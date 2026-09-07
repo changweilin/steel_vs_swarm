@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import { BUILDING_PARTS } from './runtimeParts.js';
 import { generateBackgroundObject } from './backgroundObjects.js';
 import { mergeRuntimeParts } from './runtimePartModel.js';
-import { envMat } from './toon.js';
+import { sceneObjectMat } from './toon.js';
+import { deploySceneObjects } from './sceneObjects.js';
+import { pickArchitectureModel } from './buildingDiversity.js';
 
 const geometryCache = new Map();
 let sharedMaterial = null;
@@ -44,10 +46,10 @@ const profileOf = (entry) => {
 };
 
 /**
- * 依足跡比例選出拉伸最少的一列；前六名用座標雜湊輪替，零共享亂數消耗。
+ * 足跡與高度先過尺度防線，再依文化語彙與變形代價加權選款，零共享亂數消耗。
  * 回傳的 prof 只描述「正規化後完整包絡」，供既有碰撞盒與招牌縫共用。
  */
-export function fitApprovedBuilding(building) {
+export function fitApprovedBuilding(building, architecture = null, seed = 0) {
   if (!BUILDING_PARTS.length) return null;
   const target = Math.max(building.w, 0.001) / Math.max(building.d, 0.001);
   const ranked = [];
@@ -69,10 +71,11 @@ export function fitApprovedBuilding(building) {
     || (a.entry.key < b.entry.key ? -1 : a.entry.key > b.entry.key ? 1 : 0)
     || a.rot - b.rot);
   if (!ranked.length) return null;
-  const pool = ranked.slice(0, Math.min(6, ranked.length));
-  const pick = pool[Math.floor(hash01(building.x, building.z, building.commercial ? 17 : 31) * pool.length)];
+  const pick = architecture
+    ? pickArchitectureModel(ranked, architecture, `${seed}:${building.x}:${building.z}`)
+    : ranked[Math.floor(hash01(building.x, building.z, building.commercial ? 17 : 31) * ranked.length)];
   const entry = generateBackgroundObject(pick.entry.key,
-    hash32(building.x, building.z, building.commercial ? 97 : 113));
+    hash32(building.x, building.z, (building.commercial ? 97 : 113) ^ seed));
   const proportional = !isCuboidAssembly(entry);
   return {
     entry,
@@ -104,71 +107,33 @@ export function approvedBuildingGeometry(entry, paletteIndex = null) {
 }
 
 export function approvedBuildingMaterial() {
-  if (!sharedMaterial) sharedMaterial = envMat(0xffffff, { vertexColors: true, wash: 0.42 });
+  if (!sharedMaterial) sharedMaterial = sceneObjectMat(0xffffff, { vertexColors: true });
   return sharedMaterial;
 }
 
 /** 每款一顆 InstancedMesh（若具備多套 palettes 則依座標雜湊隨機分組批次渲染）；同款跨立面來源先合併 rows 再呼叫。 */
 export function makeApprovedBuildingBatch(entry, rows) {
   if (!entry || !Array.isArray(rows) || !rows.length) throw new TypeError('建築批次缺少 entry/rows');
-  const numPalettes = Array.isArray(entry.palettes) && entry.palettes.length > 1 ? entry.palettes.length : 1;
+  const numPalettes = Math.max(1, entry.palettes?.length || 0);
   const proportional = !isCuboidAssembly(entry);
-
-  if (numPalettes <= 1) {
-    const mesh = new THREE.InstancedMesh(approvedBuildingGeometry(entry), approvedBuildingMaterial(), rows.length);
-    const matrix = new THREE.Matrix4();
-    const quaternion = new THREE.Quaternion();
-    const euler = new THREE.Euler();
-    const position = new THREE.Vector3();
-    const scale = new THREE.Vector3();
-    rows.forEach((row, i) => {
-      euler.set(0, row.ry, 0);
-      quaternion.setFromEuler(euler);
-      position.set(row.x, row.y - row.h / 2, row.z); // 正規化模型由地面起算；既有 row.y 是中心。
-      if (proportional) scale.setScalar(row.w); else scale.set(row.w, row.h, row.d);
-      matrix.compose(position, quaternion, scale);
-      mesh.setMatrixAt(i, matrix);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.frustumCulled = false;
-    mesh.name = `approved-building:${entry.key}`;
-    mesh.userData.runtimePart = { key: entry.key, version: entry.version, family: 'building' };
-    return mesh;
-  }
-
-  // 跨多套配色依座標雜湊隨機分組批次渲染
-  const groups = new Map();
-  for (const row of rows) {
-    const palIdx = Math.floor(hash01(row.x, row.z, 79) * numPalettes);
-    if (!groups.has(palIdx)) groups.set(palIdx, []);
-    groups.get(palIdx).push(row);
-  }
-
-  const batchGroup = new THREE.Group();
-  batchGroup.name = `approved-building-group:${entry.key}`;
-  const matrix = new THREE.Matrix4();
   const quaternion = new THREE.Quaternion();
   const euler = new THREE.Euler();
   const position = new THREE.Vector3();
   const scale = new THREE.Vector3();
-
-  for (const [palIdx, palRows] of groups.entries()) {
-    const mesh = new THREE.InstancedMesh(approvedBuildingGeometry(entry, palIdx), approvedBuildingMaterial(), palRows.length);
-    palRows.forEach((row, i) => {
+  return deploySceneObjects(rows, {
+    variantOf: (row) => numPalettes > 1 ? Math.floor(hash01(row.x, row.z, 79) * numPalettes) : null,
+    geometryOf: (variant) => approvedBuildingGeometry(entry, variant),
+    material: approvedBuildingMaterial(),
+    name: 'approved-building:' + entry.key,
+    metadata: { key: entry.key, version: entry.version, family: 'building' },
+    matrixOf: (row, matrix) => {
       euler.set(0, row.ry, 0);
       quaternion.setFromEuler(euler);
       position.set(row.x, row.y - row.h / 2, row.z);
       if (proportional) scale.setScalar(row.w); else scale.set(row.w, row.h, row.d);
       matrix.compose(position, quaternion, scale);
-      mesh.setMatrixAt(i, matrix);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.frustumCulled = false;
-    mesh.name = `approved-building:${entry.key}:pal${palIdx}`;
-    mesh.userData.runtimePart = { key: entry.key, version: entry.version, family: 'building', paletteIndex: palIdx };
-    batchGroup.add(mesh);
-  }
-  return batchGroup;
+    },
+  });
 }
 
 export const approvedBuildingCount = () => BUILDING_PARTS.length;

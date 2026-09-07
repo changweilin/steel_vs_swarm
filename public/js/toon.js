@@ -2312,6 +2312,11 @@ export function toonMat(color, opts = {}) {
   return applyCelPatch(m, { metal: !!celMetal, rim, soft, bands, ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, treeO });
 }
 
+/** 日系 ACG 場景實體：三階明暗、平塗、冷色暗面；描邊仍由既有後製統一處理。 */
+export function sceneObjectMat(color, opts = {}) {
+  return envMat(color, { ...opts, bands: 3, wash: 0, cool: 0.35, rim: 0.12 });
+}
+
 /**
  * 環境賽璐璐材質(靜態環境物件專用:障礙物/建物/道路/地標)。
  * 預設帶低頻水彩 wash + 冷藍陰影;opts.moss = { color?, amount? } 開苔蘚投影。

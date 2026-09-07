@@ -92,7 +92,7 @@ console.log('\nⅡ 通用幾何與場景接線');
 const usedTypes = new Set([...buildings, ...VEHICLE_PARTS].flatMap((row) => row.parts.map((part) => part.type)));
 ok([...usedTypes].every((type) => runtimeRenderer.includes(`'${type}'`)),
   `通用 renderer 涵蓋全部 ${usedTypes.size} 種正式 primitive`);
-ok(/fitApprovedBuilding\(b\)/.test(biomes)
+ok(/fitApprovedBuilding\(b(?:,|\))/.test(biomes)
   && /makeApprovedBuildingBatch\(entry, rows\)/.test(biomes), '一般建物經正式選款與每款批次進場');
 ok(/generatedApprovedVehicleModelAt\(/.test(biomes) && /makeRuntimePartModel\(model/.test(biomes),
   '場景載具經正式 v6 主結構／葉零件組裝器與通用 renderer 進場');

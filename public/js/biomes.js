@@ -61,6 +61,9 @@ import { libGeo } from './partlib.js';
 import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { generatedApprovedVehicleModelAt } from './approvedVehicleModels.js';
 import { makeRuntimePartModel } from './runtimePartModel.js';
+import { deploySceneBatches } from './sceneObjects.js';
+import { createArchitecturePlanner } from './buildingDiversity.js';
+import { sceneObjectMat } from './toon.js';
 import { buildOsmPolygonBuildings } from './osmBuilding.js';
 import { buildOsmAreaObjects } from './osmAreaObjects.js';
 // 鳥群 / 魚群 / 貓 / 狗 (2026-08-16 序 11 ⑥-2 / 2026-08-27 生態擴充; 零 THREE 的積分器)
@@ -10639,6 +10642,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 建物與用地只讀 areas，絕不重建第二份 covers。
     osmData = { ...osmData, ...pf, areas: cat.areas };
   }
+  const architectureAt = createArchitecturePlanner({
+    areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
+  });
   // 行人語意 MUST 先於剪枝／量化／橋隧判定：地下步道從此不再被任何道路消費端看見；
   // 高架與沿線主題則掛在 way 上，後續幾何重組用展開運算保留它。全段零共享 rnd。
   const pedestrianPlan = planPedestrianNetwork({
@@ -11114,8 +11120,13 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       sports: 0x789b80, parking: 0x8a8d91, utility: 0x7e8b95,
     };
     osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
-      terrain, rings,
+      terrain, rings, architectureOf: architectureAt,
       materialOf: (kind, batch, style) => {
+        if (batch.architecture) return {
+          wall: sceneObjectMat(0xffffff, { vertexColors: true }),
+          roof: sceneObjectMat(0xffffff, { vertexColors: true }),
+          detail: sceneObjectMat(0xffffff, { vertexColors: true }),
+        };
         const family = osmData.areas.find((a) => a.classification?.kind === kind)?.classification?.family || kind;
         const wall = envMat(style?.wall || osmWallColors[family] || 0xb7a893, { wash: 0.42, cool: 0.4 });
         const roof = envMat(style?.roof || 0x4f5964, { wash: 0.3, cool: 0.45 });
@@ -11723,7 +11734,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 選款只讀座標、足跡與目錄純資料，零共享 rnd() 消耗；重複目標已在目錄縫由 v6 勝出。
     const massPick = new Map();
     for (const b of generic) {
-      const fit = fitApprovedBuilding(b);
+      const fit = fitApprovedBuilding(b, architectureAt(b, null, settlement(b.x, b.z)), cfg.architectureSeed || 0);
       if (fit) massPick.set(b, fit);
     }
     /**
@@ -12111,7 +12122,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         }
       }
     }
-    for (const { entry, rows } of approvedBatches.values()) group.add(makeApprovedBuildingBatch(entry, rows));
+    group.userData.sceneDeployment = await deploySceneBatches(
+      approvedBatches.values(), group, (entry, rows) => makeApprovedBuildingBatch(entry, rows),
+      (f, label) => onProgress?.(0.72 + f * 0.08, label));
     if (cornices.length) {
       // 簷口帶:比主體大一圈的薄板,tint = 該立面款的屋頂色(與屋頂同系 = 頂緣描一筆深色)
       const cm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0xffffff, { wash: 0.5 }), cornices.length);
@@ -12673,6 +12686,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     petals: petalsBuilt,             // 落花 / 落葉粒子數(0 = 夏冬、沒有落葉樹、或 ?petal=0)
     reflectors: reflN,               // 水面倒影塊的反射體數(0 = 無水域,或岸邊沒有夠高的東西)
     buildings: generic.length + landmarks.length + osmBuildingResult.generated,
+    architecture: { seed: cfg.architectureSeed || 0, polygons: osmBuildingResult.architectureCounts || {} },
     landmarks: landmarks.length,
     roads: roadsBuilt,
     roadPrune: roadPruneStats,

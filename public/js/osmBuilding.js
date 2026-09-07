@@ -4,7 +4,7 @@
 // 因而 draw call 由型別數決定，不隨建物棟數線性增加。
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { envMat } from './toon.js';
+import { envMat, sceneObjectMat } from './toon.js';
 
 const EPS = 1e-5;
 const DEFAULT_H = Object.freeze({
@@ -122,7 +122,11 @@ function baseOf(poly, terrain, fallback = 0) {
   return Number.isFinite(y) ? y : fallback;
 }
 
-function defaultMaterials(style) {
+function defaultMaterials(style, batch = null) {
+  if (batch?.architecture) return {
+    wall: sceneObjectMat(0xffffff, { vertexColors: true }),
+    roof: sceneObjectMat(0xffffff, { vertexColors: true }),
+  };
   const row = BUILDING_STYLE_ROWS[style] || BUILDING_STYLE_ROWS.house;
   return {
     wall: envMat(row.wall, { wash: 0.42, cool: 0.4 }),
@@ -185,6 +189,109 @@ function attachmentGeometry(kind, poly, y) {
   return geo;
 }
 
+function paintGeometry(geometry, hex, variant = 0) {
+  const color = new THREE.Color(hex).multiplyScalar(0.94 + variant * 0.06);
+  const colors = new Float32Array(geometry.attributes.position.count * 3);
+  for (let i = 0; i < colors.length; i += 3) { colors[i] = color.r; colors[i + 1] = color.g; colors[i + 2] = color.b; }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geometry;
+}
+
+/** 沿真實外環／中庭牆段配置窗格、立柱與橫梁，零件數有上限。 */
+function architecturalFacade(edges, style, thickness) {
+  const geos = [];
+  let budget = 180;
+  for (const edge of edges) {
+    if (budget <= 0) break;
+    const length = edge.hw2 * 2;
+    const floors = Math.max(1, Math.min(8, Math.floor(edge.h / 3.2)));
+    const bays = Math.max(1, Math.min(10, Math.floor(length / (style.facade === 'ribbon' ? 6 : 3.2))));
+    const bayW = length / bays, floorH = edge.h / floors;
+    const add = (w, h, u, y, color) => {
+      if (budget-- <= 0) return;
+      const geo = new THREE.BoxGeometry(w, h, thickness + 0.035);
+      geo.translate(u, y, 0);
+      geo.rotateY(edge.ry);
+      geo.translate(edge.x, edge.y, edge.z);
+      geos.push(paintGeometry(geo, color, style.variant));
+    };
+    for (let floor = 0; floor < floors && budget > 0; floor++) {
+      const y = (floor + 0.55) * floorH;
+      for (let bay = 0; bay < bays && budget > 0; bay++) {
+        const u = -length / 2 + (bay + 0.5) * bayW;
+        const ribbon = style.facade === 'ribbon';
+        const w = bayW * (ribbon ? 0.9 : style.facade === 'recess' ? 0.32 : 0.55);
+        const h = floorH * (style.facade === 'piers' ? 0.72 : 0.48);
+        add(w, h, u, y, style.glass);
+        if (style.facade === 'lattice' || style.facade === 'timber') {
+          add(0.09, h, u, y, style.trim);
+          add(w, 0.09, u, y, style.trim);
+        }
+        if (style.facade === 'arches') {
+          // 拱楣為實體半環，正反兩面都沿同一牆段貼齊。
+          for (const side of [-1, 1]) {
+            if (budget-- <= 0) break;
+            const arch = new THREE.TorusGeometry(w / 2, Math.min(0.11, w * 0.06), 3, 8, Math.PI);
+            arch.translate(u, y + h / 2, side * (thickness / 2 + 0.025));
+            arch.rotateY(edge.ry); arch.translate(edge.x, edge.y, edge.z);
+            geos.push(paintGeometry(arch, style.trim, style.variant));
+          }
+        }
+      }
+      if (style.facade !== 'recess') add(length, 0.12, 0, floor * floorH + 0.14, style.trim);
+    }
+    if (['columns', 'piers', 'timber', 'industrial'].includes(style.facade)) {
+      for (let bay = 1; bay < bays && budget > 0; bay++) add(0.16, edge.h, -length / 2 + bay * bayW, edge.h / 2, style.trim);
+    }
+  }
+  return geos;
+}
+
+/** 屋頂構件僅放於可完整容納的凸外環；凹輪廓與中庭保留原形，不跨空洞搭橋。 */
+function architecturalRoof(poly, y, style) {
+  if (style.roofForm === 'flat' || poly.holes.length) return [];
+  let sign = 0;
+  for (let i = 0; i < poly.outer.length; i++) {
+    const a = poly.outer[i], b = poly.outer[(i + 1) % poly.outer.length], c = poly.outer[(i + 2) % poly.outer.length];
+    const cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    if (Math.abs(cross) < EPS) continue;
+    if (sign && Math.sign(cross) !== sign) return [];
+    sign = Math.sign(cross);
+  }
+  const xs = poly.outer.map(p => p[0]), zs = poly.outer.map(p => p[1]);
+  const half = Math.min(6, (Math.max(...xs) - Math.min(...xs)) * 0.32, (Math.max(...zs) - Math.min(...zs)) * 0.32);
+  if (half < 0.6) return [];
+  const site = attachmentSite(poly, half);
+  if (!site) return [];
+  const [x, z] = site;
+  const geos = [];
+  const add = (geo, lift) => {
+    geo.translate(x, y + lift, z);
+    geos.push(paintGeometry(geo, style.roof, style.variant));
+  };
+  if (style.roofForm === 'dome') {
+    add(new THREE.SphereGeometry(half, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0);
+  } else if (style.roofForm === 'tiered') {
+    for (let i = 0; i < 3; i++) {
+      const geo = new THREE.ConeGeometry(half * (1 - i * 0.22), half * 0.45, 4);
+      geo.rotateY(Math.PI / 4);
+      add(geo, half * (0.225 + i * 0.32));
+    }
+  } else if (style.roofForm === 'stepped') {
+    for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(half * (1.6 - i * 0.35), half * 0.25, half * (1.6 - i * 0.35)), half * (0.125 + i * 0.25));
+  } else {
+    const n = style.roofForm === 'sawtooth' ? 3 : 1;
+    for (let i = 0; i < n; i++) {
+      // 三角柱屋面：長軸沿 X，不把有坡屋頂拉成方盒。
+      const geo = new THREE.CylinderGeometry(half / n, half / n, half * 1.8, 3);
+      geo.rotateZ(Math.PI / 2);
+      geo.translate(0, 0, n > 1 ? (i - 1) * half * 0.64 : 0);
+      add(geo, half / n * 0.5);
+    }
+  }
+  return geos;
+}
+
 /**
  * 生成 OSM 建物外環／內洞。`materialOf` 回傳 { wall, roof }，可由 biomes 注入既有材質縫。
  * `rings` = 塔堡 1/4 圈 [{x,z,r}]:實體撞圈的輪廓整棟略過(寧缺勿錯),記進 skipped 供圖資缺口報表。
@@ -197,6 +304,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
   const rings = Array.isArray(options.rings) ? options.rings : [];
   const batches = new Map();
   const blockers = [], platforms = [], generatedByKind = {}, invalid = [], skipped = [];
+  const architectureCounts = {};
   const ordered = [...areas].sort((a, b) => String(a?.sourceId).localeCompare(String(b?.sourceId)));
   for (const area of ordered) {
     const cls = area?.classification || {};
@@ -218,16 +326,33 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
       }
       const baseY = baseOf(poly, terrain, 0);
       const topY = baseY + height;
+      const architecture = options.architectureOf?.(area, poly) || null;
       let batch = batches.get(kind);
       if (!batch) { batch = { kind, walls: [], roofs: [], details: [], count: 0 }; batches.set(kind, batch); }
+      const wallStart = batch.walls.length, roofStart = batch.roofs.length, detailStart = batch.details.length;
       batch.roofs.push(roofGeometry(poly, topY));
       const detail = attachmentGeometry(kind, poly, topY);
       if (detail) batch.details.push(detail);
       const outer = edgeGeometry(poly.outer, baseY, height, wallThickness, area.sourceId, kind);
       batch.walls.push(...outer.geos); blockers.push(...outer.edges);
+      const facadeEdges = [...outer.edges];
       for (const hole of poly.holes) {
         const inner = edgeGeometry(hole, baseY, height, wallThickness, area.sourceId, kind);
         batch.walls.push(...inner.geos); blockers.push(...inner.edges);
+        facadeEdges.push(...inner.edges);
+      }
+      if (architecture) {
+        batch.architecture = true;
+        for (const geo of batch.walls.slice(wallStart)) paintGeometry(geo, architecture.wall, architecture.variant);
+        for (const geo of batch.roofs.slice(roofStart)) paintGeometry(geo, architecture.roof, architecture.variant);
+        for (const geo of batch.details.slice(detailStart)) paintGeometry(geo, architecture.trim, architecture.variant);
+        batch.details.push(...architecturalFacade(facadeEdges, architecture, wallThickness));
+        // 用途有識別件的宗教／公共設施不被住宅屋頂蓋掉。
+        if (['house', 'terrace', 'apartments', 'commercial', 'farm', 'garage', 'industrial'].includes(kind)) {
+          batch.details.push(...architecturalRoof(poly, topY, architecture));
+        }
+        const key = `${architecture.profile}:${architecture.id}`;
+        architectureCounts[key] = (architectureCounts[key] || 0) + 1;
       }
       // Polygon platform retains the outer ring and all holes; no AABB approximation is used.
       const xs = poly.outer.map((p) => p[0]), zs = poly.outer.map((p) => p[1]);
@@ -268,6 +393,6 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
   return {
     blockers, platforms, generated: Object.values(generatedByKind).reduce((n, v) => n + v, 0),
     generatedByKind, invalid, skipped,
-    meshes,
+    meshes, architectureCounts,
   };
 }
