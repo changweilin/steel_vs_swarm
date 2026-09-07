@@ -19,7 +19,7 @@ for (const def of Object.values(defs)) {
         const endpoints = [-1, 1].map(sign => [part.px || 0, part.y, part.pz || 0]
           .map((v, i) => v + sign * dir[i] * p.height / 2));
         assert.ok(endpoints.every(point => point.every(Number.isFinite)));
-        assert.ok(endpoints.every(point => point[1] >= -1e-6 && point[1] <= def.h));
+        assert.ok(endpoints.every(point => point[1] >= (part.role === 'root' ? -.2 : 0) - 1e-6 && point[1] <= def.h));
       } else {
         if (part.role === 'leaf') assert.equal(part.key, 'gleaf', 'foliage keeps the shared wind/season channel');
         assert.ok(part.y + p.radius * part.sy <= def.h);
@@ -52,7 +52,7 @@ for (const type of Object.keys(TREE_SPECIES)) {
     assert.deepEqual(skeleton(tree), skeleton(spring), 'season never changes skeleton or collision geometry');
     for (const kind of ['flower', 'fruit']) {
       const trait = spec[kind];
-      const organs = spring.parts.filter(p => p.role === kind);
+      const organs = spring.parts.filter(p => p.role === kind && !p.organStem);
       if (!trait?.seasons.includes('spring')) assert.equal(organs.length, 0);
       if (organs.length) {
         const lobes = kind === 'flower' && trait.form !== 'catkin' ? 5 : 1;

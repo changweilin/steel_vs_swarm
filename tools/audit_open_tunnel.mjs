@@ -481,7 +481,7 @@ ok(/covV\[k\] && galAny\(k\)/.test(STRC),
 {
   const G0 = src.indexOf('function placeGiantGroves(');
   const GG = src.slice(G0, src.indexOf('\n}\n', G0));
-  ok(/const foot = def\.r \* s \* 1\.6;/.test(GG),
+  ok(/const foot = def\.footprint \* s;/.test(GG),
     'Ⅲ-d 神木腳印半徑 MUST 具名為 foot(落底與淨空吃同一個值,兩處各算一次就會漂)');
   ok(/if \(!areaFree\(blocked, gx, gz, foot\)\) continue;/.test(GG),
     'Ⅲ-d 神木淨空 MUST 掃整個腳印圓盤(areaFree);只問中心格 = 巨幹橫插進隧道斷面');
@@ -612,7 +612,7 @@ function fakeBattleConfig() {
   ok(/const heights0 = new Float32Array\(heights\);/.test(tsrc)
     && /const natureAt = \(x, z\) => sampleField\(heights0, x, z\);/.test(tsrc),
     'Ⅴ terrain MUST 在開挖前快照天然高度場,natureAt 與 heightAt 共用同一支內插(sampleField)');
-  ok(/return \{ group, mesh, heightAt, natureAt,/.test(tsrc), 'Ⅴ natureAt MUST 掛在 terrain API 上(消費端拿得到)');
+  ok(/return \{ group, mesh,[^}]*\bnatureAt\s*[,}]/.test(tsrc), 'Ⅴ natureAt MUST 掛在 terrain API 上(消費端拿得到)');
   ok(src.indexOf('galStrips.push') < src.indexOf('terrain.carveTunnels(tunnelRuns'),
     'Ⅴ strip 收集 MUST 在 carveTunnels 執行之前(整批用開挖前高度判定)');
   // ---- 執行原文:carveTunnels / carveGalleryBands ----

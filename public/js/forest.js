@@ -203,7 +203,8 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
     for (let i = 0; i < rootCount; i++) {
       const a = rrnd() * Math.PI * 2, d = r * (2 + rrnd() * 5), ht = .15 + rrnd() * .5;
       footprint = Math.max(footprint, d + .055);
-      parts.push({ g: cyl(.015, .055, ht, 5, 1), px: Math.cos(a) * d, y: ht / 2, pz: Math.sin(a) * d, c: bark, role: 'root' });
+      // Bury the base so the cluster's slight rigid lean cannot lift outer roots clear of soil.
+      parts.push({ g: cyl(.015, .055, ht + .2, 5, 1), px: Math.cos(a) * d, y: (ht - .2) / 2, pz: Math.sin(a) * d, c: bark, role: 'root' });
     }
   } else if (spec.roots !== 'aerial') {
     for (let i = 0; i < rootCount; i++) {
@@ -227,6 +228,8 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
       const spread = Math.sqrt(1 - up * up);
       const x = cr.p[0] + Math.cos(a) * cr.radius * spread, z = cr.p[2] + Math.sin(a) * cr.radius * spread;
       const y = Math.min(h - size * 2.5, cr.p[1] + up * cr.radius * cr.sy);
+      branch(cr.p, [x, y, z], size * .18, kind);
+      parts[parts.length - 1].organStem = true;
       const lobes = kind === 'flower' && trait.form !== 'catkin' ? 5 : 1;
       for (let j = 0; j < lobes; j++) {
         const angle = j / lobes * Math.PI * 2, offset = lobes > 1 ? size * .7 : 0;
