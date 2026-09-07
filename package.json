@@ -37,8 +37,10 @@
     "audit:catalog": "node tools/ai3d/audit_catalog_tree.mjs",
     "audit:background": "node tools/audit_background_objects.mjs",
     "shot:background": "node tools/shot_background_objects.mjs",
-    "story": "node tools/story_book.mjs"
+    "story": "node tools/story_book.mjs",
+    "preview:arch": "node tools/arch_preview.mjs"
   },
+
   "dependencies": {
     "ws": "^8.18.0"
   }
