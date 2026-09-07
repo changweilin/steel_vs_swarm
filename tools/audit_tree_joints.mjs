@@ -82,6 +82,15 @@ const SNAG_R = 0.5;      // 枯梢/內枝收尾的底半徑上限(m):結構枝�
 const SNAG_DIST = 1.2;   // 收尾梢離冠面的最大距離(m)
 
 // 冠部體積:cone 按線性收分、ico 按 sy 壓扁橢球(含 sy 欄,預設 1)
+function tubeContains(part, point, tolerance = ROOT_TOL) {
+  if (part.g.t !== 'cyl') return false;
+  const q = quatFromEuler(part.rx || 0, part.ry || 0, part.rz || 0);
+  const local = quatApply([-q[0], -q[1], -q[2], q[3]], [point[0] - (part.px || 0), point[1] - part.y, point[2] - (part.pz || 0)]);
+  const half = part.g.h / 2;
+  if (Math.abs(local[1]) > half + tolerance) return false;
+  const t = Math.max(0, Math.min(1, (local[1] + half) / part.g.h));
+  return Math.hypot(local[0], local[2]) <= part.g.r2 + (part.g.r1 - part.g.r2) * t + tolerance;
+}
 function crownContains(part, pt, tol = 0) {
   const [x, y, z] = pt;
   const cx = part.px ?? 0, cy = part.y ?? 0, cz = part.pz ?? 0;
@@ -91,6 +100,7 @@ function crownContains(part, pt, tol = 0) {
     const r = g.r * (1 - (y - (cy - g.h / 2)) / g.h);
     return Math.hypot(x - cx, z - cz) <= r + tol;
   }
+  if (g.t === 'cyl') return tubeContains(part, pt, tol);
   if (g.t === 'ico') {
     const sy = part.sy ?? 1, ry = g.r * sy;
     const dx = (x - cx) / g.r, dy = (y - cy) / ry, dz = (z - cz) / g.r;
@@ -114,10 +124,10 @@ function crownGap(part, pt) {
   }
   return Infinity;
 }
-const isCrownPart = (p) => p.g.t === 'cone' || p.g.t === 'ico';
+const isCrownPart = (p) => p.role ? p.role === 'leaf' : p.g.t === 'cone' || p.g.t === 'ico';
 // 主幹候選:貼軸無傾角的柱狀 cyl(扁平冠盤 h≤一半最大半徑,自然排除;
 // 矮胖多肉幹/基部喇叭口 h≈R 仍保留)
-const isBoleCyl = (p) => p.g.t === 'cyl' && Math.abs(p.px ?? 0) <= 0.6
+const isBoleCyl = (p) => p.role === 'trunk' && p.g.t === 'cyl' || p.g.t === 'cyl' && Math.abs(p.px ?? 0) <= 0.6
   && Math.abs(p.pz ?? 0) <= 0.6 && !(p.rx || p.rz) && p.g.h > 0.5 * Math.max(p.g.r1, p.g.r2);
 // Generated branches use the runtime XYZ rotation, including two-axis forks.
 function branchDir(p) {
@@ -202,13 +212,15 @@ for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
         if (a[1] < t.bot - ROOT_TOL || a[1] > t.top + ROOT_TOL) return false;
         const tr = trunkRAt(t.p.g.r1, t.p.g.r2, t.p.g.h, t.bot, a[1]);
         return Math.hypot(a[0] - (t.p.px ?? 0), a[2] - (t.p.pz ?? 0)) <= tr + ROOT_TOL + 0.1 * tr;
-      }) || crowns.some((c) => crownContains(c, a, ROOT_TOL));
+      }) || crowns.some((c) => c !== b && crownContains(c, a, ROOT_TOL))
+        || def.parts.some(p => p !== b && tubeContains(p, a));
       ok(rootIn, `${group} ${name} 枝根 y=${b.y} 埋進幹身/冠內/接地`);
       // Buttress roots connect ground to bole, rather than terminating in foliage.
       if (a[1] <= ROOT_TOL && boles.some(t => e[1] >= t.bot && e[1] <= t.top
         && Math.hypot(e[0], e[2]) <= trunkRAt(t.p.g.r1, t.p.g.r2, t.p.g.h, t.bot, e[1]))) { pass++; continue; }
+      if (rootIn && (b.role === 'root' || b.role === 'leaf')) { pass++; continue; }
       if (d === 'vertical' || !crowns.length) continue;
-      if (crowns.some((c) => crownContains(c, e, TIP_TOL))) { pass++; continue; }
+      if (crowns.some((c) => c !== b && crownContains(c, e, TIP_TOL)) || def.parts.some(p => p !== b && tubeContains(p, e, TIP_TOL))) { pass++; continue; }
       const thin = (b.g.r2 ?? 1) <= SNAG_R;
       const gap = Math.min(...crowns.map((c) => crownGap(c, e)));
       if (rootIn && thin && (gap <= SNAG_DIST || e[1] >= crownBottom - TIP_TOL)) {

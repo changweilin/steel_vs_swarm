@@ -1,5 +1,5 @@
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, pickTreeType, forestSeed } from './forest.js';
+import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, treeHabitatWeight, pickTreeType, forestSeed } from './forest.js';
 // ============ 地貌系統:五類地被 + 圖資建物 + 兵線淨空 ============
 // 依衛星影像逐點分類五種地貌,鋪設對應的 3D 地物:
 //   綠地   — 竹林(大小不一的群落)/ 闊葉林 / 針葉林(高海拔)
@@ -475,9 +475,21 @@ function registerTreeTrunkColliders(items, blockers) {
 // Photo-guided procedural forest. Variant envelopes also drive crown shyness.
 const GIANT_DEFS = { ...createForestDefs(cyl, ico) };
 
+function forestEnvironmentAt(terrain, x, z) {
+  let input = terrain.forestEnv || {};
+  for (const region of Array.isArray(input.regions) ? input.regions : []) {
+    if ([region.minX, region.maxX, region.minZ, region.maxZ].every(Number.isFinite)
+      && x >= region.minX && x <= region.maxX && z >= region.minZ && z <= region.maxZ) input = { ...input, ...region };
+  }
+  const heightAt = terrain.natureAt || terrain.heightAt;
+  const step = terrain.gridM || 16;
+  const slope = Math.atan(Math.hypot(heightAt(x + step, z) - heightAt(x - step, z),
+    heightAt(x, z + step) - heightAt(x, z - step)) / (2 * step)) * 180 / Math.PI;
+  return { ...input, slope: Number.isFinite(input.slope) ? input.slope : slope, wet: terrainEnvCode(terrain, x, z) !== 0 };
+}
 function forestTypeAt(terrain, x, z, roll) {
   const altitude = terrain.elevationAt?.(x, z) ?? terrain.natureAt?.(x, z) ?? terrain.heightAt(x, z);
-  return pickTreeType(terrain.center?.lat, altitude, roll, forestSeed(x, z));
+  return pickTreeType(terrain.center?.lat, altitude, roll, forestSeed(x, z), forestEnvironmentAt(terrain, x, z));
 }
 
 // 神木吃四季:綠色主導(g 為最大通道)的樹冠/苔蘚/地衣零件自動標記 'gleaf' → 季節疊色
@@ -602,8 +614,9 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
     const type = forestTypeAt(terrain, x, z, rnd());
     if (!type) continue;
     const def = GIANT_DEFS[type];
-    const n = 5 + Math.floor(rnd() * 7);          // 一群 5~11 株
-    const cr = 52 + rnd() * 70;                   // 群落半徑(株體放大 → 群落跟著攤開;
+    const grove = TREE_SPECIES[type].grove;
+    const n = grove.count[0] + Math.floor(rnd() * (grove.count[1] - grove.count[0] + 1));          // 一群 5~11 株
+    const cr = grove.spread[0] + rnd() * (grove.spread[1] - grove.spread[0]);                   // 群落半徑(株體放大 → 群落跟著攤開;
                                                   // 2026-08-03 樹冠羞避上線後同步放大:冠緣要留間隙,
                                                   // 林子攤不開就只能少種樹 —— 使用者要的是「森林」)
     const base = (0.75 + rnd() * 0.35) * OVER.giant;   // 群落基準體格(隨建物佔地等比放大)
@@ -637,7 +650,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       const gx = cand.x, gz = cand.z, s = cand.s;
       const def = createForestTree(type, forestSeed(gx, gz));
       // 腳印半徑 = 幹半徑 × 1.6(基部喇叭口 + 板根鰭)—— 落底與淨空 MUST 吃同一個值
-      const foot = def.r * s * 1.6;
+      const foot = def.footprint * s;
       // 淨空 MUST 掃**整個腳印圓盤**(areaFree,同 placeMegaliths),MUST NOT 只問中心格:
       // 巨幹半徑可 >10m,中心落在隧道走廊淨空外一格、樹身照樣橫插進洞內斷面
       // (2026-08-01 金龍隧道真圖資實測:洞內卡著整根神木樹幹)。
@@ -653,7 +666,12 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       const gy = sinkBaseY(terrain, gx, gz, foot);
       // 水域/沼澤不長神木(terrainEnvCode 確定性純函式;群落中心的 classify 有 55% mix 改寫
       // 可能把水色點洗成 green、株散 ±82m 也會越到濕地 —— 這裡是最後把關)
-      if (gy < 0.4 || terrainEnvCode(terrain, gx, gz) !== 0) continue;
+      const environment = forestEnvironmentAt(terrain, gx, gz);
+      const altitude = terrain.elevationAt?.(gx, gz) ?? terrain.heightAt(gx, gz);
+      const mangrove = TREE_SPECIES[type].roots === 'pneumatophore';
+      if ((!mangrove && (gy < 0.4 || environment.wet))
+        || (mangrove && (!environment.wet || terrain.waterY == null || gy < terrain.waterY - .8))
+        || treeHabitatWeight(type, terrain.center?.lat, altitude, environment) <= 0) continue;
       (items[type] ??= []).push({
         x: gx, y: gy, z: gz, s,
         ry: rnd() * Math.PI * 2,
@@ -667,6 +685,11 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       // tr = **頂端**幹半徑(climb.js:垂降技術繩的頂端繩錨靠 `r − tr` 的跨接臂伸回幹身)——
       // 碰撞半徑吃的是基部,不帶這個值的話繩錨會吊在幹外好幾公尺的空中。推導自 trunkR,MUST NOT 手寫
       blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1, cl: 'tree', tr: trunkR(def.h * s) });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
+      const instance = items[type][items[type].length - 1];
+      for (const stem of def.stems.slice(1)) {
+        const xf = vegPartXform({ px: stem.x, pz: stem.z, y: 0 }, instance);
+        blockers.push({ x: xf.pos[0], z: xf.pos[2], y: gy - .1, r: stem.r * s + .12, h: stem.h * s + .1, std: 1 });
+      }
       blocked.add(cellKey(gx, gz));               // 小植被/地被不長進樹幹
       occ?.add(gx, gz, def.r * s + 0.6);
       vegFoot?.add({ x: gx, z: gz, r: foot });
@@ -677,7 +700,8 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
         const hy = def.h * s * frac;
         // faceOut:錨點落在樹皮表面、零件 local +x 指徑向外(枝根埋入、巢懸枝梢)
         const rr = trunkR(hy) + (faceOut ? 0 : 0.3);
-        const jry = rnd() * Math.PI * 2;   // 保留亂數消耗序(確定性:faceOut 也照抽不跳號)
+        const jry = rnd() * Math.PI * 2;
+        if (def.h * s < 18 || def.r * s < .6) return;   // 保留亂數消耗序(確定性:faceOut 也照抽不跳號)
         const hx = gx + Math.cos(ha) * rr, hz = gz + Math.sin(ha) * rr;
         (items[dtype] ??= []).push({
           x: hx, y: gy + hy, z: hz,
@@ -704,6 +728,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       {
         const xb = djAt(gx + 11.3, gz - 7.9);
         const hangH = (dtype, salt, hfrac, ds) => {
+          if (def.h * s < 18 || def.r * s < .6) return;
           const ha2 = djAt(gx + salt, gz - salt * 1.7) * Math.PI * 2;
           const hy2 = def.h * s * hfrac;
           const rr2 = trunkR(hy2);
@@ -1073,24 +1098,37 @@ function surfIdGeo(geo, attr, treeAttr, owned = false) {
 
 // Bake every branch into tree-local space before wind deformation. Shared vertex height
 // gives wood and leaves identical displacement at their joints, even on tilted branches.
-function forestRenderDef(type, item) {
+function forestRenderDef(type, item, season) {
   const tree = createForestTree(type, forestSeed(item.x, item.z),
-    (rt, rb, h, n, sections) => new THREE.CylinderGeometry(rt, rb, h, n, sections), ico, item.s ?? 1);
-  const wood = [], leaves = [];
+    (rt, rb, h, n, sections) => new THREE.CylinderGeometry(rt, rb, h, n, sections), ico, item.s ?? 1, season);
+  const buckets = { wood: [], leaf: [], flower: [], fruit: [] };
   let cards = false;
   for (const [i, part] of tree.parts.entries()) {
     const isLeaf = part.key === 'gleaf';
-    const card = isLeaf && leafCardOn(part, 'leaf') ? leafRowGeo(null, part, i) : null;
+    const card = isLeaf && !part.noCard && leafCardOn(part, 'leaf') ? leafRowGeo(null, part, i) : null;
     const g = card || part.g;
     cards ||= !!card;
     const xf = vegPartXform(part, { x: 0, y: 0, z: 0, s: 1 });
+    xf.scl[0] *= part.sx ?? 1;
+    xf.scl[2] *= part.sz ?? 1;
     const matrix = new THREE.Matrix4().compose(new THREE.Vector3(...xf.pos),
       new THREE.Quaternion(...xf.quat), new THREE.Vector3(...xf.scl));
     g.applyMatrix4(matrix);
-    (isLeaf ? leaves : wood).push(g);
+    const color = new THREE.Color(part.c);
+    const colors = new Float32Array(g.attributes.position.count * 3);
+    for (let k = 0; k < colors.length; k += 3) { colors[k] = color.r; colors[k + 1] = color.g; colors[k + 2] = color.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const role = isLeaf ? 'leaf' : part.role === 'flower' || part.role === 'fruit' ? part.role : 'wood';
+    buckets[role].push(g);
     if (card) part.g.dispose();
   }
   const merge = list => {
+    if (list.some(g => !g.index)) list = list.map(g => {
+      if (!g.index) return g;
+      const expanded = g.toNonIndexed();
+      g.dispose();
+      return expanded;
+    });
     const g = mergeGeometries(list);
     for (const part of list) part.dispose();
     if (!g) throw new Error('Forest geometry attributes do not match');
@@ -1099,8 +1137,9 @@ function forestRenderDef(type, item) {
   };
   const height = tree.h * (item.s ?? 1);
   return { ...tree, bend: treeBend(height, tree.r * (item.s ?? 1)),
-    parts: [ { g: merge(wood), c: TREE_SPECIES[type].bark },
-      { g: merge(leaves), key: 'gleaf', c: TREE_SPECIES[type].leaf, card: cards } ] };
+    parts: Object.entries(buckets).filter(([, list]) => list.length).map(([role, list]) => ({
+      g: merge(list), c: 0xffffff, key: role === 'leaf' ? 'gleaf' : null,
+      card: role === 'leaf' && cards, vertexColors: true, role })) };
 }
 
 /**
@@ -1110,7 +1149,7 @@ function forestRenderDef(type, item) {
  */
 export function buildVegMeshes(type, items, season, generated = null) {
   if (GIANT_DEFS[type] && !generated) {
-    return items.flatMap(item => buildVegMeshes(type, [{ ...item, dj: 0 }], season, forestRenderDef(type, item)));
+    return items.flatMap(item => buildVegMeshes(type, [{ ...item, dj: 0 }], season, forestRenderDef(type, item, season)));
   }
   const def = generated || VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
   const span = generated ? generated.h : vegSpan(def);
@@ -1176,6 +1215,7 @@ export function buildVegMeshes(type, items, season, generated = null) {
       mo.surfAttr = true;                       // 面號改吃逐實例屬性 aSurfId
       if (sk === 'leaf') mo.ink = 'group';      // 葉列 = 群組剪影;木質列維持 'hard'(幹的折邊留著)
     }
+    if (part.vertexColors) mo.vertexColors = true;
     if (card) { mo.map = leafCardTex(); mo.alphaTest = 0.5; mo.transparent = false; mo.card = true; }
     const mat = toonMat(seasonColor(part.key, part.c, season), mo);
     // 畫的是 partGeo 解析結果(AI 零件庫 ?? 保險絲);佈局(span/冠幅)仍吃 p.g,見 partGeo 檔頭
@@ -10125,12 +10165,12 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rin
         s *= Math.min(1, avail / (rT * s + 6));
         if (s < 0.4) continue;
         // 背景實體互斥:邊界神木同樣避開走廊/圖資建物/既有植被。
-        const bFoot = rT * s * 1.6;
+        const bFoot = tree.footprint * s;
         if (blocked && !areaFree(blocked, x, z, bFoot)) continue;
         if (osmBldHit?.(x, z, bFoot)) continue;
         if (vegFoot && vegFoot.near({ x, z, r: bFoot })) continue;
         (items[sp] ??= []).push({
-          x, y: sinkBaseY(terrain, x, z, rT * s * 1.6), z, s,   // 板根腳印落底(見 sinkBaseY)
+          x, y: sinkBaseY(terrain, x, z, bFoot), z, s,   // 板根腳印落底(見 sinkBaseY)
           ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.04, tz: (rnd() - 0.5) * 0.04,
           dj: rnd(),
         });
@@ -10392,6 +10432,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const season = cfg.env?.season || 'summer';
   const night = cfg.env?.time === 'night';
   const mix = cfg.venue?.mix || null;
+  terrain.forestEnv = cfg.env?.forest || cfg.venue?.forest || {};
   const rnd = mulberry32(
     (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) ^ ((cfg.teamSize || 5) << 20),
   );
@@ -10781,10 +10822,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 36); a++) {
     const x = rx(), z = rz();
     const h = terrain.heightAt(x, z);
-    if (h < 0.4 || blocked.has(cellKey(x, z))) continue;
+    const input = forestEnvironmentAt(terrain, x, z);
+    const tidalForest = input.wet && input.salinity >= .05 && terrain.waterY != null && h >= terrain.waterY - .8;
+    if ((h < 0.4 && !tidalForest) || blocked.has(cellKey(x, z))) continue;
     const b = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
-    if (b === 'green' && greenSites.length < 20) greenSites.push([x, z]);
-    else if (b === 'bare' && bareSites.length < 36) bareSites.push([x, z]);
+    if (greenSites.length < 20) {
+      const dryForest = b === 'bare' && (['arid', 'mediterranean', 'alpine'].includes(input.climate) || input.moisture < .35);
+      if (b === 'green' || dryForest || tidalForest) greenSites.push([x, z]);
+    }
+    if (b === 'bare' && bareSites.length < 36) bareSites.push([x, z]);
   }
   // 國旗歸屬(地圖 30 : 駐軍 60 : 敵對 10)。純函式、零共享 rnd ⇒ 建在哪一行都不影響序列。
   const nation = makeNationPicker(cfg, basesW);
