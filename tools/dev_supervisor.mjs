@@ -22,7 +22,9 @@ import { fileURLToPath } from 'node:url';
 import { DEFAULT_PORT as CODEX_PORT } from './codex_review.mjs';
 import { DEFAULT_PORT as PARTS_PORT } from './parts_review.mjs';
 import { DEFAULT_PORT as STORY_PORT } from './story_book.mjs';
+import { DEFAULT_PORT as ARCH_PORT } from './arch_preview.mjs';
 import { corpusHome, corpusHomes, venvHome } from './ai3d/provenance.mjs';
+
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -87,6 +89,16 @@ export const TOOLS = {
       + '人眼複核排在入庫之後(就在這個台子上),判決由 tools/ai3d/apply_verdicts.mjs 執行。'
       + '新圖跑完之後會把「已餵過但沒人覆核」的排在後面重跑(--no-redo 關掉)。'
       + '要跑哪一個語料家在零件台上挑(含註冊在案、住儲存庫外的那些);逐站進度看零件台的「執行進度」。',
+  },
+  arch: {
+    key: 'arch',
+    kind: 'server',
+    label: '立體視覺驗收工作室',
+    port: ARCH_PORT,
+    script: path.join('tools', 'arch_preview.mjs'),
+    args: [],
+
+    hint: '建築分類與隨機參數展開立體視覺驗收：支援 5 大分類維度交叉矩陣、隨機參數展開變體、全類別選項自選隨機池、道路十字路網與詳細數值檢驗。',
   },
 };
 
