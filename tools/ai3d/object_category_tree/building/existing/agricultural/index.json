@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/agricultural",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "agricultural",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/agricultural/CC0_agricultural_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/agricultural/CC0_agricultural_001.jpg"
+      },
+      "subtype": "building_agricultural",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/agricultural/CC0_agricultural_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/agricultural/CC0_agricultural_002.jpg"
+      },
+      "subtype": "building_agricultural",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

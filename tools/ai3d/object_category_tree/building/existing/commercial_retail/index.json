@@ -7,10 +7,21 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:building/cf7c3f08fa949ce468837181b8de14d4.webp.jpg",
+      "id": "primary:building/commercial_retail/CC0_commercial_retail_001.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/cf7c3f08fa949ce468837181b8de14d4.webp.jpg"
+        "corpus": "primary",
+        "image": "building/commercial_retail/CC0_commercial_retail_001.jpg"
+      },
+      "subtype": "building_commercial_retail",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/commercial_retail/CC0_commercial_retail_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/commercial_retail/CC0_commercial_retail_002.jpg"
       },
       "subtype": "傳統木構零售店舖",
       "confidence": 0.95,

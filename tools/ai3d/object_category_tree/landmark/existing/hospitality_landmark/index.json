@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:landmark/atl_20220104114052_159.jpeg",
+      "id": "primary:landmark/hospitality_landmark/CC0_hospitality_landmark_001.jpeg",
       "source": {
         "corpus": "primary",
-        "image": "landmark/atl_20220104114052_159.jpeg"
+        "image": "landmark/hospitality_landmark/CC0_hospitality_landmark_001.jpeg"
       },
       "subtype": "海上環形旅宿與休閒複合地標",
       "confidence": 0.86,

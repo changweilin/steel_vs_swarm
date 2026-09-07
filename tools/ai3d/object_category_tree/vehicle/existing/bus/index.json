@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "vehicle/existing/bus",
+  "family": "vehicle",
+  "branch": "existing",
+  "objectType": "bus",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:vehicle/bus/CC0_bus_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bus/CC0_bus_001.jpg"
+      },
+      "subtype": "vehicle_bus",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

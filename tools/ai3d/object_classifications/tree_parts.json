@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "family": "tree_parts",
+  "classifier": {
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "max",
+    "basis": "visual+functional"
+  },
+  "items": [
+    {
+      "id": "primary:tree_parts/buttress/CC0_buttress_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree_parts/buttress/CC0_buttress_001.jpg"
+      },
+      "family": "tree_parts",
+      "objectType": "buttress",
+      "subtype": "tree_parts_buttress",
+      "paletteDomain": "tree_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：tree 之 buttressed_giant"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "tree buttressed_giant 主體結構或功能組件",
+          "interfaceFamily": "tree-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "tree-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree_parts/buttress/CC0_buttress_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree_parts/buttress/CC0_buttress_002.jpg"
+      },
+      "family": "tree_parts",
+      "objectType": "buttress",
+      "subtype": "tree_parts_buttress",
+      "paletteDomain": "tree_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：tree 之 buttressed_giant"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "tree buttressed_giant 主體結構或功能組件",
+          "interfaceFamily": "tree-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "tree-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree_parts/buttress/CC0_buttress_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree_parts/buttress/CC0_buttress_003.jpg"
+      },
+      "family": "tree_parts",
+      "objectType": "buttress",
+      "subtype": "tree_parts_buttress",
+      "paletteDomain": "tree_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：tree 之 buttressed_giant"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "tree buttressed_giant 主體結構或功能組件",
+          "interfaceFamily": "tree-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "tree-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "path": "tree/existing/bonsai",
+  "family": "tree",
+  "branch": "existing",
+  "objectType": "bonsai",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:tree/bonsai/CC0_bonsai_001.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/bonsai/CC0_bonsai_001.png"
+      },
+      "subtype": "flowering_broadleaf_bonsai",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/bonsai/CC0_bonsai_002.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/bonsai/CC0_bonsai_002.webp"
+      },
+      "subtype": "rounded_broadleaf_bonsai",
+      "confidence": 0.82,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/bonsai/CC0_bonsai_003.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/bonsai/CC0_bonsai_003.png"
+      },
+      "subtype": "juniper_bonsai",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/bonsai/CC0_bonsai_004.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/bonsai/CC0_bonsai_004.png"
+      },
+      "subtype": "flowering_tung_bonsai",
+      "confidence": 0.9,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/bonsai/CC0_bonsai_005.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/bonsai/CC0_bonsai_005.webp"
+      },
+      "subtype": "compact_broadleaf_bonsai",
+      "confidence": 0.79,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/bonsai/CC0_bonsai_006.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/bonsai/CC0_bonsai_006.png"
+      },
+      "subtype": "dark_juniper_bonsai",
+      "confidence": 0.87,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/bonsai/CC0_bonsai_007.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/bonsai/CC0_bonsai_007.png"
+      },
+      "subtype": "pruned_twisted_bonsai",
+      "confidence": 0.88,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/bonsai/CC0_bonsai_008.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/bonsai/CC0_bonsai_008.png"
+      },
+      "subtype": "flowering_bonsai",
+      "confidence": 0.9,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/bonsai/CC0_bonsai_009.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/bonsai/CC0_bonsai_009.avif"
+      },
+      "subtype": "stylized_digital_bonsai",
+      "confidence": 0.62,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    }
+  ]
+}

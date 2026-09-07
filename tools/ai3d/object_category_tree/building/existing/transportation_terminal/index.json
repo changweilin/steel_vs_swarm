@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/transportation_terminal",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "transportation_terminal",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/transportation_terminal/CC0_transportation_terminal_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/transportation_terminal/CC0_transportation_terminal_001.jpg"
+      },
+      "subtype": "building_transportation_terminal",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

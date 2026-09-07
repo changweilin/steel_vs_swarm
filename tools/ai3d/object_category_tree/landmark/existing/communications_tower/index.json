@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:landmark/images (1).jpg",
+      "id": "primary:landmark/communications_tower/CC0_communications_tower_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "landmark/images (1).jpg"
+        "image": "landmark/communications_tower/CC0_communications_tower_001.jpg"
       },
       "subtype": "東京鐵塔廣播通信暨觀景塔",
       "confidence": 0.99,
@@ -18,10 +18,54 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:landmark/Tokyo_Sky_Tree_2012.jpg",
+      "id": "primary:landmark/communications_tower/CC0_communications_tower_002.jpg",
       "source": {
         "corpus": "primary",
-        "image": "landmark/Tokyo_Sky_Tree_2012.jpg"
+        "image": "landmark/communications_tower/CC0_communications_tower_002.jpg"
+      },
+      "subtype": "landmark_communications_tower",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/communications_tower/CC0_communications_tower_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/communications_tower/CC0_communications_tower_003.jpg"
+      },
+      "subtype": "landmark_communications_tower",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/communications_tower/CC0_communications_tower_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/communications_tower/CC0_communications_tower_004.jpg"
+      },
+      "subtype": "landmark_communications_tower",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/communications_tower/CC0_communications_tower_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/communications_tower/CC0_communications_tower_005.jpg"
+      },
+      "subtype": "landmark_communications_tower",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/communications_tower/CC0_communications_tower_006.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/communications_tower/CC0_communications_tower_006.jpg"
       },
       "subtype": "東京晴空塔廣播通信暨觀景塔",
       "confidence": 0.99,

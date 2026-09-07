@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:ship/000-34TU8F7.jpg",
+      "id": "primary:ship/surface_combatant/CC0_surface_combatant_001.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/000-34TU8F7.jpg"
+        "corpus": "primary",
+        "image": "ship/surface_combatant/CC0_surface_combatant_001.jpg"
       },
       "subtype": "guided_missile_surface_combatant",
       "confidence": 0.97,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/1802.jpg",
+      "id": "primary:ship/surface_combatant/CC0_surface_combatant_002.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/1802.jpg"
+        "corpus": "primary",
+        "image": "ship/surface_combatant/CC0_surface_combatant_002.jpg"
       },
       "subtype": "guided_missile_surface_combatant",
       "confidence": 0.97,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/2000x1250_wmkn_84254351907813_0.jpg",
+      "id": "primary:ship/surface_combatant/CC0_surface_combatant_003.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/2000x1250_wmkn_84254351907813_0.jpg"
+        "corpus": "primary",
+        "image": "ship/surface_combatant/CC0_surface_combatant_003.jpg"
       },
       "subtype": "guided_missile_surface_combatant",
       "confidence": 0.97,
@@ -40,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/2000x1429_wmkn_19056648845677_0.jpg",
+      "id": "primary:ship/surface_combatant/CC0_surface_combatant_004.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/2000x1429_wmkn_19056648845677_0.jpg"
+        "corpus": "primary",
+        "image": "ship/surface_combatant/CC0_surface_combatant_004.jpg"
       },
       "subtype": "guided_missile_surface_combatant",
       "confidence": 0.97,
@@ -51,10 +51,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/20oz-china-ships-wgkl-master1050.jpg",
+      "id": "primary:ship/surface_combatant/CC0_surface_combatant_005.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/20oz-china-ships-wgkl-master1050.jpg"
+        "corpus": "primary",
+        "image": "ship/surface_combatant/CC0_surface_combatant_005.jpg"
       },
       "subtype": "guided_missile_surface_combatant",
       "confidence": 0.97,
@@ -62,10 +62,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg",
+      "id": "primary:ship/surface_combatant/CC0_surface_combatant_006.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg"
+        "corpus": "primary",
+        "image": "ship/surface_combatant/CC0_surface_combatant_006.jpg"
       },
       "subtype": "guided_missile_surface_combatant",
       "confidence": 0.97,
@@ -73,10 +73,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/id13750938-558191.jpg",
+      "id": "primary:ship/surface_combatant/CC0_surface_combatant_007.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/id13750938-558191.jpg"
+        "corpus": "primary",
+        "image": "ship/surface_combatant/CC0_surface_combatant_007.jpg"
       },
       "subtype": "guided_missile_surface_combatant",
       "confidence": 0.97,

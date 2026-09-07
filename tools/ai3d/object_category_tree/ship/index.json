@@ -3,10 +3,10 @@
   "family": "ship",
   "categories": [
     {
-      "path": "ship/__unresolved__/invalid_source",
+      "path": "ship/__unresolved__/insufficient_evidence",
       "branch": "__unresolved__",
       "objectType": "unresolved",
-      "resolution": "invalid_source",
+      "resolution": "insufficient_evidence",
       "members": 1
     },
     {

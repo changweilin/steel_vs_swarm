@@ -17,13 +17,19 @@ export const OBJECT_TYPES = Object.freeze({
     'commercial_retail', 'commercial_office', 'hospitality', 'industrial_production',
     'industrial_storage', 'agricultural', 'civic_administrative', 'educational',
     'healthcare', 'religious', 'transportation_terminal', 'utility_service',
-    'observation_landmark', UNKNOWN_TYPE,
+    'observation_landmark', 'castle_fortress', 'lighthouse', UNKNOWN_TYPE,
+  ]),
+  building_parts: Object.freeze([
+    'acunit', 'balcony', 'chimney', 'dormer', 'roofcap', 'rooftank', UNKNOWN_TYPE,
   ]),
   landmark: Object.freeze([
     'commemorative_monument', 'ceremonial_gateway', 'observation_tower',
     'communications_tower', 'navigation_marker', 'public_art', 'industrial_landmark',
     'natural_landmark', 'office_landmark', 'religious_landmark',
     'museum_cultural_landmark', 'mixed_use_landmark', 'hospitality_landmark', UNKNOWN_TYPE,
+  ]),
+  landmark_parts: Object.freeze([
+    'dish', UNKNOWN_TYPE,
   ]),
   rock: Object.freeze([
     'boulder', 'outcrop', 'monolith', 'tor', 'hoodoo', 'mesa', 'natural_arch',
@@ -32,7 +38,10 @@ export const OBJECT_TYPES = Object.freeze({
   ]),
   tree: Object.freeze([
     'broadleaf_tree', 'conifer_tree', 'palm_tree', 'shrub', 'snag',
-    'buttressed_giant', 'sculptural_tree', UNKNOWN_TYPE,
+    'buttressed_giant', 'sculptural_tree', 'bonsai', 'pachycaul_tree', UNKNOWN_TYPE,
+  ]),
+  tree_parts: Object.freeze([
+    'buttress', UNKNOWN_TYPE,
   ]),
   ship: Object.freeze([
     'container_cargo', 'bulk_cargo', 'tanker', 'passenger_ferry', 'cruise_ship',

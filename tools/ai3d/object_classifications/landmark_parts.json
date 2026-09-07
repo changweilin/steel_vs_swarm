@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "family": "landmark_parts",
+  "classifier": {
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "max",
+    "basis": "visual+functional"
+  },
+  "items": [
+    {
+      "id": "primary:landmark_parts/dish/CC0_dish_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark_parts/dish/CC0_dish_001.jpg"
+      },
+      "family": "landmark_parts",
+      "objectType": "dish",
+      "subtype": "landmark_parts_dish",
+      "paletteDomain": "landmark_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：landmark 之 communications_tower"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "landmark communications_tower 主體結構或功能組件",
+          "interfaceFamily": "landmark-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "landmark-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark_parts/dish/CC0_dish_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark_parts/dish/CC0_dish_002.jpg"
+      },
+      "family": "landmark_parts",
+      "objectType": "dish",
+      "subtype": "landmark_parts_dish",
+      "paletteDomain": "landmark_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：landmark 之 communications_tower"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "landmark communications_tower 主體結構或功能組件",
+          "interfaceFamily": "landmark-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "landmark-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark_parts/dish/CC0_dish_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark_parts/dish/CC0_dish_003.jpg"
+      },
+      "family": "landmark_parts",
+      "objectType": "dish",
+      "subtype": "landmark_parts_dish",
+      "paletteDomain": "landmark_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：landmark 之 communications_tower"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "landmark communications_tower 主體結構或功能組件",
+          "interfaceFamily": "landmark-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "landmark-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    }
+  ]
+}

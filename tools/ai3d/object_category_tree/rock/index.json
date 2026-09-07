@@ -14,19 +14,33 @@
       "branch": "existing",
       "objectType": "boulder",
       "resolution": null,
-      "members": 15
+      "members": 24
+    },
+    {
+      "path": "rock/existing/collapse",
+      "branch": "existing",
+      "objectType": "collapse",
+      "resolution": null,
+      "members": 3
     },
     {
       "path": "rock/existing/columnar_basalt",
       "branch": "existing",
       "objectType": "columnar_basalt",
       "resolution": null,
-      "members": 1
+      "members": 2
     },
     {
       "path": "rock/existing/dolmen_megalith",
       "branch": "existing",
       "objectType": "dolmen_megalith",
+      "resolution": null,
+      "members": 6
+    },
+    {
+      "path": "rock/existing/hoodoo",
+      "branch": "existing",
+      "objectType": "hoodoo",
       "resolution": null,
       "members": 2
     },
@@ -35,14 +49,21 @@
       "branch": "existing",
       "objectType": "mesa",
       "resolution": null,
-      "members": 3
+      "members": 7
     },
     {
       "path": "rock/existing/monolith",
       "branch": "existing",
       "objectType": "monolith",
       "resolution": null,
-      "members": 6
+      "members": 11
+    },
+    {
+      "path": "rock/existing/natural_arch",
+      "branch": "existing",
+      "objectType": "natural_arch",
+      "resolution": null,
+      "members": 4
     },
     {
       "path": "rock/existing/outcrop",
@@ -56,21 +77,21 @@
       "branch": "existing",
       "objectType": "stratified_slab",
       "resolution": null,
-      "members": 4
+      "members": 8
     },
     {
       "path": "rock/existing/talus",
       "branch": "existing",
       "objectType": "talus",
       "resolution": null,
-      "members": 2
+      "members": 4
     },
     {
       "path": "rock/existing/tor",
       "branch": "existing",
       "objectType": "tor",
       "resolution": null,
-      "members": 3
+      "members": 11
     }
   ]
 }

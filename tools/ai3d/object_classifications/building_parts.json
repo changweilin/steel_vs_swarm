@@ -1,0 +1,619 @@
+{
+  "schemaVersion": 1,
+  "family": "building_parts",
+  "classifier": {
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "max",
+    "basis": "visual+functional"
+  },
+  "items": [
+    {
+      "id": "primary:building_parts/acunit/CC0_acunit_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/acunit/CC0_acunit_001.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "acunit",
+      "subtype": "building_parts_acunit",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 acunit"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building acunit 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/balcony/CC0_balcony_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/balcony/CC0_balcony_001.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "balcony",
+      "subtype": "building_parts_balcony",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 balcony"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building balcony 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/balcony/CC0_balcony_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/balcony/CC0_balcony_002.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "balcony",
+      "subtype": "building_parts_balcony",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 balcony"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building balcony 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_001.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "chimney",
+      "subtype": "building_parts_chimney",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 chimney"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building chimney 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_002.jpeg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_002.jpeg"
+      },
+      "family": "building_parts",
+      "objectType": "chimney",
+      "subtype": "building_parts_chimney",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 chimney"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building chimney 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_003.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "chimney",
+      "subtype": "building_parts_chimney",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 chimney"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building chimney 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_004.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "chimney",
+      "subtype": "building_parts_chimney",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 chimney"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building chimney 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_005.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "chimney",
+      "subtype": "building_parts_chimney",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 chimney"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building chimney 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/dormer/CC0_dormer_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/dormer/CC0_dormer_001.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "dormer",
+      "subtype": "building_parts_dormer",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 dormer"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building dormer 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/dormer/CC0_dormer_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/dormer/CC0_dormer_002.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "dormer",
+      "subtype": "building_parts_dormer",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 dormer"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building dormer 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/roofcap/CC0_roofcap_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/roofcap/CC0_roofcap_001.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "roofcap",
+      "subtype": "building_parts_roofcap",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 roofcap"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building roofcap 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/roofcap/CC0_roofcap_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/roofcap/CC0_roofcap_002.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "roofcap",
+      "subtype": "building_parts_roofcap",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 roofcap"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building roofcap 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/roofcap/CC0_roofcap_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/roofcap/CC0_roofcap_003.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "roofcap",
+      "subtype": "building_parts_roofcap",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 roofcap"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building roofcap 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/roofcap/CC0_roofcap_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/roofcap/CC0_roofcap_004.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "roofcap",
+      "subtype": "building_parts_roofcap",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 roofcap"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building roofcap 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/rooftank/CC0_rooftank_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/rooftank/CC0_rooftank_001.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "rooftank",
+      "subtype": "building_parts_rooftank",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 rooftank"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building rooftank 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:building_parts/rooftank/CC0_rooftank_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/rooftank/CC0_rooftank_002.jpg"
+      },
+      "family": "building_parts",
+      "objectType": "rooftank",
+      "subtype": "building_parts_rooftank",
+      "paletteDomain": "building_parts-standard",
+      "confidence": 0.95,
+      "reasons": [
+        "功能判定：building 之 rooftank"
+      ],
+      "functionalProfile": {
+        "workingMedium": "solid-ground",
+        "operationMode": "static",
+        "safetyClass": "general-safety",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "primary_structure",
+          "function": "building rooftank 主體結構或功能組件",
+          "interfaceFamily": "building-chassis-interface",
+          "kinematicClass": "kinematic-joint",
+          "loadClass": "standard-load",
+          "workingMedium": "standard",
+          "handedness": "none",
+          "materialClass": "building-composite",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "path": "building_parts/existing/chimney",
+  "family": "building_parts",
+  "branch": "existing",
+  "objectType": "chimney",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_001.jpg"
+      },
+      "subtype": "building_parts_chimney",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_002.jpeg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_002.jpeg"
+      },
+      "subtype": "building_parts_chimney",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_003.jpg"
+      },
+      "subtype": "building_parts_chimney",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_004.jpg"
+      },
+      "subtype": "building_parts_chimney",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/chimney/CC0_chimney_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/chimney/CC0_chimney_005.jpg"
+      },
+      "subtype": "building_parts_chimney",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

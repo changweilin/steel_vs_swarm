@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "path": "tree/existing/pachycaul_tree",
+  "family": "tree",
+  "branch": "existing",
+  "objectType": "pachycaul_tree",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_001.jpg"
+      },
+      "subtype": "baobab_flat_crown",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_002.jpg"
+      },
+      "subtype": "baobab_flat_crown",
+      "confidence": 0.93,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_003.jpg"
+      },
+      "subtype": "baobab_dryland",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_004.jpg"
+      },
+      "subtype": "hollow_baobab",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_005.jpg"
+      },
+      "subtype": "green_baobab",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_006.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_006.jpg"
+      },
+      "subtype": "madagascar_baobab",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_007.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_007.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_008.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_009.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_009.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_010.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_010.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_011.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_011.png"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_012.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_012.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_013.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_013.png"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_014.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_014.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_015.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_015.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_016.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_016.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_017.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_017.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_018.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_018.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_019.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_019.png"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_020.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_020.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_021.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_021.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_022.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_022.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_023.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_023.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pachycaul_tree/CC0_pachycaul_tree_024.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pachycaul_tree/CC0_pachycaul_tree_024.jpg"
+      },
+      "subtype": "tree_pachycaul_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

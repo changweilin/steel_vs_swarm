@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "family": "landmark_parts",
+  "categories": [
+    {
+      "path": "landmark_parts/existing/dish",
+      "branch": "existing",
+      "objectType": "dish",
+      "resolution": null,
+      "members": 3
+    }
+  ]
+}

@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "path": "vehicle/existing/rail_vehicle",
+  "family": "vehicle",
+  "branch": "existing",
+  "objectType": "rail_vehicle",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_001.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_002.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_003.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_004.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_005.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_006.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_006.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_007.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_007.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_008.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_009.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_009.webp"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_010.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_010.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_011.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_011.webp"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_012.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_012.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_013.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_013.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_014.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_014.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/rail_vehicle/CC0_rail_vehicle_015.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/rail_vehicle/CC0_rail_vehicle_015.jpg"
+      },
+      "subtype": "vehicle_rail_vehicle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

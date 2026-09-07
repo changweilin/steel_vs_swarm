@@ -21,7 +21,7 @@
       "branch": "existing",
       "objectType": "communications_tower",
       "resolution": null,
-      "members": 2
+      "members": 6
     },
     {
       "path": "landmark/existing/hospitality_landmark",
@@ -29,6 +29,13 @@
       "objectType": "hospitality_landmark",
       "resolution": null,
       "members": 1
+    },
+    {
+      "path": "landmark/existing/industrial_landmark",
+      "branch": "existing",
+      "objectType": "industrial_landmark",
+      "resolution": null,
+      "members": 3
     },
     {
       "path": "landmark/existing/mixed_use_landmark",

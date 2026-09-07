@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:ship/c85048fc4c49c7444019ec75c0f06fb04a030e7c.jpg",
+      "id": "primary:ship/vehicle_carrier/CC0_vehicle_carrier_001.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/c85048fc4c49c7444019ec75c0f06fb04a030e7c.jpg"
+        "corpus": "primary",
+        "image": "ship/vehicle_carrier/CC0_vehicle_carrier_001.jpg"
       },
       "subtype": "vehicle_carrier",
       "confidence": 0.98,

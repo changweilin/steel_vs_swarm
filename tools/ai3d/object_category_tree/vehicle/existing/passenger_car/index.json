@@ -1,0 +1,703 @@
+{
+  "schemaVersion": 1,
+  "path": "vehicle/existing/passenger_car",
+  "family": "vehicle",
+  "branch": "existing",
+  "objectType": "passenger_car",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_001.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_002.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_002.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_003.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_004.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_005.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_005.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_006.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_006.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_007.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_007.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_008.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_009.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_009.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_010.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_010.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_011.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_011.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_012.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_012.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_013.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_013.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_014.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_014.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_015.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_015.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_016.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_016.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_017.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_017.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_018.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_018.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_019.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_019.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_020.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_020.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_021.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_021.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_022.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_022.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_023.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_023.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_024.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_024.webp"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_025.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_025.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_026.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_026.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_027.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_027.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_028.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_028.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_029.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_029.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_030.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_030.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_031.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_031.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_032.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_032.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_033.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_033.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_034.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_034.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_035.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_035.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_036.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_036.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_037.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_037.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_038.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_038.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_039.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_039.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_040.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_040.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_041.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_041.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_042.gif",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_042.gif"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_043.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_043.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_044.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_044.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_045.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_045.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_046.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_046.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_047.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_047.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_048.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_048.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_049.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_049.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_050.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_050.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_051.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_051.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_052.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_052.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_053.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_053.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_054.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_054.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_055.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_055.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_056.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_056.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_057.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_057.webp"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_058.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_058.webp"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_059.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_059.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_060.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_060.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_061.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_061.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_062.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_062.jpg"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/passenger_car/CC0_passenger_car_063.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/passenger_car/CC0_passenger_car_063.png"
+      },
+      "subtype": "vehicle_passenger_car",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

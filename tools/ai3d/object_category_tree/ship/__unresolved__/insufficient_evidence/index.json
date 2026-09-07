@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/__unresolved__/insufficient_evidence",
+  "family": "ship",
+  "branch": "__unresolved__",
+  "objectType": "unresolved",
+  "resolution": "insufficient_evidence",
+  "definitionSource": "evidence gate",
+  "members": [
+    {
+      "id": "primary:ship/unresolved/CC0_unresolved_001.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "ship/unresolved/CC0_unresolved_001.webp"
+      },
+      "subtype": "undecodable_image_file",
+      "confidence": 0.05,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/castle_fortress",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "castle_fortress",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/castle_fortress/CC0_castle_fortress_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/castle_fortress/CC0_castle_fortress_001.jpg"
+      },
+      "subtype": "日本歷史城堡觀光地標",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/castle_fortress/CC0_castle_fortress_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/castle_fortress/CC0_castle_fortress_002.jpg"
+      },
+      "subtype": "日本城堡觀光地標",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/castle_fortress/CC0_castle_fortress_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/castle_fortress/CC0_castle_fortress_003.jpg"
+      },
+      "subtype": "日本城郭觀光地標（模型示意）",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/castle_fortress/CC0_castle_fortress_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/castle_fortress/CC0_castle_fortress_004.jpg"
+      },
+      "subtype": "日本城堡觀光地標",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

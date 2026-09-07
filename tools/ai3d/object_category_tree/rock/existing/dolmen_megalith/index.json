@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:rock/132.jpg",
+      "id": "primary:rock/dolmen_megalith/CC0_dolmen_megalith_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/132.jpg"
+        "image": "rock/dolmen_megalith/CC0_dolmen_megalith_001.jpg"
       },
       "subtype": "standing_stone_circle",
       "confidence": 0.93,
@@ -18,13 +18,57 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/d087b40c-1b1a-4f8a-a620-c0aafe41056d.webp",
+      "id": "primary:rock/dolmen_megalith/CC0_dolmen_megalith_002.webp",
       "source": {
         "corpus": "primary",
-        "image": "rock/d087b40c-1b1a-4f8a-a620-c0aafe41056d.webp"
+        "image": "rock/dolmen_megalith/CC0_dolmen_megalith_002.webp"
       },
       "subtype": "stonehenge_standing_megalith",
       "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/dolmen_megalith/CC0_dolmen_megalith_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/dolmen_megalith/CC0_dolmen_megalith_003.jpg"
+      },
+      "subtype": "rock_dolmen_megalith",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/dolmen_megalith/CC0_dolmen_megalith_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/dolmen_megalith/CC0_dolmen_megalith_004.jpg"
+      },
+      "subtype": "rock_dolmen_megalith",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/dolmen_megalith/CC0_dolmen_megalith_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/dolmen_megalith/CC0_dolmen_megalith_005.jpg"
+      },
+      "subtype": "rock_dolmen_megalith",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/dolmen_megalith/CC0_dolmen_megalith_006.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/dolmen_megalith/CC0_dolmen_megalith_006.jpg"
+      },
+      "subtype": "rock_dolmen_megalith",
+      "confidence": 0.95,
       "decompositionStatus": "decomposed",
       "yolo26Status": "missing"
     }

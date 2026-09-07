@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:ship/1695146093.png",
+      "id": "primary:ship/cruise_ship/CC0_cruise_ship_001.png",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/1695146093.png"
+        "corpus": "primary",
+        "image": "ship/cruise_ship/CC0_cruise_ship_001.png"
       },
       "subtype": "ocean_cruise_ship",
       "confidence": 0.99,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/174340740201.jpg",
+      "id": "primary:ship/cruise_ship/CC0_cruise_ship_002.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/174340740201.jpg"
+        "corpus": "primary",
+        "image": "ship/cruise_ship/CC0_cruise_ship_002.jpg"
       },
       "subtype": "ocean_cruise_ship",
       "confidence": 0.99,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/668d6f418c667-870x500.webp",
+      "id": "primary:ship/cruise_ship/CC0_cruise_ship_003.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/668d6f418c667-870x500.webp"
+        "corpus": "primary",
+        "image": "ship/cruise_ship/CC0_cruise_ship_003.webp"
       },
       "subtype": "ocean_cruise_ship",
       "confidence": 0.99,
@@ -40,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/article-5ca19fe0e988a.jpg",
+      "id": "primary:ship/cruise_ship/CC0_cruise_ship_004.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/article-5ca19fe0e988a.jpg"
+        "corpus": "primary",
+        "image": "ship/cruise_ship/CC0_cruise_ship_004.jpg"
       },
       "subtype": "ocean_cruise_ship",
       "confidence": 0.99,
@@ -51,10 +51,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/Disney%20Adventure%20ship%201.jpg",
+      "id": "primary:ship/cruise_ship/CC0_cruise_ship_005.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/Disney%20Adventure%20ship%201.jpg"
+        "corpus": "primary",
+        "image": "ship/cruise_ship/CC0_cruise_ship_005.jpg"
       },
       "subtype": "ocean_cruise_ship",
       "confidence": 0.99,
@@ -62,10 +62,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp",
+      "id": "primary:ship/cruise_ship/CC0_cruise_ship_006.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp"
+        "corpus": "primary",
+        "image": "ship/cruise_ship/CC0_cruise_ship_006.webp"
       },
       "subtype": "ocean_cruise_ship",
       "confidence": 0.99,
@@ -73,10 +73,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/ttn1071_Cover0106.jpg",
+      "id": "primary:ship/cruise_ship/CC0_cruise_ship_007.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/ttn1071_Cover0106.jpg"
+        "corpus": "primary",
+        "image": "ship/cruise_ship/CC0_cruise_ship_007.jpg"
       },
       "subtype": "ocean_cruise_ship",
       "confidence": 0.99,

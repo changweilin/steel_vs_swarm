@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:ship/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg",
+      "id": "primary:ship/aircraft_carrier/CC0_aircraft_carrier_001.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg"
+        "corpus": "primary",
+        "image": "ship/aircraft_carrier/CC0_aircraft_carrier_001.jpg"
       },
       "subtype": "aircraft_carrier",
       "confidence": 0.99,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/e7642302.jpg",
+      "id": "primary:ship/aircraft_carrier/CC0_aircraft_carrier_002.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/e7642302.jpg"
+        "corpus": "primary",
+        "image": "ship/aircraft_carrier/CC0_aircraft_carrier_002.jpg"
       },
       "subtype": "aircraft_carrier",
       "confidence": 0.99,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/GettyImages-630597388-compressor.jpg",
+      "id": "primary:ship/aircraft_carrier/CC0_aircraft_carrier_003.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/GettyImages-630597388-compressor.jpg"
+        "corpus": "primary",
+        "image": "ship/aircraft_carrier/CC0_aircraft_carrier_003.jpg"
       },
       "subtype": "aircraft_carrier",
       "confidence": 0.99,
@@ -40,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
+      "id": "primary:ship/aircraft_carrier/CC0_aircraft_carrier_004.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg"
+        "corpus": "primary",
+        "image": "ship/aircraft_carrier/CC0_aircraft_carrier_004.jpg"
       },
       "subtype": "aircraft_carrier",
       "confidence": 0.99,
@@ -51,10 +51,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/圖2-超日王號.jpg",
+      "id": "primary:ship/aircraft_carrier/CC0_aircraft_carrier_005.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/圖2-超日王號.jpg"
+        "corpus": "primary",
+        "image": "ship/aircraft_carrier/CC0_aircraft_carrier_005.jpg"
       },
       "subtype": "aircraft_carrier",
       "confidence": 0.99,

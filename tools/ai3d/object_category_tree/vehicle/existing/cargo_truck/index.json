@@ -1,0 +1,483 @@
+{
+  "schemaVersion": 1,
+  "path": "vehicle/existing/cargo_truck",
+  "family": "vehicle",
+  "branch": "existing",
+  "objectType": "cargo_truck",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_001.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_002.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_003.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_004.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_005.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_006.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_006.png"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_007.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_007.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_008.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_008.png"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_009.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_009.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_010.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_010.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_011.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_011.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_012.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_012.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_013.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_013.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_014.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_014.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_015.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_015.webp"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_016.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_016.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_017.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_017.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_018.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_018.webp"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_019.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_019.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_020.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_020.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_021.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_021.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_022.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_022.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_023.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_023.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_024.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_024.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_025.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_025.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_026.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_026.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_027.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_027.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_028.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_028.png"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_029.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_029.webp"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_030.gif",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_030.gif"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_031.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_031.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_032.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_032.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_033.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_033.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_034.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_034.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_035.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_035.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_036.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_036.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_037.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_037.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_038.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_038.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_039.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_039.png"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_040.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_040.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_041.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_041.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_042.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_042.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/cargo_truck/CC0_cargo_truck_043.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/cargo_truck/CC0_cargo_truck_043.jpg"
+      },
+      "subtype": "vehicle_cargo_truck",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

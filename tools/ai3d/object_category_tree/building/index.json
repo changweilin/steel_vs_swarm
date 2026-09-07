@@ -10,32 +10,60 @@
       "members": 5
     },
     {
+      "path": "building/existing/agricultural",
+      "branch": "existing",
+      "objectType": "agricultural",
+      "resolution": null,
+      "members": 2
+    },
+    {
+      "path": "building/existing/castle_fortress",
+      "branch": "existing",
+      "objectType": "castle_fortress",
+      "resolution": null,
+      "members": 4
+    },
+    {
       "path": "building/existing/civic_administrative",
       "branch": "existing",
       "objectType": "civic_administrative",
       "resolution": null,
-      "members": 1
+      "members": 5
     },
     {
       "path": "building/existing/commercial_office",
       "branch": "existing",
       "objectType": "commercial_office",
       "resolution": null,
-      "members": 5
+      "members": 16
     },
     {
       "path": "building/existing/commercial_retail",
       "branch": "existing",
       "objectType": "commercial_retail",
       "resolution": null,
-      "members": 1
+      "members": 2
     },
     {
       "path": "building/existing/hospitality",
       "branch": "existing",
       "objectType": "hospitality",
       "resolution": null,
+      "members": 3
+    },
+    {
+      "path": "building/existing/industrial_storage",
+      "branch": "existing",
+      "objectType": "industrial_storage",
+      "resolution": null,
       "members": 2
+    },
+    {
+      "path": "building/existing/lighthouse",
+      "branch": "existing",
+      "objectType": "lighthouse",
+      "resolution": null,
+      "members": 4
     },
     {
       "path": "building/existing/mixed_use",
@@ -49,35 +77,49 @@
       "branch": "existing",
       "objectType": "observation_landmark",
       "resolution": null,
-      "members": 7
+      "members": 3
     },
     {
       "path": "building/existing/religious",
       "branch": "existing",
       "objectType": "religious",
       "resolution": null,
-      "members": 9
+      "members": 18
     },
     {
       "path": "building/existing/residential_detached",
       "branch": "existing",
       "objectType": "residential_detached",
       "resolution": null,
-      "members": 48
+      "members": 63
     },
     {
       "path": "building/existing/residential_multifamily",
       "branch": "existing",
       "objectType": "residential_multifamily",
       "resolution": null,
-      "members": 20
+      "members": 23
     },
     {
       "path": "building/existing/residential_row",
       "branch": "existing",
       "objectType": "residential_row",
       "resolution": null,
+      "members": 2
+    },
+    {
+      "path": "building/existing/transportation_terminal",
+      "branch": "existing",
+      "objectType": "transportation_terminal",
+      "resolution": null,
       "members": 1
+    },
+    {
+      "path": "building/existing/utility_service",
+      "branch": "existing",
+      "objectType": "utility_service",
+      "resolution": null,
+      "members": 3
     }
   ]
 }

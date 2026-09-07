@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "path": "building_parts/existing/roofcap",
+  "family": "building_parts",
+  "branch": "existing",
+  "objectType": "roofcap",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building_parts/roofcap/CC0_roofcap_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/roofcap/CC0_roofcap_001.jpg"
+      },
+      "subtype": "building_parts_roofcap",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/roofcap/CC0_roofcap_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/roofcap/CC0_roofcap_002.jpg"
+      },
+      "subtype": "building_parts_roofcap",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/roofcap/CC0_roofcap_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/roofcap/CC0_roofcap_003.jpg"
+      },
+      "subtype": "building_parts_roofcap",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/roofcap/CC0_roofcap_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/roofcap/CC0_roofcap_004.jpg"
+      },
+      "subtype": "building_parts_roofcap",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

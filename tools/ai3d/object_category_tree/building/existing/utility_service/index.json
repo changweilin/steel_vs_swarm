@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/utility_service",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "utility_service",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/utility_service/CC0_utility_service_001.jpeg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/utility_service/CC0_utility_service_001.jpeg"
+      },
+      "subtype": "building_utility_service",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/utility_service/CC0_utility_service_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/utility_service/CC0_utility_service_002.jpg"
+      },
+      "subtype": "building_utility_service",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/utility_service/CC0_utility_service_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/utility_service/CC0_utility_service_003.jpg"
+      },
+      "subtype": "building_utility_service",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

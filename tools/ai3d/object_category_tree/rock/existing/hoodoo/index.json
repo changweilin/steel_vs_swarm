@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/hoodoo",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "hoodoo",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/hoodoo/CC0_hoodoo_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/hoodoo/CC0_hoodoo_001.jpg"
+      },
+      "subtype": "rock_hoodoo",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/hoodoo/CC0_hoodoo_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/hoodoo/CC0_hoodoo_002.jpg"
+      },
+      "subtype": "rock_hoodoo",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

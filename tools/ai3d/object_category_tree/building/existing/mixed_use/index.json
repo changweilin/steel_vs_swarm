@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:building/images (14).jpg",
+      "id": "primary:building/mixed_use/CC0_mixed_use_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/images (14).jpg"
+        "image": "building/mixed_use/CC0_mixed_use_001.jpg"
       },
       "subtype": "街角底層商業與上層住宅大樓",
       "confidence": 0.86,

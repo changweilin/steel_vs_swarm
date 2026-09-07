@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:landmark/images.jpg",
+      "id": "primary:landmark/observation_tower/CC0_observation_tower_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "landmark/images.jpg"
+        "image": "landmark/observation_tower/CC0_observation_tower_001.jpg"
       },
       "subtype": "巴黎艾菲爾鐵塔觀景地標",
       "confidence": 0.99,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:landmark/re_kv_sp.jpg",
+      "id": "primary:landmark/observation_tower/CC0_observation_tower_002.jpg",
       "source": {
         "corpus": "primary",
-        "image": "landmark/re_kv_sp.jpg"
+        "image": "landmark/observation_tower/CC0_observation_tower_002.jpg"
       },
       "subtype": "京都塔城市觀景塔",
       "confidence": 0.99,

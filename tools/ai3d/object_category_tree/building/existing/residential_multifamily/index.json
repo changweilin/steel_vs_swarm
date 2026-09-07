@@ -7,10 +7,21 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:building/01.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/01.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_001.jpg"
+      },
+      "subtype": "雙塔高層集合住宅",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/residential_multifamily/CC0_residential_multifamily_002.jpg"
       },
       "subtype": "多層集合住宅公寓",
       "confidence": 0.95,
@@ -18,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/0b480f6369f166b3c884ddb5940ca2e8.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_003.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/0b480f6369f166b3c884ddb5940ca2e8.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_003.jpg"
       },
       "subtype": "多層集合住宅公寓",
       "confidence": 0.91,
@@ -29,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/14863_1_b.jpeg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_004.jpeg",
       "source": {
         "corpus": "primary",
-        "image": "building/14863_1_b.jpeg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_004.jpeg"
       },
       "subtype": "窄基地多層住宅樓",
       "confidence": 0.73,
@@ -40,10 +51,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/14beauty-well-ugly-slide-4QC3-master1050.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_005.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/14beauty-well-ugly-slide-4QC3-master1050.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_005.jpg"
       },
       "subtype": "低層集合住宅群",
       "confidence": 0.7,
@@ -51,10 +62,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/160991898108355807.jpg!900x.water3.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_006.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/160991898108355807.jpg!900x.water3.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_006.jpg"
       },
       "subtype": "都市中高層公寓",
       "confidence": 0.83,
@@ -62,10 +73,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/169154402859999904.jpg!900x.water3.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_007.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/169154402859999904.jpg!900x.water3.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_007.jpg"
       },
       "subtype": "高層集合住宅",
       "confidence": 0.95,
@@ -73,10 +84,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/169890929387866207.jpg!338x252.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_008.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/169890929387866207.jpg!338x252.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_008.jpg"
       },
       "subtype": "窄面高層公寓",
       "confidence": 0.9,
@@ -84,10 +95,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/171860464927014009.jpg!900x.water3.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_009.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/171860464927014009.jpg!900x.water3.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_009.jpg"
       },
       "subtype": "中高層集合住宅",
       "confidence": 0.95,
@@ -95,10 +106,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/173407398147386206.jpg!750x.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_010.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/173407398147386206.jpg!750x.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_010.jpg"
       },
       "subtype": "高層集合住宅",
       "confidence": 0.96,
@@ -106,10 +117,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/174893026464574001.jpg!900x.water3.webp",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_011.webp",
       "source": {
         "corpus": "primary",
-        "image": "building/174893026464574001.jpg!900x.water3.webp"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_011.webp"
       },
       "subtype": "中高層公寓大樓",
       "confidence": 0.96,
@@ -117,10 +128,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/175437636541282008.jpg!900x.water3.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_012.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/175437636541282008.jpg!900x.water3.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_012.jpg"
       },
       "subtype": "中高層集合住宅",
       "confidence": 0.96,
@@ -128,10 +139,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/176784033021147409.jpg!900x.water3.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_013.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/176784033021147409.jpg!900x.water3.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_013.jpg"
       },
       "subtype": "中高層公寓大樓",
       "confidence": 0.95,
@@ -139,10 +150,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/178670843535945_P35065317.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_014.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/178670843535945_P35065317.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_014.jpg"
       },
       "subtype": "都市高層集合住宅",
       "confidence": 0.96,
@@ -150,54 +161,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:building/b3e379243fd30275e809d93e81d22c8d.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_015.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/b3e379243fd30275e809d93e81d22c8d.jpg"
-      },
-      "subtype": "中層集合住宅",
-      "confidence": 0.92,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:building/柑竹時尚華廈3D建築外觀浮-02-scaled.jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "building/柑竹時尚華廈3D建築外觀浮-02-scaled.jpg"
-      },
-      "subtype": "高層公寓大樓",
-      "confidence": 0.95,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:building/欣榮文創股份有限公司-隘興段_0.jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "building/欣榮文創股份有限公司-隘興段_0.jpg"
-      },
-      "subtype": "高層集合住宅",
-      "confidence": 0.94,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "restricted:building/00365470.202403141998083052M.jpg",
-      "source": {
-        "corpus": "restricted",
-        "image": "building/00365470.202403141998083052M.jpg"
-      },
-      "subtype": "雙塔高層集合住宅",
-      "confidence": 0.97,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "restricted:building/B16A00_P_05_02.jpg",
-      "source": {
-        "corpus": "restricted",
-        "image": "building/B16A00_P_05_02.jpg"
+        "image": "building/residential_multifamily/CC0_residential_multifamily_015.jpg"
       },
       "subtype": "雙塔高層集合住宅",
       "confidence": 0.96,
@@ -205,10 +172,54 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:building/d5394391.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_016.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/d5394391.jpg"
+        "corpus": "primary",
+        "image": "building/residential_multifamily/CC0_residential_multifamily_016.jpg"
+      },
+      "subtype": "中層集合住宅",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_017.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/residential_multifamily/CC0_residential_multifamily_017.jpg"
+      },
+      "subtype": "building_residential_multifamily",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_018.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/residential_multifamily/CC0_residential_multifamily_018.jpg"
+      },
+      "subtype": "building_residential_multifamily",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_019.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/residential_multifamily/CC0_residential_multifamily_019.jpg"
+      },
+      "subtype": "building_residential_multifamily",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_020.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/residential_multifamily/CC0_residential_multifamily_020.jpg"
       },
       "subtype": "雙塔高層集合住宅",
       "confidence": 0.97,
@@ -216,10 +227,32 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:building/FB_IMG_1786334896262.jpg",
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_021.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/FB_IMG_1786334896262.jpg"
+        "corpus": "primary",
+        "image": "building/residential_multifamily/CC0_residential_multifamily_021.jpg"
+      },
+      "subtype": "高層集合住宅",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_022.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/residential_multifamily/CC0_residential_multifamily_022.jpg"
+      },
+      "subtype": "高層公寓大樓",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/residential_multifamily/CC0_residential_multifamily_023.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/residential_multifamily/CC0_residential_multifamily_023.jpg"
       },
       "subtype": "高層集合住宅",
       "confidence": 0.94,

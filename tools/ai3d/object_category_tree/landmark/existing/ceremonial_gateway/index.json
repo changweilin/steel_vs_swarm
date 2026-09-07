@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:landmark/Arc_de_Triomf_Barcelona.webp",
+      "id": "primary:landmark/ceremonial_gateway/CC0_ceremonial_gateway_001.webp",
       "source": {
         "corpus": "primary",
-        "image": "landmark/Arc_de_Triomf_Barcelona.webp"
+        "image": "landmark/ceremonial_gateway/CC0_ceremonial_gateway_001.webp"
       },
       "subtype": "巴塞隆納展覽儀式凱旋門",
       "confidence": 0.99,

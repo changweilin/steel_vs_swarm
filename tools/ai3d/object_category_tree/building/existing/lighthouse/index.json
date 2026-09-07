@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/lighthouse",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "lighthouse",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/lighthouse/CC0_lighthouse_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/lighthouse/CC0_lighthouse_001.jpg"
+      },
+      "subtype": "building_lighthouse",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/lighthouse/CC0_lighthouse_002.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/lighthouse/CC0_lighthouse_002.png"
+      },
+      "subtype": "building_lighthouse",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/lighthouse/CC0_lighthouse_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/lighthouse/CC0_lighthouse_003.jpg"
+      },
+      "subtype": "building_lighthouse",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/lighthouse/CC0_lighthouse_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/lighthouse/CC0_lighthouse_004.jpg"
+      },
+      "subtype": "building_lighthouse",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

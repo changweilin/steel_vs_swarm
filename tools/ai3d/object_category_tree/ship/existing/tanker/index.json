@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:ship/_127290139_04alamy-pwtk4p.png",
+      "id": "primary:ship/tanker/CC0_tanker_001.png",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/_127290139_04alamy-pwtk4p.png"
+        "corpus": "primary",
+        "image": "ship/tanker/CC0_tanker_001.png"
       },
       "subtype": "lng_liquefied_natural_gas_carrier",
       "confidence": 0.98,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/20250401005245.jpg",
+      "id": "primary:ship/tanker/CC0_tanker_002.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/20250401005245.jpg"
+        "corpus": "primary",
+        "image": "ship/tanker/CC0_tanker_002.jpg"
       },
       "subtype": "lng_liquefied_natural_gas_carrier",
       "confidence": 0.98,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/762bcd7026aa844c83ed2b0f5454b162.jpg",
+      "id": "primary:ship/tanker/CC0_tanker_003.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/762bcd7026aa844c83ed2b0f5454b162.jpg"
+        "corpus": "primary",
+        "image": "ship/tanker/CC0_tanker_003.jpg"
       },
       "subtype": "lng_liquefied_natural_gas_carrier",
       "confidence": 0.98,
@@ -40,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/Methanier_aspher_LNGRIVERS.jpg",
+      "id": "primary:ship/tanker/CC0_tanker_004.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/Methanier_aspher_LNGRIVERS.jpg"
+        "corpus": "primary",
+        "image": "ship/tanker/CC0_tanker_004.jpg"
       },
       "subtype": "lng_liquefied_natural_gas_carrier",
       "confidence": 0.98,

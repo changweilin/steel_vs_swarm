@@ -8,10 +8,10 @@
   "definitionSource": "evidence gate",
   "members": [
     {
-      "id": "restricted:ship/LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方.webp",
+      "id": "primary:ship/unresolved/CC0_unresolved_001.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方.webp"
+        "corpus": "primary",
+        "image": "ship/unresolved/CC0_unresolved_001.webp"
       },
       "subtype": "undecodable_image_file",
       "confidence": 0.05,

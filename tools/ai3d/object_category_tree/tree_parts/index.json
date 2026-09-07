@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "family": "tree_parts",
+  "categories": [
+    {
+      "path": "tree_parts/existing/buttress",
+      "branch": "existing",
+      "objectType": "buttress",
+      "resolution": null,
+      "members": 3
+    }
+  ]
+}

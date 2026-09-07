@@ -7,87 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:tree/cute-cartoon-tree-grass-game-art-element_88653-419.avif",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "tree/cute-cartoon-tree-grass-game-art-element_88653-419.avif"
-      },
-      "subtype": "stylized_broadleaf_tree",
-      "confidence": 0.68,
-      "decompositionStatus": "needs_decomposition",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/images (10).jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/images (10).jpg"
-      },
-      "subtype": "stylized_spreading_broadleaf",
-      "confidence": 0.9,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/images (11).jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/images (11).jpg"
-      },
-      "subtype": "stylized_open_crown_broadleaf",
-      "confidence": 0.89,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/images (12).jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/images (12).jpg"
-      },
-      "subtype": "stylized_flat_crown_broadleaf",
-      "confidence": 0.86,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/images (13).jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/images (13).jpg"
-      },
-      "subtype": "stylized_twisted_broadleaf",
-      "confidence": 0.83,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/images (14).jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/images (14).jpg"
-      },
-      "subtype": "compact_round_broadleaf",
-      "confidence": 0.82,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/images (15).jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/images (15).jpg"
-      },
-      "subtype": "twisted_trunk_broadleaf",
-      "confidence": 0.8,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "restricted:tree/092313_274u9V4y.jpg",
-      "source": {
-        "corpus": "restricted",
-        "image": "tree/092313_274u9V4y.jpg"
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_001.jpg"
       },
       "subtype": "umbrella_crown_broadleaf",
       "confidence": 0.9,
@@ -95,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/15dc1b1d19bccbbf.webp",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_002.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/15dc1b1d19bccbbf.webp"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_002.webp"
       },
       "subtype": "aerial_root_banyan",
       "confidence": 0.9,
@@ -106,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/20210316155158__33.jpg",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_003.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/20210316155158__33.jpg"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_003.jpg"
       },
       "subtype": "shrine_camphor_tree",
       "confidence": 0.87,
@@ -117,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/3f0fcc8d74ce8fcc.webp",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_004.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/3f0fcc8d74ce8fcc.webp"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_004.webp"
       },
       "subtype": "aerial_root_broadleaf",
       "confidence": 0.86,
@@ -128,10 +51,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/495849468.jpg",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_005.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/495849468.jpg"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_005.jpg"
       },
       "subtype": "park_round_crown_broadleaf",
       "confidence": 0.89,
@@ -139,10 +62,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/7d535472ae45d3eb.webp",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_006.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/7d535472ae45d3eb.webp"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_006.webp"
       },
       "subtype": "dense_round_broadleaf",
       "confidence": 0.84,
@@ -150,10 +73,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/800_eb53c296eb6fc1ac757c290a1f6444b8.jpg",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_007.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/800_eb53c296eb6fc1ac757c290a1f6444b8.jpg"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_007.jpg"
       },
       "subtype": "isolated_field_broadleaf",
       "confidence": 0.66,
@@ -161,10 +84,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/abc3c15b66b89dff.webp",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_008.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/abc3c15b66b89dff.webp"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_008.webp"
       },
       "subtype": "stylized_round_broadleaf",
       "confidence": 0.8,
@@ -172,10 +95,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/ADEY1909 (1).jpg",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_009.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/ADEY1909 (1).jpg"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_009.jpg"
       },
       "subtype": "landscape_round_broadleaf",
       "confidence": 0.78,
@@ -183,10 +106,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/ADEY1909.jpg",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_010.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/ADEY1909.jpg"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_010.jpg"
       },
       "subtype": "landscape_round_broadleaf",
       "confidence": 0.78,
@@ -194,10 +117,318 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/d0cec1f4425528fa.webp",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_011.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/d0cec1f4425528fa.webp"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_011.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_012.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_012.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_013.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_013.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_014.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_014.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_015.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_015.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_016.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_016.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_017.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_017.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_018.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_018.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_019.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_019.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_020.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_020.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_021.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_021.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_022.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_022.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_023.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_023.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_024.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_024.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_025.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_025.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_026.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_026.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_027.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_027.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_028.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_028.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_029.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_029.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_030.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_030.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_031.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_031.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_032.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_032.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_033.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_033.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_034.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_034.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_035.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_035.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_036.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_036.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_037.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_037.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_038.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_038.avif"
+      },
+      "subtype": "stylized_broadleaf_tree",
+      "confidence": 0.68,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_039.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_039.webp"
       },
       "subtype": "stylized_open_crown_broadleaf",
       "confidence": 0.82,
@@ -205,10 +436,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/ddf148d60683c553 (1).webp",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_040.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/ddf148d60683c553 (1).webp"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_040.webp"
       },
       "subtype": "generic_round_broadleaf",
       "confidence": 0.77,
@@ -216,10 +447,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/ddf148d60683c553.webp",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_041.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/ddf148d60683c553.webp"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_041.webp"
       },
       "subtype": "generic_round_broadleaf",
       "confidence": 0.77,
@@ -227,10 +458,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/FB_IMG_1786332532197 (2).jpg",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_042.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/FB_IMG_1786332532197 (2).jpg"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_042.jpg"
       },
       "subtype": "tall_sparse_broadleaf",
       "confidence": 0.71,
@@ -238,14 +469,146 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/getImage-2-4.jpg",
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_043.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/getImage-2-4.jpg"
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_043.jpg"
       },
       "subtype": "snowy_flowering_broadleaf",
       "confidence": 0.88,
       "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_044.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_044.jpg"
+      },
+      "subtype": "stylized_spreading_broadleaf",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_045.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_045.jpg"
+      },
+      "subtype": "stylized_open_crown_broadleaf",
+      "confidence": 0.89,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_046.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_046.jpg"
+      },
+      "subtype": "stylized_flat_crown_broadleaf",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_047.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_047.jpg"
+      },
+      "subtype": "stylized_twisted_broadleaf",
+      "confidence": 0.83,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_048.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_048.jpg"
+      },
+      "subtype": "compact_round_broadleaf",
+      "confidence": 0.82,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_049.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_049.jpg"
+      },
+      "subtype": "twisted_trunk_broadleaf",
+      "confidence": 0.8,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_050.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_050.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_051.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_051.png"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_052.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_052.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_053.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_053.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_054.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_054.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/broadleaf_tree/CC0_broadleaf_tree_055.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/broadleaf_tree/CC0_broadleaf_tree_055.jpg"
+      },
+      "subtype": "tree_broadleaf_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
       "yolo26Status": "missing"
     }
   ]

@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:rock/132 images.jpg",
+      "id": "primary:rock/tor/CC0_tor_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/132 images.jpg"
+        "image": "rock/tor/CC0_tor_001.jpg"
       },
       "subtype": "stacked_balanced_tor",
       "confidence": 0.84,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/600_0e22036ae47633cc17a7c569e53cc66f.jpg",
+      "id": "primary:rock/tor/CC0_tor_002.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/600_0e22036ae47633cc17a7c569e53cc66f.jpg"
+        "image": "rock/tor/CC0_tor_002.jpg"
       },
       "subtype": "forest_pinnacle_tor",
       "confidence": 0.8,
@@ -29,12 +29,100 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/images 132.jpg",
+      "id": "primary:rock/tor/CC0_tor_003.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/images 132.jpg"
+        "image": "rock/tor/CC0_tor_003.jpg"
       },
       "subtype": "balanced_sandstone_tor",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/tor/CC0_tor_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/tor/CC0_tor_004.jpg"
+      },
+      "subtype": "rock_tor",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/tor/CC0_tor_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/tor/CC0_tor_005.jpg"
+      },
+      "subtype": "rock_tor",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/tor/CC0_tor_006.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/tor/CC0_tor_006.jpg"
+      },
+      "subtype": "rock_tor",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/tor/CC0_tor_007.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/tor/CC0_tor_007.jpg"
+      },
+      "subtype": "rock_tor",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/tor/CC0_tor_008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/tor/CC0_tor_008.jpg"
+      },
+      "subtype": "rock_tor",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/tor/CC0_tor_009.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/tor/CC0_tor_009.jpg"
+      },
+      "subtype": "rock_tor",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/tor/CC0_tor_010.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/tor/CC0_tor_010.jpg"
+      },
+      "subtype": "rock_tor",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/tor/CC0_tor_011.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/tor/CC0_tor_011.jpg"
+      },
+      "subtype": "rock_tor",
       "confidence": 0.95,
       "decompositionStatus": "decomposed",
       "yolo26Status": "missing"

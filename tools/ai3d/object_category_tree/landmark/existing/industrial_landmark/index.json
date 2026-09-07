@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "path": "landmark/existing/industrial_landmark",
+  "family": "landmark",
+  "branch": "existing",
+  "objectType": "industrial_landmark",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:landmark/industrial_landmark/CC0_industrial_landmark_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/industrial_landmark/CC0_industrial_landmark_001.jpg"
+      },
+      "subtype": "landmark_industrial_landmark",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/industrial_landmark/CC0_industrial_landmark_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/industrial_landmark/CC0_industrial_landmark_002.jpg"
+      },
+      "subtype": "landmark_industrial_landmark",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/industrial_landmark/CC0_industrial_landmark_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/industrial_landmark/CC0_industrial_landmark_003.jpg"
+      },
+      "subtype": "landmark_industrial_landmark",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

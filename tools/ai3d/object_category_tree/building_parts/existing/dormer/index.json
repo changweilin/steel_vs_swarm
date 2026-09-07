@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "building_parts/existing/dormer",
+  "family": "building_parts",
+  "branch": "existing",
+  "objectType": "dormer",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building_parts/dormer/CC0_dormer_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/dormer/CC0_dormer_001.jpg"
+      },
+      "subtype": "building_parts_dormer",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/dormer/CC0_dormer_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/dormer/CC0_dormer_002.jpg"
+      },
+      "subtype": "building_parts_dormer",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

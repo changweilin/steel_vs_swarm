@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "path": "tree_parts/existing/buttress",
+  "family": "tree_parts",
+  "branch": "existing",
+  "objectType": "buttress",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:tree_parts/buttress/CC0_buttress_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree_parts/buttress/CC0_buttress_001.jpg"
+      },
+      "subtype": "tree_parts_buttress",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree_parts/buttress/CC0_buttress_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree_parts/buttress/CC0_buttress_002.jpg"
+      },
+      "subtype": "tree_parts_buttress",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree_parts/buttress/CC0_buttress_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree_parts/buttress/CC0_buttress_003.jpg"
+      },
+      "subtype": "tree_parts_buttress",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

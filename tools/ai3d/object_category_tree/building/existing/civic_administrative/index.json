@@ -7,10 +7,54 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:building/state-capitol.jpg",
+      "id": "primary:building/civic_administrative/CC0_civic_administrative_001.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/state-capitol.jpg"
+        "corpus": "primary",
+        "image": "building/civic_administrative/CC0_civic_administrative_001.jpg"
+      },
+      "subtype": "building_civic_administrative",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/civic_administrative/CC0_civic_administrative_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/civic_administrative/CC0_civic_administrative_002.jpg"
+      },
+      "subtype": "building_civic_administrative",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/civic_administrative/CC0_civic_administrative_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/civic_administrative/CC0_civic_administrative_003.jpg"
+      },
+      "subtype": "building_civic_administrative",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/civic_administrative/CC0_civic_administrative_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/civic_administrative/CC0_civic_administrative_004.jpg"
+      },
+      "subtype": "building_civic_administrative",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/civic_administrative/CC0_civic_administrative_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/civic_administrative/CC0_civic_administrative_005.jpg"
       },
       "subtype": "州議會大廈行政建築",
       "confidence": 0.99,

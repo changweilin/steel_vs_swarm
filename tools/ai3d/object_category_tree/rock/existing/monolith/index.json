@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:rock/1586238562.jpg",
+      "id": "primary:rock/monolith/CC0_monolith_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/1586238562.jpg"
+        "image": "rock/monolith/CC0_monolith_001.jpg"
       },
       "subtype": "coastal_volcanic_plug",
       "confidence": 0.86,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/69353_01.jpg",
+      "id": "primary:rock/monolith/CC0_monolith_002.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/69353_01.jpg"
+        "image": "rock/monolith/CC0_monolith_002.jpg"
       },
       "subtype": "inselberg_sandstone",
       "confidence": 0.95,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/Ballinagree.jpg",
+      "id": "primary:rock/monolith/CC0_monolith_003.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/Ballinagree.jpg"
+        "image": "rock/monolith/CC0_monolith_003.jpg"
       },
       "subtype": "standing_stone_origin_uncertain",
       "confidence": 0.57,
@@ -40,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/grey-rock-standing-tall-green-grass-nature-stone-background_632498-55922.avif",
+      "id": "primary:rock/monolith/CC0_monolith_004.avif",
       "source": {
         "corpus": "primary",
-        "image": "rock/grey-rock-standing-tall-green-grass-nature-stone-background_632498-55922.avif"
+        "image": "rock/monolith/CC0_monolith_004.avif"
       },
       "subtype": "upright_standing_boulder",
       "confidence": 0.66,
@@ -51,10 +51,65 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/php1uNn7p.jpg",
+      "id": "primary:rock/monolith/CC0_monolith_005.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/php1uNn7p.jpg"
+        "image": "rock/monolith/CC0_monolith_005.jpg"
+      },
+      "subtype": "rock_monolith",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/monolith/CC0_monolith_006.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/monolith/CC0_monolith_006.jpg"
+      },
+      "subtype": "rock_monolith",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/monolith/CC0_monolith_007.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/monolith/CC0_monolith_007.jpg"
+      },
+      "subtype": "rock_monolith",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/monolith/CC0_monolith_008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/monolith/CC0_monolith_008.jpg"
+      },
+      "subtype": "rock_monolith",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/monolith/CC0_monolith_009.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/monolith/CC0_monolith_009.jpg"
+      },
+      "subtype": "rock_monolith",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/monolith/CC0_monolith_010.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/monolith/CC0_monolith_010.jpg"
       },
       "subtype": "jointed_sandstone_monolith",
       "confidence": 0.85,
@@ -62,10 +117,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/pic_9576_12.jpg",
+      "id": "primary:rock/monolith/CC0_monolith_011.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/pic_9576_12.jpg"
+        "image": "rock/monolith/CC0_monolith_011.jpg"
       },
       "subtype": "standing_stone_group_context",
       "confidence": 0.67,

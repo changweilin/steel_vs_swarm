@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "building_parts/existing/rooftank",
+  "family": "building_parts",
+  "branch": "existing",
+  "objectType": "rooftank",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building_parts/rooftank/CC0_rooftank_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/rooftank/CC0_rooftank_001.jpg"
+      },
+      "subtype": "building_parts_rooftank",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/rooftank/CC0_rooftank_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/rooftank/CC0_rooftank_002.jpg"
+      },
+      "subtype": "building_parts_rooftank",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

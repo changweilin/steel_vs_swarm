@@ -7,65 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:tree/images (5).jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "tree/images (5).jpg"
-      },
-      "subtype": "windswept_juniper",
-      "confidence": 0.88,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/images (6).jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/images (6).jpg"
-      },
-      "subtype": "windswept_juniper",
-      "confidence": 0.88,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/images (8).jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/images (8).jpg"
-      },
-      "subtype": "landscape_conifer_with_rock_context",
-      "confidence": 0.76,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/images (9).jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/images (9).jpg"
-      },
-      "subtype": "rock_rooted_conifer_cluster",
-      "confidence": 0.78,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:tree/pine-tree-vector-white-background_28952-136.avif",
-      "source": {
-        "corpus": "primary",
-        "image": "tree/pine-tree-vector-white-background_28952-136.avif"
-      },
-      "subtype": "stylized_windswept_pine",
-      "confidence": 0.7,
-      "decompositionStatus": "needs_decomposition",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "restricted:tree/1513x4724_wmkn_328537037215_202606050063000000.jpg",
-      "source": {
-        "corpus": "restricted",
-        "image": "tree/1513x4724_wmkn_328537037215_202606050063000000.jpg"
+        "image": "tree/conifer_tree/CC0_conifer_tree_001.jpg"
       },
       "subtype": "misty_tall_conifer",
       "confidence": 0.74,
@@ -73,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/5D11CCA4-7909-424.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_002.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/5D11CCA4-7909-424.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_002.jpg"
       },
       "subtype": "misty_sparse_conifer",
       "confidence": 0.72,
@@ -84,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1).jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_003.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1).jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_003.jpg"
       },
       "subtype": "windswept_evergreen_tree",
       "confidence": 0.64,
@@ -95,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_004.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_004.jpg"
       },
       "subtype": "windswept_evergreen_tree",
       "confidence": 0.64,
@@ -106,10 +51,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_005.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_005.jpg"
       },
       "subtype": "deodar_cedar",
       "confidence": 0.95,
@@ -117,10 +62,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_006.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_006.jpg"
       },
       "subtype": "deodar_cedar",
       "confidence": 0.95,
@@ -128,10 +73,54 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_007.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_007.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_008.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_009.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_009.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_010.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_010.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_011.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_011.jpg"
       },
       "subtype": "stylized_deodar_cedar",
       "confidence": 0.89,
@@ -139,10 +128,87 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_012.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_012.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_013.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_013.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_014.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_014.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_015.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_015.jpg"
+      },
+      "subtype": "windswept_juniper",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_016.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_016.jpg"
+      },
+      "subtype": "windswept_juniper",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_017.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_017.jpg"
+      },
+      "subtype": "landscape_conifer_with_rock_context",
+      "confidence": 0.76,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_018.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_018.jpg"
+      },
+      "subtype": "rock_rooted_conifer_cluster",
+      "confidence": 0.78,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_019.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_019.jpg"
       },
       "subtype": "stylized_deodar_cedar",
       "confidence": 0.9,
@@ -150,10 +216,21 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_020.avif",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_020.avif"
+      },
+      "subtype": "stylized_windswept_pine",
+      "confidence": 0.7,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_021.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_021.jpg"
       },
       "subtype": "alaska_cedar",
       "confidence": 0.93,
@@ -161,10 +238,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_022.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_022.jpg"
       },
       "subtype": "stylized_pine",
       "confidence": 0.86,
@@ -172,10 +249,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/pngtree-coniferous-tree-png-image_6230847.png",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_023.png",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/pngtree-coniferous-tree-png-image_6230847.png"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_023.png"
       },
       "subtype": "stylized_conifer",
       "confidence": 0.84,
@@ -183,10 +260,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677.png",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_024.png",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677.png"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_024.png"
       },
       "subtype": "thick_branched_conifer",
       "confidence": 0.87,
@@ -194,10 +271,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957.png",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_025.png",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957.png"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_025.png"
       },
       "subtype": "slender_conifer",
       "confidence": 0.88,
@@ -205,10 +282,65 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_026.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_026.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_027.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_027.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_028.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_028.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_029.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_029.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_030.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_030.jpg"
+      },
+      "subtype": "tree_conifer_tree",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_031.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_031.jpg"
       },
       "subtype": "stylized_conifer",
       "confidence": 0.82,
@@ -216,10 +348,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/山上的孤松樹.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_032.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/山上的孤松樹.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_032.jpg"
       },
       "subtype": "solitary_hill_pine",
       "confidence": 0.83,
@@ -227,10 +359,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/臺灣杉照片提供／陳建帆.jpg",
+      "id": "primary:tree/conifer_tree/CC0_conifer_tree_033.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/臺灣杉照片提供／陳建帆.jpg"
+        "corpus": "primary",
+        "image": "tree/conifer_tree/CC0_conifer_tree_033.jpg"
       },
       "subtype": "taiwan_cryptomeria",
       "confidence": 0.9,

@@ -19,18 +19,14 @@ import {
 export const CORPORA = Object.freeze({
   primary: Object.freeze({
     id: 'primary',
-    photos: 'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos',
-  }),
-  restricted: Object.freeze({
-    id: 'restricted',
-    photos: 'C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos',
+    photos: path.join(ROOT, 'tools', 'ai3d', 'photos'),
   }),
 });
 
 export const CLASSIFICATION_DIR = path.join(ROOT, 'tools', 'ai3d', 'object_classifications');
 export const EXTENSIONS_PATH = path.join(ROOT, 'tools', 'ai3d', 'object_category_extensions.json');
 export const MANIFEST_PATH = path.join(ROOT, 'tools', 'ai3d', 'object_classification_manifest.json');
-export const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
+export const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif']);
 const DEFAULT_SUBPART = Object.freeze({ building: 'mass', ship: 'hull', tree: 'canopy' });
 const textCmp = (a, b) => String(a).localeCompare(String(b), 'en');
 const posix = (value) => String(value).replace(/\\/g, '/');
@@ -50,16 +46,35 @@ function atomicJson(file, value) {
 function directImages(corpus, family) {
   const dir = path.join(corpus.photos, family);
   if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && IMAGE_EXTS.has(path.extname(entry.name).toLowerCase()))
-    .map((entry) => ({
-      id: `${corpus.id}:${family}/${entry.name}`,
-      corpus: corpus.id,
-      family,
-      image: `${family}/${entry.name}`,
-      fullPath: path.join(dir, entry.name),
-    }))
-    .sort((a, b) => textCmp(a.image, b.image));
+  const out = [];
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (ent.isDirectory()) {
+      if (ent.name === '.sheet') continue;
+      const subDir = path.join(dir, ent.name);
+      for (const subEnt of fs.readdirSync(subDir, { withFileTypes: true })) {
+        if (subEnt.isFile() && IMAGE_EXTS.has(path.extname(subEnt.name).toLowerCase())) {
+          const rel = `${family}/${ent.name}/${subEnt.name}`;
+          out.push({
+            id: `${corpus.id}:${rel}`,
+            corpus: corpus.id,
+            family,
+            image: rel,
+            fullPath: path.join(subDir, subEnt.name),
+          });
+        }
+      }
+    } else if (ent.isFile() && IMAGE_EXTS.has(path.extname(ent.name).toLowerCase())) {
+      const rel = `${family}/${ent.name}`;
+      out.push({
+        id: `${corpus.id}:${rel}`,
+        corpus: corpus.id,
+        family,
+        image: rel,
+        fullPath: path.join(dir, ent.name),
+      });
+    }
+  }
+  return out.sort((a, b) => textCmp(a.image, b.image));
 }
 
 function classificationDocs() {

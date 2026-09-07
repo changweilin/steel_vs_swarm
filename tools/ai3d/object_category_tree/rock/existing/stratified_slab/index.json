@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:rock/61bc69c388977.webp",
+      "id": "primary:rock/stratified_slab/CC0_stratified_slab_001.webp",
       "source": {
         "corpus": "primary",
-        "image": "rock/61bc69c388977.webp"
+        "image": "rock/stratified_slab/CC0_stratified_slab_001.webp"
       },
       "subtype": "bedded_coastal_sea_stack",
       "confidence": 0.97,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/61bc69d997822.webp",
+      "id": "primary:rock/stratified_slab/CC0_stratified_slab_002.webp",
       "source": {
         "corpus": "primary",
-        "image": "rock/61bc69d997822.webp"
+        "image": "rock/stratified_slab/CC0_stratified_slab_002.webp"
       },
       "subtype": "bedded_coastal_sea_stack",
       "confidence": 0.98,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/714USfuK4oL._AC_UF894,1000_QL80_.jpg",
+      "id": "primary:rock/stratified_slab/CC0_stratified_slab_003.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/714USfuK4oL._AC_UF894,1000_QL80_.jpg"
+        "image": "rock/stratified_slab/CC0_stratified_slab_003.jpg"
       },
       "subtype": "weathered_bedded_slab",
       "confidence": 0.83,
@@ -40,14 +40,58 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/71W8rWv9TvL._AC_UF894,1000_QL80_.jpg",
+      "id": "primary:rock/stratified_slab/CC0_stratified_slab_004.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/71W8rWv9TvL._AC_UF894,1000_QL80_.jpg"
+        "image": "rock/stratified_slab/CC0_stratified_slab_004.jpg"
       },
       "subtype": "laminated_slab_cluster",
       "confidence": 0.91,
       "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/stratified_slab/CC0_stratified_slab_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/stratified_slab/CC0_stratified_slab_005.jpg"
+      },
+      "subtype": "rock_stratified_slab",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/stratified_slab/CC0_stratified_slab_006.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/stratified_slab/CC0_stratified_slab_006.jpg"
+      },
+      "subtype": "rock_stratified_slab",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/stratified_slab/CC0_stratified_slab_007.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/stratified_slab/CC0_stratified_slab_007.jpg"
+      },
+      "subtype": "rock_stratified_slab",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/stratified_slab/CC0_stratified_slab_008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/stratified_slab/CC0_stratified_slab_008.jpg"
+      },
+      "subtype": "rock_stratified_slab",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
       "yolo26Status": "missing"
     }
   ]

@@ -3,39 +3,53 @@
   "family": "tree",
   "categories": [
     {
+      "path": "tree/existing/bonsai",
+      "branch": "existing",
+      "objectType": "bonsai",
+      "resolution": null,
+      "members": 9
+    },
+    {
       "path": "tree/existing/broadleaf_tree",
       "branch": "existing",
       "objectType": "broadleaf_tree",
       "resolution": null,
-      "members": 22
+      "members": 55
     },
     {
       "path": "tree/existing/buttressed_giant",
       "branch": "existing",
       "objectType": "buttressed_giant",
       "resolution": null,
-      "members": 15
+      "members": 9
     },
     {
       "path": "tree/existing/conifer_tree",
       "branch": "existing",
       "objectType": "conifer_tree",
       "resolution": null,
-      "members": 21
+      "members": 33
+    },
+    {
+      "path": "tree/existing/pachycaul_tree",
+      "branch": "existing",
+      "objectType": "pachycaul_tree",
+      "resolution": null,
+      "members": 24
     },
     {
       "path": "tree/existing/sculptural_tree",
       "branch": "existing",
       "objectType": "sculptural_tree",
       "resolution": null,
-      "members": 20
+      "members": 33
     },
     {
       "path": "tree/existing/shrub",
       "branch": "existing",
       "objectType": "shrub",
       "resolution": null,
-      "members": 5
+      "members": 6
     },
     {
       "path": "tree/existing/snag",

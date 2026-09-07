@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "path": "vehicle/existing/bicycle",
+  "family": "vehicle",
+  "branch": "existing",
+  "objectType": "bicycle",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_001.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_002.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_003.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_003.webp"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_004.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_005.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_006.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_006.webp"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_007.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_007.webp"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_008.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_009.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_009.webp"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_010.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_010.webp"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_011.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_011.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_012.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_012.webp"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_013.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_013.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_014.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_014.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_015.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_015.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_016.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_016.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_017.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_017.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_018.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_018.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_019.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_019.png"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/bicycle/CC0_bicycle_020.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/bicycle/CC0_bicycle_020.jpg"
+      },
+      "subtype": "vehicle_bicycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

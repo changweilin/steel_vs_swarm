@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:ship/20240301000865.png",
+      "id": "primary:ship/submarine/CC0_submarine_001.png",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/20240301000865.png"
+        "corpus": "primary",
+        "image": "ship/submarine/CC0_submarine_001.png"
       },
       "subtype": "military_submarine",
       "confidence": 0.98,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/202512251310033872.webp",
+      "id": "primary:ship/submarine/CC0_submarine_002.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/202512251310033872.webp"
+        "corpus": "primary",
+        "image": "ship/submarine/CC0_submarine_002.webp"
       },
       "subtype": "military_submarine",
       "confidence": 0.98,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/mobile01-d0f6425557ae4a5310b111f39cf1a5ad.jpg",
+      "id": "primary:ship/submarine/CC0_submarine_003.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/mobile01-d0f6425557ae4a5310b111f39cf1a5ad.jpg"
+        "corpus": "primary",
+        "image": "ship/submarine/CC0_submarine_003.jpg"
       },
       "subtype": "composite_submarine_infographic",
       "confidence": 0.93,
@@ -40,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/Virginia_class_submarine.jpg",
+      "id": "primary:ship/submarine/CC0_submarine_004.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/Virginia_class_submarine.jpg"
+        "corpus": "primary",
+        "image": "ship/submarine/CC0_submarine_004.jpg"
       },
       "subtype": "military_submarine",
       "confidence": 0.98,

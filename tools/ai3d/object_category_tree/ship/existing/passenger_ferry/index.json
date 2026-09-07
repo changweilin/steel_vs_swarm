@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:ship/20090411-TurboJET_Barca.jpg",
+      "id": "primary:ship/passenger_ferry/CC0_passenger_ferry_001.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/20090411-TurboJET_Barca.jpg"
+        "corpus": "primary",
+        "image": "ship/passenger_ferry/CC0_passenger_ferry_001.jpg"
       },
       "subtype": "passenger_excursion_or_ferry",
       "confidence": 0.92,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/k23.jpg",
+      "id": "primary:ship/passenger_ferry/CC0_passenger_ferry_002.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/k23.jpg"
+        "corpus": "primary",
+        "image": "ship/passenger_ferry/CC0_passenger_ferry_002.jpg"
       },
       "subtype": "passenger_excursion_or_ferry",
       "confidence": 0.92,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/nzdnc7pepb9ltbpslhtv.jpg",
+      "id": "primary:ship/passenger_ferry/CC0_passenger_ferry_003.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/nzdnc7pepb9ltbpslhtv.jpg"
+        "corpus": "primary",
+        "image": "ship/passenger_ferry/CC0_passenger_ferry_003.jpg"
       },
       "subtype": "passenger_excursion_or_ferry",
       "confidence": 0.92,
@@ -40,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/s11_1667405441519.jpg",
+      "id": "primary:ship/passenger_ferry/CC0_passenger_ferry_004.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/s11_1667405441519.jpg"
+        "corpus": "primary",
+        "image": "ship/passenger_ferry/CC0_passenger_ferry_004.jpg"
       },
       "subtype": "passenger_excursion_or_ferry",
       "confidence": 0.92,
@@ -51,10 +51,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:ship/tkldbkxi3ftl5wewz3u2.jpg",
+      "id": "primary:ship/passenger_ferry/CC0_passenger_ferry_005.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/tkldbkxi3ftl5wewz3u2.jpg"
+        "corpus": "primary",
+        "image": "ship/passenger_ferry/CC0_passenger_ferry_005.jpg"
       },
       "subtype": "passenger_excursion_or_ferry",
       "confidence": 0.92,

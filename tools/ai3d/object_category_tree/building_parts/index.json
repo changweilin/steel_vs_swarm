@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "family": "building_parts",
+  "categories": [
+    {
+      "path": "building_parts/existing/acunit",
+      "branch": "existing",
+      "objectType": "acunit",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "building_parts/existing/balcony",
+      "branch": "existing",
+      "objectType": "balcony",
+      "resolution": null,
+      "members": 2
+    },
+    {
+      "path": "building_parts/existing/chimney",
+      "branch": "existing",
+      "objectType": "chimney",
+      "resolution": null,
+      "members": 5
+    },
+    {
+      "path": "building_parts/existing/dormer",
+      "branch": "existing",
+      "objectType": "dormer",
+      "resolution": null,
+      "members": 2
+    },
+    {
+      "path": "building_parts/existing/roofcap",
+      "branch": "existing",
+      "objectType": "roofcap",
+      "resolution": null,
+      "members": 4
+    },
+    {
+      "path": "building_parts/existing/rooftank",
+      "branch": "existing",
+      "objectType": "rooftank",
+      "resolution": null,
+      "members": 2
+    }
+  ]
+}

@@ -8,10 +8,10 @@
   "definitionSource": "evidence gate",
   "members": [
     {
-      "id": "primary:rock/images rock (1).jpg",
+      "id": "primary:rock/unresolved/CC0_unresolved_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/images rock (1).jpg"
+        "image": "rock/unresolved/CC0_unresolved_001.jpg"
       },
       "subtype": "fog_obscured_rock_pinnacle",
       "confidence": 0.42,

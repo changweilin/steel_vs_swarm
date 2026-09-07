@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:tree/FB_IMG_1786818411804.jpg",
+      "id": "primary:tree/snag/CC0_snag_001.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/FB_IMG_1786818411804.jpg"
+        "corpus": "primary",
+        "image": "tree/snag/CC0_snag_001.jpg"
       },
       "subtype": "weathered_twisted_snag",
       "confidence": 0.72,

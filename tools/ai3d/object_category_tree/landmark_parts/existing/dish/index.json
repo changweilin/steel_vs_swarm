@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "path": "landmark_parts/existing/dish",
+  "family": "landmark_parts",
+  "branch": "existing",
+  "objectType": "dish",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:landmark_parts/dish/CC0_dish_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark_parts/dish/CC0_dish_001.jpg"
+      },
+      "subtype": "landmark_parts_dish",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark_parts/dish/CC0_dish_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark_parts/dish/CC0_dish_002.jpg"
+      },
+      "subtype": "landmark_parts_dish",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark_parts/dish/CC0_dish_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark_parts/dish/CC0_dish_003.jpg"
+      },
+      "subtype": "landmark_parts_dish",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

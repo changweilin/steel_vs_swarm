@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:rock/20211010001701.jpg",
+      "id": "primary:rock/mesa/CC0_mesa_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/20211010001701.jpg"
+        "image": "rock/mesa/CC0_mesa_001.jpg"
       },
       "subtype": "desert_sandstone_butte",
       "confidence": 0.82,
@@ -18,10 +18,54 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/w4a9462fb-jpg.avif",
+      "id": "primary:rock/mesa/CC0_mesa_002.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/w4a9462fb-jpg.avif"
+        "image": "rock/mesa/CC0_mesa_002.jpg"
+      },
+      "subtype": "rock_mesa",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/mesa/CC0_mesa_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/mesa/CC0_mesa_003.jpg"
+      },
+      "subtype": "rock_mesa",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/mesa/CC0_mesa_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/mesa/CC0_mesa_004.jpg"
+      },
+      "subtype": "rock_mesa",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/mesa/CC0_mesa_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/mesa/CC0_mesa_005.jpg"
+      },
+      "subtype": "rock_mesa",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/mesa/CC0_mesa_006.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/mesa/CC0_mesa_006.avif"
       },
       "subtype": "flat_topped_table_mesa",
       "confidence": 0.87,
@@ -29,10 +73,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/南犹他州巨岩山-164605945.webp",
+      "id": "primary:rock/mesa/CC0_mesa_007.webp",
       "source": {
         "corpus": "primary",
-        "image": "rock/南犹他州巨岩山-164605945.webp"
+        "image": "rock/mesa/CC0_mesa_007.webp"
       },
       "subtype": "sandstone_cliff_mesa",
       "confidence": 0.94,

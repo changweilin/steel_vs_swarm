@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:tree/1342001_PE948961_S5.jpg",
+      "id": "primary:tree/shrub/CC0_shrub_001.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/1342001_PE948961_S5.jpg"
+        "corpus": "primary",
+        "image": "tree/shrub/CC0_shrub_001.jpg"
       },
       "subtype": "potted_columnar_cactus",
       "confidence": 0.92,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/51YNHnO1PXL.jpg",
+      "id": "primary:tree/shrub/CC0_shrub_002.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/51YNHnO1PXL.jpg"
+        "corpus": "primary",
+        "image": "tree/shrub/CC0_shrub_002.jpg"
       },
       "subtype": "potted_columnar_cactus_with_arms",
       "confidence": 0.91,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/Choosing-the-right-cactus.jpg",
+      "id": "primary:tree/shrub/CC0_shrub_003.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/Choosing-the-right-cactus.jpg"
+        "corpus": "primary",
+        "image": "tree/shrub/CC0_shrub_003.jpg"
       },
       "subtype": "barrel_cactus",
       "confidence": 0.97,
@@ -40,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/e7838fe5b8bde5ad90.jpg",
+      "id": "primary:tree/shrub/CC0_shrub_004.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/e7838fe5b8bde5ad90.jpg"
+        "corpus": "primary",
+        "image": "tree/shrub/CC0_shrub_004.jpg"
       },
       "subtype": "prickly_pear_cactus",
       "confidence": 0.94,
@@ -51,10 +51,21 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:tree/網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg",
+      "id": "primary:tree/shrub/CC0_shrub_005.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "tree/網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg"
+        "corpus": "primary",
+        "image": "tree/shrub/CC0_shrub_005.jpg"
+      },
+      "subtype": "tree_shrub",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/shrub/CC0_shrub_006.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/shrub/CC0_shrub_006.jpg"
       },
       "subtype": "potted_candelabra_cactus",
       "confidence": 0.93,

@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:landmark/20190403085330527.jpg",
+      "id": "primary:landmark/museum_cultural_landmark/CC0_museum_cultural_landmark_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "landmark/20190403085330527.jpg"
+        "image": "landmark/museum_cultural_landmark/CC0_museum_cultural_landmark_001.jpg"
       },
       "subtype": "羅浮宮玻璃金字塔博物館入口地標",
       "confidence": 0.99,

@@ -7,10 +7,21 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:building/images (17).jpg",
+      "id": "primary:building/residential_row/CC0_residential_row_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/images (17).jpg"
+        "image": "building/residential_row/CC0_residential_row_001.jpg"
+      },
+      "subtype": "building_residential_row",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/residential_row/CC0_residential_row_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/residential_row/CC0_residential_row_002.jpg"
       },
       "subtype": "雙戶相連住宅",
       "confidence": 0.93,

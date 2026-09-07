@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "restricted:ship/202602131051276980.webp",
+      "id": "primary:ship/patrol_rescue/CC0_patrol_rescue_001.webp",
       "source": {
-        "corpus": "restricted",
-        "image": "ship/202602131051276980.webp"
+        "corpus": "primary",
+        "image": "ship/patrol_rescue/CC0_patrol_rescue_001.webp"
       },
       "subtype": "fisheries_inspection_patrol_vessel",
       "confidence": 0.99,

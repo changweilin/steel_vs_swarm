@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "building_parts/existing/balcony",
+  "family": "building_parts",
+  "branch": "existing",
+  "objectType": "balcony",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building_parts/balcony/CC0_balcony_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/balcony/CC0_balcony_001.jpg"
+      },
+      "subtype": "building_parts_balcony",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building_parts/balcony/CC0_balcony_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building_parts/balcony/CC0_balcony_002.jpg"
+      },
+      "subtype": "building_parts_balcony",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

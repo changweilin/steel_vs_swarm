@@ -1,0 +1,351 @@
+{
+  "schemaVersion": 1,
+  "path": "vehicle/existing/motorcycle",
+  "family": "vehicle",
+  "branch": "existing",
+  "objectType": "motorcycle",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_001.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_001.png"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_002.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_002.png"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_003.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_004.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_004.png"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_005.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_006.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_006.webp"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_007.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_007.webp"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_008.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_008.webp"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_009.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_009.webp"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_010.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_010.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_011.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_011.png"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_012.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_012.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_013.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_013.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_014.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_014.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_015.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_015.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_016.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_016.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_017.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_017.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_018.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_018.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_019.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_019.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_020.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_020.webp"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_021.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_021.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_022.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_022.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_023.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_023.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_024.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_024.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_025.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_025.png"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_026.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_026.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_027.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_027.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_028.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_028.webp"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_029.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_029.png"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_030.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_030.jpg"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:vehicle/motorcycle/CC0_motorcycle_031.png",
+      "source": {
+        "corpus": "primary",
+        "image": "vehicle/motorcycle/CC0_motorcycle_031.png"
+      },
+      "subtype": "vehicle_motorcycle",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

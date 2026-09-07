@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "family": "vehicle",
+  "categories": [
+    {
+      "path": "vehicle/existing/bicycle",
+      "branch": "existing",
+      "objectType": "bicycle",
+      "resolution": null,
+      "members": 20
+    },
+    {
+      "path": "vehicle/existing/bus",
+      "branch": "existing",
+      "objectType": "bus",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "vehicle/existing/cargo_truck",
+      "branch": "existing",
+      "objectType": "cargo_truck",
+      "resolution": null,
+      "members": 43
+    },
+    {
+      "path": "vehicle/existing/motorcycle",
+      "branch": "existing",
+      "objectType": "motorcycle",
+      "resolution": null,
+      "members": 31
+    },
+    {
+      "path": "vehicle/existing/passenger_car",
+      "branch": "existing",
+      "objectType": "passenger_car",
+      "resolution": null,
+      "members": 63
+    },
+    {
+      "path": "vehicle/existing/rail_vehicle",
+      "branch": "existing",
+      "objectType": "rail_vehicle",
+      "resolution": null,
+      "members": 15
+    }
+  ]
+}

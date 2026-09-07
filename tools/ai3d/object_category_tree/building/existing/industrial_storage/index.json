@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/industrial_storage",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "industrial_storage",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/industrial_storage/CC0_industrial_storage_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/industrial_storage/CC0_industrial_storage_001.jpg"
+      },
+      "subtype": "building_industrial_storage",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/industrial_storage/CC0_industrial_storage_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/industrial_storage/CC0_industrial_storage_002.jpg"
+      },
+      "subtype": "building_industrial_storage",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

@@ -7,10 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:rock/0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA.jpg",
+      "id": "primary:rock/outcrop/CC0_outcrop_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA.jpg"
+        "image": "rock/outcrop/CC0_outcrop_001.jpg"
       },
       "subtype": "coastal_volcanic_sea_stack",
       "confidence": 0.91,
@@ -18,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/cfc0d6ff90ae224820a8d78861af93f5.webp",
+      "id": "primary:rock/outcrop/CC0_outcrop_002.webp",
       "source": {
         "corpus": "primary",
-        "image": "rock/cfc0d6ff90ae224820a8d78861af93f5.webp"
+        "image": "rock/outcrop/CC0_outcrop_002.webp"
       },
       "subtype": "accessed_pinnacle_with_observation_structure",
       "confidence": 0.86,
@@ -29,10 +29,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/IMG_7081.jpg",
+      "id": "primary:rock/outcrop/CC0_outcrop_003.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/IMG_7081.jpg"
+        "image": "rock/outcrop/CC0_outcrop_003.jpg"
       },
       "subtype": "coastal_volcanic_outcrop_cluster",
       "confidence": 0.86,
@@ -40,10 +40,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "primary:rock/miyako-146.jpg",
+      "id": "primary:rock/outcrop/CC0_outcrop_004.jpg",
       "source": {
         "corpus": "primary",
-        "image": "rock/miyako-146.jpg"
+        "image": "rock/outcrop/CC0_outcrop_004.jpg"
       },
       "subtype": "coral_limestone_karst_outcrop",
       "confidence": 0.91,

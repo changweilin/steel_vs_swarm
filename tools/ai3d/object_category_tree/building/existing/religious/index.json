@@ -7,32 +7,10 @@
   "definitionSource": "tools/ai3d/object_classification_policy.mjs",
   "members": [
     {
-      "id": "primary:building/images (15).jpg",
+      "id": "primary:building/religious/CC0_religious_001.jpg",
       "source": {
         "corpus": "primary",
-        "image": "building/images (15).jpg"
-      },
-      "subtype": "天壇式祭祀宗教建築",
-      "confidence": 0.99,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "primary:building/images.jpg",
-      "source": {
-        "corpus": "primary",
-        "image": "building/images.jpg"
-      },
-      "subtype": "大型中式寺廟宗教建築",
-      "confidence": 0.99,
-      "decompositionStatus": "decomposed",
-      "yolo26Status": "missing"
-    },
-    {
-      "id": "restricted:building/155577510.jpg",
-      "source": {
-        "corpus": "restricted",
-        "image": "building/155577510.jpg"
+        "image": "building/religious/CC0_religious_001.jpg"
       },
       "subtype": "東亞寺院宗教建築群",
       "confidence": 0.99,
@@ -40,10 +18,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:building/architecture-houou-02-tmb.jpg",
+      "id": "primary:building/religious/CC0_religious_002.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/architecture-houou-02-tmb.jpg"
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_002.jpg"
       },
       "subtype": "佛教寺院山門",
       "confidence": 0.99,
@@ -51,10 +29,131 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:building/kyotoworldheritage_2.jpg.webp",
+      "id": "primary:building/religious/CC0_religious_003.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/kyotoworldheritage_2.jpg.webp"
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_003.jpg"
+      },
+      "subtype": "building_religious",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_004.jpg"
+      },
+      "subtype": "building_religious",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_005.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_005.jpg"
+      },
+      "subtype": "building_religious",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_006.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_006.jpg"
+      },
+      "subtype": "building_religious",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_007.jpeg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_007.jpeg"
+      },
+      "subtype": "building_religious",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_008.jpeg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_008.jpeg"
+      },
+      "subtype": "building_religious",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_009.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_009.jpg"
+      },
+      "subtype": "building_religious",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_010.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_010.jpg"
+      },
+      "subtype": "building_religious",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_011.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_011.jpg"
+      },
+      "subtype": "building_religious",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_012.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_012.jpg"
+      },
+      "subtype": "天壇式祭祀宗教建築",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_013.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_013.jpg"
+      },
+      "subtype": "大型中式寺廟宗教建築",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/religious/CC0_religious_014.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_014.webp"
       },
       "subtype": "金閣寺式佛教寺院",
       "confidence": 0.99,
@@ -62,10 +161,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:building/partenone.jpg",
+      "id": "primary:building/religious/CC0_religious_015.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/partenone.jpg"
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_015.jpg"
       },
       "subtype": "古典神殿歷史遺址",
       "confidence": 0.97,
@@ -73,10 +172,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:building/phoenix-tower_rotated_270.jpg",
+      "id": "primary:building/religious/CC0_religious_016.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/phoenix-tower_rotated_270.jpg"
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_016.jpg"
       },
       "subtype": "佛塔宗教建築",
       "confidence": 0.94,
@@ -84,10 +183,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:building/photo0jpg.jpg",
+      "id": "primary:building/religious/CC0_religious_017.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/photo0jpg.jpg"
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_017.jpg"
       },
       "subtype": "山地寺院宗教建築群",
       "confidence": 0.98,
@@ -95,10 +194,10 @@
       "yolo26Status": "missing"
     },
     {
-      "id": "restricted:building/the-white-tower-when.jpg",
+      "id": "primary:building/religious/CC0_religious_018.jpg",
       "source": {
-        "corpus": "restricted",
-        "image": "building/the-white-tower-when.jpg"
+        "corpus": "primary",
+        "image": "building/religious/CC0_religious_018.jpg"
       },
       "subtype": "佛塔宗教建築",
       "confidence": 0.96,

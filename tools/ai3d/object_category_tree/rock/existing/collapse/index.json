@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/collapse",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "collapse",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/collapse/CC0_collapse_001.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/collapse/CC0_collapse_001.jpg"
+      },
+      "subtype": "rock_collapse",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/collapse/CC0_collapse_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/collapse/CC0_collapse_002.jpg"
+      },
+      "subtype": "rock_collapse",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/collapse/CC0_collapse_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/collapse/CC0_collapse_003.jpg"
+      },
+      "subtype": "rock_collapse",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

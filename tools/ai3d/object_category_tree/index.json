@@ -9,32 +9,44 @@
     "extensionGate": "registered functional definition; never appearance"
   },
   "counts": {
-    "objects": 305,
-    "categories": 50,
-    "existingCategories": 47,
+    "objects": 696,
+    "categories": 76,
+    "existingCategories": 73,
     "extensionCategories": 0,
-    "insufficientEvidence": 6,
-    "invalidSources": 1,
+    "insufficientEvidence": 7,
+    "invalidSources": 0,
     "issues": 0
   },
   "families": [
     {
       "family": "building",
       "path": "building",
-      "categories": 11,
-      "members": 100
+      "categories": 17,
+      "members": 157
+    },
+    {
+      "family": "building_parts",
+      "path": "building_parts",
+      "categories": 6,
+      "members": 16
     },
     {
       "family": "landmark",
       "path": "landmark",
-      "categories": 9,
-      "members": 17
+      "categories": 10,
+      "members": 24
+    },
+    {
+      "family": "landmark_parts",
+      "path": "landmark_parts",
+      "categories": 1,
+      "members": 3
     },
     {
       "family": "rock",
       "path": "rock",
-      "categories": 10,
-      "members": 41
+      "categories": 13,
+      "members": 87
     },
     {
       "family": "ship",
@@ -45,26 +57,52 @@
     {
       "family": "tree",
       "path": "tree",
+      "categories": 8,
+      "members": 170
+    },
+    {
+      "family": "tree_parts",
+      "path": "tree_parts",
+      "categories": 1,
+      "members": 3
+    },
+    {
+      "family": "vehicle",
+      "path": "vehicle",
       "categories": 6,
-      "members": 84
+      "members": 173
     }
   ],
   "categoryPaths": [
+    "building_parts/existing/acunit",
+    "building_parts/existing/balcony",
+    "building_parts/existing/chimney",
+    "building_parts/existing/dormer",
+    "building_parts/existing/roofcap",
+    "building_parts/existing/rooftank",
     "building/__unresolved__/insufficient_evidence",
+    "building/existing/agricultural",
+    "building/existing/castle_fortress",
     "building/existing/civic_administrative",
     "building/existing/commercial_office",
     "building/existing/commercial_retail",
     "building/existing/hospitality",
+    "building/existing/industrial_storage",
+    "building/existing/lighthouse",
     "building/existing/mixed_use",
     "building/existing/observation_landmark",
     "building/existing/religious",
     "building/existing/residential_detached",
     "building/existing/residential_multifamily",
     "building/existing/residential_row",
+    "building/existing/transportation_terminal",
+    "building/existing/utility_service",
+    "landmark_parts/existing/dish",
     "landmark/existing/ceremonial_gateway",
     "landmark/existing/commemorative_monument",
     "landmark/existing/communications_tower",
     "landmark/existing/hospitality_landmark",
+    "landmark/existing/industrial_landmark",
     "landmark/existing/mixed_use_landmark",
     "landmark/existing/museum_cultural_landmark",
     "landmark/existing/observation_tower",
@@ -72,15 +110,18 @@
     "landmark/existing/religious_landmark",
     "rock/__unresolved__/insufficient_evidence",
     "rock/existing/boulder",
+    "rock/existing/collapse",
     "rock/existing/columnar_basalt",
     "rock/existing/dolmen_megalith",
+    "rock/existing/hoodoo",
     "rock/existing/mesa",
     "rock/existing/monolith",
+    "rock/existing/natural_arch",
     "rock/existing/outcrop",
     "rock/existing/stratified_slab",
     "rock/existing/talus",
     "rock/existing/tor",
-    "ship/__unresolved__/invalid_source",
+    "ship/__unresolved__/insufficient_evidence",
     "ship/existing/aircraft_carrier",
     "ship/existing/bulk_cargo",
     "ship/existing/container_cargo",
@@ -94,12 +135,21 @@
     "ship/existing/surface_combatant",
     "ship/existing/tanker",
     "ship/existing/vehicle_carrier",
+    "tree_parts/existing/buttress",
+    "tree/existing/bonsai",
     "tree/existing/broadleaf_tree",
     "tree/existing/buttressed_giant",
     "tree/existing/conifer_tree",
+    "tree/existing/pachycaul_tree",
     "tree/existing/sculptural_tree",
     "tree/existing/shrub",
-    "tree/existing/snag"
+    "tree/existing/snag",
+    "vehicle/existing/bicycle",
+    "vehicle/existing/bus",
+    "vehicle/existing/cargo_truck",
+    "vehicle/existing/motorcycle",
+    "vehicle/existing/passenger_car",
+    "vehicle/existing/rail_vehicle"
   ],
   "issues": []
 }

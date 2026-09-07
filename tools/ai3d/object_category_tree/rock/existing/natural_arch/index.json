@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/natural_arch",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "natural_arch",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/natural_arch/CC0_natural_arch_001.jpeg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/natural_arch/CC0_natural_arch_001.jpeg"
+      },
+      "subtype": "rock_natural_arch",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/natural_arch/CC0_natural_arch_002.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/natural_arch/CC0_natural_arch_002.jpg"
+      },
+      "subtype": "rock_natural_arch",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/natural_arch/CC0_natural_arch_003.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/natural_arch/CC0_natural_arch_003.jpg"
+      },
+      "subtype": "rock_natural_arch",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/natural_arch/CC0_natural_arch_004.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/natural_arch/CC0_natural_arch_004.jpg"
+      },
+      "subtype": "rock_natural_arch",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}
