@@ -23,13 +23,15 @@ const report = await page.evaluate(async () => {
 
   // ---- 從真實原始碼抽 GIANT_DEFS(避免手抄漂移)----
   const src = await (await fetch('/public/js/biomes.js')).text();
-  const m = src.match(/const GIANT_DEFS = \{[\s\S]*?\n\};/);
+  const m = src.match(/const GIANT_DEFS = \{[^\n]*\};/);
   if (!m) return { error: '抽不到 GIANT_DEFS' };
   const cyl = (r1, r2, h, n = 5) => ({ kind: 'cyl', r1, r2, h, g: new THREE.CylinderGeometry(r1, r2, h, n) });
   const cone = (r, h, n = 5) => ({ kind: 'cone', r, h, g: new THREE.ConeGeometry(r, h, n) });
   const ico = (r) => ({ kind: 'ico', r, g: new THREE.IcosahedronGeometry(r, 0) });
-  const GIANT_DEFS = new Function('cyl', 'cone', 'ico', 'Math',
-    m[0].replace(/\{ g: /g, '{ g: ').replace('const GIANT_DEFS =', 'return') )(cyl, cone, ico, Math);
+  const { createForestDefs } = await import('/public/js/forest.js');
+  const GIANT_DEFS = new Function('createForestDefs', 'cyl', 'cone', 'ico', 'Math',
+    m[0].replace(/\{ g: /g, '{ g: ').replace('const GIANT_DEFS =', 'return') )(createForestDefs, cyl, cone, ico, Math);
+  for (const def of Object.values(GIANT_DEFS)) def.parts = def.variants[0];
 
   // ---- buildVegMeshes 同款實例變換(it = 標準株:s=1, ry=0, 無微傾)----
   const partMatrix = (part) => {

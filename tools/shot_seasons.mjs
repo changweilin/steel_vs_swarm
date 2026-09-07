@@ -21,8 +21,10 @@ const report = await page.evaluate(async () => {
   const cyl = (r1, r2, h, n = 5) => new THREE.CylinderGeometry(r1, r2, h, n);
   const cone = (r, h, n = 5) => new THREE.ConeGeometry(r, h, n);
   const ico = (r) => new THREE.IcosahedronGeometry(r, 0);
-  const GIANT_DEFS = new Function('cyl', 'cone', 'ico', 'Math',
-    src.match(/const GIANT_DEFS = \{[\s\S]*?\n\};/)[0].replace('const GIANT_DEFS =', 'return'))(cyl, cone, ico, Math);
+  const { createForestDefs } = await import('/public/js/forest.js');
+  const GIANT_DEFS = new Function('createForestDefs', 'cyl', 'cone', 'ico', 'Math',
+    src.match(/const GIANT_DEFS = \{[^\n]*\};/)[0].replace('const GIANT_DEFS =', 'return'))(createForestDefs, cyl, cone, ico, Math);
+  for (const def of Object.values(GIANT_DEFS)) def.parts = def.variants[0];
   // 抽 SEASON_GIANT_TINT(避免手抄漂移)
   const tm = src.match(/const SEASON_GIANT_TINT = (\{[^}]*\});/);
   const TINT = new Function('return ' + tm[1])();
