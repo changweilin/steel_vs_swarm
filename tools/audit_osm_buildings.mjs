@@ -453,7 +453,7 @@ function wallMatchesGeometry(geometry, blocker) {
     && close(geometry.position?.x, blocker.x) && close(geometry.position?.z, blocker.z)
     && close(geometry.position?.y, blocker.y + blocker.h / 2)
     && close(geometry.width, blocker.hw2 * 2) && close(geometry.height, blocker.h)
-    && close(geometry.depth, blocker.hd2 * 2) && angleClose(geometry.rotateYAngle || 0, blocker.ry);
+    && close(geometry.depth, blocker.hd2 * 2) && angleClose(geometry.rotateYAngle || 0, -blocker.ry);
 }
 
 function validateWallEdges(area, result, run) {

@@ -655,6 +655,9 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       // 巨幹半徑可 >10m,中心落在隧道走廊淨空外一格、樹身照樣橫插進洞內斷面
       // (2026-08-01 金龍隧道真圖資實測:洞內卡著整根神木樹幹)。
       // 抽樣紀律(§2.3):淘汰檢查排在 s 抽樣**之後** —— foot 要有 s 才算得出來。
+      const inb = edgeWallInsetM();
+      if (gx < terrain.minX + inb + foot || gx > terrain.maxX - inb - foot
+        || gz < terrain.minZ + inb + foot || gz > terrain.maxZ - inb - foot) continue;
       if (!areaFree(blocked, gx, gz, foot)) continue;
       if (roadOccupied?.({ x: gx, z: gz, r: foot })) continue;
       // 背景實體互斥:圖資建物優先 + 已放置大型背景互不穿模(抽樣之後淘汰,亂數序列不漂移)。
@@ -4209,8 +4212,9 @@ const MAIN_HW_SIGN = /^(motorway|trunk|primary|secondary|tertiary|residential|un
  *   ③ **零 `rnd()` 消耗** —— 要不要擺、擺哪一側全由幾何決定(§2.3)。
  */
 function planCorpusSites({ terrain, center, roads, generic, features, isBlocked }) {
-  const inB = (x, z) => x > terrain.minX + 12 && x < terrain.maxX - 12
-    && z > terrain.minZ + 12 && z < terrain.maxZ - 12;
+  const inb = edgeWallInsetM();
+  const inB = (x, z) => x > terrain.minX + inb && x < terrain.maxX - inb
+    && z > terrain.minZ + inb && z < terrain.maxZ - inb;
   const free = (x, z) => inB(x, z) && !isBlocked(x, z);
   const roadSites = [], noticeSites = [], scenicSites = [];
 
@@ -4315,8 +4319,8 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
   //    這一類點位唯一一個「名字以外還值得寫上去」的欄位。
   for (const poi of (pois || [])) {
     if (sheet.full) break;
-    const [x, z] = llToWorld(poi.lat, poi.lng, center);
-    if (x < terrain.minX + 20 || x > terrain.maxX - 20 || z < terrain.minZ + 20 || z > terrain.maxZ - 20) continue;
+    const inb = edgeWallInsetM();
+    if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
     const t = poi.tags || {};
     const junction = t.highway === 'motorway_junction';
     const base = resolveName(t) || (junction ? resolveRef(t) : null);
@@ -4454,8 +4458,9 @@ function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW, mapA,
   if (!lanesW.length) return 0;
   const anchors = beaconAnchors({ lanesW, basesW, towerSites: solveTowerSites(lanesW, mapA) });
   const probe = (x, z, r) => {
-    if (x < terrain.minX + r + 24 || x > terrain.maxX - r - 24
-      || z < terrain.minZ + r + 24 || z > terrain.maxZ - r - 24) return false;
+    const inb = edgeWallInsetM();
+    if (x < terrain.minX + inb + r || x > terrain.maxX - inb - r
+      || z < terrain.minZ + inb + r || z > terrain.maxZ - inb - r) return false;
     if (terrain.heightAt(x, z) < 0.4) return false;
     // 水域/沼澤:中心 + 腳印周圈四向一併驗(同 placeMegaliths —— 只問中心會讓腳半泡在水裡)
     if (terrainEnvCode(terrain, x, z) !== 0
@@ -4517,8 +4522,9 @@ function placeBaseFlags({ group, terrain, blocked, basesW, nation }) {
     for (let i = 0; i < FLAG_RING_N; i++) {
       const a = (i + 0.5) / FLAG_RING_N * Math.PI * 2;
       const x = b.x + Math.cos(a) * R, z = b.z + Math.sin(a) * R;
-      if (x < terrain.minX + 30 || x > terrain.maxX - 30
-        || z < terrain.minZ + 30 || z > terrain.maxZ - 30) continue;
+      const inb = edgeWallInsetM();
+      if (x < terrain.minX + inb || x > terrain.maxX - inb
+        || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
       if (terrainEnvCode(terrain, x, z) !== 0) continue;     // 水域/沼澤不立(寧缺勿錯)
       if (!areaFree(blocked, x, z, 2)) continue;             // 兵線/道路/建物佔住了就跳過
       sites.push({ x, z, y: terrain.heightAt(x, z), iso: nation(x, z) });
@@ -4655,8 +4661,9 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
         s *= shrink;
         r = meta.col.r * s;
       }
-      if (x < terrain.minX + r + 24 || x > terrain.maxX - r - 24
-        || z < terrain.minZ + r + 24 || z > terrain.maxZ - r - 24) continue;
+      const inb = edgeWallInsetM();
+      if (x < terrain.minX + inb + r || x > terrain.maxX - inb - r
+        || z < terrain.minZ + inb + r || z > terrain.maxZ - inb - r) continue;
       let gy = terrain.heightAt(x, z);
       if (gy < 0.4) continue;
       // 水域/沼澤不放巨岩:佔地大(r 可 ~20m+),中心 + 腳印周圈四向一併驗(rnd 已抽完,序列安全)
@@ -4795,6 +4802,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
           const rx2 = (dr() - 0.5) * 0.6, ry2 = dr() * Math.PI * 2, rz2 = (dr() - 0.5) * 0.6;
           const ty2 = terrain.heightAt(tx2, tz2);
           if (ty2 < 0.4) continue;   // 不進水面(抽樣已完,本序列獨立於共享 rnd)
+          if (tx2 < terrain.minX + inb || tx2 > terrain.maxX - inb || tz2 < terrain.minZ + inb || tz2 > terrain.maxZ - inb) continue;
           talus.push({ x: tx2, y: ty2 + tr2 * sy2 * 0.42, z: tz2, r: tr2, sy: sy2, sz: sz2,
             rx: rx2, ry: ry2, rz: rz2, dH, dS, dL });   // 與母岩同色相(同源同相)
         }
@@ -4808,8 +4816,10 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
           const dk = dr();
           const lw = probe.wallR(x, z, ly, la);
           if (lw == null) continue;
+          const lx = x + Math.cos(la) * (lw + 0.1), lz = z + Math.sin(la) * (lw + 0.1);
+          if (lx < terrain.minX + inb || lx > terrain.maxX - inb || lz < terrain.minZ + inb || lz > terrain.maxZ - inb) continue;
           const tilt = Math.atan(probe.slope(x, z, ly, la));
-          lichens.push({ x: x + Math.cos(la) * (lw + 0.1), y: ly, z: z + Math.sin(la) * (lw + 0.1),
+          lichens.push({ x: lx, y: ly, z: lz,
             a: la, r: lr2, tilt, dark: dk < 0.5, dH });
         }
       }
@@ -4896,8 +4906,9 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
     const r = def?.colR ?? 10;
 
     // 檢查邊界與高度
-    if (sx < terrain.minX + r + 30 || sx > terrain.maxX - r - 30
-      || sz < terrain.minZ + r + 30 || sz > terrain.maxZ - r - 30) continue;
+    const inb = edgeWallInsetM();
+    if (sx < terrain.minX + inb + r || sx > terrain.maxX - inb - r
+      || sz < terrain.minZ + inb + r || sz > terrain.maxZ - inb - r) continue;
 
     let gy = terrain.heightAt(sx, sz);
     if (gy < 0.6) continue; // 避開近水面
@@ -6029,11 +6040,12 @@ const DEFAULT_PARTS = [
 /** 地下步道／車站入口。一個生成器吃 PED_ARCHETYPES 資料列；名目尺寸同時產生外觀與碰撞盒。 */
 function buildPedestrianEntrances(group, terrain, sites) {
   const rows = [];
+  const inb = edgeWallInsetM();
   for (const site of sites || []) {
     const archKey = site.archetype || site.kind || 'underpass';
     const def = PED_ARCHETYPES[archKey] || PED_ARCHETYPES[site.kind] || PED_ARCHETYPES.underpass;
-    if (site.x < terrain.minX + 5 || site.x > terrain.maxX - 5
-      || site.z < terrain.minZ + 5 || site.z > terrain.maxZ - 5) continue;
+    if (site.x < terrain.minX + inb || site.x > terrain.maxX - inb
+      || site.z < terrain.minZ + inb || site.z > terrain.maxZ - inb) continue;
     const y = terrain.heightAt(site.x, site.z);
     if (y < 0.4) continue;
     rows.push({ ...site, def, archKey, y });
@@ -9371,7 +9383,8 @@ function buildRails(group, rails, terrain, center, dynamics, crossings) {
     let cur = [];
     for (const gpt of way.geometry) {
       const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
-      if (x < terrain.minX + 5 || x > terrain.maxX - 5 || z < terrain.minZ + 5 || z > terrain.maxZ - 5) {
+      const inb = edgeWallInsetM();
+      if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) {
         if (cur.length >= 2) raw.push({ g: cur, elevated, tags: way.tags });
         cur = [];
         continue;
@@ -9563,11 +9576,12 @@ function buildLevelCrossings(group, crossings, lines, terrain, center) {
     for (let i = 1; i < l.pts.length; i++) segs.push([l.pts[i - 1], l.pts[i]]);
   }
   if (!segs.length) return 0;
+  const inb = edgeWallInsetM();
   let built = 0;
   for (const c of crossings) {
     if (built >= 8) break;
     const [x, z] = llToWorld(c.lat, c.lng, center);
-    if (x < terrain.minX + 12 || x > terrain.maxX - 12 || z < terrain.minZ + 12 || z > terrain.maxZ - 12) continue;
+    if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
     // 最近地面鐵軌段 → 軌道切線方向
     let bestD = Infinity, bdx = 0, bdz = 0, bx = 0, bz = 0;
     for (const [a, b] of segs) {
@@ -9578,6 +9592,7 @@ function buildLevelCrossings(group, crossings, lines, terrain, center) {
       if (d < bestD) { bestD = d; bdx = ex; bdz = ez; bx = px; bz = pz; }
     }
     if (bestD > 30) continue;   // 附近無地面鐵軌(可能落在高架/隧道段)→ 略過
+    if (bx < terrain.minX + inb || bx > terrain.maxX - inb || bz < terrain.minZ + inb || bz > terrain.maxZ - inb) continue;
     const rl = Math.hypot(bdx, bdz) || 1;
     group.add(makeLevelCrossing(bx, terrain.heightAt(bx, bz), bz, bdx / rl, bdz / rl));
     built++;
@@ -9636,9 +9651,10 @@ function makeLevelCrossing(x, gy, z, rdx, rdz) {
 // ---- 瀑布(圖資節點):水簾 + 底部水潭 + 湧動泡沫 ----
 function buildWaterfalls(group, falls, terrain, center, dynamics) {
   let built = 0;
+  const inb = edgeWallInsetM();
   for (const f of falls.slice(0, 6)) {
     const [x, z] = llToWorld(f.lat, f.lng, center);
-    if (x < terrain.minX + 20 || x > terrain.maxX - 20 || z < terrain.minZ + 20 || z > terrain.maxZ - 20) continue;
+    if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
     // 找落差方向:採樣 8 方位高程,水從最高側流向最低側
     let hi = { h: -Infinity }, lo = { h: Infinity };
     for (let k = 0; k < 8; k++) {
@@ -10980,7 +10996,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       sports: 0x789b80, parking: 0x8a8d91, utility: 0x7e8b95,
     };
     osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
-      terrain, rings, architectureOf: architectureAt,
+      terrain, rings, architectureOf: architectureAt, inset: edgeWallInsetM(),
       materialOf: (kind, batch, style) => {
         if (batch.architecture) return {
           wall: sceneObjectMat(0xffffff, { vertexColors: true }),
@@ -11049,10 +11065,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   if (osmSource && osmData?.areas?.length) {
     osmAreaObjectResult = buildOsmAreaObjects(group, osmData.areas, {
       maxObjects: 480,
+      terrain,
+      inset: inb,
       heightAt: (x, z) => terrain.heightAt(x, z),
       // 優先序:兵線/塔位/主堡淨空高於圖資物件 ⇒ 足印半徑掃 areaFree(單格驗擋不住設施)
-      blocked: (x, z, r) => !areaFree(blocked, x, z, r) || !occ.free(x, z, r, 1)
-        || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < (b.r || 0) + r + 0.5),
+      blocked: (x, z, r) => {
+        if (x < terrain.minX + inb + r || x > terrain.maxX - inb - r
+          || z < terrain.minZ + inb + r || z > terrain.maxZ - inb - r) return true;
+        return !areaFree(blocked, x, z, r) || !occ.free(x, z, r, 1)
+          || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < (b.r || 0) + r + 0.5);
+      },
       materialOf: (_generator, row) => envMat(row.color, { wash: 0.38, cool: 0.42 }),
     });
     blockers.push(...osmAreaObjectResult.blockers);
@@ -11379,8 +11401,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       // 公設用地:多兩道閘 —— 腳印周圈全在乾地(大平板半邊泡水最難看)、地表夠平
       // (`flatRadiusAt` 單一縫;公園/球場/停車場在現實裡就是整過的平地,坡地上不擺)
       probeCivic: (x, z, kind, r) => {
-        if (x < terrain.minX + r || x > terrain.maxX - r
-          || z < terrain.minZ + r || z > terrain.maxZ - r) return false;
+        if (x < terrain.minX + inb + r || x > terrain.maxX - inb - r
+          || z < terrain.minZ + inb + r || z > terrain.maxZ - inb - r) return false;
         if (!nearUrban(x, z) || !dryAt(x, z)) return false;
         // 腳印周圈:全在乾地,且**起伏**收在門檻內。兩件事都要 ——
         // `flatRadiusAt` 只認「掉下去」(它問的是懸崖),整片往上長的山坡它一路放行,
