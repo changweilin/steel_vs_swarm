@@ -12,6 +12,7 @@ import {
   distanceToSegment,
   distanceToPolyBoundary,
   isSiteValid,
+  computeOrientedRoofFrame,
 } from './architectureStyles.js';
 
 export { distanceToSegment, distanceToPolyBoundary, isSiteValid };
@@ -251,29 +252,42 @@ export function getEdgeFrame(edge, poly) {
 /** 依屋頂造型計算指定 (x, z) 點的實際屋頂面高度，杜絕屋頂構件漂浮或埋入 */
 export function getRoofElevation(x, z, poly, roofForm = 'flat', metrics = null, topY = 0) {
   if (!roofForm || roofForm === 'flat' || !poly?.outer?.length) return topY;
-  const xs = poly.outer.map(p => p[0]), zs = poly.outer.map(p => p[1]);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minZ = Math.min(...zs), maxZ = Math.max(...zs);
-  const polyW = maxX - minX, polyD = maxZ - minZ;
-  const isRotated = polyD > polyW;
-  const span = isRotated ? polyW : polyD;
-  const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+  const frame = metrics?.frame || computeOrientedRoofFrame(poly);
+  if (!frame) return topY;
+  const { len, span, cx, cz, dirX, dirZ, normalX, normalZ } = frame;
   const roofH = Math.min(Math.max(1.6, 10 * 0.32), Math.max(1.8, span * 0.36));
 
+  const dx = x - cx, dz = z - cz;
+  const uDist = dx * dirX + dz * dirZ;
+  const vDist = dx * normalX + dz * normalZ;
+
   if (roofForm === 'stepped') {
-    const distRatio = Math.max(Math.abs(x - cx) / (polyW / 2 || 1), Math.abs(z - cz) / (polyD / 2 || 1));
+    const distRatio = Math.max(Math.abs(uDist) / (len / 2 || 1), Math.abs(vDist) / (span / 2 || 1));
     const tier = distRatio > 0.66 ? 0 : distRatio > 0.33 ? 1 : 2;
     return topY + tier * (roofH * 0.28);
   }
 
-  const distFromRidge = isRotated ? Math.abs(x - cx) : Math.abs(z - cz);
+  const distFromRidge = Math.abs(vDist);
   const halfSpan = Math.max(0.5, span / 2);
   const slopeRatio = Math.max(0, Math.min(1, 1 - distFromRidge / halfSpan));
 
   if (roofForm === 'shed') {
-    const sRatio = Math.max(0, Math.min(1, ((isRotated ? (x - minX) : (z - minZ)) / (span || 1))));
-    return topY + sRatio * roofH * 0.8;
+    const sRatio = Math.max(0, Math.min(1, (vDist + span / 2) / (span || 1)));
+    return topY + sRatio * roofH * 0.85;
   }
+
+  if (roofForm === 'vault' || roofForm === 'curved_ridge') {
+    const archRatio = Math.max(0, 1 - Math.pow(distFromRidge / halfSpan, 2));
+    return topY + Math.sqrt(archRatio) * roofH;
+  }
+
+  if (roofForm === 'dome') {
+    const r = Math.min(len / 2, span / 2);
+    const distFromCenter = Math.hypot(dx, dz);
+    if (distFromCenter >= r) return topY;
+    return topY + Math.sqrt(Math.max(0, r * r - distFromCenter * distFromCenter));
+  }
+
   return topY + slopeRatio * roofH * 0.85;
 }
 
