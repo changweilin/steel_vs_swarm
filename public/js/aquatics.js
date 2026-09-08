@@ -19,10 +19,13 @@ import * as THREE from 'three';
 import { mulberry32 } from './rng.js';
 import { WATER } from './data.js';
 import {
-  toonMat, toonPlain, envMat, markShared,
+  toonMat, toonPlain, envMat, markShared, disposeTree,
   SURF_ID
 } from './toon.js';
 import { terrainEnvCode } from './biomes.js';
+import { generateVessel, vesselFitsAt } from './vesselCatalog.js';
+import { buildGeneratedVesselMesh, buildShipWakeGroup, loftGeometry, hullRing } from './vesselModels.js';
+export { buildGeneratedVesselMesh, buildShipWakeGroup } from './vesselModels.js';
 
 /* =========================================================================
  * 0. 常數、調色盤與種子雜湊 (Constants, Palettes & Hashes)
@@ -1907,84 +1910,6 @@ export function buildInuksukSite(group, x, y, z, rnd, opts = {}) {
  * ========================================================================= */
 
 /**
- * 建立巡邏艇水面尾波群 (Stern V-Wake & Propeller Wash & Bow Waves)
- * 注意：潛艦 (Submarine) 為水下遺跡/深海探測器，不產生水面尾波 (潛艦不用)。
- */
-export function buildShipWakeGroup() {
-  const g = new THREE.Group();
-  g.name = 'ship_wake';
-
-  const foamMat = toonPlain({
-    color: 0xf0f8ff,
-    transparent: true,
-    opacity: 0.75,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-  const washMat = toonPlain({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.88,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-
-  // 1. 船尾開展 V 型尾浪 (Kelvin Wake - Expanding V-Shape Wings)
-  // 由船尾 z = -5.8 (寬 3.2m) 展開至 z = -24.0 (寬 10.5m)
-  const wakeGeo = new THREE.BufferGeometry();
-  const wakeVertices = new Float32Array([
-    // 左翼展開面
-    -1.6, -0.05, -5.8,
-    -5.2, -0.05, -24.0,
-     0.0, -0.05, -5.8,
-
-     0.0, -0.05, -5.8,
-    -5.2, -0.05, -24.0,
-     0.0, -0.05, -24.0,
-
-    // 右翼展開面
-     0.0, -0.05, -5.8,
-     5.2, -0.05, -24.0,
-     1.6, -0.05, -5.8,
-
-     0.0, -0.05, -5.8,
-     0.0, -0.05, -24.0,
-     5.2, -0.05, -24.0,
-  ]);
-  wakeGeo.setAttribute('position', new THREE.BufferAttribute(wakeVertices, 3));
-  wakeGeo.computeVertexNormals();
-  const vWake = new THREE.Mesh(wakeGeo, foamMat);
-  g.add(vWake);
-
-  // 2. 螺旋槳中心高密度白沫浪湧帶 (Propeller Wash Strip)
-  const washGeo = new THREE.PlaneGeometry(2.4, 12.0);
-  washGeo.rotateX(-Math.PI / 2);
-  washGeo.translate(0, -0.03, -12.0); // 從 z = -6.0 延伸至 -18.0
-  const washMesh = new THREE.Mesh(washGeo, washMat);
-  g.add(washMesh);
-
-  // 3. 船首劈波浪花 (Bow Spray Flairs)
-  const bowGeo = new THREE.BufferGeometry();
-  const bowVertices = new Float32Array([
-    // 左舷破浪
-    -0.2, -0.02,  6.8,
-    -2.2, -0.02,  3.5,
-    -0.8, -0.02,  3.5,
-
-    // 右舷破浪
-     0.2, -0.02,  6.8,
-     0.8, -0.02,  3.5,
-     2.2, -0.02,  3.5,
-  ]);
-  bowGeo.setAttribute('position', new THREE.BufferAttribute(bowVertices, 3));
-  bowGeo.computeVertexNormals();
-  const bowSpray = new THREE.Mesh(bowGeo, washMat);
-  g.add(bowSpray);
-
-  return g;
-}
-
-/**
  * 建立水面航行船艦與岸邊停泊小艇系統
  */
 export function createSurfaceVessels(terrain, seed) {
@@ -1993,6 +1918,7 @@ export function createSurfaceVessels(terrain, seed) {
   const rnd = mulberry32((seed ^ 0x4C81EE) >>> 0);
 
   const { minX, maxX, minZ, maxZ } = terrain;
+  if (![wy,minX,maxX,minZ,maxZ].every(Number.isFinite) || maxX-minX<=48 || maxZ-minZ<=48) return null;
   const vesselGroup = new THREE.Group();
 
   const cruisers = [];
@@ -2007,9 +1933,12 @@ export function createSurfaceVessels(terrain, seed) {
   // A. 巡弋船艦（1~3 艘沿閉合航道巡航，嚴格約束在邊界與深水區）
   const numCruisers = Math.min(3, Math.max(1, Math.floor((maxX - minX) / 400)));
   for (let i = 0; i < numCruisers; i++) {
+    const vessel = generateVessel((seed ^ Math.imul(i + 1, 7919)) >>> 0,
+      { surface: true, selfPropelled: true, maxLength: Math.min(160, (maxX-minX)/6, (maxZ-minZ)/6) });
+    if (!vessel) continue;
     let cx = 0, cz = 0, radius = 45, found = false;
     for (let t = 0; t < 60; t++) {
-      const candidateR = 35 + rnd() * 35;
+      const candidateR = Math.max(vessel.length * 2, 35 + rnd() * 35);
       const spanX = Math.max(1, (clampMaxX - candidateR) - (clampMinX + candidateR));
       const spanZ = Math.max(1, (clampMaxZ - candidateR) - (clampMinZ + candidateR));
       const rx = (clampMinX + candidateR) + rnd() * spanX;
@@ -2017,12 +1946,13 @@ export function createSurfaceVessels(terrain, seed) {
 
       if (terrainEnvCode(terrain, rx, rz) === 1 && wy - terrain.heightAt(rx, rz) > 2.5) {
         let allWater = true;
-        for (let k = 0; k < 8; k++) {
-          const a = (k / 8) * Math.PI * 2;
+        const samples = Math.ceil(2 * Math.PI * candidateR / 3);
+        for (let k = 0; k < samples; k++) {
+          const a = (k / samples) * Math.PI * 2;
           const px = rx + Math.cos(a) * candidateR;
           const pz = rz + Math.sin(a) * candidateR;
           if (px < clampMinX || px > clampMaxX || pz < clampMinZ || pz > clampMaxZ
-            || terrainEnvCode(terrain, px, pz) !== 1 || wy - terrain.heightAt(px, pz) <= 1.6) {
+            || !vesselFitsAt(vessel, terrain, px, pz, (x,z) => terrainEnvCode(terrain,x,z) === 1)) {
             allWater = false;
             break;
           }
@@ -2034,7 +1964,7 @@ export function createSurfaceVessels(terrain, seed) {
     }
     if (!found) continue;
 
-    const shipMesh = buildPatrolShipMesh();
+    const shipMesh = buildGeneratedVesselMesh(vessel);
     vesselGroup.add(shipMesh);
 
     const wakeGroup = shipMesh.userData.wake || shipMesh.getObjectByName('ship_wake');
@@ -2044,11 +1974,14 @@ export function createSurfaceVessels(terrain, seed) {
       wakeGroup,
       cx, cz,
       radius,
-      speed: AQUATIC.SHIP_CRUISE_SPD * (0.85 + rnd() * 0.3),
+      speed: Math.min(AQUATIC.SHIP_CRUISE_SPD, vessel.speedKnots * 0.514444) * (0.85 + rnd() * 0.3),
       angle: rnd() * Math.PI * 2,
       rotDir: rnd() > 0.5 ? 1 : -1,
       phase: rnd() * Math.PI * 2,
     });
+    const cruiser = cruisers[cruisers.length-1];
+    shipMesh.position.set(cx+Math.cos(cruiser.angle)*radius,wy+0.1,cz+Math.sin(cruiser.angle)*radius);
+    shipMesh.rotation.y=Math.atan2(-Math.sin(cruiser.angle)*cruiser.rotDir,Math.cos(cruiser.angle)*cruiser.rotDir);
   }
 
   // B. 停泊小艇（岸邊繫留搖擺，嚴格在邊界內）
@@ -2060,7 +1993,9 @@ export function createSurfaceVessels(terrain, seed) {
     if (terrainEnvCode(terrain, rx, rz) === 1) {
       const depth = wy - terrain.heightAt(rx, rz);
       if (depth >= 0.6 && depth <= 2.2) {
-        const boatMesh = buildDinghyMesh();
+        const vessel = generateVessel((seed ^ Math.imul(i + 1, 104729)) >>> 0, { surface:true, maxLength:10 });
+        if (!vessel || !vesselFitsAt(vessel, terrain, rx, rz, (x,z) => terrainEnvCode(terrain,x,z) === 1)) continue;
+        const boatMesh = buildGeneratedVesselMesh(vessel, { wake:false });
         boatMesh.position.set(rx, wy, rz);
         boatMesh.rotation.y = rnd() * Math.PI * 2;
         vesselGroup.add(boatMesh);
@@ -2073,6 +2008,20 @@ export function createSurfaceVessels(terrain, seed) {
         });
       }
     }
+  }
+
+  // Independent sampler: underwater additions never advance the surface stream.
+  const diveRnd = mulberry32((seed ^ 0x73656264) >>> 0);
+  const diver = generateVessel((seed ^ 0x64697665) >>> 0, { id:'submersible' });
+  for (let attempt=0;attempt<30;attempt++) {
+    const x=clampMinX+diveRnd()*(clampMaxX-clampMinX), z=clampMinZ+diveRnd()*(clampMaxZ-clampMinZ);
+    if (!vesselFitsAt(diver,terrain,x,z,(px,pz)=>terrainEnvCode(terrain,px,pz)===1)) continue;
+    const mesh=buildGeneratedVesselMesh(diver,{wake:false});
+    const baseY=wy-diver.beam-2;
+    mesh.position.set(x,baseY,z);mesh.rotation.y=diveRnd()*Math.PI*2;
+    vesselGroup.add(mesh);
+    mooredBoats.push({mesh,baseY,phase:0,bobAmp:0.02});
+    break;
   }
 
   return {
@@ -2116,57 +2065,10 @@ export function createSurfaceVessels(terrain, seed) {
       }
     },
     dispose() {
-      // 遞迴清理船隻材質
-      vesselGroup.traverse((o) => {
-        if (o.geometry) o.geometry.dispose();
-        if (o.material) {
-          if (Array.isArray(o.material)) o.material.forEach((m) => m.dispose());
-          else o.material.dispose();
-        }
-      });
+      disposeTree(vesselGroup);
     }
   };
 }
-
-/**
- * 以等點數截面建立封閉多面體；相鄰段共用同一圈頂點，避免船首另插幾何造成台階與破縫。
- * 截面點由左上沿船底走到右上，從船首看為逆時針。
- */
-function loftGeometry(sections) {
-  const ringN = sections[0].ring.length;
-  const pos = [];
-  for (const section of sections) {
-    if (section.ring.length !== ringN) throw new Error('loftGeometry 截面頂點數不一致');
-    for (const [x, y] of section.ring) pos.push(x, y, section.z);
-  }
-
-  const idx = [];
-  for (let s = 0; s < sections.length - 1; s++) {
-    const a0 = s * ringN, b0 = (s + 1) * ringN;
-    for (let j = 0; j < ringN; j++) {
-      const k = (j + 1) % ringN;
-      idx.push(a0 + j, a0 + k, b0 + k, a0 + j, b0 + k, b0 + j);
-    }
-  }
-  for (let j = 1; j < ringN - 1; j++) idx.push(j + 1, j, 0);
-  const front = (sections.length - 1) * ringN;
-  for (let j = 1; j < ringN - 1; j++) idx.push(front, front + j, front + j + 1);
-
-  const indexed = new THREE.BufferGeometry();
-  indexed.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  indexed.setIndex(idx);
-  const geo = indexed.toNonIndexed();
-  indexed.dispose();
-  geo.computeVertexNormals();
-  geo.computeBoundingBox();
-  geo.computeBoundingSphere();
-  return geo;
-}
-
-const hullRing = (halfW, deckY, chineY, keelY) => [
-  [-halfW, deckY], [-halfW * 0.82, chineY], [0, keelY],
-  [halfW * 0.82, chineY], [halfW, deckY],
-];
 
 /** 建造現代巡邏艇幾何群 */
 export function buildPatrolShipMesh() {

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>船隻建模圖鑑</title>
+<style>
+body{margin:0;background:#132c3c;color:#f0eee5;font:14px system-ui}canvas{display:block}aside{position:absolute;top:20px;left:20px;padding:22px;background:#112631ed;border:1px solid #45606b;border-radius:12px;width:290px;max-height:85vh;overflow:auto}h1{font-size:23px;margin:0 0 16px}label{display:block;margin:12px 0 5px;color:#adbec4}select,input,button{box-sizing:border-box;width:100%;padding:9px;background:#254553;border:1px solid #577380;color:#fff;border-radius:5px}button{margin-top:12px;cursor:pointer;background:#246c79}p{line-height:1.7}small{color:#9bb4bd}#error{color:#ffb399}@media(max-width:600px){aside{width:220px;padding:12px;top:8px;left:8px;max-height:42vh}}
+</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+</head><body><aside><h1>船隻建模圖鑑</h1><small id="catalog-size"></small>
+<label for="purpose">用途</label><select id="purpose"><option value="">全部用途</option></select>
+<label for="water">航域</label><select id="water"><option value="">全部航域</option></select>
+<label for="power">動力</label><select id="power"><option value="">全部動力</option></select>
+<label for="type">船型</label><select id="type"><option value="">隨機船型</option></select>
+<label for="seed">種子</label><input id="seed" type="number" value="42" step="1"><button id="next">下一艘</button>
+<p id="info"></p><p id="loadout"></p><p id="error" role="status"></p><small>拖曳旋轉 · 滾輪縮放<br>旗幟為虛構船隊旗；排水量為遊戲估算。</small></aside>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel } from './js/vesselCatalog.js';
+import { VESSEL_EQUIPMENT } from './js/vesselLayout.js';
+import { buildGeneratedVesselMesh } from './js/vesselModels.js';
+import { disposeTree } from './js/toon.js';
+import { Pipeline } from './js/postfx.js';
+const $=id=>document.getElementById(id);
+$('catalog-size').textContent=VESSEL_TYPES.length+' 種船型 · 真實米制 · 隨機裝載';
+for(const axis of ['purpose','water','power']) for(const [key,label] of Object.entries(VESSEL_AXES[axis==='water'?'waters':axis])) $(axis).add(new Option(label,key));
+for(const t of VESSEL_TYPES) $('type').add(new Option(t.name,t.id));
+const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); document.body.append(renderer.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x8daab6);
+scene.add(new THREE.HemisphereLight(0xdbefff,0x554b3d,2.5));
+const light=new THREE.DirectionalLight(0xffedce,3); light.position.set(40,80,60); scene.add(light);
+const camera=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,0.05,3000);
+const controls=new OrbitControls(camera,renderer.domElement); controls.enableDamping=true;
+const pipeline=new Pipeline(renderer,scene,camera,{dof:false,grade:false});
+const sea=new THREE.Mesh(new THREE.PlaneGeometry(2500,2500),new THREE.MeshStandardMaterial({color:0x397b90,transparent:true,opacity:0.45,roughness:0.4,depthWrite:false,side:THREE.DoubleSide}));
+sea.rotation.x=-Math.PI/2; scene.add(sea);
+let model;
+function rebuild(){
+  const v=generateVessel(Number($('seed').value),{id:$('type').value,purpose:$('purpose').value,water:$('water').value,power:$('power').value});
+  if(model){scene.remove(model);disposeTree(model);model=null;}
+  $('error').textContent=v?'':'此分類組合沒有相容船型，請調整篩選。'; $('info').textContent=''; $('loadout').textContent=''; if(!v)return;
+  model=buildGeneratedVesselMesh(v,{wake:false});scene.add(model);
+  const bounds=new THREE.Box3().setFromObject(model),center=bounds.getCenter(new THREE.Vector3());
+  const size=bounds.getSize(new THREE.Vector3()).length(); controls.target.copy(center);
+  camera.position.copy(center).add(new THREE.Vector3(size*1.05,size*0.65,size*1.15)); camera.far=Math.max(3000,size*10);camera.updateProjectionMatrix();
+  $('info').textContent=`${v.name}｜${VESSEL_AXES.purpose[v.purpose]}\n${VESSEL_AXES.power[v.power]} · ${v.waters.map(w=>VESSEL_AXES.waters[w]).join(' / ')}\n長 ${v.length.toFixed(1)} m · 寬 ${v.beam.toFixed(1)} m · 吃水 ${v.draft.toFixed(2)} m\n估計排水量 ${v.displacementTonnes.toFixed(1)} 公噸\n船齡 ${v.age} 年 · 航速 ${v.speedKnots.toFixed(1)} 節\n${v.vesselName} / ${v.registry}${v.graffiti?'\n塗鴉：'+v.graffiti:''}`;
+  $('info').style.whiteSpace='pre-line';
+  $('info').textContent+='\n材質：'+VESSEL_MATERIALS[v.material];
+  const loads=new Map();
+  for(const item of v.layout.equipment)loads.set(item.kind,(loads.get(item.kind)||0)+1);
+  $('loadout').textContent='裝載配置\n'+[...loads].map(([kind,n])=>VESSEL_EQUIPMENT[kind].label+' × '+n).join('\n');
+  const cells=v.layout.equipment.reduce((n,item)=>n+(item.kind==='vls'?item.units:0),0);
+  if(cells)$('loadout').textContent+='\n垂直發射單元合計 '+cells+' 格';
+  $('loadout').style.whiteSpace='pre-line';
+}
+for(const id of ['type','purpose','water','power','seed'])$(id).addEventListener('change',rebuild);
+$('next').onclick=()=>{$('seed').value=Number($('seed').value)+1;rebuild();};
+function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.setViewOffset(innerWidth,innerHeight,innerWidth>600?-165:0,0,innerWidth,innerHeight);camera.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();rebuild();
+renderer.setAnimationLoop(()=>{controls.update();pipeline.render();});
+</script></body></html>

@@ -279,7 +279,8 @@ ok(testBuildingType(testTags, 0) === 'shrine',
 // ▍Ⅸ 水面船艦與平民運動邊界、朝向與尾波系統 (Surface Vessels & Civilian Boundaries, Tangent Heading, Ship Wakes)
 console.log('\n▍Ⅸ 水面船艦與平民運動邊界、朝向與尾波系統');
 
-const hasWakeBuilder = BREAK_WAKE ? false : (aquaticsSrc.includes('export function buildShipWakeGroup(') && aquaticsSrc.includes('buildShipWakeGroup()'));
+const vesselModelsSrc = readSrc('public', 'js', 'vesselModels.js');
+const hasWakeBuilder = BREAK_WAKE ? false : (vesselModelsSrc.includes('export function buildShipWakeGroup(') && aquaticsSrc.includes('buildShipWakeGroup()') && aquaticsSrc.includes("from './vesselModels.js'"));
 ok(hasWakeBuilder, '巡邏艇具備專屬水面尾波與破浪建構器 (buildShipWakeGroup)');
 
 const subFnStr = /export function buildSubmarine\([\s\S]*?\n\}/.exec(aquaticsSrc)?.[0] || '';
