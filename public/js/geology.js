@@ -2,6 +2,7 @@
 import { mulberry32 } from './rng.js';
 import { forestEnvironment } from './forest.js';
 import { selectAncientStone, ancientStoneGeometry, ancientStoneDistribution } from './ancientStone.js';
+import { PHENOMENA, phenomenaWeights, phenomenaProfile, phenomenaSurface, phenomenaEffects } from './geologyPhenomena.js';
 
 export const GEOLOGY_PREFIX = 'geology/';
 const spec = (name, lithology, process, width, height, ageMa, roughness, color) =>
@@ -24,6 +25,7 @@ export const GEOLOGY_TYPES = {
     uniformScale: [.5, 1.5], color: 0x969184 },
   ruins: { name: '隨機廢棄遺跡', lithology: 'manufactured', process: 'human-activity',
     uniformScale: [.5, 1.5], color: 0x969184 },
+  ...Object.fromEntries(Object.entries(PHENOMENA).map(([id,row])=>[id,{...spec(...row.slice(0,8)),group:row[8]}])),
 };
 
 export const GEOLOGY_SURFACES = {
@@ -38,6 +40,9 @@ export const GEOLOGY_SURFACES = {
   lichen: { name: '地衣', color: 0xa5ac80, coverage: [.1, .55] },
   water: { name: '積水', color: 0x426d79, coverage: [.15, .65] },
   snow: { name: '積雪', color: 0xd5e1df, coverage: [.25, .9] },
+  ash: { name: '火山灰', color: 0x625d58, coverage: [0, 0] },
+  lava: { name: '熔岩', color: 0xf76824, coverage: [0, 0] },
+  mineral: { name: '礦物沉積', color: 0xdacb88, coverage: [0, 0] },
 };
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const number = (v, fallback, lo, hi) => Number.isFinite(v) ? clamp(v, lo, hi) : fallback;
@@ -58,7 +63,11 @@ export function geologyEnvironment(input = {}) {
     wind: number(input.wind, .4, 0, 1), fault: number(input.fault, 0, 0, 1),
     volcanic: number(input.volcanic, 0, 0, 1), exposure: number(input.exposure, .5, 0, 1),
     sediment: number(input.sediment, .4, 0, 1), dissolution: number(input.dissolution, .4, 0, 1),
-    human: number(input.human, 0, 0, 1) };
+    human: number(input.human, 0, 0, 1),
+    slope: number(input.slope, 0, 0, 90), rainfall: number(input.rainfall, 0, 0, 1),
+    instability: number(input.instability, 0, 0, 1), geothermal: number(input.geothermal, 0, 0, 1),
+    gasPressure: number(input.gasPressure, 0, 0, 1), springPressure: number(input.springPressure, 0, 0, 1),
+    impact: number(input.impact, 0, 0, 1), activity: number(input.activity, .7, 0, 1) };
 }
 
 export function geologyDistribution(input = {}) {
@@ -73,6 +82,7 @@ export function geologyDistribution(input = {}) {
     river: ['stream', 'river', 'lake'].includes(e.water) ? 2 + e.sediment : 0,
     moraine: e.temperature < 5 ? 1 : .02 };
   for(const row of ancientStoneDistribution(input)) weights[row.type]=e.human*3*row.weight;
+  Object.assign(weights,phenomenaWeights(e));
   const sum = Object.values(weights).reduce((a, b) => a + b, 0);
   return Object.entries(weights).filter(([, w]) => w > 0).map(([type, w]) => ({ type, weight: w / sum }));
 }
@@ -123,6 +133,11 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
     ageMa: sample(s.ageMa), roughness: sample(s.roughness), strike: rnd() * Math.PI * 2,
     dip: sample([0, environment.fault > .5 ? 70 : 25]), layers: 4 + Math.floor(rnd() * 9),
     erosion: environment.exposure * (.25 + rnd() * .75), dissolution: environment.dissolution };
+  if (Object.hasOwn(PHENOMENA,type)) {
+    const eventRnd=mulberry32(seed ^ 0x45564e54);
+    Object.assign(p,{activity:environment.activity,ventRadius:.12+eventRnd()*.12,
+      channelWidth:.12+eventRnd()*.14,jetHeight:.3+eventRnd()*.6});
+  }
   // Depositional age does not dictate surface exposure or weathering duration.
   const surfaces = Object.entries(surfaceWeights(environment, type)).map(([kind, weight]) => {
     const [a, b] = GEOLOGY_SURFACES[kind].coverage;
@@ -132,6 +147,7 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
 }
 
 function profile(type, x, z, p) {
+  if(Object.hasOwn(PHENOMENA,type)) return phenomenaProfile(type,x,z,p);
   const r = Math.hypot(x, z), envelope = Math.max(0, 1 - r * r);
   if (type === 'crater') return Math.exp(-(((r - .62) / .19) ** 2)) * Math.max(0, 1 - r ** 8);
   if (type === 'dune') return Math.max(0, 1 - Math.abs(z) ** 2) * Math.max(0, x < .25 ? (x + 1) / 1.25 : (1 - x) / .75);
@@ -161,10 +177,11 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
   if (!model.stone) for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
     const x = i / n * 2 - 1, z = j / n * 2 - 1;
     const base = profile(type, x, z, p);
+    const feature=Object.hasOwn(PHENOMENA,type)?phenomenaSurface(type,x,z,p):null;
     const noise = (Math.sin(x * 7 + z * 3 + phases[0]) * .3
       + Math.sin(x * 13 - z * 9 + phases[1]) * .15
       + Math.cos(x * 23 + z * 17 + phases[2]) * .05)
-      * p.roughness * (1 - p.erosion * .5) * base;
+      * p.roughness * (1 - p.erosion * .5) * base * (feature==='water'?0:1);
     const y = Math.max(0, base + noise) * p.height;
     const px = x * p.width / 2, pz = z * p.width * p.depthRatio / 2;
     points.push([px * c - pz * s, y, px * s + pz * c]);
@@ -195,6 +212,15 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     for (const row of eligible) {
       roll -= row.weight * Math.min(1, .9 / Math.max(.001, total));
       if (roll < 0) { selected = row.kind; break; }
+    }
+    if(Object.hasOwn(PHENOMENA,type)) {
+      const cos=Math.cos(p.strike),sin=Math.sin(p.strike);
+      const local=point=>[(point[0]*cos+point[2]*sin)*2/p.width,(-point[0]*sin+point[2]*cos)*2/(p.width*p.depthRatio)];
+      const feature=phenomenaSurface(type,...local(center),p);
+      if(feature==='water') {
+        // Shore triangles stay bare; only a flat, fully submerged triangle is water.
+        selected=up>=.995 && [a,b,c].every(point=>phenomenaSurface(type,...local(point),p)==='water')?'water':null;
+      } else if(feature) selected=feature==='bare'?null:feature;
     }
     if (selected) {
       color = rgb(GEOLOGY_SURFACES[selected].color);
@@ -236,6 +262,33 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     const a = j * (n + 1) + i, b = a + 1, c = a + n + 1, d = c + 1;
     face(points[a], points[c], points[b]); face(points[b], points[c], points[d]);
   }
+  const effects=[];
+  if(Object.hasOwn(PHENOMENA,type)) {
+    // Effect anchors interpolate the same mesh triangles used above, including noise.
+    const terrainHeight=(x,z)=>{
+      const gx=clamp((x/p.width+ .5)*n,0,n-1e-9),gz=clamp((z/(p.width*p.depthRatio)+.5)*n,0,n-1e-9);
+      const ix=Math.floor(gx),iz=Math.floor(gz),u=gx-ix,v=gz-iz,base=iz*(n+1)+ix;
+      const a=points[base][1],b=points[base+1][1],d=points[base+n+2][1],end=points[base+n+1][1];
+      return u+v<=1?a+(b-a)*u+(end-a)*v:d+(end-d)*(1-u)+(b-d)*(1-v);
+    };
+    effects.push(...phenomenaEffects(type,p,terrainHeight,mulberry32(seed ^ 0x504c554d)));
+    for(const effect of effects) {
+      const {x,y,z,height,radius,kind,color}=effect;
+      const transform=(dx,dy,dz)=>[(x+dx)*c-(z+dz)*s,y+dy,(x+dx)*s+(z+dz)*c];
+      const rings=8,sides=8;
+      for(let j=0;j<rings;j++) for(let i=0;i<sides;i++) {
+        const point=(level,index)=>{
+          const t=level/rings,a=index/sides*Math.PI*2;
+          const spread=kind==='steam'||kind==='ash-plume'
+            ?.2+2.3*Math.sin(Math.PI*t)**.5*(.7+.3*Math.sin(t*Math.PI*5)**2):1-t*.75;
+          return transform(Math.cos(a)*radius*spread+t*t*e.wind*height*.2,t*height,Math.sin(a)*radius*spread);
+        };
+        const a=point(j,i),b=point(j,i+1),end=point(j+1,i),d=point(j+1,i+1),tint=rgb(color,.85+.15*j/rings);
+        triangle(a,end,b,tint);triangle(b,end,d,tint);
+        if(j===rings-1) triangle(end,transform(e.wind*height*.2,height,0),d,tint);
+      }
+    }
+  }
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < vertices.length; i++) { const axis = i % 3; min[axis] = Math.min(min[axis], vertices[i]); max[axis] = Math.max(max[axis], vertices[i]); }
   const targetKey = GEOLOGY_PREFIX + type;
@@ -246,5 +299,5 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     parts: [{ name, type: 'box', dimensions: [p.width, p.height, p.width * p.depthRatio],
       position: [0, p.height / 2, 0], color: spec.color, triangles: faces.length / 3 }], palettes: [],
     meshData: { vertices, faces, colors },
-    generation: { source: 'geology', category: 'geology', ...generationModel, surfaceCounts: counts, surfaceTriangles } };
+    generation: { source: 'geology', category: 'geology', ...generationModel, effects, surfaceCounts: counts, surfaceTriangles } };
 }

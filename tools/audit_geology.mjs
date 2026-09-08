@@ -3,6 +3,7 @@ import { GEOLOGY_TYPES, generateGeology, geologyDistribution, geologyBackgroundO
 import { generateSharedBackgroundObject, sharedBackgroundObjectTargets } from '../public/js/backgroundObjects.js';
 import { ANCIENT_MONUMENTS, ANCIENT_RUINS, ancientCandidates, ancientStoneDistribution, selectAncientStone, ancientStoneGeometry } from '../public/js/ancientStone.js';
 import { REGIONAL_STONE_BUILDERS } from '../public/js/ancientStoneSites.js';
+import { PHENOMENA, phenomenaProfile, phenomenaSurface } from '../public/js/geologyPhenomena.js';
 
 let count = 0;
 for (const type of Object.keys(GEOLOGY_TYPES)) {
@@ -47,6 +48,44 @@ assert(dryDune.surfaces.filter(x => ['mud', 'moss', 'lichen', 'water'].includes(
 assert.throws(() => generateGeology('missing'), RangeError);
 assert.throws(() => generateGeology('granite', NaN), TypeError);
 assert.throws(() => generateGeology('granite', 1, { water: 'bad' }), RangeError);
+
+// Habitat eligibility is independent of explicitly choosing an art archetype.
+const probability=(input,type)=>geologyDistribution(input).find(row=>row.type===type)?.weight||0;
+assert.equal(probability({slope:0,rainfall:1,instability:1},'debris_flow'),0);
+assert(probability({slope:40,rainfall:1,sediment:1},'debris_flow')>0);
+assert.equal(probability({slope:40,rainfall:1,water:'none'},'landslide_lake'),0);
+assert(probability({slope:40,rainfall:1,water:'river'},'landslide_lake')>0);
+assert.equal(probability({volcanic:1,geothermal:0},'hot_spring'),0);
+assert(probability({gasPressure:1,sediment:1,volcanic:0},'mud_volcano')>0);
+assert.equal(probability({geothermal:1,springPressure:0},'geyser'),0);
+assert.equal(probability({volcanic:1,activity:0},'eruption'),0);
+for(const type of Object.keys(PHENOMENA)) assert.equal(probability({depth:10,geothermal:1,impact:1,gasPressure:1},type),0);
+const eventSignatures=new Set();
+for(const type of Object.keys(PHENOMENA)) {
+  const entry=geologyBackgroundObject(type,42,{activity:1,vegetation:1,moisture:1});
+  const p=entry.generation.parameters;
+  assert(entry.meshData.faces.length/3<5000);
+  const signature=JSON.stringify(entry.meshData.vertices);
+  assert(!eventSignatures.has(signature),`${type}: distinct event silhouette`);eventSignatures.add(signature);
+  for(const effect of entry.generation.effects) {
+    assert([effect.x,effect.y,effect.z,effect.height,effect.radius].every(Number.isFinite));
+    assert(effect.height>0 && effect.radius>0);
+    assert(effect.y>=entry.bounds.min[1] && effect.y+effect.height<=entry.bounds.max[1]+1e-8);
+  }
+  assert.equal(geologyBackgroundObject(type,42,{activity:0}).generation.effects.length,0);
+  for(const row of entry.generation.surfaceTriangles) {
+    const [x,,z]=row.center,cos=Math.cos(p.strike),sin=Math.sin(p.strike);
+    const feature=phenomenaSurface(type,(x*cos+z*sin)*2/p.width,(-x*sin+z*cos)*2/(p.width*p.depthRatio),p);
+    if(feature) assert(!['grass','wood','leaves','cones','moss','lichen'].includes(row.surface));
+  }
+  if(['landslide_lake','hot_spring','fountain','geyser'].includes(type)) {
+    const water=entry.generation.surfaceTriangles.filter(row=>row.surface==='water');
+    assert(water.length>0,`${type}: water is visible`);
+    assert(water.every(row=>row.up>=.995));
+  }
+  if(type==='impact_crater') assert(phenomenaProfile(type,.62,0,p)>phenomenaProfile(type,0,0,p));
+}
+assert(!geologyBackgroundObject('eruption',42,{activity:0}).generation.surfaceCounts.lava);
 
 const dryStone = { moisture: 0, vegetation: 0, exposure: 0, wind: 0, temperature: 15 };
 assert.equal(Object.keys(REGIONAL_STONE_BUILDERS).length,17);

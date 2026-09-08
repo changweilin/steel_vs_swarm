@@ -28,6 +28,14 @@
 <label for="fault">斷層作用</label><input id="fault" type="range" min="0" max="1" step=".05" value=".2">
 <label for="volcanic">火山作用</label><input id="volcanic" type="range" min="0" max="1" step=".05" value=".2">
 <label for="dissolution">溶蝕</label><input id="dissolution" type="range" min="0" max="1" step=".05" value=".6">
+<label for="slope">坡度 °</label><input id="slope" type="range" min="0" max="90" step="1" value="35">
+<label for="rainfall">降雨／融雪觸發</label><input id="rainfall" type="range" min="0" max="1" step=".05" value=".6">
+<label for="instability">山體不穩定程度</label><input id="instability" type="range" min="0" max="1" step=".05" value=".6">
+<label for="geothermal">地熱作用</label><input id="geothermal" type="range" min="0" max="1" step=".05" value=".5">
+<label for="gasPressure">地下氣體壓力</label><input id="gasPressure" type="range" min="0" max="1" step=".05" value=".4">
+<label for="springPressure">地下水承壓程度</label><input id="springPressure" type="range" min="0" max="1" step=".05" value=".5">
+<label for="impact">撞擊地貌權重</label><input id="impact" type="range" min="0" max="1" step=".05" value=".1">
+<label for="activity">噴發／噴流視覺強度</label><input id="activity" type="range" min="0" max="1" step=".05" value=".7">
 <button id="next">下一個種子</button><div id="stats"></div>
 </aside><section id="view"><div id="caption"></div></section></main>
 <script type="module">
@@ -37,10 +45,16 @@ import { GEOLOGY_TYPES, GEOLOGY_SURFACES, geologyBackgroundObject } from '/js/ge
 import { ANCIENT_REGIONS, ANCIENT_RUINS, RUIN_ACTIVITIES, ancientStoneDistribution } from '/js/ancientStone.js';
 import { runtimeMeshDataGeometry } from '/js/runtimePartModel.js';
 const $ = id => document.getElementById(id), view = $('view');
-for(const [key,spec] of Object.entries(GEOLOGY_TYPES)) $('type').add(new Option(spec.name,key));
+for(const group of ['自然地質','不穩定地質','特殊地質','人造石材']) {
+  const options=document.createElement('optgroup');options.label=group;
+  for(const [key,spec] of Object.entries(GEOLOGY_TYPES)) {
+    if((spec.group || (spec.lithology==='manufactured'?'人造石材':'自然地質'))===group) options.append(new Option(spec.name,key));
+  }
+  $('type').append(options);
+}
 for(const [key,name] of Object.entries(ANCIENT_REGIONS)) $('region').add(new Option(name,key));
 for(const [key,name] of Object.entries(ANCIENT_RUINS)) $('ruinType').add(new Option(`${RUIN_ACTIVITIES[key]} · ${name}`,key));
-$('type').value='monument'; $('region').value='egypt';
+$('type').value='eruption'; $('region').value='egypt';
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2)); view.prepend(renderer.domElement);
 const scene = new THREE.Scene();scene.background=new THREE.Color(0x111a20);
@@ -60,7 +74,7 @@ function rebuild(){
     $('ruinType').disabled=humanAuto || $('type').value!=='ruins';
     if(isAncient && !$('ruinType').disabled) input.ruinType=$('ruinType').value;
     if($('longitude').value.trim()) input.longitude=Number($('longitude').value);
-    for(const key of ['latitude','altitude','moisture','vegetation','conifers','exposure','fault','volcanic','dissolution']) input[key]=Number($(key).value);
+    for(const key of ['latitude','altitude','moisture','vegetation','conifers','exposure','fault','volcanic','dissolution','slope','rainfall','instability','geothermal','gasPressure','springPressure','impact','activity']) input[key]=Number($(key).value);
     const entry=geologyBackgroundObject(humanAuto?'masonry':$('type').value,Number($('seed').value),input);
     if(mesh){scene.remove(mesh);mesh.geometry.dispose();}
     if(grid){scene.remove(grid);grid.geometry.dispose();grid.material.dispose();}
@@ -75,7 +89,8 @@ function rebuild(){
     const stone=entry.generation.stone;
     const description=stone ? `${spec.name} · ${stone.name} · ${stone.kind==='ruins'?stone.activity:ANCIENT_REGIONS[stone.region]} · 等比例 ${p.uniformScale.toFixed(2)}×。${stone.kind==='ruins'?'種子決定殘構。':'固定模板；不抽樣長寬高。'}${stone.fallback?'地區型錄未匹配。':''}\n生成權重：${ancientStoneDistribution(input).map(row=>`${GEOLOGY_TYPES[row.type].name} ${row.weight*100}%`).join(' / ')}\n`
       : `抽樣範圍：寬 ${spec.width.join('–')} m · 高 ${spec.height.join('–')} m · 年代 ${spec.ageMa.join('–')} Ma · 粗糙度 ${spec.roughness.join('–')}。\n岩層／堆積年代 ${p.ageMa.toFixed(3)} Ma · 傾角 ${p.dip.toFixed(0)}° · ${p.layers} 層\n`;
-    $('stats').textContent=description+Object.entries(surfaceCounts).map(([key,n])=>`${GEOLOGY_SURFACES[key].name} ${n} 面`).join(' · ');
+    const eventDescription=spec.group?`${spec.group} · 活動強度 ${p.activity.toFixed(2)} · ${entry.generation.effects.length} 組噴流／煙柱。靜態事件快照，非災害演算。\n`:'';
+    $('stats').textContent=eventDescription+description+Object.entries(surfaceCounts).map(([key,n])=>`${GEOLOGY_SURFACES[key].name} ${n} 面`).join(' · ');
     window.geologyPreview={type,vertices:entry.meshData.vertices.length/3,triangles:entry.meshData.faces.length/3};
   }catch(error){$('stats').textContent=error.message;console.error(error);}
 }
