@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { envMat, sceneObjectMat } from './toon.js';
 import { generateBuildingAppurtenances } from './buildingAppurtenances.js';
-import { resolveAdaptiveRoofForm, calculateFootprintMetrics } from './architectureStyles.js';
+import { resolveAdaptiveRoofForm, calculateFootprintMetrics, computeOrientedRoofFrame } from './architectureStyles.js';
 
 const EPS = 1e-5;
 const DEFAULT_H = Object.freeze({
@@ -300,25 +300,11 @@ function architecturalFacade(edges, style, thickness) {
 /** 屋頂構件覆蓋建築實體輪廓並封閉山牆兩端，杜絕懸空、空洞與零件拆離。支援 12 種自適應屋頂造型。 */
 function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null, targetH = 10) {
   const form = actualRoofForm || style?.actualRoofForm || style?.roofForm;
-  if (!form || form === 'flat' || poly.holes.length) return [];
-  let sign = 0;
-  for (let i = 0; i < poly.outer.length; i++) {
-    const a = poly.outer[i], b = poly.outer[(i + 1) % poly.outer.length], c = poly.outer[(i + 2) % poly.outer.length];
-    const cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
-    if (Math.abs(cross) < EPS) continue;
-    if (sign && Math.sign(cross) !== sign) return [];
-    sign = Math.sign(cross);
-  }
-  const xs = poly.outer.map(p => p[0]), zs = poly.outer.map(p => p[1]);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minZ = Math.min(...zs), maxZ = Math.max(...zs);
-  const polyW = maxX - minX, polyD = maxZ - minZ;
-  if (polyW < 1.2 || polyD < 1.2) return [];
-
-  const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
-  const isRotated = polyD > polyW;
-  const len = isRotated ? polyD : polyW;
-  const span = isRotated ? polyW : polyD;
+  if (!form || form === 'flat' || poly.holes?.length) return [];
+  const frame = computeOrientedRoofFrame(poly);
+  if (!frame) return [];
+  const { len, span, cx, cz, angle } = frame;
+  if (len < 1.2 || span < 1.2) return [];
 
   const roofH = Math.min(Math.max(1.6, (targetH || 10) * 0.32), Math.max(1.8, span * 0.36));
   const ov = Math.min(0.45, Math.max(0.2, span * 0.05)); // 屋簷出挑 (eave overhang)
@@ -328,12 +314,12 @@ function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null
   const geos = [];
   const add = (geo, lift = 0, rotY = 0) => {
     if (rotY) geo.rotateY(rotY);
-    if (isRotated) geo.rotateY(Math.PI / 2);
+    geo.rotateY(-angle);
     geo.translate(cx, y + lift, cz);
     geos.push(paintGeometry(geo, style.roof, style.variant));
   };
   const addGableWall = (geo, lift = 0) => {
-    if (isRotated) geo.rotateY(Math.PI / 2);
+    geo.rotateY(-angle);
     geo.translate(cx, y + lift, cz);
     geos.push(paintGeometry(geo, style.trim || style.wall, style.variant));
   };
@@ -342,9 +328,10 @@ function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null
     const r = Math.min(span / 2, len / 2);
     add(new THREE.SphereGeometry(r, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0);
   } else if (form === 'vault') {
-    const r = span / 2;
-    const geo = new THREE.CylinderGeometry(r, r, totalL, 14, 1, false, 0, Math.PI);
-    geo.rotateZ(Math.PI / 2);
+    const geo = new THREE.CylinderGeometry(1, 1, totalL, 16, 1, false, 0, Math.PI);
+    geo.rotateZ(-Math.PI / 2);
+    geo.rotateX(-Math.PI / 2);
+    geo.scale(1, roofH, totalS / 2);
     add(geo, 0);
   } else if (form === 'spire') {
     const r = Math.min(span / 2, len / 2) * 0.85;
@@ -352,68 +339,106 @@ function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null
     add(geo, roofH * 1.1);
   } else if (form === 'shed') {
     const slopeH = roofH * 0.85;
-    const geo = new THREE.BoxGeometry(totalL, 0.18, totalS);
-    geo.rotateZ(0.22);
-    add(geo, slopeH / 2 + 0.1);
+    const slopeLen = Math.hypot(totalS, slopeH);
+    const slopeAngle = Math.atan2(slopeH, totalS);
+    const geo = new THREE.BoxGeometry(totalL, 0.18, slopeLen);
+    geo.rotateX(slopeAngle);
+    add(geo, slopeH / 2 + 0.09);
     // 封閉兩側山牆
     for (const side of [-1, 1]) {
-      const gWall = new THREE.BoxGeometry(0.18, slopeH * 0.8, span * 0.9);
-      gWall.translate(side * (len / 2 - 0.09), slopeH * 0.4, 0);
+      const gWall = new THREE.BoxGeometry(0.18, slopeH * 0.85, span * 0.9);
+      gWall.translate(side * (len / 2 - 0.09), slopeH * 0.425, 0);
       addGableWall(gWall, 0);
     }
   } else if (form === 'mansard') {
-    const lower = new THREE.CylinderGeometry(span * 0.42, totalS / 2, roofH * 0.55, 4);
+    const lowerH = roofH * 0.55;
+    const lower = new THREE.CylinderGeometry(span * 0.42, totalS / 2, lowerH, 4);
     lower.rotateY(Math.PI / 4);
-    add(lower, roofH * 0.275);
-    const upper = new THREE.CylinderGeometry(span * 0.25, span * 0.42, roofH * 0.35, 4);
+    lower.scale(totalL / totalS, 1, 1);
+    add(lower, lowerH / 2);
+    const upperH = roofH * 0.35;
+    const upper = new THREE.CylinderGeometry(span * 0.25, span * 0.42, upperH, 4);
     upper.rotateY(Math.PI / 4);
-    add(upper, roofH * 0.55 + roofH * 0.175);
+    upper.scale(totalL / totalS, 1, 1);
+    add(upper, lowerH + upperH / 2);
   } else if (form === 'curved_ridge') {
-    const r = span * 0.65;
-    const geo = new THREE.CylinderGeometry(r, r, totalL, 16, 1, false, Math.PI * 0.22, Math.PI * 0.56);
-    geo.rotateZ(Math.PI / 2);
-    add(geo, 0.1);
+    const geo = new THREE.CylinderGeometry(1, 1, totalL, 16, 1, false, Math.PI * 0.2, Math.PI * 0.6);
+    geo.rotateZ(-Math.PI / 2);
+    geo.rotateX(-Math.PI / 2);
+    const baseSine = Math.sin(Math.PI * 0.2);
+    geo.translate(0, -baseSine, 0);
+    const archH = 1 - baseSine;
+    geo.scale(1, roofH / archH, totalS / (2 * Math.cos(Math.PI * 0.2)));
+    add(geo, 0);
   } else if (form === 'wudian') {
     const hip = new THREE.CylinderGeometry(span * 0.28, totalS / 2, roofH, 4);
     hip.rotateY(Math.PI / 4);
+    hip.scale(totalL / totalS, 1, 1);
     add(hip, roofH / 2);
-    const ridge = new THREE.BoxGeometry(Math.max(1.0, len - span * 0.6), 0.15, 0.2);
+    const ridgeL = Math.max(1.0, totalL - totalS * 0.6);
+    const ridge = new THREE.BoxGeometry(ridgeL, 0.15, 0.2);
     add(ridge, roofH + 0.075);
   } else if (form === 'xieshan') {
-    const lower = new THREE.CylinderGeometry(span * 0.38, totalS / 2, roofH * 0.5, 4);
+    const lowerH = roofH * 0.45;
+    const lower = new THREE.CylinderGeometry(span * 0.38, totalS / 2, lowerH, 4);
     lower.rotateY(Math.PI / 4);
-    add(lower, roofH * 0.25);
-    const upper = new THREE.CylinderGeometry(roofH * 0.55, roofH * 0.55, totalL * 0.8, 3);
+    lower.scale(totalL / totalS, 1, 1);
+    add(lower, lowerH / 2);
+
+    const upperH = roofH * 0.55;
+    const upperL = totalL * 0.75;
+    const upperS = span * 0.76;
+    const upper = new THREE.CylinderGeometry(1, 1, upperL, 3);
     upper.rotateZ(Math.PI / 2);
-    add(upper, roofH * 0.65);
+    upper.translate(0, 0.5, 0);
+    upper.scale(1, upperH / 1.5, upperS / Math.sqrt(3));
+    add(upper, lowerH);
+
+    const ridge = new THREE.BoxGeometry(upperL + 0.2, 0.14, 0.18);
+    add(ridge, roofH + 0.07);
+
+    for (const side of [-1, 1]) {
+      const gWall = new THREE.BoxGeometry(0.18, upperH * 0.85, upperS * 0.88);
+      gWall.translate(side * (upperL / 2 - 0.09), lowerH + upperH * 0.425, 0);
+      addGableWall(gWall, 0);
+    }
   } else if (form === 'xuanshan') {
     // 懸山頂：挑梁出檁，屋面延伸出山牆外
-    const geo = new THREE.CylinderGeometry(span / 2 + ov, span / 2 + ov, totalL + 0.6, 3);
+    const geo = new THREE.CylinderGeometry(1, 1, totalL + 0.6, 3);
     geo.rotateZ(Math.PI / 2);
-    add(geo, roofH * 0.48);
+    geo.translate(0, 0.5, 0);
+    geo.scale(1, roofH / 1.5, totalS / Math.sqrt(3));
+    add(geo, 0);
+
     const beam = new THREE.BoxGeometry(totalL + 0.8, 0.14, 0.14);
     add(beam, roofH + 0.07);
+
     // 山牆面
     for (const side of [-1, 1]) {
-      const gWall = new THREE.BoxGeometry(0.18, roofH * 0.9, span * 0.88);
-      gWall.translate(side * (len / 2 - 0.09), roofH * 0.45, 0);
+      const gWall = new THREE.BoxGeometry(0.18, roofH * 0.88, span * 0.92);
+      gWall.translate(side * (len / 2 - 0.09), roofH * 0.44, 0);
       addGableWall(gWall, 0);
     }
   } else if (form === 'yingshan') {
     // 硬山頂：山牆與屋面齊平，兩側磚石封火牆凸出
-    const geo = new THREE.CylinderGeometry(span / 2, span / 2, len, 3);
+    const geo = new THREE.CylinderGeometry(1, 1, len, 3);
     geo.rotateZ(Math.PI / 2);
-    add(geo, roofH * 0.48);
+    geo.translate(0, 0.5, 0);
+    geo.scale(1, roofH / 1.5, span / Math.sqrt(3));
+    add(geo, 0);
+
     for (const side of [-1, 1]) {
-      const wall = new THREE.BoxGeometry(0.22, roofH * 1.05, span + 0.2);
-      wall.translate(side * (len / 2 + 0.11), roofH * 0.525, 0);
+      const wall = new THREE.BoxGeometry(0.24, roofH * 1.05, span + 0.2);
+      wall.translate(side * (len / 2 + 0.12), roofH * 0.525, 0);
       addGableWall(wall, 0);
     }
   } else if (form === 'tiered') {
     for (let i = 0; i < 3; i++) {
       const s = 1 - i * 0.24;
-      const geo = new THREE.ConeGeometry(Math.min(span, len) * 0.48 * s, roofH * 0.4, 4);
+      const tierH = roofH * 0.4;
+      const geo = new THREE.ConeGeometry(totalS / 2 * s, tierH, 4);
       geo.rotateY(Math.PI / 4);
+      geo.scale(totalL / totalS, 1, 1);
       add(geo, roofH * (0.2 + i * 0.32));
     }
   } else if (form === 'stepped') {
@@ -427,11 +452,13 @@ function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null
     const n = form === 'sawtooth' ? Math.min(4, Math.max(2, Math.floor(span / 4.0))) : 1;
     const toothS = span / n;
     for (let i = 0; i < n; i++) {
-      const geo = new THREE.CylinderGeometry(toothS / 2 + ov, toothS / 2 + ov, totalL, 3);
+      const geo = new THREE.CylinderGeometry(1, 1, totalL, 3);
       geo.rotateZ(Math.PI / 2);
+      geo.translate(0, 0.5, 0);
+      geo.scale(1, (roofH / (n > 1 ? 1.4 : 1)) / 1.5, (toothS + ov * 2) / Math.sqrt(3));
       const zOffset = n > 1 ? (i - (n - 1) / 2) * toothS : 0;
       geo.translate(0, 0, zOffset);
-      add(geo, roofH * 0.48 / (n > 1 ? 1.4 : 1));
+      add(geo, 0);
     }
     // 山牆封閉兩端
     for (const side of [-1, 1]) {

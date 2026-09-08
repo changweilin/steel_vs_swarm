@@ -53,7 +53,12 @@
 | **極端長寬比（細長型）**| 長寬比 $\text{aspect} > 2.6$ | 向心/四坡頂（`dome`, `vault`, `spire`, `wudian`, `xieshan`, `tiered`）轉為長軸雙坡 `yingshan`、`gable` 或 `sawtooth` | 圓頂或廡殿歇山在細長基地上會發生嚴重的橫縱比扭曲變形。 |
 | **極端微小建物** | 跨度 $< 2.5\text{m}$ 或 面積 $< 15\text{m}^2$ | 複雜屋頂轉為簡潔單坡 `shed` | 過小體積無法承載多層重簷或裝飾飛簷。 |
 
-- **屋頂尺度調校**：`architecturalRoof` 中以 $\text{half} = \min(8.0, \text{targetH} \times 0.45, \max(0.6, \text{span} \times 0.32))$ 計算構造半徑，與建築實體維持協調比例。
+- **屋頂尺度與方向性組裝（Oriented Bounding Box）**：
+  - 由 `computeOrientedRoofFrame(poly)` 沿多邊形外環計算最小外接旋轉包圍盒 (OBB)，精確解算主軸長向 $\text{len}$、短向跨度 $\text{span}$、中心點 $(cx, cz)$ 與主軸偏角 $\theta = \text{atan2}(dirZ, dirX)$。
+  - 在 Three.js 世界坐標中統一以 `rotateY(-\theta)` 與外牆同調旋轉，杜絕非正交建物屋頂偏角或反轉錯位。
+  - 凹多邊形（L型、U型）或中庭洞口自動安全降級為平頂（`null`），杜絕多翼幾何懸空或貫穿。
+  - 12 種屋頂造型均沿主軸（長向）建置正脊，單坡（`shed`）沿短向跨度傾斜，拱頂（`vault` / `curved_ridge`）垂直向上拱曲，四坡與歇山（`wudian` / `xieshan` / `mansard`）依長寬比自適應縮放完整覆蓋建物輪廓。
+
 
 ---
 

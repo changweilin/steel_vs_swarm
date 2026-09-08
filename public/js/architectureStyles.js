@@ -51,6 +51,85 @@ export const BUILDING_FUNCTION_RANGES = Object.freeze({
   tourism_cultural:      { label: '文化歷史建築', levels: [2, 5],  floorH: [3.8, 5.0], minH: 8,  maxH: 22 },
 });
 
+/**
+ * 依凸多邊形邊緣計算最小外接旋轉包圍矩形 (Oriented Bounding Box, OBB)
+ * 回傳屋頂主軸方向 (長向 len / 短向 span / 幾何中心 cx, cz / 長向旋轉角 angle)
+ * 若多邊形非凸 (例如 L型、中庭) 則回傳 null，以維持平頂降級安全機制。
+ */
+export function computeOrientedRoofFrame(poly) {
+  const outer = poly?.outer || [];
+  if (outer.length < 3) return null;
+
+  // 1. 檢驗凸多邊形 (Convex check) - 若有凹陷或中庭則維持平頂
+  let sign = 0;
+  for (let i = 0; i < outer.length; i++) {
+    const a = outer[i], b = outer[(i + 1) % outer.length], c = outer[(i + 2) % outer.length];
+    const cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    if (Math.abs(cross) < 1e-5) continue;
+    if (sign && Math.sign(cross) !== sign) return null;
+    sign = Math.sign(cross);
+  }
+
+  // 2. 最小外接矩形 (Oriented Bounding Box, OBB)
+  let bestArea = Infinity;
+  let bestFrame = null;
+
+  for (let i = 0; i < outer.length; i++) {
+    const a = outer[i], b = outer[(i + 1) % outer.length];
+    const edx = b[0] - a[0], edz = b[1] - a[1];
+    const elen = Math.hypot(edx, edz);
+    if (elen < 1e-5) continue;
+    const ux = edx / elen, uz = edz / elen; // 沿邊單位向量
+    const vx = -uz, vz = ux;                // 垂直邊單位向量
+
+    let minU = Infinity, maxU = -Infinity;
+    let minV = Infinity, maxV = -Infinity;
+
+    for (const p of outer) {
+      const pu = p[0] * ux + p[1] * uz;
+      const pv = p[0] * vx + p[1] * vz;
+      if (pu < minU) minU = pu;
+      if (pu > maxU) maxU = pu;
+      if (pv < minV) minV = pv;
+      if (pv > maxV) maxV = pv;
+    }
+
+    const w = maxU - minU;
+    const d = maxV - minV;
+    const area = w * d;
+
+    if (area < bestArea - 1e-6) {
+      bestArea = area;
+      const cu = (minU + maxU) / 2;
+      const cv = (minV + maxV) / 2;
+      const cx = cu * ux + cv * vx;
+      const cz = cu * uz + cv * vz;
+
+      if (w >= d) {
+        bestFrame = {
+          len: w,
+          span: d,
+          cx, cz,
+          dirX: ux, dirZ: uz,
+          normalX: vx, normalZ: vz,
+          angle: Math.atan2(uz, ux),
+        };
+      } else {
+        bestFrame = {
+          len: d,
+          span: w,
+          cx, cz,
+          dirX: vx, dirZ: vz,
+          normalX: -ux, normalZ: -uz,
+          angle: Math.atan2(vz, vx),
+        };
+      }
+    }
+  }
+
+  return bestFrame;
+}
+
 /** 計算建築多邊形量測指標（面積、跨度、長寬、長寬比、邊界與質心） */
 export function calculateFootprintMetrics(poly) {
   const outer = poly?.outer || [];
@@ -69,10 +148,11 @@ export function calculateFootprintMetrics(poly) {
     area += (outer[j][0] + outer[i][0]) * (outer[j][1] - outer[i][1]);
   }
   area = Math.abs(area) * 0.5;
+  const frame = computeOrientedRoofFrame(poly);
 
   return {
     width, depth, span, aspect, area, cx, cz, minX, maxX, minZ, maxZ,
-    outer, holes: poly.holes || [],
+    outer, holes: poly.holes || [], frame,
   };
 }
 

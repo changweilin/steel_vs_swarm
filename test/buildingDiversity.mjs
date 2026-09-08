@@ -9,7 +9,7 @@ import {
   ARCHITECTURE_STYLES, ARCHITECTURE_PROFILES, CULTURAL_REGIONS,
   ROOF_FORMS, FACADE_TYPES, BUILDING_FUNCTION_RANGES, CULTURAL_AFFINITY_RATIO,
   APPURTENANCE_RULES, calculateFootprintMetrics, ROOF_APPURTENANCE_COMPATIBILITY,
-  resolveAdaptiveRoofForm, distanceToPolyBoundary, isSiteValid,
+  resolveAdaptiveRoofForm, distanceToPolyBoundary, isSiteValid, computeOrientedRoofFrame,
 } from '../public/js/architectureStyles.js';
 
 // 1. 基礎地形情境比例驗證（無文化區域指定時維持原分佈）
@@ -142,6 +142,30 @@ assert.equal(polyMetrics.aspect, 2.0);
 assert.equal(polyMetrics.area, 200);
 assert.equal(polyMetrics.cx, 10);
 assert.equal(polyMetrics.cz, 5);
+
+// 驗證屋頂主軸方向性與旋轉包圍框 (computeOrientedRoofFrame)
+const frameHoriz = computeOrientedRoofFrame(testPoly);
+assert.equal(frameHoriz.len, 20, '水平長方形長度');
+assert.equal(frameHoriz.span, 10, '水平長方形跨度');
+assert.equal(frameHoriz.angle, 0, '水平長方形主軸角度應為 0');
+
+const vertPoly = { outer: [[0, 0], [10, 0], [10, 25], [0, 25]], holes: [] };
+const frameVert = computeOrientedRoofFrame(vertPoly);
+assert.equal(frameVert.len, 25, '垂直長方形長度');
+assert.equal(frameVert.span, 10, '垂直長方形跨度');
+assert.ok(Math.abs(frameVert.angle - Math.PI / 2) < 1e-4, '垂直長方形主軸角度應為 PI/2');
+
+// 旋轉 30 度長方形驗證
+const cos30 = Math.cos(Math.PI / 6), sin30 = Math.sin(Math.PI / 6);
+const rotPoly = { outer: testPoly.outer.map(([x, z]) => [x * cos30 - z * sin30, x * sin30 + z * cos30]), holes: [] };
+const frameRot = computeOrientedRoofFrame(rotPoly);
+assert.ok(Math.abs(frameRot.len - 20) < 1e-3, '旋轉長方形長度不變');
+assert.ok(Math.abs(frameRot.span - 10) < 1e-3, '旋轉長方形跨度不變');
+assert.ok(Math.abs(frameRot.angle - Math.PI / 6) < 1e-3, '旋轉長方形主軸角度應與建物邊界同調 (30度)');
+
+// 凹多邊形（如 L 型）應回傳 null 保持平頂降級安全
+const lPoly = { outer: [[0, 0], [20, 0], [20, 5], [5, 5], [5, 20], [0, 20]], holes: [] };
+assert.equal(computeOrientedRoofFrame(lPoly), null, '凹多邊形安全降級為平頂 (null)');
 
 // 驗證邊界留白與壓線保護演算法 (distanceToPolyBoundary & isSiteValid)
 assert.equal(distanceToPolyBoundary(10, 5, testPoly), 5.0, '矩形幾何中心淨距');
