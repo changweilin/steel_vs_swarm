@@ -163,15 +163,18 @@ for (const part of allRooftopParts) {
   assert.ok(ROOF_APPURTENANCE_COMPATIBILITY.flat.includes(part), `平頂應相容 ${part}`);
   assert.ok(ROOF_APPURTENANCE_COMPATIBILITY.stepped.includes(part), `階梯頂應相容 ${part}`);
 }
-// 中式殿閣屋頂與斜坡頂嚴禁出現大型停機棚與商業大型廣告看板
-for (const curved of ['wudian', 'xieshan', 'curved_ridge', 'tiered', 'gable', 'mansard', 'dome']) {
-  assert.ok(!ROOF_APPURTENANCE_COMPATIBILITY[curved].includes('heli_hangar'), `${curved} 頂不可放停機棚`);
-  assert.ok(!ROOF_APPURTENANCE_COMPATIBILITY[curved].includes('roof_billboard'), `${curved} 頂不可放大看板`);
-}
-// 傳統中式大屋頂排除水塔與現代基地台
-for (const trad of ['wudian', 'xieshan', 'curved_ridge', 'tiered']) {
-  assert.ok(!ROOF_APPURTENANCE_COMPATIBILITY[trad].includes('water_tank'), `${trad} 頂不可放水塔`);
-  assert.ok(!ROOF_APPURTENANCE_COMPATIBILITY[trad].includes('cellular_mast'), `${trad} 頂不可放基地台`);
+// 驗證水平屋頂專屬零件（只能放在屋頂水平／平整處）：在所有非水平屋面上嚴禁放置
+const horizontalOnlyParts = ['water_tank', 'heli_hangar', 'roof_billboard', 'cellular_mast', 'pigeon_coop'];
+for (const form of Object.keys(ROOF_APPURTENANCE_COMPATIBILITY)) {
+  if (form === 'flat' || form === 'stepped') {
+    for (const part of horizontalOnlyParts) {
+      assert.ok(ROOF_APPURTENANCE_COMPATIBILITY[form].includes(part), `${form} 應相容水平零件 ${part}`);
+    }
+  } else {
+    for (const part of horizontalOnlyParts) {
+      assert.ok(!ROOF_APPURTENANCE_COMPATIBILITY[form].includes(part), `非水平屋頂 ${form} 嚴禁放置 ${part}`);
+    }
+  }
 }
 
 // 驗證自適應屋頂防扭曲決議 (resolveAdaptiveRoofForm)

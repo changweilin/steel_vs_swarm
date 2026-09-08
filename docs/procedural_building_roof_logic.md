@@ -1,0 +1,99 @@
+# 程序化建築、屋頂構造與零件生成管線
+
+本文件定義遊戲啟動時 OSM 圖資建物的四階段程序化生成順序、幾何尺度指標計算、屋頂構造防扭曲自適應規則、立面平面渲染深度分層，以及屋頂零件之相容性與水平放置限制。
+
+## 0. 設計原則與管線順序
+
+建築生成遵循「單一結算點」、「確定性（種子與輪廓固定時輸出完全一致）」與「防扭曲幾何降級」原則。啟動管線劃分為嚴格的四個先後階段：
+
+```
+[Phase 1: OSM 圖資佈署建築主體與尺度量測]
+  │   - 讀取 outer / holes，提取精確輪廓
+  │   - 計算 width, depth, span, aspect, area, centroid
+  │   - 生成主體外牆網格與定向包圍盒 (blockers)
+  ▼
+[Phase 2: 屋頂構造決議與自適應尺寸調整]
+  │   - 依據層樓高度、面積、跨度與長寬比執行防扭曲降級
+  │   - 避免細長建物套用向心屋頂、避免摩天樓覆蓋單一大瓦坡
+  │   - 根據 span 與樓高按比例縮放屋頂構造幾何 (half)
+  ▼
+[Phase 3: 立面與平面特徵渲染]
+  │   - 深度分層（Glass < Frame < Trim < Pier），杜絕共面 Z-fighting
+  │   - 沿長牆面配置街頭塗鴉牆 (graffiti_wall) 與高程電視牆/廣告板
+  ▼
+[Phase 4: 外部零件相容性篩選與安全放置]
+      - 依屋頂類型矩陣過濾相容零件
+      - 水平專屬零件（水塔、停機棚、大廣告架、基地台、鴿棚）僅限 flat/stepped
+      - 依面積梯度派送零件數量，並以 isSiteValid 檢驗邊界留白防壓線
+```
+
+---
+
+## 1. 建築主體佈署與幾何指標量測（Phase 1）
+
+- **實體外環保留**：以 [`public/js/osmBuilding.js`](../public/js/osmBuilding.js) 處理，保留真實外環（`outer`）與中庭洞口（`holes`），禁止將非正交或凹多邊形簡化為中心 AABB 方盒。
+- **幾何度量指標**：透過 `calculateFootprintMetrics(poly)` 產出：
+  - `width` / `depth`：包圍盒 X 與 Z 軸向總跨幅。
+  - `span`：短向特徵跨度 $\min(\text{width}, \text{depth})$。
+  - `aspect`：長寬比 $\max(\text{width}, \text{depth}) / \text{span}$。
+  - `area`：鞋帶公式精確計算之平面底面積（$\text{m}^2$）。
+  - `cx, cz`：幾何外包圍中心。
+- **結構阻擋**：由 `edgeGeometry` 同步產生實體牆面 Mesh 與對齊的阻擋盒（`blockers`）。
+
+---
+
+## 2. 屋頂構造自適應調校與防扭曲機制（Phase 2）
+
+由 [`resolveAdaptiveRoofForm()`](../public/js/architectureStyles.js) 評估並回傳最適屋頂類型 `actualRoofForm`，防範極端尺寸造成幾何拉伸、破面或視覺違和：
+
+| 觸發條件 | 判斷閥值 | 防扭曲處置與降級造型 | 物理／視覺原因 |
+|---|---|---|---|
+| **超高層摩天樓** | 高度 $\ge 35\text{m}$ | 降級為 `stepped`（階梯冠頂）或 `flat`（露台平頂） | 避免整棟超高樓頂覆蓋單一傳統瓦坡；高樓頂部應為設備退台或停機坪。 |
+| **超大基地／巨跨度** | 面積 $\ge 750\text{m}^2$ 或 跨度 $\ge 28\text{m}$ | 工業類轉 `sawtooth`（鋸齒排窗頂）；商用/住宅轉 `flat` 或 `stepped` | 傳統歇山、廡殿或高尖頂在大尺度下會產生巨大虛積、過重瓦面與穿透破面。 |
+| **極端長寬比（細長型）**| 長寬比 $\text{aspect} > 2.6$ | 向心/四坡頂（`dome`, `vault`, `spire`, `wudian`, `xieshan`, `tiered`）轉為長軸雙坡 `yingshan`、`gable` 或 `sawtooth` | 圓頂或廡殿歇山在細長基地上會發生嚴重的橫縱比扭曲變形。 |
+| **極端微小建物** | 跨度 $< 2.5\text{m}$ 或 面積 $< 15\text{m}^2$ | 複雜屋頂轉為簡潔單坡 `shed` | 過小體積無法承載多層重簷或裝飾飛簷。 |
+
+- **屋頂尺度調校**：`architecturalRoof` 中以 $\text{half} = \min(8.0, \text{targetH} \times 0.45, \max(0.6, \text{span} \times 0.32))$ 計算構造半徑，與建築實體維持協調比例。
+
+---
+
+## 3. 立面與平面特徵渲染（Phase 3）
+
+- **立面深度分層（Anti Z-fighting Tiers）**：
+  在 [`architecturalFacade()`](../public/js/osmBuilding.js) 中，所有附加面均突出於基礎牆面，以非共面偏移徹底解決 WebGL 深度衝突：
+  - **Tier 1 玻璃窗面**：$+0.05\text{m}$（突出牆面 2.5cm）
+  - **Tier 2 窗框／窗梃／格柵**：$+0.09\text{m}$（突出玻璃面 2cm）
+  - **Tier 3 窗楣／綠化花槽／拱圈**：$+0.13\text{m} \sim +0.14\text{m}$
+  - **Tier 4 水平樓層腰帶**：$+0.15\text{m}$
+  - **Tier 5 壁柱與立柱**：$+0.18\text{m}$
+- **平面塗鴉與外牆廣告**：
+  由 [`generateBuildingAppurtenances()`](../public/js/buildingAppurtenances.js) 在住宅或工業長牆面（$\text{length} \ge 6.0\text{m}$）隨機配置街頭塗鴉牆（`graffiti_wall`，突出 $+0.04\text{m}$），商辦立面則配置大型電視牆（`video_wall`）與店鋪招牌。
+
+---
+
+## 4. 屋頂零件相容性矩陣與水平放置限制（Phase 4）
+
+### 4.1 水平屋頂專屬限制
+依據 `ROOF_APPURTENANCE_COMPATIBILITY`，需穩固水平基底或大面積停放之構件，**嚴格限定只能配置於水平屋面（`flat` 與 `stepped`）**：
+- **`heli_hangar`（直升機棚與停機坪）**：需平整基座與廣闊淨空，斜坡與曲頂全面禁止。
+- **`roof_billboard`（大型屋頂廣告看板）**：需雙向水平結構腳架，瓦面斜頂全面禁止。
+- **`water_tank`（白鐵不銹鋼水塔）**：需水平地坪承載，傾斜坡屋頂嚴防失衡翻落。
+- **`cellular_mast`（通訊基地台塔）**：三角鋼架需平坦地坪錨定。
+- **`pigeon_coop`（木造鴿棚）**：平放於頂樓平台。
+
+非水平屋面（`gable`, `shed`, `mansard`, `yingshan`, `xuanshan`, `sawtooth`, `spire`, `wudian`, `xieshan`, `curved_ridge`, `tiered`, `dome`, `vault`）僅相容煙囪穿透、脊頂天線、山牆鐘樓或脊頂尖塔飾針（`rooftop_spire`）。
+
+### 4.2 面積梯度與數量控制
+- **數量梯級**：
+  - 水塔：$\text{area} < 80\text{m}^2 \rightarrow 1$ 座；$80 \le \text{area} < 220\text{m}^2 \rightarrow 2$ 座；$\ge 220\text{m}^2 \rightarrow 3$ 座。
+  - 太陽能板：$\lfloor \text{area} / 90 \rfloor$ 組（最多 4 組）。
+  - 尖塔飾頂：$1 \sim 2$ 支。
+- **門檻過濾**：
+  - 直升機棚：$\text{area} \ge 500\text{m}^2$、$\text{span} \ge 24\text{m}$、$\text{height} \ge 28\text{m}$。
+  - 鐘樓：$\text{area} \ge 160\text{m}^2$、$\text{span} \ge 12\text{m}$。
+  - 屋頂大看板：$\text{area} \ge 150\text{m}^2$、$\text{span} \ge 14\text{m}$。
+
+### 4.3 安全留白防壓線（`isSiteValid`）
+所有屋頂零件放置位置必須呼叫 `isSiteValid(poly, x, z, radius, margin)`，計算點到多邊形外環及所有洞口邊界的歐氏距離：
+$$\text{distanceToPolyBoundary}(x, z) \ge \text{radius} + \text{margin}$$
+確保構件絕不懸空於中庭洞口上，亦不突穿女兒牆外緣。
