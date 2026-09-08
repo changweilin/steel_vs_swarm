@@ -594,19 +594,19 @@ scene.add(highlightMesh);
 
 // ---- 建築分類維度定義集 ----
 const FUNCTION_DIM = [
-  { key: 'commercial_skyscraper', label: '商業摩天樓', kind: 'commercial', w: 30, d: 26, defaultStyle: 'modern', tags: { building: 'skyscraper' } },
-  { key: 'commercial_office',     label: '商辦大樓',   kind: 'commercial', w: 24, d: 20, defaultStyle: 'deco', tags: { building: 'office' } },
-  { key: 'commercial_retail',     label: '商場賣場',   kind: 'commercial', w: 34, d: 24, defaultStyle: 'modern', tags: { building: 'retail', shop: 'supermarket' } },
+  { key: 'commercial_skyscraper', label: '商業摩天樓', kind: 'commercial', w: 24, d: 22, defaultStyle: 'modern', tags: { building: 'skyscraper' } },
+  { key: 'commercial_office',     label: '商辦大樓',   kind: 'commercial', w: 22, d: 18, defaultStyle: 'deco', tags: { building: 'office' } },
+  { key: 'commercial_retail',     label: '商場賣場',   kind: 'commercial', w: 25, d: 20, defaultStyle: 'modern', tags: { building: 'retail', shop: 'supermarket' } },
   { key: 'residential_detached',  label: '獨棟住宅',   kind: 'residential', w: 16, d: 14, defaultStyle: 'suburban', tags: { building: 'house' } },
-  { key: 'residential_multifamily', label: '集合公寓', kind: 'residential', w: 24, d: 18, defaultStyle: 'modern', tags: { building: 'apartments' } },
-  { key: 'residential_terrace',   label: '連棟街屋',   kind: 'residential', w: 14, d: 22, defaultStyle: 'shophouse', tags: { building: 'terrace' } },
-  { key: 'civic_administrative',  label: '市政機關',   kind: 'civic', w: 28, d: 22, defaultStyle: 'classical', tags: { building: 'civic', amenity: 'townhall' } },
-  { key: 'civic_cultural',        label: '文化場館',   kind: 'civic', w: 32, d: 26, defaultStyle: 'modern', tags: { building: 'museum', amenity: 'theatre' } },
-  { key: 'industrial_warehouse',  label: '物流倉庫',   kind: 'industrial', w: 36, d: 28, defaultStyle: 'industrial', tags: { building: 'warehouse' } },
-  { key: 'industrial_light',      label: '精密廠房',   kind: 'industrial', w: 32, d: 24, defaultStyle: 'industrial', tags: { building: 'industrial' } },
-  { key: 'religious_shrine',      label: '宮廟神殿',   kind: 'religious', w: 22, d: 20, defaultStyle: 'shrine', tags: { amenity: 'place_of_worship' } },
-  { key: 'hospitality_hotel',     label: '觀光飯店',   kind: 'commercial', w: 28, d: 24, defaultStyle: 'modern', tags: { tourism: 'hotel' } },
-  { key: 'mixed_commercial_res',  label: '住商混合樓', kind: 'commercial', w: 22, d: 18, defaultStyle: 'shophouse', tags: { building: 'commercial', shop: 'convenience' } },
+  { key: 'residential_multifamily', label: '集合公寓', kind: 'residential', w: 22, d: 18, defaultStyle: 'modern', tags: { building: 'apartments' } },
+  { key: 'residential_terrace',   label: '連棟街屋',   kind: 'residential', w: 14, d: 20, defaultStyle: 'shophouse', tags: { building: 'terrace' } },
+  { key: 'civic_administrative',  label: '市政機關',   kind: 'civic', w: 24, d: 20, defaultStyle: 'classical', tags: { building: 'civic', amenity: 'townhall' } },
+  { key: 'civic_cultural',        label: '文化場館',   kind: 'civic', w: 25, d: 22, defaultStyle: 'modern', tags: { building: 'museum', amenity: 'theatre' } },
+  { key: 'industrial_warehouse',  label: '物流倉庫',   kind: 'industrial', w: 25, d: 20, defaultStyle: 'industrial', tags: { building: 'warehouse' } },
+  { key: 'industrial_light',      label: '精密廠房',   kind: 'industrial', w: 24, d: 20, defaultStyle: 'industrial', tags: { building: 'industrial' } },
+  { key: 'religious_shrine',      label: '宮廟神殿',   kind: 'religious', w: 20, d: 18, defaultStyle: 'shrine', tags: { amenity: 'place_of_worship' } },
+  { key: 'hospitality_hotel',     label: '觀光飯店',   kind: 'commercial', w: 24, d: 20, defaultStyle: 'modern', tags: { tourism: 'hotel' } },
+  { key: 'mixed_commercial_res',  label: '住商混合樓', kind: 'commercial', w: 20, d: 18, defaultStyle: 'shophouse', tags: { building: 'commercial', shop: 'convenience' } },
 ];
 
 const STYLE_DIM = Object.entries(ARCHITECTURE_STYLES).map(([key, style]) => ({
@@ -795,7 +795,7 @@ function buildRoadGrid(cols, rows, startX, startZ, stepX, stepZ) {
 }
 
 // ---- 建構建築實例與中繼資料 ----
-function spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, regionId, seed, variantIdx = 0, customPoly = null }) {
+function spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, regionId, seed, variantIdx = 0, customPoly = null, maxW = 26, maxD = 22 }) {
   const fItem = funcItem || FUNCTION_DIM[0];
   const sItem = styleItem || (ARCHITECTURE_STYLES[fItem.defaultStyle] ? { key: fItem.defaultStyle, label: ARCHITECTURE_STYLES[fItem.defaultStyle].label, style: ARCHITECTURE_STYLES[fItem.defaultStyle] } : STYLE_DIM[0]);
   const style = { ...sItem.style };
@@ -803,8 +803,10 @@ function spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, 
   if (facadeType && FACADE_TYPES[facadeType]) style.defaultFacade = facadeType;
   if (roofForm && ROOF_FORMS[roofForm]) style.allowedRoofs = [roofForm];
 
-  const actualW = customPoly ? w : Math.max(10, w + ((architectureHash(seed + '|w') % 7) - 3) * 1.5);
-  const actualD = customPoly ? d : Math.max(10, d + ((architectureHash(seed + '|d') % 7) - 3) * 1.5);
+  const rawW = w + ((architectureHash(seed + '|w') % 7) - 3) * 1.5;
+  const rawD = d + ((architectureHash(seed + '|d') % 7) - 3) * 1.5;
+  const actualW = customPoly ? w : Math.min(maxW, Math.max(10, rawW));
+  const actualD = customPoly ? d : Math.min(maxD, Math.max(10, rawD));
 
   let poly;
   if (customPoly) {
@@ -1037,7 +1039,7 @@ function buildMatrixMode({ advance = false } = {}) {
       const w = funcItem ? funcItem.w : 22;
       const d = funcItem ? funcItem.d : 18;
 
-      spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, regionId, seed });
+      spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, regionId, seed, maxW: 26, maxD: 22 });
     }
   }
 
@@ -1078,8 +1080,8 @@ function buildVariantsMode(meta) {
       const z = startZ + r * stepZ;
       const seed = meta.seed + idx * 7919;
 
-      const varW = Math.max(10, baseW + ((architectureHash(seed, 'w') % 9) - 4) * 1.6);
-      const varD = Math.max(10, baseD + ((architectureHash(seed, 'd') % 9) - 4) * 1.6);
+      const varW = Math.min(23, Math.max(10, baseW + ((architectureHash(seed, 'w') % 9) - 4) * 1.6));
+      const varD = Math.min(19, Math.max(10, baseD + ((architectureHash(seed, 'd') % 9) - 4) * 1.6));
 
       spawnBuilding({
         x, z,
@@ -1092,6 +1094,8 @@ function buildVariantsMode(meta) {
         regionId: meta.regionKey,
         seed,
         variantIdx: idx,
+        maxW: 23,
+        maxD: 19,
       });
     }
   }
@@ -1151,6 +1155,8 @@ function buildFullRandomMode() {
         facadeType: facadeItem.key,
         regionId: regionItem.key,
         seed,
+        maxW: 25,
+        maxD: 21,
       });
     }
   }

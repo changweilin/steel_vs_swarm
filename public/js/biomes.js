@@ -10980,7 +10980,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       sports: 0x789b80, parking: 0x8a8d91, utility: 0x7e8b95,
     };
     osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
-      terrain, rings, architectureOf: architectureAt,
+      terrain, rings, architectureOf: architectureAt, inset: edgeWallInsetM(),
       materialOf: (kind, batch, style) => {
         if (batch.architecture) return {
           wall: sceneObjectMat(0xffffff, { vertexColors: true }),
