@@ -6029,11 +6029,12 @@ const DEFAULT_PARTS = [
 /** 地下步道／車站入口。一個生成器吃 PED_ARCHETYPES 資料列；名目尺寸同時產生外觀與碰撞盒。 */
 function buildPedestrianEntrances(group, terrain, sites) {
   const rows = [];
+  const inb = edgeWallInsetM();
   for (const site of sites || []) {
     const archKey = site.archetype || site.kind || 'underpass';
     const def = PED_ARCHETYPES[archKey] || PED_ARCHETYPES[site.kind] || PED_ARCHETYPES.underpass;
-    if (site.x < terrain.minX + 5 || site.x > terrain.maxX - 5
-      || site.z < terrain.minZ + 5 || site.z > terrain.maxZ - 5) continue;
+    if (site.x < terrain.minX + inb || site.x > terrain.maxX - inb
+      || site.z < terrain.minZ + inb || site.z > terrain.maxZ - inb) continue;
     const y = terrain.heightAt(site.x, site.z);
     if (y < 0.4) continue;
     rows.push({ ...site, def, archKey, y });
@@ -9563,11 +9564,12 @@ function buildLevelCrossings(group, crossings, lines, terrain, center) {
     for (let i = 1; i < l.pts.length; i++) segs.push([l.pts[i - 1], l.pts[i]]);
   }
   if (!segs.length) return 0;
+  const inb = edgeWallInsetM();
   let built = 0;
   for (const c of crossings) {
     if (built >= 8) break;
     const [x, z] = llToWorld(c.lat, c.lng, center);
-    if (x < terrain.minX + 12 || x > terrain.maxX - 12 || z < terrain.minZ + 12 || z > terrain.maxZ - 12) continue;
+    if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
     // 最近地面鐵軌段 → 軌道切線方向
     let bestD = Infinity, bdx = 0, bdz = 0, bx = 0, bz = 0;
     for (const [a, b] of segs) {
@@ -9578,6 +9580,7 @@ function buildLevelCrossings(group, crossings, lines, terrain, center) {
       if (d < bestD) { bestD = d; bdx = ex; bdz = ez; bx = px; bz = pz; }
     }
     if (bestD > 30) continue;   // 附近無地面鐵軌(可能落在高架/隧道段)→ 略過
+    if (bx < terrain.minX + inb || bx > terrain.maxX - inb || bz < terrain.minZ + inb || bz > terrain.maxZ - inb) continue;
     const rl = Math.hypot(bdx, bdz) || 1;
     group.add(makeLevelCrossing(bx, terrain.heightAt(bx, bz), bz, bdx / rl, bdz / rl));
     built++;
@@ -9636,9 +9639,10 @@ function makeLevelCrossing(x, gy, z, rdx, rdz) {
 // ---- 瀑布(圖資節點):水簾 + 底部水潭 + 湧動泡沫 ----
 function buildWaterfalls(group, falls, terrain, center, dynamics) {
   let built = 0;
+  const inb = edgeWallInsetM();
   for (const f of falls.slice(0, 6)) {
     const [x, z] = llToWorld(f.lat, f.lng, center);
-    if (x < terrain.minX + 20 || x > terrain.maxX - 20 || z < terrain.minZ + 20 || z > terrain.maxZ - 20) continue;
+    if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
     // 找落差方向:採樣 8 方位高程,水從最高側流向最低側
     let hi = { h: -Infinity }, lo = { h: Infinity };
     for (let k = 0; k < 8; k++) {
@@ -11049,10 +11053,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   if (osmSource && osmData?.areas?.length) {
     osmAreaObjectResult = buildOsmAreaObjects(group, osmData.areas, {
       maxObjects: 480,
+      terrain,
+      inset: inb,
       heightAt: (x, z) => terrain.heightAt(x, z),
       // 優先序:兵線/塔位/主堡淨空高於圖資物件 ⇒ 足印半徑掃 areaFree(單格驗擋不住設施)
-      blocked: (x, z, r) => !areaFree(blocked, x, z, r) || !occ.free(x, z, r, 1)
-        || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < (b.r || 0) + r + 0.5),
+      blocked: (x, z, r) => {
+        if (x < terrain.minX + inb + r || x > terrain.maxX - inb - r
+          || z < terrain.minZ + inb + r || z > terrain.maxZ - inb - r) return true;
+        return !areaFree(blocked, x, z, r) || !occ.free(x, z, r, 1)
+          || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < (b.r || 0) + r + 0.5);
+      },
       materialOf: (_generator, row) => envMat(row.color, { wash: 0.38, cool: 0.42 }),
     });
     blockers.push(...osmAreaObjectResult.blockers);

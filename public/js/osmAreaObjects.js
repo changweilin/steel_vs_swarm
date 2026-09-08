@@ -76,6 +76,16 @@ export function buildOsmAreaObjects(group, areas = [], options = {}) {
     return !containment.childrenOf(area).some((c) => (c.tags?.building != null || c.tags?.['building:part'] != null)
       && c.classification?.family === area.classification?.family);
   });
+  const terrain = options.terrain;
+  const inset = Math.max(0, Number(options.inset) || 0);
+  const isInside = (x, z, r = 0) => !terrain || (
+    x >= terrain.minX + inset + r && x <= terrain.maxX - inset - r
+    && z >= terrain.minZ + inset + r && z <= terrain.maxZ - inset - r
+  );
+  const blocked = (x, z, r, area) => {
+    if (!isInside(x, z, r)) return true;
+    return options.blocked ? options.blocked(x, z, r, area) : false;
+  };
   const plan = placeAreaCandidates(eligible, {
     maxObjects: Math.max(0, Number(options.maxObjects) || 480),
     maxPerArea: 8, minGap: 1.5,
@@ -84,11 +94,12 @@ export function buildOsmAreaObjects(group, areas = [], options = {}) {
       const row = ROWS[area.classification.generator];
       return Math.min(row.max, Math.max(1, Math.floor(areaAreaM2(area) / row.minArea)));
     },
-    blocked: options.blocked,
+    blocked,
   });
   const batches = new Map(), blockers = [], generatedByKind = {};
   for (let index = 0; index < plan.placed.length; index++) {
     const p = plan.placed[index], cls = p.area.classification, row = ROWS[cls.generator];
+    if (!isInside(p.x, p.z, row.radius)) continue;
     const make = SHAPES[row.shape];
     if (!make) continue;
     const geos = make();
