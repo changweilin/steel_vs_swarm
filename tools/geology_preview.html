@@ -9,9 +9,11 @@
 <main><aside><small>STEEL VS. SWARM / GEOLOGY</small><h1>地質生成研究台</h1><p>從地質成因到岩面生態。拖曳旋轉、滾輪縮放，固定種子可重現。</p>
 <label for="type">地質結構</label><select id="type"><option value="auto">依環境抽樣</option></select>
 <div id="ancient-controls" hidden>
+<label for="humanMode">人造物抽樣</label><select id="humanMode"><option value="manual">查看指定類別</option><option value="auto">依生成機率抽樣</option></select>
 <label for="region">古蹟地區</label><select id="region"><option value="auto">依經緯度配對</option><option value="unmatched">無對應古蹟／隨機廢墟</option></select>
+<label for="ruinType">廢棄遺跡形式</label><select id="ruinType"><option value="auto">隨機形式</option></select>
 <label for="uniformScale">整體等比例倍率</label><input id="uniformScale" type="number" min=".05" max="10" step=".05" value="1">
-<p>固定造型比例。沒有匹配的地區會抽樣廢棄建築。</p>
+<p>有匹配古蹟時兩類各占 50%；無匹配時全數抽樣廢棄遺跡。僅允許等比例縮放。</p>
 </div>
 <label for="seed">種子</label><input id="seed" type="number" value="42" step="1">
 <label for="climate">氣候</label><select id="climate"><option value="temperate">溫帶</option><option value="tropical">熱帶</option><option value="arid">乾旱</option><option value="alpine">高山</option><option value="boreal">寒帶</option></select>
@@ -32,12 +34,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GEOLOGY_TYPES, GEOLOGY_SURFACES, geologyBackgroundObject } from '/js/geology.js';
-import { ANCIENT_REGIONS } from '/js/ancientStone.js';
+import { ANCIENT_REGIONS, ANCIENT_RUINS, RUIN_ACTIVITIES, ancientStoneDistribution } from '/js/ancientStone.js';
 import { runtimeMeshDataGeometry } from '/js/runtimePartModel.js';
 const $ = id => document.getElementById(id), view = $('view');
 for(const [key,spec] of Object.entries(GEOLOGY_TYPES)) $('type').add(new Option(spec.name,key));
 for(const [key,name] of Object.entries(ANCIENT_REGIONS)) $('region').add(new Option(name,key));
-$('type').value='masonry'; $('region').value='egypt';
+for(const [key,name] of Object.entries(ANCIENT_RUINS)) $('ruinType').add(new Option(`${RUIN_ACTIVITIES[key]} · ${name}`,key));
+$('type').value='monument'; $('region').value='egypt';
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2)); view.prepend(renderer.domElement);
 const scene = new THREE.Scene();scene.background=new THREE.Color(0x111a20);
@@ -50,12 +53,15 @@ let mesh,grid;
 function rebuild(){
   try{
     const input={climate:$('climate').value,water:$('water').value};
-    const isAncient=$('type').value==='masonry';
+    const isAncient=GEOLOGY_TYPES[$('type').value]?.lithology==='manufactured';
     $('ancient-controls').hidden=!isAncient;
     if(isAncient) { input.region=$('region').value; input.uniformScale=Number($('uniformScale').value); }
+    const humanAuto=isAncient && $('humanMode').value==='auto';
+    $('ruinType').disabled=humanAuto || $('type').value!=='ruins';
+    if(isAncient && !$('ruinType').disabled) input.ruinType=$('ruinType').value;
     if($('longitude').value.trim()) input.longitude=Number($('longitude').value);
     for(const key of ['latitude','altitude','moisture','vegetation','conifers','exposure','fault','volcanic','dissolution']) input[key]=Number($(key).value);
-    const entry=geologyBackgroundObject($('type').value,Number($('seed').value),input);
+    const entry=geologyBackgroundObject(humanAuto?'masonry':$('type').value,Number($('seed').value),input);
     if(mesh){scene.remove(mesh);mesh.geometry.dispose();}
     if(grid){scene.remove(grid);grid.geometry.dispose();grid.material.dispose();}
     mesh=new THREE.Mesh(runtimeMeshDataGeometry(entry.meshData,entry.parts),material);scene.add(mesh);
@@ -67,7 +73,7 @@ function rebuild(){
     $('caption').textContent=`${entry.name}　/　SEED ${$('seed').value}\n${p.width.toFixed(1)} m × ${(p.width*p.depthRatio).toFixed(1)} m　實際高 ${entry.bounds.max[1].toFixed(1)} m`;
     const spec=GEOLOGY_TYPES[type];
     const stone=entry.generation.stone;
-    const description=stone ? `${stone.name} · ${stone.fallback?'廢墟備援':ANCIENT_REGIONS[stone.region]} · 等比例 ${p.uniformScale.toFixed(2)}×。${stone.fallback?'種子決定殘構；整體同比縮放。':'固定模板；不抽樣長寬高。'}\n`
+    const description=stone ? `${spec.name} · ${stone.name} · ${stone.kind==='ruins'?stone.activity:ANCIENT_REGIONS[stone.region]} · 等比例 ${p.uniformScale.toFixed(2)}×。${stone.kind==='ruins'?'種子決定殘構。':'固定模板；不抽樣長寬高。'}${stone.fallback?'地區型錄未匹配。':''}\n生成權重：${ancientStoneDistribution(input).map(row=>`${GEOLOGY_TYPES[row.type].name} ${row.weight*100}%`).join(' / ')}\n`
       : `抽樣範圍：寬 ${spec.width.join('–')} m · 高 ${spec.height.join('–')} m · 年代 ${spec.ageMa.join('–')} Ma · 粗糙度 ${spec.roughness.join('–')}。\n岩層／堆積年代 ${p.ageMa.toFixed(3)} Ma · 傾角 ${p.dip.toFixed(0)}° · ${p.layers} 層\n`;
     $('stats').textContent=description+Object.entries(surfaceCounts).map(([key,n])=>`${GEOLOGY_SURFACES[key].name} ${n} 面`).join(' · ');
     window.geologyPreview={type,vertices:entry.meshData.vertices.length/3,triangles:entry.meshData.faces.length/3};

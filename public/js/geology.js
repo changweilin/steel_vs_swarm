@@ -1,7 +1,7 @@
 // Pure, seeded visual geology. Metres / degrees / Ma; ranges are art direction, not surveys.
 import { mulberry32 } from './rng.js';
 import { forestEnvironment } from './forest.js';
-import { selectAncientStone, ancientStoneGeometry } from './ancientStone.js';
+import { selectAncientStone, ancientStoneGeometry, ancientStoneDistribution } from './ancientStone.js';
 
 export const GEOLOGY_PREFIX = 'geology/';
 const spec = (name, lithology, process, width, height, ageMa, roughness, color) =>
@@ -20,7 +20,9 @@ export const GEOLOGY_TYPES = {
   island: spec('海蝕島礁', 'sedimentary', 'wave-erosion', [10, 35], [3, 14], [1, 300], [.08, .25], 0x969183),
   river: spec('河床沖積灘', 'unconsolidated', 'fluvial-deposition', [6, 24], [.5, 3], [0, .1], [.03, .12], 0x9b9180),
   moraine: spec('冰磧碎石丘', 'unconsolidated', 'glacial-deposition', [8, 30], [2, 10], [0, 2.6], [.2, .45], 0x899092),
-  masonry: { name: '地區古蹟／廢棄遺跡', lithology: 'manufactured', process: 'regional-architecture',
+  monument: { name: '地區古蹟', lithology: 'manufactured', process: 'regional-architecture',
+    uniformScale: [.5, 1.5], color: 0x969184 },
+  ruins: { name: '隨機廢棄遺跡', lithology: 'manufactured', process: 'human-activity',
     uniformScale: [.5, 1.5], color: 0x969184 },
 };
 
@@ -69,7 +71,8 @@ export function geologyDistribution(input = {}) {
     reef: e.water === 'sea' && e.temperature >= 20 && e.temperature <= 30 && e.depth <= 30 ? 2 : 0,
     island: e.water === 'sea' ? 2 : 0,
     river: ['stream', 'river', 'lake'].includes(e.water) ? 2 + e.sediment : 0,
-    moraine: e.temperature < 5 ? 1 : .02, masonry: e.human * 3 };
+    moraine: e.temperature < 5 ? 1 : .02 };
+  for(const row of ancientStoneDistribution(input)) weights[row.type]=e.human*3*row.weight;
   const sum = Object.values(weights).reduce((a, b) => a + b, 0);
   return Object.entries(weights).filter(([, w]) => w > 0).map(([type, w]) => ({ type, weight: w / sum }));
 }
@@ -92,8 +95,11 @@ function surfaceWeights(e, type) {
 /** Independent streams: surface edits cannot change the rock's shape or scene RNG. */
 export function generateGeology(type = 'auto', seed = 0, input = {}) {
   if (!Number.isSafeInteger(seed)) throw new TypeError('Geology seed must be a safe integer');
+  const explicitRuins = type === 'ruins';
   const environment = geologyEnvironment(input);
   const rnd = mulberry32(seed ^ 0x47454f), coverRnd = mulberry32(seed ^ 0x534f494c);
+  // Legacy human-stone entry uses the same conditional 50/50 policy as automatic generation.
+  if(type==='masonry') type=selectAncientStone(seed,input).kind;
   if (type === 'auto') {
     const rows = geologyDistribution(input);
     let roll = rnd();
@@ -105,8 +111,9 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
   const sample = ([a, b]) => a + rnd() * (b - a);
   let stone, stoneGeometry;
   let p;
-  if (type === 'masonry') {
-    stone = selectAncientStone(seed, input);
+  if (s.lithology === 'manufactured') {
+    stone = selectAncientStone(seed, explicitRuins ? input : {...input,ruinType:'auto'},type);
+    type = stone.kind;
     stoneGeometry = ancientStoneGeometry(stone, seed);
     const [w,h,d] = stoneGeometry.bounds.size, scale = stone.uniformScale;
     p = { width: w*scale, height: h*scale, depthRatio: d/w, uniformScale: scale,

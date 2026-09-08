@@ -1,6 +1,7 @@
 // Fixed-proportion visual archetypes, not archaeological reconstructions or collision hulls.
 import { mulberry32 } from './rng.js';
 import { REGIONAL_STONE_BUILDERS } from './ancientStoneSites.js';
+import { ACTIVITY_RUINS } from './ancientRuins.js';
 
 const monument = (name, region, location, radiusKm, color, ageMa) =>
   ({ name, region, location, radiusKm, color, ageMa, uniformScale: [.5, 1.5] });
@@ -35,7 +36,11 @@ export const ANCIENT_MONUMENTS = {
 export const ANCIENT_RUINS = {
   wall: '廢棄城牆', gate: '廢棄城門', bunker: '廢棄碉堡', castle: '廢棄城堡',
   temple: '廢棄寺廟', statue: '殘缺神像', village: '廢棄村落', tomb: '廢棄陵寢', quarry: '廢棄採石場',
+  ...Object.fromEntries(Object.entries(ACTIVITY_RUINS).map(([id,row])=>[id,row.name])),
 };
+export const RUIN_ACTIVITIES = { wall:'防禦',gate:'防禦',bunker:'防禦',castle:'防禦',temple:'祭祀',
+  statue:'祭祀',village:'居住',tomb:'喪葬',quarry:'生產',
+  ...Object.fromEntries(Object.entries(ACTIVITY_RUINS).map(([id,row])=>[id,row.activity])) };
 export const ANCIENT_REGIONS = {
   egypt: '埃及', maya: '瑪雅地區', greece: '希臘', rome: '羅馬地區', britain: '不列顛',
   andes: '安地斯／庫斯科', rapa_nui: '拉帕努伊', khmer: '高棉／吳哥', qin: '關中／秦陵',
@@ -64,20 +69,36 @@ export function ancientCandidates(input = {}) {
   });
 }
 
-export function selectAncientStone(seed, input = {}) {
+/** Conditional probabilities within human stone objects, independent of catalog size. */
+export function ancientStoneDistribution(input = {}) {
+  return ancientCandidates(input).length
+    ? [{type:'monument',weight:.5},{type:'ruins',weight:.5}]
+    : [{type:'ruins',weight:1}];
+}
+
+export function selectAncientStone(seed, input = {}, mode = 'auto') {
   if (!Number.isSafeInteger(seed)) throw new TypeError('Ancient stone seed must be a safe integer');
   if (input.scale !== undefined) throw new TypeError('Use scalar uniformScale; per-axis scale is not supported');
   if (input.uniformScale !== undefined && (!Number.isFinite(input.uniformScale) || input.uniformScale < .01 || input.uniformScale > 10)) {
     throw new RangeError('uniformScale must be a number from 0.01 to 10');
   }
+  if(!['auto','monument','ruins'].includes(mode)) throw new RangeError('Unknown ancient stone mode');
   const rnd = mulberry32(seed ^ 0x414e4349), candidates = ancientCandidates(input);
-  const fallback = candidates.length === 0;
-  const choices = fallback ? Object.keys(ANCIENT_RUINS) : candidates;
-  const id = choices[Math.floor(rnd() * choices.length)];
-  const row = fallback ? { name: ANCIENT_RUINS[id], region: input.region || 'unmatched',
+  let kind = mode;
+  if(mode==='auto') {
+    let roll=mulberry32(seed ^ 0x4b494e44)();
+    for(const row of ancientStoneDistribution(input)) { roll-=row.weight;if(roll<0){kind=row.type;break;} }
+  }
+  if(!candidates.length) kind='ruins';
+  const fallback = !candidates.length;
+  const choices = kind==='ruins' ? Object.keys(ANCIENT_RUINS) : candidates;
+  const requested = mode==='ruins' && input.ruinType && input.ruinType!=='auto' ? input.ruinType : null;
+  if(requested && !Object.hasOwn(ANCIENT_RUINS,requested)) throw new RangeError('Unknown ruin type');
+  const id = requested || choices[Math.floor(rnd() * choices.length)];
+  const row = kind==='ruins' ? { name: ANCIENT_RUINS[id], region: input.region || 'unmatched',
     color: 0x999080, ageMa: .001, uniformScale: [.5, 1.5] } : ANCIENT_MONUMENTS[id];
   const uniformScale = input.uniformScale ?? row.uniformScale[0] + rnd() * (row.uniformScale[1] - row.uniformScale[0]);
-  return { id, name: row.name, region: row.region, fallback, uniformScale,
+  return { id, kind, activity: kind==='ruins'?RUIN_ACTIVITIES[id]:null, name: row.name, region: row.region, fallback, uniformScale,
     color: row.color, ageMa: row.ageMa, scaleRange: row.uniformScale };
 }
 
@@ -241,8 +262,9 @@ export function ancientStoneGeometry(selection, seed = 0) {
     for (const x of [-9,9]) box(x,0,48,7,5,7);
     // Archaeological pit outlines, not reconstructed terracotta sculptures.
     for (let i = 0; i < 3; i++) house(-26+i*24,0,35,16,14,1);
-  } else if (selection.fallback && Object.hasOwn(ANCIENT_RUINS,id)) {
+  } else if (selection.kind==='ruins' && Object.hasOwn(ANCIENT_RUINS,id)) {
     const rnd = mulberry32(seed ^ 0x5255494e);
+    if(Object.hasOwn(ACTIVITY_RUINS,id)) ACTIVITY_RUINS[id].build(g,rnd);
     function ruinedWall(x,z,w,h,d,angle = 0) {
       const count = Math.ceil(w/2);
       for (let i = 0; i < count; i++) {
