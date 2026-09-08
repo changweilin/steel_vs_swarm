@@ -1,6 +1,7 @@
 // 背景物件的決定性組裝縫：指定主結構 → 每個目標槽位獨立挑葉零件 → 子類別配色抽樣。
 // NPC、戰鬥建築與玩家機甲不引用本檔；它們各自保留權威 Rig / 碰撞 / 動畫契約。
 import { RUNTIME_BACKGROUND_CATALOG, RUNTIME_PARTS } from './runtimeParts.js';
+import { GEOLOGY_PREFIX, GEOLOGY_TYPES, geologyBackgroundObject } from './geology.js';
 import {
   STANDALONE_BOUNDARY_KINDS,
   boundaryObjectMeta,
@@ -266,13 +267,18 @@ export function sharedBackgroundObjectTargets(category = null) {
   const edge = STANDALONE_BOUNDARY_KINDS
     .filter((kind) => !category || boundaryObjectMeta(kind).category === category)
     .map((kind) => `${EDGE_BACKGROUND_PREFIX}${kind}`);
-  return [...runtime, ...edge];
+  const geology = !category || category === 'geology'
+    ? Object.keys(GEOLOGY_TYPES).map(type => GEOLOGY_PREFIX + type) : [];
+  return [...runtime, ...edge, ...geology];
 }
 
 /**
  * 背景物件共同出口。既有 v5/v6 資產維持原組裝路徑；edge/ 前綴直接轉用邊界生成器。
  */
 export function generateSharedBackgroundObject(targetKey, seed = 0, options = {}) {
+  if (targetKey.startsWith(GEOLOGY_PREFIX)) {
+    return geologyBackgroundObject(targetKey.slice(GEOLOGY_PREFIX.length), seed, options);
+  }
   if (targetKey.startsWith(EDGE_BACKGROUND_PREFIX)) {
     if (!Number.isSafeInteger(seed)) throw new TypeError('背景物件 seed 必須是安全整數');
     return edgeBackgroundObject(targetKey, seed, options && typeof options === 'object' ? options : {});

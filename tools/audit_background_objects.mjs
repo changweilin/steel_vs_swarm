@@ -16,6 +16,7 @@ import {
   sharedBackgroundObjectTargets,
 } from '../public/js/backgroundObjects.js';
 import { BOUNDARY_ONLY_KINDS, STANDALONE_BOUNDARY_KINDS } from '../public/js/edgewall.js';
+import { GEOLOGY_TYPES } from '../public/js/geology.js';
 
 const BREAK_LEAF = process.argv.includes('--break-leaf');
 const BREAK_MULTI = process.argv.includes('--break-multi');
@@ -177,7 +178,7 @@ const expectedStandalone = BREAK_BOUNDARY_SHARE
   : STANDALONE_BOUNDARY_KINDS;
 ok('獨立邊界物件全數加入共同背景型錄',
   expectedStandalone.every((kind) => sharedTargets.includes(`${EDGE_BACKGROUND_PREFIX}${kind}`))
-  && sharedTargets.length === entries.size + expectedStandalone.length);
+  && sharedTargets.length === entries.size + expectedStandalone.length + Object.keys(GEOLOGY_TYPES).length);
 ok('陣列式與長構造只供邊界使用',
   BOUNDARY_ONLY_KINDS.every((kind) => !sharedTargets.includes(`${EDGE_BACKGROUND_PREFIX}${kind}`)));
 const edgeObject = generateSharedBackgroundObject(`${EDGE_BACKGROUND_PREFIX}powerplant`, 19);
