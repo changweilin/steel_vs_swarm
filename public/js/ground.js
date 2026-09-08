@@ -71,7 +71,7 @@
 // 純視覺:不進射擊 raycast、不描邊、不產生碰撞柱(空地依然自由通行)。
 // 亂數決定性:呼叫端傳入以戰場中心為種子的 rnd + seed,全房間一致。
 import * as THREE from 'three';
-import { ENV, inkCtrM } from './data.js';
+import { ENV, inkCtrM, edgeWallInsetM } from './data.js';
 import { envMat, surfGroup } from './toon.js';
 import { gridAngle } from './roadgrid.js';
 
@@ -3113,6 +3113,7 @@ function borderTex(kind) {
  * @param opts.reservedFootprints  其他獨立場地／植被足跡；與 blockers 合併後供拼圖及細節共用
  */
 export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys, reservedFootprints = [], surfaceField = null }) {
+  const inb = edgeWallInsetM();
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
   const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
   const AQ_DET = new Set(['reed', 'lotuspad', 'fish']);   // 水生細節:免吃岸線高度淘汰、貼水面擺放
@@ -3174,6 +3175,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 界線本身該長什麼(踏石/樁/樹籬/岩塊)由 BORDER_KINDS 的 ridge 出,不是讓地被的
     // 雜草稻苗貨櫃長到界線上。與既有早退同位 ⇒ 不消耗 rnd
     if (detCount >= detCap || isBlocked(px, pz) || bdCross(px, pz, 0)) return;
+    if (px < terrain.minX + inb || px > terrain.maxX - inb || pz < terrain.minZ + inb || pz > terrain.maxZ - inb) return;
     // 互不重疊 + 不站進別人的功能性區塊(足跡量零件實幾何 × 本實例縮放);
     // 與既有早退同位 ⇒ 不消耗 rnd(s 由呼叫端先抽好,序列不變)
     const dr = detailR(type) * s;
@@ -3198,7 +3200,6 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     detCount++;
   };
 
-  const inb = 30;
   const area = terrain.worldW * terrain.worldH / 1e6;
   const target = Math.max(140, Math.min(1800, Math.round(area * 420)));
   let placed = 0;
@@ -4000,12 +4001,13 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // ---- 單塊 patch:檢查 → 幾何 → 細節 → 家族延伸(遞迴,同族異款毗鄰)----
   const tryPatch = (x, z, sub, variant, r, rot, depth) => {
     if (placed >= target) return false;
-    if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) return false;
-    if (isBlocked(x, z)) return false;
     const def = DEFS[sub];
     const foot = def.shape === 'rect'
       ? { x, z, hw: r, hd: r * (def.aspect || 0.7), ry: rot, r: r * Math.hypot(1, def.aspect || 0.7) }
       : { x, z, r: r * (BLOB_R.MIN + BLOB_R.JIT) };
+    if (x < terrain.minX + inb + foot.r || x > terrain.maxX - inb - foot.r
+      || z < terrain.minZ + inb + foot.r || z > terrain.maxZ - inb - foot.r) return false;
+    if (isBlocked(x, z)) return false;
     if (roadClear?.(x, z, foot)) return false;   // 用完整足跡避路，不能只驗中心點
     if (occupied.near(foot, PATCH_GAP)) return false;
     const zn = zoneAt(x, z);

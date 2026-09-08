@@ -1522,7 +1522,9 @@ console.log('\nⅧ 塔堡 1/4 射程淨空');
     '多邊形-圓盤相交只有一份實作,撞圈記 tower_base_clear 缺口');
   {
     const p0 = osmb.indexOf('function pointInRing(');
-    const p1 = osmb.indexOf('function attachmentSite(');
+    const p1 = osmb.indexOf('export function attachmentSite(') !== -1
+      ? osmb.indexOf('export function attachmentSite(')
+      : osmb.indexOf('function attachmentSite(');
     let gErr = null, PH = null;
     try {
       PH = new Function('EPS', `${osmb.slice(p0, p1)}\nreturn polyHitsDisc;`)(1e-5);
