@@ -1,6 +1,7 @@
 // Pure, seeded visual geology. Metres / degrees / Ma; ranges are art direction, not surveys.
 import { mulberry32 } from './rng.js';
 import { forestEnvironment } from './forest.js';
+import { selectAncientStone, ancientStoneGeometry } from './ancientStone.js';
 
 export const GEOLOGY_PREFIX = 'geology/';
 const spec = (name, lithology, process, width, height, ageMa, roughness, color) =>
@@ -19,7 +20,8 @@ export const GEOLOGY_TYPES = {
   island: spec('海蝕島礁', 'sedimentary', 'wave-erosion', [10, 35], [3, 14], [1, 300], [.08, .25], 0x969183),
   river: spec('河床沖積灘', 'unconsolidated', 'fluvial-deposition', [6, 24], [.5, 3], [0, .1], [.03, .12], 0x9b9180),
   moraine: spec('冰磧碎石丘', 'unconsolidated', 'glacial-deposition', [8, 30], [2, 10], [0, 2.6], [.2, .45], 0x899092),
-  masonry: spec('人造石砌基座', 'manufactured', 'cut-and-stack', [3, 14], [1, 7], [0, .01], [0, .015], 0x969184),
+  masonry: { name: '地區古蹟／廢棄遺跡', lithology: 'manufactured', process: 'regional-architecture',
+    uniformScale: [.5, 1.5], color: 0x969184 },
 };
 
 export const GEOLOGY_SURFACES = {
@@ -101,7 +103,16 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
   const s = GEOLOGY_TYPES[type];
   if (!s) throw new RangeError(`Unknown geology type: ${type}`);
   const sample = ([a, b]) => a + rnd() * (b - a);
-  const p = { width: sample(s.width), height: sample(s.height), depthRatio: .65 + rnd() * .5,
+  let stone, stoneGeometry;
+  let p;
+  if (type === 'masonry') {
+    stone = selectAncientStone(seed, input);
+    stoneGeometry = ancientStoneGeometry(stone, seed);
+    const [w,h,d] = stoneGeometry.bounds.size, scale = stone.uniformScale;
+    p = { width: w*scale, height: h*scale, depthRatio: d/w, uniformScale: scale,
+      ageMa: stone.ageMa, roughness: 0, strike: rnd()*Math.PI*2, dip: 0, layers: 1,
+      erosion: 0, dissolution: 0 };
+  } else p = { width: sample(s.width), height: sample(s.height), depthRatio: .65 + rnd() * .5,
     ageMa: sample(s.ageMa), roughness: sample(s.roughness), strike: rnd() * Math.PI * 2,
     dip: sample([0, environment.fault > .5 ? 70 : 25]), layers: 4 + Math.floor(rnd() * 9),
     erosion: environment.exposure * (.25 + rnd() * .75), dissolution: environment.dissolution };
@@ -110,12 +121,11 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
     const [a, b] = GEOLOGY_SURFACES[kind].coverage;
     return { kind, coverage: weight * (a + coverRnd() * (b - a)) };
   });
-  return { type, seed, environment, parameters: p, surfaces };
+  return { type, seed, environment, parameters: p, surfaces, ...(stone ? { stone, stoneGeometry } : {}) };
 }
 
 function profile(type, x, z, p) {
   const r = Math.hypot(x, z), envelope = Math.max(0, 1 - r * r);
-  if (type === 'masonry') return Math.abs(x) < .8 && Math.abs(z) < .75 ? 1 : 0;
   if (type === 'crater') return Math.exp(-(((r - .62) / .19) ** 2)) * Math.max(0, 1 - r ** 8);
   if (type === 'dune') return Math.max(0, 1 - Math.abs(z) ** 2) * Math.max(0, x < .25 ? (x + 1) / 1.25 : (1 - x) / .75);
   if (type === 'cliff') return envelope * (x > -.05 ? .95 : .12);
@@ -141,7 +151,7 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
   const shapeRnd = mulberry32(seed ^ 0x53484150);
   const phases = [shapeRnd(), shapeRnd(), shapeRnd()].map(v => v * Math.PI * 2);
   const c = Math.cos(p.strike), s = Math.sin(p.strike);
-  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
+  if (!model.stone) for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
     const x = i / n * 2 - 1, z = j / n * 2 - 1;
     const base = profile(type, x, z, p);
     const noise = (Math.sin(x * 7 + z * 3 + phases[0]) * .3
@@ -159,19 +169,20 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
   }
   const counts = {}, surfaceTriangles = [];
   let detailCount = 0;
-  function face(a, b, c) {
+  function face(a, b, c, stoneColor) {
     if (Math.max(a[1], b[1], c[1]) === 0) return;
     const u = b.map((v, k) => v - a[k]), v = c.map((v, k) => v - a[k]);
     const normal = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    if (Math.hypot(...normal) < 1e-12) return;
     const up = normal[1] / Math.hypot(...normal), center = a.map((v, k) => (v + b[k] + c[k]) / 3);
     const band = Math.floor((center[1] + center[0] * Math.tan(p.dip * Math.PI / 180)) / p.height * p.layers);
-    let color = rgb(spec.color, .91 + (band % 2 ? .09 : 0));
+    let color = rgb(stoneColor ?? spec.color, .91 + (band % 2 ? .09 : 0));
     // Coherent patches span neighbouring triangles instead of confetti per face.
     const patchX = Math.floor(center[0] / p.width * 12), patchZ = Math.floor(center[2] / p.width * 12);
     let selected = null, roll = mulberry32(seed ^ 0x434f5645 ^ Math.imul(patchX, 73856093) ^ Math.imul(patchZ, 19349663))();
     // One categorical draw includes bare rock; total cover never exceeds 90%.
     const eligible = model.surfaces.map(row => ({ ...row, weight: row.coverage *
-      (['moss', 'lichen'].includes(row.kind) ? .35 + .65 * Math.max(0, up) : up > .82 ? 1 : 0) *
+      (['moss', 'lichen'].includes(row.kind) ? (up < -.01 ? 0 : .35 + .65 * Math.max(0, up)) : up > .82 ? 1 : 0) *
       (row.kind === 'water' && (up < .995 || center[1] > p.height * .2) ? 0 : 1) }));
     const total = eligible.reduce((sum, row) => sum + row.weight, 0);
     for (const row of eligible) {
@@ -186,7 +197,8 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     surfaceTriangles.push({ center, up, surface: selected || 'bare' });
     if (!selected || detailCount >= 180 || !['grass', 'cones', 'wood', 'leaves', 'gravel'].includes(selected)) return;
     detailCount++;
-    const size = Math.min(.3, p.width / n * .2), [x, y, z] = center;
+    const scale = p.uniformScale ?? 1;
+    const size = Math.min(.3, p.width / scale / n * .2) * scale, [x, y, z] = center;
     const height = selected === 'grass' ? size * 4 : selected === 'cones' ? size * 1.5 : size * .35;
     // Centroid is on the actual triangle; decorations grow from that anchor.
     const tip = [x, y + height, z];
@@ -195,17 +207,37 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     triangle([x, y, z - size], [x, y, z + size], tip, color);
     triangle([x, y, z + size], [x, y, z - size], tip, color);
   }
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+  if (model.stone) {
+    const transform = ([x,y,z]) => [(x*c-z*s)*p.uniformScale,y*p.uniformScale,(x*s+z*c)*p.uniformScale];
+    const patchSpan = Math.max(...model.stoneGeometry.bounds.size)/12;
+    function stoneFace(a,b,end,color,depth = 0) {
+      const points = [a,b,end];
+      const lengths = points.map((point,i) => Math.hypot(...point.map((v,k) => v-points[(i+1)%3][k])));
+      const edge = lengths.indexOf(Math.max(...lengths));
+      if (depth >= 4 || lengths[edge] <= patchSpan) {
+        face(transform(a),transform(b),transform(end),color);
+        return;
+      }
+      // Subdivide on the original plane: texture patches gain detail, proportions stay fixed.
+      const first = points[edge], second = points[(edge+1)%3], third = points[(edge+2)%3];
+      const middle = first.map((v,k) => (v+second[k])/2);
+      stoneFace(first,middle,third,color,depth+1);
+      stoneFace(middle,second,third,color,depth+1);
+    }
+    for (const { a,b,c: end,color } of model.stoneGeometry.triangles) stoneFace(a,b,end,color);
+  } else for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const a = j * (n + 1) + i, b = a + 1, c = a + n + 1, d = c + 1;
     face(points[a], points[c], points[b]); face(points[b], points[c], points[d]);
   }
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < vertices.length; i++) { const axis = i % 3; min[axis] = Math.min(min[axis], vertices[i]); max[axis] = Math.max(max[axis], vertices[i]); }
   const targetKey = GEOLOGY_PREFIX + type;
-  return { key: `${targetKey}:${seed}:${JSON.stringify(e)}`, targetKey, family: 'environment', subpart: type,
-    name: spec.name, bounds: { min, max, size: max.map((v, i) => v - min[i]) },
-    parts: [{ name: spec.name, type: 'box', dimensions: [p.width, p.height, p.width * p.depthRatio],
+  const { stoneGeometry, ...generationModel } = model;
+  const name = model.stone?.name ?? spec.name;
+  return { key: `${targetKey}:${seed}:${JSON.stringify(e)}${model.stone ? ':'+model.stone.id+':'+p.uniformScale : ''}`, targetKey, family: 'environment', subpart: type,
+    name, ...(model.stone ? { scalePolicy: 'uniform' } : {}), bounds: { min, max, size: max.map((v, i) => v - min[i]) },
+    parts: [{ name, type: 'box', dimensions: [p.width, p.height, p.width * p.depthRatio],
       position: [0, p.height / 2, 0], color: spec.color, triangles: faces.length / 3 }], palettes: [],
     meshData: { vertices, faces, colors },
-    generation: { source: 'geology', category: 'geology', ...model, surfaceCounts: counts, surfaceTriangles } };
+    generation: { source: 'geology', category: 'geology', ...generationModel, surfaceCounts: counts, surfaceTriangles } };
 }
