@@ -9701,8 +9701,8 @@ function buildWaterfalls(group, falls, terrain, center, dynamics) {
 //    `_losBlocked` 吃**同一個有向盒**(A30),而演出的盒子與那個盒子逐位元同尺寸
 //    (看到多粗 = 撞到多粗 = 打到多粗,原則 4)。
 //  ②**「不可越過」是結構保證不是校準**:相鄰段以 `SEG_LAP_F` 互相咬住 ⇒ 環上沒有縫,
-//    不必回頭問「最窄的機體有多寬」;四個角落由 X 邊與 Z 邊互相跨過封死(兩組邊都跑滿整個
-//    worldW/worldH,刻意不各自讓開)。飛行那一半仍歸 x/z 夾制(見 data.js WORLD_EDGE 檔頭)。
+//    不必回頭問「最窄的機體有多寬」;四個角落兩兩邊界維持垂直不互相交叉(邊界範圍為
+//    worldW - 2*inset / worldH - 2*inset)。飛行那一半仍歸 x/z 夾制(見 data.js WORLD_EDGE 檔頭)。
 //  ③**零共享 `rnd()` 消耗**(§2.3):段位/高度/選色全由座標與地形推導 —— 選色走
 //    `classifyImg`(純影像判、零亂數),MUST NOT 改吃 `classify`(那一支會抽 `rnd()`,
 //    當場把後面每一株植被的佈局整條推移)。
@@ -9743,10 +9743,10 @@ function buildEdgeWall({ group, terrain, blockers }) {
   // 逐件一個 mesh 的話一圈牆就是上千個 draw call(本渲染器是 draw call 瓶頸,見 beacons 紀律④)。
   const batch = newBatch();
   const edges = [
-    { ax: 1, x0: terrain.minX, z0: terrain.minZ + inset, len: terrain.worldW, fry: 0, sz: -1 },
-    { ax: 1, x0: terrain.minX, z0: terrain.maxZ - inset, len: terrain.worldW, fry: Math.PI, sz: 1 },
-    { ax: 0, x0: terrain.minX + inset, z0: terrain.minZ, len: terrain.worldH, fry: Math.PI / 2, sz: -1 },
-    { ax: 0, x0: terrain.maxX - inset, z0: terrain.minZ, len: terrain.worldH, fry: -Math.PI / 2, sz: 1 },
+    { ax: 1, x0: terrain.minX + inset, z0: terrain.minZ + inset, len: terrain.worldW - 2 * inset, fry: 0, sz: -1 },
+    { ax: 1, x0: terrain.minX + inset, z0: terrain.maxZ - inset, len: terrain.worldW - 2 * inset, fry: Math.PI, sz: 1 },
+    { ax: 0, x0: terrain.minX + inset, z0: terrain.minZ + inset, len: terrain.worldH - 2 * inset, fry: Math.PI / 2, sz: -1 },
+    { ax: 0, x0: terrain.maxX - inset, z0: terrain.minZ + inset, len: terrain.worldH - 2 * inset, fry: -Math.PI / 2, sz: 1 },
   ];
   for (const e of edges) {
     const n = Math.max(1, Math.round(e.len / WORLD_EDGE.SEG_M));

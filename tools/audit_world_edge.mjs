@@ -355,8 +355,9 @@ console.log('\nⅠ 推導不手寫(環高 ← 機體 / 厚度 ← 基準厚 / �
 // ============ Ⅱ 「不可越過」是結構保證(執行真品原文)============
 console.log('\nⅡ 不可越過 = 環上沒有縫(真品 buildEdgeWall + 合成地形)');
 {
-  t(`四條邊都鋪滿(${segs.length} 段;perimeter/SEG_M ≈ ${Math.round(2 * (T.worldW + T.worldH) / WORLD_EDGE.SEG_M)})`,
-    segs.length >= 2 * (T.worldW + T.worldH) / WORLD_EDGE.SEG_M - 4);
+  const innerW = T.worldW - 2 * IN, innerH = T.worldH - 2 * IN;
+  t(`四條邊都鋪滿(${segs.length} 段;perimeter/SEG_M ≈ ${Math.round(2 * (innerW + innerH) / WORLD_EDGE.SEG_M)})`,
+    segs.length >= 2 * (innerW + innerH) / WORLD_EDGE.SEG_M - 4);
   // 逐邊做區間聯集:沿邊軸的 [d−half, d+half] MUST 首尾相連地覆蓋整條邊。
   // **逐款厚度不同 ⇒ 同一條邊上的段心 z 不再是同一個值**,故分邊改認「哪一側」而不是段心座標。
   const sideOf = (s) => (s.ry === 0
@@ -371,7 +372,7 @@ console.log('\nⅡ 不可越過 = 環上沒有縫(真品 buildEdgeWall + 合成�
   let holes = 0, minLap = Infinity, covered = true;
   for (const [key, list] of byEdge) {
     const along = key[0] === 'x' ? 'x' : 'z';
-    const lo = along === 'x' ? T.minX : T.minZ, hi = along === 'x' ? T.maxX : T.maxZ;
+    const lo = along === 'x' ? T.minX + IN : T.minZ + IN, hi = along === 'x' ? T.maxX - IN : T.maxZ - IN;
     const iv = list.map((s) => [(along === 'x' ? s.x : s.z) - s.hw2, (along === 'x' ? s.x : s.z) + s.hw2])
       .sort((a, b) => a[0] - b[0]);
     if (iv[0][0] > lo + 1e-6 || iv[iv.length - 1][1] < hi - 1e-6) covered = false;
@@ -381,7 +382,7 @@ console.log('\nⅡ 不可越過 = 環上沒有縫(真品 buildEdgeWall + 合成�
       if (lap <= 0) holes++;
     }
   }
-  t('環的兩端都蓋到圖界(四個角由 X 邊與 Z 邊互相跨過封死)', covered);
+  t('環的兩端延伸至邊界交點(四個角落兩兩垂直不互相交叉)', covered);
   t(`相鄰段互相咬住、零縫隙(最小重疊 ${minLap.toFixed(2)}m)`, holes === 0 && minLap > 0,
     `（${holes} 處有縫；SEG_LAP_F=${WORLD_EDGE.SEG_LAP_F}）`);
   t('重疊來自 SEG_LAP_F > 1 而不是碰巧(係數本身就是那個保證)', WORLD_EDGE.SEG_LAP_F > 1);
