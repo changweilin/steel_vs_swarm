@@ -38,7 +38,8 @@
     "audit:background": "node tools/audit_background_objects.mjs",
     "shot:background": "node tools/shot_background_objects.mjs",
     "story": "node tools/story_book.mjs",
-    "preview:arch": "node tools/arch_preview.mjs"
+    "preview:arch": "node tools/arch_preview.mjs",
+    "preview:gen": "node tools/arch_preview.mjs"
   },
 
   "dependencies": {
