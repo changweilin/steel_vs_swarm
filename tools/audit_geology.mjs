@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { GEOLOGY_TYPES, generateGeology, geologyDistribution, geologyBackgroundObject } from '../public/js/geology.js';
 import { generateSharedBackgroundObject, sharedBackgroundObjectTargets } from '../public/js/backgroundObjects.js';
 import { ANCIENT_MONUMENTS, ANCIENT_RUINS, ancientCandidates, selectAncientStone, ancientStoneGeometry } from '../public/js/ancientStone.js';
+import { REGIONAL_STONE_BUILDERS } from '../public/js/ancientStoneSites.js';
 
 let count = 0;
 for (const type of Object.keys(GEOLOGY_TYPES)) {
@@ -48,6 +49,9 @@ assert.throws(() => generateGeology('granite', NaN), TypeError);
 assert.throws(() => generateGeology('granite', 1, { water: 'bad' }), RangeError);
 
 const dryStone = { moisture: 0, vegetation: 0, exposure: 0, wind: 0, temperature: 15 };
+assert.equal(Object.keys(REGIONAL_STONE_BUILDERS).length,17);
+for(const id of Object.keys(REGIONAL_STONE_BUILDERS)) assert(Object.hasOwn(ANCIENT_MONUMENTS,id));
+const signatures=new Set();
 for(const [id,spec] of Object.entries(ANCIENT_MONUMENTS)) {
   assert.deepEqual(ancientCandidates({region:spec.region}),[id]);
   assert(ancientCandidates({latitude:spec.location[0],longitude:spec.location[1]}).includes(id));
@@ -61,6 +65,11 @@ for(const [id,spec] of Object.entries(ANCIENT_MONUMENTS)) {
   // Every vertex, including architecture openings, uses the same multiplier on all three axes.
   for(let i=0;i<a.meshData.vertices.length;i++) assert(Math.abs(a.meshData.vertices[i]*3-b.meshData.vertices[i])<1e-8,id);
   const canonical=ancientStoneGeometry(selectAncientStone(1,input),1);
+  assert(canonical.triangles.length>0);
+  assert(canonical.bounds.size.every(v=>Number.isFinite(v)&&v>0));
+  const signature=JSON.stringify(canonical);
+  assert(!signatures.has(signature),`${id} must have its own silhouette`);signatures.add(signature);
+  assert(a.meshData.faces.length/3<60000,`${id} exceeds the preview geometry budget`);
   assert.deepEqual(canonical,ancientStoneGeometry(selectAncientStone(999,input),999),`${id} must not randomize its proportions`);
   assert(a.meshData.vertices.every(Number.isFinite));
   assert(a.generation.surfaceTriangles.every(row=>Number.isFinite(row.up)));
@@ -84,4 +93,4 @@ assert.deepEqual(ancientCandidates({latitude:29.98}),[],'Latitude alone cannot s
 assert.deepEqual(ancientCandidates({latitude:-33.45,longitude:-70.67}),[],'Mainland Chile must not select moai');
 for(const uniformScale of [0,.001,-1,NaN,Infinity,11,[1,2,1]]) assert.throws(()=>selectAncientStone(1,{uniformScale}),RangeError);
 assert.throws(()=>selectAncientStone(1,{scale:[1,2,1]}),TypeError);
-console.log(`Geology: ${count} deterministic meshes; 9 regional monuments, 9 ruin fallbacks, uniform scaling and input guards passed.`);
+console.log(`Geology: ${count} deterministic meshes; ${Object.keys(ANCIENT_MONUMENTS).length} regional monuments, ${Object.keys(ANCIENT_RUINS).length} ruin fallbacks, uniform scaling and input guards passed.`);

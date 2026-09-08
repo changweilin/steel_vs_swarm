@@ -1,5 +1,6 @@
 // Fixed-proportion visual archetypes, not archaeological reconstructions or collision hulls.
 import { mulberry32 } from './rng.js';
+import { REGIONAL_STONE_BUILDERS } from './ancientStoneSites.js';
 
 const monument = (name, region, location, radiusKm, color, ageMa) =>
   ({ name, region, location, radiusKm, color, ageMa, uniformScale: [.5, 1.5] });
@@ -13,6 +14,23 @@ export const ANCIENT_MONUMENTS = {
   moai: monument('摩艾像', 'rapa_nui', [-27.12, -109.35], 150, 0x81776a, .0007),
   angkor_wat: monument('吳哥窟', 'khmer', [13.41, 103.87], 400, 0x9c9279, .0009),
   qin_mausoleum: monument('秦皇陵', 'qin', [34.38, 109.25], 400, 0x988769, .00225),
+  great_zimbabwe: monument('大辛巴威', 'zimbabwe', [-20.27,30.93], 400, 0x9b9588, .0007),
+  lalibela: monument('拉利貝拉岩鑿教堂', 'ethiopia_highlands', [12.03,39.04], 250, 0xa87962, .0008),
+  petra: monument('佩特拉岩鑿墓殿', 'jordan', [30.33,35.44], 180, 0xc18b76, .002),
+  hegra: monument('黑格拉岩墓', 'hejaz', [26.79,37.95], 300, 0xc4a17e, .002),
+  persepolis: monument('波斯波利斯', 'persia', [29.94,52.89], 400, 0xaaa18e, .0025),
+  gobekli_tepe: monument('哥貝克力石陣', 'upper_mesopotamia', [37.22,38.92], 200, 0xc3b596, .011),
+  geghard: monument('格加爾德修道院', 'armenia', [40.14,44.82], 180, 0x827e79, .0008),
+  sanchi: monument('桑奇佛塔', 'central_india', [23.48,77.74], 350, 0xb6a185, .0022),
+  chola: monument('朱羅大神廟', 'tamil', [10.78,79.13], 300, 0xb19b7e, .001),
+  borobudur: monument('婆羅浮屠', 'java', [-7.61,110.2], 300, 0x777b76, .0012),
+  seokguram: monument('石窟庵', 'silla', [35.79,129.35], 220, 0xb3b3a8, .0013),
+  gusuku: monument('琉球石造城跡', 'ryukyu', [26.28,127.8], 250, 0xbcb49b, .0006),
+  malta_temples: monument('馬爾他巨石神廟', 'malta', [35.83,14.44], 80, 0xcbb994, .0055),
+  nuraghe: monument('巴魯米尼努拉吉', 'sardinia', [39.71,8.99], 180, 0x8e897b, .0035),
+  tiwanaku: monument('蒂瓦納庫太陽門', 'altiplano', [-16.55,-68.67], 250, 0x999084, .0015),
+  chaco: monument('查科石造大屋', 'four_corners', [36.06,-107.96], 350, 0xb09575, .001),
+  nan_madol: monument('南馬都爾', 'pohnpei', [6.84,158.33], 100, 0x65716c, .0007),
 };
 export const ANCIENT_RUINS = {
   wall: '廢棄城牆', gate: '廢棄城門', bunker: '廢棄碉堡', castle: '廢棄城堡',
@@ -21,6 +39,10 @@ export const ANCIENT_RUINS = {
 export const ANCIENT_REGIONS = {
   egypt: '埃及', maya: '瑪雅地區', greece: '希臘', rome: '羅馬地區', britain: '不列顛',
   andes: '安地斯／庫斯科', rapa_nui: '拉帕努伊', khmer: '高棉／吳哥', qin: '關中／秦陵',
+  zimbabwe: '辛巴威高原', ethiopia_highlands: '衣索比亞高地', jordan: '約旦／佩特拉', hejaz: '漢志／黑格拉',
+  persia: '波斯／法爾斯', upper_mesopotamia: '上美索不達米亞', armenia: '亞美尼亞',
+  central_india: '印度中部', tamil: '泰米爾', java: '爪哇', silla: '新羅／慶州', ryukyu: '琉球',
+  malta: '馬爾他', sardinia: '薩丁尼亞', altiplano: '玻利維亞高原', four_corners: '北美四角地區', pohnpei: '波納佩',
 };
 
 /** Explicit region wins. Coordinate windows are art-direction zones, not national borders. */
@@ -118,7 +140,9 @@ function stoneBuilder(color) {
 export function ancientStoneGeometry(selection, seed = 0) {
   const g = stoneBuilder(selection.color), { box, frustum, column, stairs, arch, house } = g;
   const id = selection.id;
-  if (id === 'egypt_pyramid') {
+  if (Object.hasOwn(REGIONAL_STONE_BUILDERS,id)) {
+    REGIONAL_STONE_BUILDERS[id](g);
+  } else if (id === 'egypt_pyramid') {
     // Square courses all lie on the same fixed pyramid slope.
     const width = 230, height = 146, courses = 32;
     for (let i = 0; i < courses; i++) {

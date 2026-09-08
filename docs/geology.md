@@ -97,6 +97,33 @@ const entry = generateSharedBackgroundObject('geology/masonry', 42, {
 
 研究台新增「古蹟地區」、經度及「整體等比例倍率」；選擇「無對應古蹟／隨機廢墟」後切換種子可查看備援種類。
 
+新增 17 個地區模板，現有名冊共 26 個古蹟、9 類廢墟。以下造型由 `ancientStoneSites.js`
+使用共用石材幾何工具生成；全部遵守相同的固定比例、獨立種子及表層縮放契約。
+中心座標與適用半徑是遊戲美術配對值，不是文化疆界。
+
+| region | 新增代表模板 | 參考 |
+| --- | --- | --- |
+| zimbabwe | 大辛巴威橢圓圍牆、錐塔 | [UNESCO](https://whc.unesco.org/en/list/364/) |
+| ethiopia_highlands | 拉利貝拉十字岩鑿教堂與岩坑 | [UNESCO](https://whc.unesco.org/en/list/18/) |
+| jordan | 佩特拉砂岩壁、墓殿柱廊 | [UNESCO](https://whc.unesco.org/en/list/326/) |
+| hejaz | 黑格拉岩丘與階梯冠飾墓面 | [UNESCO](https://www.unesco.org/en/alula/multimedia/hegra) |
+| persia | 波斯波利斯高台與宮殿柱林 | [UNESCO](https://whc.unesco.org/en/list/114/) |
+| upper_mesopotamia | 哥貝克力環牆與 T 形石柱 | [UNESCO](https://whc.unesco.org/en/list/1572/) |
+| armenia | 格加爾德山谷教堂與岩壁 | [UNESCO](https://whc.unesco.org/en/list/960/) |
+| central_india | 桑奇覆缽塔、石欄與四面牌坊 | [UNESCO](https://whc.unesco.org/en/list/524/) |
+| tamil | 朱羅層疊高塔與前殿 | [UNESCO](https://whc.unesco.org/en/list/250/) |
+| java | 婆羅浮屠方台、圓台與鐘形塔群 | [UNESCO](https://whc.unesco.org/en/list/592/) |
+| silla | 石窟庵剖開展示的石室與佛像 | [UNESCO](https://whc.unesco.org/en/list/736/) |
+| ryukyu | 琉球層台城牆與門道 | [UNESCO](https://whc.unesco.org/en/list/972/) |
+| malta | 馬爾他半圓室與巨石門框 | [UNESCO](https://whc.unesco.org/en/list/132/) |
+| sardinia | 努拉吉主塔、副塔與圓屋 | [UNESCO](https://whc.unesco.org/en/list/833/) |
+| altiplano | 蒂瓦納庫太陽門與石造庭院 | [UNESCO](https://whc.unesco.org/en/list/567/) |
+| four_corners | 查科多層大屋與圓形儀式空間 | [UNESCO](https://whc.unesco.org/en/list/353/) |
+| pohnpei | 南馬都爾人工島基、交錯石牆與水道留空 | [UNESCO](https://whc.unesco.org/en/list/1503/) |
+
+這些模板保留代表性輪廓，不聲稱完整重建原址。婆羅浮屠塔數簡化；石窟庵有展示剖口；
+岩墓立面未挖通墓室；南馬都爾水道只留出空間，海水仍由場景水體提供。
+
 ## API
 
 ```js
