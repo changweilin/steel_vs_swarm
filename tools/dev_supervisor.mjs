@@ -93,12 +93,12 @@ export const TOOLS = {
   arch: {
     key: 'arch',
     kind: 'server',
-    label: '立體視覺驗收工作室',
+    label: '建模隨機生成器',
     port: ARCH_PORT,
     script: path.join('tools', 'arch_preview.mjs'),
     args: [],
 
-    hint: '建築分類與隨機參數展開立體視覺驗收：支援 5 大分類維度交叉矩陣、隨機參數展開變體、全類別選項自選隨機池、道路十字路網與詳細數值檢驗。',
+    hint: '建築、地質與植物建模隨機生成器：整合三大類別分頁切換，支援文化與功能維度展開、自然與人造地質成因抽樣、21 種林木植物形態與季節器官生成，包含即時 3D 預覽與參數檢驗。',
   },
 };
 

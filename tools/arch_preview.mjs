@@ -1,4 +1,4 @@
-﻿// ============ 立體視覺驗收工作室 (dev-only; 建築與路網立體檢驗) ============
+// ============ 建模隨機生成器 (dev-only; 建築/地質/植物立體檢驗) ============
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { serve, DEFAULT_PORT } from '../test/architecturePreview.mjs';
