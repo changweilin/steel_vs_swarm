@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>地質生成研究台</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111a20;color:#e5e9e4;font:14px system-ui}main{display:grid;grid-template-columns:300px 1fr;height:100dvh}aside{padding:25px;overflow:auto;background:#19242b;border-right:1px solid #33424b}h1{font-size:23px;margin:12px 0}small{color:#9cb3ba}p{line-height:1.7;color:#acb9bc}label{display:block;margin:16px 0 5px}select,input,button{width:100%;padding:8px;color:#e5e9e4;background:#26353d;border:1px solid #485961;border-radius:5px}button{margin-top:16px;background:#3b685b;cursor:pointer}#view{min-width:0;position:relative}canvas{display:block;width:100%;height:100%}#caption{position:absolute;left:24px;bottom:22px;pointer-events:none;white-space:pre-line;line-height:1.8}#stats{font-size:12px;line-height:1.8;border-top:1px solid #485961;margin-top:20px;padding-top:15px}a{color:#94cbb7}@media(max-width:650px){main{grid-template-columns:210px 1fr}aside{padding:14px}}
+</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<main><aside><small>STEEL VS. SWARM / GEOLOGY</small><h1>地質生成研究台</h1><p>從地質成因到岩面生態。拖曳旋轉、滾輪縮放，固定種子可重現。</p>
+<label for="type">地質結構</label><select id="type"><option value="auto">依環境抽樣</option></select>
+<label for="seed">種子</label><input id="seed" type="number" value="42" step="1">
+<label for="climate">氣候</label><select id="climate"><option value="temperate">溫帶</option><option value="tropical">熱帶</option><option value="arid">乾旱</option><option value="alpine">高山</option><option value="boreal">寒帶</option></select>
+<label for="water">水域</label><select id="water"><option value="none">陸地</option><option value="stream">溪流</option><option value="river">河流</option><option value="lake">湖泊</option><option value="sea">海岸</option></select>
+<label for="latitude">緯度 °</label><input id="latitude" type="number" value="25" min="-90" max="90">
+<label for="altitude">海拔 m</label><input id="altitude" type="number" value="100" min="-11000" max="9000">
+<label for="moisture">濕度</label><input id="moisture" type="range" min="0" max="1" step=".05" value=".65">
+<label for="vegetation">植被覆蓋</label><input id="vegetation" type="range" min="0" max="1" step=".05" value=".6">
+<label for="conifers">針葉林比例</label><input id="conifers" type="range" min="0" max="1" step=".05" value=".3">
+<label for="exposure">表面曝露／侵蝕</label><input id="exposure" type="range" min="0" max="1" step=".05" value=".5">
+<label for="fault">斷層作用</label><input id="fault" type="range" min="0" max="1" step=".05" value=".2">
+<label for="volcanic">火山作用</label><input id="volcanic" type="range" min="0" max="1" step=".05" value=".2">
+<label for="dissolution">溶蝕</label><input id="dissolution" type="range" min="0" max="1" step=".05" value=".6">
+<button id="next">下一個種子</button><div id="stats"></div>
+</aside><section id="view"><div id="caption"></div></section></main>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GEOLOGY_TYPES, GEOLOGY_SURFACES, geologyBackgroundObject } from '/js/geology.js';
+import { runtimeMeshDataGeometry } from '/js/runtimePartModel.js';
+const $ = id => document.getElementById(id), view = $('view');
+for(const [key,spec] of Object.entries(GEOLOGY_TYPES)) $('type').add(new Option(spec.name,key));
+$('type').value='mountain';
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); view.prepend(renderer.domElement);
+const scene = new THREE.Scene();scene.background=new THREE.Color(0x111a20);
+const camera=new THREE.PerspectiveCamera(42,1,.1,3000), controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+scene.add(new THREE.HemisphereLight(0xe4efff,0x64543d,2));
+const light=new THREE.DirectionalLight(0xffe5bb,3);light.position.set(-30,60,40);scene.add(light);
+const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.92,flatShading:true});
+let mesh,grid;
+function rebuild(){
+  try{
+    const input={climate:$('climate').value,water:$('water').value};
+    for(const key of ['latitude','altitude','moisture','vegetation','conifers','exposure','fault','volcanic','dissolution']) input[key]=Number($(key).value);
+    const entry=geologyBackgroundObject($('type').value,Number($('seed').value),input);
+    if(mesh){scene.remove(mesh);mesh.geometry.dispose();}
+    if(grid){scene.remove(grid);grid.geometry.dispose();grid.material.dispose();}
+    mesh=new THREE.Mesh(runtimeMeshDataGeometry(entry.meshData,entry.parts),material);scene.add(mesh);
+    const {parameters:p,type,surfaceCounts}=entry.generation,r=Math.max(...entry.bounds.size);
+    grid=new THREE.GridHelper(Math.ceil(r*2/10)*10,20,0x4b6269,0x26383e);grid.position.y=-.04;scene.add(grid);
+    controls.target.set(0,entry.bounds.max[1]*.4,0);camera.position.set(r*1.15,r*.95,r*1.45);controls.update();
+    $('caption').textContent=`${GEOLOGY_TYPES[type].name}　/　SEED ${$('seed').value}\n${p.width.toFixed(1)} m × ${(p.width*p.depthRatio).toFixed(1)} m　實際高 ${entry.bounds.max[1].toFixed(1)} m`;
+    const spec=GEOLOGY_TYPES[type];
+    $('stats').textContent=`抽樣範圍：寬 ${spec.width.join('–')} m · 高 ${spec.height.join('–')} m · 年代 ${spec.ageMa.join('–')} Ma · 粗糙度 ${spec.roughness.join('–')}。\n岩層／堆積年代 ${p.ageMa.toFixed(3)} Ma · 傾角 ${p.dip.toFixed(0)}° · ${p.layers} 層\n`+Object.entries(surfaceCounts).map(([key,n])=>`${GEOLOGY_SURFACES[key].name} ${n} 面`).join(' · ');
+    window.geologyPreview={type,vertices:entry.meshData.vertices.length/3,triangles:entry.meshData.faces.length/3};
+  }catch(error){$('stats').textContent=error.message;console.error(error);}
+}
+for(const el of document.querySelectorAll('select,input')) el.addEventListener('change',rebuild);
+$('next').onclick=()=>{$('seed').value=Number($('seed').value)+1;rebuild();};
+new ResizeObserver(()=>{const w=view.clientWidth,h=view.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}).observe(view);
+rebuild();renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);controls.dispose();mesh?.geometry.dispose();grid?.geometry.dispose();grid?.material.dispose();material.dispose();renderer.dispose();});
+</script></html>
