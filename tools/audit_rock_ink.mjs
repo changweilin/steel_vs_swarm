@@ -1,3 +1,4 @@
+import { groundModelDefinitions } from './ground_model_runtime.mjs';
 // ============ 剪影優先:山頭 / 巨石 / 石堆(使用者本輪追加;序 3 的 S3 / S4 消費端)============
 // 2026-08-16。使用者這一輪的話是「葉冠處理延伸到整棵樹,補充加入**山頭 / 巨石 / 石堆**的處置」。
 // 兩塊(這一支與 `audit_leaf_card`)共用同一條規則:**一個在畫面上讀作「一個東西」的物體,
@@ -123,7 +124,7 @@ console.log('\nⅡ 石堆散件(ground.js 的 3D 細節):一款一個號 + 貢�
     const before = loop;
     // 壞版:取號移進**內層**零件迴圈 ⇒ 逐零件各一號(= 每顆石頭中間仍被切一刀)。
     // ⚠ 這一支咬的是**取號的位置**不是「有沒有取號」—— 取在裡面也照樣「有 surfGroup」
-    loop = loop.replace(/(\r?\n)(\s*)const sg = surfGroup\(\), sCtr = ([^;]*);(\r?\n\s*for \(const part of DETAIL_DEFS\[type\]\) \{)/,
+    loop = loop.replace(/(\r?\n)(\s*)const sg = surfGroup\(\), sCtr = ([^;]*);(\r?\n\s*for \(const part of DETAIL_VARIANTS\[type\]\[variant\]\) \{)/,
       '$1$2const sCtr = $3;$4\n      const sg = surfGroup();');
     if (loop === before) die('--break-detsurf 的字面替換沒有生效(原文改了?)');
   }
@@ -134,7 +135,7 @@ console.log('\nⅡ 石堆散件(ground.js 的 3D 細節):一款一個號 + 貢�
   }
   const lc = code(loop);
   const iSg = lc.indexOf('const sg = surfGroup()');
-  const iFor = lc.indexOf('for (const part of DETAIL_DEFS[type])');
+  const iFor = lc.indexOf('for (const part of DETAIL_VARIANTS[type][variant])');
   ok(iSg >= 0 && iFor >= 0 && iSg < iFor,
     '`surfGroup()` MUST 取在**零件迴圈之外**(逐 `type` 一次)—— 取在裡面就是逐零件各一號 = 完全沒做,而「有沒有呼叫」看起來一模一樣');
   ok(/surf: sg, contrib: sCtr/.test(lc),
@@ -149,25 +150,13 @@ console.log('\nⅡ 石堆散件(ground.js 的 3D 細節):一款一個號 + 貢�
   ok(count(gndC, /surfGroup\(\)/g) === 1,
     'ground.js 的群組配號恰一處(第二處就是「有些款彼此不畫線、有些款畫」)');
   ok(/import \{ envMat, surfGroup \} from '\.\/toon\.js';/.test(gndSrc)
-    && /import \{ ENV, inkCtrM \} from '\.\/data\.js';/.test(gndSrc),
+    && /import \{ ENV, inkCtrM, edgeWallInsetM \} from '\.\/data\.js';/.test(gndSrc),
     '兩支推導縫都從**唯一縫**取(`surfGroup` ← toon.js / `inkCtrM` ← data.js),沒有第三份');
 
   // ---- 行為直測:真品的 DETAIL_DEFS 幾何 → detailR → 貢獻 ----
   // 幾何樁只記「這一款的水平外廓有多大」(與 ground.js 的 `detailR` 同一個量法)
-  const box3 = (hx, hy, hz) => ({ hx, hy, hz, translate() { return this; }, rotateZ() { const t = this.hx; this.hx = this.hy; this.hy = t; return this; }, rotateX() { const t = this.hy; this.hy = this.hz; this.hz = t; return this; }, scale(a, b, c) { this.hx *= a; this.hy *= b; this.hz *= c; return this; } });
-  const STUB = {
-    IcosahedronGeometry: (r) => box3(r, r, r),
-    OctahedronGeometry: (r) => box3(r, r, r),
-    SphereGeometry: (r) => box3(r, r, r),
-    BoxGeometry: (w, h, d) => box3(w / 2, h / 2, d / 2),
-    CylinderGeometry: (a, b, h) => box3(Math.max(a, b), h / 2, Math.max(a, b)),
-    ConeGeometry: (r, h) => box3(r, h / 2, r),
-    TorusGeometry: (r, t) => box3(r + t, r + t, t),
-  };
-  const THREE_STUB = new Proxy({}, { get: (_, k) => (STUB[k] ? function (...a) { return STUB[k](...a); } : function () { return box3(0, 0, 0); }) });
-  const defs = new Function('THREE', 'Math',
-    `${/const cone = \(r, h, n\)[\s\S]*?const DETAIL_DEFS = \{[\s\S]*?\n\};/.exec(gndSrc)[0]}\nreturn DETAIL_DEFS;`)(THREE_STUB, Math);
-  const detR = (t) => defs[t].reduce((m, p) => Math.max(m, Math.hypot(p.geo.hx, p.geo.hz)), 0);
+  const defs = groundModelDefinitions();
+  const detR = new Function('DETAIL_DEFS', 'const _detR = new Map();\n' + grabFn(gndSrc, 'detailR') + '\nreturn detailR;')(defs);
   const ctrOf = (t) => inkCtrM(detR(t) * 2);
   ok(Object.keys(defs).length > 30, `真品 DETAIL_DEFS 讀得到(${Object.keys(defs).length} 款)`);
   ok(ctrOf('pebble') < ctrOf('boulder'),

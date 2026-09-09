@@ -12,12 +12,13 @@
 //      watertile det 三款 / 兩個 scatterDetails 呼叫端都傳 enc / 純函式零 rnd)
 'use strict';
 import { readSrc } from './audit_src.mjs';
+import { GROUND_ATTACHMENTS } from '../public/js/groundPartCatalog.js';
 
 let fail = 0;
 const bad = (m) => { console.log('  ✗', m); fail++; };
 const ok = (m) => console.log('  ✓', m);
 
-const src = readSrc('public', 'js', 'ground.js');
+const src = readSrc('public', 'js', 'ground.js') + '\n' + readSrc('public', 'js', 'groundCatalog.js').replaceAll('export const ', 'const ');
 
 // ===== 抽原文(零依賴 → eval 執行真品)=====
 const encCfgM = src.match(/export const ENCLAVE = \{.*$/m);
@@ -241,10 +242,11 @@ console.log('== Ⅳ 靜態規則(單一縫 / 消費端接線)==');
   /encM\?\.style\.feats\?\.length \? encM\.style\.feats : zoneLists\[zoneAt\(x, z\)\]/.test(src)
     ? ok('特徵層主散佈:enclave 內改抽樣式 feats 池')
     : bad('主散佈未接 enclave feats 池');
-  (/det === 'pond'/.test(src) && /det === 'lake'/.test(src) && /det === 'spring'/.test(src))
+  (['pond', 'lake', 'spring'].every(k => GROUND_ATTACHMENTS.watertile.contexts[k])
+    && src.includes('recipe.contexts?.[enc?.style.det]'))
     ? ok('watertile 水生點綴三樣態(pond 荷葉 / lake 蘆葦岸 / spring 稀疏)接線齊全')
     : bad('watertile det 分支缺樣態');
-  (/scatterDetails\(sub, x, z, r, rot, def, zn, enc\)/.test(src)
+  (/scatterDetails\(sub, x, z, r, rot, def, zn, enc, parameters\.density/.test(src)
    && /scatterDetails\(sub, cx2, cz2, cell \* 0\.55, rnd\(\) \* Math\.PI \* 2, DEFS\[sub\], zoneAt\(cx2, cz2\), encAt\(cx2, cz2\)\)/.test(src))
     ? ok('scatterDetails 兩個呼叫端(特徵拼圖 / 底毯細節)都帶 enc 情境')
     : bad('scatterDetails 呼叫端缺 enc(水域點綴查不到包裹情境)');

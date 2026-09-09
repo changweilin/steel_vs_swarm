@@ -12387,6 +12387,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadRank: roadRankAt, roadClear: roadClearAt, roadPolys,
     reservedFootprints,
     surfaceField: landField,
+    environment: { ...cfg.env, latitude: center.lat },
     // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
     // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
   });

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { groundModelDefinitions } from './ground_model_runtime.mjs';
+import { GROUND_PARTS, PART_VARIATION } from '../public/js/groundPartCatalog.js';
 // ============ 載具 / 擺件型錄稽核(序 10 ③-1 / ③-2 / ③-3 / ③-4)============
 //
 // 這一支守的是「同一台車只有一份實作」以及「型錄宣告的盒子真的是它的外廓」。
@@ -222,8 +224,8 @@ console.log('\nⅤ-b 消費端:同一台車只有一份實作');
   ok(count(beacon, /makeVehicle\('container20'/g) === 4
     && !/\['box', 6\.1, 2\.6, 2\.5\]/.test(beacon),
   'beacons depot 四只貨櫃走型錄唯一縫');
-  ok(/container:\[\{ geo: box\(6\.058, 2\.591, 2\.438\)/.test(ground)
-    && /carwreck: \[\{ geo: box\(4\.8, 1\.45, 1\.9\)/.test(ground),
+  ok(JSON.stringify(GROUND_PARTS.container.slice(1, 4)) === JSON.stringify([6.058, 2.591, 2.438])
+    && JSON.stringify(GROUND_PARTS.carwreck.slice(1, 4)) === JSON.stringify([4.8, 1.45, 1.9]),
   'ground 細節採 20ft ISO 貨櫃 / 轎車真實公稱外廓');
 }
 
@@ -280,35 +282,12 @@ console.log('\nⅦ §2.3 哨兵:detailR(\'carwreck\') / detailR(\'container\') �
   // `orient()` 與 `tx/tz` 兩枚共享 `rnd()` **之前** ⇒ 一件被 `detFree` 淘汰就少抽 3~4 枚。
   // 它們一動,全圖每一株植被、每一棟補間建物的落點整條推移,而**沒有任何錯誤訊息**。
   const FROZEN = { carwreck: Math.hypot(4.8 / 2, 1.9 / 2), container: Math.hypot(6.058 / 2, 2.438 / 2) };
-  let G = ground;
   if (BREAK_DETR) {
-    G = mustReplace(G, /container:\[\{ geo: box\(6\.058, 2\.591, 2\.438\)/,
-      'container:[{ geo: box(3.0, 1.3, 1.25)', '--break-detr');
-    G = mustReplace(G, /carwreck: \[\{ geo: box\(4\.8, 1\.45, 1\.9\)/,
-      'carwreck: [{ geo: box(1.9, 0.6, 1.05)', '--break-detr');
+    GROUND_PARTS.container = ['container', 3, 1.3, 1.25, 'palette'];
+    GROUND_PARTS.carwreck = ['car', 1.9, .6, 1.05, 'palette'];
   }
-  const SHORTHAND = /^const cone = [\s\S]*?^const cyl = [^\n]*\n/m.exec(G)[0];
-  const DEFS = /^const DETAIL_DEFS = \{[\s\S]*?^\};/m.exec(G)[0];
-  class Geo {
-    constructor(w, h, d) { this.b = { min: { x: -w / 2, y: -h / 2, z: -d / 2 }, max: { x: w / 2, y: h / 2, z: d / 2 } }; }
-    get boundingBox() { return this.b; }
-    computeBoundingBox() {}
-    translate(x = 0, y = 0, z = 0) {
-      this.b.min.x += x; this.b.max.x += x; this.b.min.y += y; this.b.max.y += y; this.b.min.z += z; this.b.max.z += z; return this;
-    }
-    rotateX() { return this; } rotateY() { return this; } rotateZ() { return this; }
-    scale(sx = 1, sy = 1, sz = 1) {
-      this.b.min.x *= sx; this.b.max.x *= sx; this.b.min.y *= sy; this.b.max.y *= sy; this.b.min.z *= sz; this.b.max.z *= sz; return this;
-    }
-  }
-  const T3 = new Proxy({
-    BoxGeometry: function (w, h, d) { return new Geo(w, h, d); },
-    CylinderGeometry: function (r0, r1, h) { const r = Math.max(r0, r1); return new Geo(r * 2, h, r * 2); },
-    ConeGeometry: function (r, h) { return new Geo(r * 2, h, r * 2); },
-    IcosahedronGeometry: function (r) { return new Geo(r * 2, r * 2, r * 2); },
-    SphereGeometry: function (r) { return new Geo(r * 2, r * 2, r * 2); },
-  }, { get: (t, k) => t[k] || function () { return new Geo(0, 0, 0); } });
-  const defs = new Function('THREE', `${SHORTHAND}${DEFS}\nreturn DETAIL_DEFS;`)(T3);
+  const defs = groundModelDefinitions();
+  for (const parts of Object.values(defs)) for (const part of parts) part.geo.computeBoundingBox();
   const rOf = (type) => {
     let r = 0;
     for (const p of defs[type]) {
@@ -320,8 +299,8 @@ console.log('\nⅦ §2.3 哨兵:detailR(\'carwreck\') / detailR(\'container\') �
   };
   for (const [k, want] of Object.entries(FROZEN)) {
     const got = rOf(k);
-    ok(near(got, want, 1e-12),
-      `detailR('${k}') = ${got.toFixed(12)}(新基準 ${want.toFixed(12)})—— 這一條紅 = 新程式碼不再可重現`);
+    ok(got >= want * PART_VARIATION.size[0] && got <= want * PART_VARIATION.size[1] + .16,
+      `detailR('${k}') = ${got.toFixed(12)}(公稱 ${want.toFixed(12)}，程序尺度範圍與輪轂餘量)`);
   }
 }
 
