@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import {VEHICLE_AXES,VEHICLE_PROFILES,VEHICLE_PART_NAMES,vehicleCandidates} from '/js/vehicleCatalog.js';
 import {makeProceduralVehicle} from '/js/vehicleModels.js';
 import {VEHICLE_CONSISTS,CONSIST_PREFIX} from '/js/vehicleConsists.js';
+import {RIM_NAMES} from '/js/vehicleVariants.js';
 import {Pipeline} from '/js/postfx.js';
 const $=id=>document.getElementById(id), scene=new THREE.Scene();
 scene.background=new THREE.Color(0xe9e6dc);
@@ -44,6 +45,12 @@ function build(){
       : v.name+' ｜ '+VEHICLE_AXES.purpose[v.purpose]+' / '+VEHICLE_AXES.type[v.type]+' / '+VEHICLE_AXES.power[v.power]
       +'\n公稱尺寸 '+v.length.toFixed(2)+' × '+v.width.toFixed(2)+' × '+v.height.toFixed(2)+' m ｜ 車齡 '+v.age+' 年 ｜ 保養 '+Math.round(v.maintenance*100)+'% ｜ 漆面磨損 '+Math.round(v.wear*100)+'%'
       +'\n功能件：'+(v.parts.map(p=>VEHICLE_PART_NAMES[p]).join(' · ')||'標準配備')+' ｜ 塗鴉：'+(v.graffiti||'無')+(v.power==='animal'?' ｜ 停放狀態，牽引動物未繫掛':'');
+    if(!v.consist) {
+      const cargoNames={luggage:'行李箱',crate:'木箱',camping:'露營包',sacks:'袋裝貨物',barrels:'桶裝貨物',logs:'原木',cars:'汽車',aggregate:'散裝土石'};
+      $('info').textContent+='\n品牌：'+v.brand.name+' ｜ 空車 '+v.curbTonnes.toFixed(2)+' t ／ 額定載重 '+v.payloadTonnes.toFixed(2)+' t ／ 滿載總重 '+v.grossTonnes.toFixed(2)+' t（美術設定）'
+        +'\n輪胎直徑倍率 '+v.wheels.radiusScale.toFixed(2)+' × ／ 胎寬倍率 '+v.wheels.widthScale.toFixed(2)+' × ｜ 懸吊升高 '+(v.wheels.suspensionLift*100).toFixed(1)+' cm ｜ '+RIM_NAMES[v.wheels.rimStyle]
+        +'\n可見貨物：'+(v.cargo&&v.cargo.count?(v.cargo.location==='roof'?'車頂綁載 ':'')+cargoNames[v.cargo.type]+' × '+v.cargo.count:'無')+' ｜ 估計載貨 '+v.cargoTonnes.toFixed(3)+' t';
+    }
     $('info').style.whiteSpace='pre-line';window.vehiclePreview={model,renderer,scene};render();
   }catch(error){$('error').textContent=error.message;render();}
 }

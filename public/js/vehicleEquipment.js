@@ -15,7 +15,7 @@ export function buildIndustryEquipment(part, v, {box,cyl,beam,frustum}) {
     for(const end of [-1,1])box('hopper_end',x+end*span*.48,floor+H*.2,0,span*.035,H*.4,W*.84);
     for(const dx of [-.27,.27])box('bottom_discharge',x+span*dx,floor-H*.065,0,span*.17,H*.12,W*.33,dark);
     if(closed)box('sealed_hopper_roof',x,floor+H*.42,0,span,H*.07,W*.85,light);
-    else for(const dx of [-.3,0,.3])box('aggregate_load',x+span*dx,floor+H*.26,0,span*.29,H*.16,W*.62,0x67615a);
+    else for(const dx of [-.3,0,.3].slice(0,v.cargo?.type==='aggregate'?v.cargo.count:3))box('aggregate_load',x+span*dx,floor+H*.26,0,span*.29,H*.16,W*.62,0x67615a);
   };
   if(['fuelTank','cryogenicTank','potableTank','sanitaryTank','chemicalTank','waterTank','vacuumTank'].includes(part)) {
     const radius=Math.min(W*.41,H*.28), y=floor+radius;
@@ -74,6 +74,7 @@ export function buildIndustryEquipment(part, v, {box,cyl,beam,frustum}) {
     for(const end of [-1,1])box(end<0?'hinged_tailgate':'tipper_headboard',x+end*span*.48,floor+H*.2,0,span*.035,H*.4,W*.89);
     cyl('tailgate_hinge',x-span*.48,floor+H*.38,0,W*.035,W*.92,steel);
     beam('tipper_lift_ram',[x+span*.26,H*.28,0],[x+span*.3,floor+H*.1,0],W*.12,steel);
+    for(const dx of [-.3,0,.3].slice(0,v.cargo.count))box('aggregate_load',x+span*dx,floor+H*.11,0,span*.29,H*.2,W*.72,0x756d62);
   } else if(part==='paverHopper') {
     box('asphalt_feed_floor',L*.28,H*.4,0,L*.35,H*.08,W*.94,dark);
     for(const s of [-1,1])box('folding_hopper_wing',L*.28,H*.52,s*W*.43,L*.36,H*.24,W*.08,paint,[s*.3,0,0]);
@@ -89,7 +90,7 @@ export function buildIndustryEquipment(part, v, {box,cyl,beam,frustum}) {
     }
   } else if(part==='logLoad') {
     for(const dx of [-.4,0,.4])box('log_bunk_crossbar',x+span*dx,floor+W*.015,0,span*.04,W*.045,W*.89,steel);
-    for(const z of [-.27,0,.27])for(const level of [0,1])cyl('secured_log',x,floor+W*(.14+level*.23),z*W,W*.13,span,0x846140,[0,0,Math.PI/2]);
+    for(let i=0;i<v.cargo.count;i++)cyl('secured_log',x,floor+W*(.14+Math.floor(i/3)*.23),(i%3-1)*W*.27,W*.13,span,0x846140,[0,0,Math.PI/2]);
     for(const dx of [-.4,0,.4])for(const s of [-1,1])box('log_bunk',x+span*dx,floor+H*.25,s*W*.43,span*.025,H*.55,W*.055,steel);
   } else if(['militaryLoad','machineLoad'].includes(part)) {
     box('secured_equipment_hull',x,floor+H*.22,0,span*.65,H*.23,W*.6,part==='militaryLoad'?0x667050:0xd6a03a);
@@ -106,7 +107,8 @@ export function buildIndustryEquipment(part, v, {box,cyl,beam,frustum}) {
     for(const level of [0,1]) {
       const y=floor+H*level*.34;
       box('car_deck',x,y,0,span,H*.04,W*.85,steel);
-      for(const dx of [-.28,.28]){
+      for(const [slot,dx] of [-.28,.28].entries()){
+        if(level*2+slot>=v.cargo.count)continue;
         for(const axle of [-.12,.12])for(const s of [-1,1])cyl('transported_car_wheel',x+span*(dx+axle),y+H*.065,s*W*.28,H*.05,W*.09,dark);
         box('transported_car',x+span*dx,y+H*.13,0,span*.38,H*.13,W*.62,level?0xa55b45:0x4e7188);
         box('transported_car_glass',x+span*dx,y+H*.22,0,span*.17,H*.08,W*.5,dark);

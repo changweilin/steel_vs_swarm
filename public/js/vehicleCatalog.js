@@ -3,6 +3,7 @@ import { mulberry32 } from './rng.js';
 import { partAABB } from './vehicles.js';
 import { industryProfiles, INDUSTRY_PART_NAMES } from './vehicleIndustry.js';
 import { buildIndustryEquipment } from './vehicleEquipment.js';
+import {vehicleVariants,buildVariantEquipment} from './vehicleVariants.js';
 
 export const VEHICLE_PREFIX = 'vehicle/';
 export const RAIL_GAUGE = 1.435;
@@ -96,6 +97,7 @@ export function generateVehicle(key, seed = 0, options = {}) {
   // 功能件必裝，便利件獨立抽樣；動力硬體由 power 決定。
   const parts = spec.parts.filter(part => !['rack', 'basket', 'panniers', 'canopy'].includes(part) || r() < .6);
   return { key, seed, name: spec.name, purpose, type: spec.type, power, form: spec.form, habitat: spec.habitat,
+    ...vehicleVariants(key,spec,seed,length),
     length, width, height, age, maintenance, wear, paint, fadedPaint: tint(paint, 1 - wear * .25),
     dust: r() * (spec.habitat.includes('street') ? .25 : .65), graffiti, lettering: COPIES[purpose], number, parts,
     coupling:spec.form==='railWagon'||spec.form==='railLocomotive'?{system:'rail',height:.85,gauge:RAIL_GAUGE}
@@ -107,7 +109,7 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
   const v = generateVehicle(key, seed, options);
   const { length: L, width: W, height: H } = v;
   const paint = v.fadedPaint, dark = 0x252b30, glass = 0x304959, steel = 0x8d969b;
-  const rows = [], plates = [];
+  const rows = [], plates = [],wheelRows=new Set(),wheelMounts=[];
   const box = (name, x, y, z, l, h, w, c = paint, rotation) => rows.push({ role: name, g: ['box', l, h, w], p: [x, y, z], c, ...(rotation ? { r: rotation } : {}) });
   const cyl = (name, x, y, z, radius, depth, c, rotation = [Math.PI / 2, 0, 0]) => rows.push({ role: name, g: ['cyl', radius, radius, depth, 12], p: [x, y, z], c, r: rotation });
   const beam = (name, a, b, radius, color = steel) => {
@@ -115,6 +117,8 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
     box(name, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, a[2], Math.hypot(dx, dy), radius, radius, color, [0, 0, Math.atan2(dy, dx)]);
   };
   const wheel = (x, radius, z, depth = W * .12) => {
+    const first=rows.length,originalRadius=radius;
+    radius*=v.wheels.radiusScale;depth*=v.wheels.widthScale;
     if (['cycle','trike'].includes(v.form)) {
       // 18 段圓環旋轉 90°，讓一個取樣頂點精確落在最低點。
       rows.push({role:'tire',g:['ring',radius*.94,radius*.06],p:[x,radius,z],r:[0,0,Math.PI/2],c:dark});
@@ -126,7 +130,17 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
       return;
     }
     cyl('tire', x, radius, z, radius, depth, dark);
-    cyl('rim', x, radius, z, radius * .5, depth * 1.04, steel);
+    cyl('rim', x, radius, z, radius * .5, depth * 1.04, v.wheels.rimStyle==='alloy'?dark:steel);
+    if(v.wheels.rimStyle==='alloy'||v.wheels.rimStyle==='steel') {
+      const count=v.wheels.rimStyle==='alloy'?6:5,face=z+Math.sign(z)*depth*.535;
+      for(let i=0;i<count;i++) {
+        const angle=i*Math.PI*2/count;
+        if(v.wheels.rimStyle==='alloy')beam('alloy_spoke',[x,radius,face],[x+Math.cos(angle)*radius*.48,radius+Math.sin(angle)*radius*.48,face],radius*.075,steel);
+        else cyl('steel_rim_hole',x+Math.cos(angle)*radius*.32,radius+Math.sin(angle)*radius*.32,face,radius*.075,depth*.025,dark);
+      }
+    }
+    for(let i=first;i<rows.length;i++)wheelRows.add(rows[i]);
+    wheelMounts.push({x,z,radius,delta:radius-originalRadius});
   };
   const cab = (x, y, l, h, w = W * .82, z = 0) => {
     box('cab', x, y, z, l, h, w);
@@ -188,6 +202,7 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
     box('trailer_frame',0,H*.29,0,L*.94,H*.09,W*.87,dark);
     for(const x of [-.35,-.23,-.11])for(const s of [-1,1])wheel(L*x,H*.135,s*W*.41,W*.14);
     box('gooseneck',L*.34,1.3,0,L*.27,H*.06,W*.65,dark);
+    box('gooseneck_web',L*.28,(1.3+H*.29)/2,0,L*.13,Math.abs(1.3-H*.29)+H*.06,W*.52,steel);
     cyl('kingpin',L*.36,1.2,0,W*.035,H*.065,steel,[0,0,0]);
     for(const s of [-1,1])box('parking_leg',L*.2,H*.22,s*W*.3,W*.055,H*.29,W*.055,steel);
   } else if (v.form === 'van' || v.form === 'pickup') {
@@ -314,7 +329,7 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
       if(part==='livestock') for(let i=0;i<4;i++) box('ventilation',-L*.14,H*(.4+i*.13),0,L*.59,H*.05,W*.925,dark);
     } else if(part==='logs') {
       for(const dx of [-.38,.07])box('log_saddle',L*dx,H*.36,0,L*.055,H*.1,W*.86,steel);
-      for(const z of [-.27,0,.27]) cyl('timber',-L*.14,H*.48,z*W,W*.13,L*.63,0x77553a,[0,0,Math.PI/2]);
+      for(const z of [-.27,0,.27].slice(0,v.cargo.count)) cyl('timber',-L*.14,H*.48,z*W,W*.13,L*.63,0x77553a,[0,0,Math.PI/2]);
       for(const x of [-.38,.07]) for(const s of [-1,1]) box('log_stake',L*x,H*.56,s*W*.42,L*.015,H*.45,W*.035,steel);
     } else if(part==='fork') {
       for(const side of [-1,1]) {box('mast',L*.38,H*.53,side*W*.23,L*.05,H*.83,W*.06,dark);box('fork',L*.43,H*.13,side*W*.23,L*.12,H*.03,W*.08,steel);}
@@ -373,6 +388,12 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
     const x=roof.p[0],base=roof.p[1]+roof.g[2]/2;
     cyl('hydrogen_tank',x,base+W*.13,0,W*.13,Math.min(L*.35,roof.g[1]*.9),steel,[0,0,Math.PI/2]);
     for(const dx of [-.08,.08])box('hydrogen_saddle',x+L*dx,base+W*.035,0,L*.035,W*.09,W*.25,dark);
+  }
+  buildVariantEquipment(v,rows,{box,cyl,beam});
+  const lift=wheelMounts.length?Math.max(...wheelMounts.map(w=>w.delta))+v.wheels.suspensionLift:0;
+  if(lift!==0) {
+    for(const row of rows)if(!wheelRows.has(row))row.p[1]+=lift;
+    for(const w of wheelMounts)box('suspension_strut',w.x,w.radius+H*.12,Math.sign(w.z)*Math.abs(w.z)*.94,L*.025,H*.27,W*.13,steel);
   }
   // 牌照屬於端面安裝件，不能沿用最大的側面廣告／車隊標記。
   if(v.habitat.includes('street') && !['cycle','trike','cart','carriage'].includes(v.form)) {
