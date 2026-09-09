@@ -190,6 +190,82 @@ const BUILDERS = {
     g.userData.flames = flames;   // game.js 逐幀閃爍
   },
 
+  /** 森林大火:大範圍焦土 + 高聳火柱 + 厚黑煙（比城市火場更高更密） */
+  forestfire(g, r, rnd) {
+    const scorch = mesh(g, cyl(r * 0.9, r * 1.0, 0.16, 14), 0x100c09, 0, 0.08, 0);
+    scorch.material.emissive = new THREE.Color(0x1a0800);
+    mesh(g, cyl(r * 0.45, r * 0.55, 0.10, 10), 0x0a0806, 0, 0.12, 0);   // 中心焦核
+    const flames = [];
+    const n = 10 + Math.floor(rnd() * 6);
+    for (let i = 0; i < n; i++) {
+      const a = rnd() * Math.PI * 2, d = r * rnd() * 0.82;
+      const h = 2.8 + rnd() * 5.2;   // 森林火焰更高
+      const f = mesh(g, cone(0.7 + rnd() * 0.8, h, 6),
+        i % 3 === 0 ? 0xffd23c : 0xff6a1f, Math.cos(a) * d, h / 2, Math.sin(a) * d,
+        { emissive: new THREE.Color(i % 3 === 0 ? 0xffaa00 : 0xff3300), emissiveIntensity: 1.8, transparent: true, opacity: 0.88 });
+      f.userData.h0 = h; f.userData.ph = rnd() * Math.PI * 2;
+      flames.push(f);
+    }
+    for (let i = 0; i < 4; i++) {   // 更厚的黑煙柱
+      mesh(g, ico(1.2 + rnd() * 1.2), 0x1c1c20,
+        (rnd() - 0.5) * r, 5.0 + i * 2.4 + rnd(), (rnd() - 0.5) * r,
+        { transparent: true, opacity: 0.6 });
+    }
+    g.userData.flames = flames;
+  },
+
+  /** 草原大火:低矮橫向蔓延火線 + 大面積燒焦地表 */
+  grassfire(g, r, rnd) {
+    const scorch = mesh(g, cyl(r * 0.88, r * 1.0, 0.12, 16), 0x14100a, 0, 0.06, 0);
+    scorch.material.emissive = new THREE.Color(0x1a0800);
+    const flames = [];
+    const n = 14 + Math.floor(rnd() * 8);   // 低矮但密集的火舌
+    for (let i = 0; i < n; i++) {
+      const a = rnd() * Math.PI * 2, d = r * (0.2 + rnd() * 0.75);
+      const h = 0.6 + rnd() * 1.4;   // 草原火焰低矮
+      const f = mesh(g, cone(0.35 + rnd() * 0.45, h, 5),
+        i % 4 === 0 ? 0xffe050 : 0xff8820, Math.cos(a) * d, h / 2, Math.sin(a) * d,
+        { emissive: new THREE.Color(i % 4 === 0 ? 0xffcc00 : 0xff5500), emissiveIntensity: 1.5, transparent: true, opacity: 0.9 });
+      f.userData.h0 = h; f.userData.ph = rnd() * Math.PI * 2;
+      flames.push(f);
+    }
+    for (let i = 0; i < 2; i++) {   // 薄煙（草原火煙少）
+      mesh(g, ico(0.7 + rnd() * 0.6), 0x3a3840,
+        (rnd() - 0.5) * r * 0.8, 2.0 + i * 1.4 + rnd(), (rnd() - 0.5) * r * 0.8,
+        { transparent: true, opacity: 0.42 });
+    }
+    g.userData.flames = flames;
+  },
+
+  /** 工廠大火:廠房金屬骨架殘骸 + 濃烈橘紅火焰 + 滾滾黑煙 */
+  factoryfire(g, r, rnd) {
+    mesh(g, cyl(r * 0.82, r * 0.92, 0.18, 10), 0x110e0b, 0, 0.09, 0)
+      .material.emissive = new THREE.Color(0x200a00);
+    for (let i = 0; i < 3; i++) {   // 廠房金屬骨架殘骸
+      const a = rnd() * Math.PI * 2, d = r * (0.3 + rnd() * 0.5);
+      const strut = mesh(g, box(0.28 + rnd() * 0.36, 3.0 + rnd() * 3.0, 0.22), 0x3a3028,
+        Math.cos(a) * d, 1.5, Math.sin(a) * d);
+      strut.rotation.set((rnd() - 0.5) * 0.4, rnd() * Math.PI, 0);
+    }
+    const flames = [];
+    const n = 8 + Math.floor(rnd() * 4);
+    for (let i = 0; i < n; i++) {
+      const a = rnd() * Math.PI * 2, d = r * rnd() * 0.75;
+      const h = 2.2 + rnd() * 4.0;
+      const f = mesh(g, cone(0.6 + rnd() * 0.7, h, 7),
+        i % 2 === 0 ? 0xff4a10 : 0xffa020, Math.cos(a) * d, h / 2, Math.sin(a) * d,
+        { emissive: new THREE.Color(i % 2 === 0 ? 0xff2200 : 0xff8800), emissiveIntensity: 2.0, transparent: true, opacity: 0.94 });
+      f.userData.h0 = h; f.userData.ph = rnd() * Math.PI * 2;
+      flames.push(f);
+    }
+    for (let i = 0; i < 5; i++) {   // 濃厚黑煙（工廠特色）
+      mesh(g, ico(1.4 + rnd() * 1.6), 0x111115,
+        (rnd() - 0.5) * r * 0.9, 4.0 + i * 3.0 + rnd(), (rnd() - 0.5) * r * 0.9,
+        { transparent: true, opacity: 0.7 });
+    }
+    g.userData.flames = flames;
+  },
+
   /** 路面塌陷:黑洞 + 傾斜裂板 */
   sinkhole(g, r, rnd) {
     mesh(g, cyl(r * 0.8, r * 0.55, 1.6, 10), 0x0c0e10, 0, -0.75, 0);

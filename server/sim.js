@@ -23,9 +23,13 @@ import {
   weaponMaxHoriz, inWeaponRange,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
   weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor, fogSightMult,
+  FIRE_WEATHER, fireDotMul,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
+
+// 所有火場類型（模組級常數；熱路徑查表用，MUST NOT 在函式內重複構造）
+const FIRE_KINDS = new Set(['fire', 'forestfire', 'grassfire', 'factoryfire']);
 
 // 小隊共用的「玩家狀態」:一名玩家不論操控幾架機體,經濟/電力/彈藥/招式只有一份。
 // 三架機體各自是獨立 ent(有自己的 hp/護盾/座標/死亡狀態),但這些欄位透過
@@ -558,7 +562,7 @@ export class BattleSim {
       if (this.hazBlockers && def?.block) {
         this.hazBlockers = this.hazBlockers.filter(([x, z]) => x !== e.x || z !== e.z);
       }
-      if (e.kind === 'fire') this._fires = this._fires.filter((f) => f !== e);
+      if (FIRE_KINDS.has(e.kind)) this._fires = this._fires.filter((f) => f !== e);
     }
     // 地雷:隧道路面上不留(橋下地雷在地面,不衝突)
     this.mines = this.mines.filter(([x, z]) => distToCor(x, z, true) >= 2);
@@ -803,14 +807,14 @@ export class BattleSim {
     this._ensureConnectivity();
     this._seedAASites();
     this._seedRelays();
-    this._fires = [...this.ents.values()].filter((e) => e.kind === 'fire');
+    this._fires = [...this.ents.values()].filter((e) => FIRE_KINDS.has(e.kind));
     this._rebuildAvoidZones();
   }
 
   /** 中立單位迴避的傷害/限制區快取(火場 dot + 淹水區 slow);佈點/移動查表用,ent 增刪後重建。 */
   _rebuildAvoidZones() {
     this._avoidZones = [...this.ents.values()]
-      .filter((e) => e.kind === 'fire' || e.kind === 'flood')
+      .filter((e) => FIRE_KINDS.has(e.kind) || e.kind === 'flood')
       .map((e) => ({ x: e.x, z: e.z, r: (HAZARDS[e.kind]?.r || 6) * (e.sc || 1) }));
   }
 
@@ -6079,17 +6083,24 @@ export class BattleSim {
 
   // ---------- 障礙物效果(火場灼傷)+ 戰場物資(過期 / 拾取)----------
   _tickHazards(dt) {
-    const fireDef = HAZARDS.fire;
+    // 全局火場倍率(天氣聯動):大雨/大雪 → 0(熄滅);強風 → 最高 1.6×
+    // 單次計算供本 tick 所有火場共用，避免逐火場重複算
+    const fireMul = fireDotMul(this.curWeatherDyn);
     for (const f of this._fires || []) {
+      if (fireMul <= 0) break;   // 完全熄滅:跳過所有火場傷害
+      const def = HAZARDS[f.kind];
+      if (!def) continue;
+      const dot = def.dot * fireMul;
       for (const h of this._allBodies()) {
         // 2026-07-23:地面機甲跳躍/蓄力跳躍**離地期間不吃地面火場**(offGround;水域/沼澤同理,
         // 走客戶端 wet=0 回報)。飛行機種照舊吃 maxY 以下的煙柱高度規則,平衡不動。
-        if (h.dead || (h.y || 0) > fireDef.maxY || offGround(h.kind, h.y)) continue;
-        if (dist2d(h.x, h.z, f.x, f.z) > fireDef.r * (f.sc || 1)) continue;
-        this._fireBurn(h, fireDef.dot * dt);   // 同時扣護盾/HP(依最大值比例,不吃裝甲)
+        if (h.dead || (h.y || 0) > def.maxY || offGround(h.kind, h.y)) continue;
+        if (dist2d(h.x, h.z, f.x, f.z) > def.r * (f.sc || 1)) continue;
+        this._fireBurn(h, dot * dt);   // 同時扣護盾/HP(依最大值比例,不吃裝甲)
         if ((h._burnAt || 0) + 2 < this.t) {   // 事件節流:每 2 秒提示一次
           h._burnAt = this.t;
-          this.events.push({ e: 'burn', pid: h.pid, x: f.x, z: f.z });
+          // mul 傳給客戶端:讓 HUD 警告強度 / trauma 震屏跟著火場強度變化
+          this.events.push({ e: 'burn', pid: h.pid, x: f.x, z: f.z, mul: Math.round(fireMul * 100) / 100 });
         }
       }
     }

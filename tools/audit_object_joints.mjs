@@ -634,6 +634,9 @@ function buildHazardParts(kind, seed, r) {
 // loose = 不套連通性)。每一條都要寫得出理由 —— 沒理由的豁免就是把 bug 藏起來。
 const HZ_EXEMPT = {
   fire: { skip: '火舌與煙柱刻意離地飄浮(逐幀閃爍動畫)' },
+  forestfire: { skip: '火舌與煙柱刻意離地飄浮(逐幀閃爍動畫)' },
+  grassfire: { skip: '火舌與煙柱刻意離地飄浮(逐幀閃爍動畫)' },
+  factoryfire: { skip: '火舌與煙柱刻意離地飄浮(逐幀閃爍動畫)' },
   flood: { skip: '水面漣漪圈與露頭雜物刻意不相接' },
   construction: { scatter: '施工圍籬/三角錐/鷹架各自散置,本來就不相連' },
   wreck: { scatter: 1, loose: 1, joints: '2~3 台獨立殘骸各自翻覆/斜插:翻車的車輪朝天懸空、'
