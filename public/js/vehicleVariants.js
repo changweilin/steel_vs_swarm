@@ -39,7 +39,7 @@ export function vehicleVariants(key,spec,seed,length) {
 
 export function buildVariantEquipment(v,rows,{box,cyl,beam}) {
   const {length:L,width:W,height:H,brand,cargo}=v;
-  const cab=rows.find(p=>p.role==='cab')||rows.find(p=>['armored_hull','rail_frame','trailer_frame','wooden_bed','engine'].includes(p.role));
+  const cab=rows.find(p=>p.role==='cab')||rows.find(p=>['model_cowl','armored_hull','rail_frame','trailer_frame','wooden_bed','engine','electric_motor'].includes(p.role));
   if(cab) {
     const x=cab.p[0]+cab.g[1]/2+.014,y=cab.p[1]-cab.g[2]*.25,z=cab.p[2],s=Math.min(W*.075,.19);
     box('brand_badge_base',x,y,z,.025,s,s,0x28313a);

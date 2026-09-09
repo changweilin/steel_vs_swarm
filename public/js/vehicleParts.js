@@ -1,12 +1,13 @@
 // 描述子宿主的適配層：新車模與既有碰撞契約分開，兩者不反推彼此。
 import { vehicleBackgroundObject } from './vehicleCatalog.js';
+import {selectRoadCar} from './vehicleEveryday.js';
 import { makeVehicle as collisionContract, VEHICLE_SPEC, placeParts } from './vehicles.js';
 
 export function makeSceneVehicleParts(kind, opts = {}) {
   // 貨櫃是獨立物流構件，沒有車輛模型。
   if (kind.startsWith('container')) return collisionContract(kind, opts);
-  const key = kind === 'railcar' ? 'tram' : kind;
   const seed = (opts.paint || 0) ^ Math.round((opts.at?.[0] || 0)*100) ^ Math.round((opts.at?.[2] || 0)*100);
+  const key = kind === 'railcar' ? 'tram' : kind==='sedan'?selectRoadCar(seed):kind;
   const model = vehicleBackgroundObject(key, seed);
   const fit = opts.fit || VEHICLE_SPEC[kind];
   if (!fit || !['L','W','H'].every(axis=>Number.isFinite(fit[axis]) && fit[axis]>0)) throw new RangeError('載具宿主缺少正有限 fit');

@@ -4,6 +4,8 @@ import { partAABB } from './vehicles.js';
 import { industryProfiles, INDUSTRY_PART_NAMES } from './vehicleIndustry.js';
 import { buildIndustryEquipment } from './vehicleEquipment.js';
 import {vehicleVariants,buildVariantEquipment} from './vehicleVariants.js';
+import {everydayProfiles} from './vehicleEveryday.js';
+import {buildIndividualBody} from './vehicleIndividualBodies.js';
 
 export const VEHICLE_PREFIX = 'vehicle/';
 export const RAIL_GAUGE = 1.435;
@@ -47,6 +49,7 @@ export const VEHICLE_PROFILES = {
   dieselRail: row('柴油客運車', ['passenger', 'tourism'], 'rail', ['diesel'], 'railcar', [16, 22], .145, .2, [0, 50], [], ['rail']),
   steam: row('保存型蒸汽機車', ['tourism'], 'rail', ['steam'], 'steam', [10, 15], .23, .32, [40, 130], ['chimney'], ['heritageRail']),
   ...industryProfiles(row),
+  ...everydayProfiles(row),
 };
 const PAINT = {
   civilian: [0xddd8c9, 0x344a61, 0x8c3332, 0x497769, 0xd5a945, 0x42464b],
@@ -97,6 +100,7 @@ export function generateVehicle(key, seed = 0, options = {}) {
   // 功能件必裝，便利件獨立抽樣；動力硬體由 power 決定。
   const parts = spec.parts.filter(part => !['rack', 'basket', 'panniers', 'canopy'].includes(part) || r() < .6);
   return { key, seed, name: spec.name, purpose, type: spec.type, power, form: spec.form, habitat: spec.habitat,
+    style:spec.style,
     ...vehicleVariants(key,spec,seed,length),
     length, width, height, age, maintenance, wear, paint, fadedPaint: tint(paint, 1 - wear * .25),
     dust: r() * (spec.habitat.includes('street') ? .25 : .65), graffiti, lettering: COPIES[purpose], number, parts,
@@ -150,14 +154,18 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
     box('windshield_divider', x+l*.507, y+h*.12, z, l*.01, h*.56, w*.025);
     for (const side of [-1, 1]) box('pillar', x, y + h * .12, z + side * w * .502, l * .04, h * .65, W * .025);
   };
-  if (v.form === 'sedan') {
+  if (v.style) {
+    buildIndividualBody(v,{box,cyl,beam,wheel});
+  } else if (v.form === 'sedan') {
     for(const x of [-.31,.31]) for(const side of [-1,1]) wheel(L*x,H*.21,side*W*.43,W*.12);
     box('floor',0,H*.29,0,L*.87,H*.09,W*.78,dark);
     box('body',0,H*.48,0,L*.96,H*.3,W*.91);
     box('hood',L*.31,H*.66,0,L*.3,H*.08,W*.85);
     box('trunk',-L*.36,H*.65,0,L*.22,H*.08,W*.85);
-    cab(-L*.05,H*.78,L*.43,H*.37,W*.77);
-    for(const [x,angle] of [[.195,.55],[-.295,-.5]]) {
+    const extended=['hatchback','wagon','limousine'].includes(v.style);
+    if(v.style!=='convertible')cab(-L*(extended?.11:.05),H*.78,L*(extended?.58:.43),H*.37,W*.77);
+    else box('open_cockpit_floor',-L*.08,H*.66,0,L*.46,H*.07,W*.72,dark);
+    for(const [x,angle] of (v.style==='convertible'?[[.195,.55]]:[[.195,.55],[extended?-.405:-.295,-.5]])) {
       box('raked_glass',L*x,H*.79,0,L*.016,H*.36,W*.74,glass,[0,0,angle]);
     }
     for(const side of [-1,1]) {
@@ -236,16 +244,17 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
       box('contact_shoe',0,H*1.08,0,L*.025,H*.025,W*.66,dark);
     }
   } else if (['cycle', 'motor', 'trike'].includes(v.form)) {
-    const R = H * .29, rear = -L * .31, front = L * .31;
+    const R = H * (v.style==='folding'?.21:.29), rear = -L * .31, front = L * .31;
     wheel(front, R, 0, W * .13);
     for (const z of v.form === 'trike' ? [-W * .36, W * .36] : [0]) wheel(rear, R, z, W * .13);
     const a = [rear, R, 0], b = [-L * .02, H * .77, 0], c = [L * .07, R, 0], d = [L * .26, H * .8, 0];
-    for (const [p, q] of [[a,b],[b,c],[c,a],[b,d],[c,d],[d,[front,R,0]]]) beam('frame', p, q, W * .06, paint);
+    const frameLinks=v.style==='stepThrough'||['scooter','electricScooter','deliveryMoto'].includes(v.style)?[[a,b],[b,c],[c,a],[c,d],[d,[front,R,0]]]:[[a,b],[b,c],[c,a],[b,d],[c,d],[d,[front,R,0]]];
+    for (const [p, q] of frameLinks) beam('frame', p, q, W * .06, paint);
     box('saddle', b[0], b[1], 0, L * .17, H * .06, W * .34, dark);
     box('handlebar', d[0], H * .88, 0, L * .025, H * .025, W * .96, steel);
     beam('handlebar_stem',d,[d[0],H*.88,0],W*.04,steel);
     box('pedals', c[0], c[1], 0, L * .06, H * .035, W * .55, dark);
-    if (v.form === 'motor') box('engine', 0, H * .44, 0, L * .3, H * .24, W * .42, dark);
+    if (v.form === 'motor') box(v.power==='battery'?'electric_motor':'engine', 0, H * .44, 0, L * .3, H * .24, W * .42, dark);
     if (v.form === 'trike') box('cargo_bed', rear, H * .62, 0, L * .32, H * .2, W * .68);
   } else if (['cart', 'carriage'].includes(v.form)) {
     const R = H * .23;
@@ -311,7 +320,7 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
       }
     }
   }
-  if (['sedan','truck','bus','utility','railcar'].includes(v.form)) {
+  if (!v.style && ['sedan','truck','bus','utility','railcar'].includes(v.form)) {
     for(const end of [-1,1]) {
       box('bumper_mount',end*L*.44,H*.3,0,L*.1,H*.065,W*.48,dark);
       box('lamp_backing',end*L*.475,H*.385,0,L*.018,H*.2,W*.82,dark);

@@ -26,4 +26,4 @@ for(const key of Object.keys(VEHICLE_PROFILES))for(let seed=0;seed<256;seed++) {
 }
 assert.equal(brands.size,5);assert.ok(rims.has('steel')&&rims.has('alloy')&&rims.has('disc'));
 assert.ok(roof>60&&roof<145,'車頂貨物應維持低機率，約 8%');
-console.log(`23808 組變體：質量範圍、5 品牌、輪框、載貨數量與車頂綁載通過（${roof}/1280）`);
+console.log(`${Object.keys(VEHICLE_PROFILES).length*256} 組變體：質量範圍、5 品牌、輪框、載貨數量與車頂綁載通過（${roof}/1280）`);

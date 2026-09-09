@@ -62,6 +62,7 @@ import { libGeo } from './partlib.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
 import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
+import {selectRoadCar} from './vehicleEveryday.js';
 import { deploySceneBatches } from './sceneObjects.js';
 import { createArchitecturePlanner } from './buildingDiversity.js';
 import { sceneObjectMat } from './toon.js';
@@ -9504,7 +9505,7 @@ function vehGroup(kind, opts = {}) {
   const paintSeed = Number.isInteger(opts.paint) ? opts.paint : 0;
   const atSeed = Math.round((opts.at?.[0] || 0) * 10) + Math.round((opts.at?.[2] || 0) * 10);
   const vehicleSeed = (paintSeed ^ atSeed ^ Math.round(fit.L * 100)) | 0;
-  return makeProceduralVehicle(kind === 'railcar' ? 'tram' : 'sedan', vehicleSeed, { ...opts, fit });
+  return makeProceduralVehicle(kind === 'railcar' ? 'tram' : selectRoadCar(vehicleSeed), vehicleSeed, { ...opts, fit });
 }
 
 /** 低多邊形列車(車頭 + 2 節車廂)。車廂形狀走 `vehicles.js railcar` 的唯一縫 */
