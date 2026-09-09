@@ -1,13 +1,17 @@
 // 已通過零件台的建築型錄；選款、正規化與執行期批次只在此一份。
 import * as THREE from 'three';
 import { BUILDING_PARTS } from './runtimeParts.js';
-import { generateBackgroundObject } from './backgroundObjects.js';
-import { mergeRuntimeParts } from './runtimePartModel.js';
+import { generateBackgroundObject, BACKGROUND_VARIANTS_PER_TARGET } from './backgroundObjects.js';
+import { mergeRuntimeParts, runtimePartTypes } from './runtimePartModel.js';
 import { sceneObjectMat } from './toon.js';
 import { deploySceneObjects } from './sceneObjects.js';
 import { pickArchitectureModel } from './buildingDiversity.js';
+import { ARCHITECTURE_SITE, computeOrientedRoofFrame } from './architectureStyles.js';
 
 const geometryCache = new Map();
+const assemblyCache = new Map();
+const generatedCache = new Map();
+const supportedParts = new Set(runtimePartTypes());
 let sharedMaterial = null;
 
 const hash32 = (x, z, salt = 0) => {
@@ -33,6 +37,59 @@ const isCuboidAssembly = (entry) => {
     && entry.parts.slice(0, count).every((part) => part?.type === 'box');
 };
 
+/** 解析組成後才選款；不讓非法尺寸、分離主體或空底模型進入隨機池。 */
+export function analyzeApprovedBuilding(entry) {
+  if (assemblyCache.has(entry.key)) return assemblyCache.get(entry.key);
+  const reject = reason => {
+    const result = { accepted: false, reason };
+    assemblyCache.set(entry.key, result);
+    return result;
+  };
+  const count = entry.generation?.mainPartCount;
+  if (!Number.isInteger(count) || count < 1 || count > entry.parts?.length) return reject('missing_structure');
+  const boxes = [];
+  for (const part of entry.parts) {
+    if (!supportedParts.has(part.type)) return reject('unsupported_part');
+    if (!Array.isArray(part.position) || part.position.length !== 3 || !part.position.every(Number.isFinite)) return reject('invalid_position');
+    for (const key of ['dimensions', 'radii', 'scale']) {
+      if (part[key] && (!Array.isArray(part[key]) || !part[key].every(n => Number.isFinite(n) && n > 0))) return reject('invalid_size');
+    }
+    for (const key of ['radius', 'height']) {
+      if (part[key] != null && (!Number.isFinite(part[key]) || part[key] <= 0)) return reject('invalid_size');
+    }
+    if (part.rotation && (part.rotation.length !== 3 || !part.rotation.every(Number.isFinite))) return reject('invalid_rotation');
+    const geo = mergeRuntimeParts([part]);
+    boxes.push(geo.boundingBox.clone());
+    geo.dispose();
+  }
+  const main = boxes.slice(0, count);
+  const joined = new Set([0]);
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let i = 0; i < main.length; i++) {
+      if (joined.has(i)) continue;
+      if ([...joined].some(j => main[j].clone().expandByScalar(0.2).intersectsBox(main[i]))) {
+        joined.add(i); changed = true;
+      }
+    }
+  }
+  if (joined.size !== main.length) return reject('disconnected_structure');
+  const bounds = boxes.reduce((box, next) => box.union(next), new THREE.Box3());
+  const size = bounds.getSize(new THREE.Vector3());
+  const baseY = bounds.min.y + Math.min(0.5, size.y * 0.1);
+  // 完整方形底層才可替代矩形外牆；凹翼／塔腳仍保留為固定形狀模型。
+  const rectangular = entry.parts.slice(0, count).some((part, i) => part.type === 'box'
+    && !(part.rotation || []).some(r => Math.abs(r) > 1e-5)
+    && main[i].min.y <= baseY && main[i].max.y > baseY
+    && (main[i].max.x - main[i].min.x) / size.x >= 0.9
+    && (main[i].max.z - main[i].min.z) / size.z >= 0.9);
+  const result = { accepted: true, rectangular, bounds: {
+    min: bounds.min.toArray(), max: bounds.max.toArray(), size: size.toArray(),
+  } };
+  assemblyCache.set(entry.key, result);
+  return result;
+}
+
 const profileOf = (entry) => {
   const size = entry.bounds.size;
   if (isCuboidAssembly(entry)) {
@@ -49,11 +106,20 @@ const profileOf = (entry) => {
  * 足跡與高度先過尺度防線，再依文化語彙與變形代價加權選款，零共享亂數消耗。
  * 回傳的 prof 只描述「正規化後完整包絡」，供既有碰撞盒與招牌縫共用。
  */
-export function fitApprovedBuilding(building, architecture = null, seed = 0) {
+export function fitApprovedBuilding(building, architecture = null, seed = 0, options = { rectangular: true }) {
   if (!BUILDING_PARTS.length) return null;
+  if (![building.w, building.d, building.h].every(n => Number.isFinite(n) && n > 0)) return null;
+  if (architecture?.slope >= ARCHITECTURE_SITE.slopeDeg) return null;
   const target = Math.max(building.w, 0.001) / Math.max(building.d, 0.001);
   const ranked = [];
-  for (const entry of BUILDING_PARTS) {
+  for (const source of BUILDING_PARTS) {
+    const variantSeed = hash32(building.x, building.z, (building.commercial ? 97 : 113) ^ seed);
+    const cacheKey = `${source.key}:${variantSeed % BACKGROUND_VARIANTS_PER_TARGET}`;
+    if (!generatedCache.has(cacheKey)) generatedCache.set(cacheKey, generateBackgroundObject(source.key, variantSeed));
+    const entry = generatedCache.get(cacheKey);
+    const assembly = analyzeApprovedBuilding(entry);
+    if (!assembly.accepted || (options.rectangular && !assembly.rectangular)) continue;
+    entry.bounds = assembly.bounds;
     const size = entry.bounds?.size;
     if (!Array.isArray(size) || size.some((n) => !Number.isFinite(n) || n <= 0)) continue;
     for (const rot of [0, 1]) {
@@ -61,9 +127,13 @@ export function fitApprovedBuilding(building, architecture = null, seed = 0) {
       const stretch = Math.exp(Math.abs(Math.log(target / aspect)));
       const heightRatio = Math.max(building.h || 10, 0.001) / Math.max(size[1], 0.001);
       const heightStretch = Math.exp(Math.abs(Math.log(heightRatio)));
-      // 變形防線：平面拉伸不得超過 1.65x，高度拉伸不得超過 1.8x
+      // 方盒各軸縮放差 ≤35%；固定造型 ≤15%，自然樓高範圍仍限 1.8x。
       // 杜絕將 4~10m 低矮建築暴力拉伸成 50~100m 摩天大樓導致門窗被縱向拉成細長條
-      if (stretch > 1.65 || heightStretch > 1.8) continue;
+      const limit = isCuboidAssembly(entry) ? 1.35 : 1.15;
+      const scales = [(rot ? building.d : building.w) / size[0], heightRatio,
+        (rot ? building.w : building.d) / size[2]];
+      if (stretch > limit || heightStretch > 1.8
+        || Math.max(...scales) / Math.min(...scales) > limit) continue;
       ranked.push({ entry, rot, score: Math.log(stretch) + Math.log(heightStretch) * 0.4 + semanticPenalty(entry, !!building.commercial) });
     }
   }
@@ -74,8 +144,7 @@ export function fitApprovedBuilding(building, architecture = null, seed = 0) {
   const pick = architecture
     ? pickArchitectureModel(ranked, architecture, `${seed}:${building.x}:${building.z}`)
     : ranked[Math.floor(hash01(building.x, building.z, building.commercial ? 17 : 31) * ranked.length)];
-  const entry = generateBackgroundObject(pick.entry.key,
-    hash32(building.x, building.z, (building.commercial ? 97 : 113) ^ seed));
+  const entry = pick.entry;
   const proportional = !isCuboidAssembly(entry);
   return {
     entry,
@@ -84,6 +153,42 @@ export function fitApprovedBuilding(building, architecture = null, seed = 0) {
     proportional,
     prof: profileOf(entry),
   };
+}
+
+/** 固定模型整棟替換，不疊在程序牆面與屋頂上。 */
+export function fitApprovedPolygon(poly, height, architecture, seed = 0) {
+  const frame = computeOrientedRoofFrame(poly);
+  if (!frame) return null;
+  const fit = fitApprovedBuilding({ x: frame.cx, z: frame.cz, w: frame.len, d: frame.span,
+    h: height, commercial: architecture.functionInfo?.category === 'commercial' }, architecture, seed, { rectangular: true });
+  // Polygon walls/platforms describe the full envelope, so only full cuboid assemblies fit this seam.
+  if (!fit || fit.proportional) return null;
+  const mainParts = fit.entry.parts.slice(0, fit.entry.generation.mainPartCount);
+  if (mainParts.some(part => (part.rotation || []).some(r => Math.abs(r) > 1e-5))) return null;
+  const geo = approvedBuildingGeometry(fit.entry, architecture.variant).clone();
+  geo.setIndex(Array.from({ length: geo.attributes.position.count }, (_, i) => i));
+  geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count * 2), 2));
+  const width = fit.rot ? frame.span : frame.len, depth = fit.rot ? frame.len : frame.span;
+  const angle = -frame.angle + (fit.rot ? Math.PI / 2 : 0);
+  geo.scale(width, height, depth);
+  geo.rotateY(angle);
+  geo.translate(frame.cx, 0, frame.cz);
+  const { min, max, size } = fit.entry.bounds;
+  const sx = width / size[0], sy = height / size[1], sz = depth / size[2];
+  const ca = Math.cos(angle), sa = Math.sin(angle);
+  // 碰撞與可站立頂面由同一份方盒組成資料推導，退台上方不留下隱形牆。
+  geo.userData.buildingVolumes = mainParts.map(part => {
+    const scale = part.scale || [1, 1, 1];
+    const x = (part.position[0] - (min[0] + max[0]) / 2) * sx;
+    const z = (part.position[2] - (min[2] + max[2]) / 2) * sz;
+    const h = part.dimensions[1] * scale[1] * sy;
+    const hw2 = part.dimensions[0] * scale[0] * sx / 2;
+    const hd2 = part.dimensions[2] * scale[2] * sz / 2;
+    return { x: frame.cx + x * ca + z * sa, z: frame.cz - x * sa + z * ca,
+      y: (part.position[1] - min[1]) * sy - h / 2, h, hw2, hd2,
+      ry: -angle, r: Math.hypot(hw2, hd2) };
+  });
+  return geo;
 }
 
 /** 把模型正規化成 X/Z 中心、Y=0 落地；非方盒模型只按自然樓高正規化以保留比例。 */

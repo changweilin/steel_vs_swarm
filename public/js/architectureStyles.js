@@ -58,7 +58,7 @@ export const BUILDING_FUNCTION_RANGES = Object.freeze({
  */
 export function computeOrientedRoofFrame(poly) {
   const outer = poly?.outer || [];
-  if (outer.length < 3) return null;
+  if (outer.length < 3 || poly.holes?.length) return null;
 
   // 1. 檢驗凸多邊形 (Convex check) - 若有凹陷或中庭則維持平頂
   let sign = 0;
@@ -127,7 +127,11 @@ export function computeOrientedRoofFrame(poly) {
     }
   }
 
-  return bestFrame;
+  const area = Math.abs(outer.reduce((sum, p, i) => {
+    const q = outer[(i + 1) % outer.length];
+    return sum + p[0] * q[1] - q[0] * p[1];
+  }, 0)) / 2;
+  return bestArea > 0 && area / bestArea >= 0.95 ? bestFrame : null;
 }
 
 /** 計算建築多邊形量測指標（面積、跨度、長寬、長寬比、邊界與質心） */
@@ -337,7 +341,7 @@ export const ARCHITECTURE_STYLES = Object.freeze({
     affinity: 'adobe|stone|civic|house|visitor', region: 'mediterranean',
   },
   alpine: {
-    label: '山地木石屋', era: 'historic', facade: 'timber', wallType: 'timber',
+    foundation: 'retaining', label: '山地木石屋', era: 'historic', facade: 'timber', wallType: 'timber',
     roofForm: 'gable', wall: 0xe2c8a4, roof: 0x5c6175, trim: 0x614538, glass: 0x8ec8dc,
     affinity: 'cottage|stone|house|windmill|farmhouse', region: 'europe_alpine',
   },
@@ -352,7 +356,7 @@ export const ARCHITECTURE_STYLES = Object.freeze({
     affinity: 'civic|rowhouse|mass|commercial|office', region: 'americas',
   },
   modern: {
-    label: '當代玻璃街廓', era: 'modern', facade: 'ribbon', wallType: 'glass_curtain',
+    foundation: 'retaining', label: '當代玻璃街廓', era: 'modern', facade: 'ribbon', wallType: 'glass_curtain',
     roofForm: 'flat', wall: 0xd8e6ed, roof: 0x4e667b, trim: 0x93afbd, glass: 0x50aed2,
     affinity: 'mass|commercial|office|apartment|skyscraper', region: 'global_modern',
   },
@@ -493,5 +497,5 @@ export const CULTURAL_REGIONS = Object.freeze({
   },
 });
 
-export const ARCHITECTURE_SITE = Object.freeze({ slopeDeg: 10, probeM: 12, densityCellM: 100, urbanNeighbors: 18 });
+export const ARCHITECTURE_SITE = Object.freeze({ slopeDeg: 10, steepSlopeDeg: 30, foundationProbeM: 4, probeM: 12, densityCellM: 100, urbanNeighbors: 18 });
 

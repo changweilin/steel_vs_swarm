@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { envMat, sceneObjectMat } from './toon.js';
+import { sampleBuildingSite } from './buildingDiversity.js';
+import { runtimePrimitiveGeometry } from './runtimePartModel.js';
 import { generateBuildingAppurtenances } from './buildingAppurtenances.js';
 import { resolveAdaptiveRoofForm, calculateFootprintMetrics, computeOrientedRoofFrame } from './architectureStyles.js';
 
@@ -85,9 +87,9 @@ function roofGeometry(poly, y) {
   return geo;
 }
 
-function edgeGeometry(ring, baseY, height, thickness, sourceId, kind) {
+function edgeGeometry(ring, baseY, height, thickness, sourceId, kind, closed = true) {
   const geos = [], edges = [];
-  for (let i = 0; i < ring.length; i++) {
+  for (let i = 0; i < ring.length - (closed ? 0 : 1); i++) {
     const a = ring[i], b = ring[(i + 1) % ring.length];
     const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
     if (len <= EPS) continue;
@@ -298,7 +300,7 @@ function architecturalFacade(edges, style, thickness) {
 }
 
 /** 屋頂構件覆蓋建築實體輪廓並封閉山牆兩端，杜絕懸空、空洞與零件拆離。支援 12 種自適應屋頂造型。 */
-function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null, targetH = 10) {
+export function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null, targetH = 10) {
   const form = actualRoofForm || style?.actualRoofForm || style?.roofForm;
   if (!form || form === 'flat' || poly.holes?.length) return [];
   const frame = computeOrientedRoofFrame(poly);
@@ -318,17 +320,12 @@ function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null
     geo.translate(cx, y + lift, cz);
     geos.push(paintGeometry(geo, style.roof, style.variant));
   };
-  const addGableWall = (geo, lift = 0) => {
-    geo.rotateY(-angle);
-    geo.translate(cx, y + lift, cz);
-    geos.push(paintGeometry(geo, style.trim || style.wall, style.variant));
-  };
 
   if (form === 'dome') {
     const r = Math.min(span / 2, len / 2);
     add(new THREE.SphereGeometry(r, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0);
   } else if (form === 'vault') {
-    const geo = new THREE.CylinderGeometry(1, 1, totalL, 16, 1, false, 0, Math.PI);
+    const geo = new THREE.CylinderGeometry(1, 1, totalL, 16, 1, false, -Math.PI / 2, Math.PI);
     geo.rotateZ(-Math.PI / 2);
     geo.rotateX(-Math.PI / 2);
     geo.scale(1, roofH, totalS / 2);
@@ -339,56 +336,55 @@ function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null
     add(geo, roofH * 1.1);
   } else if (form === 'shed') {
     const slopeH = roofH * 0.85;
-    const slopeLen = Math.hypot(totalS, slopeH);
-    const slopeAngle = Math.atan2(slopeH, totalS);
-    const geo = new THREE.BoxGeometry(totalL, 0.18, slopeLen);
-    geo.rotateX(slopeAngle);
-    add(geo, slopeH / 2 + 0.09);
-    // 封閉兩側山牆
-    for (const side of [-1, 1]) {
-      const gWall = new THREE.BoxGeometry(0.18, slopeH * 0.85, span * 0.9);
-      gWall.translate(side * (len / 2 - 0.09), slopeH * 0.425, 0);
-      addGableWall(gWall, 0);
-    }
+    const geo = runtimePrimitiveGeometry({ type: 'wedge', dimensions: [totalL, slopeH, totalS] });
+    geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count * 2), 2));
+    add(geo, slopeH / 2);
   } else if (form === 'mansard') {
     const lowerH = roofH * 0.55;
     const lower = new THREE.CylinderGeometry(span * 0.42, totalS / 2, lowerH, 4);
     lower.rotateY(Math.PI / 4);
-    lower.scale(totalL / totalS, 1, 1);
+    lower.scale(Math.SQRT2 * totalL / totalS, 1, Math.SQRT2);
     add(lower, lowerH / 2);
     const upperH = roofH * 0.35;
     const upper = new THREE.CylinderGeometry(span * 0.25, span * 0.42, upperH, 4);
     upper.rotateY(Math.PI / 4);
-    upper.scale(totalL / totalS, 1, 1);
+    upper.scale(Math.SQRT2 * totalL / totalS, 1, Math.SQRT2);
     add(upper, lowerH + upperH / 2);
   } else if (form === 'curved_ridge') {
-    const geo = new THREE.CylinderGeometry(1, 1, totalL, 16, 1, false, Math.PI * 0.2, Math.PI * 0.6);
+    const geo = new THREE.CylinderGeometry(1, 1, totalL, 16, 1, false, -Math.PI * 0.3, Math.PI * 0.6);
     geo.rotateZ(-Math.PI / 2);
     geo.rotateX(-Math.PI / 2);
     const baseSine = Math.sin(Math.PI * 0.2);
     geo.translate(0, -baseSine, 0);
+    // Cylinder end-cap fans use the circle center; move it onto the spring line.
+    const positions = geo.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+      if (positions.getY(i) < 0) positions.setY(i, 0);
+    }
     const archH = 1 - baseSine;
     geo.scale(1, roofH / archH, totalS / (2 * Math.cos(Math.PI * 0.2)));
+    geo.computeVertexNormals();
     add(geo, 0);
   } else if (form === 'wudian') {
     const hip = new THREE.CylinderGeometry(span * 0.28, totalS / 2, roofH, 4);
     hip.rotateY(Math.PI / 4);
-    hip.scale(totalL / totalS, 1, 1);
+    hip.scale(Math.SQRT2 * totalL / totalS, 1, Math.SQRT2);
     add(hip, roofH / 2);
-    const ridgeL = Math.max(1.0, totalL - totalS * 0.6);
+    const ridgeL = span * 0.56 * totalL / totalS;
     const ridge = new THREE.BoxGeometry(ridgeL, 0.15, 0.2);
     add(ridge, roofH + 0.075);
   } else if (form === 'xieshan') {
     const lowerH = roofH * 0.45;
     const lower = new THREE.CylinderGeometry(span * 0.38, totalS / 2, lowerH, 4);
     lower.rotateY(Math.PI / 4);
-    lower.scale(totalL / totalS, 1, 1);
+    lower.scale(Math.SQRT2 * totalL / totalS, 1, Math.SQRT2);
     add(lower, lowerH / 2);
 
     const upperH = roofH * 0.55;
     const upperL = totalL * 0.75;
     const upperS = span * 0.76;
     const upper = new THREE.CylinderGeometry(1, 1, upperL, 3);
+    upper.rotateY(Math.PI / 2);
     upper.rotateZ(Math.PI / 2);
     upper.translate(0, 0.5, 0);
     upper.scale(1, upperH / 1.5, upperS / Math.sqrt(3));
@@ -397,14 +393,10 @@ function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null
     const ridge = new THREE.BoxGeometry(upperL + 0.2, 0.14, 0.18);
     add(ridge, roofH + 0.07);
 
-    for (const side of [-1, 1]) {
-      const gWall = new THREE.BoxGeometry(0.18, upperH * 0.85, upperS * 0.88);
-      gWall.translate(side * (upperL / 2 - 0.09), lowerH + upperH * 0.425, 0);
-      addGableWall(gWall, 0);
-    }
   } else if (form === 'xuanshan') {
     // 懸山頂：挑梁出檁，屋面延伸出山牆外
     const geo = new THREE.CylinderGeometry(1, 1, totalL + 0.6, 3);
+    geo.rotateY(Math.PI / 2);
     geo.rotateZ(Math.PI / 2);
     geo.translate(0, 0.5, 0);
     geo.scale(1, roofH / 1.5, totalS / Math.sqrt(3));
@@ -413,32 +405,22 @@ function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null
     const beam = new THREE.BoxGeometry(totalL + 0.8, 0.14, 0.14);
     add(beam, roofH + 0.07);
 
-    // 山牆面
-    for (const side of [-1, 1]) {
-      const gWall = new THREE.BoxGeometry(0.18, roofH * 0.88, span * 0.92);
-      gWall.translate(side * (len / 2 - 0.09), roofH * 0.44, 0);
-      addGableWall(gWall, 0);
-    }
   } else if (form === 'yingshan') {
-    // 硬山頂：山牆與屋面齊平，兩側磚石封火牆凸出
+    // 硬山頂：封閉三角端面與屋面齊平。
     const geo = new THREE.CylinderGeometry(1, 1, len, 3);
+    geo.rotateY(Math.PI / 2);
     geo.rotateZ(Math.PI / 2);
     geo.translate(0, 0.5, 0);
     geo.scale(1, roofH / 1.5, span / Math.sqrt(3));
     add(geo, 0);
 
-    for (const side of [-1, 1]) {
-      const wall = new THREE.BoxGeometry(0.24, roofH * 1.05, span + 0.2);
-      wall.translate(side * (len / 2 + 0.12), roofH * 0.525, 0);
-      addGableWall(wall, 0);
-    }
   } else if (form === 'tiered') {
     for (let i = 0; i < 3; i++) {
       const s = 1 - i * 0.24;
       const tierH = roofH * 0.4;
       const geo = new THREE.ConeGeometry(totalS / 2 * s, tierH, 4);
       geo.rotateY(Math.PI / 4);
-      geo.scale(totalL / totalS, 1, 1);
+      geo.scale(Math.SQRT2 * totalL / totalS, 1, Math.SQRT2);
       add(geo, roofH * (0.2 + i * 0.32));
     }
   } else if (form === 'stepped') {
@@ -453,18 +435,13 @@ function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null
     const toothS = span / n;
     for (let i = 0; i < n; i++) {
       const geo = new THREE.CylinderGeometry(1, 1, totalL, 3);
+      geo.rotateY(Math.PI / 2);
       geo.rotateZ(Math.PI / 2);
       geo.translate(0, 0.5, 0);
       geo.scale(1, (roofH / (n > 1 ? 1.4 : 1)) / 1.5, (toothS + ov * 2) / Math.sqrt(3));
       const zOffset = n > 1 ? (i - (n - 1) / 2) * toothS : 0;
       geo.translate(0, 0, zOffset);
       add(geo, 0);
-    }
-    // 山牆封閉兩端
-    for (const side of [-1, 1]) {
-      const gWall = new THREE.BoxGeometry(0.18, roofH * 0.88, span * 0.92);
-      gWall.translate(side * (len / 2 - 0.09), roofH * 0.44, 0);
-      addGableWall(gWall, 0);
     }
   }
   return geos;
@@ -518,11 +495,14 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
       }
       const architecture = options.architectureOf?.(area, poly) || null;
       const targetH = (area?.tags?.height || area?.tags?.['building:levels']) ? height : (architecture?.targetHeight || height);
-      const baseY = baseOf(poly, terrain, 0);
+      const site = architecture?.site || sampleBuildingSite(poly, terrain);
+      const raised = architecture?.foundation === 'retaining' && architecture.profile === 'hillside' && site;
+      const baseY = raised ? site.max + 0.15 : baseOf(poly, terrain, 0);
       const topY = baseY + targetH;
       let batch = batches.get(kind);
       if (!batch) { batch = { kind, walls: [], roofs: [], details: [], count: 0 }; batches.set(kind, batch); }
       const wallStart = batch.walls.length, roofStart = batch.roofs.length, detailStart = batch.details.length;
+      const blockerStart = blockers.length;
       batch.roofs.push(roofGeometry(poly, topY));
       const detail = !architecture ? attachmentGeometry(kind, poly, topY) : null;
       if (detail) batch.details.push(detail);
@@ -534,7 +514,39 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         batch.walls.push(...inner.geos); blockers.push(...inner.edges);
         facadeEdges.push(...inner.edges);
       }
-      if (architecture) {
+      if (raised) {
+        for (const segment of site.segments) {
+          const bottom = segment.y - 0.25;
+          const foundation = edgeGeometry([segment.start, segment.end], bottom, baseY - bottom,
+            wallThickness, area.sourceId, kind, false);
+          batch.walls.push(foundation.geos[0]); blockers.push(foundation.edges[0]);
+        }
+      }
+      const replacement = architecture && !raised
+        ? options.modelOf?.(poly, targetH, architecture) : null;
+      if (replacement) {
+        for (const geo of batch.walls.splice(wallStart)) geo.dispose();
+        for (const geo of batch.roofs.splice(roofStart)) geo.dispose();
+        replacement.translate(0, baseY, 0);
+        batch.details.push(replacement);
+        batch.architecture = true;
+        if (replacement.userData?.buildingVolumes) {
+          blockers.splice(blockerStart);
+          for (const volume of replacement.userData.buildingVolumes) {
+            const y = baseY + volume.y, ty = y + volume.h;
+            blockers.push({ ...volume, y, ty, bld: 1, osm: 1, cl: 'bld', sourceId: area.sourceId, kind });
+            const ca = Math.cos(volume.ry), sa = Math.sin(volume.ry);
+            const outer = [[-1,-1],[1,-1],[1,1],[-1,1]].map(([dx,dz]) => {
+              const x = dx * volume.hw2, z = dz * volume.hd2;
+              return [volume.x + x * ca - z * sa, volume.z + x * sa + z * ca];
+            });
+            const xs = outer.map(p => p[0]), zs = outer.map(p => p[1]);
+            platforms.push({ platform: 1, active: true, sourceId: area.sourceId, kind, outer, holes: [], y: ty,
+              bounds: { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) } });
+          }
+        }
+      }
+      if (architecture && !replacement) {
         batch.architecture = true;
         for (const geo of batch.walls.slice(wallStart)) paintGeometry(geo, architecture.wall, architecture.variant);
         for (const geo of batch.roofs.slice(roofStart)) paintGeometry(geo, architecture.roof, architecture.variant);
@@ -557,14 +569,14 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         const metrics = calculateFootprintMetrics(poly);
 
         // Phase 2: 決議最適屋頂構造並自適應調整尺寸 (防止長寬比異常或過大面積失真)
-        const adaptiveRoofForm = resolveAdaptiveRoofForm(
+        const adaptiveRoofForm = metrics.frame ? resolveAdaptiveRoofForm(
           architecture.roofForm,
           metrics,
           targetH,
           architecture.functionInfo?.category
-        );
+        ) : 'flat';
         architecture.actualRoofForm = adaptiveRoofForm;
-        if (['house', 'terrace', 'apartments', 'commercial', 'farm', 'garage', 'industrial'].includes(kind)) {
+        {
           batch.details.push(...architecturalRoof(poly, topY, architecture, adaptiveRoofForm, metrics, targetH));
         }
 
@@ -573,12 +585,14 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
 
         // Phase 4: 外部零件依屋頂類型嚴格篩選相容性後隨機配置
         batch.details.push(...generateBuildingAppurtenances(poly, facadeEdges, baseY, topY, architecture, wallThickness, adaptiveRoofForm, metrics));
+      }
+      if (architecture) {
         const key = `${architecture.profile}:${architecture.id}`;
         architectureCounts[key] = (architectureCounts[key] || 0) + 1;
       }
       // Polygon platform retains the outer ring and all holes; no AABB approximation is used.
       const xs = poly.outer.map((p) => p[0]), zs = poly.outer.map((p) => p[1]);
-      platforms.push({
+      if (!replacement?.userData?.buildingVolumes) platforms.push({
         platform: 1, active: true, sourceId: area.sourceId, kind,
         outer: poly.outer, holes: poly.holes, y: topY,
         bounds: { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) },
@@ -592,6 +606,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
     const mats = materialOf(batch.kind, batch, BUILDING_STYLE_ROWS[batch.kind]) || defaultMaterials(batch.kind);
     if (batch.walls.length) {
       const geometry = batch.walls.length === 1 ? batch.walls[0] : mergeGeometries(batch.walls, false);
+      if (batch.walls.length > 1) for (const geo of batch.walls) geo.dispose();
       const mesh = new THREE.Mesh(geometry, mats.wall);
       mesh.userData.osmBuildingBatch = batch.kind;
       mesh.frustumCulled = false;
@@ -599,6 +614,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
     }
     if (batch.roofs.length) {
       const geometry = batch.roofs.length === 1 ? batch.roofs[0] : mergeGeometries(batch.roofs, false);
+      if (batch.roofs.length > 1) for (const geo of batch.roofs) geo.dispose();
       const mesh = new THREE.Mesh(geometry, mats.roof);
       mesh.userData.osmBuildingRoofBatch = batch.kind;
       mesh.frustumCulled = false;
@@ -606,6 +622,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
     }
     if (batch.details.length) {
       const geometry = batch.details.length === 1 ? batch.details[0] : mergeGeometries(batch.details, false);
+      if (batch.details.length > 1) for (const geo of batch.details) geo.dispose();
       const mesh = new THREE.Mesh(geometry, mats.detail || mats.roof);
       mesh.userData.osmBuildingDetailBatch = batch.kind;
       mesh.frustumCulled = false;

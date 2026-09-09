@@ -60,7 +60,7 @@ import {
 } from './edgewall.js';
 import { libGeo } from './partlib.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
-import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
+import { fitApprovedBuilding, fitApprovedPolygon, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
 import {selectRoadCar} from './vehicleEveryday.js';
 import { deploySceneBatches } from './sceneObjects.js';
@@ -10980,6 +10980,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     };
     osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
       terrain, rings, architectureOf: architectureAt, inset: edgeWallInsetM(),
+      modelOf: (poly, height, architecture) => fitApprovedPolygon(poly, height, architecture, cfg.architectureSeed || 0),
       materialOf: (kind, batch, style) => {
         if (batch.architecture) return {
           wall: sceneObjectMat(0xffffff, { vertexColors: true }),
@@ -11598,10 +11599,27 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 全部一般建物都改吃通過零件台的正式 v5/v6 目錄；舊方盒只保留成目錄異常時的保險絲。
     // 選款只讀座標、足跡與目錄純資料，零共享 rnd() 消耗；重複目標已在目錄縫由 v6 勝出。
     const massPick = new Map();
+    const procedural = new Map();
     for (const b of generic) {
-      const fit = fitApprovedBuilding(b, architectureAt(b, null, settlement(b.x, b.z)), cfg.architectureSeed || 0);
+      const ca = Math.cos(b.ry), sa = Math.sin(b.ry);
+      const poly = { outer: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([dx, dz]) => {
+        const x = dx * b.w / 2, z = dz * b.d / 2;
+        return [b.x + x * ca + z * sa, b.z - x * sa + z * ca];
+      }), holes: [] };
+      const architecture = architectureAt(b, poly, settlement(b.x, b.z));
+      const fit = fitApprovedBuilding(b, architecture, cfg.architectureSeed || 0);
       if (fit) massPick.set(b, fit);
+      else procedural.set(b, { sourceId: `procedural/${b.x}/${b.z}`, centroid: { x: b.x, z: b.z },
+        tags: { ...b.tags, building: b.commercial ? 'commercial' : 'house', height: String(b.h) },
+        classification: { generator: 'polygonBuilding', kind: b.commercial ? 'commercial' : 'house' },
+        worldPolygons: [poly], architecture });
     }
+    const proceduralResult = buildOsmPolygonBuildings(group, [...procedural.values()], {
+      terrain, architectureOf: area => area.architecture,
+    });
+    blockers.push(...proceduralResult.blockers);
+    osmRoofPlatforms.push(...proceduralResult.platforms);
+    osmBuildingMeshes.push(...proceduralResult.meshes);
     /**
      * 挑中的那一棟依構造分類縮放:方盒構築貼合基地,非方盒構築只取單一比例(使用者這一輪第 ① 條的兌現點)。
      * 舊制直接拿 (w, h, d) 縮單位方盒,而節點只佔單位盒的一部分(實測 hw 0.13~0.42)——
@@ -11698,7 +11716,6 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         };
         // 屋頂/底面用素色材質(色塊分離):窗格貼圖只留在四面牆,
         // 屋頂不再出現「躺平的窗」;instance tint 兩材質同吃 → 每棟仍有色差
-        const roof = bmat(fd.roof, { wash: 0.5 });
         const pal = PALETTE[cat];
         // 先攤平成實例清單:主體 + 輪廓件(退縮頂塔/臨街裙樓)同吃立面貼圖與 tint,
         // 高層商辦成「婚禮蛋糕」剪影、街廓出裙樓 — 天際線擺脫單一長方體(botw_plan Task 1.1)
@@ -11721,14 +11738,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           //   側面而節點比方盒瘦 ⇒ 浮在半空」,而這一輪招牌改吃剖面 ⇒ 掛的是那個高度**真的
           //   存在**的那一段的牆面。丟掉它等於「最顯眼的十幾棟樓一塊招牌都沒有」。
           const fit = massPick.get(b) || null;
+          const generated = procedural.has(b);
           const sink = [];
-          const vis = (arr) => (fit ? sink : arr);
+          const vis = (arr) => (fit || generated ? sink : arr);
           // `lib` 只掛在**主量體**這一列(退縮頂塔/裙樓/梯間塔仍走方盒:它們是主體的
           // 附加輪廓件,整棟節點本身已經帶著自己的頂部造型,兩者疊起來會長出第二頂帽子)
           // 縮放:方盒可走 (w,h,d);非方盒由 `fitScale` 取單一比例(保留自然形狀)
           const fsc = fit ? fitScale(fit, b) : null;
           const renderH = fsc ? fsc.sy : b.h;
-          inst.push({
+          (generated ? sink : inst).push({
             x: b.x, y: gy + renderH / 2 - 0.5, z: b.z,
             ry: b.ry + (fit?.rot ? Math.PI / 2 : 0),
             w: fsc ? fsc.sx : b.w, h: fsc ? fsc.sy : b.h, d: fsc ? fsc.sz : b.d,
@@ -11757,7 +11775,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             })
             : [{ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, cl: 'bld',
               hw2: b.w / 2, hd2: b.d / 2, ry: b.ry, ty: gy + b.h - 0.5 }];
-          for (const c of cols) blockers.push(c);
+          if (!generated) for (const c of cols) blockers.push(c);
+          if (generated) bldFaces.set(b, []);
           // 招牌那一份**只收合格的段**(2026-08-13);空陣列 = 這一棟一段都不合格,
           // 而它與「這是方盒建物」是兩件事 ⇒ 消費端判的是 `bldFaces.has(b)` 不是長度
           if (fit) bldFaces.set(b, bldFaceList(fit, b, gy));
@@ -11791,9 +11810,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const rawPh = Math.max(6, b.h * 0.12);
             const phFloors = Math.max(2, Math.round(rawPh / floorH));
             const ph = phFloors * floorH;
-            inst.push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC, rows: phFloors });
+            vis(inst).push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC, rows: phFloors });
             // 裙樓比主體寬(1.4×1.28)且齊眼高 —— 另登記自己的碰撞盒(基座段),否則玩家/鏡頭鑽進裙樓看穿牆
-            blockers.push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, cl: 'bld', hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8, ty: gy + ph - 0.5 });
+            vis(blockers).push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, cl: 'bld', hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8, ty: gy + ph - 0.5 });
           }
           if (!commercial && b.h >= 14 && rnd() < 0.4) {        // 中層住宅:角落梯間塔(佔地內、突出屋頂)
             const tw = Math.min(b.w, b.d) * 0.3;
@@ -11802,7 +11821,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const rawTh = b.h * (1.1 + rnd() * 0.1);
             const stairFloors = Math.max(mainFloors + 1, Math.round(rawTh / floorH));
             const th = stairFloors * floorH;
-            inst.push({ x: tx, y: gy + th / 2 - 0.5, z: tz, ry: b.ry, w: tw, h: th, d: tw, c: palC, rows: stairFloors });
+            vis(inst).push({ x: tx, y: gy + th / 2 - 0.5, z: tz, ry: b.ry, w: tw, h: th, d: tw, c: palC, rows: stairFloors });
           }
           let gable = false;
           // 低層住宅斜屋頂:同一枚亂數三分 —— 人字雙坡(第二剪影;sakura-crossing「一排錐是
@@ -11917,7 +11936,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
               // 牌寬 MUST 由 `signAspect` 反推 —— 高一改寬就要跟著,否則牌面比例與貼圖不合,
               // 字會被橫向壓成一條糊帶(A37 ⑤)
               const sh = fw ? Math.min(sh0, (fw.y1 - fw.y0) * 0.9) : sh0;
-              wallSigns.push({
+              (generated ? sink : wallSigns).push({
                 x: sx2, z: sz2, y: sy,
                 ry: b.ry + (alongW ? 0 : Math.PI / 2),
                 w: sh * signAspect('wallsign'), h: sh,
@@ -11975,6 +11994,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           libRows.get(bk).rows.push(t);
         }
         // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
+        const roof = boxRows.size ? bmat(fd.roof, { wash: 0.5 }) : null;
         for (const [rw, rs] of boxRows) {
           const wall = wallOf(rw);
           emitMass(rs, new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
