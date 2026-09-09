@@ -22,6 +22,7 @@ import {
   SELF_F, selfCollider, COLLIDE_KINDS,
    CREEP_UPG, DISSOLVE, dissolveOutAt, ULT_CAST_S, fogSightMult, scopeRvminFog,
   WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
+  FIRE_WEATHER, fireDotMul,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -42,6 +43,9 @@ import { onCtrlChange, viewMode, setViewMode, onViewModeChange } from './ctrlmod
 import { visualPref } from './visualPrefs.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
+
+// 所有火場類型(模組級常數；MUST NOT 在 _spawnEnt / 每幀熱路徑中重複構造)
+const FIRE_KINDS_C = new Set(['fire', 'forestfire', 'grassfire', 'factoryfire']);
 
 const KIND_KEY = {
   soldier: 'creep:soldier', apc: 'creep:apc', tank: 'creep:tank',
@@ -3474,7 +3478,7 @@ export class BattleClient {
       if (e.k === 'flood' || e.k === 'pothole') this._conformWater(group, e.x, czw, cyw);
       if (group.userData.flames) this.flamers.add(group);
       if (e.k === 'flood') this.floods.push({ x: e.x, z: -e.z, r, slow: hazDef.slow });
-      if (e.k === 'fire') this.fires.push({ x: e.x, z: -e.z, r });   // 火場滯留霧化判定
+      if (FIRE_KINDS_C.has(e.k)) this.fires.push({ x: e.x, z: -e.z, r });   // 火場滯留霧化判定
       this.ents.set(e.id, ent);
       return ent;
     }
@@ -4010,10 +4014,21 @@ export class BattleClient {
       g.rotation.y += dt * 1.6;
       g.children[0].position.y = 1.0 + Math.sin(now * 2.2 + g.position.x) * 0.18;
     }
-    // 火場火舌閃爍
+    // 火場火舌閃爍（天氣聯動：大雨/大雪熄火、強風增強）
+    // fireDotMul 取本地天氣動態（純表現層；客戶端自算，不改任何權威狀態）
+    const _weatherDyn = this.envFx?.getWeatherDynamics?.() ?? null;
+    const _firVisMul = fireDotMul(_weatherDyn);   // 0 = 完全熄滅；>1 = 強風助燃
     for (const grp of this.flamers) {
-      for (const f of grp.userData.flames) {
-        const k = 0.75 + 0.35 * Math.sin(now * 9 + f.userData.ph) + 0.12 * Math.sin(now * 23 + f.userData.ph * 2);
+      const flames = grp.userData.flames;
+      if (!flames) continue;
+      if (_firVisMul <= 0) {
+        // 熄滅：隱藏所有火舌
+        for (const f of flames) f.visible = false;
+        continue;
+      }
+      for (const f of flames) {
+        f.visible = true;
+        const k = (0.75 + 0.35 * Math.sin(now * 9 + f.userData.ph) + 0.12 * Math.sin(now * 23 + f.userData.ph * 2)) * _firVisMul;
         f.scale.set(1, k, 1);
         f.position.y = f.userData.h0 * k / 2;
       }
@@ -4385,8 +4400,14 @@ export class BattleClient {
       spawnSingularityImplosionVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, y: iy, r: ev.r || 18 });
     } else if (ev.e === 'burn') {
       if (ev.pid === this.youId) {
-        this.trauma = Math.min(1, this.trauma + 0.25);
-        this.hud.feed?.('🔥 你在火場中持續受創,快離開!');
+        // mul 由伺服器傳入:強風助燃 >1.0,正常 ≈1.0（舊事件無 mul 欄位時退回預設值 1）
+        const mul = ev.mul ?? 1;
+        this.trauma = Math.min(1, this.trauma + (mul >= 1.4 ? 0.40 : 0.25));
+        if (mul >= 1.4) {
+          this.hud.feed?.('🔥 強風助燃！火場極度猛烈，立刻撤離！');
+        } else {
+          this.hud.feed?.('🔥 你在火場中持續受創，快離開！');
+        }
       }
     } else if (ev.e === 'freeze') {
       if (ev.pid === this.youId) {

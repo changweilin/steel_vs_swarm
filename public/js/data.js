@@ -5807,6 +5807,9 @@ export const HAZARDS = {
   construction: { name: '施工圍籬',   biome: 'urban', r: 8,   block: true, hp: 240, salvage: 0.6 },
   wreck:        { name: '車禍殘骸',   biome: 'urban', r: 5.5, block: true, hp: 180, salvage: 0.7 },
   fire:         { name: '火場',       biome: 'urban', r: 12,  dot: 30, maxY: 24 },
+  forestfire:   { name: '森林大火',   biome: 'green', r: 18,  dot: 40, maxY: 32 },
+  grassfire:    { name: '草原大火',   biome: 'bare',  r: 22,  dot: 28, maxY: 20 },
+  factoryfire:  { name: '工廠大火',   biome: 'urban', r: 14,  dot: 45, maxY: 40 },
   sinkhole:     { name: '路面塌陷',   biome: 'urban', r: 7,   block: true },
   pothole:      { name: '坑洞',       biome: 'urban', r: 4,   slow: 0.55 },
   flood:        { name: '淹水區',     biome: 'wet',   r: 20,  slow: 0.45 },
@@ -5817,6 +5820,40 @@ export const HAZARDS = {
   sacredtree:   { name: '神木',       biome: 'green', r: 9,   block: true, hp: 520, salvage: 0.75, hgt: 26 },
   boulder:      { name: '巨石',       biome: 'bare',  r: 8,   block: true, hp: 420, salvage: 0.7,  hgt: 13 },
 };
+
+// ---- 火場天氣聯動係數（唯一真相縫；sim._tickHazards 與客戶端火焰演出共用）----
+// rain/snow 超過門檻 → fireMul 線性壓制到 0（大雨/大雪熄火）
+// wind 超過門檻 → fireMul 線性升到 WIND_MAX_MUL（強風助燃）
+// 壓制與增強同時存在時，先算壓制再乘增強——雨中強風仍以壓制為主。
+export const FIRE_WEATHER = {
+  RAIN_QUENCH_T:  55,  // rain 門檻:超過即開始壓制
+  SNOW_QUENCH_T:  50,  // snow 門檻
+  WIND_BOOST_T:   65,  // wind 門檻:超過即開始增強
+  WIND_MAX_MUL:   1.6, // wind=100 時 fireMul 最高值
+};
+
+/**
+ * 依當前天氣動態計算火場 dot 倍率。
+ * 回傳 0 = 火場完全熄滅（呼叫端可跳過傷害與 burn 事件）。
+ * 回傳 >1 = 強風助燃；最高 FIRE_WEATHER.WIND_MAX_MUL。
+ * @param {{ rain:number, snow:number, wind:number }|null} dyn curWeatherDyn
+ */
+export function fireDotMul(dyn) {
+  if (!dyn) return 1;
+  const F = FIRE_WEATHER;
+  const rain  = dyn.rain  ?? 0;
+  const snow  = dyn.snow  ?? 0;
+  const wind  = dyn.wind  ?? 0;
+  // 大雨/大雪壓制（取兩者最強的一方）
+  const rainQ = rain > F.RAIN_QUENCH_T ? (rain - F.RAIN_QUENCH_T) / (100 - F.RAIN_QUENCH_T) : 0;
+  const snowQ = snow > F.SNOW_QUENCH_T ? (snow - F.SNOW_QUENCH_T) / (100 - F.SNOW_QUENCH_T) : 0;
+  const quench = Math.min(1, Math.max(rainQ, snowQ));
+  if (quench >= 1) return 0;
+  // 強風增強
+  const windB  = wind > F.WIND_BOOST_T ? (wind - F.WIND_BOOST_T) / (100 - F.WIND_BOOST_T) : 0;
+  const windMul = 1 + (F.WIND_MAX_MUL - 1) * windB;
+  return (1 - quench) * windMul;
+}
 
 // ---- 危險區生成參數(伺服器 sim._seedField)----
 export const FIELD = {
