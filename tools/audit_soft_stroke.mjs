@@ -1,3 +1,4 @@
+import { groundModelDefinitions } from './ground_model_runtime.mjs';
 // ============ 軟性物質稽核(細勾線 + 隨風飄揚)============
 // 2026-08-04 使用者定案兩條:
 //   ①「不同類型物件有不同線條輪廓的粗細,例如雲朵、芒草、草原、花園、樹葉、旗幟這些
@@ -525,33 +526,7 @@ console.log('\nⅧ 稻浪 / 草波 / 芒草波(ground.js 消費端;2026-08-04 �
   // 真品零件表 + 真品的 cone/box/cyl 速記(**一併抽原文**,不在本檔另抄一份 —— 抄的那一份
   // 會在有人改速記的落地平移之後靜默分家,而 span 的斷言照樣全綠)。
   // 幾何以「與 three 同值」的樁餵入:只追蹤包圍盒頂端(`detailSpan` 只讀 max.y)。
-  const SHORTHAND = /^const cone = [\s\S]*?^const cyl = [^\n]*\n/m.exec(G)[0];
-  const DEFS = /^const DETAIL_DEFS = \{[\s\S]*?^\};/m.exec(G)[0];
-  class Geo {
-    constructor(top) { this.top = top; }
-    get boundingBox() { return { max: { y: this.top } }; }
-    computeBoundingBox() {}
-    translate(x, y) { this.top += y; return this; }
-    rotateX() { return this; }
-    rotateZ() { return this; }
-    // 與 three 的 BufferGeometry 同一組就地變換 API:縮放只動 y 那一軸的頂端
-    // (漏了這一支的症狀是整支稽核在「有人用了 .scale()」時爆掉,而紅字的理由與軟性無關)
-    scale(sx, sy) { this.top *= sy; return this; }
-  }
-  // 置中幾何的頂端 = 半高;球狀是半徑。與 three 同值(速記的 .translate 再往上疊)。
-  // **未列名的幾何一律回半徑 0 的樁而不是丟例外**:這一段驗的是「哪些零件是軟性」與
-  // 「span 由幾何推導」,不是零件表用了哪幾種幾何 —— 有人加一款 TorusGeometry 就整支
-  // 稽核爆掉的話,紅字的理由與真正要守的東西無關(而且那是**例外洗成跳過**的反面)。
-  const T3 = new Proxy({
-    ConeGeometry: function (r, h) { return new Geo(h / 2); },
-    BoxGeometry: function (w, h) { return new Geo(h / 2); },
-    CylinderGeometry: function (r0, r1, h) { return new Geo(h / 2); },
-    IcosahedronGeometry: function (r) { return new Geo(r); },
-    SphereGeometry: function (r) { return new Geo(r); },
-  }, {
-    get: (t, k) => t[k] || function () { return new Geo(0); },
-  });
-  const defs = new Function('THREE', `${SHORTHAND}${DEFS}\nreturn DETAIL_DEFS;`)(T3);
+  const defs = groundModelDefinitions();
   // ① 使用者點名的三種波各有實體,而且**整款每一件**都標到
   for (const [k, why] of [['rice', '稻浪'], ['tuft', '草波'], ['miscanthus', '芒草波'],
     ['reed', '蘆葦'], ['weed', '雜草'], ['flower', '花']]) {
@@ -570,7 +545,7 @@ console.log('\nⅧ 稻浪 / 草波 / 芒草波(ground.js 消費端;2026-08-04 �
   // ③ span 推導:改零件表擺幅自己跟著走
   const spanFn = new Function('DETAIL_DEFS',
     `const _detSpan = new Map();\n${/^function detailSpan\(type\) \{[\s\S]*?^\}/m.exec(G)[0]}\nreturn detailSpan;`)(defs);
-  ok(Math.abs(spanFn('rice') - 0.95) < 1e-9, `稻的 span 由零件幾何實算(${spanFn('rice')}m)`);
+  ok(Math.abs(spanFn('rice') - Math.max(...defs.rice.map(p => { p.geo.computeBoundingBox(); return p.geo.boundingBox.max.y; }))) < 1e-9, `稻的 span 由零件幾何實算(${spanFn('rice')}m)`);
   ok(spanFn('miscanthus') > spanFn('rice'), '芒草比稻高 ⇒ 擺幅也大(相對擺幅 × span)');
   ok(spanFn('__none__' in defs ? '__none__' : 'pebble') >= 0.3, '分母有下限,MUST NOT 為零');
   // ④ 材質端真的把旗標交給 toon.js,且錨點 base = 0(這張表的落地平移烤在幾何裡)

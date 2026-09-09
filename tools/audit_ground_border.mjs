@@ -32,7 +32,7 @@ const ok = (m) => console.log('  ✓', m);
 // 反向驗證:`--break-de` 把同地貌色距門檻推到 +∞(= 退回 2026-08-11 的「同地貌恆不畫線」)
 // ⇒ Ⅰ⑥ 的「顏色劇烈變化處有線」與「跨門檻相鄰對 > 0」MUST 紅字
 const BREAK_DE = process.argv.includes('--break-de');
-const src0 = readSrc('public', 'js', 'ground.js');
+const src0 = readSrc('public', 'js', 'ground.js') + '\n' + readSrc('public', 'js', 'groundCatalog.js').replaceAll('export const ', 'const ');
 const src = BREAK_DE
   ? src0.replace(/export const CARPET_DE = \{ LINE: \d+ \};/, 'export const CARPET_DE = { LINE: Infinity };')
   : src0;
@@ -666,8 +666,8 @@ console.log('== Ⅶ 掃掠繞向 / 兩側地貌切線 / 拼圖迴避(2026-08-11 
       ? ok('tryPatch 的分界線迴避排在首個 rnd() 之前(確定性序列不變)')
       : bad('tryPatch 的分界線迴避晚於首個 rnd() ⇒ 散布序列被改寫');
   }
-  /if \(detCount >= detCap \|\| isBlocked\(px, pz\) \|\| bdCross\(px, pz, 0\)\) return;/.test(src)
-    ? ok('addDetail 早退含分界線迴避(3D 擺件不站在界線上;與既有早退同位,不吃 rnd)')
+  /if \(bdCross\(px, pz, dr\) \|\| roadClear\?\./.test(src)
+    ? ok('addDetail 用完整幾何足跡迴避分界線與道路')
     : bad('3D 細節未迴避分界線');
   // 讓路的方向:界線是結構、拼圖是點綴 ⇒ onRegular 降級為保險絲(註解與斷言一起釘住)
   src.includes('onRegular 自 2026-08-11 起是**保險絲**')

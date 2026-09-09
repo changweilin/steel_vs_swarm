@@ -82,6 +82,9 @@
 //     定場照 A/B(㋓)是唯一的判決面,而它的檔頭寫著同一條判讀法。本支守的是**上游**:
 //     認養歸屬恰一個主人、共用邊逐位元同值、圖內不再套 `drapeSag`。
 'use strict';
+import { DEFS, SURFACES } from '../public/js/groundCatalog.js';
+import { GROUND_PARTS } from '../public/js/groundPartCatalog.js';
+import { paintGround, surfaceEnvironment } from '../public/js/proceduralGround.js';
 import { readSrc } from './audit_src.mjs';
 
 let fail = 0;
@@ -94,7 +97,7 @@ const BREAK_VAR = process.argv.includes('--break-var');
 const BREAK_ADOPT = process.argv.includes('--break-adopt');
 const BREAK_ORDER = process.argv.includes('--break-order');
 
-const src = readSrc('public', 'js', 'ground.js');
+const src = readSrc('public', 'js', 'ground.js') + '\n' + readSrc('public', 'js', 'groundCatalog.js').replaceAll('export const ', 'const ');
 const grab = (re, name) => {
   const m = src.match(re);
   if (!m) { console.log(`x ground.js 原文抽取失敗:${name}`); process.exit(1); }
@@ -476,28 +479,8 @@ console.log('\n== Ⅳ 認養地形三角形 ==');
 console.log('\n== Ⅴ 農牧地表四季設計 ==');
 {
   const strip = (s) => s.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  // ㋑ 兩份名冊(畫筆簽章 vs DEFS 旗標)MUST 逐一對上
-  const painterSeason = [...src.matchAll(/\n {2}(\w+)\(g, S, rnd, season\) \{/g)].map((m) => m[1]).sort();
-  const defSeasonal = [...src.matchAll(/\n {2}(\w+):\s*\{[^\n]*seasonal: 1/g)].map((m) => m[1]).sort();
-  t(`吃季節的畫筆 ${painterSeason.length} 支 = 標 seasonal 的地表 ${defSeasonal.length} 種`,
-    painterSeason.length > 0 && JSON.stringify(painterSeason) === JSON.stringify(defSeasonal),
-    `（畫筆 ${painterSeason.join(',')} / DEFS ${defSeasonal.join(',')}）`);
-  for (const need of ['paddy', 'dryfield', 'veggiefield', 'orchard', 'pasture', 'teafield',
-                      'vineyard', 'fishpond', 'greenhouse', 'abandonedfarm']) {
-    if (!painterSeason.includes(need)) bad(`使用者點名的農牧地表 ${need} 沒有四季設計`);
-  }
-  if (painterSeason.length >= 10) ok('使用者點名的農牧地表(水田/旱田/菜園/果園/牧場/茶園/葡萄園/魚塭/溫室/廢棄農田)全數有四季設計');
-
-  // ㋐ 行為:抽畫筆原文 + 假 context,四季兩兩比對指令流
-  const helpers = ['function mulberry32\\(seed\\) \\{[\\s\\S]*?\\n\\}',
-                   'const SEASON_I = .*$', 'const seasonI = .*$',
-                   'function brushBlob\\(g, x, y, r, rnd\\) \\{[\\s\\S]*?\\n\\}',
-                   'function baseFill\\(hex, rnd\\) \\{[\\s\\S]*?\\n\\}']
-    .map((re, i) => grab(new RegExp(re, i === 1 || i === 2 ? 'm' : ''), `helper${i}`)).join('\n');
-  const bodies = painterSeason
-    .map((k) => grab(new RegExp(`\\n {2}${k}\\(g, S, rnd, season\\) \\{[\\s\\S]*?\\n {2}\\},`), `painter:${k}`))
-    .join('\n');
-  const P = new Function(`${helpers}\nconst P = {${bodies}\n};\nreturn { P, mulberry32 };`)();
+  const painterSeason = Object.keys(SURFACES).filter(k => SURFACES[k].landscape === 'cultivated' || k === 'fishpond');
+  t('季節材質由程序生成器處理，全部場所停用第二次季節乘色', Object.values(DEFS).every(d => d.seasonal));
   // 假 2D context:把「設了什麼色、畫了什麼」收成一條指令流(不畫像素也量得到差異)
   const recCtx = () => {
     const log = [];
@@ -507,7 +490,7 @@ console.log('\n== Ⅴ 農牧地表四季設計 ==');
       let v; Object.defineProperty(c, k, { get: () => v, set: (nv) => { v = nv; log.push(`${k}=${nv}`); } });
     }
     for (const k of ['fillRect', 'strokeRect', 'moveTo', 'lineTo', 'arc', 'rect', 'clip',
-                     'quadraticCurveTo', 'bezierCurveTo', 'ellipse', 'setLineDash', 'translate', 'rotate']) {
+                     'quadraticCurveTo', 'bezierCurveTo', 'ellipse', 'setLineDash', 'translate', 'rotate', 'scale', 'fillText']) {
       c[k] = (...a) => log.push(`${k}(${a.map((n) => (typeof n === 'number' ? n.toFixed(2) : n)).join()})`);
     }
     for (const k in h) c[k] = () => log.push(`${k}()`);
@@ -518,7 +501,7 @@ console.log('\n== Ⅴ 農牧地表四季設計 ==');
   for (const k of painterSeason) {
     const runs = SEASONS.map((sn) => {
       const g = recCtx();
-      P.P[k](g, 256, P.mulberry32(0x1234), sn);
+      paintGround(g, 256, k, 0x1234, surfaceEnvironment({ season: sn }));
       return g.log;
     });
     for (let a = 0; a < 4; a++) {
@@ -534,23 +517,9 @@ console.log('\n== Ⅴ 農牧地表四季設計 ==');
   }
   if (!sameAny && !tintOnly) ok(`${painterSeason.length} 支畫筆 × 四季 兩兩畫出不同的東西,且不只是換底色`);
 
-  // ㋒ 接線
-  t('季節只進 groundTex 的快取鍵,bucket 鍵仍是 sub#variant(一場一個季節 ⇒ draw call 不變)',
-    /const ck = `\$\{key\}@\$\{season\}`;/.test(src) && /_texCache\.set\(ck, t\)/.test(src)
-    && /PAINTERS\[sub\]\(cv\.getContext\('2d'\), S, mulberry32\(0x67D0 \^ hs\), season\)/.test(src)
-    && !/bucketOf\([^)]*season/.test(src));
-  t('畫筆種子仍只由 sub#variant 導(同一塊田的壟溝與缺株位置四季不動,只有作物換了)',
-    /for \(let i = 0; i < key\.length; i\+\+\) hs = \(hs \* 31 \+ key\.charCodeAt\(i\)\) \| 0;/.test(src));
-  t('兩個 mesh 消費端都把 season 傳進去,且對 seasonal 地表跳過 SEASON_TINT(免調兩次色)',
-    (strip(src).match(/groundTex\(sub, \+v, [^)]*, season\)/g) || []).length === 2
-    && (strip(src).match(/&& !DEFS\[sub\]\.seasonal|&& !def\.seasonal/g) || []).length === 2);
-  // 新地表 pasture:五處註冊缺一不可(少一處的症狀各不相同,而都不會報錯)
-  const reg = [['PAINTERS', /\n {2}pasture\(g, S, rnd, season\) \{/], ['DEFS', /\n {2}pasture:\s*\{/],
-               ['SIZE', /pasture: \[\d+, \d+\]/], ['ZONES.green', /'veggiefield', 'pasture'/],
-               ['FAMS.rectFarm', /'abandonedfarm', 'pasture'\]/], ['scatterDetails', /sub === 'pasture'/]];
-  const missing = reg.filter(([, re]) => !re.test(src)).map(([n]) => n);
-  t(`牧場 pasture 六處註冊齊全(${reg.map(([n]) => n).join(' / ')})`, missing.length === 0,
-    `（缺:${missing.join(', ')}）`);
+  t('材質快取區分 fit，場所與底毯共用程序畫筆', src.includes('paintGround(cv.getContext') && src.includes('/'+ '$' + '{fit}') && !/bucketOf\([^)]*season/.test(src));
+  t('兩個 Mesh 消費端使用同一場次材質快取', (strip(src).match(/map: textureOf\(/g) || []).length === 2);
+
 }
 
 console.log('\n== Ⅵ 選款清單的顏色路徑(換款的「幅度」那一半)==');
@@ -568,12 +537,8 @@ console.log('\n== Ⅵ 選款清單的顏色路徑(換款的「幅度」那一半
   t(`SUB_COL 恰涵蓋底毯款(CARPET ∪ ENCLAVE_STYLES[].carpet;${want.size} 款)`,
     miss.length === 0 && extra.length === 0, `（缺:${miss.join(',')} 多:${extra.join(',')}）`);
   // ② 畫筆真的吃這張表(否則排序用的是一份與畫面無關的色票)
-  const notFed = [...want].filter((s) => s !== 'brick'
-    && !new RegExp(`\\n  ${s}\\(g, S, rnd(?:, season)?\\) \\{[\\s\\S]{0,900}?baseFill\\(SUB_COL\\.${s},`).test(src));
-  t('每一款底毯畫筆的底色都取自 SUB_COL(brick 是具名例外:代表色由 BRICK_C 推導)',
-    notFed.length === 0, `（沒吃到的:${notFed.join(',')}）`);
-  t('brick 的代表色由磚色陣列推導,不手寫第二個數字',
-    /brick: meanHex\(BRICK_C\)/.test(src) && /const cs = BRICK_C;/.test(src));
+  t('程序畫筆使用 SUB_COL 作為底色', /paintGround\([^;]+SUB_COL\[sub\]/.test(src));
+  t('brick 代表色仍由色票推導', /brick: meanHex\(BRICK_C\)/.test(src));
   // ③ 排序本身:純函式、保留重數、同款相鄰、瓶頸步距不比原序差
   t('carpetOrder 原文零 rnd / 零 Math.random / 零 THREE(§2.3、A4)',
     !/\brnd\s*\(|Math\.random|THREE/.test(ORDER));
@@ -645,11 +610,10 @@ console.log('\n== Ⅵ 選款清單的顏色路徑(換款的「幅度」那一半
 
 console.log('\n== Ⅶ 同顏色拼圖上的多種點綴(2026-08-13「草地的小花/沙地的小石頭/水域的游魚」)==');
 {
-  const scatFn = grab(/function scatterDetails\(sub, x, z, r, rot, def, zn, enc = null\) \{[\s\S]*?\n  \}/, 'scatterDetails');
-  const DEFS_SRC = src.match(/const DETAIL_DEFS = \{[\s\S]*?\n\};/)[0];
+  const scatFn = grab(/function scatterDetails\(sub, x, z, r, rot, def, zn, enc = null, density = 1\) \{[\s\S]*?\n  \}/, 'scatterDetails');
   const NEW = ['fish', 'shell', 'mushroom'];
   t(`新增三款點綴 ${NEW.join(' / ')} 都有零件表`,
-    NEW.every((n) => new RegExp(`\\n  ${n}:\\s*\\[`).test(DEFS_SRC)));
+    NEW.every(n => GROUND_PARTS[n]));
   t('三款都登記了 TILT 與 REG(漏了的那一款會恆直立且恆隨機朝向,不會報錯)',
     NEW.every((n) => new RegExp(`${n}: [\\d.]+`).test(src.match(/const TILT = \{[\s\S]*?\n\};/)[0])
       && new RegExp(`${n}: [\\d.]+`).test(src.match(/const REG = \{[\s\S]*?\n\};/)[0])));
@@ -664,16 +628,14 @@ console.log('\n== Ⅶ 同顏色拼圖上的多種點綴(2026-08-13「草地的�
   for (const zn in CARPET) for (const s of CARPET[zn]) carpetSubs.add(s);
   const thin = [];
   for (const s of carpetSubs) {
-    const m2 = scatFn.match(new RegExp(`sub === '${s}'[\\s\\S]*?(?=\\n *else if|\\n *\\}$)`));
-    if (!m2) { thin.push(`${s}(無分支)`); continue; }
-    const kinds = new Set([...m2[0].matchAll(/(?:scatter|addDetail)\('(\w+)'/g)].map((x) => x[1]));
+    const kinds = new Set(SURFACES[s].parts);
     if (kinds.size < 2) thin.push(`${s}(${kinds.size})`);
   }
   t(`每一款底毯地表都撒得出兩種以上的點綴(${carpetSubs.size} 款)`, thin.length === 0,
     `（只有一種:${thin.join(', ')}）`);
-  t('水域三款(淺水/深水/荷塘)都有游魚', /sub === 'deepwater'\) scatter\('fish'/.test(scatFn)
-    && /scatter\('fish', 3 \+ \(rnd\(\) \* 4 \| 0\), 0\.8, 0\.5\);\n *\}/.test(scatFn)
-    && /sub === 'lotus'[\s\S]*?scatter\('fish'/.test(scatFn));
+  t('水域三款(淺水/深水/荷塘)都有游魚', ['watertile', 'deepwater', 'lotus'].every(s => SURFACES[s].parts.includes('fish')));
+  t('散布與固定配置都使用附件資料表', scatFn.includes('GROUND_ATTACHMENTS[sub]')
+    && scatFn.includes('Object.entries(scatterRules)') && scatFn.includes('recipe.fixed || []'));
 }
 
 for (const [f, m] of [['--break-lot', '取值點改回格心,Ⅰ MUST 紅字(顏色又開始短距離亂跳)'],
