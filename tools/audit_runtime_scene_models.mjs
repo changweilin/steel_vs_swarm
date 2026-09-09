@@ -94,8 +94,9 @@ ok([...usedTypes].every((type) => runtimeRenderer.includes(`'${type}'`)),
   `通用 renderer 涵蓋全部 ${usedTypes.size} 種正式 primitive`);
 ok(/fitApprovedBuilding\(b(?:,|\))/.test(biomes)
   && /makeApprovedBuildingBatch\(entry, rows\)/.test(biomes), '一般建物經正式選款與每款批次進場');
-ok(/generatedApprovedVehicleModelAt\(/.test(biomes) && /makeRuntimePartModel\(model/.test(biomes),
-  '場景載具經正式 v6 主結構／葉零件組裝器與通用 renderer 進場');
+ok(/makeProceduralVehicle\(/.test(biomes) && !biomes.includes('approvedVehicleModels')
+  && readSrc('public','js','vehicleModels.js').includes('makeRuntimePartModel(entry)'),
+  '場景載具全部經新建程序模型與通用 renderer 進場');
 ok(Object.keys(RUNTIME_BACKGROUND_CATALOG.objects).length === BUILDING_PARTS.length + VEHICLE_PARTS.length
   && backgroundGenerator.includes('generateBackgroundObject('), '背景物件型錄完整覆蓋正式環境資產');
 ok(!/buildBldBucket\.mass\s*\(/.test(biomes) && !/makeVehicle\s*\(/.test(biomes),
