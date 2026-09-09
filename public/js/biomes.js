@@ -61,8 +61,8 @@ import {
 import { libGeo } from './partlib.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
 import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
-import { generatedApprovedVehicleModelAt } from './approvedVehicleModels.js';
-import { makeRuntimePartModel } from './runtimePartModel.js';
+import { makeProceduralVehicle } from './vehicleModels.js';
+import {selectRoadCar} from './vehicleEveryday.js';
 import { deploySceneBatches } from './sceneObjects.js';
 import { createArchitecturePlanner } from './buildingDiversity.js';
 import { sceneObjectMat } from './toon.js';
@@ -9501,22 +9501,11 @@ function buildRails(group, rails, terrain, center, dynamics, crossings) {
 // 在車禍現場有輪子、在鐵軌上沒有」,而每一條既有斷言照樣全綠。
 // **零 `rnd()` 消耗**:形狀是 kind + opts 的純函式,同座標同結果(§2.3)。
 function vehGroup(kind, opts = {}) {
-  const g = new THREE.Group();
   const fit = opts.fit || { L: 4.4, W: 1.9, H: 1.55 };
   const paintSeed = Number.isInteger(opts.paint) ? opts.paint : 0;
   const atSeed = Math.round((opts.at?.[0] || 0) * 10) + Math.round((opts.at?.[2] || 0) * 10);
-  const cls = kind === 'railcar' ? ((opts.fit?.L || 0) > 10 ? 'bus' : 'cargo') : 'passenger';
-  const model = generatedApprovedVehicleModelAt((paintSeed ^ atSeed ^ Math.round(fit.L * 100)) | 0, cls);
-  const mesh = makeRuntimePartModel(model, { environment: true });
-  mesh.rotation.y = model.sceneBasis.rotationY;
-  const basis = new THREE.Group();
-  basis.add(mesh);
-  basis.scale.set(fit.L / model.dimensions.L, fit.H / model.dimensions.H, fit.W / model.dimensions.W);
-  basis.rotation.y = opts.ry || 0;
-  basis.position.fromArray(opts.at || [0, 0, 0]);
-  basis.userData.runtimePart = { key: model.key, version: model.version, family: 'vehicle' };
-  g.add(basis);
-  return g;
+  const vehicleSeed = (paintSeed ^ atSeed ^ Math.round(fit.L * 100)) | 0;
+  return makeProceduralVehicle(kind === 'railcar' ? 'tram' : selectRoadCar(vehicleSeed), vehicleSeed, { ...opts, fit });
 }
 
 /** 低多邊形列車(車頭 + 2 節車廂)。車廂形狀走 `vehicles.js railcar` 的唯一縫 */
@@ -9534,12 +9523,6 @@ function makeTrain(metro) {
       fit: { L: carL, W: 3.0, H: 4.3 }, paint: body, cabC: stripe,
       ry: -Math.PI / 2, at: [0, 0, c * (carL + gap)],
     });
-    if (c === 0) {   // 車頭斜鼻(編組的事,不是車廂的事)
-      const nose = new THREE.Mesh(new THREE.BoxGeometry(3.0, 2.6, 2.2), toonMat(body));
-      nose.position.set(0, 2.0, -7.6);
-      nose.rotation.x = 0.35;
-      car.add(nose);
-    }
     g.add(car);
   }
   return g;

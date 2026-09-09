@@ -667,9 +667,10 @@ console.log('\nⅥ 純表現層(伺服器對這一整套一無所知)');
     && !/Math\.random/.test(props) && !/Math\.random/.test(back));
   t('edgewall.js 全檔無 Math.random(A4)', !/Math\.random/.test(strip(ewSrc)));
   t('edgewall.js 零 THREE(這才是型錄與規劃器能離線驗的原因)', !/\bTHREE\b/.test(strip(ewSrc)));
-  t("edgewall.js 只 import rng.js + vehicles.js(亂數 / 載具型錄兩條唯一縫)",
-    (strip(ewSrc).match(/^import .*$/gm) || []).length === 2
-    && /from '\.\/rng\.js'/.test(ewSrc) && /from '\.\/vehicles\.js'/.test(ewSrc));
+  t("edgewall.js 只依賴亂數、幾何量尺與新車模描述子適配層",
+    (strip(ewSrc).match(/^import .*$/gm) || []).length === 3
+    && /from '\.\/rng\.js'/.test(ewSrc) && /from '\.\/vehicles\.js'/.test(ewSrc)
+    && /makeSceneVehicleParts as makeVehicle/.test(ewSrc));
 }
 
 // ============ Ⅶ 型錄與切分規則 ============

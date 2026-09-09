@@ -21,7 +21,7 @@ export { toonGradient, toonMat, toonify, envMat, bakeContactAO };
 import { partId, partJitter } from './xform.js';
 
 // ---- 載具 / 擺件型錄(唯一縫;該檔零 import、零 THREE ⇒ 離線稽核吃得到同一份)----
-import { makeVehicle } from './vehicles.js';
+import { makeSceneVehicleParts as makeVehicle } from './vehicleParts.js';
 import { mergeGeos } from './beacons.js';
 
 // ---- 幾何速記 ----

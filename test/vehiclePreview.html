@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>車輛生成試車場</title>
+<style>
+body{margin:0;background:#e9e6dc;color:#253744;font:15px system-ui}header{padding:18px 24px;background:#fff;display:flex;align-items:center;gap:20px;flex-wrap:wrap}h1{font-size:22px;margin:0}label{display:inline-flex;gap:6px;align-items:center}select,input,button{font:inherit;padding:7px;border:1px solid #a5b0b5;border-radius:5px;background:white}button{background:#245c60;color:white;cursor:pointer}input{width:80px}#view{height:64vh;min-height:350px}canvas{display:block}#info{padding:16px 24px;line-height:1.8}#error{color:#a13024}small{color:#566b76}a{color:#245c60}
+</style>
+<header><div><h1>車輛生成試車場</h1><small>拖曳旋轉 · 滾輪縮放 · 同種子重現外觀</small></div><a href="/">返回建模台</a>
+<label>展示<select id="formation"><option value="single">單車／車廂</option><option value="rail">整列貨運列車</option><option value="semi">完整聯結車</option></select></label>
+<label>用途<select id="purpose"></select></label><label>結構<select id="type"></select></label><label>動力<select id="power"></select></label>
+<label>原型<select id="profile"></select></label><span id="couplingControls" hidden><label>牽引車<select id="leader"></select></label> <label>車廂<select id="wagon"></select></label> <label>節數<input id="count" type="number" min="2" max="6" value="3"></label></span><label>種子<input id="seed" type="number" value="42" step="1"></label><button id="next">下一個變體</button></header>
+<div id="view"></div><div id="info"></div><p id="error" role="alert"></p>
+<script type="importmap">{"imports":{"three":"/three.mjs","three/addons/postprocessing/Pass.js":"/pass.mjs"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {VEHICLE_AXES,VEHICLE_PROFILES,VEHICLE_PART_NAMES,vehicleCandidates} from '/js/vehicleCatalog.js';
+import {makeProceduralVehicle} from '/js/vehicleModels.js';
+import {VEHICLE_CONSISTS,CONSIST_PREFIX} from '/js/vehicleConsists.js';
+import {RIM_NAMES} from '/js/vehicleVariants.js';
+import {Pipeline} from '/js/postfx.js';
+const $=id=>document.getElementById(id), scene=new THREE.Scene();
+scene.background=new THREE.Color(0xe9e6dc);
+scene.add(new THREE.HemisphereLight(0xffffff,0x718079,2.4));
+const light=new THREE.DirectionalLight(0xfff0db,3);light.position.set(8,14,10);scene.add(light);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));$('view').append(renderer.domElement);
+const camera=new THREE.PerspectiveCamera(40,1,.01,1000),grid=new THREE.GridHelper(60,60,0x9da8a4,0xc6cec8);scene.add(grid);
+const pipeline=new Pipeline(renderer,scene,camera,{dof:false,grade:false});
+let model, yaw=.7,pitch=.35,distance=12,targetY=1,drag;
+function render(){camera.position.set(Math.cos(yaw)*Math.cos(pitch)*distance,targetY+Math.sin(pitch)*distance,Math.sin(yaw)*Math.cos(pitch)*distance);camera.lookAt(0,targetY,0);pipeline.render();}
+new ResizeObserver(()=>{const w=$('view').clientWidth,h=$('view').clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();render();}).observe($('view'));
+function clear(){if(!model)return;scene.remove(model);const geometries=new Set(),materials=new Set(),textures=new Set();model.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)materials.add(o.material);if(o.userData.signTex)textures.add(o.userData.signTex);});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());model=null;}
+function build(){
+  clear();$('error').textContent='';
+  if(!$('profile').value){$('info').textContent='此組合沒有合理車型，請調整分類。';render();return;}
+  try {
+    const options=$('formation').value==='single'
+      ? Object.fromEntries(['purpose','type','power'].filter(k=>$(k).value).map(k=>[k,$(k).value]))
+      : {leaderKey:$('leader').value,wagonCount:Number($('count').value),wagonKey:$('wagon').value||undefined};
+    model=makeProceduralVehicle($('profile').value,Number($('seed').value),options);scene.add(model);
+    const v=model.userData.vehicle;targetY=v.height*.45;distance=Math.max(v.length,v.width)*1.9;
+    $('info').textContent=v.consist
+      ? v.name+' ｜ '+VEHICLE_AXES.purpose[v.purpose]+' ｜ '+v.members.length+' 個車體（牽引車＋'+v.wagonCount+' 節）'
+        +'\n全長 '+v.length.toFixed(2)+' m ｜ '+(v.consist==='rail'?'共用軌距與車鉤高度':'第五輪與主銷接合')
+        +'\n'+v.members.map((m,i)=>(i+1)+'. '+m.name+' · '+VEHICLE_AXES.power[m.power]).join(' → ')
+        +'\n展示為靜態編組；雲梯、支腿、遮棚等工作設備以收納姿態呈現。'
+      : v.name+' ｜ '+VEHICLE_AXES.purpose[v.purpose]+' / '+VEHICLE_AXES.type[v.type]+' / '+VEHICLE_AXES.power[v.power]
+      +'\n公稱尺寸 '+v.length.toFixed(2)+' × '+v.width.toFixed(2)+' × '+v.height.toFixed(2)+' m ｜ 車齡 '+v.age+' 年 ｜ 保養 '+Math.round(v.maintenance*100)+'% ｜ 漆面磨損 '+Math.round(v.wear*100)+'%'
+      +'\n功能件：'+(v.parts.map(p=>VEHICLE_PART_NAMES[p]).join(' · ')||'標準配備')+' ｜ 塗鴉：'+(v.graffiti||'無')+(v.power==='animal'?' ｜ 停放狀態，牽引動物未繫掛':'');
+    if(!v.consist) {
+      const cargoNames={luggage:'行李箱',crate:'木箱',camping:'露營包',sacks:'袋裝貨物',barrels:'桶裝貨物',logs:'原木',cars:'汽車',aggregate:'散裝土石'};
+      $('info').textContent+='\n品牌：'+v.brand.name+' ｜ 空車 '+v.curbTonnes.toFixed(2)+' t ／ 額定載重 '+v.payloadTonnes.toFixed(2)+' t ／ 滿載總重 '+v.grossTonnes.toFixed(2)+' t（美術設定）'
+        +'\n輪胎直徑倍率 '+v.wheels.radiusScale.toFixed(2)+' × ／ 胎寬倍率 '+v.wheels.widthScale.toFixed(2)+' × ｜ 懸吊升高 '+(v.wheels.suspensionLift*100).toFixed(1)+' cm ｜ '+RIM_NAMES[v.wheels.rimStyle]
+        +'\n可見貨物：'+(v.cargo&&v.cargo.count?(v.cargo.location==='roof'?'車頂綁載 ':'')+cargoNames[v.cargo.type]+' × '+v.cargo.count:'無')+' ｜ 估計載貨 '+v.cargoTonnes.toFixed(3)+' t';
+    }
+    $('info').style.whiteSpace='pre-line';window.vehiclePreview={model,renderer,scene};render();
+  }catch(error){$('error').textContent=error.message;render();}
+}
+function updateCoupling(){
+  const recipe=VEHICLE_CONSISTS[$('profile').value.slice(CONSIST_PREFIX.length)];
+  if(recipe){
+    $('leader').replaceChildren(...recipe.leaders.map(k=>new Option(VEHICLE_PROFILES[k].name,k)));
+    $('wagon').replaceChildren(new Option('按產業配方編組',''),...recipe.wagons.map(k=>new Option(VEHICLE_PROFILES[k].name,k)));
+    $('count').min=recipe.count[0];$('count').max=recipe.count[1];$('count').disabled=recipe.mode==='semi';
+    $('count').value=Math.min(recipe.count[1],Math.max(recipe.count[0],Number($('count').value)));
+  }
+  build();
+}
+function filter(){
+  const previous=$('profile').value,mode=$('formation').value;
+  $('couplingControls').hidden=mode==='single';$('type').disabled=mode!=='single';$('power').disabled=mode!=='single';
+  const filters=Object.fromEntries(['purpose','type','power'].filter(k=>$(k).value).map(k=>[k,$(k).value]));
+  const options=mode==='single'?vehicleCandidates(filters).map(key=>new Option(VEHICLE_PROFILES[key].name,key))
+    :Object.entries(VEHICLE_CONSISTS).filter(([k,p])=>p.mode===mode&&(!filters.purpose||p.purpose===filters.purpose)).map(([k,p])=>new Option(p.name,CONSIST_PREFIX+k));
+  $('profile').replaceChildren(...options);if(options.some(o=>o.value===previous))$('profile').value=previous;updateCoupling();
+}
+for(const axis of ['purpose','type','power']){$(axis).append(new Option('全部',''),...Object.entries(VEHICLE_AXES[axis]).map(([k,n])=>new Option(n,k)));$(axis).onchange=filter;}
+$('formation').onchange=filter;$('profile').onchange=updateCoupling;for(const key of ['seed','count','leader','wagon'])$(key).onchange=build;$('next').onclick=()=>{$('seed').value=Number($('seed').value)+1;build();};
+renderer.domElement.style.touchAction='none';renderer.domElement.onpointerdown=e=>{drag=[e.clientX,e.clientY];renderer.domElement.setPointerCapture(e.pointerId);};
+renderer.domElement.onpointermove=e=>{if(!drag)return;yaw-=(e.clientX-drag[0])*.01;pitch=Math.max(.06,Math.min(1.4,pitch+(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];render();};
+renderer.domElement.onpointerup=()=>drag=null;renderer.domElement.onpointercancel=()=>drag=null;
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();distance=Math.max(1,Math.min(2000,distance*Math.exp(e.deltaY*.001)));render();},{passive:false});
+filter();
+</script></html>

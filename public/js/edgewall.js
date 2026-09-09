@@ -36,7 +36,8 @@
 //     不進 `occ`、不進 LOS,伺服器對這一整套一無所知(原則 4)。它們唯一的職責是「往外看
 //     不是虛空」。
 import { mulberry32 } from './rng.js';
-import { makeVehicle, partAABB } from './vehicles.js';
+import { partAABB } from './vehicles.js';
+import { makeSceneVehicleParts as makeVehicle } from './vehicleParts.js';
 
 // ---- 規劃參數 ----
 export const EDGE_WALL = {

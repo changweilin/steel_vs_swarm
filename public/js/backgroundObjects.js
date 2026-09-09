@@ -1,6 +1,8 @@
 // 背景物件的決定性組裝縫：指定主結構 → 每個目標槽位獨立挑葉零件 → 子類別配色抽樣。
 // NPC、戰鬥建築與玩家機甲不引用本檔；它們各自保留權威 Rig / 碰撞 / 動畫契約。
 import { RUNTIME_BACKGROUND_CATALOG, RUNTIME_PARTS } from './runtimeParts.js';
+import { VEHICLE_PREFIX, VEHICLE_PROFILES, vehicleBackgroundObject } from './vehicleCatalog.js';
+import { CONSIST_PREFIX,VEHICLE_CONSISTS,vehicleConsistBackgroundObject } from './vehicleConsists.js';
 import { GEOLOGY_PREFIX, GEOLOGY_TYPES, geologyBackgroundObject } from './geology.js';
 import {
   STANDALONE_BOUNDARY_KINDS,
@@ -262,20 +264,27 @@ export function backgroundObjectTargets(family = null) {
 /** 正式環境資產 + 可獨立散布的邊界物件；長構造不會進入此名冊。 */
 export function sharedBackgroundObjectTargets(category = null) {
   const runtime = [...entries.values()]
-    .filter((entry) => !category || runtimeCategory(entry) === category)
+    .filter((entry) => entry.family !== 'vehicle' && (!category || runtimeCategory(entry) === category))
     .map((entry) => entry.key);
   const edge = STANDALONE_BOUNDARY_KINDS
     .filter((kind) => !category || boundaryObjectMeta(kind).category === category)
     .map((kind) => `${EDGE_BACKGROUND_PREFIX}${kind}`);
   const geology = !category || category === 'geology'
     ? Object.keys(GEOLOGY_TYPES).map(type => GEOLOGY_PREFIX + type) : [];
-  return [...runtime, ...edge, ...geology];
+  const vehicles = !category || category === 'vehicle'
+    ? Object.keys(VEHICLE_PROFILES).map(key => VEHICLE_PREFIX + key) : [];
+  const consists=!category||category==='vehicle'?Object.keys(VEHICLE_CONSISTS).map(key=>CONSIST_PREFIX+key):[];
+  return [...runtime, ...edge, ...geology, ...vehicles,...consists];
 }
 
 /**
  * 背景物件共同出口。既有 v5/v6 資產維持原組裝路徑；edge/ 前綴直接轉用邊界生成器。
  */
 export function generateSharedBackgroundObject(targetKey, seed = 0, options = {}) {
+  if(targetKey.startsWith(CONSIST_PREFIX))return vehicleConsistBackgroundObject(targetKey.slice(CONSIST_PREFIX.length),seed,options);
+  if (targetKey.startsWith(VEHICLE_PREFIX)) {
+    return vehicleBackgroundObject(targetKey.slice(VEHICLE_PREFIX.length), seed, options);
+  }
   if (targetKey.startsWith(GEOLOGY_PREFIX)) {
     return geologyBackgroundObject(targetKey.slice(GEOLOGY_PREFIX.length), seed, options);
   }

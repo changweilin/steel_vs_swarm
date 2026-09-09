@@ -29,7 +29,8 @@ import * as THREE from 'three';
 import { envMat, toonMat, bakeContactAO } from './toon.js';
 import { partExtent, mergeGeos } from './beacons.js';
 // 載具/擺件型錄唯一縫(零 import ⇒ 本檔「純區塊」的零 THREE 契約不破,離線稽核照樣執行原文)
-import { makeVehicle, makeRecess } from './vehicles.js';
+import { makeRecess } from './vehicles.js';
+import { makeSceneVehicleParts as makeVehicle } from './vehicleParts.js';
 
 // ============================================================================
 // §A 都市計畫(市區:沿街配置 + 街廓 + 公設)
@@ -518,6 +519,7 @@ export function buildCivic(kind, seed = 0) {
   const parts = CIVIC_PARTS[kind] || CIVIC_PARTS.park;
   const buckets = new Map();
   for (const p of parts) {
+    if (p.collisionOnly) continue;
     // 場景走樣(2026-08-05):同圖多座公設不再逐位元相同(舊制連停哪幾台車、什麼顏色
     // 都一樣)。`opt` = 非碰撞小件的存缺通道 —— **col 件恆保留**(碰撞柱走 civicColliders
     // 靜態表,視覺缺席就是隱形牆,A30 反面);`vc` = 色相變異通道(成對零件共用通道 ⇒
