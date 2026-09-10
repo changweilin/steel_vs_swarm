@@ -12,6 +12,7 @@
 <label for="humanMode">人造物抽樣</label><select id="humanMode"><option value="manual">查看指定類別</option><option value="auto">依生成機率抽樣</option></select>
 <label for="region">古蹟地區</label><select id="region"><option value="auto">依經緯度配對</option><option value="unmatched">無對應古蹟／隨機廢墟</option></select>
 <label for="ruinType">廢棄遺跡形式</label><select id="ruinType"><option value="auto">隨機形式</option></select>
+<label for="heritageState">遺跡保存狀態</label><select id="heritageState"><option value="abandoned">廢棄古蹟</option><option value="tourism">現代觀光古蹟</option><option value="underwater">水下遺跡</option></select>
 <label for="uniformScale">整體等比例倍率</label><input id="uniformScale" type="number" min=".05" max="10" step=".05" value="1">
 <p>有匹配古蹟時兩類各占 50%；無匹配時全數抽樣廢棄遺跡。僅允許等比例縮放。</p>
 </div>
@@ -69,7 +70,7 @@ function rebuild(){
     const input={climate:$('climate').value,water:$('water').value};
     const isAncient=GEOLOGY_TYPES[$('type').value]?.lithology==='manufactured';
     $('ancient-controls').hidden=!isAncient;
-    if(isAncient) { input.region=$('region').value; input.uniformScale=Number($('uniformScale').value); }
+    if(isAncient) { input.region=$('region').value; input.uniformScale=Number($('uniformScale').value); input.heritageState=$('heritageState').value; }
     const humanAuto=isAncient && $('humanMode').value==='auto';
     $('ruinType').disabled=humanAuto || $('type').value!=='ruins';
     if(isAncient && !$('ruinType').disabled) input.ruinType=$('ruinType').value;

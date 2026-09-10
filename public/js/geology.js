@@ -2,6 +2,7 @@
 import { mulberry32 } from './rng.js';
 import { forestEnvironment } from './forest.js';
 import { selectAncientStone, ancientStoneGeometry, ancientStoneDistribution } from './ancientStone.js';
+import { generateHeritageSite } from './heritageSites.js';
 import { PHENOMENA, phenomenaWeights, phenomenaProfile, phenomenaSurface, phenomenaEffects } from './geologyPhenomena.js';
 
 export const GEOLOGY_PREFIX = 'geology/';
@@ -124,7 +125,9 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
   if (s.lithology === 'manufactured') {
     stone = selectAncientStone(seed, explicitRuins ? input : {...input,ruinType:'auto'},type);
     type = stone.kind;
-    stoneGeometry = ancientStoneGeometry(stone, seed);
+    stoneGeometry = input.heritageState
+      ? generateHeritageSite(seed, { ...input, selection: stone, state: input.heritageState })
+      : ancientStoneGeometry(stone, seed);
     const [w,h,d] = stoneGeometry.bounds.size, scale = stone.uniformScale;
     p = { width: w*scale, height: h*scale, depthRatio: d/w, uniformScale: scale,
       ageMa: stone.ageMa, roughness: 0, strike: rnd()*Math.PI*2, dip: 0, layers: 1,
@@ -139,7 +142,7 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
       channelWidth:.12+eventRnd()*.14,jetHeight:.3+eventRnd()*.6});
   }
   // Depositional age does not dictate surface exposure or weathering duration.
-  const surfaces = Object.entries(surfaceWeights(environment, type)).map(([kind, weight]) => {
+  const surfaces = Object.entries(stone && input.heritageState ? {} : surfaceWeights(environment, type)).map(([kind, weight]) => {
     const [a, b] = GEOLOGY_SURFACES[kind].coverage;
     return { kind, coverage: weight * (a + coverRnd() * (b - a)) };
   });

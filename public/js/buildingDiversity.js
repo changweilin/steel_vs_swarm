@@ -4,6 +4,7 @@ import {
   BUILDING_FUNCTION_RANGES, CULTURAL_REGIONS, CULTURAL_AFFINITY_RATIO,
 } from './architectureStyles.js';
 import { buildContainmentIndex } from './osmAreas.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
 
 export function architectureHash(value, salt = '') {
   const text = `${value}|${salt}`;
@@ -37,7 +38,17 @@ export function detectCulturalRegion(location = {}) {
 /** 推導建築地點與功能分類 */
 export function inferBuildingFunction(building = {}, poly = null, context = {}) {
   const tags = building.tags || {};
+  const explicit = taggedBuildingFunction(tags);
+  if (explicit) return explicit;
   const bld = String(tags.building || tags['building:part'] || '');
+  // 校區／醫療園區等只有邊界標籤時，僅傳給未指定用途的屋身。
+  // 宿舍、車庫、禮拜堂等已有自身形制的建物不繼承整個園區用途。
+  if (!bld || bld === 'yes') {
+    const parent = taggedBuildingFunction(context.parentTags);
+    if (parent && ['hospital', 'school', 'university', 'kindergarten', 'station', 'plant', 'substation', 'water'].includes(parent.type)) {
+      return { ...parent, inherited: true };
+    }
+  }
   const shop = String(tags.shop || '');
   const amenity = String(tags.amenity || '');
   const landuse = String(tags.landuse || context.landuse || '');
@@ -161,7 +172,9 @@ export function architectureWeights(context = {}) {
   const profile = context.slope >= ARCHITECTURE_SITE.slopeDeg ? 'hillside'
     : context.urban ? 'urban' : context.rural ? 'rural' : 'plain';
   let weights = { ...ARCHITECTURE_PROFILES[profile] };
-  if (context.courtyard) weights.courtyard = (weights.courtyard || 10) * 2;
+  const functional = context.functionInfo?.locked && BUILDING_FUNCTIONS[context.functionInfo.type];
+  if (functional) weights = Object.fromEntries(functional.styles.map(id => [id, 10]));
+  if (!functional && context.courtyard) weights.courtyard = (weights.courtyard || 10) * 2;
   if (context.elongated) {
     if (weights.machiya) weights.machiya *= 1.5;
     if (weights.industrial) weights.industrial *= 1.5;
@@ -182,7 +195,7 @@ export function architectureWeights(context = {}) {
     const culturalStyleIds = new Set(CULTURAL_REGIONS[region].styles || []);
     // 注入該文化圈風格候選
     for (const styleId of culturalStyleIds) {
-      if (weights[styleId] == null && ARCHITECTURE_STYLES[styleId]
+      if (!functional && weights[styleId] == null && ARCHITECTURE_STYLES[styleId]
         && (!height || !ARCHITECTURE_STYLES[styleId].maxHeight || height <= ARCHITECTURE_STYLES[styleId].maxHeight)
         && (!context.functionInfo || !ARCHITECTURE_STYLES[styleId].categories
           || ARCHITECTURE_STYLES[styleId].categories.includes(context.functionInfo.category))) {
@@ -207,7 +220,7 @@ export function architectureWeights(context = {}) {
   }
 
   // 地形安全高於文化加權；文化注入不得重新引入不適合陡坡的風格。
-  if (context.slope >= ARCHITECTURE_SITE.steepSlopeDeg) {
+  if (!functional && context.slope >= ARCHITECTURE_SITE.steepSlopeDeg) {
     weights = Object.fromEntries(Object.entries(weights).filter(([id]) => ARCHITECTURE_STYLES[id].foundation));
   }
   return { profile, weights, region };
@@ -216,6 +229,7 @@ export function architectureWeights(context = {}) {
 export function chooseArchitecture(seed, identity, context = {}) {
   const funcInfo = context.functionInfo || inferBuildingFunction(context.building, context.poly, context);
   const heightInfo = sampleBuildingHeight(funcInfo.key, seed, identity, context.building || {});
+  const functional = funcInfo.locked && BUILDING_FUNCTIONS[funcInfo.type];
   const { profile, weights, region } = architectureWeights({ ...context, functionInfo: funcInfo, targetHeight: heightInfo.height });
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   let pick = architectureHash(identity, seed) / 4294967296 * total;
@@ -228,6 +242,13 @@ export function chooseArchitecture(seed, identity, context = {}) {
 
   return {
     ...ARCHITECTURE_STYLES[id],
+    ...(functional ? {
+      proceduralOnly: true, functionLocked: true, structureOnly: !!functional.structureOnly,
+      // 功能不因陡坡而改成住宅；程序外環沿用已驗證的逐段擋土基礎。
+      foundation: 'retaining',
+      ...(['religious', 'heritage'].includes(functional.category) ? { era: 'historic' } : {}),
+      ...(functional.roofForm ? { roofForm: functional.roofForm } : {}),
+    } : {}),
     id, profile, region, slope: context.slope || 0,
     variant: architectureHash(identity, `${seed}:variant`) % 3,
     functionInfo: funcInfo,
@@ -281,7 +302,7 @@ export function createArchitecturePlanner({
 
     const ctx = {
       slope, urban, rural, courtyard: !!poly?.holes?.length, elongated,
-      density, landuse: use, building, poly, region, location: loc,
+      density, landuse: use, parentTags: parent?.tags, building, poly, region, location: loc,
       seed, identity,
     };
     ctx.functionInfo = inferBuildingFunction(building, poly, ctx);

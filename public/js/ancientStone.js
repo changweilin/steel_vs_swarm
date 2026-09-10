@@ -103,7 +103,7 @@ export function selectAncientStone(seed, input = {}, mode = 'auto') {
 }
 
 // Small pure polygon builder: emits real openings, columns and lintels; no height-field stretching.
-function stoneBuilder(color) {
+export function stoneBuilder(color) {
   const triangles = [];
   const tri = (a, b, c, tint = color) => triangles.push({ a, b, c, color: tint });
   const quad = (a, b, c, d, tint) => { tri(a, b, c, tint); tri(a, c, d, tint); };
@@ -158,7 +158,7 @@ function stoneBuilder(color) {
 }
 
 /** Canonical metres. Historic silhouettes never draw random component proportions. */
-export function ancientStoneGeometry(selection, seed = 0) {
+export function ancientStoneGeometry(selection, seed = 0, options = {}) {
   const g = stoneBuilder(selection.color), { box, frustum, column, stairs, arch, house } = g;
   const id = selection.id;
   if (Object.hasOwn(REGIONAL_STONE_BUILDERS,id)) {
@@ -305,7 +305,7 @@ export function ancientStoneGeometry(selection, seed = 0) {
       for (let i = 0; i < 12; i++) box((rnd()-.5)*25,0,12+rnd()*6,1+rnd(),1+rnd()*2,1+rnd(),rnd());
     }
     // Scattered fallen masonry establishes abandonment, without distorting surviving components.
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < (options.clearDebris ? 0 : 12); i++) {
       const a = rnd()*Math.PI*2, r = 5+rnd()*10;
       box(Math.cos(a)*r,0,Math.sin(a)*r,.6+rnd()*1.2,.3+rnd()*.5,.8+rnd(),rnd()*Math.PI);
     }

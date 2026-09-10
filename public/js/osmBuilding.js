@@ -564,6 +564,10 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         }
       }
       const architecture = options.architectureOf?.(area, poly) || null;
+      if (architecture?.structureOnly) {
+        skipped.push({ sourceId: area.sourceId, reason: 'non_building_function' });
+        continue;
+      }
       const targetH = (area?.tags?.height || area?.tags?.['building:levels']) ? height : (architecture?.targetHeight || height);
       const site = architecture?.site || sampleBuildingSite(poly, terrain);
       const raised = architecture?.foundation === 'retaining' && architecture.profile === 'hillside' && site;

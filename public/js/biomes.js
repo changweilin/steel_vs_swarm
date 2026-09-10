@@ -116,6 +116,9 @@ import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
 import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
 import { nativeFunctionalKind } from './nativeFunctionalBuildings.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
+import { heritageStateOf, heritageRuinType } from './heritageSites.js';
+import { buildHeritageSite } from './heritageSiteMesh.js';
 import {
   PED_PLAN, PED_ARCHETYPES, pedestrianEntranceCollider,
   isPedestrianWay, isPedestrianBridge, planPedestrianNetwork,
@@ -2211,6 +2214,7 @@ function roofTint(tint, x, z, i) {
 
 // 地標近似碰撞柱(未縮放;放置時 × lm scale)
 const LANDMARK_COL = {
+  heritage_tourism: { r: 14, h: 16 }, heritage_abandoned: { r: 14, h: 16 },
   hospital: { r: 11, h: 22 }, school: { r: 13, h: 11 }, station: { r: 14, h: 13 },
   temple: { r: 8, h: 13 }, church: { r: 9, h: 19 }, mosque: { r: 10, h: 14 },
   museum: { r: 12, h: 12 }, power: { r: 2.6, h: 42 }, factory: { r: 13, h: 12 },
@@ -2224,6 +2228,8 @@ const LANDMARK_COL = {
 };
 
 const LANDMARKS = {
+  heritage_tourism: (g, _rnd, _nation, context = {}) => buildHeritageSite('ruins', g, 0, 0, 0, { ...context, state: 'tourism', radius: 14, maxHeight: 16 }),
+  heritage_abandoned: (g, _rnd, _nation, context = {}) => buildHeritageSite('ruins', g, 0, 0, 0, { ...context, state: 'abandoned', radius: 14, maxHeight: 16 }),
   hospital: (g) => {
     const f = facadeTex('hosp', 6, 6, '#46525c', 0.3);
     const main = box(16, 18, 12, 0xe8e4dc); main.material.map = f.map; g.add(main);
@@ -4932,7 +4938,7 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
     }
 
     const g = new THREE.Group();
-    const relic = buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true });
+    const relic = buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true, state: 'abandoned', seed: s >>> 0 });
     g.position.set(sx, gy, sz);
     bakeContactAO(g, 5);
 
@@ -4961,6 +4967,14 @@ export function matchedBuildingType(tags = {}) {
   const b = tags.building, a = tags.amenity;
   const native = nativeFunctionalKind(tags);
   if (native) return native;
+  const functional = taggedBuildingFunction(tags);
+  if (functional && ['ruins', 'monument'].includes(functional.type)) return `heritage_${heritageStateOf(tags)}`;
+  if (functional && tags.architecture !== 'stave' && b !== 'stave_church') {
+    const landmark = BUILDING_FUNCTIONS[functional.type].landmark;
+    if (landmark) return landmark;
+    if (functional.structureOnly) return 'unmodeled_structure';
+    return 'functional';
+  }
   if (a === 'place_of_worship') {
     const r = tags.religion;
     if (r === 'muslim') return 'mosque';
@@ -4984,7 +4998,7 @@ export function matchedBuildingType(tags = {}) {
   if (b === 'synagogue') return 'synagogue';
   if (b === 'gurdwara') return 'gurdwara';
   if (b === 'stave_church' || tags.architecture === 'stave') return 'stave_church';
-  if (b === 'pyramid' || tags.historic === 'archaeological_site') return 'pyramid';
+  if (b === 'pyramid') return 'pyramid';
   if (b === 'slate_house' || tags.architecture === 'slate_house' || tags.indigenous === 'taiwan') return 'slate_house';
   if (b === 'tongkonan' || tags.architecture === 'tongkonan' || tags.traditional === 'austronesian') return 'tongkonan';
   if (tags.historic === 'pylon' || tags.architecture === 'pylon' || tags.historic === 'egyptian_temple') return 'egyptian_pylon';
@@ -11205,15 +11219,21 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 此處殘留的植被過濾是安全網(足跡近似差),不是主要防線。
   // (道路占位與街廓索引已提早至圖資物件之前建立,見上。)
 
+  const mappedUnderwaterHeritage = [];
   if (osm && osm.length) {
     await onProgress?.(0.6, `建置圖資建物(${osm.length} 筆)…`);
     // 特殊地標優先,一般建物均勻抽樣到上限
     osm.sort((p, q) => (buildingType(q.tags) !== 'residential') - (buildingType(p.tags) !== 'residential'));
     for (const el of osm) {
       const [x, z] = llToWorld(el.lat, el.lng, center);
+      if (['ruins', 'monument'].includes(taggedBuildingFunction(el.tags)?.type) && heritageStateOf(el.tags) === 'underwater') {
+        mappedUnderwaterHeritage.push({ x, z, tags: el.tags });
+        continue;
+      }
       if (!tryPlace(x, z)) continue;
       const coordSeed = (Math.imul(Math.round(x * 16) | 0, 0x9E3779B1) ^ Math.imul(Math.round(z * 16) | 0, 0x85EBCA77)) ^ 0x3C6EF35F;
       const type = buildingType(el.tags, coordSeed);
+      if (type === 'unmodeled_structure' || type === 'heritage_underwater') continue;
       if (LANDMARKS[type]) {
         // 地標放大後不能只驗中心格:以碰撞半徑掃走廊,牆面才不會侵入兵線
         const cr = (LANDMARK_COL[type]?.r || 10) * OVER.lm;
@@ -11221,7 +11241,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 橫擔全寬,建物不得貼近(否則手臂壓上屋頂,像「屋頂長電塔」)
         const or3 = Math.max(cr, type === 'power' ? 9 * OVER.lm : 0);
         if (landmarks.length < 60 && areaFree(blocked, x, z, cr * 0.8) && occ.free(x, z, or3, 1)) {
-          landmarks.push({ x, z, type }); usedLm.add(type); occ.add(x, z, or3);
+          landmarks.push({ x, z, type, tags: el.tags }); usedLm.add(type); occ.add(x, z, or3);
         }
       } else if (generic.length < MAX_BUILDINGS) {
         const commercial = type === 'commercial';
@@ -11258,7 +11278,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   if (!osmSource && (!mix || (mix.urban || 0) > 0.1)
     && !landmarks.length && !generic.length && urbanPts.length > 8) {
     await onProgress?.(0.6, '離線模式:程序生成市區…');
-    const lmTypes = Object.keys(LANDMARKS);
+    const lmTypes = Object.keys(LANDMARKS).filter(type => !type.startsWith('heritage_'));
     urbanPts.forEach(([x, z], i) => {
       if (!tryPlace(x, z)) return;
       if (i < lmTypes.length && rnd() < 0.8) {
@@ -12230,11 +12250,17 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   await onProgress?.(0.85, '放置地標建物…');
   for (const lm of landmarks) {
     const g = new THREE.Group();
+    const heritageSeed = (Math.imul(Math.round(lm.x*16),73856093) ^ Math.imul(Math.round(lm.z*16),19349663)) >>> 0;
+    const landmarkRnd = lm.type.startsWith('heritage_') ? mulberry32(heritageSeed) : rnd;
     // 第三參數 = 這一座地標該掛哪一國的旗(依落點的戰場半邊;makeNationPicker)。
     // 不掛旗的型別忽略它 ⇒ 逐位元同舊制。**rnd 仍是第二參數且照抽**(§2.3)。
-    LANDMARKS[lm.type](g, rnd, nation(lm.x, lm.z));   // rnd → 同型地標逐座變化(塔高/層數/徽色)
+    LANDMARKS[lm.type](g, landmarkRnd, nation(lm.x, lm.z), {
+      seed: heritageSeed,
+      latitude: center?.lat, longitude: center?.lng,
+      ruinType: heritageRuinType(lm.tags),
+    });   // 遺跡細節僅讀座標 seed；其他原生地標維持既有呼叫契約。
     bakeContactAO(g, 3);   // 接地 AO 頂點色:地標與地面接縫處手繪暗角(botw_plan Task 2.2)
-    let sc = OVER.lm * (0.9 + rnd() * 0.25);
+    let sc = OVER.lm * (0.9 + landmarkRnd() * 0.25);
     // 物件高度上限(`WORLD_H.OBJ_F` 倍砲塔高)。標稱高 MUST **實測**而不是讀
     // `LANDMARK_COL[].h` —— 那一欄是手寫的**擋彈**高度,對細長尖頂/天線/煙囪常低報數公尺
     //(同一族病灶已在 `ty` 屋頂實測那段記過一次)⇒ 拿它當分母會讓那幾座地標的真正頂端
@@ -12252,11 +12278,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     for (const [ox, oz] of [[lr, 0], [-lr, 0], [0, lr], [0, -lr]]) {
       gy = Math.min(gy, terrain.heightAt(lm.x + ox, lm.z + oz));
     }
-    g.position.set(lm.x, gy - 0.3, lm.z);
+    g.position.set(lm.x, gy + (lm.type === 'heritage_tourism' ? 0.02 : -0.3), lm.z);
     // 碰撞橫斷面用的**局部**包圍盒 MUST 在套朝向之前量(此時 g 未旋轉 ⇒ 世界軸 = 局部軸);
     // 量完才轉。轉完再 setFromObject 拿到的是旋轉後的世界 AABB,拿它當盒面就整個歪掉。
     const lbb = new THREE.Box3().setFromObject(g);
-    g.rotation.y = rnd() * Math.PI * 2;
+    g.rotation.y = landmarkRnd() * Math.PI * 2;
     group.add(g);
     landmarkG.push({ g, x: lm.x, z: lm.z, r: (LANDMARK_COL[lm.type]?.r || 10) * sc });   // 碉堡淨空:整棟隱藏用
     const col = LANDMARK_COL[lm.type];
@@ -12493,7 +12519,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // ---- 水下與沼澤生態、動態、動植物、遺跡與船艦 (aquatics.js) ----
   if (terrain.waterY != null) {
-    const aquaticWorld = buildAquaticWorld(group, terrain, { season, blockers });
+    const aquaticWorld = buildAquaticWorld(group, terrain, { season, blockers, heritageSites: mappedUnderwaterHeritage });
     if (aquaticWorld?.step) {
       dynamics.push((dt) => aquaticWorld.step(dt, celWindTime(), null, isWeatherFrozen()));
     }

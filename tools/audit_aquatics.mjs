@@ -163,10 +163,10 @@ ok(biomesSrc.includes('swampSoft()'), 'buildSwampSurface 採用 swampSoft 黏滯
 ok(gameSrc.includes('aquaticTransition('), 'game.js 在 _updateWaterVeil 呼叫 aquaticTransition');
 const colliderSrc = BREAK_COLLIDER ? aquaticsSrc.replace('if (col) blockers.push(col);', '') : aquaticsSrc;
 ok(colliderSrc.includes('export function relicCollider('), '固定遺跡碰撞由實際子網格外廓推導');
-ok(colliderSrc.includes('buildSunkenRelics(rootGroup, terrain, seed, env.blockers)'),
+ok(colliderSrc.includes('buildSunkenRelics(rootGroup, terrain, seed, env.blockers, env.heritageSites)'),
   '水下建築、沉船與遺跡接入場景 blockers');
 ok(colliderSrc.includes('if (col) blockers.push(col);'), '每個固定水下巨物登記一顆有向盒');
-ok(biomesSrc.includes('buildAquaticWorld(group, terrain, { season, blockers })'),
+ok(biomesSrc.includes('buildAquaticWorld(group, terrain, { season, blockers, heritageSites: mappedUnderwaterHeritage })'),
   'biomes.js 將移動/彈道/LOS 共用 blockers 注入水下系統');
 ok(biomesSrc.includes('registerTreeTrunkColliders(items, blockers)'), '一般樹幹在散布定案後登記物理碰撞');
 ok(biomesSrc.includes('relicCollider(relic, `relic_${kind}`)'), '荒野廢棄遺跡沿用同一幾何量尺');
@@ -257,11 +257,13 @@ ok(biomesSrc.includes('CULTURAL_RELIC_LANDMARKS') && biomesSrc.includes('matched
 
 // OSM 文化／宗教建物必須忠實採用匹配類型，不再以種子換成無關地標。
 import { nativeFunctionalKind } from '../public/js/nativeFunctionalBuildings.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction } from '../public/js/buildingFunctions.js';
+import { heritageStateOf } from '../public/js/heritageSites.js';
 const fnDef = biomesSrc
   .slice(biomesSrc.indexOf('export const CULTURAL_RELIC_LANDMARKS'), biomesSrc.indexOf('function buildingHeight('))
   .replace(/export\s+/g, '');
 const evalCode = `${fnDef}\nreturn { CULTURAL_RELIC_LANDMARKS, matchedBuildingType, buildingType };`;
-const { buildingType: testBuildingType, CULTURAL_RELIC_LANDMARKS: testRelicLandmarks } = new Function('nativeFunctionalKind', evalCode)(nativeFunctionalKind);
+const { buildingType: testBuildingType, CULTURAL_RELIC_LANDMARKS: testRelicLandmarks } = new Function('nativeFunctionalKind', 'BUILDING_FUNCTIONS', 'taggedBuildingFunction', 'heritageStateOf', evalCode)(nativeFunctionalKind, BUILDING_FUNCTIONS, taggedBuildingFunction, heritageStateOf);
 
 let matchCount = 0;
 const N_SAMPLES = 1000;
