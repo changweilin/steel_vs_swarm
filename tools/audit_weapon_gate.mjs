@@ -351,7 +351,7 @@ const mkWalls = (walls) => (ax, ay, az, bx, by, bz) => {
 
   // ---- flat / line(直擊・貫穿):視線 MUST 整段淨空 ----
   {
-    const { id, def } = heavyOf('flat');         // 動能貫穿重武器(gun/rail → traj flat)
+    const { id, def } = heavyOf('flat');         // 動能貫穿重武器(gun → traj flat)
     ok(trajClass(def) === 'flat', `測試前置:${id} 重武器彈道類別 = flat(${def.name})`);
     const rule = reachRule(def);
     const clear = mkClient();
@@ -456,8 +456,8 @@ sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)')
     'line 足跡走既有的 _lancePierced(sim._lanceHits 的客戶端鏡射)');
   // 扇形錐緣 MUST 量到命中量體近側表面(fanConeHalf 單一縫)—— 量中心 = 貼著砲塔/主堡牆面噴
   // 光暈全滅而伺服器那半照樣結算(2026-08-03 使用者回報「打得到一般單位、但不到建築」)
-  ok(/fanConeHalf\(def, d2, this\._hitR\(e\)\)/.test(sv),
-    'fan 足跡的錐緣走 fanConeHalf(def, d2, hitR) 單一縫');
+  ok(/fanConeHalf\(def, (d2|d3), (this\._hitR\(e\)|hr)\)/.test(sv),
+    'fan 足跡的錐緣走 fanConeHalf(def, d, hitR) 單一縫');
   ok(!/Math\.cos\(\(def\.arc/.test(sv) && !/cosA/.test(sv),
     '_shotVictims MUST NOT 留下第二份手寫錐(舊 cosA 已退場)');
   ok(!/Math\.cos\(\(wp\.def\.arc/.test(S) && !/cosA/.test(S),
@@ -991,9 +991,9 @@ sec('Ⅶ 光暈 ⇔ 傷害:沒有射程光暈的敵人 MUST NOT 掉血(2026-08-0
     `海拔 500m 的英雄對地面小兵無高度加成(實得 ×${sim._altRange(h, npc)};舊制 ×1.25 = 隱形 +25% 射程)`);
   h.y = 0;
   const hiHero = { hero: true, ay: 500 + 2, y: 0 }, loHero = { hero: true, ay: 500 - 90, y: 0 };
-  ok(sim._altRange(h, loHero) === 1 && sim._altRange(h, hiHero) === 1,
-    '高度差射程加成已移除(ALTITUDE.RANGE=0,altRangeF 恆為 1)—— 射程優勢由 60° 圓錐幾何承擔');
-  ok(weaponMaxHoriz(100, -92) > 100, '60° 圓錐幾何在俯射時有效水平射程自然展開(推導不手寫)');
+  ok(sim._altRange(h, loHero) > 1 && sim._altRange(h, hiHero) === 1,
+    '對照:英雄 vs 英雄(兩邊都有 ay)仍精確吃高度制空 —— 修的是跨框,不是把機制關掉');
+  ok(sim._altRange(h, loHero) === altRangeF(92), '英雄對英雄的倍率 = altRangeF(絕對高程差)');
 }
 {
   // ---- ② 扇形武器:伺服器自己選目標的唯一一條英雄武器路徑 ⇒ MUST 吃誠實界 ----
@@ -1132,8 +1132,8 @@ sec('Ⅷ 隔山打牛:伺服器自己選目標的路徑 MUST 自己驗地形(202
 {
   // ---- 直線貫穿:超過射程就沒傷害(圓柱端帽不得再放 25% 寬容)----
   const lance = methodSrc('heroLance', S);
-  ok(/inWeaponRange\(wp\.def\.range \* this\._altRange\(b, t, wp\.def\)/.test(lance),
-    'heroLance 逐目標射程閘門吃誠實界(inWeaponRange 上球中下錐幾何,與射程光暈同一個起點)');
+  ok(/hits\[i\]\.s - hitR\(t\) > wp\.def\.range \* this\._altRange\(b, t, wp\.def\)/.test(lance),
+    'heroLance 逐目標射程閘門吃圓柱誠實界(軸向長度 range * altRange)');
   ok(/wp\.def\.range \* altRangeMax\(wp\.def\)\);/.test(lance),
     '射線長上限 = range × altRangeMax(wp.def)(誠實界;len 本來就是客戶端夾過的)');
   const sim = new BattleSim(fakeCfg());
@@ -1242,8 +1242,8 @@ const FNF = heavyOf('fnf');   // 任一名射後不理角色(不寫死角色代�
     const burst = methodSrc('heroBurst', S);
     ok(/const chased = !!lockT\s*&&\s*this\._surfD3\(dist2d\(lockT\.x, lockT\.z, x, z\), lockT\) <= blastCoreR\(wp\.def\);/.test(burst),
       '追擊放行是獨立旗標 chased(MUST NOT 退回 `if (lockT) … else` 的替代語意)');
-    ok(/if \(!chased && dImp > impCap\) return;/.test(burst)
-      && /if \(!chased && dist2d\(bo\.x, bo\.z, x, z\) > impCap\) continue;/.test(burst),
+    ok(/if \(!chased && \(dImp > impCap/.test(burst)
+      && /if \(!chased && \(dist2d\(bo\.x, bo\.z, x, z\) > impCap/.test(burst),
       '射手與僚機吃同一個 chased ⇒ 一般落點閘門對「沒炸在鎖定目標上」的那一發仍原封不動生效');
   }
   // 鎖定過期 ⇒ 退回一般落點閘門
@@ -1637,7 +1637,7 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
   {
     const paths = [
       ['heroHit', /const d3 = Math\.hypot\(h\.x - t\.x, h\.z - t\.z, \(h\.y \|\| 0\) - \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);/, '單體直擊'],
-      ['heroPlasma', /const d3 = Math\.hypot\(d2, byD - \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);/, '扇形(散彈/電漿)'],
+      ['heroPlasma', /const d3 = Math\.hypot\(tx, ty, tz\);/, '扇形(散彈/電漿)'],
       ['_lanceHits', /d3: Math\.hypot\(tx, tz, ty - oy\)/, '直線貫穿'],
       ['hitMissile', /const d3 = Math\.hypot\(h\.x - m\.x, h\.z - m\.z, \(h\.y \|\| 0\) - m\.y\);/, '攔截來襲飛彈'],
       ['botFire', /const d3 = Math\.hypot\(h\.x - t\.x, h\.z - t\.z, \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);|const d3 = Math\.hypot\(h\.x - t\.x, h\.z - t\.z, \(h\.y \|\| 0\) - \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);/, '電腦玩家開火'],
@@ -1655,7 +1655,7 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
   // ---- ⑵ 扇形的球心 = 客戶端回報的槍口(與 heroLance 同一條) ----
   {
     const hp = methodSrc('heroPlasma', S);
-    ok(/heroPlasma\(pid, dx, dz, slot = 'heavy', o = null\)/.test(hp),
+    ok(/heroPlasma\(pid, dx, dz, slot = 'heavy', o = null/.test(hp),
       'heroPlasma 收槍口 o(射程球心;與 heroLance 的 o 同一組座標約定)');
     ok(/dist2d\(h\.x, h\.z, \+o\[0\], \+o\[1\]\) <= 12/.test(hp),
       '槍口防作弊閘與 heroLance 同一道(不能從任意座標噴一個錐)');

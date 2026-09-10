@@ -597,7 +597,7 @@ export class RoomHub {
       if (m.t === 'hit' && client.side) { b.heroHit(myId, m.id, m.w); return; }
       if (m.t === 'hitMissile' && client.side) { b.hitMissile(myId, m.id, m.w); return; }
       if (m.t === 'burst' && client.side) { b.heroBurst(myId, m.x, m.z, m.y, m.lev); return; }   // y = 對空引爆高度 / lev = 爆點結構層(sim 夾範圍)
-      if (m.t === 'plasma' && client.side) { b.heroPlasma(myId, m.dx, m.dz, m.slot, m.o); return; }   // o=[x,z,y] 槍口 = 射程球心(與 lance 同一組約定)
+      if (m.t === 'plasma' && client.side) { b.heroPlasma(myId, m.dx, m.dz, m.slot, m.o, m.dy); return; }   // o=[x,z,y] 槍口 / dy=3D射向
       if (m.t === 'lance' && client.side) { b.heroLance(myId, m.o, m.d, m.len); return; }   // 直線貫穿(beam/rail/gun 重武器):o=[x,z,y] 槍口 / d=[dx,dz,dy] 射向 / len=射線長
       // 機種絕招的三條訊息(kami / decoy / hyper)2026-08-06 整組退場,MUST NOT 復辟:
       // 長按右鍵改成招式手勢(一般 = 小招 / 狙擊 = 大招)⇒ 一律走下面的 't: cast' 單一縫,

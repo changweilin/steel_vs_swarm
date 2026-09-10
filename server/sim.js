@@ -2206,11 +2206,10 @@ export class BattleSim {
     if (!wp || !wp.def.rate) return;
     const cap = (trajClass(wp.def) === 'fnf' ? chaseCapS(wp.def) : flightCapS(wp.def)) || 0.5;
     if (wp.def.needAim && !h.aiming && this.t - (h.aimOffAt ?? -Infinity) > cap) return;   // 重武器需瞄準模式才能開火(容差窗與 heroBurst 同縫)
-    // 射程驗證(2026-09-03:上段球體 / 中下段 60° 圓錐體包絡;留 25% 寬容給網路延遲/彈道飛行)
-    // 量到目標**近側表面**(inWeaponRange 扣除 hitR):彈著本來就停在建築牆面上,量中心會讓砲塔/主堡吃掉整段寬容
+    // 射程驗證(球面射程 + 高度差加成;留 25% 寬容給網路延遲/彈道飛行)
+    // 量到目標**近側表面**(_surfD3):彈著本來就停在建築牆面上,量中心會讓砲塔/主堡吃掉整段寬容
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    const dy = (t.hero ? (t.y || 0) : 0) - (h.y || 0);
-    if (!inWeaponRange(wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL, t.x - h.x, t.z - h.z, dy, hitR(t))) return;
+    if (this._surfD3(d3, t) > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL) return;
     // 迷霧內的目標不可命中:射手陣營看不見(非瞄準模式看不到)就打不到 —
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
     const pulse = this.visionUntil?.[h.side] > this.t;
@@ -2260,8 +2259,7 @@ export class BattleSim {
       if (b === h || b.dead) continue;
       if (t.hp <= 0 || (t.hero && t.dead)) return;
       const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
-      const dy = (t.hero ? (t.y || 0) : 0) - (b.y || 0);
-      if (!inWeaponRange(def.range * this._altRange(b, t, def) * RANGE_TOL, t.x - b.x, t.z - b.z, dy, hitR(t))) continue;
+      if (this._surfD3(d3, t) > def.range * this._altRange(b, t, def) * RANGE_TOL) continue;
       // 僚機自己的射線也吃障礙遮蔽(主機看得到不代表僚機那個角度打得到)
       if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), b, t)) continue;
       // pid/slot:客戶端解析僚機槍口錨(_entMuzzle 取離訊息座標最近那架)+ 開火動畫
@@ -2315,8 +2313,7 @@ export class BattleSim {
     const wp = this._heroWeapon(h, w);
     if (!wp) return false;
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    const dy = (t.hero ? (t.y || 0) : 0) - (h.y || 0);
-    if (!inWeaponRange(wp.def.range * this._altRange(h, t, wp.def), t.x - h.x, t.z - h.z, dy, 0)) return false;
+    if (d3 > wp.def.range * this._altRange(h, t, wp.def)) return false;
     // 電腦玩家不能透視:彈道被實體障礙擋住 = 不開火(與真人 heroHit 同一條 LOS 規則)
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return false;
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
@@ -2404,7 +2401,8 @@ export class BattleSim {
     //     = 高地上合法的那一發被驗證後靜默丟棄:玩家看到砲彈在敵人身上炸開、傷害卻是 0
     //     (2026-07-30 使用者回報「榴彈類常常光暈亮著卻沒命中」的伺服器側那一半)。
     const impCap = wp.def.range * altRangeMax(wp.def) * RANGE_TOL;
-    const maxH = weaponMaxHoriz(wp.def.range * RANGE_TOL, y - (org.y ?? h.y ?? 0));
+    const isLob = trajClass(wp.def) === 'lob';
+    const maxH = isLob ? weaponMaxHoriz(impCap, y - (org.y ?? h.y ?? 0)) : Infinity;
     // 追擊命中:落點落在鎖定目標的爆風核心帶內(量到近側表面,與 _blast/_reachable 同一把尺)
     // ⇒ 射程包絡整條讓位給追擊燃料。**這是一道加分題,不是替代題**(2026-08-03 使用者定案
     // 「中途爆炸也要有傷害」):彈頭在半路撞到小兵/建物/地形就地引爆時,爆點當然不在鎖定
@@ -2413,8 +2411,7 @@ export class BattleSim {
     // 一般閘門照常結算;防作弊沒有變鬆 —— impCap 那條原封不動,遠距落點仍要有鎖定才收。
     const chased = !!lockT
       && this._surfD3(dist2d(lockT.x, lockT.z, x, z), lockT) <= blastCoreR(wp.def);
-    if (!chased && dImp > impCap) return;
-    if (!chased && dImp > maxH) return;
+    if (!chased && (dImp > impCap || (isLob && dImp > maxH))) return;
     // 這一發其實是「飛行時間」秒之前擊發的 —— 把裝填計時器接回擊發時刻(見 _gateFire 的 back)。
     // 飛行時間只准經 `shotFlightS` 這個縫(拋物線是 45° 反解初速,MUST NOT 自己拿 shotV0 除一次:
     // 那會低估 2.2 倍 ⇒ 伺服器的裝填窗比客戶端晚 4 秒);球心與回推量是**同一個解**,故一律取
@@ -2443,9 +2440,8 @@ export class BattleSim {
       // 僚機吃同一道閘門、也吃同一條球心規則(各自的擊發位置 —— 整個小隊在那 6 秒裡是一起
       // 移動的,只修主視野機那一份等於僚機那 1/3 傷害照樣被靜默丟棄)。追擊命中才豁免。
       const bo = this._shotOrigin(b, wp.def, x, z, cap);
-      const boMaxH = weaponMaxHoriz(wp.def.range * RANGE_TOL, y - (bo.y ?? b.y ?? 0));
-      if (!chased && dist2d(bo.x, bo.z, x, z) > impCap) continue;
-      if (!chased && dist2d(bo.x, bo.z, x, z) > boMaxH) continue;
+      const boMaxH = isLob ? weaponMaxHoriz(impCap, y - (bo.y ?? b.y ?? 0)) : Infinity;
+      if (!chased && (dist2d(bo.x, bo.z, x, z) > impCap || (isLob && dist2d(bo.x, bo.z, x, z) > boMaxH))) continue;
       this._blast(b, wp.def, x, z, y, lev, tooClose);
     }
   }
@@ -2470,7 +2466,7 @@ export class BattleSim {
    * ⇒ 那一整條邊界帶「光暈亮著卻不掉血」。取不到 `o`(bot 的 `botFire` 側呼叫 / 舊版客戶端)
    * 退回機體中心 —— bot 沒有客戶端也沒有槍口回報,機體中心就是它的射擊點。
    */
-  heroPlasma(pid, dx, dz, slot = 'heavy', o = null) {
+  heroPlasma(pid, dx, dz, slot = 'heavy', o = null, dy = 0) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over || !Number.isFinite(dx) || !Number.isFinite(dz)) return;
     if (this._blinded(h)) return;
@@ -2479,8 +2475,8 @@ export class BattleSim {
     if (!wp || !wp.def.fan) return;
     const cap = (trajClass(wp.def) === 'fnf' ? chaseCapS(wp.def) : flightCapS(wp.def)) || 0.5;
     if (wp.def.needAim && !h.aiming && this.t - (h.aimOffAt ?? -Infinity) > cap) return;
-    const len = Math.hypot(dx, dz) || 1;
-    dx /= len; dz /= len;
+    const dl = Math.hypot(dx, dz, Number.isFinite(dy) ? dy : 0) || 1;
+    const ux = dx / dl, uz = dz / dl, uy = (Number.isFinite(dy) ? dy : 0) / dl;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     const pulse = this.visionUntil?.[h.side] > this.t;
     const src = this._visionSources(h.side);
@@ -2493,39 +2489,38 @@ export class BattleSim {
       // 僚機以各自機體中心發射(它們沒有槍口回報);主視野機用回報的槍口 ⇒ 射程球心與客戶端同一點
       const lead = mz && b === h;
       const bx = lead ? mz[0] : b.x, bz = lead ? mz[1] : b.z;
-      const byD = lead ? mz[2] : (b.y || 0);                  // 量距離的球心高
-      const byE = lead ? mz[2] : (b.y || 0) + LOS.EYE_M;      // 射線起點高(LOS / 稜線)
+      const byE = lead ? mz[2] : (b.y || 0) + LOS.EYE_M;
       for (const t of [...this.ents.values()]) {
         if (t.side === h.side || t.gar || (t.hero && t.dead)) continue;
         const tx = t.x - bx, tz = t.z - bz;
         const d2 = Math.hypot(tx, tz);
-        const d3 = Math.hypot(d2, byD - (t.hero ? (t.y || 0) : 0));
-        const dy = (t.hero ? (t.y || 0) : 0) - byD;
-        if (!inWeaponRange(wp.def.range * this._altRange(b, t, wp.def), tx, tz, dy, hitR(t))) continue;   // 誠實界(見上方註解);高度制空 + 量到近側表面(_surfD3)
-        // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內。
-        // 錐緣量到目標**命中量體的近側表面**(fanConeHalf 單一縫,lanesim / 客戶端光暈同吃):
-        // 量中心的話,貼著砲塔(hitR 7)/ 主堡(hitR 20)的牆面噴,整個錐子都打在牆上而中心
-        // 還在 30~70° 之外 = 一發都不掉血,同一處的小兵卻照樣被噴死(2026-08-03 使用者回報)。
-        const ang = d2 > 8 ? Math.acos(Math.min(1, Math.max(-1, (tx * dx + tz * dz) / d2))) : 0;
-        if (d2 > 8 && ang > fanConeHalf(wp.def, d2, hitR(t))) continue;
+        // 目標垂直帶:取射線在該水平距離處最貼近的高度點
+        const [y0, y1] = this._bodySpan(t);
+        const rayY = byE + (d2 > 0 ? (uy / (Math.hypot(ux, uz) || 1)) * d2 : 0);
+        const tyTarget = Math.max(y0, Math.min(y1, rayY));
+        const ty = tyTarget - byE;
+        const d3 = Math.hypot(tx, ty, tz);
+        const hr = hitR(t);
+        // 射程誠實界:3D 表面距離不超過有效射程(無 RANGE_TOL)
+        if (Math.max(0, d3 - hr) > wp.def.range * this._altRange(b, t, wp.def)) continue;
+        // 3D 圓錐判定:夾角 <= 錐半角(fanConeHalf 量到近側表面;近距 <=8m 視為正中滿額)
+        const dot = (tx * ux + ty * uy + tz * uz) / (d3 || 1);
+        if (dot <= 0) continue;
+        const ang = d3 > 8 ? Math.acos(Math.min(1, Math.max(-1, dot))) : 0;
+        if (d3 > 8 && ang > fanConeHalf(wp.def, d3, hr)) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
         // 扇形焰舌/彈丸也不穿牆:發射機到目標的射線被實體障礙擋住 = 錐內也打不到
-        // (起點吃同一個 byE ⇒ 射線與射程球心同源,與客戶端 `_reachable` 的 `_layerHitT(from…)` 同一點)
         if (this._losBlocked(bx, bz, byE, t.x, t.z, this._tgtY(t), b, t)) continue;
-        // 也不穿**山**:扇形是伺服器自己在錐內選目標(客戶端只送一個射向)⇒ 沒有任何本端
-        // 地形截斷可以依靠,不補這一道就是隔山打牛 —— 而射程光暈吃的是 `hit:'clear'`
-        // (線段整段淨空,含地形),早就說打不到(2026-08-01 使用者需求)。
+        // 也不穿山
         if (this._ridgeBlocked(bx, bz, this._absSightY(b, byE, bx, bz),
                                t.x, t.z, this._absSightY(t, this._tgtY(t), t.x, t.z), b, t)) continue;
-        // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額;d2 極小的正上/正下視為正中)。
-        // 分母仍是**標稱**半角 —— 量體只放寬「打不打得到」,MUST NOT 讓大目標連傷害一起變高;
-        // 靠量體才進錐的目標一律吃錐緣保底 AOE_EDGE(offAxisFalloff 自帶 [0,1] 夾制)。
+        // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額)
         const offF = offAxisFalloff(ang / arcHalf);
         this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offF, b, wp.def.pen, 0, wp.def);
       }
     }
     this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
-      dx, dz, r: wp.def.range, arc: wp.def.arc || 15, slot: slot === 'light' ? 'light' : 'heavy' });
+      dx: ux, dz: uz, dy: uy, r: wp.def.range, arc: wp.def.arc || 15, slot: slot === 'light' ? 'light' : 'heavy' });
   }
 
   /**
@@ -2633,12 +2628,8 @@ export class BattleSim {
       const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max);
       for (let i = 0; i < hits.length; i++) {
         const { t, d3, off } = hits[i];
-        // 誠實界(2026-08-01「超過射程範圍就沒傷害」;2026-09-03 上段球體/中下段 60° 圓錐體包絡):
-        // `d3` 是從**回報的槍口** ox/oz/oy 量起(見 _lanceHits),與客戶端射程光暈 `_reachable` 的 from 是同一個點
-        // ⇒ 兩端量的是同一段距離,不需要也不能再乘 RANGE_TOL —— 圓柱端帽本來就可以外溢 R + hitR,再放 25% 等於
-        // 光暈不亮的敵人照樣掉血(與 heroPlasma 同一條規則)。
-        const vdy = (t.hero ? (t.y || 0) : this._tgtY(t)) - by;
-        if (!inWeaponRange(wp.def.range * this._altRange(b, t, wp.def), t.x - bx, t.z - bz, vdy, hitR(t))) continue;   // 高度制空;量到近側表面(inWeaponRange,與 _lanceHits 的 R+hitR 同一條尺)
+        // 直線圓柱誠實界:軸向表面距離不超過有效射程
+        if (hits[i].s - hitR(t) > wp.def.range * this._altRange(b, t, wp.def)) continue;
         const dmg = this._rollCrit(b, wp.def,
           this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** i, t);
         this._applyHitEmp(b, wp.def, t);
@@ -6548,11 +6539,18 @@ export class BattleSim {
     // 塔射程拉到 310 也不會把高空無人機從 SAM 手上搶走(#INC-104 的 y=250 仍在天花板之上)
     if ((t.kind === 'drone' || t.kind === 'heli' || t.kind === 'morph')
       && (t.y || 0) > Math.min(u.range * 0.9, GAME.GUN_CEIL_M)) return true;
-    const ey = e.hero ? (e.y || 0) : this._sightY(e);
-    const ty = t.hero ? (t.y || 0) : this._sightY(t);
-    const maxH = weaponMaxHoriz(u.range * this._altRange(e, t, wd), ty - ey);
-    if (d > maxH) return true;   // 射程包絡:上段球體/中下段 60° 圓錐體
-    if (d > maxH * fogSightMult(this.curWeatherVec?.fog ?? 0)) return true;   // 濃霧:包絡同率縮(晴天 ×1 不動)
+    const isLob = wd && trajClass(wd) === 'lob';
+    if (isLob) {
+      const ey = e.hero ? (e.y || 0) : this._sightY(e);
+      const ty = t.hero ? (t.y || 0) : this._sightY(t);
+      const maxH = weaponMaxHoriz(u.range * this._altRange(e, t, wd), ty - ey);
+      if (d > maxH) return true;
+      if (d > maxH * fogSightMult(this.curWeatherVec?.fog ?? 0)) return true;
+    } else {
+      const effR = u.range * this._altRange(e, t, wd);
+      if (d > effR) return true;
+      if (d > effR * fogSightMult(this.curWeatherVec?.fog ?? 0)) return true;
+    }
     return false;
   }
 
