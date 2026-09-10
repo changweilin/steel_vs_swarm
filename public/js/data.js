@@ -719,11 +719,11 @@ export const HEROIC = { range: 1.2, dmg: 1.5 };
 // 爆擊只作用於直擊武器(heroHit/heroLance _rollCrit);招式不吃高度差、也不吃爆擊(AoE 不爆)。
 // **閃避例外**(2026-08-11 使用者定案「所有攻擊招式也加入閃避機制」):招式與一切爆風的傷害
 // 走 sim._blast,由該處逐目標擲 `_dodges` —— 範圍見 `evadable()` 這個唯一縫。
-// 2026-09-03 使用者需求：武器射程範圍改為「上段球體 / 中下段 60° 圓錐體」，移除額外的高度差射程加成(RANGE: 0)。
+// 2026-09-10 使用者需求：拋物線類武器維持原狀，其餘武器改回舊版（球形範圍 + 高度差射程加成）。
 export const ALTITUDE = {
   TIERS: 3,             // |dh| 達「3 個砲塔高」時效果封頂(門檻在 1 個砲塔高)
-  RANGE: 0,             // 較高方 +射程(封頂)—— 2026-09-03 依使用者需求移除額外高度差射程加成，射程優勢由 60° 圓錐幾何本身體現
-  RANGE_HEAVY_MUL: 0.5, // 重武器/大招高度差射程優勢比例(維持推導相容)
+  RANGE: 0.30,          // 較高方 +射程(封頂)—— 球形射程下提供高度差射程優勢
+  RANGE_HEAVY_MUL: 0.5, // 重武器/大招高度差射程優勢比例(減半)
   DODGE: 0.10,         // 較高方 +閃避率(封頂)
   // 爆擊代價四項於 2026-07-27 整組 ×0.7 重新校準(原 0.5/0.5/1.0/0.5)——
   // 對進戰模型(`npm run bal` ⑤)量到舊值讓「較高方勝率」只有 48.3%:+25% 射程只在接近期兌現、
@@ -2304,14 +2304,14 @@ export const lanceR = (def) => LANCE.R[def?.type] ?? LANCE.R.gun;
 
 // ---- 彈道五分類(2026-07-23 使用者定案)----
 //   lob   低初速拋物線:榴彈/火箭吊射(BALLISTIC.LAUNCH_MV;對空時換 AA_MV 見 _updateAaMode)
-//   flat  高初速近似直線:動能彈(gun/rail,mv 900~2500)—— 本質仍是拋物線,只是彈道極平
-//   line  完全直線:光速/準光速直擊(beam 光束、plasma 離子)—— 無重力下墜
+//   flat  高初速近似直線:動能彈(gun,mv 900~2500)—— 本質仍是拋物線,只是彈道極平
+//   line  完全直線:光速/準光速直擊(beam 光束、rail 電磁砲、plasma 離子)—— 無重力下墜
 //   guide 雷射導引:launcher + guide:1,FPV 有導引雷射指向準星目標,彈體騎波修正
 //   fnf   射後不理:missile,離架後自行追蹤發射瞬間的鎖定目標
 // **唯一分類縫 = trajClass(def)**(與 aoeClass 同框,MUST NOT 在別處重寫 type 判斷)。
 export function trajClass(def) {
   if (!def) return null;
-  if (def.type === 'beam' || def.type === 'plasma' || def.fan) return 'line';
+  if (def.type === 'beam' || def.type === 'rail' || def.type === 'plasma' || def.fan) return 'line';
   if (def.type === 'missile') return 'fnf';
   if (def.guide) return 'guide';
   if (def.type === 'launcher') return 'lob';

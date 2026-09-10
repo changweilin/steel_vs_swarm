@@ -3721,7 +3721,8 @@ export class BattleClient {
 
   _removeEnt(id, ent, dissolve = false) {
     if (this._lockId === id) this._clearLockGlow();   // 光暈是目標 mesh 的子節點,別留下懸空參照
-    if (ent._rgGlow) { ent._rgGlow.parent?.remove(ent._rgGlow); this._rgPool?.push(ent._rgGlow); ent._rgGlow = null; }   // 射程光暈回收進池(共用材質,MUST NOT 隨 mesh 一起丟)
+    if (ent._rgGlow) { ent._rgGlow.parent?.remove(ent._rgGlow); this._rgPool?.push(ent._rgGlow); ent._rgGlow = null; }   // 武器射程光暈回收進池(共用材質,MUST NOT 隨 mesh 一起丟)
+    if (ent._rgGlowS) { ent._rgGlowS.parent?.remove(ent._rgGlowS); this._rgPoolS?.push(ent._rgGlowS); ent._rgGlowS = null; }  // 招式光暈同上
     if (ent.aura) { this.scene.remove(ent.aura); this._auras = (this._auras || []).filter((x) => x !== ent); }
     if (ent.statusFx) { ent.statusFx.userData?.dispose?.(); ent.statusFx = null; }
     if (ent.guns) this.scene.remove(ent.guns);
@@ -5840,33 +5841,64 @@ export class BattleClient {
    */
   _updateRangeGlows() {
     const pool = this._rgPool || (this._rgPool = []);
+    const poolS = this._rgPoolS || (this._rgPoolS = []);
     const drop = (ent) => {
       if (ent._rgGlow) { ent._rgGlow.parent?.remove(ent._rgGlow); pool.push(ent._rgGlow); ent._rgGlow = null; }
     };
+    const dropS = (ent) => {
+      if (ent._rgGlowS) { ent._rgGlowS.parent?.remove(ent._rgGlowS); poolS.push(ent._rgGlowS); ent._rgGlowS = null; }
+    };
+    // ---- ① 武器光暈(現有邏輯不變)----
     // shopOpen 一併擋掉:`_lobAim` 對它早退 ⇒ `_lobFc.on` 為假,不擋的話拋物線武器會掉進
     // 直射線那條分支去解一個根本不存在的準星解。
     const def = (this.side && !this.dead && !this.shopOpen) ? this._curWeapon().def : null;
     const shot = def ? this._shotVictims(def, reachRule(def)) : null;
-    if (!shot) { for (const ent of this.ents.values()) drop(ent); return; }
-    const mat = this._rgMaterial(shot.warn);
-    const lit = this._rgLit || (this._rgLit = new Set());
-    lit.clear();
-    // 鎖定目標另有 lockGlow,不疊兩層;攻堅鎖血的建築完全免傷 ⇒ 亮燈是騙人(伺服器 siegeLocked 同判)
-    for (const ent of shot.hits) if (ent.id !== this._lockId && !ent.lk) lit.add(ent);
+    // 武器無目標時只收回武器光暈;招式光暈走獨立路徑(允許在掩體後施放補血/增益時仍顯示足跡)
+    if (!shot) {
+      for (const ent of this.ents.values()) drop(ent);
+    } else {
+      const mat = this._rgMaterial(shot.warn);
+      const lit = this._rgLit || (this._rgLit = new Set());
+      lit.clear();
+      // 鎖定目標另有 lockGlow,不疊兩層;攻堅鎖血的建築完全免傷 ⇒ 亮燈是騙人(伺服器 siegeLocked 同判)
+      for (const ent of shot.hits) if (ent.id !== this._lockId && !ent.lk) lit.add(ent);
+      for (const ent of this.ents.values()) {
+        if (!lit.has(ent)) { drop(ent); continue; }
+        if (ent._rgGlow) { ent._rgGlow.material = mat; continue; }
+        const sp = pool.pop() || new THREE.Sprite(mat);
+        sp.material = mat;
+        sp.userData.noOutline = true;
+        // 尺寸/定位與 lockGlow 的 halo 同一條規則:直徑 = 機體高/寬取大 ×1.15、貼機體幾何中心
+        const h = ent.dimH ?? 4, r = ent.dimR ?? 1.5, top = ent.dimTop ?? h;
+        sp.scale.setScalar(Math.max(3, Math.max(h, r * 2) * 1.15));
+        sp.position.set(0, top - h * 0.5, 0);
+        ent.mesh.add(sp);
+        ent._rgGlow = sp;
+      }
+    }
+    // ---- ② 招式光暈(詠唱期間顯示,與武器光暈並存)----
+    // 獨立於武器光暈:即使武器無目標(如在掩體後施法)也能顯示招式足跡。
+    const castA = (this._isCasting() && this._lastCastA) ? this._lastCastA : null;
+    const skillHits = castA ? this._skillVictims(castA.A, castA.x, castA.z) : [];
+    const matS = castA ? this._rgMaterial(false, true) : null;
+    const litS = this._rgLitS || (this._rgLitS = new Set());
+    litS.clear();
+    for (const ent of skillHits) litS.add(ent);
     for (const ent of this.ents.values()) {
-      if (!lit.has(ent)) { drop(ent); continue; }
-      if (ent._rgGlow) { ent._rgGlow.material = mat; continue; }
-      const sp = pool.pop() || new THREE.Sprite(mat);
-      sp.material = mat;
+      if (!litS.has(ent)) { dropS(ent); continue; }
+      if (ent._rgGlowS) { ent._rgGlowS.material = matS; continue; }
+      const sp = poolS.pop() || new THREE.Sprite(matS);
+      sp.material = matS;
       sp.userData.noOutline = true;
-      // 尺寸/定位與 lockGlow 的 halo 同一條規則:直徑 = 機體高/寬取大 ×1.15、貼機體幾何中心
+      // 招式光暈略大(×1.35 vs ×1.15),視覺可與武器光暈區分
       const h = ent.dimH ?? 4, r = ent.dimR ?? 1.5, top = ent.dimTop ?? h;
-      sp.scale.setScalar(Math.max(3, Math.max(h, r * 2) * 1.15));
+      sp.scale.setScalar(Math.max(3.5, Math.max(h, r * 2) * 1.35));
       sp.position.set(0, top - h * 0.5, 0);
       ent.mesh.add(sp);
-      ent._rgGlow = sp;
+      ent._rgGlowS = sp;
     }
   }
+
 
   /**
    * 「這一發會傷到誰」——**範圍光暈的唯一名冊**(2026-08-03 使用者定案,見 `_updateRangeGlows`)。
@@ -5943,21 +5975,28 @@ export class BattleClient {
     } else if (cls === 'fan') {
       const fwd = this.camera.getWorldDirection(this._rgDir || (this._rgDir = new THREE.Vector3()));
       const hl = Math.hypot(fwd.x, fwd.z) || 1;
-      const ux = fwd.x / hl, uz = fwd.z / hl;
       for (const e of this.ents.values()) {
         if (!foe(e)) continue;
         const p = e.mesh.position;
         const tx = p.x - from.x, tz = p.z - from.z;
         const d2 = Math.hypot(tx, tz);
-        // 錐緣量到**命中量體近側表面**(`fanConeHalf` 單一縫,與 sim.heroPlasma 逐位元同式)——
-        // 量中心的話,貼著砲塔/主堡牆面時光暈全滅,而伺服器那半照樣結算 = 兩端分家。
-        if (d2 > 8) {
-          const ang = Math.acos(Math.min(1, Math.max(-1, (tx * ux + tz * uz) / d2)));
-          if (ang > fanConeHalf(def, d2, this._hitR(e))) continue;
+        const hr = this._hitR(e);
+        const h = e.dimH ?? 4;
+        const y1 = p.y + (e.dimTop ?? h), y0 = y1 - h;
+        const rayY = from.y + (d2 > 0 ? (fwd.y / hl) * d2 : 0);
+        const tyTarget = Math.max(y0, Math.min(y1, rayY));
+        const ty = tyTarget - from.y;
+        const d3 = Math.hypot(tx, ty, tz);
+        // 3D 錐緣量到命中量體近側表面(fanConeHalf 單一縫,與 sim.heroPlasma 逐位元同式)
+        const dot = (tx * fwd.x + ty * fwd.y + tz * fwd.z) / (d3 || 1);
+        if (dot <= 0) continue;
+        if (d3 > 8) {
+          const ang = Math.acos(Math.min(1, Math.max(-1, dot)));
+          if (ang > fanConeHalf(def, d3, hr)) continue;
         }
         if (this._inShotRange(e, def, from)) hits.push(e);
       }
-    } else if (cls === 'fan' || cls === 'line') {
+    } else if (cls === 'line') {
       for (const h of this._lancePierced(from, impact, lanceR(def))) {
         if (foe(h.ent) && this._inShotRange(h.ent, def, from)) hits.push(h.ent);
       }
@@ -5967,14 +6006,13 @@ export class BattleClient {
 
   /**
    * 逐目標「射程內 + 射線淨空」(扇形 / 貫穿的足跡共用):量到**近側表面**、比對逐目標有效射程
-   * `_effRange`(與伺服器 `_surfD3 ≤ range × _altRange` 誠實界同一把尺),線段淨空與
+   * `_effRange`(與伺服器誠實界同一把尺),線段淨空與
    * `_reachable` 的 `hit:'clear'` 同一式(`_layerHitT` + `RANGE_GLOW.SURF_TOL_M`)。
    */
   _inShotRange(ent, def, from) {
     const aim = this._entAimPoint(ent);
     const hr = this._hitR(ent);
     const rng = this._effRange(def, ent);
-    if (!inWeaponRange(rng, aim.x - from.x, aim.z - from.z, aim.y - from.y, hr)) return false;
     const surf = Math.max(0, from.distanceTo(aim) - hr);
     if (surf > rng) return false;
     const cut = this._layerHitT(from.x, from.y, from.z, aim.x, aim.y, aim.z);
@@ -6001,14 +6039,46 @@ export class BattleClient {
     return (mr > 0 && d < mr) || (arm > 0 && d < arm);
   }
 
-  /** 射程光暈的兩份共用材質(A25:全場共用,MUST NOT 逐 ent 配置)。warn = 琥珀警示色。 */
-  _rgMaterial(warn) {
+  /** 射程光暈的共用材質(A25:全場共用,MUST NOT 逐 ent 配置)。
+   *  warn = 琥珀警示色; skill = 青白色招式足跡(與武器陣營色並存、可視區分)。 */
+  _rgMaterial(warn, skill = false) {
+    if (skill) return this._rgMatSkill || (this._rgMatSkill = new THREE.SpriteMaterial({
+      map: glowTexture(), color: 0x66eeff,
+      transparent: true, opacity: 0.28,
+      blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+    }));
     const key = warn ? '_rgMatWarn' : '_rgMat';
     return this[key] || (this[key] = new THREE.SpriteMaterial({
       map: glowTexture(), color: warn ? 0xffb03a : SIDES[this.side].color,
       transparent: true, opacity: warn ? 0.32 : 0.26,
       blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
     }));
+  }
+
+  /**
+   * 「這一招詠唱中會影響到誰」——招式光暈的足跡名冊。只在 `_isCasting()` 為真時被呼叫。
+   * 不鏡射伺服器複雜幾何(招式伺服器結算多樣,精確複製成本高);以招式 `range` 為球半徑做
+   * 保守估算(只要有 range 且目標類型符合就入列)。
+   *   ・`target: 'self'` → 空(不標記他人)
+   *   ・`target: 'enemy'` → 在 range 球內的敵方單位
+   *   ・`target: 'team'` / `'ground'` → 在 range 球內的我方單位(含自機)
+   * 落點 (cx, cz) 是施放當下的準星落點(已存在 _lastCastA)。
+   */
+  _skillVictims(A, cx, cz) {
+    const hits = [];
+    if (!A.range || A.target === 'self') return hits;
+    const targetFoe = A.target === 'enemy';
+    const ox = this.pos?.x ?? 0, oz = this.pos?.z ?? 0;
+    const r = A.range + 4;   // 給一點寬容(招式 range 是傷害半徑,包圍球再放大一點)
+    for (const e of this.ents.values()) {
+      if (!e.mesh?.visible || e.dead || e.gar || e.neutral) continue;
+      const isFoe = e.side && e.side !== this.side;
+      if (targetFoe ? !isFoe : isFoe) continue;
+      const p = e.mesh.position;
+      if (Math.hypot(p.x - cx, p.z - cz) - (this._hitR(e) || 1) > r) continue;
+      hits.push(e);
+    }
+    return hits;
   }
 
   /**
@@ -6034,7 +6104,9 @@ export class BattleClient {
     // 瞄機體幾何中心(與 _coneAcquire 同一條):打頭/打腳都算打中同一具機體
     aim.set(p.x, p.y + (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 1.5), p.z);
     const hr = this._hitR(ent);
-    if (!inWeaponRange(rng, aim.x - from.x, aim.z - from.z, aim.y - from.y, hr)) return { ok: false, warn: false };
+    if (rule.path === 'arc') {
+      if (!inWeaponRange(rng, aim.x - from.x, aim.z - from.z, aim.y - from.y, hr)) return { ok: false, warn: false };
+    }
     const full = from.distanceTo(aim);
     const surf = Math.max(0, full - hr);   // 到近側表面(與伺服器 _surfD3 同一把尺)
     // 射程本身也住這裡(**唯一縫**):呼叫端的候選閘刻意只寬不緊,「打得到嗎」的距離判據
@@ -7171,33 +7243,35 @@ export class BattleClient {
       // o = 槍口(與 lance 同一組座標約定:[x, −z, 離站立表面高])= **射程球心**。扇形吃誠實界
       // (無 RANGE_TOL 吸收兩端差),球心 MUST 與射程光暈 `_reachable` 的 from 是同一個點 ——
       // 少送這一欄,伺服器就退回機體中心量,槍口前伸的那一段變成「光暈亮著卻不掉血」的邊界帶。
-      this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z, slot: id,   // three z 南 → 模擬 z 北
+      this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z, slot: id, dy: dir.y,   // three z 南 → 模擬 z 北
         o: [Math.round(muzzle.x * 10) / 10, Math.round(-muzzle.z * 10) / 10,
           Math.round(((this._altAG || 0) + (muzzle.y - this.pos.y)) * 10) / 10] });
       return;
     }
 
-    if (def.type === 'beam') {
-      // 定向能:光速直擊(trajClass 'line',無彈道下墜),仍受射程限制。
-      // 貫穿光束(aoeClass 'line')的準星射線 MUST NOT 停在第一個單位身上(pierce)——
+    if (def.type === 'beam' || def.type === 'rail') {
+      // 定向能 / 電磁砲:光速/準光速直擊(trajClass 'line',無彈道下墜),仍受射程限制。
+      // 貫穿光束/電磁彈(aoeClass 'line')的準星射線 MUST NOT 停在第一個單位身上(pierce)——
       // 停下來的話回報給伺服器的 len 只到「目標近側表面」,而目標中心在那之後 ⇒ 整發落空,
       // 更別說貫穿後排。與動能貫穿彈(_updateBullets 的 b.pierce)同一條規則:只有地形/障礙才終止。
       const pierce = aoeClass(def) === 'line';
       const { point, ent, missileId } = this._resolveAim(rng, pierce);   // 高度制空:逐目標有效射程(與射程光暈同一個數字)
-      const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
+      const col = def.type === 'beam'
+        ? (this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff)
+        : this._shotCols(this.side).col;
       this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z], slot: id, hit: 1 });
       // 直線貫穿一發只過一次 _gateFire ⇒ 來襲飛彈的擊落併進 heroLance 的圓柱掃描,
       // 這裡 MUST NOT 另送 hitMissile(會重複扣彈藥/電力)。
       if (missileId != null && aoeClass(def) !== 'line') this.net.send({ t: 'hitMissile', id: missileId, w: id });
       if (aoeClass(def) === 'line') {
-        // 重武器光束 = 圓柱貫穿(伺服器 heroLance 沿射線結算全部目標);鋼彈式演出見 _lanceVisual
+        // 重武器光束 / 電磁砲 = 圓柱貫穿(伺服器 heroLance 沿射線結算全部目標);演出見 _lanceVisual
         this._lanceVisual(muzzle, point, def, this.side);
         this._muzzleBurst(muzzle, true, this.side);
         const oy = (this._altAG || 0) + (muzzle.y - this.pos.y);
         this._lanceFeedback(def, this._sendLance(muzzle, point, def, oy), point);
         return;
       }
-      // 輕武器光束:不屬重武器三分類 —— 維持單體直擊(heroHit)
+      // 輕武器光束 / 電磁砲:不屬重武器三分類 —— 維持單體直擊(heroHit)
       const hitEnt = ent || (missileId == null ? this._aimTarget(rng) : null);
       this._tracer(muzzle, point, col, 0.35);
       this._muzzleBurst(muzzle, false, this.side);
@@ -7305,15 +7379,17 @@ export class BattleClient {
     this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1) * airRecoil;
     if (prof.back) this.vel.addScaledVector(dir, -prof.back * airRecoil);
 
-    if (def.type === 'beam') {
-      const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
+    if (def.type === 'beam' || def.type === 'rail') {
+      const col = def.type === 'beam'
+        ? (this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff)
+        : this._shotCols(this.side).col;
       const { point } = this._resolveAim(rng, aoeClass(def) === 'line');
       this._tracer(muzzle, point, col, 0.35);
       this._muzzleBurst(muzzle, false, this.side);
       starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
       return;
     }
-    // 動能 / 磁軌:與本體同初速同重力 ⇒ 三發走同一條彈道,看起來就是一串連續的曳光
+    // 動能:與本體同初速同重力 ⇒ 三發走同一條彈道,看起來就是一串連續的曳光
     const to = muzzle.clone().addScaledVector(dir, rng);
     this._spawnVisShell(muzzle, to, def, this.side, this.ch, this._shotV0(def, false), false);
   }
@@ -7636,6 +7712,8 @@ export class BattleClient {
       this._castingUntil = now + castDur;
       this.castLeft = castDur;
     }
+    // 招式光暈:記錄最後施放的招式資訊供 _updateRangeGlows 在詠唱期間顯示招式足跡色光暈
+    this._lastCastA = { A, x, z };
     // 突進 / 相位穿梭:位移本就客戶端權威,樂觀立即生效(CD/MP 伺服器把關)
     if (A.fx === 'dash' || A.fx === 'phaseshift') {
       const look = this.camera.getWorldDirection(new THREE.Vector3());

@@ -594,7 +594,9 @@ export class BotBrain {
           this.sim.heroBurst(this.pid, t.x, t.z, ty);
         }
       } else if (hv.type === 'plasma') {
-        this.sim.heroPlasma(this.pid, t.x - h.x, t.z - h.z);
+        const ty = this.sim._tgtY(t);
+        const oy = (h.y || 0) + LOS.EYE_M;
+        this.sim.heroPlasma(this.pid, t.x - h.x, t.z - h.z, 'heavy', null, ty - oy);
       } else this._fire(t.id, 'heavy');
     }
 
