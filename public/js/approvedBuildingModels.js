@@ -108,6 +108,7 @@ const profileOf = (entry) => {
  */
 export function fitApprovedBuilding(building, architecture = null, seed = 0, options = { rectangular: true }) {
   if (!BUILDING_PARTS.length) return null;
+  if (architecture?.proceduralOnly) return null;
   if (![building.w, building.d, building.h].every(n => Number.isFinite(n) && n > 0)) return null;
   if (architecture?.slope >= ARCHITECTURE_SITE.slopeDeg) return null;
   const target = Math.max(building.w, 0.001) / Math.max(building.d, 0.001);

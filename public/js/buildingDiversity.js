@@ -15,7 +15,7 @@ export function architectureHash(value, salt = '') {
 
 /** 依國家代碼或經緯度判定所屬文化圈 */
 export function detectCulturalRegion(location = {}) {
-  const country = String(location.country || location.iso || '').toUpperCase();
+  const country = String(location.country || location.iso || '').trim().toUpperCase();
   if (country) {
     for (const [regionKey, reg] of Object.entries(CULTURAL_REGIONS)) {
       if (reg.countries?.includes(country)) return regionKey;
@@ -24,7 +24,9 @@ export function detectCulturalRegion(location = {}) {
   const lat = location.lat ?? location.center?.lat ?? location.ll?.[0];
   const lon = location.lng ?? location.lon ?? location.center?.lng ?? location.center?.lon ?? location.ll?.[1];
   if (Number.isFinite(lat) && Number.isFinite(lon)) {
-    for (const [regionKey, reg] of Object.entries(CULTURAL_REGIONS)) {
+    const regions = Object.entries(CULTURAL_REGIONS).filter(([,reg]) => reg.bbox?.length === 4)
+      .sort(([,a],[,b]) => (a.bbox[2]-a.bbox[0])*(a.bbox[3]-a.bbox[1]) - (b.bbox[2]-b.bbox[0])*(b.bbox[3]-b.bbox[1]));
+    for (const [regionKey, reg] of regions) {
       const [minLat, minLon, maxLat, maxLon] = reg.bbox || [];
       if (lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon) return regionKey;
     }
@@ -165,13 +167,25 @@ export function architectureWeights(context = {}) {
     if (weights.industrial) weights.industrial *= 1.5;
   }
 
+  // 已知用途／樓高不套用不相容的固定地域剪影。
+  const taggedHeight = Number.parseFloat(context.building?.tags?.height);
+  const levelsHeight = Number.parseFloat(context.building?.tags?.['building:levels']) * 3.2;
+  const height = context.targetHeight || taggedHeight || levelsHeight;
+  if (height) {
+    weights = Object.fromEntries(Object.entries(weights).filter(([id]) =>
+      !ARCHITECTURE_STYLES[id].maxHeight || height <= ARCHITECTURE_STYLES[id].maxHeight));
+  }
+
   // 依座標位置所屬文化圈調整權重：符合文化者占 60%
   const region = context.region || detectCulturalRegion(context.location || context);
   if (region && CULTURAL_REGIONS[region]) {
     const culturalStyleIds = new Set(CULTURAL_REGIONS[region].styles || []);
     // 注入該文化圈風格候選
     for (const styleId of culturalStyleIds) {
-      if (weights[styleId] == null && ARCHITECTURE_STYLES[styleId]) {
+      if (weights[styleId] == null && ARCHITECTURE_STYLES[styleId]
+        && (!height || !ARCHITECTURE_STYLES[styleId].maxHeight || height <= ARCHITECTURE_STYLES[styleId].maxHeight)
+        && (!context.functionInfo || !ARCHITECTURE_STYLES[styleId].categories
+          || ARCHITECTURE_STYLES[styleId].categories.includes(context.functionInfo.category))) {
         weights[styleId] = 10;
       }
     }
@@ -200,7 +214,9 @@ export function architectureWeights(context = {}) {
 }
 
 export function chooseArchitecture(seed, identity, context = {}) {
-  const { profile, weights, region } = architectureWeights(context);
+  const funcInfo = context.functionInfo || inferBuildingFunction(context.building, context.poly, context);
+  const heightInfo = sampleBuildingHeight(funcInfo.key, seed, identity, context.building || {});
+  const { profile, weights, region } = architectureWeights({ ...context, functionInfo: funcInfo, targetHeight: heightInfo.height });
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   let pick = architectureHash(identity, seed) / 4294967296 * total;
   let id = Object.keys(weights).at(-1);
@@ -209,8 +225,6 @@ export function chooseArchitecture(seed, identity, context = {}) {
     if (pick < 0) { id = key; break; }
   }
 
-  const funcInfo = context.functionInfo || inferBuildingFunction(context.building, context.poly, context);
-  const heightInfo = sampleBuildingHeight(funcInfo.key, seed, identity, context.building || {});
 
   return {
     ...ARCHITECTURE_STYLES[id],
