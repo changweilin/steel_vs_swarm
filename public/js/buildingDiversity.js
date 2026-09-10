@@ -4,6 +4,7 @@ import {
   BUILDING_FUNCTION_RANGES, CULTURAL_REGIONS, CULTURAL_AFFINITY_RATIO,
 } from './architectureStyles.js';
 import { buildContainmentIndex } from './osmAreas.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
 
 export function architectureHash(value, salt = '') {
   const text = `${value}|${salt}`;
@@ -15,7 +16,7 @@ export function architectureHash(value, salt = '') {
 
 /** 依國家代碼或經緯度判定所屬文化圈 */
 export function detectCulturalRegion(location = {}) {
-  const country = String(location.country || location.iso || '').toUpperCase();
+  const country = String(location.country || location.iso || '').trim().toUpperCase();
   if (country) {
     for (const [regionKey, reg] of Object.entries(CULTURAL_REGIONS)) {
       if (reg.countries?.includes(country)) return regionKey;
@@ -24,7 +25,9 @@ export function detectCulturalRegion(location = {}) {
   const lat = location.lat ?? location.center?.lat ?? location.ll?.[0];
   const lon = location.lng ?? location.lon ?? location.center?.lng ?? location.center?.lon ?? location.ll?.[1];
   if (Number.isFinite(lat) && Number.isFinite(lon)) {
-    for (const [regionKey, reg] of Object.entries(CULTURAL_REGIONS)) {
+    const regions = Object.entries(CULTURAL_REGIONS).filter(([,reg]) => reg.bbox?.length === 4)
+      .sort(([,a],[,b]) => (a.bbox[2]-a.bbox[0])*(a.bbox[3]-a.bbox[1]) - (b.bbox[2]-b.bbox[0])*(b.bbox[3]-b.bbox[1]));
+    for (const [regionKey, reg] of regions) {
       const [minLat, minLon, maxLat, maxLon] = reg.bbox || [];
       if (lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon) return regionKey;
     }
@@ -35,7 +38,17 @@ export function detectCulturalRegion(location = {}) {
 /** 推導建築地點與功能分類 */
 export function inferBuildingFunction(building = {}, poly = null, context = {}) {
   const tags = building.tags || {};
+  const explicit = taggedBuildingFunction(tags);
+  if (explicit) return explicit;
   const bld = String(tags.building || tags['building:part'] || '');
+  // 校區／醫療園區等只有邊界標籤時，僅傳給未指定用途的屋身。
+  // 宿舍、車庫、禮拜堂等已有自身形制的建物不繼承整個園區用途。
+  if (!bld || bld === 'yes') {
+    const parent = taggedBuildingFunction(context.parentTags);
+    if (parent && ['hospital', 'school', 'university', 'kindergarten', 'station', 'plant', 'substation', 'water'].includes(parent.type)) {
+      return { ...parent, inherited: true };
+    }
+  }
   const shop = String(tags.shop || '');
   const amenity = String(tags.amenity || '');
   const landuse = String(tags.landuse || context.landuse || '');
@@ -159,10 +172,21 @@ export function architectureWeights(context = {}) {
   const profile = context.slope >= ARCHITECTURE_SITE.slopeDeg ? 'hillside'
     : context.urban ? 'urban' : context.rural ? 'rural' : 'plain';
   let weights = { ...ARCHITECTURE_PROFILES[profile] };
-  if (context.courtyard) weights.courtyard = (weights.courtyard || 10) * 2;
+  const functional = context.functionInfo?.locked && BUILDING_FUNCTIONS[context.functionInfo.type];
+  if (functional) weights = Object.fromEntries(functional.styles.map(id => [id, 10]));
+  if (!functional && context.courtyard) weights.courtyard = (weights.courtyard || 10) * 2;
   if (context.elongated) {
     if (weights.machiya) weights.machiya *= 1.5;
     if (weights.industrial) weights.industrial *= 1.5;
+  }
+
+  // 已知用途／樓高不套用不相容的固定地域剪影。
+  const taggedHeight = Number.parseFloat(context.building?.tags?.height);
+  const levelsHeight = Number.parseFloat(context.building?.tags?.['building:levels']) * 3.2;
+  const height = context.targetHeight || taggedHeight || levelsHeight;
+  if (height) {
+    weights = Object.fromEntries(Object.entries(weights).filter(([id]) =>
+      !ARCHITECTURE_STYLES[id].maxHeight || height <= ARCHITECTURE_STYLES[id].maxHeight));
   }
 
   // 依座標位置所屬文化圈調整權重：符合文化者占 60%
@@ -171,7 +195,10 @@ export function architectureWeights(context = {}) {
     const culturalStyleIds = new Set(CULTURAL_REGIONS[region].styles || []);
     // 注入該文化圈風格候選
     for (const styleId of culturalStyleIds) {
-      if (weights[styleId] == null && ARCHITECTURE_STYLES[styleId]) {
+      if (!functional && weights[styleId] == null && ARCHITECTURE_STYLES[styleId]
+        && (!height || !ARCHITECTURE_STYLES[styleId].maxHeight || height <= ARCHITECTURE_STYLES[styleId].maxHeight)
+        && (!context.functionInfo || !ARCHITECTURE_STYLES[styleId].categories
+          || ARCHITECTURE_STYLES[styleId].categories.includes(context.functionInfo.category))) {
         weights[styleId] = 10;
       }
     }
@@ -192,11 +219,18 @@ export function architectureWeights(context = {}) {
     }
   }
 
+  // 地形安全高於文化加權；文化注入不得重新引入不適合陡坡的風格。
+  if (!functional && context.slope >= ARCHITECTURE_SITE.steepSlopeDeg) {
+    weights = Object.fromEntries(Object.entries(weights).filter(([id]) => ARCHITECTURE_STYLES[id].foundation));
+  }
   return { profile, weights, region };
 }
 
 export function chooseArchitecture(seed, identity, context = {}) {
-  const { profile, weights, region } = architectureWeights(context);
+  const funcInfo = context.functionInfo || inferBuildingFunction(context.building, context.poly, context);
+  const heightInfo = sampleBuildingHeight(funcInfo.key, seed, identity, context.building || {});
+  const functional = funcInfo.locked && BUILDING_FUNCTIONS[funcInfo.type];
+  const { profile, weights, region } = architectureWeights({ ...context, functionInfo: funcInfo, targetHeight: heightInfo.height });
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   let pick = architectureHash(identity, seed) / 4294967296 * total;
   let id = Object.keys(weights).at(-1);
@@ -205,12 +239,17 @@ export function chooseArchitecture(seed, identity, context = {}) {
     if (pick < 0) { id = key; break; }
   }
 
-  const funcInfo = context.functionInfo || inferBuildingFunction(context.building, context.poly, context);
-  const heightInfo = sampleBuildingHeight(funcInfo.key, seed, identity, context.building || {});
 
   return {
     ...ARCHITECTURE_STYLES[id],
-    id, profile, region,
+    ...(functional ? {
+      proceduralOnly: true, functionLocked: true, structureOnly: !!functional.structureOnly,
+      // 功能不因陡坡而改成住宅；程序外環沿用已驗證的逐段擋土基礎。
+      foundation: 'retaining',
+      ...(['religious', 'heritage'].includes(functional.category) ? { era: 'historic' } : {}),
+      ...(functional.roofForm ? { roofForm: functional.roofForm } : {}),
+    } : {}),
+    id, profile, region, slope: context.slope || 0,
     variant: architectureHash(identity, `${seed}:variant`) % 3,
     functionInfo: funcInfo,
     targetHeight: heightInfo.height,
@@ -246,8 +285,10 @@ export function createArchitecturePlanner({
     const d = ARCHITECTURE_SITE.probeM;
     const heights = [[x - d, z], [x + d, z], [x, z - d], [x, z + d]]
       .map(([px, pz]) => terrain?.heightAt?.(px, pz));
-    const slope = heights.every(Number.isFinite)
+    let slope = heights.every(Number.isFinite)
       ? Math.atan(Math.hypot(heights[1] - heights[0], heights[3] - heights[2]) / (2 * d)) * 180 / Math.PI : 0;
+    const site = poly ? sampleBuildingSite(poly, terrain) : null;
+    if (site) slope = Math.max(slope, site.slope);
     const rural = /farmland|farmyard|orchard|vineyard|meadow|allotments/.test(use) || building.tags?.building === 'farm'
       || (use === 'residential' && density < ARCHITECTURE_SITE.urbanNeighbors && !settlement);
     const urban = !rural && (/commercial|retail|industrial/.test(use)
@@ -261,11 +302,11 @@ export function createArchitecturePlanner({
 
     const ctx = {
       slope, urban, rural, courtyard: !!poly?.holes?.length, elongated,
-      density, landuse: use, building, poly, region, location: loc,
+      density, landuse: use, parentTags: parent?.tags, building, poly, region, location: loc,
       seed, identity,
     };
     ctx.functionInfo = inferBuildingFunction(building, poly, ctx);
-    return chooseArchitecture(seed, identity, ctx);
+    return { ...chooseArchitecture(seed, identity, ctx), site };
   };
 }
 
@@ -278,4 +319,29 @@ export function pickArchitectureModel(ranked, style, seed) {
   let pick = architectureHash(seed, style.id) / 4294967296 * weighted.reduce((sum, row) => sum + row.weight, 0);
   for (const row of weighted) { pick -= row.weight; if (pick < 0) return row.row; }
   return weighted.at(-1).row;
+}
+
+/** 坡地基礎、風格與落地高度共用裸地採樣。 */
+export function sampleBuildingSite(poly, terrain) {
+  const segments = [];
+  if (typeof terrain?.heightAt !== 'function') return null;
+  let min = Infinity, max = -Infinity, slope = 0;
+  for (const ring of [poly.outer, ...(poly.holes || [])]) {
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], b = ring[(i + 1) % ring.length];
+      const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (length < 1e-5) continue;
+      const count = Math.max(1, Math.ceil(length / ARCHITECTURE_SITE.foundationProbeM));
+      for (let j = 0; j < count; j++) {
+        const point = t => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        const start = point(j / count), end = point((j + 1) / count);
+        const y0 = terrain.heightAt(...start), y1 = terrain.heightAt(...end);
+        if (!Number.isFinite(y0) || !Number.isFinite(y1)) return null;
+        min = Math.min(min, y0, y1); max = Math.max(max, y0, y1);
+        slope = Math.max(slope, Math.atan2(Math.abs(y1 - y0), length / count) * 180 / Math.PI);
+        segments.push({ start, end, y: Math.min(y0, y1) });
+      }
+    }
+  }
+  return segments.length ? { min, max, slope, segments } : null;
 }

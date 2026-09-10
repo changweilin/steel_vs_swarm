@@ -18,6 +18,40 @@ function stalls(g,rnd) {
   }
 }
 export const ACTIVITY_RUINS = {
+  torii:ruin('鳥居入口遺跡','祭祀',(g)=>{
+    for(const x of [-4,4]) {g.column(x,0,0,.45,6,10);g.box(x,0,0,1.4,.5,1.4);}
+    g.box(0,4.6,0,10,.4,.5);g.box(0,6,0,11,.5,.8);
+    g.box(-4.8,6.2,0,2,.4,.8,-.12);g.box(4.8,6.2,0,2,.4,.8,.12);
+  }),
+  obelisk:ruin('方尖碑與石環','祭祀',(g)=>{
+    g.box(0,0,0,5,.8,5);g.frustum(0,.8,0,2.4,9,2.4,1.5,1.5);g.frustum(0,9.8,0,1.5,1.5,1.5,0,0);
+    stoneRing(g,0,0,0,8,1);
+  }),
+  bell_tower:ruin('殘缺尖頂鐘樓','祭祀',(g)=>{
+    g.house(0,0,0,6,6,8);g.box(0,8,0,7,.5,7);g.frustum(0,8.5,0,7,6,7,0,0);
+  }),
+  slate_house:ruin('石板屋遺址','居住',(g)=>{
+    g.house(0,0,0,12,8,2.6);
+    for(let i=0;i<5;i++) g.box(-5+i*2.5,2.6,-2.4,2.6,.18,3.3);
+  }),
+  egyptian_gate:ruin('雙塔門與柱廳遺跡','祭祀',(g,rnd)=>{
+    for(const x of [-5,5]) g.frustum(x,0,0,6,8,4,4,3);
+    g.box(0,5,0,5,1.1,3);
+    for(const x of [-5,0,5]) for(const z of [-6,-11]) g.column(x,0,z,.55,3+rnd()*2,10);
+  }),
+  boat_roof_frame:ruin('舟形屋架遺跡','居住',(g)=>{
+    for(const x of [-3,3]) for(const z of [-5,0,5]) g.column(x,0,z,.3,3,8);
+    g.box(0,3,0,7,.35,12);g.house(0,3.35,0,6,10,2);
+    for(const x of [-3,3]) for(let i=0;i<6;i++) {
+      const z=-6+i*2, next=z+2, y=5.4+z*z*.045, ny=5.4+next*next*.045;
+      // Short stepped beam segments retain the upturned roof silhouette without a solid fake roof.
+      g.box(x,Math.min(y,ny),z+1,.22,.25+Math.abs(ny-y),2.1);
+    }
+  }),
+  inuksuk:ruin('疊石人形標記','祭祀',(g)=>{
+    for(const x of [-1,1]) g.box(x,0,0,1,2,1);
+    g.box(0,2,0,4,.8,1.1);g.box(0,2.8,0,1.6,1,1.2);g.box(0,3.8,0,1.2,.8,1);
+  }),
   farm:ruin('廢棄農莊與梯田','農牧',(g,rnd)=>{
     for(let i=0;i<4;i++) {g.box(0,i,-i*4,26-i*3,1,18-i*3);g.box(0,i+1,8-i*3.5,26-i*3,.5,.5);}
     g.house(-5,4,-6,6,7,2+rnd());g.house(5,4,-6,5,6,2);

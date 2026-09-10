@@ -1,8 +1,9 @@
 // ============ 建築文化風格、功能分區、立面材質與屋頂幾何型錄 ============
 // 文化／年代是視覺語彙，不改寫圖資的實際用途；比例皆為相對權重。
 // 依座標位置所屬國家與文化圈加權，符合在地文化者占 60% (CULTURAL_AFFINITY_RATIO)。
+import { REGIONAL_STYLES, REGIONAL_CULTURES } from './regionalArchitecture.js';
 
-/** 12 款屋頂外觀分類 */
+/** 屋頂外觀分類；所有風格與附件共用此登錄。 */
 export const ROOF_FORMS = Object.freeze({
   flat: '平頂',
   shed: '單邊斜頂',
@@ -16,9 +17,11 @@ export const ROOF_FORMS = Object.freeze({
   xieshan: '歇山頂',
   xuanshan: '懸山頂',
   yingshan: '硬山頂',
+  tiered: '重簷頂', stepped: '退台頂', sawtooth: '鋸齒頂',
+  steep_gable: '陡坡雙坡頂', crowstep: '階梯山牆頂', gambrel: '雙坡複折頂', butterfly: '蝶形頂',
 });
 
-/** 7 款牆面外觀材質分類 */
+/** 牆面外觀材質分類 */
 export const FACADE_TYPES = Object.freeze({
   brick: '磚瓦',
   stone: '石砌',
@@ -27,6 +30,7 @@ export const FACADE_TYPES = Object.freeze({
   glass_curtain: '大玻璃窗',
   concrete: '清水模',
   green: '綠建築',
+  plaster: '灰泥', earth: '土築', sandstone: '砂岩',
 });
 
 /** 地點與功能分類：樓層數與層高隨機範圍（先針對區域拉伸後再渲染） */
@@ -58,7 +62,7 @@ export const BUILDING_FUNCTION_RANGES = Object.freeze({
  */
 export function computeOrientedRoofFrame(poly) {
   const outer = poly?.outer || [];
-  if (outer.length < 3) return null;
+  if (outer.length < 3 || poly.holes?.length) return null;
 
   // 1. 檢驗凸多邊形 (Convex check) - 若有凹陷或中庭則維持平頂
   let sign = 0;
@@ -127,7 +131,11 @@ export function computeOrientedRoofFrame(poly) {
     }
   }
 
-  return bestFrame;
+  const area = Math.abs(outer.reduce((sum, p, i) => {
+    const q = outer[(i + 1) % outer.length];
+    return sum + p[0] * q[1] - q[0] * p[1];
+  }, 0)) / 2;
+  return bestArea > 0 && area / bestArea >= 0.95 ? bestFrame : null;
 }
 
 /** 計算建築多邊形量測指標（面積、跨度、長寬、長寬比、邊界與質心） */
@@ -231,6 +239,10 @@ export const ROOF_APPURTENANCE_COMPATIBILITY = Object.freeze({
   // 圓頂與穹窿拱頂：曲面球頂，相容頂端尖塔飾頂、十字/新月天線或底部煙道
   dome: Object.freeze(['rooftop_spire', 'antenna', 'chimney']),
   vault: Object.freeze(['rooftop_spire', 'antenna', 'chimney']),
+  steep_gable: Object.freeze(['chimney']),
+  crowstep: Object.freeze(['chimney']),
+  gambrel: Object.freeze(['chimney']),
+  butterfly: Object.freeze([]),
 });
 
 /**
@@ -272,7 +284,7 @@ export function resolveAdaptiveRoofForm(requestedForm, metrics, height = 10, cat
 
   // 4. 極端矮小或小跨度建物 (跨度 < 2.5m 或 面積 < 15m² 或 樓高 < 3.5m)
   if (span < 2.5 || area < 15 || height < 3.5) {
-    if (['xieshan', 'tiered', 'mansard', 'wudian'].includes(requestedForm)) {
+    if (['xieshan', 'tiered', 'mansard', 'wudian', 'steep_gable', 'crowstep', 'gambrel', 'butterfly'].includes(requestedForm)) {
       return 'shed';
     }
   }
@@ -320,6 +332,7 @@ export const APPURTENANCE_RULES = Object.freeze({
 
 /** 世界各大文化建築語彙型錄 */
 export const ARCHITECTURE_STYLES = Object.freeze({
+  ...REGIONAL_STYLES,
   // ---- 既有保留語彙（完全相容現有測試與設定）----
   machiya: {
     label: '日式町屋', era: 'historic', facade: 'lattice', wallType: 'timber',
@@ -337,7 +350,7 @@ export const ARCHITECTURE_STYLES = Object.freeze({
     affinity: 'adobe|stone|civic|house|visitor', region: 'mediterranean',
   },
   alpine: {
-    label: '山地木石屋', era: 'historic', facade: 'timber', wallType: 'timber',
+    foundation: 'retaining', label: '山地木石屋', era: 'historic', facade: 'timber', wallType: 'timber',
     roofForm: 'gable', wall: 0xe2c8a4, roof: 0x5c6175, trim: 0x614538, glass: 0x8ec8dc,
     affinity: 'cottage|stone|house|windmill|farmhouse', region: 'europe_alpine',
   },
@@ -352,7 +365,7 @@ export const ARCHITECTURE_STYLES = Object.freeze({
     affinity: 'civic|rowhouse|mass|commercial|office', region: 'americas',
   },
   modern: {
-    label: '當代玻璃街廓', era: 'modern', facade: 'ribbon', wallType: 'glass_curtain',
+    foundation: 'retaining', label: '當代玻璃街廓', era: 'modern', facade: 'ribbon', wallType: 'glass_curtain',
     roofForm: 'flat', wall: 0xd8e6ed, roof: 0x4e667b, trim: 0x93afbd, glass: 0x50aed2,
     affinity: 'mass|commercial|office|apartment|skyscraper', region: 'global_modern',
   },
@@ -362,7 +375,7 @@ export const ARCHITECTURE_STYLES = Object.freeze({
     affinity: 'industrial|warehouse|mass|shed|factory|power', region: 'global_modern',
   },
 
-  // ---- 擴充文化建築風格（涵蓋 12 種屋頂與 7 種外牆）----
+  // ---- 擴充文化建築風格 ----
   minnan_brick: {
     label: '閩南磚石硬山', era: 'historic', facade: 'brick', wallType: 'brick',
     roofForm: 'yingshan', wall: 0xd96749, roof: 0x5a443a, trim: 0x8c4533, glass: 0x82b2bc,
@@ -448,16 +461,17 @@ export const ARCHITECTURE_PROFILES = Object.freeze({
 
 /** 世界文化大區與對應風格名冊 */
 export const CULTURAL_REGIONS = Object.freeze({
+  ...REGIONAL_CULTURES,
   east_asia: {
     name: '東亞文化圈',
-    countries: ['TW', 'JP', 'KR', 'CN', 'HK', 'MO'],
+    countries: ['TW', 'CN', 'HK', 'MO'],
     // 粗略經緯度邊界 [minLat, minLon, maxLat, maxLon]
     bbox: [15, 95, 50, 150],
     styles: ['machiya', 'courtyard', 'minnan_brick', 'east_asian_palace', 'siheyuan_courtyard', 'traditional_curved', 'xieshan_temple', 'tile_apartment'],
   },
   europe_west: {
     name: '西歐中歐文化圈',
-    countries: ['FR', 'DE', 'GB', 'BE', 'NL', 'CH', 'AT', 'PL', 'IE'],
+    countries: ['FR', 'DE', 'PL'],
     bbox: [42, -10, 60, 25],
     styles: ['gothic_spire', 'baroque_mansard', 'deco', 'alpine'],
   },
@@ -475,13 +489,13 @@ export const CULTURAL_REGIONS = Object.freeze({
   },
   americas: {
     name: '美洲文化圈',
-    countries: ['US', 'CA', 'MX', 'BR', 'AR', 'CL'],
+    countries: ['US', 'CA', 'BR', 'AR', 'CL'],
     bbox: [-56, -168, 72, -34],
-    styles: ['deco', 'suburban_shed', 'modern', 'industrial'],
+    styles: ['deco', 'suburban_shed', 'modern', 'industrial', 'american_barn'],
   },
   middle_east: {
     name: '中東北非文化圈',
-    countries: ['EG', 'SA', 'AE', 'TR', 'IR', 'IL', 'MA'],
+    countries: ['EG', 'TR', 'IL'],
     bbox: [12, -18, 42, 60],
     styles: ['earthen', 'islamic_vault', 'mediterranean'],
   },
@@ -489,9 +503,9 @@ export const CULTURAL_REGIONS = Object.freeze({
     name: '大洋洲文化圈',
     countries: ['AU', 'NZ'],
     bbox: [-48, 110, -10, 180],
-    styles: ['suburban_shed', 'modern', 'deco', 'eco_green'],
+    styles: ['suburban_shed', 'modern', 'deco', 'eco_green', 'tropical_modern'],
   },
 });
 
-export const ARCHITECTURE_SITE = Object.freeze({ slopeDeg: 10, probeM: 12, densityCellM: 100, urbanNeighbors: 18 });
+export const ARCHITECTURE_SITE = Object.freeze({ slopeDeg: 10, steepSlopeDeg: 30, foundationProbeM: 4, probeM: 12, densityCellM: 100, urbanNeighbors: 18 });
 

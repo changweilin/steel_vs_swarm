@@ -60,7 +60,7 @@ import {
 } from './edgewall.js';
 import { libGeo } from './partlib.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
-import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
+import { fitApprovedBuilding, fitApprovedPolygon, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
 import {selectRoadCar} from './vehicleEveryday.js';
 import { deploySceneBatches } from './sceneObjects.js';
@@ -116,6 +116,9 @@ import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
 import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
 import { nativeFunctionalKind } from './nativeFunctionalBuildings.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
+import { heritageStateOf, heritageRuinType } from './heritageSites.js';
+import { buildHeritageSite } from './heritageSiteMesh.js';
 import {
   PED_PLAN, PED_ARCHETYPES, pedestrianEntranceCollider,
   isPedestrianWay, isPedestrianBridge, planPedestrianNetwork,
@@ -2211,6 +2214,7 @@ function roofTint(tint, x, z, i) {
 
 // 地標近似碰撞柱(未縮放;放置時 × lm scale)
 const LANDMARK_COL = {
+  heritage_tourism: { r: 14, h: 16 }, heritage_abandoned: { r: 14, h: 16 },
   hospital: { r: 11, h: 22 }, school: { r: 13, h: 11 }, station: { r: 14, h: 13 },
   temple: { r: 8, h: 13 }, church: { r: 9, h: 19 }, mosque: { r: 10, h: 14 },
   museum: { r: 12, h: 12 }, power: { r: 2.6, h: 42 }, factory: { r: 13, h: 12 },
@@ -2224,6 +2228,8 @@ const LANDMARK_COL = {
 };
 
 const LANDMARKS = {
+  heritage_tourism: (g, _rnd, _nation, context = {}) => buildHeritageSite('ruins', g, 0, 0, 0, { ...context, state: 'tourism', radius: 14, maxHeight: 16 }),
+  heritage_abandoned: (g, _rnd, _nation, context = {}) => buildHeritageSite('ruins', g, 0, 0, 0, { ...context, state: 'abandoned', radius: 14, maxHeight: 16 }),
   hospital: (g) => {
     const f = facadeTex('hosp', 6, 6, '#46525c', 0.3);
     const main = box(16, 18, 12, 0xe8e4dc); main.material.map = f.map; g.add(main);
@@ -4932,7 +4938,7 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
     }
 
     const g = new THREE.Group();
-    const relic = buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true });
+    const relic = buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true, state: 'abandoned', seed: s >>> 0 });
     g.position.set(sx, gy, sz);
     bakeContactAO(g, 5);
 
@@ -4961,6 +4967,14 @@ export function matchedBuildingType(tags = {}) {
   const b = tags.building, a = tags.amenity;
   const native = nativeFunctionalKind(tags);
   if (native) return native;
+  const functional = taggedBuildingFunction(tags);
+  if (functional && ['ruins', 'monument'].includes(functional.type)) return `heritage_${heritageStateOf(tags)}`;
+  if (functional && tags.architecture !== 'stave' && b !== 'stave_church') {
+    const landmark = BUILDING_FUNCTIONS[functional.type].landmark;
+    if (landmark) return landmark;
+    if (functional.structureOnly) return 'unmodeled_structure';
+    return 'functional';
+  }
   if (a === 'place_of_worship') {
     const r = tags.religion;
     if (r === 'muslim') return 'mosque';
@@ -4984,7 +4998,7 @@ export function matchedBuildingType(tags = {}) {
   if (b === 'synagogue') return 'synagogue';
   if (b === 'gurdwara') return 'gurdwara';
   if (b === 'stave_church' || tags.architecture === 'stave') return 'stave_church';
-  if (b === 'pyramid' || tags.historic === 'archaeological_site') return 'pyramid';
+  if (b === 'pyramid') return 'pyramid';
   if (b === 'slate_house' || tags.architecture === 'slate_house' || tags.indigenous === 'taiwan') return 'slate_house';
   if (b === 'tongkonan' || tags.architecture === 'tongkonan' || tags.traditional === 'austronesian') return 'tongkonan';
   if (tags.historic === 'pylon' || tags.architecture === 'pylon' || tags.historic === 'egyptian_temple') return 'egyptian_pylon';
@@ -10980,6 +10994,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     };
     osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
       terrain, rings, architectureOf: architectureAt, inset: edgeWallInsetM(),
+      modelOf: (poly, height, architecture) => fitApprovedPolygon(poly, height, architecture, cfg.architectureSeed || 0),
       materialOf: (kind, batch, style) => {
         if (batch.architecture) return {
           wall: sceneObjectMat(0xffffff, { vertexColors: true }),
@@ -11204,15 +11219,21 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 此處殘留的植被過濾是安全網(足跡近似差),不是主要防線。
   // (道路占位與街廓索引已提早至圖資物件之前建立,見上。)
 
+  const mappedUnderwaterHeritage = [];
   if (osm && osm.length) {
     await onProgress?.(0.6, `建置圖資建物(${osm.length} 筆)…`);
     // 特殊地標優先,一般建物均勻抽樣到上限
     osm.sort((p, q) => (buildingType(q.tags) !== 'residential') - (buildingType(p.tags) !== 'residential'));
     for (const el of osm) {
       const [x, z] = llToWorld(el.lat, el.lng, center);
+      if (['ruins', 'monument'].includes(taggedBuildingFunction(el.tags)?.type) && heritageStateOf(el.tags) === 'underwater') {
+        mappedUnderwaterHeritage.push({ x, z, tags: el.tags });
+        continue;
+      }
       if (!tryPlace(x, z)) continue;
       const coordSeed = (Math.imul(Math.round(x * 16) | 0, 0x9E3779B1) ^ Math.imul(Math.round(z * 16) | 0, 0x85EBCA77)) ^ 0x3C6EF35F;
       const type = buildingType(el.tags, coordSeed);
+      if (type === 'unmodeled_structure' || type === 'heritage_underwater') continue;
       if (LANDMARKS[type]) {
         // 地標放大後不能只驗中心格:以碰撞半徑掃走廊,牆面才不會侵入兵線
         const cr = (LANDMARK_COL[type]?.r || 10) * OVER.lm;
@@ -11220,7 +11241,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 橫擔全寬,建物不得貼近(否則手臂壓上屋頂,像「屋頂長電塔」)
         const or3 = Math.max(cr, type === 'power' ? 9 * OVER.lm : 0);
         if (landmarks.length < 60 && areaFree(blocked, x, z, cr * 0.8) && occ.free(x, z, or3, 1)) {
-          landmarks.push({ x, z, type }); usedLm.add(type); occ.add(x, z, or3);
+          landmarks.push({ x, z, type, tags: el.tags }); usedLm.add(type); occ.add(x, z, or3);
         }
       } else if (generic.length < MAX_BUILDINGS) {
         const commercial = type === 'commercial';
@@ -11257,7 +11278,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   if (!osmSource && (!mix || (mix.urban || 0) > 0.1)
     && !landmarks.length && !generic.length && urbanPts.length > 8) {
     await onProgress?.(0.6, '離線模式:程序生成市區…');
-    const lmTypes = Object.keys(LANDMARKS);
+    const lmTypes = Object.keys(LANDMARKS).filter(type => !type.startsWith('heritage_'));
     urbanPts.forEach(([x, z], i) => {
       if (!tryPlace(x, z)) return;
       if (i < lmTypes.length && rnd() < 0.8) {
@@ -11598,10 +11619,27 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 全部一般建物都改吃通過零件台的正式 v5/v6 目錄；舊方盒只保留成目錄異常時的保險絲。
     // 選款只讀座標、足跡與目錄純資料，零共享 rnd() 消耗；重複目標已在目錄縫由 v6 勝出。
     const massPick = new Map();
+    const procedural = new Map();
     for (const b of generic) {
-      const fit = fitApprovedBuilding(b, architectureAt(b, null, settlement(b.x, b.z)), cfg.architectureSeed || 0);
+      const ca = Math.cos(b.ry), sa = Math.sin(b.ry);
+      const poly = { outer: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([dx, dz]) => {
+        const x = dx * b.w / 2, z = dz * b.d / 2;
+        return [b.x + x * ca + z * sa, b.z - x * sa + z * ca];
+      }), holes: [] };
+      const architecture = architectureAt(b, poly, settlement(b.x, b.z));
+      const fit = fitApprovedBuilding(b, architecture, cfg.architectureSeed || 0);
       if (fit) massPick.set(b, fit);
+      else procedural.set(b, { sourceId: `procedural/${b.x}/${b.z}`, centroid: { x: b.x, z: b.z },
+        tags: { ...b.tags, building: b.commercial ? 'commercial' : 'house', height: String(b.h) },
+        classification: { generator: 'polygonBuilding', kind: b.commercial ? 'commercial' : 'house' },
+        worldPolygons: [poly], architecture });
     }
+    const proceduralResult = buildOsmPolygonBuildings(group, [...procedural.values()], {
+      terrain, architectureOf: area => area.architecture,
+    });
+    blockers.push(...proceduralResult.blockers);
+    osmRoofPlatforms.push(...proceduralResult.platforms);
+    osmBuildingMeshes.push(...proceduralResult.meshes);
     /**
      * 挑中的那一棟依構造分類縮放:方盒構築貼合基地,非方盒構築只取單一比例(使用者這一輪第 ① 條的兌現點)。
      * 舊制直接拿 (w, h, d) 縮單位方盒,而節點只佔單位盒的一部分(實測 hw 0.13~0.42)——
@@ -11698,7 +11736,6 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         };
         // 屋頂/底面用素色材質(色塊分離):窗格貼圖只留在四面牆,
         // 屋頂不再出現「躺平的窗」;instance tint 兩材質同吃 → 每棟仍有色差
-        const roof = bmat(fd.roof, { wash: 0.5 });
         const pal = PALETTE[cat];
         // 先攤平成實例清單:主體 + 輪廓件(退縮頂塔/臨街裙樓)同吃立面貼圖與 tint,
         // 高層商辦成「婚禮蛋糕」剪影、街廓出裙樓 — 天際線擺脫單一長方體(botw_plan Task 1.1)
@@ -11721,14 +11758,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           //   側面而節點比方盒瘦 ⇒ 浮在半空」,而這一輪招牌改吃剖面 ⇒ 掛的是那個高度**真的
           //   存在**的那一段的牆面。丟掉它等於「最顯眼的十幾棟樓一塊招牌都沒有」。
           const fit = massPick.get(b) || null;
+          const generated = procedural.has(b);
           const sink = [];
-          const vis = (arr) => (fit ? sink : arr);
+          const vis = (arr) => (fit || generated ? sink : arr);
           // `lib` 只掛在**主量體**這一列(退縮頂塔/裙樓/梯間塔仍走方盒:它們是主體的
           // 附加輪廓件,整棟節點本身已經帶著自己的頂部造型,兩者疊起來會長出第二頂帽子)
           // 縮放:方盒可走 (w,h,d);非方盒由 `fitScale` 取單一比例(保留自然形狀)
           const fsc = fit ? fitScale(fit, b) : null;
           const renderH = fsc ? fsc.sy : b.h;
-          inst.push({
+          (generated ? sink : inst).push({
             x: b.x, y: gy + renderH / 2 - 0.5, z: b.z,
             ry: b.ry + (fit?.rot ? Math.PI / 2 : 0),
             w: fsc ? fsc.sx : b.w, h: fsc ? fsc.sy : b.h, d: fsc ? fsc.sz : b.d,
@@ -11757,7 +11795,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             })
             : [{ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, cl: 'bld',
               hw2: b.w / 2, hd2: b.d / 2, ry: b.ry, ty: gy + b.h - 0.5 }];
-          for (const c of cols) blockers.push(c);
+          if (!generated) for (const c of cols) blockers.push(c);
+          if (generated) bldFaces.set(b, []);
           // 招牌那一份**只收合格的段**(2026-08-13);空陣列 = 這一棟一段都不合格,
           // 而它與「這是方盒建物」是兩件事 ⇒ 消費端判的是 `bldFaces.has(b)` 不是長度
           if (fit) bldFaces.set(b, bldFaceList(fit, b, gy));
@@ -11791,9 +11830,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const rawPh = Math.max(6, b.h * 0.12);
             const phFloors = Math.max(2, Math.round(rawPh / floorH));
             const ph = phFloors * floorH;
-            inst.push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC, rows: phFloors });
+            vis(inst).push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC, rows: phFloors });
             // 裙樓比主體寬(1.4×1.28)且齊眼高 —— 另登記自己的碰撞盒(基座段),否則玩家/鏡頭鑽進裙樓看穿牆
-            blockers.push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, cl: 'bld', hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8, ty: gy + ph - 0.5 });
+            vis(blockers).push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, cl: 'bld', hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8, ty: gy + ph - 0.5 });
           }
           if (!commercial && b.h >= 14 && rnd() < 0.4) {        // 中層住宅:角落梯間塔(佔地內、突出屋頂)
             const tw = Math.min(b.w, b.d) * 0.3;
@@ -11802,7 +11841,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const rawTh = b.h * (1.1 + rnd() * 0.1);
             const stairFloors = Math.max(mainFloors + 1, Math.round(rawTh / floorH));
             const th = stairFloors * floorH;
-            inst.push({ x: tx, y: gy + th / 2 - 0.5, z: tz, ry: b.ry, w: tw, h: th, d: tw, c: palC, rows: stairFloors });
+            vis(inst).push({ x: tx, y: gy + th / 2 - 0.5, z: tz, ry: b.ry, w: tw, h: th, d: tw, c: palC, rows: stairFloors });
           }
           let gable = false;
           // 低層住宅斜屋頂:同一枚亂數三分 —— 人字雙坡(第二剪影;sakura-crossing「一排錐是
@@ -11917,7 +11956,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
               // 牌寬 MUST 由 `signAspect` 反推 —— 高一改寬就要跟著,否則牌面比例與貼圖不合,
               // 字會被橫向壓成一條糊帶(A37 ⑤)
               const sh = fw ? Math.min(sh0, (fw.y1 - fw.y0) * 0.9) : sh0;
-              wallSigns.push({
+              (generated ? sink : wallSigns).push({
                 x: sx2, z: sz2, y: sy,
                 ry: b.ry + (alongW ? 0 : Math.PI / 2),
                 w: sh * signAspect('wallsign'), h: sh,
@@ -11975,6 +12014,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           libRows.get(bk).rows.push(t);
         }
         // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
+        const roof = boxRows.size ? bmat(fd.roof, { wash: 0.5 }) : null;
         for (const [rw, rs] of boxRows) {
           const wall = wallOf(rw);
           emitMass(rs, new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
@@ -12210,11 +12250,17 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   await onProgress?.(0.85, '放置地標建物…');
   for (const lm of landmarks) {
     const g = new THREE.Group();
+    const heritageSeed = (Math.imul(Math.round(lm.x*16),73856093) ^ Math.imul(Math.round(lm.z*16),19349663)) >>> 0;
+    const landmarkRnd = lm.type.startsWith('heritage_') ? mulberry32(heritageSeed) : rnd;
     // 第三參數 = 這一座地標該掛哪一國的旗(依落點的戰場半邊;makeNationPicker)。
     // 不掛旗的型別忽略它 ⇒ 逐位元同舊制。**rnd 仍是第二參數且照抽**(§2.3)。
-    LANDMARKS[lm.type](g, rnd, nation(lm.x, lm.z));   // rnd → 同型地標逐座變化(塔高/層數/徽色)
+    LANDMARKS[lm.type](g, landmarkRnd, nation(lm.x, lm.z), {
+      seed: heritageSeed,
+      latitude: center?.lat, longitude: center?.lng,
+      ruinType: heritageRuinType(lm.tags),
+    });   // 遺跡細節僅讀座標 seed；其他原生地標維持既有呼叫契約。
     bakeContactAO(g, 3);   // 接地 AO 頂點色:地標與地面接縫處手繪暗角(botw_plan Task 2.2)
-    let sc = OVER.lm * (0.9 + rnd() * 0.25);
+    let sc = OVER.lm * (0.9 + landmarkRnd() * 0.25);
     // 物件高度上限(`WORLD_H.OBJ_F` 倍砲塔高)。標稱高 MUST **實測**而不是讀
     // `LANDMARK_COL[].h` —— 那一欄是手寫的**擋彈**高度,對細長尖頂/天線/煙囪常低報數公尺
     //(同一族病灶已在 `ty` 屋頂實測那段記過一次)⇒ 拿它當分母會讓那幾座地標的真正頂端
@@ -12232,11 +12278,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     for (const [ox, oz] of [[lr, 0], [-lr, 0], [0, lr], [0, -lr]]) {
       gy = Math.min(gy, terrain.heightAt(lm.x + ox, lm.z + oz));
     }
-    g.position.set(lm.x, gy - 0.3, lm.z);
+    g.position.set(lm.x, gy + (lm.type === 'heritage_tourism' ? 0.02 : -0.3), lm.z);
     // 碰撞橫斷面用的**局部**包圍盒 MUST 在套朝向之前量(此時 g 未旋轉 ⇒ 世界軸 = 局部軸);
     // 量完才轉。轉完再 setFromObject 拿到的是旋轉後的世界 AABB,拿它當盒面就整個歪掉。
     const lbb = new THREE.Box3().setFromObject(g);
-    g.rotation.y = rnd() * Math.PI * 2;
+    g.rotation.y = landmarkRnd() * Math.PI * 2;
     group.add(g);
     landmarkG.push({ g, x: lm.x, z: lm.z, r: (LANDMARK_COL[lm.type]?.r || 10) * sc });   // 碉堡淨空:整棟隱藏用
     const col = LANDMARK_COL[lm.type];
@@ -12473,7 +12519,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // ---- 水下與沼澤生態、動態、動植物、遺跡與船艦 (aquatics.js) ----
   if (terrain.waterY != null) {
-    const aquaticWorld = buildAquaticWorld(group, terrain, { season, blockers });
+    const aquaticWorld = buildAquaticWorld(group, terrain, { season, blockers, heritageSites: mappedUnderwaterHeritage });
     if (aquaticWorld?.step) {
       dynamics.push((dt) => aquaticWorld.step(dt, celWindTime(), null, isWeatherFrozen()));
     }

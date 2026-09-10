@@ -26,6 +26,7 @@ import {
 } from '../public/js/osmAreas.js';
 import { llToXZ } from '../public/js/data.js';
 import { parseOsmFeatureElements } from '../public/js/osmQuery.js';
+import { sampleBuildingSite } from '../public/js/buildingDiversity.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map((arg) => {
   const m = /^--([^=]+)(?:=(.*))?$/.exec(arg);
@@ -259,6 +260,7 @@ class TraceShape extends TracePath {
 }
 
 class TraceGeometry {
+  dispose() {}
   constructor(kind, bounds = null) {
     this.kind = kind; this.bounds = bounds || {
       minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity,
@@ -343,8 +345,8 @@ function compileBuilder(source) {
   // `readSrc` 已先正規化 CRLF；只移除 ES module 外殼，函式本體仍是正式原文。
   const body = source.replace(/^import[^\n]*\n/gm, '')
     .replace(/^export\s+(?=(?:const|function)\b)/gm, '');
-  const factory = new Function('THREE', 'mergeGeometries', 'envMat', 'sceneObjectMat', `${body}\nreturn { buildOsmPolygonBuildings };`);
-  return factory(THREE_STUB, mergeGeometries, envMat, envMat).buildOsmPolygonBuildings;
+  const factory = new Function('THREE', 'mergeGeometries', 'envMat', 'sceneObjectMat', 'sampleBuildingSite', `${body}\nreturn { buildOsmPolygonBuildings };`);
+  return factory(THREE_STUB, mergeGeometries, envMat, envMat, sampleBuildingSite).buildOsmPolygonBuildings;
 }
 
 function executeBuilder(builder, areas) {

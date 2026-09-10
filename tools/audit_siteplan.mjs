@@ -606,14 +606,14 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       const pickBlk = bioM.slice(bioM.indexOf('const massPick = new Map();'), bioM.indexOf('for (const commercial of'));
       ok(pickBlk.length > 80 && !/rnd\(/.test(pickBlk)
         && /for \(const b of generic\)/.test(pickBlk)
-        && /fitApprovedBuilding\(b\)/.test(pickBlk)
+        && /fitApprovedBuilding\(b, architecture, cfg\.architectureSeed \|\| 0\)/.test(pickBlk)
         && /if \(fit\) massPick\.set\(b, fit\);/.test(pickBlk),
         '正式建築挑選涵蓋全部 generic、零 rnd 消耗，單一轉呼 fitApprovedBuilding');
       // ①-b **挑選與「庫載到了沒」解耦**(2026-08-12;碰撞柱改吃剖面之後這一條是致命的):
       //     舊制的閘是 `if (ok.length)`,而它會讓「載到庫的客戶端登記剖面柱、沒載到的登記
       //     方盒柱」⇒ 權威幾何跨客戶端分家(A30 + §2.3),畫面上只表現成「你說你打中了,
       //     我這邊沒掉血」。挑選 MUST 只讀純資料;載入成敗只決定畫出來的是網格還是保險絲。
-      ok(!/bldGeo\(/.test(pickBlk) && !/libOk/.test(pickBlk) && /fitApprovedBuilding\(b\)/.test(pickBlk),
+      ok(!/bldGeo\(/.test(pickBlk) && !/libOk/.test(pickBlk) && /fitApprovedBuilding\(b, architecture, cfg\.architectureSeed \|\| 0\)/.test(pickBlk),
         '挑選只讀 bundled runtime 目錄純資料，不問非同步 GLB 載入狀態');
       // ①-c **尺寸貼合**(使用者這一輪第 ①):方盒構築由剖面實測外廓推導三軸縮放;
       //     非方盒構築保留自然比例,三軸取同一個最小比例。拉伸倍率超過 `ASPECT_MAX`
@@ -634,7 +634,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         && /if \(f\.proportional\) \{\s*const s = Math\.min\(sx, sy, sz\);\s*return \{ sx: s, sy: s, sz: s \};\s*\}/.test(fitBlk)
         && /const isCuboidAssembly = \(entry\)/.test(approvedFitSrc)
         && /if \(isCuboidAssembly\(entry\)\) geo\.scale\(1 \/ size\.x, 1 \/ size\.y, 1 \/ size\.z\);\s*else geo\.scale\(1 \/ size\.y, 1 \/ size\.y, 1 \/ size\.y\);/.test(approvedFitSrc)
-        && (approvedFitSrc.match(/if \(proportional\) scale\.setScalar\(row\.w\); else scale\.set\(row\.w, row\.h, row\.d\);/g) || []).length === 2,
+        && (approvedFitSrc.match(/if \(proportional\) scale\.setScalar\(row\.w\); else scale\.set\(row\.w, row\.h, row\.d\);/g) || []).length === 1,
         '非方盒構築保留自然比例並以同一縮放值發射；方盒構築才可三軸貼合基地');
       // ②-a 兩桶**互斥**且共用同一個門檻:高層 = commercial && h > MIN_H、低矮 = h <= MIN_H。
       //     低矮那一邊漏掉門檻 ⇒ 同一棟樓可能被兩個名冊各挑一次(後挑的覆寫前一個),
@@ -726,19 +726,19 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       {
         const fSeg = bioM.slice(bioM.indexOf('const inst = [];'), bioM.indexOf('inst.forEach((t, i) => { t.ord = i; });'));
         const visN = (fSeg.match(/\bvis\([a-zA-Z]/g) || []).length;
-        ok(/const vis = \(arr\) => \(fit \? sink : arr\);/.test(fSeg) && visN >= 15,
+        ok(/const vis = \(arr\) => \(fit \|\| generated \? sink : arr\);/.test(fSeg) && visN >= 15,
           `純視覺附件經 vis() 分流(實得 ${visN} 處;丟棄桶只換目的地,不動 rnd)`);
-        ok(!/vis\(blockers\)/.test(fSeg) && (fSeg.match(/blockers\.push\(/g) || []).length === 2
-          && /for \(const c of cols\) blockers\.push\(c\);/.test(fSeg),
-          '碰撞柱兩個 push 出口(主量體逐段 + 臨街裙樓)MUST NOT 走丟棄桶(不隨庫的有無增減)');
+        ok(/vis\(blockers\)/.test(fSeg) && (fSeg.match(/blockers\.push\(/g) || []).length === 1
+          && /if \(!generated\) for \(const c of cols\) blockers\.push\(c\);/.test(fSeg),
+          '新生成器結算碰撞；完整舊模型不再附加裙樓碰撞');
         // 主量體那一列自己也不能被分流掉 —— 它就是要被庫節點取代的那一列
         ok(/const renderH = fsc \? fsc\.sy : b\.h;/.test(fSeg)
-          && /\n\s+inst\.push\(\{\r?\n\s+x: b\.x, y: gy \+ renderH \/ 2 - 0\.5, z: b\.z,/.test(fSeg),
-          '主量體那一列直接進 inst 且依實際縮放後高度落地(不進丟棄桶)');
+          && /\n\s+\(generated \? sink : inst\)\.push\(\{\r?\n\s+x: b\.x, y: gy \+ renderH \/ 2 - 0\.5, z: b\.z,/.test(fSeg),
+          '完整舊模型依實際高度落地；新生成器主體不重複進 inst');
         // ⑤-b **牆面直式招牌不再整批丟掉**(2026-08-12 使用者「招牌會懸空」)——
         //     它當初被丟的理由是「掛在方盒側面而節點比方盒瘦 ⇒ 浮在半空」,而落點改吃剖面
         //     之後那個理由消失了。丟著不管等於「最顯眼的十幾棟樓一塊招牌都沒有」。
-        ok(!/vis\(wallSigns\)/.test(fSeg) && /wallSigns\.push\(\{/.test(fSeg)
+        ok(!/vis\(wallSigns\)/.test(fSeg) && /\(generated \? sink : wallSigns\)\.push\(\{/.test(fSeg)
           && /const fw = bldFace\(fit, b, gy, sy\);/.test(fSeg),
           '牆面招牌落點吃剖面側面(不再整批丟掉,也不再掛在方盒側面的空氣裡)');
       }
@@ -853,7 +853,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         // 幾何/材質/instance 分組 MUST 不動 —— 只換 uv;沒有跨面板共用頂點要拆的話,
         // 連 position/normal/index 都沿用**同一份** BufferAttribute(不是 clone)
         const approvedSrc = readSrc('public', 'js', 'approvedBuildingModels.js');
-        ok(/new THREE\.InstancedMesh\(approvedBuildingGeometry\(entry\), approvedBuildingMaterial\(\), rows\.length\)/.test(approvedSrc)
+        ok(/return deploySceneObjects\(rows,/.test(approvedSrc) && /geometryOf: \(variant\) => approvedBuildingGeometry\(entry, variant\)/.test(approvedSrc)
           && /geometryCache/.test(approvedSrc) && /vertexColors: true/.test(approvedSrc),
           '正式建築每款共用一顆快取 geometry + vertex-color 材質並以 InstancedMesh 發射');
         // 斜牆的面板可以比投影軸還寬 ⇒ u 有機會 > 1,立面貼圖因此 MUST 橫向環繞;

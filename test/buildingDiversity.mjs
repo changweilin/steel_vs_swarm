@@ -33,7 +33,7 @@ assert.ok(Array.from({ length: 100 }, (_, i) => chooseArchitecture(1, i).id !== 
 
 // 2. 世界文化區域判定與 60% 文化風格比例驗證
 assert.equal(detectCulturalRegion({ country: 'TW' }), 'east_asia');
-assert.equal(detectCulturalRegion({ country: 'JP' }), 'east_asia');
+assert.equal(detectCulturalRegion({ country: 'JP' }), 'japan');
 assert.equal(detectCulturalRegion({ country: 'FR' }), 'europe_west');
 assert.equal(detectCulturalRegion({ country: 'US' }), 'americas');
 assert.equal(detectCulturalRegion({ country: 'EG' }), 'middle_east');
@@ -113,9 +113,10 @@ for (const [key, range] of Object.entries(BUILDING_FUNCTION_RANGES)) {
   }
 }
 
-// 5. 12 款屋頂造型與 7 款外牆材質枚舉完整性
-assert.equal(Object.keys(ROOF_FORMS).length, 12);
-assert.equal(Object.keys(FACADE_TYPES).length, 7);
+// 5. 屋頂造型與外牆材質枚舉完整性
+assert.ok(Object.keys(ROOF_FORMS).length >= 19);
+for (const style of Object.values(ARCHITECTURE_STYLES)) assert.ok(ROOF_FORMS[style.roofForm], style.roofForm);
+assert.ok(Object.keys(FACADE_TYPES).length >= 10);
 for (const style of Object.values(ARCHITECTURE_STYLES)) {
   assert.ok(style.label && style.wall && style.roof, `${style.label} 基本屬性缺項`);
 }
@@ -176,8 +177,8 @@ assert.equal(isSiteValid(testPoly, 2, 5, 1.5, 0.8), false, '壓線危險區位�
 // 於淨距 5.0m 處則有效
 assert.equal(isSiteValid(testPoly, 10, 5, 1.5, 0.8), true, '內部安全留白區位應判定有效');
 
-// 驗證 12 種屋頂類型的屋頂零件相容性清單
-assert.ok(Object.keys(ROOF_APPURTENANCE_COMPATIBILITY).length >= 12, '屋頂零件相容性清單涵蓋至少 12 款屋頂造型');
+// 所有登錄屋頂均需明確定義零件相容性。
+for (const id of Object.keys(ROOF_FORMS)) assert.ok(Object.hasOwn(ROOF_APPURTENANCE_COMPATIBILITY, id), `${id} 缺少屋頂零件相容性`);
 const allRooftopParts = [
   'water_tank', 'antenna', 'cellular_mast', 'solar_array',
   'pigeon_coop', 'chimney', 'roof_billboard', 'clock_tower',
@@ -290,4 +291,4 @@ if (process.env.THREE_MODULE && process.env.THREE_BUFFER_UTILS) {
   assert.equal(slopePlanner(areas[0], polygons[0]).profile, 'hillside');
 }
 
-console.log('通過：地點功能分類、隨機樓高範圍、60%在地文化加權、12款屋頂與7款牆面外觀、地形比例、凹輪廓／中庭與碰撞不變');
+console.log('通過：地點功能分類、隨機樓高範圍、60%在地文化加權、屋頂與牆面登錄完整性、地形比例、凹輪廓／中庭與碰撞不變');
