@@ -382,10 +382,13 @@ const _absR = (rx, ry, rz) => {
 export function partAABB(part) {
   const [t, a, b, c] = part.g;
   let hx, hy, hz;
-  if (t === 'box') { hx = a / 2; hy = b / 2; hz = c / 2; }
+  if (t === 'mesh') { [hx, hy, hz] = b.map(n => n / 2); }
+  else if (t === 'box') { hx = a / 2; hy = b / 2; hz = c / 2; }
   else if (t === 'cyl') { hx = Math.max(a, b); hy = c / 2; hz = Math.max(a, b); }
   else if (t === 'cone') { hx = a; hy = b / 2; hz = a; }
   else { hx = hy = hz = a; }
+  const scale = part.s || [1, 1, 1];
+  hx *= Math.abs(scale[0]); hy *= Math.abs(scale[1]); hz *= Math.abs(scale[2]);
   const [px = 0, py = 0, pz = 0] = part.p || [];
   const [rx = 0, ry = 0, rz = 0] = part.r || [];
   if (rx || ry || rz) {

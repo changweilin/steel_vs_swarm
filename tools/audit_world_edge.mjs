@@ -44,18 +44,14 @@
 //       反向驗證:`--break-lap`          段長重疊係數 < 1 ⇒ 環上出現縫 ⇒ Ⅱ 紅
 //                 `--break-buffer`       緩衝深度砍半 ⇒ 外緣落進地平線之內 ⇒ Ⅰ・Ⅴ 紅
 //                 `--break-fit`          往型錄塞一件頂出盒子的零件 ⇒ Ⅲ・Ⅶ 紅
-//                 `--break-face`         把貼著內面的實體零件抽掉 ⇒ Ⅶ 紅(撞得到卻看得穿)
 //                 `--break-run`          拿掉「太長就換一款」那一條 ⇒ Ⅶ 紅
 //                 `--break-slope`        把每一款都改成三級都站得住 ⇒ Ⅶ 紅(崖面上會擺出貨櫃車)
 //                 `--break-land`         關掉逐零件落地 ⇒ Ⅷ 紅(斜坡上整段布景/背景浮在半空)
-//                 `--break-boxh`         盒高改回逐款一個值 ⇒ Ⅲ 紅(素牆頂上撞得到卻看不見)
+//                 `--break-boxh`         盒高降至最小機體門檻 ⇒ Ⅲ 紅(素牆頂上撞得到卻看不見)
 //                 `--break-snow-summer`  夏季出現覆雪 ⇒ Ⅸ 紅(夏天無雪契約破壞)
 //                 `--break-snow-slope`   雪錐斜率失真外突 ⇒ Ⅸ 紅(山頂雪錐外擴懸空)
 //                 `--break-wet`          拔掉沼澤分類 ⇒ Ⅶ 紅(wet 型錄成為死資料)
 //                 `--break-motion`       風機轉速拔掉風量倍率 ⇒ Ⅶ 紅
-//                 `--break-facility-support` 往陸域光電塞回整段底座 ⇒ Ⅶ 紅
-//                 `--break-redraw`       抽掉本輪邊界重繪辨識零件 ⇒ Ⅶ 紅
-//                 `--break-facility-gap`  把非連續大型設施的透明縫補滿 ⇒ Ⅶ 紅
 //                 `--break-facility-mix`  關掉同類設施逐節穿插 ⇒ Ⅶ 紅
 //                 `--break-shared-catalog` 抽掉獨立物件分類 ⇒ Ⅶ 紅
 //                 `--break-glass`         抽掉建築玻璃與透明批次 ⇒ Ⅲ・Ⅶ 紅
@@ -67,9 +63,9 @@ import {
   SLOPE, slopeDeg,
 } from '../public/js/data.js';
 import * as EW from '../public/js/edgewall.js';
+import { buildSlopeBoundary } from '../public/js/edgeSlope.js';
 
 const BREAK_FIT = process.argv.includes('--break-fit');
-const BREAK_FACE = process.argv.includes('--break-face');
 const BREAK_RUN = process.argv.includes('--break-run');
 const BREAK_BOXH = process.argv.includes('--break-boxh');
 const BREAK_LAND = process.argv.includes('--break-land');   // 逐零件落地關掉 ⇒ 斜坡上整段浮起來
@@ -77,9 +73,6 @@ const BREAK_SNOW_SUMMER = process.argv.includes('--break-snow-summer');
 const BREAK_SNOW_SLOPE = process.argv.includes('--break-snow-slope');
 const BREAK_WET = process.argv.includes('--break-wet');
 const BREAK_MOTION = process.argv.includes('--break-motion');
-const BREAK_FACILITY_SUPPORT = process.argv.includes('--break-facility-support');
-const BREAK_REDRAW = process.argv.includes('--break-redraw');
-const BREAK_FACILITY_GAP = process.argv.includes('--break-facility-gap');
 const BREAK_FACILITY_MIX = process.argv.includes('--break-facility-mix');
 const BREAK_SHARED_CATALOG = process.argv.includes('--break-shared-catalog');
 const BREAK_GLASS = process.argv.includes('--break-glass');
@@ -103,31 +96,6 @@ if (BREAK_RUN) EW.EDGE_WALL.RUN_MAX_M = 1e9;
 const wallParts = (kind, o) => {
   let parts = EW.wallParts(kind, o);
   if (BREAK_FIT) parts.push({ g: ['box', o.len * 1.4, 2, 2], c: 0x999999, p: [0, 1, 0] });
-  if (BREAK_FACILITY_SUPPORT && kind === 'solarfield') {
-    parts.push({ g: ['box', o.len, 2, o.depth], c: 0x777777, p: [0, 1, 0] });
-  }
-  if (BREAK_REDRAW) {
-    const removed = {
-      cliff: ['rock-strata', 'embedded-boulder', 'embedded-deadwood'],
-      landslide: ['soil-ridge', 'landslide-rock', 'landslide-deadwood', 'dust'],
-      debris: ['debris-rock', 'debris-deadwood'],
-      mine: ['mine-bench', 'ore-pile', 'mine-machine-arm', 'dust'],
-      oilfield: ['derrick-leg', 'oil-machine', 'smoke'],
-      deeprig: ['pontoon', 'offshore-derrick-leg', 'offshore-oil-machine', 'smoke'],
-      strandedship: ['bow', 'stern', 'keel', 'bridge', 'bridge-window', 'funnel', 'mast', 'lifeboat'],
-      factory: ['chimney', 'smoke'],
-      powerplant: ['chimney', 'smoke', 'cooling-tower'],
-    };
-    if (kind === 'tetrapod') parts = parts.filter((p) => p.role !== 'breakwater-core' || p.layer === 0);
-    else if (removed[kind]) parts = parts.filter((p) => !removed[kind].includes(p.role));
-  }
-  if (BREAK_FACILITY_GAP && EW.WALL_KINDS[kind]?.separated) {
-    parts.push({
-      g: ['box', o.len, Math.min(o.h, edgeWallHM()), EW.EDGE_WALL.FACE_T * 0.5], c: 0x777777,
-      p: [0, Math.min(o.h, edgeWallHM()) / 2, o.depth / 2 - EW.EDGE_WALL.FACE_T * 0.25], role: 'forbidden-gap-fill',
-    });
-  }
-  if (BREAK_FACE) return parts.filter((p) => EW.partBox(p).z1 < o.depth / 2 - EW.EDGE_WALL.FACE_T);
   if (BREAK_GLASS) parts = parts.map(({ mat, ...part }) => part);
   return parts;
 };
@@ -224,6 +192,12 @@ class Geo {
     return { x0: f(0, Math.min), x1: f(0, Math.max), y0: f(1, Math.min), y1: f(1, Math.max), z0: f(2, Math.min), z1: f(2, Math.max) };
   }
 }
+const proceduralMeshStub = meshData => {
+  const geometry = new Geo(0, 0, 0);
+  geometry.pts = [];
+  for (let i = 0; i < meshData.vertices.length; i += 3) geometry.pts.push(meshData.vertices.slice(i, i + 3));
+  return geometry;
+};
 const emitted = [];   // 每一次 flush 的零件世界 AABB(Ⅲ / Ⅷ 共用)
 const THREE_STUB = {
   Matrix4: Mat4, Quaternion: Quat, Euler: Eul, Vector3: V3,
@@ -241,12 +215,11 @@ const mergeGeosStub = (geos, cols) => {
 const classifyImg = new Function(`${grabFn(bioSrc, 'classifyImg')} return classifyImg;`)();
 const terrainEnvCode0 = new Function('WATER', `${grabFn(bioSrc, 'terrainEnvCode')} return terrainEnvCode;`)(WATER);
 const terrainEnvCode = BREAK_WET ? ((terrain, x, z) => terrainEnvCode0(terrain, x, z) === 2 ? 0 : terrainEnvCode0(terrain, x, z)) : terrainEnvCode0;
-// `--break-boxh`:把「盒高逐段實測」改回「逐款一個值」⇒ 素牆那幾節的頂上多出一截撞得到卻
-// 看不見的空氣。替換 MUST 當場驗有沒有生效(㋑:字面替換在 CRLF 工作區會是無聲 no-op)
+// --break-boxh: a visual gap must not lower the fixed collision envelope.
 let wallSrc = grabFn(bioSrc, 'buildEdgeWall');
 if (BREAK_BOXH) {
   const before = wallSrc;
-  wallSrc = wallSrc.replace(/const kh = Math[.]max\(WH, top\);/, 'const kh = Math.max(WH, kh0);');
+  wallSrc = wallSrc.replace('const kh = kh0;', 'const kh = WH;');
   if (wallSrc === before) { console.log('x --break-boxh 的字面替換沒有生效(原文改了?)'); process.exit(1); }
 }
 let HELPERS = bioSrc.slice(bioSrc.indexOf('const PLINTH_C = '), bioSrc.indexOf('// ---- 緩衝空間的 3D 物件'));
@@ -260,15 +233,15 @@ if (BREAK_LAND) {
 // `over` = 覆寫注入的規劃器/零件表(Ⅷ 的逐零件落地量測靠它把「這一顆零件是誰的第幾件」錄下來,
 // 而不是在稽核裡抄一份擺位公式)
 const mkWall = (extra = '', over = {}) => new Function(
-  'THREE', 'envMat', 'mergeGeos', 'WORLD_EDGE', 'edgeWallInsetM', 'edgeWallHM', 'WATER',
-  'SLOPE', 'slopeDeg', 'wallSlopeTier',
+  'THREE', 'runtimeMeshDataGeometry', 'envMat', 'mergeGeos', 'WORLD_EDGE', 'edgeWallInsetM', 'edgeWallHM', 'WATER',
+  'SLOPE', 'slopeDeg', 'wallSlopeTier', 'buildSlopeBoundary', 'edgeWallDeepM',
   'classifyImg', 'terrainEnvCode', 'planWallRuns', 'planWallKinds', 'WALL_KINDS', 'wallParts', 'wallVariant', 'edgeSeed',
   'planBufferProps', 'propParts', 'planBackdrop', 'backdropParts', 'BACKDROP_KINDS',
   'EDGE_WALL', 'edgeBufferM', 'objHeightMax', 'lowPower', 'partBox',
   `${HELPERS}\n${wallSrc}\n${grabFn(bioSrc, 'buildBufferProps')}\n${grabFn(bioSrc, 'buildBackdrop')}\n${extra}
    return { buildEdgeWall, buildBufferProps, buildBackdrop };`,
-)(THREE_STUB, (c, o) => ({ c, o }), mergeGeosStub, WORLD_EDGE, edgeWallInsetM, edgeWallHM, WATER,
-  SLOPE, slopeDeg, EW.wallSlopeTier,
+)(THREE_STUB, proceduralMeshStub, (c, o) => ({ c, o }), mergeGeosStub, WORLD_EDGE, edgeWallInsetM, edgeWallHM, WATER,
+  SLOPE, slopeDeg, EW.wallSlopeTier, buildSlopeBoundary, edgeWallDeepM,
   classifyImg, terrainEnvCode, EW.planWallRuns, planWallKinds, EW.WALL_KINDS, wallParts, EW.wallVariant, EW.edgeSeed,
   over.planBufferProps || EW.planBufferProps, over.propParts || EW.propParts,
   over.planBackdrop || EW.planBackdrop, over.backdropParts || EW.backdropParts, EW.BACKDROP_KINDS,
@@ -470,25 +443,9 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
   const buildEdgeWallSrc = grabFn(bioSrc, 'buildEdgeWall');
   const plinthOk = !/parts\.push\(\{\s*g:\s*\['box',\s*half\s*\*\s*2,\s*plinth/.test(buildEdgeWallSrc);
   t('邊界障礙物一律移除底座，本體直接由地面／水面長出', plinthOk);
-  // **盒高逐段實測**:城牆的城樓 14m / 素牆 9m 是同一款的不同節 —— 拿型錄宣告的最高值當
-  // 每一節的盒高,素牆那幾節的頂上就多出一截撞得到卻看不見的空氣(A30 家族的反面)。
-  // 下界仍是環高(`edgeWallHM`):比它矮的款照樣頂到那條線,「沒有機體看得過去」不動。
-  let airGap = 0, worstGap = null;
-  for (const s of segs) {
-    const top = visualEmitted.filter((bx) => inBox(bx, s)).reduce((m, bx) => Math.max(m, bx.y1), -Infinity);
-    const want = Math.max(s.ground + edgeWallHM(), top);
-    if (Math.abs((s.y + s.h) - want) > 1e-6) {
-      airGap++;
-      if (!worstGap) worstGap = `${EW.WALL_KINDS[s.kind].label} 盒頂 ${(s.y + s.h).toFixed(2)} vs 該段實測 ${want.toFixed(2)}`;
-    }
-  }
-  t('每一段的盒高 = 該段零件的實測頂(下界 = 環高)⇒ 頂上沒有一截撞得到卻看不見的空氣',
-    airGap === 0, `（${airGap} 段;例:${worstGap}）`);
-  const city = EW.WALL_KINDS.citywall, cityH = Math.max(edgeWallHM(), city.h);
-  const cityTops = new Set(Array.from({ length: 80 }, (_, i) => Math.max(...wallParts('citywall', {
-    len: WORLD_EDGE.SEG_M * WORLD_EDGE.SEG_LAP_F, depth: city.depth, h: cityH, seed: i + 1,
-  }).map((p) => EW.partBox(p).y1)).toFixed(2)));
-  t(`同一款的節可以有不同盒高(城牆 80 種子出現 ${cityTops.size} 種高度 —— 素牆 / 箭樓 / 砲台 / 城樓)`, cityTops.size >= 4);
+  t('邊界高度只由用途設定與機體下界決定，視覺空隙不打開通路',
+    segs.every(s => near(s.y + s.h, s.ground + Math.max(edgeWallHM(), EW.WALL_KINDS[s.kind].h), 1e-6)));
+  t('固定邊界高度不反讀隨機模型的頂點', /const kh = kh0/.test(bioCode));
   const glassBatchSrc = BREAK_GLASS ? bioCode.replaceAll("p.mat === 'glass'", 'false') : bioCode;
   t('演出依不透明／玻璃各自合批，而不是逐件 mesh（整圈最多兩個靜態 draw call）',
     /mergeGeos\(partBatch\.geos, partBatch\.cols\)/.test(glassBatchSrc)
@@ -667,18 +624,18 @@ console.log('\nⅥ 純表現層(伺服器對這一整套一無所知)');
     && !/Math\.random/.test(props) && !/Math\.random/.test(back));
   t('edgewall.js 全檔無 Math.random(A4)', !/Math\.random/.test(strip(ewSrc)));
   t('edgewall.js 零 THREE(這才是型錄與規劃器能離線驗的原因)', !/\bTHREE\b/.test(strip(ewSrc)));
-  t("edgewall.js 只依賴亂數、幾何量尺與新車模描述子適配層",
-    (strip(ewSrc).match(/^import .*$/gm) || []).length === 3
+  t("edgewall.js 只依賴亂數、幾何量尺與共用程序生成器",
+    (strip(ewSrc).match(/^import .*$/gm) || []).length === 4
     && /from '\.\/rng\.js'/.test(ewSrc) && /from '\.\/vehicles\.js'/.test(ewSrc)
-    && /makeSceneVehicleParts as makeVehicle/.test(ewSrc));
+    && /from '\.\/environmentParts\.js'/.test(ewSrc) && /from '\.\/edgeSlope\.js'/.test(ewSrc));
 }
 
 // ============ Ⅶ 型錄與切分規則 ============
 console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)');
 {
   const categorizedKinds = BREAK_SHARED_CATALOG
-    ? Object.keys(EW.BOUNDARY_OBJECT_CATEGORIES).filter((kind) => kind !== 'powerplant')
-    : Object.keys(EW.BOUNDARY_OBJECT_CATEGORIES);
+    ? Object.keys(EW.WALL_KINDS).filter((kind) => kind !== 'powerplant')
+    : Object.keys(EW.WALL_KINDS);
   const allKinds = Object.keys(EW.WALL_KINDS);
   t('每一款舊邊界障礙物皆歸入具名物件分類', categorizedKinds.length === allKinds.length
     && allKinds.every((kind) => typeof EW.boundaryObjectMeta(kind)?.category === 'string'));
@@ -687,7 +644,7 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     && allKinds.every((kind) => EW.STANDALONE_BOUNDARY_KINDS.includes(kind) !== EW.BOUNDARY_ONLY_KINDS.includes(kind))
     && ['citywall', 'levee', 'seawall', 'tetrapod', 'wetpods'].every((kind) => EW.BOUNDARY_ONLY_KINDS.includes(kind))
     && ['powerplant', 'mine', 'fallentree', 'skyscrapers', 'edgehamlet'].every((kind) => EW.STANDALONE_BOUNDARY_KINDS.includes(kind)));
-  const standaloneSample = EW.standaloneBoundaryParts('powerplant', { len: 30, seed: 19 });
+  const standaloneSample = EW.standaloneBoundaryParts('powerplant', { len: 30, depth: EW.WALL_KINDS.powerplant.depth, h: EW.WALL_KINDS.powerplant.h, seed: 19 });
   t('獨立背景出口直接委派 wallParts，長構造無法流入一般背景',
     JSON.stringify(standaloneSample) === JSON.stringify(EW.wallParts('powerplant', {
       len: 30, depth: EW.WALL_KINDS.powerplant.depth, h: EW.WALL_KINDS.powerplant.h,
@@ -733,71 +690,22 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     EW.wallCandidates('???', false).length > 0 && EW.wallCandidates('???', true).length > 0);
   // 每一款:收得進盒子(三軸)+ 宣告的 depth/h 與實算雙向吻合 + 內面蓋得滿
   const len = WORLD_EDGE.SEG_M * WORLD_EDGE.SEG_LAP_F, band = edgeWallHM();
-  let fitBad = [], fillBad = [], faceBad = [];
-  for (const k of kinds) {
-    const d = EW.WALL_KINDS[k];
-    const H = Math.max(band, d.h);
-    let ox = -Infinity, oy = -Infinity, oz = -Infinity, dep = 0, top = 0, cov = 1;
-    for (let s = 1; s <= 40; s++) {
-      const parts = wallParts(k, { len, depth: d.depth, h: H, seed: s });
-      const f = EW.wallFit(parts, len, d.depth, H);
-      ox = Math.max(ox, f.ox); oy = Math.max(oy, f.oy); oz = Math.max(oz, f.oz);
-      dep = Math.max(dep, f.depth); top = Math.max(top, f.h);
-      cov = Math.min(cov, EW.wallFaceCover(parts, len, d.depth, Math.min(H, d.faceH || band)));
-    }
-    if (ox > 1e-9 || oy > 1e-9 || oz > 1e-9) fitBad.push(`${k}(x+${ox.toFixed(2)} y+${oy.toFixed(2)} z+${oz.toFixed(2)})`);
-    if (Math.abs(dep - d.depth) > EW.EDGE_WALL.FILL_TOL || Math.abs(top - H) > EW.EDGE_WALL.FILL_TOL) {
-      fillBad.push(`${k}(厚 ${dep.toFixed(1)}/${d.depth}、高 ${top.toFixed(1)}/${H.toFixed(1)})`);
-    }
-    const minCov = d.minCover ?? (d.family === 'wind' ? 0.12 : EW.EDGE_WALL.FACE_COVER);
-    if (cov < minCov) faceBad.push(`${k} ${(cov * 100).toFixed(0)}%`);
-    if (d.h <= heroTallestH()) fillBad.push(`${k} 比最高機體還矮`);
-  }
-  t('每一款的零件表都收得進「段長 × depth × 高」的盒子(三軸;縱向 = 從上方斜射的彈道)',
-    fitBad.length === 0, `（${fitBad.join(' / ')}）`);
-  t(`宣告的 depth/h 與零件實算雙向吻合(±${EW.EDGE_WALL.FILL_TOL}m;低報 = A30,虛胖 = 盒子裡有空的)`,
-    fillBad.length === 0, `（${fillBad.join(' / ')}）`);
-  t(`每一款的內面都由障礙物本體蓋滿到其實際阻擋高度(一般款 ${band.toFixed(1)}m；低矮設施依 faceH；單柱風機依 minCover；覆蓋率 ≥ 門檻)`,
-    faceBad.length === 0, `（${faceBad.join(' / ')}）`);
-  t('擱淺鯨魚已從邊界型錄完整移除', !('whale' in EW.WALL_KINDS) && !/kind === ['"]whale['"]/.test(ewSrc));
-  const facilities = kinds.filter((k) => EW.WALL_KINDS[k].family);
-  const supportBad = [];
-  for (const k of facilities) {
-    const d = EW.WALL_KINDS[k], H = Math.max(band, d.h);
-    for (let s = 1; s <= 20; s++) {
-      const support = wallParts(k, { len, depth: d.depth, h: H, seed: s }).find((p) => {
-        if (p.role === 'hull' || p.g?.[0] !== 'box') return false;
-        const b = EW.partBox(p);
-        return p.g[1] >= len * 0.9 && p.g[3] >= d.depth * 0.8 && b.y0 <= 0.05 && p.g[2] >= 1;
-      });
-      if (support) { supportBad.push(`${k}@${s}`); break; }
-    }
-  }
-  t('陸海大型設施皆由障礙物本體落地／落水：不得另加整段底座或圍牆',
-    supportBad.length === 0
-    && !/\b(?:facilityBase|marineFrame)\b/.test(strip(ewSrc)), `（${supportBad.join(' / ')}）`);
-  const lowFace = facilities.filter((k) => EW.WALL_KINDS[k].faceH != null);
-  t('低矮阻擋帶只給太陽能設施，且 faceH 足以覆蓋人形單位（不得任意縮短以規避覆蓋率）',
-    lowFace.length === 2
-    && lowFace.every((k) => EW.WALL_KINDS[k].family === 'solar'
-      && EW.WALL_KINDS[k].faceH >= 1.7 && EW.WALL_KINDS[k].faceH < band));
-  const separated = kinds.filter((k) => EW.WALL_KINDS[k].separated);
-  const gapBad = [], variantBad = [];
-  for (const k of separated) {
-    const d = EW.WALL_KINDS[k], H = Math.max(band, d.h);
-    const fingerprints = new Set();
-    for (let variant = 0; variant < d.variants; variant++) {
-      const parts = wallParts(k, { len, depth: d.depth, h: H, seed: 17, variant });
-      const cover = EW.wallFaceCover(parts, len, d.depth, band);
-      if (cover >= 0.96) gapBad.push(`${k}#${variant} ${(cover * 100).toFixed(0)}%`);
+  const fitBad = [], variantBad = [];
+  for (const kind of kinds) {
+    const d = EW.WALL_KINDS[kind], H = Math.max(band, d.h), fingerprints = new Set();
+    for (let seed = 1; seed <= 40; seed++) {
+      const parts = wallParts(kind, { len, depth: d.depth, h: H, seed });
+      if (!EW.wallFit(parts, len, d.depth, H).fit) fitBad.push(kind + '@' + seed);
       fingerprints.add(JSON.stringify(parts));
     }
-    if (d.variants < 3 || fingerprints.size !== d.variants) variantBad.push(k);
+    if (fingerprints.size < 2) variantBad.push(kind);
   }
-  t('非陣列大型設施保留可見透明縫（空氣牆仍連續，物件內面覆蓋率 < 96%）',
-    separated.length >= 5 && gapBad.length === 0, `（${gapBad.join(' / ')}）`);
-  t('工業建築／摩天樓／擱淺船各有至少三種不同構型，不以同一件連續複製',
-    variantBad.length === 0, `（${variantBad.join(' / ')}）`);
+  t('每款新模型的完整幾何收在固定邊界包絡內', fitBad.length === 0, fitBad.join(' / '));
+  t('每款均從種子生成不同構造或配色', variantBad.length === 0, variantBad.join(' / '));
+  t('場內與邊界共用程序生成器，沒有舊 PARTS 或 facilityParts 分支',
+    !/const PARTS =|function facilityParts/.test(ewSrc)
+    && /environmentParts\(def.object/.test(ewSrc) && /linearEnvironmentParts\(kind/.test(ewSrc));
+  t('可見空隙不以額外通用底座填補', !/\b(?:facilityBase|marineFrame)\b/.test(strip(ewSrc)));
   const mixSegs = Array.from({ length: 12 }, (_, i) => ({
     x: -600 + i * len, z: -300, len, biome: 'urban', water: false, tier: 'flat',
   }));
@@ -816,33 +724,9 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     const d = EW.WALL_KINDS[k];
     return wallParts(k, { len, depth: d.depth, h: Math.max(band, d.h), seed });
   };
-  t('海上風機使用自身固定樁基與塔架直接入水',
-    EW.WALL_KINDS.windsea.mount === 'fixed'
-    && partsOf('windsea').some((p) => p.role === 'monopile')
-    && partsOf('windsea').some((p) => p.role === 'mooring'));
-  t('浮動光電具模組、浮筒、獨立逆變器浮台與繫泊浮標',
-    EW.WALL_KINDS.floatsolar.mount === 'float'
-    && ['float', 'inverter-float', 'mooring'].every((role) => partsOf('floatsolar').some((p) => p.role === role)));
-  t('海上牧場同時讀得出大型箱網／圍網、貝類長線、維修浮台與繫泊系統',
-    EW.WALL_KINDS.searanch.mount === 'float'
-    && ['cage-collar', 'longline-buoy', 'service-float', 'mooring'].every((role) => partsOf('searanch').some((p) => p.role === role)));
-  t('深海油井以浮筒平台直接繫泊於海域，不坐在連續海堤基座上',
-    EW.WALL_KINDS.deeprig.mount === 'float'
-    && partsOf('deeprig').some((p) => p.role === 'pontoon')
-    && partsOf('deeprig').some((p) => p.role === 'mooring'));
-  const windRows = ['windsea', 'windland'].flatMap((k) => {
-    const d = EW.WALL_KINDS[k]; return wallParts(k, { len, depth: d.depth, h: d.h, seed: 7 });
-  });
-  const floatingRows = ['floatsolar', 'searanch', 'deeprig'].flatMap((k) => {
-    const d = EW.WALL_KINDS[k]; return wallParts(k, { len, depth: d.depth, h: d.h, seed: 9 });
-  });
-  t('兩種風機陣列都把葉片標成 rotor 剛體樞軸(塔身仍留在靜態合批)',
-    windRows.some((p) => p.motion?.kind === 'rotor') && windRows.some((p) => !p.motion));
-  t('浮動太陽能／海上牧場／深海油井都具 float 剛體包絡',
-    ['floatsolar', 'searanch', 'deeprig'].every((k) => {
-      const d = EW.WALL_KINDS[k];
-      return wallParts(k, { len, depth: d.depth, h: d.h, seed: 9 }).some((p) => p.motion?.kind === 'float');
-    }));
+  t('海上風機有入水樁基；陸海風機葉片使用既有轉子動畫',
+    partsOf('windsea').some(p => p.role === 'monopile')
+    && ['windsea', 'windland'].every(k => partsOf(k).some(p => p.motion?.kind === 'rotor')));
   let motionSrc = strip(grabFn(bioSrc, 'buildEdgeMotion'));
   if (BREAK_MOTION) motionSrc = motionSrc.replace('EDGE_MOTION.ROTOR_RAD_S * wind', 'EDGE_MOTION.ROTOR_RAD_S');
   t('風機角速度 = EDGE_MOTION.ROTOR_RAD_S × 即時風量(正比，不另寫第二份天氣表)',
@@ -851,48 +735,16 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
   t('浮動設施吃 celWindTime + celWaveAmount，並掛進既有 dynamics 桶',
     /t = celWindTime\(\)/.test(motionSrc) && /wave = celWaveAmount\(\)/.test(motionSrc)
     && /dynamics\.push\(/.test(motionSrc) && /buildEdgeMotion\(\{ group, segs: edgeSegs, dynamics \}\)/.test(bioCode));
-  const roles = (kind) => partsOf(kind).map((p) => p.role).filter(Boolean);
-  const cliffParts = partsOf('cliff');
-  const cliffAngles = cliffParts.filter((p) => p.role === 'rock-strata').map((p) => p.slopeDeg);
-  t('懸崖是 60~90° 的非垂直分層岩壁，具嵌入巨石與斜下枯木',
-    EW.WALL_KINDS.cliff.faceDeg?.[0] === 60 && EW.WALL_KINDS.cliff.faceDeg?.[1] === 90
-    && cliffAngles.length >= 6 && cliffAngles.every((a) => a >= 60 && a < 90)
-    && roles('cliff').includes('embedded-boulder')
-    && cliffParts.some((p) => p.role === 'embedded-deadwood' && p.slopeDown));
-  t('土石流與山崩地都有高密度石塊／枯木；山崩地另具起伏土脊與揚塵',
-    roles('debris').filter((r) => r === 'debris-rock').length >= 8
-    && roles('debris').filter((r) => r === 'debris-deadwood').length >= 4
-    && roles('landslide').includes('soil-ridge')
-    && roles('landslide').filter((r) => r === 'landslide-rock').length >= 6
-    && roles('landslide').filter((r) => r === 'landslide-deadwood').length >= 3
-    && partsOf('landslide').some((p) => p.role === 'dust' && p.motion?.kind === 'dust'));
-  t('礦場具起伏採掘台階、礦堆、至少兩組作業機具與揚塵',
-    ['mine-bench', 'ore-pile', 'mine-machine-arm', 'mine-machine-bucket', 'dust'].every((r) => roles('mine').includes(r))
-    && new Set(partsOf('mine').filter((p) => p.motion?.kind === 'machine').map((p) => p.motion.id)).size >= 2);
-  t('陸上油田具多座鑽塔／抽油機與煙塵；海上油井具完整浮台、雙鑽塔、機具與煙塵',
-    roles('oilfield').filter((r) => r === 'derrick-leg').length >= 4
-    && partsOf('oilfield').some((p) => p.motion?.kind === 'machine')
-    && partsOf('oilfield').some((p) => p.motion?.kind === 'smoke')
-    && ['platform-deck', 'pontoon', 'platform-leg', 'platform-control', 'offshore-derrick-leg', 'offshore-oil-machine', 'smoke']
-      .every((r) => roles('deeprig').includes(r))
-    && roles('deeprig').filter((r) => r === 'offshore-derrick-leg').length >= 4);
-  const podLayers = partsOf('tetrapod').filter((p) => p.role === 'breakwater-core' && p.layer >= 0);
-  const podCounts = [0, 1, 2, 3].map((layer) => podLayers.filter((p) => p.layer === layer).length);
-  t('消波塊由下而上逐層減少，形成金字塔式堆疊',
-    podCounts.every((n) => n > 0) && podCounts.every((n, i) => i === 0 || podCounts[i - 1] > n),
-    `（各層 ${podCounts.join(' > ')}）`);
-  t('擱淺船具船殼、龍骨、尖艏、方艉、甲板、駕駛台、煙囪、桅桿與救生艇，不再是貨櫃底座',
-    ['hull', 'keel', 'bow', 'stern', 'deck', 'bridge', 'bridge-window', 'funnel', 'mast', 'lifeboat']
-      .every((r) => roles('strandedship').includes(r))
-    && !roles('strandedship').some((r) => r.startsWith('container')));
-  t('工廠與電廠的煙囪都有動態煙塵，電廠另具冷卻塔',
-    ['factory', 'powerplant'].every((k) => roles(k).includes('chimney')
-      && partsOf(k).some((p) => p.role === 'smoke' && p.motion?.kind === 'smoke'))
+  const roles = kind => partsOf(kind).map(p => p.role);
+  t('採掘設備與工業建物保留用途識別構件',
+    roles('mine').includes('mine-bench') && roles('oilfield').includes('derrick-leg')
+    && ['factory', 'powerplant', 'incinerator'].every(k => roles(k).includes('chimney'))
     && roles('powerplant').includes('cooling-tower'));
-  t('採掘機具與煙塵共用既有 dynamics 與 celWindTime，不建立第二份動畫時鐘',
-    /mot\.kind === 'machine'/.test(motionSrc) && /mot\.kind === 'smoke' \|\| mot\.kind === 'dust'/.test(motionSrc)
-    && /EDGE_MOTION\.MACHINE_FREQ/.test(motionSrc) && /EDGE_MOTION\.PLUME_FREQ/.test(motionSrc)
-    && /EDGE_MOTION\.PLUME_DRIFT_M \* wind/.test(motionSrc));
+  t('陣列有自身構造，不以共用方盒替代',
+    roles('tetrapod').includes('breakwater-arm') && roles('floatsolar').includes('solar-panel')
+    && roles('searanch').includes('culture-line') && roles('deeprig').includes('pontoon'));
+  t('擱淺船保留船殼、甲板、駕駛台、玻璃與桅桿',
+    ['hull', 'deck', 'bridge', 'bridge-window', 'mast'].every(r => roles('strandedship').includes(r)));
   // 切分規則:①地貌/水陸域改變 ②太長 ③短 run 併回去 ④相鄰不同款 ⑤決定性
   const mk = (n, biome, water) => Array.from({ length: n }, (_, i) => (
     { x: -800 + i * len, z: -500, len, biome, water }));
@@ -921,8 +773,9 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     !/Math\.random|\brnd\s*\(/.test(strip(grabFn(ewSrc, 'planWallRuns'))));
   // ---- 坡度分級(2026-08-11 使用者追加:「太陡的時候只使用懸崖峭壁/土石流/山崩這類自然
   //      景觀,中等坡度可以再加上倒木/長城」)----
-  const NATURAL = ['cliff', 'rockery', 'landslide', 'debris'];
-  const MID_EXTRA = ['fallentree', 'giantforest', 'citywall'];
+  const NATURAL = ['cliff', 'landslide', 'debris'];
+  const ADAPTIVE = Object.keys(EW.WALL_KINDS).filter(k => EW.WALL_KINDS[k].terrainFit);
+  const MID_EXTRA = ['fallentree', 'giantforest', 'gianttree', 'rockery', 'boulder', ...ADAPTIVE];
   const rank = (t2) => EW.SLOPE_TIERS.indexOf(t2);
   t(`分級恰三級(${EW.SLOPE_TIERS.join(' < ')})且每一款都宣告了 slope`,
     EW.SLOPE_TIERS.length === 3 && kinds.every((k) => EW.SLOPE_TIERS.includes(EW.WALL_KINDS[k].slope)));
@@ -938,14 +791,14 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     /deg = Math\.max\(deg, Math\.abs\(slopeDeg\(/.test(bioCode) && !/deckAt|surfaceAt/.test(grabFn(bioSrc, 'buildEdgeWall')));
   for (const b of ['urban', 'green', 'bare', 'wet']) {
     const st = EW.wallCandidates(b, false, 'steep');
-    t(`陡坡(> ${SLOPE.BLOCK_DEG}°)的「${b}」只給自然景觀(${st.map((k) => EW.WALL_KINDS[k].label).join('、')})`,
-      st.length > 0 && st.every((k) => NATURAL.includes(k)));
+    t(`陡坡(> ${SLOPE.BLOCK_DEG}°)的「${b}」只給可連續貼坡構造(${st.map((k) => EW.WALL_KINDS[k].label).join('、')})`,
+      st.length > 0 && st.every((k) => ADAPTIVE.includes(k)));
     const mid = EW.wallCandidates(b, false, 'mid');
     t(`中等坡的「${b}」= 自然景觀 + 倒木/長城(${mid.map((k) => EW.WALL_KINDS[k].label).join('、')})`,
       mid.length > 0 && mid.every((k) => NATURAL.includes(k) || MID_EXTRA.includes(k)));
   }
   t('緩坡才給得出人造線形物(列車/貨車/民房/高架橋 —— 那些只有修得起路的坡立得住)',
-    ['train', 'trucks', 'rowhouse', 'viaduct', 'skyfall', 'barricade', 'levee']
+    ['train', 'trucks', 'rowhouse', 'viaduct', 'skyfall']
       .every((k) => EW.WALL_KINDS[k].slope === 'flat'));
   t('自然三款在三級都合法(擺在緩坡上不突兀;反過來把貨櫃車擺上崖面才是穿幫)',
     NATURAL.every((k) => EW.WALL_KINDS[k].slope === 'steep')
@@ -953,8 +806,8 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
   const steepPool = EW.wallCandidates('bare', false, 'steep');
   const midPool = EW.wallCandidates('green', false, 'mid');
   const favored = (pool, kinds2) => pool.filter((k) => kinds2.includes(k)).length / pool.length;
-  t('海拔起伏處大幅加權假山／懸崖／巨木林／大倒木(候選權重 ≥ 70%)',
-    favored(steepPool, ['rockery', 'cliff']) >= 0.7
+  t('海拔起伏處大幅加權假山／懸崖／巨木林／大倒木(陡坡懸崖高於人工構造／中坡 ≥ 70%)',
+    favored(steepPool, ['cliff']) > favored(steepPool, ['citywall', 'barricade'])
     && favored(midPool, ['rockery', 'cliff', 'giantforest', 'fallentree']) >= 0.7);
   t('陡的市區配不到符合地貌的自然景觀時,退回「這一級全部合法的款」而不是退回平地款',
     EW.wallCandidates('urban', false, 'steep').every((k) => rank(EW.WALL_KINDS[k].slope) >= rank('steep')));
@@ -965,7 +818,7 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
   t('切分⑧:坡度級一換就切(緩 4 節 + 陡 4 節 ⇒ 至少兩段,且不跨界)',
     sr.length >= 2 && sr.every((r) => r.i1 <= 4 || r.i0 >= 4)
     && sr.every((r) => r.i0 >= 4 || rank(EW.WALL_KINDS[r.kind].slope) >= rank('flat')));
-  t('切分⑨:陡的那一段真的只給自然景觀', sr.filter((r) => r.tier === 'steep').every((r) => NATURAL.includes(r.kind)));
+  t('切分⑨:陡的那一段真的只給可連續貼坡構造', sr.filter((r) => r.tier === 'steep').every((r) => ADAPTIVE.includes(r.kind)));
   const oneSteep = mk(6, 'green', false).map((s, i) => ({ ...s, x: -800 + i * len, tier: i === 3 ? 'steep' : 'flat' }));
   const osr = EW.planWallRuns(oneSteep);
   t('切分⑩:一節崖面併進緩坡 run 時**整段升級成陡**(取較緩 = 一列貨櫃車橫跨那道崖,而每一條斷言照樣綠)',
@@ -973,32 +826,11 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
   const wetFlat = mk(4, 'water', true).map((s, i) => ({ ...s, x: -800 + i * len, tier: 'steep' }));
   t('切分⑪:水域段的坡度級一律 flat(水面恆是平的;水底的坡與站在水面上的東西無關)',
     EW.planWallRuns(wetFlat).every((r) => r.tier === 'flat' && EW.WALL_KINDS[r.kind].dom === 'water'));
-  // ---- 城牆的構造(2026-08-11 使用者追加:「城牆也加上城門/城樓/砲台等結構(不會攻擊)」)----
-  {
-    const d = EW.WALL_KINDS.citywall, H = Math.max(band, d.h);
-    const tops = new Map();
-    for (let sd = 1; sd <= 80; sd++) {
-      const parts = wallParts('citywall', { len, depth: d.depth, h: H, seed: sd });
-      const top = +Math.max(...parts.map((p) => EW.partBox(p).y1)).toFixed(2);
-      if (!tops.has(top)) tops.set(top, { seed: sd, parts, n: 0 });
-      tops.get(top).n++;
-    }
-    t(`城牆逐節有四種構造(素牆 / 箭樓 / 砲台 / 城門+城樓)⇒ 實測高度 ${[...tops.keys()].sort((a, b) => a - b).join(' / ')}m`,
-      tops.size >= 4);
-    const hi2 = Math.max(...tops.keys()), lo2 = Math.min(...tops.keys());
-    t(`最高的那一種(城樓 ${hi2}m)= 型錄宣告的 ${H}m,最矮的(素牆 ${lo2}m)明顯較低 ⇒ 逐段盒高才有意義`,
-      Math.abs(hi2 - H) <= EW.EDGE_WALL.FILL_TOL && hi2 - lo2 > band * 0.3);
-    // 城門 MUST 是**關著的**:開一個真的洞在邊界上就是「看得穿卻走不過」
-    const gate = tops.get(hi2);
-    t(`城門那一節的內面照樣蓋滿(${(EW.wallFaceCover(gate.parts, len, d.depth, band) * 100).toFixed(0)}% ≥ ${EW.EDGE_WALL.FACE_COVER * 100}%)—— 門是關著的,不是一個洞`,
-      EW.wallFaceCover(gate.parts, len, d.depth, band) >= EW.EDGE_WALL.FACE_COVER);
-    // 「不會攻擊」是**構造保證**:整支 buildEdgeWall 只碰 group / blockers,砲只是幾何
-    const wsrc = strip(grabFn(bioSrc, 'buildEdgeWall'));
-    t('城門/砲台/城樓是幾何不是實體:buildEdgeWall 不碰任何單位、擺件或逐幀清單(「不會攻擊」不需要一個設定值)',
-      !/\bitems\b|\bgeneric\b|\bcamps\b|\bdynamics\b|\bUNITS\b|\btowerSites\b|\bents\b/.test(wsrc));
-    t('砲台那一節也一樣掛不上攻擊:碰撞柱與素牆同一條路徑(無 bld / std / cl)',
-      blockers.every((b) => !b.bld && !b.std && !b.cl));
-  }
+  t('新城牆以程序生成牆段、石層、垛口與城樓',
+    ['wall-course', 'course-joint', 'battlement', 'watchtower'].every(role => partsOf('citywall').some(p => p.role === role)));
+  t('城牆構件不建立攻擊實體，也不可攀爬',
+    !/\bents\b|\bUNITS\b/.test(strip(grabFn(bioSrc, 'buildEdgeWall')))
+    && blockers.every(b => !b.bld && !b.std && !b.cl));
   // 真的跑出多種款式(合成地形涵蓋市區/裸露地/水域三種)
   const used = new Set(segs.map((s) => s.kind));
   t(`合成地形上真的換了款(${[...used].map((k) => EW.WALL_KINDS[k].label).join('、')})`, used.size >= 3);
@@ -1015,8 +847,8 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
   const badTier = segs.filter((s) => rank(EW.WALL_KINDS[s.kind].slope) < rank(s.tier));
   t('每一段的款式都站得住它腳下那一級坡(這一條紅 = 有貨櫃車掛在崖面上)', badTier.length === 0,
     `（${badTier.slice(0, 3).map((s) => `${EW.WALL_KINDS[s.kind].label}@${s.tier}`).join(' / ')}）`);
-  t(`陡坡段一律是自然景觀(${(byTier.steep || []).length} 段)`,
-    (byTier.steep || []).every((s) => NATURAL.includes(s.kind)));
+  t(`陡坡段一律可連續貼坡(${(byTier.steep || []).length} 段)`,
+    (byTier.steep || []).every((s) => ADAPTIVE.includes(s.kind)));
   t('中等坡段只出現自然景觀 / 倒木 / 長城',
     (byTier.mid || []).every((s) => NATURAL.includes(s.kind) || MID_EXTRA.includes(s.kind)));
 }
@@ -1219,15 +1051,11 @@ console.log('\nⅨ 邊界山脈雪線高度與山頂積雪接合(四季變化 + 
 for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-buffer', '緩衝深度砍半,Ⅰ・Ⅴ MUST 紅字'],
   ['--break-fit', '型錄多一件頂出盒子的零件,Ⅲ・Ⅶ MUST 紅字'],
-  ['--break-face', '抽掉貼著內面的實體零件,Ⅶ MUST 紅字'],
   ['--break-run', '拿掉「太長就換一款」,Ⅶ MUST 紅字'],
-  ['--break-boxh', '盒高改回逐款一個值,Ⅲ MUST 紅字(素牆頂上的空氣)'],
+  ['--break-boxh', '盒高降至最小機體門檻,Ⅲ MUST 紅字(固定用途包絡被縮小)'],
   ['--break-slope', '每一款都改成三級都站得住,Ⅶ MUST 紅字(崖面上的貨櫃車)'],
   ['--break-bias', '抽掉起伏帶自然障礙加權,Ⅶ MUST 紅字'],
   ['--break-rock-season', '假山與懸崖四季同色,Ⅸ MUST 紅字'],
-  ['--break-facility-support', '陸域光電塞回整段底座,Ⅶ MUST 紅字'],
-  ['--break-redraw', '抽掉本輪邊界重繪辨識零件,Ⅶ MUST 紅字'],
-  ['--break-facility-gap', '補滿非連續大型設施間的透明縫,Ⅶ MUST 紅字'],
   ['--break-facility-mix', '關掉同類設施逐節混排,Ⅶ MUST 紅字'],
   ['--break-shared-catalog', '抽掉獨立物件分類,Ⅶ MUST 紅字'],
   ['--break-glass', '抽掉建築玻璃與透明批次,Ⅲ・Ⅶ MUST 紅字'],

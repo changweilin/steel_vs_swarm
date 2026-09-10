@@ -33,8 +33,6 @@
 import * as THREE from 'three';
 import { toonMat, envMat, bakeContactAO } from './toon.js';
 import { mulberry32 } from './rng.js';
-import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
-import { libGeo } from './partlib.js';
 import { makeVehicle } from './vehicles.js';
 
 // ---- 規劃參數 ----
@@ -265,9 +263,9 @@ const KIND_PARTS = {
   cairn: [
     // 疊石三大件走 AI 零件庫(P2c 首批;SF3D 實拍岩體):fallback = 舊 ico 描述子,
     // 外廓契約由 intake_parts.mjs 擔保(GLB 頂點收在 fallback 包絡內)⇒ foot 不動。
-    { g: ['lib', 'rock/collapse_a', ['ico', 1.5]], c: 0x8f8a80, p: [0, 0.9, 0] },
-    { g: ['lib', 'rock/facet_a', ['ico', 1.15]], c: 0x9a958a, p: [0.25, 2.3, -0.15] },
-    { g: ['lib', 'rock/facet_b', ['ico', 0.85]], c: 0x857f75, p: [-0.2, 3.3, 0.2] },
+    { g: ['ico', 1.5], c: 0x8f8a80, p: [0, 0.9, 0] },
+    { g: ['ico', 1.15], c: 0x9a958a, p: [0.25, 2.3, -0.15] },
+    { g: ['ico', 0.85], c: 0x857f75, p: [-0.2, 3.3, 0.2] },
     { g: ['ico', 0.6], c: 0x9a958a, p: [0.1, 4.1, 0] },
     { g: ['cyl', 0.13, 0.16, 9, 6], c: 0x6b5a42, p: [0, 8.2, 0] },
     ...[8.4, 9.6, 10.8].map((y, i) => (
@@ -444,12 +442,6 @@ export function planBeaconSites(anchors, probe, opts = {}) {
 // ---- 建構(以下才需要 THREE)----
 const _geo = (spec) => {
   const [t, a, b, c] = spec;
-  // AI 零件庫:查無此名 ⇒ 原 primitive 描述子(spec[2])就是保險絲,MUST 留著。
-  // `.clone()` 不可省 —— buildBeacon 會就地 `applyMatrix4`,共用庫幾何被改一次就全壞。
-  if (t === 'lib') {
-    const g = isRuntimeEligibleNatureKey(a) ? libGeo(a) : null;
-    return g ? g.clone() : _geo(spec[2]);
-  }
   if (t === 'box') return new THREE.BoxGeometry(a, b, c);
   if (t === 'cyl') return new THREE.CylinderGeometry(a, b, c, spec[4] || 6);
   if (t === 'cone') return new THREE.ConeGeometry(a, b, spec[3] || 6);
@@ -524,11 +516,15 @@ export function mergeGeos(geos, colors = null) {
     pos.set(p.array.subarray(0, p.count * 3), vo * 3);
     if (n) nor.set(n.array.subarray(0, n.count * 3), vo * 3);
     if (col) {
-      const c = colors[gi] | 0;
-      // sRGB → linear:MeshToonMaterial 的 color 走的是線性空間,直接塞 /255 會整批偏亮
-      const rgb = [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255]
-        .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-      for (let i = 0; i < p.count; i++) col.set(rgb, (vo + i) * 3);
+      if (colors[gi] == null && gm.attributes.color) {
+        col.set(gm.attributes.color.array, vo * 3);
+      } else {
+        const c = colors[gi] | 0;
+        // sRGB → linear:MeshToonMaterial 的 color 走的是線性空間,直接塞 /255 會整批偏亮
+        const rgb = [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255]
+          .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+        for (let i = 0; i < p.count; i++) col.set(rgb, (vo + i) * 3);
+      }
     }
     if (gm.index) for (let i = 0; i < gm.index.count; i++) idx[io++] = gm.index.array[i] + vo;
     else for (let i = 0; i < p.count; i++) idx[io++] = i + vo;

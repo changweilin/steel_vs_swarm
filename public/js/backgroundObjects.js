@@ -4,6 +4,7 @@ import { RUNTIME_BACKGROUND_CATALOG, RUNTIME_PARTS } from './runtimeParts.js';
 import { VEHICLE_PREFIX, VEHICLE_PROFILES, vehicleBackgroundObject } from './vehicleCatalog.js';
 import { CONSIST_PREFIX,VEHICLE_CONSISTS,vehicleConsistBackgroundObject } from './vehicleConsists.js';
 import { GEOLOGY_PREFIX, GEOLOGY_TYPES, geologyBackgroundObject } from './geology.js';
+import { ENVIRONMENT_OBJECTS, ENVIRONMENT_PREFIX, environmentParts } from './environmentParts.js';
 import {
   STANDALONE_BOUNDARY_KINDS,
   boundaryObjectMeta,
@@ -123,11 +124,13 @@ function edgeRuntimePart(part, index) {
     name: part.role || `edge_part_${index}`,
     position: [...(part.p || [0, 0, 0])],
     rotation: [...(part.r || [0, 0, 0])],
+    scale: [...(part.s || [1, 1, 1])],
     color: part.c,
     colorKey: part.mat === 'glass' ? 'glass' : undefined,
     materialRole: part.mat === 'glass' ? 'glass' : 'body',
   };
   if (type === 'box') return { ...out, type, dimensions: [a, b, c] };
+  if (type === 'mesh') return { ...out, type: 'mesh', meshData: a };
   if (type === 'cyl') return { ...out, type: 'cylinder', radii: [a, b], height: c, sides };
   if (type === 'cone') return { ...out, type, radius: a, height: b, sides: c };
   return { ...out, type: 'icosahedron_polyhedron', radius: a };
@@ -174,6 +177,18 @@ function edgeBackgroundObject(targetKey, seed, options) {
       variant,
     },
   };
+}
+
+function proceduralEnvironmentObject(targetKey, seed, options) {
+  const kind = targetKey.slice(ENVIRONMENT_PREFIX.length);
+  const parts = environmentParts(kind, { ...options, seed });
+  const boxes = parts.map(partBox);
+  const min = ['x0', 'y0', 'z0'].map(key => Math.min(...boxes.map(b => b[key])));
+  const max = ['x1', 'y1', 'z1'].map(key => Math.max(...boxes.map(b => b[key])));
+  return { key: `${targetKey}:${seed}:${JSON.stringify(options)}`, targetKey, family: 'environment',
+    subpart: kind, bounds: { min, max, size: max.map((v, i) => v - min[i]) },
+    parts: parts.map(edgeRuntimePart), palettes: [],
+    generation: { source: 'procedural-environment', category: ENVIRONMENT_OBJECTS[kind].category, seed } };
 }
 
 /**
@@ -263,9 +278,9 @@ export function backgroundObjectTargets(family = null) {
 
 /** 正式環境資產 + 可獨立散布的邊界物件；長構造不會進入此名冊。 */
 export function sharedBackgroundObjectTargets(category = null) {
-  const runtime = [...entries.values()]
-    .filter((entry) => entry.family !== 'vehicle' && (!category || runtimeCategory(entry) === category))
-    .map((entry) => entry.key);
+  const runtime = Object.entries(ENVIRONMENT_OBJECTS)
+    .filter(([, entry]) => !category || entry.category === category)
+    .map(([kind]) => ENVIRONMENT_PREFIX + kind);
   const edge = STANDALONE_BOUNDARY_KINDS
     .filter((kind) => !category || boundaryObjectMeta(kind).category === category)
     .map((kind) => `${EDGE_BACKGROUND_PREFIX}${kind}`);
@@ -281,6 +296,7 @@ export function sharedBackgroundObjectTargets(category = null) {
  * 背景物件共同出口。既有 v5/v6 資產維持原組裝路徑；edge/ 前綴直接轉用邊界生成器。
  */
 export function generateSharedBackgroundObject(targetKey, seed = 0, options = {}) {
+  if (targetKey.startsWith(ENVIRONMENT_PREFIX)) return proceduralEnvironmentObject(targetKey, seed, options);
   if(targetKey.startsWith(CONSIST_PREFIX))return vehicleConsistBackgroundObject(targetKey.slice(CONSIST_PREFIX.length),seed,options);
   if (targetKey.startsWith(VEHICLE_PREFIX)) {
     return vehicleBackgroundObject(targetKey.slice(VEHICLE_PREFIX.length), seed, options);

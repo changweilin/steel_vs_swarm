@@ -1,43 +1,12 @@
-// ============ 邊界牆型錄 / 緩衝空間布景 / 視線邊界背景(唯一縫)============
-// 2026-08-11 使用者定案(原話):
-//   「邊界牆使用城牆/連排民房/河堤/海堤/軍工級路障/土石流/懸崖峭壁/山崩地/消波塊/倒塌神木/
-//     倒塌摩天樓/倒塌高架橋或跨海大橋/停駛的列車/連排大貨車/連排貨輪等等,地貌切換或太長的
-//     時候,會隨機更換符合地貌與水陸域的牆。邊界延伸不可進入的緩衝空間也要貼地貌拼圖,並加入
-//     少許 3D 物件。視線邊界的空氣牆貼上假山/假海/假森林/假城市(視陸域或水域而定)。」
-//
-// 舊制(2026-08-10)的障礙環是**一圈灰盒子**:結構上完美(沒有縫、看到多粗 = 撞到多粗),
-// 視覺上是一條 40m 外的水泥帶。本檔把「這一段牆長什麼樣」變成型錄查表,而**環的權威幾何
-// 一格未動** —— 段位、沿邊覆蓋、內緣貼夾制線、四角維持垂直不互相交叉(見 `biomes.js
-// buildEdgeWall` 檔頭與 `audit_world_edge` Ⅱ)。
-//
-// ---- 六條紀律(每一條壞掉都沒有錯誤訊息)----
-//  ① **零 import(除 `rng.js`)、零 THREE**:型錄是**純資料**,零件表是 `['box', w,h,d]` 這種
-//     描述子(同 `beacons.js` 紀律③)。這才是本項能離線稽核的原因 —— three 走 CDN、A2 不准進
-//     `package.json`,零件若寫成 `new THREE.Mesh(...)`,「這款牆有沒有頂出碰撞盒」就只能靠
-//     真瀏覽器看,而那正是會靜默壞掉的一半。
-//  ② **零共享 `rnd()` 消耗**(§2.3):「隨機更換」的隨機一律由**座標雜湊**餵一條自己的
-//     `mulberry32`。抽一枚共享亂數就把後面每一株植被、每一棟建物的佈局整條推移,而畫面上
-//     只表現成「整張圖變了」。
-//  ③ **演出 ⊆ 碰撞盒**(原則 4 / A30):每一款宣告 `depth`/`h`,零件表 MUST 整份收在
-//     「段長 × depth × h」這個盒子裡 —— 三軸都要,**縱向尤其**:碰撞盒只到 h,而視覺若更高,
-//     從上方斜射進緩衝空間的彈道會穿過看得見的船樓/塔頂而伺服器毫無所悉(= 看得見卻打不到)。
-//     反過來,盒子的**內面**(朝可玩區那一面)MUST 被實體零件蓋滿到本體實際阻擋高度,否則就是
-//     「撞到空氣」。一般款量到機體視線高；低矮設施用資料列 `faceH` 明列自身高度，MUST NOT
-//     為了撐滿量測帶另加底座／圍牆。兩方向由 `wallFit()` / `wallFaceCover()` 雙向釘死。
-//  ④ **深度是真實尺寸,邊界帶跟著讓開**:貨輪 18m、懸崖 14m —— §2.5 說得很清楚,載具/建物
-//     一律用真實公稱尺寸。碰撞盒的**內面恆貼夾制線**、厚度往圖界方向長,故邊界帶的內緣
-//     (`placeBoundary` 的 IN1)MUST 吃 `edgeWallDeepM()` 而不是 `WALL_T` —— 手寫的話深型牆
-//     會長進邊界樓群裡。
-//  ⑤ **切分規則只有一條**:`地貌/水陸域改變` 或 `這一款已經連續鋪了 RUN_MAX_M`。前者讓牆跟著
-//     地面走(海邊出現消波塊、市區出現連排民房),後者防「一整條邊三公里同一款」。衛星色是
-//     **逐段抖動**的 ⇒ 短於 `RUN_MIN_SEG` 節的 run MUST 併回前一段,不然一條邊會碎成城牆/
-//     民房/城牆/民房的雜訊(症狀不是壞掉,是看起來很廉價)。
-//  ⑥ **緩衝空間與背景是純表現層**:兩者都在夾制線之外、玩家永遠到不了 ⇒ 不進 `blockers`、
-//     不進 `occ`、不進 LOS,伺服器對這一整套一無所知(原則 4)。它們唯一的職責是「往外看
-//     不是虛空」。
+// Boundary catalog and deterministic ring planner. All models are procedural.
+// A fixed, continuous collision ring blocks visible gaps as well as the objects themselves.
+// Geometry must stay inside the declared envelope; it need not fill the envelope.
+// The catalog imports only render-free generators and never consumes the shared scene RNG.
 import { mulberry32 } from './rng.js';
 import { partAABB } from './vehicles.js';
-import { makeSceneVehicleParts as makeVehicle } from './vehicleParts.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts } from './environmentParts.js';
+import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
+export { ROCK_SEASON_TINT } from './environmentParts.js';
 
 // ---- 規劃參數 ----
 export const EDGE_WALL = {
@@ -54,12 +23,6 @@ export const EDGE_WALL = {
 };
 
 // 岩景四季色階：假山與懸崖共用，避免邊界兩種岩體季節分家。
-export const ROCK_SEASON_TINT = {
-  spring: 0xdce8c8,
-  summer: 0xffffff,
-  autumn: 0xe1c39a,
-  winter: 0xc9d7df,
-};
 
 // 邊界設施的剛體動態只在 `biomes.js` 建 mesh；本檔仍只交純資料。
 // 轉速的唯一輸入是 `toon.js` 的即時風量，浮動幅度的唯一輸入是同一份天氣浪量。
@@ -75,18 +38,7 @@ export const EDGE_MOTION = {
   PLUME_DRIFT_M: 0.24,
 };
 
-// ---- 坡度分級(2026-08-11 使用者追加:「太陡的時候只使用懸崖峭壁/土石流/山崩這類自然
-//      景觀,中等坡度可以再加上倒木/長城」)----
-// 門檻**推導不手寫**,而且刻意錨在既有的兩條線上(`data.js SLOPE`,由呼叫端注入 —— 本檔
-// 維持零 import,見紀律①)。兩條線本來就有精確的遊戲語意,分級因此不是美術偏好而是物理:
-//   `flat`  ≤ `EASE_DEG`  平緩帶 = 兵線走廊恆全速的那一帶 ⇒ 現實裡也就是**修得起路的坡**,
-//                          鐵路/貨車/連排民房/高架橋這些線形人造物只有在這裡才立得住;
-//   `mid`   ≤ `BLOCK_DEG` 機體還爬得上去但路修不上去 ⇒ 只剩「順著地形長出來的東西」:
-//                          自然三款 + **倒塌神木**(樹本來就長在坡上)+ **城牆**(長城正是
-//                          沿著山稜蓋的,那是它唯一合理的位置);
-//   `steep` > `BLOCK_DEG`  機體爬不上去的崖面 ⇒ **只准自然景觀**:懸崖峭壁 / 土石流 / 山崩地。
-// 逐款的 `slope` 欄 = 「這一款最陡站得到哪一級」,故 `steep` 款在三級都合法(自然景觀擺在
-// 緩坡上不突兀,反過來把貨櫃車擺上崖面則當場穿幫)。
+// 坡度門檻由呼叫端注入。剛性物件保留各自上限；陡坡另要求連續貼坡生成能力。
 export const SLOPE_TIERS = ['flat', 'mid', 'steep'];
 const tierRank = (t) => Math.max(0, SLOPE_TIERS.indexOf(t));
 /**
@@ -110,17 +62,17 @@ export const WALL_KINDS = {
   barricade: { dom: 'land',  bio: ['urban', 'bare'],          slope: 'flat',  depth: 6,   h: 7.5,  label: '軍工級路障' },
   train:     { dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 3.4, h: 7.2,  label: '停駛的列車' },
   trucks:    { dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 3.2, h: 7.4,  label: '連排大貨車' },
-  skyfall:   { dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 16,  h: 26,   label: '倒塌摩天樓' },
+  skyfall:   { object: 'skyfall', dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 16,  h: 26,   label: '倒塌摩天樓' },
   viaduct:   { dom: 'land',  bio: ['urban', 'wet'],           slope: 'flat',  depth: 13,  h: 14,   label: '倒塌高架橋' },
   levee:     { dom: 'land',  bio: ['wet', 'green'],           slope: 'flat',  depth: 12,  h: 8,    label: '河堤' },
   // `faceDeg` 是岩壁剖面的真實傾角範圍(相對水平)，幾何仍受同一個 depth/h 包絡約束。
   cliff:     { dom: 'land',  bio: ['bare', 'green', 'wet'],   slope: 'steep', depth: 18,  h: 30,   label: '懸崖峭壁', faceDeg: [60, 90], slopeBias: { mid: 6, steep: 10 } },
-  rockery:   { dom: 'land',  bio: ['bare', 'green', 'wet'],   slope: 'steep', depth: 18,  h: 30,   label: '巨型假山群', slopeBias: { mid: 6, steep: 10 } },
+  rockery:   { object: 'boulder', dom: 'land',  bio: ['bare', 'green', 'wet'],   slope: 'mid', depth: 18,  h: 30,   label: '巨型假山群', slopeBias: { mid: 6, steep: 10 } },
   landslide: { dom: 'land',  bio: ['bare', 'green'],          slope: 'steep', depth: 16,  h: 18,   label: '山崩地' },
   debris:    { dom: 'land',  bio: ['bare', 'green', 'wet'],   slope: 'steep', depth: 16,  h: 10,   label: '土石流' },
   giantforest:{dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 18,  h: 28,   label: '巨木林壁', slopeBias: { mid: 7 } },
-  fallentree:{ dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 9,   h: 9,    label: '大倒木群', slopeBias: { mid: 7 } },
-  edgehamlet:{ dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 18,  h: 24,   label: '邊界假城街' },
+  fallentree:{ object: 'fallentree', dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 9,   h: 9,    label: '大倒木群', slopeBias: { mid: 7 } },
+  edgehamlet:{ object: 'house', dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 18,  h: 24,   label: '邊界假城街' },
   // ---- 水域 ----(水面恆是平的 ⇒ 水域段的分級一律 flat,見 `planWallRuns`)
   seawall:   { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 10,  h: 8,    label: '海堤' },
   tetrapod:  { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 12,  h: 9.2,  label: '大型消波塊層層堆疊' },
@@ -133,24 +85,38 @@ export const WALL_KINDS = {
   deeprig:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 28, label: '深海油井', family: 'extract', mount: 'float', col: [0xd07a32, 0x596168] },
   windland:     { dom: 'land',  bio: ['bare', 'green'], slope: 'flat', depth: 14, h: 28, minCover: 0.12, label: '陸域風機陣列', family: 'wind', col: [0xe1e4e4, 0x69747c] },
   solarfield:   { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 14, h: 14, faceH: 1.7, label: '太陽能板陣列', family: 'solar', col: [0x243f63, 0x777b70] },
-  mine:         { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 18, h: 20, label: '大型礦場', family: 'extract', col: [0xb88a3d, 0x786c5d] },
-  oilfield:     { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 16, h: 18, label: '陸上油井', family: 'extract', col: [0x86583f, 0x555c62] },
-  ranch:        { dom: 'land',  bio: ['green'], slope: 'flat', depth: 14, h: 14, label: '大型畜牧場', family: 'ranch', col: [0x8e7652, 0x6b7a4b] },
-  greenhouse:   { dom: 'land',  bio: ['green'], slope: 'flat', depth: 14, h: 14, label: '大型溫室', family: 'greenhouse', col: [0xa9c7bf, 0x6a8a78] },
-  factory:      { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 24, label: '大型工廠', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x7b8790, 0xb0653e] },
-  powerplant:   { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 28, label: '大型電廠', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x69747c, 0x9a8f72] },
-  incinerator:  { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 30, label: '大型焚化爐', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x727c82, 0xb46b3f] },
-  skyscrapers:  { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 34, label: '摩天大樓群', family: 'highrise', mix: 'urban-building', variants: 3, separated: true, col: [0x64717d, 0x8ca0ad] },
+  mine:         { object: 'mine', dom: 'land',  bio: ['bare'], slope: 'flat', depth: 18, h: 20, label: '大型礦場', family: 'extract', col: [0xb88a3d, 0x786c5d] },
+  oilfield:     { object: 'oilfield', dom: 'land',  bio: ['bare'], slope: 'flat', depth: 16, h: 18, label: '陸上油井', family: 'extract', col: [0x86583f, 0x555c62] },
+  ranch:        { object: 'ranch', dom: 'land',  bio: ['green'], slope: 'flat', depth: 14, h: 14, label: '大型畜牧場', family: 'ranch', col: [0x8e7652, 0x6b7a4b] },
+  greenhouse:   { object: 'greenhouse', dom: 'land',  bio: ['green'], slope: 'flat', depth: 14, h: 14, label: '大型溫室', family: 'greenhouse', col: [0xa9c7bf, 0x6a8a78] },
+  factory:      { object: 'factory', dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 24, label: '大型工廠', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x7b8790, 0xb0653e] },
+  powerplant:   { object: 'powerplant', dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 28, label: '大型電廠', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x69747c, 0x9a8f72] },
+  incinerator:  { object: 'incinerator', dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 30, label: '大型焚化爐', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x727c82, 0xb46b3f] },
+  skyscrapers:  { object: 'skyscraper', dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 34, label: '摩天大樓群', family: 'highrise', mix: 'urban-building', variants: 3, separated: true, col: [0x64717d, 0x8ca0ad] },
   oysterracks:  { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 14, h: 14, label: '蚵棚', family: 'wetland', col: [0x665541, 0x9caa9e] },
-  strandedship:{ dom: 'land',  bio: ['wet'], slope: 'flat', depth: 18, h: 18, label: '擱淺船隻', family: 'wreck', variants: 3, separated: true, col: [0x5b6970, 0x8a4f3e] },
+  strandedship:{ object: 'strandedship', dom: 'land',  bio: ['wet'], slope: 'flat', depth: 18, h: 18, label: '擱淺船隻', family: 'wreck', variants: 3, separated: true, col: [0x5b6970, 0x8a4f3e] },
   wetpods:      { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 16, h: 14, label: '大型消波塊層層堆疊', family: 'pods', col: [0x969a9b, 0x777c7d] },
+  house: { object: 'house', dom: 'land', bio: ['urban'], slope: 'flat', depth: 12, h: 18, label: '住家' },
+  car: { object: 'car', dom: 'land', bio: ['urban'], slope: 'flat', depth: 8, h: 10, label: '汽車' },
+  gianttree: { object: 'gianttree', dom: 'land', bio: ['green', 'wet'], slope: 'mid', depth: 18, h: 38, label: '神木' },
+  boulder: { object: 'boulder', dom: 'land', bio: ['bare', 'green', 'wet'], slope: 'mid', depth: 18, h: 24, label: '巨石' },
 };
+// Only generators with a continuous terrain cross-section may enter steep runs.
+for (const [kind, def] of Object.entries(EXPANDED_BOUNDARIES)) {
+  const { label, category, bio, slope, depth, h, dom = 'land' } = def;
+  WALL_KINDS[kind] = { label, category, bio, slope, depth, h, dom };
+}
+for (const kind of Object.keys(SLOPE_BOUNDARIES)) {
+  WALL_KINDS[kind].terrainFit = true;
+  if (!EXPANDED_BOUNDARIES[kind] && WALL_KINDS[kind].dom === 'land') WALL_KINDS[kind].slope = 'steep';
+}
+
 
 // ---- 邊界物件分類 / 使用政策 -------------------------------------------------
 // 邊界型錄同時包含「一件就成立的物件」與「必須沿邊成列才成立的長構造」。分類只描述
 // 物件語意；layout 才決定能否流入一般背景物件型錄。長構造維持 edge-only，避免把一小截
 // 河堤／城牆／消波塊當成可任意散布的獨立擺件。
-export const BOUNDARY_OBJECT_CATEGORIES = Object.freeze({
+const BOUNDARY_LINEAR_CATEGORIES = Object.freeze({
   citywall: 'fortification', rowhouse: 'residential', barricade: 'military', train: 'rail',
   trucks: 'vehicle', skyfall: 'highrise', viaduct: 'bridge', levee: 'levee',
   cliff: 'rock', rockery: 'rock', landslide: 'rock', debris: 'rock',
@@ -163,11 +129,15 @@ export const BOUNDARY_OBJECT_CATEGORIES = Object.freeze({
   strandedship: 'marine-vehicle', wetpods: 'coastal',
 });
 
+export const BOUNDARY_OBJECT_CATEGORIES = Object.freeze(Object.fromEntries(
+  Object.entries(WALL_KINDS).map(([kind, def]) => [kind,
+    def.object ? ENVIRONMENT_OBJECTS[def.object].category : def.category || BOUNDARY_LINEAR_CATEGORIES[kind]]),
+));
+
 // 只有這些完整單體可作一般背景物件。其餘款式仍只在邊界生成器內成列或延伸。
-export const STANDALONE_BOUNDARY_KINDS = Object.freeze([
-  'skyfall', 'rockery', 'fallentree', 'edgehamlet', 'mine', 'oilfield',
-  'factory', 'powerplant', 'incinerator', 'skyscrapers', 'strandedship',
-]);
+export const STANDALONE_BOUNDARY_KINDS = Object.freeze(
+  Object.keys(WALL_KINDS).filter(kind => WALL_KINDS[kind].object),
+);
 export const BOUNDARY_ONLY_KINDS = Object.freeze(
   Object.keys(WALL_KINDS).filter((kind) => !STANDALONE_BOUNDARY_KINDS.includes(kind)),
 );
@@ -177,7 +147,7 @@ export function boundaryObjectMeta(kind) {
   if (!def) return null;
   return {
     kind,
-    category: BOUNDARY_OBJECT_CATEGORIES[kind],
+    category: def.object ? ENVIRONMENT_OBJECTS[def.object].category : BOUNDARY_OBJECT_CATEGORIES[kind],
     layout: STANDALONE_BOUNDARY_KINDS.includes(kind) ? 'standalone' : 'edge-only',
     dom: def.dom,
     bio: [...def.bio],
@@ -200,7 +170,8 @@ export const WALL_MIX_GROUPS = {
 };
 
 /** 這一款站得到這一級坡上嗎(`slope` 是**上界**:自然景觀在三級都合法) */
-const fitsTier = (k, tier) => tierRank(WALL_KINDS[k].slope) >= tierRank(tier);
+const fitsTier = (k, tier) => tierRank(WALL_KINDS[k].slope) >= tierRank(tier)
+  && (tier !== 'steep' || WALL_KINDS[k].terrainFit === true);
 /** 這一款吃得下這個(地貌, 水陸域)嗎 */
 const kindFits = (k, biome, water) => {
   const d = WALL_KINDS[k];
@@ -412,955 +383,20 @@ const rep = (len, pitch, fn) => {
   return out;
 };
 /** 深度 d 的零件要貼齊**內面**時的 z 中心(內面在 +D/2) */
-const zIn = (D, d, back = 0) => D / 2 - d / 2 - back;
-/** 從一組色票裡挑一個(確定性) */
 const pick = (rnd, arr) => arr[Math.floor(rnd() * arr.length) % arr.length];
-/**
- * 落石/土塊:**半徑先抽、位置再由半徑推**(紀律③)。
- * 反過來寫(先定位置再抽半徑)是這一族最常見的頂出方式 —— 大顆的那幾次就穿出盒頂或盒底,
- * 而它只在某些種子上發生 ⇒ 看一張圖是看不出來的。
- */
-const rock = (rnd, x, D, H, rmin, rmax, c, backMax = 0, role = 'rock') => {
-  const r = rmin + rnd() * (rmax - rmin);
-  return {
-    g: ['ico', r], c,
-    p: [x, r + rnd() * Math.max(0, H - 2 * r), zIn(D, 2 * r, rnd() * backMax)],
-    role,
-  };
-};
-/**
- * 斷木:沿邊躺著(`rz = π/2`)、只加**小幅** yaw。長軸躺平後吃的是 x 方向的餘裕 ⇒ 落點
- * 一律收在 `len × spanF` 之內,MUST NOT 塞進 `rep()`(那會把它擺到最後一節的中心,長軸一半
- * 直接伸出段外)。
- */
-const log = (rnd, len, D, y, c, lmin, lmax, spanF = 0.55, role = 'deadwood') => {
-  const L = lmin + rnd() * (lmax - lmin), r = 0.34 + rnd() * 0.22;
-  return {
-    g: ['cyl', r, r * 0.72, L, 5], c,
-    p: [(rnd() - 0.5) * len * spanF, y, zIn(D, 2 * (0.35 * L / 2 + r), rnd() * 2)],
-    r: [0, (rnd() - 0.5) * 0.7, Math.PI / 2],
-    role,
-  };
-};
 
-// 懸崖上的枯木不是水平擺件：以自身半徑先算出可用厚度，再把木幹斜向崖內收。
-const cliffDeadwood = (rnd, len, D, H) => {
-  const L = 4.8 + rnd() * 2.4, r = 0.3 + rnd() * 0.16;
-  const tilt = 0.58 + rnd() * 0.28;
-  const zExt = Math.sin(tilt) * L / 2 + Math.cos(tilt) * r;
-  const yExt = Math.cos(tilt) * L / 2 + Math.sin(tilt) * r;
-  return {
-    g: ['cyl', r, r * 0.68, L, 5], c: pick(rnd, [0x5d4c38, 0x6b5a42, 0x4e4233]),
-    p: [
-      (rnd() - 0.5) * len * 0.42,
-      Math.min(H - yExt - 0.2, H * (0.52 + rnd() * 0.2)),
-      D / 2 - zExt - 0.2,
-    ],
-    r: [-tilt, (rnd() - 0.5) * 0.18, (rnd() - 0.5) * 0.16],
-    role: 'embedded-deadwood',
-    slopeDown: true,
-  };
-};
-
-const PARTS = {
-  // 城牆:收分基座 → 牆身 → 走道緣 → 雉堞,再依雜湊給這一節一座**構造**
-  // (2026-08-11 使用者追加「城牆也加上城門/城樓/砲台等結構(不會攻擊)」):
-  //   `gate`  城門 + 城樓:門洞 + **緊閉的雙扇門** + 拱券 + 上方兩層樓身與歇山頂(最高,到 H)
-  //   `bat`   砲台:牆頂加寬的台體 + 垛口 + 三門朝外的砲(**純擺設**)+ 彈藥堆
-  //   `arrow` 箭樓:馬面加高成帶箭窗的方樓 + 攢尖頂
-  //   其餘    素牆(只有馬面)
-  // **門一定是關著的**:開一個真的洞在這裡就是「看得穿卻走不過」——`wallFaceCover` 正是
-  // 為這件事訂的門檻,而邊界本來就不該有出口。砲是幾何,不是實體:`buildEdgeWall` 只碰
-  // `group` 與 `blockers`,不進任何單位/實體清單 ⇒「不會攻擊」是**構造保證**不是設定值。
-  // 牆身只長到 `H × WALL_F`,剩下的高度留給構造 —— 而碰撞盒是**逐段實測**的(見 biomes.js),
-  // 素牆那幾節不會因為型錄宣告了 14m 就多出一截撞得到卻看不見的空氣。
-  citywall: (len, D, H, rnd) => {
-    const WALL_F = 0.64;
-    const wh = H * WALL_F;                       // 牆身(含雉堞)頂
-    const bodyH = wh * 0.76, capY = wh * 0.86;
-    const feat = rnd();
-    const stone = [0x9a9184, 0x958c7f, 0xa0978a];
-    const base = [
-      { g: ['box', len, wh * 0.1, D], c: 0x8b8276, p: [0, wh * 0.05, 0] },
-      { g: ['box', len, bodyH, D * 0.86], c: pick(rnd, stone), p: [0, wh * 0.1 + bodyH / 2, zIn(D, D * 0.86)] },
-      { g: ['box', len, wh * 0.06, D], c: 0xa79d8f, p: [0, capY - wh * 0.03, 0] },
-      ...rep(len, 2.6, (x, s) => [
-        { g: ['box', s * 0.58, wh * 0.14, D * 0.66], c: 0xa79d8f, p: [x, capY + wh * 0.07, zIn(D, D * 0.66)] },
-      ]),
-      // 石紋:三道深色橫縫,貼在內面上(牆身退在後面 0.35m,故 z 用內面推)
-      ...[0.28, 0.5, 0.7].map((f) => (
-        { g: ['box', len, 0.16, 0.12], c: 0x7d7568, p: [0, wh * f, zIn(D, 0.12)] })),
-    ];
-    // ---- 城門 + 城樓 ----
-    if (feat < 0.26) {
-      const gw = Math.min(9, len * 0.4);          // 門洞外框寬
-      const dh = wh * 0.62, dw = gw * 0.24;       // 門扇高 / 單扇寬
-      const tw = Math.min(len * 0.46, gw + 2);    // 樓身寬
-      const eave = H * 0.92, ridge = H;           // 簷線 / 屋脊(頂**恰在** H)
-      const roofT = 0.34, roofD = D * 0.42, RT = 0.5;
-      return [
-        ...base,
-        { g: ['box', gw, wh * 0.8, D], c: 0x8f8779, p: [0, wh * 0.4, 0] },                    // 門座
-        { g: ['box', gw * 0.72, dh * 1.08, 0.5], c: 0x5b544a, p: [0, dh * 0.54, zIn(D, 0.5)] }, // 門洞(內凹深色)
-        ...[-1, 1].map((sd) => (                                                              // 緊閉的雙扇門
-          { g: ['box', dw, dh, 0.34], c: 0x6b4f36, p: [sd * dw * 0.52, dh / 2, zIn(D, 0.34, 0.16)] })),
-        ...[-1, 1].flatMap((sd) => [0.3, 0.55, 0.8].map((f) => (                               // 門釘
-          { g: ['ico', 0.11], c: 0x8d949c, p: [sd * dw * 0.52, dh * f, zIn(D, 0.22, 0.16)] }))),
-        { g: ['cyl', gw * 0.36, gw * 0.36, 0.44, 9], c: 0x8b8276, p: [0, dh, zIn(D, 0.44, 0.1)], r: [Math.PI / 2, 0, 0] }, // 拱券
-        { g: ['box', gw * 0.86, 0.5, D * 0.96], c: 0xa79d8f, p: [0, dh + gw * 0.36 + 0.25, 0] },  // 門楣
-        // 城樓:台基 → 樓身(柱與窗)→ 腰簷 → 歇山頂
-        { g: ['box', tw + 1.2, wh * 0.08, D], c: 0xa79d8f, p: [0, wh + wh * 0.04, 0] },
-        { g: ['box', tw, H * 0.2, D * 0.8], c: 0xb4a893, p: [0, wh + wh * 0.08 + H * 0.1, zIn(D, D * 0.8)] },
-        ...rep(tw, 2.4, (x, s) => [
-          { g: ['box', 0.34, H * 0.19, 0.34], c: 0x7a5f4b, p: [x, wh + wh * 0.08 + H * 0.1, zIn(D, 0.34)] },
-          { g: ['box', s * 0.52, H * 0.1, 0.22], c: 0x4a4238, p: [x, wh + wh * 0.08 + H * 0.12, zIn(D, 0.22)] },
-        ]),
-        { g: ['box', tw + 1.6, 0.32, D * 0.94], c: 0x7a6352, p: [0, eave - H * 0.13, 0] },     // 腰簷
-        { g: ['box', tw + 1.4, 0.4, D * 0.96], c: 0x7a6352, p: [0, eave, 0] },                 // 簷板
-        ...[1, -1].map((sd) => ({                                                              // 兩坡頂
-          // 縱向半徑先算(傾斜件的高度是板長投影出來的)⇒ 頂**恰在**屋脊;
-          // 拿 (簷+脊)/2 當中心是「看起來差不多」,而它會把屋頂疊出宣告高度之外
-          g: ['box', tw + 1.0, roofT, roofD / Math.cos(RT)], c: 0x6f5b4c,
-          p: [0, ridge - (Math.cos(RT) * roofT / 2 + Math.sin(RT) * roofD / (2 * Math.cos(RT))), (sd * roofD) / 2],
-          r: [sd * RT, 0, 0],
-        })),
-        { g: ['box', tw + 1.0, 0.34, 0.6], c: 0x5f4d40, p: [0, ridge - 0.17, 0] },             // 屋脊
-        ...[-1, 1].map((sd) => (                                                               // 脊獸(小方塊)
-          { g: ['box', 0.4, 0.5, 0.4], c: 0x8d7f6c, p: [sd * (tw / 2 + 0.3), ridge - 0.45, 0] })),
-      ];
-    }
-    // ---- 砲台(純擺設:砲是幾何,不進任何實體清單)----
-    if (feat < 0.5) {
-      const pw = Math.min(len * 0.56, 12), py = wh + wh * 0.12;
-      return [
-        ...base,
-        { g: ['box', pw, wh * 0.24, D], c: 0x8f8779, p: [0, wh + wh * 0.12, 0] },              // 台體
-        ...rep(pw, 2.2, (x, s) => [                                                            // 台上垛口
-          { g: ['box', s * 0.56, wh * 0.16, D * 0.7], c: 0xa79d8f, p: [x, py + wh * 0.2, zIn(D, D * 0.7)] },
-        ]),
-        ...rep(pw * 0.86, 3.6, (x) => [                                                        // 三門砲(砲口朝圖界外)
-          { g: ['cyl', 0.34, 0.24, 2.4, 8], c: 0x4a4f55, p: [x, py + wh * 0.22, -D / 2 + 1.2], r: [Math.PI / 2, 0, 0] },
-          { g: ['box', 1.3, 0.55, 1.9], c: 0x6b4f36, p: [x, py + wh * 0.16, -D / 2 + 1.5] },   // 砲架
-          ...[-0.62, 0.62].map((o) => (
-            { g: ['cyl', 0.42, 0.42, 0.22, 8], c: 0x5b544a, p: [x + o, py + wh * 0.13, -D / 2 + 1.6], r: [Math.PI / 2, 0, 0] })),
-          { g: ['ico', 0.28], c: 0x3f4750, p: [x + 1.2, py + wh * 0.16, -D / 2 + 2.4] },        // 彈堆
-          { g: ['ico', 0.24], c: 0x3f4750, p: [x + 1.5, py + wh * 0.15, -D / 2 + 2.1] },
-        ]),
-        { g: ['box', pw * 0.9, 0.22, D * 0.5], c: 0x8b8276, p: [0, py + wh * 0.13, -D / 2 + D * 0.28] },
-      ];
-    }
-    // ---- 箭樓(馬面加高 + 箭窗 + 攢尖頂)----
-    if (feat < 0.72) {
-      const tw = 4.6, th = wh * 1.12;
-      const rr = Math.min(tw * 0.62, D / 2 - 0.05), rh = wh * 0.3;   // 攢尖頂:半徑吃厚度上限
-      const tx = len * (rnd() - 0.5) * 0.4;
-      return [
-        ...base,
-        { g: ['box', tw, th, D], c: 0x8f8779, p: [tx, th / 2, 0] },
-        ...[0.42, 0.62, 0.82].flatMap((f) => [-1, 1].map((sd) => (                             // 箭窗
-          { g: ['box', 0.4, 0.9, 0.18], c: 0x4a4238, p: [tx + sd * 1.2, th * f, zIn(D, 0.18)] }))),
-        ...rep(tw, 1.6, (x, s) => [
-          { g: ['box', s * 0.54, wh * 0.12, D * 0.72], c: 0xa79d8f, p: [tx + x, th + wh * 0.06, zIn(D, D * 0.72)] },
-        ]),
-        { g: ['cone', rr, rh, 4], c: 0x6f5b4c, p: [tx, th + wh * 0.12 + rh / 2, 0] },           // 攢尖頂
-      ];
-    }
-    // ---- 素牆:只有馬面(交錯左右 ⇒ 沿邊看過去是有節奏的凸出)----
-    return [
-      ...base,
-      { g: ['box', 4.6, wh * 0.9, D], c: 0x8f8779, p: [len * (rnd() - 0.5) * 0.5, wh * 0.45, 0] },
-    ];
-  },
-  // 連排民房:狹面寬、斜屋頂、一樓店面 —— 沿邊排成一道街牆(這正是「連排」的意思)。
-  rowhouse: (len, D, H, rnd) => {
-    const wallH = H * 0.66, wallD = D * 0.9, tilt = 0.52;
-    // 屋頂**不到滿足跡**(留屋簷內縮 0.14):板身自己的厚度在傾斜後也會往外長,鋪到滿的話
-    // 屋簷必定頂出內面 —— 這一族最容易漏掉的一項(演出頂出 = A30)
-    const roofSpan = wallD * 0.86, zc = zIn(D, wallD);
-    return [
-      { g: ['box', len, 0.5, D], c: 0x7c7268, p: [0, 0.25, 0] },
-      { g: ['box', len, H * 0.34, 1.0], c: 0x8a8276, p: [0, H * 0.17, -D / 2 + 0.5] },   // 後巷矮牆
-      ...rep(len, 6.2, (x, s) => {
-        const c = pick(rnd, [0xcfc4b0, 0xc3b9a6, 0xd6cdbb, 0xb9ae9c, 0xc9bda6]);
-        const roofC = pick(rnd, [0x8a5f4a, 0x6f5b4c, 0x7a6352]);
-        return [
-          { g: ['box', s * 0.96, wallH, wallD], c, p: [x, 0.5 + wallH / 2, zc] },
-          // 斜屋頂:兩片繞 x 傾斜的板(A26 —— 傾角與板長由跨距算出來,不手寫)
-          ...[1, -1].map((sd) => ({
-            g: ['box', s * 0.99, 0.28, roofSpan / 2 / Math.cos(tilt)], c: roofC,
-            p: [x, 0.5 + wallH + (roofSpan / 4) * Math.tan(tilt), zc + (sd * roofSpan) / 4],
-            r: [sd * tilt, 0, 0],
-          })),
-          { g: ['box', s * 0.99, 0.3, 0.45], c: roofC, p: [x, 0.5 + wallH + (roofSpan / 2) * Math.tan(tilt), zc] },
-          // 一樓店面 + 二樓窗:貼內面的深色薄板(看得出來是「有人住過的房子」)
-          { g: ['box', s * 0.72, 2.5, 0.24], c: 0x3c4148, p: [x, 1.7, zIn(D, 0.24)], role: 'storefront-glass', mat: 'glass' },
-          { g: ['box', s * 0.7, 0.35, 0.7], c: pick(rnd, [0xc2513f, 0x3f6f7a, 0xb8912f]), p: [x, 3.2, zIn(D, 0.7)] },
-          ...[0.62, 0.82].map((f) => (
-            { g: ['box', s * 0.5, 1.2, 0.2], c: 0x4a5158, p: [x, 0.5 + wallH * f, zIn(D, 0.2)], role: 'residential-window', mat: 'glass' })),
-          // 頂樓水塔:雜湊決定有沒有(不是每一戶都有 ⇒ 天際線不齊)
-          ...(rnd() < 0.45 ? [{ g: ['cyl', 0.85, 0.85, 1.6, 8], c: 0x9aa2a8, p: [x, H - 0.9, zIn(D, 1.7, 1.4)] }] : []),
-        ];
-      }),
-    ];
-  },
-  // 軍工級路障:HESCO 防爆牆兩排 + 沙包 + 觀測哨 + 蛇腹鐵絲網。
-  barricade: (len, D, H, rnd) => [
-    ...rep(len, 2.4, (x, s) => [
-      { g: ['box', s * 0.97, 2.4, D], c: pick(rnd, [0x9a8f72, 0xa2977a, 0x8f8568]), p: [x, 1.2, 0] },
-      { g: ['box', s * 0.97, 2.2, D * 0.62], c: pick(rnd, [0x958a6d, 0x9e9375]), p: [x, 3.5, zIn(D, D * 0.62)] },
-      { g: ['box', s * 0.97, 0.16, D * 0.94], c: 0x6f664f, p: [x, 2.48, zIn(D, D * 0.94)] },
-    ]),
-    // 沙包稜線
-    ...rep(len, 1.1, (x, s) => [
-      { g: ['cyl', 0.42, 0.42, s * 0.92, 6], c: 0x87805f, p: [x, 4.9, zIn(D, 0.9)], r: [0, 0, Math.PI / 2] },
-    ]),
-    // 觀測哨:一節一座,擺在段中偏移處
-    { g: ['box', 3.2, 2.4, 3.0], c: 0x6e7364, p: [len * (rnd() - 0.5) * 0.4, 6.1, zIn(D, 3.0, 0.6)] },
-    { g: ['box', 3.6, 0.3, 3.4], c: 0x5c6155, p: [len * 0.0, H - 0.15, zIn(D, 3.4, 0.6)] },
-    // 蛇腹鐵絲網(沿邊的細圓柱,繞 x 躺平)
-    { g: ['cyl', 0.55, 0.55, len * 0.98, 5], c: 0xb7bcc0, p: [0, 5.6, zIn(D, 1.1)], r: [0, 0, Math.PI / 2] },
-    ...rep(len, 3.2, (x) => [{ g: ['cyl', 0.09, 0.09, 2.0, 4], c: 0x767b80, p: [x, 5.7, zIn(D, 0.2)] }]),
-  ],
-  // 停駛的列車:路堤 + 道碴 + 鋼軌 + 兩節車廂 + 電桿。車廂沿邊躺著,盒子只有 3.4m 厚。
-  train: (len, D, H, rnd) => {
-    const emb = 2.0, rail = emb + 0.55;
-    return [
-      { g: ['box', len, emb, D], c: 0x6f6a5e, p: [0, emb / 2, 0] },
-      { g: ['box', len, 0.5, D * 0.86], c: 0x8a8378, p: [0, emb + 0.25, 0] },
-      { g: ['box', len, H - emb, 0.3], c: 0x596168, p: [0, emb + (H - emb) / 2, zIn(D, 0.3)] },
-      ...[-0.72, 0.72].map((z) => (
-        { g: ['box', len, 0.16, 0.14], c: 0x5d6167, p: [0, rail + 0.08, z] })),
-      ...rep(len, 13.5, (x, s) => {
-        const c = pick(rnd, [0x3f6f7a, 0x7d4a3c, 0x4c5a3f, 0x5a5f68]);
-        return [
-          ...makeVehicle('railcar', {
-            fit: { L: s * 0.9, W: 3.0, H: 3.85 }, paint: c, at: [x, rail + 0.5, 0],
-          }),
-        ];
-      }),
-      // 電車線桿:柱 + 橫臂(頂**恰在**盒頂 —— 差一點就是「盒子上面有一截空的」)
-      ...rep(len, 9, (x) => [
-        { g: ['cyl', 0.13, 0.16, H - emb, 5], c: 0x6b7076, p: [x, emb + (H - emb) / 2, -D / 2 + 0.4] },
-        { g: ['box', 0.14, 0.14, D * 0.8], c: 0x6b7076, p: [x, H - 0.5, 0] },
-      ]),
-    ];
-  },
-  // 連排大貨車:低土堤上一整排貨櫃車,首尾相接。頂上再壓一層貨櫃把高度補到盒頂。
-  trucks: (len, D, H, rnd) => {
-    const berm = 1.5;
-    return [
-      { g: ['box', len, berm, D], c: 0x6f685c, p: [0, berm / 2, 0] },
-      { g: ['box', len, H - berm, 0.3], c: 0x5c625d, p: [0, berm + (H - berm) / 2, zIn(D, 0.3)] },
-      ...rep(len, 12.5, (x, s) => {
-        const c = pick(rnd, [0xb4553c, 0x3f6f7a, 0x7d8a4a, 0xa8a08c, 0xc2913a]);
-        const c2 = pick(rnd, [0x9a4a35, 0x35606b, 0x6d7a40]);
-        return [
-          ...makeVehicle('truck', {
-            fit: { L: s * 0.94, W: 2.5, H: Math.min(4.0, H - berm) }, paint: c,
-            cabC: pick(rnd, [0xd6cdbb, 0x3f4750, 0xb9ae9c]), at: [x, berm, 0],
-          }),
-          ...makeVehicle('container20', {
-            fit: { L: s * 0.55, W: 2.3, H: 2.4 }, paint: c2,
-            at: [x + s * 0.14, H - 2.5, 0],
-          }),
-        ];
-      }),
-    ];
-  },
-  // 倒塌摩天樓:側傾的塔身(樓板一層層露出來)+ 倒塌後翼 + 折斷的上段 + 天線；直接接地無底座。
-  skyfall: (len, D, H, rnd) => {
-    const tilt = 0.18, bodyD = 12.5, bodyH = 12, base = 0;
-    const hz = Math.abs(Math.sin(tilt)) * (bodyH / 2) + Math.cos(tilt) * (bodyD / 2);
-    const hy = Math.cos(tilt) * (bodyH / 2) + Math.abs(Math.sin(tilt)) * (bodyD / 2);
-    const zc = D / 2 - hz;
-    const upD = 10, upTilt = -0.35;
-    const uhy = Math.cos(upTilt) * 5 + Math.abs(Math.sin(upTilt)) * (upD / 2);
-    const uhz = Math.abs(Math.sin(upTilt)) * 5 + Math.cos(upTilt) * (upD / 2);
-    return [
-      ...rep(len, 4.5, (x) => [rock(rnd, x, D, 2.4, 1.1, 1.9, pick(rnd, [0x9a958a, 0x857f75, 0x8f8a80]), 3)]),
-      { g: ['box', len * 0.99, bodyH, bodyD], c: 0x627b89, p: [0, base + hy, zc], r: [tilt, 0, 0], role: 'broken-curtain-wall', mat: 'glass' },
-      // 樓板:一層一片,露在傾斜的斷面上
-      ...[0.16, 0.34, 0.52, 0.7, 0.88].map((f) => (
-        { g: ['box', len * 0.99, 0.34, bodyD * 1.01], c: 0xb2b8bd, p: [0, base + bodyH * f, zc], r: [tilt, 0, 0] })),
-      // 外露柱(沿邊躺著的細柱,鋼骨斷面)
-      ...rep(len, 6.5, (x) => [
-        { g: ['cyl', 0.34, 0.34, 5.2, 5], c: 0x767d84, p: [x, base + bodyH * 0.55, zc + 4.4], r: [tilt, 0, 0] },
-      ]),
-      // 倒塌後翼殘構：填滿公稱深度，直接接地不使用通用底座
-      { g: ['box', len * 0.48, 6.0, 3.4], c: 0x5a636c, p: [-len * 0.2, 3.0, -D / 2 + 1.7], role: 'collapsed-rear-wing' },
-      { g: ['box', len * 0.34, 10, upD], c: 0x828b94, p: [len * 0.24, base + bodyH + uhy - 3, D / 2 - uhz], r: [upTilt, 0, 0] },
-      { g: ['cyl', 0.42, 0.24, 4.2, 6], c: 0x9aa2a8, p: [len * 0.24, H - 2.1, D / 2 - uhz] },
-      ...rep(len, 8, (x) => [
-        { g: ['cyl', 0.08, 0.08, 3.4, 4], c: 0xa8917a, p: [x, base + bodyH * 0.98, zc + 3.0], r: [0.7, 0, 0.3] },
-      ]),
-    ];
-  },
-  // 倒塌高架橋(或跨海大橋):瓦礫 + 一片橫躺的橋面 + 斷墩 + 一座還立著的墩帽。
-  viaduct: (len, D, H, rnd) => {
-    const base = 4.5, dtilt = 0.15, deckD = 12;
-    const dhy = Math.cos(dtilt) * 0.5 + Math.abs(Math.sin(dtilt)) * (deckD / 2);
-    const dhz = Math.abs(Math.sin(dtilt)) * 0.5 + Math.cos(dtilt) * (deckD / 2);
-    return [
-      { g: ['box', len, base, D], c: 0x8a8378, p: [0, base / 2, 0] },
-      ...rep(len, 5, (x) => [rock(rnd, x, D, base + 2.0, 0.9, 1.8, pick(rnd, [0x9a958a, 0x8a857b]), 3)]),
-      // 橫躺的橋面(整段長)—— 內面覆蓋的主力
-      { g: ['box', len * 0.99, 1.0, deckD], c: 0x9aa0a6, p: [0, base + dhy, D / 2 - dhz], r: [dtilt, 0, 0] },
-      { g: ['box', len * 0.99, 0.8, 0.4], c: 0xb0b6bb, p: [0, base + dhy + 0.9, D / 2 - 0.35] },
-      // 斷墩:折斷面朝上,露出鋼筋
-      ...rep(len, 11, (x) => [
-        { g: ['box', 3.0, 6.6, 3.4], c: 0x8f959b, p: [x, base + 3.3, -D / 2 + 2.0] },
-        ...[-0.9, 0, 0.9].map((f) => (
-          { g: ['cyl', 0.07, 0.07, 1.8, 4], c: 0xa8917a, p: [x + f, base + 7.4, -D / 2 + 2.0], r: [0, 0, f * 0.25] })),
-      ]),
-      // 還立著的那一座:墩身 + 墩帽(頂到盒頂)
-      { g: ['box', 3.6, H - base - 1.0, 3.8], c: 0x969ca2, p: [len * 0.3, base + (H - base - 1.0) / 2, -D / 2 + 2.6] },
-      { g: ['box', 4.8, 1.0, 8.0], c: 0x868d93, p: [len * 0.3, H - 0.5, -D / 2 + 4.0] },
-    ];
-  },
-  // 河堤:內面是垂直的混凝土護岸,背後是梯形堤身,頂上有步道、欄杆與燈桿。
-  levee: (len, D, H, rnd) => {
-    const wallH = H * 0.78, crest = H * 0.8;
-    return [
-      { g: ['box', len, wallH, 1.4], c: 0xa6a49c, p: [0, wallH / 2, zIn(D, 1.4)] },
-      { g: ['box', len, crest, D - 1.4], c: 0x7f8368, p: [0, crest / 2, zIn(D, D - 1.4, 1.4)] },
-      { g: ['box', len, 0.45, D * 0.86], c: 0x9a9689, p: [0, crest + 0.22, zIn(D, D * 0.86, 0.6)] },
-      // 護岸伸縮縫 + 排水口(貼內面)
-      ...rep(len, 3.4, (x) => [
-        { g: ['box', 0.14, wallH * 0.92, 0.16], c: 0x8d8b83, p: [x, wallH * 0.46, zIn(D, 0.16)] },
-      ]),
-      ...rep(len, 12, (x) => [
-        { g: ['cyl', 0.34, 0.34, 0.8, 6], c: 0x6e6c66, p: [x, wallH * 0.34, zIn(D, 0.8)], r: [Math.PI / 2, 0, 0] },
-      ]),
-      // 欄杆:立柱 + 兩道橫桿
-      ...rep(len, 2.6, (x) => [
-        { g: ['cyl', 0.07, 0.07, 1.0, 5], c: 0x9aa2a8, p: [x, crest + 0.95, zIn(D, 0.2, 0.5)] },
-      ]),
-      ...[0.62, 0.95].map((f) => (
-        { g: ['box', len, 0.09, 0.09], c: 0x9aa2a8, p: [0, crest + f, zIn(D, 0.09, 0.5)] })),
-      // 燈桿(頂到盒頂)
-      ...rep(len, 24, (x) => [
-        { g: ['cyl', 0.11, 0.13, H - crest, 5], c: 0x8a9096, p: [x, crest + (H - crest) / 2, zIn(D, 0.3, 2.2)] },
-        { g: ['box', 0.7, 0.16, 0.34], c: 0xd8d2c2, p: [x + 0.3, H - 0.1, zIn(D, 0.34, 2.2)] },
-      ]),
-      // 堤肩草被
-      ...rep(len, 2.0, (x, s) => [
-        { g: ['box', s * 0.9, 0.22, D * 0.4], c: pick(rnd, [0x6f7a4c, 0x64703f, 0x77804f]), p: [x, crest + 0.42, -D / 2 + D * 0.22] },
-      ]),
-    ];
-  },
-  // 懸崖峭壁:以逐層後退的岩棚近似 60~90° 崖面；底層山體填滿盒內，
-  // 岩紋、嵌入巨石與斜下枯木全都在同一個段落包絡內。
-  cliff: (len, D, H, rnd) => {
-    const faceD = D * 0.48;
-    const wantedDeg = 68 + rnd() * 18;
-    const retreat = Math.min(D - faceD - 0.2, H / Math.tan(wantedDeg * Math.PI / 180));
-    const actualDeg = Math.atan2(H, Math.max(0.01, retreat)) * 180 / Math.PI;
-    const strata = [0.1, 0.23, 0.37, 0.52, 0.68, 0.82, 0.94];
-    return [
-      { g: ['box', len, H * 0.74, D], c: 0x6f685c, p: [0, H * 0.37, 0], role: 'cliff-core' }, // 山體填滿厚度
-      // 每一層都向圖界退一點，內側輪廓形成不規則的斜面而非垂直牆。
-      ...strata.map((f) => {
-        const d = faceD * (0.92 + rnd() * 0.12);
-        const back = 0.18 + retreat * f;
-        return {
-          g: ['box', len, H * (f > 0.88 ? 0.08 : 0.1), d],
-          c: pick(rnd, [0x7c7466, 0x928a7c, 0x6f685c, 0x81786a]),
-          p: [0, H * f, zIn(D, d, back)], role: 'rock-strata', slopeDeg: actualDeg,
-        };
-      }),
-      { g: ['box', len, H * 0.08, faceD], c: 0x6d7a4c, p: [0, H * 0.96, zIn(D, faceD, retreat + 0.1)], role: 'cliff-crest' },
-      // 崖底崩積錐 + 嵌在岩棚上的巨石(半徑先抽，位置再由半徑決定)。
-      ...rep(len, 4.8, (x, step) => [
-        { g: ['cone', Math.min(2.2, step * 0.38), 4.0, 7], c: pick(rnd, [0x8f8a80, 0x9a958a]), p: [x, 2.0, zIn(D, 4.4)], role: 'talus' },
-        rock(rnd, x, D, 4.0, 0.75, 1.55, 0x857f75, 1.8, 'embedded-boulder'),
-        ...(rnd() < 0.72 ? [rock(rnd, x + (rnd() - 0.5) * step * 0.26, D, 7.0, 0.42, 0.9, 0x756f66, 2.8, 'embedded-boulder')] : []),
-      ]),
-      // 斜向下插入岩壁的枯木；不伸出段端，也不超過 depth/h。
-      ...[0, 1, 2].map(() => cliffDeadwood(rnd, len, D, H)),
-      // 不規則裂隙與深色橫向岩紋。
-      ...rep(len, 6.4, (x) => [
-        { g: ['box', 0.28, H * 0.58, 0.28], c: 0x5e584e, p: [x, H * 0.4, zIn(D, 0.28, retreat * 0.22)], role: 'rock-fissure' },
-      ]),
-    ];
-  },
-  // 假山群：把舊邊界外的山稜收入有碰撞的障礙環，基部實心、峰群前後錯落。
-  rockery: (len, D, H, rnd) => [
-    { g: ['box', len, H * 0.34, D], c: 0x68675f, p: [0, H * 0.17, 0], role: 'rockery-core' },
-    { g: ['cone', Math.min(D * 0.42, len * 0.2), H, 6], c: 0x74746b, p: [0, H / 2, zIn(D, D * 0.84)], role: 'rockery-peak' },
-    ...rep(len, 7.2, (x, step, i) => {
-      const h = H * (0.38 + rnd() * 0.34);
-      const r = Math.min(D * 0.23, step * 0.43);
-      return [
-        { g: ['cone', r, h, 5 + i % 3], c: pick(rnd, [0x817f75, 0x727269, 0x8c897e]), p: [x, h / 2, zIn(D, r * 2, 0.5 + rnd() * 2.2)], role: 'rockery-ridge' },
-        rock(rnd, x + step * 0.18, D, H * 0.34 + 1.2, 0.5, 1.15, 0x77746b, 2.2, 'rockery-boulder'),
-      ];
-    }),
-  ],
-  // 山崩地:後方崩崖 + 前方起伏沙土 + 多層土脊、巨礫與折斷樹幹。
-  landslide: (len, D, H, rnd) => {
-    const bodyD = D * 0.94, bodyH = H * 0.58;
-    return [
-      { g: ['box', len, bodyH, bodyD], c: 0x8b7f6b, p: [0, bodyH / 2, zIn(D, bodyD)], role: 'landslide-soil' },
-      { g: ['box', len, H * 0.5, D * 0.34], c: 0x7a7263, p: [0, H * 0.75, -D / 2 + D * 0.17], role: 'landslide-scarp' },
-      // 起伏沙土脊：高度、厚度與前後位置分開抖動，形成非規則崩積面。
-      ...rep(len, 5.0, (x, step, i) => {
-        const ridgeH = 0.75 + rnd() * 1.35, ridgeD = D * (0.24 + rnd() * 0.18);
-        return [{
-          g: ['box', step * 0.84, ridgeH, ridgeD], c: pick(rnd, [0x9a896f, 0x8f806b, 0xa18e70]),
-          p: [x, bodyH + ridgeH * 0.45 + (i % 2) * 0.18, zIn(D, ridgeD, rnd() * 2.6)], role: 'soil-ridge',
-        }];
-      }),
-      ...rep(len, 4.4, (x, s) => [
-        rock(rnd, x, D, bodyH + 2.0, 1.0, 2.0, pick(rnd, [0x9a958a, 0x857f75, 0x8f8a80, 0x7d786e]), 5, 'landslide-rock'),
-        ...(rnd() < 0.58 ? [rock(rnd, x + (rnd() - 0.5) * s * 0.3, D, bodyH + 1.0, 0.52, 1.25, 0x7f796f, 6, 'landslide-rock')] : []),
-        ...(rnd() < 0.34 ? [{ g: ['cone', 1.4, 3.0, 6], c: 0x5f6b40, p: [x, bodyH + 1.4, -D / 2 + 3.4], role: 'scrub-root' }] : []),
-      ]),
-      // 折斷的樹幹(躺著,收在段中央 —— 見 `log` 的檔頭)
-      ...[0, 1, 2].map(() => log(rnd, len, D, bodyH + 0.8, 0x6b5a42, 6, 9, 0.5, 'landslide-deadwood')),
-      // 泥流舌:從崩崖底下漫出來的扁平舌狀體
-      ...rep(len, 6, (x, s) => [
-        { g: ['box', s * 0.86, 1.1, D * 0.5], c: 0x7f7360, p: [x, bodyH + 0.4, -D / 2 + D * 0.42], role: 'slide-tongue' },
-      ]),
-      ...[-1, 1].flatMap((sd, i) => plume(
-        sd * len * 0.18, bodyH + 1.0, zIn(D, 0.8, 1.2), rnd, `landslide_dust_${i}`, 'dust', 'dust',
-      )),
-    ];
-  },
-  // 土石流:爛泥坡、隨機石塊、枯木與分流泥舌(整段最矮的一款,靠面積說話)。
-  debris: (len, D, H, rnd) => [
-    { g: ['box', len, H * 0.5, D], c: 0x7d7260, p: [0, H * 0.25, 0], role: 'mud-core' },
-    // 上層堆體的頂**恰在**盒頂:靠亂數落石去填頂是碰運氣,某些種子上盒子頂端就會空一截
-    { g: ['box', len * 0.96, H * 0.34, D * 0.76], c: 0x8a7e69, p: [0, H * 0.83, zIn(D, D * 0.76, 1.2)], role: 'mud-crust' },
-    ...rep(len, 2.8, (x, step) => [
-      rock(rnd, x, D, H, 0.8, 1.4, pick(rnd, [0x948f84, 0x827c72, 0x9e998e, 0x726d64]), 8, 'debris-rock'),
-      ...(rnd() < 0.62 ? [rock(rnd, x + (rnd() - 0.5) * step * 0.08, D, H, 0.55, 1.1, 0x8a857b, 6, 'debris-rock')] : []),
-      ...(rnd() < 0.25 ? [rock(rnd, x, D, H, 0.42, 0.8, 0x736d64, 9, 'debris-rock')] : []),
-    ]),
-    // 斷木(躺著;收在段中央,不進 rep)
-    ...[0, 1, 2, 3].map(() => log(rnd, len, D, H * 0.62, pick(rnd, [0x6b5a42, 0x5c4d38]), 5, 8.5, 0.52, 'debris-deadwood')),
-    // 泥漿舌(貼內面漫出來的扁平體)
-    ...rep(len, 5, (x, s) => [
-      { g: ['box', s * 0.92, 0.9, D * 0.36], c: 0x6f6553, p: [x, 0.45, zIn(D, D * 0.36)], role: 'mud-tongue' },
-    ]),
-  ],
-  // 巨木林壁：密林有實心暗核，避免多棵樹之間變成視覺漏洞。
-  giantforest: (len, D, H, rnd) => [
-    { g: ['box', len, H * 0.3, D], c: 0x35452f, p: [0, H * 0.15, 0], role: 'forest-core' },
-    { g: ['cyl', 1.35, 1.75, H * 0.68, 7], c: 0x584936, p: [0, H * 0.34, zIn(D, 3.5, 1.4)], role: 'giant-trunk' },
-    { g: ['cone', Math.min(5.2, D * 0.29), H * 0.48, 7], c: 0x405d37, p: [0, H * 0.76, zIn(D, 8.5, 1.4)], role: 'giant-crown' },
-    ...rep(len, 5.8, (x, step, i) => {
-      const h = H * (0.55 + rnd() * 0.28), cr = Math.min(D * 0.22, step * 0.43);
-      return [
-        { g: ['cyl', 0.42 + rnd() * 0.32, 0.64 + rnd() * 0.36, h * 0.64, 6], c: 0x5a4a36, p: [x, h * 0.32, zIn(D, 2.2, 0.4 + rnd() * 2.4)], role: 'forest-trunk' },
-        { g: ['cone', cr, h * 0.52, 6 + i % 2], c: pick(rnd, [0x3d5734, 0x49623b, 0x354d30]), p: [x, h * 0.74, zIn(D, cr * 2, 0.4 + rnd() * 2.4)], role: 'forest-crown' },
-      ];
-    }),
-  ],
-  // 假城街：舊遠景城市收入權威環，以連續街廓封底、高低塔楼破輪廓。
-  edgehamlet: (len, D, H, rnd) => [
-    { g: ['box', len, H * 0.32, D], c: 0x606975, p: [0, H * 0.16, 0], role: 'city-core' },
-    { g: ['box', len * 0.18, H, D * 0.54], c: 0x737d88, p: [0, H / 2, zIn(D, D * 0.54, 0.8)], role: 'city-tower' },
-    ...rep(len, 6.4, (x, step, i) => {
-      const h = H * (0.34 + rnd() * 0.38), d = D * (0.42 + rnd() * 0.2);
-      const back = 0.4 + (i % 2);
-      return [
-        { g: ['box', step * 0.82, h, d], c: pick(rnd, [0x68727d, 0x7a838d, 0x59636f]), p: [x, h / 2, zIn(D, d, back)], role: 'city-block' },
-        { g: ['box', step * 0.7, h * 0.62, 0.12], c: 0x496775, p: [x, h * 0.56, zIn(D, 0.12, back)], role: 'city-glass-wall', mat: 'glass' },
-      ];
-    }),
-  ],
-  // 倒塌神木:兩根沿邊躺著的巨幹 + 兩側掀起的根盤 + 斷枝 + 苔蘚與新生樹苗。
-  fallentree: (len, D, H, rnd) => {
-    const mound = 1.5, r1 = 2.4, r2 = 1.5;
-    return [
-      { g: ['box', len, mound, D], c: 0x5f5a45, p: [0, mound / 2, 0] },
-      { g: ['cyl', r1, r1 * 0.86, len * 0.99, 8], c: 0x6b5a42, p: [0, mound + r1, zIn(D, r1 * 2)], r: [0, 0, Math.PI / 2] },
-      { g: ['cyl', r2, r2 * 0.9, len * 0.72, 7], c: 0x5c4d38, p: [len * 0.1, mound + r1 * 2 - 0.4 + r2, zIn(D, r2 * 2, 1.6)], r: [0, 0, Math.PI / 2] },
-      // 掀起的根盤(立起來的圓盤,軸沿 x)
-      ...[-1, 1].map((sd) => ({
-        g: ['cyl', 3.4, 3.4, 0.9, 9], c: 0x4f4433,
-        p: [sd * len * 0.46, mound + 3.5, 0], r: [0, 0, Math.PI / 2],
-      })),
-      ...rep(len, 6.0, (x, s) => [
-        { g: ['cyl', 0.3, 0.16, 3.0 + rnd() * 1.6, 5], c: 0x6b5a42, p: [x, mound + r1 * 1.6, zIn(D, 2.6, rnd() * 2)], r: [0, rnd() * 1.0 - 0.5, 0.5 + rnd() * 0.5] },
-        rock(rnd, x + s * 0.2, D, mound + r1 * 2 + 0.6, 0.5, 1.0, pick(rnd, [0x5f6b40, 0x6d7a4c, 0x55603a]), 2),
-        ...(rnd() < 0.5 ? [{ g: ['cone', 1.0, 2.6, 6], c: 0x5f6b40, p: [x, mound + 1.2, zIn(D, 2.0)] }] : []),
-      ]),
-    ];
-  },
-  // 海堤:沉箱基礎 + 直立牆身 + 反曲胸牆(浪返)+ 頂步道;內面帶潮線污漬。
-  seawall: (len, D, H, rnd) => {
-    const cais = H * 0.36, bodyD = 6, para = 0.5;
-    const phy = Math.cos(para) * 0.8 + Math.abs(Math.sin(para)) * 1.1;
-    const phz = Math.abs(Math.sin(para)) * 0.8 + Math.cos(para) * 1.1;
-    return [
-      { g: ['box', len, cais, D], c: 0x8d8a82, p: [0, cais / 2, 0] },
-      { g: ['box', len, H * 0.52, bodyD], c: 0xa3a099, p: [0, cais + H * 0.26, zIn(D, bodyD)] },
-      { g: ['box', len, 0.5, D * 0.7], c: 0x928f88, p: [0, H * 0.9, zIn(D, D * 0.7, 2.2)] },
-      { g: ['box', len, 1.6, 2.2], c: 0xaeaba3, p: [0, H - phy, D / 2 - phz], r: [-para, 0, 0] },
-      // 潮線 + 藻痕(貼內面)
-      ...[0.16, 0.24].map((f) => (
-        { g: ['box', len, H * 0.05, 0.14], c: 0x6c7264, p: [0, H * f, zIn(D, 0.14)] })),
-      // 消波塊護趾(海堤腳下那一排)
-      ...rep(len, 3.6, (x) => [rock(rnd, x, D, cais + 1.2, 0.9, 1.4, 0x9a9c9e, 1)]),
-      ...rep(len, 6, (x) => [
-        { g: ['cyl', 0.16, 0.16, 1.0, 5], c: 0x8a9096, p: [x, H * 0.88, zIn(D, 0.4, 2.2)] },
-      ]),
-    ];
-  },
-  // 島礁海界：假海的島影收進碰撞環，水面下的連續礁盤負責封界。
-  isletbarrier: (len, D, H, rnd) => [
-    { g: ['box', len, H * 0.28, D], c: 0x626d73, p: [0, H * 0.14, 0], role: 'reef-core' },
-    { g: ['cone', Math.min(D * 0.4, len * 0.2), H, 6], c: 0x778084, p: [0, H / 2, zIn(D, D * 0.8)], role: 'reef-peak' },
-    ...rep(len, 5.6, (x, step, i) => {
-      const h = H * (0.28 + rnd() * 0.34), r = Math.min(step * 0.4, D * 0.22);
-      return [{ g: ['cone', r, h, 5 + i % 3], c: pick(rnd, [0x6a7479, 0x7b8385, 0x59656c]), p: [x, h / 2, zIn(D, r * 2, 0.6 + rnd() * 2)], role: 'reef-islet' }];
-    }),
-  ],
-  // 消波塊:下層到上層逐步減少的四層交錯塊群(每塊 = 塊心 + 四支腳)，
-  // 不另墊海堤／護坡平台；下層行數嚴格多於上層，堆疊輪廓呈金字塔。
-  tetrapod: (len, D, H, rnd) => {
-    const pod = (x, y, z, s, layer, role = 'breakwater-core') => {
-      const c = pick(rnd, [0x9fa2a4, 0x94989a, 0xa8abad]);
-      const leg = [0.3 * s, 0.2 * s, 1.65 * s, 5];
-      return [
-        { g: ['ico', 0.72 * s], c, p: [x, y, z], role, layer },
-        { g: ['cyl', ...leg], c, p: [x, y + 0.72 * s, z], role: 'breakwater-leg', layer },
-        { g: ['cyl', ...leg], c, p: [x + 0.72 * s, y, z], r: [0, 0, -Math.PI / 2], role: 'breakwater-leg', layer },
-        { g: ['cyl', ...leg], c, p: [x - 0.72 * s, y, z], r: [0, 0, Math.PI / 2], role: 'breakwater-leg', layer },
-        { g: ['cyl', ...leg], c, p: [x, y, z], r: [Math.PI / 2, 0, 0], role: 'breakwater-leg', layer },
-      ];
-    };
-    // 每一層的節距由行數推導；密度由下往上遞減，不依賴共享亂數。
-    const layers = [
-      { n: 15, y: 1.25, span: len - 2.8 },
-      { n: 14, y: 3.25, span: len * 0.9 },
-      { n: 12, y: 5.25, span: len * 0.88 },
-      { n: 10, y: 7.05, span: len * 0.8 },
-    ];
-    const out = [
-      // 兩條窄腳帶只封住深度包絡的最外緣，不是連續可站立平台。
-      { g: ['box', len * 0.98, 0.5, 0.26], c: 0x8d9192, p: [0, 0.25, D / 2 - 0.13], role: 'breakwater-foot', layer: 0 },
-      { g: ['box', len * 0.98, 0.5, 0.26], c: 0x777b7d, p: [0, 0.25, -D / 2 + 0.13], role: 'breakwater-foot', layer: 0 },
-    ];
-    for (let layer = 0; layer < layers.length; layer++) {
-      const { n, y, span } = layers[layer], step = span / n;
-      for (let i = 0; i < n; i++) {
-        const x = -span / 2 + (i + 0.5) * step;
-        const s = 1.12 + rnd() * 0.06;
-        out.push(...pod(x, y, zIn(D, 2.7 * s, 0.05), s, layer));
-      }
-    }
-    // 外側水下護腳保留真實堆石深度；行數沿用最下層，仍不會改變上窄下寬的輪廓。
-    const underN = layers[0].n, underSpan = len - 2.8, underStep = underSpan / underN;
-    for (let i = 0; i < underN; i++) {
-      const x = -underSpan / 2 + (i + 0.5) * underStep;
-      out.push(...pod(x, 1.0, -D / 2 + 1.0, 0.82 + rnd() * 0.08, -1, 'breakwater-underwater'));
-    }
-    // 最高一列的薄頂緣把盒高用滿，但不冒充一層新的消波塊。
-    out.push({ g: ['box', len * 0.62, 0.24, 0.26], c: 0xa2a6a7, p: [0, H - 0.12, D / 2 - 0.13], role: 'breakwater-crest', layer: 4 });
-    return out;
-  },
-  // 連排貨輪:船體吃水線直接貼水，不再以整段灘床／碼頭盒墊高。
-  ship: (len, D, H, rnd) => {
-    const hullH = 8, hullD = D, deck = hullH;
-    const hullC = pick(rnd, [0x7d3f36, 0x2f5566, 0x3f5a3c, 0x53565c]);
-    return [
-      { g: ['box', len * 0.99, hullH, hullD], c: hullC, p: [0, hullH / 2, 0], role: 'hull' },
-      { g: ['box', len * 0.99, 0.9, hullD * 0.99], c: 0xb0402f, p: [0, 1.4, 0], role: 'hull' },
-      { g: ['box', len * 0.99, 0.5, hullD], c: 0x8a8f92, p: [0, deck + 0.25, zIn(D, hullD)] },
-      // 貨櫃堆(三列 × 兩層)
-      ...rep(len, 6.4, (x, s) => [-4.6, 0, 4.6].flatMap((z, j) => [
-        ...makeVehicle('container20', {
-          fit: { L: s * 0.9, W: 2.4, H: 2.6 },
-          paint: pick(rnd, [0xb4553c, 0x3f6f7a, 0x7d8a4a, 0xa8a08c, 0xc2913a]),
-          at: [x, deck + 0.5, zIn(D, hullD) + z],
-        }),
-        ...(rnd() < 0.75 ? makeVehicle('container20', {
-          fit: { L: s * 0.9, W: 2.4, H: 2.6 },
-          paint: pick(rnd, [0x9a4a35, 0x35606b, 0x6d7a40, 0x8f8878]),
-          at: [x, deck + 3.2, zIn(D, hullD) + z],
-        }) : []),
-        ...(j === 1 && rnd() < 0.4 ? makeVehicle('container20', {
-          fit: { L: s * 0.9, W: 2.4, H: 2.6 }, paint: 0x8d949c,
-          at: [x, deck + 5.9, zIn(D, hullD) + z],
-        }) : []),
-      ]).flat(),
-      ),
-      // 上層建築 + 駕駛台 + 煙囪 + 桅桿(桅頂 = 盒頂)
-      { g: ['box', 6.5, 6.0, 9], c: 0xd6cdbb, p: [len * 0.32, deck + 3.0, zIn(D, 9, 2.4)] },
-      { g: ['box', 7.4, 1.7, 9.8], c: 0x526b78, p: [len * 0.32, deck + 6.85, zIn(D, 9.8, 2.4)], role: 'bridge-glass', mat: 'glass' },
-      { g: ['box', 2.6, 3.2, 3.0], c: 0x3f4750, p: [len * 0.32 - 3.6, deck + 9.3, zIn(D, 3.0, 3.4)] },
-      { g: ['cyl', 0.24, 0.16, H - deck - 7.7, 5], c: 0xd6cdbb, p: [len * 0.32, deck + 7.7 + (H - deck - 7.7) / 2, zIn(D, 0.5, 3.0)] },
-      // 起重機吊臂(斜的細柱)
-      ...rep(len, 15, (x) => [
-        { g: ['cyl', 0.3, 0.22, 9, 5], c: 0xc2913a, p: [x, deck + 4.4, zIn(D, 4, 5.5)], r: [0, 0.4, 0.62] },
-      ]),
-    ];
-  },
-};
-
-// ---- 大型設施族生成器 -------------------------------------------------------
-// `WALL_KINDS` 的每一款只是資料列；同族共用生成器，避免風機／工業量體／農牧設施各自
-// 長出一份略有不同的接點與比例。障礙物本體直接由地面／水面長出；MUST NOT 另加通用底座、
-// 擋土方盒或為了填碰撞面而存在的無語意圍牆。
-const moving = (row, kind, id, pivot, phase, pad = 0) => ({
-  ...row, motion: { kind, id, pivot, phase, pad },
-});
-
-// 一個煙／塵柱合併成一組動態網格，避免每顆粒子各自產生 draw call。
-const plume = (x, y, z, rnd, id, kind = 'smoke', role = kind) => {
-  const phase = rnd() * Math.PI * 2, pivot = [x, y, z];
-  const rows = [
-    { r: 0.48, dy: 0, dz: 0 },
-    { r: 0.38, dy: 0.62, dz: 0.14 },
-    { r: 0.3, dy: 1.24, dz: -0.16 },
-  ];
-  return rows.map((q, i) => moving({
-    g: ['ico', q.r], c: kind === 'dust' ? [0x8c806d, 0x9b8b73, 0x756b60][i] : [0x4f5354, 0x686766, 0x858078][i],
-    p: [x + (i ? (rnd() - 0.5) * 0.34 : 0), y + q.dy, z + q.dz], role,
-  }, kind, id, pivot, phase, 0.58));
-};
-
-const windFacility = (len, D, H, rnd, spec) => {
-  const marine = spec.dom === 'water';
-  const bladeR = 5.8, hubY = H - bladeR - 0.22;
-  return [
-    ...rep(len, 13.5, (x, step, i) => {
-      const z = zIn(D, 0.44, 0.48), id = `rotor_${i}`;
-      const pivot = [x, hubY, z], phase = rnd() * Math.PI * 2;
-      const towerZ = zIn(D, 1.4, 0.7);
-      return [
-        // 單支主柱塔身；海上款具水中轉接單樁，陸上款直接落地。
-        ...(marine ? [{ g: ['cyl', 1.0, 1.25, 4.0, 8], c: 0xe2b84d, p: [x, 2.0, towerZ], role: 'monopile' }] : []),
-        { g: ['cyl', 0.42, 0.72, hubY, 8], c: spec.col[0], p: [x, hubY / 2, towerZ], role: 'tower-column' },
-        { g: ['box', 1.8, 1.0, 2.4], c: spec.col[1], p: [x, hubY, zIn(D, 2.4, 0.5)], role: 'nacelle' },
-        { g: ['ico', 0.65], c: 0xd9dde0, p: pivot, role: 'hub' },
-        ...[0, 1, 2].map((j) => {
-          const a = j * Math.PI * 2 / 3;
-          return moving({
-            g: ['box', 0.44, bladeR, 0.24], c: 0xe4e7e7,
-            p: [x + Math.cos(a) * bladeR / 2, hubY + Math.sin(a) * bladeR / 2, z],
-            r: [0, 0, a - Math.PI / 2],
-          }, 'rotor', id, pivot, phase);
-        }),
-      ];
-    }),
-    { g: ['ico', 0.44], c: marine ? 0xe2b84d : spec.col[1], p: [0, 0.44, -D / 2 + 0.44], role: marine ? 'mooring' : 'service-marker' },
-  ];
-};
-
-const solarFacility = (len, D, H, rnd, spec) => {
-  const marine = spec.dom === 'water';
-  const panels = rep(len, 6.2, (x, step, i) => {
-    const z = zIn(D, 5.0, marine ? 0.55 : 0.05), id = `float_${i}`;
-    const panelY = marine ? 1.15 : 1.1, floatY = marine ? 0.75 : 0.25;
-    const rows = [
-      // 低傾角面板與浮筒／追日腳就是障礙物本體；不為了碰撞高度把面板堆成直立牆。
-      { g: ['box', step * (marine ? 0.76 : 0.86), 0.18, 5.0], c: spec.col[0], p: [x, panelY, z], r: [marine ? -0.12 : -0.25, 0, 0], role: 'panel' },
-      { g: ['box', step * (marine ? 0.76 : 0.86), marine ? 0.38 : 0.5, 5.2], c: 0x56636a, p: [x, floatY, zIn(D, 5.2, marine ? 0.55 : 0.05)], role: marine ? 'float' : 'tracker-foot' },
-      ...[-1.7, 0, 1.7].map((o) => ({ g: ['box', step * 0.7, 0.06, 0.08], c: 0xaeb8bc, p: [x, panelY + 0.12, z + o], role: 'panel-rail' })),
-    ];
-    if (spec.mount !== 'float') return rows;
-    const pivot = [x, floatY, z];
-    const phase = rnd() * Math.PI * 2;
-    return rows.map((p) => moving(p, 'float', id, pivot, phase, EDGE_MOTION.FLOAT_AMP_M + 0.12));
-  });
-  return [
-    ...panels,
-    { g: ['box', 3.4, 0.7, 2.4], c: 0xe0ded4, p: [len * 0.2, marine ? 1.05 : 0.35, -D / 2 + 1.4], role: marine ? 'inverter-float' : 'inverter' },
-    { g: ['cyl', 0.16, 0.22, H - 0.4, 6], c: 0xb9c0c2, p: [len * 0.38, 0.4 + (H - 0.4) / 2, -D / 2 + 1.4], role: 'marker' },
-    ...(marine ? [
-      { g: ['ico', 0.44], c: 0xe2b84d, p: [0, 0.44, -D / 2 + 0.44], role: 'mooring' },
-      { g: ['ico', 0.44], c: 0xe2b84d, p: [0, 0.44, D / 2 - 0.44], role: 'mooring' },
-    ] : [{ g: ['ico', 0.44], c: spec.col[1], p: [0, 0.44, -D / 2 + 0.44], role: 'service-marker' }]),
-  ];
-};
-
-const ranchFacility = (len, D, H, rnd, spec) => {
-  const marine = spec.dom === 'water';
-  const pens = rep(len, 7.5, (x, step, i) => {
-    const y = marine ? 1.0 : 0.38;
-    const z = zIn(D, 5.2, 0.25), id = `pen_${i}`, pivot = [x, y, z];
-    const rows = [
-      // 大型箱網／圍網的浮式環框；中間保持空水面，不以方盒填滿。
-      ...[-2.2, 2.2].map((o) => ({ g: ['box', step * 0.86, 0.28, 0.22], c: spec.col[0], p: [x, y, z + o], role: 'cage-collar' })),
-      ...[-1, 1].map((sd) => ({ g: ['box', 0.22, 0.28, 4.6], c: spec.col[0], p: [x + sd * step * 0.39, y, z], role: 'cage-collar' })),
-      ...[-1.5, 0, 1.5].map((o) => ({ g: ['ico', 0.42], c: marine ? 0xd9b24b : 0xd8d0bd, p: [x + o, y + 0.28, z + (rnd() - 0.5) * 2.6], role: 'buoy' })),
-      // 上方細框是防鳥網／投餌索，不是建築牆面。
-      ...[-1, 1].map((sd) => ({ g: ['box', 0.12, 6.2, 0.12], c: spec.col[1], p: [x + sd * step * 0.36, y + 3.1, z + 2.15] })),
-      ...[-1, 1].map((sd) => {
-        const span = step * 0.72, rise = 6.2, L = Math.hypot(span, rise);
-        return { g: ['box', L, 0.1, 0.1], c: spec.col[1], p: [x, y + 3.1, z + 2.15], r: [0, 0, sd * Math.atan2(rise, span)], role: 'cage-net' };
-      }),
-      { g: ['box', step * 0.76, 0.1, 0.1], c: spec.col[1], p: [x, y + 6.18, z + 2.15] },
-    ];
-    if (spec.mount !== 'float') return rows;
-    const phase = rnd() * Math.PI * 2;
-    return rows.map((p) => moving(p, 'float', id, pivot, phase, EDGE_MOTION.FLOAT_AMP_M + 0.12));
-  });
-  return [
-    ...pens,
-    // 飼料／維修浮台是獨立小船台；旁邊長線以浮標串出貝類養殖帶。
-    { g: ['box', 4.8, 0.8, 4.2], c: spec.col[0], p: [len * 0.26, marine ? 1.0 : 0.4, -D / 2 + 2.6], role: marine ? 'service-float' : 'feed-depot' },
-    { g: ['box', 3.8, 3.4, 3.2], c: 0xd8d0bd, p: [len * 0.26, marine ? 3.1 : 2.1, -D / 2 + 2.6] },
-    ...(marine ? rep(len * 0.62, 2.4, (x) => [{ g: ['ico', 0.34], c: 0xe0ad3f, p: [x - len * 0.16, 0.48, -D / 2 + 0.6], role: 'longline-buoy' }]) : rep(len, 7.5, (x, step, i) => [
-      { g: ['box', step * 0.88, 7.2, 4.8], c: spec.col[0], p: [x, 3.6, zIn(D, 4.8, 0.2)], role: 'livestock-shed' },
-      { g: ['box', step * 0.94, 0.42, 5.4], c: spec.col[1], p: [x, 7.08, zIn(D, 5.4, 0.0)], r: [0, 0, i % 2 ? 0.08 : -0.08], role: 'shed-roof' },
-    ])),
-    { g: ['cyl', 0.14, 0.2, H - 0.4, 6], c: spec.col[1], p: [len * 0.4, 0.4 + (H - 0.4) / 2, -D / 2 + 0.2], role: 'marker' },
-    ...(marine ? [
-      { g: ['ico', 0.44], c: 0xe2b84d, p: [0, 0.44, -D / 2 + 0.44], role: 'mooring' },
-      { g: ['ico', 0.44], c: 0xe2b84d, p: [0, 0.44, D / 2 - 0.44], role: 'mooring' },
-    ] : []),
-  ];
-};
-
-const extractFacility = (len, D, H, rnd, spec, kind) => {
-  const marine = spec.dom === 'water';
-  if (kind === 'deeprig') {
-    const pad = EDGE_MOTION.FLOAT_AMP_M + 0.14;
-    const pivot = [0, 1.2, 0], id = 'rig_float';
-    const phase = rnd() * Math.PI * 2;
-    const deck = [
-      { g: ['box', len * 0.78, 6.4, D * 0.72], c: spec.col[0], p: [0, 3.2 + pad, zIn(D, D * 0.72, pad)], role: 'platform-deck' },
-      ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => ({
-        g: ['box', 2.2, 1.1, 4.8], c: spec.col[1], p: [sx * len * 0.25, 1.2, sz * D * 0.24], role: 'pontoon',
-      }))),
-      ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => ({
-        g: ['box', 0.34, 4.2, 0.34], c: spec.col[1], p: [sx * len * 0.29, 3.2 + pad, sz * D * 0.26], role: 'platform-leg',
-      }))),
-      { g: ['box', 5.2, 4.2, 4.8], c: 0xd7d1c2, p: [len * 0.2, 5.2 + pad, -D * 0.1], role: 'platform-control' },
-      { g: ['box', 6.4, 0.42, 6.2], c: spec.col[0], p: [0, H - pad - 0.21, 0], role: 'derrick-platform' },
-      // 兩座鑽井塔、鑽柱與側臂，平台本體一併隨浪浮動。
-      ...[-1, 1].flatMap((sd, di) => {
-        const x = sd * len * 0.16, towerH = H - pad - 5.2, z = zIn(D, 3.8, 1.0);
-        const rows = [
-          { g: ['box', 0.28, towerH, 0.28], c: spec.col[1], p: [x - 1.4, 4.2 + towerH / 2, z], role: 'offshore-derrick-leg' },
-          { g: ['box', 0.28, towerH, 0.28], c: spec.col[1], p: [x + 1.4, 4.2 + towerH / 2, z], role: 'offshore-derrick-leg' },
-          { g: ['box', 3.5, 0.3, 0.3], c: spec.col[0], p: [x, 4.2 + towerH, z], role: 'offshore-derrick-crossbar' },
-          { g: ['cyl', 0.16, 0.2, towerH + 1.0, 6], c: 0x4e565b, p: [x, 4.2 + (towerH + 1.0) / 2, z], role: 'drill-string' },
-          moving({ g: ['box', 4.4, 0.32, 0.5], c: 0xc28b38, p: [x + 0.6, 7.0, z], r: [0, 0, 0.16], role: 'offshore-oil-machine' }, 'machine', `offshore_machine_${di}`, [x, 6.7, z], phase + di * 0.7, 0.32),
-        ];
-        return rows;
-      }),
-    ].map((p) => p.motion ? p : moving(p, 'float', id, pivot, phase, pad));
-    const smoke = [-1, 1].flatMap((sd, i) => plume(
-      sd * len * 0.16, H - 4.8, zIn(D, 0.8, 1.2), rnd, `offshore_smoke_${i}`, 'smoke', 'smoke',
-    ));
-    return [
-      ...deck,
-      ...smoke,
-      { g: ['ico', 0.44], c: 0xe2b84d, p: [0, 0.44, -D / 2 + 0.44], role: 'mooring' },
-      { g: ['ico', 0.44], c: 0xe2b84d, p: [0, 0.44, D / 2 - 0.44], role: 'mooring' },
-    ];
-  }
-  const pump = (x, i) => {
-    const y = 2.3, c = i % 2 ? spec.col[0] : spec.col[1];
-    return [
-      { g: ['box', 3.8, 0.5, 3.4], c: 0x555b5f, p: [x, 0.25, zIn(D, 3.4, 1.2)], role: kind === 'mine' ? 'mine-machine-base' : 'oil-machine-base' },
-      { g: ['cyl', 0.22, 0.28, 4.2, 6], c, p: [x - 1.0, y, zIn(D, 0.7, 2.0)], role: kind === 'mine' ? 'mine-machine-cab' : 'oil-pump-column' },
-      { g: ['box', 5.2, 0.48, 0.72], c, p: [x + 0.8, y + 1.6, zIn(D, 0.72, 1.7)], r: [0, 0, kind === 'mine' ? -0.28 : 0.18], role: kind === 'mine' ? 'mine-machine-boom' : 'oil-pump-beam' },
-      { g: ['ico', 1.25], c: kind === 'mine' ? 0x807568 : 0x444a4e, p: [x + 1.3, 1.25, -D / 2 + 2.0], role: kind === 'mine' ? 'mine-machine-wheel' : 'oil-counterweight' },
-    ];
-  };
-  if (kind === 'mine') {
-    const machines = rep(len, 12, (x, step, i) => {
-      const z = zIn(D, 3.8, 0.7), pivot = [x, 4.5, z], phase = rnd() * Math.PI * 2;
-      return [
-        ...pump(x, i),
-        moving({ g: ['box', 5.8, 0.4, 0.55], c: 0x9a6e35, p: [x + 1.6, 5.0, z], r: [0, 0, -0.24], role: 'mine-machine-arm' }, 'machine', `mine_machine_${i}`, pivot, phase, 0.34),
-        moving({ g: ['ico', 0.48], c: 0x68605a, p: [x + 4.0, 3.7, z], role: 'mine-machine-bucket' }, 'machine', `mine_machine_${i}`, pivot, phase, 0.34),
-        ...plume(x + 3.6, 6.6, zIn(D, 0.8, 1.0), rnd, `mine_dust_${i}`, 'dust', 'dust'),
-      ];
-    }).flat();
-    const benches = rep(len, 8, (x, step, i) => {
-      const ridgeH = 0.65 + rnd() * 1.45, ridgeD = D * (0.28 + rnd() * 0.2);
-      return [{ g: ['box', step * 0.82, ridgeH, ridgeD], c: i % 2 ? 0x806f5c : 0x9a856c, p: [x, ridgeH / 2 + (i % 3) * 0.35, zIn(D, ridgeD, rnd() * 2.0)], role: 'mine-bench' }];
-    }).flat();
-    const ore = rep(len, 5.5, (x, step, i) => {
-      const largeH = 6.2 + rnd() * 1.0, smallH = 2.5 + rnd() * 1.4;
-      return [
-        { g: ['cone', step * 0.4, largeH, 8], c: i % 2 ? 0x807568 : 0x9a8a74, p: [x, largeH / 2, zIn(D, step * 0.8, 0.1)], role: 'ore-pile' },
-        { g: ['cone', step * 0.25, smallH, 7], c: 0xb08b4c, p: [x + step * 0.18, smallH / 2, zIn(D, step * 0.5, 0.3)], role: 'ore-pile' },
-      ];
-    }).flat();
-    return [
-      ...machines, ...benches, ...ore,
-      { g: ['cyl', 0.28, 0.42, H, 6], c: spec.col[1], p: [len * 0.34, H / 2, -D / 2 + 2.2], role: 'mine-marker' },
-      { g: ['ico', 0.44], c: spec.col[1], p: [0, 0.44, -D / 2 + 0.44], role: 'service-marker' },
-    ];
-  }
-  const derricks = rep(len, 12, (x, step, i) => {
-    const towerH = Math.min(H - 2.2, 11.8), z = zIn(D, 3.8, 0.4), pivot = [x, 3.3, z], phase = rnd() * Math.PI * 2;
-    return [
-      { g: ['box', 4.8, 0.5, 3.8], c: 0x555b5f, p: [x, 0.25, z], role: 'oil-rig-base' },
-      ...[-1, 1].map((sd) => ({ g: ['box', 0.26, towerH, 0.26], c: spec.col[1], p: [x + sd * 1.65, towerH / 2 + 0.5, z], role: 'derrick-leg' })),
-      { g: ['box', 3.8, 0.28, 0.28], c: spec.col[0], p: [x, towerH + 0.36, z], role: 'derrick-crossbar' },
-      { g: ['cyl', 0.14, 0.18, towerH + 1.4, 6], c: 0x4e565b, p: [x, (towerH + 1.4) / 2 + 0.5, z], role: 'drill-string' },
-      moving({ g: ['box', 4.8, 0.34, 0.52], c: 0xb27e32, p: [x + 0.65, 3.7, z], r: [0, 0, 0.18], role: 'oil-machine' }, 'machine', `oil_machine_${i}`, pivot, phase, 0.3),
-      moving({ g: ['ico', 0.46], c: 0x6c5b4c, p: [x + 2.9, 3.3, z], role: 'oil-machine-counterweight' }, 'machine', `oil_machine_${i}`, pivot, phase, 0.3),
-      ...plume(x, towerH + 1.3, zIn(D, 0.8, 0.8), rnd, `oil_smoke_${i}`, 'smoke', 'smoke'),
-    ];
-  }).flat();
-  const tanks = rep(len, 6.0, (x, step, i) => [
-    { g: ['cyl', step * 0.38, step * 0.42, 7.2, 10], c: i % 2 ? spec.col[0] : spec.col[1], p: [x, 3.6, zIn(D, step * 0.84, 0.1)], role: 'storage-tank' },
-  ]).flat();
-  return [
-    ...derricks, ...tanks,
-    { g: ['cyl', 0.28, 0.42, H, 6], c: spec.col[1], p: [len * 0.34, H / 2, -D / 2 + 2.2], role: 'oilfield-marker' },
-    { g: ['ico', 0.44], c: spec.col[1], p: [0, 0.44, -D / 2 + 0.44], role: 'service-marker' },
-  ];
-};
-
-const greenhouseFacility = (len, D, H, rnd, spec) => {
-  return [
-    ...rep(len, 7.2, (x, step) => [
-      { g: ['box', step * 0.9, 6.8, D * 0.62], c: 0x78988b, p: [x, 3.4, zIn(D, D * 0.62)], role: 'greenhouse-glass-wall', mat: 'glass' },
-      { g: ['cyl', 2.0, 2.0, step * 0.9, 8], c: spec.col[0], p: [x, 6.8, zIn(D, D * 0.62)], r: [0, 0, Math.PI / 2], role: 'greenhouse-glass-roof', mat: 'glass' },
-      ...[-1.8, 0, 1.8].map((o) => ({ g: ['box', step * 0.84, 0.08, 0.08], c: 0xd3dfda, p: [x, 7.2, zIn(D, 0.1, D * 0.22 + o)] })),
-    ]),
-    { g: ['cyl', 0.18, 0.22, H, 6], c: 0x718078, p: [len * 0.4, H / 2, -D / 2 + 0.22] },
-  ];
-};
-
-const highriseFacility = (len, D, H, rnd, spec, variant = 0) => {
-  const widthF = [0.78, 0.76, 0.8][variant % 3];
-  return [
-    ...rep(len, 8.2, (x, step, i) => {
-      const rank = (i + variant) % 3;
-      const h = rank === 1 ? H : H * (0.52 + rnd() * 0.25);
-      const d = D * (0.5 + rank * 0.04);
-      return [
-        { g: ['box', step * widthF, h, d], c: (i + variant) % 2 ? spec.col[0] : spec.col[1], p: [x, h / 2, zIn(D, d)] },
-        { g: ['box', step * (widthF - 0.08), h * 0.78, 0.12], c: 0x58798a, p: [x, h * 0.52, zIn(D, 0.12)], role: 'curtain-glass-wall', mat: 'glass' },
-        ...[0.24, 0.48, 0.72].map((f) => ({ g: ['box', step * (widthF - 0.06), 0.18, 0.16], c: 0xb6ccd5, p: [x, h * f, zIn(D, 0.16)], role: 'glass-mullion' })),
-      ];
-    }),
-    { g: ['box', 3.4 + variant * 0.4, H * (0.52 + variant * 0.05), 2.0], c: spec.col[1], p: [(variant - 1) * len * 0.18, H * (0.26 + variant * 0.025), -D / 2 + 1.0], role: 'service-wing' },
-  ];
-};
-
-const industryFacility = (len, D, H, rnd, spec, kind, variant = 0) => {
-  const hallH = Math.min(H - 1, kind === 'factory' ? 9 : 11);
-  const stacks = kind === 'powerplant' ? 3 : (kind === 'incinerator' ? 2 : 1);
-  const stackRows = Array.from({ length: stacks }, (_, i) => {
-    const x = len * (0.2 + i * 0.12);
-    const h = i === stacks - 1 ? H - 2.2 : Math.min(H - 2.2, H * (0.68 + i * 0.08));
-    const z = -D / 2 + 1.15 + i * 1.3;
-    return [
-      { g: ['cyl', 0.72, 1.15, h, 10], c: i % 2 ? spec.col[0] : spec.col[1], p: [x, h / 2, z], role: 'chimney' },
-      ...plume(x, h, z, rnd, `${kind}_smoke_${i}`, 'smoke', 'smoke'),
-    ];
-  }).flat();
-  return [
-    ...rep(len, variant === 1 ? 10.8 : 8.4, (x, step, i) => {
-      const h = hallH * (0.78 + ((i + variant) % 3) * 0.1);
-      const d = D * (0.5 + ((i + variant) % 2) * 0.08);
-      const back = ((i + variant) % 2) * 1.15;
-      return [
-        { g: ['box', step * 0.76, h, d], c: (i + variant) % 2 ? spec.col[0] : spec.col[1], p: [x, h / 2, zIn(D, d, back)], role: 'industrial-hall' },
-        { g: ['box', step * 0.62, h * 0.32, 0.12], c: 0x537583, p: [x, h * 0.62, zIn(D, 0.12, back)], role: 'industrial-glass-wall', mat: 'glass' },
-        { g: ['box', step * 0.72, 0.46, d + 0.35], c: spec.col[1], p: [x, h + 0.23, zIn(D, d + 0.35, back)], role: 'industrial-roof' },
-      ];
-    }),
-    ...stackRows,
-    ...(kind === 'powerplant' ? rep(len * 0.42, 9, (x) => [
-      { g: ['cyl', 2.5, 3.4, 7.4, 10], c: 0x9b9d96, p: [x - len * 0.18, 3.7, zIn(D, 6.8, 1.0)], role: 'cooling-tower' },
-    ]) : []),
-  ];
-};
-
-const wetlandFacility = (len, D, H, rnd, spec) => {
-  return [
-    ...rep(len, 5.4, (x, step) => [
-      ...Array.from({ length: 12 }, (_, i) => ({
-        g: ['cyl', 0.18, 0.18, 7.2, 5], c: i % 2 ? spec.col[0] : 0xc7c1ad,
-        p: [x - step * 0.44 + (i + 0.5) * step * 0.88 / 12, 3.6, zIn(D, 0.36, 0.05)], role: 'oyster-line',
-      })),
-      ...[-1.8, 0, 1.8].map((z) => ({ g: ['cyl', 0.11, 0.15, 6.8, 5], c: spec.col[0], p: [x, 3.4, zIn(D, 0.3, D * 0.22 + z)] })),
-      { g: ['box', step * 0.86, 0.16, 4.2], c: spec.col[1], p: [x, 5.8, zIn(D, 4.2, 1.0)] },
-      ...[-1.2, 0, 1.2].map((z) => ({ g: ['cyl', 0.26, 0.34, step * 0.72, 6], c: 0xc7c1ad, p: [x, 6.0, zIn(D, 0.7, D * 0.24 + z)], r: [0, 0, Math.PI / 2] })),
-    ]),
-    { g: ['cyl', 0.16, 0.2, H, 5], c: spec.col[0], p: [len * 0.4, H / 2, -D / 2 + 0.2] },
-  ];
-};
-
-const wreckFacility = (len, D, H, rnd, spec, variant = 0) => {
-  const dir = variant === 1 ? -1 : 1;
-  const hullF = [0.8, 0.76, 0.84][variant % 3];
-  const bridgeX = dir * len * (0.18 + variant * 0.025);
-  return [
-    // 分層船殼、龍骨、尖艏／方艉與甲板直接構成障礙；不是堆貨櫃的底座。
-    { g: ['box', len * hullF, 5.2, D * (0.6 + variant * 0.03)], c: spec.col[0], p: [-dir * len * 0.03, 2.6, zIn(D, D * (0.6 + variant * 0.03), 0.05)], role: 'hull' },
-    { g: ['box', len * (hullF - 0.08), 1.7, D * 0.72], c: spec.col[1], p: [-dir * len * 0.06, 6.05, zIn(D, D * 0.72, 0.05)], role: 'hull-deck' },
-    { g: ['box', len * (hullF - 0.14), 1.8, D * 0.28], c: 0x46545d, p: [-dir * len * 0.06, 0.9, -D / 2 + D * 0.14], role: 'keel' },
-    { g: ['cone', D * 0.18, 5.2, 8], c: spec.col[0], p: [dir * len * (hullF / 2 - 0.03), D * 0.18, zIn(D, D * 0.42, 0.05)], r: [0, 0, -dir * Math.PI / 2], role: 'bow' },
-    { g: ['box', len * 0.15, 4.2, D * 0.6], c: spec.col[1], p: [-dir * len * (hullF / 2 - 0.04), 2.3, zIn(D, D * 0.6, 0.1)], role: 'stern' },
-    { g: ['box', len * (hullF - 0.08), 0.5, D * 0.76], c: 0xa55d45, p: [-dir * len * 0.04, 7.15, zIn(D, D * 0.76)], role: 'deck' },
-    // 駕駛台、舷窗帶、煙囪、桅桿與救生艇讓船型在遠景仍可辨識。
-    { g: ['box', 5.4 + variant * 0.4, 3.8, 6.2], c: 0xc8c2b4, p: [bridgeX, 9.0, zIn(D, 6.2, 2.0)], role: 'bridge' },
-    { g: ['box', 4.8 + variant * 0.3, 0.7, 6.5], c: 0x53616a, p: [bridgeX, 11.25, zIn(D, 6.5, 1.8)], role: 'bridge-window', mat: 'glass' },
-    { g: ['cyl', 0.55, 0.45, 3.3, 7], c: variant === 2 ? 0x4f5960 : 0x9a4d37, p: [bridgeX - dir * 0.7, 12.1, zIn(D, 1.1, 2.0)], role: 'funnel' },
-    { g: ['cyl', 0.16, 0.22, H - 12.5, 5], c: spec.col[1], p: [-dir * len * 0.04, 12.5 + (H - 12.5) / 2, zIn(D, 0.5, 2.1)], role: 'mast' },
-    ...[-1, 1].map((sd) => ({ g: ['box', 2.4, 0.55, 0.85], c: 0xd6c7a7, p: [len * 0.03, 8.0, zIn(D, 0.85, 5.3 + sd * 0.55)], role: 'lifeboat' })),
-    ...rep(len * 0.72, 5.8, (x) => [
-      { g: ['cyl', 0.07, 0.07, 1.0, 5], c: 0xb4b8b6, p: [x, 8.05, zIn(D, 0.18, 0.42)], role: 'ship-rail' },
-    ]),
-  ];
-};
-
-const podFacility = (len, D, H, rnd, spec) => {
-  const pod = (x, y, z, s, rz) => [
-    { g: ['ico', 0.92 * s], c: pick(rnd, spec.col), p: [x, y, z] },
-    ...[-1, 1].map((sd) => ({ g: ['cyl', 0.34 * s, 0.2 * s, 2.4 * s, 6], c: pick(rnd, spec.col), p: [x + sd * 0.82 * s, y, z], r: [0, 0, sd * 1.05 + rz] })),
-    ...[-1, 1].map((sd) => ({ g: ['cyl', 0.34 * s, 0.2 * s, 2.4 * s, 6], c: pick(rnd, spec.col), p: [x, y + sd * 0.82 * s, z], r: [sd * 1.05, 0, rz] })),
-  ];
-  return [
-    ...rep(len, 3.2, (x, step, i) => {
-      const px = x * 0.91, nearZ = zIn(D, 3.2, 0.1);
-      return [
-        ...pod(px, 2.1, nearZ, 1.2, i % 2 ? 0.25 : -0.25),
-        ...pod(px, 4.4, nearZ, 1.05, i % 2 ? -0.3 : 0.3),
-        ...pod(px, 6.7, nearZ, 1.05, i % 2 ? 0.2 : -0.2),
-        ...pod(px, 2.1, -D / 2 + 1.5, 1.2, i % 2 ? -0.22 : 0.22),
-      ];
-    }),
-    { g: ['cyl', 0.16, 0.2, H, 5], c: spec.col[1], p: [len * 0.42, H / 2, -D / 2 + 1.0] },
-  ];
-};
-
-function facilityParts(kind, len, D, H, rnd, variant) {
-  const spec = WALL_KINDS[kind];
-  if (!spec?.family) return null;
-  if (spec.family === 'wind') return windFacility(len, D, H, rnd, spec);
-  if (spec.family === 'solar') return solarFacility(len, D, H, rnd, spec);
-  if (spec.family === 'ranch') return ranchFacility(len, D, H, rnd, spec);
-  if (spec.family === 'extract') return extractFacility(len, D, H, rnd, spec, kind);
-  if (spec.family === 'greenhouse') return greenhouseFacility(len, D, H, rnd, spec);
-  if (spec.family === 'industry') return industryFacility(len, D, H, rnd, spec, kind, variant);
-  if (spec.family === 'highrise') return highriseFacility(len, D, H, rnd, spec, variant);
-  if (spec.family === 'wetland') return wetlandFacility(len, D, H, rnd, spec);
-  if (spec.family === 'wreck') return wreckFacility(len, D, H, rnd, spec, variant);
-  return podFacility(len, D, H, rnd, spec);
-}
-
-/**
- * 取一款的零件表。`seed` 決定同款不同節的色差與擺位(零共享亂數)。
- * 找不到的款一律回退 `barricade`(原則 6:降級不例外)。
- */
-const mulColor = (a, b) => ((((a >> 16 & 255) * (b >> 16 & 255) / 255) | 0) << 16)
-  | ((((a >> 8 & 255) * (b >> 8 & 255) / 255) | 0) << 8) | (((a & 255) * (b & 255) / 255) | 0);
-const seasonalRock = (kind, rows, season) => {
-  if (kind !== 'cliff' && kind !== 'rockery') return rows;
-  const tint = ROCK_SEASON_TINT[season] ?? ROCK_SEASON_TINT.summer;
-  return rows.map((p) => (/cliff|rock|boulder|talus/.test(p.role || '') ? { ...p, c: mulColor(p.c, tint) } : p));
-};
-
+// Visible gaps remain blocked by the continuous authoritative ring.
 export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed), season = 'summer' }) {
-  const rnd = mulberry32((seed * 2654435761) >>> 0);
-  const rows = facilityParts(kind, len, depth, h, rnd, variant) || (PARTS[kind] || PARTS.barricade)(len, depth, h, rnd);
-  return seasonalRock(kind, rows, season);
+  const def = WALL_KINDS[kind];
+  if (!def) throw new RangeError('Unknown boundary kind: ' + kind);
+  if (![len, depth, h].every(n => Number.isFinite(n) && n > 0)) throw new RangeError('Invalid boundary dimensions');
+  const objectSeed = (seed ^ Math.imul(variant, 0x45d9f3b)) >>> 0;
+  if (def.object) return environmentParts(def.object, { size: [len, h, depth], seed: objectSeed, season });
+  if (EXPANDED_BOUNDARIES[kind]) return buildSlopeBoundary(kind, {
+    len, depth, h: h - .4, x: objectSeed % 997 * 11, z: objectSeed % 953 * 7,
+    seed: objectSeed, season, heightAt: () => .4,
+  }).parts;
+  return linearEnvironmentParts(kind, { len, depth, h, seed: objectSeed, season });
 }
 
 /**
@@ -1372,10 +408,11 @@ export function standaloneBoundaryParts(kind, opts = {}) {
     throw new RangeError(`邊界款式不是獨立物件:${kind}`);
   }
   const def = WALL_KINDS[kind];
+  const size = ENVIRONMENT_OBJECTS[def.object].size;
   return wallParts(kind, {
-    len: opts.len ?? 30,
-    depth: opts.depth ?? def.depth,
-    h: opts.h ?? def.h,
+    len: opts.len ?? size[0],
+    depth: opts.depth ?? size[2],
+    h: opts.h ?? size[1],
     seed: opts.seed ?? 1,
     variant: opts.variant ?? wallVariant(kind, opts.seed ?? 1),
     season: opts.season ?? 'summer',

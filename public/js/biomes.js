@@ -26,7 +26,6 @@ import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, treeHabitat
 // 立體掩體三本柱(2026-07-10):建物 26~170m,神木 / 巨岩隨等比放大可達 ~220m,
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {
   ENV, solveTowerSites, siteCPs, mapArg, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
   WORLD_EDGE, edgeWallInsetM, edgeWallHM, edgeWallDeepM, xzToLL, SLOPE, slopeDeg,
@@ -58,9 +57,11 @@ import {
   EDGE_WALL, EDGE_MOTION, WALL_KINDS, BACKDROP_KINDS, planWallRuns, planWallKinds, wallParts, wallVariant, wallSlopeTier, edgeSeed, partBox,
   planBufferProps, propParts, planBackdrop, backdropParts,
 } from './edgewall.js';
-import { libGeo } from './partlib.js';
+import { ENVIRONMENT_OBJECTS, environmentParts } from './environmentParts.js';
+import { runtimeMeshDataGeometry } from './runtimePartModel.js';
+import { buildSlopeBoundary } from './edgeSlope.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
-import { fitApprovedBuilding, fitApprovedPolygon, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
+import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
 import {selectRoadCar} from './vehicleEveryday.js';
 import { deploySceneBatches } from './sceneObjects.js';
@@ -114,7 +115,6 @@ import {
 import { buildAquaticWorld, buildRelicObject, relicCollider, RELIC_KINDS } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
-import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
 import { nativeFunctionalKind } from './nativeFunctionalBuildings.js';
 import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
 import { heritageStateOf, heritageRuinType } from './heritageSites.js';
@@ -790,128 +790,10 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
   return trees;
 }
 
-// ---- Quaternius Ultimate Stylized Nature(CC0)植被插槽 ----
-// 下載自 quaternius.com(gltf + bin + 貼圖,法線圖已剝除);
-// 載入失敗自動退回上面 VEG_DEFS 的程序生成版本,不開天窗。
-//
-// **2026-08-06 使用者定案「連 Quaternius 一起換掉」**(第 8 輪:灌木/闊葉林/針葉林/各種
-// 大小神木一律照片 → img→3D)—— broadleaf / birch / shrub 三型**退出這份名冊**,改走
-// 下面 VEG_DEFS 的零件表 + `lib:` 照片零件庫冠簇。三件事要一起記住:
-//   ① 這份名冊在這裡的語意是「這一型**不走**零件表」:掛在名冊裡的型別,`buildVegMeshes`
-//      連呼叫都不會被呼叫到 ⇒ 在名冊裡的型別上加 `lib:` 列是接在**沒人看得到的路徑**上
-//      (整支 GLB 分支沒有零件表可掛),而且不會有任何錯誤訊息。移除是唯一的接法。
-//   ② **只換冠簇,樹幹/枝條維持 primitive**(§3 rule 1「parts, never finished props」):
-//      SF3D 吃一張整棵樹的照片會吐出一整棵樹 —— 那是成品,烤進去就沒有逐實例變化了。
-//      故照片零件只接 `ico` 冠簇列,樹幹那幾根 cyl 一根都不動。
-//   ③ **尺寸接得上**:GLB 路徑的高度是 `it.s × entry.h`(8 / 8.5 / 1.8),零件表路徑是
-//      `vegSpan(def) × it.s`(實測 7.8 / 7.3 / 1.75)⇒ 同量級,不必改散布尺度。
-//      兩條路徑都零 `rnd()` 消耗(散布早就跑完)⇒ **佈局逐位元不變**,只換畫出來的幾何。
-// silvergrass 留在名冊裡:草葉的鏤空貼圖是 img→3D 生不出來的東西(寧缺勿錯)。
-// deadtree 已退出名冊改走零件表(2026-08-07 §5u;§5q 定案樹族 img→3D 只收雕塑性主體,
-// 枯幹正是首件 —— §5k ⑤ broadleaf 的同一條遷移路,Quaternius DeadTree_1/2 隨之退場)。
-const NATURE_DIR = 'assets/models/quaternius/nature/';
-// h = 基準高(m):GLB 植被同步吃超尺度(比現實高大;put() 的 VEG_SCALE 已含在 s)
-const NATURE_MANIFEST = {
-  silvergrass: { files: ['Grass_Large.gltf', 'Grass_Small.gltf'], h: 1.2 },
-};
-// 葉片的季節色偏(乘在貼圖上;樹幹不動)
-const SEASON_LEAF_TINT = { spring: 0xd9ffd0, summer: 0xffffff, autumn: 0xffab5e, winter: 0xc9d6da };
 // 神木常綠樹冠季節疊色(乘在樹種色上;常綠不轉橘紅 → 春嫩黃綠、夏原色、秋偏金、冬霜青)
 const SEASON_GIANT_TINT = { spring: 0xe4f2be, summer: 0xffffff, autumn: 0xd8b06a, winter: 0xb2c2c6 };
 const mulHex = (a, b) => ((((a >> 16 & 255) * (b >> 16 & 255) / 255) | 0) << 16)
   | ((((a >> 8 & 255) * (b >> 8 & 255) / 255) | 0) << 8) | (((a & 255) * (b & 255) / 255) | 0);
-
-/** gltf → 正規化零件(高度=1、底部貼地),材質轉 toon 並保留貼圖 */
-function extractNatureParts(gltf, season) {
-  const root = gltf.scene;
-  root.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(root);
-  const h = Math.max(0.01, box.max.y - box.min.y);
-  const norm = new THREE.Matrix4()
-    .makeScale(1 / h, 1 / h, 1 / h)
-    .multiply(new THREE.Matrix4().makeTranslation(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2));
-  const parts = [];
-  root.traverse((o) => {
-    if (!o.isMesh) return;
-    const geo = o.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(norm, o.matrixWorld));
-    const src = Array.isArray(o.material) ? o.material[0] : o.material;
-    // 葉片判定只有這一條(季節色偏與軟性旗標同吃):另寫第二條 regex 就會出現
-    // 「這叢葉子會變色卻不會飄」。幾何已正規化成「底部貼地、高度 1」⇒ 擺動權重的
-    // span 恆為 1、base 恆為 0(這正是正規化那一步順帶給的東西,不必再量一次)。
-    const leafy = /leaves|grass|flower|bush/i.test(`${src.name} ${o.name} ${src.map?.name || ''}`);
-    // rim: 0 = 逐位元維持這條路徑原本沒有邊緣光的樣子(同一棵樹的樹幹仍是未補丁材質)
-    const mat = leafy
-      ? toonMat(src.color ? src.color.clone() : new THREE.Color(0xffffff),
-        { map: src.map || null, rim: 0, soft: { k: 'leaf', span: 1 } })
-      : toonPlain({
-        color: src.color ? src.color.clone() : new THREE.Color(0xffffff),
-        map: src.map || null,
-      });
-    if (src.map) { mat.alphaTest = 0.5; mat.side = THREE.DoubleSide; }   // 葉片鏤空貼圖
-    if (leafy) mat.color.multiply(new THREE.Color(SEASON_LEAF_TINT[season] ?? 0xffffff));
-    parts.push({ geo, mat });
-  });
-  return parts;
-}
-
-/** 併發載入 manifest 植被模型;個別失敗只是該類型退回程序生成 */
-async function loadNatureModels(season) {
-  const loader = new GLTFLoader();
-  const out = {};
-  await Promise.all(Object.entries(NATURE_MANIFEST).map(async ([type, def]) => {
-    const slots = new Array(def.files.length).fill(null);   // 保持檔案順序:全房間變體分配一致
-    await Promise.all(def.files.map(async (f, i) => {
-      try {
-        const gltf = await loader.loadAsync(NATURE_DIR + f);
-        const parts = extractNatureParts(gltf, season);
-        if (parts.length) slots[i] = { parts };
-      } catch (e) {
-        console.warn(`植被模型載入失敗(退回程序生成):${f}`, e.message);
-      }
-    }));
-    const variants = slots.filter(Boolean);
-    if (variants.length) out[type] = { variants, h: def.h };
-  }));
-  return out;
-}
-
-/** GLB 植被 → InstancedMesh(變體以 i % n 決定性分配;實例色/傾斜差異化同程序生成版) */
-function buildVegMeshesGlb(entry, items) {
-  const meshes = [];
-  const groups = entry.variants.map(() => []);
-  items.forEach((it, i) => groups[i % entry.variants.length].push([it, i]));
-  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
-  const P = new THREE.Vector3(), S = new THREE.Vector3();
-  const tint = new THREE.Color();
-  groups.forEach((list, vi) => {
-    if (!list.length) return;
-    entry.variants[vi].parts.forEach((part, pi) => {
-      const m = new THREE.InstancedMesh(part.geo, part.mat, list.length);
-      list.forEach(([it, gi], k) => {
-        E.set(it.tx || 0, it.ry, it.tz || 0);
-        Q.setFromEuler(E);
-        P.set(it.x, it.y, it.z);
-        const sc = it.s * entry.h;
-        S.set(sc, sc, sc);
-        M.compose(P, Q, S);
-        m.setMatrixAt(k, M);
-        // hash 併入零件序 pi:同株樹幹/葉叢的色抖各自獨立(與程序生成版同邏輯)
-        const kk = gi * 197 + pi * 3121 + 1;
-        const j1 = ((kk * 2654435761) >>> 0) % 100 / 100;
-        const j2 = ((kk * 1597334677) >>> 0) % 100 / 100;
-        const j3 = ((kk * 3812015801) >>> 0) % 100 / 100;
-        tint.setRGB(0.8 + j1 * 0.36, 0.8 + j2 * 0.36, 0.8 + j3 * 0.36);
-        m.setColorAt(k, tint);
-      });
-      m.instanceMatrix.needsUpdate = true;
-      if (m.instanceColor) m.instanceColor.needsUpdate = true;
-      m.castShadow = false;
-      m.frustumCulled = false;
-      meshes.push(m);
-    });
-  });
-  return meshes;
-}
 
 function seasonColor(key, fixed, season) {
   const s = ENV.seasons[season] || ENV.seasons.summer;
@@ -942,7 +824,7 @@ const vegSoftKind = (part) => part.sf ?? SOFT_BY_VEG_KEY[part.key] ?? null;
 //   ② 庫幾何已 markShared(A25)且本迴圈不就地改幾何 ⇒ 不 clone;會 applyMatrix4 的
 //      消費端(beacons buildBeacon)才要 clone。
 //   ③ 查表是純函式,零共享 rnd 消耗(§2.3)。
-const partGeo = (p) => (p.lib && isRuntimeEligibleNatureKey(p.lib) && libGeo(p.lib)) || p.g;
+const partGeo = (p) => p.g;
 
 /**
  * 一株植被的公稱高度(擺動權重的分母)。**推導不手寫**:改任一零件的 y/幾何,
@@ -3221,35 +3103,7 @@ function rockProbe(g) {
 // 頂面特徵一律「塞不下就縮小到剛好」:sc = min(想要的, 頂面半徑/自身腳印),
 // 縮到下限仍塞不下才放棄;偏移量同步夾在「頂半徑 − 腳印」內,再由 `seat()` 實測腳印四角
 // 是否踩在同一片頂面上(圓頂/窄頂/疊石堆頂拿 topR 猜會半懸空)。
-// ---- 巨岩零件庫(runbook §5f:命令式建造端不開宣告式縫,只做呼叫點守衛)----
-// 名冊 = 這裡一份(audit_siteplan Ⅴ 與 tools/ai3d 的 megaLibDescs 都吃這一份;
-// 節點還沒入庫就不要把名字放進來 —— intake 會把「名冊有、GLB 無」判成缺件紅字)。
-// 節點契約:**單位包絡**(水平徑向 ≤1、縱向 ±1;= fallback ico(1)),呼叫端以
-// mesh.scale 拉到自己的尺寸 ⇒ 同一顆節點服務任意大小的岩塊。
-const MEGA_LIB = {
-  // 渾圓/塊狀岩塊(marble 堆/崩落塊/伴生丘/疊石);2026-08-06 第 7 輪 +3 顆跨國地質實拍:
-  // d 海蝕拱殘丘、e 平衡巨礫(花崗岩 tor)、f 砂岩刃脊塊
-  block: ['rock/mega_a'].filter(isRuntimeEligibleNatureKey),
-  tower: 'rock/tower_a',                                  // 火山頸整座(實拍魔鬼塔;崖錐 + 柱身同一顆)
-  mesa: 'rock/mesa_a',                                    // 平頂岩體整座(實拍;裙狀崖錐 + 疊層同一顆)
-  hoodoo: 'rock/hoodoo_a',                                // 蘑菇岩整柱(實拍帽岩+細頸,Hoodoo Basin)
-  //   (2026-08-06 晚:同一張乾淨候選 wc_112762573,SF3D 在細腰處斷成兩截(§5j 待續①)⇒
-  //    改走 fallback chain 下一階 Hunyuan3D-2GP(runbook §5m)—— 帽岩/細頸/基座全保住)
-};
-// 與 partGeo 同一條紀律的命令式版本:查無此名/載入失敗 ⇒ null,呼叫端以原 primitive
-// 收尾(保險絲,原則 6)。兩點不同:①一律 `.clone()` —— 巨岩群組會過 bakeContactAO
-// (就地 setAttribute 頂點色),共用庫幾何被烤一次,全場每一處引用都帶著別顆岩的 AO
-// (partlib 紀律②);②佈局與碰撞(H/RX/RZ/col/anchor)的算式 MUST NOT 讀庫幾何 ——
-// 庫隨載入成敗而異,佈局讀它 = 跨客戶端分家(§2.3)。亂數紀律:呼叫端 MUST NOT 因
-// 庫的有無增減 rnd() 枚數(有無庫,共享序列逐位元同一條)。
-const megaGeo = (name) => {
-  const g2 = name && isRuntimeEligibleNatureKey(name) ? libGeo(name) : null;
-  return g2 ? g2.clone() : null;
-};
-// 輪替除數 MUST 由名冊長度推導(推導值 MUST NOT 手寫,§2.1):四個呼叫點原本各寫死 `% 3`,
-// 名冊一擴充,第 4 顆以後的節點就**永遠不會被取到** —— 檔案在、intake 綠、對照台有列,
-// 而遊戲裡一顆都沒出現過,沒有任何錯誤訊息。長度為 3 時逐位元同舊制。
-const NBLK = MEGA_LIB.block.length;
+// 巨岩由程序幾何生成，不再查詢外部零件庫。
 
 // ---- 建物配件零件庫(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物
 // 照片,再進行 img to 3D;無視舊有物件直接畫,禁止使用原版重繪」)----
@@ -3313,12 +3167,6 @@ const BLD_LIB = {
   ]],
 };
 // `i` = 輪替索引(只有陣列名冊吃得到;單一字串的舊三桶逐位元不受影響)
-const bldGeo = (key, i = 0) => {
-  const row = BLD_LIB[key];
-  if (!row) return null;
-  const n = row[0];
-  return libGeo(Array.isArray(n) ? n[((i % n.length) + n.length) % n.length] : n);
-};
 /** 該桶名冊有幾顆節點(0 = 這一桶還沒入庫;輪替除數的唯一來源) */
 const bldLibN = (key) => { const n = BLD_LIB[key]?.[0]; return n ? (Array.isArray(n) ? n.length : 1) : 0; };
 
@@ -3524,9 +3372,9 @@ function profGeo(prof, uvb) {
 // 3D 零件對照台(dev-only、唯讀,count=1 取樣)—— 台上另抄 primitive/桶色就是第二套
 // 組裝器(runbook §7 紀律 ①),它壞掉的樣子是「對照台上的原版與遊戲裡的不是同一個東西」。
 export const buildBldBucket = {
-  chimney: (n) => new THREE.InstancedMesh(bldGeo('chimney') || new THREE.BoxGeometry(1, 1, 1), bmat(0x9a5a44, { wash: 0.5 }), n),
-  tank: (n) => new THREE.InstancedMesh(bldGeo('tank') || new THREE.CylinderGeometry(1, 1, 1, 8), bmat(0xb0b8be), n),
-  acbox: (n) => new THREE.InstancedMesh(bldGeo('acbox') || new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), n),
+  chimney: (n) => new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x9a5a44, { wash: 0.5 }), n),
+  tank: (n) => new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), bmat(0xb0b8be), n),
+  acbox: (n) => new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), n),
   // 整棟量體:材質由呼叫端傳入 —— 立面貼圖是**逐立面款**現做的(窗格 + 夜間自發光),
   // 這裡自己 new 一份就是第二套立面材質,而症狀是「那幾棟高樓晚上不亮」。庫節點是單一
   // 群組 ⇒ three 取材質陣列的第 0 格,故傳單一 wall 材質即可(頂面也吃立面貼圖,是
@@ -3547,7 +3395,7 @@ export const buildBldBucket = {
   // 連剖面都沒宣告(舊名冊 / 新開的桶)才退回單位方盒 —— 那是保險絲的保險絲。
   mass: (n, mat, i = 0, key = 'mass') => {
     const prof = bldProfile(key, i);
-    const geo = bldGeo(key, i) || (prof ? profGeo(prof, MASS.UVB[key] || MASS.UVB.mass) : new THREE.BoxGeometry(1, 1, 1));
+    const geo = prof ? profGeo(prof, MASS.UVB[key] || MASS.UVB.mass) : new THREE.BoxGeometry(1, 1, 1);
     return new THREE.InstancedMesh(geo, mat || bmat(0xb9b3a8, { wash: 0.5 }), n);
   },
 };
@@ -3628,9 +3476,9 @@ export function decorateMegalith(g, anchor, rnd, s) {
     const n = 3 + Math.floor(lr() * 3);        // 3~5 顆
     let y = 0, r = 0.78 + lr() * 0.34;
     for (let i = 0; i < n; i++) {
-      const g2 = megaGeo(MEGA_LIB.block[i % NBLK]);
-      const st = new THREE.Mesh(g2 || ico(r), rockMat(0x8f8a80));
-      if (g2) st.scale.set(r, r * 0.7, r); else st.scale.y = 0.7;
+
+      const st = new THREE.Mesh(ico(r), rockMat(0x8f8a80));
+      st.scale.y = 0.7;
       // 疊層錯位:上層小石在 ±12% 半徑內偏移(深交疊不開縫);底石不偏(落座)
       const ex = i ? (lr() - 0.5) * 0.24 * r : 0, ez = i ? (lr() - 0.5) * 0.24 * r : 0;
       y += r * 0.7; st.position.set(ex, y, ez); y += r * 0.36;
@@ -3858,13 +3706,8 @@ export function synthMegalith(g, rnd) {
     chisel(2 + Math.floor(rnd() * 3), RX, RZ, H * 0.8);
   } else if (main === 'tower') {
     const r0 = 17 + rnd() * 8, bh = 24 + rnd() * 14;
-    // 整座庫節點(實拍魔鬼塔:崖錐 + 柱身同一顆)?? 原「錐 + 疊層圓柱」——
-    // **兩條路的 rnd() 枚數逐位元相同**:下面那個迴圈照跑(它負責消耗亂數並把 y/r 推到
-    // 終值,而 H/topR/sideDef 全由 y/r 決定),只有「要不要 add 進場景」分岔。少了這一點,
-    // 有沒有載到零件庫就會讓後面每一顆巨岩、每一株植被的落點整條位移(§2.3 / A4)。
-    const gT = megaGeo(MEGA_LIB.tower);
     const baseC = new THREE.Mesh(cone(r0 * 2.2, bh, 9), rockMat(shade(0.03), 0.35));
-    baseC.position.y = bh / 2; if (!gT) g.add(baseC);
+    baseC.position.y = bh / 2; g.add(baseC);
     // 柱基自錐體半高起(該處錐半徑 1.1×r0 ≥ 柱半徑)—— 柱是「從山裡長出來」,
     // 不是擱在山尖上;柱基寬過錐面 = 懸挑,物理不成立(魔鬼塔的崖錐與柱身相接)
     let y = bh * 0.5, r = r0;
@@ -3873,14 +3716,10 @@ export function synthMegalith(g, rnd) {
       const band = i % 2 === 1, hh = band ? 3.5 : 9 + rnd() * 5;
       const st = new THREE.Mesh(cyl(r * (band ? 1.06 : 1), r * (band ? 1.06 : 1) + 1, hh, 10),
         rockMat(shade(band ? 0.06 : -0.03), band ? 0.12 : 0));
-      st.position.y = y + hh / 2; y += hh; if (!gT) g.add(st);
+      st.position.y = y + hh / 2; y += hh; g.add(st);
       if (!band) r *= 0.92;
     }
     H = y; RX = RZ = r0 * 2.0; topR = r * 0.85;   // footprint 含 2.2×r0 山腳崖錐
-    if (gT) {   // 單位包絡 → 撐滿這一顆的 footprint 與高度(佈局值 H/RX/RZ 仍由上面推導)
-      const pil = new THREE.Mesh(gT, rockMat(shade(0), moss * 0.5));
-      pil.scale.set(RX, H / 2, RZ); pil.position.y = H / 2; g.add(pil);
-    }
     sideDef = { y: [bh, H * 0.85] };   // 柱身段(崖錐以上)
   } else if (main === 'arch') {   // 天然岩拱:雙墩 + 頂樑 + 拱背圓丘
     const span = 26 + rnd() * 14, ph = 34 + rnd() * 22, pw = 10 + rnd() * 5;
@@ -3899,22 +3738,14 @@ export function synthMegalith(g, rnd) {
     H = ph + pw * 1.3; RX = span / 2 + pw; RZ = pw * 1.4; topR = 3;
   } else if (main === 'mesa') {   // 平頂桌山:裙狀崖錐 + 疊層 + 開闊平頂
     const r0 = 30 + rnd() * 22, h = 40 + rnd() * 26;
-    // 整座庫節點(實拍平頂岩體:裙狀崖錐 + 疊層同一顆)?? 原「錐 + 三段疊層」——
-    // 這一支的疊層迴圈**本來就零 rnd()**(逐層係數是靜態表),故兩條路的亂數枚數天然相同;
-    // 仍照跑迴圈是為了讓 y 推到終值(H/sideDef 讀它)。
-    const gM = megaGeo(MEGA_LIB.mesa);
     const skirt = new THREE.Mesh(cone(r0 * 2.2, h * 0.62, 10), rockMat(shade(0.05), 0.3));
-    skirt.position.y = h * 0.31; if (!gM) g.add(skirt);
+    skirt.position.y = h * 0.31; g.add(skirt);
     let y = h * 0.3;
     for (const [f, hh, dl] of [[1.12, h * 0.22, -0.04], [1.04, h * 0.16, 0.05], [1.0, h * 0.32, -0.02]]) {
       const st = new THREE.Mesh(cyl(r0 * f * 0.94, r0 * f, hh, 10), rockMat(shade(dl)));
-      st.position.y = y + hh / 2; y += hh; if (!gM) g.add(st);
+      st.position.y = y + hh / 2; y += hh; g.add(st);
     }
     H = y; RX = RZ = r0 * 2.0; topR = r0 * 0.8;   // footprint 含 2.2×r0 裙狀崖錐
-    if (gM) {
-      const tbl = new THREE.Mesh(gM, rockMat(shade(0), moss * 0.4));
-      tbl.scale.set(RX, H / 2, RZ); tbl.position.y = H / 2; g.add(tbl);
-    }
     sideDef = { y: [H * 0.4, H * 0.9] };   // 疊層段(裙狀崖錐以上)
   } else if (main === 'hoodoo') {   // 風化蘑菇岩群:細腰石柱頂著過寬帽岩
     const n = 2 + Math.floor(rnd() * 3);
@@ -3923,18 +3754,11 @@ export function synthMegalith(g, rnd) {
       const a = rnd() * Math.PI * 2, d = i === 0 ? 0 : 14 + rnd() * 20;
       const px = Math.cos(a) * d, pz = Math.sin(a) * d;
       const h = 26 + rnd() * 30, r = 5 + rnd() * 4;
-      // 整柱庫節點(實拍 hoodoo)?? 頸+帽兩件程序生成 —— 兩條路都零 rnd,枚數不變
-      const g2 = megaGeo(MEGA_LIB.hoodoo);
-      if (g2) {
-        const pil = new THREE.Mesh(g2, rockMat(shade(0.03)));
-        pil.scale.set(r * 1.5, h * 0.55, r * 1.5);
-        pil.position.set(px, h * 0.55, pz); g.add(pil);
-      } else {
-        const neck = new THREE.Mesh(cyl(r * 0.55, r, h, 8), rockMat(shade(0.03)));
-        neck.position.set(px, h / 2, pz); g.add(neck);
-        const cap = new THREE.Mesh(cyl(r * 1.5, r * 0.9, h * 0.16, 8), rockMat(shade(-0.08), 0.15));
-        cap.position.set(px, h * 1.02, pz); g.add(cap);
-      }
+
+      const neck = new THREE.Mesh(cyl(r * 0.55, r, h, 8), rockMat(shade(0.03)));
+      neck.position.set(px, h / 2, pz); g.add(neck);
+      const cap = new THREE.Mesh(cyl(r * 1.5, r * 0.9, h * 0.16, 8), rockMat(shade(-0.08), 0.15));
+      cap.position.set(px, h * 1.02, pz); g.add(cap);
       // 頂錨綁「中央柱」帽岩頂面(特徵放置以原點為準;掛在群體最高點必懸空)
       if (i === 0) { topYA = h * 1.1; topRA = r * 1.1; }
       // 每根柱各自是一面可附著側壁(頸部上收 55%),樹菇/侵蝕溝貼各柱的壁
@@ -4038,10 +3862,10 @@ export function synthMegalith(g, rnd) {
       const drift = Math.max(1.5, (R0 - r) * (1 - i / nB));
       const px = (rnd() - 0.5) * drift, pz = (rnd() - 0.5) * drift;
       // 色差收斂 ±0.02:同一岩體的大理岩塊色近,靠明暗交界讀塊面
-      const g2 = megaGeo(MEGA_LIB.block[i % NBLK]);   // 庫節點(單位包絡)?? 原 ico —— rnd 枚數不變
-      const blk = new THREE.Mesh(g2 || ico(r), rockMat(shade((rnd() - 0.5) * 0.04), i < 2 ? moss * 0.6 : 0));
+
+      const blk = new THREE.Mesh(ico(r), rockMat(shade((rnd() - 0.5) * 0.04), i < 2 ? moss * 0.6 : 0));
       const syF = 0.72 + rnd() * 0.2;               // 溶蝕圓稜:壓扁的渾圓塊
-      if (g2) blk.scale.set(r, r * syF, r); else blk.scale.y = syF;
+      blk.scale.y = syF;
       blk.rotation.set(rnd() * 0.5, rnd() * Math.PI, rnd() * 0.5);
       // 上塊坐進下塊間隙(半徑 55% 交疊 = 岩塊互倚,不是懸浮串珠);
       // 底塊心壓到 0.2r:超過半顆入土,坡地上也確實著地
@@ -4070,10 +3894,10 @@ export function synthMegalith(g, rnd) {
     const nB = 2 + Math.floor(rnd() * 3);
     for (let i = 0; i < nB; i++) {
       const br = 4 + rnd() * 7, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.85 + rnd() * 0.35);
-      const g2 = megaGeo(MEGA_LIB.block[(i + 1) % NBLK]);   // 與 marble 錯開輪替,同岩不同型
-      const bd = new THREE.Mesh(g2 || ico(br), rockMat(shade((rnd() - 0.5) * 0.06), moss * 0.6));
+
+      const bd = new THREE.Mesh(ico(br), rockMat(shade((rnd() - 0.5) * 0.06), moss * 0.6));
       const syF = 0.6 + rnd() * 0.3;
-      if (g2) bd.scale.set(br, br * syF, br); else bd.scale.y = syF;
+      bd.scale.y = syF;
       bd.rotation.set(rnd() * 0.6, rnd() * Math.PI, rnd() * 0.6);
       // 塊心壓低到 0.1×半徑:過半入土,離群體最遠的崩落塊在坡地上也不懸空
       bd.position.set(Math.cos(a) * d, br * 0.1, Math.sin(a) * d);
@@ -4085,10 +3909,10 @@ export function synthMegalith(g, rnd) {
   const nSub = Math.floor(rnd() * 3);   // 伴生小圓丘
   for (let i = 0; i < nSub; i++) {
     const r = 10 + rnd() * 14, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.9 + rnd() * 0.3);
-    const g2 = megaGeo(MEGA_LIB.block[(i + 2) % NBLK]);
-    const m = new THREE.Mesh(g2 || new THREE.SphereGeometry(r, 9, 7), rockMat(shade((rnd() - 0.5) * 0.08), moss * 0.8));
+
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 9, 7), rockMat(shade((rnd() - 0.5) * 0.08), moss * 0.8));
     const syF = 0.6 + rnd() * 0.3;
-    if (g2) m.scale.set(1.2 * r, r * syF, r); else m.scale.set(1.2, syF, 1);
+    m.scale.set(1.2, syF, 1);
     m.position.set(Math.cos(a) * d, 4, Math.sin(a) * d);
     g.add(m);
     RX = Math.max(RX, Math.abs(Math.cos(a) * d) + r * 1.2);
@@ -4952,6 +4776,55 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
   }
 
   return placedCount;
+}
+
+// Coordinate-local sampling keeps new shared objects independent of the vegetation RNG.
+function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupied, occ, osmBldHit, seed = 0 }) {
+  const batch = newBatch(), placed = [];
+  const step = 160, inset = edgeWallInsetM();
+  for (let gx = terrain.minX + inset + step / 2; gx < terrain.maxX - inset; gx += step) {
+    for (let gz = terrain.minZ + inset + step / 2; gz < terrain.maxZ - inset; gz += step) {
+      const localSeed = edgeSeed(gx, gz, seed ^ 0x454e56), rnd = mulberry32(localSeed);
+      const x = gx + (rnd() - .5) * step * .5, z = gz + (rnd() - .5) * step * .5;
+      const code = terrainEnvCode(terrain, x, z);
+      if (code === 1) continue;
+      const bio = code === 2 ? 'wet' : classifyImg(terrain.sampleColor?.(x, z)) || 'bare';
+      const kinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k => ENVIRONMENT_OBJECTS[k].bio.includes(bio));
+      if (!kinds.length) continue;
+      const kind = kinds[Math.floor(rnd() * kinds.length)], def = ENVIRONMENT_OBJECTS[kind];
+      const scale = objScaleFit(1, def.size[1], 1), size = def.size.map(v => v * scale);
+      const radius = Math.hypot(size[0], size[2]) / 2;
+      if (x - radius < terrain.minX + inset || x + radius > terrain.maxX - inset
+        || z - radius < terrain.minZ + inset || z + radius > terrain.maxZ - inset) continue;
+      if (!areaFree(blocked, x, z, radius + 4) || !occ.free(x, z, radius, 4)
+        || osmBldHit(x, z, radius + 4) || roadOccupied({ x, z, r: radius + 4 })) continue;
+      const heights = [terrain.heightAt(x, z)];
+      let wet = false;
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2, px = x + Math.cos(a) * radius, pz = z + Math.sin(a) * radius;
+        heights.push(terrain.heightAt(px, pz));
+        if (terrainEnvCode(terrain, px, pz) === 1) wet = true;
+      }
+      if (heights.some(value => !Number.isFinite(value))) continue;
+      const y = Math.min(...heights), rise = Math.max(...heights) - y;
+      if (wet || y < .4 || Math.abs(slopeDeg(rise, radius * 2)) > SLOPE.EASE_DEG) continue;
+      const parts = environmentParts(kind, { size, seed: localSeed, season: terrain.season || 'summer' });
+      // Scene gaps remain traversable: register the solid parts, not the boundary ring envelope.
+      for (const part of parts) {
+        if (['leaf', 'flower', 'fruit', 'window', 'side-window'].includes(part.role)) continue;
+        const b = partBox(part), hw2 = (b.x1 - b.x0) / 2, hd2 = (b.z1 - b.z0) / 2;
+        if (hw2 < .12 || hd2 < .12) continue;
+        blockers.push({ x: x + (b.x0 + b.x1) / 2, z: z + (b.z0 + b.z1) / 2,
+          y: y + b.y0, h: b.y1 - b.y0, hw2, hd2, ry: 0, r: Math.hypot(hw2, hd2) });
+      }
+      emitWallParts(batch, parts, x, y, z, 0, 1);
+      blockArea(blocked, x, z, radius); occ.add(x, z, radius);
+      placed.push({ kind, x, y, z, seed: localSeed });
+    }
+  }
+  flushPartBatch(group, batch, { wash: .42, cool: .42 });
+  group.userData.sharedEnvironment = placed;
+  return placed.length;
 }
 
 /** OSM tags → 建物類型 */
@@ -9780,12 +9653,30 @@ function buildEdgeWall({ group, terrain, blockers }) {
         const t = k / 2 * half;
         hs.push(terrain.heightAt(e.ax ? fx + t : fx, e.ax ? fz : fz + t));
       }
-      const lo = Math.min(...hs), hi = Math.max(...hs), sp = half / 2;
+      let lo = Math.min(...hs), hi = Math.max(...hs);
+      const sp = half / 2;
       let deg = 0;
       for (let k = 1; k < hs.length; k++) deg = Math.max(deg, Math.abs(slopeDeg(hs[k] - hs[k - 1], sp)));
       const cx = terrain.heightAt(e.ax ? fx : fx + sp, e.ax ? fz + sp : fz);
       const cz = terrain.heightAt(e.ax ? fx : fx - sp, e.ax ? fz - sp : fz);
       deg = Math.max(deg, Math.abs(slopeDeg(cx - cz, sp * 2)));
+      // Test the entire outward footprint, not just the playable-side centreline.
+      // A rigid facility must not straddle a cliff hidden under its outer half.
+      const across = edgeWallDeepM(), nx = Math.ceil(half * 2 / 3), nz = Math.ceil(across / 3);
+      let previous = null;
+      for (let ix = 0; ix <= nx; ix++) {
+        const along = -half + ix * half * 2 / nx, samples = [];
+        for (let iz = 0; iz <= nz; iz++) {
+          const outward = e.sz * iz * across / nz;
+          const value = terrain.heightAt(e.ax ? fx + along : fx + outward, e.ax ? fz + outward : fz + along);
+          samples.push(value);
+          if (!Number.isFinite(value)) { deg = 90; continue; }
+          lo = Math.min(lo, value); hi = Math.max(hi, value);
+          if (iz && Number.isFinite(samples[iz - 1])) deg = Math.max(deg, Math.abs(slopeDeg(value - samples[iz - 1], across / nz)));
+          if (previous && Number.isFinite(previous[iz])) deg = Math.max(deg, Math.abs(slopeDeg(value - previous[iz], half * 2 / nx)));
+        }
+        previous = samples;
+      }
       const biome = probe(fx, fz);
       row.push({
         x: fx, z: fz, lo, hi, len: step, biome, water: biome === 'water', e,
@@ -9793,7 +9684,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
       });
     }
     // 切 run + 配款(唯一縫;純函式、零共享亂數);零件、碰撞柱、演出**同一趟**定案 ——
-    // 盒高是逐段實測的(見下),分兩趟就要嘛把零件表存起來、要嘛重算一次,兩條都是第二份真相。
+    // 固定高度加上同次取樣的地形範圍，貼坡表面與權威盒一起建立。
     let prevKind = null, prevVariant = -1;
     for (const r of planWallRuns(row)) {
       const kinds = planWallKinds(r, row, prevKind);
@@ -9807,19 +9698,18 @@ function buildEdgeWall({ group, terrain, blockers }) {
         const z = e.ax ? s.z + e.sz * hd2 : s.z;
         const seed = edgeSeed(x, z);
         const variant = wallVariant(kind, seed, kind === prevKind ? prevVariant : -1);
-        const parts = wallParts(kind, {
+        const joined = def.terrainFit ? buildSlopeBoundary(kind, {
+          len: step, depth: def.depth, h: kh0, x, z, ry: e.fry, seed,
+          heightAt: (px, pz) => terrain.heightAt(px, pz), waterY: s.water ? wy : null,
+          season: terrain.season || 'summer',
+        }) : null;
+        const parts = def.terrainFit ? (joined?.parts || []) : wallParts(kind, {
           len: half * 2, depth: def.depth, h: kh0, seed, variant, season: terrain.season || 'summer',
         });
-        // **盒高逐段實測**,不是逐款一個值(2026-08-11 城牆加了城門/城樓/砲台之後的必然):
-        // 同一款的節有高有矮(素牆 9m / 箭樓 11m / 城樓 14m),拿型錄宣告的最高值當每一節的
-        // 盒高,素牆那幾節的頂上就多出一截**撞得到卻看不見**的空氣(A30 家族的反面)。
-        // 宣告的 `def.h` 從此只是「這一款最高長到哪」= 授權上界(零件表 MUST 收在它之內)。
-        let top = 0;
-        for (const p of parts) top = Math.max(top, partBox(p).y1);
-        const kh = Math.max(WH, top);
+        const kh = kh0; // 固定邊界包絡；本體間的可見空隙同樣禁止穿越。
         // 零件的落地基準:段內最高的地形,水域段改取水面(否則海堤/貨輪整艘沉在水面下)
-        const ground = wy != null && s.water ? Math.max(s.hi, wy) : s.hi;
-        const y = s.lo - 1.5;
+        const ground = Math.max(joined?.hi ?? s.hi, wy != null && s.water ? Math.max(s.hi, wy) : s.hi);
+        const y = Math.min(s.lo, joined?.lo ?? s.lo) - 1.5;
         const motion = parts.filter((p) => p.motion);
         segs.push({
           x, z, y, h: ground + kh - y, hw2: half, hd2,
@@ -9829,7 +9719,9 @@ function buildEdgeWall({ group, terrain, blockers }) {
         // 碰撞柱:與建物走同一條有向盒路徑(hw2/hd2/ry);刻意不掛 bld/std(見 ⑤)、不掛 cl(不可攀爬)
         blockers.push({ x, z, y, h: ground + kh - y, hw2: half, hd2, ry: e.ax ? 0 : Math.PI / 2, r: Math.hypot(half, hd2) });
         // 邊界障礙物一律移除底座：本體直接由地面／水面長出，不另加通用底座
-        emitWallParts(batch, parts.filter((p) => !p.motion), x, ground, z, e.fry, 1);
+        // Joined vertices already carry terrain elevation. Collision retains its overlapping ring;
+        // visual modules meet exactly at shared endpoints instead of overlapping stair steps.
+        emitWallParts(batch, parts.filter((p) => !p.motion), x, joined ? 0 : ground, z, e.fry, 1);
         prevKind = kind;
         prevVariant = variant;
       }
@@ -9846,6 +9738,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
 const PLINTH_C = 0x7b7367;   // 底座色(埋在地形裡的那一截,看得到的只有貼著坡面的一線)
 function wallGeo(spec) {
   const [t, a, b, c] = spec;
+  if (t === 'mesh') return runtimeMeshDataGeometry(a);
   if (t === 'box') return new THREE.BoxGeometry(a, b, c);
   if (t === 'cyl') return new THREE.CylinderGeometry(a, b, c, spec[4] || 6);
   if (t === 'cone') return new THREE.ConeGeometry(a, b, spec[3] || 6);
@@ -9873,7 +9766,7 @@ function emitWallParts(batch, parts, ox, oy, oz, ry, scale, groundY = null) {
     const [rx = 0, pry = 0, rz = 0] = p.r || [];
     // 先套零件自己的位移/旋轉(局部),再整件轉 ry、縮放、平移到世界
     _we.set(rx, pry, rz);
-    _wm.compose(_wp.set(px, py, pz), _wq.setFromEuler(_we), _ws.set(1, 1, 1));
+    _wm.compose(_wp.set(px, py, pz), _wq.setFromEuler(_we), _ws.set(...(p.s || [1, 1, 1])));
     geo.applyMatrix4(_wm);
     _we.set(0, ry, 0);
     let by = oy;
@@ -9940,7 +9833,7 @@ function buildEdgeMotion({ group, segs, dynamics }) {
         const [x = 0, y = 0, z = 0] = p.p || [];
         const [rx = 0, ry = 0, rz = 0] = p.r || [];
         _we.set(rx, ry, rz);
-        _wm.compose(_wp.set(x - px, y - py, z - pz), _wq.setFromEuler(_we), _ws.set(1, 1, 1));
+        _wm.compose(_wp.set(x - px, y - py, z - pz), _wq.setFromEuler(_we), _ws.set(...(p.s || [1, 1, 1])));
         geo.applyMatrix4(_wm);
         geos.push(geo); cols.push(p.c);
       }
@@ -10458,7 +10351,6 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   terrain.inBorderBand = null;
 
   await onProgress?.(0.02, '規劃兵線淨空走廊…');
-  const naturePromise = loadNatureModels(season);   // Quaternius 植被:與散佈並行載入
   const { blocked, towerBase, rings } = buildClearance(cfg, center);
   // 主堡世界座標:道路預整理、名岩退避與語意化地標的錨點同吃這一份(各算一次 = 第二份實作)
   const basesW = ['SWARM', 'STEEL'].map((side) => {
@@ -10994,7 +10886,6 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     };
     osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
       terrain, rings, architectureOf: architectureAt, inset: edgeWallInsetM(),
-      modelOf: (poly, height, architecture) => fitApprovedPolygon(poly, height, architecture, cfg.architectureSeed || 0),
       materialOf: (kind, batch, style) => {
         if (batch.architecture) return {
           wall: sceneObjectMat(0xffffff, { vertexColors: true }),
@@ -11125,6 +11016,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
     return false;
   };
+  placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupied, occ, osmBldHit,
+    seed: cfg.architectureSeed || 0 });
   const megalithsBuilt = placeMegaliths({
     group, terrain, blocked, blockers, rnd, sites: bareSites, basesW, roadOccupied, occ, osmBldHit,
   });
@@ -11579,12 +11472,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
   }
 
-  await onProgress?.(0.7, '建置植被模型(Quaternius CC0)…');
-  const nature = await naturePromise;
+  await onProgress?.(0.7, '隨機生成植被…');
   for (const type in items) {
-    const meshes = nature[type]
-      ? buildVegMeshesGlb(nature[type], items[type])
-      : buildVegMeshes(type, items[type], season);
+    const meshes = buildVegMeshes(type, items[type], season);
     for (const m of meshes) group.add(m);
   }
 
@@ -11626,7 +11516,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         const x = dx * b.w / 2, z = dz * b.d / 2;
         return [b.x + x * ca + z * sa, b.z - x * sa + z * ca];
       }), holes: [] };
-      const architecture = architectureAt(b, poly, settlement(b.x, b.z));
+      const architecture = { ...architectureAt(b, poly, settlement(b.x, b.z)), proceduralOnly: true };
       const fit = fitApprovedBuilding(b, architecture, cfg.architectureSeed || 0);
       if (fit) massPick.set(b, fit);
       else procedural.set(b, { sourceId: `procedural/${b.x}/${b.z}`, centroid: { x: b.x, z: b.z },

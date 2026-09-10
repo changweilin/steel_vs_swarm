@@ -218,9 +218,10 @@ console.log('\nⅤ-b 消費端:同一台車只有一份實作');
   // 型錄的 `fit` MUST 由宿主的既有契約推導(停車格白線與車吃同一個數)
   ok(/export const LOT_STALL = \{/.test(site) && /fit: LOT_STALL/.test(lotSrc),
     '停車格是一個數兩個消費端(白線節距 + 車的 fit 盒),MUST NOT 各寫一份');
-  ok(/makeVehicle\('railcar'/.test(edge) && /makeVehicle\('truck'/.test(edge)
-    && count(edge, /makeVehicle\('container20'/g) >= 3,
-  'edgewall 的列車 / 貨車 / 貨櫃走型錄唯一縫');
+  const environment = readSrc('public', 'js', 'environmentParts.js');
+  ok(/linearEnvironmentParts\(kind/.test(edge)
+    && /makeSceneVehicleParts\(kind === 'train' \? 'railcar' : 'truck'/.test(environment),
+  '邊界列車與貨車透過共用程序生成器走載具唯一縫');
   ok(count(beacon, /makeVehicle\('container20'/g) === 4
     && !/\['box', 6\.1, 2\.6, 2\.5\]/.test(beacon),
   'beacons depot 四只貨櫃走型錄唯一縫');

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { ENVIRONMENT_OBJECTS } from '../public/js/environmentParts.js';
 /**
  * 背景物件組裝閘：主結構固定、同角色多槽獨立抽樣、槽包絡與接合中心固定、配色取自子類別清單。
  * NPC／戰鬥建築／玩家機甲必須與本縫隔離。
@@ -180,7 +181,7 @@ const expectedStandalone = BREAK_BOUNDARY_SHARE
   : STANDALONE_BOUNDARY_KINDS;
 ok('獨立邊界物件全數加入共同背景型錄',
   expectedStandalone.every((kind) => sharedTargets.includes(`${EDGE_BACKGROUND_PREFIX}${kind}`))
-  && sharedTargets.length === [...entries.values()].filter(e=>e.family!=='vehicle').length + expectedStandalone.length + Object.keys(GEOLOGY_TYPES).length
+  && sharedTargets.length === Object.keys(ENVIRONMENT_OBJECTS).length + expectedStandalone.length + Object.keys(GEOLOGY_TYPES).length
     + vehicleCandidates().length+Object.keys(VEHICLE_CONSISTS).length);
 ok('陣列式與長構造只供邊界使用',
   BOUNDARY_ONLY_KINDS.every((kind) => !sharedTargets.includes(`${EDGE_BACKGROUND_PREFIX}${kind}`)));
