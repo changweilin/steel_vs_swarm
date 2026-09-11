@@ -5977,10 +5977,10 @@ export const isBotId = (id) => typeof id === 'string' && id.startsWith('b');
 // elite(高):撿尾刀、打帶跑、扛半條護盾就後撤。
 // 難度分層一律走這兩顆旗標 —— bots.js MUST NOT 比對難度字串(`diff.key === 'high'` 一出現就是第二份分級表)。
 export const BOT_DIFF = {
-  novice: { key: 'novice', name: '新手', aimErr: 0.55, heavy: false, ability: false, gap: 0.90, react: 0.70, tactic: false, elite: false },
-  low:    { key: 'low',    name: '低',   aimErr: 0.35, heavy: true,  ability: false, gap: 0.55, react: 0.45, tactic: false, elite: false },
-  medium: { key: 'medium', name: '中',   aimErr: 0.15, heavy: true,  ability: true,  gap: 0.30, react: 0.28, tactic: true,  elite: false },
-  high:   { key: 'high',   name: '高',   aimErr: 0.0,  heavy: true,  ability: true,  gap: 0.15, react: 0.15, tactic: true,  elite: true  },
+  novice: { key: 'novice', name: '新手', aimErr: 0.55, heavy: false, ability: false, gap: 0.90, react: 0.70, tactic: false, elite: false, scopeSearchDeg: 0, scopeSearchPitchDeg: 0, scopeSearchFreq: 0 },
+  low:    { key: 'low',    name: '低',   aimErr: 0.35, heavy: true,  ability: false, gap: 0.55, react: 0.45, tactic: false, elite: false, scopeSearchDeg: 30, scopeSearchPitchDeg: 15, scopeSearchFreq: 0.8 },
+  medium: { key: 'medium', name: '中',   aimErr: 0.15, heavy: true,  ability: true,  gap: 0.30, react: 0.28, tactic: true,  elite: false, scopeSearchDeg: 45, scopeSearchPitchDeg: 20, scopeSearchFreq: 1.2 },
+  high:   { key: 'high',   name: '高',   aimErr: 0.0,  heavy: true,  ability: true,  gap: 0.15, react: 0.15, tactic: true,  elite: true,  scopeSearchDeg: 60, scopeSearchPitchDeg: 25, scopeSearchFreq: 1.6 },
 };
 // 各類操作的切換間隔 = 該難度 gap × 此倍數(1 = 一次基本操作)。
 // buy 27 ⇒ 高難度 ≈ 4.1s,與 2026-07-27 之前的硬編碼 4s 巡店節奏一致(其餘難度按手速等比放慢)。
@@ -5996,8 +5996,9 @@ export const botOpGap = (D, op) => (D?.gap ?? BOT_DIFF[DEFAULT_BOT_DIFF].gap) * 
 // 不可以有全角度視野」。舊制 bot 的 `_acquire` 只吃「射程 + 迷霧 + LOS」⇒ 正背後的敵人照樣鎖得到
 // (**全角度視野**),而真人只看得到螢幕上那一塊 —— 這是 bot 相對真人最不公平的一項優勢。
 //
-// **只限水平**:bot 沒有俯仰狀態(`h.ry` 是它唯一的視角欄位),垂直錐無從量起;硬套一份垂直角
-// 只會讓巡航高度的無人機對正下方的目標整批失明(原則 6 寧缺勿錯)。
+// **3D 視角錐**:水平吃寬螢幕推導半視角 `botFovHalf`,垂直吃機種基準半視角 `botFovVerticalHalf`。
+// 靜止狙擊鏡模式下立體展開 3D 偏航與俯仰角搜索(30°/45°/60° 與 15°/20°/25°),巡航高度非靜止時
+// 維持地面高度容忍避免無人機對正下方失明(原則 6 寧缺勿錯)。
 //
 // **半視角推導不手寫**:相機吃的 `UNITS[kind].fov` 是**垂直**視角,畫面的水平半視角 =
 // `atan(tan(fov/2) × 寬高比)`(與 game.js 濺血方位的 `halfH` 同一條式子)。bot 沒有畫面 ⇒
@@ -6008,10 +6009,19 @@ export const botOpGap = (D, op) => (D?.gap ?? BOT_DIFF[DEFAULT_BOT_DIFF].gap) * 
 export const BOT_VIEW = {
   ASPECT: 16 / 9,   // 基準畫面寬高比(bot 沒有畫面,取寬螢幕)
   ALERT_S: 4,       // 受擊警戒:被視野外的敵人打中之後,朝彈著方向轉頭的持續秒數
+  SEARCH_FREQ: 1.2, // 基準靜止狙擊搜索頻率(rad/s)
 };
 /** 電腦玩家的水平半視角(弧度):看得見 = 目標方位與機體朝向的夾角 ≤ 這個值 */
 export const botFovHalf = (kind) =>
   Math.atan(Math.tan((UNITS[kind]?.fov ?? 68) * Math.PI / 360) * BOT_VIEW.ASPECT);
+/** 電腦玩家的垂直半視角(弧度) */
+export const botFovVerticalHalf = (kind) => ((UNITS[kind]?.fov ?? 68) * Math.PI / 360);
+/** 難度低/中/高靜止狙擊鏡水平搜索角(弧度;低 30° / 中 45° / 高 60°) */
+export const botScopeSearchRad = (diff) => ((diff?.scopeSearchDeg || 0) * Math.PI / 180);
+/** 難度低/中/高靜止狙擊鏡垂直俯仰搜索角(弧度;低 15° / 中 20° / 高 25°) */
+export const botScopeSearchPitchRad = (diff) => ((diff?.scopeSearchPitchDeg || 0) * Math.PI / 180);
+/** 難度低/中/高靜止狙擊搜索頻率(rad/s;對齊人類低/中/高操作手速) */
+export const botScopeSearchFreq = (diff) => (diff?.scopeSearchFreq ?? BOT_VIEW.SEARCH_FREQ);
 
 // ---- 電腦玩家戰術(2026-08-02 使用者定案)----
 // 需求原文:「被打時優先對『對自己傷害最高者、造成敵人最大總傷害、快要陣亡的目標』進行攻擊」/

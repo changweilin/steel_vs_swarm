@@ -6,7 +6,8 @@
 import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, botDiffOf, botOpGap, isThirdSide,
   CHARACTERS, heroMobility, highSupSpeedF, BOSS,
   VITALS,
-  BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
+  BOT_VIEW, botFovHalf, botFovVerticalHalf, viewLockStep, wrapPi,
+  botScopeSearchRad, botScopeSearchPitchRad, botScopeSearchFreq,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
   botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG,
   WEATHER_DEBUFFS, windSpeedFactor } from '../public/js/data.js';
@@ -57,6 +58,7 @@ export class BotBrain {
     this.jitter = [(Math.random() - 0.5) * LANE_JITTER_M, (Math.random() - 0.5) * LANE_JITTER_M];
     this._cum = cumLen(sim.lanes[this.lane]);
     this._wantRy = null;   // 這一拍想看的方向(h.ry 由 _turn 逐步逼近,見 _face)
+    this._wantRx = 0;      // 這一拍想看的俯仰角(h.rx 由 _turn 逐步逼近)
     this._stuckT = 0;      // 撞牆累積秒數
     this._skirtUntil = 0;  // 繞行到期時刻
     this._skirtSide = 1;   // 繞行側(每次卡住輪替)
@@ -86,18 +88,42 @@ export class BotBrain {
     return hv && this._heavyReady(h, hv) ? hv : this._gun(h);
   }
 
+  /** 靜止狀態判定(集結等盾 / 回堡補血 / 據點站崗) */
+  _isStationary(h) {
+    if (this.state === 'RALLY' && !this._inFight(h)) return true;
+    if (this.state === 'RETREAT' && Math.hypot(h.x - this._home()[0], h.z - this._home()[1]) < 30) return true;
+    if (this.sim.bossHold?.has(this.pid) && Math.hypot(h.x - this._home()[0], h.z - this._home()[1]) < 30) return true;
+    return false;
+  }
+
   /**
    * 狙擊模式是偵察姿態,不只是一發重武器的前置動作:
-   *   ①停下等盾時保持開鏡,用狙擊視野查看兵線周遭;
+   *   ①停下等盾或靜止時保持開鏡,用狙擊視野搜索兵線周遭;
    *   ②重武器可用時提前開鏡,讓下一次掃描能看到重武器射程內的敵人;
    *   ③離開停滯且重武器不可用時收鏡,避免用空彈夾持續佔用遠距視野。
    * 轉換仍吃 `weapon` 操作閘,所以開鏡不會繞過 bot 的手速限制。
    */
   _updateAiming(h) {
     const hv = this._heavy(h);
-    const stationary = this.state === 'RALLY' && !this._inFight(h);
+    const stationary = this._isStationary(h) && (this.diff.scopeSearchDeg > 0 || this.diff.tactic);
     const want = stationary || this._heavyReady(h, hv);
     if (want !== !!h.aiming && this._op('weapon')) this.sim.heroAim(this.pid, want);
+  }
+
+  /** 靜止時狙擊搜索水平偏移角(rad;兵線方向 30/45/60 度角展開視野方向) */
+  _scopeSearchAngle(h) {
+    const rad = botScopeSearchRad(this.diff);
+    if (!rad || !h.aiming || !this._isStationary(h)) return 0;
+    const freq = botScopeSearchFreq(this.diff);
+    return Math.sin(this.sim.t * freq + this.lane) * rad;
+  }
+
+  /** 靜止時狙擊搜索垂直俯仰偏移角(rad;兵線方向 15/20/25 度角立體展開視野方向) */
+  _scopeSearchPitch(h) {
+    const rad = botScopeSearchPitchRad(this.diff);
+    if (!rad || !h.aiming || !this._isStationary(h)) return 0;
+    const freq = botScopeSearchFreq(this.diff);
+    return Math.sin(this.sim.t * freq * 2 + this.lane) * rad;
   }
 
   /** 控場折速係數(招式追加)鏡像:真人玩家由客戶端自鎖,bot 的「客戶端」就是這裡 ——
@@ -518,13 +544,25 @@ export class BotBrain {
   }
 
   /** 面向兵線的敵方端(集結等護盾時的預設朝向)——背對戰場等於白白讓人繞後,
-   *  而 `_acquire` 只認前方視野錐,轉錯邊 = 對來襲的敵人整批失明。 */
+   *  而 `_acquire` 只認前方視野錐,轉錯邊 = 對來襲的敵人整批失明。
+   *  靜止時若開鏡,則在兵線方向展開 3D 角度(水平 ±30/45/60°、垂直 ±15/20/25°)進行狙擊搜索。 */
   _faceLaneFwd(h) {
     const total = this._cum[this._cum.length - 1];
     const fwd = this.side === 'SWARM' ? 1 : -1;
-    const d = this.side === 'SWARM' ? this._rallyProg : total - this._rallyProg;
+    const prog = this.state === 'RALLY' ? this._rallyProg : this._progAt(h);
+    const d = this.side === 'SWARM' ? prog : total - prog;
     const [lx, lz] = pointAt(this.sim.lanes[this.lane], this._cum, Math.max(0, Math.min(total, d + fwd * PUSH_LOOK_M)));
-    this._face(h, lx, lz);
+    const searchAng = this._scopeSearchAngle(h);
+    const searchPitch = this._scopeSearchPitch(h);
+    if (!searchAng && !searchPitch) {
+      this._face(h, lx, lz);
+      return;
+    }
+    const baseRy = Math.atan2(-(lx - h.x), lz - h.z);
+    const targetRy = baseRy + searchAng;
+    const dist = Math.hypot(lx - h.x, lz - h.z) || PUSH_LOOK_M;
+    const targetY = (h.y || 0) + Math.sin(searchPitch) * dist;
+    this._face(h, h.x - Math.sin(targetRy) * dist, h.z + Math.cos(targetRy) * dist, targetY);
   }
 
   /** 招式可用性(解鎖 + CD + MP)——實際結算仍由 sim.heroCast 把關 */
@@ -629,18 +667,24 @@ export class BotBrain {
     this._stuck(this._move(h, h.x + (gx - h.x) / gd * step, h.z + (gz - h.z) / gd * step), dt);
   }
 
-  /** 這一拍**想看**的方向(世界點)。只寫意圖,不動 `h.ry` —— 視角有角速度上限(跟真人一樣
+  /** 這一拍**想看**的方向(世界點)。只寫意圖,不動 `h.ry`/`h.rx` —— 視角有角速度上限(跟真人一樣
    *  不能瞬間回頭),寫成兩段才不會有第二處偷偷瞬轉。客戶端 three 座標 z 取負,朝向公式與
    *  game.js 的 pos 回報一致。 */
-  _face(h, tx, tz) {
+  _face(h, tx, tz, ty = null) {
     this._wantRy = Math.atan2(-(tx - h.x), tz - h.z);
+    const flat = Math.hypot(tx - h.x, tz - h.z);
+    this._wantRx = (ty != null && flat > 0.01) ? Math.atan2(ty - (h.y || 0), flat) : 0;
   }
 
-  /** 把朝向朝 `_wantRy` 轉一步。**`h.ry` 的唯一寫入點**;角速度上限走 `viewLockStep`
-   *  (真人視野鎖定輔助的同一支)—— MUST NOT 在此手寫 rad/s,也 MUST NOT 直接指派目標角。 */
+  /** 把朝向朝 `_wantRy`/`_wantRx` 轉一步。**`h.ry` 與 `h.rx` 的唯一寫入點**;角速度上限走 `viewLockStep`
+   *  (真人視野鎖定輔助的同一支,兩軸同吃)—— MUST NOT 在此手寫 rad/s,也 MUST NOT 直接指派目標角。 */
   _turn(h, dt) {
-    if (this._wantRy == null) return;
-    h.ry = wrapPi((h.ry || 0) + viewLockStep(wrapPi(this._wantRy - (h.ry || 0)), dt));
+    if (this._wantRy != null) {
+      h.ry = wrapPi((h.ry || 0) + viewLockStep(wrapPi(this._wantRy - (h.ry || 0)), dt));
+    }
+    if (this._wantRx != null) {
+      h.rx = wrapPi((h.rx || 0) + viewLockStep(wrapPi(this._wantRx - (h.rx || 0)), dt));
+    }
   }
 
   /**
@@ -698,6 +742,14 @@ export class BotBrain {
       // 要嘛自己走進錐內 —— MUST NOT 退回全角度掃描。塔/主堡同樣吃這一條(真人也得轉頭才看得到)。
       // BOSS 守備範圍內的入侵者享有全向防衛感知。
       if (!inBossZone && Math.abs(this._bearing(h, t.x, t.z)) > fovHalf) continue;
+      // 3D 狙擊鏡視角錐:開鏡時垂直維度受限於垂直半視角 botFovVerticalHalf(h.kind)
+      if (h.aiming && !inBossZone) {
+        const ty = t.hero || t.kind === 'heli' ? (t.y || 0) : (t.kind === 'tower' || t.kind === 'base' ? 8 : 0);
+        const eyeY = (h.y || 0) + LOS.EYE_M;
+        const flatD = Math.hypot(t.x - h.x, t.z - h.z);
+        const pitchToTgt = Math.atan2(ty - eyeY, flatD);
+        if (Math.abs(wrapPi(pitchToTgt - (h.rx || 0))) > botFovVerticalHalf(h.kind)) continue;
+      }
       // 便宜的射程/視野錐淘汰在前、_visibleTo(LOS 上線後含遮蔽 trace)在後 —— 打不到的目標不付視野成本
       if (sources && !this.sim._visibleTo(t, this.side, sources)) continue;   // 迷霧外 → 看不見,不鎖定
       // 類別折算走旋鈕(定位覆寫的落點:攻堅型把工事的加價收掉去咬塔、突襲型加得更兇去獵人)
