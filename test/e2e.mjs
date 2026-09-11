@@ -1451,20 +1451,22 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     dr2.invUntil = 0; dr2.iframeCdUntil = 0;   // 清場
   }
 
-  log('— sim:雙層 HP(護盾脫戰回復 / 裝甲只能回堡或招式修)+ 電力 —');
+  log('— sim:雙層 HP(護盾脫戰滿速回復 / 裝甲脫戰 1/4 回復,回堡/招式加速)+ 電力 —');
   dr.x = sim.basePos.SWARM[0] + 500; dr.z = sim.basePos.SWARM[1];   // 先遠離主堡補血圈
   dr.sp = 0; dr.hp = Math.round(dr.maxHp * 0.6);
   const hpNow = dr.hp;
   dr.lastHitAt = sim.t;
   sim.tick(0.125);
   assert(dr.sp === 0, '戰鬥中(剛受擊)護盾不回復');
+  assert(dr.hp === hpNow, '戰鬥中(剛受擊)裝甲不回復');
   dr.lastHitAt = sim.t - VITALS.OOC_S - 1;
   sim.tick(0.5);
   assert(dr.sp > 0, `脫戰 ${VITALS.OOC_S}s 後護盾自然回復(sp=${Math.round(dr.sp)})`);
-  assert(dr.hp === hpNow, '裝甲在主堡補血圈外不回復(只能回堡或治療招式)');
+  assert(dr.hp > hpNow, `脫戰 ${VITALS.OOC_S}s 後裝甲依護盾 1/4 速率自然回復(hp=${Math.round(dr.hp)})`);
+  const hpOoc = dr.hp;
   [dr.x, dr.z] = sim.basePos.SWARM;
   sim.tick(0.5);
-  assert(dr.hp > hpNow, '回主堡 → 裝甲開始修復');
+  assert(dr.hp > hpOoc, '回主堡 → 裝甲修復');
   assert(dr.mp < dr.maxMp || dr.mp === dr.maxMp, `電力欄存在(mp=${Math.floor(dr.mp)}/${dr.maxMp})`);
 
   log('— sim:八軌養成(開場 Lv1、階梯 $75/$150/$300、戰鬥分數門檻 0/20/100、Lv4 外推)—');

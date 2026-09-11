@@ -921,6 +921,11 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
         const b4 = M.sp;
         M.sp = Math.min(M.maxSp, M.sp + M.maxSp * VITALS.SP_REGEN_PS * M.chF * rg * LANE.DT);
         if (rg > 1) M.ultBy.healed += (M.sp - b4) * (1 - 1 / rg);   // 加速的那一份才是這一招換來的
+        if (M.hp < M.maxHp) {
+          const b4hp = M.hp;
+          M.hp = Math.min(M.maxHp, M.hp + M.maxHp * VITALS.HP_REGEN_PS * M.chF * rg * LANE.DT);
+          if (rg > 1) M.ultBy.healed += (M.hp - b4hp) * (1 - 1 / rg);
+        }
       }
       // 復甦(s12 rally):裝甲平時只有主堡修得回來,時窗內**全場都修**(對齊 sim 的 rally 分支)
       if (rg > 1 && M.hp < M.maxHp) {

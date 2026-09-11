@@ -5675,13 +5675,17 @@ export class BattleSim {
         }
         const bWet = b === hh ? (hh?.wet || 0) : 0;
         const wetMul = fluidFactor(bWet);
-        // 護盾:脫戰(OOC_S 秒沒受擊)自然回復;裝甲只能回主堡 / 治療招式。
+        // 護盾/裝甲:脫戰(OOC_S 秒沒受擊)自然回復;回主堡 / 治療招式額外修復。
         // 回復速度 × 充能等級(chargeF) × 護盾恢復倍率(rg) × 流體沉浸倍率(wetMul)
         const rg = b.hero ? this._buffMul(b, 'regen') : 1;
-        if (b.sp < b.maxSp && this.t - b.lastHitAt > VITALS.OOC_S) {
+        const ooc = this.t - b.lastHitAt > VITALS.OOC_S;
+        if (b.sp < b.maxSp && ooc) {
           b.sp = Math.min(b.maxSp, b.sp + b.maxSp * VITALS.SP_REGEN_PS * chargeF(b.upg?.ch) * rg * wetMul * dt);
         }
         if (b.hp < b.maxHp) {
+          if (ooc) {
+            this._healBody(b, b.maxHp * VITALS.HP_REGEN_PS * chargeF(b.upg?.ch) * rg * wetMul * dt, 'ooc');
+          }
           const [bx, bz] = this.basePos[b.side];
           // 裝甲平時只有主堡修得回來;rally 生效期間**全場都修**(那正是這一招換來的東西),
           // 速率同吃 rg。MUST NOT 把「全場都修」寫成永久旗標 —— 它只活在 mods 的時窗裡。

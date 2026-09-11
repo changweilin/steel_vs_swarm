@@ -2127,8 +2127,9 @@ export const selfUltDps = (ch, abil) => {
 };
 
 export const VITALS = {
-  OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
+  OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾/裝甲開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)
+  HP_REGEN_F: 0.25,    // HP 預設恢復速度比例(護盾的 1/4)
   AR_K: 120,           // 護甲減免曲線常數
   CRIT_X: 1.6,         // 預設爆擊倍率(未指定 critX 的基準;heroWeapon 仍以 CRITX_MIN 夾下限)
   // ---- 暴擊下限 + 升級成長(2026-07-25 使用者需求:所有(英雄)武器 crit ≥5% / critX ≥2.0)----
@@ -2140,6 +2141,7 @@ export const VITALS = {
   CRIT_PER_LVL: 0.01,  // 每升一階暴擊率成長
   CRITX_PER_LVL: 0.05, // 每升一階暴擊倍率成長
 };
+VITALS.HP_REGEN_PS = VITALS.SP_REGEN_PS * VITALS.HP_REGEN_F; // HP 每秒回復上限比例(推導不手寫)
 // G:彈道重力(真實值;武器 mv = 初速 m/s)。LAUNCH_MV:榴彈/火箭(launcher)拋物線武器的初速上限 ——
 // 真實 mv(650~700)幾乎打平,降到此值讓拋物線軌跡明顯(2026-07-22 使用者需求;純客戶端視覺,伺服器不模擬彈道)。
 // 對空彈射模式(2026-07-23 使用者需求):launcher **準星底下**是飛行類目標
