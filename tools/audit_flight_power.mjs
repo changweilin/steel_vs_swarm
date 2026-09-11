@@ -25,7 +25,7 @@
 // LF 全綠、Windows 紅字)。MUST NOT 退回自己 `readFileSync`(§5 通則 ㋑)。
 import { readSrc } from './audit_src.mjs';
 import {
-  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, unbalMissP,
+  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, unbalMissP,
   SQUAD, TARGET_H, UNITS, CHARACTERS, ECON, chargeF,
   HYPER, DECOY, LANCE, lanceR, towerDps, towerSurviveHp, towerKillHp,
   kamiHp, kamiExposureS, kamiSide, hyperHp, hyperFlightS, hyperMaxArcM, ultLaunchLegM,
@@ -354,15 +354,23 @@ console.log('■ Ⅳ 爬升動力:推導(滿動力全速爬升撐 DRAIN_S 秒;�
   t('回充比耗盡慢(爬升是有代價的機動)',
     liftMax(UNITS.drone.mp) / liftRegen(UNITS.drone.mpRegen, ECON.UPGRADES.ch.max) > FLIGHT.DRAIN_S,
     `${(liftMax(UNITS.drone.mp) / liftRegen(UNITS.drone.mpRegen, ECON.UPGRADES.ch.max)).toFixed(1)}s 回滿`);
+  t('DESCENT_RECHARGE_F = 2 / 3(正常操作下降高度回充 2/3 電力)',
+    near(FLIGHT.DESCENT_RECHARGE_F, 2 / 3, 1e-9));
+  t('liftDescentPS 由 liftDrainPS * FLIGHT.DESCENT_RECHARGE_F 推導(MUST NOT 手寫每秒回充量)',
+    /export const liftDescentPS[\s\S]{0,140}?liftDrainPS\([\s\S]{0,40}?FLIGHT\.DESCENT_RECHARGE_F/.test(dataSrc));
+  for (const mp of [60, 100, 145]) {
+    t(`電力上限 ${mp}:全速下降回充 = 全速爬升耗速 × 2/3`,
+      near(liftDescentPS(mp) / liftDrainPS(mp), FLIGHT.DESCENT_RECHARGE_F, 1e-9));
+  }
 }
 
 // ---------------------------------------------------------------------------
 console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳點齊全 + HUD)');
 // ---------------------------------------------------------------------------
 {
-  t('liftDrainPS / liftRegen 的唯一消費端 = _stepLift',
-    count(code, 'liftDrainPS(') === 1 && count(code, 'liftRegen(') === 1
-    && /liftDrainPS\(/.test(grab('_stepLift')) && /liftRegen\(/.test(grab('_stepLift')));
+  t('liftDrainPS / liftRegen / liftDescentPS 的唯一消費端 = _stepLift',
+    count(code, 'liftDrainPS(') === 1 && count(code, 'liftRegen(') === 1 && count(code, 'liftDescentPS(') === 1
+    && /liftDrainPS\(/.test(grab('_stepLift')) && /liftRegen\(/.test(grab('_stepLift')) && /liftDescentPS\(/.test(grab('_stepLift')));
   t('airSinkM 在客戶端的唯一消費端 = _airSinkHit',
     count(code, 'airSinkM(') === 1 && /airSinkM\(/.test(grab('_airSinkHit')));
   // bot 沒有客戶端 ⇒ 伺服器補同一條規則(同一支 airSinkM);兩條扣血路徑(護盾全擋的早退 + 一般路徑)
@@ -416,9 +424,9 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
 console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬不上去 / 掉幅只由傷害決定)');
 // ---------------------------------------------------------------------------
 {
-  const proto = new Function('FLIGHT', 'airSinkM', 'liftMax', 'liftRegen', 'liftDrainPS', 'UNITS', 'fluidFactor',
+  const proto = new Function('FLIGHT', 'airSinkM', 'liftMax', 'liftRegen', 'liftDrainPS', 'liftDescentPS', 'UNITS', 'fluidFactor',
     `return ({ ${grab('_unbalanced')}, ${grab('_stepLift')}, ${grab('_airSinkHit')}, ${grab('_liftMax')} });`)(
-    FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, UNITS, fluidFactor);
+    FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, UNITS, fluidFactor);
   const u = { vspeed: UNITS.drone.vspeed, mpRegen: UNITS.drone.mpRegen };
   const mk = (over = {}) => Object.assign(Object.create(null), proto, {
     maxMp: UNITS.drone.mp, _mpAuth: true, heroKind: 'drone', upg: { ch: 0 }, hud: { feed: () => {} },
@@ -525,6 +533,42 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     c._airSink = 0;
     c._stepLift(0.1, 1.0 + FLIGHT.HIT_LOCK_S + 0.1, { x: 0, y: 0, z: 0 }, u);
     t('鎖定期結束後恢復回充', c.lift > 0);
+  }
+  // ⑦ 正常操作下降高度回充 2/3 電力 (2026-09-11 使用者需求)
+  {
+    const dt = 1 / 60;
+    // 全速下降時每秒回充電力 = liftRegen + liftDescentPS
+    const cFull = mk({ lift: 0 });
+    const fullDown = { x: 0, y: -u.vspeed, z: 0 };
+    cFull._stepLift(dt, 0, fullDown, u);
+    const expectedFull = (liftRegen(u.mpRegen, 0) + liftDescentPS(UNITS.drone.mp, false)) * dt;
+    t('正常操作全速下降:回充量 = (liftRegen + liftDescentPS) * dt',
+      near(cFull.lift, expectedFull, 1e-6), `${cFull.lift} vs ${expectedFull}`);
+
+    // 半速下降時每秒位能回充電力折半
+    const cHalf = mk({ lift: 0 });
+    const halfDown = { x: 0, y: -u.vspeed * 0.5, z: 0 };
+    cHalf._stepLift(dt, 0, halfDown, u);
+    const expectedHalf = (liftRegen(u.mpRegen, 0) + liftDescentPS(UNITS.drone.mp, false) * 0.5) * dt;
+    t('正常操作半速下降:位能回充量折半(正比於下降率)',
+      near(cHalf.lift, expectedHalf, 1e-6), `${cHalf.lift} vs ${expectedHalf}`);
+
+    // 下降回充比懸停快
+    const cHover = mk({ lift: 0 });
+    cHover._stepLift(dt, 0, { x: 0, y: 0, z: 0 }, u);
+    t('下降回充速度大於純懸停(位能回充加成)', cFull.lift > cHover.lift * 2);
+
+    // 下降回充位能增量恰好為全速爬升耗電的 2/3
+    const descContribution = cFull.lift - cHover.lift;
+    const climbDrainPerDt = liftDrainPS(UNITS.drone.mp, false) * dt;
+    t('下降每公尺回充之動力 = 爬升該公尺耗電之 2/3 (DESCENT_RECHARGE_F)',
+      near(descContribution / climbDrainPerDt, FLIGHT.DESCENT_RECHARGE_F, 1e-6));
+
+    // 受擊失衡期間正常操作下降亦不回充(非正常操作窗口)
+    const cUnbal = mk({ lift: 0 });
+    cUnbal._airSinkHit(100, 1.0);
+    cUnbal._stepLift(dt, 1.05, fullDown, u);
+    t('受擊失衡/受傷鎖定期間下降不回充(非正常操作)', cUnbal.lift === 0);
   }
 }
 
