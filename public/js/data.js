@@ -2127,8 +2127,9 @@ export const selfUltDps = (ch, abil) => {
 };
 
 export const VITALS = {
-  OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
+  OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾/裝甲開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)
+  HP_REGEN_F: 0.25,    // HP 預設恢復速度比例(護盾的 1/4)
   AR_K: 120,           // 護甲減免曲線常數
   CRIT_X: 1.6,         // 預設爆擊倍率(未指定 critX 的基準;heroWeapon 仍以 CRITX_MIN 夾下限)
   // ---- 暴擊下限 + 升級成長(2026-07-25 使用者需求:所有(英雄)武器 crit ≥5% / critX ≥2.0)----
@@ -2140,6 +2141,7 @@ export const VITALS = {
   CRIT_PER_LVL: 0.01,  // 每升一階暴擊率成長
   CRITX_PER_LVL: 0.05, // 每升一階暴擊倍率成長
 };
+VITALS.HP_REGEN_PS = VITALS.SP_REGEN_PS * VITALS.HP_REGEN_F; // HP 每秒回復上限比例(推導不手寫)
 // G:彈道重力(真實值;武器 mv = 初速 m/s)。LAUNCH_MV:榴彈/火箭(launcher)拋物線武器的初速上限 ——
 // 真實 mv(650~700)幾乎打平,降到此值讓拋物線軌跡明顯(2026-07-22 使用者需求;純客戶端視覺,伺服器不模擬彈道)。
 // 對空彈射模式(2026-07-23 使用者需求):launcher **準星底下**是飛行類目標
@@ -4308,7 +4310,7 @@ export const UNITS = {
     //   ≈ 機甲 216 的 9/8(射程較機甲高約 1/8);重武器上限(×AIM_SIGHT_MULT)仍遠 > 塔 310。
     speed: 42, vspeed: 22, fov: 68, zoomFov: 35, sight: 270,
     bomb: 'bomb',                        // F 鍵原地引爆 / 高速撞擊引爆(自毀);僚機衝刺自爆
-    regen: 12,
+    regen: 0,                            // 裝甲回復速率:UNITS 後 derive = hp × VITALS.HP_REGEN_PS
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久(單機獨立計數)
   },
   robot: {
@@ -4318,7 +4320,7 @@ export const UNITS = {
     // 雙陣營同距離目標的視覺大小才一致;差異化只靠座艙造型與視點高度)
     name: '執法者機甲', hp: 640, shield: 220, mp: 100, mpRegen: 4,
     speed: 21, jump: 9, fov: 68, zoomFov: 35, sight: 240,
-    regen: 18,
+    regen: 0,                            // 裝甲回復速率:UNITS 後 derive = hp × VITALS.HP_REGEN_PS
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久
   },
   // 集束轟炸機:變形者的外掛子機(長按右鍵分離發射)。hp 於生成時覆寫為 decoyHp()(砲塔火力反解);
@@ -4346,6 +4348,9 @@ UNITS.bunker.hp = Math.round(UNITS.tower.hp / 2);   // 碉堡 HP = 砲塔一半(
   // 初始無人機平均總血量(護盾+裝甲)—— 防空伏擊傷害 = 此值 /3(見 GAME 之後的 AA_AMBUSH.DMG derive)
   SQUAD.DRONE_AVG_HP = avg(dch.map((c) =>
     UNITS.drone.hp * (CHARACTERS[c].mods?.hp ?? 1) + UNITS.drone.shield * (CHARACTERS[c].mods?.sp ?? 1)));
+  // 英雄預設裝甲恢復速度:護盾每秒回復比例的 1/4(VITALS.HP_REGEN_PS)
+  UNITS.robot.regen = Math.round(UNITS.robot.hp * VITALS.HP_REGEN_PS);
+  UNITS.drone.regen = Math.round(UNITS.drone.hp * VITALS.HP_REGEN_PS);
 }
 // ---- 陣營對抗係數對稱化(2026-07-27 使用者原則:戰力平衡須考量攻擊距離與高度差)----
 // 對進戰模型(tools/duel.mjs / `npm run bal` ⑤)量到的**結構性偏差**:英雄對英雄時,
