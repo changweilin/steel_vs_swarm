@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { sceneObjectMat, toonMat } from './toon.js';
 
 const TYPES = new Set([
-  'box', 'cone', 'conical_frustum', 'cylinder', 'dodecahedron_polyhedron',
+  'mesh', 'box', 'cone', 'conical_frustum', 'cylinder', 'dodecahedron_polyhedron',
   'ellipsoid_sphere', 'frustum_pyramid', 'hemisphere_dome',
   'icosahedron_polyhedron', 'polygonal_prism', 'pyramid', 'torus_ring', 'wedge',
 ]);
@@ -73,6 +73,7 @@ export function runtimeMeshDataGeometry(meshData, parts = [], palette = null) {
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setIndex(faces);
   if (validMeshArray(meshData.normals, vertices.length)) {
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(meshData.normals, 3));
   } else {
@@ -85,7 +86,6 @@ export function runtimeMeshDataGeometry(meshData, parts = [], palette = null) {
     ? meshData.colors
     : deriveMeshColors(meshData, parts, palette);
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geo.setIndex(faces);
   geo.computeBoundingBox();
   geo.computeBoundingSphere();
   return geo;
@@ -116,6 +116,11 @@ export function runtimePrimitiveGeometry(part) {
   const h = Math.max(0.001, finite(part.height) ? part.height : 1);
   let geo;
   switch (part.type) {
+    case 'mesh': {
+      geo = runtimeMeshDataGeometry(part.meshData);
+      if (!geo) throw new TypeError('Invalid procedural mesh');
+      break;
+    }
     case 'box': geo = new THREE.BoxGeometry(...pos3(part.dimensions, 1).map((n) => Math.max(0.001, n))); break;
     case 'polygonal_prism': {
       const r = Math.max(0.001, finite(part.radius) ? part.radius : 1);
@@ -216,7 +221,10 @@ export function mergeRuntimeParts(parts, options = {}) {
       else if (palette[key] !== undefined) partColor = palette[key];
     }
     color.setHex(Number.isInteger(partColor) ? partColor : 0x888888);
-    for (let i = 0; i < pa.length / 3; i++) colors.push(color.r, color.g, color.b);
+    if (part.type === 'mesh' && part.meshData.colors && geo.attributes.color) {
+      for (const component of geo.attributes.color.array) colors.push(component);
+    }
+    else for (let i = 0; i < pa.length / 3; i++) colors.push(color.r, color.g, color.b);
     geo.dispose();
   }
 

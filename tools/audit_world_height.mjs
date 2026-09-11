@@ -282,8 +282,8 @@ console.log('\nⅤ 單一縫:天花板只有一份、消費端數得出來');
     count(strip(terrSrc), /avgH \/= N \* N;/g) === 1 && /maxH, avgH,/.test(terrSrc));
   t('伺服器沒有第二份天花板(位置本就客戶端權威,同 FLIGHT 全族)',
     !/worldCeilY|objHeightMax/.test(simCode) && !/worldCeilY|objHeightMax/.test(botsCode));
-  t('物件夾制的每一個生成點都經 data.js 的縫(神木×2 / 巨岩×2 / 地標×1)',
-    count(bioCode, /objScaleFit\(/g) === 5, `${count(bioCode, /objScaleFit\(/g)} 處`);
+  t('物件夾制的每一個生成點都經 data.js 的縫(神木×2 / 巨岩×2 / 地標×1 / 共用物件×1)',
+    count(bioCode, /objScaleFit\(/g) === 6 && /objScaleFit\(1, def.size\[1\], 1\)/.test(bioCode), `${count(bioCode, /objScaleFit\(/g)} 處`);
   t('biomes.js 沒有手寫的高度上限常數(舊制 bldCap: 170 不得復辟)',
     !/\b170\b/.test(strip(bioSrc).slice(0, bioSrc.indexOf('const CELL'))) && !/bldCap:\s*\d/.test(strip(bioSrc)));
 

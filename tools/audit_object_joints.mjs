@@ -693,15 +693,7 @@ const megal = (() => {
     pick(/const _rcO = new THREE\.Vector3[^\n]*\n/, 'rockProbe 的射線暫存'),
     pick(/function rockProbe\(g\) \{[\s\S]*?\n\}/, 'rockProbe'),
     pick(/const ROCK_TONES = \[[\s\S]*?\];/, 'ROCK_TONES'),
-    // 巨岩零件庫名冊與守衛(2026-08-05):稽核端注入 libGeo = () => null ⇒ 一律走保險絲
-    // 路徑(= 舊 primitive 幾何)—— 接合幾何的真相在保險絲上,GLB 只是同包絡的皮
-    "const legacyNatureKey = (category, variant) => category === 'rock' && variant === 'megalith' ? 'rock/mega_a' : null;",
-    'const isRuntimeEligibleNatureKey = () => true;',
-    pick(/const MEGA_LIB = \{[\s\S]*?\n\};/, 'MEGA_LIB'),
-    pick(/const megaGeo = \(name\) => \{[\s\S]*?\n\};/, 'megaGeo'),
-    // 輪替除數(名冊長度推導,2026-08-06):抽原文執行 ⇒ 這一行少了就是 ReferenceError,
-    // 而它與 MEGA_LIB 是同一個縫的兩半,MUST 一起抽(MUST NOT 在這裡寫死 3)
-    pick(/const NBLK = MEGA_LIB\.block\.length;/, 'NBLK'),
+    // 直接執行現役程序巨岩；舊零件庫名冊與載入器已退場。
     pick(/function synthMegalith\(g, rnd\) \{[\s\S]*?\n\}/, 'synthMegalith'),
     pick(/function decorateMegalith\(g, anchor, rnd, s\) \{[\s\S]*?\n\}/, 'decorateMegalith'),
     'return { MEGALITHS, synthMegalith, decorateMegalith };',
@@ -716,8 +708,8 @@ const megal = (() => {
   // 高壓電塔本體的接合歸 LANDMARKS 稽核(不在本節範圍);此處只驗它有沒有站在岩頂上,
   // 故以「與真品同佔地」的樁件代表:LANDMARK_COL.power r=2.6 h=42(不消耗 rnd)
   const LANDMARKS = { power: (g) => { const m = new THREE.Mesh({ t: 'prism', r1: 2.6, r2: 2.6, h: 42, n: 4 }); m.position.set(0, 21, 0); g.add(m); } };
-  const mod = new Function('cyl', 'cone', 'ico', 'box', 'rockFrustum', 'rockMat', 'toonMat', 'LANDMARKS', 'THREE', 'Math', 'libGeo', code)(
-    G.cyl, G.cone, G.ico, box, rockFrustum, mat, mat, LANDMARKS, THREE, Math, () => null);
+  const mod = new Function('cyl', 'cone', 'ico', 'box', 'rockFrustum', 'rockMat', 'toonMat', 'LANDMARKS', 'THREE', 'Math', code)(
+    G.cyl, G.cone, G.ico, box, rockFrustum, mat, mat, LANDMARKS, THREE, Math);
   return { ...mod, THREE };
 })();
 

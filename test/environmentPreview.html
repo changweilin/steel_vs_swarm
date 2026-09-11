@@ -1,0 +1,48 @@
+<!doctype html><html lang="zh-Hant"><meta charset="utf-8">
+<title>場景／邊界共用生成器</title>
+<style>
+body{margin:0;background:#e3e9ed;color:#263640;font:14px system-ui}header{position:sticky;top:0;background:#182d3d;color:white;padding:16px 24px;z-index:2;display:flex;align-items:center;gap:18px}h1{font-size:18px;margin:0}button,select,input{padding:7px;border:0;border-radius:4px}main{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:12px;padding:18px}.card{background:#f7f8f7;border-radius:8px;overflow:hidden}.view{height:210px}h2{font-size:14px;margin:10px 14px 4px}small{display:block;margin:0 14px 12px;color:#647780}canvas{position:fixed;inset:0;pointer-events:none;z-index:1}#status{font-size:12px} @media(max-width:900px){main{grid-template-columns:repeat(2,1fr)}}
+</style>
+<header><h1>場景／邊界共用生成器</h1><select id="mode"><option value="edge">邊界：固定尺寸／空隙不可穿越</option><option value="scene">場景：獨立物件</option><option value="slope">陡坡：三段連續接縫</option><option value="mid">緩坡障礙物</option><option value="flat">平地障礙物</option><option value="water">水域障礙物</option></select><label>種子 <input id="seed" type="number" value="42" style="width:70px"></label><button id="generate">重新生成</button><span id="status"></span></header><main></main>
+<script type="importmap">{"imports":{"three":"/three.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { WALL_KINDS, wallParts } from '/js/edgewall.js';
+import { ENVIRONMENT_OBJECTS, environmentParts } from '/js/environmentParts.js';
+import { SLOPE_BOUNDARIES, buildSlopeBoundary } from '/js/edgeSlope.js';
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));document.body.append(renderer.domElement);
+const cards=[];let errorCount=0;
+window.addEventListener('error',()=>errorCount++);
+function meshGeometry(data){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(data.vertices,3));if(data.colors)g.setAttribute('color',new THREE.Float32BufferAttribute(data.colors,3));g.setIndex(data.faces);g.computeVertexNormals();return g;}
+function rebuild(){
+  for(const {scene} of cards)scene.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});
+  cards.length=0;document.querySelector('main').replaceChildren();
+  const mode=document.querySelector('#mode').value,edge=mode==='edge',slope=['slope','mid','flat','water'].includes(mode),seed=Number(document.querySelector('#seed').value);
+  const catalog=slope?Object.fromEntries(Object.keys(WALL_KINDS).filter(k=>mode==='water'?WALL_KINDS[k].dom==='water':WALL_KINDS[k].dom==='land'&&WALL_KINDS[k].slope===(mode==='slope'?'steep':mode)).map(k=>[k,WALL_KINDS[k]])):edge?WALL_KINDS:ENVIRONMENT_OBJECTS;
+  for(const [kind,def] of Object.entries(catalog)){
+    const heightAt=(x,z)=>mode==='water'||mode==='flat'?0:x*(mode==='mid'?.15:.9)+Math.sin(x/13+seed)*(mode==='mid'?1:4)+z*.2;
+    const rows=slope?[-30,0,30].flatMap(x=>(def.terrainFit?buildSlopeBoundary(kind,{len:30,depth:def.depth,h:def.h,x,z:0,seed,waterY:mode==='water'?0:null,heightAt}).parts:wallParts(kind,{len:30,depth:def.depth,h:def.h,seed}).map(p=>({...p,p:[p.p[0],p.p[1]+heightAt(x,0),p.p[2]]}))).map(p=>({...p,p:[p.p[0]+x,p.p[1],p.p[2]]}))):edge?wallParts(kind,{len:30,depth:def.depth,h:def.h,seed}):environmentParts(kind,{seed});
+    const card=document.createElement('section');card.className='card';
+    const heading=document.createElement('h2');heading.textContent=def.label||kind;
+    const note=document.createElement('small');note.textContent=kind+' · '+rows.length+' 零件';
+    const view=document.createElement('div');view.className='view';card.append(view,heading,note);document.querySelector('main').append(card);
+    const scene=new THREE.Scene();scene.background=new THREE.Color(0xe8eeee);
+    scene.add(new THREE.HemisphereLight(0xf8ffff,0x687463,2));const sun=new THREE.DirectionalLight(0xffffff,2.4);sun.position.set(3,7,5);scene.add(sun);
+    const group=new THREE.Group();scene.add(group);
+    for(const p of rows){const [t,a,b,c,n]=p.g;const geo=t==='mesh'?meshGeometry(a):t==='box'?new THREE.BoxGeometry(a,b,c):t==='cyl'?new THREE.CylinderGeometry(a,b,c,n||6):t==='cone'?new THREE.ConeGeometry(a,b,c||6):new THREE.IcosahedronGeometry(a,0);
+      const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:p.c??0xffffff,vertexColors:t==='mesh'&&!!a.colors,roughness:.85,flatShading:true,transparent:p.mat==='glass',opacity:p.mat==='glass'?.72:1}));
+      mesh.position.fromArray(p.p||[0,0,0]);mesh.rotation.set(...(p.r||[0,0,0]));mesh.scale.fromArray(p.s||[1,1,1]);group.add(mesh);
+    }
+    const bounds=new THREE.Box3().setFromObject(group),center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3()),span=Math.max(size.x,size.y,size.z)*.75;
+    const camera=new THREE.OrthographicCamera(-span,span,span,-span,.01,1000);camera.position.copy(center).add(new THREE.Vector3(1.1,.85,1.4).multiplyScalar(span*3));camera.lookAt(center);
+    cards.push({scene,camera,view,span});
+  }
+  document.querySelector('#status').textContent=cards.length+' 款';window.previewReady={count:cards.length,errorCount};
+}
+function render(){renderer.setSize(innerWidth,innerHeight);renderer.setScissorTest(false);renderer.setClearColor(0x000000,0);renderer.clear();renderer.setScissorTest(true);
+ for(const {scene,camera,view,span} of cards){const r=view.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)continue;
+ camera.left=-span*r.width/r.height;camera.right=-camera.left;camera.updateProjectionMatrix();renderer.setViewport(r.left,innerHeight-r.bottom,r.width,r.height);renderer.setScissor(r.left,innerHeight-r.bottom,r.width,r.height);renderer.render(scene,camera);}
+}
+document.querySelector('#generate').onclick=()=>{rebuild();render();};document.querySelector('#mode').onchange=()=>{rebuild();render();};addEventListener('scroll',render);addEventListener('resize',render);rebuild();render();
+</script></html>

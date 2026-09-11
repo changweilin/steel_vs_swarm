@@ -173,7 +173,9 @@ function rgb(hex, shade = 1) {
 export function geologyBackgroundObject(type, seed = 0, input = {}) {
   const model = generateGeology(type, seed, input), { parameters: p, environment: e } = model;
   type = model.type;
-  const spec = GEOLOGY_TYPES[type], n = 28, points = [], vertices = [], faces = [], colors = [];
+  const spec = GEOLOGY_TYPES[type];
+  const n = Number.isInteger(input.segments) ? Math.max(8, Math.min(28, input.segments)) : 28;
+  const points = [], vertices = [], faces = [], colors = [];
   const shapeRnd = mulberry32(seed ^ 0x53484150);
   const phases = [shapeRnd(), shapeRnd(), shapeRnd()].map(v => v * Math.PI * 2);
   const c = Math.cos(p.strike), s = Math.sin(p.strike);
