@@ -13,7 +13,7 @@ import {
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur, VISION_BLIND,
   weaponMaxHoriz, inWeaponRange,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
-  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, worldCeilY, edgeWallInsetM,
+  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, worldCeilY, edgeWallInsetM,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
@@ -8268,6 +8268,7 @@ export class BattleClient {
    * 爬升動力條:往上飛消耗、其餘時間回充。**唯一消費點** —— target.y > 0 才扣,扣速 ∝ 爬升率
    * (全速 = liftDrainPS ⇒ 滿動力撐 FLIGHT.DRAIN_S 秒);動力見底把上升分量歸零(= 爬不上去,
    * 不是變慢),水平/下降/懸停不受影響。回速正比於電力回速 × 充能軌(liftRegen)。
+   * 正常操作下降高度時會回充 2/3 的電力(liftDescentPS ∝ 下降率,2026-09-11 使用者需求)。
    */
   _stepLift(dt, now, target, u) {
     // 電力上限是伺服器權威值(快照 e.mm)。它到達之前 MUST NOT 解析動力上限 —— 建構子的佔位值
@@ -8293,7 +8294,10 @@ export class BattleClient {
       // 受擊失衡期間禁止回充(2026-09-01 使用者需求:失衡時無法恢復飛行動力)
       if (!this._unbalanced(now)) {
         const wet = this._env?.code || 0;
-        this.lift = Math.min(lMax, this.lift + liftRegen(u?.mpRegen, this.upg?.ch) * fluidFactor(wet) * dt);
+        const descF = target.y < 0 ? Math.min(1, -target.y / vsp) : 0;
+        const descRecharge = liftDescentPS(this.maxMp || 0, this.isMorph) * descF;
+        this.lift = Math.min(lMax, this.lift
+          + (liftRegen(u?.mpRegen, this.upg?.ch) + descRecharge) * fluidFactor(wet) * dt);
       }
     }
   }

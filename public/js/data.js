@@ -912,6 +912,9 @@ export const FLIGHT = {
   // 回充比耗盡慢是刻意的(不然動力條等於不存在)。
   REGEN_F: 2.5,
   LOW_F: 0.15,       // HUD 低動力警示門檻(佔上限比例)
+  // 正常操作下降高度時回充電力比例(2026-09-11 使用者需求:正常操作下降高度時,會回充2/3的電力):
+  // 正常操作下降時每秒回充電力 = liftDrainPS × DESCENT_RECHARGE_F × 下降率(全速下降回充全速爬升耗速的 2/3,推導不手寫)
+  DESCENT_RECHARGE_F: 2 / 3,
   // 無人機離地下限(=貼地懸停高):飛行中不貼地的下限、以及**重生落地高**共用同一個值(2026-08-03
   // 使用者定案「重生時應該貼地起飛,靠滿動力自己爬升,而不是一出生就懸在半空」)——
   // 重生 MUST NOT 直接把高度設到巡航高度(那樣動力滿格就沒有意義),而是落在這個離地下限,
@@ -929,6 +932,8 @@ export const liftMax = (maxMp, isMorph) =>
 export const liftRegen = (mpRegen, chLvl) => Math.max(0, mpRegen || 0) * chargeF(chLvl) * FLIGHT.REGEN_F;
 /** 全速爬升的動力耗速(每秒;= 動力上限 ÷ DRAIN_S,推導不手寫) */
 export const liftDrainPS = (maxMp, isMorph) => liftMax(maxMp, isMorph) / FLIGHT.DRAIN_S;
+/** 正常操作全速下降的動力回充電力(每秒;= 全速爬升耗速 × DESCENT_RECHARGE_F(2/3),推導不手寫) */
+export const liftDescentPS = (maxMp, isMorph) => liftDrainPS(maxMp, isMorph) * FLIGHT.DESCENT_RECHARGE_F;
 /** 失衡失準機率:若射手失衡,命中率減半(失準機率相應增加) */
 export const unbalMissP = (missP, unbalanced) =>
   unbalanced ? 1 - (1 - (missP || 0)) * FLIGHT.UNBAL_ACC_MUL : (missP || 0);
