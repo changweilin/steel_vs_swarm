@@ -1451,7 +1451,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     dr2.invUntil = 0; dr2.iframeCdUntil = 0;   // 清場
   }
 
-  log('— sim:雙層 HP(護盾脫戰回復 / 裝甲只能回堡或招式修)+ 電力 —');
+  log('— sim:雙層 HP(護盾脫戰回復 / 裝甲回堡修復,預設速度為護盾 1/4)+ 電力 —');
   dr.x = sim.basePos.SWARM[0] + 500; dr.z = sim.basePos.SWARM[1];   // 先遠離主堡補血圈
   dr.sp = 0; dr.hp = Math.round(dr.maxHp * 0.6);
   const hpNow = dr.hp;
@@ -1464,7 +1464,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(dr.hp === hpNow, '裝甲在主堡補血圈外不回復(只能回堡或治療招式)');
   [dr.x, dr.z] = sim.basePos.SWARM;
   sim.tick(0.5);
-  assert(dr.hp > hpNow, '回主堡 → 裝甲開始修復');
+  assert(dr.hp > hpNow, '回主堡 → 裝甲開始修復(速率吃 UNITS.regen)');
   assert(dr.mp < dr.maxMp || dr.mp === dr.maxMp, `電力欄存在(mp=${Math.floor(dr.mp)}/${dr.maxMp})`);
 
   log('— sim:八軌養成(開場 Lv1、階梯 $75/$150/$300、戰鬥分數門檻 0/20/100、Lv4 外推)—');

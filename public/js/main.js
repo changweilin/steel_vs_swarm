@@ -2683,7 +2683,7 @@ function makeHud() {
       $('hpBar').style.width = `${Math.max(0, hp / max * 100)}%`;
       $('hpText').textContent = `裝甲 ${Math.max(0, Math.round(hp))} / ${max}`;
       if (w) {
-        // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(回堡/招式才能修)
+        // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(回堡/招式才能修,預設速度為護盾 1/4)
         $('spBar').style.width = `${Math.max(0, w.sp / w.msp * 100)}%`;
         $('spText').textContent = `護盾 ${Math.max(0, Math.round(w.sp))} / ${w.msp}`;
         // 電力(MP;電池 overcharge 可 > 上限 → 條夾 100%,數字照實顯示 130 / 100)
