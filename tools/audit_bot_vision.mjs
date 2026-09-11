@@ -22,8 +22,9 @@
 // 行為一律以**真的 BattleSim + 真的 BotBrain** 直測。
 import { readSrc, grabMethod } from './audit_src.mjs';
 import {
-  BOT_VIEW, botFovHalf, VIEW_LOCK, viewLockStep, wrapPi, SELF_F, selfCollider, COLLIDE_KINDS,
+  BOT_VIEW, botFovHalf, botFovVerticalHalf, VIEW_LOCK, viewLockStep, wrapPi, SELF_F, selfCollider, COLLIDE_KINDS,
   UNITS, CHARACTERS, heroKindOf, heroWeapon, hitR, hitH, MAPGEO, GAME,
+  BOT_DIFF, botScopeSearchRad, botScopeSearchPitchRad, botScopeSearchFreq,
 } from '../public/js/data.js';
 import { BattleSim, cumLen, pointAt } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
@@ -118,12 +119,17 @@ sec('Ⅰ 常數與推導(data.js:視野半角/碰撞量體 MUST 推導不手寫)
 sec('Ⅱ 單一縫(原文:視角/位置各只有一個寫入點,量體兩端同吃)');
 // ---------------------------------------------------------------------------------
 {
-  t('bots.js:`h.ry` 全檔只有一處寫入', count(botsCode, 'h.ry =') === 1, `${count(botsCode, 'h.ry =')} 處`);
-  t('唯一的寫入點是 `_turn`', /h\.ry\s*=/.test(strip(grabMethod(botsSrc, '_turn'))));
-  t('`_face` 只寫意圖不寫 ry(寫了就是瞬間回頭 = 視野錐失效)',
-    !/h\.ry\s*=/.test(strip(grabMethod(botsSrc, '_face'))) && /_wantRy\s*=/.test(strip(grabMethod(botsSrc, '_face'))));
-  t('轉頭步進只准經 `viewLockStep`(與真人的視野鎖定輔助同一支角速度上限)',
-    count(botsCode, 'viewLockStep(') === 1 && /viewLockStep\(/.test(strip(grabMethod(botsSrc, '_turn'))));
+  t('bots.js:`h.ry` 與 `h.rx` 全檔各只有一處寫入',
+    count(botsCode, 'h.ry =') === 1 && count(botsCode, 'h.rx =') === 1,
+    `ry ${count(botsCode, 'h.ry =')} / rx ${count(botsCode, 'h.rx =')} 處`);
+  t('唯一的寫入點是 `_turn`',
+    /h\.ry\s*=/.test(strip(grabMethod(botsSrc, '_turn'))) && /h\.rx\s*=/.test(strip(grabMethod(botsSrc, '_turn'))));
+  t('`_face` 只寫意圖不寫 ry/rx(寫了就是瞬間回頭 = 視野錐失效)',
+    !/h\.r[xy]\s*=/.test(strip(grabMethod(botsSrc, '_face')))
+    && /_wantRy\s*=/.test(strip(grabMethod(botsSrc, '_face')))
+    && /_wantRx\s*=/.test(strip(grabMethod(botsSrc, '_face'))));
+  t('轉頭步進兩軸(yaw/pitch)只准經 `viewLockStep`(與真人的視野鎖定輔助同一支角速度上限)',
+    count(botsCode, 'viewLockStep(') === 2 && /viewLockStep\(/.test(strip(grabMethod(botsSrc, '_turn'))));
   t('bots.js MUST NOT 手寫角速度 / 逼近係數', !/VIEW_LOCK\.(W|EASE)/.test(botsCode));
   t('視野半角只有一處取(`_fovHalf`)', count(botsCode, 'botFovHalf(') === 1);
   t('方位換算只有一支(`_bearing`;視野錐與受擊警戒共用)',
@@ -278,6 +284,122 @@ sec('Ⅲ-b 狙擊模式偵察:停下或重武器可用時先開鏡');
   rh.reloadUntil.heavy = ranged.t + 2;
   rb._updateAiming(rh);
   t('移動中且重武器不可用時收鏡', rh.aiming === false);
+}
+
+// ---------------------------------------------------------------------------------
+sec('Ⅲ-c 靜止狙擊鏡搜索:低/中/高難度 3D 角度(水平 30°/45°/60°、俯仰 15°/20°/25°)與速度階梯');
+// ---------------------------------------------------------------------------------
+{
+  t('BOT_DIFF 設定:低/中/高水平角為 30°/45°/60°、俯仰角為 15°/20°/25°,新手為 0',
+    BOT_DIFF.low.scopeSearchDeg === 30 && BOT_DIFF.low.scopeSearchPitchDeg === 15
+    && BOT_DIFF.medium.scopeSearchDeg === 45 && BOT_DIFF.medium.scopeSearchPitchDeg === 20
+    && BOT_DIFF.high.scopeSearchDeg === 60 && BOT_DIFF.high.scopeSearchPitchDeg === 25
+    && (BOT_DIFF.novice.scopeSearchDeg || 0) === 0 && (BOT_DIFF.novice.scopeSearchPitchDeg || 0) === 0);
+
+  t('推導不手寫:botScopeSearchRad 與 botScopeSearchPitchRad 回傳對應弧度',
+    near(botScopeSearchRad(BOT_DIFF.low), 30 * Math.PI / 180)
+    && near(botScopeSearchPitchRad(BOT_DIFF.low), 15 * Math.PI / 180)
+    && near(botScopeSearchRad(BOT_DIFF.medium), 45 * Math.PI / 180)
+    && near(botScopeSearchPitchRad(BOT_DIFF.medium), 20 * Math.PI / 180)
+    && near(botScopeSearchRad(BOT_DIFF.high), 60 * Math.PI / 180)
+    && near(botScopeSearchPitchRad(BOT_DIFF.high), 25 * Math.PI / 180)
+    && botScopeSearchRad(BOT_DIFF.novice) === 0
+    && botScopeSearchPitchRad(BOT_DIFF.novice) === 0);
+
+  t('操作手速對齊人類:搜索頻率 low < medium < high',
+    botScopeSearchFreq(BOT_DIFF.low) === 0.8
+    && botScopeSearchFreq(BOT_DIFF.medium) === 1.2
+    && botScopeSearchFreq(BOT_DIFF.high) === 1.6
+    && botScopeSearchFreq(BOT_DIFF.novice) === 0);
+
+  // 靜止停步時:低/中/高皆開鏡,新手不開鏡
+  for (const [diffKey, degH, degV] of [['low', 30, 15], ['medium', 45, 20], ['high', 60, 25]]) {
+    const s = blank();
+    const h = s.addHero('STEEL', 'b_' + diffKey, CH_ROBOT);
+    const b = new BotBrain(s, 'b_' + diffKey, 'STEEL', 0, diffKey);
+    h.aiming = false;
+    b.state = 'RALLY';
+    b._updateAiming(h);
+    t(`難度「${BOT_DIFF[diffKey].name}」:靜止停步時開啟狙擊鏡`, h.aiming === true);
+
+    const freq = botScopeSearchFreq(BOT_DIFF[diffKey]);
+    // 水平正弦波掃向 ±degH 度角展開視野
+    s.t = Math.PI / (2 * freq); // sin = 1
+    const ang1 = b._scopeSearchAngle(h);
+    t(`難度「${BOT_DIFF[diffKey].name}」:水平搜索正向展開達 +${degH}°`, near(ang1, degH * Math.PI / 180));
+
+    s.t = 3 * Math.PI / (2 * freq); // sin = -1
+    const ang2 = b._scopeSearchAngle(h);
+    t(`難度「${BOT_DIFF[diffKey].name}」:水平搜索反向展開達 -${degH}°`, near(ang2, -degH * Math.PI / 180));
+
+    // 垂直俯仰正弦波掃向 ±degV 度角展開視野 (2倍頻正交立體掃描)
+    s.t = Math.PI / (4 * freq); // sin(2*freq*t) = 1
+    const pitch1 = b._scopeSearchPitch(h);
+    t(`難度「${BOT_DIFF[diffKey].name}」:垂直俯仰正向展開達 +${degV}°`, near(pitch1, degV * Math.PI / 180));
+
+    s.t = 3 * Math.PI / (4 * freq); // sin(2*freq*t) = -1
+    const pitch2 = b._scopeSearchPitch(h);
+    t(`難度「${BOT_DIFF[diffKey].name}」:垂直俯仰反向展開達 -${degV}°`, near(pitch2, -degV * Math.PI / 180));
+  }
+
+  {
+    const sNov = blank();
+    const hNov = sNov.addHero('STEEL', 'b_nov', CH_ROBOT);
+    const bNov = new BotBrain(sNov, 'b_nov', 'STEEL', 0, 'novice');
+    hNov.aiming = false;
+    bNov.state = 'RALLY';
+    bNov._updateAiming(hNov);
+    t('新手難度:靜止時不開啟狙擊鏡', hNov.aiming === false);
+    t('新手難度:搜索偏移角恆為 0', bNov._scopeSearchAngle(hNov) === 0 && bNov._scopeSearchPitch(hNov) === 0);
+  }
+
+  // 展開視野實效(水平):站在正面視野錐之外(例如 65°)、但在展開視野範圍內的敵人能被搜索到
+  {
+    const s = blank();
+    const h = s.addHero('STEEL', 'b_flank', CH_ROBOT);
+    const b = new BotBrain(s, 'b_flank', 'STEEL', 0, 'high');
+    h.aiming = true;
+    b.state = 'RALLY';
+    h.x = 0; h.z = 0; h.y = 0; h.ry = 0; h.rx = 0;
+
+    // 正前方朝 +z(laneAngle = 0),側翼 65° 放敵兵(超出 robot 半視角 50.2°,正視角失明)
+    const flankDeg = 65;
+    const flankRad = flankDeg * Math.PI / 180;
+    const tgt = s._add({ kind: 'soldier', side: 'SWARM', lane: 0, x: -Math.sin(flankRad) * 60, z: Math.cos(flankRad) * 60, y: 0, hp: 999 });
+
+    // 面向正前方時看不見
+    h.ry = 0;
+    s._tickN++;
+    t('未轉向側翼前看不見 65° 側翼敵人', b._acquire(h) == null);
+
+    // 搜索掃向 +60° 時轉頭到位,側翼敵人進入視野錐
+    h.ry = 60 * Math.PI / 180;
+    s._tickN++;
+    t('高難度展開 60° 視野後成功鎖定側翼敵人', b._acquire(h) === tgt);
+  }
+
+  // 展開視野實效(垂直 3D):站在正前方高空(例如仰角 45°、超出垂直半視角 34°)、在 3D 俯仰展開搜索後能被鎖定
+  {
+    const s = blank();
+    const h = s.addHero('STEEL', 'b_air', CH_ROBOT);
+    const b = new BotBrain(s, 'b_air', 'STEEL', 0, 'high');
+    h.aiming = true;
+    b.state = 'RALLY';
+    h.x = 0; h.z = 0; h.y = 0; h.ry = 0; h.rx = 0;
+
+    // 正前方 40m,高度 42m (仰角約 45°,超出 Robot 垂直半視角 34°)
+    const airFoe = s.addHero('SWARM', 'h_air', 'stinger');
+    airFoe.x = 0; airFoe.z = 40; airFoe.y = 42; // eyeY ≈ 2, dy = 40, flatD = 40 => pitch ≈ 45°
+
+    h.rx = 0; // 平視
+    s._tickN++;
+    t('未抬頭前平視看不見 45° 仰角高空敵人', b._acquire(h) == null);
+
+    // 搜索俯仰展開達 +25° (45° - 25° = 20° <= 34° 垂直視野半角)
+    h.rx = 25 * Math.PI / 180;
+    s._tickN++;
+    t('高難度 3D 俯仰展開 25° 視野後成功鎖定高空敵人', b._acquire(h) === airFoe);
+  }
 }
 
 // ---------------------------------------------------------------------------------

@@ -1661,7 +1661,7 @@ export class BattleSim {
         : this._spawnPoint(side, idx, i);
       const b = this._add({
         kind, side, pid, ch, si: i, spawnIdx: idx,
-        x: ox, z: oz, y: 0, ry: 0,
+        x: ox, z: oz, y: 0, ry: 0, rx: 0,
         ...(boss ? { boss: true, sg: sq.bossStage } : {}),
         hp: Math.round(u.hp * (m.hp ?? 1) * (boss ? BOSS.HP_MUL : 1)), hero: true,
         dead: false, respawnAt: 0, deaths: 0, aaCd: 0,
@@ -6703,6 +6703,7 @@ export class BattleSim {
     }
     if (e.hero) {
       o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
+      if (e.rx) o.rx = Math.round(e.rx * 100) / 100;
       o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
       o.ch = e.ch;                                               // 角色(客戶端渲染專屬機體)
       o.sp = Math.round(e.sp); o.msp = e.maxSp;                  // 護盾(雙層 HP 第一層)
