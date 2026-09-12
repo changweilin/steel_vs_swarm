@@ -1,4 +1,4 @@
-﻿// ============ 兵線路徑平衡離線稽核 ============
+// ============ 兵線路徑平衡離線稽核 ============
 // 驗證 VENUE_LANES 所有 L2/L3 條目符合以下結構規則(2026-09-02 使用者需求):
 //   兵線=2:① 左右兩條長度誤差 ≤ 10%
 //           ② 兩條路線重合度 ≤ 5%
@@ -175,6 +175,18 @@ if (!BREAK_ANY) {
   ok('外側比門檻=1.0 時1.10x違規', !rBOut.ok);
   // 確認舊門檻復原:等長線在正常門檻下仍 ok
   ok('門檻復原:等長線 ok', lanePathBalanceAudit([laneA, laneB], 2).ok);
+
+  section('三線母體派生:L1為中路、L2為左右兩路');
+  for (const [vId, byL] of Object.entries(VENUE_LANES)) {
+    if (!byL[3] || !byL[1] || !byL[2]) continue;
+    const l3 = byL[3], l1 = byL[1], l2 = byL[2];
+    const match1 = JSON.stringify(l1.lanes[0]) === JSON.stringify(l3.lanes[1]);
+    const match2 = JSON.stringify(l2.lanes[0]) === JSON.stringify(l3.lanes[0]) && JSON.stringify(l2.lanes[1]) === JSON.stringify(l3.lanes[2]);
+    const matchBase = JSON.stringify(l1.bases) === JSON.stringify(l3.bases) && JSON.stringify(l2.bases) === JSON.stringify(l3.bases);
+    ok(`${vId}: L1 派生自 L3 中路`, match1);
+    ok(`${vId}: L2 派生自 L3 左右兩路`, match2);
+    ok(`${vId}: L1/L2/L3 基地座標位元級相同`, matchBase);
+  }
 
   console.log(`\n${tFail ? 'FAIL' : 'PASS'} 單元測試:${tPass} 通過,${tFail} 失敗`);
   if (tFail) fails = Math.max(fails, 1);
