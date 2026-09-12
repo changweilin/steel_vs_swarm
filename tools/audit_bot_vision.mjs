@@ -25,6 +25,7 @@ import {
   BOT_VIEW, botFovHalf, botFovVerticalHalf, VIEW_LOCK, viewLockStep, wrapPi, SELF_F, selfCollider, COLLIDE_KINDS,
   UNITS, CHARACTERS, heroKindOf, heroWeapon, hitR, hitH, MAPGEO, GAME,
   BOT_DIFF, botScopeSearchRad, botScopeSearchPitchRad, botScopeSearchFreq,
+  bloodScreenUv, bloodDirFromUv,
 } from '../public/js/data.js';
 import { BattleSim, cumLen, pointAt } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
@@ -623,6 +624,95 @@ sec('Ⅶ 攻擊不穿牆:bot 的每一條開火路徑都驗 LOS');
     return sim.botFire('b1', tgt.id, 'light');
   };
   t('牆後的目標:bot 一發都打不掉血(對照組:沒牆時打得到)', shoot(true) === false && shoot(false) === true);
+}
+
+// ---------------------------------------------------------------------------------
+sec('Ⅷ 受擊未見敵之反應式狙擊鏡搜索:中難度擴大區域 / 高難度出血動畫方位導引');
+// ---------------------------------------------------------------------------------
+{
+  // 1. bloodDirFromUv:出血動畫方位反解單一縫驗證
+  const hH = botFovHalf('robot'), hV = botFovVerticalHalf('robot');
+  for (const [bIn, eIn] of [[0, 0], [0.3 * hH, 0.2 * hV], [-0.5 * hH, -0.4 * hV], [0.9 * hH, -0.8 * hV]]) {
+    const { u, v } = bloodScreenUv(bIn, eIn, hH, hV);
+    const { bearing, elev } = bloodDirFromUv(u, v, hH, hV);
+    t(`bloodDirFromUv 精確反解方位 (bearing: ${bIn.toFixed(2)}, elev: ${eIn.toFixed(2)})`,
+      near(bearing, bIn, 1e-6) && near(elev, eIn, 1e-6));
+  }
+
+  // 2. 常數與倍率定義
+  t('BOT_VIEW.ALERT_SEARCH_EXPAND 存在且為 1.5 倍展開', BOT_VIEW.ALERT_SEARCH_EXPAND === 1.5);
+  t('中難度擴大後之水平角為 67.5°(45° × 1.5)',
+    near(botScopeSearchRad(BOT_DIFF.medium, BOT_VIEW.ALERT_SEARCH_EXPAND), 67.5 * Math.PI / 180));
+  t('中難度擴大後之垂直俯仰角為 30°(20° × 1.5)',
+    near(botScopeSearchPitchRad(BOT_DIFF.medium, BOT_VIEW.ALERT_SEARCH_EXPAND), 30 * Math.PI / 180));
+
+  // 3. 中難度:受擊未見敵人時開啟狙擊鏡並擴大搜索角度區域
+  {
+    const s = blank();
+    const h = s.addHero('STEEL', 'b_med_rx', CH_ROBOT);
+    const foe = s.addHero('SWARM', 'f_med', CH_DRONE);
+    const b = new BotBrain(s, 'b_med_rx', 'STEEL', 0, 'medium');
+    h.aiming = false;
+    h.x = 0; h.z = 0; h.y = 0; h.ry = 0; h.rx = 0;
+    // 敵人位於遠方側翼 60° (超出中難度常規 45° 搜索角)
+    const flankRad = 60 * Math.PI / 180;
+    foe.x = -Math.sin(flankRad) * 70; foe.z = Math.cos(flankRad) * 70; foe.y = 0;
+    s._damage(h, 15, foe, 0);
+
+    b._updateAiming(h);
+    t('中難度:受擊未見敵時主動開啟狙擊鏡', h.aiming === true);
+
+    // 搜索掃向擴大後的側翼角度 (例如 60°)
+    b._alertLook(h);
+    t('中難度:朝受擊方位展開擴大角度搜索', b._wantRy != null);
+  }
+
+  // 4. 高難度:受擊未見敵人時根據出血動畫方向判定狙擊鏡搜索方位 (含高空俯仰角)
+  {
+    const s = blank();
+    const h = s.addHero('STEEL', 'b_high_rx', CH_ROBOT);
+    const foe = s.addHero('SWARM', 'f_high_air', 'stinger');
+    const b = new BotBrain(s, 'b_high_rx', 'STEEL', 0, 'high');
+    h.aiming = false;
+    h.x = 0; h.z = 0; h.y = 0; h.ry = 0; h.rx = 0;
+    // 高空狙擊手:正前方 40m,高度 42m (仰角約 45°,超出 Robot 平視垂直視野 34°)
+    foe.x = 0; foe.z = 40; foe.y = 42;
+    s._damage(h, 25, foe, 0);
+
+    b._updateAiming(h);
+    t('高難度:受擊未見敵時主動開啟狙擊鏡', h.aiming === true);
+
+    // 檢查伺服器記下的 _alert 包含出血動畫座標 (u, v)
+    t('伺服器 _alert 包含出血動畫螢幕座標 u, v', h._alert?.u != null && h._alert?.v != null);
+    // 仰角在上方 => v < 0.5 (畫面頂部)
+    t('高空來襲之出血動畫 v 位於螢幕上半部 (v < 0.5)', h._alert.v < 0.5);
+
+    // 執行 _alertLook:高難度依出血動畫方位導引視角
+    b._alertLook(h);
+    t('高難度:狙擊鏡視角朝出血動畫高空仰角抬頭 (wantRx > 0)', b._wantRx > 0.2);
+
+    // 經過轉向逼近後,成功鎖定高空敵人
+    const dt = GAME.TICK_MS / 1000;
+    for (let i = 0; i < 60 && h._alert; i++) {
+      b._alertLook(h);
+      b._turn(h, dt);
+    }
+    s._tickN++;
+    t('高難度:經出血動畫導引精確鎖定高空狙擊手', b._acquire(h) === foe);
+  }
+
+  // 5. 新手/低難度:不進行反應式狙擊鏡搜索 (維持舊制不開鏡)
+  {
+    const s = blank();
+    const h = s.addHero('STEEL', 'b_nov_rx', CH_ROBOT);
+    const foe = s.addHero('SWARM', 'f_nov', CH_DRONE);
+    const b = new BotBrain(s, 'b_nov_rx', 'STEEL', 0, 'novice');
+    h.aiming = false;
+    [foe.x, foe.z] = atBearing(h, Math.PI, 80);
+    s._damage(h, 15, foe, 0);
+    b._updateAiming(h);
+    t('新手難度:受擊時不開啟狙擊鏡', h.aiming === false);
+  }
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 電腦玩家視野 / 碰撞稽核:${pass}/${pass + fail} 通過`);

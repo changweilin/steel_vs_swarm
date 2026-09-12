@@ -24,6 +24,7 @@ import {
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
   weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor, fogSightMult,
   FIRE_WEATHER, fireDotMul,
+  wrapPi, bloodScreenUv, botFovHalf, botFovVerticalHalf,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -5300,7 +5301,13 @@ export class BattleSim {
     if (isBotId(t.pid)) {
       const lead = this.heroes.get(t.pid);
       if (lead && !lead.dead) {
-        lead._alert = { x: by.x, z: by.z, t: this.t };
+        const byY = by.ay != null ? by.ay : (by.y != null ? by.y : (by.hero ? 2 : 0));
+        const eyeY = (lead.y || 0) + LOS.EYE_M;
+        const flatD = Math.hypot(by.x - lead.x, by.z - lead.z);
+        const bBear = wrapPi(Math.atan2(-(by.x - lead.x), by.z - lead.z) - (lead.ry || 0));
+        const bElev = flatD > 0.01 ? wrapPi(Math.atan2(byY - eyeY, flatD) - (lead.rx || 0)) : 0;
+        const { u: bU, v: bV } = bloodScreenUv(bBear, bElev, botFovHalf(lead.kind), botFovVerticalHalf(lead.kind));
+        lead._alert = { x: by.x, z: by.z, y: byY, u: bU, v: bV, ry: lead.ry || 0, rx: lead.rx || 0, t: this.t };
         const tb = (lead._threat ||= new Map());
         for (const [k, r] of tb) if (this.t - r.t > BOT_TACTIC.THREAT_S) tb.delete(k);
         const tk = by.hero ? by.pid : by.id;
