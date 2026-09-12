@@ -2894,6 +2894,23 @@ export function bloodScreenUv(bearing, elev, halfH, halfV) {
   const v = inset(0.5 - 0.5 * clamp1(halfV > 0 ? (elev || 0) / halfV : 0));
   return { u, v };
 }
+/**
+ * 根據出血動畫方位 (u, v) 反推攻擊者相對當下的水平與垂直方向 (弧度)。
+ * u, v 為螢幕比例 (0~1);反解出 bearing (水平夾角) 與 elev (垂直夾角)。
+ * 若攻擊來自視野錐外,則指示視野邊緣方位(高難度 bot 沿此方向轉頭搜索)。
+ */
+export function bloodDirFromUv(u, v, halfH, halfV) {
+  const deInset = (t) => {
+    const denom = 1 - 2 * BLOOD.EDGE;
+    return denom > 0 ? (t - BLOOD.EDGE) / denom : 0.5;
+  };
+  const normU = Math.max(-1, Math.min(1, (deInset(u) - 0.5) * 2));
+  const normV = Math.max(-1, Math.min(1, (0.5 - deInset(v)) * 2));
+  return {
+    bearing: normU * (halfH || 1),
+    elev: normV * (halfV || 1),
+  };
+}
 
 // ---- 障礙物視線遮蔽(2026-07-15;伺服器 sim._losBlocked / 客戶端彈道共用參數)----
 // 建物/神木/巨岩等實體障礙擋砲火與視線:塔/NPC/玩家都不能透視。
@@ -6010,16 +6027,17 @@ export const BOT_VIEW = {
   ASPECT: 16 / 9,   // 基準畫面寬高比(bot 沒有畫面,取寬螢幕)
   ALERT_S: 4,       // 受擊警戒:被視野外的敵人打中之後,朝彈著方向轉頭的持續秒數
   SEARCH_FREQ: 1.2, // 基準靜止狙擊搜索頻率(rad/s)
+  ALERT_SEARCH_EXPAND: 1.5, // 被攻擊未見敵人時,中難度電腦擴大狙擊鏡搜索角度區域倍率(45°→67.5°, 20°→30°)
 };
 /** 電腦玩家的水平半視角(弧度):看得見 = 目標方位與機體朝向的夾角 ≤ 這個值 */
 export const botFovHalf = (kind) =>
   Math.atan(Math.tan((UNITS[kind]?.fov ?? 68) * Math.PI / 360) * BOT_VIEW.ASPECT);
 /** 電腦玩家的垂直半視角(弧度) */
 export const botFovVerticalHalf = (kind) => ((UNITS[kind]?.fov ?? 68) * Math.PI / 360);
-/** 難度低/中/高靜止狙擊鏡水平搜索角(弧度;低 30° / 中 45° / 高 60°) */
-export const botScopeSearchRad = (diff) => ((diff?.scopeSearchDeg || 0) * Math.PI / 180);
-/** 難度低/中/高靜止狙擊鏡垂直俯仰搜索角(弧度;低 15° / 中 20° / 高 25°) */
-export const botScopeSearchPitchRad = (diff) => ((diff?.scopeSearchPitchDeg || 0) * Math.PI / 180);
+/** 難度低/中/高靜止狙擊鏡水平搜索角(弧度;低 30° / 中 45° / 高 60°;expand 為受擊未見敵時擴大倍率) */
+export const botScopeSearchRad = (diff, expand = 1) => (((diff?.scopeSearchDeg || 0) * expand) * Math.PI / 180);
+/** 難度低/中/高靜止狙擊鏡垂直俯仰搜索角(弧度;低 15° / 中 20° / 高 25°;expand 為受擊未見敵時擴大倍率) */
+export const botScopeSearchPitchRad = (diff, expand = 1) => (((diff?.scopeSearchPitchDeg || 0) * expand) * Math.PI / 180);
 /** 難度低/中/高靜止狙擊搜索頻率(rad/s;對齊人類低/中/高操作手速) */
 export const botScopeSearchFreq = (diff) => (diff?.scopeSearchFreq ?? BOT_VIEW.SEARCH_FREQ);
 

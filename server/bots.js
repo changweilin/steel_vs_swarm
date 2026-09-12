@@ -8,6 +8,7 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, b
   VITALS,
   BOT_VIEW, botFovHalf, botFovVerticalHalf, viewLockStep, wrapPi,
   botScopeSearchRad, botScopeSearchPitchRad, botScopeSearchFreq,
+  bloodScreenUv, bloodDirFromUv,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
   botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG,
   WEATHER_DEBUFFS, windSpeedFactor } from '../public/js/data.js';
@@ -100,27 +101,29 @@ export class BotBrain {
    * 狙擊模式是偵察姿態,不只是一發重武器的前置動作:
    *   ①停下等盾或靜止時保持開鏡,用狙擊視野搜索兵線周遭;
    *   ②重武器可用時提前開鏡,讓下一次掃描能看到重武器射程內的敵人;
-   *   ③離開停滯且重武器不可用時收鏡,避免用空彈夾持續佔用遠距視野。
+   *   ③受擊且未看到敵人時(中/高難度戰術反應):開鏡進行狙擊鏡反應式搜索;
+   *   ④離開停滯且重武器不可用、亦無受擊警戒時收鏡,避免用空彈夾持續佔用遠距視野。
    * 轉換仍吃 `weapon` 操作閘,所以開鏡不會繞過 bot 的手速限制。
    */
   _updateAiming(h) {
     const hv = this._heavy(h);
     const stationary = this._isStationary(h) && (this.diff.scopeSearchDeg > 0 || this.diff.tactic);
-    const want = stationary || this._heavyReady(h, hv);
+    const reactive = this.diff.tactic && h._alert && (this.sim.t - h._alert.t <= BOT_VIEW.ALERT_S) && !this._tid && !this._acquire(h);
+    const want = stationary || this._heavyReady(h, hv) || !!reactive;
     if (want !== !!h.aiming && this._op('weapon')) this.sim.heroAim(this.pid, want);
   }
 
-  /** 靜止時狙擊搜索水平偏移角(rad;兵線方向 30/45/60 度角展開視野方向) */
-  _scopeSearchAngle(h) {
-    const rad = botScopeSearchRad(this.diff);
+  /** 靜止時狙擊搜索水平偏移角(rad;兵線方向 30/45/60 度角展開視野方向;expand 為展開倍率) */
+  _scopeSearchAngle(h, expand = 1) {
+    const rad = botScopeSearchRad(this.diff, expand);
     if (!rad || !h.aiming || !this._isStationary(h)) return 0;
     const freq = botScopeSearchFreq(this.diff);
     return Math.sin(this.sim.t * freq + this.lane) * rad;
   }
 
-  /** 靜止時狙擊搜索垂直俯仰偏移角(rad;兵線方向 15/20/25 度角立體展開視野方向) */
-  _scopeSearchPitch(h) {
-    const rad = botScopeSearchPitchRad(this.diff);
+  /** 靜止時狙擊搜索垂直俯仰偏移角(rad;兵線方向 15/20/25 度角立體展開視野方向;expand 為展開倍率) */
+  _scopeSearchPitch(h, expand = 1) {
+    const rad = botScopeSearchPitchRad(this.diff, expand);
     if (!rad || !h.aiming || !this._isStationary(h)) return 0;
     const freq = botScopeSearchFreq(this.diff);
     return Math.sin(this.sim.t * freq * 2 + this.lane) * rad;
@@ -692,16 +695,61 @@ export class BotBrain {
    * 視野是前方錐 ⇒ 背後挨打時 bot 看不見攻擊者、也就永遠不會轉身;伺服器 `_hurtLog` 記下最後
    * 一次挨打的來源方位(與濺血提示同一份帳,唯一縫),這裡把視角**搶過去**朝它轉。
    * 轉到攻擊者落進視野錐(或警戒逾時)即交還一般看向邏輯,由 `_acquire` 正常鎖定。
+   * 被攻擊時如果沒看到敵人:中難度擴大狙擊鏡搜索角度區域,高難度依出血動畫方向判定搜索方位。
    * MUST 排在狀態機之後 —— 「來襲方向優先於原本想看的方向」就是這條需求本身。
    */
   _alertLook(h) {
     const al = h._alert;
     if (!al) return;
-    if (this.sim.t - al.t > BOT_VIEW.ALERT_S || Math.abs(this._bearing(h, al.x, al.z)) <= this._fovHalf(h)) {
-      h._alert = null;   // 逾時 / 已經轉到看得見了
+    if (this.sim.t - al.t > BOT_VIEW.ALERT_S) {
+      h._alert = null;   // 逾時
       return;
     }
-    this._face(h, al.x, al.z);
+    // 已鎖定目標或視野內已看見敵人:警戒達成,交回交戰邏輯
+    if (this._tid || this._acquire(h)) {
+      h._alert = null;
+      return;
+    }
+    // 新手與低難度:逐位元維持舊制(轉到正面視野錐即清除)
+    if (!this.diff.tactic) {
+      if (Math.abs(this._bearing(h, al.x, al.z)) <= this._fovHalf(h)) {
+        h._alert = null;
+        return;
+      }
+      this._face(h, al.x, al.z);
+      return;
+    }
+    // 高難度:根據出血動畫方向判斷狙擊鏡搜索方位 (含水平與仰角方位)
+    if (this.diff.elite) {
+      const alY = al.y != null ? al.y : (h.y || 0);
+      const eyeY = (h.y || 0) + LOS.EYE_M;
+      const flatD = Math.hypot(al.x - h.x, al.z - h.z);
+      const curBear = wrapPi(Math.atan2(-(al.x - h.x), al.z - h.z) - (h.ry || 0));
+      const curElev = flatD > 0.01 ? wrapPi(Math.atan2(alY - eyeY, flatD) - (h.rx || 0)) : 0;
+      const halfH = this._fovHalf(h);
+      const halfV = botFovVerticalHalf(h.kind);
+      const { u, v } = bloodScreenUv(curBear, curElev, halfH, halfV);
+      const { bearing, elev } = bloodDirFromUv(u, v, halfH, halfV);
+      const targetRy = wrapPi((h.ry || 0) + bearing);
+      const targetRx = wrapPi((h.rx || 0) + elev);
+      const dist = flatD || 60;
+      const tx = h.x - Math.sin(targetRy) * dist;
+      const tz = h.z + Math.cos(targetRy) * dist;
+      const ty = eyeY + Math.sin(targetRx) * dist;
+      this._face(h, tx, tz, ty);
+      return;
+    }
+    // 中難度:擴大狙擊鏡搜索角度區域 (水平 45°→67.5°、垂直 20°→30° 立體正弦波搜索)
+    const baseRy = Math.atan2(-(al.x - h.x), al.z - h.z);
+    const rad = botScopeSearchRad(this.diff, BOT_VIEW.ALERT_SEARCH_EXPAND);
+    const pitchRad = botScopeSearchPitchRad(this.diff, BOT_VIEW.ALERT_SEARCH_EXPAND);
+    const freq = botScopeSearchFreq(this.diff);
+    const searchAng = Math.sin(this.sim.t * freq + this.lane) * rad;
+    const searchPitch = Math.sin(this.sim.t * freq * 2 + this.lane) * pitchRad;
+    const targetRy = baseRy + searchAng;
+    const dist = Math.hypot(al.x - h.x, al.z - h.z) || 60;
+    const targetY = (al.y != null ? al.y : (h.y || 0)) + Math.sin(searchPitch) * dist;
+    this._face(h, h.x - Math.sin(targetRy) * dist, h.z + Math.cos(targetRy) * dist, targetY);
   }
 
   /**
