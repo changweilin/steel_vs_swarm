@@ -55,6 +55,7 @@ import { HAZARDS } from '../public/js/data.js';
 import { vegPartXform } from '../public/js/xform.js';
 import { makeVehicle } from '../public/js/vehicles.js';
 import { readSrc, grabConst } from './audit_src.mjs';
+import { auditBattleGeology } from './audit_battle_geology.mjs';
 import { createForestDefs } from '../public/js/forest.js';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
@@ -680,66 +681,7 @@ function vegParts(def, it) {
   return parts;
 }
 
-// ============================ biomes.js:巨岩(岩體 + 表面特徵)============================
-// 巨岩 = 岩體(名岩 `build` / `synthMegalith`)+ 表面特徵(`decorateMegalith`:峭壁樹/岩菇/
-// 石砌屋/疊石堆/鳥巢台/高壓電塔)。特徵的錨點半徑是**推算**出來的(側壁橢圓 `er` × 高度
-// 收縮 `f`),推錯一步整棵樹就浮在半空 —— 與神木樹根脫節同一族的病灶,故一併納入本工具。
-// 岩體本身也受檢(疊石/柱束/刃嶺各自著地,故一律走 scatter:只放寬 ISOLATED,FLOAT/DETACHED 照判)。
-const megal = (() => {
-  const G = geoStub(5);
-  const code = [
-    pick(/const MEGALITHS = \{[\s\S]*?\n\};/, 'MEGALITHS'),
-    // `[^\n]*` 而非 `.*`:JS 的 `.` 不吃 `\r`,CRLF 檢出(Windows core.autocrlf)會整支抽不到原文
-    pick(/const _rcO = new THREE\.Vector3[^\n]*\n/, 'rockProbe 的射線暫存'),
-    pick(/function rockProbe\(g\) \{[\s\S]*?\n\}/, 'rockProbe'),
-    pick(/const ROCK_TONES = \[[\s\S]*?\];/, 'ROCK_TONES'),
-    // 直接執行現役程序巨岩；舊零件庫名冊與載入器已退場。
-    pick(/function synthMegalith\(g, rnd\) \{[\s\S]*?\n\}/, 'synthMegalith'),
-    pick(/function decorateMegalith\(g, anchor, rnd, s\) \{[\s\S]*?\n\}/, 'decorateMegalith'),
-    'return { MEGALITHS, synthMegalith, decorateMegalith };',
-  ].join('\n');
-  const THREE = { ...THREE_STUB, Mesh: class extends Node3 { constructor(geo) { super(geo); } }, Group: class extends Node3 {},
-                  Raycaster: RaycasterStub, Box3: Box3Stub };
-  const mat = () => ({});
-  const box = (w, h, d, c, x = 0, y = 0, z = 0) => {
-    const m = new THREE.Mesh({ t: 'box', w, h, d }); m.position.set(x, y + h / 2, z); return m;
-  };
-  const rockFrustum = (w0, d0, w1, d1, h, sx = 0, sz = 0) => ({ t: 'frustum', w0, d0, w1, d1, h, sx, sz });
-  // 高壓電塔本體的接合歸 LANDMARKS 稽核(不在本節範圍);此處只驗它有沒有站在岩頂上,
-  // 故以「與真品同佔地」的樁件代表:LANDMARK_COL.power r=2.6 h=42(不消耗 rnd)
-  const LANDMARKS = { power: (g) => { const m = new THREE.Mesh({ t: 'prism', r1: 2.6, r2: 2.6, h: 42, n: 4 }); m.position.set(0, 21, 0); g.add(m); } };
-  const mod = new Function('cyl', 'cone', 'ico', 'box', 'rockFrustum', 'rockMat', 'toonMat', 'LANDMARKS', 'THREE', 'Math', code)(
-    G.cyl, G.cone, G.ico, box, rockFrustum, mat, mat, LANDMARKS, THREE, Math);
-  return { ...mod, THREE };
-})();
-
-/** 巨岩一顆 → { parts(世界公尺:根變換 = 放置縮放 s;local y=0 在地表下 1.5m), main } */
-function megalithParts(name, seed, s) {
-  const rnd = mulberry32((seed * 2654435761) >>> 0);
-  const g = new megal.THREE.Group();
-  const meta = name === '合成' ? megal.synthMegalith(g, rnd)
-    : (megal.MEGALITHS[name].build(g, rnd), megal.MEGALITHS[name]);
-  const nBody = g.children.length;   // 之後加進來的都是 decorateMegalith 的表面特徵
-  megal.decorateMegalith(g, meta.anchor, rnd, s);
-  const parts = [];
-  const walk = (node, parentXf, trail) => {
-    const xf = xfMul(parentXf, xfOf(node));
-    if (node.geo) {
-      const ls = localSolid(node.geo);
-      // 岩體本身是多塊拼接的粗獷量體(小面內縮/塊間節理縫):容差比一般零件寬,與 hazards 的
-      // rock 件同一量級。**表面特徵一律吃嚴格容差** —— 落點是實測出來的,就該貼死。
-      // 標籤帶尺寸:巨岩一顆有 20~40 塊同型零件,光靠序號認不出是哪一塊出問題
-      const G2 = node.geo;
-      const dim = G2.t === 'box' ? `${G2.w}×${G2.h}×${G2.d}`
-        : G2.t === 'prism' ? `r${G2.r1}/${G2.r2}×${G2.h}` : `r${G2.r ?? ''}`;
-      if (ls) parts.push({ tag: `${trail}${G2.t}(${dim})`, ls, xf, tol: trail.startsWith('岩體') ? 0.35 : TOL });
-    }
-    node.children.forEach((c, i) => walk(c, xf,
-      trail ? `${trail}${i}.` : `${i < nBody ? '岩體' : '特徵'}${i}.`));
-  };
-  walk(g, { m: [s, 0, 0, 0, s, 0, 0, 0, s], t: [0, 0, 0] }, '');
-  return { parts, main: meta.main || name };
-}
+// Shared geology meshes replace the old convex-primitive rock audit; checked below.
 
 // ============================ 執行 ============================
 const GROUND = halfSolid([0, 1, 0], 0);          // 地面:y ≤ 0 為土裡(埋入)
@@ -819,22 +761,7 @@ for (const [name, def] of Object.entries(defs.GIANT_DECO)) {
   }
 }
 
-// ---- 巨岩:岩體 + 表面特徵(錨體 = 地面;巨岩擺放時 local y=0 沉在地表下 1.5m)----
-// 合成巨岩的主體型別是第 4 枚亂數決定的(11 型),用足量種子把每型都掃到。
-const MEGA_S = [0.9 * 1.35, 1.4 * 1.35];   // placeMegaliths:s = (0.9~1.4) × OVER.mega
-for (const name of ['合成', ...Object.keys(megal.MEGALITHS)]) {
-  if (ONLY && !name.includes(ONLY)) continue;
-  const ss = name === '合成' ? MEGA_S : megal.MEGALITHS[name].s.map((v) => v * 1.35);
-  const nSeed = name === '合成' ? SEEDS * 6 : SEEDS;
-  for (const s of ss) {
-    for (let seed = 1; seed <= nSeed; seed++) {
-      const { parts, main } = megalithParts(name, seed, s);
-      report(`巨岩 ${name}/${main}(seed ${seed}, s ${s.toFixed(2)})`,
-             auditJoints(parts, [halfSolid([0, 1, 0], 1.5 * s)], { scatter: true }),
-             '錨體=地面');
-    }
-  }
-}
+checked += auditBattleGeology();
 
 console.log(out.join('\n') || '(無異常)');
 console.log(`\n檢查 ${checked} 個接合;異常 ${bad} 項`

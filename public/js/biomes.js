@@ -59,6 +59,7 @@ import {
 } from './edgewall.js';
 import { ENVIRONMENT_OBJECTS, environmentParts } from './environmentParts.js';
 import { runtimeMeshDataGeometry } from './runtimePartModel.js';
+import { BATTLE_GEOLOGY, SYNTH_GEOLOGY, battleGeology, battleGeologySlope } from './geologyBattle.js';
 import { buildSlopeBoundary } from './edgeSlope.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
 import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
@@ -633,6 +634,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
     const cands = [];
     for (let k = 0; k < n; k++) {
       const a = rnd() * Math.PI * 2, d = k === 0 ? 0 : 10 + rnd() * cr;
+      if (!meta) continue;
       // 物件高度上限(`WORLD_H.OBJ_F` 倍砲塔高;2026-08-09 起 4 倍)。神木走**分布版** `objScaleFit`
       // 而不是硬夾:>65m 巨樹的公稱高 72~110m,連最矮的抽樣(× 0.72)都超過上限
       // ⇒ 硬夾會把整片森林壓成**每一株一樣高**,而「同種群聚、株高各異」正是這套群落的設計
@@ -2695,366 +2697,25 @@ function rockMat(color, moss = 0) {
   m.userData.rock = true;   // 岩面材質標記:placeMegaliths 逐顆調色只認這面旗(不動綠冠/木門等)
   return m;
 }
-/**
- * 楔台/錐台幾何 (tapered box / frustum):
- * 底面 w0×d0、頂面 w1×d1、高 h、頂面偏移 (sx, sz)。
- * 相鄰面夾角皆為鈍角/銳角，杜絕 90° 直角稜邊與立方體生硬感。
- */
-function rockFrustum(w0, d0, w1, d1, h, sx = 0, sz = 0) {
-  const b = [
-    [-w0 / 2, -h / 2, -d0 / 2], [w0 / 2, -h / 2, -d0 / 2],
-    [w0 / 2, -h / 2, d0 / 2], [-w0 / 2, -h / 2, d0 / 2],
-  ];
-  const t = [
-    [sx - w1 / 2, h / 2, sz - d1 / 2], [sx + w1 / 2, h / 2, sz - d1 / 2],
-    [sx + w1 / 2, h / 2, sz + d1 / 2], [sx - w1 / 2, h / 2, sz + d1 / 2],
-  ];
-  const quads = [
-    [t[0], t[3], t[2], t[1]],   // 頂 +y
-    [b[0], b[1], b[2], b[3]],   // 底 −y
-    [b[3], b[2], t[2], t[3]],   // 前 +z
-    [b[1], b[0], t[0], t[1]],   // 後 −z
-    [b[2], b[1], t[1], t[2]],   // 右 +x
-    [b[0], b[3], t[3], t[0]],   // 左 −x
-  ];
-  const arr = [];
-  for (const [p0, p1, p2, p3] of quads) arr.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
-  geo.computeVertexNormals();
-  return geo;
-}
-
+// Compatibility roster: category, nominal envelope and scale ranges live in geologyBattle.js.
 const MEGALITHS = {
-  // col.r 一律涵蓋岩體實際外廓(含側肩/山腳錐):低估半徑 = 其他物件沉進崖錐
-  // 2026-08-05 使用者定案「方形巨石非常不自然,請移除」:主量體是**素面大方盒**的兩座名岩
-  // (elcap 酋長岩三大盒、petra 佩特拉紅砂岩崖盒)整組退場 —— 露頭群「同片同岩」會讓
-  // 一整片 3~4 顆同款方盒排在一起,遠看就是幾個貨櫃。MUST NOT 以 BoxGeometry 當名岩主量體
-  // 復辟(小構件:楣樑/梯板/屋舍/稜線墨線不在此限);合成 11 型全走 cyl/ico/cone,不受影響。
-  uluru: { col: { r: 88, h: 62 }, s: [1.0, 1.7],   // 含東側低伏 hump(px 66 + r31)
-    anchor: { topY: 60, topR: 24, side: { y: [12, 42] } },
-    build: (g, rnd) => {
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(50, 12, 8), rockMat(0xb3502e));
-    dome.scale.set(1.5, 1.15, 0.9); dome.position.y = 4; g.add(dome);     // 長條圓頂單體岩
-    const hump = new THREE.Mesh(new THREE.SphereGeometry(26, 10, 7), rockMat(0xc25c33));
-    hump.scale.set(1.2, 0.55, 0.9); hump.position.set(66, 8, 6); g.add(hump);
-    const nRib = 4 + ((rnd() * 3) | 0);
-    for (let i = 0; i < nRib; i++) {                                      // 平行侵蝕縱溝(條數/粗細/間距不定)
-      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.2 + rnd() * 1.2, 30 + rnd() * 10, 1.4), rockMat(0x8f3c22));
-      rib.position.set(-40 + i * 15 + rnd() * 6, 22, 38 + rnd() * 3); rib.rotation.x = 0.55; g.add(rib);
-    }
-  } },
-  augustus: { col: { r: 80, h: 50 }, s: [0.9, 1.6],   // 主脊 sx1.7 → 實際外廓 ~78
-    anchor: { topY: 46, topR: 22, side: { y: [8, 34] } },
-    build: (g) => {
-    const ridge = new THREE.Mesh(new THREE.SphereGeometry(46, 11, 8), rockMat(0x9a6248, 0.45));
-    ridge.scale.set(1.7, 0.95, 1.05); ridge.position.y = 2; g.add(ridge); // 主山脊(帶植被苔蘚)
-    const peak = new THREE.Mesh(new THREE.SphereGeometry(24, 9, 7), rockMat(0xa86e50, 0.4));
-    peak.scale.set(1.1, 0.9, 0.9); peak.position.set(-30, 26, 0); g.add(peak);
-    const toe = new THREE.Mesh(new THREE.SphereGeometry(20, 9, 6), rockMat(0x8f5a42, 0.5));
-    toe.scale.set(1.3, 0.6, 1.0); toe.position.set(52, 4, 8); g.add(toe);
-  } },
-  dabajian: { col: { r: 40, h: 96 }, s: [0.8, 1.5],   // 含 44m 山體基座錐
-    anchor: { topY: 97, topR: 12, side: { y: [34, 86] } },
-    // 逐層岩層半徑/稜線/軸心各異(2026-07-29):酒桶紋不再同心規整;
-    // 層高不動(anchor.topY = 97 由層高總和推得,抖高度會讓頂面特徵懸空)
-    build: (g, rnd) => {
-    // 山體基座拉高:霸尖圓柱(r≈20)起於 y=30,錐體該處半徑 44×(1−30/58)=21 ≥ 柱半徑
-    // —— 柱身與山體相接,不是擱在山尖上懸挑
-    const base = new THREE.Mesh(cone(44, 58, 9), rockMat(0x7d7466, 0.45));
-    base.position.y = 29; g.add(base);                                    // 山體基座
-    let y = 30;
-    for (const [r, hh, cc] of [[20, 14, 0x6f6a62], [21, 4, 0x8a8274], [18.5, 13, 0x6f6a62],
-                               [19.5, 4, 0x8a8274], [17, 12, 0x67625a], [18, 4, 0x8a8274],
-                               [15.5, 11, 0x6f6a62]]) {
-      const jr = r * (0.94 + rnd() * 0.09);
-      const stratum = new THREE.Mesh(cyl(jr, jr + 1.2 + rnd() * 0.8, hh, 10), rockMat(cc, cc === 0x8a8274 ? 0.15 : 0));
-      stratum.position.set((rnd() - 0.5) * 1.4, y + hh / 2, (rnd() - 0.5) * 1.4);
-      stratum.rotation.y = rnd() * Math.PI;                               // 十邊柱稜線逐層錯開
-      y += hh; g.add(stratum);                                            // 水平岩層(酒桶紋)
-    }
-    const cap = new THREE.Mesh(cyl(13 + rnd() * 1.2, 15.5 + rnd() * 1.2, 5, 10), rockMat(0x7d7466, 0.5));
-    cap.position.set((rnd() - 0.5) * 1.2, y + 2.5, (rnd() - 0.5) * 1.2);  // 平坦霸頂
-    cap.rotation.y = rnd() * Math.PI;
-    g.add(cap);
-  } },
-  moai: { col: { r: 16, h: 34 }, s: [1.0, 1.9],
-    anchor: { topY: 3.4, topR: 13, side: null },
-    build: (g, rnd) => {
-    g.add(box(34, 3.4, 10, 0x7f7868));                                    // 阿胡祭壇石台
-    // 逐尊各異(2026-07-29):身高/胖瘦/頭型逐尊抽,鼻/眉/髮髻位置由身高頭高推導
-    // (尺寸變了接合不開縫);微傾 + 錯位 = 手鑿石像群,不是複製貼上
-    for (let i = 0; i < 4; i++) {
-      const s = 0.82 + rnd() * 0.28;
-      const m = new THREE.Group();
-      const bh = 12.5 + rnd() * 2.5;                                      // 身高
-      const body = new THREE.Mesh(cyl(2.9 + rnd() * 0.7, 3.9 + rnd() * 0.7, bh, 7), rockMat(0x8f8878));
-      body.position.y = bh / 2; m.add(body);
-      const hh = 7.8 + rnd() * 1.8, hw = 4.8 + rnd() * 0.9, hd = 4.3 + rnd() * 0.7;
-      const head = new THREE.Mesh(new THREE.BoxGeometry(hw, hh, hd), rockMat(0x968e7c));
-      head.position.y = bh + hh / 2; m.add(head);
-      const nose = new THREE.Mesh(new THREE.BoxGeometry(1.2 + rnd() * 0.5, hh * 0.5, 1.2), rockMat(0x8a8270));
-      nose.position.set(0, bh + hh * 0.42, hd / 2 + 0.35); m.add(nose);   // 長鼻(依頭深貼面)
-      const brow = new THREE.Mesh(new THREE.BoxGeometry(hw * 0.9, 1.1 + rnd() * 0.4, 1.4), rockMat(0x7f7868));
-      brow.position.set(0, bh + hh * 0.78, hd / 2 - 0.1); m.add(brow);    // 眉脊
-      if (rnd() < 0.5) {
-        const pukao = new THREE.Mesh(cyl(2.3 + rnd() * 0.6, 2.8 + rnd() * 0.5, 2 + rnd() * 0.9, 8), rockMat(0x9a4a3a));
-        pukao.position.y = bh + hh + 1.0; m.add(pukao);                   // 紅色普卡奧髮髻
-      }
-      m.scale.setScalar(s);
-      m.position.set(-12 + i * 8 + (rnd() - 0.5) * 1.6, 3.4, (rnd() - 0.5) * 1.6);
-      m.rotation.y = (rnd() - 0.5) * 0.35;                                // 各自望向略異方向
-      m.rotation.z = (rnd() - 0.5) * 0.05;                                // 千年沉降微傾
-      g.add(m);
-    }
-  } },
-  machupicchu: { col: { r: 42, h: 44 }, s: [1.0, 1.7],   // 底層梯田 64×52 半對角
-    anchor: { topY: 35, topR: 11, side: { y: [5, 30] } },
-    // 手築的不整齊(2026-07-29):每層梯田各自收放/錯位/微轉(底層定腳印不偏),
-    // 石屋逐間抽尺寸 —— 偏移收在層間退縮量內,上層不懸挑
-    build: (g, rnd) => {
-    let y = 0, first = true;
-    for (const [w, d] of [[64, 52], [54, 44], [44, 36], [34, 28], [25, 20]]) {
-      const jw = w * (0.96 + rnd() * 0.06), jd = d * (0.96 + rnd() * 0.06);
-      const ox = first ? 0 : (rnd() - 0.5) * 2, oz = first ? 0 : (rnd() - 0.5) * 2;
-      const tier = new THREE.Mesh(new THREE.BoxGeometry(jw, 7, jd), rockMat(0x8d8672, 0.5 + rnd() * 0.15));
-      tier.position.set(ox, y + 3.5, oz);                                 // 梯田層(頂面苔蘚投影=草坪)
-      tier.rotation.y = (rnd() - 0.5) * 0.06;
-      g.add(tier);
-      y += 7; first = false;
-    }
-    for (let i = 0; i < 3; i++) {                                         // 山頂石屋(疊石牆 + 茅草頂,間間不同)
-      const hx = -7 + i * 7 + (rnd() - 0.5) * 1.6, hz = (i - 1) * 5 + (rnd() - 0.5) * 1.6;
-      const hw = 5.2 + rnd() * 1.4, hht = 4 + rnd() * 1, hdp = 4.4 + rnd() * 1;
-      const hry = (rnd() - 0.5) * 0.3;
-      const hut = new THREE.Mesh(new THREE.BoxGeometry(hw, hht, hdp), rockMat(0x9c9480));
-      hut.position.set(hx, y + hht / 2, hz); hut.rotation.y = hry; g.add(hut);
-      const thatch = new THREE.Mesh(cone(hw * 0.72 + 0.6, 2.8 + rnd() * 0.8, 4), rockMat(0xa9945e));
-      thatch.rotation.y = Math.PI / 4 + hry; thatch.scale.z = 0.8;
-      thatch.position.set(hx, y + hht + 1.4, hz); g.add(thatch);
-    }
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(2, 4.5 + rnd() * 1, 15 + rnd() * 2), rockMat(0x968e7a));
-    wall.position.set(9.5, y + 2.2, (rnd() - 0.5) * 2);                   // 太陽神殿弧牆(直牆近似)
-    wall.rotation.y = (rnd() - 0.5) * 0.12;
-    g.add(wall);
-  } },
-  stonehenge: { col: { r: 24, h: 27 }, s: [1.1, 2.0],
-    anchor: { topY: 0.2, topR: 12, side: null },   // 特徵落在石圈內地面
-    // 「不整齊」是巨石陣的本體(2026-07-29):每塊立石/楣石各自抽尺寸與微傾、環半徑逐塊
-    // 漂移、兩成楣石塌失、圈內外散倒伏殘石 —— 外廓上限收在 col(r24/h27)內,碰撞柱不動
-    build: (g, rnd) => {
-    const posts = [];
-    for (let i = 0; i < 10; i++) {                                        // 外環立石:塊塊不同
-      const a = i / 10 * Math.PI * 2 + (rnd() - 0.5) * 0.07;
-      const r0 = 19 + (rnd() - 0.5) * 2.4;
-      const ph = 14.5 + rnd() * 4;
-      const post = new THREE.Mesh(new THREE.BoxGeometry(3.9 + rnd() * 1.5, ph, 2.5 + rnd() * 1.1),
-        rockMat([0x9b968a, 0x94907f, 0xa19c8e][(rnd() * 3) | 0], 0.2 + rnd() * 0.25));
-      post.position.set(Math.cos(a) * r0, ph / 2, Math.sin(a) * r0);
-      post.rotation.y = -a + Math.PI / 2 + (rnd() - 0.5) * 0.16;
-      post.rotation.x = (rnd() - 0.5) * 0.05;                             // 千年沉降微傾
-      post.rotation.z = (rnd() - 0.5) * 0.05;
-      g.add(post);
-      posts.push({ a, r0, ph });
-    }
-    // 楣石:架在兩鄰石上(取矮者頂,微沉咬合)。長度與朝向 MUST 由**兩石連線的實際世界向量**推
-    // (A26):立石環半徑逐塊漂移 ±1.2m ⇒ 弦長 9.4~14m、弦向與中點切線差可達 7°,
-    // 拿「中點方位的切線 + 固定長度 12~14.5m」擺就會有一端落在立石外面(實測到 5m 的縫)
-    for (let i = 0; i < 10; i += 2) {
-      if (rnd() < 0.2) continue;                                          // 兩成塌失 = 遺跡缺口
-      const p1 = posts[i], p2 = posts[(i + 1) % 10];
-      const x1 = Math.cos(p1.a) * p1.r0, z1 = Math.sin(p1.a) * p1.r0;
-      const x2 = Math.cos(p2.a) * p2.r0, z2 = Math.sin(p2.a) * p2.r0;
-      const dx = x2 - x1, dz = z2 - z1, span = Math.hypot(dx, dz);
-      const lh = 2.4 + rnd() * 0.9;
-      const lintel = new THREE.Mesh(new THREE.BoxGeometry(span + 2.6 + rnd() * 1.2, lh, 3.1 + rnd() * 0.7),
-        rockMat(0x8f8a7c, 0.3 + rnd() * 0.2));
-      lintel.position.set((x1 + x2) / 2, Math.min(p1.ph, p2.ph) + lh / 2 - 0.3, (z1 + z2) / 2);
-      lintel.rotation.y = -Math.atan2(dz, dx);                            // local +x 對準兩石連線
-      lintel.rotation.z = (rnd() - 0.5) * 0.04;
-      g.add(lintel);
-    }
-    const th = [];
-    for (const s of [-1, 1]) {                                            // 內圈大三石塔:雙石同對不同高、互倚微傾
-      const hh = 21.5 + rnd() * 2.5;
-      const post = new THREE.Mesh(new THREE.BoxGeometry(4.2 + rnd() * 1.2, hh, 3.0 + rnd() * 0.8),
-        rockMat(0xa39e90, 0.25));
-      post.position.set(s * (4.2 + rnd() * 0.8), hh / 2, (rnd() - 0.5) * 1.6);
-      post.rotation.y = (rnd() - 0.5) * 0.14;
-      post.rotation.z = -s * rnd() * 0.03;
-      g.add(post);
-      th.push(hh);
-    }
-    const blh = 2.8 + rnd() * 0.7;
-    const bigLintel = new THREE.Mesh(new THREE.BoxGeometry(14 + rnd() * 2, blh, 3.6 + rnd() * 0.8),
-      rockMat(0x9b968a, 0.35));
-    bigLintel.position.y = Math.min(...th) + blh / 2 - 0.3;               // 架矮柱頂,高柱側咬進去
-    bigLintel.rotation.y = (rnd() - 0.5) * 0.1;
-    bigLintel.rotation.z = (rnd() - 0.5) * 0.05;
-    g.add(bigLintel);
-    const altar = new THREE.Mesh(new THREE.BoxGeometry(5 + rnd() * 2, 1.2 + rnd() * 0.8, 2.4 + rnd() * 1.2),
-      rockMat(0x7f7a6e, 0.3));
-    altar.position.set((rnd() - 0.5) * 3, 0.7, (rnd() - 0.5) * 3);
-    altar.rotation.y = rnd() * Math.PI;
-    g.add(altar);
-    const nF = 3 + ((rnd() * 3) | 0);
-    for (let i = 0; i < nF; i++) {                                        // 倒伏殘石:散落石圈內外
-      const a = rnd() * Math.PI * 2, d = 6 + rnd() * 15;
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(3 + rnd() * 3.5, 1.1 + rnd() * 0.9, 2 + rnd() * 1.4),
-        rockMat(0x8a8578, 0.4 + rnd() * 0.2));
-      slab.position.set(Math.cos(a) * d, 0.5, Math.sin(a) * d);
-      slab.rotation.set((rnd() - 0.5) * 0.12, rnd() * Math.PI, (rnd() - 0.5) * 0.12);
-      g.add(slab);
-    }
-  } },
-  torres: { col: { r: 34, h: 120 }, s: [0.8, 1.4],   // 塔群外緣 px20 + r13
-    anchor: { topY: 28, topR: 2.5, side: { y: [26, 90] } },
-    build: (g, rnd) => {
-    // 百內三塔:淺色花崗岩塔身 + 暗色角頁岩殘帽,底部共用碎石肩。
-    // 2026-07-29:逐塔高矮胖瘦/站位/稜線各異(高度只往下抖,col.h = 120 仍涵蓋)
-    for (const [px, h, r] of [[-18, 96, 11], [2, 120, 13], [20, 82, 10]]) {
-      const jh = h * (0.88 + rnd() * 0.12), jr = r * (0.88 + rnd() * 0.2);
-      const jx = px + (rnd() - 0.5) * 3, pz = (rnd() - 0.5) * 6;
-      const body = new THREE.Mesh(cyl(jr * 0.45, jr, jh, 7), rockMat(0xd0c3ae, 0.12));
-      body.position.set(jx, jh / 2, pz);
-      body.rotation.y = rnd() * Math.PI;                                  // 七邊柱稜線各異
-      g.add(body);
-      const cap = new THREE.Mesh(cyl(jr * 0.28, jr * 0.48, jh * 0.14, 6), rockMat(0x4e4a48));
-      cap.position.set(jx, jh * 0.98, pz); g.add(cap);
-    }
-    const shH = 26 + rnd() * 7;
-    const shoulder = new THREE.Mesh(cone(26 + rnd() * 6, shH, 8), rockMat(0x8f8474, 0.4));
-    shoulder.position.y = shH / 2 - 1; g.add(shoulder);                   // 底緣微沉,坡地不懸空
-  } },
-  karst: { col: { r: 18, h: 104 }, s: [0.8, 1.4],
-    anchor: { topY: 100, topR: 7, side: { y: [15, 85] } },
-    build: (g, rnd) => {
-    // 張家界石柱:石英砂岩方柱疊層(錐台微收 + 錯位微轉),崖頂綠冠環繞。
-    // 2026-07-29:逐層寬深/軸心各自抽(層高不動,anchor.topY = 100 由層高總和推得)
-    let y = 0;
-    const w0 = 22;
-    for (const [i, hh] of [20, 16, 18, 15, 17, 14].entries()) {
-      const f = 1 - i * 0.08;
-      const wBot = w0 * f * (0.92 + rnd() * 0.16), dBot = w0 * 0.85 * f * (0.92 + rnd() * 0.16);
-      const wTop = wBot * 0.94, dTop = dBot * 0.94;
-      const st = new THREE.Mesh(
-        rockFrustum(wBot, dBot, wTop, dTop, hh, 0.2, 0.2),
-        rockMat(i % 2 ? 0x8a7a5e : 0x7a6a50, i % 2 ? 0.12 : 0));
-      st.position.set((rnd() - 0.5) * 2.4, y + hh / 2, (rnd() - 0.5) * 2.4);
-      st.rotation.y = (rnd() - 0.5) * 0.24; y += hh; g.add(st);
-    }
-    for (const a of [0.4, 2.3, 4.4]) {   // 崖頂綠冠(頂緣三簇,中央留給石屋/疊石;簇簇不同)
-      const crown = new THREE.Mesh(ico(4.5 + rnd() * 2), toonMat(0x3f7a44));
-      crown.scale.y = 0.45 + rnd() * 0.2;
-      const ja = a + (rnd() - 0.5) * 0.5;
-      crown.position.set(Math.cos(ja) * (5.5 + rnd() * 2), y + 1.5, Math.sin(ja) * (4.5 + rnd() * 2)); g.add(crown);
-    }
-  } },
-  // ---- 2026-07-29 增補:三座世界地標岩體(逐顆 rnd 變異同前;外廓收在 col/anchor 內)----
-  meteora: { col: { r: 36, h: 88 }, s: [0.9, 1.5],
-    anchor: { topY: 78, topR: 8, side: { y: [12, 62] } },
-    // 邁泰奧拉(希臘):圓潤砂礫岩峰 + 崖頂修道院(紅瓦石屋/鐘塔)+ 伴峰。
-    // 層高固定(anchor.topY = 78 錨在頂台),變化放在半徑/軸心/伴峰/修道院配置
-    build: (g, rnd) => {
-    let y = 0;
-    const tones = [0x9a8f7c, 0x938774, 0xa29786];
-    for (const [f, hh] of [[1.3, 20], [1.12, 22], [1.0, 21], [0.9, 12]]) {   // 圓柱疊層砂礫岩(圓潤上收)
-      const r = 13.5 * f * (0.94 + rnd() * 0.12);
-      const st = new THREE.Mesh(cyl(r * 0.9, r, hh + 2, 9), rockMat(tones[(rnd() * 3) | 0], rnd() * 0.15));
-      st.position.set((rnd() - 0.5) * 2, y + hh / 2, (rnd() - 0.5) * 2);
-      st.rotation.y = rnd() * Math.PI;
-      y += hh; g.add(st);
-    }
-    const plat = new THREE.Mesh(cyl(8.5, 11, 3, 9), rockMat(0xa39884, 0.2));
-    plat.position.y = 76.5; g.add(plat);                                     // 頂台 75~78
-    const nHut = 1 + (rnd() < 0.6 ? 1 : 0);                                  // 修道院石屋(紅瓦雙坡頂)
-    for (let i = 0; i < nHut; i++) {
-      const hx = (i ? -1 : 1) * (1.5 + rnd() * 2), hz = (rnd() - 0.5) * 5;
-      const hw = 4.5 + rnd() * 1.6, hd = 3.6 + rnd() * 1.2, hh2 = 2.8 + rnd();
-      const hut = new THREE.Mesh(new THREE.BoxGeometry(hw, hh2, hd), rockMat(0xcfc4ae));
-      hut.position.set(hx, 78 + hh2 / 2, hz); hut.rotation.y = (rnd() - 0.5) * 0.5; g.add(hut);
-      const roof = new THREE.Mesh(cone(hw * 0.62, 1.8, 4), rockMat(0xa2543e));
-      roof.rotation.y = Math.PI / 4 + hut.rotation.y; roof.scale.z = 0.8;
-      roof.position.set(hx, 78 + hh2 + 0.9, hz); g.add(roof);                // 紅瓦頂
-    }
-    const bell = new THREE.Mesh(new THREE.BoxGeometry(1.8, 4.5, 1.8), rockMat(0xd8cfc0));
-    bell.position.set(5.5 + rnd(), 80.2, (rnd() - 0.5) * 4); g.add(bell);    // 鐘塔(頂台緣)
-    const bt = new THREE.Mesh(cone(1.6, 1.6, 4), rockMat(0xa2543e));
-    bt.rotation.y = Math.PI / 4; bt.position.set(bell.position.x, 83.2, bell.position.z); g.add(bt);
-    const cr = 7 + rnd() * 3, ch = 26 + rnd() * 14, ca = rnd() * Math.PI * 2;   // 伴峰(矮圓峰)
-    const cx2 = Math.cos(ca) * (19 + rnd() * 3), cz2 = Math.sin(ca) * (16 + rnd() * 3);
-    const comp = new THREE.Mesh(cyl(cr * 0.8, cr * 1.15, ch, 9), rockMat(tones[(rnd() * 3) | 0], 0.15 + rnd() * 0.2));
-    comp.position.set(cx2, ch / 2, cz2); comp.rotation.y = rnd() * Math.PI; g.add(comp);
-    const dome2 = new THREE.Mesh(new THREE.SphereGeometry(cr * 0.82, 9, 6), rockMat(0xa29786, 0.3));
-    dome2.scale.y = 0.55; dome2.position.set(cx2, ch, cz2); g.add(dome2);    // 伴峰圓頂
-    // 垂直侵蝕墨線:貼壁半徑與內傾角**實測**(rockProbe)—— 疊層各自抽了半徑與軸心偏移、
-    // 九邊形小面又內縮 6%,拿「層別 × 0.92」推算會浮在壁外(實測前量到 2.1m 的縫)
-    const probe = rockProbe(g);
-    const nRib = 3 + ((rnd() * 3) | 0);
-    for (let i = 0; i < nRib; i++) {
-      const a = rnd() * Math.PI * 2, ry2 = 14 + rnd() * 34;
-      const rh2 = 14 + rnd() * 12;
-      const rr = probe.wallR(0, 0, ry2, a);
-      if (rr == null) continue;
-      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.3, rh2, 1.1), rockMat(0x7a7062));
-      rib.position.set(Math.cos(a) * (rr - 0.65), ry2, Math.sin(a) * (rr - 0.65));
-      rib.rotation.y = -a;
-      rib.rotation.z = Math.atan(probe.slope(0, 0, ry2, a, rh2 / 2));   // 跟著砂礫岩上收的壁面內傾
-      g.add(rib);
-    }
-  } },
-  sigiriya: { col: { r: 48, h: 76 }, s: [0.8, 1.3],
-    anchor: { topY: 74, topR: 18, side: { y: [16, 56] } },
-    // 獅子岩(斯里蘭卡):陡壁孤丘 + 白鏡牆帶 + 頂上宮殿基座遺跡 + 山腳獅爪門 + 之字棧道
-    build: (g, rnd) => {
-    const sz = 0.62 + rnd() * 0.08;                                          // 橢圓斷面(z 壓扁)
-    const lower = new THREE.Mesh(cyl(40, 45, 54, 11), rockMat(0xa2765a, 0.18));
-    lower.scale.z = sz; lower.position.y = 27; lower.rotation.y = (rnd() - 0.5) * 0.3; g.add(lower);
-    const upper = new THREE.Mesh(cyl(34, 39, 18, 11), rockMat(0xaa7e60, 0.12));
-    upper.scale.z = sz; upper.position.y = 61; upper.rotation.y = (rnd() - 0.5) * 0.3; g.add(upper);
-    const cap = new THREE.Mesh(cyl(31, 34.5, 4, 11), rockMat(0x8a9a5e, 0.6));
-    cap.scale.z = sz; cap.position.y = 72; g.add(cap);                       // 頂台草坪(70~74)
-    const rw = (y2) => 45 - 5 * y2 / 54;                                     // 下段壁面半徑剖面
-    const mirror = new THREE.Mesh(cyl(rw(42.5) + 0.35, rw(37.5) + 0.35, 5, 11), rockMat(0xe8ddc2));
-    mirror.scale.z = sz; mirror.position.y = 40;
-    mirror.rotation.y = lower.rotation.y;   // 對齊岩體 11 邊形稜線(相對轉會讓帶子局部外浮)
-    g.add(mirror);                                                           // 白鏡牆環帶(貼壁)
-    const nW = 3 + ((rnd() * 3) | 0);                                        // 頂上宮殿基座遺跡(矮牆格局)
-    for (let i = 0; i < nW; i++) {
-      const wl = 8 + rnd() * 8;
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(wl, 1.3, 1.1), rockMat(0xc9b896, 0.2));
-      wall.position.set((rnd() - 0.5) * 22, 74.6, (rnd() - 0.5) * 14);
-      wall.rotation.y = (rnd() < 0.5 ? 0 : Math.PI / 2) + (rnd() - 0.5) * 0.15;
-      g.add(wall);
-    }
-    const pool = new THREE.Mesh(new THREE.BoxGeometry(6 + rnd() * 3, 0.9, 4 + rnd() * 2), rockMat(0x3a5a5e));
-    pool.position.set((rnd() - 0.5) * 10, 74.3, (rnd() - 0.5) * 8); g.add(pool);   // 宮殿蓄水池
-    for (const s of [-1, 1]) {                                               // 山腳獅爪門(北側雙巨爪)
-      const claw = new THREE.Mesh(new THREE.BoxGeometry(4.5 + rnd(), 6.5 + rnd(), 4), rockMat(0xb98a62, 0.1));
-      claw.position.set(s * (6.5 + rnd()), 3.2, 45 * sz * 0.92); g.add(claw);
-      for (let t = -1; t <= 1; t++) {
-        const toe = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 1.6), rockMat(0xa8794f));
-        toe.position.set(claw.position.x + t * 1.5, 1.1, claw.position.z + 2.4);
-        g.add(toe);
-      }
-    }
-    // 之字棧道(側壁淺色梯板):**貼壁半徑實測**(rockProbe)—— 岩體是 11 邊形 × z 壓扁的
-    // 橢圓斷面又整體微轉,拿 `rw()` 剖面推算會浮在小面內縮那一段外面(實測前量到 1.07m 的縫);
-    // 之字沿**方位**左右擺(local x = 徑向、z = 踏面長),MUST NOT 用固定 x + z 偏移(離壁越遠越浮)
-    const probe = rockProbe(g);
-    const nS = 4 + ((rnd() * 3) | 0);
-    for (let i = 0; i < nS; i++) {
-      const sy2 = 12 + i * (44 / nS) + rnd() * 3;
-      const step = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 7 + rnd() * 3), rockMat(0xd8c9a8));
-      const aa = (i % 2 ? 1 : -1) * (0.1 + rnd() * 0.18);                    // 繞 +x 側左右擺
-      const rr = probe.wallR(0, 0, sy2, aa);
-      if (rr == null) continue;
-      step.position.set(Math.cos(aa) * (rr - 0.9), sy2, Math.sin(aa) * (rr - 0.9));   // 沉半塊(1.8/2)
-      step.rotation.y = -aa;
-      g.add(step);
-    }
-  } },
+  ...Object.fromEntries(Object.entries(BATTLE_GEOLOGY).map(([key, def]) => [key, {
+    ...def, build: (g, rnd) => buildGeologyMegalith(g, key, Math.floor(rnd() * 4294967296)),
+  }])),
 };
+
+function buildGeologyMegalith(g, key, seed, input = {}) {
+  const entry = battleGeology(key, seed, input);
+  if (!entry) return null;
+  const material = rockMat(0xffffff);
+  material.vertexColors = true;
+  const mesh = new THREE.Mesh(runtimeMeshDataGeometry(entry.meshData, entry.parts), material);
+  g.add(mesh);
+  g.userData.geology = entry.generation.type;
+  const { col } = entry.battle;
+  return { main: entry.generation.type, col,
+    anchor: { generated: true, topY: col.h, topR: 0, side: null } };
+}
 
 // ---- 巨岩表面實測探針(貼壁 / 頂面落點的唯一縫;2026-07-30)----
 // **為什麼是實測而不是公式**:岩體是多面體近似(11 邊形球 / 8~10 邊柱 / 二十面體塊),
@@ -3407,6 +3068,7 @@ export const buildBldBucket = {
 // 同一個東西」,兩邊都不報錯(紀律 ①)。匯出只是可見性,呼叫端與行為逐位元不變;
 // placeMegaliths 仍是遊戲內唯一的呼叫點。
 export function decorateMegalith(g, anchor, rnd, s) {
+  if (anchor.generated) return; // Shared generator already attaches details to measured triangles.
   if (!anchor) return;
   const probe = rockProbe(g);
   const k = 1 / s;
@@ -3655,303 +3317,9 @@ export function decorateMegalith(g, anchor, rnd, s) {
   }
 }
 
-// ---- 合成巨岩:抽組名岩「特徵基因」隨機重組,每顆獨一無二 ----
-// 主體(圓頂=烏魯魯系/岩壁=酋長岩系/岩層塔=大霸系/尖峰/天然岩拱/平頂桌山/
-// 蘑菇岩群=風化 hoodoo/刃狀岩脊)× 伴生小圓丘 × 崩落岩塊 × 侵蝕溝 × 碎石坡 ×
-// 鑿面稜線 × 岩色系(18 色);回傳 col/anchor 供放置與表面特徵。
-const ROCK_TONES = [0xb3502e, 0xc9c4b8, 0x9a6248, 0x6f6a62, 0xa8875c, 0x8f8878,
-                    0xd8b878, 0xc49a8a, 0x5a6470, 0xd4cdb8, 0x7a6a52, 0x996a3e,
-                    0x4a4a52, 0xb87850, 0xd8c890, 0x7a8a92, 0x8a7a88, 0x6a5a44];
+// Compatibility entry for the review bench; all geometry comes from the shared generator.
 export function synthMegalith(g, rnd) {
-  const base = new THREE.Color(ROCK_TONES[Math.floor(rnd() * ROCK_TONES.length)]);
-  const shade = (dl) => base.clone().offsetHSL(0, 0, dl).getHex();
-  const moss = rnd() < 0.55 ? 0.2 + rnd() * 0.35 : 0;
-  // basalt/granite/marble(2026-07-12):多塊大石拼接 —— 依真實岩石節理各有拼法:
-  // 玄武岩 = 柱狀節理(高低參差的六角/方/圓柱束,巨人堤道式);
-  // 花崗岩 = 大塊方料錯縫整齊疊置(節理稀疏 → 巨大規則岩塊,tor 岩堆);
-  // 大理岩 = 大小互異的渾圓岩塊堆疊互倚(溶蝕圓稜,大塊在下小塊在上)
-  const kinds = ['dome', 'slab', 'tower', 'spire', 'arch', 'mesa', 'hoodoo', 'fin',
-                 'basalt', 'granite', 'marble'];
-  const main = kinds[Math.floor(rnd() * kinds.length)];
-  let H = 0, RX = 0, RZ = 0, topR = 6;
-  // 側壁錨點逐型定義(null = 該型側壁放不了樹):只描述**可附著的柱心 px/pz 與高度帶 y**,
-  // 壁面半徑與斜率一律由 `rockProbe` 實測 —— 手寫橢圓/收縮剖面永遠追不上多面體實際外廓。
-  let sideDef = null, topYA = null, topRA = null;
-  // 鑿面:斜切稜面貼在量體側緣,把圓弧/平板打成手雕硬邊(botw_plan Task 1.1)
-  const chisel = (n, rx, rz, hh) => {
-    for (let i = 0; i < n; i++) {
-      const fw = 8 + rnd() * 12;
-      const facet = new THREE.Mesh(rockFrustum(fw, fw * 0.8, fw * 0.5, fw * 0.4, fw * 0.8, 0.4, 0.4), rockMat(shade(0.04 + rnd() * 0.06), moss * 0.5));
-      const a = rnd() * Math.PI * 2;
-      facet.position.set(Math.cos(a) * rx * 0.7, hh * (0.3 + rnd() * 0.4), Math.sin(a) * rz * 0.7);
-      facet.rotation.set(rnd() * 0.8, rnd() * Math.PI, rnd() * 0.8);
-      g.add(facet);
-    }
-  };
-  if (main === 'dome') {
-    const r = 28 + rnd() * 26, sx = 1.1 + rnd() * 0.7, sy = 0.7 + rnd() * 0.55, sz = 0.8 + rnd() * 0.3;
-    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 11, 8), rockMat(shade(0), moss));
-    m.scale.set(sx, sy, sz); m.position.y = 3; g.add(m);
-    H = 3 + r * sy; RX = r * sx; RZ = r * sz; topR = Math.min(RX, RZ) * 0.35;
-    sideDef = { y: [H * 0.22, H * 0.8] };
-    chisel(2 + Math.floor(rnd() * 2), RX, RZ, H);
-  } else if (main === 'slab') {
-    const w = 30 + rnd() * 26, h = 70 + rnd() * 50, d = 16 + rnd() * 12;
-    const m = new THREE.Mesh(rockFrustum(w, d, w * 0.82, d * 0.78, h, 1.2, 0.8), rockMat(shade(0), moss));
-    m.position.y = h / 2; m.rotation.y = (rnd() - 0.5) * 0.2; g.add(m);
-    const nose = new THREE.Mesh(rockFrustum(w * 0.45, d * 0.8, w * 0.32, d * 0.6, h * 0.8, 0.8, 0.4), rockMat(shade(0.04), moss));
-    nose.position.set(w * 0.36, h * 0.4, d * 0.2); nose.rotation.y = 0.45; g.add(nose);
-    H = h; RX = w * 0.62; RZ = d * 0.8; topR = Math.min(w, d) * 0.32;
-    sideDef = { y: [H * 0.25, H * 0.75] };
-    chisel(2 + Math.floor(rnd() * 3), RX, RZ, H * 0.8);
-  } else if (main === 'tower') {
-    const r0 = 17 + rnd() * 8, bh = 24 + rnd() * 14;
-    const baseC = new THREE.Mesh(cone(r0 * 2.2, bh, 9), rockMat(shade(0.03), 0.35));
-    baseC.position.y = bh / 2; g.add(baseC);
-    // 柱基自錐體半高起(該處錐半徑 1.1×r0 ≥ 柱半徑)—— 柱是「從山裡長出來」,
-    // 不是擱在山尖上;柱基寬過錐面 = 懸挑,物理不成立(魔鬼塔的崖錐與柱身相接)
-    let y = bh * 0.5, r = r0;
-    const nL = 5 + Math.floor(rnd() * 3);
-    for (let i = 0; i < nL; i++) {
-      const band = i % 2 === 1, hh = band ? 3.5 : 9 + rnd() * 5;
-      const st = new THREE.Mesh(cyl(r * (band ? 1.06 : 1), r * (band ? 1.06 : 1) + 1, hh, 10),
-        rockMat(shade(band ? 0.06 : -0.03), band ? 0.12 : 0));
-      st.position.y = y + hh / 2; y += hh; g.add(st);
-      if (!band) r *= 0.92;
-    }
-    H = y; RX = RZ = r0 * 2.0; topR = r * 0.85;   // footprint 含 2.2×r0 山腳崖錐
-    sideDef = { y: [bh, H * 0.85] };   // 柱身段(崖錐以上)
-  } else if (main === 'arch') {   // 天然岩拱:雙墩 + 頂樑 + 拱背圓丘
-    const span = 26 + rnd() * 14, ph = 34 + rnd() * 22, pw = 10 + rnd() * 5;
-    const cols = [];
-    for (const sgn of [-1, 1]) {
-      const pier = new THREE.Mesh(rockFrustum(pw * 1.08, pw * 1.35, pw * 0.88, pw * 1.12, ph, sgn * 0.4, 0), rockMat(shade(sgn * 0.03), moss));
-      pier.position.set(sgn * span / 2, ph / 2, 0); pier.rotation.y = sgn * 0.15; g.add(pier);
-      // 兩座橋墩各自是可附著側壁(內縮吃掉 ±0.15 微轉),樹菇長在墩壁不掛拱洞
-      cols.push({ px: sgn * span / 2, pz: 0, y: [ph * 0.15, ph * 0.8] });
-    }
-    sideDef = cols;
-    const beam = new THREE.Mesh(rockFrustum(span + pw * 1.6, pw * 1.1, span + pw * 1.35, pw * 0.9, pw * 0.9, 0, 0), rockMat(shade(0.05), moss));
-    beam.position.y = ph + pw * 0.45; g.add(beam);
-    const hump = new THREE.Mesh(new THREE.SphereGeometry(pw * 0.9, 8, 6), rockMat(shade(0.02), moss));
-    hump.scale.set((span + pw) / (pw * 1.8), 0.7, 1); hump.position.y = ph + pw * 0.8; g.add(hump);
-    H = ph + pw * 1.3; RX = span / 2 + pw; RZ = pw * 1.4; topR = 3;
-  } else if (main === 'mesa') {   // 平頂桌山:裙狀崖錐 + 疊層 + 開闊平頂
-    const r0 = 30 + rnd() * 22, h = 40 + rnd() * 26;
-    const skirt = new THREE.Mesh(cone(r0 * 2.2, h * 0.62, 10), rockMat(shade(0.05), 0.3));
-    skirt.position.y = h * 0.31; g.add(skirt);
-    let y = h * 0.3;
-    for (const [f, hh, dl] of [[1.12, h * 0.22, -0.04], [1.04, h * 0.16, 0.05], [1.0, h * 0.32, -0.02]]) {
-      const st = new THREE.Mesh(cyl(r0 * f * 0.94, r0 * f, hh, 10), rockMat(shade(dl)));
-      st.position.y = y + hh / 2; y += hh; g.add(st);
-    }
-    H = y; RX = RZ = r0 * 2.0; topR = r0 * 0.8;   // footprint 含 2.2×r0 裙狀崖錐
-    sideDef = { y: [H * 0.4, H * 0.9] };   // 疊層段(裙狀崖錐以上)
-  } else if (main === 'hoodoo') {   // 風化蘑菇岩群:細腰石柱頂著過寬帽岩
-    const n = 2 + Math.floor(rnd() * 3);
-    const cols = [];
-    for (let i = 0; i < n; i++) {
-      const a = rnd() * Math.PI * 2, d = i === 0 ? 0 : 14 + rnd() * 20;
-      const px = Math.cos(a) * d, pz = Math.sin(a) * d;
-      const h = 26 + rnd() * 30, r = 5 + rnd() * 4;
-
-      const neck = new THREE.Mesh(cyl(r * 0.55, r, h, 8), rockMat(shade(0.03)));
-      neck.position.set(px, h / 2, pz); g.add(neck);
-      const cap = new THREE.Mesh(cyl(r * 1.5, r * 0.9, h * 0.16, 8), rockMat(shade(-0.08), 0.15));
-      cap.position.set(px, h * 1.02, pz); g.add(cap);
-      // 頂錨綁「中央柱」帽岩頂面(特徵放置以原點為準;掛在群體最高點必懸空)
-      if (i === 0) { topYA = h * 1.1; topRA = r * 1.1; }
-      // 每根柱各自是一面可附著側壁(頸部上收 55%),樹菇/侵蝕溝貼各柱的壁
-      cols.push({ px, pz, y: [h * 0.15, h * 0.8] });
-      H = Math.max(H, h * 1.1);
-      RX = RZ = Math.max(RX, d + r * 1.5);
-    }
-    sideDef = cols;
-    topR = 3;
-  } else if (main === 'fin') {   // 刃狀岩脊:一列薄板岩沿走向漸縮、微錯位
-    const n = 3 + Math.floor(rnd() * 3);
-    const cols = [];
-    let px = -(n - 1) * 8;
-    for (let i = 0; i < n; i++) {
-      const f = 1 - Math.abs(i - (n - 1) / 2) / n;   // 中央最高
-      const h = (55 + rnd() * 45) * (0.55 + f * 0.45), w = 12 + rnd() * 6, d = 5 + rnd() * 4;
-      const bz = (rnd() - 0.5) * 6;
-      const blade = new THREE.Mesh(rockFrustum(w, d * 1.15, w * 0.85, d * 0.55, h, 0.6, 0), rockMat(shade((rnd() - 0.5) * 0.1), moss * f));
-      blade.position.set(px, h / 2, bz);
-      blade.rotation.y = (rnd() - 0.5) * 0.3;
-      blade.rotation.z = (rnd() - 0.5) * 0.1;
-      g.add(blade);
-      // 每片刃岩自成一面側壁(略內縮吃掉微轉/微傾的誤差),樹菇貼刃面長
-      cols.push({ px, pz: bz, y: [h * 0.15, h * 0.7] });
-      H = Math.max(H, h);
-      RX = Math.max(RX, Math.abs(px) + w);
-      px += 14 + rnd() * 5;
-    }
-    sideDef = cols;
-    RZ = 12; topR = 4;
-    topYA = 0.2; topRA = 4;   // 刃嶺頂是一排參差薄脊,頂面特徵落地放刃間
-  } else if (main === 'basalt') {   // 柱狀玄武岩束:高低參差的六角/方/圓柱拼接
-    base.set([0x4a4e55, 0x3f4246, 0x565a62, 0x4e4a44][Math.floor(rnd() * 4)]);   // 玄武岩深灰
-    const R0 = 16 + rnd() * 10, hMax = 34 + rnd() * 30;
-    const nCol = 10 + Math.floor(rnd() * 8);
-    for (let i = 0; i < nCol; i++) {
-      // 徑向擠壓排列:中央最高、外圈遞減 = 管風琴輪廓(巨人堤道/澎湖柱狀節理)
-      const a = rnd() * Math.PI * 2, d = i === 0 ? 0 : Math.sqrt(rnd()) * R0;
-      const px = Math.cos(a) * d, pz = Math.sin(a) * d;
-      const r = 2.6 + rnd() * 2.2;
-      const h = Math.max(8, hMax * (1 - (d / R0) * 0.55) * (0.8 + rnd() * 0.35) * (i === 0 ? 1.1 : 1));
-      const t = rnd();
-      // 同束柱形一致才像節理:六角為主、偶夾方柱/圓柱段;
-      // 柱身向下多長 6m(埋進地基)→ 坡地上外圈柱也確實入土,不懸空
-      const geo2 = t < 0.62 ? cyl(r, r * 1.04, h + 6, 6)
-        : t < 0.84 ? rockFrustum(r * 1.8, r * 1.8, r * 1.48, r * 1.48, h + 6, 0.2, 0.2)
-        : cyl(r, r * 1.04, h + 6, 10);
-      // 色差收斂 ±0.02:同束節理是同一次岩漿冷卻,只該有風化深淺
-      const col = new THREE.Mesh(geo2, rockMat(shade((rnd() - 0.5) * 0.04), moss * (d / R0) * 0.6));
-      col.position.set(px, h / 2 - 3, pz);
-      col.rotation.y = rnd() * Math.PI;
-      g.add(col);
-      // 柱頂斷口:略寬的節理帽蓋(斷面色淺 = 新鮮斷口);中央柱必有 = 頂面特徵落腳點
-      if (i === 0 || rnd() < 0.5) {
-        const cap = new THREE.Mesh(cyl(r * 1.05, r * 0.95, 1.6, 6), rockMat(shade(0.08)));
-        cap.position.set(px, h + 0.8, pz);
-        cap.rotation.y = col.rotation.y;
-        g.add(cap);
-      }
-      // 頂錨 = 中央柱帽蓋斷面(特徵放置以群組原點為準,錨在別柱會懸空)
-      if (i === 0) { topYA = h + 1.6; topRA = r * 0.9; }
-      H = Math.max(H, h + 1.6);
-    }
-    RX = RZ = R0 + 5; topR = 3;
-    sideDef = { y: [H * 0.12, H * 0.6] };   // 柱束外壁(實測會落在該方位最外那根柱)
-  } else if (main === 'granite') {   // 花崗岩 tor:大塊方料錯縫整齊疊置
-    base.set([0xc9c4b8, 0xbdb2a0, 0xd2cabb, 0xb8b0a4][Math.floor(rnd() * 4)]);   // 淺色花崗岩
-    const w0 = 30 + rnd() * 16, d0 = 22 + rnd() * 12;
-    const nL = 3 + Math.floor(rnd() * 2);
-    let y = -3;   // 底層下沉 3m:坡地上塊底確實入土
-    for (let i = 0; i < nL; i++) {
-      const f = 1 - i * (0.12 + rnd() * 0.08);      // 逐層內收
-      const hh = 12 + rnd() * 9;
-      // 每層 1~2 塊並列(錯縫 = 上層縫不對齊下層縫),塊間留 0.8m 節理縫
-      const nB = rnd() < 0.5 ? 1 : 2;
-      const wL = w0 * f, off0 = (rnd() - 0.5) * 5;
-      for (let b2 = 0; b2 < nB; b2++) {
-        const wB = nB === 1 ? wL : wL * (0.36 + rnd() * 0.24);
-        const px = nB === 1 ? off0 : off0 + (b2 ? 1 : -1) * (wL / 2 - wB / 2) * 1.02;
-        // 色差收斂 ±0.015:同一露頭的花崗岩色勻,只留極淡的塊間變化
-        const blk = new THREE.Mesh(rockFrustum(wB, d0 * f, wB * 0.88, (d0 * f) * 0.88, hh, 0.6, 0.6), rockMat(shade((rnd() - 0.5) * 0.03), i === nL - 1 ? moss : 0));
-        blk.position.set(px, y + hh / 2, (rnd() - 0.5) * 2);
-        blk.rotation.y = (rnd() - 0.5) * 0.07;      // 整齊拼接:僅極小微轉
-        g.add(blk);
-      }
-      // 層間 0.4m **交疊**:塊面確實互壓(留空 0.5m = 每層都懸在上一層之上;
-      // 「水平節理縫」的視覺靠逐層內收 f 與塊色深淺讀出來,不靠真的留一道空隙)
-      y += hh - 0.4;
-    }
-    H = y; RX = w0 * 0.62; RZ = d0 * 0.62; topR = Math.min(w0, d0) * 0.3;
-    sideDef = { y: [H * 0.15, H * 0.8] };
-  } else if (main === 'marble') {   // 大理岩堆:大小互異的渾圓岩塊互倚
-    base.set([0xd8d3c8, 0xcfc8bc, 0xd4cdc4, 0xc8c4bc][Math.floor(rnd() * 4)]);   // 大理岩灰白
-    const R0 = 14 + rnd() * 10;
-    const nB = 5 + Math.floor(rnd() * 4);
-    let y = 0, rPrev = 0;
-    for (let i = 0; i < nB; i++) {
-      const r = (12 - i * 1.8) * (0.8 + rnd() * 0.4);   // 大塊在下、小塊在上
-      if (r < 3) break;
-      // 水平漂移隨層高收斂:頂塊貼近軸心,頂面特徵(錨在原點)才有落腳處
-      const drift = Math.max(1.5, (R0 - r) * (1 - i / nB));
-      const px = (rnd() - 0.5) * drift, pz = (rnd() - 0.5) * drift;
-      // 色差收斂 ±0.02:同一岩體的大理岩塊色近,靠明暗交界讀塊面
-
-      const blk = new THREE.Mesh(ico(r), rockMat(shade((rnd() - 0.5) * 0.04), i < 2 ? moss * 0.6 : 0));
-      const syF = 0.72 + rnd() * 0.2;               // 溶蝕圓稜:壓扁的渾圓塊
-      blk.scale.y = syF;
-      blk.rotation.set(rnd() * 0.5, rnd() * Math.PI, rnd() * 0.5);
-      // 上塊坐進下塊間隙(半徑 55% 交疊 = 岩塊互倚,不是懸浮串珠);
-      // 底塊心壓到 0.2r:超過半顆入土,坡地上也確實著地
-      y = i === 0 ? r * 0.2 : y + rPrev * 0.55 + r * 0.3;
-      blk.position.set(px, y, pz);
-      g.add(blk);
-      rPrev = r;
-      H = Math.max(H, y + r * 0.8);
-      RX = Math.max(RX, Math.abs(px) + r); RZ = Math.max(RZ, Math.abs(pz) + r);
-    }
-    topR = 3.5;
-    topYA = H * 0.96; topRA = 3;
-    sideDef = { y: [H * 0.15, H * 0.7] };
-  } else {   // spire 尖峰
-    const r0 = 20 + rnd() * 10, h = 80 + rnd() * 45;
-    const m = new THREE.Mesh(cone(r0, h, 8), rockMat(shade(0), moss));
-    m.position.y = h / 2; g.add(m);
-    const m2 = new THREE.Mesh(cone(r0 * 0.6, h * 0.6, 7), rockMat(shade(0.05), moss));
-    m2.position.set(r0 * 0.8, h * 0.3, 0); g.add(m2);
-    H = h; RX = r0 * 1.5; RZ = r0 * 1.1; topR = 2;
-    sideDef = { y: [H * 0.15, H * 0.65] };   // 錐面
-  }
-  // 以下崩落岩塊/伴生圓丘只擴 footprint(col);貼壁特徵(側樹/侵蝕溝)的高度帶走各分支
-  // 已凍結的 sideDef,落點半徑一律實測 ⇒ 撐大後的 RX/RZ 不再有機會把特徵推到半空
-  {   // 崩落岩塊:山腳鑿刻感碎岩(BOTW 手雕硬邊)
-    const nB = 2 + Math.floor(rnd() * 3);
-    for (let i = 0; i < nB; i++) {
-      const br = 4 + rnd() * 7, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.85 + rnd() * 0.35);
-
-      const bd = new THREE.Mesh(ico(br), rockMat(shade((rnd() - 0.5) * 0.06), moss * 0.6));
-      const syF = 0.6 + rnd() * 0.3;
-      bd.scale.y = syF;
-      bd.rotation.set(rnd() * 0.6, rnd() * Math.PI, rnd() * 0.6);
-      // 塊心壓低到 0.1×半徑:過半入土,離群體最遠的崩落塊在坡地上也不懸空
-      bd.position.set(Math.cos(a) * d, br * 0.1, Math.sin(a) * d);
-      g.add(bd);
-      RX = Math.max(RX, Math.abs(Math.cos(a) * d) + br);
-      RZ = Math.max(RZ, Math.abs(Math.sin(a) * d) + br);
-    }
-  }
-  const nSub = Math.floor(rnd() * 3);   // 伴生小圓丘
-  for (let i = 0; i < nSub; i++) {
-    const r = 10 + rnd() * 14, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.9 + rnd() * 0.3);
-
-    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 9, 7), rockMat(shade((rnd() - 0.5) * 0.08), moss * 0.8));
-    const syF = 0.6 + rnd() * 0.3;
-    m.scale.set(1.2, syF, 1);
-    m.position.set(Math.cos(a) * d, 4, Math.sin(a) * d);
-    g.add(m);
-    RX = Math.max(RX, Math.abs(Math.cos(a) * d) + r * 1.2);
-    RZ = Math.max(RZ, Math.abs(Math.sin(a) * d) + r);
-  }
-  // 侵蝕溝墨線:貼著側壁錨點放(單壁或柱群逐柱)。半徑與內傾角一律走 `rockProbe` **實測**
-  // (與峭壁樹同一個縫;手寫剖面公式會讓溝棒浮在小面內縮那一段外面 —— 實測前量到 5.3m 的縫)。
-  // 棒身 local +x = 徑向(ry = −a)⇒ 沉半深 = 0.8;內傾 MUST 走 `rotation.z`(Euler 'XYZ' 的
-  // z 最內層 = 繞**自身**切向軸),MUST NOT 用 rotation.x(最外層 = 繞世界 X,只有某些方位剛好對)。
-  {
-    const ribCols = Array.isArray(sideDef) ? sideDef : sideDef ? [sideDef] : [];
-    if (ribCols.length && rnd() < 0.7) {
-      const probe = rockProbe(g);
-      const n = 3 + Math.floor(rnd() * 4);
-      for (let i = 0; i < n; i++) {
-        const cSd = ribCols[Math.floor(rnd() * ribCols.length)];
-        const rh = (cSd.y[1] - cSd.y[0]) * (0.45 + rnd() * 0.35);
-        const yc = cSd.y[0] + rh / 2 + rnd() * Math.max(0, cSd.y[1] - cSd.y[0] - rh);
-        const a = rnd() * Math.PI * 2;
-        const px = cSd.px || 0, pz = cSd.pz || 0;
-        const er = probe.wallR(px, pz, yc, a);
-        if (er == null) continue;
-        const rib = new THREE.Mesh(new THREE.BoxGeometry(1.6, rh, 1.3), rockMat(shade(-0.1)));
-        rib.position.set(px + Math.cos(a) * (er - 0.8), yc, pz + Math.sin(a) * (er - 0.8));
-        rib.rotation.y = -a;
-        rib.rotation.z = Math.atan(probe.slope(px, pz, yc, a, Math.max(2, rh / 2)));
-        g.add(rib);
-      }
-    }
-  }
-  if (rnd() < 0.5) {   // 碎石坡
-    const scree = new THREE.Mesh(cone(Math.max(RX, RZ) * 0.8, 10 + rnd() * 8, 9), rockMat(shade(0.06)));
-    scree.position.y = 5; scree.scale.z = 0.7; g.add(scree);
-  }
-  return {
-    main,   // 主體型別(給 audit_object_joints 標示是哪一型的接合出問題;放置端不讀)
-    col: { r: Math.max(RX, RZ) + 4, h: H },
-    anchor: { topY: topYA ?? H, topR: topRA ?? topR, side: sideDef },
-  };
+  return buildGeologyMegalith(g, 'auto', Math.floor(rnd() * 4294967296));
 }
 
 // 山丘頂的「平坦半徑」:自中心逐環外擴,量到「地面比中心低超過 drop」為止。
@@ -4002,6 +3370,7 @@ function djAt(x, z) {
   return ((Math.imul(h ^ (h >>> 15), 0xC2B2AE3D) >>> 0) % 100003) / 100003;
 }
 export function jitterMegalith(g, dj, colR) {
+  if (g.userData.geology) return; // Preserve the shared mesh, monument proportions and measured envelope.
   for (const o of g.children) {
     const { jr, spin } = partJitter(
       partId(o.position.y, o.position.x, o.position.z), dj, MEGA_JIT,
@@ -4408,7 +3777,7 @@ function placeBaseFlags({ group, terrain, blocked, basesW, nation }) {
 const MEGA_MAX = 15;       // 全圖巨岩上限(舊制 12;改成露頭群後多留三顆給第三片)
 // 合成巨岩的標稱碰撞半徑(`synthMegalith` 回的是 `max(RX,RZ)+4`,逐顆不同)——
 // 只用來估**格距**,實際緊密判定仍量每顆真正的 `meta.col.r`(原則 4)
-const SYNTH_COL_R = 30;
+const SYNTH_COL_R = SYNTH_GEOLOGY.col.r;
 
 /**
  * 裸露地的巨岩露頭(2026-08-03 使用者定案③「巨石依地質特性緊密排列,形成壯麗景觀」)。
@@ -4421,13 +3790,13 @@ const SYNTH_COL_R = 30;
  * 緊密的界線是「碰撞柱不互穿」(`dist ≥ r_i + r_j`):再密也不能長進彼此體內 —— 那是
  * 破圖,不是景觀。逐顆仍走既有的水域/淨空/平坦度/邊界四道閘(一顆放不下就少一顆)。
  */
-function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW, roadOccupied, occ, osmBldHit }) {
+function placeMegaliths({ group, terrain, blocked, blockers, sites, basesW, roadOccupied, occ, osmBldHit }) {
+  const rnd = mulberry32(beaconSeed(terrain.minX, terrain.minZ) ^ 0x47454f);
   const types = Object.keys(MEGALITHS);
   const start = Math.floor(rnd() * types.length);   // 每張圖不同起點,依序輪替求多樣
   const placedM = [];
   const fields = [];
   const talus = [];     // 基部崩積裙(2026-08-05;純表現層,全部收在 blockArea(r) 內)
-  const lichens = [];   // 壁面地衣/水漬色斑(同上)
   let named = 0;
   for (const [fx, fz] of sites) {
     if (fields.length >= ROCKFIELD.FIELDS || placedM.length >= MEGA_MAX) break;
@@ -4448,7 +3817,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
     // 上限(`objHeightMax()`)把 s 壓下來的同時半徑也等比縮小 ⇒ 沒過這一支就會用「未夾制的體格」
     // 去排格點,整片露頭之間憑空多出一倍的空隙(而每一顆本身仍然合法,看不出成因)。
     // 合成岩的 H 逐顆生成時才知道 ⇒ 這裡沿用既有估計值,逐顆的真正夾制在下面。
-    const nomS = fSynth ? 1.15 * OVER.mega
+    const nomS = fSynth ? (SYNTH_GEOLOGY.s[0] + SYNTH_GEOLOGY.s[1]) / 2 * OVER.mega
       : objScaleFit((MEGALITHS[fType].s[0] + MEGALITHS[fType].s[1]) / 2 * OVER.mega,
         MEGALITHS[fType].col.h, MEGALITHS[fType].s[1] * OVER.mega);
     const nomR = nomS * (fSynth ? SYNTH_COL_R : MEGALITHS[fType].col.r);
@@ -4459,22 +3828,29 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
     for (const cell of cells) {
       if (placedM.length >= MEGA_MAX) break;
       const x = cell.x, z = cell.z;
+      const probeR = fSynth ? SYNTH_GEOLOGY.col.r * SYNTH_GEOLOGY.s[1] * OVER.mega : MEGALITHS[fType].col.r * MEGALITHS[fType].s[1] * OVER.mega;
+      const slope = battleGeologySlope((px, pz) => terrain.heightAt(px, pz), x, z, probeR);
+      if (slope == null) continue;
+      const environment = { ...forestEnvironmentAt(terrain, x, z), slope,
+        latitude: terrain.center?.lat,
+        altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z),
+        formationSeed: beaconSeed(fx, fz) };
       // 先建再驗:淘汰只是丟棄未進場景的 Group,rnd 序全房一致
       const synth = fSynth;
       const g = new THREE.Group();
       let meta, s;
       let sMax;   // 這一片露頭抽得到的最大縮放(cell.sf ≤ 1:體格自核心往外遞減)
       if (synth) {
-        meta = synthMegalith(g, rnd);
-        s = (0.9 + rnd() * 0.5) * OVER.mega * cell.sf;
-        sMax = 1.4 * OVER.mega;
+        meta = buildGeologyMegalith(g, 'auto', beaconSeed(x, z), environment);
+        s = (SYNTH_GEOLOGY.s[0] + rnd() * (SYNTH_GEOLOGY.s[1] - SYNTH_GEOLOGY.s[0])) * OVER.mega * cell.sf;
+        sMax = SYNTH_GEOLOGY.s[1] * OVER.mega;
       } else {
         const def = MEGALITHS[fType];
-        def.build(g, rnd);
-        meta = def;
+        meta = buildGeologyMegalith(g, fType, beaconSeed(x, z), environment);
         s = (def.s[0] + rnd() * (def.s[1] - def.s[0])) * OVER.mega * cell.sf;
         sMax = def.s[1] * OVER.mega;
       }
+      if (!meta) continue;
       // 物件高度上限(`WORLD_H.OBJ_F` 倍砲塔高)。**夾縮放不截幾何**:`meta.col.h × s`
       // 正是後面 `topW` 量的那個「岩體世界高度」,而半徑 `r`、落底腳印、緊密判定、攀岩高度帶
       // 全部乘同一個 s ⇒ 夾在這裡(平坦度縮放**之前**)整顆等比縮小,一條也不會分家。
@@ -4636,22 +4012,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
           talus.push({ x: tx2, y: ty2 + tr2 * sy2 * 0.42, z: tz2, r: tr2, sy: sy2, sz: sz2,
             rx: rx2, ry: ry2, rz: rz2, dH, dS, dL });   // 與母岩同色相(同源同相)
         }
-        // 地衣/水漬:貼壁半透明色斑(不寫深度、不描邊)—— 岩壁的「用過的痕跡」;
-        // 傾角跟實測壁面斜率走(rockProbe),斑面貼著壁面不懸空
-        const nL = 2 + Math.floor(dr() * 4);
-        for (let li = 0; li < nL; li++) {
-          const la = dr() * Math.PI * 2;
-          const ly = (gy - 1.5) + meta.col.h * s * (0.18 + dr() * 0.55);
-          const lr2 = 1.2 + dr() * 2.6;
-          const dk = dr();
-          const lw = probe.wallR(x, z, ly, la);
-          if (lw == null) continue;
-          const lx = x + Math.cos(la) * (lw + 0.1), lz = z + Math.sin(la) * (lw + 0.1);
-          if (lx < terrain.minX + inb || lx > terrain.maxX - inb || lz < terrain.minZ + inb || lz > terrain.maxZ - inb) continue;
-          const tilt = Math.atan(probe.slope(x, z, ly, la));
-          lichens.push({ x: lx, y: ly, z: lz,
-            a: la, r: lr2, tilt, dark: dk < 0.5, dH });
-        }
+
       }
       placedM.push({ x, z, r, f: fields.length });   // f = 所屬露頭群序(緊密判定只對同片放寬)
       occ?.add(x, z, r);
@@ -4663,8 +4024,8 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
       fields.push({ x: fx, z: fz, strike, n: inField });
     }
   }
-  // ---- 表面加飾的實例化(各一個 InstancedMesh = 全圖 +2 draw call)----
-  if (talus.length || lichens.length) {
+  // ---- 崩積碎石實例化；岩面地衣由共用生成器的頂點色承接 ----
+  if (talus.length) {
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3(), tint = new THREE.Color();
     if (talus.length) {
@@ -4682,27 +4043,6 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
       if (tm.instanceColor) tm.instanceColor.needsUpdate = true;
       tm.frustumCulled = false;
       group.add(tm);
-    }
-    if (lichens.length) {
-      // 色斑面片:半透明、不寫深度、不描邊(勾線 pass 讀到的仍是壁面深度 ⇒ 不出斑點)
-      const lmat = toonMat(0xffffff);
-      lmat.transparent = true; lmat.opacity = 0.42; lmat.depthWrite = false;
-      const lm = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 9), lmat, lichens.length);
-      lm.renderOrder = 1;
-      lichens.forEach((t, i) => {
-        // 面片法線 = 壁面外法線(方位 a + 依實測斜率上仰 tilt);先仰後轉 ⇒ 'YXZ'
-        E.set(-t.tilt, Math.PI / 2 - t.a, 0, 'YXZ'); Q.setFromEuler(E);
-        P.set(t.x, t.y, t.z); S.set(t.r, t.r * (0.7 + ((i * 2654435761) >>> 0) % 100 / 100 * 0.5), 1);
-        M.compose(P, Q, S);
-        lm.setMatrixAt(i, M);
-        // 深斑 = 水漬/陰生地衣(偏母岩暗色);淺斑 = 殼狀地衣(偏黃綠灰)
-        tint.setHex(t.dark ? 0x4a463e : 0x8f9a6a).offsetHSL(t.dH, 0, 0);
-        lm.setColorAt(i, tint);
-      });
-      lm.instanceMatrix.needsUpdate = true;
-      if (lm.instanceColor) lm.instanceColor.needsUpdate = true;
-      lm.frustumCulled = false;
-      group.add(lm);
     }
   }
   return placedM.length;
