@@ -406,6 +406,11 @@ export function venueConfig(venue, teamSize, mapA = false) {
   const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
   const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);   // 遊戲世界邊長
 
+  // 三線母體派生(2026-09-12 使用者定案「先建立 3 兵線地圖,單獨使用中路設為 1 兵線地圖,左右兩路作為 2 兵線地圖」):
+  // 完整戰場若具備合規 L3 烘焙母體,L1(中路)與 L2(左右兩路)優先由 L3 派生,共享基地座標與戰場主軸。
+  const baked3 = VENUE_LANES[venue.id]?.[3];
+  const baked3Ok = plan.mode === 'full' && baked3 && bakedLanesSeparated(baked3);
+
   // 三階降級(寧缺勿錯,原則 6):①這個尺度自己的烘焙路線 → ②完整版路線剪短 → ③合成弧。
   // ② 只在 ① 缺席時才走 —— 它是 2026-08-13~14 的過渡路徑,留著是因為新烤一張圖需要外網,
   // 而「沒烤到的場地整張不能玩」比「路線沒被規則重驗過」更糟。
@@ -413,7 +418,20 @@ export function venueConfig(venue, teamSize, mapA = false) {
   const bakedRaw = (ownRaw && bakedLanesSeparated(ownRaw)) ? ownRaw : VENUE_LANES[venue.id]?.[L];
   const baked = bakedRaw && bakedLanesSeparated(bakedRaw) ? bakedRaw : null;
   let A, B, lanes, maxOverlap, synthetic;
-  if (baked) {
+  if (baked3Ok) {
+    if (L === 1) {
+      lanes = [baked3.lanes[1].map((p) => [...p])];
+      maxOverlap = 0;
+    } else if (L === 2) {
+      lanes = [baked3.lanes[0].map((p) => [...p]), baked3.lanes[2].map((p) => [...p])];
+      maxOverlap = baked3.maxOverlap;
+    } else {
+      lanes = baked3.lanes.map((l) => l.map((p) => [...p]));
+      maxOverlap = baked3.maxOverlap;
+    }
+    [A, B] = baked3.bases.map((p) => [...p]);
+    synthetic = false;
+  } else if (baked) {
     lanes = baked.lanes.map((l) => l.map((p) => [...p]));
     if (plan.mode !== 'full' && baked !== ownRaw) {
       // ②:縮小尺度但只有完整版路線可用 ⇒ 兩端對稱剪短,兩端就是兩座主堡。

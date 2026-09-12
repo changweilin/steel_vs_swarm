@@ -10,7 +10,7 @@
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit, laneCssColor } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit, lanePathBalanceAudit, laneCssColor } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -216,26 +216,27 @@ async function buildLanes(A, B, signal, directRoute = null, L = 3, mini = false)
     return best || { coords: synthLane(A, B, side), dist: d * 1.2, synth: true };
   };
 
-  let lanes, synthetic = false;
+  // 訂製地圖規範:先建立 3 兵線母體 [top, mid, bot]
+  const top = await flank(1);
+  const bot = await flank(-1);
+  const synthetic = !!(top.synth || bot.synth);
+  const all3 = [top.coords, mid.coords, bot.coords];
+
+  // 另外單獨使用中路設為 1 兵線地圖,左右兩路作為 2 兵線地圖
+  let lanes;
   if (L === 1) {
     lanes = [mid.coords];
   } else if (L === 2) {
-    const top = await flank(1);
-    const bot = await flank(-1);
-    synthetic = !!(top.synth || bot.synth);
     lanes = [top.coords, bot.coords];
   } else {
-    const top = await flank(1);
-    const bot = await flank(-1);
-    synthetic = !!(top.synth || bot.synth);
-    lanes = [top.coords, mid.coords, bot.coords];
+    lanes = all3;
   }
   // 任兩條重合率
   const ov = [0];
   for (let i = 0; i < lanes.length; i++) {
     for (let j = i + 1; j < lanes.length; j++) ov.push(overlapRatio(lanes[i], lanes[j], A, cell));
   }
-  return { lanes, maxOverlap: Math.max(...ov), overlaps: ov, synthetic, roadDist: mid.dist };
+  return { lanes, all3, maxOverlap: Math.max(...ov), overlaps: ov, synthetic, roadDist: mid.dist };
 }
 
 // ============ Leaflet 選址畫面 ============
@@ -424,13 +425,15 @@ export class MapSelect {
       const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP
         && maxBt <= MAPGEO.MAX_BACKTRACK && maxUturn < MAPGEO.UTURN_MAX_DEG && accumOK;
       if (!ok) continue;
+      // 兵線路徑平衡稽核 (L2/L3 專屬)
+      if (L >= 2 && !lanePathBalanceAudit(gLanes, L).ok) continue;
       // Part 3:沿線有高程資料且坡度超標 → 淘汰(避開現實陡坡道路)
       if (elev && maxLaneGrade(lanes, elev) > gradeCap) continue;
       // 砲塔規則(規則 #4):此推薦點的兵線幾何會讓 solveTowerSites 佈出「殘餘 >80% / 疊塔」→ 淘汰
       // (自訂地圖與預設場地同標準;伺服器 validateBattleConfig 再把關一次)。
       if (!laneRuleOK(lanes, this.mini)) continue;
 
-      const cand = { latlng: B, lanes, maxOverlap, overlaps, distM: dist, sizeM, diagM, synthetic, roadDist: roadDist / MAPGEO.REAL_SCALE, bearing };
+      const cand = { latlng: B, lanes, motherLanes: all3, maxOverlap, overlaps, distM: dist, sizeM, diagM, synthetic, roadDist: roadDist / MAPGEO.REAL_SCALE, bearing };
       cand.tactics = lanesTactics(lanes, A, maxOverlap);
       this.candidates.push(cand);
       this._drawCandidate(cand, this.candidates.length - 1);
