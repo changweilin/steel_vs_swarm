@@ -37,7 +37,7 @@ import { geoGet, geoPut, geoKey } from './geocache.js';
 import { osmRelayKey } from './osmrelay.js';
 import {
   OSM_AREA_KEYS, projectAreaRecord, catalogAreas,
-  pointInProjectedArea, mergeAreaGaps,
+  pointInProjectedArea, mergeAreaGaps, subdivideLargeZones,
 } from './osmAreas.js';
 import {
   OSM_FEATURE_QUERY_VERSION, osmFeatureQuery, osmFeatureQuotas, osmRoadQuery, osmRoadQuotas,
@@ -10386,7 +10386,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   };
   if (osmSource) {
     const projected = (osmData.areas || []).map((a) => projectAreaRecord(a, llToWorld, center)).filter(Boolean);
-    const cat = catalogAreas(projected);
+    let cat = catalogAreas(projected);
+    const subdivided = subdivideLargeZones(cat.areas, osmRoads, {
+      toWorld: (lat, lon) => llToWorld(lat, lon, center),
+    });
+    if (subdivided.length !== cat.areas.length) cat = catalogAreas(subdivided);
     const parserInvalid = Number(osmData.areaInvalid) || 0;
     const parserCapacity = Number(osmData.areaCapacity) || 0;
     const parserGaps = Array.isArray(osmData.areaGaps) ? osmData.areaGaps : [];
