@@ -669,3 +669,533 @@ export function placeAreaCandidates(areas = [], options = {}) {
   }
   return { placed, capacity, skipped };
 }
+
+/** 住宅區／商業區／工業區拆解預設面積門檻（m²） */
+export const DEFAULT_ZONE_THRESHOLDS = Object.freeze({
+  residential: 10000,
+  commercial: 15000,
+  industrial: 25000,
+});
+
+/** 道路標準寬度（公尺），供拆解時判定路寬優先序 */
+export const DEFAULT_ROAD_WIDTHS = Object.freeze({
+  motorway: 12, trunk: 11, primary: 10, secondary: 8, tertiary: 7,
+  unclassified: 5, residential: 5.5, living_street: 5, service: 4,
+});
+
+function normalize2DRing(ring, eps = 1e-7) {
+  if (!Array.isArray(ring) || ring.length < 3) return null;
+  const a = [];
+  for (const p of ring) {
+    if (!Array.isArray(p) || !finite(p[0]) || !finite(p[1])) return null;
+    if (!a.length || Math.hypot(a[a.length - 1][0] - p[0], a[a.length - 1][1] - p[1]) > eps) {
+      a.push([p[0], p[1]]);
+    }
+  }
+  if (a.length > 1 && Math.hypot(a[0][0] - a[a.length - 1][0], a[0][1] - a[a.length - 1][1]) <= eps) {
+    a.pop();
+  }
+  if (a.length < 3) return null;
+  if (flatRingArea(a) < 0) a.reverse();
+  return a;
+}
+
+/**
+ * 以直線 n·p = d 將 2D 封閉外環切割為兩側的子外環集合。
+ * 零亂數、純幾何演算法；透過頂點避讓確保無共線模糊。
+ */
+export function clipPolygonWithLine(ring, normal, d, eps = 1e-7) {
+  const normLen = Math.hypot(normal?.[0] || 0, normal?.[1] || 0);
+  if (normLen < 1e-9) return null;
+  const nx = normal[0] / normLen, nz = normal[1] / normLen;
+  const vx = -nz, vz = nx; // 直線切線方向
+  const n = ring?.length || 0;
+  if (n < 3) return null;
+
+  let cutD = d;
+  for (let iter = 0; iter < 10; iter++) {
+    let hit = false;
+    for (let i = 0; i < n; i++) {
+      const dist = nx * ring[i][0] + nz * ring[i][1] - cutD;
+      if (Math.abs(dist) < 1e-4) { hit = true; break; }
+    }
+    if (!hit) break;
+    cutD += 1.5e-4;
+  }
+
+  const nodes = [];
+  const intersections = [];
+
+  for (let i = 0; i < n; i++) {
+    const p1 = ring[i];
+    const p2 = ring[(i + 1) % n];
+    const f1 = nx * p1[0] + nz * p1[1] - cutD;
+    const f2 = nx * p2[0] + nz * p2[1] - cutD;
+
+    nodes.push({ pt: p1, isX: false, side: f1 < 0 ? -1 : 1 });
+
+    if ((f1 < 0 && f2 > 0) || (f1 > 0 && f2 < 0)) {
+      const t = -f1 / (f2 - f1);
+      const ix = p1[0] + t * (p2[0] - p1[0]);
+      const iz = p1[1] + t * (p2[1] - p1[1]);
+      const u = ix * vx + iz * vz;
+      const xNode = {
+        pt: [ix, iz],
+        isX: true,
+        entryToA: f1 > 0 && f2 < 0,
+        entryToB: f1 < 0 && f2 > 0,
+        u,
+      };
+      nodes.push(xNode);
+      intersections.push(xNode);
+    }
+  }
+
+  if (intersections.length < 2 || (intersections.length % 2) !== 0) {
+    return null;
+  }
+
+  for (let i = 0; i < nodes.length; i++) {
+    nodes[i].nextPerimeter = nodes[(i + 1) % nodes.length];
+  }
+
+  intersections.sort((a, b) => a.u - b.u);
+
+  for (let k = 0; k < intersections.length; k += 2) {
+    const iA = intersections[k];
+    const iB = intersections[k + 1];
+    if (iA.entryToA) {
+      iB.nextCutToA = iA;
+      iA.nextCutToB = iB;
+    } else {
+      iA.nextCutToA = iB;
+      iB.nextCutToB = iA;
+    }
+  }
+
+  const traceSide = (targetSide, cutNextProp, entryProp) => {
+    const visited = new Set();
+    const rings = [];
+    const startCandidates = nodes.filter((node) => node.isX && node[entryProp]);
+    for (const start of startCandidates) {
+      if (visited.has(start)) continue;
+      const r = [];
+      let curr = start;
+      let guard = 0;
+      while (curr && guard++ < nodes.length * 4) {
+        r.push(curr.pt);
+        if (curr.isX && curr[entryProp]) visited.add(curr);
+        if (curr.isX && !curr[entryProp]) {
+          curr = curr[cutNextProp];
+        } else {
+          curr = curr.nextPerimeter;
+          while (curr && !curr.isX && curr.side !== targetSide) {
+            curr = curr.nextPerimeter;
+          }
+        }
+        if (curr === start) break;
+      }
+      const norm = normalize2DRing(r, eps);
+      if (norm && Math.abs(flatRingArea(norm)) > 1) rings.push(norm);
+    }
+    return rings;
+  };
+
+  const sideA = traceSide(-1, 'nextCutToA', 'entryToA');
+  const sideB = traceSide(1, 'nextCutToB', 'entryToB');
+
+  return {
+    sideA,
+    sideB,
+    line: { normal: [nx, nz], d: cutD },
+  };
+}
+
+function pointTo2D(p, toWorld) {
+  if (!p) return null;
+  if (typeof toWorld === 'function' && finite(p.lat) && finite(p.lon ?? p.lng)) {
+    return toWorld(p.lat, p.lon ?? p.lng);
+  }
+  if (Array.isArray(p) && finite(p[0]) && finite(p[1])) return [p[0], p[1]];
+  if (finite(p.x) && finite(p.z)) return [p.x, p.z];
+  return null;
+}
+
+function distPointToSeg(px, pz, x1, z1, x2, z2) {
+  const dx = x2 - x1, dz = z2 - z1;
+  const l2 = dx * dx + dz * dz;
+  if (!l2) return Math.hypot(px - x1, pz - z1);
+  let t = ((px - x1) * dx + (pz - z1) * dz) / l2;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  return Math.hypot(px - (x1 + t * dx), pz - (z1 + t * dz));
+}
+
+export function extractRoadSegments(roads = [], options = {}) {
+  const segs = [];
+  const toWorld = options.toWorld;
+  const widthOf = options.roadWidthOf;
+
+  for (const road of roads || []) {
+    let w = 5;
+    if (typeof widthOf === 'function') {
+      w = widthOf(road);
+    } else if (road?.tags) {
+      const base = DEFAULT_ROAD_WIDTHS[road.tags.highway] || 5;
+      const lanes = parseInt(road.tags.lanes, 10) || 0;
+      w = lanes ? Math.max(base, lanes * 3.2) : base;
+    } else if (Number.isFinite(road?.width)) {
+      w = road.width;
+    } else if (Array.isArray(road) && Number.isFinite(road[4])) {
+      w = road[4];
+    }
+
+    if (Array.isArray(road) && road.length >= 4 && finite(road[0]) && finite(road[1]) && finite(road[2]) && finite(road[3])) {
+      const len = Math.hypot(road[2] - road[0], road[3] - road[1]);
+      if (len >= 0.5) segs.push({ x1: road[0], z1: road[1], x2: road[2], z2: road[3], width: w, len });
+      continue;
+    }
+
+    if (road && finite(road.x1) && finite(road.z1) && finite(road.x2) && finite(road.z2)) {
+      const len = Math.hypot(road.x2 - road.x1, road.z2 - road.z1);
+      if (len >= 0.5) segs.push({ x1: road.x1, z1: road.z1, x2: road.x2, z2: road.z2, width: w, len });
+      continue;
+    }
+
+    const pts = road?.geometry || road?.points;
+    if (Array.isArray(pts) && pts.length >= 2) {
+      let prev = pointTo2D(pts[0], toWorld);
+      for (let i = 1; i < pts.length; i++) {
+        const curr = pointTo2D(pts[i], toWorld);
+        if (prev && curr) {
+          const len = Math.hypot(curr[0] - prev[0], curr[1] - prev[1]);
+          if (len >= 0.5) {
+            segs.push({ x1: prev[0], z1: prev[1], x2: curr[0], z2: curr[1], width: w, len });
+          }
+        }
+        prev = curr;
+      }
+    }
+  }
+
+  return segs;
+}
+
+/**
+ * 依區塊輪廓尋找最優先的基準道路段：
+ * 1. 優先篩選鄰近候選道路段
+ * 2. 多道路時以「路面較寬」為優先（width 最大）
+ * 3. 若同寬度，以距離最近者優先，最後以長度與座標進行決定性 tie-break
+ */
+export function findPrioritizedRoad(outerRing, roadsOrSegments = [], options = {}) {
+  const roadSegments = (roadsOrSegments?.[0]?.x1 !== undefined && roadsOrSegments?.[0]?.x2 !== undefined)
+    ? roadsOrSegments
+    : extractRoadSegments(roadsOrSegments, options);
+  if (!Array.isArray(outerRing) || outerRing.length < 3 || !roadSegments?.length) return null;
+
+  let sx = 0, sz = 0;
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const p of outerRing) {
+    sx += p[0]; sz += p[1];
+    minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+    minZ = Math.min(minZ, p[1]); maxZ = Math.max(maxZ, p[1]);
+  }
+  const cx = sx / outerRing.length, cz = sz / outerRing.length;
+  const radius = Math.hypot(maxX - minX, maxZ - minZ) * 0.5;
+  const searchDist = Math.max(80, radius + 30);
+
+  const scored = [];
+  for (const seg of roadSegments) {
+    const dc = distPointToSeg(cx, cz, seg.x1, seg.z1, seg.x2, seg.z2);
+    let dPoly = dc;
+    for (const p of outerRing) {
+      const d = distPointToSeg(p[0], p[1], seg.x1, seg.z1, seg.x2, seg.z2);
+      if (d < dPoly) dPoly = d;
+    }
+    scored.push({ seg, dPoly, dc, width: seg.width || 5, len: seg.len || 1 });
+  }
+
+  let candidates = scored.filter((s) => s.dPoly <= searchDist);
+  if (!candidates.length) candidates = scored; // 若無近路則取全圖相對最近
+
+  // 多道路時以較寬的道路為優先
+  let maxWidth = -Infinity;
+  for (const c of candidates) {
+    if (c.width > maxWidth) maxWidth = c.width;
+  }
+  const widest = candidates.filter((c) => Math.abs(c.width - maxWidth) < 1e-4);
+
+  // 相同最寬路面時，以距離最近者優先；若同分則比線段長度與座標
+  widest.sort((a, b) => (a.dPoly - b.dPoly)
+    || (a.dc - b.dc)
+    || (b.len - a.len)
+    || (a.seg.x1 - b.seg.x1)
+    || (a.seg.z1 - b.seg.z1));
+
+  const best = widest[0]?.seg;
+  if (!best) return null;
+
+  const dx = best.x2 - best.x1, dz = best.z2 - best.z1;
+  const len = Math.hypot(dx, dz);
+  if (len < 1e-6) return null;
+
+  // 道路方向向量（單位長度）
+  const roadDir = [dx / len, dz / len];
+  // 分界線需「垂直」該道路，因此分界線的法向量 = 道路切線向量
+  const cutNormal = [roadDir[0], roadDir[1]];
+
+  return {
+    segment: best,
+    roadDir,
+    cutNormal,
+  };
+}
+
+/**
+ * 分析區塊多邊形於指定基準方向（如道路切線）下的幾何指標（面寬、縱深、長寬比、跨度與面積）
+ */
+export function analyzeZoneShape(outerRing, dir) {
+  if (!Array.isArray(outerRing) || outerRing.length < 3) return null;
+  const len = Math.hypot(dir?.[0] || 0, dir?.[1] || 0);
+  const ux = len > 1e-9 ? dir[0] / len : 1;
+  const uz = len > 1e-9 ? dir[1] / len : 0;
+  const vx = -uz, vz = ux;
+
+  let minU = Infinity, maxU = -Infinity;
+  let minV = Infinity, maxV = -Infinity;
+  for (const p of outerRing) {
+    const u = p[0] * ux + p[1] * uz;
+    const v = p[0] * vx + p[1] * vz;
+    if (u < minU) minU = u;
+    if (u > maxU) maxU = u;
+    if (v < minV) minV = v;
+    if (v > maxV) maxV = v;
+  }
+  const Lu = Math.max(0.1, maxU - minU);
+  const Lv = Math.max(0.1, maxV - minV);
+  const span = Math.min(Lu, Lv);
+  const aspect = Math.max(Lu, Lv) / span;
+  const area = Math.abs(flatRingArea(outerRing));
+
+  return {
+    Lu, Lv, span, aspect,
+    ratio: Lu / Lv,
+    area,
+    minU, maxU, minV, maxV,
+  };
+}
+
+function clipHalfPlane(ring, nx, nz, s) {
+  const out = [];
+  const n = ring.length;
+  if (n < 3) return out;
+
+  for (let i = 0; i < n; i++) {
+    const p1 = ring[i];
+    const p2 = ring[(i + 1) % n];
+    const d1 = p1[0] * nx + p1[1] * nz - s;
+    const d2 = p2[0] * nx + p2[1] * nz - s;
+
+    if (d1 <= 0) {
+      if (d2 <= 0) {
+        out.push(p2);
+      } else {
+        const t = -d1 / (d2 - d1);
+        out.push([p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])]);
+      }
+    } else {
+      if (d2 <= 0) {
+        const t = -d1 / (d2 - d1);
+        out.push([p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])]);
+        out.push(p2);
+      }
+    }
+  }
+  return out;
+}
+
+function halfPlaneArea(ring, nx, nz, s) {
+  const clipped = clipHalfPlane(ring, nx, nz, s);
+  if (clipped.length < 3) return 0;
+  return Math.abs(flatRingArea(clipped));
+}
+
+/**
+ * 依目標面積比例（如 0.5、1/3、2/5），透過半平面面積積分二分搜尋精確求得切割線位置。
+ * 適用於三角形、楔形、L形與不規則形，徹底杜絕角隅極小零畸碎片。
+ */
+export function findAreaProportionalCut(ring, normal, targetFraction = 0.5) {
+  const normLen = Math.hypot(normal?.[0] || 0, normal?.[1] || 0);
+  if (normLen < 1e-9) return null;
+  const nx = normal[0] / normLen, nz = normal[1] / normLen;
+
+  let sMin = Infinity, sMax = -Infinity;
+  for (const p of ring) {
+    const s = p[0] * nx + p[1] * nz;
+    if (s < sMin) sMin = s;
+    if (s > sMax) sMax = s;
+  }
+  const totalArea = Math.abs(flatRingArea(ring));
+  const targetArea = totalArea * Math.max(0.05, Math.min(0.95, targetFraction));
+
+  let lo = sMin, hi = sMax;
+  for (let iter = 0; iter < 24; iter++) {
+    const mid = (lo + hi) / 2;
+    const a = halfPlaneArea(ring, nx, nz, mid);
+    if (Math.abs(a - targetArea) < 1e-4) return mid;
+    if (a < targetArea) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return (lo + hi) / 2;
+}
+
+/**
+ * 對單一 AreaRecord 執行依道路垂直線與形狀比例之自適應拆解
+ */
+export function subdivideAreaRecord(area, roadSegments = [], options = {}) {
+  const family = area?.classification?.family || area?.tags?.landuse || 'residential';
+  const thresholds = { ...DEFAULT_ZONE_THRESHOLDS, ...(options.thresholds || {}) };
+  const threshold = Number(options.threshold) || thresholds[family] || DEFAULT_ZONE_THRESHOLDS.residential;
+  const maxDepth = Math.max(1, Math.min(8, Number(options.maxDepth) || 5));
+  const minSliceArea = Math.max(300, threshold * 0.15);
+
+  const polys = (area.worldPolygons || []).filter((p) => Array.isArray(p.outer) && p.outer.length >= 3);
+  if (!polys.length) return [area];
+
+  const splitPolyRecursive = (poly, depth = 0) => {
+    const areaVal = Math.max(0, Math.abs(flatRingArea(poly.outer)) - (poly.holes || []).reduce((h, r) => h + Math.abs(flatRingArea(r)), 0));
+    if (areaVal <= threshold + 1e-3 || depth >= maxDepth) return [poly];
+
+    const roadMatch = findPrioritizedRoad(poly.outer, roadSegments, options);
+    let normal, roadDir;
+    if (roadMatch) {
+      normal = roadMatch.cutNormal;
+      roadDir = roadMatch.roadDir;
+    } else {
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const p of poly.outer) {
+        minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+        minZ = Math.min(minZ, p[1]); maxZ = Math.max(maxZ, p[1]);
+      }
+      if (maxX - minX >= maxZ - minZ) {
+        normal = [1, 0]; roadDir = [1, 0];
+      } else {
+        normal = [0, 1]; roadDir = [0, 1];
+      }
+    }
+
+    // 根據各邊長比例與縱深面寬決定切割次數與策略
+    const shape = analyzeZoneShape(poly.outer, roadDir);
+    const nArea = Math.max(1, Math.ceil(areaVal / threshold - 1e-4));
+    let nParts = nArea;
+
+    if (shape) {
+      if (shape.ratio >= 1.4) {
+        // 沿路面寬長條型：依邊長比切分，目標每塊趨近 1:1 ~ 1.5:1
+        const nRatio = Math.round(shape.ratio);
+        nParts = Math.max(nArea, nRatio);
+        // 最小面寬保護（避免切出薄片，每塊面寬 >= 25m）：
+        const maxPartsByFrontage = Math.max(1, Math.floor(shape.Lu / 25));
+        nParts = Math.min(nParts, Math.max(nArea, maxPartsByFrontage));
+      } else if (shape.ratio < 0.7) {
+        // 縱深狹長型：面寬過窄（< 30m）或切分後長寬比過大（> 4.5）則避免繼續縱切為針狀
+        if (shape.Lu < 30 || (shape.Lv / Math.max(1, shape.Lu / 2)) > 4.5) {
+          if (shape.Lu < 25) return [poly];
+        }
+      }
+    }
+
+    // 採面積比例計算切線位置，確保兩側子區塊面積適當均衡
+    const fraction = nParts > 1 ? Math.floor(nParts / 2) / nParts : 0.5;
+    const cutD = findAreaProportionalCut(poly.outer, normal, fraction);
+    if (cutD == null) return [poly];
+
+    const cutRes = clipPolygonWithLine(poly.outer, normal, cutD);
+    if (!cutRes || !cutRes.sideA.length || !cutRes.sideB.length) return [poly];
+
+    // 分配既有內洞至包含該內洞重心的子區塊
+    const makePieces = (rings) => rings.map((outer) => {
+      const myHoles = [];
+      for (const hole of poly.holes || []) {
+        if (pointInProjectedArea(hole[0][0], hole[0][1], { outer, holes: [] })) {
+          myHoles.push(hole);
+        }
+      }
+      return { outer, holes: myHoles };
+    });
+
+    const piecesA = makePieces(cutRes.sideA);
+    const piecesB = makePieces(cutRes.sideB);
+    const allPieces = [...piecesA, ...piecesB];
+
+    if (allPieces.length <= 1) return [poly];
+
+    // 避免極度細長或過小的零畸形狀（面積 < minSliceArea 或 跨度 < 15m）
+    const invalidPiece = allPieces.some((pc) => {
+      const a = Math.abs(flatRingArea(pc.outer));
+      if (a < minSliceArea) return true;
+      const shp = analyzeZoneShape(pc.outer, roadDir);
+      if (shp && (shp.span < 15 || shp.aspect > 4.5)) {
+        if (shape && shp.aspect > shape.aspect * 1.5 && shp.span < 20) return true;
+      }
+      return false;
+    });
+    if (invalidPiece && depth > 0) return [poly];
+
+    return allPieces.flatMap((pc) => splitPolyRecursive(pc, depth + 1));
+  };
+
+  const finalPolygons = [];
+  for (const poly of polys) {
+    finalPolygons.push(...splitPolyRecursive(poly, 0));
+  }
+
+  if (finalPolygons.length <= 1) return [area];
+
+  return finalPolygons.map((poly, idx) => {
+    const areaM2 = Math.max(0, Math.abs(flatRingArea(poly.outer)) - (poly.holes || []).reduce((h, r) => h + Math.abs(flatRingArea(r)), 0));
+    const allPts = [poly.outer, ...(poly.holes || [])].flat();
+    const xs = allPts.map((p) => p[0]), zs = allPts.map((p) => p[1]);
+    const bounds = { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) };
+    let sx = 0, sz = 0;
+    for (const p of poly.outer) { sx += p[0]; sz += p[1]; }
+    const centroid = { x: sx / poly.outer.length, z: sz / poly.outer.length };
+
+    return {
+      ...area,
+      sourceId: `${area.sourceId}#sub${idx}`,
+      worldPolygons: [poly],
+      areaM2,
+      centroid,
+      bounds,
+    };
+  });
+}
+
+/**
+ * 遊戲啟動時將大面積之住宅區／商業區／工業區拆解成適合大小。
+ * 拆解時分界線垂直其中一條道路，多道路時以較寬的道路為優先。
+ */
+export function subdivideLargeZones(areas = [], roads = [], options = {}) {
+  const roadSegs = extractRoadSegments(roads, options);
+  const thresholds = { ...DEFAULT_ZONE_THRESHOLDS, ...(options.thresholds || {}) };
+  const targetFamilies = new Set(['residential', 'commercial', 'industrial']);
+
+  const out = [];
+  for (const area of areas || []) {
+    const isBuilding = area?.tags?.building != null || area?.tags?.['building:part'] != null;
+    const family = area?.classification?.family || area?.tags?.landuse;
+    const threshold = thresholds[family];
+
+    if (!isBuilding && targetFamilies.has(family) && threshold && areaAreaM2(area) > threshold) {
+      const subs = subdivideAreaRecord(area, roadSegs, { ...options, threshold });
+      out.push(...subs);
+    } else {
+      out.push(area);
+    }
+  }
+
+  return out;
+}

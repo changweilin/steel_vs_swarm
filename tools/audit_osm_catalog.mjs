@@ -7,6 +7,8 @@
 import {
   AREA_CATALOG, BUILDING_CATALOG, areaCandidates, buildAreaRecords, catalogAreas,
   classifyArea, placeAreaCandidates, pointInProjectedArea, projectAreaRecord,
+  DEFAULT_ZONE_THRESHOLDS, DEFAULT_ROAD_WIDTHS, findPrioritizedRoad,
+  clipPolygonWithLine, subdivideLargeZones, analyzeZoneShape, findAreaProportionalCut,
 } from '../public/js/osmAreas.js';
 import fs from 'node:fs';
 
@@ -107,6 +109,109 @@ t('OSM 成功含零 area 時停用程序城市 fallback', /const osmSource = osm
   && /if \(!osmSource &&/.test(biomesSrc) && /if \(!osmSource && infillSeeds\.length\)/.test(biomesSrc));
 t('屋頂站立查詢保留 holes', /function makeRoofPlatformIndex/.test(mainSrc)
   && /\(p\.holes \|\| \[\]\)\.some/.test(mainSrc) && /roofPlatformAt\(x, z\)/.test(mainSrc));
+
+// 住宅區／商業區／工業區面積門檻與道路垂直拆解稽核
+t('住宅／商業／工業區具備獨立正值面積門檻',
+  DEFAULT_ZONE_THRESHOLDS.residential > 0
+  && DEFAULT_ZONE_THRESHOLDS.commercial > 0
+  && DEFAULT_ZONE_THRESHOLDS.industrial > 0);
+
+const testRoadNarrow = { tags: { highway: 'residential' }, geometry: [{ lat: 0, lon: 0 }, { lat: 0, lon: 200 }] }; // 5.5m
+const testRoadWide = { tags: { highway: 'primary' }, geometry: [{ lat: -10, lon: 0 }, { lat: -10, lon: 200 }] }; // 10m
+const prioRoad = findPrioritizedRoad(
+  [[0, 0], [200, 0], [200, 200], [0, 200]],
+  [testRoadNarrow, testRoadWide],
+  { toWorld: (lat, lon) => [lon, lat] }
+);
+t('多道路時以較寬的道路為優先', prioRoad?.segment?.width === 10);
+// prioRoad.roadDir 是 [1, 0] (沿 X 軸)，cutNormal 為 [1, 0]，分界線為 x = const（垂直道路）
+t('拆解分界線法向量與優先道路方向平行（分界線垂直道路）',
+  Math.abs(prioRoad.cutNormal[0] * prioRoad.roadDir[0] + prioRoad.cutNormal[1] * prioRoad.roadDir[1] - 1) < 1e-6);
+
+const smallResZone = {
+  sourceId: 'zone/small_res',
+  tags: { landuse: 'residential' },
+  classification: { family: 'residential', kind: 'residential' },
+  worldPolygons: [{ outer: [[0, 0], [50, 0], [50, 50], [0, 50]], holes: [] }],
+  areaM2: 2500,
+};
+const largeResZone = {
+  sourceId: 'zone/large_res',
+  tags: { landuse: 'residential' },
+  classification: { family: 'residential', kind: 'residential' },
+  worldPolygons: [{ outer: [[0, 0], [200, 0], [200, 200], [0, 200]], holes: [] }],
+  areaM2: 40000,
+};
+const largeComZone = {
+  sourceId: 'zone/large_com',
+  tags: { landuse: 'commercial' },
+  classification: { family: 'commercial', kind: 'commercial' },
+  worldPolygons: [{ outer: [[0, 0], [200, 0], [200, 200], [0, 200]], holes: [] }],
+  areaM2: 40000,
+};
+const subResult = subdivideLargeZones([smallResZone, largeResZone, largeComZone], [testRoadWide], {
+  toWorld: (lat, lon) => [lon, lat],
+});
+
+t('小於門檻之區塊保持不拆解', subResult.some((a) => a.sourceId === 'zone/small_res' && a.areaM2 === 2500));
+const resSubs = subResult.filter((a) => a.sourceId.startsWith('zone/large_res'));
+t('超過門檻之住宅區拆解為合適大小（全數 <= 10000 m²）',
+  resSubs.length > 1 && resSubs.every((a) => a.areaM2 <= DEFAULT_ZONE_THRESHOLDS.residential));
+const comSubs = subResult.filter((a) => a.sourceId.startsWith('zone/large_com'));
+t('超過門檻之商業區拆解為合適大小（全數 <= 15000 m²）',
+  comSubs.length > 1 && comSubs.every((a) => a.areaM2 <= DEFAULT_ZONE_THRESHOLDS.commercial));
+
+const totalSubArea = resSubs.reduce((sum, a) => sum + a.areaM2, 0);
+t('拆解前後總面積嚴格守恆', Math.abs(totalSubArea - 40000) < 1e-3);
+
+// 決定性重排測試
+const reorderedInput = [largeComZone, largeResZone, smallResZone];
+const subReordered = subdivideLargeZones(reorderedInput, [testRoadWide], {
+  toWorld: (lat, lon) => [lon, lat],
+});
+const sortKey = (a) => `${a.sourceId}|${a.areaM2.toFixed(2)}`;
+t('拆解演算法輸入重排後結果完全相同（決定性）',
+  JSON.stringify(subResult.map(sortKey).sort()) === JSON.stringify(subReordered.map(sortKey).sort()));
+
+// 形狀指標與面積比例切割測試
+const wedgeShape = [[0, 0], [200, 0], [0, 200]]; // area = 20000
+const cutHalfWedge = findAreaProportionalCut(wedgeShape, [1, 0], 0.5);
+t('三角形／楔形街廓精準求得 50% 面積切割線（杜絕角隅極小殘片）',
+  cutHalfWedge != null && Math.abs(cutHalfWedge - 200 * (1 - Math.SQRT1_2)) < 0.5);
+
+// 4:1 沿路長條區塊：400m 面寬 x 100m 縱深（40,000 m²）
+const elongatedZone = {
+  sourceId: 'zone/elongated_res',
+  tags: { landuse: 'residential' },
+  classification: { family: 'residential', kind: 'residential' },
+  worldPolygons: [{ outer: [[0, 0], [400, 0], [400, 100], [0, 100]], holes: [] }],
+  areaM2: 40000,
+};
+const elongSubs = subdivideLargeZones([elongatedZone], [testRoadNarrow], {
+  toWorld: (lat, lon) => [lon, lat],
+});
+const elongPieces = elongSubs.filter((a) => a.sourceId.startsWith('zone/elongated_res'));
+t('長條區塊依長寬比與面積門檻切割為合適大小（全數 <= 10000 m²）',
+  elongPieces.length === 4 && elongPieces.every((p) => p.areaM2 <= DEFAULT_ZONE_THRESHOLDS.residential));
+t('長條切割後每一子區塊長寬比勻稱且無細長紙片（aspect <= 2.0 且 span >= 25m）',
+  elongPieces.every((p) => {
+    const shp = analyzeZoneShape(p.worldPolygons[0].outer, [1, 0]);
+    return shp.aspect <= 2.0 && shp.span >= 25;
+  }));
+
+// 縱深過長且面寬過窄區塊（例如 20m 面寬 x 200m 縱深）：避免進一步細切為針狀
+const needleZone = {
+  sourceId: 'zone/needle_res',
+  tags: { landuse: 'residential' },
+  classification: { family: 'residential', kind: 'residential' },
+  worldPolygons: [{ outer: [[0, 0], [20, 0], [20, 200], [0, 200]], holes: [] }],
+  areaM2: 4000,
+};
+const needleSubs = subdivideLargeZones([needleZone], [testRoadNarrow], {
+  toWorld: (lat, lon) => [lon, lat],
+});
+t('過窄區塊（面寬 < 25m）受長寬比防線保護不切出針狀畸形',
+  needleSubs.length === 1 && needleSubs[0].sourceId === 'zone/needle_res');
 
 // 反向測試：旗標只改測資／期望，若對應不變式消失則本輪必紅。
 if (BREAK('relation')) t('--break-relation 反向驗證', buildAreaRecords([...relationWays, { ...relation, members: [{ type: 'way', ref: 999, role: 'outer' }] }]).areas.length === 1);
