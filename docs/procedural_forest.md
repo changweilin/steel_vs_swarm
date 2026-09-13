@@ -1,6 +1,41 @@
 # 程序森林
 
-神木群落與邊界樹木共用 `public/js/forest.js`，樹種資料集中於 `public/js/forestSpecies.js`。21 類植物逐株由座標種子生成；照片參考 `tools/ai3d/photos/tree/` 中的闊葉樹、針葉樹與板根巨木。遊戲不載入照片，也不依賴外部生成服務。
+一般植被、神木群落與邊界樹木共用 `public/js/forest.js`，樹種資料集中於 `public/js/forestSpecies.js`。38 類植物逐株由座標種子生成；照片參考 `tools/ai3d/photos/tree/` 中的闊葉樹、針葉樹與板根巨木。遊戲不載入照片，也不依賴外部生成服務。
+
+## 舊規則解析與取捨
+
+| 舊來源 | 判定與整合 |
+| --- | --- |
+| `VEG_DEFS` 闊葉、白樺 | 保留側枝接幹、錯落葉簇與淺色樹皮；一般散布改用氣候選種，新增 `forestBirch`。 |
+| 針葉四款、竹林 | 保留尖冠／層冠、竹節／多稈，交由現有 spire、tiers、bamboo 骨架抽樣；移除一般散布只依相對高度選針葉樹的最終決定權。 |
+| 枯木三根同軸柱、整樹替代節點 | 不再作一般散布的模型來源。枯木改為相接側枝與破損頂梢，雷擊木另有焦黑色與裂梢；倒木用橫向幹與沿幹碰撞柱。舊資料仍供既有零件台查看。 |
+| 固定多肉／灌木 | 一般散布移交氣候選種；多肉使用基生蓮座葉，不沿用樹幹頂著葉球的規則。 |
+| 岩壁松的等徑長彎管、獨立疊錐冠 | 保留實測壁面、入岩彎根與冠部向上，縮短並收細彎幹；冠與上幹直接使用 `cliffPine` 生成器。 |
+| 缺失坡度範圍 | 不再等同無限耐坡。45° 起必須有 `steep: true`，85° 起全部略過；仍須通過個別適生權重。 |
+| 未審核舊模型 | 不轉成正式資產、不更動審核狀態。整合的是可解釋的形態規則。 |
+| 蘑菇、鳥巢、岩石 | 不列為植物種類，保留原本用途。 |
+
+一般植被保留原本姿態亂數抽取次數；選種和建模使用座標亂數。一般散布的高樹以公稱 9m 上限等比縮小，群落沿用世界高度限制。氣候、占位與新增種類會改變植被結果，但新增器官不額外消耗共享序列。
+
+陡坡候選為岩坡松、杜鵑、杜松、灌木櫟與地生蕨，各自仍受氣候及坡度上限限制；沒有合格候選就留白。自然地形用 2m 以內差分探測，地圖作者指定的坡度只能提高實際坡度，不能把陡崖覆寫成平地。一般草、蘆葦等舊散布也接受 45° 排除。岩石側壁附生物則沿用 `rockProbe` 的實際表面判定。
+
+## 新增氣候形態
+
+| ID | 形態／氣候 |
+| --- | --- |
+| `deadwood` / `lightningSnag` / `fallenLog` | 跨氣候枯立木、焦黑雷擊裂梢、橫向倒木；倒木在 28° 起排除。 |
+| `cliffPine` / `forestBirch` | 冷涼岩坡矮松、溫帶淺皮白樺。 |
+| `agave` / `aloe` | 乾燥地區放射蓮座肉質葉。 |
+| `forestFern` / `treeFern` | 濕潤地區地生蕨與有幹樹蕨，葉軸兩側分出小葉。 |
+| `giantFlower` | 暖濕大型花草，美術概括型，葉尖花柄與五瓣花。 |
+| `pitcherPlant` | 暖濕酸性環境的豬籠草型，捕蟲囊、深色囊口與蓋片。 |
+| `dragonBlood` | 乾燥地區龍血樹，分枝向外展開，枝梢叢生劍葉。 |
+| `welwitschia` | 乾燥地區百歲蘭，兩片對生長葉分裂成連續帶狀葉段。 |
+| `silversword` | 高海拔乾燥地區銀劍草，銀白蓮座葉。 |
+| `desertRose` / `cucumberTree` | 乾燥地區沙漠玫瑰與黃瓜樹，膨大基幹；沙漠玫瑰有粉花。黃瓜樹指 *Dendrosicyos socotranus*。 |
+| `saguaro` | 乾燥地區柱狀仙人掌，側臂向上。 |
+
+上述氣候帶、尺寸與頻率是遊戲美術範圍，並非原生地分布資料；不模擬捕蟲、雷擊事件或生命週期。
 
 ## 植物形態
 
@@ -66,7 +101,7 @@ forest: {
 
 每株合併為 2–4 個繪製批次，逐頂點保存竹節、花果等顏色。幾何不進全域快取，離場走既有資源釋放流程。多竹稈、多幹灌木及榕樹落地支柱根由生成結果登記額外碰撞柱，地表占地包絡包含它們。
 
-驗證：`node tools/audit_forest.mjs`（4,200 株、環境機率、花果與骨架穩定性）、`node tools/audit_tree_joints.mjs`，以及遊戲渲染器全 21 類建模、風擺與 GPU 回收檢查。
+驗證：`node tools/audit_forest.mjs`（7,600 株、坡度邊界、乾濕氣候排除、環境機率、花果與骨架穩定性）、`node tools/audit_tree_joints.mjs`、`node tools/audit_gpu_lifecycle.mjs`。
 
 ## 植物學參考
 
@@ -79,3 +114,7 @@ forest: {
 - [RHS：冬青櫟的土壤條件](https://www.rhs.org.uk/plants/14264/quercus-ilex/details)
 - [Kew：猴麵包樹的膨大樹幹](https://www.kew.org/sites/default/files/2019-04/Sustainable%20wild%20plants.pdf)
 - [Wikipedia：椰子](https://en.wikipedia.org/wiki/Coconut)
+- [Kew：百歲蘭的兩片葉、莖基及主根](https://www.kew.org/plants/welwitschia-mirabilis)
+- [NPS：銀劍草的銀色肉質蓮座葉與乾燥火山坡地](https://www.nps.gov/locations/hawaii/silverswords.htm)
+- [RHS：龍血樹的分枝與傘形劍葉冠](https://www.rhs.org.uk/plants/20885/dracaena-cinnabari/details)
+- [Friends of Soqotra：黃瓜樹的瓶狀多肉樹幹](https://www.friendsofsoqotra.org/Activities/pdfs/Tayf%2018%20English.pdf)

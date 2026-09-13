@@ -1,5 +1,5 @@
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, treeHabitatWeight, pickTreeType, forestSeed } from './forest.js';
+import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, treeHabitatWeight, pickTreeType, forestSeed, FOREST_STEEP_DEG } from './forest.js';
 // ============ 地貌系統:五類地被 + 圖資建物 + 兵線淨空 ============
 // 依衛星影像逐點分類五種地貌,鋪設對應的 3D 地物:
 //   綠地   — 竹林(大小不一的群落)/ 闊葉林 / 針葉林(高海拔)
@@ -486,14 +486,16 @@ function forestEnvironmentAt(terrain, x, z) {
       && x >= region.minX && x <= region.maxX && z >= region.minZ && z <= region.maxZ) input = { ...input, ...region };
   }
   const heightAt = terrain.natureAt || terrain.heightAt;
-  const step = terrain.gridM || 16;
+  const step = Math.min(terrain.gridM || 16, 2);
   const slope = Math.atan(Math.hypot(heightAt(x + step, z) - heightAt(x - step, z),
     heightAt(x, z + step) - heightAt(x, z - step)) / (2 * step)) * 180 / Math.PI;
-  return { ...input, slope: Number.isFinite(input.slope) ? input.slope : slope, wet: terrainEnvCode(terrain, x, z) !== 0 };
+  return { ...input, slope: Math.max(Number.isFinite(input.slope) ? input.slope : 0, slope), wet: terrainEnvCode(terrain, x, z) !== 0 };
 }
 function forestTypeAt(terrain, x, z, roll) {
   const altitude = terrain.elevationAt?.(x, z) ?? terrain.natureAt?.(x, z) ?? terrain.heightAt(x, z);
-  return pickTreeType(terrain.center?.lat, altitude, roll, forestSeed(x, z), forestEnvironmentAt(terrain, x, z));
+  const environment = forestEnvironmentAt(terrain, x, z);
+  if (!Number.isFinite(environment.slope)) return null;
+  return pickTreeType(terrain.center?.lat, altitude, roll, forestSeed(x, z), environment);
 }
 
 // 神木吃四季:綠色主導(g 為最大通道)的樹冠/苔蘚/地衣零件自動標記 'gleaf' → 季節疊色
@@ -692,9 +694,9 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       const trunkR = (yy) => def.r * s * (1 - 0.72 * yy / (def.h * s));
       // tr = **頂端**幹半徑(climb.js:垂降技術繩的頂端繩錨靠 `r − tr` 的跨接臂伸回幹身)——
       // 碰撞半徑吃的是基部,不帶這個值的話繩錨會吊在幹外好幾公尺的空中。推導自 trunkR,MUST NOT 手寫
-      blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1, cl: 'tree', tr: trunkR(def.h * s) });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
+      if (TREE_SPECIES[type].form !== 'fallen') blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1, cl: 'tree', tr: trunkR(def.h * s) });
       const instance = items[type][items[type].length - 1];
-      for (const stem of def.stems.slice(1)) {
+      for (const stem of def.stems.slice(TREE_SPECIES[type].form === 'fallen' ? 0 : 1)) {
         const xf = vegPartXform({ px: stem.x, pz: stem.z, y: 0 }, instance);
         blockers.push({ x: xf.pos[0], z: xf.pos[2], y: gy - .1, r: stem.r * s + .12, h: stem.h * s + .1, std: 1 });
       }
@@ -3158,23 +3160,25 @@ export function decorateMegalith(g, anchor, rnd, s) {
     const t = new THREE.Group();
     const stemC = mush ? 0xd6cba8 : 0x6b4a30;
     const nSeg = Math.max(2, Math.round(bend / 0.32));   // 每 ~18° 一節:90° 彎頭約 5 節
-    const segL = 1.05, pipeR = mush ? 0.42 : 0.36;       // 水管:等徑,不收分
+    const segL = mush ? 1.05 : .48, pipeR = mush ? 0.42 : 0.36;
     // 起點沿入壁方向反推埋進壁內,彎出來才像「自岩縫鑽出」
     let jx = -Math.sin(bend) * 0.8, jy = -Math.cos(bend) * 0.8 - 0.1;
-    const kneeAt = (x, y) => {
-      const knee = new THREE.Mesh(ico(pipeR * 1.04), toonMat(stemC));
+    const kneeAt = (x, y, radius = pipeR) => {
+      const knee = new THREE.Mesh(ico(radius * 1.04), toonMat(stemC));
       knee.position.set(x, y, 0);
       t.add(knee);
     };
     kneeAt(jx, jy);
     for (let i = 0; i < nSeg; i++) {
       const phi = bend * (1 - (i + 0.5) / nSeg);         // 等角步進 = 圓弧彎頭(+x = 壁外)
-      const seg = new THREE.Mesh(cyl(pipeR, pipeR, segL, 6), toonMat(stemC));
+      const rb = pipeR * (1 - (mush ? 0 : .35) * i / nSeg);
+      const rt = pipeR * (1 - (mush ? 0 : .35) * (i + 1) / nSeg);
+      const seg = new THREE.Mesh(cyl(rt, rb, segL, 6), toonMat(stemC));
       seg.position.set(jx + Math.sin(phi) * segL / 2, jy + Math.cos(phi) * segL / 2, 0);
       seg.rotation.z = -phi;
       t.add(seg);
       jx += Math.sin(phi) * segL; jy += Math.cos(phi) * segL;
-      kneeAt(jx, jy);
+      kneeAt(jx, jy, rt);
     }
     if (mush) {   // 岩菇:蕈柄彎附岩壁,蕈傘水平朝上 + 傘底淺色菌褶(傘徑/傘色逐朵走樣)
       // 傘色 MUST 走**局部** `lr()`(這一朵自己的種子),MUST NOT 用共用 `rnd()`:
@@ -3188,22 +3192,17 @@ export function decorateMegalith(g, anchor, rnd, s) {
       cap.position.set(jx, jy + 0.72, 0); t.add(cap);
       const gill = new THREE.Mesh(cyl(capR * 0.72, capR * 0.81, 0.3, 8), toonMat(0xe8dfc0));
       gill.position.set(jx, jy + 0.15, 0); t.add(gill);
-    } else {      // 峭壁松:直立樹幹(接續水管徑,向上收分)+ 疊層樹冠(層數/層徑/微傾逐株走樣;
-                  // sakura-crossing:「正圓正放的錐是一疊燈罩」—— 每層橢圓化 + 傾斜才是樹)
-      const trunk = new THREE.Mesh(cyl(0.22, pipeR, 2.2, 6), toonMat(stemC));
-      trunk.position.set(jx, jy + 1.1, 0); t.add(trunk);
-      const c1r = 1.75 + lr() * 0.4, c1h = 3.0 + lr() * 0.5;
-      const c1 = new THREE.Mesh(cone(c1r, c1h, 6), toonMat(0x2f5e40));
-      c1.position.set(jx, jy + 1.6 + c1h / 2, 0); c1.scale.z = 0.86 + lr() * 0.28; t.add(c1);
-      const c2h = 2.3 + lr() * 0.4, c2b = 1.6 + c1h - (0.9 + lr() * 0.2);
-      const c2 = new THREE.Mesh(cone(c1r * 0.68, c2h, 6), toonMat(0x35684a));
-      c2.position.set(jx, jy + c2b + c2h / 2, 0);
-      c2.scale.z = 0.86 + lr() * 0.28; c2.rotation.z = (lr() - 0.5) * 0.12; t.add(c2);
-      if (lr() < 0.45) {   // 第三層冠(高株):天際線多一段鋸齒
-        const c3h = 1.7 + lr() * 0.3;
-        const c3 = new THREE.Mesh(cone(c1r * 0.45, c3h, 6), toonMat(0x2f5e40));
-        c3.position.set(jx, jy + c2b + c2h - 0.7 + c3h / 2, 0);
-        c3.rotation.z = (lr() - 0.5) * 0.12; t.add(c3);
+    } else {
+      // The same connected pine skeleton serves terrain and rock-wall attachments.
+      const tree = createForestTree('cliffPine', Math.floor(lr() * 4294967296), cyl, ico);
+      const sc = .8;
+      for (const part of tree.parts) {
+        if (part.role === 'root') continue;
+        const mesh = new THREE.Mesh(part.g, toonMat(part.c));
+        mesh.position.set(jx + (part.px || 0) * sc, jy + part.y * sc, (part.pz || 0) * sc);
+        mesh.rotation.set(part.rx || 0, part.ry || 0, part.rz || 0);
+        mesh.scale.set(sc * (part.sx ?? 1), sc * (part.sy ?? 1), sc * (part.sz ?? 1));
+        t.add(mesh);
       }
     }
     return t;
@@ -10063,7 +10062,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const urbanPts = [];
   let placed = 0;
   const put = (type, x, z, s) => {
-    const actualS = s * (VEG_SCALE[type] || 1);
+    let actualS = s * (VEG_SCALE[type] || 1);
     // 拒絕前仍固定抽完姿態亂數，地圖上的後續物件不因道路淘汰而漂移。
     const item = {
       x, y: terrain.heightAt(x, z), z, s: actualS,
@@ -10071,7 +10070,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,
       dj: rnd(),
     };
-    const foot = { x, z, r: (VEG_FOOT_R[type] ?? 1) * actualS };
+    const environment = forestEnvironmentAt(terrain, x, z);
+    if (!Number.isFinite(environment.slope)) return;
+    const procedural = TRUNK_TYPES.has(type) || type === 'succulent' || type === 'shrub';
+    let tree = null;
+    if (procedural) {
+      type = forestTypeAt(terrain, x, z, mulberry32(forestSeed(x, z, 0x504c414e))());
+      if (!type) return;
+      const spec = TREE_SPECIES[type];
+      tree = createForestTree(type, forestSeed(x, z));
+      actualS *= Math.min(1, 9 / spec.h);
+      item.s = actualS;
+      if (environment.wet && (spec.roots !== 'pneumatophore' || terrain.waterY == null || item.y < terrain.waterY - .8)) return;
+      item.y = sinkBaseY(terrain, x, z, tree.footprint * actualS);
+      if (spec.steep) { item.tx = 0; item.tz = 0; }
+    } else if (environment.slope >= FOREST_STEEP_DEG) return;
+    const foot = { x, z, r: (tree ? tree.footprint : VEG_FOOT_R[type] ?? 1) * actualS };
     // 優先序:兵線/塔位/主堡淨空(blocked)高於植被 ⇒ 足印圓盤掃 areaFree(單格驗擋不住大樹);
     // 地被級平面植栽走 areaFreeLane,可鋪進塔堡圈當草原/沙漠背景
     if (VEG_FLAT.has(type)) {
@@ -10083,6 +10097,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     if (osmBldHit(x, z, foot.r)) return;
     items[type] ??= [];
     items[type].push(item);
+    if (tree) occ?.add(x, z, foot.r);
+    if (tree) for (const stem of tree.stems) {
+      const xf = vegPartXform({ px: stem.x, pz: stem.z, y: 0 }, item);
+      blockers.push({ x: xf.pos[0], z: xf.pos[2], y: item.y, r: stem.r * actualS,
+        h: stem.h * actualS, cl: 'tree' });
+    }
     vegFootIndex.add(foot);
     placed++;
   };

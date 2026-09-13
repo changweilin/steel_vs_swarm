@@ -4,6 +4,12 @@ import { TREE_SPECIES } from './forestSpecies.js';
 export { TREE_SPECIES } from './forestSpecies.js';
 
 export const TREE_VARIANTS = 3;
+export const FOREST_STEEP_DEG = 45;
+export function forestSlopeAllowed(type, slope) {
+  const spec = TREE_SPECIES[type];
+  return !!spec && Number.isFinite(slope) && slope >= 0 && slope < 85
+    && (slope < FOREST_STEEP_DEG || spec.steep === true);
+}
 function rangeWeight(value, [a, b, c, d]) {
   if (value < a || value > d) return 0;
   if (value < b) return (value - a) / (b - a);
@@ -32,7 +38,9 @@ export function forestEnvironment(latitude, altitude, input = {}) {
 export function treeHabitatWeight(type, latitude, altitude, input = {}) {
   const spec = TREE_SPECIES[type];
   if (!spec) return 0;
+  if (input.slope !== undefined && !Number.isFinite(input.slope)) return 0;
   const env = forestEnvironment(latitude, altitude, input);
+  if (Number.isFinite(env.slope) && !forestSlopeAllowed(type, env.slope)) return 0;
   if (spec.roots === 'pneumatophore' && !env.wet) return 0;
   let weight = rangeWeight(Math.min(90, Math.abs(latitude)), spec.lat) * rangeWeight(altitude, spec.altitude);
   for (const [key, range] of Object.entries(spec.habitat)) {
@@ -116,7 +124,95 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
     parts.push({ g: ico(radius), px: p[0], y: p[1], pz: p[2], sy, key: 'gleaf', c: leaf, role: 'leaf' });
     crowns.push({ p, radius, sy });
   };
-  if (form === 'bamboo') {
+  if (['snag', 'lightning', 'fallen'].includes(form)) {
+    if (form === 'fallen') {
+      // Horizontal wood is represented by short collision columns along the actual log.
+      const length = r * (9 + rnd() * 5), thickness = Math.min(r, h * .4), y = thickness * .2;
+      branch([-length / 2, y, 0], [length / 2, y, 0], thickness, 'trunk');
+      for (let x = -length / 2; x <= length / 2; x += r) stems.push({ x, z: 0, r: thickness, h: y + thickness });
+      footprint = length / 2 + r;
+      for (let i = 0; i < count; i++) {
+        const x = (rnd() - .5) * length;
+        branch([x, y, 0], [x + r, h * .85, (rnd() - .5) * r * 3], r * .16);
+      }
+    } else {
+      stem(0, 0, top * .85, r);
+      for (let i = 0; i < count; i++) {
+        const y = top * (.25 + rnd() * .5), a = rnd() * Math.PI * 2;
+        const tip = [Math.cos(a) * h * .19, y + h * .12, Math.sin(a) * h * .19];
+        branch([0, y, 0], tip, r * (.12 + rnd() * .15));
+      }
+      for (let i = 0; i < (form === 'lightning' ? 4 : 2); i++) {
+        const a = i * 2.4;
+        branch([Math.cos(a) * r * .12, top * .8, Math.sin(a) * r * .12],
+          [Math.cos(a) * r * .3, h * (.88 + rnd() * .1), Math.sin(a) * r * .3], r * .13, 'splinter');
+      }
+    }
+  } else if (['rosette', 'fern', 'herb', 'pitcher', 'ribbon', 'cactus', 'dragon'].includes(form)) {
+    const base = form === 'dragon' ? h * .55 : form === 'fern' && h > 3 ? h * .6 : h * .12;
+    stem(0, 0, base, r);
+    const blade = (a, b, width, color = leaf) => {
+      branch(a, b, width, 'leaf', color);
+      Object.assign(parts[parts.length - 1], { sx: .5, noCard: true });
+    };
+    if (form === 'ribbon') {
+      // Exactly two persistent leaves, each divided into connected weathered strips.
+      for (const sign of [-1, 1]) {
+        const strips = 3 + Math.floor(rnd() * 3);
+        for (let i = 0; i < strips; i++) {
+          let p = [0, base, (i - (strips - 1) / 2) * h * .1];
+          for (let j = 1; j <= 5; j++) {
+            const q = [sign * j * h * .35, h * (.15 + .1 * Math.sin(j + i)), p[2] + (rnd() - .5) * h * .14];
+            blade(p, q, h * .14); p = q;
+          }
+        }
+      }
+      footprint = Math.max(footprint, h * 1.9);
+    } else if (form === 'cactus') {
+      parts[0].g = cyl(r * .8, r, h * .92, 10, treeSections(h * .92 * scale));
+      parts[0].y = h * .46; stems[0].h = h * .92;
+      for (let i = 0; i < count; i++) {
+        const a = i * 2.4, y = h * (.25 + rnd() * .2);
+        const p = [Math.cos(a) * r * 3, y, Math.sin(a) * r * 3];
+        branch([0, y, 0], p, r * .4, 'trunk');
+        branch(p, [p[0], y + h * (.15 + rnd() * .25), p[2]], r * .4, 'trunk');
+      }
+    } else {
+      for (let i = 0; i < count; i++) {
+        const a = i * 2.39996 + rnd() * .15;
+        let origin = [0, base, 0];
+        if (form === 'dragon') {
+          origin = [Math.cos(a) * h * .27, h * (.72 + rnd() * .06), Math.sin(a) * h * .27];
+          branch([0, base, 0], origin, r * .28);
+          for (let j = 0; j < 12; j++) {
+            const angle = j * 2.4;
+            blade(origin, [origin[0] + Math.cos(angle) * h * .12, h * .94, origin[2] + Math.sin(angle) * h * .12], h * .03);
+          }
+          continue;
+        }
+        const reach = h * (.3 + rnd() * .3);
+        const tip = [Math.cos(a) * reach, h * (.45 + rnd() * .35), Math.sin(a) * reach];
+        if (form === 'fern') {
+          branch(origin, tip, r * .2, 'leaf', leaf);
+          for (let j = 1; j <= 6; j++) {
+            const p = origin.map((v, k) => v + (tip[k] - v) * j / 7);
+            for (const sign of [-1, 1]) blade(p,
+              [p[0] - Math.sin(a) * sign * h * .14 * (1 - j / 8), p[1] + h * .02, p[2] + Math.cos(a) * sign * h * .14 * (1 - j / 8)], h * .018);
+          }
+        } else if (form === 'pitcher') {
+          branch(origin, tip, r * .18, 'leaf', leaf);
+          const size = h * (.07 + rnd() * .025);
+          parts.push({ g: cyl(size, size * .45, h * .24, 8, treeSections(h * .24 * scale)), px: tip[0], y: tip[1] - h * .12, pz: tip[2], c: 0xa25a55, key: 'gleaf', noCard: true, role: 'leaf' });
+          parts.push({ g: ico(size * .84), px: tip[0], y: tip[1], pz: tip[2], sy: .08, c: 0x392a30, role: 'mouth' });
+          parts.push({ g: ico(size), px: tip[0] + size * .7, y: tip[1] + size * .7, pz: tip[2], sy: .18, c: leaf, key: 'gleaf', noCard: true, role: 'leaf' });
+        } else {
+          blade(origin, tip, h * (spec.bladeWidth ?? .09));
+          crowns.push({p: tip, radius: h * .06, sy: .3});
+        }
+      }
+      footprint = Math.max(footprint, h * .65);
+    }
+  } else if (form === 'bamboo') {
     const n = integer(g.stemCount);
     for (let i = 0; i < n; i++) {
       const a = i * 2.39996, d = i === 0 ? 0 : h * (.035 + rnd() * .055);
@@ -206,7 +302,7 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
       // Bury the base so the cluster's slight rigid lean cannot lift outer roots clear of soil.
       parts.push({ g: cyl(.015, .055, ht + .2, 5, 1), px: Math.cos(a) * d, y: (ht - .2) / 2, pz: Math.sin(a) * d, c: bark, role: 'root' });
     }
-  } else if (spec.roots !== 'aerial') {
+  } else if (spec.roots !== 'aerial' && form !== 'fallen') {
     for (let i = 0; i < rootCount; i++) {
       const a = i / rootCount * Math.PI * 2 + rrnd() * .3;
       const buttress = spec.roots === 'buttress';
@@ -217,7 +313,7 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
     }
   }
   const organs = (kind, trait) => {
-    if (!trait || !trait.seasons.includes(season)) return;
+    if (!trait || !crowns.length || !trait.seasons.includes(season)) return;
     const random = mulberry32(seed ^ (kind === 'flower' ? 0x464c4f57 : 0x46525549));
     if (random() >= trait.chance) return;
     const n = Math.floor(trait.count[0] + random() * (trait.count[1] - trait.count[0] + 1));
@@ -232,7 +328,7 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
       parts[parts.length - 1].organStem = true;
       const lobes = kind === 'flower' && trait.form !== 'catkin' ? 5 : 1;
       for (let j = 0; j < lobes; j++) {
-        const angle = j / lobes * Math.PI * 2, offset = lobes > 1 ? size * .7 : 0;
+        const angle = j / lobes * Math.PI * 2, offset = lobes > 1 ? size * .6 : 0;
         parts.push({ g: ico(size * (lobes > 1 ? .65 : 1)), px: x + Math.cos(angle) * offset,
           y, pz: z + Math.sin(angle) * offset, sy: trait.form === 'catkin' ? 2.5 : kind === 'flower' ? .4 : 1.2, c: trait.color, role: kind });
       }
