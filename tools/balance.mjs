@@ -45,7 +45,7 @@ const ARGS = new Set(process.argv.slice(2));
 const IS_CI = ARGS.has('--ci') || process.env.CI === 'true' || process.env.CI === '1';
 const IS_STRICT = ARGS.has('--strict');
 const MODE_NAME = IS_CI
-  ? 'CI 快速模式 (抽樣少場數, 目標 50±10%)'
+  ? 'CI 模式 (全量 32 名機體, 目標 50±10%)'
   : (IS_STRICT
     ? '平衡性改動調整模式 (全量場數, 嚴格目標 50±3%)'
     : '常規平衡測試模式 (全量場數, 基準目標 50±5%)');
@@ -255,9 +255,7 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
 {
   const TOL = IS_CI ? 0.10 : (IS_STRICT ? 0.03 : 0.05);
   const kinds = ['robot', 'drone', 'morph'];
-  const allChs = Object.keys(CHARACTERS);
-  // CI 模式採用間隔抽樣少場數 (16名代表機體，涵蓋全機種與雙陣營)，平衡改動調整時與常規模式跑全量 32 名機體
-  const chs = IS_CI ? allChs.filter((_, idx) => idx % 2 === 0) : allChs;
+  const chs = Object.keys(CHARACTERS);
 
   console.log(`3.1~3.5 五大戰鬥情境平衡測試 — 遠戰 / 近戰 / 兵線守塔 / 迷霧 / 無雙 (Lv1 & Lv4, 變形雙形態, 機體數: ${chs.length}, 守門目標: 50±${(TOL * 100).toFixed(0)}%)\n`);
 
