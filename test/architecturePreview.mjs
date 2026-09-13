@@ -274,8 +274,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
           <span class="sample-label">生成種子規則:</span>
           <select id="select-seed-mode" class="seed-mode-select">
             <option value="fixed">固定種子</option>
-            <option value="shared_batch">每次改變種子但同陣列相同</option>
-            <option value="per_building" selected>每一個建築每次都改變種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
           </select>
         </div>
         <button id="btn-regen-variants" class="btn-generate btn-variant" style="display: none;">🎲 重新隨機生成 16 組變體</button>
@@ -404,15 +404,27 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </details>
       <div class="action-row">
-        <button id="btn-geo-generate" class="btn-generate">⚡ 重新生成地質</button>
-        <button id="btn-geo-random-seed" class="btn-randomize">🎲 隨機種子</button>
-        <button id="btn-geo-next-seed" class="btn-randomize">⏭ 下一個種子</button>
+        <button id="btn-geo-generate" class="btn-generate">⚡ 生成地質陣列</button>
+        <button id="btn-geo-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
         <div class="sample-control">
-          <span class="sample-label">陣列規模:</span>
+          <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-geo" value="4" min="1" max="20"></label>
           <span>×</span>
           <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-geo" value="4" min="1" max="20"></label>
         </div>
+        <div class="seed-control">
+          <label for="input-geo-seed">種子碼</label>
+          <input type="number" id="input-geo-seed" value="42" min="1" max="999999">
+        </div>
+        <div class="seed-mode-control">
+          <span class="sample-label">生成種子規則:</span>
+          <select id="select-seed-mode-geo" class="seed-mode-select">
+            <option value="fixed">固定種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
+          </select>
+        </div>
+      </div>
         <div class="seed-control">
           <label for="input-geo-seed">種子碼</label>
           <input type="number" id="input-geo-seed" value="42" min="1" max="999999">
@@ -479,15 +491,27 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </div>
       <div class="action-row">
-        <button id="btn-veh-generate" class="btn-generate">⚡ 重新生成車輛</button>
-        <button id="btn-veh-random-seed" class="btn-randomize">🎲 隨機種子</button>
-        <button id="btn-veh-next-seed" class="btn-randomize">⏭ 下一個種子</button>
+        <button id="btn-veh-generate" class="btn-generate">⚡ 生成車輛陣列</button>
+        <button id="btn-veh-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
         <div class="sample-control">
-          <span class="sample-label">陣列規模:</span>
+          <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-veh" value="4" min="1" max="20"></label>
           <span>×</span>
           <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-veh" value="4" min="1" max="20"></label>
         </div>
+        <div class="seed-control">
+          <label for="input-veh-seed">種子碼</label>
+          <input type="number" id="input-veh-seed" value="42" min="1" max="999999">
+        </div>
+        <div class="seed-mode-control">
+          <span class="sample-label">生成種子規則:</span>
+          <select id="select-seed-mode-veh" class="seed-mode-select">
+            <option value="fixed">固定種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
+          </select>
+        </div>
+      </div>
         <div class="seed-control">
           <label for="input-veh-seed">種子碼</label>
           <input type="number" id="input-veh-seed" value="42" min="1" max="999999">
@@ -543,15 +567,27 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </div>
       <div class="action-row">
-        <button id="btn-vessel-generate" class="btn-generate">⚡ 重新生成船隻</button>
-        <button id="btn-vessel-random-seed" class="btn-randomize">🎲 隨機種子</button>
-        <button id="btn-vessel-next-seed" class="btn-randomize">⏭ 下一個種子</button>
+        <button id="btn-vessel-generate" class="btn-generate">⚡ 生成船隻陣列</button>
+        <button id="btn-vessel-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
         <div class="sample-control">
-          <span class="sample-label">陣列規模:</span>
+          <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-vessel" value="4" min="1" max="20"></label>
           <span>×</span>
           <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-vessel" value="4" min="1" max="20"></label>
         </div>
+        <div class="seed-control">
+          <label for="input-vessel-seed">種子碼</label>
+          <input type="number" id="input-vessel-seed" value="42" min="1" max="999999">
+        </div>
+        <div class="seed-mode-control">
+          <span class="sample-label">生成種子規則:</span>
+          <select id="select-seed-mode-vessel" class="seed-mode-select">
+            <option value="fixed">固定種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
+          </select>
+        </div>
+      </div>
         <div class="seed-control">
           <label for="input-vessel-seed">種子碼</label>
           <input type="number" id="input-vessel-seed" value="42" min="1" max="999999">
@@ -596,15 +632,27 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </div>
       <div class="action-row">
-        <button id="btn-env-generate" class="btn-generate">⚡ 重新生成物件</button>
-        <button id="btn-env-random-seed" class="btn-randomize">🎲 隨機種子</button>
-        <button id="btn-env-next-seed" class="btn-randomize">⏭ 下一個種子</button>
+        <button id="btn-env-generate" class="btn-generate">⚡ 生成環境陣列</button>
+        <button id="btn-env-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
         <div class="sample-control">
-          <span class="sample-label">陣列規模:</span>
+          <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-env" value="4" min="1" max="20"></label>
           <span>×</span>
           <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-env" value="4" min="1" max="20"></label>
         </div>
+        <div class="seed-control">
+          <label for="input-env-seed">種子碼</label>
+          <input type="number" id="input-env-seed" value="42" min="1" max="999999">
+        </div>
+        <div class="seed-mode-control">
+          <span class="sample-label">生成種子規則:</span>
+          <select id="select-seed-mode-env" class="seed-mode-select">
+            <option value="fixed">固定種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
+          </select>
+        </div>
+      </div>
         <div class="seed-control">
           <label for="input-env-seed">種子碼</label>
           <input type="number" id="input-env-seed" value="42" min="1" max="999999">
@@ -667,15 +715,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
             <option value="grove">林相生態群落混交</option>
           </select>
         </div>
-        <div>
-          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">物候季節</label>
-          <select id="plant-season" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="summer" selected>夏季 (Summer · 繁茂枝葉)</option>
-            <option value="spring">春季 (Spring · 開花花序)</option>
-            <option value="autumn">秋季 (Autumn · 果實毬果)</option>
-            <option value="winter">冬季 (Winter · 落葉休眠)</option>
-          </select>
-        </div>
+        
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">公稱縮放倍率</label>
           <input type="number" id="plant-scale" value="1.0" min="0.1" max="3" step="0.1" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 700; color: #1e293b; background: #fff;">
@@ -700,15 +740,27 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </details>
       <div class="action-row">
-        <button id="btn-plant-generate" class="btn-generate">⚡ 重新生成植物</button>
-        <button id="btn-plant-random-seed" class="btn-randomize">🎲 隨機種子</button>
-        <button id="btn-plant-next-seed" class="btn-randomize">⏭ 下一個種子</button>
+        <button id="btn-plant-generate" class="btn-generate">⚡ 生成植物陣列</button>
+        <button id="btn-plant-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
         <div class="sample-control">
-          <span class="sample-label">陣列規模:</span>
+          <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-plant" value="4" min="1" max="20"></label>
           <span>×</span>
           <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-plant" value="4" min="1" max="20"></label>
         </div>
+        <div class="seed-control">
+          <label for="input-plant-seed">種子碼</label>
+          <input type="number" id="input-plant-seed" value="1001" min="1" max="999999">
+        </div>
+        <div class="seed-mode-control">
+          <span class="sample-label">生成種子規則:</span>
+          <select id="select-seed-mode-plant" class="seed-mode-select">
+            <option value="fixed">固定種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
+          </select>
+        </div>
+      </div>
         <div class="seed-control">
           <label for="input-plant-seed">種子碼</label>
           <input type="number" id="input-plant-seed" value="1001" min="1" max="999999">
@@ -1320,6 +1372,28 @@ function getCyclicItems(items, count, offset) {
 }
 
 // ---- 1. 建築雙維度/單維度分類陣列模式 (Matrix Mode) ----
+
+// 共享全域自適應相機取景與網格種子運算
+let activeCamDist = 120;
+let activeCamTarget = new THREE.Vector3(0, 8, 0);
+
+function resetCameraFocus() {
+  camTarget.copy(activeCamTarget);
+  camDist = activeCamDist;
+  camTheta = 0.85;
+  camPhi = 0.62;
+  updateCamera();
+  render();
+}
+
+function getGridSeed(baseSeed, seedMode, col, row, cols, rows, idx) {
+  if (seedMode === 'fixed' || seedMode === 'shared_batch') {
+    return baseSeed;
+  }
+  // 獨立種子：各物件擁有各自獨立的相異隨機種子
+  return (baseSeed + (col * 179 + row * 383) + idx * 71) % 999999 || 1001;
+}
+
 function buildMatrixMode({ advance = false } = {}) {
   clearScene();
   currentMode = 'matrix';
@@ -1430,8 +1504,12 @@ function buildMatrixMode({ advance = false } = {}) {
     }
   }
 
-  camTarget.set(0, 6, 0);
-  camDist = Math.max(120, Math.max(cols * stepX, rows * stepZ) * 1.15);
+  const totalW = (cols - 1) * stepX + 26;
+  const totalD = (rows - 1) * stepZ + 22;
+  camTarget.set(0, 8, 0);
+  camDist = Math.max(totalW, totalD, 35) * 1.25 + 20;
+  activeCamTarget.copy(camTarget);
+  activeCamDist = camDist;
   updateCamera();
   render();
 }
@@ -1640,6 +1718,7 @@ function buildGeologyMode() {
   const type = document.querySelector('#geo-type').value;
   const viewMode = document.querySelector('#geo-view-mode').value;
   let seed = parseInt(document.querySelector('#input-geo-seed').value, 10) || 42;
+  const seedMode = document.querySelector('#select-seed-mode-geo')?.value || 'per_building';
   const input = getGeologyInputs();
 
   const isAncient = GEOLOGY_TYPES[type]?.lithology === 'manufactured';
@@ -1652,45 +1731,101 @@ function buildGeologyMode() {
     document.querySelector('#nav-status').textContent = '地質單體檢驗：【' + entry.name + '】（種子碼 ' + seed + '）';
     camTarget.set(0, entry.bounds.max[1] * 0.4, 0);
     camDist = Math.max(20, r * 1.8);
-  } else if (viewMode === 'variants') {
-    const cols = 4, rows = 4;
-    const step = 45;
-    const startX = -(cols - 1) * step / 2;
-    const startZ = -(rows - 1) * step / 2;
-    document.querySelector('#nav-status').textContent = '地質 16 組種子變體陣列：【' + (GEOLOGY_TYPES[type]?.name || '環境抽樣') + '】';
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  } else {
+    const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-geo')?.value, 10) || 4));
+    const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-geo')?.value, 10) || 4));
+    const allTypes = Object.keys(GEOLOGY_TYPES);
 
-    for (let c = 0; c < cols; c++) {
-      for (let r = 0; r < rows; r++) {
-        const x = startX + c * step;
-        const z = startZ + r * step;
-        const s = seed + (r * cols + c) * 31;
-        createGeologyMesh(type, s, input, x, z);
+    // 第一階段：計算陣列中所有物件之實際包絡尺寸，找出陣列中最大者 (以最大的為主)
+    const items = [];
+    let maxObjW = 10, maxObjD = 10, maxObjH = 6;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = r * cols + c;
+        const curType = type === 'all' ? allTypes[idx % allTypes.length] : type;
+        const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
+        
+        let actualType = curType;
+        if (curType === 'auto') {
+          const dist = geologyDistribution(input);
+          actualType = dist.length ? dist[Math.abs(curSeed) % dist.length].type : 'basalt';
+        }
+        const spec = GEOLOGY_TYPES[actualType] || GEOLOGY_TYPES.basalt;
+        const itemIsAncient = spec?.lithology === 'manufactured';
+        const fullInput = { ...input };
+        if (itemIsAncient) {
+          fullInput.region = document.querySelector('#geo-region')?.value || 'egypt';
+          const ruinType = document.querySelector('#geo-ruin-type')?.value;
+          if (ruinType && ruinType !== 'auto') fullInput.ruinType = ruinType;
+          fullInput.uniformScale = parseFloat(document.querySelector('#geo-scale')?.value) || 1.0;
+        }
+
+        const entry = geologyBackgroundObject(actualType, curSeed, fullInput);
+        const szX = entry.bounds.size[0] || 15;
+        const szY = entry.bounds.size[1] || 8;
+        const szZ = entry.bounds.size[2] || 15;
+        if (szX > maxObjW) maxObjW = szX;
+        if (szZ > maxObjD) maxObjD = szZ;
+        if (szY > maxObjH) maxObjH = szY;
+        items.push({ c, r, idx, actualType, spec, itemIsAncient, fullInput, entry, curSeed });
       }
     }
-    camTarget.set(0, 10, 0);
-    camDist = 260;
-  } else if (viewMode === 'matrix') {
-    const sampleTypes = [
-      'basalt_columnar', 'karst_cave', 'dune', 'shale_cliff',
-      'debris_flow', 'landslide_lake', 'talus_cone', 'hot_spring',
-      'mud_volcano', 'geyser', 'eruption', 'impact_crater',
-      'megalith', 'obelisk', 'moai', 'ruins'
-    ];
-    const cols = 4, rows = 4;
-    const step = 48;
-    const startX = -(cols - 1) * step / 2;
-    const startZ = -(rows - 1) * step / 2;
-    document.querySelector('#nav-status').textContent = '主要地質類型矩陣展開（16 款地形／現象／古蹟對照）';
 
-    for (let i = 0; i < sampleTypes.length; i++) {
-      const c = i % cols, r = Math.floor(i / cols);
-      const x = startX + c * step, z = startZ + r * step;
-      createGeologyMesh(sampleTypes[i], seed + i * 13, input, x, z);
+    // 第二階段：依據最大物件尺寸自適應配置陣列間距，完全避免重疊穿模
+    const stepX = Math.max(20, Math.ceil(maxObjW * 1.35 + 8));
+    const stepZ = Math.max(20, Math.ceil(maxObjD * 1.35 + 8));
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (const it of items) {
+      const posX = startX + it.c * stepX;
+      const posZ = startZ + it.r * stepZ;
+      const geom = runtimeMeshDataGeometry(it.entry.meshData, it.entry.parts);
+      const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true });
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.position.set(posX, 0, posZ);
+
+      const r = Math.max(...it.entry.bounds.size);
+      const hitGeo = new THREE.BoxGeometry(r * 1.1, it.entry.bounds.max[1], r * 1.1);
+      hitGeo.translate(posX, it.entry.bounds.max[1] / 2, posZ);
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+
+      const meta = {
+        type: it.actualType,
+        spec: it.spec,
+        seed: it.curSeed,
+        entry: it.entry,
+        input: it.fullInput,
+        posX, posZ,
+        bounds: it.entry.bounds,
+        name: it.entry.name,
+        isAncient: it.itemIsAncient,
+      };
+
+      mesh.userData.geologyMeta = meta;
+      hitMesh.userData.geologyMeta = meta;
+      clickableObjects.push(hitMesh);
+      geologyGroup.add(mesh);
+      geologyGroup.add(hitMesh);
+
+      const badge = document.createElement('div');
+      badge.className = 'badge-label';
+      badge.innerHTML = '<span class="cat">【' + it.entry.name + '】</span>' + (it.spec.group || (it.itemIsAncient ? '古蹟石材' : '自然地質')) + ' · <span class="height">' + it.entry.bounds.max[1].toFixed(1) + 'm</span>';
+      labelContainer.append(badge);
+      labels.push({ element: badge, point: new THREE.Vector3(posX, it.entry.bounds.max[1] + 1.5, posZ) });
     }
-    camTarget.set(0, 12, 0);
-    camDist = 280;
-  }
 
+    document.querySelector('#nav-status').textContent = '地質陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 處）：【' + (type === 'all' ? '全部地質輪播' : GEOLOGY_TYPES[type]?.name || '地質') + '】（基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX + maxObjW;
+    const totalD = (rows - 1) * stepZ + maxObjD;
+    camTarget.set(0, maxObjH * 0.4, 0);
+    camDist = Math.max(totalW, totalD, maxObjH * 1.5) * 1.25 + 15;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  }
   updateCamera();
   render();
 }
@@ -1791,343 +1926,129 @@ function buildPlantMode() {
 
   const type = document.querySelector('#plant-species').value;
   const viewMode = document.querySelector('#plant-view-mode').value;
-  const season = document.querySelector('#plant-season').value;
+  const season = document.querySelector('#sim-season')?.value || 'summer';
   const scale = parseFloat(document.querySelector('#plant-scale').value) || 1.0;
   let seed = parseInt(document.querySelector('#input-plant-seed').value, 10) || 1001;
+  const seedMode = document.querySelector('#select-seed-mode-plant')?.value || 'per_building';
 
   if (viewMode === 'single') {
     const { tree, meta } = createPlantObject(type, seed, scale, season, 0, 0);
     document.querySelector('#nav-status').textContent = '植物單株形態檢驗：【' + meta.name + '】（' + season + '季，種子 ' + seed + '）';
     camTarget.set(0, tree.h * 0.4, 0);
     camDist = Math.max(16, tree.h * 1.5);
-  } else if (viewMode === 'variants') {
-    const cols = 4, rows = 4;
-    const step = 50;
-    const startX = -(cols - 1) * step / 2;
-    const startZ = -(rows - 1) * step / 2;
-    document.querySelector('#nav-status').textContent = '植物 16 株種子變體陣列：【' + (PLANT_NAMES[type] || '環境抽樣') + '】（' + season + '）';
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  } else {
+    const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-plant')?.value, 10) || 4));
+    const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-plant')?.value, 10) || 4));
+    const allSpecies = Object.keys(FOREST_SPECIES);
 
-    for (let c = 0; c < cols; c++) {
-      for (let r = 0; r < rows; r++) {
-        const x = startX + c * step;
-        const z = startZ + r * step;
-        const s = seed + (r * cols + c) * 47;
-        createPlantObject(type, s, scale, season, x, z);
+    // 第一階段：計算全陣列植物形態規格，以最大株之冠幅直徑與高為準
+    const items = [];
+    let maxObjW = 8, maxObjD = 8, maxObjH = 10;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = r * cols + c;
+        const curType = type === 'all' ? allSpecies[idx % allSpecies.length] : type;
+        const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
+        
+        let actualType = curType;
+        if (curType === 'auto') {
+          const biome = getPlantBiomeInputs();
+          const dist = plantDistribution(biome);
+          actualType = dist.length ? dist[Math.abs(curSeed) % dist.length].species : 'oak';
+        }
+        const spec = FOREST_SPECIES[actualType] || FOREST_SPECIES.oak;
+        const tree = generateForestTree(spec, season, curSeed, scale);
+        const szW = (tree.footprint || 4) * 2;
+        const szH = tree.h || 12;
+        if (szW > maxObjW) maxObjW = szW;
+        if (szW > maxObjD) maxObjD = szW;
+        if (szH > maxObjH) maxObjH = szH;
+        items.push({ c, r, idx, actualType, spec, tree, curSeed });
       }
     }
-    camTarget.set(0, 18, 0);
-    camDist = 280;
-  } else if (viewMode === 'grove') {
-    const speciesList = [
-      'redwood', 'sequoia', 'dougfir', 'spruce',
-      'euc', 'shorea', 'angelim', 'banyan',
-      'willow', 'holmOak', 'rhododendron', 'juniper',
-      'forestBamboo', 'mangroveGrey', 'coconut', 'baobab'
-    ];
-    const cols = 4, rows = 4;
-    const step = 52;
-    const startX = -(cols - 1) * step / 2;
-    const startZ = -(rows - 1) * step / 2;
-    document.querySelector('#nav-status').textContent = '林相生態群落混交展示（16 樹種綜合分布）';
 
-    for (let i = 0; i < speciesList.length; i++) {
-      const c = i % cols, r = Math.floor(i / cols);
-      const x = startX + c * step, z = startZ + r * step;
-      createPlantObject(speciesList[i], seed + i * 23, scale, season, x, z);
+    // 第二階段：依據最大林木尺寸自適應網格間距
+    const stepX = Math.max(16, Math.ceil(maxObjW * 1.3 + 6));
+    const stepZ = Math.max(16, Math.ceil(maxObjD * 1.3 + 6));
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (const it of items) {
+      const posX = startX + it.c * stepX;
+      const posZ = startZ + it.r * stepZ;
+
+      const group = new THREE.Group();
+      group.position.set(posX, 0, posZ);
+
+      for (const part of it.tree.parts) {
+        const geom = treePartGeometry(part.type, part.params);
+        if (!geom) continue;
+        const mat = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          roughness: part.type === 'trunk' || part.type === 'branch' ? 0.9 : 0.6,
+          side: part.type === 'leaf' || part.type === 'canopy' ? THREE.DoubleSide : THREE.FrontSide,
+        });
+        const posAttr = geom.getAttribute('position');
+        const colors = new Float32Array(posAttr.count * 3);
+        const col = new THREE.Color(part.color || 0x2e6f40);
+        for (let k = 0; k < posAttr.count; k++) {
+          colors[k * 3] = col.r;
+          colors[k * 3 + 1] = col.g;
+          colors[k * 3 + 2] = col.b;
+        }
+        geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        const partMesh = new THREE.Mesh(geom, mat);
+        partMesh.position.set(part.px || 0, part.y || 0, part.pz || 0);
+        partMesh.rotation.set(part.rx || 0, part.ry || 0, part.rz || 0);
+        partMesh.scale.set(part.sx || 1, part.sy || 1, part.sz || 1);
+        group.add(partMesh);
+      }
+
+      const hitH = Math.max(4, it.tree.h);
+      const hitR = Math.max(2, it.tree.footprint);
+      const hitGeo = new THREE.CylinderGeometry(hitR * 0.9, hitR, hitH, 8);
+      hitGeo.translate(0, hitH / 2, 0);
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+      group.add(hitMesh);
+
+      const meta = {
+        type: it.actualType,
+        name: PLANT_NAMES[it.actualType] || it.actualType,
+        spec: it.spec,
+        tree: it.tree,
+        seed: it.curSeed,
+        season,
+        scale,
+        posX, posZ,
+      };
+
+      group.userData.plantMeta = meta;
+      hitMesh.userData.plantMeta = meta;
+      clickableObjects.push(hitMesh);
+      plantGroup.add(group);
+
+      const badge = document.createElement('div');
+      badge.className = 'badge-label';
+      badge.innerHTML = '<span class="cat">【' + (PLANT_NAMES[it.actualType] || it.actualType) + '】</span>' + it.spec.form + ' · <span class="height">' + it.tree.h.toFixed(1) + 'm</span>';
+      labelContainer.append(badge);
+      labels.push({ element: badge, point: new THREE.Vector3(posX, it.tree.h + 1.5, posZ) });
     }
-    camTarget.set(0, 20, 0);
-    camDist = 300;
-  }
 
+    document.querySelector('#nav-status').textContent = '植物陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 株）：【' + (type === 'all' ? '全部樹種輪播' : PLANT_NAMES[type] || '林木陣列') + '】（' + season + '季 · 基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX + maxObjW;
+    const totalD = (rows - 1) * stepZ + maxObjD;
+    camTarget.set(0, Math.min(25, maxObjH * 0.35), 0);
+    camDist = Math.max(totalW, totalD, maxObjH * 1.5) * 1.25 + 15;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  }
   updateCamera();
   render();
 }
 
-// ==========================================
-// 統一互動懸停檢驗 (Hover & Click Inspector)
-// ==========================================
-function handleHover(e) {
-  mouse.x = (e.clientX / innerWidth) * 2 - 1;
-  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
-  raycaster.setFromCamera(mouse, camera);
-
-  const intersects = raycaster.intersectObjects(clickableObjects, false);
-
-  if (intersects.length > 0) {
-    const obj = intersects[0].object;
-    
-    // 1. 建築懸停卡片
-    if (obj.userData.buildingMeta) {
-      const meta = obj.userData.buildingMeta;
-      hoveredBuilding = meta;
-
-      highlightMesh.position.set(meta.centerPos.x, 0.2, meta.centerPos.z);
-      highlightMesh.scale.set(meta.sizeDiag, meta.sizeDiag, 1);
-      highlightMesh.visible = true;
-
-      const colors = meta.colorScheme;
-      const rgbToHex = (rgb) => {
-        if (!rgb) return '#888888';
-        const r = Math.floor(rgb[0] * 255), g = Math.floor(rgb[1] * 255), b = Math.floor(rgb[2] * 255);
-        return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('');
-      };
-
-      const cPrimary = rgbToHex(colors.primary);
-      const cTrim    = rgbToHex(colors.trim);
-      const cRoof    = rgbToHex(colors.roof);
-
-      const pillsHtml = meta.appurtenances.length > 0
-        ? meta.appurtenances.map((p) => '<span class="part-pill">' + p + '</span>').join('')
-        : '<span class="part-pill" style="color:#94a3b8">無特殊外掛構件</span>';
-
-      const hintText = currentMode === 'matrix' ? '💡 點擊此建築可展開 16 組隨機參數變體' : '💡 目前處於 16 組隨機展開模式';
-
-      inspectorCard.innerHTML =
-        '<h3>' + meta.funcLabel + ' <span style="font-size:11px;color:#94a3b8">#' + meta.seed + '</span></h3>' +
-        '<div class="sub">' + meta.styleLabel + ' · ' + meta.regionLabel + ' · ' + meta.roofLabel + '</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">📐 物理尺度與量體</div>' +
-          '<div class="prop-row"><span class="k">基地占地</span><span class="v">' + meta.w + ' m × ' + meta.d + ' m</span></div>' +
-          '<div class="prop-row"><span class="k">量測高度</span><span class="v">' + meta.height + ' m (' + meta.levels + ' 層樓)</span></div>' +
-          '<div class="prop-row"><span class="k">外牆材質</span><span class="v">' + meta.facadeLabel + '</span></div>' +
-        '</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">🎨 文化配色方案</div>' +
-          '<div class="color-bar">' +
-            '<div class="color-chip"><span class="dot" style="background:' + cPrimary + '"></span>主體</div>' +
-            '<div class="color-chip"><span class="dot" style="background:' + cTrim + '"></span>飾邊</div>' +
-            '<div class="color-chip"><span class="dot" style="background:' + cRoof + '"></span>屋頂</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">⚙ 外部構件組合 (' + meta.appurtenances.length + ' 項)</div>' +
-          '<div class="parts-badges">' + pillsHtml + '</div>' +
-        '</div>' +
-        '<div class="inspector-hint">' + hintText + '</div>';
-
-      positionInspectorCard(e);
-      render();
-      return;
-    }
-
-    // 2. 地質懸停卡片
-    if (obj.userData.geologyMeta) {
-      const meta = obj.userData.geologyMeta;
-      const entry = meta.entry;
-      const p = entry.generation.parameters;
-      const r = Math.max(...entry.bounds.size);
-
-      highlightMesh.position.set(meta.posX, 0.15, meta.posZ);
-      highlightMesh.scale.set(r * 0.6, r * 0.6, 1);
-      highlightMesh.visible = true;
-
-      const surfacePills = Object.entries(entry.generation.surfaceCounts || {})
-        .map(([k, count]) => '<span class="part-pill">' + (GEOLOGY_SURFACES[k]?.name || k) + ': ' + count + '面</span>')
-        .join('') || '<span class="part-pill">自然岩基面</span>';
-
-      inspectorCard.innerHTML =
-        '<h3>🪨 ' + entry.name + ' <span style="font-size:11px;color:#94a3b8">#' + meta.seed + '</span></h3>' +
-        '<div class="sub">' + (meta.spec.group || (meta.isAncient ? '人造古蹟石材' : '自然地質成因')) + ' · ' + (p.ageMa ? p.ageMa.toFixed(1) + ' Ma' : '地質構造') + '</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">📐 幾何尺度與構型</div>' +
-          '<div class="prop-row"><span class="k">構造長寬高</span><span class="v">' + p.width.toFixed(1) + 'm × ' + (p.width * p.depthRatio).toFixed(1) + 'm × ' + entry.bounds.max[1].toFixed(1) + 'm</span></div>' +
-          '<div class="prop-row"><span class="k">地層傾角 / 層數</span><span class="v">' + (p.dip ? p.dip.toFixed(0) + '°' : '—') + ' / ' + (p.layers || '—') + ' 層</span></div>' +
-          '<div class="prop-row"><span class="k">表面粗糙度</span><span class="v">' + (p.roughness ? p.roughness.toFixed(2) : '—') + '</span></div>' +
-          '<div class="prop-row"><span class="k">幾何面數與頂點</span><span class="v">' + (entry.meshData.faces.length / 3) + ' 面 / ' + (entry.meshData.vertices.length / 3) + ' 頂點</span></div>' +
-        '</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">🌿 岩面質地分佈</div>' +
-          '<div class="parts-badges">' + surfacePills + '</div>' +
-        '</div>' +
-        '<div class="inspector-hint">💡 點擊物件可平移視角並聚焦觀察</div>';
-
-      positionInspectorCard(e);
-      render();
-      return;
-    }
-
-    // 4. 車輛懸停卡片
-    if (obj.userData.vehicleMeta) {
-      const meta = obj.userData.vehicleMeta;
-      const v = meta.vehicle;
-      highlightMesh.position.set(meta.posX, 0.15, meta.posZ);
-      highlightMesh.scale.set(Math.max(v.length, v.width) * 0.6, Math.max(v.length, v.width) * 0.6, 1);
-      highlightMesh.visible = true;
-
-      const cargoNames = { luggage:'行李箱', crate:'木箱', camping:'露營包', sacks:'袋裝貨物', barrels:'桶裝貨物', logs:'原木', cars:'汽車', aggregate:'散裝土石' };
-      const cargoText = v.cargo && v.cargo.count ? (cargoNames[v.cargo.type] || v.cargo.type) + ' × ' + v.cargo.count : '無';
-
-      inspectorCard.innerHTML =
-        '<h3>🚗 ' + v.name + ' <span style="font-size:11px;color:#94a3b8">#' + meta.seed + '</span></h3>' +
-        '<div class="sub">' + (v.brand?.name || '無標識') + ' · ' + (VEHICLE_AXES.purpose[v.purpose] || v.purpose) + ' / ' + (VEHICLE_AXES.type[v.type] || v.type) + '</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">📐 車體尺寸與規格</div>' +
-          '<div class="prop-row"><span class="k">公稱長寬高</span><span class="v">' + v.length.toFixed(2) + 'm × ' + v.width.toFixed(2) + 'm × ' + v.height.toFixed(2) + 'm</span></div>' +
-          '<div class="prop-row"><span class="k">車齡 / 漆面磨損</span><span class="v">' + v.age + ' 年 / ' + Math.round((v.wear || 0) * 100) + '%</span></div>' +
-          '<div class="prop-row"><span class="k">保養度 / 動力</span><span class="v">' + Math.round((v.maintenance || 1) * 100) + '% / ' + (VEHICLE_AXES.power[v.power] || v.power) + '</span></div>' +
-          '<div class="prop-row"><span class="k">裝載貨物</span><span class="v">' + cargoText + '</span></div>' +
-        '</div>' +
-        (v.consist ? '<div class="prop-group"><div class="prop-title">🔗 編組資訊</div><div class="prop-row"><span class="k">節數 / 總長</span><span class="v">' + v.members.length + ' 節 / ' + v.length.toFixed(1) + 'm</span></div></div>' : '') +
-        '<div class="inspector-hint">💡 點擊車輛可平移視角並聚焦觀察</div>';
-
-      positionInspectorCard(e);
-      render();
-      return;
-    }
-
-    // 5. 船隻懸停卡片
-    if (obj.userData.vesselMeta) {
-      const meta = obj.userData.vesselMeta;
-      const v = meta.vessel;
-      highlightMesh.position.set(meta.posX, 0.15, meta.posZ);
-      highlightMesh.scale.set(v.length * 0.55, v.length * 0.55, 1);
-      highlightMesh.visible = true;
-
-      const cells = v.layout?.equipment ? v.layout.equipment.reduce((n, item) => n + (item.kind === 'vls' ? (item.units || 0) : 0), 0) : 0;
-
-      inspectorCard.innerHTML =
-        '<h3>🚢 ' + v.name + ' <span style="font-size:11px;color:#94a3b8">#' + meta.seed + '</span></h3>' +
-        '<div class="sub">' + v.vesselName + ' / ' + v.registry + ' · ' + (VESSEL_AXES.purpose[v.purpose] || v.purpose) + '</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">📐 艦體規格與航行能力</div>' +
-          '<div class="prop-row"><span class="k">艦長 / 艦寬 / 吃水</span><span class="v">' + v.length.toFixed(1) + 'm × ' + v.beam.toFixed(1) + 'm × ' + v.draft.toFixed(2) + 'm</span></div>' +
-          '<div class="prop-row"><span class="k">排水量 / 航速</span><span class="v">' + v.displacementTonnes.toFixed(1) + ' t / ' + v.speedKnots.toFixed(1) + ' 節</span></div>' +
-          '<div class="prop-row"><span class="k">動力 / 材質</span><span class="v">' + (VESSEL_AXES.power[v.power] || v.power) + ' / ' + (VESSEL_MATERIALS[v.material] || v.material) + '</span></div>' +
-          (cells > 0 ? '<div class="prop-row"><span class="k">垂直發射單元 (VLS)</span><span class="v">' + cells + ' 格</span></div>' : '') +
-        '</div>' +
-        '<div class="inspector-hint">💡 點擊船隻可平移視角並聚焦觀察</div>';
-
-      positionInspectorCard(e);
-      render();
-      return;
-    }
-
-    // 6. 環境與邊界懸停卡片
-    if (obj.userData.envMeta) {
-      const meta = obj.userData.envMeta;
-      highlightMesh.position.set(meta.posX, 0.15, meta.posZ);
-      highlightMesh.scale.set(Math.max(meta.size[0], meta.size[2]) * 0.6, Math.max(meta.size[0], meta.size[2]) * 0.6, 1);
-      highlightMesh.visible = true;
-
-      inspectorCard.innerHTML =
-        '<h3>🌐 ' + meta.label + ' <span style="font-size:11px;color:#94a3b8">#' + meta.seed + '</span></h3>' +
-        '<div class="sub">模式：' + meta.mode + ' · 款式：' + meta.kind + '</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">📐 構造尺寸與零件</div>' +
-          '<div class="prop-row"><span class="k">長寬高尺度</span><span class="v">' + meta.size[0].toFixed(1) + 'm × ' + meta.size[2].toFixed(1) + 'm × ' + meta.size[1].toFixed(1) + 'm</span></div>' +
-          '<div class="prop-row"><span class="k">零件總數</span><span class="v">' + meta.partsCount + ' 件</span></div>' +
-          (meta.isIce ? '<div class="prop-row"><span class="k">冰體水線</span><span class="v">具水下龍骨深淺配置</span></div>' : '') +
-        '</div>' +
-        '<div class="inspector-hint">💡 點擊物件可平移視角並聚焦觀察</div>';
-
-      positionInspectorCard(e);
-      render();
-      return;
-    }
-
-    // 3. 植物懸停卡片
-    if (obj.userData.plantMeta) {
-      const meta = obj.userData.plantMeta;
-      const tree = meta.tree;
-      const spec = meta.spec;
-
-      highlightMesh.position.set(meta.posX, 0.15, meta.posZ);
-      highlightMesh.scale.set(tree.footprint, tree.footprint, 1);
-      highlightMesh.visible = true;
-
-      const rootNames = {
-        surface: '地表側根', lateral: '橫向側根', buttress: '板根巨柱',
-        pneumatophore: '呼吸根系', aerial: '氣生支柱根', fibrous: '鬚根系',
-        shallow: '淺根系', rhizome: '地下走莖'
-      };
-
-      const flowers = tree.parts.filter((p) => p.role === 'flower' && !p.organStem).length;
-      const fruits = tree.parts.filter((p) => p.role === 'fruit' && !p.organStem).length;
-      const organBadges = [];
-      if (flowers > 0) organBadges.push('<span class="part-pill" style="background:rgba(236,72,153,0.25);border-color:#f472b6;color:#fbcfe8">🌸 開花數 ×' + flowers + '</span>');
-      if (fruits > 0) organBadges.push('<span class="part-pill" style="background:rgba(245,158,11,0.25);border-color:#fbbf24;color:#fef3c7">🍊 著果數 ×' + fruits + '</span>');
-      if (organBadges.length === 0) organBadges.push('<span class="part-pill" style="color:#94a3b8">常態葉簇休眠</span>');
-
-      inspectorCard.innerHTML =
-        '<h3>🌲 ' + meta.name + ' <span style="font-size:11px;color:#94a3b8">#' + meta.seed + '</span></h3>' +
-        '<div class="sub"><i>' + spec.scientific + '</i> · ' + spec.form + '形 · ' + meta.season + '季</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">📐 植物形態尺度</div>' +
-          '<div class="prop-row"><span class="k">實生樹高 / 幹圍</span><span class="v">' + tree.h.toFixed(1) + ' m / ' + tree.girth.toFixed(1) + ' m</span></div>' +
-          '<div class="prop-row"><span class="k">主枝數 / 冠幅占地</span><span class="v">' + tree.branchCount + ' 枝 / 徑 ' + (tree.footprint * 2).toFixed(1) + ' m</span></div>' +
-          '<div class="prop-row"><span class="k">根系機制 / 幹數</span><span class="v">' + (rootNames[spec.roots] || spec.roots) + ' / ' + tree.stems.length + ' 幹</span></div>' +
-          '<div class="prop-row"><span class="k">立體構件總數</span><span class="v">' + tree.parts.length + ' 件 (葉簇 ' + tree.parts.filter((p) => p.role === 'leaf').length + ' 團)</span></div>' +
-        '</div>' +
-        '<div class="prop-group">' +
-          '<div class="prop-title">🌸 季候器官與特徵</div>' +
-          '<div class="parts-badges">' + organBadges.join('') + '</div>' +
-        '</div>' +
-        '<div class="inspector-hint">💡 點擊樹木可平移視角並聚焦觀察</div>';
-
-      positionInspectorCard(e);
-      render();
-      return;
-    }
-  }
-
-  highlightMesh.visible = false;
-  inspectorCard.style.display = 'none';
-  render();
-}
-
-function positionInspectorCard(e) {
-  const cardW = 340, cardH = 320;
-  let left = e.clientX + 16;
-  let top = e.clientY + 16;
-  if (left + cardW > innerWidth) left = e.clientX - cardW - 16;
-  if (top + cardH > innerHeight) top = innerHeight - cardH - 16;
-  inspectorCard.style.left = left + 'px';
-  inspectorCard.style.top = top + 'px';
-  inspectorCard.style.display = 'block';
-}
-
-function handleClick(e) {
-  mouse.x = (e.clientX / innerWidth) * 2 - 1;
-  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
-  raycaster.setFromCamera(mouse, camera);
-
-  const intersects = raycaster.intersectObjects(clickableObjects, false);
-  if (intersects.length > 0) {
-    const obj = intersects[0].object;
-    if (obj.userData.buildingMeta && currentMode === 'matrix') {
-      buildVariantsMode(obj.userData.buildingMeta);
-    } else if (obj.userData.geologyMeta) {
-      const meta = obj.userData.geologyMeta;
-      camTarget.set(meta.posX, meta.entry.bounds.max[1] * 0.4, meta.posZ);
-      updateCamera();
-      render();
-    } else if (obj.userData.plantMeta) {
-      const meta = obj.userData.plantMeta;
-      camTarget.set(meta.posX, meta.tree.h * 0.4, meta.posZ);
-      updateCamera();
-      render();
-    } else if (obj.userData.vehicleMeta) {
-      const meta = obj.userData.vehicleMeta;
-      camTarget.set(meta.posX, meta.height * 0.4, meta.posZ);
-      updateCamera();
-      render();
-    } else if (obj.userData.vesselMeta) {
-      const meta = obj.userData.vesselMeta;
-      camTarget.set(meta.posX, meta.beam * 0.3, meta.posZ);
-      updateCamera();
-      render();
-    } else if (obj.userData.envMeta) {
-      const meta = obj.userData.envMeta;
-      camTarget.set(meta.posX, meta.size[1] * 0.4, meta.posZ);
-      updateCamera();
-      render();
-    }
-  }
-}
-
-// ==========================================
-// 頁籤切換與整體事件綁定
-// ==========================================
 function switchTab(tabKey) {
   if (currentTab === tabKey) return;
   currentTab = tabKey;
@@ -2183,61 +2104,19 @@ document.querySelectorAll('.cat-tab-btn').forEach((btn) => {
   btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
-document.querySelector('#btn-nav-reset-cam')?.addEventListener('click', () => {
-  if (currentTab === 'arch') {
-    resetFocus();
-  } else if (currentTab === 'geology') {
-    camTarget.set(0, 4, 0);
-    camDist = document.querySelector('#geo-view-mode').value === 'variants' ? 140 : 45;
-    camPhi = 1.05;
-    camTheta = 0.55;
-    updateCamera();
-    render();
-  } else if (currentTab === 'plant') {
-    camTarget.set(0, 5, 0);
-    const mode = document.querySelector('#plant-view-mode').value;
-    camDist = mode === 'forest' ? 120 : (mode === 'variants' ? 95 : 35);
-    camPhi = 1.1;
-    camTheta = 0.6;
-    updateCamera();
-    render();
-  } else if (currentTab === 'vehicle') {
-    camTarget.set(0, 2, 0);
-    camDist = document.querySelector('#veh-view-mode').value === 'variants' ? 120 : 25;
-    camPhi = 1.05;
-    camTheta = 0.65;
-    updateCamera();
-    render();
-  } else if (currentTab === 'vessel') {
-    camTarget.set(0, 4, 0);
-    camDist = document.querySelector('#vessel-view-mode').value === 'variants' ? 160 : 50;
-    camPhi = 1.1;
-    camTheta = 0.75;
-    updateCamera();
-    render();
-  } else if (currentTab === 'env') {
-    camTarget.set(0, 5, 0);
-    camDist = document.querySelector('#env-view-mode').value === 'variants' ? 140 : 40;
-    camPhi = 1.05;
-    camTheta = 0.65;
-    updateCamera();
-    render();
-  }
-});
+document.querySelector('#btn-nav-reset-cam')?.addEventListener('click', resetCameraFocus);
+document.querySelector('#btn-reset-cam')?.addEventListener('click', resetCameraFocus);
 
 // 地質控制器事件
-document.querySelector('#btn-geo-generate')?.addEventListener('click', buildGeologyMode);
-document.querySelector('#btn-geo-next-seed')?.addEventListener('click', () => {
-  const input = document.querySelector('#input-geo-seed');
-  input.value = (parseInt(input.value, 10) || 42) + 1;
+document.querySelector('#btn-geo-generate')?.addEventListener('click', () => {
+  const mode = document.querySelector('#select-seed-mode-geo')?.value;
+  if (mode === 'shared_batch') {
+    document.querySelector('#input-geo-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  }
   buildGeologyMode();
 });
 document.querySelector('#btn-geo-random-seed')?.addEventListener('click', () => {
   document.querySelector('#input-geo-seed').value = Math.floor(Math.random() * 90000) + 1000;
-  buildGeologyMode();
-});
-document.querySelector('#btn-geo-variants')?.addEventListener('click', () => {
-  document.querySelector('#geo-view-mode').value = 'variants';
   buildGeologyMode();
 });
 ['#geo-type', '#geo-view-mode', '#geo-climate', '#geo-water', '#geo-region', '#geo-ruin-type', '#geo-scale'].forEach((sel) => {
@@ -2254,18 +2133,15 @@ document.querySelector('#btn-geo-variants')?.addEventListener('click', () => {
 });
 
 // 植物控制器事件
-document.querySelector('#btn-plant-generate')?.addEventListener('click', buildPlantMode);
-document.querySelector('#btn-plant-next-seed')?.addEventListener('click', () => {
-  const input = document.querySelector('#input-plant-seed');
-  input.value = (parseInt(input.value, 10) || 1001) + 1;
+document.querySelector('#btn-plant-generate')?.addEventListener('click', () => {
+  const mode = document.querySelector('#select-seed-mode-plant')?.value;
+  if (mode === 'shared_batch') {
+    document.querySelector('#input-plant-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  }
   buildPlantMode();
 });
 document.querySelector('#btn-plant-random-seed')?.addEventListener('click', () => {
   document.querySelector('#input-plant-seed').value = Math.floor(Math.random() * 90000) + 1000;
-  buildPlantMode();
-});
-document.querySelector('#btn-plant-variants')?.addEventListener('click', () => {
-  document.querySelector('#plant-view-mode').value = 'variants';
   buildPlantMode();
 });
 ['#plant-species', '#plant-view-mode', '#plant-season', '#plant-scale', '#plant-climate'].forEach((sel) => {
@@ -2380,14 +2256,7 @@ document.querySelector('#chk-labels').addEventListener('change', () => {
   render();
 });
 
-document.querySelector('#btn-reset-cam').addEventListener('click', () => {
-  camDist = currentTab === 'plant' ? 120 : currentTab === 'geology' ? 140 : 320;
-  camTheta = 0.85;
-  camPhi = 0.62;
-  camTarget.set(0, 6, 0);
-  updateCamera();
-  render();
-});
+document.querySelector('#btn-reset-cam')?.addEventListener('click', resetCameraFocus);
 
 // 篩選池功能
 function setupFilterModal() {
@@ -2631,9 +2500,7 @@ function buildVehicleMode() {
   clearScene();
   currentMode = 'vehicle';
   document.querySelector('#btn-back').style.display = 'none';
-  floor.material.color.setHex(0x3a484e);
-  floor.visible = true;
-  waterMesh.visible = false;
+  floor.material.color.setHex(0x273649);
 
   initVehicleOptions();
 
@@ -2641,6 +2508,7 @@ function buildVehicleMode() {
   const profileKey = document.querySelector('#veh-profile').value;
   const viewMode = document.querySelector('#veh-view-mode').value;
   const seed = parseInt(document.querySelector('#input-veh-seed').value, 10) || 42;
+  const seedMode = document.querySelector('#select-seed-mode-veh')?.value || 'per_building';
 
   const allProfiles = Object.keys(VEHICLE_PROFILES);
   const actProf = (profileKey === 'all' || !profileKey) ? (allProfiles[seed % allProfiles.length]) : profileKey;
@@ -2660,47 +2528,55 @@ function buildVehicleMode() {
     document.querySelector('#nav-status').textContent = '車輛單體檢驗：【' + v.name + '】（種子碼 ' + seed + ' · 長 ' + v.length.toFixed(1) + 'm 寬 ' + v.width.toFixed(1) + 'm 高 ' + v.height.toFixed(1) + 'm）';
     camTarget.set(0, v.height * 0.4, 0);
     camDist = Math.max(v.length, v.width, v.height) * 2.2 + 6;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
   } else {
     const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-veh')?.value, 10) || 4));
     const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-veh')?.value, 10) || 4));
-
-    const res0 = createVehicleInstance(actProf, seed, options, 0, 0);
-    const v0 = res0?.vehicle;
-    const vehLen = v0?.length || 6;
-    const vehWid = v0?.width || 2.4;
-    const vehH = v0?.height || 2.2;
     clearScene();
     floor.visible = true;
 
-    // Adaptive auto-spacing based on vehicle dimensions
-    const stepX = Math.max(12, vehWid * 2.2 + 6);
-    const stepZ = Math.max(16, vehLen * 1.35 + 8);
-    const startX = -(cols - 1) * stepX / 2;
-    const startZ = -(rows - 1) * stepZ / 2;
-
+    // 第一階段：計算陣列中所有車輛規格尺寸，找出最大長度與寬度 (以最大的為主)
+    const items = [];
+    let maxObjW = 2.4, maxObjD = 5.0, maxObjH = 2.0;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
-        const curSeed = seed + idx * 7919;
+        const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
         const curProf = (profileKey === 'all' || !profileKey) ? allProfiles[idx % allProfiles.length] : profileKey;
-        const posX = startX + c * stepX;
-        const posZ = startZ + r * stepZ;
-        createVehicleInstance(curProf, curSeed, options, posX, posZ);
+        const spec = VEHICLE_PROFILES[curProf];
+        const v = generateVehicle(spec, curSeed, options);
+        if (v.width > maxObjW) maxObjW = v.width;
+        if (v.length > maxObjD) maxObjD = v.length;
+        if (v.height > maxObjH) maxObjH = v.height;
+        items.push({ c, r, idx, curProf, curSeed });
       }
     }
-    document.querySelector('#nav-status').textContent = '車輛陣列檢驗 (' + cols + '×' + rows + ' 共 ' + (cols * rows) + ' 輛）：【' + (profileKey === 'all' ? '全部車型輪播' : v0?.name || actProf) + '】（基底種子 ' + seed + '）';
-    const totalW = (cols - 1) * stepX, totalD = (rows - 1) * stepZ;
-    camTarget.set(0, vehH * 0.4, 0);
-    camDist = Math.max(totalW, totalD, vehH * 2) * 1.2 + 10;
+
+    // 第二階段：依據最大車輛尺寸決定間距
+    const stepX = Math.max(10, Math.ceil(maxObjW * 1.8 + 6));
+    const stepZ = Math.max(14, Math.ceil(maxObjD * 1.25 + 8));
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (const it of items) {
+      const posX = startX + it.c * stepX;
+      const posZ = startZ + it.r * stepZ;
+      createVehicleInstance(it.curProf, it.curSeed, options, posX, posZ);
+    }
+
+    document.querySelector('#nav-status').textContent = '車輛陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 輛）：【' + (profileKey === 'all' ? '全部車型輪播' : VEHICLE_PROFILES[actProf]?.name || actProf) + '】（基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX + maxObjW;
+    const totalD = (rows - 1) * stepZ + maxObjD;
+    camTarget.set(0, Math.min(15, maxObjH * 0.4), 0);
+    camDist = Math.max(totalW, totalD, maxObjH * 1.8) * 1.25 + 12;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
   }
   updateCamera();
   render();
 }
 
-// ==========================================
-// 船隻生成器邏輯
-// ==========================================
-let vesselInitialized = false;
 function initVesselOptions() {
   if (vesselInitialized) return;
   vesselInitialized = true;
@@ -2761,79 +2637,77 @@ function buildVesselMode() {
 
   initVesselOptions();
 
-  const showWater = document.querySelector('#chk-vessel-water').checked;
-  waterMesh.visible = showWater;
-  floor.visible = !showWater;
-  floor.material.color.setHex(0x1a3344);
-
   const type = document.querySelector('#vessel-type').value;
-  const purpose = document.querySelector('#vessel-purpose').value;
-  const water = document.querySelector('#vessel-water').value;
-  const power = document.querySelector('#vessel-power').value;
   const viewMode = document.querySelector('#vessel-view-mode').value;
   const seed = parseInt(document.querySelector('#input-vessel-seed').value, 10) || 42;
+  const seedMode = document.querySelector('#select-seed-mode-vessel')?.value || 'per_building';
+  const showWater = document.querySelector('#chk-vessel-water').checked;
+
+  const options = Object.fromEntries(
+    ['purpose', 'water', 'power']
+      .filter(k => document.querySelector('#vessel-' + k).value)
+      .map(k => [k === 'water' ? 'waters' : k, document.querySelector('#vessel-' + k).value])
+  );
 
   const allVesselTypes = VESSEL_TYPES.map(t => t.id);
-
-  const options = {
-    id: type || undefined,
-    purpose: purpose || undefined,
-    water: water || undefined,
-    power: power || undefined,
-  };
 
   if (viewMode === 'single') {
     const actOptions = { ...options, id: type || allVesselTypes[seed % allVesselTypes.length] };
     const res = createVesselInstance(seed, actOptions, 0, 0);
-    if (!res) {
-      document.querySelector('#nav-status').textContent = '此分類組合沒有相容船型，請調整篩選條件。';
-      return;
-    }
+    if (!res) return;
     const v = res.vessel;
     document.querySelector('#nav-status').textContent = '艦船單體檢驗：【' + v.name + ' · ' + v.registry + '】（種子 ' + seed + ' · 長 ' + v.length.toFixed(1) + 'm 寬 ' + v.beam.toFixed(1) + 'm 吃水 ' + v.draft.toFixed(2) + 'm · ' + v.displacementTonnes.toFixed(1) + 't）';
     camTarget.set(0, v.beam * 0.3, 0);
     camDist = Math.max(v.length, 30) * 1.8 + 10;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
   } else {
     const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-vessel')?.value, 10) || 4));
     const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-vessel')?.value, 10) || 4));
-
-    const actOptions0 = { ...options, id: type || allVesselTypes[seed % allVesselTypes.length] };
-    const res0 = createVesselInstance(seed, actOptions0, 0, 0);
-    const v0 = res0?.vessel;
-    const vLen = v0?.length || 40;
-    const vBeam = v0?.beam || 8;
     clearScene();
     waterMesh.visible = showWater;
     floor.visible = !showWater;
 
-    // Adaptive auto-spacing based on vessel length and beam
-    const stepX = Math.max(25, vBeam * 2.5 + 12);
-    const stepZ = Math.max(45, vLen * 1.35 + 16);
-    const startX = -(cols - 1) * stepX / 2;
-    const startZ = -(rows - 1) * stepZ / 2;
-
+    // 第一階段：計算陣列中所有船隻規格尺寸，找出最大艦長與船寬 (以最大的為主)
+    const items = [];
+    let maxObjW = 8, maxObjD = 35, maxObjH = 15;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
-        const curSeed = seed + idx * 7919;
+        const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
         const curOptions = { ...options, id: type || allVesselTypes[idx % allVesselTypes.length] };
-        const posX = startX + c * stepX;
-        const posZ = startZ + r * stepZ;
-        createVesselInstance(curSeed, curOptions, posX, posZ);
+        const v = generateVessel(curSeed, curOptions);
+        if (v.beam > maxObjW) maxObjW = v.beam;
+        if (v.length > maxObjD) maxObjD = v.length;
+        if ((v.height || v.beam) > maxObjH) maxObjH = (v.height || v.beam);
+        items.push({ c, r, idx, curSeed, curOptions });
       }
     }
-    document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + (cols * rows) + ' 艘）：【' + (type ? v0?.name : '全部船型輪播') + '】（基底種子 ' + seed + '）';
-    const totalW = (cols - 1) * stepX, totalD = (rows - 1) * stepZ;
-    camTarget.set(0, vBeam * 0.4, 0);
-    camDist = Math.max(totalW, totalD, vLen * 1.5) * 1.2 + 15;
+
+    // 第二階段：依據最大艦船尺寸配置間距
+    const stepX = Math.max(25, Math.ceil(maxObjW * 2.2 + 12));
+    const stepZ = Math.max(35, Math.ceil(maxObjD * 1.35 + 16));
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (const it of items) {
+      const posX = startX + it.c * stepX;
+      const posZ = startZ + it.r * stepZ;
+      createVesselInstance(it.curSeed, it.curOptions, posX, posZ);
+    }
+
+    document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 艘）：【' + (type ? VESSEL_TYPES.find(t => t.id === type)?.name : '全部船型輪播') + '】（基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX + maxObjW;
+    const totalD = (rows - 1) * stepZ + maxObjD;
+    camTarget.set(0, maxObjW * 0.4, 0);
+    camDist = Math.max(totalW, totalD, maxObjD * 1.3) * 1.25 + 20;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
   }
   updateCamera();
   render();
 }
 
-// ==========================================
-// 環境物件與邊界生成器邏輯
-// ==========================================
 function initEnvOptions() {
   const mode = document.querySelector('#env-mode').value;
   const kindSel = document.querySelector('#env-kind');
@@ -2964,6 +2838,7 @@ function buildEnvironmentMode() {
   const kind = document.querySelector('#env-kind').value;
   const viewMode = document.querySelector('#env-view-mode').value;
   const seed = parseInt(document.querySelector('#input-env-seed').value, 10) || 42;
+  const seedMode = document.querySelector('#select-seed-mode-env')?.value || 'per_building';
 
   const allModes = ['scene', 'ice', 'edge', 'slope'];
   const allSceneKinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k => k !== 'icefloe' && k !== 'iceberg');
@@ -2973,9 +2848,6 @@ function buildEnvironmentMode() {
   const actKind = (kind === 'all' || !kind) ? (allKinds[seed % allKinds.length] || allSceneKinds[0]) : kind;
 
   const isWaterMode = actMode === 'ice' || actMode === 'water' || actKind === 'icefloe' || actKind === 'iceberg';
-  waterMesh.visible = isWaterMode;
-  floor.visible = !isWaterMode;
-  floor.material.color.setHex(isWaterMode ? 0x1f3645 : 0x2e3d3b);
 
   if (viewMode === 'single') {
     const res = createEnvironmentInstance(actMode, actKind, seed, 0, 0);
@@ -2983,85 +2855,114 @@ function buildEnvironmentMode() {
     document.querySelector('#nav-status').textContent = '環境單體檢驗：【' + res.def.label + '】（種子碼 ' + seed + ' · ' + res.meta.partsCount + ' 零件 · 尺寸 ' + res.size.x.toFixed(1) + '×' + res.size.y.toFixed(1) + '×' + res.size.z.toFixed(1) + 'm）';
     camTarget.set(0, res.size.y * 0.4, 0);
     camDist = Math.max(res.size.x, res.size.y, res.size.z) * 2.2 + 8;
-  } else if (viewMode === 'array') {
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  } else {
     const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-env')?.value, 10) || 4));
     const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-env')?.value, 10) || 4));
-
-    const res0 = createEnvironmentInstance(actMode, actKind, seed, 0, 0);
-    const sz0 = res0?.size || new THREE.Vector3(20, 10, 20);
     clearScene();
     waterMesh.visible = isWaterMode;
     floor.visible = !isWaterMode;
 
-    // Adaptive auto-spacing based on object size
-    const stepX = Math.max(20, sz0.x * 1.35 + 8);
-    const stepZ = Math.max(20, sz0.z * 1.35 + 8);
-    const startX = -(cols - 1) * stepX / 2;
-    const startZ = -(rows - 1) * stepZ / 2;
-
+    // 第一階段：計算陣列中所有環境物件規格尺寸，找出最大長寬高 (以最大的為主)
+    const items = [];
+    let maxObjW = 10, maxObjD = 10, maxObjH = 8;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
-        const curSeed = seed + idx * 7919;
+        const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
         const curMode = mode === 'all' ? allModes[idx % allModes.length] : actMode;
         const curKind = (kind === 'all' || !kind) ? (allKinds[idx % allKinds.length] || allSceneKinds[idx % allSceneKinds.length]) : kind;
-        const posX = startX + c * stepX;
-        const posZ = startZ + r * stepZ;
-        createEnvironmentInstance(curMode, curKind, curSeed, posX, posZ);
+        const isIce = curMode === 'ice' || curKind === 'icefloe' || curKind === 'iceberg';
+        const def = (curMode === 'ice' ? ICE_PARTS[curKind] : (curMode === 'edge' || curMode === 'slope' ? BOUNDARY_PARTS[curKind] : ENVIRONMENT_OBJECTS[curKind])) || ENVIRONMENT_OBJECTS[curKind] || { label: curKind, h: 6, depth: 8 };
+
+        const partRows = (curMode === 'edge' || curMode === 'slope')
+          ? wallParts(curKind, { len: 30, depth: def.depth, h: def.h, seed: curSeed })
+          : environmentParts(def.objectKind || curKind, { seed: def.modelSeed ?? curSeed });
+
+        const model = assembleEnvironmentParts(partRows, isIce);
+        const bounds = new THREE.Box3().setFromObject(model);
+        const size = bounds.getSize(new THREE.Vector3());
+        if (size.x > maxObjW) maxObjW = size.x;
+        if (size.z > maxObjD) maxObjD = size.z;
+        if (size.y > maxObjH) maxObjH = size.y;
+        items.push({ c, r, idx, curMode, curKind, curSeed, isIce, def, model, bounds, size, partRows });
       }
     }
-    document.querySelector('#nav-status').textContent = '環境陣列檢驗 (' + cols + '×' + rows + ' 共 ' + (cols * rows) + ' 件）：【' + (kind === 'all' ? '全部款式輪播' : res0?.def?.label || actKind) + '】（基底種子 ' + seed + '）';
-    const totalW = (cols - 1) * stepX, totalD = (rows - 1) * stepZ;
-    camTarget.set(0, sz0.y * 0.4, 0);
-    camDist = Math.max(totalW, totalD, sz0.y * 2) * 1.2 + 15;
-  } else {
-    const catalogKinds = [...document.querySelector('#env-kind').options].map(o => o.value).filter(v => v !== 'all');
-    const cols = Math.min(6, Math.ceil(Math.sqrt(catalogKinds.length)));
-    const rows = Math.ceil(catalogKinds.length / cols);
-    const stepX = 40, stepZ = 35;
+
+    // 第二階段：依據最大物件尺寸配置間距
+    const stepX = Math.max(20, Math.ceil(maxObjW * 1.35 + 8));
+    const stepZ = Math.max(20, Math.ceil(maxObjD * 1.35 + 8));
     const startX = -(cols - 1) * stepX / 2;
     const startZ = -(rows - 1) * stepZ / 2;
 
-    for (let i = 0; i < catalogKinds.length; i++) {
-      const c = i % cols;
-      const r = Math.floor(i / cols);
-      const posX = startX + c * stepX;
-      const posZ = startZ + r * stepZ;
-      createEnvironmentInstance(actMode, catalogKinds[i], seed, posX, posZ);
+    for (const it of items) {
+      const posX = startX + it.c * stepX;
+      const posZ = startZ + it.r * stepZ;
+      it.model.position.set(posX, 0, posZ);
+      envGroup.add(it.model);
+
+      const meta = {
+        posX, posZ,
+        seed: it.curSeed,
+        mode: it.curMode,
+        kind: it.curKind,
+        label: it.def.label || it.curKind,
+        partsCount: it.partRows.length,
+        size: [it.size.x, it.size.y, it.size.z],
+        isIce: it.isIce,
+      };
+      it.model.traverse((o) => {
+        if (o.isMesh) {
+          o.userData.envMeta = meta;
+          clickableObjects.push(o);
+        }
+      });
+
+      const badge = document.createElement('div');
+      badge.className = 'badge-label';
+      badge.innerHTML = '<span class="cat">🌐</span>' + (it.def.label || it.curKind) + ' <span class="height">' + it.size.y.toFixed(1) + 'm</span>';
+      labelContainer.appendChild(badge);
+      labels.push({ element: badge, point: new THREE.Vector3(posX, it.bounds.max.y + 1.5, posZ) });
     }
-    document.querySelector('#nav-status').textContent = '環境全款式目錄陳列（共 ' + catalogKinds.length + ' 款）';
-    camTarget.set(0, 8, 0);
-    camDist = Math.max(cols * stepX, rows * stepZ) * 1.1;
+
+    document.querySelector('#nav-status').textContent = '環境陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 件）：【' + (kind === 'all' ? '全部款式輪播' : actKind) + '】（基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX + maxObjW;
+    const totalD = (rows - 1) * stepZ + maxObjD;
+    camTarget.set(0, Math.min(25, maxObjH * 0.4), 0);
+    camDist = Math.max(totalW, totalD, maxObjH * 1.5) * 1.25 + 15;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
   }
   updateCamera();
   render();
 }
 
-// ==========================================
-// 車輛、船隻、環境物件事件監聽
-// ==========================================
-
-// 陣列規模即時重算
+// 統一陣列規模、種子模式與種子碼監聽
 ['geo', 'plant', 'veh', 'vessel', 'env'].forEach((prefix) => {
   ['cols', 'rows'].forEach((dim) => {
     document.querySelector('#sample-' + dim + '-' + prefix)?.addEventListener('change', () => {
       rebuildActiveTab();
     });
   });
+  document.querySelector('#select-seed-mode-' + prefix)?.addEventListener('change', () => {
+    rebuildActiveTab();
+  });
+  document.querySelector('#input-' + prefix + '-seed')?.addEventListener('change', () => {
+    rebuildActiveTab();
+  });
 });
 
-document.querySelector('#btn-veh-generate')?.addEventListener('click', buildVehicleMode);
-document.querySelector('#btn-veh-next-seed')?.addEventListener('click', () => {
-  const input = document.querySelector('#input-veh-seed');
-  input.value = (parseInt(input.value, 10) || 42) + 1;
+// 車輛事件
+document.querySelector('#btn-veh-generate')?.addEventListener('click', () => {
+  const mode = document.querySelector('#select-seed-mode-veh')?.value;
+  if (mode === 'shared_batch') {
+    document.querySelector('#input-veh-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  }
   buildVehicleMode();
 });
 document.querySelector('#btn-veh-random-seed')?.addEventListener('click', () => {
   document.querySelector('#input-veh-seed').value = Math.floor(Math.random() * 90000) + 1000;
-  buildVehicleMode();
-});
-document.querySelector('#btn-veh-variants')?.addEventListener('click', () => {
-  document.querySelector('#veh-view-mode').value = 'variants';
   buildVehicleMode();
 });
 ['#veh-formation', '#veh-purpose', '#veh-type', '#veh-power'].forEach((id) => {
@@ -3075,18 +2976,15 @@ document.querySelector('#btn-veh-variants')?.addEventListener('click', () => {
 });
 
 // 船隻事件
-document.querySelector('#btn-vessel-generate')?.addEventListener('click', buildVesselMode);
-document.querySelector('#btn-vessel-next-seed')?.addEventListener('click', () => {
-  const input = document.querySelector('#input-vessel-seed');
-  input.value = (parseInt(input.value, 10) || 42) + 1;
+document.querySelector('#btn-vessel-generate')?.addEventListener('click', () => {
+  const mode = document.querySelector('#select-seed-mode-vessel')?.value;
+  if (mode === 'shared_batch') {
+    document.querySelector('#input-vessel-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  }
   buildVesselMode();
 });
 document.querySelector('#btn-vessel-random-seed')?.addEventListener('click', () => {
   document.querySelector('#input-vessel-seed').value = Math.floor(Math.random() * 90000) + 1000;
-  buildVesselMode();
-});
-document.querySelector('#btn-vessel-variants')?.addEventListener('click', () => {
-  document.querySelector('#vessel-view-mode').value = 'variants';
   buildVesselMode();
 });
 ['#vessel-type', '#vessel-purpose', '#vessel-water', '#vessel-power', '#vessel-view-mode'].forEach((id) => {
@@ -3100,18 +2998,15 @@ document.querySelector('#chk-vessel-water')?.addEventListener('change', () => {
 });
 
 // 環境事件
-document.querySelector('#btn-env-generate')?.addEventListener('click', buildEnvironmentMode);
-document.querySelector('#btn-env-next-seed')?.addEventListener('click', () => {
-  const input = document.querySelector('#input-env-seed');
-  input.value = (parseInt(input.value, 10) || 42) + 1;
+document.querySelector('#btn-env-generate')?.addEventListener('click', () => {
+  const mode = document.querySelector('#select-seed-mode-env')?.value;
+  if (mode === 'shared_batch') {
+    document.querySelector('#input-env-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  }
   buildEnvironmentMode();
 });
 document.querySelector('#btn-env-random-seed')?.addEventListener('click', () => {
   document.querySelector('#input-env-seed').value = Math.floor(Math.random() * 90000) + 1000;
-  buildEnvironmentMode();
-});
-document.querySelector('#btn-env-variants')?.addEventListener('click', () => {
-  document.querySelector('#env-view-mode').value = 'variants';
   buildEnvironmentMode();
 });
 document.querySelector('#env-mode')?.addEventListener('change', () => {
