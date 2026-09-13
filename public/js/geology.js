@@ -6,28 +6,44 @@ import { generateHeritageSite } from './heritageSites.js';
 import { PHENOMENA, phenomenaWeights, phenomenaProfile, phenomenaSurface, phenomenaEffects } from './geologyPhenomena.js';
 
 export const GEOLOGY_PREFIX = 'geology/';
-const spec = (name, lithology, process, width, height, ageMa, roughness, color) =>
-  ({ name, lithology, process, width, height, ageMa, roughness, color });
+export const GEOLOGY_STEEP_DEG = 45;
+const spec = (name, lithology, process, width, height, ageMa, roughness, color, terrainFit = false) =>
+  ({ name, lithology, process, width, height, ageMa, roughness, color, terrainFit });
 export const GEOLOGY_TYPES = {
   granite: spec('花崗岩塊', 'igneous', 'joint-weathering', [2, 12], [1, 7], [10, 3000], [.12, .35], 0x96928b),
   mountain: spec('褶皺山巒', 'metamorphic', 'uplift-erosion', [25, 90], [15, 65], [50, 2500], [.2, .5], 0x777d80),
   mound: spec('土堆／崩積丘', 'unconsolidated', 'colluvium', [3, 18], [1, 6], [0, .1], [.02, .1], 0x8d7051),
   dune: spec('風成沙丘', 'unconsolidated', 'aeolian', [10, 50], [2, 12], [0, .1], [.005, .025], 0xd6b77c),
   sandstone: spec('層狀砂岩台地', 'sedimentary', 'deposition-erosion', [6, 28], [3, 18], [2, 600], [.04, .15], 0xb38663),
-  cliff: spec('斷層峭壁', 'metamorphic', 'fault-uplift', [12, 40], [8, 32], [20, 1800], [.08, .25], 0x85817b),
+  cliff: spec('斷層峭壁', 'metamorphic', 'fault-uplift', [12, 40], [8, 32], [20, 1800], [.08, .25], 0x85817b, true),
   karst: spec('石灰岩溶蝕峰', 'sedimentary', 'dissolution', [6, 25], [5, 24], [5, 500], [.15, .35], 0xb1afa0),
-  basalt: spec('玄武岩柱狀節理', 'igneous', 'cooling-joints', [4, 18], [3, 15], [.001, 180], [.01, .06], 0x555e62),
+  basalt: spec('玄武岩柱狀節理', 'igneous', 'cooling-joints', [4, 18], [3, 15], [.001, 180], [.01, .06], 0x555e62, true),
   crater: spec('火山口', 'igneous', 'eruption-collapse', [18, 65], [5, 22], [0, 5], [.06, .2], 0x665952),
   reef: spec('淺海珊瑚礁', 'biogenic', 'carbonate-accretion', [5, 24], [1, 5], [0, .02], [.08, .22], 0xc6c1a3),
   island: spec('海蝕島礁', 'sedimentary', 'wave-erosion', [10, 35], [3, 14], [1, 300], [.08, .25], 0x969183),
   river: spec('河床沖積灘', 'unconsolidated', 'fluvial-deposition', [6, 24], [.5, 3], [0, .1], [.03, .12], 0x9b9180),
   moraine: spec('冰磧碎石丘', 'unconsolidated', 'glacial-deposition', [8, 30], [2, 10], [0, 2.6], [.2, .45], 0x899092),
+  tor: spec('節理風化岩堆', 'igneous', 'joint-weathering', [8, 28], [4, 18], [10, 3000], [.04, .12], 0xbdb2a0),
+  fin: spec('刃狀岩脊', 'sedimentary', 'differential-erosion', [12, 40], [8, 30], [2, 600], [.04, .14], 0xa8875c, true),
+  spire: spec('侵蝕尖峰', 'sedimentary', 'differential-erosion', [8, 26], [10, 35], [2, 600], [.06, .18], 0x9a8068),
+  marble: spec('大理岩圓蝕露頭', 'metamorphic', 'dissolution-weathering', [6, 22], [3, 12], [20, 1800], [.03, .1], 0xcfc8bc),
+  inselberg: spec('砂岩孤立岩丘', 'sedimentary', 'differential-erosion', [30, 90], [12, 40], [2, 600], [.03, .09], 0xae6345),
+  rocktower: spec('層狀砂岩塔峰', 'sedimentary', 'differential-erosion', [14, 36], [25, 65], [2, 600], [.03, .1], 0x94816a),
+  granite_towers: spec('花崗岩塔群', 'igneous', 'joint-weathering', [20, 50], [25, 70], [10, 3000], [.05, .14], 0xb9b4a8),
+  conglomerate: spec('礫岩圓頂峰', 'sedimentary', 'differential-erosion', [14, 40], [20, 55], [2, 600], [.05, .14], 0x9a8f7c),
   monument: { name: '地區古蹟', lithology: 'manufactured', process: 'regional-architecture',
     uniformScale: [.5, 1.5], color: 0x969184 },
   ruins: { name: '隨機廢棄遺跡', lithology: 'manufactured', process: 'human-activity',
     uniformScale: [.5, 1.5], color: 0x969184 },
   ...Object.fromEntries(Object.entries(PHENOMENA).map(([id,row])=>[id,{...spec(...row.slice(0,8)),group:row[8]}])),
 };
+
+// Migration ledger for biomes.js synthMegalith's eleven recipes. Unsupported topology
+// is deliberately omitted, never substituted with a solid "arch" or a floating cap.
+export const LEGACY_GEOLOGY_RULES = Object.freeze({
+  dome: 'granite', slab: 'cliff', tower: 'rocktower', mesa: 'sandstone',
+  spire: 'spire', fin: 'fin', basalt: 'basalt', granite: 'tor', marble: 'marble',
+});
 
 export const GEOLOGY_SURFACES = {
   mud: { name: '淤泥', color: 0x665844, coverage: [.2, .8] },
@@ -81,9 +97,18 @@ export function geologyDistribution(input = {}) {
     reef: e.water === 'sea' && e.temperature >= 20 && e.temperature <= 30 && e.depth <= 30 ? 2 : 0,
     island: e.water === 'sea' ? 2 : 0,
     river: ['stream', 'river', 'lake'].includes(e.water) ? 2 + e.sediment : 0,
-    moraine: e.temperature < 5 ? 1 : .02 };
+    moraine: e.temperature < 5 ? 1 : .02,
+    tor: .25 + e.exposure * .4, fin: .15 + e.fault * .7,
+    spire: .1 + e.exposure * .3, marble: .1 + e.dissolution * .3,
+    inselberg: .15 + (1 - e.moisture) * .2, rocktower: .15 + e.exposure * .2,
+    granite_towers: .1 + Math.max(0, e.altitude) / 4000, conglomerate: .15 };
   for(const row of ancientStoneDistribution(input)) weights[row.type]=e.human*3*row.weight;
   Object.assign(weights,phenomenaWeights(e));
+  if (e.slope > GEOLOGY_STEEP_DEG || typeof input.heightAt === 'function') {
+    for (const type of Object.keys(weights)) {
+      if (!GEOLOGY_TYPES[type].terrainFit) weights[type] = 0;
+    }
+  }
   const sum = Object.values(weights).reduce((a, b) => a + b, 0);
   return Object.entries(weights).filter(([, w]) => w > 0).map(([type, w]) => ({ type, weight: w / sum }));
 }
@@ -136,6 +161,7 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
     ageMa: sample(s.ageMa), roughness: sample(s.roughness), strike: rnd() * Math.PI * 2,
     dip: sample([0, environment.fault > .5 ? 70 : 25]), layers: 4 + Math.floor(rnd() * 9),
     erosion: environment.exposure * (.25 + rnd() * .75), dissolution: environment.dissolution };
+  if (Number.isFinite(input.strike)) p.strike = input.strike;
   if (Object.hasOwn(PHENOMENA,type)) {
     const eventRnd=mulberry32(seed ^ 0x45564e54);
     Object.assign(p,{activity:environment.activity,ventRadius:.12+eventRnd()*.12,
@@ -152,11 +178,36 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
 function profile(type, x, z, p) {
   if(Object.hasOwn(PHENOMENA,type)) return phenomenaProfile(type,x,z,p);
   const r = Math.hypot(x, z), envelope = Math.max(0, 1 - r * r);
+  const groove = .94 + .06 * Math.cos(x * 31 + z * 4 + p.erosion * 3);
+  if (type === 'inselberg') return Math.max(0, 1 - (x * x + z * z * 1.7)) ** .38 * groove;
+  if (type === 'rocktower') {
+    const core = Math.max(0, 1 - Math.hypot(x * 1.7, z * 1.9));
+    const tier = Math.floor(core ** .15 * p.layers) / p.layers;
+    return Math.max(envelope * .24, tier * groove);
+  }
+  if (type === 'granite_towers') {
+    let peak = 0;
+    for (const [cx, cz, height] of [[-.42, .06, .77], [0, -.08, 1], [.42, .1, .68]]) {
+      peak = Math.max(peak, Math.max(0, 1 - Math.hypot((x - cx) * 3.3, (z - cz) * 3.8)) ** .45 * height);
+    }
+    return Math.max(envelope * .18, peak * groove);
+  }
+  if (type === 'conglomerate') return Math.max(envelope * .15,
+    Math.max(0, 1 - (x * x * 2.2 + z * z * 2.5)) ** .22) * groove;
   if (type === 'crater') return Math.exp(-(((r - .62) / .19) ** 2)) * Math.max(0, 1 - r ** 8);
   if (type === 'dune') return Math.max(0, 1 - Math.abs(z) ** 2) * Math.max(0, x < .25 ? (x + 1) / 1.25 : (1 - x) / .75);
   if (type === 'cliff') return envelope * (x > -.05 ? .95 : .12);
   if (type === 'sandstone') return Math.floor(envelope ** .3 * p.layers) / p.layers;
   if (type === 'basalt') return Math.max(0, 1 - Math.hypot(Math.round(x * 5) / 5, Math.round(z * 5) / 5)) ** .25;
+  if (type === 'fin') return envelope * Math.max(0, 1 - Math.abs(z + .06 * Math.sin(x * 9)) * 5) ** .4
+    * (.7 + .3 * Math.abs(Math.cos(x * 8)));
+  if (type === 'spire') return Math.max(0, 1 - r) ** 1.5;
+  if (type === 'tor') {
+    const block = Math.max(0, 1 - Math.max(Math.abs(x), Math.abs(z)));
+    const joints = .88 + .12 * Math.abs(Math.sin(x * 11 + Math.floor(block * 4) * 1.7));
+    return Math.ceil(block * 4) / 4 * joints;
+  }
+  if (type === 'marble') return envelope ** .6 * (.65 + .35 * Math.abs(Math.sin(x * 6) * Math.cos(z * 5)));
   if (type === 'karst') return envelope * (1 - p.dissolution * .75 + p.dissolution * .75 * Math.abs(Math.sin(x * 8) * Math.cos(z * 7)) ** 3);
   if (type === 'mountain') return envelope * (.3 + .7 * Math.abs(Math.sin(x * 5 + z * 3))) ** 1.4;
   if (type === 'reef') return envelope * (.3 + .45 * Math.abs(Math.sin(x * 10) * Math.cos(z * 11)));
@@ -171,6 +222,7 @@ function rgb(hex, shade = 1) {
 
 /** Mesh colours and surface details share the measured triangles, never an approximate landing formula. */
 export function geologyBackgroundObject(type, seed = 0, input = {}) {
+  if (input.heightAt !== undefined && typeof input.heightAt !== 'function') throw new TypeError('Geology heightAt must be a function');
   const model = generateGeology(type, seed, input), { parameters: p, environment: e } = model;
   type = model.type;
   const spec = GEOLOGY_TYPES[type];
@@ -179,6 +231,12 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
   const shapeRnd = mulberry32(seed ^ 0x53484150);
   const phases = [shapeRnd(), shapeRnd(), shapeRnd()].map(v => v * Math.PI * 2);
   const c = Math.cos(p.strike), s = Math.sin(p.strike);
+  const originX = number(input.x, 0, -Infinity, Infinity), originZ = number(input.z, 0, -Infinity, Infinity);
+  const ground = input.heightAt ? input.heightAt(originX, originZ) : 0;
+  if (!Number.isFinite(ground)) return null;
+  // Sampling is performed before emitting faces, so a missing sample omits the whole object.
+  // Callers supply the maximum footprint slope; explicit art previews can still select any type.
+  if (input.heightAt && !spec.terrainFit) throw new RangeError(`Geology cannot conform to terrain: ${type}`);
   if (!model.stone) for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
     const x = i / n * 2 - 1, z = j / n * 2 - 1;
     const base = profile(type, x, z, p);
@@ -189,7 +247,10 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
       * p.roughness * (1 - p.erosion * .5) * base * (feature==='water'?0:1);
     const y = Math.max(0, base + noise) * p.height;
     const px = x * p.width / 2, pz = z * p.width * p.depthRatio / 2;
-    points.push([px * c - pz * s, y, px * s + pz * c]);
+    const wx = px * c - pz * s, wz = px * s + pz * c;
+    const baseY = input.heightAt ? input.heightAt(originX + wx, originZ + wz) : 0;
+    if (!Number.isFinite(baseY)) return null;
+    points.push([wx, y + baseY - ground, wz]);
   }
   function triangle(a, b, c, color) {
     const index = vertices.length / 3;
@@ -207,8 +268,9 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     const band = Math.floor((center[1] + center[0] * Math.tan(p.dip * Math.PI / 180)) / p.height * p.layers);
     let color = rgb(stoneColor ?? spec.color, .91 + (band % 2 ? .09 : 0));
     // Coherent patches span neighbouring triangles instead of confetti per face.
-    const patchX = Math.floor(center[0] / p.width * 12), patchZ = Math.floor(center[2] / p.width * 12);
-    let selected = null, roll = mulberry32(seed ^ 0x434f5645 ^ Math.imul(patchX, 73856093) ^ Math.imul(patchZ, 19349663))();
+    const patchX = center[0] / p.width, patchZ = center[2] / p.width;
+    let selected = null, roll = clamp(.5 + .25 * Math.sin(patchX * 11 + patchZ * 3 + phases[0])
+      + .25 * Math.cos(patchZ * 9 - patchX * 2 + phases[1]), 0, 1);
     // One categorical draw includes bare rock; total cover never exceeds 90%.
     const eligible = model.surfaces.map(row => ({ ...row, weight: row.coverage *
       (['moss', 'lichen'].includes(row.kind) ? (up < -.01 ? 0 : .35 + .65 * Math.max(0, up)) : up > .82 ? 1 : 0) *
@@ -228,7 +290,10 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
       } else if(feature) selected=feature==='bare'?null:feature;
     }
     if (selected) {
-      color = rgb(GEOLOGY_SURFACES[selected].color);
+      const coverColor = rgb(GEOLOGY_SURFACES[selected].color);
+      // Thin weathering stains retain the underlying rock tone; water, snow and event cores stay opaque.
+      const stain = ['mud', 'sand', 'moss', 'lichen'].includes(selected) ? .55 : 1;
+      color = color.map((value, i) => value * (1 - stain) + coverColor[i] * stain);
       counts[selected] = (counts[selected] || 0) + 1;
     }
     triangle(a, b, c, color);

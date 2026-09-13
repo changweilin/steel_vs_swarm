@@ -1,11 +1,54 @@
 import assert from 'node:assert/strict';
-import { GEOLOGY_TYPES, generateGeology, geologyDistribution, geologyBackgroundObject } from '../public/js/geology.js';
+import { GEOLOGY_TYPES, GEOLOGY_STEEP_DEG, LEGACY_GEOLOGY_RULES, generateGeology, geologyDistribution, geologyBackgroundObject } from '../public/js/geology.js';
 import { generateSharedBackgroundObject, sharedBackgroundObjectTargets } from '../public/js/backgroundObjects.js';
 import { ANCIENT_MONUMENTS, ANCIENT_RUINS, ancientCandidates, ancientStoneDistribution, selectAncientStone, ancientStoneGeometry } from '../public/js/ancientStone.js';
 import { REGIONAL_STONE_BUILDERS } from '../public/js/ancientStoneSites.js';
 import { PHENOMENA, phenomenaProfile, phenomenaSurface } from '../public/js/geologyPhenomena.js';
 
 let count = 0;
+assert.equal(Object.keys(LEGACY_GEOLOGY_RULES).length, 9);
+for (const type of Object.values(LEGACY_GEOLOGY_RULES)) assert(GEOLOGY_TYPES[type]);
+assert(!Object.hasOwn(LEGACY_GEOLOGY_RULES, 'arch'));
+assert(!Object.hasOwn(LEGACY_GEOLOGY_RULES, 'hoodoo'));
+const richEnvironment = { human: 1, region: 'egypt', volcanic: 1, fault: 1, rainfall: 1,
+  instability: 1, geothermal: 1, springPressure: 1, gasPressure: 1, impact: 1, sediment: 1 };
+assert(geologyDistribution({ ...richEnvironment, slope: GEOLOGY_STEEP_DEG }).some(row => !GEOLOGY_TYPES[row.type].terrainFit));
+for (const slope of [GEOLOGY_STEEP_DEG + .001, 60, 90]) {
+  for (const water of ['none', 'river', 'sea']) {
+    const input = { ...richEnvironment, slope, water, temperature: 25 };
+    const rows = geologyDistribution(input);
+    assert(rows.length > 0 && rows.every(row => GEOLOGY_TYPES[row.type].terrainFit));
+    assert(Math.abs(rows.reduce((sum, row) => sum + row.weight, 0) - 1) < 1e-12);
+    for (let seed = 0; seed < 128; seed++) assert(GEOLOGY_TYPES[generateGeology('auto', seed, input).type].terrainFit);
+  }
+}
+// Sloping and curved host surfaces preserve each sampled relief height, including the rim.
+for (const [type, spec] of Object.entries(GEOLOGY_TYPES)) {
+  if (!spec.terrainFit) continue;
+  for (const heightAt of [(x, z) => 2 * x - z, (x, z) => 2 * x + .01 * z * z]) {
+    const input = { vegetation: 0, moisture: 0, wind: 0, exposure: 0, x: 120, z: -70, heightAt };
+    const flat = geologyBackgroundObject(type, 42, { ...input, heightAt: () => 0 });
+    const fitted = geologyBackgroundObject(type, 42, input);
+    assert.deepEqual(fitted, geologyBackgroundObject(type, 42, input));
+    const vertices = fitted.meshData.vertices, original = flat.meshData.vertices;
+    const relief = new Map();
+    for (let i = 0; i < original.length; i += 3) relief.set(`${original[i]},${original[i + 2]}`, original[i + 1]);
+    // Fitted rims may include triangles omitted by the original flat-ground mesh.
+    for (let i = 0; i < vertices.length; i += 3) {
+      const [x, y, z] = vertices.slice(i, i + 3);
+      assert(Number.isFinite(y));
+      const base = heightAt(120 + x, -70 + z) - heightAt(120, -70);
+      assert(y >= base - 1e-9);
+      if (relief.has(`${x},${z}`)) assert(Math.abs(y - base - relief.get(`${x},${z}`)) < 1e-9);
+    }
+    assert(vertices.length >= original.length);
+    assert.equal(geologyBackgroundObject(type, 42, { heightAt: () => NaN }), null);
+    assert.equal(geologyBackgroundObject(type, 42, { heightAt: (x, z) => x === 0 && z === 0 ? 0 : NaN }), null);
+  }
+}
+assert.throws(() => geologyBackgroundObject('dune', 1, { heightAt: () => 0 }), RangeError);
+assert.throws(() => geologyBackgroundObject('cliff', 1, { heightAt: 1 }), TypeError);
+assert(GEOLOGY_TYPES[geologyBackgroundObject('auto', 1, { heightAt: () => 0 }).generation.type].terrainFit);
 for (const type of Object.keys(GEOLOGY_TYPES)) {
   for (const seed of [0, 1, -12, 4294967295]) {
     const input = { region: 'egypt', climate: 'temperate', moisture: .95, vegetation: .9, conifers: .6 };

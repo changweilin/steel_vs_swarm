@@ -40,7 +40,7 @@
 | Bot learning policy | `audit_bot_policy` | Policy stays clamped, neutral, and allowlisted. |
 | NPC height and unit collision | `audit_npc_collide` | Server height baseline and collision stay stable. |
 | World height caps | `audit_world_height` | Ceiling and object caps stay consistent. |
-| World edge and buffer skirt | `audit_world_edge` | Boundary staging stays inside collision. |
+| World edge and buffer skirt | `audit_world_edge`, `audit_edge_fill` | Ring bodies stay inside collision; solid buffer fill stays outside playable bounds with continuous joints. |
 | Resource lifecycle and adaptive resolution | `audit_gpu_lifecycle` | Resource release stays complete. |
 | Audio layers | `audit_audio_layers` | Movement bed follows the weight vector with registered sources. |
 | Page touch hardening | `audit_ctrl_mode` | Device and layout flags stay separated. |

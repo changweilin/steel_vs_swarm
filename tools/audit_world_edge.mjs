@@ -195,6 +195,7 @@ class Geo {
 const proceduralMeshStub = meshData => {
   const geometry = new Geo(0, 0, 0);
   geometry.pts = [];
+  geometry.boundaryBuffer = meshData.boundaryBuffer === true;
   for (let i = 0; i < meshData.vertices.length; i += 3) geometry.pts.push(meshData.vertices.slice(i, i + 3));
   return geometry;
 };
@@ -208,7 +209,7 @@ const THREE_STUB = {
   Mesh: class { constructor(g, m) { this.g = g; this.m = m; } },
 };
 const mergeGeosStub = (geos, cols) => {
-  emitted.push(...geos.map((g) => g.box()));
+  emitted.push(...geos.map((g) => ({ ...g.box(), ...(g.boundaryBuffer ? { boundaryBuffer: true } : {}) })));
   return { geos: geos.length, cols: cols ? cols.length : 0 };
 };
 
@@ -424,7 +425,7 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
       && bx.z0 >= b.z - hz - e && bx.z1 <= b.z + hz + e;
   };
   let out = 0, worst = null;
-  for (const bx of visualEmitted) {
+  for (const bx of visualEmitted.filter(b => !b.boundaryBuffer)) {
     if (blockers.some((b) => inBox(bx, b))) continue;
     out++;
     if (!worst) {
@@ -437,8 +438,13 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
       worst = { ...bx, kind: segs[ni]?.kind || '?' };
     }
   }
-  t(`每一顆零件及完整運動包絡都收在碰撞柱之內(${visualEmitted.length} 件,頂出 ${out} 件)`, out === 0,
+  t(`邊界環本體及完整運動包絡都收在碰撞柱之內(${visualEmitted.filter(b => !b.boundaryBuffer).length} 件,頂出 ${out} 件)`, out === 0,
     worst ? `（例:${worst.kind} x ${worst.x0.toFixed(1)}~${worst.x1.toFixed(1)} y ${worst.y0.toFixed(1)}~${worst.y1.toFixed(1)} z ${worst.z0.toFixed(1)}~${worst.z1.toFixed(1)}）` : '');
+  const fills = visualEmitted.filter(b => b.boundaryBuffer);
+  t('緩衝填實網格不侵入可玩區，且不越出緩衝裙', fills.length > 0 && fills.every(b =>
+    (b.x1 <= T.minX + IN + 1e-6 || b.x0 >= T.maxX - IN - 1e-6 || b.z1 <= T.minZ + IN + 1e-6 || b.z0 >= T.maxZ - IN - 1e-6)
+    && b.x0 >= T.minX - T.bufferM - 1e-6 && b.x1 <= T.maxX + T.bufferM + 1e-6
+    && b.z0 >= T.minZ - T.bufferM - 1e-6 && b.z1 <= T.maxZ + T.bufferM + 1e-6));
   // 邊界障礙物底座清理：本體直接由地面／水面長出，不額外墊水泥底座方塊。
   const buildEdgeWallSrc = grabFn(bioSrc, 'buildEdgeWall');
   const plinthOk = !/parts\.push\(\{\s*g:\s*\['box',\s*half\s*\*\s*2,\s*plinth/.test(buildEdgeWallSrc);

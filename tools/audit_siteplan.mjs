@@ -1,3 +1,4 @@
+import { BATTLE_GEOLOGY } from '../public/js/geologyBattle.js';
 // ============ 場址配置規則稽核(都市計畫 / 樹冠羞避 / 地質排列)============
 // 2026-08-03 使用者定案三條(市區沿街配置 + 公設 / 綠地樹冠羞避 / 裸露地地質排列)。
 // 三條全是**排列規則**,而排列規則壞掉的方式一律是無聲的:
@@ -32,7 +33,7 @@
 //   --break-storey  層高不再夾在帶內(拿掉「先取落在帶內的候選」那一步)
 //                   ⇒ Ⅴ 的層高全域不變式 MUST 紅字
 //   --break-tower   砲塔圈由 1/4 射程退回 1/8 ⇒ Ⅷ 的推導值 MUST 紅字
-import { readSrc } from './audit_src.mjs';
+import { readSrc, grabFn } from './audit_src.mjs';
 import { makeVehicle, makeRecess } from '../public/js/vehicles.js';
 import { objHeightMax, objScaleFit, WORLD_EDGE, edgeWallInsetM, edgeWallDeepM, UNITS } from '../public/js/data.js';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
@@ -519,9 +520,8 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
     '主堡世界座標恰兩處(buildClearance 一份 + buildBiomes 的 basesW 一份,地標與名岩共用後者)');
   // 退避距真的把名岩推出去:以現役 MEGALITHS 的體格反算最小中心距
   {
-    const megaBlk = strip(bio.slice(bio.indexOf('const MEGALITHS = {'), bio.indexOf('function synthMegalith')));
-    const cols = [...megaBlk.matchAll(/col:\s*\{\s*r:\s*(\d+(?:\.\d+)?)/g)].map((m) => +m[1]);
-    const ss = [...megaBlk.matchAll(/s:\s*\[(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)\]/g)].map((m) => +m[2]);
+    const cols = Object.values(BATTLE_GEOLOGY).map(def => def.col.r);
+    const ss = Object.values(BATTLE_GEOLOGY).map(def => def.s[1]);
     ok(cols.length >= 4 && cols.length === ss.length, `名岩體格表解析到 ${cols.length} 型`);
     const rMax = Math.max(...cols.map((c, i) => c * ss[i]));
     // 舊制:岩壁邊緣可逼近到離主堡中心 BASE_CLEAR_R + 6;新制邊緣至少再退一個岩體半徑
@@ -1154,25 +1154,19 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
           `貼圖高度隨列數單調不減且 10 列以下維持 256(24 列 → ${H(24)}、40 列 → ${H(40)})`);
       }
     }
-    {   // megaGeo 呼叫點 = 凍結清單 7 處(marble 塊/崩落塊/伴生丘/hoodoo 整柱/疊石/tower 整座/mesa 整座),名字一律出自 MEGA_LIB 名冊
-      const uses = (bioC.match(/megaGeo\(/g) || []).length;   // 定義式是 `= (name) =>`,不含 `megaGeo(`
-      ok(uses === 7 && (bioC.match(/megaGeo\(MEGA_LIB\./g) || []).length === 7,
-        `megaGeo 呼叫點 = 凍結的 7 處且全走 MEGA_LIB 名冊(實得 ${uses};增刪呼叫點 MUST 同步這裡與 tri_budget 的 max_lib_parts_per_rock)`);
-      // 輪替除數推導不手寫:名冊擴充後第 4 顆以後的節點若取不到,檔案在、intake 綠、
-      // 遊戲裡卻一顆都沒出現 —— 沒有任何錯誤訊息(2026-08-06 名冊 3 → 6 時補上)
-      ok(!/MEGA_LIB\.block\[[^\]]*%\s*\d/.test(bioC) && /const NBLK = MEGA_LIB\.block\.length;/.test(bioC),
-        'MEGA_LIB.block 的輪替除數取自名冊長度(NBLK),MUST NOT 寫死數字');
-      // 「整座」型的兩支:載到庫就不 add 原 primitive,但**迴圈照跑** —— rnd() 枚數
-      // 有無零件庫都要逐位元相同(§2.3 / A4:多消耗一枚,後面每一顆巨岩與每一株植被都位移)
-      for (const [key, flag] of [['tower', 'gT'], ['mesa', 'gM']]) {
-        const seg = bioC.slice(bioC.indexOf(`megaGeo(MEGA_LIB.${key})`));
-        const body = seg.slice(0, seg.indexOf('} else if'));
-        ok(!/if \(!?g[TM]\)[^\n]*rnd\(\)/.test(body) && new RegExp(`if \\(!${flag}\\) g\\.add`).test(body),
-          `synthMegalith ${key} 分支:庫節點只換「add 進場景」,rnd() 不進條件分支(枚數不變)`);
-      }
-      const sm = strip(bio.slice(bio.indexOf('function synthMegalith'), bio.indexOf('function flatRadiusAt')));
-      ok(!/megaGeo|MEGA_LIB/.test(sm.slice(sm.lastIndexOf('return {'))),
-        'synthMegalith 的 col/anchor 回傳塊不讀庫(佈局與碰撞恆走 primitive 參數 —— 庫隨載入成敗而異,§2.3)');
+    {   // Legacy rock parts are replaced by the shared seeded geology adapter.
+      const placement = strip(grabFn(bio, 'placeMegaliths'));
+      const adapter = strip(grabFn(bio, 'buildGeologyMegalith'));
+      const synth = strip(grabFn(bio, 'synthMegalith'));
+      ok(!/megaGeo|MEGA_LIB|ROCK_TONES/.test(adapter + synth), '巨岩不再讀取舊零件庫或私有造型表');
+      ok(adapter.includes('battleGeology(key, seed, input)') && synth.includes('buildGeologyMegalith('),
+        '戰場與研究台的巨岩幾何只有共用生成器一份');
+      ok(placement.includes('beaconSeed(x, z)') && !placement.split('\n')[0].includes('rnd'),
+        '巨岩使用座標種子，不接收共享場景亂數');
+      ok(adapter.includes('entry.battle') && placement.includes('objScaleFit(s, meta.col.h, sMax)'),
+        '碰撞使用生成器量測包絡，放置尺度經過共用限高');
+      ok(placement.includes('battleGeologySlope(') && placement.includes('forestEnvironmentAt('),
+        '巨岩選型使用完整包絡坡度與場地環境');
     }
     ok(/new THREE\.InstancedMesh\(partGeo\(part\)/.test(bioC),
       '植被消費迴圈畫的是 partGeo 解析結果(載入失敗退回保險絲 = 舊畫面)');

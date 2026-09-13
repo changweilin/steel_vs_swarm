@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>邊界地形接合預覽</title>
+<style>
+body{margin:0;background:#111a20;color:#e5e9e4;font:15px system-ui}header{position:absolute;z-index:1;padding:20px;background:#19242be8;border-radius:0 0 12px 0}h1{font-size:22px;margin:0 0 12px}p{font-size:13px;color:#aec1c4;max-width:430px}select{padding:7px;background:#26353d;color:inherit;border:1px solid #627c7b}canvas{display:block}a{color:#94cbb7}
+</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<header><h1>邊界地形接合預覽</h1>
+<label>地形 <select id="terrain"><option value="flat">平地</option><option value="slope">向外下坡</option><option value="rough">起伏地形</option></select></label>
+<label>排列 <select id="layout"><option value="line">城牆 → 峭壁 → 土石流 → 崩塌地 → 河堤</option><option value="corner">峭壁／土石流轉角</option><option value="masonry">峭壁／城牆轉角</option></select></label>
+<p>拖曳旋轉、滾輪縮放。岩頂帶自然起伏延伸至緩衝區外緣；深色格線標示原地面。</p><a href="/">返回地質研究台</a></header>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { buildSlopeBoundary } from '/js/edgeSlope.js';
+import { WALL_KINDS } from '/js/edgewall.js';
+import { runtimeMeshDataGeometry } from '/js/runtimePartModel.js';
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));document.body.append(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x111a20);
+scene.add(new THREE.HemisphereLight(0xe4efff,0x64543d,2));
+const light=new THREE.DirectionalLight(0xffe5bb,3);light.position.set(-60,100,60);scene.add(light);
+const camera=new THREE.PerspectiveCamera(42,1,.1,2000),controls=new OrbitControls(camera,renderer.domElement);
+camera.position.set(105,105,145);controls.target.set(0,10,-20);
+const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1});
+const group=new THREE.Group();scene.add(group);
+const grid=new THREE.GridHelper(240,48,0x4b6269,0x26383e);grid.position.y=-.5;scene.add(grid);
+const terrain=document.querySelector('#terrain'),layout=document.querySelector('#layout');
+function rebuild(){
+  for(const mesh of [...group.children]){group.remove(mesh);mesh.geometry.dispose();}
+  const heightAt=terrain.value==='flat'?()=>0:terrain.value==='slope'?(x,z)=>z*.18:(x,z)=>Math.sin(x*.08)*3+Math.cos(z*.1)*3;
+  const corner=layout.value!=='line';
+  const rows=corner?[{kind:'cliff',fx:12,fz:0,ry:0},{kind:layout.value==='masonry'?'citywall':'debris',fx:0,fz:12,ry:Math.PI/2}]
+    :['citywall','cliff','debris','landslide','levee'].map((kind,i)=>({kind,fx:(i-2)*24,fz:0,ry:0}));
+  const join=(r)=>r?{kind:r.kind,h:WALL_KINDS[r.kind].h,depth:WALL_KINDS[r.kind].depth,corner}:null;
+  const crest=Math.min(...Object.values(WALL_KINDS).filter(d=>d.bufferFill).map(d=>d.depth))/2;
+  rows.forEach((r,i)=>{
+    const d=WALL_KINDS[r.kind],x=r.fx-Math.round(Math.sin(r.ry))*d.depth/2,z=r.fz-Math.round(Math.cos(r.ry))*d.depth/2;
+    const joins=corner?(i===0?[join(rows[1]),null]:[null,join(rows[0])]):[join(rows[i-1]),join(rows[i+1])];
+    const result=buildSlopeBoundary(r.kind,{len:24,depth:d.depth,h:d.h,x,z,ry:r.ry,heightAt,
+      fill:{depth:62.5,crest,heightAt,joins}});
+    for(const p of [...result.parts,...(result.bufferParts||[])]){
+      const mesh=new THREE.Mesh(runtimeMeshDataGeometry(p.g[1]),material);
+      mesh.position.set(x+Math.cos(r.ry)*p.p[0]+Math.sin(r.ry)*p.p[2],p.p[1],z-Math.sin(r.ry)*p.p[0]+Math.cos(r.ry)*p.p[2]);
+      mesh.rotation.y=r.ry;group.add(mesh);
+    }
+  });
+}
+terrain.addEventListener('change',rebuild);layout.addEventListener('change',rebuild);
+function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();rebuild();renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);controls.dispose();for(const m of group.children)m.geometry.dispose();grid.geometry.dispose();grid.material.dispose();material.dispose();renderer.dispose();});
+</script>
+</html>
