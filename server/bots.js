@@ -584,7 +584,9 @@ export class BotBrain {
       const A = this._ready(h, slot);
       if (!A) continue;
       const hurt = frac < this.tac.CAST_HURT;   // 血線走旋鈕(支援型放得早、攻堅型撐得久)
-      if ((A.fx === 'heal' && hurt)
+      const isDefFx = A.fx === 'heal' || !!A.spRestore || !!A.shieldDefBoost || !!A.shieldExpand
+        || !!A.spRegenHit || A.fx === 'reflect' || A.fx === 'phaseshift' || A.fx === 'fog' || A.fx === 'cube';
+      if ((isDefFx && hurt)
         || (A.fx === 'buff' && A.mul?.dmgTaken && hurt)
         || (A.fx === 'stealth' && this._pulling())) {
         if (this._op('ability')) this.sim.heroCast(this.pid, slot);   // 按 Q/E 是一項操作
@@ -652,6 +654,7 @@ export class BotBrain {
       else if (A.fx === 'summon' || A.fx === 'vision') cast(true);
       else if (A.fx === 'buff' && A.mul?.dmg) cast(false);
       else if (A.fx === 'intercept' && this.sim.missiles.some((m) => m.tpid === this.pid)) cast(false);
+      else if (A.fx === 'shield_bash' && (d <= 35 || packed >= 2)) cast(false);
     }
 
     // 機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)2026-08-06 整組退場,MUST NOT 復辟:
@@ -662,7 +665,8 @@ export class BotBrain {
   _moveToward(h, u, [tx, tz], dt) {
     const dx = tx - h.x, dz = tz - h.z;
     const d = Math.hypot(dx, dz);
-    if (d < 30) return;                                  // 到堡附近等補血
+    const home = this._home();
+    if (d < (tx === home[0] && tz === home[1] ? 30 : 5)) return; // 到堡附近(30m)或集結點附近(5m)等
     this._face(h, tx, tz);
     const [gx, gz] = this._skirt(h, tx, tz);             // 撤退路上一樣會撞牆 ⇒ 同一套繞行
     const gd = Math.hypot(gx - h.x, gz - h.z) || 1;

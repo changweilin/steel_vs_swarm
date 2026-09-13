@@ -1084,6 +1084,7 @@ $('roomCfgTabs')?.addEventListener('click', (e) => {
 const FX_LABEL = {
   buff: '增益', heal: '維修', strike: '打擊', summon: '召喚', emp: '癱瘓',
   vision: '視野', stealth: '匿蹤', dash: '突進', intercept: '攔截',
+  shield_bash: '衝撞', reflect: '偏轉', phaseshift: '虛空', cube: '力場', fog: '迷霧',
 };
 
 /** 三階數值:全等 → 單值;否則 "a → b → c" */
@@ -1159,6 +1160,12 @@ function charAbilityRow(id, slot, key) {
   if (A.cleanse) bits.push('解除並免疫異常');
   if (B.alphaX > 1) bits.push(`破隱爆發 ${tri((l) => bst(l).alphaX, 2)}×`
     + `<span class="cd-boost">(${SELF_ULT.ALPHA_S}s)</span>`);
+  if (A.spRestore) bits.push(`充盈磁力 ${tri((l) => a(l).spRestore)}`);
+  if (A.spRegenHit) bits.push('受擊回充不中斷');
+  if (A.shieldDefBoost) bits.push(`護盾減免提升 ${tri((l) => a(l).shieldDefBoost, 1)}×`);
+  if (A.shieldExpand) bits.push('護盾擴大至 240°');
+  if (A.shieldBash) bits.push('護盾衝撞');
+  if (A.defJump) bits.push(`防守大跳躍 +${tri((l) => a(l).defJump)}次`);
   if (A.brk) bits.push('挨一發即結束');
   if (A.mul) bits.push(...Object.entries(A.mul).map(([k, _]) =>
     `${MUL_LABEL[k] || k} ${tri((l) => a(l).mul[k] + (k === 'dmg' ? bst(l).dmgMul : 0), 2)}×`
