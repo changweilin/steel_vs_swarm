@@ -710,9 +710,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
           <select id="plant-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="single" selected>單株解剖檢驗</option>
-            <option value="variants">16 株種子變體陣列</option>
-            <option value="grove">林相生態群落混交</option>
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單株解剖檢驗 (Single Tree)</option>
           </select>
         </div>
         
@@ -1706,7 +1705,8 @@ function createGeologyMesh(type, seed, input, posX = 0, posZ = 0) {
   labelContainer.append(badge);
   labels.push({ element: badge, point: new THREE.Vector3(posX, entry.bounds.max[1] + 1.5, posZ) });
 
-  return { mesh, meta, entry };
+  const labelObj = { element: badge, point: new THREE.Vector3(posX, entry.bounds.max[1] + 1.5, posZ) };
+  return { mesh, hitMesh, meta, entry, labelObj };
 }
 
 function buildGeologyMode() {
@@ -1738,7 +1738,7 @@ function buildGeologyMode() {
     const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-geo')?.value, 10) || 4));
     const allTypes = Object.keys(GEOLOGY_TYPES);
 
-    // 第一階段：計算陣列中所有物件之實際包絡尺寸，找出陣列中最大者 (以最大的為主)
+    // 第一階段：生成所有地質網格實例，量測陣列中最大物件尺寸 (以最大的為主)
     const items = [];
     let maxObjW = 10, maxObjD = 10, maxObjH = 6;
     for (let r = 0; r < rows; r++) {
@@ -1746,34 +1746,20 @@ function buildGeologyMode() {
         const idx = r * cols + c;
         const curType = type === 'all' ? allTypes[idx % allTypes.length] : type;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        
-        let actualType = curType;
-        if (curType === 'auto') {
-          const dist = geologyDistribution(input);
-          actualType = dist.length ? dist[Math.abs(curSeed) % dist.length].type : 'basalt';
+        const res = createGeologyMesh(curType, curSeed, input, 0, 0);
+        if (res && res.entry) {
+          const szX = res.entry.bounds.size[0] || 15;
+          const szY = res.entry.bounds.size[1] || 8;
+          const szZ = res.entry.bounds.size[2] || 15;
+          if (szX > maxObjW) maxObjW = szX;
+          if (szZ > maxObjD) maxObjD = szZ;
+          if (szY > maxObjH) maxObjH = szY;
+          items.push({ c, r, res });
         }
-        const spec = GEOLOGY_TYPES[actualType] || GEOLOGY_TYPES.basalt;
-        const itemIsAncient = spec?.lithology === 'manufactured';
-        const fullInput = { ...input };
-        if (itemIsAncient) {
-          fullInput.region = document.querySelector('#geo-region')?.value || 'egypt';
-          const ruinType = document.querySelector('#geo-ruin-type')?.value;
-          if (ruinType && ruinType !== 'auto') fullInput.ruinType = ruinType;
-          fullInput.uniformScale = parseFloat(document.querySelector('#geo-scale')?.value) || 1.0;
-        }
-
-        const entry = geologyBackgroundObject(actualType, curSeed, fullInput);
-        const szX = entry.bounds.size[0] || 15;
-        const szY = entry.bounds.size[1] || 8;
-        const szZ = entry.bounds.size[2] || 15;
-        if (szX > maxObjW) maxObjW = szX;
-        if (szZ > maxObjD) maxObjD = szZ;
-        if (szY > maxObjH) maxObjH = szY;
-        items.push({ c, r, idx, actualType, spec, itemIsAncient, fullInput, entry, curSeed });
       }
     }
 
-    // 第二階段：依據最大物件尺寸自適應配置陣列間距，完全避免重疊穿模
+    // 第二階段：以最大物件尺寸為基準配置網格間距
     const stepX = Math.max(20, Math.ceil(maxObjW * 1.35 + 8));
     const stepZ = Math.max(20, Math.ceil(maxObjD * 1.35 + 8));
     const startX = -(cols - 1) * stepX / 2;
@@ -1782,43 +1768,18 @@ function buildGeologyMode() {
     for (const it of items) {
       const posX = startX + it.c * stepX;
       const posZ = startZ + it.r * stepZ;
-      const geom = runtimeMeshDataGeometry(it.entry.meshData, it.entry.parts);
-      const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true });
-      const mesh = new THREE.Mesh(geom, mat);
-      mesh.position.set(posX, 0, posZ);
-
-      const r = Math.max(...it.entry.bounds.size);
-      const hitGeo = new THREE.BoxGeometry(r * 1.1, it.entry.bounds.max[1], r * 1.1);
-      hitGeo.translate(posX, it.entry.bounds.max[1] / 2, posZ);
-      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
-      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
-
-      const meta = {
-        type: it.actualType,
-        spec: it.spec,
-        seed: it.curSeed,
-        entry: it.entry,
-        input: it.fullInput,
-        posX, posZ,
-        bounds: it.entry.bounds,
-        name: it.entry.name,
-        isAncient: it.itemIsAncient,
-      };
-
-      mesh.userData.geologyMeta = meta;
-      hitMesh.userData.geologyMeta = meta;
-      clickableObjects.push(hitMesh);
-      geologyGroup.add(mesh);
-      geologyGroup.add(hitMesh);
-
-      const badge = document.createElement('div');
-      badge.className = 'badge-label';
-      badge.innerHTML = '<span class="cat">【' + it.entry.name + '】</span>' + (it.spec.group || (it.itemIsAncient ? '古蹟石材' : '自然地質')) + ' · <span class="height">' + it.entry.bounds.max[1].toFixed(1) + 'm</span>';
-      labelContainer.append(badge);
-      labels.push({ element: badge, point: new THREE.Vector3(posX, it.entry.bounds.max[1] + 1.5, posZ) });
+      it.res.mesh.position.set(posX, 0, posZ);
+      if (it.res.hitMesh) {
+        it.res.hitMesh.position.set(posX, 0, posZ);
+      }
+      it.res.meta.posX = posX;
+      it.res.meta.posZ = posZ;
+      if (it.res.labelObj) {
+        it.res.labelObj.point.set(posX, it.res.entry.bounds.max[1] + 1.5, posZ);
+      }
     }
 
-    document.querySelector('#nav-status').textContent = '地質陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 處）：【' + (type === 'all' ? '全部地質輪播' : GEOLOGY_TYPES[type]?.name || '地質') + '】（基底種子 ' + seed + '）';
+    document.querySelector('#nav-status').textContent = '地質陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 處）：【' + (type === 'all' ? '全部地質輪播' : GEOLOGY_TYPES[type]?.name || '地質陣列') + '】（基底種子 ' + seed + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, maxObjH * 0.4, 0);
@@ -1915,7 +1876,8 @@ function createPlantObject(type, seed, scale = 1, season = 'summer', posX = 0, p
   labelContainer.append(badge);
   labels.push({ element: badge, point: new THREE.Vector3(posX, tree.h + 1.5, posZ) });
 
-  return { group, tree, spec, meta };
+  const labelObj = { element: badge, point: new THREE.Vector3(posX, tree.h + 1.5, posZ) };
+  return { group, tree, spec, meta, labelObj };
 }
 
 function buildPlantMode() {
@@ -1941,9 +1903,9 @@ function buildPlantMode() {
   } else {
     const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-plant')?.value, 10) || 4));
     const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-plant')?.value, 10) || 4));
-    const allSpecies = Object.keys(FOREST_SPECIES);
+    const allSpecies = Object.keys(TREE_SPECIES);
 
-    // 第一階段：計算全陣列植物形態規格，以最大株之冠幅直徑與高為準
+    // 第一階段：生成所有林木物件，量測最大冠幅與高度 (以最大的為主)
     const items = [];
     let maxObjW = 8, maxObjD = 8, maxObjH = 10;
     for (let r = 0; r < rows; r++) {
@@ -1951,25 +1913,19 @@ function buildPlantMode() {
         const idx = r * cols + c;
         const curType = type === 'all' ? allSpecies[idx % allSpecies.length] : type;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        
-        let actualType = curType;
-        if (curType === 'auto') {
-          const biome = getPlantBiomeInputs();
-          const dist = plantDistribution(biome);
-          actualType = dist.length ? dist[Math.abs(curSeed) % dist.length].species : 'oak';
+        const res = createPlantObject(curType, curSeed, scale, season, 0, 0);
+        if (res && res.tree) {
+          const szW = (res.tree.footprint || 4) * 2;
+          const szH = res.tree.h || 12;
+          if (szW > maxObjW) maxObjW = szW;
+          if (szW > maxObjD) maxObjD = szW;
+          if (szH > maxObjH) maxObjH = szH;
+          items.push({ c, r, res });
         }
-        const spec = FOREST_SPECIES[actualType] || FOREST_SPECIES.oak;
-        const tree = generateForestTree(spec, season, curSeed, scale);
-        const szW = (tree.footprint || 4) * 2;
-        const szH = tree.h || 12;
-        if (szW > maxObjW) maxObjW = szW;
-        if (szW > maxObjD) maxObjD = szW;
-        if (szH > maxObjH) maxObjH = szH;
-        items.push({ c, r, idx, actualType, spec, tree, curSeed });
       }
     }
 
-    // 第二階段：依據最大林木尺寸自適應網格間距
+    // 第二階段：以最大林木尺寸自適應配置陣列間距
     const stepX = Math.max(16, Math.ceil(maxObjW * 1.3 + 6));
     const stepZ = Math.max(16, Math.ceil(maxObjD * 1.3 + 6));
     const startX = -(cols - 1) * stepX / 2;
@@ -1978,66 +1934,15 @@ function buildPlantMode() {
     for (const it of items) {
       const posX = startX + it.c * stepX;
       const posZ = startZ + it.r * stepZ;
-
-      const group = new THREE.Group();
-      group.position.set(posX, 0, posZ);
-
-      for (const part of it.tree.parts) {
-        const geom = treePartGeometry(part.type, part.params);
-        if (!geom) continue;
-        const mat = new THREE.MeshStandardMaterial({
-          vertexColors: true,
-          roughness: part.type === 'trunk' || part.type === 'branch' ? 0.9 : 0.6,
-          side: part.type === 'leaf' || part.type === 'canopy' ? THREE.DoubleSide : THREE.FrontSide,
-        });
-        const posAttr = geom.getAttribute('position');
-        const colors = new Float32Array(posAttr.count * 3);
-        const col = new THREE.Color(part.color || 0x2e6f40);
-        for (let k = 0; k < posAttr.count; k++) {
-          colors[k * 3] = col.r;
-          colors[k * 3 + 1] = col.g;
-          colors[k * 3 + 2] = col.b;
-        }
-        geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        const partMesh = new THREE.Mesh(geom, mat);
-        partMesh.position.set(part.px || 0, part.y || 0, part.pz || 0);
-        partMesh.rotation.set(part.rx || 0, part.ry || 0, part.rz || 0);
-        partMesh.scale.set(part.sx || 1, part.sy || 1, part.sz || 1);
-        group.add(partMesh);
+      it.res.group.position.set(posX, 0, posZ);
+      it.res.meta.posX = posX;
+      it.res.meta.posZ = posZ;
+      if (it.res.labelObj) {
+        it.res.labelObj.point.set(posX, it.res.tree.h + 1.5, posZ);
       }
-
-      const hitH = Math.max(4, it.tree.h);
-      const hitR = Math.max(2, it.tree.footprint);
-      const hitGeo = new THREE.CylinderGeometry(hitR * 0.9, hitR, hitH, 8);
-      hitGeo.translate(0, hitH / 2, 0);
-      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
-      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
-      group.add(hitMesh);
-
-      const meta = {
-        type: it.actualType,
-        name: PLANT_NAMES[it.actualType] || it.actualType,
-        spec: it.spec,
-        tree: it.tree,
-        seed: it.curSeed,
-        season,
-        scale,
-        posX, posZ,
-      };
-
-      group.userData.plantMeta = meta;
-      hitMesh.userData.plantMeta = meta;
-      clickableObjects.push(hitMesh);
-      plantGroup.add(group);
-
-      const badge = document.createElement('div');
-      badge.className = 'badge-label';
-      badge.innerHTML = '<span class="cat">【' + (PLANT_NAMES[it.actualType] || it.actualType) + '】</span>' + it.spec.form + ' · <span class="height">' + it.tree.h.toFixed(1) + 'm</span>';
-      labelContainer.append(badge);
-      labels.push({ element: badge, point: new THREE.Vector3(posX, it.tree.h + 1.5, posZ) });
     }
 
-    document.querySelector('#nav-status').textContent = '植物陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 株）：【' + (type === 'all' ? '全部樹種輪播' : PLANT_NAMES[type] || '林木陣列') + '】（' + season + '季 · 基底種子 ' + seed + '）';
+    document.querySelector('#nav-status').textContent = '植物陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 株）：【' + (type === 'all' ? '全部樹種輪播' : TREE_SPECIES[type]?.name || type) + '】（' + season + '季 · 基底種子 ' + seed + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, Math.min(25, maxObjH * 0.35), 0);
@@ -2536,7 +2441,7 @@ function buildVehicleMode() {
     clearScene();
     floor.visible = true;
 
-    // 第一階段：計算陣列中所有車輛規格尺寸，找出最大長度與寬度 (以最大的為主)
+    // 第一階段：生成所有車輛實例，量測最大長度與寬度 (以最大的為主)
     const items = [];
     let maxObjW = 2.4, maxObjD = 5.0, maxObjH = 2.0;
     for (let r = 0; r < rows; r++) {
@@ -2544,16 +2449,18 @@ function buildVehicleMode() {
         const idx = r * cols + c;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
         const curProf = (profileKey === 'all' || !profileKey) ? allProfiles[idx % allProfiles.length] : profileKey;
-        const spec = VEHICLE_PROFILES[curProf];
-        const v = generateVehicle(spec, curSeed, options);
-        if (v.width > maxObjW) maxObjW = v.width;
-        if (v.length > maxObjD) maxObjD = v.length;
-        if (v.height > maxObjH) maxObjH = v.height;
-        items.push({ c, r, idx, curProf, curSeed });
+        const res = createVehicleInstance(curProf, curSeed, options, 0, 0);
+        if (res && res.vehicle) {
+          const v = res.vehicle;
+          if (v.width > maxObjW) maxObjW = v.width;
+          if (v.length > maxObjD) maxObjD = v.length;
+          if (v.height > maxObjH) maxObjH = v.height;
+          items.push({ c, r, res });
+        }
       }
     }
 
-    // 第二階段：依據最大車輛尺寸決定間距
+    // 第二階段：以最大車輛尺寸為基準配置網格步距
     const stepX = Math.max(10, Math.ceil(maxObjW * 1.8 + 6));
     const stepZ = Math.max(14, Math.ceil(maxObjD * 1.25 + 8));
     const startX = -(cols - 1) * stepX / 2;
@@ -2562,7 +2469,12 @@ function buildVehicleMode() {
     for (const it of items) {
       const posX = startX + it.c * stepX;
       const posZ = startZ + it.r * stepZ;
-      createVehicleInstance(it.curProf, it.curSeed, options, posX, posZ);
+      it.res.model.position.set(posX, 0, posZ);
+      it.res.meta.posX = posX;
+      it.res.meta.posZ = posZ;
+      if (it.res.labelObj) {
+        it.res.labelObj.point.set(posX, (it.res.vehicle.height || 2) + 1.2, posZ);
+      }
     }
 
     document.querySelector('#nav-status').textContent = '車輛陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 輛）：【' + (profileKey === 'all' ? '全部車型輪播' : VEHICLE_PROFILES[actProf]?.name || actProf) + '】（基底種子 ' + seed + '）';
@@ -2668,7 +2580,7 @@ function buildVesselMode() {
     waterMesh.visible = showWater;
     floor.visible = !showWater;
 
-    // 第一階段：計算陣列中所有船隻規格尺寸，找出最大艦長與船寬 (以最大的為主)
+    // 第一階段：生成所有船隻實例，量測最大艦長與船寬 (以最大的為主)
     const items = [];
     let maxObjW = 8, maxObjD = 35, maxObjH = 15;
     for (let r = 0; r < rows; r++) {
@@ -2676,15 +2588,22 @@ function buildVesselMode() {
         const idx = r * cols + c;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
         const curOptions = { ...options, id: type || allVesselTypes[idx % allVesselTypes.length] };
-        const v = generateVessel(curSeed, curOptions);
-        if (v.beam > maxObjW) maxObjW = v.beam;
-        if (v.length > maxObjD) maxObjD = v.length;
-        if ((v.height || v.beam) > maxObjH) maxObjH = (v.height || v.beam);
-        items.push({ c, r, idx, curSeed, curOptions });
+        let res = createVesselInstance(curSeed, curOptions, 0, 0);
+        if (!res) {
+          // 若複合條件無完全符合者，放寬為單純依類型生成，確保物件正常陳列
+          res = createVesselInstance(curSeed, { id: curOptions.id }, 0, 0);
+        }
+        if (res && res.vessel) {
+          const v = res.vessel;
+          if (v.beam > maxObjW) maxObjW = v.beam;
+          if (v.length > maxObjD) maxObjD = v.length;
+          if ((v.height || v.beam) > maxObjH) maxObjH = (v.height || v.beam);
+          items.push({ c, r, res });
+        }
       }
     }
 
-    // 第二階段：依據最大艦船尺寸配置間距
+    // 第二階段：以最大艦長與船寬配置網格步距
     const stepX = Math.max(25, Math.ceil(maxObjW * 2.2 + 12));
     const stepZ = Math.max(35, Math.ceil(maxObjD * 1.35 + 16));
     const startX = -(cols - 1) * stepX / 2;
@@ -2693,7 +2612,12 @@ function buildVesselMode() {
     for (const it of items) {
       const posX = startX + it.c * stepX;
       const posZ = startZ + it.r * stepZ;
-      createVesselInstance(it.curSeed, it.curOptions, posX, posZ);
+      it.res.model.position.set(posX, 0, posZ);
+      it.res.meta.posX = posX;
+      it.res.meta.posZ = posZ;
+      if (it.res.labelObj) {
+        it.res.labelObj.point.set(posX, it.res.vessel.draft + 2, posZ);
+      }
     }
 
     document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 艘）：【' + (type ? VESSEL_TYPES.find(t => t.id === type)?.name : '全部船型輪播') + '】（基底種子 ' + seed + '）';
