@@ -57,12 +57,12 @@ import {
   EDGE_WALL, EDGE_MOTION, WALL_KINDS, BACKDROP_KINDS, planWallRuns, planWallKinds, wallParts, wallVariant, wallSlopeTier, edgeSeed, partBox,
   planBufferProps, propParts, planBackdrop, backdropParts,
 } from './edgewall.js';
-import { ENVIRONMENT_OBJECTS, environmentParts } from './environmentParts.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable } from './environmentParts.js';
 import { runtimeMeshDataGeometry } from './runtimePartModel.js';
 import { BATTLE_GEOLOGY, SYNTH_GEOLOGY, battleGeology, battleGeologySlope } from './geologyBattle.js';
 import { buildSlopeBoundary } from './edgeSlope.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
-import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
+import { makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
 import {selectRoadCar} from './vehicleEveryday.js';
 import { deploySceneBatches } from './sceneObjects.js';
@@ -4125,12 +4125,14 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
       const localSeed = edgeSeed(gx, gz, seed ^ 0x454e56), rnd = mulberry32(localSeed);
       const x = gx + (rnd() - .5) * step * .5, z = gz + (rnd() - .5) * step * .5;
       const code = terrainEnvCode(terrain, x, z);
-      if (code === 1) continue;
-      const bio = code === 2 ? 'wet' : classifyImg(terrain.sampleColor?.(x, z)) || 'bare';
-      const kinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k => ENVIRONMENT_OBJECTS[k].bio.includes(bio));
+      const water = code === 1;
+      const bio = water ? 'water' : code === 2 ? 'wet' : classifyImg(terrain.sampleColor?.(x, z)) || 'bare';
+      const kinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k => ENVIRONMENT_OBJECTS[k].bio.includes(bio)
+        && environmentAvailable(k, { latitude: terrain.center?.lat, ...terrain.objectEnvironment }));
       if (!kinds.length) continue;
       const kind = kinds[Math.floor(rnd() * kinds.length)], def = ENVIRONMENT_OBJECTS[kind];
-      const scale = objScaleFit(1, def.size[1], 1), size = def.size.map(v => v * scale);
+      const sampledSize = environmentSize(kind, localSeed);
+      const scale = objScaleFit(1, sampledSize[1], 1), size = sampledSize.map(v => v * scale);
       const radius = Math.hypot(size[0], size[2]) / 2;
       if (x - radius < terrain.minX + inset || x + radius > terrain.maxX - inset
         || z - radius < terrain.minZ + inset || z + radius > terrain.maxZ - inset) continue;
@@ -4144,9 +4146,27 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
         if (terrainEnvCode(terrain, px, pz) === 1) wet = true;
       }
       if (heights.some(value => !Number.isFinite(value))) continue;
-      const y = Math.min(...heights), rise = Math.max(...heights) - y;
-      if (wet || y < .4 || Math.abs(slopeDeg(rise, radius * 2)) > SLOPE.EASE_DEG) continue;
+      let y = Math.min(...heights);
+      const rise = Math.max(...heights) - y;
+      if (!water && (wet || y < .4 || Math.abs(slopeDeg(rise, radius * 2)) > SLOPE.EASE_DEG)) continue;
       const parts = environmentParts(kind, { size, seed: localSeed, season: terrain.season || 'summer' });
+      if (water) {
+        if (!Number.isFinite(terrain.waterY) || !def.draft) continue;
+        const boxes = parts.map(partBox);
+        const bottom = Math.min(...boxes.map(b => b.y0));
+        y = terrain.waterY - parts[0].waterline;
+        // Sample the complete footprint, including interior shoals. Unknown depth means omission.
+        let clear = true;
+        const nx = Math.ceil(size[0] / 2), nz = Math.ceil(size[2] / 2);
+        for (let ix = 0; ix <= nx && clear; ix++) for (let iz = 0; iz <= nz; iz++) {
+          const px = x + (ix / nx - .5) * size[0], pz = z + (iz / nz - .5) * size[2];
+          const bed = terrain.heightAt(px, pz);
+          if (!Number.isFinite(bed) || terrainEnvCode(terrain, px, pz) !== 1 || bed + .3 >= y + bottom) {
+            clear = false; break;
+          }
+        }
+        if (!clear) continue;
+      }
       // Scene gaps remain traversable: register the solid parts, not the boundary ring envelope.
       for (const part of parts) {
         if (['leaf', 'flower', 'fruit', 'window', 'side-window'].includes(part.role)) continue;
@@ -4157,7 +4177,7 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
       }
       emitWallParts(batch, parts, x, y, z, 0, 1);
       blockArea(blocked, x, z, radius); occ.add(x, z, radius);
-      placed.push({ kind, x, y, z, seed: localSeed });
+      placed.push({ kind, x, y, z, size, category: def.category, seed: localSeed });
     }
   }
   flushPartBatch(group, batch, { wash: .42, cool: .42 });
@@ -9024,7 +9044,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
     // 先切 run + 配款；整圈款式定案後，再解相鄰端面與轉角。
     // 固定高度加上同次取樣的地形範圍，貼坡表面與權威盒一起建立。
     let prevKind = null;
-    for (const r of planWallRuns(row)) {
+    for (const r of planWallRuns(row, { environment: { latitude: terrain.center?.lat, ...terrain.objectEnvironment } })) {
       const kinds = planWallKinds(r, row, prevKind);
       for (let i = r.i0; i < r.i1; i++) {
         plans.push({ s: row[i], e, step, kind: kinds[i - r.i0], tier: r.tier });
@@ -9090,7 +9110,10 @@ function buildEdgeWall({ group, terrain, blockers }) {
     // 邊界障礙物一律移除底座：本體直接由地面／水面長出，不另加通用底座
     // Joined vertices already carry terrain elevation. Collision retains its overlapping ring;
     // visual modules meet exactly at shared endpoints instead of overlapping stair steps.
-    emitWallParts(batch, parts.filter((p) => !p.motion), x, joined ? 0 : ground, z, e.fry, 1);
+    const visualParts = parts.filter((p) => !p.motion).map(part =>
+      s.water && Number.isFinite(part.waterline)
+        ? { ...part, p: [part.p[0], part.p[1] - part.waterline, part.p[2]] } : part);
+    emitWallParts(batch, visualParts, x, joined ? 0 : ground, z, e.fry, 1);
     if (joined?.bufferParts) emitWallParts(batch, joined.bufferParts, x, 0, z, e.fry, 1);
     prevKind = kind;
     prevVariant = variant;
@@ -9707,6 +9730,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const night = cfg.env?.time === 'night';
   const mix = cfg.venue?.mix || null;
   terrain.forestEnv = cfg.env?.forest || cfg.venue?.forest || {};
+  terrain.objectEnvironment = { ...terrain.forestEnv, ...cfg.env };
   const rnd = mulberry32(
     (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) ^ ((cfg.teamSize || 5) << 20),
   );
@@ -10899,8 +10923,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const tint = new THREE.Color();
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
-    // 全部一般建物都改吃通過零件台的正式 v5/v6 目錄；舊方盒只保留成目錄異常時的保險絲。
-    // 選款只讀座標、足跡與目錄純資料，零共享 rnd() 消耗；重複目標已在目錄縫由 v6 勝出。
+    // All buildings use the polygon generator; keep later shared RNG draws in their existing order.
     const massPick = new Map();
     const procedural = new Map();
     for (const b of generic) {
@@ -10910,9 +10933,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         return [b.x + x * ca + z * sa, b.z - x * sa + z * ca];
       }), holes: [] };
       const architecture = { ...architectureAt(b, poly, settlement(b.x, b.z)), proceduralOnly: true };
-      const fit = fitApprovedBuilding(b, architecture, cfg.architectureSeed || 0);
-      if (fit) massPick.set(b, fit);
-      else procedural.set(b, { sourceId: `procedural/${b.x}/${b.z}`, centroid: { x: b.x, z: b.z },
+      procedural.set(b, { sourceId: `procedural/${b.x}/${b.z}`, centroid: { x: b.x, z: b.z },
         tags: { ...b.tags, building: b.commercial ? 'commercial' : 'house', height: String(b.h) },
         classification: { generator: 'polygonBuilding', kind: b.commercial ? 'commercial' : 'house' },
         worldPolygons: [poly], architecture });

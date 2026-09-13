@@ -4,7 +4,7 @@
 // The catalog imports only render-free generators and never consumes the shared scene RNG.
 import { mulberry32 } from './rng.js';
 import { partAABB } from './vehicles.js';
-import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts } from './environmentParts.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, environmentAvailable } from './environmentParts.js';
 import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
 export { ROCK_SEASON_TINT } from './environmentParts.js';
 
@@ -74,6 +74,9 @@ export const WALL_KINDS = {
   fallentree:{ object: 'fallentree', dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 9,   h: 9,    label: '大倒木群', slopeBias: { mid: 7 } },
   edgehamlet:{ object: 'house', dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 18,  h: 24,   label: '邊界假城街' },
   // ---- 水域 ----(水面恆是平的 ⇒ 水域段的分級一律 flat,見 `planWallRuns`)
+  icefloe: { object: 'icefloe', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 8, label: '浮冰' },
+  iceberg: { object: 'iceberg', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 30, label: '冰山' },
+  seaice: { dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 12, category: 'sea-ice', label: '碎裂浮冰帶' },
   seawall:   { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 10,  h: 8,    label: '海堤' },
   tetrapod:  { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 12,  h: 9.2,  label: '大型消波塊層層堆疊' },
   ship:      { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 18,  h: 22,   label: '連排貨輪' },
@@ -189,8 +192,9 @@ const kindFits = (k, biome, water) => {
  * 退回「這一級全部合法的款」而**不是**退回平地款 —— 那一步走錯就是貨櫃車掛在崖面上,
  * 而畫面之外的每一條斷言都還是綠的。一款都配不到才回最通用那一款(原則 6:降級不例外)。
  */
-export function wallCandidates(biome, water, tier = 'flat') {
-  const byTier = Object.keys(WALL_KINDS).filter((k) => fitsTier(k, tier));
+export function wallCandidates(biome, water, tier = 'flat', environment = null) {
+  const byTier = Object.keys(WALL_KINDS).filter((k) => fitsTier(k, tier)
+    && (!environment || environmentAvailable(k === 'seaice' ? 'icefloe' : WALL_KINDS[k].object, environment)));
   const list = byTier.filter((k) => kindFits(k, biome, water));
   const weighted = (rows) => rows.flatMap((k) => Array.from(
     { length: tier === 'flat' ? 1 : Math.max(1, WALL_KINDS[k].slopeBias?.[tier] || 1) }, () => k));
@@ -268,7 +272,7 @@ export function planWallRuns(segs, opts = {}) {
   // ③ 配款:候選清單由(地貌, 水陸域, 坡度級)決定,雜湊挑一支;與前一段撞款就往後挪一格
   let prevKind = null;
   for (const r of runs) {
-    const cand = wallCandidates(r.biome, r.water, r.tier);
+    const cand = wallCandidates(r.biome, r.water, r.tier, opts.environment);
     const s = segs[r.i0];
     let idx = edgeSeed(s.x, s.z, r.i0) % cand.length;
     if (cand.some((k) => k !== prevKind) && cand[idx] === prevKind) {
@@ -433,41 +437,6 @@ export const PROP_KINDS = {
   islet:   { bio: ['water'] },          // 礁岩/浮標
 };
 
-const PROP_PARTS = {
-  grove: (rnd) => [
-    { g: ['cyl', 0.9, 1.2, 7, 5], c: 0x5c4d38, p: [0, 3.5, 0] },
-    ...[0, 1, 2].map((i) => ({
-      g: ['cone', 5.5 - i * 1.3, 8 - i * 1.4, 7], c: pick(rnd, [0x4e5f36, 0x5f6b40, 0x44532f]),
-      p: [(rnd() - 0.5) * 2, 8 + i * 4.4, (rnd() - 0.5) * 2],
-    })),
-    ...[0, 1, 2, 3].map(() => ({
-      g: ['cone', 3.2 + rnd() * 2, 9 + rnd() * 6, 6], c: pick(rnd, [0x4e5f36, 0x55603a]),
-      p: [(rnd() - 0.5) * 22, 5 + rnd() * 3, (rnd() - 0.5) * 22],
-    })),
-  ],
-  boulder: (rnd) => [
-    { g: ['ico', 4 + rnd() * 3], c: pick(rnd, [0x8f8a80, 0x9a958a, 0x7d786e]), p: [0, 3.5, 0] },
-    ...[0, 1, 2].map(() => ({
-      g: ['ico', 1.8 + rnd() * 2.6], c: pick(rnd, [0x857f75, 0x948f84]),
-      p: [(rnd() - 0.5) * 18, 1.4 + rnd() * 1.6, (rnd() - 0.5) * 18],
-    })),
-    { g: ['cone', 6, 9, 6], c: 0x8a857b, p: [(rnd() - 0.5) * 14, 4.5, (rnd() - 0.5) * 14] },
-  ],
-  hamlet: (rnd) => [
-    ...[0, 1, 2].map((i) => {
-      const w = 7 + rnd() * 6, h = 6 + rnd() * 9;
-      return { g: ['box', w, h, w * 0.8], c: pick(rnd, [0xc3b9a6, 0xb9ae9c, 0xd6cdbb, 0x9aa2a8]), p: [(i - 1) * (10 + rnd() * 8), h / 2, (rnd() - 0.5) * 12] };
-    }),
-    { g: ['box', 9, 0.5, 8], c: 0x8a5f4a, p: [0, 9.5, 0] },
-    { g: ['cyl', 0.3, 0.3, 14, 5], c: 0x8d949c, p: [8 + rnd() * 6, 7, (rnd() - 0.5) * 10] },
-  ],
-  islet: (rnd) => [
-    { g: ['ico', 5 + rnd() * 4], c: pick(rnd, [0x7d786e, 0x6f6a60]), p: [0, 1.5, 0] },
-    { g: ['cone', 3.4, 6, 6], c: 0x857f75, p: [(rnd() - 0.5) * 8, 3, (rnd() - 0.5) * 8] },
-    ...(rnd() < 0.5 ? [{ g: ['cone', 1.6, 4.5, 6], c: 0x4e5f36, p: [(rnd() - 0.5) * 9, 4.5, (rnd() - 0.5) * 9] }] : []),
-  ],
-};
-
 /** 地貌 → 緩衝空間物件款(找不到就用岩塊墊底) */
 export const propKindFor = (biome) => Object.keys(PROP_KINDS).find((k) => PROP_KINDS[k].bio.includes(biome)) || 'boulder';
 
@@ -536,6 +505,13 @@ export const MOUNTAIN_SNOWLINE = {
 /** 地貌 → 背景款 */
 export const backdropKindFor = (biome) => Object.keys(BACKDROP_KINDS).find((k) => BACKDROP_KINDS[k].bio.includes(biome)) || 'mountain';
 
+function backdropCluster(kind, len, h, rnd, season) {
+  return rep(len, Math.max(8, h * .7), (x, step) => environmentParts(kind, {
+    size: [step * .94, h * (.55 + rnd() * .45), Math.max(1, h * .65)],
+    seed: Math.floor(rnd() * 0x100000000), season,
+  }).map(p => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
+}
+
 const BACKDROP_PARTS = {
   // 假山:兩排錯開的山稜(後排高、前排矮)+ 稜線上的雪/裸岩帶
   // 雪線高度隨季節變化(夏天無雪);雪錐底面半徑嚴格由山稜斜率等比推導,頂點與山頂對齊,不外突也不懸空
@@ -565,44 +541,10 @@ const BACKDROP_PARTS = {
       }),
     ];
   },
-  // 假森林:密集的錐冠帶(兩排),前排壓低 ⇒ 遠看是一片起伏的林線
-  forest: (len, H, rnd) => [
-    ...rep(len, H * 0.42, (x, s) => {
-      const h = H * (0.62 + rnd() * 0.38);
-      return [{ g: ['cone', s * 0.62, h, 5], c: pick(rnd, [0x3f4e2e, 0x475838, 0x364527]), p: [x, h / 2, -H * 0.3] }];
-    }),
-    ...rep(len, H * 0.3, (x, s) => {
-      const h = H * (0.45 + rnd() * 0.35);
-      return [{ g: ['cone', s * 0.66, h, 5], c: pick(rnd, [0x44532f, 0x4e5f36]), p: [x, h / 2, H * 0.2] }];
-    }),
-  ],
-  // 假城市:高低錯落的量體天際線 + 幾支塔尖;前排壓低成一道低矮街廓
-  city: (len, H, rnd) => [
-    ...rep(len, H * 0.36, (x, s) => {
-      const h = H * (0.35 + rnd() * 0.65), w = s * (0.5 + rnd() * 0.4);
-      return [
-        { g: ['box', w, h, w * 0.9], c: pick(rnd, [0x5d6672, 0x69727e, 0x525b66, 0x757e89]), p: [x, h / 2, -H * 0.2] },
-        // 塔尖只加在**還有餘裕**的那幾棟上(不然最高那一棟加上去就頂破天花板)
-        ...(h < H * 0.76 && rnd() < 0.3
-          ? [{ g: ['cyl', w * 0.06, w * 0.03, H * 0.22, 4], c: 0x8d949c, p: [x, h + H * 0.11, -H * 0.2] }] : []),
-      ];
-    }),
-    ...rep(len, H * 0.24, (x, s) => {
-      const h = H * (0.14 + rnd() * 0.18);
-      return [{ g: ['box', s * 0.86, h, s * 0.5], c: pick(rnd, [0x6f7883, 0x7d8791]), p: [x, h / 2, H * 0.22] }];
-    }),
-  ],
-  // 假海:遠方的低平島影 + 一道霧色海平帶(海面本身是 terrain.js 的外環水盤,這裡只補「有東西」)
-  sea: (len, H, rnd) => [
-    { g: ['box', len, H * 0.34, H * 0.5], c: 0x7f8c98, p: [0, H * 0.17, 0] },
-    ...rep(len, H * 3.4, (x, s) => {
-      const h = H * (0.5 + rnd() * 0.5);
-      return [
-        { g: ['cone', s * 0.16, h, 5], c: pick(rnd, [0x64707c, 0x59646f]), p: [x, h / 2, -H * 0.2] },
-        ...(rnd() < 0.5 ? [{ g: ['cone', s * 0.1, h * 0.6, 5], c: 0x6c7884, p: [x + s * 0.14, h * 0.3, H * 0.1] }] : []),
-      ];
-    }),
-  ],
+  // Distant silhouettes use the same species/building/rock constructors as the scene.
+  forest: (len, H, rnd, season) => backdropCluster('gianttree', len, H, rnd, season),
+  city: (len, H, rnd, season) => backdropCluster('skyscraper', len, H, rnd, season),
+  sea: (len, H, rnd, season) => backdropCluster('boulder', len, H, rnd, season),
 };
 
 /** 取一段背景的零件表(局部座標:x = 沿邊、y = 由地面往上、z = 厚度方向) */

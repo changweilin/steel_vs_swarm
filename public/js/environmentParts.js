@@ -9,23 +9,9 @@ import { geologyBackgroundObject } from './geology.js';
 import { generateVessel } from './vesselCatalog.js';
 import { loftMeshData, vesselHullSections } from './vesselGeometry.js';
 
-export const ENVIRONMENT_OBJECTS = Object.freeze({
-  house: { category: 'residential', bio: ['urban'], size: [14, 12, 11] },
-  skyscraper: { category: 'highrise', bio: ['urban'], size: [20, 60, 18] },
-  skyfall: { category: 'highrise', bio: ['urban'], size: [36, 14, 16] },
-  factory: { category: 'industry', bio: ['urban'], size: [30, 18, 24] },
-  powerplant: { category: 'industry', bio: ['urban'], size: [32, 26, 24] },
-  incinerator: { category: 'industry', bio: ['urban'], size: [26, 28, 20] },
-  mine: { category: 'extraction', bio: ['bare'], size: [32, 16, 26] },
-  oilfield: { category: 'extraction', bio: ['bare'], size: [20, 22, 16] },
-  greenhouse: { category: 'agriculture', bio: ['green'], size: [24, 10, 16] },
-  ranch: { category: 'agriculture', bio: ['green'], size: [26, 12, 20] },
-  boulder: { category: 'rock', bio: ['bare', 'green', 'wet'], size: [18, 16, 16] },
-  gianttree: { category: 'giant-tree', bio: ['green', 'wet'], size: [30, 65, 30] },
-  fallentree: { category: 'deadwood', bio: ['green', 'wet'], size: [28, 7, 9] },
-  car: { category: 'vehicle', bio: ['urban'], size: [4.8, 1.8, 2.2] },
-  strandedship: { category: 'marine-vehicle', bio: ['wet'], size: [34, 16, 14] },
-});
+import { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS } from './environmentCatalog.js';
+import { iceParts } from './iceParts.js';
+export { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS, ENVIRONMENT_CATEGORIES, environmentSize, environmentAvailable } from './environmentCatalog.js';
 
 export const ENVIRONMENT_PREFIX = 'environment/';
 const box = (w, h, d, x, y, z, c, role, extra = {}) =>
@@ -60,8 +46,10 @@ function building(kind, w, h, d, rnd) {
   const industrial = ['factory', 'powerplant', 'incinerator'].includes(kind);
   const bodyH = h * (industrial ? .48 : tall ? .88 : .7);
   const rows = [box(w, bodyH, d, 0, bodyH / 2, 0, facade, 'building-body')];
-  const floors = tall ? integer(rnd, 8, 16) : industrial ? 2 : integer(rnd, 2, 4);
-  const bays = integer(rnd, 3, 7);
+  const spec = ENVIRONMENT_PARAMETERS[ENVIRONMENT_OBJECTS[kind].category];
+  const sample = range => range[0] + rnd() * (range[1] - range[0]);
+  const floors = Math.max(1, Math.floor(bodyH / sample(spec.floor)));
+  const bays = Math.max(1, Math.floor(w / sample(spec.bay)));
   for (let floor = 0; floor < floors; floor++) {
     const y = bodyH * (floor + .65) / floors, wh = bodyH / floors * .48;
     for (let bay = 0; bay < bays; bay++) {
@@ -87,16 +75,18 @@ function building(kind, w, h, d, rnd) {
       rows.push(cyl(w * .035, w * .05, sh, x, bodyH + sh / 2, -d * .3, trim, 'chimney'));
       rows.push(cyl(w * .037, w * .037, sh * .1, x, h * .94, -d * .3, 0xd0c8b7, 'stack-band'));
     }
-    if (kind === 'powerplant') rows.push(cyl(w * .12, w * .18, h * .5,
-      w * .25, bodyH + h * .25, 0, 0x9ca39d, 'cooling-tower'));
+    // Ground-supported cooling tower beside the hall, never on its roof.
+    if (kind === 'powerplant') rows.push(cyl(w * .12, w * .18, h * .7,
+      w * .7, h * .35, 0, 0x9ca39d, 'cooling-tower'));
   } else if (tall) {
     const crown = choose(rnd, ['terrace', 'lantern', 'spire']);
     rows.push(box(w * .65, h * .08, d * .65, 0, bodyH + h * .04, 0, trim, crown));
     if (crown === 'spire') rows.push(cyl(.12, w * .035, h * .04, 0, h * .98, 0, trim, 'antenna'));
   } else {
     const pitch = choose(rnd, [.24, .36, .48]);
-    for (const side of [-1, 1]) rows.push(box(w * 1.03, h * .035, d * .58,
-      0, bodyH + d * .13, side * d * .24, trim, 'roof-slope', { r: [side * pitch, 0, 0] }));
+    const halfSpan = d * .52, rise = Math.tan(pitch) * halfSpan;
+    for (const side of [-1, 1]) rows.push(box(w * 1.03, h * .035, halfSpan / Math.cos(pitch),
+      0, bodyH + rise / 2, side * halfSpan / 2, trim, 'roof-slope', { r: [side * pitch, 0, 0] }));
     rows.push(box(w * .16, bodyH * .42, .12, -w * .22, bodyH * .21, d / 2 + .07, trim, 'door'));
   }
   return rows;
@@ -201,7 +191,8 @@ export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size,
     || size.some(v => !Number.isFinite(v) || v <= 0)) throw new RangeError('Invalid environment dimensions or seed');
   const [w, h, d] = size, rnd = mulberry32(seed >>> 0);
   let rows;
-  if (kind === 'car') rows = makeSceneVehicleParts('sedan', { fit: { L: w, H: h, W: d }, paint: seed });
+  if (ENVIRONMENT_OBJECTS[kind].draft) rows = iceParts(kind, size, seed);
+  else if (kind === 'car') rows = makeSceneVehicleParts('sedan', { fit: { L: w, H: h, W: d }, paint: seed });
   else if (kind === 'gianttree' || kind === 'fallentree') {
     const tree = createForestTree(choose(rnd, ['redwood', 'sequoia']), seed, undefined, undefined, 1, season);
     rows = tree.parts.filter(p => kind !== 'fallentree' || !['leaf', 'flower', 'fruit'].includes(p.role)).map(p => {
@@ -215,7 +206,10 @@ export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size,
   else if (kind === 'strandedship') rows = ship(seed);
   else if (kind === 'skyfall') rows = layDown(building('skyscraper', h * .55, w, d * .8, rnd));
   else rows = building(kind, w, h, d, rnd);
-  return fit(rows, size);
+  const fitted = fit(rows, size);
+  if (!ENVIRONMENT_OBJECTS[kind].draft) return fitted;
+  const bounds = partsAABB(fitted), waterline = (bounds.y1 - bounds.y0) * ENVIRONMENT_OBJECTS[kind].draft;
+  return fitted.map(part => ({ ...part, waterline }));
 }
 
 // Array/linear forms are only exposed through the boundary catalog. Every module receives
@@ -286,6 +280,9 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
       if (kind === 'debris' || kind === 'landslide') rows.push(...environmentParts('fallentree',
         { size: [step * .8, h * .25, d * .65], seed: seed ^ (i + 33) })
         .map(p => ({ ...p, p: [p.p[0] + x, p.p[1] + h * .12, p.p[2]] })));
+    } else if (kind === 'seaice') {
+      rows.push(...environmentParts('icefloe', { size: [step * .98, Math.min(h, step * .16), d], seed: seed ^ (i + 1) })
+        .map(p => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
     } else if (['searanch', 'oysterracks'].includes(kind)) {
       const railY = Math.min(h * .45, 4);
       for (const side of [-1, 1]) {

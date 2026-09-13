@@ -92,8 +92,9 @@ console.log('\nⅡ 通用幾何與場景接線');
 const usedTypes = new Set([...buildings, ...VEHICLE_PARTS].flatMap((row) => row.parts.map((part) => part.type)));
 ok([...usedTypes].every((type) => runtimeRenderer.includes(`'${type}'`)),
   `通用 renderer 涵蓋全部 ${usedTypes.size} 種正式 primitive`);
-ok(/fitApprovedBuilding\(b(?:,|\))/.test(biomes)
-  && /makeApprovedBuildingBatch\(entry, rows\)/.test(biomes), '一般建物經正式選款與每款批次進場');
+ok(!/fitApprovedBuilding\(/.test(biomes)
+  && /buildOsmPolygonBuildings\(group, \[\.\.\.procedural.values\(\)\]/.test(biomes)
+  && /blockers.push\(\.\.\.proceduralResult.blockers\)/.test(biomes), '一般建物經多邊形程序生成器部署，碰撞同源');
 ok(/makeProceduralVehicle\(/.test(biomes) && !biomes.includes('approvedVehicleModels')
   && readSrc('public','js','vehicleModels.js').includes('makeRuntimePartModel(entry)'),
   '場景載具全部經新建程序模型與通用 renderer 進場');

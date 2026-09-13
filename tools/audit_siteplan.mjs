@@ -532,7 +532,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
   ok(/function giantCrownR\(/.test(bio), '冠幅由 giantCrownR 推導');
   ok(!/\bcr:\s*\d+(\.\d+)?\s*[,}]/.test(strip(bio.slice(bio.indexOf('const GIANT_DEFS'), bio.indexOf('const GIANT_DECO')))),
     'GIANT_DEFS 沒有手寫的冠幅欄(推導值 MUST NOT 手寫)');
-  ok(/parameters/.test(strip(bio.slice(bio.indexOf('function giantCrownR'), bio.indexOf('function placeGiantGroves')))),
+  ok(/parameters/.test(strip(grabFn(bio, 'giantCrownR'))),
     'giantCrownR 由零件表的幾何參數推導(不是抄一組常數)');
   // AI 零件庫消費端縫(2026-08-05;docs/ai3d_runbook.md §0.2 不變式 7):
   // 解析只有 build 時的 partGeo 一份(模組載入期 VEG_DEFS 建表早於 GLB 抓取,表內解析恆
@@ -540,27 +540,17 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
   // 佈局讀它 = 跨客戶端逐位元分家(§2.3),intake 契約(GLB 外廓 ≤ fallback)讓保險絲恆保守。
   {
     const bioC = strip(bio);
-    ok((bioC.match(/libGeo\(/g) || []).length === 3
-      && /const partGeo = \(p\) => \(p\.lib && isRuntimeEligibleNatureKey\(p\.lib\) && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC)
-      && /const megaGeo = \(name\) => \{\s+const g2 = name && isRuntimeEligibleNatureKey\(name\) \? libGeo\(name\) : null;\s+return g2 \? g2\.clone\(\) : null;\s+\};/.test(bioC)
-      && /const bldGeo = \(key, i = 0\) => \{/.test(bioC) && /BLD_LIB\[key\]/.test(bioC),
-      'AI 零件庫解析恰三份:partGeo + megaGeo 皆先過 v1 自然物白名單守衛;'
-      + '一律 clone —— 巨岩群組會過 bakeContactAO 就地烤頂點色,共用庫幾何被烤一次全場帶著別顆岩的 AO)'
-      + '+ bldGeo(建物屋頂配件桶守衛;不 clone —— 配件桶不過 bakeContactAO,幾何唯讀共用)');
+    ok(!/libGeo\(/.test(bioC) && /const partGeo = \(p\) => p\.g;/.test(bioC),
+      '環境幾何直接讀程序描述子，不依賴非同步舊模型庫');
     {   // bldGeo 只住 buildBldBucket 桶建構表(凍結四桶:煙囪/水塔/空調機組/**整棟量體**),
         // 逐桶恆以 `|| 原 primitive` 收尾(保險絲,原則 6;載入失敗 = 舊畫面);遊戲內消費點
         // 恰 4 處(屋頂配件三桶 + 一般建物繪製段的整棟量體桶)+ 一處**探詢**(繪製段開頭
         // 一次問完名冊裡哪幾顆真的載到 —— 放進逐棟迴圈就是同一個名字每棟查一遍)。
         // 增刪桶 MUST 同步這裡與 tri_budget families.building(名冊桶數是 deco 那三桶的除數;
         // mass 刻意不進那個除數,理由見 tri_budget 的 mass.justification)。
-      const uses = (bioC.match(/bldGeo\('(?:chimney|tank|acbox)'\) \|\| new THREE\.(?:Box|Cylinder)Geometry\(/g) || []).length
-        // 整棟量體那一桶的保險絲自 2026-08-12 起是**剖面疊出來的**(與碰撞柱同源),
-        // 連剖面都沒宣告才退回單位方盒 —— 那是保險絲的保險絲
-        + (bioC.match(/bldGeo\(key, i\) \|\| \(prof \? profGeo\(prof, MASS\.UVB\[key\] \|\| MASS\.UVB\.mass\) : new THREE\.BoxGeometry\(1, 1, 1\)\)/g) || []).length;
-      const calls = (bioC.match(/buildBldBucket\.(?:chimney|tank|acbox|mass)\(/g) || []).length;
-      ok(uses === 4 && (bioC.match(/bldGeo\(/g) || []).length === 4 && calls === 3
-        && /makeApprovedBuildingBatch\(entry, rows\)/.test(bioC),
-        `舊 bldGeo 整棟量體消費端已退場；三個屋頂配件保留保險絲，正式建築走 runtime batch(實得 ${uses}/${calls})`);
+      ok(!/bldGeo\(/.test(bioC)
+        && ['chimney', 'tank', 'acbox'].every(kind => bioC.includes(kind + ': (n) => new THREE.InstancedMesh(new THREE.')),
+        '屋頂附件使用程序 primitive，舊 bldGeo 消費端已移除');
       // 兩個整棟量體桶只差**名冊與挑選規則**,幾何/材質/保險絲同一份實作 ⇒ 桶建構表
       // MUST NOT 長出第二支;`buildBldBucket.masslow` 一出現就是「兩桶的保險絲不一樣」。
       ok(/mass: \(n, mat, i = 0, key = 'mass'\) =>/.test(bioC) && !/masslow: \(n/.test(bioC),
@@ -605,16 +595,16 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       //   拉伸過頭的那一棟會被跳過(退回方盒),額度留給下一棟。
       const pickBlk = bioM.slice(bioM.indexOf('const massPick = new Map();'), bioM.indexOf('for (const commercial of'));
       ok(pickBlk.length > 80 && !/rnd\(/.test(pickBlk)
-        && /for \(const b of generic\)/.test(pickBlk)
-        && /fitApprovedBuilding\(b, architecture, cfg\.architectureSeed \|\| 0\)/.test(pickBlk)
-        && /if \(fit\) massPick\.set\(b, fit\);/.test(pickBlk),
-        '正式建築挑選涵蓋全部 generic、零 rnd 消耗，單一轉呼 fitApprovedBuilding');
+        && /for \(const b of generic\)/.test(pickBlk) && /procedural\.set\(b,/.test(pickBlk)
+        && !/fitApprovedBuilding\(/.test(pickBlk),
+        '全部一般建物直接產生程序建築，零共享 rnd 消耗');
       // ①-b **挑選與「庫載到了沒」解耦**(2026-08-12;碰撞柱改吃剖面之後這一條是致命的):
       //     舊制的閘是 `if (ok.length)`,而它會讓「載到庫的客戶端登記剖面柱、沒載到的登記
       //     方盒柱」⇒ 權威幾何跨客戶端分家(A30 + §2.3),畫面上只表現成「你說你打中了,
       //     我這邊沒掉血」。挑選 MUST 只讀純資料;載入成敗只決定畫出來的是網格還是保險絲。
-      ok(!/bldGeo\(/.test(pickBlk) && !/libOk/.test(pickBlk) && /fitApprovedBuilding\(b, architecture, cfg\.architectureSeed \|\| 0\)/.test(pickBlk),
-        '挑選只讀 bundled runtime 目錄純資料，不問非同步 GLB 載入狀態');
+      ok(!/bldGeo\(|libOk|fitApprovedBuilding\(/.test(pickBlk)
+        && /buildOsmPolygonBuildings\(group, \[\.\.\.procedural.values\(\)\]/.test(pickBlk),
+        '程序建物不依賴舊模型庫的可用狀態');
       // ①-c **尺寸貼合**(使用者這一輪第 ①):方盒構築由剖面實測外廓推導三軸縮放;
       //     非方盒構築保留自然比例,三軸取同一個最小比例。拉伸倍率超過 `ASPECT_MAX`
       //     就不換這一棟。舊制直接拿 (w,h,d) 縮單位方盒,而節點只佔單位盒的 0.13~0.42
@@ -643,9 +633,9 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         '正式 runtime 目錄涵蓋全部一般建物，不再只替換高層/低矮兩個舊子集');
       // ②-b 名冊沒宣告剖面 ⇒ `bldProfile` 回 null ⇒ `fitNode` 挑不到 ⇒ 那一桶一棟都不換
       //     ⇒ 逐位元同舊制(保險絲;**逐桶各自成立**)
-      ok(/if \(fit\) massPick\.set\(b, fit\);/.test(bioM)
-        && /if \(!t\.lib\)/.test(bioM) && /new THREE\.BoxGeometry\(1, 1, 1\)/.test(bioM),
-        'runtime 目錄異常時該棟仍走單位方盒保險絲，不留下缺口');
+      ok(/blockers.push\(\.\.\.proceduralResult.blockers\)/.test(pickBlk)
+        && /osmRoofPlatforms.push\(\.\.\.proceduralResult.platforms\)/.test(pickBlk),
+        '建物碰撞與可站立頂面由同次程序生成結果登記');
       // ③色抖的雜湊吃原始序:拆桶後拿新索引去雜湊會讓其餘每一棟的配色跟著平移
       const emitBlk = bioM.slice(bioM.indexOf('const emitMass = (rows, mesh) =>'), bioM.indexOf('const boxRows = new Map()'));
       ok(/inst\.forEach\(\(t, i\) => \{ t\.ord = i; \}\);/.test(bioM)
@@ -1171,7 +1161,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
     ok(/new THREE\.InstancedMesh\(partGeo\(part\)/.test(bioC),
       '植被消費迴圈畫的是 partGeo 解析結果(載入失敗退回保險絲 = 舊畫面)');
     const crownSrc = strip(bio.slice(bio.indexOf('function giantCrownR'), bio.indexOf('function placeGiantGroves')));
-    const spanSrc = strip(bio.slice(bio.indexOf('function vegSpan'), bio.indexOf('function buildVegMeshes')));
+    const spanSrc = strip(grabFn(bio, 'vegSpan'));
     ok(!/libGeo|partGeo|\.lib\b/.test(crownSrc) && !/libGeo|partGeo|\.lib\b/.test(spanSrc),
       '佈局數學(giantCrownR / vegSpan)只讀保險絲 p.g:庫幾何隨載入成敗而異,佈局讀它 = 跨客戶端分家(§2.3)');
     // 2026-08-05 綠地首批接線之後才有意義的三條(在此之前一列 lib 都沒有,恆真)
