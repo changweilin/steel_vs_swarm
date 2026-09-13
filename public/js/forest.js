@@ -204,7 +204,10 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
           const size = h * (.07 + rnd() * .025);
           parts.push({ g: cyl(size, size * .45, h * .24, 8, treeSections(h * .24 * scale)), px: tip[0], y: tip[1] - h * .12, pz: tip[2], c: 0xa25a55, key: 'gleaf', noCard: true, role: 'leaf' });
           parts.push({ g: ico(size * .84), px: tip[0], y: tip[1], pz: tip[2], sy: .08, c: 0x392a30, role: 'mouth' });
-          parts.push({ g: ico(size), px: tip[0] + size * .7, y: tip[1] + size * .7, pz: tip[2], sy: .18, c: leaf, key: 'gleaf', noCard: true, role: 'leaf' });
+          const lid = [tip[0] + size * .7, tip[1] + size * .7, tip[2]];
+          // Keep the raised lid attached to the rim at every sampled pitcher size.
+          branch([tip[0] + size * .85, tip[1], tip[2]], lid, size * .12, 'leaf', leaf);
+          parts.push({ g: ico(size), px: lid[0], y: lid[1], pz: lid[2], sy: .18, c: leaf, key: 'gleaf', noCard: true, role: 'leaf' });
         } else {
           blade(origin, tip, h * (spec.bladeWidth ?? .09));
           crowns.push({p: tip, radius: h * .06, sy: .3});
