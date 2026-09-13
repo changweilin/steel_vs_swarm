@@ -411,8 +411,8 @@ sec('Ⅶ 觀戰視角:滾輪縮放 + 四種視角循環');
   ok(/\.sort\(/.test(roster), '跟隨名冊排序 MUST 穩定,否則 Q/E 循環會隨快照跳位');
 
   const initSrc = code(init);
-  ok(/_onWheel[\s\S]*?if \(this\.side \|\| this\.paused\) return;/.test(initSrc),
-    '滾輪縮放 MUST 只在觀戰生效 —— 交戰的視野縮放唯一入口是右鍵瞄準(A8:FOV 不做機種差異化)');
+  ok(/_onWheel[\s\S]*?!this\.side[\s\S]*?this\._setAiming/.test(initSrc),
+    '滾輪縮放 MUST 只在觀戰生效、交戰時滾輪切換狙擊鏡(A8:FOV 不做機種差異化)');
   ok(/removeEventListener\('wheel', this\._onWheel\)/.test(code(gameSrc)),
     'wheel 監聽 MUST 在 dispose 解訂閱(離場後滾輪還在改上一局的相機)');
   const upd = code(body(gameSrc, '_updatePlayer'));
