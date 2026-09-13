@@ -19,7 +19,6 @@ export const EXPANDED_BOUNDARIES = Object.freeze({
   tankfarm: { label: '油槽儲運區', category: 'industry', bio: ['urban', 'bare'], slope: 'flat', depth: 18, h: 18, color: 0x868b87, section: shelfSection, tanks: true, rows: 2, pitch: 8 },
   canalbank: { label: '運河護岸', category: 'levee', bio: ['wet', 'urban'], slope: 'flat', depth: 12, h: 8, color: 0x8d9691, section: [[-.5,0],[-.45,.85],[.3,.85],[.5,0]] },
   reefchain: { label: '密集連綿礁岩', category: 'coastal', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 16, color: 0x758b80, section: hillSection, rock: true, relief: true },
-  seaice: { label: '浮冰冰脊帶', category: 'coastal', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 12, color: 0xb7d4d8, section: [[-.5,0],[-.4,.5],[-.12,.9],[.1,.85],[.35,.45],[.5,0]], rock: true },
   harborwarehouses: { label: '港灣高腳倉庫群', category: 'coastal', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 20, color: 0x737f80, section: shelfSection, object: 'factory', rows: 1, pitch: 13, foundation: true },
 });
 export const SLOPE_BOUNDARIES = Object.freeze({
