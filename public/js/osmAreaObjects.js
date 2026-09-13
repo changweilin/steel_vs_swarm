@@ -13,7 +13,7 @@ const ROWS = Object.freeze({
   forest: { shape: 'tree', radius: 3.0, minArea: 750, max: 8, color: 0x3f6840, solid: true },
   park: { shape: 'bench', radius: 1.8, minArea: 1200, max: 3, color: 0x687c50, solid: true },
   sports: { shape: 'goal', radius: 2.8, minArea: 1800, max: 2, color: 0xd9ded5, solid: true },
-  parking: { shape: 'car', radius: 2.4, minArea: 180, max: 8, color: 0x657587, solid: true },
+  parking: { shape: 'car', radius: 2.2, minArea: 55, max: 24, color: 0x657587, solid: true },
   campus: { shape: 'facility', radius: 5.0, minArea: 3000, max: 1, color: 0x98aa86, solid: true, representative: true },
   hospital: { shape: 'facility', radius: 5.0, minArea: 3000, max: 1, color: 0xb57d7d, solid: true, representative: true },
   station: { shape: 'facility', radius: 5.0, minArea: 2400, max: 1, color: 0x7d86a0, solid: true, representative: true },
@@ -46,6 +46,8 @@ const SHAPES = Object.freeze({
   bench: () => [box(3, 0.35, 0.75, 0.9), box(0.25, 0.9, 0.25, 0.45), box(0.25, 0.9, 0.25, 0.45)],
   goal: () => [box(5, 0.18, 0.18, 2.4), box(0.18, 2.5, 0.18, 1.25), box(0.18, 2.5, 0.18, 1.25)],
   car: () => [box(4.2, 1.2, 1.9, 0.7), box(2.1, 0.7, 1.7, 1.55)],
+  motorcycle: () => [cylinder(0.35, 0.35, 0.14, 8, 0.35), cylinder(0.35, 0.35, 0.14, 8, 0.35), box(1.3, 0.55, 0.45, 0.55), box(0.08, 0.08, 0.7, 0.85)],
+  solar: () => [box(2.5, 0.06, 1.4, 0.7), box(2.3, 0.35, 0.06, 0.18)],
   facility: () => [box(8, 7, 7), box(3, 2, 3, 8)],
   spire: () => [box(6, 5, 6), cylinder(3.2, 0, 6, 8, 8)],
   marker: () => [box(0.7, 1.3, 0.35, 0.65)],
@@ -100,7 +102,16 @@ export function buildOsmAreaObjects(group, areas = [], options = {}) {
   for (let index = 0; index < plan.placed.length; index++) {
     const p = plan.placed[index], cls = p.area.classification, row = ROWS[cls.generator];
     if (!isInside(p.x, p.z, row.radius)) continue;
-    const make = SHAPES[row.shape];
+    let shapeKey = row.shape;
+    if (cls.generator === 'parking') {
+      const occSeed = ((index * 9301 + 49297) % 233280) / 233280;
+      if (occSeed < 0.22) continue;
+      shapeKey = (index % 3 === 0) ? 'motorcycle' : 'car';
+    } else if (cls.generator === 'power') {
+      const isSolar = p.area?.tags?.['plant:source'] === 'solar' || p.area?.tags?.['generator:source'] === 'solar' || p.area?.tags?.power === 'solar';
+      if (isSolar) shapeKey = 'solar';
+    }
+    const make = SHAPES[shapeKey] || SHAPES[row.shape];
     if (!make) continue;
     const geos = make();
     const y = Number(options.heightAt?.(p.x, p.z)) || 0;
