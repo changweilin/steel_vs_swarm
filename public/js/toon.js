@@ -882,12 +882,12 @@ const WIND_DIR = [Math.cos(WIND.DIR_DEG * Math.PI / 180), Math.sin(WIND.DIR_DEG 
 export const SOFT_KINDS = {
   // 頻率隨「這團東西有多重」遞減:樹冠是一大團葉子,慢;草穗輕,快;旗面最輕最快。
   // 反過來排(草比樹慢)看起來會像水草,不像風。
-  leaf:  { amp: 0.035, freq: 0.62, axis: 'y' },   // 樹冠 / 葉簇 / 針葉
+  leaf:  { amp: 0.050, freq: 0.48, axis: 'y' },   // 樹冠 / 葉簇 / 針葉
   // 樹幹/枝隨風搖曳(2026-09-02;2026-09-06 接縫連續修正):amp 與 leaf 一致、freq/axis 同 leaf ⇒ 幹梢與葉冠底部\r
   // 在**相同高度**上取到同一份位移,接縫不會被風吹開。amp 差一半的話冠底位移是幹梢兩倍、陣風峰值巨木接縫拉開約 1m。\r
-  wood:  { amp: 0.035, freq: 0.62, axis: 'y' },   // 樹幹 / 樹枝(amp = leaf,與冠同位移接縫不開)
-  grass: { amp: 0.075, freq: 1.15, axis: 'y' },   // 芒草 / 蘆葦 / 箭竹 / 花圃 / 稻
-  cloth: { amp: 0.110, freq: 1.70, axis: 'x' },   // 旗幟
+  wood:  { amp: 0.050, freq: 0.48, axis: 'y' },   // 樹幹 / 樹枝(amp = leaf,與冠同位移接縫不開)
+  grass: { amp: 0.110, freq: 0.85, axis: 'y' },   // 芒草 / 蘆葦 / 箭竹 / 花圃 / 稻
+  cloth: { amp: 0.150, freq: 1.25, axis: 'x' },   // 旗幟
   turf:  { amp: 0,     freq: 0,    axis: 'y' },   // 草坪 / 內場草皮(只細線,不擺動)
   // 海浪(2026-08-13)。`axis: 'w'` = **表面波**,與上面四種是兩種不同的東西:
   //   ・上面四種:位移**沿風向水平**推、權重由根到梢遞增、相位取**實例原點**(一株 = 一相位)
@@ -1685,8 +1685,8 @@ ${CEL_SEA_GLSL}
           float swRate = uSoftFreq * uWeatherWindFreq;
           float swPhase = swP;
           float swBeat = ${WIND.BEAT.toFixed(3)};
-          float swSlowW = 0.72;
-          float swFastW = 0.28;
+          float swSlowW = 0.84;
+          float swFastW = 0.16;
           float swFastPhase = swP * 1.6 + 1.7;
           #ifdef CEL_SWAY_H
             // 布料 = 慢抬起 + 3.3× 小幅快顫。雜湊只吃已定案的世界落點，零共享 rnd。
@@ -1724,7 +1724,8 @@ ${CEL_SEA_GLSL}
           // 同一個 sw 壓扁冠拿到的世界下沉才會與幹一致,不除就只剩 1/3。
           vec3 swUrow = vec3( 0.0, 1.0, 0.0 ) * swM;
           vec3 swU = normalize( vec3( swUrow.x / ( swLx * swLx ), swUrow.y / ( swLy * swLy ), swUrow.z / ( swLx * swLx ) ) + vec3( 1e-6 ) );
-          transformed -= swU * ( sw * ( uSoftAmp * uWeatherWindAmp ) * abs( swOsc ) * 0.3 / swLy );
+          // Squared deflection eases through upright without the cusp of abs(swOsc).
+          transformed -= swU * ( sw * ( uSoftAmp * uWeatherWindAmp ) * swOsc * swOsc * 0.2 / swLy );
           // ---- 玩家位移擾動(S5;⑤-1)----
           // 距離是 **2.5D**:水平取**同一株的樹基**(swTXZ,與擺動相位同一個點)、垂直取這個頂點
           // 自己的世界高度 ⇒ 同株的幹/枝/冠拿到同一份推重,接合處在機體經過時不錯開;

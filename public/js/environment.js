@@ -181,8 +181,8 @@ function cloudTextures() {
  * 4. 緩慢變形機制: 多頻非對稱縱橫拉伸、內部子結構慢速旋流位移與風切微旋轉。
  */
 const CLOUD_N = 28;        // 雲量基數;實際枚數與 WEATHERS[w].light 反比
-const CLOUD_BOB = 0.015;      // 逐朵上下起伏
-const CLOUD_BREATH = 0.08;    // 逐朵尺寸呼吸
+const CLOUD_BOB = 0.020;      // 逐朵上下起伏
+const CLOUD_BREATH = 0.10;    // 逐朵尺寸呼吸
 function makeClouds(span, skyC, W, seed) {
   if (W?.fogNear <= 0.05) return null;
   const rnd = mulberry32(((seed ?? 0) ^ 0x93B7C1) >>> 0);
@@ -327,7 +327,7 @@ function makeClouds(span, skyC, W, seed) {
         const fadeAlpha = Math.max(0, Math.min(1, life * 1.5 - 0.15)) * cloudCoverage;
 
         // 6. 風力驅動高空聚散速率 (Clustering & Dispersal pulse frequency scales with windAmp)
-        const clusterPulse = Math.sin(t * 0.12 * Math.max(0.4, windAmp) + c.phase) * 0.5 + 0.5; // 聚合 -> 分散循環
+        const clusterPulse = Math.sin(t * 0.085 * Math.max(0.4, windAmp) + c.phase) * 0.5 + 0.5; // 聚合 -> 分散循環
         const clusterMerge = (cloudsPct > 50 ? 0.35 : 0.65) * clusterPulse + (cloudsPct > 50 ? 0.45 : 0.15);
 
         // 7. 緩慢變形動態 (Slow Morphing Dynamics, 速率隨風力加乘)
@@ -340,7 +340,7 @@ function makeClouds(span, skyC, W, seed) {
         // b. 縱橫非對稱拉伸變形 (Aspect-Ratio Stretch Morphing)
         const morphX = 1.0 + Math.sin(t * item.morphSpeedX * Math.max(0.5, windAmp) + item.morphPhaseX) * 0.26 + Math.cos(t * item.morphSpeedX * 0.47) * 0.08;
         const morphY = 1.0 + Math.cos(t * item.morphSpeedY * Math.max(0.5, windAmp) + item.morphPhaseY) * 0.22 + Math.sin(t * item.morphSpeedY * 0.53) * 0.07;
-        const scaleMul = (0.75 + clusterMerge * 0.75) * (1 + Math.sin(t * 0.2 * Math.max(0.5, windAmp) + item.bobPhase) * CLOUD_BREATH);
+        const scaleMul = (0.75 + clusterMerge * 0.75) * (1 + Math.sin(t * 0.13 * Math.max(0.5, windAmp) + item.bobPhase) * CLOUD_BREATH);
 
         // c. 風切與渦流慢速自轉微傾 (Eddy Rotation Morphing)
         item.sp.material.rotation = item.rot0 + Math.sin(t * item.rotSpeed * Math.max(0.5, windAmp) + item.rotPhase) * 0.16 + Math.cos(t * item.rotSpeed * 0.38) * 0.05;
@@ -349,7 +349,7 @@ function makeClouds(span, skyC, W, seed) {
         const posZ = a * windDir[1] + d.side * windDir[0] + curOffZ;
 
         // 雲層垂直高度: 霧越濃，雲底越低 (minAltitude)，垂直跨度 (vertExpansion) 越大
-        const posY = minAltitude + (d.y - span * 0.18) * vertExpansion + Math.sin(t * 0.14 * Math.max(0.5, windAmp) + item.bobPhase) * span * CLOUD_BOB;
+        const posY = minAltitude + (d.y - span * 0.18) * vertExpansion + Math.sin(t * 0.09 * Math.max(0.5, windAmp) + item.bobPhase) * span * CLOUD_BOB;
 
         item.sp.position.set(posX, posY, posZ);
         item.sp.scale.set(item.baseScaleX * 2 * scaleMul * morphX * scaleFactor, item.baseScaleY * scaleMul * morphY * scaleFactor, 1);
