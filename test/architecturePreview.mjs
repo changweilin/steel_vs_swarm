@@ -261,9 +261,9 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <button id="btn-full-random" class="btn-full-random">🎲 全類別隨機混搭</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
-          <label class="sample-input-wrap">維度A <input type="number" id="sample-dim-a" value="5" min="1" max="30"></label>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-dim-a" value="5" min="1" max="30"></label>
           <span>×</span>
-          <label class="sample-input-wrap">維度B <input type="number" id="sample-dim-b" value="5" min="1" max="30"></label>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-dim-b" value="5" min="1" max="30"></label>
           <label class="sample-all-wrap"><input type="checkbox" id="chk-sample-all"> 全量不取樣</label>
         </div>
         <div class="seed-control">
@@ -294,6 +294,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">結構類型</label>
           <select id="geo-type" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all" selected>全部類型輪播 (All Types)</option>
             <option value="auto">依環境加權抽樣</option>
             <optgroup label="自然地質">
               <option value="granite">花崗岩塊 (Granite)</option>
@@ -335,14 +336,15 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
           <select id="geo-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="single" selected>單體細節檢驗</option>
-            <option value="variants">16 組種子變體陣列</option>
-            <option value="matrix">主要地質類型矩陣</option>
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單體細節檢驗 (Single Object)</option>
+            <option value="matrix">全類型目錄陳列 (All Catalog)</option>
           </select>
         </div>
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">氣候環境</label>
           <select id="geo-climate" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all">全部氣候輪播 (All Climates)</option>
             <option value="temperate">溫帶 (Temperate)</option>
             <option value="tropical">熱帶 (Tropical)</option>
             <option value="arid">乾旱 (Arid)</option>
@@ -353,6 +355,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">水域類型</label>
           <select id="geo-water" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all">全部水域輪播 (All Waters)</option>
             <option value="none">陸地 (None)</option>
             <option value="stream">溪流 (Stream)</option>
             <option value="river">河流 (River)</option>
@@ -365,6 +368,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div style="display:flex; gap: 10px; align-items:center; flex-wrap:wrap; font-size: 11px; font-weight: 600;">
           <span>古蹟與人造石設定：</span>
           <label>地區 <select id="geo-region" style="padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px;">
+            <option value="all">全部地區輪播</option>
             <option value="egypt">埃及 (Egypt)</option>
             <option value="greece_rome">希臘羅馬 (Greece/Rome)</option>
             <option value="maya">瑪雅 (Maya)</option>
@@ -374,7 +378,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
             <option value="uk_prehistoric">英國史前 (UK Prehistoric)</option>
           </select></label>
           <label>遺跡形式 <select id="geo-ruin-type" style="padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px;">
-            <option value="auto">隨機遺跡形式</option>
+            <option value="all">全部形式輪播 (All Forms)</option>
+            <option value="auto">隨機形式 (Random)</option>
             <option value="temple">神廟 (Temple)</option>
             <option value="stronghold">要塞 (Stronghold)</option>
             <option value="settlement">聚落 (Settlement)</option>
@@ -402,7 +407,12 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <button id="btn-geo-generate" class="btn-generate">⚡ 重新生成地質</button>
         <button id="btn-geo-random-seed" class="btn-randomize">🎲 隨機種子</button>
         <button id="btn-geo-next-seed" class="btn-randomize">⏭ 下一個種子</button>
-        <button id="btn-geo-variants" class="btn-full-random">🎲 展開 16 組變體</button>
+        <div class="sample-control">
+          <span class="sample-label">陣列規模:</span>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-geo" value="4" min="1" max="20"></label>
+          <span>×</span>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-geo" value="4" min="1" max="20"></label>
+        </div>
         <div class="seed-control">
           <label for="input-geo-seed">種子碼</label>
           <input type="number" id="input-geo-seed" value="42" min="1" max="999999">
@@ -423,6 +433,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示型態</label>
           <select id="veh-formation" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all">全部型態輪播 (All Formations)</option>
             <option value="single" selected>單車／車廂</option>
             <option value="rail">整列貨運列車</option>
             <option value="semi">完整聯結車</option>
@@ -454,8 +465,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
           <select id="veh-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="single" selected>單車細節檢驗</option>
-            <option value="variants">16 組種子變體陣列</option>
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單車細節檢驗 (Single Vehicle)</option>
           </select>
         </div>
       </div>
@@ -471,7 +482,12 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <button id="btn-veh-generate" class="btn-generate">⚡ 重新生成車輛</button>
         <button id="btn-veh-random-seed" class="btn-randomize">🎲 隨機種子</button>
         <button id="btn-veh-next-seed" class="btn-randomize">⏭ 下一個種子</button>
-        <button id="btn-veh-variants" class="btn-full-random">🎲 展開 16 組變體</button>
+        <div class="sample-control">
+          <span class="sample-label">陣列規模:</span>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-veh" value="4" min="1" max="20"></label>
+          <span>×</span>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-veh" value="4" min="1" max="20"></label>
+        </div>
         <div class="seed-control">
           <label for="input-veh-seed">種子碼</label>
           <input type="number" id="input-veh-seed" value="42" min="1" max="999999">
@@ -515,8 +531,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
           <select id="vessel-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="single" selected>單艦細節檢驗</option>
-            <option value="variants">16 組種子變體陣列</option>
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單艦細節檢驗 (Single Vessel)</option>
           </select>
         </div>
         <div>
@@ -530,7 +546,12 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <button id="btn-vessel-generate" class="btn-generate">⚡ 重新生成船隻</button>
         <button id="btn-vessel-random-seed" class="btn-randomize">🎲 隨機種子</button>
         <button id="btn-vessel-next-seed" class="btn-randomize">⏭ 下一個種子</button>
-        <button id="btn-vessel-variants" class="btn-full-random">🎲 展開 16 組變體</button>
+        <div class="sample-control">
+          <span class="sample-label">陣列規模:</span>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-vessel" value="4" min="1" max="20"></label>
+          <span>×</span>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-vessel" value="4" min="1" max="20"></label>
+        </div>
         <div class="seed-control">
           <label for="input-vessel-seed">種子碼</label>
           <input type="number" id="input-vessel-seed" value="42" min="1" max="999999">
@@ -550,6 +571,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">大分類模式</label>
           <select id="env-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all">全部大分類輪播 (All Modes)</option>
             <option value="scene" selected>場景獨立物件 (Scene Objects)</option>
             <option value="ice">浮冰與冰山 (Sea Ice & Iceberg)</option>
             <option value="edge">邊界固定構造 (Edge Boundaries)</option>
@@ -567,9 +589,9 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
           <select id="env-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="single" selected>單體細節檢驗</option>
-            <option value="variants">16 組種子變體陣列</option>
-            <option value="catalog">全分類目錄陳列</option>
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單體細節檢驗 (Single Object)</option>
+            <option value="catalog">全分類目錄陳列 (All Catalog)</option>
           </select>
         </div>
       </div>
@@ -577,7 +599,12 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <button id="btn-env-generate" class="btn-generate">⚡ 重新生成物件</button>
         <button id="btn-env-random-seed" class="btn-randomize">🎲 隨機種子</button>
         <button id="btn-env-next-seed" class="btn-randomize">⏭ 下一個種子</button>
-        <button id="btn-env-variants" class="btn-full-random">🎲 展開 16 組變體</button>
+        <div class="sample-control">
+          <span class="sample-label">陣列規模:</span>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-env" value="4" min="1" max="20"></label>
+          <span>×</span>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-env" value="4" min="1" max="20"></label>
+        </div>
         <div class="seed-control">
           <label for="input-env-seed">種子碼</label>
           <input type="number" id="input-env-seed" value="42" min="1" max="999999">
@@ -597,6 +624,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">植物樹種</label>
           <select id="plant-species" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all" selected>全部樹種輪播 (All Species)</option>
             <option value="auto">依環境適生加權抽樣</option>
             <optgroup label="針葉樹巨木">
               <option value="redwood" selected>加州紅杉 (Redwood · 塔型 110m)</option>
@@ -675,7 +703,12 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <button id="btn-plant-generate" class="btn-generate">⚡ 重新生成植物</button>
         <button id="btn-plant-random-seed" class="btn-randomize">🎲 隨機種子</button>
         <button id="btn-plant-next-seed" class="btn-randomize">⏭ 下一個種子</button>
-        <button id="btn-plant-variants" class="btn-full-random">🎲 展開 16 株變體</button>
+        <div class="sample-control">
+          <span class="sample-label">陣列規模:</span>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-plant" value="4" min="1" max="20"></label>
+          <span>×</span>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-plant" value="4" min="1" max="20"></label>
+        </div>
         <div class="seed-control">
           <label for="input-plant-seed">種子碼</label>
           <input type="number" id="input-plant-seed" value="1001" min="1" max="999999">
@@ -2606,14 +2639,13 @@ function buildVehicleMode() {
 
   const formation = document.querySelector('#veh-formation').value;
   const profileKey = document.querySelector('#veh-profile').value;
-  if (!profileKey) {
-    document.querySelector('#nav-status').textContent = '此篩選組合沒有匹配車型，請重選條件。';
-    return;
-  }
   const viewMode = document.querySelector('#veh-view-mode').value;
   const seed = parseInt(document.querySelector('#input-veh-seed').value, 10) || 42;
 
-  const options = formation === 'single'
+  const allProfiles = Object.keys(VEHICLE_PROFILES);
+  const actProf = (profileKey === 'all' || !profileKey) ? (allProfiles[seed % allProfiles.length]) : profileKey;
+
+  const options = (formation === 'single' || formation === 'all')
     ? Object.fromEntries(['purpose', 'type', 'power'].filter(k => document.querySelector('#veh-' + k).value).map(k => [k, document.querySelector('#veh-' + k).value]))
     : {
         leaderKey: document.querySelector('#veh-leader').value,
@@ -2622,20 +2654,27 @@ function buildVehicleMode() {
       };
 
   if (viewMode === 'single') {
-    const res = createVehicleInstance(profileKey, seed, options, 0, 0);
+    const res = createVehicleInstance(actProf, seed, options, 0, 0);
     if (!res) return;
     const v = res.vehicle;
     document.querySelector('#nav-status').textContent = '車輛單體檢驗：【' + v.name + '】（種子碼 ' + seed + ' · 長 ' + v.length.toFixed(1) + 'm 寬 ' + v.width.toFixed(1) + 'm 高 ' + v.height.toFixed(1) + 'm）';
     camTarget.set(0, v.height * 0.4, 0);
-    camDist = Math.max(v.length, v.width) * 2.2;
+    camDist = Math.max(v.length, v.width, v.height) * 2.2 + 6;
   } else {
-    const cols = 4, rows = 4;
-    const res0 = createVehicleInstance(profileKey, seed, options, 0, 0);
+    const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-veh')?.value, 10) || 4));
+    const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-veh')?.value, 10) || 4));
+
+    const res0 = createVehicleInstance(actProf, seed, options, 0, 0);
     const v0 = res0?.vehicle;
+    const vehLen = v0?.length || 6;
+    const vehWid = v0?.width || 2.4;
+    const vehH = v0?.height || 2.2;
     clearScene();
     floor.visible = true;
-    const stepX = Math.max(20, (v0?.width || 3) * 3 + 8);
-    const stepZ = Math.max(24, (v0?.length || 6) * 1.6 + 10);
+
+    // Adaptive auto-spacing based on vehicle dimensions
+    const stepX = Math.max(12, vehWid * 2.2 + 6);
+    const stepZ = Math.max(16, vehLen * 1.35 + 8);
     const startX = -(cols - 1) * stepX / 2;
     const startZ = -(rows - 1) * stepZ / 2;
 
@@ -2643,14 +2682,16 @@ function buildVehicleMode() {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const curSeed = seed + idx * 7919;
+        const curProf = (profileKey === 'all' || !profileKey) ? allProfiles[idx % allProfiles.length] : profileKey;
         const posX = startX + c * stepX;
         const posZ = startZ + r * stepZ;
-        createVehicleInstance(profileKey, curSeed, options, posX, posZ);
+        createVehicleInstance(curProf, curSeed, options, posX, posZ);
       }
     }
-    document.querySelector('#nav-status').textContent = '車輛 16 組隨機變體陣列：【' + (v0?.name || profileKey) + '】（基底種子 ' + seed + '）';
-    camTarget.set(0, (v0?.height || 2) * 0.4, 0);
-    camDist = Math.max(stepX * cols, stepZ * rows) * 1.1;
+    document.querySelector('#nav-status').textContent = '車輛陣列檢驗 (' + cols + '×' + rows + ' 共 ' + (cols * rows) + ' 輛）：【' + (profileKey === 'all' ? '全部車型輪播' : v0?.name || actProf) + '】（基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX, totalD = (rows - 1) * stepZ;
+    camTarget.set(0, vehH * 0.4, 0);
+    camDist = Math.max(totalW, totalD, vehH * 2) * 1.2 + 10;
   }
   updateCamera();
   render();
@@ -2732,6 +2773,8 @@ function buildVesselMode() {
   const viewMode = document.querySelector('#vessel-view-mode').value;
   const seed = parseInt(document.querySelector('#input-vessel-seed').value, 10) || 42;
 
+  const allVesselTypes = VESSEL_TYPES.map(t => t.id);
+
   const options = {
     id: type || undefined,
     purpose: purpose || undefined,
@@ -2740,7 +2783,8 @@ function buildVesselMode() {
   };
 
   if (viewMode === 'single') {
-    const res = createVesselInstance(seed, options, 0, 0);
+    const actOptions = { ...options, id: type || allVesselTypes[seed % allVesselTypes.length] };
+    const res = createVesselInstance(seed, actOptions, 0, 0);
     if (!res) {
       document.querySelector('#nav-status').textContent = '此分類組合沒有相容船型，請調整篩選條件。';
       return;
@@ -2748,16 +2792,23 @@ function buildVesselMode() {
     const v = res.vessel;
     document.querySelector('#nav-status').textContent = '艦船單體檢驗：【' + v.name + ' · ' + v.registry + '】（種子 ' + seed + ' · 長 ' + v.length.toFixed(1) + 'm 寬 ' + v.beam.toFixed(1) + 'm 吃水 ' + v.draft.toFixed(2) + 'm · ' + v.displacementTonnes.toFixed(1) + 't）';
     camTarget.set(0, v.beam * 0.3, 0);
-    camDist = Math.max(v.length, 30) * 1.8;
+    camDist = Math.max(v.length, 30) * 1.8 + 10;
   } else {
-    const cols = 4, rows = 4;
-    const res0 = createVesselInstance(seed, options, 0, 0);
+    const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-vessel')?.value, 10) || 4));
+    const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-vessel')?.value, 10) || 4));
+
+    const actOptions0 = { ...options, id: type || allVesselTypes[seed % allVesselTypes.length] };
+    const res0 = createVesselInstance(seed, actOptions0, 0, 0);
     const v0 = res0?.vessel;
+    const vLen = v0?.length || 40;
+    const vBeam = v0?.beam || 8;
     clearScene();
     waterMesh.visible = showWater;
     floor.visible = !showWater;
-    const stepX = Math.max(30, (v0?.beam || 8) * 3 + 15);
-    const stepZ = Math.max(50, (v0?.length || 30) * 1.5 + 20);
+
+    // Adaptive auto-spacing based on vessel length and beam
+    const stepX = Math.max(25, vBeam * 2.5 + 12);
+    const stepZ = Math.max(45, vLen * 1.35 + 16);
     const startX = -(cols - 1) * stepX / 2;
     const startZ = -(rows - 1) * stepZ / 2;
 
@@ -2765,14 +2816,16 @@ function buildVesselMode() {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const curSeed = seed + idx * 7919;
+        const curOptions = { ...options, id: type || allVesselTypes[idx % allVesselTypes.length] };
         const posX = startX + c * stepX;
         const posZ = startZ + r * stepZ;
-        createVesselInstance(curSeed, options, posX, posZ);
+        createVesselInstance(curSeed, curOptions, posX, posZ);
       }
     }
-    document.querySelector('#nav-status').textContent = '艦船 16 組隨機變體陣列：【' + (v0?.name || '船型') + '】（基底種子 ' + seed + '）';
-    camTarget.set(0, (v0?.beam || 6) * 0.4, 0);
-    camDist = Math.max(stepX * cols, stepZ * rows) * 1.1;
+    document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + (cols * rows) + ' 艘）：【' + (type ? v0?.name : '全部船型輪播') + '】（基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX, totalD = (rows - 1) * stepZ;
+    camTarget.set(0, vBeam * 0.4, 0);
+    camDist = Math.max(totalW, totalD, vLen * 1.5) * 1.2 + 15;
   }
   updateCamera();
   render();
@@ -2912,26 +2965,37 @@ function buildEnvironmentMode() {
   const viewMode = document.querySelector('#env-view-mode').value;
   const seed = parseInt(document.querySelector('#input-env-seed').value, 10) || 42;
 
-  const isWaterMode = mode === 'ice' || mode === 'water' || kind === 'icefloe' || kind === 'iceberg';
+  const allModes = ['scene', 'ice', 'edge', 'slope'];
+  const allSceneKinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k => k !== 'icefloe' && k !== 'iceberg');
+  const allKinds = [...document.querySelector('#env-kind').options].map(o => o.value).filter(v => v !== 'all');
+
+  const actMode = mode === 'all' ? allModes[seed % allModes.length] : mode;
+  const actKind = (kind === 'all' || !kind) ? (allKinds[seed % allKinds.length] || allSceneKinds[0]) : kind;
+
+  const isWaterMode = actMode === 'ice' || actMode === 'water' || actKind === 'icefloe' || actKind === 'iceberg';
   waterMesh.visible = isWaterMode;
   floor.visible = !isWaterMode;
   floor.material.color.setHex(isWaterMode ? 0x1f3645 : 0x2e3d3b);
 
   if (viewMode === 'single') {
-    const res = createEnvironmentInstance(mode, kind, seed, 0, 0);
+    const res = createEnvironmentInstance(actMode, actKind, seed, 0, 0);
     if (!res) return;
     document.querySelector('#nav-status').textContent = '環境單體檢驗：【' + res.def.label + '】（種子碼 ' + seed + ' · ' + res.meta.partsCount + ' 零件 · 尺寸 ' + res.size.x.toFixed(1) + '×' + res.size.y.toFixed(1) + '×' + res.size.z.toFixed(1) + 'm）';
     camTarget.set(0, res.size.y * 0.4, 0);
-    camDist = Math.max(res.size.x, res.size.y, res.size.z) * 2.0;
-  } else if (viewMode === 'variants') {
-    const cols = 4, rows = 4;
-    const res0 = createEnvironmentInstance(mode, kind, seed, 0, 0);
+    camDist = Math.max(res.size.x, res.size.y, res.size.z) * 2.2 + 8;
+  } else if (viewMode === 'array') {
+    const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-env')?.value, 10) || 4));
+    const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-env')?.value, 10) || 4));
+
+    const res0 = createEnvironmentInstance(actMode, actKind, seed, 0, 0);
     const sz0 = res0?.size || new THREE.Vector3(20, 10, 20);
     clearScene();
     waterMesh.visible = isWaterMode;
     floor.visible = !isWaterMode;
-    const stepX = Math.max(25, sz0.x * 1.5 + 8);
-    const stepZ = Math.max(25, sz0.z * 1.5 + 8);
+
+    // Adaptive auto-spacing based on object size
+    const stepX = Math.max(20, sz0.x * 1.35 + 8);
+    const stepZ = Math.max(20, sz0.z * 1.35 + 8);
     const startX = -(cols - 1) * stepX / 2;
     const startZ = -(rows - 1) * stepZ / 2;
 
@@ -2939,16 +3003,19 @@ function buildEnvironmentMode() {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const curSeed = seed + idx * 7919;
+        const curMode = mode === 'all' ? allModes[idx % allModes.length] : actMode;
+        const curKind = (kind === 'all' || !kind) ? (allKinds[idx % allKinds.length] || allSceneKinds[idx % allSceneKinds.length]) : kind;
         const posX = startX + c * stepX;
         const posZ = startZ + r * stepZ;
-        createEnvironmentInstance(mode, kind, curSeed, posX, posZ);
+        createEnvironmentInstance(curMode, curKind, curSeed, posX, posZ);
       }
     }
-    document.querySelector('#nav-status').textContent = '環境 16 組隨機變體陣列：【' + (res0?.def?.label || kind) + '】（基底種子 ' + seed + '）';
+    document.querySelector('#nav-status').textContent = '環境陣列檢驗 (' + cols + '×' + rows + ' 共 ' + (cols * rows) + ' 件）：【' + (kind === 'all' ? '全部款式輪播' : res0?.def?.label || actKind) + '】（基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX, totalD = (rows - 1) * stepZ;
     camTarget.set(0, sz0.y * 0.4, 0);
-    camDist = Math.max(stepX * cols, stepZ * rows) * 1.1;
+    camDist = Math.max(totalW, totalD, sz0.y * 2) * 1.2 + 15;
   } else {
-    const catalogKinds = [...document.querySelector('#env-kind').options].map(o => o.value);
+    const catalogKinds = [...document.querySelector('#env-kind').options].map(o => o.value).filter(v => v !== 'all');
     const cols = Math.min(6, Math.ceil(Math.sqrt(catalogKinds.length)));
     const rows = Math.ceil(catalogKinds.length / cols);
     const stepX = 40, stepZ = 35;
@@ -2960,7 +3027,7 @@ function buildEnvironmentMode() {
       const r = Math.floor(i / cols);
       const posX = startX + c * stepX;
       const posZ = startZ + r * stepZ;
-      createEnvironmentInstance(mode, catalogKinds[i], seed, posX, posZ);
+      createEnvironmentInstance(actMode, catalogKinds[i], seed, posX, posZ);
     }
     document.querySelector('#nav-status').textContent = '環境全款式目錄陳列（共 ' + catalogKinds.length + ' 款）';
     camTarget.set(0, 8, 0);
@@ -2973,6 +3040,16 @@ function buildEnvironmentMode() {
 // ==========================================
 // 車輛、船隻、環境物件事件監聽
 // ==========================================
+
+// 陣列規模即時重算
+['geo', 'plant', 'veh', 'vessel', 'env'].forEach((prefix) => {
+  ['cols', 'rows'].forEach((dim) => {
+    document.querySelector('#sample-' + dim + '-' + prefix)?.addEventListener('change', () => {
+      rebuildActiveTab();
+    });
+  });
+});
+
 document.querySelector('#btn-veh-generate')?.addEventListener('click', buildVehicleMode);
 document.querySelector('#btn-veh-next-seed')?.addEventListener('click', () => {
   const input = document.querySelector('#input-veh-seed');
@@ -3048,15 +3125,19 @@ document.querySelector('#env-mode')?.addEventListener('change', () => {
 // ==========================================
 // 頂部環境模擬控制列事件 (四季 × 日夜 × 多元天氣)
 // ==========================================
+function rebuildActiveTab() {
+  if (currentTab === 'arch') buildMatrixMode({ advance: false });
+  else if (currentTab === 'geology') buildGeologyMode();
+  else if (currentTab === 'plant') buildPlantMode();
+  else if (currentTab === 'vehicle') buildVehicleMode();
+  else if (currentTab === 'vessel') buildVesselMode();
+  else if (currentTab === 'env') buildEnvironmentMode();
+}
+
 document.querySelector('#sim-season')?.addEventListener('change', (e) => {
   currentEnv.season = e.target.value;
   initEnvironment();
-  if (currentTab === 'plant') {
-    const pSeason = document.querySelector('#plant-season');
-    if (pSeason) pSeason.value = currentEnv.season;
-    buildPlantMode();
-  }
-  render();
+  rebuildActiveTab();
 });
 
 document.querySelectorAll('.env-time-btn').forEach((btn) => {
