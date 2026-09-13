@@ -653,6 +653,8 @@ export class BattleClient {
     this._crashSent = false;          // 撞擊引爆去重
     this.aiming = false;              // 右鍵短按切換瞄準(拉近視角、切換重武器);長按 = 機種專屬招
     this._aimViewRestore = null;      // 狙擊期間暫存原本視角,退出後恢復
+    this.defending = false;           // 防守姿態(正面生成機體大小低透明度護盾)
+    this._lastWheelAimAt = 0;         // 滾輪切換狙擊鏡防抖節流戳記
     this._rmbDownAt = 0;              // 右鍵按下時刻(0 = 未按);達門檻 → 出招,短按放開 → 切換模式(見 _tickHoldAbility / _rmbUp)
     this._rmbAbilityFired = false;    // 本次按住右鍵是否已觸發專屬招(觸發後放開不再切換模式 → 切換/出招互不衝突)
 
@@ -765,6 +767,10 @@ export class BattleClient {
     const fov = this.heroKind ? UNITS[this.heroKind].fov : 68;
     this.baseFov = fov;
     this.camera = new THREE.PerspectiveCamera(fov, this.canvas.clientWidth / this.canvas.clientHeight, 0.5, span * 2);
+    this._fpsShieldMesh = this._createFrontShieldMesh(2.2, 2.6, 130 * Math.PI / 180);
+    this._fpsShieldMesh.rotation.y = Math.PI;
+    this._fpsShieldMesh.position.set(0, -0.2, 0);
+    this.camera.add(this._fpsShieldMesh);
     // 副視窗共用相機(僚機 / 餌機視角;每幀重設位置後重複使用)
     this.pipCam = new THREE.PerspectiveCamera(PIP.FOV, 1 / PIP.ASPECT, 0.5, span * 2);
 
@@ -2951,8 +2957,7 @@ export class BattleClient {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
           if (e.code === 'KeyR') this._startReload();
-          // 長按右鍵 = 招式手勢(一般模式 → 小招 / 狙擊模式 → 大招,見 _fireHoldAbility);
-          // 與這裡的 Q / E 同一個 _castAbility 縫。F 鍵停用(2026-07-18)
+          if (e.code === 'KeyF') this._toggleDefense();        // 防守姿態(正面生成磁力護盾)
           // 平民互動(靠近平民時 HUD 顯示提示):G 要求跟隨 / H 驅趕
           if (e.code === 'KeyG') this._civAct('follow');
           if (e.code === 'KeyH') this._civAct('away');
@@ -3002,13 +3007,20 @@ export class BattleClient {
     this._onCtx = (e) => e.preventDefault();
     this.canvas.addEventListener('contextmenu', this._onCtx);
 
-    // 滾輪縮放視野:**觀戰限定**。交戰中的視野縮放唯一入口是右鍵瞄準(FOV ← UNITS[kind].zoomFov),
-    // 再加一套滾輪就是第二份實作,而且會與 A8「FOV 不做機種差異化」正面衝突。
+    // 滾輪:觀戰縮放視野;交戰切換狙擊鏡(FOV ← UNITS[kind].zoomFov)
     this._onWheel = (e) => {
-      if (this.side || this.paused) return;
+      if (this.paused) return;
       e.preventDefault();
-      const f = e.deltaY > 0 ? SPEC_CAM.FOV_STEP : 1 / SPEC_CAM.FOV_STEP;
-      this._specFov = Math.max(SPEC_CAM.FOV_MIN, Math.min(SPEC_CAM.FOV_MAX, this._specFov * f));
+      if (!this.side) {
+        const f = e.deltaY > 0 ? SPEC_CAM.FOV_STEP : 1 / SPEC_CAM.FOV_STEP;
+        this._specFov = Math.max(SPEC_CAM.FOV_MIN, Math.min(SPEC_CAM.FOV_MAX, this._specFov * f));
+        return;
+      }
+      if (this.dead || this.shopOpen) return;
+      const now = performance.now() / 1000;
+      if (now - this._lastWheelAimAt < 0.15) return;
+      this._lastWheelAimAt = now;
+      this._setAiming(!this.aiming);
     };
     this.canvas.addEventListener('wheel', this._onWheel, { passive: false });
 
@@ -3068,22 +3080,16 @@ export class BattleClient {
     this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dPitch));
   }
 
-  /** 右鍵/瞄準鈕「按下」:達門檻 → 施放招式(一般模式 = 小招 / 狙擊模式 = 大招,見 _fireHoldAbility);
-   *  短按放開 → 切換模式(見 _rmbUp)。切換與出招以「按住時長」區分,互不衝突。 */
+  /** 右鍵按下:直接施放招式(一般模式 = 小招 / 狙擊模式 = 大招,見 _fireHoldAbility)。 */
   _rmbDown() {
-    this._rmbDownAt = performance.now() / 1000;
-    this._rmbAbilityFired = false;
+    if (!this.side || this.dead || this.shopOpen) return;
+    this._fireHoldAbility();
   }
 
-  /** 右鍵/瞄準鈕「放開」:短按 = 切換一般 ⇄ 狙擊模式;長按已出招則不切換 */
+  /** 右鍵放開 */
   _rmbUp() {
-    const pressed = this._rmbDownAt > 0, fired = this._rmbAbilityFired;
-    this._rmbDownAt = 0; this._rmbAbilityFired = false;
-    if (!pressed || fired) return;   // 未真正按下(指標未鎖)或長按已出招 → 不切換模式
-    // 未瞄準且當前武器打空 → 改換彈夾,保留原快捷
-    const { id, st } = this._curWeapon();
-    if (!this.aiming && st && st.ammo <= 0 && st.reloadEnd <= 0) this._startReload(id);
-    else this._setAiming(!this.aiming);
+    this._rmbDownAt = 0;
+    this._rmbAbilityFired = false;
   }
 
   /**
@@ -3124,7 +3130,7 @@ export class BattleClient {
     if (this.dead) { this.firing = false; return; }
     switch (act) {
       case 'fire': this.firing = !!down; break;
-      case 'aim': down ? this._rmbDown() : this._rmbUp(); break;
+      case 'aim': if (down) this._setAiming(!this.aiming); break;
       case 'skill': if (down) this._castAbility('skill'); break;
       case 'ult': if (down) this._castAbility('ult'); break;
       case 'reload': if (down) this._startReload(); break;
@@ -3300,8 +3306,8 @@ export class BattleClient {
         ent.ry = e.ry ?? 0;
         ent.si = e.si || 0;
         ent.act = !!e.act;   // 主視野機(三機小隊只有一架):觀戰玩家視角的跟隨名冊只收它
-        ent.kcd = e.kcd;   // 無人機自殺攻擊機冷卻(HUD 顯示用;非無人機為 undefined)
-        ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 護盾(血條玻璃藍段;所有英雄機體都送)
+        ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 磁力(血條玻璃藍段;所有英雄機體都送)
+        ent.df = !!e.df;
         // NPC BOSS 段位(有這一格 = 這是 BOSS):血條外圍光暈顏色與體型縮放由它決定。
         // 純表現層 —— 段位本身、狂暴化、恢復規則全在伺服器(見 sim._bossSync)。
         ent.bossSeg = e.bs;
@@ -3348,6 +3354,7 @@ export class BattleClient {
 
           this.hp = e.hp; this.maxHp = e.m;
           this.sp = e.sp ?? this.sp; this.maxSp = e.msp ?? this.maxSp;
+          if (this.defending && (this.sp || 0) <= 0) this._toggleDefense(false);
           // 受傷暈影:自機總量(裝甲+護盾)較上一快照下降 = 被擊 → 閃紅暈影;
           // 重生/補血的上升不觸發;換主視野(_takeOver 清 _prevVital)不誤觸
           const vital = this.hp + this.sp;
@@ -3540,6 +3547,36 @@ export class BattleClient {
     }
   }
 
+  /** 建立機體正面的低透明度能量護盾網格 (防守姿態生成) */
+  _createFrontShieldMesh(r = 2.5, h = 4.0, arc = 140 * Math.PI / 180) {
+    const sg = new THREE.Group();
+    const geo = new THREE.CylinderGeometry(r, r, h, 24, 1, true, -arc / 2, arc);
+    const m1 = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    const m2 = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: 0xbae6fd,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    m1.userData.noOutline = true; m1.userData.noPaint = true;
+    m2.userData.noOutline = true; m2.userData.noPaint = true;
+    sg.add(m1);
+    sg.add(m2);
+    sg.userData.noOutline = true;
+    sg.userData.noPaint = true;
+    sg.visible = false;
+    return sg;
+  }
+
   _spawnUnit(e) {
     const civ = e.k === 'civilian';
     const key = e.k === 'base' ? `base:${e.s}` : civ ? 'civ' : KIND_KEY[e.k];
@@ -3593,6 +3630,14 @@ export class BattleClient {
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch) : null,
     };
+    if (hero) {
+      const r = (ent.heroCol?.r || dims.dimR || 2.5) * 1.15;
+      const h = ent.heroCol?.h || dims.dimH || 5.0;
+      const sm = this._createFrontShieldMesh(r, h);
+      sm.position.y = h * 0.5;
+      group.add(sm);
+      ent.shieldMesh = sm;
+    }
     // 極音速飛彈:偏航 + 俯仰同時套(_updateEnts 的姿態段)⇒ 歐拉序 MUST 是 'YXZ',
     // 否則俯仰會繞世界橫軸轉,大偏航時 45° 抬頭看起來變成側傾。
     if (e.k === 'hyper') group.rotation.order = 'YXZ';
@@ -7158,6 +7203,7 @@ export class BattleClient {
         return;
       }
       if (def.type !== 'rail') {   // 非磁軌的高後座重武器:停穩計時到滿才擊發
+        if (this.defending) this._toggleDefense(false);
         if (!this._steadyAt) { this._steadyAt = now; this._setRailCharge(true); this.hud.feed?.(`🎯【${def.name}】穩定中…`); }
         const sp = (now - this._steadyAt) / prof.steady;
         this.flash.visible = true; this._flashTtl = 0.06;
@@ -7169,6 +7215,7 @@ export class BattleClient {
 
     // 磁軌炮:按住開火鍵蓄力 charge 秒,蓄滿才擊發;提前放開 = 取消(不耗彈,歸零見 _updateSelf)
     if (def.type === 'rail' && def.charge) {
+      if (this.defending) this._toggleDefense(false);
       if (!this._railAt) { this._railAt = now; this.hud.feed?.(`⚡【${def.name}】蓄力中…`); this._setRailCharge(true); }
       const p = (now - this._railAt) / def.charge;
       this.flash.visible = true;           // 蓄力視覺:槍口電光隨進度增亮
@@ -7179,6 +7226,7 @@ export class BattleClient {
       this.flash.scale.setScalar(1);
       this._setRailCharge(false);
     }
+    if (this.defending) this._toggleDefense(false);
     this.lastFireAt[id] = now;
     this.audio?.fire(def, id, this.side);   // 自機開火音(真實 def → 精確音色;閘門全過才播)
     st.ammo--;
@@ -7705,6 +7753,7 @@ export class BattleClient {
       x = point.x; z = point.z;
     }
     this.net.send({ t: 'cast', slot, x: Math.round(x * 10) / 10, z: Math.round(-z * 10) / 10 });
+    if (this.defending) this._toggleDefense(false);
     const snowMul = this.env?.getWeatherDynamics?.()?.snowCdMul ?? 1;
     this.cds[slot === 'skill' ? 0 : 1] = (A.cd || 10) * snowMul;
     const castDur = slot === 'ult' ? (A.castTime || ULT_CAST_S) : (A.castTime || 0);
@@ -7748,6 +7797,52 @@ export class BattleClient {
       const restore = this._aimViewRestore;
       this._aimViewRestore = null;
       setViewMode(restore);
+    }
+  }
+
+  /** 能否進入防守姿態:非死亡/非商店、磁力>0、非攻擊動作中(開火鍵未按、無招式前搖、無磁軌/停穩蓄力、武器後搖已結束) */
+  _canEnterDefense(now = performance.now() / 1000) {
+    if (!this.side || this.dead || this.shopOpen) return false;
+    if ((this.sp || 0) <= 0) return false;
+    if (this.firing) return false;
+    if (this._isCasting(now)) return false;
+    if (this._railAt || this._steadyAt) return false;
+    const { id, def } = this._curWeapon();
+    if (def && now - (this.lastFireAt[id] || 0) < 1 / def.rate) return false;
+    if (id && (this._settleUntil[id] || 0) > now) return false;
+    return true;
+  }
+
+  /** 防守姿態切換(正面生成機體大小的低透明度護盾;磁力歸零無法生成) */
+  _toggleDefense(on) {
+    const next = (on !== undefined) ? !!on : !this.defending;
+    if (next) {
+      if (!this._canEnterDefense()) {
+        if ((this.sp || 0) <= 0) this.hud.feed?.('⚠️ 磁力歸零，無法生成護盾！');
+        else this.hud.feed?.('⚠️ 攻擊動作中，無法進入防守姿態！');
+        return;
+      }
+      this.defending = true;
+      this.hud.feed?.('🛡️ 進入防守姿態');
+    } else {
+      if (!this.defending) return;
+      this.defending = false;
+      this.hud.feed?.('🛡️ 解除防守姿態');
+    }
+    this.net?.send({ t: 'defend', on: this.defending });
+    this._updateShieldVisibility();
+  }
+
+  /** 更新自機護盾網格可見度 */
+  _updateShieldVisibility() {
+    const hasShield = this.defending && (this.sp || 0) > 0 && !this.dead;
+    if (this._fpsShieldMesh) {
+      this._fpsShieldMesh.visible = (this.viewMode === 'fpv' && hasShield);
+    }
+    for (const ent of this.ents.values()) {
+      if (ent.isSelf && ent.shieldMesh) {
+        ent.shieldMesh.visible = (this.viewMode === 'tps' && hasShield);
+      }
     }
   }
 
@@ -8320,6 +8415,7 @@ export class BattleClient {
   _updatePlayer(dt, now) {
     if (!this.side) { this._updateSpectator(dt); return; }
     if (this.dead) return;
+    if (this.defending && (this.sp || 0) <= 0) this._toggleDefense(false);
     this._env = this._envAt();   // 當幀環境(水/沼):移動減速、pos 回報、狀態結算(伺服器)皆讀它
     this._updateEnvFog(dt);      // 火場滯留 → 視野漸霧化(純客戶端表現)
     this._updateWeatherFog();    // 天氣濃霧 → 全屏霧罩 + 狙擊鏡圈等比縮(純客戶端表現;視野縮減由伺服器結算)
@@ -9191,6 +9287,9 @@ export class BattleClient {
   }
 
   _updateEnts(dt, now) {
+    if (this._fpsShieldMesh) {
+      this._fpsShieldMesh.visible = (this.viewMode === 'fpv' && this.defending && (this.sp || 0) > 0 && !this.dead);
+    }
     for (const ent of this.ents.values()) {
       if (ent.isSelf) {
         if (this.viewMode === 'tps') {
@@ -9205,6 +9304,9 @@ export class BattleClient {
           ent.mesh.visible = false;
           ent.mesh.position.copy(this.pos);
         }
+        if (ent.shieldMesh) {
+          ent.shieldMesh.visible = (this.viewMode === 'tps' && this.defending && (this.sp || 0) > 0 && !ent.dead);
+        }
         this._updateStatusFx(ent, dt, now);
         continue;
       }
@@ -9216,6 +9318,9 @@ export class BattleClient {
         if (ent.bar) ent.bar.lookAt(this.camera.position);
         this._updateStatusFx(ent, dt, now);
         continue;
+      }
+      if (ent.hero && ent.shieldMesh) {
+        ent.shieldMesh.visible = (!ent.dead && !!ent.df && (ent.sp == null || ent.sp > 0));
       }
       if (ent.hero && ent.mesh.userData.decoyPod) this._updateDecoyPod(ent, dt);
       const cur = ent.mesh.position;

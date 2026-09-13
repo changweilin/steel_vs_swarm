@@ -594,6 +594,7 @@ export class RoomHub {
       }
       if (m.t === 'pos' && client.side) { b.heroPos(myId, m.x, m.y, m.z, m.ry, m.wet, m.lev, m.ay); return; }
       if (m.t === 'aim' && client.side) { b.heroAim(myId, m.on); return; }
+      if (m.t === 'defend' && client.side) { b.heroDefend(myId, m.on); return; }
       if (m.t === 'hit' && client.side) { b.heroHit(myId, m.id, m.w); return; }
       if (m.t === 'hitMissile' && client.side) { b.hitMissile(myId, m.id, m.w); return; }
       if (m.t === 'burst' && client.side) { b.heroBurst(myId, m.x, m.z, m.y, m.lev); return; }   // y = 對空引爆高度 / lev = 爆點結構層(sim 夾範圍)

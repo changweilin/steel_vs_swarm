@@ -2683,9 +2683,9 @@ function makeHud() {
       $('hpBar').style.width = `${Math.max(0, hp / max * 100)}%`;
       $('hpText').textContent = `裝甲 ${Math.max(0, Math.round(hp))} / ${max}`;
       if (w) {
-        // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(回堡/招式才能修,預設速度為護盾 1/4)
+        // 雙層 HP:磁力(脫戰自然回復)+ 裝甲(回堡/招式才能修,預設速度為磁力 1/4)
         $('spBar').style.width = `${Math.max(0, w.sp / w.msp * 100)}%`;
-        $('spText').textContent = `護盾 ${Math.max(0, Math.round(w.sp))} / ${w.msp}`;
+        $('spText').textContent = `磁力 ${Math.max(0, Math.round(w.sp))} / ${w.msp}`;
         // 電力(MP;電池 overcharge 可 > 上限 → 條夾 100%,數字照實顯示 130 / 100)
         const mpo = w.mp > w.mm;
         $('mpBar').style.width = `${Math.max(0, Math.min(100, w.mp / w.mm * 100))}%`;
@@ -3355,7 +3355,7 @@ function renderBalanceSettings(mount) {
     { id: 'ult', name: '大招威力' },
     { id: 'hp', name: '裝甲上限' },
     { id: 'ar', name: '複合裝甲' },
-    { id: 'sp', name: '護盾上限' },
+    { id: 'sp', name: '磁力上限' },
     { id: 'ch', name: '充能回速' },
   ];
 
