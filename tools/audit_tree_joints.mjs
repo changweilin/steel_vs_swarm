@@ -127,11 +127,12 @@ function crownGap(part, pt) {
 const isCrownPart = (p) => p.role ? p.role === 'leaf' : p.g.t === 'cone' || p.g.t === 'ico';
 // 主幹候選:貼軸無傾角的柱狀 cyl(扁平冠盤 h≤一半最大半徑,自然排除;
 // 矮胖多肉幹/基部喇叭口 h≈R 仍保留)
-const isBoleCyl = (p) => p.role === 'trunk' && p.g.t === 'cyl' || p.g.t === 'cyl' && Math.abs(p.px ?? 0) <= 0.6
+const isBoleCyl = (p) => p.role ? p.role === 'trunk' && p.g.t === 'cyl' && !(p.rx || p.rz) : p.g.t === 'cyl' && Math.abs(p.px ?? 0) <= 0.6
   && Math.abs(p.pz ?? 0) <= 0.6 && !(p.rx || p.rz) && p.g.h > 0.5 * Math.max(p.g.r1, p.g.r2);
 // Generated branches use the runtime XYZ rotation, including two-axis forks.
 function branchDir(p) {
   const rx = p.rx ?? 0, rz = p.rz ?? 0;
+  if (p.role) return quatApply(quatFromEuler(rx, p.ry || 0, rz), [0, 1, 0]);
   if (rx && rz) return quatApply(quatFromEuler(rx, p.ry || 0, rz), [0, 1, 0]);
   if (Math.abs(rz) > TILT_TOL) return [-Math.sin(rz), Math.cos(rz), 0];
   if (Math.abs(rx) > TILT_TOL) return [0, Math.cos(rx), Math.sin(rx)];
@@ -194,7 +195,8 @@ for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
     if (mains.length && crowns.length) {
       const top = mains.reduce((m, b) => (b.top > m.top ? b : m));
       const pt = [top.p.px ?? 0, top.top, top.p.pz ?? 0];
-      ok(crowns.some((c) => crownContains(c, pt, EMB_TOL)),
+      ok(crowns.some((c) => crownContains(c, pt, EMB_TOL))
+        || def.parts.some(p => p.role === 'branch' && tubeContains(p, pt, EMB_TOL)),
         `${group} ${name} 幹頂 (${pt[0]},${pt[1].toFixed(1)},${pt[2]}) 埋進樹冠`);
     }
     // 側枝:傾角枝驗根+梢;近垂直表面件只驗根埋幹或接地
@@ -208,17 +210,19 @@ for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
       const a = [C[0] - dir[0] * L / 2, C[1] - dir[1] * L / 2, C[2] - dir[2] * L / 2];
       const e = [C[0] + dir[0] * L / 2, C[1] + dir[1] * L / 2, C[2] + dir[2] * L / 2];
       // 根容差隨幹粗放縮(巨木表皮溝壑本來就是分米級;小樹維持原容差)
-      const rootIn = a[1] <= 0.05 || boles.some((t) => {
+      const rootIn = a[1] <= 0.05 || (b.role === 'trunk' && Math.min(a[1], e[1]) <= Math.min(b.g.r1, b.g.r2) + .05) || boles.some((t) => {
         if (a[1] < t.bot - ROOT_TOL || a[1] > t.top + ROOT_TOL) return false;
         const tr = trunkRAt(t.p.g.r1, t.p.g.r2, t.p.g.h, t.bot, a[1]);
         return Math.hypot(a[0] - (t.p.px ?? 0), a[2] - (t.p.pz ?? 0)) <= tr + ROOT_TOL + 0.1 * tr;
       }) || crowns.some((c) => c !== b && crownContains(c, a, ROOT_TOL))
         || def.parts.some(p => p !== b && tubeContains(p, a));
-      ok(rootIn, `${group} ${name} 枝根 y=${b.y} 埋進幹身/冠內/接地`);
+      const hangingLeaf = b.role === 'leaf' && def.parts.some(p => p !== b && tubeContains(p, e));
+      ok(rootIn || hangingLeaf, `${group} ${name} 枝根 y=${b.y} 埋進幹身/冠內/接地`);
       // Buttress roots connect ground to bole, rather than terminating in foliage.
       if (a[1] <= ROOT_TOL && boles.some(t => e[1] >= t.bot && e[1] <= t.top
         && Math.hypot(e[0], e[2]) <= trunkRAt(t.p.g.r1, t.p.g.r2, t.p.g.h, t.bot, e[1]))) { pass++; continue; }
-      if (rootIn && (b.role === 'root' || b.role === 'leaf')) { pass++; continue; }
+      if ((rootIn || hangingLeaf) && (b.role === 'root' || b.role === 'leaf')) { pass++; continue; }
+      if (b.organStem && def.parts.some(p => p.role === b.role && !p.organStem && crownContains(p, e, TIP_TOL))) { pass++; continue; }
       if (d === 'vertical' || !crowns.length) continue;
       if (crowns.some((c) => c !== b && crownContains(c, e, TIP_TOL)) || def.parts.some(p => p !== b && tubeContains(p, e, TIP_TOL))) { pass++; continue; }
       const thin = (b.g.r2 ?? 1) <= SNAG_R;

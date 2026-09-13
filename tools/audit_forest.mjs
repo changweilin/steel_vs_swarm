@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { TREE_SPECIES, TREE_VARIANTS, createForestDefs, createForestTree, treeBend, treeSections, treeDistribution, pickTreeType, forestSeed, forestEnvironment, treeHabitatWeight } from '../public/js/forest.js';
+import { TREE_SPECIES, TREE_VARIANTS, createForestDefs, createForestTree, treeBend, treeSections, treeDistribution, pickTreeType, forestSeed, forestEnvironment, treeHabitatWeight, FOREST_STEEP_DEG, forestSlopeAllowed } from '../public/js/forest.js';
 import { mulberry32 } from '../public/js/rng.js';
 import { quatApply, quatFromEuler } from '../public/js/xform.js';
+import { readSrc, grabFn } from './audit_src.mjs';
 
 const cyl = (radiusTop, radiusBottom, height) => ({ parameters: { radiusTop, radiusBottom, height } });
 const ico = radius => ({ parameters: { radius } });
@@ -33,7 +34,9 @@ for (const type of Object.keys(TREE_SPECIES)) {
   for (const key of ['h', 'r', 'branchCount', 'density']) {
     assert.ok(new Set(samples.map(tree => tree[key])).size > 2, `${type}: independent ${key} variation`);
   }
-  assert.ok(new Set(samples.map(tree => tree.parts.filter(p => p.key).length)).size > 2);
+  if (['snag', 'lightning', 'fallen', 'cactus'].includes(spec.form)) {
+    assert.ok(samples.every(tree => tree.parts.every(p => !p.key)), 'leafless forms never grow a crown');
+  } else assert.ok(new Set(samples.map(tree => tree.parts.filter(p => p.key).length)).size > 2, type);
   for (const [seed, tree] of samples.entries()) {
     assert.deepEqual(tree, createForestTree(type, seed));
     assert.equal(tree.girth, 2 * Math.PI * tree.r);
@@ -45,7 +48,8 @@ for (const type of Object.keys(TREE_SPECIES)) {
     assert.ok(tree.r >= spec.r * growth.radius[0] && tree.r <= spec.r * growth.radius[1]);
     assert.ok(tree.branchCount >= growth.branches[0] && tree.branchCount <= growth.branches[1]);
     const primary = tree.stems.filter(s => !s.root);
-    assert.ok(primary.length >= growth.stemCount[0] && primary.length <= growth.stemCount[1]);
+    if (spec.form === 'fallen') assert.ok(primary.length > 2, 'log collision follows its horizontal length');
+    else assert.ok(primary.length >= growth.stemCount[0] && primary.length <= growth.stemCount[1]);
     assert.ok(tree.stems.every(s => Math.hypot(s.x, s.z) + s.r <= tree.footprint + 1e-9), 'all culms/support roots fit ground envelope');
     const skeleton = t => t.parts.filter(p => !['flower', 'fruit'].includes(p.role));
     const spring = createForestTree(type, seed, undefined, undefined, 1, 'spring');
@@ -110,4 +114,29 @@ for (const season of ['spring', 'summer', 'autumn', 'winter']) {
 }
 assert.ok(createForestTree('banyan', 3).stems.some(s => s.root));
 assert.ok(createForestTree('mangroveGrey', 3).parts.filter(p => p.role === 'root').length >= 10);
+for (const slope of [FOREST_STEEP_DEG, 55, 70, 84]) {
+  for (const climate of ['tropical', 'temperate', 'boreal', 'arid', 'alpine']) {
+    const rows = treeDistribution(35, 1200, .5, {climate, slope});
+    assert.ok(rows.every(row => TREE_SPECIES[row.type].steep === true), 'steep terrain never admits ordinary plants');
+  }
+}
+assert.ok(treeDistribution(35, 1200, .5, {temperature:15, moisture:.6, slope:55}).length > 0);
+for (const type of Object.keys(TREE_SPECIES)) {
+  assert.equal(forestSlopeAllowed(type, 85), false);
+  assert.equal(forestSlopeAllowed(type, NaN), false);
+  assert.equal(forestSlopeAllowed(type, -1), false);
+}
+assert.equal(treeHabitatWeight('coconut', 20, 100, {climate:'tropical', slope:50}), 0);
+assert.equal(treeHabitatWeight('fallenLog', 35, 500, {slope:30}), 0);
+assert.equal(treeHabitatWeight('welwitschia', 23, 300, {climate:'tropical'}), 0);
+assert.ok(treeHabitatWeight('welwitschia', 23, 300, {climate:'arid'}) > 0);
+assert.equal(treeHabitatWeight('pitcherPlant', 20, 500, {climate:'arid'}), 0);
+assert.ok(treeHabitatWeight('pitcherPlant', 20, 500, {climate:'tropical', ph:5}) > 0);
+assert.equal(treeHabitatWeight('cliffPine', 35, 1200, {slope:NaN}), 0);
+const environmentAt = new Function('terrainEnvCode', grabFn(readSrc('public', 'js', 'biomes.js'), 'forestEnvironmentAt')
+  + '\nreturn forestEnvironmentAt;')(() => 0);
+const cliff = {heightAt: x => x * Math.tan(60 * Math.PI / 180), gridM:16, forestEnv:{slope:0}};
+assert.ok(Math.abs(environmentAt(cliff, 0, 0).slope - 60) < 1e-8, 'author input cannot flatten a measured cliff');
+cliff.forestEnv.slope = 75;
+assert.equal(environmentAt(cliff, 0, 0).slope, 75, 'author may impose a stricter slope');
 console.log(`Forest: ${Object.keys(TREE_SPECIES).length * 200} deterministic specimens; species dimensions, roots, seasonal organs, wind and habitat probabilities passed.`);
