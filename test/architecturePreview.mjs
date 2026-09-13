@@ -925,12 +925,22 @@ updateCamera();
 
 window.addEventListener('contextmenu', (e) => e.preventDefault());
 window.addEventListener('mousedown', (e) => {
+  if (e.target.closest('header, nav, .top-nav-bar, .modal, .badge-label, select, input, button, label')) return;
   if (e.button === 0) isLeftDragging = true;
   if (e.button === 2) isRightDragging = true;
   prevMouse = { x: e.clientX, y: e.clientY };
   mouseDownPos = { x: e.clientX, y: e.clientY };
 });
 window.addEventListener('mousemove', (e) => {
+  if ((isLeftDragging && (e.buttons & 1) === 0) || (isRightDragging && (e.buttons & 2) === 0)) {
+    isLeftDragging = false;
+    isRightDragging = false;
+  }
+  if (!isLeftDragging && !isRightDragging) {
+    handleHover(e);
+    prevMouse = { x: e.clientX, y: e.clientY };
+    return;
+  }
   const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
   if (isLeftDragging) {
     camTheta -= dx * 0.007;
@@ -944,14 +954,12 @@ window.addEventListener('mousemove', (e) => {
     camTarget.addScaledVector(right, -dx * panSpeed);
     camTarget.addScaledVector(forward, dy * panSpeed);
     updateCamera(); render();
-  } else {
-    handleHover(e);
   }
   prevMouse = { x: e.clientX, y: e.clientY };
 });
 window.addEventListener('mouseup', (e) => {
   const moved = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
-  if (moved < 5 && e.button === 0) {
+  if (moved < 5 && e.button === 0 && !e.target.closest('header, nav, .top-nav-bar, .modal, .badge-label, select, input, button, label')) {
     handleClick(e);
   }
   isLeftDragging = false;
@@ -1635,9 +1643,11 @@ function buildFullRandomMode() {
 // 地質生成邏輯 (Geology Generation Mode)
 // ==========================================
 function getGeologyInputs() {
+  const climateVal = document.querySelector('#geo-climate').value;
+  const waterVal = document.querySelector('#geo-water').value;
   const input = {
-    climate: document.querySelector('#geo-climate').value,
-    water: document.querySelector('#geo-water').value,
+    climate: climateVal === 'all' ? 'temperate' : climateVal,
+    water: waterVal === 'all' ? 'none' : waterVal,
     moisture: parseFloat(document.querySelector('#geo-moisture').value) || 0.65,
     vegetation: parseFloat(document.querySelector('#geo-vegetation').value) || 0.6,
     conifers: parseFloat(document.querySelector('#geo-conifers').value) || 0.3,
@@ -2489,6 +2499,7 @@ function buildVehicleMode() {
   render();
 }
 
+let vesselInitialized = false;
 function initVesselOptions() {
   if (vesselInitialized) return;
   vesselInitialized = true;
@@ -3039,6 +3050,8 @@ window.addEventListener('resize', () => {
 try {
   setupFilterModal();
   initEnvironment();
+  initVehicleOptions();
+  initVesselOptions();
   buildMatrixMode();
 } catch (err) {
   console.error('初次建構失敗:', err);
