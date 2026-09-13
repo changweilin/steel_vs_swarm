@@ -238,9 +238,10 @@ export function getRoofPlacementSites(poly, metrics) {
 
 /** 依外向法線計算牆面幾何局部坐標系 (保證 local +Z 指向戶外、角度與世界坐標同調) */
 export function getEdgeFrame(edge, poly) {
-  const len = edge.hw2 * 2;
-  const nx = -Math.sin(edge.ry);
-  const nz = Math.cos(edge.ry);
+  const len = edge.hw2 != null ? edge.hw2 * 2 : (edge.len || 0);
+  const ry = edge.ry ?? (edge.nx != null && edge.nz != null ? Math.atan2(-edge.nx, edge.nz) : 0);
+  const nx = -Math.sin(ry);
+  const nz = Math.cos(ry);
   const testDist = 0.25;
   const isInside = pointInRing(edge.x + nx * testDist, edge.z + nz * testDist, poly.outer) &&
     !(poly.holes || []).some(h => pointInRing(edge.x + nx * testDist, edge.z + nz * testDist, h));
@@ -917,28 +918,65 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       }
     }
 
-    // 5.7 太陽能光伏板陣列 (Solar Panels Array) - 各板獨立檢驗邊界留白
+    // 5.7 太陽能光伏板大面積陣列 (Solar Panels Array) - 大面積鋪設(≥60%面積)，平整處整齊排列
     const hasSolar = ((architectureHash(idBase, 'solar') % 100) < 45) && area >= 80 && span >= 8 && !hasHeli && allowedRooftopParts.has('solar_array');
     if (hasSolar) {
-      const solarSite = pickSite('center', 'solar_pos');
-      if (solarSite) {
-        const count = Math.min(4, Math.max(2, Math.floor(area / 90)));
-        for (let i = 0; i < count; i++) {
-          const sx = solarSite.x + (i - (count - 1) / 2) * 1.8;
-          const sz = solarSite.z;
-          // 光伏板半徑 0.85m，保留 0.9m 留白 (淨距需 >= 1.75m)
-          if (!isSiteValid(poly, sx, sz, 0.85, 0.9)) continue;
-          const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
+      const frame = metrics?.frame || computeOrientedRoofFrame(poly);
+      const rotY = frame ? frame.angle : 0;
+      const dirX = frame ? frame.dirX : 1, dirZ = frame ? frame.dirZ : 0;
+      const normX = frame ? frame.normalX : 0, normZ = frame ? frame.normalZ : 1;
+      const cx = frame ? frame.cx : metrics.cx, cz = frame ? frame.cz : metrics.cz;
+      const len = frame ? frame.len : (metrics.maxX - metrics.minX);
+      const sp = frame ? frame.span : (metrics.maxZ - metrics.minZ);
 
-          const panel = new THREE.BoxGeometry(1.5, 0.06, 1.0);
-          panel.rotateX(0.35); // 朝向日照傾角
-          panel.translate(sx, baseRoofY + 0.35, sz);
-          geos.push(paintGeometry(panel, 0x1a237e, variant));
+      // 面板 1.5m × 1.0m，步距 1.58m × 1.10m，單板 1.5m²
+      const stepU = 1.58, stepV = 1.10;
+      const uCount = Math.max(1, Math.floor((len - 1.2) / stepU));
+      const vCount = Math.max(1, Math.floor((sp - 1.2) / stepV));
+      const uStart = -((uCount - 1) * stepU) / 2;
+      const vStart = -((vCount - 1) * stepV) / 2;
 
-          const leg = new THREE.BoxGeometry(1.4, 0.25, 0.06);
-          leg.translate(sx, baseRoofY + 0.125, sz + 0.4);
-          geos.push(paintGeometry(leg, 0x9e9e9e, variant));
+      const placedSites = [];
+      for (let vi = 0; vi < vCount; vi++) {
+        for (let ui = 0; ui < uCount; ui++) {
+          const u = uStart + ui * stepU, v = vStart + vi * stepV;
+          const sx = cx + u * dirX + v * normX;
+          const sz = cz + u * dirZ + v * normZ;
+          if (isSiteValid(poly, sx, sz, 0.72, 0.35)) {
+            placedSites.push({ sx, sz });
+          }
         }
+      }
+
+      // 檢查若鋪設比例低於 60% 且面積足夠，使用稍微緊湊的邊距再試補齊
+      if (placedSites.length * 1.5 < area * 0.60 && area >= 80) {
+        for (let vi = -1; vi <= vCount; vi++) {
+          for (let ui = -1; ui <= uCount; ui++) {
+            if (vi >= 0 && vi < vCount && ui >= 0 && ui < uCount) continue;
+            const u = uStart + ui * stepU, v = vStart + vi * stepV;
+            const sx = cx + u * dirX + v * normX;
+            const sz = cz + u * dirZ + v * normZ;
+            if (isSiteValid(poly, sx, sz, 0.70, 0.25)) {
+              placedSites.push({ sx, sz });
+            }
+          }
+        }
+      }
+
+      for (const { sx, sz } of placedSites) {
+        const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
+
+        const leg = new THREE.BoxGeometry(1.4, 0.25, 0.06);
+        leg.translate(0, 0.125, 0.38);
+        if (rotY) leg.rotateY(rotY);
+        leg.translate(sx, baseRoofY, sz);
+        geos.push(paintGeometry(leg, 0x9e9e9e, variant));
+
+        const panel = new THREE.BoxGeometry(1.5, 0.06, 1.0);
+        panel.rotateX(0.35); // 朝向日照傾角
+        if (rotY) panel.rotateY(rotY);
+        panel.translate(sx, baseRoofY + 0.35, sz);
+        geos.push(paintGeometry(panel, 0x1a237e, variant));
       }
     }
 

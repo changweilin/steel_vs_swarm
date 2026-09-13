@@ -26,8 +26,7 @@ export function paintTrack(g) {
   g.restore();
 }
 
-export function paintBasketball(g) {
-  g.save(); g.translate(.5, .5); g.scale(.84 / 28, .84 / 15);
+function drawBasketballCourt(g) {
   g.strokeStyle = '#f3ede0'; g.lineWidth = .05;
   g.strokeRect(-14, -7.5, 28, 15);
   g.beginPath(); g.moveTo(0, -7.5); g.lineTo(0, 7.5); g.stroke();
@@ -42,6 +41,108 @@ export function paintBasketball(g) {
     g.arc(basket, 0, radius, Math.PI + a, Math.PI - a, true);
     g.lineTo(14, side); g.stroke();
     g.restore();
+  }
+}
+
+export function paintBasketball(g) {
+  g.save(); g.translate(.5, .5); g.scale(.84 / 28, .84 / 15);
+  drawBasketballCourt(g);
+  g.restore();
+}
+
+export function paintParking(g, widthM = 36, depthM = 25) {
+  const line = (x, y, a, b) => { g.beginPath(); g.moveTo(x, y); g.lineTo(a, b); g.stroke(); };
+  const W = Math.max(12, widthM);
+  const D = Math.max(10, depthM);
+  const marginX = 0.06;
+  const usableW = 1 - 2 * marginX;
+
+  // Real-world car stall width ~2.5m
+  const numCols = Math.max(4, Math.floor((W * usableW) / 2.5));
+  const dx = usableW / numCols;
+
+  if (D >= 28) {
+    // 4-row layout with 2 aisles (central back-to-back stall island)
+    // Row 0 (top): y from 0.05 to 0.22
+    line(marginX, 0.05, 1 - marginX, 0.05);
+    for (let i = 0; i <= numCols; i++) {
+      const x = marginX + i * dx;
+      line(x, 0.05, x, 0.22);
+    }
+    // Rows 1 & 2 (center island): y from 0.38 to 0.62, divider at 0.50
+    line(marginX, 0.50, 1 - marginX, 0.50);
+    for (let i = 0; i <= numCols; i++) {
+      const x = marginX + i * dx;
+      line(x, 0.38, x, 0.62);
+    }
+    // Row 3 (bottom): y from 0.78 to 0.95
+    const carCols = Math.max(2, Math.floor(numCols * 0.68));
+    line(marginX, 0.95, marginX + carCols * dx, 0.95);
+    for (let i = 0; i <= carCols; i++) {
+      const x = marginX + i * dx;
+      line(x, 0.78, x, 0.95);
+    }
+    // Motorcycle stalls on bottom-right
+    const motoStartX = marginX + carCols * dx + 0.015;
+    const motoEndX = 1 - marginX;
+    const motoSpan = motoEndX - motoStartX;
+    const numMotos = Math.max(3, Math.floor((W * motoSpan) / 1.05));
+    const motoDx = motoSpan / numMotos;
+    line(motoStartX, 0.81, motoEndX, 0.81);
+    line(motoStartX, 0.95, motoEndX, 0.95);
+    for (let i = 0; i <= numMotos; i++) {
+      const x = motoStartX + i * motoDx;
+      line(x, 0.81, x, 0.95);
+    }
+  } else {
+    // 2-row layout with single central driveway
+    // Row 0 (top): y from 0.06 to 0.32
+    line(marginX, 0.06, 1 - marginX, 0.06);
+    for (let i = 0; i <= numCols; i++) {
+      const x = marginX + i * dx;
+      line(x, 0.06, x, 0.32);
+    }
+    // Row 1 (bottom left: car stalls): y from 0.68 to 0.94
+    const carCols = Math.max(2, Math.floor(numCols * 0.65));
+    line(marginX, 0.94, marginX + carCols * dx, 0.94);
+    for (let i = 0; i <= carCols; i++) {
+      const x = marginX + i * dx;
+      line(x, 0.68, x, 0.94);
+    }
+    // Row 1 (bottom right: motorcycle stalls): y from 0.72 to 0.94
+    const motoStartX = marginX + carCols * dx + 0.02;
+    const motoEndX = 1 - marginX;
+    const motoSpan = motoEndX - motoStartX;
+    const numMotos = Math.max(3, Math.floor((W * motoSpan) / 1.05));
+    const motoDx = motoSpan / numMotos;
+    line(motoStartX, 0.72, motoEndX, 0.72);
+    line(motoStartX, 0.94, motoEndX, 0.94);
+    for (let i = 0; i <= numMotos; i++) {
+      const x = motoStartX + i * motoDx;
+      line(x, 0.72, x, 0.94);
+    }
+  }
+}
+
+export function paintCourtArray(g, cols = 1, rows = 1) {
+  if (cols <= 1 && rows <= 1) { paintBasketball(g); return; }
+  g.save();
+  const marginX = 0.04, marginY = 0.04;
+  const availW = 1 - 2 * marginX, availH = 1 - 2 * marginY;
+  const slotW = availW / cols, slotH = availH / rows;
+  const courtAspect = 15 / 28;
+  const fitW = Math.min(slotW * 0.90, (slotH * 0.90) / courtAspect);
+  const fitH = fitW * courtAspect;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cx = marginX + (c + 0.5) * slotW;
+      const cy = marginY + (r + 0.5) * slotH;
+      g.save();
+      g.translate(cx, cy);
+      g.scale(fitW / 28, fitH / 15);
+      drawBasketballCourt(g);
+      g.restore();
+    }
   }
   g.restore();
 }

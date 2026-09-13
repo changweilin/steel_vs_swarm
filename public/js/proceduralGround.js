@@ -1,4 +1,4 @@
-import { paintVenue, paintTrack, paintBasketball } from './groundMarkings.js';
+import { paintVenue, paintTrack, paintBasketball, paintCourtArray, paintParking } from './groundMarkings.js';
 import { LANDSCAPES, paintLandscape } from './groundLandscapes.js';
 import { VISITOR_SITES, paintVisitorSite } from './groundVisitorSites.js';
 import { mulberry32 } from './rng.js';
@@ -54,7 +54,7 @@ export function probeSurface(heightAt, x, z, r, rot, def, spec, gridM = 2) {
   return true;
 }
 
-export function paintGround(g, size, id, seed, env, baseColor) {
+export function paintGround(g, size, id, seed, env, baseColor, widthM, depthM) {
   const spec = SURFACES[id];
   if (!spec) throw new RangeError(`Unknown surface ${id}`);
   const rnd = mulberry32(seed), base = baseColor ?? spec.color;
@@ -105,11 +105,7 @@ export function paintGround(g, size, id, seed, env, baseColor) {
     for (let i = 1; i < 9; i++) line(.04, i / 9, .96, i / 9);
     g.globalAlpha = 1;
   } else if (id === 'parking') {
-    // Two rows of stalls separated by an unmarked circulation aisle.
-    for (let i = 0; i <= 8; i++) {
-      const x = .08 + i * .105; line(x, .06, x, .32); line(x, .68, x, .94);
-    }
-    line(.08, .06, .92, .06); line(.08, .94, .92, .94);
+    paintParking(g, widthM ?? 36, depthM ?? 25);
   } else if (id === 'brick' || id === 'pavement') {
     g.strokeStyle = '#79766d'; g.lineWidth = .002;
     for (let row = 0; row < 12; row++) {
@@ -119,7 +115,14 @@ export function paintGround(g, size, id, seed, env, baseColor) {
       }
     }
   } else if (pattern === 'court') {
-    paintBasketball(g);
+    const cW = widthM ?? 28, cD = depthM ?? 15;
+    if (cW > 36 || cD > 22) {
+      const cols = Math.max(1, Math.round(cW / 28));
+      const rows = Math.max(1, Math.round(cD / 15));
+      paintCourtArray(g, cols, rows);
+    } else {
+      paintBasketball(g);
+    }
   } else if (pattern === 'track') {
     paintTrack(g);
   } else if (pattern === 'helipad') {

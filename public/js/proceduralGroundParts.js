@@ -153,14 +153,31 @@ export function generateGroundPart(type, variant = 0) {
         }
       }
     }
+  } else if (family === 'motorcycle') {
+    const wheelR = h * 0.28, wheelW = d * 0.18, wheelDist = w * 0.34;
+    for (const sx of [-wheelDist, wheelDist]) {
+      add(new THREE.CylinderGeometry(wheelR, wheelR, wheelW, 8).rotateX(Math.PI / 2).translate(sx, wheelR, 0), 0x222629);
+      add(new THREE.CylinderGeometry(wheelR * 0.5, wheelR * 0.5, wheelW * 1.05, 8).rotateX(Math.PI / 2).translate(sx, wheelR, 0), 0x8a9296);
+    }
+    box(0, h * 0.38, 0, w * 0.48, h * 0.32, d * 0.45, 0x3a3f44);
+    box(w * 0.04, h * 0.62, 0, w * 0.46, h * 0.22, d * 0.46, color);
+    box(-w * 0.12, h * 0.68, 0, w * 0.30, h * 0.08, d * 0.38, 0x1f2326);
+    stem(w * 0.25, wheelR, 0, h * 0.45, 0.025, 0x9aa0a6);
+    box(w * 0.25, h * 0.78, 0, 0.04, 0.04, d * 0.85, 0x222629);
+    box(w * 0.33, h * 0.68, 0, 0.06, 0.1, 0.12, 0xfff4d0);
+    box(-w * 0.31, h * 0.68, 0, 0.05, 0.08, 0.1, 0xd03020);
   } else if (['hut', 'crate', 'container', 'pump', 'car', 'stone', 'planter'].includes(family)) {
     const bh = h * (family === 'car' ? .45 : family === 'planter' ? .45 : .9);
     box(0, bh / 2, 0, w, bh, d);
     if (family === 'hut') {
       for (const side of [-1, 1]) add(new THREE.BoxGeometry(w * .59, .1, d * 1.08).rotateZ(side * .36).translate(-side * w * .26, bh, 0), 0x66594b);
     } else if (family === 'car') {
-      box(0, h * .65, 0, w * .5, h * .4, d * .9, 0x5b6a70);
-      for (const x of [-1, 1]) for (const z of [-1, 1]) add(new THREE.CylinderGeometry(h * .2, h * .2, .16, 7).rotateX(Math.PI / 2).translate(x * w * .3, h * .22, z * d * .5), 0x424844);
+      box(-w * 0.04, h * 0.62, 0, w * 0.52, h * 0.35, d * 0.84, type === 'car' ? 0x273845 : 0x5b6a70);
+      for (const x of [-1, 1]) for (const z of [-1, 1]) add(new THREE.CylinderGeometry(h * .2, h * .2, .16, 8).rotateX(Math.PI / 2).translate(x * w * .3, h * .22, z * d * .46), 0x25282a);
+      if (type === 'car') {
+        for (const z of [-d * 0.3, d * 0.3]) box(w * 0.49, h * 0.32, z, 0.05, 0.12, 0.18, 0xfff3cc);
+        for (const z of [-d * 0.3, d * 0.3]) box(-w * 0.49, h * 0.32, z, 0.05, 0.12, 0.18, 0xd03020);
+      }
     } else if (family === 'planter') rock(0, h * .73, 0, w, h * .6, d, 'foliage', 'leaf');
     else if (family === 'pump') box(0, bh * .7, d * .51, w * .6, h * .18, .025, 0x364b50);
     else if (family === 'container' || family === 'crate') {

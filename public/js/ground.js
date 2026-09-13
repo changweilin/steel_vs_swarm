@@ -136,7 +136,15 @@ function groundTex(sub, variant, fit, season, environment, seed, cache) {
   cv.width = cv.height = S;
   let hs = 0;
   for (let i = 0; i < key.length; i++) hs = (hs * 31 + key.charCodeAt(i)) | 0;
-  paintGround(cv.getContext('2d'), S, sub, seed ^ hs, environment, SUB_COL[sub]);
+  let pW, pD;
+  if (sub === 'parking') {
+    pW = 20 + variant * 8;
+    pD = Math.round(pW * (DEFS.parking?.aspect || 0.7));
+  } else if (sub === 'court') {
+    pW = 28 + (variant >= 3 ? 28 : 0);
+    pD = 15 + (variant >= 4 ? 15 : 0);
+  }
+  paintGround(cv.getContext('2d'), S, sub, seed ^ hs, environment, SUB_COL[sub], pW, pD);
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
   // 鏡射重複:筆刷特徵跨磚無接縫(fit 型單張鋪滿,不重複)
@@ -299,7 +307,8 @@ const TILT = {
   bamboo: 0.13, snag: 0.18, charsnag: 0.18, log: 0.07, stump: 0.06, logpile: 0.05, plank: 0.08,
   fencepost: 0.14, vinerow: 0.04, ghouse: 0.03, slab: 0.22, iceshard: 0.35, rockflat: 0.3,
   saltmound: 0.06, pipe: 0.06, spoil: 0.05, barrier: 0.08, pebble: 0.4, hay: 0.07,
-  boulder: 0.3, drybush: 0.18, drum: 0.07, crate: 0.06, carwreck: 0.05, bench: 0.04, headstone: 0.1,
+  boulder: 0.3, drybush: 0.18, drum: 0.07, crate: 0.06, carwreck: 0.05, car: 0, motorcycle: 0,
+  solarpanel: 0, bench: 0.04, headstone: 0.1,
   miscanthus: 0.24, weed: 0.3, cabbage: 0.12, billboard: 0.04, planter: 0.05, hoop: 0.03,
   fish: 0.12, shell: 0.5, mushroom: 0.14,
 };
@@ -312,7 +321,8 @@ const REG = {
   bamboo: 0, snag: 0, charsnag: 0, log: 0.15, stump: 0, logpile: 0.6, plank: 0.4, cabin: 0.7,
   fencepost: 0.2, vinerow: 0.9, ghouse: 0.85, slab: 0.1, iceshard: 0, rockflat: 0, saltmound: 0,
   pipe: 0.5, spoil: 0, barrier: 0.75, canopy: 0.9, pump: 0.9, container: 0.9, carwreck: 0.45,
-  solarpanel: 0.9, bench: 0.8, headstone: 0.85, boulder: 0, drybush: 0, drum: 0.2, crate: 0.5,
+  car: 1.0, motorcycle: 1.0,
+  solarpanel: 1.0, bench: 0.8, headstone: 0.85, boulder: 0, drybush: 0, drum: 0.2, crate: 0.5,
   miscanthus: 0, weed: 0, cabbage: 0, billboard: 0.85, planter: 0.6, hoop: 0.9,
   fish: 0, shell: 0, mushroom: 0,
 };
@@ -320,14 +330,14 @@ const REG = {
 // 基底為矩形的人造件：只要呼叫端未指定列陣角度，就恆走道路／街廓格網朝向。
 const RECT_BASE_DETAILS = new Set([
   'logpile', 'plank', 'cabin', 'vinerow', 'ghouse', 'pipe', 'barrier', 'canopy', 'pump',
-  'container', 'carwreck', 'solarpanel', 'bench', 'headstone', 'crate', 'billboard', 'planter', 'hoop',
+  'container', 'carwreck', 'car', 'motorcycle', 'solarpanel', 'bench', 'headstone', 'crate', 'billboard', 'planter', 'hoop',
   'picnictable', 'tent', 'litterbin',
 ]);
 
 // 只收具有可讀實體量體的固定擺件；草、招牌薄片與可跨越小物不製造隱形牆。
 const PHYSICAL_DETAILS = new Set([
   'log', 'stump', 'logpile', 'cabin', 'ghouse', 'slab', 'pipe', 'barrier',
-  'canopy', 'container', 'carwreck', 'boulder', 'crate',
+  'canopy', 'container', 'carwreck', 'car', 'motorcycle', 'boulder', 'crate',
 ]);
 
 function detailCollider(type, it) {
@@ -2871,15 +2881,16 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // (atLocal 的平面旋轉正向 = three.js rotation.y 的負向);格位/朝向微抖不豆腐格
     const rows = (type, stepX, stepZ, mX, mZ, cap, skip, tintPick = null, s0 = 1, sv = 0) => {
       let k = 0;
-      const jx = stepX * 0.18, jz = stepZ * 0.18;
-      // 列陣隨機起點相位:同款場地的排列位置塊塊互異
-      const px0 = (rnd() - 0.5) * stepX * 0.6, pz0 = (rnd() - 0.5) * stepZ * 0.6;
+      const isSolar = type === 'solarpanel';
+      const jx = isSolar ? 0 : stepX * 0.18, jz = isSolar ? 0 : stepZ * 0.18;
+      // 列陣隨機起點相位:同款場地的排列位置塊塊互異(太陽能板平整處恆整齊居中)
+      const px0 = isSolar ? 0 : (rnd() - 0.5) * stepX * 0.6, pz0 = isSolar ? 0 : (rnd() - 0.5) * stepZ * 0.6;
       for (let lz = -dp * mZ + pz0; lz <= dp * mZ && k < cap; lz += stepZ) {
         for (let lx = -w * mX + px0; lx <= w * mX && k < cap; lx += stepX) {
           if (rnd() < skip) continue;
           const [px, pz] = atLocal(lx + (rnd() - 0.5) * jx, lz + (rnd() - 0.5) * jz);
           const tint = tintPick ? tintPick[(rnd() * tintPick.length) | 0] : null;
-          addDetail(type, px, pz, s0 + rnd() * sv, tint, 1, -rot + (rnd() - 0.5) * 0.1);
+          addDetail(type, px, pz, s0 + rnd() * sv, tint, 1, -rot + (isSolar ? 0 : (rnd() - 0.5) * 0.1));
           k++;
         }
       }
@@ -2888,14 +2899,86 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     if (!recipe) return;
     const scatterRules = { ...recipe.scatter, ...recipe.contexts?.[enc?.style.det] };
     for (const [type, values] of Object.entries(scatterRules)) {
+      if (sub === 'parking' && (type === 'car' || type === 'motorcycle')) continue;
       const [min, max, smin, smax, chance = 1] = values;
       if (rnd() > chance) continue;
       const count = min + Math.floor(rnd() * (max - min + 1));
       scatter(type, count, smin, smax - smin, GROUND_PART_PALETTES[type]);
     }
+    if (sub === 'parking') {
+      const occRate = 0.5 + rnd() * 0.5;
+      const carPal = GROUND_PART_PALETTES.car;
+      const motoPal = GROUND_PART_PALETTES.motorcycle;
+      const carSlots = [];
+      const motoSlots = [];
+
+      const marginX = 0.06;
+      const usableSpan = 1 - 2 * marginX;
+      const numCols = Math.max(4, Math.floor((w * usableSpan) / 2.5));
+      const dx = (w * usableSpan) / numCols;
+      const startX = -w * 0.5 + w * marginX;
+
+      if (dp >= 28) {
+        // 4-row layout for larger fields
+        const rZ = [-dp * 0.38, -dp * 0.12, dp * 0.12, dp * 0.38];
+        const rHead = [-rot + Math.PI / 2, -rot - Math.PI / 2, -rot + Math.PI / 2, -rot - Math.PI / 2];
+        for (let r = 0; r < 3; r++) {
+          for (let i = 0; i < numCols; i++) {
+            carSlots.push([startX + (i + 0.5) * dx, rZ[r], rHead[r]]);
+          }
+        }
+        const carCols = Math.max(2, Math.floor(numCols * 0.68));
+        for (let i = 0; i < carCols; i++) {
+          carSlots.push([startX + (i + 0.5) * dx, rZ[3], rHead[3]]);
+        }
+        const motoStartX = startX + carCols * dx + 0.5;
+        const motoEndX = w * 0.5 - w * marginX;
+        const motoWidth = Math.max(2, motoEndX - motoStartX);
+        const numMotos = Math.max(3, Math.floor(motoWidth / 1.05));
+        const motoDx = motoWidth / numMotos;
+        for (let i = 0; i < numMotos; i++) {
+          motoSlots.push([motoStartX + (i + 0.5) * motoDx, rZ[3], rHead[3]]);
+        }
+      } else {
+        // 2-row layout for standard/smaller fields
+        for (let i = 0; i < numCols; i++) {
+          carSlots.push([startX + (i + 0.5) * dx, -dp * 0.31, -rot + Math.PI / 2]);
+        }
+        const carCols = Math.max(2, Math.floor(numCols * 0.65));
+        for (let i = 0; i < carCols; i++) {
+          carSlots.push([startX + (i + 0.5) * dx, dp * 0.31, -rot - Math.PI / 2]);
+        }
+        const motoStartX = startX + carCols * dx + 0.5;
+        const motoEndX = w * 0.5 - w * marginX;
+        const motoWidth = Math.max(2, motoEndX - motoStartX);
+        const numMotos = Math.max(3, Math.floor(motoWidth / 1.05));
+        const motoDx = motoWidth / numMotos;
+        for (let i = 0; i < numMotos; i++) {
+          motoSlots.push([motoStartX + (i + 0.5) * motoDx, dp * 0.31, -rot - Math.PI / 2]);
+        }
+      }
+
+      for (const [lx, lz, hd] of carSlots) {
+        if (rnd() < occRate) {
+          const [px, pz] = atLocal(lx, lz);
+          const tint = carPal ? carPal[(rnd() * carPal.length) | 0] : null;
+          addDetail('car', px, pz, 0.98 + rnd() * 0.04, tint, 1, hd);
+        }
+      }
+      for (const [lx, lz, hd] of motoSlots) {
+        if (rnd() < occRate) {
+          const [px, pz] = atLocal(lx, lz);
+          const tint = motoPal ? motoPal[(rnd() * motoPal.length) | 0] : null;
+          addDetail('motorcycle', px, pz, 0.98 + rnd() * 0.04, tint, 1, hd);
+        }
+      }
+    }
     for (const [type, values] of Object.entries(recipe.rows || {})) {
       const [sx, sz, cap, skip, smin, smax] = values;
-      rows(type, sx, sz, .4, .34, Math.round(cap * density), skip, GROUND_PART_PALETTES[type], smin, smax - smin);
+      const isSolar = type === 'solarpanel';
+      const mX = isSolar ? 0.46 : 0.4;
+      const mZ = isSolar ? 0.44 : 0.34;
+      rows(type, sx, sz, mX, mZ, Math.round(cap * density), isSolar ? 0 : skip, GROUND_PART_PALETTES[type], smin, smax - smin);
     }
     for (const [type, u, v, heading, scale] of recipe.fixed || []) {
       const [px, pz] = atLocal(u * w, v * dp);
