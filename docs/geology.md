@@ -266,3 +266,16 @@ const mesh = makeRuntimePartModel(entry);
 已加入核心 audit suite。
 另檢查舊規則對照、45° 邊界與 90° 極限的候選排除、平面／曲面貼地、無效取樣略過。
 `node tools/audit_battle_geology.mjs` 驗證 396 組戰場網格、正式 renderer adapter、包絡坡度、尺寸與決定性；亦由物件接合稽核呼叫。
+## 邊界地形填實與接合
+
+懸崖峭壁（`cliff`）、崩塌地（`landslide`）、土石流（`debris`）作為邊界障礙時，
+由 `edgeSlope.js` 的共用斷面生成：岩頂向外以多尺度、世界座標固定的自然起伏延伸，填至 `terrain.bufferM` 的外緣，
+下坡緩衝地形不再讓背面降回地面；底面埋入實際地形。
+
+相鄰三類自然地形在端點共用高度、斷面、色彩與世界座標取樣，轉角沿對角線拼接。
+城牆／河堤仍保留自己的斷面，自然地形緊貼其端面；混合轉角補滿剩餘半塊緩衝區。
+岩頂法線與封口側面分開，內部接面不重複封口，避免條紋陰影與深度衝突。
+
+碰撞環仍使用既有有向盒，緩衝延伸只作視覺填實，不增加可站立表面或阻擋物。
+全部幾何沿用同一批次合併。離線檢查：`node tools/audit_edge_fill.mjs`、
+`node tools/audit_world_edge.mjs`；研究台的 `/edge-fill` 可檢查平地、下坡、起伏與轉角。

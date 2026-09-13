@@ -108,6 +108,8 @@ for (const [kind, def] of Object.entries(EXPANDED_BOUNDARIES)) {
 }
 for (const kind of Object.keys(SLOPE_BOUNDARIES)) {
   WALL_KINDS[kind].terrainFit = true;
+  if (SLOPE_BOUNDARIES[kind].fillContact) WALL_KINDS[kind].fillContact = true;
+  if (SLOPE_BOUNDARIES[kind].bufferFill) WALL_KINDS[kind].bufferFill = true;
   if (!EXPANDED_BOUNDARIES[kind] && WALL_KINDS[kind].dom === 'land') WALL_KINDS[kind].slope = 'steep';
 }
 

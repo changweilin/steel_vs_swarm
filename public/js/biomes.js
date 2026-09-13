@@ -8967,7 +8967,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
   const segs = [];
   // 演出:逐節取零件表 → 套上這一節的位置/朝向 → 整圈**合併成一個** mesh(顏色走頂點色)。
   // 逐件一個 mesh 的話一圈牆就是上千個 draw call(本渲染器是 draw call 瓶頸,見 beacons 紀律④)。
-  const batch = newBatch();
+  const batch = newBatch(), plans = [];
   const edges = [
     { ax: 1, x0: terrain.minX + inset, z0: terrain.minZ + inset, len: terrain.worldW - 2 * inset, fry: 0, sz: -1 },
     { ax: 1, x0: terrain.minX + inset, z0: terrain.maxZ - inset, len: terrain.worldW - 2 * inset, fry: Math.PI, sz: 1 },
@@ -9023,49 +9023,79 @@ function buildEdgeWall({ group, terrain, blockers }) {
         tier: wallSlopeTier(deg, SLOPE.EASE_DEG, SLOPE.BLOCK_DEG), deg,
       });
     }
-    // 切 run + 配款(唯一縫;純函式、零共享亂數);零件、碰撞柱、演出**同一趟**定案 ——
+    // 先切 run + 配款；整圈款式定案後，再解相鄰端面與轉角。
     // 固定高度加上同次取樣的地形範圍，貼坡表面與權威盒一起建立。
-    let prevKind = null, prevVariant = -1;
+    let prevKind = null;
     for (const r of planWallRuns(row)) {
       const kinds = planWallKinds(r, row, prevKind);
       for (let i = r.i0; i < r.i1; i++) {
-        const s = row[i];
-        const kind = kinds[i - r.i0];
-        const def = WALL_KINDS[kind] || WALL_KINDS.barricade;
-        const hd2 = def.depth / 2, kh0 = Math.max(WH, def.h);
-        // 盒心 = 內面往圖界方向退半個厚度 ⇒ 內緣恆落在夾制線上(不管這一款多厚)
-        const x = e.ax ? s.x : s.x + e.sz * hd2;
-        const z = e.ax ? s.z + e.sz * hd2 : s.z;
-        const seed = edgeSeed(x, z);
-        const variant = wallVariant(kind, seed, kind === prevKind ? prevVariant : -1);
-        const joined = def.terrainFit ? buildSlopeBoundary(kind, {
-          len: step, depth: def.depth, h: kh0, x, z, ry: e.fry, seed,
-          heightAt: (px, pz) => terrain.heightAt(px, pz), waterY: s.water ? wy : null,
-          season: terrain.season || 'summer',
-        }) : null;
-        const parts = def.terrainFit ? (joined?.parts || []) : wallParts(kind, {
-          len: half * 2, depth: def.depth, h: kh0, seed, variant, season: terrain.season || 'summer',
-        });
-        const kh = kh0; // 固定邊界包絡；本體間的可見空隙同樣禁止穿越。
-        // 零件的落地基準:段內最高的地形,水域段改取水面(否則海堤/貨輪整艘沉在水面下)
-        const ground = Math.max(joined?.hi ?? s.hi, wy != null && s.water ? Math.max(s.hi, wy) : s.hi);
-        const y = Math.min(s.lo, joined?.lo ?? s.lo) - 1.5;
-        const motion = parts.filter((p) => p.motion);
-        segs.push({
-          x, z, y, h: ground + kh - y, hw2: half, hd2,
-          ry: e.ax ? 0 : Math.PI / 2, fry: e.fry,
-          kind, variant, biome: s.biome, water: s.water, tier: r.tier, ground, kh, motion,
-        });
-        // 碰撞柱:與建物走同一條有向盒路徑(hw2/hd2/ry);刻意不掛 bld/std(見 ⑤)、不掛 cl(不可攀爬)
-        blockers.push({ x, z, y, h: ground + kh - y, hw2: half, hd2, ry: e.ax ? 0 : Math.PI / 2, r: Math.hypot(half, hd2) });
-        // 邊界障礙物一律移除底座：本體直接由地面／水面長出，不另加通用底座
-        // Joined vertices already carry terrain elevation. Collision retains its overlapping ring;
-        // visual modules meet exactly at shared endpoints instead of overlapping stair steps.
-        emitWallParts(batch, parts.filter((p) => !p.motion), x, joined ? 0 : ground, z, e.fry, 1);
-        prevKind = kind;
-        prevVariant = variant;
+        plans.push({ s: row[i], e, step, kind: kinds[i - r.i0], tier: r.tier });
+        prevKind = kinds[i - r.i0];
       }
     }
+  }
+  // Resolve both neighbours before emitting anything, including perpendicular corners.
+  const ends = new Map();
+  const endpoint = (p, sign) => {
+    const ca = Math.round(Math.cos(p.e.fry)), sa = Math.round(Math.sin(p.e.fry));
+    return [p.s.x + ca * p.step / 2 * sign, p.s.z - sa * p.step / 2 * sign]
+      .map(v => Math.round(v * 1e6)).join(',');
+  };
+  for (const p of plans) for (const sign of [-1, 1]) {
+    const key = endpoint(p, sign);
+    if (!ends.has(key)) ends.set(key, []);
+    ends.get(key).push(p);
+  }
+  const crest = Math.min(...Object.values(WALL_KINDS).filter(d => d.bufferFill).map(d => d.depth)) / 2;
+  let prevKind = null, prevVariant = -1;
+  for (const p of plans) {
+    const { s, e, step, kind, tier } = p;
+    const def = WALL_KINDS[kind] || WALL_KINDS.barricade;
+    const hd2 = def.depth / 2, kh0 = Math.max(WH, def.h);
+    // 盒心 = 內面往圖界方向退半個厚度 ⇒ 內緣恆落在夾制線上(不管這一款多厚)
+    const x = e.ax ? s.x : s.x + e.sz * hd2;
+    const z = e.ax ? s.z + e.sz * hd2 : s.z;
+    const seed = edgeSeed(x, z);
+    const variant = wallVariant(kind, seed, kind === prevKind ? prevVariant : -1);
+    const joined = def.terrainFit ? buildSlopeBoundary(kind, {
+      len: step, depth: def.depth, h: kh0, x, z, ry: e.fry, seed,
+      heightAt: (px, pz) => terrain.heightAt(px, pz), waterY: s.water ? wy : null,
+      season: terrain.season || 'summer',
+      fill: def.bufferFill && Number.isFinite(terrain.bufferM) && terrain.bufferM > 0 && terrain.bufferHeightAt ? {
+        depth: inset + terrain.bufferM, crest,
+        heightAt: (px, pz) => px >= terrain.minX && px <= terrain.maxX && pz >= terrain.minZ && pz <= terrain.maxZ
+          ? terrain.heightAt(px, pz) : terrain.bufferHeightAt(px, pz),
+        joins: [-1, 1].map(sign => {
+          const other = ends.get(endpoint(p, sign)).find(q => q !== p);
+          if (!other) return null;
+          const od = WALL_KINDS[other.kind];
+          if (!od.bufferFill && !od.fillContact) return null;
+          return { kind: other.kind, h: Math.max(WH, od.h), depth: od.depth, corner: other.e !== e };
+        }),
+      } : null,
+    }) : null;
+    const parts = def.terrainFit ? (joined?.parts || []) : wallParts(kind, {
+      len: half * 2, depth: def.depth, h: kh0, seed, variant, season: terrain.season || 'summer',
+    });
+    const kh = kh0; // 固定邊界包絡；本體間的可見空隙同樣禁止穿越。
+    // 零件的落地基準:段內最高的地形,水域段改取水面(否則海堤/貨輪整艘沉在水面下)
+    const ground = Math.max(joined?.hi ?? s.hi, wy != null && s.water ? Math.max(s.hi, wy) : s.hi);
+    const y = Math.min(s.lo, joined?.lo ?? s.lo) - 1.5;
+    const motion = parts.filter((p) => p.motion);
+    segs.push({
+      x, z, y, h: ground + kh - y, hw2: half, hd2,
+      ry: e.ax ? 0 : Math.PI / 2, fry: e.fry,
+      kind, variant, biome: s.biome, water: s.water, tier, ground, kh, motion,
+    });
+    // 碰撞柱:與建物走同一條有向盒路徑(hw2/hd2/ry);刻意不掛 bld/std(見 ⑤)、不掛 cl(不可攀爬)
+    blockers.push({ x, z, y, h: ground + kh - y, hw2: half, hd2, ry: e.ax ? 0 : Math.PI / 2, r: Math.hypot(half, hd2) });
+    // 邊界障礙物一律移除底座：本體直接由地面／水面長出，不另加通用底座
+    // Joined vertices already carry terrain elevation. Collision retains its overlapping ring;
+    // visual modules meet exactly at shared endpoints instead of overlapping stair steps.
+    emitWallParts(batch, parts.filter((p) => !p.motion), x, joined ? 0 : ground, z, e.fry, 1);
+    if (joined?.bufferParts) emitWallParts(batch, joined.bufferParts, x, 0, z, e.fry, 1);
+    prevKind = kind;
+    prevVariant = variant;
   }
   flushPartBatch(group, batch, { wash: 0.42, cool: 0.42 });
   return segs;
