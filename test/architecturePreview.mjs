@@ -38,6 +38,37 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     transition: all 0.15s;
   }
   .btn-nav-action:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+  /* 頂部環境模擬控制列 */
+  .env-sim-bar {
+    display: flex; align-items: center; gap: 8px; background: rgba(15, 23, 42, 0.7);
+    padding: 3px 10px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .env-sim-group { display: flex; align-items: center; gap: 4px; }
+  .env-sim-label { font-size: 11px; font-weight: 700; color: #94a3b8; }
+  .env-sim-select {
+    background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(148, 163, 184, 0.3); color: #f8fafc;
+    padding: 2px 6px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; outline: none;
+  }
+  .env-time-btns { display: flex; gap: 2px; }
+  .env-time-btn {
+    background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #cbd5e1; font-size: 11px; padding: 2px 5px; border-radius: 4px; cursor: pointer;
+  }
+  .env-time-btn.active {
+    background: #2563eb; border-color: #60a5fa; color: #fff;
+  }
+  .env-hour-slider { width: 55px; height: 4px; accent-color: #3b82f6; cursor: pointer; }
+  .env-hour-text { font-size: 11px; font-weight: 700; color: #38bdf8; min-width: 32px; font-variant-numeric: tabular-nums; }
+  .btn-sim-play {
+    background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399;
+    font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 5px; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-sim-play:hover { background: rgba(16, 185, 129, 0.35); }
+  .btn-sim-play.playing {
+    background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171;
+  }
+  .btn-sim-play.playing:hover { background: rgba(239, 68, 68, 0.35); }
+
 
   header {
     position: absolute; top: 62px; left: 20px; z-index: 20;
@@ -148,12 +179,58 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     <span class="brand-tag">Procedural Studio</span>
   </div>
   <div class="cat-tabs-row">
-    <button id="tab-btn-arch" class="cat-tab-btn active" type="button" data-tab="arch">🏛 建築生成 (Architecture)</button>
-    <button id="tab-btn-geology" class="cat-tab-btn" type="button" data-tab="geology">🪨 地質生成 (Geology)</button>
-    <button id="tab-btn-plant" class="cat-tab-btn" type="button" data-tab="plant">🌲 植物生成 (Plants & Forest)</button>
+    <button id="tab-btn-arch" class="cat-tab-btn active" type="button" data-tab="arch">🏛 建築</button>
+    <button id="tab-btn-geology" class="cat-tab-btn" type="button" data-tab="geology">🪨 地質</button>
+    <button id="tab-btn-plant" class="cat-tab-btn" type="button" data-tab="plant">🌲 植物</button>
+    <button id="tab-btn-vehicle" class="cat-tab-btn" type="button" data-tab="vehicle">🚗 車輛</button>
+    <button id="tab-btn-vessel" class="cat-tab-btn" type="button" data-tab="vessel">🚢 船隻</button>
+    <button id="tab-btn-env" class="cat-tab-btn" type="button" data-tab="env">🌐 環境與邊界</button>
+  </div>
+  <div class="env-sim-bar">
+    <div class="env-sim-group">
+      <label class="env-sim-label" title="四季色溫與植被物候">季節</label>
+      <select id="sim-season" class="env-sim-select">
+        <option value="spring">🌸 春</option>
+        <option value="summer" selected>☀️ 夏</option>
+        <option value="autumn">🍁 秋</option>
+        <option value="winter">❄️ 冬</option>
+      </select>
+    </div>
+    <div class="env-sim-group">
+      <label class="env-sim-label" title="時段與太陽天球軌道">時段</label>
+      <div class="env-time-btns">
+        <button class="env-time-btn" type="button" data-time="dawn" title="清晨 06:00">🌅</button>
+        <button class="env-time-btn active" type="button" data-time="day" title="白天 12:00">☀️</button>
+        <button class="env-time-btn" type="button" data-time="dusk" title="黃昏 18:00">🌇</button>
+        <button class="env-time-btn" type="button" data-time="night" title="夜晚 00:00">🌙</button>
+      </div>
+      <input id="sim-hour" type="range" min="0" max="24" step="0.25" value="12" class="env-hour-slider" title="連續小時調節">
+      <span id="sim-hour-val" class="env-hour-text">12:00</span>
+    </div>
+    <div class="env-sim-group">
+      <label class="env-sim-label" title="多元天氣預設">天氣</label>
+      <select id="sim-weather" class="env-sim-select">
+        <option value="clear" selected>☀️ 晴朗</option>
+        <option value="cloudy">☁️ 陰天</option>
+        <option value="heavy_rain">🌧️ 大雨</option>
+        <option value="storm">⚡ 暴風雨</option>
+        <option value="windy">💨 強風</option>
+        <option value="sandstorm">🏜️ 沙暴</option>
+        <option value="fog">🌫️ 濃霧</option>
+        <option value="snow">❄️ 降雪</option>
+      </select>
+    </div>
+    <div class="env-sim-group">
+      <button id="btn-sim-toggle" class="btn-sim-play" type="button" title="開啟/暫停時間流逝與天氣演化">▶ 模擬</button>
+      <select id="sim-speed" class="env-sim-select" title="模擬演化倍率" style="width: 48px;">
+        <option value="1">1×</option>
+        <option value="5" selected>5×</option>
+        <option value="20">20×</option>
+      </select>
+    </div>
   </div>
   <div class="nav-extra">
-    <button id="btn-nav-reset-cam" class="btn-nav-action" type="button" title="重設視角">🎥 重設視角</button>
+    <button id="btn-nav-reset-cam" class="btn-nav-action" type="button" title="重設視角">🎥 視角</button>
   </div>
 </nav>
 
@@ -334,6 +411,181 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     </div>
   </div>
 
+
+  <!-- 車輛類別控制面板 -->
+  <div id="panel-vehicle" class="cat-panel" style="display: none;">
+    <div class="dim-panel">
+      <div class="dim-title">
+        <span>車輛分類結構與編組</span>
+        <span class="badge" id="veh-info-badge">真實米制 · 模組化底盤 · 聯結車與列車編組</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示型態</label>
+          <select id="veh-formation" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="single" selected>單車／車廂</option>
+            <option value="rail">整列貨運列車</option>
+            <option value="semi">完整聯結車</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">用途領域</label>
+          <select id="veh-purpose" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="">全部用途</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">結構體系</label>
+          <select id="veh-type" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="">全部結構</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">動力單元</label>
+          <select id="veh-power" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="">全部動力</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">車輛原型</label>
+          <select id="veh-profile" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
+          <select id="veh-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="single" selected>單車細節檢驗</option>
+            <option value="variants">16 組種子變體陣列</option>
+          </select>
+        </div>
+      </div>
+      <div id="veh-coupling-box" style="display:none; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px;">
+        <div style="display:flex; gap: 10px; align-items:center; flex-wrap:wrap; font-size: 11px; font-weight: 600;">
+          <span>編組接合設定：</span>
+          <label>牽引車 <select id="veh-leader" style="padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px;"></select></label>
+          <label>車廂 <select id="veh-wagon" style="padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px;"></select></label>
+          <label>節數 <input type="number" id="veh-count" min="2" max="6" value="3" style="width:44px; padding:2px; border:1px solid #cbd5e1; border-radius:4px; text-align:center; font-weight:700;"></label>
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="btn-veh-generate" class="btn-generate">⚡ 重新生成車輛</button>
+        <button id="btn-veh-random-seed" class="btn-randomize">🎲 隨機種子</button>
+        <button id="btn-veh-next-seed" class="btn-randomize">⏭ 下一個種子</button>
+        <button id="btn-veh-variants" class="btn-full-random">🎲 展開 16 組變體</button>
+        <div class="seed-control">
+          <label for="input-veh-seed">種子碼</label>
+          <input type="number" id="input-veh-seed" value="42" min="1" max="999999">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 船隻類別控制面板 -->
+  <div id="panel-vessel" class="cat-panel" style="display: none;">
+    <div class="dim-panel">
+      <div class="dim-title">
+        <span>船隻艦艇與水運載具</span>
+        <span class="badge" id="vessel-info-badge">真實米制 · 動態吃水 · 裝載與武器系統</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">船型分類</label>
+          <select id="vessel-type" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="">隨機船型</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">用途任務</label>
+          <select id="vessel-purpose" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="">全部用途</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">航行水域</label>
+          <select id="vessel-water" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="">全部水域</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">動力系統</label>
+          <select id="vessel-power" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="">全部動力</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
+          <select id="vessel-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="single" selected>單艦細節檢驗</option>
+            <option value="variants">16 組種子變體陣列</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">水面環境</label>
+          <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:6px 0; cursor:pointer;">
+            <input type="checkbox" id="chk-vessel-water" checked style="accent-color:#2563eb;"> 顯示透光水面
+          </label>
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="btn-vessel-generate" class="btn-generate">⚡ 重新生成船隻</button>
+        <button id="btn-vessel-random-seed" class="btn-randomize">🎲 隨機種子</button>
+        <button id="btn-vessel-next-seed" class="btn-randomize">⏭ 下一個種子</button>
+        <button id="btn-vessel-variants" class="btn-full-random">🎲 展開 16 組變體</button>
+        <div class="seed-control">
+          <label for="input-vessel-seed">種子碼</label>
+          <input type="number" id="input-vessel-seed" value="42" min="1" max="999999">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 環境與邊界控制面板 -->
+  <div id="panel-env" class="cat-panel" style="display: none;">
+    <div class="dim-panel">
+      <div class="dim-title">
+        <span>場景共用環境物件 · 邊界障礙 · 冰體</span>
+        <span class="badge" id="env-info-badge">17 種單體 · 56 款邊界障礙 · 連續陡坡</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">大分類模式</label>
+          <select id="env-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="scene" selected>場景獨立物件 (Scene Objects)</option>
+            <option value="ice">浮冰與冰山 (Sea Ice & Iceberg)</option>
+            <option value="edge">邊界固定構造 (Edge Boundaries)</option>
+            <option value="slope">連續陡坡接縫 (Slope Boundary Joint)</option>
+            <option value="mid">緩坡障礙帶 (Mid Slope)</option>
+            <option value="flat">平地障礙帶 (Flat Ground)</option>
+            <option value="water">水域障礙物 (Water Obstacles)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">物件款式</label>
+          <select id="env-kind" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
+          <select id="env-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="single" selected>單體細節檢驗</option>
+            <option value="variants">16 組種子變體陣列</option>
+            <option value="catalog">全分類目錄陳列</option>
+          </select>
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="btn-env-generate" class="btn-generate">⚡ 重新生成物件</button>
+        <button id="btn-env-random-seed" class="btn-randomize">🎲 隨機種子</button>
+        <button id="btn-env-next-seed" class="btn-randomize">⏭ 下一個種子</button>
+        <button id="btn-env-variants" class="btn-full-random">🎲 展開 16 組變體</button>
+        <div class="seed-control">
+          <label for="input-env-seed">種子碼</label>
+          <input type="number" id="input-env-seed" value="42" min="1" max="999999">
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 植物類別控制面板 -->
   <div id="panel-plant" class="cat-panel" style="display: none;">
     <div class="dim-panel">
@@ -489,6 +741,27 @@ import { runtimeMeshDataGeometry } from '/js/runtimePartModel.js';
 
 // 植物生成模組
 import { TREE_SPECIES, createForestTree, treeDistribution, treeHabitatWeight, treeSections, treeBend, forestEnvironment } from '/js/forest.js';
+// 車輛生成模組
+import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, vehicleCandidates } from '/js/vehicleCatalog.js';
+import { makeProceduralVehicle } from '/js/vehicleModels.js';
+import { VEHICLE_CONSISTS, CONSIST_PREFIX } from '/js/vehicleConsists.js';
+import { RIM_NAMES } from '/js/vehicleVariants.js';
+
+// 船隻生成模組
+import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel } from '/js/vesselCatalog.js';
+import { VESSEL_EQUIPMENT } from '/js/vesselLayout.js';
+import { buildGeneratedVesselMesh } from '/js/vesselModels.js';
+import { disposeTree } from '/js/toon.js';
+
+// 環境物件與邊界生成模組
+import { ENVIRONMENT_OBJECTS, environmentParts } from '/js/environmentParts.js';
+import { WALL_KINDS, wallParts } from '/js/edgewall.js';
+import { SLOPE_BOUNDARIES, buildSlopeBoundary } from '/js/edgeSlope.js';
+
+// 環境模擬系統 (四季 × 日夜 × 多元天氣)
+import { applyEnvironment } from '/js/environment.js';
+import { clockHour, clockLabel, DAYCLOCK } from '/js/data.js';
+
 
 // ---- Three.js 核心場景初始化 ----
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -499,10 +772,55 @@ document.body.append(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xcdd9e2);
-scene.add(new THREE.HemisphereLight(0xffffff, 0x889bb0, 2.4));
-const light = new THREE.DirectionalLight(0xfff3e0, 2.3);
-light.position.set(-100, 200, 120);
-scene.add(light);
+
+// 環境模擬狀態 (四季 × 日夜太陽軌道 × 多元天氣粒子與閃電)
+const currentEnv = {
+  season: 'summer',
+  time: 'day',
+  weather: 'clear',
+  hour: 12,
+  playing: false,
+  speed: 5,
+};
+let envHandle = null;
+let simElapsedS = 0;
+
+function initEnvironment() {
+  if (envHandle) {
+    try { envHandle.dispose(); } catch (e) { console.warn(e); }
+    envHandle = null;
+  }
+  const simTerrain = {
+    worldW: 2400,
+    worldH: 2400,
+    center: { lat: 25.0, lng: 121.5 },
+    heightAt: () => 0,
+  };
+  envHandle = applyEnvironment(scene, simTerrain, {
+    season: currentEnv.season,
+    time: currentEnv.time,
+    weather: currentEnv.weather,
+  }, {
+    shadow: false,
+    backgroundOnly: false,
+  });
+  syncEnvironmentHour(currentEnv.hour);
+}
+
+function syncEnvironmentHour(targetHour) {
+  currentEnv.hour = targetHour;
+  const h0 = DAYCLOCK.START_H[currentEnv.time] ?? DAYCLOCK.START_H.day;
+  const rate = DAYCLOCK.GAME_H / DAYCLOCK.REAL_S;
+  const diffH = ((targetHour - h0) % 24 + 24) % 24;
+  simElapsedS = diffH / rate;
+  const slider = document.querySelector('#sim-hour');
+  if (slider) slider.value = targetHour;
+  const valText = document.querySelector('#sim-hour-val');
+  if (valText) valText.textContent = clockLabel(targetHour);
+  document.querySelectorAll('.env-time-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.time === currentEnv.time);
+  });
+}
 
 const aspect = innerWidth / innerHeight;
 const camera = new THREE.PerspectiveCamera(38, aspect, 0.5, 4000);
@@ -577,6 +895,30 @@ scene.add(geologyGroup);
 
 let plantGroup = new THREE.Group();
 scene.add(plantGroup);
+
+let vehicleGroup = new THREE.Group();
+scene.add(vehicleGroup);
+
+let vesselGroup = new THREE.Group();
+scene.add(vesselGroup);
+
+let envGroup = new THREE.Group();
+scene.add(envGroup);
+
+const waterMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(3200, 3200),
+  new THREE.MeshStandardMaterial({
+    color: 0x367e9c,
+    transparent: true,
+    opacity: 0.72,
+    roughness: 0.35,
+    side: THREE.DoubleSide,
+  })
+);
+waterMesh.rotation.x = -Math.PI / 2;
+waterMesh.position.y = 0;
+waterMesh.visible = false;
+scene.add(waterMesh);
 
 const labels = [];
 const labelContainer = document.querySelector('#labels');
@@ -709,6 +1051,18 @@ function clearScene() {
   scene.remove(plantGroup);
   plantGroup = new THREE.Group();
   scene.add(plantGroup);
+
+  scene.remove(vehicleGroup);
+  vehicleGroup = new THREE.Group();
+  scene.add(vehicleGroup);
+
+  scene.remove(vesselGroup);
+  vesselGroup = new THREE.Group();
+  scene.add(vesselGroup);
+
+  scene.remove(envGroup);
+  envGroup = new THREE.Group();
+  scene.add(envGroup);
 
   labels.length = 0;
   labelContainer.innerHTML = '';
@@ -1559,6 +1913,85 @@ function handleHover(e) {
       return;
     }
 
+    // 4. 車輛懸停卡片
+    if (obj.userData.vehicleMeta) {
+      const meta = obj.userData.vehicleMeta;
+      const v = meta.vehicle;
+      highlightMesh.position.set(meta.posX, 0.15, meta.posZ);
+      highlightMesh.scale.set(Math.max(v.length, v.width) * 0.6, Math.max(v.length, v.width) * 0.6, 1);
+      highlightMesh.visible = true;
+
+      const cargoNames = { luggage:'行李箱', crate:'木箱', camping:'露營包', sacks:'袋裝貨物', barrels:'桶裝貨物', logs:'原木', cars:'汽車', aggregate:'散裝土石' };
+      const cargoText = v.cargo && v.cargo.count ? (cargoNames[v.cargo.type] || v.cargo.type) + ' × ' + v.cargo.count : '無';
+
+      inspectorCard.innerHTML =
+        '<h3>🚗 ' + v.name + ' <span style="font-size:11px;color:#94a3b8">#' + meta.seed + '</span></h3>' +
+        '<div class="sub">' + (v.brand?.name || '無標識') + ' · ' + (VEHICLE_AXES.purpose[v.purpose] || v.purpose) + ' / ' + (VEHICLE_AXES.type[v.type] || v.type) + '</div>' +
+        '<div class="prop-group">' +
+          '<div class="prop-title">📐 車體尺寸與規格</div>' +
+          '<div class="prop-row"><span class="k">公稱長寬高</span><span class="v">' + v.length.toFixed(2) + 'm × ' + v.width.toFixed(2) + 'm × ' + v.height.toFixed(2) + 'm</span></div>' +
+          '<div class="prop-row"><span class="k">車齡 / 漆面磨損</span><span class="v">' + v.age + ' 年 / ' + Math.round((v.wear || 0) * 100) + '%</span></div>' +
+          '<div class="prop-row"><span class="k">保養度 / 動力</span><span class="v">' + Math.round((v.maintenance || 1) * 100) + '% / ' + (VEHICLE_AXES.power[v.power] || v.power) + '</span></div>' +
+          '<div class="prop-row"><span class="k">裝載貨物</span><span class="v">' + cargoText + '</span></div>' +
+        '</div>' +
+        (v.consist ? '<div class="prop-group"><div class="prop-title">🔗 編組資訊</div><div class="prop-row"><span class="k">節數 / 總長</span><span class="v">' + v.members.length + ' 節 / ' + v.length.toFixed(1) + 'm</span></div></div>' : '') +
+        '<div class="inspector-hint">💡 點擊車輛可平移視角並聚焦觀察</div>';
+
+      positionInspectorCard(e);
+      render();
+      return;
+    }
+
+    // 5. 船隻懸停卡片
+    if (obj.userData.vesselMeta) {
+      const meta = obj.userData.vesselMeta;
+      const v = meta.vessel;
+      highlightMesh.position.set(meta.posX, 0.15, meta.posZ);
+      highlightMesh.scale.set(v.length * 0.55, v.length * 0.55, 1);
+      highlightMesh.visible = true;
+
+      const cells = v.layout?.equipment ? v.layout.equipment.reduce((n, item) => n + (item.kind === 'vls' ? (item.units || 0) : 0), 0) : 0;
+
+      inspectorCard.innerHTML =
+        '<h3>🚢 ' + v.name + ' <span style="font-size:11px;color:#94a3b8">#' + meta.seed + '</span></h3>' +
+        '<div class="sub">' + v.vesselName + ' / ' + v.registry + ' · ' + (VESSEL_AXES.purpose[v.purpose] || v.purpose) + '</div>' +
+        '<div class="prop-group">' +
+          '<div class="prop-title">📐 艦體規格與航行能力</div>' +
+          '<div class="prop-row"><span class="k">艦長 / 艦寬 / 吃水</span><span class="v">' + v.length.toFixed(1) + 'm × ' + v.beam.toFixed(1) + 'm × ' + v.draft.toFixed(2) + 'm</span></div>' +
+          '<div class="prop-row"><span class="k">排水量 / 航速</span><span class="v">' + v.displacementTonnes.toFixed(1) + ' t / ' + v.speedKnots.toFixed(1) + ' 節</span></div>' +
+          '<div class="prop-row"><span class="k">動力 / 材質</span><span class="v">' + (VESSEL_AXES.power[v.power] || v.power) + ' / ' + (VESSEL_MATERIALS[v.material] || v.material) + '</span></div>' +
+          (cells > 0 ? '<div class="prop-row"><span class="k">垂直發射單元 (VLS)</span><span class="v">' + cells + ' 格</span></div>' : '') +
+        '</div>' +
+        '<div class="inspector-hint">💡 點擊船隻可平移視角並聚焦觀察</div>';
+
+      positionInspectorCard(e);
+      render();
+      return;
+    }
+
+    // 6. 環境與邊界懸停卡片
+    if (obj.userData.envMeta) {
+      const meta = obj.userData.envMeta;
+      highlightMesh.position.set(meta.posX, 0.15, meta.posZ);
+      highlightMesh.scale.set(Math.max(meta.size[0], meta.size[2]) * 0.6, Math.max(meta.size[0], meta.size[2]) * 0.6, 1);
+      highlightMesh.visible = true;
+
+      inspectorCard.innerHTML =
+        '<h3>🌐 ' + meta.label + ' <span style="font-size:11px;color:#94a3b8">#' + meta.seed + '</span></h3>' +
+        '<div class="sub">模式：' + meta.mode + ' · 款式：' + meta.kind + '</div>' +
+        '<div class="prop-group">' +
+          '<div class="prop-title">📐 構造尺寸與零件</div>' +
+          '<div class="prop-row"><span class="k">長寬高尺度</span><span class="v">' + meta.size[0].toFixed(1) + 'm × ' + meta.size[2].toFixed(1) + 'm × ' + meta.size[1].toFixed(1) + 'm</span></div>' +
+          '<div class="prop-row"><span class="k">零件總數</span><span class="v">' + meta.partsCount + ' 件</span></div>' +
+          (meta.isIce ? '<div class="prop-row"><span class="k">冰體水線</span><span class="v">具水下龍骨深淺配置</span></div>' : '') +
+        '</div>' +
+        '<div class="inspector-hint">💡 點擊物件可平移視角並聚焦觀察</div>';
+
+      positionInspectorCard(e);
+      render();
+      return;
+    }
+
     // 3. 植物懸停卡片
     if (obj.userData.plantMeta) {
       const meta = obj.userData.plantMeta;
@@ -1640,6 +2073,21 @@ function handleClick(e) {
       camTarget.set(meta.posX, meta.tree.h * 0.4, meta.posZ);
       updateCamera();
       render();
+    } else if (obj.userData.vehicleMeta) {
+      const meta = obj.userData.vehicleMeta;
+      camTarget.set(meta.posX, meta.height * 0.4, meta.posZ);
+      updateCamera();
+      render();
+    } else if (obj.userData.vesselMeta) {
+      const meta = obj.userData.vesselMeta;
+      camTarget.set(meta.posX, meta.beam * 0.3, meta.posZ);
+      updateCamera();
+      render();
+    } else if (obj.userData.envMeta) {
+      const meta = obj.userData.envMeta;
+      camTarget.set(meta.posX, meta.size[1] * 0.4, meta.posZ);
+      updateCamera();
+      render();
     }
   }
 }
@@ -1669,6 +2117,15 @@ function switchTab(tabKey) {
   } else if (tabKey === 'plant') {
     if (titleEl) titleEl.textContent = '🌲 林木植物生態與四季物候生成';
     if (descEl) descEl.textContent = '21 種林木形態 · 四季器官物候 · 微氣候適應與群落生態';
+  } else if (tabKey === 'vehicle') {
+    if (titleEl) titleEl.textContent = '🚗 載具結構與編組試車場';
+    if (descEl) descEl.textContent = '單車／整列列車／半聯結車 · 多元用途動力輪圈 · 16 變體陣列';
+  } else if (tabKey === 'vessel') {
+    if (titleEl) titleEl.textContent = '🚢 艦艇水運與裝載圖鑑';
+    if (descEl) descEl.textContent = '真實米制航域船型 · 動態吃水裝載與武器 · 透光水面環境';
+  } else if (tabKey === 'env') {
+    if (titleEl) titleEl.textContent = '🌐 環境物件 · 邊界障礙 · 冰體';
+    if (descEl) descEl.textContent = '17 類獨立建築場景 · 浮冰冰山水線 · 56 款邊界障礙與連續陡坡';
   }
 
   const activePanel = document.querySelector('#panel-' + tabKey);
@@ -1680,6 +2137,12 @@ function switchTab(tabKey) {
     buildGeologyMode();
   } else if (tabKey === 'plant') {
     buildPlantMode();
+  } else if (tabKey === 'vehicle') {
+    buildVehicleMode();
+  } else if (tabKey === 'vessel') {
+    buildVesselMode();
+  } else if (tabKey === 'env') {
+    buildEnvironmentMode();
   }
 }
 
@@ -1703,6 +2166,27 @@ document.querySelector('#btn-nav-reset-cam')?.addEventListener('click', () => {
     camDist = mode === 'forest' ? 120 : (mode === 'variants' ? 95 : 35);
     camPhi = 1.1;
     camTheta = 0.6;
+    updateCamera();
+    render();
+  } else if (currentTab === 'vehicle') {
+    camTarget.set(0, 2, 0);
+    camDist = document.querySelector('#veh-view-mode').value === 'variants' ? 120 : 25;
+    camPhi = 1.05;
+    camTheta = 0.65;
+    updateCamera();
+    render();
+  } else if (currentTab === 'vessel') {
+    camTarget.set(0, 4, 0);
+    camDist = document.querySelector('#vessel-view-mode').value === 'variants' ? 160 : 50;
+    camPhi = 1.1;
+    camTheta = 0.75;
+    updateCamera();
+    render();
+  } else if (currentTab === 'env') {
+    camTarget.set(0, 5, 0);
+    camDist = document.querySelector('#env-view-mode').value === 'variants' ? 140 : 40;
+    camPhi = 1.05;
+    camTheta = 0.65;
     updateCamera();
     render();
   }
@@ -1999,6 +2483,618 @@ document.querySelector('#btn-full-random')?.addEventListener('click', () => {
   buildFullRandomMode();
 });
 
+
+// ==========================================
+// 車輛生成器邏輯
+// ==========================================
+let vehicleInitialized = false;
+function initVehicleOptions() {
+  if (vehicleInitialized) return;
+  vehicleInitialized = true;
+  for (const [key, label] of Object.entries(VEHICLE_AXES.purpose)) {
+    document.querySelector('#veh-purpose').add(new Option(label, key));
+  }
+  for (const [key, label] of Object.entries(VEHICLE_AXES.type)) {
+    document.querySelector('#veh-type').add(new Option(label, key));
+  }
+  for (const [key, label] of Object.entries(VEHICLE_AXES.power)) {
+    document.querySelector('#veh-power').add(new Option(label, key));
+  }
+  updateVehicleFilter();
+}
+
+function updateVehicleFilter() {
+  const mode = document.querySelector('#veh-formation').value;
+  const couplingBox = document.querySelector('#veh-coupling-box');
+  if (couplingBox) couplingBox.style.display = mode === 'single' ? 'none' : 'block';
+  document.querySelector('#veh-type').disabled = mode !== 'single';
+  document.querySelector('#veh-power').disabled = mode !== 'single';
+
+  const filters = {};
+  const pur = document.querySelector('#veh-purpose').value;
+  const typ = document.querySelector('#veh-type').value;
+  const pow = document.querySelector('#veh-power').value;
+  if (pur) filters.purpose = pur;
+  if (typ) filters.type = typ;
+  if (pow) filters.power = pow;
+
+  const profSelect = document.querySelector('#veh-profile');
+  const prevVal = profSelect.value;
+  profSelect.innerHTML = '';
+
+  if (mode === 'single') {
+    const candidates = vehicleCandidates(filters);
+    for (const key of candidates) {
+      profSelect.add(new Option(VEHICLE_PROFILES[key].name, key));
+    }
+  } else {
+    for (const [k, p] of Object.entries(VEHICLE_CONSISTS)) {
+      if (p.mode === mode && (!filters.purpose || p.purpose === filters.purpose)) {
+        profSelect.add(new Option(p.name, CONSIST_PREFIX + k));
+      }
+    }
+  }
+  if ([...profSelect.options].some(o => o.value === prevVal)) {
+    profSelect.value = prevVal;
+  }
+  updateVehicleCoupling();
+}
+
+function updateVehicleCoupling() {
+  const profKey = document.querySelector('#veh-profile').value;
+  if (!profKey || !profKey.startsWith(CONSIST_PREFIX)) return;
+  const recipe = VEHICLE_CONSISTS[profKey.slice(CONSIST_PREFIX.length)];
+  if (recipe) {
+    const leaderSel = document.querySelector('#veh-leader');
+    leaderSel.innerHTML = '';
+    for (const k of recipe.leaders) leaderSel.add(new Option(VEHICLE_PROFILES[k].name, k));
+    const wagonSel = document.querySelector('#veh-wagon');
+    wagonSel.innerHTML = '';
+    wagonSel.add(new Option('按產業配方自動編組', ''));
+    for (const k of recipe.wagons) wagonSel.add(new Option(VEHICLE_PROFILES[k].name, k));
+    const countInput = document.querySelector('#veh-count');
+    countInput.min = recipe.count[0];
+    countInput.max = recipe.count[1];
+    countInput.disabled = recipe.mode === 'semi';
+    countInput.value = Math.min(recipe.count[1], Math.max(recipe.count[0], Number(countInput.value)));
+  }
+}
+
+function createVehicleInstance(profileKey, seed, options, posX = 0, posZ = 0) {
+  try {
+    const model = makeProceduralVehicle(profileKey, seed, options);
+    model.position.set(posX, 0, posZ);
+    vehicleGroup.add(model);
+    const v = model.userData.vehicle;
+    const meta = {
+      posX, posZ,
+      seed,
+      vehicle: v,
+      name: v.name,
+      formation: options.leaderKey ? 'consist' : 'single',
+      length: v.length,
+      width: v.width,
+      height: v.height,
+    };
+    model.traverse((o) => {
+      if (o.isMesh) {
+        o.userData.vehicleMeta = meta;
+        clickableObjects.push(o);
+      }
+    });
+    const badge = document.createElement('div');
+    badge.className = 'badge-label';
+    badge.innerHTML = '<span class="cat">🚗</span>' + v.name + ' <span class="height">' + v.length.toFixed(1) + 'm</span>';
+    labelContainer.appendChild(badge);
+    labels.push({ element: badge, point: new THREE.Vector3(posX, (v.height || 2) + 1.2, posZ) });
+    return { model, meta, vehicle: v };
+  } catch (err) {
+    console.error('車輛生成失敗:', err);
+    return null;
+  }
+}
+
+function buildVehicleMode() {
+  clearScene();
+  currentMode = 'vehicle';
+  document.querySelector('#btn-back').style.display = 'none';
+  floor.material.color.setHex(0x3a484e);
+  floor.visible = true;
+  waterMesh.visible = false;
+
+  initVehicleOptions();
+
+  const formation = document.querySelector('#veh-formation').value;
+  const profileKey = document.querySelector('#veh-profile').value;
+  if (!profileKey) {
+    document.querySelector('#nav-status').textContent = '此篩選組合沒有匹配車型，請重選條件。';
+    return;
+  }
+  const viewMode = document.querySelector('#veh-view-mode').value;
+  const seed = parseInt(document.querySelector('#input-veh-seed').value, 10) || 42;
+
+  const options = formation === 'single'
+    ? Object.fromEntries(['purpose', 'type', 'power'].filter(k => document.querySelector('#veh-' + k).value).map(k => [k, document.querySelector('#veh-' + k).value]))
+    : {
+        leaderKey: document.querySelector('#veh-leader').value,
+        wagonCount: Number(document.querySelector('#veh-count').value),
+        wagonKey: document.querySelector('#veh-wagon').value || undefined,
+      };
+
+  if (viewMode === 'single') {
+    const res = createVehicleInstance(profileKey, seed, options, 0, 0);
+    if (!res) return;
+    const v = res.vehicle;
+    document.querySelector('#nav-status').textContent = '車輛單體檢驗：【' + v.name + '】（種子碼 ' + seed + ' · 長 ' + v.length.toFixed(1) + 'm 寬 ' + v.width.toFixed(1) + 'm 高 ' + v.height.toFixed(1) + 'm）';
+    camTarget.set(0, v.height * 0.4, 0);
+    camDist = Math.max(v.length, v.width) * 2.2;
+  } else {
+    const cols = 4, rows = 4;
+    const res0 = createVehicleInstance(profileKey, seed, options, 0, 0);
+    const v0 = res0?.vehicle;
+    clearScene();
+    floor.visible = true;
+    const stepX = Math.max(20, (v0?.width || 3) * 3 + 8);
+    const stepZ = Math.max(24, (v0?.length || 6) * 1.6 + 10);
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = r * cols + c;
+        const curSeed = seed + idx * 7919;
+        const posX = startX + c * stepX;
+        const posZ = startZ + r * stepZ;
+        createVehicleInstance(profileKey, curSeed, options, posX, posZ);
+      }
+    }
+    document.querySelector('#nav-status').textContent = '車輛 16 組隨機變體陣列：【' + (v0?.name || profileKey) + '】（基底種子 ' + seed + '）';
+    camTarget.set(0, (v0?.height || 2) * 0.4, 0);
+    camDist = Math.max(stepX * cols, stepZ * rows) * 1.1;
+  }
+  updateCamera();
+  render();
+}
+
+// ==========================================
+// 船隻生成器邏輯
+// ==========================================
+let vesselInitialized = false;
+function initVesselOptions() {
+  if (vesselInitialized) return;
+  vesselInitialized = true;
+  for (const t of VESSEL_TYPES) {
+    document.querySelector('#vessel-type').add(new Option(t.name, t.id));
+  }
+  for (const [key, label] of Object.entries(VESSEL_AXES.purpose)) {
+    document.querySelector('#vessel-purpose').add(new Option(label, key));
+  }
+  for (const [key, label] of Object.entries(VESSEL_AXES.waters)) {
+    document.querySelector('#vessel-water').add(new Option(label, key));
+  }
+  for (const [key, label] of Object.entries(VESSEL_AXES.power)) {
+    document.querySelector('#vessel-power').add(new Option(label, key));
+  }
+}
+
+function createVesselInstance(seed, options, posX = 0, posZ = 0) {
+  try {
+    const v = generateVessel(seed, options);
+    if (!v) return null;
+    const model = buildGeneratedVesselMesh(v, { wake: false });
+    model.position.set(posX, 0, posZ);
+    vesselGroup.add(model);
+    const meta = {
+      posX, posZ,
+      seed,
+      vessel: v,
+      name: v.name,
+      length: v.length,
+      beam: v.beam,
+      draft: v.draft,
+      displacement: v.displacementTonnes,
+      speed: v.speedKnots,
+    };
+    model.traverse((o) => {
+      if (o.isMesh) {
+        o.userData.vesselMeta = meta;
+        clickableObjects.push(o);
+      }
+    });
+    const badge = document.createElement('div');
+    badge.className = 'badge-label';
+    badge.innerHTML = '<span class="cat">🚢</span>' + v.name + ' <span class="height">' + v.length.toFixed(1) + 'm</span>';
+    labelContainer.appendChild(badge);
+    labels.push({ element: badge, point: new THREE.Vector3(posX, v.beam * 0.5 + 3, posZ) });
+    return { model, meta, vessel: v };
+  } catch (err) {
+    console.error('船隻生成失敗:', err);
+    return null;
+  }
+}
+
+function buildVesselMode() {
+  clearScene();
+  currentMode = 'vessel';
+  document.querySelector('#btn-back').style.display = 'none';
+
+  initVesselOptions();
+
+  const showWater = document.querySelector('#chk-vessel-water').checked;
+  waterMesh.visible = showWater;
+  floor.visible = !showWater;
+  floor.material.color.setHex(0x1a3344);
+
+  const type = document.querySelector('#vessel-type').value;
+  const purpose = document.querySelector('#vessel-purpose').value;
+  const water = document.querySelector('#vessel-water').value;
+  const power = document.querySelector('#vessel-power').value;
+  const viewMode = document.querySelector('#vessel-view-mode').value;
+  const seed = parseInt(document.querySelector('#input-vessel-seed').value, 10) || 42;
+
+  const options = {
+    id: type || undefined,
+    purpose: purpose || undefined,
+    water: water || undefined,
+    power: power || undefined,
+  };
+
+  if (viewMode === 'single') {
+    const res = createVesselInstance(seed, options, 0, 0);
+    if (!res) {
+      document.querySelector('#nav-status').textContent = '此分類組合沒有相容船型，請調整篩選條件。';
+      return;
+    }
+    const v = res.vessel;
+    document.querySelector('#nav-status').textContent = '艦船單體檢驗：【' + v.name + ' · ' + v.registry + '】（種子 ' + seed + ' · 長 ' + v.length.toFixed(1) + 'm 寬 ' + v.beam.toFixed(1) + 'm 吃水 ' + v.draft.toFixed(2) + 'm · ' + v.displacementTonnes.toFixed(1) + 't）';
+    camTarget.set(0, v.beam * 0.3, 0);
+    camDist = Math.max(v.length, 30) * 1.8;
+  } else {
+    const cols = 4, rows = 4;
+    const res0 = createVesselInstance(seed, options, 0, 0);
+    const v0 = res0?.vessel;
+    clearScene();
+    waterMesh.visible = showWater;
+    floor.visible = !showWater;
+    const stepX = Math.max(30, (v0?.beam || 8) * 3 + 15);
+    const stepZ = Math.max(50, (v0?.length || 30) * 1.5 + 20);
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = r * cols + c;
+        const curSeed = seed + idx * 7919;
+        const posX = startX + c * stepX;
+        const posZ = startZ + r * stepZ;
+        createVesselInstance(curSeed, options, posX, posZ);
+      }
+    }
+    document.querySelector('#nav-status').textContent = '艦船 16 組隨機變體陣列：【' + (v0?.name || '船型') + '】（基底種子 ' + seed + '）';
+    camTarget.set(0, (v0?.beam || 6) * 0.4, 0);
+    camDist = Math.max(stepX * cols, stepZ * rows) * 1.1;
+  }
+  updateCamera();
+  render();
+}
+
+// ==========================================
+// 環境物件與邊界生成器邏輯
+// ==========================================
+function initEnvOptions() {
+  const mode = document.querySelector('#env-mode').value;
+  const kindSel = document.querySelector('#env-kind');
+  const prevKind = kindSel.value;
+  kindSel.innerHTML = '';
+
+  if (mode === 'scene') {
+    for (const [k, def] of Object.entries(ENVIRONMENT_OBJECTS)) {
+      if (k !== 'icefloe' && k !== 'iceberg') {
+        kindSel.add(new Option(def.label || k, k));
+      }
+    }
+  } else if (mode === 'ice') {
+    kindSel.add(new Option('浮冰群 (Sea Ice Floe)', 'icefloe'));
+    kindSel.add(new Option('極地冰山 (Glacial Iceberg)', 'iceberg'));
+  } else if (mode === 'edge') {
+    for (const [k, def] of Object.entries(WALL_KINDS)) {
+      kindSel.add(new Option(def.label || k, k));
+    }
+  } else if (['slope', 'mid', 'flat', 'water'].includes(mode)) {
+    const slopeKinds = Object.keys(WALL_KINDS).filter(k =>
+      mode === 'water' ? WALL_KINDS[k].dom === 'water' :
+      WALL_KINDS[k].dom === 'land' && WALL_KINDS[k].slope === (mode === 'slope' ? 'steep' : mode)
+    );
+    for (const k of slopeKinds) {
+      kindSel.add(new Option(WALL_KINDS[k].label || k, k));
+    }
+  }
+  if ([...kindSel.options].some(o => o.value === prevKind)) {
+    kindSel.value = prevKind;
+  }
+}
+
+function meshGeometry(data) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices, 3));
+  if (data.colors) g.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
+  g.setIndex(data.faces);
+  g.computeVertexNormals();
+  return g;
+}
+
+function assembleEnvironmentParts(rows, isIce = false) {
+  const group = new THREE.Group();
+  for (const p of rows) {
+    const [t, a, b, c, n] = p.g;
+    const geo = t === 'mesh' ? meshGeometry(a)
+      : t === 'box' ? new THREE.BoxGeometry(a, b, c)
+      : t === 'cyl' ? new THREE.CylinderGeometry(a, b, c, n || 6)
+      : t === 'cone' ? new THREE.ConeGeometry(a, b, c || 6)
+      : new THREE.IcosahedronGeometry(a, 0);
+    const mat = new THREE.MeshStandardMaterial({
+      color: p.c ?? 0xffffff,
+      vertexColors: t === 'mesh' && !!a.colors,
+      roughness: 0.85,
+      flatShading: true,
+      transparent: p.mat === 'glass',
+      opacity: p.mat === 'glass' ? 0.72 : 1,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.fromArray(p.p || [0, 0, 0]);
+    if (isIce) mesh.position.y -= (p.waterline || 0);
+    mesh.rotation.set(...(p.r || [0, 0, 0]));
+    mesh.scale.fromArray(p.s || [1, 1, 1]);
+    group.add(mesh);
+  }
+  return group;
+}
+
+function createEnvironmentInstance(mode, kind, seed, posX = 0, posZ = 0) {
+  const isIce = mode === 'ice' || kind === 'icefloe' || kind === 'iceberg';
+  const isSlope = ['slope', 'mid', 'flat', 'water'].includes(mode);
+  const def = (mode === 'scene' || isIce) ? ENVIRONMENT_OBJECTS[kind] : WALL_KINDS[kind];
+  if (!def) return null;
+
+  const heightAt = (x, z) => mode === 'water' || mode === 'flat' ? 0 : x * (mode === 'mid' ? 0.15 : 0.85) + Math.sin(x / 13 + seed) * (mode === 'mid' ? 1 : 4) + z * 0.2;
+  const rows = isSlope
+    ? [-30, 0, 30].flatMap((x) => (
+        def.terrainFit
+          ? buildSlopeBoundary(kind, { len: 30, depth: def.depth, h: def.h, x, z: 0, seed, waterY: mode === 'water' ? 0 : null, heightAt }).parts
+          : wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed }).map((p) => ({ ...p, p: [p.p[0], p.p[1] + heightAt(x, 0), p.p[2]] }))
+      ).map((p) => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })))
+    : mode === 'edge'
+      ? wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed })
+      : environmentParts(def.objectKind || kind, { seed: def.modelSeed ?? seed });
+
+  const model = assembleEnvironmentParts(rows, isIce);
+  model.position.set(posX, 0, posZ);
+  envGroup.add(model);
+
+  const bounds = new THREE.Box3().setFromObject(model);
+  const size = bounds.getSize(new THREE.Vector3());
+  const meta = {
+    posX, posZ,
+    seed,
+    mode,
+    kind,
+    label: def.label || kind,
+    partsCount: rows.length,
+    size: [size.x, size.y, size.z],
+    isIce,
+  };
+
+  model.traverse((o) => {
+    if (o.isMesh) {
+      o.userData.envMeta = meta;
+      clickableObjects.push(o);
+    }
+  });
+
+  const badge = document.createElement('div');
+  badge.className = 'badge-label';
+  badge.innerHTML = '<span class="cat">🌐</span>' + (def.label || kind) + ' <span class="height">' + size.y.toFixed(1) + 'm</span>';
+  labelContainer.appendChild(badge);
+  labels.push({ element: badge, point: new THREE.Vector3(posX, bounds.max.y + 1.5, posZ) });
+
+  return { model, meta, def, size, bounds };
+}
+
+function buildEnvironmentMode() {
+  clearScene();
+  currentMode = 'env';
+  document.querySelector('#btn-back').style.display = 'none';
+
+  initEnvOptions();
+
+  const mode = document.querySelector('#env-mode').value;
+  const kind = document.querySelector('#env-kind').value;
+  const viewMode = document.querySelector('#env-view-mode').value;
+  const seed = parseInt(document.querySelector('#input-env-seed').value, 10) || 42;
+
+  const isWaterMode = mode === 'ice' || mode === 'water' || kind === 'icefloe' || kind === 'iceberg';
+  waterMesh.visible = isWaterMode;
+  floor.visible = !isWaterMode;
+  floor.material.color.setHex(isWaterMode ? 0x1f3645 : 0x2e3d3b);
+
+  if (viewMode === 'single') {
+    const res = createEnvironmentInstance(mode, kind, seed, 0, 0);
+    if (!res) return;
+    document.querySelector('#nav-status').textContent = '環境單體檢驗：【' + res.def.label + '】（種子碼 ' + seed + ' · ' + res.meta.partsCount + ' 零件 · 尺寸 ' + res.size.x.toFixed(1) + '×' + res.size.y.toFixed(1) + '×' + res.size.z.toFixed(1) + 'm）';
+    camTarget.set(0, res.size.y * 0.4, 0);
+    camDist = Math.max(res.size.x, res.size.y, res.size.z) * 2.0;
+  } else if (viewMode === 'variants') {
+    const cols = 4, rows = 4;
+    const res0 = createEnvironmentInstance(mode, kind, seed, 0, 0);
+    const sz0 = res0?.size || new THREE.Vector3(20, 10, 20);
+    clearScene();
+    waterMesh.visible = isWaterMode;
+    floor.visible = !isWaterMode;
+    const stepX = Math.max(25, sz0.x * 1.5 + 8);
+    const stepZ = Math.max(25, sz0.z * 1.5 + 8);
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = r * cols + c;
+        const curSeed = seed + idx * 7919;
+        const posX = startX + c * stepX;
+        const posZ = startZ + r * stepZ;
+        createEnvironmentInstance(mode, kind, curSeed, posX, posZ);
+      }
+    }
+    document.querySelector('#nav-status').textContent = '環境 16 組隨機變體陣列：【' + (res0?.def?.label || kind) + '】（基底種子 ' + seed + '）';
+    camTarget.set(0, sz0.y * 0.4, 0);
+    camDist = Math.max(stepX * cols, stepZ * rows) * 1.1;
+  } else {
+    const catalogKinds = [...document.querySelector('#env-kind').options].map(o => o.value);
+    const cols = Math.min(6, Math.ceil(Math.sqrt(catalogKinds.length)));
+    const rows = Math.ceil(catalogKinds.length / cols);
+    const stepX = 40, stepZ = 35;
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (let i = 0; i < catalogKinds.length; i++) {
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      const posX = startX + c * stepX;
+      const posZ = startZ + r * stepZ;
+      createEnvironmentInstance(mode, catalogKinds[i], seed, posX, posZ);
+    }
+    document.querySelector('#nav-status').textContent = '環境全款式目錄陳列（共 ' + catalogKinds.length + ' 款）';
+    camTarget.set(0, 8, 0);
+    camDist = Math.max(cols * stepX, rows * stepZ) * 1.1;
+  }
+  updateCamera();
+  render();
+}
+
+// ==========================================
+// 車輛、船隻、環境物件事件監聽
+// ==========================================
+document.querySelector('#btn-veh-generate')?.addEventListener('click', buildVehicleMode);
+document.querySelector('#btn-veh-next-seed')?.addEventListener('click', () => {
+  const input = document.querySelector('#input-veh-seed');
+  input.value = (parseInt(input.value, 10) || 42) + 1;
+  buildVehicleMode();
+});
+document.querySelector('#btn-veh-random-seed')?.addEventListener('click', () => {
+  document.querySelector('#input-veh-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  buildVehicleMode();
+});
+document.querySelector('#btn-veh-variants')?.addEventListener('click', () => {
+  document.querySelector('#veh-view-mode').value = 'variants';
+  buildVehicleMode();
+});
+['#veh-formation', '#veh-purpose', '#veh-type', '#veh-power'].forEach((id) => {
+  document.querySelector(id)?.addEventListener('change', () => {
+    updateVehicleFilter();
+    buildVehicleMode();
+  });
+});
+['#veh-profile', '#veh-view-mode', '#veh-leader', '#veh-wagon', '#veh-count'].forEach((id) => {
+  document.querySelector(id)?.addEventListener('change', buildVehicleMode);
+});
+
+// 船隻事件
+document.querySelector('#btn-vessel-generate')?.addEventListener('click', buildVesselMode);
+document.querySelector('#btn-vessel-next-seed')?.addEventListener('click', () => {
+  const input = document.querySelector('#input-vessel-seed');
+  input.value = (parseInt(input.value, 10) || 42) + 1;
+  buildVesselMode();
+});
+document.querySelector('#btn-vessel-random-seed')?.addEventListener('click', () => {
+  document.querySelector('#input-vessel-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  buildVesselMode();
+});
+document.querySelector('#btn-vessel-variants')?.addEventListener('click', () => {
+  document.querySelector('#vessel-view-mode').value = 'variants';
+  buildVesselMode();
+});
+['#vessel-type', '#vessel-purpose', '#vessel-water', '#vessel-power', '#vessel-view-mode'].forEach((id) => {
+  document.querySelector(id)?.addEventListener('change', buildVesselMode);
+});
+document.querySelector('#chk-vessel-water')?.addEventListener('change', () => {
+  const showWater = document.querySelector('#chk-vessel-water').checked;
+  waterMesh.visible = showWater;
+  floor.visible = !showWater;
+  render();
+});
+
+// 環境事件
+document.querySelector('#btn-env-generate')?.addEventListener('click', buildEnvironmentMode);
+document.querySelector('#btn-env-next-seed')?.addEventListener('click', () => {
+  const input = document.querySelector('#input-env-seed');
+  input.value = (parseInt(input.value, 10) || 42) + 1;
+  buildEnvironmentMode();
+});
+document.querySelector('#btn-env-random-seed')?.addEventListener('click', () => {
+  document.querySelector('#input-env-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  buildEnvironmentMode();
+});
+document.querySelector('#btn-env-variants')?.addEventListener('click', () => {
+  document.querySelector('#env-view-mode').value = 'variants';
+  buildEnvironmentMode();
+});
+document.querySelector('#env-mode')?.addEventListener('change', () => {
+  initEnvOptions();
+  buildEnvironmentMode();
+});
+['#env-kind', '#env-view-mode'].forEach((id) => {
+  document.querySelector(id)?.addEventListener('change', buildEnvironmentMode);
+});
+
+// ==========================================
+// 頂部環境模擬控制列事件 (四季 × 日夜 × 多元天氣)
+// ==========================================
+document.querySelector('#sim-season')?.addEventListener('change', (e) => {
+  currentEnv.season = e.target.value;
+  initEnvironment();
+  if (currentTab === 'plant') {
+    const pSeason = document.querySelector('#plant-season');
+    if (pSeason) pSeason.value = currentEnv.season;
+    buildPlantMode();
+  }
+  render();
+});
+
+document.querySelectorAll('.env-time-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    currentEnv.time = btn.dataset.time;
+    const hourMap = { dawn: 6, day: 12, dusk: 18, night: 0 };
+    currentEnv.hour = hourMap[currentEnv.time] ?? 12;
+    initEnvironment();
+    render();
+  });
+});
+
+document.querySelector('#sim-hour')?.addEventListener('input', (e) => {
+  const targetHour = parseFloat(e.target.value);
+  syncEnvironmentHour(targetHour);
+  if (envHandle) {
+    envHandle.update(0, camera, simElapsedS);
+  }
+  render();
+});
+
+document.querySelector('#sim-weather')?.addEventListener('change', (e) => {
+  currentEnv.weather = e.target.value;
+  initEnvironment();
+  render();
+});
+
+document.querySelector('#btn-sim-toggle')?.addEventListener('click', () => {
+  currentEnv.playing = !currentEnv.playing;
+  const btn = document.querySelector('#btn-sim-toggle');
+  btn.textContent = currentEnv.playing ? '⏸ 暫停' : '▶ 模擬';
+  btn.classList.toggle('playing', currentEnv.playing);
+});
+
+document.querySelector('#sim-speed')?.addEventListener('change', (e) => {
+  currentEnv.speed = parseFloat(e.target.value) || 5;
+});
+
 // ---- 飄浮標籤投影更新與渲染循環 ----
 function updateLabels() {
   if (!document.querySelector('#chk-labels').checked) return;
@@ -2039,13 +3135,36 @@ window.addEventListener('resize', () => {
   render();
 });
 
-// 初次建構
+// 初次建構與環境初始化
 try {
   setupFilterModal();
+  initEnvironment();
   buildMatrixMode();
 } catch (err) {
   console.error('初次建構失敗:', err);
 }
+
+// 實時動態渲染循環 (雲漂移、天氣粒子、閃電打雷強光與連續日夜流逝)
+let lastAnimTime = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, (now - lastAnimTime) / 1000);
+  lastAnimTime = now;
+  if (currentEnv.playing) {
+    simElapsedS += dt * currentEnv.speed;
+    const curH = clockHour(currentEnv.time, simElapsedS);
+    currentEnv.hour = curH;
+    const slider = document.querySelector('#sim-hour');
+    if (slider) slider.value = curH;
+    const valText = document.querySelector('#sim-hour-val');
+    if (valText) valText.textContent = clockLabel(curH);
+  }
+  if (envHandle) {
+    envHandle.update(dt, camera, simElapsedS);
+  }
+  render();
+}
+requestAnimationFrame(animate);
 
 document.body.dataset.ready = 'true';
 </script>`;
@@ -2061,7 +3180,11 @@ export function serve(port = DEFAULT_PORT) {
         body = page; type = 'text/html';
       } else if (url.pathname === '/vehicles') {
         body = await readFile(new URL('./vehiclePreview.html', import.meta.url)); type = 'text/html';
-      } else if (url.pathname === '/three.mjs') {
+      } else if (url.pathname === '/vessels') {
+        body = await readFile(new URL('../public/vessels.html', import.meta.url)); type = 'text/html';
+      } else if (url.pathname === '/environment') {
+        body = await readFile(new URL('./environmentPreview.html', import.meta.url)); type = 'text/html';
+      } else if (url.pathname === '/three.mjs' || url.pathname === '/three.js') {
         if (process.env.THREE_MODULE) {
           body = await readFile(process.env.THREE_MODULE);
         } else {
