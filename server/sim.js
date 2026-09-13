@@ -12,7 +12,7 @@ import {
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
   ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND, ULT_CAST_S,
-  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
@@ -1864,7 +1864,7 @@ export class BattleSim {
    *  2026-08-02:對建築的額外加成(舊 grenadeBuildingMul)已整組移除,MUST NOT 復辟。
    *  護盾/裝甲分軌剋制**不在這裡** —— 那要看目標當下的護盾水位,只能在 _damage 分層時結算。 */
   _heroDmg(h, def, targetKind) {
-    return def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg') * (this.curWeatherDyn?.rainAtkMul ?? 1);
+    return def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg');
   }
 
   /** 空中判定:無人機/直升機/集束轟炸機/護衛機/極音速飛彈恆算飛行;其餘以高度 ≥ AA_MIN_ALT 論 */
@@ -1973,6 +1973,7 @@ export class BattleSim {
       }
     }
     if (key === 'dmg' && h.sq?.boss && (h.sq.bossSeg || 0) >= 3) m *= BOSS.ENRAGE_DMG_F;
+    if (key === 'dmg') m *= (this.curWeatherDyn?.rainAtkMul ?? 1);
     return m;
   }
 
@@ -2160,6 +2161,14 @@ export class BattleSim {
     h.aiming = !!on;
   }
 
+  /** 防守姿態切換: 磁力歸零無法生成護盾，攻擊時會取消防守狀態 */
+  heroDefend(pid, on) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over) return;
+    if (on && (h.sp || 0) <= 0) return;   // 磁力歸零無法生成護盾
+    h.defending = !!on;
+  }
+
   /**
    * 射程閘門用「到目標**近側表面**」的距離:d3(到中心)扣掉目標水平量體 hitR(= hitH 的水平版)。
    * 客戶端的準星射線/彈道停在目標**表面**(碰撞體),而舊閘門量的是**中心**——半徑 7m 的砲塔 /
@@ -2219,6 +2228,7 @@ export class BattleSim {
     // 偵察脈衝給的是「情報」,不會讓砲彈穿牆 —— 不吃 pulse 旁路)
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    h.defending = false;
     // 定位標記(招式追加效果 mark):下一擊必中(無視閃避)必爆(強制爆擊);一擊即耗
     const marked = (h.markUntil || 0) > this.t;
     if (marked) h.markUntil = 0;
@@ -2239,10 +2249,10 @@ export class BattleSim {
       dmg = this._rollCrit(h, wp.def, dmg, t);
     }
     this._applyHitEmp(h, wp.def, t);
-    this._damage(t, dmg, h, wp.def.pen, 0, wp.def);
+    this._damage(t, dmg, h, wp.def.pen, 0, (0, wp.def), { origin: [h.x, h.z] });
     if (wp.id === 'light' && h.clones && h.clones.length) {
       for (const c of h.clones) {
-        if (!c.dead) this._damage(t, dmg, h, wp.def.pen, 0, wp.def);
+        if (!c.dead) this._damage(t, dmg, h, wp.def.pen, 0, (0, wp.def), { origin: [h.x, h.z] });
       }
     }
     this._echo(h, t, wp.def);
@@ -2269,7 +2279,7 @@ export class BattleSim {
       if (evadable(def) && this._dodges(t, b)) continue;   // 閃避:僚機這一發也被閃開
       const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3), t);
       this._applyHitEmp(b, def, t);
-      this._damage(t, dmg, b, def.pen, 0, def);
+      this._damage(t, dmg, b, def.pen, 0, (0, def), { origin: [b.x, b.z] });
     }
   }
 
@@ -2287,6 +2297,7 @@ export class BattleSim {
     const d3 = Math.hypot(h.x - m.x, h.z - m.z, (h.y || 0) - m.y);
     if (d3 > wp.def.range * RANGE_TOL) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    h.defending = false;
     // 僚機同步射擊(單機傷害是 1/3,三機齊射才打得掉飛彈)
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
@@ -2318,6 +2329,7 @@ export class BattleSim {
     // 電腦玩家不能透視:彈道被實體障礙擋住 = 不開火(與真人 heroHit 同一條 LOS 規則)
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return false;
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
+    h.defending = false;
     h._shotN = (h._shotN || 0) + 1;
     // pid/slot:客戶端據此解析 bot 英雄機體的 rig 槍口錨 + 標記開火動畫(後座/射姿,與真人 tracer 同路)
     if (h._shotN % 3 === 0 || wp.id === 'heavy') {
@@ -2331,7 +2343,7 @@ export class BattleSim {
     }
     const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3), t);
     this._applyHitEmp(h, wp.def, t);
-    this._damage(t, dmg, h, wp.def.pen, 0, wp.def);
+    this._damage(t, dmg, h, wp.def.pen, 0, (0, wp.def), { origin: [h.x, h.z] });
     // 直線貫穿(line 類重武器):bot 也吃同一條範圍規則 —— 主目標之後的「順路」目標依序衰減。
     // 主目標本身已於上方全額結算,故這裡跳過它(貫穿序 i 仍沿用整條射線的名次)。
     if (aoeClass(wp.def) === 'line') {
@@ -2345,7 +2357,7 @@ export class BattleSim {
         if (k.t === t) continue;
         const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3) * offAxisFalloff(k.off) * LANCE.DECAY ** i;
         this._applyHitEmp(h, wp.def, k.t);
-        this._damage(k.t, kd, h, wp.def.pen, 0, wp.def);
+        this._damage(k.t, kd, h, wp.def.pen, 0, (0, wp.def), { origin: [h.x, h.z] });
       }
     }
     this._echo(h, t, wp.def);
@@ -2419,6 +2431,7 @@ export class BattleSim {
     // `_shotOrigin` 已經夾好的那一份,MUST NOT 在這裡拿 dImp 再算一次(兩份會在機體移動時分家)。
     const back = org.back;
     if (!this._gateFire(h, wp.id, wp.def, true, back)) return;
+    h.defending = false;
     h.lastBurst = this.t;
     // 榴彈類最小安全射程(2026-07-27):落點近於 lobMinRange ⇒ 射手落在自身爆風內 → 爆風改「無差別」
     // (不分敵我,波及友軍 + 自身),自損量由 blastFalloff 自然導出。決策以回報射手 h 定案、整組僚機齊射一致套用。
@@ -2448,37 +2461,23 @@ export class BattleSim {
   }
 
   /**
-   * 扇形攻擊(fan:電漿重武器 / 散彈輕武器):客戶端只回報射向(dx,dz 為 sim 座標單位向量)
-   * 與槽位 slot('heavy' 電漿 / 'light' 散彈;預設 heavy 向後相容)。命中判定全在伺服器 —
-   * 射程內、水平夾角 ≤ arc、迷霧可見的敵方單位全數受創(× 扇形近距高遠距低衰減)。
-   * 一發只扣一次彈藥/射速,錐內敵人全數命中 = 真散彈手感。僚機以各自位置沿同射向齊噴。
-   *
-   * **射程閘門 MUST NOT 乘 `RANGE_TOL`**(2026-08-01 使用者回報「攻擊範圍異常,沒有射程光暈
-   * 的敵人也打得到」):`RANGE_TOL` 是放給「客戶端已自行夾過射程的**回報**」的網路寬容 ——
-   * heroHit/heroLance/heroBurst 的彈道本來就飛不出 `range × 高度制空`,寬容只能防止合法彈著
-   * 被誤丟。扇形武器沒有彈道也**沒有任何客戶端閘門**(只回報一個射向,選誰中彈全在這裡),
-   * 寬容於是直接變成 25% 的隱形射程:光暈不亮的敵人照樣掉血。這裡是伺服器自己選目標的
-   * 唯一一條英雄武器路徑,MUST 吃誠實界(與 `botFire` 同一條規則)。
-   *
-   * **射程球心 = 客戶端回報的槍口 `o`**(2026-08-02 使用者定案「射程是射擊點為中心的球面」;
-   * 與 `heroLance` 同一組座標約定與同一道 12m 防作弊閘)。誠實界沒有 `RANGE_TOL` 可以吸收
-   * 兩端的球心差 ⇒ 舊制從**機體中心**量、而客戶端的扇形彈舌與射程光暈 `_reachable` 都是從
-   * **槍口**量:槍口在機體前方,同一個敵人從機體量比從槍口量遠一個前伸量(閘門允許到 12m)
-   * ⇒ 那一整條邊界帶「光暈亮著卻不掉血」。取不到 `o`(bot 的 `botFire` 側呼叫 / 舊版客戶端)
-   * 退回機體中心 —— bot 沒有客戶端也沒有槍口回報,機體中心就是它的射擊點。
+   * 扇形範圍攻擊(aoeClass 'fan':shotgun / flamethrower / plasma)。
+   * 客戶端回報 3D 射向(dx, dz, dy;已單位化),傷害判定全在伺服器:
+   * 圓錐內、射程內、迷霧可見、LOS 未遮蔽的敵方單位全數受創(偏心傷害遞減)。
    */
   heroPlasma(pid, dx, dz, slot = 'heavy', o = null, dy = 0) {
     const h = this.heroes.get(pid);
-    if (!h || h.dead || this.over || !Number.isFinite(dx) || !Number.isFinite(dz)) return;
+    if (!h || h.dead || this.over) return;
     if (this._blinded(h)) return;
     if (this._jammed(h)) return;
     const wp = this._heroWeapon(h, slot === 'light' ? 'light' : 'heavy');
-    if (!wp || !wp.def.fan) return;
+    if (!wp || aoeClass(wp.def) !== 'fan') return;
     const cap = (trajClass(wp.def) === 'fnf' ? chaseCapS(wp.def) : flightCapS(wp.def)) || 0.5;
     if (wp.def.needAim && !h.aiming && this.t - (h.aimOffAt ?? -Infinity) > cap) return;
     const dl = Math.hypot(dx, dz, Number.isFinite(dy) ? dy : 0) || 1;
     const ux = dx / dl, uz = dz / dl, uy = (Number.isFinite(dy) ? dy : 0) / dl;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    h.defending = false;
     const pulse = this.visionUntil?.[h.side] > this.t;
     const src = this._visionSources(h.side);
     const arcHalf = fanArcHalf(wp.def);   // 偏心遞減的分母(量體只放寬「打不打得到」,不放大傷害)
@@ -2517,7 +2516,7 @@ export class BattleSim {
                                t.x, t.z, this._absSightY(t, this._tgtY(t), t.x, t.z), b, t)) continue;
         // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額)
         const offF = offAxisFalloff(ang / arcHalf);
-        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offF, b, wp.def.pen, 0, wp.def);
+        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offF, b, wp.def.pen, 0, (0, wp.def), { origin: [bx, bz] });
       }
     }
     this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
@@ -2622,6 +2621,7 @@ export class BattleSim {
     // 與 heroBurst 的 impCap 同一條理由)。len 本來就是客戶端夾過的,這裡只防作弊放大。
     const max = Math.min(Math.max(0, +len), wp.def.range * altRangeMax(wp.def));
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    h.defending = false;
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
       // 僚機以各自位置沿同射向貫穿(與 heroPlasma 同構;N=1 時只有本機)
@@ -2634,7 +2634,7 @@ export class BattleSim {
         const dmg = this._rollCrit(b, wp.def,
           this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** i, t);
         this._applyHitEmp(b, wp.def, t);
-        this._damage(t, dmg, b, wp.def.pen, 0, wp.def);
+        this._damage(t, dmg, b, wp.def.pen, 0, (0, wp.def), { origin: [bx, bz], dir: [dx, dz] });
       }
     }
     // 來襲防空飛彈也在圓柱內被打穿(取代 hitMissile 那條單體路徑 —— line 類一發只過一次
@@ -3307,6 +3307,7 @@ export class BattleSim {
       }
     } else { x = h.x; z = h.z; }
     h.mp -= mpc;
+    h.defending = false;
     const snowMul = this.curWeatherDyn?.snowCdMul ?? 1;
     const cdMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_CD_F : 1) * snowMul;
     h.acd[slot] = this.t + A.cd * cdMul;
@@ -4993,7 +4994,7 @@ export class BattleSim {
       // 閃避補償(2026-08-12 使用者定案「維持 DPS 提高傷害,閃避率不動」):被閃掉的那一份還給
       // 沒被閃掉的這一發 ⇒ 期望傷害 = base × (1−p) × 1/(1−p) ≡ base。分母 MUST 是**這個目標自己的**
       // p(逐目標,與上面那一顆骰同一個值)—— 閃不掉的小兵/建築/重甲 p = 0 ⇒ 係數恆 1 ⇒ 逐位元同舊制。
-      this._damage(t, base * f * evadeCompF(p), same ? null : h, def.pen, 0, def);
+      this._damage(t, base * f * evadeCompF(p), same ? null : h, def.pen, 0, (0, def), { blast: [x, z, def.r] });
     }
   }
 
@@ -5085,9 +5086,55 @@ export class BattleSim {
   }
 
   // ---------- 傷害 / 擊殺(FPS × DOTA:護盾 → 裝甲,護甲值曲線減免,破甲抵銷)----------
+  /** 防守姿態護盾減傷判定: 正面護盾覆蓋或涵蓋 */
+  _shieldDefFactor(t, by, wd, hitCtx = null) {
+    if (!t.hero || !t.defending || (t.sp || 0) <= 0) return 1;
+    const ry = t.ry || 0;
+    const fx = -Math.sin(ry), fz = Math.cos(ry);
+    const hr = hitR(t);
+    const sx = t.x + fx * hr, sz = t.z + fz * hr;
+
+    const isBlast = aoeClass(wd) === 'blast' || (hitCtx && hitCtx.blast);
+    if (isBlast) {
+      let bx = null, bz = null, br = 0;
+      if (hitCtx && hitCtx.blast) {
+        bx = hitCtx.blast[0]; bz = hitCtx.blast[1]; br = hitCtx.blast[2] || 0;
+      } else if (by && by.x != null) {
+        bx = by.x; bz = by.z; br = wd?.radius || 8;
+      }
+      if (bx != null && bz != null) {
+        if (Math.hypot(bx - sx, bz - sz) <= br + hr) {
+          return SHIELD_DEFENSE.BLAST_F;   // 爆炸涵蓋護盾: 減為 1/2
+        }
+      }
+      return 1;
+    }
+
+    let ox = by?.x, oz = by?.z;
+    if (hitCtx && hitCtx.origin) {
+      ox = hitCtx.origin[0]; oz = hitCtx.origin[1];
+    }
+    if (ox != null && oz != null) {
+      const ax = ox - t.x, az = oz - t.z;
+      const adist = Math.hypot(ax, az);
+      if (adist > 0.01) {
+        const dot = (fx * ax + fz * az) / adist;
+        if (dot >= Math.cos(SHIELD_DEFENSE.FRONT_ARC / 2)) {
+          return SHIELD_DEFENSE.DIRECT_F;   // 擊中正面護盾: 減為 1/4
+        }
+      }
+    } else if (hitCtx && hitCtx.dir) {
+      const dot = fx * hitCtx.dir[0] + fz * hitCtx.dir[1];
+      if (dot <= -Math.cos(SHIELD_DEFENSE.FRONT_ARC / 2)) {
+        return SHIELD_DEFENSE.DIRECT_F;   // 擊中正面護盾: 減為 1/4
+      }
+    }
+    return 1;
+  }
+
   /** wd = 造成這次傷害的武器/招式 def(護盾分軌剋制 vsSp/vsHp/spPierce 的來源,見 data.shieldSplit)。
    *  環境傷害(沼澤/地雷/火場)與塔 SAM 一律不帶 ⇒ 中性參數 = 逐位元同舊制。 */
-  _damage(t, dmg, by, pen = 0, floorHp = 0, wd = null) {
+  _damage(t, dmg, by, pen = 0, floorHp = 0, wd = null, hitCtx = null) {
     if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
     if (this.siegeLocked(t)) return;               // 攻堅順序未到:前一階沒清完的建築完全免傷(劇情戰役)
     // 區域 BOSS 關卡(劇情戰役):BOSS 還沒被擊敗 / 對白還沒播完 ⇒ 這座建築**打得掉血但死不了**。
@@ -5166,10 +5213,14 @@ export class BattleSim {
       this._stampUnbal(t);                   // 飛行受擊失衡:跌落到穩住期間命中/暴擊減半、飛行動力鎖定
       this._breakOnHit(t);                   // 「挨一發就結束」的招式(t02 超載)在此撤銷
       this._interruptCast(t);                // 詠唱中受擊:強制立即施展 (t/T)^2 效果(2026-08-22)
+      // 防守姿態護盾減傷: 磁力歸零時無法生成護盾
+      const defFactor = this._shieldDefFactor(t, by, wd, hitCtx);
+      if (defFactor < 1) dmg *= defFactor;
       // 雙層拆分走 shieldSplit 單一縫(反護盾 / 穿盾 / 反裝甲三型;中性參數 = 舊制的「護盾先吃、
       // 溢出進裝甲」)。護盾層恆不吃護甲減免 —— 能量護盾與裝甲板是兩套防護,這一點沒有改。
       const { toSp: toShield, toHp } = shieldSplit(wd, dmg, t.sp || 0);
       t.sp = (t.sp || 0) - toShield;
+      if ((t.sp || 0) <= 0 && t.defending) t.defending = false;
       if (toHp <= 0) {
         this._botAirSink(t, toShield); this._hurtLog(t, by, toShield);
         this._dmgOut(by, t, toShield); this._vamp(by, toShield); return;
@@ -6714,6 +6765,7 @@ export class BattleSim {
       o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
       o.ch = e.ch;                                               // 角色(客戶端渲染專屬機體)
       o.sp = Math.round(e.sp); o.msp = e.maxSp;                  // 護盾(雙層 HP 第一層)
+      if (e.defending && (e.sp || 0) > 0) o.df = 1;              // 防守姿態且有磁力: 正面生成護盾
       o.si = e.si || 0;                                          // 小隊機位(HUD 三機狀態列)
       // NPC BOSS:目前段位(0 起算)。**存在這一格 = 這是 BOSS** —— 客戶端據此把血條外圍
       // 光暈換成該段的顏色(黑>青>銀>金)。段位是小隊層級的,同隊每架都帶同一個值。

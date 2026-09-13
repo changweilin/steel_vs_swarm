@@ -2691,6 +2691,15 @@ export function shieldRoleName(wd) {
   return '';
 }
 
+// ---- 防守姿態與正面護盾機制 ----
+// 受到爆炸範圍涵蓋護盾的爆炸傷害: 磁力損失減為 1/2 (BLAST_F)
+// 受到擊中護盾的子彈/直線/散射傷害: 磁力損失減為 1/4 (DIRECT_F)
+export const SHIELD_DEFENSE = {
+  BLAST_F: 0.5,
+  DIRECT_F: 0.25,
+  FRONT_ARC: 140 * Math.PI / 180,
+};
+
 // ---- 水域規則(2026-07-15;客戶端物理 + 道路生成共用)----
 // LEVEL:海平面水面高(terrain.js 水面盤 y,minH < 0.5 才有水);WADE_M:淺水/涉水判定深度界
 // (道路跨水升橋沿用);SLOW:涉水/河面基準減速;SPAN_MIN_M:道路連續泡水段達此長度即自動升級高架橋
@@ -3637,7 +3646,7 @@ export const CHARACTERS = {
       dmg: [66, 99, 149], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
     skill: { name: '神聖裁決：朗基努斯電磁聖槍', fx: 'lance', target: 'enemy',
-      dmg: [120, 165, 215], range: 260, pen: 16, vsSp: 1.5,
+      dmg: [120, 165, 215], range: 260, pen: 16, vsSp: 1.5, vs: { building: 0.5 },
       add: { fx: 'stun', dur: [1.0, 1.25, 1.5] },
       cd: [18, 16, 14], mp: [35, 40, 45], desc: '射出高能電磁聖槍：光速貫穿直線路徑上所有敵機，對護盾造成極高傷害並強烈麻痺沿途目標' },
     ult: { name: '聖城鐘聲：萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true,
