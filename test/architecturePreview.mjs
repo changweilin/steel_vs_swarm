@@ -304,7 +304,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
               <option value="sandstone">層狀砂岩台地 (Sandstone)</option>
               <option value="cliff">斷層峭壁 (Cliff)</option>
               <option value="karst">石灰岩溶蝕峰 (Karst)</option>
-              <option value="basalt" selected>玄武岩柱狀節理 (Basalt)</option>
+              <option value="basalt">玄武岩柱狀節理 (Basalt)</option>
               <option value="crater">火山口 (Crater)</option>
               <option value="reef">淺海珊瑚礁 (Coral Reef)</option>
               <option value="island">海蝕島礁 (Island)</option>
@@ -344,7 +344,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">氣候環境</label>
           <select id="geo-climate" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="all">全部氣候輪播 (All Climates)</option>
+            <option value="all" selected>全部氣候輪播 (All Climates)</option>
             <option value="temperate">溫帶 (Temperate)</option>
             <option value="tropical">熱帶 (Tropical)</option>
             <option value="arid">乾旱 (Arid)</option>
@@ -355,7 +355,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">水域類型</label>
           <select id="geo-water" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="all">全部水域輪播 (All Waters)</option>
+            <option value="all" selected>全部水域輪播 (All Waters)</option>
             <option value="none">陸地 (None)</option>
             <option value="stream">溪流 (Stream)</option>
             <option value="river">河流 (River)</option>
@@ -368,7 +368,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div style="display:flex; gap: 10px; align-items:center; flex-wrap:wrap; font-size: 11px; font-weight: 600;">
           <span>古蹟與人造石設定：</span>
           <label>地區 <select id="geo-region" style="padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px;">
-            <option value="all">全部地區輪播</option>
+            <option value="all" selected>全部地區輪播</option>
             <option value="egypt">埃及 (Egypt)</option>
             <option value="greece_rome">希臘羅馬 (Greece/Rome)</option>
             <option value="maya">瑪雅 (Maya)</option>
@@ -378,7 +378,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
             <option value="uk_prehistoric">英國史前 (UK Prehistoric)</option>
           </select></label>
           <label>遺跡形式 <select id="geo-ruin-type" style="padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px;">
-            <option value="all">全部形式輪播 (All Forms)</option>
+            <option value="all" selected>全部形式輪播 (All Forms)</option>
             <option value="auto">隨機形式 (Random)</option>
             <option value="temple">神廟 (Temple)</option>
             <option value="stronghold">要塞 (Stronghold)</option>
@@ -531,7 +531,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">船型分類</label>
           <select id="vessel-type" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="">隨機船型</option>
+            <option value="all" selected>全部船型輪播 (All Vessels)</option>
           </select>
         </div>
         <div>
@@ -675,7 +675,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
             <option value="all" selected>全部樹種輪播 (All Species)</option>
             <option value="auto">依環境適生加權抽樣</option>
             <optgroup label="針葉樹巨木">
-              <option value="redwood" selected>加州紅杉 (Redwood · 塔型 110m)</option>
+              <option value="redwood">加州紅杉 (Redwood · 塔型 110m)</option>
               <option value="sequoia">巨杉 (Sequoia · 塔型 92m)</option>
               <option value="dougfir">花旗松 (Douglas Fir · 塔型 100m)</option>
               <option value="sitka">錫特卡雲杉 (Sitka Spruce · 塔型 90m)</option>
@@ -724,6 +724,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <summary style="cursor:pointer; font-weight:600; color:#2563eb;">▸ 展開生態環境參數 (氣候 / 緯度 / 海拔 / 濕度 / 土壤 pH / 鹽度)</summary>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin-top: 6px; background:#fff; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
           <label>氣候 <select id="plant-climate" style="font-size:11px; width:100%;">
+            <option value="all" selected>全部氣候輪播 (All Climates)</option>
             <option value="temperate">溫帶 (Temperate)</option>
             <option value="tropical">熱帶 (Tropical)</option>
             <option value="boreal">寒帶 (Boreal)</option>
@@ -1642,12 +1643,14 @@ function buildFullRandomMode() {
 // ==========================================
 // 地質生成邏輯 (Geology Generation Mode)
 // ==========================================
-function getGeologyInputs() {
+function getGeologyInputs(seed = 0, idx = 0) {
+  const climates = ['temperate', 'tropical', 'arid', 'alpine', 'boreal'];
+  const waters = ['none', 'stream', 'river', 'lake', 'sea'];
   const climateVal = document.querySelector('#geo-climate').value;
   const waterVal = document.querySelector('#geo-water').value;
   const input = {
-    climate: climateVal === 'all' ? 'temperate' : climateVal,
-    water: waterVal === 'all' ? 'none' : waterVal,
+    climate: climateVal === 'all' ? climates[idx % climates.length] : climateVal,
+    water: waterVal === 'all' ? waters[idx % waters.length] : waterVal,
     moisture: parseFloat(document.querySelector('#geo-moisture').value) || 0.65,
     vegetation: parseFloat(document.querySelector('#geo-vegetation').value) || 0.6,
     conifers: parseFloat(document.querySelector('#geo-conifers').value) || 0.3,
@@ -1673,9 +1676,16 @@ function createGeologyMesh(type, seed, input, posX = 0, posZ = 0) {
 
   const fullInput = { ...input };
   if (isAncient) {
-    fullInput.region = document.querySelector('#geo-region')?.value || 'egypt';
+    const regVal = document.querySelector('#geo-region')?.value || 'all';
+    const regions = ['egypt', 'greece_rome', 'maya', 'easter_island', 'mesopotamia', 'east_asia', 'uk_prehistoric'];
+    fullInput.region = regVal === 'all' ? regions[Math.abs(seed) % regions.length] : regVal;
     const ruinType = document.querySelector('#geo-ruin-type')?.value;
-    if (ruinType && ruinType !== 'auto') fullInput.ruinType = ruinType;
+    const ruinTypes = ['temple', 'stronghold', 'settlement', 'aqueduct'];
+    if (ruinType === 'all') {
+      fullInput.ruinType = ruinTypes[Math.abs(seed) % ruinTypes.length];
+    } else if (ruinType && ruinType !== 'auto') {
+      fullInput.ruinType = ruinType;
+    }
     fullInput.uniformScale = parseFloat(document.querySelector('#geo-scale')?.value) || 1.0;
   }
 
@@ -1687,9 +1697,10 @@ function createGeologyMesh(type, seed, input, posX = 0, posZ = 0) {
 
   const r = Math.max(...entry.bounds.size);
   const hitGeo = new THREE.BoxGeometry(r * 1.1, entry.bounds.max[1], r * 1.1);
-  hitGeo.translate(posX, entry.bounds.max[1] / 2, posZ);
+  hitGeo.translate(0, entry.bounds.max[1] / 2, 0);
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
   const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+  hitMesh.position.set(posX, 0, posZ);
 
   const meta = {
     type: actualType,
@@ -1713,9 +1724,9 @@ function createGeologyMesh(type, seed, input, posX = 0, posZ = 0) {
   badge.className = 'badge-label';
   badge.innerHTML = '<span class="cat">【' + entry.name + '】</span>' + (spec.group || (isAncient ? '古蹟石材' : '自然地質')) + ' · <span class="height">' + entry.bounds.max[1].toFixed(1) + 'm</span>';
   labelContainer.append(badge);
-  labels.push({ element: badge, point: new THREE.Vector3(posX, entry.bounds.max[1] + 1.5, posZ) });
-
   const labelObj = { element: badge, point: new THREE.Vector3(posX, entry.bounds.max[1] + 1.5, posZ) };
+  labels.push(labelObj);
+
   return { mesh, hitMesh, meta, entry, labelObj };
 }
 
@@ -1820,8 +1831,11 @@ function createPlantObject(type, seed, scale = 1, season = 'summer', posX = 0, p
   if (type === 'auto') {
     const lat = parseFloat(document.querySelector('#plant-lat').value) || 35;
     const alt = parseFloat(document.querySelector('#plant-altitude').value) || 500;
+    const climVal = document.querySelector('#plant-climate')?.value || 'all';
+    const climPool = ['temperate', 'tropical', 'boreal', 'arid', 'mediterranean', 'alpine'];
+    const clim = climVal === 'all' ? climPool[Math.abs(seed) % climPool.length] : climVal;
     const env = forestEnvironment(lat, alt, {
-      climate: document.querySelector('#plant-climate').value,
+      climate: clim,
       moisture: parseFloat(document.querySelector('#plant-moisture').value) || 0.6,
       ph: parseFloat(document.querySelector('#plant-ph').value) || 6.5,
       salinity: parseFloat(document.querySelector('#plant-salinity').value) || 0,
@@ -1884,9 +1898,9 @@ function createPlantObject(type, seed, scale = 1, season = 'summer', posX = 0, p
   badge.className = 'badge-label';
   badge.innerHTML = '<span class="cat">【' + (PLANT_NAMES[actualType] || actualType) + '】</span>' + spec.form + ' · <span class="height">' + tree.h.toFixed(1) + 'm</span>';
   labelContainer.append(badge);
-  labels.push({ element: badge, point: new THREE.Vector3(posX, tree.h + 1.5, posZ) });
-
   const labelObj = { element: badge, point: new THREE.Vector3(posX, tree.h + 1.5, posZ) };
+  labels.push(labelObj);
+
   return { group, tree, spec, meta, labelObj };
 }
 
@@ -2340,19 +2354,23 @@ function updateVehicleFilter() {
   profSelect.innerHTML = '';
 
   if (mode === 'single') {
+    profSelect.add(new Option('全部車型輪播 (All Models)', 'all'));
     const candidates = vehicleCandidates(filters);
     for (const key of candidates) {
       profSelect.add(new Option(VEHICLE_PROFILES[key].name, key));
     }
   } else {
+    profSelect.add(new Option('全部編組輪播 (All Consists)', 'all'));
     for (const [k, p] of Object.entries(VEHICLE_CONSISTS)) {
       if (p.mode === mode && (!filters.purpose || p.purpose === filters.purpose)) {
         profSelect.add(new Option(p.name, CONSIST_PREFIX + k));
       }
     }
   }
-  if ([...profSelect.options].some(o => o.value === prevVal)) {
+  if (prevVal && [...profSelect.options].some(o => o.value === prevVal)) {
     profSelect.value = prevVal;
+  } else {
+    profSelect.value = 'all';
   }
   updateVehicleCoupling();
 }
@@ -2403,8 +2421,9 @@ function createVehicleInstance(profileKey, seed, options, posX = 0, posZ = 0) {
     badge.className = 'badge-label';
     badge.innerHTML = '<span class="cat">🚗</span>' + v.name + ' <span class="height">' + v.length.toFixed(1) + 'm</span>';
     labelContainer.appendChild(badge);
-    labels.push({ element: badge, point: new THREE.Vector3(posX, (v.height || 2) + 1.2, posZ) });
-    return { model, meta, vehicle: v };
+    const labelObj = { element: badge, point: new THREE.Vector3(posX, (v.height || 2) + 1.2, posZ) };
+    labels.push(labelObj);
+    return { model, meta, vehicle: v, labelObj };
   } catch (err) {
     console.error('車輛生成失敗:', err);
     return null;
@@ -2426,13 +2445,27 @@ function buildVehicleMode() {
   const seedMode = document.querySelector('#select-seed-mode-veh')?.value || 'per_building';
 
   const allProfiles = Object.keys(VEHICLE_PROFILES);
-  const actProf = (profileKey === 'all' || !profileKey) ? (allProfiles[seed % allProfiles.length]) : profileKey;
+  const candidates = (formation === 'single' || formation === 'all') ? vehicleCandidates(
+    Object.fromEntries(['purpose', 'type', 'power'].filter(k => document.querySelector('#veh-' + k).value).map(k => [k, document.querySelector('#veh-' + k).value]))
+  ) : [];
+  const pool = candidates.length > 0 ? candidates : allProfiles;
+  const consistPool = Object.keys(VEHICLE_CONSISTS).filter(k => VEHICLE_CONSISTS[k].mode === formation);
 
-  const options = (formation === 'single' || formation === 'all')
+  let actProf = profileKey;
+  if (profileKey === 'all' || !profileKey) {
+    if (formation === 'single' || formation === 'all') {
+      actProf = pool[seed % pool.length];
+    } else {
+      actProf = consistPool.length > 0 ? CONSIST_PREFIX + consistPool[seed % consistPool.length] : allProfiles[seed % allProfiles.length];
+    }
+  }
+
+  const recipe = actProf.startsWith(CONSIST_PREFIX) ? VEHICLE_CONSISTS[actProf.slice(CONSIST_PREFIX.length)] : null;
+  const options = (formation === 'single' || formation === 'all' || !recipe)
     ? Object.fromEntries(['purpose', 'type', 'power'].filter(k => document.querySelector('#veh-' + k).value).map(k => [k, document.querySelector('#veh-' + k).value]))
     : {
-        leaderKey: document.querySelector('#veh-leader').value,
-        wagonCount: Number(document.querySelector('#veh-count').value),
+        leaderKey: document.querySelector('#veh-leader').value || recipe.leaders[0],
+        wagonCount: Number(document.querySelector('#veh-count').value) || recipe.count[0],
         wagonKey: document.querySelector('#veh-wagon').value || undefined,
       };
 
@@ -2458,8 +2491,22 @@ function buildVehicleMode() {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        const curProf = (profileKey === 'all' || !profileKey) ? allProfiles[idx % allProfiles.length] : profileKey;
-        const res = createVehicleInstance(curProf, curSeed, options, 0, 0);
+        let curProf = actProf;
+        let curOptions = options;
+        if (profileKey === 'all' || !profileKey) {
+          if (formation === 'single' || formation === 'all') {
+            curProf = pool[idx % pool.length];
+          } else if (consistPool.length > 0) {
+            curProf = CONSIST_PREFIX + consistPool[idx % consistPool.length];
+            const cRecipe = VEHICLE_CONSISTS[curProf.slice(CONSIST_PREFIX.length)];
+            curOptions = {
+              leaderKey: document.querySelector('#veh-leader').value || (cRecipe ? cRecipe.leaders[0] : undefined),
+              wagonCount: Number(document.querySelector('#veh-count').value) || (cRecipe ? cRecipe.count[0] : 1),
+              wagonKey: document.querySelector('#veh-wagon').value || undefined,
+            };
+          }
+        }
+        const res = createVehicleInstance(curProf, curSeed, curOptions, 0, 0);
         if (res && res.vehicle) {
           const v = res.vehicle;
           if (v.width > maxObjW) maxObjW = v.width;
@@ -2545,8 +2592,10 @@ function createVesselInstance(seed, options, posX = 0, posZ = 0) {
     badge.className = 'badge-label';
     badge.innerHTML = '<span class="cat">🚢</span>' + v.name + ' <span class="height">' + v.length.toFixed(1) + 'm</span>';
     labelContainer.appendChild(badge);
-    labels.push({ element: badge, point: new THREE.Vector3(posX, v.beam * 0.5 + 3, posZ) });
-    return { model, meta, vessel: v };
+    const vesselTopY = Math.max(v.beam * 0.5 + 2, (v.freeboard || 2) + (v.beam || 5) * 0.4 + 2);
+    const labelObj = { element: badge, point: new THREE.Vector3(posX, vesselTopY, posZ) };
+    labels.push(labelObj);
+    return { model, meta, vessel: v, labelObj };
   } catch (err) {
     console.error('船隻生成失敗:', err);
     return null;
@@ -2575,7 +2624,8 @@ function buildVesselMode() {
   const allVesselTypes = VESSEL_TYPES.map(t => t.id);
 
   if (viewMode === 'single') {
-    const actOptions = { ...options, id: type || allVesselTypes[seed % allVesselTypes.length] };
+    const actType = (type === 'all' || !type) ? allVesselTypes[seed % allVesselTypes.length] : type;
+    const actOptions = { ...options, id: actType };
     const res = createVesselInstance(seed, actOptions, 0, 0);
     if (!res) return;
     const v = res.vessel;
@@ -2598,11 +2648,12 @@ function buildVesselMode() {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        const curOptions = { ...options, id: type || allVesselTypes[idx % allVesselTypes.length] };
+        const curType = (type === 'all' || !type) ? allVesselTypes[idx % allVesselTypes.length] : type;
+        const curOptions = { ...options, id: curType };
         let res = createVesselInstance(curSeed, curOptions, 0, 0);
         if (!res) {
           // 若複合條件無完全符合者，放寬為單純依類型生成，確保物件正常陳列
-          res = createVesselInstance(curSeed, { id: curOptions.id }, 0, 0);
+          res = createVesselInstance(curSeed, { id: curType }, 0, 0);
         }
         if (res && res.vessel) {
           const v = res.vessel;
@@ -2627,15 +2678,17 @@ function buildVesselMode() {
       it.res.meta.posX = posX;
       it.res.meta.posZ = posZ;
       if (it.res.labelObj) {
-        it.res.labelObj.point.set(posX, it.res.vessel.draft + 2, posZ);
+        const v = it.res.vessel;
+        const vesselTopY = Math.max(v.beam * 0.5 + 2, (v.freeboard || 2) + (v.beam || 5) * 0.4 + 2);
+        it.res.labelObj.point.set(posX, vesselTopY, posZ);
       }
     }
 
-    document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 艘）：【' + (type ? VESSEL_TYPES.find(t => t.id === type)?.name : '全部船型輪播') + '】（基底種子 ' + seed + '）';
+    document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 艘）：【' + (type && type !== 'all' ? VESSEL_TYPES.find(t => t.id === type)?.name : '全部船型輪播') + '】（基底種子 ' + seed + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
-    camTarget.set(0, maxObjW * 0.4, 0);
-    camDist = Math.max(totalW, totalD, maxObjD * 1.3) * 1.25 + 20;
+    camTarget.set(0, Math.min(25, maxObjH * 0.4), 0);
+    camDist = Math.max(totalW, totalD, maxObjH * 1.5) * 1.25 + 20;
     activeCamTarget.copy(camTarget);
     activeCamDist = camDist;
   }
