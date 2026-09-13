@@ -636,7 +636,6 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
     const cands = [];
     for (let k = 0; k < n; k++) {
       const a = rnd() * Math.PI * 2, d = k === 0 ? 0 : 10 + rnd() * cr;
-      if (!meta) continue;
       // 物件高度上限(`WORLD_H.OBJ_F` 倍砲塔高;2026-08-09 起 4 倍)。神木走**分布版** `objScaleFit`
       // 而不是硬夾:>65m 巨樹的公稱高 72~110m,連最矮的抽樣(× 0.72)都超過上限
       // ⇒ 硬夾會把整片森林壓成**每一株一樣高**,而「同種群聚、株高各異」正是這套群落的設計
