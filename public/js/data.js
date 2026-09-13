@@ -1803,7 +1803,7 @@ export const decoyHp = () => frontKillHp(decoyExposureS());
 //   ⇒ 小招移除載具／輔助機隊遞送模式,改為本體詠唱(castTime 依效果強度推導 [0.5, 2.5]s);
 //   大招維持後方工事召喚載具/輔助機隊遞送(abilOrigin === 'fort')。
 export const ULT_CARRIER = {
-  CD_LO: 30, CD_HI: 60,      // 大招 CD 帶(2026-08-06 使用者定案)
+  CD_LO: 15, CD_HI: 30,      // 大招 CD 帶(2026-09-13 改制:攻/守皆 15~30s)
   SK_CD_LO: 15, SK_CD_HI: 30, // 小招 CD 帶(2026-08-07 使用者定案「CD時間15~30s」)
   // 最短飛行腿(公尺):使用者定案「需要飛行時間」——自身/團隊型招式瞄在腳邊時,遞送點仍
   // 推到面前這麼遠,保證每一發都有 ≥0.6s 的攔截窗(最慢載具 DECOY.SPEED 62m/s)。
@@ -3354,6 +3354,7 @@ export function heroAbility(ch, slot, lvl = 1) {
   const deliverR = carrier && !a.range;
   return {
     id: slot, name: a.name, fx: a.fx, desc: a.desc, carrier, support, castTime,
+    charges: a.charges || 1,
     cd: abilCdMapped(ch, slot) ? abilCarrierCd(slot, t(a.cd)) : t(a.cd),
     mp: t(a.mp), dur: t(a.dur ?? 0), r: t(a.r ?? 0),
     dmg: t(a.dmg ?? 0) * counterDmgF(a), heal: t(a.heal ?? 0), count: t(a.count ?? 1),   // 折減見 heroWeapon 同欄註
@@ -3490,8 +3491,9 @@ export const CHARACTERS = {
     heavy: { name: '「命運終章」雷導巡弋火箭巢', rw: '多聯裝雷射終端制導火箭巢・Hydra 70 改・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
       dmg: [49, 75, 109], r: [12, 14, 16], mag: 3, reload: 12, range: 300, pen: 6,
       vs: { flesh: 1.1, armor: 1.4, air: 0.5, building: 1.2 } },
-    skill: { name: '賦格・天籟共鳴', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldExpand: true,
-      mul: { dmgTaken: [0.8, 0.75, 0.7] }, dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '奏響巴哈復調防護律動：同調共鳴力場頻率，瞬間充盈磁力並大幅擴張防守護盾面積' },
+    skill: { name: '賦格・天籟共鳴', fx: 'buff', target: 'self', spRestore: [40, 60, 80], shieldExpand: true,
+      charges: 2,
+      mul: { dmgTaken: [0.85, 0.8, 0.75] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '奏響巴哈復調防護律動（可使用2次）：同調共鳴力場頻率，瞬間充盈磁力並大幅擴張防守護盾面積' },
     ult: { name: '終章・天穹合奏', fx: 'summon', unit: 'heli_squad', count: [2, 3, 4],
       cd: [80, 70, 60], mp: [80, 90, 100], desc: '揮動終極樂章指揮棒：召喚交響武裝直升機編隊凌空突進，自主索敵並與旗艦協同集火' },
   },
@@ -3571,12 +3573,13 @@ export const CHARACTERS = {
     heavy: { name: '「紅蓮業火」聚能電漿噴湧口', rw: '高溫磁化電漿短程扇形投射器・熱核噴焰', type: 'plasma', arc: [13, 15, 17],
       dmg: [46, 75, 117], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
-    skill: { name: '金剛・修羅逆浪', fx: 'shield_bash', shieldBash: true, imp: 28, dmg: [60, 80, 105], r: 12,
+    skill: { name: '金剛・修羅逆浪', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [42, 56, 74], r: 12,
+      charges: 2,
       mul: { speed: [1.25, 1.35, 1.45], dmgTaken: [0.75, 0.7, 0.65] },
-      dur: [5, 6, 7], cd: [18, 16, 14], mp: [30, 35, 40], desc: '修羅持盾狂瀾突進：正面衝撞震退並眩暈敵軍，強行撕開包圍網並大幅減免承受傷害' },
+      dur: [4, 5, 6], cd: [13, 12, 11], mp: [25, 30, 35], desc: '修羅持盾狂瀾突進（可使用2次）：正面衝撞震退並眩暈敵軍，強行撕開包圍網並大幅減免承受傷害' },
     ult: { name: '無雙・修羅死線', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.85, 0.8, 0.75] },
       add: { fx: 'haste', f: [1.25, 1.3, 1.35] },
-      dur: [8, 10, 12], cd: [70, 60, 50], mp: [75, 85, 95], desc: '完全解放修羅死線本能：化身戰場鬼神，移動速度與傷害減免達到極限，以極速狂暴撕裂敵陣' },
+      dur: [3, 4, 5], cd: [24, 21, 18], mp: [75, 85, 95], desc: '完全解放修羅死線本能：化身戰場鬼神，移動速度與傷害減免達到極限，以極速狂暴撕裂敵陣' },
   },
   s05: {
     side: 'SWARM', kind: 'drone', name: '河瑟琪', code: 'Overclock', machine: '「超頻」競速 FPV',
@@ -3588,8 +3591,9 @@ export const CHARACTERS = {
     heavy: { name: '「星穹之影」巡飛蜂群', rw: '微型高動態巡飛彈掛架・複合制導・巡航 90m/s', type: 'missile', mv: 90,
       dmg: [44, 63, 88], r: [13, 15, 17], mag: 4, reload: 11, range: 320, pen: 12,
       vs: { flesh: 1.0, armor: 1.6, air: 0.6, building: 1.1 } },
-    skill: { name: '極限・超頻充能', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [45, 65, 90],
-      dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '超頻啟動神經應急奈米鏈：瞬間激活磁力護盾，時效內即便持續受擊亦絕不中斷充能' },
+    skill: { name: '極限・超頻充能', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60],
+      charges: 2,
+      dur: [4, 5, 6], cd: [12, 11, 10], mp: [25, 30, 35], desc: '超頻啟動神經應急奈米鏈（可使用2次）：瞬間激活磁力護盾，時效內即便持續受擊亦絕不中斷充能' },
     ult: { name: '暴走・萬星墜閃', fx: 'strike', count: [6, 8, 10], dmg: [60, 77, 94], r: 10, scatter: 30,
       add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 320, pen: 8, cd: [70, 62, 54], mp: [85, 95, 105], vs: { armor: 1.3, building: 1.1 },
@@ -3611,7 +3615,7 @@ export const CHARACTERS = {
       dmg: [45, 68, 102], r: [8, 9, 10], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.6, armor: 0.6, air: 2.5, building: 0.3 } },
     skill: { name: '聖靈・不墜穹頂', fx: 'intercept', r: [140, 170, 200], intercept: true, shieldDefBoost: [0.55, 0.45, 0.35],
-      dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '展開拜占庭神聖攔截力場：粉碎周身來襲之彈幕，並在防守姿態下獲得超高護盾傷害減免' },
+      dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '展開拜占庭神聖攔截力場：粉碎周身來襲之彈幕，並在防守姿態下獲得超高護盾傷害減免' },
     ult: { name: '輓歌・不滅戰陣', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.6, 0.5, 0.4] },
       dur: [6, 7, 8], cd: [75, 65, 55], mp: [85, 95, 105], desc: '奏響陣亡勇士之不朽輓歌：展開凱隆聖光防衛矩陣，於廣闊空域為全體友軍構築鋼鐵庇護' },
   },
@@ -3628,7 +3632,8 @@ export const CHARACTERS = {
       dmg: [50, 77, 113], mag: 3, reload: 7, range: 264, pen: 4,
       vs: { flesh: 0.9, armor: 0.6, air: 2.0, building: 0.4 } },
     skill: { name: '公理・非歐折射', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35],
-      dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '構築非歐幾何拓撲偏折面：持盾衝撞擊退敵機，大幅提高護盾減免並逆轉物理受力' },
+      charges: 2,
+      dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '構築非歐幾何拓撲偏折面（可使用2次）：持盾衝撞擊退敵機，大幅提高護盾減免並逆轉物理受力' },
     ult: { name: '悖論・幾何破滅', fx: 'strike', count: [5, 7, 9], dmg: [68, 85, 106], r: 11, scatter: 35,
       add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 340, pen: 6, cd: [72, 64, 56], mp: [85, 95, 105], vs: { air: 1.5, armor: 1.1 },
@@ -3645,7 +3650,7 @@ export const CHARACTERS = {
       dmg: [66, 99, 149], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
     skill: { name: '晨鐘・聖域庇護', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 85, 110], shieldExpand: true,
-      dur: 6, cd: [22, 20, 18], mp: [40, 45, 50], desc: '敲響克拉科夫破曉晨鐘：聖光洗禮修復機體裝甲與磁力，並在防守時大幅擴大護盾庇護範圍' },
+      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '敲響克拉科夫破曉晨鐘：聖光洗禮修復機體裝甲與磁力，並在防守時大幅擴大護盾庇護範圍' },
     ult: { name: '暮鐘・萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true,
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '敲響大教堂神聖祈願暮鐘：奇蹟光輝普照大地，全軍裝甲超大幅修復且能量護盾全數回滿' },
   },
@@ -3665,7 +3670,8 @@ export const CHARACTERS = {
     // mark 只在 heroHit(直擊彈道)有消耗路徑 —— s09 雙武器是 fan 散彈(heroPlasma)+ launcher
     // (heroBurst),掛 mark 等於死效果,2026-07-16 改 haste(獵手加速追獵)
     skill: { name: '逐風・靈步躍遷', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.2, 1.3, 1.4] }, spRestore: [40, 60, 80],
-      dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '荒原荒野獵巡本能爆發：立即充盈磁力並大幅加速，於防守姿態下追加連續靈巧大跳躍' },
+      charges: 2,
+      dur: [4, 5, 6], cd: [12, 11, 10], mp: [25, 30, 35], desc: '荒原荒野獵巡本能爆發（可使用2次）：立即充盈磁力並大幅加速，於防守姿態下追加連續靈巧大跳躍' },
     ult: { name: '封喉・禁獵天羅', fx: 'strike', count: [8, 10, 12], dmg: [51, 64, 77], r: 9, scatter: 40,
       add: { fx: 'pull', imp: [16, 20, 24] },
       range: 300, cd: [70, 62, 54], mp: [80, 90, 100], vs: { air: 2.0, flesh: 1.2 },
@@ -3686,8 +3692,9 @@ export const CHARACTERS = {
     heavy: { name: '「神經穿刺」電磁穿顱長矛', rw: '重型 EMP 穿甲貫穿狙擊彈・初速 900m/s', type: 'gun', mv: 900,
       dmg: [52, 78, 112], mag: 3, reload: 9, range: 340, emp: [1.5, 2, 2.5],
       vs: { flesh: 0.8, armor: 1.05, air: 1.8, building: 0.5 } },
-    skill: { name: '始祖・天塹巨翼', fx: 'shield_bash', shieldBash: true, imp: 26, dmg: [55, 75, 100], r: 12, spRestore: [40, 60, 80],
-      shieldDefBoost: [0.6, 0.5, 0.4], dur: [5, 6, 7], cd: [18, 16, 14], mp: [35, 40, 45], desc: '始祖巨翼化為重鋼天塹：持巨盾強勢突進衝撞擊退敵群，充盈磁力並大幅提升護盾傷害減免' },
+    skill: { name: '始祖・天塹巨翼', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [36, 48, 65], r: 12, spRestore: [25, 40, 55],
+      charges: 2,
+      shieldDefBoost: [0.6, 0.5, 0.4], dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '始祖巨翼化為重鋼天塹（可使用2次）：持巨盾強勢突進衝撞擊退敵群，充盈磁力並大幅提升護盾傷害減免' },
     ult: { name: '寂滅・全域白噪', fx: 'emp', r: 300, dur: [4, 5, 6],
       cd: [75, 65, 55], mp: [90, 100, 110], desc: '展開超廣域消音白噪音矩陣：終端信號覆蓋全場，瞬間切斷範圍內敵軍全部通訊與火控感測鏈路' },
   },
@@ -3702,9 +3709,9 @@ export const CHARACTERS = {
       dmg: [48, 70, 99], mag: 2, reload: 8, range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
       vs: { flesh: 0.8, armor: 2.2, air: 1.2, building: 0.7 } },
     skill: { name: '規訓・天平錶匣', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.55, 0.45, 0.35],
-      dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '啟動格拉蘇蒂擒縱防衛力場：磁力瞬間充盈，時序律動使護盾承受傷害減免效果大幅躍升' },
+      dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '啟動格拉蘇蒂擒縱防衛力場：磁力瞬間充盈，時序律動使護盾承受傷害減免效果大幅躍升' },
     ult: { name: '重調・時之逆轉', fx: 'heal', target: 'self', heal: [400, 550, 700], sp: true,
-      cd: [80, 70, 60], mp: [80, 90, 100], desc: '逆轉齒輪主發條時序：以精密機械大修校準自身機體，裝甲大幅回復且能量護盾瞬間滿載' },
+      cd: [28, 24, 20], mp: [80, 90, 100], desc: '逆轉齒輪主發條時序：以精密機械大修校準自身機體，裝甲大幅回復且能量護盾瞬間滿載' },
   },
   s12: {
     // 2026-08-03 台灣變形者定案的另一半:把「始祖鳥↔迅猛龍」讓給 s03,自己接下她那架鴨翼定翼機。
@@ -3725,14 +3732,14 @@ export const CHARACTERS = {
       // ④ 當場紅字(172.8 < 砲塔的 186)、而且 rngDmgF 反手把傷害補上去,⑤ 直接衝到 88%。
       vs: { flesh: 0.8, armor: 1.1, air: 0.5, building: 1.2 } },
     skill: { name: '織星・奇點引力', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.6, 0.5, 0.4],
-      dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '編織吉里赫奇點引力透鏡：磁力瞬間回滿，防守時大幅展開星軌護盾並強化傷害減免' },
+      dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '編織吉里赫奇點引力透鏡：磁力瞬間回滿，防守時大幅展開星軌護盾並強化傷害減免' },
     // 2026-08-06 使用者定案(機種絕招退場的補償;見 SELF_ULT):由「全隊無霧」改成**全隊復甦**——
     // 恢復速度倍率 + 解除既有異常 + 期間免疫異常 + **仍在重生倒數中**的隊友原地半血復活。
     // 復活刻意只救「倒數中」的(已重生的不算)且回場半血 + 一瞬無敵,CD 維持 70→54s:
     // 這是全場唯一能把一條命拿回來的效果,價錢付在「必須在那 30 秒窗口內按下去」。
     ult: { name: '引渡・群星歸鄉', fx: 'rally', target: 'team', regen: [2.5, 3, 3.5],
       cleanse: true, revive: [0.5, 0.5, 0.5], dur: [8, 10, 12],
-      cd: [70, 62, 54], mp: [80, 90, 100], desc: '詠唱星象古老引渡誓約：全軍回復速度倍增且免疫異常，倒下的戰友受群星召喚原地復甦歸隊' },
+      cd: [26, 22, 18], mp: [80, 90, 100], desc: '詠唱星象古老引渡誓約：全軍回復速度倍增且免疫異常，倒下的戰友受群星召喚原地復甦歸隊' },
   },
 
   // ================= 鋼鐵陣營(機甲)=================
@@ -3752,7 +3759,7 @@ export const CHARACTERS = {
       vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
     skill: { name: '霜狼・北境重盾', fx: 'shield_bash', shieldBash: true, imp: 28, dmg: [65, 90, 120], r: 12,
       mul: { speed: [1.2, 1.3, 1.4], dmgTaken: [0.75, 0.7, 0.65] },
-      dur: [5, 6, 7], cd: [20, 18, 16], mp: [35, 40, 45], desc: '霜狼巨盾雪原突襲衝撞：防守姿態下狂暴持盾突進，擊退並震暈沿途敵軍，大幅減免承受傷害' },
+      dur: [5, 6, 7], cd: [24, 22, 20], mp: [35, 40, 45], desc: '霜狼巨盾雪原突襲衝撞：防守姿態下狂暴持盾突進，擊退並震暈沿途敵軍，大幅減免承受傷害' },
     ult: { name: '雪崩・烏拉爾雷', fx: 'strike', count: [6, 8, 10], dmg: [77, 98, 119], r: 12, scatter: 40,
       add: { fx: 'stun', dur: [0.8, 1, 1.2] },
       range: 340, pen: 10, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
@@ -3772,7 +3779,7 @@ export const CHARACTERS = {
       dmg: [65, 98, 142], mag: 2, reload: 8, range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
       vs: { flesh: 1.0, armor: 1.8, air: 1.2, building: 0.6 } },
     skill: { name: '臨界・第七神經', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.3, 1.4, 1.5] }, spRestore: [40, 60, 80],
-      dur: [6, 7, 8], cd: [18, 16, 14], mp: [30, 35, 40], desc: '第七神經臨界超頻：瞬間充盈磁力並大幅提高機動性，於防守姿態下追加連續靈動大跳躍' },
+      dur: [5, 6, 7], cd: [13, 12, 11], mp: [30, 35, 40], desc: '第七神經臨界超頻：瞬間充盈磁力並大幅提高機動性，於防守姿態下追加連續靈動大跳躍' },
     // 2026-08-06 使用者定案(見 SELF_ULT):改成**超載** —— 彈藥全滿 + 期間無限彈藥(免裝填)
     // + 閃避率提升,**被擊中即結束**。補償當量由「免裝填的 DPS 增益 × 撐得住的秒數」兌現,
     // 故刻意不再疊 mul.dmg(疊上去就是同一份預算領兩次);`brk` 那條風險正是它的價錢 ——
@@ -3780,7 +3787,7 @@ export const CHARACTERS = {
     ult: { name: '神化・超弦同步', fx: 'buff', target: 'self',
       mul: { dmgTaken: [0.75, 0.7, 0.65] },
       add: { fx: 'overdrive', evade: [0.25, 0.32, 0.4] }, brk: true,
-      dur: [8, 10, 12], cd: [80, 70, 60], mp: [85, 95, 105], desc: '超弦同步率百分之百神化解放：彈藥瞬間全滿且免裝填、閃避率飆至極致（承受攻擊即解除）' },
+      dur: [8, 10, 12], cd: [28, 24, 20], mp: [85, 95, 105], desc: '超弦同步率百分之百神化解放：彈藥瞬間全滿且免裝填、閃避率飆至極致（承受攻擊即解除）' },
   },
   t03: {
     side: 'STEEL', kind: 'robot', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「爐膛」突擊機甲',
@@ -3799,8 +3806,9 @@ export const CHARACTERS = {
     // 小招保留鑄鐵鍋盾本體(機體左前臂真的掛著那口鍋,見 models.js gorilla)並補上衝鋒 ——
     // lore 寫的就是「頂著那口鑄鐵鍋盾一路撞進去」,承傷減免 + 加速正是這句話的機制化;
     // 大招從自身增益改成把敵人捲進鍋裡的範圍打擊,直接把目標帶進扇形武器的甜蜜點。
-    skill: { name: '鎮煞・金剛熔壁', fx: 'shield_bash', shieldBash: true, imp: 30, dmg: [70, 95, 125], r: 12, shieldExpand: true,
-      spRestore: [40, 60, 80], dur: [5, 6, 7], cd: [20, 18, 16], mp: [35, 40, 45], desc: '八卦爐神火化為鎮煞金剛壁：防守姿態下持重盾強勢衝撞擊退敵機，大幅擴大護盾並補充磁力' },
+    skill: { name: '鎮煞・金剛熔壁', fx: 'shield_bash', shieldBash: true, imp: 30, dmg: [45, 62, 85], r: 12, shieldExpand: true,
+      charges: 2,
+      spRestore: [25, 40, 55], dur: [3, 3.5, 4], cd: [17, 15, 13], mp: [25, 30, 35], desc: '八卦爐神火化為鎮煞金剛壁（可使用2次）：防守姿態下持重盾強勢衝撞擊退敵機，大幅擴大護盾並補充磁力' },
     ult: { name: '焚天・八卦火海', fx: 'strike', count: [2, 3, 4], dmg: [88, 110, 138], r: 14, scatter: 18,
       add: { fx: 'pull', imp: [24, 30, 36] },
       range: 160, pen: 10, cd: [75, 65, 55], mp: [80, 90, 100], vs: { flesh: 1.5, armor: 1.1 },
@@ -3817,10 +3825,10 @@ export const CHARACTERS = {
       dmg: [50, 75, 105], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],   // dmg −5%:同 t02 heavy 同欄註(bal ⑤ 離群修正)
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
     skill: { name: '匿影・千幻羽衣', fx: 'decoy_beacon', spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
-      dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '展開灰雁千幻光學迷彩羽衣：干擾敵方火控雷達，迅速充盈磁力並在防守時大幅提高護盾減傷' },
+      dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '展開灰雁千幻光學迷彩羽衣：干擾敵方火控雷達，迅速充盈磁力並在防守時大幅提高護盾減傷' },
     ult: { name: '滅頂・天穹要塞', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
       add: { fx: 'siege', setupS: 1.0, recoverS: 1.5 },
-      dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '展開四足液壓駐鋤就地化為滅頂要塞：進入重裝狙擊狀態，無限重彈免裝填狂轟敵陣（解除需硬直）' },
+      dur: [8, 10, 12], cd: [28, 24, 20], mp: [85, 95, 105], desc: '展開四足液壓駐鋤就地化為滅頂要塞：進入重裝狙擊狀態，無限重彈免裝填狂轟敵陣（解除需硬直）' },
   },
   t05: {
     side: 'STEEL', kind: 'robot', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
@@ -3832,8 +3840,9 @@ export const CHARACTERS = {
     heavy: { name: '「長空貫日」聚能光子長矛', rw: '關節整合型高能雷射長矛・光速直擊', type: 'beam',
       dmg: [35, 52, 78], mag: 5, reload: 8, range: 320, pen: [18, 22, 26],
       vs: { flesh: 0.8, armor: 1.7, air: 0.6, building: 0.6 } },
-    skill: { name: '玄功・應力化形', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 90, 120], spRegenHit: true,
-      dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '運轉九轉玄功應力自癒經脈：立即修復機體與磁力，時效內受擊仍可源源不絕回充磁力' },
+    skill: { name: '玄功・應力化形', fx: 'heal', target: 'self', heal: [50, 70, 95], sp: true, spRestore: [30, 45, 60], spRegenHit: true,
+      charges: 2,
+      dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '運轉九轉玄功應力自癒經脈（可使用2次）：立即修復機體與磁力，時效內受擊仍可源源不絕回充磁力' },
     ult: { name: '千機・重鋼天降', fx: 'summon', unit: 'main_battle_tank', count: [1, 2, 3],
       cd: [90, 80, 70], mp: [90, 100, 110], desc: '號令千機工坊重鋼傀儡天降：召喚自律重型主戰坦克投入前線，以銅牆鐵壁與狂暴火力自主索敵推進' },
   },
@@ -3851,10 +3860,11 @@ export const CHARACTERS = {
       dmg: [60, 93, 144], mag: 3, reload: 7, range: 264, pen: 10,
       vs: { flesh: 1.1, armor: 1.4, air: 0.3, building: 0.8 } },
     skill: { name: '騰雲・筋斗御風', fx: 'buff', target: 'self', defJump: 3, mul: { speed: [1.25, 1.35, 1.45] }, spRestore: [40, 60, 80],
-      dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '大顯筋斗御風騰雲神通：瞬間充盈磁力並大幅加速，於防守姿態下追加多次騰雲大跳躍' },
+      charges: 3,
+      dur: [1.5, 2.0, 2.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '大顯筋斗御風騰雲神通（可使用3次）：瞬間充盈磁力並大幅加速，於防守姿態下追加多次騰雲大跳躍' },
     ult: { name: '通天・身外化影', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] },
       add: { fx: 'clone', count: 2 },
-      dur: [8, 10, 12], cd: [70, 60, 50], mp: [80, 90, 100], desc: '拔毫毛變幻通天身外法影：分化兩具戰力化身協同火擊，本尊若遇致命一擊則元神轉移至化身重生' },
+      dur: [8, 10, 12], cd: [30, 26, 22], mp: [80, 90, 100], desc: '拔毫毛變幻通天身外法影：分化兩具戰力化身協同火擊，本尊若遇致命一擊則元神轉移至化身重生' },
   },
   t07: {
     // 2026-08-02 機體混編:接下原屬蜂群的「翼龍」擬態翼無人機 —— 膜翼滑翔幾乎不耗電、也幾乎沒有聲音,
@@ -3869,11 +3879,12 @@ export const CHARACTERS = {
       dmg: [40, 57, 80], mag: 3, reload: 9, range: 400, crit: 0.25, critX: 2.2, pen: [18, 24, 30],
       vs: { flesh: 2.0, armor: 1.6, air: 1.2, building: 0.5 } },
     skill: { name: '幽冥・擬態無形', fx: 'stealth', spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] },
-      dur: [5, 6, 7], cd: [20, 18, 16], mp: [35, 40, 45], desc: '展開幽邃翼龍擬態隱蔽力場：進入無聲遁形狀態並迅速回充磁力，奔襲速度顯著提升' },
-    ult: { name: '絕影・落日貫雲', fx: 'strike', count: 1, dmg: [340, 442, 553], r: 6,
-      add: { fx: 'bleed', dps: [24, 30, 38], dur: 5, pen: 12 },
-      range: 400, pen: 20, cd: [70, 62, 54], mp: [80, 90, 100], vs: { flesh: 1.5, armor: 1.2 },
-      desc: '聚斂極致殺意射出落日貫雲破滅重箭：極限穿透敵機核心，造成毀滅性創口與持續流血損傷' },
+      dur: [5, 6, 7], cd: [13, 12, 11], mp: [35, 40, 45], desc: '展開幽邃翼龍擬態隱蔽力場：進入無聲遁形狀態並迅速回充磁力，奔襲速度顯著提升' },
+    ult: { name: '絕影・落日貫雲', fx: 'strike', count: 1, dmg: [190, 250, 315], r: 6,
+      charges: 2,
+      add: { fx: 'bleed', dps: [16, 22, 28], dur: 4, pen: 12 },
+      range: 400, pen: 20, cd: [70, 62, 54], mp: [50, 60, 70], vs: { flesh: 1.5, armor: 1.2 },
+      desc: '聚斂極致殺意射出落日貫雲破滅重箭（可使用2次）：極限穿透敵機核心，造成毀滅性創口與持續流血損傷' },
   },
   t08: {
     // 2026-08-02 機體混編:接下原屬蜂群的「機械龍」擬態翼無人機 —— 東亞的龍,張口即齊射,
@@ -3890,8 +3901,9 @@ export const CHARACTERS = {
       dmg: [23, 33, 45], mag: 5, reload: 8, range: 320, emp: [1.0, 1.5, 2.0],
       vsSp: 1.55, vsHp: 0.78,
       vs: { flesh: 0.9, armor: 0.8, air: 1.8, building: 0.4 } },
-    skill: { name: '休止・斷音結界', fx: 'emp', r: 16, dur: [3.5, 4.0, 4.5], spRestore: [40, 60, 80], shieldDefBoost: [0.6, 0.5, 0.4],
-      cd: [20, 18, 16], mp: [35, 40, 45], desc: '仙音暫歇引動休止斷音結界：強烈干擾周圍敵機武器使其離線，並立即充盈磁力與強化護盾' },
+    skill: { name: '休止・斷音結界', fx: 'emp', r: 16, dur: [2.0, 2.5, 3.0], spRestore: [25, 35, 50], shieldDefBoost: [0.55, 0.45, 0.35],
+      charges: 2,
+      cd: [17, 15, 13], mp: [25, 30, 35], desc: '仙音暫歇引動休止斷音結界（可使用2次）：強烈干擾周圍敵機武器使其離線，並立即充盈磁力與強化護盾' },
     ult: { name: '絕唱・龍吟神曲', fx: 'emp', r: 280, dur: [4, 5, 6],
       cd: [72, 64, 56], mp: [90, 100, 110], desc: '引吭高歌宣洩神龍絕唱之音：以毀滅性聲電海嘯席捲全場，強行震碎並壓制敵軍全頻段通訊鏈路' },
   },
@@ -3908,7 +3920,7 @@ export const CHARACTERS = {
       dmg: [38, 55, 77], r: [15, 17, 19], mag: 4, reload: 11, range: 360, pen: 10,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
     skill: { name: '悼文・鐵壁殘卷', fx: 'buff', target: 'self', intercept: true, r: 16, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
-      dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '以波斯哀歌詩紋構築悼文鐵壁：自律僚機粉碎近身來襲彈道，充盈磁力並大幅提高護盾減傷' },
+      dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '以波斯哀歌詩紋構築悼文鐵壁：自律僚機粉碎近身來襲彈道，充盈磁力並大幅提高護盾減傷' },
     ult: { name: '天罰・焚天黑雨', fx: 'strike', count: [7, 9, 11], dmg: [72, 89, 111], r: 11, scatter: 45,
       add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 360, pen: 8, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
@@ -3925,7 +3937,7 @@ export const CHARACTERS = {
       dmg: [50, 75, 113], r: [11, 13, 15], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.7, armor: 0.7, air: 2.4, building: 0.4 } },
     skill: { name: '聖石・神聖幾何', fx: 'cube', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
-      dur: [6, 7, 8], cd: [22, 20, 18], mp: [40, 45, 50], desc: '凝結穆卡納斯立體神聖幾何石板：直接補充磁力，防守時大幅擴展護盾面積並強化傷害減免' },
+      dur: [6, 7, 8], cd: [24, 22, 20], mp: [40, 45, 50], desc: '凝結穆卡納斯立體神聖幾何石板：直接補充磁力，防守時大幅擴展護盾面積並強化傷害減免' },
     ult: { name: '王權・天穹聖所', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.55, 0.45, 0.35] },
       dur: [6, 7, 8], cd: [80, 70, 60], mp: [90, 100, 110], desc: '升起至高無上之王權天穹聖所：構築不可動搖的絕對防衛領域，於廣闊範圍內大幅減免友軍承受傷害' },
   },
@@ -3942,7 +3954,7 @@ export const CHARACTERS = {
       dmg: [78, 115, 168], r: [13, 15, 17], mag: 3, reload: 12, range: 264, pen: 12,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.0, armor: 1.5, air: 0.4, building: 1.3 } },
     skill: { name: '固守・百戰心訣', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35], spRestore: [50, 75, 100],
-      dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '運轉百戰老兵陣地固守心訣：持鋼盾衝撞擊退逼近敵機，立即充盈磁力並大幅強化護盾減傷' },
+      dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '運轉百戰老兵陣地固守心訣：持鋼盾衝撞擊退逼近敵機，立即充盈磁力並大幅強化護盾減傷' },
     ult: { name: '衝鋒・鋼鐵營陣', fx: 'summon', unit: 'veteran_squad', count: [3, 4, 5],
       cd: [85, 75, 65], mp: [85, 95, 105], desc: '吹響宿將鐵血集結衝鋒哨：召喚精銳老兵特戰連隊伴隨推進，以猛烈火力主動索敵與協同集火' },
   },
@@ -3956,8 +3968,9 @@ export const CHARACTERS = {
     heavy: { name: '「星火標定」EM 電磁貫通砲', rw: '電磁超導標定穿甲砲・初速 2500m/s', type: 'rail', mv: 2500,
       dmg: [53, 82, 122], mag: 2, reload: 8, range: 340, emp: [0.8, 1.0, 1.2],
       vs: { flesh: 0.8, armor: 1.0, air: 1.6, building: 0.5 } },
-    skill: { name: '同調・螢火護生', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
-      dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '點亮神經同調螢火生機護盾：直接充盈磁力，受擊仍可源源回充，並在防守時大幅提高護盾減傷' },
+    skill: { name: '同調・螢火護生', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60], shieldDefBoost: [0.55, 0.45, 0.35],
+      charges: 2,
+      dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '點亮神經同調螢火生機護盾（可使用2次）：直接充盈磁力，受擊仍可源源回充，並在防守時大幅提高護盾減傷' },
     ult: { name: '共振・萬象沉寂', fx: 'emp', r: 240, dur: [3, 4, 5], vision: [4, 5, 6],
       cd: [75, 65, 55], mp: [90, 100, 110], desc: '引動全域神經共振沉寂之潮：強制靜默所有被同調標記之敵機系統，並實時回傳其精準座標' },
   },
@@ -4001,11 +4014,12 @@ export const CHARACTERS = {
       dmg: [50, 72, 103], r: [12, 14, 16], mag: 4, reload: 11, range: 320, pen: [14, 18, 22],
       spPierce: 0.45, vsHp: 0.9,
       vs: { flesh: 0.9, armor: 1.7, air: 0.5, building: 1.1 } },
-    skill: { name: '狂湧・血月之庇', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [40, 60, 80], shieldBash: true,
-      mul: { speed: [1.2, 1.3, 1.4] }, dur: [6, 7, 8], cd: [18, 16, 14], mp: [30, 35, 40], desc: '喚醒血月夜鴉嗜戰之庇：持盾強勢衝撞擊退敵機，充盈磁力且在受擊時激發源源不絕的狂暴回充' },
+    skill: { name: '狂湧・血月之庇', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [25, 35, 50], shieldBash: true,
+      charges: 2,
+      mul: { speed: [1.2, 1.3, 1.4] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '喚醒血月夜鴉嗜戰之庇（可使用2次）：持盾強勢衝撞擊退敵機，充盈磁力且在受擊時激發源源不絕的狂暴回充' },
     ult: { name: '貪婪・夜鴉血宴', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5], reload: [0.8, 0.75, 0.7] },
       add: { fx: 'vamp', f: [0.12, 0.16, 0.2] },
-      dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '啟動狂戰士貪婪夜鴉血宴：核心超頻解限，攻擊射速與裝填狂暴暴增，並透過撕裂敵軍瘋狂吸取生命' },
+      dur: [8, 10, 12], cd: [28, 24, 20], mp: [80, 90, 100], desc: '啟動狂戰士貪婪夜鴉血宴：核心超頻解限，攻擊射速與裝填狂暴暴增，並透過撕裂敵軍瘋狂吸取生命' },
   },
   m02: {
     // 2026-08-02 機體混編:改駕「暴龍」雙足機甲 —— 前傾軀幹以重尾配平,巨顎裡藏的正是
@@ -4019,8 +4033,9 @@ export const CHARACTERS = {
     heavy: { name: '「滅絕巨顎」重型口藏磁軌砲', rw: '大口徑超導線性磁軌巨砲・穿甲重彈・初速 1800m/s', type: 'rail', mv: 1800,
       dmg: [74, 109, 154], mag: 2, reload: 8, range: 360, crit: 0.1, critX: 1.8, pen: [20, 25, 30],
       vs: { flesh: 0.9, armor: 1.7, air: 0.4, building: 1.0 } },
-    skill: { name: '金湯・泰坦地幔', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
-      dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '展開泰坦地幔金湯防衛護盾：直接充盈磁力，防守時大幅擴大護盾屏障面積並強化減傷' },
+    skill: { name: '金湯・泰坦地幔', fx: 'buff', target: 'self', spRestore: [35, 55, 75], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
+      charges: 2,
+      dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '展開泰坦地幔金湯防衛護盾（可使用2次）：直接充盈磁力，防守時大幅擴大護盾屏障面積並強化減傷' },
     ult: { name: '磐石・永恆誓約', fx: 'buff', target: 'team', r: 200, mul: { dmgTaken: [0.7, 0.62, 0.55] },
       dur: [6, 8, 10], cd: [80, 70, 60], mp: [85, 95, 105], desc: '締結不可破滅之磐石永恆誓約：於廣闊戰場半徑內為全體友軍提供堅不可摧的極限承傷減免' },
   },
@@ -4037,7 +4052,7 @@ export const CHARACTERS = {
       dmg: [62, 95, 137], r: [11, 13, 15], mag: 3, reload: 12, range: 300, pen: 8,
       vs: { flesh: 1.1, armor: 1.2, air: 1.2, building: 1.0 } },
     skill: { name: '冰魄・靈泉玉澤', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 90, 120], cleanse: true,
-      dur: 6, cd: [22, 20, 18], mp: [40, 45, 50], desc: '召喚高山冰魄靈泉玉澤：瞬間滌除自身一切異常狀態，大幅修復機體裝甲並充盈磁力護盾' },
+      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '召喚高山冰魄靈泉玉澤：瞬間滌除自身一切異常狀態，大幅修復機體裝甲並充盈磁力護盾' },
     ult: { name: '極光・萬象淨化', fx: 'heal', target: 'team', r: 220, heal: [260, 350, 440], sp: true,
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '引動阿爾卑斯極光萬象淨化：以漫天極光洗禮戰場，全體友軍裝甲大幅回滿並同步充滿能量護盾' },
   },
@@ -4063,7 +4078,7 @@ export const CHARACTERS = {
     ult: { name: '天眼・長生雄鷹', fx: 'recon', target: 'team', vision: [18, 24, 30],
       mul: { range: [1.2, 1.25, 1.3], speed: [1.2, 1.25, 1.3] },
       add: { fx: 'evade', evade: [0.12, 0.16, 0.2] }, dur: [8, 10, 12],
-      cd: [72, 64, 56], mp: [85, 95, 105], desc: '開展騰格里長生雄鷹天眼：全隊無霧視野翻倍，且射程、機動速度與閃避率同步獲得全面增幅' },
+      cd: [26, 22, 18], mp: [85, 95, 105], desc: '開展騰格里長生雄鷹天眼：全隊無霧視野翻倍，且射程、機動速度與閃避率同步獲得全面增幅' },
   },
   m05: {
     side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '熄燈', machine: '「鎖喉」電戰可變機甲',
@@ -4094,8 +4109,9 @@ export const CHARACTERS = {
     heavy: { name: '「萬象盛宴」集束子母巨彈', rw: '大範圍散布集束子母彈・拋撒破片・初速 400m/s', type: 'launcher', mv: 400,
       dmg: [55, 79, 112], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 6,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.4, armor: 0.9, air: 0.5, building: 1.2 } },
-    skill: { name: '狂歡・花車浮游', fx: 'buff', target: 'self', shieldExpand: true, spRestore: [50, 75, 100],
-      mul: { speed: [1.25, 1.35, 1.45] }, dur: [6, 7, 8], cd: [20, 18, 16], mp: [35, 40, 45], desc: '啟動嘉年華花車浮游護衛力場：直接充盈磁力並加速巡航，防守姿態下大幅擴張護盾保護面積' },
+    skill: { name: '狂歡・花車浮游', fx: 'buff', target: 'self', shieldExpand: true, spRestore: [30, 45, 60],
+      charges: 2,
+      mul: { speed: [1.25, 1.35, 1.45] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '啟動嘉年華花車浮游護衛力場（可使用2次）：直接充盈磁力並加速巡航，防守姿態下大幅擴張護盾保護面積' },
     ult: { name: '盛宴・天穹巡遊', fx: 'summon', unit: 'carnival_heli', count: [2, 3, 4],
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '召喚空中主力嘉年華直升機盛宴：號令武裝直升機編隊凌空巡遊突擊，以狂歡狂瀾火力自主索敵集火' },
   },
@@ -4110,7 +4126,7 @@ export const CHARACTERS = {
       dmg: [46, 73, 111], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 0.8, armor: 1.25, air: 2.2, building: 0.3 } },
     skill: { name: '封界・偏折鏡陣', fx: 'reflect', dur: [4.0, 4.5, 5.0], spRestore: [40, 60, 80], shieldDefBoost: [0.55, 0.45, 0.35],
-      cd: [20, 18, 16], mp: [35, 40, 45], desc: '立起界碑幾何偏折鏡陣：彈開敵方直線穿甲彈與光束直擊，充盈磁力並極限強化護盾傷害減免' },
+      cd: [24, 22, 20], mp: [35, 40, 45], desc: '立起界碑幾何偏折鏡陣：彈開敵方直線穿甲彈與光束直擊，充盈磁力並極限強化護盾傷害減免' },
     ult: { name: '絕界・全域封殺', fx: 'strike', count: [7, 9, 11], dmg: [55, 68, 85], r: 9, scatter: 40,
       add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 320, cd: [74, 66, 58], mp: [85, 95, 105], vs: { air: 2.0, flesh: 1.2 },
@@ -4126,12 +4142,13 @@ export const CHARACTERS = {
     heavy: { name: '「冰川之息」大口徑反器材重狙', rw: '超遠程重型反器材狙擊砲・穿甲鎢芯彈・初速 900m/s', type: 'gun', mv: 900,
       dmg: [61, 89, 126], mag: 3, reload: 9, range: 390, crit: 0.2, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.3, armor: 1.7, air: 1.2, building: 0.5 } },
-    skill: { name: '歸隱・相位虛無', fx: 'phaseshift', dur: [2.5, 3.0, 3.5], spRestore: [40, 60, 80], mul: { speed: [1.3, 1.4, 1.5] },
-      cd: [20, 18, 16], mp: [35, 40, 45], desc: '身遁曼陀羅相位虛無之境：短暫免疫一切傷害與負面狀態，立即補滿磁力並以極速脫離交火' },
+    skill: { name: '歸隱・相位虛無', fx: 'phaseshift', dur: [1.2, 1.4, 1.6], spRestore: [30, 45, 60], mul: { speed: [1.3, 1.4, 1.5] },
+      charges: 2,
+      cd: [13, 12, 11], mp: [25, 30, 35], desc: '身遁曼陀羅相位虛無之境（可使用2次）：短暫免疫一切傷害與負面狀態，立即補滿磁力並以極速脫離交火' },
     // 2026-08-06 使用者定案(見 SELF_ULT):破隱後 SELF_ULT.ALPHA_S 秒內傷害倍增 ——
     // 倍率由 `selfUltBoost` 從被移除的機種絕招預算**推導**(MUST NOT 手寫);`alpha` 只是旗標。
     ult: { name: '絕殺・一念空華', fx: 'stealth', dur: [4, 5, 6], add: { fx: 'alpha' },
-      cd: [70, 62, 54], mp: [80, 90, 100], desc: '凝聚契約刺客之一念空華：遁入絕對虛空隱匿，現身開火剎那爆發極限毀滅性一擊（首擊傷害狂暴倍增）' },
+      cd: [26, 22, 18], mp: [80, 90, 100], desc: '凝聚契約刺客之一念空華：遁入絕對虛空隱匿，現身開火剎那爆發極限毀滅性一擊（首擊傷害狂暴倍增）' },
   },
 };
 

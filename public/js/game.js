@@ -633,6 +633,7 @@ export class BattleClient {
     this._mpAuth = false;             // maxMp 是否已收到伺服器權威值(爬升動力上限 MUST NOT 拿上面那個佔位的 1 去解析)
     this.kn = 0;                      // 戰鬥分數(八軌升級的第二道門檻;伺服器權威,只增不減)
     this.cds = [0, 0];                // [小招, 大招] 冷卻(伺服器倒數)
+    this.chg = [[1, 1, 0], [1, 1, 0]]; // [[小招可用, 小招上限, 下次冷卻], [大招可用, 大招上限, 下次冷卻]]
     this.castLeft = 0;                // 招式前搖剩餘秒數(快照同步)
     this._castingUntil = 0;           // 本地樂觀前搖結束時戳
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
@@ -3320,6 +3321,7 @@ export class BattleClient {
           ent.mp = e.mp ?? 0; ent.mm = e.mm ?? 1;
           ent.money = e.$ ?? 0; ent.kn = e.kn ?? 0;
           ent.up = e.up || ent.up; ent.ab = e.ab || ent.ab; ent.cds = e.cds || ent.cds;
+          if (e.chg) ent.chg = e.chg;
           ent.emp = e.emp || 0; ent.rs = e.rs || 0;
           ent.dcd = e.dcd ?? 0; ent.dock = e.dc != null ? !!e.dc : ent.dock; ent.hcd = e.hcd ?? 0; ent.hfly = !!e.hfly;
         }
@@ -3370,6 +3372,7 @@ export class BattleClient {
           this.upg = e.up || this.upg;
           this.kn = e.kn ?? this.kn;
           this.cds = e.cds || this.cds;
+          if (e.chg) this.chg = e.chg;
           this.empLeft = e.emp || 0;
           this.blindLeft = e.vb || 0;
           this.stealthLeft = e.st || 0;
@@ -7729,10 +7732,11 @@ export class BattleClient {
       }
       return;
     }
-    const lvl = this.abil[slot] || 1;   // 招式開場即 Lv1(2026-07-20;不再有未解鎖狀態)
-    const A = heroAbility(this.ch, slot, lvl);
-    const cdLeft = this.cds[slot === 'skill' ? 0 : 1] || 0;
-    if (cdLeft > 0) { this.hud.feed?.(`⏳【${A.name}】冷卻中(${cdLeft.toFixed(0)}s)`); return; }
+    const idx = slot === 'skill' ? 0 : 1;
+    const cdLeft = this.cds[idx] || 0;
+    const chgInfo = this.chg?.[idx];
+    const readyCharges = chgInfo ? chgInfo[0] : (cdLeft <= 0 ? 1 : 0);
+    if (readyCharges <= 0 && cdLeft > 0) { this.hud.feed?.(`⏳【${A.name}】冷卻中(${cdLeft.toFixed(0)}s)`); return; }
     // 招式電力隨招式階級(sk/ult)成長(2026-07-20:無獨立精通折減;伺服器 heroCast 同一條)
     const mpc = Math.round(A.mp);
     if (this.mp < mpc) { this.hud.feed?.(`🔋 電力不足(【${A.name}】需 ${mpc} MP)`); return; }
@@ -7762,7 +7766,16 @@ export class BattleClient {
       this.defJumpUntil = now + (A.dur || 8);
     }
     const snowMul = this.env?.getWeatherDynamics?.()?.snowCdMul ?? 1;
-    this.cds[slot === 'skill' ? 0 : 1] = (A.cd || 10) * snowMul;
+    if (chgInfo && chgInfo[1] > 1) {
+      chgInfo[0] = Math.max(0, chgInfo[0] - 1);
+      if (chgInfo[0] <= 0) {
+        this.cds[idx] = (A.cd || 10) * snowMul;
+      } else {
+        this.cds[idx] = 0;
+      }
+    } else {
+      this.cds[idx] = (A.cd || 10) * snowMul;
+    }
     const castDur = slot === 'ult' ? (A.castTime || ULT_CAST_S) : (A.castTime || 0);
     if (castDur > 0) {
       this._castingUntil = now + castDur;
@@ -7897,7 +7910,15 @@ export class BattleClient {
       const lvl = this.abil[slot] || 1;
       const A = heroAbility(this.ch, slot, lvl);
       const mpc = Math.round(A.mp);   // 招式電力(隨階級,無精通折減)
-      return { name: A.name, lvl, cd: this.cds[idx] || 0, mp: mpc, ready: (this.cds[idx] || 0) <= 0 && this.mp >= mpc };
+      const chg = this.chg && this.chg[idx] ? this.chg[idx] : [1, 1, 0];
+      const charges = chg[0] != null ? chg[0] : 1;
+      const maxCharges = chg[1] != null ? chg[1] : (A.charges || 1);
+      const nextCd = chg[2] || 0;
+      return {
+        name: A.name, lvl, cd: this.cds[idx] || 0, mp: mpc,
+        ready: (this.cds[idx] || 0) <= 0 && this.mp >= mpc,
+        charges, maxCharges, nextCd,
+      };
     };
     return {
       money: this.money, atBase: this._atBase(),

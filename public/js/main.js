@@ -2641,10 +2641,10 @@ function shopHintText() { return TOUCH_UI() ? '' : 'B 升級'; }
  * 觸控版:把招式的冷卻/就緒/鎖定狀態鏡射到虛擬搖桿鈕面(X 小招 / Y 大招 / B 機動)。
  * 狀態的唯一計算來源是 makeHud().self 裡那份 w(角色數據欄同源),這裡只搬字與 class。
  */
-function padMirror(act, cd, ready, locked) {
+function padMirror(act, cd, ready, locked, chgStr) {
   for (const b of document.querySelectorAll(`#touchLayer [data-act="${act}"]`)) {
     const el = b.querySelector('.gb-cd');
-    if (el) el.textContent = cd > 0.05 ? `${cd.toFixed(0)}s` : '';
+    if (el) el.textContent = cd > 0.05 ? `${cd.toFixed(0)}s` : (chgStr || '');
     b.classList.toggle('ready', !!ready);
     b.classList.toggle('locked', !!locked);
   }
@@ -2729,7 +2729,19 @@ function makeHud() {
         // 招式:Q 防守招式 / E 攻擊招式(鎖定 / 冷卻 / 就緒)
         const abEl = (box, nameEl, cdEl2, a) => {
           $(nameEl).textContent = a.lvl > 0 ? `${a.name} Lv.${a.lvl}` : `${a.name} 🔒`;
-          $(cdEl2).textContent = a.lvl === 0 ? '' : a.cd > 0 ? `${a.cd.toFixed(0)}s` : `${a.mp}MP`;
+          if (a.lvl === 0) {
+            $(cdEl2).textContent = '';
+          } else if (a.maxCharges > 1) {
+            if (a.charges === a.maxCharges) {
+              $(cdEl2).textContent = `${a.charges}/${a.maxCharges} (${a.mp}MP)`;
+            } else if (a.charges > 0) {
+              $(cdEl2).textContent = `${a.charges}/${a.maxCharges} (${(a.nextCd || 0).toFixed(0)}s)`;
+            } else {
+              $(cdEl2).textContent = `0/${a.maxCharges} (${(a.nextCd || a.cd || 0).toFixed(0)}s)`;
+            }
+          } else {
+            $(cdEl2).textContent = a.cd > 0 ? `${a.cd.toFixed(0)}s` : `${a.mp}MP`;
+          }
           $(box).classList.toggle('ready', a.ready);
           $(box).classList.toggle('locked', a.lvl === 0);
         };
@@ -2747,12 +2759,14 @@ function makeHud() {
         // 觀戰不鏡射:那幾顆鈕在觀戰版型下是**視角/換人**(見 mobile.js setKind),
         // 把別人的招式 CD 寫上去 = 鈕面與功能不符
         if (TOUCH_UI() && !w.spec) {
-          padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
-          padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
+          const chgStr = (a) => (a.maxCharges > 1 ? `${a.charges}/${a.maxCharges}` : '');
+          padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0, chgStr(w.skill));
+          padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0, chgStr(w.ult));
           if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
           // 招式鈕(十字鍵左):長按 R 的同一個派發縫 ⇒ 鈕面 CD 鏡射**當下防守狀態那一格**招式
           // (非防守 = 攻擊招式 / 防守中 = 防守招式),與上面 X / Y 兩顆同源,搖桿只是鏡子
-          padMirror('special', abCd, abCd <= 0.05, false);
+          const activeAb = w.defending ? w.skill : w.ult;
+          padMirror('special', abCd, abCd <= 0.05, false, chgStr(activeAb));
         }
         // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)
         document.body.classList.toggle('aiming', !!w.aiming);

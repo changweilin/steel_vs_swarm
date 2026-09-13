@@ -466,13 +466,31 @@ function detonate(M, wdef, cx, cy, t, foes) {
   }
 }
 
+function spendAbilCharge(M, t, A) {
+  const max = A.charges || 1;
+  if (max > 1) {
+    if (!M.achg) M.achg = [];
+    M.achg = M.achg.filter((rt) => rt > t);
+    M.achg.push(t + A.cd);
+    M.abilAt = M.achg.length >= max ? Math.min(...M.achg) : t;
+  } else {
+    M.abilAt = t + A.cd;
+  }
+}
+
 /**
  * 長按攻擊的施放判定:CD 到、且施放距離內有目標就放。
  * 選敵序與武器同構(敵方機體 > 最近的敵方 NPC > 敵方砲塔)—— 真人也是「有人打人、沒人拆塔」。
  * 回傳新生成的載具(進 vehicles 名冊 ⇒ 下一格起就是敵方砲塔/小兵/機體都打得到的實體)。
  */
 function castAbil(M, foe, enemyTower, t, foes, ownFort) {
-  if (t < M.abilAt) return [];
+  if (M.achg) {
+    M.achg = M.achg.filter((rt) => rt > t);
+    const max = heroAbility(M.ch, 'ult', 1).charges || 1;
+    if (M.achg.length >= max) return [];
+  } else if (t < M.abilAt) {
+    return [];
+  }
   // `noUlt` = ⑦f 的**反事實對照組**(同一台機體、同一份升級,只是不放大招)。自身型組的價值
   // 有一半本模型無法逐項歸因(射程/移速/視野/匿蹤,見本節檔頭)⇒ 拿「有 vs 沒有」的鏡像勝率量,
   // 就不必替每一種效果各寫一條計價規則,也就不會漏算(漏算的症狀是「這一招看起來沒有用」)。
@@ -564,7 +582,7 @@ function castSelfUlt(M, foe, enemyTower, t, foes, ownFort) {
   if (A.fx === 'heal' && (M.hp + M.sp) >= (M.maxHp + M.maxSp) * LANE.HEAL_FRAC) return [];
   const B = selfUltBoost(M.ch, 1, abilOf(M));
   M.mp -= A.mp;
-  M.abilAt = t + A.cd;
+  spendAbilCharge(M, t, A);
   M.ultN++;
   const n = supportN(M.ch);
   M.uf = null;                                        // 舊時窗先下線(輔助機還沒就位 = 還沒供輸)
@@ -624,7 +642,7 @@ function castUltCarrier(M, foe, enemyTower, t, foes, ownFort) {
   // 那正是這一輪改制要量的東西。MUST NOT 保留舊的 `x: M.x`(改制在模型裡就不存在了)。
   const ox = ownFort ? ownFort.x : M.x;
   M.mp -= A.mp;
-  M.abilAt = t + A.cd;
+  spendAbilCharge(M, t, A);
   M.abilN++;
   const n = ultParts(M.kind, A.fx);
   // 交付率的分母(bal ⑦f 的載具組):送出去幾份 —— 抵達幾份在 ultDetonate 那一頭記。

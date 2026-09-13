@@ -109,6 +109,7 @@ export function createFighter(ch, lvl = 1, morphMode = 'ground') {
       abilities.push({
         slot,
         def: a,
+        charges: a.charges || 1,
         cd: a.cd || 15,
         mp: a.mp || 30,
         range: a.range || 0,
@@ -290,6 +291,17 @@ function calcStrikeDamage(shooterState, targetState, dist, dt, cDh, losBlocked =
   return { mpUse, hits };
 }
 
+function spendAbility(ab, S) {
+  if (ab.charges > 1) {
+    if (!ab.recharges) ab.recharges = [];
+    ab.recharges.push(ab.cd);
+    ab.cdLeft = ab.recharges.length >= ab.charges ? Math.min(...ab.recharges) : 0;
+  } else {
+    ab.cdLeft = ab.cd;
+  }
+  S.mp -= ab.mp;
+}
+
 /** 施放戰鬥主動技能 (傷害、治療、增益、召喚) */
 function castCombatAbilities(S, T, dist, dt) {
   for (const ab of S.abCooldowns) {
@@ -298,29 +310,24 @@ function castCombatAbilities(S, T, dist, dt) {
       const abRange = ab.range || sRangeMax(S.f);
 
       if (aDef.fx === 'decoy_beacon' && dist <= 200) {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         S.decoyHp = (S.decoyHp || 0) + 240;
         T.blindUntil = Math.max(T.blindUntil || 0, S.tNow + (aDef.blindDur || 1.5));
       } else if (aDef.fx === 'nanite' && dist <= 220) {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         const totalDmg = T.ehp0 * (aDef.pctPerSec || 0.08) * (aDef.dur || 4.0);
         applyDamage(T, totalDmg, 10, aDef);
       } else if (aDef.fx === 'reflect') {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         ab.activeDur = aDef.dur || 3.0;
       } else if (aDef.fx === 'phaseshift') {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         ab.activeDur = aDef.dur || 1.8;
         S.invulUntil = Math.max(S.invulUntil || 0, S.tNow + ab.activeDur);
         const psDmg = Array.isArray(aDef.dmg) ? aDef.dmg[0] : (aDef.dmg || 50);
         applyDamage(T, psDmg, 10, aDef);
       } else if (ab.isDmg && dist <= Math.max(abRange, 45)) {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         const count = Array.isArray(aDef.count) ? aDef.count[0] : (aDef.count || 1);
         const rawDmg = aDef.dmg || aDef.baseDmg || 0;
         const dmgPerHit = (Array.isArray(rawDmg) ? rawDmg[0] : rawDmg) * vsMult(aDef, T.f.kind);
@@ -331,14 +338,12 @@ function castCombatAbilities(S, T, dist, dt) {
           if (aDef.stun) T.unbalUntil = Math.max(T.unbalUntil || 0, S.tNow + aDef.stun);
         }
       } else if (aDef.fx === 'heal') {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         const healVal = Array.isArray(aDef.heal) ? aDef.heal[0] : (aDef.heal || 150);
         if (aDef.sp) S.sh = Math.min(S.f.sh0, S.sh + healVal);
         else S.ar = Math.min(S.f.ar0, S.ar + healVal);
       } else if (aDef.fx === 'buff' || aDef.fx === 'shield_bash') {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         ab.activeDur = Array.isArray(aDef.dur) ? aDef.dur[0] : (aDef.dur || 6);
         if (aDef.spRestore) {
           const spVal = Array.isArray(aDef.spRestore) ? aDef.spRestore[0] : aDef.spRestore;
@@ -349,8 +354,7 @@ function castCombatAbilities(S, T, dist, dt) {
           applyDamage(T, bashDmg, aDef.pen || 10, aDef);
         }
       } else if (aDef.fx === 'summon') {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         ab.activeDur = 10;
       }
     }
@@ -381,7 +385,7 @@ function initState(f, kiteBudget = SCENARIO.KITE_M) {
     invulUntil: -1,
     evadeCd: 0,
     tNow: 0,
-    abCooldowns: f.abilities.map((a) => ({ ...a, cdLeft: 0, activeDur: 0 })),
+    abCooldowns: f.abilities.map((a) => ({ ...a, cdLeft: 0, recharges: [], activeDur: 0 })),
     retreatLeft: kiteBudget,
     isRetreating: false,
     outOfCombatTimer: 0,
@@ -392,8 +396,20 @@ function tickAbilities(S, dt) {
   if (S.leapCd > 0) S.leapCd -= dt;
   if (S.evadeCd > 0) S.evadeCd -= dt;
   for (const ab of S.abCooldowns) {
-    if (ab.cdLeft > 0) ab.cdLeft -= dt;
     if (ab.activeDur > 0) ab.activeDur -= dt;
+    if (ab.charges > 1) {
+      if (ab.recharges && ab.recharges.length) {
+        for (let i = ab.recharges.length - 1; i >= 0; i--) {
+          ab.recharges[i] -= dt;
+          if (ab.recharges[i] <= 0) ab.recharges.splice(i, 1);
+        }
+        ab.cdLeft = ab.recharges.length >= ab.charges ? Math.min(...ab.recharges) : 0;
+      } else {
+        ab.cdLeft = 0;
+      }
+    } else {
+      if (ab.cdLeft > 0) ab.cdLeft -= dt;
+    }
   }
 }
 
@@ -429,23 +445,19 @@ function tryMobilityAbility(S, targetDist, wantCloser, dt) {
   for (const ab of S.abCooldowns) {
     if (ab.cdLeft <= 0 && S.mp >= ab.mp) {
       if (wantCloser && (ab.isDash || ab.isLeap)) {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         return ab.imp || 30;
       }
       if (!wantCloser && ab.isDash) {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         return -(ab.imp || 30);
       }
       if (ab.isHaste && ab.activeDur <= 0) {
-        ab.cdLeft = ab.cd;
+        spendAbility(ab, S);
         ab.activeDur = ab.dur || 6;
-        S.mp -= ab.mp;
       }
       if (wantCloser && ab.isPull && targetDist <= (ab.range || 150)) {
-        ab.cdLeft = ab.cd;
-        S.mp -= ab.mp;
+        spendAbility(ab, S);
         return (ab.imp || 25);
       }
     }
