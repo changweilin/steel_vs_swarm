@@ -3307,7 +3307,7 @@ export class BattleSim {
       }
     } else { x = h.x; z = h.z; }
     h.mp -= mpc;
-    h.defending = false;
+    if (slot === 'ult') h.defending = false;
     const snowMul = this.curWeatherDyn?.snowCdMul ?? 1;
     const cdMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_CD_F : 1) * snowMul;
     h.acd[slot] = this.t + A.cd * cdMul;
@@ -3857,6 +3857,35 @@ export class BattleSim {
     }
     // dash:位移在客戶端(位置本就客戶端回報),伺服器只管 CD/MP 與廣播特效
     if (A.fx === 'buff' && A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
+
+    // 防守招式核心機制：磁力回補、受擊回充、護盾強化、面積擴大、護盾衝撞、大跳躍次數
+    if (A.spRestore && once) {
+      for (const b of this._bodies(h)) {
+        if (!b.dead) b.sp = Math.min(b.maxSp, (b.sp || 0) + A.spRestore * frac);
+      }
+    }
+    if (A.spRegenHit) {
+      const dur = (A.dur || 8) * frac;
+      for (const b of this._bodies(h)) {
+        b.spRegenHitUntil = Math.max(b.spRegenHitUntil || 0, this.t + dur);
+      }
+    }
+    if (A.shieldDefBoost) {
+      const dur = (A.dur || 8) * frac;
+      h.shieldDefBoostUntil = Math.max(h.shieldDefBoostUntil || 0, this.t + dur);
+    }
+    if (A.shieldExpand) {
+      const dur = (A.dur || 8) * frac;
+      h.shieldExpandUntil = Math.max(h.shieldExpandUntil || 0, this.t + dur);
+    }
+    if (A.shieldBash) {
+      const dur = (A.dur || 8) * frac;
+      h.shieldBashUntil = Math.max(h.shieldBashUntil || 0, this.t + dur);
+    }
+    if (A.defJump) {
+      const dur = (A.dur || 8) * frac;
+      h.defJumpUntil = Math.max(h.defJumpUntil || 0, this.t + dur);
+    }
   }
 
   // ---------- 新戰鬥技能 Tick 機制 ----------
@@ -5094,6 +5123,11 @@ export class BattleSim {
     const hr = hitR(t);
     const sx = t.x + fx * hr, sz = t.z + fz * hr;
 
+    const boosted = (t.shieldDefBoostUntil || 0) > this.t;
+    const blastF = boosted ? SHIELD_DEFENSE.BOOST_BLAST_F : SHIELD_DEFENSE.BLAST_F;
+    const directF = boosted ? SHIELD_DEFENSE.BOOST_DIRECT_F : SHIELD_DEFENSE.DIRECT_F;
+    const arc = (t.shieldExpandUntil || 0) > this.t ? SHIELD_DEFENSE.EXPAND_ARC : SHIELD_DEFENSE.FRONT_ARC;
+
     const isBlast = aoeClass(wd) === 'blast' || (hitCtx && hitCtx.blast);
     if (isBlast) {
       let bx = null, bz = null, br = 0;
@@ -5104,7 +5138,7 @@ export class BattleSim {
       }
       if (bx != null && bz != null) {
         if (Math.hypot(bx - sx, bz - sz) <= br + hr) {
-          return SHIELD_DEFENSE.BLAST_F;   // 爆炸涵蓋護盾: 減為 1/2
+          return blastF;   // 爆炸涵蓋護盾減免
         }
       }
       return 1;
@@ -5119,14 +5153,14 @@ export class BattleSim {
       const adist = Math.hypot(ax, az);
       if (adist > 0.01) {
         const dot = (fx * ax + fz * az) / adist;
-        if (dot >= Math.cos(SHIELD_DEFENSE.FRONT_ARC / 2)) {
-          return SHIELD_DEFENSE.DIRECT_F;   // 擊中正面護盾: 減為 1/4
+        if (dot >= Math.cos(arc / 2)) {
+          return directF;   // 擊中正面護盾減免
         }
       }
     } else if (hitCtx && hitCtx.dir) {
       const dot = fx * hitCtx.dir[0] + fz * hitCtx.dir[1];
-      if (dot <= -Math.cos(SHIELD_DEFENSE.FRONT_ARC / 2)) {
-        return SHIELD_DEFENSE.DIRECT_F;   // 擊中正面護盾: 減為 1/4
+      if (dot <= -Math.cos(arc / 2)) {
+        return directF;   // 擊中正面護盾減免
       }
     }
     return 1;
@@ -5733,10 +5767,10 @@ export class BattleSim {
         }
         const bWet = b === hh ? (hh?.wet || 0) : 0;
         const wetMul = fluidFactor(bWet);
-        // 護盾:脫戰(OOC_S 秒沒受擊)自然回復;裝甲只能回主堡 / 治療招式。
+        // 護盾:脫戰(OOC_S 秒沒受擊)或受擊充能(spRegenHitUntil)自然回復;裝甲只能回主堡 / 治療招式。
         // 回復速度 × 充能等級(chargeF) × 護盾恢復倍率(rg) × 流體沉浸倍率(wetMul)
         const rg = b.hero ? this._buffMul(b, 'regen') : 1;
-        if (b.sp < b.maxSp && this.t - b.lastHitAt > VITALS.OOC_S) {
+        if (b.sp < b.maxSp && (this.t - b.lastHitAt > VITALS.OOC_S || (b.spRegenHitUntil || 0) > this.t)) {
           b.sp = Math.min(b.maxSp, b.sp + b.maxSp * VITALS.SP_REGEN_PS * chargeF(b.upg?.ch) * rg * wetMul * dt);
         }
         if (b.hp < b.maxHp) {
@@ -5759,6 +5793,32 @@ export class BattleSim {
         }
       }
       if (hh.dead) this._promote(sq);   // 全滅後第一架回歸 → 接管主視野
+    }
+    // 護盾衝撞 (shieldBash): 防守姿態下衝撞敵機給予擊退與碰撞傷害
+    for (const h of this.heroes.values()) {
+      if (!h.dead && h.defending && (h.sp || 0) > 0 && (h.shieldBashUntil || 0) > this.t) {
+        const ry = h.ry || 0;
+        const fx = -Math.sin(ry), fz = Math.cos(ry);
+        const bashR = 4.0;
+        for (const e of this.ents.values()) {
+          if (e.side === h.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+          const dx = e.x - h.x, dz = e.z - h.z;
+          const d = Math.hypot(dx, dz);
+          if (d <= bashR + (e.r || 1.0)) {
+            const dot = (fx * dx + fz * dz) / (d || 1);
+            if (dot >= 0.5) {
+              const pushD = 12 * dt;
+              e.x += (dx / (d || 1)) * pushD;
+              e.z += (dz / (d || 1)) * pushD;
+              this._damage(e, 35 * dt, h, 10, 0, null);
+              if ((e._bashAt || 0) + 1.0 < this.t) {
+                e._bashAt = this.t;
+                this.events.push({ e: 'shield_bash', pid: h.pid, targetId: e.id, x: e.x, z: e.z });
+              }
+            }
+          }
+        }
+      }
     }
     // 出血 DoT(招式追加效果):走 _damage 常規結算(護盾/護甲照規則),擊殺記給施放者;
     // 施放者查 heroes 活參照 —— 施放者陣亡仍持續失血,擊殺信用照記(狙擊手的創口不因重生消失)
@@ -6765,7 +6825,7 @@ export class BattleSim {
       o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
       o.ch = e.ch;                                               // 角色(客戶端渲染專屬機體)
       o.sp = Math.round(e.sp); o.msp = e.maxSp;                  // 護盾(雙層 HP 第一層)
-      if (e.defending && (e.sp || 0) > 0) o.df = 1;              // 防守姿態且有磁力: 正面生成護盾
+      if (e.defending && (e.sp || 0) > 0) o.df = (e.shieldExpandUntil || 0) > this.t ? 2 : 1; // 防守姿態且有磁力: 正面生成護盾(2 為護盾擴大)
       o.si = e.si || 0;                                          // 小隊機位(HUD 三機狀態列)
       // NPC BOSS:目前段位(0 起算)。**存在這一格 = 這是 BOSS** —— 客戶端據此把血條外圍
       // 光暈換成該段的顏色(黑>青>銀>金)。段位是小隊層級的,同隊每架都帶同一個值。

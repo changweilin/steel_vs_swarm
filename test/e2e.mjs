@@ -1293,16 +1293,16 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     const ct = skillCastTime('s01', 1);
     sb.heroCast('ab_b', 'skill');
     assert(!!hb.cast && hb.cast.dur === ct, `s01 小招開始詠唱(${ct.toFixed(2)}s)`);
-    assert(Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9, '小招詠唱中效果未生效');
+    assert(Math.abs(sb._buffMul(hb, 'dmgTaken') - 1) < 1e-9, '小招詠唱中效果未生效');
     // 詠唱至 50% 受擊
     sb.tick(ct * 0.5);
     sb._damage(hb, 10, null);
     assert(!hb.cast, '受擊後立即結束詠唱強制施法');
     const fExp = 0.25; // (0.5)^2
-    const rawMul = heroAbility('s01', 'skill', 1).mul.dmg;
+    const rawMul = heroAbility('s01', 'skill', 1).mul.dmgTaken;
     const expMul = 1 + (rawMul - 1) * fExp;
-    assert(Math.abs(sb._buffMul(hb, 'dmg') - expMul) < 1e-6,
-      `受擊強制施展效果比例 (t/T)² = ${(fExp * 100).toFixed(0)}%(dmg ×${expMul.toFixed(3)})`);
+    assert(Math.abs(sb._buffMul(hb, 'dmgTaken') - expMul) < 1e-6,
+      `受擊強制施展效果比例 (t/T)² = ${(fExp * 100).toFixed(0)}%(dmgTaken ×${expMul.toFixed(3)})`);
   }
 
   log('— data:八軌升級階梯 = $75/$150/$300 + 戰鬥分數 0/20/100(2026-08-11)—');
