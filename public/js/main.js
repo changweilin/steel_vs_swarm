@@ -1084,6 +1084,7 @@ $('roomCfgTabs')?.addEventListener('click', (e) => {
 const FX_LABEL = {
   buff: '增益', heal: '維修', strike: '打擊', summon: '召喚', emp: '癱瘓',
   vision: '視野', stealth: '匿蹤', dash: '突進', intercept: '攔截',
+  shield_bash: '衝撞', reflect: '偏轉', phaseshift: '虛空', cube: '力場', fog: '迷霧',
 };
 
 /** 三階數值:全等 → 單值;否則 "a → b → c" */
@@ -1159,6 +1160,12 @@ function charAbilityRow(id, slot, key) {
   if (A.cleanse) bits.push('解除並免疫異常');
   if (B.alphaX > 1) bits.push(`破隱爆發 ${tri((l) => bst(l).alphaX, 2)}×`
     + `<span class="cd-boost">(${SELF_ULT.ALPHA_S}s)</span>`);
+  if (A.spRestore) bits.push(`充盈磁力 ${tri((l) => a(l).spRestore)}`);
+  if (A.spRegenHit) bits.push('受擊回充不中斷');
+  if (A.shieldDefBoost) bits.push(`護盾減免提升 ${tri((l) => a(l).shieldDefBoost, 1)}×`);
+  if (A.shieldExpand) bits.push('護盾擴大至 240°');
+  if (A.shieldBash) bits.push('護盾衝撞');
+  if (A.defJump) bits.push(`防守大跳躍 +${tri((l) => a(l).defJump)}次`);
   if (A.brk) bits.push('挨一發即結束');
   if (A.mul) bits.push(...Object.entries(A.mul).map(([k, _]) =>
     `${MUL_LABEL[k] || k} ${tri((l) => a(l).mul[k] + (k === 'dmg' ? bst(l).dmgMul : 0), 2)}×`
@@ -2714,12 +2721,12 @@ function makeHud() {
           ? (w.morph.flight ? '(✈ 飛行型態)'
             : w.morph.charge > 0 ? `(⚡ 蓄力 ${Math.round(w.morph.charge * 100)}%)` : '(🦿 地面型態)')
           : '';
-        // 長按 = 招式手勢(2026-08-06:一般模式 → 小招 / 狙擊模式 → 大招)。機種絕招整組退場 ⇒
-        // 重武器列不再掛任何絕招標籤,十字鍵左那顆的 CD 直接鏡射**當下模式那一格**招式的 CD
+        // 長按 = 招式手勢(攻防雙招式改制:防守模式 → 防守招式 / 非防守模式 → 攻擊招式)。
+        // 十字鍵左那顆的 CD 直接鏡射**當下防守狀態那一格**招式的 CD
         // (單一來源 = 上面的 w.skill / w.ult;MUST NOT 在這裡另算一份)。
-        const abCd = (w.aiming ? w.ult.cd : w.skill.cd) || 0;
+        const abCd = (w.defending ? w.skill.cd : w.ult.cd) || 0;
         $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${morphTag}`;
-        // 招式:Q 小招 / E 大招(鎖定 / 冷卻 / 就緒)
+        // 招式:Q 防守招式 / E 攻擊招式(鎖定 / 冷卻 / 就緒)
         const abEl = (box, nameEl, cdEl2, a) => {
           $(nameEl).textContent = a.lvl > 0 ? `${a.name} Lv.${a.lvl}` : `${a.name} 🔒`;
           $(cdEl2).textContent = a.lvl === 0 ? '' : a.cd > 0 ? `${a.cd.toFixed(0)}s` : `${a.mp}MP`;
@@ -2743,8 +2750,8 @@ function makeHud() {
           padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
           padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
           if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
-          // 招式鈕(十字鍵左):長按 R 的同一個派發縫 ⇒ 鈕面 CD 鏡射**當下模式那一格**招式
-          // (一般 = 小招 / 狙擊 = 大招),與上面 X / Y 兩顆同源,搖桿只是鏡子
+          // 招式鈕(十字鍵左):長按 R 的同一個派發縫 ⇒ 鈕面 CD 鏡射**當下防守狀態那一格**招式
+          // (非防守 = 攻擊招式 / 防守中 = 防守招式),與上面 X / Y 兩顆同源,搖桿只是鏡子
           padMirror('special', abCd, abCd <= 0.05, false);
         }
         // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)

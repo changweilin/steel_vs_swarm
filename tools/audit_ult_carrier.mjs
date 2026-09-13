@@ -207,8 +207,8 @@ sec('Ⅱ 單一縫(原文)');
 
   // 客戶端:長按 = 招式手勢,分流只有 abilHoldSlot 一份(MUST NOT 在輸入端另寫 `aiming ? …`)
   const fha = grabMethod(G, '_fireHoldAbility');
-  ok(/_castAbility\(abilHoldSlot\(this\.aiming\)\)/.test(fha),
-    'game._fireHoldAbility:長按走 _castAbility(abilHoldSlot(aiming))(與 Q/E 同一個派發縫)');
+  ok(/_castAbility\(abilHoldSlot\(this\.(aiming|defending)\)\)/.test(fha),
+    'game._fireHoldAbility:長按走 _castAbility(abilHoldSlot(aiming|defending))(與 Q/E 同一個派發縫)');
   ok(!/isDrone|isMorph|ultDelivered/.test(strip(fha)),
     '_fireHoldAbility 不再有機種分派表(機種絕招退場 ⇒ A22 的分派縫一併退場)');
   ok(count(G, /abilHoldSlot\(/g) === 1,
@@ -219,8 +219,8 @@ sec('Ⅱ 單一縫(原文)');
   // 招式鈕面:長按對 32 台一視同仁 ⇒ CD 鏡射**當下模式那一格**招式(單一來源 = w.skill / w.ult),
   // 載具化與否不影響鈕面(它只改大招自己的結算方式)⇒ HUD 不再需要 ultCarrier 旗標
   const M = readSrc('public', 'js', 'main.js');
-  ok(/const abCd = \(w\.aiming \? w\.ult\.cd : w\.skill\.cd\) \|\| 0;/.test(M),
-    'main.js 招式鈕面:依 aiming 鏡射小招/大招 CD(單一來源)');
+  ok(/const abCd = \((w\.(?:aiming|defending) \? w\.(?:ult|skill)\.cd : w\.(?:skill|ult)\.cd)\) \|\| 0;/.test(M),
+    'main.js 招式鈕面:依 aiming/defending 鏡射小招/大招 CD(單一來源)');
   ok(!/w\.ultCarrier/.test(strip(M)) && !/ultCarrier:/.test(strip(hud)),
     'HUD 不再帶 ultCarrier 旗標(長按語意與載具化無關)');
 
@@ -468,17 +468,17 @@ sec('Ⅳ 大招載具化 + 小招本體詠唱施展(2026-08-22 使用者定案)'
   {
     // 小招詠唱直測:未受擊自然詠唱完成 → 100% 效果施放
     const sim = new BattleSim(mkCfg());
-    const h = sim.addHero('SWARM', 'o_cast', 's01');   // s01 小招:dmg buff
+    const h = sim.addHero('SWARM', 'o_cast', 's01');   // s01 小招:dmgTaken buff
     h.x = 300; h.z = 120; h.mp = 999; h.abil.skill = 1;
     const ct = d.skillCastTime('s01', 1);
     sim.heroCast('o_cast', 'skill');
     ok(!!h.cast && h.cast.dur === ct, `s01 小招開始詠唱(持續 ${ct.toFixed(2)}s)`);
-    ok(Math.abs(sim._buffMul(h, 'dmg') - 1) < 1e-9, '詠唱期間效果尚未生效');
+    ok(Math.abs(sim._buffMul(h, 'dmgTaken') - 1) < 1e-9, '詠唱期間效果尚未生效');
     // tick 到詠唱完成
     sim.tick(ct + 0.05);
     ok(!h.cast, '詠唱時間到達,cast 狀態清除');
-    const fullMul = d.heroAbility('s01', 'skill', 1).mul.dmg;
-    ok(Math.abs(sim._buffMul(h, 'dmg') - fullMul) < 1e-6, `自然詠唱完成 ⇒ 100% 滿額效果(dmg ×${fullMul})`);
+    const fullMul = d.heroAbility('s01', 'skill', 1).mul.dmgTaken;
+    ok(Math.abs(sim._buffMul(h, 'dmgTaken') - fullMul) < 1e-6, `自然詠唱完成 ⇒ 100% 滿額效果(dmgTaken ×${fullMul})`);
   }
   {
     // 小招受擊中斷直測:詠唱中途受擊強制立即施展,效果為 (t/T)^2
@@ -496,10 +496,10 @@ sec('Ⅳ 大招載具化 + 小招本體詠唱施展(2026-08-22 使用者定案)'
     // 效果應為 (0.5)^2 = 0.25
     const r = 0.5;
     const wantFrac = r * r; // 0.25
-    const rawMul = d.heroAbility('s01', 'skill', 1).mul.dmg;
+    const rawMul = d.heroAbility('s01', 'skill', 1).mul.dmgTaken;
     const expectedMul = 1 + (rawMul - 1) * wantFrac;
-    ok(Math.abs(sim._buffMul(h, 'dmg') - expectedMul) < 1e-6,
-      `詠唱 50% 時受擊強制施展 ⇒ 效果比例 (t/T)² = ${(wantFrac * 100).toFixed(1)}%(dmg ×${expectedMul.toFixed(3)})`);
+    ok(Math.abs(sim._buffMul(h, 'dmgTaken') - expectedMul) < 1e-6,
+      `詠唱 50% 時受擊強制施展 ⇒ 效果比例 (t/T)² = ${(wantFrac * 100).toFixed(1)}%(dmgTaken ×${expectedMul.toFixed(3)})`);
   }
 }
 

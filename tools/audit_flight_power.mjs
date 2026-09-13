@@ -299,7 +299,7 @@ console.log('■ Ⅱ 巨砲 + 機種絕招整組退場:射擊路徑無旁路、�
   t('客戶端不再送 kami / decoy / hyper 三條機種絕招訊息(一律走 t:\'cast\' 單一縫)',
     !/t: 'kami'|t: 'decoy'|t: 'hyper'/.test(code));
   t('長按派發縫仍只有一處(_fireHoldAbility),且不再有機種分派表',
-    /_castAbility\(abilHoldSlot\(this\.aiming\)\)/.test(grab('_fireHoldAbility', code))
+    /_castAbility\(abilHoldSlot\(this\.(aiming|defending)\)\)/.test(grab('_fireHoldAbility', code))
     && !/isDrone|isMorph/.test(grab('_fireHoldAbility', code)));
   t('模式分流只有 abilHoldSlot 一個消費端(MUST NOT 在觸控鈕/鍵盤各判一次 `aiming ? …`)',
     count(code, 'abilHoldSlot(') === 1, `實得 ${count(code, 'abilHoldSlot(')} 處`);

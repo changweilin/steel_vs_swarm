@@ -368,6 +368,7 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
   // 貼身套件 = 突進 / 匿蹤 / 走位增益 / 控場打擊 / 拉敵人(add 的家族分類見 data.js CHARACTERS 檔頭)
   const CLOSE_ADD = { buff: ['haste', 'leap', 'dodge'], strike: ['pull', 'stun', 'slow', 'confuse'] };
   const isClose = (a) => !!a && (a.fx === 'dash' || a.fx === 'stealth' || a.fx === 'harpoon' || a.fx === 'phaseshift'
+    || a.fx === 'shield_bash' || !!a.shieldBash || !!a.defJump
     || (CLOSE_ADD[a.fx] || []).includes(a.add?.fx));
   const DENSITY_F = 2;   // 「優先配置」的量化下限:扇形使用者的人均持有 ≥ 非扇形 × 此值
   const chs = Object.keys(CHARACTERS);

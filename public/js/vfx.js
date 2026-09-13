@@ -1265,7 +1265,7 @@ export function spawnHarpoonVFX(scene, effects, { fx, fy = 1.5, fz, tx, ty = 1.5
   });
 }
 
-/** 極化偏轉：鏡面防衛矩陣 (120° 偏轉護盾) */
+/** 封界・偏折鏡陣 (120° 偏轉護盾) */
 export function spawnReflectBarrierVFX(scene, effects, { getPos, ry = 0, dur = 3.0 }) {
   const g = new THREE.Group();
   const arcR = 3.2;

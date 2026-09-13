@@ -114,11 +114,11 @@ export function createFighter(ch, lvl = 1, morphMode = 'ground') {
         range: a.range || 0,
         imp: a.imp || 0,
         dur: a.dur || 0,
-        isDash: a.fx === 'dash' || a.fx === 'phaseshift',
-        isLeap: a.add?.fx === 'leap',
+        isDash: a.fx === 'dash' || a.fx === 'phaseshift' || a.fx === 'shield_bash' || !!a.shieldBash,
+        isLeap: a.add?.fx === 'leap' || !!a.defJump,
         isHaste: a.add?.fx === 'haste',
         isPull: a.add?.fx === 'pull' || a.fx === 'harpoon',
-        isDmg: (a.dmg || 0) > 0 || (a.baseDmg || 0) > 0 || a.fx === 'nanite' || a.fx === 'singularity',
+        isDmg: (a.dmg || 0) > 0 || (a.baseDmg || 0) > 0 || a.fx === 'nanite' || a.fx === 'singularity' || a.fx === 'shield_bash' || !!a.shieldBash,
       });
     }
   }
@@ -182,6 +182,12 @@ function applyDamage(targetState, dmg, pen, def) {
     targetState.decoyHp -= absorb;
     dmg -= absorb;
     if (dmg <= 0) return;
+  }
+  for (const ab of targetState.abCooldowns || []) {
+    if (ab.activeDur > 0 && ab.def.mul?.dmgTaken) {
+      const mul = Array.isArray(ab.def.mul.dmgTaken) ? ab.def.mul.dmgTaken[0] : ab.def.mul.dmgTaken;
+      dmg *= mul;
+    }
   }
   const { toSp, toHp } = shieldSplit(def, dmg, Math.max(0, targetState.sh));
   targetState.sh -= toSp;
@@ -330,10 +336,18 @@ function castCombatAbilities(S, T, dist, dt) {
         const healVal = Array.isArray(aDef.heal) ? aDef.heal[0] : (aDef.heal || 150);
         if (aDef.sp) S.sh = Math.min(S.f.sh0, S.sh + healVal);
         else S.ar = Math.min(S.f.ar0, S.ar + healVal);
-      } else if (aDef.fx === 'buff') {
+      } else if (aDef.fx === 'buff' || aDef.fx === 'shield_bash') {
         ab.cdLeft = ab.cd;
         S.mp -= ab.mp;
         ab.activeDur = Array.isArray(aDef.dur) ? aDef.dur[0] : (aDef.dur || 6);
+        if (aDef.spRestore) {
+          const spVal = Array.isArray(aDef.spRestore) ? aDef.spRestore[0] : aDef.spRestore;
+          S.sh = Math.min(S.f.sh0, S.sh + spVal);
+        }
+        if (aDef.fx === 'shield_bash' && dist <= 50) {
+          const bashDmg = Array.isArray(aDef.dmg) ? aDef.dmg[0] : (aDef.dmg || 80);
+          applyDamage(T, bashDmg, aDef.pen || 10, aDef);
+        }
       } else if (aDef.fx === 'summon') {
         ab.cdLeft = ab.cd;
         S.mp -= ab.mp;

@@ -7753,7 +7753,14 @@ export class BattleClient {
       x = point.x; z = point.z;
     }
     this.net.send({ t: 'cast', slot, x: Math.round(x * 10) / 10, z: Math.round(-z * 10) / 10 });
-    if (this.defending) this._toggleDefense(false);
+    if (slot === 'ult' && this.defending) this._toggleDefense(false);
+    if (A.shieldExpand) {
+      this.shieldExpandUntil = now + (A.dur || 8);
+      this._updateShieldVisibility();
+    }
+    if (A.defJump) {
+      this.defJumpUntil = now + (A.dur || 8);
+    }
     const snowMul = this.env?.getWeatherDynamics?.()?.snowCdMul ?? 1;
     this.cds[slot === 'skill' ? 0 : 1] = (A.cd || 10) * snowMul;
     const castDur = slot === 'ult' ? (A.castTime || ULT_CAST_S) : (A.castTime || 0);
@@ -7836,12 +7843,16 @@ export class BattleClient {
   /** 更新自機護盾網格可見度 */
   _updateShieldVisibility() {
     const hasShield = this.defending && (this.sp || 0) > 0 && !this.dead;
+    const isExpanded = (this.shieldExpandUntil || 0) > (performance.now() / 1000);
+    const s = isExpanded ? 1.7 : 1.0;
     if (this._fpsShieldMesh) {
       this._fpsShieldMesh.visible = (this.viewMode === 'fpv' && hasShield);
+      this._fpsShieldMesh.scale.set(s, 1.0, 1.0);
     }
     for (const ent of this.ents.values()) {
       if (ent.isSelf && ent.shieldMesh) {
         ent.shieldMesh.visible = (this.viewMode === 'tps' && hasShield);
+        ent.shieldMesh.scale.set(s, 1.0, s);
       }
     }
   }
@@ -7856,20 +7867,17 @@ export class BattleClient {
   }
 
   /**
-   * 招式手勢的**唯一派發縫**(2026-08-06 使用者定案「大招可透過狙擊模式長按右鍵、小招可透過
-   * 一般模式長按右鍵、或鍵盤按鍵施展」):長按右鍵 / 觸控長按 R(_tickHoldAbility)與觸控招式鈕
-   * (_cmd('special'))都走這裡,由**當下模式**分流 —— 一般 = 小招、狙擊 = 大招。
+   * 招式手勢的**唯一派發縫**(攻防雙招式改制:防守型態下使用為防守招式，非防守型態使用則為攻擊招式):
+   * 長按右鍵 / 觸控長按 R(_tickHoldAbility)與觸控招式鈕(_cmd('special'))都走這裡,
+   * 由**當下防守狀態**分流 —— 非防守 = 攻擊招式(skill)、防守中 = 防守招式(ult)。
    *
-   * 分流本身只有 `data.js abilHoldSlot` 一份,MUST NOT 在任一輸入端另寫 `aiming ? …`。
-   * 機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)自本日起**整組退場**:三種載具只剩「大招遞送」
-   * 這一個身分(ULT_CARRIER),而失去它的 9 台純自身型大招改由 `SELF_ULT` 折算補償。
-   * ⇒ 這裡不再有任何 isDrone/isMorph 分派表(A22 的機種分派縫隨機種絕招一併退場)。
+   * 分流本身只有 `data.js abilHoldSlot` 一份,MUST NOT 在任一輸入端另寫 `defending ? …`。
    */
   _fireHoldAbility() {
     if (!this.side || this.dead || this.shopOpen) return;
     if (this._isCasting(performance.now() / 1000)) return;
     this._rmbAbilityFired = true;   // 同一次按住只觸發一次;放開時也據此不再切換模式
-    this._castAbility(abilHoldSlot(this.aiming));
+    this._castAbility(abilHoldSlot(this.defending));
   }
 
   /** HUD 資料:輕/重武器 / 招式 / 資源(彈藥為本地 HUD,與伺服器小幅漂移是 by design) */
@@ -7893,9 +7901,7 @@ export class BattleClient {
     };
     return {
       money: this.money, atBase: this._atBase(),
-      // `aiming` 同時是招式鈕的鏡射依據(2026-08-06:長按 = 一般 → 小招 / 狙擊 → 大招),
-      // main.js 依它挑要顯示哪一格招式的 CD。**這一欄對 32 台一視同仁** —— 大招有沒有載具化
-      // 只改大招自己的結算方式,不改長按的語意 ⇒ 這裡不再需要 ultCarrier 旗標。
+      defending: this.defending,
       code: c.code, machine: c.machine, aiming: this.aiming,
       light: slotHud('light'), heavy: slotHud('heavy'),
       skill: abHud('skill', 0), ult: abHud('ult', 1),
@@ -8584,8 +8590,10 @@ export class BattleClient {
         // 騰空低重力 = 太空漫步;蓄力不足 = 普通小跳。與 morph 共用 this.charge(下蹲/減速一致)。
         this.charge = Math.min(1, this.charge + dt / CJUMP.CHARGE_S);
       } else if (!this.isMorph && this.charge > 0) {
-        if (onGround && this.charge >= CJUMP.MIN && now >= (this._cjumpCd || 0)) {
-          this._chargeJump(); this._cjumpCd = now + CJUMP.CD;   // 蓄力跳躍:15s CD
+        const canDefJump = this.defending && (this.defJumpUntil || 0) > now;
+        if (onGround && this.charge >= CJUMP.MIN && (canDefJump || now >= (this._cjumpCd || 0))) {
+          this._chargeJump();
+          if (!canDefJump) this._cjumpCd = now + CJUMP.CD;   // 防守大跳期間免 CD 支援追加次數
         } else if (onGround && this.charge >= CJUMP.MIN) {
           this.vy = u.jump * this._modF('jump');
           this.hud.feed?.(`🦿 蓄力跳冷卻中(${Math.ceil((this._cjumpCd || 0) - now)}s)`);
@@ -9306,6 +9314,11 @@ export class BattleClient {
         }
         if (ent.shieldMesh) {
           ent.shieldMesh.visible = (this.viewMode === 'tps' && this.defending && (this.sp || 0) > 0 && !ent.dead);
+          if (ent.shieldMesh.visible) {
+            const isExpanded = (this.shieldExpandUntil || 0) > now;
+            const s = isExpanded ? 1.7 : 1.0;
+            ent.shieldMesh.scale.set(s, 1.0, s);
+          }
         }
         this._updateStatusFx(ent, dt, now);
         continue;
@@ -9321,6 +9334,10 @@ export class BattleClient {
       }
       if (ent.hero && ent.shieldMesh) {
         ent.shieldMesh.visible = (!ent.dead && !!ent.df && (ent.sp == null || ent.sp > 0));
+        if (ent.shieldMesh.visible) {
+          const s = ent.df === 2 ? 1.7 : 1.0;
+          ent.shieldMesh.scale.set(s, 1.0, s);
+        }
       }
       if (ent.hero && ent.mesh.userData.decoyPod) this._updateDecoyPod(ent, dt);
       const cur = ent.mesh.position;
