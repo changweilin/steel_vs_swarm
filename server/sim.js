@@ -39,7 +39,7 @@ const FIRE_KINDS = new Set(['fire', 'forestfire', 'grassfire', 'factoryfire']);
 // 逐機體各記一份的話,三架均分的小隊在電腦玩家眼裡永遠不是輸出核心(見 _dmgOut)。
 const SQUAD_SHARED = [
   'money', 'upg', 'ammo', 'reloadUntil', 'fireAt', 'buffs', 'mp', 'maxMp', 'mpRegen',
-  'abil', 'acd', 'kn', 'mods', 'empUntil', 'stealthUntil', 'aiming', 'lastBurst', 'markUntil',
+  'abil', 'acd', 'achg', 'kn', 'mods', 'empUntil', 'stealthUntil', 'aiming', 'lastBurst', 'markUntil',
   'dmgOut', 'unbalUntil',
   // 純自身型大招補償(2026-08-06;見 data.js SELF_ULT):免裝填時窗與破隱爆發窗都是**小隊共用**——
   // 彈匣本來就只有一份(ammo/reloadUntil 在上面),免裝填逐機體各記一份就會出現「主視野機免裝填、
@@ -1625,7 +1625,12 @@ export class BattleSim {
         mp, maxMp: mp, mpRegen: u.mpRegen,
         // 招式開場即 Lv1 可用(2026-07-20;不再需擊殺數解鎖)
         abil: { light: 1, heavy: 1, skill: 1, ult: 1 },
-        acd: { skill: 0, ult: 0 }, kn: 0,   // kn = 戰鬥分數(八軌升級門檻;只增不減,見 data.BATTLE_SCORE)
+        acd: { skill: 0, ult: 0 },
+        achg: {
+          skill: { max: heroAbility(ch, 'skill', 1)?.charges || 1, rechargeAt: [] },
+          ult: { max: heroAbility(ch, 'ult', 1)?.charges || 1, rechargeAt: [] },
+        },
+        kn: 0,   // kn = 戰鬥分數(八軌升級門檻;只增不減,見 data.BATTLE_SCORE)
         mods: [],                    // 招式增益 [{k, m, until}]
         empUntil: 0, stealthUntil: 0, blindUntil: 0, aiming: false, lastBurst: 0,
         markUntil: 0, unbalUntil: 0, // 定位標記 / 失衡異常狀態
@@ -3285,13 +3290,33 @@ export class BattleSim {
     return best;
   }
 
+  /** 計算當前可用充能數（支援多次數獨立冷卻） */
+  _readyCharges(h, slot) {
+    const lvl = h.abil?.[slot] || 1;
+    const max = heroAbility(h.ch, slot, lvl)?.charges || 1;
+    if (max <= 1) {
+      return (h.acd?.[slot] || 0) <= this.t ? 1 : 0;
+    }
+    const chg = h.achg?.[slot];
+    if (!chg) return max;
+    chg.max = max;
+    chg.rechargeAt = (chg.rechargeAt || []).filter((tm) => tm > this.t);
+    const ready = Math.max(0, max - chg.rechargeAt.length);
+    if (ready > 0) {
+      h.acd[slot] = 0;
+    } else if (chg.rechargeAt.length) {
+      h.acd[slot] = Math.min(...chg.rechargeAt);
+    }
+    return ready;
+  }
+
   /** slot: 'skill'|'ult';x,z = 指向型招式的目標點(超程時夾回射程邊界) */
   heroCast(pid, slot, x, z) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over || (slot !== 'skill' && slot !== 'ult')) return;
     const lvl = h.abil[slot] || 0;
     if (!lvl) return;                                  // 尚未解鎖
-    if ((h.acd[slot] || 0) > this.t) return;           // 冷卻中
+    if (this._readyCharges(h, slot) <= 0) return;       // 冷卻中
     if (this._jammed(h)) return;                       // 電磁癱瘓:招式一併離線
     if (h.cast || (h.castLockUntil || 0) > this.t) return;            // 招式前搖期間鎖定其他招式
     const A = heroAbility(h.ch, slot, lvl);
@@ -3310,7 +3335,25 @@ export class BattleSim {
     if (slot === 'ult') h.defending = false;
     const snowMul = this.curWeatherDyn?.snowCdMul ?? 1;
     const cdMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_CD_F : 1) * snowMul;
-    h.acd[slot] = this.t + A.cd * cdMul;
+    const chargeCd = A.cd * cdMul;
+    const readyTime = this.t + chargeCd;
+
+    const maxChg = A.charges || 1;
+    if (!h.achg) h.achg = { skill: { max: 1, rechargeAt: [] }, ult: { max: 1, rechargeAt: [] } };
+    if (!h.achg[slot]) h.achg[slot] = { max: maxChg, rechargeAt: [] };
+    h.achg[slot].max = maxChg;
+
+    if (maxChg > 1) {
+      h.achg[slot].rechargeAt.push(readyTime);
+      const remaining = Math.max(0, maxChg - h.achg[slot].rechargeAt.length);
+      if (remaining > 0) {
+        h.acd[slot] = 0; // 仍有充能可用
+      } else {
+        h.acd[slot] = Math.min(...h.achg[slot].rechargeAt);
+      }
+    } else {
+      h.acd[slot] = readyTime;
+    }
     if (A.fx !== 'stealth' && A.fx !== 'vision' && A.fx !== 'rally' && A.fx !== 'recon') h.stealthUntil = 0;   // 出手即現形
 
     // 2026-08-22 小招改制(本體詠唱施展):
@@ -6336,6 +6379,13 @@ export class BattleSim {
       const cd = R.BATTERY_CD * mul;
       body.acd.skill = Math.max(0, (body.acd.skill || 0) - cd); // acd 為絕對可用時刻:減去 = 縮短剩餘冷卻
       body.acd.ult = Math.max(0, (body.acd.ult || 0) - cd);
+      if (body.achg) {
+        for (const sl of ['skill', 'ult']) {
+          if (body.achg[sl]?.rechargeAt) {
+            body.achg[sl].rechargeAt = body.achg[sl].rechargeAt.map((tm) => Math.max(this.t, tm - cd));
+          }
+        }
+      }
       ev.mp = mp; ev.cd = Math.round(cd * 10) / 10;
     } else {
       const money = Math.round(R.MONEY * mul);
@@ -6841,8 +6891,27 @@ export class BattleSim {
         o.$ = Math.floor(e.money); o.up = { ...e.upg };           // 經濟(客戶端 HUD / 商店)
         o.mp = Math.floor(e.mp); o.mm = e.maxMp;                 // 電力(招式資源)
         o.ab = { ...e.abil }; o.kn = e.kn;                        // 招式階級 / 戰鬥分數
-        o.cds = [Math.max(0, Math.round((e.acd.skill - this.t) * 10) / 10),
-                 Math.max(0, Math.round((e.acd.ult - this.t) * 10) / 10)];   // 招式冷卻倒數
+        const skReady = this._readyCharges(e, 'skill');
+        const ultReady = this._readyCharges(e, 'ult');
+        const skMax = e.achg?.skill?.max || 1;
+        const ultMax = e.achg?.ult?.max || 1;
+        const skNext = skReady < skMax && e.achg?.skill?.rechargeAt?.length
+          ? Math.max(0, Math.round((Math.min(...e.achg.skill.rechargeAt) - this.t) * 10) / 10)
+          : Math.max(0, Math.round(((e.acd.skill || 0) - this.t) * 10) / 10);
+        const ultNext = ultReady < ultMax && e.achg?.ult?.rechargeAt?.length
+          ? Math.max(0, Math.round((Math.min(...e.achg.ult.rechargeAt) - this.t) * 10) / 10)
+          : Math.max(0, Math.round(((e.acd.ult || 0) - this.t) * 10) / 10);
+
+        o.cds = [
+          skReady > 0 ? 0 : skNext,
+          ultReady > 0 ? 0 : ultNext,
+        ];
+        if (skMax > 1 || ultMax > 1) {
+          o.chg = [
+            [skReady, skMax, skNext],
+            [ultReady, ultMax, ultNext],
+          ];
+        }
       }
       // 變形者餌機:掛點狀態(0 = 已分離/重組中,1 = 已組合就緒)+ 冷卻倒數(HUD / 組合動畫)
       if (e.sq && e.kind === 'morph') {

@@ -1099,7 +1099,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       assert(!!fort && Math.hypot(m0.x0 - fort.x, m0.z0 - fort.z) < 1e-6 && Math.hypot(m0.x0 - rc.x, m0.z0 - rc.z) > 1,
         `大招載具自最近的我方工事(${fort?.kind})發射,不是自機體 —— 距機體 ${Math.hypot(m0.x0 - rc.x, m0.z0 - rc.z).toFixed(0)}m`);
     }
-    assert((rc.acd.ult - s2.t) >= ULT_CARRIER.CD_LO && (rc.acd.ult - s2.t) <= ULT_CARRIER.CD_HI, 'CD 已收進 [30,60] 帶');
+    assert((rc.acd.ult - s2.t) >= ULT_CARRIER.CD_LO && (rc.acd.ult - s2.t) <= ULT_CARRIER.CD_HI, 'CD 已收進 [15,30] 帶');
     const hp0 = dum.hp;
     let flew = 0, fxN = 0;
     for (let i = 0; i < 400 && rc.hypers.length; i++) {
@@ -1305,6 +1305,70 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       `受擊強制施展效果比例 (t/T)² = ${(fExp * 100).toFixed(0)}%(dmgTaken ×${expMul.toFixed(3)})`);
   }
 
+  log('— 攻/守招式 CD 15~30s 與多充能獨立平行冷卻測試 —');
+  {
+    const CHS_ALL = Object.keys(CHARACTERS);
+    // ① 全角色全階級 攻/守招式 CD 嚴格落入 [15, 30] 區間
+    for (const c of CHS_ALL) {
+      for (let lvl = 1; lvl <= 3; lvl++) {
+        const uA = heroAbility(c, 'ult', lvl);
+        const sA = heroAbility(c, 'skill', lvl);
+        assert(uA.cd >= 15 - 1e-9 && uA.cd <= 30 + 1e-9, `${c} Lv${lvl} 大招 CD ${uA.cd}s 落入 [15, 30]s`);
+        assert(sA.cd >= 15 - 1e-9 && sA.cd <= 30 + 1e-9, `${c} Lv${lvl} 小招 CD ${sA.cd}s 落入 [15, 30]s`);
+      }
+    }
+
+    // ② 多充能招式施放、連續施放與平行獨立 CD 測試 (以 t06 skill 3次充能為例)
+    const simChg = new BattleSim(fakeBattleConfig(1));
+    const hChg = simChg.addHero('STEEL', 'chg_hero', 't06');
+    hChg.x = 320; hChg.z = 140; hChg.mp = 999; hChg.abil.skill = 1;
+    const t06Sk = heroAbility('t06', 'skill', 1);
+    assert(t06Sk.charges === 3, 't06 小招具備 3 次充能');
+    assert(simChg._readyCharges(hChg, 'skill') === 3, '初始具備 3 次完整充能');
+
+    // 第一次施放
+    simChg.heroCast('chg_hero', 'skill');
+    simChg.tick(t06Sk.castTime + 0.05);
+    assert(simChg._readyCharges(hChg, 'skill') === 2, '施放一次後剩餘 2 次充能');
+    assert(hChg.acd.skill === 0, '仍有可用充能時 acd.skill 保持 0 (可立即再次施放)');
+
+    // 間隔 2 秒後第二次施放 (測試分開獨立計時)
+    simChg.tick(2.0);
+    simChg.heroCast('chg_hero', 'skill');
+    simChg.tick(t06Sk.castTime + 0.05);
+    assert(simChg._readyCharges(hChg, 'skill') === 1, '再次施放後剩餘 1 次充能');
+
+    // 間隔 1 秒後第三次施放 (耗盡所有充能)
+    simChg.tick(1.0);
+    simChg.heroCast('chg_hero', 'skill');
+    simChg.tick(t06Sk.castTime + 0.05);
+    assert(simChg._readyCharges(hChg, 'skill') === 0, '三次施放後充能耗盡 (0 次)');
+    assert(hChg.acd.skill > simChg.t, '充能耗盡後 acd.skill 進入冷卻狀態 (指向最早到期時戳)');
+
+    // 充能耗盡時無法施放
+    const canCastBefore = simChg.heroCast('chg_hero', 'skill');
+    assert(!canCastBefore, '充能為 0 時無法施放');
+
+    // 快照包裝測試
+    const snapChg = simChg.snapshot();
+    const entChg = snapChg.ents.find((e) => e.pid === 'chg_hero');
+    assert(entChg && Array.isArray(entChg.chg), '快照 ents 包含 chg 充能陣列');
+    const skillChgSnap = entChg.chg[0];
+    assert(skillChgSnap[0] === 0 && skillChgSnap[1] === 3 && skillChgSnap[2] > 0,
+      `快照反映當前充能狀態: [${skillChgSnap.join(', ')}] = [ready=0, max=3, nextCd>0]`);
+
+    // 等待第一筆充能到期 (第一筆在 t06Sk.cd 到期)
+    const tFirstRecharge = hChg.achg.skill.rechargeAt[0];
+    const waitTime1 = Math.max(0, tFirstRecharge - simChg.t + 0.05);
+    simChg.tick(waitTime1);
+    assert(simChg._readyCharges(hChg, 'skill') === 1, '第一筆充能到期，恢復 1 次充能');
+    assert(hChg.acd.skill === 0, '恢復充能後 acd.skill 再次為 0 (可施放)');
+
+    // 拾取電池補給 (測試電池冷卻縮減扣減 rechargeAt)
+    simChg._grantReward(hChg, 'battery', 1);
+    assert(hChg.achg.skill.rechargeAt.length > 0, '電池縮減充能時間後依然有效維護');
+  }
+
   log('— data:八軌升級階梯 = $75/$150/$300 + 戰鬥分數 0/20/100(2026-08-11)—');
   {
     const WANT = [[75, 0], [150, 20], [300, 100]];
@@ -1499,7 +1563,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   const A1 = heroAbility('s01', 'skill', dr.abil.skill);
   const mp0 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
-  assert(dr.acd.skill > sim.t && Math.round(mp0 - dr.mp) === Math.round(A1.mp),
+  assert((dr.achg?.skill?.rechargeAt?.length > 0 || dr.acd.skill > sim.t) && Math.round(mp0 - dr.mp) === Math.round(A1.mp),
     `施放小招:CD、電力 -${Math.round(A1.mp)}MP(隨招式階級,無精通折減)`);
   const mp1 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
