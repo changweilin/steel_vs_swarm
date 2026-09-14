@@ -238,4 +238,120 @@ console.log('  ✓ 物件標準尺寸錨定驗證通過: 載具與建築均嚴�
 
 function near(a, b, eps = 1e-4) { return Math.abs(a - b) <= eps; }
 
+// 8. 連續組裝邊界障礙物（城牆/河堤/消波塊/路障/運河護岸/海上長線牧場等）相鄰段落無縫組裝驗證
+const continuousKinds = [
+  'tetrapod', 'wetpods', 'citywall', 'levee', 'seawall',
+  'canalbank', 'barricade', 'searanch', 'oysterracks',
+];
+
+for (const kind of continuousKinds) {
+  const len = 64;
+  const segA = buildBoundaryRunParts(kind, { len, depth: 16, bufferDepth: 32, h: 28, seed: 101 });
+  const segB = buildBoundaryRunParts(kind, { len, depth: 16, bufferDepth: 32, h: 28, seed: 102 });
+
+  assert(segA.parts.length > 0 && segB.parts.length > 0, `${kind}: 連續段落零件數必須 > 0`);
+
+  // (1) 嚴格幾何收納：單段幾何嚴格收納在 [-len/2, len/2] 內
+  for (const seg of [segA, segB]) {
+    for (const p of seg.parts) {
+      const b = partBox(p);
+      assert(b.x0 >= -len / 2 - 1e-4 && b.x1 <= len / 2 + 1e-4,
+        `${kind}: 零件超出段落長度範圍: x0=${b.x0}, x1=${b.x1}, len=${len}`);
+    }
+  }
+
+  // (2) 銜接處接縫驗證
+  if (kind === 'tetrapod' || kind === 'wetpods') {
+    // 消波塊在接縫處手臂密合與核心位置驗證
+    // 將 segA 放在 [-len, 0] (中心 -len/2)，segB 放在 [0, len] (中心 +len/2)
+    const coresA = segA.parts.filter(p => p.role === 'breakwater-core').map(p => p.p[0] - len / 2);
+    const coresB = segB.parts.filter(p => p.role === 'breakwater-core').map(p => p.p[0] + len / 2);
+    assert(coresA.length > 0 && coresB.length > 0, `${kind}: 必須有消波塊核心`);
+    const maxCoreA = Math.max(...coresA);
+    const minCoreB = Math.min(...coresB);
+
+    // 手臂密合接軌驗證：段落 A 的右端手臂與段落 B 的左端手臂在 x=0 處交錯延伸
+    const maxXPartA = Math.max(...segA.parts.map(p => partBox(p).x1 - len / 2));
+    const minXPartB = Math.min(...segB.parts.map(p => partBox(p).x0 + len / 2));
+    const armSeamGap = minXPartB - maxXPartA;
+    assert(armSeamGap <= 0.35,
+      `${kind}: 消波塊手臂在段落接縫處必須延伸至 x=0 互鎖無縫隙 (maxA=${maxXPartA.toFixed(2)}, minB=${minXPartB.toFixed(2)}, gap=${armSeamGap.toFixed(2)})`);
+  } else if (['citywall', 'seawall', 'levee', 'barricade'].includes(kind)) {
+    // 水平石層與端面高度一致性驗證
+    const coursesA = segA.parts.filter(p => p.role === 'course-joint');
+    const coursesB = segB.parts.filter(p => p.role === 'course-joint');
+    if (coursesA.length > 0 && coursesB.length > 0) {
+      assert(coursesA.length === coursesB.length, `${kind}: 相鄰段落石層分層數必須一致`);
+      for (let i = 0; i < coursesA.length; i++) {
+        assert(near(coursesA[i].p[1], coursesB[i].p[1], 1e-3),
+          `${kind}: 相鄰段落第 ${i} 層石層高程必須完全一致`);
+      }
+    }
+    // 牆體主體端面貼齊 ±len/2
+    const mainParts = segA.parts.filter(p => ['wall-face', 'levee-slope', 'seawall-face', 'wall-course'].includes(p.role));
+    if (mainParts.length > 0) {
+      const minX = Math.min(...mainParts.map(p => partBox(p).x0));
+      const maxX = Math.max(...mainParts.map(p => partBox(p).x1));
+      assert(near(minX, -len / 2, 1e-3) && near(maxX, len / 2, 1e-3),
+        `${kind}: 牆體端面必須精準齊平至 ±len/2 (minX=${minX}, maxX=${maxX})`);
+    }
+  } else if (['searanch', 'oysterracks'].includes(kind)) {
+    // 養殖長線在段落端面無縫延伸至 ±len/2
+    const linesA = segA.parts.filter(p => p.role === 'longline');
+    assert(linesA.length > 0, `${kind}: 必須包含長線 (longline)`);
+    const minX = Math.min(...linesA.map(p => partBox(p).x0));
+    const maxX = Math.max(...linesA.map(p => partBox(p).x1));
+    assert(near(minX, -len / 2, 1e-3) && near(maxX, len / 2, 1e-3),
+      `${kind}: 養殖長線端面必須延伸貼齊至 ±len/2 (minX=${minX}, maxX=${maxX})`);
+  } else if (kind === 'canalbank') {
+    // 運河護岸地貌連續網格覆蓋至 ±len/2
+    const minX = Math.min(...segA.parts.map(p => partBox(p).x0));
+    const maxX = Math.max(...segA.parts.map(p => partBox(p).x1));
+    assert(minX <= -len / 2 + 1e-3 && maxX >= len / 2 - 1e-3,
+      `${kind}: 護岸幾何必須延伸貼齊至 ±len/2 (minX=${minX}, maxX=${maxX})`);
+  }
+}
+console.log('  ✓ 所有連續組裝長型邊界障礙物無縫組裝驗證通過: 零空隙、端面齊平、模組互鎖、石層/長線水平對齊');
+
+// 9. 驗證所有連續障礙物邊界外緩衝區生成物件內容同等於一般遊戲區域
+const continuousBiomes = [
+  { kind: 'citywall', biome: 'urban' },
+  { kind: 'levee', biome: 'wet' },
+  { kind: 'seawall', biome: 'water' },
+  { kind: 'tetrapod', biome: 'water' },
+  { kind: 'wetpods', biome: 'wet' },
+  { kind: 'canalbank', biome: 'urban' },
+  { kind: 'barricade', biome: 'bare' },
+  { kind: 'searanch', biome: 'water' },
+  { kind: 'oysterracks', biome: 'wet' },
+];
+
+for (const { kind, biome } of continuousBiomes) {
+  const batch = buildBoundaryRunParts(kind, {
+    len: 80, depth: 16, bufferDepth: 40, h: 28, seed: 777, biome,
+  });
+
+  assert(batch.parts.length > 0, `${kind}: 障礙物本體零件數必須 > 0`);
+  assert(batch.bufferParts.length > 0, `${kind}: 邊界外緩衝區必須生成物件 (bufferParts > 0)`);
+
+  // 緩衝區物件標記 boundaryBuffer: true
+  assert(batch.bufferParts.every(p => p.boundaryBuffer === true),
+    `${kind}: 緩衝區所有零件均應具備 boundaryBuffer: true 標記`);
+
+  // 緩衝區物件角色同等於一般遊戲區域環境物件（非隨機自造的偽磚塊）
+  const sampleRoles = batch.bufferParts.map(p => p.role).filter(Boolean);
+  assert(sampleRoles.length > 0, `${kind}: 緩衝區零件應有結構角色`);
+
+  // 物件尺寸嚴格維持世界標準尺度（不高於 ENVIRONMENT_OBJECTS 標準上限 65m，未被放大）
+  const maxBufferH = Math.max(...batch.bufferParts.map(p => partBox(p).y1));
+  assert(maxBufferH <= 66, `${kind}: 緩衝區物件尺寸不可超過一般遊戲區域物件上限 (實測 ${maxBufferH.toFixed(2)}m)`);
+
+  // 決定性：同 seed 兩次呼叫產出完全相同的 JSON 結構
+  const batch2 = buildBoundaryRunParts(kind, {
+    len: 80, depth: 16, bufferDepth: 40, h: 28, seed: 777, biome,
+  });
+  assert(JSON.stringify(batch) === JSON.stringify(batch2), `${kind}: 緩衝區生成必須具備 100% 決定性 (bit-identical)`);
+}
+console.log('  ✓ 所有連續障礙物邊界外緩衝區同源生成驗證通過: 內容同等於一般遊戲區域，尺度正常且具決定性');
+
 console.log('🎉 邊界緩衝區單一物件排列測試全部通過！');

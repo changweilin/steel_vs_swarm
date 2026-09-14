@@ -17,15 +17,15 @@ export const EXPANDED_BOUNDARIES = Object.freeze({
   hillsidegreenhouses: { label: '坡地溫室帶', category: 'agriculture', bio: ['green'], slope: 'mid', depth: 18, h: 16, color: 0x818b64, section: shelfSection, object: 'greenhouse', rows: 1, pitch: 12, foundation: true },
   warehousebelt: { label: '密集倉儲工業帶', category: 'industry', bio: ['urban'], slope: 'flat', depth: 18, h: 22, color: 0x86857b, section: shelfSection, object: 'factory', rows: 2, pitch: 12, foundation: true },
   tankfarm: { label: '油槽儲運區', category: 'industry', bio: ['urban'], slope: 'flat', depth: 18, h: 18, color: 0x868b87, section: shelfSection, tanks: true, rows: 2, pitch: 8 },
-  canalbank: { label: '運河護岸', category: 'levee', bio: ['wet', 'urban'], slope: 'flat', depth: 12, h: 8, color: 0x8d9691, section: [[-.5,0],[-.45,.85],[.3,.85],[.5,0]], slopeBias: { flat: 4 } },
+  canalbank: { fillContact: true, label: '運河護岸', category: 'levee', bio: ['wet', 'urban'], slope: 'flat', depth: 12, h: 8, color: 0x8d9691, section: [[-.5,0],[-.45,.85],[.3,.85],[.5,0]], slopeBias: { flat: 4 } },
   reefchain: { label: '密集連綿礁岩', category: 'coastal', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 16, color: 0x758b80, section: hillSection, rock: true, relief: true },
   harborwarehouses: { label: '港灣高腳倉庫群', category: 'coastal', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 20, color: 0x737f80, section: shelfSection, object: 'factory', rows: 1, pitch: 13, foundation: true },
 });
 export const SLOPE_BOUNDARIES = Object.freeze({
   citywall: { fillContact: true, color: 0x989789, section: [[-.48, 0], [-.42, .82], [-.48, .82], [-.48, 1], [.48, 1], [.48, .82], [.42, .82], [.48, 0]] },
-  barricade: { color: 0x85918c, section: [[-.5, 0], [-.5, .22], [-.2, .58], [-.16, 1], [.16, 1], [.2, .58], [.5, .22], [.5, 0]] },
+  barricade: { fillContact: true, color: 0x85918c, section: [[-.5, 0], [-.5, .22], [-.2, .58], [-.16, 1], [.16, 1], [.2, .58], [.5, .22], [.5, 0]] },
   levee: { fillContact: true, color: 0x8c9587, section: [[-.5, 0], [-.16, .9], [.16, .9], [.5, 0]] },
-  seawall: { color: 0x899393, section: [[-.5, 0], [-.25, .85], [-.25, 1], [.38, 1], [.38, .85], [.5, 0]] },
+  seawall: { fillContact: true, color: 0x899393, section: [[-.5, 0], [-.25, .85], [-.25, 1], [.38, 1], [.38, .85], [.5, 0]] },
   cliff: { bufferFill: true, color: 0x8c897b, rock: true, section: [[-.5, 0], [-.42, .58], [-.25, .92], [.05, 1], [.35, .86], [.5, 0]] },
   landslide: { bufferFill: true, color: 0x9f8667, rock: true, section: [[-.5, 0], [-.25, .58], [0, .88], [.25, .64], [.5, 0]] },
   debris: { bufferFill: true, color: 0x89816d, rock: true, section: [[-.5, 0], [-.24, .52], [0, .82], [.26, .45], [.5, 0]] },
@@ -198,7 +198,7 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
 }
 
 /** Build joined masonry/embankment/rock modules, including their terrain-dependent bounds. */
-export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt, waterY = null, season = 'summer', seed = 1, fill = null }) {
+export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt, waterY = null, season = 'summer', seed = 1, fill = null, joins = null }) {
   const def = SLOPE_BOUNDARIES[kind];
   if (!def) throw new RangeError(`Boundary cannot conform to slopes: ${kind}`);
   if (![len, depth, h, x, z, ry].every(Number.isFinite) || Math.min(len, depth, h) <= 0
@@ -235,10 +235,15 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
     faces.push(a, b, d, b, c, d);
   }
   // End caps are only closures; matching modules share the complete same end ring.
+  const jList = joins || fill?.joins;
+  const capStart = !jList?.[0] || jList[0].kind !== kind;
+  const capEnd = !jList?.[1] || jList[1].kind !== kind;
   for (let j = 1; j < n - 1; j++) {
-    faces.push(0, j + 1, j);
-    const end = (stations.length - 1) * n;
-    faces.push(end, end + j, end + j + 1);
+    if (capStart) faces.push(0, j + 1, j);
+    if (capEnd) {
+      const end = (stations.length - 1) * n;
+      faces.push(end, end + j, end + j + 1);
+    }
   }
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
   vertices.forEach((v, i) => { const a = i % 3; min[a] = Math.min(min[a], v); max[a] = Math.max(max[a], v); });

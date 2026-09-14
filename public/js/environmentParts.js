@@ -220,6 +220,27 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
   const count = Math.max(1, Math.floor(len / (kind.startsWith('wind') ? 18 : 9)));
   const step = len / count;
   const stone = choose(rnd, [0x8c908b, 0x9b927f, 0x738185]);
+  if (['tetrapod', 'wetpods'].includes(kind)) {
+    const stoneColor = kind === 'wetpods' ? choose(rnd, [0x777c7d, 0x6e7374, 0x818687]) : choose(rnd, [0x8c908b, 0x838782, 0x959994]);
+    const r = Math.min(len * 0.05, h * 0.13, d * 0.18);
+    const maxHx = r * 1.38;
+    const span = Math.max(0, len - 2 * maxHx);
+    const nPods = Math.max(2, Math.round(span / 3.4) + 1);
+    const podStep = span / Math.max(1, nPods - 1);
+    for (let pIdx = 0; pIdx < nPods; pIdx++) {
+      const cx = -len / 2 + maxHx + pIdx * podStep;
+      const podLocal = mulberry32((seed ^ Math.imul(pIdx + 1, 0x1f1f)) >>> 0);
+      for (let layer = 0; layer < 3; layer++) for (const side of [-1, 1]) {
+        const px = Math.max(-len / 2 + maxHx, Math.min(len / 2 - maxHx, cx + (layer % 2 ? 0.08 : -0.08) * podStep));
+        const y = r * (1.8 + layer * 1.65), z = side * d * 0.22;
+        const yaw = podLocal() * Math.PI;
+        rows.push({ g: ['ico', r], p: [px, y, z], c: stoneColor, role: 'breakwater-core', layer });
+        for (let arm = 0; arm < 4; arm++) rows.push(cyl(r * .38, r * .55, r * 2.4,
+          px, y, z, stoneColor, 'breakwater-arm', { r: [arm * Math.PI / 2 + .5, yaw, .8] }));
+      }
+    }
+    return rows;
+  }
   for (let i = 0; i < count; i++) {
     const x = (i + .5) * step - len / 2;
     const local = mulberry32((seed ^ Math.imul(i + 1, 0x9e3779b9)) >>> 0);
@@ -236,29 +257,26 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
           hubY + Math.sin(a) * radius * .52, z, 0xe1e5df, 'rotor-blade',
           { r: [0, 0, a - Math.PI / 2], motion: { kind: 'rotor', id: `rotor_${i}`, pivot, phase } }));
       }
-    } else if (['tetrapod', 'wetpods'].includes(kind)) {
-      const r = Math.min(step * .19, h * .13, d * .18);
-      for (let layer = 0; layer < 3; layer++) for (const side of [-1, 1]) {
-        const px = x + (layer % 2 ? .12 : -.12) * step, y = r * (1.8 + layer * 1.65), z = side * d * .22;
-        const yaw = local() * Math.PI;
-        rows.push({ g: ['ico', r], p: [px, y, z], c: stone, role: 'breakwater-core', layer });
-        for (let arm = 0; arm < 4; arm++) rows.push(cyl(r * .38, r * .55, r * 2.4,
-          px, y, z, stone, 'breakwater-arm', { r: [arm * Math.PI / 2 + .5, yaw, .8] }));
-      }
     } else if (['citywall', 'barricade', 'levee', 'seawall', 'viaduct'].includes(kind)) {
-      const wall = kind === 'citywall', bridge = kind === 'viaduct';
-      const bodyH = h * (wall ? .68 : bridge ? .52 : .78);
-      rows.push(box(step, bodyH, d * .76, x, bodyH / 2, 0, stone, bridge ? 'fallen-deck' : 'wall-course'));
-      const courses = integer(local, 3, 5);
+      const wall = kind === 'citywall', bridge = kind === 'viaduct', isLevee = kind === 'levee', isSeawall = kind === 'seawall', isBarricade = kind === 'barricade';
+      const mStone = wall ? choose(rnd, [0x989789, 0x919082, 0x9f9e90])
+        : isLevee ? choose(rnd, [0x8c9587, 0x848d7f, 0x929b8d])
+        : isSeawall ? choose(rnd, [0x899393, 0x828c8c, 0x909a9a])
+        : isBarricade ? choose(rnd, [0x85918c, 0x7c8883, 0x8e9a95])
+        : choose(rnd, [0x85898c, 0x7e8285, 0x8c9093]);
+      const bodyH = h * (wall ? .68 : bridge ? .52 : isBarricade ? .65 : .78);
+      rows.push(box(step, bodyH, d * .76, x, bodyH / 2, 0, mStone, bridge ? 'fallen-deck' : 'wall-course'));
+      const courses = 4;
       for (let k = 1; k <= courses; k++) rows.push(box(step, h * .018, d * .81,
         x, bodyH * k / courses, 0, 0x646d6b, 'course-joint'));
-      if (wall || kind === 'barricade') {
-        const teeth = integer(local, 3, 5);
-        for (let k = 0; k < teeth; k++) rows.push(box(step / teeth * .5, h * .13, d * .8,
-          x + (k + .5) * step / teeth - step / 2, bodyH + h * .065, 0, stone, 'battlement'));
+      if (wall || isBarricade) {
+        const teeth = Math.max(2, Math.round(step / 2.0));
+        const toothW = step / teeth;
+        for (let k = 0; k < teeth; k++) rows.push(box(toothW * .5, h * .13, d * .8,
+          x + (k + .5) * toothW - step / 2, bodyH + h * .065, 0, mStone, 'battlement'));
         if (wall && i % 3 === 0) rows.push(box(step * .5, h * .25, d * .9,
           x, h * .805, 0, choose(local, colors), 'watchtower'));
-      } else rows.push(box(step, h * .09, d, x, bodyH + h * .045, 0, stone, bridge ? 'deck-parapet' : 'crest'));
+      } else rows.push(box(step, h * .09, d, x, bodyH + h * .045, 0, mStone, bridge ? 'deck-parapet' : 'crest'));
     } else if (['solarfield', 'floatsolar'].includes(kind)) {
       for (const side of [-1, 1]) {
         const y = 1.1, z = side * d * .23;
@@ -286,9 +304,11 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
         .map(p => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
     } else if (['searanch', 'oysterracks'].includes(kind)) {
       const railY = Math.min(h * .45, 4);
+      const postColor = choose(rnd, [0x8c908b, 0x828681, 0x969a95]);
+      const lineWood = choose(rnd, [0x8e7d5e, 0x847354, 0x988768]);
       for (const side of [-1, 1]) {
-        rows.push(cyl(.12, .18, railY, x + side * step * .43, railY / 2, d * .25, stone, 'rack-post'));
-        rows.push(box(step * .9, .25, .3, x, railY, side * d * .28, 0x8e7d5e, 'longline'));
+        rows.push(cyl(.12, .18, railY, x + side * step * .43, railY / 2, d * .25, postColor, 'rack-post'));
+        rows.push(box(step, .25, .3, x, railY, side * d * .28, lineWood, 'longline'));
       }
       const lines = integer(local, 4, 8);
       for (let k = 0; k < lines; k++) rows.push(cyl(.07, .09, railY * .8,

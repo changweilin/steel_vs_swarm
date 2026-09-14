@@ -9087,28 +9087,30 @@ function buildEdgeWall({ group, terrain, blockers }) {
     const z = e.ax ? s.z + e.sz * hd2 : s.z;
     const seed = edgeSeed(x, z);
     const variant = wallVariant(kind, seed, kind === prevKind ? prevVariant : -1);
+    const segJoins = [-1, 1].map(sign => {
+      const other = ends.get(endpoint(p, sign)).find(q => q !== p);
+      if (!other) return null;
+      const od = WALL_KINDS[other.kind];
+      return { kind: other.kind, h: Math.max(WH, od.h), depth: od.depth, corner: other.e !== e };
+    });
     const joined = def.terrainFit ? buildSlopeBoundary(kind, {
       len: step, depth: def.depth, h: kh0, x, z, ry: e.fry, seed,
       heightAt: (px, pz) => terrain.heightAt(px, pz), waterY: s.water ? wy : null,
-      season: terrain.season || 'summer',
+      season: terrain.season || 'summer', joins: segJoins,
       fill: def.bufferFill && Number.isFinite(terrain.bufferM) && terrain.bufferM > 0 && terrain.bufferHeightAt ? {
         depth: inset + terrain.bufferM, crest,
         heightAt: (px, pz) => px >= terrain.minX && px <= terrain.maxX && pz >= terrain.minZ && pz <= terrain.maxZ
           ? terrain.heightAt(px, pz) : terrain.bufferHeightAt(px, pz),
-        joins: [-1, 1].map(sign => {
-          const other = ends.get(endpoint(p, sign)).find(q => q !== p);
-          if (!other) return null;
-          const od = WALL_KINDS[other.kind];
-          if (!od.bufferFill && !od.fillContact) return null;
-          return { kind: other.kind, h: Math.max(WH, od.h), depth: od.depth, corner: other.e !== e };
-        }),
+        joins: segJoins.map(j => (j && (WALL_KINDS[j.kind]?.bufferFill || WALL_KINDS[j.kind]?.fillContact)) ? j : null),
       } : null,
     }) : null;
     const bufAvailable = Math.max(0, (inset + (terrain.bufferM || 0)) - def.depth);
-    const boundaryBatch = !def.terrainFit && BOUNDARY_BUFFER_LAYOUTS[kind]
+    const isContinuous = BOUNDARY_BUFFER_LAYOUTS[kind]?.continuous;
+    const boundaryBatch = (isContinuous || !def.terrainFit || def.fillContact) && BOUNDARY_BUFFER_LAYOUTS[kind]
       ? buildBoundaryRunParts(kind, {
           len: step, depth: def.depth, bufferDepth: bufAvailable, h: kh0,
           seed, variant, season: terrain.season || 'summer', water: s.water,
+          biome: s.biome,
         })
       : null;
     const parts = def.terrainFit ? (joined?.parts || []) : (boundaryBatch?.parts || wallParts(kind, {
@@ -9134,7 +9136,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
         ? { ...part, p: [part.p[0], part.p[1] - part.waterline, part.p[2]] } : part);
     emitWallParts(batch, visualParts, x, joined ? 0 : ground, z, e.fry, 1);
     if (joined?.bufferParts) emitWallParts(batch, joined.bufferParts, x, 0, z, e.fry, 1);
-    if (boundaryBatch?.bufferParts?.length) {
+    if (boundaryBatch?.bufferParts?.length && !joined?.bufferParts) {
       const visualBufferParts = boundaryBatch.bufferParts.map(part =>
         s.water && Number.isFinite(part.waterline)
           ? { ...part, p: [part.p[0], part.p[1] - part.waterline, part.p[2]] } : part);

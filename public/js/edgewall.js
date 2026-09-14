@@ -492,9 +492,6 @@ export const BOUNDARY_BUFFER_LAYOUTS = Object.freeze({
   // 農牧場: 矩陣排列 (grid)
   ranch:            { type: 'artificial', mode: 'grid', pitchX: 26, pitchZ: 20, object: 'ranch', scaleRange: [0.9, 1.0] },
   terracedfarms:    { type: 'artificial', mode: 'grid', pitchX: 26, pitchZ: 20, object: 'ranch', scaleRange: [0.9, 1.0] },
-  // 水產養殖 / 蚵棚: 矩陣排列 (grid)
-  oysterracks:      { type: 'artificial', mode: 'grid', pitchX: 10, pitchZ: 10, object: 'aquaculture', scaleRange: [0.95, 1.05] },
-  searanch:         { type: 'artificial', mode: 'grid', pitchX: 12, pitchZ: 12, object: 'aquaculture', scaleRange: [0.95, 1.05] },
   // 採掘與油井: 交錯排列 (staggered)
   mine:             { type: 'artificial', mode: 'staggered', pitchX: 32, pitchZ: 26, object: 'mine', scaleRange: [0.9, 1.0] },
   oilfield:         { type: 'artificial', mode: 'staggered', pitchX: 20, pitchZ: 18, object: 'oilfield', scaleRange: [0.9, 1.0] },
@@ -533,6 +530,17 @@ export const BOUNDARY_BUFFER_LAYOUTS = Object.freeze({
   icefloe:     { type: 'natural', mode: 'random', pitchX: 24, pitchZ: 20, object: 'icefloe',   scaleRange: [0.50, 1.40], randomYaw: true },
   iceberg:     { type: 'natural', mode: 'random', pitchX: 32, pitchZ: 28, object: 'iceberg',   scaleRange: [0.55, 1.45], randomYaw: true },
   seaice:      { type: 'natural', mode: 'random', pitchX: 22, pitchZ: 20, object: 'icefloe',   scaleRange: [0.50, 1.35], randomYaw: true },
+
+  // ---- 連續組裝邊界障礙物 (Continuous Boundary Obstacles): 本體無縫接軌，外側緩衝區生成等同一般遊戲區域物件 ----
+  citywall:    { type: 'artificial', continuous: true, mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['urban', 'bare'] },
+  levee:       { type: 'artificial', continuous: true, mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['wet', 'green'] },
+  seawall:     { type: 'artificial', continuous: true, mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['water'] },
+  tetrapod:    { type: 'artificial', continuous: true, mode: 'staggered', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['water'] },
+  wetpods:     { type: 'artificial', continuous: true, mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['wet'] },
+  canalbank:   { type: 'artificial', continuous: true, mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['wet', 'urban'] },
+  barricade:   { type: 'artificial', continuous: true, mode: 'grid', pitchX: 20, pitchZ: 18, scaleRange: [0.9, 1.0], bio: ['urban', 'bare'] },
+  searanch:    { type: 'artificial', continuous: true, mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['water'] },
+  oysterracks: { type: 'artificial', continuous: true, mode: 'grid', pitchX: 20, pitchZ: 18, scaleRange: [0.9, 1.0], bio: ['wet'] },
 });
 
 /**
@@ -626,7 +634,7 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
  * @returns {{ parts: Array, bufferParts: Array }}
  */
 export function buildBoundaryRunParts(kind, {
-  len, depth, bufferDepth = 0, h = 18, seed = 1, variant = 0, season = 'summer', water = false,
+  len, depth, bufferDepth = 0, h = 18, seed = 1, variant = 0, season = 'summer', water = false, biome = null,
 }) {
   const layout = BOUNDARY_BUFFER_LAYOUTS[kind];
   const def = WALL_KINDS[kind];
@@ -650,6 +658,54 @@ export function buildBoundaryRunParts(kind, {
 
   const maxBufferRows = bufferDepth >= 6 ? Math.floor(bufferDepth / rowStep) : 0;
   const totalRows = 1 + maxBufferRows; // Row 0 = boundary wall, Row 1..maxBufferRows = buffer fill
+
+  if (layout.continuous) {
+    // 連續組裝邊界障礙物：本體（Row 0）透過 wallParts 產生連續無縫長構造；
+    // 緩衝區（Row 1..N）生成內容同等於一般遊戲區域（取用 ENVIRONMENT_OBJECTS 對應地貌物件）
+    const wallObstacleParts = wallParts(kind, { len, depth, h: targetH, seed, variant, season });
+    for (const p of wallObstacleParts) parts.push(p);
+
+    const bioList = biome ? [biome] : (layout.bio || (water ? ['water'] : ['bare']));
+    const candidateKinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k =>
+      ENVIRONMENT_OBJECTS[k].bio.some(b => bioList.includes(b))
+    );
+    const validCandidates = candidateKinds.length > 0 ? candidateKinds : ['boulder'];
+
+    for (let r = 1; r <= maxBufferRows; r++) {
+      const isStaggeredRow = mode === 'staggered' && (r % 2 === 1);
+      const uOffset = isStaggeredRow ? (colStep * 0.5) : 0;
+
+      for (let c = 0; c < numCols; c++) {
+        let u = -len / 2 + (c + 0.5) * colStep + uOffset;
+        if (u > len / 2 - colStep * 0.15) u -= (len - colStep * 0.3);
+
+        const ptSeed = edgeSeed(Math.round((u + 500) * 8), Math.round((-r * rowStep + 500) * 8), (seed ^ Math.imul(r + 1, 0x1f1f) ^ Math.imul(c + 1, 0x9e37)) >>> 0);
+        const rnd = mulberry32(ptSeed);
+
+        const objKind = validCandidates[Math.floor(rnd() * validCandidates.length)];
+        const normalSize = environmentSize(objKind, ptSeed);
+        const [nw, nh, nd] = normalSize;
+
+        const maxV = -depth / 2 - nd / 2 - 0.2;
+        const v = Math.min(maxV, -depth / 2 - (r - 0.5) * rowStep);
+
+        if (u - nw / 2 < -len / 2 - 2 || u + nw / 2 > len / 2 + 2) continue;
+        if (v - nd / 2 < -depth / 2 - bufferDepth - 2) continue;
+
+        const modelParts = environmentParts(objKind, { size: normalSize, seed: ptSeed, season });
+        for (const p of modelParts) {
+          const [px = 0, py = 0, pz = 0] = p.p || [];
+          bufferParts.push({
+            ...p,
+            p: [px + u, py, pz + v],
+            boundaryBuffer: true,
+            role: p.role || 'boundary-buffer-fill',
+          });
+        }
+      }
+    }
+    return { parts, bufferParts };
+  }
 
   if (mode === 'random') {
     // 自然物件或荒廢破壞人造物：全區（邊界 + 緩衝區）一體化隨機散布與姿態旋轉
