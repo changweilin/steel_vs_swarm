@@ -70,8 +70,8 @@ export const WALL_KINDS = {
   rockery:   { object: 'boulder', dom: 'land',  bio: ['bare', 'green', 'wet'],   slope: 'mid', depth: 18,  h: 30,   label: '巨型假山群', slopeBias: { mid: 6, steep: 10 } },
   landslide: { dom: 'land',  bio: ['bare', 'green'],          slope: 'steep', depth: 16,  h: 18,   label: '山崩地' },
   debris:    { dom: 'land',  bio: ['bare', 'green', 'wet'],   slope: 'steep', depth: 16,  h: 10,   label: '土石流' },
-  giantforest:{dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 18,  h: 28,   label: '巨木林壁', slopeBias: { mid: 7 } },
-  fallentree:{ object: 'fallentree', dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 9,   h: 9,    label: '大倒木群', slopeBias: { mid: 7 } },
+  giantforest:{dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 18,  h: 28,   label: '巨木林壁', slopeBias: { flat: 10, mid: 14 } },
+  fallentree:{ object: 'fallentree', dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 9,   h: 9,    label: '大倒木群', slopeBias: { flat: 6, mid: 12 } },
   edgehamlet:{ object: 'house', dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 18,  h: 24,   label: '邊界假城街' },
   // ---- 水域 ----(水面恆是平的 ⇒ 水域段的分級一律 flat,見 `planWallRuns`)
   icefloe: { object: 'icefloe', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 8, label: '浮冰' },
@@ -96,18 +96,18 @@ export const WALL_KINDS = {
   powerplant:   { object: 'powerplant', dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 28, label: '大型電廠', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x69747c, 0x9a8f72] },
   incinerator:  { object: 'incinerator', dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 30, label: '大型焚化爐', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x727c82, 0xb46b3f] },
   skyscrapers:  { object: 'skyscraper', dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 34, label: '摩天大樓群', family: 'highrise', mix: 'urban-building', variants: 3, separated: true, col: [0x64717d, 0x8ca0ad] },
-  oysterracks:  { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 14, h: 14, label: '蚵棚', family: 'wetland', col: [0x665541, 0x9caa9e] },
-  strandedship:{ object: 'strandedship', dom: 'land',  bio: ['wet'], slope: 'flat', depth: 18, h: 18, label: '擱淺船隻', family: 'wreck', variants: 3, separated: true, col: [0x5b6970, 0x8a4f3e] },
-  wetpods:      { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 16, h: 14, label: '大型消波塊層層堆疊', family: 'pods', col: [0x969a9b, 0x777c7d] },
+  oysterracks:  { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 14, h: 14, label: '蚵棚', family: 'wetland', col: [0x665541, 0x9caa9e], slopeBias: { flat: 5 } },
+  strandedship:{ object: 'strandedship', dom: 'land',  bio: ['wet'], slope: 'flat', depth: 18, h: 18, label: '擱淺船隻', family: 'wreck', variants: 3, separated: true, col: [0x5b6970, 0x8a4f3e], slopeBias: { flat: 5 } },
+  wetpods:      { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 16, h: 14, label: '大型消波塊層層堆疊', family: 'pods', col: [0x969a9b, 0x777c7d], slopeBias: { flat: 5 } },
   house: { object: 'house', dom: 'land', bio: ['urban'], slope: 'flat', depth: 12, h: 18, label: '住家' },
   car: { object: 'car', dom: 'land', bio: ['urban'], slope: 'flat', depth: 8, h: 10, label: '汽車' },
-  gianttree: { object: 'gianttree', dom: 'land', bio: ['green', 'wet'], slope: 'mid', depth: 18, h: 38, label: '神木' },
+  gianttree: { object: 'gianttree', dom: 'land', bio: ['green', 'wet'], slope: 'mid', depth: 18, h: 38, label: '神木', slopeBias: { flat: 6, mid: 2 } },
   boulder: { object: 'boulder', dom: 'land', bio: ['bare', 'green', 'wet'], slope: 'mid', depth: 18, h: 24, label: '巨石' },
 };
 // Only generators with a continuous terrain cross-section may enter steep runs.
 for (const [kind, def] of Object.entries(EXPANDED_BOUNDARIES)) {
-  const { label, category, bio, slope, depth, h, dom = 'land' } = def;
-  WALL_KINDS[kind] = { label, category, bio, slope, depth, h, dom };
+  const { label, category, bio, slope, depth, h, dom = 'land', slopeBias } = def;
+  WALL_KINDS[kind] = { label, category, bio, slope, depth, h, dom, ...(slopeBias ? { slopeBias } : {}) };
 }
 for (const kind of Object.keys(SLOPE_BOUNDARIES)) {
   WALL_KINDS[kind].terrainFit = true;
@@ -200,7 +200,7 @@ export function isCategoryAllowed(category, environment = null) {
     || environment.wilderness === true;
 
   if (isNature) {
-    const artificial = ['industry', 'residential', 'highrise', 'rail', 'vehicle', 'bridge', 'extraction', 'energy', 'military', 'fortification'];
+    const artificial = ['industry', 'residential', 'highrise', 'rail', 'vehicle', 'bridge', 'extraction', 'energy', 'military', 'fortification', 'agriculture'];
     if (artificial.includes(category)) return false;
   } else if (environment.zone === 'industrial' || environment.industrial === true) {
     if (category === 'residential') return false;
@@ -223,9 +223,9 @@ export function wallCandidates(biome, water, tier = 'flat', environment = null) 
     && isCategoryAllowed(BOUNDARY_OBJECT_CATEGORIES[k], environment));
   const list = byTier.filter((k) => kindFits(k, biome, water));
   const weighted = (rows) => rows.flatMap((k) => Array.from(
-    { length: tier === 'flat' ? 1 : Math.max(1, WALL_KINDS[k].slopeBias?.[tier] || 1) }, () => k));
+    { length: Math.max(1, WALL_KINDS[k].slopeBias?.[tier] || 1) }, () => k));
   if (list.length) return weighted(list);
-  if (byTier.length) return weighted(byTier);
+  if (byTier.length && !water) return weighted(byTier);
   const mix = environment?.mix || environment?.venue?.mix;
   const venueType = environment?.venue?.type;
   const isNature = (mix && (mix.urban || 0) <= 0.05)

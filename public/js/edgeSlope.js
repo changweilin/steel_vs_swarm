@@ -7,17 +7,17 @@ const hillSection = [[-.5, 0], [-.35, .32], [-.16, .7], [0, .86], [.2, .65], [.3
 const shelfSection = [[-.5, 0], [-.38, .1], [.36, .1], [.5, 0]];
 // Domain, slope capability and model recipe are declared together.
 export const EXPANDED_BOUNDARIES = Object.freeze({
-  densegiants: { label: '密集連綿神木林', category: 'giant-tree', bio: ['green', 'wet'], slope: 'steep', depth: 18, h: 60, color: 0x586647, section: shelfSection, object: 'gianttree', rows: 2, pitch: 6 },
+  densegiants: { label: '密集連綿神木林', category: 'giant-tree', bio: ['green', 'wet'], slope: 'steep', depth: 18, h: 60, color: 0x586647, section: shelfSection, object: 'gianttree', rows: 2, pitch: 6, slopeBias: { flat: 8, mid: 2, steep: 8 } },
   cliffvillage: { label: '山壁階地聚落', category: 'residential', bio: ['urban'], slope: 'steep', depth: 18, h: 26, color: 0x8e8471, section: shelfSection, object: 'house', rows: 2, pitch: 8, foundation: true },
   alpinecity: { label: '密集山城高樓', category: 'highrise', bio: ['urban'], slope: 'steep', depth: 18, h: 48, color: 0x777b77, section: shelfSection, object: 'skyscraper', rows: 2, pitch: 8, foundation: true },
-  rollinghills: { label: '連綿草丘', category: 'rock', bio: ['green', 'bare'], slope: 'steep', depth: 18, h: 26, color: 0x718052, section: hillSection, rock: true, relief: true },
-  foresthills: { label: '林木連綿山丘', category: 'giant-tree', bio: ['green'], slope: 'steep', depth: 18, h: 48, color: 0x68754c, section: hillSection.map(([z, y]) => [z, y * .16]), rock: true, object: 'gianttree', rows: 2, pitch: 9 },
-  basaltspine: { label: '玄武岩連峰', category: 'rock', bio: ['bare', 'wet'], slope: 'steep', depth: 18, h: 34, color: 0x565d5c, section: hillSection, rock: true, relief: true },
+  rollinghills: { label: '連綿草丘', category: 'rock', bio: ['green', 'bare'], slope: 'steep', depth: 18, h: 26, color: 0x718052, section: hillSection, rock: true, relief: true, slopeBias: { flat: 3, mid: 1, steep: 3 } },
+  foresthills: { label: '林木連綿山丘', category: 'giant-tree', bio: ['green'], slope: 'steep', depth: 18, h: 48, color: 0x68754c, section: hillSection.map(([z, y]) => [z, y * .16]), rock: true, object: 'gianttree', rows: 2, pitch: 9, slopeBias: { flat: 7, mid: 2, steep: 8 } },
+  basaltspine: { label: '玄武岩連峰', category: 'rock', bio: ['bare', 'wet'], slope: 'steep', depth: 18, h: 34, color: 0x565d5c, section: hillSection, rock: true, relief: true, slopeBias: { flat: 4, mid: 4, steep: 8 } },
   terracedfarms: { label: '梯田農舍帶', category: 'agriculture', bio: ['green', 'bare'], slope: 'mid', depth: 18, h: 18, color: 0x8a9461, section: shelfSection, object: 'ranch', rows: 1, pitch: 14, foundation: true },
   hillsidegreenhouses: { label: '坡地溫室帶', category: 'agriculture', bio: ['green'], slope: 'mid', depth: 18, h: 16, color: 0x818b64, section: shelfSection, object: 'greenhouse', rows: 1, pitch: 12, foundation: true },
   warehousebelt: { label: '密集倉儲工業帶', category: 'industry', bio: ['urban'], slope: 'flat', depth: 18, h: 22, color: 0x86857b, section: shelfSection, object: 'factory', rows: 2, pitch: 12, foundation: true },
   tankfarm: { label: '油槽儲運區', category: 'industry', bio: ['urban'], slope: 'flat', depth: 18, h: 18, color: 0x868b87, section: shelfSection, tanks: true, rows: 2, pitch: 8 },
-  canalbank: { label: '運河護岸', category: 'levee', bio: ['wet', 'urban'], slope: 'flat', depth: 12, h: 8, color: 0x8d9691, section: [[-.5,0],[-.45,.85],[.3,.85],[.5,0]] },
+  canalbank: { label: '運河護岸', category: 'levee', bio: ['wet', 'urban'], slope: 'flat', depth: 12, h: 8, color: 0x8d9691, section: [[-.5,0],[-.45,.85],[.3,.85],[.5,0]], slopeBias: { flat: 4 } },
   reefchain: { label: '密集連綿礁岩', category: 'coastal', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 16, color: 0x758b80, section: hillSection, rock: true, relief: true },
   harborwarehouses: { label: '港灣高腳倉庫群', category: 'coastal', dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 20, color: 0x737f80, section: shelfSection, object: 'factory', rows: 1, pitch: 13, foundation: true },
 });
