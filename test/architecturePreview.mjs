@@ -823,6 +823,7 @@ import { Pipeline } from '/js/postfx.js';
 import { GEOLOGY_TYPES, GEOLOGY_SURFACES, geologyBackgroundObject, generateGeology, geologyDistribution } from '/js/geology.js';
 import { ANCIENT_REGIONS, ANCIENT_RUINS, RUIN_ACTIVITIES, ancientStoneDistribution } from '/js/ancientStone.js';
 import { runtimeMeshDataGeometry } from '/js/runtimePartModel.js';
+import { mulberry32 } from '/js/rng.js';
 
 // 植物生成模組
 import { TREE_SPECIES, createForestTree, treeDistribution, treeHabitatWeight, treeSections, treeBend, forestEnvironment } from '/js/forest.js';
@@ -1643,6 +1644,27 @@ function buildFullRandomMode() {
 // ==========================================
 // 地質生成邏輯 (Geology Generation Mode)
 // ==========================================
+let geologyInitialized = false;
+function initGeologyOptions() {
+  if (geologyInitialized) return;
+  geologyInitialized = true;
+  const regSel = document.querySelector('#geo-region');
+  if (regSel) {
+    regSel.innerHTML = '<option value="all" selected>全部地區輪播</option>';
+    for (const [key, name] of Object.entries(ANCIENT_REGIONS)) {
+      regSel.add(new Option(name, key));
+    }
+  }
+  const ruinSel = document.querySelector('#geo-ruin-type');
+  if (ruinSel) {
+    ruinSel.innerHTML = '<option value="all" selected>全部形式輪播 (All Forms)</option><option value="auto">隨機形式 (Random)</option>';
+    for (const [key, name] of Object.entries(ANCIENT_RUINS)) {
+      const act = RUIN_ACTIVITIES[key] ? (RUIN_ACTIVITIES[key] + ' · ') : '';
+      ruinSel.add(new Option(act + name, key));
+    }
+  }
+}
+
 function getGeologyInputs(seed = 0, idx = 0) {
   const climates = ['temperate', 'tropical', 'arid', 'alpine', 'boreal'];
   const waters = ['none', 'stream', 'river', 'lake', 'sea'];
@@ -1665,69 +1687,85 @@ function getGeologyInputs(seed = 0, idx = 0) {
   return input;
 }
 
+function pickAutoGeologyType(seed, input) {
+  const dist = geologyDistribution(input);
+  if (!dist.length) return 'basalt';
+  let roll = mulberry32((seed ^ 0x47454f) >>> 0)();
+  for (const row of dist) {
+    roll -= row.weight;
+    if (roll < 0) return row.type;
+  }
+  return dist[dist.length - 1].type;
+}
+
 function createGeologyMesh(type, seed, input, posX = 0, posZ = 0) {
-  let actualType = type;
-  if (type === 'auto') {
-    const dist = geologyDistribution(input);
-    actualType = dist.length ? dist[Math.abs(seed) % dist.length].type : 'basalt';
-  }
-  const spec = GEOLOGY_TYPES[actualType] || GEOLOGY_TYPES.basalt;
-  const isAncient = spec?.lithology === 'manufactured';
-
-  const fullInput = { ...input };
-  if (isAncient) {
-    const regVal = document.querySelector('#geo-region')?.value || 'all';
-    const regions = ['egypt', 'greece_rome', 'maya', 'easter_island', 'mesopotamia', 'east_asia', 'uk_prehistoric'];
-    fullInput.region = regVal === 'all' ? regions[Math.abs(seed) % regions.length] : regVal;
-    const ruinType = document.querySelector('#geo-ruin-type')?.value;
-    const ruinTypes = ['temple', 'stronghold', 'settlement', 'aqueduct'];
-    if (ruinType === 'all') {
-      fullInput.ruinType = ruinTypes[Math.abs(seed) % ruinTypes.length];
-    } else if (ruinType && ruinType !== 'auto') {
-      fullInput.ruinType = ruinType;
+  try {
+    let actualType = type;
+    if (type === 'auto') {
+      actualType = pickAutoGeologyType(seed, input);
     }
-    fullInput.uniformScale = parseFloat(document.querySelector('#geo-scale')?.value) || 1.0;
+    const spec = GEOLOGY_TYPES[actualType] || GEOLOGY_TYPES.basalt;
+    const isAncient = spec?.lithology === 'manufactured';
+
+    const fullInput = { ...input };
+    if (isAncient) {
+      const regVal = document.querySelector('#geo-region')?.value || 'all';
+      const regions = Object.keys(ANCIENT_REGIONS);
+      fullInput.region = regVal === 'all' ? regions[Math.abs(seed) % regions.length] : regVal;
+      const ruinType = document.querySelector('#geo-ruin-type')?.value;
+      const ruinTypes = Object.keys(ANCIENT_RUINS);
+      if (ruinType === 'all') {
+        fullInput.ruinType = ruinTypes[Math.abs(seed) % ruinTypes.length];
+      } else if (ruinType && ruinType !== 'auto' && Object.hasOwn(ANCIENT_RUINS, ruinType)) {
+        fullInput.ruinType = ruinType;
+      }
+      fullInput.uniformScale = parseFloat(document.querySelector('#geo-scale')?.value) || 1.0;
+    }
+
+    const entry = geologyBackgroundObject(actualType, seed, fullInput);
+    if (!entry || !entry.meshData) return null;
+    const geom = runtimeMeshDataGeometry(entry.meshData, entry.parts);
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true });
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.position.set(posX, 0, posZ);
+
+    const r = Math.max(...entry.bounds.size);
+    const hitGeo = new THREE.BoxGeometry(r * 1.1, entry.bounds.max[1], r * 1.1);
+    hitGeo.translate(0, entry.bounds.max[1] / 2, 0);
+    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+    const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+    hitMesh.position.set(posX, 0, posZ);
+
+    const meta = {
+      type: actualType,
+      spec,
+      seed,
+      entry,
+      input: fullInput,
+      posX, posZ,
+      bounds: entry.bounds,
+      name: entry.name,
+      isAncient,
+    };
+
+    mesh.userData.geologyMeta = meta;
+    hitMesh.userData.geologyMeta = meta;
+    clickableObjects.push(hitMesh);
+    geologyGroup.add(mesh);
+    geologyGroup.add(hitMesh);
+
+    const badge = document.createElement('div');
+    badge.className = 'badge-label';
+    badge.innerHTML = '<span class="cat">【' + entry.name + '】</span>' + (spec.group || (isAncient ? '古蹟石材' : '自然地質')) + ' · <span class="height">' + entry.bounds.max[1].toFixed(1) + 'm</span>';
+    labelContainer.append(badge);
+    const labelObj = { element: badge, point: new THREE.Vector3(posX, entry.bounds.max[1] + 1.5, posZ) };
+    labels.push(labelObj);
+
+    return { mesh, hitMesh, meta, entry, labelObj };
+  } catch (err) {
+    console.error('地質生成失敗:', err);
+    return null;
   }
-
-  const entry = geologyBackgroundObject(actualType, seed, fullInput);
-  const geom = runtimeMeshDataGeometry(entry.meshData, entry.parts);
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true });
-  const mesh = new THREE.Mesh(geom, mat);
-  mesh.position.set(posX, 0, posZ);
-
-  const r = Math.max(...entry.bounds.size);
-  const hitGeo = new THREE.BoxGeometry(r * 1.1, entry.bounds.max[1], r * 1.1);
-  hitGeo.translate(0, entry.bounds.max[1] / 2, 0);
-  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
-  const hitMesh = new THREE.Mesh(hitGeo, hitMat);
-  hitMesh.position.set(posX, 0, posZ);
-
-  const meta = {
-    type: actualType,
-    spec,
-    seed,
-    entry,
-    input: fullInput,
-    posX, posZ,
-    bounds: entry.bounds,
-    name: entry.name,
-    isAncient,
-  };
-
-  mesh.userData.geologyMeta = meta;
-  hitMesh.userData.geologyMeta = meta;
-  clickableObjects.push(hitMesh);
-  geologyGroup.add(mesh);
-  geologyGroup.add(hitMesh);
-
-  const badge = document.createElement('div');
-  badge.className = 'badge-label';
-  badge.innerHTML = '<span class="cat">【' + entry.name + '】</span>' + (spec.group || (isAncient ? '古蹟石材' : '自然地質')) + ' · <span class="height">' + entry.bounds.max[1].toFixed(1) + 'm</span>';
-  labelContainer.append(badge);
-  const labelObj = { element: badge, point: new THREE.Vector3(posX, entry.bounds.max[1] + 1.5, posZ) };
-  labels.push(labelObj);
-
-  return { mesh, hitMesh, meta, entry, labelObj };
 }
 
 function buildGeologyMode() {
@@ -1736,18 +1774,34 @@ function buildGeologyMode() {
   document.querySelector('#btn-back').style.display = 'none';
   floor.material.color.setHex(0x223038);
 
+  initGeologyOptions();
+
   const type = document.querySelector('#geo-type').value;
   const viewMode = document.querySelector('#geo-view-mode').value;
   let seed = parseInt(document.querySelector('#input-geo-seed').value, 10) || 42;
   const seedMode = document.querySelector('#select-seed-mode-geo')?.value || 'per_building';
-  const input = getGeologyInputs();
+  const climateVal = document.querySelector('#geo-climate').value;
+  const waterVal = document.querySelector('#geo-water').value;
 
-  const isAncient = GEOLOGY_TYPES[type]?.lithology === 'manufactured';
+  const isAncient = GEOLOGY_TYPES[type]?.lithology === 'manufactured' || type === 'monument' || type === 'ruins';
   const ancientBox = document.querySelector('#geo-ancient-box');
   if (ancientBox) ancientBox.style.display = isAncient ? 'block' : 'none';
 
+  const allTypes = Object.keys(GEOLOGY_TYPES);
+  let pool = allTypes;
+  if (climateVal !== 'all' || waterVal !== 'all') {
+    const dist = geologyDistribution(getGeologyInputs(seed, 0));
+    if (dist.length > 0) pool = dist.map(d => d.type);
+  }
+
   if (viewMode === 'single') {
-    const { entry } = createGeologyMesh(type, seed, input, 0, 0);
+    const curInput = getGeologyInputs(seed, 0);
+    const actType = type === 'auto'
+      ? pickAutoGeologyType(seed, curInput)
+      : (type === 'all' ? pool[seed % pool.length] : type);
+    const res = createGeologyMesh(actType, seed, curInput, 0, 0);
+    if (!res || !res.entry) return;
+    const entry = res.entry;
     const r = Math.max(...entry.bounds.size);
     document.querySelector('#nav-status').textContent = '地質單體檢驗：【' + entry.name + '】（種子碼 ' + seed + '）';
     camTarget.set(0, entry.bounds.max[1] * 0.4, 0);
@@ -1755,32 +1809,38 @@ function buildGeologyMode() {
     activeCamTarget.copy(camTarget);
     activeCamDist = camDist;
   } else {
-    const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-geo')?.value, 10) || 4));
-    const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-geo')?.value, 10) || 4));
-    const allTypes = Object.keys(GEOLOGY_TYPES);
+    const isMatrix = viewMode === 'matrix';
+    const matrixPool = (type !== 'all' && type !== 'auto') ? [type] : pool;
+    const cols = isMatrix
+      ? Math.min(8, Math.max(2, Math.ceil(Math.sqrt(matrixPool.length))))
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-geo')?.value, 10) || 4));
+    const rows = isMatrix
+      ? Math.ceil(matrixPool.length / cols)
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-geo')?.value, 10) || 4));
+    const count = isMatrix ? matrixPool.length : cols * rows;
 
-    // 第一階段：生成所有地質網格實例，量測陣列中最大物件尺寸 (以最大的為主)
     const items = [];
     let maxObjW = 10, maxObjD = 10, maxObjH = 6;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const idx = r * cols + c;
-        const curType = type === 'all' ? allTypes[idx % allTypes.length] : type;
-        const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        const res = createGeologyMesh(curType, curSeed, input, 0, 0);
-        if (res && res.entry) {
-          const szX = res.entry.bounds.size[0] || 15;
-          const szY = res.entry.bounds.size[1] || 8;
-          const szZ = res.entry.bounds.size[2] || 15;
-          if (szX > maxObjW) maxObjW = szX;
-          if (szZ > maxObjD) maxObjD = szZ;
-          if (szY > maxObjH) maxObjH = szY;
-          items.push({ c, r, res });
-        }
+    for (let idx = 0; idx < count; idx++) {
+      const c = idx % cols;
+      const r = Math.floor(idx / cols);
+      const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
+      const curInput = getGeologyInputs(curSeed, idx);
+      const curType = isMatrix
+        ? matrixPool[idx]
+        : (type === 'all' ? pool[idx % pool.length] : (type === 'auto' ? pickAutoGeologyType(curSeed, curInput) : type));
+      const res = createGeologyMesh(curType, curSeed, curInput, 0, 0);
+      if (res && res.entry) {
+        const szX = res.entry.bounds.size[0] || 15;
+        const szY = res.entry.bounds.size[1] || 8;
+        const szZ = res.entry.bounds.size[2] || 15;
+        if (szX > maxObjW) maxObjW = szX;
+        if (szZ > maxObjD) maxObjD = szZ;
+        if (szY > maxObjH) maxObjH = szY;
+        items.push({ c, r, res });
       }
     }
 
-    // 第二階段：以最大物件尺寸為基準配置網格間距
     const stepX = Math.max(20, Math.ceil(maxObjW * 1.35 + 8));
     const stepZ = Math.max(20, Math.ceil(maxObjD * 1.35 + 8));
     const startX = -(cols - 1) * stepX / 2;
@@ -1800,7 +1860,7 @@ function buildGeologyMode() {
       }
     }
 
-    document.querySelector('#nav-status').textContent = '地質陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 處）：【' + (type === 'all' ? '全部地質輪播' : GEOLOGY_TYPES[type]?.name || '地質陣列') + '】（基底種子 ' + seed + '）';
+    document.querySelector('#nav-status').textContent = (isMatrix ? '地質全型錄陳列' : '地質陣列檢驗') + ' (' + cols + '×' + rows + ' 共 ' + items.length + ' 處）：【' + (type === 'all' ? '全部地質輪播' : GEOLOGY_TYPES[type]?.name || '地質陣列') + '】（基底種子 ' + seed + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, maxObjH * 0.4, 0);
@@ -2048,16 +2108,18 @@ document.querySelector('#btn-geo-random-seed')?.addEventListener('click', () => 
   document.querySelector('#input-geo-seed').value = Math.floor(Math.random() * 90000) + 1000;
   buildGeologyMode();
 });
-['#geo-type', '#geo-view-mode', '#geo-climate', '#geo-water', '#geo-region', '#geo-ruin-type', '#geo-scale'].forEach((sel) => {
+['#geo-type', '#geo-view-mode', '#geo-climate', '#geo-water', '#geo-region', '#geo-ruin-type', '#geo-scale', '#sample-cols-geo', '#sample-rows-geo', '#select-seed-mode-geo', '#input-geo-seed'].forEach((sel) => {
   document.querySelector(sel)?.addEventListener('change', () => {
-    const isAncient = GEOLOGY_TYPES[document.querySelector('#geo-type').value]?.lithology === 'manufactured';
-    document.querySelector('#geo-ancient-box').style.display = isAncient ? 'block' : 'none';
+    const typeVal = document.querySelector('#geo-type')?.value;
+    const isAncient = GEOLOGY_TYPES[typeVal]?.lithology === 'manufactured' || typeVal === 'monument' || typeVal === 'ruins';
+    const ancientBox = document.querySelector('#geo-ancient-box');
+    if (ancientBox) ancientBox.style.display = isAncient ? 'block' : 'none';
     buildGeologyMode();
   });
 });
-['#geo-moisture', '#geo-vegetation', '#geo-conifers', '#geo-exposure', '#geo-slope', '#geo-fault', '#geo-volcanic', '#geo-dissolution', '#geo-geothermal', '#geo-activity'].forEach((sel) => {
+['#geo-scale', '#geo-moisture', '#geo-vegetation', '#geo-conifers', '#geo-exposure', '#geo-slope', '#geo-fault', '#geo-volcanic', '#geo-dissolution', '#geo-geothermal', '#geo-activity'].forEach((sel) => {
   document.querySelector(sel)?.addEventListener('input', () => {
-    if (document.querySelector('#geo-view-mode').value === 'single') buildGeologyMode();
+    buildGeologyMode();
   });
 });
 
@@ -2550,9 +2612,6 @@ let vesselInitialized = false;
 function initVesselOptions() {
   if (vesselInitialized) return;
   vesselInitialized = true;
-  for (const t of VESSEL_TYPES) {
-    document.querySelector('#vessel-type').add(new Option(t.name, t.id));
-  }
   for (const [key, label] of Object.entries(VESSEL_AXES.purpose)) {
     document.querySelector('#vessel-purpose').add(new Option(label, key));
   }
@@ -2561,6 +2620,33 @@ function initVesselOptions() {
   }
   for (const [key, label] of Object.entries(VESSEL_AXES.power)) {
     document.querySelector('#vessel-power').add(new Option(label, key));
+  }
+  updateVesselFilter();
+}
+
+function updateVesselFilter() {
+  const pur = document.querySelector('#vessel-purpose')?.value || '';
+  const wat = document.querySelector('#vessel-water')?.value || '';
+  const pow = document.querySelector('#vessel-power')?.value || '';
+
+  const candidates = VESSEL_TYPES.filter(t =>
+    (!pur || t.purpose === pur) &&
+    (!wat || t.waters.includes(wat)) &&
+    (!pow || t.power.includes(pow))
+  );
+
+  const typeSel = document.querySelector('#vessel-type');
+  if (!typeSel) return;
+  const prevVal = typeSel.value;
+  typeSel.innerHTML = '';
+  typeSel.add(new Option('全部船型輪播 (All Vessels)', 'all'));
+  for (const t of candidates) {
+    typeSel.add(new Option(t.name, t.id));
+  }
+  if (prevVal && [...typeSel.options].some(o => o.value === prevVal)) {
+    typeSel.value = prevVal;
+  } else {
+    typeSel.value = 'all';
   }
 }
 
@@ -2618,15 +2704,23 @@ function buildVesselMode() {
   const options = Object.fromEntries(
     ['purpose', 'water', 'power']
       .filter(k => document.querySelector('#vessel-' + k).value)
-      .map(k => [k === 'water' ? 'waters' : k, document.querySelector('#vessel-' + k).value])
+      .map(k => [k, document.querySelector('#vessel-' + k).value])
   );
 
   const allVesselTypes = VESSEL_TYPES.map(t => t.id);
+  const candidates = VESSEL_TYPES.filter(t =>
+    (!options.purpose || t.purpose === options.purpose) &&
+    (!options.water || t.waters.includes(options.water)) &&
+    (!options.power || t.power.includes(options.power))
+  ).map(t => t.id);
+
+  const pool = candidates.length > 0 ? candidates : allVesselTypes;
 
   if (viewMode === 'single') {
-    const actType = (type === 'all' || !type) ? allVesselTypes[seed % allVesselTypes.length] : type;
+    const actType = (type === 'all' || !type) ? pool[seed % pool.length] : type;
     const actOptions = { ...options, id: actType };
-    const res = createVesselInstance(seed, actOptions, 0, 0);
+    let res = createVesselInstance(seed, actOptions, 0, 0);
+    if (!res) res = createVesselInstance(seed, { id: actType }, 0, 0);
     if (!res) return;
     const v = res.vessel;
     document.querySelector('#nav-status').textContent = '艦船單體檢驗：【' + v.name + ' · ' + v.registry + '】（種子 ' + seed + ' · 長 ' + v.length.toFixed(1) + 'm 寬 ' + v.beam.toFixed(1) + 'm 吃水 ' + v.draft.toFixed(2) + 'm · ' + v.displacementTonnes.toFixed(1) + 't）';
@@ -2648,7 +2742,7 @@ function buildVesselMode() {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        const curType = (type === 'all' || !type) ? allVesselTypes[idx % allVesselTypes.length] : type;
+        const curType = (type === 'all' || !type) ? pool[idx % pool.length] : type;
         const curOptions = { ...options, id: curType };
         let res = createVesselInstance(curSeed, curOptions, 0, 0);
         if (!res) {
@@ -2975,7 +3069,13 @@ document.querySelector('#btn-vessel-random-seed')?.addEventListener('click', () 
   document.querySelector('#input-vessel-seed').value = Math.floor(Math.random() * 90000) + 1000;
   buildVesselMode();
 });
-['#vessel-type', '#vessel-purpose', '#vessel-water', '#vessel-power', '#vessel-view-mode'].forEach((id) => {
+['#vessel-purpose', '#vessel-water', '#vessel-power'].forEach((id) => {
+  document.querySelector(id)?.addEventListener('change', () => {
+    updateVesselFilter();
+    buildVesselMode();
+  });
+});
+['#vessel-type', '#vessel-view-mode', '#sample-cols-vessel', '#sample-rows-vessel', '#select-seed-mode-vessel', '#input-vessel-seed'].forEach((id) => {
   document.querySelector(id)?.addEventListener('change', buildVesselMode);
 });
 document.querySelector('#chk-vessel-water')?.addEventListener('change', () => {
@@ -3105,6 +3205,7 @@ try {
   initEnvironment();
   initVehicleOptions();
   initVesselOptions();
+  initGeologyOptions();
   buildMatrixMode();
 } catch (err) {
   console.error('初次建構失敗:', err);
