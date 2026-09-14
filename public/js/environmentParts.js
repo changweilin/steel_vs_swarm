@@ -12,6 +12,7 @@ import { loftMeshData, vesselHullSections } from './vesselGeometry.js';
 import { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS } from './environmentCatalog.js';
 import { iceParts } from './iceParts.js';
 export { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS, ENVIRONMENT_CATEGORIES, environmentSize, environmentAvailable } from './environmentCatalog.js';
+export { makeSceneVehicleParts } from './vehicleParts.js';
 
 export const ENVIRONMENT_PREFIX = 'environment/';
 const box = (w, h, d, x, y, z, c, role, extra = {}) =>

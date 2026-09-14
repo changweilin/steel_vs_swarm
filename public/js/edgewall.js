@@ -3,8 +3,8 @@
 // Geometry must stay inside the declared envelope; it need not fill the envelope.
 // The catalog imports only render-free generators and never consumes the shared scene RNG.
 import { mulberry32 } from './rng.js';
-import { partAABB } from './vehicles.js';
-import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, environmentAvailable } from './environmentParts.js';
+import { partAABB, VEHICLE_SPEC } from './vehicles.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, environmentAvailable, environmentSize, makeSceneVehicleParts } from './environmentParts.js';
 import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
 export { ROCK_SEASON_TINT } from './environmentParts.js';
 
@@ -456,6 +456,298 @@ export function standaloneBoundaryParts(kind, opts = {}) {
   });
 }
 
+// ============ 邊界緩衝區單一物件組合類障礙物填滿 ============
+// 正常人造物件如：風機／太陽能板／完好摩天樓／連排透天等，以整齊排列（矩陣排列或交錯排列）填滿邊界緩衝區；
+// 荒廢或被破壞人造物如：被攻擊或縱火車輛／出軌列車／倒塌大樓／擱淺船隻／倒塌高架等，以隨機方向位置排列；
+// 自然物件如：大小神木林／大小巨岩／大小山頭／冰山浮冰等，以隨機排列填滿邊界緩衝區。
+// 所有物件尺寸嚴格錨定遊戲空間正常物件標準尺寸（杜絕為作障礙物而故意放大）。
+// 全程使用世界座標雜湊起種，零全域共享隨機序列消耗，嚴格決定性。
+export const BOUNDARY_BUFFER_LAYOUTS = Object.freeze({
+  // ---- 正常營運人造物件 (Artificial Intact): 整齊排列 (矩陣 grid 或交錯 staggered) ----
+  // 風機: 交錯排列 (staggered) 避免尾流
+  windland:    { type: 'artificial', mode: 'staggered', pitchX: 18, pitchZ: 18, object: 'wind',  scaleRange: [0.95, 1.05] },
+  windsea:     { type: 'artificial', mode: 'staggered', pitchX: 18, pitchZ: 18, object: 'wind',  scaleRange: [0.95, 1.05] },
+  // 太陽能板: 矩陣排列 (grid) 採光一致
+  solarfield:  { type: 'artificial', mode: 'grid',      pitchX: 8,  pitchZ: 7,  object: 'solar', scaleRange: [1.0, 1.0] },
+  floatsolar:  { type: 'artificial', mode: 'grid',      pitchX: 8,  pitchZ: 7,  object: 'solar', scaleRange: [1.0, 1.0] },
+  // 完好摩天樓: 交錯排列 (staggered) 豐富立體天際線
+  skyscrapers: { type: 'artificial', mode: 'staggered', pitchX: 20, pitchZ: 20, object: 'skyscraper', scaleRange: [0.85, 1.0] },
+  alpinecity:  { type: 'artificial', mode: 'staggered', pitchX: 20, pitchZ: 20, object: 'skyscraper', scaleRange: [0.85, 1.0] },
+  // 連排透天 / 民房: 矩陣排列 (grid) 正交街廓
+  rowhouse:    { type: 'artificial', mode: 'grid',      pitchX: 14, pitchZ: 12, object: 'house', scaleRange: [0.9, 1.0] },
+  edgehamlet:  { type: 'artificial', mode: 'grid',      pitchX: 14, pitchZ: 12, object: 'house', scaleRange: [0.9, 1.0] },
+  cliffvillage:{ type: 'artificial', mode: 'grid',      pitchX: 14, pitchZ: 12, object: 'house', scaleRange: [0.9, 1.0] },
+  house:       { type: 'artificial', mode: 'grid',      pitchX: 14, pitchZ: 12, object: 'house', scaleRange: [0.9, 1.0] },
+  // 工業廠房 / 倉儲 / 電廠 / 焚化爐: 矩陣排列 (grid)
+  warehousebelt:    { type: 'artificial', mode: 'grid', pitchX: 30, pitchZ: 24, object: 'factory', scaleRange: [0.9, 1.0] },
+  harborwarehouses: { type: 'artificial', mode: 'grid', pitchX: 30, pitchZ: 24, object: 'factory', scaleRange: [0.9, 1.0] },
+  factory:          { type: 'artificial', mode: 'grid', pitchX: 30, pitchZ: 24, object: 'factory', scaleRange: [0.9, 1.0] },
+  powerplant:       { type: 'artificial', mode: 'grid', pitchX: 32, pitchZ: 24, object: 'powerplant', scaleRange: [0.9, 1.0] },
+  incinerator:      { type: 'artificial', mode: 'grid', pitchX: 26, pitchZ: 22, object: 'incinerator', scaleRange: [0.9, 1.0] },
+  // 油槽儲運: 交錯排列 (staggered)
+  tankfarm:         { type: 'artificial', mode: 'staggered', pitchX: 14, pitchZ: 14, object: 'tank', scaleRange: [0.9, 1.05] },
+  // 溫室大棚: 矩陣排列 (grid)
+  greenhouse:         { type: 'artificial', mode: 'grid', pitchX: 24, pitchZ: 18, object: 'greenhouse', scaleRange: [0.95, 1.0] },
+  hillsidegreenhouses:{ type: 'artificial', mode: 'grid', pitchX: 24, pitchZ: 18, object: 'greenhouse', scaleRange: [0.95, 1.0] },
+  // 農牧場: 矩陣排列 (grid)
+  ranch:            { type: 'artificial', mode: 'grid', pitchX: 26, pitchZ: 20, object: 'ranch', scaleRange: [0.9, 1.0] },
+  terracedfarms:    { type: 'artificial', mode: 'grid', pitchX: 26, pitchZ: 20, object: 'ranch', scaleRange: [0.9, 1.0] },
+  // 水產養殖 / 蚵棚: 矩陣排列 (grid)
+  oysterracks:      { type: 'artificial', mode: 'grid', pitchX: 10, pitchZ: 10, object: 'aquaculture', scaleRange: [0.95, 1.05] },
+  searanch:         { type: 'artificial', mode: 'grid', pitchX: 12, pitchZ: 12, object: 'aquaculture', scaleRange: [0.95, 1.05] },
+  // 採掘與油井: 交錯排列 (staggered)
+  mine:             { type: 'artificial', mode: 'staggered', pitchX: 32, pitchZ: 26, object: 'mine', scaleRange: [0.9, 1.0] },
+  oilfield:         { type: 'artificial', mode: 'staggered', pitchX: 20, pitchZ: 18, object: 'oilfield', scaleRange: [0.9, 1.0] },
+  deeprig:          { type: 'artificial', mode: 'staggered', pitchX: 22, pitchZ: 20, object: 'oilfield', scaleRange: [0.9, 1.0] },
+
+  // ---- 荒廢／被破壞人造物件 (Artificial Ruined): 隨機方向位置排列 (random + randomYaw) ----
+  // 倒塌的大樓: 隨機方向散布
+  skyfall:     { type: 'artificial', ruined: true, mode: 'random', pitchX: 36, pitchZ: 20, object: 'skyfall',      scaleRange: [0.85, 1.0], randomYaw: true },
+  // 擱淺的船隻 / 貨輪殘骸: 隨機方向擱淺散布
+  strandedship:{ type: 'artificial', ruined: true, mode: 'random', pitchX: 34, pitchZ: 18, object: 'strandedship', scaleRange: [0.85, 1.0], randomYaw: true },
+  ship:        { type: 'artificial', ruined: true, mode: 'random', pitchX: 34, pitchZ: 18, object: 'strandedship', scaleRange: [0.85, 1.0], randomYaw: true },
+  // 被攻擊／縱火的車輛: 隨機方向停放殘骸，車頂塌陷與焦黑配色
+  trucks:      { type: 'artificial', ruined: true, mode: 'random', pitchX: 14, pitchZ: 8,  object: 'truck',        scaleRange: [0.95, 1.05], randomYaw: true },
+  car:         { type: 'artificial', ruined: true, mode: 'random', pitchX: 6,  pitchZ: 5,  object: 'car',          scaleRange: [0.9, 1.0],   randomYaw: true },
+  // 出軌的列車: 斷裂、橫臥、傾覆於緩衝區之車廂
+  train:       { type: 'artificial', ruined: true, mode: 'random', pitchX: 22, pitchZ: 10, object: 'train',        scaleRange: [0.95, 1.05], randomYaw: true },
+  // 倒塌的高架橋: 橋面斷裂錯位
+  viaduct:     { type: 'artificial', ruined: true, mode: 'random', pitchX: 22, pitchZ: 14, object: 'viaduct',      scaleRange: [0.9, 1.05],  randomYaw: true },
+
+  // ---- 自然物件 (Natural): 隨機排列 (random) 帶多尺度大小變化 ----
+  // 大小神木林: 隨機散布，尺度 0.65x ~ 1.55x
+  gianttree:   { type: 'natural', mode: 'random', pitchX: 26, pitchZ: 26, object: 'gianttree', scaleRange: [0.65, 1.55], randomYaw: true },
+  giantforest: { type: 'natural', mode: 'random', pitchX: 26, pitchZ: 26, object: 'gianttree', scaleRange: [0.65, 1.50], randomYaw: true },
+  densegiants: { type: 'natural', mode: 'random', pitchX: 24, pitchZ: 24, object: 'gianttree', scaleRange: [0.70, 1.55], randomYaw: true },
+  foresthills: { type: 'natural', mode: 'random', pitchX: 26, pitchZ: 26, object: 'gianttree', scaleRange: [0.65, 1.45], randomYaw: true },
+  fallentree:  { type: 'natural', mode: 'random', pitchX: 24, pitchZ: 14, object: 'fallentree',scaleRange: [0.60, 1.40], randomYaw: true },
+  // 大小巨岩: 隨機散布，尺度 0.55x ~ 1.65x
+  boulder:     { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.55, 1.65], randomYaw: true },
+  rockery:     { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.60, 1.60], randomYaw: true },
+  basaltspine: { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.60, 1.50], randomYaw: true },
+  reefchain:   { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.60, 1.50], randomYaw: true },
+  isletbarrier:{ type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.55, 1.50], randomYaw: true },
+  // 大小山頭: 隨機散布，尺度 0.70x ~ 1.45x
+  rollinghills:{ type: 'natural', mode: 'random', pitchX: 20, pitchZ: 20, object: 'boulder',   scaleRange: [0.70, 1.45], randomYaw: true },
+  // 冰山浮冰: 隨機散布，尺度 0.50x ~ 1.45x
+  icefloe:     { type: 'natural', mode: 'random', pitchX: 24, pitchZ: 20, object: 'icefloe',   scaleRange: [0.50, 1.40], randomYaw: true },
+  iceberg:     { type: 'natural', mode: 'random', pitchX: 32, pitchZ: 28, object: 'iceberg',   scaleRange: [0.55, 1.45], randomYaw: true },
+  seaice:      { type: 'natural', mode: 'random', pitchX: 22, pitchZ: 20, object: 'icefloe',   scaleRange: [0.50, 1.35], randomYaw: true },
+});
+
+/**
+ * 邊界單元生成器：針對單一障礙物款式產出單一物件零件。
+ * 邊界本體與緩衝區共用同一生成器，確保大小、顏色、風格、構件完全一致（單一縫）。
+ * 物件尺寸嚴格採用標準遊戲空間真實尺寸，絕不故意放大。
+ */
+function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBuffer = false }) {
+  const def = WALL_KINDS[kind];
+  const objKey = layout?.object || def?.object;
+
+  if (objKey === 'wind' || kind.startsWith('wind')) {
+    return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season });
+  }
+  if (objKey === 'solar' || kind.includes('solar')) {
+    return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season });
+  }
+  if (objKey === 'aquaculture' || ['searanch', 'oysterracks'].includes(kind)) {
+    return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season });
+  }
+  if (kind === 'deeprig') {
+    return linearEnvironmentParts('deeprig', { len: w, depth: d, h, seed, season });
+  }
+  if (objKey === 'tank' || kind === 'tankfarm') {
+    const rnd = mulberry32(seed >>> 0);
+    const r = Math.min(w, d) * 0.44;
+    const col = pick(rnd, [0xb3bab6, 0xc0c7c3, 0xa5ada9]);
+    return [
+      { g: ['cyl', r, r, h * 0.75, 12], p: [0, h * 0.375, 0], c: col, role: 'storage-tank' },
+      { g: ['cyl', r * 0.96, r, h * 0.08, 12], p: [0, h * 0.79, 0], c: 0x6e7c80, role: 'tank-roof' },
+    ];
+  }
+  if (objKey === 'truck' || kind === 'trucks') {
+    const rnd = mulberry32(seed >>> 0);
+    const crush = layout?.ruined ? (0.55 + rnd() * 0.35) : 1;
+    const paint = layout?.ruined
+      ? pick(rnd, [0x22201e, 0x332c28, 0x1a1918, 0x3f352e, 0x473d36, 0x2b2d30])
+      : (seed ^ 0x74727563);
+    const spec = VEHICLE_SPEC.truck;
+    const fit = {
+      L: Math.min(spec.L, w),
+      H: Math.min(spec.H, h),
+      W: Math.min(spec.W, d),
+    };
+    return makeSceneVehicleParts('truck', { fit, crush, paint });
+  }
+  if (objKey === 'train' || kind === 'train') {
+    const rnd = mulberry32(seed >>> 0);
+    const crush = layout?.ruined ? (0.65 + rnd() * 0.35) : 1;
+    const paint = seed ^ 0x7261696c;
+    const spec = VEHICLE_SPEC.railcar;
+    const fit = {
+      L: Math.min(spec.L, w),
+      H: Math.min(spec.H, h),
+      W: Math.min(spec.W, d),
+    };
+    return makeSceneVehicleParts('railcar', { fit, crush, paint });
+  }
+  if (objKey === 'car' || kind === 'car') {
+    const rnd = mulberry32(seed >>> 0);
+    const crush = layout?.ruined ? (0.55 + rnd() * 0.35) : 1;
+    const paint = layout?.ruined
+      ? pick(rnd, [0x22201e, 0x332c28, 0x1a1918, 0x3f352e, 0x473d36])
+      : seed;
+    const spec = VEHICLE_SPEC.sedan;
+    const fit = {
+      L: Math.min(spec.L, w),
+      H: Math.min(spec.H, h),
+      W: Math.min(spec.W, d),
+    };
+    return makeSceneVehicleParts('sedan', { fit, crush, paint });
+  }
+  if (objKey === 'viaduct' || kind === 'viaduct') {
+    return linearEnvironmentParts('viaduct', { len: w, depth: d, h, seed, season });
+  }
+  if (objKey && ENVIRONMENT_OBJECTS[objKey]) {
+    // 嚴格錨定正常物件世界標準尺寸，不可為了當障礙物就故意放大
+    const normalSize = environmentSize(objKey, seed);
+    const unitSize = isBuffer
+      ? normalSize
+      : [Math.min(normalSize[0], w), Math.min(normalSize[1], h), Math.min(normalSize[2], d)];
+    return environmentParts(objKey, { size: unitSize, seed, season });
+  }
+  return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season });
+}
+
+/**
+ * 邊界障礙物與緩衝區物件的聯合批次生成器（唯一縫：同源管線、規格一致、排列連續、風格同批）。
+ * 邊界本體（Row 0）坐落於碰撞盒內，緩衝區（Row 1..N）無縫銜接於其後。
+ *
+ * @returns {{ parts: Array, bufferParts: Array }}
+ */
+export function buildBoundaryRunParts(kind, {
+  len, depth, bufferDepth = 0, h = 18, seed = 1, variant = 0, season = 'summer', water = false,
+}) {
+  const layout = BOUNDARY_BUFFER_LAYOUTS[kind];
+  const def = WALL_KINDS[kind];
+  const targetH = Math.max(h, def?.h || 18);
+  if (!layout) {
+    return {
+      parts: wallParts(kind, { len, depth, h: targetH, seed, variant, season }),
+      bufferParts: [],
+    };
+  }
+
+  const { mode, pitchX, pitchZ } = layout;
+  const parts = [];
+  const bufferParts = [];
+
+  const numCols = Math.max(1, Math.round(len / pitchX));
+  const colStep = len / numCols;
+  const unitW = colStep * 0.94;
+  const rowStep = Math.max(depth, pitchZ);
+  const unitD = Math.min(depth * 0.94, rowStep * 0.92);
+
+  const maxBufferRows = bufferDepth >= 6 ? Math.floor(bufferDepth / rowStep) : 0;
+  const totalRows = 1 + maxBufferRows; // Row 0 = boundary wall, Row 1..maxBufferRows = buffer fill
+
+  if (mode === 'random') {
+    // 自然物件或荒廢破壞人造物：全區（邊界 + 緩衝區）一體化隨機散布與姿態旋轉
+    for (let r = 0; r < totalRows; r++) {
+      const isBuffer = r > 0;
+      const baseV = r === 0 ? 0 : (-depth / 2 - (r - 0.5) * rowStep);
+      for (let c = 0; c < numCols; c++) {
+        const baseU = -len / 2 + (c + 0.5) * colStep;
+        const ptSeed = edgeSeed(Math.round((baseU + 500) * 8), Math.round((baseV + 500) * 8), (seed ^ Math.imul(r + 1, 0x1f1f) ^ Math.imul(c + 1, 0x9e37)) >>> 0);
+        const rnd = mulberry32(ptSeed);
+
+        const jitU = isBuffer ? (rnd() - 0.5) * colStep * 0.45 : 0;
+        const jitV = isBuffer ? (rnd() - 0.5) * rowStep * 0.35 : 0;
+        let u = baseU + jitU;
+        let v = baseV + jitV;
+
+        const objW = colStep * 0.95;
+        const objD = (isBuffer ? rowStep : depth) * 0.92;
+        const objH = targetH;
+
+        if (u - objW / 2 < -len / 2 - 2 || u + objW / 2 > len / 2 + 2) continue;
+        if (isBuffer && (v - objD / 2 < -depth / 2 - bufferDepth - 2)) continue;
+
+        const modelParts = generateBoundaryUnit(kind, {
+          w: objW, d: objD, h: objH, seed: ptSeed, season, water, layout, isBuffer,
+        });
+
+        // 隨機方向旋轉（Row 0 位於權威碰撞盒內，維持軸向對齊避免突出碰撞柱；緩衝區全 360 度隨機旋轉與傾覆）
+        const yaw = (isBuffer && layout.randomYaw) ? (rnd() * Math.PI * 2) : 0;
+        const cy = Math.cos(yaw), sy = Math.sin(yaw);
+
+        for (const p of modelParts) {
+          const [px = 0, py = 0, pz = 0] = p.p || [];
+          const rx = yaw !== 0 ? (px * cy + pz * sy) : px;
+          const rz = yaw !== 0 ? (-px * sy + pz * cy) : pz;
+          const rRot = p.r ? [p.r[0], (p.r[1] || 0) + yaw, p.r[2]] : (yaw !== 0 ? [0, yaw, 0] : undefined);
+          const outPart = {
+            ...p,
+            p: [rx + u, py, rz + v],
+            ...(rRot ? { r: rRot } : {}),
+            ...(isBuffer ? { boundaryBuffer: true, role: p.role || 'boundary-buffer-fill' } : {}),
+          };
+          if (isBuffer) {
+            delete outPart.motion;
+            bufferParts.push(outPart);
+          } else {
+            parts.push(outPart);
+          }
+        }
+      }
+    }
+  } else {
+    // 正常人造物件：整齊排列（矩陣 grid 或交錯 staggered），邊界（Row 0）與緩衝區（Row 1..N）鎖入同一網格
+    for (let r = 0; r < totalRows; r++) {
+      const isBuffer = r > 0;
+      const v = r === 0 ? 0 : (-depth / 2 - (r - 0.5) * rowStep);
+      const isStaggeredRow = mode === 'staggered' && (r % 2 === 1);
+      const uOffset = isStaggeredRow ? (colStep * 0.5) : 0;
+
+      for (let c = 0; c < numCols; c++) {
+        let u = -len / 2 + (c + 0.5) * colStep + uOffset;
+        if (u > len / 2 - colStep * 0.15) u -= (len - colStep * 0.3);
+
+        const ptSeed = edgeSeed(Math.round((u + 500) * 8), Math.round((v + 500) * 8), (seed ^ Math.imul(r + 1, 0x1f1f) ^ Math.imul(c + 1, 0x9e37)) >>> 0);
+
+        if (u - unitW / 2 < -len / 2 - 2 || u + unitW / 2 > len / 2 + 2) continue;
+        if (isBuffer && (v - unitD / 2 < -depth / 2 - bufferDepth - 2)) continue;
+
+        const modelParts = generateBoundaryUnit(kind, {
+          w: unitW, d: unitD, h: targetH, seed: ptSeed, season, water, layout, isBuffer,
+        });
+
+        for (const p of modelParts) {
+          const [px = 0, py = 0, pz = 0] = p.p || [];
+          const outPart = {
+            ...p,
+            p: [px + u, py, pz + v],
+            ...(isBuffer ? { boundaryBuffer: true, role: p.role || 'boundary-buffer-fill' } : {}),
+          };
+          if (isBuffer) {
+            delete outPart.motion;
+            bufferParts.push(outPart);
+          } else {
+            parts.push(outPart);
+          }
+        }
+      }
+    }
+  }
+
+  return { parts, bufferParts };
+}
+
+/** 取緩衝空間物件的零件表（委派至 buildBoundaryRunParts 確保同源一致性） */
+export function buildBoundaryBufferParts(kind, opts) {
+  return buildBoundaryRunParts(kind, opts).bufferParts;
+}
+
 // ============ 緩衝空間的 3D 物件(使用者原話:「加入少許 3D 物件」)============
 // 緩衝空間本身是 `terrain.js` 那一圈外緣裙(貼地貌拼圖那一半住在那裡);這裡只管「擺什麼」。
 // 三條:①**格子 + 雜湊抖動**(不是亂數序列)⇒ 零共享消耗、跨客戶端逐位元一致;
@@ -466,6 +758,13 @@ export const PROP_KINDS = {
   boulder: { bio: ['bare'] },           // 岩塊
   hamlet:  { bio: ['urban'] },          // 聚落
   islet:   { bio: ['water'] },          // 礁岩/浮標
+};
+
+const PROP_PARTS = {
+  grove: (rnd) => environmentParts('gianttree', { size: [18, 28, 18], seed: Math.floor(rnd() * 0x10000000) }),
+  boulder: (rnd) => environmentParts('boulder', { size: [14, 12, 14], seed: Math.floor(rnd() * 0x10000000) }),
+  hamlet: (rnd) => environmentParts('house', { size: [12, 10, 10], seed: Math.floor(rnd() * 0x10000000) }),
+  islet: (rnd) => environmentParts('boulder', { size: [16, 10, 16], seed: Math.floor(rnd() * 0x10000000) }),
 };
 
 /** 地貌 → 緩衝空間物件款(找不到就用岩塊墊底) */
