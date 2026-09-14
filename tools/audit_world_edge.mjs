@@ -238,7 +238,7 @@ const mkWall = (extra = '', over = {}) => new Function(
   'SLOPE', 'slopeDeg', 'wallSlopeTier', 'buildSlopeBoundary', 'edgeWallDeepM',
   'classifyImg', 'terrainEnvCode', 'planWallRuns', 'planWallKinds', 'WALL_KINDS', 'wallParts', 'wallVariant', 'edgeSeed',
   'planBufferProps', 'propParts', 'planBackdrop', 'backdropParts', 'BACKDROP_KINDS',
-  'EDGE_WALL', 'edgeBufferM', 'objHeightMax', 'lowPower', 'partBox',
+  'EDGE_WALL', 'edgeBufferM', 'objHeightMax', 'lowPower', 'partBox', 'buildBoundaryBufferParts', 'buildBoundaryRunParts', 'BOUNDARY_BUFFER_LAYOUTS',
   `${HELPERS}\n${wallSrc}\n${grabFn(bioSrc, 'buildBufferProps')}\n${grabFn(bioSrc, 'buildBackdrop')}\n${extra}
    return { buildEdgeWall, buildBufferProps, buildBackdrop };`,
 )(THREE_STUB, proceduralMeshStub, (c, o) => ({ c, o }), mergeGeosStub, WORLD_EDGE, edgeWallInsetM, edgeWallHM, WATER,
@@ -246,7 +246,7 @@ const mkWall = (extra = '', over = {}) => new Function(
   classifyImg, terrainEnvCode, EW.planWallRuns, planWallKinds, EW.WALL_KINDS, wallParts, EW.wallVariant, EW.edgeSeed,
   over.planBufferProps || EW.planBufferProps, over.propParts || EW.propParts,
   over.planBackdrop || EW.planBackdrop, over.backdropParts || EW.backdropParts, EW.BACKDROP_KINDS,
-  EW.EDGE_WALL, edgeBufferM, objHeightMax, false, EW.partBox);
+  EW.EDGE_WALL, edgeBufferM, objHeightMax, false, EW.partBox, EW.buildBoundaryBufferParts, EW.buildBoundaryRunParts, EW.BOUNDARY_BUFFER_LAYOUTS);
 const B = mkWall();
 
 // 合成地形:起伏 + 一片水域 + **中等坡與陡崖各一段**(段身取樣的 lo/hi 要真的不同,平地驗不到

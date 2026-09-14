@@ -55,7 +55,7 @@ import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed
 // 型錄、切分規則、落點規劃全在那一支(純資料、零 THREE、離線可驗);本檔只負責取樣地貌與建幾何。
 import {
   EDGE_WALL, EDGE_MOTION, WALL_KINDS, BACKDROP_KINDS, planWallRuns, planWallKinds, wallParts, wallVariant, wallSlopeTier, edgeSeed, partBox,
-  planBufferProps, propParts, planBackdrop, backdropParts,
+  planBufferProps, propParts, planBackdrop, backdropParts, buildBoundaryBufferParts, buildBoundaryRunParts, BOUNDARY_BUFFER_LAYOUTS,
 } from './edgewall.js';
 import { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable } from './environmentParts.js';
 import { runtimeMeshDataGeometry } from './runtimePartModel.js';
@@ -9104,9 +9104,16 @@ function buildEdgeWall({ group, terrain, blockers }) {
         }),
       } : null,
     }) : null;
-    const parts = def.terrainFit ? (joined?.parts || []) : wallParts(kind, {
+    const bufAvailable = Math.max(0, (inset + (terrain.bufferM || 0)) - def.depth);
+    const boundaryBatch = !def.terrainFit && BOUNDARY_BUFFER_LAYOUTS[kind]
+      ? buildBoundaryRunParts(kind, {
+          len: step, depth: def.depth, bufferDepth: bufAvailable, h: kh0,
+          seed, variant, season: terrain.season || 'summer', water: s.water,
+        })
+      : null;
+    const parts = def.terrainFit ? (joined?.parts || []) : (boundaryBatch?.parts || wallParts(kind, {
       len: half * 2, depth: def.depth, h: kh0, seed, variant, season: terrain.season || 'summer',
-    });
+    }));
     const kh = kh0; // 固定邊界包絡；本體間的可見空隙同樣禁止穿越。
     // 零件的落地基準:段內最高的地形,水域段改取水面(否則海堤/貨輪整艘沉在水面下)
     const ground = Math.max(joined?.hi ?? s.hi, wy != null && s.water ? Math.max(s.hi, wy) : s.hi);
@@ -9127,6 +9134,15 @@ function buildEdgeWall({ group, terrain, blockers }) {
         ? { ...part, p: [part.p[0], part.p[1] - part.waterline, part.p[2]] } : part);
     emitWallParts(batch, visualParts, x, joined ? 0 : ground, z, e.fry, 1);
     if (joined?.bufferParts) emitWallParts(batch, joined.bufferParts, x, 0, z, e.fry, 1);
+    if (boundaryBatch?.bufferParts?.length) {
+      const visualBufferParts = boundaryBatch.bufferParts.map(part =>
+        s.water && Number.isFinite(part.waterline)
+          ? { ...part, p: [part.p[0], part.p[1] - part.waterline, part.p[2]] } : part);
+      const gy = (wx, wz) => (s.water && wy != null
+        ? Math.max(wy, (terrain.bufferHeightAt ? terrain.bufferHeightAt(wx, wz) : terrain.heightAt(wx, wz)))
+        : (terrain.bufferHeightAt ? terrain.bufferHeightAt(wx, wz) : terrain.heightAt(wx, wz)));
+      emitWallParts(batch, visualBufferParts, x, 0, z, e.fry, 1, gy);
+    }
     prevKind = kind;
     prevVariant = variant;
   }
@@ -9165,6 +9181,9 @@ const _wp = new THREE.Vector3(), _ws = new THREE.Vector3(), _wg = new THREE.Vect
 function emitWallParts(batch, parts, ox, oy, oz, ry, scale, groundY = null) {
   for (const p of parts) {
     const geo = wallGeo(p.g);
+    if (p.boundaryBuffer || p.role === 'boundary-buffer-fill' || p.g[1]?.boundaryBuffer) {
+      geo.boundaryBuffer = true;
+    }
     const [px = 0, py = 0, pz = 0] = p.p || [];
     const [rx = 0, pry = 0, rz = 0] = p.r || [];
     // 先套零件自己的位移/旋轉(局部),再整件轉 ry、縮放、平移到世界
