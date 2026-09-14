@@ -11,7 +11,8 @@ console.log('--- 驗證邊界緩衝區物件填滿 (Boundary Buffer Fill: Artifi
 const entries = Object.entries(BOUNDARY_BUFFER_LAYOUTS);
 assert(entries.length >= 15, `應定義足夠數量的邊界緩衝區款式 (實得 ${entries.length})`);
 
-const artificialKinds = [];
+const intactArtificialKinds = [];
+const ruinedArtificialKinds = [];
 const naturalKinds = [];
 
 for (const [kind, layout] of entries) {
@@ -23,9 +24,17 @@ for (const [kind, layout] of entries) {
     `${kind}: scaleRange 必須為長度 2 之陣列`);
 
   if (layout.type === 'artificial') {
-    artificialKinds.push(kind);
-    assert(['grid', 'staggered'].includes(layout.mode),
-      `人造物件 ${kind} 必須為 'grid'(矩陣) 或 'staggered'(交錯) 排列 (實得 ${layout.mode})`);
+    if (layout.ruined) {
+      ruinedArtificialKinds.push(kind);
+      assert.equal(layout.mode, 'random',
+        `荒廢／毀損人造物件 ${kind} 必須為 'random' 隨機排列 (實得 ${layout.mode})`);
+      assert.equal(layout.randomYaw, true,
+        `荒廢／毀損人造物件 ${kind} 必須啟用 randomYaw 隨機旋轉`);
+    } else {
+      intactArtificialKinds.push(kind);
+      assert(['grid', 'staggered'].includes(layout.mode),
+        `正常營運人造物件 ${kind} 必須為 'grid'(矩陣) 或 'staggered'(交錯) 排列 (實得 ${layout.mode})`);
+    }
   } else {
     naturalKinds.push(kind);
     assert.equal(layout.mode, 'random',
@@ -40,7 +49,7 @@ for (const [kind, layout] of entries) {
   }
 }
 
-console.log(`  ✓ 佈局字典結構合法: 人造物件 ${artificialKinds.length} 款 (整齊排列), 自然物件 ${naturalKinds.length} 款 (隨機+多尺度)`);
+console.log(`  ✓ 佈局字典結構合法: 正常人造物 ${intactArtificialKinds.length} 款 (整齊排列), 毀損人造物 ${ruinedArtificialKinds.length} 款 (隨機方向), 自然物件 ${naturalKinds.length} 款 (隨機+多尺度)`);
 
 // 2. 指定使用者要求之指標物件驗證
 const userMandatedArtificial = {
@@ -61,7 +70,18 @@ for (const [kind, expectedMode] of Object.entries(userMandatedArtificial)) {
   assert.equal(layout.mode, expectedMode,
     `人造物件 ${kind} 排列模式應為 ${expectedMode} (實得 ${layout.mode})`);
 }
-console.log('  ✓ 指標人造物件 (風機/太陽能板/摩天樓/連排透天/油槽) 符合整齊排列契約');
+console.log('  ✓ 指標正常人造物件 (風機/太陽能板/摩天樓/連排透天/油槽) 符合整齊排列契約');
+
+// 荒廢／被破壞人造物件驗證（被攻擊或縱火的車輛/出軌的列車/倒塌的大樓/擱淺的船隻）
+const userMandatedRuined = ['skyfall', 'strandedship', 'ship', 'trucks', 'car', 'train', 'viaduct'];
+for (const kind of userMandatedRuined) {
+  const layout = BOUNDARY_BUFFER_LAYOUTS[kind];
+  assert(layout, `指標毀損人造物件 ${kind} 必須存在於 BOUNDARY_BUFFER_LAYOUTS`);
+  assert.equal(layout.ruined, true, `指標毀損人造物件 ${kind} 必須標記 ruined: true`);
+  assert.equal(layout.mode, 'random', `指標毀損人造物件 ${kind} 必須為 random 隨機排列`);
+  assert.equal(layout.randomYaw, true, `指標毀損人造物件 ${kind} 必須為 randomYaw 隨機方向`);
+}
+console.log('  ✓ 指標毀損人造物件 (倒塌大樓/擱淺船隻/縱火車輛/出軌列車/倒塌高架) 符合隨機方向位置排列契約');
 
 const userMandatedNatural = [
   'gianttree', 'giantforest', 'densegiants', // 大小神木林
@@ -191,6 +211,30 @@ for (const kind of ['windland', 'windsea', 'solarfield', 'skyscrapers', 'rowhous
   }
 }
 console.log('  ✓ 邊界與緩衝區同源管線一致性驗證通過: 尺寸、色彩、網格與風格無縫銜接');
+
+// 7. 驗證物件真實尺寸標準（大小要跟遊戲空間的正常物件一樣，不可為了當障礙物就故意放大）
+import { partBox } from '../public/js/edgewall.js';
+
+const sizeCheckCases = [
+  { kind: 'trucks', maxExpectedH: 4.5, label: '大貨車' },
+  { kind: 'train', maxExpectedH: 4.5, label: '列車車廂' },
+  { kind: 'car', maxExpectedH: 2.5, label: '汽車' },
+  { kind: 'rowhouse', maxExpectedH: 13.0, label: '連排民房' },
+  { kind: 'skyfall', maxExpectedH: 16.0, label: '倒塌大樓' },
+  { kind: 'strandedship', maxExpectedH: 16.0, label: '擱淺船隻' },
+];
+
+for (const { kind, maxExpectedH, label } of sizeCheckCases) {
+  const batch = buildBoundaryRunParts(kind, {
+    len: 100, depth: 16, bufferDepth: 36, h: 28, seed: 42,
+  });
+  // 取出緩衝區內生成的單元零件
+  assert(batch.bufferParts.length > 0, `${kind}: 緩衝區零件數應 > 0`);
+  const maxH = Math.max(...batch.bufferParts.map(p => partBox(p).y1));
+  assert(maxH <= maxExpectedH + 0.5,
+    `${label} (${kind}) 緩衝區物件尺寸不可被刻意放大！實測最高 Y=${maxH.toFixed(2)}m (上限 ${maxExpectedH}m)`);
+}
+console.log('  ✓ 物件標準尺寸錨定驗證通過: 載具與建築均嚴格遵守正常世界標準尺度，未被刻意放大');
 
 function near(a, b, eps = 1e-4) { return Math.abs(a - b) <= eps; }
 
