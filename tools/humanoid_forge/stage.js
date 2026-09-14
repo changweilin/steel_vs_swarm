@@ -64,7 +64,7 @@ const BARS = [
   // 全向招式/定向招式 —— 後兩顆把**槽位**與**動作方向**混在一起,而方向本來就該由招式自己推)
   { group: '演出', kind: 'play', btns: [
     ['light', 'fire', '輕武器射擊(持續)'], ['heavy', 'heavy', '重武器蓄力擊發'],
-    ['skill', 'skill', '小招'], ['ult', 'ult', '大招']] },
+    ['skill', 'skill', '防守招式'], ['ult', 'ult', '攻擊招式']] },
   { group: '視角', kind: 'toggle', btns: [
     ['spin', 'spin', '自動環繞'], ['joints', 'joints', '樞軸點']] },
   { group: '版本', kind: 'ver', btns: null },       // ← STAGE_VERSIONS 推導
