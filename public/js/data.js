@@ -6009,14 +6009,14 @@ export const isBotId = (id) => typeof id === 'string' && id.startsWith('b');
 // elite(高):撿尾刀、打帶跑、扛半條護盾就後撤。
 // 難度分層一律走這兩顆旗標 —— bots.js MUST NOT 比對難度字串(`diff.key === 'high'` 一出現就是第二份分級表)。
 export const BOT_DIFF = {
-  novice: { key: 'novice', name: '新手', aimErr: 0.55, heavy: false, ability: false, gap: 0.90, react: 0.70, tactic: false, elite: false, scopeSearchDeg: 0, scopeSearchPitchDeg: 0, scopeSearchFreq: 0 },
-  low:    { key: 'low',    name: '低',   aimErr: 0.35, heavy: true,  ability: false, gap: 0.55, react: 0.45, tactic: false, elite: false, scopeSearchDeg: 30, scopeSearchPitchDeg: 15, scopeSearchFreq: 0.8 },
-  medium: { key: 'medium', name: '中',   aimErr: 0.15, heavy: true,  ability: true,  gap: 0.30, react: 0.28, tactic: true,  elite: false, scopeSearchDeg: 45, scopeSearchPitchDeg: 20, scopeSearchFreq: 1.2 },
-  high:   { key: 'high',   name: '高',   aimErr: 0.0,  heavy: true,  ability: true,  gap: 0.15, react: 0.15, tactic: true,  elite: true,  scopeSearchDeg: 60, scopeSearchPitchDeg: 25, scopeSearchFreq: 1.6 },
+  novice: { key: 'novice', name: '新手', aimErr: 0.55, heavy: false, ability: false, defend: false, gap: 0.90, react: 0.70, tactic: false, elite: false, scopeSearchDeg: 0, scopeSearchPitchDeg: 0, scopeSearchFreq: 0 },
+  low:    { key: 'low',    name: '低',   aimErr: 0.35, heavy: true,  ability: false, defend: true,  gap: 0.55, react: 0.45, tactic: false, elite: false, scopeSearchDeg: 30, scopeSearchPitchDeg: 15, scopeSearchFreq: 0.8 },
+  medium: { key: 'medium', name: '中',   aimErr: 0.15, heavy: true,  ability: true,  defend: true,  gap: 0.30, react: 0.28, tactic: true,  elite: false, scopeSearchDeg: 45, scopeSearchPitchDeg: 20, scopeSearchFreq: 1.2 },
+  high:   { key: 'high',   name: '高',   aimErr: 0.0,  heavy: true,  ability: true,  defend: true,  gap: 0.15, react: 0.15, tactic: true,  elite: true,  scopeSearchDeg: 60, scopeSearchPitchDeg: 25, scopeSearchFreq: 1.6 },
 };
 // 各類操作的切換間隔 = 該難度 gap × 此倍數(1 = 一次基本操作)。
 // buy 27 ⇒ 高難度 ≈ 4.1s,與 2026-07-27 之前的硬編碼 4s 巡店節奏一致(其餘難度按手速等比放慢)。
-export const BOT_OPS = { scan: 2, weapon: 3, ability: 4, special: 5, state: 4, buy: 27 };
+export const BOT_OPS = { scan: 2, weapon: 3, ability: 4, special: 5, state: 4, buy: 27, defend: 2 };
 export const BOT_DIFF_KEYS = ['novice', 'low', 'medium', 'high'];
 export const DEFAULT_BOT_DIFF = 'medium';
 export const botDiffOf = (key) => BOT_DIFF[key] || BOT_DIFF[DEFAULT_BOT_DIFF];

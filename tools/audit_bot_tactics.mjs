@@ -603,5 +603,88 @@ sec('Ⅵ 不回歸:護盾回復規則沒被動到 / 舊制難度逐位元不變'
   }
 }
 
+// ---------------------------------------------------------------------------------
+sec('Ⅶ 防守姿態與攻防招式策略 行為直測(真 BattleSim + 真 BotBrain)');
+// ---------------------------------------------------------------------------------
+{
+  // ① 新手難度: 完全不使用防守姿態
+  {
+    const sim = blank();
+    const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
+    const brain = new BotBrain(sim, 'b1', 'STEEL', 0, 'novice');
+    h.sp = 200; h.hp = 100; h.lastHitAt = sim.t;
+    brain.state = 'RETREAT';
+    brain._updateDefending(h, null);
+    t('新手難度: defend 旗標為 false', brain.diff.defend === false);
+    t('新手難度: 危急撤退亦不進入防守姿態', h.defending !== true);
+  }
+
+  // ② 低難度: 僅在撤退回主堡且受擊時被動舉盾保命; 一般交戰裝填不舉盾
+  {
+    const sim = blank();
+    const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
+    const brain = new BotBrain(sim, 'b1', 'STEEL', 0, 'low');
+    h.sp = 200; h.hp = 100; h.lastHitAt = sim.t;
+    brain.state = 'RETREAT';
+    brain._updateDefending(h, null);
+    t('低難度: defend 旗標為 true', brain.diff.defend === true);
+    t('低難度: 撤退回主堡受擊中進入防守姿態保命', h.defending === true);
+
+    // 一般交戰裝填中: 不舉盾(無 tactic 戰術旗標)
+    brain.state = 'ENGAGE';
+    h.reloadUntil.light = sim.t + 2;
+    brain._opAt.defend = 0; brain._opNext = 0;
+    brain._updateDefending(h, null);
+    t('低難度: 一般交戰換彈不具備戰術切盾意識', h.defending === false);
+  }
+
+  // ③ 中難度: 戰術性防守(換彈切盾、撤退/集結持盾、磁力損耗釋放防守招式)
+  {
+    const sim = blank();
+    const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
+    const brain = new BotBrain(sim, 'b1', 'STEEL', 0, 'medium');
+    h.sp = 200; h.maxSp = 200; h.hp = 500; h.maxHp = 500;
+    brain.state = 'ENGAGE';
+    h.reloadUntil.light = sim.t + 2;
+    h.reloadUntil.heavy = sim.t + 5;
+    brain._opAt.defend = 0; brain._opNext = 0;
+    brain._updateDefending(h, null);
+    t('中難度: 輕武器換彈空窗期戰術性切換防守姿態', h.defending === true);
+
+    // 磁力損耗過半: 觸發防守招式
+    const hd = sim.addHero('SWARM', 'b2', CH_DRONE);
+    const bd = new BotBrain(sim, 'b2', 'SWARM', 0, 'medium');
+    hd.sp = 40; hd.maxSp = 200; hd.lastHitAt = sim.t; hd.abil.skill = 1; hd.mp = 999; hd.acd.skill = 0;
+    bd._opAt.ability = 0; bd._opNext = 0;
+    bd._castSupport(hd, 1.0); // 即使 HP 滿血(frac=1.0)，磁力過半損耗仍觸發防守招式
+    t('中難度: 磁力損耗過半及時啟動防守招式充能/強化',
+      (hd.acd.skill || 0) > sim.t || (hd.achg?.skill?.rechargeAt?.length || 0) > 0 || !!hd.cast);
+  }
+
+  // ④ 高難度: 精英攻防一體(換彈切盾、裝填完成主動收盾、朝向威脅來源)
+  {
+    const sim = blank();
+    const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
+    const brain = new BotBrain(sim, 'b1', 'STEEL', 0, 'high');
+    h.sp = 200; h.maxSp = 200; h.hp = 500; h.maxHp = 500;
+    brain.state = 'ENGAGE';
+    h.reloadUntil.light = sim.t + 2;
+    h.reloadUntil.heavy = sim.t + 5;
+    h._alert = { x: 50, z: -50, t: sim.t };
+    brain._opAt.defend = 0; brain._opNext = 0;
+    brain._updateDefending(h, null);
+    t('高難度: 換彈空窗進入防守姿態', h.defending === true);
+    t('高難度: 持盾防守時自動轉向威脅警戒方向', brain._wantRy != null);
+
+    // 裝填完成且有目標已就緒: 主動解除防守姿態開火
+    const foe = sim._add({ kind: 'soldier', side: 'SWARM', lane: 0, x: 0, z: 50, y: 0, hp: 100 });
+    h.reloadUntil.light = 0;
+    brain._aimAt = sim.t - 1;
+    brain._opAt.defend = 0; brain._opNext = 0;
+    brain._updateDefending(h, foe);
+    t('高難度: 換彈就緒且瞄準完成時主動解除防守姿態投入進攻', h.defending === false);
+  }
+}
+
 console.log(`\n${fail ? '❌' : '✅'} 電腦玩家戰術稽核:${pass}/${pass + fail} 通過`);
 process.exit(fail ? 1 : 0);

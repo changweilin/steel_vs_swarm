@@ -113,6 +113,58 @@ export class BotBrain {
     if (want !== !!h.aiming && this._op('weapon')) this.sim.heroAim(this.pid, want);
   }
 
+  /**
+   * 防守姿態切換(F 鍵 / heroDefend):
+   * 磁力大於 0 且未在詠唱中方可進入防守姿態(正面 120° 護盾減免 75% 直擊傷害與 50% 爆炸傷害)。
+   * 分級策略:
+   *   - novice(新手): defend 為 false,完全不防守;
+   *   - low(低): 僅在危急撤退回主堡(RETREAT)且受擊時被動持盾保命;
+   *   - medium(中): 撤退/集結受擊持盾、交戰中輕武器換彈空窗切盾、受重傷爆發或導彈鎖定時持盾;
+   *   - high(高/elite): 換彈切盾微操、打帶跑拉開時持盾、且轉向對準威脅來源;換彈完成準備開火時主動收盾。
+   * 轉換切換吃 defend 操作閘(手速限制)。
+   */
+  _updateDefending(h, target) {
+    if (!this.diff.defend || h.dead || (h.sp || 0) <= 0 || h.cast) {
+      if (h.defending) this.sim.heroDefend(this.pid, false);
+      return;
+    }
+
+    let want = false;
+    if (!this.diff.tactic) {
+      // 低難度: 僅在危急撤退回主堡途中挨打時被動舉盾保命
+      want = this.state === 'RETREAT' && this._inFight(h);
+    } else {
+      // 中難度 & 高難度: 戰術防守
+      // ① 脫離交戰(撤退或集結)途中挨打: 持盾保護殘餘磁力與裝甲
+      if (this._pulling() && this._inFight(h)) {
+        want = true;
+      }
+      // ② 交戰中輕武器裝填空窗且重武器未就緒: 趁無法開火時舉盾減傷 75%
+      else if (this.state === 'ENGAGE' && (h.reloadUntil?.light || 0) > this.sim.t && !this._heavyReady(h)) {
+        want = true;
+      }
+      // ③ 承受大量傷害或被防空/反裝甲飛彈鎖定: 舉盾吸收重火力
+      else if (this._inFight(h) && (this._recentDmg(h) >= (h.maxSp || 0) * 0.35 || this.sim.missiles.some((m) => m.tpid === this.pid))) {
+        want = true;
+      }
+
+      // 高難度(elite)微操: 裝填完成且目標已在準星範圍準備射擊時，主動放下護盾開火
+      if (this.diff.elite && target && (h.reloadUntil?.light || 0) <= this.sim.t && this.sim.t >= this._aimAt) {
+        want = false;
+      }
+    }
+
+    // 舉盾時面向威脅目標或警戒方向
+    if (want || h.defending) {
+      if (target) this._face(h, target.x, target.z);
+      else if (h._alert) this._face(h, h._alert.x, h._alert.z);
+    }
+
+    if (want !== !!h.defending && this._op('defend')) {
+      this.sim.heroDefend(this.pid, want);
+    }
+  }
+
   /** 靜止時狙擊搜索水平偏移角(rad;兵線方向 30/45/60 度角展開視野方向;expand 為展開倍率) */
   _scopeSearchAngle(h, expand = 1) {
     const rad = botScopeSearchRad(this.diff, expand);
@@ -284,6 +336,7 @@ export class BotBrain {
     this._updateAiming(h);
     const target = this._target(h);
     if (!this._pulling()) this.state = target ? 'ENGAGE' : 'PUSH';
+    this._updateDefending(h, target);
 
     // 經濟:依 BUY_ORDER 逐項升級(階梯單價 + 戰鬥分數門檻,一律由 sim.buy 複驗)。
     // 前置篩選走 `canUpgrade` 同一支(2026-08-11):升級多了戰鬥分數這道閘 ⇒ 光看錢會在
@@ -584,10 +637,12 @@ export class BotBrain {
       const A = this._ready(h, slot);
       if (!A) continue;
       const hurt = frac < this.tac.CAST_HURT;   // 血線走旋鈕(支援型放得早、攻堅型撐得久)
+      const lowSp = (h.maxSp > 0) && ((h.sp || 0) / h.maxSp < 0.5) && this._inFight(h); // 磁力損耗過半及時補防
+      const fullChg = this.diff.elite && (A.charges > 1) && this._inFight(h) && (this.sim._readyCharges(h, slot) >= A.charges);
       const isDefFx = A.fx === 'heal' || !!A.spRestore || !!A.shieldDefBoost || !!A.shieldExpand
         || !!A.spRegenHit || A.fx === 'reflect' || A.fx === 'phaseshift' || A.fx === 'fog' || A.fx === 'cube';
-      if ((isDefFx && hurt)
-        || (A.fx === 'buff' && A.mul?.dmgTaken && hurt)
+      if ((isDefFx && (hurt || lowSp || fullChg))
+        || (A.fx === 'buff' && A.mul?.dmgTaken && (hurt || lowSp || fullChg))
         || (A.fx === 'stealth' && this._pulling())) {
         if (this._op('ability')) this.sim.heroCast(this.pid, slot);   // 按 Q/E 是一項操作
       }
@@ -654,7 +709,14 @@ export class BotBrain {
       else if (A.fx === 'summon' || A.fx === 'vision') cast(true);
       else if (A.fx === 'buff' && A.mul?.dmg) cast(false);
       else if (A.fx === 'intercept' && this.sim.missiles.some((m) => m.tpid === this.pid)) cast(false);
-      else if (A.fx === 'shield_bash' && (d <= 35 || packed >= 2)) cast(false);
+      else if (A.fx === 'shield_bash' && (h.defending || d <= 35 || packed >= 2)) cast(false);
+      else if (this.diff.elite && (A.charges > 1) && this.sim._readyCharges(h, slot) >= A.charges) {
+        if (A.fx === 'strike' || A.fx === 'emp') cast(true);
+        else cast(false);
+      } else if (this.diff.elite && t.hero && (A.dmg || A.baseDmg || A.fx === 'strike')
+        && t.hp <= botSalvo(this._gun(h), t.kind, this.tac)) {
+        cast(true);
+      }
     }
 
     // 機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)2026-08-06 整組退場,MUST NOT 復辟:
