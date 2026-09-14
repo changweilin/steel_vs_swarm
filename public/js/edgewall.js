@@ -186,6 +186,31 @@ const kindFits = (k, biome, water) => {
 };
 
 /**
+ * 依場地環境與區域類型過濾障礙物類別：
+ * 荒野／自然風景區（如太魯閣、合歡山、陽明山、黑森林等零市區成份場地）禁止人造建築、
+ * 重型工廠、市區交通、工業開採、能源陣列與軍工路障，維持純粹地貌與自然景觀。
+ * 工業區與住商區則各自優先或排除不符之構造。
+ */
+export function isCategoryAllowed(category, environment = null) {
+  if (!environment) return true;
+  const mix = environment.mix || environment.venue?.mix;
+  const venueType = environment.venue?.type;
+  const isNature = (mix && (mix.urban || 0) <= 0.05)
+    || (venueType && venueType !== '市區' && (mix?.urban || 0) <= 0.05)
+    || environment.wilderness === true;
+
+  if (isNature) {
+    const artificial = ['industry', 'residential', 'highrise', 'rail', 'vehicle', 'bridge', 'extraction', 'energy', 'military', 'fortification'];
+    if (artificial.includes(category)) return false;
+  } else if (environment.zone === 'industrial' || environment.industrial === true) {
+    if (category === 'residential') return false;
+  } else if (environment.zone === 'residential' || environment.residential === true) {
+    if (['industry', 'extraction'].includes(category)) return false;
+  }
+  return true;
+}
+
+/**
  * (地貌, 水陸域, 坡度級)→ 候選款式清單(**排序恆定**,`Object.keys` 的宣告序)。
  *
  * **坡度是硬門檻、地貌是偏好**:陡坡上配不到符合地貌的自然景觀時(例如「陡的市區」),
@@ -194,13 +219,19 @@ const kindFits = (k, biome, water) => {
  */
 export function wallCandidates(biome, water, tier = 'flat', environment = null) {
   const byTier = Object.keys(WALL_KINDS).filter((k) => fitsTier(k, tier)
-    && (!environment || environmentAvailable(k === 'seaice' ? 'icefloe' : WALL_KINDS[k].object, environment)));
+    && (!environment || environmentAvailable(k === 'seaice' ? 'icefloe' : WALL_KINDS[k].object, environment))
+    && isCategoryAllowed(BOUNDARY_OBJECT_CATEGORIES[k], environment));
   const list = byTier.filter((k) => kindFits(k, biome, water));
   const weighted = (rows) => rows.flatMap((k) => Array.from(
     { length: tier === 'flat' ? 1 : Math.max(1, WALL_KINDS[k].slopeBias?.[tier] || 1) }, () => k));
   if (list.length) return weighted(list);
   if (byTier.length) return weighted(byTier);
-  return water ? ['seawall'] : ['barricade'];
+  const mix = environment?.mix || environment?.venue?.mix;
+  const venueType = environment?.venue?.type;
+  const isNature = (mix && (mix.urban || 0) <= 0.05)
+    || (venueType && venueType !== '市區' && (mix?.urban || 0) <= 0.05)
+    || environment?.wilderness === true;
+  return water ? ['seawall'] : (isNature ? ['cliff'] : ['barricade']);
 };
 
 /**
