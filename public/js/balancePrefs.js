@@ -38,20 +38,20 @@ export const BALANCE_KNOBS = {
     hint: '全玩家重武器滿級(Lv4)的傷害與效能倍率。',
   },
   upg_sk_start: {
-    label: '小招威力起點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
-    hint: '全玩家小招初始(Lv1)的效果與威力倍率。',
+    label: '防守招式威力起點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
+    hint: '全玩家防守招式初始(Lv1)的效果與威力倍率。',
   },
   upg_sk_end: {
-    label: '小招威力終點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
-    hint: '全玩家小招滿級(Lv4)的效果與威力倍率。',
+    label: '防守招式威力終點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
+    hint: '全玩家防守招式滿級(Lv4)的效果與威力倍率。',
   },
   upg_ult_start: {
-    label: '大招威力起點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
-    hint: '全玩家大招初始(Lv1)的效果與威力倍率。',
+    label: '攻擊招式威力起點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
+    hint: '全玩家攻擊招式初始(Lv1)的效果與威力倍率。',
   },
   upg_ult_end: {
-    label: '大招威力終點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
-    hint: '全玩家大招滿級(Lv4)的效果與威力倍率。',
+    label: '攻擊招式威力終點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
+    hint: '全玩家攻擊招式滿級(Lv4)的效果與威力倍率。',
   },
   upg_hp_start: {
     label: '裝甲上限起點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
@@ -101,7 +101,7 @@ export const BALANCE_KNOBS = {
   },
   stat_cd: {
     label: '冷卻時間倍率', group: 'stat', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
-    hint: '小招/大招冷卻與重武器裝填時間倍率(數值越小冷卻越快)。',
+    hint: '防守/攻擊招式冷卻與重武器裝填時間倍率(數值越小冷卻越快)。',
   },
   stat_range: {
     label: '攻擊射程倍率', group: 'stat', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',

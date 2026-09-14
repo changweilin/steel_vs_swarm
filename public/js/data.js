@@ -4255,8 +4255,8 @@ export const ECON = {
   UPGRADES: {
     lw:  { name: '輕武器強化', abil: 'light', desc: '輕武器全面提升(傷害/射速/彈夾)', max: 3 },
     hw:  { name: '重武器強化', abil: 'heavy', desc: '重武器全面提升(傷害/裝填/破甲)', max: 3 },
-    sk:  { name: '小招強化',   abil: 'skill', desc: '小招全面提升(威力/冷卻/範圍)',   max: 3 },
-    ult: { name: '大招強化',   abil: 'ult',   desc: '大招全面提升(威力/冷卻/範圍)',   max: 3 },
+    sk:  { name: '防守招式強化', abil: 'skill', desc: '防守招式全面提升(威力/冷卻/範圍)', max: 3 },
+    ult: { name: '攻擊招式強化', abil: 'ult',   desc: '攻擊招式全面提升(威力/冷卻/範圍)', max: 3 },
     hp:  { name: '裝甲強化', desc: '裝甲上限 +27%/級', max: 3, step: 0.27 },
     ar:  { name: '複合裝甲', desc: '護甲值 +6/級',     max: 3, step: 6 },
     sp:  { name: '護盾強化', desc: '護盾上限 +27%/級', max: 3, step: 0.27 },

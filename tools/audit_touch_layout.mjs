@@ -229,11 +229,11 @@ for (const v of VIEWS) {
       + `<div class="shop-item-note">${note}</div></div>`
       + `<button class="btn small shop-res">☆ 預約</button><button class="btn small">$${price}</button>`);
     box.innerHTML = '';
-    add('shop-head', '🎖 戰鬥強化 —「SC-01」蜂群斥候(輕/重武器・小招/大招)');
+    add('shop-head', '🎖 戰鬥強化 —「SC-01」蜂群斥候(輕/重武器・防守/攻擊招式)');
     item('輕武器強化', '脈衝步槍・左鍵', '下一階:傷害 42 ・ 彈夾 24 ・ 填彈 1.8s', 320);
     item('重武器強化', '榴彈發射器・右鍵瞄準', '下一階:傷害 180 ・ 彈夾 4 ・ 填彈 2.6s', 480);
-    item('小招強化', '偵察脈衝・Q', '下一階:CD 12s ・ 25MP', 260);
-    item('大招強化', '蜂群突襲・E', '下一階:CD 60s ・ 80MP ・ 傷害 340', 620);
+    item('防守招式強化', '偵察脈衝・Q', '下一階:CD 12s ・ 25MP', 260);
+    item('攻擊招式強化', '蜂群突襲・E', '下一階:CD 60s ・ 80MP ・ 傷害 340', 620);
     add('shop-head', '⬆️ 防禦/系統強化(隨處可買,立即生效)');
     item('結構裝甲', '', '提升結構上限', 200);
     item('能量護盾', '', '提升護盾上限與回復', 240);

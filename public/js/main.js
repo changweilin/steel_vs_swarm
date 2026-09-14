@@ -1232,7 +1232,7 @@ function charDetailHTML(id) {
     <div class="cd-body">
       ${charBioTextHTML(id)}
       <div class="cd-hexbox">${stats}
-        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;區域/指向型大招由 ${SQUAD.KAMI.N} 架自殺攻擊機分批遞送到落點(平時不隨行,施放那一刻才衝出去;被打下幾架就少交付幾份效果)。</div>` : ''}
+        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;區域/指向型攻擊招式由 ${SQUAD.KAMI.N} 架自殺攻擊機分批遞送到落點(平時不隨行,施放那一刻才衝出去;被打下幾架就少交付幾份效果)。</div>` : ''}
         ${kind === 'morph' ? '<div class="cd-note">※ 變形者:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
       </div>
       <div class="cd-kit">
@@ -1535,7 +1535,7 @@ function fillModalPanels(role) {
   $('stageModalKeys').innerHTML = st.subject.type === 'char'
     ? (TOUCH_UI()
       ? '<b>操作演示</b>　點武器 / 招式列演出 ・ 拖曳旋轉 ・ 雙指縮放 ・ 點「跑速」鈕循環'
-      : '<b>操作演示</b>　左鍵 輕武器 ・ 右鍵 重武器 ・ Q 小招 ・ E 大招 ・ Space 跳躍/變形 ・ W 循環跑速')
+      : '<b>操作演示</b>　左鍵 輕武器 ・ 右鍵 重武器 ・ Q 防守招式 ・ E 攻擊招式 ・ Space 跳躍/變形 ・ W 循環跑速')
     : (TOUCH_UI()
       ? '<b>操作演示</b>　點下方武器列演出攻擊 ・ 拖曳旋轉 ・ 雙指縮放'
       : '<b>操作演示</b>　左鍵 主武器 ・ 右鍵 副武器 ・ 點下方武器列演出攻擊');
@@ -3059,7 +3059,7 @@ function renderShop(open, st) {
     });
   }
   if (c) {
-    head(`🎖 戰鬥強化 —「${c.code}」${c.machine}(輕/重武器・小招/大招,開場 Lv1 → 升 3 次到 Lv4)`);
+    head(`🎖 戰鬥強化 —「${c.code}」${c.machine}(輕/重武器・防守/攻擊招式,開場 Lv1 → 升 3 次到 Lv4)`);
     for (const [id, up] of Object.entries(ECON.UPGRADES)) {
       if (!up.abil) continue;
       const upg = st.upg[id] || 0;           // 已購步數(0~3);目前階級 = 1 + upg
@@ -3372,8 +3372,8 @@ function renderBalanceSettings(mount) {
   const UPGRADE_TRACKS = [
     { id: 'lw', name: '輕武器' },
     { id: 'hw', name: '重武器' },
-    { id: 'sk', name: '小招威力' },
-    { id: 'ult', name: '大招威力' },
+    { id: 'sk', name: '防守招式威力' },
+    { id: 'ult', name: '攻擊招式威力' },
     { id: 'hp', name: '裝甲上限' },
     { id: 'ar', name: '複合裝甲' },
     { id: 'sp', name: '磁力上限' },

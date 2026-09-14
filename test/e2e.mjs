@@ -1553,7 +1553,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   const dmgL2 = heroWeapon('s01', 'light', 2).dmg;
   assert(dmgL2 > heroWeapon('s01', 'light', 1).dmg, `升階後傷害提升(${heroWeapon('s01', 'light', 1).dmg} → ${dmgL2})`);
   assert(sim.buy('p_d', 'sk') === null && dr.abil.skill === 2 && dr.abil.ult === 1,
-    '小招強化升 Lv.2(只動小招,大招不變)');
+    '防守招式強化升 Lv.2(只動防守招式,攻擊招式不變)');
   // Lv4 外推:輕武器買到滿級(upg.lw 1 → 3 ⇒ abil.light = 4),第 4 階數值沿末段成長外推 > Lv3
   sim.buy('p_d', 'lw'); sim.buy('p_d', 'lw');
   assert(dr.abil.light === 4 && heroWeapon('s01', 'light', 4).dmg > heroWeapon('s01', 'light', 3).dmg,
@@ -1564,7 +1564,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   const mp0 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
   assert((dr.achg?.skill?.rechargeAt?.length > 0 || dr.acd.skill > sim.t) && Math.round(mp0 - dr.mp) === Math.round(A1.mp),
-    `施放小招:CD、電力 -${Math.round(A1.mp)}MP(隨招式階級,無精通折減)`);
+    `施放防守招式:CD、電力 -${Math.round(A1.mp)}MP(隨招式階級,無精通折減)`);
   const mp1 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
   assert(dr.mp === mp1, 'CD/詠唱中重複施放被拒(電力未扣)');
