@@ -8985,7 +8985,14 @@ function buildEdgeWall({ group, terrain, blockers }) {
     const env = terrainEnvCode(terrain, px, pz);
     if (env === 1) return 'water';
     if (env === 2) return 'wet';
-    return classifyImg(terrain.sampleColor?.(px, pz)) || 'green';
+    const raw = classifyImg(terrain.sampleColor?.(px, pz)) || 'green';
+    if (raw === 'urban') {
+      const allowUrban = (terrain.mix?.urban || 0) > 0.05 || terrain.venue?.type === '市區';
+      if (!allowUrban) {
+        return (terrain.mix?.bare || 0) > 0 ? 'bare' : 'green';
+      }
+    }
+    return raw;
   };
   const segs = [];
   // 演出:逐節取零件表 → 套上這一節的位置/朝向 → 整圈**合併成一個** mesh(顏色走頂點色)。
@@ -9049,7 +9056,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
     // 先切 run + 配款；整圈款式定案後，再解相鄰端面與轉角。
     // 固定高度加上同次取樣的地形範圍，貼坡表面與權威盒一起建立。
     let prevKind = null;
-    for (const r of planWallRuns(row, { environment: { latitude: terrain.center?.lat, ...terrain.objectEnvironment } })) {
+    for (const r of planWallRuns(row, { environment: { latitude: terrain.center?.lat, venue: terrain.venue, mix: terrain.mix, ...terrain.objectEnvironment } })) {
       const kinds = planWallKinds(r, row, prevKind);
       for (let i = r.i0; i < r.i1; i++) {
         plans.push({ s: row[i], e, step, kind: kinds[i - r.i0], tier: r.tier });
@@ -9739,6 +9746,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const season = cfg.env?.season || 'summer';
   const night = cfg.env?.time === 'night';
   const mix = cfg.venue?.mix || null;
+  terrain.venue = cfg.venue || null;
+  terrain.mix = mix;
   terrain.forestEnv = cfg.env?.forest || cfg.venue?.forest || {};
   terrain.objectEnvironment = { ...terrain.forestEnv, ...cfg.env };
   const rnd = mulberry32(
