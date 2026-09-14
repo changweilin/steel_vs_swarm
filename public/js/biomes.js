@@ -7355,6 +7355,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // (進路面桶 → 同色同材質,與緞帶內部重疊不可見,只補露地/落差)。純幾何零 rnd;classify 傳
   // mix=null(同斑馬線迴圈)不消耗共享序列。橋/隧節點本就不入 nodeArms。繞行朝 +Y(依緞帶截面推導)。
   const fillLift = (vx, vz, hMax) => Math.max(terrain.heightAt(vx, vz), hMax - CLAMP) + ROAD_LIFT;
+  // nodeArms 包含圖外 OSM 節點；補面須與道路本體共用邊界，否則路被截掉後留下浮空圓盤。
+  const fillInBounds = (x, z, r = 0) => x - r >= terrain.minX + inb && x + r <= terrain.maxX - inb
+    && z - r >= terrain.minZ + inb && z + r <= terrain.maxZ - inb;
   for (const rec of nodeArms.values()) {
     if (rec.hw < 2) continue;
     let mode = 0;                                  // 3 = 路口圓面 / 2 = 寬度縮減梯形
@@ -7369,6 +7372,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     if (biome === 'water') continue;               // 河面節點(橋另建),不鋪路面
     const b = bucketOf(biome, rec.main);
     if (mode === 3) {
+      if (!fillInBounds(rec.x, rec.z, rec.hw)) continue;
       // 扇形圓面:半徑 = 節點最大臂半寬;中心 + N 段緣點,取樣最高地表夾高(坡地不浮不沉)
       const R = rec.hw, N = 10;
       let hMax = terrain.heightAt(rec.x, rec.z);
@@ -7397,6 +7401,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       const hMax = Math.max(terrain.heightAt(s0x, s0z), terrain.heightAt(s1x, s1z), terrain.heightAt(rec.x, rec.z));
       const P = [[s0x + px * hw0, s0z + pz * hw0], [s0x - px * hw0, s0z - pz * hw0],
                  [s1x + px * hw1, s1z + pz * hw1], [s1x - px * hw1, s1z - pz * hw1]];
+      if (!P.every(([x, z]) => fillInBounds(x, z))) continue;
       const c0 = b.base;
       for (const [vx, vz] of P) {
         b.pos.push(vx, fillLift(vx, vz, hMax), vz);
@@ -9585,13 +9590,17 @@ function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
     for (let i = 1; i < pts.length; i++) {
       const a = pts[i - 1], b = pts[i];
       if (inside(a) === inside(b)) continue;   // 沒有跨越空氣牆線
-      // 與內縮框四邊求交,取線段上第一個交點
+      // 只收四條有限邊上的交點；延長線上的交點可能仍在圖外。
       const ts = [];
       for (const [va, vb, lim] of [[a[0], b[0], x0], [a[0], b[0], x1]]) {
-        if ((va - lim) * (vb - lim) < 0) ts.push((lim - va) / (vb - va));
+        if (va === vb) continue;
+        const t = (lim - va) / (vb - va), z = a[1] + (b[1] - a[1]) * t;
+        if (t >= 0 && t <= 1 && z >= z0 && z <= z1) ts.push(t);
       }
       for (const [va, vb, lim] of [[a[1], b[1], z0], [a[1], b[1], z1]]) {
-        if ((va - lim) * (vb - lim) < 0) ts.push((lim - va) / (vb - va));
+        if (va === vb) continue;
+        const t = (lim - va) / (vb - va), x = a[0] + (b[0] - a[0]) * t;
+        if (t >= 0 && t <= 1 && x >= x0 && x <= x1) ts.push(t);
       }
       if (!ts.length) continue;
       const t = Math.min(...ts);
@@ -9601,6 +9610,7 @@ function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
       const dl = Math.max(1, Math.hypot(b[0] - a[0], b[1] - a[1]));
       const dx = (b[0] - a[0]) / dl * dirIn, dz = (b[1] - a[1]) / dl * dirIn;
       const ox = cx + dx * 6, oz = cz + dz * 6;
+      if (!inside([ox, oz])) continue;   // 角落短線段外推後仍須留在框內。
       if (placed.some((p) => Math.hypot(ox - p[0], oz - p[1]) < 30)) continue;   // 同路口去重
       const gy = terrain.heightAt(ox, oz);
       if (gy < 0.4 || terrainEnvCode(terrain, ox, oz) !== 0) continue;   // 水域/沼澤不放封路障礙
