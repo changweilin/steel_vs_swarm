@@ -24,7 +24,7 @@ import {
   BOT_DIFF, BOT_DIFF_KEYS, BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
   UNITS, GAME, CHARACTERS, heroKindOf, heroWeapon, MAPGEO, VITALS,
 } from '../public/js/data.js';
-import { BattleSim } from '../server/sim.js';
+import { BattleSim, pointAt } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
 
 const botsSrc = readSrc('server', 'bots.js');
@@ -465,7 +465,10 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     const step = (n = 1, by = null) => {
       for (let i = 0; i < n; i++) { sim.t += dt; if (by) sim._damage(h, 1, by, 0); brain.update(dt); }
     };
-    brain.prog = 900; step(4);
+    const total = brain._cum[brain._cum.length - 1];
+    brain.prog = 900;
+    [h.x, h.z] = pointAt(sim.lanes[0], brain._cum, total - 900);
+    step(4);
     const foe = sim.addHero('SWARM', 'p9', CH_DRONE);
     foe.x = h.x + 60; foe.z = h.z; foe.y = 0;
     sim._damage(h, h.maxSp * 0.7, foe, 0);      // 一波扛掉七成護盾
