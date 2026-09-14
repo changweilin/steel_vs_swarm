@@ -19,7 +19,7 @@ import {
   BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
   FLIGHT, airSinkM,
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
-  BUILDING_VS_CAP, shieldSplit, shieldRoleName, EX_SIEGE_WEAPONS, counterDmgF,
+  BUILDING_VS_CAP, shieldSplit, SHIELD_DEFENSE, shieldRoleName, EX_SIEGE_WEAPONS, counterDmgF,
   aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
   trajClass, shotFlightS, vsMult, blastFamily, buildDps, heroRange,
   altRangeMax, RANGE_TOL,
@@ -1463,7 +1463,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       const brain = new BotBrain(fake, 'bx', 'STEEL', 0, 'high');
       let n = 0;
       for (fake.t = 0; fake.t < 10; fake.t += GAME.TICK_MS / 1000) {
-        for (const op of ['scan', 'weapon', 'ability', 'special', 'state', 'buy']) if (brain._op(op)) n++;
+        for (const op of ['scan', 'weapon', 'ability', 'special', 'state', 'buy', 'defend']) if (brain._op(op)) n++;
       }
       assert(n <= Math.ceil(10 / BOT_DIFF.high.gap),
         `最高難度 10 秒內全類操作合計 ${n} 次 ≤ 手速上限 ${Math.ceil(10 / BOT_DIFF.high.gap)} 次(≈400 APM)`);
@@ -1474,6 +1474,79 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       fake.t = 0; brain._aimAt = BOT_DIFF.high.react;
       assert(brain._fire(1, 'light') === false, `反應時間 ${BOT_DIFF.high.react}s 內不開火(準星還沒拉到目標上)`);
     }
+  }
+
+  log('— sim:電腦玩家操作新防守姿態與新攻防技能(分難度策略/切盾減傷/攻防技能)—');
+  {
+    const bSim = new BattleSim(fakeBattleConfig(1));
+    purgeCamps(bSim);
+    // 1. 各難度 defend 旗標與能力分級
+    const bNovice = new BotBrain(bSim, 'b_novice', 'STEEL', 0, 'novice');
+    const bLow = new BotBrain(bSim, 'b_low', 'STEEL', 1, 'low');
+    const bMed = new BotBrain(bSim, 'b_med', 'STEEL', 2, 'medium');
+    const bHigh = new BotBrain(bSim, 'b_high', 'STEEL', 3, 'high');
+    assert(bNovice.diff.defend === false, '新手難度: defend 旗標為 false(不持盾)');
+    assert(bLow.diff.defend === true && bMed.diff.defend === true && bHigh.diff.defend === true,
+      '低/中/高難度: defend 旗標為 true(具備防守姿態能力)');
+
+    // 2. 高難度: 換彈空窗期戰術切盾防守，換彈就緒且瞄準完成主動解除防守姿態投入進攻
+    const hHigh = bSim.addHero('STEEL', 'b_high', 't01');
+    const foe = bSim.addHero('SWARM', 'p_foe', 's01');
+    hHigh.ry = 0; // 面向正前方(+z)
+    foe.x = hHigh.x; foe.z = hHigh.z + 50; foe.y = 0;
+    bSim.t = 10;
+    hHigh.reloadUntil = { light: 15, heavy: 15 };
+    hHigh.lastHitAt = 10;
+    bHigh.state = 'ENGAGE';
+    bHigh._updateDefending(hHigh, foe);
+    assert(hHigh.defending === true, '高難度: 換彈空窗期戰術切換防守姿態(正面護盾)');
+
+    // 3. 防守姿態護盾減傷 (75% 直擊傷害減免)
+    const rawDmg = 100;
+    const hp0 = hHigh.hp, sp0 = hHigh.sp;
+    bSim._damage(hHigh, rawDmg, foe, 0);
+    const lostSp = sp0 - hHigh.sp;
+    assert(Math.abs(lostSp - rawDmg * SHIELD_DEFENSE.DIRECT_F) < 1e-3,
+      `防守姿態正面護盾承受直擊: 傷害折減為 ${(SHIELD_DEFENSE.DIRECT_F * 100).toFixed(0)}%(消耗護盾 ${lostSp} = 100 × 0.25)`);
+
+    // 4. 換彈就緒瞄準完成解除防守
+    bSim.t = 16;
+    hHigh.reloadUntil = { light: 5, heavy: 5 };
+    bHigh._aimAt = 5;
+    bHigh._updateDefending(hHigh, foe);
+    assert(!hHigh.defending, '高難度: 換彈就緒瞄準完成時主動解除防守姿態投入射擊');
+
+    // 5. 低難度: 僅在危急撤退回主堡(RETREAT)受擊時進入防守姿態，一般交戰不切盾
+    const hLow = bSim.addHero('STEEL', 'b_low', 't01');
+    bLow.state = 'ENGAGE';
+    hLow.reloadUntil = { light: 15, heavy: 15 };
+    bLow._updateDefending(hLow, foe);
+    assert(!hLow.defending, '低難度: 一般交戰換彈不具備戰術切盾意識');
+    bSim.t = 18;
+    bLow.state = 'RETREAT';
+    hLow.lastHitAt = bSim.t;
+    bLow._updateDefending(hLow, foe);
+    assert(hLow.defending === true, '低難度: 撤退回主堡受擊中進入防守姿態保命');
+
+    // 6. 新手難度: 撤退挨打亦不防守
+    const hNovice = bSim.addHero('STEEL', 'b_novice', 't01');
+    bNovice.state = 'RETREAT';
+    hNovice.lastHitAt = bSim.t;
+    bNovice._updateDefending(hNovice, foe);
+    assert(!hNovice.defending, '新手難度: 撤退挨打亦不進入防守姿態');
+
+    // 7. 新技能支援施放: 磁力損耗過半時啟動防守/充能招式 (以 t03 防守招為例)
+    const bSup = new BotBrain(bSim, 'b_sup', 'STEEL', 4, 'high');
+    const hSup = bSim.addHero('STEEL', 'b_sup', 't03');
+    bSim.t = 25;
+    hSup.sp = hSup.maxSp * 0.3;
+    hSup.lastHitAt = bSim.t;
+    let castCalled = false;
+    const origCast = bSim.heroCast.bind(bSim);
+    bSim.heroCast = (pid, slot) => { castCalled = true; return origCast(pid, slot); };
+    bSup._castSupport(hSup, hSup.hp / hSup.maxHp);
+    assert(castCalled, '高難度: 磁力損耗過半時及時施放防守/護盾充能招式');
+    bSim.heroCast = origCast;
   }
 
   log('— sim:擊殺電腦玩家 = 玩家同一個係數(2026-08-11;舊制的刷 bot 折價已退場)—');

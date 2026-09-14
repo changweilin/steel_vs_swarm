@@ -61,6 +61,8 @@ const AUDIT_SCRIPTS = [
   // ── 核心 Bot AI 戰術狀態機 ──
   'tools/audit_bot_vision.mjs',
   'tools/audit_bot_role.mjs',
+  'tools/audit_bot_policy.mjs',
+  'tools/audit_bot_tactics.mjs',
 
   // ── 輔助表現層演算法 (CI 保留類別 D) ──
   'tools/audit_anim_weights.mjs',
