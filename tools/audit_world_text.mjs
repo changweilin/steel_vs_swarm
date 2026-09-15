@@ -139,6 +139,7 @@ console.log('\nⅢ 接線(biomes.js)');
   ok(/tags\.place \|\| tags\.natural === 'peak'/.test(querySrc),
     '具名點位的分支排在「其餘一律當建物」之前(漏了就會在地名節點長出一棟樓)');
   ok(/pois: osmData\?\.pois/.test(bioSrc), '舊快取沒有 pois 時安全(可選鏈,不炸)');
+  ok(/const \[x, z\] = llToWorld\(poi\.lat, poi\.lng/.test(bioSrc), '具名點位經緯度正確投影為世界座標 (x, z)');
   ok(/entrances: osmData\?\.entrances/.test(bioSrc), '舊快取沒有 entrances 時安全(可選鏈,不炸)');
 }
 
