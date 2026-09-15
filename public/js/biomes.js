@@ -3516,6 +3516,7 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
   //    這一類點位唯一一個「名字以外還值得寫上去」的欄位。
   for (const poi of (pois || [])) {
     if (sheet.full) break;
+    const [x, z] = llToWorld(poi.lat, poi.lng ?? poi.lon, center);
     const inb = edgeWallInsetM();
     if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
     const t = poi.tags || {};
