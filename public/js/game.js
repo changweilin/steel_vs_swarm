@@ -2977,6 +2977,25 @@ export class BattleClient {
         if (e.code === 'KeyQ') this._specFollow(-1);
         if (e.code === 'KeyE') this._specFollow(1);
       }
+      // ── 全鍵盤操作:方向鍵 = WASD 移動 ──────────────────────────────
+      // 寫入對應的 KeyW/S/A/D,讓 _moveAxis() 正常消費;不另開分支。
+      const _AK = { ArrowUp: 'KeyW', ArrowDown: 'KeyS', ArrowLeft: 'KeyA', ArrowRight: 'KeyD' };
+      if (_AK[e.code]) this.keys[_AK[e.code]] = e.type === 'keydown';
+      // ── 全鍵盤操作:數字鍵盤 +/- = 滾輪;* = 左鍵開火;/ = 右鍵招式 ──
+      if (e.type === 'keydown') {
+        // +/- 直接複用 _onWheel 邏輯(節流已在 _lastWheelAimAt 內部處理)
+        if (e.code === 'NumpadAdd')      this._onWheel({ deltaY: -1, preventDefault() {} });
+        if (e.code === 'NumpadSubtract') this._onWheel({ deltaY:  1, preventDefault() {} });
+        // * 開火(守衛與 _onMouseDown 相同)
+        if (e.code === 'NumpadMultiply' && !this.touch && this.side && !this.dead && !this.shopOpen)
+          this.firing = true;
+        // / 右鍵招式
+        if (e.code === 'NumpadDivide' && !this.touch) this._rmbDown();
+      }
+      if (e.type === 'keyup') {
+        if (e.code === 'NumpadMultiply') this.firing = false;
+        if (e.code === 'NumpadDivide')   this._rmbUp();
+      }
       this.keys[e.code] = e.type === 'keydown';
     };
     window.addEventListener('keydown', this._onKey);
@@ -3079,6 +3098,25 @@ export class BattleClient {
   _applyLook(dYaw, dPitch) {
     this.yaw += dYaw;
     this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dPitch));
+  }
+
+  /**
+   * 數字九宮格持續按住 → 每幀以 dt 驅動視角,效果等同滑鼠 movementX/Y。
+   * 4/6 左右偏航;8/2 上下俯仰;斜向鍵 1/3/7/9 同時改兩軸。
+   * 俯仰夾制由 _applyLook 統一處理,此處不重複夾。
+   */
+  _tickNumpadLook(dt) {
+    if (this.paused) return;
+    const k = this.keys;
+    const dYaw   = (k.Numpad4 ? -1 : 0) + (k.Numpad6 ?  1 : 0)
+                 + (k.Numpad7 ? -1 : 0) + (k.Numpad9 ?  1 : 0)
+                 + (k.Numpad1 ? -1 : 0) + (k.Numpad3 ?  1 : 0);
+    const dPitch = (k.Numpad8 ? -1 : 0) + (k.Numpad2 ?  1 : 0)
+                 + (k.Numpad7 ? -1 : 0) + (k.Numpad1 ?  1 : 0)
+                 + (k.Numpad9 ? -1 : 0) + (k.Numpad3 ?  1 : 0);
+    if (!dYaw && !dPitch) return;
+    const LOOK_SPEED = 1.4;   // rad/s;與 mousemove 0.0023 px⁻¹ 等效的手感速率
+    this._applyLook(dYaw * LOOK_SPEED * dt, dPitch * LOOK_SPEED * dt);
   }
 
   /** 右鍵按下:直接施放招式(一般模式 = 小招 / 狙擊模式 = 大招,見 _fireHoldAbility)。 */
@@ -10109,6 +10147,7 @@ export class BattleClient {
     this._lobAim();                   // 榴彈火控解(消費 _aaEnt):同樣 MUST 在擊發之前 —— 所見即所射
     this._tickWeapons(now);
     this._tickBurstFx(now);           // 連發演出補畫:MUST 排在擊發之後(本幀那一輪同幀進佇列)
+    this._tickNumpadLook(dt);         // 數字九宮格持續視角:MUST 在 _updatePlayer(消費 yaw/pitch)之前
     this._updatePlayer(dt, now);
     // 致盲白幕是整個視野的表現層，不綁玩家移動或 FPV 座艙；TPS 與 FPV 共用同一消費點。
     if (this.side && !this.dead) this._updateCcFlash(dt);
