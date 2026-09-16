@@ -30,6 +30,7 @@ const AUDIT_SCRIPTS = [
   'tools/audit_underpass.mjs',
   'tools/audit_road_joint.mjs',
   'tools/audit_road_bed.mjs',
+  'tools/audit_slope_platform.mjs',
   'tools/audit_world_height.mjs',
   'tools/audit_forest.mjs',
   'tools/audit_geology.mjs',

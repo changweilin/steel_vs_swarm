@@ -1363,11 +1363,52 @@ export async function buildTerrain(cfg, onProgress) {
     return { rims, touched };
   }
 
+  /**
+   * 建物/平台整地開挖(主堡與砲塔在斜坡上的切方開挖):
+   * 平台範圍內高於平台/道路高度的地形節點，一律開挖至平台高度(targetY)，
+   * 使建物與平台底部與兵線道路保持相同高度，避免山坡穿模掩埋平台與建物。
+   * platforms: [{ cx, cz, hw, hd, ry, y, targetY, margin }]
+   */
+  function carvePlatforms(platforms) {
+    if (!platforms?.length) return;
+    const DXg = (maxX - minX) / (N - 1), DZg = (maxZ - minZ) / (N - 1);
+    let touched = false;
+    for (const p of platforms) {
+      const { cx, cz, hw, hd, ry = 0, y } = p;
+      const margin = p.margin ?? 0.2;
+      const targetY = p.targetY ?? y;
+      const ca = Math.cos(ry), sa = Math.sin(ry);
+      const rad = Math.hypot(hw + margin, hd + margin);
+      const jMin = Math.max(0, Math.floor((cx - rad - minX) / DXg));
+      const jMax = Math.min(N - 1, Math.ceil((cx + rad - minX) / DXg));
+      const iMin = Math.max(0, Math.floor((cz - rad - minZ) / DZg));
+      const iMax = Math.min(N - 1, Math.ceil((cz + rad - minZ) / DZg));
+
+      for (let i = iMin; i <= iMax; i++) {
+        const z = minZ + DZg * i;
+        for (let j = jMin; j <= jMax; j++) {
+          const x = minX + DXg * j;
+          const dx = x - cx, dz = z - cz;
+          const lx = dx * ca - dz * sa;
+          const lz = dx * sa + dz * ca;
+          if (Math.abs(lx) <= hw + margin && Math.abs(lz) <= hd + margin) {
+            const k = i * N + j;
+            if (heights[k] > targetY) {
+              heights[k] = targetY;
+              touched = true;
+            }
+          }
+        }
+      }
+    }
+    if (touched) syncHeights();
+  }
+
   await onProgress?.(1, '地形完成');
   // `gridM` = 高程網格的格距(公尺)。對外只有一個用途:**貼地地被層要拿地形法線**
   // (ground.js 的 landN)—— 中央差分的取樣距 MUST 是這一格,取更小是在同一個雙線性面內
   // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
   // ⬇ 新欄位一律**只加不改**(⑤-2 / ⑤-3):`stampSeaBlockers` = 深度場的蓋章入口(main.js
   //   在 buildBiomes 之後呼叫一次)、`seaFadeAtWorld` = 倒影塊頂點的浪幅淡出(biomes.js)。
-  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
+  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
 }
