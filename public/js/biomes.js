@@ -8305,6 +8305,285 @@ function towerMarkingTex(side = 'STEEL') {
   return t;
 }
 
+function retainingWallTex() {
+  const key = 'retaining_wall';
+  if (_platformTexCache.has(key)) return _platformTexCache.get(key);
+  if (typeof document === 'undefined') return null;
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+
+  // 1. 工程混凝土基底 (Reinforced Architectural Concrete - 穩重中灰，日照下不反白過曝)
+  g.fillStyle = '#656b73';
+  g.fillRect(0, 0, S, S);
+
+  // 混凝土粗細骨材微結構雜色與風化紋理
+  for (let i = 0; i < 900; i++) {
+    const x = (i * 137) % S, y = (i * 193) % S;
+    const sz = 1.2 + (i % 3);
+    g.fillStyle = i % 2 === 0 ? 'rgba(230,235,240,0.08)' : 'rgba(15,20,25,0.10)';
+    g.fillRect(x, y, sz, sz);
+  }
+
+  // 2. 預鑄擋土牆模組面板接縫 (Modular Concrete Panels: 2 cols x 2 rows)
+  const cols = 2, rows = 2;
+  const cw = S / cols, rh = S / rows;
+
+  for (let r = 0; r < rows; r++) {
+    const y0 = r * rh;
+    // 水平深凹槽沉降縫 (Horizontal beveled joint with shadow & highlight)
+    g.fillStyle = 'rgba(12, 15, 18, 0.85)';
+    g.fillRect(0, y0, S, 6);
+    g.fillStyle = 'rgba(215, 225, 235, 0.45)';
+    g.fillRect(0, y0 + 6, S, 2.5);
+
+    for (let c = 0; c < cols; c++) {
+      const x0 = c * cw;
+      // 垂直面板接縫 (Vertical beveled joint)
+      g.fillStyle = 'rgba(12, 15, 18, 0.85)';
+      g.fillRect(x0, y0, 6, rh);
+      g.fillStyle = 'rgba(215, 225, 235, 0.45)';
+      g.fillRect(x0 + 6, y0, 2.5, rh);
+
+      // 3. 預力岩栓錨碇墊板 (Prestressed Rock Anchor Bearing Plate) - 置於面板中央
+      const ax = x0 + cw * 0.5, ay = y0 + rh * 0.45;
+      g.save();
+      g.translate(ax, ay);
+      // 墊板外圈陰影
+      g.fillStyle = 'rgba(10, 12, 15, 0.45)';
+      g.fillRect(-22, -18, 44, 44);
+      // 菱形/正方形錨碇承壓鋼板 (45度旋轉)
+      g.rotate(Math.PI / 4);
+      g.fillStyle = '#3e434a';
+      g.fillRect(-18, -18, 36, 36);
+      g.strokeStyle = '#22252a';
+      g.lineWidth = 3.5;
+      g.strokeRect(-18, -18, 36, 36);
+      // 斜角高光邊緣
+      g.strokeStyle = 'rgba(200, 210, 220, 0.5)';
+      g.lineWidth = 1.5;
+      g.strokeRect(-16, -16, 32, 32);
+      g.restore();
+
+      // 中央高張力錨碇螺帽與墊圈 (Anchor Nut & Washer)
+      g.fillStyle = '#1c1f23';
+      g.beginPath();
+      g.arc(ax, ay, 9, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#4a5058';
+      g.beginPath();
+      g.arc(ax, ay, 6, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#eef4fa';
+      g.beginPath();
+      g.arc(ax - 2, ay - 2, 2.5, 0, Math.PI * 2);
+      g.fill();
+
+      // 4. 擋土牆 PVC 洩水孔 (Drainage Weep Holes) - 置於面板下緣 (82% 處)
+      const wx = x0 + cw * 0.5, wy = y0 + rh * 0.82;
+      // 水漬與礦物風化淚痕 (Weep hole moisture & mineral weathering stain)
+      const grad = g.createLinearGradient(wx, wy, wx, y0 + rh);
+      grad.addColorStop(0, 'rgba(18, 22, 26, 0.55)');
+      grad.addColorStop(0.4, 'rgba(28, 34, 40, 0.35)');
+      grad.addColorStop(1, 'rgba(28, 34, 40, 0.0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.moveTo(wx - 7, wy);
+      g.lineTo(wx + 7, wy);
+      g.lineTo(wx + 11, y0 + rh);
+      g.lineTo(wx - 11, y0 + rh);
+      g.closePath();
+      g.fill();
+
+      // PVC 排水孔洞主體
+      g.fillStyle = '#080a0d';
+      g.beginPath();
+      g.arc(wx, wy, 8, 0, Math.PI * 2);
+      g.fill();
+      // PVC 管壁塑料/金屬外圈高光
+      g.strokeStyle = '#c5d0db';
+      g.lineWidth = 2.5;
+      g.stroke();
+
+      // 5. 四角模具螺栓孔 (Formwork Tie-rod Holes)
+      const mOff = 22;
+      const cornerOffsets = [
+        [x0 + mOff, y0 + mOff],
+        [x0 + cw - mOff, y0 + mOff],
+        [x0 + mOff, y0 + rh - mOff],
+        [x0 + cw - mOff, y0 + rh - mOff],
+      ];
+      for (const [cx, cy] of cornerOffsets) {
+        g.fillStyle = 'rgba(15, 18, 22, 0.6)';
+        g.beginPath();
+        g.arc(cx, cy, 4, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = 'rgba(210, 220, 230, 0.35)';
+        g.lineWidth = 1;
+        g.stroke();
+      }
+    }
+  }
+
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  _platformTexCache.set(key, t);
+  return t;
+}
+
+// ---- 斜坡平台整地開挖、擋土牆與支撐柱 ----
+function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry = 0, dy, padT, padKind }) {
+  const botY = dy - padT;
+  const ca = Math.cos(ry), sa = Math.sin(ry);
+  const wallTex = retainingWallTex();
+  const wallMat = envMat(0xc4c7cb, {
+    map: wallTex,
+    rim: 0,
+    wash: 0.06,
+    cool: 0.2,
+    side: THREE.DoubleSide,
+  });
+  const capMat = envMat(0x42464c, {
+    rim: 0,
+    wash: 0.1,
+    cool: 0.2,
+  });
+  const pierMat = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
+  const wallThick = padKind === 'base' ? 1.0 : 0.6;
+
+  // 1. 擋土牆 (Retaining Walls): 緊貼開挖邊界，在天然地形高於平台 (切坡) 處立牆
+  const edges = [
+    [-hw, -hd,  hw, -hd,  0, -1],  // Back
+    [ hw, -hd,  hw,  hd,  1,  0],  // Right
+    [ hw,  hd, -hw,  hd,  0,  1],  // Front
+    [-hw,  hd, -hw, -hd, -1,  0],  // Left
+  ];
+
+  for (const [lx0, lz0, lx1, lz1, nx, nz] of edges) {
+    const elen = Math.hypot(lx1 - lx0, lz1 - lz0);
+    const nSeg = Math.max(2, Math.round(elen / 1.8)); // 取樣步長約 1.8m，精細貼合斜坡地形
+    const segL = elen / nSeg;
+    const tx_l = (lx1 - lx0) / elen, tz_l = (lz1 - lz0) / elen;
+    const tx_w = tx_l * ca + tz_l * sa, tz_w = -tx_l * sa + tz_l * ca;
+    const wallYaw = Math.atan2(tx_w, tz_w);
+
+    // 沿邊緣預先探測牆體背側（自然開挖邊坡）地形高程
+    const rawTops = [];
+    const segData = [];
+    for (let k = 0; k < nSeg; k++) {
+      const tA = k / nSeg, tB = (k + 1) / nSeg;
+      const tMid = (tA + tB) * 0.5;
+      const smLx = lx0 + (lx1 - lx0) * tMid;
+      const smLz = lz0 + (lz1 - lz0) * tMid;
+
+      // 探測牆體背側自然坡面高程
+      const probeLx = smLx + nx * (wallThick * 0.5 + 0.35);
+      const probeLz = smLz + nz * (wallThick * 0.5 + 0.35);
+      const probeWx = cx + probeLx * ca + probeLz * sa;
+      const probeWz = cz - probeLx * sa + probeLz * ca;
+      const terrY = terrain.natureAt ? terrain.natureAt(probeWx, probeWz) : terrain.heightAt(probeWx, probeWz);
+      rawTops.push(terrY);
+
+      const outLx = smLx + nx * (wallThick * 0.5);
+      const outLz = smLz + nz * (wallThick * 0.5);
+      const wallWx = cx + outLx * ca + outLz * sa;
+      const wallWz = cz - outLx * sa + outLz * ca;
+      segData.push({ wallWx, wallWz });
+    }
+
+    // 平滑地形取樣高度 (3 點加權濾波)，消除單點折角鋸齒，使頂部線條平滑貼著開挖邊坡
+    const smoothTops = rawTops.map((v, i) => {
+      const prev = rawTops[Math.max(0, i - 1)];
+      const next = rawTops[Math.min(nSeg - 1, i + 1)];
+      return prev * 0.25 + v * 0.5 + next * 0.25;
+    });
+
+    for (let k = 0; k < nSeg; k++) {
+      const origY = smoothTops[k];
+      if (origY > dy + 0.15) {
+        // 原地表高於平台頂面 -> 此段為挖方切坡，建立緊貼修飾後邊坡的擋土牆
+        const wallTop = Math.max(origY + 0.3, dy + 0.8);
+        const wallH = wallTop - botY;
+        const { wallWx, wallWz } = segData[k];
+
+        const wMesh = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, segL + 0.04), wallMat);
+        if (wMesh.geometry?.attributes?.uv) {
+          const uvs = wMesh.geometry.attributes.uv;
+          const uRep = Math.max(1, (segL + 0.04) / 2.0);
+          const vRep = Math.max(1, wallH / 2.0);
+          for (let ui = 0; ui < uvs.count; ui++) {
+            uvs.setXY(ui, uvs.getX(ui) * uRep, uvs.getY(ui) * vRep);
+          }
+          uvs.needsUpdate = true;
+        }
+        wMesh.position.set(wallWx, botY + wallH * 0.5, wallWz);
+        wMesh.rotation.y = wallYaw;
+        group.add(wMesh);
+
+        // 擋土牆頂部壓頂防護 (Coping Cap)
+        const capH = 0.25;
+        const capThick = wallThick + 0.24;
+        const capMesh = new THREE.Mesh(new THREE.BoxGeometry(capThick, capH, segL + 0.04), capMat);
+        capMesh.position.set(wallWx, wallTop + capH * 0.5, wallWz);
+        capMesh.rotation.y = wallYaw;
+        group.add(capMesh);
+
+        cols.push({ x: wallWx, z: wallWz, y: botY, r: wallThick * 0.75, h: wallH });
+      }
+    }
+  }
+
+  // 2. 支撐柱 (Support Pillars): 在懸空部位（地面低於底板）追加墩柱
+  const pierRTop = padKind === 'base' ? TOWER_BASE_R * 0.72 : 1.4;
+  const pierRBot = padKind === 'base' ? TOWER_BASE_R : 1.8;
+  const offF = padKind === 'base' ? BASE_PAD_SUPPORT_F : 0.82;
+  const offX = hw * offF, offZ = hd * offF;
+  const candidateOffsets = [];
+
+  if (padKind === 'base') {
+    // 主堡 3x3 支撐網格 + 4 外角
+    for (const ox of [-offX, 0, offX]) {
+      for (const oz of [-offZ, 0, offZ]) {
+        candidateOffsets.push([ox, oz]);
+      }
+    }
+    const cOffX = hw * 0.88, cOffZ = hd * 0.88;
+    for (const ox of [-cOffX, cOffX]) {
+      for (const oz of [-cOffZ, cOffZ]) {
+        candidateOffsets.push([ox, oz]);
+      }
+    }
+  } else {
+    // 砲塔平台 8 方位環繞（中央已有 TOWER_BASE_R 塔基障礙）
+    for (const ox of [-offX, 0, offX]) {
+      for (const oz of [-offZ, 0, offZ]) {
+        if (ox === 0 && oz === 0) continue;
+        candidateOffsets.push([ox, oz]);
+      }
+    }
+  }
+
+  for (const [ox, oz] of candidateOffsets) {
+    const px = cx + ox * ca + oz * sa;
+    const pz = cz - ox * sa + oz * ca;
+    const floorY = terrain.heightAt(px, pz);
+    const gap = botY - floorY;
+
+    if (gap > 0.5) {
+      // 懸空超過 0.5m，追加支撐柱
+      const h = gap + 0.6;
+      const pier = new THREE.Mesh(new THREE.CylinderGeometry(pierRTop, pierRBot, h, 8), pierMat);
+      pier.position.set(px, floorY - 0.6 + h * 0.5, pz);
+      pier.rotation.y = Math.PI / 8;
+      group.add(pier);
+      cols.push({ x: px, z: pz, y: floorY - 0.6, r: pierRTop, h });
+    }
+  }
+}
+
 // 陸地砲塔基座與標線（與兵線道路同高）
 function buildTowerPlatforms(group, lanesW, decks, terrain, cols, mapA, existingPads = []) {
   if (!lanesW.length) return existingPads;
@@ -8316,9 +8595,10 @@ function buildTowerPlatforms(group, lanesW, decks, terrain, cols, mapA, existing
   const ROAD_LIFT = 0.45;
   const allPads = [...existingPads];
   const newDecks = [], newCols = [];
+  const platformsToCarve = [];
 
   for (const cp of cps) {
-    const roadY = deckIdx(cp.x, cp.z) ?? (terrain.heightAt(cp.x, cp.z) + ROAD_LIFT);
+    const roadY = deckIdx(cp.x, cp.z) ?? (cp.roadY ?? (terrain.heightAt(cp.x, cp.z) + ROAD_LIFT));
     for (const s of [-1, 1]) {
       const tx = cp.x + cp.nx * GAME.TOWER_SIDE_OFF * s;
       const tz = cp.z + cp.nz * GAME.TOWER_SIDE_OFF * s;
@@ -8329,28 +8609,47 @@ function buildTowerPlatforms(group, lanesW, decks, terrain, cols, mapA, existing
       if (!isBridge) {
         allPads.push({ x: tx, z: tz, y: dy });
         newCols.push({ x: tx, z: tz, y: dy, r: TOWER_BASE_R, h: TOWER_BASE_H });
-        const slab = new THREE.Mesh(new THREE.BoxGeometry(TOWER_PAD_AXIS * 1.8, TOWER_PAD_T, TOWER_PAD_AXIS * 1.8), slabM);
+        const padR = Math.min(TOWER_PAD_AXIS * 0.75, GAME.TOWER_SIDE_OFF - 5.5);
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(padR * 2, TOWER_PAD_T, padR * 2), slabM);
         slab.position.set(tx, dy - TOWER_PAD_SINK - TOWER_PAD_T / 2, tz);
         slab.rotation.y = Math.atan2(cp.nx, cp.nz);
         group.add(slab);
         newDecks.push({
-          x1: tx - TOWER_PAD_AXIS * 0.9, z1: tz, y1: dy,
-          x2: tx + TOWER_PAD_AXIS * 0.9, z2: tz, y2: dy, hw: TOWER_PAD_AXIS * 0.9,
+          x1: tx - padR, z1: tz, y1: dy,
+          x2: tx + padR, z2: tz, y2: dy, hw: padR,
+        });
+        platformsToCarve.push({
+          cx: tx, cz: tz,
+          hw: padR, hd: padR,
+          ry: Math.atan2(cp.nx, cp.nz),
+          dy, padT: TOWER_PAD_T,
         });
       }
 
-      // 砲塔平台表面渲染軍事基地標線
-      const markGeo = new THREE.PlaneGeometry(TOWER_PAD_AXIS * 1.65, TOWER_PAD_AXIS * 1.65);
+      // 砲塔平台表面渲染軍事基地標線 (與兵線道路邊緣齊平)
+      const padR = Math.min(TOWER_PAD_AXIS * 0.75, GAME.TOWER_SIDE_OFF - 5.5);
+      const markGeo = new THREE.PlaneGeometry(padR * 1.85, padR * 1.85);
       const markMat = envMat(0xffffff, {
         map: towerMarkingTex(cp.side || 'STEEL'),
         transparent: true, alphaTest: 0.05, rim: 0, wash: 0.2, cool: 0.2,
       });
+      markMat.polygonOffset = true;
+      markMat.polygonOffsetFactor = -1;
+      markMat.polygonOffsetUnits = -1;
       const markMesh = new THREE.Mesh(markGeo, markMat);
       markMesh.position.set(tx, dy + 0.02, tz);
       markMesh.rotation.x = -Math.PI / 2;
       markMesh.rotation.z = Math.atan2(cp.nx, cp.nz);
       group.add(markMesh);
     }
+  }
+
+  for (const p of platformsToCarve) {
+    buildPlatformSlopeFeatures({
+      group, terrain, cols: newCols,
+      cx: p.cx, cz: p.cz, hw: p.hw, hd: p.hd, ry: p.ry, dy: p.dy, padT: p.padT,
+      padKind: 'tower',
+    });
   }
 
   cols.push(...newCols);
@@ -8426,29 +8725,39 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
     group.add(pier);
   }
 
-  // 陸地主堡基礎平台（與兵線道路同高）
+  // 陸地主堡整地開挖（與兵線道路同高）
   const allPads = [...plan.pads];
+  const landBasesToCarve = [];
   for (const base of basesW) {
     if (terrainEnvCode(terrain, base.x, base.z) === 0) {
-      const roadY = deckIdx(base.x, base.z) ?? (terrain.heightAt(base.x, base.z) + ROAD_LIFT);
+      const roadY = deckIdx(base.x, base.z) ?? (base.roadY ?? (terrain.heightAt(base.x, base.z) + ROAD_LIFT));
       allPads.push({ side: base.side, x: base.x, z: base.z, y: roadY });
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(BASE_PAD_R * 2, BASE_PAD_T, BASE_PAD_R * 2), slabM);
-      slab.position.set(base.x, roadY - BASE_PAD_T / 2, base.z);
-      group.add(slab);
-      plan.newDecks.push({
-        x1: base.x - BASE_PAD_R, z1: base.z, y1: roadY,
-        x2: base.x + BASE_PAD_R, z2: base.z, y2: roadY, hw: BASE_PAD_R,
+      landBasesToCarve.push({
+        cx: base.x, cz: base.z,
+        hw: BASE_PAD_R, hd: BASE_PAD_R,
+        ry: 0, dy: roadY, padT: BASE_PAD_T,
       });
     }
   }
 
-  // 主堡平台表面渲染軍事基地常見的標線與圖案
-  for (const pad of allPads) {
+  for (const p of landBasesToCarve) {
+    buildPlatformSlopeFeatures({
+      group, terrain, cols: plan.cols,
+      cx: p.cx, cz: p.cz, hw: p.hw, hd: p.hd, ry: p.ry, dy: p.dy, padT: p.padT,
+      padKind: 'base',
+    });
+  }
+
+  // 水域主堡承台表面渲染軍事基地標線
+  for (const pad of plan.pads) {
     const baseMarkGeo = new THREE.PlaneGeometry(BASE_PAD_R * 1.92, BASE_PAD_R * 1.92);
     const baseMarkMat = envMat(0xffffff, {
       map: baseMarkingTex(pad.side),
       transparent: true, alphaTest: 0.05, rim: 0, wash: 0.2, cool: 0.2,
     });
+    baseMarkMat.polygonOffset = true;
+    baseMarkMat.polygonOffsetFactor = -1;
+    baseMarkMat.polygonOffsetUnits = -1;
     const baseMarkMesh = new THREE.Mesh(baseMarkGeo, baseMarkMat);
     baseMarkMesh.position.set(pad.x, pad.y + 0.02, pad.z);
     baseMarkMesh.rotation.x = -Math.PI / 2;
@@ -11813,6 +12122,48 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       }
     }
   }
+
+  // 主堡與砲塔平台: 登記足跡避免地被層 (草皮/碎石/雪斑) 覆蓋平台，並切方開挖斜坡地形
+  const slopePlatformsToCarve = [];
+  const ROAD_LIFT = 0.45;
+  for (const base of basesW) {
+    if (terrainEnvCode(terrain, base.x, base.z) === 0) {
+      base.roadY = terrain.heightAt(base.x, base.z) + ROAD_LIFT;
+      slopePlatformsToCarve.push({
+        cx: base.x, cz: base.z, hw: BASE_PAD_R, hd: BASE_PAD_R, ry: 0, y: base.roadY, padT: BASE_PAD_T,
+      });
+      reservedFootprints.push({
+        x: base.x, z: base.z, hw: BASE_PAD_R, hd: BASE_PAD_R, ry: 0, r: Math.hypot(BASE_PAD_R, BASE_PAD_R),
+      });
+    }
+  }
+
+  const towerLanes = (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center)));
+  for (const laneSites of solveTowerSites(towerLanes, mapArg(cfg))) {
+    for (const site of laneSites) {
+      for (const cp of siteCPs(site)) {
+        cp.roadY = terrain.heightAt(cp.x, cp.z) + ROAD_LIFT;
+        for (const s of [-1, 1]) {
+          const tx = cp.x + cp.nx * GAME.TOWER_SIDE_OFF * s;
+          const tz = cp.z + cp.nz * GAME.TOWER_SIDE_OFF * s;
+          if (terrainEnvCode(terrain, tx, tz) === 0) {
+            const padR = Math.min(TOWER_PAD_AXIS * 0.75, GAME.TOWER_SIDE_OFF - 5.5);
+            const ry = Math.atan2(cp.nx, cp.nz);
+            slopePlatformsToCarve.push({
+              cx: tx, cz: tz, hw: padR, hd: padR, ry, y: cp.roadY, padT: TOWER_PAD_T,
+            });
+            reservedFootprints.push({
+              x: tx, z: tz, hw: padR, hd: padR, ry, r: Math.hypot(padR, padR),
+            });
+          }
+        }
+      }
+    }
+  }
+  if (typeof terrain.carvePlatforms === 'function' && slopePlatformsToCarve.length) {
+    terrain.carvePlatforms(slopePlatformsToCarve);
+  }
+
   const ground = buildGroundCover(group, terrain, {
     isBlocked: (x, z) => blocked.has(cellKey(x, z)),
     classifyAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), mix, grnd),
