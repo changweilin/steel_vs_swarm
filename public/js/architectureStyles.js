@@ -218,16 +218,16 @@ export function isSiteValid(poly, x, z, r, margin = 0.8) {
 /** 屋頂造型與可容納頂部零件相容性矩陣 (依屋頂類型決定可放物件) */
 export const ROOF_APPURTENANCE_COMPATIBILITY = Object.freeze({
   // 平頂與階梯露台：結構平整開闊，支援全套屋頂設備
-  flat: Object.freeze(['water_tank', 'antenna', 'cellular_mast', 'solar_array', 'pigeon_coop', 'chimney', 'roof_billboard', 'clock_tower', 'rooftop_spire', 'heli_hangar']),
-  stepped: Object.freeze(['water_tank', 'antenna', 'cellular_mast', 'solar_array', 'pigeon_coop', 'chimney', 'roof_billboard', 'clock_tower', 'rooftop_spire', 'heli_hangar']),
+  flat: Object.freeze(['water_tank', 'antenna', 'cellular_mast', 'solar_array', 'pigeon_coop', 'chimney', 'roof_billboard', 'clock_tower', 'rooftop_spire', 'heli_hangar', 'rooftop_canopy', 'drying_room', 'roof_garden', 'stairwell_penthouse', 'rooftop_shrine', 'pingpong_table', 'pool_table', 'rooftop_sofa', 'table_chairs', 'gazebo']),
+  stepped: Object.freeze(['water_tank', 'antenna', 'cellular_mast', 'solar_array', 'pigeon_coop', 'chimney', 'roof_billboard', 'clock_tower', 'rooftop_spire', 'heli_hangar', 'rooftop_canopy', 'drying_room', 'roof_garden', 'stairwell_penthouse', 'rooftop_shrine', 'pingpong_table', 'pool_table', 'rooftop_sofa', 'table_chairs', 'gazebo']),
 
   // 斜坡雙坡/單坡/折線/懸山/硬山屋頂：瓦面傾斜，嚴禁平放停機坪與大型看板；相容煙囪穿透、天線架設脊頂、山牆鐘樓與尖頂
   gable: Object.freeze(['chimney', 'antenna', 'clock_tower', 'rooftop_spire']),
-  shed: Object.freeze(['solar_array', 'chimney', 'antenna', 'rooftop_spire']),
+  shed: Object.freeze(['solar_array', 'chimney', 'antenna', 'rooftop_spire', 'rooftop_canopy']),
   mansard: Object.freeze(['chimney', 'antenna', 'clock_tower', 'rooftop_spire']),
   yingshan: Object.freeze(['chimney', 'antenna', 'rooftop_spire']),
   xuanshan: Object.freeze(['chimney', 'antenna', 'rooftop_spire']),
-  sawtooth: Object.freeze(['chimney', 'antenna', 'exhaust_fan', 'solar_array']),
+  sawtooth: Object.freeze(['chimney', 'antenna', 'exhaust_fan', 'solar_array', 'rooftop_canopy']),
   spire: Object.freeze(['rooftop_spire', 'antenna']),
 
   // 東亞傳統宮殿與寺廟大頂（廡殿、歇山、捲棚、重簷）：文化造型嚴謹，不可放置現代大型水塔與直升機棚，相容脊頂寶頂與飾針
@@ -308,6 +308,20 @@ export const APPURTENANCE_RULES = Object.freeze({
   clock_tower:     { label: '古典時鐘鐘樓',   slot: 'rooftop', categories: ['tourism', 'civic', 'commercial'], maxCount: 1, prob: 0.35, minHeight: 10, minArea: 160, minSpan: 12 },
   rooftop_spire:   { label: '哥德/東亞尖塔',   slot: 'rooftop', categories: ['tourism', 'residential', 'commercial'], maxCount: 2, prob: 0.35, minHeight: 12, minArea: 100, minSpan: 10 },
   heli_hangar:     { label: '停機坪直升機棚', slot: 'rooftop', categories: ['commercial', 'industrial'], maxCount: 1, prob: 0.40, minHeight: 28, minArea: 500, minSpan: 22 },
+
+  // 擴充屋頂範圍零件 (Rooftop Extent Parts, 面積佔比 20~80%)
+  rooftop_canopy:      { label: '波浪板遮雨棚',   slot: 'rooftop', categories: ['residential', 'commercial', 'industrial', 'rural'], maxCount: 1, prob: 0.40, minArea: 40, minSpan: 6 },
+  drying_room:         { label: '屋頂採光曬衣間', slot: 'rooftop', categories: ['residential', 'rural'], maxCount: 1, prob: 0.45, minArea: 35, minSpan: 5 },
+  roof_garden:         { label: '空中花園木甲板', slot: 'rooftop', categories: ['residential', 'commercial', 'tourism', 'civic'], maxCount: 1, prob: 0.35, minArea: 60, minSpan: 7 },
+
+  // 擴充屋頂獨立零件 (Rooftop Standalone Parts)
+  stairwell_penthouse: { label: '頂樓梯間屋突',   slot: 'rooftop', categories: ['residential', 'commercial', 'industrial', 'tourism', 'civic'], maxCount: 1, prob: 0.70, minArea: 40, minSpan: 5 },
+  rooftop_shrine:      { label: '屋頂小廟神明廳', slot: 'rooftop', categories: ['residential', 'commercial', 'rural'], maxCount: 1, prob: 0.25, minArea: 30, minSpan: 4 },
+  pingpong_table:      { label: '戶外休閒桌球桌', slot: 'rooftop', categories: ['residential', 'commercial', 'civic'], maxCount: 2, prob: 0.30, minArea: 40, minSpan: 5 },
+  pool_table:          { label: '露台娛樂撞球桌', slot: 'rooftop', categories: ['commercial', 'residential', 'tourism'], maxCount: 1, prob: 0.25, minArea: 50, minSpan: 6 },
+  rooftop_sofa:        { label: '休閒沙發茶几組', slot: 'rooftop', categories: ['residential', 'commercial', 'tourism'], maxCount: 2, prob: 0.40, minArea: 35, minSpan: 5 },
+  table_chairs:        { label: '露天桌椅遮陽傘', slot: 'rooftop', categories: ['residential', 'commercial', 'tourism', 'civic'], maxCount: 3, prob: 0.50, minArea: 25, minSpan: 4 },
+  gazebo:              { label: '屋頂景觀休閒涼亭', slot: 'rooftop', categories: ['residential', 'tourism', 'civic', 'commercial'], maxCount: 1, prob: 0.30, minArea: 70, minSpan: 8 },
 
   // 正門地面物件 (Ground Entrance)
   main_door:       { label: '正門大門門框',   slot: 'ground_front', categories: ['commercial', 'residential', 'tourism', 'industrial'], maxCount: 1, prob: 1.0 },

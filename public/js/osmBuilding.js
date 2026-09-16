@@ -628,7 +628,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
       const platformY = aquaticSite.aquatic ? Math.max(aquaticSite.surfaceY + 0.8, baseOf(poly, terrain, 0) + 1.2) : 0;
       const baseY = aquaticSite.aquatic ? platformY : (raised ? site.max + 0.15 : baseOf(poly, terrain, 0));
       const topY = baseY + targetH;
-      let batch = batches.get(effectiveKind);
+      let batch = batches.get(effectiveKind) || batches.get(kind);
       if (!batch) { batch = { kind: effectiveKind, walls: [], roofs: [], details: [], count: 0 }; batches.set(effectiveKind, batch); }
       const wallStart = batch.walls.length, roofStart = batch.roofs.length, detailStart = batch.details.length;
       const blockerStart = blockers.length;

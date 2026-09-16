@@ -11,7 +11,7 @@ export const BUILDING_FUNCTIONS = Object.freeze({
   bus_station: { label: '公車轉運站', category: 'transport', styles: ['modern', 'industrial'], range: 'tourism_visitor', landmark: 'station' },
   terminal: { label: '機場／渡輪航廈', category: 'transport', styles: ['modern', 'brutalist_concrete'], range: 'commercial_retail' },
   hangar: { label: '機庫', category: 'transport', styles: ['industrial', 'brutalist_concrete'], range: 'industrial_warehouse' },
-  parking: { label: '停車樓', category: 'transport', styles: ['brutalist_concrete', 'modern'], range: 'commercial_retail' },
+  parking: { label: '立體停車場', category: 'transport', styles: ['brutalist_concrete', 'modern'], range: 'commercial_retail' },
   museum: { label: '博物館', category: 'tourism', styles: ['deco', 'brutalist_concrete', 'modern'], range: 'tourism_cultural', landmark: 'museum' },
   theatre: { label: '劇院／音樂廳／電影院', category: 'tourism', styles: ['deco', 'modern', 'baroque_mansard'], range: 'tourism_cultural' },
   civic: { label: '市政廳／法院／公共服務', category: 'civic', styles: ['deco', 'modern', 'brutalist_concrete'], range: 'tourism_cultural' },

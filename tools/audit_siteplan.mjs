@@ -35,7 +35,7 @@ import { BATTLE_GEOLOGY } from '../public/js/geologyBattle.js';
 //   --break-tower   砲塔圈由 1/4 射程退回 1/8 ⇒ Ⅷ 的推導值 MUST 紅字
 import { readSrc, grabFn } from './audit_src.mjs';
 import { makeVehicle, makeRecess } from '../public/js/vehicles.js';
-import { objHeightMax, objScaleFit, WORLD_EDGE, edgeWallInsetM, edgeWallDeepM, UNITS } from '../public/js/data.js';
+import { objHeightMax, objScaleFit, WORLD_EDGE, edgeWallInsetM, edgeWallDeepM, UNITS, WATER } from '../public/js/data.js';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
 // 不是外廓 —— 外廓歸 intake_parts.mjs,兩邊 MUST 吃同一份解析)
 import { bioLibDescs, partLibs, parseGlb } from './ai3d/parts_src.mjs';
@@ -1226,7 +1226,7 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     CIVIC_KINDS: M.CIVIC_KINDS, CIVIC_TREES: M.CIVIC_TREES, planBlocks: M.planBlocks,
     civicColliders: M.civicColliders, plotSeed: M.plotSeed, frac: M.frac,
     buildCivic: (kind) => ({ kind, position: { set() {} }, rotation: { y: 0 }, userData: {} }),
-    STOREY: { residential: 3.1, commercial: 3.9 }, isRoadClear: () => true,
+    STOREY: { residential: 3.1, commercial: 3.9 }, isRoadClear: () => true, WATER,
   };
   const names = Object.keys(env);
   // 沙箱 MUST 是 **async**:這一段原文帶著階段回報的讓步點(`await onProgress?.(…)`,

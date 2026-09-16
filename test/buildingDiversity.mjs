@@ -121,17 +121,20 @@ for (const style of Object.values(ARCHITECTURE_STYLES)) {
   assert.ok(style.label && style.wall && style.roof, `${style.label} 基本屬性缺項`);
 }
 
-// 6. 外部零件規則與槽位完整性驗證 (24 款外部構件，含鐘樓、尖塔、直升機棚與空間容量保護)
+// 6. 外部零件規則與槽位完整性驗證 (34 款外部構件，含範圍零件與獨立零件等空間容量保護)
 const expectedSlots = new Set(['rooftop', 'ground_front', 'side_ground', 'facade']);
 for (const [key, rule] of Object.entries(APPURTENANCE_RULES)) {
   assert.ok(expectedSlots.has(rule.slot), `${key} 槽位無效: ${rule.slot}`);
   assert.ok(rule.categories && rule.categories.length > 0, `${key} 未設定適用類別`);
   assert.ok(rule.maxCount >= 1 && rule.prob > 0 && rule.prob <= 1.0, `${key} 數量或機率非法`);
 }
-assert.equal(Object.keys(APPURTENANCE_RULES).length, 24, '外部零件種類需為 24 款');
+assert.equal(Object.keys(APPURTENANCE_RULES).length, 34, '外部零件種類需為 34 款');
 assert.ok(APPURTENANCE_RULES.clock_tower.minArea >= 150 && APPURTENANCE_RULES.clock_tower.minSpan >= 10, '鐘樓需有屋頂面積與跨度限制');
 assert.ok(APPURTENANCE_RULES.rooftop_spire.minArea >= 100 && APPURTENANCE_RULES.rooftop_spire.minSpan >= 10, '尖塔需有屋頂面積與跨度限制');
 assert.ok(APPURTENANCE_RULES.heli_hangar.minArea >= 500 && APPURTENANCE_RULES.heli_hangar.minSpan >= 20, '停機坪直升機棚需有高面積與大跨度限制');
+assert.ok(APPURTENANCE_RULES.rooftop_canopy.minArea >= 40 && APPURTENANCE_RULES.rooftop_canopy.minSpan >= 6, '遮雨棚需有面積與跨度限制');
+assert.ok(APPURTENANCE_RULES.roof_garden.minArea >= 60 && APPURTENANCE_RULES.roof_garden.minSpan >= 7, '空中花園需有面積與跨度限制');
+assert.ok(APPURTENANCE_RULES.gazebo.minArea >= 70 && APPURTENANCE_RULES.gazebo.minSpan >= 8, '涼亭需有面積與跨度限制');
 
 // 7. OSM 圖資幾何量測指標、自適應屋頂決議 (防止失真扭曲) 與屋頂零件相容矩陣
 const testPoly = { outer: [[0, 0], [20, 0], [20, 10], [0, 10]], holes: [] };

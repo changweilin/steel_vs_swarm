@@ -159,7 +159,7 @@ const OVERRIDES = {
   court: { pattern: 'court', aspect: 15 / 28, locked: true, flat: 0.12, color: 0x547d99, text: ['PLAY'] },
   track: { pattern: 'track', aspect: TRACK_DEPTH / TRACK_WIDTH, locked: true, flat: 0.15, color: 0xb46950, text: [] },
   helipad: { pattern: 'helipad', aspect: 1, locked: true, flat: 0.12, text: ['H'] },
-  parking: { parts: ['billboard', 'planter', 'car', 'motorcycle'], text: ['P', '01', '02', '03'] },
+  parking: { parts: ['billboard', 'planter', 'car', 'motorcycle', 'parking_garage'], text: ['P', '01', '02', '03'] },
   paddy: { flat: 0.25, temperature: [5, 45] }, fishpond: { flat: 0.18 }, saltpan: { flat: 0.18 },
   icefield: { temperature: [-60, 3], color: 0xd8e8ee },
   sand: { color: 0xdcc28f }, redsoil: { color: 0xa05f42 }, mud: { color: 0x6d5940 },

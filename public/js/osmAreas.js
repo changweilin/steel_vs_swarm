@@ -1059,7 +1059,10 @@ export function subdivideAreaRecord(area, roadSegments = [], options = {}) {
   const thresholds = { ...DEFAULT_ZONE_THRESHOLDS, ...(options.thresholds || {}) };
   const threshold = Number(options.threshold) || thresholds[family] || DEFAULT_ZONE_THRESHOLDS.residential;
   const maxDepth = Math.max(1, Math.min(8, Number(options.maxDepth) || 5));
-  const minSliceArea = Math.max(300, threshold * 0.15);
+  const isResidential = family === 'residential';
+  const minSliceArea = isResidential
+    ? Math.max(80, Math.min(250, threshold * 0.05))
+    : Math.max(300, threshold * 0.15);
 
   const polys = (area.worldPolygons || []).filter((p) => Array.isArray(p.outer) && p.outer.length >= 3);
   if (!polys.length) return [area];
@@ -1096,13 +1099,16 @@ export function subdivideAreaRecord(area, roadSegments = [], options = {}) {
         // 沿路面寬長條型：依邊長比切分，目標每塊趨近 1:1 ~ 1.5:1
         const nRatio = Math.round(shape.ratio);
         nParts = Math.max(nArea, nRatio);
-        // 最小面寬保護（避免切出薄片，每塊面寬 >= 25m）：
-        const maxPartsByFrontage = Math.max(1, Math.floor(shape.Lu / 25));
+        // 最小面寬保護（避免切出薄片，住宅區容許較緊湊面寬 >= 12m，其餘 >= 25m）：
+        const minFrontage = isResidential ? 12 : 25;
+        const maxPartsByFrontage = Math.max(1, Math.floor(shape.Lu / minFrontage));
         nParts = Math.min(nParts, Math.max(nArea, maxPartsByFrontage));
       } else if (shape.ratio < 0.7) {
-        // 縱深狹長型：面寬過窄（< 30m）或切分後長寬比過大（> 4.5）則避免繼續縱切為針狀
-        if (shape.Lu < 30 || (shape.Lv / Math.max(1, shape.Lu / 2)) > 4.5) {
-          if (shape.Lu < 25) return [poly];
+        // 縱深狹長型：面寬過窄或切分後長寬比過大則避免繼續縱切為針狀
+        const minNarrow = isResidential ? 15 : 30;
+        const minLimit = isResidential ? 12 : 25;
+        if (shape.Lu < minNarrow || (shape.Lv / Math.max(1, shape.Lu / 2)) > 4.5) {
+          if (shape.Lu < minLimit) return [poly];
         }
       }
     }
@@ -1132,13 +1138,14 @@ export function subdivideAreaRecord(area, roadSegments = [], options = {}) {
 
     if (allPieces.length <= 1) return [poly];
 
-    // 避免極度細長或過小的零畸形狀（面積 < minSliceArea 或 跨度 < 15m）
+    // 避免極度細長或過小的零畸形狀（面積 < minSliceArea 或 跨度 < minSpan）
+    const minSpan = isResidential ? 8 : 15;
     const invalidPiece = allPieces.some((pc) => {
       const a = Math.abs(flatRingArea(pc.outer));
       if (a < minSliceArea) return true;
       const shp = analyzeZoneShape(pc.outer, roadDir);
-      if (shp && (shp.span < 15 || shp.aspect > 4.5)) {
-        if (shape && shp.aspect > shape.aspect * 1.5 && shp.span < 20) return true;
+      if (shp && (shp.span < minSpan || shp.aspect > 4.5)) {
+        if (shape && shp.aspect > shape.aspect * 1.5 && shp.span < minSpan * 1.3) return true;
       }
       return false;
     });

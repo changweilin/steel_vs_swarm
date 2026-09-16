@@ -72,6 +72,60 @@ export const APPURTENANCE_RULES = Object.freeze({
     maxCount: 1, prob: 0.40, minHeight: 28, minArea: 500, minSpan: 22,
   },
 
+  // 擴充屋頂範圍零件 (Rooftop Extent Parts, 面積佔比 20~80%)
+  rooftop_canopy: {
+    slot: 'rooftop',
+    categories: ['residential', 'commercial', 'industrial', 'rural'],
+    maxCount: 1, prob: 0.40, minArea: 40, minSpan: 6,
+  },
+  drying_room: {
+    slot: 'rooftop',
+    categories: ['residential', 'rural'],
+    maxCount: 1, prob: 0.45, minArea: 35, minSpan: 5,
+  },
+  roof_garden: {
+    slot: 'rooftop',
+    categories: ['residential', 'commercial', 'tourism', 'civic'],
+    maxCount: 1, prob: 0.35, minArea: 60, minSpan: 7,
+  },
+
+  // 擴充屋頂獨立零件 (Rooftop Standalone Parts)
+  stairwell_penthouse: {
+    slot: 'rooftop',
+    categories: ['residential', 'commercial', 'industrial', 'tourism', 'civic'],
+    maxCount: 1, prob: 0.70, minArea: 40, minSpan: 5,
+  },
+  rooftop_shrine: {
+    slot: 'rooftop',
+    categories: ['residential', 'commercial', 'rural'],
+    maxCount: 1, prob: 0.25, minArea: 30, minSpan: 4,
+  },
+  pingpong_table: {
+    slot: 'rooftop',
+    categories: ['residential', 'commercial', 'civic'],
+    maxCount: 2, prob: 0.30, minArea: 40, minSpan: 5,
+  },
+  pool_table: {
+    slot: 'rooftop',
+    categories: ['commercial', 'residential', 'tourism'],
+    maxCount: 1, prob: 0.25, minArea: 50, minSpan: 6,
+  },
+  rooftop_sofa: {
+    slot: 'rooftop',
+    categories: ['residential', 'commercial', 'tourism'],
+    maxCount: 2, prob: 0.40, minArea: 35, minSpan: 5,
+  },
+  table_chairs: {
+    slot: 'rooftop',
+    categories: ['residential', 'commercial', 'tourism', 'civic'],
+    maxCount: 3, prob: 0.50, minArea: 25, minSpan: 4,
+  },
+  gazebo: {
+    slot: 'rooftop',
+    categories: ['residential', 'tourism', 'civic', 'commercial'],
+    maxCount: 1, prob: 0.30, minArea: 70, minSpan: 8,
+  },
+
   // 正門地面物件 (Ground Entrance)
   main_door: {
     slot: 'ground_front',
@@ -918,7 +972,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       }
     }
 
-    // 5.7 太陽能光伏板大面積陣列 (Solar Panels Array) - 大面積鋪設(≥60%面積)，平整處整齊排列
+    // 5.7 太陽能光伏板陣列 (Solar Panels Array) - 覆蓋率 20%~80%，支援直接建立與架高複合式用途（遮雨棚/曬衣間）
     const hasSolar = ((architectureHash(idBase, 'solar') % 100) < 45) && area >= 80 && span >= 8 && !hasHeli && allowedRooftopParts.has('solar_array');
     if (hasSolar) {
       const frame = metrics?.frame || computeOrientedRoofFrame(poly);
@@ -929,6 +983,13 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const len = frame ? frame.len : (metrics.maxX - metrics.minX);
       const sp = frame ? frame.span : (metrics.maxZ - metrics.minZ);
 
+      // 目標覆蓋率精確控制在 20% ~ 80% 之間
+      const targetRatio = 0.20 + ((architectureHash(idBase, 'solar_coverage') % 6001) / 10000); // 0.20 ~ 0.80
+      const targetPanelCount = Math.max(1, Math.round((area * targetRatio) / 1.5));
+      const minPanelCount = Math.max(1, Math.ceil((area * 0.20) / 1.5));
+      const maxPanelCount = Math.max(minPanelCount, Math.floor((area * 0.80) / 1.5));
+      const desiredPanels = Math.min(maxPanelCount, Math.max(minPanelCount, targetPanelCount));
+
       // 面板 1.5m × 1.0m，步距 1.58m × 1.10m，單板 1.5m²
       const stepU = 1.58, stepV = 1.10;
       const uCount = Math.max(1, Math.floor((len - 1.2) / stepU));
@@ -936,47 +997,110 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const uStart = -((uCount - 1) * stepU) / 2;
       const vStart = -((vCount - 1) * stepV) / 2;
 
-      const placedSites = [];
+      let candidateSites = [];
       for (let vi = 0; vi < vCount; vi++) {
         for (let ui = 0; ui < uCount; ui++) {
           const u = uStart + ui * stepU, v = vStart + vi * stepV;
           const sx = cx + u * dirX + v * normX;
           const sz = cz + u * dirZ + v * normZ;
           if (isSiteValid(poly, sx, sz, 0.72, 0.35)) {
-            placedSites.push({ sx, sz });
+            candidateSites.push({ sx, sz, distSq: u * u + v * v });
           }
         }
       }
 
-      // 檢查若鋪設比例低於 60% 且面積足夠，使用稍微緊湊的邊距再試補齊
-      if (placedSites.length * 1.5 < area * 0.60 && area >= 80) {
+      // 若候選點未達 20% 門檻，嘗試適度以稍緊密邊距補足
+      if (candidateSites.length < minPanelCount && area >= 80) {
         for (let vi = -1; vi <= vCount; vi++) {
           for (let ui = -1; ui <= uCount; ui++) {
             if (vi >= 0 && vi < vCount && ui >= 0 && ui < uCount) continue;
             const u = uStart + ui * stepU, v = vStart + vi * stepV;
             const sx = cx + u * dirX + v * normX;
             const sz = cz + u * dirZ + v * normZ;
-            if (isSiteValid(poly, sx, sz, 0.70, 0.25)) {
-              placedSites.push({ sx, sz });
+            if (isSiteValid(poly, sx, sz, 0.68, 0.25)) {
+              candidateSites.push({ sx, sz, distSq: u * u + v * v });
+              if (candidateSites.length >= minPanelCount) break;
             }
           }
+          if (candidateSites.length >= minPanelCount) break;
         }
       }
+
+      // 由內向外排序置中挑選，嚴格鎖定於 20% ~ 80% 區間
+      candidateSites.sort((a, b) => a.distSq - b.distSq);
+      const placedSites = candidateSites.slice(0, desiredPanels);
+
+      // 直接建立 vs 架高複合式用途 (遮雨棚 / 曬衣間)
+      const isElevatedSolar = (architectureHash(idBase, 'solar_mount') % 100) >= 45;
+      const solarCompositeType = (architectureHash(idBase, 'solar_composite') % 100) < 50 ? 'canopy' : 'laundry';
+      const stiltHeight = isElevatedSolar ? 2.3 : 0.25;
 
       for (const { sx, sz } of placedSites) {
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
 
-        const leg = new THREE.BoxGeometry(1.4, 0.25, 0.06);
-        leg.translate(0, 0.125, 0.38);
-        if (rotY) leg.rotateY(rotY);
-        leg.translate(sx, baseRoofY, sz);
-        geos.push(paintGeometry(leg, 0x9e9e9e, variant));
+        if (isElevatedSolar) {
+          // 架高鋼構立柱 (Stilt column)
+          const stilt = new THREE.CylinderGeometry(0.045, 0.045, stiltHeight, 6);
+          stilt.translate(0, stiltHeight / 2, 0);
+          if (rotY) stilt.rotateY(rotY);
+          stilt.translate(sx, baseRoofY, sz);
+          geos.push(paintGeometry(stilt, 0x546e7a, variant));
+
+          // 頂部支撐縱樑 (Mounting rail)
+          const rail = new THREE.BoxGeometry(0.06, 0.08, 0.85);
+          rail.translate(0, stiltHeight, 0);
+          if (rotY) rail.rotateY(rotY);
+          rail.translate(sx, baseRoofY, sz);
+          geos.push(paintGeometry(rail, 0x78909c, variant));
+        } else {
+          // 直接建立：兩側角鋼腳架
+          for (const side of [-0.55, 0.55]) {
+            const leg = new THREE.BoxGeometry(0.06, 0.25, 0.8);
+            leg.translate(side, 0.125, 0);
+            if (rotY) leg.rotateY(rotY);
+            leg.translate(sx, baseRoofY, sz);
+            geos.push(paintGeometry(leg, 0x9e9e9e, variant));
+          }
+        }
 
         const panel = new THREE.BoxGeometry(1.5, 0.06, 1.0);
+        panel.userData.partType = 'solar_panel';
         panel.rotateX(0.35); // 朝向日照傾角
         if (rotY) panel.rotateY(rotY);
-        panel.translate(sx, baseRoofY + 0.35, sz);
+        panel.translate(sx, baseRoofY + (isElevatedSolar ? stiltHeight + 0.15 : 0.35), sz);
         geos.push(paintGeometry(panel, 0x1a237e, variant));
+      }
+
+      // 若為架高複合用途，在中央挑空空間配置遮雨或曬衣設施
+      if (isElevatedSolar && placedSites.length >= 4) {
+        const centerSite = placedSites[Math.floor(placedSites.length / 2)];
+        const underY = getRoofElevation(centerSite.sx, centerSite.sz, poly, roofForm, metrics, topY, height);
+        if (solarCompositeType === 'laundry') {
+          for (let l = -1; l <= 1; l += 2) {
+            const line = new THREE.BoxGeometry(2.4, 0.03, 0.03);
+            line.translate(0, 1.6, l * 0.8);
+            if (rotY) line.rotateY(rotY);
+            line.translate(centerSite.sx, underY, centerSite.sz);
+            geos.push(paintGeometry(line, 0xb0bec5, variant));
+
+            const cloth = new THREE.BoxGeometry(0.4, 0.5, 0.05);
+            cloth.translate(l * 0.4, 1.35, l * 0.8);
+            if (rotY) cloth.rotateY(rotY);
+            cloth.translate(centerSite.sx, underY, centerSite.sz);
+            geos.push(paintGeometry(cloth, l === -1 ? 0xffffff : 0x42a5f5, variant));
+          }
+          const sink = new THREE.BoxGeometry(0.7, 0.85, 0.55);
+          sink.translate(0, 0.425, 0);
+          if (rotY) sink.rotateY(rotY);
+          sink.translate(centerSite.sx, underY, centerSite.sz);
+          geos.push(paintGeometry(sink, 0xb0bec5, variant));
+        } else {
+          const gutter = new THREE.BoxGeometry(2.8, 0.06, 0.06);
+          gutter.translate(0, 2.1, 1.2);
+          if (rotY) gutter.rotateY(rotY);
+          gutter.translate(centerSite.sx, underY, centerSite.sz);
+          geos.push(paintGeometry(gutter, 0x455a64, variant));
+        }
       }
     }
 
@@ -1048,6 +1172,420 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           const board = new THREE.BoxGeometry(bbW, bbH, 0.18);
           board.translate(bSite.x, baseRoofY + 2.2 + bbH / 2, bSite.z);
           geos.push(paintGeometry(board, 0xfff9c4, variant));
+        }
+      }
+    }
+
+    // 5.11 擴充屋頂範圍零件 (Rooftop Extent Parts: 遮雨棚、曬衣間、空中花園，面積佔比 20% ~ 80%)
+    // (1) 波浪板遮雨棚 (Rooftop Rain Shed / Canopy)
+    const hasCanopy = ((architectureHash(idBase, 'rf_canopy') % 100) < 40) && area >= 40 && span >= 6 && !hasHeli && allowedRooftopParts.has('rooftop_canopy');
+    if (hasCanopy) {
+      const frame = metrics?.frame || computeOrientedRoofFrame(poly);
+      const rotY = frame ? frame.angle : 0;
+      const dirX = frame ? frame.dirX : 1, dirZ = frame ? frame.dirZ : 0;
+      const normX = frame ? frame.normalX : 0, normZ = frame ? frame.normalZ : 1;
+      const cx = frame ? frame.cx : metrics.cx, cz = frame ? frame.cz : metrics.cz;
+      const len = frame ? frame.len : (metrics.maxX - metrics.minX);
+      const sp = frame ? frame.span : (metrics.maxZ - metrics.minZ);
+
+      const canopyRatio = 0.20 + ((architectureHash(idBase, 'canopy_pct') % 6001) / 10000); // 20% ~ 80%
+      const targetCanopyArea = area * canopyRatio;
+      const cLen = Math.min(len * 0.88, Math.max(3.2, Math.sqrt(targetCanopyArea * (len / sp))));
+      const cSpan = Math.min(sp * 0.88, targetCanopyArea / cLen);
+
+      const offU = (len - cLen) * ((architectureHash(idBase, 'canopy_u') % 40) - 20) / 100;
+      const offV = (sp - cSpan) * ((architectureHash(idBase, 'canopy_v') % 40) - 20) / 100;
+      const posX = cx + offU * dirX + offV * normX;
+      const posZ = cz + offU * dirZ + offV * normZ;
+
+      if (isSiteValid(poly, posX, posZ, Math.min(cLen, cSpan) * 0.45, 0.4)) {
+        const baseRoofY = getRoofElevation(posX, posZ, poly, roofForm, metrics, topY, height);
+        const postH = 2.4;
+
+        // 4 根鋼構立柱
+        for (const sx of [-1, 1]) {
+          for (const sz of [-1, 1]) {
+            const post = new THREE.CylinderGeometry(0.06, 0.06, postH, 6);
+            post.translate(sx * (cLen * 0.45), postH / 2, sz * (cSpan * 0.45));
+            if (rotY) post.rotateY(rotY);
+            post.translate(posX, baseRoofY, posZ);
+            geos.push(paintGeometry(post, 0x546e7a, variant));
+          }
+        }
+
+        // 頂部斜面遮雨頂棚
+        const canopyRoof = new THREE.BoxGeometry(cLen, 0.08, cSpan);
+        canopyRoof.rotateX(0.08);
+        canopyRoof.translate(0, postH + 0.04, 0);
+        if (rotY) canopyRoof.rotateY(rotY);
+        canopyRoof.translate(posX, baseRoofY, posZ);
+        geos.push(paintGeometry(canopyRoof, 0x78909c, variant));
+
+        // 邊界導水天溝
+        const gutter = new THREE.BoxGeometry(cLen * 1.02, 0.08, 0.08);
+        gutter.translate(0, postH - 0.02, cSpan * 0.5);
+        if (rotY) gutter.rotateY(rotY);
+        gutter.translate(posX, baseRoofY, posZ);
+        geos.push(paintGeometry(gutter, 0x455a64, variant));
+      }
+    }
+
+    // (2) 屋頂採光曬衣間 (Rooftop Laundry Drying Room / Shelter)
+    const hasDryingRoom = ((architectureHash(idBase, 'rf_drying') % 100) < 45) && (cat === 'residential' || cat === 'rural') && area >= 35 && span >= 5 && !hasHeli && allowedRooftopParts.has('drying_room');
+    if (hasDryingRoom) {
+      const frame = metrics?.frame || computeOrientedRoofFrame(poly);
+      const rotY = frame ? frame.angle : 0;
+      const dirX = frame ? frame.dirX : 1, dirZ = frame ? frame.dirZ : 0;
+      const normX = frame ? frame.normalX : 0, normZ = frame ? frame.normalZ : 1;
+      const cx = frame ? frame.cx : metrics.cx, cz = frame ? frame.cz : metrics.cz;
+      const len = frame ? frame.len : (metrics.maxX - metrics.minX);
+      const sp = frame ? frame.span : (metrics.maxZ - metrics.minZ);
+
+      const dryingRatio = 0.20 + ((architectureHash(idBase, 'dry_pct') % 6001) / 10000); // 20% ~ 80%
+      const targetArea = area * dryingRatio;
+      const dLen = Math.min(len * 0.85, Math.max(3.0, Math.sqrt(targetArea * (len / sp))));
+      const dSpan = Math.min(sp * 0.85, targetArea / dLen);
+
+      const offU = (len - dLen) * ((architectureHash(idBase, 'dry_u') % 40) - 20) / 100;
+      const offV = (sp - dSpan) * ((architectureHash(idBase, 'dry_v') % 40) - 20) / 100;
+      const posX = cx + offU * dirX + offV * normX;
+      const posZ = cz + offU * dirZ + offV * normZ;
+
+      if (isSiteValid(poly, posX, posZ, Math.min(dLen, dSpan) * 0.45, 0.4)) {
+        const baseRoofY = getRoofElevation(posX, posZ, poly, roofForm, metrics, topY, height);
+        const shedH = 2.2;
+
+        // 鋁框骨架支柱
+        for (const sx of [-1, 1]) {
+          for (const sz of [-1, 1]) {
+            const post = new THREE.BoxGeometry(0.08, shedH, 0.08);
+            post.translate(sx * (dLen * 0.46), shedH / 2, sz * (dSpan * 0.46));
+            if (rotY) post.rotateY(rotY);
+            post.translate(posX, baseRoofY, posZ);
+            geos.push(paintGeometry(post, 0xb0bec5, variant));
+          }
+        }
+
+        // 半透明採光雨棚
+        const translucentRoof = new THREE.BoxGeometry(dLen, 0.05, dSpan);
+        translucentRoof.translate(0, shedH, 0);
+        if (rotY) translucentRoof.rotateY(rotY);
+        translucentRoof.translate(posX, baseRoofY, posZ);
+        geos.push(paintGeometry(translucentRoof, 0xe0f7fa, variant));
+
+        // 內部平行曬衣桿與垂掛衣物
+        for (let l = -1; l <= 1; l++) {
+          const pole = new THREE.BoxGeometry(dLen * 0.85, 0.03, 0.03);
+          pole.translate(0, 1.7, l * (dSpan * 0.28));
+          if (rotY) pole.rotateY(rotY);
+          pole.translate(posX, baseRoofY, posZ);
+          geos.push(paintGeometry(pole, 0x90a4ae, variant));
+
+          for (let c = -1; c <= 1; c += 2) {
+            const col = (architectureHash(`${idBase}:${l}:${c}`, 'cloth') % 3);
+            const clothColor = col === 0 ? 0xffffff : col === 1 ? 0xef5350 : 0x42a5f5;
+            const cloth = new THREE.BoxGeometry(0.35, 0.52, 0.04);
+            cloth.translate(c * (dLen * 0.24), 1.4, l * (dSpan * 0.28));
+            if (rotY) cloth.rotateY(rotY);
+            cloth.translate(posX, baseRoofY, posZ);
+            geos.push(paintGeometry(cloth, clothColor, variant));
+          }
+        }
+
+        // 洗滌台水槽
+        const sink = new THREE.BoxGeometry(0.75, 0.85, 0.55);
+        sink.translate(-dLen * 0.35, 0.425, -dSpan * 0.35);
+        if (rotY) sink.rotateY(rotY);
+        sink.translate(posX, baseRoofY, posZ);
+        geos.push(paintGeometry(sink, 0xb0bec5, variant));
+      }
+    }
+
+    // (3) 空中花園木甲板 (Rooftop Garden)
+    const hasRoofGarden = ((architectureHash(idBase, 'rf_garden') % 100) < 35) && area >= 60 && span >= 7 && !hasHeli && allowedRooftopParts.has('roof_garden');
+    if (hasRoofGarden) {
+      const frame = metrics?.frame || computeOrientedRoofFrame(poly);
+      const rotY = frame ? frame.angle : 0;
+      const dirX = frame ? frame.dirX : 1, dirZ = frame ? frame.dirZ : 0;
+      const normX = frame ? frame.normalX : 0, normZ = frame ? frame.normalZ : 1;
+      const cx = frame ? frame.cx : metrics.cx, cz = frame ? frame.cz : metrics.cz;
+      const len = frame ? frame.len : (metrics.maxX - metrics.minX);
+      const sp = frame ? frame.span : (metrics.maxZ - metrics.minZ);
+
+      const gardenRatio = 0.20 + ((architectureHash(idBase, 'garden_pct') % 6001) / 10000); // 20% ~ 80%
+      const targetArea = area * gardenRatio;
+      const gLen = Math.min(len * 0.88, Math.max(3.5, Math.sqrt(targetArea * (len / sp))));
+      const gSpan = Math.min(sp * 0.88, targetArea / gLen);
+
+      const offU = (len - gLen) * ((architectureHash(idBase, 'g_u') % 30) - 15) / 100;
+      const offV = (sp - gSpan) * ((architectureHash(idBase, 'g_v') % 30) - 15) / 100;
+      const posX = cx + offU * dirX + offV * normX;
+      const posZ = cz + offU * dirZ + offV * normZ;
+
+      if (isSiteValid(poly, posX, posZ, Math.min(gLen, gSpan) * 0.45, 0.4)) {
+        const baseRoofY = getRoofElevation(posX, posZ, poly, roofForm, metrics, topY, height);
+
+        // 木甲板底座平台
+        const deck = new THREE.BoxGeometry(gLen, 0.08, gSpan);
+        deck.translate(0, 0.04, 0);
+        if (rotY) deck.rotateY(rotY);
+        deck.translate(posX, baseRoofY, posZ);
+        geos.push(paintGeometry(deck, 0x8d6e63, variant));
+
+        // 綠化長條花台
+        for (const side of [-1, 1]) {
+          const bedW = gLen * 0.75, bedH = 0.4, bedD = 0.55;
+          const planter = new THREE.BoxGeometry(bedW, bedH, bedD);
+          planter.translate(0, 0.08 + bedH / 2, side * (gSpan * 0.36));
+          if (rotY) planter.rotateY(rotY);
+          planter.translate(posX, baseRoofY, posZ);
+          geos.push(paintGeometry(planter, 0x5d4037, variant));
+
+          const bush = new THREE.BoxGeometry(bedW * 0.95, 0.35, bedD * 0.85);
+          bush.translate(0, 0.08 + bedH + 0.175, side * (gSpan * 0.36));
+          if (rotY) bush.rotateY(rotY);
+          bush.translate(posX, baseRoofY, posZ);
+          geos.push(paintGeometry(bush, 0x388e3c, variant));
+        }
+
+        // 藤蔓休閒花架 (Pergola)
+        const pergW = 2.4, pergD = 2.0, pergH = 2.2;
+        for (const px of [-pergW / 2, pergW / 2]) {
+          for (const pz of [-pergD / 2, pergD / 2]) {
+            const col = new THREE.BoxGeometry(0.1, pergH, 0.1);
+            col.translate(px, pergH / 2, pz);
+            if (rotY) col.rotateY(rotY);
+            col.translate(posX, baseRoofY, posZ);
+            geos.push(paintGeometry(col, 0x6d4c41, variant));
+          }
+        }
+        for (let b = -1; b <= 1; b++) {
+          const rBeam = new THREE.BoxGeometry(pergW * 1.15, 0.08, 0.08);
+          rBeam.translate(0, pergH, b * 0.7);
+          if (rotY) rBeam.rotateY(rotY);
+          rBeam.translate(posX, baseRoofY, posZ);
+          geos.push(paintGeometry(rBeam, 0x5d4037, variant));
+        }
+
+        // 花園休閒長椅
+        const bench = new THREE.BoxGeometry(1.4, 0.45, 0.5);
+        bench.translate(0, 0.08 + 0.225, 0);
+        if (rotY) bench.rotateY(rotY);
+        bench.translate(posX, baseRoofY, posZ);
+        geos.push(paintGeometry(bench, 0x4e342e, variant));
+      }
+    }
+
+    // 5.12 擴充屋頂獨立零件 (Rooftop Standalone Parts: 樓梯間、小廟、桌球桌、撞球桌、沙發、桌椅、涼亭)
+    // (1) 頂樓樓梯間 / 屋突 (Stairwell Penthouse)
+    const hasStairwell = ((architectureHash(idBase, 'stairwell') % 100) < 70) && area >= 40 && span >= 5 && allowedRooftopParts.has('stairwell_penthouse');
+    if (hasStairwell) {
+      const stSite = pickSite('corner', 'stair_pos') || pickSite('edge', 'stair_pos');
+      if (stSite && isSiteValid(poly, stSite.x, stSite.z, 1.5, 0.8)) {
+        const sx = stSite.x, sz = stSite.z;
+        const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
+        const stH = 2.4;
+
+        const body = new THREE.BoxGeometry(2.4, stH, 2.8);
+        body.translate(sx, baseRoofY + stH / 2, sz);
+        geos.push(paintGeometry(body, architecture.wall || 0x90a4ae, variant));
+
+        const roofSlab = new THREE.BoxGeometry(2.65, 0.15, 3.05);
+        roofSlab.translate(sx, baseRoofY + stH + 0.075, sz);
+        geos.push(paintGeometry(roofSlab, architecture.trim || 0x546e7a, variant));
+
+        const door = new THREE.BoxGeometry(0.85, 1.9, 0.08);
+        door.translate(sx, baseRoofY + 0.95, sz + 1.41);
+        geos.push(paintGeometry(door, 0x37474f, variant));
+
+        const vent = new THREE.BoxGeometry(0.65, 0.45, 0.06);
+        vent.translate(sx + 1.21, baseRoofY + 1.6, sz);
+        geos.push(paintGeometry(vent, 0x78909c, variant));
+      }
+    }
+
+    // (2) 屋頂小廟 / 神明廳 (Rooftop Shrine / Temple)
+    const hasShrine = ((architectureHash(idBase, 'shrine') % 100) < 30) && area >= 30 && span >= 4 && allowedRooftopParts.has('rooftop_shrine');
+    if (hasShrine) {
+      const shSite = pickSite('edge', 'shrine_pos') || pickSite('corner', 'shrine_pos');
+      if (shSite && isSiteValid(poly, shSite.x, shSite.z, 1.3, 0.8)) {
+        const sx = shSite.x, sz = shSite.z;
+        const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
+        const shH = 1.6;
+
+        const shrineBody = new THREE.BoxGeometry(1.8, shH, 1.6);
+        shrineBody.translate(sx, baseRoofY + shH / 2, sz);
+        geos.push(paintGeometry(shrineBody, 0xb71c1c, variant));
+
+        const shrineRoof = new THREE.BoxGeometry(2.2, 0.35, 2.0);
+        shrineRoof.translate(sx, baseRoofY + shH + 0.175, sz);
+        geos.push(paintGeometry(shrineRoof, 0xff8f00, variant));
+
+        const ridge = new THREE.BoxGeometry(2.0, 0.12, 0.12);
+        ridge.translate(sx, baseRoofY + shH + 0.41, sz);
+        geos.push(paintGeometry(ridge, 0xd84315, variant));
+
+        const burner = new THREE.CylinderGeometry(0.3, 0.35, 0.6, 8);
+        burner.translate(sx, baseRoofY + 0.3, sz + 1.25);
+        geos.push(paintGeometry(burner, 0xc5a059, variant));
+      }
+    }
+
+    // (3) 屋頂桌球桌 (Ping-Pong Table)
+    const hasPingpong = ((architectureHash(idBase, 'pingpong') % 100) < 35) && area >= 40 && span >= 5 && allowedRooftopParts.has('pingpong_table');
+    if (hasPingpong) {
+      const ppSite = pickSite('edge', 'pingpong_pos') || pickSite('center', 'pingpong_pos');
+      if (ppSite && isSiteValid(poly, ppSite.x, ppSite.z, 1.5, 0.8)) {
+        const px = ppSite.x, pz = ppSite.z;
+        const baseRoofY = getRoofElevation(px, pz, poly, roofForm, metrics, topY, height);
+        const tableH = 0.76;
+
+        for (const sx of [-1.1, 1.1]) {
+          for (const sz of [-0.6, 0.6]) {
+            const leg = new THREE.BoxGeometry(0.06, tableH, 0.06);
+            leg.translate(px + sx, baseRoofY + tableH / 2, pz + sz);
+            geos.push(paintGeometry(leg, 0x212121, variant));
+          }
+        }
+
+        const tabletop = new THREE.BoxGeometry(2.74, 0.08, 1.525);
+        tabletop.translate(px, baseRoofY + tableH + 0.04, pz);
+        geos.push(paintGeometry(tabletop, 0x1976d2, variant));
+
+        const net = new THREE.BoxGeometry(0.03, 0.18, 1.6);
+        net.translate(px, baseRoofY + tableH + 0.17, pz);
+        geos.push(paintGeometry(net, 0xffffff, variant));
+      }
+    }
+
+    // (4) 屋頂撞球桌 (Pool / Billiards Table)
+    const hasPool = ((architectureHash(idBase, 'pool') % 100) < 28) && area >= 50 && span >= 6 && allowedRooftopParts.has('pool_table');
+    if (hasPool) {
+      const poolSite = pickSite('center', 'pool_pos') || pickSite('edge', 'pool_pos');
+      if (poolSite && isSiteValid(poly, poolSite.x, poolSite.z, 1.6, 0.8)) {
+        const px = poolSite.x, pz = poolSite.z;
+        const baseRoofY = getRoofElevation(px, pz, poly, roofForm, metrics, topY, height);
+        const tableH = 0.8;
+
+        for (const sx of [-1.1, 1.1]) {
+          for (const sz of [-0.6, 0.6]) {
+            const leg = new THREE.CylinderGeometry(0.09, 0.11, tableH, 8);
+            leg.translate(px + sx, baseRoofY + tableH / 2, pz + sz);
+            geos.push(paintGeometry(leg, 0x3e2723, variant));
+          }
+        }
+
+        const frame = new THREE.BoxGeometry(2.75, 0.12, 1.55);
+        frame.translate(px, baseRoofY + tableH + 0.06, pz);
+        geos.push(paintGeometry(frame, 0x4e342e, variant));
+
+        const cloth = new THREE.BoxGeometry(2.45, 0.06, 1.25);
+        cloth.translate(px, baseRoofY + tableH + 0.1, pz);
+        geos.push(paintGeometry(cloth, 0x2e7d32, variant));
+
+        for (const cx of [-1.2, 0, 1.2]) {
+          for (const cz of [-0.6, 0.6]) {
+            if (cx === 0 && cz === 0) continue;
+            const pocket = new THREE.BoxGeometry(0.1, 0.08, 0.1);
+            pocket.translate(px + cx, baseRoofY + tableH + 0.11, pz + cz);
+            geos.push(paintGeometry(pocket, 0x1b1b1b, variant));
+          }
+        }
+      }
+    }
+
+    // (5) 露台休閒沙發茶几組 (Rooftop Lounge Sofa)
+    const hasSofa = ((architectureHash(idBase, 'sofa') % 100) < 40) && area >= 35 && span >= 5 && allowedRooftopParts.has('rooftop_sofa');
+    if (hasSofa) {
+      const sofaSite = pickSite('corner', 'sofa_pos') || pickSite('edge', 'sofa_pos');
+      if (sofaSite && isSiteValid(poly, sofaSite.x, sofaSite.z, 1.4, 0.8)) {
+        const sx = sofaSite.x, sz = sofaSite.z;
+        const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
+
+        const mainSeat = new THREE.BoxGeometry(2.0, 0.42, 0.85);
+        mainSeat.translate(sx, baseRoofY + 0.21, sz);
+        geos.push(paintGeometry(mainSeat, 0x78909c, variant));
+
+        const back = new THREE.BoxGeometry(2.0, 0.38, 0.18);
+        back.translate(sx, baseRoofY + 0.61, sz - 0.34);
+        geos.push(paintGeometry(back, 0x546e7a, variant));
+
+        const lSeat = new THREE.BoxGeometry(0.85, 0.42, 0.95);
+        lSeat.translate(sx + 0.58, baseRoofY + 0.21, sz + 0.85);
+        geos.push(paintGeometry(lSeat, 0x78909c, variant));
+
+        const coffeeTable = new THREE.BoxGeometry(0.9, 0.32, 0.55);
+        coffeeTable.translate(sx - 0.2, baseRoofY + 0.16, sz + 0.7);
+        geos.push(paintGeometry(coffeeTable, 0x5d4037, variant));
+      }
+    }
+
+    // (6) 露天桌椅遮陽傘組 (Patio Table, Chairs & Parasol)
+    const hasTableChairs = ((architectureHash(idBase, 'tab_chairs') % 100) < 50) && area >= 25 && span >= 4 && allowedRooftopParts.has('table_chairs');
+    if (hasTableChairs) {
+      const tcSite = pickSite('edge', 'tc_pos') || pickSite('corner', 'tc_pos');
+      if (tcSite && isSiteValid(poly, tcSite.x, tcSite.z, 1.2, 0.7)) {
+        const tx = tcSite.x, tz = tcSite.z;
+        const baseRoofY = getRoofElevation(tx, tz, poly, roofForm, metrics, topY, height);
+
+        const table = new THREE.CylinderGeometry(0.55, 0.55, 0.05, 12);
+        table.translate(tx, baseRoofY + 0.72, tz);
+        geos.push(paintGeometry(table, 0x616161, variant));
+
+        const tLeg = new THREE.CylinderGeometry(0.05, 0.15, 0.70, 8);
+        tLeg.translate(tx, baseRoofY + 0.35, tz);
+        geos.push(paintGeometry(tLeg, 0x424242, variant));
+
+        for (const [cx, cz] of [[-0.75, 0], [0.75, 0], [0, -0.75], [0, 0.75]]) {
+          const chair = new THREE.BoxGeometry(0.42, 0.42, 0.42);
+          chair.translate(tx + cx, baseRoofY + 0.21, tz + cz);
+          geos.push(paintGeometry(chair, 0x455a64, variant));
+
+          const backrest = new THREE.BoxGeometry(0.42, 0.4, 0.06);
+          backrest.translate(tx + cx, baseRoofY + 0.62, tz + cz + (cz > 0 ? 0.18 : cz < 0 ? -0.18 : 0));
+          geos.push(paintGeometry(backrest, 0x37474f, variant));
+        }
+
+        const pole = new THREE.CylinderGeometry(0.03, 0.03, 2.2, 6);
+        pole.translate(tx, baseRoofY + 1.1, tz);
+        geos.push(paintGeometry(pole, 0xb0bec5, variant));
+
+        const umbrella = new THREE.ConeGeometry(1.15, 0.4, 8);
+        umbrella.translate(tx, baseRoofY + 2.3, tz);
+        geos.push(paintGeometry(umbrella, 0xffeb3b, variant));
+      }
+    }
+
+    // (7) 屋頂休閒涼亭 (Rooftop Gazebo / Pavilion)
+    const hasGazebo = ((architectureHash(idBase, 'gazebo') % 100) < 30) && area >= 70 && span >= 8 && allowedRooftopParts.has('gazebo');
+    if (hasGazebo) {
+      const gzSite = pickSite('corner', 'gazebo_pos') || pickSite('edge', 'gazebo_pos');
+      if (gzSite && isSiteValid(poly, gzSite.x, gzSite.z, 1.8, 1.0)) {
+        const gx = gzSite.x, gz = gzSite.z;
+        const baseRoofY = getRoofElevation(gx, gz, poly, roofForm, metrics, topY, height);
+        const gzH = 2.4;
+
+        const deck = new THREE.BoxGeometry(2.8, 0.1, 2.8);
+        deck.translate(gx, baseRoofY + 0.05, gz);
+        geos.push(paintGeometry(deck, 0x8d6e63, variant));
+
+        for (const sx of [-1.2, 1.2]) {
+          for (const sz of [-1.2, 1.2]) {
+            const col = new THREE.CylinderGeometry(0.07, 0.07, gzH, 6);
+            col.translate(gx + sx, baseRoofY + gzH / 2, gz + sz);
+            geos.push(paintGeometry(col, 0x5d4037, variant));
+          }
+        }
+
+        const roofCone = new THREE.ConeGeometry(2.1, 0.95, 4);
+        roofCone.rotateY(Math.PI / 4);
+        roofCone.translate(gx, baseRoofY + gzH + 0.475, gz);
+        geos.push(paintGeometry(roofCone, 0x3e2723, variant));
+
+        for (const side of [-0.9, 0.9]) {
+          const bench = new THREE.BoxGeometry(2.2, 0.42, 0.35);
+          bench.translate(gx, baseRoofY + 0.31, gz + side);
+          geos.push(paintGeometry(bench, 0x6d4c41, variant));
         }
       }
     }
