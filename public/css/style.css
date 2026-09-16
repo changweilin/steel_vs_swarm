@@ -2613,12 +2613,18 @@ body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .fo
   .dlg-track { top: 62px; font-size: 11px; padding: 4px 9px; }
 }
 
-/* ---------- 本機伺服器首頁懸浮快速開始按鍵 ---------- */
-.quick-restart-fab {
+/* ---------- 本機伺服器首頁懸浮快速開始按鍵群組 ---------- */
+.quick-restart-fab-group {
   position: fixed;
   bottom: calc(28px + env(safe-area-inset-bottom, 0px));
   right: calc(24px + env(safe-area-inset-right, 0px));
   z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.quick-restart-fab,
+.quick-clear-fab {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2634,23 +2640,40 @@ body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .fo
   -webkit-backdrop-filter: blur(8px);
   text-align: left;
 }
+.quick-clear-fab {
+  border-color: var(--line);
+  box-shadow: 0 0 12px rgba(122, 158, 178, 0.2);
+}
 .quick-restart-fab:hover {
   transform: translateY(-2px) scale(1.02);
   border-color: #fff;
   box-shadow: 0 0 24px rgba(var(--railW-rgb), 0.6), inset 0 0 14px rgba(var(--railW-rgb), 0.3);
   background: rgba(14, 24, 38, 0.96);
 }
-.quick-restart-fab:active {
+.quick-clear-fab:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: var(--steel);
+  box-shadow: 0 0 18px rgba(var(--railS-rgb), 0.5);
+  background: rgba(14, 24, 38, 0.96);
+}
+.quick-restart-fab:active,
+.quick-clear-fab:active {
   transform: translateY(1px) scale(0.98);
   box-shadow: 0 0 12px rgba(var(--railW-rgb), 0.4);
 }
-.quick-restart-fab .qr-icon {
+.quick-restart-fab .qr-icon,
+.quick-clear-fab .qr-icon {
   font-size: 20px;
   color: var(--railW);
   text-shadow: 0 0 8px var(--railW);
   line-height: 1;
 }
-.quick-restart-fab .qr-content {
+.quick-clear-fab .qr-icon {
+  color: var(--steel);
+  text-shadow: 0 0 8px var(--steel);
+}
+.quick-restart-fab .qr-content,
+.quick-clear-fab .qr-content {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2661,6 +2684,14 @@ body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .fo
   font-weight: 700;
   color: var(--railW);
   letter-spacing: 2px;
+  line-height: 1.2;
+}
+.quick-clear-fab .qr-title {
+  font-family: var(--font-title);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--steel);
+  letter-spacing: 1px;
   line-height: 1.2;
 }
 .quick-restart-fab .qr-desc {
@@ -2674,9 +2705,13 @@ body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .fo
   text-overflow: ellipsis;
 }
 @media (max-width: 760px) {
-  .quick-restart-fab {
+  .quick-restart-fab-group {
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     right: calc(12px + env(safe-area-inset-right, 0px));
+    gap: 6px;
+  }
+  .quick-restart-fab,
+  .quick-clear-fab {
     padding: 8px 14px;
   }
   .quick-restart-fab .qr-desc {
