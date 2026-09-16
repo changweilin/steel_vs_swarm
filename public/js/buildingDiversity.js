@@ -3,8 +3,157 @@ import {
   ARCHITECTURE_STYLES, ARCHITECTURE_PROFILES, ARCHITECTURE_SITE,
   BUILDING_FUNCTION_RANGES, CULTURAL_REGIONS, CULTURAL_AFFINITY_RATIO,
 } from './architectureStyles.js';
-import { buildContainmentIndex } from './osmAreas.js';
+import { buildContainmentIndex, pointInProjectedArea } from './osmAreas.js';
 import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
+import { WATER, llToXZ } from './data.js';
+
+function segmentsIntersect(p1, p2, p3, p4) {
+  const [x1, y1] = p1, [x2, y2] = p2;
+  const [x3, y3] = p3, [x4, y4] = p4;
+  const d1 = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
+  const d2 = (x2 - x1) * (y4 - y1) - (y2 - y1) * (x4 - x1);
+  const d3 = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3);
+  const d4 = (x4 - x3) * (y2 - y3) - (y4 - y3) * (x2 - x3);
+  return (((d1 > 1e-5 && d2 < -1e-5) || (d1 < -1e-5 && d2 > 1e-5))
+    && ((d3 > 1e-5 && d4 < -1e-5) || (d3 < -1e-5 && d4 > 1e-5)));
+}
+
+export function detectTransitPassageTags(tags = {}) {
+  if (!tags) return null;
+  const t = String(tags.tunnel || '').trim().toLowerCase();
+  const bp = String(tags.building_passage || tags.passage || '').trim().toLowerCase();
+  const c = String(tags.covered || '').trim().toLowerCase();
+  if (t === 'building_passage' || bp === 'yes' || (c === 'yes' && tags.highway)) {
+    return { penetrated: true, transitType: tags.railway ? 'rail' : 'road' };
+  }
+  return null;
+}
+
+export function buildTransitPassageIndex({ roads = [], rails = [], toXZ = null, center = null } = {}) {
+  const segs = [];
+  const projectPoint = (p) => {
+    if (!p) return null;
+    if (typeof toXZ === 'function') {
+      const q = toXZ(p);
+      if (Array.isArray(q)) return q;
+      if (q && Number.isFinite(q.x) && Number.isFinite(q.z)) return [q.x, q.z];
+    }
+    if (Number.isFinite(p.x) && Number.isFinite(p.z)) return [p.x, p.z];
+    if (Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])) return p;
+    if (center && Number.isFinite(p.lat) && Number.isFinite(p.lon ?? p.lng)) {
+      return llToXZ(p.lat, p.lon ?? p.lng, center);
+    }
+    return null;
+  };
+
+  const addWay = (way, defaultType) => {
+    if (!way) return;
+    const geometry = way.geometry || way.nodes || [];
+    const pts = [];
+    for (const p of geometry) {
+      const pt = projectPoint(p);
+      if (pt) pts.push(pt);
+    }
+    const tags = way.tags || {};
+    const transitType = tags.railway ? 'rail' : (tags.highway ? 'road' : defaultType);
+    const isPassage = tags.tunnel === 'building_passage' || tags.covered === 'yes';
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const dx = b[0] - a[0], dz = b[1] - a[1];
+      if (dx * dx + dz * dz < 0.01) continue;
+      segs.push({
+        ax: a[0], az: a[1], bx: b[0], bz: b[1],
+        minX: Math.min(a[0], b[0]), maxX: Math.max(a[0], b[0]),
+        minZ: Math.min(a[1], b[1]), maxZ: Math.max(a[1], b[1]),
+        transitType, isPassage, tags,
+      });
+    }
+  };
+
+  for (const w of (rails || [])) addWay(w, 'rail');
+  for (const w of (roads || [])) addWay(w, 'road');
+
+  if (!segs.length) return null;
+
+  const CELL = 32;
+  const grid = new Map();
+  for (let idx = 0; idx < segs.length; idx++) {
+    const s = segs[idx];
+    const i0 = Math.floor(s.minX / CELL), i1 = Math.floor(s.maxX / CELL);
+    const j0 = Math.floor(s.minZ / CELL), j1 = Math.floor(s.maxZ / CELL);
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const key = `${i},${j}`;
+        let list = grid.get(key);
+        if (!list) { list = []; grid.set(key, list); }
+        list.push(idx);
+      }
+    }
+  }
+
+  const test = (poly, building = null) => {
+    if (building?.tags) {
+      const tagCheck = detectTransitPassageTags(building.tags);
+      if (tagCheck) return tagCheck;
+    }
+    if (!poly?.outer?.length) return null;
+
+    const xs = poly.outer.map((p) => p[0]), zs = poly.outer.map((p) => p[1]);
+    const pMinX = Math.min(...xs), pMaxX = Math.max(...xs);
+    const pMinZ = Math.min(...zs), pMaxZ = Math.max(...zs);
+
+    const i0 = Math.floor(pMinX / CELL), i1 = Math.floor(pMaxX / CELL);
+    const j0 = Math.floor(pMinZ / CELL), j1 = Math.floor(pMaxZ / CELL);
+
+    const tested = new Set();
+    let hasRail = false, hasRoad = false;
+
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const list = grid.get(`${i},${j}`);
+        if (!list) continue;
+        for (const idx of list) {
+          if (tested.has(idx)) continue;
+          tested.add(idx);
+          const s = segs[idx];
+          if (s.maxX < pMinX || s.minX > pMaxX || s.maxZ < pMinZ || s.minZ > pMaxZ) continue;
+
+          if (s.isPassage) {
+            if (s.transitType === 'rail') hasRail = true; else hasRoad = true;
+            continue;
+          }
+
+          if (pointInProjectedArea(s.ax, s.az, poly) ||
+              pointInProjectedArea(s.bx, s.bz, poly) ||
+              pointInProjectedArea((s.ax + s.bx) / 2, (s.az + s.bz) / 2, poly)) {
+            if (s.transitType === 'rail') hasRail = true; else hasRoad = true;
+            continue;
+          }
+
+          const p1 = [s.ax, s.az], p2 = [s.bx, s.bz];
+          const ring = poly.outer;
+          let intersected = false;
+          for (let k = 0; k < ring.length; k++) {
+            const p3 = ring[k], p4 = ring[(k + 1) % ring.length];
+            if (segmentsIntersect(p1, p2, p3, p4)) {
+              intersected = true;
+              break;
+            }
+          }
+          if (intersected) {
+            if (s.transitType === 'rail') hasRail = true; else hasRoad = true;
+          }
+        }
+      }
+    }
+
+    if (hasRail) return { penetrated: true, transitType: 'rail' };
+    if (hasRoad) return { penetrated: true, transitType: 'road' };
+    return null;
+  };
+
+  return { test, segsCount: segs.length };
+}
 
 export function architectureHash(value, salt = '') {
   const text = `${value}|${salt}`;
@@ -39,7 +188,51 @@ export function detectCulturalRegion(location = {}) {
 export function inferBuildingFunction(building = {}, poly = null, context = {}) {
   const tags = building.tags || {};
   const explicit = taggedBuildingFunction(tags);
-  if (explicit) return explicit;
+
+  const transitPassage = context.transitPassage
+    || (context.transitPenetrated ? { penetrated: true, transitType: context.transitType || 'road' } : null)
+    || detectTransitPassageTags(tags)
+    || (context.transitIndex?.test?.(poly, building));
+
+  if (transitPassage) {
+    if (explicit && explicit.category === 'transport') {
+      return explicit;
+    }
+    const transitType = (typeof transitPassage === 'object' && transitPassage.transitType)
+      || (context.transitType)
+      || (/rail|train|subway|metro/.test(String(tags.railway || tags.rail || '')) ? 'rail' : 'road');
+    const isAquatic = Boolean(context.aquatic);
+    const idHash = architectureHash(
+      context.identity || building.sourceId || `${poly?.outer?.[0]?.[0] || 0},${poly?.outer?.[0]?.[1] || 0}`,
+      `${context.seed || 0}:transit_bld`
+    );
+    const roll = (idHash >>> 0) % 100;
+    let type;
+    if (transitType === 'rail') {
+      type = isAquatic
+        ? (roll < 75 ? 'station' : 'terminal')
+        : (roll < 60 ? 'station' : (roll < 80 ? 'terminal' : 'hangar'));
+    } else {
+      type = isAquatic
+        ? (roll < 45 ? 'parking' : (roll < 75 ? 'bus_station' : 'terminal'))
+        : (roll < 35 ? 'parking' : (roll < 65 ? 'bus_station' : (roll < 85 ? 'terminal' : 'hangar')));
+    }
+    const rule = BUILDING_FUNCTIONS[type] || BUILDING_FUNCTIONS.parking;
+    return {
+      category: 'transport',
+      type,
+      key: rule?.range || 'commercial_retail',
+      locked: true,
+      label: rule?.label || '交通設施',
+      structureOnly: false,
+    };
+  }
+
+  if (explicit && (!context.aquatic || explicit.category !== 'industrial')) return explicit;
+  if (context.aquatic) {
+    // 水域與沼澤禁止工廠類建築與高樓，一律轉為低層住宅
+    return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
+  }
   const bld = String(tags.building || tags['building:part'] || '');
   // 校區／醫療園區等只有邊界標籤時，僅傳給未指定用途的屋身。
   // 宿舍、車庫、禮拜堂等已有自身形制的建物不繼承整個園區用途。
@@ -144,27 +337,33 @@ export function inferBuildingFunction(building = {}, poly = null, context = {}) 
 }
 
 /** 依功能類別與確定性種子計算樓高與層數（未標註 height/levels 時隨機抽取） */
-export function sampleBuildingHeight(functionKey, seed, identity, area = {}) {
+export function sampleBuildingHeight(functionKey, seed, identity, area = {}, context = {}) {
   const tags = area.tags || {};
+  const isAquatic = area.aquatic || context.aquatic;
   const rawH = Number.parseFloat(tags.height);
   if (Number.isFinite(rawH) && rawH > 2) {
-    const levels = Math.max(1, Math.round(rawH / 3.4));
-    return { height: Math.min(120, rawH), levels, floorH: rawH / levels };
+    const rawLevels = Math.max(1, Math.round(rawH / 3.4));
+    const levels = isAquatic ? Math.min(rawLevels, 3) : rawLevels;
+    const height = isAquatic ? Math.min(rawH, levels * 3.2) : Math.min(120, rawH);
+    return { height, levels, floorH: height / levels };
   }
   const rawL = Number.parseFloat(tags['building:levels']);
   if (Number.isFinite(rawL) && rawL > 0) {
     const floorH = 3.2;
-    return { height: Math.min(120, Math.max(3.2, rawL * floorH)), levels: Math.round(rawL), floorH };
+    const levels = isAquatic ? Math.min(Math.round(rawL), 3) : Math.round(rawL);
+    return { height: Math.min(120, Math.max(3.2, levels * floorH)), levels, floorH };
   }
 
   const range = BUILDING_FUNCTION_RANGES[functionKey] || BUILDING_FUNCTION_RANGES.residential_townhouse;
   const hash = architectureHash(identity, `${seed}:h_levels`);
   const t = hash / 4294967296;
-  const levels = Math.round(range.levels[0] + t * (range.levels[1] - range.levels[0]));
+  let levels = Math.round(range.levels[0] + t * (range.levels[1] - range.levels[0]));
+  if (isAquatic) levels = Math.min(levels, 3);
   const hashF = architectureHash(identity, `${seed}:h_floor`);
   const tf = hashF / 4294967296;
   const floorH = range.floorH[0] + tf * (range.floorH[1] - range.floorH[0]);
-  const height = Math.max(range.minH, Math.min(range.maxH, levels * floorH));
+  const rawHeight = Math.max(range.minH, Math.min(range.maxH, levels * floorH));
+  const height = isAquatic ? Math.min(9.6, levels * floorH) : rawHeight;
   return { height: Math.round(height * 10) / 10, levels, floorH: Math.round(floorH * 10) / 10 };
 }
 
@@ -223,12 +422,15 @@ export function architectureWeights(context = {}) {
   if (!functional && context.slope >= ARCHITECTURE_SITE.steepSlopeDeg) {
     weights = Object.fromEntries(Object.entries(weights).filter(([id]) => ARCHITECTURE_STYLES[id].foundation));
   }
+  if (context.aquatic) {
+    delete weights.industrial;
+  }
   return { profile, weights, region };
 }
 
 export function chooseArchitecture(seed, identity, context = {}) {
   const funcInfo = context.functionInfo || inferBuildingFunction(context.building, context.poly, context);
-  const heightInfo = sampleBuildingHeight(funcInfo.key, seed, identity, context.building || {});
+  const heightInfo = sampleBuildingHeight(funcInfo.key, seed, identity, context.building || {}, context);
   const functional = funcInfo.locked && BUILDING_FUNCTIONS[funcInfo.type];
   const { profile, weights, region } = architectureWeights({ ...context, functionInfo: funcInfo, targetHeight: heightInfo.height });
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
@@ -238,14 +440,18 @@ export function chooseArchitecture(seed, identity, context = {}) {
     pick -= weight;
     if (pick < 0) { id = key; break; }
   }
+  if (context.aquatic && (id === 'industrial' || !id)) {
+    id = 'residential_wood';
+  }
 
 
   return {
     ...ARCHITECTURE_STYLES[id],
+    ...(context.aquatic ? { foundation: 'stilts' } : {}),
     ...(functional ? {
       proceduralOnly: true, functionLocked: true, structureOnly: !!functional.structureOnly,
       // 功能不因陡坡而改成住宅；程序外環沿用已驗證的逐段擋土基礎。
-      foundation: 'retaining',
+      foundation: context.aquatic ? 'stilts' : 'retaining',
       ...(['religious', 'heritage'].includes(functional.category) ? { era: 'historic' } : {}),
       ...(functional.roofForm ? { roofForm: functional.roofForm } : {}),
     } : {}),
@@ -260,7 +466,8 @@ export function chooseArchitecture(seed, identity, context = {}) {
 
 /** 用地採最小包含面；密度用空間格，坡度量裸地，不讀建物屋頂。 */
 export function createArchitecturePlanner({
-  areas = [], terrain, seed = 0, mix = null, center = null, venue = null, country = null, location = null,
+  areas = [], terrain, seed = 0, mix = null, center = null, venue = null, country = null, location = null, terrainEnvCode = null,
+  roads = [], rails = [], toXZ = null,
 } = {}) {
   const land = buildContainmentIndex(areas);
   const cells = new Map();
@@ -273,6 +480,7 @@ export function createArchitecturePlanner({
 
   const loc = location || { center, venue, country: country || venue?.country };
   const region = detectCulturalRegion(loc);
+  const transitIndex = buildTransitPassageIndex({ roads, rails, toXZ, center: loc?.center || center });
 
   return (building, poly = null, settlement = false) => {
     const centerPt = building.centroid || { x: building.x || 0, z: building.z || 0 };
@@ -300,14 +508,31 @@ export function createArchitecturePlanner({
     const depth = points.length ? Math.max(...points.map(p => p[1])) - Math.min(...points.map(p => p[1])) : (building.d || 10);
     const elongated = Math.max(width, depth) / Math.max(0.001, Math.min(width, depth)) > 2.5;
 
+    const waterY = terrain?.waterY ?? (typeof WATER !== 'undefined' ? WATER.LEVEL : 0.3);
+    const swampY = waterY + (typeof WATER !== 'undefined' ? (WATER.SWAMP_BAND ?? 2.2) : 2.2);
+    const gyCenter = terrain?.heightAt?.(x, z) ?? 0;
+    const envCode = typeof terrainEnvCode === 'function' ? terrainEnvCode(terrain, x, z) : 0;
+    const aquatic = Boolean(building.aquatic || (site && site.min < swampY) || gyCenter < swampY || envCode !== 0);
+
+    const transitPassage = contextTransit(poly, building, transitIndex);
+
     const ctx = {
       slope, urban, rural, courtyard: !!poly?.holes?.length, elongated,
       density, landuse: use, parentTags: parent?.tags, building, poly, region, location: loc,
-      seed, identity,
+      seed, identity, aquatic, transitPassage, transitIndex,
     };
     ctx.functionInfo = inferBuildingFunction(building, poly, ctx);
     return { ...chooseArchitecture(seed, identity, ctx), site };
   };
+}
+
+function contextTransit(poly, building, transitIndex) {
+  if (building?.transitPassage) return building.transitPassage;
+  if (building?.tags) {
+    const t = detectTransitPassageTags(building.tags);
+    if (t) return t;
+  }
+  return transitIndex?.test(poly, building) || null;
 }
 
 /** 保留所有通過尺度防線的候選；文化匹配與變形代價共同決定機率。 */

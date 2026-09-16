@@ -572,7 +572,7 @@ export async function buildTerrain(cfg, onProgress) {
   // 水面高的唯一真相 = data.js WATER.LEVEL(涉水深/道路跨水判定共用同一數字)。
   let waterY = null;
   let waterMat = null;   // 緩衝空間的外環水面共用**同一份**材質(見檔尾 buildEdgeSkirt)
-  if (minH < WATER.LEVEL + 0.2) {
+  if (minH < WATER.LEVEL + 0.2 || (cfg.venue?.mix?.water || 0) > 0.1 || (cfg.venue?.mix?.wet || 0) > 0.1) {
     waterY = WATER.LEVEL;
     // 岸邊泡沫的驅動量(S6;⑤-2):把水深烤成一張場。**無水域就不烤** ⇒ 場留在 toon.js 的
     // 1×1「很深」中性貼圖 ⇒ 恆無泡沫(原則 6),而不是滿場泡沫。

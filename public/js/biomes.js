@@ -6164,19 +6164,20 @@ function skirtWaterClips(run, terrain) {
  *   (real OSM 道路維持水域限定,免濕地圖每條小徑都長出短橋);橋面 deckAt 抬升 BRIDGE_RISE 恆
  *   高過沼面 waterY+SWAMP_BAND。
  */
-function splitWaterPieces(run, terrain, inclSwamp = false) {
+function splitWaterPieces(run, terrain, inclSwamp = true) {
   const n = run.length;
   if (n < 2) { run.wet = false; return [run]; }
   if (!inclSwamp) skirtWaterClips(run, terrain);   // 真 OSM 道路:橫切水域邊緣改繞行(貼邊);兵線/離線備援不繞
   const cum = [0];
   for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
-  const wet = run.map(([x, z]) => inclSwamp ? terrainEnvCode(terrain, x, z) !== 0 : isWaterPt(terrain, x, z));
+  const wet = run.map(([x, z]) => inclSwamp ? (terrainEnvCode(terrain, x, z) !== 0 || isWaterPt(terrain, x, z)) : isWaterPt(terrain, x, z));
   const spans = [];
+  const minSpan = inclSwamp ? 0 : WATER.SPAN_MIN_M;
   for (let i = 0; i < n; i++) {
     if (!wet[i]) continue;
     let j = i;
     while (j + 1 < n && wet[j + 1]) j++;
-    if (cum[j] - cum[i] >= WATER.SPAN_MIN_M) spans.push([cum[i], cum[j]]);
+    if (cum[j] - cum[i] >= minSpan) spans.push([cum[i], cum[j]]);
     i = j;
   }
   if (!spans.length) { run.wet = false; return [run]; }
@@ -6229,7 +6230,7 @@ function splitWaterPieces(run, terrain, inclSwamp = false) {
  * 邊界裁切/細分/拆段 MUST 與 buildRoads 同一套(inb=4 / ROAD_SEG / splitWaterPieces),
  * 否則走廊跟實際結構對不上。不耗共享 rnd(佈局序列不受影響)。
  */
-function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) {
+function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = true) {
   const corridors = [];
   const inb = 4;
   for (const way of roads || []) {
@@ -6261,8 +6262,8 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) 
       for (const run of pieces) {
         if (run.length < 2) continue;
         const wet = run.wet === true;
-        // 步道只接受圖資明示的 bridge=yes；影像泡水不自動抬橋。一般乾地路段亦不登記。
-        if (!strc && ((!bridge && !wet) || (ped && !bridge))) continue;
+        // 通過水域或沼澤的道路與步道一律升橋處理，登記走廊與淨空
+        if (!strc && !bridge && !wet) continue;
         // 沉錨橋碎片:與 buildRoads 同步跳過(該段不建橋 → 也不登記走廊/淨空);
         // 閾值 MUST 用「沒入水下 1m」(岸壁高程可低到 ~0.1,見 buildRoads 同名註解)
         const sunk = (p) => terrain.heightAt(p[0], p[1]) < WATER.LEVEL - 1.0;
@@ -6544,8 +6545,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
       for (const run of pieces) {
       if (run.length < 2) continue;
-      // 步道只在圖資明示 bridge=yes 時升成人行天橋；泡水影像不替步道猜一座橋。
-      const brg = bridge || (!ped && run.wet === true);
+      // 通過水域或沼澤的道路與鐵道一率都以高架橋處理
+      const brg = bridge || run.wet === true;
       // 沉錨橋碎片不建(2026-07-22 倫敦雙層橋案):錨點高程沒入水下 ≥1m = 斷鏈/邊界裁切殘片
       // (步橋鏈常在河面上的分岔節點斷開,mergeGradeChains 保守不併)—— 河床錨把 hA/hB 拖沉,
       // 剖面沉成貼水浮板、疊在真橋之下 = 上下兩層(倫敦實測:斷點錨 h=−2.48)。
@@ -6611,7 +6612,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 水面下限給「全部橋 run」(2026-07-22;deckAt 只在 brg run 被呼叫):真 OSM 橋斷鏈/被邊界
         // 裁切時端點可能落在河面上,hA/hB 取到水面高 → 舊版(僅 run.wet 有下限)剖面中段沉貼水面。
         // 乾地高架此下限低於地表,max 無感。
-        const floor = WATER.LEVEL + 0.9;
+        const swampY = (terrain.waterY ?? WATER.LEVEL) + (WATER.SWAMP_BAND || 0.45);
+        const floor = Math.max(WATER.LEVEL, swampY) + 0.9;
         return Math.max(yLine, terrain.heightAt(gx, gz) + ROAD_LIFT * ramp, floor);
       };
       // 隧道/地下道路面(單一縫 tunFloorAt):山體隧道 = 兩端洞口地表高的平直內插(洞內在山體
@@ -8632,17 +8634,44 @@ function buildRails(group, rails, terrain, center, dynamics, crossings) {
     if (way.tags.tunnel) continue;   // 隧道段不可見(捷運地下段)
     const elevated = !!way.tags.bridge || way.tags.railway === 'monorail';
     let cur = [];
+    const commitCur = () => {
+      if (cur.length < 2) { cur = []; return; }
+      const isWetPt = (p) => terrainEnvCode(terrain, p.x, p.z) !== 0 || isWaterPt(terrain, p.x, p.z);
+      const waterY = terrain.waterY ?? WATER.LEVEL ?? 0.3;
+      const swampY = waterY + (WATER.SWAMP_BAND || 0.45);
+      const clampGy = (p) => {
+        const env = terrainEnvCode(terrain, p.x, p.z);
+        const surf = env === 2 ? swampY : (env === 1 ? waterY : p.gy);
+        return Math.max(p.gy, surf);
+      };
+      const pushPiece = (pts, isElev) => {
+        if (pts.length < 2) return;
+        if (isElev) pts.forEach(p => { p.gy = clampGy(p); });
+        raw.push({ g: pts, elevated: isElev, tags: way.tags });
+      };
+      if (elevated) {
+        pushPiece(cur, true);
+      } else if (cur.some(isWetPt)) {
+        const pieces = splitWaterPieces(cur.map(p => [p.x, p.z]), terrain, true);
+        for (const pc of pieces) {
+          const pts = pc.map(([x, z]) => ({ x, z, gy: terrain.heightAt(x, z) }));
+          pushPiece(pts, pc.wet === true);
+        }
+      } else {
+        pushPiece(cur, false);
+      }
+      cur = [];
+    };
     for (const gpt of way.geometry) {
       const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
       const inb = edgeWallInsetM();
       if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) {
-        if (cur.length >= 2) raw.push({ g: cur, elevated, tags: way.tags });
-        cur = [];
+        commitCur();
         continue;
       }
       cur.push({ x, z, gy: terrain.heightAt(x, z) });
     }
-    if (cur.length >= 2) raw.push({ g: cur, elevated, tags: way.tags });
+    commitCur();
     if (raw.length >= 30) break;
   }
   if (!raw.length) return 0;
@@ -9743,15 +9772,16 @@ function densifyUrban({ seeds, generic, blocked, terrain, rnd, inb, occ, roadFac
         const z = s.z - lx * sa + lz * ca;
         if (x < terrain.minX + inb || x > terrain.maxX - inb
           || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
-        if (terrain.heightAt(x, z) <= 0.4) continue;              // 水面
-        if (terrainEnvCode(terrain, x, z) !== 0) continue;        // 水域/沼澤不補間建物(抽樣已完,序列安全)
+        const isAquatic = terrain.heightAt(x, z) <= 0.4 || terrainEnvCode(terrain, x, z) !== 0;
+        const finalCommercial = isAquatic ? false : commercial;
+        const finalH = isAquatic ? Math.min(h, 9.6) : h;
         // occ 用外接圓(不穿模),blocked 用內縮圓(牆面不侵走廊)— 與 OSM 建物同一套判準
         const r = Math.hypot(w, d) / 2;
         if (!occ.free(x, z, Math.max(w, d) / 2, INFILL.gap)) continue;
         if (!areaFree(blocked, x, z, r * 0.75)) continue;
         occ.add(x, z, Math.max(w, d) / 2);
         const ry = roadFacing ? (roadFacing(x, z) ?? s.ry) : s.ry;
-        generic.push({ x, z, w, d, h, ry, commercial, v });
+        generic.push({ x, z, w, d, h: finalH, ry, commercial: finalCommercial, v });
         added++;
       }
     }
@@ -9838,9 +9868,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 建物與用地只讀 areas，絕不重建第二份 covers。
     osmData = { ...osmData, ...pf, areas: cat.areas };
   }
-  const architectureAt = createArchitecturePlanner({
+  let architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
-    center, venue: cfg.venue, country: cfg.venue?.country,
+    center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
+    roads: osmRoads || [], rails: osmData?.rails || [],
+    toXZ: (p) => llToWorld(p.lat, p.lon ?? p.lng, center),
   });
   // 行人語意 MUST 先於剪枝／量化／橋隧判定：地下步道從此不再被任何道路消費端看見；
   // 高架與沿線主題則掛在 way 上，後續幾何重組用展開運算保留它。全段零共享 rnd。
@@ -10056,6 +10088,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     ? [...osmRoads.filter((w) => w.tags?.bridge || w.tags?.tunnel), ...laneRoadWays,
        ...osmRoads.filter((w) => !w.tags?.bridge && !w.tags?.tunnel)]
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
+  architectureAt = createArchitecturePlanner({
+    areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
+    center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
+    roads: roadInput || osmRoads || [], rails: osmData?.rails || [],
+    toXZ: (p) => llToWorld(p.lat, p.lon ?? p.lng, center),
+  });
   // 地表道路足跡：所有獨立物件與地被共用同一批有向盒。橋／結構隧道有垂直分層，不占地面。
   const roadFeet = [];
   for (const way of roadInput) {
@@ -10080,7 +10118,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // buildRoads 之前(高度在此定案,下游全部取樣整平後地形);開挖足跡/水域紀律住
   // terrain.gradeRoadBeds。裁切 + densify + 泡水切段 MUST 與 buildRoads 完全相同
   // (inb=4 / ROAD_SEG / splitWaterPieces),否則整平走廊與實際路面錯位。零共享 rnd。
-  const laneModeG = !osmRoads?.length;
+  const laneModeG = true;   // 水域與沼澤道路一律造橋，不壓平路基
   if (terrain.gradeRoadBeds && roadInput?.length) {
     const gradeRuns = [];
     const inbG = 4;
@@ -10110,12 +10148,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     if (gradeRuns.length) terrain.gradeRoadBeds(gradeRuns);
   }
   // 立體交通走廊:淨空(blocked)+ 上傳伺服器用小段(gradeCorridors);開挖後才算(高度已定案)。
-  // 兵線補橋走廊一併登記(提前到地物散布之前 → 橋下淨空與真橋同等待遇)。分兩趟:真 OSM 道路
-  // 維持水域限定(inclSwamp=false),兵線補橋 + 離線兵線 roadInput 吃 inclSwamp(跨沼也造橋);
-  // blocked 兩趟累加同一 Set。
-  const laneMode = !osmRoads?.length;   // 離線:roadInput = 兵線本身 ⇒ 也吃 inclSwamp
+  // 通過水域或沼澤的道路一律升橋，登記橋下淨空與走廊。
   const gradeCorridors = [
-    ...markGradeCorridors(roadInput, terrain, center, blocked, laneMode),
+    ...markGradeCorridors(roadInput, terrain, center, blocked, true),
     ...markGradeCorridors(laneWetWays, terrain, center, blocked, true),
   ];
 
@@ -10320,12 +10355,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     return true;
   };
 
-  const tryPlace = (x, z) =>
+  const tryPlace = (x, z, allowAquatic = false) =>
     !blocked.has(cellKey(x, z))
     && x > terrain.minX + inb && x < terrain.maxX - inb
     && z > terrain.minZ + inb && z < terrain.maxZ - inb
-    && terrain.heightAt(x, z) > 0.4
-    && terrainEnvCode(terrain, x, z) === 0;   // 水域/沼澤不蓋建物(單一縫:OSM 建物/地標/離線街區共用)
+    && (allowAquatic || (terrain.heightAt(x, z) > 0.4 && terrainEnvCode(terrain, x, z) === 0));
   // ---- 圖資精確建物先放(2026-09 圖資優先)----
   // OSM 面域建物:外環/內洞直接生成,牆段與 blocker 共用同一份有向盒資料。
   // 平台不混進 blockers;main.js 會透過現有 surfaceAt 查詢精確 outer/holes。
@@ -10343,7 +10377,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       sports: 0x789b80, parking: 0x8a8d91, utility: 0x7e8b95,
     };
     osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
-      terrain, rings, architectureOf: architectureAt, inset: edgeWallInsetM(),
+      terrain, terrainEnvCode, rings, architectureOf: architectureAt, inset: edgeWallInsetM(),
       materialOf: (kind, batch, style) => {
         if (batch.architecture) return {
           wall: sceneObjectMat(0xffffff, { vertexColors: true }),
@@ -10581,10 +10615,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         mappedUnderwaterHeritage.push({ x, z, tags: el.tags });
         continue;
       }
-      if (!tryPlace(x, z)) continue;
       const coordSeed = (Math.imul(Math.round(x * 16) | 0, 0x9E3779B1) ^ Math.imul(Math.round(z * 16) | 0, 0x85EBCA77)) ^ 0x3C6EF35F;
       const type = buildingType(el.tags, coordSeed);
       if (type === 'unmodeled_structure' || type === 'heritage_underwater') continue;
+      const isHouse = type === 'residential' || el.tags.building === 'house';
+      if (!tryPlace(x, z, isHouse)) continue;
       if (LANDMARKS[type]) {
         // 地標放大後不能只驗中心格:以碰撞半徑掃走廊,牆面才不會侵入兵線
         const cr = (LANDMARK_COL[type]?.r || 10) * OVER.lm;
@@ -10606,9 +10641,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 朝向對齊最近道路(2026-07-17):OSM 只給中心點,隨機朝向讓沿街建物歪斜壓路。
         // rnd 先抽(消耗固定枚數,查無路才用)—— 序列不因對齊與否漂移。
         const rndRy = rnd() * Math.PI;
+        const inAquatic = terrainEnvCode(terrain, x, z) !== 0 || terrain.heightAt(x, z) < (terrain.waterY ?? 0.3) + 0.1;
+        const rawBldH = buildingHeight(el.tags, type, rnd);
         generic.push({
           x, z, w, d,
-          h: buildingHeight(el.tags, type, rnd),
+          h: inAquatic ? Math.min(rawBldH, 9.6) : rawBldH,
           // tags 留著只為了立面招牌的字(worldtext);其餘欄位一律已在此處推導完畢,
           // MUST NOT 讓下游再從 tags 推第二份幾何/高度(那就是兩份規則)
           tags: el.tags,
@@ -10631,8 +10668,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     await onProgress?.(0.6, '離線模式:程序生成市區…');
     const lmTypes = Object.keys(LANDMARKS).filter(type => !type.startsWith('heritage_'));
     urbanPts.forEach(([x, z], i) => {
-      if (!tryPlace(x, z)) return;
+      const isAquatic = terrainEnvCode(terrain, x, z) !== 0 || terrain.heightAt(x, z) < (terrain.waterY ?? WATER.LEVEL) + (WATER.SWAMP_BAND || 2.2);
+      if (!tryPlace(x, z, isAquatic)) return;
       if (i < lmTypes.length && rnd() < 0.8) {
+        if (isAquatic) return;
         const cr = Math.max((LANDMARK_COL[lmTypes[i]]?.r || 10) * OVER.lm,
           lmTypes[i] === 'power' ? 9 * OVER.lm : 0);   // 電塔占位按橫擔全寬(同 OSM 路徑)
         if (!occ.free(x, z, cr, 1)) return;
@@ -10648,14 +10687,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (!isRoadClear(x, z, w, d)) return;   // 道路淨空防線:建物不得壓在道路上
       occ.add(x, z, Math.max(w, d) / 2);
       const rndRy = rnd() * Math.PI;   // 先抽保序列固定;附近無路(街廓深處)時 nearestRoadAngle 回 null 才用
-      const storeyTarget = commercial ? STOREY.commercial : STOREY.residential;
+      const finalCommercial = isAquatic ? false : commercial;
+      const storeyTarget = finalCommercial ? STOREY.commercial : STOREY.residential;
       const rawH = Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap);
-      const floors = Math.max(1, Math.round(rawH / storeyTarget));
+      const floors = isAquatic ? Math.min(3, Math.max(1, Math.round(rawH / storeyTarget))) : Math.max(1, Math.round(rawH / storeyTarget));
+      const finalH = isAquatic ? Math.min(floors * storeyTarget, 9.6) : floors * storeyTarget;
       generic.push({
         x, z, w, d,
-        h: floors * storeyTarget,
-        ry: nearestRoadAngle(x, z) ?? rndRy, commercial,
-        v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
+        h: finalH,
+        ry: nearestRoadAngle(x, z) ?? rndRy, commercial: finalCommercial,
+        v: Math.floor(rnd() * FACADES[finalCommercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
       });
     });
   }
@@ -10747,7 +10788,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       probeLot: (x, z, w, d) => {
         if (x < terrain.minX + inb || x > terrain.maxX - inb
           || z < terrain.minZ + inb || z > terrain.maxZ - inb) return false;
-        if (!nearUrban(x, z) || !dryAt(x, z)) return false;
+        if (!nearUrban(x, z)) return false;
         if (!areaFree(blocked, x, z, Math.hypot(w, d) / 2 * 0.75)) return false;
         if (!occ.free(x, z, Math.max(w, d) / 2, INFILL.gap)) return false;
         occ.add(x, z, Math.max(w, d) / 2);   // 通過即收下(規劃器對每個候選只問一次)
@@ -10783,14 +10824,19 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     for (const p of res.plots) {
       if (generic.length >= MAX_BUILDINGS + MAX_INFILL) break;
       const f = frac(p.seed, 5);
-      const storeyTarget = p.commercial ? STOREY.commercial : STOREY.residential;
-      const rawH = Math.min((p.commercial ? 24 + f * 40 : 7 + f * 9) * OVER.bldH, OVER.bldCap);
-      const floors = Math.max(1, Math.round(rawH / storeyTarget));
+      const isAquatic = terrainEnvCode(terrain, p.x, p.z) !== 0 || terrain.heightAt(p.x, p.z) < (terrain.waterY ?? WATER.LEVEL) + (WATER.SWAMP_BAND || 2.2);
+      const commercial = isAquatic ? false : p.commercial;
+      const storeyTarget = commercial ? STOREY.commercial : STOREY.residential;
+      const rawH = isAquatic
+        ? Math.min((7 + f * 2.6) * OVER.bldH, 9.6)
+        : Math.min((commercial ? 24 + f * 40 : 7 + f * 9) * OVER.bldH, OVER.bldCap);
+      const floors = isAquatic ? Math.min(3, Math.max(1, Math.round(rawH / storeyTarget))) : Math.max(1, Math.round(rawH / storeyTarget));
+      const finalH = isAquatic ? Math.min(floors * storeyTarget, 9.6) : floors * storeyTarget;
       generic.push({
         x: p.x, z: p.z, w: p.w, d: p.d,
-        h: floors * storeyTarget,
-        ry: p.ry, commercial: p.commercial,
-        v: Math.floor(frac(p.seed, 6) * FACADES[p.commercial ? 'commercial' : 'residential'].length),
+        h: finalH,
+        ry: p.ry, commercial,
+        v: Math.floor(frac(p.seed, 6) * FACADES[commercial ? 'commercial' : 'residential'].length),
       });
     }
     for (const c of res.civics) {
@@ -10974,13 +11020,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         return [b.x + x * ca + z * sa, b.z - x * sa + z * ca];
       }), holes: [] };
       const architecture = { ...architectureAt(b, poly, settlement(b.x, b.z)), proceduralOnly: true };
+      const bldKind = architecture.functionInfo?.type || (b.commercial ? 'commercial' : 'house');
       procedural.set(b, { sourceId: `procedural/${b.x}/${b.z}`, centroid: { x: b.x, z: b.z },
-        tags: { ...b.tags, building: b.commercial ? 'commercial' : 'house', height: String(b.h) },
-        classification: { generator: 'polygonBuilding', kind: b.commercial ? 'commercial' : 'house' },
+        tags: { ...b.tags, building: bldKind, height: String(b.h) },
+        classification: { generator: 'polygonBuilding', kind: bldKind },
         worldPolygons: [poly], architecture });
     }
     const proceduralResult = buildOsmPolygonBuildings(group, [...procedural.values()], {
-      terrain, architectureOf: area => area.architecture,
+      terrain, terrainEnvCode, architectureOf: area => area.architecture,
     });
     blockers.push(...proceduralResult.blockers);
     osmRoofPlatforms.push(...proceduralResult.platforms);
@@ -11791,8 +11838,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 只挖地形的話洞口望進去仍是一坡貼在崖面上的草皮拼圖(地被是獨立圖層)。
   const coverMeshes = group.children.slice(gcStart);
   buildSwampSurface(group, terrain);   // 沼澤水平面(暗紫濁沼盤;視線沒入 → _updateWaterVeil 帷幕)
-  // 離線備援(roadInput = 兵線本身)吃 inclSwamp ⇒ 跨沼段也升橋;真 OSM 道路維持水域限定
-  const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season, coverMeshes, !osmRoads?.length, gradeCorridors);
+  // 通過水域或沼澤的道路一律升橋處理 (inclSwamp = true)
+  const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season, coverMeshes, true, gradeCorridors);
   const pedestrianEntrances = buildPedestrianEntrances(group, terrain, pedestrianPlan.entrances);
   blockers.push(...pedestrianEntrances.cols);   // 地下道／捷運入口建築：玩家、NPC、彈道共用同一 blockers 縫
   // ---- 兵線跨水補橋(2026-07-22 確定性改制,幾何定案於前段 laneWetWays):每個兵線泡水段

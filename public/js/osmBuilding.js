@@ -11,13 +11,14 @@ import { runtimePrimitiveGeometry } from './runtimePartModel.js';
 import { roofDimensions, sectionRoofProfile } from './roofProfiles.js';
 import { generateBuildingAppurtenances } from './buildingAppurtenances.js';
 import { resolveAdaptiveRoofForm, calculateFootprintMetrics, computeOrientedRoofFrame } from './architectureStyles.js';
+import { WATER } from './data.js';
 
 const EPS = 1e-5;
 const DEFAULT_H = Object.freeze({
   house: 8, terrace: 10, apartments: 20, commercial: 18, industrial: 12, farm: 8,
-  school: 10, hospital: 14, station: 12, church: 14, mosque: 14, temple: 14,
-  synagogue: 14, civic: 12, museum: 14, stadium: 18, garage: 5, hangar: 12,
-  lighthouse: 18, castle: 16,
+  school: 10, hospital: 14, station: 12, bus_station: 10, terminal: 14, parking: 12,
+  church: 14, mosque: 14, temple: 14, synagogue: 14, civic: 12, museum: 14,
+  stadium: 18, garage: 5, hangar: 12, lighthouse: 18, castle: 16,
 });
 
 // 一種類型一列；幾何仍只由下方單一 polygon/attachment 生成器負責。
@@ -32,6 +33,9 @@ export const BUILDING_STYLE_ROWS = Object.freeze({
   school: { wall: 0x9aaf8f, roof: 0x596d58, attachment: 'clock' },
   hospital: { wall: 0xb47e7e, roof: 0x66565b, attachment: 'cross' },
   station: { wall: 0x888fa4, roof: 0x505866, attachment: 'canopy' },
+  bus_station: { wall: 0x888fa4, roof: 0x505866, attachment: 'canopy' },
+  terminal: { wall: 0x7189a8, roof: 0x465765, attachment: 'canopy' },
+  parking: { wall: 0x8a8d91, roof: 0x55595c, attachment: null },
   church: { wall: 0xa58f73, roof: 0x5c5660, attachment: 'spire' },
   mosque: { wall: 0xc0ad83, roof: 0x56756f, attachment: 'dome' },
   temple: { wall: 0xa77b64, roof: 0x6f3e36, attachment: 'finial' },
@@ -517,6 +521,34 @@ export function architecturalRoof(poly, y, style, actualRoofForm = null, metrics
   return geos;
 }
 
+/** 檢測基地是否落入水域或沼澤 */
+export function detectAquaticSite(poly, terrain, envCodeFn) {
+  if (!terrain || typeof terrain.heightAt !== 'function' || !poly?.outer?.length) {
+    return { aquatic: false, swamp: false, surfaceY: 0 };
+  }
+  const waterY = terrain.waterY ?? (typeof WATER !== 'undefined' ? WATER.LEVEL : 0.3);
+  const swampBand = typeof WATER !== 'undefined' ? (WATER.SWAMP_BAND ?? 2.2) : 2.2;
+  const swampY = waterY + swampBand;
+  let wetCount = 0, swampCount = 0;
+  const pts = [...poly.outer];
+  const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const cz = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  pts.push([cx, cz]);
+  for (const [x, z] of pts) {
+    const gy = terrain.heightAt(x, z);
+    const code = typeof envCodeFn === 'function' ? envCodeFn(terrain, x, z) : 0;
+    if (code === 2 || (gy < swampY && gy >= waterY - 0.2)) {
+      wetCount++; swampCount++;
+    } else if (code === 1 || gy < waterY + 0.1) {
+      wetCount++;
+    }
+  }
+  const aquatic = wetCount > 0;
+  const swamp = swampCount > 0 && swampCount >= wetCount * 0.5;
+  const surfaceY = swamp ? swampY : waterY;
+  return { aquatic, swamp, surfaceY };
+}
+
 /**
  * 生成 OSM 建物外環／內洞。`materialOf` 回傳 { wall, roof }，可由 biomes 注入既有材質縫。
  * `rings` = 塔堡 1/4 圈 [{x,z,r}]:實體撞圈的輪廓整棟略過(寧缺勿錯),記進 skipped 供圖資缺口報表。
@@ -542,6 +574,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
     const kind = cls.kind || 'house';
     const height = heightOf(area, kind);
     let areaGenerated = 0;
+    let effectiveKind = kind;
     for (const raw of area.worldPolygons || []) {
       const poly = polyOf(raw);
       if (!poly) { invalid.push({ sourceId: area.sourceId, reason: 'invalid_footprint' }); continue; }
@@ -568,23 +601,45 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         skipped.push({ sourceId: area.sourceId, reason: 'non_building_function' });
         continue;
       }
-      const targetH = (area?.tags?.height || area?.tags?.['building:levels']) ? height : (architecture?.targetHeight || height);
+      effectiveKind = architecture?.functionInfo?.type || kind;
+      const aquaticSite = detectAquaticSite(poly, terrain, options.terrainEnvCode);
+      if (aquaticSite.aquatic) {
+        // 禁止使用工廠類建築
+        const isTransport = architecture?.functionInfo?.category === 'transport';
+        const isFactory = !isTransport && (
+          /industrial|factory|warehouse|power|garage|hangar/.test(effectiveKind)
+          || /industrial|factory|warehouse|power|garage|hangar/.test(area?.tags?.building || '')
+          || /industrial|warehouse/.test(area?.tags?.landuse || '')
+          || /industrial/.test(architecture?.functionInfo?.category || '')
+          || architecture?.id === 'industrial'
+        );
+        if (isFactory) {
+          skipped.push({ sourceId: area.sourceId, reason: 'aquatic_factory_forbidden' });
+          continue;
+        }
+      }
+      let targetH = (area?.tags?.height || area?.tags?.['building:levels']) ? height : (architecture?.targetHeight || height);
+      if (aquaticSite.aquatic) {
+        // 禁止使用高層樓(最多三層, 每層 3.2m -> 9.6m)
+        targetH = Math.min(targetH, 9.6);
+      }
       const site = architecture?.site || sampleBuildingSite(poly, terrain);
-      const raised = architecture?.foundation === 'retaining' && architecture.profile === 'hillside' && site;
-      const baseY = raised ? site.max + 0.15 : baseOf(poly, terrain, 0);
+      const raised = !aquaticSite.aquatic && architecture?.foundation === 'retaining' && architecture.profile === 'hillside' && site;
+      const platformY = aquaticSite.aquatic ? Math.max(aquaticSite.surfaceY + 0.8, baseOf(poly, terrain, 0) + 1.2) : 0;
+      const baseY = aquaticSite.aquatic ? platformY : (raised ? site.max + 0.15 : baseOf(poly, terrain, 0));
       const topY = baseY + targetH;
-      let batch = batches.get(kind);
-      if (!batch) { batch = { kind, walls: [], roofs: [], details: [], count: 0 }; batches.set(kind, batch); }
+      let batch = batches.get(effectiveKind);
+      if (!batch) { batch = { kind: effectiveKind, walls: [], roofs: [], details: [], count: 0 }; batches.set(effectiveKind, batch); }
       const wallStart = batch.walls.length, roofStart = batch.roofs.length, detailStart = batch.details.length;
       const blockerStart = blockers.length;
       batch.roofs.push(roofGeometry(poly, topY));
-      const detail = !architecture ? attachmentGeometry(kind, poly, topY) : null;
+      const detail = !architecture ? attachmentGeometry(effectiveKind, poly, topY) : null;
       if (detail) batch.details.push(detail);
-      const outer = edgeGeometry(poly.outer, baseY, targetH, wallThickness, area.sourceId, kind);
+      const outer = edgeGeometry(poly.outer, baseY, targetH, wallThickness, area.sourceId, effectiveKind);
       batch.walls.push(...outer.geos); blockers.push(...outer.edges);
       const facadeEdges = [...outer.edges];
       for (const hole of poly.holes) {
-        const inner = edgeGeometry(hole, baseY, targetH, wallThickness, area.sourceId, kind);
+        const inner = edgeGeometry(hole, baseY, targetH, wallThickness, area.sourceId, effectiveKind);
         batch.walls.push(...inner.geos); blockers.push(...inner.edges);
         facadeEdges.push(...inner.edges);
       }
@@ -595,6 +650,55 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
             wallThickness, area.sourceId, kind, false);
           batch.walls.push(foundation.geos[0]); blockers.push(foundation.edges[0]);
         }
+      }
+      if (aquaticSite.aquatic) {
+        // 平台承台 (Stilt platform slab)
+        const slabH = 0.28;
+        const platformTop = roofGeometry(poly, platformY);
+        const platformBottom = roofGeometry(poly, platformY - slabH);
+        const platformEdge = edgeGeometry(poly.outer, platformY - slabH, slabH, wallThickness + 0.25, area.sourceId, kind);
+        const platColor = architecture?.trim || 0x5a4a3a;
+        const varIdx = architecture?.variant || 0;
+        batch.details.push(paintGeometry(platformTop, platColor, varIdx));
+        batch.details.push(paintGeometry(platformBottom, platColor, varIdx));
+        for (const g of platformEdge.geos) batch.details.push(paintGeometry(g, platColor, varIdx));
+        for (const ed of platformEdge.edges) blockers.push(ed);
+
+        // 高架柱子 (Stilts / Pillars)
+        const pillarRadius = 0.26;
+        const pillarColor = 0x423428;
+        const pillarStep = 3.5;
+        const pillarSites = [];
+        for (let i = 0; i < poly.outer.length; i++) {
+          const a = poly.outer[i], b = poly.outer[(i + 1) % poly.outer.length];
+          const dist = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          const count = Math.max(1, Math.round(dist / pillarStep));
+          for (let j = 0; j < count; j++) {
+            const t = j / count;
+            pillarSites.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+          }
+        }
+        if (poly.outer.length >= 4) {
+          const cx = poly.outer.reduce((s, p) => s + p[0], 0) / poly.outer.length;
+          const cz = poly.outer.reduce((s, p) => s + p[1], 0) / poly.outer.length;
+          pillarSites.push([cx, cz]);
+        }
+        for (const [px, pz] of pillarSites) {
+          const gy = terrain.heightAt(px, pz);
+          const bottomY = Math.min(gy - 0.4, platformY - slabH - 0.5);
+          const stiltH = (platformY - slabH) - bottomY;
+          if (stiltH > 0.1) {
+            const stiltGeo = new THREE.CylinderGeometry(pillarRadius, pillarRadius * 1.12, stiltH, 8);
+            stiltGeo.translate(px, bottomY + stiltH / 2, pz);
+            batch.details.push(paintGeometry(stiltGeo, pillarColor, varIdx));
+          }
+        }
+        const xs = poly.outer.map((p) => p[0]), zs = poly.outer.map((p) => p[1]);
+        platforms.push({
+          platform: 1, active: true, sourceId: area.sourceId, kind: effectiveKind,
+          outer: poly.outer, holes: poly.holes, y: platformY,
+          bounds: { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) },
+        });
       }
       const replacement = architecture && !raised
         ? options.modelOf?.(poly, targetH, architecture) : null;
@@ -608,14 +712,14 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
           blockers.splice(blockerStart);
           for (const volume of replacement.userData.buildingVolumes) {
             const y = baseY + volume.y, ty = y + volume.h;
-            blockers.push({ ...volume, y, ty, bld: 1, osm: 1, cl: 'bld', sourceId: area.sourceId, kind });
+            blockers.push({ ...volume, y, ty, bld: 1, osm: 1, cl: 'bld', sourceId: area.sourceId, kind: effectiveKind });
             const ca = Math.cos(volume.ry), sa = Math.sin(volume.ry);
             const outer = [[-1,-1],[1,-1],[1,1],[-1,1]].map(([dx,dz]) => {
               const x = dx * volume.hw2, z = dz * volume.hd2;
               return [volume.x + x * ca - z * sa, volume.z + x * sa + z * ca];
             });
             const xs = outer.map(p => p[0]), zs = outer.map(p => p[1]);
-            platforms.push({ platform: 1, active: true, sourceId: area.sourceId, kind, outer, holes: [], y: ty,
+            platforms.push({ platform: 1, active: true, sourceId: area.sourceId, kind: effectiveKind, outer, holes: [], y: ty,
               bounds: { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) } });
           }
         }
@@ -626,17 +730,19 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         for (const geo of batch.roofs.slice(roofStart)) paintGeometry(geo, architecture.roof, architecture.variant);
         for (const geo of batch.details.slice(detailStart)) paintGeometry(geo, architecture.trim, architecture.variant);
 
-        // 基礎入地裙帶 (Grounding plinth): 沿外環向下扎實入地 0.25m，杜絕懸空縫隙
-        for (let i = 0; i < poly.outer.length; i++) {
-          const a = poly.outer[i], b = poly.outer[(i + 1) % poly.outer.length];
-          const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
-          if (len <= EPS) continue;
-          const ry = Math.atan2(dz, dx);
-          const plinthH = 0.32;
-          const plinth = new THREE.BoxGeometry(len + 0.06, plinthH, wallThickness + 0.12);
-          plinth.rotateY(-ry);
-          plinth.translate((a[0] + b[0]) / 2, baseY - plinthH * 0.4, (a[1] + b[1]) / 2);
-          batch.details.push(paintGeometry(plinth, architecture.trim || 0x475569, architecture.variant));
+        // 基礎入地裙帶 (Grounding plinth): 沿外環向下扎實入地 0.25m，杜絕懸空縫隙 (水沼高腳屋由承台取代)
+        if (!aquaticSite.aquatic) {
+          for (let i = 0; i < poly.outer.length; i++) {
+            const a = poly.outer[i], b = poly.outer[(i + 1) % poly.outer.length];
+            const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
+            if (len <= EPS) continue;
+            const ry = Math.atan2(dz, dx);
+            const plinthH = 0.32;
+            const plinth = new THREE.BoxGeometry(len + 0.06, plinthH, wallThickness + 0.12);
+            plinth.rotateY(-ry);
+            plinth.translate((a[0] + b[0]) / 2, baseY - plinthH * 0.4, (a[1] + b[1]) / 2);
+            batch.details.push(paintGeometry(plinth, architecture.trim || 0x475569, architecture.variant));
+          }
         }
         // 4 階段程序化管線 (4-Phase Procedural Pipeline)
         // Phase 1: 依 OSM 圖資外環計算建物實體尺寸指標
@@ -667,13 +773,13 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
       // Polygon platform retains the outer ring and all holes; no AABB approximation is used.
       const xs = poly.outer.map((p) => p[0]), zs = poly.outer.map((p) => p[1]);
       if (!replacement?.userData?.buildingVolumes) platforms.push({
-        platform: 1, active: true, sourceId: area.sourceId, kind,
+        platform: 1, active: true, sourceId: area.sourceId, kind: effectiveKind,
         outer: poly.outer, holes: poly.holes, y: topY,
         bounds: { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) },
       });
       batch.count++; areaGenerated++;
     }
-    if (areaGenerated) generatedByKind[kind] = (generatedByKind[kind] || 0) + areaGenerated;
+    if (areaGenerated) generatedByKind[effectiveKind] = (generatedByKind[effectiveKind] || 0) + areaGenerated;
   }
   const meshes = [];
   for (const batch of batches.values()) {
