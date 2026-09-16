@@ -97,14 +97,23 @@
   </div>
   <footer class="foot-note">2D 地圖 / 3D 地形引擎:mapping_elf ・ 房間系統:ai_tycoon ・ 3D 模型:Quaternius (CC0)</footer>
 
-  <!-- 本機伺服器首頁懸浮快速開始按鍵 -->
-  <button id="quickRestartFab" class="quick-restart-fab" style="display:none">
-    <span class="qr-icon">⚡</span>
-    <div class="qr-content">
-      <div class="qr-title">快速開始</div>
-      <div class="qr-desc" id="quickRestartDesc">上次對戰配置</div>
-    </div>
-  </button>
+  <!-- 本機伺服器首頁懸浮快速開始按鍵與清除預載按鈕 -->
+  <div id="quickRestartFabGroup" class="quick-restart-fab-group" style="display:none">
+    <button id="quickRestartFab" class="quick-restart-fab" type="button">
+      <span class="qr-icon">⚡</span>
+      <div class="qr-content">
+        <div class="qr-title">快速開始</div>
+        <div class="qr-desc" id="quickRestartDesc">上次對戰配置</div>
+      </div>
+    </button>
+    <button id="quickClearFab" class="quick-clear-fab" type="button" title="清除地圖預載快取">
+      <span class="qr-icon">🗑</span>
+      <div class="qr-content">
+        <div class="qr-title">清除預載</div>
+      </div>
+    </button>
+  </div>
+
 
   <div class="about-me">
     <div class="about-name">Chang Wei Lin</div>
@@ -526,6 +535,12 @@
               <button id="setLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
               <button class="tip-dot" type="button" aria-label="說明" data-tipkey="lowPower">ⓘ</button>
             </div>
+            <div class="set-row">
+              <span class="set-label">快速模式</span>
+              <button id="setQuickMode" class="switch" type="button" role="switch" aria-checked="false" aria-label="快速模式開關"><span></span></button>
+              <button id="setQuickClear" class="btn small" type="button">🗑 清除預載</button>
+              <button class="tip-dot" type="button" aria-label="說明" data-tipkey="quickMode">ⓘ</button>
+            </div>
           </div>
 
           <!-- 子分頁:操控 (操作方式 + 觸控操控) -->
@@ -726,6 +741,12 @@
             <button id="lsetLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
             <button class="tip-dot" type="button" aria-label="說明" data-tipkey="lowPower">ⓘ</button>
           </div>
+          <div class="set-row">
+            <span class="set-label">快速模式</span>
+            <button id="lsetQuickMode" class="switch" type="button" role="switch" aria-checked="false" aria-label="快速模式開關"><span></span></button>
+            <button id="lsetQuickClear" class="btn small" type="button">🗑 清除預載</button>
+            <button class="tip-dot" type="button" aria-label="說明" data-tipkey="quickMode">ⓘ</button>
+          </div>
         </div>
 
         <!-- 子分頁:操控 (操作方式 + 觸控操控) -->
@@ -778,7 +799,7 @@
      跨越所有 `.screen` 並與 #touchLayer 分開,避免滿版視角層吃掉按鈕事件。
      顯示與行為沿用既有縫:音效由 GameAudio、視角由 ctrlmode.js / game.js、全螢幕由
      mobile.js toggleFullscreen() 處理；桌機不顯示這組觸控工具列。 -->
-<div id="quickTools" class="quick-tools" hidden>
+<div id="quickTools" class="quick-tools">
   <button id="quickSoundToggle" class="quick-tool" type="button" aria-label="開啟全部聲音" aria-pressed="false">
     <svg class="quick-icon" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M4 10v4h4l5 4V6l-5 4H4Z"></path>

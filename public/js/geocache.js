@@ -82,3 +82,15 @@ export function geoPut(key, data) {
     } catch { /* 靜默 */ }
   }).catch(() => {});
 }
+
+/** 清空整份快取(程式碼更新後手動呼叫以強制重建;失敗靜默) */
+export async function geoClear() {
+  try {
+    if (typeof indexedDB === 'undefined') return;
+    await new Promise((res) => {
+      const req = indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = req.onerror = req.onblocked = () => res();
+    });
+    _dbP = null;   // 讓下一次 db() 重新開啟空庫
+  } catch { /* 靜默 */ }
+}

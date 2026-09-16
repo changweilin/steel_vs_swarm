@@ -70,9 +70,24 @@ import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsD
 import { BALANCE_KNOBS, balancePref, setBalancePref, resetBalancePrefs, balancePrefsDefault } from './balancePrefs.js';
 import { MatSample } from './matsample.js';
 import { isWeatherFrozen } from './toon.js';
+import { geoClear } from './geocache.js';
+
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
+
+// ---- 快速模式偏好(localStorage svs_quickmode)----
+// 開啟後:房間階段不預建地形(startPrebuild 跳過),等進入 loading 才建。
+// 與 lowPower 同層級:只住 localStorage,不上行,不進快照。
+const _QM_KEY = 'svs_quickmode';
+function quickMode() {
+  try { return localStorage.getItem(_QM_KEY) === '1'; } catch { return false; }
+}
+function setQuickMode(on) {
+  try { on ? localStorage.setItem(_QM_KEY, '1') : localStorage.removeItem(_QM_KEY); } catch { /* 靜默 */ }
+}
+
+
 
 /**
  * 水沼粗網格烘烤(2026-07-19;房主載圖後上傳,供伺服器中立單位佈點/移動迴避)。
@@ -2127,7 +2142,10 @@ function makeRoofPlatformIndex(platforms = [], cell = 64) {
 function startPrebuild(cfg) {
   const key = prebuildKey(cfg);
   if (app.pre && app.pre.key === key && !app.pre.error) return app.pre;
+  // 快速模式:房間階段跳過預建,等進入 loading 才建(避免舊預載資料在程式碼更新後卡住)
+  if (quickMode() && app.phaseShown === 'room') return null;
   const pre = { key, prog: 0, label: '', osmLabel: '', terrain: null, ud: null, error: null, onProg: null };
+
   // 回傳值是**讓步的 promise**:建構端 `await onProgress?.(…)` 就等於在階段邊界上把主執行緒
   // 還給瀏覽器一次。節流與保底全在 `buildYield` 一處 —— 建構端 MUST NOT 自己排程。
   const setP = (f, label) => {
@@ -3142,6 +3160,7 @@ function syncAudioSwitches(p) {
     if (bv) { bv.value = String(Math.round(a.bgmVol * 100)); $(`${p}BgmVal`).textContent = `${bv.value}%`; }
   }
   setSwitch(`${p}LowPower`, lowPower());   // 未設定過:手機預設開(唯一真相在 mobile.js)
+  setSwitch(`${p}QuickMode`, quickMode());
   syncFsToggleBtn();
 }
 // 一份綁定邏輯套兩處前綴;控件改動一律寫進 app.audio / lowPower(單一真相),只回寫自己那份 UI。
@@ -3153,6 +3172,7 @@ function bindSettingsControls(p) {
     app.battle?.setLowPower();
     app.audio?.setLowPower(on);   // 低功耗也套音效:射擊/爆炸退合成 + 關移動環境音
   });
+  bindSwitch(`${p}QuickMode`, (on) => { setQuickMode(on); });
   $(`${p}SfxVol`)?.addEventListener('input', (e) => {
     const v = Number(e.target.value); $(`${p}SfxVal`).textContent = `${v}%`;
     app.audio?.setSfx(v / 100); if (v > 0 && !app.audio?.sfxOn) { app.audio.setSfxOn(true); setSwitch(`${p}SfxOn`, true); }
@@ -3162,6 +3182,13 @@ function bindSettingsControls(p) {
     const v = Number(e.target.value); $(`${p}BgmVal`).textContent = `${v}%`;
     app.audio?.setBgm(v / 100); if (v > 0 && !app.audio?.bgmOn) { app.audio.setBgmOn(true); setSwitch(`${p}BgmOn`, true); }
     syncFsToggleBtn();
+  });
+  // 清除預載:清掉 IndexedDB svs_geo + 房間階段已建的 app.pre(選項設定本身不受影響)
+  $(`${p}QuickClear`)?.addEventListener('click', async () => {
+    app.pre = null;
+    await geoClear();
+    if (app.phaseShown === 'room') renderPreloadStatus();
+    toast('🗑 地圖快取已清除,下次開戰將重新載入');
   });
 }
 bindSettingsControls('set');
@@ -3936,12 +3963,12 @@ function isLocalServer() {
 
 /** 本機伺服器首頁快速開始懸浮按鍵同步 */
 function syncQuickRestartFab() {
-  const fab = $('quickRestartFab');
-  if (!fab) return;
+  const group = $('quickRestartFabGroup') || $('quickRestartFab');
+  if (!group) return;
   const session = loadPrefs().lastSession;
   const isLocal = isLocalServer();
   const valid = isLocal && session && session.battleConfig && session.player?.side;
-  fab.style.display = (valid && app.phaseShown === 'connect') ? '' : 'none';
+  group.style.display = (valid && app.phaseShown === 'connect') ? '' : 'none';
   if (!valid) return;
   const cfg = session.battleConfig;
   const placeName = cfg.placeName || '自訂戰區';
@@ -3955,7 +3982,8 @@ function syncQuickRestartFab() {
     descEl.textContent = `📍 ${placeName} ・ ${sideName} ${charCode} ・ ${n}v${n}`;
   }
   const botCount = (session.bots || []).length;
-  attachTip(fab, `以完全相同的配置直接開戰：${placeName}、${sideName} ${charCode}、${n}v${n}${botCount ? `、${botCount} 名電腦` : ''}。`);
+  const fab = $('quickRestartFab');
+  if (fab) attachTip(fab, `以完全相同的配置直接開戰：${placeName}、${sideName} ${charCode}、${n}v${n}${botCount ? `、${botCount} 名電腦` : ''}。`);
 }
 
 // 觸控硬體(或目前就在用虛擬搖桿)才顯示大廳入口 —— 桌機不需要這顆鈕。
@@ -3966,11 +3994,12 @@ function syncTouchSetupBtn() {
 }
 syncTouchSetupBtn();
 
-// 右上常駐工具列:同一套「觸控硬體才顯示」判準,與上面 touchSetupBtn 共用。
+// 右上常駐工具列(總聲音 / 視角 / 全螢幕):全裝置常駐顯示。
 // 狀態只從 GameAudio / ctrlmode.js / fullscreen API 讀取,按鈕本身不保存第二份狀態。
 function syncFsToggleBtn() {
   const rail = $('quickTools');
-  if (rail) rail.hidden = !(touchCapable() || TOUCH_UI());
+  if (rail) rail.hidden = false;
+
 
   const sound = $('quickSoundToggle');
   const audioOn = !!app.audio?.masterOn?.();
@@ -4050,6 +4079,12 @@ window.addEventListener('DOMContentLoaded', () => {
     app.net?.send({ t: 'joinRoom', pin, name: myName(), mode });
   };
   $('quickRestartFab')?.addEventListener('click', () => { myName(); quickRestartGame(); });
+  $('quickClearFab')?.addEventListener('click', async () => {
+    app.pre = null;
+    await geoClear();
+    if (app.phaseShown === 'room') renderPreloadStatus();
+    toast('🗑 地圖快取已清除,下次開戰將重新載入');
+  });
 
   // 入座/離座改由槽位內的「＋ 入座」按鈕與自己槽位的 ✕ 處理(見 renderRoom),
   // 整卡不再綁 pickSide —— 點卡片/槽位是「選取檢視角色」,不會誤觸換陣營。
