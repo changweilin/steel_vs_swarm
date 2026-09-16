@@ -143,9 +143,49 @@ export function generateGroundPart(type, variant = 0) {
     } else if (family === 'sign') box(0, h * .77, 0, w, h * .43, d);
     else if (family === 'trellis') {
       for (let i = 0; i < 4; i++) rock((i / 3 - .5) * w * .8, top * .85, 0, w * .32, h * .4, d, color, 'leaf');
+    } else if (family === 'solar') {
+      const isElevated = (type === 'solar_carport' || type === 'solar_pasture' || type === 'solar_aquaculture' || h >= 2.0);
+      if (isElevated) {
+        legs(top, 0x546e7a);
+        box(0, top - 0.04, 0, w * 0.96, 0.08, d * 0.92, 0x455a64);
+        add(new THREE.BoxGeometry(w, 0.08, d).rotateX(-0.24).translate(0, top, 0));
+        for (let i = 1; i < 5; i++) box((i / 5 - 0.5) * w, top + 0.08, 0, 0.015, 0.02, d * 0.9, 0xb3c9cc);
+
+        const compositeKind = type === 'solar_carport' ? 'carport'
+          : type === 'solar_pasture' ? 'pasture'
+          : type === 'solar_aquaculture' ? 'aquaculture'
+          : (variant % 3 === 1 ? 'carport' : variant % 3 === 2 ? 'pasture' : 'aquaculture');
+
+        if (compositeKind === 'carport') {
+          // 底下停車場用途：停車格劃線與停放車輛剪影
+          box(-w * 0.42, 0.015, 0, 0.08, 0.03, d * 0.85, 0xffffff);
+          box(w * 0.42, 0.015, 0, 0.08, 0.03, d * 0.85, 0xffffff);
+          box(0, h * 0.18, 0, w * 0.42, h * 0.28, d * 0.65, 0x2c3e50);
+          box(0, h * 0.33, -d * 0.04, w * 0.38, h * 0.18, d * 0.36, 0x78909c);
+        } else if (compositeKind === 'pasture') {
+          // 底下牧場用途：牧場圍欄與草捲、飼料槽
+          box(0, h * 0.24, -d * 0.42, w * 0.92, 0.06, 0.06, 0x8d6e63);
+          box(0, h * 0.12, -d * 0.42, w * 0.92, 0.06, 0.06, 0x8d6e63);
+          box(-w * 0.18, h * 0.15, d * 0.12, w * 0.32, h * 0.26, d * 0.32, 0xc2a35a);
+          box(w * 0.22, h * 0.10, d * 0.12, w * 0.30, h * 0.16, d * 0.22, 0x5d4037);
+        } else {
+          // 底下魚塭用途：水面浮桶與水車增氧機
+          box(0, 0.04, 0, w * 0.88, 0.06, d * 0.88, 0x29b6f6);
+          stem(0, 0.08, 0, h * 0.22, 0.035, 0xffb300);
+          box(0, h * 0.22, 0, w * 0.28, 0.03, d * 0.28, 0xffb300);
+          box(0, h * 0.22, 0, 0.03, w * 0.28, d * 0.28, 0xffb300);
+          box(0, 0.08, -d * 0.25, w * 0.35, 0.08, 0.12, 0x0288d1);
+          box(0, 0.08, d * 0.25, w * 0.35, 0.08, 0.12, 0x0288d1);
+        }
+      } else {
+        // 直接建立：低矮貼地光電支架
+        legs(top);
+        add(new THREE.BoxGeometry(w, 0.1, d).rotateX(-0.32).translate(0, top, 0));
+        for (let i = 1; i < 5; i++) box((i / 5 - 0.5) * w, top + 0.09, 0, 0.012, 0.018, d * 0.9, 0xb3c9cc);
+      }
     } else {
-      add(new THREE.BoxGeometry(w, .1, d).rotateX(family === 'solar' ? -.32 : 0).translate(0, top, 0));
-      if (family === 'solar') for (let i = 1; i < 5; i++) box((i / 5 - .5) * w, top + .09, 0, .012, .018, d * .9, 0xb3c9cc);
+      legs(top);
+      add(new THREE.BoxGeometry(w, .1, d).translate(0, top, 0));
       if (family === 'canopy') for (const side of [-1, 1]) {
         for (const part of generateGroundPart('pump', variant)) {
           add(part.geo.translate(side * w * .25, 0, 0),

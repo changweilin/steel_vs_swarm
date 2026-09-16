@@ -23,6 +23,8 @@ export const GROUND_PARTS = {
   barrier: ['crate', 1.7, .75, .38, 0xd7d4bf], canopy: ['canopy', 4.6, 3.4, 3.2, 0xd2d7d2],
   pump: ['pump', .6, 1.3, .45, 'palette'], container: ['container', 6.058, 2.591, 2.438, 'palette'],
   carwreck: ['car', 4.8, 1.45, 1.9, 'palette'], solarpanel: ['solar', 2.5, 1.1, 1.5, 0x345879],
+  solar_carport: ['solar', 4.6, 2.8, 2.4, 0x345879], solar_pasture: ['solar', 3.8, 2.7, 2.2, 0x345879],
+  solar_aquaculture: ['solar', 3.6, 2.8, 2.4, 0x345879],
   car: ['car', 4.3, 1.4, 1.85, 'palette'], motorcycle: ['motorcycle', 1.85, 1.15, 0.75, 'palette'],
   bench: ['bench', 1.7, .95, .65, 0x9e774c], headstone: ['stone', .6, .9, .25, 0xb2b4aa],
   billboard: ['sign', 3.8, 3.8, .3, 'palette'], planter: ['planter', 1.1, 1.4, 1.1, 0xb47a50],

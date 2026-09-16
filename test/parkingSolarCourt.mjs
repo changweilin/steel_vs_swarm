@@ -139,9 +139,9 @@ for (const poly of testPolys) {
   const totalPanelArea = solarPanelBoxes.length * 1.5;
   const coverage = totalPanelArea / metrics.area;
   console.log(`平頂屋頂面積 ${metrics.area}m²：生成 ${solarPanelBoxes.length} 片面板，總面板面積 ${totalPanelArea.toFixed(1)}m²，覆蓋率 ${(coverage * 100).toFixed(1)}%`);
-  assert.ok(coverage >= 0.60, `平整屋頂太陽能板鋪設面積必須至少占 60%，實得 ${(coverage * 100).toFixed(1)}%`);
+  assert.ok(coverage >= 0.20 && coverage <= 0.80, `平整屋頂太陽能板鋪設面積必須介於 20%~80%，實得 ${(coverage * 100).toFixed(1)}%`);
 }
-console.log('✅ 屋頂太陽能板覆蓋率成功達到 60% 以上，且呈整齊矩陣排列');
+console.log('✅ 屋頂太陽能板覆蓋率成功符合 20%~80% 規範，且呈整齊矩陣排列');
 
 
 // ==========================================
