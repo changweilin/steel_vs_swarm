@@ -232,6 +232,90 @@ export function generateGroundPart(type, variant = 0) {
   } else if (family === 'mushroom') {
     stem(0, 0, 0, h * .7, w * .1, 0xd9cbaa);
     add(new THREE.SphereGeometry(1, segments, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(w / 2, h * .4, d / 2).translate(0, h * .65, 0));
+  } else if (family === 'shrine') {
+    box(0, 0.15, 0, w, 0.3, d, 0x9e9e9e);
+    for (const sx of [-w * 0.38, w * 0.38]) {
+      for (const sz of [-d * 0.35, d * 0.35]) {
+        stem(sx, 0.3, sz, h * 0.55, 0.08 + variant * 0.01, 0xb71c1c);
+      }
+    }
+    box(0, 0.3 + h * 0.28, -d * 0.34, w * 0.72, h * 0.55, 0.08, 0xb71c1c);
+    box(0, 0.3 + h * 0.22, -d * 0.15, w * 0.45, h * 0.35, d * 0.25, 0xffd54f);
+    add(new THREE.BoxGeometry(w * 1.15, 0.18 + variant * 0.02, d * 1.15).translate(0, 0.3 + h * 0.58, 0), 0xff8f00);
+    box(0, 0.3 + h * 0.68, 0, w * 0.95, 0.14, 0.16, 0xd84315);
+    add(new THREE.CylinderGeometry(0.18, 0.22, 0.45, 8).translate(0, 0.225, d * 0.38), 0xc5a059);
+  } else if (family === 'pingpong') {
+    legs(h * 0.88, 0x212121);
+    box(0, h * 0.85, 0, w * 0.88, 0.06, d * 0.85, 0x37474f);
+    box(0, h * 0.92, 0, w, 0.06 + variant * 0.01, d, color);
+    box(0, h * 0.96, 0, w * 0.98, 0.01, 0.02, 0xffffff);
+    box(0, h * 0.92 + 0.14, 0, 0.02, 0.18, d * 1.06, 0xeeeeee);
+  } else if (family === 'pool') {
+    for (const sx of [-w * 0.38, w * 0.38]) {
+      for (const sz of [-d * 0.35, d * 0.35]) {
+        stem(sx, 0, sz, h * 0.82, 0.11 + variant * 0.01, 0x3e2723);
+      }
+    }
+    box(0, h * 0.85, 0, w, 0.12, d, 0x4e342e);
+    box(0, h * 0.92, 0, w * 0.86, 0.04 + variant * 0.01, d * 0.84, color);
+    for (const px of [-w * 0.44, 0, w * 0.44]) {
+      for (const pz of [-d * 0.44, d * 0.44]) {
+        if (px === 0 && pz === 0) continue;
+        box(px, h * 0.94, pz, 0.08, 0.05, 0.08, 0x1b1b1b);
+      }
+    }
+  } else if (family === 'sofa') {
+    box(0, h * 0.35, -d * 0.1, w * 0.85, h * 0.45, d * 0.65, 0x78909c);
+    box(0, h * 0.65, -d * 0.38, w * 0.85, h * 0.45, d * 0.18, color);
+    for (const side of [-1, 1]) {
+      box(side * w * 0.41, h * 0.48, -d * 0.1, 0.14 + variant * 0.02, h * 0.4, d * 0.65, color);
+    }
+    box(0, h * 0.22, d * 0.35, w * 0.55, h * 0.25, d * 0.4, 0x5d4037);
+  } else if (family === 'table_chairs') {
+    add(new THREE.CylinderGeometry(w * 0.28, w * 0.28, 0.05 + variant * 0.01, 12).translate(0, h * 0.35, 0), color);
+    stem(0, 0, 0, h * 0.35, 0.05, 0x424242);
+    for (const [cx, cz] of [[-w * 0.38, 0], [w * 0.38, 0], [0, -d * 0.38], [0, d * 0.38]]) {
+      box(cx, h * 0.18, cz, w * 0.18, h * 0.22, d * 0.18, 0x455a64);
+      box(cx, h * 0.38, cz, w * 0.18, h * 0.22, 0.04, 0x37474f);
+    }
+    stem(0, 0, 0, h * 0.88, 0.025, 0xdcdcdc);
+    add(new THREE.ConeGeometry(w * 0.48, h * 0.22, 8).translate(0, h * 0.88, 0), variant % 2 === 0 ? 0xeee8d5 : 0x3f51b5);
+  } else if (family === 'gazebo') {
+    add(new THREE.CylinderGeometry(w * 0.48, w * 0.50, 0.25, 8).translate(0, 0.125, 0), 0x9e9e9e);
+    const pCount = 6;
+    for (let i = 0; i < pCount; i++) {
+      const ang = i * Math.PI * 2 / pCount;
+      stem(Math.cos(ang) * w * 0.42, 0.25, Math.sin(ang) * d * 0.42, h * 0.65, 0.08 + variant * 0.01, color);
+    }
+    for (let i = 0; i < pCount; i++) {
+      const a1 = i * Math.PI * 2 / pCount, a2 = ((i + 1) % pCount) * Math.PI * 2 / pCount;
+      const mx = (Math.cos(a1) + Math.cos(a2)) * w * 0.21, mz = (Math.sin(a1) + Math.sin(a2)) * d * 0.21;
+      box(mx, 0.25 + h * 0.25, mz, 0.08, 0.1, 0.08, 0x5d4037);
+    }
+    add(new THREE.ConeGeometry(w * 0.56, h * 0.35 + variant * 0.05, 8).translate(0, 0.25 + h * 0.65 + (h * 0.35) / 2, 0), 0xa1887f);
+    add(new THREE.SphereGeometry(0.15, 6, 4).translate(0, 0.25 + h * 0.65 + h * 0.35 + 0.15, 0), 0xd4af37);
+  } else if (family === 'garage') {
+    box(0, 0.15, 0, w, 0.3, d, 0x42464b);
+    box(0, h * 0.5, 0, w * 0.96, 0.25 + variant * 0.02, d * 0.96, 0x757b82);
+    box(0, h, 0, w * 0.96, 0.25 + variant * 0.02, d * 0.96, 0x6e747b);
+    for (const x of [-w * 0.42, -w * 0.14, w * 0.14, w * 0.42]) {
+      for (const z of [-d * 0.42, d * 0.42]) {
+        box(x, h * 0.25, z, 0.35, h * 0.5, 0.35, 0x8a9096);
+        box(x, h * 0.75, z, 0.35, h * 0.5, 0.35, 0x8a9096);
+      }
+    }
+    box(0, h * 0.5 + 0.45, -d * 0.47, w * 0.96, 0.65, 0.1, 0x959ba0);
+    box(0, h * 0.5 + 0.45, d * 0.47, w * 0.96, 0.65, 0.1, 0x959ba0);
+    box(0, h + 0.45, -d * 0.47, w * 0.96, 0.65, 0.1, 0x959ba0);
+    box(0, h + 0.45, d * 0.47, w * 0.96, 0.65, 0.1, 0x959ba0);
+    add(new THREE.BoxGeometry(w * 0.3, 0.15, d * 0.55).rotateX(0.28).translate(w * 0.28, h * 0.26, 0), 0x50555a);
+    add(new THREE.BoxGeometry(w * 0.3, 0.15, d * 0.55).rotateX(-0.28).translate(-w * 0.28, h * 0.76, 0), 0x50555a);
+    box(-w * 0.42, h * 0.55, d * 0.38, w * 0.16, h * 1.1, d * 0.22, 0x546066);
+    box(0, h + 0.35, -d * 0.22, w * 0.22, 0.35, d * 0.18, 0x2c3e50);
+    box(w * 0.22, h + 0.35, -d * 0.22, w * 0.22, 0.35, d * 0.18, 0xb71c1c);
+    box(-w * 0.22, h + 0.35, -d * 0.22, w * 0.22, 0.35, d * 0.18, 0x78909c);
+    box(-w * 0.42, h + 0.8, d * 0.48, 0.8, 0.8, 0.1, 0x1976d2);
+    box(-w * 0.42, h + 0.8, d * 0.49, 0.35, 0.5, 0.05, 0xffffff);
   } else throw new RangeError(`Unimplemented ground part family ${family}`);
   // Merge by coating/softness, keeping draw calls bounded independently of branch counts.
   const buckets = new Map();

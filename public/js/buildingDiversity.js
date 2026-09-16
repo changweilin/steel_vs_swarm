@@ -301,6 +301,15 @@ export function inferBuildingFunction(building = {}, poly = null, context = {}) 
     return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
   }
 
+  // 停車場：隨機生成項目包含立體停車場（25% 機率），平面停車場機率較高（75%）
+  if (amenity === 'parking' || bld === 'parking' || bld === 'garage') {
+    const parkHash = architectureHash(context.identity || building.sourceId || `${width},${depth}`, `${context.seed || 0}:parking_garage`);
+    const isMultiStorey = (tags.parking === 'multi-storey') || ((parkHash >>> 0) % 100 < 25);
+    if (isMultiStorey) {
+      return { category: 'transport', type: 'parking', key: 'commercial_retail', label: '立體停車場' };
+    }
+  }
+
   // 6. 無專屬標籤時：依環境尺度與確定性雜湊產生豐富多元分類
   const idHash = architectureHash(context.identity || building.sourceId || `${width},${depth}`, `${context.seed || 0}:bld_func`);
   const prob = (idHash >>> 0) / 4294967296;
