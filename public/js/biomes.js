@@ -8452,7 +8452,7 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
     cool: 0.2,
   });
   const pierMat = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
-  const wallThick = padKind === 'base' ? 1.0 : 0.6;
+  const wallThick = padKind === 'base' ? 2.2 : 1.4;
 
   // 1. 擋土牆 (Retaining Walls): 緊貼開挖邊界，在天然地形高於平台 (切坡) 處立牆
   const edges = [
@@ -8462,6 +8462,7 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
     [-hw,  hd, -hw, -hd, -1,  0],  // Left
   ];
 
+  const edgeWalls = [];
   for (const [lx0, lz0, lx1, lz1, nx, nz] of edges) {
     const elen = Math.hypot(lx1 - lx0, lz1 - lz0);
     const nSeg = Math.max(2, Math.round(elen / 1.8)); // 取樣步長約 1.8m，精細貼合斜坡地形
@@ -8470,22 +8471,28 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
     const tx_w = tx_l * ca + tz_l * sa, tz_w = -tx_l * sa + tz_l * ca;
     const wallYaw = Math.atan2(tx_w, tz_w);
 
-    // 沿邊緣預先探測牆體背側（自然開挖邊坡）地形高程
     const rawTops = [];
     const segData = [];
+    const cutSpan = Math.max(wallThick + 2.0, (terrain.gridM || 8.3) * 1.0);
+    const probeDists = [0.1, wallThick * 0.5, wallThick + 0.2, cutSpan * 0.5, cutSpan];
+
     for (let k = 0; k < nSeg; k++) {
       const tA = k / nSeg, tB = (k + 1) / nSeg;
       const tMid = (tA + tB) * 0.5;
       const smLx = lx0 + (lx1 - lx0) * tMid;
       const smLz = lz0 + (lz1 - lz0) * tMid;
 
-      // 探測牆體背側自然坡面高程
-      const probeLx = smLx + nx * (wallThick * 0.5 + 0.35);
-      const probeLz = smLz + nz * (wallThick * 0.5 + 0.35);
-      const probeWx = cx + probeLx * ca + probeLz * sa;
-      const probeWz = cz - probeLx * sa + probeLz * ca;
-      const terrY = terrain.natureAt ? terrain.natureAt(probeWx, probeWz) : terrain.heightAt(probeWx, probeWz);
-      rawTops.push(terrY);
+      // 沿法線探測被開挖之天然地形最高切面高程，覆蓋完整切坡高度
+      let maxCutY = -Infinity;
+      for (const d of probeDists) {
+        const pLx = smLx + nx * d;
+        const pLz = smLz + nz * d;
+        const pWx = cx + pLx * ca + pLz * sa;
+        const pWz = cz - pLx * sa + pLz * ca;
+        const yNat = terrain.natureAt ? terrain.natureAt(pWx, pWz) : (terrain.heightAt ? terrain.heightAt(pWx, pWz) : dy);
+        if (yNat > maxCutY) maxCutY = yNat;
+      }
+      rawTops.push(maxCutY);
 
       const outLx = smLx + nx * (wallThick * 0.5);
       const outLz = smLz + nz * (wallThick * 0.5);
@@ -8501,13 +8508,16 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
       return prev * 0.25 + v * 0.5 + next * 0.25;
     });
 
+    const activeSegs = [];
     for (let k = 0; k < nSeg; k++) {
       const origY = smoothTops[k];
       if (origY > dy + 0.15) {
-        // 原地表高於平台頂面 -> 此段為挖方切坡，建立緊貼修飾後邊坡的擋土牆
-        const wallTop = Math.max(origY + 0.3, dy + 0.8);
-        const wallH = wallTop - botY;
+        // 原地表高於平台頂面 -> 此段為挖方切坡，建立完整覆蓋切面之擋土牆
+        const wallTop = Math.max(origY + 0.35, dy + 0.8);
         const { wallWx, wallWz } = segData[k];
+        // 牆底深入台底與地表之下，完全消除懸空與漏底縫隙
+        const segBot = botY - 0.5;
+        const wallH = Math.max(0.2, wallTop - segBot);
 
         const wMesh = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, segL + 0.04), wallMat);
         if (wMesh.geometry?.attributes?.uv) {
@@ -8519,20 +8529,82 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
           }
           uvs.needsUpdate = true;
         }
-        wMesh.position.set(wallWx, botY + wallH * 0.5, wallWz);
+        wMesh.position.set(wallWx, segBot + wallH * 0.5, wallWz);
         wMesh.rotation.y = wallYaw;
         group.add(wMesh);
 
         // 擋土牆頂部壓頂防護 (Coping Cap)
         const capH = 0.25;
-        const capThick = wallThick + 0.24;
+        const capThick = wallThick + 0.28;
         const capMesh = new THREE.Mesh(new THREE.BoxGeometry(capThick, capH, segL + 0.04), capMat);
         capMesh.position.set(wallWx, wallTop + capH * 0.5, wallWz);
         capMesh.rotation.y = wallYaw;
         group.add(capMesh);
 
-        cols.push({ x: wallWx, z: wallWz, y: botY, r: wallThick * 0.75, h: wallH });
+        cols.push({ x: wallWx, z: wallWz, y: segBot, r: wallThick * 0.75, h: wallH });
+        activeSegs.push({ k, wallTop, segBot });
       }
+    }
+    edgeWalls.push({
+      hasStart: activeSegs.some((s) => s.k === 0),
+      hasEnd: activeSegs.some((s) => s.k === nSeg - 1),
+      startTop: activeSegs.find((s) => s.k === 0)?.wallTop ?? null,
+      endTop: activeSegs.find((s) => s.k === nSeg - 1)?.wallTop ?? null,
+      startBot: activeSegs.find((s) => s.k === 0)?.segBot ?? null,
+      endBot: activeSegs.find((s) => s.k === nSeg - 1)?.segBot ?? null,
+    });
+  }
+
+  // 四個轉角柱 (Corner Pillars): 轉角兩側任一側有擋土牆即閉合轉角空隙，消除四角破洞
+  const corners = [
+    { lx:  hw, lz: -hd, ePrev: 0, eNext: 1, sx:  1, sz: -1 }, // Back-Right
+    { lx:  hw, lz:  hd, ePrev: 1, eNext: 2, sx:  1, sz:  1 }, // Right-Front
+    { lx: -hw, lz:  hd, ePrev: 2, eNext: 3, sx: -1, sz:  1 }, // Front-Left
+    { lx: -hw, lz: -hd, ePrev: 3, eNext: 0, sx: -1, sz: -1 }, // Left-Back
+  ];
+
+  for (const c of corners) {
+    const prev = edgeWalls[c.ePrev];
+    const next = edgeWalls[c.eNext];
+    if (prev?.hasEnd || next?.hasStart) {
+      const colLx = c.lx + c.sx * (wallThick * 0.5);
+      const colLz = c.lz + c.sz * (wallThick * 0.5);
+      const colWx = cx + colLx * ca + colLz * sa;
+      const colWz = cz - colLx * sa + colLz * ca;
+
+      const topCandidates = [dy + 0.8];
+      if (prev?.endTop != null) topCandidates.push(prev.endTop);
+      if (next?.startTop != null) topCandidates.push(next.startTop);
+      const top = Math.max(...topCandidates);
+
+      const botCandidates = [botY - 0.5];
+      if (prev?.endBot != null) botCandidates.push(prev.endBot);
+      if (next?.startBot != null) botCandidates.push(next.startBot);
+      const bot = Math.min(...botCandidates);
+      const h = Math.max(0.2, top - bot);
+
+      const colMesh = new THREE.Mesh(new THREE.BoxGeometry(wallThick, h, wallThick), wallMat);
+      if (colMesh.geometry?.attributes?.uv) {
+        const uvs = colMesh.geometry.attributes.uv;
+        const uRep = Math.max(1, wallThick / 2.0);
+        const vRep = Math.max(1, h / 2.0);
+        for (let ui = 0; ui < uvs.count; ui++) {
+          uvs.setXY(ui, uvs.getX(ui) * uRep, uvs.getY(ui) * vRep);
+        }
+        uvs.needsUpdate = true;
+      }
+      colMesh.position.set(colWx, bot + h * 0.5, colWz);
+      colMesh.rotation.y = ry;
+      group.add(colMesh);
+
+      const capH = 0.25;
+      const capThick = wallThick + 0.28;
+      const capMesh = new THREE.Mesh(new THREE.BoxGeometry(capThick, capH, capThick), capMat);
+      capMesh.position.set(colWx, top + capH * 0.5, colWz);
+      capMesh.rotation.y = ry;
+      group.add(capMesh);
+
+      cols.push({ x: colWx, z: colWz, y: bot, r: wallThick * 0.75, h });
     }
   }
 
@@ -8725,13 +8797,20 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
     group.add(pier);
   }
 
-  // 陸地主堡整地開挖（與兵線道路同高）
+  // 陸地主堡基礎平台與整地開挖（與兵線道路同高）
   const allPads = [...plan.pads];
   const landBasesToCarve = [];
   for (const base of basesW) {
     if (terrainEnvCode(terrain, base.x, base.z) === 0) {
       const roadY = deckIdx(base.x, base.z) ?? (base.roadY ?? (terrain.heightAt(base.x, base.z) + ROAD_LIFT));
       allPads.push({ side: base.side, x: base.x, z: base.z, y: roadY });
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(BASE_PAD_R * 2, BASE_PAD_T, BASE_PAD_R * 2), slabM);
+      slab.position.set(base.x, roadY - BASE_PAD_T / 2, base.z);
+      group.add(slab);
+      plan.newDecks.push({
+        x1: base.x - BASE_PAD_R, z1: base.z, y1: roadY,
+        x2: base.x + BASE_PAD_R, z2: base.z, y2: roadY, hw: BASE_PAD_R,
+      });
       landBasesToCarve.push({
         cx: base.x, cz: base.z,
         hw: BASE_PAD_R, hd: BASE_PAD_R,
@@ -8748,8 +8827,8 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
     });
   }
 
-  // 水域主堡承台表面渲染軍事基地標線
-  for (const pad of plan.pads) {
+  // 主堡承台表面渲染軍事基地標線 (涵蓋水域與陸地主堡)
+  for (const pad of allPads) {
     const baseMarkGeo = new THREE.PlaneGeometry(BASE_PAD_R * 1.92, BASE_PAD_R * 1.92);
     const baseMarkMat = envMat(0xffffff, {
       map: baseMarkingTex(pad.side),
@@ -12131,6 +12210,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       base.roadY = terrain.heightAt(base.x, base.z) + ROAD_LIFT;
       slopePlatformsToCarve.push({
         cx: base.x, cz: base.z, hw: BASE_PAD_R, hd: BASE_PAD_R, ry: 0, y: base.roadY, padT: BASE_PAD_T,
+        padKind: 'base', margin: 0.35,
       });
       reservedFootprints.push({
         x: base.x, z: base.z, hw: BASE_PAD_R, hd: BASE_PAD_R, ry: 0, r: Math.hypot(BASE_PAD_R, BASE_PAD_R),
@@ -12151,6 +12231,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const ry = Math.atan2(cp.nx, cp.nz);
             slopePlatformsToCarve.push({
               cx: tx, cz: tz, hw: padR, hd: padR, ry, y: cp.roadY, padT: TOWER_PAD_T,
+              padKind: 'tower', margin: 0.35,
             });
             reservedFootprints.push({
               x: tx, z: tz, hw: padR, hd: padR, ry, r: Math.hypot(padR, padR),

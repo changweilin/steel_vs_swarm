@@ -31,11 +31,15 @@ function mockThree() {
   class MockCylinderGeometry {
     constructor(rt, rb, h, seg) { this.type = 'CylinderGeometry'; this.rt = rt; this.rb = rb; this.h = h; this.seg = seg; }
   }
+  class MockPlaneGeometry {
+    constructor(w, h) { this.type = 'PlaneGeometry'; this.w = w; this.h = h; }
+  }
   return {
     DoubleSide: 2,
     Mesh: MockMesh,
     BoxGeometry: MockBoxGeometry,
     CylinderGeometry: MockCylinderGeometry,
+    PlaneGeometry: MockPlaneGeometry,
   };
 }
 
@@ -53,6 +57,21 @@ function loadSlopeFeatures(mutate = (s) => s) {
     `${body}\nreturn { buildPlatformSlopeFeatures, retainingWallTex };`
   );
   return fn(mockThree(), () => ({}), 6.76, 0.72, new Map());
+}
+
+// 抽取 buildBaseWaterPads 原文
+function loadBasePads() {
+  const p0 = bioSrc.indexOf('const BASE_PAD_R =');
+  const p1 = bioSrc.indexOf('export function makeTunnelIndex', p0);
+  if (p0 < 0 || p1 <= p0) throw new Error('biomes.js 主堡承台切片標記找不到');
+  const body = bioSrc.slice(p0, p1);
+  const fn = new Function('THREE', 'envMat', 'terrainEnvCode', 'makeDeckIndex', 'baseMarkingTex', 'GAME', 'WATER', 'TOWER_PAD_R', 'TOWER_PAD_T', 'TOWER_BASE_R', 'buildPlatformSlopeFeatures',
+    `${body}\nreturn { buildBaseWaterPads, BASE_PAD_R, BASE_PAD_T };`
+  );
+  return fn(mockThree(), () => ({}), () => 0, () => () => null, () => ({}),
+    { HERO_HEAL_R: 12, HERO_SPAWN_OFF: 6, HERO_SPAWN_SIDE: 4 },
+    { SWAMP_BAND: 2.2, GRID_M: 8 }, 4.5, 1.0, 6.76, () => {}
+  );
 }
 
 // 抽取 carvePlatforms 原文邏輯驗證
@@ -130,11 +149,20 @@ console.log('Ⅱ 擋土牆生成稽核 (buildPlatformSlopeFeatures - Retaining W
   const allOnHighSide = wallBoxes.every((c) => c.position.x > 0);
   ok(allOnHighSide, '擋土牆僅在地形高於平台之切方側生成');
 
-  // 檢查擋土牆頂面高過切坡原地形
+  // 檢查擋土牆頂面高過切坡開挖地形
   const caps = wallBoxes.filter((c) => c.geometry.h === 0.25);
   ok(caps.length > 0, `擋土牆頂部具備壓頂防護 (Coping Cap): ${caps.length}`);
   const maxCapY = Math.max(...caps.map((c) => c.position.y));
   ok(maxCapY > 10 + 1.2, `擋土牆壓頂高過平台面至少 1.2m: ${maxCapY.toFixed(2)}m`);
+
+  // 檢查牆底深入地表與台底（消滅懸空與漏底縫隙）
+  const wallBodies = wallBoxes.filter((c) => c.geometry.h > 0.25);
+  const allEmbedded = wallBodies.every((c) => c.position.y - c.geometry.h * 0.5 < 9.0);
+  ok(allEmbedded, '擋土牆底部深入地表與台底，消滅懸空與漏底縫隙');
+
+  // 檢查切坡相鄰邊轉角柱 (Corner Pillars) 閉合
+  const cornerPosts = wallBodies.filter((c) => Math.abs(c.geometry.w - c.geometry.d) < 1e-4);
+  ok(cornerPosts.length > 0, `切坡轉角處建立轉角柱閉合四角空隙: ${cornerPosts.length}`);
 
   // 檢查碰撞柱是否有登記
   ok(cols.some((c) => c.x > 0 && c.h > 1.0), '擋土牆在切坡側登記阻擋碰撞體');
@@ -188,6 +216,23 @@ console.log('Ⅳ 平地環境防劣化稽核 (Zero overhead on flat terrain)');
 
   ok(group.children.length === 0, `平地環境不生成多餘擋土牆與支撐柱: count = ${group.children.length}`);
   ok(cols.length === 0, `平地環境不額外增加障礙碰撞體: cols = ${cols.length}`);
+}
+
+console.log('Ⅴ 陸地主堡基礎承台與標線稽核 (Land Base Foundation Slab & Markings)');
+{
+  const { buildBaseWaterPads, BASE_PAD_T } = loadBasePads();
+  const group = { children: [], add(m) { this.children.push(m); } };
+  const basesW = [{ side: 'STEEL', x: 0, z: 0 }];
+  const terrain = { heightAt: () => 10.0, waterY: null, minX: -100, minZ: -100 };
+  const decks = [], cols = [];
+
+  const pads = buildBaseWaterPads(group, basesW, terrain, decks, cols);
+  ok(pads.length === 1, `陸地主堡成功登錄 pads: ${pads.length}`);
+  const slabs = group.children.filter((c) => c.geometry?.type === 'BoxGeometry' && c.geometry.h === BASE_PAD_T);
+  ok(slabs.length === 1, `陸地主堡成功建立混凝土基礎承台 (slab): ${slabs.length}`);
+  ok(decks.length === 1, `陸地主堡成功建立站立面 (deck): ${decks.length}`);
+  const markings = group.children.filter((c) => c.geometry?.type === 'PlaneGeometry');
+  ok(markings.length === 1, `陸地主堡表面成功渲染軍事基地標線: ${markings.length}`);
 }
 
 console.log(`\n${fail === 0 ? '✅ 全綠' : '❌ 有紅字'}  pass=${pass} fail=${fail}`);
