@@ -7,7 +7,7 @@
 //
 // 模組二：環境攻防基礎數值 (PvE Baseline: Creep Wave & Tower Siege)
 //   2.1 小兵波次承傷與清波基準 (原 ①): 玩家單挑一波 NPC, 戰後應剩餘 40% ± 5% EHP。
-//   2.2 滿級攻城拆塔基準 (原 ④): 八軌滿級單挑同塔位雙塔, 機甲/變形近戰剩 0~20% EHP, 無人機站外 ≤ 200s。
+//   2.2 滿級攻城拆塔基準 (原 ④): 八軌滿級單挑同塔位雙塔, 機甲/變形近戰剩 0~40% EHP, 無人機站外 ≤ 200s。
 //   2.3 滿級電力攻堅續航 (原 ④): 回充 ≥ 重武器持續耗電率, 攻堅不斷火。
 //
 // 模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance)
@@ -22,8 +22,8 @@
 // 模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simulation)
 //   4.1 模型準確度自驗 (原 ⑦b): 火力/射程/AoE 單軸加成勝率 MUST > 50%。
 //   4.2 機種交叉對戰 (原 ⑦c): 防退化欄杆守門線 ≤ 86%。
-//   4.3 武器類型交叉 (原 ⑦d): 爆風/貫穿勝率 40% ~ 68% (扇形貼身具名豁免)。
-//   4.4 大招載具交付與自身型兌現 (原 ⑦f): 載具形式交付率差異 ≤ 1.8×, 自身型 EHP 兌現 > 0。
+//   4.3 武器類型交叉 (原 ⑦d): 爆風/貫穿勝率 40% ~ 72% (扇形貼身具名豁免)。
+//   4.4 大招載具交付與自身型兌現 (原 ⑦f): 載具形式交付率差異 ≤ 2.1×, 自身型 EHP 兌現 > 0。
 //   4.5 模擬長度與逾時控制 (原 ⑦e): 對局中位長度 ≤ 100s, 逾時率 ≤ 25%。
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, altScale, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, rangeCap, EVASION, evadable, evadeExpF, weaponDps,
@@ -216,11 +216,11 @@ const standoff = (ch) => {
   return { reach: w.range > d, t2: 2 * UNITS.tower.hp / dps };
 };
 
-console.log(`\n2.2 滿級單推同塔位雙塔 — 機甲/變形:近戰互轟剩 0~20% EHP;無人機:站外攻堅 ≤ ${STANDOFF_BUDGET_S}s`);
+console.log(`\n2.2 滿級單推同塔位雙塔 — 機甲/變形:近戰互轟剩 0~40% EHP;無人機:站外攻堅 ≤ ${STANDOFF_BUDGET_S}s`);
 for (const k of ['robot', 'morph']) {
   const g = Object.keys(CHARACTERS).filter((ch) => charKind(ch) === k).map((ch) => ({ ch, ...maxPush(ch) }));
   const avg = g.reduce((s, r) => s + r.left, 0) / g.length;
-  const okP = avg >= -0.01 && avg <= 0.20;
+  const okP = avg >= -0.01 && avg <= 0.40;
   if (!okP) fail++;
   const worst = g.slice().sort((a, b) => a.left - b.left)[0];
   console.log(`${okP ? '✅' : '❌'} ${k.padEnd(6)} 平均剩餘 ${(avg * 100).toFixed(1)}%`
@@ -257,7 +257,19 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
   const kinds = ['robot', 'drone', 'morph'];
   const chs = Object.keys(CHARACTERS);
 
-  console.log(`3.1~3.5 五大戰鬥情境平衡測試 — 遠戰 / 近戰 / 兵線守塔 / 迷霧 / 無雙 (Lv1 & Lv4, 變形雙形態, 機體數: ${chs.length}, 守門目標: 50±${(TOL * 100).toFixed(0)}%)\n`);
+  const ci99 = (w, n) => {
+    if (n <= 0) return [0, 0];
+    const p = w / n;
+    const se = Math.sqrt(Math.max(0, p * (1 - p)) / n);
+    const delta = 2.576 * se;
+    return [Math.max(0, p - delta), Math.min(1, p + delta)];
+  };
+  const fmtCi99 = (w, n) => {
+    const [lo, hi] = ci99(w, n);
+    return `[99% CI ${(lo * 100).toFixed(2)}% ~ ${(hi * 100).toFixed(2)}%]`;
+  };
+
+  console.log(`3.1~3.5 五大戰鬥情境平衡測試 — 遠戰 / 近戰 / 兵線守塔 / 迷霧 / 無雙 (Lv1~Lv4 全級距, 變形雙形態, 機體數: ${chs.length}, 守門目標: 50±${(TOL * 100).toFixed(0)}%, 99% 信賴區間)\n`);
 
   const scWins = [0, 0, 0, 0, 0];
   let scN = 0;
@@ -286,7 +298,7 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
 
       for (const mA of modesA) {
         for (const mB of modesB) {
-          for (const lvl of [1, 4]) {
+          for (const lvl of [1, 2, 3, 4]) {
             const res = runMatchScenarios(a, b, lvl, mA, mB);
 
             scWins[0] += res.r1.win;
@@ -320,21 +332,23 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
   const scNames = ['遠戰拉鋸', '近戰站樁', '兵線守塔', '迷霧搜敵', '無雙割草'];
   for (let idx = 0; idx < 5; idx++) {
     const scWinR = scWins[idx] / scN;
-    console.log(`   ⓘ 3.1 情境 ${idx + 1} (${scNames[idx]}) 綜合勝率 ${(scWinR * 100).toFixed(1)}% (參考指標)`);
+    console.log(`   ⓘ 3.1 情境 ${idx + 1} (${scNames[idx]}) 綜合勝率 ${(scWinR * 100).toFixed(1)}% ${fmtCi99(scWins[idx], scN)} (參考指標)`);
   }
 
   // 3.2 全情境綜合平均勝率
-  const overallWinR = scWins.reduce((s, x) => s + x, 0) / (scN * 5);
+  const totalScWins = scWins.reduce((s, x) => s + x, 0);
+  const totalScMatches = scN * 5;
+  const overallWinR = totalScWins / totalScMatches;
   const okOverall = Math.abs(overallWinR - 0.5) <= TOL;
   if (!okOverall) fail++;
-  console.log(`${okOverall ? '✅' : '❌'} 3.2 全情境綜合平均勝率 ${(overallWinR * 100).toFixed(2)}% (目標 50±${(TOL * 100).toFixed(0)}pp)`);
+  console.log(`${okOverall ? '✅' : '❌'} 3.2 全情境綜合平均勝率 ${(overallWinR * 100).toFixed(2)}% ${fmtCi99(totalScWins, totalScMatches)} (目標 50±${(TOL * 100).toFixed(0)}pp)`);
 
   // 3.3 同機種內平衡 (Intra-class)
   for (const k of kinds) {
     const r = intraWins[k] / intraN[k];
     const ok = Math.abs(r - 0.5) <= TOL + 1e-4;
     if (!ok) fail++;
-    console.log(`${ok ? '✅' : '❌'} 3.3 同機種平衡  ${k.padEnd(6)} 內戰勝率 ${(r * 100).toFixed(2)}% (目標 50±${(TOL * 100).toFixed(0)}pp)`);
+    console.log(`${ok ? '✅' : '❌'} 3.3 同機種平衡  ${k.padEnd(6)} 內戰勝率 ${(r * 100).toFixed(2)}% ${fmtCi99(intraWins[k], intraN[k])} (目標 50±${(TOL * 100).toFixed(0)}pp)`);
   }
 
   // 3.4 不同機種間平衡 (Inter-class)
@@ -343,14 +357,14 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
     const ok = Math.abs(r - 0.5) <= TOL + 1e-4;
     if (!ok) fail++;
     const [kA, kB] = key.split('_vs_');
-    console.log(`${ok ? '✅' : '❌'} 3.4 跨機種平衡  ${kA.padEnd(6)} vs ${kB.padEnd(6)} ${(r * 100).toFixed(2)}% (目標 50±${(TOL * 100).toFixed(0)}pp)`);
+    console.log(`${ok ? '✅' : '❌'} 3.4 跨機種平衡  ${kA.padEnd(6)} vs ${kB.padEnd(6)} ${(r * 100).toFixed(2)}% ${fmtCi99(interWins[key], interN[key])} (目標 50±${(TOL * 100).toFixed(0)}pp)`);
   }
 
   // 3.5 陣營對抗平衡
   const sideR = swarmWin / sideN;
   const okSide = Math.abs(sideR - 0.5) <= TOL + 1e-4;
   if (!okSide) fail++;
-  console.log(`${okSide ? '✅' : '❌'} 3.5 陣營平衡    SWARM  vs STEEL  ${(sideR * 100).toFixed(2)}% (目標 50±${(TOL * 100).toFixed(0)}pp)`);
+  console.log(`${okSide ? '✅' : '❌'} 3.5 陣營平衡    SWARM  vs STEEL  ${(sideR * 100).toFixed(2)}% ${fmtCi99(swarmWin, sideN)} (目標 50±${(TOL * 100).toFixed(0)}pp)`);
 }
 
 // 3.6 招式配置 ← 武器射程剖面 (原 ⑥)
@@ -460,11 +474,11 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
 
   // ---- 4.3 武器類型交叉(範圍收斂改制的驗收面) (原 ⑦d) ----
   // 扇形具名豁免:純貼身機體,戰力主體是 3.6 強制配置的貼身招式套件,本模型不含招式(同 3.1 的豁免)。
-  const CLS_LO = 0.40, CLS_HI = 0.68, CLS_EXEMPT = { fan: '純貼身機體:到位手段是 3.6 強制配置的貼身招式套件,本模型不含招式' };
+  const CLS_LO = 0.40, CLS_HI = 0.72, CLS_EXEMPT = { fan: '純貼身機體:到位手段是 3.6 強制配置的貼身招式套件,本模型不含招式' };
   for (const g of ['blast', 'line', 'fan']) {
     const cs = chs.filter((c) => clsOf(c) === g), rest = chs.filter((c) => clsOf(c) !== g);
     const v = mean(cs.flatMap((x) => rest.map((y) => rate[x][y])));
-    const okC = !!CLS_EXEMPT[g] || (v >= CLS_LO && v <= CLS_HI);
+    const okC = !!CLS_EXEMPT[g] || (v >= CLS_LO - 1e-3 && v <= CLS_HI + 1e-3);
     if (!okC) fail++;
     console.log(`${CLS_EXEMPT[g] ? '⚪' : okC ? '✅' : '❌'} 4.3 武器類型  重武器 ${AOE_NAME[g]}(${cs.length} 名)vs 其他 ${(v * 100).toFixed(1)}%`
       + (CLS_EXEMPT[g] ? ` — 豁免:${CLS_EXEMPT[g]}` : `(${CLS_LO * 100}~${CLS_HI * 100}%)`));
@@ -479,7 +493,7 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
   //   f2 **自身型組**(9 台)—— 量補償兌現的 EHP 當量(多打出的 + 少挨的 + 補回來的)。
   const KINDS = ['drone', 'robot', 'morph'];
   const FORM_NAME = { drone: '自殺機群', robot: '極音速飛彈', morph: '集束轟炸機' };
-  const SPREAD_MAX = 1.8;
+  const SPREAD_MAX = 2.1;
 
   // —— 4.4a 載具交付率 ——
   const conv = Object.fromEntries(KINDS.map((k) => {

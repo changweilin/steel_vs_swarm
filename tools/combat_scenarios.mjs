@@ -49,6 +49,7 @@ import {
   heavyMpCost, shieldSplit, HIGH_SUP, highSupF, highSupDodgeF, highSupSpeedF,
   highSupMissP, unbalMissP, waveComp, waveMarchSpeed, waveSpacingM,
   tierVal, TARGET_R, aoeClass, blastFalloff, fanFalloff,
+  shieldDefKindFactor, SHIELD_DEFENSE,
 } from '../public/js/data.js';
 
 export const SCENARIO = {
@@ -175,7 +176,13 @@ function calcDodgeP(targetFighter, targetState, dh) {
   return Math.max(0, Math.min(EVASION.P_MAX, p)) * highSupDodgeF(targetState.sup || 0);
 }
 
-/** 傷害扣減單一縫: 吃 shieldSplit 與 armorMul，具備無敵幀判定 */
+export function isBlastWeapon(def) {
+  if (!def) return false;
+  const cls = aoeClass ? aoeClass(def) : (def.aoe || 'single');
+  return cls === 'blast' || (def.r && def.r > 0) || def.type === 'missile' || def.type === 'launcher';
+}
+
+/** 傷害扣減單一縫: 吃 shieldSplit 與 armorMul，具備無敵幀判定與專業玩家護盾格檔 */
 function applyDamage(targetState, dmg, pen, def) {
   if (targetState.invulUntil > targetState.tNow) return; // 無敵幀豁免全部傷害
   if (targetState.decoyHp > 0) {
@@ -190,9 +197,53 @@ function applyDamage(targetState, dmg, pen, def) {
       dmg *= mul;
     }
   }
+
+  // 專業玩家操作護盾格檔: 處於舉盾姿態且尚有護盾時，依機種減傷 (機甲 40/20%, 變形者 50/25%, 無人機 60/30%)
+  if (targetState.defending && targetState.sh > 0) {
+    const isBlast = isBlastWeapon(def);
+    const boosted = (targetState.shieldDefBoostUntil || 0) > targetState.tNow;
+    const factor = shieldDefKindFactor(targetState.f.kind, isBlast, boosted);
+    if (factor < 1) {
+      dmg *= factor;
+    }
+  }
+
   const { toSp, toHp } = shieldSplit(def, dmg, Math.max(0, targetState.sh));
   targetState.sh -= toSp;
   targetState.ar -= toHp * armorMul(targetState.f.armor, pen);
+}
+
+/** 專業玩家操作護盾判定: 戰術撤退、射程外推進、換彈空窗、飛行防失衡、重火力迎擊 */
+export function evalProPlayerDefending(S, dist, incomingHits) {
+  if (S.sh <= 0) return false;
+
+  // ① 戰術後撤 / 脫離交戰: 舉盾保命
+  if (S.isRetreating) return true;
+
+  // ② 射程外無法還擊: 推進途中持盾防禦直射與爆風
+  const myMaxR = sRangeMax(S.f);
+  if (dist > myMaxR && incomingHits && incomingHits.length > 0) return true;
+
+  // ③ 承受重火力或爆風威脅: 舉盾吸收
+  const hasHeavy = incomingHits && incomingHits.some((h) => h.isHeavy || isBlastWeapon(h.def));
+  if (hasHeavy) return true;
+
+  // ④ 專業玩家飛行操作考量: 飛行中受擊交戰時舉盾減輕掉高與失衡 (爆炸減至 1/2, 正面減至 1/4)
+  if (S.f.flying && incomingHits && incomingHits.length > 0) return true;
+
+  // ⑤ 輕武器裝填空窗且重武器未發射: 趁無法開火時舉盾減傷
+  const light = S.f.slots.find((s) => s.id === 'light') || S.f.slots[0];
+  if (light) {
+    const fireDur = light.mag > 1 ? light.mag / light.rate : 1 / light.rate;
+    const reloadDur = light.reload;
+    const cycle = fireDur + reloadDur;
+    const phase = S.tNow % cycle;
+    if (phase >= fireDur) {
+      return true; // 換彈中舉盾
+    }
+  }
+
+  return false;
 }
 
 /** 掩體防護結算: 非爆炸 100% 阻擋，爆炸武器依半徑動態計算波及率與猜中機率 */
@@ -200,8 +251,7 @@ function evalCoverDamage(h, inCover) {
   if (!inCover) return h.dmg;
   const def = h.def;
   // 非爆炸型武器 (直射實體彈、光束、穿甲彈等): 建築掩體 100% 阻擋
-  const wCls = aoeClass ? aoeClass(def) : (def.aoe || 'single');
-  const isBlast = wCls === 'blast' || (def.r && def.r > 0) || def.type === 'missile' || def.type === 'launcher';
+  const isBlast = isBlastWeapon(def);
   if (!isBlast) {
     return 0; // 掩體 100% 阻擋
   }
@@ -334,7 +384,13 @@ function castCombatAbilities(S, T, dist, dt) {
         const totalDmg = dmgPerHit * count;
         if (totalDmg > 0) {
           applyDamage(T, totalDmg, aDef.pen || 0, aDef);
-          if (T.f.flying) T.unbalUntil = S.tNow + FLIGHT.UNBAL_S;
+          if (T.f.flying) {
+            const isBlast = isBlastWeapon(aDef);
+            const unbalF = (T.defending && T.sh > 0)
+              ? (isBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+              : 1;
+            T.unbalUntil = S.tNow + FLIGHT.UNBAL_S * unbalF;
+          }
           if (aDef.stun) T.unbalUntil = Math.max(T.unbalUntil || 0, S.tNow + aDef.stun);
         }
       } else if (aDef.fx === 'heal') {
@@ -345,6 +401,9 @@ function castCombatAbilities(S, T, dist, dt) {
       } else if (aDef.fx === 'buff' || aDef.fx === 'shield_bash') {
         spendAbility(ab, S);
         ab.activeDur = Array.isArray(aDef.dur) ? aDef.dur[0] : (aDef.dur || 6);
+        if (aDef.shieldDefBoost) {
+          S.shieldDefBoostUntil = S.tNow + ab.activeDur;
+        }
         if (aDef.spRestore) {
           const spVal = Array.isArray(aDef.spRestore) ? aDef.spRestore[0] : aDef.spRestore;
           S.sh = Math.min(S.f.sh0, S.sh + spVal);
@@ -389,6 +448,8 @@ function initState(f, kiteBudget = SCENARIO.KITE_M) {
     retreatLeft: kiteBudget,
     isRetreating: false,
     outOfCombatTimer: 0,
+    defending: false,
+    shieldDefBoostUntil: -1,
   };
 }
 
@@ -422,8 +483,8 @@ function tryMechHighLeap(S, T, dist) {
     if (needClose || targetFlying) {
       S.leapCd = 12;
       S.mp -= 20;
-      S.leapUntil = S.tNow + 1.6; // 1.2s 躍起高度拉平
-      return 32; // 瞬間縮短 26m
+      S.leapUntil = S.tNow + 1.2; // 1.2s 躍起高度拉平
+      return 26; // 瞬間縮短 26m
     }
   }
   return 0;
@@ -435,7 +496,7 @@ function tryFlightInvul(S, incomingThreat) {
   if (S.evadeCd <= 0 && S.mp >= 15 && incomingThreat) {
     S.evadeCd = 14;
     S.mp -= 15;
-    S.invulUntil = S.tNow + 0.25; // 0.35s 無敵幀
+    S.invulUntil = S.tNow + 0.35; // 0.35s 無敵幀
     return true;
   }
   return false;
@@ -543,31 +604,52 @@ export function simulateScenario1_Ranged(A, B) {
     if (strikeA.hits.some((h) => h.isHeavy)) tryFlightInvul(b, true);
     if (strikeB.hits.some((h) => h.isHeavy)) tryFlightInvul(a, true);
 
+    b.defending = evalProPlayerDefending(b, dist, strikeA.hits);
+    a.defending = evalProPlayerDefending(a, dist, strikeB.hits);
+
     let heavyHitB = false;
+    let heavyHitBIsBlast = false;
     const dealtB = strikeA.hits.reduce((acc, h) => {
       const prev = b.sh + b.ar;
       const effectiveDmg = evalCoverDamage(h, inCoverB);
       applyDamage(b, effectiveDmg, h.pen, h.def);
-      if (h.isHeavy && effectiveDmg > 0) heavyHitB = true;
+      if (h.isHeavy && effectiveDmg > 0) {
+        heavyHitB = true;
+        if (isBlastWeapon(h.def)) heavyHitBIsBlast = true;
+      }
       return acc + (prev - (b.sh + b.ar));
     }, 0);
 
     let heavyHitA = false;
+    let heavyHitAIsBlast = false;
     const dealtA = strikeB.hits.reduce((acc, h) => {
       const prev = a.sh + a.ar;
       const effectiveDmg = evalCoverDamage(h, inCoverA);
       applyDamage(a, effectiveDmg, h.pen, h.def);
-      if (h.isHeavy && effectiveDmg > 0) heavyHitA = true;
+      if (h.isHeavy && effectiveDmg > 0) {
+        heavyHitA = true;
+        if (isBlastWeapon(h.def)) heavyHitAIsBlast = true;
+      }
       return acc + (prev - (a.sh + a.ar));
     }, 0);
 
     if (dealtB > 0) {
       if (cDhA > 0) { const f = highSupF(cDhA); if (f > 0) { b.sup = Math.max(b.sup, f); b.supUntil = t + HIGH_SUP.DUR_S; } }
-      if (b.f.flying && heavyHitB) b.unbalUntil = t + FLIGHT.UNBAL_S;
+      if (b.f.flying && heavyHitB) {
+        const unbalF = (b.defending && b.sh > 0)
+          ? (heavyHitBIsBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+          : 1;
+        b.unbalUntil = t + FLIGHT.UNBAL_S * unbalF;
+      }
     }
     if (dealtA > 0) {
       if (-cDhA > 0) { const f = highSupF(-cDhA); if (f > 0) { a.sup = Math.max(a.sup, f); a.supUntil = t + HIGH_SUP.DUR_S; } }
-      if (a.f.flying && heavyHitA) a.unbalUntil = t + FLIGHT.UNBAL_S;
+      if (a.f.flying && heavyHitA) {
+        const unbalF = (a.defending && a.sh > 0)
+          ? (heavyHitAIsBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+          : 1;
+        a.unbalUntil = t + FLIGHT.UNBAL_S * unbalF;
+      }
     }
 
     // 機動推進: 迂迴繞路減速 (直線上減速 35%)
@@ -690,31 +772,52 @@ export function simulateScenario2_Melee(A, B) {
     if (strikeA.hits.some((h) => h.isHeavy)) tryFlightInvul(b, true);
     if (strikeB.hits.some((h) => h.isHeavy)) tryFlightInvul(a, true);
 
+    b.defending = evalProPlayerDefending(b, dist, strikeA.hits);
+    a.defending = evalProPlayerDefending(a, dist, strikeB.hits);
+
     let heavyHitB = false;
+    let heavyHitBIsBlast = false;
     const dealtB = strikeA.hits.reduce((acc, h) => {
       const prev = b.sh + b.ar;
       const effDmg = evalCoverDamage(h, inCoverB);
       applyDamage(b, effDmg, h.pen, h.def);
-      if (h.isHeavy && effDmg > 0) heavyHitB = true;
+      if (h.isHeavy && effDmg > 0) {
+        heavyHitB = true;
+        if (isBlastWeapon(h.def)) heavyHitBIsBlast = true;
+      }
       return acc + (prev - (b.sh + b.ar));
     }, 0);
 
     let heavyHitA = false;
+    let heavyHitAIsBlast = false;
     const dealtA = strikeB.hits.reduce((acc, h) => {
       const prev = a.sh + a.ar;
       const effDmg = evalCoverDamage(h, inCoverA);
       applyDamage(a, effDmg, h.pen, h.def);
-      if (h.isHeavy && effDmg > 0) heavyHitA = true;
+      if (h.isHeavy && effDmg > 0) {
+        heavyHitA = true;
+        if (isBlastWeapon(h.def)) heavyHitAIsBlast = true;
+      }
       return acc + (prev - (a.sh + a.ar));
     }, 0);
 
     if (dealtB > 0) {
       if (cDhA > 0) { const f = highSupF(cDhA); if (f > 0) { b.sup = Math.max(b.sup, f); b.supUntil = t + HIGH_SUP.DUR_S; } }
-      if (b.f.flying && heavyHitB) b.unbalUntil = t + FLIGHT.UNBAL_S;
+      if (b.f.flying && heavyHitB) {
+        const unbalF = (b.defending && b.sh > 0)
+          ? (heavyHitBIsBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+          : 1;
+        b.unbalUntil = t + FLIGHT.UNBAL_S * unbalF;
+      }
     }
     if (dealtA > 0) {
       if (-cDhA > 0) { const f = highSupF(-cDhA); if (f > 0) { a.sup = Math.max(a.sup, f); a.supUntil = t + HIGH_SUP.DUR_S; } }
-      if (a.f.flying && heavyHitA) a.unbalUntil = t + FLIGHT.UNBAL_S;
+      if (a.f.flying && heavyHitA) {
+        const unbalF = (a.defending && a.sh > 0)
+          ? (heavyHitAIsBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+          : 1;
+        a.unbalUntil = t + FLIGHT.UNBAL_S * unbalF;
+      }
     }
 
     // 動態拉鋸走位: 長射程方試圖後撤風箏，短射程方貼身追擊
@@ -768,8 +871,8 @@ export function simulateScenario3_Tower(A, B) {
   const Dsep = 186; // 砲塔間距
   const towerPosA = -Dsep / 2;
   const towerPosB = Dsep / 2;
-  const tRange = 155; // 砲塔射程
-  const tDps = 68; // 砲塔 DPS
+  const tRange = UNITS.tower?.range || 155; // 砲塔射程
+  const tDps = (UNITS.tower?.dmg ?? 32.5) * (UNITS.tower?.rate ?? 1.0); // 砲塔 DPS
 
   let towerHpA = UNITS.tower?.hp || 1800;
   let towerHpB = UNITS.tower?.hp || 1800;
@@ -931,31 +1034,52 @@ export function simulateScenario3_Tower(A, B) {
     const inCoverB = dist <= rMaxA && dist > rMaxB;
     const inCoverA = dist <= rMaxB && dist > rMaxA;
 
+    b.defending = evalProPlayerDefending(b, dist, strikeA.hits);
+    a.defending = evalProPlayerDefending(a, dist, strikeB.hits);
+
     let heavyHitB = false;
+    let heavyHitBIsBlast = false;
     const dealtB = strikeA.hits.reduce((acc, h) => {
       const prev = b.sh + b.ar;
       const effDmg = evalCoverDamage(h, inCoverB);
       applyDamage(b, effDmg, h.pen, h.def);
-      if (h.isHeavy && effDmg > 0) heavyHitB = true;
+      if (h.isHeavy && effDmg > 0) {
+        heavyHitB = true;
+        if (isBlastWeapon(h.def)) heavyHitBIsBlast = true;
+      }
       return acc + (prev - (b.sh + b.ar));
     }, 0);
 
     let heavyHitA = false;
+    let heavyHitAIsBlast = false;
     const dealtA = strikeB.hits.reduce((acc, h) => {
       const prev = a.sh + a.ar;
       const effDmg = evalCoverDamage(h, inCoverA);
       applyDamage(a, effDmg, h.pen, h.def);
-      if (h.isHeavy && effDmg > 0) heavyHitA = true;
+      if (h.isHeavy && effDmg > 0) {
+        heavyHitA = true;
+        if (isBlastWeapon(h.def)) heavyHitAIsBlast = true;
+      }
       return acc + (prev - (a.sh + a.ar));
     }, 0);
 
     if (dealtB > 0) {
       if (cDhA > 0) { const f = highSupF(cDhA); if (f > 0) { b.sup = Math.max(b.sup, f); b.supUntil = t + HIGH_SUP.DUR_S; } }
-      if (b.f.flying && heavyHitB) b.unbalUntil = t + FLIGHT.UNBAL_S;
+      if (b.f.flying && heavyHitB) {
+        const unbalF = (b.defending && b.sh > 0)
+          ? (heavyHitBIsBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+          : 1;
+        b.unbalUntil = t + FLIGHT.UNBAL_S * unbalF;
+      }
     }
     if (dealtA > 0) {
       if (-cDhA > 0) { const f = highSupF(-cDhA); if (f > 0) { a.sup = Math.max(a.sup, f); a.supUntil = t + HIGH_SUP.DUR_S; } }
-      if (a.f.flying && heavyHitA) a.unbalUntil = t + FLIGHT.UNBAL_S;
+      if (a.f.flying && heavyHitA) {
+        const unbalF = (a.defending && a.sh > 0)
+          ? (heavyHitAIsBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+          : 1;
+        a.unbalUntil = t + FLIGHT.UNBAL_S * unbalF;
+      }
     }
 
     // AoE 武器波及小兵
@@ -1148,31 +1272,52 @@ export function simulateScenario4_Fog(A, B) {
     if (strikeA.hits.some((h) => h.isHeavy)) tryFlightInvul(b, true);
     if (strikeB.hits.some((h) => h.isHeavy)) tryFlightInvul(a, true);
 
+    b.defending = evalProPlayerDefending(b, dist, strikeA.hits);
+    a.defending = evalProPlayerDefending(a, dist, strikeB.hits);
+
     let heavyHitB = false;
+    let heavyHitBIsBlast = false;
     const dealtB = strikeA.hits.reduce((acc, h) => {
       const prev = b.sh + b.ar;
       const effDmg = evalCoverDamage(h, inCoverB);
       applyDamage(b, effDmg, h.pen, h.def);
-      if (h.isHeavy && effDmg > 0) heavyHitB = true;
+      if (h.isHeavy && effDmg > 0) {
+        heavyHitB = true;
+        if (isBlastWeapon(h.def)) heavyHitBIsBlast = true;
+      }
       return acc + (prev - (b.sh + b.ar));
     }, 0);
 
     let heavyHitA = false;
+    let heavyHitAIsBlast = false;
     const dealtA = strikeB.hits.reduce((acc, h) => {
       const prev = a.sh + a.ar;
       const effDmg = evalCoverDamage(h, inCoverA);
       applyDamage(a, effDmg, h.pen, h.def);
-      if (h.isHeavy && effDmg > 0) heavyHitA = true;
+      if (h.isHeavy && effDmg > 0) {
+        heavyHitA = true;
+        if (isBlastWeapon(h.def)) heavyHitAIsBlast = true;
+      }
       return acc + (prev - (a.sh + a.ar));
     }, 0);
 
     if (dealtB > 0) {
       if (cDhA > 0) { const f = highSupF(cDhA); if (f > 0) { b.sup = Math.max(b.sup, f); b.supUntil = t + HIGH_SUP.DUR_S; } }
-      if (b.f.flying && heavyHitB) b.unbalUntil = t + FLIGHT.UNBAL_S;
+      if (b.f.flying && heavyHitB) {
+        const unbalF = (b.defending && b.sh > 0)
+          ? (heavyHitBIsBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+          : 1;
+        b.unbalUntil = t + FLIGHT.UNBAL_S * unbalF;
+      }
     }
     if (dealtA > 0) {
       if (-cDhA > 0) { const f = highSupF(-cDhA); if (f > 0) { a.sup = Math.max(a.sup, f); a.supUntil = t + HIGH_SUP.DUR_S; } }
-      if (a.f.flying && heavyHitA) a.unbalUntil = t + FLIGHT.UNBAL_S;
+      if (a.f.flying && heavyHitA) {
+        const unbalF = (a.defending && a.sh > 0)
+          ? (heavyHitAIsBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+          : 1;
+        a.unbalUntil = t + FLIGHT.UNBAL_S * unbalF;
+      }
     }
 
     const spdA = inCoverA ? effectiveSpeed(a) * 0.65 : effectiveSpeed(a);
@@ -1311,6 +1456,13 @@ export function simulateScenario5_Musou(A) {
     }
 
     // 小兵向機體射擊 (若機體進入其射程)
+    const minionIncoming = aliveFoes.filter((foe) => foe.dist <= foe.range).map((foe) => ({
+      dmg: foe.dmg * foe.rate * dt,
+      def: { id: 'minion', r: 0, type: 'bullet' },
+      isHeavy: false,
+    }));
+    a.defending = a.isRetreating || evalProPlayerDefending(a, closestFoe ? closestFoe.dist : 50, minionIncoming);
+
     for (const foe of aliveFoes) {
       if (foe.dist <= foe.range) {
         const foeDmg = foe.dmg * foe.rate * dt;
