@@ -19,7 +19,7 @@ import {
   BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
   FLIGHT, airSinkM,
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
-  BUILDING_VS_CAP, shieldSplit, SHIELD_DEFENSE, shieldRoleName, EX_SIEGE_WEAPONS, counterDmgF,
+  BUILDING_VS_CAP, shieldSplit, SHIELD_DEFENSE, shieldRoleName, shieldDefKindFactor, EX_SIEGE_WEAPONS, counterDmgF,
   aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
   trajClass, shotFlightS, vsMult, blastFamily, buildDps, heroRange,
   altRangeMax, RANGE_TOL,
@@ -1501,13 +1501,14 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     bHigh._updateDefending(hHigh, foe);
     assert(hHigh.defending === true, '高難度: 換彈空窗期戰術切換防守姿態(正面護盾)');
 
-    // 3. 防守姿態護盾減傷 (75% 直擊傷害減免)
+    // 3. 防守姿態護盾減傷 (依機種正面護盾減免: 機甲 20%, 無人機 25%, 變形者 30%)
     const rawDmg = 100;
     const hp0 = hHigh.hp, sp0 = hHigh.sp;
     bSim._damage(hHigh, rawDmg, foe, 0);
     const lostSp = sp0 - hHigh.sp;
-    assert(Math.abs(lostSp - rawDmg * SHIELD_DEFENSE.DIRECT_F) < 1e-3,
-      `防守姿態正面護盾承受直擊: 傷害折減為 ${(SHIELD_DEFENSE.DIRECT_F * 100).toFixed(0)}%(消耗護盾 ${lostSp} = 100 × 0.25)`);
+    const expDirectF = shieldDefKindFactor(hHigh.kind, false, false);
+    assert(Math.abs(lostSp - rawDmg * expDirectF) < 1e-3,
+      `防守姿態正面護盾承受直擊: 傷害折減為 ${(expDirectF * 100).toFixed(0)}%(消耗護盾 ${lostSp} = 100 × ${expDirectF})`);
 
     // 4. 換彈就緒瞄準完成解除防守
     bSim.t = 16;

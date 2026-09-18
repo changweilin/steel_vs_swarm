@@ -147,6 +147,10 @@ export class BotBrain {
       else if (this._inFight(h) && (this._recentDmg(h) >= (h.maxSp || 0) * 0.35 || this.sim.missiles.some((m) => m.tpid === this.pid))) {
         want = true;
       }
+      // ④ 專業玩家飛行操作考量: 飛行中受擊交戰時舉盾減輕掉高與失衡 (爆炸減至 1/2, 正面減至 1/4)
+      else if (this._fly(h) && this._inFight(h)) {
+        want = true;
+      }
 
       // 高難度(elite)微操: 裝填完成且目標已在準星範圍準備射擊時，主動放下護盾開火
       if (this.diff.elite && target && (h.reloadUntil?.light || 0) <= this.sim.t && this.sim.t >= this._aimAt) {

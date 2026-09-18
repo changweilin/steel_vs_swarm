@@ -13,7 +13,7 @@ import {
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur, VISION_BLIND,
   weaponMaxHoriz, inWeaponRange,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
-  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, worldCeilY, edgeWallInsetM,
+  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
@@ -8477,7 +8477,8 @@ export class BattleClient {
     this._airSink = (this._airSink || 0) + airSinkM(dmg);
     this._airSinkV = this._airSink / FLIGHT.SINK_S;
     const t = now ?? (typeof performance !== 'undefined' ? performance.now() / 1000 : 0);
-    this._liftLockUntil = Math.max(this._liftLockUntil || 0, t + FLIGHT.HIT_LOCK_S);
+    const defF = (this.defending && (this.sp || 0) > 0) ? SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F : 1;
+    this._liftLockUntil = Math.max(this._liftLockUntil || 0, t + FLIGHT.HIT_LOCK_S * defF);
   }
 
   // ---------------- 玩家移動 ----------------

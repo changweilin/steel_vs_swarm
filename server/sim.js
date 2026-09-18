@@ -13,6 +13,7 @@ import {
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
   ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND, ULT_CAST_S,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
+  shieldDefKindFactor, balanceMul,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
@@ -2129,10 +2130,13 @@ export class BattleSim {
     return e.kind === 'drone' || (e.kind === 'morph' && (e.y || 0) > MORPH.GROUND_Y) || (e.y || 0) >= GAME.AA_MIN_ALT;
   }
 
-  /** 飛行機體受擊失衡戳記(2026-09-01 使用者需求:跌落到穩住期間進入失衡狀態) */
-  _stampUnbal(t) {
+  /** 飛行機體受擊失衡戳記(2026-09-01 使用者需求:跌落到穩住期間進入失衡狀態;持盾減輕失衡) */
+  _stampUnbal(t, factor = 1) {
     if (!this._isFlyingHero(t)) return;
-    t.unbalUntil = Math.max(t.unbalUntil || 0, this.t + FLIGHT.UNBAL_S);
+    const f = t._unbalFactor ?? factor;
+    t._unbalFactor = null;
+    const dur = FLIGHT.UNBAL_S * Math.max(0.1, f);
+    t.unbalUntil = Math.max(t.unbalUntil || 0, this.t + dur);
   }
 
   /** 這台機體當下是否處於失衡狀態? */
@@ -5167,8 +5171,8 @@ export class BattleSim {
     const sx = t.x + fx * hr, sz = t.z + fz * hr;
 
     const boosted = (t.shieldDefBoostUntil || 0) > this.t;
-    const blastF = boosted ? SHIELD_DEFENSE.BOOST_BLAST_F : SHIELD_DEFENSE.BLAST_F;
-    const directF = boosted ? SHIELD_DEFENSE.BOOST_DIRECT_F : SHIELD_DEFENSE.DIRECT_F;
+    const blastF = shieldDefKindFactor(t.kind, true, boosted);
+    const directF = shieldDefKindFactor(t.kind, false, boosted);
     const arc = (t.shieldExpandUntil || 0) > this.t ? SHIELD_DEFENSE.EXPAND_ARC : SHIELD_DEFENSE.FRONT_ARC;
 
     const isBlast = aoeClass(wd) === 'blast' || (hitCtx && hitCtx.blast);
@@ -5287,12 +5291,19 @@ export class BattleSim {
       dmg *= this._buffMul(t, 'dmgTaken') * fluidFactor(wet);   // 複合裝甲詞綴 / 護盾招式 / 流體沉浸減傷(水域 1/2, 沼澤 1/4)
       t.lastHitAt = this.t;                  // 進入戰鬥:護盾回復重新計時
       this._stampSup(t, by);                 // 高地壓制:站得越高、挨這一發之後越打不準/閃不掉/跑不動
-      this._stampUnbal(t);                   // 飛行受擊失衡:跌落到穩住期間命中/暴擊減半、飛行動力鎖定
-      this._breakOnHit(t);                   // 「挨一發就結束」的招式(t02 超載)在此撤銷
-      this._interruptCast(t);                // 詠唱中受擊:強制立即施展 (t/T)^2 效果(2026-08-22)
-      // 防守姿態護盾減傷: 磁力歸零時無法生成護盾
+      // 防守姿態護盾減傷: 磁力歸零時無法生成護盾 (機甲 40/20%, 無人機 50/25%, 變形者 60/30%)
       const defFactor = this._shieldDefFactor(t, by, wd, hitCtx);
       if (defFactor < 1) dmg *= defFactor;
+      // 飛行受擊失衡: 跌落到穩住期間命中/暴擊減半、飛行動力鎖定
+      // 飛行時護盾格檔可減輕失衡效果 (爆炸傷害減輕至 1/2、正面抵擋減輕至 1/4)
+      const isBlast = aoeClass(wd) === 'blast' || (hitCtx && hitCtx.blast);
+      const unbalF = defFactor < 1
+        ? (isBlast ? SHIELD_DEFENSE.FLIGHT_UNBAL_BLAST_F : SHIELD_DEFENSE.FLIGHT_UNBAL_DIRECT_F)
+        : 1;
+      t._unbalFactor = unbalF;
+      this._stampUnbal(t);
+      this._breakOnHit(t);                   // 「挨一發就結束」的招式(t02 超載)在此撤銷
+      this._interruptCast(t);                // 詠唱中受擊:強制立即施展 (t/T)^2 效果(2026-08-22)
       // 雙層拆分走 shieldSplit 單一縫(反護盾 / 穿盾 / 反裝甲三型;中性參數 = 舊制的「護盾先吃、
       // 溢出進裝甲」)。護盾層恆不吃護甲減免 —— 能量護盾與裝甲板是兩套防護,這一點沒有改。
       const { toSp: toShield, toHp } = shieldSplit(wd, dmg, t.sp || 0);
@@ -5529,7 +5540,7 @@ export class BattleSim {
    *  2026-08-11 起**不再**乘小兵強化倍率 e.cu:強化已收斂成「只對非玩家生效」,
    *  這隻兵在玩家眼裡與未強化一樣好打 —— 還加成賞金就是白送錢(見 data.CREEP_UPG)。 */
   _bounty(t) {
-    return ECON.BOUNTY[t.kind] || 0;
+    return (ECON.BOUNTY[t.kind] || 0) * balanceMul('bounty');
   }
 
   _kill(t, by) {
@@ -5638,18 +5649,18 @@ export class BattleSim {
       if (t.sq && t.sq.bodies.length > 1) {
         if (this._aliveN(t) === 0) {              // 這一架墜毀 = 三艘全滅 → 追加時間、三架一起延後重生
           t.sq.wipes = (t.sq.wipes || 0) + 1;
-          const rs = r.base + r.perDeath * t.sq.wipes;   // 重生倒數秒數(整隊全滅)
+          const rs = (r.base + r.perDeath * t.sq.wipes) * balanceMul('respawn');   // 重生倒數秒數(整隊全滅)
           for (const b of t.sq.bodies) b.respawnAt = this.t + rs;
           this._deathPenalty(t, rs);              // DOTA 式陣亡罰金:整隊全滅才扣一次(不三重收費)
         } else {
-          t.respawnAt = this.t + r.base;          // 尚有僚機存活 → 個別快速重生,不累加(玩家未真正陣亡,不罰金)
+          t.respawnAt = this.t + r.base * balanceMul('respawn');          // 尚有僚機存活 → 個別快速重生,不累加(玩家未真正陣亡,不罰金)
         }
       } else {
         const sq = t.sq;
         if (sq) sq.deaths = (sq.deaths || 0) + 1;
         t.deaths = (t.deaths || 0) + 1;
         const playerDeaths = sq?.deaths ?? t.deaths;
-        const rs = r.base + r.perDeath * playerDeaths;   // 重生倒數秒數(該玩家單機獨立累計)
+        const rs = (r.base + r.perDeath * playerDeaths) * balanceMul('respawn');   // 重生倒數秒數(該玩家單機獨立累計)
         t.respawnAt = this.t + rs;
         this._deathPenalty(t, rs);
       }
