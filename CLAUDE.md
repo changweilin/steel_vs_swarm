@@ -61,9 +61,7 @@
 | [`seams-weapons.md`](.claude/rules/seams-weapons.md)<br>**§2.1 C 武器判定 / 彈道** | AoE 與彈道分類、「打得到嗎」判定、範圍光暈名冊、閃避範圍、高地壓制、爆風超壓帶、出膛初速與飛行時間、榴彈火控、導引頭機動、射程閘門容差、稜線遮蔽、貫穿演出、機體體積 |
 | [`seams-bots.md`](.claude/rules/seams-bots.md)<br>**§2.1 D 電腦玩家 (Bot)** | 操作節奏、視野判定、戰術策略 (選敵/撤退/打帶跑)、定位分類與學習策略、碰撞量體 |
 | [`seams-terrain.md`](.claude/rules/seams-terrain.md)<br>**§2.1 E 地形 / 結構 / 通行** | 迷你地圖、砲塔與兵線導航、線工切面 (§0-a)、隧道/地下道剖面、道路塗裝與路基整平、坡度移動、經緯度轉世界公尺 (主方位 θ)、立體結構建置、世界邊界牆與緩衝景觀、可通行性 |
-| [`seams-render.md`](.claude/rules/seams-render.md)<br>**§2.1 F 表現層 / 畫面** | 日夜光影、賽璐璐明暗階梯/學派 (toon.js)、後製管線 (postfx.js)、描邊寬度、世界曲面、資訊緩衝與表面群組、雜訊斷筆、斜向轉場 (wipe)、溶入 (dissolve)、軟性物質、波浪倒影、粒子系統、動畫權重向量 |
-| [`seams-world.md`](.claude/rules/seams-world.md)<br>**§2.1 G 世界內容** | 都市計畫、載具/擺件型錄、真凹處與可視角、鳥群生態、地貌拼圖與田埂對齊、農牧四季、聚落場、世界文字語料 (vernacular.js)、建物量體剖面、角色機體檔案格式 (codex.js) |
-| [`seams-ui-net.md`](.claude/rules/seams-ui-net.md)<br>**§2.1 H HUD / 輸入 / UI / 連線** | 連線機制 (netmode.js)、路網中繼 (osmrelay.js)、區網多路徑、操作方式 (ctrlmode.js)、受擊/異常提示、觸控硬化 (touch-dev)、音效層級 (audio.js)、決定性亂數 (rng.js) |
+| [`seams-ui-net.md`](.claude/rules/seams-ui-net.md)<br>**§2.1 F HUD / 輸入 / UI / 連線** | 連線機制 (netmode.js)、路網中繼 (osmrelay.js)、區網多路徑、操作方式 (ctrlmode.js)、受擊/異常提示、觸控硬化 (touch-dev)、音效層級 (audio.js)、決定性亂數 (rng.js) |
 
 ---
 
@@ -115,7 +113,7 @@ npm run story        # 故事書對照台 (埠 8623, --report 列印索引)
 
 | 層級 | 檔案 | 內容概要 |
 |---|---|---|
-| **② 規則層** | [`.claude/rules/seams-*.md`](.claude/rules/) | 8 大單一真相縫詳細規範與常數定義 |
+| **② 規則層** | [`.claude/rules/seams-*.md`](.claude/rules/) | 6 大單一真相縫詳細規範與常數定義 |
 | | [`.claude/rules/antipatterns.md`](.claude/rules/antipatterns.md) | A1~A48 絕對反模式全文 |
 | | [`.claude/rules/verification.md`](.claude/rules/verification.md) | 離線稽核清單、改動對應驗證矩陣與 AI 退化量測 |
 | | [`.claude/rules/retired.md`](.claude/rules/retired.md) | 33 條已退場機制清單 (嚴禁復辟) |

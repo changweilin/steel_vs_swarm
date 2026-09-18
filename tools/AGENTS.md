@@ -2,7 +2,7 @@
 
 > Scope: principles and boundaries only. No methods, no workflows, no commands.
 > Global principles live in root `AGENTS.md`.
-> Full definitions live in `.claude/rules/` (`verification`, `seams-world`).
+> Full definitions live in `.claude/rules/` (`verification`).
 > Nothing in this file restricts skill selection or skill usage.
 
 ## Principle
