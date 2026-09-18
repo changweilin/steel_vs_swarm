@@ -7772,6 +7772,9 @@ export class BattleClient {
       return;
     }
     const idx = slot === 'skill' ? 0 : 1;
+    const lvl = this.abil[slot] || 1;
+    const A = heroAbility(this.ch, slot, lvl);
+    if (!A) return;
     const cdLeft = this.cds[idx] || 0;
     const chgInfo = this.chg?.[idx];
     const readyCharges = chgInfo ? chgInfo[0] : (cdLeft <= 0 ? 1 : 0);
