@@ -6897,10 +6897,10 @@ export class BattleSim {
         const ultMax = e.achg?.ult?.max || 1;
         const skNext = skReady < skMax && e.achg?.skill?.rechargeAt?.length
           ? Math.max(0, Math.round((Math.min(...e.achg.skill.rechargeAt) - this.t) * 10) / 10)
-          : Math.max(0, Math.round(((e.acd.skill || 0) - this.t) * 10) / 10);
+          : Math.max(0, Math.round(((e.acd?.skill || 0) - this.t) * 10) / 10);
         const ultNext = ultReady < ultMax && e.achg?.ult?.rechargeAt?.length
           ? Math.max(0, Math.round((Math.min(...e.achg.ult.rechargeAt) - this.t) * 10) / 10)
-          : Math.max(0, Math.round(((e.acd.ult || 0) - this.t) * 10) / 10);
+          : Math.max(0, Math.round(((e.acd?.ult || 0) - this.t) * 10) / 10);
 
         o.cds = [
           skReady > 0 ? 0 : skNext,

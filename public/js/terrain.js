@@ -1376,7 +1376,7 @@ export async function buildTerrain(cfg, onProgress) {
     for (const p of platforms) {
       const { cx, cz, hw, hd, ry = 0, y } = p;
       const margin = p.margin ?? 0.35;
-      const targetY = p.targetY ?? y;
+      const targetY = p.targetY ?? (p.padT ? y - 0.25 : y);
       const ca = Math.cos(ry), sa = Math.sin(ry);
       const rad = Math.hypot(hw + margin, hd + margin);
       const jMin = Math.max(0, Math.floor((cx - rad - minX) / DXg));

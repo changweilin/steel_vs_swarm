@@ -8473,8 +8473,7 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
 
     const rawTops = [];
     const segData = [];
-    const cutSpan = Math.max(wallThick + 2.0, (terrain.gridM || 8.3) * 1.0);
-    const probeDists = [0.1, wallThick * 0.5, wallThick + 0.2, cutSpan * 0.5, cutSpan];
+    const probeDists = [wallThick * 0.5, wallThick + 0.2];
 
     for (let k = 0; k < nSeg; k++) {
       const tA = k / nSeg, tB = (k + 1) / nSeg;
@@ -8482,15 +8481,15 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
       const smLx = lx0 + (lx1 - lx0) * tMid;
       const smLz = lz0 + (lz1 - lz0) * tMid;
 
-      // 沿法線探測被開挖之天然地形最高切面高程，覆蓋完整切坡高度
+      // 沿法線探測牆背切坡高程，取開挖後實際地表 heightAt，覆蓋完整切坡高度
       let maxCutY = -Infinity;
       for (const d of probeDists) {
         const pLx = smLx + nx * d;
         const pLz = smLz + nz * d;
         const pWx = cx + pLx * ca + pLz * sa;
         const pWz = cz - pLx * sa + pLz * ca;
-        const yNat = terrain.natureAt ? terrain.natureAt(pWx, pWz) : (terrain.heightAt ? terrain.heightAt(pWx, pWz) : dy);
-        if (yNat > maxCutY) maxCutY = yNat;
+        const yCur = terrain.heightAt ? terrain.heightAt(pWx, pWz) : (terrain.natureAt ? terrain.natureAt(pWx, pWz) : dy);
+        if (yCur > maxCutY) maxCutY = yCur;
       }
       rawTops.push(maxCutY);
 
@@ -8512,36 +8511,59 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
     for (let k = 0; k < nSeg; k++) {
       const origY = smoothTops[k];
       if (origY > dy + 0.15) {
-        // 原地表高於平台頂面 -> 此段為挖方切坡，建立完整覆蓋切面之擋土牆
+        // 原地表高於平台頂面 -> 此段為挖方切坡，建立完整覆蓋切面之傾斜擋土牆
         const wallTop = Math.max(origY + 0.35, dy + 0.8);
         const { wallWx, wallWz } = segData[k];
         // 牆底深入台底與地表之下，完全消除懸空與漏底縫隙
         const segBot = botY - 0.5;
         const wallH = Math.max(0.2, wallTop - segBot);
+        const slopeRatio = 0.35;
+        const leanX = wallH * slopeRatio;
 
-        const wMesh = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallH, segL + 0.04), wallMat);
-        if (wMesh.geometry?.attributes?.uv) {
-          const uvs = wMesh.geometry.attributes.uv;
+        const wGeo = new THREE.BoxGeometry(wallThick, wallH, segL + 0.04);
+        wGeo.leanX = leanX;
+        if (wGeo.attributes?.position) {
+          const pos = wGeo.attributes.position;
+          for (let pi = 0; pi < pos.count; pi++) {
+            const normY = (pos.getY(pi) + wallH * 0.5) / wallH;
+            pos.setX(pi, pos.getX(pi) + normY * leanX);
+          }
+          pos.needsUpdate = true;
+          if (typeof wGeo.computeVertexNormals === 'function') wGeo.computeVertexNormals();
+        }
+        if (wGeo.attributes?.uv) {
+          const uvs = wGeo.attributes.uv;
           const uRep = Math.max(1, (segL + 0.04) / 2.0);
-          const vRep = Math.max(1, wallH / 2.0);
+          const vRep = Math.max(1, Math.hypot(wallH, leanX) / 2.0);
           for (let ui = 0; ui < uvs.count; ui++) {
             uvs.setXY(ui, uvs.getX(ui) * uRep, uvs.getY(ui) * vRep);
           }
           uvs.needsUpdate = true;
         }
+        const wMesh = new THREE.Mesh(wGeo, wallMat);
         wMesh.position.set(wallWx, segBot + wallH * 0.5, wallWz);
         wMesh.rotation.y = wallYaw;
         group.add(wMesh);
 
-        // 擋土牆頂部壓頂防護 (Coping Cap)
+        // 擋土牆頂部壓頂防護 (Coping Cap) - 隨牆面斜率向山體退縮對齊頂面
         const capH = 0.25;
         const capThick = wallThick + 0.28;
         const capMesh = new THREE.Mesh(new THREE.BoxGeometry(capThick, capH, segL + 0.04), capMat);
-        capMesh.position.set(wallWx, wallTop + capH * 0.5, wallWz);
+        const nWx = nx * ca + nz * sa;
+        const nWz = -nx * sa + nz * ca;
+        const capWx = wallWx + nWx * leanX;
+        const capWz = wallWz + nWz * leanX;
+        capMesh.position.set(capWx, wallTop + capH * 0.5, capWz);
         capMesh.rotation.y = wallYaw;
         group.add(capMesh);
 
-        cols.push({ x: wallWx, z: wallWz, y: segBot, r: wallThick * 0.75, h: wallH });
+        cols.push({
+          x: wallWx + nWx * (leanX * 0.5),
+          z: wallWz + nWz * (leanX * 0.5),
+          y: segBot,
+          r: wallThick * 0.75 + leanX * 0.5,
+          h: wallH,
+        });
         activeSegs.push({ k, wallTop, segBot });
       }
     }
@@ -8557,10 +8579,10 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
 
   // 四個轉角柱 (Corner Pillars): 轉角兩側任一側有擋土牆即閉合轉角空隙，消除四角破洞
   const corners = [
-    { lx:  hw, lz: -hd, ePrev: 0, eNext: 1, sx:  1, sz: -1 }, // Back-Right
-    { lx:  hw, lz:  hd, ePrev: 1, eNext: 2, sx:  1, sz:  1 }, // Right-Front
-    { lx: -hw, lz:  hd, ePrev: 2, eNext: 3, sx: -1, sz:  1 }, // Front-Left
-    { lx: -hw, lz: -hd, ePrev: 3, eNext: 0, sx: -1, sz: -1 }, // Left-Back
+    { lx:  hw, lz: -hd, ePrev: 0, eNext: 1, sx:  1, sz: -1, prevNx: 0, prevNz: -1, nextNx: 1, nextNz: 0 }, // Back-Right
+    { lx:  hw, lz:  hd, ePrev: 1, eNext: 2, sx:  1, sz:  1, prevNx: 1, prevNz: 0, nextNx: 0, nextNz: 1 }, // Right-Front
+    { lx: -hw, lz:  hd, ePrev: 2, eNext: 3, sx: -1, sz:  1, prevNx: 0, prevNz: 1, nextNx: -1, nextNz: 0 }, // Front-Left
+    { lx: -hw, lz: -hd, ePrev: 3, eNext: 0, sx: -1, sz: -1, prevNx: -1, prevNz: 0, nextNx: 0, nextNz: -1 }, // Left-Back
   ];
 
   for (const c of corners) {
@@ -8583,16 +8605,42 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
       const bot = Math.min(...botCandidates);
       const h = Math.max(0.2, top - bot);
 
-      const colMesh = new THREE.Mesh(new THREE.BoxGeometry(wallThick, h, wallThick), wallMat);
-      if (colMesh.geometry?.attributes?.uv) {
-        const uvs = colMesh.geometry.attributes.uv;
+      const slopeRatio = 0.35;
+      const cornerLean = h * slopeRatio;
+      let cLeanX = 0, cLeanZ = 0;
+      if (prev?.hasEnd && next?.hasStart) {
+        cLeanX = c.sx * 0.707 * cornerLean;
+        cLeanZ = c.sz * 0.707 * cornerLean;
+      } else if (prev?.hasEnd) {
+        cLeanX = c.prevNx * cornerLean;
+        cLeanZ = c.prevNz * cornerLean;
+      } else {
+        cLeanX = c.nextNx * cornerLean;
+        cLeanZ = c.nextNz * cornerLean;
+      }
+
+      const colGeo = new THREE.BoxGeometry(wallThick, h, wallThick);
+      colGeo.leanX = Math.hypot(cLeanX, cLeanZ);
+      if (colGeo.attributes?.position) {
+        const pos = colGeo.attributes.position;
+        for (let pi = 0; pi < pos.count; pi++) {
+          const normY = (pos.getY(pi) + h * 0.5) / h;
+          pos.setX(pi, pos.getX(pi) + normY * cLeanX);
+          pos.setZ(pi, pos.getZ(pi) + normY * cLeanZ);
+        }
+        pos.needsUpdate = true;
+        if (typeof colGeo.computeVertexNormals === 'function') colGeo.computeVertexNormals();
+      }
+      if (colGeo.attributes?.uv) {
+        const uvs = colGeo.attributes.uv;
         const uRep = Math.max(1, wallThick / 2.0);
-        const vRep = Math.max(1, h / 2.0);
+        const vRep = Math.max(1, Math.hypot(h, cornerLean) / 2.0);
         for (let ui = 0; ui < uvs.count; ui++) {
           uvs.setXY(ui, uvs.getX(ui) * uRep, uvs.getY(ui) * vRep);
         }
         uvs.needsUpdate = true;
       }
+      const colMesh = new THREE.Mesh(colGeo, wallMat);
       colMesh.position.set(colWx, bot + h * 0.5, colWz);
       colMesh.rotation.y = ry;
       group.add(colMesh);
@@ -8600,11 +8648,19 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
       const capH = 0.25;
       const capThick = wallThick + 0.28;
       const capMesh = new THREE.Mesh(new THREE.BoxGeometry(capThick, capH, capThick), capMat);
-      capMesh.position.set(colWx, top + capH * 0.5, colWz);
+      const cLeanWx = cLeanX * ca + cLeanZ * sa;
+      const cLeanWz = -cLeanX * sa + cLeanZ * ca;
+      capMesh.position.set(colWx + cLeanWx, top + capH * 0.5, colWz + cLeanWz);
       capMesh.rotation.y = ry;
       group.add(capMesh);
 
-      cols.push({ x: colWx, z: colWz, y: bot, r: wallThick * 0.75, h });
+      cols.push({
+        x: colWx + cLeanWx * 0.5,
+        z: colWz + cLeanWz * 0.5,
+        y: bot,
+        r: wallThick * 0.75 + cornerLean * 0.5,
+        h,
+      });
     }
   }
 
@@ -10535,6 +10591,46 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
     if (gradeRuns.length) terrain.gradeRoadBeds(gradeRuns);
   }
+  // ---- 主堡與砲塔平台地形切方開挖 ----
+  // MUST 排在道路整平之後、地物散布與植被之前(高度在此定案，下游全部取樣開挖後地形)。
+  const slopePlatformsToCarve = [];
+  const ROAD_LIFT = 0.45;
+  for (const base of basesW) {
+    if (terrainEnvCode(terrain, base.x, base.z) === 0) {
+      base.roadY = terrain.heightAt(base.x, base.z) + ROAD_LIFT;
+      slopePlatformsToCarve.push({
+        cx: base.x, cz: base.z, hw: BASE_PAD_R, hd: BASE_PAD_R, ry: 0,
+        y: base.roadY, padT: BASE_PAD_T, targetY: base.roadY - 0.25,
+        padKind: 'base', margin: 2.2, slopeRatio: 0.35,
+      });
+    }
+  }
+
+  const towerLanes = (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center)));
+  for (const laneSites of solveTowerSites(towerLanes, mapArg(cfg))) {
+    for (const site of laneSites) {
+      for (const cp of siteCPs(site)) {
+        cp.roadY = terrain.heightAt(cp.x, cp.z) + ROAD_LIFT;
+        for (const s of [-1, 1]) {
+          const tx = cp.x + cp.nx * GAME.TOWER_SIDE_OFF * s;
+          const tz = cp.z + cp.nz * GAME.TOWER_SIDE_OFF * s;
+          if (terrainEnvCode(terrain, tx, tz) === 0) {
+            const padR = Math.min(TOWER_PAD_AXIS * 0.75, GAME.TOWER_SIDE_OFF - 5.5);
+            const ry = Math.atan2(cp.nx, cp.nz);
+            slopePlatformsToCarve.push({
+              cx: tx, cz: tz, hw: padR, hd: padR, ry,
+              y: cp.roadY, padT: TOWER_PAD_T, targetY: cp.roadY - 0.25,
+              padKind: 'tower', margin: 1.4, slopeRatio: 0.35,
+            });
+          }
+        }
+      }
+    }
+  }
+  if (typeof terrain.carvePlatforms === 'function' && slopePlatformsToCarve.length) {
+    terrain.carvePlatforms(slopePlatformsToCarve);
+  }
+
   // 立體交通走廊:淨空(blocked)+ 上傳伺服器用小段(gradeCorridors);開挖後才算(高度已定案)。
   // 通過水域或沼澤的道路一律升橋，登記橋下淨空與走廊。
   const gradeCorridors = [
@@ -11357,9 +11453,25 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       // 神木不濾:已進 blocked(建物 areaFree 會避開),且登記了碰撞柱,拔掉會留隱形牆
       if (GIANT_DEFS[type]) continue;
       const cr = VEG_FOOT_R[type] ?? 1;
-      const kept = items[type].filter((it) =>
-        Math.abs(it.y - terrain.heightAt(it.x, it.z)) > 4 || !hitsBld(it.x, it.z, cr * it.s));
+      const kept = items[type].filter((it) => {
+        const pad = cr * it.s;
+        if (hitsBld(it.x, it.z, pad)) return false;
+        for (const p of slopePlatformsToCarve) {
+          const dx = it.x - p.cx, dz = it.z - p.cz;
+          const ca = Math.cos(p.ry), sa = Math.sin(p.ry);
+          const lx = dx * ca - dz * sa;
+          const lz = dx * sa + dz * ca;
+          const cutSpan = (p.padKind === 'base' ? 2.2 : 1.4) + 0.5;
+          if (Math.abs(lx) <= p.hw + cutSpan + pad && Math.abs(lz) <= p.hd + cutSpan + pad) {
+            return false;
+          }
+        }
+        return true;
+      });
       placed -= items[type].length - kept.length;
+      for (const it of kept) {
+        it.y = terrain.heightAt(it.x, it.z);
+      }
       items[type] = kept;
     }
   }
@@ -12202,47 +12314,13 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
   }
 
-  // 主堡與砲塔平台: 登記足跡避免地被層 (草皮/碎石/雪斑) 覆蓋平台，並切方開挖斜坡地形
-  const slopePlatformsToCarve = [];
-  const ROAD_LIFT = 0.45;
-  for (const base of basesW) {
-    if (terrainEnvCode(terrain, base.x, base.z) === 0) {
-      base.roadY = terrain.heightAt(base.x, base.z) + ROAD_LIFT;
-      slopePlatformsToCarve.push({
-        cx: base.x, cz: base.z, hw: BASE_PAD_R, hd: BASE_PAD_R, ry: 0, y: base.roadY, padT: BASE_PAD_T,
-        padKind: 'base', margin: 0.35,
-      });
-      reservedFootprints.push({
-        x: base.x, z: base.z, hw: BASE_PAD_R, hd: BASE_PAD_R, ry: 0, r: Math.hypot(BASE_PAD_R, BASE_PAD_R),
-      });
-    }
-  }
-
-  const towerLanes = (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center)));
-  for (const laneSites of solveTowerSites(towerLanes, mapArg(cfg))) {
-    for (const site of laneSites) {
-      for (const cp of siteCPs(site)) {
-        cp.roadY = terrain.heightAt(cp.x, cp.z) + ROAD_LIFT;
-        for (const s of [-1, 1]) {
-          const tx = cp.x + cp.nx * GAME.TOWER_SIDE_OFF * s;
-          const tz = cp.z + cp.nz * GAME.TOWER_SIDE_OFF * s;
-          if (terrainEnvCode(terrain, tx, tz) === 0) {
-            const padR = Math.min(TOWER_PAD_AXIS * 0.75, GAME.TOWER_SIDE_OFF - 5.5);
-            const ry = Math.atan2(cp.nx, cp.nz);
-            slopePlatformsToCarve.push({
-              cx: tx, cz: tz, hw: padR, hd: padR, ry, y: cp.roadY, padT: TOWER_PAD_T,
-              padKind: 'tower', margin: 0.35,
-            });
-            reservedFootprints.push({
-              x: tx, z: tz, hw: padR, hd: padR, ry, r: Math.hypot(padR, padR),
-            });
-          }
-        }
-      }
-    }
-  }
-  if (typeof terrain.carvePlatforms === 'function' && slopePlatformsToCarve.length) {
-    terrain.carvePlatforms(slopePlatformsToCarve);
+  // 主堡與砲塔平台: 登記足跡避免地被層 (草皮/碎石/雪斑) 覆蓋平台與擋土牆
+  for (const p of slopePlatformsToCarve) {
+    const cutSpan = (p.padKind === 'base' ? 2.2 : 1.4) + 0.5;
+    reservedFootprints.push({
+      x: p.cx, z: p.cz, hw: p.hw + cutSpan, hd: p.hd + cutSpan, ry: p.ry,
+      r: Math.hypot(p.hw + cutSpan, p.hd + cutSpan),
+    });
   }
 
   const ground = buildGroundCover(group, terrain, {

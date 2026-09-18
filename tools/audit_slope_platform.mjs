@@ -26,7 +26,19 @@ function mockThree() {
     }
   }
   class MockBoxGeometry {
-    constructor(w, h, d) { this.type = 'BoxGeometry'; this.w = w; this.h = h; this.d = d; }
+    constructor(w, h, d) {
+      this.type = 'BoxGeometry'; this.w = w; this.h = h; this.d = d;
+      this.attributes = {
+        position: {
+          count: 8,
+          getY: (i) => (i < 4 ? -h * 0.5 : h * 0.5),
+          getX: () => 0,
+          getZ: () => 0,
+          setX: () => {},
+          setZ: () => {},
+        },
+      };
+    }
   }
   class MockCylinderGeometry {
     constructor(rt, rb, h, seg) { this.type = 'CylinderGeometry'; this.rt = rt; this.rb = rb; this.h = h; this.seg = seg; }
@@ -112,13 +124,13 @@ console.log('Ⅰ 地形切方開挖稽核 (carvePlatforms)');
   // -x 側遠處 (x < -10) 應該完全保持不變
   const origFarLeft = heights[5 * N + 0]; // x = -45
   carvePlatforms([{
-    cx: 0, cz: 0, hw: 5, hd: 5, ry: 0, y: 10, margin: 0.8,
+    cx: 0, cz: 0, hw: 5, hd: 5, ry: 0, y: 10, margin: 0.8, padT: 1.0,
   }]);
 
   ok(syncCount === 1, `有開挖到地形節點時觸發 syncHeights: ${syncCount}`);
   // 檢查中心點與右側開挖
   const kCenter = 5 * N + 5; // x = 5
-  ok(heights[kCenter] <= 10.00001, `平台範圍內高地形被切方至兵線高度 10.0: ${heights[kCenter]}`);
+  ok(heights[kCenter] <= 9.75001, `平台開挖底面沉降至 9.75m (消除與 10.0m 承台共面 Z-fighting): ${heights[kCenter]}`);
   ok(heights[5 * N + 0] === origFarLeft, `平台範圍外遠處地形保持不變: ${heights[5 * N + 0]}`);
 }
 
@@ -159,6 +171,10 @@ console.log('Ⅱ 擋土牆生成稽核 (buildPlatformSlopeFeatures - Retaining W
   const wallBodies = wallBoxes.filter((c) => c.geometry.h > 0.25);
   const allEmbedded = wallBodies.every((c) => c.position.y - c.geometry.h * 0.5 < 9.0);
   ok(allEmbedded, '擋土牆底部深入地表與台底，消滅懸空與漏底縫隙');
+
+  // 檢查擋土牆本體具備斜坡開挖仰斜率 (Sloped Batter)
+  const slopedWalls = wallBodies.filter((c) => c.geometry?.leanX > 0);
+  ok(slopedWalls.length > 0, `擋土牆本體具備斜坡開挖仰斜率 (Sloped Batter): ${slopedWalls.length}`);
 
   // 檢查切坡相鄰邊轉角柱 (Corner Pillars) 閉合
   const cornerPosts = wallBodies.filter((c) => Math.abs(c.geometry.w - c.geometry.d) < 1e-4);
