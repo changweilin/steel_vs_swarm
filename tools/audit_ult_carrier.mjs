@@ -213,6 +213,9 @@ sec('Ⅱ 單一縫(原文)');
     '_fireHoldAbility 不再有機種分派表(機種絕招退場 ⇒ A22 的分派縫一併退場)');
   ok(count(G, /abilHoldSlot\(/g) === 1,
     `分流只有一個消費端(實得 ${count(G, /abilHoldSlot\(/g)});MUST NOT 在觸控鈕/鍵盤各判一次`);
+  const ca = grabMethod(G, '_castAbility');
+  ok(/heroAbility\(this\.ch,\s*slot/.test(ca),
+    'game._castAbility: 解析當前招式 A = heroAbility(this.ch, slot, lvl)');
   // HUD:機種絕招三格整組收起、觸控招式鈕鏡射 ult CD
   const hud = grabMethod(G, '_weaponHud');
   ok(!/kami:|decoy:|hyper:/.test(strip(hud)), '_weaponHud 不再有 kami / decoy / hyper 三格');
