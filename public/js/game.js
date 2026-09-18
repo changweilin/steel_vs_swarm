@@ -4796,6 +4796,7 @@ export class BattleClient {
         const up = new THREE.Vector3(0, 1, 0);
         const pcol = ev.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff;
         const heavy = ev.slot !== 'light';   // 電漿重武器 = 明顯焰舌;散彈輕武器 = 細一號
+        const bar = !!ev.bar;
         const wF = 1, kMax = 2;
         this._muzzleBurst(from, heavy, ev.side);
         // 他人的離子吐息(與自機 _fanBlast 同一支 ionBreath —— 共用視覺入口,不另寫一套)
