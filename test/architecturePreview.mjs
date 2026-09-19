@@ -184,7 +184,9 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     <button id="tab-btn-plant" class="cat-tab-btn" type="button" data-tab="plant">🌲 植物</button>
     <button id="tab-btn-vehicle" class="cat-tab-btn" type="button" data-tab="vehicle">🚗 車輛</button>
     <button id="tab-btn-vessel" class="cat-tab-btn" type="button" data-tab="vessel">🚢 船隻</button>
-    <button id="tab-btn-env" class="cat-tab-btn" type="button" data-tab="env">🌐 環境與邊界</button>
+    <button id="tab-btn-industry" class="cat-tab-btn" type="button" data-tab="industry">🏭 產業設施</button>
+    <button id="tab-btn-ice" class="cat-tab-btn" type="button" data-tab="ice">❄️ 冰雪</button>
+    <button id="tab-btn-env" class="cat-tab-btn" type="button" data-tab="env">🌐 邊界構造</button>
   </div>
   <div class="env-sim-bar">
     <div class="env-sim-group">
@@ -330,6 +332,9 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
             <optgroup label="人造石材 / 歷史古蹟">
               <option value="monument">地區古蹟 (Monument)</option>
               <option value="ruins">廢棄歷史遺跡 (Ancient Ruins)</option>
+            </optgroup>
+            <optgroup label="場景獨立物件">
+              <option value="boulder">巨石巨礫 (Boulder · 場景)</option>
             </optgroup>
           </select>
         </div>
@@ -481,6 +486,12 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
             <option value="single">單車細節檢驗 (Single Vehicle)</option>
           </select>
         </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">場景散布尺寸</label>
+          <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:6px 0; cursor:pointer;">
+            <input type="checkbox" id="chk-veh-scene-fit" style="accent-color:#2563eb;"> 套用場景汽車包絡 4.8×1.8×2.2m
+          </label>
+        </div>
       </div>
       <div id="veh-coupling-box" style="display:none; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px;">
         <div style="display:flex; gap: 10px; align-items:center; flex-wrap:wrap; font-size: 11px; font-weight: 600;">
@@ -596,21 +607,141 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     </div>
   </div>
 
+  <!-- 產業設施控制面板 -->
+  <div id="panel-industry" class="cat-panel" style="display: none;">
+    <div class="dim-panel">
+      <div class="dim-title">
+        <span>場景建物與產業設施簡模</span>
+        <span class="badge" id="industry-info-badge">住宅 1 · 高樓 2 · 工業 3 · 採掘 2 · 農牧 2</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">設施款式</label>
+          <select id="industry-kind" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all" selected>全部款式輪播 (All Kinds)</option>
+            <optgroup label="住宅 / 高樓">
+              <option value="house">住家 (House)</option>
+              <option value="skyscraper">摩天樓 (Skyscraper)</option>
+              <option value="skyfall">倒塌高樓 (Fallen Tower)</option>
+            </optgroup>
+            <optgroup label="工業設施">
+              <option value="factory">工廠 (Factory)</option>
+              <option value="powerplant">電廠 (Power Plant)</option>
+              <option value="incinerator">焚化廠 (Incinerator)</option>
+            </optgroup>
+            <optgroup label="採掘設施">
+              <option value="mine">礦場 (Mine)</option>
+              <option value="oilfield">油田 (Oilfield)</option>
+            </optgroup>
+            <optgroup label="農牧設施">
+              <option value="greenhouse">溫室 (Greenhouse)</option>
+              <option value="ranch">牧場 (Ranch)</option>
+            </optgroup>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
+          <select id="industry-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單體細節檢驗 (Single Object)</option>
+            <option value="catalog">全分類目錄陳列 (All Catalog)</option>
+          </select>
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="btn-industry-generate" class="btn-generate">⚡ 生成設施陣列</button>
+        <button id="btn-industry-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
+        <div class="sample-control">
+          <span class="sample-label">取樣規模:</span>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-industry" value="4" min="1" max="20"></label>
+          <span>×</span>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-industry" value="4" min="1" max="20"></label>
+        </div>
+        <div class="seed-control">
+          <label for="input-industry-seed">種子碼</label>
+          <input type="number" id="input-industry-seed" value="42" min="1" max="999999">
+        </div>
+        <div class="seed-mode-control">
+          <span class="sample-label">生成種子規則:</span>
+          <select id="select-seed-mode-industry" class="seed-mode-select">
+            <option value="fixed">固定種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 冰雪控制面板 -->
+  <div id="panel-ice" class="cat-panel" style="display: none;">
+    <div class="dim-panel">
+      <div class="dim-title">
+        <span>浮冰與冰山 · 水線與種子</span>
+        <span class="badge" id="ice-info-badge">海冰 1 · 冰川冰 1 · 透光水面</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">冰體款式</label>
+          <select id="ice-kind" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all" selected>全部款式輪播 (All Kinds)</option>
+            <option value="icefloe">浮冰群 (Sea Ice Floe)</option>
+            <option value="iceberg">極地冰山 (Glacial Iceberg)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
+          <select id="ice-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單體細節檢驗 (Single Object)</option>
+            <option value="catalog">全分類目錄陳列 (All Catalog)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">水面環境</label>
+          <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:6px 0; cursor:pointer;">
+            <input type="checkbox" id="chk-ice-water" checked style="accent-color:#2563eb;"> 顯示透光水面
+          </label>
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="btn-ice-generate" class="btn-generate">⚡ 生成冰體陣列</button>
+        <button id="btn-ice-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
+        <div class="sample-control">
+          <span class="sample-label">取樣規模:</span>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-ice" value="4" min="1" max="20"></label>
+          <span>×</span>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-ice" value="4" min="1" max="20"></label>
+        </div>
+        <div class="seed-control">
+          <label for="input-ice-seed">種子碼</label>
+          <input type="number" id="input-ice-seed" value="42" min="1" max="999999">
+        </div>
+        <div class="seed-mode-control">
+          <span class="sample-label">生成種子規則:</span>
+          <select id="select-seed-mode-ice" class="seed-mode-select">
+            <option value="fixed">固定種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 環境與邊界控制面板 -->
   <div id="panel-env" class="cat-panel" style="display: none;">
     <div class="dim-panel">
       <div class="dim-title">
-        <span>場景共用環境物件 · 邊界障礙 · 冰體</span>
-        <span class="badge" id="env-info-badge">17 種單體 · 56 款邊界障礙 · 連續陡坡</span>
+        <span>邊界固定構造 · 連續陡坡接縫</span>
+        <span class="badge" id="env-info-badge">56 款邊界障礙 · 連續陡坡</span>
       </div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">大分類模式</label>
           <select id="env-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="all">全部大分類輪播 (All Modes)</option>
-            <option value="scene" selected>場景獨立物件 (Scene Objects)</option>
-            <option value="ice">浮冰與冰山 (Sea Ice & Iceberg)</option>
-            <option value="edge">邊界固定構造 (Edge Boundaries)</option>
+            <option value="all">全部邊界輪播 (All Boundaries)</option>
+            <option value="edge" selected>邊界固定構造 (Edge Boundaries)</option>
             <option value="slope">連續陡坡接縫 (Slope Boundary Joint)</option>
             <option value="mid">緩坡障礙帶 (Mid Slope)</option>
             <option value="flat">平地障礙帶 (Flat Ground)</option>
@@ -704,6 +835,10 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
               <option value="mangroveGrey">海茄苳紅樹 (Mangrove · 呼吸根潮灘)</option>
               <option value="coconut">可可椰子 (Coconut · 羽狀葉椰果)</option>
               <option value="baobab">猴麵包樹 (Baobab · 膨大幹)</option>
+            </optgroup>
+            <optgroup label="場景獨立物件">
+              <option value="gianttree">神木巨木 (Scene Giant Tree)</option>
+              <option value="fallentree">倒木橫幹 (Scene Fallen Tree)</option>
             </optgroup>
           </select>
         </div>
@@ -840,7 +975,7 @@ import { buildGeneratedVesselMesh } from '/js/vesselModels.js';
 import { disposeTree } from '/js/toon.js';
 
 // 環境物件與邊界生成模組
-import { ENVIRONMENT_OBJECTS, environmentParts } from '/js/environmentParts.js';
+import { environmentParts } from '/js/environmentParts.js';
 import { WALL_KINDS, wallParts } from '/js/edgewall.js';
 import { SLOPE_BOUNDARIES, buildSlopeBoundary } from '/js/edgeSlope.js';
 
@@ -999,6 +1134,12 @@ scene.add(vesselGroup);
 let envGroup = new THREE.Group();
 scene.add(envGroup);
 
+let industryGroup = new THREE.Group();
+scene.add(industryGroup);
+
+let iceGroup = new THREE.Group();
+scene.add(iceGroup);
+
 const waterMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(3200, 3200),
   new THREE.MeshStandardMaterial({
@@ -1093,7 +1234,7 @@ function getActiveDimItems(dimKey) {
   return list.length > 0 ? list : col.items;
 }
 
-let currentTab = 'arch'; // 'arch' | 'geology' | 'plant'
+let currentTab = 'arch'; // 'arch' | 'geology' | 'plant' | 'vehicle' | 'vessel' | 'industry' | 'ice' | 'env'
 let currentMode = 'matrix'; // 'matrix' | 'variants' | 'random'
 let selectedDims = ['func', 'style'];
 const clickableObjects = [];
@@ -1157,6 +1298,14 @@ function clearScene() {
   scene.remove(envGroup);
   envGroup = new THREE.Group();
   scene.add(envGroup);
+
+  scene.remove(industryGroup);
+  industryGroup = new THREE.Group();
+  scene.add(industryGroup);
+
+  scene.remove(iceGroup);
+  iceGroup = new THREE.Group();
+  scene.add(iceGroup);
 
   labels.length = 0;
   labelContainer.innerHTML = '';
@@ -1698,8 +1847,67 @@ function pickAutoGeologyType(seed, input) {
   return dist[dist.length - 1].type;
 }
 
+function createSceneBoulderMesh(seed, posX = 0, posZ = 0) {
+  try {
+    const season = document.querySelector('#sim-season')?.value || 'summer';
+    const rows = environmentParts('boulder', { seed, season });
+    const mesh = assembleEnvironmentParts(rows, false);
+    mesh.position.set(posX, 0, posZ);
+
+    const bounds3 = new THREE.Box3().setFromObject(mesh);
+    const size3 = bounds3.getSize(new THREE.Vector3());
+    const entry = {
+      name: '巨石巨礫',
+      bounds: { size: [size3.x, size3.y, size3.z], min: [0, 0, 0], max: [size3.x, size3.y, size3.z] },
+      parts: rows,
+    };
+    const spec = { group: '場景岩石', name: '巨石巨礫' };
+
+    const r = Math.max(size3.x, size3.y, size3.z);
+    const hitGeo = new THREE.BoxGeometry(r * 1.1, size3.y, r * 1.1);
+    hitGeo.translate(0, size3.y / 2, 0);
+    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+    const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+    hitMesh.position.set(posX, 0, posZ);
+
+    const meta = {
+      type: 'boulder',
+      spec,
+      seed,
+      entry,
+      input: { sceneKind: true },
+      posX, posZ,
+      bounds: entry.bounds,
+      name: entry.name,
+      isAncient: false,
+      sceneKind: true,
+    };
+
+    mesh.userData.geologyMeta = meta;
+    hitMesh.userData.geologyMeta = meta;
+    clickableObjects.push(hitMesh);
+    geologyGroup.add(mesh);
+    geologyGroup.add(hitMesh);
+
+    const badge = document.createElement('div');
+    badge.className = 'badge-label';
+    badge.innerHTML = '<span class="cat">【' + entry.name + '】</span>場景岩石 · <span class="height">' + size3.y.toFixed(1) + 'm</span>';
+    labelContainer.append(badge);
+    const labelObj = { element: badge, point: new THREE.Vector3(posX, size3.y + 1.5, posZ) };
+    labels.push(labelObj);
+
+    return { mesh, hitMesh, meta, entry, labelObj };
+  } catch (err) {
+    console.error('場景巨礫生成失敗:', err);
+    return null;
+  }
+}
+
 function createGeologyMesh(type, seed, input, posX = 0, posZ = 0) {
   try {
+    if (type === 'boulder') {
+      return createSceneBoulderMesh(seed, posX, posZ);
+    }
     let actualType = type;
     if (type === 'auto') {
       actualType = pickAutoGeologyType(seed, input);
@@ -1787,11 +1995,11 @@ function buildGeologyMode() {
   const ancientBox = document.querySelector('#geo-ancient-box');
   if (ancientBox) ancientBox.style.display = isAncient ? 'block' : 'none';
 
-  const allTypes = Object.keys(GEOLOGY_TYPES);
+  const allTypes = [...Object.keys(GEOLOGY_TYPES), 'boulder'];
   let pool = allTypes;
   if (climateVal !== 'all' || waterVal !== 'all') {
     const dist = geologyDistribution(getGeologyInputs(seed, 0));
-    if (dist.length > 0) pool = dist.map(d => d.type);
+    if (dist.length > 0) pool = [...dist.map(d => d.type), 'boulder'];
   }
 
   if (viewMode === 'single') {
@@ -1860,7 +2068,7 @@ function buildGeologyMode() {
       }
     }
 
-    document.querySelector('#nav-status').textContent = (isMatrix ? '地質全型錄陳列' : '地質陣列檢驗') + ' (' + cols + '×' + rows + ' 共 ' + items.length + ' 處）：【' + (type === 'all' ? '全部地質輪播' : GEOLOGY_TYPES[type]?.name || '地質陣列') + '】（基底種子 ' + seed + '）';
+    document.querySelector('#nav-status').textContent = (isMatrix ? '地質全型錄陳列' : '地質陣列檢驗') + ' (' + cols + '×' + rows + ' 共 ' + items.length + ' 處）：【' + (type === 'all' ? '全部地質輪播' : type === 'boulder' ? '巨石巨礫' : GEOLOGY_TYPES[type]?.name || '地質陣列') + '】（基底種子 ' + seed + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, maxObjH * 0.4, 0);
@@ -1880,13 +2088,61 @@ const PLANT_NAMES = {
   spruce: '錫特卡雲杉', shorea: '娑羅雙', taiwania: '台灣杉', angelim: '巴西巨木',
   araucaria: '南洋杉', tualang: '甘巴豆', alerce: '智利柏', forestBamboo: '叢生竹林',
   rhododendron: '高山杜鵑', banyan: '孟加拉榕樹', scrubOak: '灌木櫟', holmOak: '冬青櫟',
-  willow: '垂柳', juniper: '刺柏', mangroveGrey: '海茄苳紅樹', coconut: '可可椰子', baobab: '猴麵包樹'
+  willow: '垂柳', juniper: '刺柏', mangroveGrey: '海茄苳紅樹', coconut: '可可椰子', baobab: '猴麵包樹',
+  gianttree: '神木巨木', fallentree: '倒木橫幹',
 };
 
 const cylGeoFactory = (rt, rb, h, n, sec) => new THREE.CylinderGeometry(rt, rb, h, Math.max(5, n || 6), Math.max(1, sec || 1));
 const icoGeoFactory = (radius) => new THREE.IcosahedronGeometry(Math.max(0.1, radius), 1);
 
+function createSceneTreeObject(type, seed, season = 'summer', posX = 0, posZ = 0) {
+  const rows = environmentParts(type, { seed, season });
+  const group = assembleEnvironmentParts(rows, false);
+  group.position.set(posX, 0, posZ);
+  const bounds = new THREE.Box3().setFromObject(group);
+  const size = bounds.getSize(new THREE.Vector3());
+  const tree = { h: size.y, footprint: Math.max(size.x, size.z) / 2, parts: [] };
+  const spec = { form: '場景獨立物件', name: PLANT_NAMES[type] || type };
+
+  const hitH = Math.max(4, tree.h);
+  const hitR = Math.max(2, tree.footprint);
+  const hitGeo = new THREE.CylinderGeometry(hitR * 0.9, hitR, hitH, 8);
+  hitGeo.translate(0, hitH / 2, 0);
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+  group.add(hitMesh);
+
+  const meta = {
+    type,
+    name: PLANT_NAMES[type] || type,
+    spec,
+    tree,
+    seed,
+    season,
+    scale: 1,
+    posX, posZ,
+    sceneKind: true,
+  };
+
+  group.userData.plantMeta = meta;
+  hitMesh.userData.plantMeta = meta;
+  clickableObjects.push(hitMesh);
+  plantGroup.add(group);
+
+  const badge = document.createElement('div');
+  badge.className = 'badge-label';
+  badge.innerHTML = '<span class="cat">【' + (PLANT_NAMES[type] || type) + '】</span>場景巨木 · <span class="height">' + tree.h.toFixed(1) + 'm</span>';
+  labelContainer.appendChild(badge);
+  const labelObj = { element: badge, point: new THREE.Vector3(posX, tree.h + 1.5, posZ) };
+  labels.push(labelObj);
+
+  return { group, tree, spec, meta, labelObj };
+}
+
 function createPlantObject(type, seed, scale = 1, season = 'summer', posX = 0, posZ = 0) {
+  if (type === 'gianttree' || type === 'fallentree') {
+    return createSceneTreeObject(type, seed, season, posX, posZ);
+  }
   let actualType = type;
   if (type === 'auto') {
     const lat = parseFloat(document.querySelector('#plant-lat').value) || 35;
@@ -1987,7 +2243,7 @@ function buildPlantMode() {
   } else {
     const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-plant')?.value, 10) || 4));
     const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-plant')?.value, 10) || 4));
-    const allSpecies = Object.keys(TREE_SPECIES);
+    const allSpecies = [...Object.keys(TREE_SPECIES), 'gianttree', 'fallentree'];
 
     // 第一階段：生成所有林木物件，量測最大冠幅與高度 (以最大的為主)
     const items = [];
@@ -2066,9 +2322,15 @@ function switchTab(tabKey) {
   } else if (tabKey === 'vessel') {
     if (titleEl) titleEl.textContent = '🚢 艦艇水運與裝載圖鑑';
     if (descEl) descEl.textContent = '真實米制航域船型 · 動態吃水裝載與武器 · 透光水面環境';
+  } else if (tabKey === 'industry') {
+    if (titleEl) titleEl.textContent = '🏭 場景建物與產業設施簡模';
+    if (descEl) descEl.textContent = '住宅高樓 3 · 工業 3 · 採掘 2 · 農牧 2 · 同一種子與陣列規則';
+  } else if (tabKey === 'ice') {
+    if (titleEl) titleEl.textContent = '❄️ 浮冰與冰山 · 水線與種子';
+    if (descEl) descEl.textContent = '海冰冰川冰 2 款 · 簡化水線造型 · 透光水面環境';
   } else if (tabKey === 'env') {
-    if (titleEl) titleEl.textContent = '🌐 環境物件 · 邊界障礙 · 冰體';
-    if (descEl) descEl.textContent = '17 類獨立建築場景 · 浮冰冰山水線 · 56 款邊界障礙與連續陡坡';
+    if (titleEl) titleEl.textContent = '🌐 邊界構造 · 連續陡坡接縫';
+    if (descEl) descEl.textContent = '56 款邊界障礙 · 固定尺寸權威碰撞 · 陡坡緩坡平地水域';
   }
 
   const activePanel = document.querySelector('#panel-' + tabKey);
@@ -2084,6 +2346,10 @@ function switchTab(tabKey) {
     buildVehicleMode();
   } else if (tabKey === 'vessel') {
     buildVesselMode();
+  } else if (tabKey === 'industry') {
+    buildIndustryMode();
+  } else if (tabKey === 'ice') {
+    buildIceMode();
   } else if (tabKey === 'env') {
     buildEnvironmentMode();
   }
@@ -2459,7 +2725,8 @@ function updateVehicleCoupling() {
 
 function createVehicleInstance(profileKey, seed, options, posX = 0, posZ = 0) {
   try {
-    const model = makeProceduralVehicle(profileKey, seed, options);
+    const sceneFit = !options.leaderKey && document.querySelector('#chk-veh-scene-fit')?.checked;
+    const model = makeProceduralVehicle(profileKey, seed, sceneFit ? { ...options, fit: { L: 4.8, H: 1.8, W: 2.2 } } : options);
     model.position.set(posX, 0, posZ);
     vehicleGroup.add(model);
     const v = model.userData.vehicle;
@@ -2481,7 +2748,7 @@ function createVehicleInstance(profileKey, seed, options, posX = 0, posZ = 0) {
     });
     const badge = document.createElement('div');
     badge.className = 'badge-label';
-    badge.innerHTML = '<span class="cat">🚗</span>' + v.name + ' <span class="height">' + v.length.toFixed(1) + 'm</span>';
+    badge.innerHTML = '<span class="cat">🚗</span>' + v.name + (sceneFit ? ' · 場景包絡' : '') + ' <span class="height">' + v.length.toFixed(1) + 'm</span>';
     labelContainer.appendChild(badge);
     const labelObj = { element: badge, point: new THREE.Vector3(posX, (v.height || 2) + 1.2, posZ) };
     labels.push(labelObj);
@@ -2643,6 +2910,9 @@ function updateVesselFilter() {
   for (const t of candidates) {
     typeSel.add(new Option(t.name, t.id));
   }
+  if (![...typeSel.options].some(o => o.value === 'strandedship')) {
+    typeSel.add(new Option('擱淺船 (場景簡模)', 'strandedship'));
+  }
   if (prevVal && [...typeSel.options].some(o => o.value === prevVal)) {
     typeSel.value = prevVal;
   } else {
@@ -2650,8 +2920,51 @@ function updateVesselFilter() {
   }
 }
 
+function createStrandedShipInstance(seed, posX = 0, posZ = 0) {
+  const rows = environmentParts('strandedship', { seed });
+  const model = assembleEnvironmentParts(rows, false);
+  model.position.set(posX, 0, posZ);
+  vesselGroup.add(model);
+  const bounds = new THREE.Box3().setFromObject(model);
+  const size = bounds.getSize(new THREE.Vector3());
+  const v = {
+    name: '擱淺船', registry: '場景簡模',
+    length: size.x, beam: size.z, height: size.y,
+    draft: 0, freeboard: size.y, displacementTonnes: 0, speedKnots: 0,
+    sceneKind: true,
+  };
+  const meta = {
+    posX, posZ,
+    seed,
+    vessel: v,
+    name: v.name,
+    length: v.length,
+    beam: v.beam,
+    draft: v.draft,
+    displacement: 0,
+    speed: 0,
+    sceneKind: true,
+  };
+  model.traverse((o) => {
+    if (o.isMesh) {
+      o.userData.vesselMeta = meta;
+      clickableObjects.push(o);
+    }
+  });
+  const badge = document.createElement('div');
+  badge.className = 'badge-label';
+  badge.innerHTML = '<span class="cat">🚢</span>' + v.name + ' · 場景簡模 <span class="height">' + v.length.toFixed(1) + 'm</span>';
+  labelContainer.appendChild(badge);
+  const labelObj = { element: badge, point: new THREE.Vector3(posX, size.y + 2, posZ) };
+  labels.push(labelObj);
+  return { model, meta, vessel: v, labelObj };
+}
+
 function createVesselInstance(seed, options, posX = 0, posZ = 0) {
   try {
+    if (options.id === 'strandedship') {
+      return createStrandedShipInstance(seed, posX, posZ);
+    }
     const v = generateVessel(seed, options);
     if (!v) return null;
     const model = buildGeneratedVesselMesh(v, { wake: false });
@@ -2715,6 +3028,7 @@ function buildVesselMode() {
   ).map(t => t.id);
 
   const pool = candidates.length > 0 ? candidates : allVesselTypes;
+  if ((type === 'all' || !type) && !pool.includes('strandedship')) pool.push('strandedship');
 
   if (viewMode === 'single') {
     const actType = (type === 'all' || !type) ? pool[seed % pool.length] : type;
@@ -2778,11 +3092,303 @@ function buildVesselMode() {
       }
     }
 
-    document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 艘）：【' + (type && type !== 'all' ? VESSEL_TYPES.find(t => t.id === type)?.name : '全部船型輪播') + '】（基底種子 ' + seed + '）';
+    document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 艘）：【' + (type && type !== 'all' ? (type === 'strandedship' ? '擱淺船' : VESSEL_TYPES.find(t => t.id === type)?.name) : '全部船型輪播') + '】（基底種子 ' + seed + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, Math.min(25, maxObjH * 0.4), 0);
     camDist = Math.max(totalW, totalD, maxObjH * 1.5) * 1.25 + 20;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  }
+  updateCamera();
+  render();
+}
+
+// ==========================================
+// 場景建物與產業設施 (Industry Mode)
+// ==========================================
+// 收容 environmentCatalog 10 種人造物：住宅 1、高樓 2、工業 3、採掘 2、農牧 2。
+// 生成器與遊戲共用 environmentParts 單一入口；此處僅套用與各頁籤一致的
+// 種子規則 (getGridSeed)、陣列/單體/目錄展示與兩階段量測佈局。
+const INDUSTRY_KINDS = ['house', 'skyscraper', 'skyfall', 'factory', 'powerplant', 'incinerator', 'mine', 'oilfield', 'greenhouse', 'ranch'];
+const INDUSTRY_LABELS = {
+  house: '住家', skyscraper: '摩天樓', skyfall: '倒塌高樓',
+  factory: '工廠', powerplant: '電廠', incinerator: '焚化廠',
+  mine: '礦場', oilfield: '油田', greenhouse: '溫室', ranch: '牧場',
+};
+const ICE_KINDS = ['icefloe', 'iceberg'];
+const ICE_LABELS = { icefloe: '浮冰群', iceberg: '極地冰山' };
+
+function createIndustryInstance(kind, seed, posX = 0, posZ = 0) {
+  const season = document.querySelector('#sim-season')?.value || 'summer';
+  const rows = environmentParts(kind, { seed, season });
+  const model = assembleEnvironmentParts(rows, false);
+  model.position.set(posX, 0, posZ);
+  industryGroup.add(model);
+
+  const bounds = new THREE.Box3().setFromObject(model);
+  const size = bounds.getSize(new THREE.Vector3());
+  const meta = {
+    posX, posZ,
+    seed,
+    kind,
+    label: INDUSTRY_LABELS[kind] || kind,
+    partsCount: rows.length,
+    size: [size.x, size.y, size.z],
+    sceneKind: true,
+  };
+
+  model.traverse((o) => {
+    if (o.isMesh) {
+      o.userData.industryMeta = meta;
+      clickableObjects.push(o);
+    }
+  });
+
+  const badge = document.createElement('div');
+  badge.className = 'badge-label';
+  badge.innerHTML = '<span class="cat">🏭</span>' + meta.label + ' <span class="height">' + size.y.toFixed(1) + 'm</span>';
+  labelContainer.appendChild(badge);
+  labels.push({ element: badge, point: new THREE.Vector3(posX, bounds.max.y + 1.5, posZ) });
+
+  return { model, meta, size, bounds };
+}
+
+function buildIndustryMode() {
+  clearScene();
+  currentMode = 'industry';
+  document.querySelector('#btn-back').style.display = 'none';
+  waterMesh.visible = false;
+  floor.visible = true;
+  floor.material.color.setHex(0xbed0bd);
+
+  const kind = document.querySelector('#industry-kind').value;
+  const viewMode = document.querySelector('#industry-view-mode').value;
+  const seed = parseInt(document.querySelector('#input-industry-seed').value, 10) || 42;
+  const seedMode = document.querySelector('#select-seed-mode-industry')?.value || 'per_building';
+
+  if (viewMode === 'single') {
+    const actKind = (kind === 'all' || !kind) ? INDUSTRY_KINDS[seed % INDUSTRY_KINDS.length] : kind;
+    const res = createIndustryInstance(actKind, seed, 0, 0);
+    if (!res) return;
+    document.querySelector('#nav-status').textContent = '設施單體檢驗：【' + res.meta.label + '】（種子碼 ' + seed + ' · ' + res.meta.partsCount + ' 零件 · 尺寸 ' + res.size.x.toFixed(1) + '×' + res.size.y.toFixed(1) + '×' + res.size.z.toFixed(1) + 'm）';
+    camTarget.set(0, res.size.y * 0.4, 0);
+    camDist = Math.max(res.size.x, res.size.y, res.size.z) * 2.2 + 8;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  } else {
+    const isCatalog = viewMode === 'catalog';
+    const listPool = (kind === 'all' || !kind) ? INDUSTRY_KINDS : [kind];
+    const cols = isCatalog
+      ? Math.min(8, Math.max(2, Math.ceil(Math.sqrt(listPool.length))))
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-industry')?.value, 10) || 4));
+    const rows = isCatalog
+      ? Math.ceil(listPool.length / cols)
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-industry')?.value, 10) || 4));
+    const count = isCatalog ? listPool.length : cols * rows;
+    clearScene();
+    waterMesh.visible = false;
+    floor.visible = true;
+
+    // 第一階段：生成所有設施實例，量測最大長寬高 (以最大的為主)
+    const items = [];
+    let maxObjW = 10, maxObjD = 10, maxObjH = 8;
+    for (let idx = 0; idx < count; idx++) {
+      const c = idx % cols;
+      const r = Math.floor(idx / cols);
+      const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
+      const curKind = listPool[idx % listPool.length];
+      const season = document.querySelector('#sim-season')?.value || 'summer';
+      const partRows = environmentParts(curKind, { seed: curSeed, season });
+      const model = assembleEnvironmentParts(partRows, false);
+      const bounds = new THREE.Box3().setFromObject(model);
+      const size = bounds.getSize(new THREE.Vector3());
+      if (size.x > maxObjW) maxObjW = size.x;
+      if (size.z > maxObjD) maxObjD = size.z;
+      if (size.y > maxObjH) maxObjH = size.y;
+      items.push({ c, r, idx, curKind, curSeed, model, bounds, size, partRows });
+    }
+
+    // 第二階段：依據最大物件尺寸配置間距
+    const stepX = Math.max(20, Math.ceil(maxObjW * 1.35 + 8));
+    const stepZ = Math.max(20, Math.ceil(maxObjD * 1.35 + 8));
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (const it of items) {
+      const posX = startX + it.c * stepX;
+      const posZ = startZ + it.r * stepZ;
+      it.model.position.set(posX, 0, posZ);
+      industryGroup.add(it.model);
+
+      const meta = {
+        posX, posZ,
+        seed: it.curSeed,
+        kind: it.curKind,
+        label: INDUSTRY_LABELS[it.curKind] || it.curKind,
+        partsCount: it.partRows.length,
+        size: [it.size.x, it.size.y, it.size.z],
+        sceneKind: true,
+      };
+      it.model.traverse((o) => {
+        if (o.isMesh) {
+          o.userData.industryMeta = meta;
+          clickableObjects.push(o);
+        }
+      });
+
+      const badge = document.createElement('div');
+      badge.className = 'badge-label';
+      badge.innerHTML = '<span class="cat">🏭</span>' + meta.label + ' <span class="height">' + it.size.y.toFixed(1) + 'm</span>';
+      labelContainer.appendChild(badge);
+      labels.push({ element: badge, point: new THREE.Vector3(posX, it.bounds.max.y + 1.5, posZ) });
+    }
+
+    document.querySelector('#nav-status').textContent = (isCatalog ? '設施全分類目錄陳列' : '設施陣列檢驗') + ' (' + cols + '×' + rows + ' 共 ' + items.length + ' 件）：【' + (kind === 'all' ? '全部款式輪播' : INDUSTRY_LABELS[kind] || kind) + '】（基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX + maxObjW;
+    const totalD = (rows - 1) * stepZ + maxObjD;
+    camTarget.set(0, Math.min(25, maxObjH * 0.4), 0);
+    camDist = Math.max(totalW, totalD, maxObjH * 1.5) * 1.25 + 15;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  }
+  updateCamera();
+  render();
+}
+
+// ==========================================
+// 浮冰與冰山 (Ice Mode)
+// ==========================================
+// 收容 environmentCatalog 海冰/冰川冰 2 款，生成器經 environmentParts 直通 iceParts；
+// 水線偏移由 assembleEnvironmentParts 統一處理，水面顯示規則與船隻頁籤一致。
+function createIceInstance(kind, seed, posX = 0, posZ = 0) {
+  const rows = environmentParts(kind, { seed });
+  const model = assembleEnvironmentParts(rows, true);
+  model.position.set(posX, 0, posZ);
+  iceGroup.add(model);
+
+  const bounds = new THREE.Box3().setFromObject(model);
+  const size = bounds.getSize(new THREE.Vector3());
+  const meta = {
+    posX, posZ,
+    seed,
+    kind,
+    label: ICE_LABELS[kind] || kind,
+    partsCount: rows.length,
+    size: [size.x, size.y, size.z],
+    sceneKind: true,
+  };
+
+  model.traverse((o) => {
+    if (o.isMesh) {
+      o.userData.iceMeta = meta;
+      clickableObjects.push(o);
+    }
+  });
+
+  const badge = document.createElement('div');
+  badge.className = 'badge-label';
+  badge.innerHTML = '<span class="cat">❄️</span>' + meta.label + ' <span class="height">' + size.y.toFixed(1) + 'm</span>';
+  labelContainer.appendChild(badge);
+  labels.push({ element: badge, point: new THREE.Vector3(posX, bounds.max.y + 1.5, posZ) });
+
+  return { model, meta, size, bounds };
+}
+
+function buildIceMode() {
+  clearScene();
+  currentMode = 'ice';
+  document.querySelector('#btn-back').style.display = 'none';
+  const showWater = document.querySelector('#chk-ice-water')?.checked ?? true;
+  waterMesh.visible = showWater;
+  floor.visible = !showWater;
+
+  const kind = document.querySelector('#ice-kind').value;
+  const viewMode = document.querySelector('#ice-view-mode').value;
+  const seed = parseInt(document.querySelector('#input-ice-seed').value, 10) || 42;
+  const seedMode = document.querySelector('#select-seed-mode-ice')?.value || 'per_building';
+
+  if (viewMode === 'single') {
+    const actKind = (kind === 'all' || !kind) ? ICE_KINDS[seed % ICE_KINDS.length] : kind;
+    const res = createIceInstance(actKind, seed, 0, 0);
+    if (!res) return;
+    document.querySelector('#nav-status').textContent = '冰體單體檢驗：【' + res.meta.label + '】（種子碼 ' + seed + ' · ' + res.meta.partsCount + ' 零件 · 尺寸 ' + res.size.x.toFixed(1) + '×' + res.size.y.toFixed(1) + '×' + res.size.z.toFixed(1) + 'm）';
+    camTarget.set(0, res.size.y * 0.4, 0);
+    camDist = Math.max(res.size.x, res.size.y, res.size.z) * 2.2 + 8;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  } else {
+    const isCatalog = viewMode === 'catalog';
+    const listPool = (kind === 'all' || !kind) ? ICE_KINDS : [kind];
+    const cols = isCatalog
+      ? Math.min(8, Math.max(2, Math.ceil(Math.sqrt(listPool.length))))
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-ice')?.value, 10) || 4));
+    const rows = isCatalog
+      ? Math.ceil(listPool.length / cols)
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-ice')?.value, 10) || 4));
+    const count = isCatalog ? listPool.length : cols * rows;
+    clearScene();
+    waterMesh.visible = showWater;
+    floor.visible = !showWater;
+
+    // 第一階段：生成所有冰體實例，量測最大長寬高 (以最大的為主)
+    const items = [];
+    let maxObjW = 10, maxObjD = 10, maxObjH = 8;
+    for (let idx = 0; idx < count; idx++) {
+      const c = idx % cols;
+      const r = Math.floor(idx / cols);
+      const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
+      const curKind = listPool[idx % listPool.length];
+      const partRows = environmentParts(curKind, { seed: curSeed });
+      const model = assembleEnvironmentParts(partRows, true);
+      const bounds = new THREE.Box3().setFromObject(model);
+      const size = bounds.getSize(new THREE.Vector3());
+      if (size.x > maxObjW) maxObjW = size.x;
+      if (size.z > maxObjD) maxObjD = size.z;
+      if (size.y > maxObjH) maxObjH = size.y;
+      items.push({ c, r, idx, curKind, curSeed, model, bounds, size, partRows });
+    }
+
+    // 第二階段：依據最大物件尺寸配置間距
+    const stepX = Math.max(20, Math.ceil(maxObjW * 1.35 + 8));
+    const stepZ = Math.max(20, Math.ceil(maxObjD * 1.35 + 8));
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+
+    for (const it of items) {
+      const posX = startX + it.c * stepX;
+      const posZ = startZ + it.r * stepZ;
+      it.model.position.set(posX, 0, posZ);
+      iceGroup.add(it.model);
+
+      const meta = {
+        posX, posZ,
+        seed: it.curSeed,
+        kind: it.curKind,
+        label: ICE_LABELS[it.curKind] || it.curKind,
+        partsCount: it.partRows.length,
+        size: [it.size.x, it.size.y, it.size.z],
+        sceneKind: true,
+      };
+      it.model.traverse((o) => {
+        if (o.isMesh) {
+          o.userData.iceMeta = meta;
+          clickableObjects.push(o);
+        }
+      });
+
+      const badge = document.createElement('div');
+      badge.className = 'badge-label';
+      badge.innerHTML = '<span class="cat">❄️</span>' + meta.label + ' <span class="height">' + it.size.y.toFixed(1) + 'm</span>';
+      labelContainer.appendChild(badge);
+      labels.push({ element: badge, point: new THREE.Vector3(posX, it.bounds.max.y + 1.5, posZ) });
+    }
+
+    document.querySelector('#nav-status').textContent = (isCatalog ? '冰體全分類目錄陳列' : '冰體陣列檢驗') + ' (' + cols + '×' + rows + ' 共 ' + items.length + ' 件）：【' + (kind === 'all' ? '全部款式輪播' : ICE_LABELS[kind] || kind) + '】（基底種子 ' + seed + '）';
+    const totalW = (cols - 1) * stepX + maxObjW;
+    const totalD = (rows - 1) * stepZ + maxObjD;
+    camTarget.set(0, Math.min(25, maxObjH * 0.4), 0);
+    camDist = Math.max(totalW, totalD, maxObjH * 1.5) * 1.25 + 15;
     activeCamTarget.copy(camTarget);
     activeCamDist = camDist;
   }
@@ -2796,18 +3402,9 @@ function initEnvOptions() {
   const prevKind = kindSel.value;
   kindSel.innerHTML = '';
 
-  if (mode === 'scene') {
-    for (const [k, def] of Object.entries(ENVIRONMENT_OBJECTS)) {
-      if (k !== 'icefloe' && k !== 'iceberg') {
-        kindSel.add(new Option(def.label || k, k));
-      }
-    }
-  } else if (mode === 'ice') {
-    kindSel.add(new Option('浮冰群 (Sea Ice Floe)', 'icefloe'));
-    kindSel.add(new Option('極地冰山 (Glacial Iceberg)', 'iceberg'));
-  } else if (mode === 'edge') {
-    for (const [k, def] of Object.entries(WALL_KINDS)) {
-      kindSel.add(new Option(def.label || k, k));
+  if (mode === 'edge' || mode === 'all') {
+    for (const k of Object.keys(WALL_KINDS)) {
+      kindSel.add(new Option(WALL_KINDS[k].label || k, k));
     }
   } else if (['slope', 'mid', 'flat', 'water'].includes(mode)) {
     const slopeKinds = Object.keys(WALL_KINDS).filter(k =>
@@ -2859,24 +3456,25 @@ function assembleEnvironmentParts(rows, isIce = false) {
   return group;
 }
 
+// 邊界列組裝單一入口：單體與陣列共用同一段長、同一坡度取樣與同一端面規則。
+function boundaryRows(kind, def, mode, seed) {
+  const heightAt = (x, z) => mode === 'water' || mode === 'flat' ? 0 : x * (mode === 'mid' ? 0.15 : 0.85) + Math.sin(x / 13 + seed) * (mode === 'mid' ? 1 : 4) + z * 0.2;
+  if (!['slope', 'mid', 'flat', 'water'].includes(mode)) {
+    return wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed });
+  }
+  return [-30, 0, 30].flatMap((x) => (
+    def.terrainFit
+      ? buildSlopeBoundary(kind, { len: 30, depth: def.depth, h: def.h, x, z: 0, seed, waterY: mode === 'water' ? 0 : null, heightAt }).parts
+      : wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed }).map((p) => ({ ...p, p: [p.p[0], p.p[1] + heightAt(x, 0), p.p[2]] }))
+  ).map((p) => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
+}
+
 function createEnvironmentInstance(mode, kind, seed, posX = 0, posZ = 0) {
-  const isIce = mode === 'ice' || kind === 'icefloe' || kind === 'iceberg';
-  const isSlope = ['slope', 'mid', 'flat', 'water'].includes(mode);
-  const def = (mode === 'scene' || isIce) ? ENVIRONMENT_OBJECTS[kind] : WALL_KINDS[kind];
+  const def = WALL_KINDS[kind];
   if (!def) return null;
 
-  const heightAt = (x, z) => mode === 'water' || mode === 'flat' ? 0 : x * (mode === 'mid' ? 0.15 : 0.85) + Math.sin(x / 13 + seed) * (mode === 'mid' ? 1 : 4) + z * 0.2;
-  const rows = isSlope
-    ? [-30, 0, 30].flatMap((x) => (
-        def.terrainFit
-          ? buildSlopeBoundary(kind, { len: 30, depth: def.depth, h: def.h, x, z: 0, seed, waterY: mode === 'water' ? 0 : null, heightAt }).parts
-          : wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed }).map((p) => ({ ...p, p: [p.p[0], p.p[1] + heightAt(x, 0), p.p[2]] }))
-      ).map((p) => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })))
-    : mode === 'edge'
-      ? wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed })
-      : environmentParts(def.objectKind || kind, { seed: def.modelSeed ?? seed });
-
-  const model = assembleEnvironmentParts(rows, isIce);
+  const rows = boundaryRows(kind, def, mode, seed);
+  const model = assembleEnvironmentParts(rows, false);
   model.position.set(posX, 0, posZ);
   envGroup.add(model);
 
@@ -2890,7 +3488,6 @@ function createEnvironmentInstance(mode, kind, seed, posX = 0, posZ = 0) {
     label: def.label || kind,
     partsCount: rows.length,
     size: [size.x, size.y, size.z],
-    isIce,
   };
 
   model.traverse((o) => {
@@ -2922,19 +3519,20 @@ function buildEnvironmentMode() {
   const seed = parseInt(document.querySelector('#input-env-seed').value, 10) || 42;
   const seedMode = document.querySelector('#select-seed-mode-env')?.value || 'per_building';
 
-  const allModes = ['scene', 'ice', 'edge', 'slope'];
-  const allSceneKinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k => k !== 'icefloe' && k !== 'iceberg');
+  const boundaryModes = ['edge', 'slope', 'mid', 'flat', 'water'];
   const allKinds = [...document.querySelector('#env-kind').options].map(o => o.value).filter(v => v !== 'all');
 
-  const actMode = mode === 'all' ? allModes[seed % allModes.length] : mode;
-  const actKind = (kind === 'all' || !kind) ? (allKinds[seed % allKinds.length] || allSceneKinds[0]) : kind;
+  const actMode = mode === 'all' ? boundaryModes[seed % boundaryModes.length] : mode;
+  const actKind = (kind === 'all' || !kind) ? (allKinds[seed % allKinds.length] || allKinds[0]) : kind;
 
-  const isWaterMode = actMode === 'ice' || actMode === 'water' || actKind === 'icefloe' || actKind === 'iceberg';
+  const isWaterMode = actMode === 'water';
 
   if (viewMode === 'single') {
+    waterMesh.visible = isWaterMode;
+    floor.visible = !isWaterMode;
     const res = createEnvironmentInstance(actMode, actKind, seed, 0, 0);
     if (!res) return;
-    document.querySelector('#nav-status').textContent = '環境單體檢驗：【' + res.def.label + '】（種子碼 ' + seed + ' · ' + res.meta.partsCount + ' 零件 · 尺寸 ' + res.size.x.toFixed(1) + '×' + res.size.y.toFixed(1) + '×' + res.size.z.toFixed(1) + 'm）';
+    document.querySelector('#nav-status').textContent = '邊界單體檢驗：【' + res.def.label + '】（種子碼 ' + seed + ' · ' + res.meta.partsCount + ' 零件 · 尺寸 ' + res.size.x.toFixed(1) + '×' + res.size.y.toFixed(1) + '×' + res.size.z.toFixed(1) + 'm）';
     camTarget.set(0, res.size.y * 0.4, 0);
     camDist = Math.max(res.size.x, res.size.y, res.size.z) * 2.2 + 8;
     activeCamTarget.copy(camTarget);
@@ -2946,29 +3544,33 @@ function buildEnvironmentMode() {
     waterMesh.visible = isWaterMode;
     floor.visible = !isWaterMode;
 
-    // 第一階段：計算陣列中所有環境物件規格尺寸，找出最大長寬高 (以最大的為主)
+    // 第一階段：計算陣列中所有邊界物件規格尺寸，找出最大長寬高 (以最大的為主)
     const items = [];
     let maxObjW = 10, maxObjD = 10, maxObjH = 8;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        const curMode = mode === 'all' ? allModes[idx % allModes.length] : actMode;
-        const curKind = (kind === 'all' || !kind) ? (allKinds[idx % allKinds.length] || allSceneKinds[idx % allSceneKinds.length]) : kind;
-        const isIce = curMode === 'ice' || curKind === 'icefloe' || curKind === 'iceberg';
-        const def = (curMode === 'ice' ? ICE_PARTS[curKind] : (curMode === 'edge' || curMode === 'slope' ? BOUNDARY_PARTS[curKind] : ENVIRONMENT_OBJECTS[curKind])) || ENVIRONMENT_OBJECTS[curKind] || { label: curKind, h: 6, depth: 8 };
+        const curMode = mode === 'all' ? boundaryModes[idx % boundaryModes.length] : actMode;
+        const validKinds = curMode === 'edge' || curMode === 'all'
+          ? allKinds
+          : Object.keys(WALL_KINDS).filter(k =>
+              curMode === 'water' ? WALL_KINDS[k].dom === 'water' :
+              WALL_KINDS[k].dom === 'land' && WALL_KINDS[k].slope === (curMode === 'slope' ? 'steep' : curMode));
+        const curKind = (kind === 'all' || !kind || !validKinds.includes(kind))
+          ? (validKinds[idx % validKinds.length] || validKinds[0] || kind)
+          : kind;
+        const def = WALL_KINDS[curKind] || { label: curKind, h: 6, depth: 8 };
 
-        const partRows = (curMode === 'edge' || curMode === 'slope')
-          ? wallParts(curKind, { len: 30, depth: def.depth, h: def.h, seed: curSeed })
-          : environmentParts(def.objectKind || curKind, { seed: def.modelSeed ?? curSeed });
+        const partRows = boundaryRows(curKind, def, curMode, curSeed);
 
-        const model = assembleEnvironmentParts(partRows, isIce);
+        const model = assembleEnvironmentParts(partRows, false);
         const bounds = new THREE.Box3().setFromObject(model);
         const size = bounds.getSize(new THREE.Vector3());
         if (size.x > maxObjW) maxObjW = size.x;
         if (size.z > maxObjD) maxObjD = size.z;
         if (size.y > maxObjH) maxObjH = size.y;
-        items.push({ c, r, idx, curMode, curKind, curSeed, isIce, def, model, bounds, size, partRows });
+        items.push({ c, r, idx, curMode, curKind, curSeed, def, model, bounds, size, partRows });
       }
     }
 
@@ -2992,7 +3594,6 @@ function buildEnvironmentMode() {
         label: it.def.label || it.curKind,
         partsCount: it.partRows.length,
         size: [it.size.x, it.size.y, it.size.z],
-        isIce: it.isIce,
       };
       it.model.traverse((o) => {
         if (o.isMesh) {
@@ -3008,7 +3609,7 @@ function buildEnvironmentMode() {
       labels.push({ element: badge, point: new THREE.Vector3(posX, it.bounds.max.y + 1.5, posZ) });
     }
 
-    document.querySelector('#nav-status').textContent = '環境陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 件）：【' + (kind === 'all' ? '全部款式輪播' : actKind) + '】（基底種子 ' + seed + '）';
+    document.querySelector('#nav-status').textContent = '邊界陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 件）：【' + (kind === 'all' ? '全部款式輪播' : actKind) + '】（基底種子 ' + seed + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, Math.min(25, maxObjH * 0.4), 0);
@@ -3021,7 +3622,7 @@ function buildEnvironmentMode() {
 }
 
 // 統一陣列規模、種子模式與種子碼監聽
-['geo', 'plant', 'veh', 'vessel', 'env'].forEach((prefix) => {
+['geo', 'plant', 'veh', 'vessel', 'env', 'industry', 'ice'].forEach((prefix) => {
   ['cols', 'rows'].forEach((dim) => {
     document.querySelector('#sample-' + dim + '-' + prefix)?.addEventListener('change', () => {
       rebuildActiveTab();
@@ -3053,7 +3654,7 @@ document.querySelector('#btn-veh-random-seed')?.addEventListener('click', () => 
     buildVehicleMode();
   });
 });
-['#veh-profile', '#veh-view-mode', '#veh-leader', '#veh-wagon', '#veh-count'].forEach((id) => {
+['#veh-profile', '#veh-view-mode', '#veh-leader', '#veh-wagon', '#veh-count', '#chk-veh-scene-fit'].forEach((id) => {
   document.querySelector(id)?.addEventListener('change', buildVehicleMode);
 });
 
@@ -3105,6 +3706,44 @@ document.querySelector('#env-mode')?.addEventListener('change', () => {
   document.querySelector(id)?.addEventListener('change', buildEnvironmentMode);
 });
 
+// 產業事件
+document.querySelector('#btn-industry-generate')?.addEventListener('click', () => {
+  const mode = document.querySelector('#select-seed-mode-industry')?.value;
+  if (mode === 'shared_batch') {
+    document.querySelector('#input-industry-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  }
+  buildIndustryMode();
+});
+document.querySelector('#btn-industry-random-seed')?.addEventListener('click', () => {
+  document.querySelector('#input-industry-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  buildIndustryMode();
+});
+['#industry-kind', '#industry-view-mode'].forEach((id) => {
+  document.querySelector(id)?.addEventListener('change', buildIndustryMode);
+});
+
+// 冰雪事件
+document.querySelector('#btn-ice-generate')?.addEventListener('click', () => {
+  const mode = document.querySelector('#select-seed-mode-ice')?.value;
+  if (mode === 'shared_batch') {
+    document.querySelector('#input-ice-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  }
+  buildIceMode();
+});
+document.querySelector('#btn-ice-random-seed')?.addEventListener('click', () => {
+  document.querySelector('#input-ice-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  buildIceMode();
+});
+['#ice-kind', '#ice-view-mode'].forEach((id) => {
+  document.querySelector(id)?.addEventListener('change', buildIceMode);
+});
+document.querySelector('#chk-ice-water')?.addEventListener('change', () => {
+  const showWater = document.querySelector('#chk-ice-water').checked;
+  waterMesh.visible = showWater;
+  floor.visible = !showWater;
+  render();
+});
+
 // ==========================================
 // 頂部環境模擬控制列事件 (四季 × 日夜 × 多元天氣)
 // ==========================================
@@ -3114,6 +3753,8 @@ function rebuildActiveTab() {
   else if (currentTab === 'plant') buildPlantMode();
   else if (currentTab === 'vehicle') buildVehicleMode();
   else if (currentTab === 'vessel') buildVesselMode();
+  else if (currentTab === 'industry') buildIndustryMode();
+  else if (currentTab === 'ice') buildIceMode();
   else if (currentTab === 'env') buildEnvironmentMode();
 }
 

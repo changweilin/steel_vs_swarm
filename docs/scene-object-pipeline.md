@@ -67,7 +67,7 @@ node test/architecturePreview.mjs
 
 ## 共用程序環境物件（2026-09-10）
 
-`environmentParts.js` 是 15 類獨立物件的共同生成入口：住家、摩天樓、倒塌高樓、工廠、電廠、焚化廠、礦場、油田、溫室、牧場、巨石、神木、倒木、汽車與擱淺船。`backgroundObjects.js` 的 `environment/` 目標與 `edgewall.js` 的獨立邊界類型雙向共用。樹、岩石、車與船體沿用各自既有程序生成器。
+`environmentParts.js` 是 17 類獨立物件的共同生成入口：住家、摩天樓、倒塌高樓、工廠、電廠、焚化廠、礦場、油田、溫室、牧場、巨石、神木、倒木、汽車、擱淺船、浮冰與冰山。`backgroundObjects.js` 的 `environment/` 目標與 `edgewall.js` 的獨立邊界類型雙向共用。樹、岩石、車與船體沿用各自既有程序生成器。
 
 邊界用途尺寸由型錄與段長固定，種子只改造型、配置和配色。外觀可見空隙仍由連續權威碰撞環封閉，禁止穿越；碰撞高度不隨隨機模型降低。消波塊、風機、堤防、城牆及其他陣列／長構造由模組種子重新生成，僅列入邊界型錄。
 
@@ -135,17 +135,19 @@ iceParts.js 產生封閉多面體、冰冠、斷裂邊緣與水下龍骨。浮�
 
 驗證：environmentObjects（17,920 組包絡、封閉網格／繞序／水線／淺灘）、environmentRender（正式 Three.js 編譯與頂點包絡）、edgeSlope、audit_world_edge、audit_edge_fill、audit_siteplan、audit_world_height、audit_client_syntax、audit_gpu_lifecycle。environmentPreview 新增「浮冰／冰山：水線與種子」，並已檢查 8 個冰體預覽。
 
-## 全物件隨機生成器大分類頁籤與動態環境整合（2026-09-13）
+## 全物件隨機生成器大分類頁籤與動態環境整合（2026-09-13；場景獨立物件整併 2026-09-18）
 
 所有物件隨機生成器整合至 `test/architecturePreview.mjs`（`npm run preview:gen`，監聽 port 8644），提供一致的 GUI 操作體驗與同源環境模擬：
 
-1. **6 大分類頁籤**：
-   - 🏛 **建築 (Architecture)**：多維度文化風格、功能多樣性與 16 變體陣列。
-   - 🪨 **地質 (Geology)**：自然地質、不穩定坡地、特殊地熱現象與古代遺跡。
-   - 🌲 **植物 (Plants)**：21 種生態樹種、四季器官物候與複合林地群落。
-   - 🚗 **車輛 (Vehicles)**：單車、貨運列車與聯結車編組，用途/動力/輪圈/載貨。
-   - 🚢 **船隻 (Vessels)**：全航域艦艇、動態吃水水線、VLS/裝載與透光水面。
-   - 🌐 **環境與邊界 (Environment & Boundaries)**：獨立場景物件、浮冰/冰山、邊界構造與連續陡坡接縫。
+1. **8 大分類頁籤**（17 種場景獨立物件不再自成模式，按生成器血緣歸位；管線沿用各頁籤既有的種子規則、陣列／單體／目錄展示與兩階段量測佈局）：
+   - 🏛 **建築 (Architecture)**：多維度文化風格、功能多樣性與 16 變體陣列（詳細多邊形建物專用）。
+   - 🏭 **產業設施 (Industry)**：新增大分類，收容 10 種人造物簡模——住宅 1（住家）、高樓 2（摩天樓、倒塌高樓）、工業 3（工廠、電廠、焚化廠）、採掘 2（礦場、油田）、農牧 2（溫室、牧場）。
+   - 🪨 **地質 (Geology)**：自然地質、不穩定坡地、特殊地熱現象與古代遺跡，另收容場景巨石（`boulder`，經 `environmentParts` 直通 `geologyBackgroundObject`）。
+   - 🌲 **植物 (Plants)**：21 種生態樹種、四季器官物候與複合林地群落，另收容場景神木與倒木（經 `environmentParts` 直通 `createForestTree`）。
+   - 🚗 **車輛 (Vehicles)**：單車、貨運列車與聯結車編組，用途/動力/輪圈/載貨；勾選「場景散布尺寸」即套用場景汽車包絡 4.8×1.8×2.2 m（生成器同為 `vehicleBackgroundObject`，場景版另經 `selectRoadCar` 選款並 fit）。
+   - 🚢 **船隻 (Vessels)**：全航域艦艇、動態吃水水線、VLS/裝載與透光水面，另收容擱淺船（經 `environmentParts` 直通 `generateVessel` 的 `container` 船型簡模）。
+   - ❄️ **冰雪 (Ice)**：新增大分類，收容海冰與冰川冰 2 款（經 `environmentParts` 直通 `iceParts`，水線偏移與透光水面規則不變）。
+   - 🌐 **邊界構造 (Boundaries)**：原「環境與邊界」瘦身，僅保留 56 款邊界固定構造與連續陡坡接縫（edge／slope／mid／flat／water）；單體與陣列共用 `boundaryRows` 單一入口（此前陣列分支另起爐灶且引用未定義的 `ICE_PARTS`／`BOUNDARY_PARTS`，已一併修復）。
 
 2. **統一操作邏輯**：
    - 統一動作列：`⚡ 重新生成`、`🎲 隨機種子`、`⏭ 下一個種子 (+1)`、`🎲 展開 16 組變體`、直接輸入種子碼。
