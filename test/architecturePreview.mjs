@@ -3589,11 +3589,21 @@ function withObjectLayout(result, prefix) {
   parent?.add(root);
   const center = bounds.getCenter(new THREE.Vector3()).sub(root.position);
   source.position.set(-center.x, 0, -center.z);
+  // 車輛／船隻邊界沿邊排列：每件確定性 360° 隨機朝向，透明牆內(Row 0)與緩衝區(Row ≥ 1)一體適用。
+  // 雜湊形狀同 edgewall.edgeSeed（此處內聯，不新增 import 依賴）；其餘分類維持軸向對齊。
+  // 遊戲本體 Row 0 仍只做 180° 翻轉（演出 ⊆ 碰撞柱，見 audit_world_edge Ⅲ），此處透明牆僅為視覺包絡。
+  const scatterYaw = prefix === 'veh' || prefix === 'vessel';
+  const yawSeed = (result.meta?.seed | 0) || 0;
   for (let row = 0; row <= grid.maxBufferRows; row++) {
     for (let col = 0; col < grid.numCols; col++) {
       const instance = source.clone(true);
       instance.position.x += (col + .5) * grid.colStep - len / 2;
       instance.position.z -= row * grid.rowStep;
+      if (scatterYaw) {
+        let h = (Math.imul(yawSeed, 0x9E3779B1) ^ Math.imul(row + 1, 0x85EBCA77) ^ Math.imul(col + 1, 0x27D4EB2F)) | 0;
+        h = Math.imul(h ^ (h >>> 15), 0xC2B2AE3D) >>> 0;
+        instance.rotation.y = (h / 4294967296) * Math.PI * 2;
+      }
       root.add(instance);
       instance.traverse(o => { if (o.isMesh) clickableObjects.push(o); });
     }
@@ -3607,7 +3617,7 @@ function withObjectLayout(result, prefix) {
   const laidOut = new THREE.Box3().setFromObject(root);
   const extent = laidOut.getSize(new THREE.Vector3());
   result.layoutSize = [extent.x, extent.y, extent.z];
-  root.userData.objectLayout = { seed: result.meta?.seed, sourceSize: [size.x, size.y, size.z], columns: grid.numCols, rows: 1 + grid.maxBufferRows };
+  root.userData.objectLayout = { seed: result.meta?.seed, sourceSize: [size.x, size.y, size.z], columns: grid.numCols, rows: 1 + grid.maxBufferRows, yaw360: scatterYaw };
   if (result.entry) result.entry = { ...result.entry, bounds: { size: result.layoutSize,
     min: laidOut.min.toArray(), max: laidOut.max.toArray() } };
   if (result.tree) result.tree = { ...result.tree, footprint: Math.max(extent.x, extent.z) / 2 };

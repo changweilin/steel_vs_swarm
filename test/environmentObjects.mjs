@@ -30,7 +30,8 @@ for (const [kind, def] of Object.entries(ENVIRONMENT_OBJECTS)) {
   assert(alias, `${kind}: missing reverse boundary consumer`);
   const options = { len: def.size[0], h: def.size[1], depth: def.size[2], seed: 42, variant: 0 };
   const rows = environmentParts(kind, { seed: 42 });
-  assert.deepEqual(rows, wallParts(alias, options), `${kind}: one generator for both uses`);
+  // 同一生成器、同參數、同輸出：wallParts 本体預設 yaw:false（連續除外），此處以 yaw:true 比對同源一致性。
+  assert.deepEqual(rows, wallParts(alias, { ...options, yaw: true }), `${kind}: one generator for both uses`);
   const entry = generateSharedBackgroundObject(`environment/${kind}`, 42);
   assert.equal(entry.parts.length, rows.length);
   assert(entry.bounds.size.every(n => Number.isFinite(n) && n > 0));

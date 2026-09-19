@@ -424,12 +424,13 @@ const rep = (len, pitch, fn) => {
 const pick = (rnd, arr) => arr[Math.floor(rnd() * arr.length) % arr.length];
 
 // Visible gaps remain blocked by the continuous authoritative ring.
-export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed), season = 'summer' }) {
+export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed), season = 'summer', yaw = false }) {
   const def = WALL_KINDS[kind];
   if (!def) throw new RangeError('Unknown boundary kind: ' + kind);
   if (![len, depth, h].every(n => Number.isFinite(n) && n > 0)) throw new RangeError('Invalid boundary dimensions');
   const objectSeed = (seed ^ Math.imul(variant, 0x45d9f3b)) >>> 0;
-  if (def.object) return environmentParts(def.object, { size: [len, h, depth], seed: objectSeed, season });
+  // 邊界本體是沿邊連續構造，單體朝向維持軸向對齊(預設除外)；獨立散布經 standaloneBoundaryParts 另開。
+  if (def.object) return environmentParts(def.object, { size: [len, h, depth], seed: objectSeed, season, yaw });
   if (EXPANDED_BOUNDARIES[kind]) return buildSlopeBoundary(kind, {
     len, depth, h: h - .4, x: objectSeed % 997 * 11, z: objectSeed % 953 * 7,
     seed: objectSeed, season, heightAt: () => .4,
@@ -454,6 +455,7 @@ export function standaloneBoundaryParts(kind, opts = {}) {
     seed: opts.seed ?? 1,
     variant: opts.variant ?? wallVariant(kind, opts.seed ?? 1),
     season: opts.season ?? 'summer',
+    yaw: opts.yaw ?? true,
   });
 }
 
@@ -625,12 +627,13 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
     return linearEnvironmentParts('viaduct', { len: w, depth: d, h, seed, season });
   }
   if (objKey && ENVIRONMENT_OBJECTS[objKey]) {
-    // 嚴格錨定正常物件世界標準尺寸，不可為了當障礙物就故意放大
+    // 嚴格錨定正常物件世界標準尺寸，不可為了當障礙物就故意放大；
+    // Row 0 位於權威碰撞柱內，維持軸向對齊(除外)，緩衝區才帶生成器朝向。
     const normalSize = environmentSize(objKey, seed);
     const unitSize = isBuffer
       ? normalSize
       : [Math.min(normalSize[0], w), Math.min(normalSize[1], h), Math.min(normalSize[2], d)];
-    return environmentParts(objKey, { size: unitSize, seed, season });
+    return environmentParts(objKey, { size: unitSize, seed, season, yaw: isBuffer });
   }
   return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season });
 }

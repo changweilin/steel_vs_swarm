@@ -177,14 +177,16 @@ function extraction(kind, w, h, d, rnd) {
   return rows;
 }
 
-function rocks(type, seed, season) {
+function rocks(type, seed, season, { yaw = true } = {}) {
   const model = geologyBackgroundObject(type, seed, { segments: 12 });
   const { min, max, size } = model.bounds, center = min.map((v, i) => (v + max[i]) / 2);
   const tint = rockTints[season] || rockTints.summer;
   const colors = model.meshData.colors.map((value, i) => value * ((tint >> (16 - i % 3 * 8)) & 255) / 255);
   const meshData = { ...model.meshData, colors,
     vertices: model.meshData.vertices.map((v, i) => v - center[i % 3]) };
-  return [{ g: ['mesh', meshData, size], p: [0, size[1] / 2, 0], c: null, role: 'rock-mass' }];
+  // rocks 本身無 rnd 流，朝向另起一種子流(不推移既有幾何)；連續無縫的邊界連排由呼叫端關掉。
+  const spin = yaw ? mulberry32(((seed ^ 0xB17D) >>> 0))() * Math.PI * 2 : 0;
+  return [{ g: ['mesh', meshData, size], p: [0, size[1] / 2, 0], c: null, r: [0, spin, 0], role: 'rock-mass' }];
 }
 
 function ship(seed) {
@@ -208,13 +210,13 @@ function ship(seed) {
   return rows;
 }
 
-export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size, seed = 1, season = 'summer' } = {}) {
+export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size, seed = 1, season = 'summer', yaw = true } = {}) {
   if (!ENVIRONMENT_OBJECTS[kind]) throw new RangeError(`Unknown environment object: ${kind}`);
   if (!Number.isSafeInteger(seed) || !Array.isArray(size) || size.length !== 3
     || size.some(v => !Number.isFinite(v) || v <= 0)) throw new RangeError('Invalid environment dimensions or seed');
   const [w, h, d] = size, rnd = mulberry32(seed >>> 0);
   let rows;
-  if (ENVIRONMENT_OBJECTS[kind].draft) rows = iceParts(kind, size, seed);
+  if (ENVIRONMENT_OBJECTS[kind].draft) rows = iceParts(kind, size, seed, { yaw });
   else if (kind === 'car') rows = makeSceneVehicleParts('sedan', { fit: { L: w, H: h, W: d }, paint: seed });
   else if (kind === 'gianttree' || kind === 'fallentree') {
     const tree = createForestTree(choose(rnd, ['redwood', 'sequoia']), seed, undefined, undefined, 1, season);
@@ -224,7 +226,7 @@ export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size,
         p: [p.px || 0, p.y || 0, p.pz || 0], r: [p.rx || 0, 0, p.rz || 0], s: [1, p.sy || 1, 1], c: p.c, role: p.role };
     });
     if (kind === 'fallentree') rows = layDown(rows);
-  } else if (kind === 'boulder') rows = rocks(choose(rnd, ['granite', 'sandstone', 'basalt']), seed, season);
+  } else if (kind === 'boulder') rows = rocks(choose(rnd, ['granite', 'sandstone', 'basalt']), seed, season, { yaw });
   else if (kind === 'mine' || kind === 'oilfield') rows = extraction(kind, w, h, d, rnd);
   else if (kind === 'strandedship') rows = ship(seed);
   else if (kind === 'skyfall') rows = layDown(building('skyscraper', h * .55, w, d * .8, rnd));
@@ -358,7 +360,7 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
         const rRot = yaw !== 0 ? (p.r ? [p.r[0], (p.r[1] || 0) + yaw, p.r[2]] : [0, yaw, 0]) : p.r;
         return { ...p, p: [px * cy + pz * sy + x + jx, py + dy, -px * sy + pz * cy], ...(rRot ? { r: rRot } : {}) };
       };
-      rows.push(...fit(rocks(type, seed ^ (i + 1), season), [step * 0.94, h, d]).map(p => spin(p)));
+      rows.push(...fit(rocks(type, seed ^ (i + 1), season, { yaw: false }), [step * 0.94, h, d]).map(p => spin(p)));
       if (kind === 'debris' || kind === 'landslide') rows.push(...environmentParts('fallentree',
         { size: [step * .8, h * .25, d * .65], seed: seed ^ (i + 33) })
         .map(p => spin(p, h * .12)));
@@ -367,7 +369,7 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
       const yaw = local() < 0.5 ? Math.PI : 0;
       const jx = (local() - 0.5) * step * 0.04;
       const cy = Math.cos(yaw), sy = Math.sin(yaw);
-      rows.push(...environmentParts('icefloe', { size: [step * .94, Math.min(h, step * .16), d], seed: seed ^ (i + 1) })
+      rows.push(...environmentParts('icefloe', { size: [step * .94, Math.min(h, step * .16), d], seed: seed ^ (i + 1), yaw: false })
         .map(p => {
           const [px = 0, py = 0, pz = 0] = p.p || [];
           const rRot = yaw !== 0 ? (p.r ? [p.r[0], (p.r[1] || 0) + yaw, p.r[2]] : [0, yaw, 0]) : p.r;

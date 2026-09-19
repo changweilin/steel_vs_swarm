@@ -2,7 +2,7 @@
 import { mulberry32 } from './rng.js';
 import { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS } from './environmentCatalog.js';
 
-export function iceParts(kind, size, seed) {
+export function iceParts(kind, size, seed, { yaw = true } = {}) {
   const def = ENVIRONMENT_OBJECTS[kind], spec = ENVIRONMENT_PARAMETERS[def?.category];
   if (!def?.draft || !Number.isSafeInteger(seed) || !Array.isArray(size)
     || size.length !== 3 || size.some(v => !Number.isFinite(v) || v <= 0)) {
@@ -43,6 +43,8 @@ export function iceParts(kind, size, seed) {
   const center = min.map((value, i) => (value + max[i]) / 2);
   const dimensions = max.map((value, i) => value - min[i]);
   const mesh = { vertices: vertices.map((value, i) => value - center[i % 3]), faces, colors };
-  return [{ g: ['mesh', mesh, dimensions], p: center, c: null,
+  // 整體朝向抽最後一枚(幾何與前版逐位元一致，只多轉向)；連續無縫的邊界連排由呼叫端關掉。
+  const spin = yaw ? rnd() * Math.PI * 2 : 0;
+  return [{ g: ['mesh', mesh, dimensions], p: center, c: null, r: [0, spin, 0],
     role: kind === 'icefloe' ? 'sea-ice' : 'glacial-ice' }];
 }
