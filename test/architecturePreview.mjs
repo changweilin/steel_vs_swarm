@@ -437,11 +437,6 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
           </select>
         </div>
       </div>
-        <div class="seed-control">
-          <label for="input-geo-seed">種子碼</label>
-          <input type="number" id="input-geo-seed" value="42" min="1" max="999999">
-        </div>
-      </div>
     </div>
   </div>
 
@@ -537,11 +532,6 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
           </select>
         </div>
       </div>
-        <div class="seed-control">
-          <label for="input-veh-seed">種子碼</label>
-          <input type="number" id="input-veh-seed" value="42" min="1" max="999999">
-        </div>
-      </div>
     </div>
   </div>
 
@@ -618,11 +608,6 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
             <option value="shared_batch">陣列種子</option>
             <option value="per_building" selected>獨立種子</option>
           </select>
-        </div>
-      </div>
-        <div class="seed-control">
-          <label for="input-vessel-seed">種子碼</label>
-          <input type="number" id="input-vessel-seed" value="42" min="1" max="999999">
         </div>
       </div>
     </div>
@@ -825,11 +810,6 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
           </select>
         </div>
       </div>
-        <div class="seed-control">
-          <label for="input-env-seed">種子碼</label>
-          <input type="number" id="input-env-seed" value="42" min="1" max="999999">
-        </div>
-      </div>
     </div>
   </div>
 
@@ -942,11 +922,6 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
             <option value="shared_batch">陣列種子</option>
             <option value="per_building" selected>獨立種子</option>
           </select>
-        </div>
-      </div>
-        <div class="seed-control">
-          <label for="input-plant-seed">種子碼</label>
-          <input type="number" id="input-plant-seed" value="1001" min="1" max="999999">
         </div>
       </div>
     </div>
@@ -1291,6 +1266,32 @@ const mouse = new THREE.Vector2();
 let hoveredBuilding = null;
 let variantTargetMeta = null;
 const dimCycleOffsets = { func: 0, style: 0, roof: 0, facade: 0, region: 0 };
+
+function pickPreviewObject(e) {
+  if (e.target.closest('header, nav, .top-nav-bar, .modal, .badge-label, select, input, button, label')) return null;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.set((e.clientX - rect.left) / rect.width * 2 - 1, 1 - (e.clientY - rect.top) / rect.height * 2);
+  raycaster.setFromCamera(mouse, camera);
+  return raycaster.intersectObjects(clickableObjects, false)[0] || null;
+}
+
+function handleHover(e) {
+  const hit = pickPreviewObject(e);
+  hoveredBuilding = hit?.object || null;
+  renderer.domElement.style.cursor = hit ? 'pointer' : 'default';
+  const meta = hit && Object.entries(hit.object.userData).find(([key]) => key.endsWith('Meta'))?.[1];
+  renderer.domElement.title = meta ? (meta.label || meta.kind || '模型') + ' · 種子 ' + meta.seed : '';
+}
+
+function handleClick(e) {
+  const hit = pickPreviewObject(e);
+  if (!hit) return;
+  const meta = hit.object.userData.buildingMeta;
+  if (meta && currentTab === 'arch') { buildVariantsMode(meta); return; }
+  camTarget.copy(hit.point);
+  updateCamera();
+  render();
+}
 
 // ---- 零件預估與統計輔助函式 ----
 function estimateAppurtenances(poly, arch, heightInfo, seed) {
@@ -3787,7 +3788,6 @@ function addTransparentWallEnvelope(model, w, h, d, cy) {
   edge.position.copy(box.position);
   model.add(box);
   model.add(edge);
-}
 }
 
 function createEnvironmentInstance(mode, kind, seed, posX = 0, posZ = 0) {

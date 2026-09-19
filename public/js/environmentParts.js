@@ -9,7 +9,7 @@ import { geologyBackgroundObject } from './geology.js';
 import { generateVessel } from './vesselCatalog.js';
 import { loftMeshData, vesselHullSections } from './vesselGeometry.js';
 
-import { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS } from './environmentCatalog.js';
+import { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS, ENVIRONMENT_STRUCTURE_PARAMETERS } from './environmentCatalog.js';
 import { iceParts } from './iceParts.js';
 export { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS, ENVIRONMENT_CATEGORIES, environmentSize, environmentAvailable } from './environmentCatalog.js';
 export { makeSceneVehicleParts } from './vehicleParts.js';
@@ -21,6 +21,7 @@ const cyl = (rt, rb, h, x, y, z, c, role, extra = {}) =>
   ({ g: ['cyl', rt, rb, h, 8], p: [x, y, z], c, role, ...extra });
 const choose = (rnd, rows) => rows[Math.floor(rnd() * rows.length)];
 const integer = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
+const sample = (rnd, range) => range[0] + rnd() * (range[1] - range[0]);
 const colors = [0xb4ab99, 0x82919c, 0xc4b597, 0x96785f, 0xa9b2ab];
 const rockTints = { spring: 0xdce8c8, summer: 0xffffff, autumn: 0xe1c39a, winter: 0xc9d7df };
 export { rockTints as ROCK_SEASON_TINT };
@@ -39,6 +40,16 @@ function fit(rows, size) {
   }));
 }
 
+// Closed triangular prism: the roof end meets the wall instead of floating above it.
+function roofWedge(w, rise, d, x, y, color) {
+  const vertices = [-w/2, 0, -d/2, w/2, 0, -d/2, w/2, rise, -d/2,
+    -w/2, 0, d/2, w/2, 0, d/2, w/2, rise, d/2];
+  const faces = [0, 2, 1, 3, 4, 5, 0, 1, 4, 0, 4, 3,
+    1, 2, 5, 1, 5, 4, 2, 0, 3, 2, 3, 5];
+  for (let i = 1; i < vertices.length; i += 3) vertices[i] -= rise / 2;
+  return { g: ['mesh', { vertices, faces }, [w, rise, d]], p: [x, y + rise / 2, 0], c: color, role: 'roof-end' };
+}
+
 function building(kind, w, h, d, rnd) {
   if (kind === 'greenhouse') return greenhouse(w, h, d, rnd);
   if (kind === 'ranch') return ranch(w, h, d, rnd);
@@ -48,9 +59,8 @@ function building(kind, w, h, d, rnd) {
   const bodyH = h * (industrial ? .48 : tall ? .88 : .7);
   const rows = [box(w, bodyH, d, 0, bodyH / 2, 0, facade, 'building-body')];
   const spec = ENVIRONMENT_PARAMETERS[ENVIRONMENT_OBJECTS[kind].category];
-  const sample = range => range[0] + rnd() * (range[1] - range[0]);
-  const floors = Math.max(1, Math.floor(bodyH / sample(spec.floor)));
-  const bays = Math.max(1, Math.floor(w / sample(spec.bay)));
+  const floors = Math.max(1, Math.floor(bodyH / sample(rnd, spec.floor)));
+  const bays = Math.max(1, Math.floor(w / sample(rnd, spec.bay)));
   for (let floor = 0; floor < floors; floor++) {
     const y = bodyH * (floor + .65) / floors, wh = bodyH / floors * .48;
     for (let bay = 0; bay < bays; bay++) {
@@ -64,11 +74,17 @@ function building(kind, w, h, d, rnd) {
       bodyH * (floor + 1) / floors, 0, trim, 'floor-band'));
   }
   if (industrial) {
-    const bays = integer(rnd, 2, 4);
+    const roof = ENVIRONMENT_STRUCTURE_PARAMETERS.industrialRoof;
+    const bays = Math.max(1, Math.round(w / sample(rnd, roof.bay)));
+    const span = w / bays, pitch = sample(rnd, roof.pitch);
+    const rise = span * Math.tan(pitch), thickness = sample(rnd, roof.thickness);
     for (let i = 0; i < bays; i++) {
       const x = (i + .5) * w / bays - w / 2;
-      rows.push(box(w / bays * .92, h * .035, d * 1.015, x, bodyH + h * .08, 0, trim,
-        'sawtooth-roof', { r: [0, 0, .14] }));
+      rows.push(roofWedge(span, rise, d, x, bodyH, facade));
+      rows.push(box(span / Math.cos(pitch), thickness, d * 1.015,
+        x, bodyH + rise / 2, 0, trim, 'sawtooth-roof', { r: [0, 0, pitch] }));
+      rows.push(box(.06, rise * .72, d * .92, x + span / 2 + .031,
+        bodyH + rise * .5, 0, 0x537785, 'roof-clerestory', { mat: 'glass' }));
     }
     const stacks = kind === 'incinerator' ? 3 : integer(rnd, 1, 2);
     for (let i = 0; i < stacks; i++) {
@@ -94,8 +110,9 @@ function building(kind, w, h, d, rnd) {
 }
 
 function greenhouse(w, h, d, rnd) {
-  const rows = [], bays = integer(rnd, 4, 7), frame = choose(rnd, [0x879e95, 0xc0cbc1, 0x71827a]);
-  const wallH = h * .58, pitch = Math.atan2(h - wallH, d / 2);
+  const spec = ENVIRONMENT_STRUCTURE_PARAMETERS.greenhouse;
+  const rows = [], bays = Math.max(1, Math.round(w / sample(rnd, spec.bay))), frame = choose(rnd, [0x879e95, 0xc0cbc1, 0x71827a]);
+  const wallH = h * sample(rnd, spec.eaveRatio), pitch = Math.atan2(h - wallH, d / 2);
   const roofD = Math.hypot(d / 2, h - wallH);
   for (const side of [-1, 1]) {
     rows.push(box(w, wallH, .09, 0, wallH / 2, side * d / 2, 0xa4d2c3, 'glass-wall', { mat: 'glass' }));
@@ -113,8 +130,13 @@ function greenhouse(w, h, d, rnd) {
     rows.push(box(.16, .16, roofD, x, (wallH + h) / 2, side * d / 4, frame,
       'roof-rafter', { r: [side * pitch, 0, 0] }));
   }
-  for (const side of [-1, 1]) rows.push(box(.09, wallH, d, side * w / 2, wallH / 2, 0,
-    0xa4d2c3, 'glass-end', { mat: 'glass' }));
+  for (const side of [-1, 1]) {
+    rows.push(box(.09, wallH, d, side * w / 2, wallH / 2, 0,
+      0xa4d2c3, 'glass-end', { mat: 'glass' }));
+    const gable = roofWedge(d / 2, h - wallH, .09, 0, wallH, 0xa4d2c3);
+    for (const end of [-1, 1]) rows.push({ ...gable, role: 'glass-gable', mat: 'glass',
+      p: [side * w / 2, (wallH + h) / 2, end * d / 4], r: [0, end * Math.PI / 2, 0] });
+  }
   return rows;
 }
 
@@ -245,16 +267,18 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
     const x = (i + .5) * step - len / 2;
     const local = mulberry32((seed ^ Math.imul(i + 1, 0x9e3779b9)) >>> 0);
     if (kind.startsWith('wind')) {
-      const radius = Math.min(step * .42, h * .24, d * .35), hubY = h - radius - .2;
-      const z = d * .15, pivot = [x, hubY, z], phase = local() * Math.PI * 2;
+      const spec = ENVIRONMENT_STRUCTURE_PARAMETERS.wind;
+      const radius = Math.min(step * sample(local, spec.rotorRatio), h * .24, d * .35), hubY = h - radius - .2;
+      const z = 1.2, pivot = [x, hubY, z], phase = local() * Math.PI * 2;
       rows.push(cyl(.32, .7, hubY, x, hubY / 2, 0, 0xd4dcda, 'tower-column'));
       rows.push(box(1.2, 1, 2.2, x, hubY, 0, stone, 'nacelle'));
       if (kind === 'windsea') rows.push(cyl(.9, 1, 3, x, 1.5, 0, 0xd3ab44, 'monopile'));
-      const blades = choose(local, [3, 3, 4]);
+      rows.push(cyl(.28, .28, .4, x, hubY, 1.1, 0xd4dcda, 'rotor-hub', { r: [Math.PI / 2, 0, 0] }));
+      const blades = spec.blades, chord = sample(local, spec.chord);
       for (let j = 0; j < blades; j++) {
         const a = j / blades * Math.PI * 2;
-        rows.push(box(.3, radius * .88, .16, x + Math.cos(a) * radius * .52,
-          hubY + Math.sin(a) * radius * .52, z, 0xe1e5df, 'rotor-blade',
+        rows.push(box(chord, radius, .16, x + Math.cos(a) * radius * .5,
+          hubY + Math.sin(a) * radius * .5, z, 0xe1e5df, 'rotor-blade',
           { r: [0, 0, a - Math.PI / 2], motion: { kind: 'rotor', id: `rotor_${i}`, pivot, phase } }));
       }
     } else if (['citywall', 'barricade', 'levee', 'seawall', 'viaduct'].includes(kind)) {
@@ -280,6 +304,10 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
     } else if (['solarfield', 'floatsolar'].includes(kind)) {
       // 浮動式貼合：水面款整組浮台掛 float 動態（與海面共用風時鐘/波浪係數），陸域款保持靜態
       const isFloat = kind === 'floatsolar';
+      const spec = ENVIRONMENT_STRUCTURE_PARAMETERS.solar;
+      // Limit tilt by clearance above the platform; deeper boundary modules stay supported.
+      const pitch = -Math.min(sample(local, spec.pitch), Math.atan2(.6, d * .38));
+      const gridLines = integer(local, ...spec.gridLines);
       for (const side of [-1, 1]) {
         const y = 1.1, z = side * d * .23;
         const floatMot = isFloat ? {
@@ -290,11 +318,13 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
         } : undefined;
         rows.push(box(step * .9, .35, d * .4, x, .5, z, 0x777e78, 'panel-support', floatMot ? { motion: floatMot } : undefined));
         const panel = box(step * .88, .14, d * .38, x, y, z, choose(local, [0x264461, 0x355875]),
-          'solar-panel', { r: [-.12, 0, 0], ...(floatMot ? { motion: floatMot } : {}) });
+          'solar-panel', { r: [pitch, 0, 0], ...(floatMot ? { motion: floatMot } : {}) });
         rows.push(panel);
-        for (let k = 0; k < 4; k++) {
+        rows.push(box(step * .65, .5, .18, x, .825, z, 0x777e78, 'panel-pedestal', floatMot ? { motion: floatMot } : undefined));
+        for (let k = 0; k < gridLines; k++) {
           const grid = box(.05, .05, d * .37,
-            x + (k - 1.5) * step * .2, y + .14, z, 0xa8babd, 'panel-grid');
+            x + ((k + .5) / gridLines - .5) * step * .8,
+            y + .096 * Math.cos(pitch), z + .096 * Math.sin(pitch), 0xa8babd, 'panel-grid', { r: [pitch, 0, 0] });
           if (floatMot) grid.motion = floatMot;
           rows.push(grid);
         }
