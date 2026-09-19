@@ -10,7 +10,7 @@ import { sampleBuildingSite } from './buildingDiversity.js';
 import { runtimePrimitiveGeometry } from './runtimePartModel.js';
 import { roofDimensions, sectionRoofProfile } from './roofProfiles.js';
 import { generateBuildingAppurtenances } from './buildingAppurtenances.js';
-import { resolveAdaptiveRoofForm, calculateFootprintMetrics, computeOrientedRoofFrame } from './architectureStyles.js';
+import { resolveAdaptiveRoofForm, calculateFootprintMetrics, computeOrientedRoofFrame, glassFacadeRule } from './architectureStyles.js';
 import { WATER } from './data.js';
 
 const EPS = 1e-5;
@@ -220,37 +220,168 @@ export function paintGeometry(geometry, hex, variant = 0) {
   return geometry;
 }
 
+/** 座標雜湊亂數（FNV-1a）：立面外觀差異只吃雜湊，零共享亂數消耗、
+ * 不擾動場景散布序列；同棟同窗跨幀跨端必定同值。 */
+function facadeHash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15;
+  return h >>> 0;
+}
+function facadeRnd(seed, floor, bay, tag) {
+  return facadeHash(`${seed}|${floor}|${bay}|${tag}`) / 4294967296;
+}
+// 已有逐窗重裝飾的風格不再疊規則窗框（避免擁擠，窗框留給素面風格展現多樣性）。
+const BUSY_FACADE_DETAIL = new Set([
+  'jali', 'louvers', 'shutters', 'half_timber', 'board_batten',
+  'recess_bands', 'carved_frame', 'brise_soleil',
+]);
+
 /** 沿真實外環／中庭牆段配置窗格、立柱與橫梁，零件數有上限。
  * 採階層式深度分層（Glass < Mullion/Frame < Trim/Header < Column/Pier），
  * 杜絕同平面共面 (Coplanar) 導致的 WebGL Z-fighting 閃爍。
+ * 三階段管線：先把每層每開間的玻璃鋪滿（高樓不再因額度耗盡而頂層缺窗），
+ * 再用「均攤額度 − 已用玻璃數」的剩餘額度疊窗框與文化裝飾，全棟總量恆受
+ * FACADE_GEOMETRY_LIMIT 夾制；玻璃形狀／尺寸／窗框由 glassFacadeRule 按建築
+ * 功能類型給定（部分類型如停車場 rate=0 全棟不渲染玻璃）。
  */
 export function architecturalFacade(edges, style, thickness) {
   const geos = [];
   const facade = style.facade || style.wallType || 'ribbon';
   const glassColor = style.glass || 0x68a5c2;
   const trimColor = style.trim || 0x546575;
+  const rule = glassFacadeRule(style.functionInfo);
+  const plainFrame = !BUSY_FACADE_DETAIL.has(style.detail);
 
-  for (const edge of edges) {
-    // 每面牆分配自己的額度，避免第一面長牆耗盡全棟細節。
-    let budget = Math.floor((style.detail ? FACADE_GEOMETRY_LIMIT.regional : FACADE_GEOMETRY_LIMIT.base) / Math.max(1, edges.length));
-    if (budget <= 0) break;
+  for (let ei = 0; ei < edges.length; ei++) {
+    const edge = edges[ei];
     const length = edge.hw2 * 2;
-    const floors = Math.max(1, Math.min(8, Math.floor(edge.h / 3.2)));
+    if (!(length > 1e-5) || !(edge.h > 0.5)) continue;
+    const limit = style.detail ? FACADE_GEOMETRY_LIMIT.regional : FACADE_GEOMETRY_LIMIT.base;
+    // 樓層按真實高度推導（層高 3.2m），不再鉗制 8 層：高層缺玻璃的主因即此截斷
+    // 疊加舊管線把低樓層裝飾先花光額度、高樓層玻璃輪不到。
+    const floors = Math.max(1, Math.min(36, Math.round(edge.h / 3.2)));
     const isCurtain = facade === 'ribbon' || facade === 'glass_curtain';
-    const bays = Math.max(1, Math.min(10, Math.floor(length / (isCurtain ? 5 : 3.2))));
+    let bays = Math.max(1, Math.min(10, Math.floor(length / (isCurtain ? 5 : 3.2))));
+    if (floors * bays > 140) bays = Math.max(1, Math.floor(140 / floors));
     const bayW = length / bays, floorH = edge.h / floors;
+    let budget = Math.floor(limit / Math.max(1, edges.length));
+    const seed = `${edge.sourceId ?? ''}|${edge.x.toFixed(2)},${edge.z.toFixed(2)}|${edge.ry.toFixed(3)}|${style.variant ?? 0}`;
+    // 已渲染窗表：後續階段沿用，不重算位置（牛眼／老虎窗不疊格柵）。
+    const wins = [];
+    const edgeStart = geos.length;
 
-    // Helper: 在特定額外厚度階層上生成幾何，避免 Z-fighting
-    const add = (w, h, u, y, color, extraDepth = 0.05, angle = 0) => {
-      if (budget-- <= 0) return;
+    // Helper: 在特定額外厚度階層上生成幾何，避免 Z-fighting。
+    // 第一階段呼叫時不扣額度（free=true）；第二階段裝飾扣額度，耗盡回 false。
+    const add = (w, h, u, y, color, extraDepth = 0.05, angle = 0, free = false) => {
+      if (!free && budget-- <= 0) return false;
       const geo = new THREE.BoxGeometry(w, h, thickness + extraDepth);
       if (angle) geo.rotateZ(angle);
       geo.translate(u, y, 0);
       geo.rotateY(-edge.ry);
       geo.translate(edge.x, edge.y, edge.z);
       geos.push(paintGeometry(geo, color, style.variant));
+      return true;
+    };
+    const addDisc = (r, u, y, color, extraDepth, free = false) => {
+      if (!free && budget-- <= 0) return false;
+      const geo = new THREE.CylinderGeometry(r, r, thickness + extraDepth, 12);
+      geo.rotateX(Math.PI / 2);
+      geo.translate(u, y, 0);
+      geo.rotateY(-edge.ry);
+      geo.translate(edge.x, edge.y, edge.z);
+      geos.push(paintGeometry(geo, color, style.variant));
+      return true;
     };
 
+    // ---- 第一階段：玻璃鋪滿，全層全開間保證覆蓋（不扣額度，事後計數扣除） ----
+    for (let floor = 0; floor < floors; floor++) {
+      const topFloor = floor === floors - 1;
+      const yBase = (floor + 0.5) * floorH;
+      for (let bay = 0; bay < bays; bay++) {
+        if (facadeRnd(seed, floor, bay, 'skip') >= rule.rate) continue;
+        let shape = rule.shapes[Math.floor(facadeRnd(seed, floor, bay, 'shape') * rule.shapes.length)] || 'rect';
+        if (shape === 'oculus' && !topFloor) shape = 'rect';
+        const w = Math.min(bayW * 0.96, Math.max(0.3,
+          bayW * (rule.w[0] + facadeRnd(seed, floor, bay, 'w') * (rule.w[1] - rule.w[0]))));
+        const h = Math.min(floorH * 0.9, Math.max(0.3,
+          floorH * (rule.h[0] + facadeRnd(seed, floor, bay, 'h') * (rule.h[1] - rule.h[0]))));
+        const u = -length / 2 + (bay + 0.5) * bayW + (facadeRnd(seed, floor, bay, 'du') - 0.5) * bayW * 0.18;
+        const y = yBase + (facadeRnd(seed, floor, bay, 'dy') - 0.5) * floorH * 0.1 + (rule.lift || 0) * floorH;
+        // 老虎窗（dormer）：只放頂層，外凸窗體＋小斜蓋，取代平面玻璃。
+        if (topFloor && (rule.dormer || 0) > 0 && facadeRnd(seed, floor, bay, 'dormer') < rule.dormer) {
+          add(w * 0.8, h * 0.7, u, y, glassColor, 0.42, 0, true);
+          add(w * 0.94, 0.09, u, y + h * 0.42, trimColor, 0.55, 0, true);
+          const lid = new THREE.BoxGeometry(w * 0.94, 0.07, 0.55);
+          lid.rotateX(0.35);
+          lid.translate(u, y + h * 0.52, 0);
+          lid.rotateY(-edge.ry);
+          lid.translate(edge.x, edge.y, edge.z);
+          geos.push(paintGeometry(lid, style.roof ?? trimColor, style.variant));
+          wins.push({ floor, bay, u, y, w, h, shape: 'dormer' });
+          continue;
+        }
+        // Tier 1: 玻璃窗面（深度 +0.05m，突出於牆面 2.5cm，徹底脫離牆面 Z-fighting）
+        if (shape === 'oculus') {
+          // 牛眼窗：圓窗＋外圈飾環（飾環 Tier 2 深度，玻璃 Tier 1 深度）
+          const r = Math.min(w, h) / 2;
+          addDisc(r + 0.09, u, y, trimColor, 0.09, true);
+          addDisc(r, u, y, glassColor, 0.05, true);
+        } else if (shape === 'arch') {
+          // 拱窗：方體＋頂部圓頭（同玻璃色，同 Tier 1 深度）
+          add(w, h * 0.72, u, y - h * 0.14, glassColor, 0.05, 0, true);
+          addDisc(w / 2, u, y + h * 0.22, glassColor, 0.05, true);
+        } else {
+          add(w, h, u, y, glassColor, 0.05, 0, true);
+        }
+        wins.push({ floor, bay, u, y, w, h, shape });
+      }
+    }
+    // 玻璃已鋪數量從本面牆均攤額度扣除：全棟總量恆 ≤ LIMIT（短棟裝飾豐富、
+    // 高棟玻璃優先，裝飾讓路），額度耗盡則後續窗框裝飾逐窗跳過。
+    budget -= (geos.length - edgeStart);
+
+    // ---- 第二階段：窗框／窗梃／窗花（Tier 2 深度 +0.09m，扣額度） ----
+    for (const win of wins) {
+      if (budget <= 0) break;
+      if (win.shape === 'dormer') continue;
+      const { floor, bay, u, y, w, h, shape } = win;
+      if (shape === 'oculus') {
+        if (facadeRnd(seed, floor, bay, 'frame') < 0.6) {
+          const r = Math.min(w, h) / 2;
+          add(0.06, r * 2, u, y, trimColor, 0.09);
+          add(r * 2, 0.06, u, y, trimColor, 0.09);
+        }
+        continue;
+      }
+      if (shape === 'arch') continue;
+      let frame = rule.frame[Math.floor(facadeRnd(seed, floor, bay, 'frame') * rule.frame.length)] || 'none';
+      if (shape === 'lattice') frame = 'grid';
+      else if (shape === 'french') frame = 'cross';
+      else if (shape === 'slit') frame = 'none';
+      if (!plainFrame) frame = 'none';
+      if (frame === 'edge' || isCurtain) {
+        add(w, 0.06, u, y - h / 2 + 0.03, trimColor, 0.09);
+      } else if (frame === 'cross') {
+        add(0.07, h, u, y, trimColor, 0.09);
+        add(w, 0.07, u, y, trimColor, 0.09);
+      } else if (frame === 'grid') {
+        add(0.07, h, u, y, trimColor, 0.09);
+        add(w, 0.07, u, y - h / 6, trimColor, 0.09);
+        add(w, 0.07, u, y + h / 6, trimColor, 0.09);
+      } else if (frame === 'bars') {
+        add(w, 0.06, u, y - h / 6, trimColor, 0.09);
+        add(w, 0.06, u, y + h / 6, trimColor, 0.09);
+      } else if (frame === 'lintel') {
+        add(w + 0.16, 0.1, u, y + h / 2 + 0.05, trimColor, 0.09);
+      }
+      if (facade === 'lattice' || facade === 'timber') {
+        add(0.08, h, u, y, trimColor, 0.09);
+        add(w, 0.08, u, y, trimColor, 0.09);
+      }
+    }
+
+    // ---- 第三階段：文化裝飾（扣額度，額度耗盡即停，不影響已鋪好的玻璃） ----
     if (style.detail === 'stone_base') {
       add(length, Math.min(0.8, edge.h * 0.12), 0, Math.min(0.8, edge.h * 0.12) / 2, trimColor, 0.2);
     }
@@ -259,88 +390,75 @@ export function architecturalFacade(edges, style, thickness) {
       for (let i = 0; i < count; i++) {
         const u = -length / 2 + (i + 0.5) * length / count;
         if (style.detail === 'toron') {
-          add(0.3, edge.h * 0.95, u, edge.h * 0.475, style.wall, 0.45);
+          if (!add(0.3, edge.h * 0.95, u, edge.h * 0.475, style.wall, 0.45)) break;
           for (let j = 1; j <= 3; j++) add(0.14, 0.14, u, edge.h * j / 4, trimColor, 0.75);
         } else {
-          add(0.15, 0.3, u, edge.h - 0.22, trimColor, 0.45);
+          if (!add(0.15, 0.3, u, edge.h - 0.22, trimColor, 0.45)) break;
           add(0.55, 0.12, u, edge.h - 0.12, style.roof, 0.55);
         }
       }
     }
-    for (let floor = 0; floor < floors && budget > 0; floor++) {
-      const y = (floor + 0.52) * floorH;
-      for (let bay = 0; bay < bays && budget > 0; bay++) {
-        const u = -length / 2 + (bay + 0.5) * bayW;
-
-        // 1. 玻璃窗尺寸比例設定：帷幕窗高透光，一般窗開口均勻
-        const w = bayW * (isCurtain ? 0.94 : (facade === 'recess' || facade === 'concrete') ? 0.40 : 0.62);
-        const h = floorH * (isCurtain ? 0.82 : (facade === 'piers' || facade === 'stone') ? 0.70 : 0.55);
-
-        // Tier 1: 玻璃窗面（深度 +0.05m，突出於牆面 2.5cm，徹底脫離牆面 Z-fighting）
-        add(w, h, u, y, glassColor, 0.05);
-
-        const detail = style.detail;
-        if (detail === 'jali' || detail === 'louvers') {
-          for (let n = 1; n <= 3; n++) {
-            add(w, 0.055, u, y - h / 2 + h * n / 4, trimColor, 0.16);
-            if (detail === 'jali') add(0.055, h, u - w / 2 + w * n / 4, y, trimColor, 0.16);
-          }
-        } else if (detail === 'shutters') {
-          const shutterW = Math.min(0.45, (bayW - w) * 0.4);
-          for (const side of [-1,1]) add(shutterW, h, u + side * (w + shutterW) / 2, y, trimColor, 0.14);
-        } else if (detail === 'half_timber') {
-          const rise = Math.min(0.5, (floorH - h) * 0.35), run = w / 2;
-          for (const side of [-1,1]) add(Math.hypot(run, rise), 0.09,
-            u + side * run / 2, y - h / 2 - rise / 2 - 0.08, trimColor, 0.16, side * Math.atan2(rise, run));
-        } else if (detail === 'board_batten') {
-          for (const side of [-1,1]) add(0.065, floorH * 0.92, u + side * bayW * 0.44,
-            (floor + 0.5) * floorH, trimColor, 0.12);
-        } else if (detail === 'recess_bands' || detail === 'carved_frame') {
-          for (const side of [-1,1]) add(0.10, h + 0.20, u + side * (w / 2 + 0.08), y, trimColor, 0.15);
-          add(w + 0.26, 0.1, u, y + h / 2 + 0.08, trimColor, 0.15);
-          if (detail === 'carved_frame') add(w + 0.26, 0.1, u, y - h / 2 - 0.08, trimColor, 0.15);
-        } else if (detail === 'brise_soleil') {
-          add(w + 0.18, 0.1, u, y + h / 2 + 0.15, trimColor, 0.7);
-          for (const side of [-1,1]) add(0.08, h, u + side * w / 2, y, trimColor, 0.55);
+    for (const win of wins) {
+      if (budget <= 0) break;
+      if (win.shape === 'oculus' || win.shape === 'dormer') continue;
+      const { u, y, w, h, floor } = win;
+      const detail = style.detail;
+      if (detail === 'jali' || detail === 'louvers') {
+        for (let n = 1; n <= 3; n++) {
+          add(w, 0.055, u, y - h / 2 + h * n / 4, trimColor, 0.16);
+          if (detail === 'jali') add(0.055, h, u - w / 2 + w * n / 4, y, trimColor, 0.16);
         }
-
-        // Tier 2: 窗框 / 窗梃 / 格子（深度 +0.09m，突出於玻璃面 2cm，徹底脫離與玻璃的共面閃爍）
-        if (isCurtain) {
-          // 帷幕下沿金屬飾條
-          add(w, 0.06, u, y - h / 2 + 0.03, trimColor, 0.09);
-        }
-        if (facade === 'lattice' || facade === 'timber') {
-          add(0.08, h, u, y, trimColor, 0.09);
-          add(w, 0.08, u, y, trimColor, 0.09);
-        }
-
-        // Tier 3: 磚石窗楣 / 綠化花槽 / 拱圈（深度 +0.13m ~ +0.14m）
-        if (facade === 'brick') {
-          add(w + 0.08, 0.09, u, y + h / 2 + 0.045, trimColor, 0.13);
-        }
-        if (facade === 'green') {
-          add(w + 0.06, 0.16, u, y - h / 2 - 0.08, 0x3d6e4a, 0.14);
-        }
-        if (facade === 'arches') {
-          for (const side of [-1, 1]) {
-            if (budget-- <= 0) break;
-            const arch = new THREE.TorusGeometry(w / 2, Math.min(0.12, w * 0.07), 3, 8, Math.PI);
-            arch.translate(u, y + h / 2, side * (thickness / 2 + 0.055));
-            arch.rotateY(-edge.ry); arch.translate(edge.x, edge.y, edge.z);
-            geos.push(paintGeometry(arch, trimColor, style.variant));
-          }
-        }
+      } else if (detail === 'shutters') {
+        const shutterW = Math.min(0.45, (bayW - w) * 0.4);
+        for (const side of [-1, 1]) add(shutterW, h, u + side * (w + shutterW) / 2, y, trimColor, 0.14);
+      } else if (detail === 'half_timber') {
+        const rise = Math.min(0.5, (floorH - h) * 0.35), run = w / 2;
+        for (const side of [-1, 1]) add(Math.hypot(run, rise), 0.09,
+          u + side * run / 2, y - h / 2 - rise / 2 - 0.08, trimColor, 0.16, side * Math.atan2(rise, run));
+      } else if (detail === 'board_batten') {
+        for (const side of [-1, 1]) add(0.065, floorH * 0.92, u + side * bayW * 0.44,
+          (floor + 0.5) * floorH, trimColor, 0.12);
+      } else if (detail === 'recess_bands' || detail === 'carved_frame') {
+        for (const side of [-1, 1]) add(0.10, h + 0.20, u + side * (w / 2 + 0.08), y, trimColor, 0.15);
+        add(w + 0.26, 0.1, u, y + h / 2 + 0.08, trimColor, 0.15);
+        if (detail === 'carved_frame') add(w + 0.26, 0.1, u, y - h / 2 - 0.08, trimColor, 0.15);
+      } else if (detail === 'brise_soleil') {
+        add(w + 0.18, 0.1, u, y + h / 2 + 0.15, trimColor, 0.7);
+        for (const side of [-1, 1]) add(0.08, h, u + side * w / 2, y, trimColor, 0.55);
       }
 
-      // Tier 4: 水平樓層腰帶 (Stringcourse / Cornice)（深度 +0.15m）
-      if (facade !== 'recess' && facade !== 'concrete') {
-        add(length, 0.14, 0, floor * floorH + 0.10, trimColor, 0.15);
+      // Tier 3: 磚石窗楣 / 綠化花槽 / 拱圈（深度 +0.13m ~ +0.14m）
+      if (facade === 'brick') {
+        add(w + 0.08, 0.09, u, y + h / 2 + 0.045, trimColor, 0.13);
       }
-      if (style.detail === 'tile_band') {
+      if (facade === 'green') {
+        add(w + 0.06, 0.16, u, y - h / 2 - 0.08, 0x3d6e4a, 0.14);
+      }
+      if (facade === 'arches') {
+        for (const side of [-1, 1]) {
+          if (budget-- <= 0) break;
+          const arch = new THREE.TorusGeometry(w / 2, Math.min(0.12, w * 0.07), 3, 8, Math.PI);
+          arch.translate(u, y + h / 2, side * (thickness / 2 + 0.055));
+          arch.rotateY(-edge.ry); arch.translate(edge.x, edge.y, edge.z);
+          geos.push(paintGeometry(arch, trimColor, style.variant));
+        }
+      }
+    }
+
+    // Tier 4: 水平樓層腰帶 (Stringcourse / Cornice)（深度 +0.15m）
+    if (facade !== 'recess' && facade !== 'concrete') {
+      for (let floor = 0; floor < floors; floor++) {
+        if (!add(length, 0.14, 0, floor * floorH + 0.10, trimColor, 0.15)) break;
+      }
+    }
+    if (style.detail === 'tile_band') {
+      for (let floor = 0; floor < floors; floor++) {
         const tiles = Math.min(10, Math.max(1, Math.floor(length / 1.1)));
-        for (let i = 0; i < tiles; i++) add(length / tiles * 0.9, 0.18,
-          -length / 2 + (i + 0.5) * length / tiles, floor * floorH + 0.3,
-          i % 2 ? trimColor : style.roof, 0.17);
+        for (let i = 0; i < tiles; i++) {
+          if (!add(length / tiles * 0.9, 0.18,
+            -length / 2 + (i + 0.5) * length / tiles, floor * floorH + 0.3,
+            i % 2 ? trimColor : style.roof, 0.17)) break;
+        }
       }
     }
 

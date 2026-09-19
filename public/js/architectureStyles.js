@@ -344,6 +344,58 @@ export const APPURTENANCE_RULES = Object.freeze({
   flagpole:        { label: '立面斜插旗幟',   slot: 'facade', categories: ['tourism', 'commercial', 'residential'], maxCount: 1, prob: 0.35 },
 });
 
+/** 立面玻璃規則單一縫：按建築功能決定玻璃覆蓋率／形狀池／尺寸／窗框。
+ * rate = 每扇窗的渲染機率（0 = 全棟不渲染玻璃，如立體停車場開敞層）；
+ * shapes 池可重複 entries 加權；'oculus'（牛眼窗）只落在頂層，'dormer'（老虎窗）走 dormer
+ * 機率且只落在頂層；w/h = 窗寬／窗高相對開間／層高的比例範圍；lift = 窗中心上移
+ * （廠房高窗）；frame 池見 osmBuilding.js 的窗框實作（none/edge/cross/grid/bars/lintel）。
+ * 先查類型覆寫，再退回功能 category，最後 _default。 */
+export const GLASS_FACADE_CATEGORIES = Object.freeze({
+  commercial:  { rate: 1.0,  shapes: ['wide', 'wide', 'wide', 'rect'], w: [0.80, 0.94], h: [0.70, 0.85], frame: ['edge', 'none'], dormer: 0, lift: 0 },
+  residential: { rate: 0.9,  shapes: ['rect', 'rect', 'rect', 'lattice', 'french'], w: [0.50, 0.68], h: [0.45, 0.62], frame: ['edge', 'cross', 'grid'], dormer: 0.25, lift: 0 },
+  industrial:  { rate: 0.22, shapes: ['slit', 'slit', 'slit', 'rect'], w: [0.25, 0.45], h: [0.25, 0.40], frame: ['edge', 'none'], dormer: 0, lift: 0.18 },
+  rural:       { rate: 0.55, shapes: ['rect', 'rect', 'lattice', 'slit'], w: [0.40, 0.60], h: [0.40, 0.55], frame: ['edge', 'cross'], dormer: 0.30, lift: 0 },
+  tourism:     { rate: 0.8,  shapes: ['arch', 'arch', 'rect', 'oculus'], w: [0.50, 0.70], h: [0.50, 0.70], frame: ['edge', 'lintel'], dormer: 0.15, lift: 0 },
+  transport:   { rate: 0.7,  shapes: ['wide', 'wide', 'rect'], w: [0.60, 0.85], h: [0.50, 0.70], frame: ['edge', 'none'], dormer: 0, lift: 0 },
+  medical:     { rate: 0.95, shapes: ['wide', 'wide', 'rect'], w: [0.70, 0.90], h: [0.55, 0.70], frame: ['edge', 'bars'], dormer: 0, lift: 0 },
+  education:   { rate: 0.85, shapes: ['rect', 'rect', 'lattice', 'wide'], w: [0.55, 0.75], h: [0.50, 0.65], frame: ['edge', 'grid', 'cross'], dormer: 0.1, lift: 0 },
+  civic:       { rate: 0.8,  shapes: ['rect', 'rect', 'wide', 'arch'], w: [0.55, 0.80], h: [0.50, 0.70], frame: ['edge', 'cross'], dormer: 0, lift: 0 },
+  religious:   { rate: 0.6,  shapes: ['arch', 'arch', 'oculus', 'slit'], w: [0.35, 0.50], h: [0.55, 0.75], frame: ['lintel', 'edge'], dormer: 0, lift: 0.05 },
+  heritage:    { rate: 0.4,  shapes: ['slit', 'slit', 'arch', 'rect'], w: [0.30, 0.50], h: [0.40, 0.60], frame: ['lintel', 'edge'], dormer: 0.1, lift: 0 },
+  utility:     { rate: 0,    shapes: ['slit'], w: [0.25, 0.40], h: [0.25, 0.40], frame: ['none'], dormer: 0, lift: 0.15 },
+});
+export const GLASS_FACADE_TYPES = Object.freeze({
+  greenhouse: { rate: 1.0, shapes: ['wide', 'wide', 'wide', 'rect'], w: [0.85, 0.96], h: [0.75, 0.88], frame: ['none', 'edge'], dormer: 0, lift: 0 },
+  parking:    { rate: 0, shapes: ['rect'], w: [0.5, 0.6], h: [0.4, 0.5], frame: ['none'], dormer: 0, lift: 0 },
+  hangar:     { rate: 0.06, shapes: ['slit', 'slit', 'rect'], w: [0.25, 0.45], h: [0.25, 0.40], frame: ['none'], dormer: 0, lift: 0.2 },
+  warehouse:  { rate: 0.15, shapes: ['slit', 'slit', 'rect'], w: [0.25, 0.45], h: [0.25, 0.40], frame: ['edge', 'none'], dormer: 0, lift: 0.18 },
+  plant:      { rate: 0.08, shapes: ['slit'], w: [0.25, 0.40], h: [0.25, 0.40], frame: ['none'], dormer: 0, lift: 0.15 },
+  substation: { rate: 0.08, shapes: ['slit'], w: [0.25, 0.40], h: [0.25, 0.40], frame: ['none'], dormer: 0, lift: 0.15 },
+  generator:  { rate: 0.08, shapes: ['slit'], w: [0.25, 0.40], h: [0.25, 0.40], frame: ['none'], dormer: 0, lift: 0.15 },
+  water:      { rate: 0.08, shapes: ['slit'], w: [0.25, 0.40], h: [0.25, 0.40], frame: ['none'], dormer: 0, lift: 0.15 },
+  station:    { rate: 0.95, shapes: ['wide', 'wide', 'arch', 'rect'], w: [0.70, 0.90], h: [0.60, 0.80], frame: ['edge', 'lintel'], dormer: 0, lift: 0 },
+  terminal:   { rate: 0.95, shapes: ['wide', 'wide', 'wide', 'rect'], w: [0.75, 0.94], h: [0.65, 0.85], frame: ['edge', 'none'], dormer: 0, lift: 0 },
+  stadium:    { rate: 0.3,  shapes: ['slit', 'slit', 'wide'], w: [0.30, 0.60], h: [0.30, 0.50], frame: ['edge', 'none'], dormer: 0, lift: 0.1 },
+  sports:     { rate: 0.3,  shapes: ['slit', 'slit', 'wide'], w: [0.30, 0.60], h: [0.30, 0.50], frame: ['edge', 'none'], dormer: 0, lift: 0.1 },
+  ruins:      { rate: 0, shapes: ['slit'], w: [0.3, 0.4], h: [0.3, 0.4], frame: ['none'], dormer: 0, lift: 0 },
+  monument:   { rate: 0, shapes: ['slit'], w: [0.3, 0.4], h: [0.3, 0.4], frame: ['none'], dormer: 0, lift: 0 },
+  pyramid:    { rate: 0, shapes: ['slit'], w: [0.3, 0.4], h: [0.3, 0.4], frame: ['none'], dormer: 0, lift: 0 },
+});
+const GLASS_FACADE_DEFAULT = Object.freeze({
+  rate: 0.85, shapes: ['rect', 'rect', 'rect', 'wide'], w: [0.50, 0.70], h: [0.45, 0.60],
+  frame: ['edge', 'cross'], dormer: 0, lift: 0,
+});
+
+/** 取立面玻璃規則（類型覆寫 → 功能 category → 預設；呼叫端傳 style.functionInfo，可為空）。 */
+export function glassFacadeRule(functionInfo = null) {
+  const type = functionInfo?.type;
+  const category = functionInfo?.category;
+  const base = (category && GLASS_FACADE_CATEGORIES[category]) || GLASS_FACADE_DEFAULT;
+  const over = (type && GLASS_FACADE_TYPES[type]) || null;
+  if (!over) return base;
+  return { ...base, ...over };
+}
+
 /** 世界各大文化建築語彙型錄 */
 export const ARCHITECTURE_STYLES = Object.freeze({
   ...REGIONAL_STYLES,
