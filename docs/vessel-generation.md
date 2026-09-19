@@ -126,7 +126,7 @@
 
 場景保留最多三艘巡航船、八艘停泊船、一艘研究潛器的預算。甲板寬納入選址範圍；水深或航道不足則略過。大航母、長貨輪不會硬塞進小地圖。航域分類供篩選，仍未由地理資料自動判別內海／湖泊，也未加入破冰或畜力拖船物理。
 
-圖鑑：啟動 `node server/server.js --port 8621` 後開啟 `/public/vessels.html`，選船型與種子，下方顯示實際材質及裝載數。
+圖鑑：執行 `npm run preview:gen` 後開啟 `http://127.0.0.1:8644` 的 🚢 船隻頁籤，選船型與種子，下方顯示實際材質及裝載數。
 
 ```powershell
 $env:THREE_MODULE = "C:\path\to\three.module.mjs"

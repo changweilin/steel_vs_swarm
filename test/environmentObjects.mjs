@@ -119,23 +119,3 @@ for (const p of water.objects) {
 assert.equal(field({ heightAt: (x, z) => 3000 + x * 2 + z * 2 }).objects.length, 0, 'reject steep terrain');
 assert.equal(field({ heightAt: () => NaN }).objects.length, 0, 'failed terrain samples are omitted');
 console.log('Scene placement: determinism, blockers, spawn/road/OSM clearance, water and slopes passed.');
-
-if (process.argv.includes('--serve')) {
-  const { createServer } = await import('node:http');
-  const { readFile } = await import('node:fs/promises');
-  const { fileURLToPath } = await import('node:url');
-  const path = await import('node:path');
-  const root = fileURLToPath(new URL('../public/', import.meta.url));
-  const three = fileURLToPath(new URL('../out/forest_review/three.module.js', import.meta.url));
-  createServer(async (req, res) => {
-    try {
-      const route = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-      const target = route === '/' ? fileURLToPath(new URL('./environmentPreview.html', import.meta.url))
-        : route === '/three.js' ? three : path.resolve(root, '.' + route);
-      if (route !== '/' && route !== '/three.js' && !target.startsWith(root)) { res.writeHead(403); res.end(); return; }
-      const data = await readFile(target);
-      res.setHeader('Content-Type', target.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/javascript');
-      res.end(data);
-    } catch { res.writeHead(404); res.end(); }
-  }).listen(8646, '127.0.0.1', () => console.log('Environment preview: http://127.0.0.1:8646'));
-}

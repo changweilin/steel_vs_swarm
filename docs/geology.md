@@ -1,7 +1,7 @@
 # 地質物件生成
 
 此模組產生可渲染的風格化地質物件，透過 `backgroundObjects.js` 的共同型錄出口使用。
-預覽執行 `node tools/geology_preview.mjs`，開啟 http://127.0.0.1:8634。
+預覽執行 `npm run preview:gen`，開啟 http://127.0.0.1:8644 的 🪨 地質頁籤。
 預覽只綁定 loopback，沒有掛進正式戰鬥伺服器。
 
 ## 分類與參數

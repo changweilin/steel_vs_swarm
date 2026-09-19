@@ -25,7 +25,7 @@
 
 `vehicleParts.js` 適配描述子宿主，外觀使用新型錄。停車場的權威碰撞柱保留原契約，以 `collisionOnly` 標記並由渲染器跳過；這些列不作可見模型。貨櫃維持獨立物流構件。其他專用車型可由共同型錄與試車場生成。
 
-開啟試車場：執行 `node test/architecturePreview.mjs`，瀏覽 `http://127.0.0.1:8644/vehicles`。可篩選三個分類、選原型、更換種子與拖曳觀察。設定 `THREE_MODULE` 與 `THREE_PASS` 可使用本機同版本 Three.js 及 `postprocessing/Pass.js`；預覽沿用遊戲後製，以正確解碼材質顏色。
+開啟試車場：執行 `npm run preview:gen`，瀏覽 `http://127.0.0.1:8644` 的 🚗 車輛頁籤。可篩選三個分類、選原型、更換種子與拖曳觀察。設定 `THREE_MODULE` 與 `THREE_PASS` 可使用本機同版本 Three.js 及 `postprocessing/Pass.js`；預覽沿用遊戲後製，以正確解碼材質顏色。
 
 驗證：設定 `THREE_MODULE` 後執行 `node test/vehicleDiversity.mjs`，以及既有 `tools/audit_vehicle_spec.mjs`、`tools/audit_background_objects.mjs`、`tools/audit_client_syntax.mjs`、`tools/audit_gpu_lifecycle.mjs`。
 
@@ -53,7 +53,7 @@ vehicleConsists.js 提供 11 種列車與 12 種聯結車配方。列車採柴�
 
 共同入口支援 consist/<配方>，例如 makeProceduralVehicle('consist/timberTrain', 42, {leaderKey:'dieselLocomotive', wagonCount:4, wagonKey:'railLogs'})。
 
-試車場增加單車／車廂、整列貨運列車、完整聯結車模式，可選牽引車、車廂及節數。本次運行網址為 http://127.0.0.1:8645/vehicles；預設啟動命令仍使用 8644。完整編組已進共同型錄，尚未新增長列車自動散布點；原有短車位仍按宿主碰撞盒容納單車。
+試車場（🚗 車輛頁籤）提供單車／車廂、整列貨運列車、完整聯結車模式，可選牽引車、車廂及節數。完整編組已進共同型錄，尚未新增長列車自動散布點；原有短車位仍按宿主碰撞盒容納單車。
 
 造型參考：[Greenbrier 貨車分類](https://www.gbrx.com/find-your-railcar/)與 [Chart 低溫槽車](https://www.chartindustries.com/Products/Cryogenic-Transport-Trailers)。簡化幾何與參數為遊戲設計，不代表廠商工程規格。
 

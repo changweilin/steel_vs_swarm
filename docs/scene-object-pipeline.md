@@ -73,7 +73,7 @@ node test/architecturePreview.mjs
 
 場內共用物件使用座標獨立種子選址，避開兵線、出生區、道路、圖資建築、水域與陡坡；碰撞由生成零件推導。新增物件不消耗植被共享亂數。一般 OSM 建物由既有多邊形程序建築生成器產生。
 
-驗證：`node test/environmentObjects.mjs`；實際 Three.js 幾何檢查為 `THREE_MODULE=<本機 three.module.js 路徑> node test/environmentRender.mjs`。`node test/environmentObjects.mjs --serve` 在 http://127.0.0.1:8646 提供場景／邊界與種子對照（需 `out/forest_review/three.module.js`）。
+驗證：`node test/environmentObjects.mjs`；實際 Three.js 幾何檢查為 `THREE_MODULE=<本機 three.module.js 路徑> node test/environmentRender.mjs`。
 
 ### 邊界陡坡接縫
 
@@ -133,7 +133,7 @@ iceParts.js 產生封閉多面體、冰冠、斷裂邊緣與水下龍骨。浮�
 
 自然生成沿用 forestEnvironment 的溫度推估：浮冰需 ≤2°C、冰山需 ≤8°C；缺乏可推估氣候時省略。此條件表示適用的遊戲氣候，不證明現地存在冰川。cfg.env.ice 可明確開關冰體，供自訂冰雪地圖使用。場景與邊界都套用此閘，預覽可直接檢查全部款式。
 
-驗證：environmentObjects（17,920 組包絡、封閉網格／繞序／水線／淺灘）、environmentRender（正式 Three.js 編譯與頂點包絡）、edgeSlope、audit_world_edge、audit_edge_fill、audit_siteplan、audit_world_height、audit_client_syntax、audit_gpu_lifecycle。environmentPreview 新增「浮冰／冰山：水線與種子」，並已檢查 8 個冰體預覽。
+驗證：environmentObjects（17,920 組包絡、封閉網格／繞序／水線／淺灘）、environmentRender（正式 Three.js 編譯與頂點包絡）、edgeSlope、audit_world_edge、audit_edge_fill、audit_siteplan、audit_world_height、audit_client_syntax、audit_gpu_lifecycle。
 
 ## 全物件隨機生成器大分類頁籤與動態環境整合（2026-09-13；場景獨立物件整併 2026-09-18）
 

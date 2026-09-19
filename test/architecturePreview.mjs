@@ -3886,12 +3886,6 @@ export function serve(port = DEFAULT_PORT) {
       let body, type = 'text/javascript';
       if (url.pathname === '/') {
         body = page; type = 'text/html';
-      } else if (url.pathname === '/vehicles') {
-        body = await readFile(new URL('./vehiclePreview.html', import.meta.url)); type = 'text/html';
-      } else if (url.pathname === '/vessels') {
-        body = await readFile(new URL('../public/vessels.html', import.meta.url)); type = 'text/html';
-      } else if (url.pathname === '/environment') {
-        body = await readFile(new URL('./environmentPreview.html', import.meta.url)); type = 'text/html';
       } else if (url.pathname === '/three.mjs' || url.pathname === '/three.js') {
         if (process.env.THREE_MODULE) {
           body = await readFile(process.env.THREE_MODULE);
