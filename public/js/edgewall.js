@@ -3,6 +3,7 @@
 // Geometry must stay inside the declared envelope; it need not fill the envelope.
 // The catalog imports only render-free generators and never consumes the shared scene RNG.
 import { mulberry32 } from './rng.js';
+import { boundaryGrid } from './objectLayout.js';
 import { partAABB, VEHICLE_SPEC } from './vehicles.js';
 import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, environmentAvailable, environmentSize, makeSceneVehicleParts } from './environmentParts.js';
 import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
@@ -657,13 +658,8 @@ export function buildBoundaryRunParts(kind, {
   const parts = [];
   const bufferParts = [];
 
-  const numCols = Math.max(1, Math.round(len / pitchX));
-  const colStep = len / numCols;
-  const unitW = colStep * 0.94;
-  const rowStep = Math.max(depth, pitchZ);
-  const unitD = Math.min(depth * 0.94, rowStep * 0.92);
-
-  const maxBufferRows = bufferDepth >= 6 ? Math.floor(bufferDepth / rowStep) : 0;
+  const { numCols, colStep, unitW, rowStep, unitD, maxBufferRows } =
+    boundaryGrid({ len, depth, bufferDepth, pitchX, pitchZ });
   const totalRows = 1 + maxBufferRows; // Row 0 = boundary wall, Row 1..maxBufferRows = buffer fill
 
   if (layout.continuous) {

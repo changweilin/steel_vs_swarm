@@ -186,6 +186,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     <button id="tab-btn-vessel" class="cat-tab-btn" type="button" data-tab="vessel">🚢 船隻</button>
     <button id="tab-btn-industry" class="cat-tab-btn" type="button" data-tab="industry">🏭 產業設施</button>
     <button id="tab-btn-ice" class="cat-tab-btn" type="button" data-tab="ice">❄️ 冰雪</button>
+    <button id="tab-btn-infrastructure" class="cat-tab-btn" type="button" data-tab="infrastructure">⚙️ 能源與工程</button>
     <button id="tab-btn-env" class="cat-tab-btn" type="button" data-tab="env">🌐 邊界構造</button>
   </div>
   <div class="env-sim-bar">
@@ -753,13 +754,14 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
   <div id="panel-env" class="cat-panel" style="display: none;">
     <div class="dim-panel">
       <div class="dim-title">
-        <span>邊界固定構造 · 連續陡坡接縫</span>
+        <span id="env-panel-title">邊界固定構造 · 連續陡坡接縫</span>
         <span class="badge" id="env-info-badge">56 款邊界障礙 · 連續陡坡</span>
       </div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">大分類模式</label>
           <select id="env-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="module">獨立構造模組 (Single Module)</option>
             <option value="all">全部邊界輪播 (All Boundaries)</option>
             <option value="edge" selected>邊界固定構造 (Edge Boundaries)</option>
             <option value="slope">連續陡坡接縫 (Slope Boundary Joint)</option>
@@ -784,7 +786,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">緩衝區與透明牆</label>
           <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:6px 0; cursor:pointer;">
-            <input type="checkbox" id="chk-env-buffer" checked style="accent-color:#2563eb;"> 含緩衝區填實＋透明牆包絡
+            <input type="checkbox" id="chk-env-buffer" checked style="accent-color:#2563eb;"> 顯示緩衝區填實（邊界透明牆常駐）
           </label>
         </div>
       </div>
@@ -999,7 +1001,9 @@ import { disposeTree } from '/js/toon.js';
 
 // 環境物件與邊界生成模組
 import { environmentParts } from '/js/environmentParts.js';
-import { WALL_KINDS, wallParts, buildBoundaryRunParts } from '/js/edgewall.js';
+import { WALL_KINDS, wallParts, buildBoundaryRunParts, BOUNDARY_OBJECT_CATEGORIES } from '/js/edgewall.js';
+import { boundaryGrid } from '/js/objectLayout.js';
+import { edgeWallHM } from '/js/data.js';
 import { SLOPE_BOUNDARIES, buildSlopeBoundary } from '/js/edgeSlope.js';
 
 // 環境模擬系統 (四季 × 日夜 × 多元天氣)
@@ -1320,6 +1324,7 @@ function estimateAppurtenances(poly, arch, heightInfo, seed) {
 
 // ---- 清除與重設 ----
 function clearScene() {
+  for (const group of [buildingGroup, roadGroup, geologyGroup, plantGroup, vehicleGroup, vesselGroup, envGroup, industryGroup, iceGroup]) disposeTree(group);
   scene.remove(buildingGroup);
   buildingGroup = new THREE.Group();
   scene.add(buildingGroup);
@@ -1952,65 +1957,6 @@ function createSceneBoulderMesh(seed, posX = 0, posZ = 0) {
   }
 }
 
-// 邊界沿邊排列版巨礫：同一生成器（buildBoundaryRunParts），只差放置與排列；
-// 本體＋緩衝區填實＋透明牆包絡與遊戲 buildEdgeWall 同源。
-function createBoundaryBoulderMesh(seed, posX = 0, posZ = 0) {
-  try {
-    const season = document.querySelector('#sim-season')?.value || 'summer';
-    const bb = previewBoundaryBatch('boulder', seed, season);
-    const mesh = assembleEnvironmentParts(bb.rows, false);
-    mesh.position.set(posX, 0, posZ);
-
-    const bounds3 = new THREE.Box3().setFromObject(mesh);
-    const size3 = bounds3.getSize(new THREE.Vector3());
-    const entry = {
-      name: '巨石巨礫',
-      bounds: { size: [size3.x, size3.y, size3.z], min: [0, 0, 0], max: [size3.x, size3.y, size3.z] },
-      parts: bb.rows,
-    };
-    const spec = { group: '邊界巨礫', name: '巨石巨礫' };
-
-    const r = Math.max(size3.x, size3.y, size3.z);
-    const hitGeo = new THREE.BoxGeometry(r * 1.1, size3.y, r * 1.1);
-    hitGeo.translate(0, size3.y / 2, 0);
-    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
-    const hitMesh = new THREE.Mesh(hitGeo, hitMat);
-    hitMesh.position.set(posX, 0, posZ);
-
-    const meta = {
-      type: 'boulder',
-      spec,
-      seed,
-      entry,
-      input: { sceneKind: false, boundaryKind: 'boulder', bufferCount: bb.bufferParts.length },
-      posX, posZ,
-      bounds: entry.bounds,
-      name: entry.name,
-      isAncient: false,
-      sceneKind: false,
-    };
-
-    mesh.userData.geologyMeta = meta;
-    hitMesh.userData.geologyMeta = meta;
-    clickableObjects.push(hitMesh);
-    geologyGroup.add(mesh);
-    geologyGroup.add(hitMesh);
-
-    const badge = document.createElement('div');
-    badge.className = 'badge-label';
-    badge.innerHTML = '<span class="cat">【' + entry.name + '】</span>邊界沿邊 · 緩衝 ' + bb.bufferParts.length + ' 件 <span class="height">' + size3.y.toFixed(1) + 'm</span>';
-    labelContainer.append(badge);
-    const labelObj = { element: badge, point: new THREE.Vector3(posX, size3.y + 1.5, posZ) };
-    labels.push(labelObj);
-    addTransparentWallEnvelope(mesh, PREVIEW_BOUNDARY_SEG_LEN, bb.def.h, bb.def.depth);
-
-    return { mesh, hitMesh, meta, entry, labelObj };
-  } catch (err) {
-    console.error('邊界巨礫生成失敗:', err);
-    return null;
-  }
-}
-
 function createGeologyMesh(type, seed, input, posX = 0, posZ = 0) {
   try {
     if (type === 'boulder') {
@@ -2107,19 +2053,17 @@ function buildGeologyMode() {
   const boundaryGeo = boundaryLayoutOf('geo') === 'boundary';
   const boundaryNote = boundaryGeo ? ' · 邊界沿邊排列（含緩衝區＋透明牆包絡）' : '';
   let pool = allTypes;
-  if (boundaryGeo) {
-    pool = ['boulder'];
-  } else if (climateVal !== 'all' || waterVal !== 'all') {
+  if (climateVal !== 'all' || waterVal !== 'all') {
     const dist = geologyDistribution(getGeologyInputs(seed, 0));
     if (dist.length > 0) pool = [...dist.map(d => d.type), 'boulder'];
   }
 
   if (viewMode === 'single') {
     const curInput = getGeologyInputs(seed, 0);
-    const actType = boundaryGeo ? 'boulder' : (type === 'auto'
+    const actType = (type === 'auto'
       ? pickAutoGeologyType(seed, curInput)
       : (type === 'all' ? pool[seed % pool.length] : type));
-    const res = boundaryGeo ? createBoundaryBoulderMesh(seed, 0, 0) : createGeologyMesh(actType, seed, curInput, 0, 0);
+    const res = withObjectLayout(createGeologyMesh(actType, seed, curInput, 0, 0), 'geo');
     if (!res || !res.entry) return;
     const entry = res.entry;
     const r = Math.max(...entry.bounds.size);
@@ -2149,9 +2093,7 @@ function buildGeologyMode() {
       const curType = isMatrix
         ? matrixPool[idx]
         : (type === 'all' ? pool[idx % pool.length] : (type === 'auto' ? pickAutoGeologyType(curSeed, curInput) : type));
-      const res = (boundaryGeo && curType === 'boulder')
-        ? createBoundaryBoulderMesh(curSeed, 0, 0)
-        : createGeologyMesh(curType, curSeed, curInput, 0, 0);
+      const res = withObjectLayout(createGeologyMesh(curType, curSeed, curInput, 0, 0), 'geo');
       if (res && res.entry) {
         const szX = res.entry.bounds.size[0] || 15;
         const szY = res.entry.bounds.size[1] || 8;
@@ -2253,54 +2195,6 @@ function createSceneTreeObject(type, seed, season = 'summer', posX = 0, posZ = 0
   return { group, tree, spec, meta, labelObj };
 }
 
-function createBoundaryTreeObject(type, seed, season = 'summer', posX = 0, posZ = 0) {
-  const bkind = boundaryKindForEnv(type) || 'gianttree';
-  const bb = previewBoundaryBatch(bkind, seed, season);
-  const group = assembleEnvironmentParts(bb.rows, false);
-  group.position.set(posX, 0, posZ);
-  const bounds = new THREE.Box3().setFromObject(group);
-  const size = bounds.getSize(new THREE.Vector3());
-  const tree = { h: size.y, footprint: Math.max(size.x, size.z) / 2, parts: [] };
-  const spec = { form: '邊界沿邊排列', name: PLANT_NAMES[type] || type };
-
-  const hitH = Math.max(4, tree.h);
-  const hitR = Math.max(2, tree.footprint);
-  const hitGeo = new THREE.CylinderGeometry(hitR * 0.9, hitR, hitH, 8);
-  hitGeo.translate(0, hitH / 2, 0);
-  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
-  const hitMesh = new THREE.Mesh(hitGeo, hitMat);
-  group.add(hitMesh);
-
-  const meta = {
-    type,
-    name: PLANT_NAMES[type] || type,
-    spec,
-    tree,
-    seed,
-    season,
-    scale: 1,
-    posX, posZ,
-    sceneKind: false,
-    boundaryKind: bkind,
-    bufferCount: bb.bufferParts.length,
-  };
-
-  group.userData.plantMeta = meta;
-  hitMesh.userData.plantMeta = meta;
-  clickableObjects.push(hitMesh);
-  plantGroup.add(group);
-
-  const badge = document.createElement('div');
-  badge.className = 'badge-label';
-  badge.innerHTML = '<span class="cat">【' + (PLANT_NAMES[type] || type) + '】</span>邊界沿邊 · 緩衝 ' + bb.bufferParts.length + ' 件 <span class="height">' + tree.h.toFixed(1) + 'm</span>';
-  labelContainer.appendChild(badge);
-  const labelObj = { element: badge, point: new THREE.Vector3(posX, tree.h + 1.5, posZ) };
-  labels.push(labelObj);
-  addTransparentWallEnvelope(group, PREVIEW_BOUNDARY_SEG_LEN, bb.def.h, bb.def.depth);
-
-  return { group, tree, spec, meta, labelObj };
-}
-
 function createPlantObject(type, seed, scale = 1, season = 'summer', posX = 0, posZ = 0) {
   if (type === 'gianttree' || type === 'fallentree') {
     return createSceneTreeObject(type, seed, season, posX, posZ);
@@ -2396,29 +2290,19 @@ function buildPlantMode() {
   const seedMode = document.querySelector('#select-seed-mode-plant')?.value || 'per_building';
   const boundaryPlant = boundaryLayoutOf('plant') === 'boundary';
   const boundaryNote = boundaryPlant ? ' · 邊界沿邊排列（含緩衝區＋透明牆包絡）' : '';
-  const boundaryPair = ['gianttree', 'fallentree'];
+  const allSpecies = [...Object.keys(TREE_SPECIES), 'gianttree', 'fallentree'];
 
   if (viewMode === 'single') {
-    if (boundaryPlant) {
-      const actType = (type === 'gianttree' || type === 'fallentree') ? type : boundaryPair[seed % boundaryPair.length];
-      const res = createBoundaryTreeObject(actType, seed, season, 0, 0);
-      document.querySelector('#nav-status').textContent = '植物單株形態檢驗：【' + res.meta.name + '】（' + season + '季，種子 ' + seed + boundaryNote + '）';
-      camTarget.set(0, res.tree.h * 0.4, 0);
-      camDist = Math.max(16, res.tree.h * 1.5);
-      activeCamTarget.copy(camTarget);
-      activeCamDist = camDist;
-    } else {
-      const { tree, meta } = createPlantObject(type, seed, scale, season, 0, 0);
-      document.querySelector('#nav-status').textContent = '植物單株形態檢驗：【' + meta.name + '】（' + season + '季，種子 ' + seed + '）';
-      camTarget.set(0, tree.h * 0.4, 0);
-      camDist = Math.max(16, tree.h * 1.5);
-      activeCamTarget.copy(camTarget);
-      activeCamDist = camDist;
-    }
+    const actType = type === 'all' ? allSpecies[Math.abs(seed) % allSpecies.length] : type;
+    const { tree, meta } = withObjectLayout(createPlantObject(actType, seed, scale, season, 0, 0), 'plant');
+    document.querySelector('#nav-status').textContent = '植物單株形態檢驗：【' + meta.name + '】（' + season + '季，種子 ' + seed + boundaryNote + '）';
+    camTarget.set(0, tree.h * 0.4, 0);
+    camDist = Math.max(16, tree.h * 1.5, tree.footprint * 3);
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
   } else {
     const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-plant')?.value, 10) || 4));
     const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-plant')?.value, 10) || 4));
-    const allSpecies = [...Object.keys(TREE_SPECIES), 'gianttree', 'fallentree'];
 
     // 第一階段：生成所有林木物件，量測最大冠幅與高度 (以最大的為主)
     const items = [];
@@ -2426,11 +2310,9 @@ function buildPlantMode() {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
-        const curType = boundaryPlant ? boundaryPair[idx % boundaryPair.length] : (type === 'all' ? allSpecies[idx % allSpecies.length] : type);
+        const curType = type === 'all' ? allSpecies[idx % allSpecies.length] : type;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        const res = boundaryPlant
-          ? createBoundaryTreeObject(curType, curSeed, season, 0, 0)
-          : createPlantObject(curType, curSeed, scale, season, 0, 0);
+        const res = withObjectLayout(createPlantObject(curType, curSeed, scale, season, 0, 0), 'plant');
         if (res && res.tree) {
           const szW = (res.tree.footprint || 4) * 2;
           const szH = res.tree.h || 12;
@@ -2459,7 +2341,7 @@ function buildPlantMode() {
       }
     }
 
-    document.querySelector('#nav-status').textContent = '植物陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 株）：【' + (boundaryPlant ? '神木倒木邊界排列' : (type === 'all' ? '全部樹種輪播' : TREE_SPECIES[type]?.name || type)) + '】（' + season + '季 · 基底種子 ' + seed + boundaryNote + '）';
+    document.querySelector('#nav-status').textContent = '植物陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 株）：【' + (type === 'all' ? '全部樹種輪播' : TREE_SPECIES[type]?.name || type) + '】（' + season + '季 · 基底種子 ' + seed + boundaryNote + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, Math.min(25, maxObjH * 0.35), 0);
@@ -2505,12 +2387,15 @@ function switchTab(tabKey) {
   } else if (tabKey === 'ice') {
     if (titleEl) titleEl.textContent = '❄️ 浮冰與冰山 · 水線與種子';
     if (descEl) descEl.textContent = '海冰冰川冰 2 款 · 簡化水線造型 · 透光水面環境';
+  } else if (tabKey === 'infrastructure') {
+    if (titleEl) titleEl.textContent = '⚙️ 能源、水產與工程構造';
+    if (descEl) descEl.textContent = '風機、光伏、水產養殖、海岸與防護工程 · 同源模組與邊界排列';
   } else if (tabKey === 'env') {
     if (titleEl) titleEl.textContent = '🌐 邊界構造 · 連續陡坡接縫';
     if (descEl) descEl.textContent = '56 款邊界障礙 · 固定尺寸權威碰撞 · 陡坡緩坡平地水域';
   }
 
-  const activePanel = document.querySelector('#panel-' + tabKey);
+  const activePanel = document.querySelector('#panel-' + (tabKey === 'infrastructure' ? 'env' : tabKey));
   if (activePanel) activePanel.style.display = 'block';
 
   if (tabKey === 'arch') {
@@ -2527,7 +2412,7 @@ function switchTab(tabKey) {
     buildIndustryMode();
   } else if (tabKey === 'ice') {
     buildIceMode();
-  } else if (tabKey === 'env') {
+  } else if (tabKey === 'env' || tabKey === 'infrastructure') {
     buildEnvironmentMode();
   }
 }
@@ -2936,42 +2821,6 @@ function createVehicleInstance(profileKey, seed, options, posX = 0, posZ = 0) {
   }
 }
 
-// 邊界沿邊排列版場景汽車：同一生成器（buildBoundaryRunParts car 款），只差放置與排列。
-function createBoundaryVehicleCell(seed, posX = 0, posZ = 0) {
-  try {
-    const season = document.querySelector('#sim-season')?.value || 'summer';
-    const bb = previewBoundaryBatch('car', seed, season);
-    const model = assembleEnvironmentParts(bb.rows, false);
-    model.position.set(posX, 0, posZ);
-    vehicleGroup.add(model);
-    const bounds = new THREE.Box3().setFromObject(model);
-    const size = bounds.getSize(new THREE.Vector3());
-    const v = { name: '連排大貨車 · 邊界', length: size.x, width: size.z, height: size.y };
-    const meta = {
-      posX, posZ, seed, vehicle: v, name: v.name, formation: 'boundary',
-      length: v.length, width: v.width, height: v.height,
-      boundaryKind: 'car', bufferCount: bb.bufferParts.length,
-    };
-    model.traverse((o) => {
-      if (o.isMesh) {
-        o.userData.vehicleMeta = meta;
-        clickableObjects.push(o);
-      }
-    });
-    const badge = document.createElement('div');
-    badge.className = 'badge-label';
-    badge.innerHTML = '<span class="cat">🚗</span>連排大貨車 · 邊界 <span class="height">' + v.length.toFixed(1) + 'm</span>';
-    labelContainer.appendChild(badge);
-    const labelObj = { element: badge, point: new THREE.Vector3(posX, (v.height || 2) + 1.2, posZ) };
-    labels.push(labelObj);
-    addTransparentWallEnvelope(model, PREVIEW_BOUNDARY_SEG_LEN, bb.def.h, bb.def.depth);
-    return { model, meta, vehicle: v, labelObj };
-  } catch (err) {
-    console.error('邊界車輛生成失敗:', err);
-    return null;
-  }
-}
-
 function buildVehicleMode() {
   clearScene();
   currentMode = 'vehicle';
@@ -3014,12 +2863,12 @@ function buildVehicleMode() {
       };
 
   if (viewMode === 'single') {
-    const res = boundaryVeh ? createBoundaryVehicleCell(seed, 0, 0) : createVehicleInstance(actProf, seed, options, 0, 0);
+    const res = withObjectLayout(createVehicleInstance(actProf, seed, options, 0, 0), 'veh');
     if (!res) return;
     const v = res.vehicle;
     document.querySelector('#nav-status').textContent = '車輛單體檢驗：【' + v.name + '】（種子碼 ' + seed + ' · 長 ' + v.length.toFixed(1) + 'm 寬 ' + v.width.toFixed(1) + 'm 高 ' + v.height.toFixed(1) + 'm' + boundaryNote + '）';
     camTarget.set(0, v.height * 0.4, 0);
-    camDist = Math.max(v.length, v.width, v.height) * 2.2 + 6;
+    camDist = Math.max(...(res.layoutSize || [v.length, v.width, v.height])) * 2.2 + 6;
     activeCamTarget.copy(camTarget);
     activeCamDist = camDist;
   } else {
@@ -3035,17 +2884,6 @@ function buildVehicleMode() {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        if (boundaryVeh) {
-          const res = createBoundaryVehicleCell(curSeed, 0, 0);
-          if (res && res.vehicle) {
-            const v = res.vehicle;
-            if (v.width > maxObjW) maxObjW = v.width;
-            if (v.length > maxObjD) maxObjD = v.length;
-            if (v.height > maxObjH) maxObjH = v.height;
-            items.push({ c, r, res });
-          }
-          continue;
-        }
         let curProf = actProf;
         let curOptions = options;
         if (profileKey === 'all' || !profileKey) {
@@ -3061,11 +2899,11 @@ function buildVehicleMode() {
             };
           }
         }
-        const res = createVehicleInstance(curProf, curSeed, curOptions, 0, 0);
+        const res = withObjectLayout(createVehicleInstance(curProf, curSeed, curOptions, 0, 0), 'veh');
         if (res && res.vehicle) {
           const v = res.vehicle;
-          if (v.width > maxObjW) maxObjW = v.width;
-          if (v.length > maxObjD) maxObjD = v.length;
+          maxObjW = Math.max(maxObjW, res.layoutSize?.[0] || v.width);
+          maxObjD = Math.max(maxObjD, res.layoutSize?.[2] || v.length);
           if (v.height > maxObjH) maxObjH = v.height;
           items.push({ c, r, res });
         }
@@ -3089,7 +2927,7 @@ function buildVehicleMode() {
       }
     }
 
-    document.querySelector('#nav-status').textContent = '車輛陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 輛）：【' + (boundaryVeh ? '場景汽車邊界排列' : (profileKey === 'all' ? '全部車型輪播' : VEHICLE_PROFILES[actProf]?.name || actProf)) + '】（基底種子 ' + seed + boundaryNote + '）';
+    document.querySelector('#nav-status').textContent = '車輛陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 輛）：【' + (profileKey === 'all' ? '全部車型輪播' : VEHICLE_PROFILES[actProf]?.name || actProf) + '】（基底種子 ' + seed + boundaryNote + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, Math.min(15, maxObjH * 0.4), 0);
@@ -3186,42 +3024,6 @@ function createStrandedShipInstance(seed, posX = 0, posZ = 0) {
   return { model, meta, vessel: v, labelObj };
 }
 
-function createBoundaryVesselCell(seed, posX = 0, posZ = 0) {
-  const season = document.querySelector('#sim-season')?.value || 'summer';
-  const bb = previewBoundaryBatch('strandedship', seed, season);
-  const model = assembleEnvironmentParts(bb.rows, false);
-  model.position.set(posX, 0, posZ);
-  vesselGroup.add(model);
-  const bounds = new THREE.Box3().setFromObject(model);
-  const size = bounds.getSize(new THREE.Vector3());
-  const v = {
-    name: '擱淺船 · 邊界', registry: '邊界沿邊排列',
-    length: size.x, beam: size.z, height: size.y,
-    draft: 0, freeboard: size.y, displacementTonnes: 0, speedKnots: 0,
-    sceneKind: false,
-  };
-  const meta = {
-    posX, posZ, seed, vessel: v, name: v.name,
-    length: v.length, beam: v.beam, draft: v.draft,
-    displacement: 0, speed: 0, sceneKind: false,
-    boundaryKind: 'strandedship', bufferCount: bb.bufferParts.length,
-  };
-  model.traverse((o) => {
-    if (o.isMesh) {
-      o.userData.vesselMeta = meta;
-      clickableObjects.push(o);
-    }
-  });
-  const badge = document.createElement('div');
-  badge.className = 'badge-label';
-  badge.innerHTML = '<span class="cat">🚢</span>擱淺船 · 邊界 <span class="height">' + v.length.toFixed(1) + 'm</span>';
-  labelContainer.appendChild(badge);
-  const labelObj = { element: badge, point: new THREE.Vector3(posX, size.y + 2, posZ) };
-  labels.push(labelObj);
-  addTransparentWallEnvelope(model, PREVIEW_BOUNDARY_SEG_LEN, bb.def.h, bb.def.depth);
-  return { model, meta, vessel: v, labelObj };
-}
-
 function createVesselInstance(seed, options, posX = 0, posZ = 0) {
   try {
     if (options.id === 'strandedship') {
@@ -3295,15 +3097,16 @@ function buildVesselMode() {
   if ((type === 'all' || !type) && !pool.includes('strandedship')) pool.push('strandedship');
 
   if (viewMode === 'single') {
-    const actType = boundaryVessel ? 'strandedship' : ((type === 'all' || !type) ? pool[seed % pool.length] : type);
+    const actType = ((type === 'all' || !type) ? pool[seed % pool.length] : type);
     const actOptions = { ...options, id: actType };
-    let res = boundaryVessel ? createBoundaryVesselCell(seed, 0, 0) : createVesselInstance(seed, actOptions, 0, 0);
+    let res = createVesselInstance(seed, actOptions, 0, 0);
     if (!res) res = createVesselInstance(seed, { id: actType }, 0, 0);
+    res = withObjectLayout(res, 'vessel');
     if (!res) return;
     const v = res.vessel;
     document.querySelector('#nav-status').textContent = '艦船單體檢驗：【' + v.name + ' · ' + v.registry + '】（種子 ' + seed + ' · 長 ' + v.length.toFixed(1) + 'm 寬 ' + v.beam.toFixed(1) + 'm 吃水 ' + v.draft.toFixed(2) + 'm · ' + v.displacementTonnes.toFixed(1) + 't' + boundaryNote + '）';
     camTarget.set(0, v.beam * 0.3, 0);
-    camDist = Math.max(v.length, 30) * 1.8 + 10;
+    camDist = Math.max(...(res.layoutSize || [v.length]), 30) * 1.8 + 10;
     activeCamTarget.copy(camTarget);
     activeCamDist = camDist;
   } else {
@@ -3320,17 +3123,18 @@ function buildVesselMode() {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        const curType = boundaryVessel ? 'strandedship' : ((type === 'all' || !type) ? pool[idx % pool.length] : type);
+        const curType = ((type === 'all' || !type) ? pool[idx % pool.length] : type);
         const curOptions = { ...options, id: curType };
-        let res = boundaryVessel ? createBoundaryVesselCell(curSeed, 0, 0) : createVesselInstance(curSeed, curOptions, 0, 0);
+        let res = createVesselInstance(curSeed, curOptions, 0, 0);
         if (!res) {
           // 若複合條件無完全符合者，放寬為單純依類型生成，確保物件正常陳列
           res = createVesselInstance(curSeed, { id: curType }, 0, 0);
         }
+        res = withObjectLayout(res, 'vessel');
         if (res && res.vessel) {
           const v = res.vessel;
-          if (v.beam > maxObjW) maxObjW = v.beam;
-          if (v.length > maxObjD) maxObjD = v.length;
+          maxObjW = Math.max(maxObjW, res.layoutSize?.[0] || v.beam);
+          maxObjD = Math.max(maxObjD, res.layoutSize?.[2] || v.length);
           if ((v.height || v.beam) > maxObjH) maxObjH = (v.height || v.beam);
           items.push({ c, r, res });
         }
@@ -3356,7 +3160,7 @@ function buildVesselMode() {
       }
     }
 
-    document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 艘）：【' + (boundaryVessel ? '擱淺船邊界排列' : (type && type !== 'all' ? (type === 'strandedship' ? '擱淺船' : VESSEL_TYPES.find(t => t.id === type)?.name) : '全部船型輪播')) + '】（基底種子 ' + seed + boundaryNote + '）';
+    document.querySelector('#nav-status').textContent = '艦船陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 艘）：【' + (type && type !== 'all' ? (type === 'strandedship' ? '擱淺船' : VESSEL_TYPES.find(t => t.id === type)?.name) : '全部船型輪播') + '】（基底種子 ' + seed + boundaryNote + '）';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, Math.min(25, maxObjH * 0.4), 0);
@@ -3385,10 +3189,9 @@ const ICE_LABELS = { icefloe: '浮冰群', iceberg: '極地冰山' };
 
 function createIndustryInstance(kind, seed, posX = 0, posZ = 0) {
   const season = document.querySelector('#sim-season')?.value || 'summer';
-  const bkind = boundaryLayoutOf('industry') === 'boundary' ? boundaryKindForEnv(kind) : null;
-  const bb = bkind ? previewBoundaryBatch(bkind, seed, season) : null;
-  const rows = bb ? bb.rows : environmentParts(kind, { seed, season });
-  const model = assembleEnvironmentParts(rows, false);
+  const bb = boundaryLayoutOf('industry') === 'boundary';
+  const rows = environmentParts(kind, { seed, season });
+  const model = withObjectLayout({ model: assembleEnvironmentParts(rows, false), meta: { seed } }, 'industry').model;
   model.position.set(posX, 0, posZ);
   industryGroup.add(model);
 
@@ -3402,7 +3205,6 @@ function createIndustryInstance(kind, seed, posX = 0, posZ = 0) {
     partsCount: rows.length,
     size: [size.x, size.y, size.z],
     sceneKind: !bb,
-    ...(bb ? { boundaryKind: bkind, bufferCount: bb.bufferParts.length } : {}),
   };
 
   model.traverse((o) => {
@@ -3417,7 +3219,6 @@ function createIndustryInstance(kind, seed, posX = 0, posZ = 0) {
   badge.innerHTML = '<span class="cat">🏭</span>' + meta.label + (bb ? ' · 邊界' : '') + ' <span class="height">' + size.y.toFixed(1) + 'm</span>';
   labelContainer.appendChild(badge);
   labels.push({ element: badge, point: new THREE.Vector3(posX, bounds.max.y + 1.5, posZ) });
-  if (bb) addTransparentWallEnvelope(model, PREVIEW_BOUNDARY_SEG_LEN, bb.def.h, bb.def.depth);
 
   return { model, meta, size, bounds };
 }
@@ -3468,16 +3269,15 @@ function buildIndustryMode() {
       const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
       const curKind = listPool[idx % listPool.length];
       const season = document.querySelector('#sim-season')?.value || 'summer';
-      const curBkind = boundaryLayoutOf('industry') === 'boundary' ? boundaryKindForEnv(curKind) : null;
-      const curBb = curBkind ? previewBoundaryBatch(curBkind, curSeed, season) : null;
-      const partRows = curBb ? curBb.rows : environmentParts(curKind, { seed: curSeed, season });
-      const model = assembleEnvironmentParts(partRows, false);
+      const curBb = boundaryLayoutOf('industry') === 'boundary';
+      const partRows = environmentParts(curKind, { seed: curSeed, season });
+      const model = withObjectLayout({ model: assembleEnvironmentParts(partRows, false), meta: { seed: curSeed } }, 'industry').model;
       const bounds = new THREE.Box3().setFromObject(model);
       const size = bounds.getSize(new THREE.Vector3());
       if (size.x > maxObjW) maxObjW = size.x;
       if (size.z > maxObjD) maxObjD = size.z;
       if (size.y > maxObjH) maxObjH = size.y;
-      items.push({ c, r, idx, curKind, curSeed, model, bounds, size, partRows, curBkind, curBb });
+      items.push({ c, r, idx, curKind, curSeed, model, bounds, size, partRows, curBb });
     }
 
     // 第二階段：依據最大物件尺寸配置間距
@@ -3500,7 +3300,6 @@ function buildIndustryMode() {
         partsCount: it.partRows.length,
         size: [it.size.x, it.size.y, it.size.z],
         sceneKind: !it.curBb,
-        ...(it.curBb ? { boundaryKind: it.curBkind, bufferCount: it.curBb.bufferParts.length } : {}),
       };
       it.model.traverse((o) => {
         if (o.isMesh) {
@@ -3514,7 +3313,6 @@ function buildIndustryMode() {
       badge.innerHTML = '<span class="cat">🏭</span>' + meta.label + (it.curBb ? ' · 邊界' : '') + ' <span class="height">' + it.size.y.toFixed(1) + 'm</span>';
       labelContainer.appendChild(badge);
       labels.push({ element: badge, point: new THREE.Vector3(posX, it.bounds.max.y + 1.5, posZ) });
-      if (it.curBb) addTransparentWallEnvelope(it.model, PREVIEW_BOUNDARY_SEG_LEN, it.curBb.def.h, it.curBb.def.depth);
     }
 
     document.querySelector('#nav-status').textContent = (isCatalog ? '設施全分類目錄陳列' : '設施陣列檢驗') + ' (' + cols + '×' + rows + ' 共 ' + items.length + ' 件）：【' + (kind === 'all' ? '全部款式輪播' : INDUSTRY_LABELS[kind] || kind) + '】（基底種子 ' + seed + boundaryNote + '）';
@@ -3536,10 +3334,9 @@ function buildIndustryMode() {
 // 水線偏移由 assembleEnvironmentParts 統一處理，水面顯示規則與船隻頁籤一致。
 function createIceInstance(kind, seed, posX = 0, posZ = 0) {
   const season = document.querySelector('#sim-season')?.value || 'summer';
-  const bkind = boundaryLayoutOf('ice') === 'boundary' ? boundaryKindForEnv(kind) : null;
-  const bb = bkind ? previewBoundaryBatch(bkind, seed, season) : null;
-  const rows = bb ? bb.rows : environmentParts(kind, { seed, season });
-  const model = assembleEnvironmentParts(rows, true);
+  const bb = boundaryLayoutOf('ice') === 'boundary';
+  const rows = environmentParts(kind, { seed, season });
+  const model = withObjectLayout({ model: assembleEnvironmentParts(rows, true), meta: { seed } }, 'ice').model;
   model.position.set(posX, 0, posZ);
   iceGroup.add(model);
 
@@ -3553,7 +3350,6 @@ function createIceInstance(kind, seed, posX = 0, posZ = 0) {
     partsCount: rows.length,
     size: [size.x, size.y, size.z],
     sceneKind: !bb,
-    ...(bb ? { boundaryKind: bkind, bufferCount: bb.bufferParts.length } : {}),
   };
 
   model.traverse((o) => {
@@ -3568,7 +3364,6 @@ function createIceInstance(kind, seed, posX = 0, posZ = 0) {
   badge.innerHTML = '<span class="cat">❄️</span>' + meta.label + (bb ? ' · 邊界' : '') + ' <span class="height">' + size.y.toFixed(1) + 'm</span>';
   labelContainer.appendChild(badge);
   labels.push({ element: badge, point: new THREE.Vector3(posX, bounds.max.y + 1.5, posZ) });
-  if (bb) addTransparentWallEnvelope(model, PREVIEW_BOUNDARY_SEG_LEN, bb.def.h, bb.def.depth);
 
   return { model, meta, size, bounds };
 }
@@ -3619,16 +3414,15 @@ function buildIceMode() {
       const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
       const curKind = listPool[idx % listPool.length];
       const season = document.querySelector('#sim-season')?.value || 'summer';
-      const curBkind = boundaryLayoutOf('ice') === 'boundary' ? boundaryKindForEnv(curKind) : null;
-      const curBb = curBkind ? previewBoundaryBatch(curBkind, curSeed, season) : null;
-      const partRows = curBb ? curBb.rows : environmentParts(curKind, { seed: curSeed, season });
-      const model = assembleEnvironmentParts(partRows, true);
+      const curBb = boundaryLayoutOf('ice') === 'boundary';
+      const partRows = environmentParts(curKind, { seed: curSeed, season });
+      const model = withObjectLayout({ model: assembleEnvironmentParts(partRows, true), meta: { seed: curSeed } }, 'ice').model;
       const bounds = new THREE.Box3().setFromObject(model);
       const size = bounds.getSize(new THREE.Vector3());
       if (size.x > maxObjW) maxObjW = size.x;
       if (size.z > maxObjD) maxObjD = size.z;
       if (size.y > maxObjH) maxObjH = size.y;
-      items.push({ c, r, idx, curKind, curSeed, model, bounds, size, partRows, curBkind, curBb });
+      items.push({ c, r, idx, curKind, curSeed, model, bounds, size, partRows, curBb });
     }
 
     // 第二階段：依據最大物件尺寸配置間距
@@ -3651,7 +3445,6 @@ function buildIceMode() {
         partsCount: it.partRows.length,
         size: [it.size.x, it.size.y, it.size.z],
         sceneKind: !it.curBb,
-        ...(it.curBb ? { boundaryKind: it.curBkind, bufferCount: it.curBb.bufferParts.length } : {}),
       };
       it.model.traverse((o) => {
         if (o.isMesh) {
@@ -3665,7 +3458,6 @@ function buildIceMode() {
       badge.innerHTML = '<span class="cat">❄️</span>' + meta.label + (it.curBb ? ' · 邊界' : '') + ' <span class="height">' + it.size.y.toFixed(1) + 'm</span>';
       labelContainer.appendChild(badge);
       labels.push({ element: badge, point: new THREE.Vector3(posX, it.bounds.max.y + 1.5, posZ) });
-      if (it.curBb) addTransparentWallEnvelope(it.model, PREVIEW_BOUNDARY_SEG_LEN, it.curBb.def.h, it.curBb.def.depth);
     }
 
     document.querySelector('#nav-status').textContent = (isCatalog ? '冰體全分類目錄陳列' : '冰體陣列檢驗') + ' (' + cols + '×' + rows + ' 共 ' + items.length + ' 件）：【' + (kind === 'all' ? '全部款式輪播' : ICE_LABELS[kind] || kind) + '】（基底種子 ' + seed + boundaryNote + '）';
@@ -3686,12 +3478,15 @@ function initEnvOptions() {
   const prevKind = kindSel.value;
   kindSel.innerHTML = '';
 
-  if (mode === 'edge' || mode === 'all') {
-    for (const k of Object.keys(WALL_KINDS)) {
+  const categories = ['energy', 'aquaculture', 'fortification', 'military', 'bridge', 'levee', 'coastal'];
+  const kinds = Object.keys(WALL_KINDS).filter(k => currentTab !== 'infrastructure'
+    || categories.includes(BOUNDARY_OBJECT_CATEGORIES[k]));
+  if (mode === 'edge' || mode === 'all' || mode === 'module') {
+    for (const k of kinds) {
       kindSel.add(new Option(WALL_KINDS[k].label || k, k));
     }
   } else if (['slope', 'mid', 'flat', 'water'].includes(mode)) {
-    const slopeKinds = Object.keys(WALL_KINDS).filter(k =>
+    const slopeKinds = kinds.filter(k =>
       mode === 'water' ? WALL_KINDS[k].dom === 'water' :
       WALL_KINDS[k].dom === 'land' && WALL_KINDS[k].slope === (mode === 'slope' ? 'steep' : mode)
     );
@@ -3699,6 +3494,8 @@ function initEnvOptions() {
       kindSel.add(new Option(WALL_KINDS[k].label || k, k));
     }
   }
+  document.querySelector('#env-panel-title').textContent = currentTab === 'infrastructure' ? '能源、水產與工程構造' : '邊界固定構造 · 連續陡坡接縫';
+  document.querySelector('#env-info-badge').textContent = kinds.length + ' 款 · 同源生成與排列';
   if ([...kindSel.options].some(o => o.value === prevKind)) {
     kindSel.value = prevKind;
   }
@@ -3742,14 +3539,15 @@ function assembleEnvironmentParts(rows, isIce = false) {
 
 // 邊界列組裝單一入口：單體與陣列共用同一段長、同一坡度取樣與同一端面規則。
 function boundaryRows(kind, def, mode, seed) {
+  const season = document.querySelector('#sim-season').value;
   const heightAt = (x, z) => mode === 'water' || mode === 'flat' ? 0 : x * (mode === 'mid' ? 0.15 : 0.85) + Math.sin(x / 13 + seed) * (mode === 'mid' ? 1 : 4) + z * 0.2;
   if (!['slope', 'mid', 'flat', 'water'].includes(mode)) {
-    return wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed });
+    return wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed, season });
   }
   return [-30, 0, 30].flatMap((x) => (
     def.terrainFit
-      ? buildSlopeBoundary(kind, { len: 30, depth: def.depth, h: def.h, x, z: 0, seed, waterY: mode === 'water' ? 0 : null, heightAt }).parts
-      : wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed }).map((p) => ({ ...p, p: [p.p[0], p.p[1] + heightAt(x, 0), p.p[2]] }))
+      ? buildSlopeBoundary(kind, { len: 30, depth: def.depth, h: def.h, x, z: 0, seed, season, waterY: mode === 'water' ? 0 : null, heightAt }).parts
+      : wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed, season }).map((p) => ({ ...p, p: [p.p[0], p.p[1] + heightAt(x, 0), p.p[2]] }))
   ).map((p) => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
 }
 
@@ -3759,10 +3557,6 @@ function boundaryRows(kind, def, mode, seed) {
 // 透明牆（權威碰撞環）遊戲內本就連續封閉，此處僅以透明包絡盒視覺化提醒，不新增遊戲邏輯。
 const PREVIEW_BOUNDARY_SEG_LEN = 30;
 const PREVIEW_BOUNDARY_BUFFER_DEPTH = 32;
-function boundaryKindForEnv(envKind) {
-  if (WALL_KINDS[envKind]?.object === envKind) return envKind;
-  return Object.keys(WALL_KINDS).find((k) => WALL_KINDS[k].object === envKind) || null;
-}
 function previewBoundaryBatch(boundaryKind, seed, season) {
   const def = WALL_KINDS[boundaryKind];
   const batch = buildBoundaryRunParts(boundaryKind, {
@@ -3773,6 +3567,53 @@ function previewBoundaryBatch(boundaryKind, seed, season) {
 }
 function boundaryLayoutOf(prefix) {
   return document.querySelector('#layout-' + prefix)?.value || 'scene';
+}
+
+// A generated model is immutable input to layout. Changing layout keeps species,
+// vehicle equipment, vessel loading, geometry, materials and the selected seed.
+function withObjectLayout(result, prefix) {
+  if (!result || boundaryLayoutOf(prefix) !== 'boundary') return result;
+  const key = result.model ? 'model' : result.mesh ? 'mesh' : 'group';
+  const source = result[key];
+  const bounds = new THREE.Box3().setFromObject(source);
+  const size = bounds.getSize(new THREE.Vector3());
+  if (![size.x, size.y, size.z].every(n => Number.isFinite(n) && n > 0)) throw new RangeError('Invalid model bounds');
+  const gap = Math.max(1, size.x * .08);
+  const depth = Math.max(6, size.z + Math.max(1, size.z * .08));
+  const len = (size.x + gap) * 3;
+  const grid = boundaryGrid({ len, depth, bufferDepth: depth, pitchX: size.x + gap, pitchZ: depth });
+  const root = new THREE.Group();
+  root.position.copy(source.position);
+  const parent = source.parent;
+  parent?.remove(source);
+  parent?.add(root);
+  const center = bounds.getCenter(new THREE.Vector3()).sub(root.position);
+  source.position.set(-center.x, 0, -center.z);
+  for (let row = 0; row <= grid.maxBufferRows; row++) {
+    for (let col = 0; col < grid.numCols; col++) {
+      const instance = source.clone(true);
+      instance.position.x += (col + .5) * grid.colStep - len / 2;
+      instance.position.z -= row * grid.rowStep;
+      root.add(instance);
+      instance.traverse(o => { if (o.isMesh) clickableObjects.push(o); });
+    }
+  }
+  // Discard the original picking proxy; copies retain the same metadata.
+  const obsolete = new Set();
+  source.traverse(o => obsolete.add(o));
+  if (result.hitMesh) { obsolete.add(result.hitMesh); result.hitMesh.parent?.remove(result.hitMesh); }
+  for (let i = clickableObjects.length - 1; i >= 0; i--) if (obsolete.has(clickableObjects[i])) clickableObjects.splice(i, 1);
+  result[key] = root;
+  const laidOut = new THREE.Box3().setFromObject(root);
+  const extent = laidOut.getSize(new THREE.Vector3());
+  result.layoutSize = [extent.x, extent.y, extent.z];
+  root.userData.objectLayout = { seed: result.meta?.seed, sourceSize: [size.x, size.y, size.z], columns: grid.numCols, rows: 1 + grid.maxBufferRows };
+  if (result.entry) result.entry = { ...result.entry, bounds: { size: result.layoutSize,
+    min: laidOut.min.toArray(), max: laidOut.max.toArray() } };
+  if (result.tree) result.tree = { ...result.tree, footprint: Math.max(extent.x, extent.z) / 2 };
+  const wallHeight = Math.max(edgeWallHM(), size.y);
+  addTransparentWallEnvelope(root, len, wallHeight, depth, bounds.min.y + wallHeight / 2);
+  return result;
 }
 function showBoundaryBuffer() {
   return document.querySelector('#chk-env-buffer')?.checked ?? true;
@@ -3795,10 +3636,11 @@ function createEnvironmentInstance(mode, kind, seed, posX = 0, posZ = 0) {
   if (!def) return null;
 
   const rows = boundaryRows(kind, def, mode, seed);
-  const wantBuffer = showBoundaryBuffer();
-  const bb = wantBuffer ? previewBoundaryBatch(kind, seed, 'summer') : null;
-  const useBuffer = !!(bb && mode === 'edge' && bb.bufferParts.length);
-  const model = assembleEnvironmentParts(useBuffer ? [...rows, ...bb.bufferParts] : rows, false);
+  const wantBuffer = showBoundaryBuffer() && mode !== 'module';
+  const bb = mode === 'edge' ? previewBoundaryBatch(kind, seed, document.querySelector('#sim-season').value) : null;
+  const useBuffer = !!(wantBuffer && bb?.bufferParts.length);
+  const body = bb?.parts || rows;
+  const model = assembleEnvironmentParts(useBuffer ? [...body, ...bb.bufferParts] : body, false);
   model.position.set(posX, 0, posZ);
   envGroup.add(model);
 
@@ -3810,7 +3652,7 @@ function createEnvironmentInstance(mode, kind, seed, posX = 0, posZ = 0) {
     mode,
     kind,
     label: def.label || kind,
-    partsCount: rows.length,
+    partsCount: body.length,
     size: [size.x, size.y, size.z],
     ...(useBuffer ? { bufferCount: bb.bufferParts.length } : {}),
   };
@@ -3827,7 +3669,7 @@ function createEnvironmentInstance(mode, kind, seed, posX = 0, posZ = 0) {
   badge.innerHTML = '<span class="cat">🌐</span>' + (def.label || kind) + (useBuffer ? ' · 緩衝 ' + bb.bufferParts.length + ' 件' : '') + ' <span class="height">' + size.y.toFixed(1) + 'm</span>';
   labelContainer.appendChild(badge);
   labels.push({ element: badge, point: new THREE.Vector3(posX, bounds.max.y + 1.5, posZ) });
-  if (wantBuffer) {
+  if (mode !== 'module') {
     if (mode === 'edge') addTransparentWallEnvelope(model, PREVIEW_BOUNDARY_SEG_LEN, def.h, def.depth);
     else addTransparentWallEnvelope(model, size.x, size.y, size.z, bounds.getCenter(new THREE.Vector3()).y);
   }
@@ -3852,6 +3694,11 @@ function buildEnvironmentMode() {
 
   const boundaryModes = ['edge', 'slope', 'mid', 'flat', 'water'];
   const allKinds = [...document.querySelector('#env-kind').options].map(o => o.value).filter(v => v !== 'all');
+  if (!allKinds.length) {
+    document.querySelector('#nav-status').textContent = '此分類沒有符合地形的構造';
+    render();
+    return;
+  }
 
   const actMode = mode === 'all' ? boundaryModes[seed % boundaryModes.length] : mode;
   const actKind = (kind === 'all' || !kind) ? (allKinds[seed % allKinds.length] || allKinds[0]) : kind;
@@ -3883,9 +3730,9 @@ function buildEnvironmentMode() {
         const idx = r * cols + c;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
         const curMode = mode === 'all' ? boundaryModes[idx % boundaryModes.length] : actMode;
-        const validKinds = curMode === 'edge' || curMode === 'all'
+        const validKinds = curMode === 'edge' || curMode === 'all' || curMode === 'module'
           ? allKinds
-          : Object.keys(WALL_KINDS).filter(k =>
+          : allKinds.filter(k =>
               curMode === 'water' ? WALL_KINDS[k].dom === 'water' :
               WALL_KINDS[k].dom === 'land' && WALL_KINDS[k].slope === (curMode === 'slope' ? 'steep' : curMode));
         const curKind = (kind === 'all' || !kind || !validKinds.includes(kind))
@@ -3894,9 +3741,10 @@ function buildEnvironmentMode() {
         const def = WALL_KINDS[curKind] || { label: curKind, h: 6, depth: 8 };
 
         const partRows = boundaryRows(curKind, def, curMode, curSeed);
-        const curBb = (wantBuffer && curMode === 'edge' && WALL_KINDS[curKind]) ? previewBoundaryBatch(curKind, curSeed, 'summer') : null;
-        const useBuffer = !!(curBb && curBb.bufferParts.length);
-        const merged = useBuffer ? [...partRows, ...curBb.bufferParts] : partRows;
+        const curBb = (curMode === 'edge' && WALL_KINDS[curKind]) ? previewBoundaryBatch(curKind, curSeed, document.querySelector('#sim-season').value) : null;
+        const useBuffer = !!(wantBuffer && curBb?.bufferParts.length);
+        const body = curBb?.parts || partRows;
+        const merged = useBuffer ? [...body, ...curBb.bufferParts] : body;
 
         const model = assembleEnvironmentParts(merged, false);
         const bounds = new THREE.Box3().setFromObject(model);
@@ -3926,7 +3774,7 @@ function buildEnvironmentMode() {
         mode: it.curMode,
         kind: it.curKind,
         label: it.def.label || it.curKind,
-        partsCount: it.partRows.length,
+        partsCount: (it.curBb?.parts || it.partRows).length,
         size: [it.size.x, it.size.y, it.size.z],
         ...(it.useBuffer ? { bufferCount: it.curBb.bufferParts.length } : {}),
       };
@@ -3942,7 +3790,7 @@ function buildEnvironmentMode() {
       badge.innerHTML = '<span class="cat">🌐</span>' + (it.def.label || it.curKind) + (it.useBuffer ? ' · 緩衝 ' + it.curBb.bufferParts.length + ' 件' : '') + ' <span class="height">' + it.size.y.toFixed(1) + 'm</span>';
       labelContainer.appendChild(badge);
       labels.push({ element: badge, point: new THREE.Vector3(posX, it.bounds.max.y + 1.5, posZ) });
-      if (wantBuffer) {
+      if (it.curMode !== 'module') {
         if (it.curMode === 'edge' && WALL_KINDS[it.curKind]) addTransparentWallEnvelope(it.model, PREVIEW_BOUNDARY_SEG_LEN, WALL_KINDS[it.curKind].h, WALL_KINDS[it.curKind].depth);
         else addTransparentWallEnvelope(it.model, it.size.x, it.size.y, it.size.z, it.bounds.getCenter(new THREE.Vector3()).y);
       }
@@ -4097,7 +3945,7 @@ function rebuildActiveTab() {
   else if (currentTab === 'vessel') buildVesselMode();
   else if (currentTab === 'industry') buildIndustryMode();
   else if (currentTab === 'ice') buildIceMode();
-  else if (currentTab === 'env') buildEnvironmentMode();
+  else if (currentTab === 'env' || currentTab === 'infrastructure') buildEnvironmentMode();
 }
 
 document.querySelector('#sim-season')?.addEventListener('change', (e) => {
