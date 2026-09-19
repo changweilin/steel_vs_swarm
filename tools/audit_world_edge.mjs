@@ -631,9 +631,10 @@ console.log('\nⅥ 純表現層(伺服器對這一整套一無所知)');
   t('edgewall.js 全檔無 Math.random(A4)', !/Math\.random/.test(strip(ewSrc)));
   t('edgewall.js 零 THREE(這才是型錄與規劃器能離線驗的原因)', !/\bTHREE\b/.test(strip(ewSrc)));
   t("edgewall.js 只依賴亂數、幾何量尺與共用程序生成器",
-    (strip(ewSrc).match(/^import .*$/gm) || []).length === 4
+    (strip(ewSrc).match(/^import .*$/gm) || []).length === 5
     && /from '\.\/rng\.js'/.test(ewSrc) && /from '\.\/vehicles\.js'/.test(ewSrc)
-    && /from '\.\/environmentParts\.js'/.test(ewSrc) && /from '\.\/edgeSlope\.js'/.test(ewSrc));
+    && /from '\.\/environmentParts\.js'/.test(ewSrc) && /from '\.\/edgeSlope\.js'/.test(ewSrc)
+    && /from '\.\/objectLayout\.js'/.test(ewSrc));
 }
 
 // ============ Ⅶ 型錄與切分規則 ============

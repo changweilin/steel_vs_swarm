@@ -39,6 +39,14 @@ export const ENVIRONMENT_CATEGORIES = Object.freeze(Object.fromEntries(
   Object.keys(ENVIRONMENT_PARAMETERS).map(category => [category,
     Object.keys(ENVIRONMENT_OBJECTS).filter(kind => ENVIRONMENT_OBJECTS[kind].category === category)]),
 ));
+
+// Authored visual ranges, not construction specifications. Angles are radians.
+export const ENVIRONMENT_STRUCTURE_PARAMETERS = Object.freeze({
+  industrialRoof: { bay: [6, 10], pitch: [.18, .32], thickness: [.12, .22] },
+  greenhouse: { bay: [2.5, 4], eaveRatio: [.52, .66] },
+  wind: { blades: 3, chord: [.24, .38], rotorRatio: [.34, .42] },
+  solar: { pitch: [.10, .18], gridLines: [4, 6] },
+});
 export function environmentSize(kind, seed) {
   const def = ENVIRONMENT_OBJECTS[kind];
   if (!def || !Number.isSafeInteger(seed)) throw new RangeError('Invalid environment kind or seed');
