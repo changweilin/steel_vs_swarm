@@ -349,6 +349,25 @@ export function getRoofElevation(x, z, poly, roofForm = 'flat', metrics = null, 
   return topY + slopeRatio * roofH * 0.85;
 }
 
+/** 屋頂式太陽能板貼合角：以屋頂面高度梯度推導面板俯仰/橫滾，面板法線貼合屋頂法線 */
+export function roofPanelAngles(x, z, poly, roofForm = 'flat', metrics = null, topY = 0, height = 10, rotY = 0) {
+  if (!roofForm || roofForm === 'flat' || !poly?.outer?.length) return { pitch: 0, roll: 0, slope: 0 };
+  const e = 0.75;
+  const hx1 = getRoofElevation(x + e, z, poly, roofForm, metrics, topY, height);
+  const hx0 = getRoofElevation(x - e, z, poly, roofForm, metrics, topY, height);
+  const hz1 = getRoofElevation(x, z + e, poly, roofForm, metrics, topY, height);
+  const hz0 = getRoofElevation(x, z - e, poly, roofForm, metrics, topY, height);
+  if (![hx1, hx0, hz1, hz0].every(Number.isFinite)) return { pitch: 0, roll: 0, slope: 0 };
+  const gx = (hx1 - hx0) / (2 * e), gz = (hz1 - hz0) / (2 * e);
+  const slope = Math.hypot(gx, gz);
+  if (slope < 0.02) return { pitch: 0, roll: 0, slope };
+  const c = Math.cos(rotY), s = Math.sin(rotY);
+  const glx = c * gx - s * gz, glz = s * gx + c * gz;
+  const clamp = (v) => Math.max(-0.6, Math.min(0.6, v));
+  // rotateX(θ):+Z 端下沉 sinθ；rotateZ(φ):+X 端抬升 sinφ ⇒ 貼合屋面需 pitch=-atan, roll=+atan
+  return { pitch: clamp(-Math.atan(glz)), roll: clamp(Math.atan(glx)), slope };
+}
+
 /** 生成單棟建築的全部外部零件 (0~N，支援角落/邊緣/中心隨機化分佈與大小容量保護) */
 export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, architecture, wallThickness = 0.28, actualRoofForm = null, precomputedMetrics = null) {
   if (!architecture || !edges.length || !poly?.outer?.length) return [];
@@ -1037,6 +1056,11 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
 
       for (const { sx, sz } of placedSites) {
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
+        // 屋頂式貼合：面板法線跟著屋頂面法線，平頂才用固定日照傾角
+        const fit = roofPanelAngles(sx, sz, poly, roofForm, metrics, topY, height, rotY);
+        const useRoofFit = fit.slope >= 0.02;
+        const panelLift = isElevatedSolar ? stiltHeight + 0.15 : 0.35;
+        const panelY = baseRoofY + panelLift;
 
         if (isElevatedSolar) {
           // 架高鋼構立柱 (Stilt column)
@@ -1046,28 +1070,33 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           stilt.translate(sx, baseRoofY, sz);
           geos.push(paintGeometry(stilt, 0x546e7a, variant));
 
-          // 頂部支撐縱樑 (Mounting rail)
+          // 頂部支撐縱樑 (Mounting rail)：與面板同傾角，貼合屋頂斜率
           const rail = new THREE.BoxGeometry(0.06, 0.08, 0.85);
           rail.translate(0, stiltHeight, 0);
+          if (useRoofFit) { rail.rotateX(fit.pitch); rail.rotateZ(fit.roll); }
           if (rotY) rail.rotateY(rotY);
           rail.translate(sx, baseRoofY, sz);
           geos.push(paintGeometry(rail, 0x78909c, variant));
         } else {
-          // 直接建立：兩側角鋼腳架
+          // 直接建立：兩側角鋼腳架，腳底各自踩在屋頂面上，面板貼合斜率（腳架保持直立，僅高度跟坡）
           for (const side of [-0.55, 0.55]) {
-            const leg = new THREE.BoxGeometry(0.06, 0.25, 0.8);
-            leg.translate(side, 0.125, 0);
+            const fx = sx + Math.cos(rotY) * side, fz = sz - Math.sin(rotY) * side;
+            const footY = getRoofElevation(fx, fz, poly, roofForm, metrics, topY, height);
+            const legH = Math.max(0.08, panelY - 0.06 - footY);
+            const leg = new THREE.BoxGeometry(0.06, legH, 0.8);
+            leg.translate(side, legH / 2, 0);
             if (rotY) leg.rotateY(rotY);
-            leg.translate(sx, baseRoofY, sz);
+            leg.translate(sx, footY, sz);
             geos.push(paintGeometry(leg, 0x9e9e9e, variant));
           }
         }
 
         const panel = new THREE.BoxGeometry(1.5, 0.06, 1.0);
         panel.userData.partType = 'solar_panel';
-        panel.rotateX(0.35); // 朝向日照傾角
+        if (useRoofFit) { panel.rotateX(fit.pitch); panel.rotateZ(fit.roll); }
+        else panel.rotateX(0.35); // 平頂朝向日照傾角
         if (rotY) panel.rotateY(rotY);
-        panel.translate(sx, baseRoofY + (isElevatedSolar ? stiltHeight + 0.15 : 0.35), sz);
+        panel.translate(sx, panelY, sz);
         geos.push(paintGeometry(panel, 0x1a237e, variant));
       }
 

@@ -278,13 +278,26 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
           x, h * .805, 0, choose(local, colors), 'watchtower'));
       } else rows.push(box(step, h * .09, d, x, bodyH + h * .045, 0, mStone, bridge ? 'deck-parapet' : 'crest'));
     } else if (['solarfield', 'floatsolar'].includes(kind)) {
+      // 浮動式貼合：水面款整組浮台掛 float 動態（與海面共用風時鐘/波浪係數），陸域款保持靜態
+      const isFloat = kind === 'floatsolar';
       for (const side of [-1, 1]) {
         const y = 1.1, z = side * d * .23;
-        rows.push(box(step * .9, .35, d * .4, x, .5, z, 0x777e78, 'panel-support'));
-        rows.push(box(step * .88, .14, d * .38, x, y, z, choose(local, [0x264461, 0x355875]),
-          'solar-panel', { r: [-.12, 0, 0] }));
-        for (let k = 0; k < 4; k++) rows.push(box(.05, .05, d * .37,
-          x + (k - 1.5) * step * .2, y + .14, z, 0xa8babd, 'panel-grid'));
+        const floatMot = isFloat ? {
+          kind: 'float', id: `float_${i}_${side > 0 ? 'p' : 'm'}`,
+          pivot: [x, y, z],
+          phase: (((seed ^ Math.imul(i + 1, 0x9e3779b9) ^ Math.imul(side + 2, 0x85ebca6b)) >>> 0) / 4294967296) * Math.PI * 2,
+          pad: 0.3, // 波浪起伏包絡：恰收進邊界包絡（底座 y0=0.325−pad 恆 ≥0），不足以上抬仍遠在碰撞柱內
+        } : undefined;
+        rows.push(box(step * .9, .35, d * .4, x, .5, z, 0x777e78, 'panel-support', floatMot ? { motion: floatMot } : undefined));
+        const panel = box(step * .88, .14, d * .38, x, y, z, choose(local, [0x264461, 0x355875]),
+          'solar-panel', { r: [-.12, 0, 0], ...(floatMot ? { motion: floatMot } : {}) });
+        rows.push(panel);
+        for (let k = 0; k < 4; k++) {
+          const grid = box(.05, .05, d * .37,
+            x + (k - 1.5) * step * .2, y + .14, z, 0xa8babd, 'panel-grid');
+          if (floatMot) grid.motion = floatMot;
+          rows.push(grid);
+        }
       }
     } else if (['train', 'trucks', 'ship', 'rowhouse', 'edgehamlet', 'giantforest'].includes(kind)) {
       const object = { rowhouse: 'house', edgehamlet: 'house', ship: 'strandedship', giantforest: 'gianttree' }[kind];

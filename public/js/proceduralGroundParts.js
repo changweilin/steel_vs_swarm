@@ -144,12 +144,22 @@ export function generateGroundPart(type, variant = 0) {
     else if (family === 'trellis') {
       for (let i = 0; i < 4; i++) rock((i / 3 - .5) * w * .8, top * .85, 0, w * .32, h * .4, d, color, 'leaf');
     } else if (family === 'solar') {
+      // 棚架式單一縫：棚頂斜率角，全組（立柱/縱樑/面板/柵線）共用同一傾角
+      const SHED_TILT = -0.24, GROUND_TILT = -0.32;
+      const shedLegs = (beamTop, tilt, c = 0x707a79) => {
+        const tan = Math.tan(-tilt);
+        for (const x of [-1, 1]) for (const z of [-1, 1]) {
+          const legH = Math.max(0.15, beamTop + tan * (z * d * 0.35));
+          box(x * w * 0.38, legH / 2, z * d * 0.35, 0.09, legH, 0.09, c);
+        }
+      };
       const isElevated = (type === 'solar_carport' || type === 'solar_pasture' || type === 'solar_aquaculture' || h >= 2.0);
       if (isElevated) {
-        legs(top, 0x546e7a);
-        box(0, top - 0.04, 0, w * 0.96, 0.08, d * 0.92, 0x455a64);
-        add(new THREE.BoxGeometry(w, 0.08, d).rotateX(-0.24).translate(0, top, 0));
-        for (let i = 1; i < 5; i++) box((i / 5 - 0.5) * w, top + 0.08, 0, 0.015, 0.02, d * 0.9, 0xb3c9cc);
+        // 棚架式貼合：立柱高低腳撐起同一棚頂斜率，縱樑/面板/柵線全平行於棚面
+        shedLegs(top, SHED_TILT, 0x546e7a);
+        add(new THREE.BoxGeometry(w * 0.96, 0.08, d * 0.92).rotateX(SHED_TILT).translate(0, top - 0.06, 0), 0x455a64);
+        add(new THREE.BoxGeometry(w, 0.08, d).rotateX(SHED_TILT).translate(0, top, 0));
+        for (let i = 1; i < 5; i++) add(new THREE.BoxGeometry(0.015, 0.02, d * 0.9).rotateX(SHED_TILT).translate((i / 5 - 0.5) * w, top + 0.08, 0), 0xb3c9cc);
 
         const compositeKind = type === 'solar_carport' ? 'carport'
           : type === 'solar_pasture' ? 'pasture'
@@ -178,10 +188,10 @@ export function generateGroundPart(type, variant = 0) {
           box(0, 0.08, d * 0.25, w * 0.35, 0.08, 0.12, 0x0288d1);
         }
       } else {
-        // 直接建立：低矮貼地光電支架
-        legs(top);
-        add(new THREE.BoxGeometry(w, 0.1, d).rotateX(-0.32).translate(0, top, 0));
-        for (let i = 1; i < 5; i++) box((i / 5 - 0.5) * w, top + 0.09, 0, 0.012, 0.018, d * 0.9, 0xb3c9cc);
+        // 直接建立：低矮貼地光電支架，立柱高低腳貼合面板斜率
+        shedLegs(top, GROUND_TILT);
+        add(new THREE.BoxGeometry(w, 0.1, d).rotateX(GROUND_TILT).translate(0, top, 0));
+        for (let i = 1; i < 5; i++) add(new THREE.BoxGeometry(0.012, 0.018, d * 0.9).rotateX(GROUND_TILT).translate((i / 5 - 0.5) * w, top + 0.09, 0), 0xb3c9cc);
       }
     } else {
       legs(top);

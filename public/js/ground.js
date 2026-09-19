@@ -1923,10 +1923,25 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       if (RECT_BASE_DETAILS.has(type) && high - low > .3) return;
       y = low;
     }
-    det[type].push({ x: px, y, z: pz, s, sy, variant,
-                     ry: ry ?? -orient(px, pz, REG[type] || 0, false, RECT_BASE_DETAILS.has(type)),
-    tx: (rnd() - 0.5) * 2 * (RECT_BASE_DETAILS.has(type) ? 0 : tl),
-    tz: (rnd() - 0.5) * 2 * (RECT_BASE_DETAILS.has(type) ? 0 : tl), tint: tintHex });
+    const finalRy = ry ?? -orient(px, pz, REG[type] || 0, false, RECT_BASE_DETAILS.has(type));
+    // 地面式貼合：太陽能板 tx/tz 吃地形梯度（與實例朝向同一局部系），其餘件維持隨機傾角；
+    // 太陽能板仍照舊抽掉 2 枚 rnd（值棄用），共享序列零位移
+    let ptx = (rnd() - 0.5) * 2 * (RECT_BASE_DETAILS.has(type) ? 0 : tl);
+    let ptz = (rnd() - 0.5) * 2 * (RECT_BASE_DETAILS.has(type) ? 0 : tl);
+    if (type === 'solarpanel') {
+      const e = 1.0;
+      const hx1 = terrain.heightAt(px + e, pz), hx0 = terrain.heightAt(px - e, pz);
+      const hz1 = terrain.heightAt(px, pz + e), hz0 = terrain.heightAt(px, pz - e);
+      if (Number.isFinite(hx1) && Number.isFinite(hx0) && Number.isFinite(hz1) && Number.isFinite(hz0)) {
+        const gx = (hx1 - hx0) / (2 * e), gz = (hz1 - hz0) / (2 * e);
+        const c = Math.cos(finalRy), s = Math.sin(finalRy);
+        const glx = c * gx - s * gz, glz = s * gx + c * gz;
+        const clamp = (v) => Math.max(-0.45, Math.min(0.45, v));
+        ptx = clamp(-Math.atan(glz));
+        ptz = clamp(Math.atan(glx));
+      } else { ptx = 0; ptz = 0; }
+    }
+    det[type].push({ x: px, y, z: pz, s, sy, variant, ry: finalRy, tx: ptx, tz: ptz, tint: tintHex });
     detPut(px, pz, dr);
     detCount++;
   };
