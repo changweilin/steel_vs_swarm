@@ -334,6 +334,9 @@ const RECT_BASE_DETAILS = new Set([
   'picnictable', 'tent', 'litterbin',
 ]);
 
+// 地面式貼合名冊：列陣/線性鋪面件跟地形起伏傾斜（車輛/貨櫃/傢俱等重力直立件不在此列，維持直立內嵌）
+const SLOPE_FIT_DETAILS = new Set(['solarpanel', 'vinerow', 'ghouse', 'pipe', 'barrier']);
+
 // 只收具有可讀實體量體的固定擺件；草、招牌薄片與可跨越小物不製造隱形牆。
 const PHYSICAL_DETAILS = new Set([
   'log', 'stump', 'logpile', 'cabin', 'ghouse', 'slab', 'pipe', 'barrier',
@@ -1924,11 +1927,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       y = low;
     }
     const finalRy = ry ?? -orient(px, pz, REG[type] || 0, false, RECT_BASE_DETAILS.has(type));
-    // 地面式貼合：太陽能板 tx/tz 吃地形梯度（與實例朝向同一局部系），其餘件維持隨機傾角；
-    // 太陽能板仍照舊抽掉 2 枚 rnd（值棄用），共享序列零位移
+    // 地面式貼合：列陣/線性件 tx/tz 吃地形梯度（與實例朝向同一局部系），其餘件維持隨機傾角；
+    // 貼合件仍照舊抽掉 2 枚 rnd（值棄用），共享序列零位移
     let ptx = (rnd() - 0.5) * 2 * (RECT_BASE_DETAILS.has(type) ? 0 : tl);
     let ptz = (rnd() - 0.5) * 2 * (RECT_BASE_DETAILS.has(type) ? 0 : tl);
-    if (type === 'solarpanel') {
+    if (SLOPE_FIT_DETAILS.has(type)) {
       const e = 1.0;
       const hx1 = terrain.heightAt(px + e, pz), hx0 = terrain.heightAt(px - e, pz);
       const hz1 = terrain.heightAt(px, pz + e), hz0 = terrain.heightAt(px, pz - e);

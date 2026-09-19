@@ -316,16 +316,24 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
       rows.push(...environmentParts('icefloe', { size: [step * .98, Math.min(h, step * .16), d], seed: seed ^ (i + 1) })
         .map(p => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
     } else if (['searanch', 'oysterracks'].includes(kind)) {
+      // 海上牧場貼合：整組網箱掛 float 動態（與海面共用風時鐘/波浪係數）；立柱腳踩水線 y0=0 故 pad 取 0，包絡原樣收進邊界盒
+      const ranchMot = kind === 'searanch' ? {
+        kind: 'float', id: `float_${i}`,
+        pivot: [x, 0, 0],
+        phase: (((seed ^ Math.imul(i + 1, 0x9e3779b9) ^ 0x5ea9) >>> 0) / 4294967296) * Math.PI * 2,
+        pad: 0,
+      } : undefined;
+      const ranchExtra = ranchMot ? { motion: ranchMot } : {};
       const railY = Math.min(h * .45, 4);
       const postColor = choose(rnd, [0x8c908b, 0x828681, 0x969a95]);
       const lineWood = choose(rnd, [0x8e7d5e, 0x847354, 0x988768]);
       for (const side of [-1, 1]) {
-        rows.push(cyl(.12, .18, railY, x + side * step * .43, railY / 2, d * .25, postColor, 'rack-post'));
-        rows.push(box(step, .25, .3, x, railY, side * d * .28, lineWood, 'longline'));
+        rows.push(cyl(.12, .18, railY, x + side * step * .43, railY / 2, d * .25, postColor, 'rack-post', ranchExtra));
+        rows.push(box(step, .25, .3, x, railY, side * d * .28, lineWood, 'longline', ranchExtra));
       }
       const lines = integer(local, 4, 8);
       for (let k = 0; k < lines; k++) rows.push(cyl(.07, .09, railY * .8,
-        x + (k + .5) / lines * step * .8 - step * .4, railY * .55, d * .28, 0x4f6667, 'culture-line'));
+        x + (k + .5) / lines * step * .8 - step * .4, railY * .55, d * .28, 0x4f6667, 'culture-line', ranchExtra));
     } else if (kind === 'deeprig') {
       rows.push(box(step * .9, h * .1, d * .85, x, h * .16, 0, 0x686f70, 'pontoon'));
       rows.push(...environmentParts('oilfield', { size: [step * .82, h * .7, d * .8], seed: seed ^ (i + 1) })

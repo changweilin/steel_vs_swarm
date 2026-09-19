@@ -59,10 +59,28 @@ const SHAPES = Object.freeze({
   transformer: () => [box(4.5, 3.8, 3.2), cylinder(0.35, 0.35, 4.8, 8, 5.8)],
 });
 
-function translateGeos(geos, x, y, z, seed) {
+function translateGeos(geos, x, y, z, seed, slopeFit = false, heightAt = null) {
   const ry = ((seed * 0.61803398875) % 1) * Math.PI * 2;
+  // 地面式貼合：以 heightAt 有限差分推導坡度，轉入實例朝向局部系；
+  // rotateX(θ):+Z 端下沉 ⇒ pitch=-atan；rotateZ(φ):+X 端抬升 ⇒ roll=+atan
+  let pitch = 0, roll = 0;
+  if (slopeFit && typeof heightAt === 'function') {
+    const e = 1.25;
+    const hx1 = heightAt(x + e, z), hx0 = heightAt(x - e, z);
+    const hz1 = heightAt(x, z + e), hz0 = heightAt(x, z - e);
+    if ([hx1, hx0, hz1, hz0].every(Number.isFinite)) {
+      const gx = (hx1 - hx0) / (2 * e), gz = (hz1 - hz0) / (2 * e);
+      if (Math.hypot(gx, gz) >= 0.02) {
+        const c = Math.cos(ry), s = Math.sin(ry);
+        const clamp = (v) => Math.max(-0.45, Math.min(0.45, v));
+        pitch = clamp(-Math.atan(s * gx + c * gz));
+        roll = clamp(Math.atan(c * gx - s * gz));
+      }
+    }
+  }
   for (let i = 0; i < geos.length; i++) {
     if (i && geos.length > 1) geos[i].translate((i - (geos.length - 1) / 2) * 0.65, 0, 0);
+    if (pitch || roll) { geos[i].rotateX(pitch); geos[i].rotateZ(roll); }
     geos[i].rotateY(ry); geos[i].translate(x, y, z);
   }
   return ry;
@@ -115,7 +133,8 @@ export function buildOsmAreaObjects(group, areas = [], options = {}) {
     if (!make) continue;
     const geos = make();
     const y = Number(options.heightAt?.(p.x, p.z)) || 0;
-    const ry = translateGeos(geos, p.x, y, p.z, index + String(p.sourceId).length);
+    // OSM 太陽能電廠貼地形起伏，其餘用地物件維持直立
+    const ry = translateGeos(geos, p.x, y, p.z, index + String(p.sourceId).length, shapeKey === 'solar', options.heightAt);
     let batch = batches.get(cls.generator);
     if (!batch) batches.set(cls.generator, batch = { row, geos: [] });
     batch.geos.push(...geos);
