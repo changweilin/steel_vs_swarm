@@ -543,6 +543,13 @@ export const BOUNDARY_BUFFER_LAYOUTS = Object.freeze({
   oysterracks: { type: 'artificial', continuous: true, mode: 'grid', pitchX: 20, pitchZ: 18, scaleRange: [0.9, 1.0], bio: ['wet'] },
 });
 
+// Row 0 連續排列仍可逐件轉向的款式：180° 翻轉（繞 Y 保持置中 AABB 不變故不突出碰撞柱）。
+// 車輛／船隻（車頭／船艏方向）＋倒塌樓／倒木（layDown 後一律倒向 +x）＋岩石／冰體（mesh 非對稱）。
+// 連續長構造與整齊人造物、徑向對稱的神木必須維持軸向對齊，故不在此列。
+const ROW0_FLIP_KINDS = new Set(['trucks', 'car', 'train', 'ship', 'strandedship',
+  'skyfall', 'fallentree', 'boulder', 'rockery', 'basaltspine', 'reefchain',
+  'isletbarrier', 'rollinghills', 'icefloe', 'iceberg', 'seaice']);
+
 /**
  * 邊界單元生成器：針對單一障礙物款式產出單一物件零件。
  * 邊界本體與緩衝區共用同一生成器，確保大小、顏色、風格、構件完全一致（單一縫）。
@@ -717,7 +724,10 @@ export function buildBoundaryRunParts(kind, {
         const ptSeed = edgeSeed(Math.round((baseU + 500) * 8), Math.round((baseV + 500) * 8), (seed ^ Math.imul(r + 1, 0x1f1f) ^ Math.imul(c + 1, 0x9e37)) >>> 0);
         const rnd = mulberry32(ptSeed);
 
-        const jitU = isBuffer ? (rnd() - 0.5) * colStep * 0.45 : 0;
+        // Row 0 微小間距誤差（±0.02 colStep）：單元最寬 objW = 0.95 colStep，
+        // 相鄰中心最小距離 0.96 colStep > 0.95 → 構造保證不重疊；僅翻轉款適用。
+        const jitU = isBuffer ? (rnd() - 0.5) * colStep * 0.45
+          : (ROW0_FLIP_KINDS.has(kind) ? (rnd() - 0.5) * colStep * 0.04 : 0);
         const jitV = isBuffer ? (rnd() - 0.5) * rowStep * 0.35 : 0;
         let u = baseU + jitU;
         let v = baseV + jitV;
@@ -733,8 +743,13 @@ export function buildBoundaryRunParts(kind, {
           w: objW, d: objD, h: objH, seed: ptSeed, season, water, layout, isBuffer,
         });
 
-        // 隨機方向旋轉（Row 0 位於權威碰撞盒內，維持軸向對齊避免突出碰撞柱；緩衝區全 360 度隨機旋轉與傾覆）
-        const yaw = (isBuffer && layout.randomYaw) ? (rnd() * Math.PI * 2) : 0;
+        // 隨機方向旋轉（Row 0 位於權威碰撞盒內：ROW0_FLIP_KINDS 採 180° 翻轉，
+        // 全 360° 會讓件體突出碰撞柱；其餘款維持軸向對齊；緩衝區全 360 度隨機旋轉與傾覆）
+        let yaw = 0;
+        if (layout.randomYaw) {
+          if (isBuffer) yaw = rnd() * Math.PI * 2;
+          else if (ROW0_FLIP_KINDS.has(kind)) yaw = rnd() < 0.5 ? Math.PI : 0;
+        }
         const cy = Math.cos(yaw), sy = Math.sin(yaw);
 
         for (const p of modelParts) {

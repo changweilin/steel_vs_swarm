@@ -304,17 +304,45 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
       const parts = object ? environmentParts(object, { size: [step * .92, h, d * .9], seed: seed ^ (i + 1), season })
         : makeSceneVehicleParts(kind === 'train' ? 'railcar' : 'truck',
           { fit: { L: step * .95, H: h, W: d * .9 }, paint: seed ^ (i + 1) });
-      rows.push(...parts.map(p => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
+      // 車輛／船隻連排：逐架 180° 翻轉＋縱向微小間距誤差（決定性 local 流；
+      // 180° 繞 Y 保持置中 AABB 不變；單元最寬 0.95 step、|jx| ≤ 0.02 step → 相鄰中心 ≥ 0.96 step，保證不重疊）
+      const flip = ['train', 'trucks', 'ship'].includes(kind);
+      const yaw = flip ? (local() < 0.5 ? Math.PI : 0) : 0;
+      const jx = flip ? (local() - 0.5) * step * 0.04 : 0;
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      rows.push(...parts.map(p => {
+        const [px = 0, py = 0, pz = 0] = p.p || [];
+        const rRot = yaw !== 0 ? (p.r ? [p.r[0], (p.r[1] || 0) + yaw, p.r[2]] : [0, yaw, 0]) : p.r;
+        return { ...p, p: [px * cy + pz * sy + x + jx, py, -px * sy + pz * cy], ...(rRot ? { r: rRot } : {}) };
+      }));
     } else if (['cliff', 'rockery', 'landslide', 'debris', 'isletbarrier'].includes(kind)) {
       const type = { cliff: 'cliff', rockery: 'mountain', landslide: 'moraine', debris: 'mound', isletbarrier: 'island' }[kind];
-      rows.push(...fit(rocks(type, seed ^ (i + 1), season), [step, h, d])
-        .map(p => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
+      // 岩體連排：逐段 180° 翻轉＋縱向微小間距誤差（fit 置中故 AABB 不變；
+      // 寬收至 0.94 step、|jx| ≤ 0.02 step → 相鄰中心 ≥ 0.96 step，保證不重疊；
+      // debris／landslide 的倒木覆蓋層同 yaw／jx 保持疊合）
+      const yaw = local() < 0.5 ? Math.PI : 0;
+      const jx = (local() - 0.5) * step * 0.04;
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      const spin = (p, dy = 0) => {
+        const [px = 0, py = 0, pz = 0] = p.p || [];
+        const rRot = yaw !== 0 ? (p.r ? [p.r[0], (p.r[1] || 0) + yaw, p.r[2]] : [0, yaw, 0]) : p.r;
+        return { ...p, p: [px * cy + pz * sy + x + jx, py + dy, -px * sy + pz * cy], ...(rRot ? { r: rRot } : {}) };
+      };
+      rows.push(...fit(rocks(type, seed ^ (i + 1), season), [step * 0.94, h, d]).map(p => spin(p)));
       if (kind === 'debris' || kind === 'landslide') rows.push(...environmentParts('fallentree',
         { size: [step * .8, h * .25, d * .65], seed: seed ^ (i + 33) })
-        .map(p => ({ ...p, p: [p.p[0] + x, p.p[1] + h * .12, p.p[2]] })));
+        .map(p => spin(p, h * .12)));
     } else if (kind === 'seaice') {
-      rows.push(...environmentParts('icefloe', { size: [step * .98, Math.min(h, step * .16), d], seed: seed ^ (i + 1) })
-        .map(p => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
+      // 浮冰連排：逐段 180° 翻轉＋縱向微小間距誤差（寬收至 0.94 step、|jx| ≤ 0.02 step，保證不重疊）
+      const yaw = local() < 0.5 ? Math.PI : 0;
+      const jx = (local() - 0.5) * step * 0.04;
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      rows.push(...environmentParts('icefloe', { size: [step * .94, Math.min(h, step * .16), d], seed: seed ^ (i + 1) })
+        .map(p => {
+          const [px = 0, py = 0, pz = 0] = p.p || [];
+          const rRot = yaw !== 0 ? (p.r ? [p.r[0], (p.r[1] || 0) + yaw, p.r[2]] : [0, yaw, 0]) : p.r;
+          return { ...p, p: [px * cy + pz * sy + x + jx, py, -px * sy + pz * cy], ...(rRot ? { r: rRot } : {}) };
+        }));
     } else if (['searanch', 'oysterracks'].includes(kind)) {
       // 海上牧場貼合：整組網箱掛 float 動態（與海面共用風時鐘/波浪係數）；立柱腳踩水線 y0=0 故 pad 取 0，包絡原樣收進邊界盒
       const ranchMot = kind === 'searanch' ? {
