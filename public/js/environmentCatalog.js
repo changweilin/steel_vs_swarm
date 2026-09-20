@@ -25,9 +25,9 @@ export const ENVIRONMENT_OBJECTS = Object.freeze({
 
 // Placement scale uses an isolated stream. Host envelopes never consume model randomness.
 export const ENVIRONMENT_PARAMETERS = Object.freeze({
-  residential: { scale: [.72, 1], floor: [2.8, 3.6], bay: [2.2, 3.6] },
-  highrise: { scale: [.75, 1], floor: [3.2, 4.2], bay: [2.4, 4] },
-  industry: { scale: [.8, 1], floor: [4.5, 6], bay: [3.5, 5] },
+  residential: { scale: [.72, 1] },
+  highrise: { scale: [.75, 1] },
+  industry: { scale: [.8, 1] },
   extraction: { scale: [.8, 1] }, agriculture: { scale: [.8, 1] },
   rock: { scale: [.6, 1] }, 'giant-tree': { scale: [.75, 1] },
   deadwood: { scale: [.65, 1] }, vehicle: { scale: [.9, 1] },
@@ -40,11 +40,18 @@ export const ENVIRONMENT_CATEGORIES = Object.freeze(Object.fromEntries(
     Object.keys(ENVIRONMENT_OBJECTS).filter(kind => ENVIRONMENT_OBJECTS[kind].category === category)]),
 ));
 
+// Environment hosts supply envelopes; architecture owns style, windows and roofs.
+export const ENVIRONMENT_BUILDINGS = Object.freeze({
+  house: { key: 'residential_townhouse', category: 'residential', type: 'townhouse', affinity: ['house', 'townhouse'], width: [.78, 1], depth: [.72, 1], body: [.55, .76] },
+  skyscraper: { key: 'commercial_skyscraper', category: 'commercial', type: 'skyscraper', affinity: ['skyscraper', 'office'], width: [.68, 1], depth: [.65, 1], body: [.72, .94] },
+  factory: { type: 'factory', width: [.8, 1], depth: [.74, 1], body: [.38, .56] },
+  powerplant: { type: 'plant', width: [.76, 1], depth: [.72, 1], body: [.36, .52] },
+  incinerator: { type: 'factory', width: [.72, 1], depth: [.7, 1], body: [.36, .54] },
+});
+
 // Authored visual ranges, not construction specifications. Angles are radians.
 export const ENVIRONMENT_STRUCTURE_PARAMETERS = Object.freeze({
-  houseRoof: { pitch: [.24, .48], thicknessRatio: [.018, .028] },
   ranch: { fenceBay: [2.4, 3.6], fenceHeight: [1.2, 1.8], gateWidth: [2.8, 4.2], siloHeightRatio: [.58, .74] },
-  industrialRoof: { bay: [6, 10], pitch: [.18, .32], thickness: [.12, .22] },
   chimney: { topRatio: [.64, .78], wallRatio: [.10, .15], bandLevel: [.78, .88] },
   coolingTower: { heightRatio: [.78, .9], throatRatio: [.56, .64], throatLevel: [.65, .75], rimRatio: [.70, .80], wallRatio: [.045, .065] },
   greenhouse: { bay: [2.5, 4], eaveRatio: [.52, .66] },

@@ -618,7 +618,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
   <div id="panel-industry" class="cat-panel" style="display: none;">
     <div class="dim-panel">
       <div class="dim-title">
-        <span>場景建物與產業設施簡模</span>
+        <span>場景建物與產業設施程序建模</span>
         <span class="badge" id="industry-info-badge">住宅 1 · 高樓 2 · 工業 3 · 採掘 2 · 農牧 2</span>
       </div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
@@ -2382,7 +2382,7 @@ function switchTab(tabKey) {
     if (titleEl) titleEl.textContent = '🚢 艦艇水運與裝載圖鑑';
     if (descEl) descEl.textContent = '真實米制航域船型 · 動態吃水裝載與武器 · 透光水面環境';
   } else if (tabKey === 'industry') {
-    if (titleEl) titleEl.textContent = '🏭 場景建物與產業設施簡模';
+    if (titleEl) titleEl.textContent = '🏭 場景建物與產業設施程序建模';
     if (descEl) descEl.textContent = '住宅高樓 3 · 工業 3 · 採掘 2 · 農牧 2 · 同一種子與陣列規則';
   } else if (tabKey === 'ice') {
     if (titleEl) titleEl.textContent = '❄️ 浮冰與冰山 · 水線與種子';
@@ -3184,6 +3184,10 @@ const INDUSTRY_LABELS = {
   factory: '工廠', powerplant: '電廠', incinerator: '焚化廠',
   mine: '礦場', oilfield: '油田', greenhouse: '溫室', ranch: '牧場',
 };
+function industryArchitectureLabel(rows) {
+  const architecture = rows.find(p => p.role === 'building-body')?.architecture;
+  return architecture ? ' · ' + ARCHITECTURE_STYLES[architecture.style].label + ' / ' + ROOF_FORMS[architecture.roofForm] : '';
+}
 const ICE_KINDS = ['icefloe', 'iceberg'];
 const ICE_LABELS = { icefloe: '浮冰群', iceberg: '極地冰山' };
 
@@ -3201,7 +3205,7 @@ function createIndustryInstance(kind, seed, posX = 0, posZ = 0) {
     posX, posZ,
     seed,
     kind,
-    label: INDUSTRY_LABELS[kind] || kind,
+    label: (INDUSTRY_LABELS[kind] || kind) + industryArchitectureLabel(rows),
     partsCount: rows.length,
     size: [size.x, size.y, size.z],
     sceneKind: !bb,
@@ -3296,7 +3300,7 @@ function buildIndustryMode() {
         posX, posZ,
         seed: it.curSeed,
         kind: it.curKind,
-        label: INDUSTRY_LABELS[it.curKind] || it.curKind,
+        label: (INDUSTRY_LABELS[it.curKind] || it.curKind) + industryArchitectureLabel(it.partRows),
         partsCount: it.partRows.length,
         size: [it.size.x, it.size.y, it.size.z],
         sceneKind: !it.curBb,

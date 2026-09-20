@@ -9,8 +9,9 @@ import { geologyBackgroundObject } from './geology.js';
 import { generateVessel } from './vesselCatalog.js';
 import { loftMeshData, vesselHullSections } from './vesselGeometry.js';
 
-import { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS, ENVIRONMENT_STRUCTURE_PARAMETERS } from './environmentCatalog.js';
+import { ENVIRONMENT_OBJECTS, ENVIRONMENT_STRUCTURE_PARAMETERS } from './environmentCatalog.js';
 import { iceParts } from './iceParts.js';
+import { environmentBuildingPlan } from './environmentArchitecture.js';
 export { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS, ENVIRONMENT_CATEGORIES, environmentSize, environmentAvailable } from './environmentCatalog.js';
 export { makeSceneVehicleParts } from './vehicleParts.js';
 
@@ -72,39 +73,12 @@ function hollowShell(profile, thickness, x, y, z, color, role) {
 function building(kind, w, h, d, rnd) {
   if (kind === 'greenhouse') return greenhouse(w, h, d, rnd);
   if (kind === 'ranch') return ranch(w, h, d, rnd);
-  const facade = choose(rnd, colors), trim = choose(rnd, [0x514d46, 0x6d7d82, 0x8f6851]);
-  const tall = kind === 'skyscraper' || kind === 'skyfall';
+  const plan = environmentBuildingPlan(kind, [w, h, d], Math.floor(rnd() * 0x100000000));
+  const { parts: rows, style, bodyH } = plan;
+  w = plan.w; d = plan.d;
+  const trim = style.trim;
   const industrial = ['factory', 'powerplant', 'incinerator'].includes(kind);
-  const bodyH = h * (industrial ? .48 : tall ? .88 : .7);
-  const rows = [box(w, bodyH, d, 0, bodyH / 2, 0, facade, 'building-body')];
-  const spec = ENVIRONMENT_PARAMETERS[ENVIRONMENT_OBJECTS[kind].category];
-  const floors = Math.max(1, Math.floor(bodyH / sample(rnd, spec.floor)));
-  const bays = Math.max(1, Math.floor(w / sample(rnd, spec.bay)));
-  for (let floor = 0; floor < floors; floor++) {
-    const y = bodyH * (floor + .65) / floors, wh = bodyH / floors * .48;
-    for (let bay = 0; bay < bays; bay++) {
-      const x = (bay + .5) * w / bays - w / 2;
-      for (const side of [-1, 1]) rows.push(box(w / bays * .62, wh, .08, x, y, side * (d / 2 + .04),
-        0x537785, 'window', { mat: 'glass' }));
-    }
-    for (const side of [-1, 1]) rows.push(box(.08, wh, d * .76, side * (w / 2 + .04), y, 0,
-      0x537785, 'side-window', { mat: 'glass' }));
-    if (tall) rows.push(box(w * 1.015, bodyH / floors * .08, d * 1.015, 0,
-      bodyH * (floor + 1) / floors, 0, trim, 'floor-band'));
-  }
   if (industrial) {
-    const roof = ENVIRONMENT_STRUCTURE_PARAMETERS.industrialRoof;
-    const bays = Math.max(1, Math.round(w / sample(rnd, roof.bay)));
-    const span = w / bays, pitch = sample(rnd, roof.pitch);
-    const rise = span * Math.tan(pitch), thickness = sample(rnd, roof.thickness);
-    for (let i = 0; i < bays; i++) {
-      const x = (i + .5) * w / bays - w / 2;
-      rows.push(roofWedge(span, rise, d, x, bodyH, facade));
-      rows.push(box(span / Math.cos(pitch), thickness, d * 1.015,
-        x, bodyH + rise / 2, 0, trim, 'sawtooth-roof', { r: [0, 0, pitch] }));
-      rows.push(box(.06, rise * .72, d * .92, x + span / 2 + .031,
-        bodyH + rise * .5, 0, 0x537785, 'roof-clerestory', { mat: 'glass' }));
-    }
     const stacks = kind === 'incinerator' ? 3 : integer(rnd, 1, 2);
     const stackSpec = ENVIRONMENT_STRUCTURE_PARAMETERS.chimney;
     for (let i = 0; i < stacks; i++) {
@@ -138,23 +112,6 @@ function building(kind, w, h, d, rnd) {
       }
       rows.push(hollowShell(profile, thickness, x, shellY, 0, 0x9ca39d, 'cooling-tower'));
     }
-  } else if (tall) {
-    const crown = choose(rnd, ['terrace', 'lantern', 'spire']);
-    rows.push(box(w * .65, h * .08, d * .65, 0, bodyH + h * .04, 0, trim, crown));
-    if (crown === 'spire') rows.push(cyl(.12, w * .035, h * .04, 0, h * .98, 0, trim, 'antenna'));
-  } else {
-    const roof = ENVIRONMENT_STRUCTURE_PARAMETERS.houseRoof;
-    const pitch = sample(rnd, roof.pitch), thickness = h * sample(rnd, roof.thicknessRatio);
-    const halfSpan = d * .52, rise = Math.tan(pitch) * halfSpan;
-    // The underside, not the slab centre, meets the wall eave and the gable slope.
-    const roofY = bodyH + rise / 2 - (halfSpan - d / 2) * Math.tan(pitch) + thickness / (2 * Math.cos(pitch));
-    for (const side of [-1, 1]) rows.push(box(w * 1.03, thickness, halfSpan / Math.cos(pitch),
-      0, roofY, side * halfSpan / 2, trim, 'roof-slope', { r: [side * pitch, 0, 0] }));
-    const gableRise = d / 2 * Math.tan(pitch), endThickness = Math.min(w, d) * .025;
-    const gable = roofWedge(d / 2, gableRise, endThickness, 0, bodyH, facade);
-    for (const side of [-1, 1]) for (const half of [-1, 1]) rows.push({ ...gable, role: 'house-gable',
-      p: [side * (w - endThickness) / 2, bodyH + gableRise / 2, half * d / 4], r: [0, half * Math.PI / 2, 0] });
-    rows.push(box(w * .16, bodyH * .42, .12, -w * .22, bodyH * .21, d / 2 + .07, trim, 'door'));
   }
   return rows;
 }
