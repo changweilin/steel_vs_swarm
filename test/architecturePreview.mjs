@@ -3510,7 +3510,7 @@ function meshGeometry(data) {
   return g;
 }
 
-function assembleEnvironmentParts(rows, isIce = false) {
+function assembleEnvironmentParts(rows, water = false) {
   const group = new THREE.Group();
   for (const p of rows) {
     const [t, a, b, c, n] = p.g;
@@ -3529,7 +3529,7 @@ function assembleEnvironmentParts(rows, isIce = false) {
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.fromArray(p.p || [0, 0, 0]);
-    if (isIce) mesh.position.y -= (p.waterline || 0);
+    if (water) mesh.position.y -= (p.waterline || 0);
     mesh.rotation.set(...(p.r || [0, 0, 0]));
     mesh.scale.fromArray(p.s || [1, 1, 1]);
     group.add(mesh);
@@ -3650,7 +3650,7 @@ function createEnvironmentInstance(mode, kind, seed, posX = 0, posZ = 0) {
   const bb = mode === 'edge' ? previewBoundaryBatch(kind, seed, document.querySelector('#sim-season').value) : null;
   const useBuffer = !!(wantBuffer && bb?.bufferParts.length);
   const body = bb?.parts || rows;
-  const model = assembleEnvironmentParts(useBuffer ? [...body, ...bb.bufferParts] : body, false);
+  const model = assembleEnvironmentParts(useBuffer ? [...body, ...bb.bufferParts] : body, def.dom === 'water');
   model.position.set(posX, 0, posZ);
   envGroup.add(model);
 
@@ -3713,7 +3713,7 @@ function buildEnvironmentMode() {
   const actMode = mode === 'all' ? boundaryModes[seed % boundaryModes.length] : mode;
   const actKind = (kind === 'all' || !kind) ? (allKinds[seed % allKinds.length] || allKinds[0]) : kind;
 
-  const isWaterMode = actMode === 'water';
+  const isWaterMode = actMode === 'water' || WALL_KINDS[actKind]?.dom === 'water';
 
   if (viewMode === 'single') {
     waterMesh.visible = isWaterMode;
@@ -3756,7 +3756,7 @@ function buildEnvironmentMode() {
         const body = curBb?.parts || partRows;
         const merged = useBuffer ? [...body, ...curBb.bufferParts] : body;
 
-        const model = assembleEnvironmentParts(merged, false);
+        const model = assembleEnvironmentParts(merged, def.dom === 'water');
         const bounds = new THREE.Box3().setFromObject(model);
         const size = bounds.getSize(new THREE.Vector3());
         if (size.x > maxObjW) maxObjW = size.x;

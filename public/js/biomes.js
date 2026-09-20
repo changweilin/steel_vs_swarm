@@ -9722,7 +9722,7 @@ function buildEdgeMotion({ group, segs, dynamics }) {
     for (const rows of sets.values()) {
       const mot = rows[0].motion, [px = 0, py = 0, pz = 0] = mot.pivot || [];
       const root = new THREE.Group(), pivot = new THREE.Group();
-      root.position.set(s.x, s.ground, s.z);
+      root.position.set(s.x, s.ground - (s.water ? rows[0].waterline || 0 : 0), s.z);
       root.rotation.y = s.fry;
       pivot.position.set(px, py, pz);
       const geos = [], cols = [];

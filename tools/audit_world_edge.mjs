@@ -749,7 +749,8 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     && roles('powerplant').includes('cooling-tower'));
   t('陣列有自身構造，不以共用方盒替代',
     roles('tetrapod').includes('breakwater-arm') && roles('floatsolar').includes('solar-panel')
-    && roles('searanch').includes('culture-line') && roles('deeprig').includes('pontoon'));
+    && ['cage-float', 'cage-net', 'cage-bottom'].every(role => roles('searanch').includes(role))
+    && roles('oysterracks').includes('culture-line') && roles('deeprig').includes('pontoon'));
   t('擱淺船保留船殼、甲板、駕駛台、玻璃與桅桿',
     ['hull', 'deck', 'bridge', 'bridge-window', 'mast'].every(r => roles('strandedship').includes(r)));
   // 切分規則:①地貌/水陸域改變 ②太長 ③短 run 併回去 ④相鄰不同款 ⑤決定性

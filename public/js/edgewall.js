@@ -5,7 +5,7 @@
 import { mulberry32 } from './rng.js';
 import { boundaryGrid } from './objectLayout.js';
 import { partAABB, VEHICLE_SPEC } from './vehicles.js';
-import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, environmentAvailable, environmentSize, makeSceneVehicleParts } from './environmentParts.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, storageTankParts, environmentAvailable, environmentSize, makeSceneVehicleParts } from './environmentParts.js';
 import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
 export { ROCK_SEASON_TINT } from './environmentParts.js';
 
@@ -85,7 +85,7 @@ export const WALL_KINDS = {
   // ---- 大型邊界設施(同族共用生成器；水域款直接落水，不借用海堤／擋土平台)----
   windsea:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 28, minCover: 0.12, label: '海上風機陣列', family: 'wind', mount: 'fixed', col: [0xd9dde0, 0x70808c] },
   floatsolar:   { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 9,  faceH: 1.7, label: '浮動式太陽能板陣列', family: 'solar', mount: 'float', col: [0x244b73, 0x6b8799] },
-  searanch:     { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 12, label: '海上牧場（網箱／圍網／貝類長線）', family: 'ranch', mount: 'float', col: [0x3f6f7a, 0xc28c38] },
+  searanch:     { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 12, label: '浮式養殖網箱', family: 'ranch', mount: 'float', col: [0x3f6f7a, 0xc28c38] },
   deeprig:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 28, label: '深海油井', family: 'extract', mount: 'float', col: [0xd07a32, 0x596168] },
   windland:     { dom: 'land',  bio: ['bare', 'green'], slope: 'flat', depth: 14, h: 28, minCover: 0.12, label: '陸域風機陣列', family: 'wind', col: [0xe1e4e4, 0x69747c] },
   solarfield:   { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 14, h: 14, faceH: 1.7, label: '太陽能板陣列', family: 'solar', col: [0x243f63, 0x777b70] },
@@ -431,7 +431,7 @@ export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant
   const objectSeed = (seed ^ Math.imul(variant, 0x45d9f3b)) >>> 0;
   // 邊界本體是沿邊連續構造，單體朝向維持軸向對齊(預設除外)；獨立散布經 standaloneBoundaryParts 另開。
   if (def.object) return environmentParts(def.object, { size: [len, h, depth], seed: objectSeed, season, yaw });
-  if (EXPANDED_BOUNDARIES[kind]) return buildSlopeBoundary(kind, {
+  if (EXPANDED_BOUNDARIES[kind] || ['barricade', 'levee', 'seawall'].includes(kind)) return buildSlopeBoundary(kind, {
     len, depth, h: h - .4, x: objectSeed % 997 * 11, z: objectSeed % 953 * 7,
     seed: objectSeed, season, heightAt: () => .4,
   }).parts;
@@ -542,8 +542,8 @@ export const BOUNDARY_BUFFER_LAYOUTS = Object.freeze({
   wetpods:     { type: 'artificial', continuous: true, mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['wet'] },
   canalbank:   { type: 'artificial', continuous: true, mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['wet', 'urban'] },
   barricade:   { type: 'artificial', continuous: true, mode: 'grid', pitchX: 20, pitchZ: 18, scaleRange: [0.9, 1.0], bio: ['urban', 'bare'] },
-  searanch:    { type: 'artificial', continuous: true, mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['water'] },
-  oysterracks: { type: 'artificial', continuous: true, mode: 'grid', pitchX: 20, pitchZ: 18, scaleRange: [0.9, 1.0], bio: ['wet'] },
+  searanch:    { type: 'artificial', object: 'aquaculture', mode: 'grid', pitchX: 24, pitchZ: 20, scaleRange: [0.9, 1.0], bio: ['water'] },
+  oysterracks: { type: 'artificial', object: 'aquaculture', mode: 'grid', pitchX: 20, pitchZ: 18, scaleRange: [0.9, 1.0], bio: ['wet'] },
 });
 
 // Row 0 連續排列仍可逐件轉向的款式：180° 翻轉（繞 Y 保持置中 AABB 不變故不突出碰撞柱）。
@@ -575,13 +575,7 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
     return linearEnvironmentParts('deeprig', { len: w, depth: d, h, seed, season });
   }
   if (objKey === 'tank' || kind === 'tankfarm') {
-    const rnd = mulberry32(seed >>> 0);
-    const r = Math.min(w, d) * 0.44;
-    const col = pick(rnd, [0xb3bab6, 0xc0c7c3, 0xa5ada9]);
-    return [
-      { g: ['cyl', r, r, h * 0.75, 12], p: [0, h * 0.375, 0], c: col, role: 'storage-tank' },
-      { g: ['cyl', r * 0.96, r, h * 0.08, 12], p: [0, h * 0.79, 0], c: 0x6e7c80, role: 'tank-roof' },
-    ];
+    return storageTankParts({ w, d, h, seed });
   }
   if (objKey === 'truck' || kind === 'trucks') {
     const rnd = mulberry32(seed >>> 0);
@@ -673,7 +667,7 @@ export function buildBoundaryRunParts(kind, {
 
     const bioList = biome ? [biome] : (layout.bio || (water ? ['water'] : ['bare']));
     const candidateKinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k =>
-      ENVIRONMENT_OBJECTS[k].bio.some(b => bioList.includes(b))
+      ENVIRONMENT_OBJECTS[k].bio.some(b => bioList.includes(b)) && environmentAvailable(k)
     );
     const validCandidates = candidateKinds.length > 0 ? candidateKinds : ['boulder'];
 
@@ -797,6 +791,10 @@ export function buildBoundaryRunParts(kind, {
           const outPart = {
             ...p,
             p: [px + u, py, pz + v],
+            ...(p.motion ? { motion: { ...p.motion,
+              pivot: [p.motion.pivot[0] + u, p.motion.pivot[1], p.motion.pivot[2] + v],
+              id: `${r}_${c}_${p.motion.id}`,
+            } } : {}),
             ...(isBuffer ? { boundaryBuffer: true, role: p.role || 'boundary-buffer-fill' } : {}),
           };
           if (isBuffer) {

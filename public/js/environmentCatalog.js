@@ -42,10 +42,22 @@ export const ENVIRONMENT_CATEGORIES = Object.freeze(Object.fromEntries(
 
 // Authored visual ranges, not construction specifications. Angles are radians.
 export const ENVIRONMENT_STRUCTURE_PARAMETERS = Object.freeze({
+  houseRoof: { pitch: [.24, .48], thicknessRatio: [.018, .028] },
+  ranch: { fenceBay: [2.4, 3.6], fenceHeight: [1.2, 1.8], gateWidth: [2.8, 4.2], siloHeightRatio: [.58, .74] },
   industrialRoof: { bay: [6, 10], pitch: [.18, .32], thickness: [.12, .22] },
+  chimney: { topRatio: [.64, .78], wallRatio: [.10, .15], bandLevel: [.78, .88] },
+  coolingTower: { heightRatio: [.78, .9], throatRatio: [.56, .64], throatLevel: [.65, .75], rimRatio: [.70, .80], wallRatio: [.045, .065] },
   greenhouse: { bay: [2.5, 4], eaveRatio: [.52, .66] },
   wind: { blades: 3, chord: [.24, .38], rotorRatio: [.34, .42] },
   solar: { pitch: [.10, .18], gridLines: [4, 6] },
+  tetrapod: { spacing: [3.2, 4.2], layers: [2, 3], armLength: [1.5, 1.8], tipRatio: [.48, .62], yaw: [0, Math.PI * 2] },
+  oysterRack: { bay: [2.5, 3.5], height: [2, 3.2], lines: [4, 7], dropRatio: [.55, .8] },
+  fishCage: { bay: [7, 10], depth: [1.8, 3.2], floatWidth: [.3, .5], meshBays: [4, 7] },
+  mine: { levels: [3, 5], benchHeightRatio: [.44, .54], retreat: [.12, .15], conveyorPitch: [.10, .20] },
+  derrick: { bays: [4, 7], crownRatio: [.28, .4], legRatio: [.018, .026], tankHeightRatio: [.18, .25] },
+  offshoreRig: { bay: [22, 30], deckRatio: [.14, .18], pontoonRatio: [.08, .12] },
+  storageTank: { radiusRatio: [.40, .46], heightRatio: [.66, .80], roofRatio: [.06, .10] },
+  fallenViaduct: { span: [10, 16], tilt: [.08, .22], slabRatio: [.08, .12] },
 });
 export function environmentSize(kind, seed) {
   const def = ENVIRONMENT_OBJECTS[kind];

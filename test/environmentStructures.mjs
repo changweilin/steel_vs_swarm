@@ -1,8 +1,47 @@
 import assert from 'node:assert/strict';
 import { environmentParts, linearEnvironmentParts } from '../public/js/environmentParts.js';
 import { partBox, WALL_KINDS } from '../public/js/edgewall.js';
+import { mat3Apply, mat3FromEulerXYZ } from '../public/js/partTransform.js';
 
 for (let seed = 0; seed < 80; seed++) {
+  for (const kind of ['tetrapod', 'wetpods']) {
+    const def = WALL_KINDS[kind];
+    const rows = linearEnvironmentParts(kind, { len: 30, depth: def.depth, h: def.h, seed });
+    for (const core of rows.filter(p => p.role === 'breakwater-core')) {
+      const arms = rows.filter(p => p.role === 'breakwater-arm' && p.pod === core.pod);
+      assert.equal(arms.length, 4, 'tetrapods have four distinct tapered legs');
+      const directions = arms.map(p => mat3Apply(mat3FromEulerXYZ(p.r), [0, 1, 0]));
+      for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) {
+        assert(Math.abs(directions[a].reduce((sum, v, k) => sum + v * directions[b][k], 0) + 1/3) < 1e-9,
+          'tetrahedral legs must not collapse into crossed cylinders');
+      }
+      for (const arm of arms) {
+        const axis = mat3Apply(mat3FromEulerXYZ(arm.r), [0, 1, 0]);
+        assert(axis.every((v, k) => Math.abs(arm.p[k] - v * arm.g[3] / 2 - core.p[k]) < 1e-9),
+          'all leg roots meet the core');
+      }
+    }
+  }
+  const rack = linearEnvironmentParts('oysterracks', { len: 30, depth: 14, h: 14, seed });
+  const posts = rack.filter(p => p.role === 'rack-post');
+  for (const rail of rack.filter(p => p.role === 'longline')) {
+    const supports = posts.filter(p => p.p[2] === rail.p[2] && Math.abs(p.p[0] - rail.p[0]) < rail.g[1] / 2);
+    assert.equal(supports.length, 2, 'each rail needs both end posts');
+    for (const post of supports) {
+      assert.equal(partBox(post).y0, 0, 'rack posts are grounded');
+      assert(Math.abs(partBox(post).y1 - rail.p[1]) < 1e-9);
+    }
+  }
+  assert(rack.some(p => p.role === 'oyster-cluster'));
+  assert(rack.every(p => !p.motion && !p.waterline), 'intertidal racks remain fixed');
+  const cage = linearEnvironmentParts('searanch', { len: 30, depth: 16, h: 12, seed });
+  assert(cage.some(p => p.role === 'cage-bottom'), 'nets include a bottom');
+  for (const part of cage) {
+    assert.equal(part.motion.kind, 'float');
+    assert.equal(part.motion.pivot[1], part.waterline, 'float pivot is at the water surface');
+    if (part.role === 'cage-float') assert.equal(part.p[1] - part.waterline, 0, 'float straddles water');
+    if (part.role === 'cage-bottom') assert(partBox(part).y1 < part.waterline, 'net bottom is underwater');
+  }
   for (const kind of ['factory', 'powerplant', 'incinerator']) {
     const rows = environmentParts(kind, { seed });
     const body = partBox(rows.find(p => p.role === 'building-body'));
@@ -43,4 +82,4 @@ for (let seed = 0; seed < 80; seed++) {
     }
   }
 }
-console.log('PASS: 80 seeds of roof closure, gables, three-blade rotors and supported solar panels.');
+console.log('PASS: 80 seeds of roofs, rotors, solar panels, tetrahedral legs, supported oyster racks and floating net cages.');
