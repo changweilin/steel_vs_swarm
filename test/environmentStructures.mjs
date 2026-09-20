@@ -45,9 +45,9 @@ for (let seed = 0; seed < 80; seed++) {
   for (const kind of ['factory', 'powerplant', 'incinerator']) {
     const rows = environmentParts(kind, { seed });
     const body = partBox(rows.find(p => p.role === 'building-body'));
-    const ends = rows.filter(p => p.role === 'roof-end');
-    assert(ends.length > 0, `${kind}: missing roof`);
-    assert.equal(ends.length, rows.filter(p => p.role === 'sawtooth-roof').length);
+    const ends = rows.filter(p => p.role === 'architecture-roof');
+    const form = rows.find(p => p.role === 'building-body').architecture.roofForm;
+    assert.equal(ends.length > 0, form !== 'flat', `${kind}: style determines roof`);
     for (const end of ends) {
       assert(Math.abs(partBox(end).y0 - body.y1) < 1e-8, 'roof meets wall');
       const { vertices, faces } = end.g[1];

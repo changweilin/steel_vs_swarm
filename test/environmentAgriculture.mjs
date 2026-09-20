@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { environmentParts } from '../public/js/environmentParts.js';
 import { ENVIRONMENT_STRUCTURE_PARAMETERS } from '../public/js/environmentCatalog.js';
 import { partBox } from '../public/js/edgewall.js';
-import { mat3Apply, mat3FromEulerXYZ, mat3Transpose } from '../public/js/partTransform.js';
+import { mat3Apply, mat3FromEulerXYZ } from '../public/js/partTransform.js';
 
 const close = (a, b, message) => assert(Math.abs(a - b) < 1e-7, `${message}: ${a} != ${b}`);
 const world = (part, point) => mat3Apply(mat3FromEulerXYZ(part.r), point.map((v, i) => v * (part.s?.[i] || 1)))
@@ -13,25 +13,13 @@ for (let seed = 0; seed < 80; seed++) {
   for (const kind of ['house', 'ranch']) for (const size of [[26, 12, 20], [12, 20, 18], [40, 8, 14]]) {
     const rows = environmentParts(kind, { seed, size });
     assert.deepEqual(rows, environmentParts(kind, { seed, size }), 'seed reproduction');
-    const roof = rows.filter(p => p.role === 'roof-slope'), gables = rows.filter(p => p.role === 'house-gable');
-    const body = partBox(rows.find(p => p.role === 'building-body'));
-    assert.equal(roof.length, 2);
-    assert.equal(gables.length, 4);
-    const pitch = Math.abs(roof[0].r[0]), spec = ENVIRONMENT_STRUCTURE_PARAMETERS.houseRoof;
-    assert(pitch >= spec.pitch[0] && pitch <= spec.pitch[1]);
-    for (const gable of gables) {
-      close(partBox(gable).y0, body.y1, 'gable rests on wall');
-      const vertices = gable.g[1].vertices;
-      for (let i = 0; i < vertices.length; i += 3) {
-        const v = world(gable, vertices.slice(i, i + 3));
-        const ridgeZ = (body.z0 + body.z1) / 2;
-        const upperY = body.y1 + ((body.z1 - body.z0) / 2 - Math.abs(v[2] - ridgeZ)) * Math.tan(pitch);
-        if (Math.abs(v[1] - upperY) > 1e-7) continue; // Lower centre vertices are inside the gable.
-        const slab = roof.find(p => (p.p[2] - ridgeZ) * (gable.p[2] - ridgeZ) > 0);
-        const local = mat3Apply(mat3Transpose(mat3FromEulerXYZ(slab.r)), v.map((n, k) => n - slab.p[k]))
-          .map((n, k) => n / (slab.s?.[k] || 1));
-        close(local[1], -slab.g[2] / 2, 'gable upper edge touches roof underside');
-      }
+    const main = rows.find(p => p.role === 'building-body'), body = partBox(main);
+    const roof = rows.filter(p => p.role === 'architecture-roof');
+    assert(main.architecture, 'house participates in the shared architecture catalog');
+    if (main.architecture.roofForm === 'flat') assert.equal(roof.length, 0);
+    else {
+      assert(roof.length > 0, 'non-flat style has roof geometry');
+      close(Math.min(...roof.map(p => partBox(p).y0)), body.y1, 'roof assembly rests on wall');
     }
     if (kind !== 'ranch') continue;
     const posts = rows.filter(p => p.role === 'fence-post');
@@ -64,8 +52,8 @@ for (let seed = 0; seed < 80; seed++) {
     const silo = partBox(rows.find(p => p.role === 'feed-silo'));
     close(silo.y0, 0, 'silo is grounded');
     close(partBox(rows.find(p => p.role === 'silo-roof')).y0, silo.y1, 'silo cap meets tank');
-    variants.add(posts.length + ':' + pitch);
+    variants.add(posts.length + ':' + main.architecture.style + ':' + (body.x1 - body.x0));
   }
 }
 assert(variants.size > 30, 'seeded roofs and fences vary');
-console.log('PASS: 80 seeds × 3 envelopes of closed house gables, supported ranch fences, braced gates and grounded silos.');
+console.log('PASS: 80 seeds × 3 envelopes of shared house roofs, supported ranch fences, braced gates and grounded silos.');

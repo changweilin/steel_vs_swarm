@@ -434,6 +434,11 @@ export function architectureWeights(context = {}) {
   if (context.aquatic) {
     delete weights.industrial;
   }
+  if (context.affinity?.length) {
+    weights = Object.fromEntries(Object.entries(weights).filter(([id]) =>
+      ARCHITECTURE_STYLES[id].affinity?.split('|').some(key => context.affinity.includes(key))));
+    if (!Object.keys(weights).length) throw new RangeError('No compatible architecture style');
+  }
   return { profile, weights, region };
 }
 
