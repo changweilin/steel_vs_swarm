@@ -3477,6 +3477,7 @@ function initEnvOptions() {
   const kindSel = document.querySelector('#env-kind');
   const prevKind = kindSel.value;
   kindSel.innerHTML = '';
+  kindSel.add(new Option('全部款式輪播 (All Kinds)', 'all'));
 
   const categories = ['energy', 'aquaculture', 'fortification', 'military', 'bridge', 'levee', 'coastal'];
   const kinds = Object.keys(WALL_KINDS).filter(k => currentTab !== 'infrastructure'
