@@ -238,10 +238,10 @@ console.log('  ✓ 物件標準尺寸錨定驗證通過: 載具與建築均嚴�
 
 function near(a, b, eps = 1e-4) { return Math.abs(a - b) <= eps; }
 
-// 8. 連續組裝邊界障礙物（城牆/河堤/消波塊/路障/運河護岸/海上長線牧場等）相鄰段落無縫組裝驗證
+// 8. 連續組裝邊界障礙物（城牆/河堤/消波塊/路障/運河護岸）相鄰段落無縫組裝驗證
 const continuousKinds = [
   'tetrapod', 'wetpods', 'citywall', 'levee', 'seawall',
-  'canalbank', 'barricade', 'searanch', 'oysterracks',
+  'canalbank', 'barricade',
 ];
 
 for (const kind of continuousKinds) {
@@ -288,21 +288,14 @@ for (const kind of continuousKinds) {
       }
     }
     // 牆體主體端面貼齊 ±len/2
-    const mainParts = segA.parts.filter(p => ['wall-face', 'levee-slope', 'seawall-face', 'wall-course'].includes(p.role));
-    if (mainParts.length > 0) {
+    const mainParts = segA.parts.filter(p => ['terrain-joined-boundary', 'wall-course'].includes(p.role));
+    assert(mainParts.length > 0, `${kind}: must include the shared structural body`);
+    {
       const minX = Math.min(...mainParts.map(p => partBox(p).x0));
       const maxX = Math.max(...mainParts.map(p => partBox(p).x1));
       assert(near(minX, -len / 2, 1e-3) && near(maxX, len / 2, 1e-3),
         `${kind}: 牆體端面必須精準齊平至 ±len/2 (minX=${minX}, maxX=${maxX})`);
     }
-  } else if (['searanch', 'oysterracks'].includes(kind)) {
-    // 養殖長線在段落端面無縫延伸至 ±len/2
-    const linesA = segA.parts.filter(p => p.role === 'longline');
-    assert(linesA.length > 0, `${kind}: 必須包含長線 (longline)`);
-    const minX = Math.min(...linesA.map(p => partBox(p).x0));
-    const maxX = Math.max(...linesA.map(p => partBox(p).x1));
-    assert(near(minX, -len / 2, 1e-3) && near(maxX, len / 2, 1e-3),
-      `${kind}: 養殖長線端面必須延伸貼齊至 ±len/2 (minX=${minX}, maxX=${maxX})`);
   } else if (kind === 'canalbank') {
     // 運河護岸地貌連續網格覆蓋至 ±len/2
     const minX = Math.min(...segA.parts.map(p => partBox(p).x0));
@@ -311,7 +304,19 @@ for (const kind of continuousKinds) {
       `${kind}: 護岸幾何必須延伸貼齊至 ±len/2 (minX=${minX}, maxX=${maxX})`);
   }
 }
-console.log('  ✓ 所有連續組裝長型邊界障礙物無縫組裝驗證通過: 零空隙、端面齊平、模組互鎖、石層/長線水平對齊');
+console.log('  ✓ 所有連續組裝長型邊界障礙物無縫組裝驗證通過: 零空隙、端面齊平、模組互鎖、石層水平對齊');
+
+// Aquaculture uses supported modules, not unsupported beams spanning the whole segment.
+for (const kind of ['searanch', 'oysterracks']) {
+  const batch = buildBoundaryRunParts(kind, { len: 80, depth: 16, bufferDepth: 40, h: 28, seed: 777 });
+  for (const rows of [batch.parts, batch.bufferParts]) {
+    const required = kind === 'searanch' ? ['cage-float', 'cage-net', 'cage-bottom']
+      : ['rack-post', 'rack-crossbar', 'longline', 'culture-line', 'oyster-cluster'];
+    assert(required.every(role => rows.some(p => p.role === role)), `${kind}: same complete structure in body and buffer`);
+    assert(rows.every(p => required.includes(p.role)), `${kind}: no unrelated ice or trees`);
+  }
+  assert(batch.bufferParts.every(p => !p.motion), 'buffer aquaculture stays in the static batch');
+}
 
 // 9. 驗證所有連續障礙物邊界外緩衝區生成物件內容同等於一般遊戲區域
 const continuousBiomes = [
@@ -322,8 +327,6 @@ const continuousBiomes = [
   { kind: 'wetpods', biome: 'wet' },
   { kind: 'canalbank', biome: 'urban' },
   { kind: 'barricade', biome: 'bare' },
-  { kind: 'searanch', biome: 'water' },
-  { kind: 'oysterracks', biome: 'wet' },
 ];
 
 for (const { kind, biome } of continuousBiomes) {

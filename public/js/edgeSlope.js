@@ -1,6 +1,6 @@
 // Continuous boundary cross-sections. Adjacent segments sample identical world coordinates;
 // segment seeds never change their end profiles. No Three.js or shared random stream.
-import { ROCK_SEASON_TINT, environmentParts } from './environmentParts.js';
+import { ROCK_SEASON_TINT, environmentParts, storageTankParts } from './environmentParts.js';
 import { mulberry32 } from './rng.js';
 
 const hillSection = [[-.5, 0], [-.35, .32], [-.16, .7], [0, .86], [.2, .65], [.38, .25], [.5, 0]];
@@ -272,9 +272,9 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
       // Rigid members stay vertical on individually supported sites, rather than bending houses/trees.
       const base = high + h * .1, modelSeed = Math.floor(rnd() * 0x7fffffff);
       if (def.tanks) {
-        const radius = Math.min(width, thick) * .46, height = h * (.5 + rnd() * .2);
-        parts.push({ g: ['cyl', radius, radius, height, 12], p: [u, base + height / 2, v], c: 0xb3bab6, role: 'storage-tank' });
-        parts.push({ g: ['cyl', radius * .96, radius, h * .04, 12], p: [u, base + height + h * .02, v], c: 0x707e81, role: 'tank-roof' });
+        rnd(); // Preserve the existing per-site seed sequence when replacing the old tank recipe.
+        parts.push(...storageTankParts({ w: width, d: thick, h: h * .85, seed: modelSeed })
+          .map(p => ({ ...p, p: [p.p[0] + u, p.p[1] + base, p.p[2] + v] })));
       } else {
         const model = environmentParts(def.object, { size: [width, h * .85, thick], seed: modelSeed, season });
         parts.push(...model.map(p => ({ ...p, p: [p.p[0] + u, p.p[1] + base, p.p[2] + v] })));
