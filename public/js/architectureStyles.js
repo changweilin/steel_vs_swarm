@@ -396,6 +396,96 @@ export function glassFacadeRule(functionInfo = null) {
   return { ...base, ...over };
 }
 
+/** 混排窗的極低機率（全棟同窗為預設；checker 兩種棋盤交錯、honeycomb 三種蜂巢交錯）。 */
+export const WINDOW_PATTERN_PROB = Object.freeze({ checker: 0.03, honeycomb: 0.01 });
+
+/** 同棟同窗雜湊（FNV-1a）：只吃 buildingKey，不消耗共享 rnd()，跨幀跨端同值。 */
+function windowHash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15;
+  return h >>> 0;
+}
+
+// 傳統／透天系（牛眼窗／老虎窗／窗花偏多、單面牆開間更疏）的類型與功能鍵。
+const TRADITIONAL_WINDOW_TYPES = new Set([
+  'townhouse', 'alley', 'farmhouse', 'cultural',
+  'temple', 'church', 'mosque', 'shrine', 'mandir', 'synagogue', 'worship',
+  'castle', 'heritage',
+]);
+const TRADITIONAL_WINDOW_KEYS = new Set([
+  'residential_townhouse', 'residential_alley',
+  'rural_farmhouse', 'tourism_cultural', 'tourism_visitor',
+]);
+
+/** 同棟同窗單一縫：整棟建築共用一份窗戶參數（同一種窗）。
+ * mode 'single' = 全棟同一款；'checker' = 兩種玻璃棋盤交錯；'honeycomb' = 三種蜂巢交錯。
+ * 高層樓壓成 single 大面積滿鋪密排玻璃；傳統／透天偏牛眼／老虎窗與窗花、開間更疏。
+ * buildingKey 必須是跨幀穩定的同棟識別（見 osmBuilding.js 的組裝）；回傳的 w/h/frame/rate
+ * 全棟固定，呼叫端 MUST NOT 再逐窗重抽形狀尺寸窗框（僅留 skip 的有無窗判定）。
+ */
+export function resolveWindowScheme(style = {}, buildingKey = '') {
+  const rule = glassFacadeRule(style.functionInfo);
+  const key = String(buildingKey ?? '');
+  const f = (tag) => windowHash(`${key}|${tag}`) / 4294967296;
+  if (!(rule.rate > 0)) {
+    return {
+      mode: 'single', shapes: ['rect'], w: 0.5, h: 0.45, frame: 'none',
+      rate: 0, lift: rule.lift || 0, dormer: false, oculusCross: false, bayStep: 5,
+    };
+  }
+  const info = style.functionInfo || {};
+  const highRise = (style.levels >= 10) || (style.targetHeight >= 30)
+    || info.key === 'commercial_skyscraper' || info.type === 'skyscraper';
+  const facade = style.facade || style.wallType || 'ribbon';
+  const isCurtain = facade === 'ribbon' || facade === 'glass_curtain';
+  if (highRise) {
+    // 高層樓：全棟同一款大面積玻璃、滿鋪、密開間、無老虎窗混排。
+    return {
+      mode: 'single', shapes: ['wide'],
+      w: 0.86 + f('w') * 0.08, h: 0.72 + f('h') * 0.13,
+      frame: f('frame') < 0.5 ? 'edge' : 'none',
+      rate: 1.0, lift: 0, dormer: false, oculusCross: false, bayStep: 3.6,
+    };
+  }
+  const traditional = info.category === 'religious' || info.category === 'heritage'
+    || TRADITIONAL_WINDOW_TYPES.has(info.type) || TRADITIONAL_WINDOW_KEYS.has(info.key);
+  // 傳統／透天在規則池外加窗花與拱窗候選（全棟仍只取一款，差異落在棟與棟之間）。
+  const pool = traditional ? [...rule.shapes, 'lattice', 'french', 'arch'] : [...rule.shapes];
+  const distinct = [...new Set(pool)];
+  const pick = (tag) => pool[Math.floor(f(tag) * pool.length)] || 'rect';
+  let mode = 'single';
+  const roll = f('pattern');
+  if (roll < WINDOW_PATTERN_PROB.honeycomb && distinct.length >= 3) mode = 'honeycomb';
+  else if (roll < WINDOW_PATTERN_PROB.honeycomb + WINDOW_PATTERN_PROB.checker && distinct.length >= 2) mode = 'checker';
+  const need = mode === 'honeycomb' ? 3 : mode === 'checker' ? 2 : 1;
+  const shapes = [pick('shape0')];
+  for (let i = 1; shapes.length < need && i < need + 6; i++) {
+    const cand = pick(`shape${i}`);
+    // 混排的每一種必須相異；候選重複時改取池中未用過的第一款。
+    shapes.push(shapes.includes(cand) ? (distinct.find((s) => !shapes.includes(s)) || cand) : cand);
+  }
+  const uniq = [...new Set(shapes)];
+  if (uniq.length < need) {
+    mode = 'single';
+    shapes.length = 1;
+  }
+  const framePool = Array.isArray(rule.frame) && rule.frame.length ? rule.frame : ['none'];
+  return {
+    mode,
+    shapes: mode === 'single' ? shapes.slice(0, 1) : uniq.slice(0, need),
+    w: rule.w[0] + f('w') * (rule.w[1] - rule.w[0]),
+    h: rule.h[0] + f('h') * (rule.h[1] - rule.h[0]),
+    frame: framePool[Math.floor(f('frame') * framePool.length)] || 'none',
+    rate: traditional ? Math.min(rule.rate, 0.55) : rule.rate,
+    lift: rule.lift || 0,
+    // 老虎窗是整棟頂層統一有無（傳統系保底 0.35）；牛眼窗十字格柵同棟統一。
+    dormer: f('dormer') < (traditional ? Math.max(rule.dormer || 0, 0.35) : (rule.dormer || 0)),
+    oculusCross: f('oculusCross') < 0.6,
+    bayStep: traditional ? 6.0 : (isCurtain ? 5 : 3.2),
+  };
+}
+
 /** 世界各大文化建築語彙型錄 */
 export const ARCHITECTURE_STYLES = Object.freeze({
   ...REGIONAL_STYLES,

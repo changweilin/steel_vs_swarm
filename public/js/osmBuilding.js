@@ -10,7 +10,7 @@ import { sampleBuildingSite } from './buildingDiversity.js';
 import { runtimePrimitiveGeometry } from './runtimePartModel.js';
 import { roofDimensions, sectionRoofProfile } from './roofProfiles.js';
 import { generateBuildingAppurtenances } from './buildingAppurtenances.js';
-import { resolveAdaptiveRoofForm, calculateFootprintMetrics, computeOrientedRoofFrame, glassFacadeRule } from './architectureStyles.js';
+import { resolveAdaptiveRoofForm, calculateFootprintMetrics, computeOrientedRoofFrame, resolveWindowScheme } from './architectureStyles.js';
 import { WATER } from './data.js';
 
 const EPS = 1e-5;
@@ -242,15 +242,25 @@ const BUSY_FACADE_DETAIL = new Set([
  * 杜絕同平面共面 (Coplanar) 導致的 WebGL Z-fighting 閃爍。
  * 三階段管線：先把每層每開間的玻璃鋪滿（高樓不再因額度耗盡而頂層缺窗），
  * 再用「均攤額度 − 已用玻璃數」的剩餘額度疊窗框與文化裝飾，全棟總量恆受
- * FACADE_GEOMETRY_LIMIT 夾制；玻璃形狀／尺寸／窗框由 glassFacadeRule 按建築
- * 功能類型給定（部分類型如停車場 rate=0 全棟不渲染玻璃）。
+ * FACADE_GEOMETRY_LIMIT 夾制；玻璃形狀／尺寸／窗框由 resolveWindowScheme 按建築
+ * 功能類型給定同棟唯一的一份參數（部分類型如停車場 rate=0 全棟不渲染玻璃）。
+ * 同棟同窗：同一呼叫（同一棟）內所有窗共用 scheme，僅棋盤／蜂巢混排依
+ * (floor, bay) 交錯取款；MUST NOT 在此逐窗重抽形狀尺寸窗框。
  */
 export function architecturalFacade(edges, style, thickness) {
   const geos = [];
   const facade = style.facade || style.wallType || 'ribbon';
   const glassColor = style.glass || 0x68a5c2;
   const trimColor = style.trim || 0x546575;
-  const rule = glassFacadeRule(style.functionInfo);
+  // 同棟識別：sourceId＋variant＋首段牆位置，跨幀穩定；同地址多外環視為同棟同窗。
+  const firstEdge = edges[0];
+  const buildingKey = `${firstEdge?.sourceId ?? ''}|${style.variant ?? 0}|${style.id ?? ''}|${style.functionInfo?.type ?? ''}|${style.functionInfo?.key ?? ''}|${firstEdge ? `${firstEdge.x.toFixed(1)},${firstEdge.z.toFixed(1)}` : ''}`;
+  const scheme = resolveWindowScheme(style, buildingKey);
+  const shapeAt = (floor, bay) => {
+    if (scheme.mode === 'checker') return scheme.shapes[(floor + bay) & 1] || 'rect';
+    if (scheme.mode === 'honeycomb') return scheme.shapes[((bay % 3) + (floor & 1 ? 1 : 0)) % 3] || 'rect';
+    return scheme.shapes[0] || 'rect';
+  };
   const plainFrame = !BUSY_FACADE_DETAIL.has(style.detail);
 
   for (let ei = 0; ei < edges.length; ei++) {
@@ -262,7 +272,8 @@ export function architecturalFacade(edges, style, thickness) {
     // 疊加舊管線把低樓層裝飾先花光額度、高樓層玻璃輪不到。
     const floors = Math.max(1, Math.min(36, Math.round(edge.h / 3.2)));
     const isCurtain = facade === 'ribbon' || facade === 'glass_curtain';
-    let bays = Math.max(1, Math.min(10, Math.floor(length / (isCurtain ? 5 : 3.2))));
+    // 開間步距由同棟窗方案給定（高層密、傳統疏），不再逐牆重算。
+    let bays = Math.max(1, Math.min(10, Math.floor(length / scheme.bayStep)));
     if (floors * bays > 140) bays = Math.max(1, Math.floor(140 / floors));
     const bayW = length / bays, floorH = edge.h / floors;
     let budget = Math.floor(limit / Math.max(1, edges.length));
@@ -295,21 +306,21 @@ export function architecturalFacade(edges, style, thickness) {
     };
 
     // ---- 第一階段：玻璃鋪滿，全層全開間保證覆蓋（不扣額度，事後計數扣除） ----
+    // 同棟同窗：形狀／尺寸／位置全棟固定，僅混排模式依 (floor, bay) 交錯取款、
+    // 有無窗依 rate 逐窗判定（存在性不算窗戶參數）。
     for (let floor = 0; floor < floors; floor++) {
       const topFloor = floor === floors - 1;
       const yBase = (floor + 0.5) * floorH;
       for (let bay = 0; bay < bays; bay++) {
-        if (facadeRnd(seed, floor, bay, 'skip') >= rule.rate) continue;
-        let shape = rule.shapes[Math.floor(facadeRnd(seed, floor, bay, 'shape') * rule.shapes.length)] || 'rect';
+        if (facadeRnd(seed, floor, bay, 'skip') >= scheme.rate) continue;
+        let shape = shapeAt(floor, bay);
         if (shape === 'oculus' && !topFloor) shape = 'rect';
-        const w = Math.min(bayW * 0.96, Math.max(0.3,
-          bayW * (rule.w[0] + facadeRnd(seed, floor, bay, 'w') * (rule.w[1] - rule.w[0]))));
-        const h = Math.min(floorH * 0.9, Math.max(0.3,
-          floorH * (rule.h[0] + facadeRnd(seed, floor, bay, 'h') * (rule.h[1] - rule.h[0]))));
-        const u = -length / 2 + (bay + 0.5) * bayW + (facadeRnd(seed, floor, bay, 'du') - 0.5) * bayW * 0.18;
-        const y = yBase + (facadeRnd(seed, floor, bay, 'dy') - 0.5) * floorH * 0.1 + (rule.lift || 0) * floorH;
-        // 老虎窗（dormer）：只放頂層，外凸窗體＋小斜蓋，取代平面玻璃。
-        if (topFloor && (rule.dormer || 0) > 0 && facadeRnd(seed, floor, bay, 'dormer') < rule.dormer) {
+        const w = Math.min(bayW * 0.96, Math.max(0.3, bayW * scheme.w));
+        const h = Math.min(floorH * 0.9, Math.max(0.3, floorH * scheme.h));
+        const u = -length / 2 + (bay + 0.5) * bayW;
+        const y = yBase + (scheme.lift || 0) * floorH;
+        // 老虎窗（dormer）：整棟頂層統一有無，外凸窗體＋小斜蓋，取代平面玻璃。
+        if (topFloor && scheme.dormer) {
           add(w * 0.8, h * 0.7, u, y, glassColor, 0.42, 0, true);
           add(w * 0.94, 0.09, u, y + h * 0.42, trimColor, 0.55, 0, true);
           const lid = new THREE.BoxGeometry(w * 0.94, 0.07, 0.55);
@@ -345,9 +356,9 @@ export function architecturalFacade(edges, style, thickness) {
     for (const win of wins) {
       if (budget <= 0) break;
       if (win.shape === 'dormer') continue;
-      const { floor, bay, u, y, w, h, shape } = win;
+      const { u, y, w, h, shape } = win;
       if (shape === 'oculus') {
-        if (facadeRnd(seed, floor, bay, 'frame') < 0.6) {
+        if (scheme.oculusCross) {
           const r = Math.min(w, h) / 2;
           add(0.06, r * 2, u, y, trimColor, 0.09);
           add(r * 2, 0.06, u, y, trimColor, 0.09);
@@ -355,7 +366,8 @@ export function architecturalFacade(edges, style, thickness) {
         continue;
       }
       if (shape === 'arch') continue;
-      let frame = rule.frame[Math.floor(facadeRnd(seed, floor, bay, 'frame') * rule.frame.length)] || 'none';
+      // 同棟同窗：窗框全棟同一款（lattice/french/slit 仍走其天生框型）。
+      let frame = scheme.frame || 'none';
       if (shape === 'lattice') frame = 'grid';
       else if (shape === 'french') frame = 'cross';
       else if (shape === 'slit') frame = 'none';

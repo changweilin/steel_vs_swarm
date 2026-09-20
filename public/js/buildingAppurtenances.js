@@ -505,7 +505,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       graffiti.translate(gwOffset, 1.1, wallThickness / 2 + 0.02);
       graffiti.rotateY(sFrame.rotY);
       graffiti.translate(sideEdge.x, baseY, sideEdge.z);
-      geos.push(paintGeometry(graffiti, 0x8e24aa, variant));
+      // 霧紫啞光塗鴉牆：避免螢光紫與土系牆面違和（使用者回報色塊）。
+      geos.push(paintGeometry(graffiti, 0x6b5a70, variant));
     }
   }
 
