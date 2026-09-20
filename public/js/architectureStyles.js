@@ -215,34 +215,38 @@ export function isSiteValid(poly, x, z, r, margin = 0.8) {
   return distanceToPolyBoundary(x, z, poly) >= requiredDistance;
 }
 
+/** 非平面屋頂可容屋頂物件：太陽能板／水塔／煙囪／天線／尖塔（牛眼窗／老虎窗為立面窗，不佔屋面）。 */
+const SLOPED_ROOF_PARTS = Object.freeze(['solar_array', 'water_tank', 'chimney', 'antenna', 'rooftop_spire']);
+
 /** 屋頂造型與可容納頂部零件相容性矩陣 (依屋頂類型決定可放物件) */
 export const ROOF_APPURTENANCE_COMPATIBILITY = Object.freeze({
   // 平頂與階梯露台：結構平整開闊，支援全套屋頂設備
   flat: Object.freeze(['water_tank', 'antenna', 'cellular_mast', 'solar_array', 'pigeon_coop', 'chimney', 'roof_billboard', 'clock_tower', 'rooftop_spire', 'heli_hangar', 'rooftop_canopy', 'drying_room', 'roof_garden', 'stairwell_penthouse', 'rooftop_shrine', 'pingpong_table', 'pool_table', 'rooftop_sofa', 'table_chairs', 'gazebo']),
   stepped: Object.freeze(['water_tank', 'antenna', 'cellular_mast', 'solar_array', 'pigeon_coop', 'chimney', 'roof_billboard', 'clock_tower', 'rooftop_spire', 'heli_hangar', 'rooftop_canopy', 'drying_room', 'roof_garden', 'stairwell_penthouse', 'rooftop_shrine', 'pingpong_table', 'pool_table', 'rooftop_sofa', 'table_chairs', 'gazebo']),
 
-  // 斜坡雙坡/單坡/折線/懸山/硬山屋頂：瓦面傾斜，嚴禁平放停機坪與大型看板；相容煙囪穿透、天線架設脊頂、山牆鐘樓與尖頂
-  gable: Object.freeze(['chimney', 'antenna', 'clock_tower', 'rooftop_spire']),
-  shed: Object.freeze(['solar_array', 'chimney', 'antenna', 'rooftop_spire', 'rooftop_canopy']),
-  mansard: Object.freeze(['chimney', 'antenna', 'clock_tower', 'rooftop_spire']),
-  yingshan: Object.freeze(['chimney', 'antenna', 'rooftop_spire']),
-  xuanshan: Object.freeze(['chimney', 'antenna', 'rooftop_spire']),
-  sawtooth: Object.freeze(['chimney', 'antenna', 'exhaust_fan', 'solar_array', 'rooftop_canopy']),
-  spire: Object.freeze(['rooftop_spire', 'antenna']),
+  // 非平面屋頂：僅容太陽能板／水塔／煙囪／天線／尖塔（牛眼窗／老虎窗為立面窗，不佔屋面）。
+  // 其餘屋頂物件（看板、棚架、休閒設施等）一律不放。
+  gable: SLOPED_ROOF_PARTS,
+  shed: SLOPED_ROOF_PARTS,
+  mansard: SLOPED_ROOF_PARTS,
+  yingshan: SLOPED_ROOF_PARTS,
+  xuanshan: SLOPED_ROOF_PARTS,
+  sawtooth: SLOPED_ROOF_PARTS,
+  spire: SLOPED_ROOF_PARTS,
 
-  // 東亞傳統宮殿與寺廟大頂（廡殿、歇山、捲棚、重簷）：文化造型嚴謹，不可放置現代大型水塔與直升機棚，相容脊頂寶頂與飾針
-  wudian: Object.freeze(['rooftop_spire', 'clock_tower', 'chimney']),
-  xieshan: Object.freeze(['rooftop_spire', 'clock_tower', 'chimney']),
-  curved_ridge: Object.freeze(['rooftop_spire', 'chimney']),
-  tiered: Object.freeze(['rooftop_spire', 'clock_tower']),
+  // 東亞傳統宮殿與寺廟大頂（廡殿、歇山、捲棚、重簷）：同上。
+  wudian: SLOPED_ROOF_PARTS,
+  xieshan: SLOPED_ROOF_PARTS,
+  curved_ridge: SLOPED_ROOF_PARTS,
+  tiered: SLOPED_ROOF_PARTS,
 
-  // 圓頂與穹窿拱頂：曲面球頂，相容頂端尖塔飾頂、十字/新月天線或底部煙道
-  dome: Object.freeze(['rooftop_spire', 'antenna', 'chimney']),
-  vault: Object.freeze(['rooftop_spire', 'antenna', 'chimney']),
-  steep_gable: Object.freeze(['chimney']),
-  crowstep: Object.freeze(['chimney']),
-  gambrel: Object.freeze(['chimney']),
-  butterfly: Object.freeze([]),
+  // 圓頂、穹窿、陡坡、折線屋頂：同上。
+  dome: SLOPED_ROOF_PARTS,
+  vault: SLOPED_ROOF_PARTS,
+  steep_gable: SLOPED_ROOF_PARTS,
+  crowstep: SLOPED_ROOF_PARTS,
+  gambrel: SLOPED_ROOF_PARTS,
+  butterfly: SLOPED_ROOF_PARTS,
 });
 
 /**

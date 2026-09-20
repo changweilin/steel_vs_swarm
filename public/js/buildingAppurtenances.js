@@ -330,7 +330,8 @@ export function getRoofElevation(x, z, poly, roofForm = 'flat', metrics = null, 
   const slopeRatio = Math.max(0, Math.min(1, 1 - distFromRidge / halfSpan));
 
   if (roofForm === 'shed') {
-    const sRatio = Math.max(0, Math.min(1, (vDist + span / 2) / (span || 1)));
+    // 視覺楔形高邊位於局部 -Z（經 rotateY(-angle) 落於 -normal 側），高邊對齊 -normal。
+    const sRatio = Math.max(0, Math.min(1, (span / 2 - vDist) / (span || 1)));
     return topY + sRatio * roofH * 0.85;
   }
 
@@ -386,6 +387,73 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
   // 決定此棟建築之屋頂造型，並取得相容的屋頂零件清單 (依屋頂類型決定可放物件)
   const roofForm = actualRoofForm || architecture.actualRoofForm || architecture.roofForm || 'flat';
   const allowedRooftopParts = new Set(ROOF_APPURTENANCE_COMPATIBILITY[roofForm] || ROOF_APPURTENANCE_COMPATIBILITY.flat);
+  // 非平面屋頂僅容太陽能板／水塔／煙囪／天線／尖塔（牛眼窗／老虎窗為立面窗，不佔屋面）；其餘由相容矩陣擋下。
+  const isSlopedRoof = roofForm !== 'flat' && roofForm !== 'stepped';
+
+  // 屋頂物件佔位登記：全部屋頂物件互不重疊。圓形以半徑計，矩形以有向半尺寸計；
+  // 佔位重疊者靜默捨棄（degrade by omission）。純數學、無 RNG，不消耗共享隨機序列。
+  const roofClaims = [];
+  function roofObbCorners(r) {
+    const c = Math.cos(r.rot || 0), s = Math.sin(r.rot || 0);
+    const pts = [];
+    for (const [qx, qz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const lx = qx * r.hw, lz = qz * r.hd;
+      pts.push([r.x + lx * c + lz * s, r.z - lx * s + lz * c]);
+    }
+    return pts;
+  }
+  function roofObbsOverlap(a, b) {
+    const ca = roofObbCorners(a), cb = roofObbCorners(b);
+    const axes = [];
+    for (const r of [a, b]) {
+      const c = Math.cos(r.rot || 0), s = Math.sin(r.rot || 0);
+      axes.push([c, -s], [s, c]);
+    }
+    for (const [ax, az] of axes) {
+      let mna = Infinity, mxa = -Infinity, mnb = Infinity, mxb = -Infinity;
+      for (const [px, pz] of ca) { const d = px * ax + pz * az; if (d < mna) mna = d; if (d > mxa) mxa = d; }
+      for (const [px, pz] of cb) { const d = px * ax + pz * az; if (d < mnb) mnb = d; if (d > mxb) mxb = d; }
+      if (mxa < mnb || mxb < mna) return false;
+    }
+    return true;
+  }
+  function roofCircleHitsRect(x, z, r, rc) {
+    const dx = x - rc.x, dz = z - rc.z;
+    const c = Math.cos(rc.rot || 0), s = Math.sin(rc.rot || 0);
+    const lx = c * dx - s * dz, lz = s * dx + c * dz;
+    const qx = Math.max(-rc.hw, Math.min(rc.hw, lx));
+    const qz = Math.max(-rc.hd, Math.min(rc.hd, lz));
+    return (lx - qx) * (lx - qx) + (lz - qz) * (lz - qz) < r * r;
+  }
+  function roofFreeCircle(x, z, r) {
+    for (const o of roofClaims) {
+      if (o.circle) {
+        const dx = x - o.x, dz = z - o.z;
+        if (dx * dx + dz * dz < (r + o.r) * (r + o.r)) return false;
+      } else if (roofCircleHitsRect(x, z, r, o)) return false;
+    }
+    return true;
+  }
+  function roofClaimFree(x, z, hw, hd, rot) {
+    const r = { x, z, hw, hd, rot: rot || 0 };
+    for (const o of roofClaims) {
+      if (o.circle) { if (roofCircleHitsRect(o.x, o.z, o.r, r)) return false; }
+      else if (roofObbsOverlap(o, r)) return false;
+    }
+    return true;
+  }
+  function claimCircle(x, z, r) {
+    if (!roofFreeCircle(x, z, r)) return false;
+    roofClaims.push({ circle: true, x, z, r });
+    return true;
+  }
+  function claimRect(x, z, hw, hd, rot) {
+    if (!roofClaimFree(x, z, hw, hd, rot)) return false;
+    roofClaims.push({ x, z, hw, hd, rot: rot || 0 });
+    return true;
+  }
+  // 棚架（rooftop_canopy）資訊：大型遮雨棚優先佔位；同區域太陽能板貼於棚架頂面並填滿。
+  let canopyInfo = null;
 
   // 1. 識別正門牆段 (通常是長度最適中、臨路或主要長邊)
   const sortedEdges = [...edges].sort((a, b) => b.hw2 - a.hw2);
@@ -692,7 +760,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const feature = architecture.roofFeature;
     const radius = feature === 'chhatri' ? 1.7 : 1.1;
     const { x, z } = sites.center;
-    if (isSiteValid(poly, x, z, radius, 0.8) && height >= 5) {
+    if (isSiteValid(poly, x, z, radius, 0.8) && height >= 5 && claimCircle(x, z, radius)) {
       const rot = -(metrics.frame?.angle || 0);
       const add = (geo, y, color, dx = 0, dz = 0) => {
         geo.translate(dx, y, dz); geo.rotateY(rot); geo.translate(x, topY, z);
@@ -748,7 +816,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     if (hasClock) {
       const clockSite = pickSite('corner', 'clock_pos');
       // 鐘樓出挑線腳半寬 1.7m，嚴格預留 1.2m 邊界留白 (淨距需 >= 2.9m)
-      if (clockSite && isSiteValid(poly, clockSite.x, clockSite.z, 1.7, 1.2)) {
+      if (clockSite && isSiteValid(poly, clockSite.x, clockSite.z, 1.7, 1.2) && claimRect(clockSite.x, clockSite.z, 1.7, 1.7, 0)) {
         const cx = clockSite.x, cz = clockSite.z;
         const baseRoofY = getRoofElevation(cx, cz, poly, roofForm, metrics, topY, height);
         const shaftH = Math.min(8.5, Math.max(5.5, height * 0.35));
@@ -820,7 +888,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       for (let s = 0; s < spireCount; s++) {
         const spireSite = (s === 0 ? pickSite('corner', 'spire_0') : (corners[1] || pickSite('edge', 'spire_1')));
         // 基座半徑 1.35m，保留 1.0m 留白 (淨距需 >= 2.35m)
-        if (spireSite && isSiteValid(poly, spireSite.x, spireSite.z, 1.35, 1.0)) {
+        if (spireSite && isSiteValid(poly, spireSite.x, spireSite.z, 1.35, 1.0) && claimCircle(spireSite.x, spireSite.z, 1.35)) {
           const sx = spireSite.x, sz = spireSite.z;
           const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
 
@@ -856,7 +924,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     if (hasHeli) {
       const heliSite = pickSite('center', 'heli_pos');
       // 停機甲板半徑 7.8m，嚴格保留 1.5m 邊緣安全走廊留白 (淨距需 >= 9.3m)
-      if (heliSite && isSiteValid(poly, heliSite.x, heliSite.z, 7.8, 1.5)) {
+      if (heliSite && isSiteValid(poly, heliSite.x, heliSite.z, 7.8, 1.5) && claimCircle(heliSite.x, heliSite.z, 7.8)) {
         const hx = heliSite.x, hz = heliSite.z;
         const baseRoofY = getRoofElevation(hx, hz, poly, roofForm, metrics, topY, height);
 
@@ -895,7 +963,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         }
 
         // 若跨度夠大 (>= 28m)，在後側配置圓拱直升機棚 (半徑 4.0m，保留 1.5m 留白)
-        if (span >= 28 && isSiteValid(poly, hx, hz - 8.5, 4.0, 1.5)) {
+        if (span >= 28 && isSiteValid(poly, hx, hz - 8.5, 4.0, 1.5) && claimRect(hx, hz - 8.5, 3.9, 2.9, 0)) {
           const hangarW = 7.5, hangarD = 5.5, hangarH = 4.2;
           const hangarRoof = new THREE.CylinderGeometry(hangarW / 2, hangarW / 2, hangarD, 12, 1, false, 0, Math.PI);
           hangarRoof.rotateZ(Math.PI / 2);
@@ -919,6 +987,62 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       }
     }
 
+    // 5.3b 波浪板遮雨棚 (Rooftop Rain Shed / Canopy)：大型遮雨棚優先佔位（面積佔比 20% ~ 80%）；
+    // 同區域太陽能板貼於棚架頂面並填滿，不再佔用屋面。
+    const hasCanopy = ((architectureHash(idBase, 'rf_canopy') % 100) < 40) && area >= 40 && span >= 6 && !hasHeli && allowedRooftopParts.has('rooftop_canopy');
+    if (hasCanopy) {
+      const frame = metrics?.frame || computeOrientedRoofFrame(poly);
+      const rotY = frame ? frame.angle : 0;
+      const dirX = frame ? frame.dirX : 1, dirZ = frame ? frame.dirZ : 0;
+      const normX = frame ? frame.normalX : 0, normZ = frame ? frame.normalZ : 1;
+      const cx = frame ? frame.cx : metrics.cx, cz = frame ? frame.cz : metrics.cz;
+      const len = frame ? frame.len : (metrics.maxX - metrics.minX);
+      const sp = frame ? frame.span : (metrics.maxZ - metrics.minZ);
+
+      const canopyRatio = 0.20 + ((architectureHash(idBase, 'canopy_pct') % 6001) / 10000); // 20% ~ 80%
+      const targetCanopyArea = area * canopyRatio;
+      const cLen = Math.min(len * 0.88, Math.max(3.2, Math.sqrt(targetCanopyArea * (len / sp))));
+      const cSpan = Math.min(sp * 0.88, targetCanopyArea / cLen);
+
+      const offU = (len - cLen) * ((architectureHash(idBase, 'canopy_u') % 40) - 20) / 100;
+      const offV = (sp - cSpan) * ((architectureHash(idBase, 'canopy_v') % 40) - 20) / 100;
+      const posX = cx + offU * dirX + offV * normX;
+      const posZ = cz + offU * dirZ + offV * normZ;
+
+      if (isSiteValid(poly, posX, posZ, Math.min(cLen, cSpan) * 0.45, 0.4) && claimRect(posX, posZ, cLen / 2, cSpan / 2, rotY)) {
+        const baseRoofY = getRoofElevation(posX, posZ, poly, roofForm, metrics, topY, height);
+        const postH = 2.4;
+
+        // 4 根鋼構立柱
+        for (const sx of [-1, 1]) {
+          for (const sz of [-1, 1]) {
+            const post = new THREE.CylinderGeometry(0.06, 0.06, postH, 6);
+            post.translate(sx * (cLen * 0.45), postH / 2, sz * (cSpan * 0.45));
+            if (rotY) post.rotateY(rotY);
+            post.translate(posX, baseRoofY, posZ);
+            geos.push(paintGeometry(post, 0x546e7a, variant));
+          }
+        }
+
+        // 頂部斜面遮雨頂棚
+        const canopyRoof = new THREE.BoxGeometry(cLen, 0.08, cSpan);
+        canopyRoof.rotateX(0.08);
+        canopyRoof.translate(0, postH + 0.04, 0);
+        if (rotY) canopyRoof.rotateY(rotY);
+        canopyRoof.translate(posX, baseRoofY, posZ);
+        geos.push(paintGeometry(canopyRoof, 0x78909c, variant));
+
+        // 邊界導水天溝
+        const gutter = new THREE.BoxGeometry(cLen * 1.02, 0.08, 0.08);
+        gutter.translate(0, postH - 0.02, cSpan * 0.5);
+        if (rotY) gutter.rotateY(rotY);
+        gutter.translate(posX, baseRoofY, posZ);
+        geos.push(paintGeometry(gutter, 0x455a64, variant));
+
+        canopyInfo = { placed: true, posX, posZ, cLen, cSpan, rotY, baseRoofY, postH };
+      }
+    }
+
     // 5.4 白鐵不銹鋼水塔 (Water Tank) - 需平頂或相容屋面，各水塔單體均嚴格檢查邊界留白
     const hasWaterTank = ((architectureHash(idBase, 'water_tank') % 100) < 85) && !hasHeli && allowedRooftopParts.has('water_tank');
     if (hasWaterTank) {
@@ -929,7 +1053,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           const ox = tankSite.x + (i - (tankCount - 1) / 2) * 1.6;
           const oz = tankSite.z;
           // 水塔支架半徑 0.7m，嚴格預留 0.9m 留白空間 (淨距需 >= 1.6m)
-          if (!isSiteValid(poly, ox, oz, 0.7, 0.9)) continue;
+          if (!isSiteValid(poly, ox, oz, 0.7, 0.9) || !claimCircle(ox, oz, 0.7)) continue;
           const baseRoofY = getRoofElevation(ox, oz, poly, roofForm, metrics, topY, height);
 
           // 支架
@@ -954,7 +1078,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasAntenna = ((architectureHash(idBase, 'antenna') % 100) < 60) && !hasHeli && allowedRooftopParts.has('antenna');
     if (hasAntenna) {
       const antSite = pickSite('corner', 'antenna_pos') || pickSite('edge', 'antenna_pos');
-      if (antSite && isSiteValid(poly, antSite.x, antSite.z, 0.4, 0.9)) {
+      if (antSite && isSiteValid(poly, antSite.x, antSite.z, 0.4, 0.9) && claimCircle(antSite.x, antSite.z, 0.4)) {
         const ax = antSite.x, az = antSite.z;
         const baseRoofY = getRoofElevation(ax, az, poly, roofForm, metrics, topY, height);
         const mast = new THREE.CylinderGeometry(0.04, 0.04, 2.8, 6);
@@ -973,7 +1097,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasCellular = ((architectureHash(idBase, 'cellular') % 100) < 35) && height >= 24 && area >= 120 && !hasHeli && allowedRooftopParts.has('cellular_mast');
     if (hasCellular) {
       const cellSite = pickSite('edge', 'cellular_pos') || pickSite('corner', 'cellular_pos');
-      if (cellSite && isSiteValid(poly, cellSite.x, cellSite.z, 0.65, 0.9)) {
+      if (cellSite && isSiteValid(poly, cellSite.x, cellSite.z, 0.65, 0.9) && claimCircle(cellSite.x, cellSite.z, 0.65)) {
         const cx = cellSite.x, cz = cellSite.z;
         const baseRoofY = getRoofElevation(cx, cz, poly, roofForm, metrics, topY, height);
         // 三角桁架塔身
@@ -994,7 +1118,30 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
 
     // 5.7 太陽能光伏板陣列 (Solar Panels Array) - 覆蓋率 20%~80%，支援直接建立與架高複合式用途（遮雨棚/曬衣間）
     const hasSolar = ((architectureHash(idBase, 'solar') % 100) < 45) && area >= 80 && span >= 8 && !hasHeli && allowedRooftopParts.has('solar_array');
-    if (hasSolar) {
+    // 5.7a 同區域有棚架：太陽能板貼在棚架頂面並填滿（跟棚架頂棚同傾角），不再佔用屋面。
+    if (hasSolar && canopyInfo && canopyInfo.placed) {
+      const { posX, posZ, cLen, cSpan, rotY: cRot, baseRoofY: cBaseY, postH: cPostH } = canopyInfo;
+      const cTopY = cBaseY + cPostH + 0.08;
+      const stepU = 1.58, stepV = 1.10;
+      const uCount = Math.max(1, Math.floor((cLen - 0.3) / stepU));
+      const vCount = Math.max(1, Math.floor((cSpan - 0.3) / stepV));
+      const cc = Math.cos(cRot || 0), ss = Math.sin(cRot || 0);
+      for (let vi = 0; vi < vCount; vi++) {
+        for (let ui = 0; ui < uCount; ui++) {
+          const lu = -((uCount - 1) * stepU) / 2 + ui * stepU;
+          const lv = -((vCount - 1) * stepV) / 2 + vi * stepV;
+          const px = posX + lu * cc + lv * ss;
+          const pz = posZ - lu * ss + lv * cc;
+          const panel = new THREE.BoxGeometry(1.5, 0.06, 1.0);
+          panel.userData.partType = 'solar_panel';
+          panel.rotateX(0.08);
+          if (cRot) panel.rotateY(cRot);
+          panel.translate(px, cTopY + 0.06, pz);
+          geos.push(paintGeometry(panel, 0x1a237e, variant));
+        }
+      }
+    }
+    if (hasSolar && !(canopyInfo && canopyInfo.placed)) {
       const frame = metrics?.frame || computeOrientedRoofFrame(poly);
       const rotY = frame ? frame.angle : 0;
       const dirX = frame ? frame.dirX : 1, dirZ = frame ? frame.dirZ : 0;
@@ -1023,7 +1170,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           const u = uStart + ui * stepU, v = vStart + vi * stepV;
           const sx = cx + u * dirX + v * normX;
           const sz = cz + u * dirZ + v * normZ;
-          if (isSiteValid(poly, sx, sz, 0.72, 0.35)) {
+          if (isSiteValid(poly, sx, sz, 0.72, 0.35) && roofFreeCircle(sx, sz, 0.78)) {
             candidateSites.push({ sx, sz, distSq: u * u + v * v });
           }
         }
@@ -1037,7 +1184,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
             const u = uStart + ui * stepU, v = vStart + vi * stepV;
             const sx = cx + u * dirX + v * normX;
             const sz = cz + u * dirZ + v * normZ;
-            if (isSiteValid(poly, sx, sz, 0.68, 0.25)) {
+            if (isSiteValid(poly, sx, sz, 0.68, 0.25) && roofFreeCircle(sx, sz, 0.72)) {
               candidateSites.push({ sx, sz, distSq: u * u + v * v });
               if (candidateSites.length >= minPanelCount) break;
             }
@@ -1056,10 +1203,13 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const stiltHeight = isElevatedSolar ? 2.3 : 0.25;
 
       for (const { sx, sz } of placedSites) {
+        // 單板佔位登記：與其他屋頂物件互不重疊（半尺寸略小於步距，相鄰板不互斥）
+        if (!claimRect(sx, sz, 0.76, 0.53, rotY)) continue;
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
         // 屋頂式貼合：面板法線跟著屋頂面法線，平頂才用固定日照傾角
         const fit = roofPanelAngles(sx, sz, poly, roofForm, metrics, topY, height, rotY);
-        const useRoofFit = fit.slope >= 0.02;
+        // 非平面屋頂強制貼合斜率（順坡排列，絕不水平放置）；平頂才用固定日照傾角
+        const useRoofFit = isSlopedRoof ? true : fit.slope >= 0.02;
         const panelLift = isElevatedSolar ? stiltHeight + 0.15 : 0.35;
         const panelY = baseRoofY + panelLift;
 
@@ -1071,12 +1221,11 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           stilt.translate(sx, baseRoofY, sz);
           geos.push(paintGeometry(stilt, 0x546e7a, variant));
 
-          // 頂部支撐縱樑 (Mounting rail)：與面板同傾角，貼合屋頂斜率
+          // 頂部支撐縱樑 (Mounting rail)：與面板同傾角，貼合屋頂斜率（先旋轉後平移，避免繞原點公轉位移）
           const rail = new THREE.BoxGeometry(0.06, 0.08, 0.85);
-          rail.translate(0, stiltHeight, 0);
           if (useRoofFit) { rail.rotateX(fit.pitch); rail.rotateZ(fit.roll); }
           if (rotY) rail.rotateY(rotY);
-          rail.translate(sx, baseRoofY, sz);
+          rail.translate(sx, baseRoofY + stiltHeight, sz);
           geos.push(paintGeometry(rail, 0x78909c, variant));
         } else {
           // 直接建立：兩側角鋼腳架，腳底各自踩在屋頂面上，面板貼合斜率（腳架保持直立，僅高度跟坡）
@@ -1138,7 +1287,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasCoop = ((architectureHash(idBase, 'coop') % 100) < 25) && (cat === 'residential' || cat === 'rural') && area >= 60 && span >= 6 && !hasHeli && allowedRooftopParts.has('pigeon_coop');
     if (hasCoop) {
       const coopSite = pickSite('corner', 'coop_pos') || pickSite('edge', 'coop_pos');
-      if (coopSite && isSiteValid(poly, coopSite.x, coopSite.z, 1.0, 1.0)) {
+      if (coopSite && isSiteValid(poly, coopSite.x, coopSite.z, 1.0, 1.0) && claimRect(coopSite.x, coopSite.z, 1.0, 0.9, 0)) {
         const px = coopSite.x, pz = coopSite.z;
         const baseRoofY = getRoofElevation(px, pz, poly, roofForm, metrics, topY, height);
         // 木棚主體
@@ -1162,7 +1311,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasChimney = ((architectureHash(idBase, 'chimney') % 100) < 55) && (cat === 'rural' || cat === 'industrial' || cat === 'residential') && area >= 35 && span >= 4 && !hasHeli && allowedRooftopParts.has('chimney');
     if (hasChimney) {
       const chSite = pickSite('edge', 'chimney_pos') || pickSite('corner', 'chimney_pos');
-      if (chSite && isSiteValid(poly, chSite.x, chSite.z, 0.45, 0.9)) {
+      if (chSite && isSiteValid(poly, chSite.x, chSite.z, 0.45, 0.9) && claimCircle(chSite.x, chSite.z, 0.45)) {
         const chX = chSite.x, chZ = chSite.z;
         const baseRoofY = getRoofElevation(chX, chZ, poly, roofForm, metrics, topY, height);
         const chH = cat === 'industrial' ? 3.6 : 1.8;
@@ -1189,7 +1338,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         const bbH = 3.6;
         if (bbW >= 3.0 &&
             isSiteValid(poly, bSite.x - bbW * 0.45, bSite.z, 0.4, 0.9) &&
-            isSiteValid(poly, bSite.x + bbW * 0.45, bSite.z, 0.4, 0.9)) {
+            isSiteValid(poly, bSite.x + bbW * 0.45, bSite.z, 0.4, 0.9) &&
+            claimRect(bSite.x, bSite.z, bbW / 2, 0.5, 0)) {
           const baseRoofY = getRoofElevation(bSite.x, bSite.z, poly, roofForm, metrics, topY, height);
           // 鋼構支架柱
           for (const legSide of [-1, 1]) {
@@ -1206,61 +1356,9 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       }
     }
 
-    // 5.11 擴充屋頂範圍零件 (Rooftop Extent Parts: 遮雨棚、曬衣間、空中花園，面積佔比 20% ~ 80%)
-    // (1) 波浪板遮雨棚 (Rooftop Rain Shed / Canopy)
-    const hasCanopy = ((architectureHash(idBase, 'rf_canopy') % 100) < 40) && area >= 40 && span >= 6 && !hasHeli && allowedRooftopParts.has('rooftop_canopy');
-    if (hasCanopy) {
-      const frame = metrics?.frame || computeOrientedRoofFrame(poly);
-      const rotY = frame ? frame.angle : 0;
-      const dirX = frame ? frame.dirX : 1, dirZ = frame ? frame.dirZ : 0;
-      const normX = frame ? frame.normalX : 0, normZ = frame ? frame.normalZ : 1;
-      const cx = frame ? frame.cx : metrics.cx, cz = frame ? frame.cz : metrics.cz;
-      const len = frame ? frame.len : (metrics.maxX - metrics.minX);
-      const sp = frame ? frame.span : (metrics.maxZ - metrics.minZ);
-
-      const canopyRatio = 0.20 + ((architectureHash(idBase, 'canopy_pct') % 6001) / 10000); // 20% ~ 80%
-      const targetCanopyArea = area * canopyRatio;
-      const cLen = Math.min(len * 0.88, Math.max(3.2, Math.sqrt(targetCanopyArea * (len / sp))));
-      const cSpan = Math.min(sp * 0.88, targetCanopyArea / cLen);
-
-      const offU = (len - cLen) * ((architectureHash(idBase, 'canopy_u') % 40) - 20) / 100;
-      const offV = (sp - cSpan) * ((architectureHash(idBase, 'canopy_v') % 40) - 20) / 100;
-      const posX = cx + offU * dirX + offV * normX;
-      const posZ = cz + offU * dirZ + offV * normZ;
-
-      if (isSiteValid(poly, posX, posZ, Math.min(cLen, cSpan) * 0.45, 0.4)) {
-        const baseRoofY = getRoofElevation(posX, posZ, poly, roofForm, metrics, topY, height);
-        const postH = 2.4;
-
-        // 4 根鋼構立柱
-        for (const sx of [-1, 1]) {
-          for (const sz of [-1, 1]) {
-            const post = new THREE.CylinderGeometry(0.06, 0.06, postH, 6);
-            post.translate(sx * (cLen * 0.45), postH / 2, sz * (cSpan * 0.45));
-            if (rotY) post.rotateY(rotY);
-            post.translate(posX, baseRoofY, posZ);
-            geos.push(paintGeometry(post, 0x546e7a, variant));
-          }
-        }
-
-        // 頂部斜面遮雨頂棚
-        const canopyRoof = new THREE.BoxGeometry(cLen, 0.08, cSpan);
-        canopyRoof.rotateX(0.08);
-        canopyRoof.translate(0, postH + 0.04, 0);
-        if (rotY) canopyRoof.rotateY(rotY);
-        canopyRoof.translate(posX, baseRoofY, posZ);
-        geos.push(paintGeometry(canopyRoof, 0x78909c, variant));
-
-        // 邊界導水天溝
-        const gutter = new THREE.BoxGeometry(cLen * 1.02, 0.08, 0.08);
-        gutter.translate(0, postH - 0.02, cSpan * 0.5);
-        if (rotY) gutter.rotateY(rotY);
-        gutter.translate(posX, baseRoofY, posZ);
-        geos.push(paintGeometry(gutter, 0x455a64, variant));
-      }
-    }
-
-    // (2) 屋頂採光曬衣間 (Rooftop Laundry Drying Room / Shelter)
+    // 5.11 擴充屋頂範圍零件 (Rooftop Extent Parts: 曬衣間、空中花園，面積佔比 20% ~ 80%)
+    // 註：遮雨棚已前移至 5.3b 優先佔位；太陽能板若同區域則貼於棚架頂面。
+    // (1) 屋頂採光曬衣間 (Rooftop Laundry Drying Room / Shelter)
     const hasDryingRoom = ((architectureHash(idBase, 'rf_drying') % 100) < 45) && (cat === 'residential' || cat === 'rural') && area >= 35 && span >= 5 && !hasHeli && allowedRooftopParts.has('drying_room');
     if (hasDryingRoom) {
       const frame = metrics?.frame || computeOrientedRoofFrame(poly);
@@ -1281,7 +1379,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const posX = cx + offU * dirX + offV * normX;
       const posZ = cz + offU * dirZ + offV * normZ;
 
-      if (isSiteValid(poly, posX, posZ, Math.min(dLen, dSpan) * 0.45, 0.4)) {
+      if (isSiteValid(poly, posX, posZ, Math.min(dLen, dSpan) * 0.45, 0.4) && claimRect(posX, posZ, dLen / 2, dSpan / 2, rotY)) {
         const baseRoofY = getRoofElevation(posX, posZ, poly, roofForm, metrics, topY, height);
         const shedH = 2.2;
 
@@ -1352,7 +1450,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const posX = cx + offU * dirX + offV * normX;
       const posZ = cz + offU * dirZ + offV * normZ;
 
-      if (isSiteValid(poly, posX, posZ, Math.min(gLen, gSpan) * 0.45, 0.4)) {
+      if (isSiteValid(poly, posX, posZ, Math.min(gLen, gSpan) * 0.45, 0.4) && claimRect(posX, posZ, gLen / 2, gSpan / 2, rotY)) {
         const baseRoofY = getRoofElevation(posX, posZ, poly, roofForm, metrics, topY, height);
 
         // 木甲板底座平台
@@ -1411,7 +1509,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasStairwell = ((architectureHash(idBase, 'stairwell') % 100) < 70) && area >= 40 && span >= 5 && allowedRooftopParts.has('stairwell_penthouse');
     if (hasStairwell) {
       const stSite = pickSite('corner', 'stair_pos') || pickSite('edge', 'stair_pos');
-      if (stSite && isSiteValid(poly, stSite.x, stSite.z, 1.5, 0.8)) {
+      if (stSite && isSiteValid(poly, stSite.x, stSite.z, 1.5, 0.8) && claimRect(stSite.x, stSite.z, 1.3, 1.5, 0)) {
         const sx = stSite.x, sz = stSite.z;
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
         const stH = 2.4;
@@ -1438,7 +1536,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasShrine = ((architectureHash(idBase, 'shrine') % 100) < 30) && area >= 30 && span >= 4 && allowedRooftopParts.has('rooftop_shrine');
     if (hasShrine) {
       const shSite = pickSite('edge', 'shrine_pos') || pickSite('corner', 'shrine_pos');
-      if (shSite && isSiteValid(poly, shSite.x, shSite.z, 1.3, 0.8)) {
+      if (shSite && isSiteValid(poly, shSite.x, shSite.z, 1.3, 0.8) && claimRect(shSite.x, shSite.z, 1.0, 0.9, 0)) {
         const sx = shSite.x, sz = shSite.z;
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
         const shH = 1.6;
@@ -1465,7 +1563,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasPingpong = ((architectureHash(idBase, 'pingpong') % 100) < 35) && area >= 40 && span >= 5 && allowedRooftopParts.has('pingpong_table');
     if (hasPingpong) {
       const ppSite = pickSite('edge', 'pingpong_pos') || pickSite('center', 'pingpong_pos');
-      if (ppSite && isSiteValid(poly, ppSite.x, ppSite.z, 1.5, 0.8)) {
+      if (ppSite && isSiteValid(poly, ppSite.x, ppSite.z, 1.5, 0.8) && claimRect(ppSite.x, ppSite.z, 1.45, 0.85, 0)) {
         const px = ppSite.x, pz = ppSite.z;
         const baseRoofY = getRoofElevation(px, pz, poly, roofForm, metrics, topY, height);
         const tableH = 0.76;
@@ -1492,7 +1590,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasPool = ((architectureHash(idBase, 'pool') % 100) < 28) && area >= 50 && span >= 6 && allowedRooftopParts.has('pool_table');
     if (hasPool) {
       const poolSite = pickSite('center', 'pool_pos') || pickSite('edge', 'pool_pos');
-      if (poolSite && isSiteValid(poly, poolSite.x, poolSite.z, 1.6, 0.8)) {
+      if (poolSite && isSiteValid(poly, poolSite.x, poolSite.z, 1.6, 0.8) && claimRect(poolSite.x, poolSite.z, 1.45, 0.85, 0)) {
         const px = poolSite.x, pz = poolSite.z;
         const baseRoofY = getRoofElevation(px, pz, poly, roofForm, metrics, topY, height);
         const tableH = 0.8;
@@ -1528,7 +1626,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasSofa = ((architectureHash(idBase, 'sofa') % 100) < 40) && area >= 35 && span >= 5 && allowedRooftopParts.has('rooftop_sofa');
     if (hasSofa) {
       const sofaSite = pickSite('corner', 'sofa_pos') || pickSite('edge', 'sofa_pos');
-      if (sofaSite && isSiteValid(poly, sofaSite.x, sofaSite.z, 1.4, 0.8)) {
+      if (sofaSite && isSiteValid(poly, sofaSite.x, sofaSite.z, 1.4, 0.8) && claimRect(sofaSite.x, sofaSite.z, 1.1, 1.0, 0)) {
         const sx = sofaSite.x, sz = sofaSite.z;
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
 
@@ -1554,7 +1652,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasTableChairs = ((architectureHash(idBase, 'tab_chairs') % 100) < 50) && area >= 25 && span >= 4 && allowedRooftopParts.has('table_chairs');
     if (hasTableChairs) {
       const tcSite = pickSite('edge', 'tc_pos') || pickSite('corner', 'tc_pos');
-      if (tcSite && isSiteValid(poly, tcSite.x, tcSite.z, 1.2, 0.7)) {
+      if (tcSite && isSiteValid(poly, tcSite.x, tcSite.z, 1.2, 0.7) && claimCircle(tcSite.x, tcSite.z, 1.2)) {
         const tx = tcSite.x, tz = tcSite.z;
         const baseRoofY = getRoofElevation(tx, tz, poly, roofForm, metrics, topY, height);
 
@@ -1590,7 +1688,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasGazebo = ((architectureHash(idBase, 'gazebo') % 100) < 30) && area >= 70 && span >= 8 && allowedRooftopParts.has('gazebo');
     if (hasGazebo) {
       const gzSite = pickSite('corner', 'gazebo_pos') || pickSite('edge', 'gazebo_pos');
-      if (gzSite && isSiteValid(poly, gzSite.x, gzSite.z, 1.8, 1.0)) {
+      if (gzSite && isSiteValid(poly, gzSite.x, gzSite.z, 1.8, 1.0) && claimRect(gzSite.x, gzSite.z, 1.5, 1.5, 0)) {
         const gx = gzSite.x, gz = gzSite.z;
         const baseRoofY = getRoofElevation(gx, gz, poly, roofForm, metrics, topY, height);
         const gzH = 2.4;
