@@ -30,6 +30,15 @@ const BUSY_FACADE_DETAIL = new Set([
   'recess_bands', 'carved_frame', 'brise_soleil',
 ]);
 
+/** 飾件雜湊（FNV-1a）：窗間飾／外推結構的「插或不插」只吃雜湊，零共享 rnd 消耗、
+ * 跨幀跨端同值；只決定飾件有無，不影響玻璃存在性（玻璃恆鋪滿、不留破洞）。 */
+function ornamentHash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15;
+  return h >>> 0;
+}
+
 /** 沿真實外環／中庭牆段配置窗格、立柱與橫梁，零件數有上限。
  * 採階層式深度分層（Glass < Mullion/Frame < Trim/Header < Column/Pier），
  * 杜絕同平面共面 (Coplanar) 導致的 WebGL Z-fighting 閃爍。
@@ -41,6 +50,10 @@ const BUSY_FACADE_DETAIL = new Set([
  * 同棟同窗：同一呼叫（同一棟）內所有窗共用 scheme，僅棋盤／蜂巢混排依
  * (floor, bay) 交錯取款；MUST NOT 在此逐窗重抽形狀尺寸窗框，也 MUST NOT
  * 逐窗隨機跳過（缺洞只能是整棟無窗 rate=0，不可是陣列中的隨機破洞）。
+ * 飾件型（scheme.layout === 'punctuated'）：每面牆每層窗數固定（約 6m 一窗、
+ * 全層共用），玻璃同樣鋪滿；窗間隙逐層雜湊擲「插或不插」（各半）補浮雕／花磚／
+ * 掛飾，開間夠寬（bayW ≥ 3.2m）再逐窗雜湊擲半數補陽台／雨遮外推。飾件與外推
+ * 全走剩餘額度，耗盡即停、不動玻璃。
  */
 export function architecturalFacadeParts(edges, style, thickness) {
   const geos = [];
@@ -68,7 +81,11 @@ export function architecturalFacadeParts(edges, style, thickness) {
     const floors = Math.max(1, Math.min(36, Math.round(edge.h / (style.functionalWindows?.storeyH || 3.2))));
     const isCurtain = facade === 'ribbon' || facade === 'glass_curtain';
     // 開間步距由同棟窗方案給定（高層密、傳統疏），不再逐牆重算。
-    let bays = Math.max(1, Math.min(10, Math.floor(length / scheme.bayStep)));
+    // 飾件型：每面牆每層窗數固定（約 6m 一窗、上限 4、全層共用），窗間留隙補飾件。
+    const punctuated = (scheme.layout || 'curtain') === 'punctuated';
+    let bays = punctuated
+      ? Math.max(1, Math.min(4, Math.round(length / 6)))
+      : Math.max(1, Math.min(10, Math.floor(length / scheme.bayStep)));
     if (floors * bays > 140) bays = Math.max(1, Math.floor(140 / floors));
     const bayW = length / bays, floorH = edge.h / floors;
     let budget = Math.floor(limit / Math.max(1, edges.length));
@@ -88,6 +105,13 @@ export function architecturalFacadeParts(edges, style, thickness) {
       if (!free && budget-- <= 0) return false;
       geos.push(placeFacadePart(['cyl', r, r, thickness + extraDepth, 12], edge, u, y, 0,
         color, style, [Math.PI / 2, 0, 0], color === glassColor ? 'window' : 'facade-detail'));
+      return true;
+    };
+    // 帶 +Z 外移量的體積件（陽台底板／欄杆／雨遮）：一律扣額度，role 恆為 facade-detail。
+    const addZ = (w, h, d, u, y, z, color, pitch = 0) => {
+      if (budget-- <= 0) return false;
+      geos.push(placeFacadePart(['box', w, h, d], edge, u, y, z,
+        color, style, [pitch, 0, 0], 'facade-detail'));
       return true;
     };
 
@@ -135,6 +159,67 @@ export function architecturalFacadeParts(edges, style, thickness) {
     // 玻璃已鋪數量從本面牆均攤額度扣除：全棟總量恆 ≤ LIMIT（短棟裝飾豐富、
     // 高棟玻璃優先，裝飾讓路），額度耗盡則後續窗框裝飾逐窗跳過。
     budget -= (geos.length - edgeStart);
+
+    // ---- 第一階段之二（飾件型專用）：窗間飾＋外推結構（扣額度；耗盡即停，不動玻璃） ----
+    // 窗間隙逐層雜湊擲「插或不插」（各半）；陽台／雨遮只落在夠寬的開間
+    // （bayW ≥ 3.2m），逐窗雜湊同樣各半。牛眼窗與老虎窗不加外推結構。
+    if (punctuated && wins.length > 0) {
+      const wallTag = `${ei}:${edge.x.toFixed(1)},${edge.z.toFixed(1)}`;
+      const roll = (floor, gap, tag) =>
+        ornamentHash(`${buildingKey}|${wallTag}|${floor}|${gap}|${tag}`) / 4294967296;
+      // wins 按 (floor, bay) 層主序逐格恰好一筆（玻璃恆鋪滿），可直取鄰窗。
+      const at = (floor, bay) => wins[floor * bays + bay];
+      const accent = style.roof ?? trimColor;
+      for (let floor = 0; floor < floors && budget > 0; floor++) {
+        for (let gap = 0; gap < bays - 1 && budget > 0; gap++) {
+          const left = at(floor, gap), right = at(floor, gap + 1);
+          if (!left || !right) continue;
+          const gapW = (right.u - right.w / 2) - (left.u + left.w / 2);
+          if (gapW < 0.9) continue;
+          if (roll(floor, gap, 'insert') >= 0.5) continue;
+          const u = (left.u + left.w / 2 + right.u - right.w / 2) / 2;
+          const y = (floor + 0.5) * floorH;
+          const kind = scheme.ornament || 'relief';
+          if (kind === 'tile') {
+            // 花磚：底板＋上下兩色橫帶（Tier 2 深度，不與玻璃共面）。
+            add(Math.min(0.55, gapW * 0.34), floorH * 0.62, u, y, trimColor, 0.10);
+            add(Math.min(0.45, gapW * 0.28), 0.09, u, y + floorH * 0.18, accent, 0.13);
+            add(Math.min(0.45, gapW * 0.28), 0.09, u, y - floorH * 0.18, accent, 0.13);
+          } else if (kind === 'hanging') {
+            // 掛飾：窄直幡＋上下飾頭。
+            add(0.30, floorH * 0.78, u, y, trimColor, 0.10);
+            add(0.40, 0.10, u, y + floorH * 0.39, accent, 0.13);
+            add(0.40, 0.10, u, y - floorH * 0.39, accent, 0.13);
+          } else {
+            // 浮雕壁柱：通層淺柱＋頂飾帶。
+            add(Math.min(0.55, gapW * 0.34), floorH * 0.92, u, y, trimColor, 0.10);
+            add(Math.min(0.65, gapW * 0.40), 0.10, u, y + floorH * 0.40, accent, 0.13);
+          }
+        }
+      }
+      if (bayW >= 3.2) {
+        for (const win of wins) {
+          if (budget <= 0) break;
+          if (win.shape === 'dormer' || win.shape === 'oculus') continue;
+          if (roll(win.floor, win.bay, 'protrude') >= 0.5) continue;
+          const { u, y, w, h } = win;
+          if ((scheme.protrudeKind || 'balcony') === 'canopy') {
+            // 雨遮：窗上前傾斜蓋＋兩側短托（突出牆面，不壓窗）。
+            if (!addZ(w + 0.5, 0.07, 0.95, u, y + h / 2 + 0.30, 0.35, accent, 0.28)) break;
+            for (const side of [-1, 1]) {
+              if (!addZ(0.08, 0.30, 0.50, u + side * (w / 2 + 0.10), y + h / 2 + 0.05, 0.25, trimColor)) break;
+            }
+          } else {
+            if (win.floor < 1) continue; // 陽台不落地
+            // 陽台：窗檻外底板＋外緣欄杆（欄杆頂低於窗心，不擋窗）。
+            const wb = Math.min(w + 0.4, bayW * 0.7);
+            const sill = y - h / 2;
+            if (!addZ(wb, 0.12, 1.0, u, sill - 0.10, 0.45, trimColor)) break;
+            addZ(wb, 0.65, 0.06, u, sill + 0.285, 0.90, trimColor);
+          }
+        }
+      }
+    }
 
     // ---- 第二階段：窗框／窗梃／窗花（Tier 2 深度 +0.09m，扣額度） ----
     for (const win of wins) {

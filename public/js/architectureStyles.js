@@ -425,6 +425,8 @@ const TRADITIONAL_WINDOW_KEYS = new Set([
 
 /** 同棟同窗單一縫：整棟建築共用一份窗戶參數（同一種窗）。
  * mode 'single' = 全棟同一款；'checker' = 兩種玻璃棋盤交錯；'honeycomb' = 三種蜂巢交錯。
+ * layout 'curtain' = 整面陣列滿鋪；'punctuated' = 每面牆每層固定窗數、窗間插飾、
+ * 夠寬插陽台／雨遮（非高層雜湊五五開，高層恆為 curtain）。
  * 高層樓壓成 single 大面積滿鋪密排玻璃；傳統／透天偏牛眼／老虎窗與窗花、開間更疏。
  * buildingKey 必須是跨幀穩定的同棟識別（見 osmBuilding.js 的組裝）；回傳的 w/h/frame/rate
  * 全棟固定，呼叫端 MUST NOT 再逐窗重抽形狀尺寸窗框，也 MUST NOT 逐窗隨機跳過
@@ -436,33 +438,42 @@ export function resolveWindowScheme(style = {}, buildingKey = '') {
   const f = (tag) => windowHash(`${key}|${tag}`) / 4294967296;
   if (!(rule.rate > 0)) {
     return {
-      mode: 'single', shapes: ['rect'], w: 0.5, h: 0.45, frame: 'none',
+      mode: 'single', layout: 'curtain', shapes: ['rect'], w: 0.5, h: 0.45, frame: 'none',
       rate: 0, lift: rule.lift || 0, dormer: false, oculusCross: false, bayStep: 5,
+      ornament: 'relief', protrudeKind: 'balcony',
     };
   }
   const info = style.functionInfo || {};
   if (style.functionalWindows) {
     const windows = style.functionalWindows;
-    return { mode: 'single', shapes: [windows.shape], w: 0.6, h: 0.62, frame: 'edge',
-      rate: rule.rate, lift: 0, dormer: false, oculusCross: false, bayStep: windows.bayStep };
+    return { mode: 'single', layout: 'curtain', shapes: [windows.shape], w: 0.6, h: 0.62, frame: 'edge',
+      rate: rule.rate, lift: 0, dormer: false, oculusCross: false, bayStep: windows.bayStep,
+      ornament: 'relief', protrudeKind: 'balcony' };
   }
   const highRise = (style.levels >= 10) || (style.targetHeight >= 30)
     || info.key === 'commercial_skyscraper' || info.type === 'skyscraper';
   const facade = style.facade || style.wallType || 'ribbon';
   const isCurtain = facade === 'ribbon' || facade === 'glass_curtain';
   if (highRise) {
-    // 高層樓：全棟同一款大面積玻璃、滿鋪、密開間、無老虎窗混排。
+    // 高層樓：全棟同一款大面積玻璃、滿鋪、密開間、無老虎窗混排（恆為陣列式，不走飾件型）。
     return {
-      mode: 'single', shapes: ['wide'],
+      mode: 'single', layout: 'curtain', shapes: ['wide'],
       w: 0.86 + f('w') * 0.08, h: 0.72 + f('h') * 0.13,
       frame: f('frame') < 0.5 ? 'edge' : 'none',
       rate: 1.0, lift: 0, dormer: false, oculusCross: false, bayStep: 3.6,
+      ornament: 'relief', protrudeKind: 'balcony',
     };
   }
+  // 外牆版式（非高層雜湊五五開）：'curtain' = 整面陣列滿鋪；'punctuated' = 每面牆每層
+  // 固定窗數、窗間插浮雕／花磚／掛飾、夠寬再插陽台／雨遮外推。版式只吃 buildingKey
+  // 雜湊，不消耗共享 rnd（§2.3），同棟跨幀跨端同值。
+  const layout = f('layout') < 0.5 ? 'punctuated' : 'curtain';
   const traditional = info.category === 'religious' || info.category === 'heritage'
     || TRADITIONAL_WINDOW_TYPES.has(info.type) || TRADITIONAL_WINDOW_KEYS.has(info.key);
   // 傳統／透天在規則池外加窗花與拱窗候選（全棟仍只取一款，差異落在棟與棟之間）。
-  const pool = traditional ? [...rule.shapes, 'lattice', 'french', 'arch'] : [...rule.shapes];
+  // 飾件型（punctuated）同樣可用較多元的參數：非傳統系也併入窗花／法式／拱窗候選。
+  const pool = (traditional || layout === 'punctuated')
+    ? [...rule.shapes, 'lattice', 'french', 'arch'] : [...rule.shapes];
   const distinct = [...new Set(pool)];
   const pick = (tag) => pool[Math.floor(f(tag) * pool.length)] || 'rect';
   let mode = 'single';
@@ -482,8 +493,13 @@ export function resolveWindowScheme(style = {}, buildingKey = '') {
     shapes.length = 1;
   }
   const framePool = Array.isArray(rule.frame) && rule.frame.length ? rule.frame : ['none'];
+  const ornamentKinds = ['relief', 'tile', 'hanging'];
   return {
     mode,
+    layout,
+    // 窗間飾種類與外推結構種類皆同棟統一（呼叫端逐窗間／逐窗以雜湊擲「插或不插」，各半）。
+    ornament: ornamentKinds[Math.floor(f('ornament') * ornamentKinds.length)] || 'relief',
+    protrudeKind: f('protrudeKind') < 0.5 ? 'balcony' : 'canopy',
     shapes: mode === 'single' ? shapes.slice(0, 1) : uniq.slice(0, need),
     w: rule.w[0] + f('w') * (rule.w[1] - rule.w[0]),
     h: rule.h[0] + f('h') * (rule.h[1] - rule.h[0]),

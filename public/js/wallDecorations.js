@@ -1,14 +1,20 @@
 import { architectureHash } from './buildingDiversity.js';
 import { WALL_DECORATIONS, WALL_COVERAGE, WALL_DECORATION_PLACEMENT } from './wallDecorationCatalog.js';
 
+// 高樓爬藤門檻（m）：達此樓高即視為高樓，植物系飾件僅 5% 保留（見 wallDecorationParts）。
+const TALL_VINE_LIMIT = 24;
 // Local wall coordinates: X along the wall, Y above its base, +Z outdoors.
 // Claims are conservative rectangles of existing attachments, including doors.
 export function wallDecorationParts({ seed, width, height, category, contemporary, claims = [], budget = 80 }) {
   const placement = WALL_DECORATION_PLACEMENT;
   if (![width, height, budget].every(Number.isFinite) || width < placement.minLength || height < placement.minHeight || budget < 24) return [];
   const rnd = tag => architectureHash(seed, tag) / 4294967296;
+  // 高樓外牆不爬藤：樓高 ≥ 24m 時植物系（ivy / flowering_trellis / hanging_vines）
+  // 僅 5% 保留，其餘整面牆不候選。只吃座標雜湊，不消耗共享 rnd（§2.3）。
+  const tall = height >= TALL_VINE_LIMIT;
+  const vineKeep = !tall || architectureHash(seed, 'vine_keep') % 100 < 5;
   const choices = Object.entries(WALL_DECORATIONS).filter(([, rule]) =>
-    rule.categories.includes(category) && (!rule.modern || contemporary));
+    rule.categories.includes(category) && (!rule.modern || contemporary) && (!rule.plant || !tall || vineKeep));
   if (!choices.length || rnd('presence') > placement.prob) return [];
   const parts = [], occupied = [...claims];
   const scopes = Object.entries(WALL_COVERAGE);
@@ -19,9 +25,12 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
     const h = Math.min(6, (height - 0.8) * hf * (0.8 + rnd(`${slot}:h`) * 0.4));
     if (w < 0.75 || h < 0.7) continue;
     let site = null;
+    // 高樓僅存的 5% 爬藤箝制在底部 8m（底層綠化）：飾件頂部不超過 8m，不飄到高空。
+    const ySpan = (tall && rule.plant)
+      ? Math.max(0.5, Math.min(8, height - h - 0.8) - h - 0.4) : height - h - 0.8;
     for (let attempt = 0; attempt < 12; attempt++) {
       const x = (rnd(`${slot}:${attempt}:x`) - 0.5) * (width - w - 0.8);
-      const y = 0.4 + h / 2 + rnd(`${slot}:${attempt}:y`) * (height - h - 0.8);
+      const y = 0.4 + h / 2 + rnd(`${slot}:${attempt}:y`) * ySpan;
       if (occupied.some(r => Math.abs(x - r.x) < (w + r.w) / 2 + 0.15 &&
         Math.abs(y - r.y) < (h + r.h) / 2 + 0.15)) continue;
       site = { x, y, w, h }; break;
