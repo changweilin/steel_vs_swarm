@@ -257,25 +257,40 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <label class="dim-cb-label"><input type="checkbox" value="facade"> 牆面立面材質 (7)</label>
         <label class="dim-cb-label"><input type="checkbox" value="region"> 世界文化大區 (7)</label>
       </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
+          <select id="arch-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單體細節檢驗 (Single Object)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">排列方式</label>
+          <select id="layout-arch" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="scene" selected>場景散布 (Scene Scatter)</option>
+            <option value="boundary">邊界沿邊排列＋緩衝區＋透明牆 (Boundary Run)</option>
+          </select>
+        </div>
+      </div>
       <div class="action-row">
-        <button id="btn-generate" class="btn-generate">⚡ 生成建築陣列</button>
-        <button id="btn-randomize" class="btn-randomize">🎲 隨機種子生成</button>
+        <button id="btn-arch-generate" class="btn-generate">⚡ 生成建築陣列</button>
+        <button id="btn-arch-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
         <button id="btn-open-filter" class="btn-filter">⚙ 類別篩選設定</button>
         <button id="btn-full-random" class="btn-full-random">🎲 全類別隨機混搭</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
-          <label class="sample-input-wrap">X欄 <input type="number" id="sample-dim-a" value="5" min="1" max="30"></label>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-arch" value="5" min="1" max="30"></label>
           <span>×</span>
-          <label class="sample-input-wrap">Y列 <input type="number" id="sample-dim-b" value="5" min="1" max="30"></label>
-          <label class="sample-all-wrap"><input type="checkbox" id="chk-sample-all"> 全量不取樣</label>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-arch" value="5" min="1" max="30"></label>
         </div>
         <div class="seed-control">
-          <label for="input-seed">種子碼</label>
-          <input type="number" id="input-seed" value="5000" min="1" max="999999">
+          <label for="input-arch-seed">種子碼</label>
+          <input type="number" id="input-arch-seed" value="5000" min="1" max="999999">
         </div>
         <div class="seed-mode-control">
           <span class="sample-label">生成種子規則:</span>
-          <select id="select-seed-mode" class="seed-mode-select">
+          <select id="select-seed-mode-arch" class="seed-mode-select">
             <option value="fixed">固定種子</option>
             <option value="shared_batch">陣列種子</option>
             <option value="per_building" selected>獨立種子</option>
@@ -1523,6 +1538,7 @@ function spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, 
 
   const meta = {
     x, z,
+    posX: x, posZ: z,
     w: actualW.toFixed(1),
     d: actualD.toFixed(1),
     height: heightInfo.height.toFixed(1),
@@ -1557,9 +1573,39 @@ function spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, 
   badge.className = 'badge-label';
   badge.innerHTML = '<span class="cat">【' + meta.funcLabel + '】</span>' + meta.styleLabel + ' · ' + meta.roofLabel + '<span class="height">' + meta.height + 'm (' + meta.levels + 'F)</span>';
   labelContainer.append(badge);
-  labels.push({ element: badge, point: meta.position });
+  const labelObj = { element: badge, point: meta.position };
+  labels.push(labelObj);
 
-  return meta;
+  // 與其他頁籤一致：邊界排列時經共用 withObjectLayout 包裝（含緩衝區＋透明牆包絡）；
+  // 場景散布時原樣返回。hitMesh 由包裝內統一移除，避免殘留不可見拾取代理。
+  const wrapped = withObjectLayout({ model: bldMesh, meta, hitMesh }, 'arch');
+  return {
+    model: wrapped.model,
+    meta,
+    hitMesh: wrapped.model === bldMesh ? hitMesh : null,
+    labelObj,
+    sizeArr: [actualW, heightInfo.height, actualD],
+    layoutSize: wrapped.layoutSize || null,
+  };
+}
+
+// 兩階段量測後重定位：模型幾何已按舊格位烘焙，僅平移根節點並同步中繼資料與標籤。
+function moveArchInstance(res, newX, newZ) {
+  const dx = newX - res.meta.posX, dz = newZ - res.meta.posZ;
+  if (dx === 0 && dz === 0) return;
+  res.model.position.x += dx;
+  res.model.position.z += dz;
+  if (res.hitMesh && res.hitMesh.parent) {
+    res.hitMesh.position.x += dx;
+    res.hitMesh.position.z += dz;
+  }
+  res.meta.posX = newX;
+  res.meta.posZ = newZ;
+  res.meta.x = newX;
+  res.meta.z = newZ;
+  res.meta.centerPos.set(newX, 0, newZ);
+  res.meta.position.set(newX, parseFloat(res.meta.height) || 0, newZ);
+  if (res.labelObj) res.labelObj.point.copy(res.meta.position);
 }
 
 function getCyclicItems(items, count, offset) {
@@ -1610,10 +1656,12 @@ function buildMatrixMode({ advance = false } = {}) {
   clearScene();
   currentMode = 'matrix';
   document.querySelector('#btn-back').style.display = 'none';
-  document.querySelector('#btn-generate').style.display = 'inline-flex';
-  document.querySelector('#btn-randomize').style.display = 'inline-flex';
+  document.querySelector('#btn-arch-generate').style.display = 'inline-flex';
+  document.querySelector('#btn-arch-random-seed').style.display = 'inline-flex';
   document.querySelector('#btn-regen-variants').style.display = 'none';
 
+  waterMesh.visible = false;
+  floor.visible = true;
   floor.material.color.setHex(0xbed0bd);
 
   const dimKeyA = selectedDims[0];
@@ -1625,18 +1673,13 @@ function buildMatrixMode({ advance = false } = {}) {
   const activeItemsA = getActiveDimItems(dimKeyA);
   const activeItemsB = dimKeyB && dimB ? getActiveDimItems(dimKeyB) : null;
 
-  const seedMode = document.querySelector('#select-seed-mode')?.value || 'per_building';
-  let baseSeed = parseInt(document.querySelector('#input-seed')?.value, 10) || 5000;
-  const isAll = document.querySelector('#chk-sample-all')?.checked;
-  const sampleCountA = isAll ? activeItemsA.length : Math.min(activeItemsA.length, Math.max(1, parseInt(document.querySelector('#sample-dim-a')?.value, 10) || 5));
-  const sampleCountB = isAll ? (activeItemsB ? activeItemsB.length : 1) : Math.min(activeItemsB ? activeItemsB.length : 1, Math.max(1, parseInt(document.querySelector('#sample-dim-b')?.value, 10) || 5));
+  const seedMode = document.querySelector('#select-seed-mode-arch')?.value || 'per_building';
+  let baseSeed = parseInt(document.querySelector('#input-arch-seed')?.value, 10) || 5000;
+  const sampleCountA = Math.min(activeItemsA.length, Math.max(1, parseInt(document.querySelector('#sample-cols-arch')?.value, 10) || 5));
+  const sampleCountB = Math.min(activeItemsB ? activeItemsB.length : 1, Math.max(1, parseInt(document.querySelector('#sample-rows-arch')?.value, 10) || 5));
 
   if (advance) {
-    if (seedMode === 'shared_batch' || seedMode === 'per_building') {
-      baseSeed = Math.floor(Math.random() * 90000) + 1000;
-      const input = document.querySelector('#input-seed');
-      if (input) input.value = baseSeed;
-    }
+    // 維度分頁照常推進；基底種子換碼由生成按鈕依種子規則統一處理（與其他頁籤一致）。
     dimCycleOffsets[dimKeyA] = (dimCycleOffsets[dimKeyA] + sampleCountA) % activeItemsA.length;
     if (dimKeyB && activeItemsB) {
       dimCycleOffsets[dimKeyB] = (dimCycleOffsets[dimKeyB] + sampleCountB) % activeItemsB.length;
@@ -1654,27 +1697,30 @@ function buildMatrixMode({ advance = false } = {}) {
 
   let cols, rows;
 
+  const boundaryNote = boundaryLayoutOf('arch') === 'boundary' ? ' · 邊界沿邊排列（含緩衝區＋透明牆包絡）' : '';
+
   if (dimB) {
     cols = itemsA.length;
     rows = itemsB.length;
-    document.querySelector('#nav-status').textContent = '雙維度循環矩陣：【' + dimA.name + ' (' + cycleA.range + ')】×【' + dimB.name + ' (' + cycleB.range + ')】（共 ' + (cols * rows) + ' 棟）';
+    document.querySelector('#nav-status').textContent = '雙維度循環矩陣：【' + dimA.name + ' (' + cycleA.range + ')】×【' + dimB.name + ' (' + cycleB.range + ')】（共 ' + (cols * rows) + ' 棟' + boundaryNote + '）';
   } else {
     cols = Math.min(5, Math.ceil(Math.sqrt(itemsA.length)));
     rows = Math.ceil(itemsA.length / cols);
-    document.querySelector('#nav-status').textContent = '單維度循環展示：【' + dimA.name + ' (' + cycleA.range + ')】（共 ' + itemsA.length + ' 棟）';
+    document.querySelector('#nav-status').textContent = '單維度循環展示：【' + dimA.name + ' (' + cycleA.range + ')】（共 ' + itemsA.length + ' 棟' + boundaryNote + '）';
   }
 
-  const stepX = 52, stepZ = 48;
-  const startX = -(cols - 1) * stepX / 2;
-  const startZ = -(rows - 1) * stepZ / 2;
+  // 第一階段：依既有 52×48 格位生成，量測最大包絡（含邊界排列的本體＋緩衝＋透明牆）。
+  const baseStepX = 52, baseStepZ = 48;
+  const provisionalX = -(cols - 1) * baseStepX / 2;
+  const provisionalZ = -(rows - 1) * baseStepZ / 2;
 
-  buildRoadGrid(cols, rows, startX, startZ, stepX, stepZ);
-
+  const items = [];
+  let maxObjW = 26, maxObjD = 22;
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
       const idx = r * cols + c;
-      const x = startX + c * stepX;
-      const z = startZ + r * stepZ;
+      const x = provisionalX + c * baseStepX;
+      const z = provisionalZ + r * baseStepZ;
 
       let funcItem = null, styleItem = null, roofForm = null, facadeType = null, regionId = null;
 
@@ -1702,22 +1748,33 @@ function buildMatrixMode({ advance = false } = {}) {
         else if (selectedDims[0] === 'region') regionId = itSingle.key;
       }
 
-      let seed;
-      if (seedMode === 'fixed' || seedMode === 'shared_batch') {
-        seed = baseSeed;
-      } else {
-        seed = baseSeed + (c * 179 + r * 383);
-      }
+      let seed = getGridSeed(baseSeed, seedMode, c, r, cols, rows, idx);
 
       const w = funcItem ? funcItem.w : 22;
       const d = funcItem ? funcItem.d : 18;
 
-      spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, regionId, seed, maxW: 26, maxD: 22 });
+      const res = spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, regionId, seed, maxW: 26, maxD: 22 });
+      const sz = res.layoutSize || res.sizeArr;
+      if (sz[0] > maxObjW) maxObjW = sz[0];
+      if (sz[2] > maxObjD) maxObjD = sz[2];
+      items.push({ c, r, res });
     }
   }
 
-  const totalW = (cols - 1) * stepX + 26;
-  const totalD = (rows - 1) * stepZ + 22;
+  // 第二階段：以最大包絡配置步距（場景散布維持既有 52×48；邊界排列放大避免重疊）。
+  const stepX = Math.max(baseStepX, Math.ceil(maxObjW * 1.35 + 8));
+  const stepZ = Math.max(baseStepZ, Math.ceil(maxObjD * 1.35 + 8));
+  const startX = -(cols - 1) * stepX / 2;
+  const startZ = -(rows - 1) * stepZ / 2;
+
+  buildRoadGrid(cols, rows, startX, startZ, stepX, stepZ);
+
+  for (const it of items) {
+    moveArchInstance(it.res, startX + it.c * stepX, startZ + it.r * stepZ);
+  }
+
+  const totalW = (cols - 1) * stepX + maxObjW;
+  const totalD = (rows - 1) * stepZ + maxObjD;
   camTarget.set(0, 8, 0);
   camDist = Math.max(totalW, totalD, 35) * 1.25 + 20;
   activeCamTarget.copy(camTarget);
@@ -1733,34 +1790,39 @@ function buildVariantsMode(meta) {
   variantTargetMeta = meta;
 
   document.querySelector('#btn-back').style.display = 'inline-block';
-  document.querySelector('#btn-generate').style.display = 'none';
-  document.querySelector('#btn-randomize').style.display = 'none';
+  document.querySelector('#btn-arch-generate').style.display = 'none';
+  document.querySelector('#btn-arch-random-seed').style.display = 'none';
   document.querySelector('#btn-regen-variants').style.display = 'inline-flex';
-  document.querySelector('#nav-status').textContent = '展開 16 組隨機參數：【' + meta.funcLabel + '】×【' + meta.styleLabel + '】變體矩陣';
+  const variantBoundaryNote = boundaryLayoutOf('arch') === 'boundary' ? ' · 邊界沿邊排列（含緩衝區＋透明牆包絡）' : '';
+  document.querySelector('#nav-status').textContent = '展開 16 組隨機參數：【' + meta.funcLabel + '】×【' + meta.styleLabel + '】變體矩陣' + variantBoundaryNote;
+
+  waterMesh.visible = false;
+  floor.visible = true;
 
   const cols = 4, rows = 4;
-  const stepX = 46, stepZ = 42;
-  const startX = -(cols - 1) * stepX / 2;
-  const startZ = -(rows - 1) * stepZ / 2;
-
-  buildRoadGrid(cols, rows, startX, startZ, stepX, stepZ);
+  const baseStepX = 46, baseStepZ = 42;
+  const provisionalX = -(cols - 1) * baseStepX / 2;
+  const provisionalZ = -(rows - 1) * baseStepZ / 2;
 
   const baseW = parseFloat(meta.w) || 20;
   const baseD = parseFloat(meta.d) || 16;
   const fItem = FUNCTION_DIM.find((f) => f.key === meta.funcKey) || FUNCTION_DIM[0];
   const sItem = STYLE_DIM.find((s) => s.key === meta.styleKey) || STYLE_DIM[0];
 
+  const variantItems = [];
+  let maxObjW = 23, maxObjD = 19;
+
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
       const idx = r * cols + c;
-      const x = startX + c * stepX;
-      const z = startZ + r * stepZ;
+      const x = provisionalX + c * baseStepX;
+      const z = provisionalZ + r * baseStepZ;
       const seed = meta.seed + idx * 7919;
 
       const varW = Math.min(23, Math.max(10, baseW + ((architectureHash(seed, 'w') % 9) - 4) * 1.6));
       const varD = Math.min(19, Math.max(10, baseD + ((architectureHash(seed, 'd') % 9) - 4) * 1.6));
 
-      spawnBuilding({
+      const res = spawnBuilding({
         x, z,
         w: varW,
         d: varD,
@@ -1774,7 +1836,22 @@ function buildVariantsMode(meta) {
         maxW: 23,
         maxD: 19,
       });
+      const vsz = res.layoutSize || res.sizeArr;
+      if (vsz[0] > maxObjW) maxObjW = vsz[0];
+      if (vsz[2] > maxObjD) maxObjD = vsz[2];
+      variantItems.push({ c, r, res });
     }
+  }
+
+  const stepX = Math.max(baseStepX, Math.ceil(maxObjW * 1.35 + 8));
+  const stepZ = Math.max(baseStepZ, Math.ceil(maxObjD * 1.35 + 8));
+  const startX = -(cols - 1) * stepX / 2;
+  const startZ = -(rows - 1) * stepZ / 2;
+
+  buildRoadGrid(cols, rows, startX, startZ, stepX, stepZ);
+
+  for (const it of variantItems) {
+    moveArchInstance(it.res, startX + it.c * stepX, startZ + it.r * stepZ);
   }
 
   camTarget.set(0, 6, 0);
@@ -1788,16 +1865,17 @@ function buildFullRandomMode() {
   clearScene();
   currentMode = 'random';
   document.querySelector('#btn-back').style.display = 'none';
-  document.querySelector('#btn-generate').style.display = 'inline-flex';
-  document.querySelector('#btn-randomize').style.display = 'inline-flex';
+  document.querySelector('#btn-arch-generate').style.display = 'inline-flex';
+  document.querySelector('#btn-arch-random-seed').style.display = 'inline-flex';
   document.querySelector('#btn-regen-variants').style.display = 'none';
 
-  const cols = 5, rows = 5;
-  const stepX = 50, stepZ = 46;
-  const startX = -(cols - 1) * stepX / 2;
-  const startZ = -(rows - 1) * stepZ / 2;
+  waterMesh.visible = false;
+  floor.visible = true;
 
-  buildRoadGrid(cols, rows, startX, startZ, stepX, stepZ);
+  const cols = 5, rows = 5;
+  const baseStepX = 50, baseStepZ = 46;
+  const provisionalX = -(cols - 1) * baseStepX / 2;
+  const provisionalZ = -(rows - 1) * baseStepZ / 2;
 
   const activeFuncs = getActiveDimItems('func');
   const activeStyles = getActiveDimItems('style');
@@ -1806,14 +1884,17 @@ function buildFullRandomMode() {
   const activeRegions = getActiveDimItems('region');
 
   let baseSeed = Math.floor(Math.random() * 900000) + 1000;
-  document.querySelector('#input-seed').value = baseSeed;
-  document.querySelector('#nav-status').textContent = '🎲 全類別篩選池隨機混搭：' + (cols * rows) + ' 棟全特徵隨機展開';
+  document.querySelector('#input-arch-seed').value = baseSeed;
+  const fullRandomBoundaryNote = boundaryLayoutOf('arch') === 'boundary' ? ' · 邊界沿邊排列（含緩衝區＋透明牆包絡）' : '';
+  document.querySelector('#nav-status').textContent = '🎲 全類別篩選池隨機混搭：' + (cols * rows) + ' 棟全特徵隨機展開' + fullRandomBoundaryNote;
 
+  const randomItems = [];
+  let maxRandomW = 25, maxRandomD = 21;
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
       const idx = r * cols + c;
-      const x = startX + c * stepX;
-      const z = startZ + r * stepZ;
+      const x = provisionalX + c * baseStepX;
+      const z = provisionalZ + r * baseStepZ;
       const seed = baseSeed + idx * 3571;
 
       const fItem = activeFuncs[Math.floor(Math.random() * activeFuncs.length)];
@@ -1822,7 +1903,7 @@ function buildFullRandomMode() {
       const facadeItem = activeFacades[Math.floor(Math.random() * activeFacades.length)];
       const regionItem = activeRegions[Math.floor(Math.random() * activeRegions.length)];
 
-      spawnBuilding({
+      const res = spawnBuilding({
         x, z,
         w: fItem.w,
         d: fItem.d,
@@ -1835,13 +1916,78 @@ function buildFullRandomMode() {
         maxW: 25,
         maxD: 21,
       });
+      const rsz = res.layoutSize || res.sizeArr;
+      if (rsz[0] > maxRandomW) maxRandomW = rsz[0];
+      if (rsz[2] > maxRandomD) maxRandomD = rsz[2];
+      randomItems.push({ c, r, res });
     }
+  }
+
+  const stepX = Math.max(baseStepX, Math.ceil(maxRandomW * 1.35 + 8));
+  const stepZ = Math.max(baseStepZ, Math.ceil(maxRandomD * 1.35 + 8));
+  const startX = -(cols - 1) * stepX / 2;
+  const startZ = -(rows - 1) * stepZ / 2;
+
+  buildRoadGrid(cols, rows, startX, startZ, stepX, stepZ);
+
+  for (const it of randomItems) {
+    moveArchInstance(it.res, startX + it.c * stepX, startZ + it.r * stepZ);
   }
 
   camTarget.set(0, 6, 0);
   camDist = 280;
   updateCamera();
   render();
+}
+
+// ---- 建築單體細節檢驗模式 (Single Mode，與其他頁籤同規則) ----
+function buildArchSingleMode() {
+  clearScene();
+  currentMode = 'single';
+  document.querySelector('#btn-back').style.display = 'none';
+  document.querySelector('#btn-arch-generate').style.display = 'inline-flex';
+  document.querySelector('#btn-arch-random-seed').style.display = 'inline-flex';
+  document.querySelector('#btn-regen-variants').style.display = 'none';
+
+  waterMesh.visible = false;
+  floor.visible = true;
+  floor.material.color.setHex(0xbed0bd);
+
+  const seed = parseInt(document.querySelector('#input-arch-seed')?.value, 10) || 5000;
+  const boundaryNote = boundaryLayoutOf('arch') === 'boundary' ? ' · 邊界沿邊排列（含緩衝區＋透明牆包絡）' : '';
+
+  const activeFuncs = getActiveDimItems('func');
+  const activeStyles = getActiveDimItems('style');
+  const fItem = activeFuncs[seed % activeFuncs.length] || FUNCTION_DIM[0];
+  const sItem = activeStyles[seed % activeStyles.length] || STYLE_DIM[0];
+
+  const res = spawnBuilding({
+    x: 0, z: 0,
+    w: fItem.w, d: fItem.d,
+    funcItem: fItem, styleItem: sItem,
+    roofForm: null, facadeType: null, regionId: null,
+    seed, maxW: 26, maxD: 22,
+  });
+  if (!res) return;
+  const sz = res.layoutSize || res.sizeArr;
+  document.querySelector('#nav-status').textContent = '建築單體檢驗：【' + res.meta.funcLabel + '】×【' + res.meta.styleLabel + '】（種子碼 ' + seed + ' · 高 ' + res.meta.height + 'm (' + res.meta.levels + 'F)' + boundaryNote + '）';
+  camTarget.set(0, sz[1] * 0.4, 0);
+  camDist = Math.max(sz[0], sz[1], sz[2]) * 2.2 + 8;
+  activeCamTarget.copy(camTarget);
+  activeCamDist = camDist;
+  updateCamera();
+  render();
+}
+
+// 建築頁籤統一分派：變體檢視中維持變體，否則依展示模式選擇陣列／單體。
+function buildArchMode({ advance = false } = {}) {
+  if (currentMode === 'variants' && variantTargetMeta) {
+    buildVariantsMode(variantTargetMeta);
+    return;
+  }
+  const vm = document.querySelector('#arch-view-mode')?.value || 'array';
+  if (vm === 'single') buildArchSingleMode();
+  else buildMatrixMode({ advance });
 }
 
 // ==========================================
@@ -2399,7 +2545,7 @@ function switchTab(tabKey) {
   if (activePanel) activePanel.style.display = 'block';
 
   if (tabKey === 'arch') {
-    buildMatrixMode({ advance: false });
+    buildArchMode({ advance: false });
   } else if (tabKey === 'geology') {
     buildGeologyMode();
   } else if (tabKey === 'plant') {
@@ -2501,16 +2647,21 @@ dimLabels.forEach((label) => {
       dimCycleOffsets[val] = 0;
     }
     document.querySelector('#dim-count-badge').textContent = '已選 ' + selectedDims.length + ' / 2 維度';
-    buildMatrixMode({ advance: false });
+    buildArchMode({ advance: false });
   });
 });
 
-document.querySelector('#btn-generate').addEventListener('click', () => {
-  const btn = document.querySelector('#btn-generate');
+document.querySelector('#btn-arch-generate').addEventListener('click', () => {
+  const btn = document.querySelector('#btn-arch-generate');
   btn.textContent = '⚡ 生成中...';
   setTimeout(() => {
     try {
-      buildMatrixMode({ advance: true });
+      // 與其他頁籤一致：僅「陣列種子」模式在重新生成時換基底種子。
+      const mode = document.querySelector('#select-seed-mode-arch')?.value;
+      if (mode === 'shared_batch') {
+        document.querySelector('#input-arch-seed').value = Math.floor(Math.random() * 90000) + 1000;
+      }
+      buildArchMode({ advance: true });
     } catch (err) {
       console.error('生成建築陣列失敗:', err);
       alert('生成建築陣列時發生錯誤: ' + (err.message || err));
@@ -2520,46 +2671,39 @@ document.querySelector('#btn-generate').addEventListener('click', () => {
   }, 10);
 });
 
-document.querySelector('#btn-randomize').addEventListener('click', () => {
+document.querySelector('#btn-arch-random-seed').addEventListener('click', () => {
   const newSeed = Math.floor(Math.random() * 90000) + 1000;
-  const input = document.querySelector('#input-seed');
+  const input = document.querySelector('#input-arch-seed');
   if (input) input.value = newSeed;
   Object.keys(dimCycleOffsets).forEach((k) => {
     dimCycleOffsets[k] = Math.floor(Math.random() * (DIM_COLLECTIONS[k]?.items.length || 10));
   });
   try {
-    buildMatrixMode({ advance: false });
+    buildArchMode({ advance: false });
   } catch (err) {
     console.error('隨機種子生成失敗:', err);
   }
 });
 
-document.querySelector('#input-seed').addEventListener('change', () => {
-  if (currentMode === 'matrix') {
-    buildMatrixMode({ advance: false });
-  } else if (variantTargetMeta) {
-    variantTargetMeta.seed = parseInt(document.querySelector('#input-seed').value, 10) || 5000;
-    buildVariantsMode(variantTargetMeta);
-  }
-});
-
-['#sample-dim-a', '#sample-dim-b', '#chk-sample-all', '#select-seed-mode'].forEach((sel) => {
-  document.querySelector(sel)?.addEventListener('change', () => {
-    if (currentMode === 'matrix') buildMatrixMode({ advance: false });
-  });
+document.querySelector('#arch-view-mode')?.addEventListener('change', () => {
+  variantTargetMeta = null;
+  buildArchMode({ advance: false });
 });
 
 document.querySelector('#btn-regen-variants').addEventListener('click', () => {
   if (variantTargetMeta) {
     variantTargetMeta.seed = Math.floor(Math.random() * 90000) + 1000;
-    const input = document.querySelector('#input-seed');
+    const input = document.querySelector('#input-arch-seed');
     if (input) input.value = variantTargetMeta.seed;
     buildVariantsMode(variantTargetMeta);
   }
 });
 
 document.querySelector('#btn-back').addEventListener('click', () => {
-  if (currentTab === 'arch') buildMatrixMode({ advance: false });
+  if (currentTab === 'arch') {
+    variantTargetMeta = null;
+    buildArchMode({ advance: false });
+  }
   else if (currentTab === 'geology') buildGeologyMode();
   else if (currentTab === 'plant') buildPlantMode();
 });
@@ -2698,7 +2842,7 @@ filterModal?.addEventListener('click', (e) => {
 });
 document.querySelector('#btn-filter-apply')?.addEventListener('click', () => {
   if (filterModal) filterModal.style.display = 'none';
-  buildMatrixMode({ advance: false });
+  buildArchMode({ advance: false });
 });
 document.querySelector('#btn-full-random')?.addEventListener('click', () => {
   buildFullRandomMode();
@@ -3824,7 +3968,7 @@ function buildEnvironmentMode() {
 }
 
 // 統一陣列規模、種子模式、種子碼與排列方式監聽
-['geo', 'plant', 'veh', 'vessel', 'env', 'industry', 'ice'].forEach((prefix) => {
+['geo', 'plant', 'veh', 'vessel', 'env', 'industry', 'ice', 'arch'].forEach((prefix) => {
   ['cols', 'rows'].forEach((dim) => {
     document.querySelector('#sample-' + dim + '-' + prefix)?.addEventListener('change', () => {
       rebuildActiveTab();
@@ -3953,7 +4097,7 @@ document.querySelector('#chk-ice-water')?.addEventListener('change', () => {
 // 頂部環境模擬控制列事件 (四季 × 日夜 × 多元天氣)
 // ==========================================
 function rebuildActiveTab() {
-  if (currentTab === 'arch') buildMatrixMode({ advance: false });
+  if (currentTab === 'arch') buildArchMode({ advance: false });
   else if (currentTab === 'geology') buildGeologyMode();
   else if (currentTab === 'plant') buildPlantMode();
   else if (currentTab === 'vehicle') buildVehicleMode();
@@ -4052,7 +4196,7 @@ try {
   initVehicleOptions();
   initVesselOptions();
   initGeologyOptions();
-  buildMatrixMode();
+  buildArchMode();
 } catch (err) {
   console.error('初次建構失敗:', err);
 }
