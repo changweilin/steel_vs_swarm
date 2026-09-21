@@ -1241,14 +1241,26 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const solarCompositeType = (architectureHash(idBase, 'solar_composite') % 100) < 50 ? 'canopy' : 'laundry';
       const stiltHeight = isElevatedSolar ? 2.3 : 0.25;
 
+      // 同一屋頂區塊統一傾斜方向：取全塊坡度最大處的貼合角為代表，塊內全部面板共用；
+      // 位置仍逐板貼合屋面高度，僅方向統一。純數學、無 RNG，不消耗共享隨機序列。
+      let blockFit = { pitch: 0, roll: 0, slope: 0 };
+      if (isSlopedRoof) {
+        let bestSlope = -1;
+        for (const { sx, sz } of placedSites) {
+          const f = roofPanelAngles(sx, sz, poly, roofForm, metrics, topY, height, rotY);
+          if (f.slope > bestSlope) { bestSlope = f.slope; blockFit = f; }
+        }
+      }
+      const useBlockRoofFit = isSlopedRoof;
+
       for (const { sx, sz } of placedSites) {
         // 單板佔位登記：與其他屋頂物件互不重疊（半尺寸略小於步距，相鄰板不互斥）
         if (!claimRect(sx, sz, 0.76, 0.53, rotY)) continue;
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
-        // 屋頂式貼合：面板法線跟著屋頂面法線，平頂才用固定日照傾角
-        const fit = roofPanelAngles(sx, sz, poly, roofForm, metrics, topY, height, rotY);
+        // 屋頂式貼合：整塊共用代表貼合角，平頂（與階梯露台）一律固定日照傾角
+        const fit = blockFit;
         // 非平面屋頂強制貼合斜率（順坡排列，絕不水平放置）；平頂才用固定日照傾角
-        const useRoofFit = isSlopedRoof ? true : fit.slope >= 0.02;
+        const useRoofFit = useBlockRoofFit;
         const panelLift = isElevatedSolar ? stiltHeight + 0.15 : 0.35;
         const panelY = baseRoofY + panelLift;
 
