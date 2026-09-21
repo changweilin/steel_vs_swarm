@@ -1591,7 +1591,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
   clip-path: var(--notch-sm);
   animation: cutMini 0.8s cubic-bezier(0.1, 0.85, 0.2, 1) both;
 }
-.cut-av { width: 40px; height: 40px; border-radius: 0; border: 1px solid var(--side); display: block; }
+.cut-av { width: 40px; height: 40px; border-radius: 0; border: 1px solid var(--side); display: block; object-fit: cover; object-position: center 20%; }
 .cut-mini-txt b { display: block; font-family: var(--serif); font-weight: 900; font-size: 14px; color: #fff; letter-spacing: 2px; }
 .cut-mini-txt span { font-family: var(--mono); font-size: 10px; color: var(--side); letter-spacing: 2px; }
 

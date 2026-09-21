@@ -12,7 +12,7 @@
 // 小招不做敵方演出(戰場上小招太頻繁,會蓋住視野)。
 
 import { CHARACTERS, heroAbility } from './data.js';
-import { portraitURL, avatarURL } from './portraits.js';
+import { cutinArtURL } from './portraits.js';
 
 const DUR = { full: 1300, warn: 1000, mini: 800 };
 
@@ -53,10 +53,10 @@ export class CutIn {
     el.className = `cutin ${mode}`;
     el.style.setProperty('--side', sideColor);
     el.innerHTML = mode === 'mini'
-      ? `<img class="cut-av" src="${avatarURL(ev.ch)}" alt="">
+      ? `<img class="cut-av" src="${cutinArtURL(ev.ch, 'skill')}" alt="">
          <div class="cut-mini-txt"><b>${esc(a.name)}</b><span>${esc(c.code)}</span></div>`
       : `<div class="cut-lines"></div>
-         <img class="cut-art" src="${portraitURL(ev.ch)}" alt="">
+         <img class="cut-art" src="${cutinArtURL(ev.ch, 'ult')}" alt="">
          <div class="cut-band">
            <div class="cut-who">${mode === 'warn' ? '⚠ 敵方 ' : ''}「${esc(c.code)}」${esc(c.name)}</div>
            <div class="cut-name">${esc(a.name)}</div>

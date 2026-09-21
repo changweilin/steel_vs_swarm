@@ -5,7 +5,7 @@
 // 風格對齊賽璐璐核心(toon.js):平塗色塊 + 單一暗部多邊形 + 粗黑描邊,不做漸層陰影。
 // 立繪 viewBox 300×400(半身),頭像共用同一份 SVG,只是把 viewBox 裁到頭部。
 
-import { CHARACTERS, SIDES, charKind } from './data.js';
+import { CHARACTERS, SIDES, charKind, abilArtFile } from './data.js';
 import { LORE } from './lore.js';
 // 亂數直取唯一縫 `rng.js`(`hazards.js` 只是舊入口的 re-export,而它 import three)——
 // 走舊入口的話,本檔連同所有 import 它的模組(storyui.js …)在 Node 端就再也載不起來,
@@ -27,6 +27,20 @@ export const AVATAR_MANIFEST = Object.fromEntries(
   DRAWN_ART_IDS.map((id) => [id, `assets/avatars/${id}.png`]));
 
 export const hasDrawnArt = (id) => !!PORTRAIT_MANIFEST[id];
+
+/** 招式立繪覆蓋表:id -> { skill, ult } 圖檔路徑(相對 public/)。
+ * 檔名由 `data.js abilArtFile` 推導(`{id}_{slot}_{atk|def}.png`),此表只做「有無手繪」的登記;
+ * 未登記者退回半身立繪 portraitURL(與 base 同一張,不破圖)。 */
+export const CUTIN_MANIFEST = Object.fromEntries(
+  DRAWN_ART_IDS.map((id) => [id, { skill: abilArtFile(id, 'skill'), ult: abilArtFile(id, 'ult') }]));
+
+export const hasCutinArt = (id, slot) => !!CUTIN_MANIFEST[id]?.[slot];
+
+/** 招式立繪(出招演出用):小招看 skill 檔、大招看 ult 檔;攻守已寫進檔名(見 ABIL_NATURE)。
+ * 未登記手繪 → 退回半身立繪(舊制逐位元一致)。 */
+export function cutinArtURL(id, slot) {
+  return CUTIN_MANIFEST[id]?.[slot] || portraitURL(id);
+}
 
 const OUTLINE = '#14161a';
 const cache = new Map();

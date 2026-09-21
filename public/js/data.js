@@ -3400,6 +3400,36 @@ export function heroAbility(ch, slot, lvl = 1) {
   };
 }
 
+// ---- 招式攻守性質(2026-09-21 使用者定案:招式立繪分攻招/守招兩套)----
+// 每名角色的大小招各判一筆 'atk'(攻招:對敵造成傷害/召喚打擊部隊/癱瘓敵武器/進攻增益)
+// 或 'def'(守招:回復/減傷/護盾/攔截/匿蹤/機動自保)。判準 = 機制本身(heroAbility 解析後的
+// dmg/heal/mul/unit/fx),與檔名無關;**立繪檔名由這一表推導**,MUST NOT 在消費端手寫
+// 'atk'/'def' 字串 —— 改判一格,檔名與演出同步跟著走(單一縫)。
+// 攻守與槽位無關:小招多為守(18/32)但盾擊/近程 emp 是攻;大招多為攻(24/32)但
+// 團隊治療/減傷領域(8 台)是守。檔名格式 `{id}_{slot}_{nature}.png`,見 portraits.js CUTIN_ART。
+export const ABIL_NATURE = {
+  s01: { skill: 'def', ult: 'atk' }, s02: { skill: 'def', ult: 'def' },
+  s03: { skill: 'def', ult: 'atk' }, s04: { skill: 'atk', ult: 'atk' },
+  s05: { skill: 'def', ult: 'atk' }, s06: { skill: 'def', ult: 'def' },
+  s07: { skill: 'def', ult: 'atk' }, s08: { skill: 'def', ult: 'def' },
+  s09: { skill: 'def', ult: 'atk' }, s10: { skill: 'atk', ult: 'atk' },
+  s11: { skill: 'def', ult: 'def' }, s12: { skill: 'def', ult: 'def' },
+  t01: { skill: 'atk', ult: 'atk' }, t02: { skill: 'def', ult: 'atk' },
+  t03: { skill: 'atk', ult: 'atk' }, t04: { skill: 'def', ult: 'atk' },
+  t05: { skill: 'def', ult: 'atk' }, t06: { skill: 'def', ult: 'atk' },
+  t07: { skill: 'def', ult: 'atk' }, t08: { skill: 'atk', ult: 'atk' },
+  t09: { skill: 'def', ult: 'atk' }, t10: { skill: 'def', ult: 'def' },
+  t11: { skill: 'def', ult: 'atk' }, t12: { skill: 'def', ult: 'atk' },
+  m01: { skill: 'def', ult: 'atk' }, m02: { skill: 'def', ult: 'def' },
+  m03: { skill: 'def', ult: 'def' }, m04: { skill: 'def', ult: 'atk' },
+  m05: { skill: 'atk', ult: 'atk' }, m06: { skill: 'def', ult: 'atk' },
+  m07: { skill: 'def', ult: 'atk' }, m08: { skill: 'def', ult: 'atk' },
+};
+/** 該招式的攻守性質('atk'/'def')。查無一律 'def'(退路,不抛錯)。 */
+export const abilNature = (ch, slot) => ABIL_NATURE[ch]?.[slot] || 'def';
+/** 該招式立繪檔名(相對 public/;推導不手寫)。 */
+export const abilArtFile = (ch, slot) => `assets/characters/${ch}_${slot}_${abilNature(ch, slot)}.png`;
+
 /**
  * 施法動作是**定向**還是**全向**(locomotion `stepCastPose` 的 `castFx.dir`)。
  * 指向敵人的(strike / dash / 遠端 emp)= 定向(揮武/刺拳/踢腿),其餘 = 全向(吼叫/跺腳/旋轉)。
