@@ -1,6 +1,6 @@
 import { computeOrientedRoofFrame } from './architectureStyles.js';
-import { roofDimensions, sectionRoofProfile } from './roofProfiles.js';
-import { loftMeshData } from './vesselGeometry.js';
+import { roofDimensions, sectionRoofProfile, ROOF_FACET_DEG, ROOF_SEAT_SINK } from './roofProfiles.js';
+import { loftMeshData, facetMeshData } from './vesselGeometry.js';
 
 // Closed sections use the same loft seam as other procedural solids.
 function sectionMesh(section, length) {
@@ -16,6 +16,10 @@ function sectionMesh(section, length) {
   return mesh;
 }
 
+// 屋頂底面沉入牆體封頂之下，避免與平板封頂／盒體頂面共面打架（值住 roofProfiles）。
+export { ROOF_SEAT_SINK };
+export { ROOF_FACET_DEG };
+
 export function architecturalRoofParts(poly, y, style, actualRoofForm = null, metrics = null, targetH = 10) {
   const form = actualRoofForm || style?.actualRoofForm || style?.roofForm;
   if (!form || form === 'flat' || poly.holes?.length) return [];
@@ -25,17 +29,18 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
   const { rise, eave } = roofDimensions(span, targetH), L = len + eave * 2, S = span + eave * 2;
   const rows = [], ca = Math.cos(angle), sa = Math.sin(angle);
   const add = (g, x = 0, lift = 0, z = 0) => {
-    rows.push({ g, p: [cx + x * ca - z * sa, y + lift, cz + x * sa + z * ca],
+    rows.push({ g, p: [cx + x * ca - z * sa, y + lift - ROOF_SEAT_SINK, cz + x * sa + z * ca],
       r: [0, -angle, 0], c: style.roof, role: 'architecture-roof', colorVariant: style.variant, roofForm: form });
   };
   const mesh = (data, x = 0, lift = 0, z = 0) => {
+    const flat = facetMeshData(data, ROOF_FACET_DEG);
     const mins = [Infinity, Infinity, Infinity], maxs = [-Infinity, -Infinity, -Infinity];
-    for (let i = 0; i < data.vertices.length; i++) {
-      const axis = i % 3; mins[axis] = Math.min(mins[axis], data.vertices[i]); maxs[axis] = Math.max(maxs[axis], data.vertices[i]);
+    for (let i = 0; i < flat.vertices.length; i++) {
+      const axis = i % 3; mins[axis] = Math.min(mins[axis], flat.vertices[i]); maxs[axis] = Math.max(maxs[axis], flat.vertices[i]);
     }
     const center = mins.map((v, i) => (v + maxs[i]) / 2);
-    const vertices = data.vertices.map((v, i) => v - center[i % 3]);
-    add(['mesh', { ...data, vertices }, maxs.map((v, i) => v - mins[i])], x + center[0], lift + center[1], z + center[2]);
+    const vertices = flat.vertices.map((v, i) => v - center[i % 3]);
+    add(['mesh', { ...data, vertices, faces: flat.faces, normals: flat.normals }, maxs.map((v, i) => v - mins[i])], x + center[0], lift + center[1], z + center[2]);
   };
   const section = (profile, length = L, lift = 0, offset = 0) => mesh(sectionMesh(profile, length), 0, lift, offset);
   const hip = (width, depth, topWidth, topDepth, height, lift = 0) => {
@@ -109,7 +114,8 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
       hip(L * s, S * s, 0, 0, rise * .4, rise * i * .32);
     }
   } else if (form === 'stepped') {
-    for (let i = 0; i < 3; i++) add(['box', len * (1 - i * .22), rise * .28, span * (1 - i * .22)], 0, rise * .28 * (.5 + i));
+    // 足部較框線內收 2cm：層側面否則與牆端帽同平面（x=±len/2）打架；簷口幾無變化。
+    for (let i = 0; i < 3; i++) add(['box', len * (1 - i * .22) - .04, rise * .28, span * (1 - i * .22) - .04], 0, rise * .28 * (.5 + i));
   } else {
     const n = form === 'sawtooth' ? Math.min(4, Math.max(2, Math.floor(span / 4))) : 1;
     const width = form === 'yingshan' ? span : span / n + eave * 2;

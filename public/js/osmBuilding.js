@@ -1,6 +1,6 @@
 import { functionalBuildingParts } from './functionalBuildingParts.js';
 import { architecturalFacadeParts } from './architectureFacadeParts.js';
-import { architecturePartGeometry } from './architecturePartGeometry.js';
+import { architecturePartGeometry, facetCylinderGeometry } from './architecturePartGeometry.js';
 // ============ OSM 精確建物外環生成器 ============
 // 只吃 osmAreas.js 投影後的 outer/holes；不把輪廓縮成中心方盒。牆段與 blocker
 // 共用同一組 edge 資料，屋頂則由 ShapeGeometry 保留內洞。不同語意最後各自合批，
@@ -12,6 +12,7 @@ import { sampleBuildingSite } from './buildingDiversity.js';
 import { architecturalRoofParts } from './architectureRoofParts.js';
 import { generateBuildingAppurtenances } from './buildingAppurtenances.js';
 import { resolveAdaptiveRoofForm, calculateFootprintMetrics } from './architectureStyles.js';
+import { ROOF_RIM_LIP, CYL_FACET_DEG } from './roofProfiles.js';
 import { WATER, objHeightMax } from './data.js';
 
 const EPS = 1e-5;
@@ -94,16 +95,17 @@ function roofGeometry(poly, y) {
   return geo;
 }
 
-function edgeGeometry(ring, baseY, height, thickness, sourceId, kind, closed = true) {
+function edgeGeometry(ring, baseY, height, thickness, sourceId, kind, closed = true, lipTop = 0) {
   const geos = [], edges = [];
   for (let i = 0; i < ring.length - (closed ? 0 : 1); i++) {
     const a = ring[i], b = ring[(i + 1) % ring.length];
     const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
     if (len <= EPS) continue;
     const ry = Math.atan2(dz, dx);
-    const geo = new THREE.BoxGeometry(len, height, thickness);
+    // 唇邊只長幾何：回報的 h/ty 維持原值，碰撞、立面佈局、可站立頂面逐位元不動。
+    const geo = new THREE.BoxGeometry(len, height + lipTop, thickness);
     geo.rotateY(-ry);
-    geo.translate((a[0] + b[0]) / 2, baseY + height / 2, (a[1] + b[1]) / 2);
+    geo.translate((a[0] + b[0]) / 2, baseY + (height + lipTop) / 2, (a[1] + b[1]) / 2);
     geos.push(geo);
     // This is the same oriented box as the visible wall segment (A30).
     edges.push({
@@ -209,11 +211,27 @@ function attachmentGeometry(kind, poly, y) {
     geo = new THREE.BoxGeometry(half, half, half);
     lift = half * 0.5;
   }
+  // 柱錐頂底蓋與側面拆法線群組（單一縫：architecturePartGeometry）。
+  if (geo.index && (type === 'dome' || type === 'silo' || type === 'spire' || type === 'finial'
+      || type === 'stack' || type === 'mast' || type === 'flag' || type === 'beacon')) {
+    const split = facetCylinderGeometry(geo, CYL_FACET_DEG);
+    geo.dispose(); geo = split;
+  }
   geo.translate(x, y + lift, z);
   return geo;
 }
 
 export function paintGeometry(geometry, hex, variant = 0) {
+  // 柱錐頂底蓋與側面共用圈頂點 → 原地拆法線群組（球面保持平滑；方盒平板本已逐面拆點）。
+  // 原地換屬性：呼叫端有以 slice 取引用後忽略回傳值的路徑，不可換物件。
+  // 判 type 字串：此 three 版 CylinderGeometry 沒有 isCylinderGeometry 旗標。
+  if (geometry?.index && (geometry.type === 'CylinderGeometry' || geometry.type === 'ConeGeometry')) {
+    const split = facetCylinderGeometry(geometry, CYL_FACET_DEG);
+    geometry.setIndex(split.index);
+    geometry.setAttribute('position', split.attributes.position);
+    geometry.setAttribute('normal', split.attributes.normal);
+    if (split.attributes.uv) geometry.setAttribute('uv', split.attributes.uv);
+  }
   const color = new THREE.Color(hex).multiplyScalar(0.94 + variant * 0.06);
   const colors = new Float32Array(geometry.attributes.position.count * 3);
   for (let i = 0; i < colors.length; i += 3) { colors[i] = color.r; colors[i + 1] = color.g; colors[i + 2] = color.b; }
@@ -343,11 +361,11 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
       batch.roofs.push(roofGeometry(poly, topY));
       const detail = !architecture ? attachmentGeometry(effectiveKind, poly, topY) : null;
       if (detail) batch.details.push(detail);
-      const outer = edgeGeometry(poly.outer, baseY, targetH, wallThickness, area.sourceId, effectiveKind);
+      const outer = edgeGeometry(poly.outer, baseY, targetH, wallThickness, area.sourceId, effectiveKind, true, ROOF_RIM_LIP);
       batch.walls.push(...outer.geos); blockers.push(...outer.edges);
       const facadeEdges = [...outer.edges];
       for (const hole of poly.holes) {
-        const inner = edgeGeometry(hole, baseY, targetH, wallThickness, area.sourceId, effectiveKind);
+        const inner = edgeGeometry(hole, baseY, targetH, wallThickness, area.sourceId, effectiveKind, true, ROOF_RIM_LIP);
         batch.walls.push(...inner.geos); blockers.push(...inner.edges);
         facadeEdges.push(...inner.edges);
       }
@@ -364,7 +382,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         const slabH = 0.28;
         const platformTop = roofGeometry(poly, platformY);
         const platformBottom = roofGeometry(poly, platformY - slabH);
-        const platformEdge = edgeGeometry(poly.outer, platformY - slabH, slabH, wallThickness + 0.25, area.sourceId, kind);
+        const platformEdge = edgeGeometry(poly.outer, platformY - slabH, slabH, wallThickness + 0.25, area.sourceId, kind, true, ROOF_RIM_LIP);
         const platColor = architecture?.trim || 0x5a4a3a;
         const varIdx = architecture?.variant || 0;
         batch.details.push(paintGeometry(platformTop, platColor, varIdx));
@@ -477,7 +495,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         batch.details.push(...architecturalFacade(facadeEdges, architecture, wallThickness));
 
         // Phase 4: 外部零件依屋頂類型嚴格篩選相容性後隨機配置
-        if (!architecture.functionalDesign) batch.details.push(...generateBuildingAppurtenances(poly, facadeEdges, baseY, topY, architecture, wallThickness, adaptiveRoofForm, metrics));
+        if (!architecture.functionalDesign) batch.details.push(...generateBuildingAppurtenances(poly, facadeEdges, baseY, topY, architecture, wallThickness, adaptiveRoofForm, metrics, terrain));
       }
       if (architecture) {
         const key = `${architecture.profile}:${architecture.id}`;

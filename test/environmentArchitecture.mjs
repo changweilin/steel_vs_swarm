@@ -3,7 +3,7 @@ import { ENVIRONMENT_BUILDINGS, ENVIRONMENT_OBJECTS } from '../public/js/environ
 import { environmentBuildingPlan } from '../public/js/environmentArchitecture.js';
 import { environmentParts } from '../public/js/environmentParts.js';
 import { ROOF_FORMS, ARCHITECTURE_STYLES } from '../public/js/architectureStyles.js';
-import { architecturalRoofParts } from '../public/js/architectureRoofParts.js';
+import { architecturalRoofParts, ROOF_SEAT_SINK } from '../public/js/architectureRoofParts.js';
 import { partBox } from '../public/js/edgewall.js';
 
 for (const [kind, spec] of Object.entries(ENVIRONMENT_BUILDINGS)) {
@@ -30,7 +30,7 @@ for (const form of Object.keys(ROOF_FORMS)) {
   const rows = architecturalRoofParts(poly, 8, { roof: 0x777777 }, form);
   if (form === 'flat') { assert.equal(rows.length, 0); continue; }
   assert(rows.length > 0, form + ': roof exists');
-  assert(Math.abs(Math.min(...rows.map(p => partBox(p).y0)) - 8) < 1e-7, form + ': roof meets wall');
+  assert(Math.abs(Math.min(...rows.map(p => partBox(p).y0)) - (8 - ROOF_SEAT_SINK)) < 1e-7, form + ': roof meets wall');
   for (const part of rows.filter(p => p.g[0] === 'mesh')) {
     const { vertices, faces } = part.g[1], edges = new Map(); let volume = 0;
     for (let i = 0; i < faces.length; i += 3) {

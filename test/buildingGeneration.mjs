@@ -8,6 +8,7 @@ register('data:text/javascript,' + encodeURIComponent(`const modules = ${JSON.st
 export async function resolve(s, c, next) { return modules[s] ? { url: modules[s], shortCircuit: true } : next(s, c); }`), import.meta.url);
 const THREE = await import('three');
 const { architecturalRoof, buildOsmPolygonBuildings } = await import('../public/js/osmBuilding.js');
+const { ROOF_SEAT_SINK } = await import('../public/js/architectureRoofParts.js');
 const { ARCHITECTURE_STYLES, CULTURAL_REGIONS } = await import('../public/js/architectureStyles.js');
 const { chooseArchitecture, createArchitecturePlanner } = await import('../public/js/buildingDiversity.js');
 const { analyzeApprovedBuilding, fitApprovedPolygon, fitApprovedBuilding } = await import('../public/js/approvedBuildingModels.js');
@@ -22,10 +23,10 @@ for (const form of ['gable','xuanshan','yingshan','sawtooth','vault','curved_rid
     for (const geo of geos) {
       assert.ok(geo.attributes.position.array.every(Number.isFinite));
       geo.translate(0,-12,0); geo.rotateY(angle); geo.computeBoundingBox();
-      assert.ok(geo.boundingBox.min.y >= -1e-4, form + ' penetrates wall top');
+      assert.ok(geo.boundingBox.min.y >= -ROOF_SEAT_SINK - 1e-4, form + ' penetrates wall top');
       if (geo === geos[0] && ['gable','xuanshan','yingshan'].includes(form)) {
-        const pos=geo.attributes.position;
-        for(let i=0;i<pos.count;i++) if(pos.getY(i)>3.19 && pos.getY(i)<3.21) {
+        const pos=geo.attributes.position, ridgeY = 3.2 - ROOF_SEAT_SINK;
+        for(let i=0;i<pos.count;i++) if(pos.getY(i)>ridgeY-0.01 && pos.getY(i)<ridgeY+0.01) {
           assert.ok(Math.abs(pos.getZ(i))<1e-4, form + ' ridge must lie on long axis');
         }
       }

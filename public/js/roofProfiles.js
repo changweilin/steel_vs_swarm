@@ -1,4 +1,16 @@
 // 屋頂截面與附件落點共用的純數學描述；不依賴渲染、無 RNG。
+// 封頂沿牆唇邊（公尺）：牆體幾何較回報高度多出此值，封頂邊緣埋入牆內、
+// 立柱頂面較牆頂退此值 —— 同向上共面重疊歸零，碰撞與立面佈局維持原值。
+export const ROOF_RIM_LIP = 0.04;
+// 屋頂底面沉入量（公尺）：屋頂實體底面較牆頂低此值；高程公式對非平面屋頂同步扣除，
+// 落位 Foot 與面板間隙才會踩在真實面上。平板封頂本身不沉。
+export const ROOF_SEAT_SINK = 0.06;
+// 法線群組拆邊角（度）：夾角超過此值即拆頂點，圓頂／拱維持平滑、折邊脆直。
+// 單一縫：facetMeshData 的預設值與此恆同，測試由這裡取值不斷言魔數。
+export const ROOF_FACET_DEG = 30;
+// 柱錐拆邊角（度）：8~12 段柱身維持圓潤（36° 以下），頂底蓋（90°）與 6 段以下
+// 桿件照樣拆開。屋頂要脆稜、柱體要圓潤，兩個閾值分開。
+export const CYL_FACET_DEG = 50;
 export function roofDimensions(span, height = 10) {
   return { rise: Math.min(Math.max(1.6, height * 0.32), Math.max(1.8, span * 0.36)),
     eave: Math.min(0.45, Math.max(0.2, span * 0.05)) };

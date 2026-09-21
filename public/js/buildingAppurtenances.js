@@ -9,7 +9,7 @@ import { wallDecorationParts } from './wallDecorations.js';
 import { WALL_DECORATION_RULES, WALL_DECORATION_LIMIT } from './wallDecorationCatalog.js';
 import { architecturePartGeometry } from './architecturePartGeometry.js';
 import { architectureHash } from './buildingDiversity.js';
-import { roofDimensions, sectionRoofProfile, sectionRoofHeight } from './roofProfiles.js';
+import { roofDimensions, sectionRoofProfile, sectionRoofHeight, ROOF_SEAT_SINK } from './roofProfiles.js';
 import { paintGeometry, pointInRing, attachmentSite } from './osmBuilding.js';
 import {
   ROOF_APPURTENANCE_COMPATIBILITY,
@@ -305,18 +305,21 @@ export function getRoofElevation(x, z, poly, roofForm = 'flat', metrics = null, 
   const frame = metrics?.frame || computeOrientedRoofFrame(poly);
   if (!frame) return topY;
   const { len, span, cx, cz, dirX, dirZ, normalX, normalZ } = frame;
-  const { rise: roofH } = roofDimensions(span, height);
+  // 與 architectureRoofParts 同一組 rise/eave/L/S（單一縫：改尺寸只改 roofDimensions）。
+  const { rise: roofH, eave } = roofDimensions(span, height);
+  const L = len + eave * 2, S = span + eave * 2;
 
   const dx = x - cx, dz = z - cz;
   const uDist = dx * dirX + dz * dirZ;
   const vDist = dx * normalX + dz * normalZ;
   const section = sectionRoofProfile(roofForm, span, height);
-  if (section) return topY + sectionRoofHeight(section, vDist);
+  if (section) return topY + sectionRoofHeight(section, vDist) - ROOF_SEAT_SINK;
 
+  // 退台：三層實體 top = (i+1)*0.28r，覆蓋 k<=1-0.22i（與 tier 方盒同界）。
   if (roofForm === 'stepped') {
-    const distRatio = Math.max(Math.abs(uDist) / (len / 2 || 1), Math.abs(vDist) / (span / 2 || 1));
-    const tier = distRatio > 0.66 ? 0 : distRatio > 0.33 ? 1 : 2;
-    return topY + tier * (roofH * 0.28);
+    const k = Math.max(Math.abs(uDist) / (len / 2 || 1), Math.abs(vDist) / (span / 2 || 1));
+    const h = k > 1 ? 0 : k > 0.78 ? roofH * 0.28 : k > 0.56 ? roofH * 0.56 : roofH * 0.84;
+    return h > 0 ? topY + h - ROOF_SEAT_SINK : topY;
   }
 
   const distFromRidge = Math.abs(vDist);
@@ -325,23 +328,96 @@ export function getRoofElevation(x, z, poly, roofForm = 'flat', metrics = null, 
 
   if (roofForm === 'shed') {
     // 視覺楔形高邊位於局部 -Z（經 rotateY(-angle) 落於 -normal 側），高邊對齊 -normal。
-    const sRatio = Math.max(0, Math.min(1, (span / 2 - vDist) / (span || 1)));
-    return topY + sRatio * roofH * 0.85;
+    // 基底取含簷 S（實體半寬），頂高 0.85r 與截面一致。
+    const sRatio = Math.max(0, Math.min(1, (S / 2 - vDist) / (S || 1)));
+    const h = sRatio * roofH * 0.85;
+    return h > 0 ? topY + h - ROOF_SEAT_SINK : topY;
   }
 
   if (roofForm === 'vault' || roofForm === 'curved_ridge') {
-    const archRatio = Math.max(0, 1 - Math.pow(distFromRidge / halfSpan, 2));
-    return topY + Math.sqrt(archRatio) * roofH;
+    // 與實體截面同式：x=sin(a)*S/(2sinL)，h=(cos a-cosL)/(1-cosL)*r（vault L=π/2 時退化為 sqrt 式）。
+    const limit = roofForm === 'vault' ? Math.PI / 2 : Math.PI * 0.3;
+    const base = Math.cos(limit), sinL = Math.sin(limit);
+    const s = Math.max(-1, Math.min(1, vDist * 2 * sinL / (S || 1)));
+    const h = (Math.cos(Math.asin(s)) - base) / (1 - base) * roofH;
+    return h > 0 ? topY + h - ROOF_SEAT_SINK : topY;
   }
 
   if (roofForm === 'dome') {
     const r = Math.min(len / 2, span / 2);
     const distFromCenter = Math.hypot(dx, dz);
     if (distFromCenter >= r) return topY;
-    return topY + Math.sqrt(Math.max(0, r * r - distFromCenter * distFromCenter));
+    return topY + Math.sqrt(Math.max(0, r * r - distFromCenter * distFromCenter)) - ROOF_SEAT_SINK;
   }
 
-  return topY + slopeRatio * roofH * 0.85;
+  // 尖錐：8 角錐以内接圓（apothem）計高 —— 估值恆低於真實面（只沉不浮，基座埋入為坐穩貌）。
+  if (roofForm === 'spire') {
+    const R = Math.max(0.5, 0.425 * Math.min(span, len)) * Math.cos(Math.PI / 8);
+    const d = Math.hypot(dx, dz);
+    if (d >= R) return topY;
+    return topY + (1 - d / R) * roofH * 2.2 - ROOF_SEAT_SINK;
+  }
+
+  // 雙坡系線性帳篷（與 gable 截面同形）：gable 基底含簷 S，yingshan 不含簷，xuanshan 含簷。
+  if (roofForm === 'gable' || roofForm === 'yingshan' || roofForm === 'xuanshan') {
+    const hb = Math.max(0.5, (roofForm === 'yingshan' ? span : S) / 2);
+    const h = Math.max(0, 1 - Math.abs(vDist) / hb) * roofH;
+    return h > 0 ? topY + h - ROOF_SEAT_SINK : topY;
+  }
+
+  // 鋸齒：n 枚同形小雙坡沿 V 向並列（齒寬、齒距、齒高 1/1.4r 與實體同值），取上包絡。
+  if (roofForm === 'sawtooth') {
+    const n = Math.min(4, Math.max(2, Math.floor(span / 4)));
+    const w = span / n + eave * 2, apex = roofH / 1.4;
+    let best = 0;
+    for (let i = 0; i < n; i++) {
+      const vc = (i - (n - 1) / 2) * span / n;
+      best = Math.max(best, Math.max(0, 1 - Math.abs(vDist - vc) / (w / 2)) * apex);
+    }
+    return best > 0 ? topY + best - ROOF_SEAT_SINK : topY;
+  }
+
+  // 複摺／廡殿／歇山／重簷：同心相似矩形 frustum（上下底比例與實體 hip 同值），
+  // 以 Chebyshev 距離 k 線性內插；重簷三金字塔取上包絡，歇山再與上層雙坡取大。
+  const chebK = () => Math.max(Math.abs(uDist) / (L / 2 || 1), Math.abs(vDist) / (S / 2 || 1));
+  if (roofForm === 'mansard') {
+    const s1 = 0.84 * span / S, s2 = 0.5 * span / S;
+    const k = chebK();
+    let h = 0;
+    if (k < 1) {
+      if (k >= s1) h = (1 - k) / (1 - s1) * roofH * 0.55;
+      else if (k >= s2) h = roofH * 0.55 + (s1 - k) / (s1 - s2) * roofH * 0.35;
+      else h = roofH * 0.9;
+    }
+    return h > 0 ? topY + h - ROOF_SEAT_SINK : topY;
+  }
+  if (roofForm === 'tiered') {
+    let best = 0;
+    for (let i = 0; i < 3; i++) {
+      const s = 1 - i * 0.24;
+      const k = Math.max(Math.abs(uDist) / (L * s / 2 || 1), Math.abs(vDist) / (S * s / 2 || 1));
+      if (k <= 1) best = Math.max(best, roofH * (i * 0.32 + (1 - k) * 0.4));
+    }
+    return best > 0 ? topY + best - ROOF_SEAT_SINK : topY;
+  }
+  if (roofForm === 'wudian') {
+    const s1 = 0.56 * span / S;
+    const k = chebK();
+    const h = k >= 1 ? 0 : k >= s1 ? (1 - k) / (1 - s1) * roofH : roofH;
+    return h > 0 ? topY + h - ROOF_SEAT_SINK : topY;
+  }
+  if (roofForm === 'xieshan') {
+    const s1 = 0.76 * span / S;
+    const k = chebK();
+    const hip = k >= 1 ? 0 : k >= s1 ? (1 - k) / (1 - s1) * roofH * 0.45 : roofH * 0.45;
+    const inSec = Math.abs(uDist) <= 0.375 * L && Math.abs(vDist) <= 0.38 * span;
+    const sec = inSec ? roofH * 0.45 + Math.max(0, 1 - Math.abs(vDist) / (0.38 * span || 1)) * roofH * 0.55 : 0;
+    const h = Math.max(hip, sec);
+    return h > 0 ? topY + h - ROOF_SEAT_SINK : topY;
+  }
+
+  const h = slopeRatio * roofH * 0.85;
+  return h > 0 ? topY + h - ROOF_SEAT_SINK : topY;
 }
 
 /** 屋頂式太陽能板貼合角：以屋頂面高度梯度推導面板俯仰/橫滾，面板法線貼合屋頂法線 */
@@ -364,7 +440,7 @@ export function roofPanelAngles(x, z, poly, roofForm = 'flat', metrics = null, t
 }
 
 /** 生成單棟建築的全部外部零件 (0~N，支援角落/邊緣/中心隨機化分佈與大小容量保護) */
-export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, architecture, wallThickness = 0.28, actualRoofForm = null, precomputedMetrics = null) {
+export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, architecture, wallThickness = 0.28, actualRoofForm = null, precomputedMetrics = null, terrain = null) {
   if (!architecture || !edges.length || !poly?.outer?.length) return [];
   const geos = [];
   const funcInfo = architecture.functionInfo || { category: 'residential', key: 'residential_townhouse' };
@@ -381,7 +457,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
   // 決定此棟建築之屋頂造型，並取得相容的屋頂零件清單 (依屋頂類型決定可放物件)
   const roofForm = actualRoofForm || architecture.actualRoofForm || architecture.roofForm || 'flat';
   const allowedRooftopParts = new Set(ROOF_APPURTENANCE_COMPATIBILITY[roofForm] || ROOF_APPURTENANCE_COMPATIBILITY.flat);
-  // 非平面屋頂僅容太陽能板／水塔／煙囪／天線／尖塔（牛眼窗／老虎窗為立面窗，不佔屋面）；其餘由相容矩陣擋下。
+  // 非平面屋頂僅容太陽能板／煙囪／天線／尖塔（水塔等水平件禁上斜頂；牛眼窗／老虎窗為立面窗，不佔屋面）；其餘由相容矩陣擋下。
   const isSlopedRoof = roofForm !== 'flat' && roofForm !== 'stepped';
 
   // 屋頂物件佔位登記：全部屋頂物件互不重疊。圓形以半徑計，矩形以有向半尺寸計；
@@ -419,12 +495,29 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const qz = Math.max(-rc.hd, Math.min(rc.hd, lz));
     return (lx - qx) * (lx - qx) + (lz - qz) * (lz - qz) < r * r;
   }
+  // 階梯跨層檢查：退台 or 斜面斷層上， footprint 內高程差超過容限即拒絕（剛性物件不可橫跨）。
+  // 平頂恆均勻、斜頂由各物件自適應（貼合角＋淨空＋埋入），只對 stepped 啟用。
+  function steppedFootprintClear(pts) {
+    if (roofForm !== 'stepped') return true;
+    let mn = Infinity, mx = -Infinity;
+    for (const [px, pz] of pts) {
+      const h = getRoofElevation(px, pz, poly, roofForm, metrics, topY, height);
+      if (h < mn) mn = h;
+      if (h > mx) mx = h;
+    }
+    return mx - mn <= 0.25;
+  }
   function roofFreeCircle(x, z, r) {
     for (const o of roofClaims) {
       if (o.circle) {
         const dx = x - o.x, dz = z - o.z;
         if (dx * dx + dz * dz < (r + o.r) * (r + o.r)) return false;
       } else if (roofCircleHitsRect(x, z, r, o)) return false;
+    }
+    if (r > 0.3) {
+      const pts = [[x, z]];
+      for (let a = 0; a < 8; a++) pts.push([x + Math.cos(a * Math.PI / 4) * r, z + Math.sin(a * Math.PI / 4) * r]);
+      if (!steppedFootprintClear(pts)) return false;
     }
     return true;
   }
@@ -433,6 +526,9 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     for (const o of roofClaims) {
       if (o.circle) { if (roofCircleHitsRect(o.x, o.z, o.r, r)) return false; }
       else if (roofObbsOverlap(o, r)) return false;
+    }
+    if (Math.max(hw, hd) > 0.3) {
+      if (!steppedFootprintClear(roofObbCorners(r).concat([[x, z]]))) return false;
     }
     return true;
   }
@@ -448,6 +544,18 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
   }
   // 棚架（rooftop_canopy）資訊：大型遮雨棚優先佔位；同區域太陽能板貼於棚架頂面並填滿。
   let canopyInfo = null;
+
+  // 貼地物件跟地形：以物件落點地形高為準（不低於牆基 baseY，高腳／擋土戶自動維持原值）。
+  // 掛牆件維持牆座標（與牆同埋同露），只有「站在地上」的才取樣。
+  const frameXZ = (edge, rotY, lu, lz) => {
+    const c = Math.cos(rotY || 0), s = Math.sin(rotY || 0);
+    return [edge.x + lu * c + lz * s, edge.z - lu * s + lz * c];
+  };
+  const groundYAt = (x, z) => {
+    if (!terrain || typeof terrain.heightAt !== 'function') return baseY;
+    const g = terrain.heightAt(x, z);
+    return Number.isFinite(g) ? Math.max(baseY, g) : baseY;
+  };
 
   // 1. 識別正門牆段 (通常是長度最適中、臨路或主要長邊)
   const sortedEdges = [...edges].sort((a, b) => b.hw2 - a.hw2);
@@ -472,13 +580,15 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const doorGeo = new THREE.BoxGeometry(doorW, doorH, 0.08);
       doorGeo.translate(doorOffset, doorH / 2, wallThickness / 2 + 0.04);
       doorGeo.rotateY(frame.rotY);
-      doorGeo.translate(frontEdge.x, baseY, frontEdge.z);
+      const [doorWX, doorWZ] = frameXZ(frontEdge, frame.rotY, doorOffset, wallThickness / 2 + 0.04);
+      const doorGy = groundYAt(doorWX, doorWZ);
+      doorGeo.translate(frontEdge.x, doorGy, frontEdge.z);
       geos.push(paintGeometry(doorGeo, 0x3d3731, variant));
 
       if (height >= 3 && (architectureHash(idBase, 'doormat') % 100) < 80) {
         const mat = new THREE.BoxGeometry(doorW * 0.8, 0.045, 0.65);
         mat.translate(doorOffset, 0.025, wallThickness / 2 + 0.38);
-        mat.rotateY(frame.rotY); mat.translate(frontEdge.x, baseY, frontEdge.z);
+        mat.rotateY(frame.rotY); mat.translate(frontEdge.x, doorGy, frontEdge.z);
         geos.push(paintGeometry(mat, [0x655443, 0x425c51, 0x804c42][architectureHash(idBase, 'mat_color') % 3], variant));
       }
 
@@ -486,7 +596,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const lintel = new THREE.BoxGeometry(doorW + 0.3, 0.22, 0.12);
       lintel.translate(doorOffset, doorH + 0.11, wallThickness / 2 + 0.06);
       lintel.rotateY(frame.rotY);
-      lintel.translate(frontEdge.x, baseY, frontEdge.z);
+      lintel.translate(frontEdge.x, doorGy, frontEdge.z);
       geos.push(paintGeometry(lintel, architecture.trim || 0x6e5d50, variant));
 
       // 遮雨棚 (Canopy / Awning) - 需正門長度足夠包容門框與兩側餘裕，且嚴格受限於邊界
@@ -500,14 +610,14 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         if (awningStyle === 1) canopy.rotateX(0.16);
         canopy.translate(doorOffset, doorH + 0.35, wallThickness / 2 + canopyD / 2);
         canopy.rotateY(frame.rotY);
-        canopy.translate(frontEdge.x, baseY, frontEdge.z);
+        canopy.translate(frontEdge.x, doorGy, frontEdge.z);
         const canopyColor = contemporary ? (cat === 'commercial' ? 0x2a3b4c : 0xb04132) : architecture.trim;
         geos.push(paintGeometry(canopy, canopyColor, variant));
         if (awningStyle === 2) {
           for (let strip = 0; strip < 7; strip++) {
             const stripe = new THREE.BoxGeometry(canopyW / 7 * 0.48, 0.025, canopyD);
             stripe.translate(doorOffset + (strip - 3) * canopyW / 7, doorH + 0.423, wallThickness / 2 + canopyD / 2);
-            stripe.rotateY(frame.rotY); stripe.translate(frontEdge.x, baseY, frontEdge.z);
+            stripe.rotateY(frame.rotY); stripe.translate(frontEdge.x, doorGy, frontEdge.z);
             geos.push(paintGeometry(stripe, 0xe6d6b3, variant));
           }
         }
@@ -523,13 +633,15 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           const pot = new THREE.CylinderGeometry(0.25, 0.18, 0.5, 8);
           pot.translate(px, 0.25, wallThickness / 2 + 0.35);
           pot.rotateY(frame.rotY);
-          pot.translate(frontEdge.x, baseY, frontEdge.z);
+          const [potWX, potWZ] = frameXZ(frontEdge, frame.rotY, px, wallThickness / 2 + 0.35);
+          const potGy = groundYAt(potWX, potWZ);
+          pot.translate(frontEdge.x, potGy, frontEdge.z);
           geos.push(paintGeometry(pot, 0xb86344, variant));
 
           const shrub = new THREE.SphereGeometry(0.3, 8, 6);
           shrub.translate(px, 0.65, wallThickness / 2 + 0.35);
           shrub.rotateY(frame.rotY);
-          shrub.translate(frontEdge.x, baseY, frontEdge.z);
+          shrub.translate(frontEdge.x, potGy, frontEdge.z);
           geos.push(paintGeometry(shrub, 0x3d7043, variant));
         }
       }
@@ -551,7 +663,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const sDoor = new THREE.BoxGeometry(1.2, 2.2, 0.06);
       sDoor.translate(sOffset, 1.1, wallThickness / 2 + 0.03);
       sDoor.rotateY(sFrame.rotY);
-      sDoor.translate(sideEdge.x, baseY, sideEdge.z);
+      const [sdWX, sdWZ] = frameXZ(sideEdge, sFrame.rotY, sOffset, wallThickness / 2 + 0.03);
+      sDoor.translate(sideEdge.x, groundYAt(sdWX, sdWZ), sideEdge.z);
       geos.push(paintGeometry(sDoor, 0x4f5459, variant));
     }
 
@@ -926,14 +1039,16 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const spireCount = Math.min(2, Math.max(1, (architectureHash(idBase, 'spire_cnt') % 2) + 1));
       for (let s = 0; s < spireCount; s++) {
         const spireSite = (s === 0 ? pickSite('corner', 'spire_0') : (corners[1] || pickSite('edge', 'spire_1')));
-        // 基座半徑 1.35m，保留 1.0m 留白 (淨距需 >= 2.35m)
-        if (spireSite && isSiteValid(poly, spireSite.x, spireSite.z, 1.35, 1.0) && claimCircle(spireSite.x, spireSite.z, 1.35)) {
+        // 基座半徑 1.35m，保留 1.0m 留白 (淨距需 >= 2.35m)；斜面基座埋入，過陡則捨棄。
+        const spSlope = isSlopedRoof ? roofPanelAngles(spireSite.x, spireSite.z, poly, roofForm, metrics, topY, height).slope : 0;
+        if (spireSite && (!isSlopedRoof || spSlope <= 0.7) && isSiteValid(poly, spireSite.x, spireSite.z, 1.35, 1.0) && claimCircle(spireSite.x, spireSite.z, 1.35)) {
           const sx = spireSite.x, sz = spireSite.z;
           const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
+          const spEmbed = 0.1 + 1.35 * spSlope;
 
           // 八角基座 (Octagonal plinth)
-          const plinth = new THREE.CylinderGeometry(1.2, 1.35, 1.4, 8);
-          plinth.translate(sx, baseRoofY + 0.7, sz);
+          const plinth = new THREE.CylinderGeometry(1.2, 1.35, 1.4 + spEmbed, 8);
+          plinth.translate(sx, baseRoofY + 0.7 - spEmbed / 2, sz);
           geos.push(paintGeometry(plinth, architecture.trim || 0x78909c, variant));
 
           // 拱廊身 (Middle belfry)
@@ -966,25 +1081,43 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       if (heliSite && isSiteValid(poly, heliSite.x, heliSite.z, 7.8, 1.5) && claimCircle(heliSite.x, heliSite.z, 7.8)) {
         const hx = heliSite.x, hz = heliSite.z;
         const baseRoofY = getRoofElevation(hx, hz, poly, roofForm, metrics, topY, height);
+        // 階梯退台上甲板架高：取盤面範圍最高點為板底（平頂時與舊制同值），鋼構腿逐點落地。
+        let deckMax = baseRoofY;
+        for (let a = 0; a < 8; a++) {
+          const surf = getRoofElevation(hx + Math.cos(a * Math.PI / 4) * 7.8, hz + Math.sin(a * Math.PI / 4) * 7.8,
+            poly, roofForm, metrics, topY, height);
+          if (surf > deckMax) deckMax = surf;
+        }
+        const deckBottom = deckMax > baseRoofY + 0.05 ? deckMax + 0.1 : baseRoofY;
+        if (deckBottom > baseRoofY) {
+          for (let a = 0; a < 8; a++) {
+            const lx = Math.cos(a * Math.PI / 4) * 6.5, lz = Math.sin(a * Math.PI / 4) * 6.5;
+            const footY = getRoofElevation(hx + lx, hz + lz, poly, roofForm, metrics, topY, height);
+            const legH = Math.max(0.3, deckBottom - (footY - 0.1));
+            const leg = new THREE.CylinderGeometry(0.09, 0.09, legH, 6);
+            leg.translate(hx + lx, footY - 0.1 + legH / 2, hz + lz);
+            geos.push(paintGeometry(leg, 0x546e7a, variant));
+          }
+        }
 
         // 八角高架停機坪 (Octagonal Helipad deck)
         const deck = new THREE.CylinderGeometry(7.5, 7.8, 0.45, 8);
-        deck.translate(hx, baseRoofY + 0.225, hz);
+        deck.translate(hx, deckBottom + 0.225, hz);
         geos.push(paintGeometry(deck, 0x263238, variant));
 
         // 停機坪黃白導引邊界圈 (Perimeter border ring)
         const ring = new THREE.CylinderGeometry(7.6, 7.6, 0.48, 8);
-        ring.translate(hx, baseRoofY + 0.24, hz);
+        ring.translate(hx, deckBottom + 0.24, hz);
         geos.push(paintGeometry(ring, 0xfff59d, variant));
 
         // "H" 字母標誌 (Yellow "H" Marking)
         for (const side of [-1, 1]) {
           const vBar = new THREE.BoxGeometry(0.65, 0.08, 4.4);
-          vBar.translate(hx + side * 1.5, baseRoofY + 0.50, hz);
+          vBar.translate(hx + side * 1.5, deckBottom + 0.50, hz);
           geos.push(paintGeometry(vBar, 0xffeb3b, variant));
         }
         const hBar = new THREE.BoxGeometry(2.4, 0.08, 0.65);
-        hBar.translate(hx, baseRoofY + 0.50, hz);
+        hBar.translate(hx, deckBottom + 0.50, hz);
         geos.push(paintGeometry(hBar, 0xffeb3b, variant));
 
         // 4 角導航指示燈 (Perimeter navigation lights)
@@ -993,34 +1126,36 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         ];
         for (const [lx, lz] of lightOffsets) {
           const lampStand = new THREE.CylinderGeometry(0.12, 0.12, 0.45, 6);
-          lampStand.translate(hx + lx, baseRoofY + 0.68, hz + lz);
+          lampStand.translate(hx + lx, deckBottom + 0.68, hz + lz);
           geos.push(paintGeometry(lampStand, 0x78909c, variant));
 
           const lamp = new THREE.SphereGeometry(0.16, 6, 6);
-          lamp.translate(hx + lx, baseRoofY + 0.95, hz + lz);
+          lamp.translate(hx + lx, deckBottom + 0.95, hz + lz);
           geos.push(paintGeometry(lamp, 0x00e676, variant));
         }
 
         // 若跨度夠大 (>= 28m)，在後側配置圓拱直升機棚 (半徑 4.0m，保留 1.5m 留白)
         if (span >= 28 && isSiteValid(poly, hx, hz - 8.5, 4.0, 1.5) && claimRect(hx, hz - 8.5, 3.9, 2.9, 0)) {
           const hangarW = 7.5, hangarD = 5.5, hangarH = 4.2;
+          const hBase = getRoofElevation(hx, hz - 8.5, poly, roofForm, metrics, topY, height);
           const hangarRoof = new THREE.CylinderGeometry(hangarW / 2, hangarW / 2, hangarD, 12, 1, false, 0, Math.PI);
           hangarRoof.rotateZ(Math.PI / 2);
-          hangarRoof.translate(hx, baseRoofY + 0.2 + hangarH * 0.6, hz - 8.5);
+          hangarRoof.translate(hx, hBase + 0.2 + hangarH * 0.6, hz - 8.5);
           geos.push(paintGeometry(hangarRoof, 0x455a64, variant));
 
-          const hangarWall = new THREE.BoxGeometry(hangarW, hangarH * 0.6, hangarD);
-          hangarWall.translate(hx, baseRoofY + (hangarH * 0.6) / 2, hz - 8.5);
+          const hangarWall = new THREE.BoxGeometry(hangarW, hangarH * 0.6 + 0.2, hangarD);
+          hangarWall.translate(hx, hBase - 0.2 + (hangarH * 0.6 + 0.2) / 2, hz - 8.5);
           geos.push(paintGeometry(hangarWall, 0x607d8b, variant));
 
-          // 飛航風向筒 (Windsock mast)
-          const pole = new THREE.CylinderGeometry(0.05, 0.05, 2.8, 6);
-          pole.translate(hx + 4.5, baseRoofY + 1.4, hz - 6.0);
+          // 飛航風向筒 (Windsock mast)：基座埋入 0.1
+          const wBase = getRoofElevation(hx + 4.5, hz - 6.0, poly, roofForm, metrics, topY, height);
+          const pole = new THREE.CylinderGeometry(0.05, 0.05, 2.9, 6);
+          pole.translate(hx + 4.5, wBase - 0.1 + 2.9 / 2, hz - 6.0);
           geos.push(paintGeometry(pole, 0xff9800, variant));
 
           const windsock = new THREE.ConeGeometry(0.28, 0.9, 6);
           windsock.rotateZ(-Math.PI / 2);
-          windsock.translate(hx + 4.9, baseRoofY + 2.7, hz - 6.0);
+          windsock.translate(hx + 4.9, wBase + 2.8, hz - 6.0);
           geos.push(paintGeometry(windsock, 0xff5722, variant));
         }
       }
@@ -1051,14 +1186,31 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       if (isSiteValid(poly, posX, posZ, Math.min(cLen, cSpan) * 0.45, 0.4) && claimRect(posX, posZ, cLen / 2, cSpan / 2, rotY)) {
         const baseRoofY = getRoofElevation(posX, posZ, poly, roofForm, metrics, topY, height);
         const postH = 2.4;
+        const cc = Math.cos(rotY || 0), ss = Math.sin(rotY || 0);
+        // 頂板四角淨空：階梯斷層上頂板會切入高層退台，不足即整座捨棄。
+        const slabY = baseRoofY + postH + 0.04;
+        let slabClear = true;
+        for (const [qx, qz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+          const lx = qx * cLen / 2, lz = qz * cSpan / 2;
+          const surf = getRoofElevation(posX + lx * cc + lz * ss, posZ - lx * ss + lz * cc,
+            poly, roofForm, metrics, topY, height);
+          if (slabY - 0.04 - surf < 0.05) { slabClear = false; break; }
+        }
+        if (!slabClear) {
+          // 頂板會切入高層退台：佔位保留（他物不侵），本座捨棄（degrade by omission）。
+        } else {
 
-        // 4 根鋼構立柱
+        // 4 根鋼構立柱：逐柱踩面（退台高差各自落地，柱底埋入 0.1）
         for (const sx of [-1, 1]) {
           for (const sz of [-1, 1]) {
-            const post = new THREE.CylinderGeometry(0.06, 0.06, postH, 6);
-            post.translate(sx * (cLen * 0.45), postH / 2, sz * (cSpan * 0.45));
+            const lx = sx * (cLen * 0.45), lz = sz * (cSpan * 0.45);
+            const footY = getRoofElevation(posX + lx * cc + lz * ss, posZ - lx * ss + lz * cc,
+              poly, roofForm, metrics, topY, height);
+            const postLen = Math.max(0.3, slabY - (footY - 0.1));
+            const post = new THREE.CylinderGeometry(0.06, 0.06, postLen, 6);
+            post.translate(lx, postLen / 2, lz);
             if (rotY) post.rotateY(rotY);
-            post.translate(posX, baseRoofY, posZ);
+            post.translate(posX, footY - 0.1, posZ);
             geos.push(paintGeometry(post, 0x546e7a, variant));
           }
         }
@@ -1079,6 +1231,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         geos.push(paintGeometry(gutter, 0x455a64, variant));
 
         canopyInfo = { placed: true, posX, posZ, cLen, cSpan, rotY, baseRoofY, postH };
+        }
       }
     }
 
@@ -1120,8 +1273,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       if (antSite && isSiteValid(poly, antSite.x, antSite.z, 0.4, 0.9) && claimCircle(antSite.x, antSite.z, 0.4)) {
         const ax = antSite.x, az = antSite.z;
         const baseRoofY = getRoofElevation(ax, az, poly, roofForm, metrics, topY, height);
-        const mast = new THREE.CylinderGeometry(0.04, 0.04, 2.8, 6);
-        mast.translate(ax, baseRoofY + 1.4, az);
+        const mast = new THREE.CylinderGeometry(0.04, 0.04, 2.95, 6);
+        mast.translate(ax, baseRoofY + 1.4 - 0.075, az);
         geos.push(paintGeometry(mast, 0x90a4ae, variant));
 
         for (let i = 0; i < 3; i++) {
@@ -1388,14 +1541,18 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const hasChimney = ((architectureHash(idBase, 'chimney') % 100) < 55) && (cat === 'rural' || cat === 'industrial' || cat === 'residential') && area >= 35 && span >= 4 && !hasHeli && allowedRooftopParts.has('chimney');
     if (hasChimney) {
       const chSite = pickSite('edge', 'chimney_pos') || pickSite('corner', 'chimney_pos');
-      if (chSite && isSiteValid(poly, chSite.x, chSite.z, 0.45, 0.9) && claimCircle(chSite.x, chSite.z, 0.45)) {
+      // 斜面落座：坡度過陡（>1.0）連佔位都不登記，直接捨棄；基座埋入坡面，下坡側不飄空。
+      const chSlope = chSite && isSlopedRoof
+        ? roofPanelAngles(chSite.x, chSite.z, poly, roofForm, metrics, topY, height).slope : 0;
+      if (chSite && (!isSlopedRoof || chSlope <= 1.0) && isSiteValid(poly, chSite.x, chSite.z, 0.45, 0.9) && claimCircle(chSite.x, chSite.z, 0.45)) {
         const chX = chSite.x, chZ = chSite.z;
         const baseRoofY = getRoofElevation(chX, chZ, poly, roofForm, metrics, topY, height);
+        const chEmbed = 0.08 + 0.35 * chSlope;
         const chH = cat === 'industrial' ? 3.6 : 1.8;
         const chBody = cat === 'industrial'
-          ? new THREE.CylinderGeometry(0.3, 0.35, chH, 8)
-          : new THREE.BoxGeometry(0.65, chH, 0.65);
-        chBody.translate(chX, baseRoofY + chH / 2, chZ);
+          ? new THREE.CylinderGeometry(0.3, 0.35, chH + chEmbed, 8)
+          : new THREE.BoxGeometry(0.65, chH + chEmbed, 0.65);
+        chBody.translate(chX, baseRoofY + (chH - chEmbed) / 2, chZ);
         geos.push(paintGeometry(chBody, cat === 'industrial' ? 0x424242 : 0xa0402e, variant));
 
         const chCap = new THREE.ConeGeometry(0.45, 0.25, 8);

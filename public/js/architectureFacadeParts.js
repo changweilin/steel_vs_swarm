@@ -1,5 +1,6 @@
 // Render-free facade shared by polygon buildings and environment objects.
 import { FACADE_GEOMETRY_LIMIT } from './regionalArchitecture.js';
+import { ROOF_RIM_LIP } from './roofProfiles.js';
 import { resolveWindowScheme } from './architectureStyles.js';
 import { mat3FromEulerXYZ, mat3Multiply, eulerXYZFromMat3 } from './partTransform.js';
 
@@ -263,8 +264,9 @@ export function architecturalFacadeParts(edges, style, thickness) {
     }
 
     // ---- 第三階段：文化裝飾（扣額度，額度耗盡即停，不影響已鋪好的玻璃） ----
+    // 通長飾帶兩端各退 0.02：端帽否則落在轉角鄰牆端帽同一平面上打架，退後埋入轉角疊體。
     if (style.detail === 'stone_base') {
-      add(length, Math.min(0.8, edge.h * 0.12), 0, Math.min(0.8, edge.h * 0.12) / 2, trimColor, 0.2);
+      add(length - 0.04, Math.min(0.8, edge.h * 0.12), 0, Math.min(0.8, edge.h * 0.12) / 2, trimColor, 0.2);
     }
     if (style.detail === 'toron' || style.detail === 'eave_brackets') {
       const count = Math.min(8, Math.max(1, Math.floor(length / 2)));
@@ -327,24 +329,26 @@ export function architecturalFacadeParts(edges, style, thickness) {
     // Tier 4: 水平樓層腰帶 (Stringcourse / Cornice)（深度 +0.15m）
     if (facade !== 'recess' && facade !== 'concrete') {
       for (let floor = 0; floor < floors; floor++) {
-        if (!add(length, 0.14, 0, floor * floorH + 0.10, trimColor, 0.15)) break;
+        if (!add(length - 0.04, 0.14, 0, floor * floorH + 0.10, trimColor, 0.15)) break;
       }
     }
     if (style.detail === 'tile_band') {
       for (let floor = 0; floor < floors; floor++) {
         const tiles = Math.min(10, Math.max(1, Math.floor(length / 1.1)));
+        const tSpan = length - 0.04;
         for (let i = 0; i < tiles; i++) {
-          if (!add(length / tiles * 0.9, 0.18,
-            -length / 2 + (i + 0.5) * length / tiles, floor * floorH + 0.3,
+          if (!add(tSpan / tiles * 0.9, 0.18,
+            -tSpan / 2 + (i + 0.5) * tSpan / tiles, floor * floorH + 0.3,
             i % 2 ? trimColor : style.roof, 0.17)) break;
         }
       }
     }
 
     // Tier 5: 垂直立柱 / 壁柱 (Piers / Columns)（深度 +0.18m）
+    // 頂面較牆頂退 ROOF_RIM_LIP：與封頂同高即共面打架，退後讀成女兒牆壓頂。
     if (['columns', 'piers', 'timber', 'industrial', 'stone'].includes(facade)) {
       for (let bay = 1; bay < bays && budget > 0; bay++) {
-        add(0.18, edge.h, -length / 2 + bay * bayW, edge.h / 2, trimColor, 0.18);
+        add(0.18, edge.h - ROOF_RIM_LIP, -length / 2 + bay * bayW, (edge.h - ROOF_RIM_LIP) / 2, trimColor, 0.18);
       }
     }
   }

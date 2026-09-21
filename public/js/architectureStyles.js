@@ -216,8 +216,9 @@ export function isSiteValid(poly, x, z, r, margin = 0.8) {
   return distanceToPolyBoundary(x, z, poly) >= requiredDistance;
 }
 
-/** 非平面屋頂可容屋頂物件：太陽能板／水塔／煙囪／天線／尖塔（牛眼窗／老虎窗為立面窗，不佔屋面）。 */
-const SLOPED_ROOF_PARTS = Object.freeze(['solar_array', 'water_tank', 'chimney', 'antenna', 'rooftop_spire']);
+/** 非平面屋頂可容屋頂物件：太陽能板／煙囪／天線／尖塔（水塔等水平件禁上斜頂，
+ * 見 test/buildingDiversity.mjs 水平零件專屬斷言；牛眼窗／老虎窗為立面窗，不佔屋面）。 */
+const SLOPED_ROOF_PARTS = Object.freeze(['solar_array', 'chimney', 'antenna', 'rooftop_spire']);
 
 /** 屋頂造型與可容納頂部零件相容性矩陣 (依屋頂類型決定可放物件) */
 export const ROOF_APPURTENANCE_COMPATIBILITY = Object.freeze({
