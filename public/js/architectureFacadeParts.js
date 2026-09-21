@@ -24,17 +24,6 @@ function archMesh(radius, tube) {
   return ['mesh', { vertices, faces }, [2 * (radius + tube), radius + tube, 2 * tube]];
 }
 
-/** 座標雜湊亂數（FNV-1a）：立面外觀差異只吃雜湊，零共享亂數消耗、
- * 不擾動場景散布序列；同棟同窗跨幀跨端必定同值。 */
-function facadeHash(text) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
-  h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15;
-  return h >>> 0;
-}
-function facadeRnd(seed, floor, bay, tag) {
-  return facadeHash(`${seed}|${floor}|${bay}|${tag}`) / 4294967296;
-}
 // 已有逐窗重裝飾的風格不再疊規則窗框（避免擁擠，窗框留給素面風格展現多樣性）。
 const BUSY_FACADE_DETAIL = new Set([
   'jali', 'louvers', 'shutters', 'half_timber', 'board_batten',
@@ -44,12 +33,14 @@ const BUSY_FACADE_DETAIL = new Set([
 /** 沿真實外環／中庭牆段配置窗格、立柱與橫梁，零件數有上限。
  * 採階層式深度分層（Glass < Mullion/Frame < Trim/Header < Column/Pier），
  * 杜絕同平面共面 (Coplanar) 導致的 WebGL Z-fighting 閃爍。
- * 三階段管線：先把每層每開間的玻璃鋪滿（高樓不再因額度耗盡而頂層缺窗），
- * 再用「均攤額度 − 已用玻璃數」的剩餘額度疊窗框與文化裝飾，全棟總量恆受
- * FACADE_GEOMETRY_LIMIT 夾制；玻璃形狀／尺寸／窗框由 resolveWindowScheme 按建築
- * 功能類型給定同棟唯一的一份參數（部分類型如停車場 rate=0 全棟不渲染玻璃）。
+ * 三階段管線：先把每層每開間的玻璃鋪滿（陣列保證完整、不留隨機缺洞；
+ * 高樓不再因額度耗盡而頂層缺窗），再用「均攤額度 − 已用玻璃數」的剩餘額度
+ * 疊窗框與文化裝飾，全棟總量恆受 FACADE_GEOMETRY_LIMIT 夾制；玻璃形狀／尺寸／
+ * 窗框由 resolveWindowScheme 按建築功能類型給定同棟唯一的一份參數（部分類型
+ * 如停車場 rate=0 全棟不渲染玻璃）。
  * 同棟同窗：同一呼叫（同一棟）內所有窗共用 scheme，僅棋盤／蜂巢混排依
- * (floor, bay) 交錯取款；MUST NOT 在此逐窗重抽形狀尺寸窗框。
+ * (floor, bay) 交錯取款；MUST NOT 在此逐窗重抽形狀尺寸窗框，也 MUST NOT
+ * 逐窗隨機跳過（缺洞只能是整棟無窗 rate=0，不可是陣列中的隨機破洞）。
  */
 export function architecturalFacadeParts(edges, style, thickness) {
   const geos = [];
@@ -81,7 +72,6 @@ export function architecturalFacadeParts(edges, style, thickness) {
     if (floors * bays > 140) bays = Math.max(1, Math.floor(140 / floors));
     const bayW = length / bays, floorH = edge.h / floors;
     let budget = Math.floor(limit / Math.max(1, edges.length));
-    const seed = `${edge.sourceId ?? ''}|${edge.x.toFixed(2)},${edge.z.toFixed(2)}|${edge.ry.toFixed(3)}|${style.variant ?? 0}`;
     // 已渲染窗表：後續階段沿用，不重算位置（牛眼／老虎窗不疊格柵）。
     const wins = [];
     const edgeStart = geos.length;
@@ -102,13 +92,13 @@ export function architecturalFacadeParts(edges, style, thickness) {
     };
 
     // ---- 第一階段：玻璃鋪滿，全層全開間保證覆蓋（不扣額度，事後計數扣除） ----
-    // 同棟同窗：形狀／尺寸／位置全棟固定，僅混排模式依 (floor, bay) 交錯取款、
-    // 有無窗依 rate 逐窗判定（存在性不算窗戶參數）。
+    // 同棟同窗：形狀／尺寸／位置全棟固定，僅混排模式依 (floor, bay) 交錯取款；
+    // rate=0 的類型整面牆不鋪玻璃（全棟無窗），rate>0 一律鋪滿、不逐窗跳過。
     for (let floor = 0; floor < floors; floor++) {
       const topFloor = floor === floors - 1;
       const yBase = (floor + 0.5) * floorH;
       for (let bay = 0; bay < bays; bay++) {
-        if (facadeRnd(seed, floor, bay, 'skip') >= scheme.rate) continue;
+        if (!(scheme.rate > 0)) continue;
         let shape = shapeAt(floor, bay);
         if (shape === 'oculus' && !topFloor) shape = 'rect';
         let w = Math.min(bayW * 0.96, Math.max(0.3, bayW * scheme.w));

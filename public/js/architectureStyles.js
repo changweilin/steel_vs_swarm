@@ -348,8 +348,9 @@ export const APPURTENANCE_RULES = Object.freeze({
   ...WALL_DECORATION_RULES,
 });
 
-/** 立面玻璃規則單一縫：按建築功能決定玻璃覆蓋率／形狀池／尺寸／窗框。
- * rate = 每扇窗的渲染機率（0 = 全棟不渲染玻璃，如立體停車場開敞層）；
+/** 立面玻璃規則單一縫：按建築功能決定玻璃覆蓋／形狀池／尺寸／窗框。
+ * rate = 0 全棟不渲染玻璃（如立體停車場開敞層）；rate > 0 全陣列鋪滿、
+ * 同棟窗戶存在性一致（不再逐窗隨機跳過，陣列不留破洞）；
  * shapes 池可重複 entries 加權；'oculus'（牛眼窗）只落在頂層，'dormer'（老虎窗）走 dormer
  * 機率且只落在頂層；w/h = 窗寬／窗高相對開間／層高的比例範圍；lift = 窗中心上移
  * （廠房高窗）；frame 池見 osmBuilding.js 的窗框實作（none/edge/cross/grid/bars/lintel）。
@@ -426,7 +427,8 @@ const TRADITIONAL_WINDOW_KEYS = new Set([
  * mode 'single' = 全棟同一款；'checker' = 兩種玻璃棋盤交錯；'honeycomb' = 三種蜂巢交錯。
  * 高層樓壓成 single 大面積滿鋪密排玻璃；傳統／透天偏牛眼／老虎窗與窗花、開間更疏。
  * buildingKey 必須是跨幀穩定的同棟識別（見 osmBuilding.js 的組裝）；回傳的 w/h/frame/rate
- * 全棟固定，呼叫端 MUST NOT 再逐窗重抽形狀尺寸窗框（僅留 skip 的有無窗判定）。
+ * 全棟固定，呼叫端 MUST NOT 再逐窗重抽形狀尺寸窗框，也 MUST NOT 逐窗隨機跳過
+ * （存在性全棟一致：rate=0 全棟無窗，rate>0 全陣列鋪滿）。
  */
 export function resolveWindowScheme(style = {}, buildingKey = '') {
   const rule = glassFacadeRule(style.functionInfo);
