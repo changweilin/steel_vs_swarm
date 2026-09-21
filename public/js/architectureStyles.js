@@ -1,6 +1,7 @@
 // ============ 建築文化風格、功能分區、立面材質與屋頂幾何型錄 ============
 // 文化／年代是視覺語彙，不改寫圖資的實際用途；比例皆為相對權重。
 // 依座標位置所屬國家與文化圈加權，符合在地文化者占 60% (CULTURAL_AFFINITY_RATIO)。
+import { WALL_DECORATION_RULES } from './wallDecorationCatalog.js';
 import { REGIONAL_STYLES, REGIONAL_CULTURES } from './regionalArchitecture.js';
 
 /** 屋頂外觀分類；所有風格與附件共用此登錄。 */
@@ -335,17 +336,16 @@ export const APPURTENANCE_RULES = Object.freeze({
   // 側邊與後側地面物件 (Side & Rear Ground)
   side_door:       { label: '後勤出入側門',   slot: 'side_ground', categories: ['industrial', 'commercial', 'residential'], maxCount: 2, prob: 0.65 },
   exhaust_fan:     { label: '工業抽風機',     slot: 'side_ground', categories: ['industrial', 'commercial'], maxCount: 3, prob: 0.75 },
-  graffiti_wall:   { label: '街頭塗鴉牆',     slot: 'side_ground', categories: ['industrial', 'residential'], maxCount: 1, prob: 0.40 },
 
   // 立面與側邊高程物件 (Facade & Upper Sides)
   blade_sign:      { label: '側懸店鋪招牌',   slot: 'facade', categories: ['commercial', 'residential'], maxCount: 3, prob: 0.80 },
-  video_wall:      { label: '戶外大型電視牆', slot: 'facade', categories: ['commercial'], maxCount: 1, prob: 0.30, minHeight: 24 },
   election_banner: { label: '外牆選舉看板',   slot: 'facade', categories: ['residential', 'commercial'], maxCount: 1, prob: 0.25 },
   fire_escape:     { label: '外露鋼構逃生梯', slot: 'facade', categories: ['residential', 'commercial', 'industrial'], maxCount: 1, prob: 0.40, minHeight: 12 },
   balconies:       { label: '各層懸挑陽台',   slot: 'facade', categories: ['residential'], maxCount: 8, prob: 0.70, minHeight: 10 },
   drying_rack:     { label: '陽台曬衣架',     slot: 'facade', categories: ['residential'], maxCount: 4, prob: 0.60 },
   ac_units:        { label: '冷氣室外機',     slot: 'facade', categories: ['residential', 'commercial'], maxCount: 12, prob: 0.85 },
   flagpole:        { label: '立面斜插旗幟',   slot: 'facade', categories: ['tourism', 'commercial', 'residential'], maxCount: 1, prob: 0.35 },
+  ...WALL_DECORATION_RULES,
 });
 
 /** 立面玻璃規則單一縫：按建築功能決定玻璃覆蓋率／形狀池／尺寸／窗框。
