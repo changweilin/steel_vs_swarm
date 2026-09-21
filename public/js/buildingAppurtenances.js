@@ -1234,34 +1234,60 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
 
       // 由內向外排序置中挑選，嚴格鎖定於 20% ~ 80% 區間
       candidateSites.sort((a, b) => a.distSq - b.distSq);
-      const placedSites = candidateSites.slice(0, desiredPanels);
 
       // 直接建立 vs 架高複合式用途 (遮雨棚 / 曬衣間)
       const isElevatedSolar = (architectureHash(idBase, 'solar_mount') % 100) >= 45;
       const solarCompositeType = (architectureHash(idBase, 'solar_composite') % 100) < 50 ? 'canopy' : 'laundry';
       const stiltHeight = isElevatedSolar ? 2.3 : 0.25;
+      const panelLift = isElevatedSolar ? stiltHeight + 0.15 : 0.35;
 
-      // 同一屋頂區塊統一傾斜方向：取全塊坡度最大處的貼合角為代表，塊內全部面板共用；
-      // 位置仍逐板貼合屋面高度，僅方向統一。純數學、無 RNG，不消耗共享隨機序列。
+      // 同一屋頂區塊統一傾斜方向：取近中心、坡度明確的貼合角為全塊代表（排除稜線平點與
+      // 邊牆階差假影），塊內全部面板共用；位置仍逐板貼合屋面高度。
+      // 會切入屋面的站點直接捨棄並往外遞補，維持覆蓋率。純數學、無 RNG，不消耗共享隨機序列。
       let blockFit = { pitch: 0, roll: 0, slope: 0 };
       if (isSlopedRoof) {
-        let bestSlope = -1;
-        for (const { sx, sz } of placedSites) {
+        let flatFallback = null, steepest = null, steepestSlope = -1, picked = false;
+        for (const { sx, sz } of candidateSites) {
           const f = roofPanelAngles(sx, sz, poly, roofForm, metrics, topY, height, rotY);
-          if (f.slope > bestSlope) { bestSlope = f.slope; blockFit = f; }
+          if (!flatFallback && f.slope < 0.02) flatFallback = f;
+          if (f.slope > steepestSlope) { steepestSlope = f.slope; steepest = f; }
+          if (f.slope >= 0.02 && f.slope <= 1.0) { blockFit = f; picked = true; break; }
         }
+        if (!picked) blockFit = flatFallback || steepest || blockFit;
       }
       const useBlockRoofFit = isSlopedRoof;
-
-      for (const { sx, sz } of placedSites) {
+      const clearMat = isSlopedRoof
+        ? new THREE.Matrix4().makeRotationY(rotY)
+          .multiply(new THREE.Matrix4().makeRotationZ(blockFit.roll))
+          .multiply(new THREE.Matrix4().makeRotationX(blockFit.pitch))
+        : null;
+      const clearVec = new THREE.Vector3();
+      const placedSites = [];
+      for (const { sx, sz } of candidateSites) {
+        if (placedSites.length >= desiredPanels) break;
+        const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
+        if (clearMat) {
+          const panelY = baseRoofY + panelLift;
+          let clears = true;
+          for (const [lx, lz] of [[0.75, 0.5], [0.75, -0.5], [-0.75, 0.5], [-0.75, -0.5]]) {
+            clearVec.set(lx, -0.03, lz).applyMatrix4(clearMat);
+            if (clearVec.y + panelY - getRoofElevation(clearVec.x + sx, clearVec.z + sz, poly, roofForm, metrics, topY, height) < 0.02) {
+              clears = false; break;
+            }
+          }
+          if (!clears) continue;
+        }
         // 單板佔位登記：與其他屋頂物件互不重疊（半尺寸略小於步距，相鄰板不互斥）
         if (!claimRect(sx, sz, 0.76, 0.53, rotY)) continue;
+        placedSites.push({ sx, sz });
+      }
+
+      for (const { sx, sz } of placedSites) {
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
         // 屋頂式貼合：整塊共用代表貼合角，平頂（與階梯露台）一律固定日照傾角
         const fit = blockFit;
         // 非平面屋頂強制貼合斜率（順坡排列，絕不水平放置）；平頂才用固定日照傾角
         const useRoofFit = useBlockRoofFit;
-        const panelLift = isElevatedSolar ? stiltHeight + 0.15 : 0.35;
         const panelY = baseRoofY + panelLift;
 
         if (isElevatedSolar) {
