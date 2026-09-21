@@ -5,6 +5,9 @@
 // 依功能類別置於正確結構部位（頂部角落/邊緣/中心、正門地面、側邊地面、立面高程），
 // 根據建物生成後的實體尺寸（長度、高度、屋頂面積、跨度）進行空間容量保護與確定性隨機配置。
 import * as THREE from 'three';
+import { wallDecorationParts } from './wallDecorations.js';
+import { WALL_DECORATION_RULES, WALL_DECORATION_LIMIT } from './wallDecorationCatalog.js';
+import { architecturePartGeometry } from './architecturePartGeometry.js';
 import { architectureHash } from './buildingDiversity.js';
 import { roofDimensions, sectionRoofProfile, sectionRoofHeight } from './roofProfiles.js';
 import { paintGeometry, pointInRing, attachmentSite } from './osmBuilding.js';
@@ -18,7 +21,7 @@ import {
 
 export { distanceToSegment, distanceToPolyBoundary, isSiteValid };
 
-/** 外部零件型錄定義與配置規則 (24 款外部構件) */
+/** 外部零件型錄定義與配置規則 */
 export const APPURTENANCE_RULES = Object.freeze({
   // 頂部物件 (Rooftop)
   water_tank: {
@@ -154,22 +157,12 @@ export const APPURTENANCE_RULES = Object.freeze({
     categories: ['industrial', 'commercial'],
     maxCount: 3, prob: 0.75, minLength: 3.0,
   },
-  graffiti_wall: {
-    slot: 'side_ground',
-    categories: ['industrial', 'residential'],
-    maxCount: 1, prob: 0.40, minLength: 6.0,
-  },
 
   // 立面與側邊高程物件 (Facade & Upper Sides)
   blade_sign: {
     slot: 'facade',
     categories: ['commercial', 'residential'],
     maxCount: 3, prob: 0.80, minLength: 4.5,
-  },
-  video_wall: {
-    slot: 'facade',
-    categories: ['commercial'],
-    maxCount: 1, prob: 0.30, minHeight: 24, minLength: 12.0, minArea: 180,
   },
   election_banner: {
     slot: 'facade',
@@ -201,6 +194,7 @@ export const APPURTENANCE_RULES = Object.freeze({
     categories: ['tourism', 'commercial', 'residential'],
     maxCount: 1, prob: 0.35, minHeight: 8, minLength: 8.0,
   },
+  ...WALL_DECORATION_RULES,
 });
 
 /** 計算屋頂多邊形幾何量測指標（面積、跨度、長寬邊界與質心） */
@@ -459,9 +453,11 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
   const sortedEdges = [...edges].sort((a, b) => b.hw2 - a.hw2);
   const frontEdge = sortedEdges[0];
   const sideEdges = sortedEdges.slice(1);
+  const groundAttachments = new Map();
 
   // 2. 正門地面物件生成 (大門、雨棚、盆栽 - 緊密貼齊外牆法線，杜絕內旋或拆開)
   if (frontEdge) {
+    const groundStart = geos.length;
     const frame = getEdgeFrame(frontEdge, poly);
     const frontLen = frame.len;
     if (frontLen >= 2.4) {
@@ -479,6 +475,13 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       doorGeo.translate(frontEdge.x, baseY, frontEdge.z);
       geos.push(paintGeometry(doorGeo, 0x3d3731, variant));
 
+      if (height >= 3 && (architectureHash(idBase, 'doormat') % 100) < 80) {
+        const mat = new THREE.BoxGeometry(doorW * 0.8, 0.045, 0.65);
+        mat.translate(doorOffset, 0.025, wallThickness / 2 + 0.38);
+        mat.rotateY(frame.rotY); mat.translate(frontEdge.x, baseY, frontEdge.z);
+        geos.push(paintGeometry(mat, [0x655443, 0x425c51, 0x804c42][architectureHash(idBase, 'mat_color') % 3], variant));
+      }
+
       // 門楣橫板
       const lintel = new THREE.BoxGeometry(doorW + 0.3, 0.22, 0.12);
       lintel.translate(doorOffset, doorH + 0.11, wallThickness / 2 + 0.06);
@@ -493,11 +496,21 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         const canopyW = maxCanopyW;
         const canopyD = 1.5;
         const canopy = new THREE.BoxGeometry(canopyW, 0.12, canopyD);
+        const awningStyle = architectureHash(idBase, 'awning_style') % 3;
+        if (awningStyle === 1) canopy.rotateX(0.16);
         canopy.translate(doorOffset, doorH + 0.35, wallThickness / 2 + canopyD / 2);
         canopy.rotateY(frame.rotY);
         canopy.translate(frontEdge.x, baseY, frontEdge.z);
         const canopyColor = contemporary ? (cat === 'commercial' ? 0x2a3b4c : 0xb04132) : architecture.trim;
         geos.push(paintGeometry(canopy, canopyColor, variant));
+        if (awningStyle === 2) {
+          for (let strip = 0; strip < 7; strip++) {
+            const stripe = new THREE.BoxGeometry(canopyW / 7 * 0.48, 0.025, canopyD);
+            stripe.translate(doorOffset + (strip - 3) * canopyW / 7, doorH + 0.423, wallThickness / 2 + canopyD / 2);
+            stripe.rotateY(frame.rotY); stripe.translate(frontEdge.x, baseY, frontEdge.z);
+            geos.push(paintGeometry(stripe, 0xe6d6b3, variant));
+          }
+        }
       }
 
       // 迎賓盆栽 (Planter Pots) - 需正門兩側有足夠餘裕 (>= doorW + 1.8)
@@ -521,10 +534,12 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         }
       }
     }
+    groundAttachments.set(frontEdge, geos.slice(groundStart));
   }
 
-  // 3. 側邊與後側地面物件 (側門、抽風機、塗鴉牆 - 依側邊長度容量分派)
+  // 3. 側邊與後側地面物件 (側門、抽風機 - 依側邊長度容量分派)
   if (sideEdges.length > 0) {
+    const groundStart = geos.length;
     const sideEdge = sideEdges[0];
     const sFrame = getEdgeFrame(sideEdge, poly);
     const sLen = sFrame.len;
@@ -563,21 +578,11 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         geos.push(paintGeometry(vent, 0x343a40, variant));
       }
     }
-
-    // 塗鴉牆 (Graffiti Wall) - 工業或住宅長牆面 (>= 6m)
-    const hasGraffiti = contemporary && (architectureHash(idBase, 'graffiti') % 100) < 45;
-    if (hasGraffiti && (cat === 'industrial' || cat === 'residential') && sLen >= 6.0) {
-      const gwW = Math.min(6.0, sLen * 0.65);
-      const gwOffset = (((architectureHash(idBase, 'graf_pos') % 40) - 20) * 0.01) * (sLen - gwW);
-      const graffiti = new THREE.BoxGeometry(gwW, 2.2, 0.04);
-      graffiti.translate(gwOffset, 1.1, wallThickness / 2 + 0.02);
-      graffiti.rotateY(sFrame.rotY);
-      graffiti.translate(sideEdge.x, baseY, sideEdge.z);
-      // 霧紫啞光塗鴉牆：避免螢光紫與土系牆面違和（使用者回報色塊）。
-      geos.push(paintGeometry(graffiti, 0x6b5a70, variant));
-    }
+    groundAttachments.set(sideEdge, geos.slice(groundStart));
   }
 
+  let decorationBudget = WALL_DECORATION_LIMIT;
+  let balconyCount = 0, acCount = 0;
   // 4. 立面高程物件 (招牌、電視牆、看板、選舉廣告、逃生梯、陽台、曬衣架、冷氣、旗幟)
   for (const edge of edges) {
     const frame = getEdgeFrame(edge, poly);
@@ -585,6 +590,14 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     if (len < 3.2) continue;
     const floors = Math.max(1, Math.floor(height / 3.2));
     const floorH = height / floors;
+    const attachmentStart = geos.length;
+    const edgeSeed = `${idBase}|${edge.x},${edge.z}|${frame.rotY}`;
+    const addDetail = (w, h, d, u, y, z, color) => {
+      const geo = new THREE.BoxGeometry(w, h, d);
+      geo.translate(u, y, wallThickness / 2 + z);
+      geo.rotateY(frame.rotY); geo.translate(edge.x, baseY, edge.z);
+      geos.push(paintGeometry(geo, color, variant));
+    };
 
     // 招牌 (Blade Sign - 垂直側看板，偏向立面邊角)
     const hasBladeSign = (architectureHash(`${idBase}:${edge.x}`, 'blade') % 100) < 65;
@@ -598,30 +611,11 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       signGeo.translate(edge.x, baseY, edge.z);
       const signColor = (architectureHash(`${idBase}:${edge.z}`, 'sign_col') % 2) ? 0xe65100 : 0x0277bd;
       geos.push(paintGeometry(signGeo, signColor, variant));
-    }
-
-    // 電視牆 (LED Video Wall) - 商業高層且立面與面積足夠
-    const hasVideoWall = contemporary && (architectureHash(`${idBase}:${edge.x}`, 'video_wall') % 100) < 35;
-    if (hasVideoWall && cat === 'commercial' && height >= 24 && len >= 12.0 && (metrics?.area || 0) >= 180) {
-      const vwW = Math.min(10.0, len * 0.65);
-      const vwH = Math.min(12.0, floorH * 2.5);
-      const vwall = new THREE.BoxGeometry(vwW, vwH, 0.16);
-      vwall.translate(0, height * 0.45, wallThickness / 2 + 0.08);
-      vwall.rotateY(frame.rotY);
-      vwall.translate(edge.x, baseY, edge.z);
-      geos.push(paintGeometry(vwall, 0x00e5ff, variant));
-    }
-
-    // 看板 / 大型廣告看板 (Billboard)
-    const hasAdBoard = contemporary && (architectureHash(`${idBase}:${edge.x}`, 'ad_board') % 100) < 40;
-    if (hasAdBoard && len >= 8.0 && height >= 14 && !hasVideoWall) {
-      const adW = Math.min(8.0, len * 0.55);
-      const adH = Math.min(4.5, floorH * 1.4);
-      const adBoard = new THREE.BoxGeometry(adW, adH, 0.12);
-      adBoard.translate(0, height * 0.65, wallThickness / 2 + 0.06);
-      adBoard.rotateY(frame.rotY);
-      adBoard.translate(edge.x, baseY, edge.z);
-      geos.push(paintGeometry(adBoard, 0xf5f5dc, variant));
+      // Raised blocks read from either side of the projecting shop sign.
+      for (const side of [-1, 1]) for (let glyph = 0; glyph < 3; glyph++) {
+        addDetail(0.025, signH * 0.15, 0.55, signU + side * 0.075,
+          3.8 + signH * (0.25 + glyph * 0.25), 0.45, 0xf0dfba);
+      }
     }
 
     // 選舉廣告牆 (Election Banner)
@@ -678,6 +672,10 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           const u = -len / 2 + (b + 0.5) * (len / bays);
           const balW = Math.min(2.8, (len / bays) * 0.7);
 
+          if (balconyCount >= APPURTENANCE_RULES.balconies.maxCount ||
+            architectureHash(edgeSeed, `${f}:${b}:balcony`) % 100 >= 70) continue;
+          balconyCount++;
+          const balconyStyle = architectureHash(edgeSeed, `${f}:${b}:balcony_style`) % 3;
           // 陽台底板
           const bSlab = new THREE.BoxGeometry(balW, 0.12, 1.2);
           bSlab.translate(u, fy, wallThickness / 2 + 0.6);
@@ -686,11 +684,19 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           geos.push(paintGeometry(bSlab, architecture.trim || 0x616161, variant));
 
           // 陽台欄杆
-          const bRail = new THREE.BoxGeometry(balW, 0.8, 0.06);
+          const bRail = new THREE.BoxGeometry(balW, balconyStyle === 1 ? 0.09 : 0.8, 0.06);
           bRail.translate(u, fy + 0.4, wallThickness / 2 + 1.2);
           bRail.rotateY(frame.rotY);
           bRail.translate(edge.x, baseY, edge.z);
-          geos.push(paintGeometry(bRail, 0x424242, variant));
+          geos.push(paintGeometry(bRail, balconyStyle === 2 ? 0x77989f : 0x424242, variant));
+          if (balconyStyle === 1) for (let bar = 0; bar < 5; bar++) {
+            addDetail(0.045, 0.8, 0.045, u + (bar - 2) * balW / 5, fy + 0.4, 1.2, 0x424242);
+          }
+          if (balconyStyle === 2) {
+            addDetail(balW * 0.65, 0.22, 0.3, u, fy + 0.9, 1.05, 0xa16e50);
+            for (let plant = 0; plant < 3; plant++) addDetail(balW * 0.17, 0.22 + plant % 2 * 0.16,
+              0.26, u + (plant - 1) * balW * 0.2, fy + 1.1, 1.05, 0x53754b);
+          }
 
           // 曬衣架 (Clothes Drying Rack)
           const hasDrying = (architectureHash(`${idBase}:${f}:${b}`, 'dry') % 100) < 55;
@@ -720,10 +726,12 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const fy = f * floorH;
       for (let b = 0; b < bays; b++) {
         const hasAc = contemporary && (architectureHash(`${idBase}:${f}:${b}`, 'ac') % 100) < 65;
-        if (!hasAc) continue;
+        if (!hasAc || acCount >= APPURTENANCE_RULES.ac_units.maxCount) continue;
+        acCount++;
+        const acStyle = architectureHash(edgeSeed, `${f}:${b}:ac_style`) % 3;
         const u = -len / 2 + (b + 0.35) * (len / bays);
         const acY = fy + 0.6;
-        const acUnit = new THREE.BoxGeometry(0.85, 0.55, 0.4);
+        const acUnit = new THREE.BoxGeometry(acStyle === 2 ? 1.2 : 0.85, 0.55, 0.4);
         acUnit.translate(u, acY, wallThickness / 2 + 0.2);
         acUnit.rotateY(frame.rotY);
         acUnit.translate(edge.x, baseY, edge.z);
@@ -734,6 +742,10 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         acGrill.rotateY(frame.rotY);
         acGrill.translate(edge.x, baseY, edge.z);
         geos.push(paintGeometry(acGrill, 0x616161, variant));
+        if (acStyle === 1) for (let slat = 0; slat < 3; slat++) {
+          addDetail(0.65, 0.035, 0.025, u, acY + (slat - 1) * 0.12, 0.445, 0xb4bbb8);
+        }
+        if (acStyle === 2) addDetail(0.3, 0.4, 0.04, u + 0.36, acY, 0.41, 0x616161);
       }
     }
 
@@ -753,6 +765,33 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       flag.translate(edge.x, baseY, edge.z);
       geos.push(paintGeometry(flag, 0xd32f2f, variant));
     }
+    // Project existing attachments into wall space so artwork never covers them.
+    const claims = [];
+    for (const source of [...(groundAttachments.get(edge) || []), ...geos.slice(attachmentStart)]) {
+      const pos = source.attributes.position;
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      const c = Math.cos(frame.rotY), s = Math.sin(frame.rotY);
+      for (let vi = 0; vi < pos.count; vi++) {
+        const x = (pos.getX(vi) - edge.x) * c - (pos.getZ(vi) - edge.z) * s;
+        const y = pos.getY(vi) - baseY;
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+      }
+      claims.push({ x: (minX + maxX) / 2, y: (minY + maxY) / 2,
+        w: maxX - minX, h: maxY - minY });
+    }
+    const decorations = wallDecorationParts({ seed: edgeSeed, width: len, height,
+      category: cat, contemporary, claims, budget: decorationBudget });
+    for (const part of decorations) {
+      const geo = architecturePartGeometry({ ...part, colorVariant: variant });
+      geo.userData.wallDecoration = part.role;
+      geo.userData.coverage = part.scope;
+      geo.translate(0, 0, wallThickness / 2 + 0.18);
+      geo.rotateY(frame.rotY); geo.translate(edge.x, baseY, edge.z);
+      geos.push(geo);
+    }
+    decorationBudget -= decorations.length;
+
   }
 
   // 5. 頂部物件生成 (角落/邊緣/中心分派，附帶屋頂面積與跨度容量檢查)
