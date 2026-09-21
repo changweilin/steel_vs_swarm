@@ -36,11 +36,6 @@ import { BATTLE_GEOLOGY } from '../public/js/geologyBattle.js';
 import { readSrc, grabFn } from './audit_src.mjs';
 import { makeVehicle, makeRecess } from '../public/js/vehicles.js';
 import { objHeightMax, objScaleFit, WORLD_EDGE, edgeWallInsetM, edgeWallDeepM, UNITS, WATER } from '../public/js/data.js';
-// AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
-// 不是外廓 —— 外廓歸 intake_parts.mjs,兩邊 MUST 吃同一份解析)
-import { bioLibDescs, partLibs, parseGlb } from './ai3d/parts_src.mjs';
-// 窗格貼齊面板的**行為直測**(⑥-d):規則本體零 import ⇒ 這裡直接載真品跑一次
-import * as WALLPANEL from '../public/js/wallpanel.js';
 
 const BREAK_LINE = process.argv.includes('--break-line');
 const BREAK_SHY = process.argv.includes('--break-shy');
@@ -830,7 +825,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       }
       // ⑥-d **窗格貼齊面板**(2026-08-13 使用者「平面區域太小的話不渲染窗戶,窗戶會被裁切掉
       //      的時候也不渲染」)。規則本體在 `wallpanel.js`(零 import、離線工具吃同一支);
-      //      這裡驗接線與三條不變式,**行為**由下面的直測跑真的一次。
+      //      這裡驗接線與不變式。
       {
         const wpSrc = readSrc('public', 'js', 'wallpanel.js');
         ok(!/^\s*import\s/m.test(wpSrc),
@@ -851,198 +846,14 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         const fxW = bioC.slice(bioC.indexOf('function facadeTex('), bioC.indexOf('const PALETTE = {'));
         ok(/t\.wrapS = THREE\.RepeatWrapping;/.test(fxW) && !/wrapT/.test(fxW),
           '立面貼圖橫向環繞、縱向維持 clamp(v 是三條帶,捲起來就是屋頂帶接在窗牆帶上面)');
-        // **行為直測**:真的切一次面板、算一次格數(離線讀原文看不出「格數會不會 round 成 0」)
-        {
-          const W = WALLPANEL;
-          // 帶寬取量測檔那一份(寫死在這裡就是第四份同值常數,而重烤節點時它會靜默過期)
-          const mb = JSON.parse(readSrc('tools', 'ai3d', 'tri_budget.json')).families.building.mass;
-          const RB = mb.roof_band, PB = mb.plain_band;
-          const nodes = parseGlb('public/assets/models/parts/building.glb');
-          let panelN = 0, wholeOK = true, tooSmall = 0, spanOK = true, splitN = 0, vLo = 1, vHi = 0;
-          for (const [nm, nd] of nodes) {
-            if (!nm.startsWith('mass')) continue;
-            const r0 = W.wallPanels(nd.pos, nd.idx, W.PANEL);
-            const sp = W.splitByPanel({ pos: nd.pos, uv: new Float32Array(nd.pos.length / 3 * 2) }, nd.idx, r0.faceOf);
-            const r = { ...r0, ...sp };
-            splitN += sp.split;
-            const hx = Math.max(r.hi[0] - r.lo[0], r.hi[2] - r.lo[2]) / 2, hy = (r.hi[1] - r.lo[1]) / 2;
-            panelN += r.panels.length;
-            for (const [cols, rows] of [[3, 1], [5, 9], [7, 26], [10, 41]]) {
-              const cells = W.panelCells(r.panels, { cols, rows, hx, hy });
-              tooSmall += cells.filter((c) => !c).length;
-              // 格數 MUST 是整數且 ≥1 —— 這一條就是「不畫半扇窗」的**構造保證**
-              wholeOK = wholeOK && cells.every((c) => !c || (Number.isInteger(c.k) && Number.isInteger(c.m) && c.k >= 1 && c.m >= 1));
-              const uv = W.panelGridUV(r.pos, r.idx, r.uv, r.panels, r.faceOf,
-                { cols, rows, roof: RB, plain: PB, hx, hy });
-              // 逐面板量 u/v 的實得跨距:**u 跨距 MUST 是 1/cols 的整數倍**(= 面板兩側的
-              // 邊界恰好落在格線上 = 不會有被裁一半的窗),v 跨距 MUST 是整數列
-              const uR = r.panels.map(() => [Infinity, -Infinity]), vR = r.panels.map(() => [Infinity, -Infinity]);
-              for (let t = 0; t < r.faceOf.length; t++) {
-                const pi = r.faceOf[t];
-                if (pi < 0) continue;
-                for (let j = 0; j < 3; j++) {
-                  const vi = r.idx[t * 3 + j];
-                  uR[pi][0] = Math.min(uR[pi][0], uv[vi * 2]); uR[pi][1] = Math.max(uR[pi][1], uv[vi * 2]);
-                  vR[pi][0] = Math.min(vR[pi][0], uv[vi * 2 + 1]); vR[pi][1] = Math.max(vR[pi][1], uv[vi * 2 + 1]);
-                }
-              }
-              cells.forEach((c, pi) => {
-                if (!c || !Number.isFinite(uR[pi][0])) return;
-                const du = (uR[pi][1] - uR[pi][0]) * cols, dv = (vR[pi][1] - vR[pi][0]) / (1 - RB - PB) * rows;
-                if (Math.abs(du - Math.round(du)) > 1e-4 || Math.abs(dv - Math.round(dv)) > 1e-4) spanOK = false;
-                vLo = Math.min(vLo, vR[pi][0]); vHi = Math.max(vHi, vR[pi][1]);
-              });
-            }
-          }
-          ok(panelN > 20 && wholeOK,
-            `逐面板的格數恆為 ≥1 的整數(${panelN} 片面板 × 4 種網格)`);
-          ok(spanOK,
-            'u 跨距恆為 1/cols 的整數倍、v 跨距恆為整數列 ⇒ **面板兩側的邊界恆落在格線上 = 不會有被裁一半的窗**');
-          ok(tooSmall > 0, `放不下一整格的面板會被擋掉(4 種網格合計 ${tooSmall} 片改吃素牆帶)`);
-          ok(vLo >= RB + PB - 1e-6 && vHi <= 1 + 1e-6,
-            `窗格的 v 恆收在窗牆帶內([${vLo.toFixed(3)}, ${vHi.toFixed(3)}] ⊆ [${(RB + PB).toFixed(3)}, 1];溢出就是窗印到素牆/屋頂帶上)`);
-        }
       }
-      // ⑥-e **小區塊併入角度最接近的鄰居**(2026-08-14 使用者「法線角夾角小的**相鄰**平面
-      //      合併,**相對周邊面積過小**且**角度差異沒有過大**的區塊,與**角度最接近的鄰居**
-      //      合併,最後收斂成多面柱體 / 錐台 / 角錐 / 圓柱 / 圓台 / 圓錐等幾何多面體構成」)。
-      //      刀住 `normalize_parts.py` 的 ㋗、尺住 `parts_src.solidConverge`,成品那一半由
-      //      `intake_parts` 直接量 GLB(這裡驗的是規則本身與門檻的單一來源)。
+      // ⑥-e 小區塊合併門檻自洽(入庫管線退場後,量測檔自己的數字仍須收斂):
+      // 合併角上界收在 (分群容差,45°) 之間 —— 下界是分群容差(設得比它小 = 合併整條是死碼),
+      // 上界 45° 是兩面直角牆之間的倒角(那是特徵不是雜訊,越過去就把特徵當雜訊併掉了)。
       {
         const ps = JSON.parse(readSrc('tools', 'ai3d', 'tri_budget.json')).families.building.planar_spec;
-        // 壞版:--break-merge = 第三輪(整條 ㋗ 拿掉)、--break-denoise = 第四輪(整條 ㋘ 拿掉)
-        let npF = readSrc('tools', 'ai3d', 'normalize_parts.py');
-        if (BREAK_MERGE) {
-          npF = npF
-            .replace(/^PLANAR_SMALL_F = [\d.]+/m, 'PLANAR_SMALL_F = 0.0')
-            .replace(/^PLANAR_MERGE_DEG = [\d.]+/m, 'PLANAR_MERGE_DEG = 0.0')
-            .replace(/def _face_adj\(me, rep\):/, 'def _face_adj_disabled(me, rep):')
-            .replace(/for g in small:[\s\S]*?(?=# ㋖ 殘料吸附)/, '');
-        }
-        if (BREAK_DENOISE) {
-          npF = npF
-            .replace(/^PLANAR_DN_ITER = [\d.]+/m, 'PLANAR_DN_ITER = 0')
-            .replace(/^PLANAR_DN_DEG = [\d.]+/m, `PLANAR_DN_DEG = ${(ps.flat_deg + 2).toFixed(1)}`)
-            .replace(/    _denoise\(me, rep, home, off, adj\)\r?\n/, '')
-            .replace(/math\.exp\(-q \* q \/ \(2 \* sr \* sr\)\)/, '1.0');
-        }
-        const SF = npF.match(/^PLANAR_SMALL_F = ([\d.]+)/m);
-        const MD = npF.match(/^PLANAR_MERGE_DEG = ([\d.]+)/m);
-        ok(!!SF && !!MD && +SF[1] === ps.small_f && +MD[1] === ps.merge_deg,
-          `㋗ 的兩個門檻與 tri_budget 的 planar_spec 同一份(small_f ${SF?.[1]} / merge_deg ${MD?.[1]})`);
-        // ---- ㋘ 前置去噪(2026-08-14 使用者「處理合併平面前,隨機凹凸不平的面先弄平整」)----
-        const DN = ['DN_ITER', 'DN_VERT', 'DN_DEG', 'DN_SS']
-          .map((k) => npF.match(new RegExp(`^PLANAR_${k} = ([\\d.]+)`, 'm')));
-        ok(DN.every(Boolean) && +DN[0][1] === ps.dn_iter && +DN[1][1] === ps.dn_vert
-          && +DN[2][1] === ps.dn_deg && +DN[3][1] === ps.dn_ss,
-          `㋘ 的四個參數與 planar_spec 同一份(${DN.map((m) => m?.[1]).join(' / ')})`);
-        // **順序就是使用者那句話的整個重點**:分群的入群條件吃法線角,隨機起伏會把一面平牆
-        // 從中間切開 ⇒ 去噪 MUST 排在分群之前。倒過來做,群一旦切碎了後面每一步都在碎片上。
-        // 錨在**呼叫點**(縮排 4 格)不是函式簽章 —— 抓到 def 的話這一條恆綠
-        const iDn = npF.search(/\n {4}_denoise\(me, rep, home, off, adj\)/);
-        const iGrp = npF.indexOf('for g in _plane_groups(me, off, axis=PLANAR_AXIS)');
-        ok(iDn > 0 && iGrp > 0 && iDn < iGrp,
-          '㋘ 去噪排在分群**之前**(排在後面 = 在已經被雜訊切碎的群上做事)');
-        // 去噪門檻 MUST < 平整門檻 —— 平整那條線被去噪抹掉的話,「真的貼在平面上」恆真
-        const FDs = +(npF.match(/^PLANAR_FLAT_DEG = ([\d.]+)/m)?.[1] ?? NaN);
-        ok(ps.dn_deg < ps.flat_deg && +DN[2]?.[1] < FDs && FDs === ps.flat_deg
-          && /assert PLANAR_DN_DEG < PLANAR_FLAT_DEG/.test(npF)
-          && /assert ub_fdeg == 0\.0 or ub_fdeg == PLANAR_FLAT_DEG/.test(npF),
-          `去噪門檻 ${DN[2]?.[1]}° < 平整門檻 ${FDs}°(= planar_spec.flat_deg ${ps.flat_deg});平整門檻只有一個數(--uvbands 解析時釘住)`);
-        // **保稜線**:一般的平滑會把第三輪 ㋔ 修回來的邊角一起磨掉 ⇒ MUST 是雙邊(值域項)
-        ok(/math\.exp\(-q \* q \/ \(2 \* sr \* sr\)\)/.test(npF)
-          && /sr = 2\.0 \* math\.sin\(math\.radians\(PLANAR_DN_DEG\) \/ 2\.0\)/.test(npF)
-          && /ss = \(ds \/ dn if dn else 1\.0\) \* PLANAR_DN_SS/.test(npF),
-          '去噪是**雙邊**濾波(值域項讓夾角大的鄰居權重趨近 0 ⇒ 稜線兩側互不影響;少了它就是把 ㋔ 修回來的邊角再磨圓一次)');
-        // 位移共用同一份累計夾制 ⇒「整顆離原始掃描最多跑多遠」仍然只有一個數字
-        ok(iDn > 0 && /if ln > off:                     # 與合併共用同一個累計位移上限/.test(npF),
-          '去噪與合併共用同一份 `home` 與同一個位移上限(第二個預算 = 「最多跑多遠」變成兩個數字)');
-        // 兩條設計不變式:①在分群容差之內的本來就併掉了 ⇒ merge_deg MUST > deg
-        //                ②45° 是兩面直角牆之間的**倒角** —— 那是特徵不是雜訊
         ok(ps.merge_deg > ps.deg && ps.merge_deg < 45,
-          `㋗ 的角度上界收在 (${ps.deg}°, 45°) 之間(下界 = 分群容差,設得比它小 = ㋗ 整條是死碼;`
-          + `上界 = 倒角,越過去就把特徵當雜訊併掉了;現值 ${ps.merge_deg}°)`);
-        // 「相對周邊面積過小」MUST 比**那個鄰居**的面積,MUST NOT 比佔全體的比例 ——
-        // 圓柱 / 圓台 / 圓錐的側面每一片都一樣大 ⇒ 比值恆 1 ⇒ 結構上併不掉(使用者列的
-        // 那三種曲面體的保護就是這一行);拿佔全體比例當判據的話,一根 36 面的圓柱
-        // 每一片只佔 2%,整根會被抹平,而每一條既有斷言照樣全綠。
-        ok(/g\['area'\] > PLANAR_SMALL_F \* h\['area'\]/.test(npF),
-          '「相對周邊面積過小」比的是**那個鄰居**的面積(比佔全體的比例 = 把圓柱/圓台/圓錐整根抹平)');
-        // 「相鄰」是**共邊**:分群本來就不看連通性(對「是不是同一面牆」是對的),
-        // 但「這塊碎屑該併給誰」只能由拓樸回答
-        ok(/def _face_adj\(me, rep\):/.test(npF) && /adj = _face_adj\(me, rep\)/.test(npF)
-          && /e2f\.setdefault\(\(a, b\) if a < b else \(b, a\), \[\]\)/.test(npF),
-          '「相鄰」走共邊的 `_face_adj`,而邊的鍵經 `rep` 正規化(拿原始頂點索引當鍵 ⇒ 三角形湯上每片面自成孤島 ⇒ ㋗ 安靜地什麼都沒併)');
-        // 「併得過去才併」:拉一半比不拉更糟(30° 的碎屑被拉成 5°,小角那一欄反而升高)
-        ok(/vs = \{rep\[vi\] for fi in g\['faces'\] for vi in me\.polygons\[fi\]\.vertices\}/.test(npF)
-          && /if any\(abs\(\(home\[vi\]\.x - best\['c'\]\[0\]\)/.test(npF),
-          '㋗ 併之前先驗「整塊的頂點都能在累計位移上限之內落到那個平面上」(拉一半 = 半平不平)');
-        // 被併的那一塊 MUST NOT 進大群的擬合 —— 反過來就是讓碎屑把一面好牆拉歪
-        const i0 = npF.indexOf('for g in small:');
-        const blk = i0 < 0 ? '' : npF.slice(i0, npF.indexOf('# ㋖ 殘料吸附'));
-        ok(blk.length > 200 && !/refit/.test(blk),
-          '併的方向是**小的貼上大的**(被併的那一塊不進大群的擬合;反過來 = 碎屑把一面好牆拉歪)');
-        // 尺:JS 這一側的分群只有 `wallpanel.planeGroups` 一份,兩個消費端同吃
-        const wpSrc2 = readSrc('public', 'js', 'wallpanel.js');
-        const psSrc = readSrc('tools', 'ai3d', 'parts_src.mjs');
-        ok((wpSrc2.match(/export function planeGroups\(/g) || []).length === 1
-          && /const \{ G, fn, fa, totA, span, lo, hi, nT \} = planeGroups\(pos, idx, o\);/.test(wpSrc2)
-          && /import \{ wallPanels, planeGroups \} from '\.\.\/\.\.\/public\/js\/wallpanel\.js';/.test(psSrc)
-          && /planeGroups\(node\.pos, node\.idx, \{/.test(psSrc),
-          '量測端的平面分群只有 wallpanel.planeGroups 一份(wallPanels 與 solidConverge 同吃)');
-        // 收斂度 MUST 是**兩欄**:單看碎鱗率,把整顆抹成一顆大球也很「不碎」;
-        // 單看貼平面,一層碎鱗每一片都貼在自己那一小群上,佔比一樣漂亮
-        // ---- ㋙ 封底(2026-08-14 使用者圈了三處「破洞」)----
-        // 先說量到的:圈起來的那幾處**不是破洞**(chimney_a / masslow_a / mass_c / masslow_b
-        // 的邊界邊是 0),是 img→3D 的底面內凹成一顆穹頂 ⇒ 整顆靠一圈扇貝狀毛邊站在地上。
-        const npS = BREAK_SEAL
-          ? npF.replace(/^SEAL_OPEN_MAX = [\d.]+/m, 'SEAL_OPEN_MAX = 1.0')
-            .replace(/^SEAL_RIM_F = [\d.]+/m, 'SEAL_RIM_F = 1.0')
-            .replace(/if ok and fi >= 0 and nor\.z < 0\.0:/, 'if ok and fi >= 0:')
-            .replace(/if open_r > SEAL_OPEN_MAX:/, 'if False:')
-            .replace(/if me\.vertices\[rep\[v\]\]\.co\.z <= band/, 'if True')
-            .replace(/^CAVITY_F = [\d.]+/m, 'CAVITY_F = 1.0')
-            // ⚠ **全域**替換:乾跑區塊有一模一樣的一行,只換第一處的話這條壞版是靜默
-            //   no-op(2026-08-14 實測:紅字由 6 條掉成 5 條,而壞版根本沒被造出來)
-            .replace(/hok, hloc, _, _ = hull\.ray_cast\(tuple\(o\), tuple\(d\)\)/g, 'hok, hloc = True, o')
-            .replace(/if opened:/g, 'if False:')
-          : npF;
-        const SO = +(npS.match(/^SEAL_OPEN_MAX = ([\d.]+)/m)?.[1] ?? NaN);
-        const SR = +(npS.match(/^SEAL_RIM_F = ([\d.]+)/m)?.[1] ?? NaN);
-        const CF = +(npS.match(/^CAVITY_F = ([\d.]+)/m)?.[1] ?? NaN);
-        ok(SO > 0 && SO < 0.1 && SR > 0 && SR <= ps.off_f * 2 && CF > 0 && CF < 0.5,
-          `㋙ 的三道夾制都在(破口上限 ${SO}、底緣帶 ${SR} × 跨距、凹陷深度上限 ${CF} × 該方向寬度)`);
-        // **深度 MUST 相對於凸包**(周圍表面)而不是包圍盒:拿包圍盒當基準的話,一根圓柱
-        // 從側面看,靠邊那幾條射線要走到圓心才碰到面 ⇒「深度 1.000 × 寬」,而它根本沒有
-        // 凹陷(實測會誤拉 80 個頂點,把圓柱削成一根方柱)。
-        ok(/hok, hloc, _, _ = hull\.ray_cast\(tuple\(o\), tuple\(d\)\)/.test(npS)
-          && /dep = \(loc\[axis\] - hloc\[axis\]\) \* sgn/.test(npS) && /def _hull_obj\(ob\):/.test(npS),
-          '「深度」量的是**相對於凸包的內凹量**(拿包圍盒當基準 = 把曲率當凹陷,圓柱會被削成方柱)');
-        // 「類似甜甜圈這樣穿過去則不用處理」MUST 是**區塊級**的判定:逐點往側向打射線不夠
-        // —— 甜甜圈的孔在側向被整個環圍住(實測會誤拉 281 個頂點,把它填成一塊圓餅)。
-        ok(/thru\[p2\]\[q2\]/.test(npS) && /if opened:/.test(npS),
-          '穿過去的通道**整塊**放行(候選區塊碰得到一條穿過去的射線就整塊不動)');
-        // ①**破口太多就不封底**:選片的判據是「由下往上的第一個命中」,而那只在封閉網格上
-        //   成立 —— 有破口時射線會鑽進去打到對面的內面,那一片被拉下來 = 整顆長出一排尖刺
-        //   (實測 ac_a 破口佔面數 0.599,封底後側面一排黑色尖楔,而外廓與面數兩條照樣全綠)
-        ok(/if open_r > SEAL_OPEN_MAX:/.test(npS) && /return 0/.test(npS)
-          && /def _open_share\(me\):/.test(npS),
-          '破口佔面數超過上限就**不封底**(原則 6;射線會從破口鑽進去,把對面的內面扯下來)');
-        // ②**只壓底緣帶**:中空殼的內頂棚可以高到 0.9 × 跨距,無差別下拉會把那個高度的
-        //   外牆一起扯垮(實測上方 90% 的小角佔比 mass_a 19.0% → 43.6%,而兩條斷言全綠)
-        ok(/band = z0 \+ SEAL_RIM_F \* span/.test(npS)
-          && /if me\.vertices\[rep\[v\]\]\.co\.z <= band/.test(npS),
-          '只壓「底緣帶之內」的頂點(無差別下拉 = 把 0.9 × 跨距高的外牆一起扯垮)');
-        // ③選片 MUST 只收**朝下**的命中(朝上的第一個命中 = 射線穿進側牆了)
-        ok(/if ok and fi >= 0 and nor\.z < 0\.0:/.test(npS),
-          '由下往上的命中只收朝下的面(收到朝上的 = 射線已經穿進側牆)');
-        // ④封底 MUST 排在整平**之前**(整平吃的是形狀;反過來整的是還吊在半空中的底面)
-        const iSeal = npS.indexOf("# ---- `--basefill`");
-        const iRep = npS.indexOf("# ---- `--replanar`");
-        ok(iSeal > 0 && iRep > 0 && iSeal < iRep, '㋙ 封底排在 --replanar 之前(整平吃的是形狀)');
-        ok(/scales: G\.length \/ Math\.max\(nT, 1\)/.test(psSrc) && /onPlane: onA \/ T/.test(psSrc)
-          && (readSrc('tools', 'ai3d', 'intake_parts.mjs').match(/cv\.scales <= |cv\.onPlane >= /g) || []).length === 2,
-          '收斂度是**兩欄**(碎鱗率 + 貼平面)且入庫閘兩條都驗(只留一條都有一種騙得過去的壞法)');
+          `㋗ 的角度上界收在 (${ps.deg}°, 45°) 之間(現值 ${ps.merge_deg}°)`);
       }
       // ⑥-b **窗戶圖層間距逐款不同 + 幾乎無間距的玻璃牆**(2026-08-12 使用者定案)。
       //     舊制只有兩組窗格幾何(帷幕 0.86×0.62、其餘一律 0.52×0.48)⇒ 十六款樓的窗間距
@@ -1164,18 +975,6 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
     const spanSrc = strip(grabFn(bio, 'vegSpan'));
     ok(!/libGeo|partGeo|\.lib\b/.test(crownSrc) && !/libGeo|partGeo|\.lib\b/.test(spanSrc),
       '佈局數學(giantCrownR / vegSpan)只讀保險絲 p.g:庫幾何隨載入成敗而異,佈局讀它 = 跨客戶端分家(§2.3)');
-    // 2026-08-05 綠地首批接線之後才有意義的三條(在此之前一列 lib 都沒有,恆真)
-    const { rows, srcLibCount } = bioLibDescs(bio);
-    ok(rows.length === srcLibCount,
-      `biomes 的 lib 列全部在可執行的零件表裡(原文 ${srcLibCount} 筆 / 解析 ${rows.length} 筆)`
-      + ' —— 對不上代表有 lib 列住在離線驗不到的表,那一列等於沒被驗過');
-    ok(rows.every((r) => Array.isArray(r.fb) && r.fb.length >= 2),
-      '每一列 lib 都留著保險絲 g(只有 lib 沒有 g = 載入失敗當場沒有幾何可畫)');
-    const libs = new Set(partLibs());
-    const orphanFam = [...new Set(rows.map((r) => r.family))].filter((f) => !libs.has(f));
-    ok(orphanFam.length === 0,
-      `lib 列的家族都在 PART_LIBS 裡(缺 ${orphanFam.join('、') || '無'})`
-      + ' —— 不在的話那一族永遠查 null = 整批永久走保險絲,畫面與今天一樣而沒有任何錯誤訊息');
   }
   // 羞避傾斜吃既有 tx/tz 剛體通道(A27)
   ok(/cand\.lean\[0\]/.test(bio) && /cand\.lean\[1\]/.test(bio), '羞避傾斜併進既有 tx/tz(剛體通道,A27)');

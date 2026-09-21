@@ -14,7 +14,6 @@ if (process.env.THREE_MODULE) {
 const THREE = await import('three');
 const { deploySceneObjects, deploySceneBatches } = await import('../public/js/sceneObjects.js');
 const { makeRuntimePartModel } = await import('../public/js/runtimePartModel.js');
-const { generatedApprovedVehicleModelAt } = await import('../public/js/approvedVehicleModels.js');
 const { BUILDING_PARTS } = await import('../public/js/runtimeParts.js');
 const { makeApprovedBuildingBatch } = await import('../public/js/approvedBuildingModels.js');
 
@@ -60,7 +59,7 @@ for (const mesh of buildingTarget.children) {
   assert.equal(mesh.material.userData.celOpts.bands, 3);
 }
 
-const entry = generatedApprovedVehicleModelAt(1);
+const entry = BUILDING_PARTS[0];
 const coldAt = performance.now();
 const first = makeRuntimePartModel(entry);
 const coldMs = performance.now() - coldAt;

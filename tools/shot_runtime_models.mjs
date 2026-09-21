@@ -55,7 +55,6 @@ await page.goto('http://localhost:8620', { waitUntil: 'domcontentloaded' });
 const report = await page.evaluate(async () => {
   const THREE = await import('three');
   const { BUILDING_PARTS } = await import('/public/js/runtimeParts.js');
-  const { APPROVED_VEHICLE_MODELS } = await import('/public/js/approvedVehicleModels.js');
   const { makeRuntimePartModel } = await import('/public/js/runtimePartModel.js');
   const { buildNpcModel } = await import('/public/js/npcModels.js');
   const { buildBuildingUnit, buildBuildingUnitTurret } = await import('/public/js/buildingUnitModels.js');
@@ -76,7 +75,6 @@ const report = await page.evaluate(async () => {
   const cases = [
     ['建築 v5', () => makeRuntimePartModel(first(5))],
     ['建築 v6', () => makeRuntimePartModel(first(6))],
-    ['場景載具 v6', () => makeRuntimePartModel(APPROVED_VEHICLE_MODELS[0])],
     ['蜂群步兵', () => buildNpcModel('creep:soldier', 'SWARM')],
     ['鋼鐵裝甲車', () => buildNpcModel('creep:apc', 'STEEL')],
     ['鋼鐵坦克', () => buildNpcModel('creep:tank', 'STEEL')],

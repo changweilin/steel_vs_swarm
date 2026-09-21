@@ -280,19 +280,13 @@ try {
   // 「▶ 啟動」)。這一條 MUST 隨 TOOLS 一起長:新增一支工具就會多一列 import 要驗。
   {
     const sup = await import('./dev_supervisor.mjs');
-    const srcOf = { codex: 'codex_review', parts: 'parts_review', story: 'story_book', arch: 'arch_preview' };
+    const srcOf = { codex: 'codex_review', story: 'story_book', arch: 'arch_preview' };
     for (const key of Object.keys(sup.TOOLS)) {
 
       const t = sup.TOOLS[key];
-      ok(t.kind === 'server' || t.kind === 'job', `${key}:kind 是 server / job 其中之一(實得 ${t.kind})`);
+      ok(t.kind === 'server', `${key}:kind 是 server(實得 ${t.kind})`);
       ok(!/^\d+$/.test(String(t.script)) && t.script.startsWith('tools' + path.sep),
         `${key}:script 是 tools/ 底下的常數路徑`);
-      // **只有 server 有埠**。2026-08-10 加入的採集迴圈是 `job` —— 它不聽任何埠,
-      // 拿 `listening()` 去問它會永遠回「沒開」,鈕面停在「▶ 啟動」而背景每按一次多開一支。
-      if (t.kind !== 'server') {
-        ok(t.port === undefined, `${key}(job):MUST NOT 宣告埠(有埠 = 存活判準會被誤用成探埠)`);
-        continue;
-      }
       const mod = srcOf[key];
       ok(!!mod && new RegExp(`import \\{ DEFAULT_PORT as \\w+ \\} from '\\./${mod}\\.mjs'`).test(supSrc),
         `${key}:埠號 MUST 從 tools/${mod || '?'}.mjs import,MUST NOT 抄一份`);
@@ -300,24 +294,22 @@ try {
       ok(t.port === m.DEFAULT_PORT,
         `${key}:TOOLS 的埠(${t.port})= 工具自己的 DEFAULT_PORT(${m.DEFAULT_PORT})`);
     }
-    const ports = Object.values(sup.TOOLS).filter((t) => t.kind === 'server').map((t) => t.port);
+    const ports = Object.values(sup.TOOLS).map((t) => t.port);
     ok(new Set(ports).size === ports.length, `每一支伺服器型工具的埠互不相同(${ports.join(', ')})`);
-    // job 的存活判準 MUST 是「我們自己的子行程還在」;server 才問埠
-    ok(/const alive = \(rec\) =>/.test(supSrc) && /kind === 'job'/.test(supSrc),
-      'job 的存活判準是自己的子行程(沒有埠可以探)');
+    // 存活有兩面:埠(使用者在終端機起的也認得)與自己的子行程(停得掉的只有自己開的)
+    ok(/const alive = \(rec\) =>/.test(supSrc),
+      '停不停得掉走自己的子行程判準(不是看埠)');
+    ok(!/kind === 'job'/.test(supSrc) && !/needsHome/.test(supSrc),
+      '已無工作型工具(採集迴圈退場,連同資料家推導一起移除)');
   }
-  // argv 仍然零信任,只是多了一段**推導**:`argvOf` 會把資料家接上去(語料家會搬 ⇒ 寫死等於下次就錯),
-  // 而那條路徑是從檔案系統算出來的 —— 請求一個字都碰不到。
-  // 2026-08-11 起請求可以**指名**要跑哪一個資料家(儲存庫外那一份不給挑就永遠跑不到),
-  // 而鬆的方式 MUST 是**索引**:第二個參數是已經解析好的路徑,解析只發生在 `start` 裡面。
+  // argv 零信任:全部來自 TOOLS 常數 + argvOf,請求只能挑一個 key —— 請求一個字都碰不到命令列。
   ok(/spawn\(process\.execPath, \[t\.script, \.\.\.argv\]/.test(supSrc)
-    && /export function argvOf\(t, home = null\)/.test(supSrc)
-    && /corpusHomes\(\)\[homeIdx\]\?\.home/.test(supSrc)
+    && /export function argvOf\(t\)/.test(supSrc)
+    && !/corpusHomes/.test(supSrc)
     && !/argvOf\([^)]*req/.test(supSrc)
     && !/spawn\([^)]*req\./.test(supSrc),
-    'spawn 的 argv MUST 來自 TOOLS 常數 + argvOf 推導,請求只能挑一個 key 與一個索引(參數零信任)');
-  ok(/\/\^\\\/dev\\\/tools\\\/\(\[a-z0-9_-\]\{1,32\}\)\\\/\(start\|stop\)\$\//.test(supSrc)
-    || /\[a-z0-9_-\]\{1,32\}/.test(supSrc),
+    'spawn 的 argv MUST 來自 TOOLS 常數 + argvOf,請求只能挑一個 key(參數零信任)');
+  ok(/\/\^\\\/dev\\\/tools\\\/\(\[a-z0-9_-\]\{1,32\}\)\\\/\(start\|stop\)\$\//.test(supSrc),
     '動作路徑 MUST 以白名單字元集比對(key 進不了命令列,也進不了檔案路徑)');
   ok(/x-dev-tools'\] !== '1'/.test(supSrc),
     '改變狀態的請求 MUST 要一個非簡單標頭(擋跨來源網頁的 CSRF)');
@@ -344,8 +336,8 @@ try {
   const lo = await devReq('127.0.0.1', '/dev/tools');
   let tools = [];
   try { tools = JSON.parse(lo.body).tools || []; } catch { /* 下一行會紅 */ }
-  ok(lo.code === 200 && ['codex', 'parts', 'harvest'].every((k) => tools.some((t) => t.key === k)),
-    'loopback 拿得到工具清單(codex 2D 生圖對照台 / parts 3D 零件對照台 / harvest 採集迴圈)');
+  ok(lo.code === 200 && ['codex', 'story', 'arch'].every((k) => tools.some((t) => t.key === k)),
+    'loopback 拿得到工具清單(codex 2D 生圖對照台 / story 本地故事書 / arch 建模隨機生成器)');
   ok(tools.filter((t) => t.kind === 'server')
     .every((t) => typeof t.url === 'string' && /^http:\/\/localhost:\d+\/$/.test(t.url)),
     '伺服器型工具自己帶網址(客戶端因此一個埠號都不用寫死)');

@@ -20,10 +20,8 @@ import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_PORT as CODEX_PORT } from './codex_review.mjs';
-import { DEFAULT_PORT as PARTS_PORT } from './parts_review.mjs';
 import { DEFAULT_PORT as STORY_PORT } from './story_book.mjs';
 import { DEFAULT_PORT as ARCH_PORT } from './arch_preview.mjs';
-import { corpusHome, corpusHomes, venvHome } from './ai3d/provenance.mjs';
 
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -31,14 +29,8 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 /**
  * 可啟停的工具型錄。`script`/`args` 是**常數**,MUST NOT 由請求拼出來(邊界 ③)。
  *
- * `kind` 有兩種,而差別**只在「怎麼知道它還活著」**:
- *   `server` —— 對照台那兩支。活著 = **那個埠上有人在聽**(使用者可能是在終端機起的,
- *               那種我們停不掉也不該假裝停得掉)。
- *   `job`   —— 2026-08-10 加入的採集迴圈。它**不聽任何埠** ⇒ 拿 `listening()` 去問它
- *               會**永遠回報「沒開」**,鈕面就停在「▶ 啟動」而背景其實跑著好幾支
- *               (每按一次就多開一支,而畫面完全正常)。⇒ 活著 = 我們自己的子行程還在。
- *               代價要講清楚:終端機起的那一支我們**看不到**(沒有埠可以探),
- *               所以 job 的狀態語意是「**這個台子有沒有在跑它**」而不是「機器上有沒有在跑」。
+ * `kind` 目前只有 `server`:活著 = **那個埠上有人在聽**(使用者可能是在終端機起的,
+ * 那種我們停不掉也不該假裝停得掉)。
  */
 export const TOOLS = {
   codex: {
@@ -51,17 +43,6 @@ export const TOOLS = {
     hint: '把已生成的機體圖配對到角色頭像與 3D 展示台,逐張確認勾選 / 框出局部重繪 / 重下 prompt;'
       + '同時列出缺圖與孤兒檔,並收 tools/ai3d/masters/ 那批尚未驗收的 AI 設定稿。',
   },
-  parts: {
-    key: 'parts',
-    kind: 'server',
-    label: '3D 零件對照台',
-    port: PARTS_PORT,
-    script: path.join('tools', 'parts_review.mjs'),
-    args: [],
-    hint: '把 docs/ai3d_runbook.md 生成的 3D 物件與原版並排比較(同一顆座號、同一顆相機):'
-      + '零件庫 GLB vs 保險絲 primitive、純資料件 vs 改寫前的零件表;逐件說明用哪個生成方法、'
-      + '吃哪一張來源圖(授權與出處),並列出缺件 / 孤兒節點 / 未記載來源。',
-  },
   story: {
     key: 'story',
     kind: 'server',
@@ -72,23 +53,6 @@ export const TOOLS = {
     hint: '直接翻看六章 × 兩陣營的劇情與對話,不用真的通關:開戰簡報 → 前線/中段砲塔的無線電對白 '
       + '→ 主堡那一階的結算對照稿 → 勝敗文案。呈現走遊戲的真品(storyui.js / dialogue.js / style.css),'
       + '對白可自動播或逐句翻。唯讀,不動 localStorage 的通關進度。',
-  },
-  harvest: {
-    key: 'harvest',
-    kind: 'job',
-    label: 'img→3D 採集迴圈',
-    script: path.join('tools', 'ai3d', 'harvest_loop.mjs'),
-    // `--rounds 0` = 一直跑到按停為止(採集是機率的,「跑到夠為止」沒有一個算得出來的輪數);
-    // `--every 15` 是來源限流的節奏(撞到 429 之後 Retry-After 600s,調短只會讓封鎖續期)。
-    args: ['--rounds', '0', '--every', '15'],
-    // 語料家 / 模型棧家**都不是常數**(會搬,而且刻意不同住)⇒ 由 `argvOf` 從檔案系統推導後
-    // 接在 args 後面。它仍然沒有違反邊界 ③:那是我們自己算出來的路徑,**請求一個字都碰不到**。
-    needsHome: true,
-    hint: '收編 inbox → 抓照片 → 去背 → 圈選分離 → 選片閘 → img→3D → 快篩 → contact sheet '
-      + '→ 自動入庫 → 收尾稽核,每 15 分鐘一輪,按停為止。入庫只寫工作區**不 commit**;'
-      + '人眼複核排在入庫之後(就在這個台子上),判決由 tools/ai3d/apply_verdicts.mjs 執行。'
-      + '新圖跑完之後會把「已餵過但沒人覆核」的排在後面重跑(--no-redo 關掉)。'
-      + '要跑哪一個語料家在零件台上挑(含註冊在案、住儲存庫外的那些);逐站進度看零件台的「執行進度」。',
   },
   arch: {
     key: 'arch',
@@ -103,29 +67,11 @@ export const TOOLS = {
 };
 
 /**
- * 真正要 spawn 的 argv(常數 + 推導出來的那幾個家)。**請求碰不到這裡的任何一格**(邊界 ③)。
- *
- * 三個家是**三件事**,MUST NOT 讓其中一個預設等於另一個(runbook §5d):
- *   ・語料家 `--home` —— 照片與帳本。推不到 ⇒ 回 null,呼叫端印理由不啟動。
- *   ・模型棧家 `--venv` —— `.venv` + `vendor/stable-fast-3d/`。少了它,`harvest_loop`
- *     的 `VENV_HOME` 預設成 `--home` ⇒ 找不到 python ⇒ **去背/圈選分離/選片閘/生成
- *     四站全部跳過**,而鈕面顯示「執行中」、每輪照印「生成 0」(沒有任何錯誤訊息)。
- *   ・T2-spz `--t2` —— checkout 在儲存庫**之外**(study clone)⇒ 推導不出來,只能由
- *     環境變數給。沒有不是例外:建築那一族本輪不生成,而 `harvest_loop` 會印出理由。
- * 後兩個推不到就**不加旗標**(降級不例外,原則 6),MUST NOT 硬塞一個猜出來的路徑。
+ * 真正要 spawn 的 argv。**請求碰不到這裡的任何一格**(邊界 ③):
+ * 完整常數來自上面的 `TOOLS`,cwd 固定在儲存庫根。
  */
-export function argvOf(t, home = null) {
-  if (!t.needsHome) return [...t.args];
-  // `home` 只能是**這一支自己推導出來的候選之一**(呼叫端從 `corpusHomes()` 挑,見 `start`)——
-  // 請求送進來的是一個**索引**,不是路徑:邊界 ③ 一格未鬆,只是「挑哪一個」從「筆數最多」
-  // 變成「使用者可以指定」(版權未確認的那一份筆數本來就少,不給挑等於它永遠跑不到)。
-  const pick = home || corpusHome();
-  if (!pick) return null;    // 找不到語料 ⇒ null,呼叫端印理由不啟動
-  const argv = [...t.args, '--home', pick];
-  const venv = venvHome();
-  if (venv) argv.push('--venv', venv);
-  if (process.env.SVS_T2_HOME) argv.push('--t2', process.env.SVS_T2_HOME);
-  return argv;
+export function argvOf(t) {
+  return [...t.args];
 }
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
@@ -139,17 +85,15 @@ export function isLoopback(req) {
 /** key → { child, log:[] }。只記我們自己開的那些(見 `owned`) */
 const running = new Map();
 /**
- * key → 上一次啟動的**經過**(`{ at, argv, home, error, exit }`)。存在的理由:
- * 「按了沒反應」有一半是**啟動失敗而畫面沒地方講**(找不到語料家 / 行程頭一秒就死)。
- * 錯誤只回在那一次 POST 的回應裡的話,重新整理一次就永遠消失了 ⇒ 記著,讓執行進度頁
+ * key → 上一次啟動的**經過**(`{ at, argv, error, exit }`)。存在的理由:
+ * 「按了沒反應」有一半是**啟動失敗而畫面沒地方講**(行程頭一秒就死)。
+ * 錯誤只回在那一次 POST 的回應裡的話,重新整理一次就永遠消失了 ⇒ 記著,讓輸出視窗
  * 隨時看得到「上一次按下去發生了什麼」。行程收掉也不清 —— 那正是要回頭看的時候。
  */
 const lastRun = new Map();
-// 執行進度頁看的是這一份 ⇒ 留得夠一輪看得完(一輪十幾站,每站好幾行)。
-// 純記憶體、逐工具封頂,不寫檔(採集迴圈自己的 `harvest_log.jsonl` 才是長期紀錄)。
+// 輸出視窗看的是這一份 ⇒ 留得夠看完啟動期的日誌。純記憶體、逐工具封頂,不寫檔。
 const LOG_LINES = 300;
 const START_WAIT_MS = 5000;
-const JOB_SETTLE_MS = 1200;   // job 沒有埠可等 ⇒ 等「有沒有立刻死掉」(起不來都是頭一秒的事)
 const PROBE_MS = 400;
 const POLL_MS = 100;    // 等待迴圈的間隔:連不上時 ECONNREFUSED 是立刻回的,不歇會變成猛敲那個埠
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -167,7 +111,7 @@ function listening(port) {
   });
 }
 
-/** 我們自己開的那支還活著嗎(job 的存活判準;server 另外還要問埠) */
+/** 我們自己開的那支還活著嗎(停不停得掉的判準;「跑起來了嗎」另外問埠) */
 const alive = (rec) => !!rec && rec.child.exitCode === null && !rec.child.killed;
 
 /** 我們啟動的子行程觀測資料。終端機自行啟動的工具沒有可信 PID，故寧缺勿猜。 */
@@ -193,24 +137,9 @@ async function statusOf(t) {
     run: lastRun.get(t.key) || null,
     monitor: monitorOf(rec),
   };
-  // job 沒有埠 ⇒ **不回 url / listening**(回一個假的 `http://localhost:undefined/` 會讓
-  // 客戶端畫出一個點不開的連結,而那看起來像「台子壞了」)。`running` 就是它的 listening。
-  //
-  // ⚠ 但「跑起來了嗎」**MUST 另外推導成一欄 `on`**(2026-08-11 修的那個 bug):兩種 kind 的
-  // 存活判準不同一件事,而客戶端只想知道那顆鈕要畫成啟動還是停止 —— 讓它自己挑欄位的下場是
-  // `main.js` 的設定頁對 job 讀了 `t.listening`(恆 undefined)⇒ 鈕面**永遠**停在「▶ 啟動」、
-  // 網址欄永遠寫「未啟動」,而背景其實跑著:使用者看到的就是「點啟動沒反應」。
-  // 分流住這裡一份,兩個客戶端(main.js 設定頁 / 零件台面板)一律讀 `on`。
-  if (t.kind === 'job') {
-    const homes = t.needsHome ? corpusHomes() : [];
-    return {
-      ...base, on: owned, running: owned,
-      home: t.needsHome ? corpusHome() : null,
-      // 候選資料家一起送:面板要讓人挑(版權未確認那一份筆數少、又不出貨,不給挑就永遠跑不到),
-      // 而**挑的是索引**不是路徑(邊界 ③)。每一列自帶 shipping ⇒ 面板 MUST 標出來。
-      homes,
-    };
-  }
+  // **「跑起來了嗎」直接推導成一欄 `on`**(2026-08-11 修的那個 bug 的教訓):
+  // 客戶端只想知道那顆鈕要畫成啟動還是停止 —— 讓它自己挑欄位,拿錯尺的下場就是
+  // 鈕面**永遠**停在「▶ 啟動」而背景其實跑著。存活判準住這裡一份,客戶端一律讀 `on`。
   const isUp = await listening(t.port);
   return {
     ...base, port: t.port, url: `http://localhost:${t.port}/`,
@@ -224,35 +153,12 @@ export async function list() {
 
 /**
  * @param {string} key 工具鍵(白名單比對過的)
- * @param {number|null} homeIdx **候選資料家的索引**(不是路徑!)。請求只能挑一個由
- *   `corpusHomes()` 推導出來的候選 —— 與「請求只能挑一個工具 key」同一條規矩(邊界 ③)。
- *   索引對不上一律回錯誤而不是退回預設:清單在兩次請求之間變了的話,靜靜地跑另一個家
- *   正是這一輪要修的那種「看起來正常」。實際挑中的那一個由 `run.home` 回報,面板 MUST 顯示。
  */
-export async function start(key, homeIdx = null) {
+export async function start(key) {
   const t = TOOLS[key];
   if (!t) return { error: '沒有這個工具' };
-  if (t.kind === 'job') {
-    // job 沒有埠可以探 ⇒ 「已經在跑了嗎」只能問自己那支。少了這一道,每按一次啟動就多開
-    // 一支採集迴圈:兩支同時對同一個資料家寫 harvest_state.json,而畫面完全正常。
-    if (alive(running.get(t.key))) return statusOf(t);
-  } else if (await listening(t.port)) return statusOf(t);   // 已經有人在聽(可能是終端機起的)⇒ 不再開第二支
-  let pick = null;
-  if (homeIdx != null && t.needsHome) {
-    pick = corpusHomes()[homeIdx]?.home || null;
-    if (!pick) {
-      const err = `第 ${homeIdx} 個資料家候選不存在(清單變了?重新整理再挑一次)`;
-      lastRun.set(t.key, { at: new Date().toISOString(), argv: null, home: null, error: err });
-      return { ...(await statusOf(t)), error: err };
-    }
-  }
-  const argv = argvOf(t, pick);
-  if (!argv) {
-    const err = '找不到任何有 photo_manifest.json 的資料家(語料家會搬 ⇒ 請用終端機帶 --home 跑,'
-      + '或把它註冊進 tools/ai3d/corpus_homes.json)';
-    lastRun.set(t.key, { at: new Date().toISOString(), argv: null, home: null, error: err });
-    return { ...(await statusOf(t)), error: err };
-  }
+  if (await listening(t.port)) return statusOf(t);   // 已經有人在聽(可能是終端機起的)⇒ 不再開第二支
+  const argv = argvOf(t);
   const log = [];
   const startedAt = new Date().toISOString();
   const rec = { child: null, log, startedAt, lastOutputAt: startedAt, endedAt: null };
@@ -262,9 +168,8 @@ export async function start(key, homeIdx = null) {
     { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   const keep = (buf) => {
     rec.lastOutputAt = new Date().toISOString();
-    // ANSI 控制碼要**脫掉**:這條迴圈會轉呼一堆 python 工具,而其中幾支(onnxruntime 那一族)
-    // 印的是帶色碼的訊息 —— 原樣送到頁面上就是一串 `[1;31m` 夾在中文裡,而那正是使用者要看
-    // 「跑到哪一站」的地方。終端機看得懂色碼,HTML 看不懂。
+  // ANSI 控制碼要**脫掉**:子行程印的訊息裡若帶色碼 —— 原樣送到頁面上就是一串
+  // `[1;31m` 夾在中文裡。終端機看得懂色碼,HTML 看不懂。
     // ⚠ 樣式 MUST 從 `` 起算(而且寫成跳脫序列,不要在原始碼裡塞一個看不見的控制字元):
     //   少了 ESC 就變成「任何 `[xxx]` 都砍」,而這條迴圈自己印的 `[dry]` 會被砍成 `ry]`。
     for (const line of String(buf).replace(/\u001b\[[0-9;]*[A-Za-z]/g, '').split(/\r?\n/)) {
@@ -293,19 +198,15 @@ export async function start(key, homeIdx = null) {
   running.set(t.key, rec);
   lastRun.set(t.key, {
     at: startedAt,
-    // 完整命令列**要看得到**:三個家推不推導得到是這條迴圈最常見的失敗(少了 --venv 就是
-    // 四站靜默跳過、每輪印「生成 0」)⇒ 進度頁把它原樣印出來,不必去猜跑的是哪一個家。
+    // 完整命令列**要看得到**:啟動失敗時先看跑的到底是哪一支,不必去猜。
     argv: [t.script, ...argv],
-    home: pick || (t.needsHome ? corpusHome() : null),
     error: null, exit: null,
   });
 
   // 等到真的聽得到才回報 —— 回得太早,鈕面會先閃一下「還沒起來」再自己變好(看起來像壞掉)。
-  // job 沒有埠可以等 ⇒ 改成「等它**沒有立刻死掉**」:採集迴圈第一件事是印資料家與第一輪標題,
-  // 起不來(路徑錯/相依缺)是在頭一秒就退出的,而那正是要讓使用者看到的那一種失敗。
-  const until = Date.now() + (t.kind === 'job' ? JOB_SETTLE_MS : START_WAIT_MS);
+  const until = Date.now() + START_WAIT_MS;
   while (Date.now() < until && child.exitCode === null) {
-    if (t.kind !== 'job' && await listening(t.port)) break;
+    if (await listening(t.port)) break;
     await sleep(POLL_MS);
   }
   return statusOf(t);
@@ -323,10 +224,9 @@ export async function stop(key) {
   if (!rec || !alive(rec)) return { ...(await statusOf(t)), error: '這一支不是從這裡啟動的' };
   rec.child.kill();
   const until = Date.now() + 2000;
-  // server 除了等它把埠放掉，還要等子行程真的結束：埠先釋放、exit 事件晚一拍時，監控資料
-  // 才能在這次回應中帶回 endedAt。job 沒有埠，一樣只等行程真的收掉(採集迴圈可能正卡在
-  // 15 分鐘的等待，但 `kill()` 對它是立刻的 —— 等的是 Node 把 exitCode 填上)。
-  while (Date.now() < until && (rec.child.exitCode === null || (t.kind === 'server' && await listening(t.port)))) await sleep(POLL_MS);
+  // 除了等它把埠放掉,還要等子行程真的結束:埠先釋放、exit 事件晚一拍時,監控資料
+  // 才能在這次回應中帶回 endedAt。
+  while (Date.now() < until && (rec.child.exitCode === null || await listening(t.port))) await sleep(POLL_MS);
   // **紀錄留著**(舊版在這裡 `running.delete`):停下來之後才是最想回頭看日誌的時候 ——
   // 刪掉的話執行進度頁在按下停止的那一瞬間整個清空,看起來像「剛才什麼都沒跑」。
   // 存活判準吃的是 `alive()`(exitCode 已經填上 ⇒ 恆 false),不是這個 Map 有沒有這一格:
@@ -334,11 +234,7 @@ export async function stop(key) {
   return statusOf(t);
 }
 
-// ⚠ `kill()` 只收掉我們開的**那一支**。採集迴圈當下若正卡在 `spawnSync`(去背 / SF3D 那幾站),
-// 那支孫行程會跑完自己那一輪才消失 —— 這是刻意不做行程樹砍殺(`taskkill /T` 是平台專屬,
-// 而半途砍掉 Blender/SF3D 會留下寫到一半的 GLB)。按下停止 = **不再開新的一輪**。
-
-/** 父行程收掉時把開過的子行程一起帶走(否則 8621 會留下一支沒人管的 server)。
+/** 父行程收掉時把開過的子行程一起帶走(否則會有留下一支沒人管的 server)。
  *  只涵蓋得了「正常收掉」那幾條路:`taskkill /F` 是 SIGKILL,handler 根本不會跑,
  *  那種情況下子行程會留著 —— 下次按「▶ 啟動」會看到它還在聽,鈕是灰的並說明「不是從這裡啟動的」。 */
 for (const sig of ['exit', 'SIGINT', 'SIGTERM']) {
@@ -377,11 +273,9 @@ export async function handle(req, res, urlPath) {
   if (req.method === 'POST') {
     // 邊界 ④:非簡單標頭 ⇒ 跨來源的網頁送不出來(預檢我們不回應)
     if (req.headers['x-dev-tools'] !== '1') { send(403, { error: '缺少 x-dev-tools 標頭' }); return true; }
-    // 第三段(選用)= **候選資料家的索引**,只准數字:它進不了命令列也進不了檔案路徑
-    // (路徑是 `corpusHomes()` 自己算出來的那一份,請求只是挑第幾個)。
-    const m = urlPath.match(/^\/dev\/tools\/([a-z0-9_-]{1,32})\/(start|stop)(?:\/(\d{1,3}))?$/);
+    const m = urlPath.match(/^\/dev\/tools\/([a-z0-9_-]{1,32})\/(start|stop)$/);
     if (!m) { send(404, { error: '沒有這個動作' }); return true; }
-    const out = m[2] === 'start' ? await start(m[1], m[3] == null ? null : Number(m[3])) : await stop(m[1]);
+    const out = m[2] === 'start' ? await start(m[1]) : await stop(m[1]);
     send(out.error && !out.key ? 404 : 200, out);
     return true;
   }
