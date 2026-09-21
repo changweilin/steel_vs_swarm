@@ -1,3 +1,4 @@
+import { functionalBuildingParts } from './functionalBuildingParts.js';
 import { architecturalFacadeParts } from './architectureFacadeParts.js';
 import { architecturePartGeometry } from './architecturePartGeometry.js';
 // ============ OSM 精確建物外環生成器 ============
@@ -11,7 +12,7 @@ import { sampleBuildingSite } from './buildingDiversity.js';
 import { architecturalRoofParts } from './architectureRoofParts.js';
 import { generateBuildingAppurtenances } from './buildingAppurtenances.js';
 import { resolveAdaptiveRoofForm, calculateFootprintMetrics } from './architectureStyles.js';
-import { WATER } from './data.js';
+import { WATER, objHeightMax } from './data.js';
 
 const EPS = 1e-5;
 const DEFAULT_H = Object.freeze({
@@ -463,15 +464,20 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
           architecture.functionInfo?.category
         ) : 'flat';
         architecture.actualRoofForm = adaptiveRoofForm;
-        {
+        const featureHalf = Math.min(12, metrics.span * 0.44, targetH * 0.8);
+        const featureSite = metrics.frame ? attachmentSite(poly, featureHalf) : null;
+        const functionalParts = functionalBuildingParts(outer.edges, baseY, topY, architecture,
+          featureSite, featureHalf, Math.max(0, objHeightMax() - targetH));
+        if (!functionalParts.replacesRoof) {
           batch.details.push(...architecturalRoof(poly, topY, architecture, adaptiveRoofForm, metrics, targetH));
         }
+        batch.details.push(...functionalParts.parts.map(architecturePartGeometry));
 
         // Phase 3: 建築立面與平面特徵渲染 (大玻璃窗、塗鴉牆、壁柱、格柵等)
         batch.details.push(...architecturalFacade(facadeEdges, architecture, wallThickness));
 
         // Phase 4: 外部零件依屋頂類型嚴格篩選相容性後隨機配置
-        batch.details.push(...generateBuildingAppurtenances(poly, facadeEdges, baseY, topY, architecture, wallThickness, adaptiveRoofForm, metrics));
+        if (!architecture.functionalDesign) batch.details.push(...generateBuildingAppurtenances(poly, facadeEdges, baseY, topY, architecture, wallThickness, adaptiveRoofForm, metrics));
       }
       if (architecture) {
         const key = `${architecture.profile}:${architecture.id}`;

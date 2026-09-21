@@ -1,3 +1,4 @@
+import { TOWER_BUILDINGS, buildTowerBuilding, towerSides } from './towerBuildings.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, treeHabitatWeight, pickTreeType, forestSeed, FOREST_STEEP_DEG } from './forest.js';
 // ============ 地貌系統:五類地被 + 圖資建物 + 兵線淨空 ============
@@ -2099,6 +2100,7 @@ function roofTint(tint, x, z, i) {
 
 // 地標近似碰撞柱(未縮放;放置時 × lm scale)
 const LANDMARK_COL = {
+  ...TOWER_BUILDINGS,
   heritage_tourism: { r: 14, h: 16 }, heritage_abandoned: { r: 14, h: 16 },
   hospital: { r: 11, h: 22 }, school: { r: 13, h: 11 }, station: { r: 14, h: 13 },
   temple: { r: 8, h: 13 }, church: { r: 9, h: 19 }, mosque: { r: 10, h: 14 },
@@ -2113,6 +2115,7 @@ const LANDMARK_COL = {
 };
 
 const LANDMARKS = {
+  ...Object.fromEntries(Object.keys(TOWER_BUILDINGS).map(type => [type, (g, _rnd, _nation, context) => buildTowerBuilding(g, type, context)])),
   heritage_tourism: (g, _rnd, _nation, context = {}) => buildHeritageSite('ruins', g, 0, 0, 0, { ...context, state: 'tourism', radius: 14, maxHeight: 16 }),
   heritage_abandoned: (g, _rnd, _nation, context = {}) => buildHeritageSite('ruins', g, 0, 0, 0, { ...context, state: 'abandoned', radius: 14, maxHeight: 16 }),
   hospital: (g) => {
@@ -2274,19 +2277,20 @@ const LANDMARKS = {
     const heraldic = [0xd93a2b, 0x3a6ad9, 0xc7a13d, 0x2e7a4a][(rnd() * 4) | 0];
     g.add(flag(2.2, 1.2, 0.08, iso ?? heraldic, 1.2, kh + 4.4, 0));   // 主樓旗(軟性)
   },
-  lighthouse: (g, rnd) => {
+  lighthouse: (g, rnd, _nation, context = {}) => {
+    const sides = towerSides(context.tags, context.seed);
     // 燈塔:白塔身 + 紅環帶 + 迴廊燈室 + 看守小屋;高度/環帶數逐座抽
     const h = 19 + rnd() * 6;
-    const tw = new THREE.Mesh(cyl(1.7, 2.6, h, 9), bmat(0xf0ece2));
+    const tw = new THREE.Mesh(cyl(1.7, 2.6, h, sides), bmat(0xf0ece2));
     tw.position.y = h / 2; g.add(tw);
     const nB = 2 + (rnd() < 0.5 ? 1 : 0);
     for (let i = 0; i < nB; i++) {                              // 紅環帶(貼塔身)
       const by = h * (0.18 + (i + rnd() * 0.3) * 0.55 / nB);
       const br = 2.6 - 0.9 * (by / h);
-      const band = new THREE.Mesh(cyl(br + 0.04, br + 0.12, h * 0.13, 9), bmat(0xc9463a));
+      const band = new THREE.Mesh(cyl(br + 0.04, br + 0.12, h * 0.13, sides), bmat(0xc9463a));
       band.position.y = by; g.add(band);
     }
-    const gal = new THREE.Mesh(cyl(2.3, 2.3, 0.5, 9), bmat(0x3a4046));
+    const gal = new THREE.Mesh(cyl(2.3, 2.3, 0.5, sides), bmat(0x3a4046));
     gal.position.y = h + 0.25; g.add(gal);                      // 迴廊台
     const lamp = new THREE.Mesh(cyl(1.2, 1.3, 2.2, 8),
       bmat(0xffe9b0, { emissive: new THREE.Color(0x8a6a10), emissiveIntensity: 1.2 }));
@@ -2297,14 +2301,16 @@ const LANDMARKS = {
     g.add(box(4.5, 3.2, 3.6, 0xe4ded0, hx, 0, 0));              // 看守小屋
     g.add(box(5, 0.5, 4, 0x8a8274, hx, 3.2, 0));
   },
-  pagoda: (g, rnd) => {
+  pagoda: (g, rnd, _nation, context = {}) => {
+    const sides = towerSides(context.tags, context.seed);
     // 五重塔:方樓身逐層退縮 + 出簷四坡頂 + 金頂剎;層數 4~5 逐座抽
     g.add(box(11, 1.2, 11, 0xb0a494));                          // 石台基
     const tiers = 4 + (rnd() < 0.5 ? 1 : 0);
     let y = 1.2, w = 8.4;
     for (let t = 0; t < tiers; t++) {
-      g.add(box(w, 3, w, 0x8a3324, 0, y, 0));                   // 丹紅樓身
-      const roof = new THREE.Mesh(cone(w * 0.92, 2.1, 4), bmat(0x2e5a46));
+      const body = new THREE.Mesh(cyl(w * 0.6, w * 0.6, 3, sides), bmat(0x8a3324));
+      body.rotation.y = sides === 4 ? Math.PI / 4 : 0; body.position.y = y + 1.5; g.add(body);                   // 丹紅樓身
+      const roof = new THREE.Mesh(cone(w * 0.92, 2.1, sides), bmat(0x2e5a46));
       roof.rotation.y = Math.PI / 4;
       roof.position.y = y + 3.9; g.add(roof);                   // 出簷四坡頂(青銅綠)
       y += 4.3; w *= 0.84;
@@ -10315,6 +10321,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   let architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
     center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
+    environmentAt: (x, z) => forestEnvironmentAt(terrain, x, z),
     roads: osmRoads || [], rails: osmData?.rails || [],
     toXZ: (p) => llToWorld(p.lat, p.lon ?? p.lng, center),
   });
@@ -10357,8 +10364,17 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       (x, z) => worldToLL(x, z, center),
     );
   }
-  // 舊中心點建物欄位已退場；精確面域由下方 OSM polygon builder 消費。
-  const osm = null;
+  // 一般建物保留精確面域；獨立塔體由地標生成器處理點位與結構用途面域。
+  const towerPoint = tags => {
+    const kind = BUILDING_FUNCTIONS[taggedBuildingFunction(tags)?.type]?.landmark;
+    return Object.hasOwn(TOWER_BUILDINGS, kind) || kind === 'power' || kind === 'lighthouse';
+  };
+  const osm = (osmData?.pois || []).filter(p => towerPoint(p.tags));
+  for (const area of osmData?.areas || []) {
+    if (!towerPoint(area.tags) || !area.centroid) continue;
+    const p = worldToLL(area.centroid.x, area.centroid.z, center);
+    osm.push({ lat: p.lat, lng: p.lon, tags: area.tags });
+  }
   // 隧道/橋樑分段合併(2026-07-15 二修):OSM 常把一條隧道/橋切成多條 way,共用節點
   // 深在山體內/河道上 —— 把「way 端點」當洞口/橋台會讓路面剖面在結構中段爬回地表
   // (Λ 形斷面、覆蓋斷開、接縫殘留岩階 = 洞內隱形牆)。共端點的同類 way MUST 先併成
@@ -10535,6 +10551,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
     center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
+    environmentAt: (x, z) => forestEnvironmentAt(terrain, x, z),
     roads: roadInput || osmRoads || [], rails: osmData?.rails || [],
     toXZ: (p) => llToWorld(p.lat, p.lon ?? p.lng, center),
   });
@@ -11111,7 +11128,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 橫擔全寬,建物不得貼近(否則手臂壓上屋頂,像「屋頂長電塔」)
         const or3 = Math.max(cr, type === 'power' ? 9 * OVER.lm : 0);
         if (landmarks.length < 60 && areaFree(blocked, x, z, cr * 0.8) && occ.free(x, z, or3, 1)) {
-          landmarks.push({ x, z, type, tags: el.tags }); usedLm.add(type); occ.add(x, z, or3);
+          landmarks.push({ x, z, type, tags: el.tags, localTower: true }); usedLm.add(type); occ.add(x, z, or3);
         }
       } else if (generic.length < MAX_BUILDINGS) {
         const commercial = type === 'commercial';
@@ -11150,7 +11167,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   if (!osmSource && (!mix || (mix.urban || 0) > 0.1)
     && !landmarks.length && !generic.length && urbanPts.length > 8) {
     await onProgress?.(0.6, '離線模式:程序生成市區…');
-    const lmTypes = Object.keys(LANDMARKS).filter(type => !type.startsWith('heritage_'));
+    const lmTypes = Object.keys(LANDMARKS).filter(type => !type.startsWith('heritage_') && !Object.hasOwn(TOWER_BUILDINGS, type));
     urbanPts.forEach(([x, z], i) => {
       const isAquatic = terrainEnvCode(terrain, x, z) !== 0 || terrain.heightAt(x, z) < (terrain.waterY ?? WATER.LEVEL) + (WATER.SWAMP_BAND || 2.2);
       if (!tryPlace(x, z, isAquatic)) return;
@@ -12143,11 +12160,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   for (const lm of landmarks) {
     const g = new THREE.Group();
     const heritageSeed = (Math.imul(Math.round(lm.x*16),73856093) ^ Math.imul(Math.round(lm.z*16),19349663)) >>> 0;
-    const landmarkRnd = lm.type.startsWith('heritage_') ? mulberry32(heritageSeed) : rnd;
+    const landmarkRnd = (lm.localTower || lm.type.startsWith('heritage_') || Object.hasOwn(TOWER_BUILDINGS, lm.type)) ? mulberry32(heritageSeed) : rnd;
     // 第三參數 = 這一座地標該掛哪一國的旗(依落點的戰場半邊;makeNationPicker)。
     // 不掛旗的型別忽略它 ⇒ 逐位元同舊制。**rnd 仍是第二參數且照抽**(§2.3)。
     LANDMARKS[lm.type](g, landmarkRnd, nation(lm.x, lm.z), {
-      seed: heritageSeed,
+      seed: heritageSeed, tags: lm.tags,
       latitude: center?.lat, longitude: center?.lng,
       ruinType: heritageRuinType(lm.tags),
     });   // 遺跡細節僅讀座標 seed；其他原生地標維持既有呼叫契約。

@@ -1,3 +1,4 @@
+import { functionalArchitecture } from './functionalArchitecture.js';
 // 純規劃：不依賴 Three.js、不消耗場景共享亂數。
 import {
   ARCHITECTURE_STYLES, ARCHITECTURE_PROFILES, ARCHITECTURE_SITE,
@@ -469,6 +470,7 @@ export function chooseArchitecture(seed, identity, context = {}) {
       ...(['religious', 'heritage'].includes(functional.category) ? { era: 'historic' } : {}),
       ...(functional.roofForm ? { roofForm: functional.roofForm } : {}),
     } : {}),
+    ...functionalArchitecture(funcInfo, { ...context, region }, architectureHash(identity, `${seed}:function`)),
     id, profile, region, slope: context.slope || 0,
     variant: architectureHash(identity, `${seed}:variant`) % 3,
     functionInfo: funcInfo,
@@ -481,7 +483,7 @@ export function chooseArchitecture(seed, identity, context = {}) {
 /** 用地採最小包含面；密度用空間格，坡度量裸地，不讀建物屋頂。 */
 export function createArchitecturePlanner({
   areas = [], terrain, seed = 0, mix = null, center = null, venue = null, country = null, location = null, terrainEnvCode = null,
-  roads = [], rails = [], toXZ = null,
+  roads = [], rails = [], toXZ = null, environmentAt = null,
 } = {}) {
   const land = buildContainmentIndex(areas);
   const cells = new Map();
@@ -529,11 +531,14 @@ export function createArchitecturePlanner({
     const aquatic = Boolean(building.aquatic || (site && site.min < swampY) || gyCenter < swampY || envCode !== 0);
 
     const transitPassage = contextTransit(poly, building, transitIndex);
+    const environment = environmentAt?.(x, z) || {};
 
     const ctx = {
       slope, urban, rural, courtyard: !!poly?.holes?.length, elongated,
       density, landuse: use, parentTags: parent?.tags, building, poly, region, location: loc,
       seed, identity, aquatic, transitPassage, transitIndex,
+      climate: environment.climate || venue?.climate,
+      geology: environment.geology || venue?.geology,
     };
     ctx.functionInfo = inferBuildingFunction(building, poly, ctx);
     return { ...chooseArchitecture(seed, identity, ctx), site };

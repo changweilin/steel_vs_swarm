@@ -3,7 +3,7 @@
 // 都從這裡取得，避免額度或 selector 改動後各自查出不同世界。
 import { OSM_AREA_KEYS, buildAreaRecords } from './osmAreas.js';
 
-export const OSM_FEATURE_QUERY_VERSION = 6;
+export const OSM_FEATURE_QUERY_VERSION = 7;
 export const OSM_ROAD_QUERY_VERSION = 1;
 export const OSM_QUERY_TIMEOUT_S = 15;
 
@@ -54,6 +54,8 @@ export function osmFeatureQuery(bbox) {
   return `[out:json][timeout:${OSM_QUERY_TIMEOUT_S}];`
     // multipolygon relation 必須保留 member ref／role；只有 tags + geom 會讓真實 relation 變成 missing_outer。
     + `(${areaWays}${areaRelations});out body geom ${nArea};`
+    + `node["man_made"~"^(tower|mast|communications_tower|lighthouse)$"](${bb});out tags ${nBld};`
+    + `node["aeroway"="control_tower"](${bb});out tags ${nBld};`
     + `node["power"="tower"](${bb});out tags ${nBld};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`
@@ -115,7 +117,8 @@ export function parseOsmFeatureElements(elements = []) {
       || (tags.entrance && /^(station|subway)$/.test(tags.public_transport || '')))) {
       entrances.push({ lat: el.lat, lng: el.lon, tags });
     } else if (el?.type === 'node' && (tags.place || tags.natural === 'peak'
-      || tags.highway === 'motorway_junction' || tags.railway)) {
+      || tags.highway === 'motorway_junction' || tags.railway || tags.power === 'tower'
+      || ['tower', 'mast', 'communications_tower', 'lighthouse'].includes(tags.man_made) || tags.aeroway === 'control_tower')) {
       pois.push({ lat: el.lat, lng: el.lon, tags });
     }
   }

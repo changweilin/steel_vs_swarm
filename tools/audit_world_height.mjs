@@ -1,3 +1,4 @@
+import { TOWER_BUILDINGS } from '../public/js/towerBuildingRules.js';
 import { BATTLE_GEOLOGY } from '../public/js/geologyBattle.js';
 import { createForestDefs } from '../public/js/forest.js';
 // ============ 世界高度上限(遊戲最高高度 / 物件最高高度) 稽核 ============
@@ -80,7 +81,7 @@ const runTable = (src, name, extraNames = [], extraVals = []) => new Function(
 
 const GIANT_DEFS = runTable(bioSrc, 'GIANT_DEFS', ['createForestDefs'], [createForestDefs]);
 const MEGALITHS = runTable(bioSrc, 'MEGALITHS', ['BATTLE_GEOLOGY'], [BATTLE_GEOLOGY]);
-const LANDMARK_COL = runTable(bioSrc, 'LANDMARK_COL');
+const LANDMARK_COL = runTable(bioSrc, 'LANDMARK_COL', ['TOWER_BUILDINGS'], [TOWER_BUILDINGS]);
 const VEG_DEFS = runTable(bioSrc, 'VEG_DEFS');
 const VEG_SCALE = runTable(bioSrc, 'VEG_SCALE');
 const OVER = runTable(bioSrc, 'OVER', ['objHeightMax'], [objHeightMax]);
