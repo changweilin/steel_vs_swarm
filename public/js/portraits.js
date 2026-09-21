@@ -29,14 +29,14 @@ export const AVATAR_MANIFEST = Object.fromEntries(
 export const hasDrawnArt = (id) => !!PORTRAIT_MANIFEST[id];
 
 /** 招式立繪覆蓋表:id -> { skill, ult } 圖檔路徑(相對 public/)。
- * 檔名由 `data.js abilArtFile` 推導(`{id}_{slot}_{atk|def}.png`),此表只做「有無手繪」的登記;
+ * 檔名由 `data.js abilArtFile` 推導(`{id}_skill_{atk|def}.png`),此表只做「有無手繪」的登記;
  * 未登記者退回半身立繪 portraitURL(與 base 同一張,不破圖)。 */
 export const CUTIN_MANIFEST = Object.fromEntries(
   DRAWN_ART_IDS.map((id) => [id, { skill: abilArtFile(id, 'skill'), ult: abilArtFile(id, 'ult') }]));
 
 export const hasCutinArt = (id, slot) => !!CUTIN_MANIFEST[id]?.[slot];
 
-/** 招式立繪(出招演出用):小招看 skill 檔、大招看 ult 檔;攻守已寫進檔名(見 ABIL_NATURE)。
+/** 招式立繪(出招演出用):守招看 skill 檔、攻招看 ult 檔;攻守已寫進檔名(見 ABIL_NATURE)。
  * 未登記手繪 → 退回半身立繪(舊制逐位元一致)。 */
 export function cutinArtURL(id, slot) {
   return CUTIN_MANIFEST[id]?.[slot] || portraitURL(id);

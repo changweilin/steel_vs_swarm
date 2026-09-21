@@ -1,6 +1,7 @@
 // ============ 招式立繪演出(Cut-in)============
 // 對應 doc/drone_vs_robot_fps_dota_plan.html「2D Comic Billboard VFX」:
-// 施放大招/小招時,以粗體斜角漫畫字 + 立繪滑入 + 徑向速度線呈現,搭配鏡頭震動。
+// 施放攻招/守招時,以粗體斜角漫畫字 + 立繪滑入 + 徑向速度線呈現,搭配鏡頭震動。
+// (攻招 = ult 槽、守招 = skill 槽;護盾模式中施展必為守招,見 data.js ABIL_NATURE)
 //
 // 純 DOM overlay(不進 3D 場景):立繪是 2D 素材,拉進 Three.js 只會多一層 billboard 排序問題;
 // 且戰鬥中 UI 層本來就在 canvas 之上。所有動畫走 CSS,JS 只負責掛/卸節點。
@@ -9,7 +10,7 @@
 //   ult  自己  → full  全屏立繪 + 大字幕(1.3s)
 //   skill 自己 → mini  左下角小卡(0.8s)
 //   ult  敵方  → warn  頂部警示條 + 敵方立繪(1.0s)
-// 小招不做敵方演出(戰場上小招太頻繁,會蓋住視野)。
+// 守招不做敵方演出(戰場上守招太頻繁,會蓋住視野)。
 
 import { CHARACTERS, heroAbility } from './data.js';
 import { cutinArtURL } from './portraits.js';

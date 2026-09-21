@@ -3400,35 +3400,36 @@ export function heroAbility(ch, slot, lvl = 1) {
   };
 }
 
-// ---- 招式攻守性質(2026-09-21 使用者定案:招式立繪分攻招/守招兩套)----
-// 每名角色的大小招各判一筆 'atk'(攻招:對敵造成傷害/召喚打擊部隊/癱瘓敵武器/進攻增益)
-// 或 'def'(守招:回復/減傷/護盾/攔截/匿蹤/機動自保)。判準 = 機制本身(heroAbility 解析後的
-// dmg/heal/mul/unit/fx),與檔名無關;**立繪檔名由這一表推導**,MUST NOT 在消費端手寫
-// 'atk'/'def' 字串 —— 改判一格,檔名與演出同步跟著走(單一縫)。
-// 攻守與槽位無關:小招多為守(18/32)但盾擊/近程 emp 是攻;大招多為攻(24/32)但
-// 團隊治療/減傷領域(8 台)是守。檔名格式 `{id}_{slot}_{nature}.png`,見 portraits.js CUTIN_ART。
+// ---- 招式攻守定義(2026-09-21 使用者定案:每名角色一攻招一守招,不再分大小招)----
+// 攻招 = ult 槽、守招 = skill 槽,判準是**施放條件**不是機制內容:
+//   護盾模式中施展(`abilHoldSlot(true)` → skill)必為守招;
+//   無護盾施展(`abilHoldSlot(false)` → ult)必為攻招(伺服器 `heroCast` 放 ult 即解除 defending)。
+// 機制偏向不影響歸屬:團隊守護型 ult(s02/s06/s08/s11/s12/t10/m02/m03)與
+// 盾擊/emp 型 skill(s04/s10/t01/t03/t08/m05)照此定義分別歸攻招/守招。
+// 檔名格式 `{id}_skill_{atk|def}.png`(2026-09-21 使用者定案:兩張一律 skill 前綴,
+// 以攻守後綴區分;攻招圖 = ult 槽立繪、守招圖 = skill 槽立繪),見 portraits.js CUTIN_ART。
 export const ABIL_NATURE = {
-  s01: { skill: 'def', ult: 'atk' }, s02: { skill: 'def', ult: 'def' },
-  s03: { skill: 'def', ult: 'atk' }, s04: { skill: 'atk', ult: 'atk' },
-  s05: { skill: 'def', ult: 'atk' }, s06: { skill: 'def', ult: 'def' },
-  s07: { skill: 'def', ult: 'atk' }, s08: { skill: 'def', ult: 'def' },
-  s09: { skill: 'def', ult: 'atk' }, s10: { skill: 'atk', ult: 'atk' },
-  s11: { skill: 'def', ult: 'def' }, s12: { skill: 'def', ult: 'def' },
-  t01: { skill: 'atk', ult: 'atk' }, t02: { skill: 'def', ult: 'atk' },
-  t03: { skill: 'atk', ult: 'atk' }, t04: { skill: 'def', ult: 'atk' },
+  s01: { skill: 'def', ult: 'atk' }, s02: { skill: 'def', ult: 'atk' },
+  s03: { skill: 'def', ult: 'atk' }, s04: { skill: 'def', ult: 'atk' },
+  s05: { skill: 'def', ult: 'atk' }, s06: { skill: 'def', ult: 'atk' },
+  s07: { skill: 'def', ult: 'atk' }, s08: { skill: 'def', ult: 'atk' },
+  s09: { skill: 'def', ult: 'atk' }, s10: { skill: 'def', ult: 'atk' },
+  s11: { skill: 'def', ult: 'atk' }, s12: { skill: 'def', ult: 'atk' },
+  t01: { skill: 'def', ult: 'atk' }, t02: { skill: 'def', ult: 'atk' },
+  t03: { skill: 'def', ult: 'atk' }, t04: { skill: 'def', ult: 'atk' },
   t05: { skill: 'def', ult: 'atk' }, t06: { skill: 'def', ult: 'atk' },
-  t07: { skill: 'def', ult: 'atk' }, t08: { skill: 'atk', ult: 'atk' },
-  t09: { skill: 'def', ult: 'atk' }, t10: { skill: 'def', ult: 'def' },
+  t07: { skill: 'def', ult: 'atk' }, t08: { skill: 'def', ult: 'atk' },
+  t09: { skill: 'def', ult: 'atk' }, t10: { skill: 'def', ult: 'atk' },
   t11: { skill: 'def', ult: 'atk' }, t12: { skill: 'def', ult: 'atk' },
-  m01: { skill: 'def', ult: 'atk' }, m02: { skill: 'def', ult: 'def' },
-  m03: { skill: 'def', ult: 'def' }, m04: { skill: 'def', ult: 'atk' },
-  m05: { skill: 'atk', ult: 'atk' }, m06: { skill: 'def', ult: 'atk' },
+  m01: { skill: 'def', ult: 'atk' }, m02: { skill: 'def', ult: 'atk' },
+  m03: { skill: 'def', ult: 'atk' }, m04: { skill: 'def', ult: 'atk' },
+  m05: { skill: 'def', ult: 'atk' }, m06: { skill: 'def', ult: 'atk' },
   m07: { skill: 'def', ult: 'atk' }, m08: { skill: 'def', ult: 'atk' },
 };
 /** 該招式的攻守性質('atk'/'def')。查無一律 'def'(退路,不抛錯)。 */
 export const abilNature = (ch, slot) => ABIL_NATURE[ch]?.[slot] || 'def';
-/** 該招式立繪檔名(相對 public/;推導不手寫)。 */
-export const abilArtFile = (ch, slot) => `assets/characters/${ch}_${slot}_${abilNature(ch, slot)}.png`;
+/** 該招式立繪檔名(相對 public/;推導不手寫):攻招 → `{ch}_skill_atk.png`,守招 → `{ch}_skill_def.png`。 */
+export const abilArtFile = (ch, slot) => `assets/characters/${ch}_skill_${abilNature(ch, slot)}.png`;
 
 /**
  * 施法動作是**定向**還是**全向**(locomotion `stepCastPose` 的 `castFx.dir`)。
