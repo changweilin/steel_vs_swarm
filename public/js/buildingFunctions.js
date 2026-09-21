@@ -24,6 +24,15 @@ export const BUILDING_FUNCTIONS = Object.freeze({
   substation: { label: '變電站', category: 'industrial', styles: ['brutalist_concrete', 'industrial'], range: 'industrial_power' },
   generator: { label: '發電設備', category: 'industrial', styles: ['industrial'], range: 'industrial_power' },
   power_tower: { label: '輸電塔', category: 'utility', styles: ['industrial'], range: 'industrial_power', landmark: 'power', structureOnly: true },
+  bell_tower: { label: '鐘樓', category: 'civic', styles: ['brutalist_concrete'], range: 'tourism_cultural', landmark: 'bell_tower', structureOnly: true },
+  clock_tower: { label: '時鐘塔', category: 'civic', styles: ['brutalist_concrete'], range: 'tourism_cultural', landmark: 'clock_tower', structureOnly: true },
+  control_tower: { label: '塔台', category: 'transport', styles: ['brutalist_concrete'], range: 'tourism_cultural', landmark: 'control_tower', structureOnly: true },
+  watchtower: { label: '瞭望台', category: 'heritage', styles: ['brutalist_concrete'], range: 'tourism_cultural', landmark: 'watchtower', structureOnly: true },
+  beacon_tower: { label: '烽火台', category: 'heritage', styles: ['brutalist_concrete'], range: 'tourism_cultural', landmark: 'beacon_tower', structureOnly: true },
+  gun_tower: { label: '砲塔', category: 'heritage', styles: ['brutalist_concrete'], range: 'tourism_cultural', landmark: 'gun_tower', structureOnly: true },
+  iron_tower: { label: '鐵塔', category: 'utility', styles: ['brutalist_concrete'], range: 'tourism_cultural', landmark: 'iron_tower', structureOnly: true },
+  observation_tower: { label: '景觀塔', category: 'tourism', styles: ['brutalist_concrete'], range: 'tourism_cultural', landmark: 'observation_tower', structureOnly: true },
+  radio_tower: { label: '無線電塔', category: 'utility', styles: ['brutalist_concrete'], range: 'tourism_cultural', landmark: 'radio_tower', structureOnly: true },
   water: { label: '淨水／污水處理設施', category: 'utility', styles: ['industrial', 'brutalist_concrete'], range: 'industrial_factory' },
   factory: { label: '工廠／工坊', category: 'industrial', styles: ['industrial', 'brutalist_concrete'], range: 'industrial_factory', landmark: 'factory' },
   warehouse: { label: '倉庫／物流庫房', category: 'industrial', styles: ['industrial', 'brutalist_concrete'], range: 'industrial_warehouse', landmark: 'factory' },
@@ -61,6 +70,7 @@ const buildingTypes = {
   shrine: 'shrine', synagogue: 'synagogue', gurdwara: 'gurdwara', stupa: 'stupa', pagoda: 'pagoda',
   castle: 'castle', ruins: 'ruins', pyramid: 'pyramid', lighthouse: 'lighthouse', hotel: 'hotel', retail: 'market', supermarket: 'market',
   industrial: 'factory', factory: 'factory', warehouse: 'warehouse', depot: 'warehouse', greenhouse: 'greenhouse',
+  tower: 'watchtower', bell_tower: 'bell_tower', clock_tower: 'clock_tower', control_tower: 'control_tower', watchtower: 'watchtower', beacon_tower: 'beacon_tower', gun_tower: 'gun_tower', iron_tower: 'iron_tower', observation_tower: 'observation_tower', radio_tower: 'radio_tower',
   sports_hall: 'sports', stadium: 'stadium', civic: 'civic', fire_station: 'emergency',
 };
 const religions = { christian: 'church', muslim: 'mosque', buddhist: 'temple', taoist: 'temple', confucian: 'temple', shinto: 'shrine', hindu: 'mandir', jewish: 'synagogue', sikh: 'gurdwara' };
@@ -78,9 +88,18 @@ export function taggedBuildingFunction(tags = {}) {
   }
   if (!type && normalized(tags.healthcare)) type = ['hospital', 'clinic'].includes(normalized(tags.healthcare)) ? normalized(tags.healthcare) : null;
   if (!type && ['museum', 'gallery', 'hotel', 'motel', 'hostel'].includes(normalized(tags.tourism))) type = ['museum', 'gallery'].includes(normalized(tags.tourism)) ? 'museum' : 'hotel';
+  if (!type && normalized(tags.office) === 'government') type = 'civic';
   if (!type && normalized(tags.railway) === 'station') type = 'station';
   if (!type && ['terminal', 'hangar'].includes(normalized(tags.aeroway))) type = normalized(tags.aeroway);
   if (!type && ['water_works', 'wastewater_plant', 'pumping_station'].includes(normalized(tags.man_made))) type = 'water';
+  if (!type && normalized(tags.aeroway) === 'control_tower') type = 'control_tower';
+  if (!type && ['tower', 'mast', 'communications_tower'].includes(normalized(tags.man_made))) {
+    type = lookup({ bell_tower: 'bell_tower', bell: 'bell_tower', clock: 'clock_tower', observation: 'observation_tower',
+      watchtower: 'watchtower', monitoring: 'watchtower', defensive: 'gun_tower', beacon: 'beacon_tower',
+      communication: 'radio_tower', communications: 'radio_tower', radio: 'radio_tower', lighting: 'iron_tower' }, normalized(tags['tower:type']))
+      || (normalized(tags.man_made) === 'communications_tower' ? 'radio_tower' : normalized(tags['tower:construction']) === 'lattice' ? 'iron_tower' : 'watchtower');
+  }
+  if (!type && normalized(tags.historic) === 'tower') type = 'watchtower';
   if (!type && normalized(tags.man_made) === 'lighthouse') type = 'lighthouse';
   if (!type && normalized(tags.leisure) === 'sports_centre') type = 'sports';
   if (!type && normalized(tags.leisure) === 'stadium') type = 'stadium';

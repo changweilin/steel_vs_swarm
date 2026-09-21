@@ -439,6 +439,11 @@ export function resolveWindowScheme(style = {}, buildingKey = '') {
     };
   }
   const info = style.functionInfo || {};
+  if (style.functionalWindows) {
+    const windows = style.functionalWindows;
+    return { mode: 'single', shapes: [windows.shape], w: 0.6, h: 0.62, frame: 'edge',
+      rate: rule.rate, lift: 0, dormer: false, oculusCross: false, bayStep: windows.bayStep };
+  }
   const highRise = (style.levels >= 10) || (style.targetHeight >= 30)
     || info.key === 'commercial_skyscraper' || info.type === 'skyscraper';
   const facade = style.facade || style.wallType || 'ribbon';

@@ -74,7 +74,7 @@ export function architecturalFacadeParts(edges, style, thickness) {
     const limit = style.detail ? FACADE_GEOMETRY_LIMIT.regional : FACADE_GEOMETRY_LIMIT.base;
     // 樓層按真實高度推導（層高 3.2m），不再鉗制 8 層：高層缺玻璃的主因即此截斷
     // 疊加舊管線把低樓層裝飾先花光額度、高樓層玻璃輪不到。
-    const floors = Math.max(1, Math.min(36, Math.round(edge.h / 3.2)));
+    const floors = Math.max(1, Math.min(36, Math.round(edge.h / (style.functionalWindows?.storeyH || 3.2))));
     const isCurtain = facade === 'ribbon' || facade === 'glass_curtain';
     // 開間步距由同棟窗方案給定（高層密、傳統疏），不再逐牆重算。
     let bays = Math.max(1, Math.min(10, Math.floor(length / scheme.bayStep)));
