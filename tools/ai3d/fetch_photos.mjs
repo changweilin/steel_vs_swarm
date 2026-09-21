@@ -710,7 +710,7 @@ function adoptInbox() {
     }
   }
   console.log(`\n收編 ${took} 張${left ? `;${left} 張留在 inbox 沒收(理由見上)` : ''}。`);
-  if (took) console.log('下一步:去背 → 選片閘 → img→3D(或直接 `node tools/ai3d/harvest_loop.mjs --rounds 1`)。');
+  console.log('後續 img→3D 採集管線已退場,收編的照片留作圖庫備查。');
 }
 
 async function main() {

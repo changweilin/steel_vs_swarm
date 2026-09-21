@@ -1,4 +1,5 @@
-// 本檔由 tools/ai3d/build_runtime_catalog.mjs 決定性產生，請勿手改。
+// 執行期型錄凍結檔(原由已退場的 tools/ai3d 管線決定性產生;現為手維護,
+// 改 counts 必須同步下面兩份名冊的實際列數)。
 export const RUNTIME_PARTS_META = Object.freeze({
   "schemaVersion": 1,
   "policy": {
@@ -20,11 +21,6 @@ export const RUNTIME_PARTS_META = Object.freeze({
       "bld_church",
       "bld_museum"
     ]
-  },
-  "generatedFrom": {
-    "review": "tools/parts_review/state.json",
-    "manifest": "tools/ai3d/parts_manifest.json",
-    "database": "out/3d_database.json"
   },
   "counts": {
     "building": 29,

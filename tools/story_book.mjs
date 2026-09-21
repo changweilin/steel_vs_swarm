@@ -9,7 +9,7 @@
 // 「長得很像」的第二份版面等於讓故事書從此獨立演化:遊戲改了排版而它沒跟上,
 // 你在這裡看到的東西就再也沒有在遊戲裡出現過 —— 那不叫覆核,叫看另一個作品。
 //
-// 三條邊界(與 codex_review / parts_review 同一套):
+// 三條邊界(與 codex_review 同一套):
 //   ① **住 `tools/` 不住 `public/`** —— `tools/build_solo.mjs` 是把 `public/**` 整包複製過去的,
 //      放進 public 就會跟著出貨到單機版與 GitHub Pages。頁面由這支自己的 dev server 供應,
 //      `server/server.js` 一行都不動。
@@ -33,7 +33,7 @@ import { STORY, chapterSide } from '../public/js/story.js';
 import { talkOf, stageKey } from '../public/js/storytalk.js';
 import { venueName } from '../public/js/storyui.js';
 
-/** 這支自己的預設埠 —— **它是這個數字的唯一真相**(同 codex_review / parts_review 的註)。
+/** 這支自己的預設埠 —— **它是這個數字的唯一真相**(同 codex_review 的註)。
  *  `tools/dev_supervisor.mjs`(設定頁那顆啟停鈕的後端)MUST import 這一個常數,MUST NOT 自己抄。 */
 export const DEFAULT_PORT = 8623;
 

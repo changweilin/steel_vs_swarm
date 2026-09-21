@@ -19,9 +19,8 @@
 //   與一條新的渲染路(量過:16 棟約 10,700 片),而它換不到任何額外的正確性。
 //
 // ---- 三條紀律 ----
-// ① **零 import**(同 `roadgrid.js`/`edgewall.js`):離線工具(`tools/ai3d/parts_src.mjs`)與
-//    遊戲端 `biomes.js` 吃**同一支**,面板的定義因此只有一份。`normalize_parts.py` 那一份是
-//    刻意的第二份(匯出端的刀 vs 量測端的尺,見 A46 ⑥ 與 parts_src 檔頭)。
+// ① **零 import**(同 `roadgrid.js`/`edgewall.js`):遊戲端 `biomes.js` 與離線工具吃
+//    **同一支**,面板的定義因此只有一份。
 // ② **格數用 `Math.round` 不是 `Math.floor`**:floor 會在面板邊緣留下一條寬度不足一格的
 //    餘料,而那條餘料的 UV 只能是「半扇窗」或「一條要另外切三角形才畫得出來的素牆」——
 //    前者正是要修的東西,後者要動拓樸。round ⇒ 格子稍微伸縮去**貼滿**面板,
@@ -42,11 +41,9 @@ export const PANEL = { DEG: 12, OFF_F: 0.03, WALL_NY: 0.15, FLAT_DEG: 6, MIN_F: 
 const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 /**
- * 平面分群(`wallPanels` 與收斂量測 `parts_src.solidConverge` 的**共用底層**)。
- * 規則與 `normalize_parts.py _plane_groups` 逐條相同:法線夾角 ≤ `DEG` **且** 平面偏移
- * ≤ `OFF_F` × 跨距;每收一片就重擬(面積加權)。零亂數、依三角形序定序 ⇒ 決定性。
- * ⚠ 這裡**不做**匯出端那條軸向吸附(`PLANAR_AXIS`)—— 吸附是「刀」的一部分,
- *   量測端跟著吸就量不到「它到底有沒有被吸到軸上」(A46 ⑥ 的刀 vs 尺)。
+ * 平面分群(法線夾角 + 平面偏移;面積加權重擬)。
+ * 規則:法線夾角 ≤ `DEG` **且** 平面偏移 ≤ `OFF_F` × 跨距;每收一片就重擬。
+ * 零亂數、依三角形序定序 ⇒ 決定性。
  * @param {ArrayLike<number>} pos  逐頂點 xyz
  * @param {ArrayLike<number>} idx  逐三角形頂點索引
  */

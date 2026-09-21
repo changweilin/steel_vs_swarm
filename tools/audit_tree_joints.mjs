@@ -23,34 +23,17 @@ import { quatApply, quatFromEuler } from '../public/js/xform.js';
 //         近垂直表面件(剝皮絲帶/纏藤,傾角 ≤ 0.15)只驗根,不驗梢(貼面由探針稽核擁有)。
 //         巨木枝全是單軸傾角 ⇒ 與 Euler 軸序無關;出現雙軸傾角直接紅
 //         (那在 runtime XYZ 與合成 Rz·Ry·Rx 下指向不同方向)。
-//   Ⅱ out/3d_data/tree 樹模型(model.json 真品):
-//     只驗對照台可見集合(路徑 _luna_v6 或 metadata status ok;
-//     舊 gemini 原件已有 luna 接班,不在名冊內,另列數量不紅)。
-//     角色劃分與對照台同一份正則(見 treeModelPartRole,註明出處 —— 驗的就是台上看到的):
-//     Ⅱ-a 同軸樹幹柱連續(含木質橋段,不論名字;名字只影響 Ⅱ-b)
-//     Ⅱ-b 木質長件 MUST NOT 掛 crown 名(trunk_crown 案重演即紅)
-//     Ⅱ-c 枝根接幹/接前段(硬);枝梢進冠/接後段(硬),枯梢/內枝收尾同 Ⅰ-c 例外
-//     Ⅱ-d 僅警告:合成軸序(Rz·Ry·Rx)與 runtime XYZ 下端點漂移 > 0.05m 的枝數
-//         (runtimePartModel 走 XYZ;漂移的枝上了遊戲會浮空 —— 管線級地雷,先記帳不紅)
 //
 // 反向驗證(字面替換 CRLF 容忍,替換無效 MUST 當場 exit 1;期望值不隨 flag 改變):
 //   --break-trunk-gap  dinizia 頂段縮回舊值(h24→18,y64→61)⇒ Ⅰ-b MUST 紅
-//   --break-branch-tip  指定的傘形樹冠整體抬高 5m(記憶體內,不寫碟)⇒ Ⅱ-c MUST 紅;
-//     若錨點模型不在可見集合內則當場 exit 1,不報假綠
-//   --break-crown-name  南洋杉 trunk_upper 改回 trunk_crown(記憶體內)⇒ Ⅱ-b MUST 紅;
-//     若碟上檔案已無 trunk_upper 則當場 exit 1
 //
-// 用法:node tools/audit_tree_joints.mjs [--break-trunk-gap] [--break-branch-tip] [--break-crown-name]
+// 用法:node tools/audit_tree_joints.mjs [--break-trunk-gap]
 // 退出碼:0 = 全綠(警告不影響);1 = 有紅
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { readSrc, grabConst, ROOT } from './audit_src.mjs';
+import { readSrc, grabConst } from './audit_src.mjs';
 
 const A = process.argv.slice(2);
 const BRK = {
   trunkGap: A.includes('--break-trunk-gap'),
-  branchTip: A.includes('--break-branch-tip'),
-  crownName: A.includes('--break-crown-name'),
 };
 let pass = 0, fail = 0, warn = 0;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log(`  ✗ ${m}`); } };
@@ -236,188 +219,6 @@ for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
   }
 }
 
-// ---------------- Ⅱ 樹模型 ----------------
-// 角色劃分與對照台同一份正則(tools/parts_review/review.js treeModelPartRole):
-// 驗的就是台上看到的接合,不另開第二份定義。
-console.log('Ⅱ out/3d_data/tree 模型幹枝接合');
-// 整詞比對(broadleaf 含 leaf 子字串,MUST NOT 誤判 —— 與對照台同義,見 treeModelPartRole)
-const CROWN_TOKENS = /^(crown|canopy|leaf|foliage)$/;
-const BRANCH_TOKENS = /^(branch|bough|primary|outer|secondary|inner|sag|hook|upturn|arm|candelabra|fork|elbow|link|gnarled|limb|tip)$/;
-const TRUNK_TOKENS = /^(trunk|bole|stem|column|barrel|flare|leader|root|bottle)$/;
-// 梢目標冠:blob 型零件的生成器關鍵詞(對照台把 rosette/tuft/cap 等判成 other,
-// 台上冠視圖看不到它們 —— 但梢確實插在裡面,接合驗證 MUST 認,偏離處以本註為準)
-const TIP_CROWN_WORDS = /crown|canopy|umbrella|needle|bloom|tuft|rosette|dome|foliage|flower|cluster|mass|facet|pad|fan|cap|core|leaf|outer|edge|whorl|break/;
-// 註:對照台把 inner/sag/hook/upturn 链段判成 other(台上枝視圖不顯示它們);
-// 這裡為接合完整仍納入驗證,偏離處以本註為準。
-const tok = (s) => String(s || '').toLowerCase().split(/[^a-z]+/);
-function modelRole(p) {
-  const ts = tok(p.name);
-  const has = (re) => ts.some((t) => re.test(t));
-  if (has(CROWN_TOKENS)) return 'canopy';
-  if (/gnarled_(trunk|bough)/.test(String(p.name || '').toLowerCase())) return 'branch';
-  if (has(BRANCH_TOKENS)) return isLong(p) ? 'branch' : 'other';
-  if (has(TRUNK_TOKENS)) return isLong(p) ? 'trunk' : 'other';
-  return 'other';
-}
-const isLong = (p) => /frustum|cylinder|prism/i.test(p.type || '');
-// 合成軸序(Rz·Ry·Rx,烘焙/對照台真相)與 runtime XYZ 下的 +Y 軸向
-function dirSYN(rx, ry, rz) {
-  const cx = Math.cos(rx), sx = Math.sin(rx), cy = Math.cos(ry), sy = Math.sin(ry);
-  const cz = Math.cos(rz), sz = Math.sin(rz);
-  const x = sx * sy, y = cx, z = sx * cy;
-  return [x * cz - y * sz, x * sz + y * cz, z];
-}
-function dirXYZ(rx, ry, rz) {
-  const cx = Math.cos(rx), sx = Math.sin(rx), cy = Math.cos(ry), sy = Math.sin(ry);
-  const cz = Math.cos(rz), sz = Math.sin(rz);
-  let x = -sz, y = cz, z = 0;
-  const x1 = x * cy + z * sy, z1 = -x * sy + z * cy;
-  x = x1; z = z1;
-  return [x, y * cx - z * sx, y * sx + z * cx];
-}
-function visibleTreeModels() {
-  const out = [];
-  const walk = (d) => {
-    for (const e of readdirSync(d, { withFileTypes: true })) {
-      const p = join(d, e.name);
-      if (e.isDirectory()) { walk(p); continue; }
-      if (e.name !== 'model.json') continue;
-      let meta = null;
-      try { meta = JSON.parse(readFileSync(join(d, 'metadata.json'), 'utf8')); } catch { /* 無 */ }
-      if (p.includes('_luna_v6') || meta?.status === 'ok') out.push(p);
-    }
-  };
-  walk(join(ROOT, 'out', '3d_data', 'tree'));
-  return out.sort();
-}
-const files = visibleTreeModels();
-let modelCount = 0, skippedLegacy = 0, xyzDrift = 0, xyzBranches = 0, anchorSeen = false;
-{
-  const all = [];
-  const walkAll = (d) => {
-    for (const e of readdirSync(d, { withFileTypes: true })) {
-      const p = join(d, e.name);
-      if (e.isDirectory()) { walkAll(p); continue; }
-      if (e.name === 'model.json') all.push(p);
-    }
-  };
-  try { walkAll(join(ROOT, 'out', '3d_data', 'tree')); skippedLegacy = all.length - files.length; } catch { /* 無 */ }
-}
-for (const f of files) {
-  let j;
-  try { j = JSON.parse(readFileSync(f, 'utf8')); } catch { continue; }
-  const parts = j.parts || [];
-  const short = f.split('tree').pop().slice(-70);
-  modelCount++;
-  const roles = parts.map((p) => ({ p, r: modelRole(p) }));
-  const trunks = roles.filter((o) => o.r === 'trunk').map((o) => o.p);
-  const branches = roles.filter((o) => o.r === 'branch').map((o) => o.p);
-  const crowns = roles.filter((o) => o.r === 'canopy').map((o) => o.p);
-  // 梢目標冠 = 台上冠 ∪ blob 生成冠(見 TIP_CROWN_WORDS 註)
-  const tipCrowns = parts.filter((p) => !isLong(p)
-    && TIP_CROWN_WORDS.test(String(p.name || '').toLowerCase()));
-  const boleColors = new Set(trunks.map((p) => p.color));
-  if (BRK.crownName && short.includes('61a8c242')) {
-    anchorSeen = true;
-    for (const p of parts) if (p.name === 'trunk_upper') p.name = 'trunk_crown';
-    if (!parts.some((p) => p.name === 'trunk_crown')) { console.log('x --break-crown-name 錨點遺失(模型改名了?)'); process.exit(1); }
-    roles.forEach((o) => { o.r = modelRole(o.p); });
-  }
-  if (BRK.branchTip && short.includes('042e661d')) {
-    anchorSeen = true;
-    for (const c of tipCrowns) c.position = [c.position[0], c.position[1] + 5, c.position[2]];
-  }
-  // Ⅱ-b 木質橋段誤名
-  for (const p of parts) {
-    if (!isLong(p) || modelRole(p) !== 'canopy') continue;
-    if (boleColors.has(p.color)) ok(false, `${short} 木質長件 ${p.name} 掛 crown 名(對照台樹幹視圖會藏起它)`);
-  }
-  // Ⅱ-a 同軸柱連續:主幹件 + 木質橋段(wood 色的 crown 名長件,不論名字);
-  // 枝一律不參柱(同柱判定只看垂直覆蓋:根罩 flare 與主幹同起點,覆蓋式掃描才不會虛報)
-  const axis = parts.filter((p) => isLong(p)
-    && Math.abs(p.position[0]) <= 0.6 && Math.abs(p.position[2]) <= 0.6
-    && (modelRole(p) === 'trunk'
-      || (modelRole(p) === 'canopy' && p.color != null && boleColors.has(p.color))));
-  const spans = axis.map((p) => ({
-    p, bot: p.position[1] - p.height / 2, top: p.position[1] + p.height / 2,
-  })).sort((a, b) => a.bot - b.bot);
-  // 首段接地即合法(底 ≤ 0.1m 視為落地)
-  let covered = 0.05 + GAP_TOL;
-  for (const s of spans) {
-    if (s.bot > covered + GAP_TOL) {
-      ok(false, `${short} 幹柱 ${s.p.name} 底 ${s.bot.toFixed(2)} 懸空(下方覆蓋只到 ${covered.toFixed(2)})`);
-    } else pass++;
-    covered = Math.max(covered, s.top);
-  }
-  // Ⅱ-c 枝接合(合成軸序);梢目標吃 tipCrowns(含台上判成 other 的生成冠)
-  const inTrunk = (pt) => trunks.some((t) => {
-    const r = t.radii || [0.1, 0.1], h = t.height, y = t.position[1], ly = pt[1] - y;
-    if (ly < -h / 2 - 0.06 || ly > h / 2 + 0.06) return false;
-    const tt = Math.max(0, Math.min(1, (ly + h / 2) / h));
-    return Math.hypot(pt[0] - t.position[0], pt[2] - t.position[2]) <= r[1] + (r[0] - r[1]) * tt + 0.06;
-  });
-  const inCrown = (pt) => tipCrowns.some((c) => {
-    let rx, ry, rz;
-    if (c.radii && c.radii.length === 3) [rx, ry, rz] = c.radii;
-    else if (c.radius) rx = ry = rz = c.radius;
-    else if (c.dimensions) { rx = c.dimensions[0] / 2; ry = c.dimensions[1] / 2; rz = c.dimensions[2] / 2; }
-    else return false;
-    const dx = (pt[0] - c.position[0]) / rx, dy = (pt[1] - c.position[1]) / ry, dz = (pt[2] - c.position[2]) / rz;
-    return dx * dx + dy * dy + dz * dz <= 1.25;
-  });
-  const crownGapM = (pt) => {
-    let m = Infinity;
-    for (const c of tipCrowns) {
-      let rx, ry, rz;
-      if (c.radii && c.radii.length === 3) [rx, ry, rz] = c.radii;
-      else if (c.radius) rx = ry = rz = c.radius;
-      else if (c.dimensions) { rx = c.dimensions[0] / 2; ry = c.dimensions[1] / 2; rz = c.dimensions[2] / 2; }
-      else continue;
-      const q = Math.sqrt(((pt[0] - c.position[0]) / rx) ** 2 + ((pt[1] - c.position[1]) / ry) ** 2 + ((pt[2] - c.position[2]) / rz) ** 2);
-      m = Math.min(m, Math.max(0, q - 1) * Math.min(rx, ry, rz));
-    }
-    return m;
-  };
-  const crownBottom = tipCrowns.length ? Math.min(...tipCrowns.map((c) => {
-    if (c.radii && c.radii.length === 3) return c.position[1] - c.radii[1];
-    if (c.radius) return c.position[1] - c.radius;
-    if (c.dimensions) return c.position[1] - c.dimensions[1] / 2;
-    return Infinity;
-  })) : Infinity;
-  const items = branches.map((b) => {
-    const d = dirSYN(...b.rotation), L = b.height, C = b.position;
-    return {
-      b,
-      a: [C[0] - d[0] * L / 2, C[1] - d[1] * L / 2, C[2] - d[2] * L / 2],
-      e: [C[0] + d[0] * L / 2, C[1] + d[1] * L / 2, C[2] + d[2] * L / 2],
-    };
-  });
-  const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) < 0.08;
-  for (const it of items) {
-    const rootOk = inTrunk(it.a) || items.some((o) => o !== it && (near(it.a, o.a) || near(it.a, o.e)));
-    ok(rootOk, `${short} 枝根 ${it.b.name} 接幹/接前段`);
-    if (inCrown(it.e) || items.some((o) => o !== it && (near(it.e, o.a) || near(it.e, o.e)))) { pass++; continue; }
-    const thin = (it.b.radii?.[1] ?? 1) <= SNAG_R;
-    if (rootOk && thin && (crownGapM(it.e) <= SNAG_DIST || it.e[1] >= crownBottom - TIP_TOL)) {
-      note(`${short} 枯梢/內枝 ${it.b.name} 收尾(根有接、細枝,僅記帳)`);
-      continue;
-    }
-    ok(false, `${short} 枝梢 ${it.b.name} 懸空(結構枝必須進冠/接後段)`);
-  }
-  for (const it of items) {
-    // Ⅱ-d 軸序漂移記帳(不紅)
-    const d2 = dirXYZ(...it.b.rotation), C = it.b.position, L = it.b.height;
-    const drift = Math.max(
-      Math.hypot(it.a[0] - (C[0] - d2[0] * L / 2), it.a[1] - (C[1] - d2[1] * L / 2), it.a[2] - (C[2] - d2[2] * L / 2)),
-      Math.hypot(it.e[0] - (C[0] + d2[0] * L / 2), it.e[1] - (C[1] + d2[1] * L / 2), it.e[2] - (C[2] + d2[2] * L / 2)));
-    xyzBranches++;
-    if (drift > 0.05) xyzDrift++;
-  }
-}
-if ((BRK.branchTip || BRK.crownName) && !anchorSeen) {
-  console.log('x 反向驗證錨點不在可見集合內(檔名改了?)'); process.exit(1);
-}
-if (skippedLegacy) note(`舊 gemini 原件 ${skippedLegacy} 顆不在對照台名冊內(已有 luna 接班,僅記帳)`);
-if (xyzDrift) note(`軸序漂移:合成 vs runtime XYZ 端點差 > 0.05m 的枝 ${xyzDrift}/${xyzBranches}(管線級地雷,見檔頭 Ⅱ-d)`);
-console.log(`\n檢查 ${pass + fail} 項,正常 ${pass} 項,警告 ${warn} 項,模型 ${modelCount} 棵`);
+// ---------------- 尾聲 ----------------
+console.log(`\n檢查 ${pass + fail} 項,正常 ${pass} 項,警告 ${warn} 項`);
 process.exit(fail ? 1 : 0);
