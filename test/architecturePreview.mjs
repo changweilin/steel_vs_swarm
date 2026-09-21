@@ -103,6 +103,15 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
   .btn-filter:hover { background: #f1f5f9; border-color: #94a3b8; }
   .btn-full-random { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; box-shadow: 0 3px 10px rgba(139, 92, 246, 0.35); transition: all 0.2s; }
   .btn-full-random:hover { background: linear-gradient(135deg, #7c3aed, #5b21b6); transform: translateY(-1px); }
+  .btn-collapse-toggle { position: absolute; top: 8px; right: 10px; background: rgba(255, 255, 255, 0.9); color: #334155; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 12px; line-height: 1.4; cursor: pointer; transition: all 0.15s; }
+  .btn-collapse-toggle:hover { background: #e2e8f0; border-color: #94a3b8; }
+  .header-info-row { padding-right: 40px; }
+  /* 整個控制大區塊收合：標題、分類選項、參數列、狀態列全部隱藏，只保留隨機生成按鈕與展開按鈕 */
+  header.params-collapsed #cat-title,
+  header.params-collapsed #cat-desc,
+  header.params-collapsed .nav-bar { display: none; }
+  header.params-collapsed .dim-panel > :not(.action-row) { display: none; }
+  header.params-collapsed .dim-panel .action-row > :not(.btn-randomize):not(.btn-collapse-toggle) { display: none !important; }
 
   .sample-control { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #334155; font-weight: 600; background: #fff; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; }
   .sample-label { color: #1e293b; font-weight: 700; }
@@ -274,10 +283,10 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </div>
       <div class="action-row">
-        <button id="btn-arch-generate" class="btn-generate">⚡ 生成建築陣列</button>
-        <button id="btn-arch-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
-        <button id="btn-open-filter" class="btn-filter">⚙ 類別篩選設定</button>
-        <button id="btn-full-random" class="btn-full-random">🎲 全類別隨機混搭</button>
+        <button id="btn-arch-generate" class="btn-generate" title="生成建築陣列">⚡</button>
+        <button id="btn-arch-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
+        <button id="btn-open-filter" class="btn-filter" title="類別篩選設定">⚙</button>
+        <button id="btn-full-random" class="btn-full-random" title="全類別隨機混搭">🔀</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-arch" value="5" min="1" max="30"></label>
@@ -296,7 +305,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
             <option value="per_building" selected>獨立種子</option>
           </select>
         </div>
-        <button id="btn-regen-variants" class="btn-generate btn-variant" style="display: none;">🎲 重新隨機生成 16 組變體</button>
+        <button id="btn-regen-variants" class="btn-generate btn-variant" style="display: none;" title="重新隨機生成 16 組變體">🔁</button>
       </div>
     </div>
   </div>
@@ -432,8 +441,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </details>
       <div class="action-row">
-        <button id="btn-geo-generate" class="btn-generate">⚡ 生成地質陣列</button>
-        <button id="btn-geo-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
+        <button id="btn-geo-generate" class="btn-generate" title="生成地質陣列">⚡</button>
+        <button id="btn-geo-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-geo" value="4" min="1" max="20"></label>
@@ -527,8 +536,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </div>
       <div class="action-row">
-        <button id="btn-veh-generate" class="btn-generate">⚡ 生成車輛陣列</button>
-        <button id="btn-veh-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
+        <button id="btn-veh-generate" class="btn-generate" title="生成車輛陣列">⚡</button>
+        <button id="btn-veh-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-veh" value="4" min="1" max="20"></label>
@@ -605,8 +614,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </div>
       <div class="action-row">
-        <button id="btn-vessel-generate" class="btn-generate">⚡ 生成船隻陣列</button>
-        <button id="btn-vessel-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
+        <button id="btn-vessel-generate" class="btn-generate" title="生成船隻陣列">⚡</button>
+        <button id="btn-vessel-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-vessel" value="4" min="1" max="20"></label>
@@ -678,8 +687,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </div>
       <div class="action-row">
-        <button id="btn-industry-generate" class="btn-generate">⚡ 生成設施陣列</button>
-        <button id="btn-industry-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
+        <button id="btn-industry-generate" class="btn-generate" title="生成設施陣列">⚡</button>
+        <button id="btn-industry-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-industry" value="4" min="1" max="20"></label>
@@ -741,8 +750,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </div>
       <div class="action-row">
-        <button id="btn-ice-generate" class="btn-generate">⚡ 生成冰體陣列</button>
-        <button id="btn-ice-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
+        <button id="btn-ice-generate" class="btn-generate" title="生成冰體陣列">⚡</button>
+        <button id="btn-ice-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-ice" value="4" min="1" max="20"></label>
@@ -806,8 +815,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </div>
       <div class="action-row">
-        <button id="btn-env-generate" class="btn-generate">⚡ 生成環境陣列</button>
-        <button id="btn-env-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
+        <button id="btn-env-generate" class="btn-generate" title="生成環境陣列">⚡</button>
+        <button id="btn-env-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-env" value="4" min="1" max="20"></label>
@@ -920,8 +929,8 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         </div>
       </details>
       <div class="action-row">
-        <button id="btn-plant-generate" class="btn-generate">⚡ 生成植物陣列</button>
-        <button id="btn-plant-random-seed" class="btn-randomize">🎲 隨機種子生成</button>
+        <button id="btn-plant-generate" class="btn-generate" title="生成植物陣列">⚡</button>
+        <button id="btn-plant-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
         <div class="sample-control">
           <span class="sample-label">取樣規模:</span>
           <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-plant" value="4" min="1" max="20"></label>
@@ -945,12 +954,12 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
   </div>
 
   <div class="nav-bar">
-    <button id="btn-back" class="btn-back">← 返回分類矩陣</button>
+    <button id="btn-back" class="btn-back" title="返回分類矩陣">←</button>
     <div class="nav-status" id="nav-status">目前展示：【建築分類與變體】</div>
     <div class="toggles">
       <label><input type="checkbox" id="chk-roads" checked> 道路 / 地面網格</label>
       <label><input type="checkbox" id="chk-labels" checked> 懸浮標籤</label>
-      <label><button id="btn-reset-cam" style="background:#e2e8f0;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:11px;">視角重置</button></label>
+      <label><button id="btn-reset-cam" style="background:#e2e8f0;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:11px;" title="視角重置">🔄</button></label>
     </div>
   </div>
 </header>
@@ -967,7 +976,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <div class="filter-modal-title">⚙ 建築類別與維度選項篩選池</div>
         <div class="filter-modal-desc">自訂隨機生成與陣列循環時納入的特徵項目（未勾選之項目將從隨機抽選與矩陣循環中排除）</div>
       </div>
-      <button id="btn-close-filter" class="btn-close-modal">✕ 關閉</button>
+      <button id="btn-close-filter" class="btn-close-modal" title="關閉">✕</button>
     </div>
     <div class="filter-modal-body">
       <div id="filter-grid" class="filter-modal-grid"></div>
@@ -2653,7 +2662,7 @@ dimLabels.forEach((label) => {
 
 document.querySelector('#btn-arch-generate').addEventListener('click', () => {
   const btn = document.querySelector('#btn-arch-generate');
-  btn.textContent = '⚡ 生成中...';
+  btn.textContent = '⏳';
   setTimeout(() => {
     try {
       // 與其他頁籤一致：僅「陣列種子」模式在重新生成時換基底種子。
@@ -2666,7 +2675,7 @@ document.querySelector('#btn-arch-generate').addEventListener('click', () => {
       console.error('生成建築陣列失敗:', err);
       alert('生成建築陣列時發生錯誤: ' + (err.message || err));
     } finally {
-      btn.textContent = '⚡ 生成建築陣列';
+      btn.textContent = '⚡';
     }
   }, 10);
 });
@@ -2720,6 +2729,33 @@ document.querySelector('#chk-labels').addEventListener('change', () => {
 });
 
 document.querySelector('#btn-reset-cam')?.addEventListener('click', resetCameraFocus);
+
+// 控制大區塊展開/收縮：整個區塊（含標題、分類選項、參數列、狀態列）一起收合，
+// 收縮時只保留隨機生成按鈕與展開按鈕
+function setupParamsCollapse() {
+  const header = document.querySelector('header');
+  if (!header) return;
+  const syncLabels = () => {
+    const collapsed = header.classList.contains('params-collapsed');
+    document.querySelectorAll('.btn-collapse-toggle').forEach((btn) => {
+      btn.textContent = collapsed ? '▼' : '▲';
+      btn.title = collapsed ? '展開控制區塊' : '收起整個控制區塊';
+    });
+  };
+  document.querySelectorAll('.cat-panel .dim-panel').forEach((panel) => {
+    const actionRow = panel.querySelector('.action-row');
+    if (!actionRow || actionRow.querySelector('.btn-collapse-toggle')) return;
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'btn-collapse-toggle';
+    toggle.addEventListener('click', () => {
+      header.classList.toggle('params-collapsed');
+      syncLabels();
+    });
+    actionRow.appendChild(toggle);
+  });
+  syncLabels();
+}
 
 // 篩選池功能
 function setupFilterModal() {
@@ -4192,6 +4228,7 @@ window.addEventListener('resize', () => {
 // 初次建構與環境初始化
 try {
   setupFilterModal();
+  setupParamsCollapse();
   initEnvironment();
   initVehicleOptions();
   initVesselOptions();
