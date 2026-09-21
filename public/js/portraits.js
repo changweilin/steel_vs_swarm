@@ -19,10 +19,10 @@ const DRAWN_ART_IDS = [
   't01', 't02', 't03', 't04', 't05', 't06', 't07', 't08', 't09', 't10', 't11', 't12',
   'm01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm07', 'm08',
 ];
-/** 手繪立繪覆蓋表:id -> 圖檔路徑(相對 public/)。留空 = 全部走程序生成。一律原圖,不去背。 */
+/** 手繪立繪覆蓋表:id -> 圖檔路徑(相對 public/)。留空 = 全部走程序生成。透明背景。 */
 export const PORTRAIT_MANIFEST = Object.fromEntries(
   DRAWN_ART_IDS.map((id) => [id, `assets/characters/${id}_base.png`]));
-/** 手繪頭像覆蓋表(未登記則沿用立繪或程序生成)。一律原圖,不去背。 */
+/** 手繪頭像覆蓋表(未登記則沿用立繪或程序生成)。透明背景。 */
 export const AVATAR_MANIFEST = Object.fromEntries(
   DRAWN_ART_IDS.map((id) => [id, `assets/avatars/${id}.png`]));
 
@@ -165,7 +165,7 @@ function buildSVG(id) {
 
 const uri = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
-/** 半身立繪(300×400)。已登記手繪檔 → 直接回傳原圖路徑(不去背) */
+/** 半身立繪(300×400)。已登記手繪檔 → 直接回傳圖檔路徑(透明背景) */
 export function portraitURL(id) {
   if (PORTRAIT_MANIFEST[id]) return PORTRAIT_MANIFEST[id];
   let svg = cache.get(id);
