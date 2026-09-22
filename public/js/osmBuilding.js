@@ -10,7 +10,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { envMat, sceneObjectMat } from './toon.js';
 import { sampleBuildingSite } from './buildingDiversity.js';
 import { architecturalRoofParts } from './architectureRoofParts.js';
-import { generateBuildingAppurtenances, resolveFrontDoorOpening } from './buildingAppurtenances.js';
+import { generateBuildingAppurtenances, resolveFrontDoorOpening, resolveSideDoorOpening } from './buildingAppurtenances.js';
 import { resolveAdaptiveRoofForm, calculateFootprintMetrics } from './architectureStyles.js';
 import { ROOF_RIM_LIP, CYL_FACET_DEG } from './roofProfiles.js';
 import { WATER, objHeightMax } from './data.js';
@@ -492,10 +492,10 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         batch.details.push(...functionalParts.parts.map(architecturePartGeometry));
 
         // Phase 3: 建築立面與平面特徵渲染 (大玻璃窗、塗鴉牆、壁柱、格柵等)
-        // 正門開口先算：首層被取代的一窗不鋪玻璃，門坐上該窗位（單一縫）。
-        const doorOpening = (!architecture.functionalDesign)
-          ? resolveFrontDoorOpening(poly, facadeEdges, architecture, targetH) : null;
-        const doorOpenings = doorOpening ? [doorOpening] : [];
+        // 正門／側門開口先算：首層被取代的窗不鋪玻璃，門坐上該窗位（單一縫）。
+        const doorOpenings = (!architecture.functionalDesign)
+          ? [resolveFrontDoorOpening(poly, facadeEdges, architecture, targetH),
+            resolveSideDoorOpening(poly, facadeEdges, architecture, targetH)].filter(Boolean) : [];
         batch.details.push(...architecturalFacade(facadeEdges, architecture, wallThickness, doorOpenings));
 
         // Phase 4: 外部零件依屋頂類型嚴格篩選相容性後隨機配置

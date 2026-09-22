@@ -93,8 +93,8 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
     if (floors * bays > 140) bays = Math.max(1, Math.floor(140 / floors));
     const bayW = length / bays, floorH = edge.h / floors;
     let budget = Math.floor(limit / Math.max(1, edges.length));
-    // 本面牆的正門開口（以 edge 身份匹配；首層 bay 對位取代一窗）。
-    const opening = doorOpenings.find((o) => o && o.edge === edge);
+    // 本面牆的正門／側門開口（以 edge 身份匹配；首層 bay 對位取代窗）。
+    const edgeOpenings = doorOpenings.filter((o) => o && o.edge === edge);
     // 已渲染窗表：後續階段沿用，不重算位置（牛眼／老虎窗不疊格柵）。
     const wins = [];
     const edgeStart = geos.length;
@@ -143,8 +143,9 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
         if (shape === 'arch' && w > h) w = h;
         const u = -length / 2 + (bay + 0.5) * bayW;
         const y = yBase + (scheme.lift || 0) * floorH;
-        // 正門開口：首層對應開間只留佔位（飾帶分段、柱體避讓用），不鋪玻璃。
-        if (opening && floor === 0 && bay === opening.bay) {
+        // 正門／側門開口：首層對應開間只留佔位（飾帶分段、柱體避讓用），不鋪玻璃。
+        const opening = floor === 0 ? edgeOpenings.find((o) => o.bay === bay) : null;
+        if (opening) {
           wins.push({ floor, bay, u: opening.u, y: opening.h / 2, w: opening.w, h: opening.h, shape: 'doorway', doorway: true });
           continue;
         }
