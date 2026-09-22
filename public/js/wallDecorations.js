@@ -151,6 +151,51 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
   for (let slot = 0; slot < placement.maxCount; slot++) {
     const [kind, rule] = choices[Math.floor(rnd(`${slot}:type`) * choices.length)];
     const [scope, [wf, hf]] = scopes[Math.floor(rnd(`${slot}:scope`) * scopes.length)];
+    if (rule.plant) {
+      // 藤蔓走窗間垂直空隙：找一條無佔位的窄柱，以 1×N 無縫疊塊向上攀爬。
+      // 每塊圖案單元長寬比恆 ≤1.5（塊高取 ceil 均分，恆 ≤1.5×柱寬、恆 ≥0.7m），
+      // 塊與塊共用接縫座標（generateSeamlessVinePattern 的 hseam 保證連續），
+      // 整柱不壓窗不壓外掛。密窗牆上方能有整幅攀藤，而非只剩縮小的碎塊。
+      const vw = 1.0 + rnd(`${slot}:vinew`) * 0.6;
+      let strip = null;
+      if (width - vw - 0.8 > 0) {
+        for (let attempt = 0; attempt < 24 && !strip; attempt++) {
+          const x = (rnd(`${slot}:vine:${attempt}:x`) - 0.5) * (width - vw - 0.8);
+          const cuts = [];
+          for (const r of occupied) {
+            if (Math.abs(x - r.x) < (vw + r.w) / 2 + 0.15) {
+              cuts.push([r.y - r.h / 2 - 0.15, r.y + r.h / 2 + 0.15]);
+            }
+          }
+          cuts.sort((a, b) => a[0] - b[0]);
+          let cur = 0.4, best = null;
+          const consider = (a, b) => {
+            if (b - a >= 2.0 && (!best || b - a > best[1] - best[0])) best = [a, b];
+          };
+          for (const [a, b] of cuts) {
+            if (a > cur) consider(cur, Math.min(a, height - 0.4));
+            cur = Math.max(cur, b);
+            if (cur >= height - 0.4) break;
+          }
+          if (cur < height - 0.4) consider(cur, height - 0.4);
+          if (!best) continue;
+          const segH = best[1] - best[0];
+          const rows = Math.max(1, Math.ceil(segH / Math.min(vw * 1.5, 3.0)));
+          const tileH = segH / rows;
+          if (tileH < 0.7 || tileH > vw * 1.5 + 1e-6) continue;
+          strip = { site: { x, y: (best[0] + best[1]) / 2, w: vw, h: segH }, rows };
+        }
+      }
+      if (!strip) continue;
+      const motif = generateSeamlessVinePattern({
+        seed, slot, site: strip.site, w: strip.site.w, h: strip.site.h,
+        kind, rule, scope, cols: 1, rows: strip.rows, budget: budget - parts.length,
+      });
+      // Keep motifs complete when the building-wide budget runs out.
+      if (parts.length + motif.length > budget) continue;
+      parts.push(...motif); occupied.push(strip.site);
+      continue;
+    }
     let w = Math.min(8, (width - 0.8) * wf * (0.8 + rnd(`${slot}:w`) * 0.4));
     let h = Math.min(6, (height - 0.8) * hf * (0.8 + rnd(`${slot}:h`) * 0.4));
     // 渲染圖案長寬差距不可超過 50%（不可太細）：收斂長邊至 1.5× 短邊。
