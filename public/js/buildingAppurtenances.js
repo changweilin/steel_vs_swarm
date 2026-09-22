@@ -63,6 +63,38 @@ function rectsOverlap(u, y, w, h, rects) {
   return false;
 }
 
+// 正門取代首層窗的單一縫：同一顆雜湊算出正門（最長邊、門寬、偏置），
+// 再吸附到最近的首層窗格中心，門寬夾至 0.8 個開間（不吞鄰窗）。
+// 立面（跳過該窗玻璃）與外掛（門對齊該窗）共用此回傳，兩端同值、零共享 rnd 消耗。
+// 無首層玻璃（無窗棟／牆太短）回 null，兩端維持舊行為（門照舊放、無窗可替）。
+export function resolveFrontDoorOpening(poly, edges = [], architecture = {}, height = 0) {
+  if (!architecture || !edges.length || !poly?.outer?.length || !(height > 0)) return null;
+  const sorted = [...edges].sort((a, b) => (b.hw2 ?? 0) - (a.hw2 ?? 0));
+  const front = sorted[0];
+  const frontLen = front.hw2 != null ? front.hw2 * 2 : 0;
+  if (!(frontLen >= 2.4)) return null;
+  const idBase = `${architecture.id || 'bld'}|${edges[0]?.sourceId || edges[0]?.x}|${poly.outer.length}`;
+  const firstEdge = edges[0];
+  const key = `${firstEdge?.sourceId ?? ''}|${architecture.variant ?? 0}|${architecture.id ?? ''}|${architecture.functionInfo?.type ?? ''}|${architecture.functionInfo?.key ?? ''}|${firstEdge ? `${firstEdge.x.toFixed(1)},${firstEdge.z.toFixed(1)}` : ''}`;
+  let doorW = Math.min(2.8, frontLen * 0.35);
+  const doorH = Math.min(3.2, Math.max(2.2, height * 0.25));
+  const rects = facadeGlassRects(front, architecture, key, height);
+  if (!rects.length) return null;
+  // 首層窗格 = y 最小的一排（floor 0，bay 序即 push 序）。
+  const y0 = Math.min(...rects.map((r) => r.y));
+  const ground = rects.filter((r) => r.y <= y0 + 1e-6);
+  if (!ground.length) return null;
+  const maxOffset = Math.max(0, (frontLen - doorW - 1.2) * 0.35);
+  const offset = maxOffset > 0 ? (((architectureHash(idBase, 'door_pos') % 100) / 50) - 1.0) * maxOffset : 0;
+  let best = 0, bd = Infinity;
+  ground.forEach((r, i) => {
+    const d = Math.abs(r.x - offset);
+    if (d < bd) { bd = d; best = i; }
+  });
+  doorW = Math.min(doorW, (frontLen / ground.length) * 0.8);
+  return { edge: front, bay: best, u: ground[best].x, w: doorW, h: doorH };
+}
+
 /** 外部零件型錄定義與配置規則 */
 export const APPURTENANCE_RULES = Object.freeze({
   // 頂部物件 (Rooftop)
@@ -604,6 +636,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
   const frontEdge = sortedEdges[0];
   const sideEdges = sortedEdges.slice(1);
   const groundAttachments = new Map();
+  // 正門開口（取代首層其中一窗）：與立面共用單一縫；無首層玻璃時為 null。
+  const doorOpening = resolveFrontDoorOpening(poly, edges, architecture, height);
 
   // 2. 正門地面物件生成 (大門、雨棚、盆栽 - 緊密貼齊外牆法線，杜絕內旋或拆開)
   if (frontEdge) {
@@ -611,13 +645,16 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const frame = getEdgeFrame(frontEdge, poly);
     const frontLen = frame.len;
     if (frontLen >= 2.4) {
-      // 大門 (Main Door)
-      const doorW = Math.min(2.8, frontLen * 0.35);
-      const doorH = Math.min(3.2, Math.max(2.2, height * 0.25));
+      // 大門 (Main Door)：有開口即坐上被取代的窗位，無開口走舊雜湊偏置。
+      let doorW = Math.min(2.8, frontLen * 0.35);
+      let doorH = Math.min(3.2, Math.max(2.2, height * 0.25));
 
       // 隨機偏置：不一定置中，但在安全邊界內隨機滑移
       const maxOffset = Math.max(0, (frontLen - doorW - 1.2) * 0.35);
-      const doorOffset = maxOffset > 0 ? (((architectureHash(idBase, 'door_pos') % 100) / 50) - 1.0) * maxOffset : 0;
+      let doorOffset = maxOffset > 0 ? (((architectureHash(idBase, 'door_pos') % 100) / 50) - 1.0) * maxOffset : 0;
+      if (doorOpening && doorOpening.edge === frontEdge) {
+        doorOffset = doorOpening.u; doorW = doorOpening.w; doorH = doorOpening.h;
+      }
 
       const doorGeo = new THREE.BoxGeometry(doorW, doorH, 0.08);
       doorGeo.translate(doorOffset, doorH / 2, wallThickness / 2 + 0.04);

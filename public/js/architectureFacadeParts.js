@@ -55,8 +55,11 @@ function ornamentHash(text) {
  * 全層共用），玻璃同樣鋪滿；窗間隙逐層雜湊擲「插或不插」（各半）補浮雕／花磚／
  * 掛飾，開間夠寬（bayW ≥ 3.2m）再逐窗雜湊擲半數補陽台／雨遮外推。飾件與外推
  * 全走剩餘額度，耗盡即停、不動玻璃。
+ * 正門取代首層窗：doorOpenings 傳入外掛共用的正門開口（{edge, bay, u, w, h}），
+ * 首層對應開間不鋪玻璃不加框（wins 保留開口佔位，飾帶分段、柱體避讓照走，
+ * 開間索引不錯位）；無開口（無首層玻璃）行為不變。
  */
-export function architecturalFacadeParts(edges, style, thickness) {
+export function architecturalFacadeParts(edges, style, thickness, doorOpenings = []) {
   const geos = [];
   const facade = style.facade || style.wallType || 'ribbon';
   const glassColor = style.glass || 0x68a5c2;
@@ -90,6 +93,8 @@ export function architecturalFacadeParts(edges, style, thickness) {
     if (floors * bays > 140) bays = Math.max(1, Math.floor(140 / floors));
     const bayW = length / bays, floorH = edge.h / floors;
     let budget = Math.floor(limit / Math.max(1, edges.length));
+    // 本面牆的正門開口（以 edge 身份匹配；首層 bay 對位取代一窗）。
+    const opening = doorOpenings.find((o) => o && o.edge === edge);
     // 已渲染窗表：後續階段沿用，不重算位置（牛眼／老虎窗不疊格柵）。
     const wins = [];
     const edgeStart = geos.length;
@@ -138,6 +143,11 @@ export function architecturalFacadeParts(edges, style, thickness) {
         if (shape === 'arch' && w > h) w = h;
         const u = -length / 2 + (bay + 0.5) * bayW;
         const y = yBase + (scheme.lift || 0) * floorH;
+        // 正門開口：首層對應開間只留佔位（飾帶分段、柱體避讓用），不鋪玻璃。
+        if (opening && floor === 0 && bay === opening.bay) {
+          wins.push({ floor, bay, u: opening.u, y: opening.h / 2, w: opening.w, h: opening.h, shape: 'doorway', doorway: true });
+          continue;
+        }
         // 老虎窗（dormer）：整棟頂層統一有無，外凸窗體＋小斜蓋，取代平面玻璃。
         // 窗體玻璃非等比縮放後仍須長寬比 ≤1.5（不可太細）。
         if (topFloor && scheme.dormer) {
@@ -245,6 +255,7 @@ export function architecturalFacadeParts(edges, style, thickness) {
         for (const win of wins) {
           if (budget <= 0) break;
           if (win.shape === 'dormer' || win.shape === 'oculus') continue;
+          if (win.doorway) continue; // 門洞上不加陽台／雨遮（門頭另有外掛雨棚）
           if (roll(win.floor, win.bay, 'protrude') >= 0.5) continue;
           const { u, y, w, h } = win;
           if ((scheme.protrudeKind || 'balcony') === 'canopy') {
@@ -266,9 +277,10 @@ export function architecturalFacadeParts(edges, style, thickness) {
     }
 
     // ---- 第二階段：窗框／窗梃／窗花（Tier 2 深度 +0.09m，扣額度） ----
+    // 門洞窗不加框（門面留給外掛正門）。
     for (const win of wins) {
       if (budget <= 0) break;
-      if (win.shape === 'dormer') continue;
+      if (win.shape === 'dormer' || win.doorway) continue;
       const { u, y, w, h, shape } = win;
       if (shape === 'oculus') {
         if (scheme.oculusCross) {
@@ -335,6 +347,7 @@ export function architecturalFacadeParts(edges, style, thickness) {
     for (const win of wins) {
       if (budget <= 0) break;
       if (win.shape === 'oculus' || win.shape === 'dormer') continue;
+      if (win.doorway) continue; // 門洞不加文化飾（門面留給外掛正門）
       const { u, y, w, h, floor } = win;
       const detail = style.detail;
       if (detail === 'jali' || detail === 'louvers') {
