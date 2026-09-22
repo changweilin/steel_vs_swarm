@@ -1,20 +1,150 @@
 import { architectureHash } from './buildingDiversity.js';
 import { WALL_DECORATIONS, WALL_COVERAGE, WALL_DECORATION_PLACEMENT } from './wallDecorationCatalog.js';
 
-// 高樓爬藤門檻（m）：達此樓高即視為高樓，植物系飾件僅 5% 保留（見 wallDecorationParts）。
-const TALL_VINE_LIMIT = 24;
+// 低樓層門檻（m）：達此樓高以上視為高樓，牆面裝飾/渲染全面停用（陽台/雨遮/冷氣等規律配件除外）。
+export const LOW_RISE_LIMIT = 24;
+
+/**
+ * 建築牆面爬藤植物無重複連續拼接生成器。
+ * 支援多塊連續網格拼接（cols × rows）：
+ * 1. 跨塊共享接縫（vseam / hseam）端點座標與切線確定性完全相符（連續拼接）。
+ * 2. 各塊內部藤幹、葉片與花芽以塊坐標雜湊獨立隨機生長（完全不重複）。
+ */
+export function generateSeamlessVinePattern({
+  seed, slot = 0, site, w, h, kind = 'ivy', rule, scope = 'field',
+  cols = null, rows = null, budget = 60,
+}) {
+  const cCount = cols || Math.max(1, Math.min(4, Math.round(w / 1.6)));
+  const rCount = rows || Math.max(1, Math.min(3, Math.round(h / 1.8)));
+  const tileW = w / cCount, tileH = h / rCount;
+  const motif = [];
+
+  const box = (bw, bh, x, y, color, depth = 0.035, z = 0.16, rz = 0, blockKey = null) => {
+    if (motif.length >= budget) return;
+    motif.push({
+      g: ['box', bw, bh, depth],
+      p: [site.x + x, site.y + y, z],
+      r: [0, 0, rz],
+      c: color,
+      role: `wall-${kind}`, scope,
+      ...(blockKey ? { block: blockKey } : {}),
+    });
+  };
+
+  const leafPart = (x, y, z, angle, sizeW, sizeH, col, blockKey = null) => {
+    if (motif.length >= budget) return;
+    motif.push({
+      g: ['cyl', sizeW, sizeH, 0.06, 4],
+      p: [site.x + x, site.y + y, z],
+      r: [Math.PI / 2, angle, 0],
+      s: [1, 1, Math.min(1, h / w)],
+      c: col,
+      role: `wall-${kind}`, scope,
+      ...(blockKey ? { block: blockKey } : {}),
+    });
+  };
+
+  // 1. 架體或花槽 (Trellis / Planter Box)
+  if (kind === 'flowering_trellis') {
+    const barsX = cCount * 2 + 1;
+    for (let i = 0; i < barsX && motif.length < budget; i++) {
+      box(0.04, h, -w / 2 + (i / (barsX - 1)) * w, 0, 0x87745b, 0.03, 0.13);
+    }
+    const barsY = rCount * 2 + 1;
+    for (let j = 0; j < barsY && motif.length < budget; j++) {
+      box(w, 0.04, 0, -h / 2 + (j / (barsY - 1)) * h, 0x87745b, 0.03, 0.13);
+    }
+  } else if (kind === 'hanging_vines') {
+    box(w, 0.2, 0, h / 2 - 0.1, 0x986b50, 0.3, 0.22);
+  }
+
+  // 2. 決定跨塊邊界接點 (Deterministic Seam Connectors)
+  // 相鄰兩塊在接縫上的端點 (y, dy) 僅依賴該接縫的確定性雜湊，保證連續對接
+  const getVSeam = (c, r) => {
+    const key = architectureHash(seed, `${slot}:vseam:${c}:${r}`);
+    const yRel = ((key % 1000) / 1000 - 0.5) * (tileH * 0.55);
+    const dy = (((key >>> 12) % 1000) / 1000 - 0.5) * 0.4;
+    return { y: -h / 2 + (r + 0.5) * tileH + yRel, dy };
+  };
+
+  const getHSeam = (c, r) => {
+    const key = architectureHash(seed, `${slot}:hseam:${c}:${r}`);
+    const xRel = ((key % 1000) / 1000 - 0.5) * (tileW * 0.55);
+    return { x: -w / 2 + (c + 0.5) * tileW + xRel };
+  };
+
+  // 3. 逐塊生成完全不重複之藤蔓與枝葉
+  for (let r = 0; r < rCount && motif.length < budget; r++) {
+    for (let c = 0; c < cCount && motif.length < budget; c++) {
+      const blockSeed = architectureHash(seed, `${slot}:blk:${c}:${r}`);
+      const blockKey = `${c}:${r}`;
+      const x0 = -w / 2 + c * tileW;
+      const x1 = x0 + tileW;
+      const cy = -h / 2 + (r + 0.5) * tileH;
+
+      const left = c > 0
+        ? getVSeam(c, r)
+        : { y: cy + (((blockSeed % 100) / 100) - 0.5) * tileH * 0.4, dy: 0 };
+      const right = c < cCount - 1
+        ? getVSeam(c + 1, r)
+        : { y: cy + ((((blockSeed >>> 8) % 100) / 100) - 0.5) * tileH * 0.4, dy: 0 };
+
+      // 主幹 3 段折線平滑連接左右端點
+      const segs = Math.max(2, Math.min(4, Math.floor(tileW / 0.6)));
+      for (let s = 0; s < segs && motif.length < budget; s++) {
+        const tA = s / segs, tB = (s + 1) / segs;
+        const xA = x0 + tA * tileW, xB = x0 + tB * tileW;
+        const midY = (left.y + right.y) / 2 + (((blockSeed >>> (14 + s * 3)) % 100) / 100 - 0.5) * tileH * 0.28;
+        const yA = tA < 0.5 ? left.y + (midY - left.y) * (tA * 2) : midY + (right.y - midY) * ((tA - 0.5) * 2);
+        const yB = tB < 0.5 ? left.y + (midY - left.y) * (tB * 2) : midY + (right.y - midY) * ((tB - 0.5) * 2);
+
+        const segDx = xB - xA, segDy = yB - yA;
+        const segLen = Math.hypot(segDx, segDy);
+        const segAng = Math.atan2(segDy, segDx);
+
+        box(segLen + 0.02, 0.035, (xA + xB) / 2, (yA + yB) / 2, 0x5c6740, 0.032, 0.165, segAng, blockKey);
+
+        // 塊內獨特葉片
+        const leafSeed = architectureHash(blockSeed, `leaf:${s}`);
+        const lx = (xA + xB) / 2 + (((leafSeed % 100) / 100) - 0.5) * 0.14;
+        const ly = (yA + yB) / 2 + ((((leafSeed >>> 8) % 100) / 100) - 0.5) * 0.14;
+        const leafAngle = (((leafSeed >>> 16) % 100) / 100) * Math.PI;
+        const leafW = Math.min(tileW, tileH) * 0.11;
+        const leafH = Math.min(tileW, tileH) * 0.065;
+        const leafColor = (leafSeed % 3) ? rule.color : rule.accent;
+        leafPart(lx, ly, 0.20, leafAngle, leafW, leafH, leafColor, blockKey);
+
+        // 花架花朵 / 攀藤側芽
+        if (kind === 'flowering_trellis' && (leafSeed % 2 === 0)) {
+          leafPart(lx + 0.05, ly + 0.05, 0.22, leafAngle + 0.4, leafW * 0.6, leafH * 0.6, rule.accent, blockKey);
+        }
+      }
+
+      // 垂直上下塊相接 (跨層藤蔓 runner)
+      if (r < rCount - 1 && motif.length < budget) {
+        const hConn = getHSeam(c, r + 1);
+        const vy0 = cy, vy1 = -h / 2 + (r + 1) * tileH;
+        const vx = hConn.x;
+        const vLen = Math.abs(vy1 - vy0);
+        box(0.03, vLen, vx, (vy0 + vy1) / 2, 0x566d3b, 0.03, 0.17, 0, blockKey);
+        const vLeafSeed = architectureHash(blockSeed, 'vleaf');
+        leafPart(vx + 0.04, (vy0 + vy1) / 2, 0.21, 0.6, 0.09, 0.055, rule.color, blockKey);
+      }
+    }
+  }
+  return motif;
+}
+
 // Local wall coordinates: X along the wall, Y above its base, +Z outdoors.
 // Claims are conservative rectangles of existing attachments, including doors.
 export function wallDecorationParts({ seed, width, height, category, contemporary, claims = [], budget = 80 }) {
   const placement = WALL_DECORATION_PLACEMENT;
   if (![width, height, budget].every(Number.isFinite) || width < placement.minLength || height < placement.minHeight || budget < 24) return [];
+  // 限定建築牆面的渲染/零件只有低樓層建築才使用（高樓層全面禁用牆飾）。
+  if (height > LOW_RISE_LIMIT) return [];
   const rnd = tag => architectureHash(seed, tag) / 4294967296;
-  // 高樓外牆不爬藤：樓高 ≥ 24m 時植物系（ivy / flowering_trellis / hanging_vines）
-  // 僅 5% 保留，其餘整面牆不候選。只吃座標雜湊，不消耗共享 rnd（§2.3）。
-  const tall = height >= TALL_VINE_LIMIT;
-  const vineKeep = !tall || architectureHash(seed, 'vine_keep') % 100 < 5;
   const choices = Object.entries(WALL_DECORATIONS).filter(([, rule]) =>
-    rule.categories.includes(category) && (!rule.modern || contemporary) && (!rule.plant || !tall || vineKeep));
+    rule.categories.includes(category) && (!rule.modern || contemporary));
   if (!choices.length || rnd('presence') > placement.prob) return [];
   const parts = [], occupied = [...claims];
   const scopes = Object.entries(WALL_COVERAGE);
@@ -25,9 +155,7 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
     const h = Math.min(6, (height - 0.8) * hf * (0.8 + rnd(`${slot}:h`) * 0.4));
     if (w < 0.75 || h < 0.7) continue;
     let site = null;
-    // 高樓僅存的 5% 爬藤箝制在底部 8m（底層綠化）：飾件頂部不超過 8m，不飄到高空。
-    const ySpan = (tall && rule.plant)
-      ? Math.max(0.5, Math.min(8, height - h - 0.8) - h - 0.4) : height - h - 0.8;
+    const ySpan = height - h - 0.8;
     for (let attempt = 0; attempt < 12; attempt++) {
       const x = (rnd(`${slot}:${attempt}:x`) - 0.5) * (width - w - 0.8);
       const y = 0.4 + h / 2 + rnd(`${slot}:${attempt}:y`) * ySpan;
@@ -42,26 +170,9 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
       role: `wall-${kind}`, scope,
     });
     if (rule.plant) {
-      if (kind === 'flowering_trellis') {
-        for (let i = 0; i < 4; i++) box(0.045, h, (i / 3 - 0.5) * w * 0.9, 0, 0x87745b);
-        for (let i = 0; i < 3; i++) box(w, 0.045, 0, (i - 1) * h * 0.42, 0x87745b);
-      }
-      if (kind === 'hanging_vines') box(w, 0.22, 0, h / 2 - 0.11, 0x986b50, 0.32, 0.24);
-      for (let vine = 0; vine < 3; vine++) {
-        const x = (vine - 1) * w * 0.29;
-        const reach = h * (0.55 + rnd(`${slot}:${vine}:reach`) * 0.4);
-        const center = kind === 'hanging_vines' ? (h - reach) / 2 : (reach - h) / 2;
-        box(0.035, reach, x, center, 0x5c6740, 0.035, 0.17);
-        for (let leaf = 0; leaf < 5; leaf++) {
-          const lx = x + (leaf % 2 ? 1 : -1) * w * 0.055;
-          const ly = center + (leaf / 4 - 0.5) * reach * 0.8;
-          // Faceted diamond leaves: no textures, alpha sorting, or extra material buckets.
-          motif.push({ g: ['cyl', w * 0.1, w * 0.06, 0.07, 4],
-            p: [site.x + lx, site.y + ly, 0.22], r: [Math.PI / 2, leaf * 0.8, 0],
-            s: [1, 1, Math.min(1, h / w)], c: leaf % 3 ? rule.color : rule.accent,
-            role: `wall-${kind}`, scope });
-        }
-      }
+      motif.push(...generateSeamlessVinePattern({
+        seed, slot, site, w, h, kind, rule, scope, budget: budget - parts.length,
+      }));
     } else if (kind === 'posters') {
       for (let i = 0; i < 4; i++) {
         const pw = w * 0.21, ph = h * (0.58 + rnd(`${slot}:${i}:paper`) * 0.35);
@@ -114,3 +225,4 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
   }
   return parts;
 }
+

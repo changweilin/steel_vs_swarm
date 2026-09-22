@@ -6,11 +6,12 @@ const modules = {
 };
 register('data:text/javascript,' + encodeURIComponent(`const modules = ${JSON.stringify(modules)};
 export async function resolve(s, c, next) { return modules[s] ? { url: modules[s], shortCircuit: true } : next(s, c); }`), import.meta.url);
-const { wallDecorationParts } = await import('../public/js/wallDecorations.js');
+const { wallDecorationParts, generateSeamlessVinePattern, LOW_RISE_LIMIT } = await import('../public/js/wallDecorations.js');
 const { WALL_DECORATIONS, WALL_COVERAGE, WALL_DECORATION_LIMIT } = await import('../public/js/wallDecorationCatalog.js');
 const { architecturePartGeometry } = await import('../public/js/architecturePartGeometry.js');
 const { generateBuildingAppurtenances } = await import('../public/js/buildingAppurtenances.js');
 const { buildOsmPolygonBuildings } = await import('../public/js/osmBuilding.js');
+const { architecturalRoofParts } = await import('../public/js/architectureRoofParts.js');
 const THREE = await import('three');
 const kinds = new Set(), scopes = new Set();
 const originalRandom = Math.random;
@@ -90,4 +91,54 @@ group.traverse(object => {
   assert.equal(object.geometry.attributes.color.count, object.geometry.attributes.position.count);
   object.geometry.dispose();
 });
+// 1. 爬藤多塊連續拼接 (Seamless Connection) 與完全不重複 (Non-repeating Pattern) 測試
+const vineMotif = generateSeamlessVinePattern({
+  seed: 'seamless_vine_test', slot: 0, site: { x: 0, y: 0 },
+  w: 6, h: 4, kind: 'ivy', rule: WALL_DECORATIONS.ivy, scope: 'field',
+  cols: 3, rows: 2, budget: 120,
+});
+assert(vineMotif.length >= 24, 'Multi-block vine motif generated adequate primitives');
+// 驗證各塊幾何圖案不重複
+const blockFingerprints = new Map();
+for (const p of vineMotif) {
+  const bk = p.block || 'default';
+  if (!blockFingerprints.has(bk)) blockFingerprints.set(bk, []);
+  blockFingerprints.get(bk).push(`${p.g[0]}:${p.p.map(n => n.toFixed(2)).join(',')}`);
+}
+assert.equal(blockFingerprints.size, 6, 'Grid generates all 3x2 blocks');
+const fpStrings = [...blockFingerprints.values()].map(arr => arr.join('|'));
+const uniqueFpStrings = new Set(fpStrings);
+assert.equal(uniqueFpStrings.size, blockFingerprints.size, 'All vine blocks have completely non-repeating patterns');
+
+// 2. 限定低樓層建築使用，陽台/雨遮/冷氣廣泛規律使用項目除外
+assert.equal(LOW_RISE_LIMIT, 24);
+assert.deepEqual(wallDecorationParts({ seed: 'highrise', width: 12, height: 28, category: 'commercial' }), [],
+  'High-rise buildings strictly omit wall decorations');
+assert.ok(wallDecorationParts({ seed: 'lowrise:0', width: 12, height: 20, category: 'commercial' }).length > 0,
+  'Low-rise buildings allow wall decorations');
+
+// 3. 高樓層建築規律配件保留驗證 (陽台與冷氣室外機在全樓層正常配置)
+const tallPoly = { outer: [[-12,-8],[12,-8],[12,8],[-12,8]], holes: [] };
+const tallEdges = [[0,-8,12,0],[12,0,8,Math.PI/2],[0,8,12,0],[-12,0,8,Math.PI/2]].map(([x,z,hw2,ry]) => ({
+  x, z, hw2, ry, sourceId: 'tall-fixture'
+}));
+const tallStyle = { id: 'tall-test', variant: 0, roofForm: 'flat', trim: 0x69757d,
+  functionInfo: { category: 'residential' } };
+const tallGeos = generateBuildingAppurtenances(tallPoly, tallEdges, 0, 36, tallStyle);
+// 牆飾全面歸零
+assert.equal(tallGeos.filter(g => g.userData.wallDecoration).length, 0, 'No wall decorations on 36m tower');
+// 陽台與冷氣室外機在 36m 高樓維持正常配置
+assert.ok(tallGeos.length > 20, 'Regular fixtures (balconies, AC units, drying racks) persist on high-rise');
+for (const g of tallGeos) g.dispose();
+
+// 4. 非平面屋頂垂直端面同等建築牆面，由建築牆面延伸驗證
+for (const form of ['gable', 'shed', 'steep_gable', 'gambrel', 'crowstep']) {
+  const rParts = architecturalRoofParts({ outer: [[-10,-6],[10,-6],[10,6],[-10,6]], holes: [] },
+    12, { roof: 0x223344, wall: 0x887766, variant: 0 }, form);
+  const wallFaces = rParts.filter(p => p.role === 'architecture-wall');
+  assert.ok(wallFaces.length > 0, `${form} roof vertical face must extend building wall`);
+  assert.ok(wallFaces.every(p => p.c === 0x887766), `${form} roof vertical face must take wall color`);
+}
+
 console.log(`PASS: ${kinds.size} themes, ${scopes.size} coverage patterns, geometry bounds, entrance clearance, deterministic plans and ${integratedKinds.size} integrated themes.`);
+console.log('PASS: seamless non-repeating vines, low-rise limit with regular fixture preservation, and roof vertical wall extension verified.');

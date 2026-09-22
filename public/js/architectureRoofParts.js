@@ -28,11 +28,13 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
   const { len, span, cx, cz, angle } = frame;
   const { rise, eave } = roofDimensions(span, targetH), L = len + eave * 2, S = span + eave * 2;
   const rows = [], ca = Math.cos(angle), sa = Math.sin(angle);
-  const add = (g, x = 0, lift = 0, z = 0) => {
+  const wallColor = style.wall ?? style.roof;
+  const wallT = 0.06;
+  const add = (g, x = 0, lift = 0, z = 0, color = style.roof, role = 'architecture-roof') => {
     rows.push({ g, p: [cx + x * ca - z * sa, y + lift - ROOF_SEAT_SINK, cz + x * sa + z * ca],
-      r: [0, -angle, 0], c: style.roof, role: 'architecture-roof', colorVariant: style.variant, roofForm: form });
+      r: [0, -angle, 0], c: color, role, colorVariant: style.variant, roofForm: form });
   };
-  const mesh = (data, x = 0, lift = 0, z = 0) => {
+  const mesh = (data, x = 0, lift = 0, z = 0, color = style.roof, role = 'architecture-roof') => {
     const flat = facetMeshData(data, ROOF_FACET_DEG);
     const mins = [Infinity, Infinity, Infinity], maxs = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < flat.vertices.length; i++) {
@@ -40,9 +42,11 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
     }
     const center = mins.map((v, i) => (v + maxs[i]) / 2);
     const vertices = flat.vertices.map((v, i) => v - center[i % 3]);
-    add(['mesh', { ...data, vertices, faces: flat.faces, normals: flat.normals }, maxs.map((v, i) => v - mins[i])], x + center[0], lift + center[1], z + center[2]);
+    add(['mesh', { ...data, vertices, faces: flat.faces, normals: flat.normals }, maxs.map((v, i) => v - mins[i])],
+      x + center[0], lift + center[1], z + center[2], color, role);
   };
-  const section = (profile, length = L, lift = 0, offset = 0) => mesh(sectionMesh(profile, length), 0, lift, offset);
+  const section = (profile, length = L, lift = 0, offset = 0, color = style.roof, role = 'architecture-roof') =>
+    mesh(sectionMesh(profile, length), 0, lift, offset, color, role);
   const hip = (width, depth, topWidth, topDepth, height, lift = 0) => {
     if (topWidth === 0 && topDepth === 0) {
       mesh({ vertices: [-width/2,0,depth/2, width/2,0,depth/2, width/2,0,-depth/2, -width/2,0,-depth/2, 0,height,0],
@@ -68,11 +72,18 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
       }
       mesh(data);
     }
-    else section(profile);
+    else {
+      section(profile);
+      // 非平面屋頂中垂直地面的端面（山牆面）同等建築牆面，由建築牆面延伸（內收 2cm 杜絕共面打架）
+      const wallInset = 0.02;
+      for (const side of [-1, 1]) {
+        mesh(sectionMesh(profile, wallT), side * (len / 2 - wallT / 2 - wallInset), 0, 0, wallColor, 'architecture-wall');
+      }
+    }
     if (form === 'crowstep') for (const side of [-1, 1]) for (let i = 0; i < 7; i++) {
       const stepW = span / 7, z = -span / 2 + (i + .5) * stepW;
       const h = rise * (1 - Math.max(0, Math.abs(z) - stepW / 2) / (S / 2)) + .22;
-      add(['box', .22, h, stepW], side * len / 2, h / 2, z);
+      add(['box', .22, h, stepW], side * len / 2, h / 2, z, wallColor, 'architecture-wall');
     }
   } else if (form === 'dome') {
     const radius = Math.min(span, len) / 2, vertices = [], faces = [], n = 14, rings = 8;
@@ -91,14 +102,27 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
     mesh({ vertices, faces });
   } else if (form === 'vault' || form === 'curved_ridge') {
     const limit = form === 'vault' ? Math.PI / 2 : Math.PI * .3, base = Math.cos(limit);
-    section(Array.from({ length: 17 }, (_, i) => {
+    const vProfile = Array.from({ length: 17 }, (_, i) => {
       const a = -limit + i * limit / 8;
       return [Math.sin(a) * S / (2 * Math.sin(limit)), (Math.cos(a) - base) * rise / (1 - base)];
-    }));
+    });
+    section(vProfile);
+    const wallInset = 0.02;
+    for (const side of [-1, 1]) {
+      mesh(sectionMesh(vProfile, wallT), side * (len / 2 - wallT / 2 - wallInset), 0, 0, wallColor, 'architecture-wall');
+    }
   } else if (form === 'spire') {
     add(['cyl', 0, Math.min(span, len) * .425, rise * 2.2, 8], 0, rise * 1.1);
-  } else if (form === 'shed') section([[-S/2, 0], [S/2, rise * .85]]);
-  else if (form === 'mansard') {
+  } else if (form === 'shed') {
+    const shedProfile = [[-S/2, 0], [S/2, rise * .85]];
+    section(shedProfile);
+    const wallInset = 0.02;
+    for (const side of [-1, 1]) {
+      mesh(sectionMesh(shedProfile, wallT), side * (len / 2 - wallT / 2 - wallInset), 0, 0, wallColor, 'architecture-wall');
+    }
+    // 單坡垂直後牆由建築牆面延伸（內收 2cm 杜絕與後牆端面共面打架）
+    add(['box', len - 0.04, rise * .85, wallT], 0, rise * .85 / 2, span / 2 - wallT / 2 - wallInset, wallColor, 'architecture-wall');
+  } else if (form === 'mansard') {
     hip(L, S, span * .84 * L / S, span * .84, rise * .55);
     hip(span * .84 * L / S, span * .84, span * .5 * L / S, span * .5, rise * .35, rise * .55);
   } else if (form === 'wudian') {
@@ -106,7 +130,12 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
     add(['box', span * .56 * L / S, .15, .2], 0, rise + .075);
   } else if (form === 'xieshan') {
     hip(L, S, span * .76 * L / S, span * .76, rise * .45);
-    section([[-span*.38,0],[0,rise*.55],[span*.38,0]], L * .75, rise * .45);
+    const xsProfile = [[-span*.38,0],[0,rise*.55],[span*.38,0]];
+    section(xsProfile, L * .75, rise * .45);
+    const wallInset = 0.02;
+    for (const side of [-1, 1]) {
+      mesh(sectionMesh(xsProfile, wallT), side * (L * .75 / 2 - wallT / 2 - wallInset), rise * .45, 0, wallColor, 'architecture-wall');
+    }
     add(['box', L * .75 + .2, .14, .18], 0, rise + .07);
   } else if (form === 'tiered') {
     for (let i = 0; i < 3; i++) {
@@ -120,7 +149,15 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
     const n = form === 'sawtooth' ? Math.min(4, Math.max(2, Math.floor(span / 4))) : 1;
     const width = form === 'yingshan' ? span : span / n + eave * 2;
     const length = form === 'yingshan' ? len : form === 'xuanshan' ? L + .6 : L;
-    for (let i = 0; i < n; i++) section([[-width/2,0],[0,rise / (n > 1 ? 1.4 : 1)],[width/2,0]], length, 0, (i - (n - 1) / 2) * span / n);
+    const sawProfile = [[-width/2,0],[0,rise / (n > 1 ? 1.4 : 1)],[width/2,0]];
+    const wallInset = 0.02;
+    for (let i = 0; i < n; i++) {
+      const zOff = (i - (n - 1) / 2) * span / n;
+      section(sawProfile, length, 0, zOff);
+      for (const side of [-1, 1]) {
+        mesh(sectionMesh(sawProfile, wallT), side * (len / 2 - wallT / 2 - wallInset), 0, zOff, wallColor, 'architecture-wall');
+      }
+    }
     if (form === 'xuanshan') add(['box', L + .8, .14, .14], 0, rise + .07);
   }
   return rows;
