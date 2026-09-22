@@ -5,7 +5,7 @@ import { DEFS, ZONES, CARPET, FAMS, SIZE, SURFACES } from './groundCatalog.js';
 import { paintGround, surfaceEnvironment, surfaceAllowed, surfaceParameters, probeSurface, groundSeed } from './proceduralGround.js';
 import { GROUND_ATTACHMENTS, GROUND_PART_PALETTES } from './groundPartCatalog.js';
 import { createGroundParts } from './proceduralGroundParts.js';
-import { ENV, inkCtrM, edgeWallInsetM } from './data.js';
+import { ENV, inkCtrM, edgeWallInsetM, optimalSolarTiltRad, mapRot } from './data.js';
 import { envMat, surfGroup } from './toon.js';
 import { gridAngle } from './roadgrid.js';
 
@@ -1923,7 +1923,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         if (!Number.isFinite(h)) return;
         low = Math.min(low, h); high = Math.max(high, h);
       }
-      if (RECT_BASE_DETAILS.has(type) && high - low > .3) return;
+      if (type !== 'solarpanel' && RECT_BASE_DETAILS.has(type) && high - low > .3) return;
       y = low;
     }
     const finalRy = ry ?? -orient(px, pz, REG[type] || 0, false, RECT_BASE_DETAILS.has(type));
@@ -1937,11 +1937,23 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       const hz1 = terrain.heightAt(px, pz + e), hz0 = terrain.heightAt(px, pz - e);
       if (Number.isFinite(hx1) && Number.isFinite(hx0) && Number.isFinite(hz1) && Number.isFinite(hz0)) {
         const gx = (hx1 - hx0) / (2 * e), gz = (hz1 - hz0) / (2 * e);
+        const slope = Math.hypot(gx, gz);
         const c = Math.cos(finalRy), s = Math.sin(finalRy);
         const glx = c * gx - s * gz, glz = s * gx + c * gz;
         const clamp = (v) => Math.max(-0.45, Math.min(0.45, v));
-        ptx = clamp(-Math.atan(glz));
-        ptz = clamp(Math.atan(glx));
+        if (type === 'solarpanel' && slope < 0.03) {
+          // 接近水平地面：向太陽黃道面方向傾斜，角度根據緯度以最科學的角度處理
+          const latDeg = terrain?.center?.lat ?? 25.0;
+          const sciTilt = optimalSolarTiltRad(latDeg);
+          const targetWorldAz = (latDeg >= 0 ? 0 : Math.PI); // +z 為南
+          const relAz = targetWorldAz - finalRy;
+          ptx = sciTilt * Math.cos(relAz);
+          ptz = sciTilt * Math.sin(relAz);
+        } else {
+          // 起伏地形：沿著地形斜坡鋪設
+          ptx = clamp(-Math.atan(glz));
+          ptz = clamp(Math.atan(glx));
+        }
       } else { ptx = 0; ptz = 0; }
     }
     det[type].push({ x: px, y, z: pz, s, sy, variant, ry: finalRy, tx: ptx, tz: ptz, tint: tintHex });

@@ -12,6 +12,7 @@ import { loftMeshData, vesselHullSections } from './vesselGeometry.js';
 import { ENVIRONMENT_OBJECTS, ENVIRONMENT_STRUCTURE_PARAMETERS } from './environmentCatalog.js';
 import { iceParts } from './iceParts.js';
 import { environmentBuildingPlan } from './environmentArchitecture.js';
+import { optimalSolarTiltRad } from './data.js';
 export { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS, ENVIRONMENT_CATEGORIES, environmentSize, environmentAvailable } from './environmentCatalog.js';
 export { makeSceneVehicleParts } from './vehicleParts.js';
 
@@ -391,7 +392,7 @@ export function storageTankParts({ w, h, d, seed = 1 }) {
     cyl(0, radius, roofH, 0, baseH + bodyH + roofH / 2, 0, 0x6e7c80, 'tank-roof')];
 }
 
-export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, season = 'summer' }) {
+export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, season = 'summer', latDeg = 25.0 }) {
   if (kind === 'searanch' || kind === 'oysterracks') return aquacultureParts(kind, len, d, h, seed);
   const rnd = mulberry32(seed >>> 0), rows = [];
   const count = Math.max(1, Math.floor(len / (kind === 'deeprig'
@@ -488,8 +489,10 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
       // 浮動式貼合：水面款整組浮台掛 float 動態（與海面共用風時鐘/波浪係數），陸域款保持靜態
       const isFloat = kind === 'floatsolar';
       const spec = ENVIRONMENT_STRUCTURE_PARAMETERS.solar;
+      const optTilt = optimalSolarTiltRad(latDeg ?? 25.0);
+      const isNorth = (latDeg ?? 25.0) >= 0;
       // Limit tilt by clearance above the platform; deeper boundary modules stay supported.
-      const pitch = -Math.min(sample(local, spec.pitch), Math.atan2(.6, d * .38));
+      const pitch = (isNorth ? -1 : 1) * Math.min(optTilt, Math.atan2(.6, d * .38));
       const gridLines = integer(local, ...spec.gridLines);
       for (const side of [-1, 1]) {
         const y = 1.1, z = side * d * .23;

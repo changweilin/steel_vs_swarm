@@ -25,6 +25,8 @@ import { readSrc, grabMethod } from './audit_src.mjs';
 import {
   ENV, DAYCLOCK, dayHourRate, clockHour, clockLabel, phaseBlend,
   sunDirAt, moonDirAt, bodyFade, SHADOW, shadowRangeM, TARGET_H,
+  computeSolarSchedule, setSolarSchedule, optimalSolarTiltDeg, optimalSolarTiltRad,
+  resolveEnv, lunarMoonDirAt, isMarineWater, tideLevelAt, TIDE,
 } from '../public/js/data.js';
 
 const BREAK = new Set(process.argv.filter((a) => a.startsWith('--break-')));
@@ -270,6 +272,127 @@ console.log('\n■ Ⅷ 投影旗標的兩個唯一縫(makeUnit 投射 / buildGro
 }
 
 // ---------------------------------------------------------------------------
+console.log('\n■ Ⅸ 依緯度與四季之科學天體軌道及太陽能板傾角 (PVWatts / NREL 模型)');
+// ---------------------------------------------------------------------------
+{
+  // 1. 夏季赤緯 +23.44° 在台北 (緯度 25°N) 正午仰角 = 90 - (25 - 23.44) = 88.44°
+  const schedSummer25 = computeSolarSchedule('summer', 25.0);
+  setSolarSchedule(schedSummer25);
+  const sSummerNoon = sunDirAt(12);
+  const elSummerNoon = Math.asin(sSummerNoon.y) * 180 / Math.PI;
+  t(`夏至 25°N 正午仰角 ≈ 88.44° (實測 ${elSummerNoon.toFixed(2)}°)`, near(elSummerNoon, 88.44, 0.05));
+
+  // 2. 冬季赤緯 -23.44° 在台北 (緯度 25°N) 正午仰角 = 90 - (25 - (-23.44)) = 41.56°
+  const schedWinter25 = computeSolarSchedule('winter', 25.0);
+  setSolarSchedule(schedWinter25);
+  const sWinterNoon = sunDirAt(12);
+  const elWinterNoon = Math.asin(sWinterNoon.y) * 180 / Math.PI;
+  t(`冬至 25°N 正午仰角 ≈ 41.56° (實測 ${elWinterNoon.toFixed(2)}°)`, near(elWinterNoon, 41.56, 0.05));
+
+  // 3. 北半球太陽偏南 (+z > 0)，南半球太陽偏北 (-z < 0)
+  const schedNorth = computeSolarSchedule('autumn', 35.0);
+  setSolarSchedule(schedNorth);
+  t('北半球秋分正午太陽在南方 (+z > 0)', sunDirAt(12).z > 0);
+
+  const schedSouth = computeSolarSchedule('autumn', -35.0);
+  setSolarSchedule(schedSouth);
+  t('南半球秋分正午太陽在北方 (-z < 0)', sunDirAt(12).z < 0);
+
+  // 4. 地圖旋轉同步 (rotXZ)
+  const rot = 0.5;
+  const schedRot = computeSolarSchedule('summer', 25.0, rot);
+  setSolarSchedule(schedRot);
+  const sRot = sunDirAt(12);
+  setSolarSchedule(schedSummer25);
+  const sNoRot = sunDirAt(12);
+  t('天體向量與地圖主旋轉 rot 同步', near(sRot.y, sNoRot.y) && near(Math.hypot(sRot.x, sRot.z), Math.hypot(sNoRot.x, sNoRot.z)));
+
+  // 5. 光伏最佳傾角計算 (PVWatts 模型)
+  t('赤道 (0°) 太陽能板傾角保證自潔下限 10°', near(optimalSolarTiltDeg(0), 10.0));
+  t('台北 (25°) 太陽能板最佳傾角 ≈ 21.75°', near(optimalSolarTiltDeg(25), 21.75, 0.01));
+  t('東京 (35°) 太陽能板最佳傾角 ≈ 29.7°', near(optimalSolarTiltDeg(35), 29.7, 0.01));
+  t('高緯度 (60°) 太陽能板最佳傾角 ≈ 48.0°', near(optimalSolarTiltDeg(60), 48.0, 0.01));
+
+  // 復原預設排程
+  setSolarSchedule(null);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n■ Ⅹ 隨機陰曆月相軌跡暨海域動態潮汐現象 (Lunar Day & Tidal Physics)');
+// ---------------------------------------------------------------------------
+{
+  // 1. 開局隨機農曆初幾 (1~30) 抽樣與指定傳入
+  const samples = new Set();
+  let inRangeCount = 0;
+  for (let i = 0; i < 200; i++) {
+    const env = resolveEnv();
+    if (Number.isInteger(env.lunarDay) && env.lunarDay >= 1 && env.lunarDay <= 30) inRangeCount++;
+    samples.add(env.lunarDay);
+  }
+  t('lunarDay 落在 [1, 30] 區間', inRangeCount === 200);
+  t('開局 resolveEnv 隨機抽選農曆日數 (涵蓋初一至三十多種日期)', samples.size >= 20);
+
+  const forcedEnv = resolveEnv({ lunarDay: 15 });
+  t('指定 lunarDay 時保持原樣定案', forcedEnv.lunarDay === 15);
+
+  // 2. 農曆初一 (朔月 / 合朔): 月亮與太陽同向，同升同落 (時角差 0)
+  const sunDir12 = sunDirAt(12);
+  const moonDir1_12 = lunarMoonDirAt(12, 1);
+  t('農曆初一正午月球與太陽同向合朔 (同升同落)', near(moonDir1_12.x, sunDir12.x, 0.01) && near(moonDir1_12.y, sunDir12.y, 0.01) && near(moonDir1_12.z, sunDir12.z, 0.01));
+
+  // 3. 農曆十五 (滿月 / 望月): 月亮與太陽相距 180° 對沖 (午夜滿月中天)
+  const moonDir15_0 = lunarMoonDirAt(0, 15);
+  const defMoonDir0 = moonDirAt(0);
+  t('農曆十五午夜滿月中天且與預設 moonDirAt(0) 完全一致', near(moonDir15_0.x, defMoonDir0.x) && near(moonDir15_0.y, defMoonDir0.y) && near(moonDir15_0.z, defMoonDir0.z));
+  t('農曆十五滿月午夜在正南天頂附近 (仰角高、南北分量與正午太陽一致)', near(moonDir15_0.y, sunDir12.y, 0.01));
+
+  // 4. 農曆初八 (上弦月): 月球比太陽落後 6 小時，黃昏 18:00 過中天 (正南方仰角最高)
+  const moonDir8_18 = lunarMoonDirAt(18, 8);
+  t('農曆初八上弦月黃昏 18:00 過正南中天 (仰角與正午太陽一致)', near(moonDir8_18.y, sunDir12.y, 0.05) && moonDir8_18.z > 0);
+
+  // 5. 農曆廿三 (下弦月): 月球比太陽超前 6 小時，清晨 06:00 過中天
+  const moonDir23_6 = lunarMoonDirAt(6, 23);
+  t('農曆廿三下弦月清晨 06:00 過正南中天', near(moonDir23_6.y, sunDir12.y, 0.05) && moonDir23_6.z > 0);
+
+  // 6. 海域判定 isMarineWater
+  t('海洋/海邊/出海口/海灣正確識別為海域',
+    isMarineWater({ name: '淡水河口・紅樹林濕地', id: 'tamsui' }) &&
+    isMarineWater({ name: '巴塞隆納・地中海濱', id: 'barcelona' }) &&
+    isMarineWater({ name: '里約・基督山海岸', id: 'rio' }) &&
+    isMarineWater({ name: '威尼斯・潟湖水都', id: 'venice' }) &&
+    isMarineWater(null, '太平洋出海口戰區'));
+
+  t('內陸河流/高山谷地正確識別為非海域',
+    !isMarineWater({ name: '優勝美地・谷地', id: 'yosemite' }) &&
+    !isMarineWater({ name: '伊瓜蘇大瀑布', id: 'iguazu' }));
+
+  // 7. 潮汐物理模型 tideLevelAt
+  t('非海域水體潮位恆為 0', tideLevelAt(12, 15, false) === 0);
+
+  // 大潮 (初一合朔與十五望月) 潮差振幅 vs 小潮 (初八與廿三)
+  const springHigh = tideLevelAt(12, 1, true);  // 初一正午日月合朔中天大潮滿潮
+  const springLow = tideLevelAt(6, 1, true);    // 初一清晨地平乾潮
+  const springRange = springHigh - springLow;
+
+  const neapHigh = tideLevelAt(18, 8, true);    // 初八傍晚月球中天小潮滿潮
+  const neapLow = tideLevelAt(0, 8, true);      // 初八午夜地平乾潮
+  const neapRange = neapHigh - neapLow;
+
+  t('朔望大潮潮差顯著大於弦月小潮 (理論比值約 2.64 倍)', near(springRange / neapRange, (1 + TIDE.SPRING_NEAP_F) / (1 - TIDE.SPRING_NEAP_F), 0.05));
+  t('大潮滿潮潮位約 +0.51m', near(springHigh, 0.5075, 0.01));
+  t('大潮乾潮潮位約 -0.51m', near(springLow, -0.5075, 0.01));
+
+  // 半日潮兩次循環特性 (一天 24 小時內兩次滿潮兩次乾潮，週期 12 小時)
+  const tideAt0 = tideLevelAt(0, 15, true);
+  const tideAt12 = tideLevelAt(12, 15, true);
+  const tideAt6 = tideLevelAt(6, 15, true);
+  const tideAt18 = tideLevelAt(18, 15, true);
+  t('半日潮間隔 12 小時 (上中天與下中天) 同為滿潮峰值', near(tideAt0, tideAt12, 1e-4) && tideAt0 > 0.45);
+  t('半日潮間隔 12 小時同為乾潮谷值', near(tideAt6, tideAt18, 1e-4) && tideAt6 < -0.45);
+}
+
+// ---------------------------------------------------------------------------
 console.log(`\n${fail ? '❌' : '🎉'} 日夜循環稽核:${pass} 通過 / ${fail} 失敗`);
 if (BREAK.size) console.log(`   (反向驗證模式:${[...BREAK].join(' ')} —— 上面 MUST 有紅字)`);
 process.exit(fail ? 1 : 0);
+
