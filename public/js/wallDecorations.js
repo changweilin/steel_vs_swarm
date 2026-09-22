@@ -151,19 +151,46 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
   for (let slot = 0; slot < placement.maxCount; slot++) {
     const [kind, rule] = choices[Math.floor(rnd(`${slot}:type`) * choices.length)];
     const [scope, [wf, hf]] = scopes[Math.floor(rnd(`${slot}:scope`) * scopes.length)];
-    const w = Math.min(8, (width - 0.8) * wf * (0.8 + rnd(`${slot}:w`) * 0.4));
-    const h = Math.min(6, (height - 0.8) * hf * (0.8 + rnd(`${slot}:h`) * 0.4));
+    let w = Math.min(8, (width - 0.8) * wf * (0.8 + rnd(`${slot}:w`) * 0.4));
+    let h = Math.min(6, (height - 0.8) * hf * (0.8 + rnd(`${slot}:h`) * 0.4));
+    // 渲染圖案長寬差距不可超過 50%（不可太細）：收斂長邊至 1.5× 短邊。
+    if (w > h * 1.5) w = h * 1.5;
+    else if (h > w * 1.5) h = w * 1.5;
     if (w < 0.75 || h < 0.7) continue;
+    // 選址收斂至空位：以中心試探後向 claims（含窗玻璃與外掛佔位）收縮半徑，
+    // 仍 ≥0.75×0.7 且長寬比 ≤1.5 才接受 —— 密窗牆上壁飾縮小存活，不硬壓窗。
+    const fitSite = (x, y) => {
+      let hw = w / 2, hh = h / 2;
+      hw = Math.min(hw, width / 2 - 0.4 - Math.abs(x));
+      hh = Math.min(hh, y - 0.4, height - 0.4 - y);
+      if (!(hw >= 0.375) || !(hh >= 0.35)) return null;
+      for (const r of occupied) {
+        const needX = hw + r.w / 2 + 0.15 - Math.abs(x - r.x);
+        const needY = hh + r.h / 2 + 0.15 - Math.abs(y - r.y);
+        if (needX > 0 && needY > 0) {
+          if (needX < needY) hw -= needX;
+          else hh -= needY;
+          if (!(hw >= 0.375) || !(hh >= 0.35)) return null;
+        }
+      }
+      let w2 = hw * 2, h2 = hh * 2;
+      if (w2 > h2 * 1.5) w2 = h2 * 1.5;
+      else if (h2 > w2 * 1.5) h2 = w2 * 1.5;
+      if (w2 < 0.75 || h2 < 0.7) return null;
+      return { x, y, w: w2, h: h2 };
+    };
     let site = null;
     const ySpan = height - h - 0.8;
     for (let attempt = 0; attempt < 12; attempt++) {
       const x = (rnd(`${slot}:${attempt}:x`) - 0.5) * (width - w - 0.8);
       const y = 0.4 + h / 2 + rnd(`${slot}:${attempt}:y`) * ySpan;
-      if (occupied.some(r => Math.abs(x - r.x) < (w + r.w) / 2 + 0.15 &&
-        Math.abs(y - r.y) < (h + r.h) / 2 + 0.15)) continue;
-      site = { x, y, w, h }; break;
+      const fitted = fitSite(x, y);
+      if (!fitted) continue;
+      site = fitted; break;
     }
     if (!site) continue;
+    // 收斂後的實際尺寸驅動圖案生成（圖案恆落在空位內，不擴回期望尺寸）。
+    w = site.w; h = site.h;
     const motif = [];
     const box = (bw, bh, x, y, color, depth = 0.04, z = 0.12) => motif.push({
       g: ['box', bw, bh, depth], p: [site.x + x, site.y + y, z], c: color,
@@ -184,11 +211,12 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
       }
     } else if (kind === 'graffiti') {
       // Overlapping outlined letter bubbles and paint drips, directly on masonry.
+      // 相鄰泡泡間距 w*0.145：外圈半徑 MUST ≤ 間距一半，否則泡泡互疊（不可重疊）。
       for (let i = 0; i < 6; i++) {
         const x = (i - 2.5) * w * 0.145;
         const y = (rnd(`${slot}:${i}:stroke`) - 0.5) * h * 0.25;
         for (let layer = 0; layer < 2; layer++) motif.push({
-          g: ['cyl', w * (layer ? 0.083 : 0.105), w * (layer ? 0.083 : 0.105), 0.016, 8],
+          g: ['cyl', w * (layer ? 0.058 : 0.07), w * (layer ? 0.058 : 0.07), 0.016, 8],
           p: [site.x + x, site.y + y, 0.12 + layer * 0.025], r: [Math.PI / 2, 0, 0],
           s: [1, 1, h / w * 2.6], c: layer ? (i % 2 ? rule.accent : 0x8cb0a4) : 0x393d49,
           role: `wall-${kind}`, scope,

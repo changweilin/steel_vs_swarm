@@ -127,14 +127,24 @@ export function architecturalFacadeParts(edges, style, thickness) {
         let shape = shapeAt(floor, bay);
         if (shape === 'oculus' && !topFloor) shape = 'rect';
         let w = Math.min(bayW * 0.96, Math.max(0.3, bayW * scheme.w));
-        const h = Math.min(floorH * 0.9, Math.max(0.3, floorH * scheme.h));
+        let h = Math.min(floorH * 0.9, Math.max(0.3, floorH * scheme.h));
         // A round arch is bounded by storey height as well as bay width.
         if (shape === 'arch') w = Math.min(w, Math.max(.1, floorH * (.96 - 2 * Math.abs(scheme.lift || 0)) - h * .44));
+        // 渲染圖案長寬差距不可超過 50%（不可太細）：收斂玻璃長邊至 1.5× 短邊。
+        if (w > h * 1.5) w = h * 1.5;
+        else if (h > w * 1.5) h = w * 1.5;
+        // 拱窗由方體＋半圓頭拼成：方體高僅 0.72h，w 須再收至 ≤h，
+        // 否則子件長寬比超標（w/0.72h > 1.5）。
+        if (shape === 'arch' && w > h) w = h;
         const u = -length / 2 + (bay + 0.5) * bayW;
         const y = yBase + (scheme.lift || 0) * floorH;
         // 老虎窗（dormer）：整棟頂層統一有無，外凸窗體＋小斜蓋，取代平面玻璃。
+        // 窗體玻璃非等比縮放後仍須長寬比 ≤1.5（不可太細）。
         if (topFloor && scheme.dormer) {
-          add(w * 0.8, h * 0.7, u, y, glassColor, 0.42, 0, true);
+          let dw = w * 0.8, dh = h * 0.7;
+          if (dw > dh * 1.5) dw = dh * 1.5;
+          else if (dh > dw * 1.5) dh = dw * 1.5;
+          add(dw, dh, u, y, glassColor, 0.42, 0, true);
           add(w * 0.94, 0.09, u, y + h * 0.42, trimColor, 0.55, 0, true);
           geos.push(placeFacadePart(['box', w * .94, .07, .55], edge, u, y + h * .52, 0,
             style.roof ?? trimColor, style, [.35, 0, 0], 'dormer-roof'));
@@ -160,6 +170,39 @@ export function architecturalFacadeParts(edges, style, thickness) {
     // 玻璃已鋪數量從本面牆均攤額度扣除：全棟總量恆 ≤ LIMIT（短棟裝飾豐富、
     // 高棟玻璃優先，裝飾讓路），額度耗盡則後續窗框裝飾逐窗跳過。
     budget -= (geos.length - edgeStart);
+
+    // 牆面渲染（含窗戶）彼此不可重疊：窗玻璃佔位 wins，後續飾帶／柱體凡壓窗即跳過或分段。
+    const hitsWin = (u, y, w, h) => {
+      for (const wn of wins) {
+        if (Math.abs(u - wn.u) < (w + wn.w) / 2 - 1e-3 &&
+            Math.abs(y - wn.y) < (h + wn.h) / 2 - 1e-3) return true;
+      }
+      return false;
+    };
+    // 水平通長飾帶避窗分段：與窗垂直相交的窗洞挖除，只鋪窗間隙與端頭餘段。
+    const addBandAvoidingWindows = (y, bh, color, extraDepth) => {
+      const x0 = -length / 2 + 0.02, x1 = length / 2 - 0.02;
+      const cuts = [];
+      for (const wn of wins) {
+        if (wn.y - wn.h / 2 < y + bh / 2 - 1e-3 && wn.y + wn.h / 2 > y - bh / 2 + 1e-3) {
+          cuts.push([wn.u - wn.w / 2, wn.u + wn.w / 2]);
+        }
+      }
+      if (!cuts.length) { add(x1 - x0, bh, (x0 + x1) / 2, y, color, extraDepth); return; }
+      cuts.sort((a, b) => a[0] - b[0]);
+      let cur = x0, ok = true;
+      const segs = [];
+      for (const [a, b] of cuts) {
+        if (a > cur + 0.05) segs.push([cur, Math.min(a, x1)]);
+        cur = Math.max(cur, b);
+        if (cur >= x1) break;
+      }
+      if (cur < x1 - 0.05) segs.push([cur, x1]);
+      for (const [a, b] of segs) {
+        if (!add(b - a, bh, (a + b) / 2, y, color, extraDepth)) { ok = false; break; }
+      }
+      return ok;
+    };
 
     // ---- 第一階段之二（飾件型專用）：窗間飾＋外推結構（扣額度；耗盡即停，不動玻璃） ----
     // 窗間隙逐層雜湊擲「插或不插」（各半）；陽台／雨遮只落在夠寬的開間
@@ -265,17 +308,25 @@ export function architecturalFacadeParts(edges, style, thickness) {
 
     // ---- 第三階段：文化裝飾（扣額度，額度耗盡即停，不影響已鋪好的玻璃） ----
     // 通長飾帶兩端各退 0.02：端帽否則落在轉角鄰牆端帽同一平面上打架，退後埋入轉角疊體。
+    // 基座帶壓窗即分段（不可重疊），不整條跳過。
     if (style.detail === 'stone_base') {
-      add(length - 0.04, Math.min(0.8, edge.h * 0.12), 0, Math.min(0.8, edge.h * 0.12) / 2, trimColor, 0.2);
+      const bh = Math.min(0.8, edge.h * 0.12);
+      addBandAvoidingWindows(bh / 2, bh, trimColor, 0.2);
     }
     if (style.detail === 'toron' || style.detail === 'eave_brackets') {
       const count = Math.min(8, Math.max(1, Math.floor(length / 2)));
       for (let i = 0; i < count; i++) {
         const u = -length / 2 + (i + 0.5) * length / count;
         if (style.detail === 'toron') {
+          // 通高壁柱壓窗即整柱跳過（不可重疊）。
+          if (hitsWin(u, edge.h * 0.475, 0.3, edge.h * 0.95)) continue;
           if (!add(0.3, edge.h * 0.95, u, edge.h * 0.475, style.wall, 0.45)) break;
-          for (let j = 1; j <= 3; j++) add(0.14, 0.14, u, edge.h * j / 4, trimColor, 0.75);
+          for (let j = 1; j <= 3; j++) {
+            if (hitsWin(u, edge.h * j / 4, 0.14, 0.14)) continue;
+            add(0.14, 0.14, u, edge.h * j / 4, trimColor, 0.75);
+          }
         } else {
+          if (hitsWin(u, edge.h - 0.22, 0.15, 0.3) || hitsWin(u, edge.h - 0.12, 0.55, 0.12)) continue;
           if (!add(0.15, 0.3, u, edge.h - 0.22, trimColor, 0.45)) break;
           add(0.55, 0.12, u, edge.h - 0.12, style.roof, 0.55);
         }
@@ -299,8 +350,12 @@ export function architecturalFacadeParts(edges, style, thickness) {
         for (const side of [-1, 1]) add(Math.hypot(run, rise), 0.09,
           u + side * run / 2, y - h / 2 - rise / 2 - 0.08, trimColor, 0.16, side * Math.atan2(rise, run));
       } else if (detail === 'board_batten') {
-        for (const side of [-1, 1]) add(0.065, floorH * 0.92, u + side * bayW * 0.44,
-          (floor + 0.5) * floorH, trimColor, 0.12);
+        // 豎壓條落窗即跳過該側（不可重疊），不硬壓玻璃。
+        for (const side of [-1, 1]) {
+          const bu = u + side * bayW * 0.44, by = (floor + 0.5) * floorH;
+          if (hitsWin(bu, by, 0.065, floorH * 0.92)) continue;
+          add(0.065, floorH * 0.92, bu, by, trimColor, 0.12);
+        }
       } else if (detail === 'recess_bands' || detail === 'carved_frame') {
         for (const side of [-1, 1]) add(0.10, h + 0.20, u + side * (w / 2 + 0.08), y, trimColor, 0.15);
         add(w + 0.26, 0.1, u, y + h / 2 + 0.08, trimColor, 0.15);
@@ -327,28 +382,56 @@ export function architecturalFacadeParts(edges, style, thickness) {
     }
 
     // Tier 4: 水平樓層腰帶 (Stringcourse / Cornice)（深度 +0.15m）
+    // 壓窗即分段繞行（不可重疊），不整條壓過玻璃。
     if (facade !== 'recess' && facade !== 'concrete') {
       for (let floor = 0; floor < floors; floor++) {
-        if (!add(length - 0.04, 0.14, 0, floor * floorH + 0.10, trimColor, 0.15)) break;
+        addBandAvoidingWindows(floor * floorH + 0.10, 0.14, trimColor, 0.15);
+        if (budget <= 0) break;
       }
     }
     if (style.detail === 'tile_band') {
       for (let floor = 0; floor < floors; floor++) {
-        const tiles = Math.min(10, Math.max(1, Math.floor(length / 1.1)));
-        const tSpan = length - 0.04;
-        for (let i = 0; i < tiles; i++) {
-          if (!add(tSpan / tiles * 0.9, 0.18,
-            -tSpan / 2 + (i + 0.5) * tSpan / tiles, floor * floorH + 0.3,
-            i % 2 ? trimColor : style.roof, 0.17)) break;
+        const y = floor * floorH + 0.3, bh = 0.18;
+        const x0 = -length / 2 + 0.02, x1 = length / 2 - 0.02;
+        const cuts = [];
+        for (const wn of wins) {
+          if (wn.y - wn.h / 2 < y + bh / 2 - 1e-3 && wn.y + wn.h / 2 > y - bh / 2 + 1e-3) {
+            cuts.push([wn.u - wn.w / 2, wn.u + wn.w / 2]);
+          }
         }
+        cuts.sort((a, b) => a[0] - b[0]);
+        let cur = x0;
+        const segs = [];
+        for (const [a, b] of cuts) {
+          if (a > cur + 0.05) segs.push([cur, Math.min(a, x1)]);
+          cur = Math.max(cur, b);
+          if (cur >= x1) break;
+        }
+        if (cur < x1 - 0.05) segs.push([cur, x1]);
+        const spans = cuts.length ? segs : [[x0, x1]];
+        for (const [a, b] of spans) {
+          const iw = b - a;
+          if (iw < 0.3) continue;
+          const tiles = Math.min(10, Math.max(1, Math.floor(iw / 1.1)));
+          for (let i = 0; i < tiles; i++) {
+            if (!add(iw / tiles * 0.9, bh,
+              a + (i + 0.5) * iw / tiles, y,
+              i % 2 ? trimColor : style.roof, 0.17)) break;
+          }
+          if (budget <= 0) break;
+        }
+        if (budget <= 0) break;
       }
     }
 
     // Tier 5: 垂直立柱 / 壁柱 (Piers / Columns)（深度 +0.18m）
     // 頂面較牆頂退 ROOF_RIM_LIP：與封頂同高即共面打架，退後讀成女兒牆壓頂。
+    // 立柱壓窗即跳過該柱（不可重疊）。
     if (['columns', 'piers', 'timber', 'industrial', 'stone'].includes(facade)) {
       for (let bay = 1; bay < bays && budget > 0; bay++) {
-        add(0.18, edge.h - ROOF_RIM_LIP, -length / 2 + bay * bayW, (edge.h - ROOF_RIM_LIP) / 2, trimColor, 0.18);
+        const pu = -length / 2 + bay * bayW, ph = edge.h - ROOF_RIM_LIP;
+        if (hitsWin(pu, ph / 2, 0.18, ph)) continue;
+        add(0.18, ph, pu, ph / 2, trimColor, 0.18);
       }
     }
   }
