@@ -173,10 +173,7 @@ const ok = (cond, msg) => {
   ok(!Object.keys(help.UI_TIPS).some((k) => /dev/i.test(k)),
     '開發工具的說明 MUST NOT 進 UI_TIPS(那一份會被推導進玩家看得到的說明分頁)');
 
-  // 埠號的真相住工具自己(codex_review.mjs `DEFAULT_PORT`)⇒ 客戶端 MUST 一個數字都不寫死
-  const codexSrc = readSrc('tools', 'codex_review.mjs');
-  ok(/export const DEFAULT_PORT = \d+;/.test(codexSrc),
-    'tools/codex_review.mjs 匯出 `DEFAULT_PORT`(埠號的唯一真相)');
+  // 埠號的真相住工具自己(`*_review.mjs`/`story_book.mjs` 的 `DEFAULT_PORT`)⇒ 客戶端 MUST 一個數字都不寫死
   ok(!/localhost:\d+/.test(mainJs),
     'main.js MUST NOT 寫死開發工具的網址或埠(網址由 GET /dev/tools 給)');
   ok(/fetch\('\/dev\/tools'/.test(mainJs) && /x-dev-tools/.test(mainJs),

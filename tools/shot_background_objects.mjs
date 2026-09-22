@@ -40,7 +40,7 @@ async function serveReview(port) {
     nextPort++;
   }
   const processHandle = spawn(process.execPath,
-    [path.join(ROOT, 'tools', 'codex_review.mjs'), '--port', String(nextPort)],
+    [path.join(ROOT, 'tools', 'story_book.mjs'), '--port', String(nextPort)],
     { stdio: 'ignore', cwd: ROOT });
   const url = `http://localhost:${nextPort}/`;
   for (let i = 0; i < 60; i++) {

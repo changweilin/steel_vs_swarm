@@ -38,8 +38,7 @@ const OFFLINE_AUDIT_SCRIPTS = [
   'tools/audit_weather_dynamics.mjs',
   'tools/audit_weather_visuals.mjs',
 
-  // ── C. 世界觀文案、圖鑑與生成提示詞 (7 項) ──
-  'tools/audit_codex.mjs',
+  // ── C. 世界觀文案、圖鑑與生成提示詞 (6 項) ──
   'tools/audit_vernacular.mjs',
   'tools/audit_world_text.mjs',
   'tools/audit_vehicle_spec.mjs',
