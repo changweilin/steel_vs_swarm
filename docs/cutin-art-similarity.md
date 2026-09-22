@@ -3,6 +3,7 @@
 > 定義（2026-09-21 使用者定案）：每名角色一攻招一守招，不再分大小招。
 > 攻招＝ult 槽（無護盾時施展），守招＝skill 槽（護盾模式中施展，見 `abilHoldSlot`）。
 > 立繪檔名一律 `{id}_skill_atk.png`（攻招圖）／`{id}_skill_def.png`（守招圖），由 `data.js abilArtFile` 單一縫推導。
+> 2026-09-21 交換：m07 守招 ⇆ t11 守招（立繪跟招式走；m07 補足位移類，解近戰約束違規）。
 >
 > 吻合度：高＝立繪直接描繪招式內容；中＝姿態／意象相符但缺關鍵要素；低＝內容錯位。
 > 排序由低至高；吻合度為高者不列入（53／64）。點擊縮圖看原圖。
@@ -16,7 +17,7 @@
 | 5 | s09 獵場主 | 守招・逐風・靈步躍遷（加速＋大跳躍） | 中 | [<img src="../public/assets/characters/s09_skill_def.png" width="160">](../public/assets/characters/s09_skill_def.png) | 靜態裝填缺機動感；需改為躍起加速動態＋跳躍殘影 |
 | 6 | t01 冬將軍 | 守招・霜狼・北境重盾（持盾突進） | 中 | [<img src="../public/assets/characters/t01_skill_def.png" width="160">](../public/assets/characters/t01_skill_def.png) | 徒手號令未持盾；需加上巨盾本體持盾突進 |
 | 7 | t06 小川 | 攻招・通天・身外化影（分身協同） | 中 | [<img src="../public/assets/characters/t06_skill_atk.png" width="160">](../public/assets/characters/t06_skill_atk.png) | 單體揮斬缺分身；需加入兩具化身剪影 |
-| 8 | t11 老雪茄 | 守招・固守・百戰心訣（盾撞＋減傷） | 中 | [<img src="../public/assets/characters/t11_skill_def.png" width="160">](../public/assets/characters/t11_skill_def.png) | 談話構圖缺戰鬥要素；需改為持鋼盾衝撞＋磁力充盈 |
-| 9 | t12 螢火 | 守招・同調・螢火護生（護盾減傷） | 中 | [<img src="../public/assets/characters/t12_skill_def.png" width="160">](../public/assets/characters/t12_skill_def.png) | 純雷達桌缺護盾；需加入光罩或螢火環繞視覺 |
-| 10 | m01 渡鴉 | 守招・狂湧・血月之庇（持盾衝撞） | 中 | [<img src="../public/assets/characters/m01_skill_def.png" width="160">](../public/assets/characters/m01_skill_def.png) | 投擲煙罐未持盾；需改為持盾衝撞＋受擊回充特效 |
-| 11 | m06 嘉年華 | 守招・狂歡・花車浮游（擴盾＋加速） | 中 | [<img src="../public/assets/characters/m06_skill_def.png" width="160">](../public/assets/characters/m06_skill_def.png) | 僅前指突進缺擴盾；需加入護盾擴張範圍圈 |
+| 8 | t12 螢火 | 守招・同調・螢火護生（護盾減傷） | 中 | [<img src="../public/assets/characters/t12_skill_def.png" width="160">](../public/assets/characters/t12_skill_def.png) | 純雷達桌缺護盾；需加入光罩或螢火環繞視覺 |
+| 9 | m01 渡鴉 | 守招・狂湧・血月之庇（持盾衝撞） | 中 | [<img src="../public/assets/characters/m01_skill_def.png" width="160">](../public/assets/characters/m01_skill_def.png) | 投擲煙罐未持盾；需改為持盾衝撞＋受擊回充特效 |
+| 10 | m06 嘉年華 | 守招・狂歡・花車浮游（擴盾＋加速） | 中 | [<img src="../public/assets/characters/m06_skill_def.png" width="160">](../public/assets/characters/m06_skill_def.png) | 僅前指突進缺擴盾；需加入護盾擴張範圍圈 |
+| 11 | m07 界碑 | 守招・拒止・百戰心訣（盾撞擊退） | 中 | [<img src="../public/assets/characters/m07_skill_def.png" width="160">](../public/assets/characters/m07_skill_def.png) | 赴任立繪為談話構圖（原 t11 圖），缺盾撞動態；需改為持鞘翅甲盾衝撞＋擊退特效 |
