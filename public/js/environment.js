@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import {
   clockHour, phaseBlend, sunDirAt, moonDirAt, bodyFade,
   SHADOW, shadowRangeM, weatherAtTime, WEATHER_DYNAMICS, computeSolarSchedule, setSolarSchedule,
-  weatherVectorAt, resolveWeatherDynamics, WEATHER_ATTRS, WEATHER_PRESETS,
+  weatherVectorAt, resolveWeatherDynamics, WEATHER_ATTRS, WEATHER_PRESETS, mapRot,
+  lunarMoonDirAt, tideLevelAt,
 } from './data.js';
 import { setCelSun, WIND, celWindTime, INK_INFO_DECL, INK_INFO_NONE, setWeatherDynamics } from './toon.js';
 import { mulberry32 } from './rng.js';
@@ -361,7 +362,7 @@ function makeClouds(span, skyC, W, seed) {
   };
 }
 
-function makeBodies(span) {
+function makeBodies(span, lunarDay = 15) {
   const grp = new THREE.Group();
   const BODY_R_F = 0.055, MOON_R_F = 0.050, BODY_DIST_F = 1.25;
 
@@ -378,13 +379,59 @@ function makeBodies(span) {
       gr.addColorStop(1, 'rgba(255,238,200,0)');
       g.fillStyle = gr;
       g.fillRect(0, 0, S, S);
-    }
-    g.fillStyle = '#fff';
-    g.beginPath(); g.arc(C, C, S * (kind === 'sun' ? 0.30 : 0.34), 0, Math.PI * 2); g.fill();
-    if (kind === 'moon') {
-      g.fillStyle = 'rgba(150,162,182,0.55)';
+      g.fillStyle = '#fff';
+      g.beginPath(); g.arc(C, C, S * 0.30, 0, Math.PI * 2); g.fill();
+    } else if (kind === 'moon') {
+      const R = S * 0.34;
+      const d = Number.isFinite(lunarDay) ? Math.max(1, Math.min(30, lunarDay)) : 15;
+      const phaseAngle = ((d - 1) / 29.53059) * Math.PI * 2; // [0, 2pi)
+
+      // 先繪製微弱地照灰光圓底 (Earthshine)
+      g.fillStyle = 'rgba(70, 85, 110, 0.28)';
+      g.beginPath(); g.arc(C, C, R, 0, Math.PI * 2); g.fill();
+
+      // 繪製受光月球亮面與月海暗斑
+      const fullCv = document.createElement('canvas');
+      fullCv.width = fullCv.height = S;
+      const fg = fullCv.getContext('2d');
+      fg.fillStyle = '#f0f4ff';
+      fg.beginPath(); fg.arc(C, C, R, 0, Math.PI * 2); fg.fill();
+      fg.fillStyle = 'rgba(145,158,180,0.55)';
       for (const [dx, dy, r] of [[-0.09, -0.07, 0.085], [0.07, 0.03, 0.065], [-0.02, 0.11, 0.05], [0.12, -0.10, 0.04]]) {
-        g.beginPath(); g.arc(C + dx * S, C + dy * S, r * S, 0, Math.PI * 2); g.fill();
+        fg.beginPath(); fg.arc(C + dx * S, C + dy * S, r * S, 0, Math.PI * 2); fg.fill();
+      }
+
+      if (d === 15) {
+        // 十五滿月：全圓亮面
+        g.drawImage(fullCv, 0, 0);
+      } else if (d !== 1) {
+        // 初二至十四、十六至廿九：月相晨昏線 (Terminator)
+        const isWaxing = phaseAngle < Math.PI; // 上半月右亮，下半月左亮
+        const cosPhase = Math.cos(phaseAngle);
+
+        fg.save();
+        fg.globalCompositeOperation = 'destination-in';
+        fg.beginPath();
+        if (isWaxing) {
+          fg.arc(C, C, R, -Math.PI / 2, Math.PI / 2, false);
+          if (fg.ellipse) {
+            fg.ellipse(C, C, Math.max(0.1, Math.abs(R * cosPhase)), R, 0, Math.PI / 2, -Math.PI / 2, cosPhase > 0);
+          } else {
+            fg.lineTo(C, C - R);
+          }
+        } else {
+          fg.arc(C, C, R, Math.PI / 2, -Math.PI / 2, false);
+          if (fg.ellipse) {
+            fg.ellipse(C, C, Math.max(0.1, Math.abs(R * cosPhase)), R, 0, -Math.PI / 2, Math.PI / 2, cosPhase < 0);
+          } else {
+            fg.lineTo(C, C + R);
+          }
+        }
+        fg.closePath();
+        fg.fill();
+        fg.restore();
+
+        g.drawImage(fullCv, 0, 0);
       }
     }
     const tex = new THREE.CanvasTexture(cv);
@@ -911,7 +958,8 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
   const latDeg = terrain?.center?.lat ?? 25.0;
   const seed = Math.round((terrain.center?.lat ?? 0) * 1e4) * 31 + Math.round((terrain.center?.lng ?? 0) * 1e4);
 
-  const sched = computeSolarSchedule(startSeason, latDeg);
+  const mapRotation = terrain?.center ? mapRot(terrain.center) : 0;
+  const sched = computeSolarSchedule(startSeason, latDeg, mapRotation, env?.lunarDay ?? 15);
   const S = SEASONS[startSeason] || SEASONS.summer;
   if (!backgroundOnly) setSolarSchedule(sched);
 
@@ -935,7 +983,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
   const clouds = makeClouds(span, skyC, curDyn, seed);
   if (clouds) scene.add(clouds.obj);
 
-  const bodies = makeBodies(span);
+  const bodies = makeBodies(span, sched?.lunarDay ?? 15);
   scene.add(bodies.obj);
 
   // 設定頁樣品只借用同一套天空/雲/天氣；燈光仍由 matsample 的鍵光控制，
@@ -1025,16 +1073,21 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
     }
 
     const sd = backgroundOnly ? sunDirAt(h, sched.riseH, sched.setH) : sunDirAt(h);
-    const md = backgroundOnly ? sunDirAt(h + 12, sched.riseH, sched.setH) : moonDirAt(h);
+    const md = backgroundOnly
+      ? (sched?.lunarDay != null ? lunarMoonDirAt(h, sched.lunarDay, sched.riseH, sched.setH) : sunDirAt(h + 12, sched.riseH, sched.setH))
+      : (sched?.lunarDay != null ? lunarMoonDirAt(h, sched.lunarDay) : moonDirAt(h));
     _sunD.set(sd.x, sd.y, sd.z);
     _moonD.set(md.x, md.y, md.z);
     const up = sd.y > 0;
     out.sunUp = up;
     _lit.copy(up ? _sunD : _moonD);
     const fade = bodyFade(up ? sd.y : md.y);
+    const moonIllum = sched?.lunarPhaseAngle != null
+      ? (0.08 + 0.92 * (1 - Math.cos(sched.lunarPhaseAngle)) * 0.5)
+      : 1.0;
     if (sun) {
       sun.color.copy(sunC);
-      sun.intensity = (T.sunI * curDyn.light * S.mul * fade) + (flashStrength * 5.0);
+      sun.intensity = (T.sunI * curDyn.light * S.mul * fade * (up ? 1.0 : moonIllum)) + (flashStrength * 5.0);
     }
     if (!backgroundOnly) setCelSun(_lit);
 
@@ -1083,6 +1136,12 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       // 3. 推進日照時段與更新光影
       const h = clockHour(startTime, elapsedS, sched.startH);
       setHour(h);
+
+      // 動態海域潮汐更新
+      if (terrain && typeof terrain.updateTide === 'function' && terrain.isMarine) {
+        const tideH = tideLevelAt(h, sched?.lunarDay ?? 15, true);
+        terrain.updateTide(tideH);
+      }
 
       // 4. 能見度與空氣透視動態調整(2026-09-06 改制:渲染霧錨定權威視野 ——
       // 敵機在視野邊界消失時 3D 必須已經一片白,否則消失讀成憑空不見。

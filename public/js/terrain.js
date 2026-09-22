@@ -13,7 +13,7 @@ import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
 // 低功耗旗標的唯一真相(深度場的 texel 邊長跟著它折半 —— 同 `SHADOW.TEXEL_M` 那一條)。
 // MUST NOT 在此另讀一次 localStorage(第二份預設值遲早分家;biomes.js 的同一條註)。
 import { lowPower } from './mobile.js';
-import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, siteCPs, mapArg, curveMaxEdgeM, edgeBufferM, edgeWallInsetM } from './data.js';
+import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, siteCPs, mapArg, curveMaxEdgeM, edgeBufferM, edgeWallInsetM, isMarineWater } from './data.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
@@ -569,11 +569,19 @@ export async function buildTerrain(cfg, onProgress) {
   let seaData = null, seaN = 0;
 
   // 水面(有低於海平面的區域才加);waterY = 水面高(無水域 = null,供 game.js 涉水/深水物理)。
+  // 水面(有低於海平面的區域才加);waterY = 水面高(無水域 = null,供 game.js 涉水/深水物理)。
   // 水面高的唯一真相 = data.js WATER.LEVEL(涉水深/道路跨水判定共用同一數字)。
   let waterY = null;
   let waterMat = null;   // 緩衝空間的外環水面共用**同一份**材質(見檔尾 buildEdgeSkirt)
-  if (minH < WATER.LEVEL + 0.2 || (cfg.venue?.mix?.water || 0) > 0.1 || (cfg.venue?.mix?.wet || 0) > 0.1) {
-    waterY = WATER.LEVEL;
+  let waterMesh = null;
+  let wRingMesh = null;
+  const isMarine = isMarineWater(cfg.venue, cfg.placeName);
+  const baseWaterY = (minH < WATER.LEVEL + 0.2 || (cfg.venue?.mix?.water || 0) > 0.1 || (cfg.venue?.mix?.wet || 0) > 0.1)
+    ? WATER.LEVEL
+    : null;
+
+  if (baseWaterY != null) {
+    waterY = baseWaterY;
     // 岸邊泡沫的驅動量(S6;⑤-2):把水深烤成一張場。**無水域就不烤** ⇒ 場留在 toon.js 的
     // 1×1「很深」中性貼圖 ⇒ 恆無泡沫(原則 6),而不是滿場泡沫。
     bakeSeaDepth();
@@ -605,7 +613,20 @@ export async function buildTerrain(cfg, onProgress) {
     water.rotation.x = -Math.PI / 2;
     water.position.set((minX + maxX) / 2, waterY, (minZ + maxZ) / 2);
     group.add(water);
+    waterMesh = water;
     waterMat = water.material;
+  }
+
+  /**
+   * 隨月相與引潮力動態更新潮汐海面水位 (僅在海域且有水面時生效)
+   * @param {number} tideDeltaY 潮位偏移量 (公尺)
+   */
+  function updateTide(tideDeltaY) {
+    if (baseWaterY == null || !isMarine) return;
+    const dy = Number.isFinite(tideDeltaY) ? tideDeltaY : 0;
+    waterY = baseWaterY + dy;
+    if (waterMesh) waterMesh.position.y = waterY;
+    if (wRingMesh) wRingMesh.position.y = dy;
   }
 
   /**
@@ -842,6 +863,7 @@ export async function buildTerrain(cfg, onProgress) {
       wgeo.computeVertexNormals();
       const wRing = new THREE.Mesh(wgeo, waterMat);
       wRing.frustumCulled = false;
+      wRingMesh = wRing;
       group.add(wRing);
     }
   }
@@ -1408,7 +1430,5 @@ export async function buildTerrain(cfg, onProgress) {
   // `gridM` = 高程網格的格距(公尺)。對外只有一個用途:**貼地地被層要拿地形法線**
   // (ground.js 的 landN)—— 中央差分的取樣距 MUST 是這一格,取更小是在同一個雙線性面內
   // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
-  // ⬇ 新欄位一律**只加不改**(⑤-2 / ⑤-3):`stampSeaBlockers` = 深度場的蓋章入口(main.js
-  //   在 buildBiomes 之後呼叫一次)、`seaFadeAtWorld` = 倒影塊頂點的浪幅淡出(biomes.js)。
-  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
+  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, get waterY() { return waterY; }, set waterY(v) { waterY = v; }, isMarine, baseWaterY, updateTide, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
 }

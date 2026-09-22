@@ -6564,7 +6564,7 @@ export function pickSeasonalWeather(season, roll01 = Math.random()) {
  * @param {string} season 'spring' | 'summer' | 'autumn' | 'winter'
  * @param {number} latDeg 緯度 (度, -65 ~ +65)
  */
-export function computeSolarSchedule(season = 'summer', latDeg = 25.0) {
+export function computeSolarSchedule(season = 'summer', latDeg = 25.0, rot = 0, lunarDay = 15) {
   // 赤緯角 (度)
   const declMap = { spring: 0, summer: 23.44, autumn: 0, winter: -23.44 };
   const delta = (declMap[season] ?? 23.44) * Math.PI / 180;
@@ -6595,7 +6595,36 @@ export function computeSolarSchedule(season = 'summer', latDeg = 25.0) {
     night: Number(((setH + twilightH + 0.5)).toFixed(2)),
   };
 
-  return { riseH, setH, twilightH, halfDayH, phaseH, startH };
+  const mapRotation = Number.isFinite(rot) ? rot : 0;
+  const lDay = (Number.isInteger(lunarDay) && lunarDay >= 1 && lunarDay <= 30) ? lunarDay : 15;
+  const lunarPhaseAngle = ((lDay - 1) / 29.53059) * (Math.PI * 2);
+  const lunarHourOffset = ((lDay - 1) / 29.53059) * 24.0;
+
+  return {
+    season, latDeg: lat, phi, delta, riseH, setH, twilightH, halfDayH, phaseH, startH, rot: mapRotation,
+    lunarDay: lDay, lunarPhaseAngle, lunarHourOffset,
+  };
+}
+
+/**
+ * 依緯度計算太陽能光伏板最佳科學傾角 (度)
+ * 遵循國際光伏工程規範 (PVWatts / NREL 最佳年發電量固定傾角模型):
+ * - 低緯度 (|lat| <= 25°): 取 0.87 × |lat|，最低保證 10° 傾角以利雨水排塵自潔
+ * - 中緯度 (25° < |lat| <= 50°): 取 0.76 × |lat| + 3.1°
+ * - 高緯度 (|lat| > 50°): 取 0.55 × |lat| + 15.0° (上限 55°)
+ * @param {number} latDeg 緯度 (-65 ~ +65)
+ * @returns {number} 最佳傾角 (度, 10° ~ 55°)
+ */
+export function optimalSolarTiltDeg(latDeg = 25.0) {
+  const lat = Math.abs(Number.isFinite(latDeg) ? latDeg : 25.0);
+  if (lat <= 25.0) return Math.max(10.0, lat * 0.87);
+  if (lat <= 50.0) return lat * 0.76 + 3.1;
+  return Math.min(55.0, lat * 0.55 + 15.0);
+}
+
+/** 依緯度計算太陽能光伏板最佳科學傾角 (rad) */
+export function optimalSolarTiltRad(latDeg = 25.0) {
+  return optimalSolarTiltDeg(latDeg) * Math.PI / 180;
 }
 
 /**
@@ -6915,14 +6944,19 @@ export function envLabel(env) {
   return `${s}・${t}・${w}`;
 }
 
-/** env = { season, time, weather };'random'/缺值 → 抽一個具體值 */
+/** env = { season, time, weather, lunarDay };'random'/缺值 → 抽一個具體值 */
 export function resolveEnv(env = {}) {
   const pick = (obj, v) => (v && obj[v]) ? v : Object.keys(obj)[Math.floor(Math.random() * Object.keys(obj).length)];
   const season = pick(ENV.seasons, env.season);
+  // 開局陰曆初幾 (1~30 隨機抽樣定案，全房共用)
+  const lunarDay = (Number.isInteger(env.lunarDay) && env.lunarDay >= 1 && env.lunarDay <= 30)
+    ? env.lunarDay
+    : (Math.floor(Math.random() * 30) + 1);
   return {
     season,
     time: pick(ENV.times, env.time),
     weather: (env.weather && ENV.weathers[env.weather]) ? env.weather : pickSeasonalWeather(season, Math.random()),
+    lunarDay,
   };
 }
 
@@ -7001,25 +7035,128 @@ export function phaseBlend(hour, phaseHObj = null) {
 }
 
 /**
- * 太陽方向(單位向量,遊戲世界座標;+x 東、+y 上)。
- * 仰角 = `MAX_ELEV × sin(2π(h−6)/24)` ⇒ 6/18 點恰在地平線(紀律 ③),週期恰 24 小時。
+ * 太陽方向(單位向量,遊戲世界座標;+x 東、+y 上、+z 南)。
+ * 依緯度與季節天文解算天體地平座標 (Horizontal Coordinates)：
+ *   時角 omega = 15° × (hour - 12)
+ *   仰角正弦 sin(el) = sin(phi)*sin(delta) + cos(phi)*cos(delta)*cos(omega)
+ *   東西分量 x = -cos(delta)*sin(omega) (+x 東升、-x 西落)
+ *   南北分量 z = sin(phi)*cos(delta)*cos(omega) - cos(phi)*sin(delta) (+z 南偏、-z 北偏)
+ *   幾何單位向量恆等式 x² + y² + z² ≡ 1
+ * 若有地圖方位角旋轉 (rot)，則同步旋轉水平平面分量 (x, z)。
  * **月亮 = 同一支 +12 小時**,MUST NOT 另寫一份軌道。
  */
-export function sunDirAt(hour, riseH = null, setH = null) {
-  const rH = riseH ?? _currentSolarSchedule?.riseH ?? DAYCLOCK.RISE_H;
-  const sH = setH ?? _currentSolarSchedule?.setH ?? DAYCLOCK.SET_H;
-  const isDefaultRise = (rH === 6 && sH === 18);
-  const elAngle = isDefaultRise
-    ? Math.PI * (hour - DAYCLOCK.RISE_H) / 12
-    : Math.PI * (hour - rH) / (sH - rH || 12);
-  const el = DAYCLOCK.MAX_ELEV_DEG * Math.PI / 180 * Math.sin(elAngle);
-  const az = Math.PI * (hour - (isDefaultRise ? DAYCLOCK.RISE_H : rH)) / (isDefaultRise ? 12 : (sH - rH || 12));
-  const hx = Math.cos(az), hz = Math.sin(az) * DAYCLOCK.AZ_TILT;
-  const hn = Math.hypot(hx, hz) || 1;
-  const ce = Math.cos(el);
-  return { x: hx / hn * ce, y: Math.sin(el), z: hz / hn * ce };
+export function sunDirAt(hour, riseH = null, setH = null, rot = null) {
+  const sched = _currentSolarSchedule;
+  const rH = riseH ?? sched?.riseH ?? DAYCLOCK.RISE_H;
+  const sH = setH ?? sched?.setH ?? DAYCLOCK.SET_H;
+  const mapR = rot ?? sched?.rot ?? 0;
+
+  let phi, delta;
+  if (sched && Number.isFinite(sched.phi) && Number.isFinite(sched.delta)) {
+    phi = sched.phi;
+    delta = sched.delta;
+  } else {
+    // 預設/離線稽核模式 (春分 delta=0, 緯度 28° => 正午仰角恰為 62° = DAYCLOCK.MAX_ELEV_DEG)
+    phi = (90 - DAYCLOCK.MAX_ELEV_DEG) * Math.PI / 180;
+    delta = 0;
+  }
+
+  const isDefault = (!sched || (sched.riseH === 6 && sched.setH === 18 && sched.phi === phi && sched.delta === delta));
+  const halfDay = isDefault ? 6 : ((sH - rH) / 2 || 6);
+  const omega = isDefault
+    ? Math.PI * (hour - 12) / 12
+    : (Math.PI / 2) * (hour - 12) / halfDay;
+
+  const cosO = Math.cos(omega), sinO = Math.sin(omega);
+  const cosD = Math.cos(delta), sinD = Math.sin(delta);
+  const cosP = Math.cos(phi), sinP = Math.sin(phi);
+
+  const rawX = -cosD * sinO;
+  const rawY = sinP * sinD + cosP * cosD * cosO;
+  const rawZ = sinP * cosD * cosO - cosP * sinD;
+
+  const len = Math.hypot(rawX, rawY, rawZ) || 1;
+  let x = rawX / len, y = rawY / len, z = rawZ / len;
+
+  if (mapR !== 0) {
+    const [rx, rz] = rotXZ(x, z, mapR);
+    x = rx;
+    z = rz;
+  }
+  return { x, y, z };
 }
 export const moonDirAt = (hour) => sunDirAt(hour + 12);
+
+/**
+ * 依農曆日數與當前鐘點解算月球地平座標方向向量 (單位向量)
+ * 朔望月週期約 29.53 天:
+ * - 初一 (朔): 月球與太陽同向 (同升同落，角距 0°)
+ * - 初八 (上弦): 月球在太陽東側 90° (黃昏過中天)
+ * - 十五 (望): 月球與太陽對沖 180° (半夜過中天，即 hour + 12，與 moonDirAt 相同)
+ * - 廿三 (下弦): 月球在太陽西側 90° (清晨過中天)
+ *
+ * @param {number} hour 當前鐘點 (0~24)
+ * @param {number} lunarDay 農曆日數 (1~30)
+ * @param {number|null} riseH 日出時刻
+ * @param {number|null} setH 日落時刻
+ * @param {number|null} rot 地圖方位角
+ */
+export function lunarMoonDirAt(hour, lunarDay = 15, riseH = null, setH = null, rot = null) {
+  const d = Number.isFinite(lunarDay) ? Math.max(1, Math.min(30, lunarDay)) : 15;
+  if (d === 15) return sunDirAt(hour + 12, riseH, setH, rot);
+  // 相對於太陽的時角差 (初一 0h，十五 ~11.38h ~ 12h)
+  const offsetH = ((d - 1) / 29.53059) * 24.0;
+  // 月球在時間 hour 的視位置相當於太陽在 (hour - offsetH) 的地平座標
+  // 滿月時 hour - 12 同義於 hour + 12
+  const effectiveHour = ((hour - offsetH) % 24 + 24) % 24;
+  return sunDirAt(effectiveHour, riseH, setH, rot);
+}
+
+/**
+ * 判斷水域是否為海域（海洋、海岸、海濱、出海口、河口、海港、海灣、潟湖等）
+ * @param {object} venue 場地物件
+ * @param {string} placeName 戰場或場地名稱
+ * @returns {boolean} 是否為海域
+ */
+export function isMarineWater(venue, placeName = '') {
+  if (venue?.isMarine === true) return true;
+  if (venue?.isMarine === false) return false;
+  const name = `${venue?.name || ''} ${venue?.id || ''} ${venue?.type || ''} ${placeName || ''}`;
+  const marineRegex = /(海|洋|灣|港|河口|出海口|潟湖|sea|ocean|coast|bay|estuary|harbor|port|lagoon|marine|strait|beach)/i;
+  return marineRegex.test(name);
+}
+
+/** 基準半日潮引潮力振幅 (公尺) 與朔望調變常數 */
+export const TIDE = {
+  BASE_AMP: 0.35,      // 基準半日潮振幅 (±0.35m)
+  SPRING_NEAP_F: 0.45, // 朔望大潮/小潮調變幅度 (大潮 +45% 達 ±0.51m，小潮 -45% 達 ±0.19m)
+};
+
+/**
+ * 依當前鐘點、農曆日與海域屬性計算即時潮位高程偏移量 (公尺)
+ * 遵循半日潮 (Semidiurnal Tide) 與朔望大潮 (Spring/Neap) 天體物理模型:
+ * - 月球時角過中天（上中天或下中天，週期約 12 小時）時達到滿潮 (High Tide)
+ * - 月球處於地平線時達到乾潮/退潮 (Low Tide)
+ * - 初一 (朔) 與十五 (望) 日月同線引潮力疊加為大潮 (振幅 1.45x)
+ * - 初八 (上弦) 與廿三 (下弦) 日月正交引潮力相消為小潮 (振幅 0.55x)
+ * @param {number} hour 當前遊戲鐘點 (0~24)
+ * @param {number} lunarDay 農曆日數 (1~30)
+ * @param {boolean} isMarine 是否為海域水體
+ * @returns {number} 潮位高程偏移 (m)
+ */
+export function tideLevelAt(hour, lunarDay = 15, isMarine = false) {
+  if (!isMarine) return 0;
+  const d = Number.isFinite(lunarDay) ? Math.max(1, Math.min(30, lunarDay)) : 15;
+  const phaseAngle = ((d - 1) / 29.53059) * Math.PI * 2;
+  const springNeapMod = 1.0 + TIDE.SPRING_NEAP_F * Math.cos(2 * phaseAngle);
+
+  const lunarHourOffset = ((d - 1) / 29.53059) * 24.0;
+  const moonHour = ((hour - lunarHourOffset) % 24 + 24) % 24;
+
+  // 半日潮相位：在 moonHour = 12 (上中天) 與 moonHour = 0/24 (下中天) 時 cos = 1 (滿潮)
+  const tidePhase = (moonHour - 12) * (Math.PI * 2 / 12.0);
+  return TIDE.BASE_AMP * springNeapMod * Math.cos(tidePhase);
+}
 
 /** 地平線淡出(0~1):主光與天體圓盤共用,見紀律 ④ */
 export const bodyFade = (y) => Math.max(0, Math.min(1, y / DAYCLOCK.FADE_Y));

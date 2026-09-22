@@ -2,13 +2,14 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mulberry32 } from './rng.js';
 import { GROUND_PARTS, PART_VARIATION, GROUND_PART_PALETTES } from './groundPartCatalog.js';
+import { optimalSolarTiltRad } from './data.js';
 
-export function createGroundParts() {
+export function createGroundParts(latDeg = 25.0) {
   return Object.fromEntries(Object.keys(GROUND_PARTS).map(type => [type,
-    Array.from({ length: PART_VARIATION.count }, (_, variant) => generateGroundPart(type, variant))]));
+    Array.from({ length: PART_VARIATION.count }, (_, variant) => generateGroundPart(type, variant, latDeg))]));
 }
 
-export function generateGroundPart(type, variant = 0) {
+export function generateGroundPart(type, variant = 0, latDeg = 25.0) {
   const spec = GROUND_PARTS[type];
   if (!spec) throw new RangeError(`Unknown ground part ${type}`);
   let seed = variant ^ 0x47525054;
@@ -144,8 +145,11 @@ export function generateGroundPart(type, variant = 0) {
     else if (family === 'trellis') {
       for (let i = 0; i < 4; i++) rock((i / 3 - .5) * w * .8, top * .85, 0, w * .32, h * .4, d, color, 'leaf');
     } else if (family === 'solar') {
-      // 棚架式單一縫：棚頂斜率角，全組（立柱/縱樑/面板/柵線）共用同一傾角
-      const SHED_TILT = -0.24, GROUND_TILT = -0.32;
+      // 棚架式單一縫：棚頂斜率角，依緯度科學模型計算，全組（立柱/縱樑/面板/柵線）共用同一傾角
+      const optTilt = optimalSolarTiltRad(latDeg);
+      const isNorth = latDeg >= 0;
+      const SHED_TILT = (isNorth ? -1 : 1) * optTilt * 0.75;
+      const GROUND_TILT = (isNorth ? -1 : 1) * optTilt;
       const shedLegs = (beamTop, tilt, c = 0x707a79) => {
         const tan = Math.tan(-tilt);
         for (const x of [-1, 1]) for (const z of [-1, 1]) {
