@@ -6,6 +6,30 @@ import { REGIONAL_STONE_BUILDERS } from '../public/js/ancientStoneSites.js';
 import { PHENOMENA, phenomenaProfile, phenomenaSurface } from '../public/js/geologyPhenomena.js';
 
 let count = 0;
+for (const [type, spec] of Object.entries(GEOLOGY_TYPES)) {
+  if (spec.lithology === 'manufactured') continue;
+  assert(spec.maxHeightDiagonalRatio === null || spec.maxHeightDiagonalRatio > 0, `${type}: missing relief policy`);
+  for (const [width, depth] of [[2, 2], [100000, 80000], [10000, 2], [2, 10000]]) {
+    const input = { width, depth, height: 100000, strike: 0, vegetation: 0, moisture: 0,
+      wind: 0, exposure: 0, temperature: 20, activity: 0 };
+    const entry = geologyBackgroundObject(type, 42, input);
+    const p = entry.generation.parameters;
+    assert.equal(p.width, width);
+    assert.equal(p.width * p.depthRatio, depth);
+    const limit = Math.hypot(width, depth) * (spec.maxHeightDiagonalRatio ?? Infinity);
+    assert(p.height <= limit);
+    // Solid terrain comes before event plumes; surface decoration is disabled above.
+    const solidEnd = entry.generation.surfaceTriangles.length * 9;
+    for (let i = 1; i < solidEnd; i += 3) assert(entry.meshData.vertices[i] <= limit + 1e-8, `${type}: peak exceeds cap`);
+    if (spec.maxHeightDiagonalRatio === null) assert.equal(p.height, input.height);
+    assert.deepEqual(entry, geologyBackgroundObject(type, 42, input));
+  }
+}
+for (const key of ['width', 'depth', 'height']) {
+  for (const value of [0, -1, NaN, Infinity, '20']) {
+    assert.throws(() => generateGeology('mound', 1, { [key]: value }), RangeError);
+  }
+}
 assert.equal(Object.keys(LEGACY_GEOLOGY_RULES).length, 9);
 for (const type of Object.values(LEGACY_GEOLOGY_RULES)) assert(GEOLOGY_TYPES[type]);
 assert(!Object.hasOwn(LEGACY_GEOLOGY_RULES, 'arch'));
@@ -70,7 +94,9 @@ for (const type of Object.keys(GEOLOGY_TYPES)) {
     assert.deepEqual(bare.parameters, a.generation.parameters);
     assert(bare.surfaces.filter(x => ['wood', 'leaves', 'cones', 'grass'].includes(x.kind)).every(x => x.coverage === 0));
     for (const key of GEOLOGY_TYPES[type].lithology === 'manufactured' ? [] : ['width', 'height', 'ageMa', 'roughness']) {
-      assert(a.generation.parameters[key] >= GEOLOGY_TYPES[type][key][0]);
+      assert(a.generation.parameters[key] >= (key === 'height' ? Math.min(GEOLOGY_TYPES[type][key][0],
+        Math.hypot(a.generation.parameters.width, a.generation.parameters.width * a.generation.parameters.depthRatio)
+          * (GEOLOGY_TYPES[type].maxHeightDiagonalRatio ?? Infinity)) : GEOLOGY_TYPES[type][key][0]));
       assert(a.generation.parameters[key] <= GEOLOGY_TYPES[type][key][1]);
     }
     count++;

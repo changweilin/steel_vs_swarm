@@ -38,6 +38,18 @@ export const GEOLOGY_TYPES = {
   ...Object.fromEntries(Object.entries(PHENOMENA).map(([id,row])=>[id,{...spec(...row.slice(0,8)),group:row[8]}])),
 };
 
+// Art-direction limits for solid relief above its base, independent of footprint area.
+const reliefRatios = {
+  granite: .4, mountain: .35, mound: .2, dune: .15, sandstone: .4,
+  cliff: null, karst: null, basalt: null, crater: .2, reef: .12, island: .3,
+  river: .06, moraine: .2, tor: .4, fin: null, spire: null, marble: .35,
+  inselberg: .3, rocktower: null, granite_towers: null, conglomerate: null,
+  debris_flow: .12, landslide: .3, landslide_lake: .18, slope_creep: .25,
+  eruption: .3, badlands: .25, geothermal: .08, mud_volcano: .15,
+  hot_spring: .06, fountain: .06, geyser: .06, impact_crater: .15,
+};
+for (const [type, ratio] of Object.entries(reliefRatios)) GEOLOGY_TYPES[type].maxHeightDiagonalRatio = ratio;
+
 // Migration ledger for biomes.js synthMegalith's eleven recipes. Unsupported topology
 // is deliberately omitted, never substituted with a solid "arch" or a floating cap.
 export const LEGACY_GEOLOGY_RULES = Object.freeze({
@@ -162,6 +174,21 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
     dip: sample([0, environment.fault > .5 ? 70 : 25]), layers: 4 + Math.floor(rnd() * 9),
     erosion: environment.exposure * (.25 + rnd() * .75), dissolution: environment.dissolution };
   if (Number.isFinite(input.strike)) p.strike = input.strike;
+  if (!stone) {
+    for (const key of ['width', 'depth', 'height']) {
+      if (input[key] !== undefined && (!Number.isFinite(input[key]) || input[key] <= 0)) {
+        throw new RangeError(`Geology ${key} must be a positive finite number`);
+      }
+    }
+    p.width = input.width ?? p.width;
+    p.depthRatio = input.depth === undefined ? p.depthRatio : input.depth / p.width;
+    p.height = input.height ?? p.height;
+    const diagonal = Math.hypot(p.width, p.width * p.depthRatio);
+    if (!Number.isFinite(diagonal) || !Number.isFinite(p.depthRatio) || p.depthRatio <= 0) {
+      throw new RangeError('Geology footprint must be finite');
+    }
+    if (s.maxHeightDiagonalRatio !== null) p.height = Math.min(p.height, diagonal * s.maxHeightDiagonalRatio);
+  }
   if (Object.hasOwn(PHENOMENA,type)) {
     const eventRnd=mulberry32(seed ^ 0x45564e54);
     Object.assign(p,{activity:environment.activity,ventRadius:.12+eventRnd()*.12,
@@ -227,7 +254,8 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
   type = model.type;
   const spec = GEOLOGY_TYPES[type];
   const n = Number.isInteger(input.segments) ? Math.max(8, Math.min(28, input.segments)) : 28;
-  const points = [], vertices = [], faces = [], colors = [];
+  const points = [], bases = [], vertices = [], faces = [], colors = [];
+  let peakRelief = 0;
   const shapeRnd = mulberry32(seed ^ 0x53484150);
   const phases = [shapeRnd(), shapeRnd(), shapeRnd()].map(v => v * Math.PI * 2);
   const c = Math.cos(p.strike), s = Math.sin(p.strike);
@@ -251,6 +279,14 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     const baseY = input.heightAt ? input.heightAt(originX + wx, originZ + wz) : 0;
     if (!Number.isFinite(baseY)) return null;
     points.push([wx, y + baseY - ground, wz]);
+    bases.push(baseY - ground);
+    peakRelief = Math.max(peakRelief, y);
+  }
+  // Noise and profile peaks are included; scaling all relief preserves benches and pools.
+  if (!model.stone && spec.maxHeightDiagonalRatio !== null) {
+    const limit = Math.hypot(p.width, p.width * p.depthRatio) * spec.maxHeightDiagonalRatio;
+    const fit = peakRelief > limit ? limit / peakRelief : 1;
+    for (let i = 0; i < points.length; i++) points[i][1] = bases[i] + (points[i][1] - bases[i]) * fit;
   }
   function triangle(a, b, c, color) {
     const index = vertices.length / 3;
@@ -364,7 +400,7 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
   const targetKey = GEOLOGY_PREFIX + type;
   const { stoneGeometry, ...generationModel } = model;
   const name = model.stone?.name ?? spec.name;
-  return { key: `${targetKey}:${seed}:${JSON.stringify(e)}${model.stone ? ':'+model.stone.id+':'+p.uniformScale : ''}`, targetKey, family: 'environment', subpart: type,
+  return { key: `${targetKey}:${seed}:${JSON.stringify(e)}${model.stone ? ':'+model.stone.id+':'+p.uniformScale : ':'+JSON.stringify(p)}`, targetKey, family: 'environment', subpart: type,
     name, ...(model.stone ? { scalePolicy: 'uniform' } : {}), bounds: { min, max, size: max.map((v, i) => v - min[i]) },
     parts: [{ name, type: 'box', dimensions: [p.width, p.height, p.width * p.depthRatio],
       position: [0, p.height / 2, 0], color: spec.color, triangles: faces.length / 3 }], palettes: [],
