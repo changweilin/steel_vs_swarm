@@ -697,6 +697,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
 
   let decorationBudget = WALL_DECORATION_LIMIT;
   let balconyCount = 0, acCount = 0;
+  const isLowRise = height <= 24;
   // 4. 立面高程物件 (招牌、電視牆、看板、選舉廣告、逃生梯、陽台、曬衣架、冷氣、旗幟)
   for (const edge of edges) {
     const frame = getEdgeFrame(edge, poly);
@@ -713,8 +714,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       geos.push(paintGeometry(geo, color, variant));
     };
 
-    // 招牌 (Blade Sign - 垂直側看板，偏向立面邊角)
-    const hasBladeSign = (architectureHash(`${idBase}:${edge.x}`, 'blade') % 100) < 65;
+    // 招牌 (Blade Sign - 垂直側看板，僅低樓層建築配置)
+    const hasBladeSign = isLowRise && (architectureHash(`${idBase}:${edge.x}`, 'blade') % 100) < 65;
     if (hasBladeSign && floors >= 2 && len >= 4.5) {
       const signSide = (architectureHash(`${idBase}:${edge.x}`, 'blade_side') % 2) === 0 ? 1 : -1;
       const signU = signSide * Math.min(len * 0.38, len / 2 - 0.8);
@@ -732,8 +733,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       }
     }
 
-    // 選舉廣告牆 (Election Banner)
-    const hasElection = contemporary && (architectureHash(`${idBase}:${edge.x}`, 'election') % 100) < 28;
+    // 選舉廣告牆 (Election Banner - 僅低樓層建築配置)
+    const hasElection = isLowRise && contemporary && (architectureHash(`${idBase}:${edge.x}`, 'election') % 100) < 28;
     if (hasElection && (cat === 'residential' || cat === 'commercial') && height >= 8 && len >= 6.0) {
       const elW = Math.min(3.2, len * 0.4);
       const elH = Math.min(6.5, height * 0.6);
@@ -863,8 +864,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       }
     }
 
-    // 旗幟 (Flagpole with Flag) - 觀光、文化或市政
-    const hasFlag = contemporary && (architectureHash(`${idBase}:${edge.x}`, 'flag') % 100) < 35;
+    // 旗幟 (Flagpole with Flag - 僅低樓層觀光、文化或市政建築)
+    const hasFlag = isLowRise && contemporary && (architectureHash(`${idBase}:${edge.x}`, 'flag') % 100) < 35;
     if (hasFlag && (cat === 'tourism' || cat === 'commercial') && height >= 8 && len >= 8.0) {
       const pole = new THREE.CylinderGeometry(0.04, 0.04, 2.4, 6);
       pole.rotateZ(-0.35);
