@@ -35,7 +35,7 @@ import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampR
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { animWeights } from './animweights.js';
-import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
+import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
@@ -3345,6 +3345,8 @@ export class BattleClient {
         ent.ry = e.ry ?? 0;
         ent.si = e.si || 0;
         ent.act = !!e.act;   // 主視野機(三機小隊只有一架):觀戰玩家視角的跟隨名冊只收它
+        // 防守盾受擊閃:護盾水位較上一快照下降且正舉盾 = 這一發打在盾上 → 六角紋閃亮 + 波紋(強度 ∝ 傷害)
+        if (ent.shieldMesh && e.sp != null && ent.sp != null && e.sp < ent.sp && !!e.df) ent.shieldMesh.userData.hit?.(shieldHitStrength(ent.sp - e.sp));
         ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 磁力(血條玻璃藍段;所有英雄機體都送)
         ent.df = !!e.df;
         // NPC BOSS 段位(有這一格 = 這是 BOSS):血條外圍光暈顏色與體型縮放由它決定。
@@ -3395,15 +3397,24 @@ export class BattleClient {
           this.hp = e.hp; this.maxHp = e.m;
           this.sp = e.sp ?? this.sp; this.maxSp = e.msp ?? this.maxSp;
           if (this.defending && (this.sp || 0) <= 0) this._toggleDefense(false);
-          // 受傷暈影:自機總量(裝甲+護盾)較上一快照下降 = 被擊 → 閃紅暈影;
-          // 重生/補血的上升不觸發;換主視野(_takeOver 清 _prevVital)不誤觸
+          // 受擊回饋分流:護盾吃下這一發(舉盾中且護盾水位下降) → 護盾位置閃光(強度 ∝ 傷害),
+          // 取代全屏血光;裝甲掉血(盾沒接住:穿盾/盾已空/沒舉盾)才閃紅暈影。
+          // 重生/補血的上升不觸發;換主視野(_takeOver 清 _prevVital/_prevSp)不誤觸
           const vital = this.hp + this.sp;
           if (this._prevVital != null && vital < this._prevVital - 0.5 && !e.dead) {
-            this.hud.hurt?.();
+            const spLoss = (this._prevSp ?? this.sp) - this.sp;
             this._lastHurtAt = performance.now() / 1000;   // 被攻擊時戳(無人機完美迴避的戰鬥狀態判定)
             this._airSinkHit(this._prevVital - vital);     // 飛行機體受擊掉高(掉幅 ∝ 這次掉的護盾+裝甲)
+            if (this.defending && (this.sp || 0) > 0 && spLoss > 0.5) {
+              const s = shieldHitStrength(spLoss);
+              this._fpsShieldMesh?.userData.hit?.(s);
+              ent.shieldMesh?.userData.hit?.(s);
+            } else {
+              this.hud.hurt?.();
+            }
           }
           this._prevVital = vital;
+          this._prevSp = this.sp;
           this.mp = e.mp ?? this.mp; this.maxMp = e.mm ?? this.maxMp;
           if (e.mm != null) this._mpAuth = true;   // 電力上限定案 → 爬升動力才解析得出真正的上限
           this.money = e.$ ?? this.money;
@@ -3588,30 +3599,23 @@ export class BattleClient {
     }
   }
 
-  /** 建立機體正面的低透明度能量護盾網格 (防守姿態生成) */
+  // 英雄正面防守盾:整片呈大六角形的蜂巢拼接板(平面,面向正前方) + 護盾六角紋
+  // shader(vfx.js makeShieldMaterial 單一縫,與塔/主堡受擊殼同源;閒置只剩 fresnel
+  // 邊緣光 + 淡格線 + 大六角外框光,受擊閃亮 + 波紋)。
+  // 尺寸推導不手寫:R 取舊弧面弦寬一半(弦 = 2r·sin(arc/2)),板高 √3·R 恰與舊 h 相當;
+  // 板立於身前 z = 0.6r(舊弧面緣 0.34r、心 r 之間)。純表現層;減傷結算在
+  // sim._shieldDefFactor,護盾/裝甲分軌在 data.js shieldSplit。
   _createFrontShieldMesh(r = 2.5, h = 4.0, arc = 140 * Math.PI / 180) {
     const sg = new THREE.Group();
-    const geo = new THREE.CylinderGeometry(r, r, h, 24, 1, true, -arc / 2, arc);
-    const m1 = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.25,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    }));
-    const m2 = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-      color: 0xbae6fd,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.45,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    }));
-    m1.userData.noOutline = true; m1.userData.noPaint = true;
-    m2.userData.noOutline = true; m2.userData.noPaint = true;
-    sg.add(m1);
-    sg.add(m2);
+    const R = Math.max(0.8, r * Math.sin(arc / 2));
+    const geo = new THREE.CircleGeometry(R, 6);
+    const mat = makeShieldMaterial(0x38bdf8, { planar: true, hexR: R });
+    const m = new THREE.Mesh(geo, mat);
+    m.position.z = r * 0.6;
+    m.userData.noOutline = true; m.userData.noPaint = true;
+    sg.add(m);
+    sg.userData.mat = mat;
+    sg.userData.hit = (s = 1) => { mat.uniforms.uFlash.value = Math.max(mat.uniforms.uFlash.value, s); };
     sg.userData.noOutline = true;
     sg.userData.noPaint = true;
     sg.visible = false;
@@ -5690,6 +5694,7 @@ export class BattleClient {
     this._liftLockUntil = 0;
     this.unbalLeft = 0;
     this._prevVital = null;   // 換座機:重置受傷偵測基準,避免血量落差誤觸暈影
+    this._prevSp = null;      // 同上:護盾損耗基準一併重置,否則首包快照誤閃大盾光
     this._clearCcFlash();     // 換座機:白幕是上一具機體的感光反應,不跟著視野搬過來
     this._clearBlood();       // 換座機:血漬是上一具機體座艙玻璃上的,同理不跟著搬
     this._burstQ = null;      // 換座機:未補畫完的連發是上一具機體的槍口,不跟著搬
@@ -9361,6 +9366,7 @@ export class BattleClient {
   _updateEnts(dt, now) {
     if (this._fpsShieldMesh) {
       this._fpsShieldMesh.visible = (this.viewMode === 'fpv' && this.defending && (this.sp || 0) > 0 && !this.dead);
+      if (this._fpsShieldMesh.visible && this._fpsShieldMesh.userData.mat) stepShieldMaterial(this._fpsShieldMesh.userData.mat, dt);
     }
     for (const ent of this.ents.values()) {
       if (ent.isSelf) {
@@ -9382,6 +9388,7 @@ export class BattleClient {
             const isExpanded = (this.shieldExpandUntil || 0) > now;
             const s = isExpanded ? 1.7 : 1.0;
             ent.shieldMesh.scale.set(s, 1.0, s);
+            if (ent.shieldMesh.userData.mat) stepShieldMaterial(ent.shieldMesh.userData.mat, dt);
           }
         }
         this._updateStatusFx(ent, dt, now);
@@ -9401,6 +9408,7 @@ export class BattleClient {
         if (ent.shieldMesh.visible) {
           const s = ent.df === 2 ? 1.7 : 1.0;
           ent.shieldMesh.scale.set(s, 1.0, s);
+          if (ent.shieldMesh.userData.mat) stepShieldMaterial(ent.shieldMesh.userData.mat, dt);
         }
       }
       if (ent.hero && ent.mesh.userData.decoyPod) this._updateDecoyPod(ent, dt);

@@ -694,6 +694,8 @@ const SHIELD_FRAG = /* glsl */`
   uniform vec3 uColor;
   uniform float uTime;
   uniform float uFlash;   // 受擊 1 → 0 衰減
+  uniform float uPlanar;  // 0 柱面鋪格(工事殼) / 1 平面鋪格(英雄正面盾)
+  uniform float uHexR;    // 平面模式:大六角外接圓半徑(公尺)
   varying vec3 vN;
   varying vec3 vV;
   varying vec3 vP;
@@ -701,6 +703,12 @@ const SHIELD_FRAG = /* glsl */`
   float hexDist( vec2 p ) {
     p = abs( p );
     return max( dot( p, vec2( 0.8660254, 0.5 ) ), p.x );
+  }
+  // 平頂大六角(頂點在 ±X,與 CircleGeometry(R,6) 同向)外接圓 = 1 的有向距離,內負。
+  // hexDist 只在格心附近準,拿來描整片外框會糊成不均勻的一圈 ⇒ 外框用精確 SDF。
+  float hexSDF( vec2 p ) {
+    vec2 q = abs( p );
+    return max( dot( q, vec2( 0.8660254, 0.5 ) ), max( q.y, dot( q, vec2( -0.8660254, 0.5 ) ) ) ) - 0.8660254;
   }
   float hexEdge( vec2 uv ) {
     vec2 r = vec2( 1.0, 1.7320508 );
@@ -714,17 +722,60 @@ const SHIELD_FRAG = /* glsl */`
     vec3 N = normalize( vN );
     vec3 V = normalize( vV );
     float fres = pow( 1.0 - abs( dot( N, V ) ), 2.2 );
-    // 以柱面座標鋪六角格,隨時間往上流動
-    vec2 uv = vec2( atan( vP.z, vP.x ) * 3.2, vP.y * 0.55 - uTime * 0.35 ) * 3.0;
+    // 柱面(工事殼)走柱面座標;平面(英雄正面盾)走世界 XY,兩軸同比例才保得住正六角格
+    vec2 uv = mix(
+      vec2( atan( vP.z, vP.x ) * 3.2, vP.y * 0.55 - uTime * 0.35 ) * 3.0,
+      vec2( vP.x, vP.y - uTime * 0.35 ) * 3.0,
+      uPlanar );
     float edge = hexEdge( uv );
+    // 大六角外框光(只在平面模式):整片輪廓本體就是六角形,正面看也讀得出外框;
+    // 外框寬度隨閃光強度向內擴張 ⇒ 傷害越大,亮起的六角形越大
+    float rimW = 0.10 + uFlash * 0.30;
+    float rim = uPlanar * smoothstep( -rimW, -0.012, hexSDF( vP.xy / uHexR ) );
+    float rimGlow = rim * ( 0.55 + uFlash * 1.6 );
     // 受擊波紋:自頂向下掃過的亮帶
     float ripple = uFlash * smoothstep( 0.25, 0.0, abs( fract( vP.y * 0.04 + uTime * 1.6 ) - 0.5 ) - 0.2 );
-    float glow = edge * ( 0.25 + uFlash * 1.4 ) + fres * 0.55 + ripple;
-    float alpha = 0.05 + edge * 0.08 + fres * 0.22 + uFlash * ( 0.30 + edge * 0.45 );
+    float glow = edge * ( 0.25 + uFlash * 1.4 ) + fres * 0.55 + ripple + rimGlow;
+    float alpha = 0.05 + edge * 0.08 + fres * 0.22 + uFlash * ( 0.30 + edge * 0.45 ) + rim * ( 0.10 + uFlash * 0.35 );
     gl_FragColor = vec4( uColor * ( 0.6 + glow * 1.8 ), alpha );
     ${INK_INFO_NONE}   // 半透明加成殼不該畫輪廓線:寫哨兵 0(見 toon.js 的材質契約)
   }
 `;
+
+/**
+ * 護盾六角紋材質的**單一縫**:工事受擊殼(makeHitShell)與英雄正面防守盾
+ * (game.js _createFrontShieldMesh)共吃這一支 —— 格紋密度/流向/受擊波紋改這裡一處。
+ * 純表現層;權威護盾結算仍在 data.js shieldSplit(見 A34)。
+ */
+export function makeShieldMaterial(color, opts = {}) {
+  return new THREE.ShaderMaterial({
+    vertexShader: SHIELD_VERT,
+    fragmentShader: SHIELD_FRAG,
+    uniforms: {
+      uColor: { value: new THREE.Color(color) },
+      uTime: { value: Math.random() * 10 },
+      uFlash: { value: 0 },
+      uPlanar: { value: opts.planar ? 1 : 0 },   // 0 柱面鋪格(工事殼) / 1 平面鋪格(英雄正面盾)
+      uHexR: { value: opts.hexR || 1 },          // 平面模式:大六角外接圓半徑(公尺),邊框光定位用
+    },
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+  });
+}
+
+/** 護盾閃光強度映射:單次護盾損耗(點) → uFlash 峰值。擦傷小亮、重擊大亮(封頂 1.6)。 */
+export const SHIELD_FLASH_REF = 80;
+export function shieldHitStrength(drop) {
+  return Math.min(1.6, 0.35 + Math.max(0, drop || 0) / SHIELD_FLASH_REF);
+}
+
+/** 護盾材質每幀步進:六角格上流 + 受擊閃亮衰減。 */
+export function stepShieldMaterial(mat, dt, decay = 0.9) {
+  mat.uniforms.uTime.value += dt;
+  mat.uniforms.uFlash.value = Math.max(0, mat.uniforms.uFlash.value - dt * decay);
+}
 
 /**
  * 工事(塔/主堡)受擊回饋殼:回傳 mesh;mesh.userData.update(dt) 每幀呼叫,
@@ -743,19 +794,7 @@ const SHIELD_FRAG = /* glsl */`
  *   —— 半橢球內接於「hitR × hitH」那根圓柱 ⇒ 偏差恆朝「畫得比打得到的小」(原則 6)。
  */
 export function makeHitShell(radius, height, color) {
-  const mat = new THREE.ShaderMaterial({
-    vertexShader: SHIELD_VERT,
-    fragmentShader: SHIELD_FRAG,
-    uniforms: {
-      uColor: { value: new THREE.Color(color) },
-      uTime: { value: Math.random() * 10 },
-      uFlash: { value: 0 },
-    },
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-  });
+  const mat = makeShieldMaterial(color);
   const mesh = new THREE.Mesh(
     new THREE.SphereGeometry(radius, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2),
     mat,
