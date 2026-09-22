@@ -505,13 +505,14 @@
         </div>
       </div>
 
-      <!-- 分頁:設定(音訊 / 操控 / 畫面 / 開發)-->
+      <!-- 分頁:設定(音訊 / 操控 / 畫面 / 平衡性 / 機體 / 開發)-->
       <div class="pause-page" data-page="settings" hidden>
         <div class="set-tabs seg seg-sm" id="pauseSetTabs">
           <button class="segb set-tab on" type="button" data-setpage="audio">音訊</button>
           <button class="segb set-tab" type="button" data-setpage="ctrl">操控</button>
           <button class="segb set-tab" type="button" data-setpage="visual">畫面</button>
           <button class="segb set-tab" type="button" data-setpage="balance">平衡性</button>
+          <button class="segb set-tab" type="button" data-setpage="mecha">機體</button>
           <button class="segb set-tab" type="button" data-setpage="dev" hidden>開發</button>
         </div>
 
@@ -560,6 +561,12 @@
           <div class="set-panel" data-setpage="balance" hidden>
             <div class="set-sub">▎平衡性調整 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="balance">ⓘ</button></div>
             <div id="pauseBalanceMount" class="bset"></div>
+          </div>
+
+          <!-- 子分頁:機體 (雙方陣營機體資訊瀏覽;唯讀,不影響選角;內容與房間選角同一份數值) -->
+          <div class="set-panel" data-setpage="mecha" hidden>
+            <div class="set-sub">▎機體資訊 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="mecha">ⓘ</button></div>
+            <div id="pauseMechaMount" class="mecha-browse"></div>
           </div>
 
           <!-- 子分頁:開發工具 (本機開發工具啟停) -->
@@ -719,6 +726,7 @@
         <button class="segb set-tab" type="button" data-setpage="ctrl">操控</button>
         <button class="segb set-tab" type="button" data-setpage="visual">畫面</button>
         <button class="segb set-tab" type="button" data-setpage="balance">平衡性</button>
+        <button class="segb set-tab" type="button" data-setpage="mecha">機體</button>
         <button class="segb set-tab" type="button" data-setpage="dev" hidden>開發</button>
       </div>
       <div class="set-list">
@@ -766,6 +774,12 @@
         <div class="set-panel" data-setpage="balance" hidden>
           <div class="set-sub">▎平衡性調整 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="balance">ⓘ</button></div>
           <div id="lobbyBalanceMount" class="bset"></div>
+        </div>
+
+        <!-- 子分頁:機體 (雙方陣營機體資訊瀏覽;唯讀,不影響選角) -->
+        <div class="set-panel" data-setpage="mecha" hidden>
+          <div class="set-sub">▎機體資訊 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="mecha">ⓘ</button></div>
+          <div id="lobbyMechaMount" class="mecha-browse"></div>
         </div>
 
         <!-- 子分頁:開發工具 -->
@@ -843,7 +857,7 @@
     </div>
     <div class="stage-modal-pick">
       <div class="smp-col" id="modalCharCol">
-        <div class="smp-head">角色</div>
+        <div class="smp-head">角色・雙方陣營</div>
         <div class="char-grid smp-grid" id="modalCharGrid"></div>
       </div>
       <div class="smp-col">

@@ -833,7 +833,7 @@ function exitStoryBattle() {
   $('overOverlay').style.display = 'none';
   $('pauseOverlay').style.display = 'none';
   $('shopOverlay').style.display = 'none';
-  disposeVisualSettings();   // 離場:設定頁若開著,樣品的 WebGL context 要跟著收(A25)
+  disposeVisualSettings(); stopMechaAll();   // 離場:設定頁若開著,樣品與機體預覽的 WebGL context 要跟著收(A25)
   delete $('overOverlay').dataset.done;
   sessionStorage.removeItem('svs_token');
   enterStory();
@@ -1648,21 +1648,21 @@ function selectChar(id) {
   }
   showCharDetail(id, app.pickSide);
 }
-/** 放大視窗內的角色 + NPC 選擇格(req:放大頁面也出現選擇)。角色格僅在可選角(自己/房主代選)時出現。 */
+/** 放大視窗內的角色 + NPC 選擇格(req:放大頁面也出現選擇)。
+ * 角色格雙陣營分組並列:己方可選(送 pickChar/setBotChar)、敵方唯讀預覽
+ * (只換展示台,不送任何選角訊息 —— 開戰前同一頁面看完雙方資料,選角仍只限己方)。 */
 function renderModalPicks() {
   const cg = $('modalCharGrid');
-  if (app.pickEditable && app.pickSide) {
+  const own = app.pickSide;
+  const foe = own === 'STEEL' ? 'SWARM' : own === 'SWARM' ? 'STEEL' : null;
+  if (!own) { cg.parentElement.style.display = 'none'; }
+  else {
     cg.innerHTML = '';
-    for (const id of charsOf(app.pickSide)) {
-      const c = CHARACTERS[id];
-      const b = document.createElement('button');
-      b.className = 'char-btn' + (app.stages.char?.subject?.id === id ? ' on' : '') + (c.side === 'MERC' ? ' merc' : '');
-      b.innerHTML = `${charAvatarHTML(id)}<b>${c.side === 'MERC' ? '⚔ ' : ''}${esc(c.code)}</b>`;
-      b.onclick = () => { selectChar(id); enlargeInModal('char'); renderModalPicks(); };
-      cg.appendChild(b);
-    }
+    // 己方(含傭兵);敵方排除傭兵(已在己方組出現,不重複)
+    cg.appendChild(modalCharGroup(own, true));
+    if (foe) cg.appendChild(modalCharGroup(foe, false));
     cg.parentElement.style.display = '';
-  } else { cg.parentElement.style.display = 'none'; }
+  }
 
   const side = app.unitSide || app.pickSide || 'STEEL';
   $('modalUnitToggle').innerHTML = sideToggleHTML(side, 'muside');
@@ -1676,6 +1676,38 @@ function renderModalPicks() {
     b.onclick = () => { app.unitKind = kind; app.unitShown = null; renderUnitGrid(side); showUnitDetail(kind, side); enlargeInModal('unit'); renderModalPicks(); };
     ug.appendChild(b);
   }
+}
+/** 放大視窗角色分組(單一縫):`selectable` = 己方且可選角才送 selectChar,
+ * 其餘(敵方 / 唯讀檢視)只換展示台預覽,MUST NOT 送 pickChar/setBotChar。 */
+function modalCharGroup(side, selectable) {
+  const wrap = document.createElement('div');
+  wrap.className = 'smp-group';
+  const head = document.createElement('div');
+  head.className = 'smp-sub';
+  head.textContent = side === 'STEEL' ? '▲ 協約 鋼鐵' : '▼ 同盟 蜂群';
+  wrap.appendChild(head);
+  const grid = document.createElement('div');
+  grid.className = 'char-grid smp-grid';
+  const canPick = selectable && !!app.pickEditable && side === app.pickSide;
+  // 敵方組排除傭兵(已在己方組列過一次,不重複佔兩格;己方組恆含傭兵)
+  const ids = charsOf(side).filter((id) => selectable || CHARACTERS[id].side !== 'MERC');
+  for (const id of ids) grid.appendChild(modalCharBtn(id, side, canPick));
+  wrap.appendChild(grid);
+  return wrap;
+}
+function modalCharBtn(id, side, selectable) {
+  const c = CHARACTERS[id];
+  const b = document.createElement('button');
+  b.className = 'char-btn' + (app.stages.char?.subject?.id === id ? ' on' : '')
+    + (c.side === 'MERC' ? ' merc' : '') + (selectable ? '' : ' foe');
+  b.innerHTML = `${charAvatarHTML(id)}<b>${c.side === 'MERC' ? '⚔ ' : ''}${esc(c.code)}</b>`;
+  if (!selectable) b.title = `${c.code} ${c.name}(敵方・唯讀預覽)`;
+  b.onclick = () => {
+    if (selectable) selectChar(id);
+    else showCharDetail(id, side);
+    enlargeInModal('char'); renderModalPicks();
+  };
+  return b;
 }
 $('charStageModalClose').onclick = closeStageModal;
 $('charStageModal').addEventListener('click', (e) => { if (e.target.id === 'charStageModal') closeStageModal(); });
@@ -2880,7 +2912,7 @@ function makeHud() {
     // 戰場選單(暫停):game.js 於指標解鎖時推狀態。每次開啟回到「選單」頁並同步設定 UI 到目前狀態
     pause: (on) => {
       $('pauseOverlay').style.display = on ? '' : 'none';
-      if (on) { switchPausePage('menu'); syncSettingsUi(); } else disposeVisualSettings();
+      if (on) { switchPausePage('menu'); syncSettingsUi(); } else { disposeVisualSettings(); stopMechaAll(); }
     },
     // 被敵方準星鎖定:每幀由 game.js 推狀態(伺服器 lock 事件驅動,LOCK.WARN_S 後自動退)
     locked: (on) => $('lockWarn').classList.toggle('on', !!on),
@@ -3116,14 +3148,17 @@ function switchPausePage(page) {
   document.querySelectorAll('#pauseTabs .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
   document.querySelectorAll('#pauseOverlay .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
   // 樣品是一顆真的 WebGL context:只在「設定」頁真的顯示時才建,離開這一頁立刻收
-  if (page === 'settings') { renderVisualSettings($('pauseVisualMount')); syncDevTools(); renderBalanceSettings($('pauseBalanceMount')); }
-  else disposeVisualSettings();
+  if (page === 'settings') {
+    renderVisualSettings($('pauseVisualMount')); syncDevTools(); renderBalanceSettings($('pauseBalanceMount'));
+    if (isMechaTabOn('pauseSetTabs')) renderMechaSettings($('pauseMechaMount'));
+  }
+  else { disposeVisualSettings(); stopMechaAll(); }
 }
 document.querySelectorAll('#pauseTabs .pause-tab, #pauseOverlay .pause-back').forEach((b) => {
   b.addEventListener('click', () => { switchPausePage(b.dataset.page); app.audio?.ui('click'); });
 });
 
-// ── 設定頁子分頁切換(音訊 / 操控 / 畫面 / 觸控 / 開發)──
+// ── 設定頁子分頁切換(音訊 / 操控 / 畫面 / 平衡性 / 機體 / 觸控 / 開發)──
 function switchSetTab(scopeEl, subpage) {
   if (!scopeEl) return;
   scopeEl.querySelectorAll('.set-tabs .set-tab').forEach((b) => {
@@ -3133,10 +3168,18 @@ function switchSetTab(scopeEl, subpage) {
     p.hidden = p.dataset.setpage !== subpage;
   });
 }
+/** 機體子分頁是否為目前作用中(重進設定頁時決定要不要重啟預覽) */
+function isMechaTabOn(tabsId) {
+  return !!$(tabsId)?.querySelector('.set-tab[data-setpage="mecha"]')?.classList.contains('on');
+}
 document.querySelectorAll('#pauseSetTabs .set-tab, #lobbySetTabs .set-tab').forEach((b) => {
   b.addEventListener('click', () => {
     const pageEl = b.closest('.pause-page');
     switchSetTab(pageEl, b.dataset.setpage);
+    // 機體頁首次點開才建預覽(進設定頁不預建,省一顆 WebGL context)
+    if (b.dataset.setpage === 'mecha') {
+      renderMechaSettings($(b.closest('#pauseOverlay') ? 'pauseMechaMount' : 'lobbyMechaMount'));
+    }
     app.audio?.ui('click');
   });
 });
@@ -3467,6 +3510,186 @@ function renderBalanceSettings(mount) {
   syncReset();
 }
 
+// ── 機體資訊(設定頁子分頁;雙方陣營唯讀瀏覽 + 獨立 3D 預覽)──
+// 唯讀:點選只換展示台,不送 pickChar/setBotChar、不碰房間選角狀態(app.pick* / app.unit*)。
+// 數值列走同一批渲染函式(charBioTextHTML/heroHexHTML/charWeaponRow/charAbilityRow/
+// unitStatCells/unitWeaponRow),MUST NOT 另寫第二份數值標記。
+// 預覽是各掛載點獨立的一台 CharPreview(房間 'char'/'unit' 兩台不動);離開設定頁即 stop(A25)。
+const MECHA_MOUNTS = ['pauseMechaMount', 'lobbyMechaMount'];
+/** 掛載點骨架(建一次):雙方英雄牆 + 展示台 + 詳情 + NPC 牆 */
+function ensureMechaScope(mount) {
+  let st = mount._mecha;
+  if (st) return st;
+  st = mount._mecha = { sel: { type: 'char', id: charsOf('STEEL')[0], side: 'STEEL' },
+    unitSide: 'STEEL', weapons: [], preview: null };
+  mount.innerHTML = `
+    <div class="smp-sub">▲ 協約 鋼鐵</div><div class="char-grid smp-grid" data-mgroup="STEEL"></div>
+    <div class="smp-sub">▼ 同盟 蜂群</div><div class="char-grid smp-grid" data-mgroup="SWARM"></div>
+    <div class="mecha-stage-row">
+      <div class="mecha-stage-mount"></div>
+      <div class="mecha-detail"></div>
+    </div>
+    <div class="smp-sub">NPC / 攻擊建築 <span class="unit-side-toggle seg seg-sm" data-munitside></span></div>
+    <div class="unit-grid smp-grid" data-munits></div>`;
+  const canvas = document.createElement('canvas');
+  canvas.className = 'cd-canvas';
+  st.preview = new CharPreview(canvas);
+  const shell = document.createElement('div');
+  shell.className = 'cd-stage small';
+  shell.innerHTML = `
+    <button class="cd-morph-btn" hidden>✈ 變形</button>
+    <div class="cd-run"><button class="cd-run-btn" data-run="idle">⏸ 靜止</button></div>
+    <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 點武器/招式看演出</div>`;
+  shell.appendChild(canvas);
+  st.shell = shell;
+  mount.querySelector('.mecha-stage-mount').appendChild(shell);
+  const RUN_LABEL = { idle: '⏸ 靜止', slow: '🐢 慢速', normal: '▶ 正常' };
+  const syncRun = () => {
+    const b = shell.querySelector('.cd-run-btn');
+    b.textContent = RUN_LABEL[st.preview.runMode] || RUN_LABEL.idle;
+    b.classList.toggle('on', st.preview.runMode !== 'idle');
+  };
+  st.preview.onMove = () => syncRun();
+  let runClickT = null;
+  shell.querySelector('.cd-run-btn').onclick = () => {
+    if (runClickT) { clearTimeout(runClickT); runClickT = null; st.preview.cycleRun(-1); }
+    else runClickT = setTimeout(() => { runClickT = null; st.preview.cycleRun(1); }, 250);
+  };
+  shell.querySelector('.cd-morph-btn').onclick = (e) => {
+    e.currentTarget.textContent = st.preview.toggleMorph() ? '⬇ 變形' : '✈ 變形';
+  };
+  mount.addEventListener('click', (e) => mechaScopeClick(mount, e));
+  return st;
+}
+/** 設定頁機體瀏覽事件委派(單一縫):英雄牆 / NPC 牆 / 陣營切換 / 平民選項 / 武器招式演出 */
+function mechaScopeClick(mount, e) {
+  const st = mount._mecha;
+  if (!st) return;
+  const hb = e.target.closest('[data-mch]');
+  if (hb) {
+    st.sel = { type: 'char', id: hb.dataset.mch, side: hb.dataset.mside };
+    refreshMechaScope(mount); app.audio?.ui('click'); return;
+  }
+  const ub = e.target.closest('[data-munit]');
+  if (ub) {
+    st.sel = { type: 'unit', kind: ub.dataset.munit, side: st.unitSide };
+    refreshMechaScope(mount); app.audio?.ui('click'); return;
+  }
+  const ms = e.target.closest('[data-mside]');
+  if (ms) {
+    st.unitSide = ms.dataset.mside;
+    const roster = unitRosterOf(st.unitSide);
+    if (st.sel.type === 'unit') {
+      const keep = st.unitSide === 'CIV' ? st.sel.kind === 'civilian' : roster.includes(st.sel.kind);
+      if (!keep) st.sel = { type: 'unit', kind: roster[0], side: st.unitSide };
+    }
+    refreshMechaScope(mount); app.audio?.ui('click'); return;
+  }
+  const cp = e.target.closest('[data-civprof]');
+  if (cp) { app.civProf = +cp.dataset.civprof; refreshMechaScope(mount); return; }
+  const cf = e.target.closest('[data-civfac]');
+  if (cf) { app.civFaction = cf.dataset.civfac; refreshMechaScope(mount); return; }
+  const bio = e.target.closest('[data-mbio]');
+  if (bio) { showCharBioModal(bio.dataset.mbio, CHARACTERS[bio.dataset.mbio]?.side); return; }
+  const row = e.target.closest('.cd-row');
+  if (!row || !mount.querySelector('.mecha-detail').contains(row)) return;
+  if (row.dataset.slot) st.preview.play(row.dataset.slot);
+  else if (row.dataset.uwid != null) {
+    const w = (st.weapons || [])[+row.dataset.uwid];
+    if (w) st.preview.playUnitWeapon(w);
+  }
+}
+/** 英雄詳情(不含展示台掛載點 —— 設定頁預覽是獨立實例,沿用 charDetailHTML 會撞 id="stageBottom") */
+function mechaHeroDetail(id) {
+  const kind = charKind(id);
+  const droneNote = kind === 'drone'
+    ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;區域/指向型攻擊招式由 ${SQUAD.KAMI.N} 架自殺攻擊機分批遞送到落點(平時不隨行,施放那一刻才衝出去;被打下幾架就少交付幾份效果)。</div>` : '';
+  const morphNote = kind === 'morph'
+    ? '<div class="cd-note">※ 變形者:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : '';
+  return `${charBioTextHTML(id)}
+    <div class="cd-hexbox">${heroHexHTML(id)}${droneNote}${morphNote}</div>
+    <div class="cd-kit">
+      ${charWeaponRow(id, 'light', '左鍵')}
+      ${charWeaponRow(id, 'heavy', '右鍵')}
+      ${charAbilityRow(id, 'skill', 'Q')}
+      ${charAbilityRow(id, 'ult', 'E')}
+    </div>
+    <div class="cd-foot">數值 Lv1 → Lv4 ・ 點立繪看完整簡歷 ・ 點武器/招式看演出</div>`;
+}
+/** NPC 詳情(同上,不沿用 unitDetailHTML 以免撞 id="unitStageBottom") */
+function mechaUnitDetail(kind, side) {
+  const u = UNITS[kind];
+  const kit = kind === 'bunker' ? bunkerNoteRow()
+    : kind === 'civilian' ? civFactionToggle(side) + civNoteRow() + civProfGrid()
+      : unitWeaponList(kind).map((w, i) => unitWeaponRow(w, i)).join('');
+  return `<div class="unit-name">${esc(u.name)} <span class="dim">${esc(sideName(side))} ・ ${esc(unitClassLabel(kind))}</span></div>
+    <div class="cd-stats">${unitStatCells(kind)}</div>
+    <div class="cd-kit">${kit}</div>`;
+}
+/** 重繪某掛載點:兩牆高亮 + 詳情 + 預覽載入 */
+function refreshMechaScope(mount) {
+  const st = mount._mecha;
+  if (!st) return;
+  for (const side of ['STEEL', 'SWARM']) {
+    const grid = mount.querySelector(`[data-mgroup="${side}"]`);
+    grid.innerHTML = '';
+    // 傭兵只列在鋼鐵組(與放大視窗同一條去重)
+    const ids = charsOf(side).filter((id) => side === 'STEEL' || CHARACTERS[id].side !== 'MERC');
+    for (const id of ids) {
+      const c = CHARACTERS[id];
+      const b = document.createElement('button');
+      b.className = 'char-btn' + (st.sel.type === 'char' && st.sel.id === id ? ' on' : '')
+        + (c.side === 'MERC' ? ' merc' : '');
+      b.dataset.mch = id; b.dataset.mside = side;
+      b.innerHTML = `${charAvatarHTML(id)}<b>${c.side === 'MERC' ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
+      grid.appendChild(b);
+    }
+  }
+  mount.querySelector('[data-munitside]').innerHTML = sideToggleHTML(st.unitSide, 'mside');
+  const ug = mount.querySelector('[data-munits]');
+  ug.innerHTML = '';
+  for (const kind of unitRosterOf(st.unitSide)) {
+    const b = document.createElement('button');
+    b.className = 'unit-btn' + (st.sel.type === 'unit' && st.sel.kind === kind ? ' on' : '');
+    b.dataset.munit = kind;
+    b.innerHTML = `${npcIconHTML(kind)}<b>${esc(UNITS[kind].name)}</b><span class="unit-cls">${esc(unitClassLabel(kind))}</span>`;
+    ug.appendChild(b);
+  }
+  const detail = mount.querySelector('.mecha-detail');
+  const mb = st.shell.querySelector('.cd-morph-btn');
+  const run = st.shell.querySelector('.cd-run');
+  if (st.sel.type === 'char') {
+    const c = CHARACTERS[st.sel.id];
+    detail.innerHTML = `<div class="cd-portrait" data-mbio="${st.sel.id}" title="點立繪看完整簡歷">`
+      + `<img src="${portraitURL(st.sel.id)}" alt="${esc(c.name)}"></div>`
+      + mechaHeroDetail(st.sel.id);
+    const viewSide = c.side === 'MERC' ? st.sel.side : c.side;
+    st.preview.setChar(st.sel.id, viewSide);
+    mb.hidden = charKind(st.sel.id) !== 'morph'; mb.textContent = '✈ 變形';
+    run.style.display = '';
+  } else {
+    const civ = st.sel.kind === 'civilian';
+    const mside = civ ? (app.civFaction || 'STEEL') : st.sel.side;
+    detail.innerHTML = mechaUnitDetail(st.sel.kind, mside);
+    st.weapons = unitWeaponList(st.sel.kind);
+    st.preview.setUnit(st.sel.kind, mside, app.civProf || 0);
+    mb.hidden = true;
+    run.style.display = 'none';
+  }
+  st.preview._resize();
+  st.preview.start();
+}
+/** 進入機體子分頁時呼叫(建骨架 → 重繪 → 啟動預覽) */
+function renderMechaSettings(mount) {
+  if (!mount) return;
+  const st = ensureMechaScope(mount);
+  if (st.sel.type === 'char' && !CHARACTERS[st.sel.id]) st.sel = { type: 'char', id: charsOf('STEEL')[0], side: 'STEEL' };
+  refreshMechaScope(mount);
+}
+/** 離開設定頁即停預覽(A25:背景不留 WebGL 迴圈);不拆 DOM,下次進入直接重繪 */
+function stopMechaSettings(mount) { mount?._mecha?.preview?.stop(); }
+function stopMechaAll() { for (const id of MECHA_MOUNTS) stopMechaSettings($(id)); }
+
 // ── 開發工具(dev-only:只在本機開發環境出現)──────────────────────────────
 // 這些工具**刻意住 tools/ 不住 public/**(`tools/build_solo.mjs` 是把 `public/**` 整包複製出貨的)⇒
 // 遊戲這邊只有一列開關與一條連結,MUST NOT 把工具本身搬進來。
@@ -3758,8 +3981,11 @@ $('touchCloseBtn')?.addEventListener('click', () => { $('touchOverlay').style.di
 function switchLobbyPage(page) {
   document.querySelectorAll('#lobbyMenu .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
   document.querySelectorAll('#lobbyMenu .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
-  if (page === 'settings') { renderVisualSettings($('lobbyVisualMount')); syncDevTools(); renderBalanceSettings($('lobbyBalanceMount')); }
-  else disposeVisualSettings();
+  if (page === 'settings') {
+    renderVisualSettings($('lobbyVisualMount')); syncDevTools(); renderBalanceSettings($('lobbyBalanceMount'));
+    if (isMechaTabOn('lobbySetTabs')) renderMechaSettings($('lobbyMechaMount'));
+  }
+  else { disposeVisualSettings(); stopMechaAll(); }
 }
 function openLobbyMenu(page) {
   syncAudioSwitches('lset');
@@ -3773,9 +3999,9 @@ function openLobbyMenu(page) {
 $('lobbySettingsBtn')?.addEventListener('click', () => { openLobbyMenu('settings'); app.audio?.ui('click'); });
 $('lobbyHelpBtn')?.addEventListener('click', () => { openLobbyMenu('help'); app.audio?.ui('click'); });
 // 關閉大廳疊層一律連樣品一起收(兩條關閉路徑都要,漏一條就是背景留著一顆 WebGL context)
-$('lobbyMenuCloseBtn')?.addEventListener('click', () => { $('lobbyMenu').style.display = 'none'; disposeVisualSettings(); });
+$('lobbyMenuCloseBtn')?.addEventListener('click', () => { $('lobbyMenu').style.display = 'none'; disposeVisualSettings(); stopMechaAll(); });
 $('lobbyMenu')?.addEventListener('click', (e) => {
-  if (e.target.id === 'lobbyMenu') { $('lobbyMenu').style.display = 'none'; disposeVisualSettings(); }
+  if (e.target.id === 'lobbyMenu') { $('lobbyMenu').style.display = 'none'; disposeVisualSettings(); stopMechaAll(); }
 });
 document.querySelectorAll('#lobbyMenuTabs .pause-tab').forEach((b) => {
   b.addEventListener('click', () => { switchLobbyPage(b.dataset.page); app.audio?.ui('click'); });
