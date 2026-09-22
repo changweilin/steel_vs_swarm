@@ -548,6 +548,18 @@ body.aiming .crosshair::after { height: 2px; }
    血滴以多層 radial-gradient 疊在同一張 background(逐滴建 DOM 會讓節點數 = 血滴數);
    位置與圖樣在建立時烤死,MUST NOT 每幀重算 —— 血漬噴上去就該黏在玻璃上不跟著鏡頭滑。 */
 .blood-vig { position: absolute; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
+/* 舉盾受擊螢光閃光:護盾接住那一發時,原血滴位置噴的青藍閃光(短閃快退,時序住 data.js GLINT)。
+   與 .blood-splat 同一條契約:同層(z 8)、同畫布(26vmin,滴形沿用血同一組)、opacity 由
+   game.js 每幀推、MUST NOT 加 transition/animation、位置圖樣建立時烤死不跟鏡頭滑。
+   差別只有顏色與外光暈:螢光往外發光(drop-shadow 青藍),血漬往內壓暗。 */
+.glint-vig { position: absolute; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
+/* 畫布 30vmin = 2 ×(SPREAD 7.5 + GLINT.DROP_MAX 7.0)+ 餘裕:小於這個值,最外圈的閃光會被切掉。 */
+.glint-flash {
+  position: absolute; opacity: 0;
+  width: 30vmin; height: 30vmin; transform: translate(-50%, -50%);
+  background-repeat: no-repeat;
+  filter: blur(0.18vmin) drop-shadow(0 0 0.8vmin rgba(110, 255, 200, 0.8));
+}
 /* 畫布 26vmin = 2 ×(SPREAD 7.5 + DROP_MAX 4.6)+ 餘裕:小於這個值,最外圈的血滴會被切掉。 */
 .blood-splat {
   position: absolute; opacity: 0;

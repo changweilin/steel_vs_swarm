@@ -3008,6 +3008,32 @@ function makeHud() {
       }
       for (const el of [...box.children]) if (!live.has(el.dataset.bid)) el.remove();
     },
+    // 舉盾受擊螢光閃光(game.js 每幀推整份清單 [{id,u,v,drops,a}],空陣列 = 全部退場)。
+    // 與 blood 同一條 id 對帳/DOM 節約契約,差別只有顏色:護盾接住那一發時,原血滴位置
+    // 噴的是薄荷青螢光而不是血(短停留快退,時序住 data.js GLINT)—— 同冷色系但色相偏綠,
+    // 與防守盾的天空藍(0x38bdf8)在視覺上明顯區隔。一顆閃光 = 一個節點。
+    glint: (list) => {
+      const box = $('glintVig');
+      const live = new Set();
+      for (const b of list || []) {
+        live.add(String(b.id));
+        let el = box.querySelector(`[data-bid="${b.id}"]`);
+        if (!el) {
+          el = document.createElement('div');
+          el.className = 'glint-flash';
+          el.dataset.bid = String(b.id);
+          // 位置與圖樣在建立時烤死(閃光釘在座艙玻璃上,不跟著鏡頭滑動;與血同契約)
+          el.style.left = `${(b.u * 100).toFixed(2)}%`;
+          el.style.top = `${(b.v * 100).toFixed(2)}%`;
+          el.style.backgroundImage = (b.drops || []).map((d) =>
+            `radial-gradient(circle ${d.r.toFixed(2)}vmin at calc(50% + ${d.x.toFixed(2)}vmin) calc(50% + ${d.y.toFixed(2)}vmin),`
+            + ' rgba(215, 255, 238, 0.95) 0%, rgba(110, 255, 195, 0.85) 45%, rgba(45, 225, 175, 0.40) 75%, rgba(30, 180, 150, 0) 100%)').join(',');
+          box.appendChild(el);
+        }
+        el.style.opacity = Math.max(0, Math.min(1, b.a || 0)).toFixed(3);
+      }
+      for (const el of [...box.children]) if (!live.has(el.dataset.bid)) el.remove();
+    },
     // 異常狀態致盲白幕(2026-07-30;game.js 每幀依 data.js ccFlashAlpha() 推 0~1)——
     // 純表現層:狀態效果(禁移動/武器離線/操縱反轉)一律伺服器結算,這裡只負責「被閃到」的過曝。
     ccFlash: (a) => {

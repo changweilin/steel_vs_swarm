@@ -13,6 +13,7 @@ import {
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur, VISION_BLIND,
   weaponMaxHoriz, inWeaponRange,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
+  GLINT, glintDur, glintAlpha, glintDropR,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
@@ -644,8 +645,11 @@ export class BattleClient {
     this._ccFlashPeak = 0;            // 本次白幕的峰值不透明度(= 該狀態的致盲強度)
     // 受擊濺血提示(純表現層;常數/曲線住 data.js BLOOD):伺服器 hurt 事件 → 依方位噴在座艙玻璃上
     this._blood = [];                 // [{ id, u, v, drops, left }](最舊的先退場,上限 BLOOD.MAX)
-    this._bloodSeq = 0;               // 血斑序號(HUD 端據此建立/回收 DOM,MUST 唯一遞增)
+    this._bloodSeq = 0;               // 血斑/閃光序號(HUD 端據此建立/回收 DOM,MUST 唯一遞增)
     this._bloodOn = false;            // 上一幀是否還有血斑(歸零那幀仍推一次空陣列後才早退)
+    // 舉盾受擊螢光閃光(純表現層;常數/曲線住 data.js GLINT):護盾接住那一發時,血滴位置改噴閃光
+    this._glints = [];                // [{ id, u, v, drops, left }](與血同形,上限 GLINT.MAX)
+    this._glintOn = false;            // 上一幀是否還有閃光(歸零那幀仍推一次空陣列後才早退)
     this.shopOpen = false;
     this.paused = false;              // 戰場選單開啟中(凍結輸入)
     this._everLocked = false;         // 曾經取得過指標鎖定(未鎖定過不跳暫停選單)
@@ -2405,8 +2409,10 @@ export class BattleClient {
     const halfV = THREE.MathUtils.degToRad(cam.fov) * 0.5;
     const halfH = Math.atan(Math.tan(halfV) * (cam.aspect || 1));
     const { u, v } = bloodScreenUv(bearing, elev, halfH, halfV);
-    // 血滴:主滴在斑心,其餘依份量散開(純視覺抖動,不涉場景確定性 ⇒ Math.random 無妨)
-    const r0 = bloodDropR(frac);
+    // 血滴:主滴在斑心,其餘依份量散開(純視覺抖動,不涉場景確定性 ⇒ Math.random 無妨);
+    // 舉盾時改噴螢光閃光,滴形走 GLINT 自己的大一圈曲線(尺寸仍 ∝ 份量,見 data.js)
+    const shielded = this.defending && (this.sp || 0) > 0;
+    const r0 = shielded ? glintDropR(frac) : bloodDropR(frac);
     const n = bloodDropN(frac);
     const drops = [{ x: 0, y: 0, r: r0 }];
     for (let i = 1; i < n; i++) {
@@ -2416,6 +2422,12 @@ export class BattleClient {
         x: Math.cos(th) * rad, y: Math.sin(th) * rad,
         r: r0 * (0.18 + 0.42 * Math.random()),   // 衛星滴恆小於主滴
       });
+    }
+    // 舉盾接住那一發:不噴血,原血滴位置改噴螢光閃光(同位置、同份量、同滴形,短閃快退)
+    if (shielded) {
+      this._glints.push({ id: ++this._bloodSeq, u, v, drops, left: glintDur() });
+      while (this._glints.length > GLINT.MAX) this._glints.shift();   // 上限:最舊的先退場
+      return;
     }
     this._blood.push({ id: ++this._bloodSeq, u, v, drops, left: bloodDur() });
     while (this._blood.length > BLOOD.MAX) this._blood.shift();   // 上限:最舊的先退場
@@ -2437,11 +2449,30 @@ export class BattleClient {
     })));
   }
 
+  /** 螢光閃光逐幀衰減 → 推 HUD(與 _updateBlood 同一條早退/DOM 節約契約,見 main.js hud.glint) */
+  _updateGlint(dt) {
+    if (!this._glints.length) {
+      if (!this._glintOn) return;
+      this._glintOn = false;
+      this.hud.glint?.([]);
+      return;
+    }
+    for (const g of this._glints) g.left -= dt;
+    this._glints = this._glints.filter((g) => g.left > 0);
+    this._glintOn = true;
+    this.hud.glint?.(this._glints.map((g) => ({
+      id: g.id, u: g.u, v: g.v, drops: g.drops, a: glintAlpha(g.left),
+    })));
+  }
+
   /** 清除濺血(陣亡/重生/換座機:血漬留在上一具機體的座艙玻璃上,MUST NOT 跟著視野搬過來) */
   _clearBlood() {
     this._blood.length = 0;
     this._bloodOn = false;
     this.hud.blood?.([]);
+    this._glints.length = 0;   // 閃光同是螢幕空間殘留,同理不跟著視野搬過來
+    this._glintOn = false;
+    this.hud.glint?.([]);
   }
 
   /**
@@ -8495,6 +8526,7 @@ export class BattleClient {
     this._updateEnvFog(dt);      // 火場滯留 → 視野漸霧化(純客戶端表現)
     this._updateWeatherFog();    // 天氣濃霧 → 全屏霧罩 + 狙擊鏡圈等比縮(純客戶端表現;視野縮減由伺服器結算)
     this._updateBlood(dt);       // 受擊濺血 → 依方位噴在座艙玻璃上後漸淡(純客戶端表現)
+    this._updateGlint(dt);       // 舉盾受擊螢光閃光 → 原血滴位置短閃快退(純客戶端表現)
     // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)。
     // open 段(地下道引道露天路塹)**刻意不濾**:側壁閘(單步高差 + tunnelWallCross 幾何牆線)
     // 正是「溝底不能爬牆側出、出入口只在道路兩端」的物理 —— 這是 open 段唯二的消費端之一
