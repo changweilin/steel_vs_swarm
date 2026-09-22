@@ -3350,8 +3350,10 @@ export class BattleClient {
         if (selfHero || statik) ent = this._spawnEnt(e);
         else { this._spawnPend.set(e.id, e); continue; }
       }
-      // 工事受擊回饋:hp 下降的那個快照閃亮 + 波紋(工事無護盾層,掉的一律是裝甲)
-      if (ent.hitShell && e.hp < ent.hp) ent.hitShell.userData.hit();
+      // 受擊回饋二分(純表現層):無護盾一律火光濺射 + 點煙(含塔/主堡/雜兵,走 _victimHitFx);
+      // 工事舊制閃 hex 殼,讀感像護盾 ⇒ 不再閃殼(網格留著,平時不可見)。英雄見下方舉盾分流。
+      const prevHpSnap = ent.hp;
+      if (e.hp < prevHpSnap && !HERO_KINDS.has(e.k)) this._victimHitFx(ent, false);
       ent.hp = e.hp; ent.max = e.m;
       ent.lk = !!e.lk;   // 攻堅鎖血:這一座打不動(範圍光暈把它排除,見 _updateRangeGlows)
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
@@ -3376,8 +3378,15 @@ export class BattleClient {
         ent.ry = e.ry ?? 0;
         ent.si = e.si || 0;
         ent.act = !!e.act;   // 主視野機(三機小隊只有一架):觀戰玩家視角的跟隨名冊只收它
-        // 防守盾受擊閃:護盾水位較上一快照下降且正舉盾 = 這一發打在盾上 → 六角紋閃亮 + 波紋(強度 ∝ 傷害)
-        if (ent.shieldMesh && e.sp != null && ent.sp != null && e.sp < ent.sp && !!e.df) ent.shieldMesh.userData.hit?.(shieldHitStrength(ent.sp - e.sp));
+        // 受擊二分:舉盾且護盾水位下降 = 打在盾上 → 小火光 + 護盾劇烈發光(舊峰值 ×1.6,封頂 2.5);
+        // 裝甲掉血(穿盾/盾空/沒舉盾) = 無護盾 → 火光濺射 + 點煙(與工事/雜兵同一支 _victimHitFx)。
+        const _spDrop = (e.sp != null && ent.sp != null) ? ent.sp - e.sp : 0;
+        if (!!e.df && (e.sp ?? 0) > 0 && _spDrop > 0) {
+          ent.shieldMesh?.userData.hit?.(Math.min(2.5, shieldHitStrength(_spDrop) * 1.6));
+          this._victimHitFx(ent, true);
+        } else if (e.hp < prevHpSnap) {
+          this._victimHitFx(ent, false);
+        }
         ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 磁力(血條玻璃藍段;所有英雄機體都送)
         ent.df = !!e.df;
         // NPC BOSS 段位(有這一格 = 這是 BOSS):血條外圍光暈顏色與體型縮放由它決定。
@@ -3437,7 +3446,7 @@ export class BattleClient {
             this._lastHurtAt = performance.now() / 1000;   // 被攻擊時戳(無人機完美迴避的戰鬥狀態判定)
             this._airSinkHit(this._prevVital - vital);     // 飛行機體受擊掉高(掉幅 ∝ 這次掉的護盾+裝甲)
             if (this.defending && (this.sp || 0) > 0 && spLoss > 0.5) {
-              const s = shieldHitStrength(spLoss);
+              const s = Math.min(2.5, shieldHitStrength(spLoss) * 1.6);   // 劇烈發光:舊峰值 ×1.6
               this._fpsShieldMesh?.userData.hit?.(s);
               ent.shieldMesh?.userData.hit?.(s);
             } else {
@@ -7033,12 +7042,66 @@ export class BattleClient {
     return undefined;
   }
 
+  /**
+   * 命中火光距離補償(純表現層):狙擊鏡交戰 150~300m,世界單位火光在 FOV 35 下只剩幾個像素,
+   * 再被狙擊專屬景深(postfx DOF)糊掉 ⇒ 按鏡頭距離放大,維持視角大小可讀。
+   * 60m 內恆 1(近戰外觀逐位元不動),封頂 4。只管大小,不讀寫傷害/命中。
+   */
+  _hitFxScale(p) {
+    const d = this.camera ? this.camera.position.distanceTo(p) : 0;
+    return Math.max(1, Math.min(4, d / 60));
+  }
+
+  /**
+   * 受擊端世界火光唯一縫(快照 hp/sp 掉血那一拍,全員可見):
+   * 無護盾 → 火光濺射(雙層星爆 + 火星 + 單縷灰煙;塔/主堡放大一號);
+   * 舉盾接住 → 小火光,不撒煙(護盾閃光由呼叫端另觸發)。
+   * 純表現層;位置取機體當下渲染座標,不讀寫權威狀態。
+   */
+  _victimHitFx(ent, shielded) {
+    const m = ent?.mesh?.position;
+    if (!m) return;
+    const y = m.y + (ent.dimH || 4) * 0.5;
+    const _k = this._hitFxScale(m);   // 狙擊距離補償(近戰恆 1,不動舊外觀)
+    if (shielded) {
+      starburst(this.scene, this.effects, m.x, y, m.z, 1.2 * _k, 0xbfdcff);
+      return;
+    }
+    // 與低血量燃燒(makeDamageFx:常駐火舌 + 上升煙柱 + 裂痕)的區隔:受擊是「爆」——
+    // 白熱核心 + 貼地快擴衝擊環 + 速散火星,全 <1s 即收;燃燒是「燒」——慢速常駐,不帶衝擊環。
+    if (ent.kind === 'tower' || ent.kind === 'base') {
+      const base = ent.kind === 'base';
+      starburst(this.scene, this.effects, m.x, y, m.z, (base ? 9 : 7) * _k, 0xfff3d0);
+      starburst(this.scene, this.effects, m.x, y, m.z, (base ? 12 : 9) * _k, 0xffb055);
+      shockRing(this.scene, this.effects, m.x, m.y, m.z, (base ? 15 : 11) * Math.min(_k, 2), 0xffc98a);
+      this._emberBurst(m.x, y, m.z, base ? 16 : 12, (base ? 8 : 6) * _k);
+      this._crashSmoke(m.x, y + 1, m.z, (base ? 1.5 : 1.2) * Math.min(_k, 2));
+      return;
+    }
+    starburst(this.scene, this.effects, m.x, y, m.z, 2.2 * _k, 0xfff3d0);
+    starburst(this.scene, this.effects, m.x, y, m.z, 2.8 * _k, 0xffb055);
+    this._emberBurst(m.x, y, m.z, 5, 2 * _k);
+    this._crashSmoke(m.x, y + 1, m.z, 0.55 * Math.min(_k, 2));
+  }
+
   /** 命中回饋:星爆 + 準星標記 + 本地估算傷害數字(伺服器仍是權威) */
   _hitFeedback(def, ent, point) {
     this.hud.hitmark?.();
     // 命中鎖定目標 → 該目標的鎖定光暈短暫閃爍(射程範圍提示回饋)
     if (ent && this._lockId === ent.id) this._flashLockGlow();
-    starburst(this.scene, this.effects, point.x, point.y, point.z, 2.6, 0xfff2b8);
+    // 護盾二分:舉盾接住 → 小火光 + 護盾劇烈發光(即時,不等 8Hz 快照);
+    // 無護盾 → 火光濺射 + 火星(煙由受擊端快照那一拍補,逐發不撒煙避免洗版)。
+    const _shielded = !!(ent && ent.hero && ent.df && (ent.sp || 0) > 0);
+    const _k = this._hitFxScale(point);   // 狙擊距離補償(近戰恆 1)
+    if (_shielded) {
+      starburst(this.scene, this.effects, point.x, point.y, point.z, 1.2 * _k, 0xbfdcff);
+      ent.shieldMesh?.userData.hit?.(1.8);
+    } else if (ent) {
+      starburst(this.scene, this.effects, point.x, point.y, point.z, 2.8 * _k, 0xffb055);
+      this._emberBurst(point.x, point.y, point.z, 4, 1.6 * _k);
+    } else {
+      starburst(this.scene, this.effects, point.x, point.y, point.z, 2.6, 0xfff2b8);
+    }
     if (ent) {
       // 無敵幀中的目標:伺服器 _damage 完全免傷 —— 跳灰字「-0」而非誤導性的滿額估算數字
       if ((ent.inv || 0) > 0) {
@@ -7119,7 +7182,15 @@ export class BattleClient {
       const { ent, off } = hits[i];
       const p = ent.mesh.position;
       if (this._lockId === ent.id) this._flashLockGlow();
-      starburst(this.scene, this.effects, p.x, p.y + 1.4, p.z, i === 0 ? 2.8 : 2.0, 0xfff2b8);
+      // 護盾二分(同 _hitFeedback):舉盾接住 → 小火光 + 護盾劇烈發光;無護盾 → 火光濺射 + 火星。
+      const _k = this._hitFxScale(p);   // 狙擊距離補償(近戰恆 1)
+      if (ent.hero && ent.df && (ent.sp || 0) > 0) {
+        starburst(this.scene, this.effects, p.x, p.y + 1.4, p.z, (i === 0 ? 1.4 : 1.0) * _k, 0xbfdcff);
+        ent.shieldMesh?.userData.hit?.(1.8);
+      } else {
+        starburst(this.scene, this.effects, p.x, p.y + 1.4, p.z, (i === 0 ? 3.0 : 2.2) * _k, 0xffb055);
+        this._emberBurst(p.x, p.y + 1.4, p.z, 4, 1.6 * _k);
+      }
       // 無敵幀目標:同 _hitFeedback,跳灰字 -0(伺服器免傷)
       if ((ent.inv || 0) > 0) {
         damageNumber(this.scene, this.effects, p.clone().add(new THREE.Vector3(0, 1.2, 0)), 0, { text: '-0' });
