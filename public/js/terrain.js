@@ -1430,14 +1430,5 @@ export async function buildTerrain(cfg, onProgress) {
   // `gridM` = 高程網格的格距(公尺)。對外只有一個用途:**貼地地被層要拿地形法線**
   // (ground.js 的 landN)—— 中央差分的取樣距 MUST 是這一格,取更小是在同一個雙線性面內
   // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
-  return {
-    group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1),
-    rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles,
-    sampleColor,
-    get waterY() { return waterY; },
-    set waterY(v) { waterY = v; },
-    isMarine, baseWaterY, updateTide,
-    center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH,
-    usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld,
-  };
+  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, get waterY() { return waterY; }, set waterY(v) { waterY = v; }, isMarine, baseWaterY, updateTide, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
 }
