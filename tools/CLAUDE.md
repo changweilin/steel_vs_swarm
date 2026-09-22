@@ -11,7 +11,7 @@
 | `bake_venue_*.mjs` | 烘焙表產出 (`venueLanes.js` / `venueGrid.js` / `venueText.js`)。重烤 MUST 分批指定 `ONLY=`，避免單一場地查詢超時導致全表覆蓋 |
 | `balance.mjs` / `duel.mjs` / `lanesim.mjs` | `npm run bal` 三大平衡模型 (核心不變式 / 對進戰勝率 / 前線交戰)；分工明確不合併 |
 | `ai3d/` | img→3D 資產管線；物件分類與替換準則見 `docs/ai3d_object_classification.md` |
-| `*_review/`・`humanoid_forge/`・`story_book/` | Dev-only 獨立對照台 (埠 8621 生圖 / 8622 零件 / 8623 故事書 / 8631 機體台)；啟停一律經 `dev_supervisor.mjs` |
+| `humanoid_forge/`・`story_book/`・`background_review/` | Dev-only 獨立對照台 (8623 故事書 / 8631 機體台 / 背景物件檢視)；啟停一律經 `dev_supervisor.mjs`(2D 生圖 8621 與 3D 零件 8622 已退場，見 retired.md) |
 | `dev_supervisor.mjs` | **全專案唯一「HTTP 請求 → spawn 行程」路徑**，三道防護閘 (loopback / 參數零信任 / `x-dev-tools` 標頭) 僅住於此 |
 | `venue_field.mjs` | Node 端取得「與執行期同形」地形 / 圖資 / 結構清單之**唯一縫**；消費端 MUST 透過它獲取資料，嚴禁各檔重複複製 |
 | `audit_src.mjs` | 讀取原始碼與抽取方法區塊之**唯一縫** (`readSrc()` / `grabMethod()`) |

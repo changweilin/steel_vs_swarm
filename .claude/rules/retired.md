@@ -35,3 +35,5 @@
 | Per-branch trail distance | One sphere distance for all trajectories |
 | Direct bot position and tactic writes | Single write point and buy-order seam |
 | Random boulder yaw | Geology-aligned orientation from cells |
+| 2D生圖對照台與稽核 (`codex_review`/`audit_codex`/`ai3d` gen2d-prompt-slots/定案圖) | 圖鑑格式真相保留於 `public/js/codex.js`；覆核流程退場，產物備份於 `D:\data\steel_vs_swarm_ai3d` |
+| 3D零件對照台 (`parts`，埠 8622) | 機體建模真相保留於 `public/js/forge/`；對照台退場 |

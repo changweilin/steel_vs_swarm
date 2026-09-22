@@ -49,7 +49,7 @@
 | Building mass and window bands | `audit_siteplan` | Mass and band behavior stays reproducible. |
 | Planarization, sealing, wall panels | `audit_siteplan` | Panel grids stay integral inside window bands. |
 | Collision profile, fit, signs, glazing | `audit_siteplan` | Ground passage width stays unchanged. |
-| Codex format | `audit_codex` | Format layers and pose alignment stay stable. |
+| Codex format | — (已退場；`audit_codex` 隨 2D 生圖對照台退役，格式真相仍住 `public/js/codex.js`) | Format layers and pose alignment stay stable. |
 | Coating block and tunnel roof | `audit_layer_block` | Geometry stays unchanged across coating work. |
 | Open tunnels | `audit_open_tunnel` | Tunnel geometry behavior stays stable. |
 | Underpass qualification | `audit_underpass` | Centerline and full-width seam behavior stays convergent. |
