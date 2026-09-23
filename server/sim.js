@@ -6551,7 +6551,10 @@ export class BattleSim {
     const cu = this._creepMul(side, li);
     waveComp().forEach((kind, i) => {
       const jx = (Math.random() - 0.5) * 14, jz = (Math.random() - 0.5) * 14;
-      const prog = lead - i * 6;
+      // 列隊向己方端錯開，但不得退進主堡碰撞體：lead=34、7 人編制拖尾 36m ⇒ 尾排 prog 16/10/4/0 < 主堡半徑 20
+      // = 每波 9 隻出生即卡在堡內（直升機含高度也在 [0,46] 柱內）。 floor = 出兵點自身 ⇒ 全波落在堡外平台上；
+      // 預置波 lead ≥ 154 不觸此 floor，逐位元不動。
+      const prog = Math.max(lead - i * 6, GAME.WAVE_SPAWN_OFF_M);
       const d = side === 'SWARM' ? prog : total - prog;
       const [sx, sz] = pointAt(pts, cum, Math.max(0, Math.min(total, d)));
       this._add({

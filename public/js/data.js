@@ -3082,7 +3082,7 @@ export const TARGET_H = {
   'creep:apc': 2.7, 'creep:tank': 2.8, 'creep:heli': 3.9,
   'summon:drone_wingman': 1.6, 'summon:assault_rover': 2.4, 'summon:heli_squad': 3.6,
   'summon:main_battle_tank': 2.8, 'summon:veteran_squad': SOLDIER_H * 1.05, 'summon:carnival_heli': 3.8,
-  tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
+  tower: 26, 'base:SWARM': 46, 'base:STEEL': 46,
   bunker: 5.2,   // 第三方碉堡(低矮工事;駐守 3 名步槍兵的量體)
   civ: SOLDIER_H,   // 平民/間諜(真人身高)
 };
@@ -3099,7 +3099,7 @@ export function hitH(e) {
     const scale = (e.sq?.boss && e.sq.bossSeg != null ? bossScaleF(e.sq.bossSeg) : (e.bossSeg != null ? bossScaleF(e.bossSeg) : 1));
     return heroTargetH(e.kind, e.ch) * scale;
   }
-  if (e.kind === 'base') return TARGET_H[`base:${e.side}`] ?? 44;
+  if (e.kind === 'base') return TARGET_H[`base:${e.side}`] ?? 46;
   if (e.civ) return TARGET_H.civ;
   return TARGET_H[`creep:${e.kind}`] ?? TARGET_H[e.kind] ?? SOLDIER_H * 1.6;
 }
@@ -4733,7 +4733,7 @@ export const GAME = {
   // 改此值 MUST 重跑 `npm run bal`(③),且開場預置兵線的間距同步變動(見 waveSpacingM)。
   WAVE_S: 20,
   FIRST_WAVE_DELAY_S: 0,      // 開局即出第一波(從主堡出發),不再空等對線
-  WAVE_SPAWN_OFF_M: 34,       // 波次生成點離己方主堡的沿線距離:落在主路線上、出主堡外(base R 22)
+  WAVE_SPAWN_OFF_M: 34,       // 波次生成點離己方主堡的沿線距離:落在主路線上、出主堡外(base R 20)+ 抖動餘裕
   WAVE_COHESION_M: 26,        // 同波僚兵最大脫節距離:領先者原地等最慢的(交戰中除外)
   WAVE_SOLDIERS: 3,           // 每波每兵線步槍兵數(固定編制另見 WAVE_EXTRAS)
   // 波次固定編制(2026-07-17 追加坦克):sim._spawnWave / tools/balance.mjs / e2e 共用唯一真相,
