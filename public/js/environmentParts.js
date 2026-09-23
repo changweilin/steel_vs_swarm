@@ -392,7 +392,7 @@ export function storageTankParts({ w, h, d, seed = 1 }) {
     cyl(0, radius, roofH, 0, baseH + bodyH + roofH / 2, 0, 0x6e7c80, 'tank-roof')];
 }
 
-export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, season = 'summer', latDeg = 25.0 }) {
+export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, season = 'summer', latDeg = 25.0, joins = null }) {
   if (kind === 'searanch' || kind === 'oysterracks') return aquacultureParts(kind, len, d, h, seed);
   const rnd = mulberry32(seed >>> 0), rows = [];
   const count = Math.max(1, Math.floor(len / (kind === 'deeprig'
@@ -485,6 +485,19 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
         x + (k + .5) * toothW - step / 2, bodyH + h * .065, 0, mStone, 'battlement'));
       if (i % 3 === 0) rows.push(box(step * .5, h * .25, d * .9,
         x, h * .805, 0, choose(local, colors), 'watchtower'));
+      // 端點或自身延伸甕城連接
+      if (i === 0 || i === count - 1) {
+        const endIdx = i === 0 ? 0 : 1;
+        const j = joins ? joins[endIdx] : { kind: 'citywall' };
+        const jKind = j ? (j.kind || j) : null;
+        if (!jKind || !NATURAL_CLIFF_KINDS.has(jKind)) {
+          const isEndpoint = !jKind || jKind !== 'citywall';
+          rows.push(...citywallBarbicanParts({
+            len, depth: d, h, seed: (seed ^ Math.imul(endIdx + 1, 0x7391)) >>> 0,
+            endIdx, isEndpoint,
+          }));
+        }
+      }
     } else if (['solarfield', 'floatsolar'].includes(kind)) {
       // 浮動式貼合：水面款整組浮台掛 float 動態（與海面共用風時鐘/波浪係數），陸域款保持靜態
       const isFloat = kind === 'floatsolar';
@@ -577,3 +590,126 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
   }
   return rows;
 }
+
+export const NATURAL_CLIFF_KINDS = Object.freeze(new Set(['cliff', 'landslide', 'debris']));
+
+/**
+ * 城牆甕城零件生成：
+ * 城牆自身持續延伸時透過甕城連接，與懸崖峭壁/土石流/崩塌地之外的物件相接時建立甕城作為端點。
+ * 零件嚴格收納在端點範圍內，不超出 [-len/2, len/2]。
+ */
+export function citywallBarbicanParts({ len, depth: d, h, seed = 1, endIdx = 0, isEndpoint = false }) {
+  const rnd = mulberry32((seed ^ 0x62617262) >>> 0);
+  const rows = [];
+  const W_b = Math.min(10, len * 0.24);
+  const sign = endIdx === 0 ? -1 : 1;
+  const margin = 0.1;
+  const bx = sign * (len / 2 - W_b / 2 - margin);
+  const mStone = choose(rnd, [0x989789, 0x919082, 0x9f9e90]);
+  const bodyH = h * 0.68;
+
+  // 1. 甕城外凸圍護城牆 (barbican-wall)：在 -z 方向（緩衝區側）延伸圍護 (嚴格約束 z 落在 [-d/2, d/2] 內)
+  const wallThick = d * 0.18;
+  const frontZ = -d / 2 + wallThick / 2;
+  // 前側甕城牆 (外緣恰貼齊 -d/2)
+  rows.push(box(W_b * 0.88, bodyH, wallThick, bx, bodyH / 2, frontZ, mStone, 'barbican-wall'));
+  // 左右兩側翼牆 (向內延伸連接主牆)
+  const flankW = Math.max(0.6, W_b * 0.16);
+  const flankD = Math.abs(frontZ);
+  rows.push(box(flankW, bodyH, flankD, bx - W_b * 0.44 + flankW / 2, bodyH / 2, -flankD / 2, mStone, 'barbican-wall'));
+  rows.push(box(flankW, bodyH, flankD, bx + W_b * 0.44 - flankW / 2, bodyH / 2, -flankD / 2, mStone, 'barbican-wall'));
+
+  // 2. 甕城水平石層接縫 (course-joint) - 高程與城牆主體 4 層完全一致
+  const courses = 4;
+  for (let k = 1; k <= courses; k++) {
+    rows.push(box(W_b * 0.9, h * 0.018, wallThick, bx, bodyH * k / courses, frontZ, 0x646d6b, 'course-joint'));
+  }
+
+  // 3. 甕城頂部垛口 (battlement)
+  const teeth = Math.max(2, Math.round(W_b / 2.0));
+  const toothW = (W_b * 0.88) / teeth;
+  for (let k = 0; k < teeth; k++) {
+    rows.push(box(toothW * 0.5, h * 0.12, wallThick,
+      bx - W_b * 0.44 + (k + 0.5) * toothW, bodyH + h * 0.06, frontZ, mStone, 'battlement'));
+  }
+
+  // 4. 甕城門洞 (barbican-gate) 與門拱 (gate-arch)
+  const gateW = Math.min(3.2, W_b * 0.36);
+  const gateH = bodyH * 0.62;
+  rows.push(box(gateW, gateH, wallThick, bx, gateH / 2, frontZ, 0x242220, 'barbican-gate'));
+  rows.push(box(gateW * 1.15, h * 0.04, wallThick, bx, gateH + h * 0.02, frontZ, 0x5a5d5c, 'gate-arch'));
+
+  // 5. 甕城城樓 (barbican-tower)：座落於主牆與甕城接合之門樓 (嚴格限制頂部高度不超高 h，深度收於 [-d/2, d/2])
+  const towerW = W_b * 0.58;
+  const towerH = h * 0.20;
+  const towerD = d * 0.72;
+  const towerColor = choose(rnd, [0x8a3832, 0x7a302a, 0x6e322b]);
+  // 樓身
+  rows.push(box(towerW, towerH, towerD, bx, bodyH + towerH / 2, -d * 0.04, towerColor, 'barbican-tower'));
+  // 歇山頂／廡殿頂大屋簷
+  rows.push(box(towerW * 1.22, h * 0.05, d * 0.88, bx, bodyH + towerH + h * 0.025, -d * 0.04, 0x3d4349, 'barbican-tower'));
+  // 屋脊
+  rows.push(box(towerW * 0.82, h * 0.03, d * 0.22, bx, bodyH + towerH + h * 0.065, -d * 0.04, 0x2b3035, 'barbican-tower'));
+
+  return rows;
+}
+
+/**
+ * 河堤閘門零件生成：
+ * 河堤自身持續延伸時透過閘門連接，與懸崖峭壁/土石流/崩塌地之外的物件相接時建立閘門作為端點。
+ * 包含閘墩、防汛閘板、起閉機架、捲揚機箱、檢修便橋與導水翼牆。
+ */
+export function leveeGateParts({ len, depth: d, h, seed = 1, endIdx = 0, isEndpoint = false }) {
+  const rnd = mulberry32((seed ^ 0x67617465) >>> 0);
+  const rows = [];
+  const gateW = Math.min(8, len * 0.22);
+  const sign = endIdx === 0 ? -1 : 1;
+  const margin = 0.25;
+  const gx = sign * (len / 2 - gateW / 2 - margin);
+
+  const pierW = Math.max(0.6, gateW * 0.14);
+  const pierH = h * 0.95;
+  const pierD = d * 0.62;
+  const concreteColor = choose(rnd, [0x78807d, 0x707875, 0x828a87]);
+
+  // 1. 防汛閘墩 (gate-pier) - 兩側立墩
+  const pierOffset = gateW / 2 - pierW / 2;
+  rows.push(box(pierW, pierH, pierD, gx - pierOffset, pierH / 2, 0, concreteColor, 'gate-pier'));
+  rows.push(box(pierW, pierH, pierD, gx + pierOffset, pierH / 2, 0, concreteColor, 'gate-pier'));
+
+  // 2. 防汛鋼閘板 (gate-leaf)
+  const leafW = gateW - pierW * 2;
+  const leafH = h * 0.65;
+  const leafD = Math.max(0.2, d * 0.08);
+  rows.push(box(leafW, leafH, leafD, gx, leafH / 2, 0, 0x2e363a, 'gate-leaf'));
+  // 橫向加勁肋
+  for (let r = 1; r <= 3; r++) {
+    rows.push(box(leafW * 0.98, h * 0.035, leafD * 1.25, gx, leafH * r / 3.5, 0, 0x424e54, 'gate-leaf'));
+  }
+
+  // 3. 啟閉機架 (gate-frame) - 跨越兩墩頂部
+  const frameH = h * 0.04;
+  rows.push(box(gateW, frameH, pierD * 0.35, gx, pierH - frameH / 2, 0, 0x4a5459, 'gate-frame'));
+
+  // 4. 捲揚機箱 (gate-hoist) - 頂部中央
+  const hoistW = gateW * 0.38;
+  const hoistH = h * 0.04;
+  rows.push(box(hoistW, hoistH, pierD * 0.28, gx, pierH + hoistH / 2, 0, 0x364045, 'gate-hoist'));
+
+  // 5. 檢修便橋 (gate-bridge) - 橫跨堤頂供巡查
+  const bridgeH = h * 0.05;
+  rows.push(box(leafW, bridgeH, d * 0.26, gx, h * 0.78, 0, 0x828a88, 'gate-bridge'));
+  for (const side of [-1, 1]) {
+    rows.push(box(leafW, h * 0.08, 0.08, gx, h * 0.78 + h * 0.065, side * d * 0.11, 0x9ea6a4, 'gate-bridge'));
+  }
+
+  // 6. 導水翼牆 (wing-wall)
+  const wingW = pierW;
+  const wingH = h * 0.5;
+  const wingD = d * 0.3;
+  rows.push(box(wingW, wingH, wingD, gx - pierOffset, wingH / 2, -d * 0.3, 0x6e7572, 'wing-wall'));
+  rows.push(box(wingW, wingH, wingD, gx + pierOffset, wingH / 2, -d * 0.3, 0x6e7572, 'wing-wall'));
+
+  return rows;
+}
+
