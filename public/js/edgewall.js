@@ -5,7 +5,7 @@
 import { mulberry32 } from './rng.js';
 import { boundaryGrid } from './objectLayout.js';
 import { partAABB, VEHICLE_SPEC } from './vehicles.js';
-import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, storageTankParts, environmentAvailable, environmentSize, makeSceneVehicleParts } from './environmentParts.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, narrowGeologyBoundary, storageTankParts, environmentAvailable, environmentSize, makeSceneVehicleParts } from './environmentParts.js';
 import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
 export { ROCK_SEASON_TINT } from './environmentParts.js';
 
@@ -430,6 +430,8 @@ export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant
   if (![len, depth, h].every(n => Number.isFinite(n) && n > 0)) throw new RangeError('Invalid boundary dimensions');
   const objectSeed = (seed ^ Math.imul(variant, 0x45d9f3b)) >>> 0;
   // 邊界本體是沿邊連續構造，單體朝向維持軸向對齊(預設除外)；獨立散布經 standaloneBoundaryParts 另開。
+  // 假山群改用一般地質拉狹長型單體（高低變化大的連綿起伏），不再是單顆拉伸巨石。
+  if (kind === 'rockery') return narrowGeologyBoundary(kind, { len, depth, h, seed: objectSeed, season });
   if (def.object) return environmentParts(def.object, { size: [len, h, depth], seed: objectSeed, season, yaw });
   if (EXPANDED_BOUNDARIES[kind] || ['barricade', 'levee', 'seawall'].includes(kind)) return buildSlopeBoundary(kind, {
     len, depth, h: h - .4, x: objectSeed % 997 * 11, z: objectSeed % 953 * 7,

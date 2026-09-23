@@ -26,7 +26,9 @@ for (const [kind, def] of Object.entries(WALL_KINDS)) {
   assert.equal(typeof boundaryObjectMeta(kind).category, 'string');
 }
 for (const [kind, def] of Object.entries(ENVIRONMENT_OBJECTS)) {
-  const alias = STANDALONE_BOUNDARY_KINDS.find(key => WALL_KINDS[key].object === kind);
+  // 同名款優先：假山群已改走一般地質狹長單體，巨石仍由同名邊界款共用同一生成器。
+  const alias = STANDALONE_BOUNDARY_KINDS.find(key => key === kind)
+    ?? STANDALONE_BOUNDARY_KINDS.find(key => WALL_KINDS[key].object === kind);
   assert(alias, `${kind}: missing reverse boundary consumer`);
   const options = { len: def.size[0], h: def.size[1], depth: def.size[2], seed: 42, variant: 0 };
   const rows = environmentParts(kind, { seed: 42 });

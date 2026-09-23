@@ -280,6 +280,22 @@ const mesh = makeRuntimePartModel(entry);
 `sharedBackgroundObjectTargets('geology')` 列出可用 target。
 固定種子與輸入可重現結果；造型、覆蓋各用獨立 mulberry32，新增表層不推進場景亂數。
 
+## 狹長型邊界單體
+
+邊界使用地質時（`cliff`、`rockery`、`landslide`、`debris`、`isletbarrier`）一次使用狹長型單體，
+不再逐段零星散置。`elongatedGeologyParams(len, depth, seed)` 由長寬比推導突起數量
+（`floor(aspect/3)`–`ceil(aspect/1.2)` 隨機範圍）與鞍部深度（愈狹長谷底愈低）；
+每個突起抽取各自的隨機波峰、每道分界抽取各自的隨機波谷，範圍見 `ELONGATED_RELIEF`
+（懸崖峭壁／玄武岩／刃脊等邊界斷層面類起伏極小、波谷維持高位；山巒／冰磧／土堆／島礁類起伏較大）；
+波長與起伏量（波峰−波谷）正相關，雜訊再乘 per-bump 誤差倍率（斷層類誤差小、
+隨機性高的冰磧／土堆／惡地／沙丘誤差大）；
+`elongatedGeologyMesh(type, seed, { len, depth, height, tint })` 以任意自然地形為基底、
+沿長軸重複其造型生成連續起伏網格（含落地裙擺與脊頂 `heightAt` 取樣器）。
+幾何與季節無關，四季差異只在 `tint` 色調；`environmentParts.js` 的
+`narrowGeologyBoundary` 是邊界唯一使用入口（土石流／崩塌地另帶 1–3 株谷底倒木）。
+假山群（`rockery`）按種子輪用一般地質（花崗岩／砂岩／節理岩堆／山巒，見 `ROCKERY_BASES`）
+拉狹長型，波谷可低至一成高度，形成高低變化大的連綿起伏。
+
 ## 驗證
 
 `node tools/audit_geology.mjs` 檢查 35 類 × 4 種子、有限頂點、色彩、面索引、bounds、

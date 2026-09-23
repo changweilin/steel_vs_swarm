@@ -175,7 +175,7 @@ console.log('\nⅣ 正規化');
 console.log('\nⅤ 六角圖繪製(執行 main.js 原文)');
 {
   t('heroHexHTML 只有一份實作', count(mainCode, /function heroHexHTML\(/g) === 1);
-  t('角色卡與放大視窗兩個消費端都吃它', count(mainCode, /heroHexHTML\(/g) === 3);   // 定義 1 + 呼叫 2
+  t('角色卡・放大視窗・設定頁機體資訊三個消費端都吃它', count(mainCode, /heroHexHTML\(/g) === 4);   // 定義 1 + 呼叫 3
   // 原文直測:抽 HEXG / hexPt / hexPoly / heroHexHTML 起來跑(esc 與 heroHexStats 由外部注入)
   const HEXG_SRC = mainSrc.match(/const HEXG = \{[^\n]*\};/)[0];
   const HEXPOLY_SRC = mainSrc.match(/const hexPoly = [^\n]*;/)[0];
