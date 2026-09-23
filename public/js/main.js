@@ -3542,21 +3542,33 @@ function renderBalanceSettings(mount) {
 // unitStatCells/unitWeaponRow),MUST NOT 另寫第二份數值標記。
 // 預覽是各掛載點獨立的一台 CharPreview(房間 'char'/'unit' 兩台不動);離開設定頁即 stop(A25)。
 const MECHA_MOUNTS = ['pauseMechaMount', 'lobbyMechaMount'];
-/** 掛載點骨架(建一次):雙方英雄牆 + 展示台 + 詳情 + NPC 牆 */
+// 機體資訊頁頂層頁籤:機體(雙方英雄牆) / 陣營單位(STEEL+SWARM NPC) / 第三方單位(GUER+MILI) / 平民。
+// 陣營/第三方兩頁籤共用同一套 NPC 牆 + 展示台,只是側邊切換列過濾出的 side 子集不同;平民單一種直接進詳情。
+const MECHA_TABS = [['hero', '機體'], ['faction', '陣營單位'], ['third', '第三方單位'], ['civ', '平民']];
+const MECHA_TAB_SIDES = { faction: ['STEEL', 'SWARM'], third: ['GUER', 'MILI'] };
+// 過濾版陣營切換列:按鈕標記與 sideToggleHTML 同式(同 class + 同 toggleLabel),只是 side 子集不同。
+const mechaSideToggleHTML = (side, attr, list) => list.map((sd) =>
+  `<button class="segb unit-side-btn ${sd === side ? 'on' : ''}" type="button" data-${attr}="${sd}">${esc(toggleLabel(sd))}</button>`).join('');
+/** 掛載點骨架(建一次):頁籤列 + 英雄牆(hero 頁) + NPC 牆(陣營/第三方頁) + 展示台 + 詳情 */
 function ensureMechaScope(mount) {
   let st = mount._mecha;
   if (st) return st;
-  st = mount._mecha = { sel: { type: 'char', id: charsOf('STEEL')[0], side: 'STEEL' },
+  st = mount._mecha = { tab: 'hero', sel: { type: 'char', id: charsOf('STEEL')[0], side: 'STEEL' },
     unitSide: 'STEEL', weapons: [], preview: null };
   mount.innerHTML = `
+    <div class="seg seg-sm" data-mtabs></div>
+    <div data-mpane="hero">
     <div class="smp-sub">▲ 協約 鋼鐵</div><div class="char-grid smp-grid" data-mgroup="STEEL"></div>
     <div class="smp-sub">▼ 同盟 蜂群</div><div class="char-grid smp-grid" data-mgroup="SWARM"></div>
-    <div class="mecha-stage-row">
-      <div class="mecha-stage-mount"></div>
-      <div class="mecha-detail"></div>
     </div>
+    <div data-mpane="unit">
     <div class="smp-sub">NPC / 攻擊建築 <span class="unit-side-toggle seg seg-sm" data-munitside></span></div>
-    <div class="unit-grid smp-grid" data-munits></div>`;
+    <div class="unit-grid smp-grid" data-munits></div>
+    </div>`
+  const stageRow = document.createElement('div');
+  stageRow.className = 'mecha-stage-row';
+  stageRow.innerHTML = '<div class="mecha-stage-mount"></div><div class="mecha-detail"></div>';
+  mount.appendChild(stageRow);
   const canvas = document.createElement('canvas');
   canvas.className = 'cd-canvas';
   st.preview = new CharPreview(canvas);
@@ -3591,8 +3603,26 @@ function ensureMechaScope(mount) {
 function mechaScopeClick(mount, e) {
   const st = mount._mecha;
   if (!st) return;
+  const tb = e.target.closest('[data-mtab]');
+  if (tb) {
+    st.tab = tb.dataset.mtab;
+    if (st.tab === 'hero') {
+      if (st.sel.type !== 'char') st.sel = { type: 'char', id: charsOf('STEEL')[0], side: 'STEEL' };
+    } else if (st.tab === 'civ') {
+      st.sel = { type: 'unit', kind: 'civilian', side: 'CIV' };
+    } else {
+      const sides = MECHA_TAB_SIDES[st.tab] || MECHA_TAB_SIDES.faction;
+      if (!sides.includes(st.unitSide)) st.unitSide = sides[0];
+      const roster = unitRosterOf(st.unitSide);
+      if (st.sel.type !== 'unit' || st.sel.kind === 'civilian' || !roster.includes(st.sel.kind))
+        st.sel = { type: 'unit', kind: roster[0], side: st.unitSide };
+      else st.sel.side = st.unitSide;
+    }
+    refreshMechaScope(mount); app.audio?.ui('click'); return;
+  }
   const hb = e.target.closest('[data-mch]');
   if (hb) {
+    st.tab = 'hero';
     st.sel = { type: 'char', id: hb.dataset.mch, side: hb.dataset.mside };
     refreshMechaScope(mount); app.audio?.ui('click'); return;
   }
@@ -3604,10 +3634,14 @@ function mechaScopeClick(mount, e) {
   const ms = e.target.closest('[data-mside]');
   if (ms) {
     st.unitSide = ms.dataset.mside;
-    const roster = unitRosterOf(st.unitSide);
-    if (st.sel.type === 'unit') {
-      const keep = st.unitSide === 'CIV' ? st.sel.kind === 'civilian' : roster.includes(st.sel.kind);
-      if (!keep) st.sel = { type: 'unit', kind: roster[0], side: st.unitSide };
+    if (st.unitSide === 'CIV') {
+      st.tab = 'civ';
+      st.sel = { type: 'unit', kind: 'civilian', side: 'CIV' };
+    } else {
+      st.tab = MECHA_TAB_SIDES.third.includes(st.unitSide) ? 'third' : 'faction';
+      const roster = unitRosterOf(st.unitSide);
+      if (st.sel.type === 'unit' && st.sel.kind !== 'civilian' && roster.includes(st.sel.kind)) st.sel.side = st.unitSide;
+      else st.sel = { type: 'unit', kind: roster[0], side: st.unitSide };
     }
     refreshMechaScope(mount); app.audio?.ui('click'); return;
   }
@@ -3652,10 +3686,35 @@ function mechaUnitDetail(kind, side) {
     <div class="cd-stats">${unitStatCells(kind)}</div>
     <div class="cd-kit">${kit}</div>`;
 }
-/** 重繪某掛載點:兩牆高亮 + 詳情 + 預覽載入 */
+/** 重繪某掛載點:頁籤列 + 牆高亮 + 詳情 + 預覽載入 */
 function refreshMechaScope(mount) {
   const st = mount._mecha;
   if (!st) return;
+  if (!st.tab) st.tab = 'hero';
+  if (st.unitSide === 'CIV') st.unitSide = 'STEEL';
+  if (st.tab === 'hero' && st.sel.type !== 'char') st.sel = { type: 'char', id: charsOf('STEEL')[0], side: 'STEEL' };
+  if (st.tab === 'civ' && (st.sel.type !== 'unit' || st.sel.kind !== 'civilian')) st.sel = { type: 'unit', kind: 'civilian', side: 'CIV' };
+  if (st.tab === 'faction' || st.tab === 'third') {
+    const sides = MECHA_TAB_SIDES[st.tab];
+    if (!sides.includes(st.unitSide)) {
+      st.unitSide = sides[0];
+      st.sel = { type: 'unit', kind: unitRosterOf(st.unitSide)[0], side: st.unitSide };
+    } else if (st.sel.type !== 'unit' || st.sel.kind === 'civilian') {
+      st.sel = { type: 'unit', kind: unitRosterOf(st.unitSide)[0], side: st.unitSide };
+    } else st.sel.side = st.unitSide;
+  }
+  const tabsEl = mount.querySelector('[data-mtabs]');
+  tabsEl.innerHTML = '';
+  for (const pair of MECHA_TABS) {
+    const b = document.createElement('button');
+    b.className = 'segb' + (st.tab === pair[0] ? ' on' : '');
+    b.type = 'button';
+    b.dataset.mtab = pair[0];
+    b.textContent = pair[1];
+    tabsEl.appendChild(b);
+  }
+  mount.querySelector('[data-mpane="hero"]').hidden = st.tab !== 'hero';
+  mount.querySelector('[data-mpane="unit"]').hidden = st.tab !== 'faction' && st.tab !== 'third';
   for (const side of ['STEEL', 'SWARM']) {
     const grid = mount.querySelector(`[data-mgroup="${side}"]`);
     grid.innerHTML = '';
@@ -3671,7 +3730,7 @@ function refreshMechaScope(mount) {
       grid.appendChild(b);
     }
   }
-  mount.querySelector('[data-munitside]').innerHTML = sideToggleHTML(st.unitSide, 'mside');
+  mount.querySelector('[data-munitside]').innerHTML = mechaSideToggleHTML(st.unitSide, 'mside', MECHA_TAB_SIDES[st.tab] || MECHA_TAB_SIDES.faction);
   const ug = mount.querySelector('[data-munits]');
   ug.innerHTML = '';
   for (const kind of unitRosterOf(st.unitSide)) {
