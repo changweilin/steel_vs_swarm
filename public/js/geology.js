@@ -265,16 +265,29 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
   // Sampling is performed before emitting faces, so a missing sample omits the whole object.
   // Callers supply the maximum footprint slope; explicit art previews can still select any type.
   if (input.heightAt && !spec.terrainFit) throw new RangeError(`Geology cannot conform to terrain: ${type}`);
+  const is2DGeo = !model.stone && Math.min(p.width, p.width * p.depthRatio) >= 24;
+  const pattern2D = is2DGeo ? (GEOLOGY_TYPE_2D_PATTERN[type] || GEOLOGY_2D_PATTERNS[(seed >>> 4) % GEOLOGY_2D_PATTERNS.length]) : null;
+  const rnd2DGeo = is2DGeo ? mulberry32((seed ^ 0x32444745) >>> 0) : null;
+  const phases2DGeo = is2DGeo ? [rnd2DGeo() * Math.PI * 2, rnd2DGeo() * Math.PI * 2, rnd2DGeo() * Math.PI * 2, rnd2DGeo() * Math.PI * 2] : null;
+  const bumpsXGeo = is2DGeo ? Math.max(2, Math.round(p.width / 16)) : 1;
+  const bumpsZGeo = is2DGeo ? Math.max(2, Math.round((p.width * p.depthRatio) / 16)) : 1;
+  const kxGeo = 2 * Math.PI * bumpsXGeo / p.width;
+  const kzGeo = 2 * Math.PI * bumpsZGeo / (p.width * p.depthRatio);
   if (!model.stone) for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
     const x = i / n * 2 - 1, z = j / n * 2 - 1;
     const base = profile(type, x, z, p);
+    const px = x * p.width / 2, pz = z * p.width * p.depthRatio / 2;
     const feature=Object.hasOwn(PHENOMENA,type)?phenomenaSurface(type,x,z,p):null;
+    let wave2D = 1;
+    if (is2DGeo && base > 1e-4) {
+      const u2d = eval2DUndulation(pattern2D, px, pz, kxGeo, kzGeo, phases2DGeo);
+      wave2D = 0.65 + 0.35 * u2d;
+    }
     const noise = (Math.sin(x * 7 + z * 3 + phases[0]) * .3
       + Math.sin(x * 13 - z * 9 + phases[1]) * .15
       + Math.cos(x * 23 + z * 17 + phases[2]) * .05)
       * p.roughness * (1 - p.erosion * .5) * base * (feature==='water'?0:1);
-    const y = Math.max(0, base + noise) * p.height;
-    const px = x * p.width / 2, pz = z * p.width * p.depthRatio / 2;
+    const y = Math.max(0, base * wave2D + noise) * p.height;
     const wx = px * c - pz * s, wz = px * s + pz * c;
     const baseY = input.heightAt ? input.heightAt(originX + wx, originZ + wz) : 0;
     if (!Number.isFinite(baseY)) return null;
@@ -440,6 +453,59 @@ export const ELONGATED_RELIEF = Object.freeze({
   default: { peak: [.60, 1], valley: [.30, .55], err: [.50, 1] },
 });
 
+export const GEOLOGY_2D_PATTERNS = Object.freeze(['lattice', 'quasicrystal', 'fluid', 'random']);
+
+export const GEOLOGY_TYPE_2D_PATTERN = Object.freeze({
+  basalt: 'lattice', cliff: 'lattice', tor: 'lattice', rocktower: 'lattice',
+  granite_towers: 'lattice', reef: 'lattice',
+  mountain: 'quasicrystal', rockery: 'quasicrystal', inselberg: 'quasicrystal',
+  karst: 'quasicrystal', spire: 'quasicrystal', marble: 'quasicrystal',
+  river: 'fluid', dune: 'fluid', debris: 'fluid', landslide: 'fluid', sandstone: 'fluid',
+  mound: 'random', moraine: 'random', boulder: 'random', island: 'random',
+  isletbarrier: 'random', conglomerate: 'random', crater: 'random', badlands: 'fluid',
+});
+
+// 2D 空間起伏計算：任何方向觀察皆具備波峰波谷交替起伏
+export function eval2DUndulation(pattern, x, z, kx = 0.2, kz = 0.2, phases = [0, 0, 0, 0]) {
+  const pList = Array.isArray(phases) && phases.length >= 3 ? phases : [0, 0, 0, 0];
+  const p0 = pList[0] ?? 0, p1 = pList[1] ?? 0, p2 = pList[2] ?? 0, p3 = pList[3] ?? (p0 * 1.7);
+  if (pattern === 'lattice') {
+    // 2D 晶格：六角晶格（0°, 60°, 120° 三向平面波）+ 正交諧波調諧
+    const sqrt3 = 1.7320508075688772;
+    const w1 = Math.cos(kx * x + p0);
+    const w2 = Math.cos((kx * x + sqrt3 * kz * z) * 0.5 + p1);
+    const w3 = Math.cos((-kx * x + sqrt3 * kz * z) * 0.5 + p2);
+    const hex = (w1 + w2 + w3) / 3;
+    const rect = Math.cos(kx * x + p3) * Math.cos(kz * z + p1 * 1.3);
+    return hex * 0.72 + rect * 0.28;
+  }
+  if (pattern === 'quasicrystal') {
+    // 準晶格：8 摺非週期對稱平面波干涉，圓周等角度波矢無盲角，任一切面均具拍頻波峰波谷
+    const N = 8;
+    let sum = 0;
+    for (let j = 0; j < N; j++) {
+      const angle = j * Math.PI / 4;
+      const pj = (phases[j % phases.length] * (1 + j * 0.21)) % (Math.PI * 2);
+      sum += Math.cos(kx * x * Math.cos(angle) + kz * z * Math.sin(angle) + pj);
+    }
+    return sum / 4;
+  }
+  if (pattern === 'fluid') {
+    // 流體：旋度對流卷與渦流旋度位移（Curl-advection + Rayleigh-Bénard convection rolls）
+    const dx = (0.28 / Math.max(1e-4, kx)) * Math.cos(kz * z * 0.8 + p0);
+    const dz = (0.28 / Math.max(1e-4, kz)) * Math.sin(kx * x * 0.8 + p1);
+    const xx = x + dx, zz = z + dz;
+    const roll1 = Math.cos(kx * xx + kz * zz + p2) * Math.cos(kx * xx - kz * zz + p0);
+    const roll2 = Math.sin(kx * xx * 1.4 + p1) * Math.cos(kz * zz * 1.4 + p2);
+    return roll1 * 0.58 + roll2 * 0.42;
+  }
+  // random: 多頻率交叉擾動胞狀隨機起伏場
+  const o1 = Math.sin(kx * x + 0.7 * kz * z + p0) * Math.cos(0.85 * kx * x - kz * z + p1);
+  const o2 = Math.sin(1.8 * kx * x - 1.2 * kz * z + p2) * 0.35;
+  const o3 = Math.cos(1.1 * kx * x + 2.1 * kz * z + p3) * 0.25;
+  return (o1 + o2 + o3) / 1.1;
+}
+
 // 狹長型邊界單體起伏參數:一次使用、沿長軸連續。突起數量與起伏程度由長寬比推導,
 // 以種子抽取隨機範圍;愈狹長(長寬比愈大)突起愈多,鞍部愈低。
 // 串流順序固定(bumps → saddle → relief → sharp → phases → roughness → layers → dissolution → per-bump),
@@ -461,17 +527,14 @@ export function elongatedGeologyParams(len, depth, seed) {
   return { bumps, saddle, relief, sharp, phases, aspect };
 }
 
-// 狹長型邊界連續起伏網格:以任意自然地形為基底(profile 唯一縫),沿長軸重複其造型,
-// 每個突起抽取各自的隨機波峰、每道分界抽取各自的隨機波谷（範圍見 ELONGATED_RELIEF），
-// 首尾兩端恆為波谷且高度為 0（落地）；波長與起伏量（波峰−波谷）正相關
-// （落差愈大波長愈長，另帶隨機抖動），雜訊再乘 per-bump 誤差倍率；
-// 波峰有效高度另乘 per-bump 增益（由同一次 err 取樣正規化，幅度按地質 err 均值等比、
-// 上限 50%，斷層類小得多），無新增取樣、不推移 BUMP 串流（首尾壓零為覆寫，不少抽）。
-// 單一網格、零共享亂數;幾何與季節無關,色調由 tint 決定。
-// 回傳 { meshData, size, params, undulation, heightAt }:size 為 [len, peakY, depth],網格基底 y0 = 0;
-// undulation.wavelengths 以公尺計，加總等於 len；undulation.peaks 為增益後有效波峰，
-// undulation.valleys 首尾恆為 0，undulation.gains 為 per-bump 增益。
-export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0xffffff } = {}) {
+// 狹長/大範圍邊界連續起伏網格：
+// 1. 以任意自然地形為基底（profile 唯一縫），沿長軸重複其造型，首尾兩端恆為波谷 0m。
+// 2. 當地質生成範圍大到某種程度（雙向尺度 ≥ 20m 或延伸至緩衝區），2 個維度都加入隨機起伏，
+//    排列方法支援 2D 晶格（lattice）、準晶格（quasicrystal）、流體（fluid）、隨機（random），
+//    任何方向觀察均具備波峰波谷交替起伏。
+// 3. 四周邊界遵守地質邊緣高度 = 0（雙向 smooth01 落地包絡）。
+// 4. 支援 2 維延伸往緩衝區擴大（bufferDepth > 0），產出同源無縫分割的本體與緩衝填滿網格。
+export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0xffffff, bufferDepth = 0, pattern = null } = {}) {
   const s = GEOLOGY_TYPES[type];
   if (!s) throw new RangeError(`Unknown geology type: ${type}`);
   if (s.lithology === 'manufactured') throw new RangeError('Elongated ridge needs a natural terrain type');
@@ -479,6 +542,11 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     || len <= 0 || depth <= 0 || height <= 0)
     throw new RangeError('Elongated geology dimensions must be positive finite numbers');
   if (!Number.isSafeInteger(seed)) throw new TypeError('Geology seed must be a safe integer');
+  const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
+  const totalDepth = depth + bufD;
+  const is2D = totalDepth >= 20 || Math.min(len, totalDepth) >= 20;
+  const activePattern = pattern || GEOLOGY_TYPE_2D_PATTERN[type] || GEOLOGY_2D_PATTERNS[(seed >>> 4) % GEOLOGY_2D_PATTERNS.length];
+
   const params = elongatedGeologyParams(len, depth, seed);
   const { bumps, relief, sharp, phases } = params;
   const cfg = ELONGATED_RELIEF[type] || ELONGATED_RELIEF.default;
@@ -498,13 +566,10 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     () => cfg.err[0] + brnd() * (cfg.err[1] - cfg.err[0]));
   // per-bump 波峰增益：由同一次 err 取樣正規化，幅度按該地質 err 均值等比縮放、
   // 上限 50%（僅 err 最大的冰磧／土堆取滿；斷層／峭壁類小得多），不新增取樣。
-  // 斷層類取樣寬度另受「peak 下限 ≥ valley 上限」約束，落差主要由此增益提供。
   const errSpan = cfg.err[1] - cfg.err[0];
   const errMeanMax = Math.max(...Object.values(ELONGATED_RELIEF).map(c => (c.err[0] + c.err[1]) / 2));
   const half = 0.25 * ((cfg.err[0] + cfg.err[1]) / 2) / errMeanMax;
   const gains = errors.map(err => errSpan > 0 ? (1 - half) + ((err - cfg.err[0]) / errSpan) * 2 * half : 1);
-  // 有效波峰嚴格高於相鄰波谷（+0.05：覆蓋鞍谷不對稱與長波負向擺動，避免拍平或反轉）；
-  // 首尾兩突起恆為全高：端格地坪自 0 陡升，唯有全高峰能確保其尾鞍（頭鞍）仍為波谷。
   const peaks = sampledPeaks.map((peak, k) => (k === 0 || k === bumps - 1) ? 1 : Math.min(1,
     Math.max(Math.max(valleys[k], valleys[k + 1]) + 0.05, peak * gains[k])));
   const bounds = [0];
@@ -520,21 +585,35 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     erosion: .25 + rnd() * .75, layers: 4 + Math.floor(rnd() * 9), dissolution: rnd(), dip: 0 };
   if (Object.hasOwn(PHENOMENA, type)) Object.assign(p, { activity: .7,
     ventRadius: .12 + rnd() * .12, channelWidth: .12 + rnd() * .14, jetHeight: .3 + rnd() * .6 });
-  const nx = Math.max(12, Math.min(96, Math.round(len / Math.max(1.5, depth / 8))));
-  const nz = 8;
+
+  // 2D 雙向取樣與網格解析度
+  const bumpsZ = Math.max(2, Math.round(totalDepth / 16));
+  const rnd2D = mulberry32((seed ^ 0x32444745) >>> 0);
+  const phases2D = [rnd2D() * Math.PI * 2, rnd2D() * Math.PI * 2, rnd2D() * Math.PI * 2, rnd2D() * Math.PI * 2];
+  const kx = 2 * Math.PI * bumps / len;
+  const kz = 2 * Math.PI * bumpsZ / totalDepth;
+  const zMid = -bufD / 2;
+
+  const nx = Math.max(12, Math.min(96, Math.round(len / Math.max(1.5, totalDepth / 8))));
+  const nzObs = bufD > 0 ? Math.max(6, Math.min(48, Math.round(depth / 2.5))) : (is2D ? Math.max(8, Math.min(64, Math.round(depth / 2.5))) : 8);
+  const nzBuf = bufD > 0 ? Math.max(6, Math.min(48, Math.round(bufD / 2.5))) : 0;
+  const nz = nzObs + nzBuf;
   const top = (ix, iz) => ix * (nz + 1) + iz;
-  const vertices = [], colors = [], faces = [], grid = new Float32Array((nx + 1) * (nz + 1));
+
+  const grid = new Float32Array((nx + 1) * (nz + 1));
   const tintCh = [16, 8, 0].map(shift => ((tint >> shift) & 255) / 255);
   const paint = (y, shade) => {
     const t = clamp(y / height, 0, 1);
     const k = (.80 + .20 * t) * shade;
     return [16, 8, 0].map((shift, i) => linear(clamp(((s.color >> shift) & 255) / 255 * k * tintCh[i], 0, 1)));
   };
-  // 頭尾落地包絡：兩端各半個波長內 smoothstep 收至 0，突起中心處恆為 1。
+
   const taperL = Math.max(1e-9, wavelengths[0] / 2);
   const taperR = Math.max(1e-9, wavelengths[bumps - 1] / 2);
+  const taperZ = Math.max(1e-9, (totalDepth / bumpsZ) / 2);
   const smooth01 = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
-  let peakY = 0;
+
+  let peakY = 0, peakYBuf = 0;
   for (let ix = 0; ix <= nx; ix++) {
     const u = ix / nx * 2 - 1;
     const x = Math.min(ix / nx * len, len - 1e-9), cell = locate(x);
@@ -544,61 +623,134 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     const floor = valleys[cell] + (valleys[cell + 1] - valleys[cell]) * blend;
     const crest = peaks[cell], err = errors[cell];
     const xx = ix / nx * len;
-    const env = Math.min(smooth01(xx / taperL), smooth01((len - xx) / taperR));
-    // 縱向窗：抬升與長波起伏在分界處歸零（邊界渲染為谷底高），突起中心處恆為 1。
+    const envU = Math.min(smooth01(xx / taperL), smooth01((len - xx) / taperR));
     const win = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 0.7);
     const winR = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 2);
+
     for (let iz = 0; iz <= nz; iz++) {
-      const v = iz / nz * 2 - 1;
+      let zPhys;
+      if (bufD > 0) {
+        if (iz <= nzObs) zPhys = depth / 2 - (iz / nzObs) * depth;
+        else zPhys = -depth / 2 - ((iz - nzObs) / nzBuf) * bufD;
+      } else {
+        zPhys = -depth / 2 + (iz / nz) * depth;
+      }
+      const distFront = depth / 2 - zPhys;
+      const distBack = zPhys - (-depth / 2 - bufD);
+      const envV = Math.min(smooth01(distFront / taperZ), smooth01(distBack / taperZ));
+      const env2D = envU * envV;
+
+      const v = (zPhys - zMid) / (totalDepth / 2);
       const base = profile(type, lu * .92, v * .92, p);
       const noise = (Math.sin(lu * 7 + v * 3 + phases[0]) * .3
         + Math.sin(lu * 13 - v * 9 + phases[1]) * .15
         + Math.cos((lu + v) * 17 + phases[2]) * .05)
         * p.roughness * (1 - p.erosion * .5) * base * err;
+
       const cross = Math.pow(Math.max(0, Math.cos(v * Math.PI / 2)), .5 * sharp);
-      const y = Math.max(0, Math.min(1,
-        (floor + (crest - floor) * Math.min(1, Math.max(0, base + noise)) * win) * (.72 + .28 * cross)
-        + relief * .02 * Math.sin(u * bumps * Math.PI + phases[2]) * cross * winR)) * env;
+      let crossMod = .72 + .28 * cross;
+      let peakEff = crest;
+
+      if (is2D) {
+        const u2d = eval2DUndulation(activePattern, -len / 2 + xx, zPhys - zMid, kx, kz, phases2D);
+        const wave2D = clamp(0.5 + 0.5 * u2d, 0, 1);
+        crossMod = (0.34 + 0.66 * wave2D) * (.70 + .30 * cross);
+        peakEff = floor + (crest - floor) * (0.35 + 0.65 * wave2D);
+      }
+
+      let y = Math.max(0, Math.min(1,
+        (floor + (peakEff - floor) * Math.min(1, Math.max(0, base + noise)) * win) * crossMod
+        + relief * .02 * Math.sin(u * bumps * Math.PI + phases[2]) * crossMod * winR)) * env2D;
+
+      // 嚴格遵守地質邊緣高度 = 0（四邊外緣點一律落地）
+      if (ix === 0 || ix === nx || iz === 0 || iz === nz) y = 0;
+
       const yy = Math.min(height, y * height);
-      peakY = Math.max(peakY, yy);
       grid[top(ix, iz)] = yy;
-      vertices.push(-len / 2 + ix / nx * len, yy, -depth / 2 + iz / nz * depth);
+      if (iz <= nzObs) peakY = Math.max(peakY, yy);
+      else peakYBuf = Math.max(peakYBuf, yy);
+    }
+  }
+
+  // 建立本體網格（iz ∈ [0, nzObs]）
+  const vertices = [], colors = [], faces = [];
+  const topObs = (ix, iz) => ix * (nzObs + 1) + iz;
+  for (let ix = 0; ix <= nx; ix++) {
+    for (let iz = 0; iz <= nzObs; iz++) {
+      const zPhys = depth / 2 - (iz / nzObs) * depth;
+      const yy = grid[top(ix, iz)];
+      vertices.push(-len / 2 + ix / nx * len, yy, zPhys);
+      const lu = (ix / nx * 2 - 1);
+      const v = (zPhys - zMid) / (totalDepth / 2);
       colors.push(...paint(yy, .94 + .06 * Math.sin(lu * 31 + v * 4 + p.erosion * 3)));
     }
   }
-  for (let ix = 0; ix < nx; ix++) for (let iz = 0; iz < nz; iz++) {
-    const a = top(ix, iz), b = a + 1, c = a + nz + 1, d = c + 1;
+  for (let ix = 0; ix < nx; ix++) for (let iz = 0; iz < nzObs; iz++) {
+    const a = topObs(ix, iz), b = a + 1, c = a + nzObs + 1, d = c + 1;
     faces.push(a, c, b, b, c, d);
   }
-  // 周邊裙擺:由表緣直落地面,雙面繞序(不透明批次單面渲染亦可見),色調壓暗。
-  const skirt = (edge) => {
+
+  // 周邊裙擺: 表緣落地面
+  const skirt = (targetVerts, targetColors, targetFaces, edge, hasBottomSkirt) => {
     for (let i = 0; i < edge.length - 1; i++) {
       const [t0, t1] = [edge[i], edge[i + 1]];
-      const [x0, y0, z0] = vertices.slice(t0 * 3, t0 * 3 + 3);
-      const [x1, y1, z1] = vertices.slice(t1 * 3, t1 * 3 + 3);
-      const base = vertices.length / 3;
-      const dark = (t) => colors.slice(t * 3, t * 3 + 3).map(v => v * .72);
-      vertices.push(x0, y0, z0, x1, y1, z1, x0, 0, z0, x1, 0, z1);
-      colors.push(...dark(t0), ...dark(t1), ...dark(t0).map(v => v * .9), ...dark(t1).map(v => v * .9));
-      faces.push(base, base + 2, base + 1, base + 1, base + 2, base + 3,
+      const [x0, y0, z0] = targetVerts.slice(t0 * 3, t0 * 3 + 3);
+      const [x1, y1, z1] = targetVerts.slice(t1 * 3, t1 * 3 + 3);
+      const base = targetVerts.length / 3;
+      const dark = (t) => targetColors.slice(t * 3, t * 3 + 3).map(v => v * .72);
+      targetVerts.push(x0, y0, z0, x1, y1, z1, x0, 0, z0, x1, 0, z1);
+      targetColors.push(...dark(t0), ...dark(t1), ...dark(t0).map(v => v * .9), ...dark(t1).map(v => v * .9));
+      targetFaces.push(base, base + 2, base + 1, base + 1, base + 2, base + 3,
         base, base + 1, base + 2, base + 1, base + 3, base + 2);
     }
   };
-  const edgeLoop = [];
-  for (let ix = 0; ix <= nx; ix++) edgeLoop.push(top(ix, 0));
-  for (let iz = 1; iz <= nz; iz++) edgeLoop.push(top(nx, iz));
-  for (let ix = nx - 1; ix >= 0; ix--) edgeLoop.push(top(ix, nz));
-  for (let iz = nz - 1; iz >= 1; iz--) edgeLoop.push(top(0, iz));
-  edgeLoop.push(top(0, 0));
-  skirt(edgeLoop);
+
+  const edgeLoopObs = [];
+  for (let ix = 0; ix <= nx; ix++) edgeLoopObs.push(topObs(ix, 0));
+  for (let iz = 1; iz <= nzObs; iz++) edgeLoopObs.push(topObs(nx, iz));
+  if (bufD === 0) for (let ix = nx - 1; ix >= 0; ix--) edgeLoopObs.push(topObs(ix, nzObs));
+  for (let iz = nzObs - 1; iz >= 1; iz--) edgeLoopObs.push(topObs(0, iz));
+  edgeLoopObs.push(topObs(0, 0));
+  skirt(vertices, colors, faces, edgeLoopObs);
+
+  // 若有緩衝區（bufD > 0），建立同源無縫接軌的緩衝延伸網格（iz ∈ [nzObs, nz]）
+  let bufferMeshData = null, bufferSize = null;
+  if (bufD > 0) {
+    const bufVerts = [], bufColors = [], bufFaces = [];
+    const topBuf = (ix, izB) => ix * (nzBuf + 1) + izB;
+    const pzCenter = -depth / 2 - bufD / 2;
+    for (let ix = 0; ix <= nx; ix++) {
+      for (let izB = 0; izB <= nzBuf; izB++) {
+        const iz = nzObs + izB;
+        const zPhys = -depth / 2 - (izB / nzBuf) * bufD;
+        const yy = grid[top(ix, iz)];
+        bufVerts.push(-len / 2 + ix / nx * len, yy, zPhys - pzCenter);
+        const lu = (ix / nx * 2 - 1);
+        const v = (zPhys - zMid) / (totalDepth / 2);
+        bufColors.push(...paint(yy, .94 + .06 * Math.sin(lu * 31 + v * 4 + p.erosion * 3)));
+      }
+    }
+    for (let ix = 0; ix < nx; ix++) for (let izB = 0; izB < nzBuf; izB++) {
+      const a = topBuf(ix, izB), b = a + 1, c = a + nzBuf + 1, d = c + 1;
+      bufFaces.push(a, c, b, b, c, d);
+    }
+    const edgeLoopBuf = [];
+    for (let izB = 0; izB <= nzBuf; izB++) edgeLoopBuf.push(topBuf(nx, izB));
+    for (let ix = nx - 1; ix >= 0; ix--) edgeLoopBuf.push(topBuf(ix, nzBuf));
+    for (let izB = nzBuf - 1; izB >= 0; izB--) edgeLoopBuf.push(topBuf(0, izB));
+    edgeLoopBuf.push(topBuf(0, 0));
+    skirt(bufVerts, bufColors, bufFaces, edgeLoopBuf);
+    bufferMeshData = { vertices: bufVerts, faces: bufFaces, colors: bufColors, boundaryBuffer: true };
+    bufferSize = [len, Math.max(peakYBuf, 1e-6), bufD];
+  }
+
   const size = [len, Math.max(peakY, 1e-6), depth];
-  // 脊頂高度取樣器(u, v ∈ [-1, 1])：覆蓋層（倒木等）落地用，與網格同一份高度。
+  // 脊頂高度取樣器(u, v ∈ [-1, 1])：覆蓋層（倒木等）落地用
   const heightAt = (u, v) => {
     if (!Number.isFinite(u) || !Number.isFinite(v)) return NaN;
-    const gxRaw = (u + 1) / 2 * nx, gzRaw = (v + 1) / 2 * nz;
-    // 兩端恰好落地：u=±1 直接取邊界列，避免雙線性跨格帶入鄰列浮點殘值。
+    const gxRaw = (u + 1) / 2 * nx, gzRaw = (v + 1) / 2 * nzObs;
     const gx = gxRaw <= 0 ? 0 : gxRaw >= nx ? nx : Math.min(nx - 1e-9, gxRaw);
-    const gz = Math.max(0, Math.min(nz - 1e-9, gzRaw));
+    const gz = Math.max(0, Math.min(nzObs - 1e-9, gzRaw));
     const iz = Math.floor(gz), fv = gz - iz;
     const ix = gxRaw <= 0 ? 0 : gxRaw >= nx ? nx - 1 : Math.floor(gx);
     const fu = gxRaw <= 0 ? 0 : gxRaw >= nx ? 1 : gx - ix;
@@ -606,6 +758,13 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     const c = grid[top(ix, iz + 1)], d = grid[top(ix + 1, iz + 1)];
     return a + (b - a) * fu + (c - a) * fv + (a - b - c + d) * fu * fv;
   };
-  return { meshData: { vertices, faces, colors }, size, params,
-    undulation: { peaks, valleys, wavelengths, errors, gains }, heightAt };
+
+  return {
+    meshData: { vertices, faces, colors },
+    size,
+    params,
+    undulation: { peaks, valleys, wavelengths, errors, gains, pattern: activePattern, is2D },
+    heightAt,
+    ...(bufferMeshData ? { bufferMeshData, bufferSize } : {}),
+  };
 }

@@ -5,7 +5,7 @@
 import { mulberry32 } from './rng.js';
 import { boundaryGrid } from './objectLayout.js';
 import { partAABB, VEHICLE_SPEC } from './vehicles.js';
-import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, narrowGeologyBoundary, storageTankParts, environmentAvailable, environmentSize, makeSceneVehicleParts, NATURAL_CLIFF_KINDS, citywallBarbicanParts, leveeGateParts } from './environmentParts.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, narrowGeologyBoundary, NARROW_GEOLOGY_BOUNDARY, storageTankParts, environmentAvailable, environmentSize, makeSceneVehicleParts, NATURAL_CLIFF_KINDS, citywallBarbicanParts, leveeGateParts } from './environmentParts.js';
 import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
 export { ROCK_SEASON_TINT } from './environmentParts.js';
 
@@ -525,10 +525,13 @@ export const BOUNDARY_BUFFER_LAYOUTS = Object.freeze({
   fallentree:  { type: 'natural', mode: 'random', pitchX: 24, pitchZ: 14, object: 'fallentree',scaleRange: [0.60, 1.40], randomYaw: true },
   // 大小巨岩: 隨機散布，尺度 0.55x ~ 1.65x
   boulder:     { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.55, 1.65], randomYaw: true },
-  rockery:     { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.60, 1.60], randomYaw: true },
+  rockery:     { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, object: 'boulder',   scaleRange: [0.60, 1.60], randomYaw: true },
   basaltspine: { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.60, 1.50], randomYaw: true },
   reefchain:   { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.60, 1.50], randomYaw: true },
-  isletbarrier:{ type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.55, 1.50], randomYaw: true },
+  isletbarrier:{ type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, object: 'boulder',   scaleRange: [0.55, 1.50], randomYaw: true },
+  cliff:       { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, scaleRange: [0.60, 1.50], randomYaw: true },
+  landslide:   { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, scaleRange: [0.60, 1.50], randomYaw: true },
+  debris:      { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, scaleRange: [0.60, 1.50], randomYaw: true },
   // 大小山頭: 隨機散布，尺度 0.70x ~ 1.45x
   rollinghills:{ type: 'natural', mode: 'random', pitchX: 20, pitchZ: 20, object: 'boulder',   scaleRange: [0.70, 1.45], randomYaw: true },
   // 冰山浮冰: 隨機散布，尺度 0.50x ~ 1.45x
@@ -647,9 +650,24 @@ export function buildBoundaryRunParts(kind, {
   const def = WALL_KINDS[kind];
   const targetH = Math.max(h, def?.h || 18);
   if (!layout) {
+    if (NARROW_GEOLOGY_BOUNDARY[kind]) {
+      const geoParts = narrowGeologyBoundary(kind, { len, depth, bufferDepth, h: targetH, seed, season });
+      return {
+        parts: geoParts.parts || geoParts.filter(p => !p.boundaryBuffer),
+        bufferParts: geoParts.bufferParts || geoParts.filter(p => p.boundaryBuffer),
+      };
+    }
     return {
       parts: wallParts(kind, { len, depth, h: targetH, seed, variant, season, joins }),
       bufferParts: [],
+    };
+  }
+
+  if (layout.continuousGeology || NARROW_GEOLOGY_BOUNDARY[kind]) {
+    const geoParts = narrowGeologyBoundary(kind, { len, depth, bufferDepth, h: targetH, seed, season });
+    return {
+      parts: geoParts.parts || geoParts.filter(p => !p.boundaryBuffer),
+      bufferParts: geoParts.bufferParts || geoParts.filter(p => p.boundaryBuffer),
     };
   }
 
