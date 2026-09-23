@@ -494,9 +494,10 @@ export function getRoofElevation(x, z, poly, roofForm = 'flat', metrics = null, 
     return topY + Math.sqrt(Math.max(0, r * r - distFromCenter * distFromCenter)) - ROOF_SEAT_SINK;
   }
 
-  // 尖錐：8 角錐以内接圓（apothem）計高 —— 估值恆低於真實面（只沉不浮，基座埋入為坐穩貌）。
+  // 尖錐：圓錐以 L, S 外接圓計高，完整覆蓋整座頂樓
   if (roofForm === 'spire') {
-    const R = Math.max(0.5, 0.425 * Math.min(span, len)) * Math.cos(Math.PI / 8);
+    const sides = Math.max(24, poly?.outer?.length >= 8 ? poly.outer.length : 24);
+    const R = Math.hypot(L, S) / (2 * Math.cos(Math.PI / sides));
     const d = Math.hypot(dx, dz);
     if (d >= R) return topY;
     return topY + (1 - d / R) * roofH * 2.2 - ROOF_SEAT_SINK;
@@ -1541,10 +1542,9 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const isNorthHemi = latDeg >= 0;
     const eclipticTilt = isNorthHemi ? solarTilt : -solarTilt;
 
-    // 5.7a 同區域有棚架：太陽能板貼在棚架頂面並填滿（向黃道面傾角），不再佔用屋面。
+    // 5.7a 同區域有棚架：太陽能板順著斜棚架傾斜佈署，支撐腳架踩在棚面上，太陽能板面向與傾角保持不變（依黃道面日照傾角）
     if (hasSolar && canopyInfo && canopyInfo.placed) {
       const { posX, posZ, cLen, cSpan, rotY: cRot, baseRoofY: cBaseY, postH: cPostH } = canopyInfo;
-      const cTopY = cBaseY + cPostH + 0.08;
       const stepU = 1.58, stepV = 1.10;
       const uCount = Math.max(1, Math.floor((cLen - 0.3) / stepU));
       const vCount = Math.max(1, Math.floor((cSpan - 0.3) / stepV));
@@ -1555,11 +1555,27 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           const lv = -((vCount - 1) * stepV) / 2 + vi * stepV;
           const px = posX + lu * cc + lv * ss;
           const pz = posZ - lu * ss + lv * cc;
+          // 斜棚架頂面高度隨傾斜變化（順著傾斜佈署，rotateX(0.08)）
+          const cSurfaceY = cBaseY + cPostH + 0.08 - Math.sin(0.08) * lv;
+          const panelLift = 0.18;
+          const panelY = cSurfaceY + panelLift;
+
+          // 棚架固定腳架 (連至斜棚架表面)
+          const standRot = mapRotation;
+          for (const side of [-0.5, 0.5]) {
+            const legH = Math.max(0.08, panelLift - 0.03);
+            const leg = new THREE.BoxGeometry(0.04, legH, 0.7);
+            leg.translate(side, legH / 2, 0);
+            if (standRot) leg.rotateY(standRot);
+            leg.translate(px, cSurfaceY, pz);
+            geos.push(paintGeometry(leg, 0x78909c, variant));
+          }
+
           const panel = new THREE.BoxGeometry(1.5, 0.06, 1.0);
           panel.userData.partType = 'solar_panel';
           panel.rotateX(eclipticTilt);
           if (mapRotation) panel.rotateY(mapRotation);
-          panel.translate(px, cTopY + 0.06, pz);
+          panel.translate(px, panelY, pz);
           geos.push(paintGeometry(panel, 0x1a237e, variant));
         }
       }
@@ -1625,77 +1641,54 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const stiltHeight = isElevatedSolar ? 2.3 : 0.25;
       const panelLift = isElevatedSolar ? stiltHeight + 0.15 : 0.35;
 
-      // 同一屋頂區塊統一傾斜方向：取近中心、坡度明確的貼合角為全塊代表（排除稜線平點與
-      // 邊牆階差假影），塊內全部面板共用；位置仍逐板貼合屋面高度。
-      // 會切入屋面的站點直接捨棄並往外遞補，維持覆蓋率。純數學、無 RNG，不消耗共享隨機序列。
-      let blockFit = { pitch: 0, roll: 0, slope: 0 };
-      if (isSlopedRoof) {
-        let flatFallback = null, steepest = null, steepestSlope = -1, picked = false;
-        for (const { sx, sz } of candidateSites) {
-          const f = roofPanelAngles(sx, sz, poly, roofForm, metrics, topY, height, rotY);
-          if (!flatFallback && f.slope < 0.02) flatFallback = f;
-          if (f.slope > steepestSlope) { steepestSlope = f.slope; steepest = f; }
-          if (f.slope >= 0.02 && f.slope <= 1.0) { blockFit = f; picked = true; break; }
-        }
-        if (!picked) blockFit = flatFallback || steepest || blockFit;
-      }
-      const useBlockRoofFit = isSlopedRoof;
-      const clearMat = isSlopedRoof
-        ? new THREE.Matrix4().makeRotationY(rotY)
-          .multiply(new THREE.Matrix4().makeRotationZ(blockFit.roll))
-          .multiply(new THREE.Matrix4().makeRotationX(blockFit.pitch))
-        : null;
+      // 太陽能板面向與傾角恆定（黃道面日照傾角），在斜坡/斜屋頂上順著傾斜佈署，支撐腳架自適應貼合屋面
+      const solarPanelMat = new THREE.Matrix4();
+      if (mapRotation) solarPanelMat.makeRotationY(mapRotation);
+      solarPanelMat.multiply(new THREE.Matrix4().makeRotationX(eclipticTilt));
+
       const clearVec = new THREE.Vector3();
       const placedSites = [];
       for (const { sx, sz } of candidateSites) {
         if (placedSites.length >= desiredPanels) break;
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
-        if (clearMat) {
-          const panelY = baseRoofY + panelLift;
-          let clears = true;
+        let effLift = panelLift;
+        if (isSlopedRoof) {
+          // 斜屋頂順著傾斜佈署：面板面向與傾角保持不變，高度隨坡度自適應抬升以確保板面四角均不切入屋面
           for (const [lx, lz] of [[0.75, 0.5], [0.75, -0.5], [-0.75, 0.5], [-0.75, -0.5]]) {
-            clearVec.set(lx, -0.03, lz).applyMatrix4(clearMat);
-            if (clearVec.y + panelY - getRoofElevation(clearVec.x + sx, clearVec.z + sz, poly, roofForm, metrics, topY, height) < 0.02) {
-              clears = false; break;
-            }
+            clearVec.set(lx, -0.03, lz).applyMatrix4(solarPanelMat);
+            const cornerRoofY = getRoofElevation(clearVec.x + sx, clearVec.z + sz, poly, roofForm, metrics, topY, height);
+            const neededLift = (cornerRoofY + 0.06) - (baseRoofY + clearVec.y);
+            if (neededLift > effLift) effLift = neededLift;
           }
-          if (!clears) continue;
+          if (effLift > (isElevatedSolar ? 4.5 : 2.0)) continue; // 坡度過度斷崖處不落板
         }
         // 單板佔位登記：與其他屋頂物件互不重疊（半尺寸略小於步距，相鄰板不互斥）
         if (!claimRect(sx, sz, 0.76, 0.53, rotY)) continue;
-        placedSites.push({ sx, sz });
+        placedSites.push({ sx, sz, effLift });
       }
 
-      for (const { sx, sz } of placedSites) {
+      for (const { sx, sz, effLift } of placedSites) {
         const baseRoofY = getRoofElevation(sx, sz, poly, roofForm, metrics, topY, height);
-        // 屋頂式貼合：整塊共用代表貼合角，平頂（與階梯露台）一律固定日照傾角
-        const fit = blockFit;
-        // 非平面屋頂強制貼合斜率（順坡排列，絕不水平放置）；平頂向黃道面傾斜
-        const useRoofFit = useBlockRoofFit;
-        const panelY = baseRoofY + panelLift;
+        const panelY = baseRoofY + effLift;
 
         if (isElevatedSolar) {
+          const curStiltHeight = effLift - 0.15;
           // 架高鋼構立柱 (Stilt column)
-          const stilt = new THREE.CylinderGeometry(0.045, 0.045, stiltHeight, 6);
-          stilt.translate(0, stiltHeight / 2, 0);
-          if (useRoofFit ? rotY : mapRotation) stilt.rotateY(useRoofFit ? rotY : mapRotation);
+          const stilt = new THREE.CylinderGeometry(0.045, 0.045, curStiltHeight, 6);
+          stilt.translate(0, curStiltHeight / 2, 0);
+          if (mapRotation) stilt.rotateY(mapRotation);
           stilt.translate(sx, baseRoofY, sz);
           geos.push(paintGeometry(stilt, 0x546e7a, variant));
 
-          // 頂部支撐縱樑 (Mounting rail)：與面板同傾角，貼合屋頂斜率（先旋轉後平移，避免繞原點公轉位移）
+          // 頂部支撐縱樑 (Mounting rail)：與面板同傾角（黃道面日照傾角）
           const rail = new THREE.BoxGeometry(0.06, 0.08, 0.85);
-          if (useRoofFit) {
-            rail.rotateX(fit.pitch); rail.rotateZ(fit.roll);
-            if (rotY) rail.rotateY(rotY);
-          } else {
-            rail.rotateX(eclipticTilt);
-            if (mapRotation) rail.rotateY(mapRotation);
-          }
-          rail.translate(sx, baseRoofY + stiltHeight, sz);
+          rail.rotateX(eclipticTilt);
+          if (mapRotation) rail.rotateY(mapRotation);
+          rail.translate(sx, baseRoofY + curStiltHeight, sz);
           geos.push(paintGeometry(rail, 0x78909c, variant));
         } else {
-          // 直接建立：兩側角鋼腳架，腳底各自踩在屋頂面上，面板貼合斜率（腳架保持直立，僅高度跟坡）
-          const standRot = useRoofFit ? rotY : mapRotation;
+          // 直接建立：兩側角鋼腳架，腳底各自踩在屋頂面上，面板保持日照傾角，腳架保持直立隨坡度延伸
+          const standRot = mapRotation;
           for (const side of [-0.55, 0.55]) {
             const fx = sx + Math.cos(standRot) * side, fz = sz - Math.sin(standRot) * side;
             const footY = getRoofElevation(fx, fz, poly, roofForm, metrics, topY, height);
@@ -1710,13 +1703,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
 
         const panel = new THREE.BoxGeometry(1.5, 0.06, 1.0);
         panel.userData.partType = 'solar_panel';
-        if (useRoofFit) {
-          panel.rotateX(fit.pitch); panel.rotateZ(fit.roll);
-          if (rotY) panel.rotateY(rotY);
-        } else {
-          panel.rotateX(eclipticTilt);
-          if (mapRotation) panel.rotateY(mapRotation);
-        }
+        panel.rotateX(eclipticTilt);
+        if (mapRotation) panel.rotateY(mapRotation);
         panel.translate(sx, panelY, sz);
         geos.push(paintGeometry(panel, 0x1a237e, variant));
       }

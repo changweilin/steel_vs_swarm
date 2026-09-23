@@ -133,8 +133,8 @@ export function buildOsmAreaObjects(group, areas = [], options = {}) {
     if (!make) continue;
     const geos = make();
     const y = Number(options.heightAt?.(p.x, p.z)) || 0;
-    // OSM 太陽能電廠貼地形起伏，其餘用地物件維持直立
-    const ry = translateGeos(geos, p.x, y, p.z, index + String(p.sourceId).length, shapeKey === 'solar', options.heightAt);
+    // OSM 太陽能電廠順著地形高程鋪設，面向角度保持不變；其餘用地物件維持直立
+    const ry = translateGeos(geos, p.x, y, p.z, index + String(p.sourceId).length, false, options.heightAt);
     let batch = batches.get(cls.generator);
     if (!batch) batches.set(cls.generator, batch = { row, geos: [] });
     batch.geos.push(...geos);

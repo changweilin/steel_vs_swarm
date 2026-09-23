@@ -1941,8 +1941,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         const c = Math.cos(finalRy), s = Math.sin(finalRy);
         const glx = c * gx - s * gz, glz = s * gx + c * gz;
         const clamp = (v) => Math.max(-0.45, Math.min(0.45, v));
-        if (type === 'solarpanel' && slope < 0.03) {
-          // 接近水平地面：向太陽黃道面方向傾斜，角度根據緯度以最科學的角度處理
+        if (type === 'solarpanel') {
+          // 斜坡/起伏地面：順著地勢高程鋪設 (y = low/heightAt)，但太陽能板角度面向角度保持不變（依緯度向黃道面科學傾斜）
           const latDeg = terrain?.center?.lat ?? 25.0;
           const sciTilt = optimalSolarTiltRad(latDeg);
           const targetWorldAz = (latDeg >= 0 ? 0 : Math.PI); // +z 為南
@@ -1950,7 +1950,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           ptx = sciTilt * Math.cos(relAz);
           ptz = sciTilt * Math.sin(relAz);
         } else {
-          // 起伏地形：沿著地形斜坡鋪設
+          // 其餘線性/列陣件起伏地形：沿著地形斜坡鋪設
           ptx = clamp(-Math.atan(glz));
           ptz = clamp(Math.atan(glx));
         }
