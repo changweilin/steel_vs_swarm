@@ -102,13 +102,20 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
     const roof = (.9 + crestWave * .09) * (1 - rearBlend)
       + bufferRoof(wx, wz) * rearBlend;
     const y = d >= fill.crest ? Math.max(ground - .4, crest + height * roof) : d === 0 ? front - .4 : top;
+    // 自然岩類 terminal 端（fill joins 缺席）整斷面收谷：本體＋後方緩衝屋頂一起落地；
+    // 相接端（joins 存在）不動故連續性不變；lo/hi 照地形取樣不動，不碰碰撞。
+    const taperLen = Math.min(len / 2, depth);
+    const termEnv = def.rock !== true ? 1 : Math.min(
+      !joins[0] ? smooth(Math.max(0, Math.min(1, (u + len / 2) / taperLen))) : 1,
+      !joins[1] ? smooth(Math.max(0, Math.min(1, (len / 2 - u) / taperLen))) : 1);
+    const yy = (ground - .4) + (y - (ground - .4)) * termEnv;
     const tint = ROCK_SEASON_TINT[season] || ROCK_SEASON_TINT.summer;
     const color = [16, 8, 0].map(shift => {
       let c = (def.color >> shift) & 255;
       if (natural) c = c * (1 - blend / 2) + (((SLOPE_BOUNDARIES[end.kind].color >> shift) & 255)) * blend / 2;
       return linear(c / 255 * (.9 + wave * .07) * ((tint >> shift) & 255) / 255);
     });
-    return { p: [ca * (wx - x) - sa * (wz - z), y, sa * (wx - x) + ca * (wz - z)], bottom: Math.min(ground, y) - .4, color };
+    return { p: [ca * (wx - x) - sa * (wz - z), yy, sa * (wx - x) + ca * (wz - z)], bottom: Math.min(ground, yy) - .4, color };
   }));
   if (!valid) return null;
   const parts = [], bufferParts = [];
@@ -214,6 +221,14 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
     if (local > -len / 2 + 1e-6 && local < len / 2 - 1e-6) stations.push(local);
   }
   stations.sort((a, b) => a - b);
+  // End caps are only closures; matching modules share the complete same end ring.
+  const jList = joins || fill?.joins;
+  const capStart = !jList?.[0] || jList[0].kind !== kind;
+  const capEnd = !jList?.[1] || jList[1].kind !== kind;
+  // 自然岩類封蓋端收谷：同款相接處不斷（端環完全一致），封蓋端才以包絡落地；
+  // 人造牆堤維持俐落端面。只動 rise（地形 base 與 lo/hi 包絡不動，不碰碰撞）。
+  const sstep = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+  const taperLen = Math.min(len / 2, depth);
   const vertices = [], colors = [], faces = [], n = def.section.length;
   let lo = Infinity, hi = -Infinity;
   for (const u of stations) for (const [dz, level] of def.section) {
@@ -224,7 +239,9 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
     lo = Math.min(lo, base); hi = Math.max(hi, base);
     const wave = (Math.sin(wx * .081 + wz * .043) + Math.sin(wx * .027 - wz * .069)) / 2;
     const relief = def.relief ? .62 + Math.cos(wx * .16 + wz * .12) * .37 : def.rock ? .9 + wave * .09 : 1;
-    const rise = level * h * relief;
+    const endEnv = def.rock !== true ? 1 : Math.min(capStart ? sstep((u + len / 2) / taperLen) : 1,
+      capEnd ? sstep((len / 2 - u) / taperLen) : 1);
+    const rise = level * h * relief * endEnv;
     vertices.push(u, base + (level === 0 ? -.4 : rise), v);
     const shade = def.rock ? .87 + wave * .1 + level * .03 : .93 + level * .05 + wave * .02;
     const tint = def.rock ? ROCK_SEASON_TINT[season] || ROCK_SEASON_TINT.summer : 0xffffff;
@@ -234,10 +251,6 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
     const a = i * n + j, b = i * n + (j + 1) % n, c = b + n, d = a + n;
     faces.push(a, b, d, b, c, d);
   }
-  // End caps are only closures; matching modules share the complete same end ring.
-  const jList = joins || fill?.joins;
-  const capStart = !jList?.[0] || jList[0].kind !== kind;
-  const capEnd = !jList?.[1] || jList[1].kind !== kind;
   for (let j = 1; j < n - 1; j++) {
     if (capStart) faces.push(0, j + 1, j);
     if (capEnd) {

@@ -410,33 +410,34 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
 
 // 狹長型邊界各突起波峰／波谷／誤差範圍（相對高度比例）：為邊界設計的狹長地形
 // （懸崖峭壁／連續斷層面類）起伏極小、波谷維持高位；堆積／侵蝕類起伏較大。
-// peak 下限恆 ≥ valley 上限，避免峰谷反轉。err 為雜訊倍率：斷層類等特定幾何
-// 圖形誤差小，隨機性高的地質（冰磧／土堆／惡地／沙丘）誤差大。
+// peak 下限恆 ≥ valley 上限，避免峰谷反轉（斷層類受此約束取樣寬度較小）。
+// err 為雜訊倍率兼波峰增益刻度：斷層類等特定幾何圖形誤差小，隨機性高的地質
+// （冰磧／土堆／惡地／沙丘）誤差大；增益幅度按 err 均值等比、上限 50%。
 export const ELONGATED_RELIEF = Object.freeze({
-  cliff: { peak: [.88, 1], valley: [.70, .86], err: [.20, .50] },
-  basalt: { peak: [.85, 1], valley: [.65, .83], err: [.20, .50] },
-  fin: { peak: [.85, 1], valley: [.65, .83], err: [.25, .55] },
-  mountain: { peak: [.75, 1], valley: [.30, .55], err: [.60, 1] },
+  cliff: { peak: [.86, 1], valley: [.70, .86], err: [.20, .50] },
+  basalt: { peak: [.83, 1], valley: [.65, .83], err: [.20, .50] },
+  fin: { peak: [.83, 1], valley: [.65, .83], err: [.25, .55] },
+  mountain: { peak: [.60, 1], valley: [.30, .55], err: [.60, 1] },
   moraine: { peak: [.60, .95], valley: [.25, .50], err: [.80, 1.3] },
   mound: { peak: [.55, .90], valley: [.25, .50], err: [.80, 1.3] },
-  island: { peak: [.70, 1], valley: [.35, .60], err: [.50, .90] },
+  island: { peak: [.60, 1], valley: [.35, .60], err: [.50, .90] },
   // 一般地質拉狹長型：高低變化大的連綿起伏，波谷可低至一成高度。
-  granite: { peak: [.80, 1], valley: [.10, .32], err: [.50, .90] },
-  sandstone: { peak: [.75, 1], valley: [.12, .35], err: [.50, .90] },
-  tor: { peak: [.70, 1], valley: [.10, .30], err: [.60, 1] },
-  spire: { peak: [.85, 1], valley: [.15, .35], err: [.50, .90] },
-  karst: { peak: [.70, 1], valley: [.15, .35], err: [.50, .90] },
+  granite: { peak: [.60, 1], valley: [.10, .32], err: [.50, .90] },
+  sandstone: { peak: [.60, 1], valley: [.12, .35], err: [.50, .90] },
+  tor: { peak: [.60, 1], valley: [.10, .30], err: [.60, 1] },
+  spire: { peak: [.60, 1], valley: [.15, .35], err: [.50, .90] },
+  karst: { peak: [.60, 1], valley: [.15, .35], err: [.50, .90] },
   marble: { peak: [.65, .95], valley: [.15, .35], err: [.50, .90] },
   dune: { peak: [.45, .85], valley: [.10, .30], err: [.70, 1.1] },
   crater: { peak: [.55, .90], valley: [.10, .30], err: [.50, .90] },
   badlands: { peak: [.60, .95], valley: [.12, .32], err: [.80, 1.2] },
-  rocktower: { peak: [.75, 1], valley: [.12, .32], err: [.50, .90] },
-  granite_towers: { peak: [.75, 1], valley: [.12, .32], err: [.50, .90] },
-  conglomerate: { peak: [.75, 1], valley: [.12, .32], err: [.50, .90] },
-  inselberg: { peak: [.75, 1], valley: [.12, .32], err: [.50, .90] },
+  rocktower: { peak: [.60, 1], valley: [.12, .32], err: [.50, .90] },
+  granite_towers: { peak: [.60, 1], valley: [.12, .32], err: [.50, .90] },
+  conglomerate: { peak: [.60, 1], valley: [.12, .32], err: [.50, .90] },
+  inselberg: { peak: [.60, 1], valley: [.12, .32], err: [.50, .90] },
   reef: { peak: [.40, .80], valley: [.10, .30], err: [.60, 1] },
   river: { peak: [.40, .80], valley: [.10, .30], err: [.60, 1] },
-  default: { peak: [.70, 1], valley: [.30, .55], err: [.50, 1] },
+  default: { peak: [.60, 1], valley: [.30, .55], err: [.50, 1] },
 });
 
 // 狹長型邊界單體起伏參數:一次使用、沿長軸連續。突起數量與起伏程度由長寬比推導,
@@ -462,10 +463,14 @@ export function elongatedGeologyParams(len, depth, seed) {
 
 // 狹長型邊界連續起伏網格:以任意自然地形為基底(profile 唯一縫),沿長軸重複其造型,
 // 每個突起抽取各自的隨機波峰、每道分界抽取各自的隨機波谷（範圍見 ELONGATED_RELIEF），
-// 波長與起伏量（波峰−波谷）正相關（落差愈大波長愈長，另帶隨機抖動），雜訊再乘 per-bump 誤差倍率。
+// 首尾兩端恆為波谷且高度為 0（落地）；波長與起伏量（波峰−波谷）正相關
+// （落差愈大波長愈長，另帶隨機抖動），雜訊再乘 per-bump 誤差倍率；
+// 波峰有效高度另乘 per-bump 增益（由同一次 err 取樣正規化，幅度按地質 err 均值等比、
+// 上限 50%，斷層類小得多），無新增取樣、不推移 BUMP 串流（首尾壓零為覆寫，不少抽）。
 // 單一網格、零共享亂數;幾何與季節無關,色調由 tint 決定。
 // 回傳 { meshData, size, params, undulation, heightAt }:size 為 [len, peakY, depth],網格基底 y0 = 0;
-// undulation.wavelengths 以公尺計，加總等於 len。
+// undulation.wavelengths 以公尺計，加總等於 len；undulation.peaks 為增益後有效波峰，
+// undulation.valleys 首尾恆為 0，undulation.gains 為 per-bump 增益。
 export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0xffffff } = {}) {
   const s = GEOLOGY_TYPES[type];
   if (!s) throw new RangeError(`Unknown geology type: ${type}`);
@@ -478,16 +483,30 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
   const { bumps, relief, sharp, phases } = params;
   const cfg = ELONGATED_RELIEF[type] || ELONGATED_RELIEF.default;
   const brnd = mulberry32((seed ^ 0x42554d50) >>> 0);
-  const peaks = Array.from({ length: bumps },
+  const sampledPeaks = Array.from({ length: bumps },
     () => cfg.peak[0] + brnd() * (cfg.peak[1] - cfg.peak[0]));
   const valleys = Array.from({ length: bumps + 1 },
     () => cfg.valley[0] + brnd() * (cfg.valley[1] - cfg.valley[0]));
-  const rawWave = peaks.map((peak, k) => (0.35 + 2.2 * (peak - (valleys[k] + valleys[k + 1]) / 2))
+  // 首尾兩端恆為波谷 0m：維持取樣次數（不推移後續波谷／波長抖動），覆寫為 0。
+  valleys[0] = 0;
+  valleys[bumps] = 0;
+  const rawWave = sampledPeaks.map((peak, k) => (0.35 + 2.2 * (peak - (valleys[k] + valleys[k + 1]) / 2))
     * (0.9 + 0.2 * brnd()));
   const waveSum = rawWave.reduce((a, b) => a + b, 0);
   const wavelengths = rawWave.map(w => w / waveSum * len);
   const errors = Array.from({ length: bumps },
     () => cfg.err[0] + brnd() * (cfg.err[1] - cfg.err[0]));
+  // per-bump 波峰增益：由同一次 err 取樣正規化，幅度按該地質 err 均值等比縮放、
+  // 上限 50%（僅 err 最大的冰磧／土堆取滿；斷層／峭壁類小得多），不新增取樣。
+  // 斷層類取樣寬度另受「peak 下限 ≥ valley 上限」約束，落差主要由此增益提供。
+  const errSpan = cfg.err[1] - cfg.err[0];
+  const errMeanMax = Math.max(...Object.values(ELONGATED_RELIEF).map(c => (c.err[0] + c.err[1]) / 2));
+  const half = 0.25 * ((cfg.err[0] + cfg.err[1]) / 2) / errMeanMax;
+  const gains = errors.map(err => errSpan > 0 ? (1 - half) + ((err - cfg.err[0]) / errSpan) * 2 * half : 1);
+  // 有效波峰嚴格高於相鄰波谷（+0.05：覆蓋鞍谷不對稱與長波負向擺動，避免拍平或反轉）；
+  // 首尾兩突起恆為全高：端格地坪自 0 陡升，唯有全高峰能確保其尾鞍（頭鞍）仍為波谷。
+  const peaks = sampledPeaks.map((peak, k) => (k === 0 || k === bumps - 1) ? 1 : Math.min(1,
+    Math.max(Math.max(valleys[k], valleys[k + 1]) + 0.05, peak * gains[k])));
   const bounds = [0];
   for (const w of wavelengths) bounds.push(bounds[bounds.length - 1] + w);
   bounds[bumps] = len;
@@ -511,6 +530,10 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     const k = (.80 + .20 * t) * shade;
     return [16, 8, 0].map((shift, i) => linear(clamp(((s.color >> shift) & 255) / 255 * k * tintCh[i], 0, 1)));
   };
+  // 頭尾落地包絡：兩端各半個波長內 smoothstep 收至 0，突起中心處恆為 1。
+  const taperL = Math.max(1e-9, wavelengths[0] / 2);
+  const taperR = Math.max(1e-9, wavelengths[bumps - 1] / 2);
+  const smooth01 = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
   let peakY = 0;
   for (let ix = 0; ix <= nx; ix++) {
     const u = ix / nx * 2 - 1;
@@ -520,6 +543,11 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     const blend = frac * frac * (3 - 2 * frac);
     const floor = valleys[cell] + (valleys[cell + 1] - valleys[cell]) * blend;
     const crest = peaks[cell], err = errors[cell];
+    const xx = ix / nx * len;
+    const env = Math.min(smooth01(xx / taperL), smooth01((len - xx) / taperR));
+    // 縱向窗：抬升與長波起伏在分界處歸零（邊界渲染為谷底高），突起中心處恆為 1。
+    const win = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 0.7);
+    const winR = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 2);
     for (let iz = 0; iz <= nz; iz++) {
       const v = iz / nz * 2 - 1;
       const base = profile(type, lu * .92, v * .92, p);
@@ -529,8 +557,8 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
         * p.roughness * (1 - p.erosion * .5) * base * err;
       const cross = Math.pow(Math.max(0, Math.cos(v * Math.PI / 2)), .5 * sharp);
       const y = Math.max(0, Math.min(1,
-        (floor + (crest - floor) * Math.min(1, Math.max(0, base + noise))) * (.72 + .28 * cross)
-        + relief * .04 * Math.sin(u * bumps * Math.PI + phases[2]) * cross));
+        (floor + (crest - floor) * Math.min(1, Math.max(0, base + noise)) * win) * (.72 + .28 * cross)
+        + relief * .02 * Math.sin(u * bumps * Math.PI + phases[2]) * cross * winR)) * env;
       const yy = Math.min(height, y * height);
       peakY = Math.max(peakY, yy);
       grid[top(ix, iz)] = yy;
@@ -567,13 +595,17 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
   // 脊頂高度取樣器(u, v ∈ [-1, 1])：覆蓋層（倒木等）落地用，與網格同一份高度。
   const heightAt = (u, v) => {
     if (!Number.isFinite(u) || !Number.isFinite(v)) return NaN;
-    const gx = Math.max(0, Math.min(nx - 1e-9, (u + 1) / 2 * nx));
-    const gz = Math.max(0, Math.min(nz - 1e-9, (v + 1) / 2 * nz));
-    const ix = Math.floor(gx), iz = Math.floor(gz), fu = gx - ix, fv = gz - iz;
+    const gxRaw = (u + 1) / 2 * nx, gzRaw = (v + 1) / 2 * nz;
+    // 兩端恰好落地：u=±1 直接取邊界列，避免雙線性跨格帶入鄰列浮點殘值。
+    const gx = gxRaw <= 0 ? 0 : gxRaw >= nx ? nx : Math.min(nx - 1e-9, gxRaw);
+    const gz = Math.max(0, Math.min(nz - 1e-9, gzRaw));
+    const iz = Math.floor(gz), fv = gz - iz;
+    const ix = gxRaw <= 0 ? 0 : gxRaw >= nx ? nx - 1 : Math.floor(gx);
+    const fu = gxRaw <= 0 ? 0 : gxRaw >= nx ? 1 : gx - ix;
     const a = grid[top(ix, iz)], b = grid[top(ix + 1, iz)];
     const c = grid[top(ix, iz + 1)], d = grid[top(ix + 1, iz + 1)];
     return a + (b - a) * fu + (c - a) * fv + (a - b - c + d) * fu * fv;
   };
   return { meshData: { vertices, faces, colors }, size, params,
-    undulation: { peaks, valleys, wavelengths, errors }, heightAt };
+    undulation: { peaks, valleys, wavelengths, errors, gains }, heightAt };
 }

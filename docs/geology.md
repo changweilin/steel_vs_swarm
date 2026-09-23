@@ -287,6 +287,11 @@ const mesh = makeRuntimePartModel(entry);
 （`floor(aspect/3)`–`ceil(aspect/1.2)` 隨機範圍）與鞍部深度（愈狹長谷底愈低）；
 每個突起抽取各自的隨機波峰、每道分界抽取各自的隨機波谷，範圍見 `ELONGATED_RELIEF`
 （懸崖峭壁／玄武岩／刃脊等邊界斷層面類起伏極小、波谷維持高位；山巒／冰磧／土堆／島礁類起伏較大）；
+首尾兩道分界恆為波谷 0m，網格兩端另以半波長 smoothstep 包絡落地（`heightAt(±1,·)=0`）；
+首尾兩突起恆為全高（端格地坪自 0 陡升，唯全高峰能保其相鄰分界仍為波谷）；
+波峰有效高度另乘 per-bump 增益（同一次 err 取樣正規化，增益極端差按地質 err 均值等比、
+上限 50%——僅冰磧／土堆取滿，斷層／峭壁類小得多），並嚴格高於相鄰波谷 +0.05；
+抬升與長波起伏（0.02）乘縱向窗，分界處歸零、突起中心不變，分界渲染即谷底高；
 波長與起伏量（波峰−波谷）正相關，雜訊再乘 per-bump 誤差倍率（斷層類誤差小、
 隨機性高的冰磧／土堆／惡地／沙丘誤差大）；
 `elongatedGeologyMesh(type, seed, { len, depth, height, tint })` 以任意自然地形為基底、
@@ -295,6 +300,11 @@ const mesh = makeRuntimePartModel(entry);
 `narrowGeologyBoundary` 是邊界唯一使用入口（土石流／崩塌地另帶 1–3 株谷底倒木）。
 假山群（`rockery`）按種子輪用一般地質（花崗岩／砂岩／節理岩堆／山巒，見 `ROCKERY_BASES`）
 拉狹長型，波谷可低至一成高度，形成高低變化大的連綿起伏。
+實機邊界走 `edgeSlope.buildSlopeBoundary` 的稜柱款（`cliff`／`landslide`／`debris`／連綿草丘等，
+`terrainFit` 使然）同樣守端部成谷：僅自然岩類（`def.rock`）封蓋端以包絡收至地面，
+同款相接處端環完全一致不斷，人造牆堤端面不動；填充路徑 terminal 端整斷面
+（含後方緩衝屋頂）一起落地。只動高程、地形 base 與 lo/hi 包絡、頂點數不動，
+不碰碰撞（`test/edgeSlope.mjs` 1200 縫、`tools/audit_edge_fill.mjs` 216 縫仍綠）。
 
 ## 驗證
 
