@@ -112,7 +112,10 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
       mesh(sectionMesh(vProfile, wallT), side * (len / 2 - wallT / 2 - wallInset), 0, 0, wallColor, 'architecture-wall');
     }
   } else if (form === 'spire') {
-    add(['cyl', 0, Math.min(span, len) * .425, rise * 2.2, 8], 0, rise * 1.1);
+    // 圓錐屋頂完整覆蓋所有頂樓（含外伸簷角），以 L, S 外接圓為底半徑
+    const sides = Math.max(24, poly?.outer?.length >= 8 ? poly.outer.length : 24);
+    const coneR = Math.hypot(L, S) / (2 * Math.cos(Math.PI / sides));
+    add(['cyl', 0, coneR, rise * 2.2, sides], 0, rise * 1.1);
   } else if (form === 'shed') {
     const shedProfile = [[-S/2, 0], [S/2, rise * .85]];
     section(shedProfile);

@@ -136,7 +136,21 @@ export function computeOrientedRoofFrame(poly) {
     const q = outer[(i + 1) % outer.length];
     return sum + p[0] * q[1] - q[0] * p[1];
   }, 0)) / 2;
-  return bestArea > 0 && area / bestArea >= 0.95 ? bestFrame : null;
+  const isRectangular = bestArea > 0 && area / bestArea >= 0.95;
+  let isRound = false;
+  if (!isRectangular && outer.length >= 6 && bestFrame) {
+    const aspect = Math.max(bestFrame.len, bestFrame.span) / Math.max(0.1, Math.min(bestFrame.len, bestFrame.span));
+    if (aspect <= 1.25) {
+      let p = 0;
+      for (let i = 0, j = outer.length - 1; i < outer.length; j = i++) {
+        p += Math.hypot(outer[i][0] - outer[j][0], outer[i][1] - outer[j][1]);
+      }
+      if (p > 0 && (4 * Math.PI * area) / (p * p) >= 0.82) {
+        isRound = true;
+      }
+    }
+  }
+  return (isRectangular || isRound) ? bestFrame : null;
 }
 
 /** 計算建築多邊形量測指標（面積、跨度、長寬、長寬比、邊界與質心） */
@@ -252,6 +266,45 @@ export const ROOF_APPURTENANCE_COMPATIBILITY = Object.freeze({
 });
 
 /**
+ * 判斷建物是否為圓形/柱狀或塔形建築
+ * 1. 塔形建築：高瘦比顯著（height / span >= 2.0，或 height >= 16 且 span <= 8）或明確標記為塔
+ * 2. 圓形建築：長寬比接近 1 (aspect <= 1.25) 且外環具備高圓度 (正六邊形/八邊形/圓形 circularity >= 0.82) 或明確標記為圓形
+ */
+export function isRoundOrTower(metrics, height = 10) {
+  if (!metrics) return false;
+  if (metrics.isTower || metrics.isRound || metrics.shape === 'round' || metrics.shape === 'cylinder' || metrics.shape === 'circle') {
+    return true;
+  }
+  const span = metrics.span || Math.min(metrics.width || 10, metrics.depth || 10);
+  const aspect = metrics.aspect || 1.0;
+  // 1. 塔形建築判定 (高瘦比)
+  if (span > 0 && (height / span >= 2.0 || (height >= 16 && span <= 8))) {
+    return true;
+  }
+  // 2. 圓形/多邊柱狀建築判定 (長寬比接近 1 且環頂點密集度或圓度高)
+  const outer = metrics.outer;
+  if (outer && outer.length >= 6 && aspect <= 1.25) {
+    let p = 0;
+    for (let i = 0, j = outer.length - 1; i < outer.length; j = i++) {
+      p += Math.hypot(outer[i][0] - outer[j][0], outer[i][1] - outer[j][1]);
+    }
+    const area = metrics.area || 0;
+    if (p > 0 && area > 0) {
+      const circularity = (4 * Math.PI * area) / (p * p);
+      if (circularity >= 0.82) return true;
+    }
+    const cx = metrics.cx ?? 0, cz = metrics.cz ?? 0;
+    const radii = outer.map(pt => Math.hypot(pt[0] - cx, pt[1] - cz));
+    const meanR = radii.reduce((a, b) => a + b, 0) / radii.length;
+    if (meanR > 0) {
+      const maxDiff = Math.max(...radii.map(r => Math.abs(r - meanR)));
+      if (maxDiff / meanR <= 0.18) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * 依長寬高與面積決定屋頂類型並調整適當大小
  * 若長寬高比例不對或面積過大，避免使用容易被扭曲的屋頂構造（如超大基地硬塞廡殿/歇山，或細長建物硬塞圓頂）
  */
@@ -293,6 +346,14 @@ export function resolveAdaptiveRoofForm(requestedForm, metrics, height = 10, cat
     if (['xieshan', 'tiered', 'mansard', 'wudian', 'steep_gable', 'crowstep', 'gambrel', 'butterfly'].includes(requestedForm)) {
       return 'shed';
     }
+  }
+
+  // 5. 圓錐屋頂 (spire) 限制：僅限圓形建築或塔形建築
+  // 非圓形且非塔形建物請求圓錐屋頂時，依類型降級為鋸齒/平頂/雙坡
+  if (requestedForm === 'spire' && !isRoundOrTower(metrics, height)) {
+    if (category === 'industrial') return 'sawtooth';
+    if (category === 'commercial') return 'flat';
+    return 'gable';
   }
 
   return requestedForm;

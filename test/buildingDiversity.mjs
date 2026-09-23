@@ -10,6 +10,7 @@ import {
   ROOF_FORMS, FACADE_TYPES, BUILDING_FUNCTION_RANGES, CULTURAL_AFFINITY_RATIO,
   APPURTENANCE_RULES, calculateFootprintMetrics, ROOF_APPURTENANCE_COMPATIBILITY,
   resolveAdaptiveRoofForm, distanceToPolyBoundary, isSiteValid, computeOrientedRoofFrame,
+  isRoundOrTower,
 } from '../public/js/architectureStyles.js';
 
 // 1. 基礎地形情境比例驗證（無文化區域指定時維持原分佈）
@@ -234,6 +235,41 @@ const normalMetrics = { area: 240, span: 12, aspect: 1.3 };
 assert.equal(resolveAdaptiveRoofForm('wudian', normalMetrics, 14, 'tourism'), 'wudian');
 assert.equal(resolveAdaptiveRoofForm('xieshan', normalMetrics, 14, 'tourism'), 'xieshan');
 assert.equal(resolveAdaptiveRoofForm('dome', normalMetrics, 14, 'tourism'), 'dome');
+
+// (f) 圓錐屋頂 (spire) 限制：僅限圓形建築或塔形建築，且圓錐底座覆蓋整座頂樓
+// 非圓形、非塔形之一般平地建物禁止使用圓錐屋頂，自動降級至雙坡/平頂/鋸齒
+assert.equal(resolveAdaptiveRoofForm('spire', normalMetrics, 14, 'residential'), 'gable', '一般長方形住宅不得使用圓錐頂，轉為雙坡');
+assert.equal(resolveAdaptiveRoofForm('spire', normalMetrics, 14, 'commercial'), 'flat', '一般長方形商業樓不得使用圓錐頂，轉為平頂');
+assert.equal(resolveAdaptiveRoofForm('spire', normalMetrics, 14, 'industrial'), 'sawtooth', '一般長方形工業廠房不得使用圓錐頂，轉為鋸齒');
+
+// 高瘦塔形建築 (height / span >= 2.0) 允許使用圓錐屋頂
+const towerMetrics = { area: 36, span: 6, aspect: 1.0 };
+assert.equal(isRoundOrTower(towerMetrics, 18), true, '高瘦塔形建築判定為真 (height/span = 3.0)');
+assert.equal(resolveAdaptiveRoofForm('spire', towerMetrics, 18, 'residential'), 'spire', '塔形建築保留圓錐屋頂');
+
+// 圓形/正多邊形建築允許使用圓錐屋頂
+const circleOuter = Array.from({ length: 16 }, (_, i) => {
+  const a = (i * 2 * Math.PI) / 16;
+  return [10 + 6 * Math.cos(a), 10 + 6 * Math.sin(a)];
+});
+const roundPoly = { outer: circleOuter, holes: [] };
+const roundMetrics = calculateFootprintMetrics(roundPoly);
+assert.equal(isRoundOrTower(roundMetrics, 10), true, '正16邊形圓形建築判定為真');
+assert.equal(resolveAdaptiveRoofForm('spire', roundMetrics, 10, 'residential'), 'spire', '圓形建築保留圓錐屋頂');
+
+// 驗證圓錐屋頂構件幾何底面半徑完整覆蓋所有頂樓（含屋簷外角）
+const { architecturalRoofParts } = await import('../public/js/architectureRoofParts.js');
+const squareTowerPoly = { outer: [[0, 0], [6, 0], [6, 6], [0, 6]], holes: [] };
+const spireParts = architecturalRoofParts(squareTowerPoly, 18, { roof: 0x444d5c }, 'spire', towerMetrics, 18);
+assert.ok(spireParts.length > 0, '塔形建築成功生成圓錐屋頂構件');
+const [cylType, topR, bottomR, coneH, coneSides] = spireParts[0].g;
+assert.equal(cylType, 'cyl');
+assert.equal(topR, 0, '圓錐尖端半徑為 0');
+assert.ok(coneSides >= 24, '圓錐面細分度至少 24');
+const { roofDimensions } = await import('../public/js/roofProfiles.js');
+const { eave } = roofDimensions(6, 18);
+const cornerDist = Math.hypot((6 + eave * 2) / 2, (6 + eave * 2) / 2);
+assert.ok(bottomR >= cornerDist, `圓錐底半徑 (${bottomR}) 必須完整覆蓋頂樓所有角落 (${cornerDist})`);
 
 // 8. 3D 幾何整合測試（若環境有 THREE_MODULE 與 THREE_BUFFER_UTILS 則執行）
 if (process.env.THREE_MODULE && process.env.THREE_BUFFER_UTILS) {
