@@ -19,6 +19,7 @@ import {
   touchCapable, ctrlModeText, VIEW_MODES, VIEW_MODE_KEYS, viewMode, setViewMode, onViewModeChange,
 } from './ctrlmode.js';
 import { tipHTML } from './tip.js';
+import { LOOK_PREFS, lookPref, setLookPref, onLookPrefChange } from './lookPrefs.js';
 
 /* ---------------- 裝置判定 ---------------- */
 // 判定本身住 `ctrlmode.js`(操作方式唯一真相縫):本檔只轉呼,MUST NOT 在這裡再寫一份
@@ -788,6 +789,26 @@ export function renderCtrlSettings(mount, opts = {}) {
       notice(`畫面慣用手:${HAND_LABEL[screenHandedness()]}`, 3000);
     });
   }
+
+  // 視角方向反轉(滑鼠 / 九宮格 / 觸控拖曳 / 視角搖桿 / 陀螺儀 / 觀戰自由視角共用):
+  // 值住 lookPrefs.js(唯一真相),此處只渲染開關 —— 大廳 / 戰場 / 手機面板三處共用同一份。
+  for (const k of ['invertX', 'invertY']) {
+    const d = LOOK_PREFS[k];
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    row.innerHTML = `<span class="set-label">${_esc(d.label)}</span>`
+      + `<button class="switch tset-look-${k}" type="button" role="switch" aria-checked="false"`
+      + ` aria-label="${_esc(d.label)}"><span></span></button>`
+      + _tipDot(`tset-look-${k}-hint`);
+    mount.appendChild(row);
+    row.querySelector('.switch').addEventListener('click', (e) => {
+      const el = e.currentTarget;
+      const on = el.getAttribute('aria-checked') !== 'true';
+      setLookPref(k, on);
+      syncCtrlSettings();
+      notice(`${d.label}:${on ? '開' : '關'}`, 3000);
+    });
+  }
   _ctrlMounts.push(mount);
   syncCtrlSettings();
 }
@@ -850,8 +871,16 @@ export function syncCtrlSettings() {
     if (vh) {
       vh.dataset.tip = VIEW_MODES[curView]?.hint || '視角切換:第一人稱(座艙)/第三人稱(機體後方)';
     }
+    // 視角方向反轉:滑鼠 / 九宮格 / 觸控拖曳 / 視角搖桿 / 陀螺儀 / 觀戰自由視角共用同一對開關
+    for (const k of ['invertX', 'invertY']) {
+      const el = mount.querySelector(`.tset-look-${k}`);
+      if (el) el.setAttribute('aria-checked', lookPref(k) ? 'true' : 'false');
+      const hh2 = mount.querySelector(`.tset-look-${k}-hint`);
+      if (hh2) hh2.dataset.tip = LOOK_PREFS[k].hint;
+    }
   }
 }
+onLookPrefChange(() => syncCtrlSettings());
 
 /**
  * 把觸控設定列渲染進 mount(冪等:同一個 mount 只建一次)。

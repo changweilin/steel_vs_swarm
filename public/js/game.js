@@ -41,6 +41,7 @@ import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
 import { onCtrlChange, viewMode, setViewMode, onViewModeChange } from './ctrlmode.js';
+import { lookPref } from './lookPrefs.js';
 import { visualPref } from './visualPrefs.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
@@ -3123,28 +3124,36 @@ export class BattleClient {
   }
 
   /**
-   * 視角套用唯一縫(弧度增量)。滑鼠 movement、觸控拖曳、陀螺儀三種來源共用 ——
-   * 俯仰夾制只准住這裡,MUST NOT 在各輸入端各夾一次。
+   * 視角套用唯一縫(弧度增量)。滑鼠 movement、數字九宮格、觸控拖曳、視角搖桿、
+   * 陀螺儀、觀戰自由視角全部共用 ——
+   * 俯仰夾制與水平/垂直方向反轉只准住這裡,MUST NOT 在各輸入端各做一次。
+   * 系統驅動(視野鎖定自動追瞄)走 system=true 繞過反轉:反轉只反使用者手,不反系統。
    */
-  _applyLook(dYaw, dPitch) {
-    this.yaw += dYaw;
-    this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dPitch));
+  _applyLook(dYaw, dPitch, system = false) {
+    let ix = 1, iy = 1;
+    if (!system) {
+      ix = lookPref('invertX') ? -1 : 1;
+      iy = lookPref('invertY') ? -1 : 1;
+    }
+    this.yaw += dYaw * ix;
+    this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dPitch * iy));
   }
 
   /**
    * 數字九宮格持續按住 → 每幀以 dt 驅動視角,效果等同滑鼠 movementX/Y。
-   * 4/6 左右偏航;8/2 上下俯仰;斜向鍵 1/3/7/9 同時改兩軸。
+   * 4 左 / 6 右偏航;8 上 / 2 下俯仰;斜向鍵 1/3/7/9 同時改兩軸。
+   * 正向定義與滑鼠一致:右移向右、上移抬頭。方向反轉由 _applyLook 統一處理。
    * 俯仰夾制由 _applyLook 統一處理,此處不重複夾。
    */
   _tickNumpadLook(dt) {
     if (this.paused) return;
     const k = this.keys;
-    const dYaw   = (k.Numpad4 ? -1 : 0) + (k.Numpad6 ?  1 : 0)
-                 + (k.Numpad7 ? -1 : 0) + (k.Numpad9 ?  1 : 0)
-                 + (k.Numpad1 ? -1 : 0) + (k.Numpad3 ?  1 : 0);
-    const dPitch = (k.Numpad8 ? -1 : 0) + (k.Numpad2 ?  1 : 0)
-                 + (k.Numpad7 ? -1 : 0) + (k.Numpad1 ?  1 : 0)
-                 + (k.Numpad9 ? -1 : 0) + (k.Numpad3 ?  1 : 0);
+    const dYaw   = (k.Numpad4 ?  1 : 0) + (k.Numpad6 ? -1 : 0)
+                 + (k.Numpad7 ?  1 : 0) + (k.Numpad9 ? -1 : 0)
+                 + (k.Numpad1 ?  1 : 0) + (k.Numpad3 ? -1 : 0);
+    const dPitch = (k.Numpad8 ?  1 : 0) + (k.Numpad2 ? -1 : 0)
+                 + (k.Numpad7 ?  1 : 0) + (k.Numpad1 ? -1 : 0)
+                 + (k.Numpad9 ?  1 : 0) + (k.Numpad3 ? -1 : 0);
     if (!dYaw && !dPitch) return;
     const LOOK_SPEED = 1.4;   // rad/s;與 mousemove 0.0023 px⁻¹ 等效的手感速率
     this._applyLook(dYaw * LOOK_SPEED * dt, dPitch * LOOK_SPEED * dt);
@@ -5925,8 +5934,8 @@ export class BattleClient {
     dYaw = Math.atan2(Math.sin(dYaw), Math.cos(dYaw));           // 收進 ±π,免得繞遠路轉一圈
     const dPitch = Math.atan2(dy, flat) - this.pitch;
     // 每幀轉多少 = `data.js viewLockStep`(唯一縫:逼近係數與角速度上限取小者),兩軸同吃;
-    // 套用走 `_applyLook`(視角套用唯一縫,俯仰夾制只住那裡)。
-    this._applyLook(viewLockStep(dYaw, dt), viewLockStep(dPitch, dt));
+    // 套用走 `_applyLook`(視角套用唯一縫,俯仰夾制只住那裡;系統追瞄繞過方向反轉)。
+    this._applyLook(viewLockStep(dYaw, dt), viewLockStep(dPitch, dt), true);
   }
 
   /** 鎖定中的鈕面亮燈:狀態唯一真相在此(比照 `body.mm-near`),觸控層不必自己記一份 */
