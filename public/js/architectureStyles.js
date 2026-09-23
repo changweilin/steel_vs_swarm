@@ -465,6 +465,41 @@ export function resolveWindowScheme(style = {}, buildingKey = '') {
       ornament: 'relief', protrudeKind: 'balcony',
     };
   }
+  // 低樓層疏窗：約兩成整棟無窗、約三成半稀疏窗（開間 8.5m、窗窄三成），
+  // 空出的整幅牆留給壁飾（爬藤）與外掛零件。只吃同棟雜湊，不消耗共享 rnd。
+  // 閘門：有明確層數／高度者才走（無層數的測試手寫 style 行為不變）；
+  // environment/ 展示件豁免（手工構圖保窗，見 environmentArchitecture 測試）。
+  const lowRise = (typeof style.levels === 'number' && style.levels <= 5) ||
+    (typeof style.targetHeight === 'number' && style.targetHeight <= 18);
+  if (lowRise && !key.startsWith('environment/')) {
+    const sRoll = f('lowsparse');
+    if (sRoll < 0.20) {
+      return {
+        mode: 'single', layout: 'curtain', shapes: ['rect'], w: 0.5, h: 0.45, frame: 'none',
+        rate: 0, lift: rule.lift || 0, dormer: false, oculusCross: false, bayStep: 8.5,
+        ornament: 'relief', protrudeKind: 'balcony',
+      };
+    }
+    if (sRoll < 0.55) {
+      const sparseShapes = [...new Set(rule.shapes)];
+      const sparseFrames = Array.isArray(rule.frame) && rule.frame.length ? rule.frame : ['none'];
+      const wBase = rule.w[0] + f('w') * (rule.w[1] - rule.w[0]);
+      const hBase = rule.h[0] + f('h') * (rule.h[1] - rule.h[0]);
+      // 稀疏窗同樣長寬比 ≤1.5（渲染層另有收斂，此處先合規）。
+      let sw = wBase * 0.7, sh = hBase * 0.9;
+      if (sw > sh * 1.5) sw = sh * 1.5;
+      else if (sh > sw * 1.5) sh = sw * 1.5;
+      return {
+        mode: 'single', layout: 'curtain',
+        shapes: [sparseShapes[Math.floor(f('lowsparse_shape') * sparseShapes.length)] || 'rect'],
+        w: sw, h: sh,
+        frame: sparseFrames[Math.floor(f('frame') * sparseFrames.length)] || 'none',
+        rate: rule.rate, lift: rule.lift || 0,
+        dormer: f('dormer') < (rule.dormer || 0), oculusCross: f('oculusCross') < 0.6,
+        bayStep: 8.5, ornament: 'relief', protrudeKind: 'balcony',
+      };
+    }
+  }
   // 外牆版式（非高層雜湊五五開）：'curtain' = 整面陣列滿鋪；'punctuated' = 每面牆每層
   // 固定窗數、窗間插浮雕／花磚／掛飾、夠寬再插陽台／雨遮外推。版式只吃 buildingKey
   // 雜湊，不消耗共享 rnd（§2.3），同棟跨幀跨端同值。

@@ -428,6 +428,9 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
       <details style="margin-bottom:8px; font-size: 11px; color:#475569;">
         <summary style="cursor:pointer; font-weight:600; color:#2563eb;">▸ 展開進階環境滑桿 (植被 / 侵蝕 / 地熱 / 坡度 / 斷層)</summary>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin-top: 6px; background:#fff; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+          <label>自然地質寬度 m（留空自動）<input type="number" id="geo-width" min="0.01" step="any" placeholder="自動"></label>
+          <label>自然地質深度 m（留空自動）<input type="number" id="geo-depth" min="0.01" step="any" placeholder="自動"></label>
+          <label>自然地質高度 m（受地貌比例限制）<input type="number" id="geo-height" min="0.01" step="any" placeholder="自動"></label>
           <label>濕度 <input type="range" id="geo-moisture" min="0" max="1" step="0.05" value="0.65"></label>
           <label>植被覆蓋 <input type="range" id="geo-vegetation" min="0" max="1" step="0.05" value="0.6"></label>
           <label>針葉林比 <input type="range" id="geo-conifers" min="0" max="1" step="0.05" value="0.3"></label>
@@ -2042,6 +2045,10 @@ function getGeologyInputs(seed = 0, idx = 0) {
     geothermal: parseFloat(document.querySelector('#geo-geothermal').value) || 0.5,
     activity: parseFloat(document.querySelector('#geo-activity').value) || 0.7,
   };
+  for (const key of ['width', 'depth', 'height']) {
+    const value = document.querySelector('#geo-' + key).value;
+    if (value !== '') input[key] = Number(value);
+  }
   return input;
 }
 

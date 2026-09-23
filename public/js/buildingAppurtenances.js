@@ -18,9 +18,148 @@ import {
   distanceToPolyBoundary,
   isSiteValid,
   computeOrientedRoofFrame,
+  resolveWindowScheme,
 } from './architectureStyles.js';
 
 export { distanceToSegment, distanceToPolyBoundary, isSiteValid };
+
+// 牆面渲染（含窗戶）與外掛零件不可重疊：以外牆局部座標 (u 沿牆，y 離地）
+// 重建與 architecturalFacadeParts 同格的窗玻璃佔位（同 scheme、同層高層數、
+// 同 aspect 收斂），外掛零件凡壓窗即跳過，壁飾 claims 亦含窗。
+function facadeGlassRects(edge, architecture, buildingKey, height) {
+  const length = edge.hw2 != null ? edge.hw2 * 2 : 0;
+  const h = edge.h ?? height;
+  if (!(length > 1e-5) || !(h > 0.5)) return [];
+  const scheme = resolveWindowScheme(architecture, buildingKey);
+  if (!(scheme.rate > 0)) return [];
+  const storeyH = architecture.functionalWindows?.storeyH || 3.2;
+  const floors = Math.max(1, Math.min(36, Math.round(h / storeyH)));
+  const punctuated = (scheme.layout || 'curtain') === 'punctuated';
+  let bays = punctuated
+    ? Math.max(1, Math.min(4, Math.round(length / 6)))
+    : Math.max(1, Math.min(10, Math.floor(length / scheme.bayStep)));
+  if (floors * bays > 140) bays = Math.max(1, Math.floor(140 / floors));
+  const bayW = length / bays, floorH = h / floors;
+  const rects = [];
+  for (let floor = 0; floor < floors; floor++) {
+    for (let bay = 0; bay < bays; bay++) {
+      let w = Math.min(bayW * 0.96, Math.max(0.3, bayW * scheme.w));
+      let hh = Math.min(floorH * 0.9, Math.max(0.3, floorH * scheme.h));
+      if (w > hh * 1.5) w = hh * 1.5;
+      else if (hh > w * 1.5) hh = w * 1.5;
+      const u = -length / 2 + (bay + 0.5) * bayW;
+      const y = (floor + 0.5) * floorH + (scheme.lift || 0) * floorH;
+      rects.push({ x: u, y, w, h: hh });
+    }
+  }
+  return rects;
+}
+
+function rectsOverlap(u, y, w, h, rects) {
+  for (const r of rects) {
+    if (Math.abs(u - r.x) < (w + r.w) / 2 - 1e-3 &&
+        Math.abs(y - r.y) < (h + r.h) / 2 - 1e-3) return true;
+  }
+  return false;
+}
+
+// 立面 u → 外掛 u（翻面牆鏡射）。rects 恆以立面 u 傳入，回傳外掛框座標。
+function toAppRects(rects, uSign) {
+  return uSign === 1 ? rects : rects.map((r) => ({ ...r, x: -r.x }));
+}
+
+// 門高不超過一層樓：與立面同層高推導（functionalWindows storeyH 亦一致），
+// 正門 reserve 0.7m 給門楣＋雨棚，側門無棚件 reserve 0.2m。
+function capDoorHeight(doorH, edgeH, height, architecture, reserve = 0.7) {
+  const storeyH = architecture.functionalWindows?.storeyH || 3.2;
+  const eh = (edgeH ?? height) || height || 3.2;
+  const floorH = eh / Math.max(1, Math.round(eh / storeyH));
+  return Math.max(1.8, Math.min(doorH, floorH - reserve));
+}
+
+// 常見門面：款式（素板／雙開／框鑲／玻璃）＋色系（住宅偏木色、工業偏金屬、商用偏玻璃門）。
+// 全吃 idBase 雜湊，零共享 rnd 消耗，同棟跨幀同值。匯出以供分佈驗證。
+export function doorFinish(idBase, cat) {
+  const wood = [0x6b4a2f, 0x7a5636, 0x4e3421, 0x8a6a45];
+  const modern = [0x3d3731, 0x4f5459, 0x9aa0a6, 0xe8e0d0, 0x232323, 0x2e4a6b, 0x2f5d50, 0x8c3b32];
+  const roll = architectureHash(idBase, 'door_style') % 10;
+  let style = 'panel';
+  if (cat === 'commercial' && roll < 4) style = 'glass';
+  else if (roll < 2) style = 'double';
+  else if (roll < 4) style = 'framed';
+  const pool = style === 'glass' ? [0x2a3b4c, 0x37474f, 0x4e3421]
+    : cat === 'residential' ? [...wood, 0xe8e0d0, 0x8c3b32]
+    : cat === 'industrial' ? [0x4f5459, 0x616161, 0x37474f, 0x2f5d50]
+    : [...modern, ...wood];
+  return { style, color: pool[architectureHash(idBase, 'door_color') % pool.length] };
+}
+
+// 正門取代首層窗的單一縫：同一顆雜湊算出正門（最長邊、門寬、偏置），
+// 再吸附到最近的首層窗格中心，門寬夾至 0.8 個開間（不吞鄰窗）。
+// 立面（跳過該窗玻璃）與外掛（門對齊該窗）共用此回傳，兩端同值、零共享 rnd 消耗。
+// 無首層玻璃（無窗棟／牆太短）回 null，兩端維持舊行為（門照舊放、無窗可替）。
+export function resolveFrontDoorOpening(poly, edges = [], architecture = {}, height = 0) {
+  if (!architecture || !edges.length || !poly?.outer?.length || !(height > 0)) return null;
+  const sorted = [...edges].sort((a, b) => (b.hw2 ?? 0) - (a.hw2 ?? 0));
+  const front = sorted[0];
+  const frontLen = front.hw2 != null ? front.hw2 * 2 : 0;
+  if (!(frontLen >= 2.4)) return null;
+  const idBase = `${architecture.id || 'bld'}|${edges[0]?.sourceId || edges[0]?.x}|${poly.outer.length}`;
+  const firstEdge = edges[0];
+  const key = `${firstEdge?.sourceId ?? ''}|${architecture.variant ?? 0}|${architecture.id ?? ''}|${architecture.functionInfo?.type ?? ''}|${architecture.functionInfo?.key ?? ''}|${firstEdge ? `${firstEdge.x.toFixed(1)},${firstEdge.z.toFixed(1)}` : ''}`;
+  let doorW = Math.min(2.8, frontLen * 0.35);
+  const doorH = capDoorHeight(Math.min(3.2, Math.max(2.2, height * 0.25)), front.h, height, architecture, 0.7);
+  const rects = facadeGlassRects(front, architecture, key, height);
+  if (!rects.length) return null;
+  // 首層窗格 = y 最小的一排（floor 0，bay 序即 push 序）。
+  const y0 = Math.min(...rects.map((r) => r.y));
+  const ground = rects.filter((r) => r.y <= y0 + 1e-6);
+  if (!ground.length) return null;
+  // 偏置是外掛框座標，先轉到外掛框再找最近窗（翻面牆直接比會吸附到鏡像 bay）。
+  const uSign = getEdgeFrame(front, poly).uSign;
+  const appGround = toAppRects(ground, uSign);
+  const maxOffset = Math.max(0, (frontLen - doorW - 1.2) * 0.35);
+  const offset = maxOffset > 0 ? (((architectureHash(idBase, 'door_pos') % 100) / 50) - 1.0) * maxOffset : 0;
+  let best = 0, bd = Infinity;
+  appGround.forEach((r, i) => {
+    const d = Math.abs(r.x - offset);
+    if (d < bd) { bd = d; best = i; }
+  });
+  doorW = Math.min(doorW, (frontLen / ground.length) * 0.8);
+  // 回傳立面框 u（立面直接取用）；外掛放置端 MUST 乘 uSign。
+  return { edge: front, bay: best, u: ground[best].x, w: doorW, h: doorH };
+}
+
+// 側門取代首層窗的單一縫：與正門同理（同偏置雜湊、吸附最近首層窗、門寬夾 0.8 開間）。
+// 閘門必須與放置端一致（65% 機率＋牆長），否則立面留洞而門沒放。
+export function resolveSideDoorOpening(poly, edges = [], architecture = {}, height = 0) {
+  if (!architecture || !edges.length || !poly?.outer?.length || !(height > 0)) return null;
+  const sorted = [...edges].sort((a, b) => (b.hw2 ?? 0) - (a.hw2 ?? 0));
+  const side = sorted[1];
+  if (!side) return null;
+  const idBase = `${architecture.id || 'bld'}|${edges[0]?.sourceId || edges[0]?.x}|${poly.outer.length}`;
+  if (!((architectureHash(idBase, 'side_door') % 100) < 65)) return null;
+  const sLen = getEdgeFrame(side, poly).len;
+  if (!(sLen >= 3.5)) return null;
+  const firstEdge = edges[0];
+  const key = `${firstEdge?.sourceId ?? ''}|${architecture.variant ?? 0}|${architecture.id ?? ''}|${architecture.functionInfo?.type ?? ''}|${architecture.functionInfo?.key ?? ''}|${firstEdge ? `${firstEdge.x.toFixed(1)},${firstEdge.z.toFixed(1)}` : ''}`;
+  const rects = facadeGlassRects(side, architecture, key, height);
+  if (!rects.length) return null;
+  const y0 = Math.min(...rects.map((r) => r.y));
+  const ground = rects.filter((r) => r.y <= y0 + 1e-6);
+  if (!ground.length) return null;
+  const uSign = getEdgeFrame(side, poly).uSign;
+  const appGround = toAppRects(ground, uSign);
+  const sOffset = (((architectureHash(idBase, 'sdoor_u') % 60) - 30) * 0.01) * (sLen - 2.0);
+  let best = 0, bd = Infinity;
+  appGround.forEach((r, i) => {
+    const d = Math.abs(r.x - sOffset);
+    if (d < bd) { bd = d; best = i; }
+  });
+  const w = Math.min(1.2, (sLen / ground.length) * 0.8);
+  // 回傳立面框 u（立面直接取用）；外掛放置端 MUST 乘 uSign。
+  return { edge: side, bay: best, u: ground[best].x, w, h: capDoorHeight(2.2, side.h, height, architecture, 0.2) };
+}
 
 /** 外部零件型錄定義與配置規則 */
 export const APPURTENANCE_RULES = Object.freeze({
@@ -297,7 +436,11 @@ export function getEdgeFrame(edge, poly) {
   const outNx = isInside ? -nx : nx;
   const outNz = isInside ? -nz : nz;
   const rotY = Math.atan2(outNx, outNz);
-  return { outNx, outNz, rotY, len };
+  // 立面格 (edge.ry) 與外掛框 (rotY) 的 u 方向：翻面牆差一面鏡（純旋轉保不住雙手系）。
+  // uSign = +1 同向（外掛 u ＝ 立面 u）；-1 鏡射（外掛 u ＝ -立面 u）。
+  // 立面窗格佔位一律以立面 u 計算，進入外掛比較／放置前 MUST 乘 uSign。
+  const uSign = isInside ? -1 : 1;
+  return { outNx, outNz, rotY, len, uSign };
 }
 
 /** 依屋頂造型計算指定 (x, z) 點的實際屋頂面高度，杜絕屋頂構件漂浮或埋入 */
@@ -563,6 +706,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
   const frontEdge = sortedEdges[0];
   const sideEdges = sortedEdges.slice(1);
   const groundAttachments = new Map();
+  // 正門開口（取代首層其中一窗）：與立面共用單一縫；無首層玻璃時為 null。
+  const doorOpening = resolveFrontDoorOpening(poly, edges, architecture, height);
 
   // 2. 正門地面物件生成 (大門、雨棚、盆栽 - 緊密貼齊外牆法線，杜絕內旋或拆開)
   if (frontEdge) {
@@ -570,21 +715,60 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const frame = getEdgeFrame(frontEdge, poly);
     const frontLen = frame.len;
     if (frontLen >= 2.4) {
-      // 大門 (Main Door)
-      const doorW = Math.min(2.8, frontLen * 0.35);
-      const doorH = Math.min(3.2, Math.max(2.2, height * 0.25));
+      // 大門 (Main Door)：有開口即坐上被取代的窗位，無開口走舊雜湊偏置。
+      // 高度恆收進一層樓（含門楣雨棚）。
+      let doorW = Math.min(2.8, frontLen * 0.35);
+      let doorH = capDoorHeight(Math.min(3.2, Math.max(2.2, height * 0.25)), frontEdge.h, height, architecture, 0.7);
 
       // 隨機偏置：不一定置中，但在安全邊界內隨機滑移
       const maxOffset = Math.max(0, (frontLen - doorW - 1.2) * 0.35);
-      const doorOffset = maxOffset > 0 ? (((architectureHash(idBase, 'door_pos') % 100) / 50) - 1.0) * maxOffset : 0;
+      let doorOffset = maxOffset > 0 ? (((architectureHash(idBase, 'door_pos') % 100) / 50) - 1.0) * maxOffset : 0;
+      if (doorOpening && doorOpening.edge === frontEdge) {
+        // 開口 u 是立面框，轉進外掛框（翻面牆鏡射）門才落在洞上。
+        doorOffset = frame.uSign * doorOpening.u; doorW = doorOpening.w; doorH = doorOpening.h;
+      }
 
-      const doorGeo = new THREE.BoxGeometry(doorW, doorH, 0.08);
-      doorGeo.translate(doorOffset, doorH / 2, wallThickness / 2 + 0.04);
-      doorGeo.rotateY(frame.rotY);
+      // 門扇款式：全部件恆落在門洞矩形內（不壓窗不壓飾）。
+      const finish = doorFinish(idBase, cat);
+      const trimCol = architecture.trim || 0x6e5d50;
+      const addDoorBox = (bw, bh, dx, dy, dd, color, dzc) => {
+        const g = new THREE.BoxGeometry(bw, bh, dd);
+        g.translate(doorOffset + dx, dy, dzc);
+        g.rotateY(frame.rotY);
+        g.translate(frontEdge.x, doorGy, frontEdge.z);
+        geos.push(paintGeometry(g, color, variant));
+      };
       const [doorWX, doorWZ] = frameXZ(frontEdge, frame.rotY, doorOffset, wallThickness / 2 + 0.04);
       const doorGy = groundYAt(doorWX, doorWZ);
-      doorGeo.translate(frontEdge.x, doorGy, frontEdge.z);
-      geos.push(paintGeometry(doorGeo, 0x3d3731, variant));
+      const slabZ = wallThickness / 2 + 0.04;
+      if (finish.style === 'double') {
+        // 雙開：兩扇＋中縫＋雙把手
+        for (const side of [-1, 1]) {
+          addDoorBox(doorW / 2 - 0.03, doorH, side * doorW / 4, doorH / 2, 0.08, finish.color, slabZ);
+          addDoorBox(0.05, 0.22, side * 0.13, Math.min(1.05, doorH * 0.5), 0.05, 0xb9c2c7, slabZ + 0.05);
+        }
+        addDoorBox(0.06, doorH * 0.92, 0, doorH * 0.46, 0.09, trimCol, slabZ);
+      } else if (finish.style === 'framed') {
+        // 框鑲：門芯＋邊框＋頂楣線＋門檻
+        addDoorBox(doorW - 0.16, doorH - 0.08, 0, (doorH - 0.08) / 2 + 0.02, 0.07, finish.color, slabZ);
+        for (const side of [-1, 1]) addDoorBox(0.09, doorH, side * (doorW / 2 - 0.045), doorH / 2, 0.1, trimCol, slabZ);
+        addDoorBox(doorW, 0.1, 0, doorH - 0.05, 0.1, trimCol, slabZ);
+        addDoorBox(doorW, 0.06, 0, 0.03, 0.1, trimCol, slabZ);
+        addDoorBox(0.05, 0.22, doorW / 2 - 0.2, Math.min(1.05, doorH * 0.5), 0.05, 0xb9c2c7, slabZ + 0.05);
+      } else if (finish.style === 'glass') {
+        // 玻璃門：邊框＋上玻璃＋下踢板
+        for (const side of [-1, 1]) addDoorBox(0.09, doorH, side * (doorW / 2 - 0.045), doorH / 2, 0.1, finish.color, slabZ);
+        addDoorBox(doorW, 0.15, 0, doorH - 0.075, 0.1, finish.color, slabZ);
+        addDoorBox(doorW, 0.35, 0, 0.175, 0.09, 0x5a6167, slabZ);
+        const glassH = Math.max(0.3, doorH - 0.5);
+        addDoorBox(doorW - 0.24, glassH, 0, 0.35 + glassH / 2, 0.04,
+          architecture.glass || 0x9fc4d4, slabZ - 0.01);
+        addDoorBox(0.05, 0.3, doorW / 2 - 0.2, Math.min(1.05, doorH * 0.5), 0.05, 0xb9c2c7, slabZ + 0.05);
+      } else {
+        // 素板＋把手
+        addDoorBox(doorW, doorH, 0, doorH / 2, 0.08, finish.color, slabZ);
+        addDoorBox(0.05, 0.22, doorW / 2 - 0.2, Math.min(1.05, doorH * 0.5), 0.05, 0xb9c2c7, slabZ + 0.05);
+      }
 
       if (height >= 3 && (architectureHash(idBase, 'doormat') % 100) < 80) {
         const mat = new THREE.BoxGeometry(doorW * 0.8, 0.045, 0.65);
@@ -657,16 +841,30 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const sFrame = getEdgeFrame(sideEdge, poly);
     const sLen = sFrame.len;
 
-    // 側門 (Side Entrance) - 需側邊長度 >= 3.5m
+    // 側門 (Side Entrance) - 需側邊長度 >= 3.5m；有開口即坐上被取代的窗位
     const hasSideDoor = (architectureHash(idBase, 'side_door') % 100) < 65;
     if (hasSideDoor && sLen >= 3.5) {
-      const sOffset = (((architectureHash(idBase, 'sdoor_u') % 60) - 30) * 0.01) * (sLen - 2.0);
-      const sDoor = new THREE.BoxGeometry(1.2, 2.2, 0.06);
-      sDoor.translate(sOffset, 1.1, wallThickness / 2 + 0.03);
+      let sOffset = (((architectureHash(idBase, 'sdoor_u') % 60) - 30) * 0.01) * (sLen - 2.0);
+      let sDoorW = 1.2;
+      const sideOpening = resolveSideDoorOpening(poly, edges, architecture, height);
+      if (sideOpening && sideOpening.edge === sideEdge) {
+        // 開口 u 是立面框，轉進外掛框（翻面牆鏡射）門才落在洞上。
+        sOffset = sFrame.uSign * sideOpening.u; sDoorW = sideOpening.w;
+      }
+      // 側門同色系素板＋把手，高度同樣不超過一層樓。
+      const sDoorH = sideOpening && sideOpening.edge === sideEdge
+        ? sideOpening.h : capDoorHeight(2.2, sideEdge.h, height, architecture, 0.2);
+      const sDoor = new THREE.BoxGeometry(sDoorW, sDoorH, 0.06);
+      sDoor.translate(sOffset, sDoorH / 2, wallThickness / 2 + 0.03);
       sDoor.rotateY(sFrame.rotY);
       const [sdWX, sdWZ] = frameXZ(sideEdge, sFrame.rotY, sOffset, wallThickness / 2 + 0.03);
       sDoor.translate(sideEdge.x, groundYAt(sdWX, sdWZ), sideEdge.z);
-      geos.push(paintGeometry(sDoor, 0x4f5459, variant));
+      geos.push(paintGeometry(sDoor, doorFinish(idBase, cat).color, variant));
+      const sHandle = new THREE.BoxGeometry(0.05, 0.2, 0.05);
+      sHandle.translate(sOffset + sDoorW / 2 - 0.18, Math.min(1.0, sDoorH * 0.5), wallThickness / 2 + 0.08);
+      sHandle.rotateY(sFrame.rotY);
+      sHandle.translate(sideEdge.x, groundYAt(sdWX, sdWZ), sideEdge.z);
+      geos.push(paintGeometry(sHandle, 0xb9c2c7, variant));
     }
 
     // 抽風機 (Exhaust Fans) - 工業或商業，數量依側邊長度限制
@@ -698,6 +896,9 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
   let decorationBudget = WALL_DECORATION_LIMIT;
   let balconyCount = 0, acCount = 0;
   const isLowRise = height <= 24;
+  // 與 architecturalFacadeParts 同一條同棟識別（同 scheme、同窗格），外掛避窗用。
+  const firstEdge = edges[0];
+  const facadeBuildingKey = `${firstEdge?.sourceId ?? ''}|${architecture.variant ?? 0}|${architecture.id ?? ''}|${architecture.functionInfo?.type ?? ''}|${architecture.functionInfo?.key ?? ''}|${firstEdge ? `${firstEdge.x.toFixed(1)},${firstEdge.z.toFixed(1)}` : ''}`;
   // 4. 立面高程物件 (招牌、電視牆、看板、選舉廣告、逃生梯、陽台、曬衣架、冷氣、旗幟)
   for (const edge of edges) {
     const frame = getEdgeFrame(edge, poly);
@@ -707,6 +908,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     const floorH = height / floors;
     const attachmentStart = geos.length;
     const edgeSeed = `${idBase}|${edge.x},${edge.z}|${frame.rotY}`;
+    // 本面牆窗玻璃佔位（外掛框座標：立面 u 乘 frame.uSign；外掛零件壓窗即跳過；壁飾 claims 亦含窗）。
+    const glassRects = toAppRects(facadeGlassRects(edge, architecture, facadeBuildingKey, height), frame.uSign);
     const addDetail = (w, h, d, u, y, z, color) => {
       const geo = new THREE.BoxGeometry(w, h, d);
       geo.translate(u, y, wallThickness / 2 + z);
@@ -715,11 +918,15 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     };
 
     // 招牌 (Blade Sign - 垂直側看板，僅低樓層建築配置)
+    // 壓窗即跳過（不可重疊）。
     const hasBladeSign = isLowRise && (architectureHash(`${idBase}:${edge.x}`, 'blade') % 100) < 65;
     if (hasBladeSign && floors >= 2 && len >= 4.5) {
       const signSide = (architectureHash(`${idBase}:${edge.x}`, 'blade_side') % 2) === 0 ? 1 : -1;
       const signU = signSide * Math.min(len * 0.38, len / 2 - 0.8);
       const signH = Math.min(3.6, floorH * 1.5);
+      if (rectsOverlap(signU, 3.8 + signH / 2, 1.0, signH, glassRects)) {
+        // 壓窗：整組招牌捨棄（degrade by omission）。
+      } else {
       const signGeo = new THREE.BoxGeometry(0.12, signH, 0.9);
       signGeo.translate(signU, 3.8 + signH / 2, wallThickness / 2 + 0.45);
       signGeo.rotateY(frame.rotY);
@@ -731,28 +938,36 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         addDetail(0.025, signH * 0.15, 0.55, signU + side * 0.075,
           3.8 + signH * (0.25 + glyph * 0.25), 0.45, 0xf0dfba);
       }
+      }
     }
 
-    // 選舉廣告牆 (Election Banner - 僅低樓層建築配置)
+    // 選舉廣告牆 (Election Banner - 僅低樓層建築配置；壓窗即跳過）
     const hasElection = isLowRise && contemporary && (architectureHash(`${idBase}:${edge.x}`, 'election') % 100) < 28;
     if (hasElection && (cat === 'residential' || cat === 'commercial') && height >= 8 && len >= 6.0) {
       const elW = Math.min(3.2, len * 0.4);
       const elH = Math.min(6.5, height * 0.6);
       const elSide = (architectureHash(`${idBase}:${edge.x}`, 'el_side') % 2) === 0 ? 1 : -1;
       const elU = elSide * (len * 0.25);
+      if (rectsOverlap(elU, elH / 2 + 1.2, elW, elH, glassRects)) {
+        // 壓窗捨棄。
+      } else {
       const elBoard = new THREE.BoxGeometry(elW, elH, 0.08);
       elBoard.translate(elU, elH / 2 + 1.2, wallThickness / 2 + 0.04);
       elBoard.rotateY(frame.rotY);
       elBoard.translate(edge.x, baseY, edge.z);
       const partyColor = (architectureHash(idBase, 'party') % 2) ? 0x00c853 : 0x2979ff;
       geos.push(paintGeometry(elBoard, partyColor, variant));
+      }
     }
 
-    // 逃生梯 (Fire Escape Stairway) - 位於側端角落邊緣
+    // 逃生梯 (Fire Escape Stairway) - 位於側端角落邊緣；壓窗即整組跳過
     const hasFireEscape = contemporary && (architectureHash(`${idBase}:${edge.x}`, 'fire_escape') % 100) < 35;
     if (hasFireEscape && floors >= 3 && len >= 6.5 && height >= 12) {
       const feSide = (architectureHash(`${idBase}:${edge.x}`, 'fe_side') % 2) === 0 ? 1 : -1;
       const feU = feSide * (len / 2 - 1.2);
+      if (rectsOverlap(feU, (floorH + height) / 2, 1.6, height - floorH, glassRects)) {
+        // 壓窗捨棄。
+      } else {
       for (let f = 1; f < floors; f++) {
         const fy = f * floorH;
         // 平台
@@ -776,9 +991,10 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       ladder.rotateY(frame.rotY);
       ladder.translate(edge.x, baseY, edge.z);
       geos.push(paintGeometry(ladder, 0x263238, variant));
+      }
     }
 
-    // 陽台 (Balconies) & 曬衣架 (Drying Racks) - 住宅類
+    // 陽台 (Balconies) & 曬衣架 (Drying Racks) - 住宅類；壓窗即該開間跳過
     if (contemporary && cat === 'residential' && floors >= 2 && len >= 7.5) {
       const bays = Math.max(1, Math.floor(len / 4.5));
       for (let f = 1; f < floors; f++) {
@@ -789,6 +1005,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
 
           if (balconyCount >= APPURTENANCE_RULES.balconies.maxCount ||
             architectureHash(edgeSeed, `${f}:${b}:balcony`) % 100 >= 70) continue;
+          // 陽台體 (底板至曬衣桿 fy-0.1 ~ fy+1.7）壓窗即跳過。
+          if (rectsOverlap(u, fy + 0.8, balW, 1.8, glassRects)) continue;
           balconyCount++;
           const balconyStyle = architectureHash(edgeSeed, `${f}:${b}:balcony_style`) % 3;
           // 陽台底板
@@ -835,17 +1053,19 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       }
     }
 
-    // 冷氣室外機 (AC Outdoor Units)
+    // 冷氣室外機 (AC Outdoor Units)；壓窗即該台跳過
     const bays = Math.min(6, Math.max(1, Math.floor(len / 3.4)));
     for (let f = 0; f < floors; f++) {
       const fy = f * floorH;
       for (let b = 0; b < bays; b++) {
         const hasAc = contemporary && (architectureHash(`${idBase}:${f}:${b}`, 'ac') % 100) < 65;
         if (!hasAc || acCount >= APPURTENANCE_RULES.ac_units.maxCount) continue;
-        acCount++;
         const acStyle = architectureHash(edgeSeed, `${f}:${b}:ac_style`) % 3;
         const u = -len / 2 + (b + 0.35) * (len / bays);
         const acY = fy + 0.6;
+        const acW = acStyle === 2 ? 1.2 : 0.85;
+        if (rectsOverlap(u, acY, acW + 0.1, 0.7, glassRects)) continue;
+        acCount++;
         const acUnit = new THREE.BoxGeometry(acStyle === 2 ? 1.2 : 0.85, 0.55, 0.4);
         acUnit.translate(u, acY, wallThickness / 2 + 0.2);
         acUnit.rotateY(frame.rotY);
@@ -864,9 +1084,10 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       }
     }
 
-    // 旗幟 (Flagpole with Flag - 僅低樓層觀光、文化或市政建築)
+    // 旗幟 (Flagpole with Flag - 僅低樓層觀光、文化或市政建築；壓窗即跳過）
     const hasFlag = isLowRise && contemporary && (architectureHash(`${idBase}:${edge.x}`, 'flag') % 100) < 35;
     if (hasFlag && (cat === 'tourism' || cat === 'commercial') && height >= 8 && len >= 8.0) {
+      if (!rectsOverlap(0.5, height * 0.5 + 0.6, 0.9, 0.55, glassRects)) {
       const pole = new THREE.CylinderGeometry(0.04, 0.04, 2.4, 6);
       pole.rotateZ(-0.35);
       pole.translate(0, height * 0.5, wallThickness / 2 + 0.4);
@@ -879,9 +1100,11 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       flag.rotateY(frame.rotY);
       flag.translate(edge.x, baseY, edge.z);
       geos.push(paintGeometry(flag, 0xd32f2f, variant));
+      }
     }
     // Project existing attachments into wall space so artwork never covers them.
-    const claims = [];
+    // 窗玻璃亦為 claims：壁飾選址一律避窗（不可重疊）。
+    const claims = [...glassRects];
     for (const source of [...(groundAttachments.get(edge) || []), ...geos.slice(attachmentStart)]) {
       const pos = source.attributes.position;
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;

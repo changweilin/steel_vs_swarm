@@ -2907,6 +2907,29 @@ export const bloodDropR = (frac) =>
 /** 血滴數(含主滴):份量越高噴得越散 */
 export const bloodDropN = (frac) =>
   Math.round(BLOOD.N_MIN + (BLOOD.N_MAX - BLOOD.N_MIN) * Math.max(0, Math.min(1, frac || 0)));
+
+// ---- 舉盾受擊螢光閃光(護盾接住那一發時,取代濺血噴在同一位置;同族純表現層唯一縫)----
+// 位置/份量沿用血同一支曲線(bloodScreenUv/bloodFrac/bloodDropN),不另立;滴形走 GLINT
+// 自己的大一圈曲線(glintDropR,尺寸仍 ∝ 份量) ——
+// 這裡只管「閃光」自己的時序與尺寸:短停留 + 快退 + 大一圈,讀起來是閃一下而不是糊一片血漬。
+export const GLINT = {
+  HOLD_S: 0.12, FADE_S: 0.9,      // 停留(全亮)+ 漸淡秒數(閃光比血漬退得快)
+  PEAK: 0.85,                     // 峰值不透明度(螢光可以比半透明血漬亮)
+  DROP_MIN: 1.4, DROP_MAX: 7.0,   // 主閃光半徑(vmin;比血滴大一圈,重擊的存在感)
+  MAX: 5,                         // 同時存在的閃光上限(超過 = 最舊的先退場,與血同額度)
+};
+/** 閃光總長(秒)= 停留段 + 漸淡段;推導不手寫 */
+export const glintDur = () => GLINT.HOLD_S + GLINT.FADE_S;
+/** 閃光不透明度(0~1):left = 剩餘秒數(由 glintDur() 倒數) */
+export function glintAlpha(left) {
+  const t = Math.max(0, Math.min(glintDur(), left || 0));
+  if (t >= GLINT.FADE_S) return GLINT.PEAK;              // 停留段
+  const u = t / GLINT.FADE_S;                            // 1 → 0
+  return GLINT.PEAK * u * u * (3 - 2 * u);               // smoothstep 漸淡
+}
+/** 主閃光半徑(vmin):份量 0 → DROP_MIN、份量 1 → DROP_MAX(與血同形,錨不同) */
+export const glintDropR = (frac) =>
+  GLINT.DROP_MIN + (GLINT.DROP_MAX - GLINT.DROP_MIN) * Math.max(0, Math.min(1, frac || 0));
 /**
  * 濺血位置(螢幕比例 {u, v},0~1;v 由上往下)。
  * bearing = 攻擊者相對視線的**水平**夾角(0 = 正前、+ = 右、±π = 背後);

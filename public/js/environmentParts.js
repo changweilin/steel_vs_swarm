@@ -5,7 +5,7 @@ import { createForestTree } from './forest.js';
 import { makeSceneVehicleParts } from './vehicleParts.js';
 import { partsAABB } from './vehicles.js';
 import { mat3FromEulerXYZ, mat3Multiply, eulerXYZFromMat3 } from './partTransform.js';
-import { geologyBackgroundObject } from './geology.js';
+import { geologyBackgroundObject, elongatedGeologyMesh } from './geology.js';
 import { generateVessel } from './vesselCatalog.js';
 import { loftMeshData, vesselHullSections } from './vesselGeometry.js';
 
@@ -392,8 +392,63 @@ export function storageTankParts({ w, h, d, seed = 1 }) {
     cyl(0, radius, roofH, 0, baseH + bodyH + roofH / 2, 0, 0x6e7c80, 'tank-roof')];
 }
 
+export const NARROW_GEOLOGY_BOUNDARY = Object.freeze({
+  cliff: 'cliff', rockery: 'mountain', landslide: 'moraine', debris: 'mound', isletbarrier: 'island',
+});
+
+// 假山群基底：按種子輪用一般地質，拉狹長型成高低變化大的連綿起伏。
+export const ROCKERY_BASES = Object.freeze(['granite', 'sandstone', 'tor', 'mountain']);
+
+// 地質邊界一次使用狹長型單體：整段一個連續起伏網格（基底為各類地形，突起數量／
+// 起伏程度由長寬比推導的種子隨機範圍決定），不再逐段零星散置。幾何與季節無關
+// （四季共用同一網格），季節差異只在 tint 色調。零共享亂數、決定性。
+export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season = 'summer' }) {
+  let type = NARROW_GEOLOGY_BOUNDARY[kind];
+  if (!type) throw new RangeError(`Not a narrow geology boundary: ${kind}`);
+  if (kind === 'rockery') {
+    const pick = mulberry32((seed ^ 0x524f434b) >>> 0);
+    type = ROCKERY_BASES[Math.floor(pick() * ROCKERY_BASES.length) % ROCKERY_BASES.length];
+  }
+  if (![len, d, h].every(v => Number.isFinite(v) && v > 0) || !Number.isSafeInteger(seed))
+    throw new RangeError('Invalid narrow geology boundary dimensions or seed');
+  const tint = rockTints[season] || rockTints.summer;
+  const ridge = elongatedGeologyMesh(type, seed >>> 0, { len, depth: d, height: h, tint });
+  // 網格頂點 y ∈ [0, peakY]；後移半高使 AABB 量尺與渲染位置一致（同 rocks 的置中慣例）。
+  const centered = { ...ridge.meshData,
+    vertices: ridge.meshData.vertices.map((v, i) => (i % 3 === 1 ? v - ridge.size[1] / 2 : v)) };
+  const rows = [{ g: ['mesh', centered, ridge.size], p: [0, ridge.size[1] / 2, 0], c: null, role: 'rock-mass' }];
+  if (kind === 'debris' || kind === 'landslide') {
+    // 倒木覆蓋層：依長寬比取 1–3 株，種在突起之間的谷底（基底埋入 .3），
+    // 谷底過高無足夠淨空時整株略過（脊體本身已足夠），全程收在包絡內。
+    const nTree = Math.max(1, Math.min(3, Math.round(len / 24)));
+    const bumps = ridge.params.bumps;
+    for (let k = 0; k < nTree; k++) {
+      const local = mulberry32((seed ^ Math.imul(k + 1, 0x85ebca6b)) >>> 0);
+      const m = bumps > 1 ? Math.max(1, Math.min(bumps - 1, Math.round((k + 1) * bumps / (nTree + 1)))) : 0;
+      const tw = Math.min(len / nTree * .7, 10);
+      const rawU = (m === 0 ? (k % 2 ? .7 : -.7) : -1 + 2 * m / bumps) * len / 2
+        + (local() - .5) * len / Math.max(8, bumps) * .3;
+      const tu = Math.max(-len / 2 + tw / 2 + 1e-6, Math.min(len / 2 - tw / 2 - 1e-6, rawU));
+      const td = d * .6;
+      const tv = Math.max(-d / 2 + td / 2 + 1e-6,
+        Math.min(d / 2 - td / 2 - 1e-6, (local() - .5) * d * .4));
+      const floorY = Math.max(0, ridge.heightAt(
+        Math.max(-1, Math.min(1, tu / (len / 2))), Math.max(-1, Math.min(1, tv / (d / 2)))));
+      if (floorY > h - 1.3) continue;
+      const treeH = Math.min(h * .25, h - floorY);
+      const tree = environmentParts('fallentree',
+        { size: [tw, treeH, td], seed: (seed ^ Math.imul(k + 33, 0x27d4eb2f)) >>> 0 });
+      const tb = partsAABB(tree);
+      const ty = floorY - tb.y0 - .3;
+      rows.push(...tree.map(p => ({ ...p, p: [p.p[0] + tu, p.p[1] + ty, p.p[2] + tv] })));
+    }
+  }
+  return rows;
+}
+
 export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, season = 'summer', latDeg = 25.0, joins = null }) {
   if (kind === 'searanch' || kind === 'oysterracks') return aquacultureParts(kind, len, d, h, seed);
+  if (NARROW_GEOLOGY_BOUNDARY[kind]) return narrowGeologyBoundary(kind, { len, depth: d, h, seed, season });
   const rnd = mulberry32(seed >>> 0), rows = [];
   const count = Math.max(1, Math.floor(len / (kind === 'deeprig'
     ? sample(rnd, ENVIRONMENT_STRUCTURE_PARAMETERS.offshoreRig.bay) : kind === 'viaduct'
@@ -544,23 +599,6 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
         const rRot = yaw !== 0 ? (p.r ? [p.r[0], (p.r[1] || 0) + yaw, p.r[2]] : [0, yaw, 0]) : p.r;
         return { ...p, p: [px * cy + pz * sy + x + jx, py, -px * sy + pz * cy], ...(rRot ? { r: rRot } : {}) };
       }));
-    } else if (['cliff', 'rockery', 'landslide', 'debris', 'isletbarrier'].includes(kind)) {
-      const type = { cliff: 'cliff', rockery: 'mountain', landslide: 'moraine', debris: 'mound', isletbarrier: 'island' }[kind];
-      // 岩體連排：逐段 180° 翻轉＋縱向微小間距誤差（fit 置中故 AABB 不變；
-      // 寬收至 0.94 step、|jx| ≤ 0.02 step → 相鄰中心 ≥ 0.96 step，保證不重疊；
-      // debris／landslide 的倒木覆蓋層同 yaw／jx 保持疊合）
-      const yaw = local() < 0.5 ? Math.PI : 0;
-      const jx = (local() - 0.5) * step * 0.04;
-      const cy = Math.cos(yaw), sy = Math.sin(yaw);
-      const spin = (p, dy = 0) => {
-        const [px = 0, py = 0, pz = 0] = p.p || [];
-        const rRot = yaw !== 0 ? (p.r ? [p.r[0], (p.r[1] || 0) + yaw, p.r[2]] : [0, yaw, 0]) : p.r;
-        return { ...p, p: [px * cy + pz * sy + x + jx, py + dy, -px * sy + pz * cy], ...(rRot ? { r: rRot } : {}) };
-      };
-      rows.push(...fit(rocks(type, seed ^ (i + 1), season, { yaw: false }), [step * 0.94, h, d]).map(p => spin(p)));
-      if (kind === 'debris' || kind === 'landslide') rows.push(...environmentParts('fallentree',
-        { size: [step * .8, h * .25, d * .65], seed: seed ^ (i + 33) })
-        .map(p => spin(p, h * .12)));
     } else if (kind === 'seaice') {
       // 浮冰連排：逐段 180° 翻轉＋縱向微小間距誤差（寬收至 0.94 step、|jx| ≤ 0.02 step，保證不重疊）
       const yaw = local() < 0.5 ? Math.PI : 0;

@@ -66,7 +66,16 @@ const editSrc = readSrc('tools', 'humanoid_forge', 'dolledit.js');
 const forgeSrc = readSrc('public', 'js', 'forge', 'forge.js');
 const dfinSrc = readSrc('tools', 'humanoid_forge', 'dollfinish.js');
 const storeSrc = readSrc('tools', 'humanoid_forge', 'specstore.mjs');
-const reviewSrc = readSrc('tools', 'codex_review', 'review.js');
+// 2D 生圖對照台已退場(備份於 D:\data\steel_vs_swarm_ai3d):覆核台相關斷言僅在檔案仍存在時驗,缺檔即跳過。
+import { existsSync } from 'node:fs';
+import { join as _join, dirname as _dirname } from 'node:path';
+import { fileURLToPath as _furl } from 'node:url';
+const _ROOT = _dirname(_dirname(_furl(import.meta.url)));
+const trySrc = (...parts) => {
+  try { return readSrc(...parts); } catch { return null; }
+};
+const reviewSrc = trySrc('tools', 'codex_review', 'review.js');
+const HAS_CODEX = !!reviewSrc && existsSync(_join(_ROOT, 'tools', 'codex_review.mjs'));
 // 2026-08-14:兩座看板共用的那一座展示台(場景/演出/型態/版本;versions.js 是它的版本表)
 const stageSrc = readSrc('tools', 'humanoid_forge', 'stage.js');
 
@@ -262,7 +271,7 @@ console.log('■ Ⅴ 套用縫(dollapply / forge 收尾:一份實作、順序、
   t('兩座看板都傳同一支收尾(同形的唯一保證)',
     /finish: dollFinish/.test(code(readSrc('tools', 'humanoid_forge', 'versions.js')))
     && /ver\.build\(st\.spec/.test(code(stageSrc))
-    && !/forgeMech\(|forgeMorphUnit\(/.test(code(reviewSrc))
+    && !/forgeMech\(|forgeMorphUnit\(/.test(reviewSrc ? code(reviewSrc) : '')
     && !/forgeMech\(|forgeMorphUnit\(/.test(code(readSrc('tools', 'humanoid_forge', 'viewer.js'))));
   t('mergeSpec 帶得動 doll 欄(覆寫層 → 鍛造)', /doll: ovr\?\.doll \?\? base\.doll \?\? null/.test(fg));
   t('applyDoll 全專案只有一個實作', (code(applySrc).match(/export function applyDoll/g) || []).length === 1);
@@ -299,15 +308,20 @@ console.log('■ Ⅵ 存檔語意(specstore:兩個寫入端、逐欄 patch —�
   // ⚠ 這兩條刻意**不剝註解**:humanoid_forge.mjs 的檔頭寫著 `public/**`,那個 `/*`
   // 會讓「剝區塊註解」的樣式一路吃到下一個 `*/`(連 import 段一起吃掉)⇒ 斷言變成永遠紅字。
   // 改以「只有程式碼會長這樣」的錨定樣式比對,比剝註解更準也更短。
-  const fSrc = readSrc('tools', 'humanoid_forge.mjs'), cSrc = readSrc('tools', 'codex_review.mjs');
-  const wired = (s) => /^import \{ handleForgeApi \} from '\.\/humanoid_forge\/specstore\.mjs';$/m.test(s)
+  const fSrc = readSrc('tools', 'humanoid_forge.mjs'), cSrc = trySrc('tools', 'codex_review.mjs');
+  const wired = (s) => !!s && /^import \{ handleForgeApi \} from '\.\/humanoid_forge\/specstore\.mjs';$/m.test(s)
     && /^\s*if \(await handleForgeApi\(req, res, send\)\) return;$/m.test(s);
-  t('兩支 dev server 共用同一個處理器', wired(fSrc) && wired(cSrc), `forge ${wired(fSrc)} / codex ${wired(cSrc)}`);
-  t('specstore 是唯一的寫入實作(其餘端 MUST NOT 自己組 specs.json 路徑)',
-    ![fSrc, cSrc].some((s) => /join\(ROOT,[^)]*'specs\.json'\)/.test(s)));
-  t('覆核台存檔改送逐欄 null(MUST NOT 整包 null,否則洗掉 doll)',
-    /prop: Object\.keys\(ovr\.prop\)\.length \? ovr\.prop : null/.test(reviewSrc)
-    && /knobs: Object\.keys\(ovr\.knobs\)\.length \? ovr\.knobs : null/.test(reviewSrc));
+  if (HAS_CODEX) {
+    t('兩支 dev server 共用同一個處理器', wired(fSrc) && wired(cSrc), `forge ${wired(fSrc)} / codex ${wired(cSrc)}`);
+    t('specstore 是唯一的寫入實作(其餘端 MUST NOT 自己組 specs.json 路徑)',
+      ![fSrc, cSrc].some((s) => /join\(ROOT,[^)]*'specs\.json'\)/.test(s)));
+    t('覆核台存檔改送逐欄 null(MUST NOT 整包 null,否則洗掉 doll)',
+      /prop: Object\.keys\(ovr\.prop\)\.length \? ovr\.prop : null/.test(reviewSrc)
+      && /knobs: Object\.keys\(ovr\.knobs\)\.length \? ovr\.knobs : null/.test(reviewSrc));
+  } else {
+    t('鍛造台接同一處理器(覆核台已退場,僅驗鍛造端)', wired(fSrc));
+    console.log('  … 覆核台已退場,跳過覆核端共用處理器斷言');
+  }
   t('patch 語意寫在 specstore(單一縫)', /export async function patchOvr/.test(storeSrc));
 }
 
@@ -346,14 +360,16 @@ console.log('■ Ⅶ 編輯器紀律(dolledit:只寫草稿文件、拖曳與重�
 console.log('■ Ⅷ 兩座看板整合(展示台 :8631 / 美術覆核台 :8641:同一支編輯器、同一份標記與樣式)');
 // ═══════════════════════════════════════════════════════════════════════════
 {
-  const revJs = readSrc('tools', 'codex_review', 'review.js');
-  let revCss = readSrc('tools', 'codex_review', 'review.css');
-  const revHtml = readSrc('tools', 'codex_review', 'index.html');
+  const revJs = trySrc('tools', 'codex_review', 'review.js');
+  let revCss = trySrc('tools', 'codex_review', 'review.css') || '';
+  const revHtml = trySrc('tools', 'codex_review', 'index.html') || '';
   const fwdHtml = readSrc('tools', 'humanoid_forge', 'index.html');
   const boardCss = readSrc('tools', 'humanoid_forge', 'board.css');
   const refSrc = readSrc('tools', 'humanoid_forge', 'refstrip.js');
   const apiSrc = readSrc('tools', 'humanoid_forge', 'boardapi.mjs');
-  let revForge = revJs;
+  let revForge = revJs || '';
+  if (!revJs) console.log('  … 覆核台已退場,Ⅷ 覆核端整合斷言整段跳過(僅留鍛造端由其他段落覆蓋)');
+  if (revJs) {
 
   // ── 使用者 2026-08-12 回報:「武器招式按鍵擋住機體3D建模」──
   // 病因不是按鈕太多,是**疊層**:`.cr-stage-btns` 同時吃到共用規則的 `bottom: 6px` 與
@@ -461,6 +477,7 @@ console.log('■ Ⅷ 兩座看板整合(展示台 :8631 / 美術覆核台 :8641:
   // 兩座看板同吃一支 step ⇒ 這一條只要在共用展示台上成立一次(兩邊自動都對)
   t('切武器頁後在姿勢落定的那一幀重取景(共用展示台一份)',
     /st\._reframe && st\.view !== 'mech'/.test(reframeS) && /st\._reframe = true/.test(reframeS));
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -651,10 +668,10 @@ console.log('■ Ⅺ 原型參考照的判決 / 重搜 / 使用者自貼(帳本�
     && (code(stripSrc).match(/refPost\('upload'/g) || []).length === 1
     && (code(viewSrc2).match(/fetch\('\/api\/protorefs\//g) || []).length === 0
     && (code(viewSrc2).match(/refPost\(/g) || []).length === 0);
-  t('行為也只有一份:兩座看板都轉呼 bindRefStrip(MUST NOT 各綁一套)',
+  t('行為也只有一份:鍛造看板轉呼 bindRefStrip(覆核台已退場,僅驗鍛造端)',
     /export function bindRefStrip/.test(code(stripSrc))
     && /bindRefStrip\(box, spec\.id/.test(code(viewSrc2))
-    && /bindRefStrip\(\$\('crRefStrip'\), key/.test(code(readSrc('tools', 'codex_review', 'review.js'))));
+    && (!HAS_CODEX || /bindRefStrip\(\$\('crRefStrip'\), key/.test(code(trySrc('tools', 'codex_review', 'review.js') || ''))));
   t('改過帳本要丟快取(否則畫面停在改之前那一份)',
     /export const dropRefsCache/.test(code(stripSrc)) && /dropRefsCache\(spec\.id\)/.test(code(viewSrc2)));
   // import 這支去看查詢詞不可以觸發一整趟採集(2026-08-12 踩過:當場把圖庫限流撞更深)
@@ -766,7 +783,8 @@ console.log('■ ⅩⅣ 共用展示台:版本註冊表 / 變形過程 / 圖示�
   let verSrc = readSrc('tools', 'humanoid_forge', 'versions.js');
   let stgSrc = readSrc('tools', 'humanoid_forge', 'stage.js');
   const htmlSrc = readSrc('tools', 'humanoid_forge', 'index.html');
-  const crSrc = readSrc('tools', 'codex_review', 'review.js');
+  const crSrc = trySrc('tools', 'codex_review', 'review.js') || '';
+  if (!crSrc) console.log('  … 覆核台已退場,含覆核端的三條斷言僅驗鍛造端');
   const fgSrc = readSrc('public', 'js', 'forge', 'forge.js');
   const bustSrc = (name, src, from, to) => {
     if (!src.includes(from)) { console.log(`  ✗ --break-${name} 沒有咬到目標原文(樣式過期)`); process.exit(1); }
@@ -788,7 +806,7 @@ console.log('■ ⅩⅣ 共用展示台:版本註冊表 / 變形過程 / 圖示�
     'if (keep) { if (st.unit.dolls) st.unit.doll = st.unit.dolls[spec.form] || null; } else build();', 'build();');
   // 壞版 ⑤:覆核台自己再建一座展示台(第二份場景 + 第二組鈕面)
   let crBad = crSrc;
-  if (brk('twostage')) crBad = bustSrc('twostage', crSrc,
+  if (brk('twostage') && crSrc) crBad = bustSrc('twostage', crSrc,
     'fstage = FORGE.stage.makeStage({', 'fstage = { scene: new FORGE.THREE.Scene() } || FORGE.stage.makeStage({');
   const vc = code(viewSrc), rc = code(verSrc), sc = code(stgSrc), cc = code(crBad);
 
@@ -800,8 +818,8 @@ console.log('■ ⅩⅣ 共用展示台:版本註冊表 / 變形過程 / 圖示�
     && !/forgeMech\(|forgeMorphUnit\(|buildLegacyUnit\(/.test(vc)
     && !/forgeMech\(|forgeMorphUnit\(|buildLegacyUnit\(/.test(crBad)
     && !/forgeMech\(|forgeMorphUnit\(|buildLegacyUnit\(/.test(sc));
-  t('鈕面名冊只有一份(stage.js 的 BARS;兩座 HTML 都只放空容器)',
-    /const BARS = \[/.test(sc) && /id="stageBar"/.test(htmlSrc) && /id="crStageBar"/.test(crSrc)
+  t('鈕面名冊只有一份(stage.js 的 BARS;鍛造 HTML 只放空容器,覆核台已退場)',
+    /const BARS = \[/.test(sc) && /id="stageBar"/.test(htmlSrc) && (!crSrc || /id="crStageBar"/.test(crSrc))
     && !/btnLegacy|id="vWpnL"|id="cfFire"|id="cfCast"|id="cfRun"/.test(htmlSrc + crSrc));
   t('能力旗標宣告在表上、鈕面吃它(MUST NOT 由看板嗅探 unit 的副作用推回來)',
     /caps: \{ edit:/.test(rc) && /st\.ver\.caps\.wpn/.test(sc) && /st\.ver\.caps\.joints/.test(sc)
@@ -846,13 +864,13 @@ console.log('■ ⅩⅣ 共用展示台:版本註冊表 / 變形過程 / 圖示�
     && /icon: 'verNew'/.test(rc) && /icon: 'verOld'/.test(rc));
   // ⚠ 覆核台這一半 MUST 讀原始碼(見上方 Ⅷ 段的同一條:字串裡的 `mechs/*.js` 會被剝註解
   //   那一支當成區塊註解的開頭)—— 壞版判定因此改用 crBad 的原文。
-  t('覆核台的鍛造區塊**直接套用**同一座展示台(MUST NOT 自己再建一份場景/迴圈)',
-    /FORGE\.stage\.makeStage\(\{/.test(crBad)
-    && !/new FORGE\.THREE\.Scene\(\)|new THREE\.Scene\(\)/.test(crBad)
-    && !/stepLocomotion\(|stepCombatFx\(/.test(crBad));
-  t('兩座看板的 headless 入口都問得到版本 / 型態進度(純視覺的壞法只有這裡量得到)',
+  t('鍛造區塊直接套用同一座展示台(覆核台已退場,此條僅在覆核端存在時驗)',
+    !crSrc || (/FORGE\.stage\.makeStage\(\{/.test(crBad)
+      && !/new FORGE\.THREE\.Scene\(\)|new THREE\.Scene\(\)/.test(crBad)
+      && !/stepLocomotion\(|stepCombatFx\(/.test(crBad)));
+  t('看板的 headless 入口問得到版本 / 型態進度(覆核台已退場,僅驗鍛造端)',
     /versions: \(\) => stage\.versions\(\)/.test(vc) && /morphM: \(\) => stage\.morphM\(\)/.test(vc)
-    && /versions: \(\) => fstage\.versions\(\)/.test(crBad) && /morphM: \(\) => fstage\.morphM\(\)/.test(crBad));
+    && (!crSrc || (/versions: \(\) => fstage\.versions\(\)/.test(crBad) && /morphM: \(\) => fstage\.morphM\(\)/.test(crBad))));
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 紙娃娃系統稽核:${pass}/${pass + fail} 通過`);

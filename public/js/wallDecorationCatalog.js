@@ -11,7 +11,9 @@ export const WALL_DECORATIONS = Object.freeze({
   hanging_vines: { label: '垂吊藤蔓', categories: ['residential', 'commercial', 'tourism'], plant: true, color: 0x365e48, accent: 0x84a462 },
 });
 export const WALL_COVERAGE = Object.freeze({
-  patch: [0.28, 0.24], band: [0.72, 0.18], column: [0.2, 0.62], field: [0.58, 0.48],
+  // 各覆蓋範圍實際 w/h 長寬比 MUST ≤ 1.5（不可太細）：正方形牆上 wf/hf 即實際比，
+  // 寬高牆再由 wallDecorations.js 動態收斂長邊，此處先保證基準不違規。
+  patch: [0.28, 0.24], band: [0.52, 0.38], column: [0.30, 0.42], field: [0.58, 0.48],
 });
 
 export const WALL_DECORATION_PLACEMENT = Object.freeze({ maxCount: 2, prob: 0.82, minLength: 3, minHeight: 3 });

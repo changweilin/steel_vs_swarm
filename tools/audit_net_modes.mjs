@@ -336,8 +336,8 @@ try {
   const lo = await devReq('127.0.0.1', '/dev/tools');
   let tools = [];
   try { tools = JSON.parse(lo.body).tools || []; } catch { /* 下一行會紅 */ }
-  ok(lo.code === 200 && ['codex', 'story', 'arch'].every((k) => tools.some((t) => t.key === k)),
-    'loopback 拿得到工具清單(codex 2D 生圖對照台 / story 本地故事書 / arch 建模隨機生成器)');
+  ok(lo.code === 200 && ['story', 'arch'].every((k) => tools.some((t) => t.key === k)) && !tools.some((t) => t.key === 'codex'),
+    'loopback 拿得到工具清單(story 本地故事書 / arch 建模隨機生成器;codex 已退場)');
   ok(tools.filter((t) => t.kind === 'server')
     .every((t) => typeof t.url === 'string' && /^http:\/\/localhost:\d+\/$/.test(t.url)),
     '伺服器型工具自己帶網址(客戶端因此一個埠號都不用寫死)');
@@ -352,9 +352,9 @@ try {
     const out = await devReq(lan, '/dev/tools');
     ok(out.code === 404, `非 loopback(${lan})MUST 拿到 404 —— 隊友連進來看不到這個端點`);
   }
-  ok((await devReq('127.0.0.1', '/dev/tools/codex/start', { method: 'POST' })).code === 403,
+  ok((await devReq('127.0.0.1', '/dev/tools/story/start', { method: 'POST' })).code === 403,
     '沒帶 `x-dev-tools` 標頭的 POST MUST 被拒(擋 CSRF)');
-  ok((await devReq('127.0.0.1', '/dev/tools/codex/nope', {
+  ok((await devReq('127.0.0.1', '/dev/tools/story/nope', {
     method: 'POST', headers: { 'x-dev-tools': '1' },
   })).code === 404, '沒有的動作 MUST 404(而不是被當成 start)');
 

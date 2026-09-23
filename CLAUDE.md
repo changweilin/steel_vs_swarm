@@ -95,8 +95,6 @@ npm run lan          # 區網 / Tailscale 對戰模式 (--https)
 npm run cloud        # 雲端伺服器節點模式
 npm run build:solo   # 打包單機特化版至 dist/ (純檔案複製，無 bundler)
 npm run audit:net    # 連線機制與安全路由稽核
-npm run codex        # 2D 生圖對照台 (埠 8621, --report 列印配對表)
-npm run parts        # 3D 零件對照台 (埠 8622, --report 列印對照表)
 npm run story        # 故事書對照台 (埠 8623, --report 列印索引)
 ```
 
