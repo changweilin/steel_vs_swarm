@@ -17,13 +17,34 @@ export class Net {
     this.connected = false;
     this._everOpen = false;
     this._queue = [];
+    this._fails = 0;      // 連續斷線次數:退避重連用,連上歸零
+    this._timer = null;
     this._connect();
   }
 
+  // 退避重連:2s 起跳、指數退避、30s 封頂。伺服器重啟瞬間全員固定 2s 回打 = 驚群,
+  // 還會跟 15s 心跳共振;拉開之後錯峰回來。長期斷線不無限拉長(封頂 30s)。
+  _later() {
+    if (this._dead) return;
+    clearTimeout(this._timer);
+    const wait = Math.min(30000, 2000 * 2 ** Math.min(this._fails, 4));
+    this._fails++;
+    this._timer = setTimeout(() => this._connect(), wait);
+  }
+
   _connect() {
-    this.ws = new WebSocket(this.url);
+    if (this._dead) return;
+    let ws;
+    try {
+      ws = new WebSocket(this.url);
+    } catch {
+      this._later();   // 網址壞掉之類:照退避重試,不把頁面炸掉
+      return;
+    }
+    this.ws = ws;
     this.ws.onopen = () => {
       this.connected = true;
+      this._fails = 0;
       if (this._everOpen) {
         this.h.reconnect?.();     // 重連:由 app 送 reattach 認回座位
       } else {
@@ -32,32 +53,61 @@ export class Net {
       }
     };
     this.ws.onmessage = (e) => {
-      const m = JSON.parse(e.data);
-      const fn = this.h[m.t];
-      if (fn) fn(m);
-      else this.h.other?.(m);
+      let m;
+      try { m = JSON.parse(e.data); } catch { return; }   // 非 JSON 幀直接丟棄
+      try {
+        const fn = this.h[m?.t];
+        if (fn) fn(m);
+        else this.h.other?.(m);
+      } catch { /* handler 異常不炸傳輸層 */ }
     };
-    this.ws.onclose = () => {
+    this.ws.onerror = () => {};   // 細節由隨後的 onclose 統一處理
+    this.ws.onclose = (e) => {
       this.connected = false;
       if (this._dead) return;
-      this.h.error?.({ msg: '與伺服器斷線,重連中…' });
-      setTimeout(() => this._connect(), 2000);
+      // 1009 = 訊息超過上限(通常是房主的世界/圖資上傳那一包):重連也不會自己變小,講清楚。
+      this.h.error?.({ msg: e?.code === 1009 ? '上傳資料超過上限被斷線,重連中…(反覆發生請重整後重試)' : '與伺服器斷線,重連中…' });
+      this._later();
     };
   }
 
-  kill() { this._dead = true; this._queue = []; try { this.ws.close(); } catch { /* 忽略 */ } }
+  kill() { this._dead = true; this._queue = []; clearTimeout(this._timer); try { this.ws.close(); } catch { /* 忽略 */ } }
 
-  sendNow(msg) { if (this.connected) this.ws.send(JSON.stringify(msg)); }
+  // 發送本體:race(connected 剛置 true、底層已半開)下 ws.send 會拋 ——
+  // 舊制直接噴到呼叫端(遊戲迴圈),connected 還卡在 true = 表面連著、實際全丟。
+  // 這裡當斷線處理:排退避重連,呼叫端只看到回傳值。
+  _raw(msg) {
+    try { this.ws.send(JSON.stringify(msg)); return true; }
+    catch {
+      this.connected = false;
+      this._later();
+      return false;
+    }
+  }
+
+  sendNow(msg) { if (this.connected && !this._raw(msg)) this._queueMsg(msg); }
 
   flushQueue() {
     if (!this.connected) return;
-    for (const m of this._queue) this.ws.send(JSON.stringify(m));
-    this._queue = [];
+    while (this._queue.length) {
+      if (!this._raw(this._queue[0])) break;   // 中途斷線:剩下的留待下次重連,順序不變
+      this._queue.shift();
+    }
+  }
+
+  // 斷線期間的輸入(座標每幀一則)無界排隊 = 重連 burst 打爆上限再斷線的循環。
+  // 只留最新的 120 則(約 2s 輸入):舊座標本來就被新座標取代。
+  _queueMsg(msg) {
+    if (this._queue.length >= 120) this._queue.shift();
+    this._queue.push(msg);
   }
 
   send(msg) {
-    if (this.connected) this.ws.send(JSON.stringify(msg));
-    else this._queue.push(msg);
+    if (this.connected) {
+      if (this._raw(msg)) return;
+      // 發送 race 失敗:當斷線排隊,重連後 reattach 先送、這一則隨後,不亂序。
+    }
+    this._queueMsg(msg);
   }
 }
 

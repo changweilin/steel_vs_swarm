@@ -315,7 +315,14 @@ let _devSup = null;
 const devSup = () => (_devSup ||= import('../tools/dev_supervisor.mjs').catch(() => null));
 
 const handler = (req, res) => {
-  const urlPath = decodeURIComponent(req.url.split('?')[0]);
+  // 壞掉的 URL(裸 %、截斷的 UTF-8 序列)會讓 decodeURIComponent 拋 URIError ——
+  // 這裡不接住 = 整個 process 退出 = 全員斷線,而埠掃描器天天都在送這種東西。
+  let urlPath;
+  try {
+    urlPath = decodeURIComponent(req.url.split('?')[0]);
+  } catch {
+    res.writeHead(400); res.end('400'); return;
+  }
 
   if (urlPath.startsWith('/__osm_fixture/')) {
     serveOsmFixture(req, res, urlPath);
@@ -433,7 +440,11 @@ const wss = new WebSocketServer({ noServer: true, maxPayload: 4 << 20 });
 for (const s of [plainServer, httpsServer]) {
   if (!s) continue;
   s.on('upgrade', (req, socket, head) => {
-    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+    try {
+      wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+    } catch {
+      try { socket.destroy(); } catch { /* 忽略 */ }
+    }
   });
 }
 
@@ -445,20 +456,29 @@ const HEARTBEAT_MS = 15 * 1000;
 wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
-  const sess = hub.attach((msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); });
+  // 發送失敗(對端半開、訊息序列化異常)只丟這一則:不接住 = tick 廣播裡一拋,
+  // 整個 process 退出 = 全房斷線。
+  const sess = hub.attach((msg) => {
+    if (ws.readyState !== 1) return;
+    try { ws.send(JSON.stringify(msg)); } catch { /* 丟棄,心跳會回收這條連線 */ }
+  });
+  // 單一客戶端的畸形/惡意訊息 MUST NOT 拖垮整台伺服器:接住、記一筆、丟棄(降級不例外)。
   ws.on('message', (raw) => {
     ws.isAlive = true;   // 有訊息進來 = 連線活著(對局中 pos 回報比 pong 更即時)
     let m;
     try { m = JSON.parse(raw); } catch { return; }
-    sess.recv(m);
+    try { sess.recv(m); } catch (e) { console.log(`⚠ 客戶端訊息處理異常已攔截並丟棄:${String(e?.message || e)}`); }
   });
-  ws.on('close', () => sess.close());
+  ws.on('error', () => {});   // 不接 = 'error' 事件變成未處理異常,整支伺服器被帶走
+  ws.on('close', () => { try { sess.close(); } catch (e) { console.log(`⚠ 連線收尾異常已攔截:${String(e?.message || e)}`); } });
 });
 const hbTimer = setInterval(() => {
   for (const ws of wss.clients) {
-    if (ws.isAlive === false) { ws.terminate(); continue; }   // terminate 觸發 'close' → sess.close()
-    ws.isAlive = false;
-    ws.ping();
+    try {
+      if (ws.isAlive === false) { ws.terminate(); continue; }   // terminate 觸發 'close' → sess.close()
+      ws.isAlive = false;
+      ws.ping();
+    } catch { /* 半開 socket 的 ping/terminate 可能拋,下一輪心跳再收 */ }
   }
 }, HEARTBEAT_MS);
 hbTimer.unref?.();

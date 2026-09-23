@@ -45,7 +45,11 @@ export function validateBattleConfig(cfg, teamSize) {
   if (!cfg || !cfg.bases || !cfg.center || !Array.isArray(cfg.lanes)) return '戰場設定不完整,請先建立/選擇地圖';
   // 地圖型態(完整 / 迷你 / 劇情戰役)只有 `mapArg` 一份解讀 —— 這一支與 solveTowerSites /
   // 尺度函式 / 兵線數共用同一個入口,驗證與生成因此不可能對這一場的型態有兩種看法。
-  const mapA = mapArg(cfg);
+  // 地圖型態以下的幾何驗證吃的是客戶端送上來的 JSON,形狀不對(map/數字/陣列任一格)
+  // 會在深處拋 TypeError —— MUST 回錯誤字串,MUST NOT 拋:拋出去 = 整個伺服器 process
+  // 退出 = 全部房間全員斷線。房主只會看到一句話,而不是全服陪葬。
+  try {
+    const mapA = mapArg(cfg);
   const plan = mapPlan(mapA);
   const L = laneCountFor(teamSize, mapA);
   if (cfg.lanes.length !== L) {
@@ -69,6 +73,9 @@ export function validateBattleConfig(cfg, teamSize) {
   // 規則(權威把關):同一 L 內兵線互不接觸/交叉(任兩線中段最近距離須 ≥ 20m 真實;含立體交叉亦禁)
   if (!laneSeparationAudit(game).ok) return '此地圖的兵線互相接觸或交叉(任兩線最近距離須 ≥ 20m),請改選其他推薦點或位置';
   return null;
+  } catch {
+    return '戰場設定格式異常,請重新建立/選擇地圖';
+  }
 }
 
 /**
@@ -230,7 +237,9 @@ export class RoomHub {
       battleConfig: room.battleConfig || null,
     };
     for (const [id, c] of room.clients) {
-      c.send({ t: 'sync', youId: id, token: c.token, isHost: id === room.hostId, lobby });
+      try {
+        c.send({ t: 'sync', youId: id, token: c.token, isHost: id === room.hostId, lobby });
+      } catch { /* 單一死連線不擋全房廣播,心跳/斷線流程會回收它 */ }
     }
   }
 
@@ -249,7 +258,7 @@ export class RoomHub {
     if (room.hostId === clientId) {
       room.hostId = [...room.clients.keys()][0];
       const h = room.clients.get(room.hostId);
-      h.send({ t: 'info', msg: '👑 原房主離線,你成為新房主' });
+      try { h.send({ t: 'info', msg: '👑 原房主離線,你成為新房主' }); } catch { /* 新房主連線已死就跳過,座位照樣移交 */ }
     }
     this.broadcast(room);
   }
@@ -257,6 +266,7 @@ export class RoomHub {
   // ---------------- 戰鬥生命週期 ----------------
   startBattle(room) {
     if (room.battle || !room.battleConfig) return;
+    try {
     // world 於構造時傳入 → 水沼粗網格在初次佈點前就緒(中立單位一開始就避開水沼);LOS/走廊淨空仍走下方 setWorld。
     room.battle = new BattleSim(room.battleConfig, room.world || null);
     // 世界障礙(房主載圖時上傳,存房間一份 → rematch 直接沿用):
@@ -278,10 +288,23 @@ export class RoomHub {
     room.phase = 'game';
     // 危險區靜態資料(地雷位置等)只發一次;快照不帶,雙方都要「用眼睛掃雷」
     const field = room.battle.fieldPayload();
-    for (const c of room.clients.values()) c.send(field);
+    for (const c of room.clients.values()) { try { c.send(field); } catch { /* 單一死連線不擋開戰 */ } }
+    } catch (e) {
+      // 開戰資料異常(畸形地圖之類):這一房退回房間階段等重開,伺服器與其他房不受影響。
+      // 不接住 = 整個 process 退出 = 全部房間全員斷線。
+      this.log(`⚠ 房間 ${room.pin} 開戰失敗已攔截:${String(e?.message || e)}`);
+      try { this.stopBattle(room); } catch { /* 忽略 */ }
+      room.battle = null; room.phase = 'room';
+      const host = room.clients.get(room.hostId);
+      try { host?.send({ t: 'error', msg: '開戰失敗:戰場資料異常,請重選地圖再開' }); } catch { /* 忽略 */ }
+      try { this.broadcast(room); } catch { /* 忽略 */ }
+      return;
+    }
     let last = Date.now();
     room.noHumanAt = 0;   // 對局中無真人計時(見下方檢查)
+    room.tickFails = 0;   // 連續 tick 異常計數(見下方 catch:偶發撐著,連爆才收房)
     room.tickTimer = setInterval(() => {
+      try {
       const now = Date.now();
       const dt = Math.min(0.5, (now - last) / 1000);
       last = now;
@@ -308,6 +331,17 @@ export class RoomHub {
         room.phase = 'over';
         this.stopBattle(room, /*keepPhase*/ true);
         this.broadcast(room);
+      }
+      room.tickFails = 0;   // 這一 tick 全程無異常:連爆計數歸零
+      } catch (e) {
+        // tick 內任何未預期異常(模擬邊界、快照序列化、廣播)只收這一房:偶發撐著等下一 tick,
+        // 連爆 5 次才退回房間階段。舊制不接住 = 整個 process 退出 = 全部房間全員斷線。
+        room.tickFails = (room.tickFails || 0) + 1;
+        this.log(`⚠ 房間 ${room.pin} tick 異常已攔截:${String(e?.message || e)}`);
+        if (room.tickFails <= 5) return;
+        try { this.stopBattle(room); } catch { /* 忽略 */ }
+        room.battle = null; room.phase = 'room'; room.tickFails = 0;
+        try { this.broadcast(room); } catch { /* 忽略 */ }
       }
     }, GAME.TICK_MS);
     this.broadcast(room);

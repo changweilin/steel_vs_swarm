@@ -69,17 +69,24 @@ export class LocalNet {
     this.hub = null; this.sess = null;
   }
 
-  sendNow(msg) { if (this.connected) this.sess.recv(msg); }
+  // 單機 recv 是同步直呼:核心若拋(畸形輸入之類)會一路噴進遊戲迴圈把頁面打停。
+  // 傳輸層在這裡攔截並丟棄,與伺服器版行為一致(降級不例外)。
+  _recv(m) {
+    try { this.sess.recv(m); }
+    catch (err) { console.error('[solo] 訊息處理異常已攔截並丟棄', err); }
+  }
+
+  sendNow(msg) { if (this.connected) this._recv(msg); }
 
   flushQueue() {
     if (!this.connected) return;
     const q = this._queue;
     this._queue = [];
-    for (const m of q) this.sess.recv(m);
+    for (const m of q) this._recv(m);
   }
 
   send(msg) {
-    if (this.connected) this.sess.recv(msg);
+    if (this.connected) this._recv(msg);
     else this._queue.push(msg);
   }
 }
