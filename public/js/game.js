@@ -4560,7 +4560,7 @@ export class BattleClient {
         const y = this.terrain ? this.terrain.heightAt(x, z) + (p.y || 0) : (p.y || 0);
         this.env?.strikeLightningAt?.(x, y, z);
         if (p.id === this.bodyId || (this.hero && p.id === this.hero.id) || p.id === this.youId) {
-          this.hud?.feed?.(`⚡ 遭雷雨閃電擊中! 受損 ${WEATHER_DEBUFFS.LIGHTNING.BASE_DMG} HP`);
+          this.hud?.feed?.(`⚡ 遭打雷閃電擊中! 受損 ${WEATHER_DEBUFFS.LIGHTNING.BASE_DMG} HP`);
           this._lastHurtAt = performance.now() / 1000;
           this.trauma = Math.min(1, this.trauma + 0.4);
         }

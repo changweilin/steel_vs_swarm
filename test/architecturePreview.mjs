@@ -225,7 +225,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
         <option value="clear" selected>☀️ 晴朗</option>
         <option value="cloudy">☁️ 陰天</option>
         <option value="heavy_rain">🌧️ 大雨</option>
-        <option value="storm">⚡ 暴風雨</option>
+        <option value="storm">⚡ 打雷</option>
         <option value="windy">💨 強風</option>
         <option value="sandstorm">🏜️ 沙暴</option>
         <option value="fog">🌫️ 濃霧</option>

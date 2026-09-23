@@ -59,8 +59,11 @@ export function paintGround(g, size, id, seed, env, baseColor, widthM, depthM) {
   if (!spec) throw new RangeError(`Unknown surface ${id}`);
   const rnd = mulberry32(seed), base = baseColor ?? spec.color;
   const wear = sample(rnd, SURFACE_LIMITS.wear);
-  const wet = ['rain', 'storm'].includes(env.weather);
-  const snow = env.temperature < 2 && env.weather === 'snow';
+  // 打雷/強風是乾基底:只有夏季伴隨降雨才比照雨天潤濕,春(無)/秋(沙)/冬(雪)不濕
+  const wet = env.weather === 'rain'
+    || ((env.weather === 'storm' || env.weather === 'windy') && env.season === 'summer');
+  const snow = env.temperature < 2 && (env.weather === 'snow'
+    || ((env.weather === 'storm' || env.weather === 'windy') && env.season === 'winter'));
   const seasonal = spec.landscape === 'grassland' || spec.landscape === 'woodland' || spec.landscape === 'cultivated';
   const factor = (wet ? .8 : 1) * (seasonal && env.season === 'winter' ? .88 : 1);
   const rgb = [base >> 16 & 255, base >> 8 & 255, base & 255].map(v => Math.round(v * factor));

@@ -786,7 +786,7 @@ function makeParticles() {
 
 /**
  * 3D 烏雲閃電電弧系統 (3D Branching Lightning Bolts)
- * 在雷雨/風暴天從高空烏雲群向下擊出真實折線分支閃電弧光與地面衝擊光暈。
+ * 在打雷天從高空烏雲群向下擊出真實折線分支閃電弧光與地面衝擊光暈。
  */
 function makeLightningSystem(span, terrain) {
   const grp = new THREE.Group();

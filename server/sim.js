@@ -5715,9 +5715,9 @@ export class BattleSim {
   }
 
   /**
-   * 雷雨天氣閃電隨機傷害結算 (2026-09-04 使用者定案):
-   * 雷雨天氣時的閃電有機率隨機造成一名或多名 NPC / 機體 / 建築單位傷害,
-   * 機率與頻率與雷雨指數有關 (thunder >= 75% 且 effectiveThunder > 0 時觸發)。
+   * 打雷天氣閃電隨機傷害結算 (2026-09-04 使用者定案):
+   * 打雷天氣時的閃電有機率隨機造成一名或多名 NPC / 機體 / 建築單位傷害,
+   * 機率與頻率與打雷指數有關 (thunder >= 75% 且 effectiveThunder > 0 時觸發)。
    */
   _tickWeather(dt) {
     const dyn = this.curWeatherDyn;
@@ -5728,11 +5728,11 @@ export class BattleSim {
     const cfg = WEATHER_DEBUFFS.LIGHTNING;
     this._lightningTimer -= dt;
     if (this._lightningTimer <= 0) {
-      // 依雷雨指數決定下次判定頻率 (75% 時 8s, 100% 時 2s)
+      // 依打雷指數決定下次判定頻率 (75% 時 8s, 100% 時 2s)
       const interval = Math.max(cfg.INTERVAL_MIN, (1.0 - dyn.effectiveThunder) * (cfg.INTERVAL_MAX - cfg.INTERVAL_MIN) + cfg.INTERVAL_MIN);
       this._lightningTimer = interval;
 
-      // 依雷雨指數決定觸發機率 (75% 時 35%, 100% 時 90%)
+      // 依打雷指數決定觸發機率 (75% 時 35%, 100% 時 90%)
       const prob = cfg.PROB_MIN + dyn.effectiveThunder * (cfg.PROB_MAX - cfg.PROB_MIN);
 
       // 確定性隨機判定 (以時間與種子為依據, mulbberry32 演算法)

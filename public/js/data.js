@@ -6488,7 +6488,7 @@ export const ENV = {
     clear:      { name: '晴朗' },
     cloudy:     { name: '陰天' },
     heavy_rain: { name: '大雨' },
-    storm:      { name: '雷雨' },
+    storm:      { name: '打雷' },
     fog:        { name: '濃霧' },
     windy:      { name: '強風' },
     snow:       { name: '大雪' },
@@ -6505,12 +6505,59 @@ export const WEATHER_PRESETS = {
   clear:      { clouds: 10, fog: 0,  wind: 12, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   cloudy:     { clouds: 68, fog: 12, wind: 22, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   heavy_rain: { clouds: 88, fog: 32, wind: 58, rain: 88, sand: 0,  snow: 0,  thunder: 0 },
-  storm:      { clouds: 94, fog: 38, wind: 78, rain: 94, sand: 0,  snow: 0,  thunder: 88 },
+  storm:      { clouds: 94, fog: 38, wind: 78, rain: 0,  sand: 0,  snow: 0,  thunder: 88 },
   fog:        { clouds: 42, fog: 90, wind: 8,  rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   windy:      { clouds: 32, fog: 0,  wind: 88, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   snow:       { clouds: 84, fog: 28, wind: 62, rain: 0,  sand: 0,  snow: 92, thunder: 0 },
   sandstorm:  { clouds: 28, fog: 18, wind: 84, rain: 0,  sand: 88, snow: 0,  thunder: 0 },
 };
+
+// 打雷本身是乾雷基底(不帶雨),開局降水視季節貼近其中一種天氣:
+// 春 = 無降水(乾雷) / 夏 = 近大雨 / 秋 = 近沙暴 / 冬 = 近大雪(雷雪)
+export const STORM_SEASON_COMPANION = {
+  spring: null,         // 乾雷:只打雷,無雨/沙/雪粒子
+  summer: 'heavy_rain',
+  autumn: 'sandstorm',
+  winter: 'snow',
+};
+
+/** 打雷開局初始向量:乾雷基底(烏雲/強風/雷) + 季節伴隨降水(春無/夏雨/秋沙/冬雪) */
+export function stormPresetForSeason(season = 'summer') {
+  const base = WEATHER_PRESETS.storm;
+  const companion = STORM_SEASON_COMPANION[season] ?? null;
+  const ref = (companion && WEATHER_PRESETS[companion]) || null;
+  if (!ref) return { ...base };
+  return {
+    ...base,
+    rain: companion === 'heavy_rain' ? ref.rain : 0,
+    sand: companion === 'sandstorm' ? ref.sand : 0,
+    snow: companion === 'snow' ? ref.snow : 0,
+  };
+}
+
+// 強風本身是乾風基底(不帶降水),開局降水視季節貼近其中一種天氣:
+// 春 = 無降水(乾風) / 夏 = 近大雨 / 秋 = 近沙暴 / 冬 = 近大雪(風雪)
+export const WINDY_SEASON_COMPANION = {
+  spring: null,         // 乾風:只有強風,無雨/沙/雪粒子
+  summer: 'heavy_rain',
+  autumn: 'sandstorm',
+  winter: 'snow',
+};
+
+/** 強風開局初始向量:乾風基底(強風) + 季節伴隨降水(春無/夏雨/秋沙/冬雪);夏冬雲量 64 達烏雲門檻,春秋維持 32 */
+export function windyPresetForSeason(season = 'summer') {
+  const base = WEATHER_PRESETS.windy;
+  const companion = WINDY_SEASON_COMPANION[season] ?? null;
+  const ref = (companion && WEATHER_PRESETS[companion]) || null;
+  if (!ref) return { ...base };
+  return {
+    ...base,
+    clouds: (companion === 'heavy_rain' || companion === 'snow') ? 64 : base.clouds,
+    rain: companion === 'heavy_rain' ? ref.rain : 0,
+    sand: companion === 'sandstorm' ? ref.sand : 0,
+    snow: companion === 'snow' ? ref.snow : 0,
+  };
+}
 
 // 四季常理天氣出現機率分配 (總和 100%; 符合真實氣候統計特徵; 夏季降雪率嚴格為 1.0%)
 export const SEASON_WEATHER_WEIGHTS = {
@@ -6663,7 +6710,12 @@ export function optimalSolarTiltRad(latDeg = 25.0) {
  */
 export function weatherVectorAt(season = 'summer', startTime = 'day', startWeather = 'clear', elapsedS = 0, seed = 0, latDeg = 25.0) {
   const s = season && SEASON_TIME_BIAS[season] ? season : 'summer';
-  const initVec = WEATHER_PRESETS[startWeather] || WEATHER_PRESETS.clear;
+  // 打雷/強風開局不固定降水:乾基底 + 視季節貼近其中一種天氣(春無/夏雨/秋沙/冬雪)
+  const initVec = startWeather === 'storm'
+    ? stormPresetForSeason(s)
+    : startWeather === 'windy'
+      ? windyPresetForSeason(s)
+      : (WEATHER_PRESETS[startWeather] || WEATHER_PRESETS.clear);
   const sched = computeSolarSchedule(s, latDeg);
   const curHour = clockHour(startTime, elapsedS, sched.startH);
   const { a, b, t } = phaseBlend(curHour);
@@ -6837,15 +6889,15 @@ export function resolveWeatherDynamics(weatherVec, prevDyn = null, dt = 0) {
   };
 }
 
-// 動態天氣 Debuff 參數與單一真相縫 (強風移速、大雪 CD、沙暴攻速、大雨攻擊力、雷雨閃電傷害)
+// 動態天氣 Debuff 參數與單一真相縫 (強風移速、大雪 CD、沙暴攻速、大雨攻擊力、打雷閃電傷害)
 export const WEATHER_DEBUFFS = {
   THRESHOLD: 75,       // 各屬性觸發門檻 75%
   MAX_CHANGE: 0.125,   // 最大變化幅度 12.5%
   LIGHTNING: {
     BASE_DMG: 75,      // 閃電基礎傷害
     PEN: 15,           // 穿甲值
-    INTERVAL_MIN: 2.0, // 雷雨 100% 時判定頻率 (每 2 秒一次)
-    INTERVAL_MAX: 8.0, // 雷雨 75% 剛觸發時判定頻率 (每 8 秒一次)
+    INTERVAL_MIN: 2.0, // 打雷 100% 時判定頻率 (每 2 秒一次)
+    INTERVAL_MAX: 8.0, // 打雷 75% 剛觸發時判定頻率 (每 8 秒一次)
     PROB_MIN: 0.35,    // 最低觸發機率
     PROB_MAX: 0.90,    // 最高觸發機率
     MAX_TARGETS: 3,    // 單次閃電最大打擊目標數

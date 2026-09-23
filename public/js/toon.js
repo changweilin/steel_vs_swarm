@@ -922,7 +922,7 @@ const _windK = {
 const _gustK = (_windDir.gustK = {
   value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.GUST_M),
 });
-// 天氣動態風浪影響共享 uniform(強風/沙暴/雷雨時動態放大樹木搖晃、旗幟飄動、水波高度與擴散速度)
+// 天氣動態風浪影響共享 uniform(強風/沙暴/打雷時動態放大樹木搖晃、旗幟飄動、水波高度與擴散速度)
 const _weatherWind = {
   amp: { value: 1.0 },
   freq: { value: 1.0 },
