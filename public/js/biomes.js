@@ -9572,7 +9572,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
       ? buildBoundaryRunParts(kind, {
           len: step, depth: def.depth, bufferDepth: bufAvailable, h: kh0,
           seed, variant, season: terrain.season || 'summer', water: s.water,
-          biome: s.biome,
+          biome: s.biome, joins: segJoins,
         })
       : null;
     const parts = def.terrainFit ? (joined?.parts || []) : (boundaryBatch?.parts || wallParts(kind, {

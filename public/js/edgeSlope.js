@@ -1,6 +1,6 @@
 // Continuous boundary cross-sections. Adjacent segments sample identical world coordinates;
 // segment seeds never change their end profiles. No Three.js or shared random stream.
-import { ROCK_SEASON_TINT, environmentParts, storageTankParts } from './environmentParts.js';
+import { ROCK_SEASON_TINT, environmentParts, storageTankParts, leveeGateParts, citywallBarbicanParts, NATURAL_CLIFF_KINDS } from './environmentParts.js';
 import { mulberry32 } from './rng.js';
 
 const hillSection = [[-.5, 0], [-.35, .32], [-.16, .7], [0, .86], [.2, .65], [.38, .25], [.5, 0]];
@@ -250,6 +250,51 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
   const center = min.map((v, i) => (v + max[i]) / 2), size = max.map((v, i) => v - min[i]);
   const meshData = { vertices: vertices.map((v, i) => v - center[i % 3]), faces, colors };
   const parts = [{ g: ['mesh', meshData, size], p: center, c: null, role: 'terrain-joined-boundary' }];
+  if (kind === 'levee') {
+    const jList = joins || fill?.joins;
+    for (const endIdx of [0, 1]) {
+      const j = jList ? jList[endIdx] : { kind: 'levee' };
+      const jKind = j ? (j.kind || j) : null;
+      if (jKind && NATURAL_CLIFF_KINDS.has(jKind)) continue;
+      const isEndpoint = !jKind || jKind !== 'levee';
+      const gateList = leveeGateParts({ len, depth, h, seed: (seed ^ Math.imul(endIdx + 1, 0x5173)) >>> 0, endIdx, isEndpoint });
+      const sign = endIdx === 0 ? -1 : 1;
+      const gateW = Math.min(8, len * 0.22);
+      const margin = 0.25;
+      const gx = sign * (len / 2 - gateW / 2 - margin);
+      const wx = snap(x + ca * gx);
+      const wz = snap(z - sa * gx);
+      const sample = heightAt(wx, wz);
+      if (!Number.isFinite(sample)) return null;
+      const groundLevel = waterY == null ? sample : Math.max(waterY, sample);
+      const base = groundLevel - 0.4;
+      lo = Math.min(lo, groundLevel);
+      hi = Math.max(hi, groundLevel);
+      parts.push(...gateList.map(p => ({ ...p, p: [p.p[0], p.p[1] + base, p.p[2]] })));
+    }
+  } else if (kind === 'citywall') {
+    const jList = joins || fill?.joins;
+    for (const endIdx of [0, 1]) {
+      const j = jList ? jList[endIdx] : { kind: 'citywall' };
+      const jKind = j ? (j.kind || j) : null;
+      if (jKind && NATURAL_CLIFF_KINDS.has(jKind)) continue;
+      const isEndpoint = !jKind || jKind !== 'citywall';
+      const barbicanList = citywallBarbicanParts({ len, depth, h, seed: (seed ^ Math.imul(endIdx + 1, 0x7391)) >>> 0, endIdx, isEndpoint });
+      const sign = endIdx === 0 ? -1 : 1;
+      const W_b = Math.min(10, len * 0.24);
+      const margin = 0.1;
+      const bx = sign * (len / 2 - W_b / 2 - margin);
+      const wx = snap(x + ca * bx);
+      const wz = snap(z - sa * bx);
+      const sample = heightAt(wx, wz);
+      if (!Number.isFinite(sample)) return null;
+      const groundLevel = waterY == null ? sample : Math.max(waterY, sample);
+      const base = groundLevel - 0.4;
+      lo = Math.min(lo, groundLevel);
+      hi = Math.max(hi, groundLevel);
+      parts.push(...barbicanList.map(p => ({ ...p, p: [p.p[0], p.p[1] + base, p.p[2]] })));
+    }
+  }
   if (def.object || def.tanks) {
     const count = Math.max(1, Math.ceil(len / def.pitch)), slot = len / count;
     const rnd = mulberry32(seed >>> 0);

@@ -5,7 +5,7 @@
 import { mulberry32 } from './rng.js';
 import { boundaryGrid } from './objectLayout.js';
 import { partAABB, VEHICLE_SPEC } from './vehicles.js';
-import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, narrowGeologyBoundary, storageTankParts, environmentAvailable, environmentSize, makeSceneVehicleParts } from './environmentParts.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, narrowGeologyBoundary, storageTankParts, environmentAvailable, environmentSize, makeSceneVehicleParts, NATURAL_CLIFF_KINDS, citywallBarbicanParts, leveeGateParts } from './environmentParts.js';
 import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
 export { ROCK_SEASON_TINT } from './environmentParts.js';
 
@@ -424,7 +424,7 @@ const rep = (len, pitch, fn) => {
 const pick = (rnd, arr) => arr[Math.floor(rnd() * arr.length) % arr.length];
 
 // Visible gaps remain blocked by the continuous authoritative ring.
-export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed), season = 'summer', yaw = false }) {
+export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed), season = 'summer', yaw = false, joins = null }) {
   const def = WALL_KINDS[kind];
   if (!def) throw new RangeError('Unknown boundary kind: ' + kind);
   if (![len, depth, h].every(n => Number.isFinite(n) && n > 0)) throw new RangeError('Invalid boundary dimensions');
@@ -435,9 +435,9 @@ export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant
   if (def.object) return environmentParts(def.object, { size: [len, h, depth], seed: objectSeed, season, yaw });
   if (EXPANDED_BOUNDARIES[kind] || ['barricade', 'levee', 'seawall'].includes(kind)) return buildSlopeBoundary(kind, {
     len, depth, h: h - .4, x: objectSeed % 997 * 11, z: objectSeed % 953 * 7,
-    seed: objectSeed, season, heightAt: () => .4,
+    seed: objectSeed, season, heightAt: () => .4, joins,
   }).parts;
-  return linearEnvironmentParts(kind, { len, depth, h, seed: objectSeed, season });
+  return linearEnvironmentParts(kind, { len, depth, h, seed: objectSeed, season, joins });
 }
 
 /**
@@ -641,14 +641,14 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
  * @returns {{ parts: Array, bufferParts: Array }}
  */
 export function buildBoundaryRunParts(kind, {
-  len, depth, bufferDepth = 0, h = 18, seed = 1, variant = 0, season = 'summer', water = false, biome = null,
+  len, depth, bufferDepth = 0, h = 18, seed = 1, variant = 0, season = 'summer', water = false, biome = null, joins = null,
 }) {
   const layout = BOUNDARY_BUFFER_LAYOUTS[kind];
   const def = WALL_KINDS[kind];
   const targetH = Math.max(h, def?.h || 18);
   if (!layout) {
     return {
-      parts: wallParts(kind, { len, depth, h: targetH, seed, variant, season }),
+      parts: wallParts(kind, { len, depth, h: targetH, seed, variant, season, joins }),
       bufferParts: [],
     };
   }
@@ -663,9 +663,90 @@ export function buildBoundaryRunParts(kind, {
 
   if (layout.continuous) {
     // 連續組裝邊界障礙物：本體（Row 0）透過 wallParts 產生連續無縫長構造；
-    // 緩衝區（Row 1..N）生成內容同等於一般遊戲區域（取用 ENVIRONMENT_OBJECTS 對應地貌物件）
-    const wallObstacleParts = wallParts(kind, { len, depth, h: targetH, seed, variant, season });
+    // 城牆/河堤自身延伸時透過甕城/閘門連接；與非峭壁/土石流/崩塌地物件相接時建立甕城/閘門作為端點，兩端向緩衝區繼續鋪設
+    const wallObstacleParts = wallParts(kind, { len, depth, h: targetH, seed, variant, season, joins });
     for (const p of wallObstacleParts) parts.push(p);
+
+    if (kind === 'levee') {
+      const hasGate = parts.some(p => p.role === 'gate-pier' || p.role === 'gate-leaf');
+      if (!hasGate) {
+        for (const endIdx of [0, 1]) {
+          const j = joins ? joins[endIdx] : { kind: 'levee' };
+          const jKind = j ? (j.kind || j) : null;
+          if (jKind && NATURAL_CLIFF_KINDS.has(jKind)) continue;
+          const isEndpoint = !jKind || jKind !== 'levee';
+          parts.push(...leveeGateParts({ len, depth, h: targetH, seed: (seed ^ Math.imul(endIdx + 1, 0x5173)) >>> 0, endIdx, isEndpoint }));
+        }
+      }
+    }
+
+    // 端點兩端向緩衝區繼續鋪設 (citywall / levee)
+    const endpointXs = [];
+    if ((kind === 'citywall' || kind === 'levee') && bufferDepth > 0) {
+      for (const endIdx of [0, 1]) {
+        const j = joins ? joins[endIdx] : { kind };
+        const jKind = j ? (j.kind || j) : null;
+        if (jKind && NATURAL_CLIFF_KINDS.has(jKind)) continue;
+        const isEndpoint = !jKind || jKind !== kind;
+        if (!isEndpoint) continue; // 僅非自然岩體端點向緩衝區繼續鋪設
+        const sign = endIdx === 0 ? -1 : 1;
+        const ex = sign * (len / 2 - Math.min(5, len * 0.15));
+        endpointXs.push(ex);
+
+        const paveRows = Math.max(maxBufferRows, bufferDepth >= 8 ? 1 : 0);
+        for (let r = 1; r <= paveRows; r++) {
+          const stepD = maxBufferRows > 0 ? rowStep : Math.min(rowStep, bufferDepth);
+          const v = Math.min(-depth / 2 - 1.0, -depth / 2 - (r - 0.5) * stepD);
+          if (v < -depth / 2 - bufferDepth - 1e-4) continue;
+          if (kind === 'citywall') {
+            const bodyH = targetH * 0.68;
+            bufferParts.push({
+              g: ['box', 8, bodyH * 0.88, rowStep * 0.9],
+              p: [ex, bodyH * 0.44, v],
+              c: 0x989789,
+              role: 'buffer-wall',
+              boundaryBuffer: true,
+            });
+            bufferParts.push({
+              g: ['box', 8.2, targetH * 0.018, rowStep * 0.92],
+              p: [ex, bodyH * 0.5, v],
+              c: 0x646d6b,
+              role: 'course-joint',
+              boundaryBuffer: true,
+            });
+            bufferParts.push({
+              g: ['box', 1.6, targetH * 0.12, rowStep * 0.88],
+              p: [ex - 2, bodyH * 0.88 + targetH * 0.06, v],
+              c: 0x989789,
+              role: 'battlement',
+              boundaryBuffer: true,
+            });
+            bufferParts.push({
+              g: ['box', 1.6, targetH * 0.12, rowStep * 0.88],
+              p: [ex + 2, bodyH * 0.88 + targetH * 0.06, v],
+              c: 0x989789,
+              role: 'battlement',
+              boundaryBuffer: true,
+            });
+          } else if (kind === 'levee') {
+            bufferParts.push({
+              g: ['box', 8, targetH * 0.55, rowStep * 0.92],
+              p: [ex, targetH * 0.275, v],
+              c: 0x8c9587,
+              role: 'buffer-levee',
+              boundaryBuffer: true,
+            });
+            bufferParts.push({
+              g: ['box', 2.2, targetH * 0.62, rowStep * 0.92],
+              p: [ex + sign * 2.8, targetH * 0.31, v],
+              c: 0x78807d,
+              role: 'wing-wall',
+              boundaryBuffer: true,
+            });
+          }
+        }
+      }
+    }
 
     const bioList = biome ? [biome] : (layout.bio || (water ? ['water'] : ['bare']));
     const candidateKinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k =>
@@ -680,6 +761,8 @@ export function buildBoundaryRunParts(kind, {
       for (let c = 0; c < numCols; c++) {
         let u = -len / 2 + (c + 0.5) * colStep + uOffset;
         if (u > len / 2 - colStep * 0.15) u -= (len - colStep * 0.3);
+
+        if (endpointXs.some(ex => Math.abs(u - ex) < colStep * 0.75)) continue;
 
         const ptSeed = edgeSeed(Math.round((u + 500) * 8), Math.round((-r * rowStep + 500) * 8), (seed ^ Math.imul(r + 1, 0x1f1f) ^ Math.imul(c + 1, 0x9e37)) >>> 0);
         const rnd = mulberry32(ptSeed);
