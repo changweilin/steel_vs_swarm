@@ -221,8 +221,8 @@ ok(/if \(LOBBY_SCREENS\.has\(screen\)\) setRoomCtrlMode\(null\)/.test(mainSrc),
   '離開戰區回大廳 MUST 解除戰區定案(留著 = 大廳還在用上一場的限定值)');
 ok(count(code(mainSrc), /setRoomCtrlMode\(/g) === 2,
   'setRoomCtrlMode 的呼叫端 MUST 只有兩處(套用廣播 + 回大廳解除)');
-ok(/ctrl: ctrlPref\(\)/.test(mainSrc) && count(mainSrc, /ctrl: ctrlPref\(\)/g) === 3,
-  '開房(一般 + 劇情 + 超級)MUST 帶上房主自己的預設操作方式');
+ok(/ctrl: ctrlPref\(\)/.test(mainSrc) && count(mainSrc, /ctrl: ctrlPref\(\)/g) === 2,
+  '開房(一般/超級 + 劇情)MUST 帶上房主自己的預設操作方式');
 ok(!/class="[^"]*touch-only[^"]*"[^>]*id="pauseCtrlMount"/.test(htmlSrc)
   && !/id="pauseCtrlMount"[^>]*class="[^"]*touch-only/.test(htmlSrc),
   '操作方式 MUST NOT 藏進 .touch-only —— 桌機也要能選「限定搖桿」');

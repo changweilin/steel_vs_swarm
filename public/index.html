@@ -42,8 +42,14 @@
   <div class="panel connect-box">
     <div class="panel-head">▍指揮官登入</div>
     <input id="myName" placeholder="你的代號" maxlength="16">
-    <div class="row lobby-actions">
-      <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 建立地圖</button>
+    <div class="divider">─── 生成地圖 ───</div>
+    <div class="row lobby-actions lobby-map-actions">
+      <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 預設/自訂</button>
+      <button id="mapMixedBtn" class="btn big swarm-btn">⚄ 混合地圖</button>
+      <button id="mapRandomBtn" class="btn big swarm-btn">🎲 隨機地圖</button>
+    </div>
+    <div class="divider">─── 遊戲模式 ───</div>
+    <div class="row lobby-actions lobby-game-actions">
       <button id="openRoomBtn" class="btn big steel-btn">▶ 開戰時刻</button>
       <button id="storyBtn" class="btn big story-btn">◈ 劇情戰役</button>
       <button id="superBtn" class="btn big super-btn">⚡ 超級大戰</button>
@@ -208,9 +214,9 @@
 <!-- ========= 開戰時刻(從已存地圖挑一個,設定房名/公開性/環境後開房)========= -->
 <div id="openroom" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
-  <div class="sysbar"><span><b>DEPLOY</b> // 戰區生成</span><span>MAP × TEAM × ENV <i>●</i></span></div>
+  <div class="sysbar"><span id="openRoomSysLeft"><b>DEPLOY</b> // 戰區生成</span><span>MAP × TEAM × ENV <i>●</i></span></div>
   <div class="panel connect-box">
-    <div class="panel-head">▍開戰時刻 — 選人數 + 地圖,或挑一個已存最愛</div>
+    <div class="panel-head" id="openRoomHead">▍開戰時刻 — 選人數 + 地圖,或挑一個已存最愛</div>
 
     <div class="setup-sec">
       <div class="setup-label">隊伍規模(現場切換,免先存最愛)</div>
@@ -296,60 +302,6 @@
   </div>
 </div>
 
-<!-- ========= 超級大戰(單人第三方:選規模 + 地圖 → 選角 → 出擊自動開戰)========= -->
-<div id="super" class="screen center-screen" style="display:none">
-  <div class="scanlines"></div>
-  <div class="sysbar"><span><b>SUPER</b> // 單人第三方</span><span>1 × SWARM × STEEL <i>●</i></span></div>
-  <div class="panel connect-box story-panel">
-    <div class="panel-head">▍超級大戰 — 一人對抗雙陣營</div>
-    <p class="story-blurb">你一人成第三方<b>超級戰士</b>:可選任意角色,鋼鐵與蜂群都是敵人、第三方野營不打你。重生在雙陣營砲火之外。每階 $200 全項目升級(20 階 = 原滿級,最高 100 階),自動購買預設開啟;陣亡金錢歸零 + 等級掉 5%。</p>
-
-    <div class="setup-sec">
-      <div class="setup-label">敵方規模(每陣營電腦數)</div>
-      <div class="row ts-row" id="tsRowSuper"></div>
-      <div class="setup-info" id="tsInfoSuper"></div>
-    </div>
-
-    <div class="setup-sec">
-      <div class="setup-label">電腦難度</div>
-      <div class="seg seg-sm" id="superDiffRow"></div>
-    </div>
-
-    <div class="setup-sec">
-      <div class="setup-label">預設場地(依上方人數即時重算兵線,即選即用)</div>
-      <div class="venue-grid" id="venueGridSuper"></div>
-    </div>
-
-    <div class="divider">─── 或從我的最愛選 ───</div>
-
-    <div class="setup-sec" id="favSectionSuper">
-      <div class="setup-label">★ 我的最愛</div>
-      <div class="venue-grid" id="favGridSuper"></div>
-    </div>
-
-    <div class="setup-sec">
-      <div class="setup-label">環境(預設隨機,開房時定案)</div>
-      <div class="row env-row">
-        <select id="envSeasonSuper" class="env-sel"></select>
-        <select id="envTimeSuper" class="env-sel"></select>
-        <select id="envWeatherSuper" class="env-sel"></select>
-      </div>
-    </div>
-
-    <div class="setup-sec">
-      <div class="setup-label">選擇你的角色(不選 = 開戰隨機,32 名全可選)</div>
-      <div class="char-grid" id="superCharGrid"></div>
-      <div class="char-info" id="superCharInfo"></div>
-    </div>
-
-    <div id="superStatus" class="map-status">選人數 + 場地,即可出擊。</div>
-    <div id="superDeploy" class="map-status" style="display:none"></div>
-    <div class="row" style="justify-content:center">
-      <button id="superFightBtn" class="btn big super-btn" disabled>⚡ 出擊</button>
-      <button id="superBackBtn" class="btn">← 返回大廳</button>
-    </div>
-  </div>
-</div>
 
 <!-- ========= 房間(陣營配對,每陣營 N 席)========= -->
 <div id="room" class="screen center-screen" style="display:none">
@@ -375,7 +327,7 @@
   </header>
 
   <!-- 卡序 = 主視覺方位:STEEL 左(藍)/ SWARM 右(黃),與 logo、標題橫幔、底圖對抗場一致 -->
-  <div class="side-cards">
+  <div class="side-cards" id="sideCards">
     <div class="side-card steel" id="sideSTEEL">
       <!-- 陣營軍旗:齒輪環 + 機甲三角(取自 logo 的鋼鐵徽記,平塗硬邊重繪) -->
       <div class="side-emblem">
@@ -393,7 +345,75 @@
       <div class="side-hero">主力 執法者機甲 ・ 地面 / 重火力 / 厚裝甲</div>
       <div class="side-slots"></div>
     </div>
-    <div class="side-vs">VS</div>
+    <div class="side-vs" id="steelVs">VS</div>
+    <div class="side-card super" id="sideSUPER" hidden>
+      <!-- 動態融合撕裂交錯的幾何細線背景 (無固定斜率，非平行破裂碎塊) -->
+      <div class="super-geom-bg" aria-hidden="true">
+        <svg class="super-geom-svg" viewBox="0 0 300 400" preserveAspectRatio="none">
+          <g class="geom-layer geom-steel">
+            <polyline points="0,65 95,40 180,110 300,75" />
+            <polyline points="0,210 130,170 190,260 300,200" />
+            <polyline points="0,320 80,360 210,290 300,340" />
+            <polygon class="geom-shard shard-1" points="40,110 110,85 85,150" />
+            <polygon class="geom-shard shard-3" points="190,220 260,205 230,280" />
+          </g>
+          <g class="geom-layer geom-swarm">
+            <polyline points="300,50 205,80 120,30 0,90" />
+            <polyline points="300,190 170,230 110,150 0,220" />
+            <polyline points="300,310 220,270 90,340 0,300" />
+            <polygon class="geom-shard shard-2" points="260,120 190,145 215,80" />
+            <polygon class="geom-shard shard-4" points="110,250 40,265 70,195" />
+          </g>
+        </svg>
+      </div>
+      <!-- 中央動態雷電線 (布朗運動隨機游走折線) -->
+      <div class="super-lightning-container" aria-hidden="true">
+        <svg class="super-lightning-svg" viewBox="0 0 100 400" preserveAspectRatio="none">
+          <defs>
+            <filter id="lightningGlow">
+              <feGaussianBlur stdDeviation="2" result="blur1"/>
+              <feGaussianBlur stdDeviation="5" result="blur2"/>
+              <feMerge>
+                <feMergeNode in="blur2"/>
+                <feMergeNode in="blur1"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <polyline class="super-bolt bolt-a" points="50,0 53,16 41,31 62,54 39,78 57,98 33,124 67,146 43,172 64,201 32,233 54,261 38,289 65,317 44,349 52,376 50,400" />
+          <polyline class="super-bolt bolt-b" points="50,0 44,21 63,42 36,65 58,89 42,114 66,138 31,167 56,193 27,219 61,244 46,276 69,308 37,336 59,363 46,386 50,400" />
+          <polyline class="super-bolt bolt-c" points="50,0 48,28 65,58 38,92 59,122 34,152 63,185 41,215 67,248 35,278 58,312 43,342 62,371 50,400" />
+          <path class="super-bolt-branch branch-a" d="M41,31 L20,44 L11,62 M62,54 L84,65 L93,82 M33,124 L14,142 L6,163 M67,146 L86,161 L94,183" />
+          <path class="super-bolt-branch branch-b" d="M32,233 L15,251 L21,273 M61,244 L83,256 L77,279 M38,289 L19,305 M65,317 L85,331" />
+        </svg>
+      </div>
+      <div class="side-emblem">
+        <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="超級戰士">
+          <defs>
+            <linearGradient id="superGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#5fd0f2"/>
+              <stop offset="48%" stop-color="#5fd0f2"/>
+              <stop offset="52%" stop-color="#ffc247"/>
+              <stop offset="100%" stop-color="#ffc247"/>
+            </linearGradient>
+            <filter id="superGlow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M8 26 H142 V34 H8 Z" fill="url(#superGrad)"/>
+          <path d="M75 36 L100 78 L88 76 L96 116 L75 100 L54 116 L62 76 L50 78 Z" fill="url(#superGrad)" filter="url(#superGlow)"/>
+          <circle cx="75" cy="82" r="60" stroke="url(#superGrad)" stroke-width="3" opacity="0.75"/>
+        </svg>
+      </div>
+      <div class="side-name">超級戰士 <span class="side-en">SUPER WARRIOR</span></div>
+      <div class="side-hero">單人第三方 ・ 任意角色 ・ 雙陣營皆敵</div>
+      <div class="side-slots"></div>
+    </div>
+    <div class="side-vs super-vs" id="superVs" hidden>VS</div>
     <div class="side-card swarm" id="sideSWARM">
       <!-- 陣營軍旗:倒三角 + 展翼 + 蜂巢(取自 logo 的蜂群徽記,平塗硬邊重繪) -->
       <div class="side-emblem">
@@ -415,19 +435,6 @@
       <div class="side-hero">主力 獵蜂無人機 ・ 飛行 / 高機動 / 薄裝甲</div>
       <div class="side-slots"></div>
     </div>
-    <div class="side-vs super-vs" id="superVs" hidden>＋</div>
-    <div class="side-card super" id="sideSUPER" hidden>
-      <div class="side-emblem">
-        <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="超級戰士">
-          <path d="M8 26 H142 V34 H8 Z" fill="currentColor"/>
-          <path d="M75 36 L100 78 L88 76 L96 116 L75 100 L54 116 L62 76 L50 78 Z" fill="currentColor"/>
-          <circle cx="75" cy="82" r="60" stroke="currentColor" stroke-width="3" opacity="0.65"/>
-        </svg>
-      </div>
-      <div class="side-name">超級戰士 <span class="side-en">SUPER</span></div>
-      <div class="side-hero">單人第三方 ・ 任意角色 ・ 雙陣營皆敵</div>
-      <div class="side-slots"></div>
-    </div>
   </div>
   <!-- 準備/開戰/離開:置於軍團(陣營)選擇正下方 -->
   <div class="row room-actions">
@@ -438,6 +445,11 @@
   <!-- 選角(入座後出現;不選 = 開戰隨機) -->
   <div class="char-section" id="charSection" style="display:none">
     <div class="panel-head" id="charSectionHead">▍選擇角色</div>
+    <div class="row seg seg-sm char-side-tabs" id="charSideTabs" style="display:none; justify-content:center; margin-bottom:8px">
+      <button class="segb on" type="button" data-cside="STEEL">▲ 鋼鐵軍團</button>
+      <button class="segb" type="button" data-cside="SWARM">▼ 蜂群兵團</button>
+      <button class="segb" type="button" data-cside="MERC">⚔ 傭兵聯盟</button>
+    </div>
     <div class="char-pick">
       <div class="char-grid" id="charGrid"></div>
       <div class="char-detail" id="charDetail"></div>
