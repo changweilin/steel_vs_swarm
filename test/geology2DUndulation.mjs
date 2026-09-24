@@ -299,6 +299,53 @@ for (const kind of continuousTypes) {
 console.log(`   ✓ 全部 ${continuousTypes.length} 款連續地質皆能向緩衝區無縫 2D 延伸，且頭尾兩端波谷嚴格為 0m、外圍落地、接縫平滑`);
 
 // -----------------------------------------------------------------------------
+// 4.1 驗證 2D 起伏不同排波峰隨機交錯（破除直角棋盤排布）
+// -----------------------------------------------------------------------------
+console.log('4.1 驗證 2D 起伏不同排波峰隨機交錯（非整齊棋盤排布）...');
+for (const kind of continuousTypes) {
+  const mesh = elongatedGeologyMesh(kind === 'rockery' ? 'mountain' : (NARROW_GEOLOGY_BOUNDARY[kind] || 'cliff'), 2026, {
+    len: 80,
+    depth: 16,
+    height: 14,
+    bufferDepth: 35,
+  });
+
+  // 收集緩衝區網格中各 z 排的頂點
+  const verts = mesh.bufferMeshData.vertices;
+  const rows = new Map();
+  for (let i = 0; i < verts.length; i += 3) {
+    const x = verts[i], y = verts[i + 1], z = verts[i + 2];
+    const zKey = z.toFixed(2);
+    if (!rows.has(zKey)) rows.set(zKey, []);
+    rows.get(zKey).push({ x, y });
+  }
+
+  // 找出有顯著起伏的高峰排
+  const reliefRows = Array.from(rows.entries())
+    .map(([z, pts]) => ({
+      z: Number(z),
+      peak: pts.reduce((max, p) => (p.y > max.y ? p : max), pts[0]),
+    }))
+    .filter(r => r.peak.y > 2.0);
+
+  assert(reliefRows.length >= 3, `${kind}: 應有足夠深度排數進行起伏交錯檢驗 (實得 ${reliefRows.length})`);
+
+  // 驗證相鄰排波峰位置存在橫向位移（交錯），絕非所有排波峰鎖定在同一 x 座標（棋盤格）
+  let staggeredShifts = 0;
+  for (let r = 0; r < reliefRows.length - 1; r++) {
+    const dx = Math.abs(reliefRows[r].peak.x - reliefRows[r + 1].peak.x);
+    if (dx > 0.5) staggeredShifts++;
+  }
+
+  assert(
+    staggeredShifts > 0,
+    `${kind}: 2D 地質深度方向各排波峰必須隨機交錯，不可呈整齊棋盤對齊 (staggeredShifts: ${staggeredShifts})`
+  );
+}
+console.log('   ✓ 全部連續地質在 2D 緩衝延伸中各排波峰皆自然隨機交錯');
+
+
+// -----------------------------------------------------------------------------
 // 5. 邊界管線整合 (narrowGeologyBoundary 與 buildBoundaryRunParts)
 // -----------------------------------------------------------------------------
 console.log('5. 驗證邊界管線整合產出 bufferParts...');

@@ -470,33 +470,35 @@ export function eval2DUndulation(pattern, x, z, kx = 0.2, kz = 0.2, phases = [0,
   const pList = Array.isArray(phases) && phases.length >= 3 ? phases : [0, 0, 0, 0];
   const p0 = pList[0] ?? 0, p1 = pList[1] ?? 0, p2 = pList[2] ?? 0, p3 = pList[3] ?? (p0 * 1.7);
   if (pattern === 'lattice') {
-    // 2D 晶格：六角晶格（0°, 60°, 120° 三向平面波）+ 正交諧波調諧
+    // 2D 晶格：六角/菱形晶格三向平面波，相鄰排自然交錯（非正交棋盤）+ 傾斜菱形調諧
     const sqrt3 = 1.7320508075688772;
     const w1 = Math.cos(kx * x + p0);
     const w2 = Math.cos((kx * x + sqrt3 * kz * z) * 0.5 + p1);
     const w3 = Math.cos((-kx * x + sqrt3 * kz * z) * 0.5 + p2);
     const hex = (w1 + w2 + w3) / 3;
-    const rect = Math.cos(kx * x + p3) * Math.cos(kz * z + p1 * 1.3);
-    return hex * 0.72 + rect * 0.28;
+    const rhombic = Math.cos((kx * x + 0.577 * kz * z) + p3) * Math.cos((sqrt3 * kz * z * 0.8) + p1 * 1.3);
+    return hex * 0.75 + rhombic * 0.25;
   }
   if (pattern === 'quasicrystal') {
     // 準晶格：8 摺非週期對稱平面波干涉，圓周等角度波矢無盲角，任一切面均具拍頻波峰波谷
+    // 加入 15° 非正交偏角，破除 0°/90° 軸向死鎖與棋盤狀排列
     const N = 8;
+    const tilt = 0.2617993877991494; // 15° 偏角
     let sum = 0;
     for (let j = 0; j < N; j++) {
-      const angle = j * Math.PI / 4;
+      const angle = tilt + j * Math.PI / 4;
       const pj = (phases[j % phases.length] * (1 + j * 0.21)) % (Math.PI * 2);
       sum += Math.cos(kx * x * Math.cos(angle) + kz * z * Math.sin(angle) + pj);
     }
     return sum / 4;
   }
   if (pattern === 'fluid') {
-    // 流體：旋度對流卷與渦流旋度位移（Curl-advection + Rayleigh-Bénard convection rolls）
+    // 流體：旋度對流卷與渦流旋度位移，斜向剪切與渦度調製破除對稱排列
     const dx = (0.28 / Math.max(1e-4, kx)) * Math.cos(kz * z * 0.8 + p0);
     const dz = (0.28 / Math.max(1e-4, kz)) * Math.sin(kx * x * 0.8 + p1);
     const xx = x + dx, zz = z + dz;
     const roll1 = Math.cos(kx * xx + kz * zz + p2) * Math.cos(kx * xx - kz * zz + p0);
-    const roll2 = Math.sin(kx * xx * 1.4 + p1) * Math.cos(kz * zz * 1.4 + p2);
+    const roll2 = Math.sin((kx * xx + 0.6 * kz * zz) * 1.3 + p1) * Math.cos((0.6 * kx * xx - kz * zz) * 1.3 + p2);
     return roll1 * 0.58 + roll2 * 0.42;
   }
   // random: 多頻率交叉擾動胞狀隨機起伏場
@@ -613,19 +615,16 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
   const taperZ = Math.max(1e-9, (totalDepth / bumpsZ) / 2);
   const smooth01 = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 
+  const avgW = len / bumps;
+  const kzRow = Math.PI * bumpsZ / totalDepth;
+
   let peakY = 0, peakYBuf = 0;
   for (let ix = 0; ix <= nx; ix++) {
     const u = ix / nx * 2 - 1;
-    const x = Math.min(ix / nx * len, len - 1e-9), cell = locate(x);
-    const span = bounds[cell + 1] - bounds[cell];
-    const frac = span > 0 ? (x - bounds[cell]) / span : 0, lu = frac * 2 - 1;
-    const blend = frac * frac * (3 - 2 * frac);
-    const floor = valleys[cell] + (valleys[cell + 1] - valleys[cell]) * blend;
-    const crest = peaks[cell], err = errors[cell];
-    const xx = ix / nx * len;
+    const xx = Math.min(ix / nx * len, len - 1e-9);
     const envU = Math.min(smooth01(xx / taperL), smooth01((len - xx) / taperR));
-    const win = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 0.7);
-    const winR = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 2);
+    // 兩端邊緣平滑收斂至 0，確保頭尾（x = 0, len）兩端波谷不受橫向平移拉扯，嚴格保持 0m
+    const edgeTaper = Math.sin(Math.PI * Math.max(0, Math.min(1, xx / len)));
 
     for (let iz = 0; iz <= nz; iz++) {
       let zPhys;
@@ -640,7 +639,29 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
       const envV = Math.min(smooth01(distFront / taperZ), smooth01(distBack / taperZ));
       const env2D = envU * envV;
 
-      const v = (zPhys - zMid) / (totalDepth / 2);
+      const zLocal = zPhys - zMid;
+      const v = zLocal / (totalDepth / 2);
+
+      let xEff = xx;
+      if (is2D) {
+        // 2D 起伏不同排波峰隨機交錯：相鄰排相位差 π（cos 符號交替），波峰沿 X 軸錯開約半個波長
+        // 次級諧波（黃金比例頻率）與隨機相位破除規整週期，使不同排交錯量隨機化，破除棋盤格
+        const alt = Math.cos(kzRow * zLocal + phases2D[0]);
+        const jitt = Math.sin(1.618 * kzRow * zLocal + phases2D[1]) * 0.42
+          + Math.cos(2.414 * kzRow * zLocal + phases2D[2]) * 0.22;
+        const stagX = avgW * (0.38 * alt + 0.22 * jitt) * edgeTaper;
+        xEff = Math.max(0, Math.min(len - 1e-9, xx + stagX));
+      }
+
+      const cell = locate(xEff);
+      const span = bounds[cell + 1] - bounds[cell];
+      const frac = span > 0 ? (xEff - bounds[cell]) / span : 0, lu = frac * 2 - 1;
+      const blend = frac * frac * (3 - 2 * frac);
+      const floor = valleys[cell] + (valleys[cell + 1] - valleys[cell]) * blend;
+      const crest = peaks[cell], err = errors[cell];
+      const win = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 0.7);
+      const winR = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 2);
+
       const base = profile(type, lu * .92, v * .92, p);
       const noise = (Math.sin(lu * 7 + v * 3 + phases[0]) * .3
         + Math.sin(lu * 13 - v * 9 + phases[1]) * .15
@@ -652,7 +673,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
       let peakEff = crest;
 
       if (is2D) {
-        const u2d = eval2DUndulation(activePattern, -len / 2 + xx, zPhys - zMid, kx, kz, phases2D);
+        const u2d = eval2DUndulation(activePattern, -len / 2 + xEff, zLocal, kx, kz, phases2D);
         const wave2D = clamp(0.5 + 0.5 * u2d, 0, 1);
         crossMod = (0.34 + 0.66 * wave2D) * (.70 + .30 * cross);
         peakEff = floor + (crest - floor) * (0.35 + 0.65 * wave2D);
