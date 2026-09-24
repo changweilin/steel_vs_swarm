@@ -490,7 +490,7 @@ function venueBtn(v) {
   const vdef = VARIANT_DEFS.find((d) => d.key === v.variant);
   b.innerHTML = `<span class="venue-name"><span class="venue-name-text">${v.country} ${esc(v.name)}</span></span>`
     + `<span class="venue-tags"><span class="venue-type t-${v.type}">${v.type}</span>`
-    + (vdef ? `<span class="venue-var">${vdef.name}</span>` : '')
+    + (vdef ? `<span class="venue-var var-${v.variant}">${vdef.name}</span>` : '')
     + (v.story ? '<span class="venue-var story-tag">劇情</span>' : '')
     + '</span>';
   attachTip(b, venueTip(v, app.teamSize));
@@ -2087,14 +2087,29 @@ function renderCharPick(me) {
 
   const isSuper = subject.side === 'SUPER';
   const tabsEl = $('charSideTabs');
-  if (tabsEl) tabsEl.style.display = 'none';
+  if (tabsEl) {
+    tabsEl.style.display = isSuper ? 'flex' : 'none';
+    if (isSuper) {
+      if (!app.superCharTab) {
+        app.superCharTab = (subject.ch && CHARACTERS[subject.ch]?.side) || 'STEEL';
+      }
+      for (const btn of tabsEl.querySelectorAll('[data-cside]')) {
+        btn.classList.toggle('on', btn.dataset.cside === app.superCharTab);
+        btn.onclick = () => {
+          app.superCharTab = btn.dataset.cside;
+          for (const b of tabsEl.querySelectorAll('[data-cside]')) b.classList.toggle('on', b === btn);
+          renderCharPick(me);
+        };
+      }
+    }
+  }
 
   const grid = $('charGrid');
   grid.style.display = editable ? '' : 'none';
   grid.innerHTML = '';
   if (editable) {
     const list = isSuper
-      ? Object.keys(CHARACTERS)
+      ? Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].side === app.superCharTab)
       : charsOf(subject.side);
     for (const id of list) {
       const c = CHARACTERS[id];

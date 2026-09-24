@@ -411,29 +411,54 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   animation: superTearScan 5s linear infinite;
   z-index: 1;
 }
-.super-tear-fx {
-  position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1;
+/* 幾何撕裂細線背景 */
+.super-geom-bg {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; opacity: 0.75;
 }
-.super-tear-fx::before {
-  content: ''; position: absolute; inset: -20px; pointer-events: none;
-  background: radial-gradient(circle at 40% 45%, rgba(95, 208, 242, 0.25) 0%, transparent 60%);
-  mix-blend-mode: color-dodge;
-  animation: superSwirlBlue 6s ease-in-out infinite alternate;
+.super-geom-svg { width: 100%; height: 100%; display: block; }
+.geom-steel line, .geom-steel polyline {
+  stroke: #5fd0f2; stroke-width: 0.9px; stroke-dasharray: 6 3 2 4;
+  animation: geomSlideSteel 7s linear infinite;
 }
-.super-tear-fx::after {
-  content: ''; position: absolute; inset: -20px; pointer-events: none;
-  background: radial-gradient(circle at 60% 55%, rgba(255, 194, 71, 0.25) 0%, transparent 60%);
-  mix-blend-mode: color-dodge;
-  animation: superSwirlYellow 6s ease-in-out infinite alternate;
+.geom-swarm line, .geom-swarm polyline {
+  stroke: #ffc247; stroke-width: 0.9px; stroke-dasharray: 5 4 3 2;
+  animation: geomSlideSwarm 7s linear infinite reverse;
 }
-.super-clash-seam {
-  position: absolute; top: 0; bottom: 0; left: 50%; width: 3px;
-  transform: translateX(-50%) skewX(-8deg);
-  background: linear-gradient(180deg, #5fd0f2, #ffc247, #5fd0f2, #ffc247);
+.geom-shard { fill: none; stroke-width: 1px; }
+.shard-1 {
+  stroke: #5fd0f2;
+  animation: shardDrift1 4s ease-in-out infinite alternate;
+}
+.shard-2 {
+  stroke: #ffc247;
+  animation: shardDrift2 4s ease-in-out infinite alternate;
+}
+
+/* 中央動態雷電線 */
+.super-lightning-container {
+  position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+  pointer-events: none; z-index: 2; overflow: hidden;
+}
+.super-lightning-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.super-bolt {
+  fill: none; stroke-width: 2.2px; stroke-linecap: round; stroke-linejoin: round;
+  filter: url(#lightningGlow);
+}
+.bolt-a {
+  stroke: #5fd0f2;
+  animation: lightningFlickerA 0.35s steps(1) infinite;
+}
+.bolt-b {
+  stroke: #ffc247;
+  animation: lightningFlickerB 0.35s steps(1) infinite;
+}
+.super-bolt-branch {
+  fill: none; stroke-width: 1.5px; stroke-linecap: round;
+  stroke: #ffffff; opacity: 0.75;
   filter: drop-shadow(0 0 6px #5fd0f2) drop-shadow(0 0 6px #ffc247);
-  opacity: 0.75; pointer-events: none;
-  animation: superSeamJitter 1.8s steps(2, start) infinite;
+  animation: branchFlicker 0.5s steps(2) infinite;
 }
+
 .side-card.swarm:hover { background: rgba(255, 194, 71, 0.06); }
 .side-card.steel:hover { background: rgba(95, 208, 242, 0.06); }
 .side-card.super:hover {
@@ -553,24 +578,44 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
     border-color: rgba(255, 210, 100, 0.6);
   }
 }
-@keyframes superSeamJitter {
-  0% { transform: translateX(-50%) skewX(-8deg) scaleY(1); opacity: 0.7; }
-  15% { transform: translateX(-53%) skewX(-14deg) scaleY(1.05); opacity: 0.95; }
-  35% { transform: translateX(-47%) skewX(-4deg) scaleY(0.95); opacity: 0.6; }
-  55% { transform: translateX(-52%) skewX(-11deg) scaleY(1.02); opacity: 0.85; }
-  75% { transform: translateX(-48%) skewX(-6deg) scaleY(0.98); opacity: 0.7; }
-  100% { transform: translateX(-50%) skewX(-8deg) scaleY(1); opacity: 0.75; }
+@keyframes geomSlideSteel {
+  0% { stroke-dashoffset: 0; transform: translateY(0); }
+  50% { transform: translateY(-10px) skewX(2deg); }
+  100% { stroke-dashoffset: 60; transform: translateY(0); }
 }
-@keyframes superSwirlBlue {
-  0% { transform: translate(-10px, -15px) scale(1); }
-  50% { transform: translate(15px, 10px) scale(1.15); }
-  100% { transform: translate(-5px, 20px) scale(0.9); }
+@keyframes geomSlideSwarm {
+  0% { stroke-dashoffset: 0; transform: translateY(0); }
+  50% { transform: translateY(10px) skewX(-2deg); }
+  100% { stroke-dashoffset: 60; transform: translateY(0); }
 }
-@keyframes superSwirlYellow {
-  0% { transform: translate(10px, 15px) scale(1.1); }
-  50% { transform: translate(-15px, -10px) scale(0.9); }
-  100% { transform: translate(5px, -20px) scale(1.15); }
+@keyframes shardDrift1 {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.3; }
+  50% { transform: translate(8px, -6px) rotate(8deg); opacity: 0.85; }
+  100% { transform: translate(-6px, 6px) rotate(-6deg); opacity: 0.4; }
 }
+@keyframes shardDrift2 {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.4; }
+  50% { transform: translate(-8px, 6px) rotate(-8deg); opacity: 0.9; }
+  100% { transform: translate(6px, -4px) rotate(6deg); opacity: 0.3; }
+}
+@keyframes lightningFlickerA {
+  0%, 100% { opacity: 0.95; transform: scaleX(1); stroke-width: 2.2px; }
+  25% { opacity: 0.2; transform: scaleX(0.7); stroke-width: 1.5px; }
+  50% { opacity: 1; transform: scaleX(1.3) translateX(-1px); stroke-width: 2.8px; }
+  75% { opacity: 0.4; transform: scaleX(0.9); stroke-width: 1.8px; }
+}
+@keyframes lightningFlickerB {
+  0%, 100% { opacity: 0.3; transform: scaleX(0.8); stroke-width: 1.6px; }
+  25% { opacity: 1; transform: scaleX(1.2) translateX(1px); stroke-width: 2.6px; }
+  50% { opacity: 0.25; transform: scaleX(0.7); stroke-width: 1.4px; }
+  75% { opacity: 0.9; transform: scaleX(1.1); stroke-width: 2.4px; }
+}
+@keyframes branchFlicker {
+  0%, 100% { opacity: 0.8; stroke-dashoffset: 0; }
+  33% { opacity: 0.15; }
+  66% { opacity: 0.95; stroke-dashoffset: 4; }
+}
+
 .side-en { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 5px; color: var(--dim); margin-top: 4px; }
 .side-hero { color: var(--dim); font-size: 12px; font-family: var(--mono); letter-spacing: 0.5px; }
 .side-player { font-size: 15px; font-weight: 700; margin-top: 6px; min-height: 20px; }
@@ -1095,8 +1140,44 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .venue-var {
   flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
   padding: 1px 5px; border: 1px solid var(--line); border-radius: 0; color: var(--railW);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 .venue-var.story-tag { color: var(--dim); }
+
+/* 混合水域 / 混合沼澤:使用對應顏色 */
+.venue-var.var-water {
+  color: #6cc3e8;
+  border-color: rgba(108, 195, 232, 0.45);
+  background: rgba(108, 195, 232, 0.1);
+}
+.venue-var.var-swamp {
+  color: #6fae9b;
+  border-color: rgba(111, 174, 155, 0.45);
+  background: rgba(111, 174, 155, 0.1);
+}
+
+/* 另外 4 種:未用過的 Rose/Coral 色系，依混和/起伏程度漸變 */
+.venue-var.var-plain {
+  color: #ffccd5;
+  border-color: rgba(255, 204, 213, 0.35);
+  background: rgba(255, 204, 213, 0.08);
+}
+.venue-var.var-light {
+  color: #ff99aa;
+  border-color: rgba(255, 153, 170, 0.42);
+  background: rgba(255, 153, 170, 0.1);
+}
+.venue-var.var-mixed {
+  color: #ff6685;
+  border-color: rgba(255, 102, 133, 0.5);
+  background: rgba(255, 102, 133, 0.12);
+}
+.venue-var.var-rugged {
+  color: #ff3360;
+  border-color: rgba(255, 51, 96, 0.6);
+  background: rgba(255, 51, 96, 0.16);
+}
+
 .venue-btn:hover { border-color: var(--railW); background: rgba(var(--railW-rgb), 0.1); }
 .venue-btn.fav { border-left: 3px solid var(--railW); }
 .venue-btn.on { border-color: var(--railW); color: var(--railW); animation: selGlowSwarm 1.8s ease-in-out infinite; }

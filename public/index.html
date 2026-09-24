@@ -347,8 +347,45 @@
     </div>
     <div class="side-vs" id="steelVs">VS</div>
     <div class="side-card super" id="sideSUPER" hidden>
-      <div class="super-tear-fx" aria-hidden="true">
-        <div class="super-clash-seam"></div>
+      <!-- 動態融合撕裂交錯的幾何細線背景 -->
+      <div class="super-geom-bg" aria-hidden="true">
+        <svg class="super-geom-svg" viewBox="0 0 300 400" preserveAspectRatio="none">
+          <g class="geom-layer geom-steel">
+            <line x1="0" y1="35" x2="300" y2="115" />
+            <line x1="0" y1="150" x2="300" y2="230" />
+            <line x1="0" y1="265" x2="300" y2="345" />
+            <line x1="50" y1="0" x2="230" y2="400" />
+            <polyline points="15,70 140,130 75,250 210,310" />
+          </g>
+          <g class="geom-layer geom-swarm">
+            <line x1="300" y1="45" x2="0" y2="125" />
+            <line x1="300" y1="160" x2="0" y2="240" />
+            <line x1="300" y1="275" x2="0" y2="355" />
+            <line x1="250" y1="0" x2="70" y2="400" />
+            <polyline points="285,80 160,140 225,240 90,300" />
+          </g>
+          <polygon class="geom-shard shard-1" points="130,115 170,135 150,165" />
+          <polygon class="geom-shard shard-2" points="150,225 170,255 130,245" />
+        </svg>
+      </div>
+      <!-- 中央動態雷電線 -->
+      <div class="super-lightning-container" aria-hidden="true">
+        <svg class="super-lightning-svg" viewBox="0 0 100 400" preserveAspectRatio="none">
+          <defs>
+            <filter id="lightningGlow">
+              <feGaussianBlur stdDeviation="2" result="blur1"/>
+              <feGaussianBlur stdDeviation="5" result="blur2"/>
+              <feMerge>
+                <feMergeNode in="blur2"/>
+                <feMergeNode in="blur1"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <polyline class="super-bolt bolt-a" points="50,0 46,45 56,90 41,135 59,180 44,225 57,270 43,315 54,360 50,400" />
+          <polyline class="super-bolt bolt-b" points="50,0 55,50 42,95 58,145 43,190 58,235 42,280 56,330 47,370 50,400" />
+          <path class="super-bolt-branch branch-a" d="M41,135 L22,155 M59,180 L78,200 M44,225 L25,245 M56,90 L75,108" />
+        </svg>
       </div>
       <div class="side-emblem">
         <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="超級戰士">
@@ -408,6 +445,11 @@
   <!-- 選角(入座後出現;不選 = 開戰隨機) -->
   <div class="char-section" id="charSection" style="display:none">
     <div class="panel-head" id="charSectionHead">▍選擇角色</div>
+    <div class="row seg seg-sm char-side-tabs" id="charSideTabs" style="display:none; justify-content:center; margin-bottom:8px">
+      <button class="segb on" type="button" data-cside="STEEL">▲ 鋼鐵軍團</button>
+      <button class="segb" type="button" data-cside="SWARM">▼ 蜂群兵團</button>
+      <button class="segb" type="button" data-cside="MERC">⚔ 傭兵聯盟</button>
+    </div>
     <div class="char-pick">
       <div class="char-grid" id="charGrid"></div>
       <div class="char-detail" id="charDetail"></div>
