@@ -4296,7 +4296,8 @@ for (const c of Object.values(CHARACTERS)) {
 
 // ---- 經濟(2026-07-17 改制:金錢只來自擊殺/助攻/物資,無被動收入)----
 // 擊殺 = 全額賞金;助攻 = 賞金 × ASSIST.F(1/4) —— 曾對死者造成傷害才算貢獻,
-// 永久有效直到陣亡結算(sim._kill);陣亡後不記。TTL_S 保留僅供相容,不再消費。
+// 永久有效直到陣亡結算(sim._kill);陣亡後不記。結算另驗範圍:貢獻者須在 ASSIST.R_M 內。
+// TTL_S 保留僅供相容,不再消費。
 // 賞金「對應難度」:表列戰鬥單位由 UNITS 戰力推導(見 UNITS 之後的推導區塊),
 // 此處只手訂非表列目標(missile 擊落防空飛彈 / aasite 匿蹤陣地 / decoy 集束轟炸機 / 英雄機體)。
 // 校準錨(npm run bal ③):單一兵線 30% 擊殺 + 40% 助攻 × 10 分鐘 ≈ 八軌全滿總價。
@@ -5252,6 +5253,11 @@ export function rngDmgF(ch, slot) {
   for (const k of ['GUN_CEIL_M', 'HELI_ALT', 'AA_MIN_ALT', 'HERO_HEAL_RADIUS', 'HERO_HEAL_R']) GAME[k] *= CS;
   EVASION.MOBILITY_MIN *= CS; EVASION.MOVING_SPD *= CS;   // 速度門檻隨移速縮
 }
+// 助攻賞金半徑(唯一推導處,MUST NOT 手寫):狙擊模式視野 ×1.25,全角色統一取最大值。
+// 狙擊視野 = UNITS[kind].sight × GAME.AIM_SIGHT_MULT;現值 270 = 135(drone,最大)×1.6×1.25。
+// MUST 排在 COMBAT_SCALE 統一縮放之後:UNITS.sight 縮放後才是遊戲空間尺度,排前面會大一倍。
+ECON.ASSIST.R_M = Math.max(UNITS.drone.sight, UNITS.robot.sight, UNITS.morph.sight)
+  * GAME.AIM_SIGHT_MULT * 1.25;
 
 // ---- 持續 DPS 的唯一量法(彈匣週期;**MUST NOT 在任何消費端手抄這兩行**)----
 // 三個消費端各自抄一份是這個公式的老病:對建築收斂 `buildDps`、平衡 `tools/balance.mjs slotDps`、

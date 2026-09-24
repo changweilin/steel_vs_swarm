@@ -5729,14 +5729,16 @@ export class BattleSim {
       // 戰鬥分數(八軌升級的第二道門檻):擊殺 +4,對玩家(含電腦玩家)與砲塔 ×5;夾 MAX、只增不減。
       if (!t.neutral) by.kn = addBattleScore(by.kn, battleScoreGain(t.kind, !!t.hero));
     }
-    // 助攻:曾對死者造成傷害的其他英雄,賞金 × ASSIST.F(1/4)。純傷害永久制:
-    // 只要 _damage 唯一縫蓋過戳記就算,陣亡結算不再驗 TTL/距離;擊殺者本人拿全額不重複領。
+    // 助攻:曾對死者造成傷害的其他英雄,賞金 × ASSIST.F(1/4)。純傷害永久制 + 範圍限制:
+    // 只要 _damage 唯一縫蓋過戳記就算,但擊殺當下貢獻者須在 ASSIST.R_M(狙擊視野×1.25取最大)內;
+    // 擊殺者本人拿全額不重複領。
     if (t.asst) {
       const bounty = this._bounty(t);
       for (const pid in t.asst) {
         if (by && by.hero && pid === by.pid) continue;   // 擊殺者本人拿全額,不重複領助攻
         const a = this.heroes.get(pid);
         if (!a || a.side === t.side) continue;
+        if (dist2d(a.x, a.z, t.x, t.z) > ECON.ASSIST.R_M) continue;   // 範圍限制:狙擊視野×1.25,全角色統一值
         // 戰鬥分數:助攻 +1(硬目標 ×5)。**與賞金脫鉤** —— 賞金 0 的目標(如砲塔)一樣算戰績,
         // 舊制的 `if (!bounty) break` 只該擋錢,擋到分數就是「拆塔的助攻不計分」。
         if (!t.neutral) a.kn = addBattleScore(a.kn, battleScoreGain(t.kind, !!t.hero, true));
