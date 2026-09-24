@@ -6,7 +6,8 @@
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, BASE_MISSILE, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
-  vsMult, upgradePrice, upgradeScore, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId,
+  vsMult, upgradePrice, upgradeScore,   chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId,
+  isSuperSide, isThirdSide, SUPER_UPG, superCombatLvl, superDefLvl,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
   hyperClimbVx, hyperArcY, hyperTrackR,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
@@ -201,6 +202,8 @@ export class BattleSim {
     this.over = false;
     this.winner = null;
     this.stats = { SWARM: { kills: 0, deaths: 0, creepKills: 0, assists: 0 }, STEEL: { kills: 0, deaths: 0, creepKills: 0, assists: 0 } };
+    // 超級大戰才多記第三方戰績(一般對戰不加這一欄 ⇒ 快照逐位元同舊制)
+    if (!!config.super) this.stats.SUPER = { kills: 0, deaths: 0, creepKills: 0, assists: 0 };
     this._tickN = 0;                   // 快照霧戰爭:同一 tick 內多次呼叫共用同一份事件/飛彈/物資
     this._frameTickN = -1;
     // 陣營小兵強化等級(2026-07-30):**同陣營全玩家共用、不同兵線分開** ⇒ [side][laneIdx]。
@@ -212,9 +215,9 @@ export class BattleSim {
     // 攻堅順序(劇情戰役專用;見 data.js SIEGE)。旗標由開房的 battleConfig 帶進來,
     // 一般對戰恆 false ⇒ 下面兩張表全空、`siegeLocked()` 恆 false = 逐位元同舊制。
     this.siege = !!config.siege;
-    // 迷你地圖(見 data.js MINI):每側只有前線砲塔。旗標由開房的 battleConfig 帶進來(rooms.js
-    // 已正規化成布林),一般對戰恆 false ⇒ solveTowerSites 逐位元同舊制。
-    this.mini = !!config.mini;
+    // 超級大戰(單人第三方;見 data.js SUPER_UPG)。旗標由開房的 battleConfig 帶進來,
+    // 一般對戰恆 false ⇒ 超級分支全不執行 = 逐位元同舊制。
+    this.super = !!config.super;
     // 劇情戰役(見 data.js STORY_MAP):防守方 = NPC BOSS 那一邊;一般對戰恆 null。
     // 地圖型態只有 `mapArg` 一份解讀 —— 塔位 / 尺度 / 兵線數與客戶端建圖吃的是同一個入口。
     this.defSide = config.defSide || null;
@@ -1649,7 +1652,37 @@ export class BattleSim {
    * 主堡 HERO_SPAWN_OFF(> NPC 波次生成點沿線距離 WAVE_SPAWN_OFF_M,故落在 NPC 隊列之前),
    * 再垂直偏到路旁(避開落在兵線中央的 NPC 生成點)。同隊各機(bodyIdx)沿側向再錯開不疊在一起。
    */
+  /**
+   * 超級重生點:地圖雙陣營砲火外的任意地點(超級大戰專用)。
+   * 在空氣牆內隨機取樣,落在全部砲塔/主堡射程 + 緩衝之外;兼避水沼/火場。
+   * 取樣全用 Math.random(重生點本就非確定性佈局,不進共享 rnd 序列)。
+   */
+  _superSpawnPoint() {
+    const guns = [];
+    for (const e of this.ents.values()) {
+      if ((e.kind === 'tower' || e.kind === 'base') && e.hp > 0) guns.push(e);
+    }
+    for (const side of ['SWARM', 'STEEL']) {
+      const bp = this.basePos[side];
+      if (bp && !guns.some((g) => g.kind === 'base' && g.side === side)) guns.push({ x: bp[0], z: bp[1], kind: 'base' });
+    }
+    const R = (UNITS.tower?.range || 310) + 30;
+    const b = this.bounds || { minX: -600, maxX: 600, minZ: -600, maxZ: 600 };
+    let best = null, bestD = -Infinity;
+    for (let k = 0; k < 60; k++) {
+      const x = b.minX + Math.random() * (b.maxX - b.minX);
+      const z = b.minZ + Math.random() * (b.maxZ - b.minZ);
+      if (this._terrainBlocked && this._terrainBlocked(x, z)) continue;
+      let d = Infinity;
+      for (const g of guns) d = Math.min(d, dist2d(x, z, g.x, g.z));
+      if (d > R) return [x, z];
+      if (d > bestD) { bestD = d; best = [x, z]; }
+    }
+    return best || [(b.minX + b.maxX) / 2, (b.minZ + b.maxZ) / 2];
+  }
+
   _spawnPoint(side, squadIdx = 0, bodyIdx = 0) {
+    if (isSuperSide(side)) return this._superSpawnPoint();
     const [bx, bz] = this.basePos[side];
     const lanes = this.lanes.filter((p) => p.length >= 2);
     if (!lanes.length) return [bx + squadIdx * 14 + bodyIdx * 8, bz + squadIdx * 8 + bodyIdx * 5];
@@ -1672,8 +1705,8 @@ export class BattleSim {
   // ---------- 英雄(每陣營可多位,以玩家 pid 為鍵;ch = 角色 id)----------
   addHero(side, pid, ch) {
     if (this.heroes.has(pid)) return this.heroes.get(pid);
-    // 角色未指定(默認隨機):抽同陣營未被使用的角色(池含雙陣營共用的傭兵)
-    if (!CHARACTERS[ch] || (CHARACTERS[ch].side !== side && CHARACTERS[ch].side !== 'MERC')) {
+    // 角色未指定(默認隨機):抽同陣營未被使用的角色(池含雙陣營共用的傭兵);超級方可選任意角色
+    if (!CHARACTERS[ch] || (!isSuperSide(side) && CHARACTERS[ch].side !== side && CHARACTERS[ch].side !== 'MERC')) {
       const used = new Set([...this.heroes.values()].filter((x) => x.side === side).map((x) => x.ch));
       const pool = charsOf(side).filter((id) => !used.has(id));
       ch = (pool.length ? pool : charsOf(side))[Math.floor(Math.random() * (pool.length ? pool.length : charsOf(side).length))];
@@ -1692,7 +1725,8 @@ export class BattleSim {
       kamis: [], kamiCd: 0,          // 無人機自殺攻擊機:目前在空中的那些 / F 鍵冷卻到期時刻
       ps: {                          // 共用玩家狀態(見 SQUAD_SHARED)
         // 八軌升級(2026-07-20 面向改制):4 戰鬥面向(lw/hw/sk/ult,推進 abil 階)+ 4 防禦系統(見 ECON.UPGRADES)
-        money: ECON.START, upg: { lw: 0, hw: 0, sk: 0, ult: 0, hp: 0, ar: 0, sp: 0, ch: 0 },
+        // 超級升級(超級大戰專用單軌 0~100;一般對戰不存在此欄 ⇒ 快照 o.up 逐位元同舊制)
+        money: ECON.START, upg: { lw: 0, hw: 0, sk: 0, ult: 0, hp: 0, ar: 0, sp: 0, ch: 0, ...(isSuperSide(side) ? { super: 0 } : {}) },
         ammo: {}, reloadUntil: {}, fireAt: {}, buffs: {},
         mp, maxMp: mp, mpRegen: u.mpRegen,
         // 招式開場即 Lv1 可用(2026-07-20;不再需擊殺數解鎖)
@@ -1822,6 +1856,8 @@ export class BattleSim {
     if (this._blinded(h)) return;
     const t = this.ents.get(targetId);
     if (!t || t.neutral || t.gar || t.side === sq.side || t.hp <= 0 || (t.hero && t.dead)) return;
+    // 超級大戰:第三方與超級方互為中立,鎖了也打不動(見 _damage)⇒ 鎖定一併拒絕,免假火控
+    if ((isSuperSide(sq.side) && isThirdSide(t.side)) || (isThirdSide(sq.side) && isSuperSide(t.side))) return;
     // 射程閘門:用玩家當下手上那把武器(瞄準中 = 重武器),留與 heroHit 同一份彈道寬容
     const wp = this._heroWeapon(h, h.aiming ? 'heavy' : 'light');
     if (!wp) return;
@@ -4543,6 +4579,8 @@ export class BattleSim {
     if (!u) return;
     const lvl = h.abil[A.id] || 1;
     const scale = 1 + (lvl - 1) * 0.35;
+    // 超級大戰「小兵升級」:超級方召喚物另吃 creep 曲線(同 CREEP_UPG 0~100 同一條,不追溯既有召喚)
+    const supCreep = isSuperSide(h.side) ? creepUpgMul(h.upg?.super || 0) : 1;
     const nSum = nImp ?? Math.max(1, Math.round((A.count || 2) * frac));
     const isFly = !!u.fly;
     const alt = isFly ? (kind.includes('heli') ? GAME.HELI_ALT : GAME.DRONE_ALT) : 0;
@@ -4559,9 +4597,9 @@ export class BattleSim {
         ownerPid: h.pid,
         x: sx, z: sz,
         y: alt,
-        hp: Math.round(u.hp * scale),
-        maxHp: Math.round(u.hp * scale),
-        dmg: Math.round(u.dmg * scale),
+        hp: Math.round(u.hp * scale * supCreep),
+        maxHp: Math.round(u.hp * scale * supCreep),
+        dmg: Math.round(u.dmg * scale * supCreep),
         armor: u.armor || 0,
         speed: u.speed || 15,
         range: u.range || 150,
@@ -4590,7 +4628,9 @@ export class BattleSim {
       let target = null;
       if (owner?.lastHitTargetId) {
         const lt = this.ents.get(owner.lastHitTargetId);
-        if (lt && lt.hp > 0 && lt.side !== s.side && (!lt.hero || !lt.dead) && dist2d(s.x, s.z, lt.x, lt.z) <= s.sight * 1.5) {
+        // 超級方召喚物不集火第三方(互為中立,打也打不動;見 _damage 唯一縫)
+        if (lt && lt.hp > 0 && lt.side !== s.side && (!lt.hero || !lt.dead) && dist2d(s.x, s.z, lt.x, lt.z) <= s.sight * 1.5
+          && !(isSuperSide(s.side) && isThirdSide(lt.side))) {
           target = lt;
         }
       }
@@ -5160,6 +5200,11 @@ export class BattleSim {
     // NPC BOSS 不使用升級系統(使用者:「防禦面與小兵永不升級」;攻擊面改由擊破 HP 段推進,
     // 見 `_bossEnrage`)。閘門住這裡而不是 bots.js —— 那是 AI 的節流,這裡才是權威(A1)。
     if (this.isBoss(h)) return 'NPC BOSS 不使用升級系統';
+    // 超級大戰:超級方只走單軌超級升級(固定 $200,免戰鬥分數門檻);八軌與小兵強化不適用
+    if (isSuperSide(h.side)) {
+      if (item === 'super') return this._buySuperUpg(h);
+      return '超級戰士請購買超級升級';
+    }
     if (item === 'creep') return this._buyCreepUpg(h, lane);
     // hasOwn:item 是客戶端原字串,'toString' 等原型鏈鍵名會取到繼承函式(truthy)
     // → price NaN → 共用 ps.money 污染成 NaN = 八軌全免。
@@ -5207,6 +5252,52 @@ export class BattleSim {
       const na = heroArmor(h.ch) + up.step * h.upg.ar;
       for (const b of this._bodies(h)) b.armor = na;
     }
+  }
+
+  /**
+   * 超級升級(超級大戰專用單軌):每階固定 SUPER_UPG.PRICE,全武器/招式/防禦等比推進一階、
+   * 召喚物另吃 creep 曲線(見 _spawnSummon)。20 階 = 原八軌全滿,MAX 封頂。
+   */
+  _buySuperUpg(h) {
+    const lvl = h.upg?.super || 0;
+    if (lvl >= SUPER_UPG.MAX) return `超級升級已滿級(LV${SUPER_UPG.MAX})`;
+    if (h.money < SUPER_UPG.PRICE) return `資金不足(超級升級需 $${SUPER_UPG.PRICE})`;
+    h.money -= SUPER_UPG.PRICE;
+    this._setSuperLvl(h, lvl + 1);
+    return null;
+  }
+
+  /**
+   * 超級等級兌現(**唯一縫**):購買與死亡懲罰共用。由等級 S 直接重算全部派生值(冪等)——
+   * 戰鬥面向 abil = superCombatLvl(S)(浮點,tierVal 內插)、防禦三軌走同 step × superDefLvl(S)、
+   * 充能走 _chargeLvl(S,夾滿級)。升級補新增血段(同 _applyUpg)、降級只夾上限不扣當下血。
+   */
+  _setSuperLvl(h, S) {
+    S = Math.max(0, Math.min(SUPER_UPG.MAX, Math.floor(S || 0)));
+    const prev = h.upg?.super || 0;
+    h.upg.super = S;
+    const combat = superCombatLvl(S), def = superDefLvl(S);
+    h.abil.light = combat; h.abil.heavy = combat; h.abil.skill = combat; h.abil.ult = combat;
+    // 升階可能加大彈夾:清空該槽計數(與 _applyUpg 戰鬥面向同處置)
+    delete h.ammo.light; delete h.reloadUntil.light;
+    delete h.ammo.heavy; delete h.reloadUntil.heavy;
+    const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + ECON.UPGRADES.hp.step * def));
+    const ns = Math.round(UNITS[h.kind].shield * (CHARACTERS[h.ch].mods?.sp ?? 1) * (1 + ECON.UPGRADES.sp.step * def));
+    const na = heroArmor(h.ch) + ECON.UPGRADES.ar.step * def;
+    for (const b of this._bodies(h)) {
+      if (!b.dead) {
+        b.hp = Math.min(nm, b.hp + Math.max(0, nm - b.maxHp));
+        b.sp = Math.min(ns, b.sp + Math.max(0, ns - b.maxSp));
+      }
+      b.maxHp = nm; b.maxSp = ns; b.armor = na;
+    }
+    if (S !== prev) this.events.push({ e: 'buy', pid: h.pid, item: 'super', lvl: S });
+  }
+
+  /** 充能有效步數:超級方由超級等級推導(夾滿級,回速不超標);其餘走 upg.ch 原值 */
+  _chargeLvl(h) {
+    if (h && isSuperSide(h.side)) return Math.min(ECON.UPGRADES.ch.max, superDefLvl(h.upg?.super || 0));
+    return h?.upg?.ch || 0;
   }
 
   /**
@@ -5288,6 +5379,11 @@ export class BattleSim {
    *  環境傷害(沼澤/地雷/火場)與塔 SAM 一律不帶 ⇒ 中性參數 = 逐位元同舊制。 */
   _damage(t, dmg, by, pen = 0, floorHp = 0, wd = null, hitCtx = null) {
     if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
+    // 超級大戰:第三方野營與超級方互為中立(雙向免傷;索敵端另由 _tgBlockedD 把關)。
+    // 唯一結算縫:直擊/爆風/貫穿/召喚/地雷全走這裡,一處即擋下全部(含記仇/助攻/威脅,皆在下游)。
+    if (by && by.side) {
+      if ((isSuperSide(by.side) && isThirdSide(t.side)) || (isThirdSide(by.side) && isSuperSide(t.side))) return;
+    }
     if (this.siegeLocked(t)) return;               // 攻堅順序未到:前一階沒清完的建築完全免傷(劇情戰役)
     // 區域 BOSS 關卡(劇情戰役):BOSS 還沒被擊敗 / 對白還沒播完 ⇒ 這座建築**打得掉血但死不了**。
     // 併進既有的 `floorHp` 通道(沼澤那條)而不是另寫一段:那條路徑的語意逐字就是「扣得動、
@@ -5337,8 +5433,8 @@ export class BattleSim {
         }
       }
     }
-    // 攻堅需兵線配合:附近沒有己方小兵時,打主堡傷害折減
-    if (t.kind === 'base' && by && by.side) {
+    // 攻堅需兵線配合:附近沒有己方小兵時,打主堡傷害折減(超級方無兵線,豁免此條)
+    if (t.kind === 'base' && by && by.side && !isSuperSide(by.side)) {
       const near = [...this.ents.values()].some((e) =>
         e.side === by.side && !e.hero && !e.neutral
         && dist2d(e.x, e.z, t.x, t.z) < 320);
@@ -5697,7 +5793,7 @@ export class BattleSim {
       t.dead = true;
       t.dash = 0;
       if (this._aliveN(t) === 0) t.aiming = false;   // 小隊全滅才收瞄準(aiming 是共用狀態)
-      this.stats[t.side].deaths++;
+      if (this.stats[t.side]) this.stats[t.side].deaths++;
       // 第三方軍隊(GUER/MILI)沒有 stats 欄:擊殺英雄只記受害方 deaths,不記殺手 kills
       if (bySide && bySide !== t.side && this.stats[bySide]) this.stats[bySide].kills++;
       // ---- NPC BOSS:不重生(使用者定案「打掉就是打掉」)----
@@ -5825,6 +5921,14 @@ export class BattleSim {
    * money 是 sq.ps 共用欄位(SQUAD_SHARED),扣在死亡機體上即扣整隊共用錢包;不透支(floor 0)。
    */
   _deathPenalty(t, respawnSeconds) {
+    // 超級大戰:金錢歸零 + 等級下降 5%(無條件捨去),派生值由 _setSuperLvl 重算
+    if (isSuperSide(t.side)) {
+      const lost = Math.floor(t.money || 0);
+      t.money = 0;
+      this._setSuperLvl(t, Math.floor((t.upg?.super || 0) * 0.95));
+      this.events.push({ e: 'penalty', pid: t.pid, side: t.side, v: lost });
+      return;
+    }
     const pen = respawnSeconds * ECON.DEATH_PENALTY_PER_S;
     t.money = Math.max(0, t.money - pen);
     this.events.push({ e: 'penalty', pid: t.pid, side: t.side, v: Math.round(pen) });
@@ -5924,7 +6028,7 @@ export class BattleSim {
       // 流體沉浸異常狀態(2026-08-22):電力回充速度減至 1/2(水域) / 1/4(沼澤)。
       const wetMul = fluidFactor(h.wet || 0);
       if (!h.dead && this._aliveN(h) > 0 && h.mp < h.maxMp) {
-        h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * chargeF(h.upg?.ch) * wetMul * dt);
+        h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * chargeF(this._chargeLvl(h)) * wetMul * dt);
       }
     }
     // 機體層級:重生 / 護盾脫戰回復 / 主堡修裝甲
@@ -5941,13 +6045,15 @@ export class BattleSim {
         // 回復速度 × 充能等級(chargeF) × 護盾恢復倍率(rg) × 流體沉浸倍率(wetMul)
         const rg = b.hero ? this._buffMul(b, 'regen') : 1;
         if (b.sp < b.maxSp && (this.t - b.lastHitAt > VITALS.OOC_S || (b.spRegenHitUntil || 0) > this.t)) {
-          b.sp = Math.min(b.maxSp, b.sp + b.maxSp * VITALS.SP_REGEN_PS * chargeF(b.upg?.ch) * rg * wetMul * dt);
+          b.sp = Math.min(b.maxSp, b.sp + b.maxSp * VITALS.SP_REGEN_PS * chargeF(this._chargeLvl(b)) * rg * wetMul * dt);
         }
         if (b.hp < b.maxHp) {
-          const [bx, bz] = this.basePos[b.side];
+          // 超級方無主堡:雙陣營主堡旁皆可修裝甲(深入敵後搶修,風險自負)
+          const bases = isSuperSide(b.side) ? [this.basePos.SWARM, this.basePos.STEEL] : [this.basePos[b.side]];
+          const patched = bases.some((bp) => bp && dist2d(b.x, b.z, bp[0], bp[1]) < GAME.HERO_HEAL_R);
           // 裝甲平時只有主堡修得回來;rally 生效期間**全場都修**(那正是這一招換來的東西),
           // 速率同吃 rg。MUST NOT 把「全場都修」寫成永久旗標 —— 它只活在 mods 的時窗裡。
-          if (rg > 1 || dist2d(b.x, b.z, bx, bz) < GAME.HERO_HEAL_R) {
+          if (rg > 1 || patched) {
             // 來源分流:rally 生效中(rg > 1)= 招式,否則 = 主堡修裝甲。BOSS 只認前者(減半),
             // 主堡那一份對 BOSS 恆 0 —— 否則守在自家主堡旁的那名 BOSS 會一直把血補回去。
             this._healBody(b, UNITS[b.kind].regen * rg * dt, rg > 1 ? 'skill' : 'base');
@@ -6845,6 +6951,9 @@ export class BattleSim {
     if (t.side === e.side || t.neutral || t.hp <= 0) return true;   // 中立障礙不當目標
     if (this.siegeLocked(t)) return true;   // 鎖血建築不列入索敵(只擋傷害會把兵線卡死,見 siegeLocked)
     if (e.tp && t.tp) return true;   // 第三方不打第三方(游擊隊/民兵互不為敵,只防衛正規軍)
+    // 超級大戰:第三方野營與超級方互不索敵(玩家不會被第三方攻擊;超級方召喚物同屬 SUPER)
+    if (isSuperSide(e.side) && isThirdSide(t.side)) return true;
+    if (isThirdSide(e.side) && isSuperSide(t.side)) return true;
     if (t.gar) return true;   // 駐守碉堡中的第三方步槍兵:躲在工事裡,不可鎖定
     if (t.hero && (t.dead || (t.stealthUntil || 0) > this.t)) return true;   // 匿蹤英雄不被鎖定
     // 高空飛行單位難以直射鎖定:天花板 = min(射程×0.9, GUN_CEIL_M) —— 與射程脫鉤,
@@ -7019,6 +7128,9 @@ export class BattleSim {
       if (e.rx) o.rx = Math.round(e.rx * 100) / 100;
       o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
       o.ch = e.ch;                                               // 角色(客戶端渲染專屬機體)
+      // 超級等級(客戶端體型縮放;全機體都帶,非主視野機也要 —— 與 o.up(只跟主視野機)不同)
+      // 欄名 `sv`:短快照鍵;`sup` 已被高地壓制/輔助機欄位佔用(見 tools/duel.mjs S.sup)
+      if (isSuperSide(e.side)) o.sv = e.upg?.super | 0;
       o.sp = Math.round(e.sp); o.msp = e.maxSp;                  // 護盾(雙層 HP 第一層)
       if (e.defending && (e.sp || 0) > 0) o.df = (e.shieldExpandUntil || 0) > this.t ? 2 : 1; // 防守姿態且有磁力: 正面生成護盾(2 為護盾擴大)
       o.si = e.si || 0;                                          // 小隊機位(HUD 三機狀態列)

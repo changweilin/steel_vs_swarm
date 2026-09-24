@@ -22,6 +22,7 @@ import {
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
    CREEP_UPG, DISSOLVE, dissolveOutAt, ULT_CAST_S, fogSightMult, scopeRvminFog,
+  isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
   WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
   FIRE_WEATHER, fireDotMul,
   SCENE_STRUCT, sceneIsPhysical, sceneIsVehicle,
@@ -105,9 +106,9 @@ const RES_CREEP = 'creep:';
 // 體型改綁角色護甲後,碰撞跟著等比走 —— 巨大機甲既難閃也難躲。
 // **半徑不手寫**:一律走 data.js hitR(貫穿判定的水平量體與碰撞量體 MUST 是同一把尺 ——
 // 各寫一份就會「撞得到卻打不到」);高度沿用 heroTargetH ×1.08(頭頂餘裕)。
-const heroCollider = (kind, ch) => ({
-  r: hitR({ hero: true, kind, ch }),
-  h: heroTargetH(kind, ch) * 1.08,
+const heroCollider = (kind, ch, sv = 0) => ({
+  r: hitR({ hero: true, kind, ch, sv }),
+  h: heroTargetH(kind, ch) * superScaleF(sv) * 1.08,
 });
 // 自機碰撞/視點的身高比例:2026-08-02 起住 data.js(伺服器的 bot 碰撞吃同一份 —— 見 selfCollider)
 // FPV 視點 = 該機體「駕駛艙/頭艙」在自身幾何上的實際位置(2026-07-12):
@@ -608,7 +609,8 @@ export class BattleClient {
     this.cutin = new CutIn(document.getElementById('cutinLayer'));
 
     // 機體種類綁角色(2026-08-02 起每名角色都自帶 kind,不隨陣營);未選角/觀戰退回陣營主力機種
-    this.heroKind = this.side ? (CHARACTERS[this.ch]?.kind || SIDES[this.side].hero) : null;
+    // (超級方無 SIDES 主力機種,退回機甲 —— 開戰快照會把真實角色帶回來)
+    this.heroKind = this.side ? (CHARACTERS[this.ch]?.kind || SIDES[this.side]?.hero || 'robot') : null;
     this.isDrone = this.heroKind === 'drone';
     this.isMorph = this.heroKind === 'morph';   // 變形機甲(飛行 ↔ 地面雙型態)
     this.flight = false;                        // morph:目前是否飛行型態
@@ -630,6 +632,8 @@ export class BattleClient {
     this.money = 0;
     this.upg = { lw: 0, hw: 0, sk: 0, ult: 0, hp: 0, ar: 0, sp: 0, ch: 0 };   // 八軌升級(快照 o.up 回寫)
     this._reserve = new Set();        // 商店預約名單(錢一夠自動下單;純客戶端排程,見 _tickReserve)
+    // 超級大戰自動購買預設勾選:超級升級一進戰場就掛上預約(玩家可手動摘下,摘下後不再自動加回)
+    if (isSuperSide(this.side)) this._reserve.add('super');
     this._resSent = {};               // 預約已下單的階(item → {lvl, t}):擋住權威回覆前的重複下單
     this.sp = 0; this.maxSp = 1;      // 護盾(雙層 HP 第一層,脫戰自然回復)
     this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
@@ -704,7 +708,7 @@ export class BattleClient {
       this.ch = ch;
       // 角色由快照晚到(隨機指派):機體種類與座艙跟著角色重建
       if (changed && this.side) {
-        this.heroKind = CHARACTERS[ch].kind || SIDES[this.side].hero;
+        this.heroKind = CHARACTERS[ch].kind || SIDES[this.side]?.hero || 'robot';
         this.isDrone = this.heroKind === 'drone';
         this.isMorph = this.heroKind === 'morph';
         this.flight = false;
@@ -2236,8 +2240,11 @@ export class BattleClient {
     COLLIDE_KINDS.map((kind) => [kind, { r: hitR({ kind, side: 'STEEL' }), h: hitH({ kind, side: 'STEEL' }) }]),
   );
 
-  /** 自機機體實高(公尺):碰撞圓柱與座艙視點高度一律由它推導 */
-  get selfH() { return this.heroKind ? heroTargetH(this.heroKind, this.ch) : SOLDIER_H * 4; }
+  /** 自機機體實高(公尺):碰撞圓柱與座艙視點高度一律由它推導;超級升級同步放大 */
+  get selfH() {
+    if (!this.heroKind) return SOLDIER_H * 4;
+    return heroTargetH(this.heroKind, this.ch) * superScaleF(isSuperSide(this.side) ? this.upg?.super : 0);
+  }
 
   /** 目前是否為飛行機體(無人機恆飛;變形者僅飛行型態) */
   _flying() { return this.isDrone || (this.isMorph && this.flight); }
@@ -3405,6 +3412,9 @@ export class BattleClient {
         // 純表現層 —— 段位本身、狂暴化、恢復規則全在伺服器(見 sim._bossSync)。
         ent.bossSeg = e.bs;
         if (ent.bossSeg != null && ent.mesh) ent.mesh.scale.setScalar(bossScaleF(ent.bossSeg));
+        // 超級體型:升級即時放大(只在等級變動時重設,平時不碰 —— 每幀 setScalar 會髒掉矩陣快取)
+        if (e.sv != null && e.sv !== ent.sv && ent.mesh) ent.mesh.scale.setScalar(superScaleF(e.sv));
+        ent.sv = e.sv ?? ent.sv ?? 0;
         ent.inv = e.iv || 0;   // 無敵幀剩餘秒(伺服器完全免傷 → 本地命中回饋改跳 -0,不誤導)
         // 觀戰玩家資訊面板(2026-08-02 使用者需求「會顯示該玩家所有資訊,包括商店升級」):
         // 這些欄位**伺服器本來就發**(見 sim._serializeEnt 的 o.act 區塊),客戶端只是留存下來 ——
@@ -3513,6 +3523,7 @@ export class BattleClient {
             const u = this.upg;
             const sig = `${Math.floor(this.money)}|${this.kn}|${this.ch}|${this.abil.light}.${this.abil.heavy}.${this.abil.skill}.${this.abil.ult}|`
               + ['lw', 'hw', 'sk', 'ult', 'hp', 'ar', 'sp', 'ch'].map((k) => u[k] || 0).join(',')
+              + `|sup:${u.super || 0}`   // 超級升級(一般對戰恆 0,簽章穩定不誤觸重繪)
               + `|${[...this._reserve].join('.')}`   // 預約名單(成交/退場都要讓 ★ 跟著更新)
               + `|${(this.creepUpg?.[this.side] || []).join('.')}`;   // 陣營小兵強化(共用值,別人買了也要重繪)
             if (sig !== this._shopSig) { this._shopSig = sig; this.hud.shop?.(true, this._shopState()); }
@@ -3689,6 +3700,7 @@ export class BattleClient {
       { ch: civ ? e.pf : e.ch, ring: e.k !== 'decoy' && e.k !== 'kami' && e.k !== 'hyper', dissolve: true });
     if (e.k === 'kami') group.scale.setScalar(SQUAD.KAMI.SIZE_F);   // 護衛自殺機衝出:SIZE_F(1/2)體型
     if (e.bs != null) group.scale.setScalar(bossScaleF(e.bs));      // NPC BOSS 階段體型縮放
+    if (e.sv != null) group.scale.setScalar(superScaleF(e.sv));   // 超級戰士升級體型(命中/碰撞同一把尺)
     const hero = HERO_KINDS.has(e.k);
     const isStatic = e.k === 'tower' || e.k === 'base' || e.k === 'bunker';
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
@@ -3724,14 +3736,14 @@ export class BattleClient {
     }
     const ent = {
       dimTop: dims.dimTop, dimH: dims.dimH, dimR: dims.dimR,
-      id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null,
+      id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null, sv: e.sv ?? 0,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
       isSelf, hero, heroY: 0, ry: 0,
       flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami' || e.k === 'hyper' || e.k === 'drone_wingman' || e.k === 'heli_squad' || e.k === 'carnival_heli',
       decoy: e.k === 'decoy', kami: e.k === 'kami', hyper: e.k === 'hyper', si: e.si || 0,
       isStatic,
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
-      heroCol: hero ? heroCollider(e.k, e.ch) : null,
+      heroCol: hero ? heroCollider(e.k, e.ch, e.sv || 0) : null,
     };
     if (hero) {
       const r = (ent.heroCol?.r || dims.dimR || 2.5) * 1.15;
@@ -4895,9 +4907,13 @@ export class BattleClient {
       }
     } else if (ev.e === 'buy') {
       if (ev.pid === this.youId && ev.lvl != null) {
-        const up = ECON.UPGRADES[ev.item];
-        // 戰鬥面向(abil = 1 + upg):顯示階級 = 已購步數 + 1;防禦系統直接顯示 Lv
-        this.hud.feed?.(`⬆️ ${up?.name || ev.item} Lv.${up?.abil ? ev.lvl + 1 : ev.lvl}`);
+        // 超級升級只有一軌,直接顯示 LV(降級也會走這裡,見 sim._setSuperLvl)
+        if (ev.item === 'super') { this.hud.feed?.(`⚡ 超級升級 LV${ev.lvl}/${SUPER_UPG.MAX}`); }
+        else {
+          const up = ECON.UPGRADES[ev.item];
+          // 戰鬥面向(abil = 1 + upg):顯示階級 = 已購步數 + 1;防禦系統直接顯示 Lv
+          this.hud.feed?.(`⬆️ ${up?.name || ev.item} Lv.${up?.abil ? ev.lvl + 1 : ev.lvl}`);
+        }
       }
     } else if (ev.e === 'assist') {
       if (ev.pid === this.youId) this.hud.feed?.(`🤝 助攻 +$${ev.v}`);
@@ -5881,10 +5897,10 @@ export class BattleClient {
   _aimTarget(rng) {
     const fc = this._lobFc;
     if (fc?.on) {
-      return fc.ok && fc.ent && fc.ent.side !== this.side && !fc.ent.neutral && !fc.ent.dead ? fc.ent : null;
+      return fc.ok && this._isFoeEnt(fc.ent) && !fc.ent.dead ? fc.ent : null;
     }
     const { ent, point } = this._resolveAim(rng);
-    if (ent && ent.side !== this.side && !ent.neutral && point && this.pos.distanceTo(point) <= rng) return ent;
+    if (ent && this._isFoeEnt(ent) && point && this.pos.distanceTo(point) <= rng) return ent;
     return this._coneAcquire(rng) || null;
   }
 
@@ -5892,9 +5908,16 @@ export class BattleClient {
    *  各寫一份就會出現「鎖得到卻瞄到腳邊」。`dimTop/dimH` 是 spawn 時量好的機體尺寸。 */
   _entAimPoint(ent) {
     const c = ent.mesh.position.clone();
-    const scale = ent.bossSeg != null ? bossScaleF(ent.bossSeg) : 1;
+    const scale = (ent.bossSeg != null ? bossScaleF(ent.bossSeg) : 1) * superScaleF(ent.sv || 0);
     c.y += (ent.dimTop != null ? (ent.dimTop - ent.dimH * 0.5) * scale : 2 * scale);
     return c;
+  }
+
+  /** 敵對判定(單一縫):同陣營/中立非敵;超級方與第三方野營互為中立(傷害端見 sim._damage) */
+  _isFoeEnt(ent) {
+    if (!ent || !ent.side || ent.side === this.side || ent.neutral) return false;
+    if (isSuperSide(this.side) && isThirdSide(ent.side)) return false;
+    return true;
   }
 
   /**
@@ -5943,7 +5966,7 @@ export class BattleClient {
         : Math.max(Math.abs(v.x), Math.abs(v.y));
     };
     const score = (ent, lim) => {   // 合格回傳偏離度(越小越正對),不合格回 -1
-      if (!ent || ent.side === this.side || ent.neutral || (heroOnly && !ent.hero)
+      if (!this._isFoeEnt(ent) || (heroOnly && !ent.hero)
         || !ent.mesh?.visible || ent.dead) return -1;
       const c = this._entAimPoint(ent);
       if (this.pos.distanceTo(c) > rng) return -1;                     // 出射程
@@ -6159,7 +6182,7 @@ export class BattleClient {
     const from = this._rgFrom || (this._rgFrom = new THREE.Vector3());
     const impact = this._rgAim || (this._rgAim = new THREE.Vector3());
     const cls = aoeClass(def);
-    const foe = (e) => e && !e.isSelf && e.side && e.side !== this.side && !e.neutral
+    const foe = (e) => e && !e.isSelf && this._isFoeEnt(e)
       && !e.dead && !e.gar && e.mesh.visible;
     // ---- ① 入口閘:準星這一發的落點 / 打不打得到 ----
     // 球心恆是槍口(與 `_reachable` / 伺服器誠實界同一個點)
@@ -6280,7 +6303,7 @@ export class BattleClient {
     }));
     const key = warn ? '_rgMatWarn' : '_rgMat';
     return this[key] || (this[key] = new THREE.SpriteMaterial({
-      map: glowTexture(), color: warn ? 0xffb03a : SIDES[this.side].color,
+      map: glowTexture(), color: warn ? 0xffb03a : sideInfo(this.side).color,
       transparent: true, opacity: warn ? 0.32 : 0.26,
       blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
     }));
@@ -6370,7 +6393,7 @@ export class BattleClient {
     this._clearLockGlow();
     this._lockId = ent.id;
     // 基準尺寸(排除受擊殼等子節點)→ 光暈剛好包住目標,塔不再是巨球
-    this._lockGlow = lockGlow(ent.mesh, SIDES[this.side].color,
+    this._lockGlow = lockGlow(ent.mesh, sideInfo(this.side).color,
       ent.dimH != null ? { h: ent.dimH, r: ent.dimR, top: ent.dimTop } : null);
     this.hud.feed?.(`🎯 鎖定 ${UNITS[ent.kind]?.name || ent.kind}`);
   }
@@ -6470,15 +6493,26 @@ export class BattleClient {
   // ---------------- 主堡軍械庫(B 鍵)----------------
   _atBase() {
     if (!this.side) return false;
-    const [bx, bz] = llToWorld(this.cfg.bases[this.side][0], this.cfg.bases[this.side][1], this.center);
-    return Math.hypot(this.pos.x - bx, this.pos.z - bz) <= GAME.HERO_HEAL_RADIUS;
+    // 超級方無主堡:雙陣營主堡旁皆視為可補給(與伺服器修裝甲規則同)
+    const sides = isSuperSide(this.side) ? ['SWARM', 'STEEL'] : [this.side];
+    return sides.some((s) => {
+      const b = this.cfg.bases?.[s];
+      if (!b) return false;
+      const [bx, bz] = llToWorld(b[0], b[1], this.center);
+      return Math.hypot(this.pos.x - bx, this.pos.z - bz) <= GAME.HERO_HEAL_RADIUS;
+    });
   }
 
   _shopState() {
+    const superMode = isSuperSide(this.side);
     return {
       money: this.money, upg: this.upg,
       ch: this.ch, ab: { ...this.abil }, kn: this.kn,
       kind: this.heroKind, atBase: this._atBase(),
+      // 超級大戰:單軌超級升級(LV0~MAX,每階固定 PRICE)+ 自動購買預設勾選(見 _tickReserve)
+      super: superMode,
+      superLvl: superMode ? (this.upg.super || 0) : 0,
+      buySuper: () => this._optimisticBuySuper(),
       // 陣營小兵強化:等級是同陣營共用的權威值(唯讀顯示),購買不做樂觀更新 —— 共用狀態
       // 樂觀扣款會在別人同時買的時候顯示錯位,交給下一份 8Hz 快照校正即可。
       creepUpg: [...(this.creepUpg?.[this.side] || [])],
@@ -6561,7 +6595,7 @@ export class BattleClient {
    * 掃進去等於把全部身家一次倒進兵線(見 `_sweepBuy`)。預約是**一次一階**,不吃這個坑。
    */
   _toggleReserve(item) {
-    if (!Object.hasOwn(ECON.UPGRADES, item) && this._resCreepLane(item) == null) return;
+    if (item !== 'super' && !Object.hasOwn(ECON.UPGRADES, item) && this._resCreepLane(item) == null) return;
     if (this._reserve.has(item)) this._reserve.delete(item);
     else this._reserve.add(item);
     if (this.shopOpen) { this._shopSig = null; this.hud.shop?.(true, this._shopState()); }
@@ -6574,6 +6608,18 @@ export class BattleClient {
     // 本輪已下單但**尚未**從 `this.money` 扣掉的金額(只有小兵強化會累加,理由見下)。
     let pend = 0;
     for (const item of [...this._reserve]) {
+      // 超級升級預約(超級大戰自動購買):固定 $200 一階,樂觀扣款 ⇒ 不記 pend(同八軌)
+      if (item === 'super') {
+        if (!isSuperSide(this.side)) { this._reserve.delete(item); continue; }
+        const slvl = this.upg.super || 0;
+        if (slvl >= SUPER_UPG.MAX) { this._reserve.delete(item); continue; }
+        if (this.money < SUPER_UPG.PRICE) continue;
+        const sent = this._resSent[item];
+        if (sent && sent.lvl === slvl && now - sent.t < RESERVE_RESEND_S) continue;
+        this._resSent[item] = { lvl: slvl, t: now };
+        if (this._optimisticBuySuper()) this.hud.feed?.(`📌 預約成交:超級升級 LV${slvl + 1}`);
+        continue;
+      }
       const lane = this._resCreepLane(item);
       const up = lane == null ? ECON.UPGRADES[item] : null;
       const lvl = lane == null ? (this.upg[item] || 0) : (this.creepUpg?.[this.side]?.[lane] || 0);
@@ -6630,6 +6676,27 @@ export class BattleClient {
     this.net.send({ t: 'buy', item });
   }
 
+  /**
+   * 超級升級購買:樂觀本地更新(扣款/升階/重算武器 → UI 馬上回饋)+ 送伺服器(權威 _buySuperUpg)。
+   * 伺服器拒絕回 error toast,下一份快照把 money/upg/abil 校正回權威值(與八軌同機制)。
+   */
+  _optimisticBuySuper() {
+    if (!isSuperSide(this.side)) return false;
+    const lvl = this.upg.super || 0;
+    if (lvl >= SUPER_UPG.MAX || this.money < SUPER_UPG.PRICE) return false;
+    this.money -= SUPER_UPG.PRICE;
+    this.upg.super = lvl + 1;
+    const combat = superCombatLvl(lvl + 1);
+    let changed = false;
+    for (const s of ['light', 'heavy', 'skill', 'ult']) {
+      if (this.abil[s] !== combat) { this.abil[s] = combat; changed = true; }
+    }
+    if (changed) this._setChar(this.ch, true);
+    if (this.shopOpen) { this._shopSig = null; this.hud.shop?.(true, this._shopState()); }
+    this.net.send({ t: 'buy', item: 'super' });
+    return true;
+  }
+
   _toggleShop(force) {
     if (!this.side) return;   // 死亡不擋:重生等待也能購買
     const want = force != null ? force : !this.shopOpen;
@@ -6641,8 +6708,51 @@ export class BattleClient {
     if (want) document.exitPointerLock?.();
   }
 
+  /**
+   * 超級重生點(客戶端呈現用;權威在伺服器 _superSpawnPoint):地圖雙陣營砲火外的任意地點。
+   * 砲塔/主堡(已知快照 + 雙方主堡)射程外 + 兵線走廊外 + 地雷外,60 次取樣取首個全滿足者,
+   * 否則取離火力最遠者。座標全為 three 系(與 _spawnAt 同)。
+   */
+  _superSpawnAt() {
+    const R = (UNITS.tower?.range || 310) + 30;
+    const half = Math.max(200, (this.cfg.sizeM || 1200) / 2 - 40);
+    const guns = [];
+    for (const s of ['SWARM', 'STEEL']) {
+      const b = this.cfg.bases?.[s];
+      if (b) guns.push(llToWorld(b[0], b[1], this.center));
+    }
+    const lanePts = [];
+    for (const L of (this.cfg.lanes || [])) {
+      for (const [lat, lng] of (L || [])) lanePts.push(llToWorld(lat, lng, this.center));
+    }
+    for (const ent of this.ents?.values?.() || []) {
+      if ((ent.kind === 'tower' || ent.kind === 'base') && ent.tgt) guns.push([ent.tgt.x, ent.tgt.z]);
+    }
+    const mines = [...(this.mineMeshes?.values?.() || [])].map((m) => [m.position.x, m.position.z]);
+    const dMin = (x, z, pts) => {
+      let d = Infinity;
+      for (const [px, pz] of pts) { const v = Math.hypot(x - px, z - pz); if (v < d) d = v; }
+      return d;
+    };
+    let best = null, bestScore = -Infinity;
+    for (let k = 0; k < 60; k++) {
+      const x = (Math.random() * 2 - 1) * half, z = (Math.random() * 2 - 1) * half;
+      if (mines.length && dMin(x, z, mines) < 25) continue;
+      const dg = dMin(x, z, guns), dl = lanePts.length ? dMin(x, z, lanePts) : Infinity;
+      if (dg > R && dl > R) return [x, z];
+      const score = dg > R ? 1e4 + dl : dg;   // 先保證砲火外,再離兵線越遠越好
+      if (score > bestScore) { bestScore = score; best = [x, z]; }
+    }
+    return best || [0, 0];
+  }
+
   /** 己方主堡往敵方方向 100m、面向敵方主堡 */
   _spawnAt() {
+    if (isSuperSide(this.side)) {
+      const [sx, sz] = this._superSpawnAt();
+      this._placeAt(sx, sz, -sx, -sz);   // 面向戰場中心
+      return;
+    }
     const mySide = this.side || 'SWARM';
     const other = mySide === 'SWARM' ? 'STEEL' : 'SWARM';
     const [bx, bz] = llToWorld(this.cfg.bases[mySide][0], this.cfg.bases[mySide][1], this.center);
@@ -6678,6 +6788,11 @@ export class BattleClient {
     const pl = Math.hypot(dx, dz) || 1;
     sx += (dz / pl) * GAME.HERO_SPAWN_SIDE;
     sz += (-dx / pl) * GAME.HERO_SPAWN_SIDE;
+    this._placeAt(sx, sz, dx, dz);
+  }
+
+  /** 落點安置(出生/重生共用尾段):貼地 + 面向行進方向 + 變形者歸零,超級與常規同吃這一支 */
+  _placeAt(sx, sz, dx, dz) {
     const gy = this._surf(sx, sz, Infinity);
     // 無人機重生落在離地下限(FLIGHT.HOVER_M)貼地起飛,不直接放到巡航高度 —— 重生動力補滿
     // (見 _onSelfRespawn 的 this.lift = null)MUST 真的被拿來爬升,不然滿動力形同虛設。
@@ -10548,7 +10663,7 @@ export class BattleClient {
       this.pipCam.rotation.set(0, p.ent.ry, 0, 'YXZ');
       // 外框:先清一圈陣營色,再把內圈交給場景繪製
       r.setScissor(x - 2, y - 2, pw + 4, ph + 4);
-      r.setClearColor(SIDES[this.side].color, 1);
+      r.setClearColor(sideInfo(this.side).color, 1);
       r.clear(true, false, false);
       r.setViewport(x, y, pw, ph);
       r.setScissor(x, y, pw, ph);

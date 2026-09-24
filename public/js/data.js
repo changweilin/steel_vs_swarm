@@ -40,16 +40,12 @@ export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
 
-// ============ 1 兵線地圖(原迷你地圖規格標準化)============
-// 使用者定案:「邊界緩衝區減半。迷你地圖正式轉為1兵線地圖,2/3兵線地圖以同樣比例調整(兵線砲塔數同樣縮減為各陣營一對)」。
-//
-// 1v1 / 2v2 (L=1) 正式對齊緊湊戰場尺度(真實邊長 240m),兵線每陣營各 1 座前線砲塔 + 主堡(各陣營一對)。
-// 2/3 兵線地圖(L=2, L=3)亦依 3/5 比例等比縮小(邊長 300m / 360m),砲塔數同樣為每線各陣營一對。
-export const MINI = {
-  TEAM_MAX: 2,      // 1 兵線地圖為 1v1 / 2v2
-  STAGES: 1,        // 每側塔位數:只有前線砲塔
-  BUFFER_F: 1,      // 緩衝只容納邊界障礙，不再隨地圖型態縮放
-};
+// ============ 單一戰場規格(迷你地圖已退場)============
+// 地圖只剩一種:1v1 / 2v2 (L=1) 對齊緊湊戰場尺度,兵線每陣營各 1 座前線砲塔 + 主堡(各陣營一對);
+// 2/3 兵線地圖(L=2, L=3)等比放大,砲塔數同樣為每線各陣營一對。
+// 迷你地圖(舊 `MINI` / `cfg.mini`)與標準戰場在幾何上已逐位元相同(塔階、尺度皆為 1)⇒ 整組退場:
+// 開關 UI、手機門檻、`cfg.mini` 管線一併移除;舊存檔的 mini:true 一律視為標準戰場。
+// 唯一例外是劇情戰役(非對稱塔位 + 專用 m1 烘焙線,見 STORY_MAP)。
 /** 戰場每側塔位數:每條兵線各陣營各 1 座砲塔(各陣營一對) */
 export const FULL_STAGES = 1;
 
@@ -74,37 +70,31 @@ export const allyBotDmgF = (kind) =>
   (kind === 'boss' ? STORY_MAP.ALLY_BOT_BOSS_F : kind === 'building' ? STORY_MAP.ALLY_BOT_BLD_F : 1);
 
 /**
- * 地圖型態(尺度 / 塔位 / 兵線數 / 緩衝共用的**唯一入口**)。參數 `m` 三態:
- *   falsy             → 'full'  標準戰場
- *   true              → 'mini'  1 兵線緊湊戰場(相容舊 mini 旗標)
+ * 地圖型態(尺度 / 塔位 / 兵線數 / 緩衝共用的**唯一入口**)。參數 `m` 二態:
+ *   falsy(含舊 mini 旗標真值 —— 地圖只剩一種,真值一律視為標準戰場)
+ *     → 'full'  標準戰場
  *   'SWARM' / 'STEEL' → 'story' 劇情戰役,**值本身就是防守方(BOSS 方)**
- * 省略 ⇒ 'full' ⇒ 一切推導逐位元同舊制(IEEE754:3/3 === 1、x * 1 === x)。
+ * 省略 ⇒ 'full' ⇒ 一切推導逐位元同舊制。
  */
 export const mapPlan = (m) => (m === 'SWARM' || m === 'STEEL'
   ? { mode: 'story', def: m, atkStages: STORY_MAP.ATK_STAGES, defStages: STORY_MAP.DEF_STAGES }
-  : m === true
-    ? { mode: 'mini', def: null, atkStages: MINI.STAGES, defStages: MINI.STAGES }
-    : { mode: 'full', def: null, atkStages: FULL_STAGES, defStages: FULL_STAGES });
+  : { mode: 'full', def: null, atkStages: FULL_STAGES, defStages: FULL_STAGES });
 /**
- * battleConfig → 地圖型態參數(`mapPlan` 的實參)。**所有消費端 MUST 走這一支**,
- * MUST NOT 繼續各自傳 `cfg.mini` —— 漏傳的那一份會拿完整戰場的塔位/尺度去建劇情戰役的世界。
+ * battleConfig → 地圖型態參數(`mapPlan` 的實參)。**所有消費端 MUST 走這一支**。
+ * `cfg.mini` 已退場不再解讀 —— 舊存檔帶著 mini:true 照樣落到標準戰場(幾何逐位元相同)。
  */
-export const mapArg = (cfg) => (cfg && cfg.defSide) || !!(cfg && cfg.mini);
+export const mapArg = (cfg) => (cfg && cfg.defSide) || false;
 /** 這一場防守方每側幾階砲塔(對稱地圖 = 兩側都是這個數) */
 export const towerStages = (m) => mapPlan(m).defStages;
 /** 兵線長度需求(單位 = 敵我塔距 SEP):每側 stages 座塔各一個 SEP,加上中線那半個 ×2 */
 export const laneChainF = (stages) => 2 * stages + 1;
 /** 這一場的兵線長度需求(非對稱地圖用):攻方 + 守方各自的塔,加上中間那一段 */
 export const laneChainOf = (m) => { const p = mapPlan(m); return p.atkStages + p.defStages + 1; };
-/** 1 兵線地圖的尺度縮小比(推導,MUST NOT 手寫)= 塔鏈需求比 = 3/3 = 1 */
-export const miniScaleF = () => laneChainF(MINI.STAGES) / laneChainF(FULL_STAGES);
 /** 這一場的地圖尺度倍率(邊長 / 兩堡距離共用同一個);標準 = 3/3 = 1 ⇒ 逐位元同舊制 */
 export const mapScaleF = (m) => laneChainOf(m) / laneChainOf(false);
 /** 這一場幾條兵線(劇情戰役恆單線,不看人數) */
 export const laneCountFor = (teamSize, m) =>
   (mapPlan(m).mode === 'story' ? STORY_MAP.LANES : lanesFor(teamSize));
-/** 這個人數開得成 1 兵線地圖嗎(1v1 / 2v2) */
-export const miniAllowed = (teamSize) => teamSize <= MINI.TEAM_MAX;
 /**
  * 一個塔位上**實際會生成砲塔**的控制點(帶 side)。劇情戰役我方無塔 ⇒ 只有防守方那一個。
  * 「繞著塔位做事」的消費端(biomes 淨空 / beacons 錨點 / 橋上墩座 / sim 生成 / 佈局稽核)
@@ -114,13 +104,6 @@ export const miniAllowed = (teamSize) => teamSize <= MINI.TEAM_MAX;
 export const siteCPs = (site) => (site
   ? ['SWARM', 'STEEL'].filter((s) => site[s]).map((s) => ({ side: s, ...site[s] }))
   : []);
-/**
- * 這台裝置只准打迷你地圖嗎?(使用者:「手機版只允許連線遊玩迷你地圖,桌機版不限制」)
- * 參數 = `ctrlmode.js deviceScheme()` 的回傳 —— 裝置判定全 repo 只有那一份,本檔
- * (伺服器也 import)MUST NOT 自己碰 navigator/matchMedia。
- */
-export const miniOnlyFor = (deviceScheme) => deviceScheme === 'pad';
-
 // 地圖「真實世界」邊長 (m)。第二參數 = 地圖型態(見 mapPlan);省略 ⇒ 倍率 1 ⇒ 逐位元同舊制
 // (IEEE754:5/5 === 1、x * 1 === x)
 export const realSideMFor = (L, m) =>
@@ -3097,7 +3080,7 @@ export function hitH(e) {
   if (!e) return SOLDIER_H;
   if (e.hero) {
     const scale = (e.sq?.boss && e.sq.bossSeg != null ? bossScaleF(e.sq.bossSeg) : (e.bossSeg != null ? bossScaleF(e.bossSeg) : 1));
-    return heroTargetH(e.kind, e.ch) * scale;
+    return heroTargetH(e.kind, e.ch) * scale * superScaleF(e.sv ?? e.upg?.super);
   }
   if (e.kind === 'base') return TARGET_H[`base:${e.side}`] ?? 46;
   if (e.civ) return TARGET_H.civ;
@@ -3129,7 +3112,7 @@ export function hitR(e) {
   if (!e) return SOLDIER_H * 0.5;
   if (e.hero) {
     const scale = (e.sq?.boss && e.sq.bossSeg != null ? bossScaleF(e.sq.bossSeg) : (e.bossSeg != null ? bossScaleF(e.bossSeg) : 1));
-    return heroTargetH(e.kind, e.ch) * (HERO_HIT_R[e.kind] ?? 0.43) * scale;
+    return heroTargetH(e.kind, e.ch) * (HERO_HIT_R[e.kind] ?? 0.43) * scale * superScaleF(e.sv ?? e.upg?.super);
   }
   if (e.kind === 'base') return TARGET_R[`base:${e.side}`] ?? 20;
   if (e.civ) return TARGET_R.civ;
@@ -3302,11 +3285,16 @@ export const addBattleScore = (cur, gain) =>
 // 2026-07-20 四面向升級(開場 Lv1 → 可升到 Lv4):超出資料階(Lv4+)沿「最後一段成長」線性外推 —
 // 單一推導縫,免手寫 32 角色 × 每欄位的第 4 階(CLAUDE.md §2.1「推導值 MUST NOT 手寫」)。
 // 遞增欄位(dmg/mag/rate)續增、遞減欄位(cd/reload/mul 折減)續減,夾 ≥0。
+// 2026-09-24 超級大戰:階級可為小數(超級有效階 1 + S×3/20)⇒ 表內線性內插;整數輸入逐位元同舊制。
 export const tierVal = (v, lvl = 1) => {
   if (!Array.isArray(v)) return v;
   const n = v.length, i = lvl - 1;
   if (i <= 0) return v[0];
-  if (i < n) return v[i];
+  if (i < n) {
+    const lo = Math.min(n - 1, Math.floor(i)), hi = Math.min(n - 1, Math.ceil(i));
+    if (hi === lo) return v[lo];
+    return v[lo] + (v[hi] - v[lo]) * (i - lo);
+  }
   const step = v[n - 1] - (v[n - 2] ?? v[n - 1]);   // 末段增量;長度 1 → step 0(純量化,不外推)
   return Math.max(0, v[n - 1] + step * (i - (n - 1)));
 };
@@ -3477,12 +3465,13 @@ export const heroArmor = (ch) => {
   return charKind(ch) === 'drone' ? a * SQUAD.ARMOR_F : a;
 };
 
-// 陣營可選角色池:專屬角色 + 傭兵(side:'MERC',雙陣營皆可受雇)
-export const charsOf = (side) => Object.keys(CHARACTERS)
-  .filter((id) => CHARACTERS[id].side === side || CHARACTERS[id].side === 'MERC');
+// 陣營可選角色池:專屬角色 + 傭兵(side:'MERC',雙陣營皆可受雇);超級大戰可選任意角色
+export const charsOf = (side) => side === SUPER_SIDE ? Object.keys(CHARACTERS)
+  : Object.keys(CHARACTERS)
+    .filter((id) => CHARACTERS[id].side === side || CHARACTERS[id].side === 'MERC');
 
-/** 角色機體種類:kind 一律綁角色(機種不隨陣營);查無角色才退回 SIDES 主力機種 */
-export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero;
+/** 角色機體種類:kind 一律綁角色(機種不隨陣營);查無角色退回機甲(超級方無 SIDES 主力機種) */
+export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side]?.hero || 'robot';
 
 // ---- 角色圖鑑(24 名陣營角色 + 8 名傭兵;劇情設定見 docs/characters.md)----
 // 每名角色 = 專屬機體(**kind 一律顯式標註**)+ 輕武器 + 重武器(CD)+ 小招 + 大招。
@@ -4719,9 +4708,32 @@ export const THIRD = {
   CLEAR_CIVS: 4,         // 首次清空整營(碉堡 + 全單位皆亡)脫困的平民數:隨機陣營、自動跟隨清營者、不重生
 };
 export const isThirdSide = (s) => s === 'GUER' || s === 'MILI';
-/** 陣營資訊統一查表(SWARM/STEEL/第三方皆可):客戶端配色/播報用,查無給中性灰 */
+/** 陣營資訊統一查表(SWARM/STEEL/第三方/超級皆可):客戶端配色/播報用,查無給中性灰 */
 export const sideInfo = (s) =>
-  SIDES[s] || THIRD.SIDES[s] || { name: '不明勢力', color: '#9aa39b', colorDim: '#4d524c' };
+  SIDES[s] || THIRD.SIDES[s] || (s === SUPER_SIDE ? SUPER_INFO : { name: '不明勢力', color: '#9aa39b', colorDim: '#4d524c' });
+
+// ---- 超級大戰(單人第三方;見 rooms cfg.super / sim _setSuperLvl)----
+// 玩家一人成第三方(SUPER):鋼鐵與蜂群皆為敵、第三方野營(GUER/MILI)互為中立(雙向免傷 + 不索敵)。
+// 升級只有一軌「超級升級」:每階固定 PRICE,全武器/招式/防禦等比推進 + 召喚物吃 creep 曲線。
+// 20 階 = 原八軌全滿(戰鬥面向 Lv4 / 防禦滿級),100 階封頂;曲線與原制同一支 tierVal(浮點內插)。
+export const SUPER_SIDE = 'SUPER';
+export const isSuperSide = (s) => s === SUPER_SIDE;
+export const SUPER_INFO = { name: '超級戰士', color: '#ffd54a', colorDim: '#8a6d1a' };
+export const SUPER_UPG = { MAX: 100, PRICE: 200 };
+/** 超級等級 → 防禦軌有效步數(0 起;20 階到 3 = 原滿級;上限 15) */
+export const superDefLvl = (lvl = 0) =>
+  Math.max(0, Math.min(SUPER_UPG.MAX, Math.floor(lvl || 0))) * 3 / 20;
+/** 超級等級 → 戰鬥面向有效階級(開場 Lv1;20 階到 Lv4,之後沿 tierVal 外推;上限 Lv16) */
+export const superCombatLvl = (lvl = 0) => 1 + superDefLvl(lvl);
+/**
+ * 機體縮放:每 20 階 +100%,最多 +500%(= 6 倍);命中/碰撞/渲染同一把尺。
+ * 非數值輸入(舊欄位撞名/缺值)一律回 1 —— 量體函式吃到 NaN 會靜默打穿全場,必須在這裡擋下。
+ */
+export const superScaleF = (lvl = 0) => {
+  const n = Number(lvl);
+  if (!Number.isFinite(n)) return 1;
+  return 1 + Math.floor(Math.max(0, Math.min(SUPER_UPG.MAX, n)) / 20);
+};
 
 // ---- 對局節奏(緊湊化:1/2/3 線目標 5/8/10 分鐘一場)----
 export const GAME = {
@@ -5608,14 +5620,14 @@ export const bossHealF = (src) => (src === 'skill' ? BOSS.HEAL_SKILL_F : 0);
  * MUST 用直線距離判定 —— 兵線 90° 急彎時沿線距離會騙過去。稽核:tools/audit_map_rules.mjs。
  *
  * 第二參數 = 地圖型態(見 `mapPlan`):
- *   `true`(迷你地圖,見 MINI 檔頭 ②):每側只有前線砲塔 ⇒ **第二趟根本不跑**,回傳每條兵線
+ *   省略/false(標準戰場):每側只有前線砲塔 ⇒ **第二趟根本不跑**,回傳每條兵線
  *     恰一個塔位。MUST NOT 改成「解完再由呼叫端丟掉後塔」—— biomes 淨空 / beacons 錨點 /
  *     橋上墩座吃的是這一支的回傳,解出來卻不生成 = 世界繞著一座不存在的塔讓路。
  *   `'SWARM'`/`'STEEL'`(劇情戰役,見 STORY_MAP 檔頭 ②):**只有防守方有塔**,回傳的 site
  *     因此只帶那一側的鍵(消費端一律走 `siteCPs()`)。
  * 省略參數 ⇒ 逐位元同舊制。
  */
-export function solveTowerSites(lanes, mini) {
+export function solveTowerSites(lanes, mapA) {
   const R = UNITS.tower.range, SEP = R * GAME.TOWER_SEP_F, OFF = GAME.TOWER_SIDE_OFF;
   const d2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   const geom = (pts) => {
@@ -5672,7 +5684,7 @@ export function solveTowerSites(lanes, mini) {
   };
   // ---- 劇情戰役(非對稱):只有防守方有塔,「我方前線就是主堡」----
   // 敵方砲塔攻擊範圍不可涵蓋攻方主堡的重生處與治療光環;若會衝突,後面的砲塔/主堡距離可適度放寬。
-  const plan = mapPlan(mini);
+  const plan = mapPlan(mapA);
   if (plan.mode === 'story' && bases.length === 2) {
     const def = plan.def, atk = OTHER_SIDE[def];
     const defBase = def === 'SWARM' ? bases[0] : bases[1];
@@ -5775,8 +5787,8 @@ export function solveTowerSites(lanes, mini) {
   //   軟目標(皆 ≥ SEP ⇒ ≤80%):sep = 後塔↔己方主堡/同兵線前塔、sameAdj = 後塔↔**相鄰兵線**同陣營塔(前/後皆算,使用者新增規則,優先滿足)。
   //   ① strict:sep≥SEP 且 sameAdj≥SEP 時取最貼主堡(防禦縱深);② spread:相鄰塞得下(sameAdj≥SEP)時 sep 最大;
   //   ③ spreadNoAdj:相鄰塞不下時退回舊行為(只保 opp/sameAll,sep 最大);④ fb:皆難 → min(sep,opp,sameAll,sameAdj) 最大。
-  // 迷你地圖(towerStages = 1)整趟不跑 —— 每條兵線就只有前線那一組。
-  if (towerStages(mini) < 2) return frontSites.map((frontSite) => [frontSite]);
+  // 單階塔位(towerStages = 1)整趟不跑 —— 每條兵線就只有前線那一組。
+  if (towerStages(mapA) < 2) return frontSites.map((frontSite) => [frontSite]);
   return frontSites.map((frontSite, li) => {
     const { site, towers } = G[li];
     const fS = towers(frontSite.SWARM), fT = towers(frontSite.STEEL);   // 己方前塔
@@ -5811,15 +5823,15 @@ export function solveTowerSites(lanes, mini) {
  *   合規 = 無「殘餘 >80%」(後塔↔己方主堡 / 後塔↔同兵線己方前塔 / 相鄰兵線同陣營塔)且無物理疊塔(≥ STACK)。
  *   敵我前線塔重疊 ≤80% 是固有設計(invariant ②,solveTowerSites 保證),不算殘餘。
  * lanes: [[x,z], …][](遊戲公尺;index 0 = SWARM 端、末端 = STEEL 端,與 solveTowerSites 同)。
- * `mini` MUST 與開房的 battleConfig 同值 —— 迷你地圖沒有後塔,拿完整版的解來驗等於
- * 檢查一批不會生成的塔(而且會因為兵線縮短而殘餘超標,把本來合法的地圖擋在門外)。
+ * `mapA` MUST 與開房的 battleConfig 同值 —— 劇情戰役只有防守方有塔,拿對稱版的解來驗等於
+ * 檢查一批不會生成的塔,把本來合法的地圖擋在門外。
  */
-export function towerLayoutAudit(lanes, mini) {
+export function towerLayoutAudit(lanes, mapA) {
   const R = UNITS.tower.range, OFF = GAME.TOWER_SIDE_OFF;
   const BASE_R = Math.max(UNITS.base.range, UNITS.base.guns.range);
   const STACK = 2 * OFF + 10;
   const overlapPct = (d, ra, rb) => Math.max(0, (ra + rb - d) / Math.min(ra, rb)) * 100;
-  const sites = solveTowerSites(lanes, mini);
+  const sites = solveTowerSites(lanes, mapA);
   const ep = lanes[0] || [];
   const structs = [];
   if (ep.length) {
@@ -5851,12 +5863,12 @@ export function towerLayoutAudit(lanes, mini) {
   }
   const stackBad = minStack < STACK - 1;
   // 劇情戰役:**軟規則降為警示,`ok` 只認硬規則(不物理疊塔)**。
-  // 理由是這一場的尺度與塔位分配都是使用者定死的(同迷你地圖大小 + 敵方兩階塔 + 我方零塔)——
+  // 理由是這一場的尺度與塔位分配都是使用者定死的(標準單兵線大小 + 敵方兩階塔 + 我方零塔)——
   // 三段間隙全擠在防守方那半條線上,而兵線是真實道路:蜿蜒的路段(實測 crimea)沿線量得到
   // 一個塔距、直線量只有 85%,而 `solveTowerSites` 已經取到那條線上的最佳解(它是 best-effort,
   // 見該支趟 2 註)。此時把房間擋掉的意思是「這一章打不開」,而錯誤訊息還會說是砲塔重疊。
   // residual / worstRB / worstRF 照樣回報 —— 降級的是判定,不是能見度(原則 6)。
-  if (mapPlan(mini).mode === 'story') return { ok: !stackBad, residual, minStack: minStack === Infinity ? 0 : minStack, stackBad, worstRB, worstRF, worstAdj, oppFront, soft: true };
+  if (mapPlan(mapA).mode === 'story') return { ok: !stackBad, residual, minStack: minStack === Infinity ? 0 : minStack, stackBad, worstRB, worstRF, worstAdj, oppFront, soft: true };
   return { ok: residual === 0 && !stackBad, residual, minStack: minStack === Infinity ? 0 : minStack, stackBad, worstRB, worstRF, worstAdj, oppFront };
 }
 
@@ -5870,9 +5882,9 @@ export function towerLayoutAudit(lanes, mini) {
  * 開局時 solveTowerSites 手上只有兵線 ⇒ 本規則是**選線期**的判定(烘焙/稽核),
  * MUST NOT 改成執行期挪塔 —— 伺服器與客戶端拿不到同一份洞口資料,塔位會分家。
  */
-export function towerTunnelAudit(lanes, tunSpans = [], mini) {
+export function towerTunnelAudit(lanes, tunSpans = [], mapA) {
   const need = UNITS.tower.range * (1 - GAME.TOWER_TUNNEL_OUT_F);
-  const sites = solveTowerSites(lanes, mini);
+  const sites = solveTowerSites(lanes, mapA);
   const bad = [];
   let worst = 0, inside = 0;
   for (let li = 0; li < sites.length; li++) {

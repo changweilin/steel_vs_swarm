@@ -46,6 +46,7 @@
       <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 建立地圖</button>
       <button id="openRoomBtn" class="btn big steel-btn">▶ 開戰時刻</button>
       <button id="storyBtn" class="btn big story-btn">◈ 劇情戰役</button>
+      <button id="superBtn" class="btn big super-btn">⚡ 超級大戰</button>
     </div>
 
     <!-- 連線機制:雲端 / 區網 Tailscale / 單機。
@@ -145,8 +146,6 @@
     <div class="setup-sec">
       <div class="setup-label">隊伍規模(每陣營人數,決定兵線數)</div>
       <div class="row ts-row" id="tsRow"></div>
-      <div class="setup-label" data-tipkey="miniMap" style="display:none">戰場規模</div>
-      <div class="seg seg-sm" id="miniRow" style="display:none"></div>
       <div class="setup-info" id="tsInfo"></div>
     </div>
 
@@ -182,8 +181,6 @@
     <div class="setup-sec">
       <div class="setup-label">隊伍規模(現場切換,免先存最愛)</div>
       <div class="row ts-row" id="tsRowOpen"></div>
-      <div class="setup-label" data-tipkey="miniMap" style="display:none">戰場規模</div>
-      <div class="seg seg-sm" id="miniRowOpen" style="display:none"></div>
       <div class="setup-info" id="tsInfoOpen"></div>
     </div>
 
@@ -265,6 +262,61 @@
   </div>
 </div>
 
+<!-- ========= 超級大戰(單人第三方:選規模 + 地圖 → 選角 → 出擊自動開戰)========= -->
+<div id="super" class="screen center-screen" style="display:none">
+  <div class="scanlines"></div>
+  <div class="sysbar"><span><b>SUPER</b> // 單人第三方</span><span>1 × SWARM × STEEL <i>●</i></span></div>
+  <div class="panel connect-box story-panel">
+    <div class="panel-head">▍超級大戰 — 一人對抗雙陣營</div>
+    <p class="story-blurb">你一人成第三方<b>超級戰士</b>:可選任意角色,鋼鐵與蜂群都是敵人、第三方野營不打你。重生在雙陣營砲火之外。每階 $200 全項目升級(20 階 = 原滿級,最高 100 階),自動購買預設開啟;陣亡金錢歸零 + 等級掉 5%。</p>
+
+    <div class="setup-sec">
+      <div class="setup-label">敵方規模(每陣營電腦數)</div>
+      <div class="row ts-row" id="tsRowSuper"></div>
+      <div class="setup-info" id="tsInfoSuper"></div>
+    </div>
+
+    <div class="setup-sec">
+      <div class="setup-label">電腦難度</div>
+      <div class="seg seg-sm" id="superDiffRow"></div>
+    </div>
+
+    <div class="setup-sec">
+      <div class="setup-label">預設場地(依上方人數即時重算兵線,即選即用)</div>
+      <div class="venue-grid" id="venueGridSuper"></div>
+    </div>
+
+    <div class="divider">─── 或從我的最愛選 ───</div>
+
+    <div class="setup-sec" id="favSectionSuper">
+      <div class="setup-label">★ 我的最愛</div>
+      <div class="venue-grid" id="favGridSuper"></div>
+    </div>
+
+    <div class="setup-sec">
+      <div class="setup-label">環境(預設隨機,開房時定案)</div>
+      <div class="row env-row">
+        <select id="envSeasonSuper" class="env-sel"></select>
+        <select id="envTimeSuper" class="env-sel"></select>
+        <select id="envWeatherSuper" class="env-sel"></select>
+      </div>
+    </div>
+
+    <div class="setup-sec">
+      <div class="setup-label">選擇你的角色(不選 = 開戰隨機,32 名全可選)</div>
+      <div class="char-grid" id="superCharGrid"></div>
+      <div class="char-info" id="superCharInfo"></div>
+    </div>
+
+    <div id="superStatus" class="map-status">選人數 + 場地,即可出擊。</div>
+    <div id="superDeploy" class="map-status" style="display:none"></div>
+    <div class="row" style="justify-content:center">
+      <button id="superFightBtn" class="btn big super-btn" disabled>⚡ 出擊</button>
+      <button id="superBackBtn" class="btn">← 返回大廳</button>
+    </div>
+  </div>
+</div>
+
 <!-- ========= 房間(陣營配對,每陣營 N 席)========= -->
 <div id="room" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
@@ -327,6 +379,19 @@
       </div>
       <div class="side-name">蜂群兵團 <span class="side-en">THE SWARM</span></div>
       <div class="side-hero">主力 獵蜂無人機 ・ 飛行 / 高機動 / 薄裝甲</div>
+      <div class="side-slots"></div>
+    </div>
+    <div class="side-vs super-vs" id="superVs" hidden>＋</div>
+    <div class="side-card super" id="sideSUPER" hidden>
+      <div class="side-emblem">
+        <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="超級戰士">
+          <path d="M8 26 H142 V34 H8 Z" fill="currentColor"/>
+          <path d="M75 36 L100 78 L88 76 L96 116 L75 100 L54 116 L62 76 L50 78 Z" fill="currentColor"/>
+          <circle cx="75" cy="82" r="60" stroke="currentColor" stroke-width="3" opacity="0.65"/>
+        </svg>
+      </div>
+      <div class="side-name">超級戰士 <span class="side-en">SUPER</span></div>
+      <div class="side-hero">單人第三方 ・ 任意角色 ・ 雙陣營皆敵</div>
       <div class="side-slots"></div>
     </div>
   </div>

@@ -18,13 +18,13 @@
 //   ⑥ **一般對戰被波及** —— 省略 `defSide` 的每一條推導 MUST 逐位元同舊制。
 //
 // 反向驗證(原則 9;每一支都 MUST 讓對應條目紅字,否則等於沒驗到):
-//   node tools/audit_story_map.mjs --break-stage     敵方塔位階數改成 1(= 迷你地圖)
+//   node tools/audit_story_map.mjs --break-stage     敵方塔位階數改成 1(= 單階,無中段塔可打)
 //   node tools/audit_story_map.mjs --break-hpmul     段權重改了而總倍率手寫沒跟著走
 //   node tools/audit_story_map.mjs --break-full      建圖/生成改吃「完整戰場」的塔位解
 //   node tools/audit_story_map.mjs --break-cap       恢復不夾當前段天花板(退回 min(maxHp, …))
 //   node tools/audit_story_map.mjs --break-enrage    擊破一段不升攻擊面
 //   node tools/audit_story_map.mjs --break-respawn   BOSS 照一般規則重生
-//   node tools/audit_story_map.mjs --break-team      地圖大小跟著人數走(= 迷你地圖那條路)
+//   node tools/audit_story_map.mjs --break-team      地圖大小跟著人數走(= 已退場的舊迷你規則)
 //   node tools/audit_story_map.mjs --break-prefill   開場預置退回「兩側取較小者」(守方補不到前線塔)
 //   node tools/audit_story_map.mjs --break-sp        進段不補滿護盾
 //   node tools/audit_story_map.mjs --break-hpscale   裝甲上限升級補滿那一截(= 段位被推回上一階)
@@ -33,8 +33,8 @@
 // 讀原文與抽方法走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabMethod } from './audit_src.mjs';
 import {
-  STORY_MAP, MINI, FULL_STAGES, TEAM, SIEGE, UNITS, GAME, ECON, OTHER_SIDE, CHARACTERS,
-  mapPlan, mapArg, mapScaleF, miniScaleF, laneChainOf, laneChainF, laneCountFor, towerStages,
+  STORY_MAP, FULL_STAGES, TEAM, SIEGE, UNITS, GAME, ECON, OTHER_SIDE, CHARACTERS,
+  mapPlan, mapArg, mapScaleF, laneChainOf, laneChainF, laneCountFor, towerStages,
   solveTowerSites, siteCPs, siegeSiteStages, towerLayoutAudit, edgeBufferM, llToXZ,
   waveSpacingM, siegeTalkS, allyBotDmgF, isBotId, hitH, hitR, HERO_HIT_R, heroTargetH, heroWeapon, heroAbility,
   heroMobility, vsMult,
@@ -68,8 +68,8 @@ if (BRK.prefill) {
 }
 // 壞版:段權重多一段而總倍率留在原地(= 手寫 10 的下場)
 if (BRK.hpmul) BOSS.SEG_W = [1, 2, 3, 4, 5];
-// 壞版:敵方只剩一階塔(照抄迷你地圖的階數 ⇒ 沒有中段砲塔可打,而地圖大小自己會跟著縮)
-if (BRK.stage) STORY_MAP.DEF_STAGES = MINI.STAGES;
+// 壞版:敵方只剩一階塔(⇒ 沒有中段砲塔可打,而地圖大小自己會跟著縮)
+if (BRK.stage) STORY_MAP.DEF_STAGES = 1;
 if (BRK.invuln) BOSS.INVULN_S = [0, 0, 0, 0];
 if (BRK.scale) BOSS.SCALE_F = [1.0, 1.0, 1.0, 1.0];
 if (BRK.enrageNpc) BOSS.ENRAGE_NPC_DMG_F = 1.0;
@@ -96,13 +96,13 @@ const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '')
 console.log('■ Ⅰ 地圖型態:一格旗標四個推論(data.js STORY_MAP)');
 // ---------------------------------------------------------------------------
 {
-  t("mapPlan 三態:省略 = full / true = mini / side 字串 = story",
-    mapPlan().mode === 'full' && mapPlan(true).mode === 'mini'
+  t("mapPlan 二態:省略 = full / 真值 = full(舊 mini 旗標) / side 字串 = story",
+    mapPlan().mode === 'full' && mapPlan(true).mode === 'full'
     && mapPlan('STEEL').mode === 'story' && mapPlan('SWARM').def === 'SWARM');
   t('無效字串退回完整戰場(客戶端送上來的旗標不可信,而半套狀態比拒絕更糟)',
     mapPlan('FOO').mode === 'full' && mapPlan(0).mode === 'full');
-  t('mapArg 由 battleConfig 推導(defSide 優先於 mini)',
-    mapArg({ defSide: 'STEEL', mini: true }) === 'STEEL' && mapArg({ mini: true }) === true
+  t('mapArg 由 battleConfig 推導(只有 defSide 一格;舊 mini 旗標不再解讀)',
+    mapArg({ defSide: 'STEEL', mini: true }) === 'STEEL' && mapArg({ mini: true }) === false
     && mapArg({}) === false && mapArg(null) === false);
 
   // ① 兵線數:劇情戰役恆單線,不看人數
@@ -115,40 +115,40 @@ console.log('■ Ⅰ 地圖型態:一格旗標四個推論(data.js STORY_MAP)');
   t('我方前線就是主堡 ⇒ 攻方零座塔', mapPlan('STEEL').atkStages === 0);
   t(`敵方兩階塔 + 主堡 = 攻堅三階(DEF_STAGES ${STORY_MAP.DEF_STAGES} MUST === SIEGE.BASE ${SIEGE.BASE})`,
     STORY_MAP.DEF_STAGES === SIEGE.BASE);
-  t('towerStages 對完整 / 迷你逐位元同舊制',
-    towerStages(false) === FULL_STAGES && towerStages(true) === MINI.STAGES);
+  t('towerStages 對完整 / 真值輸入逐位元同舊制',
+    towerStages(false) === FULL_STAGES && towerStages(true) === FULL_STAGES);
 
   // ③ 地圖尺度:推導不手寫
-  t(`塔鏈需求 = 攻方 + 守方 + 1(完整 ${laneChainOf(false)} / 迷你 ${laneChainOf(true)} / 劇情 ${laneChainOf('STEEL')})`,
-    laneChainOf(false) === laneChainF(FULL_STAGES) && laneChainOf(true) === laneChainF(MINI.STAGES)
+  t(`塔鏈需求 = 攻方 + 守方 + 1(完整 ${laneChainOf(false)} / 劇情 ${laneChainOf('STEEL')})`,
+    laneChainOf(false) === laneChainF(FULL_STAGES)
     && laneChainOf('STEEL') === STORY_MAP.ATK_STAGES + STORY_MAP.DEF_STAGES + 1);
   t('完整戰場的尺度倍率**逐位元** 1(x * 1 === x ⇒ 一般對戰一格未動)', mapScaleF() === 1 && mapScaleF(false) === 1);
-  t(`劇情戰役 = 迷你地圖大小(${mapScaleF('STEEL')} = miniScaleF ${miniScaleF()})—— 這是推導出來的巧合,不是抄過來的數字`,
-    mapScaleF('STEEL') === miniScaleF() && mapScaleF('STEEL') === laneChainOf('STEEL') / laneChainOf(false));
-  // 使用者追問定案:「不管人數多少都跟迷你地圖 2vs2 一樣大小」。
+  t(`劇情戰役與標準戰場同尺度(${mapScaleF('STEEL')} = 1)—— 推導值,不是抄過來的數字`,
+    mapScaleF('STEEL') === 1 && mapScaleF('STEEL') === laneChainOf('STEEL') / laneChainOf(false));
+  // 使用者追問定案:「不管人數多少都跟 2v2 一樣大小」。
   // 這一條目前是**兩步推導的結果**(兵線數被 `laneCountFor` 釘成 1 → 尺度函式只吃 L 不吃人數),
   // 而兩步都可能被日後的改動拆掉(劇情改多兵線 / 尺度公式改讀 teamSize)⇒ 直接把結論釘死:
-  // 逐人數與「迷你 2v2」的**整份幾何**(邊長 / 對角 / 兩堡距離 / 主堡座標 / 兵線折線)逐位元相同。
+  // 逐人數與**固定參考**(2v2 劇情配置)的**整份幾何**(邊長 / 對角 / 兩堡距離 / 主堡座標 / 兵線折線)逐位元相同。
   {
     const geom = (c) => JSON.stringify({ sizeM: c.sizeM, diagM: c.diagM, distM: c.distM, bases: c.bases, lanes: c.lanes, laneCount: c.laneCount });
     let same = 0, tot = 0; const bad = [];
     for (const v of VENUES.slice(0, 12)) {
-      const ref = geom(venueConfig(v, MINI.TEAM_MAX, true));   // 迷你地圖能開的最大人數 = 2v2
+      const ref = geom(venueConfig(v, 2, 'SWARM'));   // 固定參考:2v2 劇情配置
       for (let ts = TEAM.MIN; ts <= TEAM.MAX; ts++) {
         tot++;
-        // 壞版 = 兵線數(進而地圖大小)跟著人數走,也就是迷你地圖那條路
+        // 壞版 = 兵線數(進而地圖大小)跟著人數走
         if (geom(venueConfig(v, ts, BRK.team ? true : 'SWARM')) === ref) same++; else bad.push(`${v.id}/${ts}v${ts}`);
       }
     }
-    t(`不管人數多少,劇情戰役的整份幾何都與迷你 ${MINI.TEAM_MAX}v${MINI.TEAM_MAX} **逐位元相同**(${TEAM.MAX} 種人數 × 12 場地)`,
+    t(`不管人數多少,劇情戰役的整份幾何逐位元相同(${TEAM.MAX} 種人數 × 12 場地)`,
       same === tot, bad.slice(0, 4).join(' '));
   }
   t('尺度函式只吃兵線數 L,不吃人數(人數只准經 `laneCountFor` 影響 L)',
     !/teamSize/.test(dataSrc.slice(dataSrc.indexOf('export const realSideMFor'), dataSrc.indexOf('export const overlapCellM'))));
 
   // ④ 緩衝深度:劇情刻意不縮(BUFFER_F 換的是手機幀率,使用者這一輪講的是地圖大小)
-  t('劇情戰役的邊緣緩衝與完整戰場同深(只有迷你地圖縮到 1/3)',
-    near(edgeBufferM('STEEL'), edgeBufferM()) && near(edgeBufferM(true), edgeBufferM() * MINI.BUFFER_F));
+  t('劇情戰役的邊緣緩衝與完整戰場同深',
+    near(edgeBufferM('STEEL'), edgeBufferM()));
 }
 
 // ---------------------------------------------------------------------------
@@ -327,7 +327,7 @@ console.log('\n■ Ⅴ 行為直測(跑真品 BattleSim:塔、BOSS、鎖血、�
   const cfg = venueConfig(v, TEAM, DEF);
   cfg.env = { season: 'summer', time: 'day', weather: 'clear' };
   cfg.siege = true; cfg.teamSize = TEAM;
-  if (BRK.full) { cfg.defSide = null; cfg.mini = false; }
+  if (BRK.full) { cfg.defSide = null; }
   const sim = new BattleSim(cfg);
   const towers = [...sim.ents.values()].filter((e) => e.kind === 'tower');
   t(`防守方 ${STORY_MAP.DEF_STAGES} 個塔位 × 左右 2 座 = ${STORY_MAP.DEF_STAGES * 2} 座`,

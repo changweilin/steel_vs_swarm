@@ -2385,8 +2385,8 @@ assert(true, '主堡距離未達對角線 80% 被拒絕');
   assert(bc.defSide === null && bc.siege === false,
     `亂填的 defSide 清成 null,siege 跟著 false(defSide=${bc.defSide} siege=${bc.siege})`);
   const sc = await mkRoom('劇情戰役', venueConfig(VENUES[0], 1, 'STEEL'));
-  assert(sc.defSide === 'STEEL' && sc.siege === true && sc.mini === false,
-    '劇情戰役:defSide=STEEL ⇒ siege 推導為 true、mini 互斥為 false');
+  assert(sc.defSide === 'STEEL' && sc.siege === true && !('mini' in sc),
+    '劇情戰役:defSide=STEEL ⇒ siege 推導為 true、不再帶 mini 旗標');
   assert(sc.lanes.length === 1, `劇情戰役恆單兵線(收到 ${sc.lanes.length} 條)`);
 }
 

@@ -805,7 +805,7 @@ export const landMaskId = (zone, mask) => (Number.isInteger(zone) && zone >= 0 &
 // MUST NOT 另建「零件種類 → 貢獻」的名冊(名冊會在加零件時靜默過期)。
 // 唯一容許手寫的是 `INK_CONTRIB_NONE`(否決)。
 //
-// ⚠ **倍率 2 是授權值不是量測值**(同 `MINI.BUFFER_F = 1/3`、`SELF_ULT.REALIZED_F = 0.35`
+// ⚠ **倍率 2 是授權值不是量測值**(同 `SELF_ULT.REALIZED_F = 0.35`
 // 的處理方式):試過 `SOLDIER_H`(把三組全推到 1)與 `heroTallestH() ≈ 26m`(全推到近 0)
 // 兩個現成錨都配不起來。校準面 = 序 12b 的定裝照,MUST NOT 宣稱它是量出來的。
 export const INK_REPEAT_M = SOLDIER_H * 2;

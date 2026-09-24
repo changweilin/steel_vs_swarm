@@ -9,7 +9,7 @@ import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
 import {
   SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, resolveEnv,
-  BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit, MINI, miniAllowed,
+  BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit,
   laneCountFor, mapArg, mapPlan,
 } from '../public/js/data.js';
 // 操作方式(整房一致、房主定案)的合法值只有 ctrlmode.js 一份 —— 在這裡照抄一組字串
@@ -43,7 +43,7 @@ function genToken() {
 /** 開房前的戰場設定驗證:回傳錯誤訊息或 null(三種機制同標準,單機也照驗) */
 export function validateBattleConfig(cfg, teamSize) {
   if (!cfg || !cfg.bases || !cfg.center || !Array.isArray(cfg.lanes)) return '戰場設定不完整,請先建立/選擇地圖';
-  // 地圖型態(完整 / 迷你 / 劇情戰役)只有 `mapArg` 一份解讀 —— 這一支與 solveTowerSites /
+  // 地圖型態(標準 / 劇情戰役)只有 `mapArg` 一份解讀 —— 這一支與 solveTowerSites /
   // 尺度函式 / 兵線數共用同一個入口,驗證與生成因此不可能對這一場的型態有兩種看法。
   // 地圖型態以下的幾何驗證吃的是客戶端送上來的 JSON,形狀不對(map/數字/陣列任一格)
   // 會在深處拋 TypeError —— MUST 回錯誤字串,MUST NOT 拋:拋出去 = 整個伺服器 process
@@ -57,16 +57,11 @@ export function validateBattleConfig(cfg, teamSize) {
       ? `劇情戰役恆為 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`
       : `隊伍 ${teamSize}v${teamSize} 需要 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`;
   }
-  // 迷你地圖只開放 1v1 / 2v2(使用者定案)。這一道 MUST 在伺服器 —— 手機閘門住客戶端是因為
-  // 「這台裝置畫不畫得動」只有客戶端知道,但「幾人可以打迷你地圖」是房間規則,對雙方對稱生效。
-  if (plan.mode === 'mini' && !miniAllowed(teamSize)) {
-    return `迷你地圖只開放 ${MINI.TEAM_MAX}v${MINI.TEAM_MAX} 以下(收到 ${teamSize}v${teamSize})`;
-  }
   if (!(cfg.distM >= cfg.diagM * 0.8)) {
     return `主堡距離 ${Math.round(cfg.distM)}m 未達地圖對角線 80%(${Math.round(cfg.diagM * 0.8)}m)`;
   }
   // 規則 #4(權威把關):此兵線幾何佈出的砲塔會殘餘 >80% 重疊或疊塔 → 拒絕(自訂/預設同標準;客戶端掃描已預濾)
-  // 型態 MUST 傳下去:迷你地圖沒有後塔、劇情戰役只有一側有塔,拿完整版的解來驗等於檢查
+  // 型態 MUST 傳下去:劇情戰役只有一側有塔,拿完整版的解來驗等於檢查
   // 一批不會生成的塔,會把本來合法的地圖擋在門外(見 towerLayoutAudit)
   const game = lanesToGame(cfg.lanes);
   if (!game || !towerLayoutAudit(game, mapA).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
@@ -192,15 +187,17 @@ export class RoomHub {
             .concat([...room.bots.values()].filter((b) => b.side === 'SWARM').map((b) => `🤖${b.name}`)),
           STEEL: players.filter((c) => c.side === 'STEEL').map((c) => c.name)
             .concat([...room.bots.values()].filter((b) => b.side === 'STEEL').map((b) => `🤖${b.name}`)),
+          // 超級席只在超級房出現(一般房不帶此鍵 ⇒ 列表逐位元同舊制)
+          ...(room.battleConfig?.super
+            ? { SUPER: players.filter((c) => c.side === 'SUPER').map((c) => c.name) } : {}),
         },
         host: this._hostNameOf(room),
         // 操作方式:限定時要在**加入之前**看得到(手機玩家不該進了限定鍵鼠的房才發現沒搖桿)
         ctrl: room.config.ctrl || DEFAULT_CTRL_MODE,
         place: room.battleConfig?.placeName || null,
         env: room.battleConfig?.env || null,
-        // 迷你地圖:同 ctrl,要在**加入之前**看得到 —— 只能打迷你地圖的裝置(手機)
-        // 不該進了完整戰場的房才發現跑不動(閘門住客戶端,見 data.js miniOnlyFor)
-        mini: !!room.battleConfig?.mini,
+        // 超級大戰:單人第三方模式(加入前看得到,非超級房不帶 SUPER 席 ⇒ 列表逐位元同舊制)
+        super: !!room.battleConfig?.super,
       };
       if (isPublic) e.pin = room.pin;
       out.push(e);
@@ -324,7 +321,8 @@ export class RoomHub {
       // 內容逐位元不變;同 tick 首份快照沖洗 events 的共用語意(sim._frame)不受影響。
       const snaps = {};
       for (const c of room.clients.values()) {
-        const k = c.side === 'SWARM' || c.side === 'STEEL' ? c.side : 'all';   // 未定/非法 side 照舊收無霧份
+        // 超級方收自己視野的霧戰爭快照(與雙陣營同規則);未定/非法 side 照舊收無霧份
+        const k = c.side === 'SWARM' || c.side === 'STEEL' || c.side === 'SUPER' ? c.side : 'all';
         c.send(snaps[k] ??= room.battle.snapshotFor(k === 'all' ? null : k));
       }
       if (room.battle.over) {
@@ -412,9 +410,9 @@ export class RoomHub {
         // (cfg 可能整包缺席 —— 那由 validateBattleConfig 回「戰場設定不完整」,這裡先不碰)
         if (cfg && typeof cfg === 'object') {
           cfg.defSide = (cfg.defSide === 'SWARM' || cfg.defSide === 'STEEL') ? cfg.defSide : null;
-          // 迷你地圖(塔位階數 / 地圖尺度 / 緩衝深度全由它推導)正規化成布林;劇情戰役自帶尺度
-          // ⇒ 兩者互斥(同時為真 = 每側只剩一階塔的劇情地圖 = 沒有中段砲塔可打)。
-          cfg.mini = !!cfg.mini && !cfg.defSide;
+          // 超級大戰(單人第三方)正規化成布林;與劇情戰役互斥(劇情有固定劇本陣容)。
+          // 驗證之前正規化,理由同 defSide(見上)。舊 `cfg.mini` 已退場,不再解讀。
+          cfg.super = !!cfg.super && !cfg.defSide;
         }
         const err = validateBattleConfig(cfg, teamSize);
         if (err) { send({ t: 'error', msg: err }); return; }
@@ -450,6 +448,11 @@ export class RoomHub {
         const r = hub.rooms.get(String(m.pin));
         if (!r) { send({ t: 'error', msg: '找不到房間,確認 PIN 是否正確' }); return; }
         const mode = m.mode === 'spectator' ? 'spectator' : 'player';
+        // 超級大戰僅限單人遊玩:已有真人玩家時,後來者只能觀戰
+        if (r.battleConfig?.super && mode === 'player'
+          && [...r.clients.values()].some((c) => c.mode === 'player')) {
+          send({ t: 'error', msg: '超級大戰僅限單人遊玩,可用觀戰模式加入' }); return;
+        }
         const players = [...r.clients.values()].filter((c) => c.mode === 'player').length + r.bots.size;
         const cap = r.config.teamSize * 2;
         if (mode === 'player' && players >= cap) { send({ t: 'error', msg: `參戰席位已滿(${cap} 人),可用觀戰模式加入` }); return; }
@@ -496,11 +499,14 @@ export class RoomHub {
 
       // ---- 房間配對 ----
       if (m.t === 'pickSide') {
-        const side = m.side === 'SWARM' || m.side === 'STEEL' ? m.side : null;
+        // 超級大戰房才可選 SUPER(第三方固定 1 席);其餘房間維持雙陣營
+        const side = m.side === 'SWARM' || m.side === 'STEEL' || (m.side === 'SUPER' && room.battleConfig?.super)
+          ? m.side : null;
         if (client.mode !== 'player') { send({ t: 'error', msg: '觀戰者不能選陣營' }); return; }
         if (side && side !== client.side) {
+          const cap = side === 'SUPER' ? 1 : room.config.teamSize;
           const n = hub._sideCount(room, side) - (client.side === side ? 1 : 0);
-          if (n >= room.config.teamSize) { send({ t: 'error', msg: `${SIDES[side].name} 已滿(${room.config.teamSize} 席)` }); return; }
+          if (n >= cap) { send({ t: 'error', msg: `${(SIDES[side] || { name: '超級戰士' }).name} 已滿(${cap} 席)` }); return; }
         }
         client.side = side;
         client.ready = false;
@@ -509,11 +515,11 @@ export class RoomHub {
         return;
       }
       if (m.t === 'pickChar') {
-        // 開戰前選角(不選 = 開戰時隨機);角色必須屬於自己的陣營,傭兵雙陣營皆可
+        // 開戰前選角(不選 = 開戰時隨機);角色必須屬於自己的陣營,傭兵雙陣營皆可;超級方可選任意角色
         if (room.phase !== 'room' || client.mode !== 'player') return;
         if (m.ch == null) { client.ch = null; hub.broadcast(room); return; }
         const c = CHARACTERS[m.ch];
-        if (!c || !client.side || (c.side !== client.side && c.side !== 'MERC')) { send({ t: 'error', msg: '角色與陣營不符' }); return; }
+        if (!c || !client.side || (client.side !== 'SUPER' && c.side !== client.side && c.side !== 'MERC')) { send({ t: 'error', msg: '角色與陣營不符' }); return; }
         client.ch = m.ch;
         hub.broadcast(room);
         return;

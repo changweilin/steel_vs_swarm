@@ -367,24 +367,31 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 }
 .side-card.swarm::before { background: var(--swarm); }
 .side-card.steel::before { background: var(--steel); }
+.side-card.super::before { background: #ffd54a; }
 .side-card:hover { border-color: var(--line-strong); }
 .side-card.swarm { border-top: 0; }
 .side-card.steel { border-top: 0; }
+.side-card.super { border-top: 0; }
 .side-card.swarm:hover { background: rgba(255, 194, 71, 0.06); }
 .side-card.steel:hover { background: rgba(95, 208, 242, 0.06); }
+.side-card.super:hover { background: rgba(255, 213, 74, 0.06); }
 .side-card.swarm.taken { background: rgba(255, 194, 71, 0.09); }
 .side-card.steel.taken { background: rgba(95, 208, 242, 0.09); }
+.side-card.super.taken { background: rgba(255, 213, 74, 0.09); }
 .side-card.mine { box-shadow: inset 0 0 0 2px var(--ok); }
 /* 陣營軍旗:inline SVG 以 currentColor 上色 → 由 .side-card.swarm/.steel 決定陣營色 */
 .side-emblem { display: flex; justify-content: center; padding: 4px 0 2px; }
 .side-emblem .crest { width: 104px; height: 104px; display: block; }
 .side-card.swarm .side-emblem { color: var(--swarm); }
 .side-card.steel .side-emblem { color: var(--steel); }
+.side-card.super .side-emblem { color: #ffd54a; }
 .side-card.swarm:hover .side-emblem, .side-card.swarm.taken .side-emblem { filter: drop-shadow(0 0 12px rgba(255, 194, 71, 0.55)); }
 .side-card.steel:hover .side-emblem, .side-card.steel.taken .side-emblem { filter: drop-shadow(0 0 12px rgba(95, 208, 242, 0.55)); }
+.side-card.super:hover .side-emblem, .side-card.super.taken .side-emblem { filter: drop-shadow(0 0 12px rgba(255, 213, 74, 0.55)); }
 .side-name { font-family: var(--serif); font-weight: 900; font-size: 20px; letter-spacing: 6px; }
 .side-card.swarm .side-name { color: var(--swarm); }
 .side-card.steel .side-name { color: var(--steel); }
+.side-card.super .side-name { color: #ffd54a; }
 .side-en { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 5px; color: var(--dim); margin-top: 4px; }
 .side-hero { color: var(--dim); font-size: 12px; font-family: var(--mono); letter-spacing: 0.5px; }
 .side-player { font-size: 15px; font-weight: 700; margin-top: 6px; min-height: 20px; }
@@ -945,10 +952,11 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .room-cfg-page > .set-row { justify-content: center; flex-wrap: wrap; }
 
 /* ---------- 劇情戰役 ---------- */
-/* 大廳三動作同列(建立地圖 / 開戰時刻 / 劇情戰役),窄螢幕自動換行 */
+/* 大廳四動作(建立地圖 / 開戰時刻 / 劇情戰役 / 超級大戰):桌機/橫式同列;
+   直式 2×2(四顆硬擠同列在 360px 每顆只剩 ~80px,鈕面文字會被 clip-path 裁掉 —— 見 audit_ui_layout) */
 .lobby-actions { flex-wrap: wrap; }
 .lobby-actions .btn.big {
-  flex: 1 1 30%; min-width: 128px; padding-left: 12px; padding-right: 12px; letter-spacing: 3px;
+  flex: 1 1 22%; min-width: 0; padding-left: 12px; padding-right: 12px; letter-spacing: 3px;
 }
 /* 劇情入口鈕:藍—洋紅—黃三色漸層(對撞主題),置於「開戰時刻」右側 */
 .story-btn {
@@ -958,6 +966,15 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   box-shadow: inset 3px 0 0 var(--steel), inset -3px 0 0 var(--swarm);
 }
 .story-btn:hover:not(:disabled) { background: linear-gradient(120deg, rgba(95, 208, 242, 0.32), rgba(255, 46, 136, 0.30) 52%, rgba(255, 194, 71, 0.32)); color: var(--text); border-color: #fff; }
+/* 超級入口鈕:金色主題(第三方超級戰士識別色),置於「劇情戰役」右側 */
+.super-btn {
+  margin-top: 0;
+  border-color: #ffd54a;
+  color: #ffd54a;
+  background: linear-gradient(120deg, rgba(255, 213, 74, 0.10), rgba(255, 213, 74, 0.22) 52%, rgba(255, 213, 74, 0.10));
+  box-shadow: inset 3px 0 0 #ffd54a, inset -3px 0 0 #ffd54a;
+}
+.super-btn:hover:not(:disabled) { background: linear-gradient(120deg, rgba(255, 213, 74, 0.28), rgba(255, 213, 74, 0.45) 52%, rgba(255, 213, 74, 0.28)); color: #0d0900; border-color: #fff; }
 .story-panel { max-height: calc(100vh - 28px); overflow-y: auto; width: min(680px, 94vw); }
 .story-blurb { font-size: 13px; line-height: 1.7; color: var(--dim); }
 .story-chapters { display: flex; flex-direction: column; gap: 8px; }
@@ -2526,10 +2543,10 @@ body.touch-ui.ori-portrait .title-sub .dim { display: none; }
 body.touch-ui.ori-portrait .masthead .subtitle { display: none; }
 body.touch-ui.ori-portrait .foot-note { display: none; }
 
-/* ---- 大廳三入口(建立地圖 / 開戰時刻 / 劇情戰役):MUST 同列 ---- */
+/* ---- 大廳四入口(建立地圖 / 開戰時刻 / 劇情戰役 / 超級大戰):直式 2×2 ---- */
 body.touch-ui.ori-portrait .lobby-actions { flex-direction: row; flex-wrap: wrap; gap: 6px; }
 body.touch-ui.ori-portrait .lobby-actions .btn.big {
-  flex: 1 1 0; width: auto; min-width: 0; white-space: nowrap;
+  flex: 1 1 40%; width: auto; min-width: 0; white-space: nowrap;
   padding: 12px 4px; font-size: 13px; letter-spacing: 1px;
 }
 

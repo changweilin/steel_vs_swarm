@@ -690,7 +690,7 @@ return { nextSurfId, SURF_ID, SURF_SLOT_N };`)();
   ok(/export const INK_REPEAT_M = SOLDIER_H \* 2;/.test(T) && /export const inkRepeat = /.test(T),
     'inkRepeat(節距軸)住 toon.js;INK_REPEAT_M 是**授權值**(原文旁邊寫著校準面在定裝照)');
   ok(/授權值不是量測值/.test(readSrc('public', 'js', 'toon.js')),
-    'INK_REPEAT_M 旁邊明講它不是量測值(同 MINI.BUFFER_F / REALIZED_F 的處理方式)');
+    'INK_REPEAT_M 旁邊明講它不是量測值(同 REALIZED_F 的處理方式)');
   let mono = true, prevV = -1;
   for (let m = 0; m <= 6; m += 0.05) { const v = inkCtrM(m); if (v < prevV - 1e-12) mono = false; prevV = v; }
   ok(mono && inkCtrM(INK_CTR.FULL_M) === 1 && inkCtrM(INK_CTR.FULL_M + 10) === 1 && inkCtrM(0) === 0,

@@ -41,7 +41,7 @@ import { mulberry32 } from './rng.js';
 
 /**
  * 排列參數。
- * ⚠ `SIZE_M` / `COVER` / `N_MAX` 是**授權值不是量測值**(同 `PETAL.SIZE`、`MINI.BUFFER_F`):
+ * ⚠ `SIZE_M` / `COVER` / `N_MAX` 是**授權值不是量測值**(同 `PETAL.SIZE`):
  * 一叢真實葉片在這個尺度上是幾公分,日系背景一律誇張成「一筆畫得出來的一叢」。
  * 校準面是定裝照(㋓)與真機填充率(㋕),兩者沙箱都跑不動。
  */

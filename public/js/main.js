@@ -15,9 +15,10 @@ import {
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
+  isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
    FLIGHT, SQUAD, scopeRvminFog, weatherFogStops, WEATHER_FOG_MASK,
   heroHexStats, SIEGE,
-  MINI, miniAllowed, miniOnlyFor, miniScaleF, SPEC_CAM,
+  SPEC_CAM,
 } from './data.js';
 import { LORE } from './lore.js';
 import { protoOf } from './codex.js';
@@ -63,7 +64,7 @@ import {
   renderCtrlModeRow, syncCtrlModeRow, isTouchUI, openTouchTest, closeTouchTest, toggleFullscreen,
 } from './mobile.js';
 import {
-  CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange, deviceScheme,
+  CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange,
   VIEW_MODES, viewMode, setViewMode, onViewModeChange,
 } from './ctrlmode.js';
 import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault } from './visualPrefs.js';
@@ -74,7 +75,7 @@ import { geoClear } from './geocache.js';
 
 
 const $ = (id) => document.getElementById(id);
-const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
+  const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'super', 'room', 'loading', 'game'];
 
 // ---- 快速模式偏好(localStorage svs_quickmode)----
 // 開啟後:房間階段不預建地形(startPrebuild 跳過),等進入 loading 才建。
@@ -159,7 +160,6 @@ const app = {
   pickSubject: null, pickSide: null, pickEditable: false, pickIsSelf: false,   // 選角上下文(供放大視窗角色格)
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
-  mini: false,          // 迷你地圖(見 data.js MINI);手機一律 true 且鎖住
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
   story: null,          // 劇情戰役進行中:{ chapterId, side, foe, ch(主駕), allies[], enemies[], index, launched }
   storySide: 'STEEL',   // 目前瀏覽的戰線陣營(協約 / 同盟)
@@ -195,7 +195,7 @@ document.addEventListener('pointerdown', (e) => {
 }, true);
 
 // 還沒進戰區的畫面(這些畫面上沒有房主定案 ⇒ 操作方式退回「我的預設」)
-const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story']);
+const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story', 'super']);
 
 function show(screen) {
   for (const s of screens) $(s).style.display = s === screen ? '' : 'none';
@@ -211,7 +211,7 @@ function show(screen) {
     syncQuickRestartFab();
   }
   // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
-  if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
+  if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story' || screen === 'super') document.body.dataset.side = 'SPEC';
 }
 
 function toast(msg, ms = 3200) {
@@ -238,6 +238,8 @@ const NET_HANDLERS = {
     if (app.phaseShown === 'openroom') $('createRoomBtn').disabled = !app.favCfg;
     // 劇情部署被拒 → 清狀態退回章節列表
     if (app.phaseShown === 'story' && app.story) { app.story = null; $('storyDeploy').style.display = 'none'; renderStoryChapters(); }
+    // 超級部署被拒 → 清狀態退回超級設定(保留已選的地圖/角色,重按出擊即可)
+    if (app.phaseShown === 'super' && app.super) { app.super = null; $('superDeploy').style.display = 'none'; updateSuperStatus(); }
   },
   info: (m) => toast(m.msg),
   // 路網中繼:房主抓到的 OSM 圖資(見 osmGate)。可能比 sync 早到,也可能晚到 —— 兩種都要收。
@@ -318,13 +320,14 @@ function renderRooms(list) {
     row.className = 'room-row' + (r.phase !== 'room' ? ' started' : '');
     const n = r.teamSize || 1;
     const sideTags = `<span class="tag swarm">SWARM ${r.sides.SWARM.length}/${n}</span>
-                      <span class="tag steel">STEEL ${r.sides.STEEL.length}/${n}</span>`;
+                      <span class="tag steel">STEEL ${r.sides.STEEL.length}/${n}</span>`
+      + (r.super ? `<span class="tag dim">⚡超級(${(r.sides.SUPER || []).length}/1)</span>` : '');
     row.innerHTML = `
       <div class="room-info">
         <div class="room-name">${r.isPublic ? '🌐' : '🔒'} ${esc(r.name)} <span class="room-host">房主:${esc(r.host)}</span></div>
         <div class="room-tags">${sideTags}
           <span class="tag dim">${n}v${n}</span>
-          ${r.mini ? '<span class="tag dim">🗺 迷你地圖</span>' : ''}
+          ${r.super ? '<span class="tag dim">⚡超級大戰</span>' : ''}
           <span class="tag dim">${r.phase === 'room' ? '配對中' : r.phase === 'game' ? '交戰中' : '準備中'}</span>
           ${r.ctrl && r.ctrl !== 'any' ? `<span class="tag dim">${esc(CTRL_MODES[r.ctrl].icon)} ${esc(CTRL_MODES[r.ctrl].label)}</span>` : ''}
           ${r.place ? `<span class="tag dim">📍 ${esc(r.place)}</span>` : ''}
@@ -332,11 +335,7 @@ function renderRooms(list) {
         </div>
       </div>
       <button class="btn small">${r.phase === 'room' ? '加入' : '觀戰'}</button>`;
-    // 手機只開放迷你地圖(使用者定案):完整戰場的戰區連加入鈕都不給,並講清楚理由
-    const blocked = miniLocked() && !r.mini;
     const joinBtn = row.querySelector('button');
-    joinBtn.disabled = blocked;
-    if (blocked) attachTip(joinBtn, '本裝置判定為手機,只開放迷你地圖的戰區。');
     joinBtn.onclick = () => {
       const mode = r.phase === 'room'
         ? (document.querySelector('input[name=joinMode]:checked')?.value || 'player')
@@ -422,47 +421,12 @@ async function enterMapBuilder() {
       },
     });
     app.mapSel.setTeamSize(app.teamSize);
-    app.mapSel.setMini(miniOn());   // 掃描的目標距離與砲塔複驗都吃它
     renderTeamSize();
     renderVenues();
     setTimeout(() => app.mapSel.map.invalidateSize(), 60);
   }
   $('mapStatus').textContent = '選一個預設場地,或在地圖上點選你的蜂群主堡位置。';
 }
-
-// ---- 迷你地圖(見 data.js MINI)----
-// 「這台裝置只能打迷你地圖嗎」只問一支 `miniOnlyFor(deviceScheme())` —— 裝置判定全 repo
-// 只有 ctrlmode.js 那一份,策略只有 data.js 那一份,main.js MUST NOT 自己看螢幕寬或 touch。
-const miniLocked = () => miniOnlyFor(deviceScheme());
-/** 目前生效的迷你旗標:手機恆真;人數超過 1v1/2v2 一律假(那個人數開不成迷你地圖)*/
-function miniOn() {
-  if (!miniAllowed(app.teamSize)) return false;
-  return miniLocked() || !!app.mini;
-}
-/**
- * 「完整戰場 / 迷你地圖」分段鈕(兩處設定畫面共用同一支;A20:鈕面不加括號補述)。
- * 手機一律鎖在迷你(使用者:「手機版只允許連線遊玩迷你地圖,桌機版不限制」);
- * 人數 > MINI.TEAM_MAX 時整組停用 —— 迷你地圖恆為單兵線,3v3 以上開不成。
- */
-function renderMiniRow(rowId, onPick) {
-  const row = $(rowId);
-  if (!row) return;
-  const locked = miniLocked(), allowed = miniAllowed(app.teamSize), on = miniOn();
-  row.innerHTML = '';
-  for (const [val, label] of [[false, '完整戰場'], [true, '迷你地圖']]) {
-    const b = document.createElement('button');
-    b.className = 'segb' + (val === on ? ' on' : '');
-    b.textContent = label;
-    b.disabled = locked || (val && !allowed);
-    attachTip(b, val
-      ? `兵線只有前線砲塔 + 主堡、地圖與據點距離縮到 ${Math.round(miniScalePct())}%、邊緣緩衝縮到 1/3。`
-        + `只開放 ${MINI.TEAM_MAX}v${MINI.TEAM_MAX} 以下;手機一律使用迷你地圖。`
-      : '前線砲塔 + 中段砲塔 + 主堡的完整戰場。手機跑不動,故手機版不開放。');
-    b.onclick = () => { app.mini = val; savePrefs({ mini: val }); renderMiniRow(rowId, onPick); onPick(); };
-    row.appendChild(b);
-  }
-}
-const miniScalePct = () => miniScaleF() * 100;
 
 function renderTeamSize() {
   const row = $('tsRow');
@@ -471,28 +435,10 @@ function renderTeamSize() {
     const b = document.createElement('button');
     b.className = 'btn ts-btn' + (n === app.teamSize ? ' on' : '');
     b.textContent = `${n}v${n}`;
-    // 手機只准打迷你地圖,而迷你地圖恆為單兵線 ⇒ 3v3 以上整組停用(選了才報錯是更差的體驗)
-    b.disabled = miniLocked() && !miniAllowed(n);
     b.onclick = () => { setTeamSize(n); };
     row.appendChild(b);
   }
-  renderMiniRow('miniRow', () => onMiniChanged(false));
   updateTsInfo();
-}
-
-/** 迷你旗標變更後的連鎖:摘要 / 場地提示 / 已選場地的兵線全部重算(兩處設定畫面共用)*/
-function onMiniChanged(openRoom) {
-  syncVenueTips();
-  if (openRoom) {
-    updateTsInfoOpen();
-    if (app.venueSelOpen) selectVenueOpen(app.venueSelOpen);
-    else { app.favCfg = null; $('createRoomBtn').disabled = true; }
-  } else {
-    updateTsInfo();
-    app.mapSel?.setMini(miniOn());
-    if (app.venueSel) selectVenue(app.venueSel);
-    else { app.favCfg = null; $('saveFavBtn').disabled = true; }
-  }
 }
 
 function setTeamSize(n) {
@@ -500,10 +446,8 @@ function setTeamSize(n) {
   savePrefs({ teamSize: n });
   app.favCfg = null;
   app.mapSel?.setTeamSize(n);
-  app.mapSel?.setMini(miniOn());   // 人數跨過 MINI.TEAM_MAX 就開不成迷你地圖 ⇒ 掃描目標距離跟著回來
   $('saveFavBtn').disabled = true;
   for (const [i, b] of [...$('tsRow').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
-  renderMiniRow('miniRow', () => onMiniChanged(false));   // 迷你可不可選吃人數
   updateTsInfo();
   syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
   // 預設場地已選:換規模直接重算(預先計算是確定性幾何,瞬間完成)
@@ -516,8 +460,7 @@ function updateTsInfo() { $('tsInfo').textContent = tsInfoText(); }
 function tsInfoText() {
   const L = lanesFor(app.teamSize);
   const size = sideMFor(L);
-  return `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km) ・ 每線各陣營一對砲塔`
-    + (miniLocked() ? ' ・ 本裝置判定為手機,鎖定單兵線戰場' : '');
+  return `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km) ・ 每線各陣營一對砲塔`;
 }
 
 // 場地鈕的路線/地形說明:2026-08-02 起走 tip.js 的懸浮提示單一縫(觸控長按也看得到);
@@ -533,7 +476,7 @@ function venueBtn(v) {
     + (vdef ? `<span class="venue-var">${vdef.name}</span>` : '')
     + (v.story ? '<span class="venue-var story-tag">劇情</span>' : '')
     + '</span>';
-  attachTip(b, venueTip(v, app.teamSize, miniOn()));
+  attachTip(b, venueTip(v, app.teamSize));
   return b;
 }
 
@@ -612,12 +555,12 @@ document.fonts?.ready?.then(() => refitVenueMarquee());
 
 /** 換人數 ⇒ 兵線條數/長度/彎曲度整組變 ⇒ 兩處場地清單的說明 MUST 跟著重掛(唯一出口) */
 function syncVenueTips() {
-  for (const gid of ['venueGrid', 'venueGridOpen']) {
+  for (const gid of ['venueGrid', 'venueGridOpen', 'venueGridSuper']) {
     const grid = $(gid);
     if (!grid) continue;
     for (const b of grid.querySelectorAll('button.venue-btn')) {
       const v = VENUES.find((x) => x.id === b.dataset.vid);
-      if (v) attachTip(b, venueTip(v, app.teamSize, miniOn()));
+      if (v) attachTip(b, venueTip(v, app.teamSize));
     }
   }
 }
@@ -625,7 +568,7 @@ function syncVenueTips() {
 /** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描 */
 function selectVenue(v) {
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
-  const cfg = venueConfig(v, app.teamSize, miniOn());
+  const cfg = venueConfig(v, app.teamSize);
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
   app.venueSel = v;
   app.favCfg = cfg;
@@ -633,7 +576,7 @@ function selectVenue(v) {
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,存入最愛後即可開房。` +
     `(想用真實道路兵線,可改在地圖上手動點選錨點)` +
-    `<div class="venue-desc">${esc(venueBrief(v, app.teamSize, miniOn()))}</div>`;
+    `<div class="venue-desc">${esc(venueBrief(v, app.teamSize))}</div>`;
   $('mapProgressBar').style.width = '100%';
   $('saveFavBtn').disabled = false;
 }
@@ -647,28 +590,20 @@ function renderFavsOpenRoom() {
   for (const f of favs) {
     const b = document.createElement('button');
     b.className = 'venue-btn fav';
-    const favMini = !!f.cfg?.mini;
-    b.innerHTML = `★ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`
-      + (favMini ? '<span class="venue-type">🗺 迷你</span>' : '');
-    // 手機只能打迷你地圖 ⇒ 完整戰場的最愛整顆停用(選了才被伺服器擋是更差的體驗)
-    b.disabled = miniLocked() && !favMini;
-    if (b.disabled) attachTip(b, '本裝置判定為手機,只開放迷你地圖。請改選迷你地圖的最愛,或在桌機上遊玩。');
+    b.innerHTML = `★ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`;
     b.onclick = () => {
       warmModels();   // 選定最愛地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
       app.teamSize = f.teamSize;
       const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
-      app.mini = !!cfg.mini;               // 最愛的迷你與否是烤死在 cfg 裡的,鈕面要跟著它
-      savePrefs({ teamSize: f.teamSize, mini: app.mini });
+      savePrefs({ teamSize: f.teamSize });
       app.favCfg = cfg;
       app.venueSelOpen = null;   // 最愛的兵線是存檔時就烤死的配置,跟即時場地選擇互斥
       for (const el of grid.children) el.classList.remove('on');
       for (const el of $('venueGridOpen').children) el.classList.remove('on');
       for (const [i, tb] of [...$('tsRowOpen').children].entries()) tb.classList.toggle('on', i + TEAM.MIN === f.teamSize);
-      renderMiniRow('miniRowOpen', () => onMiniChanged(true));
       updateTsInfoOpen();
       b.classList.add('on');
-      $('openRoomStatus').innerHTML = `⭐ 已選「${esc(f.name)}」(${esc(f.cfg.placeName || '')}) ・ ${f.teamSize}v${f.teamSize}`
-        + `${favMini ? ' ・ 迷你地圖' : ''},可以開房了。`;
+      $('openRoomStatus').innerHTML = `⭐ 已選「${esc(f.name)}」(${esc(f.cfg.placeName || '')}) ・ ${f.teamSize}v${f.teamSize},可以開房了。`;
       $('createRoomBtn').disabled = false;
     };
     const del = document.createElement('span');
@@ -710,11 +645,9 @@ function renderTeamSizeOpen() {
     const b = document.createElement('button');
     b.className = 'btn ts-btn' + (n === app.teamSize ? ' on' : '');
     b.textContent = `${n}v${n}`;
-    b.disabled = miniLocked() && !miniAllowed(n);   // 同 renderTeamSize
     b.onclick = () => setTeamSizeOpen(n);
     row.appendChild(b);
   }
-  renderMiniRow('miniRowOpen', () => onMiniChanged(true));
   updateTsInfoOpen();
 }
 
@@ -722,7 +655,6 @@ function setTeamSizeOpen(n) {
   app.teamSize = n;
   savePrefs({ teamSize: n });
   for (const [i, b] of [...$('tsRowOpen').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
-  renderMiniRow('miniRowOpen', () => onMiniChanged(true));   // 迷你可不可選吃人數
   updateTsInfoOpen();
   syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
   if (app.venueSelOpen) {
@@ -746,7 +678,7 @@ function renderVenuesOpen() {
 /** 開戰時刻現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
 function selectVenueOpen(v) {
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
-  const cfg = venueConfig(v, app.teamSize, miniOn());
+  const cfg = venueConfig(v, app.teamSize);
   app.venueSelOpen = v;
   app.favCfg = cfg;
   savePrefs({ lastVenueId: v.id });
@@ -755,9 +687,9 @@ function selectVenueOpen(v) {
   if (btn) btn.classList.add('on');
   for (const el of $('favGrid').children) el.classList.remove('on');
   $('openRoomStatus').innerHTML =
-    `📍 <b>${esc(v.name)}</b>:${app.teamSize}v${app.teamSize}${cfg.mini ? ' ・ 迷你地圖' : ''}`
+    `📍 <b>${esc(v.name)}</b>:${app.teamSize}v${app.teamSize}`
     + ` ・ 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,可以開房了。`
-    + `<div class="venue-desc">${esc(venueBrief(v, app.teamSize, miniOn()))}</div>`;
+    + `<div class="venue-desc">${esc(venueBrief(v, app.teamSize))}</div>`;
   $('createRoomBtn').disabled = false;
 }
 
@@ -906,12 +838,257 @@ function exitStoryBattle() {
   enterStory();
 }
 
-/** 離開戰場(暫停選單「離開戰場」共用):劇情 → 回章節;一般對戰 → 退回大廳 */
+/** 離開戰場(暫停選單「離開戰場」共用):劇情 → 回章節;超級 → 回超級設定;一般對戰 → 退回大廳 */
 function leaveBattle() {
   if (app.story) { exitStoryBattle(); return; }
+  if (app.super) { exitSuperBattle(); return; }
   app.net?.send({ t: 'leaveRoom' });
   sessionStorage.removeItem('svs_token');
   location.reload();
+}
+
+// ================= 超級大戰(單人第三方:選規模 + 地圖 → 選角 → 出擊自動開戰)=================
+// 流程鏡射劇情戰役:選完按出擊 → 開私人房 → onSync 房間階段自動入座/選角/補電腦/開戰(只跑一次)。
+// 房間配對畫面只會閃過(與劇情同),不需手動操作;人數 = 每陣營電腦數,玩家固定第三方 1 人。
+
+/** 進入超級大戰設定畫面 */
+function enterSuper() {
+  app.super = null;                       // 進場清空(可能剛從某場超級戰役退回)
+  app.superCfg = null;
+  app.superVenue = null;
+  app.superFav = null;
+  if (app.superCh != null && !CHARACTERS[app.superCh]) app.superCh = null;
+  if (!app.superDiff || !BOT_DIFF[app.superDiff]) app.superDiff = loadPrefs().botDiff || DEFAULT_BOT_DIFF;
+  $('superDeploy').style.display = 'none';
+  show('super');
+  renderTeamSizeSuper();
+  renderVenueGroups($('venueGridSuper'), (v) => selectVenueSuper(v));
+  renderFavsSuperRoom();
+  renderSuperEnvSelects();
+  renderSuperDiff();
+  renderSuperChars();
+  updateSuperStatus();
+}
+
+function renderTeamSizeSuper() {
+  const row = $('tsRowSuper');
+  row.innerHTML = '';
+  for (let n = TEAM.MIN; n <= TEAM.MAX; n++) {
+    const b = document.createElement('button');
+    b.className = 'btn ts-btn' + (n === app.teamSize ? ' on' : '');
+    b.textContent = `${n}v${n}`;
+    b.onclick = () => setTeamSizeSuper(n);
+    row.appendChild(b);
+  }
+  updateTsInfoSuper();
+}
+
+function setTeamSizeSuper(n) {
+  app.teamSize = n;
+  savePrefs({ teamSize: n });
+  for (const [i, b] of [...$('tsRowSuper').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
+  updateTsInfoSuper();
+  syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
+  if (app.superVenue) selectVenueSuper(app.superVenue);
+  else if (app.superFav) selectFavSuperRoom(app.superFav);
+  else { app.superCfg = null; updateSuperStatus(); }
+}
+
+function updateTsInfoSuper() {
+  const L = lanesFor(app.teamSize);
+  const size = sideMFor(L);
+  $('tsInfoSuper').textContent = `你 1 人 ・ 每陣營 ${app.teamSize} 台電腦 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方`;
+}
+
+/** 超級大戰現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
+function selectVenueSuper(v) {
+  warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
+  const cfg = venueConfig(v, app.teamSize);
+  cfg.super = true;   // 超級旗標(開房時伺服器再正規化一次,見 rooms.js createRoom)
+  app.superVenue = v;
+  app.superFav = null;
+  app.superCfg = cfg;
+  savePrefs({ lastVenueId: v.id });
+  for (const el of $('venueGridSuper').querySelectorAll('button.venue-btn')) el.classList.remove('on');
+  const btn = $('venueGridSuper').querySelector(`button.venue-btn[data-vid="${v.id}"]`);
+  if (btn) btn.classList.add('on');
+  for (const el of $('favGridSuper').children) el.classList.remove('on');
+  updateSuperStatus();
+}
+
+/** 超級大戰:我的最愛列表(選一個 → 依當下人數沿用存檔配置) */
+function renderFavsSuperRoom() {
+  const favs = loadFavorites();
+  const grid = $('favGridSuper');
+  grid.innerHTML = '';
+  for (const f of favs) {
+    const b = document.createElement('button');
+    b.className = 'venue-btn fav';
+    b.innerHTML = `★ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`;
+    b.onclick = () => {
+      warmModels();
+      selectFavSuperRoom(f);
+    };
+    const del = document.createElement('span');
+    del.className = 'fav-del';
+    del.textContent = '✕';
+    del.title = '移除最愛';
+    del.onclick = (e) => {
+      e.stopPropagation();
+      removeFavorite(f.name);
+      if (app.superFav === f) { app.superFav = null; app.superCfg = null; updateSuperStatus(); }
+      renderFavsSuperRoom();
+    };
+    b.appendChild(del);
+    grid.appendChild(b);
+  }
+}
+
+/** 超級大戰選最愛:人數跟存檔走(存檔的兵線是烤死的配置,與預設場地即時重算互斥) */
+function selectFavSuperRoom(f) {
+  app.teamSize = f.teamSize;
+  const cfg = migrateFavCfg(f);
+  cfg.super = true;   // 超級旗標(同 selectVenueSuper)
+  savePrefs({ teamSize: f.teamSize });
+  app.superFav = f;
+  app.superVenue = null;
+  app.superCfg = cfg;
+  for (const el of $('favGridSuper').children) el.classList.remove('on');
+  for (const el of $('venueGridSuper').querySelectorAll('button.venue-btn')) el.classList.remove('on');
+  for (const [i, tb] of [...$('tsRowSuper').children].entries()) tb.classList.toggle('on', i + TEAM.MIN === f.teamSize);
+  updateTsInfoSuper();
+  updateSuperStatus();
+}
+
+/** 超級大戰環境選擇(選項與記憶同開戰時刻那三顆,ID 獨立) */
+function renderSuperEnvSelects() {
+  const saved = loadPrefs().env || {};
+  const persist = () => savePrefs({
+    env: { season: $('envSeasonSuper').value, time: $('envTimeSuper').value, weather: $('envWeatherSuper').value },
+  });
+  const fill = (id, obj, label, key) => {
+    const sel = $(id);
+    sel.innerHTML = `<option value="random">🎲 隨機${label}</option>`;
+    for (const [k, v] of Object.entries(obj)) {
+      sel.innerHTML += `<option value="${k}">${v.name}</option>`;
+    }
+    const want = saved[key];
+    sel.value = (want === 'random' || obj[want]) ? want : 'random';
+    sel.onchange = persist;
+  };
+  fill('envSeasonSuper', ENV.seasons, '季節', 'season');
+  fill('envTimeSuper', ENV.times, '時段', 'time');
+  fill('envWeatherSuper', ENV.weathers, '天氣', 'weather');
+}
+
+/** 超級大戰電腦難度(整房一個;開房時定案,進房後房主仍可在戰區畫面改) */
+function renderSuperDiff() {
+  const row = $('superDiffRow');
+  if (!row) return;
+  row.innerHTML = '<span class="seg seg-sm diff-seg">'
+    + BOT_DIFF_KEYS.map((k) =>
+      `<button class="segb${k === app.superDiff ? ' on' : ''}" type="button" data-diff="${k}">${esc(BOT_DIFF[k].name)}</button>`).join('')
+    + '</span>';
+  for (const b of row.querySelectorAll('[data-diff]')) {
+    b.onclick = () => {
+      app.superDiff = b.dataset.diff;
+      savePrefs({ botDiff: app.superDiff });
+      renderSuperDiff();
+    };
+  }
+}
+
+/** 超級大戰選角(32 名全可選;不選 = 開戰隨機) */
+function renderSuperChars() {
+  const grid = $('superCharGrid');
+  grid.innerHTML = '';
+  for (const id of Object.keys(CHARACTERS)) {
+    const c = CHARACTERS[id];
+    const merc = c.side === 'MERC';
+    const b = document.createElement('button');
+    b.className = 'char-btn' + (app.superCh === id ? ' on' : '') + (merc ? ' merc' : '');
+    b.innerHTML = `${charAvatarHTML(id)}
+      <b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
+    b.title = `${c.code} ${c.name} ・ ${c.machine}`;
+    b.onclick = () => {
+      app.superCh = id;
+      savePrefs({ lastChar: id });
+      renderSuperChars();
+      updateSuperStatus();
+    };
+    grid.appendChild(b);
+  }
+  const rnd = document.createElement('button');
+  rnd.className = 'char-btn rnd' + (app.superCh ? '' : ' on');
+  rnd.innerHTML = '<span class="char-dice">🎲</span><span class="char-name">隨機</span>';
+  rnd.onclick = () => { app.superCh = null; renderSuperChars(); updateSuperStatus(); };
+  grid.appendChild(rnd);
+}
+
+/** 超級狀態列 + 出擊鈕門(有場地配置才能出擊;角色不選即隨機) */
+function updateSuperStatus() {
+  const cfg = app.superCfg;
+  const ch = app.superCh && CHARACTERS[app.superCh];
+  $('superFightBtn').disabled = !cfg;
+  $('superStatus').innerHTML = !cfg
+    ? '選人數 + 場地,即可出擊。'
+    : `📍 <b>${esc(cfg.placeName || '')}</b>:每陣營 ${app.teamSize} 台電腦`
+      + ` ・ ${cfg.lanes.length} 條兵線 ・ ${ch ? `「${esc(ch.code)}」${esc(ch.name)}` : '角色隨機'}`;
+  $('superCharInfo').textContent = ch
+    ? `已選定「${ch.code}」${ch.name} ・ ${ch.machine}`
+    : '未選角色:開戰時隨機指派一名超級戰士(點頭像選角)。';
+}
+
+/** 出擊:組 battleConfig 開私人房;雙陣營電腦於 launchSuperBattle 補滿 */
+function startSuperBattle() {
+  const cfg = app.superCfg;
+  if (!cfg) return;
+  if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
+  cfg.env = {
+    season: $('envSeasonSuper').value,
+    time: $('envTimeSuper').value,
+    weather: $('envWeatherSuper').value,
+  };
+  app.super = { ch: app.superCh || null, teamSize: app.teamSize, launched: false };
+  $('superDeploy').style.display = '';
+  $('superDeploy').textContent = `⚙ 部署中:${cfg.placeName || '未知戰區'}…`;
+  $('superFightBtn').disabled = true;
+  app.net?.send({
+    t: 'createRoom', name: myName(), roomName: `超級大戰・${cfg.placeName || '未知戰區'}`, isPublic: false,
+    teamSize: app.teamSize, botDiff: app.superDiff, ctrl: ctrlPref(), battleConfig: cfg,
+  });
+}
+
+/** onSync 在 room 階段呼叫一次:入座 SUPER、選角、補滿雙陣營電腦、開戰(只跑一次) */
+function launchSuperBattle() {
+  const s = app.super;
+  s.launched = true;
+  app.mySide = 'SUPER';
+  const net = app.net;
+  net.send({ t: 'pickSide', side: 'SUPER' });
+  if (s.ch) net.send({ t: 'pickChar', ch: s.ch });
+  for (let i = 0; i < s.teamSize; i++) net.send({ t: 'addBot', side: 'SWARM' });
+  for (let i = 0; i < s.teamSize; i++) net.send({ t: 'addBot', side: 'STEEL' });
+  net.send({ t: 'setReady', ready: true });
+  net.send({ t: 'startBattle' });
+}
+
+/** 退出超級大戰(勝負已定或中途離開):收掉單人房,回到超級設定(保留上次選擇) */
+function exitSuperBattle() {
+  app.net?.send({ t: 'leaveRoom' });
+  if (app.battle) { app.battle.dispose(); app.battle = null; }
+  app.dlg?.dispose(); app.dlg = null;   // 對話層與戰場同生死(定時器漏收 = 下一場冒出上一場的台詞)
+  app.terrain = null;
+  app.lobby = null;
+  app.super = null;
+  app.fieldMsg = null;
+  $('overOverlay').style.display = 'none';
+  $('pauseOverlay').style.display = 'none';
+  $('shopOverlay').style.display = 'none';
+  disposeVisualSettings(); stopMechaAll();   // 離場:設定頁若開著,樣品與機體預覽的 WebGL context 要跟著收(A25)
+  delete $('overOverlay').dataset.done;
+  sessionStorage.removeItem('svs_token');
+  enterSuper();
 }
 
 /**
@@ -983,8 +1160,6 @@ $('createRoomBtn')?.addEventListener('click', () => {
   const cfg = app.favCfg;
   if (!cfg) return;
   if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
-  // 手機閘門的最後一道:cfg 可能來自舊的最愛(存檔時還沒有迷你地圖)⇒ 鈕面擋過還要再驗一次
-  if (miniLocked() && !cfg.mini) { toast('本裝置判定為手機,只開放迷你地圖 —— 請改選迷你地圖'); return; }
   $('createRoomBtn').disabled = true;
   $('openRoomStatus').textContent = '建立戰區…';
   cfg.env = {
@@ -992,6 +1167,7 @@ $('createRoomBtn')?.addEventListener('click', () => {
     time: $('envTime').value,
     weather: $('envWeather').value,
   };
+
   app.net?.send({
     t: 'createRoom',
     name: myName(),
@@ -1021,8 +1197,9 @@ function renderRoom() {
 
   // 戰場資訊(開房時已鎖定)
   const cfg = lb.battleConfig;
+  const superMode = !!cfg?.super;
   $('roomMapInfo').textContent = cfg
-    ? `📍 ${cfg.placeName} ・ ${N}v${N}${cfg.mini ? ' ・ 🗺 迷你地圖' : ''} ・ ${cfg.lanes.length} 條兵線`
+    ? `📍 ${cfg.placeName} ・ ${N}v${N}${superMode ? ' ・ ⚡超級大戰(單人第三方)' : ''} ・ ${cfg.lanes.length} 條兵線`
       + ` ・ ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ ${envLabel(cfg.env)}`
     : '';
   renderPreloadStatus();   // 地圖預建進度(獨立元素,見 startPrebuild)
@@ -1032,6 +1209,12 @@ function renderRoom() {
 
   const me = lb.clients.find((c) => c.id === app.youId);
   app.mySide = me?.side || null;
+  // 超級席顯示 + 自動入座(超級房進房即坐 SUPER 席,免手動;選角仍由玩家決定)
+  $('sideSUPER').hidden = !superMode;
+  $('superVs').hidden = !superMode;
+  if (superMode && lb.phase === 'room' && me && me.mode === 'player' && !me.side) {
+    app.net?.send({ t: 'pickSide', side: 'SUPER' });
+  }
   // 選角高亮對象 = 任一 client id(自己/電腦/他人);指向的對象消失就退回自己
   if (!lb.clients.some((c) => c.id === app.charTarget)) app.charTarget = me?.side ? me.id : null;
   // 主視覺:自己的角色一經 highlight,整套 UI 單色件收束成該陣營色(style.css --uiL/--uiR);
@@ -1047,14 +1230,16 @@ function renderRoom() {
     return x;
   };
 
-  for (const side of ['SWARM', 'STEEL']) {
+  // 席位卡渲染(單一縫):雙陣營各 N 席、超級席固定 1 席(僅限真人,不設電腦鈕)
+  const renderSideCard = (side, seats) => {
     const card = $(`side${side}`);
+    if (!card) return;
     const members = lb.clients.filter((c) => c.side === side);
-    card.classList.toggle('taken', members.length >= N);
+    card.classList.toggle('taken', members.length >= seats);
     card.classList.toggle('mine', members.some((c) => c.id === app.youId));
     const slotsEl = card.querySelector('.side-slots');
     slotsEl.innerHTML = '';
-    for (let i = 0; i < N; i++) {
+    for (let i = 0; i < seats; i++) {
       const c = members[i];
       const div = document.createElement('div');
       if (c) {
@@ -1081,7 +1266,8 @@ function renderRoom() {
           };
           div.appendChild(join);
         }
-        if (app.isHost) {
+        // 超級席僅限真人(電腦走正常八軌升級,擠進超級席會整場升不了級)
+        if (app.isHost && side !== 'SUPER') {
           const add = document.createElement('button');
           add.className = 'slot-btn';
           add.textContent = '＋ 電腦';
@@ -1092,7 +1278,9 @@ function renderRoom() {
       }
       slotsEl.appendChild(div);
     }
-  }
+  };
+  for (const side of ['SWARM', 'STEEL']) renderSideCard(side, N);
+  if (superMode) renderSideCard('SUPER', 1);
 
   renderCharPick(me);
 
@@ -1100,11 +1288,7 @@ function renderRoom() {
   $('specList').textContent = specs.length ? `◇ 觀戰:${specs.map((c) => c.name).join('、')}` : '';
 
   const readyBtn = $('readyBtn');
-  // 私人房只能靠 PIN 進來 ⇒ 大廳列表那道閘門看不到它;這裡是手機閘門的最後一站
-  // (**不自動踢出**:留在房裡仍可觀戰,只是不能上場 —— 寧可講清楚,不要替玩家決定離開)
-  const miniBlocked = miniLocked() && cfg && !cfg.mini;
-  readyBtn.disabled = !me?.side || miniBlocked;
-  if (miniBlocked) attachTip(readyBtn, '本裝置判定為手機,只開放迷你地圖的戰區 —— 可以觀戰,但不能上場。');
+  readyBtn.disabled = !me?.side;
   readyBtn.textContent = me?.ready ? '取消' : '✔ 準備';
   readyBtn.classList.toggle('on', !!me?.ready);
 
@@ -1751,7 +1935,7 @@ function modalCharGroup(side, selectable) {
   wrap.className = 'smp-group';
   const head = document.createElement('div');
   head.className = 'smp-sub';
-  head.textContent = side === 'STEEL' ? '▲ 協約 鋼鐵' : '▼ 同盟 蜂群';
+  head.textContent = side === 'STEEL' ? '▲ 協約 鋼鐵' : side === 'SUPER' ? '⚡ 超級戰士(任意角色)' : '▼ 同盟 蜂群';
   wrap.appendChild(head);
   const grid = document.createElement('div');
   grid.className = 'char-grid smp-grid';
@@ -1985,10 +2169,9 @@ async function fetchDevOsmRelay(name, bbox) {
 
 function prebuildKey(cfg) {
   // 會影響地形/地貌的欄位全進 key:center/sizeM/bases/lanes(對調反轉後)/env(season/time 進地貌)/teamSize(進亂數種子)
-  // mini 進 key:塔位階數(biomes 淨空/地標/墩座)與緩衝深度(裙)全由它推導 ⇒ 換了就得重建
   // `defSide` MUST 進 key:劇情戰役的塔位是非對稱的(只有防守方有塔)⇒ 換邊就是換一個世界,
   // 漏掉它會讓房間階段預建好的地形被原樣沿用,而塔的淨空/墩座全長在錯的那一側。
-  return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, !!cfg.mini, cfg.defSide || null,
+  return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, cfg.defSide || null,
     cfg.architectureSeed || 0, devOsmFixtureName()]);
 }
 
@@ -2950,10 +3133,14 @@ function makeHud() {
       const ot = chapter ? overText(chapter, app.story.side, won) : null;
       $('overTitle').textContent = ot ? ot.title : `${win.name} 勝利!`;
       $('overTitle').style.color = ot ? (won ? win.color : ot.color) : win.color;
+      // 超級方無主堡:結算只宣告雙陣營勝負 + 自己的戰績(見 overStats 的 SUPER 欄)
+      const superMe = isSuperSide(app.mySide);
       $('overSub').textContent = ot ? ot.sub
-        : app.mySide
-          ? (won ? '🏆 敵方主堡已化為廢墟,你贏得了這場戰役!' : '💀 你的主堡被摧毀了…下次再戰。')
-          : '戰役結束。';
+        : superMe
+          ? `⚡ 大戰落幕:${win.name}拿下了戰場 —— 你的戰績見下方。`
+          : app.mySide
+            ? (won ? '🏆 敵方主堡已化為廢墟,你贏得了這場戰役!' : '💀 你的主堡被摧毀了…下次再戰。')
+            : '戰役結束。';
       // 劇情戰役的**主堡那一階**對白:戰鬥中沒有暫停,主堡一倒就 gameOver ⇒ 那一場天生
       // 屬於結算畫面(也才重讀得到)。只有贏的那一方才是「推掉對方主堡」,輸了不演。
       app.dlg?.clear();
@@ -2964,7 +3151,9 @@ function makeHud() {
       }
       $('overStats').textContent =
         `◆ ${SIDES.SWARM.name}:擊殺 ${stats.SWARM.kills}/助攻 ${stats.SWARM.assists ?? 0}/陣亡 ${stats.SWARM.deaths}/補刀 ${stats.SWARM.creepKills}   ` +
-        `◆ ${SIDES.STEEL.name}:擊殺 ${stats.STEEL.kills}/助攻 ${stats.STEEL.assists ?? 0}/陣亡 ${stats.STEEL.deaths}/補刀 ${stats.STEEL.creepKills}`;
+        `◆ ${SIDES.STEEL.name}:擊殺 ${stats.STEEL.kills}/助攻 ${stats.STEEL.assists ?? 0}/陣亡 ${stats.STEEL.deaths}/補刀 ${stats.STEEL.creepKills}`
+        + (stats.SUPER
+          ? `   ◆ 超級戰士:擊殺 ${stats.SUPER.kills}/助攻 ${stats.SUPER.assists ?? 0}/陣亡 ${stats.SUPER.deaths}/補刀 ${stats.SUPER.creepKills}` : '');
       const back = $('backRoomBtn');
       if (chapter) {
         back.style.display = '';
@@ -3183,6 +3372,20 @@ function renderShop(open, st) {
   };
   const c = st.ch && CHARACTERS[st.ch];
   const KEYS = { light: '左鍵', heavy: '右鍵瞄準', skill: 'Q', ult: 'E' };
+  // ---- 超級升級(超級大戰專用單軌;八軌/小兵強化整段不畫,直接換成這一軌)----
+  if (st.super) {
+    const lvl = st.superLvl || 0, full = lvl >= SUPER_UPG.MAX;
+    const scaleNow = superScaleF(lvl), scaleNext = superScaleF(Math.min(SUPER_UPG.MAX, lvl + 1));
+    head(`⚡ 超級升級 LV${lvl}/${SUPER_UPG.MAX}(全武器/招式/防禦/召喚同步成長・20階 = 原滿級・自動購買預設開啟)`);
+    row(`<b>超級升級</b> LV${lvl}/${SUPER_UPG.MAX}`
+      + ` <span class="dim">戰鬥階級 Lv.${superCombatLvl(lvl).toFixed(2)} ・ 體型 ×${scaleNow}</span>`,
+      full ? null : SUPER_UPG.PRICE, !full && st.money >= SUPER_UPG.PRICE, () => st.buySuper(),
+      full ? '已滿級' : `下一階:戰鬥階級 Lv.${superCombatLvl(lvl + 1).toFixed(2)}`
+        + `${scaleNext !== scaleNow ? ` ・ 體型 ×${scaleNext}` : ''}`
+        + ` ・ ${reserved.has('super') ? '★ 自動購買開啟中' : '☆ 自動購買已關閉'}`,
+      'super');
+    return;
+  }
   // ---- 陣營小兵強化(八軌全滿才解鎖;同陣營共用、不同兵線分開)----
   // 解鎖門檻與伺服器 sim._upgAllMax 同一條規則:八軌**全部**到 max。
   // **MUST 排在最前面**(2026-07-30 使用者回報「全部升級完畢後,沒看到升級小兵的選項」):
@@ -3228,6 +3431,7 @@ $('shopCloseBtn')?.addEventListener('click', () => app.battle?._toggleShop(false
 
 $('backRoomBtn')?.addEventListener('click', () => {
   if (app.story) { exitStoryBattle(); return; }   // 劇情:回章節選擇(重繪解鎖狀態)
+  if (app.super) { exitSuperBattle(); return; }   // 超級:回超級設定(保留上次選擇)
   app.net?.send({ t: 'backToRoom' });
 });
 $('leaveGameBtn')?.addEventListener('click', () => location.reload());
@@ -4203,6 +4407,10 @@ $('ttDone')?.addEventListener('click', () => {
 
 // 劇情戰役
 $('storyBtn')?.addEventListener('click', () => { myName(); enterStory(); });
+// 超級大戰(與劇情戰役左右並排的單人入口)
+$('superBtn')?.addEventListener('click', () => { myName(); enterSuper(); });
+$('superBackBtn')?.addEventListener('click', () => { app.super = null; show('connect'); refreshRooms(); });
+$('superFightBtn')?.addEventListener('click', () => startSuperBattle());
 $('storyBackBtn')?.addEventListener('click', () => { app.story = null; show('connect'); refreshRooms(); });
 $('storyBriefCloseBtn')?.addEventListener('click', () => { $('storyBrief').style.display = 'none'; });
 $('storyBrief')?.addEventListener('click', (e) => { if (e.target.id === 'storyBrief') $('storyBrief').style.display = 'none'; });
@@ -4251,6 +4459,8 @@ function onSync(m) {
     }
     // 劇情戰役:不顯示配對房 UI,自動完成選陣營/角色/準備/開戰(只跑一次)
     if (app.story) { if (!app.story.launched) launchStoryBattle(); return; }
+    // 超級大戰:不顯示配對房 UI,自動完成入座/選角/補電腦/開戰(只跑一次)
+    if (app.super) { if (!app.super.launched) launchSuperBattle(); return; }
 
     // 建立遊戲時記得上一場的陣營角色選擇:房主初次進房且尚未入座時自動入座並選角
     if (app.isHost && !app._autoPickedRoom) {
@@ -4459,7 +4669,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // 還原上次的開房設定(人數 / 房名;場地在 enterOpenRoom 還原)
   const prefs = loadPrefs();
   if (prefs.teamSize >= TEAM.MIN && prefs.teamSize <= TEAM.MAX) app.teamSize = prefs.teamSize;
-  if (typeof prefs.mini === 'boolean') app.mini = prefs.mini;
   $('roomNameInput').value = prefs.roomName || '';
   $('roomNameInput').addEventListener('input', (e) => savePrefs({ roomName: e.target.value.trim() }));
 

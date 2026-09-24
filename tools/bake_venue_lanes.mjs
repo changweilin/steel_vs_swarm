@@ -5,10 +5,10 @@
 // fixture 模式預設只列報告；FIXTURE_WRITE=1 仍會硬驗 center/bbox。真的移動場地時須另設
 // FIXTURE_RECAPTURE=1，寫入後立即用 fetch_osm_fixture.mjs --update 重抓同名 raw fixture。
 // 產出 public/js/venueLanes.js。改 ANCHORS 或 MAPGEO 的尺寸/重合率常數後 MUST 重跑。
-// 逐場地烤四份:完整戰場 L1/L2/L3 + **縮小尺度的單兵線 m1**(迷你地圖與劇情戰役共用 ——
-// 兩者 mapScaleF 相同,見 venues.js venueLaneKey)。m1 的砲塔規則一次驗三種型態
-// (迷你 / 劇情守方在 SWARM / 劇情守方在 STEEL),因為守方是哪一邊逐章不同、還會被
-// rollSideSwap 再擲一次。改 MINI.STAGES / STORY_MAP.DEF_STAGES 後 MUST 重跑。
+// 逐場地烤四份:完整戰場 L1/L2/L3 + **縮小尺度的單兵線 m1**(劇情戰役專用 ——
+// 見 venues.js venueLaneKey)。m1 的砲塔規則一次驗劇情兩側
+// (守方在 SWARM / 守方在 STEEL),因為守方是哪一邊逐章不同、還會被
+// rollSideSwap 再擲一次。改 STORY_MAP.DEF_STAGES 後 MUST 重跑。
 // Overpass 真實道路路網 → 建圖 → 每條兵線 = 一條「邊不相交」的最短路徑(全程踩在現實道路上)
 // → 用 overlapCellM(L) 驗重合率 ≤ MAX_OVERLAP、繞路 ≤ 2.2×、兩堡距離 ≥ 對角線 80%。
 // 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
@@ -777,8 +777,8 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
     if (aIdx < 0) { log('  錨點 120m 內無道路節點 → skip'); continue; }
 
     const byL = {};
-    // 逐「尺度 × 兵線數」各烤一份:完整戰場 L1~L3,縮小尺度(迷你 / 劇情戰役,兩者
-    // mapScaleF 相同)只有單兵線 —— 兩種型態都恆為 1 條線(laneCountFor / MINI.TEAM_MAX)。
+    // 逐「尺度 × 兵線數」各烤一份:完整戰場 L1~L3,縮小尺度(劇情戰役)只有單兵線 ——
+    // 恆為 1 條線(laneCountFor)。
     for (const { key, L, mapA } of VENUE_LANE_KEYS) {
       let best = null;
       const why = {};
