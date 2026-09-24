@@ -42,8 +42,14 @@
   <div class="panel connect-box">
     <div class="panel-head">▍指揮官登入</div>
     <input id="myName" placeholder="你的代號" maxlength="16">
-    <div class="row lobby-actions">
-      <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 建立地圖</button>
+    <div class="divider">─── 生成地圖 ───</div>
+    <div class="row lobby-actions lobby-map-actions">
+      <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 預設/自訂</button>
+      <button id="mapMixedBtn" class="btn big swarm-btn">⚄ 混合地圖</button>
+      <button id="mapRandomBtn" class="btn big swarm-btn">🎲 隨機地圖</button>
+    </div>
+    <div class="divider">─── 遊戲模式 ───</div>
+    <div class="row lobby-actions lobby-game-actions">
       <button id="openRoomBtn" class="btn big steel-btn">▶ 開戰時刻</button>
       <button id="storyBtn" class="btn big story-btn">◈ 劇情戰役</button>
       <button id="superBtn" class="btn big super-btn">⚡ 超級大戰</button>
@@ -208,9 +214,9 @@
 <!-- ========= 開戰時刻(從已存地圖挑一個,設定房名/公開性/環境後開房)========= -->
 <div id="openroom" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
-  <div class="sysbar"><span><b>DEPLOY</b> // 戰區生成</span><span>MAP × TEAM × ENV <i>●</i></span></div>
+  <div class="sysbar"><span id="openRoomSysLeft"><b>DEPLOY</b> // 戰區生成</span><span>MAP × TEAM × ENV <i>●</i></span></div>
   <div class="panel connect-box">
-    <div class="panel-head">▍開戰時刻 — 選人數 + 地圖,或挑一個已存最愛</div>
+    <div class="panel-head" id="openRoomHead">▍開戰時刻 — 選人數 + 地圖,或挑一個已存最愛</div>
 
     <div class="setup-sec">
       <div class="setup-label">隊伍規模(現場切換,免先存最愛)</div>
@@ -296,60 +302,6 @@
   </div>
 </div>
 
-<!-- ========= 超級大戰(單人第三方:選規模 + 地圖 → 選角 → 出擊自動開戰)========= -->
-<div id="super" class="screen center-screen" style="display:none">
-  <div class="scanlines"></div>
-  <div class="sysbar"><span><b>SUPER</b> // 單人第三方</span><span>1 × SWARM × STEEL <i>●</i></span></div>
-  <div class="panel connect-box story-panel">
-    <div class="panel-head">▍超級大戰 — 一人對抗雙陣營</div>
-    <p class="story-blurb">你一人成第三方<b>超級戰士</b>:可選任意角色,鋼鐵與蜂群都是敵人、第三方野營不打你。重生在雙陣營砲火之外。每階 $200 全項目升級(20 階 = 原滿級,最高 100 階),自動購買預設開啟;陣亡金錢歸零 + 等級掉 5%。</p>
-
-    <div class="setup-sec">
-      <div class="setup-label">敵方規模(每陣營電腦數)</div>
-      <div class="row ts-row" id="tsRowSuper"></div>
-      <div class="setup-info" id="tsInfoSuper"></div>
-    </div>
-
-    <div class="setup-sec">
-      <div class="setup-label">電腦難度</div>
-      <div class="seg seg-sm" id="superDiffRow"></div>
-    </div>
-
-    <div class="setup-sec">
-      <div class="setup-label">預設場地(依上方人數即時重算兵線,即選即用)</div>
-      <div class="venue-grid" id="venueGridSuper"></div>
-    </div>
-
-    <div class="divider">─── 或從我的最愛選 ───</div>
-
-    <div class="setup-sec" id="favSectionSuper">
-      <div class="setup-label">★ 我的最愛</div>
-      <div class="venue-grid" id="favGridSuper"></div>
-    </div>
-
-    <div class="setup-sec">
-      <div class="setup-label">環境(預設隨機,開房時定案)</div>
-      <div class="row env-row">
-        <select id="envSeasonSuper" class="env-sel"></select>
-        <select id="envTimeSuper" class="env-sel"></select>
-        <select id="envWeatherSuper" class="env-sel"></select>
-      </div>
-    </div>
-
-    <div class="setup-sec">
-      <div class="setup-label">選擇你的角色(不選 = 開戰隨機,32 名全可選)</div>
-      <div class="char-grid" id="superCharGrid"></div>
-      <div class="char-info" id="superCharInfo"></div>
-    </div>
-
-    <div id="superStatus" class="map-status">選人數 + 場地,即可出擊。</div>
-    <div id="superDeploy" class="map-status" style="display:none"></div>
-    <div class="row" style="justify-content:center">
-      <button id="superFightBtn" class="btn big super-btn" disabled>⚡ 出擊</button>
-      <button id="superBackBtn" class="btn">← 返回大廳</button>
-    </div>
-  </div>
-</div>
 
 <!-- ========= 房間(陣營配對,每陣營 N 席)========= -->
 <div id="room" class="screen center-screen" style="display:none">
@@ -438,6 +390,11 @@
   <!-- 選角(入座後出現;不選 = 開戰隨機) -->
   <div class="char-section" id="charSection" style="display:none">
     <div class="panel-head" id="charSectionHead">▍選擇角色</div>
+    <div class="row seg seg-sm char-side-tabs" id="charSideTabs" style="display:none; justify-content:center; margin-bottom:8px">
+      <button class="segb on" type="button" data-cside="STEEL">▲ 鋼鐵軍團</button>
+      <button class="segb" type="button" data-cside="SWARM">▼ 蜂群兵團</button>
+      <button class="segb" type="button" data-cside="MERC">⚔ 傭兵聯盟</button>
+    </div>
     <div class="char-pick">
       <div class="char-grid" id="charGrid"></div>
       <div class="char-detail" id="charDetail"></div>

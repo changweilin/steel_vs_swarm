@@ -951,12 +951,10 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .room-cfg-page { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
 .room-cfg-page > .set-row { justify-content: center; flex-wrap: wrap; }
 
-/* ---------- 劇情戰役 ---------- */
-/* 大廳四動作(建立地圖 / 開戰時刻 / 劇情戰役 / 超級大戰):桌機/橫式同列;
-   直式 2×2(四顆硬擠同列在 360px 每顆只剩 ~80px,鈕面文字會被 clip-path 裁掉 —— 見 audit_ui_layout) */
-.lobby-actions { flex-wrap: wrap; }
+/* 大廳動作:生成地圖三項一列,遊戲模式三項下一列(桌機與橫式皆同列) */
+.lobby-actions { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 8px; width: 100%; }
 .lobby-actions .btn.big {
-  flex: 1 1 22%; min-width: 0; padding-left: 12px; padding-right: 12px; letter-spacing: 3px;
+  flex: 1 1 0; min-width: 0; padding: 12px 4px; letter-spacing: 1px; white-space: nowrap;
 }
 /* 劇情入口鈕:藍—洋紅—黃三色漸層(對撞主題),置於「開戰時刻」右側 */
 .story-btn {
@@ -1244,10 +1242,102 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   background: rgba(12, 18, 25, 0.9); border: 1px solid var(--line); border-radius: 0;
   padding: 4px 2px 5px; cursor: pointer; text-align: center;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  position: relative; overflow: hidden;
 }
 .char-btn:hover { border-color: var(--railW); background: rgba(var(--railW-rgb), 0.1); }
 .char-btn.on { border-color: var(--ok); color: var(--ok); animation: selGlowOk 1.8s ease-in-out infinite; }
+
+/* 陣營代表色標記:藍(鋼鐵)/黃(蜂群)/米白(傭兵)兼具美感與科技感 */
+.char-btn.side-steel {
+  border-top: 2px solid #5fd0f2;
+  background: linear-gradient(180deg, rgba(95, 208, 242, 0.12) 0%, rgba(12, 18, 25, 0.92) 42%);
+}
+.char-btn.side-steel:hover {
+  border-color: #5fd0f2;
+  box-shadow: 0 0 10px rgba(95, 208, 242, 0.28);
+}
+.char-btn.side-steel .char-av { border-color: rgba(95, 208, 242, 0.45); }
+
+.char-btn.side-swarm {
+  border-top: 2px solid #ffc247;
+  background: linear-gradient(180deg, rgba(255, 194, 71, 0.12) 0%, rgba(12, 18, 25, 0.92) 42%);
+}
+.char-btn.side-swarm:hover {
+  border-color: #ffc247;
+  box-shadow: 0 0 10px rgba(255, 194, 71, 0.28);
+}
+.char-btn.side-swarm .char-av { border-color: rgba(255, 194, 71, 0.45); }
+
+.char-btn.side-merc {
+  border-top: 2px solid #f0eee9;
+  border-style: solid;
+  background: linear-gradient(180deg, rgba(240, 238, 233, 0.12) 0%, rgba(12, 18, 25, 0.92) 42%);
+}
+.char-btn.side-merc:hover {
+  border-color: #f0eee9;
+  box-shadow: 0 0 10px rgba(240, 238, 233, 0.28);
+}
+.char-btn.side-merc .char-av { border-color: rgba(240, 238, 233, 0.45); }
+
+/* 陣營代表色膠囊標籤 */
+.char-side-pill {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  line-height: 1.2;
+  display: inline-block;
+  font-family: var(--mono);
+  margin-top: 1px;
+}
+.char-side-pill.steel {
+  color: #5fd0f2;
+  background: rgba(95, 208, 242, 0.18);
+  border: 1px solid rgba(95, 208, 242, 0.45);
+}
+.char-side-pill.swarm {
+  color: #ffc247;
+  background: rgba(255, 194, 71, 0.18);
+  border: 1px solid rgba(255, 194, 71, 0.45);
+}
+.char-side-pill.merc {
+  color: #f0eee9;
+  background: rgba(240, 238, 233, 0.18);
+  border: 1px solid rgba(240, 238, 233, 0.45);
+}
+
+/* 超級大戰選角陣營分頁標籤 */
+.char-side-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+.char-side-tabs .segb {
+  flex: 0 1 auto;
+  min-width: 90px;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+.char-side-tabs .segb[data-cside="STEEL"].on {
+  color: #5fd0f2;
+  border-color: #5fd0f2;
+  background: rgba(95, 208, 242, 0.18);
+}
+.char-side-tabs .segb[data-cside="SWARM"].on {
+  color: #ffc247;
+  border-color: #ffc247;
+  background: rgba(255, 194, 71, 0.18);
+}
+.char-side-tabs .segb[data-cside="MERC"].on {
+  color: #f0eee9;
+  border-color: #f0eee9;
+  background: rgba(240, 238, 233, 0.18);
+}
+
 .char-btn.merc { border-style: dashed; }
 .char-av { width: 56px; height: 56px; border-radius: 0; border: 1px solid var(--line); display: block; clip-path: var(--notch-sm); }
 /* 頭像 + 機種角標(2026-08-02 使用者定案「設計無人機/機甲/變形者的圖示,標示在頭像旁邊」)。
@@ -2543,11 +2633,11 @@ body.touch-ui.ori-portrait .title-sub .dim { display: none; }
 body.touch-ui.ori-portrait .masthead .subtitle { display: none; }
 body.touch-ui.ori-portrait .foot-note { display: none; }
 
-/* ---- 大廳四入口(建立地圖 / 開戰時刻 / 劇情戰役 / 超級大戰):直式 2×2 ---- */
-body.touch-ui.ori-portrait .lobby-actions { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+/* ---- 大廳動作:生成地圖三項一列,遊戲模式三項下一列(直式 3+3) ---- */
+body.touch-ui.ori-portrait .lobby-actions { flex-direction: row; flex-wrap: nowrap; gap: 4px; width: 100%; }
 body.touch-ui.ori-portrait .lobby-actions .btn.big {
-  flex: 1 1 40%; width: auto; min-width: 0; white-space: nowrap;
-  padding: 12px 4px; font-size: 13px; letter-spacing: 1px;
+  flex: 1 1 0; width: auto; min-width: 0; white-space: nowrap;
+  padding: 11px 2px; font-size: 11px; letter-spacing: 0;
 }
 
 /* ---- 陣營卡:STEEL ▏SWARM 左右對抗(與桌機、logo、底圖方位一致)---- */

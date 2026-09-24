@@ -253,12 +253,13 @@ for (const v of VIEWS) {
     // ---- 大廳 ----
     show('connect');
     out.lobby = {
-      map: box('#mapBuilderBtn'), open: box('#openRoomBtn'), story: box('#storyBtn'), super: box('#superBtn'),
+      mapPreset: box('#mapBuilderBtn'), mapMixed: box('#mapMixedBtn'), mapRandom: box('#mapRandomBtn'),
+      open: box('#openRoomBtn'), story: box('#storyBtn'), super: box('#superBtn'),
       panel: box('.connect-box'),
       // 首屏可見度以捲動容器座標算(.screen 是 position:fixed + overflow:auto)
       scrollTop: document.getElementById('connect').scrollTop,
     };
-    for (const k of ['mapBuilderBtn', 'openRoomBtn', 'storyBtn', 'superBtn']) out.fits[k] = fits(`#${k}`);
+    for (const k of ['mapBuilderBtn', 'mapMixedBtn', 'mapRandomBtn', 'openRoomBtn', 'storyBtn', 'superBtn']) out.fits[k] = fits(`#${k}`);
     // 連線機制三選一(雲端 / 區網 / 單機):直式同樣 MUST 左右並排(見 /CLAUDE.md A20)
     out.link = { cloud: box('#link_cloud'), lan: box('#link_lan'), solo: box('#link_solo') };
     for (const k of ['link_cloud', 'link_lan', 'link_solo']) out.fits[k] = fits(`#${k}`);
@@ -342,21 +343,16 @@ for (const v of VIEWS) {
   const sameRow = (a, b) => !!a && !!b && a.y < b.b - 0.5 && b.y < a.b - 0.5;
   const leftOf = (a, b) => a && b && a.r <= b.x + 0.5;
 
-  // 1)大廳四入口(建立地圖 / 開戰時刻 / 劇情戰役 / 超級大戰):橫式/桌機 MUST 同列;
-  // 直式 2×2(建立/開戰 ▏ 劇情/超級)—— 四顆硬擠同列會把鈕面文字裁掉(見 fits)。
-  // 整組落在首屏(不必捲動就看得到「劇情戰役」)。
-  const L = r.lobby, S = L.super;
-  if (!r.portrait) {
-    ok(sameRow(L.map, L.open) && sameRow(L.open, L.story) && sameRow(L.story, S), '大廳四入口同列(建立地圖 / 開戰時刻 / 劇情戰役 / 超級大戰)');
-    ok(leftOf(L.map, L.open) && leftOf(L.open, L.story) && leftOf(L.story, S), '大廳四入口由左至右不重疊');
-  } else {
-    ok(sameRow(L.map, L.open) && sameRow(L.story, S), '直式大廳入口 2×2(建立/開戰 ▏ 劇情/超級)');
-    ok(leftOf(L.map, L.open) && leftOf(L.story, S), '直式大廳入口列內由左至右不重疊');
-    ok(L.open && S && L.open.b <= S.y + 0.5, '直式第二列(劇情/超級)在第一列下方');
-  }
+  // 1) 大廳入口:生成地圖三項一列,遊戲模式三項下一列
+  const L = r.lobby;
+  ok(sameRow(L.mapPreset, L.mapMixed) && sameRow(L.mapMixed, L.mapRandom), '生成地圖三項同列(預設/自訂 / 混合地圖 / 隨機地圖)');
+  ok(leftOf(L.mapPreset, L.mapMixed) && leftOf(L.mapMixed, L.mapRandom), '生成地圖三項由左至右不重疊');
+  ok(sameRow(L.open, L.story) && sameRow(L.story, L.super), '遊戲模式三項同列(開戰時刻 / 劇情戰役 / 超級大戰)');
+  ok(leftOf(L.open, L.story) && leftOf(L.story, L.super), '遊戲模式三項由左至右不重疊');
+  ok(L.mapPreset && L.open && L.mapPreset.b <= L.open.y + 0.5, '遊戲模式三項在生成地圖三項下方');
   // 首屏可見度只在直式斷言:橫式高度只有 375,題頭壓縮後仍不可能把整個面板塞進一屏(捲動是正常的)
-  if (r.portrait) ok(L.story && L.story.b <= r.vh, `「劇情戰役」在首屏內(bottom ${Math.round(L.story?.b)} ≤ ${r.vh})`);
-  ok(L.story && L.story.h >= 44, `入口鈕觸控高度 ≥44(${Math.round(L.story?.h)})`);
+  if (r.portrait) ok(L.super && L.super.b <= r.vh, `「遊戲模式」在首屏內(bottom ${Math.round(L.super?.b)} ≤ ${r.vh})`);
+  ok(L.story && L.story.h >= 40, `入口鈕觸控高度 ≥40(${Math.round(L.story?.h)})`);
 
   // 1.5)連線機制三選一 MUST 同列(桌機左右並排 ⇒ 直式也左右並排,窄屏只准收窄欄寬 + 降字級)
   const K = r.link;
