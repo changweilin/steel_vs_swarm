@@ -2086,21 +2086,30 @@ function renderCharPick(me) {
     : `▍檢視 ${whoLabel} 的角色`;
 
   const isSuper = subject.side === 'SUPER';
+  const allowedTabs = isSuper ? ['STEEL', 'SWARM', 'MERC'] : [subject.side, 'MERC'];
+
+  if (!app.charSideTab || !allowedTabs.includes(app.charSideTab)) {
+    const curSide = subject.ch && CHARACTERS[subject.ch]?.side;
+    app.charSideTab = (curSide && allowedTabs.includes(curSide))
+      ? curSide
+      : (isSuper ? 'STEEL' : subject.side);
+  }
+
   const tabsEl = $('charSideTabs');
   if (tabsEl) {
-    tabsEl.style.display = isSuper ? 'flex' : 'none';
-    if (isSuper) {
-      if (!app.superCharTab) {
-        app.superCharTab = (subject.ch && CHARACTERS[subject.ch]?.side) || 'STEEL';
-      }
-      for (const btn of tabsEl.querySelectorAll('[data-cside]')) {
-        btn.classList.toggle('on', btn.dataset.cside === app.superCharTab);
-        btn.onclick = () => {
-          app.superCharTab = btn.dataset.cside;
-          for (const b of tabsEl.querySelectorAll('[data-cside]')) b.classList.toggle('on', b === btn);
-          renderCharPick(me);
-        };
-      }
+    tabsEl.style.display = editable ? 'flex' : 'none';
+    for (const btn of tabsEl.querySelectorAll('[data-cside]')) {
+      const cside = btn.dataset.cside;
+      const isAllowed = allowedTabs.includes(cside);
+      btn.style.display = isAllowed ? '' : 'none';
+      btn.classList.toggle('on', cside === app.charSideTab);
+      btn.onclick = () => {
+        app.charSideTab = cside;
+        for (const b of tabsEl.querySelectorAll('[data-cside]')) {
+          b.classList.toggle('on', b.dataset.cside === cside);
+        }
+        renderCharPick(me);
+      };
     }
   }
 
@@ -2108,9 +2117,8 @@ function renderCharPick(me) {
   grid.style.display = editable ? '' : 'none';
   grid.innerHTML = '';
   if (editable) {
-    const list = isSuper
-      ? Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].side === app.superCharTab)
-      : charsOf(subject.side);
+    const allChars = isSuper ? Object.keys(CHARACTERS) : charsOf(subject.side);
+    const list = allChars.filter((id) => CHARACTERS[id].side === app.charSideTab);
     for (const id of list) {
       const c = CHARACTERS[id];
       const merc = c.side === 'MERC';
