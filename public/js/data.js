@@ -5936,7 +5936,85 @@ export const HAZARDS = {
   // 超尺度地標型障礙(比現實高大):遮視線 + 立體掩體;高 HP → TC 掉落更高階
   sacredtree:   { name: '神木',       biome: 'green', r: 9,   block: true, hp: 520, salvage: 0.75, hgt: 26 },
   boulder:      { name: '巨石',       biome: 'bare',  r: 8,   block: true, hp: 420, salvage: 0.7,  hgt: 13 },
+  // 可破壞載具(路邊停放車 / 擱淺船):比照一般單位有 HP/護甲、可被直射與爆風擊毀;
+  // parked = 只由 sim._seedVehicles 定點生成,不進 _seedHazards 隨機選型(船隻須落在水域)。
+  car:          { name: '汽車',       biome: 'urban', r: 3,   block: true, hp: 260, salvage: 0.5, hgt: 2.2, parked: true },
+  ship:         { name: '擱淺船',     biome: 'wet',   r: 18,  block: true, hp: 1300, salvage: 0.5, hgt: 15, parked: true },
 };
+
+// ---- 場景物件 HP / 護甲唯一真相縫(2026-09-24;砲塔/主堡同源火災/坍塌)----
+// 伺服器 `sim._seedHazards` 生成可破壞場景物件(圍籬/殘骸/落石/倒木/神木/巨石/坍方)
+// 的 HP 與護甲**唯一結算點**。HP 與物件類型(TYPE.f)及整體大小(半徑 r×實例 sc)相關,
+// 再加確定性誤差(hash,不消耗共享亂數 ⇒ 不推移植被/建築序列);上限 = 主堡 HP ×MAX_F。
+// 地面狀態類(火場/淹水/塌陷/坑洞)非實體物件,不進此縫(維持不可破壞)。
+export const SCENE_STRUCT = {
+  MAX_F: 2,          // 最大 HP = UNITS.base.hp ×2(主堡 3000 ⇒ 6000)
+  R_REF: 8,          // 尺寸正規化半徑(m)
+  JITTER: 0.15,      // 確定性誤差 ±15%
+  TYPE: {
+    construction: { f: 0.080, armor: 12 },   // 施工圍籬(金屬桁架)
+    wreck:        { f: 0.069, armor: 8 },    // 車禍殘骸(薄鋼殼)
+    rockfall:     { f: 0.108, armor: 22 },   // 落石(實心岩)
+    fallentree:   { f: 0.046, armor: 4 },    // 倒木(朽木)
+    sacredtree:   { f: 0.165, armor: 10 },   // 神木(活木,量大)
+    boulder:      { f: 0.140, armor: 26 },   // 巨石(整塊碑岩)
+    landslide:    { f: 0.240, armor: 18 },   // 坍方土石流(量體最大)
+    car:          { f: 0.115, armor: 10 },   // 汽車(鋼殼 + 車門,比照一般單位)
+    ship:         { f: 0.290, armor: 20 },   // 擱淺船(船殼鋼板,量體大)
+  },
+  FIRE_TTL_MIN: 20,  // 殘留火場最短(秒,小物件)
+  FIRE_TTL_MAX: 90,  // 殘留火場最長(秒,HP 觸頂者)
+  RUBBLE_F: 0.45,    // 坍塌後殘骸半徑比例(仍阻擋,變矮可越頂射擊由碰撞高處理)
+  EV_FRACTION: 0.3,  // 停放車中電動車比例(確定性雜湊,燃油/電池驅動見 vehicleCatalog power 軸)
+  VEH_FIRE_TTL_S: 8, // 載具擊毀短暫火災(秒,燃油車)
+  EV_FIRE_MUL: 4.5,  // 電動車(鋰電池)火災持續 = 燃油車 ×4.5
+};
+/** 可破壞載具(路邊車 / 擱淺船);一般障礙走 sceneIsPhysical */
+export function sceneIsVehicle(kind) {
+  return kind === 'car' || kind === 'ship';
+}
+/** 該停放車是否為電動車(確定性雜湊,不消耗共享亂數) */
+export function sceneIsEV(x, z) {
+  return sceneHash01(x, z, 'ev') < SCENE_STRUCT.EV_FRACTION;
+}
+/** 載具擊毀火災持續(秒):短暫;電動車 ×EV_FIRE_MUL(4.5 倍) */
+export function sceneVehicleFireTtl(ev) {
+  return Math.round(SCENE_STRUCT.VEH_FIRE_TTL_S * (ev ? SCENE_STRUCT.EV_FIRE_MUL : 1));
+}
+/** 可破壞實體場景物件(有 HP、吃傷害、會坍塌);地面狀態回 false */
+export function sceneIsPhysical(kind) {
+  return !!SCENE_STRUCT.TYPE[kind];
+}
+/** 確定性雜湊 → [0,1)(座標 + 種類;不消耗共享亂數,跨端一致) */
+export function sceneHash01(x, z, kind = '') {
+  let h = 2166136261;
+  const s = `${Math.round(x * 10)}:${Math.round(z * 10)}:${kind}`;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 10000) / 10000;
+}
+/** 場景物件 HP:類型 × 尺寸 × 確定性誤差;夾 [40, 主堡×MAX_F] */
+export function sceneHpFor(kind, r, sc = 1, x = 0, z = 0) {
+  const t = SCENE_STRUCT.TYPE[kind];
+  if (!t) return 0;
+  const base = (UNITS.base && UNITS.base.hp) || 3000;
+  const sizeF = 0.6 + 0.4 * ((r || 0) * (sc || 1)) / SCENE_STRUCT.R_REF;
+  const jit = 1 + (sceneHash01(x, z, kind) - 0.5) * 2 * SCENE_STRUCT.JITTER;
+  const cap = base * SCENE_STRUCT.MAX_F;
+  return Math.max(40, Math.min(cap, Math.round(base * t.f * sizeF * jit)));
+}
+/** 場景物件護甲:類型基底 + 隨 HP 微增;夾 [0,40](爆風高穿透下近乎全額,輕武器才有感) */
+export function sceneArmorFor(kind, hp) {
+  const t = SCENE_STRUCT.TYPE[kind];
+  if (!t) return 0;
+  return Math.max(0, Math.min(40, Math.round(t.armor + (hp || 0) / 500)));
+}
+/** 殘留火場持續(秒):HP 越多燒越久,MIN~MAX 線性內插 */
+export function sceneFireTtl(maxHp) {
+  const base = (UNITS.base && UNITS.base.hp) || 3000;
+  const cap = base * SCENE_STRUCT.MAX_F;
+  const f = Math.max(0, Math.min(1, (maxHp || 0) / cap));
+  return Math.round(SCENE_STRUCT.FIRE_TTL_MIN + (SCENE_STRUCT.FIRE_TTL_MAX - SCENE_STRUCT.FIRE_TTL_MIN) * f);
+}
 
 // ---- 火場天氣聯動係數（唯一真相縫；sim._tickHazards 與客戶端火焰演出共用）----
 // rain/snow 超過門檻 → fireMul 線性壓制到 0（大雨/大雪熄火）
@@ -5998,6 +6076,15 @@ export const FIELD = {
 // 地雷總面積 × THREAT_AA_AREA_FRAC(1/3)⇒ 防空密度 = 地雷密度的 1/3;不再等面積)。
 FIELD.AA_SITE.range = Math.round(
   Math.sqrt(GAME.THREAT_AREA_PER_LANE * GAME.THREAT_AA_AREA_FRAC / (Math.PI * FIELD.AA_SITES_PER_LANE)));
+// 可破壞載具生成參數(伺服器 sim._seedVehicles):路邊停放車沿兵線兩側、擱淺船落在水域;
+// 船隻需房主上傳水網(_wetAt),無網格(headless)即缺席,寧缺勿錯。
+FIELD.VEHICLES = {
+  CARS: 8,             // 停放車 / 場
+  SHIPS: 3,            // 擱淺船上限 / 場(有水才放)
+  CAR_LANE_MIN: 24,    // 車距兵線中心線最小距離(走廊外路邊,不擋正規路線)
+  CAR_LANE_MAX: 70,    // 車距兵線中心線最大距離
+  SHIP_TRIES: 60,      // 每船取樣嘗試上限
+};
 // 防空伏擊傷害 = 初始無人機平均總血量(護盾+裝甲)的 1/3(2026-07-17:不再命中即墜)。
 GAME.AA_AMBUSH.DMG = Math.round(SQUAD.DRONE_AVG_HP / 3);
 // 爆風半徑(2026-08-13「所有爆炸傷害武器都套用」):飛彈 = 導彈類,MUST 真的炸開 —— 舊制的

@@ -25,6 +25,7 @@ import {
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
   weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor, fogSightMult,
   FIRE_WEATHER, fireDotMul,
+  SCENE_STRUCT, sceneIsPhysical, sceneIsVehicle, sceneIsEV, sceneHpFor, sceneArmorFor, sceneFireTtl, sceneVehicleFireTtl,
   wrapPi, bloodScreenUv, botFovHalf, botFovVerticalHalf,
 } from '../public/js/data.js';
 
@@ -806,6 +807,7 @@ export class BattleSim {
     this.visionUntil = { SWARM: 0, STEEL: 0 };   // 偵察中繼站:全隊無霧視野的到期時刻
     this._seedMines();
     this._seedHazards();
+    this._seedVehicles();                        // 路邊車/擱淺船(須在連通性驗證前:殘骸計入阻擋)
     this._ensureConnectivity();
     this._seedAASites();
     this._seedRelays();
@@ -919,7 +921,8 @@ export class BattleSim {
   _seedHazards() {
     const F = FIELD;
     const mix = this.config.venue?.mix || null;
-    const types = Object.keys(HAZARDS);
+    // parked 載具(路邊車/擱淺船)只由 _seedVehicles 定點生成,不進隨機選型(船須落在水域)
+    const types = Object.keys(HAZARDS).filter((t) => !HAZARDS[t].parked);
     const w = types.map((t) => (mix ? (mix[HAZARDS[t].biome] || 0) + 0.05 : 1));
     const wSum = w.reduce((a, b) => a + b, 0);
     const pickType = () => {
@@ -949,15 +952,83 @@ export class BattleSim {
         const sc = Math.round((0.75 + Math.random() * 0.6) * 100) / 100;   // 每次生成隨機差異化(半徑感知,先算再驗)
         if (!this._hazOk(x, z, def, sc, wall)) continue;
         const r = def.r * sc;
+        // 場景物件 HP/護甲唯一縫 = data.js sceneHpFor/sceneArmorFor(類型×尺寸+確定性誤差,
+        // 上限主堡×2)。實體物件(圍籬/殘骸/落石/倒木/神木/巨石/坍方)可破壞;火場/淹水/
+        // 塌陷/坑洞是地面狀態,維持不可破壞(inv)。
+        const physical = sceneIsPhysical(type);
+        const hp = physical ? sceneHpFor(type, def.r, sc, x, z) : 1;
         this._add({
           kind: type, side: null, neutral: true, haz: true, x, z, sc,
-          hp: def.hp ? Math.round(def.hp * sc) : 1, inv: !def.hp,
+          hp, armor: physical ? sceneArmorFor(type, hp) : 0, inv: !physical,
         });
         if (def.block) this.hazBlockers.push([x, z, r]);
         this._hazAll.push({ x, z, r, block: !!def.block, wall });
         placed++;
       }
     }
+  }
+
+  /**
+   * 可破壞載具(路邊停放車 / 擱淺船):比照一般單位有 HP/護甲的中立實體,可被直射與爆風擊毀。
+   * 車沿兵線兩側路邊停放(走廊外,不擋正規路線);船隻落在水域(_wetAt,無網格即缺席)。
+   * 電動車比例與火災加時走 data.js 真相縫(sceneIsEV/sceneVehicleFireTtl)。
+   */
+  _seedVehicles() {
+    const V = FIELD.VEHICLES;
+    // --- 路邊停放車 ---
+    const carDef = HAZARDS.car;
+    let cars = 0;
+    for (let tries = 0; tries < V.CARS * 30 && cars < V.CARS; tries++) {
+      const li = Math.floor(Math.random() * this.lanes.length);
+      const cum = this._laneCum(li);
+      const total = cum[cum.length - 1];
+      const p = this._lanePointNormal(li, this._pickLaneD(li, total, 0.08, 0.92, FIELD.TURN_BIAS));
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      const off = V.CAR_LANE_MIN + Math.random() * (V.CAR_LANE_MAX - V.CAR_LANE_MIN);
+      const x = p.x + p.nx * dir * off, z = p.z + p.nz * dir * off;
+      const sc = Math.round((0.9 + Math.random() * 0.2) * 100) / 100;
+      if (!this._hazOk(x, z, carDef, sc, this._hazAll.length)) continue;
+      this._parkVehicle('car', x, z, sc);
+      cars++;
+    }
+    // --- 擱淺船(水域;無水網格即缺席,寧缺勿錯) ---
+    const shipDef = HAZARDS.ship;
+    let ships = 0;
+    for (let tries = 0; tries < V.SHIPS * V.SHIP_TRIES && ships < V.SHIPS; tries++) {
+      const b = this.bounds;
+      const x = b.minX + Math.random() * (b.maxX - b.minX);
+      const z = b.minZ + Math.random() * (b.maxZ - b.minZ);
+      const sc = Math.round((0.85 + Math.random() * 0.15) * 100) / 100;
+      const r = shipDef.r * sc;
+      if (!this._inBounds(x, z, r)) continue;
+      if (this._wetAt(x, z) !== 1) continue;   // 船體落在水上(沼澤不算)
+      let bad = false;
+      for (const side of ['SWARM', 'STEEL']) {
+        const [bx, bz] = this.basePos[side];
+        if (dist2d(x, z, bx, bz) < FIELD.HAZ_BASE_CLEAR) { bad = true; break; }
+      }
+      if (bad) continue;
+      for (const h of this._hazAll || []) {
+        if (dist2d(x, z, h.x, h.z) < r + h.r) { bad = true; break; }
+      }
+      if (bad) continue;
+      this._parkVehicle('ship', x, z, sc);
+      ships++;
+    }
+  }
+
+  /** 載具停放(HP/護甲唯一縫;電動車旗標確定性雜湊):阻擋登記比照障礙物 */
+  _parkVehicle(kind, x, z, sc) {
+    const def = HAZARDS[kind];
+    const hp = sceneHpFor(kind, def.r, sc, x, z);
+    const ev = kind === 'car' ? sceneIsEV(x, z) : false;
+    this._add({
+      kind, side: null, neutral: true, haz: true, veh: true, x, z, sc,
+      hp, armor: sceneArmorFor(kind, hp), ev: ev || undefined, inv: false,
+    });
+    const r = def.r * sc;
+    if (def.block) this.hazBlockers.push([x, z, r]);
+    this._hazAll.push({ x, z, r, block: !!def.block, wall: this._hazAll.length });
   }
 
   /** 中立物散布的越界防線:含半徑 r 整體落在地形(空氣牆內)才准放 */
@@ -5322,7 +5393,8 @@ export class BattleSim {
       // NPC/建築沒有護盾層 ⇒ 同一支 shieldSplit 以 sp=0 呼叫,結果就是「整發吃 vsHp」——
       // 「主 HP 傷害較弱」對小兵/塔一樣成立(只對英雄生效的話那是隱形的第二套規則)。
       dmg = shieldSplit(wd, dmg, 0).toHp;
-      const ar = UNITS[t.kind]?.armor ?? 0;
+      // 護甲:場景物件吃生成時寫入的 ent.armor(類型×HP 唯一縫);其餘沿用 UNITS 表。
+      const ar = t.armor ?? UNITS[t.kind]?.armor ?? 0;
       dmg *= armorMul(ar, pen);
       // 陣營小兵強化的耐久側(2026-08-11 使用者改制):**只對非玩家攻擊者生效**。
       // hp 不再 ×cu ⇒ 整份耐久折進這個係數(creepDmgTakenF 逐 pen 還原舊制 EHP);
@@ -5675,6 +5747,18 @@ export class BattleSim {
       return; // 英雄不移除,等重生
     }
     if (t.neutral) {
+      // 實體場景物件(圍籬/殘骸/落石/倒木/神木/巨石/坍方):HP 歸 0 即坍塌/傾倒為低矮殘骸
+      // (保留阻擋,半徑 ×RUBBLE_F),同時在地面範圍引起殘留火場一段時間(HP 越多燒越久)。
+      // 地面狀態類(火/水/塌陷/坑洞)沿舊制直接移除。
+      if (sceneIsPhysical(t.kind) && HAZARDS[t.kind]?.block) {
+        // 載具擊毀引起短暫火災;電動車(鋰電池)持續 ×EV_FIRE_MUL
+        this._collapseScene(t, sceneIsVehicle(t.kind) ? sceneVehicleFireTtl(!!t.ev) : null);
+        const def = HAZARDS[t.kind];
+        if (def?.salvage && Math.random() < def.salvage) {
+          this._spawnLoot(t.x, t.z, Math.min(1, (t.maxHp || 0) / LOOT.TC.HP_REF));
+        }
+        return;
+      }
       this.ents.delete(t.id);
       if (this.hazBlockers && HAZARDS[t.kind]?.block) {
         this.hazBlockers = this.hazBlockers.filter(([x, z]) => x !== t.x || z !== t.z);
@@ -5687,7 +5771,7 @@ export class BattleSim {
       if (def?.salvage && Math.random() < def.salvage) {
         this._spawnLoot(t.x, t.z, Math.min(1, (t.maxHp || 0) / LOOT.TC.HP_REF));
       }
-      if (t.kind === 'fire') this._fires = this._fires.filter((f) => f !== t);
+      if (FIRE_KINDS.has(t.kind)) this._fires = this._fires.filter((f) => f !== t);
       return;
     }
     if (bySide && by.hero && bySide !== t.side && this.stats[bySide]) {
@@ -5700,6 +5784,38 @@ export class BattleSim {
       this.over = true;
       this.winner = OTHER_SIDE[t.side];
       this.events.push({ e: 'gameOver', winner: this.winner });
+    }
+  }
+
+  /**
+   * 場景物件坍塌(HP 歸 0):本體倒為低矮殘骸(保留阻擋,半徑 ×RUBBLE_F,實體不刪除),
+   * 並在原地引起一段地面火場(預設持續 = sceneFireTtl(maxHp),HP 越多燒越久;
+   * 載具另給短暫火災 ttl,電動車 ×EV_FIRE_MUL)。
+   * 權威結算唯一點;表現層(傾倒姿態/無框血條隱藏/煙火)由客戶端讀快照 col 旗標。
+   */
+  _collapseScene(t, fireTtl = null) {
+    t.hp = 0;
+    t.collapsed = true;
+    const def = HAZARDS[t.kind];
+    const r0 = (def?.r || 6) * (t.sc || 1);
+    const rr = r0 * SCENE_STRUCT.RUBBLE_F;
+    if (this.hazBlockers) {
+      let hit = false;
+      this.hazBlockers = this.hazBlockers.map(([x, z, r]) => {
+        if (!hit && x === t.x && z === t.z) { hit = true; return [x, z, rr]; }
+        return [x, z, r];
+      });
+      this._losDirty = true;
+    }
+    this._rebuildAvoidZones();
+    this.events.push({ e: 'collapse', id: t.id, kind: t.kind, x: t.x, z: t.z, ...(t.ev ? { ev: 1 } : {}) });
+    // 殘留火場:過多則寧缺勿錯跳過(降級不例外)
+    if ((this._fires?.length || 0) < 40) {
+      const ttl = fireTtl ?? sceneFireTtl(t.maxHp || 0);
+      const fsc = Math.max(0.3, rr / (HAZARDS.fire?.r || 12));
+      const f = this._add({ kind: 'fire', side: null, neutral: true, haz: true, x: t.x, z: t.z, sc: fsc, hp: 1, inv: true, ttl });
+      (this._fires ||= []).push(f);
+      this._rebuildAvoidZones();
     }
   }
 
@@ -6246,6 +6362,20 @@ export class BattleSim {
 
   // ---------- 障礙物效果(火場灼傷)+ 戰場物資(過期 / 拾取)----------
   _tickHazards(dt) {
+    // 殘留火場(坍塌引起,帶 ttl):到期熄滅移除;永久火場(ttl 缺省)不受影響
+    if (this._fires?.length) {
+      for (let i = this._fires.length - 1; i >= 0; i--) {
+        const f = this._fires[i];
+        if (f.ttl == null) continue;
+        f.ttl -= dt;
+        if (f.ttl <= 0) {
+          this.ents.delete(f.id);
+          this._fires.splice(i, 1);
+          this.events.push({ e: 'die', id: f.id, kind: f.kind, x: f.x, z: f.z, side: f.side });
+        }
+      }
+      if (!this._fires.length) this._rebuildAvoidZones();
+    }
     // 全局火場倍率(天氣聯動):大雨/大雪 → 0(熄滅);強風 → 最高 1.6×
     // 單次計算供本 tick 所有火場共用，避免逐火場重複算
     const fireMul = fireDotMul(this.curWeatherDyn);
@@ -6859,6 +6989,7 @@ export class BattleSim {
   _serializeEnt(e) {
     const o = { id: e.id, k: e.kind, s: e.side, x: Math.round(e.x * 10) / 10, z: Math.round(e.z * 10) / 10, hp: Math.round(e.hp), m: e.maxHp };
     if (e.sc) o.sc = e.sc;   // 障礙物實例尺寸(客戶端外觀 / 碰撞半徑)
+    if (e.collapsed) o.col = 1;   // 場景物件已坍塌 = 低矮殘骸(客戶端傾倒姿態 + 藏血條)
     // 攻堅鎖血:客戶端血條變灰 + 掛鎖,並把它排除在射程光暈之外(打不掉的東西不該亮燈)
     if (this.siegeLocked(e)) o.lk = 1;
     if (e.kind === 'heli') o.y = Math.round((e.y || 0) * 10) / 10;   // 攻擊直升機巡航高度(純渲染用)

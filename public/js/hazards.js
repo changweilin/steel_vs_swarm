@@ -166,6 +166,42 @@ const BUILDERS = {
     }
   },
 
+  /** 路邊停放車:完好私家車(直立四輪接地,可被擊毀 → 燒成殘骸;形狀走 vehicles.js 唯一縫) */
+  car(g, r, rnd) {
+    const seed = Math.floor(rnd() * 1e9);
+    const body = new THREE.Group();
+    // makeVehicle 在稽核沙盒內是 vehicles.js 真品、在遊戲內是 vehicleParts 適配層,
+    // 兩者同形({g,p,c,r})⇒ 此處寫法與 wreck 的逐台迴圈同一支,不可另起爐灶。
+    for (const p of makeVehicle('sedan', { fit: { L: 4.4, W: 1.9, H: 1.55 }, paint: seed })) {
+      const [t, ga, gb, gc, sg] = p.g;
+      const geo = t === 'box' ? box(ga, gb, gc)
+        : t === 'cyl' ? cyl(ga, gb, gc, sg || 6)
+          : t === 'cone' ? cone(ga, gb, sg || 6) : ico(ga);
+      const [px = 0, py = 0, pz = 0] = p.p || [];
+      const m = mesh(body, geo, p.c, px, py, pz);
+      const [rx = 0, ry = 0, rz = 0] = p.r || [];
+      if (rx || ry || rz) m.rotation.set(rx, ry, rz);
+    }
+    body.rotation.y = rnd() * Math.PI * 2;
+    g.add(body);
+  },
+
+  /** 擱淺船:鏽蝕船殼坐灘 + 艦橋 + 貨櫃(可被擊毀 → 短暫火災;全部件相接,無懸空) */
+  ship(g, r, rnd) {
+    const hullC = jitterColor(0x5a3a2e, rnd);
+    mesh(g, box(24, 5, 9), hullC, 0, 2.5, 0);                        // 船殼(底坐灘)
+    const bow = mesh(g, cyl(3.5, 3.5, 5, 4), hullC, 11.5, 2.5, 0);   // 船艏(四稜柱轉 45° 接船殼)
+    bow.rotation.y = Math.PI / 4;
+    mesh(g, box(20, 0.5, 8), jitterColor(0x6a5a48, rnd), 0, 5.25, 0); // 主甲板(貼船殼頂)
+    mesh(g, box(5, 4, 7), jitterColor(0xd8dce0, rnd), -8, 7.5, 0);    // 艦橋(坐甲板)
+    mesh(g, cyl(0.9, 1.1, 3, 8), jitterColor(0x8a2a20, rnd), -8, 11, 0); // 煙囪(接艦橋頂)
+    const boxCs = [0x2e6da4, 0x3f7a3c, 0xb8642a];
+    for (let i = 0; i < 2; i++) {                                     // 貨櫃(坐甲板,互相緊靠)
+      mesh(g, box(6, 2.6, 2.5), jitterColor(boxCs[i % boxCs.length], rnd), -1 + i * 6.2, 6.8, 0);
+    }
+    mesh(g, cyl(0.12, 0.15, 6, 5), jitterColor(0x8d949a, rnd), 13, 8, 0); // 前桅(立於船艏頂)
+  },
+
   /** 火場:焦土 + 火舌(閃爍動畫)+ 濃煙柱 */
   fire(g, r, rnd) {
     const scorch = mesh(g, cyl(r * 0.85, r * 0.95, 0.14, 12), 0x17130f, 0, 0.07, 0);

@@ -24,6 +24,7 @@ import {
    CREEP_UPG, DISSOLVE, dissolveOutAt, ULT_CAST_S, fogSightMult, scopeRvminFog,
   WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
   FIRE_WEATHER, fireDotMul,
+  SCENE_STRUCT, sceneIsPhysical, sceneIsVehicle,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -3365,6 +3366,8 @@ export class BattleClient {
       if (e.hp < prevHpSnap && !HERO_KINDS.has(e.k)) this._victimHitFx(ent, false);
       ent.hp = e.hp; ent.max = e.m;
       ent.lk = !!e.lk;   // 攻堅鎖血:這一座打不動(範圍光暈把它排除,見 _updateRangeGlows)
+      // 場景物件坍塌(伺服器權威 col 旗標):傾倒為低矮殘骸,只做一次
+      if (e.col && ent.neutral && !ent.collapsed) this._applyCollapse(ent, false);
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
       // 第三方步槍兵駐守碉堡:人在工事裡,機體隱藏(出堡的快照會把 gar 拿掉 → 復現)
@@ -3575,19 +3578,25 @@ export class BattleClient {
       const ent = {
         id: e.id, kind: e.k, side: null, mesh: group,
         tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
-        neutral: true, isStatic: true, hero: false,
+        neutral: true, isStatic: true, hero: false, collapsed: false,
         // 阻擋型障礙:限制行動但不完全封鎖(縫隙由伺服器佈局保證,無人機可飛越)
         colR: hazDef?.block ? r : (e.k === 'aasite' ? 3.2 : e.k === 'relay' ? 1.6 : 0),
         colH: e.k === 'aasite' ? 3.5 : e.k === 'relay' ? 8 : (hazDef?.hgt || 6),
       };
       const czw = -e.z, cyw = this._surf(e.x, czw, this.terrain.heightAt(e.x, czw));
-      group.position.set(e.x, cyw, czw);
+      // 擱淺船浮於水面(湖床在水面下時不下沉;無水面資訊或高灘上則貼地)
+      const wy = (e.k === 'ship' && Number.isFinite(this.terrain.waterY)) ? this.terrain.waterY : -Infinity;
+      group.position.set(e.x, Math.max(cyw, wy), czw);
       // 淹水/坑洞:水面是寬平盤,單一中心高度會在斜坡上飄空、在橋面下沉 —— 逐頂點貼地
       if (e.k === 'flood' || e.k === 'pothole') this._conformWater(group, e.x, czw, cyw);
       if (group.userData.flames) this.flamers.add(group);
       if (e.k === 'flood') this.floods.push({ x: e.x, z: -e.z, r, slow: hazDef.slow });
       if (FIRE_KINDS_C.has(e.k)) this.fires.push({ x: e.x, z: -e.z, r });   // 火場滯留霧化判定
       this.ents.set(e.id, ent);
+      // 車船受損火舌定位:量體取自權威半徑/碰撞高(其餘障礙沿用預設小火舌)
+      if (sceneIsVehicle(e.k)) { ent.dimR = r; ent.dimTop = ent.colH; ent.dimH = ent.colH; }
+      // 坍塌殘骸(重進視野/重連):直接套用傾倒姿態,不走動畫
+      if (e.col) this._applyCollapse(ent, true);
       return ent;
     }
     // 覆蓋:此處回退,續建一般單位
@@ -3897,8 +3906,11 @@ export class BattleClient {
   }
 
   // 血條:HP 用紅色標示現有值,護盾(英雄雙層 HP 第一層)用玻璃藍疊在上方一列
+  // 場景物件(中立可破壞物):被攻擊前不顯示,一旦受損掛無框細血條(與砲塔/主堡的有框條區分)
   _updateHpBar(ent) {
     if (ent.isSelf) return;
+    // 中立場景物(障礙/防空陣地)走無框細血條;平民維持舊有框條(同一般單位讀感)
+    if (ent.neutral && !ent.civ) return this._updateSceneHpBar(ent);
     const frac = Math.max(0, ent.hp / ent.max);
     const maxSp = ent.maxSp || 0;
     const sfrac = maxSp > 0 ? Math.max(0, (ent.sp || 0) / maxSp) : 0;
@@ -3975,12 +3987,73 @@ export class BattleClient {
   }
 
   /**
+   * 場景物件無框細血條:滿血不建條(被攻擊才顯示);殘骸/地面狀態不掛條。
+   * 純表現層,HP 權威值來自快照。
+   */
+  _updateSceneHpBar(ent) {
+    if (ent.collapsed) return;   // 殘骸不再顯示血條
+    // 可破壞場景物才掛條:實體障礙 + 防空陣地;地面狀態/中繼站/火場不掛
+    if (!sceneIsPhysical(ent.kind) && ent.kind !== 'aasite') return;
+    const frac = ent.max > 0 ? Math.max(0, ent.hp / ent.max) : 1;
+    if (frac >= 1) {
+      if (ent.bar) { ent.mesh.remove(ent.bar); ent.bar = null; ent.barFg = null; }
+      return;
+    }
+    if (!ent.bar) {
+      const w = 10, hh = 0.28;
+      const plane = (color, opacity, z) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, hh),
+          new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthTest: false, depthWrite: false }));
+        m.position.z = z;
+        m.renderOrder = 990 + Math.round(z * 100);
+        return m;
+      };
+      const grp = new THREE.Group();
+      grp.add(plane(0x111417, 1, 0));            // 無框底槽
+      const fg = plane(0xe23b34, 1, 0.02);       // 現有 HP:紅
+      grp.add(fg);
+      grp.position.y = (ent.colH || 6) + 1.0;
+      ent.mesh.add(grp);
+      ent.bar = grp; ent.barFg = fg; ent.barW = w;
+    }
+    ent.barFg.scale.x = Math.max(0.001, frac);
+    ent.barFg.position.x = -(1 - frac) * ent.barW / 2;
+  }
+
+  /**
+   * 場景物件坍塌演出:壓成低矮殘骸 + 確定性傾倒(種子 = 實體 id,跨端一致),
+   * 藏血條、卸受損特效(殘留火場是伺服器另發的火場實體)。只做一次。
+   */
+  _applyCollapse(ent, instant) {
+    if (!ent || ent.collapsed) return;
+    ent.collapsed = true;
+    if (ent.bar) { ent.mesh.remove(ent.bar); ent.bar = null; ent.barFg = null; }
+    if (ent.dmgFx) { ent.mesh.remove(ent.dmgFx); ent.dmgFx = null; this.damaged.delete(ent); }
+    ent.dmgStage = 0;
+    const s = (ent.id % 2 === 0 ? 1 : -1);
+    ent.mesh.scale.y *= 0.35;
+    ent.mesh.rotation.z += s * 0.12;
+    ent.mesh.rotation.x += 0.08;
+    const rf = SCENE_STRUCT?.RUBBLE_F || 0.45;
+    ent.colR = (ent.colR || 0) * rf;
+    ent.colH = (ent.colH || 6) * 0.35;
+    if (!instant) {
+      const p = ent.mesh.position;
+      debrisBurst(this.scene, this.effects, p.x, p.y + 2, p.z, { big: false, accent: 0x8a7a5a });
+    }
+  }
+
+  /**
    * 受損視覺化(vfx makeDamageFx):依快照 HP 比例掛/卸兩階特效(1=冒煙+裂痕、2=失火+破損)。
    * 純表現層,只驅動視覺;跳過自機(FPV 機體隱藏)/中立物/平民/餌機/自殺機(體型縮放或短命)。
    * 用 dimTop/dimH/dimR(spawn 時基準包圍盒,已排除受擊殼/血條)量體 —— 與血條/標記同一把尺。
    */
   _updateDamageStage(ent) {
-    if (ent.isSelf || ent.neutral || ent.civ || ent.decoy || ent.kami) return;
+    if (ent.isSelf || ent.civ || ent.decoy || ent.kami) return;
+    // 中立物:只有可破壞場景物(實體障礙 + 防空陣地)掛火災階段,
+    // 與砲塔/主堡同閾值(DMG_FX);地面狀態與坍塌殘骸不掛
+    if (ent.neutral && !sceneIsPhysical(ent.kind) && ent.kind !== 'aasite') return;
+    if (ent.collapsed) return;
     if (!ent.max || ent.max <= 0) return;
     let stage = 0;
     if (!ent.dead) {
@@ -4394,24 +4467,28 @@ export class BattleClient {
       const [x, z] = [ev.x, -ev.z];
       const big = ev.kind === 'tower' || ev.kind === 'base' || ev.kind === 'tank' || ev.kind === 'heli' || ev.kind === 'bunker';
       const hero = HERO_KINDS.has(ev.kind);
-      const ey = this.terrain.heightAt(x, z) + 3;
-      this._explosion(x, ey, z, big ? 14 : 5, big ? 0xff8844 : 0xffcc66);
-      this._applyBlast(x, ey, z, big ? 16 : 6);   // 近距離看拆塔/坦克殉爆會被衝擊波推開
-      // 漫畫式破壞回饋:機械碎片噴散 + BOOM 字卡 + hitstop(頓點強調重量感)
-      debrisBurst(this.scene, this.effects, x, ey + (big ? 6 : 1), z,
-        { big, accent: ev.side ? sideInfo(ev.side).color : 0xd8b04a });
-      if (big || hero) {
-        comicPop(this.scene, this.effects, x, ey + (ev.kind === 'base' ? 30 : ev.kind === 'tower' ? 20 : 8), z,
-          { big: true, hue: hero ? 2 : 18 });
-        this._hitstop = Math.max(this._hitstop || 0,
-          ev.kind === 'base' ? 0.12 : ev.kind === 'tower' ? 0.08 : 0.05);
+      // 實體場景物件的爆炸演出走 collapse 事件(殘骸保留);die 只留播報,避免雙重爆炸
+      const sceneCollapse = ev.kind && sceneIsPhysical(ev.kind);
+      if (!sceneCollapse) {
+        const ey = this.terrain.heightAt(x, z) + 3;
+        this._explosion(x, ey, z, big ? 14 : 5, big ? 0xff8844 : 0xffcc66);
+        this._applyBlast(x, ey, z, big ? 16 : 6);   // 近距離看拆塔/坦克殉爆會被衝擊波推開
+        // 漫畫式破壞回饋:機械碎片噴散 + BOOM 字卡 + hitstop(頓點強調重量感)
+        debrisBurst(this.scene, this.effects, x, ey + (big ? 6 : 1), z,
+          { big, accent: ev.side ? sideInfo(ev.side).color : 0xd8b04a });
+        if (big || hero) {
+          comicPop(this.scene, this.effects, x, ey + (ev.kind === 'base' ? 30 : ev.kind === 'tower' ? 20 : 8), z,
+            { big: true, hue: hero ? 2 : 18 });
+          this._hitstop = Math.max(this._hitstop || 0,
+            ev.kind === 'base' ? 0.12 : ev.kind === 'tower' ? 0.08 : 0.05);
+        }
       }
       if (ev.kind === 'aasite') {
         this.hud.feed?.('🎯 匿蹤防空陣地被摧毀,該片空域安全了!');
       } else if (ev.kind === 'decoy') {
         // 餌機被攔截擊落:誘餌任務結束(PiP 隨實體消失一起收掉)
         if (ev.pid === this.youId) this.hud.feed?.('💥 集束轟炸機被擊落,回傳畫面終止');
-      } else if (HAZARDS[ev.kind]) {
+      } else if (HAZARDS[ev.kind] && !sceneIsPhysical(ev.kind)) {
         this.hud.feed?.(`🧹 ${HAZARDS[ev.kind].name}被清除,通道打開了!`);
       } else if (ev.kind === 'bunker') {
         this.hud.feed?.(`🏚️ ${sideInfo(ev.side).name}的碉堡被摧毀!(${THIRD.BUNKER_RESPAWN_S / 60} 分鐘後原地重建)`);
@@ -4421,6 +4498,19 @@ export class BattleClient {
         this.hud.feed?.(`🏗️ ${SIDES[ev.side].name}的防禦塔倒了!`);
       } else if (ev.kind === 'base') {
         this.hud.feed?.(`🏰 ${SIDES[ev.side].name}主堡被摧毀!`);
+      }
+    } else if (ev.e === 'collapse') {
+      // 場景物件坍塌/傾倒:殘骸保留阻擋 + 地面殘留火場(伺服器另發火場實體經快照同步)
+      const ent = this.ents.get(ev.id);
+      if (ent && !ent.collapsed) this._applyCollapse(ent, false);
+      const [cx, cz] = [ev.x, -ev.z];
+      const cy = this.terrain.heightAt(cx, cz) + 2;
+      this._explosion(cx, cy, cz, 6, 0xff8844);
+      debrisBurst(this.scene, this.effects, cx, cy + 1, cz, { big: false, accent: 0x8a7a5a });
+      if (HAZARDS[ev.kind]) {
+        if (ev.kind === 'car') this.hud.feed?.(ev.ev ? '⚡ 電動車起火了!鋰電池燒得久,遠離殘骸!' : '🚗 汽車被擊毀起火了!');
+        else if (ev.kind === 'ship') this.hud.feed?.('🚢 擱淺船被擊毀起火了!');
+        else this.hud.feed?.(`🏚️ ${HAZARDS[ev.kind].name}坍塌了,殘骸仍會阻擋!`);
       }
     } else if (ev.e === 'boom') {
       const [x, z] = [ev.x, -ev.z];
