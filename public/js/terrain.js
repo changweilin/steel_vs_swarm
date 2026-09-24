@@ -409,7 +409,10 @@ export async function buildTerrain(cfg, onProgress) {
     }
     // 市區衰減:SRTM 市區建物殘留雜訊經 AMP 放大會把平坦市街變丘壑(建物半埋、街道忽上忽下、
     // 河谷成乾峽谷)—— 依場地市區成分縮減放大量(公式與常數住 data.js TERRAIN.AMP_URBAN_F)。
-    const amp = TERRAIN.AMP * (1 - Math.min(1, cfg.venue?.mix?.urban || 0) * TERRAIN.AMP_URBAN_F);
+    // 變化放大:3×6 體系的坡度分級(原貌/輕度/多元/起伏/沼澤/水域)由 venue.ampF 攜帶
+    // (venues.js variantAmpF 推導,隨 battleConfig 廣播);缺席恆 1 = 逐位元同舊制。
+    const amp = TERRAIN.AMP * (1 - Math.min(1, cfg.venue?.mix?.urban || 0) * TERRAIN.AMP_URBAN_F)
+      * (Number.isFinite(cfg.venue?.ampF) ? cfg.venue.ampF : 1);
     if (segs.length) {
       let meanH = 0;
       for (let k = 0; k < N * N; k++) meanH += heights[k];

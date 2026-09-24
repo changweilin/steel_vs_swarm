@@ -867,13 +867,49 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .ts-row { gap: 5px; flex-wrap: wrap; }
 .ts-btn { padding: 6px 14px; font-family: var(--mono); font-size: 12px; letter-spacing: 1px; }
 .ts-btn.on { border-color: var(--railW); color: var(--railW); animation: selGlowSwarm 1.8s ease-in-out infinite; }
-.venue-grid { display: flex; flex-wrap: wrap; gap: 4px; max-height: 150px; overflow-y: auto; }
+/* 預設地圖清單:三個一列對齊並排(3×6 分組 + 劇情分類);分組標題佔滿一列 */
+.venue-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; max-height: 220px; overflow-y: auto; }
+.venue-group-head {
+  grid-column: 1 / -1; font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+  color: var(--railS); margin-top: 6px;
+}
+.venue-group-head:first-child { margin-top: 0; }
+.venue-group-head.story-head { color: var(--dim); }
 .venue-btn {
   position: relative; font: inherit; font-size: 11px; color: var(--fg);
   background: rgba(12, 18, 25, 0.9); border: 1px solid var(--line); border-radius: 0;
-  padding: 4px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 9px; cursor: pointer; display: block; text-align: left;
+  min-width: 0; min-height: 44px;
   transition: background 0.12s, border-color 0.12s;
 }
+/* 地名獨佔一行、不換行:建圖面板僅 ~430px 寬、三欄每欄 ~130px,
+   長地名(如奧卡萬戈)溢出時掛 .marquee 跑馬燈捲動展示全文,短名靜止.
+   鈕本體用 block(不用 column flex):flex 子項 overflow 非 visible 時自動最小高度歸零,
+   會被壓縮裁掉底部,這正是上一版底部被擋住的原因 */
+.venue-name {
+  display: block; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--text, var(--fg));
+  white-space: nowrap; overflow: hidden; line-height: 1.6; margin-bottom: 3px;
+}
+.venue-name-text { display: inline-block; white-space: nowrap; will-change: transform; }
+.venue-btn.marquee .venue-name {
+  mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 10px), transparent);
+}
+.venue-btn.marquee .venue-name-text { animation: venueMarquee 7s linear infinite; }
+@keyframes venueMarquee {
+  0%, 12% { transform: translateX(0); }
+  88%, 100% { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .venue-btn.marquee .venue-name-text { animation: none; }
+}
+.venue-btn.on .venue-name { color: inherit; }
+.venue-tags { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.venue-btn.story { border-left: 3px solid var(--dim); }
+.venue-var {
+  flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+  padding: 1px 5px; border: 1px solid var(--line); border-radius: 0; color: var(--railW);
+}
+.venue-var.story-tag { color: var(--dim); }
 .venue-btn:hover { border-color: var(--railW); background: rgba(var(--railW-rgb), 0.1); }
 .venue-btn.fav { border-left: 3px solid var(--railW); }
 .venue-btn.on { border-color: var(--railW); color: var(--railW); animation: selGlowSwarm 1.8s ease-in-out infinite; }

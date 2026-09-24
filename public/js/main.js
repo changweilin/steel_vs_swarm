@@ -38,7 +38,7 @@ import { CharPreview } from './charPreview.js';
 import {
   createShowcaseFallbackTerrain, GAME_SHOWCASE_SITES, showcaseTerrainConfig,
 } from './showcase.js';
-import { VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
+import { VENUES, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { talkOf, stageKey } from './storytalk.js';
 // 劇情畫面的標記唯一縫 —— 遊戲本體與本地故事書(tools/story_book)共用同一份,見 storyui.js 檔頭
@@ -522,26 +522,102 @@ function tsInfoText() {
 
 // 場地鈕的路線/地形說明:2026-08-02 起走 tip.js 的懸浮提示單一縫(觸控長按也看得到);
 // MUST NOT 退回 `title=`(手機沒有 hover)。摘要吃當下人數 ⇒ 換人數要重掛(見 syncVenueTips)。
-function renderVenues() {
-  const grid = $('venueGrid');
-  grid.innerHTML = '';
-  for (const v of VENUES) {
-    const b = document.createElement('button');
-    b.className = 'venue-btn';
-    b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
-    attachTip(b, venueTip(v, app.teamSize, miniOn()));
-    b.onclick = () => selectVenue(v);
-    grid.appendChild(b);
-  }
+/** 場地鈕(唯一縫):預設 18 張帶變化名,劇情戰役帶劇情籤 */
+function venueBtn(v) {
+  const b = document.createElement('button');
+  b.className = 'venue-btn' + (v.story ? ' story' : '');
+  b.dataset.vid = v.id;
+  const vdef = VARIANT_DEFS.find((d) => d.key === v.variant);
+  b.innerHTML = `<span class="venue-name"><span class="venue-name-text">${v.country} ${esc(v.name)}</span></span>`
+    + `<span class="venue-tags"><span class="venue-type t-${v.type}">${v.type}</span>`
+    + (vdef ? `<span class="venue-var">${vdef.name}</span>` : '')
+    + (v.story ? '<span class="venue-var story-tag">劇情</span>' : '')
+    + '</span>';
+  attachTip(b, venueTip(v, app.teamSize, miniOn()));
+  return b;
 }
+
+/** 3×6 分組 + 劇情分類(另計,不佔名額):主地形分組,組內照六變化順序 */
+function renderVenueGroups(grid, onPick) {
+  grid.innerHTML = '';
+  const presets = PRESET_VENUES();
+  for (const base of VENUE_BASES) {
+    const head = document.createElement('div');
+    head.className = 'venue-group-head';
+    head.textContent = `▎${base}（${presets.filter((v) => (v.base || v.type) === base).length}）`;
+    grid.appendChild(head);
+    for (const vd of VARIANT_DEFS) {
+      const v = presets.find((x) => (x.base || x.type) === base && x.variant === vd.key);
+      if (!v) continue;
+      const b = venueBtn(v);
+      b.onclick = () => onPick(v);
+      grid.appendChild(b);
+    }
+  }
+  const stories = STORY_VENUES();
+  if (stories.length) {
+    const head = document.createElement('div');
+    head.className = 'venue-group-head story-head';
+    head.textContent = `▎劇情戰役（另計,不佔 3×6 名額）`;
+    grid.appendChild(head);
+    for (const v of stories) {
+      const b = venueBtn(v);
+      b.onclick = () => onPick(v);
+      grid.appendChild(b);
+    }
+  }
+  fitVenueMarquee(grid);
+}
+
+/**
+ * 長地名跑馬燈:地名不換行,溢出欄寬的那顆才捲動展示全文。
+ * 量測 scrollWidth > clientWidth 才掛 .marquee(短名零動畫);內容複製成「本文+間隔」×2,
+ * CSS 取 translateX(-50%) 無縫迴圈。rAF 等排版落定後量,字體載入前量不準故重掛無害。
+ */
+function fitVenueMarquee(grid) {
+  requestAnimationFrame(() => {
+    for (const b of grid.querySelectorAll('button.venue-btn')) {
+      const name = b.querySelector('.venue-name');
+      const txt = b.querySelector('.venue-name-text');
+      if (!name || !txt) continue;
+      if (txt.dataset.full) txt.textContent = txt.dataset.full;   // 先還原單份再量
+      b.classList.remove('marquee');
+      if (name.scrollWidth > name.clientWidth + 1) {
+        if (!txt.dataset.full) txt.dataset.full = txt.textContent;
+        const t = esc(txt.dataset.full);
+        txt.innerHTML = `${t}<span class="mq-gap">　　　</span>${t}<span class="mq-gap">　　　</span>`;
+        b.classList.add('marquee');
+      }
+    }
+  });
+}
+
+function renderVenues() {
+  renderVenueGroups($('venueGrid'), (v) => selectVenue(v));
+}
+
+/* 視窗縮放/字體載入改變欄寬時重掛跑馬燈(量測無害,短名直接跳過) */
+let _venueMqT = 0;
+function refitVenueMarquee() {
+  clearTimeout(_venueMqT);
+  _venueMqT = setTimeout(() => {
+    for (const gid of ['venueGrid', 'venueGridOpen']) {
+      const g = $(gid);
+      if (g && g.isConnected) fitVenueMarquee(g);
+    }
+  }, 150);
+}
+window.addEventListener('resize', refitVenueMarquee);
+document.fonts?.ready?.then(() => refitVenueMarquee());
 
 /** 換人數 ⇒ 兵線條數/長度/彎曲度整組變 ⇒ 兩處場地清單的說明 MUST 跟著重掛(唯一出口) */
 function syncVenueTips() {
   for (const gid of ['venueGrid', 'venueGridOpen']) {
     const grid = $(gid);
     if (!grid) continue;
-    for (const [i, b] of [...grid.children].entries()) {
-      if (VENUES[i]) attachTip(b, venueTip(VENUES[i], app.teamSize, miniOn()));
+    for (const b of grid.querySelectorAll('button.venue-btn')) {
+      const v = VENUES.find((x) => x.id === b.dataset.vid);
+      if (v) attachTip(b, venueTip(v, app.teamSize, miniOn()));
     }
   }
 }
@@ -664,16 +740,7 @@ function setTeamSizeOpen(n) {
 function updateTsInfoOpen() { $('tsInfoOpen').textContent = tsInfoText(); }
 
 function renderVenuesOpen() {
-  const grid = $('venueGridOpen');
-  grid.innerHTML = '';
-  for (const v of VENUES) {
-    const b = document.createElement('button');
-    b.className = 'venue-btn';
-    b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
-    attachTip(b, venueTip(v, app.teamSize, miniOn()));
-    b.onclick = () => selectVenueOpen(v);
-    grid.appendChild(b);
-  }
+  renderVenueGroups($('venueGridOpen'), (v) => selectVenueOpen(v));
 }
 
 /** 開戰時刻現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
@@ -683,9 +750,9 @@ function selectVenueOpen(v) {
   app.venueSelOpen = v;
   app.favCfg = cfg;
   savePrefs({ lastVenueId: v.id });
-  for (const el of $('venueGridOpen').children) el.classList.remove('on');
-  const idx = VENUES.indexOf(v);
-  if (idx >= 0 && $('venueGridOpen').children[idx]) $('venueGridOpen').children[idx].classList.add('on');
+  for (const el of $('venueGridOpen').querySelectorAll('button.venue-btn')) el.classList.remove('on');
+  const btn = $('venueGridOpen').querySelector(`button.venue-btn[data-vid="${v.id}"]`);
+  if (btn) btn.classList.add('on');
   for (const el of $('favGrid').children) el.classList.remove('on');
   $('openRoomStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:${app.teamSize}v${app.teamSize}${cfg.mini ? ' ・ 迷你地圖' : ''}`
