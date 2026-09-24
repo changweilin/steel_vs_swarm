@@ -393,7 +393,8 @@ export function storageTankParts({ w, h, d, seed = 1 }) {
 }
 
 export const NARROW_GEOLOGY_BOUNDARY = Object.freeze({
-  cliff: 'cliff', rockery: 'mountain', landslide: 'moraine', debris: 'mound', isletbarrier: 'island',
+  cliff: 'cliff', rockery: 'mountain', landslide: 'moraine', debris: 'mound',
+  isletbarrier: 'island', basaltspine: 'basalt', rollinghills: 'mountain', reefchain: 'reef',
 });
 
 // 假山群基底：按種子輪用一般地質，拉狹長型成高低變化大的連綿起伏。

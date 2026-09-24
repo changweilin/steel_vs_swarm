@@ -544,7 +544,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
   if (!Number.isSafeInteger(seed)) throw new TypeError('Geology seed must be a safe integer');
   const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
   const totalDepth = depth + bufD;
-  const is2D = totalDepth >= 20 || Math.min(len, totalDepth) >= 20;
+  const is2D = bufD > 0 || totalDepth >= 20 || Math.min(len, totalDepth) >= 20;
   const activePattern = pattern || GEOLOGY_TYPE_2D_PATTERN[type] || GEOLOGY_2D_PATTERNS[(seed >>> 4) % GEOLOGY_2D_PATTERNS.length];
 
   const params = elongatedGeologyParams(len, depth, seed);

@@ -9555,7 +9555,8 @@ function buildEdgeWall({ group, terrain, blockers }) {
       const od = WALL_KINDS[other.kind];
       return { kind: other.kind, h: Math.max(WH, od.h), depth: od.depth, corner: other.e !== e };
     });
-    const joined = def.terrainFit ? buildSlopeBoundary(kind, {
+    const isContinuousGeology = !!(BOUNDARY_BUFFER_LAYOUTS[kind]?.continuousGeology);
+    const joined = (def.terrainFit && !isContinuousGeology) ? buildSlopeBoundary(kind, {
       len: step, depth: def.depth, h: kh0, x, z, ry: e.fry, seed,
       heightAt: (px, pz) => terrain.heightAt(px, pz), waterY: s.water ? wy : null,
       season: terrain.season || 'summer', joins: segJoins,
@@ -9568,14 +9569,14 @@ function buildEdgeWall({ group, terrain, blockers }) {
     }) : null;
     const bufAvailable = Math.max(0, (inset + (terrain.bufferM || 0)) - def.depth);
     const isContinuous = BOUNDARY_BUFFER_LAYOUTS[kind]?.continuous;
-    const boundaryBatch = (isContinuous || !def.terrainFit || def.fillContact) && BOUNDARY_BUFFER_LAYOUTS[kind]
+    const boundaryBatch = (isContinuous || !def.terrainFit || def.fillContact || isContinuousGeology) && BOUNDARY_BUFFER_LAYOUTS[kind]
       ? buildBoundaryRunParts(kind, {
           len: step, depth: def.depth, bufferDepth: bufAvailable, h: kh0,
           seed, variant, season: terrain.season || 'summer', water: s.water,
           biome: s.biome, joins: segJoins,
         })
       : null;
-    const parts = def.terrainFit ? (joined?.parts || []) : (boundaryBatch?.parts || wallParts(kind, {
+    const parts = (def.terrainFit && !isContinuousGeology) ? (joined?.parts || []) : (boundaryBatch?.parts || wallParts(kind, {
       len: half * 2, depth: def.depth, h: kh0, seed, variant, season: terrain.season || 'summer',
     }));
     const kh = kh0; // 固定邊界包絡；本體間的可見空隙同樣禁止穿越。
@@ -9602,10 +9603,11 @@ function buildEdgeWall({ group, terrain, blockers }) {
       const visualBufferParts = boundaryBatch.bufferParts.map(part =>
         s.water && Number.isFinite(part.waterline)
           ? { ...part, p: [part.p[0], part.p[1] - part.waterline, part.p[2]] } : part);
-      const gy = (wx, wz) => (s.water && wy != null
+      const isGeoFill = isContinuousGeology || visualBufferParts.some(p => p.role === 'boundary-buffer-fill');
+      const gy = isGeoFill ? null : ((wx, wz) => (s.water && wy != null
         ? Math.max(wy, (terrain.bufferHeightAt ? terrain.bufferHeightAt(wx, wz) : terrain.heightAt(wx, wz)))
-        : (terrain.bufferHeightAt ? terrain.bufferHeightAt(wx, wz) : terrain.heightAt(wx, wz)));
-      emitWallParts(batch, visualBufferParts, x, 0, z, e.fry, 1, gy);
+        : (terrain.bufferHeightAt ? terrain.bufferHeightAt(wx, wz) : terrain.heightAt(wx, wz))));
+      emitWallParts(batch, visualBufferParts, x, isGeoFill ? ground : 0, z, e.fry, 1, gy);
     }
     prevKind = kind;
     prevVariant = variant;

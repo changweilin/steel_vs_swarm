@@ -157,7 +157,10 @@ console.log(
 // 4. 連續地質往緩衝區 2 維擴大延伸 (Continuous Geology Buffer Expansion)
 // -----------------------------------------------------------------------------
 console.log('4. 驗證連續邊界地質區域朝緩衝區 2D 延伸填滿...');
-const continuousTypes = ['cliff', 'rockery', 'landslide', 'debris', 'isletbarrier'];
+const continuousTypes = [
+  'cliff', 'rockery', 'landslide', 'debris', 'isletbarrier',
+  'basaltspine', 'rollinghills', 'reefchain',
+];
 
 for (const kind of continuousTypes) {
   const len = 60;
@@ -267,8 +270,33 @@ for (const kind of continuousTypes) {
     seamNonZeroCount > 0,
     `${kind}: 接縫處應保持地形連續起伏高度 (不可出現內部落地裙擺阻斷)`
   );
+
+  // 驗證頭尾兩端波谷數值契約：valleys[0] === 0 與 valleys[bumps] === 0
+  assert.equal(res.undulation.valleys[0], 0, `${kind}: 頭端波谷 (valleys[0]) 必須嚴格為 0m`);
+  assert.equal(
+    res.undulation.valleys[res.params.bumps],
+    0,
+    `${kind}: 尾端波谷 (valleys[bumps]) 必須嚴格為 0m`
+  );
+
+  // 驗證 2D 空間起伏啟用狀態：延伸至緩衝區時 2 個維度都必須加入隨機起伏
+  assert.equal(res.undulation.is2D, true, `${kind}: 往緩衝區延伸時 is2D 必須啟用`);
+
+  // 驗證脊頂取樣器在頭尾兩端 (u = ±1) 嚴格為 0m
+  for (const v of [-1, -0.5, 0, 0.5, 1]) {
+    assert.equal(
+      res.heightAt(-1, v),
+      0,
+      `${kind}: heightAt(-1, ${v}) 頭端高度必須嚴格為 0m`
+    );
+    assert.equal(
+      res.heightAt(1, v),
+      0,
+      `${kind}: heightAt(1, ${v}) 尾端高度必須嚴格為 0m`
+    );
+  }
 }
-console.log('   ✓ 全部 5 款連續地質皆能向緩衝區無縫 2D 延伸，且外圍落地、接縫平滑');
+console.log(`   ✓ 全部 ${continuousTypes.length} 款連續地質皆能向緩衝區無縫 2D 延伸，且頭尾兩端波谷嚴格為 0m、外圍落地、接縫平滑`);
 
 // -----------------------------------------------------------------------------
 // 5. 邊界管線整合 (narrowGeologyBoundary 與 buildBoundaryRunParts)

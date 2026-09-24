@@ -430,8 +430,8 @@ export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant
   if (![len, depth, h].every(n => Number.isFinite(n) && n > 0)) throw new RangeError('Invalid boundary dimensions');
   const objectSeed = (seed ^ Math.imul(variant, 0x45d9f3b)) >>> 0;
   // 邊界本體是沿邊連續構造，單體朝向維持軸向對齊(預設除外)；獨立散布經 standaloneBoundaryParts 另開。
-  // 假山群改用一般地質拉狹長型單體（高低變化大的連綿起伏），不再是單顆拉伸巨石。
-  if (kind === 'rockery') return narrowGeologyBoundary(kind, { len, depth, h, seed: objectSeed, season });
+  // 連續地質改用自然地質拉狹長型單體（高低變化大的連綿起伏），不再是單向斷面擠出。
+  if (NARROW_GEOLOGY_BOUNDARY[kind]) return narrowGeologyBoundary(kind, { len, depth, h, seed: objectSeed, season });
   if (def.object) return environmentParts(def.object, { size: [len, h, depth], seed: objectSeed, season, yaw });
   if (EXPANDED_BOUNDARIES[kind] || ['barricade', 'levee', 'seawall'].includes(kind)) return buildSlopeBoundary(kind, {
     len, depth, h: h - .4, x: objectSeed % 997 * 11, z: objectSeed % 953 * 7,
@@ -526,14 +526,14 @@ export const BOUNDARY_BUFFER_LAYOUTS = Object.freeze({
   // 大小巨岩: 隨機散布，尺度 0.55x ~ 1.65x
   boulder:     { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.55, 1.65], randomYaw: true },
   rockery:     { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, object: 'boulder',   scaleRange: [0.60, 1.60], randomYaw: true },
-  basaltspine: { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.60, 1.50], randomYaw: true },
-  reefchain:   { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, object: 'boulder',   scaleRange: [0.60, 1.50], randomYaw: true },
+  basaltspine: { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, scaleRange: [0.60, 1.50], randomYaw: true },
+  reefchain:   { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, scaleRange: [0.60, 1.50], randomYaw: true },
   isletbarrier:{ type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, object: 'boulder',   scaleRange: [0.55, 1.50], randomYaw: true },
   cliff:       { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, scaleRange: [0.60, 1.50], randomYaw: true },
   landslide:   { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, scaleRange: [0.60, 1.50], randomYaw: true },
   debris:      { type: 'natural', mode: 'random', pitchX: 18, pitchZ: 18, continuous: true, continuousGeology: true, scaleRange: [0.60, 1.50], randomYaw: true },
   // 大小山頭: 隨機散布，尺度 0.70x ~ 1.45x
-  rollinghills:{ type: 'natural', mode: 'random', pitchX: 20, pitchZ: 20, object: 'boulder',   scaleRange: [0.70, 1.45], randomYaw: true },
+  rollinghills:{ type: 'natural', mode: 'random', pitchX: 20, pitchZ: 20, continuous: true, continuousGeology: true, scaleRange: [0.70, 1.45], randomYaw: true },
   // 冰山浮冰: 隨機散布，尺度 0.50x ~ 1.45x
   icefloe:     { type: 'natural', mode: 'random', pitchX: 24, pitchZ: 20, object: 'icefloe',   scaleRange: [0.50, 1.40], randomYaw: true },
   iceberg:     { type: 'natural', mode: 'random', pitchX: 32, pitchZ: 28, object: 'iceberg',   scaleRange: [0.55, 1.45], randomYaw: true },
