@@ -1694,7 +1694,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     rb2.upg.ch = 0;
   }
 
-  log('— sim:助攻(傷害/負面狀態 = 貢獻;賞金 × 1/4)—');
+  log('— sim:助攻(純傷害 = 貢獻;賞金 × 1/4)—');
   {
     const prey = sim._add({ kind: 'tank', side: 'SWARM', x: rb2.x + 22, z: rb2.z, hp: UNITS.tank.hp });
     rb2.ammo = {}; rb2.fireAt = {}; rb2.reloadUntil = {}; rb2.mp = rb2.maxMp;
@@ -1707,15 +1707,15 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(rb2.money - $a0 >= Math.floor(ECON.BOUNTY.tank * ECON.ASSIST.F),
       `助攻入帳 +$${Math.round(rb2.money - $a0)}(= 賞金 ${ECON.BOUNTY.tank} × ${ECON.ASSIST.F})`);
     assert(sim.events.some((e) => e.e === 'assist' && e.pid === 'p_r2'), 'assist 事件廣播(HUD 提示)');
-    // 招式型範圍 EMP 也是負面狀態 → 記助攻貢獻(與武器附帶 EMP / _applyCC 同規)
+    // 純傷害制:範圍 EMP(純負面狀態)不記助攻貢獻
     const empc = sim.addHero('SWARM', 'p_e', 's03');
     const mark = sim._add({ kind: 'tank', side: 'STEEL', x: empc.x + 10, z: empc.z, hp: 9999 });
     empc.abil.ult = 1; empc.mp = empc.maxMp;
     sim.heroCast('p_e', 'ult', empc.x, empc.z);
     // 大招載具化:EMP 由轟炸機送到落點才施放 ⇒ 等它飛完投放腿
     for (let i = 0; i < 400 && !((mark.empUntil || 0) > sim.t); i++) sim.tick(0.125);
-    assert((mark.empUntil || 0) > sim.t && mark.asst && mark.asst.p_e != null,
-      '範圍 EMP(負面狀態)寫入助攻貢獻戳記');
+    assert((mark.empUntil || 0) > sim.t && !(mark.asst && mark.asst.p_e != null),
+      '範圍 EMP(純負面狀態)不寫入助攻貢獻戳記');
     sim.ents.delete(mark.id);
     // 補刀者**也是英雄**的路徑(舊測只驗非英雄補刀):擊殺者拿全額、其餘貢獻者拿 ASSIST.F
     const ally = sim.addHero('STEEL', 'p_al', charsOf('STEEL')[0]);

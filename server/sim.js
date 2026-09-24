@@ -2062,12 +2062,11 @@ export class BattleSim {
     return v;
   }
 
-  /** 命中附帶 EMP(訊號矛/諧振波炮之類):敵方英雄武器短暫離線;負面狀態 = 助攻貢獻 */
+  /** 命中附帶 EMP(訊號矛/諧振波炮之類):敵方英雄武器短暫離線;純狀態不記助攻(純傷害制) */
   _applyHitEmp(h, def, t) {
     if (!def.emp || !t.hero) return;
     if (this._buffVal(t, 'ccImm') > 0) return;   // 異常免疫(s12「滿天星座」)
     t.empUntil = Math.max(t.empUntil || 0, this.t + def.emp);
-    if (h && h.hero && h.side !== t.side) (t.asst ||= {})[h.pid] = this.t;
   }
 
   /** 詞綴強化 × 招式增益乘數(dmg/reload/dmgTaken/bounty;過期即清,全部伺服器結算) */
@@ -3343,7 +3342,7 @@ export class BattleSim {
    * 集束轟炸機投下一顆炸彈(依機體類型:燃燒/凍結/毒霧/雷爆,見 DECOY_BOMB)。
    * 落點 = **指定目標的位置**(個別瞄準);沒帶目標(墜毀補投)才落在機體正下方。
    * 直擊爆風走 _blast(記主機火力升級/助攻/擊殺);附加狀態復用既有 bleed/slow/EMP/stun 欄位
-   * (與 _applyCC 同一批狀態縫),純狀態貢獻另補 asst 戳記(輔助角色收入)。
+   * (與 _applyCC 同一批狀態縫);純傷害制下純狀態不記助攻,DoT 傷害經 _damage 另記。
    * 事件帶 fx/fz/fy(投擲點)⇒ 客戶端把炸彈畫成**榴彈拋物線**(使用者需求);傷害仍於事件當下
    * 即結算(拋物線純表現層,MUST NOT 改成客戶端落地才回報 —— 那就是把結算下放到客戶端,A1)。
    */
@@ -3366,7 +3365,6 @@ export class BattleSim {
       if (t.kind === 'tower' || t.kind === 'base' || t.kind === 'bunker') continue;   // 工事免控場/狀態
       if (t.hero && (t.invUntil || 0) > this.t) continue;
       if (dist2d(t.x, t.z, bx, bz) > rr) continue;
-      (t.asst ||= {})[owner.pid] = this.t;   // 純狀態貢獻也記助攻
       if (b.dot) t.bleed = { dps: b.dot, until: this.t + (b.dur || 4), pen: 6, pid: owner.pid };   // 燃燒/毒霧 DoT
       if (b.slow) { t.slowUntil = Math.max(t.slowUntil || 0, this.t + (b.dur || 3)); t.slowF = Math.min(t.slowF ?? 1, b.slow); }   // 凍結/毒霧 減速(取較強 = 較小)
       if (b.emp) t.empUntil = Math.max(t.empUntil || 0, this.t + b.emp);   // 雷爆:武器離線(英雄與 NPC 皆吃)
@@ -3644,7 +3642,6 @@ export class BattleSim {
         if (e.hero && this._buffVal(e, 'ccImm') > 0) continue;   // 異常免疫(s12「滿天星座」)
         if (dist2d(e.x, e.z, x, z) > A.r) continue;
         e.empUntil = Math.max(e.empUntil || 0, this.t + A.dur * frac);
-        (e.asst ||= {})[h.pid] = this.t;   // 施加負面狀態 = 助攻貢獻(與 _applyCC/_applyHitEmp 同規)
       }
       if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
     } else if (A.fx === 'vision') {
@@ -3734,7 +3731,6 @@ export class BattleSim {
         if (perp <= lineR + (e.r || 1)) {
           this._damage(e, A.dmg * frac, h, A.pen || 16, 0, { pen: A.pen || 16, vsSp: A.vsSp || 1.5 });
           if (A.add) this._applyCC(h, A.add, e.x, e.z, 2);
-          (e.asst ||= {})[h.pid] = this.t;
         }
       }
       this.events.push({ e: 'lance', pid: h.pid, side: h.side, x1: h.x, z1: h.z, x2: ex, z2: ez, r: lineR });
@@ -3763,7 +3759,6 @@ export class BattleSim {
         if (curPsn > 0) {
           best.bleed = { dps: curPsn, until: this.t + (A.add?.dur || 4), pid: h.pid, pen: 8, attacker: h };
         }
-        (best.asst ||= {})[h.pid] = this.t;
         curDmg *= (1 - decay);
         curPsn *= (1 - decay);
       }
@@ -3843,7 +3838,6 @@ export class BattleSim {
         const pen = A.pen || 16;
         this._damage(hitEnemy, dmg, h, pen, 0, { pen });
         hitEnemy.stunUntil = Math.max(hitEnemy.stunUntil || 0, this.t + (A.stun || 1.0));
-        (hitEnemy.asst ||= {})[h.pid] = this.t;
         this.events.push({
           e: 'harpoon', pid: h.pid, side: h.side,
           sx: origX, sz: origZ, tx: hitEnemy.x, tz: hitEnemy.z,
@@ -4097,7 +4091,6 @@ export class BattleSim {
           if (b.add?.fx === 'stun' || b.add?.stunDur) {
             this._applyCC(b.owner, { fx: 'stun', dur: b.add.stunDur || b.add.dur || 1.0 }, e.x, e.z, 2);
           }
-          (e.asst ||= {})[b.owner.pid] = this.t;
         }
       }
     }
@@ -4116,7 +4109,6 @@ export class BattleSim {
         if (dist2d(fp.x, fp.z, e.x, e.z) <= fp.r + (e.r || 1)) {
           this._damage(e, fp.dps * dt, fp.owner, 10, 0, null);
           e.bleed = { dps: fp.dps * 0.4, until: this.t + 2.0, pen: 10, pid: fp.owner.pid };
-          (e.asst ||= {})[fp.owner.pid] = this.t;
         }
       }
     }
@@ -4435,7 +4427,6 @@ export class BattleSim {
           if (dist2d(p.x, p.z, e.x, e.z) <= p.r + (e.r || 1.0)) {
             this._damage(e, p.dps * dt, p.owner, 10, 0, null);
             this._applyCC(p.owner, { fx: 'slow', f: 1 - p.slow, dur: 0.6 }, e.x, e.z, 1);
-            (e.asst ||= {})[p.owner.pid] = this.t;
           }
         }
       }
@@ -4526,7 +4517,6 @@ export class BattleSim {
         const maxHp = e.maxHp || (e.hero ? 640 : (UNITS[e.kind]?.hp || 100));
         const tickDmg = maxHp * (inf.pctPerSec || 0.08) * dt;
         this._damage(e, tickDmg, inf.owner, 20, 0, null);
-        (e.asst ||= {})[inf.owner.pid] = this.t;
       }
     }
   }
@@ -5039,7 +5029,6 @@ export class BattleSim {
       if (t.hero && this._buffVal(t, 'ccImm') > 0) continue;   // 異常免疫(s12「滿天星座」)
       const d = dist2d(t.x, t.z, x, z);
       if (d > rr) continue;
-      if (h && h.hero) (t.asst ||= {})[h.pid] = this.t;   // 施加負面狀態 = 助攻貢獻
       if (ad.fx === 'stun') {
         t.stunUntil = Math.max(t.stunUntil || 0, this.t + (ad.dur || 1));
       } else if (ad.fx === 'slow') {
@@ -5440,8 +5429,11 @@ export class BattleSim {
         && dist2d(e.x, e.z, t.x, t.z) < 320);
       if (!near) dmg *= GAME.BASE_ARMOR_NEED_CREEP;
     }
-    // 助攻貢獻戳記(2026-07-17):英雄對敵方目標造成傷害 = 貢獻;_kill 結算時複驗時效/距離
-    if (by && by.hero && by.side !== t.side) (t.asst ||= {})[by.pid] = this.t;
+    // 助攻貢獻戳記:英雄(或其召喚物/代理,經 ownerPid 歸戶)對敵方目標造成傷害 = 貢獻;
+    // 純傷害制:永久有效直到目標陣亡結算,不驗 TTL/距離;陣亡目標早退(hp<=0)故陣亡後不記。
+    // 唯一戳記縫:其餘各處的純狀態/重複 asst 戳記已移除,全部匯流到此。
+    { const ap = by?.hero ? by : (by?.ownerPid ? this.heroes.get(by.ownerPid) : null);
+      if (ap?.hero && ap.side !== t.side) (t.asst ||= {})[ap.pid] = 1; }
     // 召喚僚機協同集火目標標記 (focusFire)
     if (by && by.side !== t.side) {
       const h = by.hero ? by : (by.ownerPid ? this.heroes.get(by.ownerPid) : null);
@@ -5737,17 +5729,14 @@ export class BattleSim {
       // 戰鬥分數(八軌升級的第二道門檻):擊殺 +4,對玩家(含電腦玩家)與砲塔 ×5;夾 MAX、只增不減。
       if (!t.neutral) by.kn = addBattleScore(by.kn, battleScoreGain(t.kind, !!t.hero));
     }
-    // 助攻(2026-07-17):曾造成傷害/負面狀態的其他英雄,賞金 × ASSIST.F。
-    // 「離開可視半徑 10 秒後不算」:tick 內的在場刷新讓「仍在半徑內」的戳記恆新;
-    // 戳記逾期 = 離開半徑(或陣亡)超過 TTL —— 此處只驗 TTL,不再看距離
-    // (擊殺當下看距離會讓已失效的貢獻因重返半徑復活,違反規格)。
+    // 助攻:曾對死者造成傷害的其他英雄,賞金 × ASSIST.F(1/4)。純傷害永久制:
+    // 只要 _damage 唯一縫蓋過戳記就算,陣亡結算不再驗 TTL/距離;擊殺者本人拿全額不重複領。
     if (t.asst) {
       const bounty = this._bounty(t);
       for (const pid in t.asst) {
         if (by && by.hero && pid === by.pid) continue;   // 擊殺者本人拿全額,不重複領助攻
         const a = this.heroes.get(pid);
         if (!a || a.side === t.side) continue;
-        if (this.t - t.asst[pid] > ECON.ASSIST.TTL_S) continue;
         // 戰鬥分數:助攻 +1(硬目標 ×5)。**與賞金脫鉤** —— 賞金 0 的目標(如砲塔)一樣算戰績,
         // 舊制的 `if (!bounty) break` 只該擋錢,擋到分數就是「拆塔的助攻不計分」。
         if (!t.neutral) a.kn = addBattleScore(a.kn, battleScoreGain(t.kind, !!t.hero, true));
@@ -6104,17 +6093,7 @@ export class BattleSim {
       const killer = (e.bleed.pid ? this.heroes.get(e.bleed.pid) : null) || e.bleed.attacker || null;
       this._damage(e, e.bleed.dps * dt, killer, e.bleed.pen);
     }
-    // 助攻貢獻「在場」刷新:貢獻者仍在自身可視半徑內 → 戳記刷新為現在
-    // ⇒「離開可視半徑 10 秒後不算」語意精確(TTL 從離開那一刻起算);
-    // 已失效(> TTL)不因重返半徑復活 —— 要重新造成傷害/負面狀態才算。
-    for (const e of this.ents.values()) {
-      if (!e.asst) continue;
-      for (const pid in e.asst) {
-        if (this.t - e.asst[pid] > ECON.ASSIST.TTL_S) continue;
-        const a = this.heroes.get(pid);
-        if (a && !a.dead && dist2d(a.x, a.z, e.x, e.z) <= (UNITS[a.kind].sight || 0)) e.asst[pid] = this.t;
-      }
-    }
+    // 助攻純傷害永久制:戳記直到 _kill 結算才清,不做在場刷新/TTL 逾期。
     this._tickSquads(dt);
     this._tickCasts(dt);
     this._tickDecoys(dt);
