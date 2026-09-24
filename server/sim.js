@@ -1653,36 +1653,70 @@ export class BattleSim {
    * 再垂直偏到路旁(避開落在兵線中央的 NPC 生成點)。同隊各機(bodyIdx)沿側向再錯開不疊在一起。
    */
   /**
-   * 超級重生點:地圖雙陣營砲火外的任意地點(超級大戰專用)。
-   * 在空氣牆內隨機取樣,落在全部砲塔/主堡射程 + 緩衝之外;兼避水沼/火場。
+   * 超級重生點:不可在雙陣營兵線/砲塔/主堡射程的125%以內,每次陣亡重生地都隨機不同。
    * 取樣全用 Math.random(重生點本就非確定性佈局,不進共享 rnd 序列)。
    */
-  _superSpawnPoint() {
+  _superSpawnPoint(pid = null) {
     const guns = [];
     for (const e of this.ents.values()) {
       if ((e.kind === 'tower' || e.kind === 'base') && e.hp > 0) guns.push(e);
     }
     for (const side of ['SWARM', 'STEEL']) {
       const bp = this.basePos[side];
-      if (bp && !guns.some((g) => g.kind === 'base' && g.side === side)) guns.push({ x: bp[0], z: bp[1], kind: 'base' });
+      if (bp && !guns.some((g) => g.kind === 'base' && g.side === side)) {
+        guns.push({ x: bp[0], z: bp[1], kind: 'base' });
+      }
     }
-    const R = (UNITS.tower?.range || 310) + 30;
+    const clearDist = (UNITS.tower?.range || 155) * 1.25;
+    const baseClearDist = Math.max(UNITS.base?.range || 0, UNITS.base?.guns?.range || 0, UNITS.tower?.range || 155) * 1.25;
     const b = this.bounds || { minX: -600, maxX: 600, minZ: -600, maxZ: 600 };
-    let best = null, bestD = -Infinity;
-    for (let k = 0; k < 60; k++) {
-      const x = b.minX + Math.random() * (b.maxX - b.minX);
-      const z = b.minZ + Math.random() * (b.maxZ - b.minZ);
+    const pad = 30;
+    const minX = b.minX + pad, maxX = b.maxX - pad;
+    const minZ = b.minZ + pad, maxZ = b.maxZ - pad;
+
+    const candidates = [];
+    for (let k = 0; k < 240; k++) {
+      const x = minX + Math.random() * (maxX - minX);
+      const z = minZ + Math.random() * (maxZ - minZ);
       if (this._terrainBlocked && this._terrainBlocked(x, z)) continue;
-      let d = Infinity;
-      for (const g of guns) d = Math.min(d, dist2d(x, z, g.x, g.z));
-      if (d > R) return [x, z];
-      if (d > bestD) { bestD = d; best = [x, z]; }
+      if ((this.hazBlockers || []).some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + 16)) continue;
+      const dl = this._distToLanes(x, z);
+      if (dl < clearDist) continue;
+      let gunOk = true;
+      for (const g of guns) {
+        const needD = g.kind === 'base' ? baseClearDist : clearDist;
+        if (dist2d(x, z, g.x, g.z) < needD) { gunOk = false; break; }
+      }
+      if (!gunOk) continue;
+      candidates.push([x, z]);
     }
-    return best || [(b.minX + b.maxX) / 2, (b.minZ + b.maxZ) / 2];
+
+    const last = pid ? (this._lastSuperSpawnByPid?.get(pid) || this._lastSuperSpawn) : this._lastSuperSpawn;
+    let pick = null;
+    if (candidates.length > 0) {
+      if (last) {
+        const cDiff = candidates.filter(([x, z]) => dist2d(x, z, last[0], last[1]) >= 80);
+        if (cDiff.length > 0) pick = cDiff[Math.floor(Math.random() * cDiff.length)];
+        else {
+          pick = candidates.reduce((best, cur) => {
+            const d = dist2d(cur[0], cur[1], last[0], last[1]);
+            return d > best.d ? { pt: cur, d } : best;
+          }, { pt: candidates[0], d: -1 }).pt;
+        }
+      } else {
+        pick = candidates[Math.floor(Math.random() * candidates.length)];
+      }
+    }
+    pick = pick || [(b.minX + b.maxX) / 2, (b.minZ + b.maxZ) / 2];
+    this._lastSuperSpawn = [pick[0], pick[1]];
+    if (pid) {
+      (this._lastSuperSpawnByPid ??= new Map()).set(pid, [pick[0], pick[1]]);
+    }
+    return pick;
   }
 
-  _spawnPoint(side, squadIdx = 0, bodyIdx = 0) {
-    if (isSuperSide(side)) return this._superSpawnPoint();
+  _spawnPoint(side, squadIdx = 0, bodyIdx = 0, pid = null) {
+    if (isSuperSide(side)) return this._superSpawnPoint(pid);
     const [bx, bz] = this.basePos[side];
     const lanes = this.lanes.filter((p) => p.length >= 2);
     if (!lanes.length) return [bx + squadIdx * 14 + bodyIdx * 8, bz + squadIdx * 8 + bodyIdx * 5];
@@ -1770,7 +1804,7 @@ export class BattleSim {
     for (let i = 0; i < n; i++) {
       const [ox, oz] = hold
         ? [hold.x + bossSlotOff(i) , hold.z]          // BOSS:整組就位在據點上(小隊多架則橫向錯開)
-        : this._spawnPoint(side, idx, i);
+        : this._spawnPoint(side, idx, i, pid);
       const b = this._add({
         kind, side, pid, ch, si: i, spawnIdx: idx,
         x: ox, z: oz, y: 0, ry: 0, rx: 0,
@@ -6221,7 +6255,7 @@ export class BattleSim {
     b.lastHitAt = -99;
     b.wet = 0; b.wetT = this.t;   // 重生清環境滯留(下個 pos 回報重新判定)
     b._trail = null;              // 重生是瞬移:留著上一條命的軌跡會讓落點閘門回推到主堡外
-    const [sx, sz] = this._spawnPoint(b.side, b.spawnIdx || 0, b.si || 0);
+    const [sx, sz] = this._spawnPoint(b.side, b.spawnIdx || 0, b.si || 0, b.pid);
     b.x = sx; b.z = sz;
     // 無人機重生落在離地下限(FLIGHT.HOVER_M),不直接放到 SQUAD.REGROUP_ALT 那個(三機小隊時代
     // 遺留的)巡航高度 —— 重生動力補滿是為了讓玩家/bot 自己爬升,不是省了這段爬升(單一縫:
