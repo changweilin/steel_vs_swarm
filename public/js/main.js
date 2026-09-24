@@ -40,6 +40,7 @@ import {
   createShowcaseFallbackTerrain, GAME_SHOWCASE_SITES, showcaseTerrainConfig,
 } from './showcase.js';
 import { VENUES, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
+import { GEN_BIOMES, MAX_WATER_WET, mixedMapConfig, randomMapConfig, describeGen, biomeName } from './mapgen.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { talkOf, stageKey } from './storytalk.js';
 // 劇情畫面的標記唯一縫 —— 遊戲本體與本地故事書(tools/story_book)共用同一份,見 storyui.js 檔頭
@@ -165,6 +166,7 @@ const app = {
   storySide: 'STEEL',   // 目前瀏覽的戰線陣營(協約 / 同盟)
   storyPilot: null,     // 簡報中選定的出戰主駕
   venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
+  mapGenMode: 'preset', // 建圖模式:preset(預設/自訂)|mixed(混合)|random(隨機)
   dlg: null,            // Dialogue(劇情戰役對話演出層;與 battle 同生死)
   battle: null,         // BattleClient
   audio: null,          // GameAudio(app 層,跨戰局存活;BGM 大廳↔戰場切換)
@@ -410,6 +412,7 @@ async function enterMapBuilder() {
       confirmReady: (cfg) => {
         app.favCfg = null;
         app.venueSel = null;
+        if (cfg) { app.mapGenMode = 'preset'; syncMapGenModeRow(); }
         $('saveFavBtn').disabled = !cfg;
         if (cfg) {
           $('mapStatus').innerHTML =
@@ -423,6 +426,7 @@ async function enterMapBuilder() {
     app.mapSel.setTeamSize(app.teamSize);
     renderTeamSize();
     renderVenues();
+    initMapGenUI();
     setTimeout(() => app.mapSel.map.invalidateSize(), 60);
   }
   $('mapStatus').textContent = '選一個預設場地,或在地圖上點選你的蜂群主堡位置。';
@@ -452,6 +456,11 @@ function setTeamSize(n) {
   syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
   // 預設場地已選:換規模直接重算(預先計算是確定性幾何,瞬間完成)
   if (app.venueSel) selectVenue(app.venueSel);
+  // 擴充模式已生成:換規模依同條件重生成(種子/來源不變,只改兵線數與尺度)
+  else if (app.favCfg?.gen && app.mapSel) {
+    if (app.mapGenMode === 'mixed') genMixedFromUI();
+    else if (app.mapGenMode === 'random') genRandomFromUI();
+  }
 }
 
 function updateTsInfo() { $('tsInfo').textContent = tsInfoText(); }
@@ -572,6 +581,8 @@ function selectVenue(v) {
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
   app.venueSel = v;
   app.favCfg = cfg;
+  app.mapGenMode = 'preset';
+  syncMapGenModeRow();
   savePrefs({ lastVenueId: v.id });
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,存入最愛後即可開房。` +
@@ -579,6 +590,164 @@ function selectVenue(v) {
     `<div class="venue-desc">${esc(venueBrief(v, app.teamSize))}</div>`;
   $('mapProgressBar').style.width = '100%';
   $('saveFavBtn').disabled = false;
+}
+
+/* ================= 擴充建立模式:混合地圖 / 隨機地圖 ================= */
+// 兩模式皆輸出標準 battleConfig(走既有 showConfig 預覽 + 存入最愛 + 伺服器驗證管線)。
+// 混合:勾選地點等權混合,滑桿有值則覆蓋 mix(夾限走 mapgen 唯一縫);隨機:全由種子推導。
+
+/** 建圖模式分段鈕同步(唯一出口) */
+function syncMapGenModeRow() {
+  for (const b of document.querySelectorAll('#mapGenModeRow .segb')) {
+    b.classList.toggle('on', b.dataset.gmode === app.mapGenMode);
+  }
+  const m = app.mapGenMode;
+  if ($('mixedPanel')) $('mixedPanel').style.display = m === 'mixed' ? '' : 'none';
+  if ($('randomPanel')) $('randomPanel').style.display = m === 'random' ? '' : 'none';
+  if ($('presetPanel')) $('presetPanel').style.display = m === 'preset' ? '' : 'none';
+}
+
+/** 生成結果走既有預覽+存檔管線(與 selectVenue 同出口) */
+function acceptGenCfg(cfg) {
+  if (!cfg) { toast('生成失敗,請調整來源或種子後重試'); return; }
+  warmModels();
+  app.mapSel?.showConfig(cfg);
+  app.venueSel = null;
+  app.favCfg = cfg;
+  $('mapStatus').innerHTML =
+    `📍 <b>${esc(cfg.placeName)}</b>:${esc(describeGen(cfg))} — 存入最愛後即可開房。`;
+  $('mapProgressBar').style.width = '100%';
+  $('saveFavBtn').disabled = false;
+}
+
+/** 混合來源勾選格(預設場地 18 張,等權) */
+function renderMixedSrcGrid() {
+  const grid = $('mixedSrcGrid');
+  if (!grid || grid.children.length) return;
+  for (const v of PRESET_VENUES()) {
+    const lab = document.createElement('label');
+    lab.className = 'chk venue-btn';
+    lab.innerHTML = `<input type="checkbox" data-vid="${v.id}"> ${esc(v.country || '')} ${esc(v.name)} <span class="venue-type">${esc(v.type)}</span>`;
+    grid.appendChild(lab);
+  }
+  // 預設勾兩處不同主地形,首屏即有混合感
+  const boxes = [...grid.querySelectorAll('input[type="checkbox"]')];
+  if (boxes[0]) boxes[0].checked = true;
+  const other = boxes.find((b) => {
+    const v = VENUES.find((x) => x.id === b.dataset.vid);
+    const f = VENUES.find((x) => x.id === boxes[0].dataset.vid);
+    return v && f && (v.base || v.type) !== (f.base || f.type);
+  });
+  if (other) other.checked = true;
+}
+
+/** 地貌滑桿(全 0 = 依勾選地點自動混合) */
+function renderMixedMixRows() {
+  const wrap = $('mixedMixRows');
+  if (!wrap || wrap.children.length) return;
+  for (const k of GEN_BIOMES) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<span style="min-width:3em">${biomeName(k)}</span>`
+      + `<input type="range" min="0" max="100" value="0" data-biome="${k}" style="flex:1">`
+      + `<span data-biome-val="${k}" style="min-width:3em;text-align:right">自動</span>`;
+    wrap.appendChild(row);
+  }
+  wrap.addEventListener('input', () => {
+    const vals = readMixedSliders();
+    for (const k of GEN_BIOMES) {
+      const el = wrap.querySelector(`[data-biome-val="${k}"]`);
+      if (el) el.textContent = vals ? `${Math.round(vals[k] * 100)}%` : '自動';
+    }
+    const ww = vals ? (vals.water + vals.wet) : 0;
+    if ($('mixedWetHint')) {
+      $('mixedWetHint').textContent = !vals ? ''
+        : ww > MAX_WATER_WET ? `⚠️ 水域+沼澤 ${(ww * 100).toFixed(0)}% 超過 50%,生成時自動壓回` : `水域+沼澤 ${(ww * 100).toFixed(0)}%`;
+    }
+  });
+}
+
+/** 讀滑桿:全 0 回 null(自動混合),否則回正規化 mix */
+function readMixedSliders() {
+  const wrap = $('mixedMixRows');
+  if (!wrap) return null;
+  const raw = {};
+  let sum = 0;
+  for (const k of GEN_BIOMES) {
+    const r = wrap.querySelector(`input[data-biome="${k}"]`);
+    raw[k] = r ? Number(r.value) / 100 : 0;
+    sum += raw[k];
+  }
+  if (!(sum > 0)) return null;
+  for (const k of GEN_BIOMES) raw[k] /= sum;
+  return raw;
+}
+
+function mixedSourcesFromUI() {
+  return [...document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]:checked')]
+    .map((b) => VENUES.find((x) => x.id === b.dataset.vid))
+    .filter(Boolean)
+    .map((v) => ({ name: v.name, ll: v.ll, mix: v.mix, ampF: v.ampF ?? 1, weight: 1 }));
+}
+
+function genMixedFromUI() {
+  const sources = mixedSourcesFromUI();
+  if (!sources.length) { toast('請至少勾選一處混合來源'); return; }
+  acceptGenCfg(mixedMapConfig(sources, { teamSize: app.teamSize, mixOverride: readMixedSliders() }));
+}
+
+function genRandomFromUI() {
+  const raw = ($('randomSeedInput')?.value || '').trim();
+  const seed = /^\d+$/.test(raw) ? Number(raw) >>> 0 : (Math.random() * 4294967296) >>> 0;
+  if ($('randomSeedInput')) $('randomSeedInput').value = String(seed);
+  const cfg = randomMapConfig({ teamSize: app.teamSize, seed, anchors: VENUES.map((v) => ({ ll: v.ll })) });
+  acceptGenCfg(cfg);
+  if (cfg && $('randomHint')) {
+    $('randomHint').textContent = `中心 ${cfg.center.lat.toFixed(4)}, ${cfg.center.lng.toFixed(4)} ・ 種子 ${seed} ・ 同一種子跨端同一張圖`;
+  }
+}
+
+/** 建圖模式 UI(enterMapBuilder 內呼叫,重複進入不重建) */
+function initMapGenUI() {
+  if (initMapGenUI._done) return;
+  initMapGenUI._done = true;
+  document.querySelectorAll('#mapGenModeRow .segb').forEach((b) => {
+    b.onclick = () => {
+      app.mapGenMode = b.dataset.gmode;
+      app.favCfg = null;
+      app.venueSel = null;
+      app.mapSel?.reset();
+      $('saveFavBtn').disabled = true;
+      syncMapGenModeRow();
+      syncVenueTips();
+      $('mapStatus').textContent = app.mapGenMode === 'mixed'
+        ? '勾選兩處以上地點,按「生成混合地圖」。'
+        : app.mapGenMode === 'random' ? '按「生成隨機地圖」(種子空白即隨機)。'
+        : '選一個預設場地,或在地圖上點選蜂群主堡位置。';
+    };
+  });
+  renderMixedSrcGrid();
+  renderMixedMixRows();
+  $('mixedGenBtn')?.addEventListener('click', genMixedFromUI);
+  $('mixedPick3Btn')?.addEventListener('click', () => {
+    const boxes = [...document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]')];
+    for (const b of boxes) b.checked = false;
+    for (let i = boxes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [boxes[i], boxes[j]] = [boxes[j], boxes[i]];
+    }
+    boxes.slice(0, 3).forEach((b) => { b.checked = true; });
+    genMixedFromUI();
+  });
+  $('mixedClearBtn')?.addEventListener('click', () => {
+    for (const b of document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]')) b.checked = false;
+  });
+  $('randomGenBtn')?.addEventListener('click', genRandomFromUI);
+  $('randomDiceBtn')?.addEventListener('click', () => {
+    if ($('randomSeedInput')) $('randomSeedInput').value = String((Math.random() * 4294967296) >>> 0);
+    genRandomFromUI();
+  });
+  syncMapGenModeRow();
 }
 
 /** 開戰時刻畫面:我的最愛列表(選一個 → 可建立戰區) */

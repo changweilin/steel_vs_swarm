@@ -150,6 +150,40 @@
     </div>
 
     <div class="setup-sec">
+      <div class="setup-label">建立模式</div>
+      <div class="row seg" id="mapGenModeRow">
+        <button class="segb on" data-gmode="preset">預設/自訂</button>
+        <button class="segb" data-gmode="mixed">混合地圖</button>
+        <button class="segb" data-gmode="random">隨機地圖</button>
+      </div>
+    </div>
+
+    <div class="setup-sec" id="mixedPanel" style="display:none">
+      <div class="setup-label">混合地圖 — 勾選地點(等權混合)或隨機挑選,再以滑桿指定地貌比例(水域+沼澤 ≤ 50%)</div>
+      <div class="venue-grid" id="mixedSrcGrid"></div>
+      <div class="row">
+        <button id="mixedPick3Btn" class="btn small">🎲 隨機挑 3 處</button>
+        <button id="mixedClearBtn" class="btn small">清空</button>
+      </div>
+      <div class="setup-label">地貌比例(留空 = 依勾選地點自動混合)</div>
+      <div id="mixedMixRows"></div>
+      <div class="setup-info" id="mixedWetHint"></div>
+      <div class="row">
+        <button id="mixedGenBtn" class="btn big swarm-btn">⚙ 生成混合地圖</button>
+      </div>
+    </div>
+
+    <div class="setup-sec" id="randomPanel" style="display:none">
+      <div class="setup-label">隨機地圖 — 全部資訊由種子生成(學習現實地圖分佈,但與任一現實地圖皆不同)</div>
+      <div class="row">
+        <input id="randomSeedInput" placeholder="種子(空白=隨機)" maxlength="10" inputmode="numeric">
+        <button id="randomDiceBtn" class="btn small">🎲 重擲</button>
+        <button id="randomGenBtn" class="btn big swarm-btn">⚙ 生成隨機地圖</button>
+      </div>
+      <div class="setup-info" id="randomHint"></div>
+    </div>
+
+    <div class="setup-sec" id="presetPanel">
       <div class="setup-label">預設場地(路線/圖資已預先算好,即選即用)或點地圖自訂(真實道路掃描)</div>
       <div class="venue-grid" id="venueGrid"></div>
     </div>

@@ -19,6 +19,7 @@ import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ, xzToLL } from '../public/js/data.js';
+import { procReliefAt, sanitizeProcRelief } from '../public/js/mapgen.js';
 import { PED_PLAN, isPedestrianBridge, isPedestrianWay } from '../public/js/pedestrian.js';
 
 export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -274,6 +275,8 @@ export function buildHeightField(cfg, bbox, sampleElev) {
     }
   }
   const amp = TERRAIN.AMP * (1 - Math.min(1, cfg.venue?.mix?.urban || 0) * TERRAIN.AMP_URBAN_F);
+  // 程序化起伏鏡射(terrain.js 同段;mapgen.js 唯一實作,此處只轉呼)
+  const proc = sanitizeProcRelief(cfg.procRelief);
   if (segs.length) {
     let meanH = 0;
     for (let k = 0; k < N * N; k++) meanH += heights[k];
@@ -289,6 +292,7 @@ export function buildHeightField(cfg, bbox, sampleElev) {
         for (const [bx, bz] of bases) db = Math.min(db, Math.hypot(x - bx, z - bz));
         if (db < BR) f *= smooth01((db - BR * 0.4) / (BR * 0.6));
         if (f > 0) heights[i * N + j] += (heights[i * N + j] - meanH) * amp * f;
+        if (proc && f > 0) heights[i * N + j] += procReliefAt(proc.seed, x, z) * proc.amp * f;
       }
     }
   }

@@ -20,6 +20,9 @@ import { CTRL_MODES, DEFAULT_CTRL_MODE } from '../public/js/ctrlmode.js';
 // (在這裡照抄一組上限就是第二份會過期的規格)。該檔零 import、零模組級狀態 ⇒
 // Node 與瀏覽器(單機)都載得起來,與 data.js 同樣走鏡射佈局的相對路徑。
 import { sanitizeOsmRelay, osmRelayKey } from '../public/js/osmrelay.js';
+// 擴充地圖生成縫(零 Node API,單機瀏覽器共用):mix 夾限唯一真相住 mapgen,
+// 驗證端只讀結果,不重寫公式。
+import { MAX_WATER_WET, sanitizeProcRelief } from '../public/js/mapgen.js';
 
 // 兵線(lat/lng)→ 遊戲公尺(原點任取,towerLayoutAudit 只用相對距離)。與 mapSelect / 烘焙同一換算。
 const EARTH_M = 6371000, SC_GAME = 1 / MAPGEO.REAL_SCALE;
@@ -67,6 +70,12 @@ export function validateBattleConfig(cfg, teamSize) {
   if (!game || !towerLayoutAudit(game, mapA).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
   // 規則(權威把關):同一 L 內兵線互不接觸/交叉(任兩線中段最近距離須 ≥ 20m 真實;含立體交叉亦禁)
   if (!laneSeparationAudit(game).ok) return '此地圖的兵線互相接觸或交叉(任兩線最近距離須 ≥ 20m),請改選其他推薦點或位置';
+  // 規則(權威把關):地貌水域+沼澤 ≤ 50%(混合/隨機地圖夾限;門檻住 mapgen.js MAX_WATER_WET)
+  if (cfg.venue && cfg.venue.mix) {
+    const m = cfg.venue.mix;
+    const ww = (Number(m.water) || 0) + (Number(m.wet) || 0);
+    if (!(ww <= MAX_WATER_WET + 1e-9)) return `此地圖水域+沼澤占比 ${(ww * 100).toFixed(0)}% 超過上限 50%,請重新生成`;
+  }
   return null;
   } catch {
     return '戰場設定格式異常,請重新建立/選擇地圖';
@@ -413,6 +422,10 @@ export class RoomHub {
           // 超級大戰(單人第三方)正規化成布林;與劇情戰役互斥(劇情有固定劇本陣容)。
           // 驗證之前正規化,理由同 defSide(見上)。舊 `cfg.mini` 已退場,不再解讀。
           cfg.super = !!cfg.super && !cfg.defSide;
+          // 擴充地圖模式正規化:只有 mixed/random 兩種是合法值,其餘一律 null(舊存檔無此欄);
+          // 程序化起伏只留淨化後的 {seed,amp}(振幅上限住 mapgen,防自訂封包灌爆地形)。
+          cfg.gen = (cfg.gen?.mode === 'mixed' || cfg.gen?.mode === 'random') ? cfg.gen : null;
+          cfg.procRelief = sanitizeProcRelief(cfg.procRelief);
         }
         const err = validateBattleConfig(cfg, teamSize);
         if (err) { send({ t: 'error', msg: err }); return; }

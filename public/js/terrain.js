@@ -14,6 +14,7 @@ import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
 // MUST NOT 在此另讀一次 localStorage(第二份預設值遲早分家;biomes.js 的同一條註)。
 import { lowPower } from './mobile.js';
 import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, siteCPs, mapArg, curveMaxEdgeM, edgeBufferM, edgeWallInsetM, isMarineWater } from './data.js';
+import { procReliefAt, sanitizeProcRelief } from './mapgen.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
@@ -413,6 +414,9 @@ export async function buildTerrain(cfg, onProgress) {
     // (venues.js variantAmpF 推導,隨 battleConfig 廣播);缺席恆 1 = 逐位元同舊制。
     const amp = TERRAIN.AMP * (1 - Math.min(1, cfg.venue?.mix?.urban || 0) * TERRAIN.AMP_URBAN_F)
       * (Number.isFinite(cfg.venue?.ampF) ? cfg.venue.ampF : 1);
+    // 程序化起伏(混合/隨機地圖的等高線混合層):座標雜湊值雜訊,零共享 rnd 消耗,
+    // 與 AMP 共用走廊/基座壓平係數 f ⇒ 兵線走廊與主堡基座恆不受擾動;無 procRelief 恆 null = 逐位元同舊制。
+    const proc = sanitizeProcRelief(cfg.procRelief);
     if (segs.length) {
       let meanH = 0;
       for (let k = 0; k < N * N; k++) meanH += heights[k];
@@ -430,6 +434,7 @@ export async function buildTerrain(cfg, onProgress) {
           if (db < BR) f *= smooth01((db - BR * 0.4) / (BR * 0.6));   // 基座淨空壓平
           const k = i * N + j;
           if (f > 0) heights[k] += (heights[k] - meanH) * amp * f;
+          if (proc && f > 0) heights[k] += procReliefAt(proc.seed, x, z) * proc.amp * f;
           if (heights[k] < minH) minH = heights[k];
           if (heights[k] > maxH) maxH = heights[k];
         }
