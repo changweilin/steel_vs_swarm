@@ -38,7 +38,7 @@ import {
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
   shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn, GUIDED_LAUNCH, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchZeroPitchM, guidedLaunchDist,
   HIGH_SUP, highSupF, altTier, altDhMax,
-  inWeaponRange, weaponMaxHoriz,
+  inWeaponRange, weaponMaxHoriz, isSuperSide, isThirdSide, bossScaleF, superScaleF,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 import { readSrc } from './audit_src.mjs';
@@ -314,7 +314,8 @@ const THREE = { Vector3: V3 };
 const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
 const RANGE_GLOW = new Function(`return ${/const RANGE_GLOW = (\{[^}]*\});/.exec(G)[1]}`)();
 const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf, shotV0,
-  aoeClass, blastFalloff, fanConeHalf, lanceR, LANCE, inWeaponRange, weaponMaxHoriz };
+  aoeClass, blastFalloff, fanConeHalf, lanceR, LANCE, inWeaponRange, weaponMaxHoriz, isSuperSide, isThirdSide,
+  bossScaleF, superScaleF };
 const M = (n) => pickMethod(n, G, env);
 // 牆 = 沿 +X 的一道垂直面(擋住 x ≥ w.x 且高度低於 w.top 的射線);回傳截斷距離
 const mkWalls = (walls) => (ax, ay, az, bx, by, bz) => {
@@ -514,6 +515,7 @@ sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)')
     _shotWarn: M('_shotWarn'),
     _inShotRange: M('_inShotRange'),
     _lancePierced: M('_lancePierced'),
+    _isFoeEnt: M('_isFoeEnt'),
     _reachable: M('_reachable'),
     _shotVictims: M('_shotVictims'),
     _shotV0: M('_shotV0'), _lobSolve: M('_lobSolve'), _lobVel: M('_lobVel'),

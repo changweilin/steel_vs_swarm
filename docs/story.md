@@ -16,11 +16,9 @@
 ## 序幕:四百八十美元(2022–2025)
 
 ````carousel
-![中立視角 (雙葬禮)](../public/assets/story/story_prologue.png)
+![自由蜂群同盟視角 (林翎與樫村守衛 101)](../public/assets/story/story_ch1_swarm.png)
 <!-- slide -->
-![自由蜂群同盟視角 (卡特琳娜修復飛行器)](../public/assets/story/story_prologue_swarm.png)
-<!-- slide -->
-![大陸鋼鐵協約視角 (格羅莫夫在雨中哀悼)](../public/assets/story/story_prologue_steel.png)
+![大陸鋼鐵協約視角 (沈鶴鳴與陸小川突擊蜂巢)](../public/assets/story/story_ch1_steel.png)
 ````
 
 2022 年,東歐戰爭爆發,與我們的時空一模一樣——直到兩場葬禮讓它岔了出去。
@@ -47,11 +45,9 @@
 ## 第一幕:車庫與兵工廠(2026–2029)
 
 ````carousel
-![中立視角 (首次王牌對決)](../public/assets/story/story_act1.png)
+![自由蜂群同盟視角 (河瑟琪與卡佳 FPV 跳頻反制)](../public/assets/story/story_ch2_swarm.png)
 <!-- slide -->
-![自由蜂群同盟視角 (FPV 操縱席的專注)](../public/assets/story/story_act1_swarm.png)
-<!-- slide -->
-![大陸鋼鐵協約視角 (灰犬機甲座艙)](../public/assets/story/story_act1_steel.png)
+![大陸鋼鐵協約視角 (韓雪與李正赫澀谷雨夜電戰)](../public/assets/story/story_ch2_steel.png)
 ````
 
 2026 年黑海事件、2027 年東亞第二戰線與以伊開戰之後(詳見 characters.md 時間線),戰爭全球化。
@@ -84,11 +80,9 @@
 ## 第二幕:第二戰線(2029–2030)
 
 ````carousel
-![中立視角 (頻譜攻防)](../public/assets/story/story_act2.png)
+![自由蜂群同盟視角 (沙哈與埃米爾吉薩星圖防空)](../public/assets/story/story_ch3_swarm.png)
 <!-- slide -->
-![自由蜂群同盟視角 (白噪音卡佳密碼解譯)](../public/assets/story/story_act2_swarm.png)
-<!-- slide -->
-![大陸鋼鐵協約視角 (電戰員韓雪低聲吟唱)](../public/assets/story/story_act2_steel.png)
+![大陸鋼鐵協約視角 (達留什與蕾拉吉薩突防演算)](../public/assets/story/story_ch3_steel.png)
 ````
 
 **產線之夜**:台海戰事波及新竹的那一晚,林翎(S-03)抱著一盒晶圓進掩體,
@@ -122,11 +116,9 @@
 ## 第三幕:膝蓋戰爭(2030)
 
 ````carousel
-![中立視角 (薇拉與糖紙)](../public/assets/story/story_act3.png)
+![自由蜂群同盟視角 (哈特曼與惠特洛克黑森林伏擊)](../public/assets/story/story_ch4_swarm.png)
 <!-- slide -->
-![自由蜂群同盟視角 (哈特曼推演關節缺陷)](../public/assets/story/story_act3_swarm.png)
-<!-- slide -->
-![大陸鋼鐵協約視角 (沈鶴鳴於廠房抗議)](../public/assets/story/story_act3_steel.png)
+![大陸鋼鐵協約視角 (薇拉與老雪茄黑森林推進)](../public/assets/story/story_ch4_steel.png)
 ````
 
 維爾納・哈特曼(S-11)出庭作證自家公司的關節模組流入協約,隨後叛逃同盟。
@@ -155,11 +147,9 @@
 ## 第四幕:攔截經濟學(2030 冬)
 
 ````carousel
-![中立視角 (攔截之弧與詩)](../public/assets/story/story_act4.png)
+![自由蜂群同盟視角 (悼歌瑪雅與聖燭佐菲亞雪夜攔截)](../public/assets/story/story_ch5_swarm.png)
 <!-- slide -->
-![自由蜂群同盟視角 (沙哈書寫攔截矩陣)](../public/assets/story/story_act4_swarm.png)
-<!-- slide -->
-![大陸鋼鐵協約視角 (侯賽尼演算突防軌跡)](../public/assets/story/story_act4_steel.png)
+![大陸鋼鐵協約視角 (大鍋與螢火曼哈頓雪夜突入)](../public/assets/story/story_ch5_steel.png)
 ````
 
 埃坦・沙哈(S-07)與蕾拉・侯賽尼(T-10)的演算法軍備競賽白熱化:
@@ -186,11 +176,9 @@
 ## 終幕:信使日(2031 春)
 
 ````carousel
-![中立視角 (六分鐘的和平)](../public/assets/story/story_final.png)
+![自由蜂群同盟視角 (蜂后卡特琳娜與鐵匠塔拉斯終樂章)](../public/assets/story/story_ch6_swarm.png)
 <!-- slide -->
-![自由蜂群同盟視角 (悼歌瑪雅捨身遮擋)](../public/assets/story/story_final_swarm.png)
-<!-- slide -->
-![大陸鋼鐵協約視角 (李正赫狙擊哨兵機)](../public/assets/story/story_final_steel.png)
+![大陸鋼鐵協約視角 (冬將軍格羅莫夫與灰雁雪崩指令)](../public/assets/story/story_ch6_steel.png)
 ````
 
 協約在北線試驗部署新型自主火控「**哨兵-9**」——交戰迴路裡沒有人,只有模型。
