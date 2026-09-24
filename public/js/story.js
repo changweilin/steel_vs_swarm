@@ -42,7 +42,7 @@ export const STORY = [
     env: { season: 'summer', time: 'day', weather: 'clear' },
     STEEL: {
       title: '星火・信義', heroes: ['t06', 't05'], mercs: ['m01'],
-      img: 'assets/story/story_prologue_steel.png',
+      img: 'assets/story/story_ch1_steel.png',
       objective: '摧毀蜂群設在信義計畫區的前線主堡。',
       intro: `信義計畫區的玻璃帷幕在夏天的正午亮得刺眼,反光把整片天空都熔成一面晃動的鏡子。蜂群把牠們在東亞的第一座蜂巢,就架在 101 的腳下——四十架、六十架、數不清的六旋翼從帷幕的反光裡湧出來,像有人打翻了一整窩胡蜂。牠們不追求單機的兇猛,只追求「多」:多到雷達的告警聲連成一片、多到鋼鐵的每一發砲彈都像打進一片流沙。指揮部的判斷很簡單,簡單到近乎殘忍:趁火還小,踩熄它。
 
@@ -58,7 +58,7 @@ export const STORY = [
     },
     SWARM: {
       title: '玻璃帷幕的蜂巢', heroes: ['s03', 's04'], mercs: ['m05'],
-      img: 'assets/story/story_prologue_swarm.png',
+      img: 'assets/story/story_ch1_swarm.png',
       objective: '守住信義的蜂巢,把協約的登陸機甲擋回灘頭。',
       intro: `台海戰線開打那天,林翎正在新竹的晶圓廠產線值夜班。警報響起時,她做的第一件事不是逃,而是把整條反干擾晶片的設計思路,一頁一頁拷進一個隨身硬碟。撤離、技術交換、赴歐,她帶著那個硬碟繞了半個地球,又繞了回來——回到這片她長大的天空底下。信義計畫區的蜂巢是同盟在東亞的第一個立足點,而替它守住的,正是把「這是我今年的 KPI」寫在懸賞令旁邊的那個女人。
 
@@ -79,7 +79,7 @@ export const STORY = [
     env: { season: 'autumn', time: 'night', weather: 'heavy_rain' },
     STEEL: {
       title: '霓虹肅聲', heroes: ['t08', 't07'], mercs: ['m02'],
-      img: 'assets/story/story_act2_steel.png',
+      img: 'assets/story/story_ch2_steel.png',
       objective: '在雨夜巷戰中拔除蜂群的東亞節點主堡。',
       intro: `澀谷十字路口的雨夜裡,整片電子看板都成了蜂群的誘餌。協約派來拔除這個東亞節點的,是兩個北韓人。
 
@@ -95,7 +95,7 @@ export const STORY = [
     },
     SWARM: {
       title: '跳頻搖籃曲', heroes: ['s05', 's10'], mercs: ['m06'],
-      img: 'assets/story/story_act2_swarm.png',
+      img: 'assets/story/story_ch2_swarm.png',
       objective: '用整片霓虹當掩護,唱垮協約的電戰,守住東亞節點。',
       intro: `澀谷的雨夜,是為速度而生的舞台。
 
@@ -116,7 +116,7 @@ export const STORY = [
     env: { season: 'summer', time: 'dusk', weather: 'clear' },
     STEEL: {
       title: '黃沙證明', heroes: ['t09', 't10'], mercs: ['m03'],
-      img: 'assets/story/story_act1_steel.png',
+      img: 'assets/story/story_ch3_steel.png',
       objective: '突破沙漠防線,摧毀蜂群的補給樞紐主堡。',
       intro: `蜂群把補給樞紐藏進了金字塔群的陰影裡,而協約派去拆掉它的,是兩個伊朗人。
 
@@ -132,7 +132,7 @@ export const STORY = [
     },
     SWARM: {
       title: '補給線的星圖', heroes: ['s07', 's12'], mercs: ['m07'],
-      img: 'assets/story/story_act1_swarm.png',
+      img: 'assets/story/story_ch3_swarm.png',
       objective: '守住沙漠補給樞紐,掩護蜂群的補給線。',
       intro: `吉薩的補給樞紐,是蜂群往沙漠深處退卻的最後一條生命線。守著它的,是一個把攔截當數學的以色列人,和一個把家背在身上的克里米亞韃靼人。
 
@@ -153,7 +153,7 @@ export const STORY = [
     env: { season: 'autumn', time: 'day', weather: 'fog' },
     STEEL: {
       title: '濃霧與關節', heroes: ['t02', 't11'], mercs: ['m04'],
-      img: 'assets/story/story_act3_steel.png',
+      img: 'assets/story/story_ch4_steel.png',
       objective: '在濃霧密林中殲滅蜂群伏兵,拔除其藏匿主堡。',
       intro: `黑森林的濃霧裡,誰先看見誰,誰就活。協約派進林子的,是一老一少兩個極端。
 
@@ -169,7 +169,7 @@ export const STORY = [
     },
     SWARM: {
       title: '錶芯不休', heroes: ['s11', 's09'], mercs: ['m08'],
-      img: 'assets/story/story_act3_swarm.png',
+      img: 'assets/story/story_ch4_swarm.png',
       objective: '在濃霧中殲滅協約獵殺組,守住蜂群的藏匿主堡。',
       intro: `黑森林是德國人的主場,而替蜂群守著這片濃霧的,正是一個德國老工程師,和一個把打仗當狩獵的澳洲牧場主。
 
@@ -190,7 +190,7 @@ export const STORY = [
     env: { season: 'winter', time: 'night', weather: 'snow' },
     STEEL: {
       title: '鋼鐵之心', heroes: ['t03', 't12'], mercs: ['m05'],
-      img: 'assets/story/story_act4_steel.png',
+      img: 'assets/story/story_ch5_steel.png',
       objective: '在雪夜市街突入蜂群主控核心,摧毀其中樞主堡。',
       intro: `蜂群的主控核心藏在曼哈頓的摩天樓陣裡。雪夜,協約的突擊隊踹開了街區。
 
@@ -206,7 +206,7 @@ export const STORY = [
     },
     SWARM: {
       title: '留白的攔截', heroes: ['s06', 's08'], mercs: ['m01'],
-      img: 'assets/story/story_act4_swarm.png',
+      img: 'assets/story/story_ch5_swarm.png',
       objective: '守住蜂群的西半球主控核心,擋下協約的突入。',
       intro: `曼哈頓的主控核心是蜂群在西半球的心臟,而替它擋下每一枚來襲的,是一個只防守、不進攻的美國人,和一個一手縫補、一手報靶的波蘭修女。
 
@@ -227,7 +227,7 @@ export const STORY = [
     env: { season: 'spring', time: 'dusk', weather: 'clear' },
     STEEL: {
       title: '王之詔令', heroes: ['t01', 't04'], mercs: ['m06', 'm07', 'm08'],
-      img: 'assets/story/story_final_steel.png',
+      img: 'assets/story/story_ch6_steel.png',
       objective: '擊潰蜂群主力,摧毀其設於塞瓦斯托波爾灣畔的女王巢——終結戰爭。',
       intro: `海風有鹽味。從台北到克里米亞,這場征討繞了大半個地球,最後把所有人帶回了它開始的地方——黑海北岸的這座半島,這座用白色石灰岩砌了兩百年、被圍過兩次也守過兩次的要塞港市。蜂群把最後一座女王巢架在灣畔的船塢區,傾巢而出,暮色連著海面一起黑成一片。
 
@@ -245,7 +245,7 @@ export const STORY = [
     },
     SWARM: {
       title: '終樂章', heroes: ['s01', 's02'], mercs: ['m02', 'm03', 'm04'],
-      img: 'assets/story/story_final_swarm.png',
+      img: 'assets/story/story_ch6_swarm.png',
       objective: '擋下協約主力,守住塞瓦斯托波爾灣畔的女王巢——終結戰爭。',
       intro: `克里米亞是同盟的終點,也是這一切的起點。從台北一路打回來,蜂群的訊號退到無可再退,終於在這座半島的灣畔停住:牠們的女王巢就架在船塢區的門式吊車之間,今夜傾巢而出,做最後一次齊射。
 
