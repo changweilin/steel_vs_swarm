@@ -327,7 +327,7 @@
   </header>
 
   <!-- 卡序 = 主視覺方位:STEEL 左(藍)/ SWARM 右(黃),與 logo、標題橫幔、底圖對抗場一致 -->
-  <div class="side-cards">
+  <div class="side-cards" id="sideCards">
     <div class="side-card steel" id="sideSTEEL">
       <!-- 陣營軍旗:齒輪環 + 機甲三角(取自 logo 的鋼鐵徽記,平塗硬邊重繪) -->
       <div class="side-emblem">
@@ -345,7 +345,38 @@
       <div class="side-hero">主力 執法者機甲 ・ 地面 / 重火力 / 厚裝甲</div>
       <div class="side-slots"></div>
     </div>
-    <div class="side-vs">VS</div>
+    <div class="side-vs" id="steelVs">VS</div>
+    <div class="side-card super" id="sideSUPER" hidden>
+      <div class="super-tear-fx" aria-hidden="true">
+        <div class="super-clash-seam"></div>
+      </div>
+      <div class="side-emblem">
+        <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="超級戰士">
+          <defs>
+            <linearGradient id="superGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#5fd0f2"/>
+              <stop offset="48%" stop-color="#5fd0f2"/>
+              <stop offset="52%" stop-color="#ffc247"/>
+              <stop offset="100%" stop-color="#ffc247"/>
+            </linearGradient>
+            <filter id="superGlow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M8 26 H142 V34 H8 Z" fill="url(#superGrad)"/>
+          <path d="M75 36 L100 78 L88 76 L96 116 L75 100 L54 116 L62 76 L50 78 Z" fill="url(#superGrad)" filter="url(#superGlow)"/>
+          <circle cx="75" cy="82" r="60" stroke="url(#superGrad)" stroke-width="3" opacity="0.75"/>
+        </svg>
+      </div>
+      <div class="side-name">超級戰士 <span class="side-en">SUPER WARRIOR</span></div>
+      <div class="side-hero">單人第三方 ・ 任意角色 ・ 雙陣營皆敵</div>
+      <div class="side-slots"></div>
+    </div>
+    <div class="side-vs super-vs" id="superVs" hidden>VS</div>
     <div class="side-card swarm" id="sideSWARM">
       <!-- 陣營軍旗:倒三角 + 展翼 + 蜂巢(取自 logo 的蜂群徽記,平塗硬邊重繪) -->
       <div class="side-emblem">
@@ -367,19 +398,6 @@
       <div class="side-hero">主力 獵蜂無人機 ・ 飛行 / 高機動 / 薄裝甲</div>
       <div class="side-slots"></div>
     </div>
-    <div class="side-vs super-vs" id="superVs" hidden>＋</div>
-    <div class="side-card super" id="sideSUPER" hidden>
-      <div class="side-emblem">
-        <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="超級戰士">
-          <path d="M8 26 H142 V34 H8 Z" fill="currentColor"/>
-          <path d="M75 36 L100 78 L88 76 L96 116 L75 100 L54 116 L62 76 L50 78 Z" fill="currentColor"/>
-          <circle cx="75" cy="82" r="60" stroke="currentColor" stroke-width="3" opacity="0.65"/>
-        </svg>
-      </div>
-      <div class="side-name">超級戰士 <span class="side-en">SUPER</span></div>
-      <div class="side-hero">單人第三方 ・ 任意角色 ・ 雙陣營皆敵</div>
-      <div class="side-slots"></div>
-    </div>
   </div>
   <!-- 準備/開戰/離開:置於軍團(陣營)選擇正下方 -->
   <div class="row room-actions">
@@ -390,11 +408,6 @@
   <!-- 選角(入座後出現;不選 = 開戰隨機) -->
   <div class="char-section" id="charSection" style="display:none">
     <div class="panel-head" id="charSectionHead">▍選擇角色</div>
-    <div class="row seg seg-sm char-side-tabs" id="charSideTabs" style="display:none; justify-content:center; margin-bottom:8px">
-      <button class="segb on" type="button" data-cside="STEEL">▲ 鋼鐵軍團</button>
-      <button class="segb" type="button" data-cside="SWARM">▼ 蜂群兵團</button>
-      <button class="segb" type="button" data-cside="MERC">⚔ 傭兵聯盟</button>
-    </div>
     <div class="char-pick">
       <div class="char-grid" id="charGrid"></div>
       <div class="char-detail" id="charDetail"></div>

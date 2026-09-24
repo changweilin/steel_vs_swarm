@@ -367,31 +367,210 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 }
 .side-card.swarm::before { background: var(--swarm); }
 .side-card.steel::before { background: var(--steel); }
-.side-card.super::before { background: #ffd54a; }
+.side-card.super::before {
+  background: linear-gradient(90deg, #5fd0f2, #ffc247, #5fd0f2, #ffc247);
+  background-size: 300% 100%;
+  animation: superBorderRun 3s linear infinite;
+  z-index: 3;
+}
 .side-card:hover { border-color: var(--line-strong); }
 .side-card.swarm { border-top: 0; }
 .side-card.steel { border-top: 0; }
-.side-card.super { border-top: 0; }
+.side-card.super {
+  border-top: 0;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 15% 25%, rgba(95, 208, 242, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 75%, rgba(255, 194, 71, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(140, 200, 255, 0.12) 0%, transparent 60%),
+    rgba(8, 13, 20, 0.95);
+  border-color: rgba(130, 200, 250, 0.45);
+  box-shadow:
+    0 0 25px rgba(95, 208, 242, 0.25),
+    0 0 35px rgba(255, 194, 71, 0.2),
+    inset 0 0 20px rgba(95, 208, 242, 0.12),
+    inset 0 0 20px rgba(255, 194, 71, 0.12);
+  overflow: hidden;
+  animation: superClashPulse 4s ease-in-out infinite alternate;
+}
+.side-card.super::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(
+    -55deg,
+    transparent 0px,
+    transparent 10px,
+    rgba(95, 208, 242, 0.08) 10px,
+    rgba(95, 208, 242, 0.08) 12px,
+    transparent 12px,
+    transparent 24px,
+    rgba(255, 194, 71, 0.08) 24px,
+    rgba(255, 194, 71, 0.08) 26px
+  );
+  background-size: 200% 200%;
+  mix-blend-mode: screen;
+  animation: superTearScan 5s linear infinite;
+  z-index: 1;
+}
+.super-tear-fx {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1;
+}
+.super-tear-fx::before {
+  content: ''; position: absolute; inset: -20px; pointer-events: none;
+  background: radial-gradient(circle at 40% 45%, rgba(95, 208, 242, 0.25) 0%, transparent 60%);
+  mix-blend-mode: color-dodge;
+  animation: superSwirlBlue 6s ease-in-out infinite alternate;
+}
+.super-tear-fx::after {
+  content: ''; position: absolute; inset: -20px; pointer-events: none;
+  background: radial-gradient(circle at 60% 55%, rgba(255, 194, 71, 0.25) 0%, transparent 60%);
+  mix-blend-mode: color-dodge;
+  animation: superSwirlYellow 6s ease-in-out infinite alternate;
+}
+.super-clash-seam {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 3px;
+  transform: translateX(-50%) skewX(-8deg);
+  background: linear-gradient(180deg, #5fd0f2, #ffc247, #5fd0f2, #ffc247);
+  filter: drop-shadow(0 0 6px #5fd0f2) drop-shadow(0 0 6px #ffc247);
+  opacity: 0.75; pointer-events: none;
+  animation: superSeamJitter 1.8s steps(2, start) infinite;
+}
 .side-card.swarm:hover { background: rgba(255, 194, 71, 0.06); }
 .side-card.steel:hover { background: rgba(95, 208, 242, 0.06); }
-.side-card.super:hover { background: rgba(255, 213, 74, 0.06); }
+.side-card.super:hover {
+  background:
+    radial-gradient(ellipse at 15% 25%, rgba(95, 208, 242, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 75%, rgba(255, 194, 71, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(140, 200, 255, 0.16) 0%, transparent 60%),
+    rgba(8, 13, 20, 0.95);
+  border-color: rgba(180, 225, 255, 0.65);
+}
 .side-card.swarm.taken { background: rgba(255, 194, 71, 0.09); }
 .side-card.steel.taken { background: rgba(95, 208, 242, 0.09); }
-.side-card.super.taken { background: rgba(255, 213, 74, 0.09); }
+.side-card.super.taken { border-color: rgba(180, 225, 255, 0.65); }
 .side-card.mine { box-shadow: inset 0 0 0 2px var(--ok); }
 /* 陣營軍旗:inline SVG 以 currentColor 上色 → 由 .side-card.swarm/.steel 決定陣營色 */
 .side-emblem { display: flex; justify-content: center; padding: 4px 0 2px; }
 .side-emblem .crest { width: 104px; height: 104px; display: block; }
 .side-card.swarm .side-emblem { color: var(--swarm); }
 .side-card.steel .side-emblem { color: var(--steel); }
-.side-card.super .side-emblem { color: #ffd54a; }
+.side-card.super .side-emblem .crest {
+  filter: drop-shadow(0 0 12px rgba(95, 208, 242, 0.65)) drop-shadow(0 0 12px rgba(255, 194, 71, 0.65));
+  transition: filter 0.2s;
+}
 .side-card.swarm:hover .side-emblem, .side-card.swarm.taken .side-emblem { filter: drop-shadow(0 0 12px rgba(255, 194, 71, 0.55)); }
 .side-card.steel:hover .side-emblem, .side-card.steel.taken .side-emblem { filter: drop-shadow(0 0 12px rgba(95, 208, 242, 0.55)); }
-.side-card.super:hover .side-emblem, .side-card.super.taken .side-emblem { filter: drop-shadow(0 0 12px rgba(255, 213, 74, 0.55)); }
+.side-card.super:hover .side-emblem .crest, .side-card.super.taken .side-emblem .crest {
+  filter: drop-shadow(0 0 18px rgba(95, 208, 242, 0.85)) drop-shadow(0 0 18px rgba(255, 194, 71, 0.85));
+}
 .side-name { font-family: var(--serif); font-weight: 900; font-size: 20px; letter-spacing: 6px; }
 .side-card.swarm .side-name { color: var(--swarm); }
 .side-card.steel .side-name { color: var(--steel); }
-.side-card.super .side-name { color: #ffd54a; }
+.side-card.super .side-name {
+  background: linear-gradient(90deg, #5fd0f2 10%, #ffffff 50%, #ffc247 90%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 8px rgba(95, 208, 242, 0.5)) drop-shadow(0 0 8px rgba(255, 194, 71, 0.5));
+}
+
+/* 超級大戰:中央超級戰士、兩側雙陣營各壓縮一半(總寬度跟開戰時刻一致) */
+.side-cards.super-battle {
+  max-width: min(730px, 94vw);
+  width: 100%;
+  margin: 0 auto;
+  gap: 8px;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: center;
+}
+.side-cards.super-battle .side-card.steel,
+.side-cards.super-battle .side-card.swarm {
+  flex: 0.5 1 0;
+  width: auto;
+  max-width: 175px;
+  min-width: 0;
+  padding: 12px 6px 10px;
+}
+.side-cards.super-battle .side-card.steel .side-emblem .crest,
+.side-cards.super-battle .side-card.swarm .side-emblem .crest {
+  width: 48px;
+  height: 48px;
+}
+.side-cards.super-battle .side-card.steel .side-name,
+.side-cards.super-battle .side-card.swarm .side-name {
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+.side-cards.super-battle .side-card.steel .side-en,
+.side-cards.super-battle .side-card.swarm .side-en {
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.side-cards.super-battle .side-card.steel .side-hero,
+.side-cards.super-battle .side-card.swarm .side-hero {
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.side-cards.super-battle .side-card.steel .slot,
+.side-cards.super-battle .side-card.swarm .slot {
+  padding: 4px 5px;
+  font-size: 11px;
+}
+.side-cards.super-battle .side-card.steel .slot-char,
+.side-cards.super-battle .side-card.swarm .slot-char {
+  font-size: 10px;
+}
+.side-cards.super-battle .side-card.super {
+  flex: 1 1 0;
+  width: auto;
+  max-width: 350px;
+  min-width: 0;
+  padding: 18px 14px 16px;
+}
+.side-cards.super-battle .side-vs {
+  font-size: 16px;
+  letter-spacing: 1px;
+  margin: 0 -2px;
+  align-self: center;
+}
+
+@keyframes superBorderRun {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 300% 0%; }
+}
+@keyframes superTearScan {
+  0% { transform: translateY(-20px); }
+  100% { transform: translateY(20px); }
+}
+@keyframes superClashPulse {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(95, 208, 242, 0.25), 0 0 35px rgba(255, 194, 71, 0.2), inset 0 0 20px rgba(95, 208, 242, 0.12), inset 0 0 20px rgba(255, 194, 71, 0.12);
+    border-color: rgba(130, 200, 250, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(255, 194, 71, 0.35), 0 0 45px rgba(95, 208, 242, 0.3), inset 0 0 28px rgba(255, 194, 71, 0.2), inset 0 0 28px rgba(95, 208, 242, 0.2);
+    border-color: rgba(255, 210, 100, 0.6);
+  }
+}
+@keyframes superSeamJitter {
+  0% { transform: translateX(-50%) skewX(-8deg) scaleY(1); opacity: 0.7; }
+  15% { transform: translateX(-53%) skewX(-14deg) scaleY(1.05); opacity: 0.95; }
+  35% { transform: translateX(-47%) skewX(-4deg) scaleY(0.95); opacity: 0.6; }
+  55% { transform: translateX(-52%) skewX(-11deg) scaleY(1.02); opacity: 0.85; }
+  75% { transform: translateX(-48%) skewX(-6deg) scaleY(0.98); opacity: 0.7; }
+  100% { transform: translateX(-50%) skewX(-8deg) scaleY(1); opacity: 0.75; }
+}
+@keyframes superSwirlBlue {
+  0% { transform: translate(-10px, -15px) scale(1); }
+  50% { transform: translate(15px, 10px) scale(1.15); }
+  100% { transform: translate(-5px, 20px) scale(0.9); }
+}
+@keyframes superSwirlYellow {
+  0% { transform: translate(10px, 15px) scale(1.1); }
+  50% { transform: translate(-15px, -10px) scale(0.9); }
+  100% { transform: translate(5px, -20px) scale(1.15); }
+}
 .side-en { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 5px; color: var(--dim); margin-top: 4px; }
 .side-hero { color: var(--dim); font-size: 12px; font-family: var(--mono); letter-spacing: 0.5px; }
 .side-player { font-size: 15px; font-weight: 700; margin-top: 6px; min-height: 20px; }
@@ -399,6 +578,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .spec-list { color: var(--dim); font-size: 12px; z-index: 3; font-family: var(--mono); }
 .room-hint { color: var(--dim); font-size: 13px; z-index: 3; }
 .room-actions { z-index: 3; flex-wrap: wrap; justify-content: center; }
+
 
 /* ---------- 戰場選址 ---------- */
 #leafletMap { position: absolute; inset: 0; z-index: 1; background: var(--bg0); filter: saturate(0.65) contrast(1.1); }
@@ -2647,8 +2827,34 @@ body.touch-ui.ori-portrait .side-vs { display: none; }
 body.touch-ui.ori-portrait .side-emblem .crest { width: 58px; height: 58px; }
 body.touch-ui.ori-portrait .side-name { font-size: 14px; letter-spacing: 2px; }
 body.touch-ui.ori-portrait .side-en { display: none; }
-body.touch-ui.ori-portrait .side-hero { font-size: 10px; letter-spacing: 0; }
 body.touch-ui.ori-portrait .slot { font-size: 12px; padding: 5px 6px; }
+body.touch-ui.ori-portrait .side-cards.super-battle { gap: 4px; }
+body.touch-ui.ori-portrait .side-cards.super-battle .side-vs { display: none; }
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.steel,
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.swarm {
+  flex: 0.5 1 0; padding: 8px 3px 6px; gap: 3px;
+}
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.steel .side-emblem .crest,
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.swarm .side-emblem .crest {
+  width: 32px; height: 32px;
+}
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.steel .side-name,
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.swarm .side-name {
+  font-size: 11px; letter-spacing: 0;
+}
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.steel .side-hero,
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.swarm .side-hero {
+  display: none;
+}
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.super {
+  flex: 1 1 0; padding: 10px 6px 8px; gap: 4px;
+}
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.super .side-emblem .crest {
+  width: 58px; height: 58px;
+}
+body.touch-ui.ori-portrait .side-cards.super-battle .side-card.super .side-name {
+  font-size: 14px; letter-spacing: 2px;
+}
 /* 空位的「入座 / 電腦」維持同列(鈕面精簡後半寬卡也塞得下);
    **MUST NOT 改成 flex-direction: column** —— `.slot-btn` 是 `flex: 1 1 0`,
    直排時 basis 0 會落在**高度**上,兩顆鈕被壓進 `.slot` 的 min-height 32px 裡各剩 ~11px(字被切一半)。 */

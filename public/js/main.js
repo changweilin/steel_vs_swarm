@@ -1172,6 +1172,7 @@ function renderRoom() {
 
   const me = lb.clients.find((c) => c.id === app.youId);
   app.mySide = me?.side || null;
+  $('sideCards')?.classList.toggle('super-battle', superMode);
   // 超級席顯示 + 自動入座(超級房進房即坐 SUPER 席,免手動;非超級房嚴格隱藏,開戰時刻無超級按鍵)
   if ($('sideSUPER')) {
     $('sideSUPER').hidden = !superMode;
@@ -1232,13 +1233,13 @@ function renderRoom() {
         const chTag = c.ch && CHARACTERS[c.ch] ? `<span class="slot-char">「${CHARACTERS[c.ch].code}」</span>` : '<span class="slot-char dim">RND</span>';
         div.innerHTML = `<span class="slot-name">${c.isHost ? '◆ ' : ''}${c.isBot ? '▣ ' : ''}${esc(c.name)}</span> ${chTag}<span class="slot-ready">${c.ready ? '●' : '○'}${c.connected === false ? ' ✕' : ''}</span>`;
         div.onclick = () => { app.charTarget = c.id; renderRoom(); };
-        // 自己:X 才離座(點格子只是選取,不再離座);電腦(房主):X 移除
-        if (c.id === app.youId) div.appendChild(slotX('離開座位', () => app.net?.send({ t: 'pickSide', side: null })));
+        // 自己:X 才離座(超級大戰鎖定超級席,無法離座/換陣營);電腦(房主):X 移除
+        if (!superMode && c.id === app.youId) div.appendChild(slotX('離開座位', () => app.net?.send({ t: 'pickSide', side: null })));
         else if (c.isBot && app.isHost) div.appendChild(slotX('移除電腦', () => app.net?.send({ t: 'removeBot', id: c.id })));
       } else {
         // 空位:入座 + 加電腦玩家,兩顆按鈕同寬
         div.className = 'slot empty';
-        if (me && me.mode === 'player' && me.side !== side) {
+        if (!superMode && me && me.mode === 'player' && me.side !== side) {
           const join = document.createElement('button');
           join.className = 'slot-btn';
           join.textContent = '＋ 入座';
@@ -2086,29 +2087,14 @@ function renderCharPick(me) {
 
   const isSuper = subject.side === 'SUPER';
   const tabsEl = $('charSideTabs');
-  if (tabsEl) {
-    tabsEl.style.display = isSuper ? 'flex' : 'none';
-    if (isSuper) {
-      if (!app.superCharTab) {
-        app.superCharTab = (subject.ch && CHARACTERS[subject.ch]?.side) || 'STEEL';
-      }
-      for (const btn of tabsEl.querySelectorAll('[data-cside]')) {
-        btn.classList.toggle('on', btn.dataset.cside === app.superCharTab);
-        btn.onclick = () => {
-          app.superCharTab = btn.dataset.cside;
-          for (const b of tabsEl.querySelectorAll('[data-cside]')) b.classList.toggle('on', b === btn);
-          renderCharSection();
-        };
-      }
-    }
-  }
+  if (tabsEl) tabsEl.style.display = 'none';
 
   const grid = $('charGrid');
   grid.style.display = editable ? '' : 'none';
   grid.innerHTML = '';
   if (editable) {
     const list = isSuper
-      ? Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].side === app.superCharTab)
+      ? Object.keys(CHARACTERS)
       : charsOf(subject.side);
     for (const id of list) {
       const c = CHARACTERS[id];
