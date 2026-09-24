@@ -4346,8 +4346,9 @@ export const upgradeScore = (u, lvl) => upgStep(lvl).score;
 /** 買不買得起 = 錢 + 戰鬥分數兩道閘一起看(單一縫;拆開判會出現「鈕面亮著按不動」) */
 export const canUpgrade = (u, lvl, money, score) =>
   (lvl || 0) < u.max && (money || 0) >= upgradePrice(u, lvl) && (score || 0) >= upgradeScore(u, lvl);
-/** 充能倍率:護盾/電力回復速度 ×(CHARGE_MIN → 1.0);現役回復速度即滿級規格 */
-export const chargeF = (lvl) => ECON.CHARGE_MIN + (1 - ECON.CHARGE_MIN) * (lvl || 0) / ECON.UPGRADES.ch.max;
+/** 充能倍率:護盾/電力回復速度 ×(CHARGE_MIN → 1.0);現役回復速度即滿級規格。
+ * 另乘設定曲線 upgradeCurveMul('ch', lvl)(預設 1.0 ⇒ 逐位元同舊制;全模式共用唯一縫)。 */
+export const chargeF = (lvl) => (ECON.CHARGE_MIN + (1 - ECON.CHARGE_MIN) * (lvl || 0) / ECON.UPGRADES.ch.max) * upgradeCurveMul('ch', lvl || 0);
 /** 重武器每發電力(解析後 def)。輕武器不耗電。彈夾週期 = mag/rate + reload 秒,週期總耗電 =
  *  週期 × HEAVY_MP_PER_CD,均攤到每發 ⇒「持續火力耗電率」= HEAVY_MP_PER_CD/s(mag=1 時 ≈ 舊值)。
  *  2026-07-20:電力折減併入重武器階級(reload/mag 隨階變),取消獨立武器精通折減。 */
@@ -4812,6 +4813,9 @@ export const GAME = {
   THREAT_MISSILES_MAX: 1,     // 同時在空中的第三方伏擊飛彈上限(全場 1 發)
   // 地雷(非正規路線,只有地面機甲會踩;顏色融入地表,靠近才看得到極輕微突起)
   // CUT_BIAS/CUT_R:偏向佈在兵線轉角外圍的「切彎捷徑」帶 — 抄直線省時間 = 承擔雷區風險
+  // DMG/R 刻意手寫(與 AA_AMBUSH 的推導不同):R 是雷區面積預算的錨(PER_LANE 由 R 反推,見下方
+  // derive —— 照 npcBlastR 重推 R 會連動雷數 64→80,屬平衡改動不是對齊);DMG = 踩雷錨(機甲護盾
+  // 220→50,見 e2e)。衰減形狀則與全遊戲同一支 blastFalloff(見 sim._tickMines)。
   MINES: { PER_LANE: 0, TRIGGER_R: 4, DMG: 170, R: 10, PEN: 10,
            LANE_CLEAR: 115,            // > AMBUSH_M:走廊 + 緩衝帶內絕不佈雷(含雷體半徑 R)
            BASE_CLEAR: 260,            // > 主堡補血半徑 160 + 重生點外推 45 + 緩衝

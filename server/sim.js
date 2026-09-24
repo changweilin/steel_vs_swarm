@@ -14,7 +14,7 @@ import {
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
   ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND, ULT_CAST_S,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
-  shieldDefKindFactor, balanceMul,
+  shieldDefKindFactor, balanceMul, upgradeCurveMul,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
@@ -1775,13 +1775,13 @@ export class BattleSim {
         kind, side, pid, ch, si: i, spawnIdx: idx,
         x: ox, z: oz, y: 0, ry: 0, rx: 0,
         ...(boss ? { boss: true, sg: sq.bossStage } : {}),
-        hp: Math.round(u.hp * (m.hp ?? 1) * (boss ? BOSS.HP_MUL : 1)), hero: true,
+        hp: Math.round(u.hp * (m.hp ?? 1) * (boss ? BOSS.HP_MUL : 1) * upgradeCurveMul('hp', 0)), hero: true,
         dead: false, respawnAt: 0, deaths: 0, aaCd: 0,
         // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(hp;護甲值 armor 減免)
-        armor: heroArmor(ch), lastHitAt: -99,   // 無人機護甲等比縮放至機甲平均 ×HP_F(見 data.heroArmor)
+        armor: heroArmor(ch) * upgradeCurveMul('ar', 0), lastHitAt: -99,   // 無人機護甲等比縮放至機甲平均 ×HP_F(見 data.heroArmor)
         dash: 0, rg: false,          // 僚機:衝刺自爆目標 / 歸隊中
       });
-      b.maxSp = Math.round(u.shield * (m.sp ?? 1));
+      b.maxSp = Math.round(u.shield * (m.sp ?? 1) * upgradeCurveMul('sp', 0));
       b.sp = b.maxSp;
       this._bindShared(b, sq);
       sq.bodies.push(b);
@@ -4647,7 +4647,8 @@ export class BattleSim {
             const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
             s.cd = 1 / ((s.rate || 0.8) * sandMul);
             const wd = s.wid ? WEAPONS[s.wid] : null;
-            this._damage(target, s.dmg * rainMul, s, wd?.pen || 0, 0, wd);
+            // 直射衰減與英雄同一支 dmgFalloff(無 type 的武器恆為 1 ⇒ 其餘召喚逐位元不動;beam 類召喚此前全額,現與英雄光束同衰減)
+            this._damage(target, s.dmg * rainMul * (wd ? dmgFalloff(wd, d) : 1), s, wd?.pen || 0, 0, wd);
             this.events.push({
               e: 'shot', id: s.id, kind: s.kind, wid: s.wid,
               from: [s.x, s.z], to: [target.x, target.z],
@@ -5224,13 +5225,13 @@ export class BattleSim {
         delete h.ammo[up.abil]; delete h.reloadUntil[up.abil];
       }
     } else if (item === 'hp') {
-      const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + up.step * h.upg.hp));
+      const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + up.step * h.upg.hp) * upgradeCurveMul('hp', h.upg.hp));
       for (const b of this._bodies(h)) {       // 機殼升級套用到小隊每一架
         if (!b.dead) b.hp += nm - b.maxHp;     // 陣亡中只擴上限,重生時 hp = maxHp
         b.maxHp = nm;
       }
     } else if (item === 'sp') {
-      const nm = Math.round(UNITS[h.kind].shield * (CHARACTERS[h.ch].mods?.sp ?? 1) * (1 + up.step * h.upg.sp));
+      const nm = Math.round(UNITS[h.kind].shield * (CHARACTERS[h.ch].mods?.sp ?? 1) * (1 + up.step * h.upg.sp) * upgradeCurveMul('sp', h.upg.sp));
       for (const b of this._bodies(h)) {
         if (!b.dead) b.sp += nm - b.maxSp;
         b.maxSp = nm;
@@ -5238,7 +5239,8 @@ export class BattleSim {
     } else if (item === 'ar') {
       // 護甲是絕對值疊加(armorMul 曲線);不影響體型(heroTargetH 只看角色 mods.armor)。
       // 基底走 heroArmor()(無人機已等比縮放)—— 與 _add 生成同一個縫,升級才不會把縮放洗掉。
-      const na = heroArmor(h.ch) + up.step * h.upg.ar;
+      // 另乘設定曲線 upgradeCurveMul('ar')(預設 1.0 ⇒ 逐位元同舊制)。
+      const na = (heroArmor(h.ch) + up.step * h.upg.ar) * upgradeCurveMul('ar', h.upg.ar);
       for (const b of this._bodies(h)) b.armor = na;
     }
   }
@@ -5270,9 +5272,9 @@ export class BattleSim {
     // 升階可能加大彈夾:清空該槽計數(與 _applyUpg 戰鬥面向同處置)
     delete h.ammo.light; delete h.reloadUntil.light;
     delete h.ammo.heavy; delete h.reloadUntil.heavy;
-    const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + ECON.UPGRADES.hp.step * def));
-    const ns = Math.round(UNITS[h.kind].shield * (CHARACTERS[h.ch].mods?.sp ?? 1) * (1 + ECON.UPGRADES.sp.step * def));
-    const na = heroArmor(h.ch) + ECON.UPGRADES.ar.step * def;
+    const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + ECON.UPGRADES.hp.step * def) * upgradeCurveMul('hp', def));
+    const ns = Math.round(UNITS[h.kind].shield * (CHARACTERS[h.ch].mods?.sp ?? 1) * (1 + ECON.UPGRADES.sp.step * def) * upgradeCurveMul('sp', def));
+    const na = (heroArmor(h.ch) + ECON.UPGRADES.ar.step * def) * upgradeCurveMul('ar', def);
     for (const b of this._bodies(h)) {
       if (!b.dead) {
         b.hp = Math.min(nm, b.hp + Math.max(0, nm - b.maxHp));
@@ -6380,8 +6382,11 @@ export class BattleSim {
           if (t.hero && t.dead) continue;
           const d = dist2d(mx, mz, t.x, t.z);
           if (t.hero && (t.y || 0) > M.R) continue;  // 空中不受地雷波及
-          if (d <= M.R) this._damage(t, M.DMG, null, M.PEN);
-          else if (d <= M.R * 1.8) this._damage(t, M.DMG * 0.4, null, M.PEN);
+          // 爆風衰減與全遊戲同一支 blastFalloff(舊二段式 R 內全額/1.8R 四折是 blastFalloff 定案前的殘留;
+          // 踩雷中心 d≈0 恆為全額 ⇒ 既有殺傷錨(機甲護盾 220→50)不動)
+          const f = blastFalloff(M.R, d);
+          if (f <= 0) continue;
+          this._damage(t, M.DMG * f, null, M.PEN);
         }
         break;
       }
