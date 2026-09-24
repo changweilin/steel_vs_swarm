@@ -493,6 +493,29 @@
   <!-- 劇情戰役對話層(dialogue.js 掛節點:攻堅進度條 + 下緣無線電對話條) -->
   <div id="dialogueLayer" class="dlg-layer"></div>
 
+  <!-- 劇情戰役 BOSS 頂部血條 -->
+  <div id="bossBarWrap" class="boss-bar-wrap" style="display: none;">
+    <div class="boss-bar-header">
+      <div class="boss-title-group">
+        <span class="boss-badge">BOSS</span>
+        <span id="bossName" class="boss-name"></span>
+        <span id="bossSub" class="boss-sub"></span>
+      </div>
+      <div class="boss-stats-group">
+        <span id="bossPhase" class="boss-phase"></span>
+        <span id="bossHpText" class="boss-hp-text"></span>
+      </div>
+    </div>
+    <div class="boss-bar-track">
+      <div id="bossSpBar" class="boss-sp-bar"></div>
+      <div id="bossHpGhost" class="boss-hp-ghost"></div>
+      <div id="bossHpBar" class="boss-hp-bar"></div>
+      <div class="boss-bar-segments">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
   <!-- HUD -->
   <div class="hud-top">
     <div class="base-bar swarm">

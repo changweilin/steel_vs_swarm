@@ -3411,6 +3411,9 @@ export class BattleClient {
         // NPC BOSS 段位(有這一格 = 這是 BOSS):血條外圍光暈顏色與體型縮放由它決定。
         // 純表現層 —— 段位本身、狂暴化、恢復規則全在伺服器(見 sim._bossSync)。
         ent.bossSeg = e.bs;
+        if (e.bs != null || (this.cfg?.defSide && ent.side === this.cfg.defSide && ent.hero)) {
+          ent.isBoss = true;
+        }
         if (ent.bossSeg != null && ent.mesh) ent.mesh.scale.setScalar(bossScaleF(ent.bossSeg));
         // 超級體型:升級即時放大(只在等級變動時重設,平時不碰 —— 每幀 setScalar 會髒掉矩陣快取)
         if (e.sv != null && e.sv !== ent.sv && ent.mesh) ent.mesh.scale.setScalar(superScaleF(e.sv));
@@ -3509,7 +3512,7 @@ export class BattleClient {
             if (changed) this._setChar(this.ch, true);
           }
           if (e.dead && !this.dead) this._onSelfDeath();
-          if (!e.dead && this.dead) this._onSelfRespawn();
+          if (!e.dead && this.dead) this._onSelfRespawn(e.x, -e.z);
           // 過場播放中壓住倒數頁(#deadOverlay/砲塔 PiP),過場結束(_deathSeq=null)下一快照才顯示;
           // 開著戰場選單(this.paused)時亦壓住倒數頁 → 讓離開/繼續選單獨佔畫面(ESC 開的離開頁)
           this.hud.dead?.(e.dead && !this._deathSeq && !this.paused ? e.rs : null);
@@ -3734,11 +3737,13 @@ export class BattleClient {
       };
       dimCache.set(dimKey, dims);
     }
+    const isBoss = (e.bs != null) || !!(this.cfg?.defSide && e.s === this.cfg.defSide && hero);
     const ent = {
       dimTop: dims.dimTop, dimH: dims.dimH, dimR: dims.dimR,
       id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null, sv: e.sv ?? 0,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
       isSelf, hero, heroY: 0, ry: 0,
+      isBoss, bossSeg: e.bs ?? (isBoss ? 0 : null),
       flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami' || e.k === 'hyper' || e.k === 'drone_wingman' || e.k === 'heli_squad' || e.k === 'carnival_heli',
       decoy: e.k === 'decoy', kami: e.k === 'kami', hyper: e.k === 'hyper', si: e.si || 0,
       isStatic,
@@ -6058,6 +6063,73 @@ export class BattleClient {
     document.body.classList.toggle('vlock', on);
   }
 
+  /**
+   * 劇情模式 BOSS 視野生命條:
+   * 劇情戰役(defSide)中,當敵方 BOSS 進入視野(錐內 + 無遮擋)時最上方顯示 BOSS 生命條。
+   * 具備 3.0 秒視角轉開遲滯,避免轉頭或閃避時閃爍;BOSS 陣亡或離開戰場時熄滅。
+   */
+  _updateBossBar(now) {
+    if (!this.cfg?.defSide) return;
+    const eye = this.camera.position;
+    if (!this._bossMvi) this._bossMvi = new THREE.Matrix4();
+    this._bossMvi.copy(this.camera.matrixWorld).invert();
+    const v = this._bossV || (this._bossV = new THREE.Vector3());
+
+    let targetBoss = null;
+    let minD = Infinity;
+
+    for (const ent of this.ents.values()) {
+      if (!ent.isBoss || ent.dead || !ent.mesh?.visible || ent.side !== this.cfg.defSide) continue;
+      if ((ent.hp || 0) <= 0) continue;
+
+      const c = this._entAimPoint ? this._entAimPoint(ent) : ent.mesh.position;
+      v.copy(c).applyMatrix4(this._bossMvi);
+      if (v.z > -0.1) continue; // 相機後方
+
+      v.applyMatrix4(this.camera.projectionMatrix);
+      if (Math.abs(v.x) > 1.15 || Math.abs(v.y) > 1.15) continue; // 視野框外
+
+      const dist = eye.distanceTo(c);
+      const hitT = this._obstHitT ? this._obstHitT(eye.x, eye.y, eye.z, c.x, c.y, c.z) : null;
+      if (hitT != null && hitT < dist - 1.0) continue; // 障礙遮蔽
+
+      if (dist < minD) {
+        minD = dist;
+        targetBoss = ent;
+      }
+    }
+
+    if (targetBoss) {
+      this._activeBossId = targetBoss.id;
+      this._bossLastSeenAt = now;
+    }
+
+    let active = this._activeBossId != null ? this.ents.get(this._activeBossId) : null;
+    if (active && (!active.isBoss || active.dead || (active.hp || 0) <= 0 || (now - (this._bossLastSeenAt || 0) > 3.0))) {
+      active = null;
+      this._activeBossId = null;
+    }
+
+    if (active) {
+      const seg = active.bossSeg != null ? active.bossSeg : 0;
+      const phase = Math.min(4, Math.max(1, seg + 1));
+      const ch = CHARACTERS[active.ch];
+      this.hud.bossBar?.({
+        name: ch?.name || active.name || '戰地首領',
+        sub: ch?.machine || (active.side === 'STEEL' ? '鋼鐵帝國 BOSS' : '異星蜂群 BOSS'),
+        phase,
+        hp: active.hp,
+        maxHp: active.maxHp || 1,
+        sp: active.sp || 0,
+        maxSp: active.maxSp || 0,
+        glow: bossGlow(seg),
+      });
+    } else {
+      this.hud.bossBar?.(null);
+    }
+  }
+
+
   // ---------------- 餌機掛點(純外觀;2026-08-06 起只服務大招載具遞送)----------------
   /** 掛點餌機:組合(慢慢裝上)/ 分離(瞬間彈出)的縮放動畫 */
   _updateDecoyPod(ent, dt) {
@@ -6473,11 +6545,22 @@ export class BattleClient {
     if (fly) starburst(this.scene, this.effects, eye.x, eye.y, eye.z, 3.0, 0xffb050);
     else this._deathPlume(this.pos.x, surf, this.pos.z);
   }
-  _onSelfRespawn() {
+  _onSelfRespawn(sx, sz) {
     this.dead = false;
     this._deathSeq = null;        // 過場未播完就重生:硬切,交還 _updatePlayer 控制鏡頭
     this.hud.deathCine?.(false);  // 熄紅框(#deadOverlay 由本幀 e.dead=false 的 hud.dead(null) 自動隱藏)
-    this._spawnAt();
+    if (isSuperSide(this.side)) {
+      if (sx != null && sz != null) {
+        this._lastSuperSpawn = [sx, sz];
+        this._placeAt(sx, sz, -sx, -sz);
+      } else {
+        const [rx, rz] = this._superSpawnAt();
+        this._lastSuperSpawn = [rx, rz];
+        this._placeAt(rx, rz, -rx, -rz);
+      }
+    } else {
+      this._spawnAt();
+    }
     this.vel.set(0, 0, 0);
     this._airSink = 0;        // 重生:清掉高待落帳
     this._liftLockUntil = 0;
@@ -6709,47 +6792,95 @@ export class BattleClient {
   }
 
   /**
-   * 超級重生點(客戶端呈現用;權威在伺服器 _superSpawnPoint):地圖雙陣營砲火外的任意地點。
-   * 砲塔/主堡(已知快照 + 雙方主堡)射程外 + 兵線走廊外 + 地雷外,60 次取樣取首個全滿足者,
-   * 否則取離火力最遠者。座標全為 three 系(與 _spawnAt 同)。
+   * 超級重生點(客戶端呈現用;權威在伺服器 _superSpawnPoint):
+   * 不可在雙陣營兵線/砲塔/主堡射程的 125% 以內,每次陣亡重生地都隨機不同。
+   * 座標全為 three 系(與 _spawnAt 同)。
    */
   _superSpawnAt() {
-    const R = (UNITS.tower?.range || 310) + 30;
+    const clearDist = (UNITS.tower?.range || 155) * 1.25;
+    const baseClearDist = Math.max(UNITS.base?.range || 0, UNITS.base?.guns?.range || 0, UNITS.tower?.range || 155) * 1.25;
     const half = Math.max(200, (this.cfg.sizeM || 1200) / 2 - 40);
     const guns = [];
     for (const s of ['SWARM', 'STEEL']) {
       const b = this.cfg.bases?.[s];
-      if (b) guns.push(llToWorld(b[0], b[1], this.center));
-    }
-    const lanePts = [];
-    for (const L of (this.cfg.lanes || [])) {
-      for (const [lat, lng] of (L || [])) lanePts.push(llToWorld(lat, lng, this.center));
+      if (b) {
+        const [bx, bz] = llToWorld(b[0], b[1], this.center);
+        guns.push({ x: bx, z: bz, isBase: true });
+      }
     }
     for (const ent of this.ents?.values?.() || []) {
-      if ((ent.kind === 'tower' || ent.kind === 'base') && ent.tgt) guns.push([ent.tgt.x, ent.tgt.z]);
+      if ((ent.kind === 'tower' || ent.kind === 'base') && (ent.hp > 0 || ent.hp == null)) {
+        const gx = ent.tgt ? ent.tgt.x : ent.mesh?.position?.x;
+        const gz = ent.tgt ? ent.tgt.z : ent.mesh?.position?.z;
+        if (gx != null && gz != null) guns.push({ x: gx, z: gz, isBase: ent.kind === 'base' });
+      }
     }
-    const mines = [...(this.mineMeshes?.values?.() || [])].map((m) => [m.position.x, m.position.z]);
-    const dMin = (x, z, pts) => {
-      let d = Infinity;
-      for (const [px, pz] of pts) { const v = Math.hypot(x - px, z - pz); if (v < d) d = v; }
-      return d;
+    const worldLanes = [];
+    for (const L of (this.cfg.lanes || [])) {
+      if (L?.length) worldLanes.push(L.map(([lat, lng]) => llToWorld(lat, lng, this.center)));
+    }
+    const distToLanes = (x, z) => {
+      let best = Infinity;
+      for (const pts of worldLanes) {
+        for (let i = 1; i < pts.length; i++) {
+          const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
+          const dx = bx - ax, dz = bz - az;
+          const len2 = dx * dx + dz * dz || 1;
+          const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / len2));
+          const d = Math.hypot(x - (ax + dx * t), z - (az + dz * t));
+          if (d < best) best = d;
+        }
+      }
+      return best;
     };
+    const mines = [...(this.mineMeshes?.values?.() || [])].map((m) => [m.position.x, m.position.z]);
+    const candidates = [];
     let best = null, bestScore = -Infinity;
-    for (let k = 0; k < 60; k++) {
+    for (let k = 0; k < 240; k++) {
       const x = (Math.random() * 2 - 1) * half, z = (Math.random() * 2 - 1) * half;
-      if (mines.length && dMin(x, z, mines) < 25) continue;
-      const dg = dMin(x, z, guns), dl = lanePts.length ? dMin(x, z, lanePts) : Infinity;
-      if (dg > R && dl > R) return [x, z];
-      const score = dg > R ? 1e4 + dl : dg;   // 先保證砲火外,再離兵線越遠越好
-      if (score > bestScore) { bestScore = score; best = [x, z]; }
+      if (mines.length && mines.some(([mx, mz]) => Math.hypot(x - mx, z - mz) < 25)) continue;
+      const dl = worldLanes.length ? distToLanes(x, z) : Infinity;
+      if (dl < clearDist) continue;
+      let gunOk = true;
+      let minGunD = Infinity;
+      for (const g of guns) {
+        const d = Math.hypot(x - g.x, z - g.z);
+        if (d < minGunD) minGunD = d;
+        if (d < (g.isBase ? baseClearDist : clearDist)) { gunOk = false; break; }
+      }
+      if (gunOk) {
+        candidates.push([x, z]);
+      } else {
+        const score = Math.min(dl, minGunD);
+        if (score > bestScore) { bestScore = score; best = [x, z]; }
+      }
     }
-    return best || [0, 0];
+    const last = this._lastSuperSpawn;
+    let pick = null;
+    if (candidates.length > 0) {
+      if (last) {
+        const cDiff = candidates.filter(([x, z]) => Math.hypot(x - last[0], z - last[1]) >= 80);
+        if (cDiff.length > 0) pick = cDiff[Math.floor(Math.random() * cDiff.length)];
+        else {
+          pick = candidates.reduce((b, cur) => {
+            const d = Math.hypot(cur[0] - last[0], cur[1] - last[1]);
+            return d > b.d ? { pt: cur, d } : b;
+          }, { pt: candidates[0], d: -1 }).pt;
+        }
+      } else {
+        pick = candidates[Math.floor(Math.random() * candidates.length)];
+      }
+    }
+    pick = pick || best || [0, 0];
+    this._lastSuperSpawn = [pick[0], pick[1]];
+    return pick;
   }
 
   /** 己方主堡往敵方方向 100m、面向敵方主堡 */
   _spawnAt() {
     if (isSuperSide(this.side)) {
       const [sx, sz] = this._superSpawnAt();
+      this._lastSuperSpawn = [sx, sz];
       this._placeAt(sx, sz, -sx, -sz);   // 面向戰場中心
       return;
     }
@@ -10483,6 +10614,7 @@ export class BattleClient {
     if (this.side && !this.dead) this._updateCcFlash(dt);
     if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
     this._updateEnts(dt, now);
+    this._updateBossBar(now);
     this._updateViewOcclusion(now);
     this._updateDissolveGhosts(dt);   // 實體先摘出 ents,殘影只在這條純渲染路徑收尾
     this._updateRangeGlows();         // 這一發會傷到的單位才亮範圍光暈(鎖定目標另有 lockGlow)
@@ -10772,6 +10904,8 @@ export class BattleClient {
     document.body.classList.remove('mm-near');   // 小地圖模式的鈕面亮燈掛在 body,跟著戰局收掉
     document.body.classList.remove('aiming');    // 狙擊遮罩的鈕面/黑邊跟著戰局收掉
     document.body.classList.remove('spectating', 'spec-follow');   // 觀戰版型同理(留著 = 下一局角色數據面板被收起)
+    document.body.classList.remove('has-boss-bar');
+    this.hud?.bossBar?.(null);
     this._vlockHold = false; this._vlockId = null; this._vlockPrev = null;
     this._setVlockUi(false);                     // 視野鎖定的亮燈同理(留著 = 下一局開場就亮)
     document.exitPointerLock?.();

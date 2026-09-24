@@ -1030,7 +1030,8 @@ function exitStoryBattle() {
   $('overOverlay').style.display = 'none';
   $('pauseOverlay').style.display = 'none';
   $('shopOverlay').style.display = 'none';
-  disposeVisualSettings(); stopMechaAll();   // 離場:設定頁若開著,樣品與機體預覽的 WebGL context 要跟著收(A25)
+  if ($('bossBarWrap')) $('bossBarWrap').style.display = 'none';
+  document.body.classList.remove('has-boss-bar');
   delete $('overOverlay').dataset.done;
   sessionStorage.removeItem('svs_token');
   enterStory();
@@ -3127,6 +3128,35 @@ function makeHud() {
     },
     wave: (n, secs) => {
       $('waveInfo').textContent = `第 ${n} 波 ・ 下一波 ${secs}s`;
+    },
+    bossBar: (info) => {
+      const wrap = $('bossBarWrap');
+      if (!wrap) return;
+      if (!info) {
+        wrap.style.display = 'none';
+        document.body.classList.remove('has-boss-bar');
+        return;
+      }
+      wrap.style.display = 'flex';
+      document.body.classList.add('has-boss-bar');
+      if ($('bossName')) $('bossName').textContent = info.name;
+      if ($('bossSub')) $('bossSub').textContent = info.sub || '';
+      if ($('bossPhase')) $('bossPhase').textContent = `階段 ${info.phase} / 4`;
+      if ($('bossHpText')) $('bossHpText').textContent = `${Math.max(0, Math.round(info.hp))} / ${Math.round(info.maxHp)}`;
+      const pct = Math.max(0, Math.min(100, (info.hp / (info.maxHp || 1)) * 100));
+      if ($('bossHpBar')) {
+        $('bossHpBar').style.width = `${pct}%`;
+        if (info.glow) $('bossHpBar').style.background = `linear-gradient(90deg, #b71c1c, ${info.glow})`;
+      }
+      if ($('bossHpGhost')) $('bossHpGhost').style.width = `${pct}%`;
+      if ($('bossSpBar')) {
+        if (info.maxSp > 0) {
+          $('bossSpBar').style.display = '';
+          $('bossSpBar').style.width = `${Math.max(0, Math.min(100, (info.sp / info.maxSp) * 100))}%`;
+        } else {
+          $('bossSpBar').style.display = 'none';
+        }
+      }
     },
     feed: (text) => {
       const div = document.createElement('div');
