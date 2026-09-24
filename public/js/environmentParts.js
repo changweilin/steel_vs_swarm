@@ -393,16 +393,18 @@ export function storageTankParts({ w, h, d, seed = 1 }) {
 }
 
 export const NARROW_GEOLOGY_BOUNDARY = Object.freeze({
-  cliff: 'cliff', rockery: 'mountain', landslide: 'moraine', debris: 'mound', isletbarrier: 'island',
+  cliff: 'cliff', rockery: 'mountain', landslide: 'moraine', debris: 'mound',
+  isletbarrier: 'island', basaltspine: 'basalt', rollinghills: 'mountain', reefchain: 'reef',
 });
 
 // 假山群基底：按種子輪用一般地質，拉狹長型成高低變化大的連綿起伏。
 export const ROCKERY_BASES = Object.freeze(['granite', 'sandstone', 'tor', 'mountain']);
 
-// 地質邊界一次使用狹長型單體：整段一個連續起伏網格（基底為各類地形，突起數量／
-// 起伏程度由長寬比推導的種子隨機範圍決定），不再逐段零星散置。幾何與季節無關
-// （四季共用同一網格），季節差異只在 tint 色調。零共享亂數、決定性。
-export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season = 'summer' }) {
+// 地質邊界一次使用狹長/2D 連續型單體：整段一個連續起伏網格（基底為各類地形，突起數量／
+// 起伏程度由長寬比推導的種子隨機範圍決定），不再逐段零星散置。
+// 支援 2 維延伸往緩衝區擴大（bufferDepth > 0），把緩衝區完全填滿。
+// 幾何與季節無關（四季共用同一網格），季節差異只在 tint 色調。零共享亂數、決定性。
+export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season = 'summer', bufferDepth = 0 }) {
   let type = NARROW_GEOLOGY_BOUNDARY[kind];
   if (!type) throw new RangeError(`Not a narrow geology boundary: ${kind}`);
   if (kind === 'rockery') {
@@ -411,12 +413,27 @@ export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season
   }
   if (![len, d, h].every(v => Number.isFinite(v) && v > 0) || !Number.isSafeInteger(seed))
     throw new RangeError('Invalid narrow geology boundary dimensions or seed');
+  const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
   const tint = rockTints[season] || rockTints.summer;
-  const ridge = elongatedGeologyMesh(type, seed >>> 0, { len, depth: d, height: h, tint });
+  const ridge = elongatedGeologyMesh(type, seed >>> 0, { len, depth: d, height: h, tint, bufferDepth: bufD });
   // 網格頂點 y ∈ [0, peakY]；後移半高使 AABB 量尺與渲染位置一致（同 rocks 的置中慣例）。
   const centered = { ...ridge.meshData,
     vertices: ridge.meshData.vertices.map((v, i) => (i % 3 === 1 ? v - ridge.size[1] / 2 : v)) };
   const rows = [{ g: ['mesh', centered, ridge.size], p: [0, ridge.size[1] / 2, 0], c: null, role: 'rock-mass' }];
+  const bufferParts = [];
+  if (ridge.bufferMeshData) {
+    const centeredBuf = { ...ridge.bufferMeshData,
+      vertices: ridge.bufferMeshData.vertices.map((v, i) => (i % 3 === 1 ? v - ridge.bufferSize[1] / 2 : v)) };
+    const bufPart = {
+      g: ['mesh', centeredBuf, ridge.bufferSize],
+      p: [0, ridge.bufferSize[1] / 2, -d / 2 - bufD / 2],
+      c: null,
+      role: 'boundary-buffer-fill',
+      boundaryBuffer: true,
+    };
+    rows.push(bufPart);
+    bufferParts.push(bufPart);
+  }
   if (kind === 'debris' || kind === 'landslide') {
     // 倒木覆蓋層：依長寬比取 1–3 株，種在突起之間的谷底（基底埋入 .3），
     // 谷底過高無足夠淨空時整株略過（脊體本身已足夠），全程收在包絡內。
@@ -443,6 +460,8 @@ export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season
       rows.push(...tree.map(p => ({ ...p, p: [p.p[0] + tu, p.p[1] + ty, p.p[2] + tv] })));
     }
   }
+  rows.parts = rows.filter(p => !p.boundaryBuffer);
+  rows.bufferParts = bufferParts;
   return rows;
 }
 
