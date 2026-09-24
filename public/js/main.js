@@ -76,7 +76,7 @@ import { geoClear } from './geocache.js';
 
 
 const $ = (id) => document.getElementById(id);
-  const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'super', 'room', 'loading', 'game'];
+const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
 
 // ---- 快速模式偏好(localStorage svs_quickmode)----
 // 開啟後:房間階段不預建地形(startPrebuild 跳過),等進入 loading 才建。
@@ -197,10 +197,13 @@ document.addEventListener('pointerdown', (e) => {
 }, true);
 
 // 還沒進戰區的畫面(這些畫面上沒有房主定案 ⇒ 操作方式退回「我的預設」)
-const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story', 'super']);
+const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story']);
 
 function show(screen) {
-  for (const s of screens) $(s).style.display = s === screen ? '' : 'none';
+  for (const s of screens) {
+    const el = $(s);
+    if (el) el.style.display = s === screen ? '' : 'none';
+  }
   app.phaseShown = screen;
   // body 層常駐工具列(#quickTools)跨所有畫面共用；疊層與選址面板由 z-index 蓋住。
   document.body.dataset.screen = screen;
@@ -213,7 +216,7 @@ function show(screen) {
     syncQuickRestartFab();
   }
   // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
-  if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story' || screen === 'super') document.body.dataset.side = 'SPEC';
+  if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
 }
 
 function toast(msg, ms = 3200) {
@@ -240,8 +243,6 @@ const NET_HANDLERS = {
     if (app.phaseShown === 'openroom') $('createRoomBtn').disabled = !app.favCfg;
     // 劇情部署被拒 → 清狀態退回章節列表
     if (app.phaseShown === 'story' && app.story) { app.story = null; $('storyDeploy').style.display = 'none'; renderStoryChapters(); }
-    // 超級部署被拒 → 清狀態退回超級設定(保留已選的地圖/角色,重按出擊即可)
-    if (app.phaseShown === 'super' && app.super) { app.super = null; $('superDeploy').style.display = 'none'; updateSuperStatus(); }
   },
   info: (m) => toast(m.msg),
   // 路網中繼:房主抓到的 OSM 圖資(見 osmGate)。可能比 sync 早到,也可能晚到 —— 兩種都要收。
