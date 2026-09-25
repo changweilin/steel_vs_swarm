@@ -646,6 +646,7 @@ export class BattleClient {
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
     this.blindLeft = 0;               // 閃光彈致盲剩餘秒數(伺服器權威視野狀態)
     this.stealthLeft = 0;
+    this._buffsLeft = [];             // 詞綴強化 [[id, remS], …](AFFIXES 剩餘秒;由快照 bf 欄推入)
     // 異常狀態致盲白幕(純表現層;常數/曲線住 data.js CC_FLASH):狀態上身瞬間全白 → 漸淡
     this._ccFlashLeft = 0;            // 白幕剩餘秒數(由 ccFlashDur() 倒數)
     this._ccFlashPeak = 0;            // 本次白幕的峰值不透明度(= 該狀態的致盲強度)
@@ -3503,6 +3504,7 @@ export class BattleClient {
           this.bleedLeft = e.bl || 0;
           this.invLeft = e.iv || 0;
           this.selfMods = e.md || [];   // 招式增益 [k, m, remS](speed/jump 由客戶端物理消費)
+          this._buffsLeft = e.bf || []; // 詞綴強化 [[id, remS], …](AFFIXES: tempered/hardened/…)
           this._ccFeed();
           // 角色 / 招式階級同步(伺服器權威;升階 → 重算武器數值並滿彈夾)
           if (e.ch && e.ch !== this.ch) this._setChar(e.ch);
@@ -3568,6 +3570,69 @@ export class BattleClient {
     const sh = this._specHud();
     this.hud.self?.(sh ? sh.hp : this.hp, sh ? sh.max : this.maxHp,
       sh ? 0 : this._burstCdLeft(), sh || this._weaponHud());
+    // 異常狀態圖示列(僅自機;觀戰不顯示)
+    if (!sh) {
+      const icons = [];
+      const push = (id, remS, positive, label, stacks) => {
+        if (remS > 0) icons.push({ id, remS, positive, label, stacks });
+      };
+      // ── 暈眩:移速×0,行動全鎖 ─────────────────────────────────────────
+      push('stun', this.stunLeft, false, '暈眩');
+      // ── 減速/凍結:用 slowF 區分(≤0.4=凍結,>0.4=一般減速) ───────────────
+      if (this.slowLeft > 0) {
+        const sf = this.slowF || 0.6;
+        // 中毒同時帶減速(slowF≈0.7):稍後由 poison 組合處理,此處只處理純減速/凍結
+        // 「中毒減速」判定:bleed 也在效果中,且 slowF > 0.5(poison slow 特徵)
+        const isPoisonSlow = this.bleedLeft > 0 && sf > 0.5;
+        if (!isPoisonSlow) {
+          push(sf <= 0.4 ? 'freeze' : 'slow', this.slowLeft, false, sf <= 0.4 ? '凍結' : '減速');
+        }
+      }
+      // ── 灼燒/中毒:bleed 欄位(火焰=純DoT,毒=DoT+減速組合) ──────────────
+      if (this.bleedLeft > 0) {
+        const sf = this.slowF || 0.6;
+        const hasPoisonSlow = this.slowLeft > 0 && sf > 0.5;
+        if (hasPoisonSlow) {
+          // 中毒(組合):以兩者較短的剩餘時間顯示毒圖示(代表 DoT+減速並行期)
+          const poisonRem = Math.min(this.bleedLeft, this.slowLeft);
+          push('poison', poisonRem, false, '中毒');
+          // 若 bleed 超過 slow,剩餘純 DoT 段顯示為灼燒(毒液掉盡後依舊灼燒)
+          if (this.bleedLeft > this.slowLeft + 0.1) push('burn', this.bleedLeft, false, '灼燒');
+        } else {
+          // 純灼燒(fire DoT,無減速或凍結組合)
+          push('burn', this.bleedLeft, false, '灼燒');
+        }
+      }
+      // ── 武器/招式離線 ─────────────────────────────────────────────────
+      push('emp', this.empLeft, false, '電磁干擾');
+      // ── 視野+火控喪失 ─────────────────────────────────────────────────
+      push('blind', this.blindLeft, false, '致盲');
+      // ── 移速折半+方向反轉 ─────────────────────────────────────────────
+      push('conf', this.confLeft, false, '混亂');
+      // ── 取消閃避 ──────────────────────────────────────────────────────
+      push('mark', this.markLeft, false, '標記');
+      // ── 命中率懲罰(精度下降) ────────────────────────────────────────
+      push('unbal', this.unbalLeft, false, '失衡');
+      // ── 命中+閃避雙懲罰(高地壓制) ──────────────────────────────────
+      push('hiSup', this.hiSupLeft, false, '高地壓制');
+      // ── 正面效果 ──────────────────────────────────────────────────────
+      push('stealth', this.stealthLeft, true, '隱身');
+      push('inv',     this.invLeft,     true, '無敵');
+      // 招式增益(多層,stacks = 生效中的條數)
+      const activeMods = (this.selfMods || []).filter((m) => m[2] > 0);
+      if (activeMods.length) {
+        const minRem = Math.min(...activeMods.map((m) => m[2]));
+        push('mod', minRem, true, '招式增益', activeMods.length);
+      }
+      // 詞綴強化(AFFIXES: tempered/hardened/vampiric/bounty)
+      for (const [id, remS] of (this._buffsLeft || [])) push(id, remS, true);
+      icons.sort((a, b) => a.remS - b.remS);
+      this.hud.statusIcons?.(icons);
+    } else {
+      this.hud.statusIcons?.([]);
+    }
+
+
     if (m.over) {
       const first = !this._gameOver;
       this._gameOver = true; this._deathSeq = null; this.hud.deathCine?.(false);
