@@ -352,12 +352,14 @@ console.log('\nⅣ 消費端覆蓋(使用者點名的六種軟性物質)');
   ok(/treeArr\[i \* 2\] = it\.x;/.test(code(biomes)) && /q\.setAttribute\('aTreeO', treeAttr\)/.test(code(biomes)),
     'aTreeO 由實例落點(it.x/it.z)推導 = 樹基本體(讀零件原點就是分解本身)');
 
-  // ⑥ GLB 植被:葉片判定只有一條(季節色偏與軟性同吃)
-  const glb = block(biomes, 'function extractNatureParts(');
-  ok(count(code(glb), /leaves\|grass\|flower\|bush/g) === 1,
-    'GLB 植被的葉片 regex 只有一條(兩條 = 「會變色卻不會飄」)');
-  ok(/soft: \{ k: 'leaf', span: 1 \}/.test(code(glb)) && /rim: 0/.test(code(glb)),
-    'GLB 葉片掛軟性且 rim: 0(幾何已正規化成高度 1 ⇒ span 恆 1;不加邊緣光 = 這條路徑外觀不變)');
+  // ⑥ GLB/canopy 植被(2026-09-11 統一幾何後):舊 `extractNatureParts` 正則分類器已退場,
+  // 葉片(含 GLB 換皮的 canopy)一律掛 key 走 `vegSoftKind` 推導,不另開名單
+  ok(count(code(biomes), /extractNatureParts/g) === 0,
+    '舊 GLB 葉片 regex 分類器零殘留(留著 = 兩份名單,改 key 那邊不會跟著動)');
+  ok(/key: 'foliage', lib:/.test(code(biomes)) || /key: 'conifer', lib:/.test(code(biomes)),
+    'GLB canopy 換皮仍掛 foliage/conifer key ⇒ 軟性走 vegSoftKind 同一縫');
+  ok(count(code(biomes), /soft: \{ k: sk,/g) === 1,
+    '葉片 soft 推導恰一處(k = vegSoftKind 結果;另起一處手寫 = 第二份名單)');
 
   // ⑦ 旗幟
   ok(count(code(biomes), /^function flag\(/gm) === 1, '旗面建構恰一份實作');
@@ -580,7 +582,7 @@ console.log('\nⅨ 國旗(地圖 30 : 駐軍 60 : 敵對 10)');
   ok(flagsMod.natIso('中國(重慶)') === 'CN' && flagsMod.natIso('烏克蘭(克里米亞韃靼)') === 'UA',
     '帶括號補述的國籍(全形/半形)切得掉 —— 直接查表那兩位會從名冊裡無聲消失');
   // 場地國:venues 的 country MUST 進 battleConfig,否則「地圖國」那 30% 恆缺席
-  ok(/venue: \{ id: venue\.id, name: venue\.name, mix: venue\.mix, country: venue\.country \}/.test(code(venuesSrc)),
+  ok(/venue: \{[^}]*country: venue\.country[^}]*\}/.test(code(venuesSrc)),
     'venueConfig 把 country 帶進 battleConfig(不帶 = 地圖國那一份恆缺席,而旗子照掛)');
   const noDesign = [...new Set(VENUES.map((v) => flagsMod.isoOfFlagEmoji(v.country)))]
     .filter((i) => !i || !flagsMod.FLAG_DESIGNS[i]);
