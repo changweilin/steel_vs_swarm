@@ -6,7 +6,7 @@
  * 驗證使用者需求與單一真相縫:
  *   1. 陰天雲朵數量與覆蓋率 (與雲量成正比, 陰天覆蓋半數以上天空; 霧量垂直擴展, 越濃雲底越低)
  *   2. 大雪結束後持續凍結一段時間 (thaw delay), 隨後平緩連續動態融化解凍恢復波浪
- *   3. 濃霧最濃時能見度壓至防禦塔射程 (Single Seam: UNITS.tower.range)
+ *   3. 濃霧錨定權威視野(2026-09-06:far 收斂至 65m 錨)
  *   4. 大風與四季自然物理表現: 春季櫻花 / 夏季綠葉 / 秋天楓紅 / 冬天枯葉 (淘汰虛擬氣流, 高空雲速/聚散 + 低空四季落花落葉)
  *   5. 雷雨時烏雲擊出真實 3D 分支閃電 (折線電弧 + 側向分叉 + 地面光暈 + 資源回收)
  */
@@ -17,7 +17,6 @@ import {
   WEATHER_PRESETS,
   WEATHER_DYNAMICS,
   ENV,
-  UNITS,
 } from '../public/js/data.js';
 import { petalSeason, petalTones } from '../public/js/petals.js';
 import { readFileSync } from 'node:fs';
@@ -119,34 +118,39 @@ assert(simDyn.waveAmp > 0.8, '完全解凍後水波完全恢復正常');
 console.log('  ✓ 大雪結束後持續凍結保溫 (thawHoldS) → 連續平緩融化解凍 → 恢復正常起伏\n');
 
 // --------------------------------------------------------------------------
-// Ⅲ. 濃霧「最濃時」能見度壓至防禦塔射程 (UNITS.tower.range)
-// --------------------------------------------------------------------------
-console.log('▍Ⅲ. 濃霧最濃時能見度壓至防禦塔射程 (UNITS.tower.range)');
+// Ⅲ. 濃霧雸定權威視野(2026-09-06 改制):渲染霧 far 收斂至 65m 錨,
+// 效機在視野邊界消失時 3D 已經一片白
+console.log('▍Ⅲ. 濃霧雸定權威視野(65m 錨)');
 
-const TOWER_RANGE = UNITS.tower.range;
-console.log(`  - 實戰砲塔權威射程 (UNITS.tower.range): ${TOWER_RANGE}m`);
-assert(TOWER_RANGE > 100 && TOWER_RANGE < 400, `UNITS.tower.range 應為有效砲塔射程 (實得 ${TOWER_RANGE})`);
-
-// 驗證 environment.js 中最濃霧壓制公式
-assert.match(envSrc, /const effFog = Math\.pow\(Math\.max\(0, curDyn\.effectiveFog\), 1\.8\);/, '能見度壓制採用高階曲線 (最濃時才收斂至射程)');
+// 驗證 environment.js 霧錨定公式:w=(1-eff)^5,eff=0 恆等舊制,eff越大壓得越狠
+assert.match(envSrc, /const fogW = Math\.pow\(1 - \(curDyn\.effectiveFog \?\? 0\), 5\);/, '能見度壓制採用高階曲線 (eff=0 恆等舊制,最濃才全壓)');
+assert.match(envSrc, /const FOG_SIGHT_FAR_M = 65;/, '濃霧錨 = 65m 步行視野 far');
 
 const testSpan = 1000;
-// 中度起霧 (fog 80%, effectiveFog = 0.20)
+const FOG_ANCHOR_FAR = 65;
+// 清晴 (fog 0%, eff = 0 => fogW = 1 => 恆等舊制)
+const clrDyn = resolveWeatherDynamics({ rain: 0, fog: 0, wind: 10, clouds: 60, thunder: 0, sand: 0, snow: 0 });
+const clrFogW = Math.pow(1 - (clrDyn.effectiveFog ?? 0), 5);
+const clrFar = testSpan * clrDyn.fogFar * clrFogW + FOG_ANCHOR_FAR * (1 - clrFogW);
+// 中度起霧 (fog 80%)
 const midFogDyn = resolveWeatherDynamics({ rain: 0, fog: 80, wind: 10, clouds: 60, thunder: 0, sand: 0, snow: 0 });
-const midEffFog = Math.pow(Math.max(0, midFogDyn.effectiveFog), 1.8);
-const midActualFogFar = lerp(testSpan * midFogDyn.fogFar, Math.min(testSpan * midFogDyn.fogFar, TOWER_RANGE), midEffFog);
+const midFogW = Math.pow(1 - (midFogDyn.effectiveFog ?? 0), 5);
+const midActualFogFar = testSpan * midFogDyn.fogFar * midFogW + FOG_ANCHOR_FAR * (1 - midFogW);
 
-// 極致濃霧 (fog 100%, effectiveFog = 1.0)
+// 極致濃霧 (fog 100%, eff = 1 => fogW = 0 => 錨定 65m)
 const maxFogDyn = resolveWeatherDynamics({ rain: 0, fog: 100, wind: 10, clouds: 60, thunder: 0, sand: 0, snow: 0 });
-const maxEffFog = Math.pow(Math.max(0, maxFogDyn.effectiveFog), 1.8);
-const maxActualFogFar = lerp(testSpan * maxFogDyn.fogFar, Math.min(testSpan * maxFogDyn.fogFar, TOWER_RANGE), maxEffFog);
+const maxFogW = Math.pow(1 - (maxFogDyn.effectiveFog ?? 0), 5);
+const maxActualFogFar = testSpan * maxFogDyn.fogFar * maxFogW + FOG_ANCHOR_FAR * (1 - maxFogW);
 
+console.log(`  - 晴天 far 距離: ${clrFar.toFixed(1)}m (恆等舊制)`);
 console.log(`  - 中度霧 (80%) far 距離: ${midActualFogFar.toFixed(1)}m (保持遠處模糊可視)`);
-console.log(`  - 最濃霧 (100%) far 距離: ${maxActualFogFar.toFixed(1)}m (精確收斂至 1 個砲塔射程 ${TOWER_RANGE}m)`);
+console.log(`  - 最濃霧 (100%) far 距離: ${maxActualFogFar.toFixed(1)}m (收斂至 65m 錨)`);
 
-assert(midActualFogFar > TOWER_RANGE * 1.5, '中度霧未過度壓制視野');
-assert(Math.abs(maxActualFogFar - TOWER_RANGE) < 5, `最濃霧時視野距離精確收斂至 1 個砲塔射程 (實得 ${maxActualFogFar.toFixed(1)}m)`);
-console.log('  ✓ 濃霧在「最濃時」精確收斂至 1 個砲塔射程\n');
+assert(Math.abs(clrFar - testSpan * clrDyn.fogFar) < 1e-9, '晴天霧效果恆等舊制(eff=0 時曲線恆等)');
+assert(midActualFogFar > 300, '中度霧未過度壓制視野');
+assert(maxActualFogFar < midActualFogFar, '濃度越深視野越近(單調)');
+assert(Math.abs(maxActualFogFar - FOG_ANCHOR_FAR) < 1, `最濃霧時視野距離收斂至 65m 錨 (實得 ${maxActualFogFar.toFixed(1)}m)`);
+console.log('  ✓ 濃霧在「最濃時」收斂至 65m 步行視野錨\n');
 
 // --------------------------------------------------------------------------
 // Ⅳ. 風力自然表現與四季落花落葉 (春櫻花 / 夏綠葉 / 秋楓紅 / 冬枯葉)
@@ -181,7 +185,7 @@ assert.doesNotMatch(envSrc, /windTex/, '已無 windTex 虛擬氣流貼圖');
 
 // 3. 高空風力表現
 assert.match(envSrc, /WIND\.CLOUD_MPS \* windAmp \* t/, '高空雲朵飄移速度由 windAmp 驅動');
-assert.match(envSrc, /clusterPulse = Math\.sin\(t \* 0\.12 \* Math\.max\(0\.4, windAmp\) \+ c\.phase\)/, '高空雲朵聚散頻率由 windAmp 驅動');
+assert.match(envSrc, /clusterPulse = Math\.sin\(t \* [\d.]+ \* Math\.max\(0\.4, windAmp\) \+ c\.phase\)/, '高空雲朵聚散頻率由 windAmp 驅動');
 console.log('  ✓ 高空: 雲朵飄移速度與聚散速率完全由風力 windAmp 即時驅動');
 
 // 4. 低空落花落葉風力動態響應
