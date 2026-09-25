@@ -255,10 +255,11 @@ async function osmApiRoads(lat, lng, radius) {
 }
 
 // ---- 數值索引路網圖 ----
-function buildGraph(ways, origin) {
+function buildGraph(ways, origin, tunPrefRe) {
   const idx = new Map();          // "lat,lng" -> i
   const X = [], Z = [], LA = [], LN = [], adj = [];
   const tunE = new Set();         // 隧道邊 "u:v"(雙向都記):規則 #5 選線判定用
+  const tunPrefE = new Set();     // PREFER_TUNNEL 偏好專用:只收目標隧道的邊,tunE 本體不動
   const brgE = new Set();         // 橋樑邊(同上):PREFER_BRIDGE 場地的選線偏好用
   const portalN = new Set();      // 橋/隧 way 的端點節點 = 出入口(portal):規則「只能從出入口進出」
   const cosO = Math.cos(origin[0] * d2r);
@@ -285,7 +286,12 @@ function buildGraph(ways, origin) {
       const len = Math.hypot(X[u] - X[v], Z[u] - Z[v]);
       adj[u].push(v, len);        // 扁平化:[v0,len0, v1,len1, …]
       adj[v].push(u, len);
-      if (tun) { tunE.add(`${u}:${v}`); tunE.add(`${v}:${u}`); }
+      if (tun) {
+        tunE.add(`${u}:${v}`); tunE.add(`${v}:${u}`);
+        if (!tunPrefRe || tunPrefRe.test(w.tags?.name || '')) {
+          tunPrefE.add(`${u}:${v}`); tunPrefE.add(`${v}:${u}`);
+        }
+      }
       if (brg) { brgE.add(`${u}:${v}`); brgE.add(`${v}:${u}`); }
     }
     // 結構 way 的頭尾幾何節點 = 出入口(portal):真實匝道/洞口只接在結構兩端,
@@ -312,7 +318,7 @@ function buildGraph(ways, origin) {
     }
     componentCount++;
   }
-  return { X, Z, LA, LN, adj, n: X.length, tunE, brgE, portalN, component, componentCount };
+  return { X, Z, LA, LN, adj, n: X.length, tunE, tunPrefE, brgE, portalN, component, componentCount };
 }
 
 class MinHeap {
@@ -483,6 +489,9 @@ const PREFER_BRIDGE = new Set(['parkave', 'chicago', 'civicblvd']);
 // 放棄(civicblvd 的 60m service 就是這樣落空的)。這個集合只是選線偏好,成不成立一律
 // 以 `audit_lane_scenarios` 的實測為準。
 const PREFER_TUNNEL = new Set(['taroko', 'madrid', 'roppongi']);
+// 場地 → OSM way name 正則:該場地的隧道偏好只比目標隧道(多洞並存時不被最長但建不起來的洞帶走)。
+// 未列場地一律全收 ⇒ 選線逐位元不變。tunE(安全閘輸入)不受影響。
+const PREFER_TUNNEL_WAY = {};
 const BEARING_SECTORS = {
   // 僅仍保留結構場地的定向扇區；一般都市場地不列入，走全向暴搜。
   // madrid 兩錨都夾往東(Joaquín Costa / María de Molina 都是東西向,目標地下道在錨點東側)。
@@ -729,7 +738,7 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1) 
       const u = l.full[i - 1], v = l.full[i];
       const seg = Math.hypot(g.X[u] - g.X[v], g.Z[u] - g.Z[v]) * s;
       if (g.brgE?.has(`${u}:${v}`)) brgLen += seg;
-      if (g.tunE?.has(`${u}:${v}`)) tunLen += seg;
+      if ((g.tunPrefE ?? g.tunE)?.has(`${u}:${v}`)) tunLen += seg;
     }
   }
   // 規則(2026-09-02):L2/L3 路徑平衡閘 —— 左右長度誤差/外側比/重合度。
@@ -770,7 +779,7 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
     const RAD = maxRealD * 2.4;
     const ways = await roadsFor(id, anchor, RAD);
     if (!ways || ways.length < 20) { log(`  ways=${ways ? ways.length : 'ERR'} → skip`); continue; }
-    const g = buildGraph(ways, anchor);
+    const g = buildGraph(ways, anchor, PREFER_TUNNEL_WAY[id]);
     log(`  ways=${ways.length} nodes=${g.n}`);
     // 錨點 → 最近道路節點(120m 內)
     let aIdx = -1, ad = 120;
