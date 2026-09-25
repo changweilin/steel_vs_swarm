@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { ENVIRONMENT_BUILDINGS, ENVIRONMENT_OBJECTS } from '../public/js/environmentCatalog.js';
-import { environmentBuildingPlan } from '../public/js/environmentArchitecture.js';
+import { environmentBuildingPlan } from '../public/js/environmentParts.js';
 import { environmentParts } from '../public/js/environmentParts.js';
 import { ROOF_FORMS, ARCHITECTURE_STYLES } from '../public/js/architectureStyles.js';
 import { architecturalRoofParts, ROOF_SEAT_SINK } from '../public/js/architectureRoofParts.js';

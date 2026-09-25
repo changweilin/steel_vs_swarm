@@ -10,21 +10,21 @@
 |---|---|---|
 | vehicle(10) | vehicleIndividualBodies73k, vehicleCatalog31k, vehicles26k, vehicleEquipment20k, vehicleIndustry9k, vehicleVariants6k, vehicleConsists5k, vehicleEveryday4k, vehicleModels3k, vehicleParts2k | `vehicles.js` 被 6 支 import，疑似外層縫；`vehicleParts` 僅 hazards/siteplan/test 引用 |
 | vessel(5) | vesselModels14k, vesselLayout12k, vesselCatalog11k, vesselEquipmentModels8k, vesselGeometry4k | 全被 aquatics/environmentParts/biomes 引用；可併為 `vessels/` 目錄或單一 `vessel.js` |
-| ground(10) | ground237k, terrain82k, proceduralGroundParts21k, groundCatalog16k, groundPartCatalog13k, groundMarkings12k, proceduralGround8k, groundVenues5k, groundVisitorSites5k, groundLandscapes4k | ground.js 是 hub；`groundVisitorSites/Landscapes/Venues` 僅被 Catalog/PartCatalog 互引，宜先收攏此三支 |
+| ground(7) | ground237k, terrain82k, proceduralGroundParts21k, groundCatalog16k, groundPartCatalog13k, groundMarkings12k, proceduralGround8k | ground.js 是 hub；`groundVisitorSites/Landscapes/Venues` 已收攏進 groundPartCatalog / groundCatalog / proceduralGround |
 | arch(11) | architectureStyles43k, architectureFacadeParts24k, architectureRoofParts9k, functionalArchitectureCatalog9k, regionalArchitecture8k, towerBuildings5k, functionalArchitecture4k, architecturePartGeometry3k, roofProfiles2k, nativeFunctionalBuildings1k, towerBuildingRules1k | `architectureStyles/buildingDiversity` 各被 7 支 import；`towerBuildingRules` 僅 towerBuildings+稽核引用 |
-| env(4) | environment51k, environmentParts45k, environmentCatalog5k, environmentArchitecture2k | environmentParts 被 5 支 import 的 hub；`environmentArchitecture` 僅 3 處引用，可併入 environmentParts |
+| env(3) | environment51k, environmentParts45k, environmentCatalog5k | environmentParts 為 hub；`environmentArchitecture` 已併入 environmentParts |
 | venue(4) | venueText135k, venues41k, venueLanes35k, venueGrid1k | venueGrid 僅 roadgrid/venueGrid/稽核/bake 引用；bake_venue_* 三支工具對應 |
 | building(5) | buildingAppurtenances109k, buildingDiversity29k, buildingFunctions13k, approvedBuildingModels12k, buildingUnitModels11k | buildingDiversity 被 7 支 import 的 hub |
 | osm(5) | osmAreas58k, osmBuilding29k, osmrelay19k, osmAreaObjects9k, osmQuery7k | osmAreas 被 5 支 import 的 hub |
-| wall(3) | wallDecorations, wallpanel, wallDecorationCatalog | wallpanel 全庫唯一零靜態 import（僅 biomes/gaitcurve/leafcard 字串引用），先查是否死碼再併 |
+| wall(2) | wallDecorations, wallpanel | `wallDecorationCatalog` 已併入 `wallDecorations`；`wallpanel` 供 `audit_siteplan` 驗證零 import 面板切分，保留獨立 |
 | story(5) | lore143k, storytalk38k, story37k, codex28k, storyui8k | 與 tools/story_book 共用 storyui 縫，勿拆 |
 | audio_vfx(7) | toon162k, castfx104k, vfx79k, postfx68k, audio52k, petals16k, castparticles13k | toon 被 32 支 import 的全域 hub，動它=動全部 |
 | char_npc(13) | locomotion112k, aquatics69k, mecha52k, npcModels40k, charPreview37k, matsample34k, summonModels27k, wildlife22k, gaitcurve21k, pedestrian19k, morphrig15k, portraits11k, npcicon6k | forge/ 目錄另有 45 支 mechs（0.93MB） |
 | geo_terrain(13) | biomes761k, edgewall63k, roadgrid55k, geology47k, hazards43k, siteplan33k, mapSelect29k, forestSpecies24k, edgeSlope24k, forest19k, mapgen16k, geologyPhenomena6k, geologyBattle4k | biomes/data/rng/toon 為全域 hub |
 
-## 建議順序（下一對話）
+## 建議順序
 
-1. wall(3)＋`environmentArchitecture`＋`groundVisitorSites/Landscapes/Venues`：引用面最小，先收。
+1. ✅ **已完成**：`wallDecorationCatalog`＋`environmentArchitecture`＋`groundVisitorSites/Landscapes/Venues`（5 支碎片已整併至相應主模組，刪除 5 檔，全單元測試與平衡稽核通過）。
 2. vessel(5)→單一模組；vehicle(10)→以 `vehicles.js` 為縫收攏。
 3. arch(11)＋building(5)：先畫 import 圖再動（hub 交織）。
 4. ground/venue/osm：牽涉 bake 工具與伺服器地形縫，最後動。

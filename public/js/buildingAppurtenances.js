@@ -5,8 +5,7 @@
 // 依功能類別置於正確結構部位（頂部角落/邊緣/中心、正門地面、側邊地面、立面高程），
 // 根據建物生成後的實體尺寸（長度、高度、屋頂面積、跨度）進行空間容量保護與確定性隨機配置。
 import * as THREE from 'three';
-import { wallDecorationParts } from './wallDecorations.js';
-import { WALL_DECORATION_RULES, WALL_DECORATION_LIMIT } from './wallDecorationCatalog.js';
+import { wallDecorationParts, WALL_DECORATION_RULES, WALL_DECORATION_LIMIT } from './wallDecorations.js';
 import { architecturePartGeometry } from './architecturePartGeometry.js';
 import { architectureHash } from './buildingDiversity.js';
 import { roofDimensions, sectionRoofProfile, sectionRoofHeight, ROOF_SEAT_SINK } from './roofProfiles.js';

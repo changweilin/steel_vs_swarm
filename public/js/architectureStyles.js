@@ -1,7 +1,7 @@
 // ============ 建築文化風格、功能分區、立面材質與屋頂幾何型錄 ============
 // 文化／年代是視覺語彙，不改寫圖資的實際用途；比例皆為相對權重。
 // 依座標位置所屬國家與文化圈加權，符合在地文化者占 60% (CULTURAL_AFFINITY_RATIO)。
-import { WALL_DECORATION_RULES } from './wallDecorationCatalog.js';
+import { WALL_DECORATION_RULES } from './wallDecorations.js';
 import { REGIONAL_STYLES, REGIONAL_CULTURES } from './regionalArchitecture.js';
 
 /** 屋頂外觀分類；所有風格與附件共用此登錄。 */

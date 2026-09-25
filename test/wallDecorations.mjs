@@ -6,8 +6,10 @@ const modules = {
 };
 register('data:text/javascript,' + encodeURIComponent(`const modules = ${JSON.stringify(modules)};
 export async function resolve(s, c, next) { return modules[s] ? { url: modules[s], shortCircuit: true } : next(s, c); }`), import.meta.url);
-const { wallDecorationParts, generateSeamlessVinePattern, LOW_RISE_LIMIT } = await import('../public/js/wallDecorations.js');
-const { WALL_DECORATIONS, WALL_COVERAGE, WALL_DECORATION_LIMIT } = await import('../public/js/wallDecorationCatalog.js');
+const {
+  wallDecorationParts, generateSeamlessVinePattern, LOW_RISE_LIMIT,
+  WALL_DECORATIONS, WALL_COVERAGE, WALL_DECORATION_LIMIT,
+} = await import('../public/js/wallDecorations.js');
 const { architecturePartGeometry } = await import('../public/js/architecturePartGeometry.js');
 const { generateBuildingAppurtenances } = await import('../public/js/buildingAppurtenances.js');
 const { buildOsmPolygonBuildings } = await import('../public/js/osmBuilding.js');

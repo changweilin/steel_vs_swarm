@@ -12,7 +12,7 @@ const { DEFS, SURFACES, SIZE } = await import('../public/js/groundCatalog.js');
 const { GROUND_PARTS, GROUND_ATTACHMENTS, GROUND_PART_PALETTES } = await import('../public/js/groundPartCatalog.js');
 const { paintGround, surfaceEnvironment } = await import('../public/js/proceduralGround.js');
 const { paintBasketball, paintCourtArray, paintTrack } = await import('../public/js/groundMarkings.js');
-const { TRACK, TRACK_WIDTH, TRACK_DEPTH } = await import('../public/js/groundVenues.js');
+const { TRACK, TRACK_WIDTH, TRACK_DEPTH } = await import('../public/js/groundCatalog.js');
 const { generateGroundPart } = await import('../public/js/proceduralGroundParts.js');
 const { generateBuildingAppurtenances, calculateRoofMetrics } = await import('../public/js/buildingAppurtenances.js');
 

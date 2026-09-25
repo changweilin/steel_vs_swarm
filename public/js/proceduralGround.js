@@ -1,10 +1,79 @@
 import { paintVenue, paintTrack, paintBasketball, paintCourtArray, paintParking } from './groundMarkings.js';
-import { LANDSCAPES, paintLandscape } from './groundLandscapes.js';
-import { VISITOR_SITES, paintVisitorSite } from './groundVisitorSites.js';
 import { mulberry32 } from './rng.js';
 import { forestEnvironment, forestSeed } from './forest.js';
-import { DEFS, SURFACES, SURFACE_LIMITS } from './groundCatalog.js';
+import { DEFS, SURFACES, SURFACE_LIMITS, LANDSCAPES, VISITOR_SITES } from './groundCatalog.js';
 export { forestSeed as groundSeed } from './forest.js';
+
+export function paintLandscape(g, spec, rnd) {
+  const p = spec.pattern;
+  g.save(); g.lineWidth = .003; g.globalAlpha = .3;
+  g.strokeStyle = spec.landscape === 'exposed' ? '#655e54' : '#3d6348';
+  if (['dunes', 'gullies'].includes(p)) {
+    const phase = rnd() * 6;
+    for (let row = -1; row < 12; row++) {
+      g.beginPath();
+      for (let i = 0; i <= 24; i++) {
+        const x = i / 24, y = row / 10 + .025 * Math.sin(x * 11 + phase + row * .4);
+        if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+  } else if (['cracks', 'crust'].includes(p)) {
+    for (let i = 0; i < 32; i++) {
+      const x = rnd(), y = rnd(), a = rnd() * Math.PI * 2;
+      for (let branch = 0; branch < 3; branch++) {
+        const angle = a + branch * 2.1, len = .025 + rnd() * .06;
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len); g.stroke();
+      }
+    }
+  } else {
+    for (let i = 0; i < 90; i++) {
+      const x = rnd(), y = rnd(), r = .006 + rnd() * .018;
+      g.fillStyle = p === 'heath' ? (i % 3 ? '#7b8a58' : '#d5a1b5')
+        : spec.landscape === 'exposed' ? (i % 2 ? '#ded7c4' : '#6f685e') : (i % 2 ? '#acc58a' : '#476643');
+      g.beginPath();
+      if (p === 'angular' || p === 'chalk') {
+        g.moveTo(x - r, y); g.lineTo(x, y - r); g.lineTo(x + r, y + r * .5); g.closePath();
+      } else if (p === 'fern' || p === 'prairie' || p === 'savanna') {
+        g.moveTo(x, y); g.lineTo(x + r, y - r * 3); g.lineTo(x + r * .5, y); g.closePath();
+      } else if (p === 'clover') {
+        for (let leaf = 0; leaf < 3; leaf++) {
+          const a = leaf * Math.PI * 2 / 3;
+          g.moveTo(x, y); g.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, r, 0, Math.PI * 2);
+        }
+      } else g.ellipse(x, y, r, r * .6, rnd() * Math.PI, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.restore();
+}
+
+export function paintVisitorSite(g, site) {
+  g.save();
+  const green = site.zone === 'green';
+  g.strokeStyle = green ? '#c6b995' : '#c4b39c';
+  g.lineWidth = .075; g.lineCap = 'round';
+  // One access route with branches to each facility, never a decorative grid.
+  g.beginPath(); g.moveTo(.5, .94); g.lineTo(.5, .5); g.stroke();
+  for (const [, x, z] of site.equipment) {
+    g.beginPath(); g.moveTo(.5, .5); g.lineTo(x + .5, z + .5); g.stroke();
+  }
+  const pads = ['camp', 'picnic', 'workshop', 'exhibit'];
+  if (pads.includes(site.layout)) {
+    g.fillStyle = site.layout === 'camp' ? '#b2a17d' : '#a8a391';
+    for (const [, x, z] of site.equipment) g.fillRect(x + .41, z + .42, .18, .16);
+  } else if (site.layout === 'garden') {
+    for (const side of [-1, 1]) {
+      g.fillStyle = '#799154'; g.beginPath(); g.ellipse(.5 + side * .22, .48, .11, .1, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#b69c76'; g.lineWidth = .012; g.stroke();
+    }
+  } else if (site.layout === 'circle' || site.layout === 'classroom') {
+    g.fillStyle = '#b4ad98'; g.beginPath(); g.arc(.5, .5, .2, 0, Math.PI * 2); g.fill();
+  } else if (site.layout === 'lookout') {
+    g.fillStyle = '#b4aa94'; g.fillRect(.13, .16, .74, .19);
+  }
+  g.restore();
+}
 
 const sample = (r, [a, b]) => a + r() * (b - a);
 const within = (v, [a, b]) => v >= a && v <= b;
