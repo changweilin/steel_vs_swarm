@@ -1,25 +1,25 @@
-// ============ 無人戰略:鋼鐵與蜂群 — 對戰伺服器(雲端 / 區網 Tailscale 共用)============
-// 本檔 = **傳輸層**:HTTP 靜態檔 + WebSocket + 健康檢查;房間/配對/戰鬥生命週期全在 `server/rooms.js`
-// (`RoomHub`,與傳輸層無關),單機版由瀏覽器直接 new 同一支 —— 三種連線機制共用同一份房間邏輯。
+// ============ Steel vs. Swarm — battle server (cloud / LAN-over-Tailscale) ============
+// This file = transport layer: HTTP static + WebSocket + health checks. Room/matchmaking/battle
+// lifecycle lives entirely in `server/rooms.js` (`RoomHub`, transport-independent); solo news the same
 //
-// 三種機制對應的啟動方式:
-//   ・雲端  `node server/server.js --cloud`      (PORT 由平台注入;不廣播區網位址,房間數設上限)
-//   ・區網  `node server/server.js --lan --https`(印出 Tailscale / 區網網址與自簽憑證說明)
-//   ・單機  完全不用本檔(見 `public/js/localhost.js` + `tools/build_solo.mjs`)
+// Start modes (three mechanisms, one room core):
+//   - cloud  `node server/server.js --cloud`       (PORT injected by platform; no LAN broadcast, room cap)
+//   - lan    `node server/server.js --lan --https` (prints Tailscale / LAN URLs and self-signed cert notes)
+//   - solo   never touches this file (see `public/js/localhost.js` + `tools/build_solo.mjs`)
 //
-// 【同時多路徑】區網模式 MUST 讓有線 LAN / WiFi / Tailscale **同時**都連得進來,不需為某一條路重跑或重設。
-// 監聽 0.0.0.0 只解決了 TCP 那一半,另外三件事沒做就是「某一條路靜靜連不上」:
-//   ①自簽憑證的 SAN 在第一次生成時就凍住 —— 之後才接上的 WiFi / Tailscale 位址不在裡面,
-//     那條路徑的瀏覽器直接擋在憑證主體不符(見 ensureCert:SAN 取聯集,缺涵蓋才重簽)。
-//   ②介面是會熱插拔的(WiFi 換網、`tailscale up` 晚於開伺服器)⇒ 位址集合要持續盯,
-//     變了就重簽並熱換 secure context(見 ADDR_WATCH_MS 那段),否則只能重啟伺服器。
-//   ③`--https` 之下 `http://<ip>:PORT` 是死的,而桌機瀏覽器打 IP 預設補的就是 http ——
-//     故同一個埠用第一個位元組分流(0x16 = TLS)同時吃 http 與 https(見 demux)。
+// Multipath: LAN mode MUST serve wired LAN / WiFi / Tailscale simultaneously with no per-path reruns.
+// Listening on 0.0.0.0 solves only the TCP half; skipping the other three leaves one path silently unreachable:
+//   (1) self-signed cert SANs freeze at first generation -- later-joined WiFi / Tailscale addresses
+//     fall outside them, and that path's browsers block on cert-name mismatch (see ensureCert: union the
+//   (2) interfaces hot-plug (WiFi swaps, `tailscale up` after server start), so watch the address set and
+//     re-sign + hot-swap the secure context on change (see ADDR_WATCH_MS), or only a restart recovers.
+//   (3) under `--https`, `http://<ip>:PORT` is dead while desktop browsers default-typed URLs to http --
+//     hence one port demuxes on the first byte (0x16 = TLS) to serve both http and https (see demux).
 //
-// 【URL 佈局】瀏覽器看到的路徑 **MUST** 鏡射儲存庫佈局:`/public/**` 與 `/server/*.js`,`/` 302 到 `/public/`。
-// 理由:單機版的瀏覽器要 import `/server/rooms.js`,而它 import `../public/js/data.js` ——
-// 只有鏡射佈局能讓 `data.js` 在整個瀏覽器分頁裡是**同一個模組實例**(否則主程式與 sim 各拿一份平衡數值)。
-// GitHub Pages 的靜態單機版用同一套佈局(見 `tools/build_solo.mjs`),故 dev 與線上完全一致。
+// URL layout: browser-visible paths MUST mirror the repo layout: `/public/**` and `/server/*.js`, `/` 302s to `/public/`.
+// Why: solo browsers import `/server/rooms.js`, which imports `../public/js/data.js` -- only the mirrored
+// layout keeps `data.js` a single module instance per tab (otherwise app and sim hold divergent balance numbers).
+// The GitHub Pages static solo build uses the same layout (see `tools/build_solo.mjs`), so dev and live agree.
 import http from 'http';
 import https from 'https';
 import net from 'net';

@@ -1,10 +1,10 @@
-// ============ 房間中樞 RoomHub — 與傳輸層無關的房間/配對/戰鬥生命週期 ============
-// 【單一真相縫】三種連線機制(雲端 / 區網 Tailscale / 單機)**共用這一支**:
-//   ・雲端 & 區網:`server/server.js` 把每條 WebSocket 接成一個 session。
-//   ・單機:`public/js/localhost.js` 在瀏覽器裡直接 new RoomHub(),session 是同步迴圈。
-// 因此本檔 **MUST NOT** import 任何 Node 內建模組(http/fs/os/ws…),也 MUST NOT 碰 process/Buffer ——
-// 一旦踩進去,單機版在瀏覽器就整支炸掉(稽核:`node tools/audit_net_modes.mjs`)。
-// 訊息協定(t 欄位)是三種機制之間的唯一介面:client → recv(msg) / hub → send(msg)。
+// ============ RoomHub — transport-independent room/matchmaking/battle lifecycle ============
+// Single seam: cloud / LAN-over-Tailscale / solo share this file:
+//   - cloud & LAN: `server/server.js` attaches each WebSocket as a session.
+//   - solo: `public/js/localhost.js` news a RoomHub in-tab with synchronous sessions.
+// Hence this file MUST NOT import Node builtins (http/fs/os/ws...) nor touch
+// process/Buffer -- solo would explode in the browser (guard: `node tools/audit_net_modes.mjs`).
+// The message protocol (t field) is the only cross-mode interface: client -> recv(msg) / hub -> send(msg).
 import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
 import {
@@ -12,19 +12,20 @@ import {
   BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit,
   laneCountFor, mapArg, mapPlan,
 } from '../public/js/data.js';
-// 操作方式(整房一致、房主定案)的合法值只有 ctrlmode.js 一份 —— 在這裡照抄一組字串
-// 就是第二份選項表(新增第四種操控時必漏改)。該檔刻意零 import、頂層不碰 window ⇒
-// Node 與瀏覽器(單機)都載得起來,與 data.js 同樣走鏡射佈局的相對路徑。
+// Control-mode values (room-wide, host-finalized) live only in ctrlmode.js -- copying the
+// strings here would fork a second option table (a fourth mode would miss one copy). That file
+// stays zero-import with no top-level window access, so Node and in-tab solo both load it
+// via the same mirrored-layout relative path as data.js.
 import { CTRL_MODES, DEFAULT_CTRL_MODE } from '../public/js/ctrlmode.js';
-// 路網中繼的 payload 形狀/上限:房主送出前與伺服器收到後 MUST 是**同一支**淨化函式
-// (在這裡照抄一組上限就是第二份會過期的規格)。該檔零 import、零模組級狀態 ⇒
-// Node 與瀏覽器(單機)都載得起來,與 data.js 同樣走鏡射佈局的相對路徑。
+// Road-relay payload shape/limits: host-side send and server-side receive MUST share the single
+// sanitizer (a copied limit set here would rot). That module keeps zero imports and zero
+// module-level state for the same dual-runtime reason.
 import { sanitizeOsmRelay, osmRelayKey } from '../public/js/osmrelay.js';
-// 擴充地圖生成縫(零 Node API,單機瀏覽器共用):mix 夾限唯一真相住 mapgen,
-// 驗證端只讀結果,不重寫公式。
+// Extended-map seams (zero Node API, shared with solo): mix-clamping truth lives in mapgen;
+// the validator reads results without rewriting formulas.
 import { MAX_WATER_WET, sanitizeProcRelief } from '../public/js/mapgen.js';
 
-// 兵線(lat/lng)→ 遊戲公尺(原點任取,towerLayoutAudit 只用相對距離)。與 mapSelect / 烘焙同一換算。
+// Lanes (lat/lng) -> game meters (arbitrary origin; towerLayoutAudit uses relative distances only). Same conversion as mapSelect / baking.
 const EARTH_M = 6371000, SC_GAME = 1 / MAPGEO.REAL_SCALE;
 function lanesToGame(lanes) {
   const o = lanes[0]?.[0];
@@ -43,14 +44,14 @@ function genToken() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-/** 開房前的戰場設定驗證:回傳錯誤訊息或 null(三種機制同標準,單機也照驗) */
+/** Pre-room battlefield-config validation: returns an error message or null (same bar across all three modes, solo included) */
 export function validateBattleConfig(cfg, teamSize) {
   if (!cfg || !cfg.bases || !cfg.center || !Array.isArray(cfg.lanes)) return '戰場設定不完整,請先建立/選擇地圖';
-  // 地圖型態(標準 / 劇情戰役)只有 `mapArg` 一份解讀 —— 這一支與 solveTowerSites /
-  // 尺度函式 / 兵線數共用同一個入口,驗證與生成因此不可能對這一場的型態有兩種看法。
-  // 地圖型態以下的幾何驗證吃的是客戶端送上來的 JSON,形狀不對(map/數字/陣列任一格)
-  // 會在深處拋 TypeError —— MUST 回錯誤字串,MUST NOT 拋:拋出去 = 整個伺服器 process
-  // 退出 = 全部房間全員斷線。房主只會看到一句話,而不是全服陪葬。
+  // Map kind (standard / story campaign) has one reading in `mapArg` -- shared with solveTowerSites,
+  // scale functions, and lane counts, so validation and generation can never disagree on a battle's kind.
+  // Geometry checks below consume client-submitted JSON; a malformed shape (map/number/array)
+  // throws TypeError deep inside -- so MUST return error strings, MUST NOT throw: a throw
+  // exits the whole server process = every room disconnects. The host sees one sentence, not a fleet-wide outage.
   try {
     const mapA = mapArg(cfg);
   const plan = mapPlan(mapA);

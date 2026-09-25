@@ -1,180 +1,48 @@
-# 程序化建築、屋頂構造與零件生成管線
+# Procedural Buildings, Roof Frames, and Part Generation
 
-本文件定義遊戲啟動時 OSM 圖資建物的四階段程序化生成順序、幾何尺度指標計算、屋頂構造防扭曲自適應規則、立面平面渲染深度分層，以及屋頂零件之相容性與水平放置限制。
+> SSOT: `public/js/osmBuilding.js` (footprint body), `architectureStyles.js`
+> (`resolveAdaptiveRoofForm()`), `architecturalFacadeParts.js`,
+> `architectureRoofParts.js`, `architecturePartGeometry.js` (OSM-side geometry
+> adapter), `buildingAppurtenances.js`, `buildingFunctions.js`,
+> `regionalArchitecture.js`, `heritageSites.js`.
+> Verification: `node test/buildingGeneration.mjs`, `node test/regionalArchitecture.mjs`,
+> `node test/buildingFunctions.mjs`, `node test/heritageSites.mjs`.
 
-## 0. 設計原則與管線順序
+## Pipeline (four strict phases)
 
-建築生成遵循「單一結算點」、「確定性（種子與輪廓固定時輸出完全一致）」與「防扭曲幾何降級」原則。啟動管線劃分為嚴格的四個先後階段：
+1. Deploy body and measure: keep the true outer ring and courtyard holes; never
+   simplify non-orthogonal or concave polygons to a center AABB. Measure width,
+   depth, short-span, aspect, exact area (shoelace), and centroid; wall meshes and
+   aligned blocker boxes derive from the same edge geometry.
+2. Resolve roof with anti-warp downgrade: skyscrapers (>= 35m) step down to
+   stepped/flat crowns; giant footprints (>= 750 sqm or >= 28m span) go sawtooth
+   (industrial) or flat/stepped; extreme slenderness (aspect > 2.6) drops radial
+   roofs for long-axis gables; tiny footprints (< 2.5m span or < 15 sqm) fall to a
+   plain shed. Concave or courtyard polygons default to flat so no wing hangs in air.
+3. Render facade in depth tiers (glass < frame < trim < pier, non-coplanar offsets)
+   so WebGL never z-fights; long residential/industrial walls take graffiti bands,
+   commercial faces take video walls and shop signs.
+4. Filter parts by roof-compat matrix with area-gradient counts, and validate every
+   placement with `isSiteValid` (distance to outer ring and hole edges >= radius +
+   margin) so parts never hover over courtyards or pierce parapets.
 
-```
-[Phase 1: OSM 圖資佈署建築主體與尺度量測]
-  │   - 讀取 outer / holes，提取精確輪廓
-  │   - 計算 width, depth, span, aspect, area, centroid
-  │   - 生成主體外牆網格與定向包圍盒 (blockers)
-  ▼
-[Phase 2: 屋頂構造決議與自適應尺寸調整]
-  │   - 依據層樓高度、面積、跨度與長寬比執行防扭曲降級
-  │   - 避免細長建物套用向心屋頂、避免摩天樓覆蓋單一大瓦坡
-  │   - 根據 span 與樓高按比例縮放屋頂構造幾何 (half)
-  ▼
-[Phase 3: 立面與平面特徵渲染]
-  │   - 深度分層（Glass < Frame < Trim < Pier），杜絕共面 Z-fighting
-  │   - 沿長牆面配置街頭塗鴉牆 (graffiti_wall) 與高程電視牆/廣告板
-  ▼
-[Phase 4: 外部零件相容性篩選與安全放置]
-      - 依屋頂類型矩陣過濾相容零件
-      - 水平專屬零件（水塔、停機棚、大廣告架、基地台、鴿棚）僅限 flat/stepped
-      - 依面積梯度派送零件數量，並以 isSiteValid 檢驗邊界留白防壓線
-```
+## Constraints (why, not what)
 
----
-
-## 1. 建築主體佈署與幾何指標量測（Phase 1）
-
-- **實體外環保留**：以 [`public/js/osmBuilding.js`](../public/js/osmBuilding.js) 處理，保留真實外環（`outer`）與中庭洞口（`holes`），禁止將非正交或凹多邊形簡化為中心 AABB 方盒。
-- **幾何度量指標**：透過 `calculateFootprintMetrics(poly)` 產出：
-  - `width` / `depth`：包圍盒 X 與 Z 軸向總跨幅。
-  - `span`：短向特徵跨度 $\min(\text{width}, \text{depth})$。
-  - `aspect`：長寬比 $\max(\text{width}, \text{depth}) / \text{span}$。
-  - `area`：鞋帶公式精確計算之平面底面積（$\text{m}^2$）。
-  - `cx, cz`：幾何外包圍中心。
-- **結構阻擋**：由 `edgeGeometry` 同步產生實體牆面 Mesh 與對齊的阻擋盒（`blockers`）。
-
----
-
-## 2. 屋頂構造自適應調校與防扭曲機制（Phase 2）
-
-由 [`resolveAdaptiveRoofForm()`](../public/js/architectureStyles.js) 評估並回傳最適屋頂類型 `actualRoofForm`，防範極端尺寸造成幾何拉伸、破面或視覺違和：
-
-| 觸發條件 | 判斷閥值 | 防扭曲處置與降級造型 | 物理／視覺原因 |
-|---|---|---|---|
-| **超高層摩天樓** | 高度 $\ge 35\text{m}$ | 降級為 `stepped`（階梯冠頂）或 `flat`（露台平頂） | 避免整棟超高樓頂覆蓋單一傳統瓦坡；高樓頂部應為設備退台或停機坪。 |
-| **超大基地／巨跨度** | 面積 $\ge 750\text{m}^2$ 或 跨度 $\ge 28\text{m}$ | 工業類轉 `sawtooth`（鋸齒排窗頂）；商用/住宅轉 `flat` 或 `stepped` | 傳統歇山、廡殿或高尖頂在大尺度下會產生巨大虛積、過重瓦面與穿透破面。 |
-| **極端長寬比（細長型）**| 長寬比 $\text{aspect} > 2.6$ | 向心/四坡頂（`dome`, `vault`, `spire`, `wudian`, `xieshan`, `tiered`）轉為長軸雙坡 `yingshan`、`gable` 或 `sawtooth` | 圓頂或廡殿歇山在細長基地上會發生嚴重的橫縱比扭曲變形。 |
-| **極端微小建物** | 跨度 $< 2.5\text{m}$ 或 面積 $< 15\text{m}^2$ | 複雜屋頂轉為簡潔單坡 `shed` | 過小體積無法承載多層重簷或裝飾飛簷。 |
-
-- **屋頂尺度與方向性組裝（Oriented Bounding Box）**：
-  - 由 `computeOrientedRoofFrame(poly)` 沿多邊形外環計算最小外接旋轉包圍盒 (OBB)，精確解算主軸長向 $\text{len}$、短向跨度 $\text{span}$、中心點 $(cx, cz)$ 與主軸偏角 $\theta = \text{atan2}(dirZ, dirX)$。
-  - 在 Three.js 世界坐標中統一以 `rotateY(-\theta)` 與外牆同調旋轉，杜絕非正交建物屋頂偏角或反轉錯位。
-  - 凹多邊形（L型、U型）或中庭洞口自動安全降級為平頂（`null`），杜絕多翼幾何懸空或貫穿。
-  - 12 種屋頂造型均沿主軸（長向）建置正脊，單坡（`shed`）沿短向跨度傾斜，拱頂（`vault` / `curved_ridge`）垂直向上拱曲，四坡與歇山（`wudian` / `xieshan` / `mansard`）依長寬比自適應縮放完整覆蓋建物輪廓。
-
-
----
-
-## 3. 立面與平面特徵渲染（Phase 3）
-
-- **立面深度分層（Anti Z-fighting Tiers）**：
-  在 [`architecturalFacade()`](../public/js/osmBuilding.js) 中，所有附加面均突出於基礎牆面，以非共面偏移徹底解決 WebGL 深度衝突：
-  - **Tier 1 玻璃窗面**：$+0.05\text{m}$（突出牆面 2.5cm）
-  - **Tier 2 窗框／窗梃／格柵**：$+0.09\text{m}$（突出玻璃面 2cm）
-  - **Tier 3 窗楣／綠化花槽／拱圈**：$+0.13\text{m} \sim +0.14\text{m}$
-  - **Tier 4 水平樓層腰帶**：$+0.15\text{m}$
-  - **Tier 5 壁柱與立柱**：$+0.18\text{m}$
-- **平面塗鴉與外牆廣告**：
-  由 [`generateBuildingAppurtenances()`](../public/js/buildingAppurtenances.js) 在住宅或工業長牆面（$\text{length} \ge 6.0\text{m}$）隨機配置街頭塗鴉牆（`graffiti_wall`，突出 $+0.04\text{m}$），商辦立面則配置大型電視牆（`video_wall`）與店鋪招牌。
-
----
-
-## 4. 屋頂零件相容性矩陣與水平放置限制（Phase 4）
-
-### 4.1 水平屋頂專屬限制
-依據 `ROOF_APPURTENANCE_COMPATIBILITY`，需穩固水平基底或大面積停放之構件，**嚴格限定只能配置於水平屋面（`flat` 與 `stepped`）**：
-- **`heli_hangar`（直升機棚與停機坪）**：需平整基座與廣闊淨空，斜坡與曲頂全面禁止。
-- **`roof_billboard`（大型屋頂廣告看板）**：需雙向水平結構腳架，瓦面斜頂全面禁止。
-- **`water_tank`（白鐵不銹鋼水塔）**：需水平地坪承載，傾斜坡屋頂嚴防失衡翻落。
-- **`cellular_mast`（通訊基地台塔）**：三角鋼架需平坦地坪錨定。
-- **`pigeon_coop`（木造鴿棚）**：平放於頂樓平台。
-
-非水平屋面（`gable`, `shed`, `mansard`, `yingshan`, `xuanshan`, `sawtooth`, `spire`, `wudian`, `xieshan`, `curved_ridge`, `tiered`, `dome`, `vault`）僅相容煙囪穿透、脊頂天線、山牆鐘樓或脊頂尖塔飾針（`rooftop_spire`）。
-
-### 4.2 面積梯度與數量控制
-- **數量梯級**：
-  - 水塔：$\text{area} < 80\text{m}^2 \rightarrow 1$ 座；$80 \le \text{area} < 220\text{m}^2 \rightarrow 2$ 座；$\ge 220\text{m}^2 \rightarrow 3$ 座。
-  - 太陽能板：$\lfloor \text{area} / 90 \rfloor$ 組（最多 4 組）。
-  - 尖塔飾頂：$1 \sim 2$ 支。
-- **門檻過濾**：
-  - 直升機棚：$\text{area} \ge 500\text{m}^2$、$\text{span} \ge 24\text{m}$、$\text{height} \ge 28\text{m}$。
-  - 鐘樓：$\text{area} \ge 160\text{m}^2$、$\text{span} \ge 12\text{m}$。
-  - 屋頂大看板：$\text{area} \ge 150\text{m}^2$、$\text{span} \ge 14\text{m}$。
-
-### 4.3 安全留白防壓線（`isSiteValid`）
-所有屋頂零件放置位置必須呼叫 `isSiteValid(poly, x, z, radius, margin)`，計算點到多邊形外環及所有洞口邊界的歐氏距離：
-$$\text{distanceToPolyBoundary}(x, z) \ge \text{radius} + \text{margin}$$
-確保構件絕不懸空於中庭洞口上，亦不突穿女兒牆外緣。
-
-
-## 5. 主體互斥、舊模型解析與坡地（2026-09）
-
-- 一棟建築只有一個主體來源：相容的完整模型，或程序化外環／屋頂／立面。完整模型不再額外附加舊裙樓、梯間塔、頂塔或第二套屋頂。舊配件分支僅保留既有 RNG 消耗順序，避免其他場景物件漂移。
-- 舊型錄先依背景組裝器的 mainPartCount 分離主結構與槽位零件，使用既有 primitive 轉接器量測實際組裝包絡。未知 primitive、非法尺寸／位置／旋轉，以及主結構包絡無法在 0.2m 接合容差內連通的候選退出生成池；不手改產生式型錄。
-- 地面主體需有覆蓋組裝包絡 X/Z 各至少 90% 的方盒底層，才可配對矩形基地。方盒組成的三軸縮放差最多 35%，固定非方盒造型最多 15%，自然樓高倍率最多 1.8。凹形、中庭與矩形填充率不足 95% 的外環不套固定矩形模型。
-- 精確外環路徑只整合無旋轉方盒主結構：完整模型一次替換程序主體，碰撞與各退台的可站立頂面由相同主結構方盒資料推導。其餘輪廓保持外環程序生成；不強行壓成方盒。
-- 目前 29 款、各 4 個組裝變體中，88 個通過組成檢查，28 個因主體分離排除；相容矩形測例有 12 個變體成功進入完整替換路徑。通過組成檢查不代表可套用任意基地。
-- 舊模型變體與解析結果依有限變體鍵快取；合批後釋放暫存幾何。材質／合批沿用現有 vertex-color 管線。
-
-坡地使用沿外環與洞口邊界、間距不超過 4m 的裸地採樣，結合中心梯度決定坡度。30° 以上只保留具 retaining 基礎能力的山地木石屋或現代建築；此限制在文化加權之後執行。屋身保持水平並升至採樣最高點上方 0.15m，擋土基礎逐段延伸至當地地面下 0.25m，碰撞與可見基礎同源。10° 以上不選固定舊模型。
-
-三角柱先校正截面再沿建築長軸放置。非平面屋頂中垂直地面的那一面（山牆端面、單坡垂直後牆、階梯山牆）同等建築牆面，改由建築牆面實體延伸（對齊建築外牆邊界、採用 `style.wall` 與 `architecture-wall` 角色，微幅內收 2cm 杜絕共面干涉）。單坡使用封閉楔形；拱頂取向上的弧段，四角錐／台形修正外接圓半徑與邊長的換算。實際無法生成斜頂時，零件相容性同步採平頂。
-
-驗證：`node test/buildingGeneration.mjs` 使用庫內 Three.js 執行旋轉屋頂、陡坡硬篩選、組成拒絕、主體互斥、混合批次與碰撞／頂面一致性測試。
-
-
-## 6. 地域零件與樣態擴充（2026-09）
-
-`regionalArchitecture.js` 新增 16 組程序風格及 14 個文化區域，連同既有內容共 37 組風格、19 種屋頂、10 種牆面材質分類。風格包括日本合掌造、韓式木構、低地國階梯山牆、英式半木構、北歐板屋、南亞格柵宅邸、波斯風塔、馬格里布院宅、薩赫勒土築、斯瓦希里街屋、馬來木屋、安地斯石土屋、墨西哥殖民街屋、葉門土磚塔屋、北美穀倉及熱帶現代建築。名稱代表簡化建築語彙，不承諾復原特定古蹟或自動生成院落平面；凹形與中庭仍依輸入基地保留。
-
-- 12 種立面細節：半木斜撐、簷托、窗板、板條、格柵、窗框帶、彩磚帶、外露木樁與扶壁、門窗框、百葉、石基座及遮陽板。特色零件先分配預算，再填充窗格；預算按外牆分配，避免第一面牆耗盡全部細節。
-- 新增陡雙坡、階梯山牆、複折穀倉頂、蝶形頂。`roofProfiles.js` 由屋頂網格及附件落點共用截面公式；新斜頂僅接受明確相容附件，蝶形頂不配置通用屋頂附件。
-- 風塔與柱亭為專屬平頂構件，檢查基地邊界、中庭洞口、樓高及留白；不與通用屋頂設備重疊。歷史樣態抑制現代廣告、外掛冷氣等裝飾，以保留立面特徵。
-- 國碼優先；缺國碼時以較小的文化區域包圍盒優先。包圍盒是粗略回退，不是行政區界。用途與高度先篩選再分配在地權重，陡坡能力最後硬篩選。新風格禁止被舊固定模型替換。
-- 所有變體沿用座標雜湊，不增加共享 RNG 消耗。立面幾何上限一般 180 件、地域細節 320 件，沿用既有合批材質管線。
-
-文化參考：[白川鄉與五箇山合掌造](https://whc.unesco.org/en/list/734)、[亞茲德風塔與土築城市](https://whc.unesco.org/en/list/1544)、[傑內土築城鎮](https://whc.unesco.org/en/list/116)、[拉穆珊瑚石與木構街屋](https://whc.unesco.org/en/list/1055/)、[希巴姆土磚塔屋](https://whc.unesco.org/en/list/192/)。色彩、窗格密度與構件比例因遊戲效能及基地尺寸而抽象化。
-
-驗證：`node test/regionalArchitecture.mjs` 覆蓋各地域風格可抽選性、國碼及包圍盒判定、用途／樓高與陡坡限制、有限幾何與立面預算；以實際 Three.js 射線比對四種新屋頂在不同旋轉／樓高下的附件高度。另以瀏覽器檢查全部 16 組樣態渲染。
-
-## 7. 圖資功能限定候選池（2026-09）
-
-`buildingFunctions.js` 統一明確標籤分類、候選風格、樓高規則參照及原生地標路由，目前 43 個功能類別。精確外環與點位建築共用語意，不再僅用模糊 affinity 提高某款機率。
-
-| 群組 | 類別 |
-| --- | --- |
-| 醫療 | 醫院、診所／健康中心 |
-| 教育 | 學校、大學／學院、幼兒園、圖書館 |
-| 交通 | 鐵路車站、公車轉運站、航廈、機庫、停車樓、燈塔 |
-| 文化與公共服務 | 博物館、表演場館、市政服務、緊急服務、運動中心、體育場 |
-| 商業 | 旅館、市場／商場 |
-| 能源與生產 | 發電廠、變電站、發電設備、輸電塔、水務設施、工廠、倉庫、溫室 |
-| 宗教 | 教堂、佛道儒殿宇、清真寺、神社、印度教寺廟、猶太會堂、謁師所、佛塔、樓閣式塔、未細分類宗教場所 |
-| 歷史 | 城堡、歷史建築、遺址／廢墟、紀念物、金字塔 |
-
-判定順序：明確現行用途（amenity／healthcare／tourism／交通與能源標籤）→ building／building:part 形制 → 歷史保護標籤 → 既有環境猜測。例：90m 醫院仍是醫院，不先歸入商辦；改作博物館的教堂依 tourism=museum 使用博物館池。宗教未明時採中性場所，不猜成佛寺。地面停車場不因 amenity=parking 成為停車樓。
-
-校區／院區／交通或公用設施邊界可把用途傳給最小包含面內未指定形制的 building=yes；宿舍等有自身類型的屋身不繼承。此處沿用既有中心點包含索引，並不推論整個園區內每棟建物的詳細科別。
-
-文化加權僅調整功能池內的候選，不注入池外住宅。陡坡功能建築使用同一功能樣態加上既有逐段擋土基礎；不為適應坡度改生成山地住宅。鎖定用途的精確輪廓禁止被通用舊模型替換。此版擴充分類與既有零件組合，不代表新增 43 套獨立手工模型。
-
-輸電塔、燈塔等有原生模型者仍走對應點位地標路徑；非屋身結構不套實心樓房。考古遺址／紀念物不使用完整楼房外環生成；精確面域跳過時記錄 non_building_function，點位交由第 8 節遺跡生成器。單有 archaeological_site 不直接判定為金字塔。
-
-標籤語意參考：[OSM 建築形制與現行用途](https://wiki.openstreetmap.org/wiki/Buildings)、[宗教場所及 religion 標籤](https://wiki.openstreetmap.org/wiki/Place_of_Worship)、[考古遺址定義](https://wiki.openstreetmap.org/wiki/Tag%3Ahistoric%3Darchaeological_site)。遊戲候選池是本專案的簡化視覺分類，不宣稱由標籤重建原建築。
-
-驗證：`node test/buildingFunctions.mjs` 測試全部功能池跨文化與陡坡的封閉性、標籤優先順序、園區繼承、原生點位路由、舊模型排除，以及實際 Three.js 網格生成和非建物跳過紀錄。
-
-## 8. 觀光／廢棄／水下遺跡共用生成（2026-09）
-
-`heritageSites.js` 沿用地質生成器的 `selectAncientStone` 與 `ancientStoneGeometry`：26 組地域古蹟及 35 種活動／構造遺跡，以種子抽選並維持等比例。沒有地域配對時使用一般活動遺跡，不宣稱生成地點對應的真實考古復原。
-
-- tourism：保留遺構與原有缺口，清除額外散落砌石；在原模型包絡外配置步道、護欄、解說牌和座椅。步道不與完整建築疊放，也不把廢墟補成完整宮殿。
-- abandoned：沿用殘牆、斷柱、散落砌石與確定性風化斑塊，沒有遊客服務設施。
-- underwater：同一組成規則改用沉積及水下附著斑塊，加底部沉積碎石；沒有陸上步道與設施。依水深等比例縮小，屋頂最高點至少留在水面下 0.3m。
-
-舊水下古蹟的 11 個入口已改為相容轉接，移除其獨立建模本體；鳥居、方尖碑、鐘樓、石板屋、雙塔門、舟形屋架與疊石標記納入活動遺跡規則，佛塔及階梯金字塔使用既有對應古蹟語彙。潛艦、沉船與現代科研殘骸沿用各自生成器。
-
-每座遺跡合併為一個 vertex-color 網格，按實測包絡限制占位半徑與高度。物件細節使用座標種子；水下落點抽样與物件細節分開，新增零件不推移後續候選落點。碰撞沿用場景既有網格包絡／水線截面管線，並非新增逐石塊碰撞。
-
-圖資考古點位預設走觀光版；abandoned、disused 或禁止／私人進入標籤選廢棄版，location=underwater 或 submerged=yes 選水下版。archaeological_site／ruins 的已知細分類限制對應遺跡語彙。水下指定點位優先，檢查深度、邊界及占位後才補隨機散布；過淺或無有效水域的點位跳過。此為遊戲視覺狀態分類，不推論實際開放時間或保存等級。
-
-地質預覽台新增「遺跡保存狀態」選項；`generateGeology` 可傳入 heritageState，選擇共用狀態後不再疊加另一套地質草木覆蓋。既有未指定狀態的地質呼叫保持原行為。
-
-驗證：`node test/heritageSites.mjs` 覆蓋 131 組原型／狀態、11 個舊入口、尺寸與水深限制、固定種子重現、指定水下遺址優先；地質及水下稽核通過。預覽台已逐一檢查觀光、廢棄、水下三種畫面。
+- One body per building: a compatible whole model or the procedural
+  ring/roof/facade -- whole models attach no legacy skirts, stair towers, or second
+  roofs. Legacy branches keep only their existing RNG draw order so other scene
+  objects never drift.
+- Level-only parts stay level: heli hangars, billboards, water tanks, masts, and
+  dovecotes mount on flat/stepped roofs only; sloped roofs take only penetrating
+  chimneys, ridge antennas, gable belfries, or spire pins.
+- Function pooling, not per-function models: `buildingFunctions.js` routes OSM tags
+  to shared style pools by explicit current use (a 90m hospital stays a hospital);
+  religious sites without a clear tag stay neutral instead of guessed.
+- Regional styles are simplified vocabularies (never heritage reconstructions);
+  country codes win, and smaller culture bounding boxes are a coarse fallback, not
+  administrative boundaries. All variants use coordinate hashes with zero shared-RNG
+  cost under the existing batched vertex-color pipeline.
+- Ruins reuse the geology ancient-stone selector with seed-proportional scaling:
+  tourist versions keep gaps and add paths/rails/signs without completing palaces;
+  abandoned versions add weathering only; underwater versions sink the roofline at
+  least 0.3m below the surface with sediment instead of land paths.

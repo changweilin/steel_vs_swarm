@@ -1,17 +1,22 @@
-# 程序化建築牆飾
+# Procedural Building Wall Decorations
 
-`wallDecorationCatalog.js` 登錄電視牆、廣告、塗鴉、海報、馬賽克、常春藤、開花藤架與垂吊藤蔓。
-`wallDecorations.js` 依建築功能及年代挑選主題，以座標和建築識別雜湊生成局部、橫帶、直幅或大片配置，另隨機調整尺寸、位置、色塊與植物長度。電視牆使用靜態節目圖案，沒有影片下載或逐幀更新。
+> SSOT: `public/js/wallDecorationCatalog.js` (motif registry) and
+> `public/js/wallDecorations.js` (selection and placement). Appearance-only;
+> verification: `node test/wallDecorations.mjs`, `node tools/audit_siteplan.mjs`.
 
-牆面裝飾／渲染零件限定僅低樓層建築（樓高 $\le 24\text{m}$）才生成，高樓層建築禁用非規律牆飾。陽台、雨遮、冷氣室外機等廣泛規律使用的日常機能配件除外，高樓層仍維持全棟正常配置。
+## Constraints (why, not what)
 
-植物系飾件（常春藤、開花藤架、垂吊藤蔓）採用多塊連續網格拼接機制（`generateSeamlessVinePattern`）：跨塊共享接縫端點座標與切線嚴格吻合（連續拼接），各塊內部枝幹、葉片與花芽以區塊座標雜湊獨立隨機生長（完全不重複），渲染到牆面時可連續多塊無縫拼接。
-
-每面牆最多兩組，單組上限 8 × 6 公尺；整棟新增牆飾最多 160 個幾何零件。先投影既有門、雨遮、陽台、招牌等附件的佔位，最多嘗試 12 個位置，放不下就略過。主題保持完整，不因額度不足截掉一半。歷史建築不生成現代廣告或電子看板。
-
-零件透過既有 `architecturePartGeometry` 轉為頂點色幾何，並沿用 `osmBuilding.js` 的細節合批及資源釋放流程。牆飾只影響程序化建築外觀，不新增碰撞、材質桶、套件依賴或共享亂數消耗。
-
-外掛配件另有三色踏墊、平板／斜板／條紋雨遮、實心／欄杆／花槽陽台、標準／格柵／雙風扇冷氣，以及雙面招牌凸字。陽台與冷氣依原型錄數量上限配置。
-
-驗證：`node test/wallDecorations.mjs`（主題與範圍覆蓋、年代限制、可重現性、幾何邊界、佔位避讓、連續無重複爬藤拼接、低樓層門檻與規律配件保留、完整建築合批），以及 `node tools/audit_siteplan.mjs`。
-
+- Wall decor never affects gameplay: no collision, no new material buckets, no new
+  package dependencies, zero shared-RNG consumption.
+- Height gate: irregular decor generates only on low-rise buildings (height <= 24m).
+  High-rises keep only regularly repeating functional fittings (balconies, canopies,
+  AC units), which are exempt because their rhythm is the facade, not noise.
+- Fit-or-skip: existing doors, canopies, balconies, and signs project their footprints
+  first; at most 12 placement tries, then the motif is skipped whole. A motif stays
+  intact or absent, never clipped in half by a depleted budget (caps: 2 groups per
+  wall, 8x6m per group, 160 parts per building).
+- Seamless vines: cross-tile vine bands share seam endpoint positions and tangents
+  (continuous joints) while interiors grow from per-tile coordinate hashes (never
+  repeating), so multi-tile runs join without visible seams or clones.
+- Era guard: historic buildings take no modern ads or electronic boards. TV walls use
+  static program patterns only -- no video downloads, no per-frame updates.

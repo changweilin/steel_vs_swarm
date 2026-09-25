@@ -1,8 +1,8 @@
-// ============ 電腦玩家(伺服器端英雄 AI)============
-// 每個 bot 操控一位英雄(無人機/機甲),與人類玩家共用 sim 的英雄規則:
-// 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
-// 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RALLY(退到砲塔後方等護盾)→ RETREAT(回堡補血)。
-// NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
+// ============ Computer players (server-side hero AI) ============
+// Each bot drives one hero (drone/mech) under the same hero rules as humans:
+// character weapon/ability resolution, damage tables, and rate/range/CD/MP all gated by sim (botFire / heroBurst / heroCast).
+// Behavior state machine: PUSH (advance along lane) -> ENGAGE -> RALLY (wait behind tower for shield) -> RETREAT (recall for heals).
+// NPC paths = room lanes (same polylines as creeps); no separate pathfinding.
 import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, botDiffOf, botOpGap, isThirdSide,
   CHARACTERS, heroMobility, highSupSpeedF, BOSS,
   VITALS,
@@ -14,20 +14,22 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, b
   WEATHER_DEBUFFS, windSpeedFactor } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
-const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
-const FLY_Y = 2;                            // 離地高於此 = 飛行型態(地速 / 碰撞量體同判,唯一縫)
-const LANE_JITTER_M = 24;                   // 兵線側向散開幅度(峰對峰):同線多台 bot 不疊在一起
-// 推線時的前瞻距離:視角改吃視野錐之後,「看向線上的目標點」= 看向**側面**(機體站在
-// 目標點旁 ±LANE_JITTER_M/2 處,那條連線幾乎垂直於兵線)⇒ 一路側著頭推線、正前方的敵人
-// 全數失明。前瞻 MUST 遠大於側向散開,朝向才由兵線走向主導。
+const CRUISE_ALT = { min: 26, max: 52 };   // Drone cruise altitude (AGL; at/above AA_MIN_ALT eats air-defense missiles -- bots fly at deliberate risk)
+const FLY_Y = 2;                            // Above this AGL = flight regime (ground speed / collision volume judged together, single seam)
+const LANE_JITTER_M = 24;                   // Lateral lane spread (peak-to-peak): bots on one lane never stack
+// Push lookahead: once vision runs through the view cone, "looking at the lane target point"
+// means looking sideways (the body stands beside the target point at +-LANE_JITTER_M/2, so that
+// link runs nearly perpendicular to the lane) -- pushing sideways would blind the bot to enemies
+// ahead. Lookahead MUST far exceed lateral spread so lane direction dominates heading.
 const PUSH_LOOK_M = LANE_JITTER_M * 3;
-// 撞牆繞行(2026-08-02 隨碰撞上線;bot 沒有尋路,正面頂著建物會原地卡死 = 兵線整條不推)。
-// 靠 push-out 的切向分量本來就會沿牆滑,但凹角會鎖死 ⇒ 連續推不動就把目標點往側向挪一段,
-// 換個方向再試(左右輪替)。純 AI 決策,不動任何碰撞規則。
+// Wall unsticking (bots have no pathfinding; head-on against a building wedges forever = the lane stalls).
+// Push-out's tangential component already slides along walls, but concave corners lock -- after sustained
+// stall the target point sidesteps and retries from another angle (alternating sides). Pure AI decision,
+// touching no collision rules.
 const STUCK = { F: 0.35, S: 0.6, SKIRT_S: 1.6, SKIRT_M: 28 };
 
-// 消費優先序(八軌,2026-07-20 面向)住 `data.js BOT_BUY_ORDER`,逐定位的順序走 `botBuyOrder`
-// (2026-08-08 定位分類改制)—— 兩邊各留一份的話,改定位採購順序時基準那份不會跟著動。
+// Spend priority (eight tracks) lives in `data.js BOT_BUY_ORDER`; per-role order goes through `botBuyOrder`
+// -- keeping a copy on either side would let role-order edits silently desync from the baseline.
 
 export class BotBrain {
   /** sim: BattleSim;pid: 'b1' 之類字串;laneIdx: 指派兵線;diffKey: 難度(新手/低/中/高) */
