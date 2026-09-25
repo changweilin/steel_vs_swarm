@@ -44,7 +44,7 @@
     <input id="myName" placeholder="你的代號" maxlength="16">
     <div class="divider">─── 生成地圖 ───</div>
     <div class="row lobby-actions lobby-map-actions">
-      <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 預設/自訂</button>
+      <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 自訂地圖</button>
       <button id="mapMixedBtn" class="btn big swarm-btn">⚄ 混合地圖</button>
       <button id="mapRandomBtn" class="btn big swarm-btn">🎲 隨機地圖</button>
     </div>
@@ -147,7 +147,7 @@
 <!-- ========= 建立地圖(隊伍規模 / 場地 / 選址,建好後存入最愛)========= -->
 <div id="mapbuilder" class="screen" style="display:none">
   <div class="map-panel setup-panel">
-    <div class="panel-head">▍建立地圖 — 建好後存入最愛,開戰時刻時再選用</div>
+    <div class="panel-head">▍建立地圖 — 建好後加入最愛地圖,開戰時刻時再選用</div>
 
     <div class="setup-sec">
       <div class="setup-label">隊伍規模(每陣營人數,決定兵線數)</div>
@@ -158,7 +158,7 @@
     <div class="setup-sec">
       <div class="setup-label">建立模式</div>
       <div class="row seg" id="mapGenModeRow">
-        <button class="segb on" data-gmode="preset">預設/自訂</button>
+        <button class="segb on" data-gmode="preset">自訂地圖</button>
         <button class="segb" data-gmode="mixed">混合地圖</button>
         <button class="segb" data-gmode="random">隨機地圖</button>
       </div>
@@ -176,6 +176,7 @@
       <div class="setup-info" id="mixedWetHint"></div>
       <div class="row">
         <button id="mixedGenBtn" class="btn big swarm-btn">⚙ 生成混合地圖</button>
+        <button id="mixedSaveFavBtn" class="btn big swarm-btn" disabled>★ 加入最愛地圖</button>
       </div>
     </div>
 
@@ -185,6 +186,7 @@
         <input id="randomSeedInput" placeholder="種子(空白=隨機)" maxlength="10" inputmode="numeric">
         <button id="randomDiceBtn" class="btn small">🎲 重擲</button>
         <button id="randomGenBtn" class="btn big swarm-btn">⚙ 生成隨機地圖</button>
+        <button id="randomSaveFavBtn" class="btn big swarm-btn" disabled>★ 加入最愛地圖</button>
       </div>
       <div class="setup-info" id="randomHint"></div>
     </div>
@@ -200,7 +202,7 @@
     <div id="mapStatus" class="map-status">選一個預設場地,或在地圖上點選蜂群主堡位置。</div>
     <div class="pbar"><div id="mapProgressBar" class="pbar-fill"></div></div>
     <div class="row">
-      <button id="saveFavBtn" class="btn big swarm-btn" disabled>★ 存入最愛</button>
+      <button id="saveFavBtn" class="btn big swarm-btn" disabled>★ 加入最愛地圖</button>
       <button id="resetSiteBtn" class="btn">↺ 重新選點</button>
     </div>
     <div class="row">
