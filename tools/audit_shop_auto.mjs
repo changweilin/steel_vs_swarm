@@ -1,23 +1,22 @@
-// ============ 商店掃貨 / 預約稽核(2026-08-02 使用者需求)============
-// 使用者定調一句:「商店加入掃貨與預約選項」。
-//   掃貨 = 把**現在買得起的**升級一次買到底;
-//   預約 = 掛上某一軌,**錢一夠就自動下單**(商店關著也算)。
-// 用途:改 `game.js _sweepPick`/`_sweepBuy`/`_toggleReserve`/`_tickReserve`/`_shopState`、
-//      `main.js renderShop` 的掃貨鈕與預約鈕、或 `ECON.UPGRADES`/`upgradePrice` 之後跑這一支。
-// 跑法:`node tools/audit_shop_auto.mjs [-v]`(純原文 + 真品行為直測,不需瀏覽器/外網)
+// ============ Shop Sweep / Reservation Audit ============
+// Sweep = immediately buys all currently affordable upgrades in greedy sequence.
+// Reservation = watches target track and automatically orders when funds suffice (even if shop UI closed).
+// Scope: tests game.js (_sweepPick, _sweepBuy, _toggleReserve, _tickReserve, _shopState),
+//        main.js renderShop sweep/reserve buttons, and ECON.UPGRADES / upgradePrice.
+// Usage: node tools/audit_shop_auto.mjs [-v]
 //
-// 這支要釘住的**四件事**(每一件壞掉都不會報錯,只會「錢莫名其妙變少」或「按了沒反應」):
-//   Ⅰ 判定單一縫:「買不買得起」只有 `_sweepPick` 一份 —— UI 端自己再算一次的下場是
-//     鈕面說可以按、按下去卻沒動作(或反過來),而畫面上看不出哪一邊錯。
-//   Ⅱ 貪心便宜優先:階梯單價 `price(lvl)` 隨等級遞增 ⇒ 先買便宜的,同一筆錢換到最多階。
-//     退回「宣告順序」不會報錯,只是同樣的錢少買一兩階(玩家幾乎不可能自己發現)。
-//   Ⅲ 只**掃**八軌:陣營小兵強化是同陣營共用、且刻意不做樂觀扣款 ⇒ 掃貨的迴圈條件永遠成立,
-//     掃進去 = 一次掃光全部身家。**預約收它**(2026-08-02 使用者定案「商店的預約包含兵線升級」)
-//     —— 預約是一次一階,不吃那個坑;但因為沒有樂觀扣款,同一輪多條兵線 MUST 自己記帳(`pend`),
-//     否則三條線都看到同一筆錢而全數下單,後兩筆被伺服器拒 = 假的「資金不足」。
-//   Ⅳ 預約不重複下單:樂觀更新會被下一份快照的權威值校正回去,若那份快照比伺服器處理購買
-//     還早到(RTT > 125ms),沒有「同一階只送一次」的閘就會重送,第二筆被拒 ⇒ 玩家看到
-//     一句莫名其妙的「資金不足」。逾時窗是被拒時的救濟閥,MUST NOT 短到蓋不住一次往返。
+// Invariants enforced:
+//   I. Affordability single seam: _sweepPick is the sole judge of purchasability.
+//      UI must not re-implement price checks.
+//   II. Greedy cheapest-first: price(lvl) strictly increases with level -> buying lowest priced
+//       items first yields the maximum number of tier upgrades per budget.
+//   III. Sweep operates exclusively on the 8 mech tracks: creep lane upgrades are shared across
+//        faction teammates without optimistic balance deduction; sweeping them would drain balance infinitely.
+//        Reservation accepts creep lane upgrades, but processes one tier at a time and maintains
+//        local pending accounting across lanes to prevent false "insufficient funds" server rejects.
+//   IV. Reservation deduplication: late snapshots (RTT > 125ms) can roll back optimistic balance
+//       before the server order resolves. The client MUST NOT resend orders for the same tier
+//       until authoritative confirmation or until the retry window (RESERVE_RESEND_S) elapses.
 import { readSrc, grabMethod } from './audit_src.mjs';
 import { ECON, upgradePrice, canUpgrade, BATTLE_SCORE, CREEP_UPG } from '../public/js/data.js';
 
@@ -33,12 +32,11 @@ const ok = (cond, msg, extra = '') => {
 };
 const sec = (t) => console.log(`\n▍${t}`);
 const count = (src, re) => (src.match(re) || []).length;
-/** 剝掉註解再驗原文(註解裡提到某個名字不算「第二處實作」) */
+/** Strips comments before source verification so mentions in comments do not count as duplicate implementations. */
 const code = (s) => s.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
 
-// ── 真品行為直測用的最小客戶端 ────────────────────────────────
-// 四支方法的原文直接抽出來跑;`_optimisticBuy` 以測試替身代入(它已由既有路徑覆蓋,
-// 這裡要驗的是「挑哪一項、挑幾次、送不送」)。
+// ---- Minimal Client for Behavior Verification ----
+// Extracts methods directly from source; _optimisticBuy is substituted with test spy.
 const RES_CREEP = /const RES_CREEP = '([^']+)'/.exec(gameSrc)?.[1];
 const proto = new Function(
   'ECON', 'upgradePrice', 'canUpgrade', 'CREEP_UPG', 'RESERVE_RESEND_S', 'RES_CREEP', 'performance',
@@ -52,14 +50,14 @@ const proto = new Function(
     ${grabMethod(gameSrc, '_resCreepLane')},
   });`,
 )(ECON, upgradePrice, canUpgrade, CREEP_UPG, Number(/const RESERVE_RESEND_S = ([\d.]+)/.exec(gameSrc)?.[1]), RES_CREEP,
-  { now: () => (globalThis.__t ?? 0) * 1000 });   // 真品吃 performance.now()/1000 ⇒ 這裡回毫秒
+  { now: () => (globalThis.__t ?? 0) * 1000 });   // Real runtime uses performance.now()/1000 -> returns ms here.
 
 const RESEND_S = Number(/const RESERVE_RESEND_S = ([\d.]+)/.exec(gameSrc)?.[1]);
 const TRACKS = Object.keys(ECON.UPGRADES);
 const zeroUpg = () => Object.fromEntries(TRACKS.map((k) => [k, 0]));
 const maxUpg = () => Object.fromEntries(TRACKS.map((k) => [k, ECON.UPGRADES[k].max]));
 
-/** 造一個最小可跑的交戰客戶端;`sent` 記下所有送出的購買(小兵強化記成 `creep:<lane>`)*/
+/** Creates minimal runnable client harness; sent tracks emitted orders. */
 const mkClient = (money, upg = zeroUpg(), creep = [0, 0, 0], kn = BATTLE_SCORE.MAX) => {
   const sent = [];
   const c = Object.assign(Object.create(null), proto, {
@@ -69,7 +67,7 @@ const mkClient = (money, upg = zeroUpg(), creep = [0, 0, 0], kn = BATTLE_SCORE.M
     hud: { feed() {}, shop() {} },
     net: { send(m) { sent.push(`${m.item}:${m.lane}`); } },
     _shopSig: null,
-    // 樂觀購買替身:扣款 + 推進等級(與真品 `_optimisticBuy` 的可觀察效果一致)
+    // Optimistic purchase spy: deducts balance + advances tier (observable behavior matches _optimisticBuy).
     _optimisticBuy(item) {
       const up = ECON.UPGRADES[item];
       const lvl = this.upg[item] || 0;
@@ -82,7 +80,7 @@ const mkClient = (money, upg = zeroUpg(), creep = [0, 0, 0], kn = BATTLE_SCORE.M
   return c;
 };
 
-// ── Ⅰ 判定單一縫 ────────────────────────────────────────────────
+// -- I. Decision single seam ------------------------------------------------
 sec('Ⅰ 判定單一縫');
 ok(count(gameSrc, /\n  _sweepPick\(/g) === 1, '`_sweepPick` 只有一份實作');
 ok(count(code(gameSrc), /this\._sweepPick\(\)/g) === 2,
@@ -102,7 +100,7 @@ ok(htmlSrc.includes('id="shopSweepBtn"') && /st\.sweep\(\)/.test(mainSrc)
   && /st\.toggleReserve\(item\)/.test(mainSrc),
   'UI 只負責呼叫 `sweep` / `toggleReserve`,名單與排程都住 game.js');
 
-// ── Ⅱ 掃貨:貪心便宜優先 ────────────────────────────────────────
+// -- II. Sweep buy: greedy cheapest-first ----------------------------------
 sec('Ⅱ 掃貨(貪心便宜優先)');
 {
   const L1 = upgradePrice(ECON.UPGRADES[TRACKS[0]], 0);
@@ -110,7 +108,7 @@ sec('Ⅱ 掃貨(貪心便宜優先)');
   const L3 = upgradePrice(ECON.UPGRADES[TRACKS[0]], 2);
   ok(L2 > L1 && L3 > L2, `階梯單價嚴格遞增($${L1} < $${L2} < $${L3})—— 貪心便宜優先才會是最佳解`);
 
-  const c = mkClient(L1 * 2 + L1 - 1);       // 剛好買得起兩階、差一元買不起第三階
+  const c = mkClient(L1 * 2 + L1 - 1);       // Exactly enough for 2 tiers; 1 coin short of tier 3.
   const n = c._sweepBuy();
   ok(n === 2 && c.sent.length === 2, `掃貨買到買不起為止(預期 2 階,實得 ${n})`);
   ok(c.money === L1 - 1, `餘額 = 起始 − 已購(實得 $${c.money})`);
@@ -121,17 +119,17 @@ sec('Ⅱ 掃貨(貪心便宜優先)');
   const poor = mkClient(L1 - 1);
   ok(poor._sweepBuy() === 0 && poor.money === L1 - 1, '一項都買不起時掃貨不下單也不扣錢');
 
-  // 戰鬥分數門檻(2026-08-11):錢無限但零戰績 ⇒ 只買得到每一軌的第一階
+  // Battle score gate: infinite money with zero score unlocks only tier 1 per track.
   const green = mkClient(1e9, zeroUpg(), [0, 0, 0], 0);
   ok(green._sweepBuy() === TRACKS.length,
     `戰鬥分數 0 時掃貨只買得到八軌各自的第一階(預期 ${TRACKS.length},實得 ${green.sent.length})`);
   ok(TRACKS.every((k) => green.upg[k] === 1), '第二階被戰鬥分數門檻擋下(錢再多也不行)');
 
-  // 滿級池:掃貨 MUST 停手(且不會空轉到迴圈上限)
+  // Fully upgraded pool: sweep MUST stop without looping to safety cap.
   const full = mkClient(999999, Object.fromEntries(TRACKS.map((k) => [k, ECON.UPGRADES[k].max])));
   ok(full._sweepBuy() === 0, '八軌全滿時掃貨不下單(滿級軌 MUST 被跳過)');
 
-  // 錢無限:掃貨恰好把八軌買滿,一階不多一階不少
+  // Infinite funds: sweep buys all 8 tracks to capacity exactly.
   const rich = mkClient(1e9);
   const total = TRACKS.reduce((s, k) => s + ECON.UPGRADES[k].max, 0);
   ok(rich._sweepBuy() === total,
@@ -139,7 +137,7 @@ sec('Ⅱ 掃貨(貪心便宜優先)');
   ok(TRACKS.every((k) => rich.upg[k] === ECON.UPGRADES[k].max), '每一軌都停在自己的 max,不超買');
 }
 
-// ── Ⅲ 掃貨只作用於八軌 / 預約收兵線升級 ────────────────────────
+// -- III. Sweep affects 8 tracks only / reservation accepts creep upgrades --
 sec('Ⅲ 掃貨只作用於八軌;預約收陣營小兵強化');
 {
   const sweep = code(grabMethod(gameSrc, '_sweepBuy')) + code(grabMethod(gameSrc, '_sweepPick'));
@@ -162,14 +160,14 @@ sec('Ⅲ 掃貨只作用於八軌;預約收陣營小兵強化');
   ok(/Object\.hasOwn\(ECON\.UPGRADES, item\)/.test(grabMethod(gameSrc, '_toggleReserve')),
     '八軌的合法性仍以 `Object.hasOwn` 判定(與伺服器 `buy()` 同一條規則)');
 
-  // 鍵的格式只有一份:main.js MUST NOT 自己拼字串,一律拿 `_shopState().creepKey`
+  // Single seam for key format: main.js MUST NOT assemble strings independently.
   ok(count(code(gameSrc), new RegExp(`'${RES_CREEP}'`, 'g')) === 1
     && /creepKey: \(lane\) => this\._creepResKey\(lane\)/.test(gameSrc),
     '預約鍵格式單一縫(`RES_CREEP` 一處定義 + `creepKey` 對外)');
   ok(!/creep:\$\{|'creep:'|`creep:/.test(code(mainSrc)) && /st\.creepKey\(li\)/.test(mainSrc),
     'main.js MUST NOT 自己拼預約鍵(拼錯不報錯,只會「★ 亮著卻永遠不成交」)');
 
-  // 解鎖門檻只有一份:UI 與排程同吃 `_upgAllMax`
+  // Single seam for unlock requirement: UI and scheduler share _upgAllMax.
   ok(count(gameSrc, /\n  _upgAllMax\(/g) === 1 && /allMax: this\._upgAllMax\(\)/.test(gameSrc),
     '`_upgAllMax` 一份實作,商店 UI 走 `_shopState().allMax`');
   ok(/st\.allMax && st\.creepUpg\?\.length/.test(mainSrc)
@@ -177,11 +175,11 @@ sec('Ⅲ 掃貨只作用於八軌;預約收陣營小兵強化');
     'renderShop MUST NOT 自己再算一次「八軌全滿」(兩份門檻會漂)');
 }
 
-// ── Ⅲ-b 兵線升級預約的行為 ──────────────────────────────────────
+// -- III-b. Creep upgrade reservation behavior -----------------------------
 sec('Ⅲ-b 兵線升級預約');
 {
   const P = CREEP_UPG.PRICE;
-  // 八軌沒買滿:伺服器根本不受理 ⇒ 預約靜靜等著(送出去只會換來一句被拒的 toast)
+  // Tracks incomplete: server rejects orders -> reservation remains pending.
   const early = mkClient(1e9);
   early._toggleReserve(early._creepResKey(0));
   globalThis.__t = 0;
@@ -189,7 +187,7 @@ sec('Ⅲ-b 兵線升級預約');
   ok(early.sent.length === 0, '八軌未滿時預約不下單(門檻與伺服器 `_upgAllMax` 同一條)');
   ok(early._reserve.size === 1, '未解鎖 MUST 只是等著,MUST NOT 把它踢出名單');
 
-  // 解鎖後:錢一夠就下單
+  // Once unlocked: auto-orders as soon as balance suffices.
   const c = mkClient(P - 1, maxUpg());
   c._toggleReserve(c._creepResKey(2));
   globalThis.__t = 0;
@@ -199,15 +197,15 @@ sec('Ⅲ-b 兵線升級預約');
   c._tickReserve();
   ok(c.sent.join() === 'creep:2', `錢一夠自動下單(帶對兵線;實得 ${c.sent.join() || "無"})`);
 
-  // 沒有樂觀扣款 ⇒ 同一階 MUST NOT 重送
+  // No optimistic balance deduction -> MUST NOT resend same tier.
   globalThis.__t = RESEND_S * 0.5;
   c._tickReserve();
   ok(c.sent.length === 1, '權威等級還沒回來之前 MUST NOT 對同一階重送(共用值不做樂觀更新)');
-  c.creepUpg.SWARM[2] = 1;                    // 權威快照回來:等級前進
+  c.creepUpg.SWARM[2] = 1;                    // Authoritative snapshot arrives: tier advances.
   c._tickReserve();
   ok(c.sent.length === 2, '權威等級一前進就買下一階,不必等逾時窗');
 
-  // 三條兵線同時預約、錢只夠一階 ⇒ 本輪只准送一筆(否則後兩筆被拒 = 假的「資金不足」)
+  // Simultaneous reservations across 3 lanes with budget for 1 tier: dispatch only 1 order per tick.
   const three = mkClient(P, maxUpg());
   [0, 1, 2].forEach((li) => three._toggleReserve(three._creepResKey(li)));
   globalThis.__t = 0;
@@ -219,20 +217,20 @@ sec('Ⅲ-b 兵線升級預約');
   rich2._tickReserve();
   ok(rich2.sent.length === 3, '錢夠三階時三條兵線同輪成交');
 
-  // 滿級自動退出名單
+  // Automatically evicts from list when max tier reached.
   const full = mkClient(1e9, maxUpg(), [CREEP_UPG.MAX, 0, 0]);
   full._toggleReserve(full._creepResKey(0));
   full._tickReserve();
   ok(!full._reserve.size && full.sent.length === 0, '已滿級的兵線 MUST 自動退出名單');
 
-  // 沒有 side:不動作
+  // Spectator / unseated: inert without side assignment.
   const spec = mkClient(1e9, maxUpg());
   spec._reserve.add('creep:0'); spec.side = null;
   spec._tickReserve();
   ok(spec.sent.length === 0, '觀戰/未入座時兵線預約也不動作');
 }
 
-// ── Ⅳ 預約:錢一夠就下單、同一階只送一次 ────────────────────────
+// -- IV. Reservation: place order when funds suffice; no repeat per tier ---
 sec('Ⅳ 預約');
 {
   const item = TRACKS[0], up = ECON.UPGRADES[item];
@@ -249,43 +247,43 @@ sec('Ⅳ 預約');
   c._tickReserve();
   ok(c.sent.length === 1 && c.upg[item] === 1, '錢一夠就自動下單');
 
-  // 權威快照晚到:money/upg 被校正回購買**前**的值 ⇒ MUST NOT 對同一階重送
+  // Delayed authoritative snapshot rolls state back to pre-purchase value: MUST NOT resend same tier.
   c.money = P0; c.upg[item] = 0;
   globalThis.__t = RESEND_S * 0.5;
   c._tickReserve();
   ok(c.sent.length === 1,
     '權威值還沒回來之前 MUST NOT 對同一階重複下單(第二筆會被伺服器拒 ⇒ 假的「資金不足」)');
 
-  // 逾時救濟閥:真的被拒時,等超過重送窗才放行
+  // Timeout fallback: releases retry lock only after resend window expires.
   globalThis.__t = RESEND_S * 1.5;
   c._tickReserve();
   ok(c.sent.length === 2, `逾時 ${RESEND_S}s 後放行重送(被拒時才不會把這一軌永久卡死)`);
   ok(RESEND_S > 0.125,
     `重送窗 ${RESEND_S}s MUST 蓋得住一次網路往返 + 一份 8Hz 快照(0.125s)`);
 
-  // 權威等級前進 = 正常解鎖下一階(不必等逾時)
+  // Authoritative tier advance unlocks next tier without waiting for timeout.
   const d = mkClient(1e9);
   d._toggleReserve(item);
   globalThis.__t = 0;
   d._tickReserve();
   const after = d.sent.length;
-  globalThis.__t = 0;                       // 時間不動:靠「等級前進」解鎖
+  globalThis.__t = 0;                       // Time frozen: unlocked by tier advance.
   d._tickReserve();
   ok(d.sent.length > after, '權威等級一前進就能買下一階,不必等逾時窗');
 
-  // 滿級自動退出名單
+  // Automatically evicts from list when max tier reached.
   const e = mkClient(1e9, { ...zeroUpg(), [item]: up.max });
   e._toggleReserve(item);
   globalThis.__t = 0;
   e._tickReserve();
   ok(!e._reserve.has(item) && e.sent.length === 0, '已滿級的軌 MUST 自動退出名單(留著是死預約)');
 
-  // 再按一次 = 取消
+  // Second toggle cancels reservation.
   const f = mkClient(0);
   f._toggleReserve(item); f._toggleReserve(item);
   ok(f._reserve.size === 0, '再按一次 = 取消預約');
 
-  // 觀戰 / 未入座:沒有 side 就沒有商店
+  // Spectator / unseated: inert without side assignment.
   const g = mkClient(1e9);
   g.side = null; g._reserve.add(item);
   g._tickReserve();

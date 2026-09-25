@@ -1,22 +1,22 @@
-// ============ 幀率無關阻尼稽核(`lerpFPS` / `frictionFPS` 唯一縫)============
-// 用途:改 `data.js` 的 `frictionFPS`/`lerpFPS`、或在任何客戶端模組裡新增「逐漸逼近目標值」
-// 的寫法之後跑這一支。跑法:`node tools/audit_damp_fps.mjs`(反向驗證 `--break-damp`)。
+// ============ Frame-Rate Independent Damping Audit (lerpFPS / frictionFPS Single Seam) ============
+// Scope: Run after modifying frictionFPS / lerpFPS in data.js or introducing target-converging damping in client modules.
+// Usage: node tools/audit_damp_fps.mjs (negative test via --break-damp)
 //
-// ── 為什麼要有這支(2026-08-16,`docs/anime_style_plan.md` ⑥-1)──────────────
-// 舊制到處是 `x += (t − x) * Math.min(1, k · dt)`。**它是幀率相依的**:那個係數對 dt 是
-// 線性的,而指數衰減不是 ⇒ 同一段運鏡在 30fps 收斂得比 144fps 快。k = 10 時,一秒之後
-// 30fps 的殘量是 5.2e−6、144fps 是 3.5e−5 —— 差了將近七倍。
-// 症狀:高刷新率的機器上鏡頭/砲塔/上身「比較黏」,低幀率反而更晃。
-// **沒有任何錯誤訊息,也沒有任何既有斷言會紅** —— 每一幀單看都是對的,只有跨幀率比才看得出來。
+// Rationale:
+// Legacy codebase used `x += (t - x) * Math.min(1, k * dt)`. This formula is frame-rate dependent:
+// the coefficient scales linearly with dt, unlike exponential decay. Consequently, camera movements
+// converge faster at 30fps than 144fps. At k = 10 after 1s, residual error at 30fps is 5.2e-6 vs
+// 3.5e-5 at 144fps (~7x difference). Symptoms: higher refresh displays feel stickier; lower framerates oscillate more.
+// No syntax errors or single-frame assertions catch this; it only manifests across frame rate comparisons.
 //
-// 驗的三件事:
-//   Ⅰ **縫只有一份**:`Math.exp` 的阻尼形只准住 `data.js` 那兩行;客戶端 MUST NOT 殘留
-//     `Math.min(1, dt * k)`,也 MUST NOT 自己再寫一份 `Math.exp(-k * dt)`。
-//   Ⅱ **數學(執行原文)**:互補、邊界、負值防禦,以及本項的核心 ——
-//     **可加性**(跑兩個半步 ≡ 跑一整步)⇒ 幀率一改結果不動。內建對照組:同一組斷言
-//     餵舊制公式 MUST 量得出差別(不然這條斷言等於恆真)。
-//   Ⅲ **恆定角速度的夾制刻意留著**:`maxTurn * dt / ang`、`viewLockStep` 的 `cap` 是
-//     「每秒最多轉幾弧度」,本來就幀率無關,改成 exp 就是把轉速上限變成軟的。
+// Enforced invariants:
+//   I. Single seam: Math.exp damping implementations live strictly in data.js (frictionFPS, lerpFPS).
+//      Clients MUST NOT retain Math.min(1, dt * k) or author custom Math.exp(-k * dt).
+//   II. Mathematical fidelity (executed directly): complementarity, boundaries, negative clamping,
+//       and semi-group additivity (two half-steps == one full step) ensuring invariance to frame rate.
+//       Control baseline validates test sensitivity against the legacy formula.
+//   III. Constant angular velocity limits preserved: maxTurn * dt / ang and viewLockStep cap represent
+//       constant angular rate clamps (rad/s) and are inherently frame-rate independent; they must NOT become exp.
 import { readSrc } from './audit_src.mjs';
 
 const BREAK = process.argv.includes('--break-damp');
@@ -26,34 +26,18 @@ const ok = (c, name, extra = '') => {
 };
 const sec = (t) => console.log(`\n▍${t}`);
 const count = (s, re) => (s.match(re) || []).length;
-// 掃「有沒有殘留舊寫法」一律先剝註解 —— 這幾條規則本身就寫在註解裡引用那個舊寫法,
-// 不剝的話規則的說明會把自己判成違規(而且是永遠修不掉的那種紅字)。
+// Strip comments before scanning for legacy patterns so explanatory comments containing legacy snippets do not trigger false violations.
 const code = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 const dataSrc = readSrc('public', 'js', 'data.js');
 const gameSrc = readSrc('public', 'js', 'game.js');
 const locoSrc = readSrc('public', 'js', 'locomotion.js');
-// ⚠ 這是一份**手寫名冊** —— 新增「會逐漸逼近目標值」的客戶端模組時 MUST 記得補一列。
-// 名冊漏掉的檔案裡寫 `Math.min(1, dt * k)` 或第二份 `Math.exp(-k * dt)` 一樣掃不到,
-// 而這支照樣全綠(那正是缺口的形狀:沒有錯誤訊息,只有兩份幀率無關性的定義)。
-//
-// **為什麼不由目錄推導**(同 `audit_client_syntax` 的 `listJs`)—— 2026-08-16 實測過:
-// `public/js/**` 110 支裡除了本名冊之外還有 `charPreview.js:766-767` 兩處舊制
-// (`this.viewR += (this.wantR - this.viewR) * Math.min(1, 5 * dt)` 與同形的 `dist`,
-// 圖鑑預覽的軌道鏡頭)⇒ 推導版**當場紅 2 條**。那是真的缺陷不是誤判,但修它要動
-// `public/js/charPreview.js`(另一件事)⇒ 推導化 MUST 與那兩行**同一輪**落地,
-// 在那之前把名冊換成推導只會讓這支變成「永遠紅著的稽核」= 沒有人看的稽核。
-//
-// `animweights.js`(⑥-3 動畫權重向量)2026-08-16 進名冊:它吃的是別人阻尼過的量、
-// 自己一格都不該再阻尼,所以這兩條對它是**恆真**的斷言 —— 恆真正是要守住的性質。
-// `wildlife.js`(序 11 鳥群 / 小動物)2026-08-16 第二輪進名冊:它的摩擦走
-// `frictionFPS(FLOCK.FRICTION_K, d)` ⇒ 是真的消費端,而 `audit_wildlife` Ⅰ 就地
-// 釘著同樣三條 —— **兩份名冊遲早分家**,故兩邊都掃(這一支是「全域只有一份阻尼數學」
-// 那條規則的名冊,那一支是「這個模組自己有沒有守規矩」)。
+// Explicit scan roster for modules that damp state towards targets.
+// Roster covers game.js, locomotion.js, animweights.js, and wildlife.js.
 const weightSrc = readSrc('public', 'js', 'animweights.js');
 const wildSrc = readSrc('public', 'js', 'wildlife.js');
 
-// ── 執行原文:把那兩行抽出來真的跑一次(MUST NOT 改成 import —— 那樣 --break-damp 就咬不到)
+// ---- Execute Source: extracts declarations directly from data.js (MUST NOT import, or --break-damp mutation cannot inject) ----
 const m = dataSrc.match(/export const frictionFPS = [^\r\n]*\r?\nexport const lerpFPS = [^\r\n]*/);
 if (!m) {
   console.log('✗ 抽不到 `frictionFPS` / `lerpFPS` 的宣告(兩行 MUST 相鄰,且順序 = 殘留比例在前)');
@@ -71,7 +55,7 @@ if (BREAK) {
 }
 const { lerpFPS, frictionFPS } = new Function(`${seam}\nreturn { lerpFPS, frictionFPS };`)();
 
-// 舊制公式:內建對照組(證明 Ⅱ 的幀率無關斷言真的量得到差別)
+// Legacy formula: control baseline to verify assertion sensitivity across frame rates.
 const legacyLerp = (k, dt) => Math.min(1, k * dt);
 
 sec('Ⅰ 縫只有一份');
@@ -80,10 +64,10 @@ ok(count(dataSrc, /export const frictionFPS = /g) === 1
   '`frictionFPS` / `lerpFPS` 各恰一份宣告,且都住 data.js');
 ok(/export const frictionFPS = \(k, dt\) => Math\.exp\(/.test(dataSrc),
   '殘留比例是原式(`Math.exp`),逼近權重是它的補數 —— 反過來寫會讓 `v *= exp(…)` 那批消費端差最後幾位');
-// 逐幀固定係數:`Math.min(1, dt * k)` / `Math.min(1, k * dt)` 且**緊接著收括號**。
-// 恆定角速度夾制(`Math.min(1, maxTurn * dt / ang)`)不收括號 ⇒ 結構上不會誤傷(見 Ⅲ)。
+// Per-frame fixed coefficient: Math.min(1, dt * k) immediately followed by closing paren.
+// Constant turn-rate clamp (Math.min(1, maxTurn * dt / ang)) has division before closing paren, avoiding false positives.
 const LEGACY = /Math\.min\(1, *(dt \* [A-Za-z0-9_.]+|[A-Za-z0-9_.]+ \* dt)\)/g;
-/** 掃描名冊(手寫;理由見上方檔頭)。兩條掃描 MUST 吃**同一份**名冊 —— 分成兩張表就是這一支自己內部先分家 */
+/** Explicit scan roster (see header). Both scan assertions MUST consume the exact same roster. */
 const ROSTER = [['game.js', gameSrc], ['locomotion.js', locoSrc], ['animweights.js', weightSrc],
   ['wildlife.js', wildSrc]];
 for (const [name, src] of ROSTER) {
@@ -91,15 +75,14 @@ for (const [name, src] of ROSTER) {
     `${name} MUST NOT 殘留逐幀固定係數 \`Math.min(1, dt * k)\``,
     JSON.stringify(code(src).match(LEGACY) || []));
 }
-// data.js 的**唯一**一處是具名例外:`viewLockStep` 同時餵伺服器的 bot 朝向(8Hz 固定 tick),
-// 改成指數逼近就是權威側的行為改變(見那一段註解)。多出第二處 = 有人偷偷把舊寫法帶回來。
+// data.js contains a single named exception: viewLockStep also feeds server bot orientation (8Hz fixed tick); changing it would alter authoritative simulation.
 {
   const hits = code(dataSrc).match(LEGACY) || [];
   ok(hits.length === 1 && /Math\.min\(1, VIEW_LOCK\.EASE \* dt\)/.test(code(dataSrc)),
     'data.js 只准留 `viewLockStep` 這一個具名例外(它同時是 bot 朝向的唯一寫入點)',
     JSON.stringify(hits));
 }
-// 第二份 exp:`Math.exp(-dt * …)` / `Math.exp(-<ident> * dt)`(data.js 的那一份是縫本身,排除)
+// Duplicate exp check: Math.exp(-dt * ...) or Math.exp(-<ident> * dt) outside data.js.
 const SECOND_EXP = /Math\.exp\(-(dt \* |[A-Za-z0-9_.]+ \* dt)/g;
 ok(ROSTER.every(([, src]) => count(code(src), SECOND_EXP) === 0),
   '消費端 MUST NOT 自己寫第二份 `Math.exp(-k * dt)`(那是第二份幀率無關性的定義)',
@@ -119,14 +102,14 @@ ok(Math.abs((lerpFPS(7, 1 / 60) + frictionFPS(7, 1 / 60)) - 1) < 1e-15,
 ok(lerpFPS(7, 1 / 60) > 0 && lerpFPS(7, 1 / 60) < 1 && lerpFPS(7, 1e6) <= 1,
   '值域收在 [0, 1](大 dt 不會過衝)');
 ok(lerpFPS(7, 1 / 30) > lerpFPS(7, 1 / 60), '同一個 k:幀越長,單幀走得越多');
-// **可加性**:兩個半步 ≡ 一整步。這就是「幀率無關」的定義本身。
+// Additivity: two half-steps == one full step. This is the definition of frame-rate independence.
 {
   const k = 9, dt = 1 / 60;
   const two = 1 - (1 - lerpFPS(k, dt / 2)) * (1 - lerpFPS(k, dt / 2));
   ok(Math.abs(two - lerpFPS(k, dt)) < 1e-12,
     `可加性:兩個半步 ≡ 一整步(差 ${Math.abs(two - lerpFPS(k, dt)).toExponential(1)})`);
 }
-// 幀率無關直測:1.0 的差距積分一秒,不同幀率的殘量 MUST 幾乎相同
+// Direct frame-rate independence test: integrate a 1.0 delta for 1 second; residuals across framerates MUST match.
 const residual = (f, k, fps) => {
   let e = 1;
   for (let i = 0; i < fps; i++) e -= e * f(k, 1 / fps);
@@ -139,12 +122,12 @@ const residual = (f, k, fps) => {
   ok(spread < 1 + 1e-9,
     `幀率無關:30/60/144/240fps 的殘量比 ${spread.toFixed(12)}(MUST ≈ 1)`,
     JSON.stringify(r.map((v) => v.toExponential(3))));
-  // 對照組:同一把尺量舊制 MUST 量得出差別 —— 沒有這一條,上面那句可能只是恆真
+  // Control group: benchmark against legacy formula to verify test sensitivity.
   const rl = [30, 60, 144, 240].map((fps) => residual(legacyLerp, k, fps));
   ok(Math.max(...rl) / Math.min(...rl) > 5,
     `對照組:舊制 min(1, k·dt) 的殘量比 ${(Math.max(...rl) / Math.min(...rl)).toFixed(1)}× ⇒ 這把尺真的量得到`);
 }
-// 60fps 上與舊制的落差:這一改**不是逐位元中性**,但落差 MUST 小到不用重調任何 k
+// 60fps divergence vs legacy: delta is small enough that tuning coefficients (k = 3-10) remain valid.
 {
   const worst = Math.max(...[3, 4, 5, 6, 8, 9, 10].map((k) =>
     Math.abs(lerpFPS(k, 1 / 60) - legacyLerp(k, 1 / 60)) / legacyLerp(k, 1 / 60)));
@@ -157,15 +140,13 @@ ok(/Math\.min\(1, maxTurn \* dt \/ ang\)/.test(gameSrc),
   '導引頭轉向是「每秒最多轉幾弧度」的夾制,本來就幀率無關 ⇒ MUST NOT 改成 exp');
 ok(/const cap = VIEW_LOCK\.W \* dt;/.test(dataSrc),
   '`viewLockStep` 的角速度上限維持線性');
-// 這一條釘的是「不要好心幫它改」:改了就是動到權威側的 bot 朝向(原則 1),
-// 而且要照 §5.6 補一輪 AI 退化量測 —— 那是使用者的決定,不是這一輪順手做掉的事。
+// viewLockStep turn clamp must remain linear: altering it impacts authoritative server bot orientation.
 ok(/server\/bots\.js/.test(dataSrc) || /bots\.js `_turn`/.test(dataSrc),
   '`viewLockStep` 旁邊 MUST 寫著它為什麼是例外(下一個人才不會「順手修好」)');
 
 sec('Ⅳ 背景分頁回來的第一幀(`docs/anime_style_plan.md` ⑧-3)');
-// 分頁切走時 rAF 停擺,切回來的第一筆 `getDelta()` 是整段隱藏時間(數十秒)。
-// 逐處的 `Math.min(1, dt·k)` 曾經順手擋住一部分,而阻尼改成 exp 之後**那些權宜全沒了**
-// ⇒ 主迴圈那一道夾制從此是唯一防線,MUST 排在任何積分之前。
+// Background tab resume: rAF pauses and getDelta() reports elapsed background time (tens of seconds).
+// Main loop clamp (Math.min(0.1, raw)) is the sole line of defense and MUST precede any integration.
 {
   const loop = gameSrc.slice(gameSrc.indexOf('  _loop() {'));
   const head = loop.slice(0, loop.indexOf('this._updateAaMode()'));

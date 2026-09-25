@@ -1,34 +1,32 @@
 #!/usr/bin/env node
 import { createForestDefs } from '../public/js/forest.js';
 import { quatApply, quatFromEuler } from '../public/js/xform.js';
-// 樹木幹枝接合離線稽核(2026-09-06;南洋杉 trunk_crown 誤名 + dinizia/tualang 幹頂懸空案)
-// ---------------------------------------------------------------------------
-// 為什麼要這支:audit_object_joints 以凸包探針驗「零件有沒有貼著」,但三種樹木病灶
-// 會從它的指縫溜走 ——
-//   ① 同軸樹幹分段的「垂直斷開」(dinizia 頂段頂 70m、冠底 74.7m,中間 4.7m 全是空氣;
-//      探針只量相接處,懸空的那一段沒有接合端可以量);
-//   ② 零件台樹模型的「木質橋段誤名」(南洋杉 trunk_crown 是棕色木質、卻掛著 crown 的
-//      名字 ⇒ 對照台「樹幹＋樹枝」視圖把它藏起來,主幹與頂梢看起來斷成兩截);
-//   ③ 結構側枝的梢懸空(枝根釘在幹上、梢停在冠底之外數公尺 —— dinizia +x/+z、
-//      sequoia +x 都是這一型;修法一律是根不動、梢重瞄進冠;掛在梢旁的配件要跟著走)。
-// 故本支直接驗三件事(全部讀真品,不手抄):
-//   Ⅰ biomes.js 宣告表(VEG_DEFS/GIANT_DEFS 真品原文抽出執行):
-//     Ⅰ-a 同軸樹幹柱連續(垂直間隙 ≤ 0.05m)。不管的名字只看形狀:
-//         主幹候選 = 貼軸無傾角 cyl 且 h > 2×最大半徑(冠盤/苔環/板根是扁的,自然排除);
-//         被別段完全包住的段(苔蘚環帶)不計;半徑階只警告(小接大是包覆)。
-//     Ⅰ-b 主幹頂埋進樹冠(幹頂點落在任一冠部體積內,容差 0.1m;枯梢不計入柱頂)。
-//     Ⅰ-c 枝根埋幹/埋冠/接地(硬);枝梢進冠(硬)—— 但有合法收尾,只記帳不紅:
-//         枯梢/內枝:根有接 + 底半徑 ≤ 0.5m + (貼近冠面 1.2m 內或高於冠底)。
-//         判紅的是結構枝(底半徑 > 0.5m)的梢懸空。
-//         近垂直表面件(剝皮絲帶/纏藤,傾角 ≤ 0.15)只驗根,不驗梢(貼面由探針稽核擁有)。
-//         巨木枝全是單軸傾角 ⇒ 與 Euler 軸序無關;出現雙軸傾角直接紅
-//         (那在 runtime XYZ 與合成 Rz·Ry·Rx 下指向不同方向)。
+// ============ Offline Tree Trunk and Branch Joint Audit ============
+// Rationale: audit_object_joints uses convex hull probes to verify part contacts,
+// but misses three distinct tree failure modes:
+//   1. Vertical disconnection across coaxial trunk segments (e.g. dinizia top segment ending at 70m
+//      with crown base at 74.7m leaving 4.7m gap; probes measure contacts, missing empty spans).
+//   2. Misnamed wooden bridges in models (e.g. araucaria trunk_crown is brown wood but tagged as crown,
+//      hiding it in "trunk + branch" showcase view and rendering the main trunk severed).
+//   3. Structural lateral branches with floating tips (branch root planted on trunk, but tip terminates
+//      meters outside crown base; fix: root stationary, retarget tip into crown).
+// Verified checks (executed directly from source declarations):
+//   I. biomes.js declarations (VEG_DEFS / GIANT_DEFS):
+//     I-a Coaxial trunk column continuity (vertical gap <= 0.05m). Evaluated by geometry:
+//         trunk candidates = axis-aligned non-tilted cylinders with h > 0.5 * max(r1, r2)
+//         (excluding flat crown discs). Fully enveloped sub-segments (moss rings) excluded; radius steps warn only.
+//     I-b Main trunk summit embedded in crown volume (top point within any crown volume, tolerance 0.1m; snags excluded).
+//     I-c Branch root embedded in trunk/crown/ground (hard); branch tip embedded in crown (hard) with exceptions:
+//         Snags/inner twigs: root connected + base radius <= 0.5m + (within 1.2m of crown or above crown bottom).
+//         Flags structural branches (base radius > 0.5m) with dangling tips.
+//         Near-vertical surface pieces (peeling bark, vines, tilt <= 0.15) verify root only.
+//         Giant tree branches use single-axis tilt (invariant to Euler axis order; dual-axis tilt fails).
 //
-// 反向驗證(字面替換 CRLF 容忍,替換無效 MUST 當場 exit 1;期望值不隨 flag 改變):
-//   --break-trunk-gap  dinizia 頂段縮回舊值(h24→18,y64→61)⇒ Ⅰ-b MUST 紅
+// Negative testing:
+//   --break-trunk-gap: dinizia top segment shortened (h24->18, y64->61) => I-b MUST fail.
 //
-// 用法:node tools/audit_tree_joints.mjs [--break-trunk-gap]
-// 退出碼:0 = 全綠(警告不影響);1 = 有紅
+// Usage: node tools/audit_tree_joints.mjs [--break-trunk-gap]
+// Exit code: 0 = all passed (warnings permitted); 1 = failures detected.
 import { readSrc, grabConst } from './audit_src.mjs';
 
 const A = process.argv.slice(2);
@@ -39,7 +37,7 @@ let pass = 0, fail = 0, warn = 0;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log(`  ✗ ${m}`); } };
 const note = (m) => { warn++; console.log(`  ! ${m}`); };
 
-// ---------------- 真品抽出 ----------------
+// ---- Extract Real Declarations ----
 let bioSrc = readSrc('public', 'js', 'biomes.js');
 const tableCode = grabConst(bioSrc, 'VEG_DEFS') + '\n' + grabConst(bioSrc, 'GIANT_DEFS')
   + '\nreturn { VEG_DEFS, GIANT_DEFS };';
@@ -54,17 +52,17 @@ if (BRK.trunkGap) {
   for (const parts of GIANT_DEFS.dinizia.variants) { parts[0].g.h -= 20; parts[0].y -= 10; }
 }
 
-// ---------------- 小工具 ----------------
-const GAP_TOL = 0.05;    // 同軸柱垂直間隙容差(m)
-const EMB_TOL = 0.1;     // 幹頂埋冠容差(m)
-const ROOT_TOL = 0.15;   // 枝根貼幹容差(m)
-const TIP_TOL = 0.15;    // 枝梢進冠容差(m)
-const R_STEP_WARN = 0.25;// 半徑階警告線(只警告,不紅)
-const TILT_TOL = 0.15;   // 表面件與結構枝的分界傾角(rad)
-const SNAG_R = 0.5;      // 枯梢/內枝收尾的底半徑上限(m):結構枝必須落地進冠
-const SNAG_DIST = 1.2;   // 收尾梢離冠面的最大距離(m)
+// ---- Helpers ----
+const GAP_TOL = 0.05;    // Collinear column vertical gap tolerance (m)
+const EMB_TOL = 0.1;     // Trunk top crown embed tolerance (m)
+const ROOT_TOL = 0.15;   // Branch root trunk attachment tolerance (m)
+const TIP_TOL = 0.15;    // Branch tip crown embed tolerance (m)
+const R_STEP_WARN = 0.25;// Radius step warning threshold (warning only, non-failing)
+const TILT_TOL = 0.15;   // Cutoff tilt angle between surface features and structural branches (rad)
+const SNAG_R = 0.5;      // Max base radius for snags/twigs (m): structural branches must terminate in crown
+const SNAG_DIST = 1.2;   // Max distance from termination tip to crown surface (m)
 
-// 冠部體積:cone 按線性收分、ico 按 sy 壓扁橢球(含 sy 欄,預設 1)
+// Crown volume: cone tapers linearly; ico forms flattened ellipsoid via sy (default 1).
 function tubeContains(part, point, tolerance = ROOT_TOL) {
   if (part.g.t !== 'cyl') return false;
   const q = quatFromEuler(part.rx || 0, part.ry || 0, part.rz || 0);
@@ -108,8 +106,7 @@ function crownGap(part, pt) {
   return Infinity;
 }
 const isCrownPart = (p) => p.role ? p.role === 'leaf' : p.g.t === 'cone' || p.g.t === 'ico';
-// 主幹候選:貼軸無傾角的柱狀 cyl(扁平冠盤 h≤一半最大半徑,自然排除;
-// 矮胖多肉幹/基部喇叭口 h≈R 仍保留)
+// Bole candidates: axis-aligned non-tilted cylinders (flat crown discs h <= 0.5*max_R excluded; stocky succulent trunks h ~= R retained).
 const isBoleCyl = (p) => p.role ? p.role === 'trunk' && p.g.t === 'cyl' && !(p.rx || p.rz) : p.g.t === 'cyl' && Math.abs(p.px ?? 0) <= 0.6
   && Math.abs(p.pz ?? 0) <= 0.6 && !(p.rx || p.rz) && p.g.h > 0.5 * Math.max(p.g.r1, p.g.r2);
 // Generated branches use the runtime XYZ rotation, including two-axis forks.
@@ -126,21 +123,21 @@ const trunkRAt = (r1, r2, h, yBot, y) => {
   return r2 + (r1 - r2) * t;
 };
 
-// ---------------- Ⅰ 宣告表 ----------------
+// ---------------- I. Declaration Tables ----------------
 console.log('Ⅰ biomes.js 宣告表幹柱連續');
 for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
   for (const [name, def] of Object.entries(table).flatMap(([name, def]) => def.variants
     ? def.variants.map((parts, i) => [`${name}:${i}`, { ...def, parts }]) : [[name, def]])) {
     const boles = def.parts.filter(isBoleCyl)
       .map((p) => ({ p, bot: p.y - p.g.h / 2, top: p.y + p.g.h / 2 }));
-    // 被別段完全包住的段(苔蘚環帶)不計入柱
+    // Segments fully enveloped by another segment (e.g. moss collar bands) do not contribute to trunk height calculation.
     const cols = [...boles].sort((a, b) => a.bot - b.bot)
       .filter((s, _, arr) => !arr.some((o) => o !== s && o.bot <= s.bot && o.top >= s.top));
     const crowns = def.parts.filter(isCrownPart);
     const crownBottom = crowns.length
       ? Math.min(...crowns.map((c) => (c.y ?? 0) - (c.g.t === 'cone' ? c.g.h / 2 : c.g.r * (c.sy ?? 1))))
       : Infinity;
-    // 枯梢(細長頂刺,根在冠內)不計入柱頂
+    // Dead tops / snags (slender vertical spikes rooted within crown) are excluded from the main trunk top calculation.
     const mains = [];
     const spikes = [];
     for (const s of cols) {
@@ -154,14 +151,14 @@ for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
         note(`${group} ${name} 枯梢 h=${s.p.g.h}@y=${s.p.y} 突出冠頂(根在冠內,僅記帳)`);
       } else mains.push(s);
     }
-    // 覆蓋式掃描(根罩/環帶與主幹同起點重疊,逐對比較會虛報;首段接地即合法;
-    // 板根鰭錐包住幹基也算覆蓋:錐水平範圍與軸相交即提供該段覆蓋)
+    // Coverage scan: overlapping roots/collars sharing a base with the trunk trigger false positives in pairwise checks; grounding the base segment satisfies connectivity.
+    // Buttress root cones enveloping the base also provide valid trunk coverage when their horizontal span intersects the trunk axis.
     const cover = mains.map((s) => ({ ...s, quiet: false }));
     for (const p of def.parts.filter((q) => q.g.t === 'cone')) {
       const bot = p.y - p.g.h / 2, top = p.y + p.g.h / 2;
       const rr = Math.max(p.g.r, 0.001);
       if (Math.hypot(p.px ?? 0, p.pz ?? 0) > rr + 3.0) continue;
-      cover.push({ p, bot, top, quiet: true });   // 覆蓋不報縫:冠錐坐進冠團即算接合
+      cover.push({ p, bot, top, quiet: true });   // Suppress seam warnings: crown cone seated in crown cluster counts as connected.
     }
     let covered = 0.05 + GAP_TOL;
     for (const s of cover.sort((a, b) => a.bot - b.bot)) {
@@ -182,7 +179,7 @@ for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
         || def.parts.some(p => p.role === 'branch' && tubeContains(p, pt, EMB_TOL)),
         `${group} ${name} 幹頂 (${pt[0]},${pt[1].toFixed(1)},${pt[2]}) 埋進樹冠`);
     }
-    // 側枝:傾角枝驗根+梢;近垂直表面件只驗根埋幹或接地
+    // Lateral branches: tilted branches verify both root and tip; near-vertical surface pieces only verify root embed or grounding.
     const branches = def.parts.filter((p) => p.g.t === 'cyl' && !isBoleCyl(p)
       && Math.abs(p.px ?? 0) < 12 && Math.abs(p.pz ?? 0) < 12);
     for (const b of branches) {
@@ -192,7 +189,7 @@ for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
       const dir = d === 'vertical' ? [0, 1, 0] : d;
       const a = [C[0] - dir[0] * L / 2, C[1] - dir[1] * L / 2, C[2] - dir[2] * L / 2];
       const e = [C[0] + dir[0] * L / 2, C[1] + dir[1] * L / 2, C[2] + dir[2] * L / 2];
-      // 根容差隨幹粗放縮(巨木表皮溝壑本來就是分米級;小樹維持原容差)
+      // Scale root tolerance with trunk thickness (ancient tree bark fissures span decimeters; smaller trees retain base tolerance).
       const rootIn = a[1] <= 0.05 || (b.role === 'trunk' && Math.min(a[1], e[1]) <= Math.min(b.g.r1, b.g.r2) + .05) || boles.some((t) => {
         if (a[1] < t.bot - ROOT_TOL || a[1] > t.top + ROOT_TOL) return false;
         const tr = trunkRAt(t.p.g.r1, t.p.g.r2, t.p.g.h, t.bot, a[1]);
@@ -219,6 +216,6 @@ for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
   }
 }
 
-// ---------------- 尾聲 ----------------
+// ---------------- Summary ----------------
 console.log(`\n檢查 ${pass + fail} 項,正常 ${pass} 項,警告 ${warn} 項`);
 process.exit(fail ? 1 : 0);
