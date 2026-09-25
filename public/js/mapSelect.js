@@ -349,12 +349,14 @@ export class MapSelect {
 
   async _onClick(latlng) {
     if (this._searching) return;
-    if (this.chosen) return; // 已選定,先按「重新選點」
     this.anchor = latlng;
+    this.chosen = null;
+    this.candidates = [];
     this.venue = this._pendingVenue || null;   // 手動點圖 = 自訂場地(無 mix)
     this._pendingVenue = null;
     this._clearLayers();
     this.h.confirmReady?.(null);
+    this.h.candidates?.([], -1);
     this._addLayer(L.circleMarker(latlng, {
       radius: 10, color: '#ffb300', fillColor: '#ffb300', fillOpacity: 0.9, weight: 3,
     }).bindTooltip('◆ 蜂群主堡(錨點)', { permanent: true, direction: 'top' }), 'anchor');
@@ -457,17 +459,11 @@ export class MapSelect {
     this._searching = false;
     if (this.candidates.length === 0) {
       this.h.status?.('❌ 此區域找不到符合條件的對點(道路太少或被水域阻隔),請換個位置再點一次。', 1);
+      this.h.candidates?.([], -1);
     } else {
-      const synth = this.candidates.some((c) => c.synthetic);
-      this.h.status?.(
-        `✅ 找到 ${this.candidates.length} 個推薦主堡點,點選其一預覽三條兵線` + (synth ? '(部分為離線模擬路徑)' : ''),
-        1,
-      );
-      // 視野涵蓋所有候選點
-      const all = [this.anchor, ...this.candidates.map((c) => c.latlng)];
-      this.map.fitBounds(L.latLngBounds(all).pad(0.2));
+      // 直接選擇最佳解 (第 1 候選,已按戰術評分排序) 提供給使用者作為自訂地圖
+      this._choose(this.candidates[0]);
     }
-    this.h.candidates?.(this.candidates);
   }
 
   _drawCandidate(cand, idx) {
@@ -493,7 +489,11 @@ export class MapSelect {
       if (c !== cand) {
         this._addLayer(L.circleMarker(c.latlng, {
           radius: 8, color: '#3a4a55', fillColor: '#22303a', fillOpacity: 0.5, weight: 2,
-        }), 'cand').on('click', () => { this.chosen = null; this._choose(c); });
+        }).bindTooltip(`⚙ 推薦點 ${i + 1} — 距離 ${(c.distM / 1000).toFixed(2)}km / 重合 ${(c.maxOverlap * 100).toFixed(0)}%`, { direction: 'top' }), 'cand')
+        .on('click', (ev) => {
+          L.DomEvent.stopPropagation(ev);
+          this._choose(c);
+        });
       }
     }
     this._addLayer(L.circleMarker(cand.latlng, {
@@ -516,7 +516,17 @@ export class MapSelect {
     }), 'lanes');
     this.map.fitBounds(L.latLngBounds([this.anchor, cand.latlng]).pad(0.25));
 
+    const curIdx = this.candidates.indexOf(cand);
+    this.h.candidates?.(this.candidates, curIdx);
     this.h.confirmReady?.(this.buildConfig());
+  }
+
+  selectNextCandidate() {
+    if (!this.candidates || this.candidates.length <= 1) return null;
+    const curIdx = Math.max(0, this.candidates.indexOf(this.chosen));
+    const nextIdx = (curIdx + 1) % this.candidates.length;
+    this._choose(this.candidates[nextIdx]);
+    return nextIdx;
   }
 
   reset() {
@@ -528,7 +538,8 @@ export class MapSelect {
     this.candidates = [];
     this._clearLayers();
     this.h.confirmReady?.(null);
-    this.h.status?.('選一個預設場地,或在地圖上點選蜂群主堡位置。', 0);
+    this.h.candidates?.([], -1);
+    this.h.status?.('選一個場地,或在地圖上點選蜂群主堡位置。', 0);
   }
 
   /** 組出送給伺服器的戰場設定 */
