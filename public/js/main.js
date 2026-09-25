@@ -166,7 +166,7 @@ const app = {
   storySide: 'STEEL',   // 目前瀏覽的戰線陣營(協約 / 同盟)
   storyPilot: null,     // 簡報中選定的出戰主駕
   venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
-  mapGenMode: 'preset', // 建圖模式:preset(預設/自訂)|mixed(混合)|random(隨機)
+  mapGenMode: 'preset', // 建圖模式:preset(自訂地圖)|mixed(混合)|random(隨機)
   dlg: null,            // Dialogue(劇情戰役對話演出層;與 battle 同生死)
   battle: null,         // BattleClient
   audio: null,          // GameAudio(app 層,跨戰局存活;BGM 大廳↔戰場切換)
@@ -393,11 +393,16 @@ function ensureLeaflet() {
   }
   return _leafletReady;
 }
+function setFavBtnDisabled(disabled) {
+  if ($('saveFavBtn')) $('saveFavBtn').disabled = disabled;
+  if ($('mixedSaveFavBtn')) $('mixedSaveFavBtn').disabled = disabled;
+  if ($('randomSaveFavBtn')) $('randomSaveFavBtn').disabled = disabled;
+}
 async function enterMapBuilder(initialMode = 'preset') {
   app.mapGenMode = initialMode;
   show('mapbuilder');
   app.favCfg = null;
-  $('saveFavBtn').disabled = true;
+  setFavBtnDisabled(true);
 
   try {
     await ensureLeaflet();
@@ -415,7 +420,7 @@ async function enterMapBuilder(initialMode = 'preset') {
         app.favCfg = null;
         app.venueSel = null;
         if (cfg) { app.mapGenMode = 'preset'; syncMapGenModeRow(); }
-        $('saveFavBtn').disabled = !cfg;
+        setFavBtnDisabled(!cfg);
         if (cfg) {
           $('mapStatus').innerHTML =
             `已選定:兩堡直線 <b>${(cfg.distM / 1000).toFixed(2)} km</b>(門檻 ${(cfg.diagM * 0.8 / 1000).toFixed(2)} km)` +
@@ -456,16 +461,17 @@ function renderTeamSize() {
 function setTeamSize(n) {
   app.teamSize = n;
   savePrefs({ teamSize: n });
+  const prevGen = !!app.favCfg?.gen;
   app.favCfg = null;
   app.mapSel?.setTeamSize(n);
-  $('saveFavBtn').disabled = true;
+  setFavBtnDisabled(true);
   for (const [i, b] of [...$('tsRow').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
   updateTsInfo();
   syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
   // 預設場地已選:換規模直接重算(預先計算是確定性幾何,瞬間完成)
   if (app.venueSel) selectVenue(app.venueSel);
   // 擴充模式已生成:換規模依同條件重生成(種子/來源不變,只改兵線數與尺度)
-  else if (app.favCfg?.gen && app.mapSel) {
+  else if (prevGen && app.mapSel) {
     if (app.mapGenMode === 'mixed') genMixedFromUI();
     else if (app.mapGenMode === 'random') genRandomFromUI();
   }
@@ -593,11 +599,11 @@ function selectVenue(v) {
   syncMapGenModeRow();
   savePrefs({ lastVenueId: v.id });
   $('mapStatus').innerHTML =
-    `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,存入最愛後即可開房。` +
+    `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,加入最愛地圖後即可開房。` +
     `(想用真實道路兵線,可改在地圖上手動點選錨點)` +
     `<div class="venue-desc">${esc(venueBrief(v, app.teamSize))}</div>`;
   $('mapProgressBar').style.width = '100%';
-  $('saveFavBtn').disabled = false;
+  setFavBtnDisabled(false);
 }
 
 /* ================= 擴充建立模式:混合地圖 / 隨機地圖 ================= */
@@ -613,6 +619,7 @@ function syncMapGenModeRow() {
   if ($('mixedPanel')) $('mixedPanel').style.display = m === 'mixed' ? '' : 'none';
   if ($('randomPanel')) $('randomPanel').style.display = m === 'random' ? '' : 'none';
   if ($('presetPanel')) $('presetPanel').style.display = m === 'preset' ? '' : 'none';
+  if ($('resetSiteBtn')) $('resetSiteBtn').style.display = m === 'preset' ? '' : 'none';
 }
 
 /** 生成結果走既有預覽+存檔管線(與 selectVenue 同出口) */
@@ -623,9 +630,9 @@ function acceptGenCfg(cfg) {
   app.venueSel = null;
   app.favCfg = cfg;
   $('mapStatus').innerHTML =
-    `📍 <b>${esc(cfg.placeName)}</b>:${esc(describeGen(cfg))} — 存入最愛後即可開房。`;
+    `📍 <b>${esc(cfg.placeName)}</b>:${esc(describeGen(cfg))} — 加入最愛地圖後即可開房。`;
   $('mapProgressBar').style.width = '100%';
-  $('saveFavBtn').disabled = false;
+  setFavBtnDisabled(false);
 }
 
 /** 混合來源勾選格(預設場地 18 張,等權) */
@@ -725,18 +732,19 @@ function initMapGenUI() {
       app.favCfg = null;
       app.venueSel = null;
       app.mapSel?.reset();
-      $('saveFavBtn').disabled = true;
+      setFavBtnDisabled(true);
       syncMapGenModeRow();
       syncVenueTips();
       $('mapStatus').textContent = app.mapGenMode === 'mixed'
         ? '勾選兩處以上地點,按「生成混合地圖」。'
         : app.mapGenMode === 'random' ? '按「生成隨機地圖」(種子空白即隨機)。'
-        : '選一個預設場地,或在地圖上點選蜂群主堡位置。';
+        : '選一個場地,或在地圖上點選蜂群主堡位置。';
     };
   });
   renderMixedSrcGrid();
   renderMixedMixRows();
   $('mixedGenBtn')?.addEventListener('click', genMixedFromUI);
+  $('mixedSaveFavBtn')?.addEventListener('click', () => $('saveFavBtn')?.click());
   $('mixedPick3Btn')?.addEventListener('click', () => {
     const boxes = [...document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]')];
     for (const b of boxes) b.checked = false;
@@ -751,6 +759,7 @@ function initMapGenUI() {
     for (const b of document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]')) b.checked = false;
   });
   $('randomGenBtn')?.addEventListener('click', genRandomFromUI);
+  $('randomSaveFavBtn')?.addEventListener('click', () => $('saveFavBtn')?.click());
   $('randomDiceBtn')?.addEventListener('click', () => {
     if ($('randomSeedInput')) $('randomSeedInput').value = String((Math.random() * 4294967296) >>> 0);
     genRandomFromUI();
@@ -1081,9 +1090,8 @@ async function resolveMapRot(cfg) {
 $('saveFavBtn')?.addEventListener('click', async () => {
   const cfg = app.favCfg || app.mapSel?.buildConfig();
   if (!cfg) return;
-  const btn = $('saveFavBtn');
   const prevStatus = $('mapStatus').innerHTML;   // 量測是短暫的過場,MUST 還原原本的選址摘要
-  btn.disabled = true;
+  setFavBtnDisabled(true);
   app.mapSel?.resetPlaceNameStats?.();
   try {
     $('mapStatus').textContent = '取得地圖名稱(最久 5 秒)…';
@@ -1094,12 +1102,13 @@ $('saveFavBtn')?.addEventListener('click', async () => {
       $('mapStatus').textContent = '地圖建立完成，補試地圖名稱(最久 5 秒)…';
       await app.mapSel.fetchPlaceName(cfg);
     }
-  } finally { btn.disabled = false; $('mapStatus').innerHTML = prevStatus; }
+  } finally { setFavBtnDisabled(false); $('mapStatus').innerHTML = prevStatus; }
   const name = prompt('地圖名稱:', cfg.placeName)?.trim();
   if (!name) return;
   saveFavorite(name, app.teamSize, cfg);
+  setFavBtnDisabled(true);
   const rotDeg = cfg.center.rot * 180 / Math.PI;
-  toast(`⭐ 已存入最愛:${name}(可到「開戰時刻」選用)`
+  toast(`⭐ 已加入最愛地圖:${name}(可到「開戰時刻」選用)`
     + (Math.abs(rotDeg) > 0.05 ? ` ・地圖主方位 ${rotDeg.toFixed(1)}°` : '')
     + ` ・名稱查詢略過 ${app.mapSel.placeNameSkips || 0} 次`);
 });
