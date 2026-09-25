@@ -1021,8 +1021,7 @@ import { VEHICLE_CONSISTS, CONSIST_PREFIX } from '/js/vehicleConsists.js';
 import { RIM_NAMES } from '/js/vehicleVariants.js';
 
 // 船隻生成模組
-import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel } from '/js/vesselCatalog.js';
-import { VESSEL_EQUIPMENT } from '/js/vesselLayout.js';
+import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel, VESSEL_EQUIPMENT } from '/js/vesselCatalog.js';
 import { buildGeneratedVesselMesh } from '/js/vesselModels.js';
 import { disposeTree } from '/js/toon.js';
 

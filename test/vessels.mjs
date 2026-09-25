@@ -3,8 +3,7 @@ import { register } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { readSrc } from '../tools/audit_src.mjs';
 import { mulberry32 } from '../public/js/rng.js';
-import { VESSEL_TYPES, VESSEL_AXES, generateVessel, vesselFitsAt } from '../public/js/vesselCatalog.js';
-import { VESSEL_DESIGNS, VESSEL_EQUIPMENT } from '../public/js/vesselLayout.js';
+import { VESSEL_TYPES, VESSEL_AXES, generateVessel, vesselFitsAt, VESSEL_DESIGNS, VESSEL_EQUIPMENT } from '../public/js/vesselCatalog.js';
 
 assert.deepEqual(Object.keys(VESSEL_DESIGNS).sort(),VESSEL_TYPES.map(t=>t.id).sort());
 const overlaps=(a,b)=>Math.abs(a.x-b.x)<(a.w+b.w)/2-1e-6 && Math.abs(a.z-b.z)<(a.d+b.d)/2-1e-6;
