@@ -1,4 +1,4 @@
-// 陸上載具的用途／結構相容表。所有數值是遊戲美術範圍，不是工程規格。
+// Land vehicle role/structure compatibility table. Values represent visual art boundaries, not engineering specs.
 import { mulberry32 } from './rng.js';
 import { partAABB, makeVehicle as collisionContract, VEHICLE_SPEC, placeParts } from './vehicles.js';
 import { buildIndividualBody } from './vehicleIndividualBodies.js';
@@ -202,7 +202,7 @@ export const VEHICLE_BRANDS = [
 export const RIM_NAMES={steel:'鋼製孔式',alloy:'六輻鋁圈',disc:'封閉碟式',spoked:'鋼絲輻條',rail:'鐵道鋼輪',tracked:'履帶負重輪'};
 const mass={cycle:[.009,.03],trike:[.06,.2],motor:[.1,.35],cart:[.025,.12],carriage:[.3,1],sedan:[1.1,2.2],van:[1.7,3.2],pickup:[1.5,3],truck:[5,12],tractorUnit:[6,10],bus:[8,16],tractor:[2,7],harvester:[8,18],forklift:[2,6],excavator:[8,25],tank:[12,55],armor:[10,25],roller:[3,12],railcar:[25,48],railWagon:[15,30],railLocomotive:[70,120],steam:[45,90],semiTrailer:[5,10],utility:[1.5,5]};
 
-/** 美術用噸位與改裝參數；不進入碰撞、傷害或經濟計算。 */
+/** Art tonnage and cosmetic variant parameters; excluded from collision, damage, or economy simulation. */
 export function vehicleVariants(key,spec,seed,length) {
   const r=mulberry32(seed^0x56415249),pick=a=>a[Math.floor(r()*a.length)],sample=(a,b)=>a+r()*(b-a);
   const range=mass[spec.form],size=(length-spec.length[0])/(spec.length[1]-spec.length[0]);
@@ -211,7 +211,7 @@ export function vehicleVariants(key,spec,seed,length) {
   const noFreight=['railLocomotive','steam','tractorUnit','tank','excavator','roller','harvester','tractor'].includes(spec.form);
   const payloadTonnes=noFreight?0:curbTonnes*(['bus','railcar'].includes(spec.form)?sample(.12,.25):heavy?sample(.45,1.4):sample(.15,.35));
   const roadWheel=!['tracked','rail'].includes(spec.type)&&!['cycle','trike','cart','carriage','roller'].includes(spec.form);
-  // 聯結座、軌距、履帶與工作輪保持標準安裝高度。
+  // Maintain standard mount heights across couplings, rail gauge, tracks, and road wheels.
   const adjustable=['sedan','van','pickup','utility'].includes(spec.form);
   const radiusScale=adjustable?sample(.96,1.08):1;
   const suspensionLift=adjustable?sample(0,spec.type==='offroad'?.12:.045):0;
@@ -258,14 +258,14 @@ export function buildVariantEquipment(v,rows,{box,cyl,beam}) {
       box('cargo_'+cargo.type,cx,base+h/2,0,l,h,w*.8,cargo.type==='crate'?0x9b794c:cargo.type==='camping'?0x52725d:0x98775f);
       if(cargo.type==='crate')box('crate_batten',cx,base+h/2,w*.405,l*.13,h,W*.015,0x624b30);
     }
-    // 綁帶貼著貨物頂面與兩側，落到承載平台。
+    // Straps contour over cargo top and sides down to load bed.
     box('cargo_tie_top',cx,base+h+.005,0,l*.09,.018,w*.84,0x353b40);
     for(const side of [-1,1])box('cargo_tie_side',cx,base+h/2,side*w*.41,l*.09,h+.025,.018,0x353b40);
   }
 
 }
 
-/** 工作設備共用幾何語彙，尺寸取自母車的載貨平台，不另做一套底盤。 */
+/** Equipment shares common geometric vocabulary sized to carrier load bed without dedicated chassis duplication. */
 export function buildIndustryEquipment(part, v, {box,cyl,beam,frustum}) {
   if (!Object.hasOwn(INDUSTRY_PART_NAMES,part)) return false;
   const {length:L,width:W,height:H,fadedPaint:paint}=v;
@@ -431,7 +431,7 @@ export function buildIndustryEquipment(part, v, {box,cyl,beam,frustum}) {
     box('spray_bar',-L*.47,H*.22,0,L*.025,H*.025,W*.94,steel);
     for(const s of [-1,1])cyl('water_nozzle',-L*.48,H*.21,s*W*.35,W*.03,H*.07,dark,[0,0,0]);
   } else if(part==='mixerDrum') {
-    // 軸向由低前端 (+X) 指向高後端 (-X)；後方縮口供進料與卸料。
+    // Axis points from low front (+X) to raised rear (-X); rear discharge opening feeds and unloads concrete.
     const tilt=.22, center=[x,H*.7,0], radius=W*.4;
     const point=t=>[center[0]-Math.cos(tilt)*t,center[1]+Math.sin(tilt)*t,0];
     const sections=[[-.4,-.22,.2,1],[-.22,.09,1,1],[.09,.4,1,.38]];
@@ -553,7 +553,7 @@ export function buildIndustryEquipment(part, v, {box,cyl,beam,frustum}) {
 }
 
 
-/** 篩選交集；沒有合理組合就回空陣列，禁止隨機退回別種車。 */
+/** Filter archetype candidates; returns empty array if no valid profile matches, forbidding arbitrary fallback. */
 export function vehicleCandidates(filters = {}) {
   for (const axis of ['purpose', 'type', 'power']) {
     if (filters[axis] != null && !Object.hasOwn(VEHICLE_AXES[axis], filters[axis])) throw new RangeError(`未知載具分類:${axis}`);
@@ -585,7 +585,7 @@ export function generateVehicle(key, seed = 0, options = {}) {
   const graffitiChance = spec.purpose.some(p=>['military','government','medical','rescue','sport'].includes(p)) ? 0 : .12;
   const graffiti = r() < graffitiChance ? choose(r, ['HI', 'GO!', 'NOVA', '自由']) : '';
   const number = String(1 + Math.floor(r() * 999)).padStart(3, '0');
-  // 功能件必裝，便利件獨立抽樣；動力硬體由 power 決定。
+  // Functional parts are mandatory, convenience accessories sampled independently; powertrain determined by power.
   const parts = spec.parts.filter(part => !['rack', 'basket', 'panniers', 'canopy'].includes(part) || r() < .6);
   return { key, seed, name: spec.name, purpose, type: spec.type, power, form: spec.form, habitat: spec.habitat,
     style:spec.style,
@@ -596,7 +596,7 @@ export function generateVehicle(key, seed = 0, options = {}) {
       :spec.form==='semiTrailer'||spec.form==='tractorUnit'?{system:'fifthWheel',height:1.2}:null };
 }
 
-/** +X 車頭、地面原點。零件先在公稱盒內生成，再由宿主決定權威 fit。 */
+/** Vehicle facing +X with ground origin. Parts generated in nominal box before host determines authoritative fit. */
 export function vehicleBackgroundObject(key, seed = 0, options = {}) {
   const v = generateVehicle(key, seed, options);
   const { length: L, width: W, height: H } = v;
@@ -612,7 +612,7 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
     const first=rows.length,originalRadius=radius;
     radius*=v.wheels.radiusScale;depth*=v.wheels.widthScale;
     if (['cycle','trike'].includes(v.form)) {
-      // 18 段圓環旋轉 90°，讓一個取樣頂點精確落在最低點。
+      // Rotate 18-segment ring by 90 deg so one sample vertex aligns exactly with lowest ground contact point.
       rows.push({role:'tire',g:['ring',radius*.94,radius*.06],p:[x,radius,z],r:[0,0,Math.PI/2],c:dark});
       cyl('hub',x,radius,z,radius*.1,depth,steel);
       for(let i=0;i<6;i++) {
@@ -892,7 +892,7 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
     for(const row of rows)if(!wheelRows.has(row))row.p[1]+=lift;
     for(const w of wheelMounts)box('suspension_strut',w.x,w.radius+H*.12,Math.sign(w.z)*Math.abs(w.z)*.94,L*.025,H*.27,W*.13,steel);
   }
-  // 牌照屬於端面安裝件，不能沿用最大的側面廣告／車隊標記。
+  // License plates mount on end facades, kept separate from lateral advertising or fleet livery.
   if(v.habitat.includes('street') && !['cycle','trike','cart','carriage'].includes(v.form)) {
     if(v.form==='motor') {
       beam('rear_plate_stay',[-L*.02,H*.77,0],[-L*.39,H*.61,0],W*.055,steel);
@@ -965,7 +965,7 @@ export const VEHICLE_CONSISTS = {
   grainSemi:semi('散裝穀物聯結車','agriculture','semiGrain'),
 };
 
-/** 車頭 +X；只允許配方白名單。編組不控制行車或物理鉸接。 */
+/** Vehicle facing +X; whitelist recipes only. Consist definition does not simulate articulation physics. */
 export function vehicleConsistBackgroundObject(key,seed=0,options={}) {
   if(!Object.hasOwn(VEHICLE_CONSISTS,key))throw new RangeError(`未知編組:${key}`);
   if(!Number.isSafeInteger(seed))throw new TypeError('編組 seed 必須是安全整數');
@@ -993,7 +993,7 @@ export function vehicleConsistBackgroundObject(key,seed=0,options={}) {
     }
     parts.push(...child.parts.map(p=>({...p,name:`${index}:${p.name}`,position:[p.position[0]+offset,p.position[1],p.position[2]]})));
     if(child.markingSurface)markings.push({surface:{...child.markingSurface,x:child.markingSurface.x+offset},vehicle:v});
-    // 聯結後只保留牽引車前牌與末端拖車後牌，避免牌照藏在聯結器內。
+    // Consist retains only tractor front plate and tail wagon rear plate, omitting occluded inter-coupling plates.
     for(const plate of child.plates||[])if((index===0&&plate.ry>0)||(index===children.length-1&&plate.ry<0))plates.push({...plate,x:plate.x+offset});
     members.push({key:selected[index],name:v.name,power:v.power,offset,length:v.length,coupling:v.coupling});
     for(let axis=0;axis<3;axis++){
@@ -1013,9 +1013,9 @@ export function vehicleConsistBackgroundObject(key,seed=0,options={}) {
 }
 
 
-// 描述子宿主的適配層：新車模與既有碰撞契約分開，兩者不反推彼此。
+// Host adapter: decoupled from existing collision contracts without backward derivation.
 export function makeSceneVehicleParts(kind, opts = {}) {
-  // 貨櫃是獨立物流構件，沒有車輛模型。
+  // Containers are independent static logistics props without vehicle chassis.
   if (kind.startsWith('container')) return collisionContract(kind, opts);
   const seed = (opts.paint || 0) ^ Math.round((opts.at?.[0] || 0)*100) ^ Math.round((opts.at?.[2] || 0)*100);
   const key = kind === 'railcar' ? 'tram' : kind==='sedan'?selectRoadCar(seed):kind;
@@ -1031,7 +1031,7 @@ export function makeSceneVehicleParts(kind, opts = {}) {
     const dims=p.type==='box' ? ['box',...p.dimensions.map(n=>n*factor)]
       : ['cyl',p.radii[0]*factor,p.radii[1]*factor,p.height*factor,p.sides];
     const at=[(p.position[0]-(min[0]+max[0])/2)*factor,(p.position[1]-min[1])*factor,(p.position[2]-(min[2]+max[2])/2)*factor];
-    // 殘骸的上半部塌陷保留輪組接地；這裡只處理新幾何。
+    // Wreck upper-half collapse preserves grounded wheel posture; handles procedural geometry only.
     if (p.type==='box' && at[1]>fit.H*.5) {
       at[1]=fit.H*.5+(at[1]-fit.H*.5)*crush;
       dims[2]*=crush;
@@ -1040,7 +1040,7 @@ export function makeSceneVehicleParts(kind, opts = {}) {
   });
   const visual=placeParts(rows,opts.at,opts.ry);
   if (!opts.col) return visual;
-  // 權威碰撞柱逐位元保留；渲染器跳過這些無外觀的契約列。
+  // Preserve authoritative collision hulls bit-identical; renderer ignores appearance-less contract entries.
   return [...collisionContract(kind,opts).filter(p=>p.col).map(p=>({...p,collisionOnly:true})),...visual];
 }
 

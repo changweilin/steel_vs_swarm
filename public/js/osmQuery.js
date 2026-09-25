@@ -1,6 +1,6 @@
-// ============ OSM 查詢與原始元素分流(瀏覽器／工具共用)============
-// Overpass 查詢字串與回應分流只能有一份；執行期、fixture 抓取器與 payload 實測
-// 都從這裡取得，避免額度或 selector 改動後各自查出不同世界。
+// ============ OSM Query Construction and Element Routing (Shared between Client and Tools) ============
+// Overpass query templates and response routing MUST maintain a single source of truth.
+// Runtime, fixture extractors, and payload validation tools all source from here to prevent divergent query filters.
 import { OSM_AREA_KEYS, buildAreaRecords } from './osmAreas.js';
 
 export const OSM_FEATURE_QUERY_VERSION = 7;
@@ -44,7 +44,7 @@ export function osmRoadQuotas(bbox) {
   };
 }
 
-/** 正式建物／地被／附屬點位查詢；內容與 biomes.js 執行期完全相同。 */
+/** Authoritative feature query (buildings, landcover, point POIs); bit-identical to biomes.js runtime. */
 export function osmFeatureQuery(bbox) {
   const bb = bboxText(bbox);
   if (!bb) return null;
@@ -52,7 +52,7 @@ export function osmFeatureQuery(bbox) {
   const areaWays = OSM_AREA_KEYS.map((key) => `way["${key}"](${bb});`).join('');
   const areaRelations = OSM_AREA_KEYS.map((key) => `rel["type"="multipolygon"]["${key}"](${bb});`).join('');
   return `[out:json][timeout:${OSM_QUERY_TIMEOUT_S}];`
-    // multipolygon relation 必須保留 member ref／role；只有 tags + geom 會讓真實 relation 變成 missing_outer。
+    // Multipolygon relations MUST retain member ref/role; tags + geom alone will cause missing_outer failures.
     + `(${areaWays}${areaRelations});out body geom ${nArea};`
     + `node["man_made"~"^(tower|mast|communications_tower|lighthouse)$"](${bb});out tags ${nBld};`
     + `node["aeroway"="control_tower"](${bb});out tags ${nBld};`
@@ -73,7 +73,7 @@ export function osmFeatureQuery(bbox) {
     + `rel["boundary"="administrative"](${bb});way(r);out geom 400;`;
 }
 
-/** 正式道路查詢；主幹與次要道路分開限額，避免小徑擠掉主幹。 */
+/** Authoritative road network query; partitions quota between arterial and secondary roads to prevent minor paths crowding arterials. */
 export function osmRoadQuery(bbox) {
   const bb = bboxText(bbox);
   if (!bb) return null;
@@ -83,17 +83,17 @@ export function osmRoadQuery(bbox) {
     + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian|steps|cycleway|bridleway)$"](${bb});out geom ${nMinor};`;
 }
 
-/** 把正式 feature 查詢回應分成 AreaRecord 與非面狀欄位；不得丟失 raw element。 */
+/** Route raw Overpass response into AreaRecords and non-polygonal feature collections; retains raw element integrity. */
 export function parseOsmFeatureElements(elements = []) {
   const areaElements = [], rails = [], falls = [], crossings = [], pois = [], entrances = [];
   const waters = [], boundaries = [], areaKeys = new Set(OSM_AREA_KEYS);
   for (const el of Array.isArray(elements) ? elements : []) {
     const tags = el?.tags || {};
     if (el?.type === 'relation' && (tags.type === 'multipolygon' || Array.isArray(el.members))) {
-      // relation member way 仍留在 areaElements，buildAreaRecords 會依 source ID 串 outer/inner。
+      // Retain relation member ways in areaElements; buildAreaRecords chains outer/inner rings by source ID.
       areaElements.push(el);
     } else if (el?.type === 'way' && el.geometry && Object.keys(tags).some((k) => areaKeys.has(k))) {
-      // way 即使是 relation 邊段也保留，供 relation 組環；非閉合的線由 buildAreaRecords 略過並列 invalid。
+      // Retain ways even if part of relations for ring assembly; unclosed linestrings are routed to invalid areas.
       areaElements.push(el);
       const closed = Array.isArray(el.geometry) && el.geometry.length > 2
         && el.geometry[0]?.lat === el.geometry.at(-1)?.lat
@@ -107,7 +107,7 @@ export function parseOsmFeatureElements(elements = []) {
     } else if (el?.type === 'way' && el.geometry && tags.natural === 'coastline') {
       boundaries.push({ tags, geometry: el.geometry });
     } else if (el?.type === 'way' && el.geometry) {
-      // relation 展開後的成員 way 通常沒有 boundary 標籤；排除具名類別後即為行政界成員。
+      // Member ways expanded from relations typically lack boundary tags; non-categorized ways represent administrative boundaries.
       boundaries.push({ tags, geometry: el.geometry });
     } else if (el?.type === 'node' && tags.railway === 'level_crossing') {
       crossings.push({ lat: el.lat, lng: el.lon, tags });
@@ -127,7 +127,7 @@ export function parseOsmFeatureElements(elements = []) {
   return {
     areas: built.areas, areaInvalid: built.invalid, areaCapacity: built.capacity, areaGaps: built.gaps,
     pointFeatures,
-    // 舊消費端的短期別名；陣列仍與 pointFeatures 共用同一份參照。
+    // Backward compatibility aliases for legacy consumers; shares identical references with pointFeatures.
     ...pointFeatures,
   };
 }

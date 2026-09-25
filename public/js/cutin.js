@@ -1,16 +1,15 @@
-// ============ 招式立繪演出(Cut-in)============
-// 對應 doc/drone_vs_robot_fps_dota_plan.html「2D Comic Billboard VFX」:
-// 施放攻招/守招時,以粗體斜角漫畫字 + 立繪滑入 + 徑向速度線呈現,搭配鏡頭震動。
-// (攻招 = ult 槽、守招 = skill 槽;護盾模式中施展必為守招,見 data.js ABIL_NATURE)
+// ============ Ability Cut-in Presentation ============
+// Implements 2D comic billboard VFX: bold angled typography + character portrait slide-in + radial speedlines + camera shake.
+// (Offensive ability = ult slot, defensive ability = skill slot; casting during shield mode is always defensive, see data.js ABIL_NATURE).
 //
-// 純 DOM overlay(不進 3D 場景):立繪是 2D 素材,拉進 Three.js 只會多一層 billboard 排序問題;
-// 且戰鬥中 UI 層本來就在 canvas 之上。所有動畫走 CSS,JS 只負責掛/卸節點。
+// Pure DOM overlay outside 3D scene: 2D cut-in art avoids Three.js billboard depth sorting issues,
+// and HUD layer already sits above canvas. CSS drives animations; JS handles mount/unmount lifecycle.
 //
-// 三種強度:
-//   ult  自己  → full  全屏立繪 + 大字幕(1.3s)
-//   skill 自己 → mini  左下角小卡(0.8s)
-//   ult  敵方  → warn  頂部警示條 + 敵方立繪(1.0s)
-// 守招不做敵方演出(戰場上守招太頻繁,會蓋住視野)。
+// Intensity levels:
+//   ult  (self)  -> full  full-screen portrait + banner (1.3s)
+//   skill (self) -> mini  bottom-left thumbnail card (0.8s)
+//   ult  (enemy) -> warn  top warning bar + enemy portrait (1.0s)
+// Defensive abilities do not trigger enemy presentation to avoid obstructing combat visibility.
 
 import { CHARACTERS, heroAbility } from './data.js';
 import { cutinArtURL } from './portraits.js';
@@ -18,26 +17,26 @@ import { cutinArtURL } from './portraits.js';
 const DUR = { full: 1300, warn: 1000, mini: 800 };
 
 export class CutIn {
-  /** @param {HTMLElement} root 疊在 canvas 之上的空層 */
+  /** @param {HTMLElement} root Container layer mounted above canvas. */
   constructor(root) {
     this.root = root;
     this.timers = new Set();
-    // 斜向轉場(序 8 ④-1)的**選用**消費端。沒接上 ⇒ 一格都不會發生(原則 6):
-    // 立繪本身是 DOM overlay,而幕是後製 pass ⇒ 兩者只在「同一個施放事件」上會合。
+    // Optional consumer for diagonal wipe transitions. If disconnected, no transition runs (degrade by omission):
+    // Cut-in is DOM overlay while wipe is post-process pass; both synchronize on the same cast event.
     this.pipeline = null;
   }
 
   /**
-   * 接上後製管線(`game.js` 建完 pipeline 之後一行:`this.cutin.setPipeline(this.pipeline)`)。
-   * **MUST NOT 由本檔自己去找 pipeline** —— 全專案有兩個 `new Pipeline`(戰場與設定頁樣品),
-   * 模組級的「當下這一支」會在開設定頁時指到樣品那一支上。
+   * Bind post-process pipeline (wired by game.js after pipeline construction).
+   * MUST NOT query pipeline globally: two Pipeline instances coexist (match and settings sample),
+   * and a module-level pointer would bind to the settings sample on menu open.
    */
   setPipeline(p) { this.pipeline = p || null; }
 
   /**
-   * @param {object} ev  伺服器 cast 事件(ch/slot/side/lvl)
-   * @param {boolean} self 是不是自己施放
-   * @param {string} sideColor 施放者陣營色
+   * @param {object} ev Server cast event (ch/slot/side/lvl).
+   * @param {boolean} self True if cast by local player.
+   * @param {string} sideColor Caster faction color.
    */
   show(ev, self, sideColor) {
     if (!this.root) return;
@@ -46,7 +45,7 @@ export class CutIn {
     const isUlt = ev.slot === 'ult';
     if (!self && !isUlt) return;
     const mode = self ? (isUlt ? 'full' : 'mini') : 'warn';
-    // 同強度只留最新一張:大招重疊時舊的立即讓位,不排隊
+    // Retain latest cut-in per intensity: overlapping ultimates yield immediately without queuing.
     this.root.querySelector(`.cutin.${mode}`)?.remove();
 
     const a = heroAbility(ev.ch, ev.slot, ev.lvl || 1);
@@ -66,16 +65,15 @@ export class CutIn {
     this.root.appendChild(el);
     const t = setTimeout(() => { el.remove(); this.timers.delete(t); }, DUR[mode]);
     this.timers.add(t);
-    // 自己的大招那一格才刷屏(`full`):小卡與敵方警示條在戰鬥中太頻繁,蓋住視野就是玩法改動。
-    // 幕色吃**施放者的陣營色**(呼叫端已經算好的那一個)—— 幕色刻意不住 `data.js WIPE`,
-    // 那會變成與 `toon.js OUTLINE_COLOR` 並存的第二份墨色。
+    // Trigger screen wipe only on local ultimate (full); frequent mini/warn wipes obstruct combat visibility.
+    // Screen wipe uses caster faction color calculated by caller to avoid maintaining duplicate palette in data.js WIPE.
     if (mode === 'full') this.wipe(sideColor);
   }
 
   /**
-   * 遮幕 → 揭幕的一次刷屏。旋鈕關著時 `playWipe` 會**同步**走回呼並回 false ⇒
-   * 這一支整條退化成「呼叫兩次早退」,連時序都逐位元同舊制。
-   * 回呼由**幀迴圈**觸發(`Pipeline._tickWipe`),本檔的 `timers` 一格都不用動。
+   * Full wipe pass (cover -> reveal). When wipe is toggled off, playWipe executes callback synchronously
+   * and returns false, cleanly degrading to two early returns with matching execution order.
+   * Callbacks are driven by render loop (Pipeline._tickWipe); timers set is untouched.
    */
   wipe(color) {
     const p = this.pipeline;
@@ -87,7 +85,7 @@ export class CutIn {
   dispose() {
     for (const t of this.timers) clearTimeout(t);
     this.timers.clear();
-    this.pipeline = null;   // 幕的回呼抓著 this ⇒ 離場 MUST 斷掉(管線自己也會清 _wipe)
+    this.pipeline = null; // Wipe callback captures this; MUST disconnect on tear-down.
     if (this.root) this.root.innerHTML = '';
   }
 }

@@ -1,27 +1,27 @@
-// ============ 行人路網語意規劃 ============
-// OSM 步道先在此分成四種結果：
-//   ① bridge=yes 的戶外步道保留並建成人行天橋；
-//   ② 地下／室內負樓層步道移除路線，只留下端點出入口；
-//   ③ 車站入口節點與車站附近的地下端點共用車站入口外觀；
-//   ④ 與同層道路／鐵道長距離平行的步道，統一規劃成老街、綠廊或自行車道。
+// ============ Pedestrian Network Semantic Planning ============
+// OSM walkways partition into four outcomes here:
+//   1. bridge=yes outdoor walkways remain as footbridges;
+//   2. Underground / indoor negative-level footpaths drop routing, keeping only endpoint portals;
+//   3. Station entrance nodes and nearby underground portals share station portal styling;
+//   4. Long-distance ground walkways parallel to roads/railways become themed corridors (heritage, greenway, bike path).
 //
-// 本檔零 import、零 THREE、零亂數。圖資分類、入口落點與沿線主題只有這一份；biomes.js
-// 只把結果翻成幾何。輸入 way 不就地修改，供離線稽核直接吃同一支真品。
+// Zero-import, zero-THREE, zero-RNG module. Source of truth for classification, portal placement,
+// and corridor themes; biomes.js only converts results into geometry. Input ways are not mutated in-place.
 
 export const PED_PLAN = {
-  NEAR_M: 24,             // 同層平行走廊的最大橫距（遊戲公尺；REAL_SCALE=0.5 時約 12m 真實距離）
+  NEAR_M: 24,             // Maximum lateral distance for ground parallel corridor (game meters; ~12m real distance at REAL_SCALE=0.5)
   PARALLEL_DEG: 24,
-  MIN_PARALLEL_F: 0.42,   // 至少此比例的步道路段貼著道路／鐵道才整條套主題
-  STATION_NEAR_M: 140,    // 車站附近入口與商圈老街的判定半徑（約 70m 真實距離）
+  MIN_PARALLEL_F: 0.42,   // Minimum proportion of footway segments aligned with road/railway to theme whole way
+  STATION_NEAR_M: 140,    // Detection radius for nearby station portals and commercial old streets (~70m real distance)
   ENTRANCE_MERGE_M: 10,
-  FOOTBRIDGE_MIN_W_M: 6,  // 單機體可通行；車行橋仍走既有 PASS_W
+  FOOTBRIDGE_MIN_W_M: 6,  // Clearance for single mech; vehicular bridges use PASS_W
   DRESS_STEP_M: 18,
-  JOINT_M: 0.06,          // 外觀結構接縫的最小重疊量；不進入口碰撞 OBB
+  JOINT_M: 0.06,          // Minimum overlap for structural seams; excluded from entrance collision OBB
 };
 
-// 一個生成器族 + 一張款式表；渲染端不得為每一款複製一套建模函式。
+// One generator family + archetype table; rendering code MUST NOT duplicate builders per style.
 export const PED_ARCHETYPES = Object.freeze({
-  // 基礎款與既有樣式
+  // Base and legacy archetypes
   station:              { w: 5.8, d: 7.2, h: 3.3, roof: 0x44687c, frame: 0xd8e0e3, wall: 0x91a6ad, accent: 0xe0a030, style: 'canopy' },
   station_modern:       { w: 6.0, d: 7.6, h: 3.4, roof: 0x3a5d73, frame: 0xe0e6eb, wall: 0x768c96, accent: 0x357899, style: 'modern' },
   station_canopy:       { w: 5.6, d: 7.2, h: 3.2, roof: 0x2e6b8a, frame: 0xd0d8de, wall: 0x85a2b0, accent: 0x4a90e2, style: 'canopy' },
@@ -32,7 +32,7 @@ export const PED_ARCHETYPES = Object.freeze({
   underpass_open:       { w: 4.8, d: 6.0, h: 2.2, roof: 0x505860, frame: 0xb8c0c8, wall: 0x707880, accent: 0x3b82f6, style: 'open' },
   underpass_covered:    { w: 5.0, d: 6.2, h: 2.9, roof: 0x3d6652, frame: 0xb4c2ba, wall: 0x7d8e85, accent: 0x2b8a5f, style: 'covered' },
 
-  // 各國代表性城市捷運／車站出入口
+  // Representative metro / station portals
   station_taipei:       { w: 6.2, d: 8.0, h: 3.6, roof: 0x247a8c, frame: 0xd8e4e8, wall: 0x6c96a3, accent: 0xf5b82e, style: 'arch_glass', city: 'taipei' },
   station_tokyo:        { w: 5.8, d: 7.6, h: 3.4, roof: 0x282c34, frame: 0x4a515e, wall: 0x616a78, accent: 0xf0c644, style: 'tokyo_slate', city: 'tokyo' },
   station_paris:        { w: 5.6, d: 7.2, h: 3.8, roof: 0x2b5443, frame: 0x1a382c, wall: 0x3a6652, accent: 0xe69138, style: 'art_nouveau', city: 'paris' },
@@ -42,14 +42,14 @@ export const PED_ARCHETYPES = Object.freeze({
   station_fosterito:    { w: 6.4, d: 8.4, h: 3.8, roof: 0x48bb78, frame: 0xe2e8f0, wall: 0x94a3b8, accent: 0x0d9488, style: 'glass_cocoon', city: 'bilbao' },
   station_seoul:        { w: 6.0, d: 7.8, h: 3.5, roof: 0x2563eb, frame: 0xcfd8dc, wall: 0x78909c, accent: 0x1d4ed8, style: 'metallic_gabled', city: 'seoul' },
 
-  // 各國代表性地下街／地下道出入口
+  // Representative underpass portals
   underpass_chika_mall: { w: 6.6, d: 8.2, h: 3.6, roof: 0x334155, frame: 0xf1f5f9, wall: 0x64748b, accent: 0xf97316, style: 'mall_portal', city: 'mall' },
   underpass_stone_arch: { w: 5.6, d: 7.0, h: 3.3, roof: 0x6b6357, frame: 0x998d7c, wall: 0x7d7263, accent: 0xbfa074, style: 'stone_arch', city: 'europe' },
   underpass_origami:    { w: 5.6, d: 7.2, h: 3.3, roof: 0x334155, frame: 0xb0bec5, wall: 0x546e7a, accent: 0x06b6d4, style: 'origami', city: 'modern' },
   underpass_glass_cube: { w: 5.4, d: 6.8, h: 3.2, roof: 0x5eead4, frame: 0x0f172a, wall: 0x2dd4bf, accent: 0x0f766e, style: 'glass_cube', city: 'nordic' },
 });
 
-/** 地下道／車站入口的名目外廓；渲染與玩家／NPC／彈道碰撞共用 PED_ARCHETYPES 尺寸。 */
+/** Nominal portal envelope; shared between rendering and player/NPC/ballistic collision (PED_ARCHETYPES). */
 export function pedestrianEntranceCollider(site, y) {
   const archKey = site?.archetype || site?.kind || 'underpass';
   const def = PED_ARCHETYPES[archKey] || PED_ARCHETYPES[site?.kind] || PED_ARCHETYPES.underpass;
@@ -197,13 +197,13 @@ function offsetBesideRoad(x, z, dx, dz, roadTargets) {
   let posX = x, posZ = z;
   let nearRoad = null;
 
-  // 多輪幾何鬆弛：確保出入口量體邊界與人行道緩衝完全退出所有鄰近車道路緣外
+  // Iterative relaxation: push portal bounds and sidewalk buffer completely outside adjacent roadway curbs
   for (let iter = 0; iter < 3; iter++) {
     nearRoad = nearestPoint(posX, posZ, roadTargets);
     if (!nearRoad) break;
     const d = Math.sqrt(nearRoad.d2);
     const segHw = nearRoad.seg.hw || 4.5;
-    // 出入口量體半徑 (4.2m) + 人行道緩衝 (2.5m) + 車道半寬 (segHw)
+    // Portal radius (4.2m) + sidewalk buffer (2.5m) + lane half-width (segHw)
     const minClearance = segHw + 4.2 + 2.5;
 
     if (d < minClearance) {
@@ -236,11 +236,11 @@ function offsetBesideRoad(x, z, dx, dz, roadTargets) {
   nx /= nl;
   nz /= nl;
 
-  // 出入口朝向：正對道路（迎向路心）或側對道路（順路側方向），絕不背對道路
-  // 迎向路心方向：[-nx, -nz]
-  // 順路側方向：[nearRoad.seg.ux, nearRoad.seg.uz] 或 [-nearRoad.seg.ux, -nearRoad.seg.uz]
+  // Portal orientation: facing roadway center or aligned with curb, never facing away from road
+  // Towards road center: [-nx, -nz]
+  // Aligned with curb: [nearRoad.seg.ux, nearRoad.seg.uz] or [-nearRoad.seg.ux, -nearRoad.seg.uz]
   const h = ((Math.round(posX * 10) * 73856093) ^ (Math.round(posZ * 10) * 19349663) ^ 101) >>> 0;
-  const faceMode = (h % 100) < 45 ? 'road' : 'side'; // 45% 正對道路, 55% 側對道路
+  const faceMode = (h % 100) < 45 ? 'road' : 'side'; // 45% facing road, 55% curb-aligned
   let ry;
   if (faceMode === 'road') {
     ry = Math.atan2(-nx, -nz);
@@ -255,7 +255,7 @@ function offsetBesideRoad(x, z, dx, dz, roadTargets) {
 
 function endpointSites(way, pts, stations, roadTargets = null) {
   if (pts.length < 2) return [];
-  // 封閉地下環沒有可辨識的地面端點；不得在重合起終點憑空捏造一座入口。
+  // Closed underground rings lack distinct surface endpoints; MUST NOT generate phantom portals at coincident terminals.
   if (dist2(pts[0], pts[pts.length - 1]) <= PED_PLAN.ENTRANCE_MERGE_M ** 2) return [];
   const ends = [[0, 1], [pts.length - 1, pts.length - 2]];
   return ends.map(([i, j]) => {
@@ -306,7 +306,7 @@ function clusterAndBrandEntrances(entrances, stations) {
 
   for (const cluster of clusters) {
     const isStat = cluster.some((e) => e.kind === 'station');
-    // 1. 同一區統一地名／站名
+    // 1. Unify district / station naming across the cluster
     let baseName = null;
     for (const e of cluster) {
       const st = e.stationTags || e.tags;
@@ -317,14 +317,14 @@ function clusterAndBrandEntrances(entrances, stations) {
       baseName = isStat ? '捷運站' : '人行地下道';
     }
 
-    // 2. 同一區統一外觀樣式 (由聚類中心與名稱雜湊決定)
+    // 2. Unify architectural style per cluster (hashed from centroid and district name)
     const cx = cluster.reduce((sum, e) => sum + e.x, 0) / cluster.length;
     const cz = cluster.reduce((sum, e) => sum + e.z, 0) / cluster.length;
     let ch = ((Math.round(cx * 10) * 73856093) ^ (Math.round(cz * 10) * 19349663) ^ (baseName.length * 37)) >>> 0;
     const stylePool = isStat ? STATION_ARCHETYPES : UNDERPASS_ARCHETYPES;
     const styleKey = stylePool[ch % stylePool.length];
 
-    // 3. 循序幾何排序與編號分派
+    // 3. Sequential geometric sorting and exit number assignment
     cluster.sort((a, b) => {
       const angA = Math.atan2(a.z - cz, a.x - cx);
       const angB = Math.atan2(b.z - cz, b.x - cx);

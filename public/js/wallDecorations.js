@@ -19,8 +19,9 @@ export const WALL_DECORATIONS = Object.freeze({
   hanging_vines: { label: '垂吊藤蔓', categories: ['residential', 'commercial', 'tourism'], plant: true, color: 0x365e48, accent: 0x84a462 },
 });
 export const WALL_COVERAGE = Object.freeze({
-  // 各覆蓋範圍實際 w/h 長寬比 MUST ≤ 1.5（不可太細）：正方形牆上 wf/hf 即實際比，
-  // 寬高牆再由 wallDecorations.js 動態收斂長邊，此處先保證基準不違規。
+  // Coverage aspect ratio (w/h) MUST <= 1.5 to prevent overly narrow strips:
+  // On square walls wf/hf is the true ratio; on non-square facades, wallDecorations.js
+  // dynamically clamps the longer dimension.
   patch: [0.28, 0.24], band: [0.52, 0.38], column: [0.30, 0.42], field: [0.58, 0.48],
 });
 
@@ -31,14 +32,14 @@ export const WALL_DECORATION_RULES = Object.freeze(Object.fromEntries(
   }]),
 ));
 
-// 低樓層門檻（m）：達此樓高以上視為高樓，牆面裝飾/渲染全面停用（陽台/雨遮/冷氣等規律配件除外）。
+// Low-rise ceiling (m): facades above this limit disable wall decorations (balconies/awnings/AC remain enabled).
 export const LOW_RISE_LIMIT = 24;
 
 /**
- * 建築牆面爬藤植物無重複連續拼接生成器。
- * 支援多塊連續網格拼接（cols × rows）：
- * 1. 跨塊共享接縫（vseam / hseam）端點座標與切線確定性完全相符（連續拼接）。
- * 2. 各塊內部藤幹、葉片與花芽以塊坐標雜湊獨立隨機生長（完全不重複）。
+ * Seamless, non-repeating procedural climbing plant generator for building facades.
+ * Supports multi-tile grids (cols x rows):
+ * 1. Shared seam connectors (vseam / hseam) deterministically match position and tangent across tiles.
+ * 2. Tile interiors (runners, leaves, blooms) grow pseudo-randomly using tile-coordinate hashes.
  */
 export function generateSeamlessVinePattern({
   seed, slot = 0, site, w, h, kind = 'ivy', rule, scope = 'field',
@@ -74,7 +75,7 @@ export function generateSeamlessVinePattern({
     });
   };
 
-  // 1. 架體或花槽 (Trellis / Planter Box)
+  // 1. Trellis frame or planter box
   if (kind === 'flowering_trellis') {
     const barsX = cCount * 2 + 1;
     for (let i = 0; i < barsX && motif.length < budget; i++) {
@@ -88,8 +89,8 @@ export function generateSeamlessVinePattern({
     box(w, 0.2, 0, h / 2 - 0.1, 0x986b50, 0.3, 0.22);
   }
 
-  // 2. 決定跨塊邊界接點 (Deterministic Seam Connectors)
-  // 相鄰兩塊在接縫上的端點 (y, dy) 僅依賴該接縫的確定性雜湊，保證連續對接
+  // 2. Deterministic seam connectors
+  // Neighboring tile seam endpoints (y, dy) depend strictly on the seam hash to ensure continuity.
   const getVSeam = (c, r) => {
     const key = architectureHash(seed, `${slot}:vseam:${c}:${r}`);
     const yRel = ((key % 1000) / 1000 - 0.5) * (tileH * 0.55);
@@ -103,7 +104,7 @@ export function generateSeamlessVinePattern({
     return { x: -w / 2 + (c + 0.5) * tileW + xRel };
   };
 
-  // 3. 逐塊生成完全不重複之藤蔓與枝葉
+  // 3. Generate non-repeating vines and foliage per tile
   for (let r = 0; r < rCount && motif.length < budget; r++) {
     for (let c = 0; c < cCount && motif.length < budget; c++) {
       const blockSeed = architectureHash(seed, `${slot}:blk:${c}:${r}`);
@@ -119,7 +120,7 @@ export function generateSeamlessVinePattern({
         ? getVSeam(c + 1, r)
         : { y: cy + ((((blockSeed >>> 8) % 100) / 100) - 0.5) * tileH * 0.4, dy: 0 };
 
-      // 主幹 3 段折線平滑連接左右端點
+      // Main stem: 3-segment polyline smoothly connecting left and right seam points.
       const segs = Math.max(2, Math.min(4, Math.floor(tileW / 0.6)));
       for (let s = 0; s < segs && motif.length < budget; s++) {
         const tA = s / segs, tB = (s + 1) / segs;
@@ -134,7 +135,7 @@ export function generateSeamlessVinePattern({
 
         box(segLen + 0.02, 0.035, (xA + xB) / 2, (yA + yB) / 2, 0x5c6740, 0.032, 0.165, segAng, blockKey);
 
-        // 塊內獨特葉片
+        // Unique foliage per tile segment
         const leafSeed = architectureHash(blockSeed, `leaf:${s}`);
         const lx = (xA + xB) / 2 + (((leafSeed % 100) / 100) - 0.5) * 0.14;
         const ly = (yA + yB) / 2 + ((((leafSeed >>> 8) % 100) / 100) - 0.5) * 0.14;
@@ -144,13 +145,13 @@ export function generateSeamlessVinePattern({
         const leafColor = (leafSeed % 3) ? rule.color : rule.accent;
         leafPart(lx, ly, 0.20, leafAngle, leafW, leafH, leafColor, blockKey);
 
-        // 花架花朵 / 攀藤側芽
+        // Trellis blooms / lateral vine buds
         if (kind === 'flowering_trellis' && (leafSeed % 2 === 0)) {
           leafPart(lx + 0.05, ly + 0.05, 0.22, leafAngle + 0.4, leafW * 0.6, leafH * 0.6, rule.accent, blockKey);
         }
       }
 
-      // 垂直上下塊相接 (跨層藤蔓 runner)
+      // Vertical inter-tile connector (vertical runner)
       if (r < rCount - 1 && motif.length < budget) {
         const hConn = getHSeam(c, r + 1);
         const vy0 = cy, vy1 = -h / 2 + (r + 1) * tileH;
@@ -170,7 +171,7 @@ export function generateSeamlessVinePattern({
 export function wallDecorationParts({ seed, width, height, category, contemporary, claims = [], budget = 80 }) {
   const placement = WALL_DECORATION_PLACEMENT;
   if (![width, height, budget].every(Number.isFinite) || width < placement.minLength || height < placement.minHeight || budget < 24) return [];
-  // 限定建築牆面的渲染/零件只有低樓層建築才使用（高樓層全面禁用牆飾）。
+  // Restrict facade motifs to low-rise buildings (high-rises disable decorative wall art).
   if (height > LOW_RISE_LIMIT) return [];
   const rnd = tag => architectureHash(seed, tag) / 4294967296;
   const choices = Object.entries(WALL_DECORATIONS).filter(([, rule]) =>
@@ -182,10 +183,10 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
     const [kind, rule] = choices[Math.floor(rnd(`${slot}:type`) * choices.length)];
     const [scope, [wf, hf]] = scopes[Math.floor(rnd(`${slot}:scope`) * scopes.length)];
     if (rule.plant) {
-      // 藤蔓走窗間垂直空隙：找一條無佔位的窄柱，以 1×N 無縫疊塊向上攀爬。
-      // 每塊圖案單元長寬比恆 ≤1.5（塊高取 ceil 均分，恆 ≤1.5×柱寬、恆 ≥0.7m），
-      // 塊與塊共用接縫座標（generateSeamlessVinePattern 的 hseam 保證連續），
-      // 整柱不壓窗不壓外掛。密窗牆上方能有整幅攀藤，而非只剩縮小的碎塊。
+      // Vertical vine runner between windows: finds an unoccupied column strip and stacks 1xN seamless blocks.
+      // Unit aspect ratio MUST <= 1.5 (tile height divided via ceil, <= 1.5x strip width and >= 0.7m).
+      // Consecutive tiles share seam coordinates via generateSeamlessVinePattern hseam.
+      // Avoids overlapping windows or wall attachments while allowing full-height vines on dense facades.
       const vw = 1.0 + rnd(`${slot}:vinew`) * 0.6;
       let strip = null;
       if (width - vw - 0.8 > 0) {
@@ -228,12 +229,12 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
     }
     let w = Math.min(8, (width - 0.8) * wf * (0.8 + rnd(`${slot}:w`) * 0.4));
     let h = Math.min(6, (height - 0.8) * hf * (0.8 + rnd(`${slot}:h`) * 0.4));
-    // 渲染圖案長寬差距不可超過 50%（不可太細）：收斂長邊至 1.5× 短邊。
+    // Motif aspect ratio difference MUST NOT exceed 50% (clamp longer side to 1.5x shorter side).
     if (w > h * 1.5) w = h * 1.5;
     else if (h > w * 1.5) h = w * 1.5;
     if (w < 0.75 || h < 0.7) continue;
-    // 選址收斂至空位：以中心試探後向 claims（含窗玻璃與外掛佔位）收縮半徑，
-    // 仍 ≥0.75×0.7 且長寬比 ≤1.5 才接受 —— 密窗牆上壁飾縮小存活，不硬壓窗。
+    // Fit placement into available clearance: test center and shrink radius away from claims
+    // (including windows and attachments). Must remain >= 0.75x0.7 with aspect ratio <= 1.5.
     const fitSite = (x, y) => {
       let hw = w / 2, hh = h / 2;
       hw = Math.min(hw, width / 2 - 0.4 - Math.abs(x));
@@ -264,7 +265,7 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
       site = fitted; break;
     }
     if (!site) continue;
-    // 收斂後的實際尺寸驅動圖案生成（圖案恆落在空位內，不擴回期望尺寸）。
+    // Generate motifs using clamped dimensions to stay strictly inside unoccupied clearance.
     w = site.w; h = site.h;
     const motif = [];
     const box = (bw, bh, x, y, color, depth = 0.04, z = 0.12) => motif.push({
@@ -286,7 +287,7 @@ export function wallDecorationParts({ seed, width, height, category, contemporar
       }
     } else if (kind === 'graffiti') {
       // Overlapping outlined letter bubbles and paint drips, directly on masonry.
-      // 相鄰泡泡間距 w*0.145：外圈半徑 MUST ≤ 間距一半，否則泡泡互疊（不可重疊）。
+      // Bubble spacing w*0.145: outer radius MUST <= half spacing to prevent overlapping bubbles.
       for (let i = 0; i < 6; i++) {
         const x = (i - 2.5) * w * 0.145;
         const y = (rnd(`${slot}:${i}:stroke`) - 0.5) * h * 0.25;

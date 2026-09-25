@@ -1,29 +1,23 @@
-// ============ 遊戲說明(客戶端 UI 文字唯一縫)============
-// 純表現/導覽文字 —— 伺服器 MUST NOT import(比照 lore.js)。
-// 三份資料:
-//   CONTROLS_BY_KIND — 依機種的操作提示(戰場選單「選單」頁 pauseHelp 與「說明」頁共用同一份,
-//                      MUST NOT 在 main.js 另寫一份逐機種字串)。
-//   TOUCH_CONTROLS   — 同上,但是觸控版(手機/平板)的說法。鍵位字串 MUST NOT 混進 CONTROLS_BY_KIND,
-//                      兩版各自完整一份;鍵名 key 與 CONTROLS_BY_KIND 一致(drone/morph/mech/spectator)。
-//   HELP             — 依類別分頁的完整遊戲說明清單(戰場選單「說明」頁渲染來源)。
+// ============ Game Help (sole seam for client UI copy) ============
+// Pure presentation and navigation copy -- server simulation MUST NOT import this (per lore.js).
+// Three datasets:
+//   CONTROLS_BY_KIND -- Per-mech control hints (shared between pause menu pauseHelp and Help tab;
+//                      MUST NOT duplicate strings in main.js).
+//   TOUCH_CONTROLS   -- Touch/virtual-pad variants for mobile/tablet, keeping keys identical to CONTROLS_BY_KIND.
+//   HELP             -- Full categorized game guide rendered in the pause menu Help tab.
 //
-// **輸入裝置自動偵測(2026-07-27)**:說明頁的鍵位敘述隨目前輸入方式切換 ——
-// 每則條目除了 `p`(鍵盤滑鼠)可再帶一份 `pTouch`(虛擬搖桿),類別可帶 `labelTouch`;
-// 由 `helpItemP()` / `helpCatLabel()` 這**唯一一個縫**決定要拿哪一份(判定值來自 mobile.js `isTouchUI()`,
-// 與 pauseHelp 用的是同一個旗標)。MUST NOT 在 main.js 另寫一套 if(touch) 字串。
-// 內容數值(CD 30s、極音速飛彈射程 ×1.2 塔射程、完美迴避 +1s 無敵…)沿用既有 pauseHelp 既定文案,
-// 與武器/招式的平衡調整無耦合;僅 UI 敘述,MUST NOT 當作平衡真相。
+// Input device detection: copy dynamically selects keyboard/mouse vs virtual pad.
+// Each item provides `p` (keyboard/mouse) and optional `pTouch` (virtual pad), plus `labelTouch`.
+// Selection is mediated solely via `helpItemP()` / `helpCatLabel()` using mobile.js `isTouchUI()`.
+// Numerical descriptions follow established pauseHelp copy and do not define authoritative balance truth.
 
 /**
- * **觀戰操作說明的唯一資料源**(2026-08-02 使用者需求「觀戰時加入觀戰操作說明」)。
- * 逐列 `[鍵位, 說明]`,兩個消費端共用:
- *   ① 戰場選單/說明分頁那一長串 —— 由 `specJoin()` 推導成 `CONTROLS_BY_KIND.spectator` /
- *      `TOUCH_CONTROLS.spectator`(**推導不手寫**:面板與選單的說法自動一致);
- *   ② 觀戰中常駐在畫面左下的 `#specHelp` 面板 —— main.js `renderSpecHelp()` 逐列渲染。
- * 為面板另抄一份的下場:兩份總有一份先過時,而「同一款說明在兩個地方寫得不一樣」
- * 沒有任何錯誤訊息,只有玩家照著做卻按不出效果。
- * 鍵盤版 / 搖桿版**各自完整一份**(慣例同 CONTROLS_BY_KIND ⇄ TOUCH_CONTROLS),
- * 取哪一份只准經 `specControls(touch)` 這一個縫(A21:裝置分支不准散到 main.js)。
+ * Sole data source for spectator control instructions.
+ * Array of `[key, description]` shared across:
+ *   1. Pause menu / Help tab -- derived via `specJoin()` into `CONTROLS_BY_KIND.spectator` /
+ *      `TOUCH_CONTROLS.spectator` to keep panel and menu descriptions synchronized.
+ *   2. On-screen `#specHelp` panel rendered by main.js `renderSpecHelp()`.
+ * Keyboard and gamepad variants are maintained separately and resolved solely through `specControls(touch)`.
  */
 export const SPEC_CONTROLS = {
   key: [
@@ -54,12 +48,12 @@ export const SPEC_CONTROLS = {
     ['跟隨中', '畫面左下顯示該玩家完整數據:裝甲 / 磁力 / 電力 / 武器 / 招式冷卻 / 金錢 / 擊殺 + 八軌商店升級'],
   ],
 };
-/** 觀戰說明取字唯一縫(面板與選單同吃;MUST NOT 在 main.js 自己判 touch 挑表)*/
+/** Sole lookup seam for spectator controls; consumers MUST NOT branch on touch internally. */
 export const specControls = (touch) => (touch ? SPEC_CONTROLS.pad : SPEC_CONTROLS.key);
-/** 逐列 → 選單那一長串(推導;分隔符與其餘機種的說明一致)*/
+/** Format key/desc rows into formatted pause-menu string matching other mech styles. */
 const specJoin = (rows) => rows.map(([k, d]) => `${k} ${d}`).join(' ・ ');
 
-/** 依機種的操作提示(drone 無人機 / morph 變形者 / mech 一般機甲 / spectator 觀戰)*/
+/** Control instructions by unit kind (drone / morph / mech / spectator). */
 export const CONTROLS_BY_KIND = {
   drone: 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降(上升消耗爬升動力,見 HUD 動力條;耗盡就爬不上去)・ 受擊會依傷害掉高度 ・ 戰鬥中按 Space 飛行=完美迴避(向上飛+1s 無敵,CD 30s) ・ 左鍵 輕武器 ・ 滾輪切換 狙擊鏡+重武器(準星鎖定) ・ 右鍵 施放招式(防守姿態放防守招式、非防守姿態放攻擊招式) ・ F 防守姿態(正面生成護盾，減免磁力損耗，攻擊動作會取消) ・ Q 攻擊招式 ・ E 防守招式 ・ R 填彈 ・ B 升級 ・ M 切換小地圖範圍(周遭/全部) ・ 單機機動求生,善用護衛機拆塔清群!',
   morph: '飛行中上升消耗爬升動力(HUD 動力條,耗盡爬不上去)、受擊會依傷害掉高度 ・ 地面:WASD 移動 ・ 靠近長梯/攀岩抓點/垂降技術繩推前進即攀爬(前後推杆上下、Space 脫手跳離)・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 滾輪切換 狙擊鏡+重武器 ・ 右鍵 施放招式(防守姿態放防守招式、非防守姿態放攻擊招式) ・ F 防守姿態(正面生成護盾，減免磁力損耗，攻擊動作會取消) ・ Q 攻擊招式 ・ E 防守招式 ・ R 填彈 ・ B 升級 ・ M 切換小地圖範圍(周遭/全部) ・ 地面小心地雷、高空小心防空!',
@@ -68,9 +62,8 @@ export const CONTROLS_BY_KIND = {
 };
 
 /**
- * 觸控版(手機/平板)= **虛擬搖桿**逐機種操作提示。與 CONTROLS_BY_KIND 一一對應,
- * 只換操作方式敘述,招式的效果數值一律沿用同一套文案(效果本身與輸入裝置無關)。
- * 鍵位對應住 mobile.js 的 data-act ⇄ game.js `_cmd`,改鈕請一併改這裡。
+ * Virtual-pad control hints for touch devices, mapped 1:1 to CONTROLS_BY_KIND.
+ * Button bindings align with mobile.js data-act <-> game.js `_cmd`.
  */
 export const TOUCH_CONTROLS = {
   drone: '左上搖桿 = 飛行(沿視線進退 + 橫移,推到底 = 衝刺)・ 右下搖桿或空處拖曳 = 轉視角(空處輕點一下再按住/拖曳 = 邊瞄邊射)・ 陀螺儀開啟後轉動手機即轉動準星 ・ B 上升(消耗爬升動力,見 HUD 動力條)/ ZL 下降 ・ 受擊會依傷害掉高度 ・ 戰鬥中按 B = 完美迴避(向上飛 +1s 無敵,CD 30s)・ A 射擊 ・ ZR 按一下 = 視野鎖定前方視野內的敵人、再按一下換下一個(按住期間視野貼著追瞄;狙擊模式只認狙擊鏡圈內,後座力照舊)・ R 短按切換 狙擊模式+重武器、長按 R 或按十字鍵左 招式 = 施放招式(防守姿態放防守招式、非防守姿態放攻擊招式,與 X/Y 同一招同一份冷卻)・ X 攻招 / Y 防招 ・ L 填彈 ・ ⇄換機 切僚機視野 ・ 十字鍵 上 ⊟ 商店 / 左 招式 / 下 陀螺儀開關 / 右 小地圖範圍 ・ HOME 戰場選單',
@@ -80,11 +73,11 @@ export const TOUCH_CONTROLS = {
 };
 
 /**
- * **GUI 懸浮提示的文字唯一縫**(2026-07-31 使用者定案「遊戲內 GUI 說明一律改成懸浮提示,
- * 並彙整到說明分頁」)。每一則同時有兩個消費端:
- *   ① 各畫面的 ⓘ 標記 —— `tip.js tipHTML(uiTip(key, touch))`;
- *   ② 說明分頁的「介面」類別 —— 直接由本表推導(見下方 HELP 末項),MUST NOT 手抄第二份。
- * 條目形狀與 HELP 一致({ h, p, pTouch? }),故兩邊共用 `helpItemP()` 取字。
+ * Sole source of truth for GUI tooltip copy.
+ * Consumed by:
+ *   1. Screen ⓘ badges via `tip.js tipHTML(uiTip(key, touch))`.
+ *   2. Pause menu Help tab "UI" category derived from this table (see HELP below).
+ * Item schema matches HELP ({ h, p, pTouch? }), sharing `helpItemP()`.
  */
 export const UI_TIPS = {
   miniMap: {
@@ -159,8 +152,8 @@ export const UI_TIPS = {
 };
 
 /**
- * 分類說明清單。每類:{ id, label, items:[{ h 標題, p 內文 }] }。
- * 戰場選單「說明」頁依此渲染類別子分頁 + 內文;新增條目只改本檔。
+ * Categorized help definitions: `{ id, label, labelTouch?, items: [{ h, p, pTouch? }] }`.
+ * Drives tabs and items in the pause menu Help view.
  */
 export const HELP = [
   {
@@ -268,20 +261,19 @@ export const HELP = [
       { h: '第三方勢力', p: '戰場另有中立 / 第三方軍隊(游擊 GUER、民兵 MILI)與攻擊直升機。它們不屬任一陣營,靠近時注意交火。' },
     ],
   },
-  // 「介面」= GUI 上那些 ⓘ 懸浮提示的彙整。**由 UI_TIPS 推導**,MUST NOT 在這裡另抄一份 ——
-  // 抄了就是兩份會漂的說明(懸浮提示改了、說明分頁還停在舊版)。
+  // "ui" category aggregates GUI tooltips derived directly from UI_TIPS; MUST NOT duplicate.
   { id: 'ui', label: '介面', items: Object.values(UI_TIPS) },
 ];
 
 
 // ---------------------------------------------------------------------------
-// 輸入裝置自動偵測:說明頁取字串的**唯一入口**。
-// `touch` 由呼叫端傳入(main.js 用 mobile.js `isTouchUI()` 的結果,與 pauseHelp 同一個旗標)——
-// 本檔刻意不 import mobile.js:help.js 是純文字表,保持零相依才能被工具/測試直接載入。
+// Input device detection: sole lookup entry points for help strings.
+// `touch` is passed in from callers (`isTouchUI()` in mobile.js).
+// Kept dependency-free so tools and tests can load help.js directly.
 // ---------------------------------------------------------------------------
-/** 條目內文:觸控版優先取 pTouch,沒寫就退回鍵鼠版 p(不是每則都有裝置差異) */
+/** Item body text: prefers pTouch on touch devices, falling back to p. */
 export const helpItemP = (item, touch) => (touch && item.pTouch) || item.p;
-/** 類別標籤:觸控版優先取 labelTouch(例:操作・鍵鼠 ⇄ 操作・搖桿) */
+/** Category label: prefers labelTouch on touch devices, falling back to label. */
 export const helpCatLabel = (cat, touch) => (touch && cat.labelTouch) || cat.label;
-/** GUI 懸浮提示取字(與說明分頁「介面」類同一份;消費端 MUST NOT 自己讀 UI_TIPS[k].p) */
+/** Tooltip text lookup (shares copy with Help tab UI category; callers MUST NOT access UI_TIPS directly). */
 export const uiTip = (key, touch) => helpItemP(UI_TIPS[key], touch);

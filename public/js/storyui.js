@@ -1,19 +1,12 @@
-// ============ 劇情戰役的畫面標記(章節卡 / 開戰簡報 / 結算文案)============
-// **兩個消費端共用的唯一縫**:遊戲本體 `main.js` 與本地故事書 `tools/story_book/`。
+// ============ Campaign UI Markup (chapter cards, mission briefings, settlement copy) ============
+// Sole shared generation seam between live game `main.js` and local storybook `tools/story_book/`.
+// Both environments share identical markup and CSS so offline review exactly mirrors in-game presentation.
 //
-// 為什麼要抽出來:使用者要的故事書是「**完全仿照正式遊戲的呈現**,只是可以隨時換頁」。
-// 那句話的工程意思只有一個 —— 兩邊 MUST 是**同一份標記 + 同一份 CSS**。
-// 對照台各寫一份「長得很像」的版面,下場是它從此獨立演化:遊戲裡改了簡報排版、故事書沒跟上,
-// 而你在故事書裡看到的東西**從來沒有在遊戲裡出現過** —— 那就不叫覆核,叫看另一個作品。
-// 同一條理由讓對話演出直接沿用 `dialogue.js`(它本來就只負責畫),沒有第二份實作。
-//
-// 三條邊界:
-//   ① **零 DOM、零 three** —— 只出 HTML 字串。本檔(與它 import 的 data/story/venues/portraits/
-//      npcicon)在 Node 端載得起來 ⇒ 離線稽核吃得到真品,不必讀原文用 regex 猜。
-//      故 `envLabel` 取自 `data.js` 而不是 `environment.js`(後者 import three)。
-//   ② **不碰狀態** —— 解鎖/通關/選中主駕一律由呼叫端**傳進來**。故事書要的正是
-//      「不用真的通關」,而那件事在這裡就只是 `unlocked: true` 這個參數,不是一條分支。
-//   ③ **不綁事件** —— 卡片只帶 `data-i` / `data-ch`,點擊由各自的呼叫端委派。
+// Boundaries:
+//   1. Zero-DOM, zero-Three.js: generates pure HTML strings so offline tools and audits can execute in Node.
+//      `envLabel` is imported from data.js rather than environment.js (which imports Three.js).
+//   2. Stateless: unlock status, clear state, and pilot selection are passed in as arguments.
+//   3. Event-free: elements provide `data-i` / `data-ch`; callers delegate clicks.
 
 import { SIDES, CHARACTERS, charKind, envLabel } from './data.js';
 import { chapterSide } from './story.js';
@@ -23,14 +16,13 @@ import { kindIconHTML } from './npcicon.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-/** 機種中文名(頭像角標的 aria-label / 角色卡機體行)—— 自 main.js 抽出的**同一份**,字面不動 */
+/** Unit kind display name (aria-label on avatar badges / character card unit row). */
 export const kindLabelOf = (kind) => kind === 'drone' ? '無人機' : kind === 'morph' ? '變形者' : '機甲';
 
 /**
- * **頭像 + 機種角標**(2026-08-02 使用者定案「設計無人機/機甲/變形者的圖示,標示在頭像旁邊」)。
- * 五處頭像(選角牆 / 放大視窗選角牆 / 劇情主駕小卡 / 角色卡立繪標籤 / 故事書)MUST 全走這一支 ——
- * 各拼一次 `<img>` + `<svg>` 就是五份會漂的標記,而「某一面牆沒有角標」在畫面上只像是漏渲染。
- * 機種一律取 `charKind(id)`(2026-08-02 混編後陣營 ≠ 機種,MUST NOT 由 side 推)。
+ * Avatar with unit kind corner badge.
+ * Single seam across all avatar placements (lobby roster, modal roster, pilot chip, card label, storybook).
+ * Unit kind routes strictly via `charKind(id)` (mixed compositions decouple faction from unit kind).
  */
 export function charAvatarHTML(id, cls = 'char-av') {
   const kind = charKind(id);
@@ -38,7 +30,7 @@ export function charAvatarHTML(id, cls = 'char-av') {
     + `<span class="av-kind" aria-label="${esc(kindLabelOf(kind))}">${kindIconHTML(kind)}</span></span>`;
 }
 
-/** 角色小卡(選主駕 / 敵方預覽 / 故事書陣容共用) */
+/** Character chip for pilot selection, enemy roster preview, and storybook. */
 export function heroChip(id, opts = {}) {
   const c = CHARACTERS[id] || {};
   const cls = 'sb-chip' + (opts.merc ? ' merc' : '') + (opts.on ? ' on' : '') + (opts.enemy ? ' enemy' : '');
@@ -48,17 +40,16 @@ export function heroChip(id, opts = {}) {
     </button>`;
 }
 
-/** 場地顯示名(找不到就退回 id —— 缺資料要看得出來,MUST NOT 靜默留白) */
+/** Venue display name (falls back to ID so missing data remains noticeable). */
 export const venueName = (ch) => VENUES.find((x) => x.id === ch.venueId)?.name || ch.venueId;
 
-/** 章節的一行地點資訊(卡片與簡報頭共用,兩處分家 = 同一章兩種寫法) */
+/** Single-line venue metadata shared across cards and briefing headers. */
 export const chapterMeta = (ch) =>
   `📍 ${esc(venueName(ch))} ・ ${esc(envLabel(ch.env))} ・ ${ch.teamSize}v${ch.teamSize}`;
 
 /**
- * 章節卡。`unlocked`/`cleared` 由呼叫端給(遊戲讀 localStorage 進度,故事書一律全開)。
- * 回**整顆元素**的 HTML:`tag` 隨解鎖狀態換(可點的是 button)—— 兩邊各自 createElement
- * 就會出現「故事書的卡片不能用鍵盤 focus」這種只有無障礙才看得出來的分歧。
+ * Chapter card HTML. `unlocked` and `cleared` flags are provided by callers.
+ * Outer tag adapts to state (clickable buttons for unlocked chapters, divs for locked).
  */
 export function chapterCardHTML(ch, i, side, { unlocked = true, cleared = false } = {}) {
   const sc = chapterSide(ch, side);
@@ -76,8 +67,8 @@ export function chapterCardHTML(ch, i, side, { unlocked = true, cleared = false 
 }
 
 /**
- * 開戰前簡報:全幅立繪 → 長篇敘事 → 雙方陣容(選主駕)→ 任務目標。
- * @param {string} pilot 目前選中的主駕 id(故事書照樣用它高亮,只是點了不會出擊)
+ * Pre-battle briefing: artwork -> narrative prose -> bilateral roster (pilot picker) -> mission objective.
+ * @param {string} pilot Currently selected pilot ID for highlight state
  */
 export function briefHTML(ch, i, side, pilot) {
   const foe = side === 'STEEL' ? 'SWARM' : 'STEEL';
@@ -113,9 +104,8 @@ export function briefHTML(ch, i, side, pilot) {
 }
 
 /**
- * 結算畫面的標題/敘述(劇情戰役)。**文案來源只有 story.js 的 `victory`/`defeat`** ——
- * 遊戲與故事書分別寫一句「任務達成」就會有兩種說法,而那正是玩家會拿來對照的地方。
- * 回 `{ title, sub, color }`;`color` 是 CSS 值(勝利取陣營色、失敗取警示色)。
+ * Campaign settlement headline and narrative copy (sourced directly from story.js victory/defeat).
+ * Returns `{ title, sub, color }` where color applies faction tint on victory and danger tint on defeat.
  */
 export function overText(ch, side, won) {
   const sc = chapterSide(ch, side);
@@ -126,7 +116,7 @@ export function overText(ch, side, won) {
   };
 }
 
-/** 戰線進度列(章節選單底下那一行);`clearedN` 由呼叫端數 */
+/** Campaign progress summary string beneath chapter selector; cleared count supplied by caller. */
 export const progressText = (side, clearedN, total) =>
   `${SIDES[side].name}戰線:已通關 ${clearedN} / ${total}`
   + (clearedN >= total ? ' ・ 🏆 全戰線肅清!' : '');

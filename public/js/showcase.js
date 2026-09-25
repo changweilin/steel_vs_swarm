@@ -8,7 +8,7 @@ export const LONDON_SHOWCASE_UNITS = [
   { id: 'm04', side: 'MERC', label: '獵鷹', note: '鷹式偵獵機', tint: 0xe7c875, hover: 1.55 },
 ];
 
-// 五個展示各自使用遊戲實機場地（VENUES）足夠小的實機空間
+// Five showcase sites sampled from compact bounds of live game venues (VENUES)
 export const GAME_SHOWCASE_SITES = Object.freeze([
   { id: 'mech', venueId: 'taipei101', area: '台北・101 信義計畫區', center: [25.034009, 121.563871], sizeM: 240, terrain: 'urban', water: false, mix: { urban: 0.85, green: 0.1, water: 0.05 } },
   { id: 'shore', venueId: 'rio', area: '里約・基督山海岸', center: [-22.969255, -43.184768], sizeM: 240, terrain: 'shore', water: 'shore', mix: { urban: 0.4, green: 0.35, water: 0.25 } },
@@ -19,7 +19,7 @@ export const GAME_SHOWCASE_SITES = Object.freeze([
 export const LONDON_SHOWCASE_SITES = GAME_SHOWCASE_SITES;
 export const SHOWCASE_SITES = GAME_SHOWCASE_SITES;
 
-/** 建立只供設定頁取樣的實機場地設定；不註冊成可玩的 VENUE。 */
+/** Create terrain config for settings sampling; does not register as playable VENUE. */
 export function showcaseTerrainConfig(site) {
   const [lat, lng] = site.center;
   const anchor = [lat, lng];
@@ -33,7 +33,7 @@ export function showcaseTerrainConfig(site) {
   };
 }
 
-// 範圍足夠小的展示空間：44m×36m 緊湊幾何覆蓋視錐，89×73 頂點高解析度網格（間距 0.5m，精細還原實機坡度與溝壑）
+// Compact showcase patch: 44mx36m bounds covering camera frustum, 89x73 grid (0.5m spacing) resolving slopes and gullies
 const PATCH = { width: 44, depth: 36, cols: 89, rows: 73 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -44,7 +44,7 @@ function slopeAt(terrain, x, z) {
   return Math.atan(Math.max(dx, dz)) * 180 / Math.PI;
 }
 
-/** 五個專屬場地都以各自圖資框的中心取樣，避免掃回同一塊平坦地。 */
+/** Sample near venue bounding box center to avoid scanning back to identical flat areas. */
 export function showcaseAnchorSite(terrain) {
   if (!terrain?.heightAt) return { x: 0, z: 0, y: 0, slopeDeg: 0, score: 0 };
   const x = clamp(0, terrain.minX, terrain.maxX);
@@ -52,7 +52,7 @@ export function showcaseAnchorSite(terrain) {
   return { x, z, y: terrain.heightAt(x, z), slopeDeg: slopeAt(terrain, x, z), score: 0 };
 }
 
-/** 依展示類型找出地貌位置；取樣順序固定，不消耗遊戲共享亂數。 */
+/** Locate terrain site for showcase mode; deterministic sampling order without consuming shared RNG. */
 export function findShowcaseSite(terrain, mode = 'flat') {
   if (!terrain?.heightAt) return { x: 0, z: 0, y: 0, slopeDeg: 0 };
   const spanX = Math.max(1, terrain.maxX - terrain.minX);
@@ -101,37 +101,37 @@ export function findShowcaseSite(terrain, mode = 'flat') {
 const FALLBACKS = {
   mech: {
     waterY: null,
-    // 台北・101 信義計畫區: 平坦市街網格微幅起伏
+    // Taipei 101 Xinyi District: flat street grid with subtle micro-relief.
     heightAt: (x, z) => 0.16 * Math.sin(x * 0.08) + 0.10 * Math.cos(z * 0.10),
     color: (x, z) => [86 + Math.sin(x * 0.09) * 8, 98 + Math.cos(z * 0.1) * 8, 88],
   },
   shore: {
     waterY: 0,
-    // 里約・基督山海岸: 沙灘向海水緩降
+    // Rio de Janeiro Corcovado coast: gentle beach slope towards the sea.
     heightAt: (x, z) => 0.30 + 0.45 * Math.tanh(-x / 8) + 0.06 * Math.sin(z * 0.12),
     color: (x, z) => x < 0 ? [192 + Math.sin(z * 0.15) * 10, 172, 122] : [28, 84 + Math.cos(z * 0.1) * 8, 104],
   },
   swamp: {
     waterY: 0.18,
-    // 淡水河口・紅樹林濕地: 潮間帶泥濘平緩窪地
+    // Tamsui River estuary mangrove wetland: muddy flat depression in intertidal zone.
     heightAt: (x, z) => 0.12 + 0.12 * Math.sin(x * 0.08) + 0.08 * Math.cos(z * 0.10),
     color: (x, z) => [46 + Math.sin(x * 0.08) * 6, 76 + Math.cos(z * 0.1) * 8, 46],
   },
   tree: {
     waterY: null,
-    // 德國・黑森林: 起伏森林地帶
+    // Black Forest, Germany: undulating forested terrain.
     heightAt: (x, z) => 0.42 * Math.sin(x * 0.06) + 0.30 * Math.cos(z * 0.08),
     color: (x, z) => [44, 96 + Math.sin(x * 0.08) * 10, 44 + Math.cos(z * 0.1) * 8],
   },
   biome: {
     waterY: null,
-    // 太魯閣・燕子口: 峽谷斷面與岩層高起伏
+    // Taroko Swallow Grotto: canyon cross-section with steep rock relief.
     heightAt: (x, z) => 0.07 * x + 0.52 * Math.sin(z * 0.08) + 0.28 * Math.cos(x * 0.10),
     color: (x, z) => x < 0 ? [72, 108 + Math.cos(z * 0.1) * 8, 62] : [136 + Math.sin(z * 0.08) * 10, 112, 76],
   },
 };
 
-/** 實機場地圖資未連線或取樣失敗時的安全備援；各展示依場地特色提供小範圍高程。 */
+/** Fallback profile when live map tiles are disconnected or sampling fails; provides localized elevation by site archetype. */
 export function createShowcaseFallbackTerrain(sceneId = 'mech') {
   const site = GAME_SHOWCASE_SITES.find((item) => item.id === sceneId) || GAME_SHOWCASE_SITES[0];
   const profile = FALLBACKS[sceneId] || FALLBACKS.mech;
@@ -183,14 +183,14 @@ function mapColor(terrain, x, z, localY, style = 'urban') {
     forest: 0x2f6c35,
     heath: x < 0 ? 0x4f7a43 : 0x9a8054,
   }[style] || 0x49624a;
-  // 保留實機高解析圖資真實場所色彩，微幅疊加地貌色偏增強風格辨識度
+  // Preserve source tile base coloration, blending style tint to emphasize site identity.
   c.lerp(new THREE.Color(tint), style === 'urban' ? 0.14 : 0.22);
   const relief = clamp(0.96 + localY * 0.045, 0.78, 1.16);
   c.multiplyScalar(relief);
   return [c.r, c.g, c.b];
 }
 
-/** 在同一份高度場上鋪低伏地貌紋理；只是視覺標記，不建立碰撞平台。 */
+/** Low-relief terrain drape on shared heightfield; visual dressing only, no collision hull. */
 function drapedRibbon(points, width, yAt, material) {
   const pos = new Float32Array(points.length * 2 * 3);
   for (let i = 0; i < points.length; i++) {
@@ -238,21 +238,21 @@ function drapedDisc(x, z, radius, yAt, material, segments = 18) {
 function dressingBuilding(group, x, z, w, d, h, yAt, wallMat, roofMat, glassMat, hvacMat, rotation = 0) {
   const bGroup = new THREE.Group();
   const baseY = yAt(x, z) + 0.04;
-  // 主牆身
+  // Main building mass
   const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
   wall.position.y = h * 0.5;
   bGroup.add(wall);
-  // 窗帶與立面玻璃開口
+  // Window ribbon and glazed facade opening
   if (h > 1.2) {
     const windowBand = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, h * 0.45, d + 0.04), glassMat);
     windowBand.position.y = h * 0.52;
     bGroup.add(windowBand);
   }
-  // 屋頂女牆／挑簷
+  // Parapet and roof cornice
   const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.16, 0.16, d + 0.16), roofMat);
   roof.position.y = h + 0.08;
   bGroup.add(roof);
-  // 屋頂機房／HVAC 設備盒
+  // Roof mechanical penthouse and HVAC enclosure
   if (w > 2.0) {
     const hvac = new THREE.Mesh(new THREE.BoxGeometry(w * 0.32, 0.35, d * 0.32), hvacMat);
     hvac.position.set(w * 0.15, h + 0.25, -d * 0.12);
@@ -266,11 +266,11 @@ function dressingBuilding(group, x, z, w, d, h, yAt, wallMat, roofMat, glassMat,
 export function dressingTree(group, x, z, scale, yAt, trunkM, leafM) {
   const tGroup = new THREE.Group();
   const baseY = yAt(x, z);
-  // 樹幹
+  // Trunk
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12 * scale, 0.22 * scale, 1.8 * scale, 6), trunkM);
   trunk.position.y = 0.9 * scale;
   tGroup.add(trunk);
-  // 實機 conifer 階梯塔狀三層樹冠
+  // Three-tier stepped conifer canopy
   const c1 = new THREE.Mesh(new THREE.ConeGeometry(1.4 * scale, 1.8 * scale, 7), leafM);
   c1.position.y = 1.8 * scale;
   const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.05 * scale, 1.5 * scale, 7), leafM);
@@ -283,7 +283,7 @@ export function dressingTree(group, x, z, scale, yAt, trunkM, leafM) {
 }
 
 export function dressingMound(group, x, z, radius, height, yAt, material) {
-  // 實機風格多面體風化巨石（非尖圓錐）
+  // Weathered faceted boulder (non-conical)
   const rockGeo = new THREE.DodecahedronGeometry(radius, 0);
   rockGeo.scale(1.0, height / Math.max(0.1, radius), 0.85);
   const mound = new THREE.Mesh(rockGeo, material);
@@ -372,7 +372,7 @@ function addTerrainDressing(group, style, yAt) {
   }
 }
 
-/** 烘烤展示地貌專屬的海面深度場（64×64），驅動水深漸層、水底陰影與岸邊賽璐璐泡沫帶。 */
+/** Bake dedicated 64x64 sea depth field to drive water depth gradient, seabed shadow, and cel-shaded shoreline foam. */
 export function bakeShowcaseSeaDepth(localYAt, waterY, width = PATCH.width, depth = PATCH.depth) {
   if (waterY == null) return false;
   const n = 64;
@@ -389,7 +389,7 @@ export function bakeShowcaseSeaDepth(localYAt, waterY, width = PATCH.width, dept
   return true;
 }
 
-/** 從正式地形取樣一塊小型展示地貌；返回的 localYAt 與網格使用同一份 heightAt。 */
+/** Sample miniature showcase terrain patch from source terrain; returned localYAt shares the same heightAt seam. */
 export function buildShowcasePatch(terrain, { site = showcaseAnchorSite(terrain), style = 'urban', water = false } = {}) {
   const source = terrain || createShowcaseFallbackTerrain();
   const safeSite = site || findShowcaseSite(source);
@@ -453,7 +453,7 @@ export function buildShowcasePatch(terrain, { site = showcaseAnchorSite(terrain)
       bands: 'soft', rim: 0, transparent: true, opacity: 0.85, side: THREE.DoubleSide,
       soft: water === 'swamp' ? swampSoft() : seaSoft(),
     }));
-    // 真實水面優先；個別潮間帶圖框若沒有回傳 waterY，退到地形低位分位數，仍保留實景坡面。
+    // Prefer authoritative water level; fall back to lower elevation percentile when tile lacks waterY to preserve shoreline profile.
     const level = Number.isFinite(source.waterY)
       ? source.waterY
       : baseY + minY + (maxY - minY) * (water === 'swamp' ? 0.48 : 0.35);
