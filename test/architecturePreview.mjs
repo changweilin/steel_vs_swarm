@@ -1015,10 +1015,8 @@ import { mulberry32 } from '/js/rng.js';
 // 植物生成模組
 import { TREE_SPECIES, createForestTree, treeDistribution, treeHabitatWeight, treeSections, treeBend, forestEnvironment } from '/js/forest.js';
 // 車輛生成模組
-import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, vehicleCandidates } from '/js/vehicleCatalog.js';
+import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, vehicleCandidates, VEHICLE_CONSISTS, CONSIST_PREFIX, RIM_NAMES } from '/js/vehicleCatalog.js';
 import { makeProceduralVehicle } from '/js/vehicleModels.js';
-import { VEHICLE_CONSISTS, CONSIST_PREFIX } from '/js/vehicleConsists.js';
-import { RIM_NAMES } from '/js/vehicleVariants.js';
 
 // 船隻生成模組
 import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel, VESSEL_EQUIPMENT } from '/js/vesselCatalog.js';

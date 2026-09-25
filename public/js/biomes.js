@@ -65,7 +65,7 @@ import { buildSlopeBoundary } from './edgeSlope.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
 import { makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
-import {selectRoadCar} from './vehicleEveryday.js';
+import { selectRoadCar } from './vehicleCatalog.js';
 import { deploySceneBatches } from './sceneObjects.js';
 import { createArchitecturePlanner } from './buildingDiversity.js';
 import { sceneObjectMat } from './toon.js';

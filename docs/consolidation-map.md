@@ -8,8 +8,8 @@
 
 | 群 | 檔案 | 備註 |
 |---|---|---|
-| vehicle(10) | vehicleIndividualBodies73k, vehicleCatalog31k, vehicles26k, vehicleEquipment20k, vehicleIndustry9k, vehicleVariants6k, vehicleConsists5k, vehicleEveryday4k, vehicleModels3k, vehicleParts2k | `vehicles.js` 被 6 支 import，疑似外層縫；`vehicleParts` 僅 hazards/siteplan/test 引用 |
-| vessel(5) | vesselModels14k, vesselLayout12k, vesselCatalog11k, vesselEquipmentModels8k, vesselGeometry4k | 全被 aquatics/environmentParts/biomes 引用；可併為 `vessels/` 目錄或單一 `vessel.js` |
+| vehicle(4) | vehicleIndividualBodies73k, vehicleCatalog, vehicles26k, vehicleModels | `vehicleEveryday/Industry/Equipment/Variants/Consists/Parts` (6 檔) 已收攏至 `vehicleCatalog`；`vehicles.js` 嚴守零 import / 零 THREE / 零亂數之碰撞外層縫保留 |
+| vessel(3) | vesselModels, vesselCatalog, vesselGeometry4k | `vesselEquipmentModels` 併入 `vesselModels`；`vesselLayout` 併入 `vesselCatalog`；`vesselGeometry` 供屋頂/建築/環境純幾何共用保留 |
 | ground(7) | ground237k, terrain82k, proceduralGroundParts21k, groundCatalog16k, groundPartCatalog13k, groundMarkings12k, proceduralGround8k | ground.js 是 hub；`groundVisitorSites/Landscapes/Venues` 已收攏進 groundPartCatalog / groundCatalog / proceduralGround |
 | arch(11) | architectureStyles43k, architectureFacadeParts24k, architectureRoofParts9k, functionalArchitectureCatalog9k, regionalArchitecture8k, towerBuildings5k, functionalArchitecture4k, architecturePartGeometry3k, roofProfiles2k, nativeFunctionalBuildings1k, towerBuildingRules1k | `architectureStyles/buildingDiversity` 各被 7 支 import；`towerBuildingRules` 僅 towerBuildings+稽核引用 |
 | env(3) | environment51k, environmentParts45k, environmentCatalog5k | environmentParts 為 hub；`environmentArchitecture` 已併入 environmentParts |
@@ -24,8 +24,10 @@
 
 ## 建議順序
 
-1. ✅ **已完成**：`wallDecorationCatalog`＋`environmentArchitecture`＋`groundVisitorSites/Landscapes/Venues`（5 支碎片已整併至相應主模組，刪除 5 檔，全單元測試與平衡稽核通過）。
-2. vessel(5)→單一模組；vehicle(10)→以 `vehicles.js` 為縫收攏。
+1. ✅ **已完成 (Stage 1)**：`wallDecorationCatalog`＋`environmentArchitecture`＋`groundVisitorSites/Landscapes/Venues`（5 支碎片已整併至相應主模組，刪除 5 檔，全單元測試與平衡稽核通過）。
+2. ✅ **已完成 (Stage 2)**：
+   - `vessel(5 -> 3)`：`vesselEquipmentModels` 併入 `vesselModels`，`vesselLayout` 併入 `vesselCatalog`（刪除 2 檔）。
+   - `vehicle(10 -> 4)`：`vehicleEveryday`, `vehicleIndustry`, `vehicleEquipment`, `vehicleVariants`, `vehicleConsists`, `vehicleParts`（6 檔）全數收攏至 `vehicleCatalog`；`vehicles.js` 零 import 碰撞縫與 `vehicleModels` 3D 渲染縫保留（刪除 6 檔）。
 3. arch(11)＋building(5)：先畫 import 圖再動（hub 交織）。
 4. ground/venue/osm：牽涉 bake 工具與伺服器地形縫，最後動。
 

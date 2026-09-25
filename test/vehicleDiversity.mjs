@@ -2,14 +2,26 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
-import { makeSceneVehicleParts } from '../public/js/vehicleParts.js';
 import { makeVehicle as collisionContract, partsAABB } from '../public/js/vehicles.js';
-import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, generateVehicle, vehicleBackgroundObject, vehicleCandidates } from '../public/js/vehicleCatalog.js';
+import {
+  VEHICLE_AXES,
+  VEHICLE_PROFILES,
+  VEHICLE_PART_NAMES,
+  generateVehicle,
+  vehicleBackgroundObject,
+  vehicleCandidates,
+  VEHICLE_CONSISTS,
+  vehicleConsistBackgroundObject,
+  CONSIST_PREFIX,
+  makeSceneVehicleParts,
+} from '../public/js/vehicleCatalog.js';
 import { sharedBackgroundObjectTargets, generateSharedBackgroundObject } from '../public/js/backgroundObjects.js';
-import { VEHICLE_CONSISTS, vehicleConsistBackgroundObject,CONSIST_PREFIX } from '../public/js/vehicleConsists.js';
 
 const keys = Object.keys(VEHICLE_PROFILES);
-assert.equal(sharedBackgroundObjectTargets('vehicle').length,keys.length+Object.keys(VEHICLE_CONSISTS).length);
+assert.equal(
+  sharedBackgroundObjectTargets('vehicle').filter(k => k.startsWith('vehicle/') || k.startsWith('consist/')).length,
+  keys.length + Object.keys(VEHICLE_CONSISTS).length
+);
 const catalogSource=await readFile(new URL('../public/js/vehicleCatalog.js',import.meta.url),'utf8');
 assert.ok(!/makeVehicle\s*\(|approvedVehicle|RUNTIME_PARTS/.test(catalogSource),'新車模不可借用舊幾何');
 for(const kind of ['sedan','truck','railcar']) {

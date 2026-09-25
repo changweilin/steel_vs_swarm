@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { vehicleBackgroundObject } from './vehicleCatalog.js';
-import { CONSIST_PREFIX,vehicleConsistBackgroundObject } from './vehicleConsists.js';
+import { vehicleBackgroundObject, CONSIST_PREFIX, vehicleConsistBackgroundObject } from './vehicleCatalog.js';
 import { makeRuntimePartModel } from './runtimePartModel.js';
 import { SignSheet, signAspect } from './worldtext.js';
 

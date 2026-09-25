@@ -2,7 +2,7 @@
 // Descriptors remain render-free so scene and boundary consumers can use the same model.
 import { mulberry32 } from './rng.js';
 import { createForestTree } from './forest.js';
-import { makeSceneVehicleParts } from './vehicleParts.js';
+import { makeSceneVehicleParts } from './vehicleCatalog.js';
 import { partsAABB } from './vehicles.js';
 import { mat3FromEulerXYZ, mat3Multiply, eulerXYZFromMat3 } from './partTransform.js';
 import { geologyBackgroundObject, elongatedGeologyMesh } from './geology.js';
@@ -18,7 +18,7 @@ import { architecturalFacadeParts } from './architectureFacadeParts.js';
 import { architecturalRoofParts } from './architectureRoofParts.js';
 import { optimalSolarTiltRad } from './data.js';
 export { ENVIRONMENT_OBJECTS, ENVIRONMENT_PARAMETERS, ENVIRONMENT_CATEGORIES, environmentSize, environmentAvailable } from './environmentCatalog.js';
-export { makeSceneVehicleParts } from './vehicleParts.js';
+export { makeSceneVehicleParts } from './vehicleCatalog.js';
 
 export const ENVIRONMENT_PREFIX = 'environment/';
 const box = (w, h, d, x, y, z, c, role, extra = {}) =>
