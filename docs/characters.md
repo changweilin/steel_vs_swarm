@@ -1,10 +1,27 @@
+# Character Bible — Steel vs. Swarm
+
+> Governance (English; binding):
+> - Fiction contract: parallel-timeline fiction inspired by real events; every character
+>   is fictional and unrelated to real persons.
+> - Design prototypes are internal-only: each character's prototype field serves art and
+>   writing reference and MUST NEVER appear in any in-game text. Rule of thirds: every
+>   character = 1/3 Unlight facet + 1/3 other ACG facet + 1/3 original facet -- borrow
+>   facets only, always reworked, never a copy of any single character (see §六).
+> - Art direction: hand-painted watercolor dark-tone portraits (rough strokes, high-
+>   contrast lighting, realistic proportions); dieselpunk x battlefield-realism texture
+>   (rusted plate, camo canvas, zip-tied retrofit electronics).
+> - Content SSOT: shipped narrative lives in `public/js/lore.js` (character files),
+>   `public/js/mecha.js` (body files), `public/js/story.js` + `storytalk.js` (campaign);
+>   those modules are the exempt Traditional Chinese narrative layer. Roster numbering
+>   (S/T/N-XX) here is authoritative for cross-references from `story.md`.
+> - Body below: narrative design bible (Traditional Chinese; English translation is a
+>   separate creative workstream, not cleanup).
+>
+> _Original header preserved below; campaign narrative in [story.md](story.md)._
+
 # 角色設定集 — 無人戰略:鋼鐵與蜂群
 
-> **內部設計文件。**本作為**平行時空之虛構創作**,靈感取材自現實事件,所有角色皆為虛構,與真實人物無涉。
-> 每名角色的「設計原型」欄位僅供美術/寫作內部參考,**不得出現在遊戲內任何文字**。
-> 原型採**三分律**:每名角色 = Unlight 要素 ⅓ + 其他 ACG 要素 ⅓ + 原創要素 ⅓;只取面向、必經微調,禁止照抄任何單一角色(詳見第六節)。主線劇情見 [story.md](story.md)。
-> 美術方向:承襲 Unlight 式**手繪水彩暗色調立繪**(粗獷筆觸、高對比打光、寫實比例),
-> 世界觀質感由哥德蒸氣龐克轉譯為**柴電龐克 × 戰地寫實**(鏽蝕鋼板、迷彩帆布、纏線束的改裝電子件)。
+> 主線劇情見 [story.md](story.md)。以下為角色敘事正文。
 
 ---
 

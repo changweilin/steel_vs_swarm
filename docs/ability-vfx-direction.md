@@ -1,206 +1,137 @@
-# 64 招程序式 VFX 美術方向
+# 64-Move Procedural VFX Art Direction
 
-> 狀態：實作規格。名稱、效果、範圍與持續時間只讀自 `CHARACTERS`；本文只定義表現層。
+> Status: implementation spec. Names, effects, ranges, and durations read only from
+> `CHARACTERS`; this document defines presentation only.
 >
-> 目標：每招在灰階剪影、第一個 0.25 秒、接觸收尾三項中至少兩項可與其餘 63 招區分。不得只靠換色或替換中央圖騰宣稱不同招式。
-
-## 共通畫面語法
-
-- 每招仍遵守 Tell → Release → Contact → Decay，但不再強制疊同一個圓形 `fxCastBeat`。
-- 魔法陣只給確實需要「場域、儀式、公式」的技能；突進、狙擊、隱形、召喚改用方向性輪廓。
-- 有效範圍邊界只能由權威半徑推導。裝飾光、煙、碎屑可以向內衰退，不得暗示更大的命中區。
-- 每招使用唯一 `profileId`。可以共享幾何、材質、貼圖與更新器，但不可共享完全相同的層次組合和時間曲線。
-- 主色沿用機體色；輔色由下表指定。所有亮核以白或低飽和暖色作瞬間對比，禁止全程 bloom 糊屏。
-
-## 自由蜂群同盟
-
-### S-01 蜂后｜樂團指揮、六旋翼蜂群
-
-- `s01.skill.fugue_concord`｜**巴哈賦格：萬象協奏**：地面浮現五線譜螺旋，三條不同速度的聲部弧線依次追入；釋放時指揮棒形亮線切下，全隊方向分出細金色同步線；接觸以暗紅吸血音符逆流回核心。圖騰：五線譜、八分音符、蜂巢節拍點。風格：象牙白＋烏克蘭藍黃＋暗紅回流。
-- `s01.ult.sky_orchestra`｜**極致終曲：天穹大合奏**：天空展開橫向總譜而非地面圓陣，六旋翼節拍燈逐排點亮；三道譜門沿進軍方向打開，直升機剪影穿譜而出；尾聲是譜線被旋翼氣流撕散。圖騰：指揮棒、總譜小節、六點蜂群。風格：軍樂典禮與空中編隊。
-
-### S-02 鐵匠｜焊接、鍛造、重載運翼
-
-- `s02.skill.tempered_reforge`｜**靈鋼淬火重塑**：破損方向先亮出紅熱裂縫，四支焊臂光束向內縫合；鐵砧形壓印落下時裝甲板依序扣合，飛出少量橙白焊花；餘韻是金屬由橙轉暗。圖騰：鐵砧、鉚釘、焊道。風格：近身工業維修，完全不畫治療圓環。
-- `s02.ult.world_crucible`｜**神爐焚天：萬象重鑄**：巨大爐口投影在核心下方，熔金沿六條鑄道流向隊友；範圍邊界升起分段回火刻度，友軍位置生成一次壓鑄光印與護盾淬火蒸汽。圖騰：坩堝、澆道、回火溫標。風格：黑鐵＋熔橙＋冷卻青白。
-
-### S-03 半羽｜利維坦、鯨歌、共形陣列
-
-- `s03.skill.silent_lobes`｜**太虛匿影：萬籟俱寂**：機體左右展開兩片耳廓橢圓瓣，窄角干涉條紋向落點夾合；中心只在相消瞬間出現一條無聲黑帶，敵方感測符號逐格熄滅。圖騰：雙耳瓣、相位正負號、鯨尾。風格：珍珠灰＋青藍，強調「聲音被拿走」。
-- `s03.ult.leviathan_song`｜**利維坦天海長歌**：十六道鯨腹稜線依次發亮，低頻橢圓波像海面等深線向外推開；中段浮出巨鯨側影後溶入頻譜，最外圈不是爆炸而是整片電磁雜訊沉靜。圖騰：十六肋、鯨歌頻譜、海天線。風格：深海藍綠＋銀白。
-
-### S-04 Kashi｜近接教官、突刺、修羅
-
-- `s04.skill.breakthrough_thrust`｜**瞬步・破陣突刺**：視線方向先壓出極窄白色刀路，腳下兩枚反向推力楔瞬燃；釋放只留一條帶紅邊的高速殘線，終點產生向前偏置的槍尖衝擊，不畫圓形波。圖騰：鐵鍬槍尖、一步足印。風格：軍用白＋警戒紅。
-- `s04.ult.deadline_shura`｜**無雙修羅：斷空死線**：四條黑紅死線先在身側鎖定安全間隙，機體周圍形成不閉合的八面切割框；每次脈衝閃出不同方位的短斬殘影，收尾以所有死線同時斷裂。圖騰：修羅目、斷線、四向刀痕。風格：黑、深紅、瞬白。
-
-### S-05 Overclock｜電競、突觸、FPV 飽和俯衝
-
-- `s05.skill.synapse_overclock`｜**神經突觸：極限超頻**：核心旁生成雙股突觸鏈，節點以高 APM 節奏點火；競速 HUD 箭頭緊貼移動方向壓縮，裝填節點像進度條瞬間跳滿；尾聲留下錯位殘像。圖騰：神經節點、刷新箭頭、像素星。風格：電競洋紅＋電藍＋白。
-- `s05.ult.star_swarm_dive`｜**蒼穹狂嵐：星芒自爆蜂群**：目標上空形成漏斗狀航線，微型星芒先繞軌集結再逐批向中心俯衝；接觸是多點錯時閃爆與短促致盲雜訊，不做單一大爆炸。圖騰：六芒航點、FPV 準星、螺旋航跡。風格：霓虹競速與混亂彈幕。
-
-### S-06 悼歌｜攔截、護航、追悼
-
-- `s06.skill.elegy_intercept`｜**聖光穹頂：絕對攔截**：半透明穹頂由一圈圈日誌橫線向上縫合；來襲方向浮現細白攔截弦，命中點只開一朵克制的爵士藍火花；攔下後橫線沉入穹頂。圖騰：空白布章、記錄橫線、凱隆拱門。風格：午夜藍＋冷白，安靜而莊重。
-- `s06.ult.undying_phalanx`｜**英靈庇佑：不滅戰陣**：友軍間豎起錯列的長方盾牆，像無名墓碑組成防衛陣列；中央空白旗布短暫展開，外來衝擊被分流成兩側弧光。圖騰：空白旗、護衛翼、碑列。風格：深靛＋銀灰，拒絕宗教金光泛用化。
-
-### S-07 鐵證｜數學證明、攔截經濟學
-
-- `s07.skill.causal_proof`｜**真理之界：因果攔截網**：先畫出來襲向量與最短攔截弦，交點依序標上公理節點；解成立時多邊形瞬間閉合並消去飛彈軌跡，最後留下 `Q.E.D.` 式方框符號但不使用文字。圖騰：弦、切線、證明方框。風格：白板青＋琥珀節點。
-- `s07.ult.inverse_geometry`｜**極限推論：幾何破滅陣**：目標區被不規則三角剖分，所有三角形先向外推導再突然反向折入；接觸沿氣動面方向切出碎片矢量，餘韻是幾何網格失去解而崩散。圖騰：反證叉、三角剖分、極限箭頭。風格：冷青幾何＋紅色錯誤項。
-
-### S-08 聖燭｜空投醫療、晨鐘、克拉科夫
-
-- `s08.skill.angel_dropship`｜**晨曦之露：天使空投箱**：一道垂直晨光標記空投點，醫療莢艙沿光柱下降；落地展開四片燭台形支架，修復露珠由內向友軍彈跳。圖騰：燭台、露滴、白綠醫療十字。風格：晨曦金＋醫療綠。
-- `s08.ult.krakow_bells`｜**聖城鐘聲：萬物復甦**：空中浮出鐘擺輪廓，第一次鐘擊推開金色壓縮波，第二次形成玫瑰窗光陣，第三次為每名友軍補上一圈完整護盾；餘韻像彩窗碎光落下。圖騰：晨鐘、玫瑰窗、燭焰。風格：聖城石灰＋金綠彩窗。
-
-### S-09 獵場主｜袋鼠躍步、圍獵、禁獵區
-
-- `s09.skill.royal_hunt`｜**獵皇號令：疾馳獵巡**：地面依次烙出袋鼠長跳足跡與牧場火印，雙管獵槍形速度條向前拉長；每次躍步留下短茶金弧，不使用通用增益光環。圖騰：牧場烙印、獵號、雙管。風格：油布棕＋獵場綠＋火印橙。
-- `s09.ult.sky_snare`｜**天羅地網：蒼穹禁獵區**：四枚拘束樁向天射出，空中織成內縮獵網；網眼沿目標方向逐格收緊，中心出現小型引力結而非爆炸；尾聲網線像套索回收。圖騰：套索、獵網、禁獵標。風格：黃銅＋深綠。
-
-### S-10 白噪音｜始祖翼陣、破譯、全域靜默
-
-- `s10.skill.allseeing_decode`｜**全視之眼：萬象破譯**：始祖鳥翼面展開成扇形頻譜，封包方塊沿羽軸流入中央眼；錯誤碼被逐層剝離，最後掃出一條覆蓋全場的細亮視線。圖騰：羽軸電路、封包括號、全視眼。風格：終端綠＋白金羽。
-- `s10.ult.white_noise_void`｜**虛無之境：全域靜默狂潮**：寬頻瀑布先充滿細密彩色噪點，随后所有頻帶由外向內被抹成純白，再驟然切成黑色靜默環；始祖翼骨只剩負片輪廓。圖騰：頻譜瀑布、刪除游標、負片羽。風格：白噪彩斑→純白→近黑。
-
-### S-11 鐘匠｜精密錶芯、弱點、重調
-
-- `s11.skill.fatal_escapement`｜**命運之隙：致命裂解**：透明擒縱輪對準目標運轉，齒尖逐次卡入結構應力點；最後一格時間停住，弱點以極細金裂紋亮起。圖騰：擒縱叉、寶石軸承、裂紋刻度。風格：槍灰＋腕錶金＋紅寶石。
-- `s11.ult.glashutte_retime`｜**時序重調：格拉蘇蒂大修復**：自身機體投影成爆炸圖，齒輪、發條與裝甲分層向外懸停；秒針逆走一圈後所有零件精準扣回，護盾像藍鋼錶鏡閉合。圖騰：同心錶芯、逆行秒針。風格：精密製錶，不使用綠色治療波。
-
-### S-12 歸鄉｜星圖、月影、復甦
-
-- `s12.skill.lavender_moonveil`｜**月影迷蹤：天幕偽裝**：新月從機翼一側掠過，星點依巴赫奇薩賴星圖連成斗篷；淡紫薰衣草薄霧沿機身向後覆蓋，輪廓碎成星塵。圖騰：新月、克里米亞星圖、薰衣草枝。風格：月白＋薰衣草紫。
-- `s12.ult.homeward_constellation`｜**星穹不滅：靈魂喚醒之歌**：天空星圖由斷裂航線重新連起，倒下位置升起微弱靈魂燈沿線歸隊；中央不是聖光法陣，而是一扇朝故鄉方向打開的星門。圖騰：歸航羅盤、星路、家門拱。風格：深夜藍＋暖窗金。
-
-## 大陸鋼鐵協約
-
-### T-01 冬將軍｜全軍突擊、烏拉爾砲兵
-
-- `t01.skill.steel_advance`｜**鋼鐵意志：全軍突擊令**：紅色軍旗幾何從履帶方向拔起，隊列箭頭一排排向前踏步；號角脈衝不是圓環，而是朝戰線展開的寬扇形。圖騰：軍旗、履帶齒、三列突擊箭頭。風格：閱兵紅＋鋼灰。
-- `t01.ult.ural_avalanche`｜**雪崩天降：烏拉爾雷霆齊射**：目標區先落下砲兵方位刻線，雪粒被上升氣流吸起；多發砲彈錯時落下，白色雪崩壓浪與黑橙爆風交疊，麻痺以短促地震折線收尾。圖騰：烏拉爾山線、砲兵刻度、雪崩楔。
-
-### T-02 編號七｜神經同步、空間瞬影
-
-- `t02.skill.neural_seventh_step`｜**虛空躍遷：神經瞬影步**：七個神經節點沿移動線依次過曝，空間被拉成窄長稜鏡裂口；機體穿過後第七節點反向閉合，留下短暫色散殘像。圖騰：數字七的折角、突觸鏈、空間縫。風格：紫白色散＋冷黑。
-- `t02.ult.galatea_fullsync`｜**超越神性：同步率 100%**：人形神經輪廓與機甲線框由錯位逐漸完全重合，七重斷環依次鎖定；滿同步瞬間只保留一個無縫白色輪廓，受擊解除的易碎感由環上裂口暗示。圖騰：七重環、腦機脊柱、100% 閉環。風格：無菌白＋神經紫。
-
-### T-03 大鍋｜巨盾衝鋒、熔爐引力
-
-- `t03.skill.cauldron_ram`｜**不屈鐵壁：狂暴衝鋒**：厚重盾板像爐門由兩側扣合，鉚釘逐顆鎖死；前方形成矩形推土衝擊面，移動時噴出煤煙與爐星。圖騰：爐門、巨鉚釘、衝角。風格：鑄鐵黑＋爐火橙。
-- `t03.ult.furnace_maelstrom`｜**地獄熔爐：狂怒漩渦**：地面裂成鍋爐渦殼，熔紅流線沿螺旋向核心下陷；中心爐壓表衝到紅區後爆出向內翻捲的火浪，餘韻留下焦黑渦紋。圖騰：壓力表、爐柵、熔流螺旋。
-
-### T-04 灰雁｜格魯烏匿蹤、獵殺鎖定
-
-- `t04.skill.grey_goose_cloak`｜**幽影匿跡：虛無光學迷彩**：灰雁羽片從頭部向尾部逐排翻成背景色，雷達截面線框被一條掃描刀削除；尾跡只剩低對比冷灰波紋。圖騰：雁羽、刪除掃線、GRU 菱框。風格：灰藍、低亮度、無發光光環。
-- `t04.ult.reaper_gaze`｜**死神凝視：致命獵殺鎖定**：狹長紅色視錐搜尋後只鎖一個高價值目標，四枚獵殺括角逐步收窄；下一擊方向形成單眼縫般的紅白亮線。圖騰：單眼、價值刻度、四角鎖框。風格：石墨灰＋暗紅。
-
-### T-05 鶴｜仿生自癒、重工生產線
-
-- `t05.skill.crane_stress_heal`｜**九轉玄功：仿生應力自癒**：鶴翼骨架線描沿關節逐段掃描，受損節點生成九次微小回折；奈米纖維像羽軸生長補齊裂口，最後收成白瓷般完整表面。圖騰：鶴羽、九折回路、關節應力圖。風格：瓷白＋機械青。
-- `t05.ult.industrial_descent`｜**千機天降：鐵甲重裝陣線**：空中投影重工裝配藍圖，吊臂刻線、履帶模組和裝甲板分三層落位；地面沿兵線打開矩形出廠門，坦克剪影從流水線方向推出。圖騰：起重鉤、流水線節拍、履帶章。風格：工程藍圖＋兵工黃黑。
-
-### T-06 小川｜齊天、筋斗雲、裂地重擊
-
-- `t06.skill.cloud_somersault`｜**筋斗雲步：九霄遊龍步**：腳下白金雲帶以毛筆飛白捲起，三個猿行落點在前方快速閃現；突進路徑呈遊龍 S 曲線而非直線殘影。圖騰：筋斗雲、猴王足印、如意棒小印。風格：宣紙白＋鎏金＋朱紅。
-- `t06.ult.heaven_riot`｜**大鬧天宮：齊天踏雲裂地**：如意棒光柱先向上伸長再猛然壓下，雲海被劈成兩半；落點出現山形裂紋與金箍環，機體周圍維持跳動的齊天戰紋。圖騰：金箍、如意棒、裂山雲。風格：神話金紅，但保留機械硬邊。
-
-### T-07 無聲｜翼龍擬態、終結狙擊
-
-- `t07.skill.pterosaur_silence`｜**幽冥翔影：擬態無聲遁形**：翼膜上的熱紋像呼吸般逐格冷卻，聲波輪廓被翼尖向後收束；最後整具機體折成一片無反射黑翼，僅留極淡滑翔渦。圖騰：翼龍膜骨、消音波、閉合瞳孔。風格：炭黑＋冷紫灰。
-- `t07.ult.terminal_arrow`｜**破滅之擊：終結之箭**：沒有法陣；槍口前只形成一條極細白線與單枚菱形穿甲標，蓄力時世界方向線向它收束；擊發后目標處先出現針孔白閃，再延遲撕開長形紅黑創口。圖騰：一線箭、穿甲菱、呼吸刻度。風格：極簡高對比。
-
-### T-08 電波歌姬｜聲電結界、神龍共振
-
-- `t08.skill.broken_tuning`｜**破滅神曲：斷音結界**：一段完整波形進入目標區後被切成錯位小節，五線譜像玻璃般折斷；中心聲壓節點反相爆開，敵方武器圖示逐個失聲。圖騰：斷譜、反相波、龍鱗節拍。風格：電紫＋歌姬粉＋黑色斷點。
-- `t08.ult.dragon_aria`｜**終焉詠嘆：天籟寂滅風暴**：機體前方展開龍首喉腔的線框截面，低頻到高頻的彩色聲帶逐層共振；釋放形成帶鱗片節點的聲電海嘯，穿過後畫面短暫只剩無聲負片。圖騰：龍喉、詠嘆弧、全頻音階。
-
-### T-09 詩人｜波斯哀歌、火箭兵、巡飛彈黑雨
-
-- `t09.skill.martyrs_elegy`｜**英靈哀歌：火箭衛隊召喚**：波斯書法般的兩道飄帶在空中書寫召集路徑，字尾化成軍旗門；火箭兵剪影沿墨線由遠而近，不使用通用六角傳送門。圖騰：羽筆、哀歌飄帶、火箭羽焰。風格：靛青墨＋銅金。
-- `t09.ult.missile_black_rain`｜**萬劫天罰：巡飛彈狂瀾**：天空墨跡迅速擴散成黑雲，金色詩句碎成大量巡飛彈航標；彈雨呈斜向分批落下，爆點像墨花濺開後燃成橙紅。圖騰：墨雨、斷句、彈群楔。風格：波斯細密畫轉戰地黑雨。
-
-### T-10 落點｜彈道學、先知攔截、庇護所
-
-- `t10.skill.prophetic_intercept`｜**宿命對偶：先知攔截矩陣**：每枚來襲軌跡生成一條鏡像反軌跡，兩條拋物線在預測落點吻合；命中瞬間形成沙漏形對偶閃光，隨後所有預測線同時清空。圖騰：對偶拋物線、落點十字、沙漏。風格：砂金＋測繪青。
-- `t10.ult.sky_sanctuary`｜**神聖不可侵犯：天穹庇護所**：地面以方位刻度升起八片拱券護牆，頂部拼成穆卡納斯式幾何穹頂；傷害方向撞上時沿拱券分流到地面。圖騰：八向方位、拱券、避難所門。風格：青綠釉色＋砂岩金。
-
-### T-11 老雪茄｜戰壕經驗、宿將集結
-
-- `t11.skill.trench_doctrine`｜**百戰心訣：鐵甲弱點洞悉**：地面展開舊軍圖等高線與鉛筆戰術箭頭，友軍腳下各出現一段貼身戰壕折線；敵方火線被引導滑向空隙。圖騰：等高線、戰壕折角、雪茄燼點。風格：舊紙褐＋軍綠＋炭筆白。
-- `t11.ult.veteran_muster`｜**鋼鐵之師：老兵步兵連隊**：一聲短哨以窄扇形推出，地面逐列出現重靴足跡與班隊符號；煙霧中先見槍管和盾，再見步兵剪影沿陣線壓上。圖騰：集合哨、班隊方塊、戰旗缺口。風格：戰地寫實，壓低奇幻感。
-
-### T-12 螢火｜幽光掃描、訊號同悲
-
-- `t12.skill.firefly_spectrum`｜**幽光燭照：全頻譜洞悉**：少量螢光點從機體下方升起，各自掃出不同頻帶的小扇面；光點連成全場頻譜網後瞬間顯示遠方輪廓，再恢復游離。圖騰：螢火腹光、頻譜梳、微型眼點。風格：夜黑＋黃綠生物光。
-- `t12.ult.collective_silence`｜**萬物同悲：全域心靈寂靜**：所有被標記目標先被一條極細幽光神經線連起，信號脈衝同時抵達中心；網路突然熄滅，只留下每個目標的一點精確座標餘燼。圖騰：神經網、悼亡燈、坐標十字。風格：幽綠轉冷黑，避免通用 EMP 圓環。
-
-## 不結盟市場
-
-### N-01 渡鴉｜血蝠突進、吸血狂暴
-
-- `m01.skill.night_bat_escape`｜**暗夜掠影：絕命突進**：兩片蝠翼陰影先向內包住機體，釋放時沿視線撕成三道黑紅殘翼；終點散出渡鴉羽片並迅速被夜色吸回。圖騰：蝠翼、渡鴉羽、血滴箭。風格：近黑紫＋暗血紅。
-- `m01.ult.blood_raven_feast`｜**血夜狂宴：噬魂狂暴**：破缺血月在背後升起，烏鴉羽毛沿反時針旋轉；命中回流以細血色絲線返回核心，每次回流讓月輪短暫補全。圖騰：缺月、鴉羽、吸血脈。風格：哥德黑紅但保持硬質機械輪廓。
-
-### N-02 磐石｜泰坦重甲、守護誓約
-
-- `m02.skill.titan_stance`｜**不動如山：泰坦防禦姿態**：腳下伸出四枚承重樁，厚重甲片像地層由下向上咬合；完成時只留下低矮山脊剪影與沉重落塵。圖騰：岩層、承重樁、恐龍背甲。風格：玄武岩灰＋土金。
-- `m02.ult.cornerstone_oath`｜**金湯之固：永恆守護誓約**：隊伍範圍四角升起巨石界柱，金色砌縫從柱間延伸成低牆；中央基石落下時護牆閉合，衝擊化成沿牆奔走的金色應力波。圖騰：基石、砌縫、誓約結。風格：古城石垣＋現代複合裝甲。
-
-### N-03 雪線｜高山運補、靈泉、極光復甦
-
-- `m03.skill.alpine_spring`｜**雪線之澤：靈泉急救陣**：地面先畫出高山等高線與雪線，修復莢艙落下後藍綠融雪沿低處支流奔向友軍；接觸點長出短暫冰晶護片。圖騰：雪線等高線、泉眼、雙尾航跡。風格：冰藍＋松綠。
-- `m03.ult.aurora_revival`｜**聖靈降臨：萬象淨化大復甦**：三道極光帷幕從範圍外緣向中央合攏，雪花晶格沿友軍輪廓修補裝甲；護盾充滿時極光在上方閉成冠狀光幕。圖騰：極光冠、六角雪晶、山脈輪廓。風格：極地青綠＋紫藍。
-
-### N-04 霧行者｜蒙古金鵰、匿蹤、全境巡狩
-
-- `m04.skill.steppe_mist`｜**荒原霧隱：神鷹匿蹤術**：低矮草原風帶從側面捲起，金鵰羽片沿氣流覆住機身；輪廓像遠方地平線上的熱霧逐步消失。圖騰：鷹羽、草原風紋、無名印。風格：霧灰＋皮革褐＋鷹金。
-- `m04.ult.eagle_skyeye`｜**雄鷹之眸：全境巡狩天眼**：高空金鵰眼投下狹長視錐，草原羅盤向全圖展開；友軍各獲一枚順風羽標，視野、射程與機動三種增益以三層不同方向的風帶表達。圖騰：鷹眼、八風羅盤、馴鷹腕結。
-
-### N-05 熄燈｜斷路、電戰可變機、雷刑
-
-- `m05.skill.blackout_breaker`｜**幽夜斷路：滅靈結界**：區域邊緣出現四枚斷路器刀閘，Tell 階段電流仍沿線跳動；Release 時刀閘同時落下，中心光源一格格熄滅，只留下紫色殘電爬行。圖騰：刀閘、斷線、熄滅燈泡。風格：工業黑＋警示紫。
-- `m05.ult.thunder_judgement`｜**冥界神罰：萬雷絕命清算**：黑色積雨雲不是貼圖，而是數層扁平硬邊陰影；六到十道垂直雷柱依判決刻度落下，中心最後出現倒置電椅般的電弧框，麻痺以地面爬電收尾。圖騰：裁決秤、斷路符、垂雷。風格：黑紫＋瞬白。
-
-### N-06 嘉年華｜巴西號令、傳送援軍、空中艦隊
-
-- `m06.skill.carnival_vanguard`｜**神軍臨世：先鋒援軍令**：彩帶不是裝飾散射，而是三條精確座標帶在空中交會；交點打開鼓面形傳送口，火箭兵剪影踩著森巴鼓點沿兵線落位。圖騰：座標結、軍鼓、火箭羽。風格：巴西綠黃藍＋軍用黑。
-- `m06.ult.helicopter_carnival`｜**遮天蔽日：武裝直升機大編隊**：母艦背部展開扇形航空甲板光柵，直升機編隊依嘉年華羽冠的層級一排排升空；旋翼下洗把彩帶壓成方向性尾流，最後整隊朝戰線傾斜突進。圖騰：羽冠、旋翼、航空甲板格。風格：節慶秩序感，不做雜亂彩屑。
-
-### N-07 界碑｜邊境閘門、區域拒止
-
-- `m07.skill.border_dome`｜**天塹無涯：絕對防禦穹頂**：四至八根界碑沿權威半徑依次砸下，碑間拉起垂直電漿閘面並向上彎成穹頂；來襲物接觸時在最近界碑刻下一道白痕。圖騰：界碑編號槽、落閘、警戒斜線。風格：混凝土灰＋電漿青。
-- `m07.ult.total_exclusion`｜**萬劫焚滅：全域火力封鎖**：區域被切成紅色禁行網格，邊界像大型閘門逐段落下；彈幕沿網格交點定序傾瀉，外圈持續顯示向內的禁止箭頭，強調拒止而非單次爆炸。圖騰：封鎖柵格、禁止線、火力坐標。風格：警戒紅＋焦黑。
-
-### N-08 尾聲｜合約刺客、瞬移、破隱首擊
-
-- `m08.skill.paid_positioning`｜**縮地成寸：虛空幽影步**：一枚極簡合約勾記在目的方向亮起，起點與終點間只出現折疊的尺規刻度；款項確認般的單次綠閃後，機體沿折線瞬移，沒有魔法圓。圖騰：勾記、折尺、座標小數點。風格：消光黑＋鈔票綠＋冷白。
-- `m08.ult.formless_finale`｜**無相歸真：剎那破滅一擊**：機體先被一個空心「無相」墨圈吞沒，畫面只剩呼吸般收窄的黑白負形；破隱瞬間空圈被一條超細狙擊線切開，目標處出現無聲菱形破口，隨即全部退成零。圖騰：空圈、斷契線、菱形彈孔。風格：水墨黑白＋一次冷金閃光。
-
-## 實作契約
-
-### 資料與入口
-
-- 保留 `spawnCastFx(scene, effects, opts)` 為戰場與展示台唯一入口。
-- 將目前 `a/m/c/c2` 表擴充為 64 個唯一 `profileId`；角色表只選 profile，生命週期與共享資產仍集中在 `castfx.js`。
-- `opts.r`、`opts.dur`、`opts.scale`、`opts.at`、`opts.casterPos` 仍是唯一尺寸、時長與位置來源；不得從 profile 寫死傷害半徑。
-- `CAST_SIG` 只控制機體骨架施法姿勢；profile 可選發射方向和掛點語意，但不得複製姿勢狀態機。
-
-### 效能預算
-
-- 小招同時可見上限：4 個材質層、3 個 draw call、24 個 instance。
-- 大招同時可見上限：7 個材質層、5 個 draw call、48 個 instance。
-- 召喚剪影、彈幕、音符、火花、雨滴、螢火、網格節點一律以 `InstancedMesh` 或單張程序貼圖批次化。
-- 幾何模組級共享、CanvasTexture 以語意鍵快取；fade/update 期間不得建立物件、擴張陣列或排 timer。
-- 透明層採硬輪廓 core/halo；同一像素最多三層大面積透明面，避免 overdraw。
-- 展示台換角與效果到期必須釋放 per-cast 材質；共享幾何和貼圖不得 dispose。
-
-### 驗收
-
-- 64 招逐一錄下 Tell、Release、Contact 三幀；灰階後仍至少有 56 招能只憑輪廓辨識，剩餘 8 招必須能憑運動方向或接觸收尾辨識。
-- 同一機體的 Q/E 不得使用相同 archetype、相同魔法陣底板或相同時間曲線。
-- 不同機體不得有完全相同的 profile 組合；`rune` 不再作為缺省圖騰，缺 profile 應在開發模式 fail loud。
-- 執行 `node tools/audit_client_syntax.mjs`、`node tools/audit_cast_jump.mjs`、`node tools/audit_gpu_lifecycle.mjs`，並保留 `--break-vfx-ease` 反向驗證。
-- 展示台實機點擊 32 台 Q/E 共 64 招；確認動畫不中止、console 0 error、清場後 renderer memory 回到穩態。
-
+> Goal: every move must differ from the other 63 in at least two of (grayscale
+> silhouette, first 0.25s, contact tail). Recolor or totem-swap alone never counts
+> as a distinct move.
+
+## Common visual grammar
+
+- Every move follows Tell -> Release -> Contact -> Decay, but no longer stacks the
+  same circular `fxCastBeat`.
+- Magic circles only for skills that truly need "field, ritual, formula"; dashes,
+  snipes, stealth, and summons use directional contours instead.
+- Effective-range borders derive from authority radii only. Decorative light, smoke,
+  and debris may decay inward but MUST NOT imply a larger hit zone.
+- Every move owns a unique `profileId`. Geometry, materials, textures, and updaters
+  may be shared, but never the identical layer stack plus timing curve.
+- Primary color follows the body; accents per roster below. All bright cores flash
+  white or low-saturation warm for instant contrast only -- no full-duration bloom wash.
+
+## Roster: Free Swarm Coalition
+
+| Move | Visual beat | Totem | Palette / mood |
+|---|---|---|---|
+| `s01.skill.fugue_concord` | Ground staff-spiral unfurls; three voice-arcs at different tempi chase in; baton light-blade cuts down; dark-red notes stream back | Staff, quavers, hive beat-dots | Ivory + blue/yellow + dark-red reflux |
+| `s01.ult.sky_orchestra` | Horizontal full score opens across the sky, hex-rotor beat-lights ignite row by row; three score-gates disgorge helicopter silhouettes; staff-lines shred in rotor wash | Baton, bar lines, six-point swarm | Parade formality + air formation |
+| `s02.skill.tempered_reforge` | Red-hot cracks mark damage side first; four weld-arm beams stitch inward; anvil imprint drops as plates clasp with orange-white spatter; metal cools orange-to-dark | Anvil, rivets, weld beads | Close industrial repair, never a heal ring |
+| `s02.ult.world_crucible` | Crucible mouth projects under the core; molten gold runs six casting channels to allies; segmented temper-scale rises at the border; one die-stamp light-print per ally plus quench steam | Crucible, runners, temper marks | Black iron + molten orange + cooling off-white |
+| `s03.skill.silent_lobes` | Twin ear-lobe ellipses open; narrow interference fringes clamp the drop point; center shows a silent black band only at the cancellation instant; enemy sensor glyphs die cell by cell | Ear lobes, phase signs, fluke | Pearl gray + teal; "sound removed" |
+| `s03.ult.leviathan_song` | Sixteen belly-rib lines ignite in sequence; low-frequency ellipses push out like bathymetric contours; a whale profile surfaces mid-way and dissolves into spectrum; rim settles as EM quiet, not explosion | Sixteen ribs, song spectrum, sea-sky line | Deep sea teal + silver |
+| `s04.skill.breakthrough_thrust` | Sight-line presses a hair-thin white blade-road; twin reversed thrust-wedges ignite underfoot; release leaves one red-edged speed remnant with a forward-biased spear-tip impact, no circular wave | Spade spear-tip, single footprint | Military white + alarm red |
+| `s04.ult.deadline_shura` | Four black-red death-lines lock safe gaps at the sides; an open octahedral cut-frame forms; pulses flash short slashes from changing bearings; all lines snap at once | Asura eyes, severed lines, four-way cuts | Black, deep red, snap white |
+| `s05.skill.synapse_overclock` | Twin synapse chains spark beside the core at high-APM rhythm; racing HUD arrows compress along motion; reload nodes jump full like progress bars; misaligned afterimages linger | Neural nodes, refresh arrows, pixel stars | Esports magenta + electric blue + white |
+| `s05.ult.star_swarm_dive` | Funnel flight-lines form over the target; micro star-points orbit up then dive in batches; contact is staggered multi-point strobe bursts plus brief blinding noise, never one big blast | Six-point waymarks, FPV reticle, spiral tracks | Neon racing + chaotic bullet-pattern |
+| `s06.skill.elegy_intercept` | Translucent dome sewn upward from log-line rings; thin white intercept strings meet incomings; each kill opens one restrained jazz-blue spark; lines sink back into the dome | Blank tabs, log lines, keel arch | Midnight blue + cold white; quiet, funereal |
+| `s06.ult.undying_phalanx` | Staggered oblong shield-walls rise between allies like nameless tombstones; a blank banner unfurls center; impacts split into side arc-light | Blank banner, escort wings, stone rows | Deep indigo + silver gray; no generic holy gold |
+| `s07.skill.causal_proof` | Incoming vectors draw with shortest intercept chords; axiom nodes mark intersections in order; on proof the polygon snaps shut and erases missile tracks, leaving a `Q.E.D.`-style box glyph, no text | Chords, tangents, proof box | Whiteboard teal + amber nodes |
+| `s07.ult.inverse_geometry` | Target zone triangulates irregularly; all triangles push outward then snap-fold inward; contact shreds fragment vectors along aerodynamic faces; grid collapses for lack of solution | Counter-proof cross, triangulation, limit arrows | Cold geometric teal + red error terms |
+| `s08.skill.angel_dropship` | Vertical dawn-light marks the drop; med-pods descend the beam; four candlestick struts unfold on landing; repair dew bounces inward to allies | Candelabra, dew drops, white-green med cross | Dawn gold + medical green |
+| `s08.ult.krakow_bells` | Bell-pendulum outlines float up; first toll pushes a gold compression wave, second forms a rose-window light array, third rings each ally a full shield; afterglow falls as stained-glass shards | Morning bells, rose window, candle flames | Limestone + gold-green stained glass |
+| `s09.skill.royal_hunt` | Ground brands kangaroo long-jump tracks with pasture fire-marks; twin-barrel speed bars stretch forward; each leap leaves a short tea-gold arc, no generic buff ring | Pasture brands, hunt horn, twin barrels | Oilcloth brown + hunting green + fire-mark orange |
+| `s09.ult.sky_snare` | Four snare-stakes fire skyward and weave an inward-shrinking hunt-net; mesh tightens cell by cell toward the target; center forms a small gravity knot, not an explosion; lines reel back like lassos | Lasso, hunt-net, reserve marks | Brass + deep green |
+| `s10.skill.allseeing_decode` | Archaeopteryx wing-fan opens as spectrum; packet blocks stream along feather-shafts into a central eye; error codes peel layer by layer; final sweep throws one hair-thin sight-line across the field | Feather-shaft circuits, packet brackets, all-seeing eye | Terminal green + platinum |
+| `s10.ult.white_noise_void` | Broadband waterfall fills with dense color noise, wipes outside-in to pure white, then cuts to a black silence ring; wing bones survive only as negative outlines | Spectrum waterfall, delete cursor, negative wings | Color noise -> white -> near-black |
+| `s11.skill.fatal_escapement` | Transparent escapement wheel spins against the target; teeth seat into stress points one by one; time stops on the last tooth; the weak point lights as a hair-thin gold crack | Escape fork, jewel bearings, crack graduations | Gunmetal + watch gold + ruby |
+| `s11.ult.glashutte_retime` | Own body projects as an exploded diagram; gears, springs, and armor hover out in layers; the second hand runs one revolution backward; every part seats back exactly; shields close like blued-steel bezels | Concentric caliber, retrograde seconds | Watchmaker precision, no green heal wave |
+| `s12.skill.lavender_moonveil` | New moon sweeps past the wing; stars string a cloak along the star chart; pale lavender mist covers the hull rearward; outlines crumble to stardust | New moon, star chart, lavender sprigs | Moon white + lavender |
+| `s12.ult.homeward_constellation` | Sky chart reconnects severed routes; faint soul-lamps rise from downed positions and rejoin along the lines; center opens a star-gate toward home, not a holy array | Homing compass, star roads, home arch | Midnight blue + warm window-gold |
+
+## Roster: Continental Steel Pact
+
+| Move | Visual beat | Totem | Palette / mood |
+|---|---|---|---|
+| `t01.skill.steel_advance` | Red banner-geometry rises along track direction; rank arrows step forward row by row; horn pulse spreads as a wide fan toward the line, not a ring | Banners, track teeth, triple assault arrows | Parade red + steel gray |
+| `t01.ult.ural_avalanche` | Artillery bearing ticks drop first; snow grains suck upward; staggered shells land amid overlapping white avalanche pressure-waves and black-orange blast; paralysis ends in short quake polylines | Ural ridgeline, gun ticks, avalanche wedge | Snow + blast + seismic linework |
+| `t02.skill.neural_seventh_step` | Seven neural nodes overexpose along the move line; space stretches into a narrow prism rift; the body passes as the seventh node seals backward, leaving chromatic-dispersion afterimages | Folded seven, synapse chain, space seam | Violet-white dispersion + cold black |
+| `t02.ult.galatea_fullsync` | Human neural outline and mech wireframe slide from offset into perfect overlap; seven broken rings lock in turn; full-sync holds one seamless white contour; fragility reads only as ring cracks when hits break it | Seven rings, brain-machine spine, 100% loop | Sterile white + neural violet |
+| `t03.skill.cauldron_ram` | Heavy shield-plates clasp like furnace doors with rivets seating one by one; a rectangular dozer impact-face forms ahead; travel kicks coal-smoke and furnace stars | Furnace door, giant rivets, ram prow | Cast-iron black + furnace orange |
+| `t03.ult.furnace_maelstrom` | Ground cracks into a boiler volute; molten-red streamlines spiral down to the core; the pressure gauge redlines then bursts into inward-rolling flame; scorched vortex prints remain | Pressure gauge, grate bars, melt spiral | Furnace red on blackened swirl |
+| `t04.skill.grey_goose_cloak` | Goose feathers flip to background color head-to-tail row by row; a scan-blade wipes the radar-cross-section wireframe; wake keeps only low-contrast cold-gray ripples | Goose feathers, deleting scan-line, diamond frame | Gray-blue, low luminance, no glow halo |
+| `t04.ult.reaper_gaze` | Narrow red view-cone searches, then locks one high-value target; four hunter brackets narrow stepwise; the next shot draws a slit-like red-white line like a single eye | Single eye, value ticks, four-corner lock | Graphite + dark red |
+| `t05.skill.crane_stress_heal` | Crane-wing skeleton linework scans joint by joint; damaged nodes fold back nine micro-times; nanofibers regrow cracks like feather shafts; finish sets porcelain-smooth | Crane feathers, nine-fold circuits, joint stress map | Porcelain white + machine teal |
+| `t05.ult.industrial_descent` | Assembly blueprints project overhead; crane ticks, track modules, and armor plates land in three layers; rectangular factory gates open along lanes pushing tank silhouettes out | Hook blocks, line takt, track seals | Blueprint engineering + hazard striping |
+| `t06.skill.cloud_somersault` | Platinum cloud-bands roll up underfoot like dry-brush strokes; three ape-gait landing flashes blink ahead; the dash path curves S-shaped draconic, never a straight remnant | Tumble cloud, monkey-king footprints, cudgel seal | Rice-paper white + gilt + cinnabar |
+| `t06.ult.heaven_riot` | Cudgel light-column stretches skyward then slams down; the cloud sea splits in two; mountain-crack patterns and hoop-rings mark the hit; war-stripes dance around the body | Gold hoop, cudgel, split mountain-cloud | Mythic gold-red on hard mechanical edges |
+| `t07.skill.pterosaur_silence` | Wing-membrane heat-prints cool cell by cell like breathing; sound-wave contours gather rearward off wingtips; the body folds into one non-reflective black wing with only a faint glide vortex | Pterosaur membrane-bones, muted waves, closed pupil | Charcoal + cold violet-gray |
+| `t07.ult.terminal_arrow` | No array; one hair-thin white line plus a single rhombic penetrator mark before the muzzle; world direction-lines converge on it while charging; the target takes a pinhole white flash first, then tears a long red-black wound late | Single-line arrow, penetrator rhomb, breath ticks | Minimalist high contrast |
+| `t08.skill.broken_tuning` | A whole waveform enters then shatters into offset bars; staff lines snap like glass; the center pressure-node bursts inverted; enemy weapon icons fall silent one by one | Broken score, inverted waves, dragon-scale beats | Electric violet + songstress pink + black breaks |
+| `t08.ult.dragon_aria` | Wireframe dragon-throat cross-section opens ahead; colored vocal cords resonate low-to-high in layers; release drives a scale-noded acoustoelectric tsunami; aftermath holds a soundless negative frame briefly | Dragon throat, aria arcs, full-range scale | Throat-wireframe chroma into silence |
+| `t09.skill.martyrs_elegy` | Two calligraphic ribbons ink the muster path; tails resolve into banner-gates; rocket-troop silhouettes approach along the ink, no generic hex portal | Quill, elegy ribbons, rocket plumes | Indigo ink + copper gold |
+| `t09.ult.missile_black_rain` | Sky-ink bleeds into black cloud; gold verse shatters into cruise-missile waymarks; slanted volleys land in batches; bursts bloom like ink-flowers burning orange-red | Ink rain, broken verse, missile wedge | Persian-miniature turned battlefield black rain |
+| `t10.skill.prophetic_intercept` | Every incoming track grows a mirrored counter-track; parabola pairs meet at predicted points; kills flash hourglass-dual glints; all prediction lines clear at once | Dual parabolas, impact crosses, hourglass | Sand gold + survey teal |
+| `t10.ult.sky_sanctuary` | Eight arch wall-panels rise on bearing ticks and join into a muqarnas-style dome; damage directions shunt along arches into the ground | Eight bearings, arches, refuge gate | Glazed teal + sandstone gold |
+| `t11.skill.trench_doctrine` | Old contour map unrolls with pencil tactic arrows; each ally gains a body-hugging trench kink; enemy fire-lanes slide off into gaps | Contours, trench kinks, cigar ember | Aged paper + army green + charcoal white |
+| `t11.ult.veteran_muster` | One short whistle pushes a narrow fan; boot-print rows and squad blocks appear column by column; gun barrels and shields emerge from smoke before infantry silhouettes press the line | Muster whistle, squad blocks, gapped banner | Battlefield realism, fantasy dialed down |
+| `t12.skill.firefly_spectrum` | Few firefly points rise and sweep small fans in different bands; points link into a field-wide spectrum net that flashes distant outlines, then drifts free | Firefly glow-dots, spectrum comb, micro eye-spots | Night black + bio yellow-green |
+| `t12.ult.collective_silence` | All marked targets join by hair-thin ghost-green nerve-lines; pulses arrive center together; the net blacks out, leaving one exact coordinate ember per target | Nerve net, mourning lamps, coordinate crosses | Ghost green into cold black, no generic EMP ring |
+
+## Roster: Non-Aligned Market
+
+| Move | Visual beat | Totem | Palette / mood |
+|---|---|---|---|
+| `m01.skill.night_bat_escape` | Twin bat-wing shadows wrap inward, then tear along sight into three black-red remnants; raven feathers scatter at the endpoint and drink back into night | Bat wings, raven feathers, blood-drop arrow | Near-black violet + dark blood-red |
+| `m01.ult.blood_raven_feast` | Broken blood-moon rises behind; crow feathers rotate counterclockwise; hit reflux returns on thin blood-silk threads; each return briefly completes the moon | Broken moon, crow feathers, siphon veins | Gothic black-red on hard mechanical contours |
+| `m02.skill.titan_stance` | Four load-piles drive down; heavy plates bite upward stratum by stratum; finish leaves only a low ridgeline silhouette and heavy settling dust | Rock strata, load piles, dinosaur back-plates | Basalt gray + earth gold |
+| `m02.ult.cornerstone_oath` | Four corner megaliths rise at the zone corners; gold mortar seams run between into low walls; the keystone drops and seals the ring; impacts run off as gold stress-waves along walls | Keystone, mortar seams, oath knot | Old city stone + modern composite armor |
+| `m03.skill.alpine_spring` | Contour lines and snowline draw first; repair pods land as blue-green meltwater runs downhill branches to allies; contact grows brief ice-crystal guards | Snowline contours, spring eyes, twin wake-trails | Ice blue + pine green |
+| `m03.ult.aurora_revival` | Three aurora curtains close centerward from the rim; snowflake lattices patch ally armor along outlines; full shields crown overhead in aurora light | Aurora crown, hex snow-crystals, mountain outline | Polar teal-green + violet-blue |
+| `m04.skill.steppe_mist` | Low steppe wind-bands roll in sideways; golden-eagle feathers settle over the hull with the flow; outlines dissolve like heat-haze on a far horizon | Eagle feathers, steppe wind-print, nameless seal | Mist gray + leather brown + eagle gold |
+| `m04.ult.eagle_skyeye` | High eagle-eye drops a long view-cone; a steppe compass unfolds field-wide; each ally takes one tailwind feather-mark; vision, range, and mobility buffs read as three wind-bands in different directions | Eagle eye, eight-wind compass, falconer wrist-knot | Wind-mapped triple buffs |
+| `m05.skill.blackout_breaker` | Four breaker knife-switches frame the zone with current still dancing on Tell; Release drops all switches at once; light sources die cell by cell leaving crawling violet residual arcs | Knife switches, cut lines, dead bulbs | Industrial black + warning violet |
+| `m05.ult.thunder_judgement` | Black storm-clouds build as flat hard-edged shadow slabs, never textures; six-to-ten vertical pillars fall on judgement ticks; center ends in an inverted electric-chair arc-frame; paralysis closes on ground-crawl arcs | Scales, breaker glyphs, falling volts | Black-violet + snap white |
+| `m06.skill.carnival_vanguard` | Streamers act as three precise coordinate bands meeting mid-air, not decoration; the crossing opens a drum-head portal; rocket-troop silhouettes land along lanes on samba-drum beats | Coordinate knots, war drums, rocket plumes | Brazil green-yellow-blue + military black |
+| `m06.ult.helicopter_carnival` | Fan deck-light grating unfolds off the carrier back; helicopter ranks lift in feather-crest tiers; rotor wash presses streamers into directional wakes; the formation tilts onto the line as one | Crest feathers, rotors, deck grid | Festive order, never confetti chaos |
+| `m07.skill.border_dome` | Four-to-eight boundary steles slam down along the authority radius in turn; vertical plasma gate-faces span between and bend into a dome; contacts score one white mark on the nearest stele | Stele number-slots, drop gates, hazard striping | Concrete gray + plasma teal |
+| `m07.ult.total_exclusion` | Zone slices into a red no-go grid with borders dropping segment by segment like great gates; barrages pour on grid-intersection order; the rim holds inward prohibition arrows -- denial, not one blast | Blockade grid, prohibition lines, fire coordinates | Alert red + scorched black |
+| `m08.skill.paid_positioning` | One minimal contract check-mark lights toward the destination; only folding ruler-ticks span start to end; a single bill-green confirmation flash teleports the body along the fold, no magic circle | Check-mark, folding ruler, coordinate decimals | Matte black + bill green + cold white |
+| `m08.ult.formless_finale` | A hollow ink "formless" ring swallows the body; the frame holds only a breathing black-white negative; the reveal instant slices the ring with one ultra-thin sniper line; the target takes a soundless rhombic breach, then all falls back to zero | Hollow ring, severed-contract line, rhombic bullet-hole | Ink black-white + one cold-gold flash |
+
+## Implementation contract
+
+### Data and entry points
+
+- Keep `spawnCastFx(scene, effects, opts)` the sole entry for battlefield and showcase.
+- Extend the current `a/m/c/c2` tables to 64 unique `profileId`s; character tables select
+  profiles only, while lifecycle and shared assets stay centralized in `castfx.js`.
+- `opts.r`, `opts.dur`, `opts.scale`, `opts.at`, `opts.casterPos` remain the sole size,
+  duration, and position sources; profiles MUST NOT hardcode damage radii.
+- `CAST_SIG` drives body casting poses only; profiles may choose launch direction and
+  hardpoint semantics but MUST NOT duplicate the pose state machine.
+
+### Performance budget
+
+- Minor-cast visible cap: 4 material layers, 3 draw calls, 24 instances.
+- Ultimate visible cap: 7 material layers, 5 draw calls, 48 instances.
+- Summon silhouettes, barrages, notes, sparks, rain, fireflies, and grid nodes batch
+  via `InstancedMesh` or single procedural textures.
+- Module-level shared geometry, `CanvasTexture` cached by semantic key; no object
+  creation, array growth, or timers during fade/update.
+- Transparent layers use hard-contour core/halo; at most three large transparent faces
+  per pixel to bound overdraw.
+- Showcase angle swaps and effect expiry MUST release per-cast materials; shared
+  geometry and textures are never disposed.
+
+### Acceptance
+
+- Record Tell, Release, Contact frames for all 64; at least 56 stay recognizable by
+  silhouette in grayscale, the remaining 8 by motion direction or contact tail.
+- Same body's Q/E MUST NOT share archetype, magic-array base, or timing curve.
+- No two bodies share an identical profile combination; `rune` retires as the default
+  totem, and missing profiles fail loud in dev mode.
+- Run `node tools/audit_client_syntax.mjs`, `node tools/audit_cast_jump.mjs`,
+  `node tools/audit_gpu_lifecycle.mjs`, keeping the `--break-vfx-ease` counter-proof.
+- Click through all 32 bodies x Q/E in the live showcase; animations MUST NOT abort,
+  console stays at 0 errors, and renderer memory returns to steady state after clearing.

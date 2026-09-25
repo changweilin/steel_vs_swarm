@@ -1,15 +1,30 @@
+# Main Campaign — Steel vs. Swarm (2022–2031)
+
+> Governance (English; binding):
+> - Fiction contract: parallel-timeline fiction inspired by real events; unrelated to
+>   real persons and units. Roster numbers (S/T/N-XX) resolve in [characters.md](characters.md).
+> - 2031 order of battle: both sides field mixed wings (Swarm 7/3/2, Steel 3/7/2,
+>   Market 2/2/4) -- doctrines unchanged, organizations changed (see "機體混編").
+> - Roster discipline: only N-01..N-08 are drivable mercenaries. Mira the courier stays
+>   a non-drivable world character (frontline courier) outside the eight seats.
+> - Every match = one routine clash on the stalemate line after the Courier Protocol:
+>   human heroes pilot/drive both sides' machines (the Protocol bans fully unmanned
+>   engagement loops), drones respawn cooldown-free (expendable airframes), mechs
+>   respawn on cooldown (expensive airframes, ejecting pilots).
+> - Content SSOT: shipped dialogue lives in `public/js/storytalk.js`, staging in
+>   `public/js/dialogue.js`, marks in `public/js/storyui.js` (exempt Traditional
+>   Chinese narrative layer).
+> - Body below: narrative design bible (Traditional Chinese; English translation is a
+>   separate creative workstream, not cleanup).
+>
+> _Original header preserved below._
+
 # 主線劇情 — 無人戰略:鋼鐵與蜂群(2022–2031)
 
 > **內部設計文件。**平行時空之虛構創作,靈感取材自現實事件,與真實人物、單位無涉。
 > **機體編制**:2031 年雙方均已混編三種機體(蜂群 7/3/2、鋼鐵 3/7/2、傭兵 2/2/4);
 > 主義沒變,編制變了 —— 詳見 [characters.md 「機體混編」](characters.md)。
 > 角色設定與原型三分律見 [characters.md](characters.md)(角色編號 S/T/N-XX 均指向該文件)。
-> **2026-08-03 對帳**:本檔曾引用一批從未進入可駕駛名冊的傭兵(艾拉・德米爾、雪豹、恩科西、
-> 阿米娜・奧蒂諾…),已改寫成實際出貨的 N-01~N-08;**信使米菈**維持登場,但明確標為
-> **非可駕駛的世界角色**(前線信使),她不佔傭兵八席。
-> **與遊戲的關係**:每一場對戰 = 《信使協定》之後,膠著戰線上的一次「例行交鋒」——
-> 這解釋了為什麼雙方座機都由人類英雄駕駛/操縱(協定禁止無人在環的交戰迴路),
-> 也解釋了無人機重生無冷卻(機體可拋棄)與機甲重生有冷卻(機體昂貴、駕駛員彈射)的機制差異。
 
 ---
 
