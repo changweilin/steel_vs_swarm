@@ -1,26 +1,26 @@
-// ============ 平衡性設定與數值倍率(全玩家數值微調唯一縫)============
-// 提供全玩家八項升級曲線起終點與基礎能力倍率拉桿(0.1~10x);
-// 預設值 1.0x(完全等於出廠標準平衡)。
+// ============ Balance Preferences & Stat Multipliers (sole client tuning seam) ============
+// Provides sliders (0.1..10x) for upgrade curve endpoints and base ability multipliers across all players;
+// defaults to 1.0x (factory baseline).
 //
-// 紀律:
-//   ① `def` 一律為 1.0(標準倍率),未調整時數值與原始設定逐位元一致。
-//   ② 支援 localStorage(鍵名 svs_balance)記憶與離線稽核零相依載入。
-//   ③ 消費端可透過 `upgradeCurveMul(item, lvl)` 計算升級曲線內插倍率,
-//      或透過 `balanceMul(statKey)` 讀取單項基礎數值倍率。
+// Invariants:
+//   1. `def` is strictly 1.0; unadjusted values remain bit-identical to shipped balance.
+//   2. Persists to localStorage (`svs_balance`) with zero-dependency loading for offline audits.
+//   3. Consumers query `upgradeCurveMul(item, lvl)` for interpolated curve multipliers,
+//      or `balanceMul(statKey)` for single stat multipliers.
 
 const KEY = 'svs_balance';
 
 /**
- * 旋鈕表(單一真相)。
- *   label 繁體中文標籤
- *   group 分組 ('upgrade' = 升級曲線起終點, 'stat' = 基礎能力倍率)
- *   def   預設值 (1.0)
- *   min/max/step  拉桿範圍 (0.1 ~ 10, step 0.1)
- *   unit  單位 ('x')
- *   hint  詳細提示文字
+ * Knob registry (single truth source).
+ *   label Traditional Chinese display label
+ *   group Category ('upgrade' = curve endpoints, 'stat' = base stat multipliers)
+ *   def   Default value (1.0)
+ *   min/max/step  Slider range (0.1..10, step 0.1)
+ *   unit  Display unit ('x')
+ *   hint  Detailed tooltip text
  */
 export const BALANCE_KNOBS = {
-  // ---- 八項升級曲線起終點 (0.1 ~ 10x) ----
+  // ---- Eight upgrade curve endpoints (0.1..10x) ----
   upg_lw_start: {
     label: '輕武器起點倍率', group: 'upgrade', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
     hint: '全玩家輕武器初始(Lv1)的傷害與效能倍率。',
@@ -86,7 +86,7 @@ export const BALANCE_KNOBS = {
     hint: '全玩家滿級充能系統(Lv3)的回復速度倍率。',
   },
 
-  // ---- 玩家基礎數值倍率 (0.1 ~ 10x) ----
+  // ---- Base player stat multipliers (0.1..10x) ----
   stat_speed: {
     label: '移動速度倍率', group: 'stat', def: 1.0, min: 0.1, max: 10, step: 0.1, unit: 'x',
     hint: '全玩家機體地面移動與飛行巡航速度倍率。',
@@ -137,35 +137,35 @@ function clamp(k, v) {
   return Math.round(clamped * 10) / 10;
 }
 
-// 載入:整份讀進來後逐項夾制
+// Load: clamps values on initialization from localStorage
 {
   let raw = null;
   try {
     if (typeof localStorage !== 'undefined') {
       raw = JSON.parse(localStorage.getItem(KEY) || '{}');
     }
-  } catch { /* 私密模式 / 壞字串 */ }
+  } catch { /* Incognito storage quota or malformed JSON */ }
   for (const k in BALANCE_KNOBS) {
     const v = raw && typeof raw === 'object' ? raw[k] : undefined;
     _vals[k] = v === undefined ? BALANCE_KNOBS[k].def : clamp(k, v);
   }
 }
 
-/** 目前值(恆在 [min, max] 內) */
+/** Current value (guaranteed within [min, max]). */
 export function balancePref(k) {
   return k in _vals ? _vals[k] : (BALANCE_KNOBS[k]?.def ?? 1.0);
 }
 
-/** 取得基礎數值倍率(若無該鍵則回傳 1.0) */
+/** Lookup base stat multiplier (defaults to 1.0 if key not found). */
 export function balanceMul(statKey) {
   const k = `stat_${statKey}`;
   return k in _vals ? _vals[k] : 1.0;
 }
 
 /**
- * 計算升級軌在指定等級下的曲線倍率 (起點與終點線性內插)
- * @param {'lw'|'hw'|'sk'|'ult'|'hp'|'ar'|'sp'|'ch'} item 升級軌 id
- * @param {number} lvl 等級 (戰鬥面向 1..4, 防禦面向 0..3)
+ * Compute upgrade curve multiplier at specified level (linear interpolation between start and end).
+ * @param {'lw'|'hw'|'sk'|'ult'|'hp'|'ar'|'sp'|'ch'} item Upgrade track ID
+ * @param {number} lvl Level (1..4 for combat, 0..3 for defense)
  */
 export function upgradeCurveMul(item, lvl = 1) {
   const startKey = `upg_${item}_start`;
@@ -184,12 +184,12 @@ export function upgradeCurveMul(item, lvl = 1) {
   return s + (e - s) * t;
 }
 
-/** 整份目前值(回傳新物件,MUST NOT 就地改) */
+/** Snapshot of current preference values (shallow copy; callers MUST NOT mutate). */
 export function balancePrefs() {
   return { ..._vals };
 }
 
-/** 寫入一個旋鈕(夾制 + 持久化 + 廣播)。回傳夾制後的值 */
+/** Update single knob with clamping, persistence, and change notification. Returns clamped value. */
 export function setBalancePref(k, v) {
   if (!(k in BALANCE_KNOBS)) return 1.0;
   const nv = clamp(k, v);
@@ -199,12 +199,12 @@ export function setBalancePref(k, v) {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(KEY, JSON.stringify(_vals));
     }
-  } catch { /* 私密模式忽略 */ }
+  } catch { /* Ignore incognito localStorage write errors */ }
   _emit();
   return nv;
 }
 
-/** 全部回到交付預設 (1.0x) */
+/** Reset all knobs to shipped defaults (1.0x). */
 export function resetBalancePrefs() {
   let changed = false;
   for (const k in BALANCE_KNOBS) {
@@ -218,16 +218,16 @@ export function resetBalancePrefs() {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(KEY, JSON.stringify(_vals));
     }
-  } catch { /* 私密模式忽略 */ }
+  } catch { /* Ignore incognito localStorage write errors */ }
   _emit();
 }
 
-/** 是否全部維持預設(設定頁的「還原」鈕要不要亮) */
+/** Check whether all settings remain at defaults (drives Reset button state in UI). */
 export function balancePrefsDefault() {
   return Object.keys(BALANCE_KNOBS).every((k) => _vals[k] === BALANCE_KNOBS[k].def);
 }
 
-/** 訂閱變更;回傳解訂閱函式 */
+/** Subscribe to balance preference updates; returns unsubscribe function. */
 export function onBalanceChange(fn) {
   _subs.add(fn);
   return () => _subs.delete(fn);
@@ -235,6 +235,6 @@ export function onBalanceChange(fn) {
 
 function _emit() {
   for (const fn of [..._subs]) {
-    try { fn(_vals); } catch { /* 消費端異常不阻斷廣播 */ }
+    try { fn(_vals); } catch { /* Consumer errors MUST NOT interrupt notification chain */ }
   }
 }

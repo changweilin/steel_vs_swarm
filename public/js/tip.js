@@ -1,35 +1,34 @@
-// ============ 懸浮提示(遊戲內 GUI 說明的唯一縫)============
-// 2026-07-31 使用者定案:**遊戲內 GUI 的常駐說明文字一律改成懸浮提示**,內容同時彙整到
-// 戰場選單的「說明」分頁(help.js `UI_TIPS` → 說明分頁「介面」類)。
+// ============ Tooltips (sole seam for in-game GUI explanations) ============
+// In-game GUI persistent explanation texts are consolidated into hover/touch tooltips,
+// and also aggregated into the "Help" tab of the battle pause menu (help.js `UI_TIPS` -> "UI" category).
 //
-// 為什麼要有這一支:常駐說明把每一個選項列都撐成兩三行,窄屏尤其把按鍵擠出摺線(見 A20);
-// 但把字直接刪掉又等於資訊消失。折衷 = 字收進 `data-tip`,列上只留一顆 ⓘ 標記,
-// 想看再看;同一份字另從 help.js 進說明分頁,離線也翻得到。
+// Persistent explanation labels bloat option rows into multiple lines, squeezing controls on narrow screens.
+// Tooltips hide text inside `data-tip` behind an ⓘ badge, while help.js mirrors the copy offline.
 //
-// **單一縫**:全站只有這一份提示氣泡實作 —— 消費端 MUST 只做兩件事:
-//   ① 掛 `data-tip="…"`(任何元素都行,滑鼠移上去/觸控長按即顯示);
-//   ② 需要一顆看得見的標記時用 `tipHTML(text)` / `attachTip(el, text)`。
-// MUST NOT 另寫第二套氣泡、MUST NOT 退回 `title=`(手機沒有 hover,原生 tooltip 在觸控上永遠不出現)。
+// Sole seam: single tooltip bubble implementation across the client. Consumers MUST only:
+//   1. Add `data-tip="..."` (displayed on mouseover or touch long-press).
+//   2. Use `tipHTML(text)` or `attachTip(el, text)` when a visible badge is required.
+// MUST NOT implement a second bubble system or fall back to native `title=` (touch devices have no hover).
 //
-// 純表現層:不碰任何權威狀態,也不參與伺服器結算。
+// Pure presentation layer: does not touch authority state or participate in server settlement.
 
-let _bubble = null;      // 唯一氣泡節點(延遲建立)
-let _anchor = null;      // 目前顯示中的錨點
-let _lpTimer = 0;        // 觸控長按計時器
-let _viaHover = false;   // 目前這一次顯示是不是滑鼠移上去帶出來的(決定點擊該收還是該留)
+let _bubble = null;      // Lazy singleton bubble element
+let _anchor = null;      // Currently active anchor element
+let _lpTimer = 0;        // Touch long-press timer
+let _viaHover = false;   // True if triggered via hover (determines click dismiss behavior)
 let _installed = false;
 
-const LONG_PRESS_MS = 380;   // 觸控長按門檻(短於此 = 一般點擊,不能吃掉選項的點選)
-const EDGE = 8;              // 氣泡離視窗邊界的最小留白
+const LONG_PRESS_MS = 380;   // Threshold distinguishing tap from long-press to avoid swallowing option clicks
+const EDGE = 8;              // Minimum padding from viewport boundary
 
 const _esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-/** 提示標記的 HTML(消費端唯一取字處;要在樣板字串裡插入時用這支)*/
+/** Tooltip badge HTML (sole generation seam; use when interpolating into template strings). */
 export function tipHTML(text, cls = '') {
   return `<button class="tip-dot${cls ? ` ${cls}` : ''}" type="button" aria-label="說明" data-tip="${_esc(text)}">ⓘ</button>`;
 }
 
-/** 提示標記的 DOM 版(要 append 到既有節點時用這支;回傳建好的按鈕)*/
+/** DOM variant of tooltip badge for appending to existing nodes. */
 export function tipDot(text, cls = '') {
   const b = document.createElement('button');
   b.className = 'tip-dot' + (cls ? ` ${cls}` : '');
@@ -41,8 +40,8 @@ export function tipDot(text, cls = '') {
 }
 
 /**
- * 把提示掛到既有元素上(元素本身就是錨點,不另長標記)。
- * 空字串 = 移除提示(動態列刷新時用得到)。
+ * Attach tooltip directly to an existing element without adding a badge.
+ * Empty string removes tooltip (used during dynamic row refresh).
  */
 export function attachTip(el, text) {
   if (!el) return el;
@@ -61,7 +60,7 @@ function ensureBubble() {
   return _bubble;
 }
 
-/** 顯示提示;錨點沒有 `data-tip` 就當作沒事發生 */
+/** Show tooltip; no-op if anchor lacks `data-tip`. */
 export function showTip(el) {
   const text = el?.dataset?.tip;
   if (!text) return;
@@ -71,8 +70,8 @@ export function showTip(el) {
   _anchor = el;
   el.classList.add('tip-open');
 
-  // 定位:預設貼在錨點正下方靠左對齊,超出視窗就往回夾。
-  // MUST 先量氣泡自身尺寸(已 !hidden 才量得到),否則右緣夾制會用到 0 寬。
+  // Position directly below anchor, left-aligned; clamped within viewport boundaries.
+  // Bubble dimensions MUST be measured after unhiding to avoid 0-width measurement.
   b.style.left = '0px';
   b.style.top = '0px';
   const a = el.getBoundingClientRect();
@@ -82,13 +81,13 @@ export function showTip(el) {
   let y = a.bottom + 6;
   if (x + r.width > vw - EDGE) x = vw - EDGE - r.width;
   if (x < EDGE) x = EDGE;
-  if (y + r.height > vh - EDGE) y = a.top - 6 - r.height;   // 下方放不下就翻到上方
+  if (y + r.height > vh - EDGE) y = a.top - 6 - r.height;   // Flip above if bottom overflows
   if (y < EDGE) y = EDGE;
   b.style.left = `${Math.round(x)}px`;
   b.style.top = `${Math.round(y)}px`;
 }
 
-/** 收起提示(重複呼叫安全)*/
+/** Hide tooltip (idempotent / safe to call repeatedly). */
 export function hideTip() {
   clearTimeout(_lpTimer);
   _lpTimer = 0;
@@ -98,9 +97,9 @@ export function hideTip() {
 }
 
 /**
- * 全域安裝(冪等)。事件一律用委派掛在 document 上 ——
- * 提示標記是動態產生的(房間列、商店、圖鑑每次重繪都換一批節點),
- * 逐節點綁定 MUST NOT:重繪後就失效,而且是漏綁在先、找不到原因在後。
+ * Global installation (idempotent). Delegated on document because tooltip anchors
+ * are recreated dynamically during room, shop, and roster redraws.
+ * Per-node listeners MUST NOT be used as they would detach on DOM re-renders.
  */
 export function installTips() {
   if (_installed) return;
@@ -108,7 +107,7 @@ export function installTips() {
 
   const anchorOf = (t) => (t instanceof Element ? t.closest('[data-tip]') : null);
 
-  // 滑鼠:移入即顯示、移出即收起(pointerover/out 會冒泡,mouseenter 不會 ⇒ 委派只能用前者)
+  // Mouse: pointerover/pointerout bubble across delegation boundaries, unlike mouseenter/mouseleave.
   document.addEventListener('pointerover', (e) => {
     if (e.pointerType === 'touch') return;
     const el = anchorOf(e.target);
@@ -119,8 +118,8 @@ export function installTips() {
     if (_anchor && !_anchor.contains(e.relatedTarget)) hideTip();
   });
 
-  // 觸控:長按顯示。短按 MUST 原樣放行 —— 提示可以掛在選項按鈕上,
-  // 在這裡吃掉點擊等於整顆鈕失效(A19 一族的「看得到按不到」)。
+  // Touch: long-press displays tooltip. Short taps MUST pass through without interference
+  // so option buttons under tooltips remain clickable.
   document.addEventListener('pointerdown', (e) => {
     const el = anchorOf(e.target);
     if (e.pointerType !== 'touch') { if (!el) hideTip(); return; }
@@ -133,9 +132,8 @@ export function installTips() {
   document.addEventListener('pointercancel', () => hideTip(), true);
   document.addEventListener('pointermove', (e) => { if (e.pointerType === 'touch') cancelLp(); }, true);
 
-  // ⓘ 標記本身:點一下就切換(觸控不必長按、鍵盤 Enter/Space 也走這條)。
-  // `_viaHover` 是必要的:滑鼠移上去已經先顯示了,若在這裡無條件 toggle,
-  // 「移上去看到 → 點一下」會立刻把它關掉,看起來像點了沒反應。
+  // ⓘ badge toggle: immediate click toggle for keyboard Enter/Space and touch taps.
+  // `_viaHover` avoids closing immediately on click when hover has already opened the bubble.
   document.addEventListener('click', (e) => {
     const dot = e.target instanceof Element ? e.target.closest('.tip-dot') : null;
     if (!dot) return;
@@ -145,15 +143,15 @@ export function installTips() {
     else { showTip(dot); _viaHover = false; }
   });
 
-  // 鍵盤聚焦帶出提示。`.tip-dot` 例外 —— 它是按鈕,點擊時 focusin 會先於 click 觸發,
-  // 在這裡跟著顯示會讓上面那條 toggle 永遠處在「剛被打開」的狀態。
+  // Keyboard focusin displays tooltip, except for .tip-dot where focusin precedes click
+  // and would break toggle state tracking.
   document.addEventListener('focusin', (e) => {
     const el = anchorOf(e.target);
     if (el && !el.classList.contains('tip-dot')) { showTip(el); _viaHover = false; }
   });
   document.addEventListener('focusout', () => hideTip());
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideTip(); });
-  // 捲動/轉向後錨點就跑掉了 —— 氣泡是 position:fixed,留著會浮在錯的地方
+  // Dismiss fixed bubble on scroll/resize because anchor position has invalidated.
   window.addEventListener('scroll', () => hideTip(), true);
   window.addEventListener('resize', () => hideTip());
 }

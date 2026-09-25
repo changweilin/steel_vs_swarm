@@ -1,28 +1,24 @@
-// ============ 音效層級稽核(地點床 / 移動床 / 事件音 / BGM 階梯)============
-// 用途:改 `public/js/audio.js`、`game.js` 的量測端、或 `public/audio/README.md` 的來源帳
-// 之後跑這一支。跑法:`node tools/audit_audio_layers.mjs`
-// 反向驗證:`--break-prio` / `--break-base` / `--break-margin` / `--break-sync`
-//           `--break-take` / `--break-tier` / `--break-licence`
+// ============ Audio Layer Hierarchy Audit (Ambience Beds / Movement Beds / SFX / BGM) ============
+// Validates public/js/audio.js, game.js measurement hooks, and public/audio/README.md provenance ledger.
+// Usage: node tools/audit_audio_layers.mjs
+// Negative testing: --break-prio / --break-base / --break-margin / --break-sync
+//                    --break-take / --break-tier / --break-licence
 //
-// ── 為什麼要有這支(2026-08-16,`docs/anime_style_plan.md` ⑦)────────────────
-// 音效這一族的正確性有一半只有耳朵驗得到,但**最貴的那幾種錯全部是離線就量得到的**:
-//   ① **兩床同時響**(累加取代 first-match-wins):交界處總音量爆掉,而每一個 gain
-//      單看都還在 [0,1]。
-//   ② **恆亮床沒了**:分區邊界被聽成一個洞。
-//   ③ **濕床另建第二顆 LFO**:走進水裡會踏空一拍 —— 兩顆振盪器在任何靜態斷言上
-//      都看不出問題,它就是「同相」這件事唯一的失效模式。
-//   ④ **低階早退加了、補載入沒加**:關掉低功耗之後音效永久停在 Layer 1 合成,
-//      **有聲音、沒有錯誤訊息、每一條既有斷言全綠**,使用者只會說「設定好像沒作用」。
-//   ⑤ **常駐床誤走 `_play`**:去重窗與 `_MAX_VOICES` 會在齊射時把它丟掉,
-//      症狀是「打得最兇的時候環境音整片消失」。
-//   ⑥ **授權污染**:一列 `CC BY` 就改掉整個 repo 的散布條件。
+// Key failure modes and constraints:
+//   1. Dual active beds (additive mixing replacing first-match-wins): boundary zones clip total volume while
+//      individual gains remain in [0, 1].
+//   2. Dropped base bed: partition boundaries create an auditory silence hole.
+//   3. Separate LFO for wet movement bed: stepping into water causes audible phase slip.
+//      Phase coherence requires sharing a single LFO oscillator.
+//   4. Low-power early exit without reload hook: disabling low-power mode leaves audio permanently stuck in
+//      Layer 1 synthesis without error reports.
+//   5. Continuous ambient beds routed through _play: dedup window and _MAX_VOICES drop ambient beds during heavy combat.
+//   6. License pollution: non-CC0 assets contaminate repository distribution terms (CC0 only).
 //
-// ⚠ `audio.js` 透過 `mobile.js` 間接 import THREE ⇒ Node 端 import 不了整支。
-//   本檔全程走 `readSrc` + `grabConst`/`grabFn`/`grabMethod` + `new Function`,
-//   **MUST NOT 改成 import** —— 那樣每一支 `--break-*` 都咬不到,而且看起來一樣綠。
-// ⚠ 本檔 MUST NOT 出現帶前導斜線的 `audio` 路徑字面 —— `audit_net_modes.mjs` 的
-//   `strayPaths` 掃的就是 `tools/*.mjs`,踩到會紅在一個完全不相干的訊息上。
-//   路徑一律 `join(ROOT, 'public', 'audio')` 與不帶前導斜線的相對字串。
+// Constraints:
+//   audio.js imports THREE indirectly via mobile.js and cannot be imported directly in Node.
+//   Source MUST be read via readSrc + grabConst / grabFn / grabMethod + new Function.
+//   MUST NOT write leading-slash audio path literals; audit_net_modes.mjs checks for stray paths in tools/*.mjs.
 import { readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, readSrc, grabConst, grabFn, grabMethod, grabBlock } from './audit_src.mjs';
@@ -40,7 +36,7 @@ const note = (t) => console.log(`  · ${t}`);
 const sec = (t) => console.log(`\n▍${t}`);
 const count = (s, re) => (s.match(re) || []).length;
 const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
-/** 字面替換:無效 MUST 當場失敗(§5.4 ㋑ —— 靜默 no-op 的 break 永遠是綠的)*/
+/** Literal substitution: MUST fail immediately on no-op so break flags remain testable. */
 const bust = (src, re, to, tag) => {
   const out = src.replace(re, to);
   if (out === src) {
@@ -54,9 +50,9 @@ let audioSrc = readSrc('public', 'js', 'audio.js');
 const gameSrc = readSrc('public', 'js', 'game.js');
 let readmeSrc = readSrc('public', 'audio', 'README.md');
 
-// ── 壞版注入 ────────────────────────────────────────────────────
+// -- Negative Break Injections --
 if (B_PRIO) {
-  // 累加所有 g > 0 的床、回傳整份 map(參考專案 symptom 表的『Overlapping zones both play』)
+  // Additive mix of all g > 0 beds, returning full map (symptom: overlapping zones both play).
   audioSrc = bust(audioSrc,
     /if \(g > 0\) return \{ id: a\.id, g \};\r?\n {2}\}\r?\n {2}return null;/,
     'if (g > 0) out[a.id] = g;\n  }\n  return Object.keys(out).length ? { id: Object.keys(out)[0], g: Object.values(out).reduce((s, v) => s + v, 0), out } : null;',
@@ -88,11 +84,9 @@ if (B_LIC) {
     '$1| `sfx/x.ogg` | 測試 | 某站(**CC BY 4.0**) |\n', 'licence');
 }
 
-// ── 執行原文(名冊 + 純函式解析器)────────────────────────────────────
-// ⚠ `grabConst` 的大括號配對只認 `{`/`}` ⇒ **頂層陣列**(`AMBIENCE`)會被截在第一個元素。
-//   地點環境音那一段本來就是**連續**的一塊(名冊 + 純函式),直接取兩個錨點之間的原文:
-//   起點 = `const AMB_BASE`,終點 = `ambienceMix` 函式本體的結尾(那一支走 grabFn,函式的
-//   大括號配對是對的)。`_clamp` 是同檔的小工具,補一份定義進沙箱即可。
+// -- Execute Source Logic (Manifests + Pure Functions) --
+// grabConst bracket matching only inspects '{' and '}', which truncates top-level array literals (AMBIENCE) at element 0.
+// Extract contiguous block between AMB_BASE and the end of ambienceMix; provide _clamp helper in sandbox.
 const ambFn = grabFn(audioSrc, 'ambienceMix');
 const ambStart = audioSrc.indexOf('const AMB_BASE');
 const ambEnd = audioSrc.indexOf(ambFn) + ambFn.length;
@@ -130,7 +124,7 @@ ok(!AMBIENCE.some((a) => a.id === AMB_BASE.id),
 
 sec('Ⅱ 優先序:first-match-wins(行為;--break-prio MUST 紅)');
 {
-  // tunnel 與 water 同時成立(兩者都是二元查詢 0 = 在裡面)
+  // Both tunnel and water satisfied simultaneously (binary queries where 0 = inside).
   const both = ambienceMix({ tunnel: 0, water: 0, swamp: 0, camp: 0, urban: 0, forest: 0 });
   const first = AMBIENCE[0].id;
   ok(both && both.id === first,
@@ -164,7 +158,7 @@ ok(AMB_BASE.url && AMB_BASE.id, '恆亮床有自己的 url 與 id');
   ok(AMBIENCE.every((a) => a.m > 0 && a.r > 0 && a.vol > 0), '每一列的 r / m / vol 皆 > 0');
 }
 {
-  // 邊界的兩端:查詢值 = r ⇒ 恰好熄;= r − m ⇒ 恰好滿
+  // Boundary extremes: query = r extinguishes gain (0); query = r - m reaches full gain (1).
   const a = AMBIENCE[AMBIENCE.length - 1];
   const at = (q) => { const w = ambienceMix({ [a.id]: q }); return w?.id === a.id ? w.g : 0; };
   ok(Math.abs(at(a.r - a.m) - 1) < 1e-12 && at(a.r) === 0 && at(a.r + 1) === 0,
@@ -200,8 +194,8 @@ sec('Ⅳ 常駐床:MUST NOT 走 `_play`、MUST NOT 每幀 pause');
   ok(/this\._ambDens\?\.clear\(\)/.test(grabMethod(gameSrc, '_clearAroundBunker')),
     '密度快取 MUST 與 `_blockGrid` **同一處**失效(拆平的街廓不留幽靈市區聲)');
   {
-    // 64m 硬階梯是聽得出來的:走過格界 MUST 是連續的(雙線性內插),而每一條
-    // gain 斷言在階梯版上都會過。行為直測:沿 x 掃過一整個格界,量最大單步跳變。
+    // 64m discrete step transitions are audible; cell crossings MUST be continuous (bilinear interpolation).
+    // Measure maximum single-step jump across cell boundary along x axis.
     const src = grabMethod(gameSrc, '_ambDensityAt');
     const obj = new Function(`return {${src}\n};`)();
     const grid = new Map([['0,0', [{ bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 },
@@ -246,16 +240,15 @@ sec('Ⅵ ⑦-3 多 take + rate 抖動(--break-take MUST 紅;去重窗兩個現�
 {
   const jit = Number(/const _RATE_JIT = ([0-9.]+);/.exec(audioSrc)?.[1]);
   ok(jit >= 0.05 && jit <= 0.10, `抖動幅度 ∈ [0.05, 0.10](現值 ${jit})`);
-  // 對照組:break 咬的 MUST 是 take/抖動,而不是順手把去重窗一起改掉
+  // Control group: verify break targets take/jitter exclusively without touching dedup window.
   ok(/const _DEDUP_S = 0\.045;/.test(audioSrc), '對照組:去重窗 `_DEDUP_S` 維持 0.045(齊射的收斂靠它)');
   ok(/const _MAX_VOICES = 24;/.test(audioSrc), '對照組:發聲上限 `_MAX_VOICES` 維持 24');
 }
 {
-  // 管線行為直測(資產未到位 ⇒ 名冊仍全是單字串,不能拿「至少一槽有多 take」當硬斷言)
+  // Pipeline behavioral verification.
   const src = grabMethod(audioSrc, '_playSample');
   const picked = [];
-  // ⚠ 注入的 MUST 是**原文裡那個值**(可能已被 --break-take 改掉)—— 寫死 0.07 的話,
-  //   壞版跑的仍是好版的抖動幅度,這一段就量不到 break 真正做的事(§5.4 ㋑)。
+  // Injected rate jitter MUST use actual value from source to ensure --break-take reflects mutated logic.
   const jitSrc = Number(/const _RATE_JIT = ([0-9.]+);/.exec(audioSrc)?.[1]);
   const obj = new Function('_RATE_JIT', `return {${src}\n};`)(jitSrc);
   const mock = {
@@ -287,7 +280,7 @@ sec('Ⅵ ⑦-3 多 take + rate 抖動(--break-take MUST 紅;去重窗兩個現�
     `\`playbackRate\` 真的在抖、而且收在 ±10% 之內(相異值 ${new Set(rates).size} 個)`);
   ok(/duration \/ rate/.test(src),
     '`_count` 的時長 MUST 除以 rate —— 不除的話聲部計數釋放錯位,`_MAX_VOICES` 緩慢漂掉');
-  // 單字串 MUST 解析成長度 1 的陣列 ⇒ 行為逐位元同舊制
+  // Single string entries normalize to length-1 array for backward compatibility.
   const singles = Object.values(SFX).filter((v) => typeof v === 'string').length;
   ok(singles + Object.values(SFX).filter((v) => Array.isArray(v)).length === Object.keys(SFX).length,
     `\`SFX_MANIFEST\` 的值型別只准 \`string | string[]\`(現役單字串 ${singles} 槽)`);
@@ -295,7 +288,7 @@ sec('Ⅵ ⑦-3 多 take + rate 抖動(--break-take MUST 紅;去重窗兩個現�
     '註冊端把單字串解析成長度 1 的陣列(舊名冊逐位元同舊制)');
 }
 {
-  // A4:`Math.random()` 在本檔只准出現在三處(白噪 / take 挑選 / rate 抖動)
+  // Math.random() is restricted to exactly 3 non-deterministic sites: white noise, take selection, and rate jitter.
   const c = code(audioSrc);
   ok(count(c, /Math\.random\(/g) === 3,
     '`Math.random()` 在 audio.js 恰三處(白噪 / take 挑選 / rate 抖動)—— 逐事件、不進共享 rnd 序列',
@@ -313,7 +306,7 @@ sec('Ⅶ ⑦-4 低記憶體階梯(--break-tier MUST 紅;另兩條是對照組)')
   ok(early >= 0 && loop >= 0 && early < loop,
     '低階早退 MUST 排在 fetch 迴圈**之前**(整份 SFX 名冊不註冊 —— decoded buffer 才是真實成本)');
   ok(/this\._loadBgm\(\); return;/.test(ls), '低階仍載 BGM(串流本就低耗),只是走行動版編碼');
-  // 對照組:這兩條在 --break-tier 下 MUST 仍綠(證明 break 咬的是早退)
+  // Control group: must remain green under --break-tier to isolate early exit behavior.
   ok(count(code(audioSrc), /export function bgmUrl\(/g) === 1
     && count(code(audioSrc), /bgmUrl\(/g) >= 2,
     '對照組:`bgmUrl` 取檔唯一縫恰一份宣告,且真的被用到');
@@ -341,7 +334,7 @@ sec('Ⅷ 授權來源帳(雙向比對;--break-licence MUST 紅)');
   ok(badLic.length === 0,
     '每一列 MUST 是 CC0,MUST NOT 出現 `CC BY` / `-NC` / `BY-SA`(一列就污染整個 repo 的散布條件)',
     JSON.stringify(badLic.map((r) => `${r.file} ← ${r.src}`)));
-  // 實體檔案 → 表(**紅字**方向):放了檔卻沒登記 = 授權來歷不明
+  // Physical files -> README ledger: untracked audio files fail audit (unverified provenance).
   const root = join(ROOT, 'public', 'audio');
   const disk = [];
   const walk = (dir, pre) => {
@@ -357,11 +350,11 @@ sec('Ⅷ 授權來源帳(雙向比對;--break-licence MUST 紅)');
   ok(orphan.length === 0,
     `實體存在的音檔 MUST 全部登記在來源帳(實測 ${disk.length} 個檔)`,
     JSON.stringify(orphan));
-  // 表 → 實體檔案(**待補清單**方向,刻意不判紅:資產一天沒到、CI 不該一天紅)
+  // README ledger -> physical files: missing asset files warn as pending (soft degradation to base bed).
   const missing = rows.map((r) => r.file).filter((f) => !existsSync(join(root, f)));
   ok(true, `登記但尚未到位 ${missing.length} 個(待補清單,刻意不判紅 —— 缺檔時該床靜默、base 頂著)`);
   if (missing.length) note(`待補:${missing.join(' / ')}`);
-  // 名冊 → 表:audio.js 宣告的每一個 url MUST 在來源帳裡有一列
+  // Manifest -> README ledger: every url declared in audio.js MUST have a ledger entry.
   const urls = [
     ...Object.values(SFX).flatMap((v) => (Array.isArray(v) ? v : [v])),
     ...Object.values(BGM).flatMap((e) => [e.hi, e.low].filter(Boolean)),

@@ -1,28 +1,23 @@
-// ============ 攻擊範圍收斂 + 三軸預算(範圍 / 機動 / 射程)稽核 ============
-// 用途:改 `data.js` 的 `AREA_WEAPONS`、`soloBlastRmax()`/`towerPairSepM()`、`AOE_BUDGET`、
-// `MOB_BUDGET`、`RANGE_BUDGET`、任何爆炸型武器的 `r`、`GAME.TOWER_SIDE_OFF`、`TARGET_R.tower`、
-// `BLAST`,或 `tools/lanesim.mjs` 之後跑。
-// 跑法:`node tools/audit_aoe_trim.mjs`
+// ============ AoE Radius Convergence and 3-Axis Budget (AoE / Mobility / Range) Audit ============
+// Scope: Run after modifying data.js (AREA_WEAPONS, soloBlastRmax, towerPairSepM, AOE_BUDGET,
+//        MOB_BUDGET, RANGE_BUDGET, weapon r, GAME.TOWER_SIDE_OFF, TARGET_R.tower, BLAST)
+//        or tools/lanesim.mjs.
+// Usage: node tools/audit_aoe_trim.mjs
 //
-// 為什麼要這一支 —— 這批改動有四個「壞掉但不會報錯」的形狀:
-//
-// ① **夾制失效只差 0.001m**。「一發不得同時吃到同塔位兩座塔」是一條充要條件
-//    (r × BLAST.EDGE < 塔距/2 − 塔半徑),頂階半徑高出 1mm 規則就整條失效,而畫面上只表現成
-//    「這把武器拆塔特別快」。前科兩次:逐項四捨五入把頂階推回 cap 之上;以及 tierVal 的 Lv4
-//    **外推**(2·v₃ − v₂)在逐項捨去後反彈(t09 [15,17,19] 實測回到 4.445)。
-//    故此處**實算**:爆心沿兩塔連心線逐點掃,兩座塔都掉血就紅字 —— 不比常數,比行為。
-//
-// ② **豁免名冊變成裝飾**。「以範圍見長」的武器如果被夾到跟別人一樣,名冊就只是註解;
-//    反過來,名冊漏了誰,那把武器就靜默地繼續一發削兩座塔。兩個方向都驗。
-//
-// ③ **補償變成通膨**。收掉範圍要還火力,但既有的 bal ①④⑤ 全是單體模型(爆風半徑從來沒進過
-//    算式)⇒ 補償若當成純加法發下去,那些模型只看得到「傷害整批變高」。故補償 MUST 是
-//    **重分配**:整批補償係數的幾何平均 = 1(AOE_BUDGET.NORM 的定義),且沒被夾過的武器恆 ×1。
-//
-// ④ **預算沒接上 / 接了兩次**。三個係數(aoeTrimF / mobDmgF / rngDmgF)的套用點都只有
-//    heroWeapon 的 dmg 一欄;少接一處 = 那條路徑沒有計價,多接一處 = 平方計價。原文計數釘死。
-//
-// 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
+// Failure modes guarded by this audit:
+//   1. Boundary breach by 0.001m: "One blast must not hit both twin towers simultaneously" is an exact
+//      geometric constraint (r * BLAST.EDGE < tower_separation / 2 - tower_radius).
+//      If top-tier blast radius exceeds this by even 1mm, the rule fails completely while manifesting
+//      only as towers collapsing too fast. Past regressions: naive rounding pushing max tier above cap,
+//      and tierVal Lv4 extrapolation (2*v3 - v2) rebounding after truncation.
+//      Therefore this audit sweeps blast centers empirically along the inter-tower baseline.
+//   2. Exemption roster rot: If area-specialized weapons are clamped identically, the roster is dead.
+//      Conversely, if an unexempt weapon is omitted, it silently cleaves two towers. Both directions are verified.
+//   3. Compensation becoming inflation: Trimming AoE radius returns firepower, but existing balance models
+//      are single-target. Compensation must be budget-neutral redistribution: geometric mean of all compensation
+//      factors == 1 (AOE_BUDGET.NORM), with un-trimmed weapons strictly factor 1.0.
+//   4. Budget wiring errors: The 3 budget factors (aoeTrimF / mobDmgF / rngDmgF) apply exclusively to
+//      heroWeapon.dmg. Missing an application leaves an axis unpriced; duplicate application squares the pricing.
 import { readSrc } from './audit_src.mjs';
 import {
   CHARACTERS, GAME, ECON, BLAST, TARGET_R, UNITS, blastFalloff, aoeClass, heroWeapon, heroRange,
@@ -40,21 +35,21 @@ const MAX_TIER = 1 + ECON.UPGRADES.hw.max;
 
 const DATA = readSrc('public', 'js', 'data.js');
 const LSIM = readSrc('tools', 'lanesim.mjs');
-/** 剝掉行註解**與區塊註解**後的原文(單一縫計數 MUST NOT 把註解/JSDoc 裡提到的名字算進去) */
+/** Strips block and line comments so identifiers mentioned in documentation do not pollute token counts. */
 const bare = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '')
   .split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
 const DATA_B = bare(DATA);
 const count = (src, re) => (src.match(re) || []).length;
 
-/** 全部「爆炸型」英雄武器(滿級解析後 —— 頂階半徑才是真正的上界) */
+/** All blast-type hero weapons at max tier (max tier radius represents the true upper bound). */
 const blasts = [];
 for (const ch of Object.keys(CHARACTERS)) for (const slot of ['light', 'heavy']) {
   const w = heroWeapon(ch, slot, MAX_TIER, true);
   if (w && aoeClass(w) === 'blast') blasts.push({ key: `${ch}.${slot}`, ch, slot, def: w });
 }
 /**
- * 這個爆風半徑「一發打不打得到同塔位的兩座塔」——**實算**,不比常數。
- * 爆心沿兩塔連心線掃(對稱 ⇒ 只掃半邊);距離量到**命中量體表面**(對齊 sim._blast 的最近點)。
+ * Empirically tests whether a blast radius can damage both towers of a twin tower site along their baseline.
+ * Sweeps blast center along inter-tower line; distances measure to target collider surface (aligns with sim._blast).
  */
 const twoTowers = (r) => {
   const R = TARGET_R.tower, half = towerPairSepM() / 2;
@@ -72,13 +67,13 @@ console.log('\nⅠ 幾何上界:推導不手寫,且逐把實算「打不打得�
     near(soloBlastRmax(), (towerPairSepM() / 2 - TARGET_R.tower) / BLAST.EDGE));
   t('blastFootprintR() = r × BLAST.EDGE(= blastFalloff 的歸零界)',
     near(blastFootprintR(7), 7 * BLAST.EDGE) && blastFalloff(7, 7 * BLAST.EDGE) === 0);
-  // 上界本身 MUST 恰好是「臨界」:等於上界打不到第二座,再大一點點就打得到
+  // Upper bound is a true critical threshold: r = bound hits 1 tower; r = bound + 1mm hits both.
   t('上界是臨界值:r = 上界 ⇒ 打不到兩座;r = 上界 + 1mm ⇒ 打得到',
     !twoTowers(soloBlastRmax()) && twoTowers(soloBlastRmax() + 0.001));
   t('原文:soloBlastRmax / towerPairSepM 各只有一處定義(單一縫)',
     count(DATA_B, /export const soloBlastRmax\s*=/g) === 1
     && count(DATA_B, /export const towerPairSepM\s*=/g) === 1);
-  // 消費端不得手抄幾何常數:家族上限只准經 blastCapR(),而它只准經 soloBlastRmax()
+  // Consumers must not hardcode geometric constants: family cap derives from blastCapR(), which calls soloBlastRmax().
   t('原文:blastCapR 只有一處定義,且吃 soloBlastRmax()(MUST NOT 手抄 30 / 7 / 1.8)',
     count(DATA_B, /export const blastCapR\s*=/g) === 1
     && /export const blastCapR\s*=[^;]*soloBlastRmax\(\)/.test(DATA_B));
@@ -98,7 +93,7 @@ console.log('\nⅠ-b 爆風家族帶:榴彈吃滿上限、導引恆小於榴彈(
     && near(blastCapR('fnf'), blastCapR('guide')) && BLAST_BAND.GUIDED_F < 1);
   t('階梯底係數 LO ∈ (0, 1](= 1 即半徑不隨階級成長;→ 0 即回到「頂階貼齊、底階自由落體」)',
     BLAST_BAND.LO > 0 && BLAST_BAND.LO <= 1);
-  // 逐階全掃:兩族各自的值域,以及「導引 < 榴彈」的三個端點
+  // Sweep all tiers: domain bounds per family and endpoints verifying guided < lob.
   const band = {};
   for (const b of blasts) {
     const fam = blastFamily(trajClass(b.def));
@@ -122,7 +117,7 @@ console.log('\nⅠ-b 爆風家族帶:榴彈吃滿上限、導引恆小於榴彈(
       const cap = blastCapR(f === 'lob' ? 'lob' : 'guide');
       return Math.abs(Math.min(...band[f]) - cap * BLAST_BAND.LO) <= 0.002;
     }));
-  // 家族內排序保留:授權半徑大的,定案半徑也 MUST 不小於授權半徑小的(逐把伸展會把這條抹平)
+  // Intra-family rank preservation: weapons with larger raw radius MUST preserve relative order.
   const bad = [];
   for (const fam of ['lob', 'guided']) {
     const ws = blasts.filter((b) => blastFamily(trajClass(b.def)) === fam)
@@ -131,7 +126,7 @@ console.log('\nⅠ-b 爆風家族帶:榴彈吃滿上限、導引恆小於榴彈(
     for (let i = 1; i < ws.length; i++) if (ws[i].r < ws[i - 1].r - 1e-9) bad.push(`${fam}:${ws[i].k}`);
   }
   t('家族內排序保留:授權半徑越大 ⇒ 定案半徑越大(逐把伸展會把這條抹平)', bad.length === 0, bad.join(' '));
-  // 榴彈類 = 「較短射程的那一類」(使用者定案):MUST 是全體重武器解析後射程的最小值
+  // Lob category: shortest range class across all heavy weapons.
   const heavies = Object.keys(CHARACTERS).map((ch) => ({ ch, r: heroRange(ch, 'heavy'), def: heroWeapon(ch, 'heavy', 1, true) }));
   const minR = Math.min(...heavies.map((h) => h.r));
   const lobs = heavies.filter((h) => trajClass(h.def) === 'lob');
@@ -144,11 +139,9 @@ console.log('\nⅠ-b 爆風家族帶:榴彈吃滿上限、導引恆小於榴彈(
 console.log('\nⅡ 逐把武器:非「範圍見長」一發打不到兩座塔;名冊內的仍打得到');
 {
   const exempt = Object.keys(AREA_WEAPONS);
-  // 名冊是**凍結清單**(與 EX_SIEGE_WEAPONS 同一條紀律):放行的是「一發削兩座塔」這種
-  // 結構性特權,單靠「有沒有附理由」擋不住膨脹 —— 誰都可以自稱以範圍見長。故此處逐一釘死,
-  // **改名冊 MUST 同步改這一行**,讓每一次增刪都是一次刻意的決定而不是順手加名。
-  // 2026-08-04 使用者定案「榴彈類不可一次命中兩座砲塔」⇒ 名冊裡原本那三把榴彈類全數收回,
-  // 現況**應為空**:沒有任何爆炸型武器享有豁免(fan/line 依機制豁免,不經此表)。
+  // Frozen exemption list (same discipline as EX_SIEGE_WEAPONS):
+  // Authorizes the structural privilege of cleaving two towers in a single blast.
+  // Requires explicit rationale; currently empty (no blast-type weapons are exempt).
   const EXPECT = [];
   t(`名冊 AREA_WEAPONS 恰為 ${EXPECT.length ? EXPECT.join('、') : '空'}(凍結清單;增刪 MUST 同步本稽核)`,
     exempt.length === EXPECT.length && EXPECT.every((k) => k in AREA_WEAPONS),
@@ -162,14 +155,14 @@ console.log('\nⅡ 逐把武器:非「範圍見長」一發打不到兩座塔;�
     t(`${b.key} 滿級 r=${b.def.r.toFixed(3)}m ${isArea ? '【範圍見長】MUST 打得到兩座' : 'MUST 打不到兩座'}`,
       isArea ? hit2 : !hit2);
   }
-  // 逐階都要成立(不是只有滿級):Lv1~Lv4 全掃
+  // Must hold across all levels (Lv1 - Lv4), not merely max tier.
   const badTier = [];
   for (const b of blasts) {
     if (AREA_WEAPONS[b.key]) continue;
     for (let lv = 1; lv <= MAX_TIER; lv++) if (twoTowers(heroWeapon(b.ch, b.slot, lv, true).r)) badTier.push(`${b.key}@Lv${lv}`);
   }
   t(`逐階(Lv1~Lv${MAX_TIER})全數成立`, badTier.length === 0, badTier.join(' '));
-  // 三分類只有 blast 進夾制:fan / line 逐位元不動(_aoeRaw 只會掛在被夾過的 blast 上)
+  // Only blast AoE undergoes radius clamping; fan and line profiles remain bit-identical.
   const wrong = [];
   for (const ch of Object.keys(CHARACTERS)) for (const slot of ['light', 'heavy']) {
     const raw = CHARACTERS[ch][slot];
@@ -194,9 +187,9 @@ console.log('\nⅢ 範圍補償:重分配而非通膨(幾何平均 = 1),且讓�
       const w = CHARACTERS[ch][s];
       return !w || w._aoeRaw || (aoeTrimF(w) === 1 && aoeTrimRaw(w) === 1);
     })));
-  // 讓出越多範圍 ⇒ 補償越多(單調);同時驗 areaValue 的形狀。
-  // **逐家族比**:兩族的上限不同(榴彈吃滿 / 導引 ×GUIDED_F)⇒ 同一個授權半徑在兩族會落在
-  // 不同的定案半徑上,跨族排序本來就沒有意義(這條驗的是「同一族內誰讓得多誰拿得多」)。
+  // Monotonic compensation: greater radius sacrifice yields larger damage compensation.
+  // Evaluated per-family: lob and guided families possess different upper caps (lob = 1.0, guided = GUIDED_F).
+  // Cross-family ranking is meaningless; this validates monotonic scaling within each family.
   const badMono = [];
   for (const fam of ['lob', 'guided']) {
     const sorted = trimmed
@@ -210,7 +203,7 @@ console.log('\nⅢ 範圍補償:重分配而非通膨(幾何平均 = 1),且讓�
   t('areaValue:半徑 0 = 1(單體基準)、= 上界時 = 1 + W、且嚴格遞增',
     near(areaValue(0), 1) && near(areaValue(soloBlastRmax()), 1 + AOE_BUDGET.W)
     && areaValue(10) > areaValue(5));
-  // 階梯形狀保留:夾制是等比收斂,不是整排壓平
+  // Ladder progression preserved: geometric scaling rather than flat clamping across tiers.
   const ladders = trimmed.filter((w) => Array.isArray(w.r) && w.r.length > 1);
   t('階梯形狀保留(等比收斂,不是整排壓成同一個值)',
     ladders.length > 0 && ladders.every((w) => w.r[w.r.length - 1] > w.r[0]));
@@ -220,7 +213,7 @@ console.log('\nⅢ 範圍補償:重分配而非通膨(幾何平均 = 1),且讓�
 
 console.log('\nⅣ 機動 / 射程預算:以同儕幾何中點為軸,單調,且套用點各只有一處');
 {
-  // 機動
+  // Mobility
   const mv = Object.keys(CHARACTERS).map((c) => heroMobility(charKind(c), CHARACTERS[c].mods, charKind(c) === 'drone'));
   t('mobMid() = 全角色有效機動的幾何中點(推導)',
     near(mobMid(), Math.exp(mv.reduce((s, x) => s + Math.log(x), 0) / mv.length), 1e-9));
@@ -232,7 +225,7 @@ console.log('\nⅣ 機動 / 射程預算:以同儕幾何中點為軸,單調,且�
   t('mobDmgF 在中點恰為 1、上下各跨過 1(是重分配不是全體加減)',
     Math.max(...byMob.map(mobDmgF)) > 1 && Math.min(...byMob.map(mobDmgF)) < 1
     && MOB_BUDGET.K > 0);
-  // 射程(逐槽位)
+  // Range (per slot)
   for (const slot of ['light', 'heavy']) {
     const rv = Object.keys(CHARACTERS).map((c) => heroRange(c, slot)).filter((x) => x > 0);
     t(`rangeMid('${slot}') = 該槽位解析後射程的幾何中點(逐槽位,推導)`,
@@ -247,9 +240,9 @@ console.log('\nⅣ 機動 / 射程預算:以同儕幾何中點為軸,單調,且�
   t('heroRange 是唯一縫:heroWeapon 的 range 欄與預算同吃',
     Object.keys(CHARACTERS).every((c) => ['light', 'heavy'].every((s) =>
       !CHARACTERS[c][s] || near(heroWeapon(c, s, 1, true).range, heroRange(c, s)))));
-  // 套用點各只有一處(原文)
+  // Single application point per factor in source code.
   for (const fn of ['aoeTrimF', 'mobDmgF', 'rngDmgF']) {
-    // 定義 1 次 + heroWeapon 消費 1 次 = 原文恰 2 處(識別字計數,不論 const 箭頭或 function 宣告)
+    // 1 definition + 1 heroWeapon usage = exactly 2 token occurrences in source.
     const n = count(DATA_B, new RegExp(`\\b${fn}\\b`, 'g'));
     t(`原文:${fn} 恰 2 處(定義 + heroWeapon 唯一消費點)`, n === 2, `實得 ${n}`);
   }
@@ -273,7 +266,7 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
   t('原文:範圍幾何走 aoeClass 三分類(MUST NOT 另寫一份 def.type 比對)',
     /aoeClass\(def\)/.test(bare(LSIM)) && !/def\.type\s*===\s*'launcher'/.test(bare(LSIM)));
 
-  // 行為:三類範圍各自的命中名冊
+  // Behavioral validation: hit lists across the three AoE classes.
   const shooter = { x: 0, y: 0 }, foesAt = (xs) => xs.map((x) => ({ kind: 'soldier', x, y: 0, hp: 100 }));
   const blastDef = heroWeapon(blasts.find((b) => !AREA_WEAPONS[b.key]).ch,
     blasts.find((b) => !AREA_WEAPONS[b.key]).slot, 1, true);
@@ -281,7 +274,7 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
   const h = hits(shooter, foes[0], blastDef, foes);
   t('blast:足跡內的順帶掃到、足跡外的不掃到(圓形超壓)',
     h.length === 2 && h.every((x) => x.f > 0) && !h.some((x) => x.ent === foes[2]));
-  // fan:錐寬隨距離張開 —— 同一個橫向偏移,拉遠才進得了錐
+  // fan: cone width scales with distance; given lateral offset enters cone only at longer range.
   const fanCh = Object.keys(CHARACTERS).find((c) => heroWeapon(c, 'heavy', 1, true)?.fan);
   const fanDef = heroWeapon(fanCh, 'heavy', 1, true);
   const off = 12;
@@ -292,7 +285,7 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
     hn.length === 1 && hf.length === 2);
   t('fan:越近越強(fanFalloff),所以拉遠掃得多但每個都更痛不了',
     hn[0].f > hf.find((x) => x.ent === farFoes[0]).f);
-  // line:圓柱貫穿,依序衰減,且有上限
+  // line: piercing cylinder with sequential decay up to target cap.
   const lineCh = Object.keys(CHARACTERS).find((c) => aoeClass(heroWeapon(c, 'heavy', 1, true)) === 'line');
   const lineDef = heroWeapon(lineCh, 'heavy', 1, true);
   const row = foesAt([30, 60, 90]);
@@ -300,11 +293,11 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
   t('line:一線貫穿多名,且後續目標逐一衰減(LANCE.DECAY)',
     hl.length === 3 && hl[0].f > hl[1].f && hl[1].f > hl[2].f);
 
-  // 勝負條件:先毀敵機體或一座塔
+  // Win conditions: kill enemy mech or destroy one tower.
   const r = laneBattle('t01', 't01');
   t('對局終局理由只有 kill / tower / timeout 三種', ['kill', 'tower', 'timeout'].includes(r.why));
   t('對局長度有上限且 ≤ LANE.MAX_T', r.t <= LANE.MAX_T + LANE.DT);
-  // 有錢就升級:開場資金 MUST 立刻換成等級(貪心買最便宜的一階)
+  // Immediate start fund conversion into cheapest upgrade tiers.
   const M = mech('t01', 'SWARM');
   t('開場資金 = ECON.START,且八軌起始全 0', M.cash === ECON.START && LANE.TRACKS.every((k) => M.up[k] === 0));
   t('升級只買模型算得到的六軌(小招/大招不在模型內 ⇒ 不進採購清單)',

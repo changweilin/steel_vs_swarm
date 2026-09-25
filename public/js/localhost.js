@@ -1,27 +1,26 @@
-// ============ 單機模式:瀏覽器內的權威主機 ============
-// 「單機」不是把伺服器邏輯抄一份到客戶端 —— 那是 A1 明令禁止的「客戶端先改狀態」。
-// 這裡做的是**把伺服器整支搬進分頁**:同一支 `server/rooms.js`(RoomHub)+ `server/sim.js`(BattleSim)
-// 直接在瀏覽器執行,客戶端仍然只送輸入、收快照。差別只有傳輸層:WebSocket 換成同分頁的函式呼叫。
+// ============ Solo Mode: In-Browser Authoritative Host ============
+// Solo mode does not duplicate server simulation logic on the client (violates principle 1 server-authoritative).
+// Instead, the entire server suite (RoomHub in server/rooms.js + BattleSim in server/sim.js) runs inside the browser tab.
+// The client only sends input and receives snapshots; only the transport switches from WebSocket to function calls.
 //
-// 【路徑】`../../server/rooms.js` 從 `/public/js/` 出發 = `/server/rooms.js`。
-// 這要求瀏覽器的 URL 佈局鏡射儲存庫佈局(`/public/**` + `/server/*.js`);
-// dev 伺服器(server/server.js)與 GitHub Pages 靜態版(tools/build_solo.mjs)都照這個佈局出檔,
-// 這樣 `data.js` 在整個分頁裡才是**同一個模組實例**(平衡數值只有一份)。
+// Path: ../../server/rooms.js resolved from /public/js/ maps to /server/rooms.js.
+// Browser URL structure mirrors repository layout (/public/** + /server/*.js) across dev server and static GitHub Pages build,
+// ensuring data.js shares a single module instance across the tab (single seam for balance parameters).
 //
-// 訊息延遲:收進來的訊息一律**排進微任務**再交給 handler。伺服器版天然是非同步的(socket 事件),
-// 單機若同步回呼,`send → handler → send` 會變成遞迴堆疊(例如 loaded → sync → 再送訊息),
-// MUST NOT 為了「少一個 tick」改成同步直呼。
+// Message dispatch: incoming messages MUST be queued in microtasks before handing off to handlers.
+// Server transport is inherently asynchronous (socket events); synchronous dispatch in solo would create recursive call stacks
+// (e.g. loaded -> sync -> sendNow), which must not be flattened into synchronous calls.
 
 const HUB_URL = '../../server/rooms.js';
 
 export class LocalNet {
   /**
-   * @param {object} handlers 與 `Net` 完全相同的 handler 表(sync/snap/rooms/error/…)
+   * @param {object} handlers Handler table identical to Net (sync/snap/rooms/error/...).
    */
   constructor(handlers = {}) {
     this.h = handlers;
     this.mode = 'solo';
-    this.connected = false;     // 模組載入完成前先當「未連上」,送出的訊息排隊(與 Net 同語意)
+    this.connected = false; // Mark unconnected until module loads; outbound messages queue up (matches Net semantics).
     this._queue = [];
     this._inbox = [];
     this._dead = false;
@@ -34,7 +33,7 @@ export class LocalNet {
     try {
       const { RoomHub } = await import(HUB_URL);
       if (this._dead) return;
-      // 單機:沒有可分享的加入網址;斷線即離座(dropMs 0)—— 自己就是唯一的真人玩家,不必留位等重連。
+      // Solo mode: no shareable join URL; drop immediately on disconnect (dropMs 0) since local player is the sole participant.
       this.hub = new RoomHub({ urls: () => [], log: () => {}, dropMs: 0 });
       this.sess = this.hub.attach((msg) => this._inbound(msg));
       this.connected = true;
@@ -47,7 +46,7 @@ export class LocalNet {
 
   _inbound(msg) {
     this._inbox.push(msg);
-    if (this._inbox.length > 1) return;          // 已排好一次沖洗,同一輪的訊息一起送
+    if (this._inbox.length > 1) return; // Microtask flush already scheduled; batch messages in the same tick.
     queueMicrotask(() => {
       const batch = this._inbox;
       this._inbox = [];
@@ -64,13 +63,13 @@ export class LocalNet {
     this._dead = true;
     this._queue = [];
     this._inbox = [];
-    try { this.sess?.close(); } catch { /* 忽略 */ }
-    try { this.hub?.shutdown(); } catch { /* 忽略 */ }   // MUST:停掉房間 tick,否則切走後 8Hz 迴圈還在跑
+    try { this.sess?.close(); } catch { /* ignore */ }
+    try { this.hub?.shutdown(); } catch { /* ignore */ } // MUST: stop room ticks; otherwise 8Hz loop leaks across modes.
     this.hub = null; this.sess = null;
   }
 
-  // 單機 recv 是同步直呼:核心若拋(畸形輸入之類)會一路噴進遊戲迴圈把頁面打停。
-  // 傳輸層在這裡攔截並丟棄,與伺服器版行為一致(降級不例外)。
+  // Solo recv is a direct synchronous invocation: simulation exceptions (e.g. malformed inputs) would halt the render loop.
+  // Catch and drop at transport layer to match server-side websocket error handling (degrade by omission).
   _recv(m) {
     try { this.sess.recv(m); }
     catch (err) { console.error('[solo] 訊息處理異常已攔截並丟棄', err); }

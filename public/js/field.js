@@ -1,37 +1,34 @@
-// ============ 地表屬性場(確定性散布橢圓場;唯一縫)============
-// 用途:回答「這一點比周圍**多**還是**少**」這種低頻、無方向性的問題 ——
-// 地表色階梯要走哪一階(terrain.js 的無影像路徑)、將來的風化/苔蘚/鏽蝕密度(P2-A)。
+// ============ Surface Property Field (deterministic scattered ellipse field; sole seam) ============
+// Evaluates low-frequency, non-directional spatial variance ("more or less than surroundings") --
+// driving terrain ramp selection (terrain.js imageless path) and weathering/moss/rust density.
 //
-// **為什麼不是雜訊函式**:值雜訊(value noise)每一點都獨立,大面積看起來是均勻的沙,
-// 沒有「這一片比較老、那一片比較新」的區塊感;而純用「離某某距離」推(離水多遠、
-// 離爆點多遠、離地面多高)在**均勻區域內是常數** —— 那正是要修的毛病本身,不是解法。
-// 散布橢圓場兩者都不是:少量大橢圓隨機灑在圖上,每個帶自己的權重,任一點取**加權平均**。
+// Value noise evaluates each point independently, yielding uniform speckle across large areas without regional clustering;
+// pure distance fields (distance to water, blast center, elevation) stay constant over uniform zones.
+// A scattered ellipse field sprinkles a small number of large ellipses with individual weights, evaluated via weighted average.
 //
-// 三條紀律(全部踩過,寫在這裡免得再踩):
-//   ① MUST 是**加權平均** `s / max(W_MIN, w)`,MUST NOT 是加總 —— 橢圓一多,加總會飽和成
-//      一個常數,比沒有場更糟(整片同一階,看起來就是「又忘了做」)。
-//   ② 分母的下限 `W_MIN` 不可省:沒有任何橢圓覆蓋的空白處 w→0,除下去會爆成 ±∞ ⇒
-//      畫面上是一塊塊雜訊斑。夾住之後空白處自然回到中性值 0.5。
-//   ③ 散布 MUST NOT 用 `Math.random()`(§2.3 確定性):種子由呼叫端給(戰場中心),
-//      每個橢圓固定消耗 6 枚亂數 ⇒ 跨客戶端逐位元同一張場。
+// Core invariants:
+//   1. MUST use weighted average `s / max(W_MIN, w)`, MUST NOT sum -- summation saturates into a constant as ellipses overlap.
+//   2. Lower bound `W_MIN` on denominator is required: uncovered voids where w -> 0 would divide toward +-infinity.
+//      Clamping gracefully returns void areas to neutral 0.5.
+//   3. Deterministic scatter (AGENTS.md principle 3): caller provides seed (battle center);
+//      each ellipse consumes exactly 6 random numbers without rejection sampling -> bit-identical across clients.
 import { mulberry32 } from './rng.js';
 
-const W_MIN = 0.55;      // 加權平均分母下限(見紀律②)
-const N_BLOB = 26;       // 橢圓枚數:少了看不出區塊、多了互相抵消成常數
+const W_MIN = 0.55;      // Lower bound on weighted average denominator (invariant 2)
+const N_BLOB = 26;       // Ellipse count: too few loses regional structure, too many cancels toward constant
 
 /**
- * 建一張屬性場。
- * @param seed   整數種子(呼叫端一律用戰場中心推,與 biomes.js 的散布同源)
- * @param span   場地跨距(公尺);橢圓半徑由它推導,MUST NOT 手寫公尺數
- * @returns (x, z) => 0~1(0.5 = 中性;無橢圓覆蓋處恆為中性)
+ * Construct a property field.
+ * @param seed   Integer seed (caller uses battle center, matching biomes.js scatter)
+ * @param span   Arena span (meters); ellipse radii derive from span, MUST NOT be hardcoded
+ * @returns (x, z) => 0..1 (0.5 = neutral; uncovered areas default to neutral)
  */
 export function makeField(seed, span) {
   const rnd = mulberry32(seed >>> 0);
-  const R0 = span * 0.10, R1 = span * 0.34;    // 橢圓半徑帶:小於 1/10 跨距就碎成雜訊
+  const R0 = span * 0.10, R1 = span * 0.34;    // Ellipse radius range: < 1/10 span becomes high-frequency noise
   const blobs = [];
   for (let i = 0; i < N_BLOB; i++) {
-    // 固定 6 枚:中心 x/z、兩軸半徑、旋轉、值。淘汰檢查 MUST 排在抽樣**之後**(§2.3),
-    // 這裡沒有淘汰 ⇒ 序列天生一致。
+    // Exactly 6 numbers: center x/z, radii a/b, rotation, value. No rejection sampling -> sequence stays aligned.
     const cx = (rnd() - 0.5) * span * 1.2;
     const cz = (rnd() - 0.5) * span * 1.2;
     const ra = R0 + rnd() * (R1 - R0);
@@ -47,30 +44,29 @@ export function makeField(seed, span) {
       const u = (dx * b.ca + dz * b.sa) * b.ia, v = (-dx * b.sa + dz * b.ca) * b.ib;
       const d2 = u * u + v * v;
       if (d2 >= 1) continue;
-      const k = 1 - d2;                        // 橢圓內平滑落到邊界為 0(邊界不留硬圈)
+      const k = 1 - d2;                        // Smooth falloff to 0 at boundary (no hard circle edges)
       s += b.val * k; w += k;
     }
-    return w > 0 ? s / Math.max(W_MIN, w) : 0.5;   // 紀律①②:加權平均 + 分母下限
+    return w > 0 ? s / Math.max(W_MIN, w) : 0.5;   // Invariants 1 & 2: weighted average + denominator clamp
   };
 }
 
 /**
- * 色階梯:把屬性場切成 n 階,回傳 `(x, z) => 0..n-1`。
+ * Tone ladder: partitions property field into n steps, returning `(x, z) => 0..n-1`.
  *
- * **門檻取該場地自己的分位數,MUST NOT 手寫固定門檻**(2026-08-03 實測):
- * 場的值是「少量橢圓的加權平均」⇒ 分布隨種子漂,固定門檻在 27 個場地 × 三種隊制上
- * 最壞會讓單一色階佔到 **51.3%**(iguazu L3)—— 那就退回「88% 的坡面同一個顏色」那個
- * 病灶本身。改吃分位數 ⇒ 每一階天生約 1/n,與種子無關。
- * 抖動則是另一件事:門檻逐點加一個**比場粗、比取樣細**的雜湊偏移,否則等值線會長成
- * 一圈一圈的等高線(見 `coarseHash`)。
+ * Thresholds evaluate local field quantiles, MUST NOT use fixed constants:
+ * The field is a weighted average of sparse ellipses; distribution drifts with seed.
+ * Fixed thresholds can concentrate over 50% of the terrain into a single ramp step on certain seeds.
+ * Quantile sampling guarantees each ramp step spans ~1/n of the terrain regardless of seed.
+ * Jitter adds a coarse hash offset coarser than the field and finer than sample grid to break isoline contour rings.
  *
- * @param field  makeField 的輸出
- * @param b      取樣範圍 { minX, maxX, minZ, maxZ }(用地形網格的世界邊界)
- * @param n      階數
- * @param jitM   抖動格寬(公尺);抖幅固定為一階的 ±25%
+ * @param field  Output of makeField
+ * @param b      Sampling bounds { minX, maxX, minZ, maxZ } (terrain mesh world bounds)
+ * @param n      Number of steps
+ * @param jitM   Jitter cell width (meters); amplitude fixed to +-25% of one step
  */
 export function makeToneLadder(field, b, n, jitM) {
-  const S = 96;                                   // 分位取樣網格(確定性:固定格數,與地形無關)
+  const S = 96;                                   // Quantile sample grid (deterministic: fixed resolution)
   const vals = new Float32Array(S * S);
   for (let i = 0; i < S; i++) {
     const z = b.minZ + (b.maxZ - b.minZ) * (i + 0.5) / S;
@@ -79,7 +75,7 @@ export function makeToneLadder(field, b, n, jitM) {
   const sorted = Float32Array.from(vals).sort();
   const th = [];
   for (let k = 1; k < n; k++) th.push(sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * k / n))]);
-  // 抖幅 = 一階寬度的 ±25%:再大就把階梯攪成雜訊,再小就看得出等值線
+  // Jitter amplitude = +-25% of one step: larger creates noise, smaller reveals isolines
   const amp = ((sorted[sorted.length - 1] - sorted[0]) / n) * 0.5;
   return (x, z) => {
     const v = field(x, z), h = (coarseHash(x, z, jitM) - 0.5) * amp;
@@ -90,20 +86,19 @@ export function makeToneLadder(field, b, n, jitM) {
 }
 
 /**
- * 把場烤成一張小方格(P2-A 風化密度;唯一縫)。
+ * Bake field into a small 2D grid for weathering density texture (sole seam).
  *
- * **為什麼是烤成貼圖而不是在著色器裡算**:場是 26 個橢圓的加權平均 —— 逐像素跑那個迴圈
- * 在最大的一塊面(地形)上就是每幀幾百萬次橢圓測試。場本身又是**低頻**的(橢圓半徑
- * ≥ 1/10 跨距),64² 的格子已經比場的最小特徵細一個量級,線性內插後看不出格點。
+ * Pre-baked to a texture because evaluating 26 ellipses per pixel on large terrain
+ * costs millions of tests per frame. Since the field is low-frequency (radius >= 1/10 span),
+ * a 64x64 grid is an order of magnitude finer than the smallest feature and interpolates smoothly.
  *
- * 回傳 **Uint8Array 而不是貼圖**:本檔零 three 依賴(同 rng.js 的理由 —— 離線稽核要直接
- * 執行它);而且 `audit_cel_pipeline` 釘死「ramp 的 DataTexture 只准在 toon.js 建構」,
- * 場貼圖同理由同一個地方建,才不會長出第二套取樣規則。
+ * Returns Uint8Array rather than THREE.DataTexture to preserve zero-dependency Node execution for audits;
+ * toon.js maintains the sole seam for DataTexture construction.
  *
- * @param field  makeField 的輸出
- * @param b      { minX, maxX, minZ, maxZ } 世界邊界(取樣框,與消費端的 uv 換算同一份)
- * @param size   邊長格數
- * @returns Uint8Array(size × size;列 = z,行 = x,0~255 對應場的 0~1)
+ * @param field  Output of makeField
+ * @param b      World bounds { minX, maxX, minZ, maxZ }
+ * @param size   Grid dimension
+ * @returns Uint8Array (size x size; row = z, col = x; 0..255 mapped to field 0..1)
  */
 export function bakeFieldTexture(field, b, size = 64) {
   const out = new Uint8Array(size * size);
@@ -119,11 +114,9 @@ export function bakeFieldTexture(field, b, size = 64) {
 }
 
 /**
- * 閾值抖動用的粗粒雜湊(0~1)。
- * **為什麼要抖**:色階梯若逐點拿同一個閾值比,等值線會在畫面上長成一圈一圈的**等高線**
- * (地圖等高線那種),一眼就看得出是程式畫的。用比場本身**更粗**的格子抖動閾值 ⇒
- * 交界變成鋸齒狀的碎塊,像手繪的色塊邊。格子 MUST 比橢圓小很多、又 MUST 比取樣點粗
- * (與取樣同粒度 = 逐點白雜訊 = 交界變成沙)。
+ * Coarse hash for threshold jitter (0..1).
+ * Threshold jitter prevents uniform isolines from forming contour map rings.
+ * Grid MUST be much smaller than ellipses and coarser than sample points to avoid high-frequency white noise.
  */
 export function coarseHash(x, z, cellM) {
   const i = Math.floor(x / cellM), j = Math.floor(z / cellM);

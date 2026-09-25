@@ -1,14 +1,7 @@
-// ============ s10@flight 逐機零件檔(航空機體;dev-only)============
-// s10「羽陣」始祖式可變機甲 —— **飛行型**(迅猛龍展羽:始祖鳥現形)。
-// 2D 定案圖:public/assets/cyberpunk_art/mechs/s10_flight_static.jpg / s10_ground_static.jpg
-//
-// 2026-08-13 使用者定案:「迅猛龍+始祖鳥:**重製為迅猛龍為主體**,地面形態前爪與尾巴的羽毛
-// 收合,飛行形態時前爪展開變翅膀,尾巴羽毛也水平展開變尾翼,武器在後背朝前。」
-//   ⇒ 舊制那台是另畫的一具「相控陣翼板」機身(瘦長軀幹 + 平板翼 + 配平尾桿),龍體一格也沒有;
-//     gen.sil 的「前緣帶爪的寬羽翼 + 收翼摺成背脊天線」是 2D 圖的描述,使用者這一輪把
-//     **翼板改回羽毛**、主體改回迅猛龍。
-//   ⇒ 本檔因此**一顆自己的幾何都沒有**:整台由 `s10.js`(迅猛龍)的建構器組出來,
-//     飛行型只把 `c.featherSpread` 從 0 轉到 1(前肢飛羽張開成翼、尾羽攤平成尾翼)。
+// ============ s10@flight Mech Component (Flight Variant; dev-only) ============
+// s10 "Plumage Array" Archaeopteryx-type variable mech -- Flight Variant (velociraptor spreading feathered wings).
+// Contains zero local geometry primitives; entirely composed from s10.js generators.
+// Flight stance sets c.featherSpread = 1 (foreleg remiges deploy into wings, rectrices flatten into horizontal stabilizer fan).
 import * as THREE from 'three';
 import s10 from './s10.js';
 import { staticLimb } from './_morph.js';
@@ -16,7 +9,7 @@ import { staticLimb } from './_morph.js';
 const FR = s10.frame;
 
 export default {
-  // 色相 MUST = 地面型(同一台機的同一批塗裝)
+  // Hue MUST match ground variant (same vehicle livery).
   label: '羽陣・飛行型(s10 始祖式展羽)', kind: 'air', height: s10.height,
   air: { tiltY: 2.4, bob: 0.07, top: 27, span: 5.0 },
   moveSig: { hover: 0.22, hoverF: 0.75, hoverA: 0.65, surge: 0.38, flare: 0.75, bank: 0.52 },
@@ -31,7 +24,7 @@ export default {
   ],
 
   body(c, t) {
-    c.featherSpread = 1;                 // ← 這一個旋鈕就是「羽毛收合 ↔ 展開」的全部
+    c.featherSpread = 1;                 // Morph knob: 0 = folded plumage, 1 = deployed wings/tail fan.
     const spine = new THREE.Group();
     t.add(spine);
     const chest = new THREE.Group();
@@ -40,7 +33,7 @@ export default {
     s10.body(c, spine, chest);
     const neck = new THREE.Group();
     neck.position.set(...FR.neck);
-    neck.rotation.x = -0.35;             // 飛行時頸微伸、頭朝航向
+    neck.rotation.x = -0.35;             // Extend neck forward along flight heading.
     chest.add(neck);
     const head = new THREE.Group();
     head.position.set(...FR.head);
@@ -48,48 +41,48 @@ export default {
     s10.neckHead(c, neck, head);
     c._spine = spine;
 
-    // ---- 前肢張開成翼(rig.wings 的兩段樞軸:肩 = w、肘 = outer)----
-    // ⚠ **展翼角 MUST 掛在 w 底下的靜態 Group**:stepAerial 每幀 `w.rotation.z = sgn·sin(…)·amp`
-    //   是**絕對指派**(locomotion.js:667)⇒ 寫在 w 上的那個 π/2 開場就被歸零,兩翼於是
-    //   垂在體側往後拖(b_s10f_front.png / b_s10f_side45.png 的病灶),而每一條斷言都正常。
-    //   `outer.rotation.z` 同樣被覆寫;`rotation.x` 兩者都安全 —— 展開後肢體局部 x 已經被
-    //   那 90° 轉成**世界垂直軸** ⇒ x 在翼上讀作「後掠」,正好拿來排初級/次級的翼形。
+    // ---- Forelimbs deploy as wings (rig.wings pivots: shoulder = w, elbow = outer) ----
+    // Wing deployment angle MUST attach to an intermediate static Group (wg) under w:
+    // stepAerial overwrites w.rotation.z and outer.rotation.z every frame via absolute assignment.
+    // Setting deployment angle on w directly gets overwritten to 0 on frame 1.
+    // Local limb points along -y; 90 deg rotation converts local x into the world vertical axis,
+    // making local rotation.x function as wing sweep rather than pitch.
     const wings = [];
     for (const sx of [-1, 1]) {
       const cx = { ...c, sx, front: true };
       const w = new THREE.Group();
       w.position.set(sx * FR.legX, 0.08, FR.fz);
-      w.rotation.x = -0.16;                                  // 迎角(x 不被覆寫)
+      w.rotation.x = -0.16;                                  // Angle of attack (rotation.x preserved by stepAerial)
       spine.add(w);
       const wg = new THREE.Group();
-      wg.rotation.z = sx * (Math.PI / 2 - 0.13);             // 肢體朝 −y ⇒ 轉 90° 成水平翼展 + 上反 0.13
+      wg.rotation.z = sx * (Math.PI / 2 - 0.13);             // Rotate -y limb 90 deg into horizontal wingspan + 0.13 dihedral
       w.add(wg);
       const segs = s10.legF(cx);
-      // 第一節畫在 wg、其餘掛進 outer ⇒ 撲翼的內/外兩段(stepAerial 對 outer 加相位延遲)
+      // Segment 0 rendered into wg, remaining into outer for two-stage wing-flapping phase lag
       segs[0].draw(wg);
       const outer = new THREE.Group();
       const pv = segs[1].piv;
       outer.position.set(pv ? pv[0] : 0, pv ? pv[1] : -segs[0].len, pv ? pv[2] : 0);
-      outer.rotation.x = 0.13;                               // 外翼後掠(展開後 x = 垂直軸 ⇒ 這是掠角不是俯仰)
+      outer.rotation.x = 0.13;                               // Outer wing sweep (local x aligns with vertical axis)
       wg.add(outer);
       segs[1].draw(outer);
       const handG = new THREE.Group();
       const pv2 = segs[2].piv;
       handG.position.set(pv2 ? pv2[0] : 0, pv2 ? pv2[1] : -segs[1].len, pv2 ? pv2[2] : 0);
-      handG.rotation.x = 0.17;                               // 翼端(掌)再掠一點
+      handG.rotation.x = 0.17;                               // Wingtip progressive sweep
       outer.add(handG);
       segs[2].draw(handG);
       wings.push({ w, outer, sgn: sx });
     }
     c._wings = wings;
 
-    // ---- 後肢向後收折(同一組腿件;四節 ⇒ 姿態表四格)----
+    // ---- Hindlimbs folded aft (shares 4-segment leg assembly with ground variant) ----
     for (const sx of [-1, 1]) {
       const cx = { ...c, sx, front: false };
       staticLimb(spine, s10.legH(cx), [0, 1.15, -0.95, 0.55], [sx * FR.legX, -0.02, FR.hz], [0.62, 0, sx * 0.16]);
     }
 
-    // ---- 尾:十二節長骨尾 + 水平展開的尾羽面(姿態與配平角全住 s10.tail)----
+    // ---- Tail: 12-segment caudal chain + horizontal rectrice fan (trim lives in s10.tail) ----
     const tail = new THREE.Group();
     tail.position.set(0, FR.tailY, FR.tailZ);
     spine.add(tail);

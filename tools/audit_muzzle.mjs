@@ -1,22 +1,21 @@
-// 全機體武裝掛點/槍口/戰鬥姿勢/後座稽核(CLAUDE.md §5「武裝掛點/槍口」列;2026-07-22 重建)
-// 前置:伺服器在 8620 執行中(node server/server.js);Playwright 借用 mapping_elf 的安裝
-// 用法:node tools/audit_muzzle.mjs
-// ① 32 英雄地面型:rig.wpn 輕/重的「槍尾→槍口」方向(ref 框架 fwd 軸)MUST 朝機體正前
-//    (dot(+z) ≥ 0.8;例外:aegis 雙肩 VLS 朝上 = 本體特徵、monkey 尾砲須進重武器交戰檢查)
-// ② monkey 尾砲:地面重武器交戰(_aimH)後砲口 MUST 轉前(dot(+z) ≥ 0.6)
-// ③ 變形者飛行型(m→1):輕/重槍口 MUST 朝航向(dot(+z) ≥ 0.75)
-// ④ 槍口位置 MUST 在武器前端(muz 沿射向投影 ≥ ref 原點)且掛焰(rig.flames)
-// ⑤ 開火後座:fireFx 注入後 _kickL/_kickR/_kickB 任一 MUST > 0.02(輕重各驗)
-// ⑥ 戰鬥姿勢:有 gunR/gunL 的機體,靜止(交戰)時槍身 rotation.x MUST 收斂到 aim 角 ±0.25
-// ⑦ NPC:四陣營小兵/火箭/榴彈 + 車輛(砲塔 pitch 節點)+ 直升機(雙槍口輪替 + gunTilt)
-// ⑧ 運動射擊:地面奔跑/飛行高速移動中,輕重武器發射軸 MUST 保持朝機體正前(dot(+z) ≥ 0.9)
-// ⑨ 巨象/劍龍/半人馬:四肢的根節、第二節、掌/蹠節實際奔跑行程 MUST 全部 > 0.03rad
-// ⑩ 逐台雙足/四足:軀幹 COM 起伏 MUST 與一個完整 stride 同步(對稱=2、疾馳/併蹬=1)
-// ⑪ 運動開火:舉槍權重 MUST 從 0 連續收斂到 1，不得首幀瞬切
+// Unit hardpoints, muzzle alignment, combat stance, and recoil audit.
+// Prerequisite: server running on port 8620 (node server/server.js). Playwright sourced from mapping_elf.
+// Usage: node tools/audit_muzzle.mjs
+// 1. 32 hero ground forms: rig.wpn light/heavy breech-to-muzzle vector (ref frame fwd axis) MUST face forward
+//    (dot(+z) >= 0.8; exceptions: aegis shoulder VLS points up by design, monkey tail gun verified via heavy combat stance).
+// 2. monkey tail gun: heavy weapon combat stance (_aimH) MUST pivot muzzle forward (dot(+z) >= 0.6).
+// 3. Morph aerial forms (m -> 1): light/heavy muzzles MUST align with flight path (dot(+z) >= 0.75).
+// 4. Muzzle anchor MUST sit at weapon front (muz projection along fire axis >= ref origin) with flame anchor (rig.flames).
+// 5. Firing recoil: after fireFx injection, at least one of _kickL / _kickR / _kickB MUST > 0.02 (verified for light and heavy).
+// 6. Combat stance: units with gunR/gunL MUST converge weapon rotation.x to aim angle +-0.25 when stationary in combat.
+// 7. NPC: 4-faction infantry/rocketeer/howitzer + vehicles (turret pitch node) + helicopters (alternating twin muzzles + gunTilt).
+// 8. Mobile fire: during ground run / flight transit, light and heavy fire axes MUST remain facing forward (dot(+z) >= 0.9).
+// 9. Elephant / stegosaurus / centaur: root, second, and metapodial/phalangeal joints MUST all achieve > 0.03 rad stroke.
+// 10. Biped / quadruped units: trunk COM oscillation MUST synchronize with full stride cycle (symmetric = 2, gallop/bound = 1).
+// 11. Mobile fire transition: aim raise weight MUST converge continuously from 0 to 1 without instant snapping on first frame.
 import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';
 
-// 埠可由 SVS_URL 覆寫:8620 上常常跑著**另一個 checkout**(工作區之間共用那個埠),
-// 在那裡驗到的是別份程式碼而且不會報錯。
+// Port overridable via SVS_URL: workspaces sharing port 8620 risk hitting stale checkouts silently.
 const browser = await chromium.launch();
 const page = await browser.newPage();
 page.on('pageerror', (e) => console.log('PAGEERROR:', e.message));
@@ -30,7 +29,7 @@ const report = await page.evaluate(async () => {
 
   const Z = new THREE.Vector3(0, 0, 1);
   const out = [];
-  // ref 框架 fwd 軸('z'/'-z'/'y'/'-y'/'x'/'-x')→ 世界方向
+  // Transform ref frame forward axis ('z'/'-z'/'y'/'-y'/'x'/'-x') into world direction vector.
   const wpnDir = (set) => {
     const ax = set.fwd || 'z';
     const s = ax.startsWith('-') ? -1 : 1;
@@ -44,7 +43,7 @@ const report = await page.evaluate(async () => {
     const dt = 1 / 60;
     for (let i = 0; i < frames; i++) {
       t += dt;
-      if (fire) ent.fireFx = { t0: t - 0.05, slot: fire };   // 交戰保持(每幀刷新 t0 = 連射)
+      if (fire) ent.fireFx = { t0: t - 0.05, slot: fire };   // Continuous engagement: refresh t0 every frame to simulate burst fire.
       stepCombatFx(ent, t, dt);
       stepLocomotion(ent, dt, t, mesh.position.x, mesh.position.z, mesh.rotation.y);
     }
@@ -137,7 +136,7 @@ const report = await page.evaluate(async () => {
       ranges: row.nodes.map((n, j) => n ? row.hi[j] - row.lo[j] : -1) }));
   };
 
-  // ── ① 32 英雄 ──
+  // -- 1. 32 Heroes --
   for (const [id, ch] of Object.entries(CHARACTERS)) {
     const kind = charKind(id);
     const r = { id, kind, issues: [] };
@@ -151,23 +150,23 @@ const report = await page.evaluate(async () => {
       const ent = { mesh, heroY: 0 };
       settle(ent, mesh, 90);
       mesh.updateMatrixWorld(true);
-      // ④ 焰球
+      // 4. Muzzle flash sphere
       if (rig.muzzles && !rig.flames) r.issues.push('muzzles 有登記但無 rig.flames(焰球未掛)');
-      // ①④ 地面型 wpn 朝向與槍口位置
+      // 1 & 4. Ground form wpn orientation and muzzle placement
       for (const slot of ['light', 'heavy']) {
         const set = rig.wpn?.[slot];
         if (!set?.ref || !set?.muz) { r.issues.push(`wpn.${slot} 缺登記`); continue; }
         const dir = wpnDir(set);
         const dz = dir.dot(Z);
-        const vlsUp = slot === 'heavy' && vis.proto === 'aegis';          // 雙肩 VLS 朝上 = 本體特徵
-        const tailGun = slot === 'heavy' && vis.ground === 'monkey';      // 尾砲另驗交戰姿態(下)
-        const punch = slot === 'heavy' && vis.creature === 'roo';         // 拳砲另驗擊發前突(下)
+        const vlsUp = slot === 'heavy' && vis.proto === 'aegis';          // Shoulder VLS points upward by design.
+        const tailGun = slot === 'heavy' && vis.ground === 'monkey';      // Tail gun verified in combat stance below.
+        const punch = slot === 'heavy' && vis.creature === 'roo';         // Fist cannon verified during thrust phase below.
         if (!vlsUp && !tailGun && !punch && dz < 0.8) r.issues.push(`地面 ${slot} 槍口朝向 dot(+z)=${dz.toFixed(2)} < 0.8`);
         const o = set.ref.getWorldPosition(new THREE.Vector3());
         const proj = set.muz.getWorldPosition(new THREE.Vector3()).sub(o).dot(dir);
         if (!vlsUp && !tailGun && proj < -0.05) r.issues.push(`${slot} 槍口不在武器前端(投影 ${proj.toFixed(2)})`);
       }
-      // ⑧ 地面奔跑射擊:靜態特徵可以是 VLS/尾砲/拳砲,但移動擊發必須進入前向攻擊姿態。
+      // 8. Ground run-and-gun: static pose may allow VLS / tail gun / punch gun, but mobile fire must enter forward attack stance.
       for (const slot of ['light', 'heavy']) {
         ent.cfx = null; ent.fireFx = null; ent.heavyFx = null;
         const trace = moveFire(ent, mesh, 120, slot, Math.max(6, (rig.top || 12) * 0.72));
@@ -180,7 +179,7 @@ const report = await page.evaluate(async () => {
         const motion = movingRig.kind === 'aerial' ? '飛行射擊' : '奔跑射擊';
         if (dz < 0.9) r.issues.push(`${motion} ${slot} 槍口未朝正前(dot=${dz.toFixed(2)})`);
       }
-      // ⑨ 三台原始回報機體直測：s03/m06 為柱狀肢，s06 為蹄行，不能只驗柱狀共用曲線。
+      // 9. Direct verification for s03 / m06 (columnar limbs) and s06 (unguligrade) to prevent regressions hidden by shared curves.
       if (id === 's03' || id === 'm06' || id === 's06') {
         const rows = limbMotion(ent, mesh, 180, Math.max(6, (rig.top || 12) * 0.72));
         r.limbMotion = rows;
@@ -189,8 +188,8 @@ const report = await page.evaluate(async () => {
             r.issues.push(`${row.name} 根/第二/掌蹠節卡死(行程 ${row.ranges.map((v) => v.toFixed(3)).join('/')})`);
         }
       }
-      // 拳砲擊發前突(roo):蓄力把拳前伸鎖定 → 擊發瞬間拳口 MUST 前指
-      // (走完整蓄力→擊發序列,取全程峰值;無蓄力直接注入 fire 量不到前伸相)
+      // Punch cannon forward thrust (roo): charge thrusts fist forward and locks; muzzle MUST point forward on fire.
+      // Evaluates full charge-to-fire sequence for peak dot product; injecting fire directly skips thrust phase.
       if (vis.creature === 'roo' && rig.wpn?.heavy?.ref) {
         let t = settle(ent, mesh, 30);
         const dt = 1 / 60;
@@ -211,20 +210,20 @@ const report = await page.evaluate(async () => {
         if (best < 0.85) r.issues.push(`roo 拳砲蓄力/擊發未前突(峰值 dot=${best.toFixed(2)})`);
         ent.heavyFx = null; ent.cfx = null;
       }
-      // ⑥ 據槍角收斂
+      // 6. Aim angle convergence
       for (const [nm, gp] of [['gunR', rig.gunR], ['gunL', rig.gunL]]) {
         if (!gp?.g) continue;
         const d = Math.abs(gp.g.rotation.x - gp.aim);
         if (d > 0.25) r.issues.push(`${nm} 交戰未收斂到據槍角(Δ${d.toFixed(2)})`);
       }
-      // ⑤ 後座
+      // 5. Recoil
       for (const slot of ['light', 'heavy']) {
         ent.cfx = null;
         settle(ent, mesh, 6, slot);
         const k = Math.max(rig._kickL || 0, rig._kickR || 0, rig._kickB || 0);
         if (k < 0.02) r.issues.push(`${slot} 開火無後座(kick=${k.toFixed(3)})`);
       }
-      // ② monkey 尾砲交戰轉前
+      // 2. Monkey tail gun combat forward rotation
       if (vis.ground === 'monkey') {
         ent.cfx = null; ent.heavyFx = null;
         settle(ent, mesh, 150, 'heavy');
@@ -233,7 +232,7 @@ const report = await page.evaluate(async () => {
         if (dz < 0.6) r.issues.push(`monkey 尾砲重武器交戰未轉前(dot=${dz.toFixed(2)})`);
         ent.heavyFx = null;
       }
-      // ⑩ 不是抽驗共用曲線：每一台實際 rig 走滿一個 stride，再直接數軀幹的動態起伏。
+      // 10. Per-rig stride cycle: execute one complete stride and count dynamic trunk COM oscillations directly.
       if (rig.kind === 'biped' || rig.kind === 'quad') {
         const cycle = motionCycle(ent, mesh, Math.max(6, (rig.top || 12) * 0.72));
         r.motionCycle = cycle;
@@ -242,18 +241,15 @@ const report = await page.evaluate(async () => {
         if (rig.kind === 'quad' && cycle.pitch.count !== cycle.expected)
           r.issues.push(`${cycle.gait} 軀幹俯仰 ${cycle.pitch.count} 次/stride，應為 ${cycle.expected}`);
       }
-      // ③ 變形者飛行型:開火中量測(悟空懸停直立是 by design,開火保持會壓平回巡航
-      //    → 槍口朝攻擊方向;其餘機種開不開火皆已對齊)
+      // 3. Morph aerial forms: measured during active firing (monkey hovers vertically by design; sustained fire flattens into cruise towards target).
       if (kind === 'morph') {
         ent.cfx = null; ent.fireFx = null;
         ent.heroY = 60;
-        settle(ent, mesh, 300);   // L.morph damp 2.6 → 5s 內收斂到 1
+        settle(ent, mesh, 300);   // L.morph damp 2.6: converges to 1 within 5s.
         settle(ent, mesh, 90, 'light');
         mesh.updateMatrixWorld(true);
-        // ⚠ 量的 MUST 是**飛行型那一棵**的武裝(`rigAir`)—— 上面那個 `rig` 是函式開頭取的,
-        // 2026-08-14 兩棵樹並存之後它恆是**地面型**的 rig。舊制的地面型那一棵在飛行中整棵
-        // 凍在出廠姿態(槍口自然朝前)⇒ 這一條斷言其實恆真、什麼都沒驗到;2026-08-15 逐零件
-        // 變形上線後它會跟著飛行佈局擺過去,那個讀數既不是地面型也不是飛行型的設計值。
+        // Measurement MUST target the aerial rig (rigAir); the top-level rig reference points to ground form.
+        // Aerial flight morphs translate part transforms dynamically; sampling the ground rig yields invalid intermediate values.
         const rigA = mesh.userData.rigAir || mesh.userData.rig;
         for (const slot of ['light', 'heavy']) {
           const set = rigA.wpn?.[slot];
@@ -277,10 +273,10 @@ const report = await page.evaluate(async () => {
     out.push(r);
   }
 
-  // ── ⑦ NPC ──
+  // -- 7. NPC --
   const npc = [];
   for (const side of ['SWARM', 'STEEL', 'GUER', 'MILI']) {
-    // 第三方(GUER/MILI)編制無 APC(sim 只出 soldier/rocketeer/howitzer/tank/heli)
+    // Third-party factions (GUER/MILI) lack APCs (simulation spawns soldier/rocketeer/howitzer/tank/heli only).
     const kinds = ['creep:soldier', 'creep:rocketeer', 'creep:howitzer', 'creep:tank', 'creep:heli',
       ...(side === 'SWARM' || side === 'STEEL' ? ['creep:apc'] : [])];
     for (const kind of kinds) {
@@ -293,7 +289,7 @@ const report = await page.evaluate(async () => {
         const ent = { mesh, heroY: 0 };
         settle(ent, mesh, 90, 'light');
         mesh.updateMatrixWorld(true);
-        // 槍口錨 + 在機體前方
+        // Muzzle anchor placed forward of unit mesh origin.
         const mz = rig.muzzles?.light;
         if (!mz?.n) r.issues.push('缺 muzzles.light');
         else {
@@ -303,19 +299,19 @@ const report = await page.evaluate(async () => {
           if (!isHeli && fwdZ < 0.2) r.issues.push(`槍口不在機體前方(z 偏移 ${fwdZ.toFixed(2)})`);
         }
         if (rig.muzzles && !rig.flames) r.issues.push('焰球未掛');
-        // 後座
+        // Recoil
         const k = Math.max(rig._kickL || 0, rig._kickR || 0, rig._kickB || 0);
         if (k < 0.02) r.issues.push(`開火無後座(kick=${k.toFixed(3)})`);
-        // 戰鬥姿勢:手持(weap R)須有 aimPose;肩扛火箭筒也要抬臂扶筒(2026-07-22 規則 2)
+        // Combat stance: handheld weapon requires aimPose; shoulder rocket launcher requires raised arm support.
         if ((kind === 'creep:soldier' || kind === 'creep:howitzer' || kind === 'creep:rocketeer') && !rig.aimPose)
           r.issues.push('步兵缺 aimPose(戰鬥姿勢)');
-        // 車輛:砲塔 + pitch 節點
+        // Vehicles: turret + pitch node.
         if (kind === 'creep:apc' || kind === 'creep:tank') {
           const tur = mesh.userData.turret;
           if (!tur) r.issues.push('缺 userData.turret');
           else if (!tur.userData?.pitch) r.issues.push('砲塔缺 pitch 節點');
         }
-        // 直升機:雙槍口輪替或 gunTilt(蜂群頜砲單口 → 只驗 gunTilt)
+        // Helicopters: alternating dual muzzles or gunTilt (swarm jaw cannon is single-barrel, verifying gunTilt only).
         if (kind === 'creep:heli') {
           if (!mesh.userData.gunTilt) r.issues.push('直升機缺 gunTilt(共軛俯仰)');
           const tm = mesh.userData.turretMuzzles;

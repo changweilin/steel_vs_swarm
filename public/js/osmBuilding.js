@@ -1,10 +1,10 @@
 import { functionalBuildingParts } from './functionalBuildingParts.js';
 import { architecturalFacadeParts } from './architectureFacadeParts.js';
 import { architecturePartGeometry, facetCylinderGeometry } from './architecturePartGeometry.js';
-// ============ OSM 精確建物外環生成器 ============
-// 只吃 osmAreas.js 投影後的 outer/holes；不把輪廓縮成中心方盒。牆段與 blocker
-// 共用同一組 edge 資料，屋頂則由 ShapeGeometry 保留內洞。不同語意最後各自合批，
-// 因而 draw call 由型別數決定，不隨建物棟數線性增加。
+// ============ OSM Exact Building Footprint Generator ============
+// Consumes only projected outer/holes from osmAreas.js; does not collapse footprints into bounding boxes.
+// Wall segments share the same edge records with blockers; roof ShapeGeometry preserves inner holes.
+// Distinct semantics are batched separately so draw calls scale with archetype count, not building count.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { envMat, sceneObjectMat } from './toon.js';
@@ -22,8 +22,8 @@ const DEFAULT_H = Object.freeze({
   stadium: 18, garage: 5, hangar: 12, lighthouse: 18, castle: 16,
 });
 
-// 一種類型一列；幾何仍只由下方單一 polygon/attachment 生成器負責。
-// attachment 是識別性屋頂件，fit 不進完整輪廓時整件略過，不放大主體。
+// One row per type; geometry generation remains driven solely by polygon/attachment generators below.
+// Roof attachments are skipped when they exceed footprint bounds rather than stretching the main body.
 export const BUILDING_STYLE_ROWS = Object.freeze({
   house: { wall: 0xb7a893, roof: 0x6d5d52, attachment: 'chimney' },
   terrace: { wall: 0xb39a84, roof: 0x67584f, attachment: 'chimney' },
@@ -101,7 +101,7 @@ function edgeGeometry(ring, baseY, height, thickness, sourceId, kind, closed = t
     const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
     if (len <= EPS) continue;
     const ry = Math.atan2(dz, dx);
-    // 唇邊只長幾何：回報的 h/ty 維持原值，碰撞、立面佈局、可站立頂面逐位元不動。
+    // Parapet lip is visual geometry only: reported h/ty stay unchanged so collision and walkable roofs remain identical.
     const geo = new THREE.BoxGeometry(len, height + lipTop, thickness);
     geo.rotateY(-ry);
     geo.translate((a[0] + b[0]) / 2, baseY + (height + lipTop) / 2, (a[1] + b[1]) / 2);
@@ -155,9 +155,9 @@ export function pointInRing(x, z, ring) {
   return inside;
 }
 
-// 多邊形實體與圓盤是否相交(零 import 純幾何):外環頂點入盤、或外環邊緣掠過盤內、
-// 或盤心落在實體內(外環內且不在內洞裡) —— 塔堡 1/4 圈淨空的判定縫,呼叫端只餵圈,
-// 幾何只認這一份(中庭裡的塔不算重疊,照樣放行)
+// Polygon-disc intersection test (zero-import pure geometry): outer vertices inside disc,
+// edges intersecting disc, or disc center inside footprint outer and not in holes --
+// sole clearance test seam for base/turret 1/4 arcs (towers inside courtyards remain allowed).
 function polyHitsDisc(poly, cx, cz, r) {
   const outer = poly?.outer || [];
   for (const p of outer) if (Math.hypot(p[0] - cx, p[1] - cz) < r) return true;
@@ -210,7 +210,7 @@ function attachmentGeometry(kind, poly, y) {
     geo = new THREE.BoxGeometry(half, half, half);
     lift = half * 0.5;
   }
-  // 柱錐頂底蓋與側面拆法線群組（單一縫：architecturePartGeometry）。
+  // Disconnect normal smoothing groups between cylinder/cone caps and sides (architecturePartGeometry seam).
   if (geo.index && (type === 'dome' || type === 'silo' || type === 'spire' || type === 'finial'
       || type === 'stack' || type === 'mast' || type === 'flag' || type === 'beacon')) {
     const split = facetCylinderGeometry(geo, CYL_FACET_DEG);
@@ -221,9 +221,10 @@ function attachmentGeometry(kind, poly, y) {
 }
 
 export function paintGeometry(geometry, hex, variant = 0) {
-  // 柱錐頂底蓋與側面共用圈頂點 → 原地拆法線群組（球面保持平滑；方盒平板本已逐面拆點）。
-  // 原地換屬性：呼叫端有以 slice 取引用後忽略回傳值的路徑，不可換物件。
-  // 判 type 字串：此 three 版 CylinderGeometry 沒有 isCylinderGeometry 旗標。
+  // Cylinders and cones share seam vertices between caps and mantles -> split normal groups in-place
+  // (spheres remain smooth, boxes are already face-split). In-place attribute replacement is required
+  // because callers may retain geometry references ignoring return values. Check type string because
+  // this Three.js version lacks isCylinderGeometry.
   if (geometry?.index && (geometry.type === 'CylinderGeometry' || geometry.type === 'ConeGeometry')) {
     const split = facetCylinderGeometry(geometry, CYL_FACET_DEG);
     geometry.setIndex(split.index);
@@ -246,7 +247,7 @@ export function architecturalRoof(poly, y, style, actualRoofForm = null, metrics
   return architecturalRoofParts(poly, y, style, actualRoofForm, metrics, targetH).map(architecturePartGeometry);
 }
 
-/** 檢測基地是否落入水域或沼澤 */
+/** Detect whether building site intersects water bodies or swamps. */
 export function detectAquaticSite(poly, terrain, envCodeFn) {
   if (!terrain || typeof terrain.heightAt !== 'function' || !poly?.outer?.length) {
     return { aquatic: false, swamp: false, surfaceY: 0 };
@@ -275,9 +276,9 @@ export function detectAquaticSite(poly, terrain, envCodeFn) {
 }
 
 /**
- * 生成 OSM 建物外環／內洞。`materialOf` 回傳 { wall, roof }，可由 biomes 注入既有材質縫。
- * `rings` = 塔堡 1/4 圈 [{x,z,r}]:實體撞圈的輪廓整棟略過(寧缺勿錯),記進 skipped 供圖資缺口報表。
- * 回傳的 platforms 不放進 blockers，僅交給 main.js 的既有 surfaceAt 平台索引。
+ * Generate OSM building walls and roofs from outer/holes footprints.
+ * `rings` = turret/base clearance discs [{x,z,r}]: colliding buildings are omitted and recorded in skipped.
+ * Returned platforms are supplied to the main.js `surfaceAt` platform index rather than blockers.
  */
 export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
   const terrain = options.terrain;
@@ -329,7 +330,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
       effectiveKind = architecture?.functionInfo?.type || kind;
       const aquaticSite = detectAquaticSite(poly, terrain, options.terrainEnvCode);
       if (aquaticSite.aquatic) {
-        // 禁止使用工廠類建築
+        // Industrial/factory facilities forbidden on aquatic sites
         const isTransport = architecture?.functionInfo?.category === 'transport';
         const isFactory = !isTransport && (
           /industrial|factory|warehouse|power|garage|hangar/.test(effectiveKind)
@@ -345,7 +346,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
       }
       let targetH = (area?.tags?.height || area?.tags?.['building:levels']) ? height : (architecture?.targetHeight || height);
       if (aquaticSite.aquatic) {
-        // 禁止使用高層樓(最多三層, 每層 3.2m -> 9.6m)
+        // Limit height on aquatic sites (max 3 floors, 3.2m -> 9.6m)
         targetH = Math.min(targetH, 9.6);
       }
       const site = architecture?.site || sampleBuildingSite(poly, terrain);
@@ -377,7 +378,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         }
       }
       if (aquaticSite.aquatic) {
-        // 平台承台 (Stilt platform slab)
+        // Stilt platform slab
         const slabH = 0.28;
         const platformTop = roofGeometry(poly, platformY);
         const platformBottom = roofGeometry(poly, platformY - slabH);
@@ -389,7 +390,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         for (const g of platformEdge.geos) batch.details.push(paintGeometry(g, platColor, varIdx));
         for (const ed of platformEdge.edges) blockers.push(ed);
 
-        // 高架柱子 (Stilts / Pillars)
+        // Stilts / Pillars
         const pillarRadius = 0.26;
         const pillarColor = 0x423428;
         const pillarStep = 3.5;
@@ -455,7 +456,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         for (const geo of batch.roofs.slice(roofStart)) paintGeometry(geo, architecture.roof, architecture.variant);
         for (const geo of batch.details.slice(detailStart)) paintGeometry(geo, architecture.trim, architecture.variant);
 
-        // 基礎入地裙帶 (Grounding plinth): 沿外環向下扎實入地 0.25m，杜絕懸空縫隙 (水沼高腳屋由承台取代)
+        // Grounding plinth: extends 0.25m into terrain to eliminate daylight gaps (stilt slabs replace this in water/swamp)
         if (!aquaticSite.aquatic) {
           for (let i = 0; i < poly.outer.length; i++) {
             const a = poly.outer[i], b = poly.outer[(i + 1) % poly.outer.length];
@@ -469,11 +470,11 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
             batch.details.push(paintGeometry(plinth, architecture.trim || 0x475569, architecture.variant));
           }
         }
-        // 4 階段程序化管線 (4-Phase Procedural Pipeline)
-        // Phase 1: 依 OSM 圖資外環計算建物實體尺寸指標
+        // 4-Phase Procedural Pipeline
+        // Phase 1: Compute building footprint metrics from OSM outer ring
         const metrics = calculateFootprintMetrics(poly);
 
-        // Phase 2: 決議最適屋頂構造並自適應調整尺寸 (防止長寬比異常或過大面積失真)
+        // Phase 2: Resolve adaptive roof form and dimensions (prevents aspect ratio distortion)
         const adaptiveRoofForm = metrics.frame ? resolveAdaptiveRoofForm(
           architecture.roofForm,
           metrics,
@@ -490,14 +491,14 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         }
         batch.details.push(...functionalParts.parts.map(architecturePartGeometry));
 
-        // Phase 3: 建築立面與平面特徵渲染 (大玻璃窗、塗鴉牆、壁柱、格柵等)
-        // 正門／側門開口先算：首層被取代的窗不鋪玻璃，門坐上該窗位（單一縫）。
+        // Phase 3: Architectural facade features (glazing, wall panels, pilasters, grilles)
+        // Door openings resolved first: replaced ground-floor window slots omit glass so door mounts flush.
         const doorOpenings = (!architecture.functionalDesign)
           ? [resolveFrontDoorOpening(poly, facadeEdges, architecture, targetH),
             resolveSideDoorOpening(poly, facadeEdges, architecture, targetH)].filter(Boolean) : [];
         batch.details.push(...architecturalFacade(facadeEdges, architecture, wallThickness, doorOpenings));
 
-        // Phase 4: 外部零件依屋頂類型嚴格篩選相容性後隨機配置
+        // Phase 4: Exterior appurtenances filtered for roof type compatibility
         if (!architecture.functionalDesign) batch.details.push(...generateBuildingAppurtenances(poly, facadeEdges, baseY, topY, architecture, wallThickness, adaptiveRoofForm, metrics, terrain));
       }
       if (architecture) {

@@ -1,21 +1,18 @@
-// ============ 多面體零件語彙(機體建模共用幾何庫)============
-// 2026-08-12 使用者指示:「所有機體不要只使用簡單的立方體,參考各機體的 2D 圖像,針對
-// 身體/四肢/頭部/翅膀/羽毛/尾巴/觸手等不同生物部位,設計各自的多面體或多邊形來組合,
-// 特別是羽毛/尾巴/觸手需採用多零件組合;武器也一樣的邏輯」。
-// 本檔 = 那句話的「字母表」:楔台/稜柱/旋成體/薄刃鰭片/羽扇/節鏈/纜束 —— 每一個都是
-// 「一顆幾何」以上的**零件語彙**,逐機檔案(mechs/*.js)只准用這裡的字母拼字,
-// MUST NOT 在逐機檔內自己 new BufferGeometry(第二份實作)。
+// ============ Polyhedral Component Primitives (Shared Mech Modeling Geometry) ============
+// Shared geometric vocabulary: frustums (tboxF), extruded prisms (prismF), lathes (latheF),
+// airfoils/fins (finF/wingF), feather fans (fanF), articulated segment chains (chainF),
+// cable bundles (cablesF), rotors (rotorF), and weapon pods (gunPodF).
+// Mech component modules (mechs/*.js) MUST assemble models using this vocabulary;
+// MUST NOT instantiate local BufferGeometry.
 //
-// 三條紀律:
-//   ① 硬邊多面體(非索引、逐面法線)MUST 附 userData.outlineGeo 焊接平滑副本 ——
-//      toon.js outlinify 的反轉外殼沿法線外推,per-face 法線會把描邊撐裂(toon.js:926)。
-//   ② 零 Math.random(§2.3):羽扇/節鏈的片間差異一律決定性遞變(索引函數)。
-//   ③ 材質一律走 matF → toonMat(A14);本檔只 import three 與 ../geo3d.js。
+// Rules:
+//   1. Hard-edged faceted geometries (non-indexed, per-face normals) MUST attach welded
+//      smooth copies in userData.outlineGeo -- toon.js outlinify expands along normals,
+//      and split face normals would tear outlines.
+//   2. Zero Math.random: inter-element variations in fans/chains MUST use deterministic index functions.
+//   3. Materials MUST use matF -> toonMat; this file imports only Three.js and ../geo3d.js.
 import * as THREE from 'three';
-// ---- 基本積木:唯一縫住 `../geo3d.js`(2026-08-14 新版建模整合)----------------
-// 這一段本來是 models.js 內部函式的**鏡射副本**(forge.js 檔頭列的第一筆欠帳)。
-// 新建模進遊戲之後那份副本就是服役中的第二份實作 ⇒ 收成一份。
-// 這裡只做**別名 re-export**:40 支逐機檔的 `matF/bxF/cylF/…` 一行不改。
+// ---- Base primitives: re-exported from ../geo3d.js ----
 import {
   mat as matF, dim as dimF, outlineW as outlineWF, segLimb as segLimbF,
   bx as bxF, cyl as cylF, sph as sphF, cone as coneF, torus as torusF, jetFlame as jetF,
@@ -23,15 +20,15 @@ import {
 
 export { matF, dimF, outlineWF, segLimbF, bxF, cylF, sphF, coneF, torusF, jetF };
 
-// ---- 本語彙自己的常用色 ----
+// ---- Palette constants ----
 export const IRON = 0x23262a, GUNMETAL = 0x1a1d20, COAL = 0x14171a, INK = 0x0d0f11;
 export const BONE = 0xd8d4c8, BRASS = 0xe8b33a;
 
-// ---- 關節機構語彙(逐機互異的「字母」;自 forge.js 移入)---------------------
-/** t01/t11/t06:外露液壓缸(單端錨、斜置、不跨樞軸)+ 缸頭關節環;core 給亮桿芯 */
-// `barrel`/`head` 選用色(省略 = 逐位元同舊行為):t01 這一輪要求關節處統一白色,
-// 而缸體/缸頭環的顏色本來寫死在這裡 —— 呼叫端拿不到缸頭環那顆 mesh(只回缸體),
-// 要在外面改色就得再找一次,那是第二份「哪一顆是缸頭環」的知識。
+// ---- Articulated mechanism primitives ----
+/**
+ * Hydraulic cylinder: single-ended anchor, angled, non-spanning + joint collar ring; optional polished core rod.
+ * barrel/head colors are parameterized so callers can recolor joint accents without traversing child meshes.
+ */
 export function hydCyl(p, r, len, x, y, z, tiltX, core = null, barrel = IRON, head = 0x3a4048) {
   const c = cylF(p, r, r, len, 6, x, y, z, barrel, { metalness: 0.85 });
   c.rotation.x = tiltX;
@@ -42,12 +39,12 @@ export function hydCyl(p, r, len, x, y, z, tiltX, core = null, barrel = IRON, he
   }
   return c;
 }
-/** t02:雙件式肌腱缸(上段深色缸體 + 下段外露亮活塞桿)—— 生體 × 機構的縫合感 */
+/** Two-piece tendon cylinder (dark upper body + exposed polished rod) for biomechanical joints. */
 export function sinew(p, h, x, y, z, lite) {
   cylF(p, 0.11, 0.11, h * 0.62, 8, x, y + h * 0.16, z, IRON, { metalness: 0.8 });
   cylF(p, 0.05, 0.05, h * 0.92, 6, x, y - h * 0.06, z, lite, { metalness: 0.9 });
 }
-/** t12:蜈蚣體節 —— 兩片圓角感的疊板(下片窄薄前移壓出疊層陰影)+ 節末外露軸環 */
+/** Centipede segment: layered overlapping plates + exposed joint collar. */
 export function seg2(p, w, len, d, y, main, sub) {
   bxF(p, w, len, d, 0, y - len / 2, 0, main, { metalness: 0.55 });
   bxF(p, w * 0.9, len * 0.94, d * 0.92, 0, y - len / 2 - len * 0.03, 0.03, sub, { metalness: 0.55 });
@@ -55,9 +52,9 @@ export function seg2(p, w, len, d, y, main, sub) {
   ax.rotation.z = Math.PI / 2;
 }
 
-// ══════════ 多面體語彙 ══════════
+// ========== Polyhedral Geometry Primitives ==========
 
-/** 位置焊接(容差 1e-4)→ 索引幾何 + 平滑法線:描邊外殼專用副本。 */
+/** Positional vertex welding (1e-4 tolerance) -> indexed geometry + smooth normals for toon outline shell. */
 export function weldSmooth(geo) {
   const pos = geo.attributes.position;
   const map = new Map();
@@ -81,7 +78,7 @@ export function weldSmooth(geo) {
   return g;
 }
 
-/** 硬邊化:非索引 + 逐面法線(多面體的「面」),並掛描邊救援副本(紀律 ①)。 */
+/** Hard facet geometry: non-indexed + per-face normals with smooth outline copy. */
 export function facet(geo) {
   const flat = geo.index ? geo.toNonIndexed() : geo;
   flat.computeVertexNormals();
@@ -96,7 +93,7 @@ const mesh = (parent, geo, x, y, z, color, opts) => {
   return m;
 };
 
-/** 由「逐面四角」清單組非索引幾何(內部:tbox/fin 共用)。每 quad = [a,b,c,d] 逆時針。 */
+/** Assembles non-indexed geometry from CCW quad lists [a, b, c, d]. */
 export function quadsGeo(quads) {
   const arr = [];
   for (const [a, b, c, d] of quads) arr.push(...a, ...b, ...c, ...a, ...c, ...d);
@@ -106,8 +103,8 @@ export function quadsGeo(quads) {
 }
 
 /**
- * 楔台(tapered box / frustum)—— 裝甲板與肢殼的主力,取代「簡單的立方體」。
- * 底面 w0×d0、頂面 w1×d1、高 h,頂面可平移 (sx, sz) 做斜切/後掠;原點在幾何中心。
+ * Tapered box / frustum for armor plates and limb shells.
+ * Bottom w0 x d0, top w1 x d1, height h; top offset by (sx, sz) for taper/sweep.
  * spec = { w0, d0, w1, d1, h, sx = 0, sz = 0 }
  */
 export function tboxF(parent, spec, x, y, z, color, opts) {
@@ -122,20 +119,20 @@ export function tboxF(parent, spec, x, y, z, color, opts) {
     [sx + w1 / 2, h / 2, sz + d1 / 2], [sx - w1 / 2, h / 2, sz + d1 / 2],
   ];
   const geo = quadsGeo([
-    [t[0], t[3], t[2], t[1]],   // 頂 +y
-    [b[0], b[1], b[2], b[3]],   // 底 −y
-    [b[3], b[2], t[2], t[3]],   // 前 +z
-    [b[1], b[0], t[0], t[1]],   // 後 −z
-    [b[2], b[1], t[1], t[2]],   // 右 +x
-    [b[0], b[3], t[3], t[0]],   // 左 −x
+    [t[0], t[3], t[2], t[1]],   // Top +y
+    [b[0], b[1], b[2], b[3]],   // Bottom -y
+    [b[3], b[2], t[2], t[3]],   // Front +z
+    [b[1], b[0], t[0], t[1]],   // Back -z
+    [b[2], b[1], t[1], t[2]],   // Right +x
+    [b[0], b[3], t[3], t[0]],   // Left -x
   ]);
   return mesh(parent, geo, x, y, z, color, opts);
 }
 
 /**
- * 稜柱(extruded polygon)—— 胸廓剖面/盾形/月牙刃/領翼/楔形頭殼的主力。
- * pts = XY 平面上的多邊形頂點([[x,y],...] 逆時針),沿 Z 擠出 depth(置中)。
- * opts.bevel = { t, s } 選用斜切邊。
+ * Extruded polygon for thoracic sections, shields, crescent blades, and head cowls.
+ * pts = CCW polygon vertices on XY plane [[x,y],...], extruded along Z by depth (centered).
+ * opts.bevel = { t, s } optional beveling.
  */
 export function prismF(parent, pts, depth, x, y, z, color, opts = {}) {
   const shape = new THREE.Shape();
@@ -149,38 +146,33 @@ export function prismF(parent, pts, depth, x, y, z, color, opts = {}) {
   });
   geo.translate(0, 0, -depth / 2);
   const flat = facet(geo);
-  // 斜切邊的擠出體:bevel 產生的近重合頂點焊出來的平滑殼會在正面畫出雜亂描邊線
-  // (2026-08-12 t12 實測)—— 這種形狀輪廓本就圓滑,描邊殼直接用原幾何即可。
+  // Beveled extrusions already have rounded profiles; welded outline shell creates artifacts on bevels.
   if (bevel) delete flat.userData.outlineGeo;
   return mesh(parent, flat, x, y, z, color, matOpts);
 }
 
 /**
- * 旋成體(lathe)—— 球肩圓頂/波紋鼓/砲口/關節環的主力。
- * profile = [[r, y], ...] 由下而上繞 Y 旋轉;seg 徑向段數(預設 10,低模面數紀律)。
+ * Lathe body for spherical shoulders, domes, corrugated drums, muzzles, and joint collars.
+ * profile = [[r, y], ...] bottom-to-top rotated around Y; seg = radial segments (default 10).
  */
 export function latheF(parent, profile, seg, x, y, z, color, opts) {
   const geo = new THREE.LatheGeometry(profile.map(([r, py]) => new THREE.Vector2(Math.max(0.0001, r), py)), seg || 10);
-  geo.computeVertexNormals();          // 旋成體維持平滑(圓頂/鼓身);描邊不需救援副本
+  geo.computeVertexNormals();          // Lathes remain smooth; outlines require no separate weld copy.
   return mesh(parent, geo, x, y, z, color, opts);
 }
 
 /**
- * 薄刃鰭片(單片羽毛/刀刃/尖刺/槳葉)—— 沿 +Y 伸長,原點在根部(呼叫端當羽軸樞轉)。
+ * Tapered blade fin (individual feather, blade, spine, rotor blade) extending along +Y; origin at root pivot.
  * spec = { len, w0, w1, t, sweep = 0, camber = 0 }
- *   w0 根寬 → w1 梢寬(x 向);t 根厚(往梢自動收薄);sweep/camber 梢端與中段沿 +z 位移;
- * 三段剖面(根/中/梢)= 有稜有面的「多邊形」羽片,不是一片薄板。
+ *   w0 root width -> w1 tip width (along x); t root thickness (tapered to tip); sweep/camber tip offset along +z.
+ * 3-stage profile (root/mid/tip) forms a faceted polygon, not a flat plane.
  *
- * ⚠ 三條紀律(2026-08-13 一次修掉五個檔案的同一族病灶,寫在這裡免得再來一次):
- *  ① **片面的法線是局部 z**(長 y / 寬 x / 厚 z)。要一片**有前後緣**的舵面/尾翼/水平羽,
- *     MUST 繞自身長軸補 `rotation.y = π/2` 把「寬」轉到弦向;少了這一步就是一片
- *     厚度只有 t 的板正對氣流 —— 正面看是完整的一片、側視幾乎消失,而每一條斷言都正常。
- *  ② `sweep`/`camber` 位移的是**局部 z = 厚度軸**,不是弦平面內的後掠。做完 ① 之後它會變成
- *     出平面的偏擺/上反(水平片還會左右反號)⇒ 轉正的片一律把 sweep 歸零,後掠改由呼叫端
- *     傾斜整片表達。(翼面的真後掠在 `wingF` 的 sweep,那一支才是弦平面內的。)
- *  ③ 分邊時 `rotation.z = sx·π/2` 會把 +y 送到 **−sx·x** ⇒ 兩片交叉;要指向 +sx·x 得用 `−sx·π/2`。
- *     而 ① 的 Ry 與這個 Rz **MUST 拆兩層 Group**(three 預設尤拉序 'XYZ' ⇒ R = Rx·Ry·Rz,
- *     Rz 先作用會把 Ry 的轉正結果整個轉走);Rx 配 Ry 則安全(Ry 先、且保留 y 軸)。
+ * Rules:
+ *  1. Fin surface normal lies along local z (len y / width x / thickness z). Control surfaces and flukes
+ *     MUST apply rotation.y = PI/2 around the length axis to align width with chordwise flow.
+ *  2. sweep/camber offsets local z (thickness axis). Chordwise sweep should be handled by tilting the parent group.
+ *  3. rotation.z = sx * PI/2 directs +y to -sx * x; pointing toward +sx * x requires -sx * PI/2.
+ *     rotation.y and rotation.z MUST be separated into two parent groups under Euler 'XYZ' order.
  */
 export function finF(parent, spec, x, y, z, color, opts) {
   const { len, w0, w1, t, sweep = 0, camber = 0 } = spec;
@@ -195,25 +187,24 @@ export function finF(parent, spec, x, y, z, color, opts) {
   };
   const s0 = sec(0), s1 = sec(0.55), s2 = sec(1);
   const band = (a, b) => [
-    [a[3], a[2], b[2], b[3]],   // 前 +z
-    [a[1], a[0], b[0], b[1]],   // 後 −z
-    [a[2], a[1], b[1], b[2]],   // 右 +x
-    [a[0], a[3], b[3], b[0]],   // 左 −x
+    [a[3], a[2], b[2], b[3]],   // Front +z
+    [a[1], a[0], b[0], b[1]],   // Back -z
+    [a[2], a[1], b[1], b[2]],   // Right +x
+    [a[0], a[3], b[3], b[0]],   // Left -x
   ];
   const geo = quadsGeo([
-    [s0[0], s0[1], s0[2], s0[3]],                 // 根蓋 −y
+    [s0[0], s0[1], s0[2], s0[3]],                 // Root cap -y
     ...band(s0, s1), ...band(s1, s2),
-    [s2[0], s2[3], s2[2], s2[1]],                 // 梢蓋(收薄後近稜線)
+    [s2[0], s2[3], s2[2], s2[1]],                 // Tip cap (tapered ridge)
   ]);
   return mesh(parent, geo, x, y, z, color, opts);
 }
 
 /**
- * 羽扇(多零件組合)—— 翅膀/鬃毛/尾羽/火焰翎的主力:一片羽毛 = 一顆零件,
- * n 片沿樞軸扇形排列,長度自中央往兩側決定性遞減(§2.3:零亂數)。
+ * Feather fan (multi-element assembly) for wings, manes, rectrices, and crests.
+ * n fins arranged radially along pivot, length decreases deterministically toward edges.
  * spec = { n, arc, len, edgeF = 0.55, gap = 0.012, fin: { w0, w1, t, sweep, camber } }
- *   排列面 = 樞軸 Group 的局部 XY 平面(逐片繞 Z 轉 ±arc/2);呼叫端旋轉 Group 定向。
- * 回傳 { g(樞軸), fins[] }。
+ * Returns { g (pivot), fins[] }.
  */
 export function fanF(parent, spec, x, y, z, color, opts) {
   const { n, arc, len, edgeF = 0.55, gap = 0.012, fin } = spec;
@@ -224,7 +215,7 @@ export function fanF(parent, spec, x, y, z, color, opts) {
   for (let i = 0; i < n; i++) {
     const u = n === 1 ? 0 : i / (n - 1) - 0.5;              // −0.5 ~ +0.5
     const f = finF(g, { ...fin, len: len * (1 - (1 - edgeF) * Math.abs(u) * 2) },
-      0, 0, (i - (n - 1) / 2) * gap, color, opts);          // 逐片 z 錯位防 z-fighting
+      0, 0, (i - (n - 1) / 2) * gap, color, opts);          // Progressive z-offset prevents z-fighting
     f.rotation.z = -arc * u;
     fins.push(f);
   }
@@ -232,17 +223,15 @@ export function fanF(parent, spec, x, y, z, color, opts) {
 }
 
 /**
- * 節鏈(多零件尾巴/觸手/鞭)—— 每節 = 樞軸 Group + 收分節身 + 節間關節環,
- * 節身沿 −Z(尾巴慣例,同 t06/m05;rig.tailSegs 直接吃回傳的 segs)。
- * ⚠ rot0/rotD 只在**靜態展示**成立:segs 一旦掛進 rig.tailSegs,locomotion whipTail
- * 每幀直接覆寫節樞軸 rotation.x/y(segs[0] 只留 base、其餘 ≈0)—— 垂掛/上捲的基礎姿勢
- * MUST 放在 chainF 之上的**靜態中介 Group**,或把曲線寫進節身幾何(2026-08-12 仿生批次
- * 四台實測同一個坑:s06/s09/m02 走中介 Group、s09 尾另走位置編碼手排)。
- * rig.tents 不受此限(tentGuard 寫入含 j.base ⇒ 基礎角保留)。
+ * Articulated segment chain for tails, tentacles, and whips.
+ * Each segment = pivot Group + tapered segment body + inter-segment collar ring.
+ * Segments extend along -Z (tail convention matching t06/m05; consumed directly by rig.tailSegs).
+ * Note: rot0/rotD apply only in static pose. Once hooked into rig.tailSegs, locomotion whipTail
+ * overwrites segment pivot rotation.x/y per frame. Baseline curve posture MUST be set via
+ * an intermediate static Group above chainF or baked directly into segment geometry.
  * spec = { n, x, y, z, len0, len1, r0, r1, rot0 = 0.5, rotD = -0.05,
  *          ring = true, ringColor = IRON, seg = 8, drawSeg? }
- *   drawSeg(group, i, { r, len }):逐節加料(鱗片/毛簇/發光環)的掛點。
- * 回傳 { segs[], tip(末節 Group), lenOf(i) }。
+ * Returns { segs[], tip (last segment Group), tipZ }.
  */
 export function chainF(parent, spec, color, opts) {
   const { n, x = 0, y = 0, z = 0, len0, len1, r0, r1,
@@ -270,21 +259,20 @@ export function chainF(parent, spec, color, opts) {
   return { segs, tip: segs[n - 1], tipZ: -(len0 + (len1 - len0)) };
 }
 
-// ══════════ 航空語彙(2026-08-12 第四輪:機體台擴充到航空機體)══════════
-// 三個字母服務「飛機/無人機這類有現實機體原型」的那一頁:翼面 / 旋翼 / 尾焰。
-// 與生物語彙同一條紀律 —— 逐機檔只准用字母拼字,MUST NOT 自己 new BufferGeometry。
+// ========== Aerial Craft Primitives ==========
+// Primitives for aircraft and UAV archetypes: airfoils (wingF), rotors (rotorF), and jet flames (jetF).
+// Component modules MUST construct forms from these primitives without creating local BufferGeometry.
 
 /**
- * 翼面(有翼型剖面的梯形機翼)—— 沿 +X 伸出,原點在翼根前後緣中點。
- * 「一片薄板」是這一類機體最容易畫錯的地方:真機翼有**弦長收分 + 後掠 + 上反 + 扭轉**,
- * 剖面是拱形不是矩形。逐段三剖面(根/中/梢)拼出多面體,側視看得到翼型厚度。
+ * Trapezoidal wing with cambered airfoil section, extending along +X (origin at root mid-chord).
+ * Features chord taper, sweep, dihedral, and washout twist.
  * spec = { span, c0, c1, t, sweep = 0, dihedral = 0, twist = 0 }
- *   c0 根弦 → c1 梢弦(沿 Z;+z = 前緣);t 根厚(往梢自動收薄);
- *   sweep 梢端後移量(−z 方向為正);dihedral 梢端上抬量;twist 梢端洗流扭轉(弧度)。
+ *   c0 root chord -> c1 tip chord (along Z; +z = leading edge); t root thickness (tapered to tip);
+ *   sweep tip aft offset (-z positive); dihedral tip vertical rise; twist tip washout (radians).
  */
 export function wingF(parent, spec, x, y, z, color, opts) {
   const { span, c0, c1, t, sweep = 0, dihedral = 0, twist = 0 } = spec;
-  // 翼型剖面(6 邊形:前緣尖 → 上表面拱起 → 後緣尖 → 下表面近平)
+  // 6-sided cambered airfoil profile: sharp leading edge -> cambered upper surface -> trailing edge -> flat lower surface
   const sec = (u) => {
     const c = c0 + (c1 - c0) * u;
     const th = t * (1 - 0.55 * u);
@@ -292,10 +280,7 @@ export function wingF(parent, spec, x, y, z, color, opts) {
     const pts = [[0.5, 0], [1 / 6, 0.5], [-1 / 3, 0.35], [-0.5, 0], [-1 / 3, -0.2], [1 / 6, -0.3]];
     return pts.map(([cz, cy]) => {
       const pz = cz * c, py = cy * th;
-      // 扭轉繞翼展軸(+X):剖面在 ZY 平面內轉 tw;後掠 = 整個剖面沿 −z 平移(逐位元不動翼型)
-      // ⚠ 2026-08-13 修:sweep 自本函式誕生起被解構卻**從未進過回傳值** ——
-      //   八台機體宣告的後掠角(s12 主翼自稱「大後掠」0.72、m05@flight 0.5…)實得一律 0°,
-      //   而每一條既有斷言與每一張截圖都「正常」(翼還是翼,只是平的)。
+      // Washout twist around spanwise axis (+X); sweep translates section along -z without distorting chord profile
       return [u * span, py * Math.cos(tw) - pz * Math.sin(tw) + dihedral * u,
         pz * Math.cos(tw) + py * Math.sin(tw) - sweep * u];
     });
@@ -313,11 +298,10 @@ export function wingF(parent, spec, x, y, z, color, opts) {
 }
 
 /**
- * 旋翼(多零件:定向臂座 + 自轉槳盤 + n 片收分槳葉)—— 旋翼機的視覺主角。
+ * Rotor assembly: gimbal holder + rotating rotor hub + n tapered blades.
  * spec = { r, blades = 2, pitch = 0.12, hub = r*0.14, thick = 0.03, tilt = [x,z] }
- *   tilt = 臂座朝向(傾轉旋翼/尾旋翼給非零值);pitch = 槳距(逐片繞自身長軸)。
- * 回傳 { holder(定向), prop(自轉;呼叫端推進 rotation.y), blades[] } ——
- * 自轉由**呼叫端**每幀推進(戰場走 game.js spinners 吃 userData.spin,展示台同一份名冊)。
+ *   tilt = gimbal orientation; pitch = blade pitch (collective angle of attack).
+ * Returns { holder, prop (spinning hub; animated by caller), blades[] }.
  */
 export function rotorF(parent, spec, x, y, z, color, opts) {
   const { r, blades = 2, pitch = 0.12, hub, thick = 0.03, tilt } = spec;
@@ -326,33 +310,31 @@ export function rotorF(parent, spec, x, y, z, color, opts) {
   holder.position.set(x, y, z);
   if (tilt) { holder.rotation.x = tilt[0] || 0; holder.rotation.z = tilt[1] || 0; }
   parent.add(holder);
-  cylF(holder, hr * 0.85, hr, hr * 1.6, 8, 0, 0, 0, COAL, { metalness: 0.85 });   // 馬達
+  cylF(holder, hr * 0.85, hr, hr * 1.6, 8, 0, 0, 0, COAL, { metalness: 0.85 });   // Motor housing
   const prop = new THREE.Group();
   prop.position.y = hr * 1.1;
   holder.add(prop);
   latheF(prop, [[0, 0], [hr * 0.9, 0.01], [hr * 0.75, hr * 0.5], [0, hr * 0.62]], 8, 0, 0, 0, GUNMETAL, { metalness: 0.9 });
   const out = [];
   for (let i = 0; i < blades; i++) {
-    // 逐葉一個方位 Group,槳葉自身只往 +x 長 —— **MUST NOT 在同一顆網格上同時寫
-    // rotation.y 與極座標 position**:那兩者的 z 號相反(rotation.y 把 +x 送到
-    // (cos, 0, −sin),而 (cos, 0, +sin) 是另一個方向)⇒ 槳葉會離開槳轂浮在旁邊,
-    // 而在正面視角剛好看不出來(2026-08-12 s04 實測)。
+    // Each blade has a dedicated azimuth Group; blade geometry extends purely along +x.
+    // MUST NOT combine rotation.y and polar translation on the same mesh due to sign convention disparity.
     const arm = new THREE.Group();
     arm.rotation.y = i * Math.PI * 2 / blades;
     prop.add(arm);
     const b = tboxF(arm, { w0: r * 0.94, d0: r * 0.2, w1: r * 0.94, d1: r * 0.1, h: thick, sz: -r * 0.05 },
       r * 0.5, 0, 0, color, opts);
-    b.rotation.x = pitch;              // 槳距(攻角)
+    b.rotation.x = pitch;              // Blade pitch (angle of attack)
     out.push(b);
   }
   return { holder, prop, blades: out };
 }
 
 /**
- * 機載武器莢(旋翼/定翼/撲翼機共用)—— 莢殼(收分楔台)+ 收分砲管 + 膛口制退器 + 槍口燈。
- * 幾何一律沿局部 **+z 朝前**(rig.wpn 的 `fwd:'z'` 契約;FPV 座艙複製時方向才對得上)。
+ * Aircraft gun pod: aerodynamic casing + tapered barrel + muzzle brake + muzzle flash node.
+ * Geometry points along local +z (fulfills rig.wpn fwd:'z' contract for FPV parity).
  * spec = { len, r, accent, muzR = r*0.55, brake = true }
- * 回傳 { g, muz } —— muz 是**發光網格**(lightGlowM/heavyGlowM 直接吃它的 material)。
+ * Returns { g, muz } where muz is the emissive flash mesh for lightGlowM / heavyGlowM.
  */
 export function gunPodF(parent, spec, x, y, z, color, opts) {
   const { len, r, accent, muzR = r * 0.55, brake = true } = spec;
@@ -374,13 +356,13 @@ export function gunPodF(parent, spec, x, y, z, color, opts) {
   return { g, muz };
 }
 
-// 噴射尾焰 `jetF` = `geo3d.jetFlame` 的別名(本檔頂部 re-export):
-// 回傳契約 `{ g, m1, m2 }`,locomotion.js stepAerial 直接吃(推力 ∝ 速度:焰長/亮度/抖動)。
-// 錐尖朝局部 −y;呼叫端轉 rotation.x = π/2 讓噴流指向機尾(−z)。
+// Jet flame `jetF` = alias of `geo3d.jetFlame` (re-exported at top):
+// Contract returns { g, m1, m2 }, consumed by locomotion.js stepAerial (velocity-proportional thrust).
+// Cone apex points along local -y; caller rotates rx = PI/2 to direct exhaust aft (-z).
 
 /**
- * 纜束(外露肌腱/管線,多零件)—— p0 → p1 之間 k 條細管微散開 + 下垂;
- * 生體感來自「每條各自成件」而不是一根粗管。零亂數:散開角 = 索引均分。
+ * Cable bundle (exposed tendon/hydraulic piping): k curves dispersed between p0 and p1 with droop.
+ * Deterministic angular distribution across indices without random variance.
  * spec = { p0: [x,y,z], p1: [x,y,z], k, r, sag = 0.06, spread = 0.03 }
  */
 export function cablesF(parent, spec, color, opts) {

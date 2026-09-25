@@ -1,43 +1,41 @@
-// ============ 角色頭像 / 立繪(程序生成 SVG + 手繪覆蓋)============
-// 與 models.js 同一套路:先查 manifest 有無手繪檔,沒有就走程序生成 fallback。
-// 後續補上手繪立繪時,只要把檔名登記進 PORTRAIT_MANIFEST 即可,不必動任何呼叫端。
+// ============ Character Portraits and Avatars (Procedural SVG + Illustrated Overrides) ============
+// Follows models.js pattern: check manifest for illustrated asset; fall back to procedural generator if absent.
+// Registering illustrated portraits in PORTRAIT_MANIFEST seamlessly overrides procedural versions without changing callers.
 //
-// 風格對齊賽璐璐核心(toon.js):平塗色塊 + 單一暗部多邊形 + 粗黑描邊,不做漸層陰影。
-// 立繪 viewBox 300×400(半身),頭像共用同一份 SVG,只是把 viewBox 裁到頭部。
+// Matches toon.js cel-shaded aesthetic: flat color fills + single shadow polygon + heavy outline, no soft gradients.
+// Portrait viewBox 300x400 (bust); avatar shares the same SVG cropped to head region.
 
 import { CHARACTERS, SIDES, charKind, abilArtFile } from './data.js';
 import { LORE } from './lore.js';
-// 亂數直取唯一縫 `rng.js`(`hazards.js` 只是舊入口的 re-export,而它 import three)——
-// 走舊入口的話,本檔連同所有 import 它的模組(storyui.js …)在 Node 端就再也載不起來,
-// 離線稽核只好退回「讀原文用 regex 猜」。行為逐位元不變:兩邊是同一支 `mulberry32`。
+// Mulberry32 RNG pulled directly from rng.js (hazards.js is a legacy re-export importing Three.js).
+// Direct import enables Node.js loading during headless audits (e.g. storyui.js).
 import { mulberry32 } from './rng.js';
 
-/** 已有手繪立繪/頭像的角色 id(對齊 public/assets/characters・avatars 現有檔案)。
- * 新角色上線但美術未到位時,不列入此表即自動退回程序生成 fallback。 */
+/** Character IDs with illustrated art assets (mirrors public/assets/characters and avatars).
+ * Unregistered characters fall back to procedural SVG generation. */
 const DRAWN_ART_IDS = [
   's01', 's02', 's03', 's04', 's05', 's06', 's07', 's08', 's09', 's10', 's11', 's12',
   't01', 't02', 't03', 't04', 't05', 't06', 't07', 't08', 't09', 't10', 't11', 't12',
   'm01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm07', 'm08',
 ];
-/** 手繪立繪覆蓋表:id -> 圖檔路徑(相對 public/)。留空 = 全部走程序生成。透明背景。 */
+/** Illustrated portrait manifest: id -> image path (relative to public/). Transparent background. */
 export const PORTRAIT_MANIFEST = Object.fromEntries(
   DRAWN_ART_IDS.map((id) => [id, `assets/characters/${id}_base.png`]));
-/** 手繪頭像覆蓋表(未登記則沿用立繪或程序生成)。透明背景。 */
+/** Illustrated avatar manifest (falls back to portrait or procedural if omitted). Transparent background. */
 export const AVATAR_MANIFEST = Object.fromEntries(
   DRAWN_ART_IDS.map((id) => [id, `assets/avatars/${id}.png`]));
 
 export const hasDrawnArt = (id) => !!PORTRAIT_MANIFEST[id];
 
-/** 招式立繪覆蓋表:id -> { skill, ult } 圖檔路徑(相對 public/)。
- * 檔名由 `data.js abilArtFile` 推導(`{id}_skill_{atk|def}.png`),此表只做「有無手繪」的登記;
- * 未登記者退回半身立繪 portraitURL(與 base 同一張,不破圖)。 */
+/** Ability cutin manifest: id -> { skill, ult } paths (relative to public/).
+ * File paths derived via data.js abilArtFile; unregistered characters fall back to base portrait. */
 export const CUTIN_MANIFEST = Object.fromEntries(
   DRAWN_ART_IDS.map((id) => [id, { skill: abilArtFile(id, 'skill'), ult: abilArtFile(id, 'ult') }]));
 
 export const hasCutinArt = (id, slot) => !!CUTIN_MANIFEST[id]?.[slot];
 
-/** 招式立繪(出招演出用):守招看 skill 檔、攻招看 ult 檔;攻守已寫進檔名(見 ABIL_NATURE)。
- * 未登記手繪 → 退回半身立繪(舊制逐位元一致)。 */
+/** Ability cutin asset: defensive uses skill asset, offensive uses ult asset (see ABIL_NATURE).
+ * Falls back to base portrait when no custom cutin art is registered. */
 export function cutinArtURL(id, slot) {
   return CUTIN_MANIFEST[id]?.[slot] || portraitURL(id);
 }
@@ -46,7 +44,7 @@ const OUTLINE = '#14161a';
 const cache = new Map();
 
 const hex = (n) => `#${(n >>> 0).toString(16).padStart(6, '0')}`;
-/** f<0 變暗、f>0 變亮(線性混黑/白;賽璐璐只需要兩階,不做 gamma) */
+/** Linear blend with black (f < 0) or white (f > 0); two-tone cel shading without gamma correction. */
 function shade(color, f) {
   const n = typeof color === 'number' ? color : parseInt(color.slice(1), 16);
   const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) =>
@@ -55,7 +53,7 @@ function shade(color, f) {
 }
 const seedOf = (id) => [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 
-// ---- 髮型:回傳 { back, front }(SVG path/圖形字串;back 畫在頭之前)----
+// ---- Hair styling: returns { back, front } SVG fragments (back renders behind head) ----
 function hairShapes(style, col) {
   const dk = shade(col, -0.32);
   const st = `stroke="${OUTLINE}" stroke-width="3"`;
@@ -93,7 +91,7 @@ function hairShapes(style, col) {
   }
 }
 
-/** 頭戴裝備:無人機操作員 = FPV 目鏡;機甲駕駛 = 半罩頭盔 + 單眼 HUD */
+/** Headgear: drone operator = FPV goggles; mech pilot = open-face helmet + monocular HUD. */
 function gearShapes(kind, hue) {
   const lens = shade(hue, 0.25);
   const dk = shade(hue, -0.45);
@@ -133,7 +131,7 @@ function buildSVG(id) {
 
   const armor = shade(hue, -0.35);
   const armorLit = shade(hue, -0.1);
-  // 背景速度線:賽璐璐漫畫感,角度依角色種子微變
+  // Background speedlines: comic cel styling; angle varies slightly with character seed.
   const lineA = -18 - rnd() * 14;
   const lines = Array.from({ length: 9 }, (_, i) => {
     const x = -60 + i * 46 + rnd() * 12;
@@ -154,23 +152,23 @@ function buildSVG(id) {
     <g transform="rotate(${lineA.toFixed(1)} 150 200)">${lines}</g>
     <circle cx="150" cy="150" r="104" fill="${sideCol}" opacity="0.10"/>
 
-    <!-- 軀幹 / 駕駛服 -->
+    <!-- Torso / flight suit -->
     <path d="M28,400 C36,318 92,266 150,266 C208,266 264,318 272,400 Z" fill="${armor}" stroke="${OUTLINE}" stroke-width="4"/>
     <path d="M112,272 L150,318 L188,272 L206,282 L150,344 L94,282 Z" fill="${armorLit}" stroke="${OUTLINE}" stroke-width="3"/>
     <rect x="126" y="196" width="48" height="56" fill="${shade(skin, -0.18)}" stroke="${OUTLINE}" stroke-width="3"/>
 
     ${H.back}
-    <!-- 頭 -->
+    <!-- Head -->
     <path d="M98,140 C98,96 120,78 150,78 C180,78 202,96 202,140 C202,182 178,216 150,216 C122,216 98,182 98,140 Z"
           fill="${skin}" stroke="${OUTLINE}" stroke-width="4"/>
-    <!-- 眼睛落在目鏡/面罩高度:無人機操作員被目鏡完全遮住,機甲駕駛只露左眼(右眼是 HUD 單目鏡) -->
+    <!-- Eye alignment at goggle/visor height: drone goggles occlude eyes; pilot helmet reveals left eye with monocular HUD on right -->
     <ellipse cx="132" cy="143" rx="7.5" ry="5" fill="${eye}" stroke="${OUTLINE}" stroke-width="2"/>
     <ellipse cx="168" cy="143" rx="7.5" ry="5" fill="${eye}" stroke="${OUTLINE}" stroke-width="2"/>
     <path d="M141,190 Q150,196 159,190" fill="none" stroke="${OUTLINE}" stroke-width="3" stroke-linecap="round"/>
     ${H.front}
     ${gearShapes(kind, hue)}
 
-    <!-- 賽璐璐暗部:右半側單一色塊(不做漸層)-->
+    <!-- Cel shadow: flat single-tone shadow polygon on right half -->
     <path d="M150,0 L300,0 L300,400 L206,400 C214,320 190,266 150,260 Z" fill="#0a0d12" opacity="0.20"/>
     <rect x="0" y="0" width="300" height="400" fill="none" stroke="${sideCol}" stroke-width="3" opacity="0.55"/>
   </g>
@@ -179,7 +177,7 @@ function buildSVG(id) {
 
 const uri = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
-/** 半身立繪(300×400)。已登記手繪檔 → 直接回傳圖檔路徑(透明背景) */
+/** Bust portrait (300x400). Returns illustrated image path if registered (transparent background). */
 export function portraitURL(id) {
   if (PORTRAIT_MANIFEST[id]) return PORTRAIT_MANIFEST[id];
   let svg = cache.get(id);
@@ -187,7 +185,7 @@ export function portraitURL(id) {
   return uri(svg);
 }
 
-/** 頭像(正方形):裁到頭部的同一份 SVG */
+/** Square avatar: cropped to head region from the shared SVG. */
 export function avatarURL(id) {
   if (AVATAR_MANIFEST[id]) return AVATAR_MANIFEST[id];
   if (PORTRAIT_MANIFEST[id]) return PORTRAIT_MANIFEST[id];

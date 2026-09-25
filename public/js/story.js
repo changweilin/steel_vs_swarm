@@ -1,26 +1,27 @@
-// ============ 劇情戰役:雙陣營雙故事線 ============
-// 客戶端專用內容模組(比照 lore.js,伺服器不 import)。此檔只住「內容 + 進度」,不含平衡數值。
+// ============ Campaign Storylines: Dual-Faction Dual-Narrative ============
+// Client-side content module (mirrors lore.js, not imported by server). Holds narrative content and progress tracking only, no balance values.
 //
-// 【結構】六個共用戰場、雙視角:選鋼鐵(協約)或蜂群(同盟)決定你打哪一邊。
-//   同一章 = 同一戰場/環境,兩邊都是「有名有姓」的鏡像陣容(你方 heroes+mercs 對上敵方 heroes+mercs)。
-//   出戰複用既有房間/開戰流程(main.js launchStoryBattle):你選一名主駕,其餘同隊角色 = 指名 AI 僚機,
-//   敵方 = 對面陣容的指名 AI。通關(擊毀敵主堡)解鎖同陣營下一章;兩陣營進度各自獨立。
+// Structure:
+// Six shared battlefields with dual perspective: selecting STEEL or SWARM determines the playable perspective.
+// Each chapter maps to a shared battlefield/environment with mirrored rosters (allied heroes+mercs vs enemy heroes+mercs).
+// Deployment reuses existing room/matchmaking flow (main.js launchStoryBattle): player selects pilot, teammates are designated AI wingmen,
+// enemies are designated AI opponents. Clearing a chapter (destroying enemy base) unlocks the next chapter for that faction; progression is per-faction.
 //
-// 【角色分配(MUST 維持,見下)】
-//   陣營角色:每陣營 12 名,前五章各 2 名 + 終章 2 名 = 12 → 每位剛好出場一次。
-//   傭兵(MERC)8 名:雙方各加入一次(共 16 席 = 前五章每場兩邊各 1 ×5×2=10 + 終章每邊 3 ×2=6),
-//     但「同一場戰役」兩邊的傭兵一定不同(下方分配已驗證兩兩不重疊)。
-//   teamSize:前五章 3(3v3 → lanesFor=L2)、終章 5(5v5 → L3);皆有預烤兵線。
-//   稽核:node -e 讀本檔驗「每陣營 t/s 各 12 不重複、每 m 出現 STEEL 側 1 次 + SWARM 側 1 次、同章兩側傭兵不交集」。
+// Roster Allocation Invariants:
+// - Faction pilots: 12 per faction. Chapters 1-5 have 2 pilots each + final chapter has 2 = 12 total (each appears exactly once).
+// - Mercenaries: 8 total. Each joins both factions once (16 seats total = Ch 1-5 have 1 per side x 5 x 2 = 10 + final chapter has 3 per side x 2 = 6).
+//   Within the same battle, both sides MUST have disjoint mercenaries.
+// - teamSize: Ch 1-5 use 3 (3v3 -> lanesFor=L2), final chapter uses 5 (5v5 -> L3); all have pre-baked lanes.
+// - Audit: verified by node script asserting unique faction pilots, merc count, and disjoint mercenaries per chapter.
 //
-// img = 開戰前簡報過場立繪(assets/story/*,STEEL 用 _steel、SWARM 用 _swarm)。
+// img = Briefing cutin portrait displayed before battle launch (assets/story/*, STEEL uses _steel, SWARM uses _swarm).
 //
-// 【攻堅順序(2026-08-10 使用者定案)】劇情戰役 MUST 依序打:前線砲塔 → 中段砲塔 → 主堡,
-//   前一階沒清完後一階完全免傷(結算住 `sim.siegeLocked`、階段定義住 `data.js SIEGE`;
-//   旗標由 `main.startStoryChapter` 的 `cfg.siege = true` 帶進開房)。
-//   每推平一階播一場雙方對白 —— 內容住 `storytalk.js`、演出住 `dialogue.js`,
-//   **本檔的 `heroes`/`mercs` 就是那三場對白的選角名冊**(改陣容 MUST 回頭看 storytalk,
-//   稽核 `tools/audit_story_talk.mjs` 會擋下「發言者不在場」與「有人整章沒開口」)。
+// Siege Progression:
+// Story battles MUST follow strict sequence: frontline turret -> mid turret -> base core.
+// Damage to subsequent tiers is locked until previous tier is destroyed (settled in sim.siegeLocked, tiers defined in data.js SIEGE;
+// enabled via cfg.siege = true from main.startStoryChapter).
+// Destroying a tier triggers dialogue cutscene (content in storytalk.js, presentation in dialogue.js).
+// heroes/mercs in this file define the dialogue cast (checked by tools/audit_story_talk.mjs).
 
 export const WORLD = `這是一場誰都負擔得起的戰爭。
 
@@ -264,10 +265,10 @@ export const STORY = [
   },
 ];
 
-/** 取某章某陣營的內容(STEEL / SWARM) */
+/** Retrieve chapter content for given faction (STEEL / SWARM). */
 export const chapterSide = (ch, side) => (side === 'STEEL' ? ch.STEEL : ch.SWARM);
 
-// ---- 進度(localStorage;每陣營各存一條已通關章節 id 陣列)----
+// ---- Progress Persistence (localStorage array of cleared chapter IDs per faction) ----
 const KEY = (side) => 'svs_story_' + side;
 
 export function loadStoryCleared(side) {
@@ -276,7 +277,7 @@ export function loadStoryCleared(side) {
 export function isCleared(side, id) {
   return loadStoryCleared(side).includes(id);
 }
-/** 第 0 章恆解鎖;其後需同陣營前一章已通關 */
+/** Chapter 0 is always unlocked; subsequent chapters require the previous chapter cleared. */
 export function chapterUnlocked(side, i) {
   if (i <= 0) return true;
   return loadStoryCleared(side).includes(STORY[i - 1].id);
