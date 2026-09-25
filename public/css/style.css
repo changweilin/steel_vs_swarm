@@ -2142,6 +2142,51 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .sq-box.down { opacity: 0.6; color: var(--danger); border-color: rgba(255, 68, 54, 0.5); }
 .sq-box.down .sq-fill { background: rgba(255, 68, 54, 0.2); }
 
+/* ---- 異常狀態圖示列(status icons strip above HP bar) ----
+   排列規則:依剩餘秒數升序(最快到期在最左)。
+   圖示為 28×28px 正方形,顏色由 --si-bg 注入。
+   三個角徽:
+     右上 = 剩餘秒數(白字)
+     右下 = 正/負效果箭頭(綠↑ / 紅↓)
+     左下 = 層數計數(金字;僅多層狀態出現)              */
+.status-icons { display: flex; flex-wrap: wrap; gap: 2px; }
+.status-icons:empty { display: none; }
+.si {
+  position: relative;
+  width: 28px; height: 28px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 2px;
+  background-color: var(--si-bg, #1a1a2e);
+  overflow: visible;
+  flex-shrink: 0;
+}
+/* SVG 圖形主體塞滿磚塊 */
+.si > svg { display: block; width: 100%; height: 100%; }
+/* 右上:剩餘秒數 */
+.si-t {
+  position: absolute; top: -1px; right: -1px;
+  font-family: var(--mono); font-size: 7px; font-weight: 700;
+  color: #fff; background: rgba(0,0,0,0.65);
+  padding: 0 2px; line-height: 1.4;
+  pointer-events: none;
+}
+/* 右下:極性箭頭 */
+.si-p {
+  position: absolute; bottom: -1px; right: -1px;
+  font-size: 8px; line-height: 1;
+  pointer-events: none;
+}
+.si-p.pos { color: #4cde6a; }   /* 正面效果:綠↑ */
+.si-p.neg { color: #ff4436; }   /* 負面效果:紅↓ */
+/* 左下:層數(僅多層顯示) */
+.si-n {
+  position: absolute; bottom: -1px; left: -1px;
+  font-family: var(--mono); font-size: 7px; font-weight: 700;
+  color: #ffd54f; background: rgba(0,0,0,0.65);
+  padding: 0 2px; line-height: 1.4;
+  pointer-events: none;
+}
+
 /* 招式盒(Q 小招 / E 大招) */
 .ab-row { display: flex; gap: 5px; }
 .ab-box {
