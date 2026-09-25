@@ -170,9 +170,7 @@ const ACCEPTED = {
   aokigahara: { kinds: ['built:high'], why: '錨點 = 河口湖町(要路網);宣告描述的是青木原樹海' },
   blackforest: { kinds: ['built:high'], why: '錨點 = 鎮上(要路網);宣告描述的是黑森林' },
   hehuanshan: { kinds: ['axis:未開發地'], why: '錨點 = 埔里(要路網);宣告描述的是合歡山' },
-  iguazu: { kinds: ['axis:water', 'built:high'], why: '錨點 = 鎮上(要路網);瀑布與水體不在 L1 方框內' },
   tamsui: { kinds: ['axis:water'], why: '錨點 = 淡水市街(要路網);宣告描述的是河口濕地' },
-  rio: { kinds: ['axis:未開發地'], why: '錨點 = 市區(要路網);宣告的綠地是周邊山體,不在 L1 方框內' },
 };
 /** 落差扣掉名冊赦免的那幾種 ⇒ 剩下的就是「沒有人看過」的,MUST 紅 */
 function unaccepted(id, notes) {
