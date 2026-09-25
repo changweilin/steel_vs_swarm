@@ -1,16 +1,16 @@
-// ============ s11 逐機零件檔(航空機體;dev-only)============
-// s11「錶芯」精密工作機(fixed / wing:'vtail'):圓桿機身 + 高展弦比主翼 + V 形尾 + 尾推槳
-// 2D 定案圖:public/assets/cyberpunk_art/mechs/s11_static.png(/ _moving / _heavy)
-// 設計權威 = mecha.js gen.sil:「細長的等直弦主翼加一組 V 形尾,機身是一根乾淨的圓桿;
-// 整台機看不到一根多餘的桿件。」gen.note:「活動關節 MUST 剛好數得出 11 個。」
-//   ⇒ 外露軸承座恰 **11 個**(JOINTS 常數,逐顆生成;改數量請改那一個數字並回頭看 gen.note)。
-// 等直弦(c0 === c1)是這台的識別點:MUST NOT 給它收分翼(那就變成別台長航機)。
+// ============ s11 part file (airframe; dev-only) ============
+// s11 precision worker (fixed / wing:'vtail'): rod fuselage + high-aspect main wing + V tail + pusher prop
+// 2D approved art: public/assets/cyberpunk_art/mechs/s11_static.png(/ _moving / _heavy)
+// Authority = mecha.js gen.sil: slender constant-chord main wing + one V tail on a clean rod fuselage;
+// no spare struts. gen.note: exposed joints MUST number exactly 11.
+//   -> exactly JOINTS bearing seats (generated per joint; change that one number and re-check gen.note).
+// Constant chord (c0 === c1) is this craft's marker: MUST NOT taper it into another long-endurance wing.
 import {
   bxF, cylF, sphF, latheF, prismF, wingF, rotorF, gunPodF,
   IRON, GUNMETAL, COAL,
 } from '../geo.js';
 
-const JOINTS = 11;            // gen.note 明列的數字:外露軸承座剛好 11 個
+const JOINTS = 11;            // gen.note count: exactly 11 exposed bearing seats
 
 export default {
   label: '錶芯(s11 精密工作機)', kind: 'air', height: 3.4,
@@ -28,23 +28,23 @@ export default {
 
   body(c, t) {
     const { PAL, accent, dark } = c;
-    // 圓桿機身(等徑;+z 機首)
+    // Rod fuselage (constant diameter; +z = nose)
     const fus = latheF(t, [[0, -1.6], [0.09, -1.5], [0.11, -0.4], [0.11, 0.7], [0.09, 1.0], [0, 1.12]],
       12, 0, 0, 0, PAL.main, { metalness: 0.6 });
     fus.rotation.x = Math.PI / 2;
-    // 前段酬載莢 + 觀測窗
+    // Forward payload pod + viewport
     latheF(t, [[0, -0.34], [0.14, -0.26], [0.16, 0.1], [0.1, 0.3], [0, 0.34]], 12, 0, -0.06, 0.76,
       PAL.mid, { metalness: 0.55 }).rotation.x = Math.PI / 2;
     const win = sphF(t, 0.1, 0, -0.1, 1.02, accent, { emissive: accent, emissiveIntensity: 1.2 });
     win.scale.z = 0.7;
-    // 外露軸承座 ×11(精密機的美學:每一顆都看得見、數得出來)
+    // 11 exposed bearing seats (precision look: every one visible and countable)
     for (let i = 0; i < JOINTS; i++) {
       const u = i / (JOINTS - 1);
       const z = 0.9 - u * 2.3;
       const b = cylF(t, 0.125, 0.125, 0.045, 10, 0, 0, z, 0xb98a4a, { metalness: 0.9 });
       b.rotation.x = Math.PI / 2;
     }
-    // V 形尾:尾桁 + 兩片上反 45°
+    // V tail: boom + two 45-deg panels
     cylF(t, 0.05, 0.06, 0.5, 8, 0, 0.08, -1.42, dark, { metalness: 0.7 }).rotation.x = Math.PI / 2 - 0.16;
     for (const sx of [-1, 1]) {
       const v = wingF(t, { span: 0.72, c0: 0.36, c1: 0.24, t: 0.055, sweep: 0.16, dihedral: 0.62 },
@@ -55,14 +55,14 @@ export default {
 
   lift(c, t) {
     const { PAL, K } = c;
-    // 等直弦高展弦比主翼(c0 === c1;這台的識別點)+ 翼尖小端板
+    // Constant-chord high-aspect main wing (c0 === c1; identity marker) + tip plates
     for (const sx of [-1, 1]) {
       const w = wingF(t, { span: 2.28, c0: 0.4, c1: 0.4, t: 0.075, sweep: 0.03, dihedral: 0.12 },
         sx * 0.1, 0.1, 0.02, PAL.main, { metalness: 0.55 });
       w.scale.x = sx;
       bxF(t, 0.025, 0.2, 0.34, sx * 2.36, 0.14, 0.02, PAL.lite, { metalness: 0.5 });
     }
-    // 尾置推進槳(後推)+ 整流錐
+    // Tail pusher prop + spinner cone
     latheF(t, [[0, 0], [0.07, 0.06], [0.05, 0.16], [0, 0.2]], 8, 0, 0, -1.68, PAL.deep, { metalness: 0.75 })
       .rotation.x = Math.PI / 2;
     const r = rotorF(t, { r: 0.66 * K.barrelF, blades: 2, pitch: 0.3, thick: 0.026, tilt: [-Math.PI / 2, 0] },
@@ -73,7 +73,7 @@ export default {
   mount(c, F) {
     const { accent, K, dark } = c;
     const t = F.tilt;
-    // 精密機的武裝也是「少而精」:翼根兩具細莢,不掛外掛梁(桿件不准多)
+    // Minimal armament to match: two slim root pods, no extra pylons (no spare struts)
     const lp = gunPodF(t, { len: 0.72 * K.barrelF, r: 0.075, accent }, -0.34, -0.1, 0.44, dark, { metalness: 0.8 });
     const hp = gunPodF(t, { len: 0.92 * K.barrelF, r: 0.1, accent }, 0.34, -0.1, 0.4, dark, { metalness: 0.8 });
     return {
