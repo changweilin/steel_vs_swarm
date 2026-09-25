@@ -702,7 +702,7 @@ export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 // ---- 戰鬥核心公式(FPS × DOTA)----
 // HEROIC:玩家(英雄)持有的武器 vs NPC 同型武器 → 射程 +20%、威力 +50%。
 // VITALS:雙層 HP — 第一層護盾(非戰鬥 OOC_S 秒後自然回復,不吃護甲減免)、
-//         第二層裝甲 HP(只能回主堡 / 治療招式回復,吃護甲值減免)。
+//         第二層裝甲 HP(脫戰以磁力 1/4 自然回復,回主堡/治療招式加速,吃護甲值減免)。
 // 護甲減免(DOTA 曲線):實效護甲 a = max(0, 護甲 − 破甲),減免 = a / (a + AR_K)。
 // 爆擊(FPS):武器 crit 機率 × critX 倍率(未定義用 CRIT_X),僅直擊武器,AoE 不爆。
 export const HEROIC = { range: 1.2, dmg: 1.5 };
@@ -4408,7 +4408,7 @@ export const UNITS = {
   // range/rate 仍與塔取最大值 ⇒ 這兩欄的初始值(310/1.2)實際會生效,dmg 的初始值(90)不會。
   base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 310, rate: 1.2, speed: 0,  sight: 310 },
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
-  // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招 + 重武器擊發皆消耗,
+  // 裝甲 hp 脫戰以磁力 1/4 自然回復,回主堡/治療招式加速;mp = 電力(施放小招/大招 + 重武器擊發皆消耗,
   // 見 heavyMpCost);mpRegen 為「充能」滿級規格(實際回速 × chargeF(充能等級))。
   // 無人機 = 單架(SQUAD.N=1,2026-07-17):hp/shield/armor 於 UNITS 之後 derive = 機甲平均 ×SQUAD.HP_F
   // (80%;MUST NOT 手寫),傷害 = 機甲全額(heroWeapon() 唯一折算點,DMG=1)。各自重生、各自吃冷卻。

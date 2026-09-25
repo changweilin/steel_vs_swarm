@@ -6081,7 +6081,7 @@ export class BattleSim {
           // 超級方無主堡:雙陣營主堡旁皆可修裝甲(深入敵後搶修,風險自負)
           const bases = isSuperSide(b.side) ? [this.basePos.SWARM, this.basePos.STEEL] : [this.basePos[b.side]];
           const patched = bases.some((bp) => bp && dist2d(b.x, b.z, bp[0], bp[1]) < GAME.HERO_HEAL_R);
-          // 裝甲平時只有主堡修得回來;rally 生效期間**全場都修**(那正是這一招換來的東西),
+          // 裝甲脫戰以磁力 1/4 速率自然回復,回主堡/rally 加速;rally 生效期間**全場都修**(那正是這一招換來的東西),
           // 速率同吃 rg。MUST NOT 把「全場都修」寫成永久旗標 —— 它只活在 mods 的時窗裡。
           if (rg > 1 || patched) {
             // 來源分流:rally 生效中(rg > 1)= 招式,否則 = 主堡修裝甲。BOSS 只認前者(減半),

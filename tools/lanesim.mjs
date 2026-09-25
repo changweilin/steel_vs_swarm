@@ -932,7 +932,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       fire(M, foe, enemyTower, t, foes);
       // 長按 = 大招:CD 到就放(載具組送載具 / 自身型組就地開窗,見 castAbil)
       vehicles.push(...castAbil(M, foe, enemyTower, t, foes, ownFort));
-      // 電力 / 護盾回復(脫戰 OOC_S 後回盾)+ 有錢就升級
+      // 電力 / 雙層回復(脫戰 OOC_S 後回盾 + 裝甲 1/4)+ 有錢就升級
       M.mp = Math.min(M.mp0, M.mp + M.mpRegenBase * M.chF * LANE.DT);
       const rg = U ? U.regenF : 1;
       if (t - M.hurtT >= VITALS.OOC_S) {
@@ -945,7 +945,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
           if (rg > 1) M.ultBy.healed += (M.hp - b4hp) * (1 - 1 / rg);
         }
       }
-      // 復甦(s12 rally):裝甲平時只有主堡修得回來,時窗內**全場都修**(對齊 sim 的 rally 分支)
+      // 復甦(s12 rally):裝甲脫戰以磁力 1/4 速率自然回復,回主堡/rally 加速,時窗內**全場都修**(對齊 sim 的 rally 分支)
       if (rg > 1 && M.hp < M.maxHp) {
         const b4 = M.hp;
         M.hp = Math.min(M.maxHp, M.hp + UNITS[M.kind].regen * rg * LANE.DT);
