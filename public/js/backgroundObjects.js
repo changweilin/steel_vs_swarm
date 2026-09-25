@@ -1,5 +1,5 @@
-// 背景物件的決定性組裝縫：指定主結構 → 每個目標槽位獨立挑葉零件 → 子類別配色抽樣。
-// NPC、戰鬥建築與玩家機甲不引用本檔；它們各自保留權威 Rig / 碰撞 / 動畫契約。
+// Deterministic background-object assembly seam: pick main structure -> choose leaf parts per target slot -> sample subcategory palette.
+// NPCs, combat buildings, and player mecha MUST NOT reference this file; each keeps its own authoritative rig / collision / animation contract.
 import { RUNTIME_BACKGROUND_CATALOG, RUNTIME_PARTS } from './runtimeParts.js';
 import {
   VEHICLE_PREFIX,
@@ -76,8 +76,9 @@ function decorate(part, role) {
 }
 
 /**
- * 把來源槽的零件群塞進目標槽包絡。槽中心與方向取自目標，因此接合點不受來源物件座標影響；
- * 槽內相對位置與尺寸一起縮放，疊層零件仍保持為同一個組件。
+ * Fit a source slot's part group into the target slot envelope. Center and orientation come from the target,
+ * so joints stay independent of source-object coordinates; intra-slot offsets and sizes scale together,
+ * keeping stacked parts as one assembly.
  */
 function fitLeafSlot(part, role, sourceSlot, targetSlot) {
   const out = decorate(part, role);
@@ -198,11 +199,11 @@ function proceduralEnvironmentObject(targetKey, seed, options) {
 }
 
 /**
- * 以穩定 seed 產生一個背景物件描述子。相同 targetKey + seed 恆得到同一組零件與配色；
- * seed 先量化成固定變體數，讓渲染端仍可按成品 key 合批。
- * options 只增加覆核台／工具需要的選擇，不改變未傳 options 時的遊戲路徑：
+ * Build one background-object descriptor from a stable seed. Same targetKey + seed always yields the same parts and palette;
+ * the seed quantizes to a fixed variant count so the renderer can still batch by finished key.
+ * options only adds review-rig / tooling selection and never changes the game path when options are omitted:
  *   partOverrides: { 'role:target-slot': { sourceKey, sourceSlotId } | { random: true } }
- *   randomParts: true、paletteId、randomPalette: true
+ *   randomParts: true, paletteId, randomPalette: true
  */
 export function generateBackgroundObject(targetKey, seed = 0, options = {}) {
   if (!Number.isSafeInteger(seed)) throw new TypeError('背景物件 seed 必須是安全整數');
@@ -217,7 +218,7 @@ export function generateBackgroundObject(targetKey, seed = 0, options = {}) {
   const parts = target.mainParts.map(({ index, role }) => decorate(targetEntry.parts[index], role));
   const sources = {};
   const slotSources = [];
-  // 目標自己的槽位名冊固定成品接合點；來源只提供槽內零件，不得新增目標不存在的位置。
+  // The target's own slot roster fixes finished-product joints; sources only supply in-slot parts and MUST NOT add positions the target lacks.
   for (const targetRole of target.leafRoles) {
     const choices = structure.members.flatMap((member) => member.leafRoles
       .filter((row) => row.role === targetRole.role)
@@ -282,7 +283,7 @@ export function backgroundObjectTargets(family = null) {
   return [...entries.values()].filter((entry) => !family || entry.family === family).map((entry) => entry.key);
 }
 
-/** 正式環境資產 + 可獨立散布的邊界物件；長構造不會進入此名冊。 */
+/** Production environment assets + independently scatterable boundary objects; long structures stay out of this roster. */
 export function sharedBackgroundObjectTargets(category = null) {
   const runtime = Object.entries(ENVIRONMENT_OBJECTS)
     .filter(([, entry]) => !category || entry.category === category)
@@ -299,7 +300,7 @@ export function sharedBackgroundObjectTargets(category = null) {
 }
 
 /**
- * 背景物件共同出口。既有 v5/v6 資產維持原組裝路徑；edge/ 前綴直接轉用邊界生成器。
+ * Shared background-object entry point. Existing v5/v6 assets keep their assembly path; the edge/ prefix routes to the boundary generator.
  */
 export function generateSharedBackgroundObject(targetKey, seed = 0, options = {}) {
   if (targetKey.startsWith(ENVIRONMENT_PREFIX)) return proceduralEnvironmentObject(targetKey, seed, options);

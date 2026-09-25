@@ -1,5 +1,4 @@
-// 執行期型錄凍結檔(原由已退場的 tools/ai3d 管線決定性產生;現為手維護,
-// 改 counts 必須同步下面兩份名冊的實際列數)。
+// Frozen runtime catalog (hand-maintained; changing counts MUST sync with the actual row counts of the two rosters below).
 export const RUNTIME_PARTS_META = Object.freeze({
   "schemaVersion": 1,
   "policy": {

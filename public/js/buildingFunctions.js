@@ -1,5 +1,5 @@
-// 圖資功能語意單一來源；明確用途先於建築舊形制與環境猜測。
-// styles 是封閉候選池，文化偏好只可調整池內權重。
+// Single source of truth for map-feature function semantics; explicit function wins over legacy building form and environment guesses.
+// styles is a closed candidate pool; cultural preference may only reweight entries inside the pool.
 export const BUILDING_FUNCTIONS = Object.freeze({
   hospital: { label: '醫院', category: 'medical', styles: ['modern', 'brutalist_concrete'], range: 'commercial_office', landmark: 'hospital' },
   clinic: { label: '診所／健康中心', category: 'medical', styles: ['modern', 'tile_apartment'], range: 'residential_townhouse' },
@@ -116,10 +116,10 @@ export function taggedBuildingFunction(tags = {}) {
   return { category: rule.category, type, key: rule.range, locked: true, label: rule.label, structureOnly: !!rule.structureOnly };
 }
 
-// ============ 專案原生功能性建築（非 img-to-3D）============
-// 這六類的用途識別、程序剪影與碰撞剖面是遊戲語意的一部分，必須走 biomes.js 的
-// LANDMARKS 原生生成器；照片只可作美術參考，不得進正式 img-to-3D 執行期型錄。
-// 本檔零 THREE、零 DOM，瀏覽器場景與 Node 建模工具共用同一份排除名冊。
+// ============ Project-native functional buildings (not img-to-3D) ============
+// Function recognition, procedural silhouette, and collision profile for these six kinds are game semantics
+// and MUST go through the biomes.js LANDMARKS native generator; photos are art reference only and MUST NOT enter the production img-to-3D runtime catalog.
+// This file has zero THREE and zero DOM; browser scenes and Node modeling tools share the same exclusion roster.
 
 export const NATIVE_FUNCTIONAL_BUILDINGS = Object.freeze({
   hospital: 'bld_hospital',
@@ -136,7 +136,7 @@ export const NATIVE_FUNCTIONAL_SUBPARTS = Object.freeze(Object.values(NATIVE_FUN
 export const isNativeFunctionalSubpart = (family, subpart) =>
   family === 'building' && NATIVE_FUNCTIONAL_SUBPARTS.includes(subpart);
 
-/** OSM tags → 原生功能性建築類型；其餘建物交還 biomes.js 的一般分類。 */
+/** OSM tags -> native functional building kind; all other buildings fall back to the general biomes.js classification. */
 export function nativeFunctionalKind(tags = {}) {
   const functional = taggedBuildingFunction(tags);
   if (functional) {

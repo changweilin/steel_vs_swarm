@@ -1,7 +1,7 @@
-// 場景實體部署縫：輸入已定案的幾何與變換，不參與碰撞、選址或亂數抽樣。
+// Scene-entity deploy seam: takes finalized geometry and transforms; no collision, siting, or random sampling here.
 import * as THREE from 'three';
 
-/** 每種外觀編譯一次；呼叫端提供矩陣寫入器，保留各物件的尺度契約。 */
+/** Compile each appearance once; the caller supplies the matrix writer, preserving each object's scale contract. */
 export function deploySceneObjects(rows, { variantOf, geometryOf, material, matrixOf, name, metadata }) {
   if (!Array.isArray(rows) || !rows.length) throw new TypeError('場景部署缺少實體');
   const variants = new Map();
@@ -23,7 +23,7 @@ export function deploySceneObjects(rows, { variantOf, geometryOf, material, matr
       mesh.setMatrixAt(index, matrix);
     });
     mesh.instanceMatrix.needsUpdate = true;
-    // 世界曲面由頂點 shader 處理；CPU 包絡不可用於視錐剔除。
+    // World curvature is handled by the vertex shader; CPU envelopes MUST NOT drive frustum culling.
     mesh.frustumCulled = false;
     mesh.name = `${name}:${variant}`;
     mesh.userData.runtimePart = { ...metadata, paletteIndex: variant };
@@ -34,7 +34,7 @@ export function deploySceneObjects(rows, { variantOf, geometryOf, material, matr
   return result;
 }
 
-/** 逐款部署；讓步由啟動流程注入，所有展示／對戰共用同一建構器。 */
+/** Deploy per prototype; yields are injected by the boot flow so every showcase and battle shares one builder. */
 export async function deploySceneBatches(batches, target, build, onProgress) {
   const rows = [...batches];
   const started = performance.now();
@@ -42,7 +42,7 @@ export async function deploySceneBatches(batches, target, build, onProgress) {
   for (let index = 0; index < rows.length; index++) {
     const batch = rows[index];
     const built = build(batch.entry, batch.rows);
-    // 建物淨空逐一存取直接子節點；配色分組不留下中間容器。
+    // Access direct child nodes for building clearance; palette groups leave no intermediate containers.
     if (built.isGroup) target.add(...built.children.slice());
     else target.add(built);
     objects += batch.rows.length;

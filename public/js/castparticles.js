@@ -1,12 +1,12 @@
-// 招式粒子 GPU 環形緩衝：每個 Three.js scene 共用兩個 InstancedMesh / ShaderMaterial。
-// CPU 只在施放時寫入 spawn/data/color 欄位；生命週期、位移、尺寸與淡出由 GPU 計算。
+// Cast-particle GPU ring buffer: each Three.js scene shares two InstancedMesh / ShaderMaterial pairs.
+// CPU writes spawn/data/color fields only at cast time; lifetime, displacement, size, and fade are computed on the GPU.
 import * as THREE from 'three';
 import { lowPower } from './mobile.js';
 import { markShared, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
 
 export const PARTICLE_CAPACITY_NORMAL = 1024;
 export const PARTICLE_CAPACITY_LOW = 512;
-// 舊呼叫端若需要常數，這是 backing allocation；實際 instanceCount 由 getParticleCapacity() 即時決定。
+// Backing allocation for legacy callers that need a constant; the live instanceCount is decided by getParticleCapacity() at runtime.
 export const PARTICLE_CAPACITY = PARTICLE_CAPACITY_NORMAL;
 export const PARTICLE_SYSTEM_COUNT = 2;
 const SYSTEM_CAPACITY_NORMAL = PARTICLE_CAPACITY_NORMAL / PARTICLE_SYSTEM_COUNT;
@@ -16,7 +16,7 @@ export const CAST_PARTICLE_DRAW_LAYERS = 2;
 export const CAST_FIXED_DRAW_LAYERS_MIN = 4;
 export const CAST_FIXED_DRAW_LAYERS_MAX = 6;
 const ROOT_POOL_SIZE = 32;
-// 一份共享 unit quad；每個系統只 clone 頂點索引，讓 instance attributes 不互相覆寫。
+// One shared unit quad; each system clones only vertex indices so instance attributes never overwrite each other.
 const UNIT_QUAD = markShared(new THREE.PlaneGeometry(2, 2));
 
 const VS = `
@@ -192,7 +192,7 @@ const LAYOUT_MODE = Object.freeze({ spiral: 0, airline: 0, thrust: 0, arrowline:
 });
 const ACCENT_MODE = Object.freeze({ whale: 0, spectrum: 1, anvil: 2, bell: 3, artillery: 4, thunder: 5, border: 6, coin: 7 });
 
-/** 共用粒子施放縫；recipe.count 只允許 64..128，低功耗自動折半。 */
+/** Shared particle-cast seam; recipe.count allows 64..128 only, halved automatically on low power. */
 export function spawnParticleCast(scene, effects, P, recipe) {
   if (!recipe) return;
   const engine = engineFor(scene);
@@ -215,7 +215,7 @@ export function spawnParticleCast(scene, effects, P, recipe) {
   for (let i = 0; i < count; i++) {
     const slot = engine.cursor++ % engine.capacity;
     const old = engine.slots[slot]; old?.release?.();
-    // 全域 slot 固定映射到一個 layer；覆寫時不會在另一層留下仍存活的幽靈粒子。
+    // Each global slot maps to a fixed layer, so overwriting never leaves a live ghost particle on the other layer.
     const sys = systems[slot % PARTICLE_SYSTEM_COUNT];
     const index = Math.floor(slot / PARTICLE_SYSTEM_COUNT);
     const a = rand() * Math.PI * 2 + (recipe.phase || 0), rr = Math.sqrt(rand()) * Math.max(P.r || P.scale, P.scale);

@@ -1,9 +1,9 @@
-// ============ 決定性亂數(mulberry32;全專案唯一縫)============
-// §2.3:跨客戶端的場景一致靠這一支(戰場中心為種子),散布路徑 MUST NOT 用 `Math.random()`。
-// 為什麼獨立成一支**沒有任何 import** 的模組:離線稽核要在 Node 端跑同一份序列,
-// 而 `hazards.js` / `biomes.js` 都 import three(CDN importmap,Node 端載不進來)——
-// 亂數與 three 綁在同一個檔,等於逼每一支工具再抄一份 mulberry32,那就不是同一條序列了。
-// `hazards.js` re-export 舊入口保持相容。
+// ============ Deterministic RNG (mulberry32; sole seam for the project) ============
+// Determinism (AGENTS.md principle 3): cross-client scene consistency rests on this module (battle center as seed); scatter paths MUST NOT use `Math.random()`.
+// Standalone module with zero imports so offline audits can replay the same sequence in Node;
+// `hazards.js` / `biomes.js` import three (CDN importmap, unloadable in Node) --
+// keeping RNG clear of three avoids forcing every tool to copy mulberry32 and diverge from the single sequence.
+// `hazards.js` re-exports the legacy entry point for compatibility.
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return () => {

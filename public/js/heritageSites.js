@@ -1,4 +1,4 @@
-// 地質生成器與陸地／水下場景共用：選址語彙 → 固定比例組成 → 狀態表面與設施。
+// Shared by the geology generator and land / underwater scenes: siting vocabulary -> fixed-ratio composition -> state surfaces and facilities.
 import { selectAncientStone, ancientStoneGeometry, stoneBuilder, ANCIENT_RUINS } from './ancientStone.js';
 import { mulberry32 } from './rng.js';
 
@@ -36,7 +36,7 @@ export function generateHeritageSite(seed = 0, input = {}) {
   const additions = stoneBuilder(state === 'tourism' ? 0x8b969b : 0x80775d);
   const rnd = mulberry32(seed ^ 0x53495445);
   if (state === 'tourism') {
-    // 現代設施置於遺構包絡之外；保留原有開口與殘缺，不虛構完整復原建築。
+    // Modern facilities stay outside the ruin envelope; keep existing openings and gaps without fabricating a fully restored building.
     const z = source.bounds.max[2] + 2.2;
     additions.box(centerX,0,z,w+5,.18,2.2,0,0xb3aa94);
     for (let i=0;i<=6;i++) additions.box(centerX-w/2+i*w/6,.18,z-1,.09,1,.09,0,0x535f64);
@@ -47,7 +47,7 @@ export function generateHeritageSite(seed = 0, input = {}) {
       additions.box(x,.18,z,1.6,.45,.55,0,0x84684c);
     }
   }
-  // 像地質覆蓋一樣，以空間格雜湊形成連續斑塊，不逐頂點抖動遺構。
+  // Like the geology overlay, form continuous patches from a spatial-cell hash instead of jittering the ruins per vertex.
   for (const triangle of triangles) {
     const cx=(triangle.a[0]+triangle.b[0]+triangle.c[0])/3;
     const cy=(triangle.a[1]+triangle.b[1]+triangle.c[1])/3;

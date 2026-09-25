@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// 尺寸同時供生成、占位與碰撞使用；造型不讀場景共用 RNG。
+// Dimensions feed generation, occupancy, and collision together; styling MUST NOT read the shared scene RNG.
 export const TOWER_BUILDINGS = Object.freeze({
   bell_tower: { r: 5, h: 28 },
   clock_tower: { r: 5, h: 30 },

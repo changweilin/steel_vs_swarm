@@ -1,4 +1,4 @@
-// 地域建築語彙；是遊戲用抽象化，不是歷史建築復原模型。
+// Regional building vocabulary; gameplay abstraction, not a historic-building restoration model.
 const styles = {
   gassho: {
     label: "日本合掌造農舍", region: "japan",

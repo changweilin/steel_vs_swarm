@@ -1,4 +1,4 @@
-// 執行期零件槽位的純矩陣縫；零 THREE，供型錄工具與客戶端組裝器共用。
+// Pure-matrix seam for runtime part slots; zero THREE, shared by catalog tooling and the client assembler.
 export function mat3FromEulerXYZ(rotation = [0, 0, 0]) {
   const [rx = 0, ry = 0, rz = 0] = rotation;
   const a = Math.cos(rx), b = Math.sin(rx), c = Math.cos(ry), d = Math.sin(ry);
