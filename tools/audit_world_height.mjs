@@ -1,4 +1,7 @@
-import { TOWER_BUILDINGS } from '../public/js/towerBuildingRules.js';
+import { register } from 'node:module';
+const modules = { three: new URL('../out/forest_review/three.module.js', import.meta.url).href };
+register('data:text/javascript,' + encodeURIComponent(`const modules=${JSON.stringify(modules)}; export async function resolve(s,c,next){return modules[s]?{url:modules[s],shortCircuit:true}:next(s,c)}`), import.meta.url);
+const { TOWER_BUILDINGS } = await import('../public/js/towerBuildings.js');
 import { BATTLE_GEOLOGY } from '../public/js/geologyBattle.js';
 import { createForestDefs } from '../public/js/forest.js';
 // ============ 世界高度上限(遊戲最高高度 / 物件最高高度) 稽核 ============

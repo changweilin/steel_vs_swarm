@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { chooseArchitecture, createArchitecturePlanner } from '../public/js/buildingDiversity.js';
 import { BUILDING_FUNCTIONS, taggedBuildingFunction } from '../public/js/buildingFunctions.js';
-import { functionalArchitecture } from '../public/js/functionalArchitecture.js';
-import { FUNCTIONAL_VARIANTS, FUNCTIONAL_FAMILIES, FUNCTIONAL_DETAIL_LIMIT } from '../public/js/functionalArchitectureCatalog.js';
+import { functionalArchitecture, FUNCTIONAL_VARIANTS, FUNCTIONAL_FAMILIES, FUNCTIONAL_DETAIL_LIMIT } from '../public/js/functionalArchitectureCatalog.js';
 import { functionalBuildingParts } from '../public/js/functionalBuildingParts.js';
 const modules = {
   three: new URL('../out/forest_review/three.module.js', import.meta.url).href,

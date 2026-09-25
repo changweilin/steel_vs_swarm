@@ -117,8 +117,7 @@ import {
 import { buildAquaticWorld, buildRelicObject, relicCollider, RELIC_KINDS } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
-import { nativeFunctionalKind } from './nativeFunctionalBuildings.js';
-import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction, nativeFunctionalKind } from './buildingFunctions.js';
 import { heritageStateOf, heritageRuinType } from './heritageSites.js';
 import { buildHeritageSite } from './heritageSiteMesh.js';
 import {

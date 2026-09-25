@@ -11,10 +11,10 @@
 | vehicle(4) | vehicleIndividualBodies73k, vehicleCatalog, vehicles26k, vehicleModels | `vehicleEveryday/Industry/Equipment/Variants/Consists/Parts` (6 檔) 已收攏至 `vehicleCatalog`；`vehicles.js` 嚴守零 import / 零 THREE / 零亂數之碰撞外層縫保留 |
 | vessel(3) | vesselModels, vesselCatalog, vesselGeometry4k | `vesselEquipmentModels` 併入 `vesselModels`；`vesselLayout` 併入 `vesselCatalog`；`vesselGeometry` 供屋頂/建築/環境純幾何共用保留 |
 | ground(7) | ground237k, terrain82k, proceduralGroundParts21k, groundCatalog16k, groundPartCatalog13k, groundMarkings12k, proceduralGround8k | ground.js 是 hub；`groundVisitorSites/Landscapes/Venues` 已收攏進 groundPartCatalog / groundCatalog / proceduralGround |
-| arch(11) | architectureStyles43k, architectureFacadeParts24k, architectureRoofParts9k, functionalArchitectureCatalog9k, regionalArchitecture8k, towerBuildings5k, functionalArchitecture4k, architecturePartGeometry3k, roofProfiles2k, nativeFunctionalBuildings1k, towerBuildingRules1k | `architectureStyles/buildingDiversity` 各被 7 支 import；`towerBuildingRules` 僅 towerBuildings+稽核引用 |
+| arch(7) | architectureStyles43k, architectureFacadeParts24k, architectureRoofParts11k, functionalArchitectureCatalog13k, regionalArchitecture8k, towerBuildings5k, architecturePartGeometry3k | `roofProfiles` 併入 `architectureRoofParts`；`functionalArchitecture` 併入 `functionalArchitectureCatalog`；`towerBuildingRules` 併入 `towerBuildings`；`nativeFunctionalBuildings` 併入 `buildingFunctions` |
 | env(3) | environment51k, environmentParts45k, environmentCatalog5k | environmentParts 為 hub；`environmentArchitecture` 已併入 environmentParts |
 | venue(4) | venueText135k, venues41k, venueLanes35k, venueGrid1k | venueGrid 僅 roadgrid/venueGrid/稽核/bake 引用；bake_venue_* 三支工具對應 |
-| building(5) | buildingAppurtenances109k, buildingDiversity29k, buildingFunctions13k, approvedBuildingModels12k, buildingUnitModels11k | buildingDiversity 被 7 支 import 的 hub |
+| building(5) | buildingAppurtenances109k, buildingDiversity29k, buildingFunctions14k, approvedBuildingModels12k, buildingUnitModels11k | buildingDiversity 被 7 支 import 的 hub；`nativeFunctionalBuildings` 已收攏至 `buildingFunctions` |
 | osm(5) | osmAreas58k, osmBuilding29k, osmrelay19k, osmAreaObjects9k, osmQuery7k | osmAreas 被 5 支 import 的 hub |
 | wall(2) | wallDecorations, wallpanel | `wallDecorationCatalog` 已併入 `wallDecorations`；`wallpanel` 供 `audit_siteplan` 驗證零 import 面板切分，保留獨立 |
 | story(5) | lore143k, storytalk38k, story37k, codex28k, storyui8k | 與 tools/story_book 共用 storyui 縫，勿拆 |
@@ -28,7 +28,13 @@
 2. ✅ **已完成 (Stage 2)**：
    - `vessel(5 -> 3)`：`vesselEquipmentModels` 併入 `vesselModels`，`vesselLayout` 併入 `vesselCatalog`（刪除 2 檔）。
    - `vehicle(10 -> 4)`：`vehicleEveryday`, `vehicleIndustry`, `vehicleEquipment`, `vehicleVariants`, `vehicleConsists`, `vehicleParts`（6 檔）全數收攏至 `vehicleCatalog`；`vehicles.js` 零 import 碰撞縫與 `vehicleModels` 3D 渲染縫保留（刪除 6 檔）。
-3. arch(11)＋building(5)：先畫 import 圖再動（hub 交織）。
+3. ✅ **已完成 (Stage 3)**：
+   - `arch(11 -> 7)` + `building(5)`：
+     - `towerBuildingRules` 併入 `towerBuildings.js`（刪除 1 檔）。
+     - `nativeFunctionalBuildings` 併入 `buildingFunctions.js`（刪除 1 檔）。
+     - `functionalArchitecture` 併入 `functionalArchitectureCatalog.js`（刪除 1 檔）。
+     - `roofProfiles` 併入 `architectureRoofParts.js`（刪除 1 檔）。
+     - `test/roofSeams.mjs` 透過 `doorFinish` 單一縫對齊動態門色；全 CI、離線稽核（42 項）與平衡測試全過。
 4. ground/venue/osm：牽涉 bake 工具與伺服器地形縫，最後動。
 
 ## 本輪已刪（備份在 D:\data\steel_vs_swarm_ai3d）

@@ -1,4 +1,4 @@
-import { functionalArchitecture } from './functionalArchitecture.js';
+import { functionalArchitecture } from './functionalArchitectureCatalog.js';
 // 純規劃：不依賴 Three.js、不消耗場景共享亂數。
 import {
   ARCHITECTURE_STYLES, ARCHITECTURE_PROFILES, ARCHITECTURE_SITE,

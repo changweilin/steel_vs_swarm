@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { readFileSync } from 'node:fs';
-import { BUILDING_FUNCTIONS, taggedBuildingFunction } from '../public/js/buildingFunctions.js';
-import { nativeFunctionalKind } from '../public/js/nativeFunctionalBuildings.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction, nativeFunctionalKind } from '../public/js/buildingFunctions.js';
 import { heritageStateOf } from '../public/js/heritageSites.js';
 import { parseOsmFeatureElements, osmFeatureQuery } from '../public/js/osmQuery.js';
 const modules = { three: new URL('../out/forest_review/three.module.js', import.meta.url).href };

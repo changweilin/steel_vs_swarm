@@ -11,7 +11,7 @@ export async function resolve(s, c, next) { return modules[s] ? { url: modules[s
 const THREE = await import('three');
 const { buildOsmPolygonBuildings, architecturalRoof } = await import('../public/js/osmBuilding.js');
 const { ARCHITECTURE_STYLES } = await import('../public/js/architectureStyles.js');
-const { ROOF_FACET_DEG } = await import('../public/js/roofProfiles.js');
+const { ROOF_FACET_DEG } = await import('../public/js/architectureRoofParts.js');
 
 const rect = (w, d) => ({ outer: [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]], holes: [] });
 const terrain = { heightAt: () => 10 };
@@ -168,7 +168,9 @@ console.log('PASS: no coplanar seams in any orientation, windows included');
   buildOsmPolygonBuildings(group, [{ sourceId: 'seam/slope', tags: { building: 'house' },
     classification: { generator: 'polygonBuilding', kind: 'house' }, worldPolygons: [rect(20, 10)] }],
     { terrain: slopeTerrain, architectureOf: () => arch });
-  const doorC = [0x3d3731].map((h) => new THREE.Color(h).multiplyScalar(0.94))[0];
+  const { doorFinish } = await import('../public/js/buildingAppurtenances.js');
+  const finish = doorFinish('alpine|seam/slope|4', 'residential');
+  const doorC = [finish.color].map((h) => new THREE.Color(h).multiplyScalar(0.94))[0];
   let minY = Infinity;
   const cx = [0], cz = [0];
   let n = 0;

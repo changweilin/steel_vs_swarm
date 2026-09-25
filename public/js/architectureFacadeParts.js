@@ -1,6 +1,6 @@
 // Render-free facade shared by polygon buildings and environment objects.
 import { FACADE_GEOMETRY_LIMIT } from './regionalArchitecture.js';
-import { ROOF_RIM_LIP } from './roofProfiles.js';
+import { ROOF_RIM_LIP } from './architectureRoofParts.js';
 import { resolveWindowScheme } from './architectureStyles.js';
 import { mat3FromEulerXYZ, mat3Multiply, eulerXYZFromMat3 } from './partTransform.js';
 

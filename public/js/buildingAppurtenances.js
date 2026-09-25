@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { wallDecorationParts, WALL_DECORATION_RULES, WALL_DECORATION_LIMIT } from './wallDecorations.js';
 import { architecturePartGeometry } from './architecturePartGeometry.js';
 import { architectureHash } from './buildingDiversity.js';
-import { roofDimensions, sectionRoofProfile, sectionRoofHeight, ROOF_SEAT_SINK } from './roofProfiles.js';
+import { roofDimensions, sectionRoofProfile, sectionRoofHeight, ROOF_SEAT_SINK } from './architectureRoofParts.js';
 import { paintGeometry, pointInRing, attachmentSite } from './osmBuilding.js';
 import { optimalSolarTiltRad, mapRot } from './data.js';
 import {

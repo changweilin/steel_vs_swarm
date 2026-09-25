@@ -266,7 +266,7 @@ const [cylType, topR, bottomR, coneH, coneSides] = spireParts[0].g;
 assert.equal(cylType, 'cyl');
 assert.equal(topR, 0, '圓錐尖端半徑為 0');
 assert.ok(coneSides >= 24, '圓錐面細分度至少 24');
-const { roofDimensions } = await import('../public/js/roofProfiles.js');
+const { roofDimensions } = await import('../public/js/architectureRoofParts.js');
 const { eave } = roofDimensions(6, 18);
 const cornerDist = Math.hypot((6 + eave * 2) / 2, (6 + eave * 2) / 2);
 assert.ok(bottomR >= cornerDist, `圓錐底半徑 (${bottomR}) 必須完整覆蓋頂樓所有角落 (${cornerDist})`);
