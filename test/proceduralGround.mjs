@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
-import { DEFS, SURFACES, SURFACE_LIMITS, ZONES } from '../public/js/groundCatalog.js';
+import { DEFS, SURFACES, SURFACE_LIMITS, ZONES, VENUES, TRACK, TRACK_WIDTH, TRACK_DEPTH, LANDSCAPES, VISITOR_SITES } from '../public/js/groundCatalog.js';
 import { stadiumPath, paintVenue } from '../public/js/groundMarkings.js';
-import { VENUES, TRACK, TRACK_WIDTH, TRACK_DEPTH } from '../public/js/groundVenues.js';
-import { LANDSCAPES } from '../public/js/groundLandscapes.js';
-import { VISITOR_SITES } from '../public/js/groundVisitorSites.js';
 import { GROUND_PARTS, GROUND_ATTACHMENTS } from '../public/js/groundPartCatalog.js';
 import { surfaceEnvironment, surfaceAllowed, surfaceParameters, probeSurface, paintGround } from '../public/js/proceduralGround.js';
 import { mulberry32 } from '../public/js/rng.js';

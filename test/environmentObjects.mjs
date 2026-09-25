@@ -7,7 +7,7 @@ import { readSrc, grabFn } from '../tools/audit_src.mjs';
 import { edgeSeed } from '../public/js/edgewall.js';
 import { edgeWallInsetM, objScaleFit, slopeDeg, SLOPE, WATER } from '../public/js/data.js';
 import { mulberry32 } from '../public/js/rng.js';
-import { iceParts } from '../public/js/iceParts.js';
+import { iceParts } from '../public/js/environmentParts.js';
 
 let samples = 0;
 for (const [kind, def] of Object.entries(WALL_KINDS)) {

@@ -1,7 +1,11 @@
-import { GROUND_ATTACHMENTS } from './groundPartCatalog.js';
-import { VENUES, TRACK_WIDTH, TRACK_DEPTH } from './groundVenues.js';
-import { LANDSCAPES } from './groundLandscapes.js';
-import { VISITOR_SITES } from './groundVisitorSites.js';
+import {
+  GROUND_ATTACHMENTS,
+  VENUES, TRACK, TRACK_WIDTH, TRACK_DEPTH,
+  LANDSCAPES, VISITOR_SITES,
+} from './groundPartCatalog.js';
+
+export { VENUES, TRACK, TRACK_WIDTH, TRACK_DEPTH, LANDSCAPES, VISITOR_SITES };
+
 // Surface content and numeric placement contracts. Rendering lives in proceduralGround.js.
 export const SURFACE_GROUPS = {
   recreation: { purpose: '休憩運動', landscape: 'managed', pattern: 'paving',

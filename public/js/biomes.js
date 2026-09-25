@@ -60,12 +60,12 @@ import {
 } from './edgewall.js';
 import { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable } from './environmentParts.js';
 import { runtimeMeshDataGeometry } from './runtimePartModel.js';
-import { BATTLE_GEOLOGY, SYNTH_GEOLOGY, battleGeology, battleGeologySlope } from './geologyBattle.js';
+import { BATTLE_GEOLOGY, SYNTH_GEOLOGY, battleGeology, battleGeologySlope } from './geology.js';
 import { buildSlopeBoundary } from './edgeSlope.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
 import { makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
-import {selectRoadCar} from './vehicleEveryday.js';
+import { selectRoadCar } from './vehicleCatalog.js';
 import { deploySceneBatches } from './sceneObjects.js';
 import { createArchitecturePlanner } from './buildingDiversity.js';
 import { sceneObjectMat } from './toon.js';
@@ -117,8 +117,7 @@ import {
 import { buildAquaticWorld, buildRelicObject, relicCollider, RELIC_KINDS } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
-import { nativeFunctionalKind } from './nativeFunctionalBuildings.js';
-import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction, nativeFunctionalKind } from './buildingFunctions.js';
 import { heritageStateOf, heritageRuinType } from './heritageSites.js';
 import { buildHeritageSite } from './heritageSiteMesh.js';
 import {

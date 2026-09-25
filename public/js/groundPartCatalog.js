@@ -1,6 +1,116 @@
-import { VENUES } from './groundVenues.js';
-import { LANDSCAPES } from './groundLandscapes.js';
-import { VISITOR_SITES } from './groundVisitorSites.js';
+// Reference dimensions describe markings, not certified competition installations.
+// A single uniform game scale applies to the pitch and its equipment.
+const sportVenue = (label, length, width, marking, regions, equipment = []) => ({
+  label, length, width, marking, regions, category: 'sport', color: 0x63845b, equipment,
+});
+export const VENUES = {
+  tennis: sportVenue('網球', 23.77, 10.97, 'tennis', ['global'], [['tennisnet', 0, 0, 0]]),
+  badminton: sportVenue('羽球', 13.4, 6.1, 'badminton', ['global'], [['badmintonnet', 0, 0, 0]]),
+  pickleball: sportVenue('匹克球', 13.4112, 6.096, 'pickleball', ['North America'], [['picklenet', 0, 0, 0]]),
+  volleyball: sportVenue('排球', 18, 9, 'volleyball', ['global'], [['volleynet', 0, 0, 0]]),
+  beachvolley: sportVenue('沙灘排球', 16, 8, 'beach', ['coastal'], [['beachnet', 0, 0, 0]]),
+  soccer: sportVenue('足球', 105, 68, 'soccer', ['global']),
+  futsal: sportVenue('五人制足球', 40, 20, 'futsal', ['global']),
+  handball: sportVenue('手球', 40, 20, 'handball', ['Europe']),
+  fieldhockey: sportVenue('曲棍球', 91.4, 55, 'hockey', ['South Asia', 'Europe', 'Oceania']),
+  rugby: sportVenue('橄欖球', 120, 70, 'rugby', ['Oceania', 'Europe', 'Southern Africa']),
+  americanfootball: sportVenue('美式足球', 109.728, 48.768, 'football', ['North America']),
+  netball: sportVenue('籃網球', 30.5, 15.25, 'netball', ['Oceania', 'Commonwealth']),
+  cricket: sportVenue('板球', 120, 110, 'cricket', ['South Asia', 'Commonwealth']),
+  baseball: sportVenue('棒球', 110, 110, 'baseball', ['East Asia', 'Americas']),
+  softball: sportVenue('壘球', 75, 75, 'softball', ['global']),
+  kabaddi: sportVenue('卡巴迪', 13, 10, 'kabaddi', ['South Asia']),
+  sepaktakraw: sportVenue('藤球', 13.4, 6.1, 'takraw', ['Southeast Asia'], [['takrawnet', 0, 0, 0]]),
+  petanque: sportVenue('法式滾球', 15, 4, 'boules', ['France', 'Mediterranean']),
+  bocce: sportVenue('義式滾球', 26.5, 4, 'bocce', ['Italy']),
+  gateball: sportVenue('門球', 20, 15, 'gateball', ['Japan', 'East Asia']),
+  sumo: sportVenue('相撲土俵', 6.7, 6.7, 'sumo', ['Japan']),
+  wrestling: sportVenue('摔角墊', 12, 12, 'wrestling', ['global']),
+  archery: sportVenue('射箭練習場', 50, 20, 'archery', ['global']),
+  longjump: sportVenue('跳遠助跑與沙坑', 48, 8, 'longjump', ['global']),
+  taiwanTemple: { label: '臺灣廟埕', length: 28, width: 22, marking: 'forecourt', regions: ['Taiwan'], category: 'culture', color: 0xb39378, equipment: [['incenseurn', .18, 0, 0], ['lantern', -.3, -.3, 0], ['lantern', -.3, .3, 0]] },
+  japaneseGarden: { label: '日本枯山水庭園', length: 24, width: 16, marking: 'raked', regions: ['Japan'], category: 'culture', color: 0xc5c0ad, equipment: [['boulder', .16, .12, 0], ['rockflat', -.17, -.2, 0], ['stonelantern', .3, -.3, 0]] },
+  chineseCourtyard: { label: '華人庭院', length: 26, width: 22, marking: 'courtyard', regions: ['East Asia'], category: 'culture', color: 0x96948a, equipment: [['planter', -.3, -.3, 0], ['planter', .3, .3, 0], ['bench', 0, .33, 0]] },
+  mediterraneanPlaza: { label: '地中海噴泉廣場', length: 30, width: 24, marking: 'plaza', regions: ['Mediterranean'], category: 'culture', color: 0xc5b496, equipment: [['fountain', 0, 0, 0], ['bench', .3, .3, 0], ['planter', -.3, -.3, 0]] },
+  northAfricanCourt: { label: '北非中庭', length: 24, width: 20, marking: 'courtyard', regions: ['North Africa'], category: 'culture', color: 0xc1a17c, equipment: [['fountain', 0, 0, 0], ['planter', -.3, .3, 0], ['planter', .3, -.3, 0]] },
+  latinPlaza: { label: '拉丁美洲市集廣場', length: 30, width: 24, marking: 'market', regions: ['Latin America'], category: 'culture', color: 0xb98970, equipment: [['marketstall', -.28, -.28, 0], ['marketstall', .28, -.28, 0], ['bench', 0, .32, 0]] },
+  southAsianMaidan: { label: '南亞公共活動空地', length: 38, width: 28, marking: 'commons', regions: ['South Asia'], category: 'culture', color: 0xb3a279, equipment: [['bench', -.3, -.32, 0], ['marketstall', .3, .3, 0]] },
+  nordicSquare: { label: '北歐公共廣場', length: 28, width: 24, marking: 'plaza', regions: ['Northern Europe'], category: 'culture', color: 0x959b99, equipment: [['bench', -.3, .3, 0], ['planter', .3, -.3, 0], ['marketstall', .3, .3, 0]] },
+};
+for (const [id, goal] of Object.entries({soccer:'soccergoal', futsal:'smallgoal', handball:'smallgoal', fieldhockey:'hockeygoal', rugby:'rugbypost', americanfootball:'footballpost', netball:'netballpost'})) {
+  const u = id === 'rugby' ? .4 * (VENUES[id].length - 20) / VENUES[id].length : .4;
+  VENUES[id].equipment.push([goal, -u, 0, Math.PI / 2], [goal, u, 0, -Math.PI / 2]);
+}
+VENUES.cricket.equipment.push(['wicket', -20.12 / 120 * .4, 0, Math.PI / 2], ['wicket', 20.12 / 120 * .4, 0, Math.PI / 2]);
+VENUES.gateball.equipment.push(['gate', -.25, -.2, 0], ['gate', 0, .2, Math.PI / 2], ['gate', .25, -.2, 0]);
+for (const z of [-.25, 0, .25]) VENUES.archery.equipment.push(['target', .35, z, Math.PI / 2]);
+for (const id of ['beachvolley', 'petanque', 'bocce', 'sumo', 'longjump']) VENUES[id].color = 0xc3aa7b;
+for (const id of ['tennis', 'pickleball', 'netball']) VENUES[id].color = 0x547e99;
+for (const id of ['volleyball', 'handball', 'wrestling', 'kabaddi']) VENUES[id].color = 0xb58263;
+export const TRACK = { straight: 84.39, radius: 36.5, lane: 1.22, lanes: 8, margin: 12, lineWidth: .45 };
+export const TRACK_WIDTH = TRACK.straight + 2 * (TRACK.radius + TRACK.lanes * TRACK.lane + TRACK.margin);
+export const TRACK_DEPTH = 2 * (TRACK.radius + TRACK.lanes * TRACK.lane + TRACK.margin);
+
+// Feature patches supplement the continuous carpet. No new shared random stream.
+const greenLandscape = (label, pattern, color, parts, limits = {}) => ({
+  label, pattern, color, landscape: 'grassland', zone: 'green', parts, ...limits,
+});
+const bareLandscape = (label, pattern, color, parts, limits = {}) => ({
+  label, pattern, color, landscape: 'exposed', zone: 'bare', parts, ...limits,
+});
+export const LANDSCAPES = {
+  mossbed: greenLandscape('苔蘚地', 'moss', 0x70865b, ['rockflat', 'mushroom'], { temperature: [-10, 28] }),
+  cloverfield: greenLandscape('三葉草地', 'clover', 0x73945e, ['flower', 'tuft']),
+  fernfloor: greenLandscape('蕨類林下地', 'fern', 0x61794e, ['bush', 'mushroom', 'log'], { landscape: 'woodland', temperature: [0, 35] }),
+  heathland: greenLandscape('石楠灌叢地', 'heath', 0x877782, ['bush', 'flower', 'pebble'], { temperature: [-15, 28] }),
+  prairie: greenLandscape('高草草原', 'prairie', 0x9b9f64, ['miscanthus', 'flower', 'tuft']),
+  savannagrass: greenLandscape('稀樹草地', 'savanna', 0xb2a36a, ['drybush', 'sapling', 'tuft'], { temperature: [15, 50] }),
+  alpineflowers: greenLandscape('高山花甸', 'heath', 0x849774, ['flower', 'rockflat', 'tuft'], { altitude: [1200, 5000], temperature: [-20, 20], zones: ['green', 'alpine'] }),
+  wetmeadow: greenLandscape('濕草甸', 'moss', 0x6e906b, ['reed', 'tuft', 'flower']),
+  riparianbrush: greenLandscape('河岸灌叢', 'fern', 0x6c8462, ['reed', 'bush', 'log'], { zones: ['green', 'wet'] }),
+  coastalgrass: greenLandscape('海岸草叢', 'prairie', 0xa0aa77, ['miscanthus', 'shell', 'tuft'], { altitude: [-20, 180] }),
+  basaltfield: bareLandscape('玄武岩碎地', 'angular', 0x636568, ['boulder', 'rockflat', 'pebble']),
+  volcanicash: bareLandscape('火山灰地', 'ash', 0x827d78, ['pebble', 'boulder']),
+  chalkground: bareLandscape('白堊裸地', 'chalk', 0xc9c5b0, ['rockflat', 'pebble', 'drybush']),
+  sanddunes: bareLandscape('風紋沙地', 'dunes', 0xd0b486, ['shell', 'drybush']),
+  shinglebank: bareLandscape('礫石灘', 'shingle', 0xaaa292, ['pebble', 'rockflat', 'shell']),
+  saltcrust: bareLandscape('鹽殼地', 'crust', 0xdad5c4, ['saltmound', 'pebble']),
+  drylakebed: bareLandscape('乾湖床', 'cracks', 0xb3a58c, ['pebble', 'drybush']),
+  erodedclay: bareLandscape('侵蝕黏土地', 'gullies', 0xb17f61, ['spoil', 'pebble', 'drybush']),
+  glacialtill: bareLandscape('冰磧裸地', 'shingle', 0xaaa99e, ['boulder', 'pebble', 'rockflat'], { zones: ['bare', 'alpine'], temperature: [-50, 15] }),
+  ironstone: bareLandscape('鐵質碎石地', 'angular', 0x9b6650, ['rockflat', 'pebble', 'boulder']),
+};
+
+// Each recent natural addition has exactly one authored visitor/service counterpart.
+// Equipment anchors and their access paths share normalized patch coordinates.
+const siteSpec = (naturalCounterpart, label, layout, equipment) => ({ naturalCounterpart, label, layout, equipment });
+export const VISITOR_SITES = {
+  mossGarden: siteSpec('mossbed', '苔庭休憩區', 'garden', [['rockflat', -.22, -.2], ['stonelantern', .28, -.24], ['bench', .22, .25]]),
+  picnicLawn: siteSpec('cloverfield', '草坪野餐區', 'picnic', [['picnictable', -.23, -.22], ['picnictable', .23, -.22], ['litterbin', .3, .28]]),
+  forestLearning: siteSpec('fernfloor', '林下自然教室', 'classroom', [['billboard', 0, -.28], ['bench', -.23, .06], ['bench', .23, .06], ['bench', 0, .28]]),
+  heatherGarden: siteSpec('heathland', '石楠花園步道', 'garden', [['planter', -.24, -.24], ['planter', .24, -.24], ['bench', .25, .26]]),
+  grasslandCamp: siteSpec('prairie', '草原露營區', 'camp', [['tent', -.23, -.2], ['tent', .23, -.2], ['picnictable', 0, .24]]),
+  safariRest: siteSpec('savannagrass', '草原導覽休息站', 'shade', [['marketstall', 0, -.2], ['billboard', -.3, .2], ['bench', .28, .24]]),
+  alpineRest: siteSpec('alpineflowers', '高山步道休憩點', 'lookout', [['bench', -.22, -.22], ['billboard', .28, -.22], ['fencepost', -.3, .28], ['fencepost', .3, .28]]),
+  wetlandLearning: siteSpec('wetmeadow', '濕地解說廣場', 'classroom', [['billboard', 0, -.25], ['bench', -.25, .18], ['bench', .25, .18]]),
+  riversidePicnic: siteSpec('riparianbrush', '河岸野餐休憩地', 'picnic', [['picnictable', -.22, -.2], ['bench', .24, -.2], ['litterbin', .3, .25]]),
+  coastalRest: siteSpec('coastalgrass', '海岸步道休息站', 'lookout', [['bench', -.24, -.2], ['bench', .24, -.2], ['billboard', .28, .28]]),
+  basaltExhibit: siteSpec('basaltfield', '玄武岩戶外展示場', 'exhibit', [['boulder', -.24, -.2], ['rockflat', .24, -.2], ['billboard', 0, .26]]),
+  volcanoVisitor: siteSpec('volcanicash', '火山地質導覽站', 'shade', [['marketstall', 0, -.23], ['billboard', -.28, .22], ['bench', .27, .22]]),
+  chalkTrailhead: siteSpec('chalkground', '白堊地步道入口', 'trailhead', [['billboard', -.27, -.22], ['bench', .27, -.22], ['litterbin', .3, .25]]),
+  desertCamp: siteSpec('sanddunes', '沙地營地', 'camp', [['tent', -.23, -.2], ['tent', .23, -.2], ['picnictable', 0, .24]]),
+  beachRest: siteSpec('shinglebank', '礫灘休憩廣場', 'picnic', [['picnictable', -.24, -.2], ['marketstall', .24, -.2], ['litterbin', .3, .26]]),
+  saltInterpretation: siteSpec('saltcrust', '鹽地文化解說場', 'exhibit', [['saltmound', -.24, -.2], ['saltmound', .24, -.2], ['billboard', 0, .26]]),
+  stargazingSite: siteSpec('drylakebed', '乾湖觀星集合地', 'circle', [['bench', -.27, -.22], ['bench', .27, -.22], ['billboard', .3, .26]]),
+  clayWorkshop: siteSpec('erodedclay', '陶土戶外體驗場', 'workshop', [['marketstall', 0, -.25], ['picnictable', -.23, .2], ['crate', .26, .22]]),
+  moraineLookout: siteSpec('glacialtill', '冰磧地觀景休息點', 'lookout', [['bench', 0, -.24], ['billboard', .28, .24], ['rockflat', -.27, .24]]),
+  miningHeritage: siteSpec('ironstone', '礦業遺產展示地', 'exhibit', [['boulder', -.25, -.22], ['crate', .25, -.22], ['billboard', 0, .26]]),
+};
+for (const value of Object.values(VISITOR_SITES)) {
+  const natural = LANDSCAPES[value.naturalCounterpart];
+  Object.assign(value, { zone: natural.zone, length: 28, width: 22,
+    color: natural.color, temperature: natural.temperature, altitude: natural.altitude });
+}
 // Nominal envelopes in metres; procedural builders vary joints, panels and silhouettes.
 export const GROUND_PARTS = {
   tuft: ['blade', .7, 1, .7, 'grass'], rice: ['blade', .38, .95, .38, 'grass'],

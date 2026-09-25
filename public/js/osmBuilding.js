@@ -9,10 +9,9 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { envMat, sceneObjectMat } from './toon.js';
 import { sampleBuildingSite } from './buildingDiversity.js';
-import { architecturalRoofParts } from './architectureRoofParts.js';
+import { architecturalRoofParts, ROOF_RIM_LIP, CYL_FACET_DEG } from './architectureRoofParts.js';
 import { generateBuildingAppurtenances, resolveFrontDoorOpening, resolveSideDoorOpening } from './buildingAppurtenances.js';
 import { resolveAdaptiveRoofForm, calculateFootprintMetrics } from './architectureStyles.js';
-import { ROOF_RIM_LIP, CYL_FACET_DEG } from './roofProfiles.js';
 import { WATER, objHeightMax } from './data.js';
 
 const EPS = 1e-5;

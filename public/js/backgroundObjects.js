@@ -1,8 +1,14 @@
 // 背景物件的決定性組裝縫：指定主結構 → 每個目標槽位獨立挑葉零件 → 子類別配色抽樣。
 // NPC、戰鬥建築與玩家機甲不引用本檔；它們各自保留權威 Rig / 碰撞 / 動畫契約。
 import { RUNTIME_BACKGROUND_CATALOG, RUNTIME_PARTS } from './runtimeParts.js';
-import { VEHICLE_PREFIX, VEHICLE_PROFILES, vehicleBackgroundObject } from './vehicleCatalog.js';
-import { CONSIST_PREFIX,VEHICLE_CONSISTS,vehicleConsistBackgroundObject } from './vehicleConsists.js';
+import {
+  VEHICLE_PREFIX,
+  VEHICLE_PROFILES,
+  vehicleBackgroundObject,
+  CONSIST_PREFIX,
+  VEHICLE_CONSISTS,
+  vehicleConsistBackgroundObject,
+} from './vehicleCatalog.js';
 import { GEOLOGY_PREFIX, GEOLOGY_TYPES, geologyBackgroundObject } from './geology.js';
 import { ENVIRONMENT_OBJECTS, ENVIRONMENT_PREFIX, environmentParts } from './environmentParts.js';
 import {

@@ -30,7 +30,7 @@ import { envMat, toonMat, bakeContactAO } from './toon.js';
 import { partExtent, mergeGeos } from './beacons.js';
 // 載具/擺件型錄唯一縫(零 import ⇒ 本檔「純區塊」的零 THREE 契約不破,離線稽核照樣執行原文)
 import { makeRecess } from './vehicles.js';
-import { makeSceneVehicleParts as makeVehicle } from './vehicleParts.js';
+import { makeSceneVehicleParts as makeVehicle } from './vehicleCatalog.js';
 
 // ============================================================================
 // §A 都市計畫(市區:沿街配置 + 街廓 + 公設)

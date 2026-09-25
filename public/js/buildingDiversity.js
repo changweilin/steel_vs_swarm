@@ -1,4 +1,4 @@
-import { functionalArchitecture } from './functionalArchitecture.js';
+import { functionalArchitecture } from './functionalArchitectureCatalog.js';
 // 純規劃：不依賴 Three.js、不消耗場景共享亂數。
 import {
   ARCHITECTURE_STYLES, ARCHITECTURE_PROFILES, ARCHITECTURE_SITE,
@@ -6,6 +6,7 @@ import {
 } from './architectureStyles.js';
 import { buildContainmentIndex, pointInProjectedArea } from './osmAreas.js';
 import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
+import { architectureHash } from './wallDecorations.js';
 import { WATER, llToXZ } from './data.js';
 
 function segmentsIntersect(p1, p2, p3, p4) {
@@ -156,13 +157,7 @@ export function buildTransitPassageIndex({ roads = [], rails = [], toXZ = null, 
   return { test, segsCount: segs.length };
 }
 
-export function architectureHash(value, salt = '') {
-  const text = `${value}|${salt}`;
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
-  h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15;
-  return h >>> 0;
-}
+export { architectureHash };
 
 /** 依國家代碼或經緯度判定所屬文化圈 */
 export function detectCulturalRegion(location = {}) {

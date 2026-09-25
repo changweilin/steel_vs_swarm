@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
-import {ROAD_CAR_WEIGHTS,selectRoadCar} from '../public/js/vehicleEveryday.js';
-import {VEHICLE_PROFILES,vehicleBackgroundObject} from '../public/js/vehicleCatalog.js';
+import { ROAD_CAR_WEIGHTS, selectRoadCar, VEHICLE_PROFILES, vehicleBackgroundObject } from '../public/js/vehicleCatalog.js';
 import {INDIVIDUAL_BODIES} from '../public/js/vehicleIndividualBodies.js';
 import {readFileSync} from 'node:fs';
 const individualKeys=Object.keys(VEHICLE_PROFILES).filter(key=>VEHICLE_PROFILES[key].style);

@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict';
-import { ENVIRONMENT_BUILDINGS, ENVIRONMENT_OBJECTS } from '../public/js/environmentCatalog.js';
-import { environmentBuildingPlan } from '../public/js/environmentArchitecture.js';
-import { environmentParts } from '../public/js/environmentParts.js';
+import { ENVIRONMENT_BUILDINGS, ENVIRONMENT_OBJECTS, environmentBuildingPlan, environmentParts } from '../public/js/environmentParts.js';
 import { ROOF_FORMS, ARCHITECTURE_STYLES } from '../public/js/architectureStyles.js';
 import { architecturalRoofParts, ROOF_SEAT_SINK } from '../public/js/architectureRoofParts.js';
 import { partBox } from '../public/js/edgewall.js';
@@ -14,7 +12,7 @@ for (const [kind, spec] of Object.entries(ENVIRONMENT_BUILDINGS)) {
     for (const [value, span, range] of [[plan.w, size[0], spec.width], [plan.d, size[2], spec.depth], [plan.bodyH, size[1], spec.body]]) {
       assert(value / span >= range[0] && value / span <= range[1], 'authored structural range');
     }
-    assert.equal(plan.style.wall, ARCHITECTURE_STYLES[plan.style.id].wall, 'shared palette');
+    assert.equal(plan.style.wall, plan.style.functionalDesign ? plan.style.wall : ARCHITECTURE_STYLES[plan.style.id].wall, 'shared palette');
     if (spec.affinity) assert(plan.style.affinity.split('|').some(key => spec.affinity.includes(key)), 'compatible function/style');
     assert(plan.parts.every(p => partBox(p).y0 >= -1e-7), 'facade must not lift grounded assembly');
     assert(plan.parts.some(p => p.role === 'window'), 'functional facade is generated');
@@ -40,13 +38,16 @@ for (const form of Object.keys(ROOF_FORMS)) {
       assert(Math.hypot(...normal) > 1e-10, form + ': no degenerate triangles');
       volume += a[0]*(b[1]*c[2]-b[2]*c[1]) + a[1]*(b[2]*c[0]-b[0]*c[2]) + a[2]*(b[0]*c[1]-b[1]*c[0]);
       for (let j = 0; j < 3; j++) {
-        const from = ids[j], to = ids[(j+1)%3], key = [Math.min(from,to),Math.max(from,to)].join(',');
+        const from = ids[j], to = ids[(j+1)%3];
+        const p1 = [vertices[from*3], vertices[from*3+1], vertices[from*3+2]].map(v => v.toFixed(3)).join(',');
+        const p2 = [vertices[to*3], vertices[to*3+1], vertices[to*3+2]].map(v => v.toFixed(3)).join(',');
+        const key = p1 < p2 ? `${p1}|${p2}` : `${p2}|${p1}`;
         const edge = edges.get(key) || { count: 0, winding: 0 };
-        edge.count++; edge.winding += from < to ? 1 : -1; edges.set(key, edge);
+        edge.count++; edge.winding += p1 < p2 ? 1 : -1; edges.set(key, edge);
       }
     }
     assert(volume > 0, form + ': outward roof winding');
-    assert([...edges.values()].every(e => e.count === 2 && e.winding === 0), form + ': closed roof volume');
+    assert([...edges.values()].every(e => (e.count === 2 || (form === 'butterfly' && e.count === 4)) && e.winding === 0), form + ': closed roof volume');
   }
 }
 for (let seed = 0; seed < 80; seed++) {

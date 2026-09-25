@@ -1,4 +1,4 @@
-import { VENUES, TRACK, TRACK_WIDTH, TRACK_DEPTH } from './groundVenues.js';
+import { VENUES, TRACK, TRACK_WIDTH, TRACK_DEPTH } from './groundCatalog.js';
 
 // Coordinates are metres before one uniform projection into the rectangular UV.
 export function stadiumPath(g, straight, radius) {

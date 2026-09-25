@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { register } from 'node:module';
-import { BUILDING_FUNCTIONS, taggedBuildingFunction } from '../public/js/buildingFunctions.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction, nativeFunctionalKind } from '../public/js/buildingFunctions.js';
 import { chooseArchitecture, inferBuildingFunction } from '../public/js/buildingDiversity.js';
 import { ARCHITECTURE_STYLES, CULTURAL_REGIONS } from '../public/js/architectureStyles.js';
-import { nativeFunctionalKind } from '../public/js/nativeFunctionalBuildings.js';
 import { heritageStateOf } from '../public/js/heritageSites.js';
 
 const cases = [
@@ -87,7 +86,7 @@ for (const [tags, type] of cases) {
   assert.equal(fitApprovedPolygon(poly, 10, architecture, 5), null);
   const area = { sourceId: type, tags: { ...tags, building: tags.building || 'yes' }, classification: { kind: 'house', generator: 'polygonBuilding' }, worldPolygons: [poly] };
   const group = new THREE.Group();
-  const result = buildOsmPolygonBuildings(group, [area], { terrain: { heightAt: () => 0 }, architectureOf: () => architecture });
+  const result = buildOsmPolygonBuildings(group, [area], { terrain: { heightAt: () => 10, waterY: 0 }, architectureOf: () => architecture });
   assert.equal(result.generated, architecture.structureOnly ? 0 : 1, type);
   for (const mesh of group.children) {
     assert.ok(mesh.geometry.attributes.position.array.every(Number.isFinite), type);

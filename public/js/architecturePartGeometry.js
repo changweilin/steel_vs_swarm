@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { runtimeMeshDataGeometry } from './runtimePartModel.js';
 import { facetMeshData } from './vesselGeometry.js';
-import { CYL_FACET_DEG } from './roofProfiles.js';
+import { CYL_FACET_DEG } from './architectureRoofParts.js';
 
 // 柱體頂底蓋與側面在 three 原生幾何中共用圈頂點，平均後簷口整圈色帶；
 // 拆成法線群組（仍帶順序 index，合批相容），方盒本已逐面拆點故略過。

@@ -256,8 +256,7 @@ ok(biomesSrc.includes('CULTURAL_RELIC_LANDMARKS') && biomesSrc.includes('matched
   'biomes.js 具備 CULTURAL_RELIC_LANDMARKS 與 matchedBuildingType 結構');
 
 // OSM 文化／宗教建物必須忠實採用匹配類型，不再以種子換成無關地標。
-import { nativeFunctionalKind } from '../public/js/nativeFunctionalBuildings.js';
-import { BUILDING_FUNCTIONS, taggedBuildingFunction } from '../public/js/buildingFunctions.js';
+import { BUILDING_FUNCTIONS, taggedBuildingFunction, nativeFunctionalKind } from '../public/js/buildingFunctions.js';
 import { heritageStateOf } from '../public/js/heritageSites.js';
 const fnDef = biomesSrc
   .slice(biomesSrc.indexOf('export const CULTURAL_RELIC_LANDMARKS'), biomesSrc.indexOf('function buildingHeight('))

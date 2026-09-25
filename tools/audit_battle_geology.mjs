@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
-import { BATTLE_GEOLOGY, SYNTH_GEOLOGY, battleGeology, battleGeologySlope } from '../public/js/geologyBattle.js';
-import { GEOLOGY_TYPES } from '../public/js/geology.js';
+import { BATTLE_GEOLOGY, SYNTH_GEOLOGY, battleGeology, battleGeologySlope, GEOLOGY_TYPES } from '../public/js/geology.js';
 import { readSrc, grabFn } from './audit_src.mjs';
 
 export function auditBattleGeology() {
