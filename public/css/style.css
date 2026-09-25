@@ -1559,11 +1559,125 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 
 /* ── 世界觀・序章(長篇閱讀)── */
 .world-box { max-width: min(680px, 94vw); text-align: left; max-height: 90vh; }
-.world-body { overflow-y: auto; max-height: 66vh; padding-right: 8px; }
+.world-tabs .world-tab { min-width: 110px; }
+.world-body { overflow-y: auto; max-height: 64vh; padding-right: 8px; }
 .world-body p { font-size: 14px; line-height: 2.0; color: var(--text); margin-bottom: 1.05em; text-indent: 2em; }
 .world-body p:first-child {
   color: var(--railW); font-family: var(--serif); font-weight: 700; font-size: 17px;
   text-indent: 0; letter-spacing: 1px; border-left: 3px solid var(--railW); padding-left: 12px;
+}
+
+/* 序章頁籤：動畫面板 */
+.world-anim-panel { overflow-y: auto; max-height: 64vh; padding-right: 6px; }
+.world-anim-hero { margin-bottom: 14px; }
+.world-anim-poster-wrap {
+  position: relative;
+  width: 100%;
+  height: 168px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  clip-path: var(--notch-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.world-anim-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.65);
+  transition: transform 0.4s ease, filter 0.3s ease;
+}
+.world-anim-poster-wrap:hover .world-anim-poster {
+  transform: scale(1.03);
+  filter: brightness(0.75);
+}
+.world-anim-poster-grad {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 7, 10, 0.25) 0%, rgba(5, 7, 10, 0.82) 100%);
+}
+.world-play-btn {
+  position: relative;
+  z-index: 2;
+  padding: 12px 30px;
+  font-size: 15px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+.world-anim-hero-sub {
+  font-size: 12px;
+  color: var(--dim);
+  line-height: 1.6;
+  margin: 8px 0 0 0;
+  text-align: center;
+  font-family: var(--mono);
+}
+.world-anim-scene-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.world-scene-card {
+  display: flex;
+  gap: 12px;
+  background: rgba(10, 16, 22, 0.85);
+  border: 1px solid var(--line);
+  clip-path: var(--notch-sm);
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.world-scene-card:hover {
+  border-color: var(--steel);
+  background: rgba(15, 24, 34, 0.95);
+}
+.wsc-thumb-wrap {
+  position: relative;
+  width: 96px;
+  height: 64px;
+  flex-shrink: 0;
+  overflow: hidden;
+  clip-path: var(--notch-sm);
+}
+.wsc-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wsc-tag {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 4px;
+  background: rgba(0, 0, 0, 0.82);
+  color: var(--steel-hot);
+}
+.wsc-desc {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+.wsc-title {
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+.wsc-detail {
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── 簡報:長篇敘事(多段落)+ 雙方陣容小卡 ── */
@@ -3421,4 +3535,414 @@ body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .fo
     max-width: 160px;
   }
 }
+
+/* ================= 序章開場動畫 (Prologue Cinematic Intro) ================= */
+.prologue-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: #000;
+  overflow: hidden;
+  display: flex;
+  opacity: 1;
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.prologue-screen.prologue-fadeout {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 運鏡背景舞台 */
+.prologue-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  background: #05070a;
+}
+.prologue-scenes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.prologue-scene-item {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
+}
+.prologue-scene-item.active {
+  opacity: 1;
+}
+
+/* 左右模糊延伸背景 (滿版鋪滿，高斯模糊使左右兩側形成自然延伸) */
+.prologue-bg-blur {
+  position: absolute;
+  inset: -30px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(36px) brightness(0.55) saturate(1.25);
+  transform: scale(1.12);
+  will-change: transform;
+}
+
+/* 前景核心插畫層 (橫式時上下不可裁切，置中 contain 顯示) */
+.prologue-fg-art {
+  position: absolute;
+  inset: 0;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  will-change: transform;
+  transition: transform 0.2s cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+.prologue-overlay-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(5, 7, 10, 0.08) 30%, rgba(5, 7, 10, 0.65) 75%, rgba(5, 7, 10, 0.94) 100%),
+              linear-gradient(180deg, rgba(5, 7, 10, 0.82) 0%, transparent 18%, transparent 82%, rgba(5, 7, 10, 0.92) 100%);
+  pointer-events: none;
+}
+
+/* 頂部 HUD */
+.prologue-hud-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 24px 12px;
+  pointer-events: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(122, 158, 178, 0.2);
+  background: linear-gradient(180deg, rgba(6, 10, 15, 0.92) 0%, rgba(6, 10, 15, 0) 100%);
+}
+.prologue-hud-top .sysbar {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+}
+.prologue-date-tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--steel-hot);
+  letter-spacing: 1.5px;
+}
+
+/* ---------- 固定文字敘事區塊 (不擋主畫面、自身不動、文字在內向上捲動) ---------- */
+.prologue-narrative-box {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  background: rgba(6, 10, 16, 0.88);
+  border: 1px solid rgba(122, 158, 178, 0.35);
+  border-left: 3px solid var(--steel);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), inset 0 0 24px rgba(95, 208, 242, 0.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  clip-path: var(--notch);
+  pointer-events: auto;
+}
+
+/* 區塊固定標頭 */
+.prologue-box-header {
+  padding: 10px 18px 8px;
+  border-bottom: 1px solid rgba(122, 158, 178, 0.2);
+  background: rgba(8, 14, 22, 0.75);
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.prologue-box-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--steel-hot);
+}
+.prologue-box-title {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #fff;
+  margin: 0;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+/* 內部緩緩向上捲動視口 */
+.prologue-crawl-viewport {
+  position: relative;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  padding: 16px 20px 42px;
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 88%, transparent 100%);
+}
+.prologue-crawl-viewport::-webkit-scrollbar {
+  width: 4px;
+}
+.prologue-crawl-viewport::-webkit-scrollbar-thumb {
+  background: rgba(95, 208, 242, 0.25);
+  border-radius: 2px;
+}
+
+/* 內部章節文章 */
+.prologue-crawl-content {
+  display: flex;
+  flex-direction: column;
+}
+.prologue-crawl-section {
+  margin-bottom: 36px;
+  padding-bottom: 20px;
+  border-bottom: 1px dashed rgba(122, 158, 178, 0.16);
+  opacity: 0.65;
+  transition: opacity 0.4s ease;
+}
+.prologue-crawl-section.active {
+  opacity: 1.0;
+}
+.pcs-chapter-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--steel-hot);
+  border-bottom: 1px solid rgba(122, 158, 178, 0.15);
+  padding-bottom: 4px;
+}
+.pcs-title-inline {
+  font-family: var(--serif);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+}
+.pcs-paras p {
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 15px;
+  line-height: 2.0;
+  color: #e2eaf0;
+  margin: 0 0 12px 0;
+  text-indent: 2em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+  letter-spacing: 0.3px;
+}
+.pcs-paras p:last-child {
+  margin-bottom: 0;
+}
+
+/* 捲動結尾 */
+.prologue-crawl-end {
+  text-align: center;
+  padding: 30px 0 20px;
+}
+.pce-divider {
+  letter-spacing: 6px;
+  color: var(--line);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.pce-note {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  margin-bottom: 20px;
+}
+.prologue-finish-btn {
+  padding: 12px 36px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+
+/* 底部 HUD */
+.prologue-hud-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  padding: 12px 24px calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(122, 158, 178, 0.2);
+  background: linear-gradient(0deg, rgba(6, 10, 15, 0.96) 0%, rgba(6, 10, 15, 0.75) 70%, rgba(6, 10, 15, 0) 100%);
+  pointer-events: none;
+}
+.prologue-buffer-status {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.3s;
+}
+.prologue-buffer-status.ready {
+  color: var(--ok);
+}
+.prologue-buffer-status.flash-warn {
+  color: var(--danger);
+  animation: flashWarn 0.35s ease 2;
+}
+.prologue-check {
+  color: var(--ok);
+  font-weight: 700;
+}
+.prologue-warn-tag {
+  color: var(--danger);
+  font-weight: 700;
+}
+.prologue-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(122, 158, 178, 0.3);
+  border-top-color: var(--steel-hot);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes flashWarn {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.05); }
+}
+
+.prologue-skip-hint {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.prologue-skip-hint.unlocked {
+  color: var(--steel-hot);
+}
+.prologue-key-badge {
+  background: rgba(95, 208, 242, 0.15);
+  border: 1px solid rgba(95, 208, 242, 0.4);
+  color: var(--steel-hot);
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+/* 長按視覺環 (Hold Indicator) */
+.prologue-hold-indicator {
+  position: fixed;
+  width: 70px;
+  height: 70px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2600;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.prologue-hold-indicator.active {
+  opacity: 1;
+}
+.prologue-hold-svg {
+  width: 60px;
+  height: 60px;
+  transform: rotate(-90deg);
+}
+.prologue-hold-svg .hold-bg {
+  fill: rgba(5, 7, 10, 0.7);
+  stroke: rgba(122, 158, 178, 0.3);
+  stroke-width: 4;
+}
+.prologue-hold-svg .hold-progress {
+  fill: none;
+  stroke: var(--steel-hot);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 163.36;
+  stroke-dashoffset: 163.36;
+  transition: stroke-dashoffset 0.05s linear;
+}
+.prologue-hold-indicator .hold-text {
+  position: absolute;
+  bottom: -20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px #000;
+}
+
+/* ================= 橫式 (Landscape: 電腦版 / 手機橫式) ================= */
+@media (orientation: landscape) {
+  .prologue-narrative-box {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+    width: min(640px, 86vw);
+    height: min(210px, 28vh);
+  }
+}
+
+/* ================= 直式 (Portrait: 手機直式 / 直屏視窗) ================= */
+@media (orientation: portrait) {
+  .prologue-stage {
+    inset: 0;
+    position: absolute;
+  }
+  .prologue-narrative-box {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 28px);
+    max-width: 480px;
+    height: min(230px, 32vh);
+    clip-path: var(--notch-sm);
+  }
+  .prologue-box-header {
+    padding: 8px 14px 6px;
+  }
+  .prologue-box-title {
+    font-size: 15px;
+  }
+  .prologue-crawl-viewport {
+    padding: 12px 14px 36px;
+  }
+  .pcs-paras p {
+    font-size: 14px;
+    line-height: 1.9;
+  }
+  .prologue-hud-top {
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8px;
+  }
+  .prologue-hud-bottom {
+    padding: 8px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+}
+
 

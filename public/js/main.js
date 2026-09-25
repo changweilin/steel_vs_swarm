@@ -49,6 +49,7 @@ import {
   chapterCardHTML, briefHTML, overText, progressText,
 } from './storyui.js';
 import { Dialogue } from './dialogue.js';
+import { playPrologueIntro } from './prologue.js';
 // `game.js`(600KB+toon/postfx/vfx 鏈)進戰才動態載入,首屏不解析(單航班,失敗回提示不炸頁)。
 let _BattleClient = null;
 function battleClientCtor() {
@@ -2203,6 +2204,7 @@ function warmModels(onProg) {
   if (!_modelsReady) _modelsReady = preloadModels(onProg);
   return _modelsReady;
 }
+if (typeof window !== 'undefined') window.__warmModels = warmModels;
 
 /**
  * 固定 OSM 瀏覽器驗收閘(dev-only)：只有 loopback 頁面帶 query 才會問 server fixture route。
@@ -4687,10 +4689,44 @@ $('storySideToggle')?.addEventListener('click', (e) => {
   renderStorySide();
 });
 // 世界觀・序章
+function switchWorldTab(tab) {
+  const tabs = document.querySelectorAll('#worldTabs .world-tab');
+  tabs.forEach((b) => b.classList.toggle('on', b.dataset.worldtab === tab));
+  const body = $('worldBody');
+  const anim = $('worldAnimPanel');
+  if (body) body.style.display = tab === 'read' ? '' : 'none';
+  if (anim) anim.style.display = tab === 'anim' ? '' : 'none';
+}
+$('worldTabs')?.addEventListener('click', (e) => {
+  const b = e.target.closest('.world-tab');
+  if (b?.dataset.worldtab) switchWorldTab(b.dataset.worldtab);
+});
+
+function launchWorldPrologueAnim() {
+  $('worldOverlay').style.display = 'none';
+  playPrologueIntro({
+    force: true,
+    onFinished: () => {
+      $('worldOverlay').style.display = '';
+      switchWorldTab('anim');
+    },
+  });
+}
+$('worldPlayAnimBtn')?.addEventListener('click', launchWorldPrologueAnim);
+document.querySelectorAll('#worldAnimPanel .world-scene-card').forEach((card) => {
+  card.addEventListener('click', launchWorldPrologueAnim);
+});
+
 $('worldBtn')?.addEventListener('click', () => {
   $('worldBody').innerHTML = `<p>${esc(WORLD).replace(/\n\n+/g, '</p><p>')}</p>`;
+  switchWorldTab('read');
   $('worldOverlay').style.display = '';
   $('worldBody').scrollTop = 0;
+});
+$('prologuePlayBtn')?.addEventListener('click', () => {
+  $('worldBody').innerHTML = `<p>${esc(WORLD).replace(/\n\n+/g, '</p><p>')}</p>`;
+  switchWorldTab('anim');
+  $('worldOverlay').style.display = '';
 });
 $('worldCloseBtn')?.addEventListener('click', () => { $('worldOverlay').style.display = 'none'; });
 $('worldOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'worldOverlay') $('worldOverlay').style.display = 'none'; });
@@ -4996,4 +5032,5 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 5000);
   // 所有初始 UI 與事件完成後才放行畫面，避免初始化期間閃出舊版 UI。
   document.documentElement.classList.add('app-ready');
+  playPrologueIntro();
 });
