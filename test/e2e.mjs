@@ -1125,7 +1125,8 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(uk.length === SQUAD.KAMI.N && uk.every((k) => k.uA && k.pt), `s02 大招生成 ${SQUAD.KAMI.N} 架點遞送 kami(分批)`);
     uk[0].hp = 0; s3._kill(uk[0], null);
     uk[1].hp = 0; s3._kill(uk[1], null);
-    for (let i = 0; i < 200 && [...s3.ents.values()].some((e) => e.kami); i++) s3.tick(0.125);
+    // 假人釘在戰鬥中(lastHitAt):脫戰裝甲 1/4 自然回復會污染「補多少」的量測,治療本身不吃 OOC
+    for (let i = 0; i < 200 && [...s3.ents.values()].some((e) => e.kami); i++) { dc.lastHitAt = s3.t; s3.tick(0.125); }
     const healFull = heroAbility('s02', 'ult', 1).heal;
     assert(Math.abs((dc.hp - 100) - healFull / 2) < 12,
       `擊落 2/${SQUAD.KAMI.N} ⇒ 只補一半(${(dc.hp - 100).toFixed(0)} / 全額 ${healFull})`);
