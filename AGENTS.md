@@ -14,6 +14,12 @@
 5. **One architecture, three transports**: cloud / LAN / solo share one simulation and room core; only the transport switches. File and URL layouts stay mirrored.
 6. **Intentional designs stay**: blast coverage, penetration dimensionality, ammo micro-drift, and AoE behavior are deliberate performance and gameplay trade-offs. MUST NOT "repair" them into inconsistency with the shipped balance.
 
+## 1. Documentation Discipline
+
+- **Language**: docs and code comments are English. In-game UI strings and narrative dialogue stay Traditional Chinese and live in their content modules only.
+- **Disclosure**: Tier-1 holds principles only. Definitions live in `.claude/rules/`; per-assertion formulas live in `tools/audit_*.mjs` headers; commands live in `package.json`. MUST NOT duplicate them here.
+- **Signal**: state the non-obvious "why" (constraint, failure mode, invariant). MUST NOT restate what the code plainly shows, and MUST NOT log completed history, dates, or transitional notes.
+
 ## 1. Technical Boundaries
 
 - Runtime: Node.js with a single websocket dependency. MUST NOT add dependencies.

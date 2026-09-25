@@ -1,8 +1,8 @@
-// ============ 戰場模擬(伺服器權威)============
-// DOTA 式三路兵線:小兵(步兵/裝甲車/坦克)沿真實道路路徑推進,
-// 防禦塔與主堡自動迎擊;英雄(無人機/機甲)位置由客戶端回報、
-// 血量與傷害由伺服器結算。座標系:以戰場中心為原點的公尺平面
-// (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
+// ============ Battlefield simulation (server-authoritative) ============
+// DOTA-style three lanes: creeps (infantry/APC/tank) advance along real-road paths;
+// towers and core engage automatically; hero (drone/mech) positions arrive from
+// client reports while HP and damage settle here. Plane is in meters about the
+// battlefield center (x east, z north; height is client-side, simulation is 2D + lane paths).
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, BASE_MISSILE, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
@@ -32,37 +32,40 @@ import {
 
 let nextEntId = 1;
 
-// 所有火場類型（模組級常數；熱路徑查表用，MUST NOT 在函式內重複構造）
+// All fire-field kinds (module constant for hot-path lookup; MUST NOT be rebuilt per call).
 const FIRE_KINDS = new Set(['fire', 'forestfire', 'grassfire', 'factoryfire']);
 
-// 小隊共用的「玩家狀態」:一名玩家不論操控幾架機體,經濟/電力/彈藥/招式只有一份。
-// 三架機體各自是獨立 ent(有自己的 hp/護盾/座標/死亡狀態),但這些欄位透過
-// getter/setter 指回同一個 sq.ps —— 讓既有的 h.money / h.abil / h.ammo 全部原樣可用。
-// dmgOut(累計輸出)同樣共用:一名玩家不論操控幾架機體,「這個人打出多少傷害」只有一份帳 ——
-// 逐機體各記一份的話,三架均分的小隊在電腦玩家眼裡永遠不是輸出核心(見 _dmgOut)。
+// One shared "player state" per squad: one pilot driving several bodies shares a single
+// economy/power/ammo/ability ledger. Each body keeps its own hp/shield/position/death
+// state while these fields alias the same sq.ps, so existing h.money / h.abil / h.ammo
+// accessors keep working unchanged.
+// dmgOut (accumulated output) is shared for the same reason: split per-body ledgers
+// would make an evenly split squad invisible as a damage core to bot targeting (see _dmgOut).
 const SQUAD_SHARED = [
   'money', 'upg', 'ammo', 'reloadUntil', 'fireAt', 'buffs', 'mp', 'maxMp', 'mpRegen',
   'abil', 'acd', 'achg', 'kn', 'mods', 'empUntil', 'stealthUntil', 'aiming', 'lastBurst', 'markUntil',
   'dmgOut', 'unbalUntil',
-  // 純自身型大招補償(2026-08-06;見 data.js SELF_ULT):免裝填時窗與破隱爆發窗都是**小隊共用**——
-  // 彈匣本來就只有一份(ammo/reloadUntil 在上面),免裝填逐機體各記一份就會出現「主視野機免裝填、
-  // 僚機照裝填」這種只有拿碼表才量得出來的分歧。
+  // Self-type ult compensation (see data.js SELF_ULT): the reload-free window and post-stealth
+  // burst window are squad-shared -- ammo/reload state already lives once above, so per-body
+  // copies would split "main-view reload-free, wingman still reloading" with no observable cause.
   'noReloadUntil', 'alphaArm', 'alphaX', 'cast', 'castLockUntil',
 ];
 
-// ---- tick 內加速結構(2026-08-05 手機單機效能:索敵/推擠原是 O(N²) 全掃,實測佔 tick 近九成)----
-// 網格與分桶只在 tick() 內存在(tick 尾清空):tick 之外的直接呼叫(訊息處理/e2e 直測)
-// 一律退回原全掃路徑,行為逐位元同舊制 —— 位置在 tick 之間仍會變(heroPos 訊息/測試瞬移),
-// 過期網格 MUST NOT 留用。格寬/週期只影響效能;索敵合法性仍逐候選走 _tgBlockedD 單一縫。
-const TG_CELL = 96;      // 索敵網格格寬(m):最長射程(塔 310 × altRangeMax)的查詢圈也只掃 ~9×9 格
-const TG_OFF = 2048, TG_SPAN = 4096;   // 格座標 → 單一整數鍵(±2048 格 ≈ ±196km,遠大於任何戰場)
-const TG_RESCAN = 2;     // 索敵快取強制重掃週期(tick):黏著窗 ≤ 2×125ms,克制/英雄偏好的重排語意保留
+// ---- Tick-local acceleration structures ----
+// Grids and buckets exist only inside tick() and are cleared at its tail: direct calls
+// outside ticks (message handling / straight e2e tests) fall back to the full-scan path
+// with bit-identical behavior -- positions still move between ticks (heroPos messages /
+// test teleports), so a stale grid MUST NOT be reused. Cell size/period affect performance
+// only; targeting legitimacy still goes through the _tgBlockedD seam per candidate.
+const TG_CELL = 96;      // Targeting grid cell (m): even the longest-range query (tower 310 x altRangeMax) scans ~9x9 cells
+const TG_OFF = 2048, TG_SPAN = 4096;   // Cell coords -> single integer key (+-2048 cells ~= +-196km, far beyond any battlefield)
+const TG_RESCAN = 2;     // Forced targeting-cache rescan period (ticks): stickiness window <= 2x125ms, counter/hero-preference reorder semantics kept
 
-/** 經緯度 → 以 center 為原點的「遊戲世界」公尺平面(等距圓柱,5km 內誤差可忽略)。
- *  投影本體(含比例尺與**地圖主方位旋轉**)只有 `data.js llToXZ` 一份 —— 本支只負責
- *  **z 鏡射**:客戶端框 z = 南、伺服器框 z = 北(A30)。
- *  ⚠ 鏡射同時把旋轉共軛成反向 ⇒ 這裡 MUST 只是 `[x, -z]`,MUST NOT 自己再套一次 `rotXZ`
- *  (套同號 = 兩端世界差 2θ,而畫面上只表現成「塔的位置對不上 / 打得到卻沒傷害」)。 */
+/** Longitude/latitude -> "game world" meter plane about center (equirectangular, negligible error within 5km).
+ *  The projection body (scale plus **map-bearing rotation**) lives only in `data.js llToXZ` -- this file owns
+ *  the **z mirror** only: client frame z = south, server frame z = north (A30).
+ *  Mirroring conjugates the rotation, so this MUST stay `[x, -z]` and MUST NOT apply `rotXZ` again
+ *  (same-sign rotation would split the two worlds by 2θ, surfacing only as "towers misalign / hits deal no damage"). */
 export function llToMeters(lat, lng, center) {
   const [x, z] = llToXZ(lat, lng, center);
   return [x, -z];
