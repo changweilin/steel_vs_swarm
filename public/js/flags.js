@@ -102,6 +102,25 @@ export const FLAG_DESIGNS = {
   NL: { f: 'h', c: ['#ae1c28', '#ffffff', '#21468b'] },
   NO: { f: 'solid', c: ['#ba0c2f'], m: [['cross', 0.36, 0.28, '#ffffff'], ['cross', 0.36, 0.14, '#00205b']] },
   AE: { f: 'h', c: ['#00732f', '#ffffff', '#000000'], m: [['bar', 0, 0, 0.25, 1, '#ff0000']] },
+  MA: { f: 'solid', c: ['#c1272d'], m: [['star', 0.5, 0.5, 0.2, 5, '#006233']] },
+  VN: { f: 'solid', c: ['#da251d'], m: [['star', 0.5, 0.5, 0.24, 5, '#ffff00']] },
+  NZ: {
+    f: 'solid', c: ['#00247d'],
+    m: [['jack', 0.5, 0.5],
+      ['star', 0.75, 0.22, 0.08, 5, '#ffffff'], ['star', 0.75, 0.22, 0.05, 5, '#cc142b'],
+      ['star', 0.85, 0.45, 0.07, 5, '#ffffff'], ['star', 0.85, 0.45, 0.045, 5, '#cc142b'],
+      ['star', 0.75, 0.75, 0.09, 5, '#ffffff'], ['star', 0.75, 0.75, 0.06, 5, '#cc142b'],
+      ['star', 0.65, 0.50, 0.07, 5, '#ffffff'], ['star', 0.65, 0.50, 0.045, 5, '#cc142b']],
+  },
+  NA: {
+    f: 'solid', c: ['#003580'],
+    m: [['poly', [[0, 1], [1, 1], [1, 0]], '#009543'],
+      ['poly', [[0, 1], [0, 0.7], [1, 0], [1, 0.3]], '#ffffff'],
+      ['poly', [[0, 0.95], [0, 0.75], [1, 0.05], [1, 0.25]], '#d21034'],
+      ['sun', 0.22, 0.28, 0.12, 12, '#ffce00'],
+      ['disc', 0.22, 0.28, 0.08, '#003580'],
+      ['disc', 0.22, 0.28, 0.06, '#ffce00']],
+  },
 };
 
 /**
@@ -338,6 +357,13 @@ function drawMark(ctx, w, h, [t, ...a]) {
         const px = cx * w + Math.cos(th0) * rr, py = cy * h + Math.sin(th0) * rr;
         i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
       }
+      ctx.closePath(); ctx.fill();
+      break;
+    }
+    case 'poly': {
+      const [pts, c] = a;
+      ctx.fillStyle = c; ctx.beginPath();
+      pts.forEach(([px, py], i) => { i ? ctx.lineTo(px * w, py * h) : ctx.moveTo(px * w, py * h); });
       ctx.closePath(); ctx.fill();
       break;
     }

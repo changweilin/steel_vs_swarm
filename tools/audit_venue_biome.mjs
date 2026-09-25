@@ -166,11 +166,7 @@ const JUDGED_AXES = [
 // 「未開發地量不到」,明天它的建蔽率從 2.5% 跳到 40%(那一帶被蓋滿)也會一起被吞掉,
 // 而那正是需要有人知道的事。⇒ 名冊逐筆列出**接受哪幾種**落差,新種類照樣紅。
 const ACCEPTED = {
-  yangmingshan: { kinds: ['built:high'], why: '錨點 = 天母(要路網);宣告描述的是陽明山' },
-  aokigahara: { kinds: ['built:high'], why: '錨點 = 河口湖町(要路網);宣告描述的是青木原樹海' },
   blackforest: { kinds: ['built:high'], why: '錨點 = 鎮上(要路網);宣告描述的是黑森林' },
-  hehuanshan: { kinds: ['axis:未開發地'], why: '錨點 = 埔里(要路網);宣告描述的是合歡山' },
-  tamsui: { kinds: ['axis:water'], why: '錨點 = 淡水市街(要路網);宣告描述的是河口濕地' },
 };
 /** 落差扣掉名冊赦免的那幾種 ⇒ 剩下的就是「沒有人看過」的,MUST 紅 */
 function unaccepted(id, notes) {
