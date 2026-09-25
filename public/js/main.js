@@ -403,6 +403,7 @@ async function enterMapBuilder(initialMode = 'preset') {
   show('mapbuilder');
   app.favCfg = null;
   setFavBtnDisabled(true);
+  if ($('nextCandBtn')) { $('nextCandBtn').style.display = 'none'; $('nextCandBtn').disabled = true; }
 
   try {
     await ensureLeaflet();
@@ -422,11 +423,26 @@ async function enterMapBuilder(initialMode = 'preset') {
         if (cfg) { app.mapGenMode = 'preset'; syncMapGenModeRow(); }
         setFavBtnDisabled(!cfg);
         if (cfg) {
+          const candCount = app.mapSel?.candidates?.length || 0;
+          const candIdx = app.mapSel?.chosen ? app.mapSel.candidates.indexOf(app.mapSel.chosen) : -1;
+          const candText = candCount > 1 && candIdx >= 0 ? ` [候選 ${candIdx + 1}/${candCount}] ` : '';
           $('mapStatus').innerHTML =
-            `已選定:兩堡直線 <b>${(cfg.distM / 1000).toFixed(2)} km</b>(門檻 ${(cfg.diagM * 0.8 / 1000).toFixed(2)} km)` +
+            `已選定${candText}:兩堡直線 <b>${(cfg.distM / 1000).toFixed(2)} km</b>(門檻 ${(cfg.diagM * 0.8 / 1000).toFixed(2)} km)` +
             `・${cfg.laneCount} 條兵線,最大重合 <b>${(cfg.maxOverlap * 100).toFixed(0)}%</b>` +
             (cfg.tactics ? `・彎折 <b>×${cfg.tactics.sinuosity.toFixed(2)}</b>・轉角 <b>${cfg.tactics.turnsPerKm.toFixed(1)}/km</b>` : '') +
             `${cfg.synthetic ? '(含離線模擬路徑)' : ''}`;
+        }
+      },
+      candidates: (list, chosenIdx) => {
+        const btn = $('nextCandBtn');
+        if (!btn) return;
+        if (list && list.length > 1 && chosenIdx >= 0) {
+          btn.style.display = '';
+          btn.disabled = false;
+          btn.textContent = `⟳ 建議其他候選 ${chosenIdx + 1}/${list.length}`;
+        } else {
+          btn.style.display = 'none';
+          btn.disabled = true;
         }
       },
     });
@@ -442,7 +458,7 @@ async function enterMapBuilder(initialMode = 'preset') {
   $('mapStatus').textContent = app.mapGenMode === 'mixed'
     ? '勾選兩處以上地點,按「生成混合地圖」。'
     : app.mapGenMode === 'random' ? '按「生成隨機地圖」(種子空白即隨機)。'
-    : '選一個預設場地,或在地圖上點選蜂群主堡位置。';
+    : '選一個場地,或在地圖上點選主堡位置自動計算兵線。';
 }
 
 function renderTeamSize() {
@@ -620,6 +636,7 @@ function syncMapGenModeRow() {
   if ($('randomPanel')) $('randomPanel').style.display = m === 'random' ? '' : 'none';
   if ($('presetPanel')) $('presetPanel').style.display = m === 'preset' ? '' : 'none';
   if ($('resetSiteBtn')) $('resetSiteBtn').style.display = m === 'preset' ? '' : 'none';
+  if ($('nextCandBtn') && m !== 'preset') $('nextCandBtn').style.display = 'none';
 }
 
 /** 生成結果走既有預覽+存檔管線(與 selectVenue 同出口) */
@@ -763,6 +780,9 @@ function initMapGenUI() {
   $('randomDiceBtn')?.addEventListener('click', () => {
     if ($('randomSeedInput')) $('randomSeedInput').value = String((Math.random() * 4294967296) >>> 0);
     genRandomFromUI();
+  });
+  $('nextCandBtn')?.addEventListener('click', () => {
+    app.mapSel?.selectNextCandidate();
   });
   syncMapGenModeRow();
 }
@@ -1116,10 +1136,18 @@ $('saveFavBtn')?.addEventListener('click', async () => {
 $('resetSiteBtn')?.addEventListener('click', () => {
   app.favCfg = null;
   app.mapSel?.reset();
+  if ($('nextCandBtn')) {
+    $('nextCandBtn').style.display = 'none';
+    $('nextCandBtn').disabled = true;
+  }
 });
 $('backLobbyBtn')?.addEventListener('click', () => {
   app.favCfg = null;
   app.mapSel?.reset();
+  if ($('nextCandBtn')) {
+    $('nextCandBtn').style.display = 'none';
+    $('nextCandBtn').disabled = true;
+  }
   show('connect');
   refreshRooms();
 });
