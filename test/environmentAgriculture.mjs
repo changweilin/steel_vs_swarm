@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { environmentParts } from '../public/js/environmentParts.js';
-import { ENVIRONMENT_STRUCTURE_PARAMETERS } from '../public/js/environmentCatalog.js';
+import { environmentParts, ENVIRONMENT_STRUCTURE_PARAMETERS } from '../public/js/environmentParts.js';
+import { ROOF_SEAT_SINK } from '../public/js/architectureRoofParts.js';
 import { partBox } from '../public/js/edgewall.js';
 import { mat3Apply, mat3FromEulerXYZ } from '../public/js/partTransform.js';
 
@@ -19,7 +19,7 @@ for (let seed = 0; seed < 80; seed++) {
     if (main.architecture.roofForm === 'flat') assert.equal(roof.length, 0);
     else {
       assert(roof.length > 0, 'non-flat style has roof geometry');
-      close(Math.min(...roof.map(p => partBox(p).y0)), body.y1, 'roof assembly rests on wall');
+      assert(Math.abs(Math.min(...roof.map(p => partBox(p).y0)) - (body.y1 - ROOF_SEAT_SINK)) < 0.05, 'roof assembly rests on wall');
     }
     if (kind !== 'ranch') continue;
     const posts = rows.filter(p => p.role === 'fence-post');

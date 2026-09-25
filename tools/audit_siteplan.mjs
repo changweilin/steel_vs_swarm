@@ -1,4 +1,4 @@
-import { BATTLE_GEOLOGY } from '../public/js/geologyBattle.js';
+import { BATTLE_GEOLOGY } from '../public/js/geology.js';
 // ============ 場址配置規則稽核(都市計畫 / 樹冠羞避 / 地質排列)============
 // 2026-08-03 使用者定案三條(市區沿街配置 + 公設 / 綠地樹冠羞避 / 裸露地地質排列)。
 // 三條全是**排列規則**,而排列規則壞掉的方式一律是無聲的:

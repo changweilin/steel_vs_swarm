@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
-import { environmentParts, linearEnvironmentParts } from '../public/js/environmentParts.js';
-import { ENVIRONMENT_STRUCTURE_PARAMETERS } from '../public/js/environmentCatalog.js';
+import { environmentParts, linearEnvironmentParts, ENVIRONMENT_STRUCTURE_PARAMETERS } from '../public/js/environmentParts.js';
 import { partBox, buildBoundaryRunParts, wallFit, WALL_KINDS } from '../public/js/edgewall.js';
 import { partsAABB } from '../public/js/vehicles.js';
 import { mat3Apply, mat3FromEulerXYZ, mat3Transpose } from '../public/js/partTransform.js';

@@ -88,7 +88,7 @@
 舊戰場巨岩建構器已移除；`synthMegalith` 只保留呼叫共用生成器的相容入口。
 這些是美術形狀對應，不代表各岩性只會產生這些地貌。
 
-戰場透過 `geologyBattle.js` 的 `BATTLE_GEOLOGY` 與 `battleGeology` 使用同一份幾何：
+戰場透過 `geology.js` 的 `BATTLE_GEOLOGY` 與 `battleGeology` 使用同一份幾何：
 uluru／augustus → 砂岩孤立岩丘；dabajian／舊 karst → 層狀砂岩塔峰；
 torres → 花崗岩塔群；meteora → 礫岩圓頂峰；sigiriya → 花崗岩塊。
 舊 karst 鍵保留相容性，型別改為原模板所描述的砂岩塔峰。

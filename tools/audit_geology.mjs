@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
-import { GEOLOGY_TYPES, GEOLOGY_STEEP_DEG, LEGACY_GEOLOGY_RULES, generateGeology, geologyDistribution, geologyBackgroundObject } from '../public/js/geology.js';
+import {
+  GEOLOGY_TYPES, GEOLOGY_STEEP_DEG, LEGACY_GEOLOGY_RULES, generateGeology, geologyDistribution, geologyBackgroundObject,
+  PHENOMENA, phenomenaProfile, phenomenaSurface,
+} from '../public/js/geology.js';
 import { generateSharedBackgroundObject, sharedBackgroundObjectTargets } from '../public/js/backgroundObjects.js';
 import { ANCIENT_MONUMENTS, ANCIENT_RUINS, ancientCandidates, ancientStoneDistribution, selectAncientStone, ancientStoneGeometry } from '../public/js/ancientStone.js';
 import { REGIONAL_STONE_BUILDERS } from '../public/js/ancientStoneSites.js';
-import { PHENOMENA, phenomenaProfile, phenomenaSurface } from '../public/js/geologyPhenomena.js';
 
 let count = 0;
 for (const [type, spec] of Object.entries(GEOLOGY_TYPES)) {
