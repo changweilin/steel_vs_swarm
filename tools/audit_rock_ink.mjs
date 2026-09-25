@@ -149,8 +149,10 @@ console.log('\nⅡ 石堆散件(ground.js 的 3D 細節):一款一個號 + 貢�
     '沒有手寫的貢獻常數,也沒有「零件款 → 貢獻」的名冊(名冊會在加一款細節時靜默過期)');
   ok(count(gndC, /surfGroup\(\)/g) === 1,
     'ground.js 的群組配號恰一處(第二處就是「有些款彼此不畫線、有些款畫」)');
-  ok(/import \{ envMat, surfGroup \} from '\.\/toon\.js';/.test(gndSrc)
-    && /import \{ ENV, inkCtrM, edgeWallInsetM \} from '\.\/data\.js';/.test(gndSrc),
+  ok(/import \{[^}]*\bsurfGroup\b[^}]*\} from '\.\/toon\.js';/.test(gndSrc)
+    && /import \{[^}]*\binkCtrM\b[^}]*\} from '\.\/data\.js';/.test(gndSrc)
+    && !/function surfGroup|const surfGroup/.test(code(gndSrc))
+    && !/function inkCtrM|const inkCtrM/.test(code(gndSrc)),
     '兩支推導縫都從**唯一縫**取(`surfGroup` ← toon.js / `inkCtrM` ← data.js),沒有第三份');
 
   // ---- 行為直測:真品的 DETAIL_DEFS 幾何 → detailR → 貢獻 ----
