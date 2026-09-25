@@ -6068,13 +6068,16 @@ export class BattleSim {
         }
         const bWet = b === hh ? (hh?.wet || 0) : 0;
         const wetMul = fluidFactor(bWet);
-        // 護盾:脫戰(OOC_S 秒沒受擊)或受擊充能(spRegenHitUntil)自然回復;裝甲只能回主堡 / 治療招式。
+        // 護盾:脫戰(OOC_S 秒沒受擊)或受擊充能(spRegenHitUntil)自然回復;裝甲脫戰以磁力 1/4 速率自然回復,回主堡 / 治療招式額外修復。
         // 回復速度 × 充能等級(chargeF) × 護盾恢復倍率(rg) × 流體沉浸倍率(wetMul)
         const rg = b.hero ? this._buffMul(b, 'regen') : 1;
         if (b.sp < b.maxSp && (this.t - b.lastHitAt > VITALS.OOC_S || (b.spRegenHitUntil || 0) > this.t)) {
           b.sp = Math.min(b.maxSp, b.sp + b.maxSp * VITALS.SP_REGEN_PS * chargeF(this._chargeLvl(b)) * rg * wetMul * dt);
         }
         if (b.hp < b.maxHp) {
+          if (this.t - b.lastHitAt > VITALS.OOC_S) {
+            this._healBody(b, b.maxHp * VITALS.HP_REGEN_PS * chargeF(this._chargeLvl(b)) * rg * wetMul * dt, 'ooc');
+          }
           // 超級方無主堡:雙陣營主堡旁皆可修裝甲(深入敵後搶修,風險自負)
           const bases = isSuperSide(b.side) ? [this.basePos.SWARM, this.basePos.STEEL] : [this.basePos[b.side]];
           const patched = bases.some((bp) => bp && dist2d(b.x, b.z, bp[0], bp[1]) < GAME.HERO_HEAL_R);
