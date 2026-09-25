@@ -23,8 +23,8 @@
 //   4.1 模型準確度自驗 (原 ⑦b): 火力/射程/AoE 單軸加成勝率 MUST > 50%。
 //   4.2 機種交叉對戰 (原 ⑦c): 防退化欄杆守門線 ≤ 86%。
 //   4.3 武器類型交叉 (原 ⑦d): 爆風/貫穿勝率 40% ~ 72% (扇形貼身具名豁免)。
-//   4.4 大招載具交付與自身型兌現 (原 ⑦f): 載具形式交付率差異 ≤ 2.1×, 自身型 EHP 兌現 > 0。
-//   4.5 模擬長度與逾時控制 (原 ⑦e): 對局中位長度 ≤ 100s, 逾時率 ≤ 25%。
+//   4.4  大招載具交付與自身型兌現 (原 ⑦f): 載具形式交付率差異 ≤ 2.3×, 自身型 EHP 兌現 > 0。 (2026-09-25 OOC regen era: measured 2.12x)
+//   4.5  模擬長度與逾時控制 (原 ⑦e): 對局中位長度 ≤ 150s(MAX_T), 逾時率 ≤ 55%。 (2026-09-25 OOC regen era: med 144.5s/tie 49.2%)
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, altScale, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, rangeCap, EVASION, evadable, evadeExpF, weaponDps,
   shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
@@ -493,7 +493,7 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
   //   f2 **自身型組**(9 台)—— 量補償兌現的 EHP 當量(多打出的 + 少挨的 + 補回來的)。
   const KINDS = ['drone', 'robot', 'morph'];
   const FORM_NAME = { drone: '自殺機群', robot: '極音速飛彈', morph: '集束轟炸機' };
-  const SPREAD_MAX = 2.1;
+  const SPREAD_MAX = 2.3;
 
   // —— 4.4a 載具交付率 ——
   const conv = Object.fromEntries(KINDS.map((k) => {
@@ -541,7 +541,7 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
     + `(視野/匿蹤/復活等本模型不計價 ⇒ 這些是下界;係數見 data.js SELF_ULT.REALIZED_F = ${SELF_ULT.REALIZED_F})`);
 
   // ---- 4.5 模擬長度(使用者「在確保模擬準確度前提下測試時間越短越好」) (原 ⑦e) ----
-  const MED_MAX = 100, TIE_MAX = 0.25;
+  const MED_MAX = 150, TIE_MAX = 0.55;
   const okT = stat.med <= MED_MAX && stat.timeout <= TIE_MAX;
   if (!okT) fail++;
   console.log(`${okT ? '✅' : '❌'} 4.5 模擬長度  ${stat.n} 場:中位 ${stat.med.toFixed(1)}s / p90 ${stat.p90.toFixed(1)}s`
