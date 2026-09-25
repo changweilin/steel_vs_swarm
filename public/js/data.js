@@ -34,9 +34,9 @@ export const SIDES = {
 export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 
 // ---- 隊伍規模 ----
-// 每陣營 N 人(1~5),總人數 2N;兵線 L = ⌈N/2⌉(1v1=1 線 … 5v5=3 線);
-// 地圖大小「綁定人數」:真實世界邊長 = 0.3 + 0.1×L km(L1/L2/L3 = 0.4/0.5/0.6 km),
-// 不再有大/中/小尺寸選項。
+// 每陣營 N 人(1~5),總人數 2N;啟用兵線 L = ⌈N/2⌉(1v1=1 線 … 5v5=3 線);
+// 地圖框架恆為三線母體(2026-09-25 同一張圖):真實世界邊長固定 0.18 + 0.06×3 km,
+// 人數只決定啟用子集(L1=[中]、L2=[上,下])。不再有大/中/小尺寸選項。
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
 
@@ -96,6 +96,18 @@ export const mapScaleF = (m) => laneChainOf(m) / laneChainOf(false);
 export const laneCountFor = (teamSize, m) =>
   (mapPlan(m).mode === 'story' ? STORY_MAP.LANES : lanesFor(teamSize));
 /**
+ * 三線母體(2026-09-25 使用者定案「1~3 條兵線用同一張圖」):
+ * 標準戰場的地圖框架(兩堡/尺寸/兵線母體)恆為 3 線,兵線數只決定啟用子集 ——
+ * L1 = 中路、L2 = 左右兩路、L3 = 全開。劇情戰役不進母體(專用 m1 單線)。
+ * 母體排序恆為 [上, 中, 下];合成弧 side +1/0/−1 與烘焙排序同義。
+ */
+export const MOTHER_LANES = 3;
+/** 啟用子集(母體下標):L1 → [1]、L2 → [0, 2]、L3 → 全 */
+export const laneSubsetFor = (L) => (L <= 1 ? [1] : L === 2 ? [0, 2] : [0, 1, 2]);
+/** 地圖框架用兵線數:標準戰場恆取母體,劇情戰役跟兵線數 */
+export const geoLanesFor = (teamSize, m) =>
+  (mapPlan(m).mode === 'story' ? laneCountFor(teamSize, m) : MOTHER_LANES);
+/**
  * 一個塔位上**實際會生成砲塔**的控制點(帶 side)。劇情戰役我方無塔 ⇒ 只有防守方那一個。
  * 「繞著塔位做事」的消費端(biomes 淨空 / beacons 錨點 / 橋上墩座 / sim 生成 / 佈局稽核)
  * MUST 全走這一支,MUST NOT 直接讀 `site.SWARM` / `site.STEEL` —— 直接讀的那一份會在
@@ -122,8 +134,8 @@ export const MAPGEO = {
   // 主堡距離目標 ≈ 0.85 × 地圖對角線(> 題目要求的 80%)
   BASE_DIST_FRAC: 0.85,
   MIN_DIST_FRAC: 0.80,
-  // 地圖真實世界邊長 = BASE + PER_LANE × L (km) = 0.18 + 0.06×L (L1/L2/L3 = 0.24/0.30/0.36 km)。
-  // 依 3/5 比例等比縮小(1 兵線為 240m 緊湊尺度,2/3 兵線同比例 300m/360m)。
+  // 地圖真實世界邊長 = BASE + PER_LANE × L (km)。標準戰場框架恆取母體 L=3
+  // (見 geoLanesFor ⇒ 0.36km),與人數無關;人數只決定啟用子集(見 laneSubsetFor)。
   REAL_SIDE_BASE_KM: 0.18,
   REAL_SIDE_PER_LANE_KM: 0.06,
   // 真實↔遊戲世界比例尺:真實地理距離 = 遊戲距離 × REAL_SCALE。

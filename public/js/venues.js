@@ -7,7 +7,7 @@
 // 完整 battleConfig(合成兵線),不需要 OSRM 掃描即可開房;
 // 想用真實道路兵線,仍可在地圖上手動點選錨點走掃描流程。
 // 「我的最愛」存整份 battleConfig(含兵線),選了即用、不必重新搜尋。
-import { MAPGEO, lanesFor, laneCountFor, mapPlan, targetDistFor, laneSeparationAudit, laneTacticsXZ, altTier } from './data.js';
+import { MAPGEO, lanesFor, laneCountFor, mapPlan, targetDistFor, laneSeparationAudit, laneTacticsXZ, altTier, laneSubsetFor, geoLanesFor } from './data.js';
 import { VENUE_LANES } from './venueLanes.js';
 import { VENUE_GRID } from './venueGrid.js';
 
@@ -238,6 +238,37 @@ function bakedLanesSeparated(entry) {
 }
 
 /**
+ * 兩側翼的弧長等距中線(混合母體的中路備選):兩線各重取樣為固定 K 點後逐點平均。
+ * 構造上落在兩側翼正中間 —— 側翼中段間距 ≥ 80m 處,中線離任一側翼恆 ≥ 40m;
+ *  pinched 處由分離稽核把關,不通過就換下一備選。固定 K ⇒ 確定性,同輸入同輸出。
+ * 中線本身不是真實道路(合成中路亦然),但它與兩側翼共享同一對主堡端點。
+ */
+function midlineOf(top, bot) {
+  const K = 32;
+  const cumOf = (pts) => {
+    const cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + distMeters(pts[i - 1], pts[i]));
+    return cum;
+  };
+  const at = (pts, cum, total, d) => {
+    d = Math.max(0, Math.min(total, d));
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < d) i++;
+    const f = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+    return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+  };
+  const ct = cumOf(top), cb = cumOf(bot);
+  const tt = ct[ct.length - 1] || 1, tb = cb[cb.length - 1] || 1;
+  const out = [];
+  for (let k = 0; k <= K; k++) {
+    const [a1, o1] = at(top, ct, tt, tt * k / K);
+    const [a2, o2] = at(bot, cb, tb, tb * k / K);
+    out.push([(a1 + a2) / 2, (o1 + o2) / 2]);
+  }
+  return out;
+}
+
+/**
  * 烘焙兵線表的鍵(`venueLanes.js` 與 `tools/bake_venue_lanes.mjs` 的**唯一縫**)。
  *
  * 完整戰場的鍵就是兵線數(`1` / `2` / `3`);劇情戰役另有一組 `m1`
@@ -340,18 +371,22 @@ function mulberry32(seed) {
  * via 點」再 Chaikin 平滑的戰術折線 — 保證非直線、有真實轉角
  * (轉角 = 伺服器障礙/防空/地雷的伏擊錨點),端點精確落在兩堡。
  * 三條線共用同一組交錯相位 → 同進同退,維持兵線分離度。
+ * salt = 確定性備選流(salt=0 恆為舊制輸出):混合母體拿真實側翼配合成中路時,
+ * 若主位流與側翼互穿,依 salt 遞增換一組同構擺動,直到分離稽核通過。
  */
-export function synthLane(a, b, side) {
+export function synthLane(a, b, side, salt = 0) {
   const cosLat = Math.cos(a[0] * Math.PI / 180);
   const vx = (b[1] - a[1]) * Math.PI / 180 * R_EARTH * cosLat;
   const vz = (b[0] - a[0]) * Math.PI / 180 * R_EARTH;
   const d = Math.hypot(vx, vz) || 1;
   const px = -vz / d, pz = vx / d;                       // 垂直單位向量(公尺系)
   // 種子不含 side:全部兵線共用同一組側擺相位(同進同退),
-  // 線間距離恆為主脊間距(0.3×D×sin),側擺不會互相吃掉分離度
+  // 線間距離恆為主脊間距(0.3×D×sin),側擺不會互相吃掉分離度。
+  // 種子含 salt:同一 (a,b,side) 不同 salt 是不同構的同模擺動,salt=0 逐位元同舊制。
   const rnd = mulberry32(
-    (Math.round(a[0] * 1e4) * 31 + Math.round(a[1] * 1e4) * 17
-     + Math.round(b[0] * 1e4) * 7 + Math.round(b[1] * 1e4) * 3) >>> 0,
+    ((Math.round(a[0] * 1e4) * 31 + Math.round(a[1] * 1e4) * 17
+      + Math.round(b[0] * 1e4) * 7 + Math.round(b[1] * 1e4) * 3
+      + Math.imul(salt | 0, 0x9E3779B9)) >>> 0),
   );
   const latOf = (t, lateral) => [
     a[0] + (b[0] - a[0]) * t + lateral * pz / R_EARTH * 180 / Math.PI,
@@ -390,27 +425,123 @@ export function synthLane(a, b, side) {
  *
  * 沒有預算資料的場地(路網不足)才退回 synthLane 合成弧 —— 這是離線/無圖資的最後防線,
  * MUST NOT 移除(見 CLAUDE.md「外部 API 皆會限流或掛掉」)。
- * 幾何:真實邊長 0.3+0.1L km,兩堡距離 = 邊長 × 0.85 × √2。
+ * 幾何:母體框架固定三線尺度(真實邊長 0.36km,兩堡距離 = 邊長 × 0.85 × √2);
+ * 烘焙尺度較小的場地(僅有 L1/L2 烘焙),框架由實際兩堡距離反推(兩堡恆為對角線 85%)。
  *
  * 第三參數 = 地圖型態(見 data.js `mapPlan`;省略 = 標準戰場、劇情戰役 = 防守方 side):
  * 尺度整組乘 `mapScaleF` ⇒ 邊長 / 兩堡距離 / 重合網格一起縮。劇情戰役**有自己的
  * 一組烘焙兵線**(鍵見 `venueLaneKey` 的 `m1`):同一張圖在不同兩堡距離下,路網上
  * 走得通又合規的路徑不是同一條。烤不到的場地才退回「完整版路線兩端對稱剪短」(`trimLaneTo`)。
  * 合成弧那條路天生吃 realD,零改動。
- * 劇情戰役另外**恆為單兵線**(`laneCountFor`)—— 3v3 / 5v5 一樣只取 L1 那條烘焙路線,
+ * 劇情戰役另外**恆為單兵線**(`laneCountFor`)—— 3v3 / 5v5 一律只取 L1 那條烘焙路線,
  * MUST NOT 拿 lanesFor(teamSize) 去查表(查到的是兩三條線,而兵線數是 STORY_MAP.LANES 定的)。
+ *
+ * 標準戰役**同一張圖**(2026-09-25 使用者定案):框架恆為三線母體,與人數無關 ——
+ * `D/sizeM` 一律取母體尺度(`geoLanesFor`),L1 取母體中路、L2 取母體左右兩路
+ * (下標見 data.js `laneSubsetFor`),L3 全開。母體來源三階:①合規 L3 烘焙 →
+ * ②合規 L2 烘焙配合成中路(須再過分離稽核,不過就往下掉) → ③合成弧母體。
+ * 框架(主堡/尺寸)因此不隨人數漂移;`laneIds` 記母體下標(渲染色號用),
+ * `motherLanes` 存整份母體(換人數重派子集用,不進戰鬥結算)。
  */
 export function venueConfig(venue, teamSize, mapA = false) {
   const plan = mapPlan(mapA);
   const L = laneCountFor(teamSize, mapA);
+  if (plan.mode !== 'full') return venueStoryConfig(venue, L, mapA, plan);
+  const G = geoLanesFor(teamSize, mapA);   // 標準戰場恆為母體,與人數無關
+  const D = targetDistFor(G, mapA);             // 遊戲世界距離(母體框架,與人數無關)
+  const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
+  const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);   // 遊戲世界邊長(母體框架)
+
+  // 三線母體:[上, 中, 下],兩端即兩座主堡
+  const baked3 = VENUE_LANES[venue.id]?.[3];
+  let A, B, mother, maxOverlap, synthetic, frameFromBases = false;
+  if (baked3 && bakedLanesSeparated(baked3)) {
+    mother = baked3.lanes.map((l) => l.map((p) => [...p]));
+    [A, B] = baked3.bases.map((p) => [...p]);
+    maxOverlap = baked3.maxOverlap;
+    synthetic = false;
+  } else {
+    // 混合母體:真實側翼/中路能留就留,缺的那條由中線或合成弧補,過分離稽核才收。
+    // 中路備選序:側翼中線(構造等距) → 合成弧逐 salt(同構不同擺);側翼備選:兩翼同 salt。
+    const baked2 = VENUE_LANES[venue.id]?.[2];
+    if (!mother && baked2 && bakedLanesSeparated(baked2)) {
+      const [A2, B2] = baked2.bases.map((p) => [...p]);
+      const top = baked2.lanes[0].map((p) => [...p]), bot = baked2.lanes[1].map((p) => [...p]);
+      const mids = [midlineOf(top, bot)];
+      for (let salt = 0; salt < 8; salt++) mids.push(synthLane(A2, B2, 0, salt));
+      for (const mid of mids) {
+        if (bakedLanesSeparated({ lanes: [top, mid, bot], bases: [A2, B2] })) {
+          [A, B] = [A2, B2];
+          mother = [top, mid.map((p) => [...p]), bot];
+          maxOverlap = baked2.maxOverlap;
+          synthetic = false;
+          frameFromBases = true;   // 烘焙尺度主堡配母體公式邊長會跌破兩堡 80% 門檻 ⇒ 邊長由實際兩堡距離反推
+          break;
+        }
+      }
+    }
+    const baked1 = VENUE_LANES[venue.id]?.[1];
+    if (!mother && baked1 && bakedLanesSeparated(baked1)) {
+      const [A1, B1] = baked1.bases.map((p) => [...p]);
+      const mid = baked1.lanes[0].map((p) => [...p]);
+      for (let salt = 0; salt < 8 && !mother; salt++) {
+        const cand = [synthLane(A1, B1, 1, salt), mid, synthLane(A1, B1, -1, salt)];
+        if (bakedLanesSeparated({ lanes: cand, bases: [A1, B1] })) {
+          [A, B] = [A1, B1];
+          mother = cand;
+          maxOverlap = baked1.maxOverlap;
+          synthetic = false;
+          frameFromBases = true;
+        }
+      }
+    }
+    if (!mother) {
+      A = [...venue.ll];
+      B = destPoint(A, venue.bearing ?? 0, realD);
+      mother = [1, 0, -1].map((s) => synthLane(A, B, s));
+      maxOverlap = 0.06;           // 三線同相位側擺、主脊間距 0.3×D,僅端點交會
+      synthetic = true;
+    }
+  }
+  const sub = laneSubsetFor(L);
+  const lanes = sub.map((i) => mother[i].map((p) => [...p]));
+  // distM 用實際兩堡距離(預算路線的端點吸附到道路節點,與理想值有數十公尺差)
+  const distGame = distMeters(A, B) / MAPGEO.REAL_SCALE;
+  const sizeMUse = frameFromBases ? distGame / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2) : sizeM;
+  return {
+    // rot = 地圖主方位(弧度):把整張地圖轉這麼多度,該場地的大馬路就對齊世界軸
+    // (2026-08-10 使用者定案)。離線烘焙的表沒有這個場地 ⇒ 0 = 不旋轉 = 逐位元同舊制。
+    // **旋轉是投影的一部分**(見 data.js llToXZ),隨 battleConfig 廣播全房 ⇒ 兩端同一個世界。
+    center: { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2, rot: (VENUE_GRID[venue.id] || 0) * Math.PI / 180 },
+    bases: { SWARM: A, STEEL: B },
+    lanes,
+    laneCount: L,
+    laneIds: [...sub],
+    motherLanes: mother.map((l) => l.map((p) => [...p])),
+    sizeM: sizeMUse, diagM: sizeMUse * Math.SQRT2, distM: distGame,   // 全為遊戲世界公尺
+    geoScaleVer: MAPGEO.GEO_SCALE_VER,
+    maxOverlap,
+    synthetic, precomputed: true,
+    // `country`(旗幟 emoji)MUST 帶進 battleConfig:兩個消費端都在建圖期,而那時只拿得到
+    // cfg —— ①在地文字語域的備援(`biomes.js` 的 `localeOf(cfg.venue?.country)`,**這一行
+    // 2026-08-13 之前一直讀到 undefined**:VENUES 有這一欄而 venueConfig 沒帶下來);
+    // ②國旗物件的「地圖國」那 30%(flags.js 的 FLAG_MIX)。自訂地圖沒有這一欄 ⇒ 兩者各自降級。
+    venue: { id: venue.id, name: venue.name, mix: venue.mix, country: venue.country, base: venue.base || null, variant: venue.variant || null, ampF: venue.ampF ?? 1 },
+    placeName: venue.name,
+    // 劇情戰役:防守方(BOSS 方)陣營 id。同樣 MUST 隨 battleConfig 廣播 —— 塔位是非對稱的,
+    // 少一台知道就少一台把敵方的兩座塔建在同一個地方。一般對戰恆 null ⇒ 一切推導同舊制。
+    defSide: plan.def,
+  };
+}
+
+/**
+ * 劇情戰役專用(單線,不進三線母體):烘焙 m1 → 完整版路線剪短 → 合成弧。
+ * 縮小尺度恆為單兵線(`laneCountFor`),MUST NOT 拿 lanesFor(teamSize) 去查表。
+ */
+function venueStoryConfig(venue, L, mapA, plan) {
   const D = targetDistFor(L, mapA);             // 遊戲世界距離
   const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
   const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);   // 遊戲世界邊長
-
-  // 三線母體派生(2026-09-12 使用者定案「先建立 3 兵線地圖,單獨使用中路設為 1 兵線地圖,左右兩路作為 2 兵線地圖」):
-  // 完整戰場若具備合規 L3 烘焙母體,L1(中路)與 L2(左右兩路)優先由 L3 派生,共享基地座標與戰場主軸。
-  const baked3 = VENUE_LANES[venue.id]?.[3];
-  const baked3Ok = plan.mode === 'full' && baked3 && bakedLanesSeparated(baked3);
 
   // 三階降級(寧缺勿錯,原則 6):①這個尺度自己的烘焙路線 → ②完整版路線剪短 → ③合成弧。
   // ② 只在 ① 缺席時才走 —— 它是 2026-08-13~14 的過渡路徑,留著是因為新烤一張圖需要外網,
@@ -419,20 +550,7 @@ export function venueConfig(venue, teamSize, mapA = false) {
   const bakedRaw = (ownRaw && bakedLanesSeparated(ownRaw)) ? ownRaw : VENUE_LANES[venue.id]?.[L];
   const baked = bakedRaw && bakedLanesSeparated(bakedRaw) ? bakedRaw : null;
   let A, B, lanes, maxOverlap, synthetic;
-  if (baked3Ok) {
-    if (L === 1) {
-      lanes = [baked3.lanes[1].map((p) => [...p])];
-      maxOverlap = 0;
-    } else if (L === 2) {
-      lanes = [baked3.lanes[0].map((p) => [...p]), baked3.lanes[2].map((p) => [...p])];
-      maxOverlap = baked3.maxOverlap;
-    } else {
-      lanes = baked3.lanes.map((l) => l.map((p) => [...p]));
-      maxOverlap = baked3.maxOverlap;
-    }
-    [A, B] = baked3.bases.map((p) => [...p]);
-    synthetic = false;
-  } else if (baked) {
+  if (baked) {
     lanes = baked.lanes.map((l) => l.map((p) => [...p]));
     if (plan.mode !== 'full' && baked !== ownRaw) {
       // ②:縮小尺度但只有完整版路線可用 ⇒ 兩端對稱剪短,兩端就是兩座主堡。
@@ -463,6 +581,7 @@ export function venueConfig(venue, teamSize, mapA = false) {
     bases: { SWARM: A, STEEL: B },
     lanes,
     laneCount: L,
+    laneIds: lanes.map((_, i) => i),   // 劇情單線無母體,下標即自身
     sizeM, diagM: sizeM * Math.SQRT2, distM: distGame,   // 全為遊戲世界公尺
     geoScaleVer: MAPGEO.GEO_SCALE_VER,
     maxOverlap,

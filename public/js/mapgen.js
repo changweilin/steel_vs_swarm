@@ -15,7 +15,7 @@
 //     .claude.md B.5:地貌拼圖一律零共享亂數,免推移植被/建築序列)。
 //   sanitizeProcRelief = procRelief 欄位唯一淨化(振幅夾上限)。
 // 本檔零 three import、零 Node API:瀏覽器 / rooms.js(單機) / Node 稽核共用。
-import { MAPGEO, BIOMES, lanesFor, targetDistFor, sideMFor } from './data.js';
+import { MAPGEO, BIOMES, lanesFor, targetDistFor, sideMFor, MOTHER_LANES, laneSubsetFor } from './data.js';
 import { mulberry32 } from './rng.js';
 
 /** 地貌鍵(與 data.js BIOMES / venues.js mix 同鍵) */
@@ -212,17 +212,21 @@ export function synthGenLanes(A, B, L, seedU32) {
   return sides.map(one);
 }
 
-/** 兩堡/兵線骨架 → battleConfig 外殼(混合/隨機共用;幾何公式與現制同源) */
-function genConfigShell({ A, B, lanes, mix, ampF, name, venueId, mode, seed, sources, procAmp }) {
+/** 兩堡/兵線骨架 → battleConfig 外殼(混合/隨機共用;幾何公式與現制同源)。
+ * 框架恆為三線母體(2026-09-25 同一張圖):邊長/兩堡距取母體尺度,lanes 為當下啟用子集。 */
+function genConfigShell({ A, B, lanes, mother, mix, ampF, name, venueId, mode, seed, sources, procAmp }) {
   const L = lanes.length;
-  const D = targetDistFor(L);
-  const sizeM = sideMFor(L);
+  const sub = laneSubsetFor(L);
+  const D = targetDistFor(MOTHER_LANES);
+  const sizeM = sideMFor(MOTHER_LANES);
   const distGame = distMeters(A, B) / MAPGEO.REAL_SCALE;
   return {
     center: { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2, rot: 0 },
     bases: { SWARM: A, STEEL: B },
     lanes,
     laneCount: L,
+    laneIds: [...sub],
+    motherLanes: (mother || lanes).map((l) => l.map((p) => [...p])),
     sizeM, diagM: sizeM * Math.SQRT2, distM: distGame,
     geoScaleVer: MAPGEO.GEO_SCALE_VER,
     maxOverlap: 0.06,
@@ -255,18 +259,19 @@ export function mixedMapConfig(sources, opts = {}) {
     ? Number(opts.seed) >>> 0
     : hashSeed(list.map((s) => `${s.ll[0].toFixed(4)},${s.ll[1].toFixed(4)}:${s.weight}`).join('|'));
   const center = centroidOf(list);
-  const D = targetDistFor(L);
+  const D = targetDistFor(MOTHER_LANES);
   const realD = D * MAPGEO.REAL_SCALE;
   const rnd = mulberry32(seed);
   const bearing = Number.isFinite(Number(opts.bearing)) ? Number(opts.bearing) : Math.floor(rnd() * 360);
   const A = destPoint(center, bearing + 180, realD / 2);
   const B = destPoint(center, bearing, realD / 2);
-  const lanes = synthGenLanes(A, B, L, seed);
+  const mother = synthGenLanes(A, B, MOTHER_LANES, seed);
+  const lanes = laneSubsetFor(L).map((i) => mother[i]);
   const mix = opts.mixOverride ? clampBiomeMix(opts.mixOverride) : blendBiomeMix(list);
   const ampF = Math.max(0.3, Math.min(2, blendNum(list, 'ampF', 1)));
   const names = list.map((s) => s.name).filter(Boolean).slice(0, 3).join('+') || '多地';
   return genConfigShell({
-    A, B, lanes, mix, ampF,
+    A, B, lanes, mother, mix, ampF,
     name: `混合地圖・${names}`,
     venueId: `mixed-${(seed >>> 0).toString(16)}`,
     mode: 'mixed', seed, sources: list,
@@ -296,14 +301,15 @@ export function randomMapConfig(opts = {}) {
   const mix = clampBiomeMix(Object.fromEntries(GEN_BIOMES.map((k, i) => [k, draws[i] / sum])));
   const ampF = Math.round((0.4 + rnd() * 1.2) * 100) / 100;
   const L = lanesFor(teamSize);
-  const D = targetDistFor(L);
+  const D = targetDistFor(MOTHER_LANES);
   const realD = D * MAPGEO.REAL_SCALE;
   const bearing = Math.floor(rnd() * 360);
   const A = destPoint(center, bearing + 180, realD / 2);
   const B = destPoint(center, bearing, realD / 2);
-  const lanes = synthGenLanes(A, B, L, seed ^ 0x9E3779B9);
+  const mother = synthGenLanes(A, B, MOTHER_LANES, seed ^ 0x9E3779B9);
+  const lanes = laneSubsetFor(L).map((i) => mother[i]);
   return genConfigShell({
-    A, B, lanes, mix, ampF,
+    A, B, lanes, mother, mix, ampF,
     name: `隨機地圖・${(seed >>> 0).toString(16).padStart(8, '0').slice(-6)}`,
     venueId: `random-${(seed >>> 0).toString(16)}`,
     mode: 'random', seed, sources: [{ name: '隨機錨點', weight: 1 }],

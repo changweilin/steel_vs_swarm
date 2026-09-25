@@ -5,8 +5,9 @@
 // fixture 模式預設只列報告；FIXTURE_WRITE=1 仍會硬驗 center/bbox。真的移動場地時須另設
 // FIXTURE_RECAPTURE=1，寫入後立即用 fetch_osm_fixture.mjs --update 重抓同名 raw fixture。
 // 產出 public/js/venueLanes.js。改 ANCHORS 或 MAPGEO 的尺寸/重合率常數後 MUST 重跑。
-// 逐場地烤四份:完整戰場 L1/L2/L3 + **縮小尺度的單兵線 m1**(劇情戰役專用 ——
-// 見 venues.js venueLaneKey)。m1 的砲塔規則一次驗劇情兩側
+// 逐場地烤兩份:完整戰場的三線母體(鍵 3)+ **縮小尺度的單兵線 m1**(劇情戰役專用 ——
+// 見 venues.js venueLaneKey)。L1(母體中路)/L2(母體左右兩路)寫檔時由母體派生,不獨立烤
+// (2026-09-25 同一張圖)。m1 的砲塔規則一次驗劇情兩側
 // (守方在 SWARM / 守方在 STEEL),因為守方是哪一邊逐章不同、還會被
 // rollSideSwap 再擲一次。改 STORY_MAP.DEF_STAGES 後 MUST 重跑。
 // Overpass 真實道路路網 → 建圖 → 每條兵線 = 一條「邊不相交」的最短路徑(全程踩在現實道路上)
@@ -777,9 +778,10 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
     if (aIdx < 0) { log('  錨點 120m 內無道路節點 → skip'); continue; }
 
     const byL = {};
-    // 逐「尺度 × 兵線數」各烤一份:完整戰場 L1~L3,縮小尺度(劇情戰役)只有單兵線 ——
-    // 恆為 1 條線(laneCountFor)。
-    for (const { key, L, mapA } of VENUE_LANE_KEYS) {
+    // 同一張圖(2026-09-25):完整戰場只烤三線母體(L3),L1(中路)/L2(左右兩路)寫檔時由母體派生;
+    // 縮小尺度(劇情戰役)只有單兵線 —— 恆為 1 條線(laneCountFor)。
+    // 母體烤不到的場地:L1/L2 不寫(執行期 venueConfig 以混合母體/合成弧補),不等於舊表的獨立路線。
+    for (const { key, L, mapA } of VENUE_LANE_KEYS.filter(({ mapA: m, L: l }) => m || l === 3)) {
       let best = null;
       const why = {};
       let bestOv = 9;
@@ -821,7 +823,8 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
         }
       }
       if (!best) {
-        // 逐鍵獨立:這個尺度湊不出真實道路兵線 → venueConfig 對它降級(完整版路線剪短 / synthLane)
+        // 這個尺度湊不出真實道路兵線 → 該鍵不寫;完整戰場 L1/L2 由母體派生故不需獨立解,
+        // 執行期 venueConfig 對缺母體以降級鏈補(混合母體 / synthLane,見 venues.js)。
         log(`  ${key} ✗ 無可行方位角 reasons=${JSON.stringify(why)}${bestOv < 9 ? ` bestOv=${bestOv.toFixed(3)}` : ''}`);
         continue;
       }
@@ -835,8 +838,9 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
     // **完整戰場的鍵排在縮小尺度之前**(2026-08-14 加入 m1 時追加):比較序寫成
     // [完整合規數, 完整可用數, 全部合規數, 全部可用數]。多錨點的場地(tamsui / madrid /
     // roppongi …)本來就是靠這個計數挑錨,把新鍵併進同一個計數 = 「另一個錨點的**迷你**
-    // 路線比較好」就足以換掉那張圖已經定案的 L1~L3(連同 `scen` 場景實測標記整份過期)。
+    // 路線比較好」就足以換掉那張圖已經定案的母體(連同 `scen` 場景實測標記整份過期)。
     // 分層之後新增鍵只能當同分時的決勝,既有尺度的選擇一格不動。
+    // 同一張圖(2026-09-25):完整戰場只剩母體鍵 3,故「完整」= 母體本身。
     const cnt = (ks) => {
       const es = ks.map((k) => byL[k]).filter(Boolean);
       return [es.filter((b) => b.resid === 0 && b.tunBad === 0).length, es.length];
@@ -846,12 +850,16 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
     const centerM = fixture ? centerErrorM(fixture, g, byL[3]) : 0;
     const rank = [...cnt(KEYS.filter((k) => typeof k === 'number')), ...cnt(KEYS), -centerM];
     if (!picked || lexGT(rank, picked.rank)) picked = { anchor, byL, ways: ways.length, g, conf: rank[2], rank, centerM };
-    if (!fixture && hits === KEYS.length && rank[2] === KEYS.length) break;   // 線上模式維持既有提前收手
+    if (!fixture && byL[3] && byL.m1 && rank[0] === 1 && rank[2] === 2) break;   // 線上模式維持既有提前收手(母體+m1 雙合規)
   }
   if (!picked) { report.push(`${id}: ❌ 全尺度皆無真實道路解 → 一律 synthLane`); log(`${id}: ❌`); continue; }
   out[id] = picked;
-  const mark = (K) => (picked.byL[K] ? `${K} ov=${picked.byL[K].maxOverlap.toFixed(2)}` : `${K} synth`);
-  const full = Object.keys(picked.byL).length === KEYS.length;
+  const mark = (K) => {
+    if (picked.byL[K]) return `${K} ov=${picked.byL[K].maxOverlap.toFixed(2)}`;
+    if ((K === 1 || K === 2) && picked.byL[3]) return `${K} ¬母體派生`;
+    return `${K} synth`;
+  };
+  const full = !!(picked.byL[3] && picked.byL.m1);
   report.push(`${id}: ${full ? '✅' : '◐'} A=[${picked.anchor.map((v) => v.toFixed(5))}] ${KEYS.map(mark).join(' | ')}`
     + (fixture ? ` | centerΔ=${Number.isFinite(picked.centerM) ? picked.centerM.toFixed(3) : '∞'}m` : ''));
   log(`${id}: ${full ? '✅' : '◐'}`);
@@ -896,7 +904,7 @@ let js = `// ============ 預設場地兵線(離線預算,勿手改)============
 // 任兩線重合率 ≤ ${MAPGEO.MAX_OVERLAP}(判定網格 overlapCellM(L))、單線繞路 ≤ 2.2×直線距離、
 // 任兩線互不接觸/交叉(排除主堡扇出段,中段最近距離 ≥ ${MAPGEO.LANE_MIN_SEP_M} 遊戲公尺,含立體交叉亦禁)。
 // bases[0] = SWARM(錨點側)、bases[1] = STEEL;lanes 依側向排序 [上, 中, 下]。
-// 鍵(見 venues.js \`venueLaneKey\`):1/2/3 = 完整戰場的兵線數;
+// 鍵(見 venues.js \`venueLaneKey\`):1/2 = 由鍵 3 母體派生的中路 / 左右兩路(同 bases);
 // m1 = 縮小尺度(迷你地圖 / 劇情戰役,兩堡距離 ×${(realDistFor(1, true) / realDistFor(1)).toFixed(1)})的單兵線 ——
 // 那是**另外挑過的一條路線**,不是完整版剪短的中段:同一張圖在兩種距離下,
 // 路網上走得通又排得出合規砲塔的路徑不同,且 m1 的砲塔規則是拿迷你 + 劇情兩側一起驗的。
@@ -920,13 +928,24 @@ for (const [id, byL] of keep) {
 }
 for (const [id, v] of Object.entries(out)) {
   js += `  ${id}: {\n`;
+  // 同一張圖(2026-09-25):L1/L2 由母體(鍵 3)派生,與母體同 bases ——
+  // L1 = 母體中路(idx 1)、L2 = 母體左右兩路(idx 0/2)。母體缺席則該場地不寫 L1/L2。
+  const m3 = v.byL[3];
+  const derived = {};
+  if (m3) {
+    derived[1] = { sub: [1], ov: 0 };
+    const c2 = overlapCellM(2, false);
+    derived[2] = { sub: [0, 2], ov: overlapXZ(m3.lanes[0].xz, m3.lanes[2].xz, c2) };
+  }
   for (const K of KEYS) {
-    const b = v.byL[K];
+    const dv = derived[K];
+    const b = v.byL[K] || (dv && m3);
     if (!b) continue;                     // 該鍵無真實道路解 → venues.js 對它降級(見 venueConfig)
     const g = v.g;
     const A = [g.LA[b.aIdx], g.LN[b.aIdx]], B = [g.LA[b.bIdx], g.LN[b.bIdx]];
-    const lanesLL = b.lanes.map((l) => l.idx.map((i) => [r6(g.LA[i]), r6(g.LN[i])]));
-    js += `    ${K}: { bearing: ${b.bearing}, maxOverlap: ${+b.maxOverlap.toFixed(3)},\n`;
+    const lanesLL = (dv ? dv.sub.map((i) => b.lanes[i]) : b.lanes).map((l) => l.idx.map((i) => [r6(g.LA[i]), r6(g.LN[i])]));
+    const mo = dv ? dv.ov : b.maxOverlap;
+    js += `    ${K}: { bearing: ${b.bearing}, maxOverlap: ${+mo.toFixed(3)},\n`;
     js += `      bases: [[${r6(A[0])},${r6(A[1])}],[${r6(B[0])},${r6(B[1])}]],\n`;
     js += `      lanes: [\n        ${lanesLL.map((l) => `[${l.map((p) => `[${p[0]},${p[1]}]`).join(',')}]`).join(',\n        ')}\n      ] },\n`;
   }

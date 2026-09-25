@@ -1176,7 +1176,7 @@ export class BattleClient {
         const i = Math.floor(f), j = Math.min(prof.length - 1, i + 1);
         return prof[i] + (prof[j] - prof[i]) * (f - i);
       };
-      const color = LANE_COLORS[li % LANE_COLORS.length];
+      const color = LANE_COLORS[(this.cfg.laneIds?.[li] ?? li) % LANE_COLORS.length];
       // 兵線兩側獨立引導線(2026-09-06):不畫在道路上,沿兵線中心兩側各一條虛線緞帶。
       // 偏移/寬/抬高全在此處常數,高度吃同一份 surfY 剖面(橋上走橋面、隧道走路面)。
       // 虛實由共用 dash 貼圖表現,u = s / DASH_LEN,動 offset.x 朝 +s(敵方主堡)前進。
@@ -10474,7 +10474,7 @@ export class BattleClient {
     ctx.globalAlpha = 0.7;
     this._mmLanes.forEach((samples, i) => {
       if (samples.length < 2) return;
-      ctx.strokeStyle = laneCssColor(i);
+      ctx.strokeStyle = laneCssColor(this.cfg.laneIds?.[i] ?? i);
       let k = 0;
       while (k < samples.length - 1) {
         const gr = samples[k].grade;

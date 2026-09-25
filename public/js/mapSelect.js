@@ -6,11 +6,12 @@
 //  1. 房主在真實地圖點一個點 → 作為「蜂群」主堡候選錨點 A。
 //  2. 演算法在 A 周圍(方位角 0~330° 掃描)找出多個推薦點 B:
 //     - |AB| ≥ 地圖對角線 × 80%(地圖 = 以 AB 中點為中心的正方形戰場,
-//       邊長由 |AB| 反推;真實邊長綁定人數 = 0.45 + 0.15×L km)
-//     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
+//       邊長固定取三線母體框架,與人數無關)
+//     - A、B 之間能建出三線母體(真實道路,OSRM),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
+//     - 當下啟用子集按人數切(L1=[中路]、L2=[上,下路];見 data.js laneSubsetFor)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit, lanePathBalanceAudit, laneCssColor } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit, lanePathBalanceAudit, laneCssColor, MOTHER_LANES, laneSubsetFor } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -172,13 +173,15 @@ function maxLaneGrade(lanes, sampleElev) {
 const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
 
 /**
- * 為 A→B 建 L 條兵線(L=1 中路;L=2 上/下路;L=3 上/中/下路):
+ * 為 A→B 建三線母體 [top, mid, bot](同一張圖,2026-09-25):
  * 中路 = 直達路線;側翼 = 經側向中繼點,與中路重合率過高就加大側移重試;
  * via 全失敗才補合成弧線(synthetic 標記)。
  * 直達路線失敗(海面/無路網)回傳 null,由呼叫端淘汰該方位。
+ * 啟用子集由呼叫端按 `laneSubsetFor(當下兵線數)` 切(L1=[中]、L2=[上,下])——
+ * 框架(兩堡/尺寸)與母體不隨人數變,換人數只換子集。
  */
-async function buildLanes(A, B, signal, directRoute = null, L = 3) {
-  const cell = overlapCellM(L);
+async function buildLanes(A, B, signal, directRoute = null) {
+  const cell = overlapCellM(MOTHER_LANES);
   const d = distM(A, B);
   const [vx, vz] = toMeters(B, A);
   const len = Math.hypot(vx, vz) || 1;
@@ -215,27 +218,18 @@ async function buildLanes(A, B, signal, directRoute = null, L = 3) {
     return best || { coords: synthLane(A, B, side), dist: d * 1.2, synth: true };
   };
 
-  // 訂製地圖規範:先建立 3 兵線母體 [top, mid, bot]
+  // 訂製地圖規範:先建立 3 兵線母體 [top, mid, bot];啟用子集由呼叫端切
   const top = await flank(1);
   const bot = await flank(-1);
   const synthetic = !!(top.synth || bot.synth);
   const all3 = [top.coords, mid.coords, bot.coords];
 
-  // 另外單獨使用中路設為 1 兵線地圖,左右兩路作為 2 兵線地圖
-  let lanes;
-  if (L === 1) {
-    lanes = [mid.coords];
-  } else if (L === 2) {
-    lanes = [top.coords, bot.coords];
-  } else {
-    lanes = all3;
-  }
-  // 任兩條重合率
+  // 任兩條重合率(母體三線兩兩)
   const ov = [0];
-  for (let i = 0; i < lanes.length; i++) {
-    for (let j = i + 1; j < lanes.length; j++) ov.push(overlapRatio(lanes[i], lanes[j], A, cell));
+  for (let i = 0; i < all3.length; i++) {
+    for (let j = i + 1; j < all3.length; j++) ov.push(overlapRatio(all3[i], all3[j], A, cell));
   }
-  return { lanes, all3, maxOverlap: Math.max(...ov), overlaps: ov, synthetic, roadDist: mid.dist };
+  return { lanes: all3, all3, maxOverlap: Math.max(...ov), overlaps: ov, synthetic, roadDist: mid.dist };
 }
 
 // ============ Leaflet 選址畫面 ============
@@ -292,16 +286,32 @@ export class MapSelect {
     this.placeNameLastSkipped = false;
   }
 
-  /** 兵線數(隨隊伍規模)與兩堡目標距離(遊戲世界公尺) */
+  /** 兵線數(隨隊伍規模) */
   get laneCount() { return lanesFor(this.teamSize); }
-  get targetDist() { return targetDistFor(this.laneCount); }
+  /** 兩堡目標距離:母體框架恆取三線(與人數無關),啟用子集才隨人數 */
+  get targetDist() { return targetDistFor(MOTHER_LANES); }
 
-  /** 改隊伍規模:幾何條件全變,重置目前選點 */
+  /** 改隊伍規模:框架與母體不變,已選定就地重切子集(免重掃);搜尋中/未選才重置 */
   setTeamSize(n) {
     n = Math.max(TEAM.MIN, Math.min(TEAM.MAX, n | 0));
     if (n === this.teamSize) return;
     this.teamSize = n;
+    if (this.chosen?.motherLanes) { this._reSliceChosen(); return; }
     if (this.anchor) this.reset();
+  }
+
+  /** 母體就地重切啟用子集(換人數不換圖):重算 lanes/tactics,重畫兵線層,重送確認 */
+  _reSliceChosen() {
+    const c = this.chosen;
+    if (!c?.motherLanes || !this.anchor) return;
+    const sub = laneSubsetFor(this.laneCount);
+    c.lanes = sub.map((i) => c.motherLanes[i]);
+    c.laneIds = [...sub];
+    c.tactics = lanesTactics(c.lanes, this.anchor, c.maxOverlap);
+    this._clearLayers('lanes');
+    this._clearLayers('cand');
+    this._drawChosenFrame(c);
+    this.h.confirmReady?.(this.buildConfig());
   }
 
   /** 純預覽已存好的戰場設定(我的最愛):畫主堡/兵線/邊界,不重新搜尋 */
@@ -314,7 +324,7 @@ export class MapSelect {
       radius: 10, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
     }).bindTooltip('◆ 鋼鐵主堡', { permanent: true, direction: 'top' }), 'fav');
     cfg.lanes.forEach((lane, i) => {
-      this._addLayer(L.polyline(lane, { color: laneCssColor(i), weight: 4, opacity: 0.85 }), 'fav');
+      this._addLayer(L.polyline(lane, { color: laneCssColor(cfg.laneIds?.[i] ?? i), weight: 4, opacity: 0.85 }), 'fav');
     });
     const half = cfg.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
     const dLat = half / R_EARTH * 180 / Math.PI;
@@ -397,33 +407,43 @@ export class MapSelect {
       await sleep(130);
       if (!direct) { osrmDead++; continue; }
       if (direct.dist / realD > 2.2) continue;
-      const result = await buildLanes(A, B, signal, direct, L);
+      const result = await buildLanes(A, B, signal, direct);
       if (!result) continue;
-      const { lanes, maxOverlap, overlaps, synthetic, roadDist } = result;
+      const { lanes: mother, all3, maxOverlap, overlaps, synthetic, roadDist } = result;
+      // 當下啟用子集(L1=[中]、L2=[上,下];見 data.js laneSubsetFor)
+      const sub = laneSubsetFor(L);
+      const lanes = sub.map((i) => mother[i]);
       const dist = distM(A, B) / MAPGEO.REAL_SCALE;   // 真實 → 遊戲世界公尺
+      // 母體三線全驗(同一張圖要撐起所有人數,未啟用的線也不能是壞線;子集繼承母體結論,
+      // 唯平衡稽核 L2/L3 規則不同,子集另驗一次)
+      const uSc = 1 / MAPGEO.REAL_SCALE;
+      const gMother = mother.map((lane) => lane.map((c) => { const [x, z] = toMeters(c, A); return [x * uSc, z * uSc]; }));
       // 折返門檻(同 bake / MAPGEO.MAX_BACKTRACK):任一兵線往主堡折返超標 → 淘汰此推薦點
-      const maxBt = Math.max(...lanes.map((lane) => laneBacktrackFrac(lane.map((c) => toMeters(c, A)))));
+      const maxBt = Math.max(...mother.map((lane) => laneBacktrackFrac(lane.map((c) => toMeters(c, A)))));
       // 迴轉門檻(同 bake / MAPGEO.UTURN_MAX_DEG):任一兵線接近 180° 掉頭 → 淘汰(規則 2026-07-28)。
       // 規則「橋/隧只能從出入口進出」不在此複驗:OSRM 走真實道路路徑,拓樸上本就只能從匝道/洞口進出。
       // toMeters 回真實公尺;laneUTurnAudit 的 SEG_M 取樣與 laneTacticsXZ 同在遊戲公尺語意 ⇒ × 1/REAL_SCALE。
-      const uSc = 1 / MAPGEO.REAL_SCALE;
-      const gLanes = lanes.map((lane) => lane.map((c) => { const [x, z] = toMeters(c, A); return [x * uSc, z * uSc]; }));
-      const maxUturn = Math.max(...gLanes.map((lane) => laneUTurnAudit(lane).maxDeg));
+      const maxUturn = Math.max(...gMother.map((lane) => laneUTurnAudit(lane).maxDeg));
       // 主軸偏航門檻(同 bake / MAPGEO.TURN_ACCUM_MAX_DEG):任一兵線相對 A→B 主軸的帶號
       // 偏航累積出範圍 → 淘汰此推薦點(規則 2026-07-29;判定縫 = laneTurnAccumAudit,不另比對門檻)。
-      const accumOK = gLanes.every((lane) => laneTurnAccumAudit(lane).ok);
+      const accumOK = gMother.every((lane) => laneTurnAccumAudit(lane).ok);
       const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP
         && maxBt <= MAPGEO.MAX_BACKTRACK && maxUturn < MAPGEO.UTURN_MAX_DEG && accumOK;
       if (!ok) continue;
-      // 兵線路徑平衡稽核 (L2/L3 專屬)
-      if (L >= 2 && !lanePathBalanceAudit(gLanes, L).ok) continue;
+      // 兵線路徑平衡稽核:母體按 L3,啟用子集按當下 L(規則不同,兩次)
+      if (!lanePathBalanceAudit(gMother, MOTHER_LANES).ok) continue;
+      if (L >= 2) {
+        const gSub = lanes.map((lane) => lane.map((c) => { const [x, z] = toMeters(c, A); return [x * uSc, z * uSc]; }));
+        if (!lanePathBalanceAudit(gSub, L).ok) continue;
+      }
       // Part 3:沿線有高程資料且坡度超標 → 淘汰(避開現實陡坡道路)
-      if (elev && maxLaneGrade(lanes, elev) > gradeCap) continue;
+      if (elev && maxLaneGrade(mother, elev) > gradeCap) continue;
       // 砲塔規則(規則 #4):此推薦點的兵線幾何會讓 solveTowerSites 佈出「殘餘 >80% / 疊塔」→ 淘汰
       // (自訂地圖與預設場地同標準;伺服器 validateBattleConfig 再把關一次)。
-      if (!laneRuleOK(lanes)) continue;
+      // 母體三線通過 ⇒ 任一子集繼承通過(塔位逐線、相鄰對只會變少)。
+      if (!laneRuleOK(mother)) continue;
 
-      const cand = { latlng: B, lanes, motherLanes: all3, maxOverlap, overlaps, distM: dist, sizeM, diagM, synthetic, roadDist: roadDist / MAPGEO.REAL_SCALE, bearing };
+      const cand = { latlng: B, lanes, motherLanes: all3, laneIds: [...sub], maxOverlap, overlaps, distM: dist, sizeM, diagM, synthetic, roadDist: roadDist / MAPGEO.REAL_SCALE, bearing };
       cand.tactics = lanesTactics(lanes, A, maxOverlap);
       this.candidates.push(cand);
       this._drawCandidate(cand, this.candidates.length - 1);
@@ -436,17 +456,19 @@ export class MapSelect {
       this.candidates.forEach((c, i) => this._drawCandidate(c, i));
     }
 
-    // 完全連不上 OSRM(離線)→ 全合成兵線,遊戲照樣能開
+    // 完全連不上 OSRM(離線)→ 全合成兵線,遊戲照樣能開(母體三線先建,再切當下子集)
     if (this.candidates.length === 0 && osrmDead === nB && !signal.aborted) {
-      const sides = L === 1 ? [0] : L === 2 ? [1, -1] : [1, 0, -1];
+      const sub = laneSubsetFor(L);
+      const cell = overlapCellM(MOTHER_LANES);
       for (const bearing of [0, 90, 180, 270]) {
         const B = destPoint(A, bearing, realD);
-        const lanes = sides.map((s) => synthLane(A, B, s));
+        const mother = [1, 0, -1].map((s) => synthLane(A, B, s));
+        const lanes = sub.map((i) => mother[i]);
         let maxOverlap = 0;
-        for (let i = 0; i < lanes.length; i++) {
-          for (let j = i + 1; j < lanes.length; j++) maxOverlap = Math.max(maxOverlap, overlapRatio(lanes[i], lanes[j], A, overlapCellM(L)));
+        for (let i = 0; i < mother.length; i++) {
+          for (let j = i + 1; j < mother.length; j++) maxOverlap = Math.max(maxOverlap, overlapRatio(mother[i], mother[j], A, cell));
         }
-        const cand = { latlng: B, lanes, distM: distM(A, B) / MAPGEO.REAL_SCALE, sizeM, diagM, bearing, maxOverlap, synthetic: true, roadDist: D };
+        const cand = { latlng: B, lanes, motherLanes: mother, laneIds: [...sub], distM: distM(A, B) / MAPGEO.REAL_SCALE, sizeM, diagM, bearing, maxOverlap, synthetic: true, roadDist: D };
         cand.tactics = lanesTactics(lanes, A, maxOverlap);
         this.candidates.push(cand);
         this._drawCandidate(cand, this.candidates.length - 1);
@@ -484,6 +506,29 @@ export class MapSelect {
     });
   }
 
+  /** 選定候選的框架繪製(主堡標記 + 兵線 + 邊界;色號吃母體下標,換人數重切可重用) */
+  _drawChosenFrame(cand) {
+    this._addLayer(L.circleMarker(cand.latlng, {
+      radius: 12, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
+    }).bindTooltip('◆ 鋼鐵主堡', { permanent: true, direction: 'top' }), 'cand');
+
+    const names = cand.lanes.length === 1 ? ['中路']
+      : cand.lanes.length === 2 ? ['上路', '下路'] : ['上路', '中路', '下路'];
+    cand.lanes.forEach((lane, i) => {
+      this._addLayer(L.polyline(lane, { color: laneCssColor(cand.laneIds?.[i] ?? i), weight: 4, opacity: 0.85 })
+        .bindTooltip(`${names[i]} 兵線`), 'lanes');
+    });
+    // 戰場邊界(以 AB 中點為中心的正方形)
+    const c = midPoint(this.anchor, cand.latlng);
+    const half = cand.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
+    const dLat = half / R_EARTH * 180 / Math.PI;
+    const dLng = half / (R_EARTH * Math.cos(c[0] * Math.PI / 180)) * 180 / Math.PI;
+    this._addLayer(L.rectangle([[c[0] - dLat, c[1] - dLng], [c[0] + dLat, c[1] + dLng]], {
+      color: '#8899aa', weight: 2, dashArray: '8 6', fill: false,
+    }), 'lanes');
+    this.map.fitBounds(L.latLngBounds([this.anchor, cand.latlng]).pad(0.25));
+  }
+
   _choose(cand) {
     this.chosen = cand;
     this._clearLayers('lanes');
@@ -496,25 +541,7 @@ export class MapSelect {
         }), 'cand').on('click', () => { this.chosen = null; this._choose(c); });
       }
     }
-    this._addLayer(L.circleMarker(cand.latlng, {
-      radius: 12, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
-    }).bindTooltip('◆ 鋼鐵主堡', { permanent: true, direction: 'top' }), 'cand');
-
-    const names = cand.lanes.length === 1 ? ['中路']
-      : cand.lanes.length === 2 ? ['上路', '下路'] : ['上路', '中路', '下路'];
-    cand.lanes.forEach((lane, i) => {
-      this._addLayer(L.polyline(lane, { color: laneCssColor(i), weight: 4, opacity: 0.85 })
-        .bindTooltip(`${names[i]} 兵線`), 'lanes');
-    });
-    // 戰場邊界(以 AB 中點為中心的正方形)
-    const c = midPoint(this.anchor, cand.latlng);
-    const half = cand.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
-    const dLat = half / R_EARTH * 180 / Math.PI;
-    const dLng = half / (R_EARTH * Math.cos(c[0] * Math.PI / 180)) * 180 / Math.PI;
-    this._addLayer(L.rectangle([[c[0] - dLat, c[1] - dLng], [c[0] + dLat, c[1] + dLng]], {
-      color: '#8899aa', weight: 2, dashArray: '8 6', fill: false,
-    }), 'lanes');
-    this.map.fitBounds(L.latLngBounds([this.anchor, cand.latlng]).pad(0.25));
+    this._drawChosenFrame(cand);
 
     this.h.confirmReady?.(this.buildConfig());
   }
@@ -538,8 +565,10 @@ export class MapSelect {
     return {
       center: { lat: c[0], lng: c[1] },
       bases: { SWARM: this.anchor, STEEL: this.chosen.latlng },
-      lanes: this.chosen.lanes,          // 方向:SWARM → STEEL
+      lanes: this.chosen.lanes,          // 方向:SWARM → STEEL;當下啟用子集
       laneCount: this.chosen.lanes.length,
+      laneIds: [...(this.chosen.laneIds || this.chosen.lanes.map((_, i) => i))],
+      motherLanes: (this.chosen.motherLanes || this.chosen.lanes).map((l) => l.map((p) => [...p])),
       sizeM: this.chosen.sizeM,
       diagM: this.chosen.diagM,
       distM: this.chosen.distM,

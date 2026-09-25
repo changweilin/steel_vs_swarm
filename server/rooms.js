@@ -98,6 +98,8 @@ function rollSideSwap(cfg) {
   if (!cfg || Math.random() >= 0.5) return;      // 另外五成:維持原歸屬
   const t = cfg.bases.SWARM; cfg.bases.SWARM = cfg.bases.STEEL; cfg.bases.STEEL = t;
   cfg.lanes = cfg.lanes.map((l) => l.slice().reverse());
+  // 母體同反轉(laneIds 是母體下標,不動仍指同一條線)
+  if (Array.isArray(cfg.motherLanes)) cfg.motherLanes = cfg.motherLanes.map((l) => l.slice().reverse());
 }
 
 /**

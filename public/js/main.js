@@ -8,7 +8,7 @@ import {
   cloudUrl, setCloudUrl, modeReady,
 } from './netmode.js';
 import {
-  SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice, upgradeScore, canUpgrade, BATTLE_SCORE,
+  SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, MOTHER_LANES, ECON, upgradePrice, upgradeScore, canUpgrade, BATTLE_SCORE,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, selfUltBoost, SELF_ULT, recoilName, recoilTier, recoilMoveF,
   aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME, shieldRoleName,
   UNITS, WEAPONS, STRUCT_W, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc, llToXZ,
@@ -470,7 +470,7 @@ function setTeamSize(n) {
   syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
   // 預設場地已選:換規模直接重算(預先計算是確定性幾何,瞬間完成)
   if (app.venueSel) selectVenue(app.venueSel);
-  // 擴充模式已生成:換規模依同條件重生成(種子/來源不變,只改兵線數與尺度)
+  // 擴充模式已生成:換規模依同條件重生成(種子/來源不變,只改啟用兵線數,框架與母體不變)
   else if (prevGen && app.mapSel) {
     if (app.mapGenMode === 'mixed') genMixedFromUI();
     else if (app.mapGenMode === 'random') genRandomFromUI();
@@ -482,7 +482,7 @@ function updateTsInfo() { $('tsInfo').textContent = tsInfoText(); }
 /** 人數/兵線/地圖規模摘要一行(兩處設定畫面共用同一份文字,MUST NOT 各寫一套)*/
 function tsInfoText() {
   const L = lanesFor(app.teamSize);
-  const size = sideMFor(L);
+  const size = sideMFor(MOTHER_LANES);   // 同一張圖:框架恆為三線母體,與人數無關
   return `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km) ・ 每線各陣營一對砲塔`;
 }
 
