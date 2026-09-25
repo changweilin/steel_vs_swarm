@@ -1,24 +1,20 @@
-// ============ 變形者兩態共用縫(dev-only;不是一台機體,index.js 不收)============
-// 2026-08-13 使用者指示:「盡量用相同零件變形切換地面/飛行形態」。
-// ⇒ 變形者的飛行型 MUST 由**地面型那一份零件建構器**組裝出來,兩態的差別只有「擺位」:
-//   同一顆頭、同一片胸甲、同一組四肢、同一把武器,換一組靜態旋轉就是另一個型態。
-//   各畫一組的下場是兩座管理頁看起來像兩台機,而兩邊都不會報錯(t06/t11/m01/m05 的
-//   飛行檔原本就只共用一顆頭,其餘全是另寫的幾何)。
+// ============ Dual-Mode Morph Shared Seam (dev-only; helper module) ============
+// Variable-geometry mechs MUST construct their flight variant from the ground form's
+// component generators. The two modes differ only in spatial placement and rotation.
 //
-// 本檔只放**兩態共用的那幾件事**,零幾何:
-//   ① bipedDims:forge.js 餵給人形建構器的那一組公尺尺寸(飛行檔要拿到同一份才會同尺寸)
-//   ② posed:把一顆「反向抵銷母體傾角」的中介 Group 掛上去(飛行姿態的共同句型)
-//
-// ⚠ ① 是 forge.js:184-192 那段算式的鏡射。**預設值刻意不複製** —— 四台變形者地面型的
-//   prop 都把十個鍵寫滿了,缺鍵一律當場拋錯;悄悄補一份自己的預設 = forge.js 改了
-//   HUMANOID.def 之後兩態的零件尺寸靜默分家,而畫面上只表現成「飛行型好像胖了一點」。
+// This module contains shared stance utilities with zero local geometry:
+//   1. bipedDims: mirrors humanoid scaffold metrics in forge.js so flight models match scale exactly.
+//   2. groundCtx: backfills ground form c.G / c.dims into aerial baseCtx to prevent girth drift.
+//   3. staticLimb: statically evaluates segLimbF segment specs for folded/stowed limb configurations.
+//   4. upright: intermediate transform group that counters parent pitch tilt.
+// Defaults are intentionally omitted: all keys must exist explicitly on ground presets to fail loud on drift.
 import * as THREE from 'three';
 
 const KEYS = ['hips', 'legSplay', 'thigh', 'shin', 'shoulderY', 'shoulderX', 'upperArm', 'foreArm', 'head', 'girth'];
 
 /**
- * 地面型(人形鷹架)的骨架公尺尺寸 —— 飛行檔用它餵同一組建構器。
- * D = 地面型的 default export(讀 D.prop 與 D.height);回傳值的鍵名逐字同 forge.js 的區域變數。
+ * Derives humanoid scaffold dimensions in meters for flight variant builders.
+ * D = ground default export (reads D.prop and D.height). Returns keys matching forge.js locals.
  */
 export function bipedDims(D, height) {
   const P = D.prop || {};
@@ -40,10 +36,8 @@ export function bipedDims(D, height) {
 }
 
 /**
- * 飛行檔用的建構情境:把地面型那一份 `c.G` / `c.dims` 補回航空鷹架的 baseCtx。
- * 航空鷹架的 baseCtx 恆給 `G: 1` 與 `dims: {...air}`(forge.js:437)—— 直接拿去餵地面型
- * 建構器的話,凡是乘 `c.G` 的零件(t11 girth 1.15)會比地面型瘦一圈,而兩張截圖分開看
- * 都很正常。`c` 是三支建構器共用的同一個物件 ⇒ 在 body() 裡改一次即可。
+ * Builds construction context by injecting ground c.G and c.dims into aerial baseCtx.
+ * Prevents girth-scaled components (e.g. t11 girth 1.15) from shrinking in aerial mode.
  */
 export function groundCtx(c, dim) {
   c.G = dim.G;
@@ -52,10 +46,9 @@ export function groundCtx(c, dim) {
 }
 
 /**
- * 把 `segLimbF` 的分節規格**靜態**組起來(飛行檔用:同一組肢件、另一組姿態)。
- * 四足鷹架的 `D.legF/legH` 回傳的就是這種規格陣列 —— 飛行型不需要步態鏈,只要擺好位置,
- * 但零件 MUST 是同一批(自己在飛行檔另寫一組腿 = 兩態的腿長得不一樣,而兩張圖分開看都正常)。
- * poses[i] = 第 i 節的 rotation.x(省略則沿用該節宣告的 base)。
+ * Statically composes segLimbF segment specifications into a posed hierarchy.
+ * Used for flight stowage where gait kinematic chains are unneeded.
+ * poses[i] = segment i rotation.x (falls back to s.base if omitted).
  */
 export function staticLimb(parent, segs, poses = [], pos = [0, 0, 0], rot = null) {
   const root = new THREE.Group();
@@ -77,7 +70,7 @@ export function staticLimb(parent, segs, poses = [], pos = [0, 0, 0], rot = null
   return root;
 }
 
-/** 反傾中介 Group:掛在傾了 `pitch` 的母體之下,讓子零件回到世界水平(座艙/旋翼盤/起落腿) */
+/** Pitch-compensating intermediate group: negates parent pitch tilt to keep children level with world horizon. */
 export function upright(parent, pitch, x = 0, y = 0, z = 0) {
   const g = new THREE.Group();
   g.position.set(x, y, z);

@@ -1,10 +1,10 @@
-// ============ 逐機零件檔名冊(dev-only)============
-// 一格一檔:2D 定案圖 → 多面體零件的轉換各自住 mechs/<檔名>.js;本檔只做彙整。
+// ============ Mech Component Registry (dev-only) ============
+// One module per roster slot translating concept art into polyhedral component hierarchies.
 //
-// **鍵 = roster.js 的 entryKey()**(2026-08-12 第四輪):`t01` / `t06@ground` / `t06@flight`。
-// 變形者一台兩格(地面型與飛行型是兩個不同原型、各自對照自己的 2D 定案圖),
-// 檔名以底線代替 `@`(`t06_flight.js`),**鍵仍是 `@`** —— 鍵的唯一真相在 roster.js,
-// 這裡 MUST NOT 出現第二套字串規則(拼錯的下場是那一格從名冊消失,而分類頁不會報錯)。
+// Key MUST strictly match roster.js entryKey(): t01 / t06@ground / t06@flight.
+// Morph mechs provide separate entries for ground and flight stances.
+// File paths substitute '@' with '_' (e.g. t06_flight.js), but registry dictionary keys MUST use '@'
+// to preserve single seam alignment with roster.js.
 import t01 from './t01.js';
 import t02 from './t02.js';
 import t10 from './t10.js';
@@ -13,13 +13,12 @@ import t06g from './t06.js';
 import t11g from './t11.js';
 import m01g from './m01.js';
 import m05g from './m05.js';
-// 變形者的**仿生地面型**(2026-08-13 使用者的變形者重製:這四格原本缺檔 ⇒ 名冊上是空的,
-// 而它們的飛行型早就在架上 —— 兩態同零件的前提是地面型先有一份可被呼叫的建構器)
+// Variable-geometry biomimetic ground variants (shared component source for flight forms).
 import m07g from './m07.js';
 import m08g from './m08.js';
 import s03g from './s03.js';
 import s10g from './s10.js';
-// 仿生批次(2026-08-12:★ 定案圖 → 仿生機型;四足 kind:'quad' + 獸型雙足)
+// Biomimetic mechs (quadruped kind:'quad' + digitigrade biped).
 import s06 from './s06.js';
 import s07 from './s07.js';
 import t04 from './t04.js';
@@ -28,7 +27,7 @@ import s09 from './s09.js';
 import t03 from './t03.js';
 import t05 from './t05.js';
 import m02 from './m02.js';
-// 航空批次(2026-08-12 第四輪:kind:'air';旋翼機 / 定翼機 / 撲翼機 / 變形者飛行型)
+// Aerial craft (kind:'air'; rotary-wing / fixed-wing / ornithopter / flight stances).
 import s01 from './s01.js';
 import s02 from './s02.js';
 import s04 from './s04.js';
@@ -51,13 +50,13 @@ import m07f from './m07_flight.js';
 import m08f from './m08_flight.js';
 
 export const MECH_DETAIL = {
-  // ── 人形機甲(biped 鷹架)──
+  // Humanoid mechs (biped scaffold)
   t01, t02, t10, t12,
   't06@ground': t06g, 't11@ground': t11g, 'm01@ground': m01g, 'm05@ground': m05g,
-  // ── 仿生機體(quad 鷹架 / 獸型雙足 biped 鷹架)──
+  // Biomimetic mechs (quad / digitigrade biped scaffold)
   s06, s07, t04, m06, s09, t03, t05, m02,
   'm07@ground': m07g, 'm08@ground': m08g, 's03@ground': s03g, 's10@ground': s10g,
-  // ── 航空機體(air 鷹架)──
+  // Aerial craft (air scaffold)
   s01, s02, s04, s05, s08, s11, s12, t07, t08, t09, m03, m04,
   's03@flight': s03f, 's10@flight': s10f, 't06@flight': t06f, 't11@flight': t11f,
   'm01@flight': m01f, 'm05@flight': m05f, 'm07@flight': m07f, 'm08@flight': m08f,

@@ -1,23 +1,21 @@
-// ============ m06 逐機零件檔(dev-only;仿生四足 D.kind 'quad' + walk 慢步)============
-// ── m06「傾盆」母艦式機甲(stego 劍龍):背骨板 = 發射軌掛滿子機、尾錘、象柱腿 ──
-// 2D 定案圖:public/assets/cyberpunk_art/mechs/m06_static.jpg(★ = m06_static)
-// 幾何語彙一律取自 ../geo.js;MUST NOT 在本檔自建 BufferGeometry。
-// 2026-08-12 多面體改寫:主殼一律 tboxF/prismF/latheF(bxF 只留小塊);
-// 背骨板 = prismF 後掠五角板 ×8 **交錯兩列**,格格掛貨(6 管集束莢 ×2 + 方彈筒 ×2 +
-// 摺翼子機 ×4)—— mecha.js gen.note:排成一列或空著 = 一般獸型機甲,直接錯。
-// 尾錘 = 素鐵(STEEL 灰)波浪剖面 latheF(被打得變形)+ 橫軸副錘;圖騰塗裝歸 paint 層。
-// 2026-08-12 修補:尾巴補成完整量體(骨架照:尾 = 脊線延伸、粗根收梢、長度接近體長、上弧高舉)——
-// 節環 6 節 + 沿尾小背板 3 對逐對縮小 + 錘頭接尾梢;上弧姿勢全寫進節身幾何(whipTail 覆寫樞軸 rotation)。
+// ============ m06 Mech Part Specification (dev-only; Bionic Quadruped kind: 'quad', slow walk) ============
+// m06 "Downpour" Carrier-Type Mech (Stegosaurus archetype): dorsal plates = launch rails loaded with drones, thagomizer tail, columnar legs.
+// Reference 2D static art: public/assets/cyberpunk_art/mechs/m06_static.jpg
+// Geometry vocabulary sourced strictly from ../geo.js; MUST NOT instantiate BufferGeometry directly.
+// Main hull uses tboxF/prismF/latheF.
+// Dorsal plates = 8 swept pentagonal prismF plates staggered in two rows, loaded with ordnance (2x 6-tube cluster pods + 2x missile canisters + 4x folding drones).
+// Tail thagomizer = raw steel latheF wavy profile with cross-axis secondary club; heraldry paint lives in paint layer.
+// Tail structure = 6 segmental rings + 3 pairs of tapering tail plates + thagomizer tip; upward curvature encoded in mesh offsets.
 import * as THREE from 'three';
 import {
   matF, dimF, bxF, cylF, sphF, coneF, torusF, tboxF, prismF, latheF, finF, fanF, chainF, cablesF,
   hydCyl, sinew, seg2, IRON, GUNMETAL, COAL, INK, BONE, BRASS,
 } from '../geo.js';
 
-// 素鐵灰(尾錘/副錘;「素鐵」明講不上塗裝 → 不吃 PAL 金黃階)
+// Raw steel gray (thagomizer / secondary club; unpainted raw steel excludes PAL gold tier).
 const STEEL = 0x7d838b;
 
-// 後掠五角背板輪廓(body 背軌 ×8 與尾部小背板共用同一份語彙;縮放住呼叫端)
+// Swept pentagonal plate contour (shared between dorsal launch rails and tail plates; scaled at callsite).
 const PLATE = [[-0.5, 0], [0.5, 0], [0.7, 0.35], [0.45, 1.0], [-0.25, 0.45]];
 
 export default {
@@ -27,8 +25,8 @@ export default {
     chest: [0, 0.1, 0.6], neck: [0, -0.05, 1.25], head: [0, -0.2, 0.7],
     tailY: 0.15, tailZ: -2.0, tail2Z: 1.6,
   },
-  // limb:重載四足 = 四肢皆**柱狀**(象型):骨軸近乎鉛直、遠端行程只有趾行的 0.3~0.4 倍,
-  // 支撐相把腕/跗鎖成承重柱(lock 0.70)—— 這種體重的腿沒有「彈簧壓縮」那一段。
+  // Heavy columnar quadruped limbs (elephantine): vertical bone axes, distal stride 0.3-0.4x digitigrade.
+  // Stance phase locks carpus/tarsus into load-bearing columns (lock: 0.70) without spring compression.
   gait: { gait: 'walk', stride: 2.3, top: 8, bob: 0.05, rollSway: 0.11, pitchAmp: 0.03,
     limb: { fore: 'columnar', hind: 'columnar' } },
   moveSig: { poise: 0.48, idleF: 0.48, idleA: 1.85, launch: 0.10, spool: 0.88, brake: 0.10, settle: 2.10 },
@@ -45,28 +43,28 @@ export default {
   ],
   body(c, spine, chest) {
     const { PAL, accent } = c;
-    // ── 前後雙段厚殼(art:軀幹長、上窄下寬的厚重量體;後段長出後腿 = 長尾臀)──
+    // Double-tier torso hull: long, heavy volume tapering upward; rear section anchors hind legs and tail.
     tboxF(chest, { w0: 2.3, d0: 2.1, w1: 1.5, d1: 1.7, h: 1.35, sz: 0.12 }, 0, 0.22, 0.25, PAL.main, { metalness: 0.45 });
     tboxF(chest, { w0: 2.4, d0: 1.9, w1: 2.2, d1: 1.75, h: 0.55 }, 0, -0.45, 0.2, PAL.mid, { metalness: 0.5 });
     tboxF(spine, { w0: 2.2, d0: 2.7, w1: 1.45, d1: 2.15, h: 1.3, sz: -0.18 }, 0, 0.28, -0.85, PAL.mid, { metalness: 0.45 });
     tboxF(spine, { w0: 2.3, d0: 2.4, w1: 2.1, d1: 2.2, h: 0.5 }, 0, -0.42, -0.8, PAL.main, { metalness: 0.5 });
-    // 腹艙(GUNMETAL)+ 裝載升降口(COAL 門板 + accent 縫 ×2:mecha.js「腹部裝載升降口」)
+    // Ventral cargo bay (GUNMETAL) + cargo lift gate (COAL hatch + dual accent seams).
     tboxF(chest, { w0: 1.35, d0: 3.4, w1: 1.6, d1: 3.6, h: 0.5 }, 0, -0.85, -0.55, GUNMETAL, { metalness: 0.7 });
     tboxF(chest, { w0: 0.95, d0: 1.2, w1: 1.05, d1: 1.3, h: 0.16 }, 0, -1.12, 0.1, COAL, { metalness: 0.6 });
     for (const dz of [-1, 1])
       bxF(chest, 0.9, 0.05, 0.05, 0, -1.16, 0.1 + dz * 0.62, dimF(accent, 0.8), { emissive: accent, emissiveIntensity: 0.6 });
-    // 側面散熱格柵(art:側腹深色格柵帶):inset + 直櫺 ×3(索引遞變)
+    // Lateral radiator louvers: inset + 3 vertical slats with indexed stepping.
     for (const sx of [-1, 1]) {
       bxF(chest, 0.1, 0.36, 0.6, sx * 0.99, -0.12, 0.25, COAL, { metalness: 0.6 });
       for (let i = 0; i < 3; i++)
         bxF(chest, 0.12, 0.36, 0.07, sx * 1.0, -0.12, 0.06 + i * 0.19, PAL.deep, { metalness: 0.7 });
     }
-    // 側裙(前後腿之間的垂裙 + accent 緣條)
+    // Side skirts: hanging skirts between fore and hind legs with accent trim.
     for (const sx of [-1, 1]) {
       tboxF(chest, { w0: 0.12, d0: 1.5, w1: 0.12, d1: 1.7, h: 0.55 }, sx * 1.06, -0.6, -0.55, PAL.deep, { metalness: 0.55 });
       bxF(chest, 0.13, 0.07, 1.45, sx * 1.07, -0.34, -0.55, dimF(accent, 0.7), { emissive: accent, emissiveIntensity: 0.4 });
     }
-    // 肩圓盤(前;art:前腿上方的圓形肩罩 + 轂)
+    // Shoulder discs (fore): circular cowl and hub above forelegs.
     for (const sx of [-1, 1]) {
       const d1 = latheF(chest, [[0.12, -0.1], [0.5, -0.08], [0.58, 0], [0.46, 0.09], [0.12, 0.13]], 12, sx * 0.98, -0.15, 0.6, PAL.lite, { metalness: 0.5 });
       d1.rotation.z = -sx * Math.PI / 2;
@@ -75,7 +73,7 @@ export default {
       const hc = cylF(chest, 0.14, 0.14, 0.1, 10, sx * 1.1, -0.15, 0.6, IRON, { metalness: 0.85 });
       hc.rotation.z = Math.PI / 2;
     }
-    // 髖圓盤(後;art:後腿上方的大圓頂 + 大圓口)
+    // Hip discs (aft): large dome cowl and port above hindlegs.
     for (const sx of [-1, 1]) {
       const d2 = latheF(spine, [[0.15, -0.1], [0.62, -0.06], [0.78, 0.02], [0.6, 0.15], [0.15, 0.2]], 12, sx * 0.92, 0.02, -1.55, PAL.lite, { metalness: 0.5 });
       d2.rotation.z = -sx * Math.PI / 2;
@@ -84,19 +82,19 @@ export default {
       const pc = cylF(spine, 0.25, 0.25, 0.08, 12, sx * 1.12, 0.02, -1.55, COAL, { metalness: 0.6 });
       pc.rotation.z = Math.PI / 2;
     }
-    // 層疊頸甲外二環(chest 前緣;第三環在 neckHead;art:頸基三層八角甲環)
+    // Segmented collar rings (outer two rings at chest front; third ring at neckHead).
     const c1 = latheF(chest, [[0.62, -0.12], [0.7, 0.02], [0.54, 0.28]], 8, 0, -0.1, 1.3, PAL.mid, { metalness: 0.55 });
     c1.rotation.x = Math.PI / 2;
     const c2 = latheF(chest, [[0.5, -0.1], [0.58, 0.02], [0.42, 0.24]], 8, 0, -0.14, 1.54, PAL.main, { metalness: 0.5 });
     c2.rotation.x = Math.PI / 2;
-    // ── 背骨板 ×8:交錯兩列(±x 錯開、z 交錯;高度前升後降;基部沉進背脊)──
-    // 後掠五角板:局部 +x(apex 偏移側)經 rotation.y=π/2 轉成世界 −z = 朝尾後掠
-    const tier = [PAL.lite, PAL.main, PAL.mid];             // 圖騰逐板異色歸 paint 層,幾何以三階近似
+    // Dorsal plates (8x staggered in two rows across +/-x and z; ascending then descending height).
+    // Swept pentagon: local +x (apex offset side) rotated via Ry(-PI/2) to point rearward (-z).
+    const tier = [PAL.lite, PAL.main, PAL.mid];             // Geometric 3-tier approximation; per-plate heraldry lives in paint layer.
     const plateAt = (parent, i, y, z, h) => {
       const sx = i % 2 ? 1 : -1;
       const p = prismF(parent, PLATE.map(([px, py]) => [px * 0.66 * h, py * h]), 0.14,
         sx * 0.26, y, z, tier[i % 3], { metalness: 0.5 });
-      p.rotation.y = -Math.PI / 2;                          // 實拍校正:−π/2 才是 apex 朝尾(後掠)
+      p.rotation.y = -Math.PI / 2;                          // Ry(-PI/2) directs apex rearward (-z).
       return p;
     };
     plateAt(chest, 0, 0.72, 0.9, 0.66);
@@ -107,8 +105,8 @@ export default {
     plateAt(spine, 5, 0.82, -0.8, 1.2);
     plateAt(spine, 6, 0.78, -1.35, 0.95);
     plateAt(spine, 7, 0.68, -1.8, 0.7);
-    // ── 摺翼子機 ×4(每格掛貨;外側軌位,與集束莢/方彈筒補滿整條背軌)──
-    // 一格一台:IRON 托架 + tboxF 收分艙身 + coneF 鼻錐 + finF 摺翼 ×2 + accent 尾燈
+    // Folding-wing drones (4x): mounted on outboard rail slots.
+    // Modular payload: IRON pylon + tboxF fuselage + coneF nose cone + dual finF folding wings + accent taillight.
     const droneAt = (parent, sx, y, z, i) => {
       const g = new THREE.Group();
       g.position.set(sx * 0.55, y, z);
@@ -126,20 +124,20 @@ export default {
       }
       bxF(g, 0.1, 0.08, 0.06, 0, 0.0, -0.42, accent, { emissive: accent, emissiveIntensity: 0.8 + 0.2 * (i % 3) });
     };
-    droneAt(chest, 1, 1.06, 0.0, 0);        // 軌位 wz+0.6(右外側)
-    droneAt(chest, -1, 1.06, -0.45, 1);     // 軌位 wz+0.15(左外側)
-    droneAt(spine, 1, 1.04, -0.33, 2);      // 軌位 wz−0.33(右外側)
-    droneAt(spine, -1, 1.0, -0.8, 3);       // 軌位 wz−0.8(左外側)
+    droneAt(chest, 1, 1.06, 0.0, 0);        // Outboard rail slot right (+0.6)
+    droneAt(chest, -1, 1.06, -0.45, 1);     // Outboard rail slot left (+0.15)
+    droneAt(spine, 1, 1.04, -0.33, 2);      // Outboard rail slot right (-0.33)
+    droneAt(spine, -1, 1.0, -0.8, 3);       // Outboard rail slot left (-0.8)
   },
   neckHead(c, neck, head) {
     const { PAL, accent } = c;
-    // 頸甲第三環(最小、最前)+ 頸橋 + 頸下管束(cablesF 多零件)
+    // Third collar ring (innermost) + neck bridge + ventral cable bundle.
     const c3 = latheF(neck, [[0.4, -0.08], [0.46, 0.04], [0.32, 0.2]], 8, 0, -0.02, 0.1, IRON, { metalness: 0.6 });
     c3.rotation.x = Math.PI / 2;
     const nk = cylF(neck, 0.2, 0.32, 0.9, 8, 0, -0.06, 0.28, PAL.mid, { metalness: 0.55 });
     nk.rotation.x = 1.25;
     cablesF(neck, { p0: [0, -0.22, 0.12], p1: [0, -0.38, 0.58], k: 3, r: 0.022, sag: 0.03, spread: 0.06 }, IRON, { metalness: 0.6 });
-    // 小頭(art:小楔頭 + 收分喙吻 + 怒眉稜;相對軀幹仍「幾乎可忽略」)
+    // Compact head: wedge skull + tapered beak + brow ridge (small relative to massive torso).
     const cr = tboxF(head, { w0: 0.42, d0: 0.34, w1: 0.32, d1: 0.27, h: 0.5, sz: 0.02 }, 0, 0.02, 0.1, PAL.main, { metalness: 0.5 });
     cr.rotation.x = Math.PI / 2;
     const brow = [[-0.15, 0], [0, -0.025], [0.15, 0], [0.15, 0.06], [0, 0.035], [-0.15, 0.06]];
@@ -158,7 +156,7 @@ export default {
   },
   legF(c) { return this._leg(c, 1); },
   legH(c) { return this._leg(c, -1); },
-  // 象柱腿(len/base/k/d 同 models.js stego 分支:承重腿幾乎不折);後肢 ×1.1 加粗
+  // Columnar limbs (stego branch: load-bearing, minimal flexion); hindlimbs scaled 1.1x.
   _leg(c, S) {
     const { PAL, sx } = c;
     const b = S < 0 ? 1.1 : 1;
@@ -191,9 +189,9 @@ export default {
   },
   tail(c, tail, tail2) {
     const { PAL } = c;
-    // 節環尾(骨架照:粗根收梢、長度接近體長、向後上弧高舉)——
-    // whipTail 每幀覆寫 tail/tail2 樞軸 rotation ⇒ 上弧姿勢全寫進節身幾何:
-    // 逐節 y 抬升 + tilt 住 mesh;rotation.x = tilt − π/2(節身軸沿「上‑後」= 弧的切線)
+    // Segmented ring tail: thick root tapering to thagomizer, arching upward.
+    // whipTail dynamically updates tail/tail2 pivot rotations; upward curvature encoded statically in segment offsets:
+    // Progressive Y lift + tilt angle per segment; rotation.x = tilt - PI/2 along curve tangent.
     const segAt = (parent, z, y, r, len, tilt, col) => {
       const s = latheF(parent, [[r * 0.8, -len * 0.5], [r, -len * 0.13], [r, len * 0.17], [r * 0.86, len * 0.5]], 10, 0, y, z, col, { metalness: 0.5 });
       s.rotation.x = tilt - Math.PI / 2;
@@ -204,18 +202,18 @@ export default {
       rg.rotation.x = tilt - Math.PI / 2;
       return rg;
     };
-    // tail 前三節:根粗(半徑貼後軀下緣量體)→ 收分;根節咬進後殼(不懸空)
+    // Tail segments 1-3: thick root tapering down, anchored into rear torso.
     segAt(tail, -0.35, -0.05, 0.55, 0.8, 0.12, PAL.main);
     ringAt(tail, -0.78, 0.06, 0.42, 0.25);
     segAt(tail, -1.05, 0.15, 0.44, 0.7, 0.3, PAL.mid);
     ringAt(tail, -1.42, 0.3, 0.33, 0.45);
     segAt(tail, -1.5, 0.36, 0.37, 0.55, 0.5, PAL.main);
-    // tail2 後三節:先向後伸展、再續上弧高舉(骨架照:尾先拉長再起弧,不貼著身體直上)
+    // Tail2 segments 4-6: extends rearward before arching upward.
     segAt(tail2, -0.3, 0.42, 0.3, 0.6, 0.55, PAL.mid);
     ringAt(tail2, -0.62, 0.6, 0.24, 0.75);
     segAt(tail2, -0.85, 0.72, 0.24, 0.55, 0.9, PAL.main);
     segAt(tail2, -1.1, 0.98, 0.19, 0.5, 1.15, PAL.mid);
-    // 沿尾小背板 3 對(±x 交錯、逐對縮小;同 body PLATE 語彙,apex 朝尾後掠)
+    // Tail dorsal plate pairs (3 pairs, tapering rearward with apex pointing toward tail tip).
     const tplateAt = (parent, sx, z, y, h) => {
       const p = prismF(parent, PLATE.map(([px, py]) => [px * 0.66 * h, py * h]), 0.1,
         sx * 0.16, y, z, sx > 0 ? PAL.lite : PAL.mid, { metalness: 0.5 });
@@ -228,7 +226,7 @@ export default {
     tplateAt(tail, -1, -1.54, 0.62, 0.46);
     tplateAt(tail2, 1, -0.4, 0.64, 0.38);
     tplateAt(tail2, -1, -0.66, 0.74, 0.32);
-    // 尾錘(素鐵、被打得變形):柄自末節頂端接出(不懸空)、錘頭高舉 + 橫軸副錘 + 凹痕補片
+    // Thagomizer club: shaft anchored to distal segment + elevated club head + cross-axis secondary bar + dent patches.
     const hf = cylF(tail2, 0.08, 0.1, 0.5, 8, 0, 1.32, -1.22, IRON, { metalness: 0.8 });
     hf.rotation.x = 1.3 - Math.PI / 2;
     const bd = torusF(tail2, 0.12, 0.028, 0, 1.18, -1.18, COAL, { metalness: 0.8 });
@@ -237,7 +235,7 @@ export default {
       [0.23, -0.44], [0.38, -0.34], [0.33, -0.18], [0.4, -0.02], [0.34, 0.14], [0.39, 0.28], [0.25, 0.4], [0.0001, 0.44],
     ], 9, 0, 1.72, -1.28, STEEL, { metalness: 0.7 });
     hd.rotation.x = 1.3 - Math.PI / 2;
-    // 橫軸副錘:長過錘頭最大半徑(0.4)⇒ 兩端露出錘頭輪廓(★ 圖錘頂橫軸)
+    // Secondary cross-bar: spans beyond main club radius (0.4) to expose dual lateral studs.
     const pl = cylF(tail2, 0.15, 0.17, 0.95, 8, 0, 1.95, -1.34, GUNMETAL, { metalness: 0.8 });
     pl.rotation.z = Math.PI / 2;
     const dt1 = bxF(tail2, 0.2, 0.15, 0.06, 0.2, 1.78, -1.42, COAL, { metalness: 0.5 });
@@ -247,14 +245,13 @@ export default {
   },
   mount(c, F) {
     const { PAL, accent } = c;
-    // ── 重武器:6 管集束莢 ×2(左前掛 chest / 右後掛 spine,外側軌位;管口面朝後上)──
+    // Heavy weapon: dual 6-tube cluster pods (left-front on chest, right-rear on spine; elevated forward).
     const rackAt = (parent, x, y, z, hot) => {
       const rk = new THREE.Group();
       rk.position.set(x, y, z);
-      rk.rotation.x = -0.35;                                // 管口(+z 面)朝**前**上仰
-      // ⚠ 2026-08-14:管口原本開在 −z(朝機尾)—— art 的發射角是往後上,但那讓重武器的
-      //   曳光起點在機體後方、朝反方向飛(audit_muzzle ① dot(+z) = −0.94)。管口整組翻到 +z,
-      //   上仰角不變 ⇒ 讀起來仍是 MLRS 的仰射姿,只是朝著敵人那一側。
+      rk.rotation.x = -0.35;                                // Tube array (+z face) angled forward-upward.
+      // Tubes aimed forward-upward (+z face) so weapon tracers originate forward toward targets
+      // while retaining MLRS elevated trajectory stance.
       parent.add(rk);
       tboxF(rk, { w0: 0.7, d0: 1.15, w1: 0.64, d1: 1.05, h: 0.5 }, 0, 0.25, 0, PAL.lite, { metalness: 0.5 });
       bxF(rk, 0.66, 0.46, 0.06, 0, 0.25, 0.58, COAL, { metalness: 0.7 });
@@ -267,13 +264,13 @@ export default {
       mz.rotation.x = Math.PI / 2;
       return { rk, mz };
     };
-    const rk1 = rackAt(F.chest, -0.58, 1.0, 0.45, true);    // 左前(★ 圖的前段掛載)
-    const rk2 = rackAt(F.spine, 0.58, 1.02, -1.28, false);  // 右後
-    // 方彈筒 ×2(兩列骨板之間的中溝;後仰 = art 中背那對方管)
+    const rk1 = rackAt(F.chest, -0.58, 1.0, 0.45, true);    // Left-front mount
+    const rk2 = rackAt(F.spine, 0.58, 1.02, -1.28, false);  // Right-rear mount
+    // Dual missile canisters: central trough between plate rows, pitched rearward.
     const tubeAt = (parent, x, z, len, yb) => {
       const tg = new THREE.Group();
       tg.position.set(x, yb, z);
-      tg.rotation.x = 0.45;                                 // 實拍校正:+x 旋轉 = 筒口向後仰(art)
+      tg.rotation.x = 0.45;                                 // Positive pitch tilts canister opening rearward.
       parent.add(tg);
       tboxF(tg, { w0: 0.26, d0: 0.26, w1: 0.3, d1: 0.3, h: len }, 0, len * 0.5, 0, GUNMETAL, { metalness: 0.75 });
       tboxF(tg, { w0: 0.36, d0: 0.36, w1: 0.33, d1: 0.33, h: 0.14 }, 0, len - 0.02, 0, PAL.deep, { metalness: 0.7 });
@@ -282,7 +279,7 @@ export default {
     };
     const tb1 = tubeAt(F.chest, -0.06, -0.25, 1.55, 0.8);
     const tb2 = tubeAt(F.spine, 0.06, -0.35, 1.7, 0.82);
-    // ── 輕武器:頸側雙聯機槍莢(右頸甲側;art 無明顯輕武器 → 收成貼頸的小莢)──
+    // Light weapon: dual machine gun pod mounted along right neck collar.
     const pod = tboxF(F.chest, { w0: 0.24, d0: 0.5, w1: 0.2, d1: 0.42, h: 0.26 }, 0.85, -0.05, 1.05, PAL.deep, { metalness: 0.6 });
     const bs = [];
     for (const bxx of [-1, 1]) {
@@ -296,7 +293,7 @@ export default {
       gunR: null, gunL: null,
       muzzles: { light: { n: lMuz, r: 0.055 }, heavy: { n: rk1.mz, r: 0.1 } },
       lightGlowM: [lMuz], heavyGlowM: [rk1.mz, rk2.mz],
-      // charge:兩座集束莢 + 兩支方彈筒一齊仰起(rest → deploy)
+      // charge: dual cluster pods + dual missile canisters elevate concurrently (rest -> deploy).
       heavyPivot: [
         { obj: rk1.rk, rest: { x: -0.35, y: 0, z: 0 }, deploy: { x: -0.9, y: 0, z: 0 } },
         { obj: rk2.rk, rest: { x: -0.35, y: 0, z: 0 }, deploy: { x: -0.9, y: 0, z: 0 } },

@@ -1,22 +1,17 @@
-// ============ s03@flight 逐機零件檔(航空機體;dev-only)============
-// s03「利維坦」長耳可變訊號機 —— **飛行型**(飛鯨浮空艦)。
-// 2D 定案圖:public/assets/cyberpunk_art/mechs/s03_flight_static.jpg
-// 幾何語彙一律取自 ../geo.js;MUST NOT 在本檔自建 BufferGeometry。
+// ============ s03@flight Mech Component (Flight Variant; dev-only) ============
+// s03 "Leviathan" variable-geometry signal mech -- Flight Variant (sky-whale airship).
+// Geometry primitives MUST come from ../geo.js; MUST NOT construct BufferGeometry here.
 //
-// 2026-08-13 使用者定案:「利維坦+巨像:**保持飛艇形象,加入飛鯨頭部與胸鰭特徵**;
-// 飛行型改為一具完整的飛鯨浮空艦(囊背指揮塔+噴氣孔+額隆+側扁尾柄+水平尾鰭+垂直背鰭+
-// 腹下貨架與推進器);地面型變為四足站立的機械巨象(象腿落地+耳板立於頰側+長鼻捲武器)。」
-//
-// ── 兩態共用量體(同一座零件庫、旋鈕切換姿態)──
-// 兩態的「紡錘囊體 / 額隆鯨首 / 腹下貨架 / 指揮塔 / 頰側耳板 / 象牙 / 軟鼻 / 尾鰭 / 背鰭 /
-// 推進器」是同一份零件樹。飛行型旋鈕:
-//   ① 四足柱狀腿全數以 hip/knee/ankle 折收進腹艙(+y / +z 貼平);
-//   ② 頰側耳板(ear/flipper)放平(ry=±π/2、rz=±0.15)展開成後掠大胸鰭;
-//   ③ 象牙(tusk)水平收平(rx=0)貼在鯨首兩側;
-//   ④ 九節軟鼻(trunk)自下垂挺直為向前伸出的尖細「獨角/探針」(rx=0);
-//   ⑤ 水平尾鰭(fluke)全開(rx=0、ry=0)成雙側展開的水平鯨尾。
-//
-// 姿態矩陣由 _morph.js computeMorphFrame 推導;本檔只寫飛行型的靜態 override。
+// Dual-state shared geometry:
+// Ground and flight variants share the exact same component tree (spindle envelope,
+// whale rostrum, belly cradle, conning tower, ear flippers, tusks, trunk, tail fluke, dorsal fin).
+// Flight stance configuration:
+//   1. Quadruped limbs fold into belly bay (+y / +z flush);
+//   2. Cheek ear-flippers lay flat (ry = +-PI/2, rz = +-0.15) into swept pectoral flippers;
+//   3. Tusks retract flush (rx = 0) along rostrum flanks;
+//   4. 9-segment trunk straightens forward into a narwhal horn / sensor probe (rx = 0);
+//   5. Flukes deploy horizontally (rx = 0, ry = 0).
+// Stance transform matrices are derived via _morph.js computeMorphFrame; this file defines static flight overrides.
 import * as THREE from 'three';
 import { cylF, rotorF } from '../geo.js';
 import s03 from './s03.js';
@@ -25,7 +20,7 @@ import { staticLimb } from './_morph.js';
 const FR = s03.frame;
 
 export default {
-  // 色相 MUST = 地面型(同一台機的同一批塗裝)
+  // Hue MUST match ground variant (same vehicle livery).
   label: '利維坦・飛行型(s03 飛鯨浮空艦)', kind: 'air', height: s03.height,
   air: { tiltY: 3.0, bob: 0.11, top: 12, span: 3.6 },
   moveSig: { hover: 0.15, hoverF: 0.5, hoverA: 0.25, surge: 0.05, flare: 0.05, bank: 0.05 },
@@ -42,7 +37,7 @@ export default {
   ],
 
   body(c, t) {
-    // ← 四個旋鈕:一次把地面型的巨象轉成飛行型的鯨(零件一批都沒換)
+    // Morph knobs: switches ground colossus to flight whale form without replacing parts.
     c.earOut = 0; c.tuskOut = 0; c.trunkDown = false;
 
     const spine = new THREE.Group();
@@ -60,47 +55,37 @@ export default {
     s03.neckHead(c, neck, head);
     c._spine = spine;
 
-    // ---- 象腿 ×4 上收進腹艙(同一組腿件;規格陣列由 staticLimb 靜態組起來)----
-    // ══ 2026-08-14 第三輪:整組重排,理由是前兩輪都沒修掉的**腿↔胸鰭互穿** ══
-    // 症狀:大腿楔台與膝轂直接貫穿鰭板下表面,交線處墨線碎成一片,整個腹面讀起來是
-    //   「一堆散落的楔塊」;而 s03_flight_static.jpg 的腹面是乾淨的(連腿都看不到)。
-    // 前兩輪的做法都是「把腿再壓低一點 / 再往內收一點」—— 那治不好,因為**胸鰭的根
-    //   本來就埋在囊體裡、而且往內埋得很深**:逐頂點量胸鰭(earOut 0)在 spine 座標下
-    //   的佔位得到
-    //     z∈[−0.3, 0.3] 這一段 min|x| 只有 **0.39**(y 帶 −0.31 ~ +0.06),
-    //     z≥0.4 與 z≤−0.5 兩段 min|x| 都在 **0.80 以上**。
-    //   ⇒ 腹面正中那條 |x|<0.39 的走廊寬度不夠塞下一條 0.56 寬的大腿(兩側還會在
-    //     中線互穿),所以**唯一乾淨的解是讓腿完全避開 z∈[−0.45, 0.45] 這一帶**:
-    //       前腿收進**鼻艙**(z 0.52 ~ 1.86),後腿的大腿**斜著往前上方抬**,
-    //       進入那一帶時已經高過鰭根的 y 上緣(+0.06),小腿與足柱再落回中段囊內。
-    //   三個姿態角因此各有出處,MUST NOT 隨手調:
-    //     前腿 φ = +90° → −137.5° → 0°(大腿水平朝後貼腹、小腿往前上折、足柱鉛直向下)
-    //     後腿 φ = −120.3° → −88.8° → 0°(大腿斜前上、小腿水平朝前、足柱鉛直向下)
-    //   ⚠ **膝轂改朝內**:`_leg` 的膝轂掛在 `c.sx × 0.28` 上,朝外的話大腿一躺平它就
-    //     頂到 |x|=0.65 —— 那正好是鰭板內緣。收腿時傳**反號的 sx** ⇒ 膝轂轉進腹腔,
-    //     零件一顆沒換(這是唯一用得上 `sx` 的地方,`_leg` 其餘部分與它無關)。
-    // ⚠ 收起來的四條腿彼此在囊內有重疊 —— 那是**刻意的**:囊體是不透明的旋成外殼,
-    //   殼內的東西一律看不見,而 2.66 m 的肢柱 ×4 在 4.4 m 的囊裡本來就排不開。
-    //   要驗的是「腿有沒有穿出殼外 / 有沒有碰到胸鰭」,不是腿彼此碰不碰。
-    // ⚠ 後腿的落點是**夾在兩道相反的牆之間**調出來的,逐頂點量過才留得住:
-    //     太高/太陡 ⇒ 大腿的上外側角頂穿囊體**背面**(俯視就是背上兩塊深色橢圓;
-    //                 實測 y=−0.02 / r0=−2.30 時 2640 顆腿頂點有 55 顆在殼外、最深 0.176)
-    //     太低      ⇒ 大腿的下緣切進胸鰭埋在囊裡的那截根(y=−0.10 時交插 18 條、
-    //                 y=−0.24 時 28 條)
-    //   現值(x 0.22 / y −0.02 / z −0.90 / r0 −2.10):**腿↔鰭三角形交插 0 條**、
-    //   殼外只剩 18 顆頂點、最深 0.106 m,而那 0.106 是**前腿**大腿的腹側外緣
-    //   (讀起來是起落架整流罩,不是破圖)。動 px/py/pz/r0 任一項 MUST 兩項一起重量。
+    // ---- Legs retracted into belly bay (static assembly via staticLimb) ----
+    // Flipper root avoidance constraint:
+    // The pectoral flipper roots embed deeply into envelope interior:
+    //   z in [-0.3, 0.3] has min|x| = 0.39 (y in [-0.31, 0.06]),
+    //   z >= 0.4 and z <= -0.5 have min|x| >= 0.80.
+    // The ventral corridor (|x| < 0.39) cannot accommodate a 0.56-wide thigh without clipping.
+    // Retracted limbs MUST bypass z in [-0.45, 0.45]:
+    //   Forelegs tuck into rostrum bay (z 0.52 - 1.86).
+    //   Hindleg thighs elevate forward-upward above flipper root upper edge (+0.06)
+    //   before lower legs/feet drop back into mid-envelope.
+    // Pose angles:
+    //   Foreleg phi: +90 deg -> -137.5 deg -> 0 deg (thigh aft flush, shank folded up-forward, foot down)
+    //   Hindleg phi: -120.3 deg -> -88.8 deg -> 0 deg (thigh forward-up, shank forward, foot down)
+    // Knee hubs inward:
+    //   _leg mounts knee hubs at c.sx * 0.28. Outward hubs clip flipper inner boundary at |x| = 0.65.
+    //   Passing inverted sx turns hubs inward into belly void without altering part geometry.
+    // Hull clipping clearance:
+    //   Envelope is opaque; internal overlap between folded limbs is intentional and harmless.
+    //   Placement balances upper-thigh dorsal breach against flipper-root lower penetration.
+    //   px/py/pz/r0 parameters guarantee 0 triangle-plane intersections against flippers.
     for (const [sx, front, px, py, pz, r0, p1, p2] of [
       [-1, true, 0.30, -0.30, 1.78, 1.5708, -3.9708, 2.40],
       [1, true, 0.30, -0.30, 1.78, 1.5708, -3.9708, 2.40],
       [-1, false, 0.22, -0.02, -0.90, -2.10, 0.55, 1.55],
       [1, false, 0.22, -0.02, -0.90, -2.10, 0.55, 1.55],
     ]) {
-      const cx = { ...c, sx: -sx, front };            // sx 反號 = 膝轂朝內(見上)
+      const cx = { ...c, sx: -sx, front };            // Invert sx so knee hubs face inward (see above).
       staticLimb(spine, front ? s03.legF(cx) : s03.legH(cx),
         [0, p1, p2], [sx * px, py, pz], [r0, 0, 0]);
     }
-    // ---- 鯨尾(與地面型同一組;掛在囊尾)----
+    // ---- Whale tail (shares ground form assets; mounted at envelope stern) ----
     const tail = new THREE.Group();
     tail.position.set(0, FR.tailY, FR.tailZ);
     spine.add(tail);
@@ -113,7 +98,7 @@ export default {
   lift(c) {
     const { PAL, K } = c;
     const spin = [];
-    for (const sx of [-1, 1]) {                      // 矢量推進器 ×2(涵道低速螺槳)
+    for (const sx of [-1, 1]) {                      // Vectored thrusters (ducted low-speed props).
       cylF(c._spine, 0.3, 0.3, 0.34, 12, sx * 1.0, -0.5, -1.5, PAL.deep, { metalness: 0.7 }).rotation.x = Math.PI / 2;
       const r = rotorF(c._spine, { r: 0.26 * K.barrelF, blades: 4, pitch: 0.28, thick: 0.026, tilt: [Math.PI / 2, 0] },
         sx * 1.0, -0.5, -1.5, PAL.lite, { metalness: 0.5, transparent: true, opacity: 0.85 });

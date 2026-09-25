@@ -1,25 +1,22 @@
-// ============ m05@flight 逐機零件檔(航空機體;dev-only)============
-// m05「鎖喉」電戰可變機甲 —— **飛行型**(飛鼠滑翔態)。
-// 2D 定案圖:public/assets/cyberpunk_art/mechs/m05_ground_static.jpg(地面型 = 建模主體)
+// ============ m05@flight Mech Part Specification (Airframe, dev-only) ============
+// m05 "Chokehold" EW Variable Mech -- Flight Mode (Flying Squirrel Glider).
+// Reference 2D static art: public/assets/cyberpunk_art/mechs/m05_ground_static.jpg (ground mode is primary design basis).
 //
-// 2026-08-13 使用者定案:「狼人+飛鼠:**重製為狼人為主體,移除羽翼**,飛行型態狼頭朝前,
-// 四肢飛鼠一樣打開,飛膜由透明轉實體,爪子更顯眼,尾巴控制方向。」
-//   ⇒ 舊制那台「噴射戰機」(壓平機身 + wingF 後掠翼 + 進氣口 + 干擾吊艙 + 尾焰)整組退場:
-//     mecha.js gen.sil 的「機身壓平、肩部進氣口、翼下干擾吊艙」是 2D 圖的描述,使用者這一輪
-//     把飛行原型從噴射機改成**飛鼠**,升力面因此是**飛膜**不是翼。
-//   ⇒ 零件比例:狼人(地面型)75% / 飛鼠 25% —— 飛鼠那 25% 就是「四肢張開的姿態 + 實體飛膜」,
-//     其餘(頭/胸/鬃冠/四肢/爪/尾/武器)全部是 m05.js 的同一批零件。
-//   ⇒ **尾巴進 rig.tailSegs**:locomotion whipTail 依轉向角速度把尾甩向反側 = 使用者說的
-//     「尾巴控制方向」(這一台與 t06 相反 —— t06 的尾是武器瞄準架,刻意不掛)。
+// Werewolf + flying squirrel design rework:
+// - Werewolf remains primary body; wings removed. Wolf head points forward in flight; limbs spread in flying squirrel glide.
+// - Patagium membrane converts from transparent to opaque solid; claws prominent; tail steers flight.
+// - Retires jet fighter elements (swept wings, intakes, EW pods, jet exhaust). Lift surface is patagium membrane.
+// - Component ratio: 75% werewolf (ground mode) / 25% flying squirrel (spread posture + solid patagium).
+// - Tail registered in rig.tailSegs: locomotion whipTail swings tail inversely to yaw rate for aerodynamic steering.
 import * as THREE from 'three';
 import m05 from './m05.js';
 import { bipedDims, groundCtx, upright } from './_morph.js';
 
-const PITCH = 1.44;           // 軀幹幾乎水平(滑翔;狼頭朝航向)
-const HG = 6.0;               // 地面型的取景高 = 兩態共用的骨架尺度基準
+const PITCH = 1.44;           // Torso near-horizontal (glide stance; wolf head facing flight path)
+const HG = 6.0;               // Ground framing height = shared skeletal scale reference
 
 export default {
-  // 色相 MUST = 地面型(同一台機的同一批塗裝)
+  // Palette hue matches ground mode for consistent paint scheme across forms.
   label: '鎖喉・飛行型(m05 飛鼠滑翔)', kind: 'air', height: HG,
   air: { tiltY: 3.0, bob: 0.05, top: 30, span: 6.0 },
   moveSig: { hover: 0.22, hoverF: 0.8, hoverA: 0.12, surge: 0.80, flare: 0.70, bank: 0.75 },
@@ -37,7 +34,7 @@ export default {
   body(c, t) {
     const dim = bipedDims(m05, HG);
     groundCtx(c, dim);
-    c._glide = true;      // 告訴 m05.chest 這一場的飛膜由這裡展開,它不要再建一片收摺的
+    c._glide = true;      // Signals m05.chest that patagium unfolds here to skip folded skin fold.
     const hull = new THREE.Group();
     hull.position.set(0, 0.1, -0.35);
     hull.rotation.x = PITCH;
@@ -49,25 +46,22 @@ export default {
     const chest = new THREE.Group();
     hips.add(chest);
     m05.chest(c, chest, { shoulderX: dim.shoulderX, shoulderY: dim.shoulderYl, waistY: dim.waistYl });
-    m05.head(c, upright(chest, PITCH - 0.34, 0, dim.headYl, 0.04));   // 狼頭抬起朝航向
+    m05.head(c, upright(chest, PITCH - 0.34, 0, dim.headYl, 0.04));   // Wolf head tilted up facing flight heading
 
-    // ---- 四肢像飛鼠一樣張開成 X 字(前肢朝前外、後肢朝後外;膜就撐在這四點之間)----
-    // 2026-08-13 使用者「四肢調整為 X 字形」:舊制兩組都往**後**耙(前肢 −0.16、後肢 −0.28)
-    // ⇒ 俯視是 K 不是 X。角度一律取 m05.GLIDE(飛膜輪廓吃同一份 ⇒ 改姿勢膜自己跟著走)。
-    // 2026-08-14 骨架校準:m05.GLIDE 的掃掠角改由飛鼠解剖圖量到的 **45°** 定(見該常數檔頭),
-    // 本檔一格未改 —— 這正是「角度只有一份」的用處:改姿勢時飛行檔不必動,膜也自己跟著走。
-    // 每肢兩層 Group:①掃掠 Rz ②繞肢體長軸的 roll Ry —— 有了 ② 第二節的 rotation.x 才在
-    // **滑翔面內**折;少了它肘/膝一折就出平面,而正面看完全正常(見 m05.glideFrame 檔頭)。
+    // ---- Limbs splayed into X-form (forelimbs forward-out, hindlimbs rear-out; membrane spans between all 4 points) ----
+    // Angles derived from m05.GLIDE (shared with patagium outline).
+    // Each limb uses two Groups: 1) Sweep Rz, 2) Roll Ry along limb axis.
+    // Roll rotates elbow/knee flexion into the glide plane.
     const GL = m05.GLIDE;
     const hands = {};
     for (const sx of [-1, 1]) {
       const cx = { ...c, sx };
       const piv = new THREE.Group();
       piv.position.set(sx * dim.shoulderX, dim.shoulderYl, 0);
-      piv.rotation.z = sx * (Math.PI / 2 + GL.armSweep);        // 前肢:側向 → 再往機首掃
+      piv.rotation.z = sx * (Math.PI / 2 + GL.armSweep);        // Forelimb: lateral -> swept toward nose
       chest.add(piv);
       const arm = new THREE.Group();
-      arm.rotation.y = -sx * Math.PI / 2;                       // roll:肘的折向轉進滑翔面
+      arm.rotation.y = -sx * Math.PI / 2;                       // Roll: rotates elbow flexion into glide plane
       piv.add(arm);
       m05.armUp(cx, arm, { len: dim.upperArmL });
       const fore = new THREE.Group();
@@ -77,8 +71,8 @@ export default {
       m05.armFore(cx, fore, { len: dim.foreArmL });
       const hand = new THREE.Group();
       hand.position.y = -dim.foreArmL;
-      hand.rotation.y = sx * Math.PI / 2;                       // 把 roll 轉回來:武器朝向同地面型
-      hand.name = `wrist${sx}`;                                 // 探針錨(飛膜前角 MUST 落在這裡)
+      hand.rotation.y = sx * Math.PI / 2;                       // Roll inverted: weapon orientation matches ground form
+      hand.name = `wrist${sx}`;                                 // Probe anchor: forward patagium corner MUST land here
       fore.add(hand);
       hands[sx] = hand;
     }
@@ -86,7 +80,7 @@ export default {
       const cx = { ...c, sx };
       const piv = new THREE.Group();
       piv.position.set(sx * dim.legX, 0, 0);
-      piv.rotation.z = sx * (Math.PI / 2 - GL.legSweep);        // 後肢:側向 → 再往機尾掃
+      piv.rotation.z = sx * (Math.PI / 2 - GL.legSweep);        // Hindlimb: lateral -> swept toward tail
       hull.add(piv);
       const leg = new THREE.Group();
       leg.rotation.y = -sx * Math.PI / 2;
@@ -99,16 +93,14 @@ export default {
       m05.shin(cx, shin, { len: dim.shinL });
       const foot = new THREE.Group();
       foot.position.y = -dim.shinL;
-      foot.rotation.x = GL.toe;                                 // 爪往後拖(飛鼠滑翔時後足是收著的)
-      foot.name = `ankle${sx}`;                                 // 探針錨(飛膜後角 MUST 落在這裡)
+      foot.rotation.x = GL.toe;                                 // Claws trail rearward (feet tucked during squirrel glide)
+      foot.name = `ankle${sx}`;                                 // Probe anchor: rear patagium corner MUST land here
       shin.add(foot);
       m05.foot(cx, foot, { clear: dim.clear, footL: dim.footL });
     }
 
-    // ---- 飛膜:同一片零件展開成實體膜 ----
-    // **掛 chest、零旋轉**:膜與四肢因此同在軀幹的局部 XY 平面上(共面 = 「不越界」的前提)。
-    // 舊制掛在反傾錨上轉 −π/2 是要讓膜**水平**,但四肢留在俯仰面 ⇒ 肢端與膜差到 0.3m,
-    // 不管輪廓怎麼算都會露出來(2026-08-13 使用者回報的「飛膜越界」有一半是這個)。
+    // ---- Patagium: Deployed as solid membrane ----
+    // Mounted on chest with zero rotation: membrane and limbs remain coplanar in torso local XY.
     const out = m05.patagiumOutline(HG, dim.G, dim.shoulderX, dim.shoulderYl);
     for (const sx of [-1, 1]) {
       const w = m05.patagium(c, chest, sx, true, out);
@@ -116,39 +108,31 @@ export default {
       w.name = `pata${sx}`;
     }
 
-    // ---- 方向舵尾(m05.extra 的同一條三節狼尾)----
-    // **MUST 掛在反傾錨上**:節鏈沿局部 −z 往後長,直接掛 hips 會被軀幹前傾 1.44 轉成朝天
-    // 的一根立桿(實測第一版就是這樣),而 whipTail 只覆寫節樞軸、不會把它轉回來。
-    // 2026-08-15 使用者「尾巴也要逐骨架變形」⇒ 這一態的逐節基礎姿勢**打直**:飛鼠的尾在滑翔時
-    // 是一片平伸在機尾的舵面(chainF 沿 −z 長 ⇒ 逐節 0 就是筆直後伸),而狼態是上揚後拱的
-    // 0.5/節。逐節差 0.5 rad ⇒ 三節各自轉、梢端走一大段 = 使用者要的「逐骨架」而不是整條平移。
+    // ---- Rudder tail (three-segment wolf tail from m05.extra) ----
+    // Mounted on upright anchor: prevents torso pitch from turning tail upward.
+    // In flight mode, baseline posture extends straight back as an aerodynamic rudder.
     c.tailCurl = { rot0: 0, rotD: 0 };
     const stub = { muzzles: {}, heavy: { glow: [] }, wpn: {} };
     m05.extra(c, { hips: upright(hips, PITCH) }, stub);
     c._tail = stub.tailSegs;
 
     c._W = m05.mount(c, { chest, handL: hands[-1], handR: hands[1], hips });
-    // ---- 武裝順著航向收(2026-08-14 D2)----
-    // ⚠ 判退實測:m05.mount 給的靜姿是 `Rx(REST=1.62)` —— 那是**地面型**的「手垂著、槍朝前」。
-    //   滑翔姿把整條手臂甩到側前方又繞長軸 roll 了 90°,同一個靜姿在這裡解出來的槍管軸是
-    //   世界 (0, −0.99, 0.13):**垂直朝下**。逐頂點量到六管旋砲的 y 1.81…3.06 / z 3.06…3.42,
-    //   俯視像一支起落架吊在右前肢下(全機最低點 minY 1.8077 就是它)。
-    // 修法只有一條式子,而且是**推導**的:手的世界朝向在這一姿裡恰好是繞 z 的單一旋轉
-    //   Rz(φ),φ = sx·(π/2 + armSweep + elbow)(掃掠 Rz、roll Ry(∓90°) 夾住的肘 Rx 共軛成 Rz,
-    //   最後 hand 的 Ry 又把 roll 轉回來)⇒ 對槍組補 Rz(−φ) 就讓槍管的局部 +y 落回**機首方向**。
-    //   角度因此只有 m05.GLIDE 一份:改姿勢時這裡自己跟著走,MUST NOT 手寫一個度數。
+    // ---- Weapons aligned with flight heading ----
+    // Forelimb sweep and roll transform hand orientation to Rz(phi) where phi = sx * (PI/2 + armSweep + elbow).
+    // Compensate with Rz(-phi) so weapon local +y returns to flight heading.
+    // Derived strictly from m05.GLIDE single seam.
     const GPHI = Math.PI / 2 + GL.armSweep + GL.elbow;
     for (const [w, sx] of [[c._W.gunR, 1], [c._W.gunL, -1]]) {
       if (!w?.g) continue;
       w.g.rotation.set(0, 0, -sx * GPHI);
-      w.g.position.set(sx * 0.06, -0.10, 0.02);   // 貼回掌心;z 在這一姿是「離滑翔面的高度」⇒ 收到 ~0
+      w.g.position.set(sx * 0.06, -0.10, 0.02);   // Tucked against palm; z represents height above glide plane -> close to zero
     }
   },
 
-  // 升力全部來自飛膜滑翔(無翼、無旋翼、無噴口)
+  // Lift generated entirely by patagium gliding (no wings, rotors, or thruster nozzles).
   lift() { return {}; },
 
-  // 尾巴 = 方向舵:掛進 rig.tailSegs ⇒ whipTail 依 yawRate 甩向反側(使用者「尾巴控制方向」)
+  // Tail rudder: registered in rig.tailSegs; whipTail swings tail against yawRate for flight steering.
   tail(c) { return c._tail || null; },
 
   mount(c) { return { ...c._W, gunR: null, gunL: null, aimPose: null }; },

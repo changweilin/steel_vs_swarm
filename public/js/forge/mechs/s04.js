@@ -1,18 +1,9 @@
-// ============ s04 逐機零件檔(航空機體;dev-only)============
-// s04「鐵鍬」零式突擊翼(fixed / wing:'zero'):A6M 零式的低翼單翼 + 星型引擎牽引槳
-// 2D 定案圖:public/assets/cyberpunk_art/mechs/s04_static.png(/ _moving / _heavy)
-// 設計權威 = mecha.js gen.sil:「低翼單翼的細長機身,機首一具短粗的星型引擎與大直徑牽引槳,
-// 座艙罩位置換成一顆感測球;翼端上翹得很淺。」
-// gen.note:「槳 MUST 畫成真的會轉的動力件(有槳轂與變距機構)—— 它是這台機最後一件武器。」
-//   ⇒ 槳轂走 rotorF(自帶槳轂旋成體),另補**變距連桿**;槳進 spin 名冊。
-// 定翼機 MUST 帶 air.level = 1(stepAerial:巡航機身水平,不隨前速低頭),moveSig.flare = 0。
-// ---- 2026-08-14 這一輪(使用者:「參考舊版設計重新渲染外觀,只改外觀不增減零件」)----
-// 舊版 = 退役的 legacy_models.js buildFixedWing() 的 `W === 'zero'` 分支。
-// 只動色階與尺寸,零件一件未增減:翼面/尾翼組 → `lite`(舊版翼面比機身亮一階)、
-// 翼端識別帶 → accent、整流罩 → PAL.mid、內翼弦 0.78→0.95、上反 0.2→0.12(淺上翹)、
-// 扭轉 −0.05→0(舊版翼面無扭轉)。
-// 徽記那一半(2026-08-14 使用者:「零式的雙翼上下都要印紅日」)= 主翼掛 `userData.hinomaru`,
-// 由 forge.js 收尾轉呼 paint.js `paintUnit` → `paintWingRoundel` 沿 Y 三平面投影 ⇒ 雙翼正反共四枚。
+// ============ s04 Mech Component (Flight Variant; dev-only) ============
+// s04 "Spade" Zero-type assault wing (fixed-wing): Low-wing monoplane + radial engine tractor propeller.
+// Propeller MUST render as functional animated propulsion (rotorF with pitch-control linkages, registered in spin list).
+// Fixed-wing craft MUST set air.level = true (stepAerial cruise orientation stays level regardless of forward velocity) and moveSig.flare = 0.
+// Wing roundels tag userData.hinomaru for paint.js paintWingRoundel tri-planar Y-projection (upper and lower surfaces, 4 roundels total).
+// Single seam: decal projection lives in paint.js, MUST NOT duplicate roundel geometry here.
 import {
   bxF, cylF, sphF, tboxF, prismF, latheF, wingF, rotorF, gunPodF,
   IRON, GUNMETAL, COAL,
@@ -35,14 +26,13 @@ export default {
 
   body(c, t) {
     const { PAL, accent, dark } = c;
-    // 細長機身:旋成體(前粗後收);+z = 機首
+    // Slender fuselage: lathe body (tapered aft); +z = nose.
     const fus = latheF(t, [[0, -1.5], [0.13, -1.3], [0.2, -0.6], [0.26, 0.2], [0.28, 0.72], [0.24, 1.02], [0, 1.1]],
       12, 0, 0, 0, PAL.main, { metalness: 0.55 });
     fus.rotation.x = Math.PI / 2;
-    bxF(t, 0.06, 0.09, 1.7, 0, 0.24, -0.3, PAL.deep, { metalness: 0.6 });          // 機背脊條
-    // 星型引擎:引擎環 + 九缸 + 排氣短管
-    // 整流罩取 PAL.mid(舊版 `dark = PAL.mid`)—— 取 PAL.deep 會與缸體同深,
-    // 「短粗的整流罩」在剪影上就只剩一團黑。
+    bxF(t, 0.06, 0.09, 1.7, 0, 0.24, -0.3, PAL.deep, { metalness: 0.6 });          // Dorsal spine ridge
+    // Radial engine: cowl ring + 9 cylinders + exhaust stubs.
+    // Cowling uses PAL.mid to preserve visual silhouette contrast against dark cylinder heads.
     const ring = latheF(t, [[0.14, 0], [0.34, 0.02], [0.36, 0.16], [0.3, 0.24], [0.14, 0.26]],
       12, 0, 0, 1.12, PAL.mid, { metalness: 0.75 });
     ring.rotation.x = -Math.PI / 2;
@@ -50,7 +40,7 @@ export default {
       const th = i / 9 * Math.PI * 2;
       const cy = cylF(t, 0.055, 0.062, 0.2, 6, Math.sin(th) * 0.25, Math.cos(th) * 0.25, 1.16, GUNMETAL, { metalness: 0.8 });
       cy.rotation.x = Math.PI / 2;
-      for (let f = 0; f < 3; f++)                                                   // 散熱鰭
+      for (let f = 0; f < 3; f++)                                                   // Cooling fins
         cylF(t, 0.07, 0.07, 0.014, 6, Math.sin(th) * 0.25, Math.cos(th) * 0.25, 1.1 + f * 0.06,
           COAL, { metalness: 0.85 }).rotation.x = Math.PI / 2;
     }
@@ -58,13 +48,12 @@ export default {
       const ex = cylF(t, 0.03, 0.035, 0.3, 6, sx * 0.22, -0.16, 1.0, COAL, { metalness: 0.85 });
       ex.rotation.x = Math.PI / 2 - 0.2;
     }
-    // 感測球(原座艙罩位置)+ 環形基座
+    // Spherical sensor head + annular collar (replacing cockpit canopy).
     cylF(t, 0.2, 0.24, 0.08, 12, 0, 0.24, 0.28, PAL.deep, { metalness: 0.7 });
     const ball = sphF(t, 0.19, 0, 0.36, 0.28, accent, { emissive: accent, emissiveIntensity: 1.1 });
     ball.scale.y = 0.86;
-    // 尾翼組:單垂尾 + 水平尾翼 ×2
-    // 舊版的尾翼組與主翼同吃 `lite`(models.js:1024/:1029)—— 翼面比機身亮一階是這台機
-    // 兩色分明的來源;取 PAL.mid 會與機身糊成同一塊。
+    // Empennage: single vertical fin + dual horizontal stabilizers.
+    // Tail and wing surfaces use PAL.lite to provide tonal contrast against fuselage.
     prismF(t, [[-0.42, 0], [0.16, 0], [0.06, 0.62], [-0.3, 0.66]], 0.05, 0, 0.28, -1.16, PAL.lite, { metalness: 0.5 })
       .rotation.y = Math.PI / 2;
     for (const sx of [-1, 1]) {
@@ -76,21 +65,18 @@ export default {
 
   lift(c, t) {
     const { PAL, accent, K } = c;
-    // 低翼主翼:翼根接機身下緣,淺上翹(gen.sil:「翼端上翹得很淺」)
-    // 舊版對照(models.js:997~1000):翼面 `lite`(比機身亮一階)、內翼厚弦(0.95)、
-    // 外翼收分、上反角 0.12rad —— 板上原本翼面與機身同吃 PAL.main 且弦短,
-    // 讀起來是「機身上插了兩片薄板」而不是橢圓低單翼。
+    // Low-mounted main wing: root joins lower fuselage contour with shallow dihedral (0.12 rad).
+    // PAL.lite surfaces maintain tonal contrast against PAL.main fuselage.
     for (const sx of [-1, 1]) {
       const w = wingF(t, { span: 1.74, c0: 0.95, c1: 0.46, t: 0.12, sweep: 0.1, dihedral: 0.12, twist: 0 },
         sx * 0.22, -0.17, 0.16, PAL.lite, { metalness: 0.5 });
       w.scale.x = sx;
-      // 日之丸:標記給 paint.js `paintWingRoundel` —— 它沿 Y 三平面投影 ⇒ **每片翼的頂面與
-      // 底面各一枚**,雙翼共四枚(使用者:「零式的雙翼上下都要印紅日」)。旗標而不是幾何:
-      // 貼花的畫法只有 paint.js 一份,這裡自己畫一片紅圓就是第二份實作。
+      // Mark for paint.js paintWingRoundel tri-planar Y-projection (both surfaces, 4 roundels total).
+      // Projection logic lives exclusively in paint.js to maintain single seam.
       w.userData.hinomaru = true;
-      bxF(t, 0.05, 0.06, 0.34, sx * 1.9, -0.02, 0.14, accent, { metalness: 0.5 });   // 翼端識別帶(舊版 dim(accent))
+      bxF(t, 0.05, 0.06, 0.34, sx * 1.9, -0.02, 0.14, accent, { metalness: 0.5 });   // Wingtip identification stripe
     }
-    // 牽引槳:三葉大直徑 + 槳轂 + 變距連桿
+    // Tractor prop: 3 blades + hub + variable-pitch linkage rods.
     const r = rotorF(t, { r: 1.05 * K.barrelF, blades: 3, pitch: 0.34, thick: 0.05, tilt: [Math.PI / 2, 0] },
       0, 0, 1.3, PAL.deep, { metalness: 0.6, transparent: true, opacity: 0.9 });
     for (let i = 0; i < 3; i++) {
@@ -103,7 +89,7 @@ export default {
   mount(c, F) {
     const { accent, K, dark } = c;
     const t = F.tilt;
-    for (const sx of [-1, 1]) bxF(t, 0.09, 0.1, 0.34, sx * 0.92, -0.24, 0.14, dark, { metalness: 0.75 });   // 掛梁
+    for (const sx of [-1, 1]) bxF(t, 0.09, 0.1, 0.34, sx * 0.92, -0.24, 0.14, dark, { metalness: 0.75 });   // Pylon mounts
     const lp = gunPodF(t, { len: 0.86 * K.barrelF, r: 0.11, accent }, -0.92, -0.36, 0.3, dark, { metalness: 0.75 });
     const hp = gunPodF(t, { len: 1.06 * K.barrelF, r: 0.15, accent }, 0.92, -0.36, 0.26, dark, { metalness: 0.75 });
     return {
