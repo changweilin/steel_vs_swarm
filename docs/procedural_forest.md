@@ -8,6 +8,18 @@
 
 ## Constraints (why, not what)
 
+- Catalog names, representative regions and climate tags live with each species.
+  Regions describe browsing groups (including broad taxa and generic deadwood), not
+  surveyed native-range masks. The preview intersects these tags with crown form;
+  habitat sampling then renormalizes the shared distribution within that intersection.
+  An empty intersection or unsuitable environment remains empty.
+- Species additions reuse the shared procedural forms with species-specific size,
+  branching and habitat parameters. Botanical naming references include Kew POWO:
+  [Quercus robur](https://powo.science.kew.org/taxon/urn:lsid:ipni.org:names:304293-2/general-information),
+  [Ginkgo biloba](https://powo.science.kew.org/taxon/urn:lsid:ipni.org:names:262125-1/general-information),
+  [Vachellia tortilis](https://powo.science.kew.org/taxon/77087190-1), and
+  [NatureScot's native woodland list](https://www.nature.scot/professional-advice/land-and-sea-management/managing-land/forests-and-woodlands/native-versus-non-native-woodland).
+
 - Zero shared-RNG discipline: each plant grows from coordinate seeds. New shapes and
   organs use independent randomness and MUST NOT consume the shared scene sequence,
   so adding a species never shifts the whole map's vegetation and building layout.

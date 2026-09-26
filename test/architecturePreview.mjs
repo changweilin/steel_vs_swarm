@@ -847,49 +847,23 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     <div class="dim-panel">
       <div class="dim-title">
         <span>植物形態與生態季候</span>
-        <span class="badge" id="plant-info-badge">21 種林木形態 · 獨立季節器官</span>
+        <span class="badge" id="plant-info-badge">植物目錄 · 區域／氣候／形態</span>
       </div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 8px;">
+        <div><label>區域／分布類群 <select id="plant-region" style="width:100%"></select></label></div>
+        <div><label>氣候 <select id="plant-climate" style="font-size:11px; width:100%;">
+            <option value="all" selected>全部氣候（依緯度／海拔）</option>
+            <option value="temperate">溫帶 (Temperate)</option>
+            <option value="tropical">熱帶 (Tropical)</option>
+            <option value="boreal">寒帶 (Boreal)</option>
+            <option value="arid">乾旱 (Arid)</option>
+            <option value="mediterranean">地中海 (Mediterranean)</option>
+            <option value="alpine">高山 (Alpine)</option>
+          </select></label></div>
+        <div><label>植物形態 <select id="plant-form" style="width:100%"></select></label></div>
         <div>
           <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">植物樹種</label>
           <select id="plant-species" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
-            <option value="all" selected>全部樹種輪播 (All Species)</option>
-            <option value="auto">依環境適生加權抽樣</option>
-            <optgroup label="針葉樹巨木">
-              <option value="redwood">加州紅杉 (Redwood · 塔型 110m)</option>
-              <option value="sequoia">巨杉 (Sequoia · 塔型 92m)</option>
-              <option value="dougfir">花旗松 (Douglas Fir · 塔型 100m)</option>
-              <option value="sitka">錫特卡雲杉 (Sitka Spruce · 塔型 90m)</option>
-              <option value="taiwania">台灣杉 (Taiwania · 塔型 90m)</option>
-              <option value="alerce">智利柏 (Alerce · 階層 60m)</option>
-              <option value="klinki">克林基南洋杉 (Araucaria · 階層 88m)</option>
-            </optgroup>
-            <optgroup label="闊葉巨木">
-              <option value="euc">澳洲杏仁尤加利 (Eucalyptus · 開展 98m)</option>
-              <option value="meranti">婆羅洲娑羅雙 (Shorea · 傘型 96m)</option>
-              <option value="dinizia">巴西巨木 (Angelim · 傘型 86m)</option>
-              <option value="tualang">巨型甘巴豆 (Tualang · 傘型 88m)</option>
-            </optgroup>
-            <optgroup label="溫帶與地中海">
-              <option value="banyan">孟加拉榕樹 (Banyan · 氣生支柱根)</option>
-              <option value="willow">垂柳 (Willow · 下垂枝柔荑花序)</option>
-              <option value="holmOak">地中海冬青櫟 (Holm Oak · 耐乾傘冠)</option>
-            </optgroup>
-            <optgroup label="灌叢與冷涼生態">
-              <option value="scrubOak">矮灌木櫟 (Scrub Oak · 多幹密灌)</option>
-              <option value="rhododendron">高山杜鵑 (Rhododendron · 花簇酸土)</option>
-              <option value="juniper">刺柏 (Juniper · 多幹漿果狀球果)</option>
-            </optgroup>
-            <optgroup label="特殊生態形態">
-              <option value="forestBamboo">叢生竹叢 (Bamboo · 竹節地下莖)</option>
-              <option value="mangroveGrey">海茄苳紅樹 (Mangrove · 呼吸根潮灘)</option>
-              <option value="coconut">可可椰子 (Coconut · 羽狀葉椰果)</option>
-              <option value="baobab">猴麵包樹 (Baobab · 膨大幹)</option>
-            </optgroup>
-            <optgroup label="場景獨立物件">
-              <option value="gianttree">神木巨木 (Scene Giant Tree)</option>
-              <option value="fallentree">倒木橫幹 (Scene Fallen Tree)</option>
-            </optgroup>
           </select>
         </div>
         <div>
@@ -915,20 +889,13 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
       <details style="margin-bottom:8px; font-size: 11px; color:#475569;">
         <summary style="cursor:pointer; font-weight:600; color:#2563eb;">▸ 展開生態環境參數 (氣候 / 緯度 / 海拔 / 濕度 / 土壤 pH / 鹽度)</summary>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin-top: 6px; background:#fff; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
-          <label>氣候 <select id="plant-climate" style="font-size:11px; width:100%;">
-            <option value="all" selected>全部氣候輪播 (All Climates)</option>
-            <option value="temperate">溫帶 (Temperate)</option>
-            <option value="tropical">熱帶 (Tropical)</option>
-            <option value="boreal">寒帶 (Boreal)</option>
-            <option value="arid">乾旱 (Arid)</option>
-            <option value="mediterranean">地中海 (Mediterranean)</option>
-            <option value="alpine">高山 (Alpine)</option>
-          </select></label>
+
+          <label>濕地／潮灘 <input type="checkbox" id="plant-wet"></label>
           <label>緯度 ° <input type="range" id="plant-lat" min="0" max="90" step="1" value="35"></label>
           <label>海拔 m <input type="range" id="plant-altitude" min="-200" max="4000" step="50" value="500"></label>
           <label>濕度 <input type="range" id="plant-moisture" min="0" max="1" step="0.05" value="0.6"></label>
           <label>土壤 pH <input type="range" id="plant-ph" min="3.5" max="8.5" step="0.1" value="6.5"></label>
-          <label>鹽度 <input type="range" id="plant-salinity" min="0" max="0.15" step="0.01" value="0"></label>
+          <label>鹽度 <input type="range" id="plant-salinity" min="0" max="1" step="0.01" value="0"></label>
         </div>
       </details>
       <div class="action-row">
@@ -1013,7 +980,9 @@ import { runtimeMeshDataGeometry } from '/js/runtimePartModel.js';
 import { mulberry32 } from '/js/rng.js';
 
 // 植物生成模組
-import { TREE_SPECIES, createForestTree, treeDistribution, treeHabitatWeight, treeSections, treeBend, forestEnvironment } from '/js/forest.js';
+import { forestCatalog, sampleForestCatalog } from '/js/forestCatalog.js';
+import { FOREST_FORMS } from '/js/forestSpecies.js';
+import { TREE_SPECIES, createForestTree, treeHabitatWeight, treeSections, treeBend, forestEnvironment } from '/js/forest.js';
 // 車輛生成模組
 import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, vehicleCandidates, VEHICLE_CONSISTS, CONSIST_PREFIX, RIM_NAMES } from '/js/vehicleCatalog.js';
 import { makeProceduralVehicle } from '/js/vehicleModels.js';
@@ -2299,13 +2268,53 @@ function buildGeologyMode() {
 // 植物生成邏輯 (Plants & Forest Generation Mode)
 // ==========================================
 const PLANT_NAMES = {
-  redwood: '加州紅杉', sequoia: '巨杉', euc: '杏仁尤加利', dougfir: '花旗松',
-  spruce: '錫特卡雲杉', shorea: '娑羅雙', taiwania: '台灣杉', angelim: '巴西巨木',
-  araucaria: '南洋杉', tualang: '甘巴豆', alerce: '智利柏', forestBamboo: '叢生竹林',
-  rhododendron: '高山杜鵑', banyan: '孟加拉榕樹', scrubOak: '灌木櫟', holmOak: '冬青櫟',
-  willow: '垂柳', juniper: '刺柏', mangroveGrey: '海茄苳紅樹', coconut: '可可椰子', baobab: '猴麵包樹',
+  ...Object.fromEntries(Object.entries(TREE_SPECIES).map(([type, spec]) => [type, spec.name])),
   gianttree: '神木巨木', fallentree: '倒木橫幹',
 };
+
+function plantFilters() {
+  return {
+    region: document.querySelector('#plant-region').value,
+    form: document.querySelector('#plant-form').value,
+    climate: document.querySelector('#plant-climate').value,
+  };
+}
+
+function plantCatalogTypes() {
+  const filters = plantFilters();
+  const types = forestCatalog(filters);
+  if (Object.values(filters).every(value => value === 'all')) types.push('gianttree', 'fallentree');
+  return types;
+}
+
+function refreshPlantCatalog() {
+  const select = document.querySelector('#plant-species');
+  const previous = select.value;
+  const types = plantCatalogTypes();
+  select.replaceChildren(new Option('符合分類項目輪播', 'all'), new Option('依環境適生加權抽樣', 'auto'));
+  const groups = new Map();
+  for (const type of types) {
+    const spec = TREE_SPECIES[type];
+    const label = spec ? FOREST_FORMS[spec.form] : '場景獨立物件';
+    if (!groups.has(label)) {
+      const group = document.createElement('optgroup');
+      group.label = label;
+      groups.set(label, group);
+      select.append(group);
+    }
+    groups.get(label).append(new Option(PLANT_NAMES[type] + (spec?.scientific ? ' · ' + spec.scientific : ''), type));
+  }
+  select.value = ['all', 'auto', ...types].includes(previous) ? previous : 'all';
+  document.querySelector('#plant-info-badge').textContent = forestCatalog(plantFilters()).length + ' / ' + Object.keys(TREE_SPECIES).length + ' 項植物 · 區域 × 氣候 × 形態';
+}
+
+for (const [id, field, label] of [['plant-region', 'regions', '全部區域'], ['plant-form', 'form', '全部形態']]) {
+  const select = document.getElementById(id);
+  select.append(new Option(label, 'all'));
+  const values = [...new Set(Object.values(TREE_SPECIES).flatMap(spec => spec[field]))];
+  for (const value of values) select.append(new Option(field === 'form' ? FOREST_FORMS[value] : value, value));
+}
+refreshPlantCatalog();
 
 const cylGeoFactory = (rt, rb, h, n, sec) => new THREE.CylinderGeometry(rt, rb, h, Math.max(5, n || 6), Math.max(1, sec || 1));
 const icoGeoFactory = (radius) => new THREE.IcosahedronGeometry(Math.max(0.1, radius), 1);
@@ -2360,19 +2369,17 @@ function createPlantObject(type, seed, scale = 1, season = 'summer', posX = 0, p
   }
   let actualType = type;
   if (type === 'auto') {
-    const lat = parseFloat(document.querySelector('#plant-lat').value) || 35;
-    const alt = parseFloat(document.querySelector('#plant-altitude').value) || 500;
-    const climVal = document.querySelector('#plant-climate')?.value || 'all';
-    const climPool = ['temperate', 'tropical', 'boreal', 'arid', 'mediterranean', 'alpine'];
-    const clim = climVal === 'all' ? climPool[Math.abs(seed) % climPool.length] : climVal;
+    const lat = Number(document.querySelector('#plant-lat').value);
+    const alt = Number(document.querySelector('#plant-altitude').value);
     const env = forestEnvironment(lat, alt, {
-      climate: clim,
-      moisture: parseFloat(document.querySelector('#plant-moisture').value) || 0.6,
-      ph: parseFloat(document.querySelector('#plant-ph').value) || 6.5,
-      salinity: parseFloat(document.querySelector('#plant-salinity').value) || 0,
+      climate: document.querySelector('#plant-climate').value,
+      moisture: Number(document.querySelector('#plant-moisture').value),
+      ph: Number(document.querySelector('#plant-ph').value),
+      salinity: Number(document.querySelector('#plant-salinity').value),
+      wet: document.querySelector('#plant-wet').checked,
     });
-    const dist = treeDistribution(lat, alt, 0.5, env);
-    actualType = dist.length ? dist[Math.abs(seed) % dist.length].type : 'redwood';
+    actualType = sampleForestCatalog(plantFilters(), seed, lat, alt, env);
+    if (!actualType) return null;
   }
 
   const spec = TREE_SPECIES[actualType] || TREE_SPECIES.redwood;
@@ -2449,11 +2456,22 @@ function buildPlantMode() {
   const seedMode = document.querySelector('#select-seed-mode-plant')?.value || 'per_building';
   const boundaryPlant = boundaryLayoutOf('plant') === 'boundary';
   const boundaryNote = boundaryPlant ? ' · 邊界沿邊排列（含緩衝區＋透明牆包絡）' : '';
-  const allSpecies = [...Object.keys(TREE_SPECIES), 'gianttree', 'fallentree'];
+  const allSpecies = plantCatalogTypes();
+  if (!allSpecies.length) {
+    document.querySelector('#nav-status').textContent = '此分類組合沒有植物，請調整區域、氣候或形態。';
+    render();
+    return;
+  }
 
   if (viewMode === 'single') {
     const actType = type === 'all' ? allSpecies[Math.abs(seed) % allSpecies.length] : type;
-    const { tree, meta } = withObjectLayout(createPlantObject(actType, seed, scale, season, 0, 0), 'plant');
+    const result = createPlantObject(actType, seed, scale, season, 0, 0);
+    if (!result) {
+      document.querySelector('#nav-status').textContent = '目前環境沒有適生植物，請調整生態參數。';
+      render();
+      return;
+    }
+    const { tree, meta } = withObjectLayout(result, 'plant');
     document.querySelector('#nav-status').textContent = '植物單株形態檢驗：【' + meta.name + '】（' + season + '季，種子 ' + seed + boundaryNote + '）';
     camTarget.set(0, tree.h * 0.4, 0);
     camDist = Math.max(16, tree.h * 1.5, tree.footprint * 3);
@@ -2471,7 +2489,9 @@ function buildPlantMode() {
         const idx = r * cols + c;
         const curType = type === 'all' ? allSpecies[idx % allSpecies.length] : type;
         const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
-        const res = withObjectLayout(createPlantObject(curType, curSeed, scale, season, 0, 0), 'plant');
+        const result = createPlantObject(curType, curSeed, scale, season, 0, 0);
+        if (!result) continue;
+        const res = withObjectLayout(result, 'plant');
         if (res && res.tree) {
           const szW = (res.tree.footprint || 4) * 2;
           const szH = res.tree.h || 12;
@@ -2500,7 +2520,8 @@ function buildPlantMode() {
       }
     }
 
-    document.querySelector('#nav-status').textContent = '植物陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 株）：【' + (type === 'all' ? '全部樹種輪播' : TREE_SPECIES[type]?.name || type) + '】（' + season + '季 · 基底種子 ' + seed + boundaryNote + '）';
+    document.querySelector('#nav-status').textContent = '植物陣列檢驗 (' + cols + '×' + rows + ' 共 ' + items.length + ' 株）：【' + (type === 'all' ? '符合分類項目輪播' : type === 'auto' ? '適生加權抽樣' : PLANT_NAMES[type] || type) + '】（' + season + '季 · 基底種子 ' + seed + boundaryNote + '）';
+    if (!items.length) document.querySelector('#nav-status').textContent = '目前環境沒有適生植物，請調整生態參數。';
     const totalW = (cols - 1) * stepX + maxObjW;
     const totalD = (rows - 1) * stepZ + maxObjD;
     camTarget.set(0, Math.min(25, maxObjH * 0.35), 0);
@@ -2533,7 +2554,7 @@ function switchTab(tabKey) {
     if (descEl) descEl.textContent = '21 種地質成因與歷史古蹟結構 · 侵蝕氣候環境模擬 · 16 變體陣列';
   } else if (tabKey === 'plant') {
     if (titleEl) titleEl.textContent = '🌲 林木植物生態與四季物候生成';
-    if (descEl) descEl.textContent = '21 種林木形態 · 四季器官物候 · 微氣候適應與群落生態';
+    if (descEl) descEl.textContent = Object.keys(TREE_SPECIES).length + ' 項植物 · 區域／氣候／形態交叉篩選 · 四季器官物候';
   } else if (tabKey === 'vehicle') {
     if (titleEl) titleEl.textContent = '🚗 載具結構與編組試車場';
     if (descEl) descEl.textContent = '單車／整列列車／半聯結車 · 多元用途動力輪圈 · 16 變體陣列';
@@ -2622,10 +2643,16 @@ document.querySelector('#btn-plant-random-seed')?.addEventListener('click', () =
   document.querySelector('#input-plant-seed').value = Math.floor(Math.random() * 90000) + 1000;
   buildPlantMode();
 });
-['#plant-species', '#plant-view-mode', '#plant-season', '#plant-scale', '#plant-climate'].forEach((sel) => {
+['#plant-species', '#plant-view-mode', '#plant-season', '#plant-scale'].forEach((sel) => {
   document.querySelector(sel)?.addEventListener('change', buildPlantMode);
 });
-['#plant-lat', '#plant-altitude', '#plant-moisture', '#plant-ph', '#plant-salinity'].forEach((sel) => {
+['#plant-region', '#plant-form', '#plant-climate'].forEach(sel => {
+  document.querySelector(sel).addEventListener('change', () => {
+    refreshPlantCatalog();
+    buildPlantMode();
+  });
+});
+['#plant-lat', '#plant-altitude', '#plant-moisture', '#plant-ph', '#plant-salinity', '#plant-wet'].forEach((sel) => {
   document.querySelector(sel)?.addEventListener('input', () => {
     if (document.querySelector('#plant-species').value === 'auto' || document.querySelector('#plant-view-mode').value === 'grove') {
       buildPlantMode();
