@@ -67,7 +67,9 @@ ok(plan.piers.length === 9 && plan.cols.length === 9, `3×3 支撐柱與碰撞�
 console.log('Ⅲ 高度與淨空接線');
 ok(bio.indexOf('function planBaseWaterPads') > bio.indexOf('export function makeDeckIndex'),
   '主堡承台材質位於凍結的 buildRoads → makeDeckIndex 授權區之外');
-ok(/buildBaseWaterPads\(group, basesW, terrain, roadRes\.decks, roadRes\.cols\)/.test(bio), '承台併入道路 decks／cols 單一縫');
+ok(/buildBaseWaterPads\(group, basesW, terrain, roadRes\.decks, roadRes\.cols[\s\S]{0,200}?\)/.test(bio), '承台併入道路 decks／cols 單一縫');
+ok(/buildBaseWaterPads\([\s\S]*?cfg\.lanes/.test(bio) && /laneGapAt\(wallWx, wallWz\)/.test(bio)
+  && /laneGapAt\(colWx, colWz\)/.test(bio), '主堡擋土牆/轉角柱對兵線留口(平台不封兵線)');
 ok(/terrain\.basePadY\s*=/.test(main) && /biomes\.userData\.basePads/.test(main), 'main 安裝 basePadY');
 ok(/e\.k === 'base'\) ent\.padY = this\.terrain\.basePadY/.test(game), '主堡本體讀 basePadY');
 ok(/ent\.padY \?\? this\.terrain\.heightAt\(wx, wz\)/.test(game), '治癒光環與主堡共用 padY');

@@ -25,7 +25,7 @@ import {
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
   WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
   FIRE_WEATHER, fireDotMul,
-  SCENE_STRUCT, sceneIsPhysical, sceneIsVehicle,
+   SCENE_STRUCT, sceneIsPhysical, sceneIsVehicle, clampHeroSpawn,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -7035,7 +7035,9 @@ export class BattleClient {
     const mySide = this.side || 'SWARM';
     const other = mySide === 'SWARM' ? 'STEEL' : 'SWARM';
     const [bx, bz] = llToWorld(this.cfg.bases[mySide][0], this.cfg.bases[mySide][1], this.center);
-    // 沿「主堡所在的那條兵線」推出生成點 + 面向兵線前進方向 → 一重生就正對兵線箭頭(而非直線指向敵堡)
+    // 沿「主堡所在的那條兵線」推出生成點 + 面向兵線前進方向 → 一重生就正對兵線箭頭(而非直線指向敵堡)。
+    // 與伺服器 _spawnPoint 同式:由主堡中心沿首段直線推出(彎曲兵線的沿線取點會把落點推回堡內,
+    // 兩端分家),終點吃 clampHeroSpawn 唯一縫:不與主堡重疊 + 平台上 + 治療環內。
     let sx, sz, dx, dz;
     let bestLane = null, bd = Infinity;
     for (const L of (this.cfg.lanes || [])) {
@@ -7046,27 +7048,20 @@ export class BattleClient {
       if (d < bd) { bd = d; bestLane = seq; }
     }
     if (bestLane) {
-      let acc = 0;   // 沿兵線走 HERO_SPAWN_OFF 找生成點(貼著兵線 → 更靠近)
-      for (let i = 0; i < bestLane.length - 1; i++) {
-        const ax = bestLane[i][0], az = bestLane[i][1];
-        const seg = Math.hypot(bestLane[i + 1][0] - ax, bestLane[i + 1][1] - az) || 1;
-        dx = bestLane[i + 1][0] - ax; dz = bestLane[i + 1][1] - az;
-        if (acc + seg >= GAME.HERO_SPAWN_OFF || i === bestLane.length - 2) {
-          const t = Math.min(1, (GAME.HERO_SPAWN_OFF - acc) / seg);
-          sx = ax + dx * t; sz = az + dz * t; break;
-        }
-        acc += seg;
-      }
+      dx = bestLane[1][0] - bestLane[0][0]; dz = bestLane[1][1] - bestLane[0][1];
+      const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl;
+      sx = bx + dx * GAME.HERO_SPAWN_OFF; sz = bz + dz * GAME.HERO_SPAWN_OFF;
     } else {
       const [ex, ez] = llToWorld(this.cfg.bases[other][0], this.cfg.bases[other][1], this.center);
-      dx = ex - bx; dz = ez - bz; const len = Math.hypot(dx, dz) || 1;
-      sx = bx + dx / len * GAME.HERO_SPAWN_OFF; sz = bz + dz / len * GAME.HERO_SPAWN_OFF;
+      dx = ex - bx; dz = ez - bz; const len = Math.hypot(dx, dz) || 1; dx /= len; dz /= len;
+      sx = bx + dx * GAME.HERO_SPAWN_OFF; sz = bz + dz * GAME.HERO_SPAWN_OFF;
     }
     // 橫向偏移到路旁:重生點落在兵線中央會被剛生出/行進中的 NPC 波次撞開,偏出兵線走廊即可避開
     // (伺服器 _spawnPoint 同一偏移;垂直於兵線前進方向,不影響面向兵線箭頭的 yaw)
     const pl = Math.hypot(dx, dz) || 1;
     sx += (dz / pl) * GAME.HERO_SPAWN_SIDE;
     sz += (-dx / pl) * GAME.HERO_SPAWN_SIDE;
+    [sx, sz] = clampHeroSpawn(bx, bz, sx, sz);
     this._placeAt(sx, sz, dx, dz);
   }
 

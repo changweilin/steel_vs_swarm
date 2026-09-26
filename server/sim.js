@@ -6,7 +6,7 @@
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, BASE_MISSILE, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
-  vsMult, upgradePrice, upgradeScore,   chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId,
+  vsMult, upgradePrice, upgradeScore,   chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId, clampHeroSpawn,
   isSuperSide, isThirdSide, SUPER_UPG, superCombatLvl, superDefLvl,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
   hyperClimbVx, hyperArcY, hyperTrackR,
@@ -1008,6 +1008,9 @@ export class BattleSim {
       const r = shipDef.r * sc;
       if (!this._inBounds(x, z, r)) continue;
       if (this._wetAt(x, z) !== 1) continue;   // 船體落在水上(沼澤不算)
+      // 擱淺船是阻擋型(半徑 18m):船體邊緣 MUST 離兵線 ≥ HAZ_LANE_MIN,否則跨水橋段的
+      // 兵線會被橫在水面/橋下的船身封死(與 _hazOk 同一走廊規則;_wetAt 需求使 _hazOk 不能直用)
+      if (this._distToLanes(x, z) - r < FIELD.HAZ_LANE_MIN) continue;
       let bad = false;
       for (const side of ['SWARM', 'STEEL']) {
         const [bx, bz] = this.basePos[side];
@@ -1098,8 +1101,12 @@ export class BattleSim {
 
   /**
    * 連通性保證(DevilutionX DRLG 思想:生成後 flood-fill 驗證,不通就拆牆)。
-   * 粗網格 BFS 驗證兩堡地面互通;HAZ_GAP/HAZ_LANE_MIN 依構造已保證走廊暢通,
-   * 此為防禦性檢查 — 未來調參(如障礙半徑 > 走廊淨空)才可能觸發。
+   * 由 SWARM 主堡 flood-fill:STEEL 主堡 + 每條兵線的沿線取樣點 MUST 全數可達 —
+   * 直線互通不等於兵線互通(蜿蜒兵線會繞進障礙叢,只驗直線會漏掉兵線上的封路);
+   * HAZ_GAP/HAZ_LANE_MIN 依構造已保證走廊暢通,此為防禦性檢查 —
+   * 未來調參(如障礙半徑 > 走廊淨空)才可能觸發。
+   * 取樣點即兵線本身:合法障礙的邊緣距兵線 ≥ HAZ_LANE_MIN(20m) > 半個格對角(17m)⇒
+   * 合法掩體永遠壓不住取樣格,不會有誤拆;只有真封路才會讓取樣點不可達。
    */
   _ensureConnectivity() {
     const cell = FIELD.CONNECT_CELL_M;
@@ -1114,7 +1121,17 @@ export class BattleSim {
     const W = Math.ceil((maxX - minX) / cell), H = Math.ceil((maxZ - minZ) / cell);
     const idx = (x, z) => (Math.min(H - 1, Math.max(0, Math.floor((z - minZ) / cell)))) * W
       + Math.min(W - 1, Math.max(0, Math.floor((x - minX) / cell)));
-    const reachable = () => {
+    // 沿線取樣點:敵方主堡 + 每條兵線每 cell 一點(含兩端,方向 SWARM→STEEL)
+    const samples = [[bx, bz]];
+    for (let li = 0; li < this.lanes.length; li++) {
+      const cum = this._laneCum(li);
+      const total = cum[cum.length - 1];
+      if (!(total > 0)) continue;
+      for (let d = 0; d < total; d += cell) samples.push(pointAt(this.lanes[li], cum, d));
+      samples.push(pointAt(this.lanes[li], cum, total));
+    }
+    // 首個不可達的取樣點(null = 全數可達)
+    const firstBlocked = () => {
       const blocked = new Uint8Array(W * H);
       for (const [hx, hz, hr] of this.hazBlockers) {
         const rr = hr + 2.5;   // 機甲半身寬裕度
@@ -1124,13 +1141,14 @@ export class BattleSim {
           }
         }
       }
-      const start = idx(ax, az), goal = idx(bx, bz);
+      const start = idx(ax, az);
+      const goals = samples.map(([x, z]) => idx(x, z));
+      blocked[start] = 0;   // 主堡格恆可行走(HAZ_BASE_CLEAR 下本來就不會有障礙,此為保險)
       const seen = new Uint8Array(W * H);
       const q = [start];
       seen[start] = 1;
       while (q.length) {
         const c = q.pop();
-        if (c === goal) return true;
         const cx = c % W, cz = (c / W) | 0;
         for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           const nx = cx + dx, nz = cz + dz;
@@ -1140,17 +1158,17 @@ export class BattleSim {
           q.push(n);
         }
       }
-      return false;
+      for (let i = 0; i < goals.length; i++) if (!seen[goals[i]]) return samples[i];
+      return null;
     };
-    for (let tries = 0; tries < 12 && this.hazBlockers.length && !reachable(); tries++) {
-      // 不通:拆掉最靠近兩堡連線的阻擋障礙,重驗
-      const dx = bx - ax, dz = bz - az;
-      const len2 = dx * dx + dz * dz || 1;
+    for (let tries = 0; tries < 12 && this.hazBlockers.length; tries++) {
+      // 不通:拆掉離斷點最近的阻擋障礙,重驗
+      const miss = firstBlocked();
+      if (!miss) break;
       let worst = 0, worstD = Infinity;
       for (let i = 0; i < this.hazBlockers.length; i++) {
         const [hx, hz] = this.hazBlockers[i];
-        const t = Math.max(0, Math.min(1, ((hx - ax) * dx + (hz - az) * dz) / len2));
-        const d = dist2d(hx, hz, ax + dx * t, az + dz * t);
+        const d = dist2d(hx, hz, miss[0], miss[1]);
         if (d < worstD) { worstD = d; worst = i; }
       }
       const [hx, hz] = this.hazBlockers[worst];
@@ -1651,9 +1669,10 @@ export class BattleSim {
   }
 
   /**
-   * 出生/重生點:每名玩家(squadIdx)分配到不同兵線 + 交替左右側,彼此避開;沿該兵線推出
-   * 主堡 HERO_SPAWN_OFF(> NPC 波次生成點沿線距離 WAVE_SPAWN_OFF_M,故落在 NPC 隊列之前),
+   * 出生/重生點:每名玩家(squadIdx)分配到不同兵線 + 交替左右側,彼此避開;由主堡中心沿該兵線
+   * 推出 HERO_SPAWN_OFF(> NPC 波次生成點沿線距離 WAVE_SPAWN_OFF_M,故落在 NPC 隊列之前),
    * 再垂直偏到路旁(避開落在兵線中央的 NPC 生成點)。同隊各機(bodyIdx)沿側向再錯開不疊在一起。
+   * 終點吃 data.js clampHeroSpawn 唯一縫:不與主堡重疊 + 平台上 + 治療環內(與客戶端同式)。
    */
   /**
    * 超級重生點:不可在雙陣營兵線/砲塔/主堡射程的125%以內,每次陣亡重生地都隨機不同。
@@ -1722,7 +1741,8 @@ export class BattleSim {
     if (isSuperSide(side)) return this._superSpawnPoint(pid);
     const [bx, bz] = this.basePos[side];
     const lanes = this.lanes.filter((p) => p.length >= 2);
-    if (!lanes.length) return [bx + squadIdx * 14 + bodyIdx * 8, bz + squadIdx * 8 + bodyIdx * 5];
+    // 無兵線(極端測試):主堡旁散開,仍吃同一夾制(不與主堡重疊 + 治療環內)
+    if (!lanes.length) return clampHeroSpawn(bx, bz, bx + squadIdx * 14 + bodyIdx * 8, bz + squadIdx * 8 + bodyIdx * 5);
     const nL = lanes.length;
     const li = squadIdx % nL;                                     // 不同玩家分散到不同兵線
     const layer = Math.floor(squadIdx / nL);                      // 兵線數用罄後的外圈
@@ -1735,8 +1755,11 @@ export class BattleSim {
     const px = dz, pz = -dx;                                      // 兵線垂直向(路旁)
     // 側偏:基準偏移 + 外圈漸遠 + 同隊各機錯開(都 < 走廊半寬 LANE_SAFE_M 45,仍貼兵線)
     const lat = GAME.HERO_SPAWN_SIDE + Math.floor(layer / 2) * 11 + bodyIdx * 10;
-    return [end[0] + dx * GAME.HERO_SPAWN_OFF + px * lat * s,
-      end[1] + dz * GAME.HERO_SPAWN_OFF + pz * lat * s];
+    // 起點一律由主堡中心推出(兵線端點經道路吸附可能偏主堡數十公尺,拿端點當原點會把落點
+    // 推回堡內);終點吃 clampHeroSpawn 唯一縫:不與主堡重疊 + 平台上 + 治療環內(方位不變)
+    return clampHeroSpawn(bx, bz,
+      bx + dx * GAME.HERO_SPAWN_OFF + px * lat * s,
+      bz + dz * GAME.HERO_SPAWN_OFF + pz * lat * s);
   }
 
   // ---------- 英雄(每陣營可多位,以玩家 pid 為鍵;ch = 角色 id)----------

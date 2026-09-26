@@ -8422,9 +8422,29 @@ function retainingWallTex() {
 }
 
 // ---- 斜坡平台整地開挖、擋土牆與支撐柱 ----
-function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry = 0, dy, padT, padKind }) {
+function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry = 0, dy, padT, padKind, lanes = null }) {
   const botY = dy - padT;
   const ca = Math.cos(ry), sa = Math.sin(ry);
+  // 兵線出入口留口判定(主堡平台專用;砲塔台不傳 lanes 即全段建牆,行為不變):
+  // 擋土牆緊貼平台邊緣整圈施作時,會把橫越平台邊緣的兵線封死(切坡側無缺口 = 進出只能翻牆)。
+  // 留口半寬 = 兵線淨空走廊 17m(buildClearance) + 牆體碰撞半徑餘裕;留口段的切面由兵線道路
+  // 自身的路塹承接(同高相接,無高差可擋)。純幾何判定,零共享亂數消耗。
+  const laneGapAt = (x, z) => {
+    if (!lanes || !lanes.length) return false;
+    const G = 20;
+    for (const line of lanes) {
+      for (let i = 1; i < line.length; i++) {
+        const ax = line[i - 1][0], az = line[i - 1][1];
+        const ex = line[i][0] - ax, ez = line[i][1] - az;
+        const L2 = ex * ex + ez * ez || 1;
+        let t = ((x - ax) * ex + (z - az) * ez) / L2;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const dx = x - (ax + ex * t), dz = z - (az + ez * t);
+        if (dx * dx + dz * dz < G * G) return true;
+      }
+    }
+    return false;
+  };
   const wallTex = retainingWallTex();
   const wallMat = envMat(0xc4c7cb, {
     map: wallTex,
@@ -8497,10 +8517,11 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
     const activeSegs = [];
     for (let k = 0; k < nSeg; k++) {
       const origY = smoothTops[k];
-      if (origY > dy + 0.15) {
-        // 原地表高於平台頂面 -> 此段為挖方切坡，建立完整覆蓋切面之傾斜擋土牆
+      const { wallWx, wallWz } = segData[k];
+      // 兵線留口段不建牆(見 laneGapAt):牆會封死兵線進出平台的通道
+      if (origY > dy + 0.15 && !laneGapAt(wallWx, wallWz)) {
+        // 原地形高於平台頂面 -> 此段為挖方切坡，建立完整覆蓋切面之傾斜擋土牆
         const wallTop = Math.max(origY + 0.35, dy + 0.8);
-        const { wallWx, wallWz } = segData[k];
         // 牆底深入台底與地表之下，完全消除懸空與漏底縫隙
         const segBot = botY - 0.5;
         const wallH = Math.max(0.2, wallTop - segBot);
@@ -8580,6 +8601,7 @@ function buildPlatformSlopeFeatures({ group, terrain, cols, cx, cz, hw, hd, ry =
       const colLz = c.lz + c.sz * (wallThick * 0.5);
       const colWx = cx + colLx * ca + colLz * sa;
       const colWz = cz - colLx * sa + colLz * ca;
+      if (laneGapAt(colWx, colWz)) continue;   // 兵線留口轉角不立柱(與牆段留口同理)
 
       const topCandidates = [dy + 0.8];
       if (prev?.endTop != null) topCandidates.push(prev.endTop);
@@ -8820,7 +8842,7 @@ function planBaseWaterPads(basesW, terrain) {
   return { pads, newDecks, cols, slabs, piers };
 }
 
-function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
+function buildBaseWaterPads(group, basesW, terrain, decks, cols, lanesW = []) {
   const plan = planBaseWaterPads(basesW, terrain);
   const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
   const pierM = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
@@ -8866,7 +8888,7 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
     buildPlatformSlopeFeatures({
       group, terrain, cols: plan.cols,
       cx: p.cx, cz: p.cz, hw: p.hw, hd: p.hd, ry: p.ry, dy: p.dy, padT: p.padT,
-      padKind: 'base',
+      padKind: 'base', lanes: lanesW,
     });
   }
 
@@ -12372,7 +12394,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const towerPads = buildTowerPlatforms(
     group, (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
     roadRes.decks, terrain, roadRes.cols, mapArg(cfg), bridgeTowerPads);
-  const basePads = buildBaseWaterPads(group, basesW, terrain, roadRes.decks, roadRes.cols);
+  const basePads = buildBaseWaterPads(group, basesW, terrain, roadRes.decks, roadRes.cols,
+    (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))));
   const roadsBuilt = roadRes.built;
   group.userData.towerPads = towerPads;   // 橋上／陸地砲塔落位高度(main.js → terrain.towerPadY → game.js)
   group.userData.basePads = basePads;     // 水域／陸地主堡落位高度(main.js → terrain.basePadY → game.js)

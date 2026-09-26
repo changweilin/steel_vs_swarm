@@ -5269,6 +5269,30 @@ export function rngDmgF(ch, slot) {
   for (const k of ['GUN_CEIL_M', 'HELI_ALT', 'AA_MIN_ALT', 'HERO_HEAL_RADIUS', 'HERO_HEAL_R']) GAME[k] *= CS;
   EVASION.MOBILITY_MIN *= CS; EVASION.MOVING_SPD *= CS;   // 速度門檻隨移速縮
 }
+// ---- 出生/重生點安全帶(唯一縫;伺服器 `sim._spawnPoint` 與客戶端 `game._spawnAt` 同吃)----
+// 玩家機體的起始/重生點 MUST 同時滿足三件事:①不與主堡物件重疊 ②落在主堡平台上 ③落在治療光環內。
+// HERO_SPAWN_OFF/SIDE 是「地圖佈局距離」(不吃 COMBAT_SCALE),而 HERO_HEAL_R 是 reach(吃縮放)⇒
+// 兩者脫鉤後意向偏移(48.5m)會落在縮放後的治療光環(40m)之外;彎曲兵線的沿線取點更可能把落點
+// 推回主堡碰撞體內。解法不是改常數(牽動承台/塔位/稽核),而是徑向夾制:方向沿用兵線意向,
+// 距離夾進 [主堡半徑 + 淨空, 治療半徑 − 內縮]。承台半徑由 max(治療, 意向偏移) 推導 ⇒ 夾制後的
+// 落點恆在台面上(三者一次滿足,呼叫期讀 GAME ⇒ 縮放前後同式)。
+export const HERO_SPAWN = {
+  BASE_MARGIN: 4,   // 主堡半徑之外的額外淨空(最大機體半徑 ~2.2 + 推擠餘裕)
+  HEAL_MARGIN: 6,   // 治療光環內緣保留(機體半徑 + 貼邊餘裕,免半台機體露在環外)
+};
+/** 出生點離主堡中心的最小距離(公尺):主堡碰撞半徑 + 淨空(推導不手寫) */
+export const heroSpawnMinD = () => (TARGET_R['base:SWARM'] ?? 20) + HERO_SPAWN.BASE_MARGIN;
+/** 出生點離主堡中心的最大距離(公尺):治療光環半徑 − 內縮(呼叫期讀 GAME,吃 COMBAT_SCALE 後的值) */
+export const heroSpawnMaxD = () => Math.max(heroSpawnMinD() + 1, GAME.HERO_HEAL_R - HERO_SPAWN.HEAL_MARGIN);
+/** 出生/重生點徑向夾制:同一射向只調距離,不改方位(朝向兵線的 yaw 不變) */
+export function clampHeroSpawn(bx, bz, x, z) {
+  let dx = x - bx, dz = z - bz;
+  let d = Math.hypot(dx, dz);
+  if (!(d > 0)) { dx = 1; dz = 0; d = 1; }
+  const lo = heroSpawnMinD(), hi = heroSpawnMaxD();
+  const t = d < lo ? lo / d : d > hi ? hi / d : 1;
+  return [bx + dx * t, bz + dz * t];
+}
 // 助攻賞金半徑(唯一推導處,MUST NOT 手寫):狙擊模式視野 ×1.25,全角色統一取最大值。
 // 狙擊視野 = UNITS[kind].sight × GAME.AIM_SIGHT_MULT;現值 270 = 135(drone,最大)×1.6×1.25。
 // MUST 排在 COMBAT_SCALE 統一縮放之後:UNITS.sight 縮放後才是遊戲空間尺度,排前面會大一倍。
