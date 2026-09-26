@@ -1,5 +1,5 @@
 // ============ 招式演出特效庫(castfx)============
-// 32 名角色 × 小招/大招 = 64 式,每式指定「演出原型 × 圖騰 × 配色」——
+// 32 名角色 × 守招/攻招 = 64 式,每式指定「演出原型 × 圖騰 × 配色」——
 // 告別全角色共用一套 shockRing 的年代,魔法陣/元素環繞/拳影劍氣/靈魂束縛/
 // 治療綻放各有專屬演出。
 //
@@ -1125,7 +1125,7 @@ function fxHeal(scene, effects, P) {
     Math.min(rv, P.scale * (2.8 + (P.variant % 3) * 0.25)), P.scale * 0.5, P.rand);
   const pil = pillar(P.col2, P.scale * 0.8, P.scale * 2.8, 0.4);
   g.add(disc, pts.pts, pil);
-  // 大招附魔法陣底 + 雙螺旋
+  // 攻招附魔法陣底 + 雙螺旋
   const helix = [];
   if (P.big) {
     const ring = flat(new THREE.Mesh(PLANE, M(signatureTex(P.profile.layoutStructure), P.col, 0.85)));
@@ -1586,14 +1586,14 @@ function fxAtfield(scene, effects, P) {
   const dur = fxDur(P, 2.2);
   const g = new THREE.Group();
   let field;
-  if (P.profile.profileId === 's06.ult.undying_phalanx') {
+  if (P.profile.profileId === 's06.atk.undying_phalanx') {
     field = instances(BOX, M(signatureTex('tomb'), P.col, 0.72), 7, (d, i) => {
       const x = i - 3;
       d.position.set(x * P.scale * 0.58, P.scale * (0.72 + (3 - Math.abs(x)) * 0.10), 0);
       d.rotation.y = x * 0.06;
       d.scale.set(P.scale * 0.48, P.scale * (1.34 + (3 - Math.abs(x)) * 0.16), 1);
     });
-  } else if (P.profile.profileId === 't02.ult.galatea_fullsync') {
+  } else if (P.profile.profileId === 't02.atk.galatea_fullsync') {
     field = instances(OCT, M(null, P.col2, 0.82), 7, (d, i) => {
       d.position.y = P.scale * (0.45 + i * 0.18);
       d.rotation.set(i % 2 ? Math.PI / 2 : 0, i * Math.PI / 7, i % 3 ? 0 : Math.PI / 2);
@@ -1615,7 +1615,7 @@ function fxAtfield(scene, effects, P) {
     anchorCaster(g, P);
     const grow = outBack(Math.min(1, t / 0.34));
     field.scale.setScalar(Math.max(0.01, grow * (1 + t * 0.10)));
-    field.rotation.y += dt * (P.profile.profileId === 'm06.ult.helicopter_carnival' ? 1.8 : 0.32);
+    field.rotation.y += dt * (P.profile.profileId === 'm06.atk.helicopter_carnival' ? 1.8 : 0.32);
     field.material.opacity = field.material.userData.o
       * (0.62 + 0.38 * Math.sin(t * 16 + P.phase)) * bell(t, dur, 0.1, 0.5);
     pil.material.opacity = pil.material.userData.o * bell(t, dur, 0.2, 0.5);
@@ -1759,106 +1759,106 @@ function profileCastCompositor(scene, effects, P) {
 // 每列都是獨立的「輪廓 + 層次 + 節奏」契約；渲染器可以共享，但不得把 Q/E
 // 壓回同一個 archetype。profileId 也是確定性亂數的種子，換角時版面仍可重現。
 const PROFILE_ROWS = [
-  ['s01.skill.fugue_concord','s01','skill','notewave','note'], ['s01.ult.sky_orchestra','s01','ult','gate','wing'],
-  ['s02.skill.tempered_reforge','s02','skill','slash','gear'], ['s02.ult.world_crucible','s02','ult','circle','flame'],
-  ['s03.skill.silent_lobes','s03','skill','scan','circuit'], ['s03.ult.leviathan_song','s03','ult','notewave','star'],
-  ['s04.skill.breakthrough_thrust','s04','skill','dash','claw'], ['s04.ult.deadline_shura','s04','ult','slash','claw'],
-  ['s05.skill.synapse_overclock','s05','skill','aura','bolt'], ['s05.ult.star_swarm_dive','s05','ult','zone','reticle'],
-  ['s06.skill.elegy_intercept','s06','skill','dome','wing'], ['s06.ult.undying_phalanx','s06','ult','atfield','shield'],
-  ['s07.skill.causal_proof','s07','skill','bind','math'], ['s07.ult.inverse_geometry','s07','ult','zone','math'],
-  ['s08.skill.angel_dropship','s08','skill','gate','cross'], ['s08.ult.krakow_bells','s08','ult','notewave','cross'],
-  ['s09.skill.royal_hunt','s09','skill','aura','star'], ['s09.ult.sky_snare','s09','ult','bind','reticle'],
-  ['s10.skill.allseeing_decode','s10','skill','scan','circuit'], ['s10.ult.white_noise_void','s10','ult','veil','wing'],
-  ['s11.skill.fatal_escapement','s11','skill','circle','clock'], ['s11.ult.glashutte_retime','s11','ult','dome','clock'],
-  ['s12.skill.lavender_moonveil','s12','skill','veil','rune'], ['s12.ult.homeward_constellation','s12','ult','gate','star'],
-  ['t01.skill.steel_advance','t01','skill','aura','shield'], ['t01.ult.ural_avalanche','t01','ult','zone','frost'],
-  ['t02.skill.neural_seventh_step','t02','skill','dash','circuit'], ['t02.ult.galatea_fullsync','t02','ult','atfield','hex'],
-  ['t03.skill.cauldron_ram','t03','skill','dome','shield'], ['t03.ult.furnace_maelstrom','t03','ult','bind','flame'],
-  ['t04.skill.grey_goose_cloak','t04','skill','veil','wing'], ['t04.ult.reaper_gaze','t04','ult','snipe','reticle'],
-  ['t05.skill.crane_stress_heal','t05','skill','heal','gear'], ['t05.ult.industrial_descent','t05','ult','gate','gear'],
-  ['t06.skill.cloud_somersault','t06','skill','dash','flame'], ['t06.ult.heaven_riot','t06','ult','slash','fist'],
-  ['t07.skill.pterosaur_silence','t07','skill','veil','rune'], ['t07.ult.terminal_arrow','t07','ult','snipe','reticle'],
-  ['t08.skill.broken_tuning','t08','skill','bind','note'], ['t08.ult.dragon_aria','t08','ult','notewave','note'],
-  ['t09.skill.martyrs_elegy','t09','skill','gate','poem'], ['t09.ult.missile_black_rain','t09','ult','zone','poem'],
-  ['t10.skill.prophetic_intercept','t10','skill','scan','math'], ['t10.ult.sky_sanctuary','t10','ult','dome','shield'],
-  ['t11.skill.trench_doctrine','t11','skill','circle','star'], ['t11.ult.veteran_muster','t11','ult','gate','shield'],
-  ['t12.skill.firefly_spectrum','t12','skill','scan','star'], ['t12.ult.collective_silence','t12','ult','bind','circuit'],
-  ['m01.skill.night_bat_escape','m01','skill','dash','wing'], ['m01.ult.blood_raven_feast','m01','ult','aura','flame'],
-  ['m02.skill.titan_stance','m02','skill','dome','shield'], ['m02.ult.cornerstone_oath','m02','ult','circle','shield'],
-  ['m03.skill.alpine_spring','m03','skill','heal','frost'], ['m03.ult.aurora_revival','m03','ult','dome','frost'],
-  ['m04.skill.steppe_mist','m04','skill','veil','wing'], ['m04.ult.eagle_skyeye','m04','ult','scan','reticle'],
-  ['m05.skill.blackout_breaker','m05','skill','bind','bolt'], ['m05.ult.thunder_judgement','m05','ult','zone','bolt'],
-  ['m06.skill.carnival_vanguard','m06','skill','gate','note'], ['m06.ult.helicopter_carnival','m06','ult','atfield','wing'],
-  ['m07.skill.border_dome','m07','skill','dome','hex'], ['m07.ult.total_exclusion','m07','ult','zone','hex'],
-  ['m08.skill.paid_positioning','m08','skill','dash','coin'], ['m08.ult.formless_finale','m08','ult','snipe','coin'],
+  ['s01.def.fugue_concord','s01','def','notewave','note'], ['s01.atk.sky_orchestra','s01','atk','gate','wing'],
+  ['s02.def.tempered_reforge','s02','def','slash','gear'], ['s02.atk.world_crucible','s02','atk','circle','flame'],
+  ['s03.def.silent_lobes','s03','def','scan','circuit'], ['s03.atk.leviathan_song','s03','atk','notewave','star'],
+  ['s04.def.breakthrough_thrust','s04','def','dash','claw'], ['s04.atk.deadline_shura','s04','atk','slash','claw'],
+  ['s05.def.synapse_overclock','s05','def','aura','bolt'], ['s05.atk.star_swarm_dive','s05','atk','zone','reticle'],
+  ['s06.def.elegy_intercept','s06','def','dome','wing'], ['s06.atk.undying_phalanx','s06','atk','atfield','shield'],
+  ['s07.def.causal_proof','s07','def','bind','math'], ['s07.atk.inverse_geometry','s07','atk','zone','math'],
+  ['s08.def.angel_dropship','s08','def','gate','cross'], ['s08.atk.krakow_bells','s08','atk','notewave','cross'],
+  ['s09.def.royal_hunt','s09','def','aura','star'], ['s09.atk.sky_snare','s09','atk','bind','reticle'],
+  ['s10.def.allseeing_decode','s10','def','scan','circuit'], ['s10.atk.white_noise_void','s10','atk','veil','wing'],
+  ['s11.def.fatal_escapement','s11','def','circle','clock'], ['s11.atk.glashutte_retime','s11','atk','dome','clock'],
+  ['s12.def.lavender_moonveil','s12','def','veil','rune'], ['s12.atk.homeward_constellation','s12','atk','gate','star'],
+  ['t01.def.steel_advance','t01','def','aura','shield'], ['t01.atk.ural_avalanche','t01','atk','zone','frost'],
+  ['t02.def.neural_seventh_step','t02','def','dash','circuit'], ['t02.atk.galatea_fullsync','t02','atk','atfield','hex'],
+  ['t03.def.cauldron_ram','t03','def','dome','shield'], ['t03.atk.furnace_maelstrom','t03','atk','bind','flame'],
+  ['t04.def.grey_goose_cloak','t04','def','veil','wing'], ['t04.atk.reaper_gaze','t04','atk','snipe','reticle'],
+  ['t05.def.crane_stress_heal','t05','def','heal','gear'], ['t05.atk.industrial_descent','t05','atk','slash','gear'],
+  ['t06.def.cloud_somersault','t06','def','dash','flame'], ['t06.atk.heaven_riot','t06','atk','slash','fist'],
+  ['t07.def.pterosaur_silence','t07','def','veil','rune'], ['t07.atk.terminal_arrow','t07','atk','snipe','reticle'],
+  ['t08.def.broken_tuning','t08','def','bind','note'], ['t08.atk.dragon_aria','t08','atk','notewave','note'],
+  ['t09.def.martyrs_elegy','t09','def','gate','poem'], ['t09.atk.missile_black_rain','t09','atk','zone','poem'],
+  ['t10.def.prophetic_intercept','t10','def','scan','math'], ['t10.atk.sky_sanctuary','t10','atk','dome','shield'],
+  ['t11.def.trench_doctrine','t11','def','circle','star'], ['t11.atk.veteran_muster','t11','atk','gate','shield'],
+  ['t12.def.firefly_spectrum','t12','def','scan','star'], ['t12.atk.collective_silence','t12','atk','bind','circuit'],
+  ['m01.def.night_bat_escape','m01','def','dash','wing'], ['m01.atk.blood_raven_feast','m01','atk','aura','flame'],
+  ['m02.def.titan_stance','m02','def','dome','shield'], ['m02.atk.cornerstone_oath','m02','atk','circle','shield'],
+  ['m03.def.alpine_spring','m03','def','heal','frost'], ['m03.atk.aurora_revival','m03','atk','dome','frost'],
+  ['m04.def.steppe_mist','m04','def','veil','wing'], ['m04.atk.eagle_skyeye','m04','atk','scan','reticle'],
+  ['m05.def.blackout_breaker','m05','def','bind','bolt'], ['m05.atk.thunder_judgement','m05','atk','zone','bolt'],
+  ['m06.def.carnival_vanguard','m06','def','gate','note'], ['m06.atk.helicopter_carnival','m06','atk','atfield','wing'],
+  ['m07.def.border_dome','m07','def','dome','hex'], ['m07.atk.total_exclusion','m07','atk','zone','hex'],
+  ['m08.def.paid_positioning','m08','def','dash','coin'], ['m08.atk.formless_finale','m08','atk','snipe','coin'],
 ];
 // 每個 profile 的美術簽名是資料，不由角色序號推導；四欄分別控制 Tell 輪廓、層次
 // 佈局、運動方向與 Contact 收尾。accentMotif 只提供圖騰，不能取代前三欄。
 const PROFILE_SIGNATURES = {
-  's01.skill.fugue_concord': { tellShape:'score', layout:'spiral', motion:'chase', contact:'reverse', accentMotif:'note' },
-  's01.ult.sky_orchestra': { tellShape:'score', layout:'airline', motion:'lift', contact:'scatter', accentMotif:'wing' },
-  's02.skill.tempered_reforge': { tellShape:'anvil', layout:'weld', motion:'inward', contact:'impact', accentMotif:'rivet' },
-  's02.ult.world_crucible': { tellShape:'furnace', layout:'streams', motion:'flow', contact:'steam', accentMotif:'crucible' },
-  's03.skill.silent_lobes': { tellShape:'whale', layout:'ears', motion:'close', contact:'silence', accentMotif:'whale' },
-  's03.ult.leviathan_song': { tellShape:'whale', layout:'ribs', motion:'outward', contact:'noise', accentMotif:'spectrum' },
-  's04.skill.breakthrough_thrust': { tellShape:'arrow', layout:'thrust', motion:'forward', contact:'stab', accentMotif:'claw' },
-  's04.ult.deadline_shura': { tellShape:'deadline', layout:'frame', motion:'pulse', contact:'break', accentMotif:'slash' },
-  's05.skill.synapse_overclock': { tellShape:'synapse', layout:'chain', motion:'pulse', contact:'dive', accentMotif:'circuit' },
-  's05.ult.star_swarm_dive': { tellShape:'starfall', layout:'funnel', motion:'dive', contact:'multi', accentMotif:'reticle' },
-  's06.skill.elegy_intercept': { tellShape:'tally', layout:'dome', motion:'stitch', contact:'spark', accentMotif:'shield' },
-  's06.ult.undying_phalanx': { tellShape:'tomb', layout:'phalanx', motion:'lock', contact:'divert', accentMotif:'banner' },
-  's07.skill.causal_proof': { tellShape:'proof', layout:'chord', motion:'solve', contact:'close', accentMotif:'math' },
-  's07.ult.inverse_geometry': { tellShape:'triangulation', layout:'inverse', motion:'fold', contact:'scatter', accentMotif:'math' },
-  's08.skill.angel_dropship': { tellShape:'dropship', layout:'pillar', motion:'drop', contact:'impact', accentMotif:'cross' },
-  's08.ult.krakow_bells': { tellShape:'bell', layout:'rose', motion:'threebeat', contact:'renew', accentMotif:'star' },
-  's09.skill.royal_hunt': { tellShape:'brand', layout:'track', motion:'advance', contact:'jump', accentMotif:'star' },
-  's09.ult.sky_snare': { tellShape:'snare', layout:'net', motion:'shrink', contact:'reel', accentMotif:'reticle' },
-  's10.skill.allseeing_decode': { tellShape:'feather', layout:'wing', motion:'inward', contact:'scan', accentMotif:'circuit' },
-  's10.ult.white_noise_void': { tellShape:'noise', layout:'waterfall', motion:'erase', contact:'blackout', accentMotif:'wing' },
-  's11.skill.fatal_escapement': { tellShape:'escapement', layout:'gear', motion:'step', contact:'lock', accentMotif:'clock' },
-  's11.ult.glashutte_retime': { tellShape:'escapement', layout:'explode', motion:'rewind', contact:'restore', accentMotif:'clock' },
-  's12.skill.lavender_moonveil': { tellShape:'crescent', layout:'starpath', motion:'veil', contact:'drift', accentMotif:'star' },
-  's12.ult.homeward_constellation': { tellShape:'starpath', layout:'door', motion:'reconnect', contact:'return', accentMotif:'star' },
-  't01.skill.steel_advance': { tellShape:'banner', layout:'arrowline', motion:'march', contact:'fan', accentMotif:'shield' },
-  't01.ult.ural_avalanche': { tellShape:'artillery', layout:'azimuth', motion:'fall', contact:'avalanche', accentMotif:'frost' },
-  't02.skill.neural_seventh_step': { tellShape:'seven', layout:'nodes', motion:'blink', contact:'slit', accentMotif:'circuit' },
-  't02.ult.galatea_fullsync': { tellShape:'seven', layout:'rings', motion:'align', contact:'seal', accentMotif:'hex' },
-  't03.skill.cauldron_ram': { tellShape:'furnace', layout:'door', motion:'close', contact:'ram', accentMotif:'shield' },
-  't03.ult.furnace_maelstrom': { tellShape:'furnace', layout:'vortex', motion:'inward', contact:'pressure', accentMotif:'flame' },
-  't04.skill.grey_goose_cloak': { tellShape:'feather', layout:'rows', motion:'cool', contact:'delete', accentMotif:'wing' },
-  't04.ult.reaper_gaze': { tellShape:'eye', layout:'cone', motion:'search', contact:'lock', accentMotif:'reticle' },
-  't05.skill.crane_stress_heal': { tellShape:'crane', layout:'joints', motion:'repair', contact:'seal', accentMotif:'gear' },
-  't05.ult.industrial_descent': { tellShape:'blueprint', layout:'assembly', motion:'descend', contact:'deploy', accentMotif:'gear' },
-  't06.skill.cloud_somersault': { tellShape:'cloud', layout:'sweep', motion:'s', contact:'land', accentMotif:'flame' },
-  't06.ult.heaven_riot': { tellShape:'staff', layout:'split', motion:'slam', contact:'crack', accentMotif:'fist' },
-  't07.skill.pterosaur_silence': { tellShape:'pterosaur', layout:'membrane', motion:'cool', contact:'fold', accentMotif:'wing' },
-  't07.ult.terminal_arrow': { tellShape:'arrow', layout:'needle', motion:'charge', contact:'pierce', accentMotif:'reticle' },
-  't08.skill.broken_tuning': { tellShape:'chord', layout:'bars', motion:'fracture', contact:'reverse', accentMotif:'note' },
-  't08.ult.dragon_aria': { tellShape:'dragon', layout:'throat', motion:'resonate', contact:'negative', accentMotif:'note' },
-  't09.skill.martyrs_elegy': { tellShape:'calligraphy', layout:'ribbons', motion:'write', contact:'gate', accentMotif:'poem' },
-  't09.ult.missile_black_rain': { tellShape:'rain', layout:'cloud', motion:'fall', contact:'inkburst', accentMotif:'poem' },
-  't10.skill.prophetic_intercept': { tellShape:'parabola', layout:'mirror', motion:'converge', contact:'hourglass', accentMotif:'math' },
-  't10.ult.sky_sanctuary': { tellShape:'arch', layout:'octant', motion:'rise', contact:'deflect', accentMotif:'shield' },
-  't11.skill.trench_doctrine': { tellShape:'trench', layout:'contour', motion:'guide', contact:'gap', accentMotif:'star' },
-  't11.ult.veteran_muster': { tellShape:'whistle', layout:'rows', motion:'march', contact:'advance', accentMotif:'shield' },
-  't12.skill.firefly_spectrum': { tellShape:'firefly', layout:'bands', motion:'rise', contact:'reveal', accentMotif:'star' },
-  't12.ult.collective_silence': { tellShape:'network', layout:'nodes', motion:'converge', contact:'extinguish', accentMotif:'circuit' },
-  'm01.skill.night_bat_escape': { tellShape:'bat', layout:'wings', motion:'close', contact:'tear', accentMotif:'wing' },
-  'm01.ult.blood_raven_feast': { tellShape:'moon', layout:'feast', motion:'orbit', contact:'return', accentMotif:'flame' },
-  'm02.skill.titan_stance': { tellShape:'strata', layout:'pillars', motion:'lock', contact:'dust', accentMotif:'shield' },
-  'm02.ult.cornerstone_oath': { tellShape:'cornerstone', layout:'walls', motion:'close', contact:'stress', accentMotif:'shield' },
-  'm03.skill.alpine_spring': { tellShape:'alpine', layout:'contour', motion:'flow', contact:'crystal', accentMotif:'frost' },
-  'm03.ult.aurora_revival': { tellShape:'aurora', layout:'curtains', motion:'close', contact:'crown', accentMotif:'frost' },
-  'm04.skill.steppe_mist': { tellShape:'eagle', layout:'wind', motion:'cover', contact:'fade', accentMotif:'wing' },
-  'm04.ult.eagle_skyeye': { tellShape:'eagle', layout:'compass', motion:'scan', contact:'mark', accentMotif:'reticle' },
-  'm05.skill.blackout_breaker': { tellShape:'breaker', layout:'switches', motion:'drop', contact:'blackout', accentMotif:'bolt' },
-  'm05.ult.thunder_judgement': { tellShape:'thunder', layout:'columns', motion:'fall', contact:'crawl', accentMotif:'bolt' },
-  'm06.skill.carnival_vanguard': { tellShape:'carnival', layout:'bands', motion:'cross', contact:'deploy', accentMotif:'note' },
-  'm06.ult.helicopter_carnival': { tellShape:'rotor', layout:'flightdeck', motion:'rise', contact:'tilt', accentMotif:'wing' },
-  'm07.skill.border_dome': { tellShape:'border', layout:'gates', motion:'rise', contact:'strike', accentMotif:'hex' },
-  'm07.ult.total_exclusion': { tellShape:'exclusion', layout:'grid', motion:'close', contact:'barrage', accentMotif:'hex' },
-  'm08.skill.paid_positioning': { tellShape:'check', layout:'fold', motion:'blink', contact:'confirm', accentMotif:'coin' },
-  'm08.ult.formless_finale': { tellShape:'empty_circle', layout:'negative', motion:'shrink', contact:'cut', accentMotif:'coin' },
+  's01.def.fugue_concord': { tellShape:'score', layout:'spiral', motion:'chase', contact:'reverse', accentMotif:'note' },
+  's01.atk.sky_orchestra': { tellShape:'score', layout:'airline', motion:'lift', contact:'scatter', accentMotif:'wing' },
+  's02.def.tempered_reforge': { tellShape:'anvil', layout:'weld', motion:'inward', contact:'impact', accentMotif:'rivet' },
+  's02.atk.world_crucible': { tellShape:'furnace', layout:'streams', motion:'flow', contact:'steam', accentMotif:'crucible' },
+  's03.def.silent_lobes': { tellShape:'whale', layout:'ears', motion:'close', contact:'silence', accentMotif:'whale' },
+  's03.atk.leviathan_song': { tellShape:'whale', layout:'ribs', motion:'outward', contact:'noise', accentMotif:'spectrum' },
+  's04.def.breakthrough_thrust': { tellShape:'arrow', layout:'thrust', motion:'forward', contact:'stab', accentMotif:'claw' },
+  's04.atk.deadline_shura': { tellShape:'deadline', layout:'frame', motion:'pulse', contact:'break', accentMotif:'slash' },
+  's05.def.synapse_overclock': { tellShape:'synapse', layout:'chain', motion:'pulse', contact:'dive', accentMotif:'circuit' },
+  's05.atk.star_swarm_dive': { tellShape:'starfall', layout:'funnel', motion:'dive', contact:'multi', accentMotif:'reticle' },
+  's06.def.elegy_intercept': { tellShape:'tally', layout:'dome', motion:'stitch', contact:'spark', accentMotif:'shield' },
+  's06.atk.undying_phalanx': { tellShape:'tomb', layout:'phalanx', motion:'lock', contact:'divert', accentMotif:'banner' },
+  's07.def.causal_proof': { tellShape:'proof', layout:'chord', motion:'solve', contact:'close', accentMotif:'math' },
+  's07.atk.inverse_geometry': { tellShape:'triangulation', layout:'inverse', motion:'fold', contact:'scatter', accentMotif:'math' },
+  's08.def.angel_dropship': { tellShape:'dropship', layout:'pillar', motion:'drop', contact:'impact', accentMotif:'cross' },
+  's08.atk.krakow_bells': { tellShape:'bell', layout:'rose', motion:'threebeat', contact:'renew', accentMotif:'star' },
+  's09.def.royal_hunt': { tellShape:'brand', layout:'track', motion:'advance', contact:'jump', accentMotif:'star' },
+  's09.atk.sky_snare': { tellShape:'snare', layout:'net', motion:'shrink', contact:'reel', accentMotif:'reticle' },
+  's10.def.allseeing_decode': { tellShape:'feather', layout:'wing', motion:'inward', contact:'scan', accentMotif:'circuit' },
+  's10.atk.white_noise_void': { tellShape:'noise', layout:'waterfall', motion:'erase', contact:'blackout', accentMotif:'wing' },
+  's11.def.fatal_escapement': { tellShape:'escapement', layout:'gear', motion:'step', contact:'lock', accentMotif:'clock' },
+  's11.atk.glashutte_retime': { tellShape:'escapement', layout:'explode', motion:'rewind', contact:'restore', accentMotif:'clock' },
+  's12.def.lavender_moonveil': { tellShape:'crescent', layout:'starpath', motion:'veil', contact:'drift', accentMotif:'star' },
+  's12.atk.homeward_constellation': { tellShape:'starpath', layout:'door', motion:'reconnect', contact:'return', accentMotif:'star' },
+  't01.def.steel_advance': { tellShape:'banner', layout:'arrowline', motion:'march', contact:'fan', accentMotif:'shield' },
+  't01.atk.ural_avalanche': { tellShape:'artillery', layout:'azimuth', motion:'fall', contact:'avalanche', accentMotif:'frost' },
+  't02.def.neural_seventh_step': { tellShape:'seven', layout:'nodes', motion:'blink', contact:'slit', accentMotif:'circuit' },
+  't02.atk.galatea_fullsync': { tellShape:'seven', layout:'rings', motion:'align', contact:'seal', accentMotif:'hex' },
+  't03.def.cauldron_ram': { tellShape:'furnace', layout:'door', motion:'close', contact:'ram', accentMotif:'shield' },
+  't03.atk.furnace_maelstrom': { tellShape:'furnace', layout:'vortex', motion:'inward', contact:'pressure', accentMotif:'flame' },
+  't04.def.grey_goose_cloak': { tellShape:'feather', layout:'rows', motion:'cool', contact:'delete', accentMotif:'wing' },
+  't04.atk.reaper_gaze': { tellShape:'eye', layout:'cone', motion:'search', contact:'lock', accentMotif:'reticle' },
+  't05.def.crane_stress_heal': { tellShape:'crane', layout:'joints', motion:'repair', contact:'seal', accentMotif:'gear' },
+  't05.atk.industrial_descent': { tellShape:'blueprint', layout:'split', motion:'descend', contact:'deploy', accentMotif:'gear' },
+  't06.def.cloud_somersault': { tellShape:'cloud', layout:'sweep', motion:'s', contact:'land', accentMotif:'flame' },
+  't06.atk.heaven_riot': { tellShape:'staff', layout:'split', motion:'slam', contact:'crack', accentMotif:'fist' },
+  't07.def.pterosaur_silence': { tellShape:'pterosaur', layout:'membrane', motion:'cool', contact:'fold', accentMotif:'wing' },
+  't07.atk.terminal_arrow': { tellShape:'arrow', layout:'needle', motion:'charge', contact:'pierce', accentMotif:'reticle' },
+  't08.def.broken_tuning': { tellShape:'chord', layout:'bars', motion:'fracture', contact:'reverse', accentMotif:'note' },
+  't08.atk.dragon_aria': { tellShape:'dragon', layout:'throat', motion:'resonate', contact:'negative', accentMotif:'note' },
+  't09.def.martyrs_elegy': { tellShape:'calligraphy', layout:'ribbons', motion:'write', contact:'gate', accentMotif:'poem' },
+  't09.atk.missile_black_rain': { tellShape:'rain', layout:'cloud', motion:'fall', contact:'inkburst', accentMotif:'poem' },
+  't10.def.prophetic_intercept': { tellShape:'parabola', layout:'mirror', motion:'converge', contact:'hourglass', accentMotif:'math' },
+  't10.atk.sky_sanctuary': { tellShape:'arch', layout:'octant', motion:'rise', contact:'deflect', accentMotif:'shield' },
+  't11.def.trench_doctrine': { tellShape:'trench', layout:'contour', motion:'guide', contact:'gap', accentMotif:'star' },
+  't11.atk.veteran_muster': { tellShape:'whistle', layout:'rows', motion:'march', contact:'advance', accentMotif:'shield' },
+  't12.def.firefly_spectrum': { tellShape:'firefly', layout:'bands', motion:'rise', contact:'reveal', accentMotif:'star' },
+  't12.atk.collective_silence': { tellShape:'network', layout:'nodes', motion:'converge', contact:'extinguish', accentMotif:'circuit' },
+  'm01.def.night_bat_escape': { tellShape:'bat', layout:'wings', motion:'close', contact:'tear', accentMotif:'wing' },
+  'm01.atk.blood_raven_feast': { tellShape:'moon', layout:'feast', motion:'orbit', contact:'return', accentMotif:'flame' },
+  'm02.def.titan_stance': { tellShape:'strata', layout:'pillars', motion:'lock', contact:'dust', accentMotif:'shield' },
+  'm02.atk.cornerstone_oath': { tellShape:'cornerstone', layout:'walls', motion:'close', contact:'stress', accentMotif:'shield' },
+  'm03.def.alpine_spring': { tellShape:'alpine', layout:'contour', motion:'flow', contact:'crystal', accentMotif:'frost' },
+  'm03.atk.aurora_revival': { tellShape:'aurora', layout:'curtains', motion:'close', contact:'crown', accentMotif:'frost' },
+  'm04.def.steppe_mist': { tellShape:'eagle', layout:'wind', motion:'cover', contact:'fade', accentMotif:'wing' },
+  'm04.atk.eagle_skyeye': { tellShape:'eagle', layout:'compass', motion:'scan', contact:'mark', accentMotif:'reticle' },
+  'm05.def.blackout_breaker': { tellShape:'breaker', layout:'switches', motion:'drop', contact:'blackout', accentMotif:'bolt' },
+  'm05.atk.thunder_judgement': { tellShape:'thunder', layout:'columns', motion:'fall', contact:'crawl', accentMotif:'bolt' },
+  'm06.def.carnival_vanguard': { tellShape:'carnival', layout:'bands', motion:'cross', contact:'deploy', accentMotif:'note' },
+  'm06.atk.helicopter_carnival': { tellShape:'rotor', layout:'flightdeck', motion:'rise', contact:'tilt', accentMotif:'wing' },
+  'm07.def.border_dome': { tellShape:'border', layout:'gates', motion:'rise', contact:'strike', accentMotif:'hex' },
+  'm07.atk.total_exclusion': { tellShape:'exclusion', layout:'grid', motion:'close', contact:'barrage', accentMotif:'hex' },
+  'm08.def.paid_positioning': { tellShape:'check', layout:'fold', motion:'blink', contact:'confirm', accentMotif:'coin' },
+  'm08.atk.formless_finale': { tellShape:'empty_circle', layout:'negative', motion:'shrink', contact:'cut', accentMotif:'coin' },
 };
 const PROFILE_DEFS = Object.fromEntries(PROFILE_ROWS.map((row, i) => {
   const [profileId, ch, slot, arch, motif] = row;
@@ -1902,7 +1902,7 @@ const FX_ACCENT = {
  * @param {THREE.Scene} scene
  * @param {Array} effects  呼叫端的特效陣列({obj, ttl, fade, dispose})
  * @param {object} opts
- *   ch / slot('skill'|'ult')/ lvl / fx(sim 的 fx 型別)/ side
+ *   ch / slot('def'|'atk')/ lvl / fx(sim 的 fx 型別)/ side
  *   at:THREE.Vector3 落點世界座標(y = 地面高)
  *   casterPos:() => THREE.Vector3|null 施放者即時座標(跟隨移動;迷霧看不見 → null)
  *   groundY:(x, z) => y 地面高度查詢(展示台給 () => 0)
@@ -1928,7 +1928,7 @@ export function spawnCastFx(scene, effects, opts) {
     at: opts.at, casterPos: opts.casterPos, groundY: opts.groundY,
     r: opts.r || 0, dur: opts.dur || 0, lvl: opts.lvl || 1,
     scale: Math.max(2, opts.scale || 4),
-    big: opts.slot === 'ult',
+    big: opts.slot === 'atk',
     motif: conf.motif,
     profileId: conf.profileId,
     profile: conf,

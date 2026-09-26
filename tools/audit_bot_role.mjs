@@ -124,7 +124,7 @@ sec('Ⅰ 分類:特徵推導不手寫 + 剖面形狀 + 覆蓋與決定性');
   const rawOwn = {
     dur: HV.dur, armor: HV.armor, fire: HV.fire, zone: HV.zone, mob: HV.mob,
     siege: (ch) => buildDps(ch, 'light') + buildDps(ch, 'heavy'),
-    aid: (ch) => ['skill', 'ult'].reduce((s, slot) => {
+    aid: (ch) => ['def', 'atk'].reduce((s, slot) => {
       const A = heroAbility(ch, slot);
       return s + (!A ? 0 : A.target === 'team' ? 1 : AID_FX.has(A.fx) ? 0.5 : 0);
     }, 0) / 2,
@@ -428,7 +428,7 @@ sec('Ⅳ 行為直測(真 BattleSim + 真 BotBrain)');
   // ---- 招式血線:支援型放得早、攻堅型撐得久 ----
   {
     const hasSelfHeal = (c) => {
-      const A = heroAbility(c, 'skill');
+      const A = heroAbility(c, 'def');
       return A && A.fx === 'heal' && A.target === 'self';
     };
     const castAt = (role, frac) => {
@@ -437,9 +437,9 @@ sec('Ⅳ 行為直測(真 BattleSim + 真 BotBrain)');
       const sim = blank();
       const side = CHARACTERS[ch].side === 'SWARM' ? 'SWARM' : 'STEEL';
       const { h, br } = brainOf(sim, side, ch, 'high');
-      h.abil.skill = 1; h.mp = 999; h.acd.skill = 0;
+      h.abil.def = 1; h.mp = 999; h.acd.def = 0;
       br._castSupport(h, frac);
-      const cast = (h.acd.skill || 0) > sim.t || (h.achg?.skill?.rechargeAt?.length || 0) > 0 || !!h.cast;
+      const cast = (h.acd.def || 0) > sim.t || (h.achg?.def?.rechargeAt?.length || 0) > 0 || !!h.cast;
       return { cast, hurt: br.tac.CAST_HURT };
     };
     const sup = castAt('support', 0.6);
@@ -458,7 +458,7 @@ sec('Ⅳ 行為直測(真 BattleSim + 真 BotBrain)');
     h.money = ECON.UPG_STEPS.reduce((s, st) => s + st.price, 0);   // 三階全額(首階 $0)
     const order = botBuyOrder(br._role);
     for (const item of order) if (sim.buy(br.pid, item) === null) {
-      t('支援型的第一筆消費落在招式軌(採購順序真的換了一條路)', item === 'sk' || item === 'ult');
+      t('支援型的第一筆消費落在招式軌(採購順序真的換了一條路)', item === 'sk' || item === 'ult' || item === 'def' || item === 'atk');
       break;
     }
     t('無定位(低難度)的採購順序仍是舊制那一條', botBuyOrder(null).join() === BOT_BUY_ORDER.join());

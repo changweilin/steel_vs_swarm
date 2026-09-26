@@ -1,15 +1,15 @@
-// ============ 自身強化型大招:補償 + 跟隨玩家的輔助機隊 ============
+// ============ 自身強化型攻招:補償 + 跟隨玩家的輔助機隊 ============
 // 2026-08-06 定案:機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)整組退場,長按右鍵改成招式手勢
-// (一般 → 小招 / 狙擊 → 大招)。大招已載具化的 23 台等於把長按換成了大招;剩下 9 台
-// **純自身型**大招沒有載具可換 ⇒ 把被移除的那份預算折進大招本身(data.js SELF_ULT)。
-// 2026-08-07 定案(本檔 Ⅴ):那 9 台改由**跟隨玩家的輔助機隊**供輸(data.js ULT_SUPPORT)——
+// (一般 → 守招 / 狙擊 → 攻招)。攻招已載具化的 22 台等於把長按換成了攻招;剩下 10 台
+// **純自身型**攻招沒有載具可換 ⇒ 把被移除的那份預算折進攻招本身(data.js SELF_ATK)。
+// 2026-08-07 定案(本檔 Ⅴ):那 10 台改由**跟隨玩家的輔助機隊**供輸(data.js ATK_SUPPORT)——
 //   某些招式派多架、多架的狀態**疊加**;持續型的機隊耐久 > 間斷型 > 瞬發型,dur 越久越硬。
 //
 // 防的病灶(全部無錯誤訊息):
 //   ・當量手寫一個倍率 ⇒ 之後改任一角色的 `ult.cd` 或 `SPECIAL.BASE`,補償當場失準,
 //     而畫面上只表現成「這幾台好像變弱了」;
 //   ・補償算成「再乘一層」而不是**增額** ⇒ 1.35 × 2.35 = 3.17 而不是 2.35(多發一份預算);
-//   ・載具化的 23 台也吃到補償 ⇒ 長按換成大招**又**領一份折算(預算雙重領);
+//   ・載具化的 22 台也吃到補償 ⇒ 長按換成攻招**又**領一份折算(預算雙重領);
 //   ・破隱爆發窗在 `_castEffect` 就開 ⇒ 躲著不開火也在燒那一秒(玩家只覺得「爆發沒生效」);
 //   ・`brk`(挨一發就結束)漏掉某一條扣血路徑 ⇒ 那個來源的傷害打不斷超載;
 //   ・夾制把推導值削掉卻不記錄 ⇒ 「補償是推導的」這句話對那幾台其實不成立(靜默截斷)。
@@ -22,7 +22,7 @@
 //
 // 跑法:`node tools/audit_self_ult.mjs`
 //   反向驗證(原則 9;對應條目 MUST 立刻紅字,否則等於沒驗到):
-//     `--break-eq`    selfUltEq 改成手寫常數(不再隨 cd / 預算走)⇒ Ⅰ 紅
+//     `--break-eq`    selfAtkEq 改成手寫常數(不再隨 cd / 預算走)⇒ Ⅰ 紅
 //     `--break-alpha` 破隱窗改在 `_castEffect` 就開(而不是開火現形那一刻)⇒ Ⅲ・Ⅳ 紅
 //     `--break-brk`   `_damage` 不再呼叫 `_breakOnHit`(超載打不斷)⇒ Ⅲ・Ⅳ 紅
 //     `--break-stack` 疊加改成相乘(mf 退化成恆等)⇒ Ⅴ 紅
@@ -71,12 +71,12 @@ let d, S = readSrc('server', 'sim.js'), BattleSim;
     const dir = mkdtempSync(join(tmpdir(), 'svs-selfult-'));
     let ds = DSRC;
     if (BREAK_EQ) {
-      ds = bust(ds, /return specialBudget\(abil\) \* SELF_ULT\.REALIZED_F \* tierVal\(a\.cd, lvl\) \/ SPECIAL_CD_S;/,
+      ds = bust(ds, /return specialBudget\(abil\) \* SELF_ATK\.REALIZED_F \* tierVal\(a\.cd, lvl\) \/ SPECIAL_CD_S;/,
         'return 250;', '--break-eq');
     }
     if (BREAK_ALPHA) {
       S = bust(S, /if \(A\.add\?\.fx === 'alpha' && once\) \{ h\.alphaX = B\.alphaX; h\.alphaArm = this\.t \+ A\.dur; \}/,
-        "if (A.add?.fx === 'alpha' && once) { h.mods.push({ k: 'dmg', m: B.alphaX, until: this.t + SELF_ULT.ALPHA_S }); }",
+        "if (A.add?.fx === 'alpha' && once) { h.mods.push({ k: 'dmg', m: B.alphaX, until: this.t + SELF_ATK.ALPHA_S }); }",
         '--break-alpha');
     }
     if (BREAK_BRK) {
@@ -107,35 +107,35 @@ let d, S = readSrc('server', 'sim.js'), BattleSim;
 }
 
 const CHS = Object.keys(d.CHARACTERS);
-const SELF = CHS.filter((c) => !d.ultDelivered(c));
-const CONV = CHS.filter((c) => d.ultDelivered(c));
+const SELF = CHS.filter((c) => !d.atkDelivered(c));
+const CONV = CHS.filter((c) => d.atkDelivered(c));
 const AB = (l = 1, h = 1) => ({ light: l, heavy: h });
 
 // ============================================================
 sec('Ⅰ 當量推導(MUST NOT 手寫)');
 {
-  ok(SELF.length === 9, `純自身型 9 台(實得 ${SELF.length}:${SELF.join(' ')})`);
-  ok(CONV.every((c) => d.selfUltEq(c, 1, AB()) === 0),
-    '載具化的 23 台當量恆 0(長按已經換成大招,MUST NOT 重複補)');
-  ok(SELF.every((c) => d.selfUltEq(c, 1, AB()) > 0), '未載具化的 9 台當量全 > 0');
+  ok(SELF.length === 10, `純自身型 10 台(實得 ${SELF.length}:${SELF.join(' ')})`);
+  ok(CONV.every((c) => d.selfAtkEq(c, 1, AB()) === 0),
+    '載具化的 22 台當量恆 0(長按已經換成攻招,MUST NOT 重複補)');
+  ok(SELF.every((c) => d.selfAtkEq(c, 1, AB()) > 0), '未載具化的 10 台當量全 > 0');
 
   // 三個自變數各自單調:CD 越長帶回越多份、預算越大帶回越多、機種絕招 CD 越短要帶回越多份
-  const s04 = (lvl) => d.selfUltEq('s04', lvl, AB());
-  ok(d.selfUltEq('s04', 1, AB(4, 4)) > d.selfUltEq('s04', 1, AB(1, 1)),
+  const s04 = (lvl) => d.selfAtkEq('s04', lvl, AB());
+  ok(d.selfAtkEq('s04', 1, AB(4, 4)) > d.selfAtkEq('s04', 1, AB(1, 1)),
     '當量隨武器綜合等級(= specialBudget)遞增');
-  const cds = SELF.map((c) => [d.tierVal(d.CHARACTERS[c].ult.cd, 1), d.selfUltEq(c, 1, AB())]);
-  ok(cds.every(([cd, eq]) => near(eq, d.specialBudget(AB()) * d.SELF_ULT.REALIZED_F * cd / d.SPECIAL_CD_S)),
-    '當量 = 預算 × 實得率 × (大招 CD ÷ 機種絕招 CD)—— 逐台獨立重算比對');
-  // 當量正比於**這一招自己的 CD**:大招轉得越快,一次要帶回的機種絕招份數就越少。
+  const cds = SELF.map((c) => [d.tierVal(d.CHARACTERS[c].atk.cd, 1), d.selfAtkEq(c, 1, AB())]);
+  ok(cds.every(([cd, eq]) => near(eq, d.specialBudget(AB()) * d.SELF_ATK.REALIZED_F * cd / d.SPECIAL_CD_S)),
+    '當量 = 預算 × 實得率 × (攻招 CD ÷ 機種絕招 CD)—— 逐台獨立重算比對');
+  // 當量正比於**這一招自己的 CD**:攻招轉得越快,一次要帶回的機種絕招份數就越少。
   // s04 的 cd 階梯是 [70, 60, 50](升級越快)⇒ 當量 MUST 跟著遞減,而不是「升級就變多」。
-  ok(s04(3) < s04(1) && near(s04(3) / s04(1), d.tierVal(d.CHARACTERS.s04.ult.cd, 3) / d.tierVal(d.CHARACTERS.s04.ult.cd, 1)),
-    '當量正比於大招 CD(cd 階梯一改自己跟著走)');
+  ok(s04(3) < s04(1) && near(s04(3) / s04(1), d.tierVal(d.CHARACTERS.s04.atk.cd, 3) / d.tierVal(d.CHARACTERS.s04.atk.cd, 1)),
+    '當量正比於攻招 CD(cd 階梯一改自己跟著走)');
 
-  // 推導不手寫:定義式裡不得出現任何數字字面值(常數一律走 SELF_ULT / SPECIAL_CD_S)
-  const eqSrc = (strip(DSRC).match(/export const selfUltEq = [\s\S]*?\n\};/) || [''])[0];
-  ok(/specialBudget\(abil\)/.test(eqSrc) && /SELF_ULT\.REALIZED_F/.test(eqSrc)
+  // 推導不手寫:定義式裡不得出現任何數字字面值(常數一律走 SELF_ATK / SPECIAL_CD_S)
+  const eqSrc = (strip(DSRC).match(/export const selfAtkEq = [\s\S]*?\n\};/) || [''])[0];
+  ok(/specialBudget\(abil\)/.test(eqSrc) && /SELF_ATK\.REALIZED_F/.test(eqSrc)
     && /SPECIAL_CD_S/.test(eqSrc) && !/[^.\w]\d+(\.\d+)?\s*[*/]/.test(eqSrc),
-    'selfUltEq 由 specialBudget / REALIZED_F / SPECIAL_CD_S 推導,式子裡沒有手寫倍率');
+    'selfAtkEq 由 specialBudget / REALIZED_F / SPECIAL_CD_S 推導,式子裡沒有手寫倍率');
   ok(/export const SPECIAL_CD_S = SQUAD\.KAMI\.CD_S;/.test(DSRC)
     && near(d.SPECIAL_CD_S, d.SQUAD.KAMI.CD_S) && near(d.SPECIAL_CD_S, d.DECOY.CD_S)
     && near(d.SPECIAL_CD_S, d.HYPER.CD_S),
@@ -147,16 +147,16 @@ sec('Ⅱ 兌現形式與夾制(逐台;夾到上限 MUST 講出來)');
 {
   // 中性:載具化角色的 boost 三欄全中性 ⇒ _castEffect 對它們逐位元不動
   ok(CONV.every((c) => {
-    const B = d.selfUltBoost(c, 1, AB());
+    const B = d.selfAtkBoost(c, 1, AB());
     return B.dmgMul === 0 && B.heal === 0 && B.alphaX === 1;
-  }), '載具化的 23 台 boost 恆中性(dmgMul 0 / heal 0 / alphaX 1)⇒ 效果結算逐位元不受影響');
-  ok(d.selfUltBoost('__nope__', 1, AB()).alphaX === 1, '未知角色回中性值(不炸)');
+  }), '載具化的 22 台 boost 恆中性(dmgMul 0 / heal 0 / alphaX 1)⇒ 效果結算逐位元不受影響');
+  ok(d.selfAtkBoost('__nope__', 1, AB()).alphaX === 1, '未知角色回中性值(不炸)');
 
   // 逐 fx 分派:heal → heal 欄、stealth → alphaX、buff+mul.dmg → dmgMul、重設計三台 → 全中性
-  const byFx = (c) => d.CHARACTERS[c].ult.fx;
+  const byFx = (c) => d.CHARACTERS[c].atk.fx;
   for (const c of SELF) {
-    const B = d.selfUltBoost(c, 1, AB()), fx = byFx(c);
-    const u = d.CHARACTERS[c].ult;
+    const B = d.selfAtkBoost(c, 1, AB()), fx = byFx(c);
+    const u = d.CHARACTERS[c].atk;
     const want = fx === 'heal' ? (B.heal > 0 && B.dmgMul === 0 && B.alphaX === 1)
       : fx === 'stealth' ? (B.alphaX > 1 && B.heal === 0 && B.dmgMul === 0)
         : (fx === 'buff' && u.mul?.dmg) ? (B.dmgMul > 0 && B.heal === 0 && B.alphaX === 1)
@@ -165,22 +165,22 @@ sec('Ⅱ 兌現形式與夾制(逐台;夾到上限 MUST 講出來)');
   }
   // 重新設計的三台:效果本身即補償,MUST NOT 再疊乘數(否則同一份預算領兩次)
   for (const c of ['s12', 't02', 'm04']) {
-    const B = d.selfUltBoost(c, 1, AB());
+    const B = d.selfAtkBoost(c, 1, AB());
     ok(B.dmgMul === 0 && B.heal === 0 && B.alphaX === 1,
       `${c}(重新設計)不再另加乘數 —— 效果本身就是補償`);
   }
   // 治療型:增額 = 當量本身(治療 X 點 = 抵銷 X 點傷害,等價可推導)
-  ok(near(d.selfUltBoost('s11', 1, AB()).heal, d.selfUltEq('s11', 1, AB())),
+  ok(near(d.selfAtkBoost('s11', 1, AB()).heal, d.selfAtkEq('s11', 1, AB())),
     's11 治療增額 = 當量本身(1:1 等價)');
 
   // 夾制:兩個上限都夾得住,而且**頂到上限的逐台講出來**(靜默截斷 = 「推導」那句話不成立)
   const capped = { dmg: [], alpha: [] };
   for (const c of SELF) for (const lvl of [1, 2, 3]) {
-    const B = d.selfUltBoost(c, lvl, AB());
-    ok(B.dmgMul <= d.SELF_ULT.MUL_MAX + 1e-9 && B.alphaX <= d.SELF_ULT.ALPHA_MAX + 1e-9,
+    const B = d.selfAtkBoost(c, lvl, AB());
+    ok(B.dmgMul <= d.SELF_ATK.MUL_MAX + 1e-9 && B.alphaX <= d.SELF_ATK.ALPHA_MAX + 1e-9,
       `${c} Lv${lvl} 夾在上限內`);
-    if (lvl === 1 && near(B.dmgMul, d.SELF_ULT.MUL_MAX)) capped.dmg.push(c);
-    if (lvl === 1 && near(B.alphaX, d.SELF_ULT.ALPHA_MAX)) capped.alpha.push(c);
+    if (lvl === 1 && near(B.dmgMul, d.SELF_ATK.MUL_MAX)) capped.dmg.push(c);
+    if (lvl === 1 && near(B.alphaX, d.SELF_ATK.ALPHA_MAX)) capped.alpha.push(c);
   }
   console.log(`   ⓘ Lv1 頂到夾制上限:mul.dmg ${capped.dmg.join('/') || '無'}`
     + ` / alphaX ${capped.alpha.join('/') || '無'} —— 這幾台的補償**不是**完整推導值,是被上限截斷後的值`);
@@ -190,11 +190,11 @@ sec('Ⅱ 兌現形式與夾制(逐台;夾到上限 MUST 講出來)');
   ok(capped.dmg.length > 0, `MUL_MAX 對現役角色是**生效中**的夾制(${capped.dmg.join('/')})`);
   ok(capped.alpha.length > 0, `ALPHA_MAX 對現役角色是**生效中**的夾制(${capped.alpha.join('/')})`);
   // 預算灌爆(只抬輕武器等級 ⇒ 只抬預算不抬重武器 DPS)一定夾得住
-  ok(near(d.selfUltBoost('t06', 1, AB(9, 1)).dmgMul, d.SELF_ULT.MUL_MAX),
+  ok(near(d.selfAtkBoost('t06', 1, AB(9, 1)).dmgMul, d.SELF_ATK.MUL_MAX),
     '預算灌爆時 dmgMul 夾在 MUL_MAX');
   // DPS 取重武器(輕武器 DPS 低會把倍率整批推到夾制上限)
-  ok(/heroWeapon\(ch, 'heavy'/.test(strip(DSRC).match(/export const selfUltDps[\s\S]*?\n\};/)[0]),
-    'selfUltDps 取**重武器**持續 DPS(大招開窗那幾秒玩家打的就是它)');
+  ok(/heroWeapon\(ch, 'heavy'/.test(strip(DSRC).match(/export const selfAtkDps[\s\S]*?\n\};/)[0]),
+    'selfAtkDps 取**重武器**持續 DPS(攻招開窗那幾秒玩家打的就是它)');
   ok(/weaponDps\(w\)/.test(DSRC), '持續 DPS 走 weaponDps 單一縫(MUST NOT 手抄彈匣週期)');
 }
 
@@ -202,13 +202,13 @@ sec('Ⅱ 兌現形式與夾制(逐台;夾到上限 MUST 講出來)');
 sec('Ⅲ 單一縫(原文)');
 {
   // 倍率/治療增額只在 _castEffect 取一次
-  ok(count(S, /selfUltBoost\(/g) === 1, `sim 只在一處取 boost(實得 ${count(S, /selfUltBoost\(/g)})`);
+  ok(count(S, /selfAtkBoost\(/g) === 1, `sim 只在一處取 boost(實得 ${count(S, /selfAtkBoost\(/g)})`);
   const ce = grabMethod(S, '_castEffect');
-  ok(/selfUltBoost\(h\.ch, h\.abil\?\.ult \|\| 1, h\.abil\)/.test(ce) && /A\.id === 'ult'/.test(ce),
-    '_castEffect 是唯一取用點,而且只給大招(小招不吃補償)');
-  ok(!/selfUltBoost|selfUltEq/.test(strip(G)),
+  ok(/selfAtkBoost\(h\.ch, h\.abil\?\.atk \|\| 1, h\.abil\)/.test(ce) && /A\.id === 'atk'/.test(ce),
+    '_castEffect 是唯一取用點,而且只給攻招(守招不吃補償)');
+  ok(!/selfAtkBoost|selfAtkEq/.test(strip(G)),
     '客戶端 MUST NOT 自己算一份補償(算出兩個數字 = 「HUD 說 ×2.3、實際掉血 ×1.35」)');
-  ok(count(L, /selfUltBoost\(/g) === 1,
+  ok(count(L, /selfAtkBoost\(/g) === 1,
     '前線交戰模型也只取一次(bal 說平衡、打起來不是 ⇐ 模型自己算一份)');
   // 增額語意:相加不是相乘
   ok(/const mm = k === 'dmg' \? m \+ B\.dmgMul : m;/.test(strip(ce)),
@@ -219,10 +219,10 @@ sec('Ⅲ 單一縫(原文)');
   ok(/h\.alphaX = B\.alphaX; h\.alphaArm = this\.t \+ A\.dur;/.test(strip(ce)),
     '_castEffect 對 alpha 只**上膛**(alphaArm),不開窗');
   const gf = strip(grabMethod(S, '_gateFire'));
-  ok(/h\.mods\.push\(\{ k: 'dmg', m: h\.alphaX \|\| 1, until: now \+ SELF_ULT\.ALPHA_S \}\);/.test(gf)
+  ok(/h\.mods\.push\(\{ k: 'dmg', m: h\.alphaX \|\| 1, until: now \+ SELF_ATK\.ALPHA_S \}\);/.test(gf)
     && gf.indexOf('alphaArm') < gf.indexOf("h.stealthUntil = 0"),
     '窗開在 _gateFire 的開火現形那一刻,且排在 `stealthUntil = 0` **之前**');
-  ok(count(S, /SELF_ULT\.ALPHA_S/g) === 1, '爆發窗長度只有一個消費端');
+  ok(count(S, /SELF_ATK\.ALPHA_S/g) === 1, '爆發窗長度只有一個消費端');
 
   // 免裝填:補滿 MUST 排在「打空 → 開始填彈」之前
   ok(/if \(h\.ammo\[id\] <= 0 && \(h\.noReloadUntil \|\| 0\) > now\) h\.ammo\[id\] = def\.mag;/.test(gf),
@@ -270,11 +270,11 @@ sec('Ⅳ 行為直測(真 BattleSim)');
   // 輔助機」而不是招式本身(而且 t02 的 brk 會被路過的小兵提前打斷)。
   const hero = (sim, side, pid, ch) => {
     const h = sim.addHero(side, pid, ch);
-    h.x = 400; h.z = 0; h.mp = 999; h.abil.ult = 1;
+    h.x = 400; h.z = 0; h.mp = 999; h.abil.atk = 1;
     return h;
   };
-// 2026-08-07:自身強化型大招不再瞬發 —— 先飛完投放腿才供輸 ⇒ 行為直測 MUST 推到就位。
-  // 第二輪(大招改從最近的砲塔/主堡召喚)之後,投放腿是**實距**而不是固定值 ⇒ MUST NOT 再用
+// 2026-08-07:自身強化型攻招不再瞬發 —— 先飛完投放腿才供輸 ⇒ 行為直測 MUST 推到就位。
+  // 第二輪(攻招改從最近的砲塔/主堡召喚)之後,投放腿是**實距**而不是固定值 ⇒ MUST NOT 再用
   // 「supportLegS / dt」那種固定格數(工事離施放者多遠就飛多久;寫死格數會在施放者往前壓的
   // 場景上假紅)。上限用 kami 的 TTL 當保險 —— 真的飛不到才會走到那裡。
   const DEPLOY_N = Math.ceil(d.SQUAD.KAMI.TTL_S / 0.125) + 4;
@@ -295,8 +295,8 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     mate.stunUntil = sim.t + 5; mate.empUntil = sim.t + 5;
     const body = sim._bodies(mate)[0];
     body.dead = true; body.respawnAt = sim.t + 12; body.hp = 0; body.sp = 0;
-    const A = d.heroAbility('s12', 'ult', 1);
-    sim.heroCast('a1', 'ult');
+    const A = d.heroAbility('s12', 'atk', 1);
+    sim.heroCast('a1', 'atk');
     deploy(sim);
     ok(!body.dead && body.respawnAt === 0, 'rally:重生倒數中的隊友原地站起來');
     // 就位那一刻半血站起來;之後 regen 會慢慢補上去 ⇒ 下界比對(上界擋掉「整條回滿」)
@@ -315,7 +315,7 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     const m2 = hero(sim2, 'SWARM', 'b2', 's11');
     const b2 = sim2._bodies(m2)[0];
     b2.dead = true; b2.respawnAt = 0;                // 不在倒數中
-    sim2.heroCast('b1', 'ult');
+    sim2.heroCast('b1', 'atk');
     // 2026-08-07:推到就位要 tick,而一般重生流程本來就會在 respawnAt 到期時把人放回場 ⇒
     // 判準改看「有沒有發出 revive 事件」(舊制的 `b2.dead` 會被一般重生洗成假紅)
     let revived = false;
@@ -332,7 +332,7 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     const h = hero(sim, 'STEEL', 'a3', 't02');
     const wl = d.heroWeapon('t02', 'light', 1);
     h.ammo.light = 0; h.reloadUntil.light = sim.t + 99;
-    sim.heroCast('a3', 'ult');
+    sim.heroCast('a3', 'atk');
     deploy(sim);
     ok(h.noReloadUntil > sim.t && !(h.reloadUntil.light > sim.t),
       'overdrive:彈藥/填彈帳清空 + 開啟免裝填時窗');
@@ -353,7 +353,7 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     {
       const s3 = new BattleSim(mkCfg());
       const h3 = hero(s3, 'STEEL', 'a9', 't02');
-      s3.heroCast('a9', 'ult');
+      s3.heroCast('a9', 'atk');
       deploy(s3);
       const dur = h3.noReloadUntil - s3.t;
       s3.t += dur / 2;                                 // 時窗正中間,離結束還有一半
@@ -365,7 +365,7 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     // 對照組:沒有 brk 的招式不會被一發打斷
     const sim2 = new BattleSim(mkCfg());
     const h2 = hero(sim2, 'SWARM', 'a4', 's04');
-    sim2.heroCast('a4', 'ult');
+    sim2.heroCast('a4', 'atk');
     deploy(sim2);
     const before = sim2._buffMul(h2, 'dmg');
     sim2._damage(h2, 5, null, 0);
@@ -379,10 +379,10 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     const h = hero(sim, 'SWARM', 'a5', 'm04');
     const dum = sim._add({ kind: 'bunker', side: 'STEEL', x: 200, z: 0, y: 0, hp: 4000 }); delete dum.lane;
     const before = sim._altRange(h, dum);
-    sim.heroCast('a5', 'ult');
+    sim.heroCast('a5', 'atk');
     deploy(sim);
     const after = sim._altRange(h, dum);
-    const A = d.heroAbility('m04', 'ult', 1);
+    const A = d.heroAbility('m04', 'atk', 1);
     ok(near(after / before, A.mul.range, 1e-9), `recon:有效射程 ×${A.mul.range}(${before.toFixed(2)} → ${after.toFixed(2)})`);
     ok(sim._buffMul(h, 'speed') > 1 && sim._buffVal(h, 'evade') > 0, 'recon:跑速與閃避同步拉高');
     ok(sim.visionUntil[h.side] > sim.t, 'recon:全隊無霧視野');
@@ -397,9 +397,9 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     const h = hero(sim, 'STEEL', 'a6', 'm08');
     if (!h) { ok(false, 'm08 掛不上戰區'); }
     else {
-      const A = d.heroAbility('m08', 'ult', 1);
-      const B = d.selfUltBoost('m08', 1, h.abil);
-      sim.heroCast('a6', 'ult');
+      const A = d.heroAbility('m08', 'atk', 1);
+      const B = d.selfAtkBoost('m08', 1, h.abil);
+      sim.heroCast('a6', 'atk');
       deploy(sim);
       ok(h.stealthUntil > sim.t && h.alphaArm > sim.t, 'alpha:施放後匿蹤 + 上膛');
       ok(near(sim._buffMul(h, 'dmg'), 1), 'alpha:**還沒開火 ⇒ 窗還沒開**(躲著不打不會燒掉那一秒)');
@@ -409,8 +409,8 @@ sec('Ⅳ 行為直測(真 BattleSim)');
       sim._gateFire(h, 'light', wl);                   // 開火 = 現形
       ok(near(sim._buffMul(h, 'dmg'), B.alphaX, 1e-9), `alpha:開火那一刻開窗(×${B.alphaX.toFixed(2)})`);
       ok(h.stealthUntil === 0 && h.alphaArm === 0, 'alpha:現形 + 卸膛(同一次匿蹤只換一個窗)');
-      sim.t += d.SELF_ULT.ALPHA_S + 0.01;
-      ok(near(sim._buffMul(h, 'dmg'), 1), `alpha:${d.SELF_ULT.ALPHA_S}s 後窗關閉`);
+      sim.t += d.SELF_ATK.ALPHA_S + 0.01;
+      ok(near(sim._buffMul(h, 'dmg'), 1), `alpha:${d.SELF_ATK.ALPHA_S}s 後窗關閉`);
     }
   }
 
@@ -423,9 +423,9 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     // 2026-08-11 起 NPC 肩射火箭是真的爆炸(逐目標擲閃避的那一版)⇒ 殘血 1 的受測機體會被路過的
     // 濺射掃到,這一段就變成擲骰決定綠不綠(實測 8 跑紅 2)。無敵幀是既有的隔離手段,不改被測邏輯。
     h.invUntil = sim.t + 1e6;
-    const A = d.heroAbility('s11', 'ult', 1);
-    const B = d.selfUltBoost('s11', 1, h.abil);
-    sim.heroCast('a7', 'ult');
+    const A = d.heroAbility('s11', 'atk', 1);
+    const B = d.selfAtkBoost('s11', 1, h.abil);
+    sim.heroCast('a7', 'atk');
     // 瞬發型:四架各交付 1/4 ⇒ 等整隊到齊(第一架到就停 = 只量到四分之一份)
     deploy(sim, () => ![...sim.ents.values()].some((e) => e.supG));
     ok(B.heal > 0 && near(h.hp, Math.min(h.maxHp, 1 + A.heal + B.heal), 0.01),
@@ -433,7 +433,7 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     const sim2 = new BattleSim(mkCfg());
     const h2 = hero(sim2, 'SWARM', 'a8', 's02');       // 載具化(團隊 heal)
     h2.hp = 1;
-    sim2.heroCast('a8', 'ult');
+    sim2.heroCast('a8', 'atk');
     ok(near(h2.hp, 1), '載具化角色:效果由載具抵達時才施放,施放當下不回血(逐位元同載具改制)');
   }
 }
@@ -442,24 +442,24 @@ sec('Ⅳ 行為直測(真 BattleSim)');
 sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
 {
   // ---- Ⅴ-a 分類與機數:推導不手寫 ----
-  const TEMPOS = SELF.map((c) => d.selfUltTempo(c));
+  const TEMPOS = SELF.map((c) => d.selfAtkTempo(c));
   ok(TEMPOS.every((t) => t === 'burst' || t === 'pulse' || t === 'sustain'),
-    `9 台各有節奏分類(${SELF.map((c, i) => `${c}:${TEMPOS[i]}`).join(' ')})`);
-  ok(CONV.every((c) => d.selfUltTempo(c) === null && d.supportN(c) === 1),
-    '載具化的 23 台不歸這一段管(tempo 回 null)');
+    `10 台各有節奏分類(${SELF.map((c, i) => `${c}:${TEMPOS[i]}`).join(' ')})`);
+  ok(CONV.every((c) => d.selfAtkTempo(c) === null && d.supportN(c) === 1),
+    '載具化的 22 台不歸這一段管(tempo 回 null)');
   ok(new Set(TEMPOS).size === 3, '三種節奏在現役角色上都有人(分類不是死碼)');
   // 分類**由 ult 欄位推導**:沒有 dur ⇒ 瞬發、有 regen ⇒ 間斷、其餘 ⇒ 持續(逐台獨立重算)
   ok(SELF.every((c) => {
-    const u = d.CHARACTERS[c].ult;
+    const u = d.CHARACTERS[c].atk;
     const want = !(d.tierVal(u.dur ?? 0, 1) > 0) ? 'burst'
       : d.tierVal(u.regen ?? 0, 1) > 0 ? 'pulse' : 'sustain';
-    return d.selfUltTempo(c) === want;
+    return d.selfAtkTempo(c) === want;
   }), '節奏由 ult 欄位推導(逐台獨立重算比對)');
-  ok(!/selfUltTempo[\s\S]{0,400}?['"]s\d\d['"]/.test(strip(DSRC)),
+  ok(!/selfAtkTempo[\s\S]{0,400}?['"]s\d\d['"]/.test(strip(DSRC)),
     '節奏分類 MUST NOT 手寫角色名冊');
-  // 機數:可疊加者依機種分批(同 ultParts 那張表),二元狀態恆單機 —— 使用者「**某些**招式換成多個」
+  // 機數:可疊加者依機種分批(同 atkParts 那張表),二元狀態恆單機 —— 使用者「**某些**招式換成多個」
   ok(SELF.every((c) => d.supportN(c) === (d.supportStackable(c) ? d.kindParts(d.charKind(c)) : 1)),
-    '機數 = 可疊加 ? 該機種分批數 : 1(與 ultParts 同一張機種表)');
+    '機數 = 可疊加 ? 該機種分批數 : 1(與 atkParts 同一張機種表)');
   ok(SELF.some((c) => d.supportN(c) > 1) && SELF.some((c) => d.supportN(c) === 1),
     `「某些」招式換成多架:多機 ${SELF.filter((c) => d.supportN(c) > 1).join('/')}`
     + ` / 單機 ${SELF.filter((c) => d.supportN(c) === 1).join('/')}`);
@@ -468,7 +468,7 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
   ok(d.kindParts('drone') === d.SQUAD.KAMI.N && d.kindParts('morph') === d.DECOY.BOMB_MAX
     && d.kindParts('robot') === 1
     && count(DSRC, /kind === 'drone' \? SQUAD\.KAMI\.N/g) === 1,
-    'kindParts 是機種分批數的唯一縫(ultParts 與 supportN 同吃)');
+    'kindParts 是機種分批數的唯一縫(atkParts 與 supportN 同吃)');
 
   // ---- Ⅴ-b 疊加是加法(核心不變式:全員在線 = 逐位元同舊制)----
   for (const c of SELF) {
@@ -484,17 +484,17 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
   // ---- Ⅴ-c 耐久:使用者③的兩條 ----
   // 服務窗:同 dur 下 持續 > 間斷 > 瞬發;且對 dur 嚴格遞增(dur = 0 的瞬發除外)
   const F = d.supportTempoF;
-  ok(F('sustain') === 1 && F('burst') === 0 && F('pulse') === d.ULT_SUPPORT.PULSE_F,
+  ok(F('sustain') === 1 && F('burst') === 0 && F('pulse') === d.ATK_SUPPORT.PULSE_F,
     '節奏係數:兩端是定義(0 / 1)、中間是旋鈕 PULSE_F');
   ok(F('sustain') > F('pulse') && F('pulse') > F('burst'),
     `持續 > 間斷 > 瞬發(${F('sustain')} > ${F('pulse')} > ${F('burst')})`);
-  ok(d.ULT_SUPPORT.PULSE_F > 0 && d.ULT_SUPPORT.PULSE_F < 1,
+  ok(d.ATK_SUPPORT.PULSE_F > 0 && d.ATK_SUPPORT.PULSE_F < 1,
     'PULSE_F ∈ (0, 1):撐一半仍有交付,但不是撐滿');
   // 同一台角色掃 dur:機隊總耐久對 dur 嚴格遞增(使用者「持續時間越久耐久也越高」)
   {
     const durs = [1, 4, 8, 12, 20];
     // 逐架:投放腿平行(不除以機數)、效果窗串行(除以機數)—— 與 supportHp 同式
-    const hpAt = (tempo, dur, n = 4) => d.frontKillHp(d.supportLegS('ult') + F(tempo) * dur / n) * n;
+    const hpAt = (tempo, dur, n = 4) => d.frontKillHp(d.supportLegS('atk') + F(tempo) * dur / n) * n;
     for (const tempo of ['sustain', 'pulse']) {
       const seq = durs.map((x) => hpAt(tempo, x));
       ok(seq.every((v, i) => i === 0 || v > seq[i - 1]), `${tempo}:dur 越久機隊越硬(${seq.join(' < ')})`);
@@ -504,19 +504,19 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
         `dur ${dur}s:持續 ${hpAt('sustain', dur)} > 間斷 ${hpAt('pulse', dur)} > 瞬發 ${hpAt('burst', dur)}`);
     }
   }
-  // 現役 9 台:機隊總耐久 ≈ frontDps × 服務窗(與機數無關)、逐台 > 0、armor/護盾 0 由生成端保證
+  // 現役 10 台:機隊總耐久 ≈ frontDps × 服務窗(與機數無關)、逐台 > 0、armor/護盾 0 由生成端保證
   for (const c of SELF) {
-    const n = d.supportN(c), tempo = d.selfUltTempo(c);
-    const dur = d.tierVal(d.CHARACTERS[c].ult.dur ?? 0, 1);
-    const want = d.frontKillHp(d.supportLegS('ult') + F(tempo) * dur / n);
+    const n = d.supportN(c), tempo = d.selfAtkTempo(c);
+    const dur = d.tierVal(d.CHARACTERS[c].atk.dur ?? 0, 1);
+    const want = d.frontKillHp(d.supportLegS('atk') + F(tempo) * dur / n);
     ok(d.supportHp(c, 1) === want && want > 0,
       `${c}:每架 ${want} = 前線塔位 ${d.frontDps()} DPS ×(投放腿 + ${tempo} 窗 ÷ ${n})`);
     ok(d.supportFleetHp(c, 1) === want * n, `${c}:機隊總耐久 = 每架 × ${n}`);
     ok(d.supportHp(c, 3) >= d.supportHp(c, 1), `${c}:升級不會讓輔助機變脆`);
   }
   // 投放腿是**平行**曝險:MUST NOT 連它也除以機數(除下去 s11 每架只剩一顆子彈的量)
-  ok(d.supportHp('s11', 1) > d.frontKillHp(d.supportLegS('ult') / d.supportN('s11')) * 2,
-    `瞬發型每架 ${d.supportHp('s11', 1)} 點 ≫ 「整段除以機數」的 ${d.frontKillHp(d.supportLegS('ult') / d.supportN('s11'))} 點`);
+  ok(d.supportHp('s11', 1) > d.frontKillHp(d.supportLegS('atk') / d.supportN('s11')) * 2,
+    `瞬發型每架 ${d.supportHp('s11', 1)} 點 ≫ 「整段除以機數」的 ${d.frontKillHp(d.supportLegS('atk') / d.supportN('s11'))} 點`);
   // 推導不手寫:HP 式子只由 frontKillHp / 服務窗 / 機數組成
   {
     const hpSrc = (strip(DSRC).match(/export const supportHp = [\s\S]*?\n\};/) || [''])[0];
@@ -526,11 +526,11 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
     const svcSrc = (strip(DSRC).match(/export const supportServiceS = [\s\S]*?\n\};/) || [''])[0];
     ok(/supportLegS\(slot\)/.test(svcSrc) && /supportTempoF\(/.test(svcSrc) && !/\d\s*[*/+-]/.test(svcSrc),
       '服務窗 = 投放腿 + 節奏係數 × dur(沒有手寫秒數)');
-    // 投放腿只有 abilLaunchLegM 一份分流(小招 MIN_LEG / 大招 ultLaunchLegM);
+    // 投放腿只有 abilLaunchLegM 一份分流(守招 MIN_LEG / 攻招 atkLaunchLegM);
     // MUST NOT 在 supportLegS 裡再寫一次 slot 判斷(兩份分流遲早只改一份)
     ok(count(DSRC, /abilLaunchLegM\(slot\) \/ supportSpeed\(\)/g) === 1
       && count(DSRC, /export const abilLaunchLegM/g) === 1,
-      '投放腿逐槽位只有 abilLaunchLegM 一份分流(小招 MIN_LEG / 大招 代表發射腿)');
+      '投放腿逐槽位只有 abilLaunchLegM 一份分流(守招 MIN_LEG / 攻招 代表發射腿)');
   }
   // 砲塔數值一改,耐久自己跟著漂(與三種點遞送載具同一把尺)
   ok(/frontKillHp/.test(strip(DSRC).match(/export const supportHp[\s\S]*?\n\};/)[0])
@@ -538,12 +538,12 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
     '耐久與 kami/decoy/hyper 共用「前線一組塔位」那一把尺');
 
   // ---- Ⅴ-d 單一縫(原文)----
-  ok(count(S, /_launchUltSupport\(/g) === 2,
-    `_launchUltSupport:1 定義 + 1 呼叫(實得 ${count(S, /_launchUltSupport\(/g)})`);
+  ok(count(S, /_launchAtkSupport\(/g) === 2,
+    `_launchAtkSupport:1 定義 + 1 呼叫(實得 ${count(S, /_launchAtkSupport\(/g)})`);
   ok(count(S, /supportHp\(/g) === 1, '輔助機 HP 只在生成處取一次(MUST NOT 在別處另算)');
   ok(count(S, /_supSync\(/g) === 3,
     `_supSync:1 定義 + 2 呼叫(就位 / 下線 —— 疊加只有這一條路;實得 ${count(S, /_supSync\(/g)})`);
-  ok(!/supportHp|supportN|ULT_SUPPORT/.test(strip(G)),
+  ok(!/supportHp|supportN|ATK_SUPPORT/.test(strip(G)),
     '客戶端 MUST NOT 自己算輔助機的耐久/機數(A1:那是伺服器結算的量)');
   {
     const sy = strip(grabMethod(S, '_supSync'));
@@ -558,7 +558,7 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
       '投放腿的推進排在到期判定**之前**(排反了 ⇒ 瞬發型永遠交付不到)');
     // 2026-08-07 第二輪:效果窗 MUST 自**就位**起算 —— 施放當下就定死的話,工事離施放者遠一點
     // 就在半路到期 = 這一招在深推時永遠交付不到(同一個坑的第二次,一樣沒有錯誤訊息)
-    ok(/until: null,/.test(strip(grabMethod(S, '_launchUltSupport')))
+    ok(/until: null,/.test(strip(grabMethod(S, '_launchAtkSupport')))
       && /g\.until \?\?= this\.t \+ \(g\.A\.dur \|\| 0\);/.test(strip(grabMethod(S, '_supArm'))),
       '效果窗自第一架就位起算(施放當下 until = null;MUST NOT 用「施放 + 代表腿」定死)');
   }
@@ -589,7 +589,7 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
         env: { season: 'summer', time: 'day', weather: 'clear' },
       };
     };
-    // 投放腿是實距(大招自最近的工事召喚)⇒ 等「有人就位」而不是固定格數
+    // 投放腿是實距(攻招自最近的工事召喚)⇒ 等「有人就位」而不是固定格數
     const DEPLOY_N = Math.ceil(d.SQUAD.KAMI.TTL_S / 0.125) + 4;
     const armed = (sim) => [...sim.ents.values()].some((e) => e.supG && e.phase === 'escort');
     const deploy = (sim, until = null) => {
@@ -599,7 +599,7 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
     const mk = (side, pid, ch) => {
       const sim = new BattleSim(mkCfg());
       const h = sim.addHero(side, pid, ch);
-      h.x = 400; h.z = 0; h.mp = 999; h.abil.ult = 1;   // 兵線之外(同 Ⅳ 的理由)
+      h.x = 400; h.z = 0; h.mp = 999; h.abil.atk = 1;   // 兵線之外(同 Ⅳ 的理由)
       return { sim, h };
     };
     const fleet = (sim, pid) => [...sim.ents.values()].filter((e) => e.supG && e.pid === pid);
@@ -608,14 +608,14 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
     // ① 生成:機數 / HP / armor·護盾 0 / 還沒就位 ⇒ 加成尚未上線
     {
       const { sim, h } = mk('SWARM', 'v1', 's04');
-      sim.heroCast('v1', 'ult');
+      sim.heroCast('v1', 'atk');
       const cs = fleet(sim, 'v1');
       ok(cs.length === d.supportN('s04'), `s04 派出 ${cs.length} 架(推導 ${d.supportN('s04')})`);
       ok(cs.every((k) => k.hp === d.supportHp('s04', 1) && k.armor === 0 && k.maxSp === 0),
         `每架 HP ${d.supportHp('s04', 1)}、armor / 護盾恆 0(校準不隨主機漂移)`);
       ok(near(sim._buffMul(h, 'dmg'), 1), '投放腿飛行中 ⇒ 加成還沒上線(每一發都有攔截窗)');
       deploy(sim);
-      const full = d.heroAbility('s04', 'ult', 1).mul.dmg + d.selfUltBoost('s04', 1, h.abil).dmgMul;
+      const full = d.heroAbility('s04', 'atk', 1).mul.dmg + d.selfAtkBoost('s04', 1, h.abil).dmgMul;
       ok(near(sim._buffMul(h, 'dmg'), full, 1e-6),
         `全員就位 ⇒ 效果值**逐位元同舊制**(×${full.toFixed(3)})`);
       // ② 疊加:擊落一半 ⇒ 加成剩一半(加法,不是相乘)
@@ -633,13 +633,13 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
       const { sim, h } = mk('SWARM', 'v2', 's11');
       h.hp = 1;
       h.invUntil = sim.t + 1e6;   // 同上:量治療量 MUST 與路過的爆風隔離(deploy 是真的在跑 tick)
-      sim.heroCast('v2', 'ult');
+      sim.heroCast('v2', 'atk');
       const cs = fleet(sim, 'v2');
-      ok(cs.length === d.supportN('s11') && d.selfUltTempo('s11') === 'burst',
+      ok(cs.length === d.supportN('s11') && d.selfAtkTempo('s11') === 'burst',
         `s11 是瞬發型、派 ${cs.length} 架`);
       cs[0].hp = 0; sim._kill(cs[0], null);
       deploy(sim, () => ![...sim.ents.values()].some((e) => e.supG));
-      const A = d.heroAbility('s11', 'ult', 1), B = d.selfUltBoost('s11', 1, h.abil);
+      const A = d.heroAbility('s11', 'atk', 1), B = d.selfAtkBoost('s11', 1, h.abil);
       ok(near(h.hp, Math.min(h.maxHp, 1 + (A.heal + B.heal) * 0.75), 1),
         `擊落 1/4 ⇒ 只補 3/4(${(h.hp - 1).toFixed(0)} / 全額 ${(A.heal + B.heal).toFixed(0)})`);
       ok(fleet(sim, 'v2').length === 0, '瞬發型交付完即退場(沒有時窗可供輸)');
@@ -647,7 +647,7 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
     // ④ 二元狀態(m08 匿蹤):單機、被擊落即現形
     {
       const { sim, h } = mk('STEEL', 'v3', 'm08');
-      sim.heroCast('v3', 'ult');
+      sim.heroCast('v3', 'atk');
       deploy(sim);
       ok(fleet(sim, 'v3').length === 1 && h.stealthUntil > sim.t,
         'm08 單機就位 ⇒ 匿蹤上線');
@@ -659,7 +659,7 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
     // ⑤ 時窗不展期:死一架之後 until 仍是原本那一刻
     {
       const { sim, h } = mk('SWARM', 'v4', 's12');
-      sim.heroCast('v4', 'ult');
+      sim.heroCast('v4', 'atk');
       deploy(sim);
       const armAt5 = sim.t;
       const u0 = h.mods.find((m) => m.k === 'regen').until;
@@ -668,17 +668,17 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
       k.hp = 0; sim._kill(k, null);
       const u1 = h.mods.find((m) => m.k === 'regen').until;
       ok(near(u0, u1), `擊落一架不展期(until ${u0.toFixed(2)} 不變)`);
-      ok(u0 > sim.t && near(u0 - armAt5, d.heroAbility('s12', 'ult', 1).dur, 0.2),
+      ok(u0 > sim.t && near(u0 - armAt5, d.heroAbility('s12', 'atk', 1).dur, 0.2),
         `時窗 = dur(自就位那一刻起算;實得 ${(u0 - armAt5).toFixed(2)}s)`);
     }
     // ⑥ 一次性效果只做一次:s12 的復活不會因為「又死一架重放」而再救一次
     {
       const { sim, h } = mk('SWARM', 'v5', 's12');
       const mate = sim.addHero('SWARM', 'v5b', 's11');
-      mate.x = 700; mate.mp = 999; mate.abil.ult = 1;
+      mate.x = 700; mate.mp = 999; mate.abil.atk = 1;
       const body = sim._bodies(mate)[0];
       body.dead = true; body.respawnAt = sim.t + 30; body.hp = 0;
-      sim.heroCast('v5', 'ult');
+      sim.heroCast('v5', 'atk');
       deploy(sim);
       ok(!body.dead, 'rally:就位那一刻復活隊友');
       body.dead = true; body.respawnAt = sim.t + 30; body.hp = 0;   // 再殺一次
@@ -686,10 +686,10 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
       k.hp = 0; sim._kill(k, null);                                  // 觸發一次重放
       ok(body.dead, '重放 MUST NOT 再復活一次(一次性效果只在第一次做)');
     }
-    // ⑦ 載具化的 23 台完全不受影響(不生輔助機)
+    // ⑦ 載具化的 22 台完全不受影響(不生輔助機)
     {
       const { sim } = mk('SWARM', 'v6', 's02');
-      sim.heroCast('v6', 'ult', 450, 0);
+      sim.heroCast('v6', 'atk', 450, 0);
       ok(fleet(sim, 'v6').length === 0
         && [...sim.ents.values()].filter((e) => e.kami).length === d.SQUAD.KAMI.N,
         's02(點遞送)仍生 kami 載具、一架輔助機都沒有');
@@ -698,46 +698,46 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
 }
 
 // ============================================================
-sec('Ⅵ 輔助機隊大招專屬 + 小招本體詠唱分流(2026-08-22 使用者定案)');
+sec('Ⅵ 輔助機隊攻招專屬 + 守招本體詠唱分流(2026-08-22 使用者定案)');
 {
-  // 2026-08-22 使用者定案「小招改成施展效果而不是召喚物效果,需要詠唱時間才會生效,視效果強度決定詠唱時間,詠唱期間被攻擊時會強制立即施展(已詠唱時間比例平方的效果)」。
-  // 輔助機隊(ULT_SUPPORT)自此專屬大招(slot === 'ult'),小招一律為本體施展技能(非載具/輔助機)。
+  // 2026-08-22 使用者定案「守招改成施展效果而不是召喚物效果,需要詠唱時間才會生效,視效果強度決定詠唱時間,詠唱期間被攻擊時會強制立即施展(已詠唱時間比例平方的效果)」。
+  // 輔助機隊(ATK_SUPPORT)自此專屬攻招(slot === 'atk'),守招一律為本體施展技能(非載具/輔助機)。
   const CHS2 = Object.keys(d.CHARACTERS);
-  // ① 分類/機數/節奏/耐久四支在大招那一組逐位元不動(預設參數 = 'ult')
-  ok(CHS2.every((c) => d.supportStackable(c, 'ult') === d.supportStackable(c)
-    && d.supportN(c, 'ult') === d.supportN(c)
-    && d.abilTempo(c, 'ult') === d.selfUltTempo(c)
-    && d.supportHp(c, 1, 'ult') === d.supportHp(c, 1)),
+  // ① 分類/機數/節奏/耐久四支在攻招那一組逐位元不動(預設參數 = 'atk')
+  ok(CHS2.every((c) => d.supportStackable(c, 'atk') === d.supportStackable(c)
+    && d.supportN(c, 'atk') === d.supportN(c)
+    && d.abilTempo(c, 'atk') === d.selfAtkTempo(c)
+    && d.supportHp(c, 1, 'atk') === d.supportHp(c, 1)),
     '四支推導的預設槽位 = ult ⇒ 既有呼叫端逐位元不變');
-  // ② 自身強化型大招 9 台走跟隨編隊,節奏三分都用得到、耐久 > 0
-  const supUlt = CHS2.filter((c) => !d.abilDelivered(c, 'ult'));
-  ok(supUlt.length === 9 && supUlt.every((c) => d.heroAbility(c, 'ult', 1).support),
-    `自身強化型大招恰 9 台走跟隨編隊(實得 ${supUlt.length} 台)`);
-  ok(new Set(supUlt.map((c) => d.abilTempo(c, 'ult'))).size === 3,
-    `大招三種節奏皆在線(${[...new Set(supUlt.map((c) => d.abilTempo(c, 'ult')))].join(' / ')})`);
+  // ② 自身強化型攻招 10 台走跟隨編隊,節奏三分都用得到、耐久 > 0
+  const supUlt = CHS2.filter((c) => !d.abilDelivered(c, 'atk'));
+  ok(supUlt.length === 10 && supUlt.every((c) => d.heroAbility(c, 'atk', 1).support),
+    `自身強化型攻招恰 10 台走跟隨編隊(實得 ${supUlt.length} 台)`);
+  ok(new Set(supUlt.map((c) => d.abilTempo(c, 'atk'))).size === 3,
+    `攻招三種節奏皆在線(${[...new Set(supUlt.map((c) => d.abilTempo(c, 'atk')))].join(' / ')})`);
   let ultHpOk = true;
   for (const c of supUlt) {
-    const n = d.supportN(c, 'ult'), tempo = d.abilTempo(c, 'ult');
-    const dur = d.tierVal(d.CHARACTERS[c].ult.dur ?? 0, 1);
-    const want = d.frontKillHp(d.supportLegS('ult') + d.supportTempoF(tempo) * dur / n);
-    if (d.supportHp(c, 1, 'ult') !== want || !(want > 0)) ultHpOk = false;
+    const n = d.supportN(c, 'atk'), tempo = d.abilTempo(c, 'atk');
+    const dur = d.tierVal(d.CHARACTERS[c].atk.dur ?? 0, 1);
+    const want = d.frontKillHp(d.supportLegS('atk') + d.supportTempoF(tempo) * dur / n);
+    if (d.supportHp(c, 1, 'atk') !== want || !(want > 0)) ultHpOk = false;
   }
-  ok(ultHpOk, '大招輔助機耐久 = 前線一組塔位 ×(大招投放腿 + 節奏係數 × dur ÷ 機數)(逐台獨立重算)');
+  ok(ultHpOk, '攻招輔助機耐久 = 前線一組塔位 ×(攻招投放腿 + 節奏係數 × dur ÷ 機數)(逐台獨立重算)');
 
-  // ③ 小招全數非輔助機(carrier: false, support: false, castTime > 0)
+  // ③ 守招全數非輔助機(carrier: false, support: false, castTime > 0)
   ok(CHS2.every((c) => {
-    const A = d.heroAbility(c, 'skill', 1);
-    return !A.carrier && !A.support && A.castTime >= d.SKILL_CAST.MIN_S && A.castTime <= d.SKILL_CAST.MAX_S;
-  }), '32 台小招全數為本體施展技能(非載具/輔助機,castTime ∈ [0.5, 2.5]s)');
+    const A = d.heroAbility(c, 'def', 1);
+    return !A.carrier && !A.support && A.castTime >= d.DEF_CAST.MIN_S && A.castTime <= d.DEF_CAST.MAX_S;
+  }), '32 台守招全數為本體施展技能(非載具/輔助機,castTime ∈ [0.5, 2.5]s)');
 
-  // ④ 補償只給大招:小招 MUST NOT 領 selfUltEq(那份預算換的是被移除的機種絕招)
-  ok(CHS2.every((c) => d.selfUltEq(c, 1, { light: 1, heavy: 1 }) >= 0)
-    && /A\.id === 'ult'/.test(strip(grabMethod(S, '_castEffect'))),
-    '補償只在 A.id === ult 那一支取(小招不領 selfUltEq)');
+  // ④ 補償只給攻招:守招 MUST NOT 領 selfAtkEq(那份預算換的是被移除的機種絕招)
+  ok(CHS2.every((c) => d.selfAtkEq(c, 1, { light: 1, heavy: 1 }) >= 0)
+    && /A\.id === 'atk'/.test(strip(grabMethod(S, '_castEffect'))),
+    '補償只在 A.id === ult 那一支取(守招不領 selfAtkEq)');
 }
 
 // ============================================================
-console.log(`\n${fail ? '❌' : '✅'} 自身強化型大招(補償 + 輔助機隊)稽核:${pass} 綠 / ${fail} 紅`
+console.log(`\n${fail ? '❌' : '✅'} 自身強化型攻招(補償 + 輔助機隊)稽核:${pass} 綠 / ${fail} 紅`
   + (BREAK_EQ || BREAK_ALPHA || BREAK_BRK || BREAK_STACK || BREAK_TEMPO
     ? '(反向驗證模式:紅字 = 稽核有牙)' : ''));
 process.exit(fail ? 1 : 0);

@@ -23,12 +23,12 @@
 //   4.1 模型準確度自驗 (原 ⑦b): 火力/射程/AoE 單軸加成勝率 MUST > 50%。
 //   4.2 機種交叉對戰 (原 ⑦c): 防退化欄杆守門線 ≤ 86%。
 //   4.3 武器類型交叉 (原 ⑦d): 爆風/貫穿勝率 40% ~ 72% (扇形貼身具名豁免)。
-//   4.4  大招載具交付與自身型兌現 (原 ⑦f): 載具形式交付率差異 ≤ 2.3×, 自身型 EHP 兌現 > 0。 (2026-09-25 OOC regen era: measured 2.12x)
+//   4.4  攻招載具交付與自身型兌現 (原 ⑦f): 載具形式交付率差異 ≤ 2.3×, 自身型 EHP 兌現 > 0。 (2026-09-25 OOC regen era: measured 2.12x)
 //   4.5  模擬長度與逾時控制 (原 ⑦e): 對局中位長度 ≤ 150s(MAX_T), 逾時率 ≤ 55%。 (2026-09-25 OOC regen era: med 144.5s/tie 49.2%)
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, altScale, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, rangeCap, EVASION, evadable, evadeExpF, weaponDps,
   shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
-  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, ultDelivered, SELF_ULT,
+  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, atkDelivered, SELF_ATK,
   HIGH_SUP } from '../public/js/data.js';
 import { fighter, chassisFighter, neutralArmor, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
 import { laneMatrix, laneWin, LANE } from './lanesim.mjs';
@@ -369,12 +369,12 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
 
 // 3.6 招式配置 ← 武器射程剖面 (原 ⑥)
 // 使用者定案(2026-07-27):「扇形武器優先配置拉敵人 / 快速進場退場 / 匿蹤暗殺等、
-// 控場或走位的大小招」。扇形武器沒有近距平台、實用交戰帶最短(見 data.js FAN_MUZZLE),
+// 控場或走位的攻守招」。扇形武器沒有近距平台、實用交戰帶最短(見 data.js FAN_MUZZLE),
 // 拿到手的若是站樁型套件(承傷減免 / 治療 / 召喚 / 攔截),貼不上的時候一項都兌現不了 ——
 // 扇形使用者長年墊底就是這麼來的。
 // **雙扇形 vs 單扇形分開要求**:兩把武器都是扇形(s04/t03)= 純貼身機體,兩招都 MUST 是貼身套件;
 // 只有一把扇形(s07/m07 的重武器是電漿、輕武器仍是中距槍械)= 半貼身,至少一招即可 ——
-// 這兩名的小招(攔截領域 / 拒止穹頂)是 lore.js 裡 bio・expertise・bond・proto 四欄的人設核心,
+// 這兩名的守招(攔截領域 / 拒止穹頂)是 lore.js 裡 bio・expertise・bond・proto 四欄的人設核心,
 // **刻意不動**:規則是「優先配置」,不是「拿角色識別去換一格達標」。
 {
   // 貼身套件 = 突進 / 匿蹤 / 走位增益 / 控場打擊 / 拉敵人(add 的家族分類見 data.js CHARACTERS 檔頭)
@@ -385,7 +385,7 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
   const DENSITY_F = 2;   // 「優先配置」的量化下限:扇形使用者的人均持有 ≥ 非扇形 × 此值
   const chs = Object.keys(CHARACTERS);
   const fanN = (c) => ['light', 'heavy'].filter((s) => heroWeapon(c, s, 1, true)?.fan).length;
-  const closeN = (c) => ['skill', 'ult'].filter((s) => isClose(heroAbility(c, s, 1))).length;
+  const closeN = (c) => ['def', 'atk'].filter((s) => isClose(heroAbility(c, s, 1))).length;
   const fans = chs.filter((c) => fanN(c) > 0);
   console.log('\n3.6 招式配置 ← 武器射程剖面 — 扇形武器優先配置貼身套件(突進/匿蹤/走位/控場)\n');
 
@@ -393,7 +393,7 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
   if (bad.length) fail++;
   for (const c of fans) {
     const need = fanN(c) === 2 ? 2 : 1, got = closeN(c);
-    const kit = ['skill', 'ult'].map((s) => {
+    const kit = ['def', 'atk'].map((s) => {
       const a = heroAbility(c, s, 1);
       return `${isClose(a) ? '✔' : '✘'}${a.name}(${a.fx}${a.add ? '+' + a.add.fx : ''})`;
     }).join('  ');
@@ -442,7 +442,7 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
 
   // ---- c 機種交叉對戰(使用者「三種機體使用不同武器類型交叉對戰」)----
   // 目標仍是 50±5pp。**現況達不到**,守門線是防退化欄杆而非驗收線:
-  // 本模型刻意不含招式 / 機種絕招 / 變形(使用者指示「先不考慮長按技和大小招」),而那三者正是
+  // 本模型刻意不含招式 / 機種絕招 / 變形(使用者指示「先不考慮長按技和攻守招」),而那三者正是
   // 短射程低機動機體的到位與求生手段;且 ⑦ 量到射程是最貴的一軸(見 RANGE_BUDGET),
   // 而三機種的射程上限本來就不同(rangeCap ← UNITS[kind].sight)—— 要收斂 MUST 動那條線,另案。
   //
@@ -484,20 +484,20 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
       + (CLS_EXEMPT[g] ? ` — 豁免:${CLS_EXEMPT[g]}` : `(${CLS_LO * 100}~${CLS_HI * 100}%)`));
   }
 
-  // ---- 4.4 長按 = 大招(2026-08-06 使用者定案:一般模式 → 小招 / 狙擊模式 → 大招) (原 ⑦f) ----
+  // ---- 4.4 長按 = 攻招(2026-08-06 使用者定案:一般模式 → 守招 / 狙擊模式 → 攻招) (原 ⑦f) ----
   // 機種絕招整組退場之後,「三招同預算 ⇒ 實得也該等值」這條**沒有東西可量了**(那三招不存在)。
   // 長按自此分成兩組,而兩組的**量測面刻意不同**(硬塞進同一個平均就是舊制失效的原因:
   // 效果型 payload 的 EHP 恆為 0,混進去會被讀成「這一招不會交付」,而它其實每一發都到了):
-  //   f1 **載具組**(23 台)—— 量「送出去的份額有幾份真的飛到」。這個量對每一種 payload
+  //   f1 **載具組**(22 台)—— 量「送出去的份額有幾份真的飛到」。這個量對每一種 payload
   //      都成立,而且正是三種載具形式唯一分得出高下的地方(kami 魚貫 / 轟炸機逐批 / 飛彈全有或全無)。
-  //   f2 **自身型組**(9 台)—— 量補償兌現的 EHP 當量(多打出的 + 少挨的 + 補回來的)。
+  //   f2 **自身型組**(10 台)—— 量補償兌現的 EHP 當量(多打出的 + 少挨的 + 補回來的)。
   const KINDS = ['drone', 'robot', 'morph'];
   const FORM_NAME = { drone: '自殺機群', robot: '極音速飛彈', morph: '集束轟炸機' };
   const SPREAD_MAX = 2.3;
 
   // —— 4.4a 載具交付率 ——
   const conv = Object.fromEntries(KINDS.map((k) => {
-    const v = of(k).filter((c) => ultDelivered(c)).map((c) => abil[c]);
+    const v = of(k).filter((c) => atkDelivered(c)).map((c) => abil[c]);
     const n = v.reduce((s, x) => s + x.carN, 0), hit = v.reduce((s, x) => s + x.carHit, 0);
     return [k, { n, hit, rate: n ? hit / n : 0 }];
   }));
@@ -513,7 +513,7 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
     + `;生存性 = ${TOWER_SITE_N} 座塔的前線基準(飛彈另計一波兵)`);
   // 帶**傷害** payload 的載具實得:點遞送不追擊 ⇒ 移動中的機體幾乎吃不到。
   {
-    const v = chs.filter((c) => ultDelivered(c) && CHARACTERS[c].ult.fx === 'strike').map((c) => abil[c]);
+    const v = chs.filter((c) => atkDelivered(c) && CHARACTERS[c].atk.fx === 'strike').map((c) => abil[c]);
     const n = v.reduce((s, x) => s + x.n, 0);
     const eff2 = v.reduce((s, x) => s + x.hero + x.tower, 0), cr = v.reduce((s, x) => s + x.creep, 0);
     const nom = v.reduce((s, x) => s + x.carNom, 0);
@@ -522,10 +522,10 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
   }
 
   // —— 4.4b 自身型補償兌現 ——
-  const selfChs = chs.filter((c) => !ultDelivered(c));
+  const selfChs = chs.filter((c) => !atkDelivered(c));
   const perCast = (c) => {
     const a = abil[c];
-    return a.ultN ? (a.dealtEff + a.prevented + a.healed) / a.ultN : 0;
+    return a.atkN ? (a.dealtEff + a.prevented + a.healed) / a.atkN : 0;
   };
   const okF2 = selfChs.every((c) => perCast(c) > 0);
   if (!okF2) fail++;
@@ -535,10 +535,10 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
     const sN = selfChs.reduce((s, c) => s + abil[c].carN, 0);
     const sL = selfChs.reduce((s, c) => s + abil[c].supLost, 0);
     console.log(`   ⓘ 4.4 輔助機損失  ${sN} 架派出 / ${sL} 架被擊落(${sN ? (100 * sL / sN).toFixed(1) : 0}%`
-      + `;選敵最近優先 ⇒ 這是下界)—— 耐久見 data.js ULT_SUPPORT`);
+      + `;選敵最近優先 ⇒ 這是下界)—— 耐久見 data.js ATK_SUPPORT`);
   }
   console.log(`${okF2 ? '✅' : '❌'} 4.4 自身型補償  ${selfChs.length} 台的長按 MUST 全數 > 0`
-    + `(視野/匿蹤/復活等本模型不計價 ⇒ 這些是下界;係數見 data.js SELF_ULT.REALIZED_F = ${SELF_ULT.REALIZED_F})`);
+    + `(視野/匿蹤/復活等本模型不計價 ⇒ 這些是下界;係數見 data.js SELF_ATK.REALIZED_F = ${SELF_ATK.REALIZED_F})`);
 
   // ---- 4.5 模擬長度(使用者「在確保模擬準確度前提下測試時間越短越好」) (原 ⑦e) ----
   const MED_MAX = 150, TIE_MAX = 0.55;

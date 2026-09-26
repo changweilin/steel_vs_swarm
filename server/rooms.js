@@ -657,8 +657,8 @@ export class RoomHub {
       if (m.t === 'plasma' && client.side) { b.heroPlasma(myId, m.dx, m.dz, m.slot, m.o, m.dy); return; }   // o=[x,z,y] 槍口 / dy=3D射向
       if (m.t === 'lance' && client.side) { b.heroLance(myId, m.o, m.d, m.len); return; }   // 直線貫穿(beam/rail/gun 重武器):o=[x,z,y] 槍口 / d=[dx,dz,dy] 射向 / len=射線長
       // 機種絕招的三條訊息(kami / decoy / hyper)2026-08-06 整組退場,MUST NOT 復辟:
-      // 長按右鍵改成招式手勢(一般 = 小招 / 狙擊 = 大招)⇒ 一律走下面的 't: cast' 單一縫,
-      // 三種載具只剩「大招遞送」這一個身分(sim._launchUltCarrier)。
+      // 長按右鍵改成招式手勢(一般 = 守招 / 狙擊 = 攻招)⇒ 一律走下面的 't: cast' 單一縫,
+      // 三種載具只剩「攻招遞送」這一個身分(sim._launchAtkCarrier)。
       if (m.t === 'swap' && client.side) { b.heroSwap(myId, m.i); return; }
       if (m.t === 'lock' && client.side) { b.heroLock(myId, m.id); return; }
       if (m.t === 'civ' && client.side) { b.civInteract(myId, m.id, m.act); return; }   // 平民互動:跟隨/驅趕

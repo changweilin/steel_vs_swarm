@@ -702,8 +702,8 @@
       <div class="wpn-box"><span id="wpnName"></span><span id="wpnAmmo" class="wpn-ammo"></span></div>
       <div class="burst-box"><span id="burstName">重武器</span> <span id="burstCd" class="burst-cd">就緒</span></div>
       <div class="ab-row">
-        <div class="ab-box" id="abSkill"><span class="ab-key">Q</span><span class="ab-name" id="abSkillName">—</span><span class="ab-cd" id="abSkillCd"></span></div>
-        <div class="ab-box" id="abUlt"><span class="ab-key">E</span><span class="ab-name" id="abUltName">—</span><span class="ab-cd" id="abUltCd"></span></div>
+        <div class="ab-box" id="abDef"><span class="ab-key">Q</span><span class="ab-name" id="abDefName">—</span><span class="ab-cd" id="abDefCd"></span></div>
+        <div class="ab-box" id="abAtk"><span class="ab-key">E</span><span class="ab-name" id="abAtkName">—</span><span class="ab-cd" id="abAtkCd"></span></div>
         <!-- 空白鍵機動能力:無人機=完美迴避 / 機甲=蓄力跳躍 / 變形機甲=升空變形(CD 顯示) -->
         <div class="ab-box" id="abMobil"><span class="ab-key">␣</span><span class="ab-name" id="abMobilName">—</span><span class="ab-cd" id="abMobilCd"></span></div>
       </div>
@@ -876,7 +876,7 @@
        類比搖桿 = 移動(輕推慢走、推到底衝刺);十字鍵四向是「按鍵」不是移動 ——
        上 ⊟ 商店 / 下 陀螺儀開關 / 右 小地圖範圍(周遭 ⇄ 全部,等同鍵盤 M),
        左 = **施放招式**(2026-08-01 從 ZR 搬來,原本是保留未用的版位;扳機位改給視野鎖定)。
-       2026-08-06 起長按 = 招式手勢(一般模式小招 / 狙擊模式大招),機種絕招整組退場。
+        2026-08-06 起長按 = 招式手勢(一般模式守招 / 狙擊模式攻招),機種絕招整組退場。
        這顆與「長按 R」是同一個派發縫(game.js `_fireHoldAbility`),只是不必長按;
        冷卻秒數由 main.js `padMirror('special')` 鏡射進鈕面的 .gb-cd,與舊 ZR 同源。
        陀螺儀開關**只住這裡**(2026-07-27 起)—— 兩顆同功能的鈕就是兩處要同步的狀態。 -->
@@ -895,8 +895,8 @@
        ABXY 走 Switch 方位(X 上 / Y 左 / A 右 / B 下):A 射擊 ・ B 跳躍(機動)・ X 防守 ・ Y 招式;
        招式名稱與冷卻由 main.js 一併鏡射進 .gb-cd。視角搖桿與「空處拖曳」並存,兩者都走 _applyLook。 -->
   <div class="tl-gp">
-    <button class="tl-gb gb-x" type="button" data-act="skill"><i class="gb-k">X</i><span class="gb-f">防守</span><span class="gb-cd"></span></button>
-    <button class="tl-gb gb-y" type="button" data-act="ult"><i class="gb-k">Y</i><span class="gb-f">招式</span><span class="gb-cd"></span></button>
+    <button class="tl-gb gb-x" type="button" data-act="def"><i class="gb-k">X</i><span class="gb-f">防守</span><span class="gb-cd"></span></button>
+    <button class="tl-gb gb-y" type="button" data-act="atk"><i class="gb-k">Y</i><span class="gb-f">招式</span><span class="gb-cd"></span></button>
     <button class="tl-gb gb-a" type="button" data-act="fire"><i class="gb-k">A</i><span class="gb-f">射擊</span></button>
     <button class="tl-gb gb-b" type="button" data-act="jump"><i class="gb-k">B</i><span class="gb-f">跳躍</span><span class="gb-cd"></span></button>
   </div>

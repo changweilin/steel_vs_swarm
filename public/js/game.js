@@ -21,7 +21,7 @@ import {
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
-   CREEP_UPG, DISSOLVE, dissolveOutAt, ULT_CAST_S, fogSightMult, scopeRvminFog,
+   CREEP_UPG, DISSOLVE, dissolveOutAt, ATK_CAST_S, fogSightMult, scopeRvminFog,
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
   WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
   FIRE_WEATHER, fireDotMul,
@@ -671,15 +671,15 @@ export class BattleClient {
     this._liftLockUntil = 0;                    // 受擊掉高動力回復鎖定截止時刻(FLIGHT.HIT_LOCK_S)
     this.unbalLeft = 0;                         // 受擊失衡異常狀態剩餘秒(伺服器快照同步)
 
-    // 角色(專屬機體 + 輕/重武器 + 小招/大招);開房廣播帶 ch,快照亦會同步
-    this.abil = { light: 1, heavy: 1, skill: 1, ult: 1 };   // 招式開場即 Lv1 可用(2026-07-20)
+    // 角色(專屬機體 + 輕/重武器 + 守招/攻招);開房廣播帶 ch,快照亦會同步
+    this.abil = { light: 1, heavy: 1, def: 1, atk: 1 };   // 招式開場即 Lv1 可用(2026-07-20)
     this.wdef = {};                   // slot -> 解析後武器數值(含英雄倍率與階級)
     this.wstate = {};                 // slot -> { ammo, reloadEnd }(本地 HUD;伺服器另行把關)
     this.lastFireAt = { light: 0, heavy: 0 };
     this.bullets = [];                // 彈道學子彈(初速 mv + 重力,射程上限)
     this._setChar(this.ch || null);
     this.money = 0;
-    this.upg = { lw: 0, hw: 0, sk: 0, ult: 0, hp: 0, ar: 0, sp: 0, ch: 0 };   // 八軌升級(快照 o.up 回寫)
+    this.upg = { lw: 0, hw: 0, def: 0, atk: 0, hp: 0, ar: 0, sp: 0, ch: 0 };   // 八軌升級(快照 o.up 回寫)
     this._reserve = new Set();        // 商店預約名單(錢一夠自動下單;純客戶端排程,見 _tickReserve)
     // 超級大戰自動購買預設勾選:超級升級一進戰場就掛上預約(玩家可手動摘下,摘下後不再自動加回)
     if (isSuperSide(this.side)) this._reserve.add('super');
@@ -688,8 +688,8 @@ export class BattleClient {
     this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
     this._mpAuth = false;             // maxMp 是否已收到伺服器權威值(爬升動力上限 MUST NOT 拿上面那個佔位的 1 去解析)
     this.kn = 0;                      // 戰鬥分數(八軌升級的第二道門檻;伺服器權威,只增不減)
-    this.cds = [0, 0];                // [小招, 大招] 冷卻(伺服器倒數)
-    this.chg = [[1, 1, 0], [1, 1, 0]]; // [[小招可用, 小招上限, 下次冷卻], [大招可用, 大招上限, 下次冷卻]]
+    this.cds = [0, 0];                // [守招, 攻招] 冷卻(伺服器倒數)
+    this.chg = [[1, 1, 0], [1, 1, 0]]; // [[守招可用, 守招上限, 下次冷卻], [攻招可用, 攻招上限, 下次冷卻]]
     this.castLeft = 0;                // 招式前搖剩餘秒數(快照同步)
     this._castingUntil = 0;           // 本地樂觀前搖結束時戳
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
@@ -3045,8 +3045,8 @@ export class BattleClient {
         // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例)
         if (e.code === 'KeyB') this._toggleShop();
         if (!this.dead) {
-          if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
-          if (e.code === 'KeyE') this._castAbility('ult');     // 大招
+          if (e.code === 'KeyQ') this._castAbility('def');   // 守招
+          if (e.code === 'KeyE') this._castAbility('atk');     // 攻招
           if (e.code === 'KeyR') this._startReload();
           if (e.code === 'KeyF') this._toggleDefense();        // 防守姿態(正面生成磁力護盾)
           // 平民互動(靠近平民時 HUD 顯示提示):G 要求跟隨 / H 驅趕
@@ -3217,7 +3217,7 @@ export class BattleClient {
     this._applyLook(dYaw * LOOK_SPEED * dt, dPitch * LOOK_SPEED * dt);
   }
 
-  /** 右鍵按下:直接施放招式(一般模式 = 小招 / 狙擊模式 = 大招,見 _fireHoldAbility)。 */
+  /** 右鍵按下:直接施放招式(一般模式 = 守招 / 狙擊模式 = 攻招,見 _fireHoldAbility)。 */
   _rmbDown() {
     if (!this.side || this.dead || this.shopOpen) return;
     this._fireHoldAbility();
@@ -3268,11 +3268,11 @@ export class BattleClient {
     switch (act) {
       case 'fire': this.firing = !!down; break;
       case 'aim': if (down) this._setAiming(!this.aiming); break;
-      case 'skill': if (down) this._castAbility('skill'); break;
-      case 'ult': if (down) this._castAbility('ult'); break;
+      case 'def': if (down) this._castAbility('def'); break;
+      case 'atk': if (down) this._castAbility('atk'); break;
       case 'reload': if (down) this._startReload(); break;
       // 招式鈕(十字鍵左):與「長按右鍵 / 長按 R」同一個派發縫(_fireHoldAbility)——
-      // 一般模式放小招、狙擊模式放大招,MUST NOT 在此另寫一次模式判斷
+      // 一般模式放守招、狙擊模式放攻招,MUST NOT 在此另寫一次模式判斷
       case 'special': if (down) this._fireHoldAbility(); break;
       case 'civFollow': if (down) this._civAct('follow'); break;
       case 'civAway': if (down) this._civAct('away'); break;
@@ -3575,8 +3575,8 @@ export class BattleClient {
           // 掉點擊(「沒辦法馬上購買」)。以 money/擊殺/升級/角色/階級簽章 gate,idle 時完全不重繪。
           if (this.shopOpen) {
             const u = this.upg;
-            const sig = `${Math.floor(this.money)}|${this.kn}|${this.ch}|${this.abil.light}.${this.abil.heavy}.${this.abil.skill}.${this.abil.ult}|`
-              + ['lw', 'hw', 'sk', 'ult', 'hp', 'ar', 'sp', 'ch'].map((k) => u[k] || 0).join(',')
+            const sig = `${Math.floor(this.money)}|${this.kn}|${this.ch}|${this.abil.light}.${this.abil.heavy}.${this.abil.def}.${this.abil.atk}|`
+              + ['lw', 'hw', 'def', 'atk', 'hp', 'ar', 'sp', 'ch'].map((k) => u[k] || 0).join(',')
               + `|sup:${u.super || 0}`   // 超級升級(一般對戰恆 0,簽章穩定不誤觸重繪)
               + `|${[...this._reserve].join('.')}`   // 預約名單(成交/退場都要讓 ★ 跟著更新)
               + `|${(this.creepUpg?.[this.side] || []).join('.')}`;   // 陣營小兵強化(共用值,別人買了也要重繪)
@@ -4923,8 +4923,8 @@ export class BattleClient {
       if (ev.pid === this.youId) {
         // 餌機(轟炸機)彈射分離:掛點瞬間抽離的機體震動(伺服器確認才震,請求被拒不會誤震)
         this.trauma = Math.min(1, this.trauma + SHAKE.DECOY);
-        this.hud.feed?.(ev.slot === 'ult' ? '💣 攻擊招式載具升空:轟炸機自後方工事飛往落點投遞!'
-          : ev.slot === 'skill' ? '💣 防守招式載具升空:轟炸機自機側飛往落點投遞!'
+        this.hud.feed?.(ev.slot === 'atk' ? '💣 攻擊招式載具升空:轟炸機自後方工事飛往落點投遞!'
+          : ev.slot === 'def' ? '💣 防守招式載具升空:轟炸機自機側飛往落點投遞!'
           : ev.homing ? '💣 集束炸彈投放:轟炸機追蹤鎖定目標!' : '💣 集束炸彈投放:轟炸機直飛(無法操舵)');
       }
     } else if (ev.e === 'decoyLost') {
@@ -4932,7 +4932,7 @@ export class BattleClient {
     } else if (ev.e === 'hyper') {
       // 極音速飛彈發射:彈體本身是伺服器實體(走 ents 渲染),這裡只播報 + 發射點後燄
       if (ev.pid === this.youId) {
-        this.hud.feed?.(ev.slot === 'ult' ? '🚀 攻擊招式載具發射:飛彈自後方工事飛往落點!'
+        this.hud.feed?.(ev.slot === 'atk' ? '🚀 攻擊招式載具發射:飛彈自後方工事飛往落點!'
           : ev.homing ? '🚀 極音速飛彈發射:鎖定目標,射後不理!' : '🚀 極音速飛彈發射:無鎖定,打向正前方');
       }
     } else if (ev.e === 'cast_start') {
@@ -4987,8 +4987,8 @@ export class BattleClient {
       // 地面高走 surfaceAt 唯一縫(§2):以施放者當下高度當 curY —— 隧道內施放
       // 特效貼隧道路面、橋上施放貼橋面;裸 heightAt 會把演出釘上覆蓋段山頂。
       const surfY = (x, z) => this._surf(x, z, casterPos ? casterPos().y : this.terrain.heightAt(x, z));
-      // 大招載具遞送(ev.carrier):效果還在天上飛 —— 施法當下只演施法動作/立繪/播報,
-      // 落點效果等載具抵達的 ultfx 事件再演(在這裡就開演 = 演出跑在結算前面,擊落也收不回來)
+      // 攻招載具遞送(ev.carrier):效果還在天上飛 —— 施法當下只演施法動作/立繪/播報,
+      // 落點效果等載具抵達的 atkfx 事件再演(在這裡就開演 = 演出跑在結算前面,擊落也收不回來)
       if (!ev.carrier) {
         spawnCastFx(this.scene, this.effects, {
           ch: ev.ch, slot: ev.slot, lvl: ev.lvl || 1, fx: ev.fx, side: ev.side,
@@ -5017,21 +5017,21 @@ export class BattleClient {
         this.hud.feed?.(ev.side === this.side
           ? `${tag} ${c.code}【${a.name}】`
           : `⚠️ 敵方 ${c.code} 施放【${a.name}】!`);
-        // 立繪演出:自己的招式一律演;敵方只演大招(小招太頻繁會蓋住視野)
+        // 立繪演出:自己的招式一律演;敵方只演攻招(守招太頻繁會蓋住視野)
         const self = ev.pid === this.youId;
         if (self) { this._castingUntil = 0; this.castLeft = 0; }
         this.cutin.show(ev, self, ev.side ? SIDES[ev.side].color : '#ffffff');
-        if (ev.slot === 'ult') this.trauma = Math.min(1, this.trauma + (self ? 0.45 : 0.25));
+        if (ev.slot === 'atk') this.trauma = Math.min(1, this.trauma + (self ? 0.45 : 0.25));
       } else if (ev.pid === this.youId) {
         this._castingUntil = 0; this.castLeft = 0;
       }
-    } else if (ev.e === 'ultfx') {
-      // 大招載具抵達:效果在落點結算(伺服器 _ultArrive)—— 這裡補上落點演出。
+    } else if (ev.e === 'atkfx') {
+      // 攻招載具抵達:效果在落點結算(伺服器 _atkArrive)—— 這裡補上落點演出。
       // 錨定落點(casterPos null),分批遞送(frac < 1)縮小尺寸 —— 看到多大 ≈ 拿到多少份
       const wx = ev.x, wz = -ev.z;
       const surfY = (x, z) => this._surf(x, z, this.terrain.heightAt(x, z));
       spawnCastFx(this.scene, this.effects, {
-        ch: ev.ch, slot: ev.slot || 'ult', lvl: ev.lvl || 1, fx: ev.fx, side: ev.side,
+        ch: ev.ch, slot: ev.slot || 'atk', lvl: ev.lvl || 1, fx: ev.fx, side: ev.side,
         at: new THREE.Vector3(wx, surfY(wx, wz), wz),
         casterPos: null, groundY: surfY,
         r: ev.r || 0, dur: ev.dur || 0, scale: 4 * Math.sqrt(Math.max(0.25, ev.frac ?? 1)),
@@ -6278,7 +6278,7 @@ export class BattleClient {
   }
 
 
-  // ---------------- 餌機掛點(純外觀;2026-08-06 起只服務大招載具遞送)----------------
+  // ---------------- 餌機掛點(純外觀;2026-08-06 起只服務攻招載具遞送)----------------
   /** 掛點餌機:組合(慢慢裝上)/ 分離(瞬間彈出)的縮放動畫 */
   _updateDecoyPod(ent, dt) {
     const pod = ent.mesh.userData.decoyPod;
@@ -6920,7 +6920,7 @@ export class BattleClient {
     this.upg.super = lvl + 1;
     const combat = superCombatLvl(lvl + 1);
     let changed = false;
-    for (const s of ['light', 'heavy', 'skill', 'ult']) {
+    for (const s of ['light', 'heavy', 'def', 'atk']) {
       if (this.abil[s] !== combat) { this.abil[s] = combat; changed = true; }
     }
     if (changed) this._setChar(this.ch, true);
@@ -8356,7 +8356,7 @@ export class BattleClient {
     }
   }
 
-  // ---------------- 招式(Q 小招 / E 大招:解鎖 + CD + 電力,伺服器結算)----------------
+  // ---------------- 招式(Q 守招 / E 攻招:解鎖 + CD + 電力,伺服器結算)----------------
   _castAbility(slot) {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
     const now = performance.now() / 1000;
@@ -8367,7 +8367,7 @@ export class BattleClient {
       }
       return;
     }
-    const idx = slot === 'skill' ? 0 : 1;
+    const idx = slot === 'def' ? 0 : 1;
     const lvl = this.abil[slot] || 1;
     const A = heroAbility(this.ch, slot, lvl);
     if (!A) return;
@@ -8395,7 +8395,7 @@ export class BattleClient {
       x = point.x; z = point.z;
     }
     this.net.send({ t: 'cast', slot, x: Math.round(x * 10) / 10, z: Math.round(-z * 10) / 10 });
-    if (slot === 'ult' && this.defending) this._toggleDefense(false);
+    if (slot === 'atk' && this.defending) this._toggleDefense(false);
     if (A.shieldExpand) {
       this.shieldExpandUntil = now + (A.dur || 8);
       this._updateShieldVisibility();
@@ -8414,7 +8414,7 @@ export class BattleClient {
     } else {
       this.cds[idx] = (A.cd || 10) * snowMul;
     }
-    const castDur = slot === 'ult' ? (A.castTime || ULT_CAST_S) : (A.castTime || 0);
+    const castDur = slot === 'atk' ? (A.castTime || ATK_CAST_S) : (A.castTime || 0);
     if (castDur > 0) {
       this._castingUntil = now + castDur;
       this.castLeft = castDur;
@@ -8563,14 +8563,14 @@ export class BattleClient {
       defending: this.defending,
       code: c.code, machine: c.machine, aiming: this.aiming,
       light: slotHud('light'), heavy: slotHud('heavy'),
-      skill: abHud('skill', 0), ult: abHud('ult', 1),
+      def: abHud('def', 0), atk: abHud('atk', 1),
       sp: this.sp, msp: this.maxSp, mp: this.mp, mm: this.maxMp,
       // 爬升動力(飛行機體限定;非飛行狀態 = null ⇒ HUD 整條收起)。上限正比於電力,見 data.FLIGHT
       lift: this._flying() ? { v: Math.max(0, this.lift ?? this._liftMax()), max: this._liftMax() } : null,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
       // 機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)自 2026-08-06 起整組退場 ⇒ 這裡不再有
-      // kami / decoy / hyper 三格。長按右鍵改成招式手勢(一般 = 小招、狙擊 = 大招),
-      // CD 一律由上面的 skill / ult 兩格顯示 —— 再畫一顆機種絕招格就是「鈕面說有、按下去沒有」的假招。
+      // kami / decoy / hyper 三格。長按右鍵改成招式手勢(一般 = 守招、狙擊 = 攻招),
+      // CD 一律由上面的 def / atk 兩格顯示 —— 再畫一顆機種絕招格就是「鈕面說有、按下去沒有」的假招。
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
       // 空白鍵機動能力 CD(HUD 顯示;完美迴避 30s / 蓄力跳躍 15s / 升空變形 15s,皆客戶端時戳)
       mobil: this.isDrone ? { name: '完美迴避', cd: Math.max(0, (this._dodgeCd || 0) - now) }
@@ -9671,7 +9671,7 @@ export class BattleClient {
     if (!tgt) return { spec: true, follow: false, who: `觀戰模式 ・ ${vname}`, hp: 0, max: 1 };
     const c = CHARACTERS[tgt.ch];
     const kind = c?.kind || (tgt.side && SIDES[tgt.side].hero) || 'robot';
-    const ab = tgt.ab || { light: 1, heavy: 1, skill: 1, ult: 1 };
+    const ab = tgt.ab || { light: 1, heavy: 1, def: 1, atk: 1 };
     const mp = tgt.mp ?? 0, mm = tgt.mm || 1;
     const slotHud = (id) => {
       const def = heroWeapon(tgt.ch, id, ab[id] || 1);
@@ -9695,11 +9695,11 @@ export class BattleClient {
       money: tgt.money || 0, kn: tgt.kn || 0, atBase: false, aiming: false,
       code: c?.code, machine: c?.machine,
       light: slotHud('light'), heavy: slotHud('heavy'),
-      skill: abHud('skill', 0), ult: abHud('ult', 1),
+      def: abHud('def', 0), atk: abHud('atk', 1),
       sp: tgt.sp || 0, msp: tgt.maxSp || 1, mp, mm,
       lift: null, mobil: null, morph: null,
       emp: tgt.emp || 0, stealth: 0,
-      // 機種絕招 2026-08-06 整組退場 ⇒ 觀戰面板與交戰 HUD 同樣只剩 skill / ult 兩格招式冷卻。
+      // 機種絕招 2026-08-06 整組退場 ⇒ 觀戰面板與交戰 HUD 同樣只剩 def / atk 兩格招式冷卻。
     };
   }
 

@@ -45,7 +45,7 @@
 //   ・預算怎麼切(kami 4 份均分、decoy 撞擊 + 6 顆逐顆個別瞄準、hyper 單一戰鬥部吃整份)。
 // 故本模型把載具當**真的實體**跑:進 foesOf ⇒ 敵方砲塔/小兵/機體都打得到它,擊落也有賞金。
 // MUST NOT 簡化成「一次性加一筆傷害」——那等於把上面四項全部抹平,ⓕ 那一段就永遠是三個相同的數字。
-// 小招/大招仍不在模型內(使用者:先不考慮大小招),TRACKS 也仍不含 sk/ul。
+// 守招/攻招仍不在模型內(使用者:先不考慮攻守招),TRACKS 也仍不含 def/atk。
 //
 // ---- 與 server/sim.js 的對齊 ----
 // 傷害鏈逐項對齊 sim.heroHit/_blast:dmgFalloff → vsMult → 爆擊期望 → 閃避期望 → shieldSplit
@@ -56,8 +56,8 @@ import {
   dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, fanConeHalf, blastFootprintR, aoeClass,
   shieldSplit, heavyMpCost, upgradePrice, canUpgrade, battleScoreGain, addBattleScore, waveComp, waveMarchSpeed, hitR, lanceR,
   kamiHp, kamiSide, decoyHp, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd, hyperTrackR,
-  heroAbility, ultDelivered, ultParts, ultPartN, ULT_CARRIER, SELF_ULT, selfUltBoost,
-  supportN, supportHp, supportLegS, supportSpeed, supportF, selfUltTempo,
+  heroAbility, atkDelivered, atkParts, atkPartN, ATK_CARRIER, SELF_ATK, selfAtkBoost,
+  supportN, supportHp, supportLegS, supportSpeed, supportF, selfAtkTempo,
 } from '../public/js/data.js';
 import { waveInterval } from '../server/sim.js';
 
@@ -73,10 +73,10 @@ export const LANE = {
   START_F: 1.10,        // 起始間距 = 雙方最長有效射程 × 此值(開場雙方都在射程外)
   PREF_STEP_M: 4,       // 偏好交戰距離的掃描解析度(公尺)
   LAT_M: 12,            // 同波成員橫向散布半寬(公尺;< GAME.LANE_SAFE_M ⇒ 仍在走廊內)
-  // 升級只買**模型算得到**的六軌:小招/大招不在本模型內(使用者指示「先不考慮長按技和大小招」),
+  // 升級只買**模型算得到**的六軌:守招/攻招不在本模型內(使用者指示「先不考慮長按技和攻守招」),
   // 讓它進採購清單等於兩邊都把錢丟進黑洞、只是把戰鬥升級節奏整體拖慢 = 系統性偏誤。
   TRACKS: ['lw', 'hw', 'hp', 'ar', 'sp', 'ch'],
-  // 補血型大招的施放門檻(EHP 佔比):**鏡射 `bots._castSupport` 的 `hurt = frac < 0.55`**。
+  // 補血型攻招的施放門檻(EHP 佔比):**鏡射 `bots._castSupport` 的 `hurt = frac < 0.55`**。
   // 那個數字在 bots.js 是行內常數 ⇒ 改那邊 MUST 回頭改這裡,否則模型會在滿血時把治療倒掉。
   HEAL_FRAC: 0.55,
 };
@@ -101,7 +101,7 @@ export function mech(ch, side, tw = null) {
     hp0: Math.round(u.hp * (m.hp ?? 1)), sp0: Math.round(u.shield * (m.sp ?? 1)),
     armor0: heroArmor(ch), mp0: u.mp * (m.mp ?? 1), mpRegenBase: u.mpRegen,
     mob: heroMobility(kind, m, flying), slots: [], hurtT: -99,
-    // ---- 長按 = 大招(2026-08-06 第二階段)的量測面(bal ⑦f)----
+    // ---- 長按 = 攻招(2026-08-06 第二階段)的量測面(bal ⑦f)----
     // `abil*` = **載具組**的實得傷害帳(strike payload;分三桶,見 detonate 的註解);
     // `car*`  = 載具**份額**的交付率(送出幾份 / 抵達幾份)—— 這一項對每一種 payload 都成立,
     //           效果型(heal/emp/buff/summon)沒有 EHP 可量,但「有沒有飛到」照樣量得到;
@@ -109,8 +109,8 @@ export function mech(ch, side, tw = null) {
     // `ult*`  = **自身型組**的補償兌現帳(EHP 當量:多打出的 + 少挨的 + 補回來的)。
     abilAt: 0, abilN: 0, abilDmg: 0, abilBy: { hero: 0, tower: 0, creep: 0 },
     carN: 0, carHit: 0, carNom: 0, supLost: 0,
-    ultN: 0, ultBy: { dealt: 0, dealtEff: 0, prevented: 0, healed: 0 },
-    uf: null,   // 目前生效的自身型大招時窗(見 ufFrom / supSync)
+    atkN: 0, atkBy: { dealt: 0, dealtEff: 0, prevented: 0, healed: 0 },
+    uf: null,   // 目前生效的自身型攻招時窗(見 ufFrom / supSync)
     sup: null,  // 目前這一輪輔助機隊的群組紀錄(見 castSelfUlt)
   };
   M.tw = tw;
@@ -190,11 +190,11 @@ const dodgeP = (tgt, U = null) => {
   return Math.min(EVASION.P_MAX, EVASION.GROUND + (tgt.flying ? EVASION.AIR_BONUS : 0) + (U ? U.evade : 0));
 };
 
-/** 目前生效的大招時窗(自身型的補償 / 載具遞送的團隊 buff 共用同一份紀錄;過期 = null) */
+/** 目前生效的攻招時窗(自身型的補償 / 載具遞送的團隊 buff 共用同一份紀錄;過期 = null) */
 const ufAt = (e, now) => (e.hero && e.uf && e.uf.until > now ? e.uf : null);
 
 /** 對目標結算一次傷害(雙層拆分 → 裝甲層吃 armorMul);回傳實際扣掉的 EHP。
- *  now = 模擬時鐘:大招的減傷 / 閃避在此消費(未傳 = 不吃 buff,舊行為)。 */
+ *  now = 模擬時鐘:攻招的減傷 / 閃避在此消費(未傳 = 不吃 buff,舊行為)。 */
 // evd0 = 這一擊吃不吃閃避(呼叫端先過 `evadable`;NPC 那條刻意維持 false,見該處註)
 function damage(tgt, dmg, def, evd0, now = -Infinity) {
   const U = ufAt(tgt, now);
@@ -211,7 +211,7 @@ function damage(tgt, dmg, def, evd0, now = -Infinity) {
   // 沒有這一招時會扣掉 got × (fBase / fNow),差額就是這一招擋下來的 EHP —— 是等式不是估計。
   if (U && got > 0) {
     const fNow = takenF * evF, fBase = evd0 ? evadeExpF(def, dodgeP(tgt, null)) : 1;
-    if (fNow > 1e-9 && fBase > fNow) tgt.ultBy.prevented += got * (fBase / fNow - 1);
+    if (fNow > 1e-9 && fBase > fNow) tgt.atkBy.prevented += got * (fBase / fNow - 1);
   }
   // 挨打即結束(t02 超載的 `brk`):對齊 sim._breakOnHit —— 全滿彈匣 + 零裝填的爆發
   // 只在沒被打到的前提下成立,吃到一發就回到常態(這條風險正是它的價錢)。
@@ -350,7 +350,7 @@ function reFire(next, t, iv) {
  * 對線期打人、沒人打就清兵、清完兵才拆塔,與正式對局的優先序同構。
  */
 function fire(M, foe, enemyTower, t, foes) {
-  if ((M.empUntil || 0) > t) return;   // 大招 EMP:武器離線(移動不受影響,對齊 sim._jammed)
+  if ((M.empUntil || 0) > t) return;   // 攻招 EMP:武器離線(移動不受影響,對齊 sim._jammed)
   const U = ufAt(M, t);
   const dmgF = U ? U.dmgF : 1, rangeF = U ? U.rangeF : 1, reloadF = U ? U.reloadF : 1;
   for (const s of M.slots) {
@@ -392,13 +392,13 @@ function fire(M, foe, enemyTower, t, foes) {
       // 火力加成會被兵波灌爆(實測 s04 一次施放的帳從 925 掉到 hero+tower 才是真正兌現的量)。
       if (U && got > 0) {
         const add = bonus ? got : got * (dmgF - 1) / dmgF;
-        M.ultBy.dealt += add;
-        if (h.ent.hero || h.ent.tower) M.ultBy.dealtEff += add;
+        M.atkBy.dealt += add;
+        if (h.ent.hero || h.ent.tower) M.atkBy.dealtEff += add;
       }
       if (U && U.vamp > 0 && got > 0) {                        // 吸血(m01「回收條款」的 add)
         const before = M.hp;
         M.hp = Math.min(M.maxHp, M.hp + got * U.vamp);
-        M.ultBy.healed += M.hp - before;
+        M.atkBy.healed += M.hp - before;
       }
       reward(M, h.ent);
     }
@@ -413,14 +413,14 @@ function reward(M, e) {
   M.score = addBattleScore(M.score, battleScoreGain(e.kind, !!e.hero));
 }
 
-// ---------- 長按 = 大招(2026-08-06 使用者定案:一般模式 → 小招 / 狙擊模式 → 大招)----------
+// ---------- 長按 = 攻招(2026-08-06 使用者定案:一般模式 → 守招 / 狙擊模式 → 攻招)----------
 // 機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)**整組退場**,本模型裡的「長按」自此只有兩條路:
-//   ・**載具組**(23 台,`ultDelivered`)—— 同機種形式的載具點遞送大招 payload。載具仍是
+//   ・**載具組**(22 台,`atkDelivered`)—— 同機種形式的載具點遞送攻招 payload。載具仍是
 //     **可被擊落的實體**(進 foesOf ⇒ 敵方砲塔/小兵/機體都打得到),所以這一組的價值就是
 //     「**送出去的份額有幾份真的飛到**」:kami 魚貫、轟炸機逐批、飛彈全有或全無,三種形式在
 //     同一組前線火力下的交付率本來就不同,而那正是 ⑦f 要量的東西。
-//   ・**自身型組**(9 台)—— 2026-08-07 起同樣是載具制:派出 `supportN` 架**跟隨玩家的輔助機**
-//     (data.js ULT_SUPPORT),飛完投放腿才供輸、被打下來就少一份(疊加是加法)。價值仍在
+//   ・**自身型組**(10 台)—— 2026-08-07 起同樣是載具制:派出 `supportN` 架**跟隨玩家的輔助機**
+//     (data.js ATK_SUPPORT),飛完投放腿才供輸、被打下來就少一份(疊加是加法)。價值仍在
 //     「時窗裡多打出多少 / 少挨多少 / 補回多少」EHP,但那個時窗現在是**可以被打斷的**。
 //     輔助機 MUST 當真的實體跑(進 foesOf)—— 模型看不到它就等於這一輪改制沒有發生;
 //     損失率由 bal ⑦f 的「輔助機損失」那一行印出來(恆 0 = 這一條沒有兌現)。
@@ -486,23 +486,23 @@ function spendAbilCharge(M, t, A) {
 function castAbil(M, foe, enemyTower, t, foes, ownFort) {
   if (M.achg) {
     M.achg = M.achg.filter((rt) => rt > t);
-    const max = heroAbility(M.ch, 'ult', 1).charges || 1;
+    const max = heroAbility(M.ch, 'atk', 1).charges || 1;
     if (M.achg.length >= max) return [];
   } else if (t < M.abilAt) {
     return [];
   }
-  // `noUlt` = ⑦f 的**反事實對照組**(同一台機體、同一份升級,只是不放大招)。自身型組的價值
+  // `noUlt` = ⑦f 的**反事實對照組**(同一台機體、同一份升級,只是不放攻招)。自身型組的價值
   // 有一半本模型無法逐項歸因(射程/移速/視野/匿蹤,見本節檔頭)⇒ 拿「有 vs 沒有」的鏡像勝率量,
   // 就不必替每一種效果各寫一條計價規則,也就不會漏算(漏算的症狀是「這一招看起來沒有用」)。
   if (M.tw?.noUlt) return [];
-  // 載具組:同形式載具攜帶大招 payload 點遞送(效果取代傷害),CD/MP 走 heroAbility 解析值
-  if (ultDelivered(M.ch)) return castUltCarrier(M, foe, enemyTower, t, foes, ownFort);
+  // 載具組:同形式載具攜帶攻招 payload 點遞送(效果取代傷害),CD/MP 走 heroAbility 解析值
+  if (atkDelivered(M.ch)) return castAtkCarrier(M, foe, enemyTower, t, foes, ownFort);
   // 自身型組:派出跟隨玩家的輔助機隊(2026-08-07),飛完投放腿才供輸、被打下來就少一份
   return castSelfUlt(M, foe, enemyTower, t, foes, ownFort);
 }
 
 /**
- * 自身強化型大招的時窗紀錄(`M.uf`)—— **一份**:自身型大招彼此不疊(一次只放得出一招),
+ * 自身強化型攻招的時窗紀錄(`M.uf`)—— **一份**:自身型攻招彼此不疊(一次只放得出一招),
  * 欄位對齊伺服器的 mods 通道:dmgF ← mul.dmg + 補償增額 / takenF ← mul.dmgTaken /
  * reloadF ← mul.reload / evade ← add.evade / speedF ← mul.speed 或 add haste /
  * rangeF ← mul.range / regenF ← rally 的 regen / noReload ← overdrive / vamp ← add vamp /
@@ -544,7 +544,7 @@ function supSync(M, live, t) {
   if (!g || g.tempo === 'burst') return;           // 瞬發型沒有時窗可供輸(交付完就退場)
   if (live <= 0) { M.uf = null; return; }
   // 匿蹤的爆發窗長度是 ALPHA_S 而不是 dur(伺服器同語意:同一份預算換一個更短更硬的窗)
-  const until = g.A.fx === 'stealth' ? (g.armAt ?? t) + SELF_ULT.ALPHA_S : g.until;
+  const until = g.A.fx === 'stealth' ? (g.armAt ?? t) + SELF_ATK.ALPHA_S : g.until;
   M.uf = ufFrom(g.A, g.B, supportF(M.ch, live), until);
 }
 
@@ -555,23 +555,23 @@ function supDeliver(M, frac) {
   const before = M.hp + M.sp;
   M.hp = Math.min(M.maxHp, M.hp + (g.A.heal + g.B.heal) * frac);
   if (g.A.sp) M.sp = Math.min(M.maxSp, M.sp + M.maxSp * frac);
-  M.ultBy.healed += (M.hp + M.sp) - before;
+  M.atkBy.healed += (M.hp + M.sp) - before;
 }
 
 /**
- * 自身強化型大招(9 台)= 派出 `supportN` 架**跟隨玩家的輔助機**(2026-08-07 使用者定案)。
- * 效果一律經 `data.js selfUltBoost` 這一個縫取增額 —— 模型自己算一份就是「bal 說平衡、打起來不是」
+ * 自身強化型攻招(10 台)= 派出 `supportN` 架**跟隨玩家的輔助機**(2026-08-07 使用者定案)。
+ * 效果一律經 `data.js selfAtkBoost` 這一個縫取增額 —— 模型自己算一份就是「bal 說平衡、打起來不是」
  * (症狀只會出現在補償那幾台身上,而且沒有任何錯誤訊息)。
  * 輔助機 MUST 當**真的實體**跑(進 foesOf ⇒ 敵方砲塔/小兵/機體都打得到它)—— 這一輪改制的
  * 全部代價就在這裡:少幾架就少幾份加成,而模型看不到它就等於改制沒有發生。
  */
 function castSelfUlt(M, foe, enemyTower, t, foes, ownFort) {
-  const A = heroAbility(M.ch, 'ult', 1);
+  const A = heroAbility(M.ch, 'atk', 1);
   if (M.mp < A.mp) return [];
   // ---- 施放時機:兩道閘,少一道這一招在模型裡就是**淨損** ----
   // ①**交戰中才放**(射程內有敵人):舊制的 `castAbil` 靠「reach 內有 aim」天然擋住開場空放,
   //   自身型沒有落點也就沒有那道閘 ⇒ t = 0 站在射程外就把 A.mp(75~85)倒掉,重武器接下來
-  //   好幾秒開不了火。實測 t02/t04/m01/m04 的鏡像對照組因此**放大招的那一側必敗**(0%),
+  //   好幾秒開不了火。實測 t02/t04/m01/m04 的鏡像對照組因此**放攻招的那一側必敗**(0%),
   //   而那量到的是「模型在空放」,不是這一招不好。
   // ②**補血型等真的掉血**(門檻鏡射 bots._castSupport 的 `hurt = frac < 0.55`):滿血放掉的
   //   治療量會被 `Math.min(maxHp, …)` 整份吃掉,帳上卻仍記一次施放 ⇒ ⑦f 讀成「兌現 0」。
@@ -580,20 +580,20 @@ function castSelfUlt(M, foe, enemyTower, t, foes, ownFort) {
     || foes.some((e) => !e.tower && !e.vehicle && e.hp > 0 && dist(M, e) - hitR(e) <= M.maxRange);
   if (!engaged) return [];
   if (A.fx === 'heal' && (M.hp + M.sp) >= (M.maxHp + M.maxSp) * LANE.HEAL_FRAC) return [];
-  const B = selfUltBoost(M.ch, 1, abilOf(M));
+  const B = selfAtkBoost(M.ch, 1, abilOf(M));
   M.mp -= A.mp;
   spendAbilCharge(M, t, A);
-  M.ultN++;
+  M.atkN++;
   const n = supportN(M.ch);
   M.uf = null;                                        // 舊時窗先下線(輔助機還沒就位 = 還沒供輸)
   M.sup = {
-    A, B, n, tempo: selfUltTempo(M.ch), armAt: null,
+    A, B, n, tempo: selfAtkTempo(M.ch), armAt: null,
     // 效果窗由**第一架就位**那一刻起算(對齊 sim._supArm 的 `g.until ??=`)——
     // 施放當下就定死的話,工事離施放者遠一點就在半路到期 = 這一招永遠交付不到。
     until: null, cleanse: !!A.cleanse,
   };
   M.carN += n;   // 輔助機同樣是「送出去幾份」——⑦f 自身型組另量 EHP,這一欄留給交叉比對
-  // 2026-08-07:大招自**最近的我方工事**出發,飛向主機才就位 ⇒ 投放腿是實距(離前線越深越久,
+  // 2026-08-07:攻招自**最近的我方工事**出發,飛向主機才就位 ⇒ 投放腿是實距(離前線越深越久,
   // 而且整段都在敵方火力下)。生成點 MUST 真的在工事上:寫成 M.x 的話這一輪改制在模型裡不存在。
   const ox = ownFort ? ownFort.x : M.x;
   return Array.from({ length: n }, (_, i) => ({
@@ -605,20 +605,20 @@ function castSelfUlt(M, foe, enemyTower, t, foes, ownFort) {
 }
 
 /**
- * converted 角色的長按 = 大招載具(2026-08-06):同形式載具(kami×N / 轟炸機 / 飛彈)點遞送,
- * payload = 大招效果(strike 傷害 / heal 自補 / dmgTaken 減傷 / emp 武器離線 / summon 加兵),
+ * converted 角色的長按 = 攻招載具(2026-08-06):同形式載具(kami×N / 轟炸機 / 飛彈)點遞送,
+ * payload = 攻招效果(strike 傷害 / heal 自補 / dmgTaken 減傷 / emp 武器離線 / summon 加兵),
  * **效果取代傷害** ⇒ 引爆不再吃 kamiBlast/decoyBlast/hyperBlast。落點發射當下烤死(pt 模式,
- * 不追蹤 —— 對齊 sim._launchUltCarrier);擊落 = 該份否定(無殉爆、無補投)。
- * CD = ultCarrierCd 解析值([30,60]s)、MP = 大招電力(與重武器搶同一池 —— 正式對局同構)。
+ * 不追蹤 —— 對齊 sim._launchAtkCarrier);擊落 = 該份否定(無殉爆、無補投)。
+ * CD = atkCarrierCd 解析值([30,60]s)、MP = 攻招電力(與重武器搶同一池 —— 正式對局同構)。
  */
-function castUltCarrier(M, foe, enemyTower, t, foes, ownFort) {
+function castAtkCarrier(M, foe, enemyTower, t, foes, ownFort) {
   const kind = ABIL_KIND[M.kind];
-  const A = heroAbility(M.ch, 'ult', 1);
+  const A = heroAbility(M.ch, 'atk', 1);
   if (M.mp < A.mp) return [];
   const offensive = A.fx === 'strike' || A.fx === 'emp' || A.fx === 'summon';
   let tx, ty;
   if (offensive) {
-    // 選敵序同 castAbil(機體 > 最近 NPC > 塔);遞送距離 = 大招射程(支援型預設已在 heroAbility 補上)
+    // 選敵序同 castAbil(機體 > 最近 NPC > 塔);遞送距離 = 攻招射程(支援型預設已在 heroAbility 補上)
     const reach = A.range || hyperRange();
     const inR = (e) => dist(M, e) - hitR(e) <= reach;
     let aim = foe.hp > 0 && inR(foe) ? foe : null;
@@ -635,7 +635,7 @@ function castUltCarrier(M, foe, enemyTower, t, foes, ownFort) {
     tx = aim.x; ty = aim.y;
   } else {
     // 支援型(heal/buff):對自身施放 —— 遞送點 = 面前 MIN_LEG(對齊 sim 的最短飛行腿)
-    tx = M.x + M.dir * ULT_CARRIER.MIN_LEG; ty = M.y;
+    tx = M.x + M.dir * ATK_CARRIER.MIN_LEG; ty = M.y;
   }
   // 2026-08-07:發射點 = 最近的我方工事(不是機體自己)。載具因此要先飛完「工事 → 落點」
   // 這一整段,而它從第一格起就是敵方砲塔/小兵/機體打得到的實體 ⇒ ⑦f 的交付率會跟著掉,
@@ -644,14 +644,14 @@ function castUltCarrier(M, foe, enemyTower, t, foes, ownFort) {
   M.mp -= A.mp;
   spendAbilCharge(M, t, A);
   M.abilN++;
-  const n = ultParts(M.kind, A.fx);
+  const n = atkParts(M.kind, A.fx);
   // 交付率的分母(bal ⑦f 的載具組):送出去幾份 —— 抵達幾份在 ultDetonate 那一頭記。
-  // `carNom` 只有 strike 有意義(名目爆風預算),它同時是 SELF_ULT.REALIZED_F 的量測面:
+  // `carNom` 只有 strike 有意義(名目爆風預算),它同時是 SELF_ATK.REALIZED_F 的量測面:
   // 「同一批載具帶著**傷害** payload,實得 ÷ 名目」正是被移除的機種絕招那個實得率的直接類比。
   M.carN += n;
   M.carNom += A.fx === 'strike' ? A.dmg * A.count : 0;
   const divis = A.fx === 'strike' || A.fx === 'summon';
-  const part = (i) => ({ uA: A, uFrac: 1 / n, uImp: divis ? ultPartN(A.count, n, i) : null });
+  const part = (i) => ({ uA: A, uFrac: 1 / n, uImp: divis ? atkPartN(A.count, n, i) : null });
   const base = { side: M.side, owner: M, vehicle: true, armor: 0, tgt: { hp: 0 }, tx, ty };
   const fwd = Math.sign(tx - ox) || M.dir;   // 發射點 → 落點(散開/前伸沿這個方向)
   if (kind === 'kami') {
@@ -674,7 +674,7 @@ function castUltCarrier(M, foe, enemyTower, t, foes, ownFort) {
   }];
 }
 
-/** 大招 payload 的落點施放(lanesim 端的 _castEffect 鏡射;只模型化模型量得到的量) */
+/** 攻招 payload 的落點施放(lanesim 端的 _castEffect 鏡射;只模型化模型量得到的量) */
 function ultDetonate(M, A, cx, cy, frac, nImp, t, foes, ctx) {
   M.carHit++;   // 這一份真的飛到了(交付率的分子;每呼叫一次 = 一份 payload 抵達)
   if (A.fx === 'strike') {
@@ -685,10 +685,10 @@ function ultDetonate(M, A, cx, cy, frac, nImp, t, foes, ctx) {
       const before = M.hp + M.sp;
       M.hp = Math.min(M.maxHp, M.hp + A.heal * frac);
       if (A.sp) M.sp = Math.min(M.maxSp, M.sp + M.maxSp * frac);
-      M.ultBy.healed += (M.hp + M.sp) - before;
+      M.atkBy.healed += (M.hp + M.sp) - before;
     }
   } else if (A.fx === 'buff') {
-    // 團隊 buff 的減傷與自身型大招共用同一份時窗紀錄(`uf`)—— 兩份紀錄就會有一份被另一份蓋掉,
+    // 團隊 buff 的減傷與自身型攻招共用同一份時窗紀錄(`uf`)—— 兩份紀錄就會有一份被另一份蓋掉,
     // 而症狀只是「這一招的減傷有時候沒生效」
     if (Math.hypot(M.x - cx, M.y - cy) <= A.r && A.mul?.dmgTaken) {
       M.uf = { until: t + A.dur, dmgF: 1, takenF: A.mul.dmgTaken, reloadF: 1,
@@ -707,7 +707,7 @@ function ultDetonate(M, A, cx, cy, frac, nImp, t, foes, ctx) {
 
 /**
  * 每格推進所有在空載具:飛行 → 逐份投遞 / 撲擊 / 俯衝 → 引爆或被擊落。
- * 2026-08-06 機種絕招退場後,在空載具**只剩大招載具**一種 ⇒ 被擊落的收尾也只剩一條規則:
+ * 2026-08-06 機種絕招退場後,在空載具**只剩攻招載具**一種 ⇒ 被擊落的收尾也只剩一條規則:
  * **該份完全否定**(kami 無殉爆、轟炸機不補投、飛彈本就不引爆)。三種形式分得出高下的地方
  * 因此換成了「**幾份飛得到**」:kami 魚貫(擊落幾架少幾份)、轟炸機逐批(剩下的整批沒了)、
  * 飛彈全有或全無 —— 這正是 ⑦f 載具組量的那個交付率。
@@ -774,7 +774,7 @@ function stepAbils(vehicles, t, dt, foesOf, ctx = null) {
       }
       alive.push(v); continue;
     }
-    // 大招轟炸機:進 BOMB_R 起逐份投遞(間斷型);投完短暫飛離解體(不撞擊自爆、不補投)。
+    // 攻招轟炸機:進 BOMB_R 起逐份投遞(間斷型);投完短暫飛離解體(不撞擊自爆、不補投)。
     // 下一份的時刻 MUST 由**這一份投出的當下**起算(`= t + GAP`,不是 `+= GAP`):
     // 巡航到接敵之間投不出去,`nextBomb` 會停在生成時刻;累加式一進 BOMB_R 就會在同一格
     // 把積欠的間隔一次補完 = 整批同時落地(正式對局是每 GAP 秒一份)。
@@ -826,7 +826,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
   // 在空的長按攻擊載具(飽和攻擊護衛機 / 集束轟炸機 / 極音速飛彈)——**進 foesOf**:
   // 敵方砲塔/小兵/機體都打得到它,擊落也照付賞金(它們在正式對局裡就是合法目標)。
   let vehicles = [];
-  // 大招載具的 summon payload:單位就地投入(落點起沿兵線推進;血量/火力/速度取自 UNITS)
+  // 攻招載具的 summon payload:單位就地投入(落點起沿兵線推進;血量/火力/速度取自 UNITS)
   const ctx = {
     spawnSummon: (side, A, count, cx) => {
       const dir = side === 'SWARM' ? 1 : -1;
@@ -860,7 +860,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       let tgt = null, td = Infinity;
       for (const e of foes) { const d = dist(c, e) - hitR(e); if (d < td) { td = d; tgt = e; } }
       if (!tgt || td > u.range) { c.x += c.dir * c.speed * LANE.DT; continue; }
-      if ((c.empUntil || 0) > t) continue;   // 大招 EMP:武器離線(仍會推進,對齊 sim)
+      if ((c.empUntil || 0) > t) continue;   // 攻招 EMP:武器離線(仍會推進,對齊 sim)
       if (t < c.next) continue;
       c.next = reFire(c.next, t, 1 / u.rate);
       // 小兵的武器在本模型裡是**一團**(pen/vs/爆風全部攤掉,與 bal ①/④ 同一個簡化)⇒
@@ -893,9 +893,9 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
     for (const [M, foe, pref, hold] of [[A, B, prefA, holdA], [B, A, prefB, holdB]]) {
       if (M.hp <= 0) continue;
       const enemyTower = tw[M.side === 'SWARM' ? 'STEEL' : 'SWARM'].filter((x) => x.hp > 0)[0];
-      // 大招載具的**發射點**(2026-08-07 使用者定案「從最近的砲塔或主堡召喚」):本模型場上
+      // 攻招載具的**發射點**(2026-08-07 使用者定案「從最近的砲塔或主堡召喚」):本模型場上
       // 只有自家前線塔位;全滅就退回自家開場站位(= 主堡方向那一端)。少了這一段,模型裡的
-      // 大招仍是「就地生成」⇒ 這一輪改制在 ⑦f 上完全看不見(交付率不會動)。
+      // 攻招仍是「就地生成」⇒ 這一輪改制在 ⑦f 上完全看不見(交付率不會動)。
       const ownFort = tw[M.side].filter((x) => x.hp > 0)[0] || { x: M.x0 };
       const foes = foesOf(M.side);
       // ---- 撤退 / 復出(門檻與遲滯帶沿用 bots.js 的同一組 BOT_TACTIC,MUST NOT 另立第二套數字)----
@@ -930,7 +930,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       const step = Math.min(M.mob * (U ? U.speedF : 1) * LANE.DT, Math.abs(want - M.x));
       M.x += Math.sign(want - M.x) * step;
       fire(M, foe, enemyTower, t, foes);
-      // 長按 = 大招:CD 到就放(載具組送載具 / 自身型組就地開窗,見 castAbil)
+      // 長按 = 攻招:CD 到就放(載具組送載具 / 自身型組就地開窗,見 castAbil)
       vehicles.push(...castAbil(M, foe, enemyTower, t, foes, ownFort));
       // 電力 / 雙層回復(脫戰 OOC_S 後回盾 + 裝甲 1/4)+ 有錢就升級
       M.mp = Math.min(M.mp0, M.mp + M.mpRegenBase * M.chF * LANE.DT);
@@ -938,18 +938,18 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       if (t - M.hurtT >= VITALS.OOC_S) {
         const b4 = M.sp;
         M.sp = Math.min(M.maxSp, M.sp + M.maxSp * VITALS.SP_REGEN_PS * M.chF * rg * LANE.DT);
-        if (rg > 1) M.ultBy.healed += (M.sp - b4) * (1 - 1 / rg);   // 加速的那一份才是這一招換來的
+        if (rg > 1) M.atkBy.healed += (M.sp - b4) * (1 - 1 / rg);   // 加速的那一份才是這一招換來的
         if (M.hp < M.maxHp) {
           const b4hp = M.hp;
           M.hp = Math.min(M.maxHp, M.hp + M.maxHp * VITALS.HP_REGEN_PS * M.chF * rg * LANE.DT);
-          if (rg > 1) M.ultBy.healed += (M.hp - b4hp) * (1 - 1 / rg);
+          if (rg > 1) M.atkBy.healed += (M.hp - b4hp) * (1 - 1 / rg);
         }
       }
       // 復甦(s12 rally):裝甲脫戰以磁力 1/4 速率自然回復,回主堡/rally 加速,時窗內**全場都修**(對齊 sim 的 rally 分支)
       if (rg > 1 && M.hp < M.maxHp) {
         const b4 = M.hp;
         M.hp = Math.min(M.maxHp, M.hp + UNITS[M.kind].regen * rg * LANE.DT);
-        M.ultBy.healed += M.hp - b4;
+        M.atkBy.healed += M.hp - b4;
       }
       buyUp(M);
     }
@@ -969,15 +969,15 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
     win = Math.abs(dA - dB) > 1e-6 ? (dA < dB ? 1 : 0)
       : Math.abs(leftA - leftB) > 1e-6 ? (leftA > leftB ? 1 : 0) : 0.5;
   }
-  // 長按 = 大招的量測帳(bal ⑦f)。三組數字各回答一個問題:
+  // 長按 = 攻招的量測帳(bal ⑦f)。三組數字各回答一個問題:
   //   n / hero / tower / creep —— 載具組帶**傷害** payload 時實得多少 EHP(分桶,見 detonate);
   //   carN / carHit / carNom  —— 載具**份額**送出幾份、飛到幾份、名目預算多少(交付率 + REALIZED_F);
   //   supLost                 —— 輔助機被擊落幾架(自身型組的改制代價;恆 0 = 模型裡沒有現形);
-  //   ultN / dealt·prevented·healed —— 自身型組的補償兌現(EHP 當量)。
+  //   atkN / dealt·prevented·healed —— 自身型組的補償兌現(EHP 當量)。
   const abilOf2 = (M) => ({
     n: M.abilN, dmg: M.abilDmg, ...M.abilBy,
     carN: M.carN, carHit: M.carHit, carNom: M.carNom, supLost: M.supLost || 0,
-    ultN: M.ultN, ...M.ultBy,
+    atkN: M.atkN, ...M.atkBy,
   });
   return {
     win, t, why, leftA, leftB, towA: towLeft('SWARM'), towB: towLeft('STEEL'),
@@ -1000,7 +1000,7 @@ export function laneMatrix(chs = Object.keys(CHARACTERS)) {
   const rate = {}, ts = [], abil = {};
   let timeout = 0;
   const BUCKETS = ['n', 'dmg', 'hero', 'tower', 'creep',
-    'carN', 'carHit', 'carNom', 'supLost', 'ultN', 'dealt', 'dealtEff', 'prevented', 'healed'];
+    'carN', 'carHit', 'carNom', 'supLost', 'atkN', 'dealt', 'dealtEff', 'prevented', 'healed'];
   for (const a of chs) { rate[a] = {}; abil[a] = Object.fromEntries(BUCKETS.map((k) => [k, 0])); }
   const tally = (ch, r) => { for (const k of BUCKETS) abil[ch][k] += r[k]; };
   for (let i = 0; i < chs.length; i++) for (let j = i + 1; j < chs.length; j++) {

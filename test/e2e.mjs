@@ -23,12 +23,12 @@ import {
   aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
   trajClass, shotFlightS, vsMult, blastFamily, buildDps, heroRange,
   altRangeMax, RANGE_TOL,
-  ULT_CARRIER, ultDelivered, abilDelivered, abilOrigin, ultCarrierCd, ultCdBand, ultParts, ultPartN,
-  SELF_ULT, selfUltEq, selfUltBoost, abilHoldSlot,
-  ULT_SUPPORT, supportN, supportHp, supportLegS, supportStackable, supportTempoF, selfUltTempo,
+  ATK_CARRIER, atkDelivered, abilDelivered, abilOrigin, atkCarrierCd, atkCdBand, atkParts, atkPartN,
+  SELF_ATK, selfAtkEq, selfAtkBoost, abilHoldSlot,
+  ATK_SUPPORT, supportN, supportHp, supportLegS, supportStackable, supportTempoF, selfAtkTempo,
   kindParts, frontKillHp,
   TERRAIN_FX, fluidFactor, envTrigger, WATER, liftRegen,
-  SKILL_CAST, skillCastTime,
+  DEF_CAST, defCastTime,
 } from '../public/js/data.js';
 // 劇情戰役開房那一段要真的地圖(旗標 defSide 由 venueConfig 帶進 battleConfig)
 import { VENUES, venueConfig } from '../public/js/venues.js';
@@ -170,7 +170,7 @@ log('— sim:角色系統(24 陣營角 + 8 傭兵 × 專屬武器/招式 × 三�
       }
       if (heroWeapon(id, slot, 3).dmg <= heroWeapon(id, slot, 1).dmg) tierOk = false;
     }
-    for (const slot of ['skill', 'ult']) {
+    for (const slot of ['def', 'atk']) {
       for (let lvl = 1; lvl <= 3; lvl++) {
         const a = heroAbility(id, slot, lvl);
         if (!a || !(a.cd > 0) || !(a.mp > 0)) dataOk = false;
@@ -737,7 +737,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     // ① 建築「加乘全刪、懲罰保留」:全武器/招式 vs.building ≤ 1,且仍有 < 1 的
     const over = [];
     for (const [id, c] of Object.entries(CHARACTERS))
-      for (const s of ['light', 'heavy', 'skill', 'ult'])
+      for (const s of ['light', 'heavy', 'def', 'atk'])
         if (c[s]?.vs?.building > BUILDING_VS_CAP) over.push(`${id}.${s}=${c[s].vs.building}`);
     for (const [k, w] of Object.entries(WEAPONS))
       if (w.vs?.building > BUILDING_VS_CAP) over.push(`WEAPONS.${k}=${w.vs.building}`);
@@ -963,7 +963,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
 
   // 機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)2026-08-06 整組退場 ⇒ 三段以**入口**為前提的
   // 直測隨之退場,MUST NOT 復辟。三種載具的彈道 / HP / 擊落語意仍在,只是唯一入口改成
-  // 大招載具遞送 —— 覆蓋改由下方「大招載具遞送」那一段負責(它就是走 _launchUltCarrier)。
+  // 攻招載具遞送 —— 覆蓋改由下方「攻招載具遞送」那一段負責(它就是走 _launchAtkCarrier)。
 
   log('— data:機種絕招載具 HP 一律由「一座砲塔打幾秒」反解(2026-08-01 使用者定調)—');
   {
@@ -982,7 +982,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       assert(Math.abs(ss.reduce((a2, b2) => a2 + b2, 0)) < 1e-9, 'kamiSide 左右對稱(總和為 0)');
     }
     // 極音速飛彈:撐得住最長一次飛行 = 剛好不會被打爆(打完仍剩 ≥1 滴)
-    // 2026-08-07:大招載具改從最近的砲塔/主堡發射 ⇒ 最長一發的航程多了一段代表發射腿
+    // 2026-08-07:攻招載具改從最近的砲塔/主堡發射 ⇒ 最長一發的航程多了一段代表發射腿
     // (hyperMaxArcM);曝險窗跟著長,HP 也跟著漂 —— 這裡量的仍是同一句「剛好打不爆」。
     const hyFly = hyperFlightS(hyperMaxArcM());
     assert(hyperHp() > overflyDps() * hyFly,
@@ -1058,110 +1058,110 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(HYPER && HYPER.CD_S > 0, 'HYPER 取代 BARRAGE 成為機甲長按招式的常數組');
   }
 
-  log('— sim/data:大招載具遞送(2026-08-06 使用者定案「長按招式取代部分機體的大招」)—');
+  log('— sim/data:攻招載具遞送(2026-08-06 使用者定案「長按招式取代部分機體的攻招」)—');
   {
-    // ① 轉換判定是推導(區域/指向型全轉:strike/emp/summon + 團隊 heal/buff = 23 台);
-    //    純自身型 9 台維持瞬發且 heroAbility 輸出(cd/range)逐位元不動
-    const conv = Object.keys(CHARACTERS).filter((c) => ultDelivered(c));
-    assert(conv.length === 23, `區域/指向型大招共 23 台轉載具(實得 ${conv.length})`);
+    // ① 轉換判定是推導(區域/指向型全轉:strike/emp/summon + 團隊 heal/buff = 22 台);
+    //    純自身型 10 台維持瞬發且 heroAbility 輸出(cd/range)逐位元不動
+    const conv = Object.keys(CHARACTERS).filter((c) => atkDelivered(c));
+    assert(conv.length === 22, `區域/指向型攻招共 22 台轉載具(實得 ${conv.length})`);
     for (const c of Object.keys(CHARACTERS)) {
-      const u = CHARACTERS[c].ult;
+      const u = CHARACTERS[c].atk;
       const inst = !(u.fx === 'strike' || u.fx === 'emp' || u.fx === 'summon'
         || ((u.fx === 'heal' || u.fx === 'buff') && u.target === 'team'));
-      assert(ultDelivered(c) === !inst, `${c} 轉換判定與「區域/指向型」定義一致`);
-      const A = heroAbility(c, 'ult', 1);
+      assert(atkDelivered(c) === !inst, `${c} 轉換判定與「區域/指向型」定義一致`);
+      const A = heroAbility(c, 'atk', 1);
       if (inst) {
-        assert(!A.carrier && A.cd === tierVal(u.cd, 1), `${c} 純自身型大招維持瞬發、cd 不動(${A.cd}s)`);
+        assert(!A.carrier && A.cd === tierVal(u.cd, 1), `${c} 純自身型攻招維持瞬發、cd 不動(${A.cd}s)`);
       } else {
-        assert(A.carrier && A.cd >= ULT_CARRIER.CD_LO - 1e-9 && A.cd <= ULT_CARRIER.CD_HI + 1e-9,
-          `${c} 載具大招 CD ${A.cd.toFixed(1)}s 落在 [${ULT_CARRIER.CD_LO}, ${ULT_CARRIER.CD_HI}]`);
-        assert(A.range > 0, `${c} 載具大招有遞送距離(${A.range.toFixed(0)}m)`);
+        assert(A.carrier && A.cd >= ATK_CARRIER.CD_LO - 1e-9 && A.cd <= ATK_CARRIER.CD_HI + 1e-9,
+          `${c} 載具攻招 CD ${A.cd.toFixed(1)}s 落在 [${ATK_CARRIER.CD_LO}, ${ATK_CARRIER.CD_HI}]`);
+        assert(A.range > 0, `${c} 載具攻招有遞送距離(${A.range.toFixed(0)}m)`);
       }
     }
     // CD 映射保序(仿射):原 cd 越短者新 cd 仍越短
-    const pairs = conv.map((c) => [tierVal(CHARACTERS[c].ult.cd, 1), heroAbility(c, 'ult', 1).cd]);
+    const pairs = conv.map((c) => [tierVal(CHARACTERS[c].atk.cd, 1), heroAbility(c, 'atk', 1).cd]);
     pairs.sort((a, b) => a[0] - b[0]);
     assert(pairs.every((p, i) => i === 0 || p[1] >= pairs[i - 1][1] - 1e-9), 'CD 帶映射嚴格保序');
 
-    // ② 機甲 strike 大招 = 極音速飛彈形式:有飛行時間、著彈打出 strike、效果取代傷害
+    // ② 機甲 strike 攻招 = 極音速飛彈形式:有飛行時間、著彈打出 strike、效果取代傷害
     const s2 = new BattleSim(fakeBattleConfig(1));
     const rc = s2.addHero('STEEL', 'uc_r', 't01');
-    rc.x = 400; rc.z = 0; rc.mp = 999; rc.abil.ult = 1;
+    rc.x = 400; rc.z = 0; rc.mp = 999; rc.abil.atk = 1;
     const dum = s2._add({ kind: 'bunker', side: 'SWARM', x: 500, z: 0, y: 0, hp: 4000 }); delete dum.lane;
-    s2.heroCast('uc_r', 'ult', 500, 0);
-    // 2026-08-07:名冊是陣列(同一名機甲的小招與大招都可能是飛彈形式)
-    assert(rc.hypers?.length === 1 && !!rc.hypers[0].uA, 't01 大招發射極音速飛彈載具(uA payload、點遞送)');
-    // 大招改從最近的**我方砲塔/主堡**發射(2026-08-07 使用者定案)——彈道起點不再是機體自己
+    s2.heroCast('uc_r', 'atk', 500, 0);
+    // 2026-08-07:名冊是陣列(同一名機甲的守招與攻招都可能是飛彈形式)
+    assert(rc.hypers?.length === 1 && !!rc.hypers[0].uA, 't01 攻招發射極音速飛彈載具(uA payload、點遞送)');
+    // 攻招改從最近的**我方砲塔/主堡**發射(2026-08-07 使用者定案)——彈道起點不再是機體自己
     {
       const m0 = rc.hypers[0];
       const fort = [...s2.ents.values()].filter((e) => e.side === rc.side && (e.kind === 'tower' || e.kind === 'base'))
         .sort((a, b) => Math.hypot(a.x - rc.x, a.z - rc.z) - Math.hypot(b.x - rc.x, b.z - rc.z))[0];
       assert(!!fort && Math.hypot(m0.x0 - fort.x, m0.z0 - fort.z) < 1e-6 && Math.hypot(m0.x0 - rc.x, m0.z0 - rc.z) > 1,
-        `大招載具自最近的我方工事(${fort?.kind})發射,不是自機體 —— 距機體 ${Math.hypot(m0.x0 - rc.x, m0.z0 - rc.z).toFixed(0)}m`);
+        `攻招載具自最近的我方工事(${fort?.kind})發射,不是自機體 —— 距機體 ${Math.hypot(m0.x0 - rc.x, m0.z0 - rc.z).toFixed(0)}m`);
     }
-    assert((rc.acd.ult - s2.t) >= ULT_CARRIER.CD_LO && (rc.acd.ult - s2.t) <= ULT_CARRIER.CD_HI, 'CD 已收進 [15,30] 帶');
+    assert((rc.acd.atk - s2.t) >= ATK_CARRIER.CD_LO && (rc.acd.atk - s2.t) <= ATK_CARRIER.CD_HI, 'CD 已收進 [15,30] 帶');
     const hp0 = dum.hp;
     let flew = 0, fxN = 0;
     for (let i = 0; i < 400 && rc.hypers.length; i++) {
       s2.tick(0.125); flew++;
-      fxN += s2.events.filter((e) => e.e === 'ultfx' && e.fx === 'strike').length;
+      fxN += s2.events.filter((e) => e.e === 'atkfx' && e.fx === 'strike').length;
       s2.events.length = 0;
     }
     assert(!rc.hypers.length && flew * 0.125 >= 1, `飛彈有飛行時間(${(flew * 0.125).toFixed(1)}s ≥ 1s)後引爆`);
-    assert(fxN === 1 && dum.hp < hp0, `著彈推送 ultfx 並以 strike 結算(${Math.round(hp0)} → ${Math.round(dum.hp)})`);
+    assert(fxN === 1 && dum.hp < hp0, `著彈推送 atkfx 並以 strike 結算(${Math.round(hp0)} → ${Math.round(dum.hp)})`);
 
-    // ③ 無人機團隊 heal 大招 = 4 架自殺攻擊機分批;擊落一半 = 只補一半(該份否定、無殉爆傷害)
+    // ③ 無人機團隊 heal 攻招 = 4 架自殺攻擊機分批;擊落一半 = 只補一半(該份否定、無殉爆傷害)
     const s3 = new BattleSim(fakeBattleConfig(1));
     const dc = s3.addHero('SWARM', 'uc_d', 's02');
-    dc.x = 400; dc.z = 0; dc.mp = 999; dc.abil.ult = 1; dc.hp = 100;
-    // 2026-08-07:大招自最近的我方工事召喚 ⇒ 載具要飛好幾秒才到,期間這具 100 HP 的假人會被
+    dc.x = 400; dc.z = 0; dc.mp = 999; dc.abil.atk = 1; dc.hp = 100;
+    // 2026-08-07:攻招自最近的我方工事召喚 ⇒ 載具要飛好幾秒才到,期間這具 100 HP 的假人會被
     // 旁邊的敵方工事打死(舊制窗只有 0.7s 所以碰不到)。量的是「補多少」不是「活不活得下來」
     // ⇒ 給無敵幀把傷害那一軸移開(治療照常寫 hp,不吃 invUntil)。
     dc.invUntil = 1e9;
     // 旁觀者取 bunker(speed 0):測試假人無 lane,speed > 0 的兵種會被 _advance 撞上 undefined 兵線
     const bys = s3._add({ kind: 'bunker', side: 'STEEL', x: 450, z: 0, y: 0, hp: 4000 }); delete bys.lane;
-    s3.heroCast('uc_d', 'ult', 450, 0);
+    s3.heroCast('uc_d', 'atk', 450, 0);
     const uk = [...s3.ents.values()].filter((e) => e.kami);
-    assert(uk.length === SQUAD.KAMI.N && uk.every((k) => k.uA && k.pt), `s02 大招生成 ${SQUAD.KAMI.N} 架點遞送 kami(分批)`);
+    assert(uk.length === SQUAD.KAMI.N && uk.every((k) => k.uA && k.pt), `s02 攻招生成 ${SQUAD.KAMI.N} 架點遞送 kami(分批)`);
     uk[0].hp = 0; s3._kill(uk[0], null);
     uk[1].hp = 0; s3._kill(uk[1], null);
     // 假人釘在戰鬥中(lastHitAt):脫戰裝甲 1/4 自然回復會污染「補多少」的量測,治療本身不吃 OOC
     for (let i = 0; i < 200 && [...s3.ents.values()].some((e) => e.kami); i++) { dc.lastHitAt = s3.t; s3.tick(0.125); }
-    const healFull = heroAbility('s02', 'ult', 1).heal;
+    const healFull = heroAbility('s02', 'atk', 1).heal;
     assert(Math.abs((dc.hp - 100) - healFull / 2) < 12,
       `擊落 2/${SQUAD.KAMI.N} ⇒ 只補一半(${(dc.hp - 100).toFixed(0)} / 全額 ${healFull})`);
     assert(bys.hp === 4000, '效果取代傷害:heal 載具抵達不產生任何爆風傷害(落點敵方單位毫髮無傷)');
 
-    // ④ 變形者 emp 大招 = 單一轟炸機(不可分狀態單載);抵達落點區內敵人武器離線
+    // ④ 變形者 emp 攻招 = 單一轟炸機(不可分狀態單載);抵達落點區內敵人武器離線
     const s4 = new BattleSim(fakeBattleConfig(1));
     const mc = s4.addHero('SWARM', 'uc_m', 's03');
-    mc.x = 400; mc.z = 0; mc.mp = 999; mc.abil.ult = 1;
+    mc.x = 400; mc.z = 0; mc.mp = 999; mc.abil.atk = 1;
     const dum4 = s4._add({ kind: 'bunker', side: 'STEEL', x: 520, z: 0, y: 0, hp: 4000 }); delete dum4.lane;
-    s4.heroCast('uc_m', 'ult', 520, 0);
+    s4.heroCast('uc_m', 'atk', 520, 0);
     const ub = [...s4.ents.values()].filter((e) => e.decoy);
     assert(ub.length === 1 && ub[0].uA && ub[0].uDrops.length === 1, 's03(emp)= 單一轟炸機、單份投遞(emp/buff 不可分)');
-    assert(ultParts('morph', 'emp') === 1 && ultParts('drone', 'buff') === 1
-      && ultParts('drone', 'heal') === SQUAD.KAMI.N && ultParts('morph', 'strike') === DECOY.BOMB_MAX,
-      'ultParts:可分預算分批、不可分狀態單載(推導規則)');
+    assert(atkParts('morph', 'emp') === 1 && atkParts('drone', 'buff') === 1
+      && atkParts('drone', 'heal') === SQUAD.KAMI.N && atkParts('morph', 'strike') === DECOY.BOMB_MAX,
+      'atkParts:可分預算分批、不可分狀態單載(推導規則)');
     for (let i = 0; i < 300 && [...s4.ents.values()].some((e) => e.decoy); i++) s4.tick(0.125);
     assert((dum4.empUntil || 0) > s4.t, '轟炸機抵達 ⇒ 落點敵人 EMP 武器離線(效果取代傷害)');
 
     // ⑤ 機種絕招 2026-08-06 整組退場 ⇒ 「converted 角色舊路徑被守衛擋下」這一組直測不再有對象:
     //    heroKamikaze / heroDecoy / heroHyper 三個入口本身已經不存在(sim.js 原文留有具名退場記錄)。
-    //    三種載具的唯一生成點 = _launchUltCarrier,由上面 ①~④ 覆蓋。
+    //    三種載具的唯一生成點 = _launchAtkCarrier,由上面 ①~④ 覆蓋。
 
     // ⑥ 未轉換角色維持**瞬發**(不發載具),治療量 = 原值 + 機種絕招退場的補償增額。
-    //    期望值 MUST 走 selfUltBoost 這一支推導 —— 寫死 400 的話,改 SELF_ULT 或 s11 的 cd
+    //    期望值 MUST 走 selfAtkBoost 這一支推導 —— 寫死 400 的話,改 SELF_ATK 或 s11 的 cd
     //    之後測試會紅在一個「其實是對的」的數字上,而真正的分家(伺服器與 HUD 各算一份)驗不到。
     const s6 = new BattleSim(fakeBattleConfig(1));
     const h6 = s6.addHero('SWARM', 'uc_i', 's11');
-    h6.mp = 999; h6.abil.ult = 1; h6.hp = 50;
-    s6.heroCast('uc_i', 'ult');
-    const A6 = heroAbility('s11', 'ult', 1);
-    const B6 = selfUltBoost('s11', 1, h6.abil);
+    h6.mp = 999; h6.abil.atk = 1; h6.hp = 50;
+    s6.heroCast('uc_i', 'atk');
+    const A6 = heroAbility('s11', 'atk', 1);
+    const B6 = selfAtkBoost('s11', 1, h6.abil);
     // 2026-08-07:自身強化型改由**跟隨玩家的輔助機隊**供輸(見下一段)⇒ 這裡只釘住
-    // 「不是點遞送載具」與「補償真的經 selfUltBoost 進到結算」;交付要等輔助機飛完投放腿。
-    assert(!A6.carrier && A6.support, 's11 是輔助機隊型大招(不是點遞送載具)');
+    // 「不是點遞送載具」與「補償真的經 selfAtkBoost 進到結算」;交付要等輔助機飛完投放腿。
+    assert(!A6.carrier && A6.support, 's11 是輔助機隊型攻招(不是點遞送載具)');
     assert(B6.heal > 0, `s11 領到機種絕招退場的補償(+${Math.round(B6.heal)} 治療)`);
     assert(Math.abs(h6.hp - 50) < 0.01, 's11 施放當下不回血 —— 輔助機還在飛投放腿(有攔截窗)');
     // 四架各交付 1/4:等**整隊**都到齊(第一架到就停 = 只量到四分之一份)
@@ -1170,26 +1170,26 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       `s11 自補 = 原值 ${A6.heal} + 補償 ${Math.round(B6.heal)}(cd ${A6.cd}s 不變)`);
   }
 
-  log('— sim/data:自身強化型大招 = 跟隨玩家的輔助機隊(2026-08-07 使用者定案)—');
+  log('— sim/data:自身強化型攻招 = 跟隨玩家的輔助機隊(2026-08-07 使用者定案)—');
   {
     // ① 分類與機數推導:某些招式換成多架(可疊加者依機種分批)、二元狀態恆單機
-    const SELF9 = Object.keys(CHARACTERS).filter((c) => !ultDelivered(c));
-    assert(SELF9.length === 9 && SELF9.every((c) => heroAbility(c, 'ult', 1).support),
-      `自身強化型 9 台全走輔助機隊(${SELF9.join(' ')})`);
+    const SELF9 = Object.keys(CHARACTERS).filter((c) => !atkDelivered(c));
+    assert(SELF9.length === 10 && SELF9.every((c) => heroAbility(c, 'atk', 1).support),
+      `自身強化型 10 台全走輔助機隊(${SELF9.join(' ')})`);
     assert(SELF9.every((c) => supportN(c) === (supportStackable(c) ? kindParts(charKind(c)) : 1)),
-      '機數 = 可疊加 ? 該機種分批數 : 1(與 ultParts 同一張機種表)');
+      '機數 = 可疊加 ? 該機種分批數 : 1(與 atkParts 同一張機種表)');
     assert(supportN('s04') === SQUAD.KAMI.N && supportN('t06') === DECOY.BOMB_MAX
       && supportN('t02') === 1 && supportN('m08') === 1,
       `多機 ${supportN('s04')}(drone)/ ${supportN('t06')}(morph),單機 robot 與純二元狀態(m08 匿蹤)`);
-    assert(new Set(SELF9.map((c) => selfUltTempo(c))).size === 3,
+    assert(new Set(SELF9.map((c) => selfAtkTempo(c))).size === 3,
       '三種節奏(瞬發/間斷/持續)在現役角色上都有人');
 
     // ② 耐久:持續 > 間斷 > 瞬發,且 dur 越久越硬(逐台獨立重算 —— 推導不手寫)
     for (const c of SELF9) {
-      const n = supportN(c), dur = tierVal(CHARACTERS[c].ult.dur ?? 0, 1);
-      const tf = supportTempoF(selfUltTempo(c));
+      const n = supportN(c), dur = tierVal(CHARACTERS[c].atk.dur ?? 0, 1);
+      const tf = supportTempoF(selfAtkTempo(c));
       assert(supportHp(c, 1) === frontKillHp(supportLegS() + tf * dur / n),
-        `${c} 每架 ${supportHp(c, 1)} = 前線一組塔位 ×(投放腿 + ${selfUltTempo(c)} 窗 ÷ ${n})`);
+        `${c} 每架 ${supportHp(c, 1)} = 前線一組塔位 ×(投放腿 + ${selfAtkTempo(c)} 窗 ÷ ${n})`);
     }
     {
       const hpAt = (tempo, dur) => frontKillHp(supportLegS() + supportTempoF(tempo) * dur / 4) * 4;
@@ -1199,7 +1199,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
         '持續時間越久,輔助機隊越硬');
     }
 
-    // 輔助機就位的等待:大招自最近的我方工事召喚(2026-08-07)⇒ 投放腿是**實距**不是固定值,
+    // 輔助機就位的等待:攻招自最近的我方工事召喚(2026-08-07)⇒ 投放腿是**實距**不是固定值,
     // MUST NOT 再用 `supportLegS()/dt` 那種固定格數(工事離施放者多遠就飛多久)。
     const armWait = (sim, pred, maxS = 30) => {
       for (let i = 0; i < Math.ceil(maxS / 0.125) && !pred(); i++) sim.tick(0.125);
@@ -1208,17 +1208,17 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     // ③ 行為:就位才供輸、疊加是加法、擊落就少一份、全滅整份下線
     const sS = new BattleSim(fakeBattleConfig(1));
     const hS = sS.addHero('SWARM', 'sup_d', 's04');
-    hS.x = 400; hS.z = 0; hS.mp = 999; hS.abil.ult = 1;
-    sS.heroCast('sup_d', 'ult');
+    hS.x = 400; hS.z = 0; hS.mp = 999; hS.abil.atk = 1;
+    sS.heroCast('sup_d', 'atk');
     const cS = [...sS.ents.values()].filter((e) => e.supG);
     assert(cS.length === supportN('s04') && cS.every((k) => k.hp === supportHp('s04', 1) && k.armor === 0),
       `s04 派出 ${cS.length} 架輔助機、每架 HP ${supportHp('s04', 1)}(armor 0)`);
     assert(Math.abs(sS._buffMul(hS, 'dmg') - 1) < 1e-9, '投放腿飛行中 ⇒ 加成尚未上線(每一發都有攔截窗)');
-    // 大招自最近的我方工事召喚 ⇒ 生成點離施放者一段實距(這一條同時釘住「不是就地生成」)
-    assert(cS.every((k) => Math.hypot(k.x - hS.x, k.z - hS.z) > ULT_SUPPORT.SLOT_R * 2),
-      '大招輔助機自後方工事出發(生成點不在主機身邊)');
+    // 攻招自最近的我方工事召喚 ⇒ 生成點離施放者一段實距(這一條同時釘住「不是就地生成」)
+    assert(cS.every((k) => Math.hypot(k.x - hS.x, k.z - hS.z) > ATK_SUPPORT.SLOT_R * 2),
+      '攻招輔助機自後方工事出發(生成點不在主機身邊)');
     armWait(sS, () => [...sS.ents.values()].some((e) => e.supG && e.phase === 'escort'));
-    const fullS = heroAbility('s04', 'ult', 1).mul.dmg + selfUltBoost('s04', 1, hS.abil).dmgMul;
+    const fullS = heroAbility('s04', 'atk', 1).mul.dmg + selfAtkBoost('s04', 1, hS.abil).dmgMul;
     assert(Math.abs(sS._buffMul(hS, 'dmg') - fullS) < 1e-6,
       `全員就位 ⇒ 效果值逐位元同舊制(×${fullS.toFixed(3)})`);
     const aliveS = [...sS.ents.values()].filter((e) => e.supG);
@@ -1232,75 +1232,75 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     // ④ 二元狀態(匿蹤)單機:輔助機被擊落即現形
     const sT = new BattleSim(fakeBattleConfig(1));
     const hT = sT.addHero('STEEL', 'sup_m', 'm08');
-    hT.x = 400; hT.z = 0; hT.mp = 999; hT.abil.ult = 1;
-    sT.heroCast('sup_m', 'ult');
+    hT.x = 400; hT.z = 0; hT.mp = 999; hT.abil.atk = 1;
+    sT.heroCast('sup_m', 'atk');
     armWait(sT, () => hT.stealthUntil > sT.t);
     assert(hT.stealthUntil > sT.t, 'm08 輔助機就位 ⇒ 匿蹤上線');
     const kT = [...sT.ents.values()].filter((e) => e.supG)[0];
     kT.hp = 0; sT._kill(kT, null);
     assert(hT.stealthUntil === 0, '輔助機被擊落 ⇒ 當場現形(二元狀態顯式撤掉)');
 
-    // ⑤ 點遞送的 23 台完全不受影響
+    // ⑤ 點遞送的 22 台完全不受影響
     const sC = new BattleSim(fakeBattleConfig(1));
     const hC = sC.addHero('SWARM', 'sup_c', 's02');
-    hC.x = 400; hC.z = 0; hC.mp = 999; hC.abil.ult = 1;
-    sC.heroCast('sup_c', 'ult', 450, 0);
+    hC.x = 400; hC.z = 0; hC.mp = 999; hC.abil.atk = 1;
+    sC.heroCast('sup_c', 'atk', 450, 0);
     assert(![...sC.ents.values()].some((e) => e.supG)
       && [...sC.ents.values()].filter((e) => e.kami).length === SQUAD.KAMI.N,
       's02(點遞送)仍生 kami 載具、一架輔助機都沒有');
   }
 
-  log('— sim/data:小招詠唱機制 + 大招載具遞送(2026-08-22 使用者定案)—');
+  log('— sim/data:守招詠唱機制 + 攻招載具遞送(2026-08-22 使用者定案)—');
   {
-    // ① 大招 32 台全部載具化(點遞送 / 跟隨編隊),小招 32 台全數為本體施展技能(非載具/輔助機)
+    // ① 攻招 32 台全部載具化(點遞送 / 跟隨編隊),守招 32 台全數為本體施展技能(非載具/輔助機)
     const CHS2 = Object.keys(CHARACTERS);
     assert(CHS2.every((c) => {
-      const uA = heroAbility(c, 'ult', 1);
-      const sA = heroAbility(c, 'skill', 1);
-      return (uA.carrier !== uA.support && uA.carrier === abilDelivered(c, 'ult'))
-        && (!sA.carrier && !sA.support && !abilDelivered(c, 'skill') && sA.castTime > 0);
-    }), '大招全數載具化、小招全數為本體施展技能(castTime > 0)');
+      const uA = heroAbility(c, 'atk', 1);
+      const sA = heroAbility(c, 'def', 1);
+      return (uA.carrier !== uA.support && uA.carrier === abilDelivered(c, 'atk'))
+        && (!sA.carrier && !sA.support && !abilDelivered(c, 'def') && sA.castTime > 0);
+    }), '攻招全數載具化、守招全數為本體施展技能(castTime > 0)');
 
-    // ② 小招 CD 帶 [15,30] 且嚴格保序(排名不變的保證)
+    // ② 守招 CD 帶 [15,30] 且嚴格保序(排名不變的保證)
     const skCd = [];
     let skIn = true;
     for (const c of CHS2) for (let lvl = 1; lvl <= 3; lvl++) {
-      const cd = heroAbility(c, 'skill', lvl).cd;
+      const cd = heroAbility(c, 'def', lvl).cd;
       if (cd < 15 - 1e-9 || cd > 30 + 1e-9) skIn = false;
-      skCd.push([tierVal(CHARACTERS[c].skill.cd, lvl), cd]);
+      skCd.push([tierVal(CHARACTERS[c].def.cd, lvl), cd]);
     }
-    assert(skIn, '小招 CD 全落 [15, 30]s(使用者定案)');
+    assert(skIn, '守招 CD 全落 [15, 30]s(使用者定案)');
     skCd.sort((a, b) => a[0] - b[0]);
-    assert(skCd.every((g, i) => i === 0 || g[1] >= skCd[i - 1][1] - 1e-9), '小招 CD 映射嚴格保序');
-    assert(abilOrigin('skill') === 'self' && abilOrigin('ult') === 'fort',
-      '發射點單一縫:小招 = 主機身邊 / 大招 = 最近的我方砲塔或主堡');
+    assert(skCd.every((g, i) => i === 0 || g[1] >= skCd[i - 1][1] - 1e-9), '守招 CD 映射嚴格保序');
+    assert(abilOrigin('def') === 'self' && abilOrigin('atk') === 'fort',
+      '發射點單一縫:守招 = 主機身邊 / 攻招 = 最近的我方砲塔或主堡');
 
-    // ③ 大招自工事出發直測
+    // ③ 攻招自工事出發直測
     const sk = new BattleSim(fakeBattleConfig(1));
     const hk = sk.addHero('SWARM', 'ab_o', 's03');
-    hk.x = 320; hk.z = 140; hk.mp = 999; hk.abil.skill = 1; hk.abil.ult = 1;
-    const fortP = sk._launchOrigin(hk, 'ult');
-    assert(Math.hypot(fortP.x - hk.x, fortP.z - hk.z) > ULT_CARRIER.MIN_LEG,
+    hk.x = 320; hk.z = 140; hk.mp = 999; hk.abil.def = 1; hk.abil.atk = 1;
+    const fortP = sk._launchOrigin(hk, 'atk');
+    assert(Math.hypot(fortP.x - hk.x, fortP.z - hk.z) > ATK_CARRIER.MIN_LEG,
       `最近的我方工事離施放者 ${Math.hypot(fortP.x - hk.x, fortP.z - hk.z).toFixed(0)}m(不是就地生成)`);
-    sk.heroCast('ab_o', 'ult', hk.x + 60, hk.z);
+    sk.heroCast('ab_o', 'atk', hk.x + 60, hk.z);
     const vUl = [...sk.ents.values()].filter((e) => e.decoy)[0];
     assert(!!vUl && Math.hypot(vUl.x - fortP.x, vUl.z - fortP.z) < 1e-6,
-      '大招載具自最近的我方工事升空(「從最近的砲塔或主堡召喚」)');
+      '攻招載具自最近的我方工事升空(「從最近的砲塔或主堡召喚」)');
 
-    // ④ 小招詠唱機制直測:詠唱期間無加成、自然完成滿額、受擊立即觸發 (t/T)^2
+    // ④ 守招詠唱機制直測:詠唱期間無加成、自然完成滿額、受擊立即觸發 (t/T)^2
     const sb = new BattleSim(fakeBattleConfig(1));
     const hb = sb.addHero('SWARM', 'ab_b', 's01');
-    hb.x = 320; hb.z = 140; hb.mp = 999; hb.abil.skill = 1;
-    const ct = skillCastTime('s01', 1);
-    sb.heroCast('ab_b', 'skill');
-    assert(!!hb.cast && hb.cast.dur === ct, `s01 小招開始詠唱(${ct.toFixed(2)}s)`);
-    assert(Math.abs(sb._buffMul(hb, 'dmgTaken') - 1) < 1e-9, '小招詠唱中效果未生效');
+    hb.x = 320; hb.z = 140; hb.mp = 999; hb.abil.def = 1;
+    const ct = defCastTime('s01', 1);
+    sb.heroCast('ab_b', 'def');
+    assert(!!hb.cast && hb.cast.dur === ct, `s01 守招開始詠唱(${ct.toFixed(2)}s)`);
+    assert(Math.abs(sb._buffMul(hb, 'dmgTaken') - 1) < 1e-9, '守招詠唱中效果未生效');
     // 詠唱至 50% 受擊
     sb.tick(ct * 0.5);
     sb._damage(hb, 10, null);
     assert(!hb.cast, '受擊後立即結束詠唱強制施法');
     const fExp = 0.25; // (0.5)^2
-    const rawMul = heroAbility('s01', 'skill', 1).mul.dmgTaken;
+    const rawMul = heroAbility('s01', 'def', 1).mul.dmgTaken;
     const expMul = 1 + (rawMul - 1) * fExp;
     assert(Math.abs(sb._buffMul(hb, 'dmgTaken') - expMul) < 1e-6,
       `受擊強制施展效果比例 (t/T)² = ${(fExp * 100).toFixed(0)}%(dmgTaken ×${expMul.toFixed(3)})`);
@@ -1312,62 +1312,62 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     // ① 全角色全階級 攻/守招式 CD 嚴格落入 [15, 30] 區間
     for (const c of CHS_ALL) {
       for (let lvl = 1; lvl <= 3; lvl++) {
-        const uA = heroAbility(c, 'ult', lvl);
-        const sA = heroAbility(c, 'skill', lvl);
-        assert(uA.cd >= 15 - 1e-9 && uA.cd <= 30 + 1e-9, `${c} Lv${lvl} 大招 CD ${uA.cd}s 落入 [15, 30]s`);
-        assert(sA.cd >= 15 - 1e-9 && sA.cd <= 30 + 1e-9, `${c} Lv${lvl} 小招 CD ${sA.cd}s 落入 [15, 30]s`);
+        const uA = heroAbility(c, 'atk', lvl);
+        const sA = heroAbility(c, 'def', lvl);
+        assert(uA.cd >= 15 - 1e-9 && uA.cd <= 30 + 1e-9, `${c} Lv${lvl} 攻招 CD ${uA.cd}s 落入 [15, 30]s`);
+        assert(sA.cd >= 15 - 1e-9 && sA.cd <= 30 + 1e-9, `${c} Lv${lvl} 守招 CD ${sA.cd}s 落入 [15, 30]s`);
       }
     }
 
-    // ② 多充能招式施放、連續施放與平行獨立 CD 測試 (以 t06 skill 3次充能為例)
+    // ② 多充能招式施放、連續施放與平行獨立 CD 測試 (以 t06 def 3次充能為例)
     const simChg = new BattleSim(fakeBattleConfig(1));
     const hChg = simChg.addHero('STEEL', 'chg_hero', 't06');
-    hChg.x = 320; hChg.z = 140; hChg.mp = 999; hChg.abil.skill = 1;
-    const t06Sk = heroAbility('t06', 'skill', 1);
-    assert(t06Sk.charges === 3, 't06 小招具備 3 次充能');
-    assert(simChg._readyCharges(hChg, 'skill') === 3, '初始具備 3 次完整充能');
+    hChg.x = 320; hChg.z = 140; hChg.mp = 999; hChg.abil.def = 1;
+    const t06Sk = heroAbility('t06', 'def', 1);
+    assert(t06Sk.charges === 3, 't06 守招具備 3 次充能');
+    assert(simChg._readyCharges(hChg, 'def') === 3, '初始具備 3 次完整充能');
 
     // 第一次施放
-    simChg.heroCast('chg_hero', 'skill');
+    simChg.heroCast('chg_hero', 'def');
     simChg.tick(t06Sk.castTime + 0.05);
-    assert(simChg._readyCharges(hChg, 'skill') === 2, '施放一次後剩餘 2 次充能');
-    assert(hChg.acd.skill === 0, '仍有可用充能時 acd.skill 保持 0 (可立即再次施放)');
+    assert(simChg._readyCharges(hChg, 'def') === 2, '施放一次後剩餘 2 次充能');
+    assert(hChg.acd.def === 0, '仍有可用充能時 acd.def 保持 0 (可立即再次施放)');
 
     // 間隔 2 秒後第二次施放 (測試分開獨立計時)
     simChg.tick(2.0);
-    simChg.heroCast('chg_hero', 'skill');
+    simChg.heroCast('chg_hero', 'def');
     simChg.tick(t06Sk.castTime + 0.05);
-    assert(simChg._readyCharges(hChg, 'skill') === 1, '再次施放後剩餘 1 次充能');
+    assert(simChg._readyCharges(hChg, 'def') === 1, '再次施放後剩餘 1 次充能');
 
     // 間隔 1 秒後第三次施放 (耗盡所有充能)
     simChg.tick(1.0);
-    simChg.heroCast('chg_hero', 'skill');
+    simChg.heroCast('chg_hero', 'def');
     simChg.tick(t06Sk.castTime + 0.05);
-    assert(simChg._readyCharges(hChg, 'skill') === 0, '三次施放後充能耗盡 (0 次)');
-    assert(hChg.acd.skill > simChg.t, '充能耗盡後 acd.skill 進入冷卻狀態 (指向最早到期時戳)');
+    assert(simChg._readyCharges(hChg, 'def') === 0, '三次施放後充能耗盡 (0 次)');
+    assert(hChg.acd.def > simChg.t, '充能耗盡後 acd.def 進入冷卻狀態 (指向最早到期時戳)');
 
     // 充能耗盡時無法施放
-    const canCastBefore = simChg.heroCast('chg_hero', 'skill');
+    const canCastBefore = simChg.heroCast('chg_hero', 'def');
     assert(!canCastBefore, '充能為 0 時無法施放');
 
     // 快照包裝測試
     const snapChg = simChg.snapshot();
     const entChg = snapChg.ents.find((e) => e.pid === 'chg_hero');
     assert(entChg && Array.isArray(entChg.chg), '快照 ents 包含 chg 充能陣列');
-    const skillChgSnap = entChg.chg[0];
-    assert(skillChgSnap[0] === 0 && skillChgSnap[1] === 3 && skillChgSnap[2] > 0,
-      `快照反映當前充能狀態: [${skillChgSnap.join(', ')}] = [ready=0, max=3, nextCd>0]`);
+    const defChgSnap = entChg.chg[0];
+    assert(defChgSnap[0] === 0 && defChgSnap[1] === 3 && defChgSnap[2] > 0,
+      `快照反映當前充能狀態: [${defChgSnap.join(', ')}] = [ready=0, max=3, nextCd>0]`);
 
     // 等待第一筆充能到期 (第一筆在 t06Sk.cd 到期)
-    const tFirstRecharge = hChg.achg.skill.rechargeAt[0];
+    const tFirstRecharge = hChg.achg.def.rechargeAt[0];
     const waitTime1 = Math.max(0, tFirstRecharge - simChg.t + 0.05);
     simChg.tick(waitTime1);
-    assert(simChg._readyCharges(hChg, 'skill') === 1, '第一筆充能到期，恢復 1 次充能');
-    assert(hChg.acd.skill === 0, '恢復充能後 acd.skill 再次為 0 (可施放)');
+    assert(simChg._readyCharges(hChg, 'def') === 1, '第一筆充能到期，恢復 1 次充能');
+    assert(hChg.acd.def === 0, '恢復充能後 acd.def 再次為 0 (可施放)');
 
     // 拾取電池補給 (測試電池冷卻縮減扣減 rechargeAt)
     simChg._grantReward(hChg, 'battery', 1);
-    assert(hChg.achg.skill.rechargeAt.length > 0, '電池縮減充能時間後依然有效維護');
+    assert(hChg.achg.def.rechargeAt.length > 0, '電池縮減充能時間後依然有效維護');
   }
 
   log('— data:八軌升級階梯 = $75/$150/$300 + 戰鬥分數 0/20/100(2026-08-11)—');
@@ -1610,7 +1610,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
 
   log('— sim:八軌養成(開場 Lv1、階梯 $75/$150/$300、戰鬥分數門檻 0/20/100、Lv4 外推)—');
   dr.money = 9999; dr.kn = 0;
-  assert(dr.abil.skill === 1 && dr.abil.ult === 1, '招式開場即 Lv1 可用(無需擊殺解鎖)');
+  assert(dr.abil.def === 1 && dr.abil.atk === 1, '招式開場即 Lv1 可用(無需擊殺解鎖)');
   // 第一階無戰鬥分數門檻:錢夠就過。第二階起要戰鬥分數(下面驗完門檻再補滿)
   assert(sim.buy('p_d', 'ar') === null && (dr.upg.ar || 0) === 1, '第一階無戰鬥分數門檻(只看錢)');
   assert(/戰鬥分數不足/.test(sim.buy('p_d', 'ar') || ''),
@@ -1629,7 +1629,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(sim.buy('p_d', 'hw') === null && dr.abil.heavy === 2, '重武器強化升 Lv.2(獨立面向)');
   const dmgL2 = heroWeapon('s01', 'light', 2).dmg;
   assert(dmgL2 > heroWeapon('s01', 'light', 1).dmg, `升階後傷害提升(${heroWeapon('s01', 'light', 1).dmg} → ${dmgL2})`);
-  assert(sim.buy('p_d', 'sk') === null && dr.abil.skill === 2 && dr.abil.ult === 1,
+  assert(sim.buy('p_d', 'def') === null && dr.abil.def === 2 && dr.abil.atk === 1,
     '防守招式強化升 Lv.2(只動防守招式,攻擊招式不變)');
   // Lv4 外推:輕武器買到滿級(upg.lw 1 → 3 ⇒ abil.light = 4),第 4 階數值沿末段成長外推 > Lv3
   sim.buy('p_d', 'lw'); sim.buy('p_d', 'lw');
@@ -1637,18 +1637,18 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     '輕武器可升到 Lv4(第 4 階外推,傷害 > Lv3)');
   assert(/已滿級/.test(sim.buy('p_d', 'lw') || ''), 'Lv4 後滿級,再買被拒');
   dr.mp = dr.maxMp;
-  const A1 = heroAbility('s01', 'skill', dr.abil.skill);
+  const A1 = heroAbility('s01', 'def', dr.abil.def);
   const mp0 = dr.mp;
-  sim.heroCast('p_d', 'skill', dr.x, dr.z);
-  assert((dr.achg?.skill?.rechargeAt?.length > 0 || dr.acd.skill > sim.t) && Math.round(mp0 - dr.mp) === Math.round(A1.mp),
+  sim.heroCast('p_d', 'def', dr.x, dr.z);
+  assert((dr.achg?.def?.rechargeAt?.length > 0 || dr.acd.def > sim.t) && Math.round(mp0 - dr.mp) === Math.round(A1.mp),
     `施放防守招式:CD、電力 -${Math.round(A1.mp)}MP(隨招式階級,無精通折減)`);
   const mp1 = dr.mp;
-  sim.heroCast('p_d', 'skill', dr.x, dr.z);
+  sim.heroCast('p_d', 'def', dr.x, dr.z);
   assert(dr.mp === mp1, 'CD/詠唱中重複施放被拒(電力未扣)');
-  // 2026-08-22:小招需要詠唱時間才會生效
-  assert(dr.mods.length === 0, '小招詠唱中尚未掛 mods');
+  // 2026-08-22:守招需要詠唱時間才會生效
+  assert(dr.mods.length === 0, '守招詠唱中尚未掛 mods');
   sim.tick(A1.castTime + 0.1);
-  assert(dr.mods.length > 0, '增益類小招詠唱完成 ⇒ 掛上 mods(蜂群協奏)');
+  assert(dr.mods.length > 0, '增益類守招詠唱完成 ⇒ 掛上 mods(蜂群協奏)');
   const rb2 = sim.addHero('STEEL', 'p_r2', 't05');
   rb2.money = 999; rb2.kn = BATTLE_SCORE.MAX;
   assert(sim.buy('p_r2', 'hp') === null && rb2.maxHp > Math.round(UNITS.robot.hp * CHARACTERS.t05.mods.hp),
@@ -1713,9 +1713,9 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     // 純傷害制:範圍 EMP(純負面狀態)不記助攻貢獻
     const empc = sim.addHero('SWARM', 'p_e', 's03');
     const mark = sim._add({ kind: 'tank', side: 'STEEL', x: empc.x + 10, z: empc.z, hp: 9999 });
-    empc.abil.ult = 1; empc.mp = empc.maxMp;
-    sim.heroCast('p_e', 'ult', empc.x, empc.z);
-    // 大招載具化:EMP 由轟炸機送到落點才施放 ⇒ 等它飛完投放腿
+    empc.abil.atk = 1; empc.mp = empc.maxMp;
+    sim.heroCast('p_e', 'atk', empc.x, empc.z);
+    // 攻招載具化:EMP 由轟炸機送到落點才施放 ⇒ 等它飛完投放腿
     for (let i = 0; i < 400 && !((mark.empUntil || 0) > sim.t); i++) sim.tick(0.125);
     assert((mark.empUntil || 0) > sim.t && !(mark.asst && mark.asst.p_e != null),
       '範圍 EMP(純負面狀態)不寫入助攻貢獻戳記');
@@ -1764,14 +1764,14 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     const simLock = new BattleSim(fakeBattleConfig(1));
     purgeCamps(simLock);
     const h1 = simLock.addHero('SWARM', 'p_lock1', 's01');
-    h1.mp = 999; h1.abil.skill = 1; h1.abil.ult = 1;
-    // 1. 小招前搖期間鎖定武器與其他招式
-    simLock.heroCast('p_lock1', 'skill');
-    assert(!!h1.cast, '小招進入詠唱狀態');
-    assert(!simLock._gateFire(h1, 'light', simLock.t), '小招詠唱中武器開火被鎖定');
-    assert(!simLock._gateFire(h1, 'heavy', simLock.t), '小招詠唱中重武器被鎖定');
+    h1.mp = 999; h1.abil.def = 1; h1.abil.atk = 1;
+    // 1. 守招前搖期間鎖定武器與其他招式
+    simLock.heroCast('p_lock1', 'def');
+    assert(!!h1.cast, '守招進入詠唱狀態');
+    assert(!simLock._gateFire(h1, 'light', simLock.t), '守招詠唱中武器開火被鎖定');
+    assert(!simLock._gateFire(h1, 'heavy', simLock.t), '守招詠唱中重武器被鎖定');
     const castStartN = simLock.events.filter((e) => e.e === 'cast_start').length;
-    simLock.heroCast('p_lock1', 'ult');
+    simLock.heroCast('p_lock1', 'atk');
     assert(simLock.events.filter((e) => e.e === 'cast_start').length === castStartN, '詠唱中無法施放其他招式');
 
     // 2. 異常狀態 (bleed / DoT) 致死算施加者擊殺
@@ -2601,7 +2601,7 @@ host.send({ t: 'aim', on: false });
 const boomsAfter = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom').length;
 assert(boomsAfter - boomsBefore === 1, `連按兩次只炸一次(重武器 CD 生效;實際 ${boomsAfter - boomsBefore})`);
 
-log('— 無人機長按 = 大招載具(2026-08-06:s02 大招已轉載具遞送;kami 事件帶 ult 旗標)—');
+log('— 無人機長按 = 攻招載具(2026-08-06:s02 攻招已轉載具遞送;kami 事件帶 ult 旗標)—');
 const droneDies = () => host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'die' && e.kind === 'drone').length;
 const dies0 = droneDies();
 // 移到高空(250 > SAM 240)避免被塔擊落干擾,再觸發
@@ -2609,24 +2609,24 @@ const foeTower = spec.snaps.at(-1).ents.find((e) => e.k === 'tower' && e.s === '
 host.send({ t: 'pos', x: foeTower.x, y: HI_ALT, z: foeTower.z, ry: 0 });
 await new Promise((r) => setTimeout(r, 250));
 // WS 端只驗「長按 → 伺服器 → 廣播」這條路走通;確切架數/HP/payload/擊落否定走上方 sim 直測與稽核。
-// host = s02(團隊 heal 大招,已轉載具)⇒ ①舊 {t:'kami'} 路徑被 ultDelivered 守衛擋下;
-// ②長按改送 {t:'cast', slot:'ult'}(client._fireHoldAbility 同一縫)⇒ kami 事件帶 ult:1。
+// host = s02(團隊 heal 攻招,已轉載具)⇒ ①舊 {t:'kami'} 路徑被 atkDelivered 守衛擋下;
+// ②長按改送 {t:'cast', slot:'atk'}(client._fireHoldAbility 同一縫)⇒ kami 事件帶 atk:1。
 // **判據是 `kami` 事件而不是快照裡的機體**(2026-08-01):每架只有 kamiHp()(刻意的脆),
 // 8Hz 快照可能一幀都沒拍到;事件是伺服器「確實受理」的權威回報,不受存活時間影響。
 const kamiEvs = () => host.snaps.flatMap((snp) => snp.ev || []).filter((e) => e.e === 'kami' && e.pid === host.sync.youId);
 host.send({ t: 'kami' });   // 舊機種絕招路徑:converted 角色 MUST 被守衛擋下
 await new Promise((r) => setTimeout(r, 400));
 assert(kamiEvs().length === 0, 'converted 角色(s02)按舊 kami 路徑被守衛擋下(不生成護衛機)');
-// 長按 = 施放大招(與 E 鍵同縫):電力由前面測試消耗過 ⇒ 等回充到夠再送(wait 內重送無妨,CD 擋重複)
-host.send({ t: 'cast', slot: 'ult', x: foeTower.x, z: foeTower.z });
-await host.wait(() => { host.send({ t: 'cast', slot: 'ult', x: foeTower.x, z: foeTower.z }); return kamiEvs().length >= 1; }, 15000);
-assert(kamiEvs().length === 1, `大招經網路發射載具(收到 ${kamiEvs().length} 次 kami 事件)`);
-assert(kamiEvs()[0].ult === 1 && kamiEvs()[0].n === SQUAD.KAMI.N,
-  `kami 事件帶 ult 旗標與架數 n = ${SQUAD.KAMI.N}(實得 ult:${kamiEvs()[0].ult} n:${kamiEvs()[0].n})`);
-assert(droneDies() === dies0, '主機不自爆(大招載具不會炸掉自己)');
-host.send({ t: 'cast', slot: 'ult', x: foeTower.x, z: foeTower.z });   // CD 內再按:不應再放一次
+// 長按 = 施放攻招(與 E 鍵同縫):電力由前面測試消耗過 ⇒ 等回充到夠再送(wait 內重送無妨,CD 擋重複)
+host.send({ t: 'cast', slot: 'atk', x: foeTower.x, z: foeTower.z });
+await host.wait(() => { host.send({ t: 'cast', slot: 'atk', x: foeTower.x, z: foeTower.z }); return kamiEvs().length >= 1; }, 15000);
+assert(kamiEvs().length === 1, `攻招經網路發射載具(收到 ${kamiEvs().length} 次 kami 事件)`);
+assert(kamiEvs()[0].atk === 1 && kamiEvs()[0].n === SQUAD.KAMI.N,
+  `kami 事件帶 ult 旗標與架數 n = ${SQUAD.KAMI.N}(實得 atk:${kamiEvs()[0].atk} n:${kamiEvs()[0].n})`);
+assert(droneDies() === dies0, '主機不自爆(攻招載具不會炸掉自己)');
+host.send({ t: 'cast', slot: 'atk', x: foeTower.x, z: foeTower.z });   // CD 內再按:不應再放一次
 await new Promise((r) => setTimeout(r, 300));
-assert(kamiEvs().length === 1, 'CD 內再按不會再放一次大招載具');
+assert(kamiEvs().length === 1, 'CD 內再按不會再放一次攻招載具');
 
 log('— 斷線重連 —');
 const token = guest.sync.token;

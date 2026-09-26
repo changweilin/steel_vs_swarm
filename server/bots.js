@@ -356,7 +356,7 @@ export class BotBrain {
       // 採購順序隨定位換(攻堅先買重武器與護甲、支援先買招式與充能…);無定位 = 舊制順序
       for (const item of botBuyOrder(this._role)) {
         // 不使用招式的難度(新手/低):不買招式面向,把錢留給武器/防禦強化
-        if (!this.diff.ability && (item === 'sk' || item === 'ult')) continue;
+        if (!this.diff.ability && (item === 'def' || item === 'atk')) continue;
         if (sim.buy(this.pid, item) === null) { bought = true; break; }
       }
       // 八軌全滿後的去化:把錢投進**自己這條兵線**的陣營小兵強化(門檻/價格/上限由 sim.buy 把關)。
@@ -639,7 +639,7 @@ export class BotBrain {
   /** 輔助/自保招式(不需目標點):治療、護盾、增益、匿蹤撤退 */
   _castSupport(h, frac) {
     if (!this.diff.ability) return;   // 低/新手難度:不使用招式
-    for (const slot of ['skill', 'ult']) {
+    for (const slot of ['def', 'atk']) {
       const A = this._ready(h, slot);
       if (!A) continue;
       const hurt = frac < this.tac.CAST_HURT;   // 血線走旋鈕(支援型放得早、攻堅型撐得久)
@@ -706,7 +706,7 @@ export class BotBrain {
 
     // 攻擊型招式:對準目標丟(strike/emp/summon;範圍/MP/CD 由 sim 把關)。低/新手難度不使用招式。
     // 每次施放吃一格 `ability` 間隔 —— 真人不可能同一瞬間把 Q 跟 E 一起按下去。
-    if (this.diff.ability) for (const slot of ['skill', 'ult']) {
+    if (this.diff.ability) for (const slot of ['def', 'atk']) {
       const A = this._ready(h, slot);
       if (!A) continue;
       const cast = (aimed) => this._op('ability')
@@ -726,8 +726,8 @@ export class BotBrain {
     }
 
     // 機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)2026-08-06 整組退場,MUST NOT 復辟:
-    // 長按右鍵改成招式手勢(一般 = 小招 / 狙擊 = 大招)⇒ bot 這邊也只剩上面的 heroCast 兩條路,
-    // 三種載具只由 sim._launchUltCarrier 生成。`special` 那一格手速因此不再有消費端。
+    // 長按右鍵改成招式手勢(一般 = 守招 / 狙擊 = 攻招)⇒ bot 這邊也只剩上面的 heroCast 兩條路,
+    // 三種載具只由 sim._launchAtkCarrier 生成。`special` 那一格手速因此不再有消費端。
   }
 
   _moveToward(h, u, [tx, tz], dt) {

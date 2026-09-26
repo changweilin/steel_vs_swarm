@@ -9,7 +9,7 @@ import {
 } from './netmode.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, MOTHER_LANES, ECON, upgradePrice, upgradeScore, canUpgrade, BATTLE_SCORE,
-  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, selfUltBoost, SELF_ULT, recoilName, recoilTier, recoilMoveF,
+  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, selfAtkBoost, SELF_ATK, recoilName, recoilTier, recoilMoveF,
   aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME, shieldRoleName,
   UNITS, WEAPONS, STRUCT_W, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc, llToXZ,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
@@ -1434,11 +1434,11 @@ const MUL_LABEL = { dmg: '傷害', dmgTaken: '承傷', reload: '填彈', range: 
 function charAbilityRow(id, slot, key) {
   const a = (l) => heroAbility(id, slot, l);
   const A = a(1);
-  // 純自身型大招的補償增額(2026-08-06 機種絕招退場;data.js SELF_ULT 單一縫)——
+  // 純自身型攻招的補償增額(2026-08-06 機種絕招退場;data.js SELF_ATK 單一縫)——
   // 圖鑑 MUST 顯示**加成後**的值,而不是 CHARACTERS 表上那個未補償的階梯:
   // 玩家在選角畫面比的就是這幾個數字,顯示未補償值等於把這一輪的改動整個藏起來。
-  // 載具化的 23 台 boost 恆中性 ⇒ 這一段對它們逐位元不動。
-  const bst = (l) => (slot === 'ult' ? selfUltBoost(id, l, { light: l, heavy: l })
+  // 載具化的 22 台 boost 恆中性 ⇒ 這一段對它們逐位元不動。
+  const bst = (l) => (slot === 'atk' ? selfAtkBoost(id, l, { light: l, heavy: l })
     : { dmgMul: 0, heal: 0, alphaX: 1 });
   const B = bst(1);
   const bits = [`電力 ${tri((l) => a(l).mp)}`, `冷卻 ${tri((l) => a(l).cd, 1)}s`];
@@ -1455,7 +1455,7 @@ function charAbilityRow(id, slot, key) {
   if (A.revive) bits.push(`原地復活 ${tri((l) => a(l).revive * 100)}% 血`);
   if (A.cleanse) bits.push('解除並免疫異常');
   if (B.alphaX > 1) bits.push(`破隱爆發 ${tri((l) => bst(l).alphaX, 2)}×`
-    + `<span class="cd-boost">(${SELF_ULT.ALPHA_S}s)</span>`);
+    + `<span class="cd-boost">(${SELF_ATK.ALPHA_S}s)</span>`);
   if (A.spRestore) bits.push(`充盈磁力 ${tri((l) => a(l).spRestore)}`);
   if (A.spRegenHit) bits.push('受擊回充不中斷');
   if (A.shieldDefBoost) bits.push(`護盾減免提升 ${tri((l) => a(l).shieldDefBoost, 1)}×`);
@@ -1534,8 +1534,8 @@ function charDetailHTML(id) {
       <div class="cd-kit">
         ${charWeaponRow(id, 'light', '左鍵')}
         ${charWeaponRow(id, 'heavy', '右鍵')}
-        ${charAbilityRow(id, 'skill', 'Q')}
-        ${charAbilityRow(id, 'ult', 'E')}
+        ${charAbilityRow(id, 'def', 'Q')}
+        ${charAbilityRow(id, 'atk', 'E')}
       </div>
       <div class="cd-foot">${tipHTML(uiTip('charFoot', TOUCH_UI()))} 數值 Lv1 → Lv4</div>
     </div>
@@ -1815,7 +1815,7 @@ function stageKitHTML(st) {
   if (subject.type === 'char') {
     const id = subject.id;
     return charWeaponRow(id, 'light', '左鍵') + charWeaponRow(id, 'heavy', '右鍵')
-      + charAbilityRow(id, 'skill', 'Q') + charAbilityRow(id, 'ult', 'E');
+      + charAbilityRow(id, 'def', 'Q') + charAbilityRow(id, 'atk', 'E');
   }
   return subject.kind === 'bunker' ? bunkerNoteRow()
     : subject.kind === 'civilian' ? civFactionToggle(subject.side) + civNoteRow() + civProfGrid()
@@ -1894,8 +1894,8 @@ function bindStageControls() {
   const onKey = (e) => {
     if (!app.modalRole) return;
     if (e.code === 'Escape') { closeStageModal(); return; }
-    if (e.code === 'KeyQ') stagePlaySlot('skill');
-    else if (e.code === 'KeyE') stagePlaySlot('ult');
+    if (e.code === 'KeyQ') stagePlaySlot('def');
+    else if (e.code === 'KeyE') stagePlaySlot('atk');
     else if (e.code === 'Space') { e.preventDefault(); p.jump(); }
     else if (e.code === 'KeyW') p.cycleRun();
   };
@@ -3008,7 +3008,7 @@ function renderSpecHelp() {
 function shopHintText() { return TOUCH_UI() ? '' : 'B 升級'; }
 
 /**
- * 觸控版:把招式的冷卻/就緒/鎖定狀態鏡射到虛擬搖桿鈕面(X 小招 / Y 大招 / B 機動)。
+ * 觸控版:把招式的冷卻/就緒/鎖定狀態鏡射到虛擬搖桿鈕面(X 守招 / Y 攻招 / B 機動)。
  * 狀態的唯一計算來源是 makeHud().self 裡那份 w(角色數據欄同源),這裡只搬字與 class。
  */
 function padMirror(act, cd, ready, locked, chgStr) {
@@ -3093,8 +3093,8 @@ function makeHud() {
           : '';
         // 長按 = 招式手勢(攻防雙招式改制:防守模式 → 防守招式 / 非防守模式 → 攻擊招式)。
         // 十字鍵左那顆的 CD 直接鏡射**當下防守狀態那一格**招式的 CD
-        // (單一來源 = 上面的 w.skill / w.ult;MUST NOT 在這裡另算一份)。
-        const abCd = (w.defending ? w.skill.cd : w.ult.cd) || 0;
+        // (單一來源 = 上面的 w.def / w.atk;MUST NOT 在這裡另算一份)。
+        const abCd = (w.defending ? w.def.cd : w.atk.cd) || 0;
         $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${morphTag}`;
         // 招式:Q 防守招式 / E 攻擊招式(鎖定 / 冷卻 / 就緒)
         const abEl = (box, nameEl, cdEl2, a) => {
@@ -3115,8 +3115,8 @@ function makeHud() {
           $(box).classList.toggle('ready', a.ready);
           $(box).classList.toggle('locked', a.lvl === 0);
         };
-        abEl('abSkill', 'abSkillName', 'abSkillCd', w.skill);
-        abEl('abUlt', 'abUltName', 'abUltCd', w.ult);
+        abEl('abDef', 'abDefName', 'abDefCd', w.def);
+        abEl('abAtk', 'abAtkName', 'abAtkCd', w.atk);
         // 空白鍵機動能力 CD(完美迴避 / 蓄力跳躍 / 升空變形):就緒亮綠、冷卻顯示秒數
         const mob = w.mobil;
         if (mob) {
@@ -3130,12 +3130,12 @@ function makeHud() {
         // 把別人的招式 CD 寫上去 = 鈕面與功能不符
         if (TOUCH_UI() && !w.spec) {
           const chgStr = (a) => (a.maxCharges > 1 ? `${a.charges}/${a.maxCharges}` : '');
-          padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0, chgStr(w.skill));
-          padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0, chgStr(w.ult));
+          padMirror('def', w.def.cd, w.def.ready, w.def.lvl === 0, chgStr(w.def));
+          padMirror('atk', w.atk.cd, w.atk.ready, w.atk.lvl === 0, chgStr(w.atk));
           if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
           // 招式鈕(十字鍵左):長按 R 的同一個派發縫 ⇒ 鈕面 CD 鏡射**當下防守狀態那一格**招式
           // (非防守 = 攻擊招式 / 防守中 = 防守招式),與上面 X / Y 兩顆同源,搖桿只是鏡子
-          const activeAb = w.defending ? w.skill : w.ult;
+          const activeAb = w.defending ? w.def : w.atk;
           padMirror('special', abCd, abCd <= 0.05, false, chgStr(activeAb));
         }
         // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)
@@ -3668,7 +3668,7 @@ function renderShop(open, st) {
     const need = upgradeScore(up, lvl);
     return need > 0 ? `・需戰鬥分數 ${need}(現有 ${kn}${kn >= need ? ' 已達標' : ''})` : '';
   };
-  // 下一階數值預覽(戰鬥面向:輕/重武器 → 傷害/彈夾/填彈;小招/大招 → CD/電力/傷害)
+  // 下一階數值預覽(戰鬥面向:輕/重武器 → 傷害/彈夾/填彈;守招/攻招 → CD/電力/傷害)
   const facetNext = (slot, nextTier) => {
     if (slot === 'light' || slot === 'heavy') {
       const w = heroWeapon(st.ch, slot, nextTier);
@@ -3678,7 +3678,7 @@ function renderShop(open, st) {
     return `下一階:CD ${(+a.cd).toFixed(0)}s ・ ${Math.round(a.mp)}MP${a.dmg ? ` ・ 傷害 ${Math.round(a.dmg)}` : ''}`;
   };
   const c = st.ch && CHARACTERS[st.ch];
-  const KEYS = { light: '左鍵', heavy: '右鍵瞄準', skill: 'Q', ult: 'E' };
+  const KEYS = { light: '左鍵', heavy: '右鍵瞄準', def: 'Q', atk: 'E' };
   // ---- 超級升級(超級大戰專用單軌;八軌/小兵強化整段不畫,直接換成這一軌)----
   if (st.super) {
     const lvl = st.superLvl || 0, full = lvl >= SUPER_UPG.MAX;
@@ -4046,8 +4046,8 @@ function renderBalanceSettings(mount) {
   const UPGRADE_TRACKS = [
     { id: 'lw', name: '輕武器' },
     { id: 'hw', name: '重武器' },
-    { id: 'sk', name: '防守招式威力' },
-    { id: 'ult', name: '攻擊招式威力' },
+    { id: 'def', name: '防守招式威力' },
+    { id: 'atk', name: '攻擊招式威力' },
     { id: 'hp', name: '裝甲上限' },
     { id: 'ar', name: '複合裝甲' },
     { id: 'sp', name: '磁力上限' },
@@ -4269,8 +4269,8 @@ function mechaHeroDetail(id) {
     <div class="cd-kit">
       ${charWeaponRow(id, 'light', '左鍵')}
       ${charWeaponRow(id, 'heavy', '右鍵')}
-      ${charAbilityRow(id, 'skill', 'Q')}
-      ${charAbilityRow(id, 'ult', 'E')}
+      ${charAbilityRow(id, 'def', 'Q')}
+      ${charAbilityRow(id, 'atk', 'E')}
     </div>
     <div class="cd-foot">數值 Lv1 → Lv4 ・ 點立繪看完整簡歷 ・ 點武器/招式看演出</div>`;
 }

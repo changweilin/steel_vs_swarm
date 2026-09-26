@@ -361,7 +361,7 @@ export function buildHeliSquad(side) {
 }
 
 /**
- * 4. 自律主戰坦克 (main_battle_tank) — 召喚者：T-05 Shen Heming「仙鶴」
+ * 4. 自律主戰坦克 (main_battle_tank) — 現行無招式指向（預留；舊召喚者 T-05 已改分身）
  * 構型：瀋陽重工第 7 代履帶底盤，仿生液氣懸掛、低輪廓多面體砲塔、鶴羽相控陣雷達反射面。
  * 塗裝：協約工業鈦灰 (0x3d444d) 配高反差防滑塗層與出廠銘文白金飾 (0xdce4ec)。
  */

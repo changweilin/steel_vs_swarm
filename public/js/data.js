@@ -721,7 +721,7 @@ export const HEROIC = { range: 1.2, dmg: 1.5 };
 export const ALTITUDE = {
   TIERS: 3,             // |dh| 達「3 個砲塔高」時效果封頂(門檻在 1 個砲塔高)
   RANGE: 0.30,          // 較高方 +射程(封頂)—— 球形射程下提供高度差射程優勢
-  RANGE_HEAVY_MUL: 0.5, // 重武器/大招高度差射程優勢比例(減半)
+  RANGE_HEAVY_MUL: 0.5, // 重武器/攻招高度差射程優勢比例(減半)
   DODGE: 0.10,         // 較高方 +閃避率(封頂)
   // 爆擊代價四項於 2026-07-27 整組 ×0.7 重新校準(原 0.5/0.5/1.0/0.5)——
   // 對進戰模型(`npm run bal` ⑤)量到舊值讓「較高方勝率」只有 48.3%:+25% 射程只在接近期兌現、
@@ -745,15 +745,15 @@ export const altScale = (dh) => {
   const T = altTier(), a = Math.abs(dh || 0);
   return Math.max(0, Math.min(1, (a - T) / (T * (ALTITUDE.TIERS - 1))));
 };
-/** 判定槽位或武器/招式定義是否為重武器/大招(高度差射程優勢減半) */
+/** 判定槽位或武器/招式定義是否為重武器/攻招(高度差射程優勢減半) */
 export const isHeavyOrUlt = (slotOrDef) => {
   if (!slotOrDef) return false;
   if (typeof slotOrDef === 'boolean') return slotOrDef;
-  if (typeof slotOrDef === 'string') return slotOrDef === 'heavy' || slotOrDef === 'ult';
+  if (typeof slotOrDef === 'string') return slotOrDef === 'heavy' || slotOrDef === 'atk' || slotOrDef === 'ult';
   const id = slotOrDef.id || slotOrDef.slot;
-  return id === 'heavy' || id === 'ult';
+  return id === 'heavy' || id === 'atk' || id === 'ult';
 };
-/** 高度制空射程加成率上限(輕武器/小招 = ALTITUDE.RANGE; 重武器/大招 = ALTITUDE.RANGE * RANGE_HEAVY_MUL) */
+/** 高度制空射程加成率上限(輕武器/守招 = ALTITUDE.RANGE; 重武器/攻招 = ALTITUDE.RANGE * RANGE_HEAVY_MUL) */
 export const altRangeAdv = (slotOrDef) =>
   ALTITUDE.RANGE * (isHeavyOrUlt(slotOrDef) ? (ALTITUDE.RANGE_HEAVY_MUL ?? 0.5) : 1);
 /**
@@ -1069,7 +1069,7 @@ let _reachM = 0;
  *   ② 32 角 × 兩槽位 × 四階的解析後射程,再乘**高度制空放寬**與**防作弊容差**
  *      —— 伺服器真的會收下那個距離的回報(`RANGE_TOL`),那就是誠實的上界;
  *   ③ 32 角 × 兩槽位 × 四階的招式施放距離;
- *   ④ 大招載具的最長航程(`hyperMaxArcM`)—— 它是可鎖定可擊落的實體,全程都該看得見。
+ *   ④ 攻招載具的最長航程(`hyperMaxArcM`)—— 它是可鎖定可擊落的實體,全程都該看得見。
  * 快取:靜態資料的純函式,而呼叫點在開場與換座機(每局個位數次)。
  */
 export const combatReachM = () => {
@@ -1082,7 +1082,7 @@ export const combatReachM = () => {
         m = Math.max(m, (heroWeapon(ch, slot, lv, true)?.range || 0) * wF);
       }
     }
-    for (const slot of ['skill', 'ult']) {
+    for (const slot of ['def', 'atk']) {
       for (let lv = 1; lv <= 4; lv++) m = Math.max(m, heroAbility(ch, slot, lv, true)?.range || 0);
     }
   }
@@ -1598,7 +1598,7 @@ export const hyperTerminalF = (d = hyperRange()) => {
  * 158 → 183 EHP/次)。追擊是「打得到人」的加分,MUST NOT 連生存性也一起加成;
  * 偏差方向因此朝「飛彈比較容易被攔下來」(原則 6),MUST NOT 改吃斜距。
  *
- * 2026-08-07(使用者定案「大招改為從最近的砲塔或主堡召喚」):最長的那一發自此**多了一段
+ * 2026-08-07(使用者定案「攻招改為從最近的砲塔或主堡召喚」):最長的那一發自此**多了一段
  * 發射腿** —— 航程 = 代表發射腿 + 這一形式最遠的一次遞送距離(`hyperMaxArcM`)。飛彈全程在高空
  * 飛越整條前線(所以它吃的是 `overflyDps` 而不是只算塔位),那一段是**真的多挨打**;
  * 不跟著改的話 HP 就不再滿足「最長一發剛好打不爆」,而症狀只是「這一招好像被打下來的次數變多了」。
@@ -1608,7 +1608,7 @@ export const hyperTerminalF = (d = hyperRange()) => {
 export const hyperFlightS = (d = hyperRange()) =>
   hyperClimbS(d) + hyperApex(d) / hyperDiveSpd();
 /** 極音速飛彈形式的**最長航程**(公尺)= 代表發射腿 + 最遠遞送距離(推導不手寫)。
- *  現役機甲 carrier 大招未標 range ⇒ heroAbility 補上的正是 `hyperRange()`(稽核釘住這個等式)。 */
+ *  現役機甲 carrier 攻招未標 range ⇒ heroAbility 補上的正是 `hyperRange()`(稽核釘住這個等式)。 */
 export const hyperMaxArcM = () => ultLaunchLegM() + hyperRange();
 
 
@@ -1753,7 +1753,7 @@ export const kamiSide = (i) => {
   return n === 1 ? 0 : (i - (n - 1) / 2) / ((n - 1) / 2);
 };
 /**
- * 2026-08-07(大招改從最近的砲塔/主堡發射)**刻意不動**:曝險窗量的是「進入前線塔位射程 →
+ * 2026-08-07(攻招改從最近的砲塔/主堡發射)**刻意不動**:曝險窗量的是「進入前線塔位射程 →
  * 抵達」那一段,而它只由**落點**決定 —— 發射點往自家後方退,多出來的那一段飛在敵方塔位射程之外
  * (自家前線塔距敵方前線塔 = tower.range × TOWER_SEP_F > tower.range)⇒ 這把尺逐位元不變。
  * (極音速飛彈是具名例外:它全程在高空飛越整條前線,見 hyperFlightS。)
@@ -1780,67 +1780,68 @@ export const decoyExposureS = () =>
   + (DECOY.DROP_N - 0.5) * DECOY.BOMB_GAP;
 export const decoyHp = () => frontKillHp(decoyExposureS());
 
-// ---- 大招載具遞送(2026-08-06 使用者定案「長按招式取代部分機體的大招」)----
-// 定案三條:①**區域/指向型大招全轉**載具形式(strike/emp/summon/團隊 heal/團隊 buff);
+// ---- 攻招載具遞送(2026-08-06 使用者定案「長按招式取代部分機體的攻招」)----
+// 定案三條:①**區域/指向型攻招全轉**載具形式(strike/emp/summon/團隊 heal/團隊 buff);
 //   純自身型(自我強化/隱形/視野/自補)維持瞬發不變 —— 自身效果沒有「飛過去」的語意。
-//   ②**合併為一招**:轉換角色的長按(與 E 鍵同縫 game._fireHoldAbility → _castAbility('ult'))
-//   = 發射「該機種絕招形式」的載具送出大招效果;原純傷害機種絕招對這些角色**退場**
-//   (sim.heroKamikaze/heroDecoy/heroHyper 各有 ultDelivered 守衛)。CD 收到 [30,60]s、
-//   沿用大招 MP 與升級階梯。③**效果取代傷害**:攻擊型(strike)的傷害就是它的 payload;
+//   ②**合併為一招**:轉換角色的長按(與 E 鍵同縫 game._fireHoldAbility → _castAbility('atk'))
+//   = 發射「該機種絕招形式」的載具送出攻招效果;原純傷害機種絕招對這些角色**退場**
+//   (sim.heroKamikaze/heroDecoy/heroHyper 各有 atkDelivered 守衛)。CD 收到 [30,60]s、
+//   沿用攻招 MP 與升級階梯。③**效果取代傷害**:攻擊型(strike)的傷害就是它的 payload;
 //   補血/控場/強化型載具抵達只施放效果、不再附機種絕招爆風 —— 預算不雙重領,
 //   「效果強大」的代價是**可被攔截**(載具是 sim 實體,擊落 = 該份否定,同極音速飛彈語意)。
 // 形式沿用三機種既有載具(以原先長按招式的形式):無人機 = KAMI.N 架自殺攻擊機、
 //   變形者 = 集束轟炸機逐顆投遞、機甲 = 極音速飛彈拋物線 —— 節奏因此天然分成
 //   爆發型(單彈頭)/ 間斷型(轟炸機分批)/ 連擊型(四機魚貫),持續型 = 效果本身的 dur。
-// **可分預算分批、不可分狀態單載**(ultParts):strike 彈著數 / heal 量 / summon 隻數可均分
+// **可分預算分批、不可分狀態單載**(atkParts):strike 彈著數 / heal 量 / summon 隻數可均分
 //   ⇒ 依機種分批(擊落幾架就少幾份);emp/buff 是一段狀態時窗,分批會疊乘(mods 逐筆相乘)
 //   ⇒ 恆單一載具、攔截 = 完全否定。
 //
-// ---- 2026-08-22 使用者定案(小招改制)----
-// 「小招改成施展效果而不是召喚物效果,需要詠唱時間才會生效,視效果強度決定詠唱時間,詠唱期間被攻擊時會強制立即施展(已詠唱時間比例平方的效果)」
-//   ⇒ 小招移除載具／輔助機隊遞送模式,改為本體詠唱(castTime 依效果強度推導 [0.5, 2.5]s);
-//   大招維持後方工事召喚載具/輔助機隊遞送(abilOrigin === 'fort')。
-export const ULT_CARRIER = {
-  CD_LO: 15, CD_HI: 30,      // 大招 CD 帶(2026-09-13 改制:攻/守皆 15~30s)
-  SK_CD_LO: 15, SK_CD_HI: 30, // 小招 CD 帶(2026-08-07 使用者定案「CD時間15~30s」)
+// ---- 2026-08-22 使用者定案(守招改制)----
+// 「守招改成施展效果而不是召喚物效果,需要詠唱時間才會生效,視效果強度決定詠唱時間,詠唱期間被攻擊時會強制立即施展(已詠唱時間比例平方的效果)」
+//   ⇒ 守招移除載具／輔助機隊遞送模式,改為本體詠唱(castTime 依效果強度推導 [0.5, 2.5]s);
+//   攻招維持後方工事召喚載具/輔助機隊遞送(abilOrigin === 'fort')。
+export const ATK_CARRIER = {
+  CD_LO: 15, CD_HI: 30,      // 攻招 CD 帶(2026-09-13 改制:攻/守皆 15~30s)
+  DEF_CD_LO: 15, DEF_CD_HI: 30, // 守招 CD 帶(2026-08-07 使用者定案「CD時間15~30s」)
   // 最短飛行腿(公尺):使用者定案「需要飛行時間」——自身/團隊型招式瞄在腳邊時,遞送點仍
   // 推到面前這麼遠,保證每一發都有 ≥0.6s 的攔截窗(最慢載具 DECOY.SPEED 62m/s)。
   MIN_LEG: 40,
 };
 /** 這一招由誰召喚(**發射點的唯一縫**):
- *  'self' = 主機身邊(小招)/ 'fort' = 最近的我方砲塔或主堡(大招)。 */
-export const abilOrigin = (slot) => (slot === 'ult' ? 'fort' : 'self');
+ *  'self' = 主機身邊(守招)/ 'fort' = 最近的我方砲塔或主堡(攻招)。 */
+export const abilOrigin = (slot) => (slot === 'atk' ? 'fort' : 'self');
 /**
- * 大招載具的**代表發射腿**(公尺):施放者站在兵線接觸線上時,離自家前線塔位的距離
+ * 攻招載具的**代表發射腿**(公尺):施放者站在兵線接觸線上時,離自家前線塔位的距離
  * = 半個塔距(敵我前線塔間距 = tower.range × TOWER_SEP_F,見 invariant ②)。**推導不手寫**。
  * 真正飛的那一段是「當下最近的工事 → 主機」的實距(隨站位變);這一支只服務**校準**——
  * 輔助機隊的耐久(supportHp)要有一個與站位無關的窗長,否則同一招的 HP 會隨玩家站哪裡漂移。
  */
 export const ultLaunchLegM = () => UNITS.tower.range * GAME.TOWER_SEP_F / 2;
-/** 這一槽位的載具發射腿(公尺):小招 = 主機身邊 MIN_LEG;大招 = 後方工事飛過來(代表值)。 */
+export const atkLaunchLegM = ultLaunchLegM;
+/** 這一槽位的載具發射腿(公尺):守招 = 主機身邊 MIN_LEG;攻招 = 後方工事飛過來(代表值)。 */
 export const abilLaunchLegM = (slot) =>
-  (abilOrigin(slot) === 'fort' ? ultLaunchLegM() : ULT_CARRIER.MIN_LEG);
+  (abilOrigin(slot) === 'fort' ? atkLaunchLegM() : ATK_CARRIER.MIN_LEG);
 /**
  * 這名角色的這一招是不是**點遞送**(**推導判定,MUST NOT 手寫名冊**):
- * 2026-08-22:載具遞送只服務**大招**;小招改為本體詠唱施展。
+ * 2026-08-22:載具遞送只服務**攻招**;守招改為本體詠唱施展。
  * 區域/指向型 = strike/emp/summon + 團隊 heal/buff;其餘(自身/personal 型)= 跟隨編隊。
  */
-export const abilDelivered = (ch, slot = 'ult') => {
-  if (slot !== 'ult') return false;
+export const abilDelivered = (ch, slot = 'atk') => {
+  if (slot !== 'atk') return false;
   const u = CHARACTERS[ch]?.[slot];
   if (!u) return false;
   return u.fx === 'strike' || u.fx === 'emp' || u.fx === 'summon'
     || ((u.fx === 'heal' || u.fx === 'buff') && u.target === 'team');
 };
-/** 大招的點遞送判定(既有縫;消費端沿用) */
-export const ultDelivered = (ch) => abilDelivered(ch, 'ult');
+/** 攻招的點遞送判定(既有縫;消費端沿用) */
+export const atkDelivered = (ch) => abilDelivered(ch, 'atk');
 /**
  * 這一招的 cd 要不要被壓進槽位 CD 帶。
- *   小招:**全部**(使用者定案「CD時間15~30s」對 32 台一視同仁);
- *   大招:只有點遞送那 23 台 —— 9 台自身型的 cd 同時是 `selfUltEq` 的分子(補償 ∝ cd),
+ *   守招:**全部**(使用者定案「CD時間15~30s」對 32 台一視同仁);
+ *   攻招:只有點遞送那 22 台 —— 10 台自身型的 cd 同時是 `selfAtkEq` 的分子(補償 ∝ cd),
  *         壓進去等於一個改動同時動兩個平衡面(2026-08-07 前一輪已定案,MUST NOT 順手併進來)。
  */
-export const abilCdMapped = (ch, slot) => (slot === 'ult' ? ultDelivered(ch) : !!CHARACTERS[ch]?.[slot]);
+export const abilCdMapped = (ch, slot) => (slot === 'atk' ? atkDelivered(ch) : !!CHARACTERS[ch]?.[slot]);
 /** 該槽位「會被映射的那一群」的原 cd 全距(逐階掃描;memo —— CHARACTERS 之後才叫得動) */
 const _abilCdBand = {};
 export const abilCdBand = (slot) => {
@@ -1858,9 +1859,9 @@ export const abilCdBand = (slot) => {
   return _abilCdBand[slot];
 };
 /** 該槽位的目標 CD 帶 */
-export const abilCdRange = (slot) => (slot === 'ult'
-  ? { lo: ULT_CARRIER.CD_LO, hi: ULT_CARRIER.CD_HI }
-  : { lo: ULT_CARRIER.SK_CD_LO, hi: ULT_CARRIER.SK_CD_HI });
+export const abilCdRange = (slot) => (slot === 'atk'
+  ? { lo: ATK_CARRIER.CD_LO, hi: ATK_CARRIER.CD_HI }
+  : { lo: ATK_CARRIER.DEF_CD_LO, hi: ATK_CARRIER.DEF_CD_HI });
 /** 舊 cd → 載具制 cd:把該槽位的 cd 全距仿射映射進目標帶。
  *  **嚴格保序**(仿射斜率 > 0)⇒ 誰的招轉得快、改制後仍轉得快;MUST NOT 改成分段表。 */
 export const abilCarrierCd = (slot, cd) => {
@@ -1869,30 +1870,30 @@ export const abilCarrierCd = (slot, cd) => {
   const f = hi > lo ? (cd - lo) / (hi - lo) : 0.5;
   return band.lo + f * (band.hi - band.lo);
 };
-/** 大招的 CD 帶與映射(既有縫;消費端沿用) */
-export const ultCdBand = () => abilCdBand('ult');
-export const ultCarrierCd = (cd) => abilCarrierCd('ult', cd);
+/** 攻招的 CD 帶與映射(既有縫;消費端沿用) */
+export const atkCdBand = () => abilCdBand('atk');
+export const atkCarrierCd = (cd) => abilCarrierCd('atk', cd);
 /** 該機種載具形式的分批數(kami 架數 / 轟炸機投彈數 / 飛彈單彈頭)——「形式即機種絕招」的唯一縫。
- *  點遞送(ultParts)與跟隨型輔助機隊(supportN)同吃這一份,MUST NOT 各寫一張機種表。 */
+ *  點遞送(atkParts)與跟隨型輔助機隊(supportN)同吃這一份,MUST NOT 各寫一張機種表。 */
 export const kindParts = (kind) =>
   kind === 'drone' ? SQUAD.KAMI.N : kind === 'morph' ? DECOY.BOMB_MAX : 1;
 /** 載具遞送的分批數:可分預算(strike/heal/summon)依機種分批,不可分狀態(emp/buff)恆單載。 */
-export const ultParts = (kind, fx) => {
+export const atkParts = (kind, fx) => {
   const divisible = fx === 'strike' || fx === 'heal' || fx === 'summon';
   return divisible ? kindParts(kind) : 1;
 };
 
-// ---- 小招詠唱機制 (2026-08-22 使用者定案「小招改成施展效果而不是召喚物效果,需要詠唱時間才會生效,視效果強度決定詠唱時間」) ----
-export const SKILL_CAST = {
+// ---- 守招詠唱機制 (2026-08-22 使用者定案「守招改成施展效果而不是召喚物效果,需要詠唱時間才會生效,視效果強度決定詠唱時間」) ----
+export const DEF_CAST = {
   MIN_S: 0.5,   // 最短詠唱時間(秒)—— 輕量走位/突進類
   MAX_S: 2.5,   // 最長詠唱時間(秒)—— 重型全隊/大範圍控場類
 };
-/** 大招施展前搖時間(秒;單一真相縫:施法前搖期間鎖定武器開火與其他招式) */
-export const ULT_CAST_S = 0.8;
+/** 攻招施展前搖時間(秒;單一真相縫:施法前搖期間鎖定武器開火與其他招式) */
+export const ATK_CAST_S = 0.8;
 
-/** 小招效果強度綜合評分(單一真相縫:推導不手寫) */
+/** 守招效果強度綜合評分(單一真相縫:推導不手寫) */
 export const skillPower = (ch, lvl = 1) => {
-  const u = CHARACTERS[ch]?.skill;
+  const u = CHARACTERS[ch]?.def;
   if (!u) return 0;
   const t = (v) => tierVal(v, lvl);
   let p = 0;
@@ -1935,7 +1936,7 @@ export const skillPower = (ch, lvl = 1) => {
   return p;
 };
 
-/** 全小招效果強度全距(memo) */
+/** 全守招效果強度全距(memo) */
 let _skillPowerBand = null;
 export const skillPowerBand = () => {
   if (_skillPowerBand) return _skillPowerBand;
@@ -1951,22 +1952,22 @@ export const skillPowerBand = () => {
   return _skillPowerBand;
 };
 
-/** 視效果強度決定詠唱時間(秒;單一真相縫,嚴格保序映射至 [SKILL_CAST.MIN_S, SKILL_CAST.MAX_S]) */
-export const skillCastTime = (ch, lvl = 1) => {
+/** 視效果強度決定詠唱時間(秒;單一真相縫,嚴格保序映射至 [DEF_CAST.MIN_S, DEF_CAST.MAX_S]) */
+export const defCastTime = (ch, lvl = 1) => {
   const p = skillPower(ch, lvl);
   const { lo, hi } = skillPowerBand();
   const f = hi > lo ? (p - lo) / (hi - lo) : 0.5;
-  return +(SKILL_CAST.MIN_S + f * (SKILL_CAST.MAX_S - SKILL_CAST.MIN_S)).toFixed(2);
+  return +(DEF_CAST.MIN_S + f * (DEF_CAST.MAX_S - DEF_CAST.MIN_S)).toFixed(2);
 };
 
 // ---- 自身強化型招式 = 跟隨玩家的輔助機隊(2026-08-07 使用者定案)----
-// 2026-08-22:輔助機隊只服務大招(slot === 'ult');小招已改為本體詠唱施展。
+// 2026-08-22:輔助機隊只服務攻招(slot === 'atk');守招已改為本體詠唱施展。
 // 使用者兩句話:①「自身強化類的改成**跟隨玩家的輔助機型**進行提供加成」;
 //   ②「**某些招式換成多個輔助機型,多機型的狀態可以疊加**」;
 //   ③「持續型招式的輔助機型耐久會比瞬發型與間斷型高,**持續時間越久耐久也越高**」。
-// 32 台大招自此**全部**經載具遞送,只差形式 ——
-//   點遞送(`ultDelivered`,23 台:飛出去、抵達即引爆) vs 跟隨編隊(這一段,9 台:留在身邊供輸)。
-export const ULT_SUPPORT = {
+// 32 台攻招自此**全部**經載具遞送,只差形式 ——
+//   點遞送(`atkDelivered`,22 台:飛出去、抵達即引爆) vs 跟隨編隊(這一段,10 台:留在身邊供輸)。
+export const ATK_SUPPORT = {
   SLOT_R: 7,      // 編隊半徑(公尺):輔助機環繞主機的站位圈(> 機體碰撞半徑,不擋自己的視線)
   SLOT_ALT: 4.5,  // 編隊離地高(公尺):高過步兵、低過屋頂 —— 打得到也看得到
   TURN_K: 4,      // 編隊收斂係數(1/s):越界就往站位點靠,MUST NOT 硬貼(硬貼 = 打不中的無敵護衛)
@@ -1975,12 +1976,12 @@ export const ULT_SUPPORT = {
 /** 輔助機的飛行速度:與自殺攻擊機同一具小型載具(客戶端也共用 kami 那份縮小渲染)⇒ 同吃那一份速度。 */
 export const supportSpeed = () => UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL;
 /** 投放腿(秒)= 該槽位的發射腿 ÷ 飛行速度 ⇒ 每一次施放都有攔截窗(使用者 2026-08-06 定案
- *  「需要飛行時間」)。推導不手寫;大招那一段自 2026-08-07 起是**後方工事 → 主機**的代表距離。 */
-export const supportLegS = (slot = 'ult') => abilLaunchLegM(slot) / supportSpeed();
+ *  「需要飛行時間」)。推導不手寫;攻招那一段自 2026-08-07 起是**後方工事 → 主機**的代表距離。 */
+export const supportLegS = (slot = 'atk') => abilLaunchLegM(slot) / supportSpeed();
 /** 這一招的狀態可不可以「一半」(⇒ 可不可以拆成多架輔助機疊加)。
  *  純二元狀態(匿蹤 / 解除異常 / 免裝填)沒有半份可言 ⇒ 單機;有任何**純量**狀態即可疊加。 */
-export const supportStackable = (ch, slot = 'ult') => {
-  if (slot !== 'ult') return false;
+export const supportStackable = (ch, slot = 'atk') => {
+  if (slot !== 'atk') return false;
   const a = CHARACTERS[ch]?.[slot];
   if (!a || abilDelivered(ch, slot)) return false;
   if (Object.keys(a.mul || {}).length) return true;
@@ -1988,29 +1989,29 @@ export const supportStackable = (ch, slot = 'ult') => {
   const ad = a.add || {};
   return ad.f != null || ad.evade != null;
 };
-/** 這一招派幾架輔助機(可疊加者依機種分批,同 ultParts 那張機種表;不可疊加恆 1) */
-export const supportN = (ch, slot = 'ult') => (supportStackable(ch, slot) ? kindParts(charKind(ch)) : 1);
+/** 這一招派幾架輔助機(可疊加者依機種分批,同 atkParts 那張機種表;不可疊加恆 1) */
+export const supportN = (ch, slot = 'atk') => (supportStackable(ch, slot) ? kindParts(charKind(ch)) : 1);
 /** k 架在線時的效果佔比(疊加是**加法**:倍率 = 1 + (m − 1) × f,f = k/N) */
-export const supportF = (ch, live, slot = 'ult') => {
+export const supportF = (ch, live, slot = 'atk') => {
   const n = supportN(ch, slot);
   return n > 0 ? Math.max(0, Math.min(1, live / n)) : 0;
 };
 /** 自身強化型招式的節奏(burst / pulse / sustain);點遞送的那一群回 null。**推導不手寫**。 */
-export const abilTempo = (ch, slot = 'ult') => {
-  if (slot !== 'ult') return null;
+export const abilTempo = (ch, slot = 'atk') => {
+  if (slot !== 'atk') return null;
   const a = CHARACTERS[ch]?.[slot];
   if (!a || abilDelivered(ch, slot)) return null;
   if (!(tierVal(a.dur ?? 0, 1) > 0)) return 'burst';   // 沒有時窗 = 一次交付完
   if (tierVal(a.regen ?? 0, 1) > 0) return 'pulse';    // 逐 tick 入帳 = 間斷
   return 'sustain';                                     // 其餘 = 狀態時窗
 };
-/** 大招的節奏(既有縫;消費端沿用) */
-export const selfUltTempo = (ch) => abilTempo(ch, 'ult');
+/** 攻招的節奏(既有縫;消費端沿用) */
+export const selfAtkTempo = (ch) => abilTempo(ch, 'atk');
 /** 節奏 → 「要撐住效果時窗的多少」(0 / PULSE_F / 1;前後兩個是定義,中間那個是旋鈕) */
 export const supportTempoF = (tempo) =>
-  tempo === 'sustain' ? 1 : tempo === 'pulse' ? ULT_SUPPORT.PULSE_F : 0;
+  tempo === 'sustain' ? 1 : tempo === 'pulse' ? ATK_SUPPORT.PULSE_F : 0;
 /** 輔助機隊的服務窗(秒)= 投放腿 + 節奏係數 × 效果時窗 —— 「這一招要機隊撐多久」。 */
-export const supportServiceS = (ch, lvl = 1, slot = 'ult') => {
+export const supportServiceS = (ch, lvl = 1, slot = 'atk') => {
   const a = CHARACTERS[ch]?.[slot], tempo = abilTempo(ch, slot);
   if (!a || !tempo) return 0;
   return supportLegS(slot) + supportTempoF(tempo) * tierVal(a.dur ?? 0, lvl);
@@ -2022,102 +2023,102 @@ export const supportServiceS = (ch, lvl = 1, slot = 'ult') => {
  *   ・效果窗:敵人一次點名一架(同 kamiHp「塔位一次只打一架」)⇒ 這一段才由機隊分攤(÷ N)。
  * armor / 護盾恆 0(同三種點遞送載具):校準要精確,EHP 就 MUST NOT 隨主機角色或升級漂移。
  */
-export const supportHp = (ch, lvl = 1, slot = 'ult') => {
+export const supportHp = (ch, lvl = 1, slot = 'atk') => {
   const a = CHARACTERS[ch]?.[slot], tempo = abilTempo(ch, slot), n = supportN(ch, slot);
   if (!a || !tempo || n <= 0) return 0;
   return frontKillHp(supportLegS(slot) + supportTempoF(tempo) * tierVal(a.dur ?? 0, lvl) / n);
 };
 /** 機隊總耐久(使用者③那句話量的就是這個量) */
-export const supportFleetHp = (ch, lvl = 1, slot = 'ult') => supportHp(ch, lvl, slot) * supportN(ch, slot);
+export const supportFleetHp = (ch, lvl = 1, slot = 'atk') => supportHp(ch, lvl, slot) * supportN(ch, slot);
 /** 整數預算(彈著數/召喚隻數)均分到 n 批的第 i 批份額(平衡分配,總和恆 = total)。
  *  sim 生成端與 lanesim/稽核共用 —— MUST NOT 各自 round(各寫一份會湊不回 total)。 */
-export const ultPartN = (total, n, i) =>
+export const atkPartN = (total, n, i) =>
   Math.round(total * (i + 1) / n) - Math.round(total * i / n);
 
-// ---- 招式啟動手勢(2026-08-06 使用者定案「大招可透過狙擊模式長按右鍵、小招可透過一般模式長按右鍵」)----
-// 長按右鍵/右鍵點擊自此由**防守狀態**分流:防守姿態 → 防守招式(skill)、非防守型態 → 攻擊招式(ult)。
+// ---- 招式啟動手勢(2026-08-06 使用者定案「攻招可透過狙擊模式長按右鍵、守招可透過一般模式長按右鍵」)----
+// 長按右鍵/右鍵點擊自此由**防守狀態**分流:防守姿態 → 防守招式(def)、非防守型態 → 攻擊招式(atk)。
 // `abilHoldSlot(defending)` 是這條分流的**唯一縫**:客戶端手勢(game._fireHoldAbility)、觸控招式鈕、
-// 說明文字與稽核同吃 —— MUST NOT 在任一輸入端另寫 `defending ? 'skill' : 'ult'`。
-export const abilHoldSlot = (defending) => (defending ? 'skill' : 'ult');
+// 說明文字與稽核同吃 —— MUST NOT 在任一輸入端另寫 `defending ? 'def' : 'atk'`。
+export const abilHoldSlot = (defending) => (defending ? 'def' : 'atk');
 
-// ---- 機種絕招退場 + 純自身型大招補償(2026-08-06 使用者定案「機種絕招移除,提高大招效果」)----
+// ---- 機種絕招退場 + 純自身型攻招補償(2026-08-06 使用者定案「機種絕招移除,提高攻招效果」)----
 // 長按被招式佔走之後,純傷害的機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)**整組退場**:
-// 三種載具只剩「大招遞送」這一個身分(ULT_CARRIER),`SPECIAL` 只剩下面這把**補償的尺**。
-// 載具化的 23 台本來就把長按換成了大招(2026-08-06 前一輪),不受這一段影響;
-// 剩下 9 台純自身型大招沒有載具可換 ⇒ 把被移除的那份預算折進大招本身。
-// (2026-08-07:那 9 台改由**跟隨玩家的輔助機隊**供輸,見 ULT_SUPPORT —— 補償的**當量**不受影響
+// 三種載具只剩「攻招遞送」這一個身分(ATK_CARRIER),`SPECIAL` 只剩下面這把**補償的尺**。
+// 載具化的 22 台本來就把長按換成了攻招(2026-08-06 前一輪),不受這一段影響;
+// 剩下 10 台純自身型攻招沒有載具可換 ⇒ 把被移除的那份預算折進攻招本身。
+// (2026-08-07:那 10 台改由**跟隨玩家的輔助機隊**供輸,見 ATK_SUPPORT —— 補償的**當量**不受影響
 //  〔換的仍是被移除的機種絕招〕,但兌現率從此吃「幾架還活著」,校準錨仍是 bal ⑦f 的自身型組。)
 //
-// **當量 MUST 推導不手寫**(`selfUltEq`):機種絕招每 `SPECIAL_CD_S` 秒發一份,而在同一段時間裡
-// 大招只放得出 `cd / SPECIAL_CD_S` 次 ⇒ 一次大招要帶回這麼多份,否則「移除」就是淨削弱。
+// **當量 MUST 推導不手寫**(`selfAtkEq`):機種絕招每 `SPECIAL_CD_S` 秒發一份,而在同一段時間裡
+// 攻招只放得出 `cd / SPECIAL_CD_S` 次 ⇒ 一次攻招要帶回這麼多份,否則「移除」就是淨削弱。
 // 手寫一個 2 倍係數的下場是:之後改任一角色的 `ult.cd` 或 `SPECIAL.BASE`,補償當場失準,
 // 而畫面上只表現成「這幾台好像變弱了」,沒有任何錯誤訊息。
 //
-// 兌現形式**逐 fx 分派**(`selfUltBoost`),但一律走既有的 mods / heal 通道:
+// 兌現形式**逐 fx 分派**(`selfAtkBoost`),但一律走既有的 mods / heal 通道:
 //   ①有傷害窗的 buff 型(s04/t04/t06/m01)⇒ 把當量攤進 `dur` 秒的 `mul.dmg` 增額
 //     (Δ = 當量 ÷ (該角色重武器持續 DPS × dur);DPS 走 `weaponDps` 單一縫,MUST NOT 手抄彈匣週期);
 //   ②自補型(s11)⇒ 治療量增額 = 當量本身(治療 X 點抵銷 X 點傷害,等價可推導);
 //   ③匿蹤(m08)⇒ 收斂成**破隱後 `ALPHA_S` 秒**的傷害倍率(使用者定案「破隱一秒內傷害增加」)——
 //     同一份預算換一個更短更硬的窗,倍率因此也是推導值,MUST NOT 手寫 3。
 //   ④重新設計的三台(s12 復甦 / t02 超載 / m04 偵搜)⇒ 效果本身就是補償,不再另加乘數
-//     (它們的數值是**設計值**,校準錨是 bal ⑤⑦,見各自 ult 欄位的註解)。
+//     (它們的數值是**設計值**,校準錨是 bal ⑤⑦,見各自 atk 欄位的註解)。
 // 夾制(MUL_MAX / ALPHA_MAX)只是防呆上限:窗短或 DPS 低的角色不該因為除法而拿到荒謬倍率。
 export const SPECIAL_CD_S = SQUAD.KAMI.CD_S;   // 三招同一段 CD(DECOY.CD_S / HYPER.CD_S 同值,稽核釘住)
-export const SELF_ULT = {
+export const SELF_ATK = {
   ALPHA_S: 1,       // 匿蹤破除後的爆發窗長度(秒;使用者定案「破隱一秒內」)
   MUL_MAX: 1.0,     // 傷害加成**增額**上限(疊在既有 mul.dmg 之上)
   ALPHA_MAX: 3,     // 破隱爆發窗的傷害倍率上限(= 使用者舉的「3 倍」;推導值多半頂到這裡)
   // **實得率**:`SPECIAL.BASE` 是**名目**預算(爆風總傷害),而機種絕招的**實得**(打在英雄與
   // 砲塔上、扣掉被攔截那幾份)只有其中一部分。補償要換的是「玩家真的少拿到多少」,拿名目去換
-  // 就是**淨加強**:Lv1 一次大招會塞進 700 點額外傷害、8 秒窗算出來的增額直接頂到夾制上限,
+  // 就是**淨加強**:Lv1 一次攻招會塞進 700 點額外傷害、8 秒窗算出來的增額直接頂到夾制上限,
   // 而那台角色本來的 mul.dmg 才 1.35。
   //
   // **自 2026-08-06 起這是凍結的歷史量測,MUST NOT 再宣稱它是當輪量出來的**:
   // 現值 0.35 取自機種絕招**退場前**最後一輪 bal ⑦f 的實測帶下緣(逐招 102~183 EHP/次 ÷ 名目
   // 300 = 0.34~0.61;偏差朝「補得保守」,原則 6)。退場之後那三招在模型裡**不存在**,而最接近
-  // 的類比(帶 strike payload 的大招載具)差在**唯一支配這個數字的性質**上 —— 機種絕招自動追蹤
-  // 目標,大招載具是「點遞送、不索敵不追擊」(同日使用者定案)⇒ 同一輪 ⑦f 實測它對機體+砲塔
+  // 的類比(帶 strike payload 的攻招載具)差在**唯一支配這個數字的性質**上 —— 機種絕招自動追蹤
+  // 目標,攻招載具是「點遞送、不索敵不追擊」(同日使用者定案)⇒ 同一輪 ⑦f 實測它對機體+砲塔
   // 只有 **4.3 EHP/次**(名目 391 ⇒ 實得率 1.1%);清兵那一桶另有 142 EHP/次(全部/名目 37.4%,
-  // 與本係數同量級 —— 但那一桶不決定勝負,見 lanesim 檔頭)。拿 1.1% 去重算會把這 9 台的大招
+  // 與本係數同量級 —— 但那一桶不決定勝負,見 lanesim 檔頭)。拿 1.1% 去重算會把這 10 台的攻招
   // 折到近乎歸零,而那量到的是「載具打不中移動中的機體」,不是「機種絕招本來值多少」。
   // ⇒ 要調這個係數,**MUST 改看 bal ⑦f 的「自身型補償」那一行**(逐台 EHP/次)決定。
   REALIZED_F: 0.35,
   REVIVE_INV_S: 1.5,   // 原地復活後的無敵幀(站起來那一瞬不該被同一發爆風再收一次)
 };
-/** 一次純自身型大招要帶回的機種絕招預算(**實得**傷害當量)。
- *  載具化角色恆 0(長按已經換成大招,不重複補)。 */
-export const selfUltEq = (ch, lvl, abil) => {
-  const a = CHARACTERS[ch]?.ult;
-  if (!a || ultDelivered(ch)) return 0;
-  return specialBudget(abil) * SELF_ULT.REALIZED_F * tierVal(a.cd, lvl) / SPECIAL_CD_S;
+/** 一次純自身型攻招要帶回的機種絕招預算(**實得**傷害當量)。
+ *  載具化角色恆 0(長按已經換成攻招,不重複補)。 */
+export const selfAtkEq = (ch, lvl, abil) => {
+  const a = CHARACTERS[ch]?.atk;
+  if (!a || atkDelivered(ch)) return 0;
+  return specialBudget(abil) * SELF_ATK.REALIZED_F * tierVal(a.cd, lvl) / SPECIAL_CD_S;
 };
 /**
- * 純自身型大招的補償欄位(**單一縫**:伺服器 `_castEffect`、客戶端 HUD 與圖鑑同吃)。
+ * 純自身型攻招的補償欄位(**單一縫**:伺服器 `_castEffect`、客戶端 HUD 與圖鑑同吃)。
  * 回傳 `{ dmgMul, heal, alphaX }` —— 全為「增額」語意,無補償時三欄皆為中性值
- * (dmgMul 0 / heal 0 / alphaX 1)⇒ 其餘 23 台逐位元不受影響。
+ * (dmgMul 0 / heal 0 / alphaX 1)⇒ 其餘 22 台逐位元不受影響。
  */
-export const selfUltBoost = (ch, lvl, abil) => {
+export const selfAtkBoost = (ch, lvl, abil) => {
   const none = { dmgMul: 0, heal: 0, alphaX: 1 };
-  const a = CHARACTERS[ch]?.ult;
-  const eq = selfUltEq(ch, lvl, abil);
+  const a = CHARACTERS[ch]?.atk;
+  const eq = selfAtkEq(ch, lvl, abil);
   if (!a || eq <= 0) return none;
   if (a.fx === 'stealth') {
     // 破隱窗:整份當量壓進 ALPHA_S 秒 ⇒ 倍率 = 1 + 當量 ÷ (窗內基礎輸出)
-    const dps = selfUltDps(ch, abil);
+    const dps = selfAtkDps(ch, abil);
     if (dps <= 0) return none;
-    return { ...none, alphaX: Math.min(SELF_ULT.ALPHA_MAX, 1 + eq / (dps * SELF_ULT.ALPHA_S)) };
+    return { ...none, alphaX: Math.min(SELF_ATK.ALPHA_MAX, 1 + eq / (dps * SELF_ATK.ALPHA_S)) };
   }
   if (a.fx === 'heal') return { ...none, heal: eq };   // 治療 X 點 = 抵銷 X 點傷害
   if (a.fx === 'buff' && a.mul?.dmg) {
-    const dur = tierVal(a.dur, lvl), dps = selfUltDps(ch, abil);
+    const dur = tierVal(a.dur, lvl), dps = selfAtkDps(ch, abil);
     if (!(dur > 0) || dps <= 0) return none;
-    return { ...none, dmgMul: Math.min(SELF_ULT.MUL_MAX, eq / (dps * dur)) };
+    return { ...none, dmgMul: Math.min(SELF_ATK.MUL_MAX, eq / (dps * dur)) };
   }
   return none;   // 重新設計的三台(rally / overdrive / recon):效果本身即補償
 };
 /** 補償折算用的基準輸出:該角色**重武器**的持續 DPS(彈匣週期走 `weaponDps` 單一縫)。
- *  取重武器是因為大招開窗那幾秒玩家打的就是它;輕武器 DPS 低會把倍率推到夾制上限。 */
-export const selfUltDps = (ch, abil) => {
+ *  取重武器是因為攻招開窗那幾秒玩家打的就是它;輕武器 DPS 低會把倍率推到夾制上限。 */
+export const selfAtkDps = (ch, abil) => {
   const w = heroWeapon(ch, 'heavy', abil?.heavy || 1);
   return w ? weaponDps(w) : 0;
 };
@@ -3373,24 +3374,24 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
   };
 }
 
-/** 解析角色招式(slot: 'skill'|'ult')在 lvl 階的實戰數值 */
+/** 解析角色招式(slot: 'def'|'atk')在 lvl 階的實戰數值 */
 export function heroAbility(ch, slot, lvl = 1) {
   const a = CHARACTERS[ch]?.[slot];
   if (!a) return null;
   const t = (v) => tierVal(v, lvl);
-  // 大招載具遞送(2026-08-06 使用者定案;見 ULT_CARRIER):carrier 大招的 cd 壓入 [30,60] 帶、
+  // 攻招載具遞送(2026-08-06 使用者定案;見 ATK_CARRIER):carrier 攻招的 cd 壓入 [30,60] 帶、
   // 未標 range 的支援型補上遞送距離 = hyperRange()(與機甲接戰距離同一把尺;不再 ×COMBAT_SCALE ——
   // hyperRange 已是縮好的遊戲公尺)。其餘欄位(dmg/heal/dur/mp/…)逐位元不動。
-  // 2026-08-07:剩下 9 台自身強化型改由**跟隨玩家的輔助機隊**供輸(見 ULT_SUPPORT)⇒ 32 台大招
+  // 2026-08-07:剩下 10 台自身強化型改由**跟隨玩家的輔助機隊**供輸(見 ATK_SUPPORT)⇒ 32 台攻招
   // 全數載具化,只差形式。`support` 是伺服器分流的旗標,其餘欄位(含 cd)逐位元不動。
-  // 2026-08-22(小招改制):小招改為本體詠唱施展(castTime 依效果強度推導 [0.5, 2.5]s),
-  // 不再是載具或輔助機(carrier/support 恆 false);大招維持載具/輔助機遞送(castTime 恆 0)。
-  const isUlt = slot === 'ult';
-  const carrier = isUlt && abilDelivered(ch, 'ult');
+  // 2026-08-22(守招改制):守招改為本體詠唱施展(castTime 依效果強度推導 [0.5, 2.5]s),
+  // 不再是載具或輔助機(carrier/support 恆 false);攻招維持載具/輔助機遞送(castTime 恆 0)。
+  const isUlt = slot === 'atk';
+  const carrier = isUlt && abilDelivered(ch, 'atk');
   const support = isUlt && !carrier;
-  const castTime = isUlt ? ULT_CAST_S : skillCastTime(ch, lvl);
-  // 遞送距離的預設值只給**大招**:它是「從後方工事送到指定點」的戰略遞送 ⇒ 未標 range 的支援型
-  //   要有一段可以指定的遞送距離(= hyperRange,與機甲接戰距離同一把尺)。小招從主機身邊施放,
+  const castTime = isUlt ? ATK_CAST_S : defCastTime(ch, lvl);
+  // 遞送距離的預設值只給**攻招**:它是「從後方工事送到指定點」的戰略遞送 ⇒ 未標 range 的支援型
+  //   要有一段可以指定的遞送距離(= hyperRange,與機甲接戰距離同一把尺)。守招從主機身邊施放,
   //   遞送距離就是招式本來的 range(未標 = 施放在腳下)。
   const deliverR = carrier && !a.range;
   return {
@@ -3398,14 +3399,14 @@ export function heroAbility(ch, slot, lvl = 1) {
     charges: a.charges || 1,
     cd: (abilCdMapped(ch, slot) ? abilCarrierCd(slot, t(a.cd)) : t(a.cd)) * balanceMul('cd'),
     mp: t(a.mp) * balanceMul('mpCost'), dur: t(a.dur ?? 0), r: t(a.r ?? 0),
-    dmg: t(a.dmg ?? 0) * counterDmgF(a) * upgradeCurveMul(slot === 'ult' ? 'ult' : 'sk', lvl) * balanceMul('dmg'),
-    heal: t(a.heal ?? 0) * upgradeCurveMul(slot === 'ult' ? 'ult' : 'sk', lvl),
+    dmg: t(a.dmg ?? 0) * counterDmgF(a) * upgradeCurveMul(slot === 'atk' ? 'atk' : 'def', lvl) * balanceMul('dmg'),
+    heal: t(a.heal ?? 0) * upgradeCurveMul(slot === 'atk' ? 'atk' : 'def', lvl),
     count: t(a.count ?? 1),
     hp: t(a.hp ?? 0),
     range: (deliverR ? hyperRange() : t(a.range ?? 0) * COMBAT_SCALE) * balanceMul('range'),
     imp: t(a.imp ?? 0), scatter: t(a.scatter ?? 0),   // range 縮 reach;imp/scatter/r 為效果尺寸不縮
     unit: a.unit, target: a.target || 'self', sp: !!a.sp, vision: t(a.vision ?? 0) * COMBAT_SCALE,
-    // 純自身型大招補償帶進來的三個新欄位(2026-08-06;見 SELF_ULT):
+    // 純自身型攻招補償帶進來的三個新欄位(2026-08-06;見 SELF_ATK):
     //   regen 恢復速度倍率 / cleanse 解除並免疫異常 / revive 復活回場血量比例 / brk 被擊中即結束。
     // 未標註的角色一律得到 0/false ⇒ 其餘 28 台的 heroAbility 輸出逐位元不動。
     regen: t(a.regen ?? 0), cleanse: !!a.cleanse, revive: t(a.revive ?? 0), brk: !!a.brk,
@@ -3423,31 +3424,31 @@ export function heroAbility(ch, slot, lvl = 1) {
   };
 }
 
-// ---- 招式攻守定義(2026-09-21 使用者定案:每名角色一攻招一守招,不再分大小招)----
-// 攻招 = ult 槽、守招 = skill 槽,判準是**施放條件**不是機制內容:
-//   護盾模式中施展(`abilHoldSlot(true)` → skill)必為守招;
-//   無護盾施展(`abilHoldSlot(false)` → ult)必為攻招(伺服器 `heroCast` 放 ult 即解除 defending)。
-// 機制偏向不影響歸屬:團隊守護型 ult(s02/s06/s08/s11/s12/t10/m02/m03)與
-// 盾擊/emp 型 skill(s04/s10/t01/t03/t08/m05)照此定義分別歸攻招/守招。
+// ---- 招式攻守定義(2026-09-21 使用者定案:每名角色一攻招一守招,不再分攻守招)----
+// 攻招 = atk 槽、守招 = def 槽,判準是**施放條件**不是機制內容:
+//   護盾模式中施展(`abilHoldSlot(true)` → def)必為守招;
+//   無護盾施展(`abilHoldSlot(false)` → atk)必為攻招(伺服器 `heroCast` 放 atk 即解除 defending)。
+// 機制偏向不影響歸屬:團隊守護型 atk(s02/s06/s08/s11/s12/t10/m02/m03)與
+// 盾擊/emp 型 def(s04/s10/t01/t03/t08/m05)照此定義分別歸攻招/守招。
 // 檔名格式 `{id}_skill_{atk|def}.png`(2026-09-21 使用者定案:兩張一律 skill 前綴,
-// 以攻守後綴區分;攻招圖 = ult 槽立繪、守招圖 = skill 槽立繪),見 portraits.js CUTIN_ART。
+// 以攻守後綴區分;攻招圖 = atk 槽立繪、守招圖 = def 槽立繪),見 portraits.js CUTIN_ART。
 export const ABIL_NATURE = {
-  s01: { skill: 'def', ult: 'atk' }, s02: { skill: 'def', ult: 'atk' },
-  s03: { skill: 'def', ult: 'atk' }, s04: { skill: 'def', ult: 'atk' },
-  s05: { skill: 'def', ult: 'atk' }, s06: { skill: 'def', ult: 'atk' },
-  s07: { skill: 'def', ult: 'atk' }, s08: { skill: 'def', ult: 'atk' },
-  s09: { skill: 'def', ult: 'atk' }, s10: { skill: 'def', ult: 'atk' },
-  s11: { skill: 'def', ult: 'atk' }, s12: { skill: 'def', ult: 'atk' },
-  t01: { skill: 'def', ult: 'atk' }, t02: { skill: 'def', ult: 'atk' },
-  t03: { skill: 'def', ult: 'atk' }, t04: { skill: 'def', ult: 'atk' },
-  t05: { skill: 'def', ult: 'atk' }, t06: { skill: 'def', ult: 'atk' },
-  t07: { skill: 'def', ult: 'atk' }, t08: { skill: 'def', ult: 'atk' },
-  t09: { skill: 'def', ult: 'atk' }, t10: { skill: 'def', ult: 'atk' },
-  t11: { skill: 'def', ult: 'atk' }, t12: { skill: 'def', ult: 'atk' },
-  m01: { skill: 'def', ult: 'atk' }, m02: { skill: 'def', ult: 'atk' },
-  m03: { skill: 'def', ult: 'atk' }, m04: { skill: 'def', ult: 'atk' },
-  m05: { skill: 'def', ult: 'atk' }, m06: { skill: 'def', ult: 'atk' },
-  m07: { skill: 'def', ult: 'atk' }, m08: { skill: 'def', ult: 'atk' },
+  s01: { def: 'def', atk: 'atk' }, s02: { def: 'def', atk: 'atk' },
+  s03: { def: 'def', atk: 'atk' }, s04: { def: 'def', atk: 'atk' },
+  s05: { def: 'def', atk: 'atk' }, s06: { def: 'def', atk: 'atk' },
+  s07: { def: 'def', atk: 'atk' }, s08: { def: 'def', atk: 'atk' },
+  s09: { def: 'def', atk: 'atk' }, s10: { def: 'def', atk: 'atk' },
+  s11: { def: 'def', atk: 'atk' }, s12: { def: 'def', atk: 'atk' },
+  t01: { def: 'def', atk: 'atk' }, t02: { def: 'def', atk: 'atk' },
+  t03: { def: 'def', atk: 'atk' }, t04: { def: 'def', atk: 'atk' },
+  t05: { def: 'def', atk: 'atk' }, t06: { def: 'def', atk: 'atk' },
+  t07: { def: 'def', atk: 'atk' }, t08: { def: 'def', atk: 'atk' },
+  t09: { def: 'def', atk: 'atk' }, t10: { def: 'def', atk: 'atk' },
+  t11: { def: 'def', atk: 'atk' }, t12: { def: 'def', atk: 'atk' },
+  m01: { def: 'def', atk: 'atk' }, m02: { def: 'def', atk: 'atk' },
+  m03: { def: 'def', atk: 'atk' }, m04: { def: 'def', atk: 'atk' },
+  m05: { def: 'def', atk: 'atk' }, m06: { def: 'def', atk: 'atk' },
+  m07: { def: 'def', atk: 'atk' }, m08: { def: 'def', atk: 'atk' },
 };
 /** 該招式的攻守性質('atk'/'def')。查無一律 'def'(退路,不抛錯)。 */
 export const abilNature = (ch, slot) => ABIL_NATURE[ch]?.[slot] || 'def';
@@ -3486,7 +3487,7 @@ export const charsOf = (side) => side === SUPER_SIDE ? Object.keys(CHARACTERS)
 export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side]?.hero || 'robot';
 
 // ---- 角色圖鑑(24 名陣營角色 + 8 名傭兵;劇情設定見 docs/characters.md)----
-// 每名角色 = 專屬機體(**kind 一律顯式標註**)+ 輕武器 + 重武器(CD)+ 小招 + 大招。
+// 每名角色 = 專屬機體(**kind 一律顯式標註**)+ 輕武器 + 重武器(CD)+ 守招 + 攻招。
 // 2026-08-02 機體混編改制(使用者定案):陣營不再等於機種,每個陣營三種機體都有 ——
 //   蜂群 無人機 7 / 機甲 3 / 變形機甲 2、鋼鐵 無人機 3 / 機甲 7 / 變形機甲 2、傭兵 無人機 2 / 機甲 2 / 變形機甲 4。
 //   **角色的陣營不變**,移動的是「機體」:每具機體的原型(仿生/現實)配到與該陣營國家相稱的駕駛員身上,
@@ -3566,10 +3567,10 @@ export const CHARACTERS = {
     heavy: { name: '「命運終章」雷導巡弋火箭巢', rw: '多聯裝雷射終端制導火箭巢・Hydra 70 改・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
       dmg: [49, 75, 109], r: [12, 14, 16], mag: 3, reload: 12, range: 300, pen: 6,
       vs: { flesh: 1.1, armor: 1.4, air: 0.5, building: 1.2 } },
-    skill: { name: '賦格・天籟共鳴', fx: 'buff', target: 'self', spRestore: [40, 60, 80], shieldExpand: true,
+    def: { name: '賦格・天籟共鳴', fx: 'buff', target: 'self', spRestore: [40, 60, 80], shieldExpand: true,
       charges: 2,
       mul: { dmgTaken: [0.85, 0.8, 0.75] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '奏響巴哈復調防護律動（可使用2次）：同調共鳴力場頻率，瞬間充盈磁力並大幅擴張防守護盾面積' },
-    ult: { name: '終章・天穹合奏', fx: 'summon', unit: 'heli_squad', count: [2, 3, 4],
+    atk: { name: '終章・天穹合奏', fx: 'summon', unit: 'heli_squad', count: [2, 3, 4],
       cd: [80, 70, 60], mp: [80, 90, 100], desc: '揮動終極樂章指揮棒：召喚交響武裝直升機編隊凌空突進，自主索敵並與旗艦協同集火' },
   },
   s02: {
@@ -3590,9 +3591,9 @@ export const CHARACTERS = {
       // dmg −5%:讓出 15m 爆風換回的火力補償(aoeTrimF)把它推到 bal ⑤ 81% 出界(見 t02 heavy 同欄註)
       dmg: [48, 69, 100], r: [15, 17, 19], mag: 3, reload: 12, range: 264, pen: 15,
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
-    skill: { name: '地脈・百煉重鑄', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '地脈・百煉重鑄', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.6, 0.5, 0.4],
       dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '啟動應急奈米回火鍛造：持重盾狂暴衝撞擊退敵機，直接充盈磁力並大幅強化護盾減傷' },
-    ult: { name: '天工・萬象焚熔', fx: 'heal', target: 'team', r: 200, heal: [220, 300, 380], sp: true,
+    atk: { name: '天工・萬象焚熔', fx: 'heal', target: 'team', r: 200, heal: [220, 300, 380], sp: true,
       cd: [80, 70, 60], mp: [85, 95, 105], desc: '全面解放萬噸重型熔爐：以熾熱奈米回火烈焰覆蓋全軍，大幅修復機體裝甲並充盈能量護盾' },
   },
   s03: {
@@ -3633,9 +3634,9 @@ export const CHARACTERS = {
       dmg: [44, 66, 96], mag: 5, reload: 8, range: 320, emp: [0.8, 1.0, 1.2],
       vsSp: 1.7, vsHp: 0.7,
       vs: { flesh: 0.7, armor: 0.95, air: 2.0, building: 0.4 } },
-    skill: { name: '幽溟・天海屏障', fx: 'buff', target: 'self', spRestore: [50, 75, 100], shieldExpand: true, shieldDefBoost: [0.65, 0.55, 0.45],
+    def: { name: '幽溟・天海屏障', fx: 'buff', target: 'self', spRestore: [50, 75, 100], shieldExpand: true, shieldDefBoost: [0.65, 0.55, 0.45],
       dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '展開十六道深海共形陣列：構築幽溟水幕屏障，立即充盈磁力並大幅擴張防守護盾' },
-    ult: { name: '逆潮・鯨嘯長歌', fx: 'emp', r: 260, dur: [4, 5, 6],
+    atk: { name: '逆潮・鯨嘯長歌', fx: 'emp', r: 260, dur: [4, 5, 6],
       cd: [70, 62, 54], mp: [90, 100, 110], desc: '引爆低頻超音速利維坦鯨歌：海嘯般音波逆潮狂湧，全頻段封鎖壓制範圍內敵機電磁迴路' },
   },
   s04: {
@@ -3648,11 +3649,11 @@ export const CHARACTERS = {
     heavy: { name: '「紅蓮業火」聚能電漿噴湧口', rw: '高溫磁化電漿短程扇形投射器・熱核噴焰', type: 'plasma', arc: [13, 15, 17],
       dmg: [46, 75, 117], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
-    skill: { name: '金剛・修羅逆浪', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [42, 56, 74], r: 12,
+    def: { name: '金剛・修羅逆浪', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [42, 56, 74], r: 12,
       charges: 2,
       mul: { speed: [1.25, 1.35, 1.45], dmgTaken: [0.75, 0.7, 0.65] },
       dur: [4, 5, 6], cd: [13, 12, 11], mp: [25, 30, 35], desc: '修羅揮鍬狂瀾突進（可使用2次）：以工兵鍬格開彈道、正面衝撞震退並眩暈敵軍，強行撕開包圍網並大幅減免承受傷害' },
-    ult: { name: '無雙・修羅死線', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.85, 0.8, 0.75] },
+    atk: { name: '無雙・修羅死線', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.85, 0.8, 0.75] },
       add: { fx: 'haste', f: [1.25, 1.3, 1.35] },
       dur: [3, 4, 5], cd: [24, 21, 18], mp: [75, 85, 95], desc: '完全解放修羅死線本能：化身戰場鬼神，以鐵鍬開路、移動速度與傷害減免達到極限，以極速狂暴撕裂敵陣' },
   },
@@ -3666,10 +3667,10 @@ export const CHARACTERS = {
     heavy: { name: '「星穹之影」巡飛蜂群', rw: '微型高動態巡飛彈掛架・複合制導・巡航 90m/s', type: 'missile', mv: 90,
       dmg: [44, 63, 88], r: [13, 15, 17], mag: 4, reload: 11, range: 320, pen: 12,
       vs: { flesh: 1.0, armor: 1.6, air: 0.6, building: 1.1 } },
-    skill: { name: '極限・超頻充能', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60],
+    def: { name: '極限・超頻充能', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60],
       charges: 2,
       dur: [4, 5, 6], cd: [12, 11, 10], mp: [25, 30, 35], desc: '超頻啟動神經應急奈米鏈（可使用2次）：瞬間激活磁力護盾，時效內即便持續受擊亦絕不中斷充能' },
-    ult: { name: '暴走・萬星墜閃', fx: 'strike', count: [6, 8, 10], dmg: [60, 77, 94], r: 10, scatter: 30,
+    atk: { name: '暴走・萬星墜閃', fx: 'strike', count: [6, 8, 10], dmg: [60, 77, 94], r: 10, scatter: 30,
       add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 320, pen: 8, cd: [70, 62, 54], mp: [85, 95, 105], vs: { armor: 1.3, building: 1.1 },
       desc: '導引海量微型自爆蜂群暴走俯衝：漫天星芒飽和轟炸指定空域，引發毀滅性光爆與強烈致盲' },
@@ -3689,9 +3690,9 @@ export const CHARACTERS = {
     heavy: { name: '「淨化之矢」超音速防空飛彈', rw: '近程空對空攔截飛彈・全向光電尋的・初速 1000m/s', type: 'missile', mv: 1000,
       dmg: [45, 68, 102], r: [8, 9, 10], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.6, armor: 0.9, air: 2.5, building: 0.3 } },
-    skill: { name: '聖靈・不墜穹頂', fx: 'intercept', r: [140, 170, 200], intercept: true, shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '聖靈・不墜穹頂', fx: 'intercept', r: [140, 170, 200], intercept: true, shieldDefBoost: [0.55, 0.45, 0.35],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '展開拜占庭神聖攔截力場：粉碎周身來襲之彈幕，並在防守姿態下獲得超高護盾傷害減免' },
-    ult: { name: '輓歌・不滅戰陣', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.6, 0.5, 0.4] },
+    atk: { name: '輓歌・不滅戰陣', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.6, 0.5, 0.4] },
       dur: [6, 7, 8], cd: [75, 65, 55], mp: [85, 95, 105], desc: '奏響陣亡勇士之不朽輓歌：展開凱隆聖光防衛矩陣，於廣闊空域為全體友軍構築鋼鐵庇護' },
   },
   s07: {
@@ -3706,10 +3707,10 @@ export const CHARACTERS = {
     heavy: { name: '「非歐撕裂」電漿防空網', rw: '高能磁約束電漿矩陣・拓撲扇形散布', type: 'plasma', arc: [20, 23, 26],
       dmg: [50, 77, 113], mag: 3, reload: 7, range: 264, pen: 4,
       vs: { flesh: 0.9, armor: 0.85, air: 2.0, building: 0.4 } },
-    skill: { name: '公理・非歐折射', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '公理・非歐折射', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35],
       charges: 2,
       dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '構築非歐幾何拓撲偏折面（可使用2次）：持盾衝撞擊退敵機，大幅提高護盾減免並逆轉物理受力' },
-    ult: { name: '悖論・幾何破滅', fx: 'strike', count: [5, 7, 9], dmg: [68, 85, 106], r: 11, scatter: 35,
+    atk: { name: '悖論・幾何破滅', fx: 'strike', count: [5, 7, 9], dmg: [68, 85, 106], r: 11, scatter: 35,
       add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 340, pen: 6, cd: [72, 64, 56], mp: [85, 95, 105], vs: { air: 1.5, armor: 1.1 },
       desc: '推演幾何空間奇點悖論：釋放反向拓撲破片彈幕，徹底撕裂範圍內所有敵機之氣動舵面與引擎' },
@@ -3724,9 +3725,9 @@ export const CHARACTERS = {
     heavy: { name: '「神聖裁決」電磁獵魔長槍', rw: '軌道級重型電磁狙擊管・高能穿甲針・初速 2200m/s', type: 'rail', mv: 2200,
       dmg: [66, 99, 149], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
-    skill: { name: '晨鐘・聖域庇護', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 85, 110], shieldExpand: true,
+    def: { name: '晨鐘・聖域庇護', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 85, 110], shieldExpand: true,
       dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '敲響克拉科夫破曉晨鐘：聖光洗禮修復機體裝甲與磁力，並在防守時大幅擴大護盾庇護範圍' },
-    ult: { name: '暮鐘・萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true,
+    atk: { name: '暮鐘・萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true,
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '敲響大教堂神聖祈願暮鐘：奇蹟光輝普照大地，全軍裝甲超大幅修復且能量護盾全數回滿' },
   },
   s09: {
@@ -3744,10 +3745,10 @@ export const CHARACTERS = {
       vs: { flesh: 0.9, armor: 1.2, air: 1.8, building: 0.8 } },
     // mark 只在 heroHit(直擊彈道)有消耗路徑 —— s09 雙武器是 fan 散彈(heroPlasma)+ launcher
     // (heroBurst),掛 mark 等於死效果,2026-07-16 改 haste(獵手加速追獵)
-    skill: { name: '逐風・靈步躍遷', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.2, 1.3, 1.4] }, spRestore: [40, 60, 80],
+    def: { name: '逐風・靈步躍遷', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.2, 1.3, 1.4] }, spRestore: [40, 60, 80],
       charges: 2,
       dur: [4, 5, 6], cd: [12, 11, 10], mp: [25, 30, 35], desc: '荒原荒野獵巡本能爆發（可使用2次）：立即充盈磁力並大幅加速，於防守姿態下追加連續靈巧大跳躍' },
-    ult: { name: '封喉・禁獵天羅', fx: 'strike', count: [8, 10, 12], dmg: [51, 64, 77], r: 9, scatter: 40,
+    atk: { name: '封喉・禁獵天羅', fx: 'strike', count: [8, 10, 12], dmg: [51, 64, 77], r: 9, scatter: 40,
       add: { fx: 'pull', imp: [16, 20, 24] },
       range: 300, cd: [70, 62, 54], mp: [80, 90, 100], vs: { air: 2.0, flesh: 1.2 },
       desc: '向蒼穹拋射引力拘束天羅：展開絕對禁獵領域，強大向心引力將封鎖空域內所有獵物強行吸向陣眼' },
@@ -3767,10 +3768,10 @@ export const CHARACTERS = {
     heavy: { name: '「神經穿刺」電磁穿顱長矛', rw: '重型 EMP 穿甲貫穿狙擊彈・初速 900m/s', type: 'gun', mv: 900,
       dmg: [52, 78, 112], mag: 3, reload: 9, range: 340, emp: [1.5, 2, 2.5],
       vs: { flesh: 0.8, armor: 1.05, air: 1.8, building: 0.5 } },
-    skill: { name: '始祖・天塹巨翼', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [36, 48, 65], r: 12, spRestore: [25, 40, 55],
+    def: { name: '始祖・天塹巨翼', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [36, 48, 65], r: 12, spRestore: [25, 40, 55],
       charges: 2,
       shieldDefBoost: [0.6, 0.5, 0.4], dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '始祖巨翼化為重鋼天塹（可使用2次）：持巨盾強勢突進衝撞擊退敵群，充盈磁力並大幅提升護盾傷害減免' },
-    ult: { name: '寂滅・全域白噪', fx: 'emp', r: 300, dur: [4, 5, 6],
+    atk: { name: '寂滅・全域白噪', fx: 'emp', r: 300, dur: [4, 5, 6],
       cd: [75, 65, 55], mp: [90, 100, 110], desc: '展開超廣域消音白噪音矩陣：終端信號覆蓋全場，瞬間切斷範圍內敵軍全部通訊與火控感測鏈路' },
   },
   s11: {
@@ -3783,9 +3784,9 @@ export const CHARACTERS = {
     heavy: { name: '「擒縱碎核」重型磁軌貫甲砲', rw: '高密電磁穿甲重砲・關節破壞彈・初速 2000m/s', type: 'rail', mv: 2000,
       dmg: [40, 58, 82], mag: 2, reload: 8, range: 380, crit: 0.15, critX: 2.0, pen: [20, 24, 28],
       vs: { flesh: 0.8, armor: 1.8, air: 1.2, building: 0.7 } },
-    skill: { name: '規訓・天平錶匣', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '規訓・天平錶匣', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.55, 0.45, 0.35],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '啟動格拉蘇蒂擒縱防衛力場：磁力瞬間充盈，時序律動使護盾承受傷害減免效果大幅躍升' },
-    ult: { name: '重調・時之逆轉', fx: 'heal', target: 'self', heal: [400, 550, 700], sp: true,
+    atk: { name: '重調・時之逆轉', fx: 'heal', target: 'self', heal: [400, 550, 700], sp: true,
       cd: [28, 24, 20], mp: [80, 90, 100], desc: '逆轉齒輪主發條時序：以精密機械大修校準自身機體，裝甲大幅回復且能量護盾瞬間滿載' },
   },
   s12: {
@@ -3806,13 +3807,13 @@ export const CHARACTERS = {
       // ⇒ 解析射程 172.8 → 192m。曾經試過把名目射程壓回去讓解析值不動(320 → 240),結果是
       // ④ 當場紅字(172.8 < 砲塔的 186)、而且 rngDmgF 反手把傷害補上去,⑤ 直接衝到 88%。
       vs: { flesh: 0.8, armor: 1.1, air: 0.5, building: 1.2 } },
-    skill: { name: '織星・奇點引力', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '織星・奇點引力', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.6, 0.5, 0.4],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '編織吉里赫奇點引力透鏡：磁力瞬間回滿，防守時大幅展開星軌護盾並強化傷害減免' },
-    // 2026-08-06 使用者定案(機種絕招退場的補償;見 SELF_ULT):由「全隊無霧」改成**全隊復甦**——
+    // 2026-08-06 使用者定案(機種絕招退場的補償;見 SELF_ATK):由「全隊無霧」改成**全隊復甦**——
     // 恢復速度倍率 + 解除既有異常 + 期間免疫異常 + **仍在重生倒數中**的隊友原地半血復活。
     // 復活刻意只救「倒數中」的(已重生的不算)且回場半血 + 一瞬無敵,CD 維持 70→54s:
     // 這是全場唯一能把一條命拿回來的效果,價錢付在「必須在那 30 秒窗口內按下去」。
-    ult: { name: '引渡・群星歸鄉', fx: 'rally', target: 'team', regen: [2.5, 3, 3.5],
+    atk: { name: '引渡・群星歸鄉', fx: 'rally', target: 'team', regen: [2.5, 3, 3.5],
       cleanse: true, revive: [0.5, 0.5, 0.5], dur: [8, 10, 12],
       cd: [26, 22, 18], mp: [80, 90, 100], desc: '詠唱星象古老引渡誓約：全軍回復速度倍增且免疫異常，倒下的戰友受群星召喚原地復甦歸隊' },
   },
@@ -3832,10 +3833,10 @@ export const CHARACTERS = {
     heavy: { name: '「冰魄霜斧」重型電漿戰斧', rw: '高溫磁化冷焰電漿戰斧・重型扇形近戰揮砍', type: 'plasma', arc: [15, 17, 19],
       dmg: [60, 90, 126], mag: 3, reload: 7, range: 264, pen: 16,
       vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
-    skill: { name: '霜狼・北境重盾', fx: 'shield_bash', shieldBash: true, imp: 28, dmg: [65, 90, 120], r: 12,
+    def: { name: '霜狼・北境重盾', fx: 'shield_bash', shieldBash: true, imp: 28, dmg: [65, 90, 120], r: 12,
       mul: { speed: [1.2, 1.3, 1.4], dmgTaken: [0.75, 0.7, 0.65] },
       dur: [5, 6, 7], cd: [24, 22, 20], mp: [35, 40, 45], desc: '霜狼巨盾雪原突襲衝撞：防守姿態下狂暴持盾突進，擊退並震暈沿途敵軍，大幅減免承受傷害' },
-    ult: { name: '雪崩・烏拉爾雷', fx: 'strike', count: [6, 8, 10], dmg: [77, 98, 119], r: 12, scatter: 40,
+    atk: { name: '雪崩・烏拉爾雷', fx: 'strike', count: [6, 8, 10], dmg: [77, 98, 119], r: 12, scatter: 40,
       add: { fx: 'stun', dur: [0.8, 1, 1.2] },
       range: 340, pen: 10, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
       desc: '呼叫烏拉爾重裝砲兵軍團雪崩齊射：以毀滅性雷霆轟炸目標空域，強烈衝擊震撼並癱瘓敵軍' },
@@ -3853,13 +3854,13 @@ export const CHARACTERS = {
       // 依 §2.1「個別角色改 dmg 階梯」這條唯一的具名出口修正,MUST NOT 回頭動 vs 表。
       dmg: [65, 98, 142], mag: 2, reload: 8, range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
       vs: { flesh: 1.0, armor: 1.8, air: 1.2, building: 0.6 } },
-    skill: { name: '臨界・第七神經', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.3, 1.4, 1.5] }, spRestore: [40, 60, 80],
+    def: { name: '臨界・第七神經', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.3, 1.4, 1.5] }, spRestore: [40, 60, 80],
       dur: [5, 6, 7], cd: [13, 12, 11], mp: [30, 35, 40], desc: '第七神經臨界超頻：瞬間充盈磁力並大幅提高機動性，於防守姿態下追加連續靈動大跳躍' },
-    // 2026-08-06 使用者定案(見 SELF_ULT):改成**超載** —— 彈藥全滿 + 期間無限彈藥(免裝填)
+    // 2026-08-06 使用者定案(見 SELF_ATK):改成**超載** —— 彈藥全滿 + 期間無限彈藥(免裝填)
     // + 閃避率提升,**被擊中即結束**。補償當量由「免裝填的 DPS 增益 × 撐得住的秒數」兌現,
     // 故刻意不再疊 mul.dmg(疊上去就是同一份預算領兩次);`brk` 那條風險正是它的價錢 ——
     // 全滿彈匣 + 零裝填的爆發只有在沒被打到的前提下成立,吃到一發就回到常態。
-    ult: { name: '神化・超弦同步', fx: 'buff', target: 'self',
+    atk: { name: '神化・超弦同步', fx: 'buff', target: 'self',
       mul: { dmgTaken: [0.75, 0.7, 0.65] },
       add: { fx: 'overdrive', evade: [0.25, 0.32, 0.4] }, brk: true,
       dur: [8, 10, 12], cd: [28, 24, 20], mp: [85, 95, 105], desc: '超弦同步率百分之百神化解放：彈藥瞬間全滿且免裝填、閃避率飆至極致（承受攻擊即解除）' },
@@ -3876,15 +3877,15 @@ export const CHARACTERS = {
       vsSp: 0.72, vsHp: 1.15,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
     // 雙扇形(霰彈 + 電漿噴焰)= 全機種最短的交戰帶,又是最慢的機體 ⇒ 兩招都給貼身套件
-    // (2026-07-27 使用者原則:扇形武器優先配置拉敵人/進場退場/匿蹤、控場或走位的大小招;稽核 bal ⑥)。
+    // (2026-07-27 使用者原則:扇形武器優先配置拉敵人/進場退場/匿蹤、控場或走位的攻守招;稽核 bal ⑥)。
     // 舊制「承傷減免 + 傷害增益吸血」是站樁包:貼不上的時候一項都兌現不了,對進戰(bal ⑤)長年墊底。
-    // 小招保留鑄鐵鍋盾本體(機體左前臂真的掛著那口鍋,見 models.js gorilla)並補上衝鋒 ——
+    // 守招保留鑄鐵鍋盾本體(機體左前臂真的掛著那口鍋,見 models.js gorilla)並補上衝鋒 ——
     // lore 寫的就是「頂著那口鑄鐵鍋盾一路撞進去」,承傷減免 + 加速正是這句話的機制化;
-    // 大招從自身增益改成把敵人捲進鍋裡的範圍打擊,直接把目標帶進扇形武器的甜蜜點。
-    skill: { name: '鎮煞・金剛熔壁', fx: 'shield_bash', shieldBash: true, imp: 30, dmg: [45, 62, 85], r: 12, shieldExpand: true,
+    // 攻招從自身增益改成把敵人捲進鍋裡的範圍打擊,直接把目標帶進扇形武器的甜蜜點。
+    def: { name: '鎮煞・金剛熔壁', fx: 'shield_bash', shieldBash: true, imp: 30, dmg: [45, 62, 85], r: 12, shieldExpand: true,
       charges: 2,
       spRestore: [25, 40, 55], dur: [3, 3.5, 4], cd: [17, 15, 13], mp: [25, 30, 35], desc: '八卦爐神火化為鎮煞金剛壁（可使用2次）：防守姿態下持重盾強勢衝撞擊退敵機，大幅擴大護盾並補充磁力' },
-    ult: { name: '焚天・八卦火海', fx: 'strike', count: [2, 3, 4], dmg: [88, 110, 138], r: 14, scatter: 18,
+    atk: { name: '焚天・八卦火海', fx: 'strike', count: [2, 3, 4], dmg: [88, 110, 138], r: 14, scatter: 18,
       add: { fx: 'pull', imp: [24, 30, 36] },
       range: 160, pen: 10, cd: [75, 65, 55], mp: [80, 90, 100], vs: { flesh: 1.5, armor: 1.1 },
       desc: '解放八卦爐核心三昧真火：掀起焚天引力火海，強大吸力將範圍內敵軍全數吞入核心煉獄' },
@@ -3899,9 +3900,9 @@ export const CHARACTERS = {
     heavy: { name: '「天誅」14.5mm 反器材重砲', rw: '大口徑鎢芯穿甲反器材砲・KPV 縮裝・初速 1000m/s', type: 'gun', mv: 1000,
       dmg: [50, 75, 105], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],   // dmg −5%:同 t02 heavy 同欄註(bal ⑤ 離群修正)
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
-    skill: { name: '匿影・千幻羽衣', fx: 'decoy_beacon', spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '匿影・千幻羽衣', fx: 'decoy_beacon', count: 2, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '展開灰雁千幻光學迷彩羽衣：干擾敵方火控雷達，迅速充盈磁力並在防守時大幅提高護盾減傷' },
-    ult: { name: '滅頂・天穹要塞', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
+    atk: { name: '滅頂・天穹要塞', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
       add: { fx: 'siege', setupS: 1.0, recoverS: 1.5 },
       dur: [8, 10, 12], cd: [28, 24, 20], mp: [85, 95, 105], desc: '展開四足液壓駐鋤就地化為滅頂要塞：進入重裝狙擊狀態，無限重彈免裝填狂轟敵陣（解除需硬直）' },
   },
@@ -3915,11 +3916,12 @@ export const CHARACTERS = {
     heavy: { name: '「長空貫日」聚能光子長矛', rw: '關節整合型高能雷射長矛・光速直擊', type: 'beam',
       dmg: [35, 52, 78], mag: 5, reload: 8, range: 320, pen: [18, 22, 26],
       vs: { flesh: 0.8, armor: 1.7, air: 0.6, building: 0.6 } },
-    skill: { name: '觀自在・應力回火', fx: 'heal', target: 'self', heal: [50, 70, 95], sp: true, spRestore: [30, 45, 60], spRegenHit: true,
+    def: { name: '觀自在・應力回火', fx: 'heal', target: 'self', heal: [50, 70, 95], sp: true, spRestore: [30, 45, 60], spRegenHit: true,
       charges: 2,
       dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '全機應力掃描自檢回火（可使用2次）：釋放殘餘應力並重鑄疲勞關節，立即修復機體與磁力，時效內受擊仍可源源不絕回充磁力' },
-    ult: { name: '千機・重鋼天降', fx: 'summon', unit: 'main_battle_tank', count: [1, 2, 3],
-      cd: [90, 80, 70], mp: [90, 100, 110], desc: '號令千機工坊重鋼傀儡天降：召喚自律重型主戰坦克投入前線，以銅牆鐵壁與狂暴火力自主索敵推進' },
+    atk: { name: '千機・重鋼天降', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] },
+      add: { fx: 'clone', count: 2 },
+      dur: [8, 10, 12], cd: [30, 26, 22], mp: [90, 100, 110], desc: '總設計師親率千機備用機天降：分化兩具仿生鶴戰力化身協同火擊，本尊若遇致命一擊則轉移至化身重生' },
   },
   t06: {
     // 2026-08-02 機體混編(使用者定案:孫悟空轉鋼鐵、國籍中國 —— 他本來就是中國人):
@@ -3934,10 +3936,10 @@ export const CHARACTERS = {
     heavy: { name: '「如意金箍」熔核焚天砲', rw: '高溫磁化電漿聚爆砲・多節長尾前捲破敵', type: 'plasma', arc: [10, 12, 14],
       dmg: [60, 93, 144], mag: 3, reload: 7, range: 264, pen: 10,
       vs: { flesh: 0.8, armor: 1.4, air: 0.45, building: 0.8 } },
-    skill: { name: '騰雲・筋斗御風', fx: 'buff', target: 'self', defJump: 3, mul: { speed: [1.25, 1.35, 1.45] }, spRestore: [40, 60, 80],
+    def: { name: '騰雲・筋斗御風', fx: 'buff', target: 'self', defJump: 3, mul: { speed: [1.25, 1.35, 1.45] }, spRestore: [40, 60, 80],
       charges: 3,
       dur: [1.5, 2.0, 2.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '大顯筋斗御風騰雲神通（可使用3次）：瞬間充盈磁力並大幅加速，於防守姿態下追加多次騰雲大跳躍' },
-    ult: { name: '通天・身外化影', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] },
+    atk: { name: '通天・身外化影', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] },
       add: { fx: 'clone', count: 2 },
       dur: [8, 10, 12], cd: [30, 26, 22], mp: [80, 90, 100], desc: '拔毫毛變幻通天身外法影：分化兩具戰力化身協同火擊，本尊若遇致命一擊則元神轉移至化身重生' },
   },
@@ -3953,9 +3955,9 @@ export const CHARACTERS = {
     heavy: { name: '「斷魂」14.5mm 栓動破甲重狙', rw: '重型手動栓動狙擊步槍・重鎢穿甲彈・初速 1000m/s', type: 'gun', mv: 1000,
       dmg: [40, 57, 80], mag: 3, reload: 9, range: 400, crit: 0.25, critX: 2.2, pen: [18, 24, 30],
       vs: { flesh: 2.0, armor: 1.6, air: 1.2, building: 0.5 } },
-    skill: { name: '幽冥・擬態無形', fx: 'stealth', spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] },
+    def: { name: '幽冥・擬態無形', fx: 'stealth', spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] },
       dur: [5, 6, 7], cd: [13, 12, 11], mp: [35, 40, 45], desc: '展開幽邃翼龍擬態隱蔽力場：進入無聲遁形狀態並迅速回充磁力，奔襲速度顯著提升' },
-    ult: { name: '絕影・落日貫雲', fx: 'strike', count: 1, dmg: [190, 250, 315], r: 6,
+    atk: { name: '絕影・落日貫雲', fx: 'strike', count: 1, dmg: [190, 250, 315], r: 6,
       charges: 2,
       add: { fx: 'bleed', dps: [16, 22, 28], dur: 4, pen: 12 },
       range: 400, pen: 20, cd: [70, 62, 54], mp: [50, 60, 70], vs: { flesh: 1.5, armor: 1.2 },
@@ -3976,10 +3978,10 @@ export const CHARACTERS = {
       dmg: [23, 33, 45], mag: 5, reload: 8, range: 320, emp: [1.0, 1.5, 2.0],
       vsSp: 1.55, vsHp: 0.78,
       vs: { flesh: 0.9, armor: 0.8, air: 1.8, building: 0.4 } },
-    skill: { name: '休止・斷音結界', fx: 'emp', r: 16, dur: [2.0, 2.5, 3.0], spRestore: [25, 35, 50], shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '休止・斷音結界', fx: 'emp', r: 16, dur: [2.0, 2.5, 3.0], spRestore: [25, 35, 50], shieldDefBoost: [0.55, 0.45, 0.35],
       charges: 2,
       cd: [17, 15, 13], mp: [25, 30, 35], desc: '仙音暫歇引動休止斷音結界（可使用2次）：強烈干擾周圍敵機武器使其離線，並立即充盈磁力與強化護盾' },
-    ult: { name: '絕唱・龍吟神曲', fx: 'emp', r: 280, dur: [4, 5, 6],
+    atk: { name: '絕唱・龍吟神曲', fx: 'emp', r: 280, dur: [4, 5, 6],
       cd: [72, 64, 56], mp: [90, 100, 110], desc: '引吭高歌宣洩神龍絕唱之音：以毀滅性聲電海嘯席捲全場，強行震碎並壓制敵軍全頻段通訊鏈路' },
   },
   t09: {
@@ -3994,9 +3996,9 @@ export const CHARACTERS = {
     heavy: { name: '「天罰見證」136 巡飛彈發射槽', rw: '三角翼自主攻擊巡飛彈・Shahed-136 縮裝・巡飛 100m/s', type: 'missile', mv: 100,
       dmg: [38, 55, 77], r: [15, 17, 19], mag: 4, reload: 11, range: 360, pen: 10,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
-    skill: { name: '悼文・鐵壁殘卷', fx: 'buff', target: 'self', intercept: true, r: 16, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '悼文・鐵壁殘卷', fx: 'buff', target: 'self', intercept: true, r: 16, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '以波斯哀歌詩紋構築悼文鐵壁：母機搭載的護衛無人機循詩節迎擊，粉碎近身來襲彈道，充盈磁力並大幅提高護盾減傷' },
-    ult: { name: '天罰・焚天黑雨', fx: 'strike', count: [7, 9, 11], dmg: [72, 89, 111], r: 11, scatter: 45,
+    atk: { name: '天罰・焚天黑雨', fx: 'strike', count: [7, 9, 11], dmg: [72, 89, 111], r: 11, scatter: 45,
       add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 360, pen: 8, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
       desc: '降下蔽日遮天的波斯天罰黑雨：海量巡飛彈飽和俯衝轟炸目標空域，引發毀滅性混亂與火海' },
@@ -4011,14 +4013,14 @@ export const CHARACTERS = {
     heavy: { name: '「天穹衛士」垂直防空飛彈', rw: '垂直冷發射防空攔截飛彈・9M330 衍生・初速 800m/s', type: 'missile', mv: 800,
       dmg: [50, 75, 113], r: [11, 13, 15], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.7, armor: 0.7, air: 2.4, building: 0.4 } },
-    skill: { name: '聖石・神聖幾何', fx: 'cube', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '聖石・神聖幾何', fx: 'cube', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [40, 45, 50], desc: '凝結穆卡納斯立體神聖幾何石板：直接補充磁力，防守時大幅擴展護盾面積並強化傷害減免' },
-    ult: { name: '王權・天穹聖所', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.55, 0.45, 0.35] },
+    atk: { name: '王權・天穹聖所', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.55, 0.45, 0.35] },
       dur: [6, 7, 8], cd: [80, 70, 60], mp: [90, 100, 110], desc: '升起至高無上之王權天穹聖所：構築不可動搖的絕對防衛領域，於廣闊範圍內大幅減免友軍承受傷害' },
   },
   t11: {
     // 2026-08-02 機體混編:接下原屬傭兵的「傾轉旋翼 ↔ 負重工」變形機甲 —— 傾轉旋翼把步兵班
-    // 載到定位(大招「安哥拉支援」),落地變成扛著整個班的負重前傾體態。老兵的活,本來就是扛人。
+    // 載到定位(攻招「安哥拉支援」),落地變成扛著整個班的負重前傾體態。老兵的活,本來就是扛人。
     side: 'STEEL', kind: 'morph', name: '拉斐爾・富恩特斯', code: '老雪茄', machine: '「老兵」可變式戰術指導機',
     visual: { hue: 0x8a9a5a, pod: 'antenna', flight: 'tilt', ground: 'atlas', bulk: 1.15, paint: 'camo' },
     mods: { hp: 1.05, sp: 0.9, mp: 1.0, speed: 0.9, armor: 14 },
@@ -4028,9 +4030,9 @@ export const CHARACTERS = {
     heavy: { name: '「破城者」SPG-9 無後座力砲', rw: '重型破甲無後座力加農砲・高爆穿甲彈・初速 435m/s', type: 'launcher', mv: 435,
       dmg: [78, 115, 168], r: [13, 15, 17], mag: 3, reload: 12, range: 264, pen: 12,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.3 } },
-    skill: { name: '固守・偏折鏡陣', fx: 'reflect', dur: [4.0, 4.5, 5.0], spRestore: [40, 60, 80], shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '固守・偏折鏡陣', fx: 'reflect', dur: [4.0, 4.5, 5.0], spRestore: [40, 60, 80], shieldDefBoost: [0.55, 0.45, 0.35],
       cd: [24, 22, 20], mp: [35, 40, 45], desc: '立起陣地幾何偏折鏡陣：彈開敵方直線穿甲彈與光束直擊，充盈磁力並極限強化護盾傷害減免' },
-    ult: { name: '衝鋒・鋼鐵營陣', fx: 'summon', unit: 'veteran_squad', count: [3, 4, 5],
+    atk: { name: '衝鋒・鋼鐵營陣', fx: 'summon', unit: 'veteran_squad', count: [3, 4, 5],
       cd: [85, 75, 65], mp: [85, 95, 105], desc: '吹響宿將鐵血集結衝鋒哨：召喚精銳老兵特戰連隊伴隨推進，以猛烈火力主動索敵與協同集火' },
   },
   t12: {
@@ -4043,10 +4045,10 @@ export const CHARACTERS = {
     heavy: { name: '「星火標定」EM 電磁貫通砲', rw: '電磁超導標定穿甲砲・初速 2500m/s', type: 'rail', mv: 2500,
       dmg: [53, 82, 122], mag: 2, reload: 8, range: 340, emp: [0.8, 1.0, 1.2],
       vs: { flesh: 0.8, armor: 1.0, air: 1.6, building: 0.5 } },
-    skill: { name: '同調・螢火護生', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60], shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '同調・螢火護生', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60], shieldDefBoost: [0.55, 0.45, 0.35],
       charges: 2,
       dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '將全身測向天線陣調諧至友軍頻段，點亮同調螢火護持生機（可使用2次）：直接充盈磁力，受擊仍可源源回充，並在防守時大幅提高護盾減傷' },
-    ult: { name: '共振・萬象沉寂', fx: 'emp', r: 240, dur: [3, 4, 5], vision: [4, 5, 6],
+    atk: { name: '共振・萬象沉寂', fx: 'emp', r: 240, dur: [3, 4, 5], vision: [4, 5, 6],
       cd: [75, 65, 55], mp: [90, 100, 110], desc: '引動全域神經共振沉寂之潮：強制靜默所有被同調標記之敵機系統，並實時回傳其精準座標' },
   },
 
@@ -4089,10 +4091,10 @@ export const CHARACTERS = {
       dmg: [50, 72, 103], r: [12, 14, 16], mag: 4, reload: 11, range: 320, pen: [14, 18, 22],
       spPierce: 0.45, vsHp: 0.9,
       vs: { flesh: 0.9, armor: 1.7, air: 0.55, building: 1.1 } },
-    skill: { name: '狂湧・血月之庇', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [25, 35, 50], shieldBash: true,
+    def: { name: '狂湧・血月之庇', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [25, 35, 50], shieldBash: true,
       charges: 2,
       mul: { speed: [1.2, 1.3, 1.4] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '喚醒血月夜鴉嗜戰之庇（可使用2次）：持盾強勢衝撞擊退敵機，充盈磁力且在受擊時激發源源不絕的狂暴回充' },
-    ult: { name: '貪婪・夜鴉血宴', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5], reload: [0.8, 0.75, 0.7] },
+    atk: { name: '貪婪・夜鴉血宴', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5], reload: [0.8, 0.75, 0.7] },
       add: { fx: 'vamp', f: [0.12, 0.16, 0.2] },
       dur: [8, 10, 12], cd: [28, 24, 20], mp: [80, 90, 100], desc: '啟動狂戰士貪婪夜鴉血宴：核心超頻解限，攻擊射速與裝填狂暴暴增，並透過撕裂敵軍瘋狂吸取生命' },
   },
@@ -4108,10 +4110,10 @@ export const CHARACTERS = {
     heavy: { name: '「滅絕巨顎」重型口藏磁軌砲', rw: '大口徑超導線性磁軌巨砲・穿甲重彈・初速 1800m/s', type: 'rail', mv: 1800,
       dmg: [74, 109, 154], mag: 2, reload: 8, range: 360, crit: 0.1, critX: 1.8, pen: [20, 25, 30],
       vs: { flesh: 0.9, armor: 1.7, air: 0.4, building: 1.0 } },
-    skill: { name: '金湯・泰坦地幔', fx: 'buff', target: 'self', spRestore: [35, 55, 75], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '金湯・泰坦地幔', fx: 'buff', target: 'self', spRestore: [35, 55, 75], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
       charges: 2,
       dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '展開泰坦地幔金湯防衛護盾（可使用2次）：直接充盈磁力，防守時大幅擴大護盾屏障面積並強化減傷' },
-    ult: { name: '磐石・永恆誓約', fx: 'buff', target: 'team', r: 200, mul: { dmgTaken: [0.7, 0.62, 0.55] },
+    atk: { name: '磐石・永恆誓約', fx: 'buff', target: 'team', r: 200, mul: { dmgTaken: [0.7, 0.62, 0.55] },
       dur: [6, 8, 10], cd: [80, 70, 60], mp: [85, 95, 105], desc: '締結不可破滅之磐石永恆誓約：於廣闊戰場半徑內為全體友軍提供堅不可摧的極限承傷減免' },
   },
   m03: {
@@ -4126,9 +4128,9 @@ export const CHARACTERS = {
     heavy: { name: '「雪崩精準」雷導空投火箭', rw: '雷射制導高爆空投火箭・APKWS 縮裝・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
       dmg: [62, 95, 137], r: [11, 13, 15], mag: 3, reload: 12, range: 300, pen: 8,
       vs: { flesh: 1.1, armor: 1.2, air: 1.2, building: 1.0 } },
-    skill: { name: '冰魄・靈泉玉澤', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 90, 120], cleanse: true,
+    def: { name: '冰魄・靈泉玉澤', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 90, 120], cleanse: true,
       dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '召喚高山冰魄靈泉玉澤：瞬間滌除自身一切異常狀態，大幅修復機體裝甲並充盈磁力護盾' },
-    ult: { name: '極光・萬象淨化', fx: 'heal', target: 'team', r: 220, heal: [260, 350, 440], sp: true,
+    atk: { name: '極光・萬象淨化', fx: 'heal', target: 'team', r: 220, heal: [260, 350, 440], sp: true,
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '引動阿爾卑斯極光萬象淨化：以漫天極光洗禮戰場，全體友軍裝甲大幅回滿並同步充滿能量護盾' },
   },
   m04: {
@@ -4145,12 +4147,12 @@ export const CHARACTERS = {
     heavy: { name: '「天穹破甲」20mm 鷹眼重砲', rw: '大口徑遠程穿甲反器材砲・初速 900m/s', type: 'gun', mv: 900,
       dmg: [40, 58, 81], mag: 3, reload: 9, range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.2, armor: 1.9, air: 1.3, building: 0.5 } },
-    skill: { name: '迷障・神鷹蒼雲', fx: 'fog', r: 24, dur: [6, 7, 8], spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] },
+    def: { name: '迷障・神鷹蒼雲', fx: 'fog', r: 24, dur: [6, 7, 8], spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] },
       cd: [18, 16, 14], mp: [35, 40, 45], desc: '撒布長生天神鷹蒼雲迷障：遮蔽敵方視野並隱匿行蹤，迅速充盈磁力並大幅提高移速脫離危險' },
-    // 2026-08-06 使用者定案(見 SELF_ULT):無霧秒數加倍,並在同一段窗內給**全隊**射程 / 跑速 /
-    // 閃避率加成。fx 仍是 `recon`(不是 buff+team)⇒ `ultDelivered` 不收它,維持瞬發全隊型;
+    // 2026-08-06 使用者定案(見 SELF_ATK):無霧秒數加倍,並在同一段窗內給**全隊**射程 / 跑速 /
+    // 閃避率加成。fx 仍是 `recon`(不是 buff+team)⇒ `atkDelivered` 不收它,維持瞬發全隊型;
     // 射程加成走 mods 的 `range` 鍵(伺服器射程閘與客戶端有效射程同吃 heroRange 那條縫)。
-    ult: { name: '天眼・長生雄鷹', fx: 'recon', target: 'team', vision: [18, 24, 30],
+    atk: { name: '天眼・長生雄鷹', fx: 'recon', target: 'team', vision: [18, 24, 30],
       mul: { range: [1.2, 1.25, 1.3], speed: [1.2, 1.25, 1.3] },
       add: { fx: 'evade', evade: [0.12, 0.16, 0.2] }, dur: [8, 10, 12],
       cd: [26, 22, 18], mp: [85, 95, 105], desc: '開展騰格里長生雄鷹天眼：全隊無霧視野翻倍，且射程、機動速度與閃避率同步獲得全面增幅' },
@@ -4165,9 +4167,9 @@ export const CHARACTERS = {
     heavy: { name: '「冥府追魂」全向自導飛彈', rw: '智慧鎖定追蹤飛彈・破甲多用途彈頭・初速 400m/s', type: 'missile', mv: 400,
       dmg: [50, 72, 103], r: [13, 15, 17], mag: 4, reload: 11, range: 330, pen: [12, 15, 18],
       vs: { flesh: 1.0, armor: 1.5, air: 0.55, building: 1.2 } },
-    skill: { name: '避雷・幽夜絕緣', fx: 'emp', r: 16, dur: [3.5, 4.0, 4.5], spRestore: [40, 60, 80], shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '避雷・幽夜絕緣', fx: 'emp', r: 16, dur: [3.5, 4.0, 4.5], spRestore: [40, 60, 80], shieldDefBoost: [0.6, 0.5, 0.4],
       cd: [18, 16, 14], mp: [35, 40, 45], desc: '展開幽夜高壓避雷絕緣力場：強行癱瘓近身敵軍武器，迅速補滿磁力並大幅強化護盾減傷' },
-    ult: { name: '引煞・萬雷清算', fx: 'strike', count: [6, 8, 10], dmg: [68, 85, 106], r: 11, scatter: 38,
+    atk: { name: '引煞・萬雷清算', fx: 'strike', count: [6, 8, 10], dmg: [68, 85, 106], r: 11, scatter: 38,
       add: { fx: 'stun', dur: [0.8, 1, 1.2] },
       range: 330, pen: 10, cd: [78, 68, 58], mp: [88, 98, 108], vs: { armor: 1.3, building: 1.2 },
       desc: '引動九天凶煞之萬雷清算：傾瀉飽和電磁滅絕狂雷，瞬間重創並強效麻痺範圍內全部敵方機體' },
@@ -4184,10 +4186,10 @@ export const CHARACTERS = {
     heavy: { name: '「萬象盛宴」集束子母巨彈', rw: '大範圍散布集束子母彈・拋撒破片・初速 400m/s', type: 'launcher', mv: 400,
       dmg: [55, 79, 112], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 6,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.4, armor: 0.9, air: 0.5, building: 1.2 } },
-    skill: { name: '狂歡・花車浮游', fx: 'buff', target: 'self', shieldExpand: true, spRestore: [30, 45, 60],
+    def: { name: '狂歡・花車浮游', fx: 'buff', target: 'self', shieldExpand: true, spRestore: [30, 45, 60],
       charges: 2,
       mul: { speed: [1.25, 1.35, 1.45] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '啟動嘉年華花車浮游護衛力場（可使用2次）：直接充盈磁力並加速巡航，防守姿態下大幅擴張護盾保護面積' },
-    ult: { name: '盛宴・天穹巡遊', fx: 'summon', unit: 'carnival_heli', count: [2, 3, 4],
+    atk: { name: '盛宴・天穹巡遊', fx: 'summon', unit: 'carnival_heli', count: [2, 3, 4],
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '召喚空中主力嘉年華直升機盛宴：號令武裝直升機編隊凌空巡遊突擊，以狂歡狂瀾火力自主索敵集火' },
   },
   m07: {
@@ -4200,9 +4202,9 @@ export const CHARACTERS = {
     heavy: { name: '「焚天界域」扇面防衛電漿幕', rw: '近迫磁化電漿散射矩陣・扇形防空幕', type: 'plasma', arc: [22, 25, 28],
       dmg: [46, 73, 111], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 0.8, armor: 1.25, air: 2.2, building: 0.3 } },
-    skill: { name: '拒止・百戰心訣', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35], spRestore: [50, 75, 100],
+    def: { name: '拒止・百戰心訣', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35], spRestore: [50, 75, 100],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '運轉界碑拒止百戰心訣：持鞘翅甲盾衝撞擊退闖入禁區之敵機，立即充盈磁力並大幅強化護盾減傷' },
-    ult: { name: '絕界・全域封殺', fx: 'strike', count: [7, 9, 11], dmg: [55, 68, 85], r: 9, scatter: 40,
+    atk: { name: '絕界・全域封殺', fx: 'strike', count: [7, 9, 11], dmg: [55, 68, 85], r: 9, scatter: 40,
       add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 320, cd: [74, 66, 58], mp: [85, 95, 105], vs: { air: 2.0, flesh: 1.2 },
       desc: '劃定全域拒止之毀滅絕界：傾瀉鋪天蓋地的界碑彈幕，徹底壓制全域敵軍並造成極限減速' },
@@ -4217,12 +4219,12 @@ export const CHARACTERS = {
     heavy: { name: '「冰川之息」大口徑反器材重狙', rw: '超遠程重型反器材狙擊砲・穿甲鎢芯彈・初速 900m/s', type: 'gun', mv: 900,
       dmg: [61, 89, 126], mag: 3, reload: 9, range: 390, crit: 0.2, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.3, armor: 1.7, air: 1.2, building: 0.5 } },
-    skill: { name: '歸隱・相位虛無', fx: 'phaseshift', dur: [1.2, 1.4, 1.6], spRestore: [30, 45, 60], mul: { speed: [1.3, 1.4, 1.5] },
+    def: { name: '歸隱・相位虛無', fx: 'phaseshift', dur: [1.2, 1.4, 1.6], spRestore: [30, 45, 60], mul: { speed: [1.3, 1.4, 1.5] },
       charges: 2,
       cd: [13, 12, 11], mp: [25, 30, 35], desc: '身遁曼陀羅相位虛無之境（可使用2次）：短暫免疫一切傷害與負面狀態，立即補滿磁力並以極速脫離交火' },
-    // 2026-08-06 使用者定案(見 SELF_ULT):破隱後 SELF_ULT.ALPHA_S 秒內傷害倍增 ——
-    // 倍率由 `selfUltBoost` 從被移除的機種絕招預算**推導**(MUST NOT 手寫);`alpha` 只是旗標。
-    ult: { name: '絕殺・一念空華', fx: 'stealth', dur: [4, 5, 6], add: { fx: 'alpha' },
+    // 2026-08-06 使用者定案(見 SELF_ATK):破隱後 SELF_ATK.ALPHA_S 秒內傷害倍增 ——
+    // 倍率由 `selfAtkBoost` 從被移除的機種絕招預算**推導**(MUST NOT 手寫);`alpha` 只是旗標。
+    atk: { name: '絕殺・一念空華', fx: 'stealth', dur: [4, 5, 6], add: { fx: 'alpha' },
       cd: [26, 22, 18], mp: [80, 90, 100], desc: '凝聚契約刺客之一念空華：遁入絕對虛空隱匿，現身開火剎那爆發極限毀滅性一擊（首擊傷害狂暴倍增）' },
   },
 };
@@ -4331,8 +4333,8 @@ export const ECON = {
   UPGRADES: {
     lw:  { name: '輕武器強化', abil: 'light', desc: '輕武器全面提升(傷害/射速/彈夾)', max: 3 },
     hw:  { name: '重武器強化', abil: 'heavy', desc: '重武器全面提升(傷害/裝填/破甲)', max: 3 },
-    sk:  { name: '防守招式強化', abil: 'skill', desc: '防守招式全面提升(威力/冷卻/範圍)', max: 3 },
-    ult: { name: '攻擊招式強化', abil: 'ult',   desc: '攻擊招式全面提升(威力/冷卻/範圍)', max: 3 },
+    def:  { name: '防守招式強化', abil: 'def', desc: '防守招式全面提升(威力/冷卻/範圍)', max: 3 },
+    atk: { name: '攻擊招式強化', abil: 'atk',   desc: '攻擊招式全面提升(威力/冷卻/範圍)', max: 3 },
     hp:  { name: '裝甲強化', desc: '裝甲上限 +27%/級', max: 3, step: 0.27 },
     ar:  { name: '複合裝甲', desc: '護甲值 +6/級',     max: 3, step: 6 },
     sp:  { name: '護盾強化', desc: '護盾上限 +27%/級', max: 3, step: 0.27 },
@@ -4408,7 +4410,7 @@ export const UNITS = {
   // range/rate 仍與塔取最大值 ⇒ 這兩欄的初始值(310/1.2)實際會生效,dmg 的初始值(90)不會。
   base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 310, rate: 1.2, speed: 0,  sight: 310 },
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
-  // 裝甲 hp 脫戰以磁力 1/4 自然回復,回主堡/治療招式加速;mp = 電力(施放小招/大招 + 重武器擊發皆消耗,
+  // 裝甲 hp 脫戰以磁力 1/4 自然回復,回主堡/治療招式加速;mp = 電力(施放守招/攻招 + 重武器擊發皆消耗,
   // 見 heavyMpCost);mpRegen 為「充能」滿級規格(實際回速 × chargeF(充能等級))。
   // 無人機 = 單架(SQUAD.N=1,2026-07-17):hp/shield/armor 於 UNITS 之後 derive = 機甲平均 ×SQUAD.HP_F
   // (80%;MUST NOT 手寫),傷害 = 機甲全額(heroWeapon() 唯一折算點,DMG=1)。各自重生、各自吃冷卻。
@@ -4506,7 +4508,7 @@ export const CLASS_SYM = { K: 0.68, SWARM_ARMOR_F: 1, STEEL_AIR_F: 1 };
 // 整組等比放大,夾在它前面會被重新放回 1 以上(而且只在某些角色身上,更難察覺)。
 const VS_DEFS = [
   ...Object.values(WEAPONS), DECOY, HYPER,
-  ...Object.values(CHARACTERS).flatMap((c) => ['light', 'heavy', 'skill', 'ult'].map((s) => c[s])),
+  ...Object.values(CHARACTERS).flatMap((c) => ['light', 'heavy', 'def', 'atk'].map((s) => c[s])),
 ].filter((w) => w?.vs);
 for (const w of VS_DEFS) {
   // ① 建築加乘移除(見 BUILDING_VS_CAP):加乘歸零、懲罰(< 1)原樣保留
@@ -5188,7 +5190,7 @@ export const aoeTrimF = (w) => (w?._aoeRaw ? aoeTrimRaw(w) / AOE_BUDGET.NORM : 1
 //   mobDmgF(ch) = (全角色有效機動的幾何中點 ÷ 該角色有效機動) ^ K
 // ⇒ 機動高於中點者基礎火力下修、低於中點者上修,整體火力水位由幾何中點鎖住(不通膨,與
 //   CLASS_SYM 取幾何中點同理)。K = 0 即逐位元回到舊制。
-// **只作用於武器**(招式不吃):使用者指示「先不考慮長按技和大小招」,那三類的預算住 SPECIAL /
+// **只作用於武器**(招式不吃):使用者指示「先不考慮長按技和攻守招」,那三類的預算住 SPECIAL /
 // 招式階梯,不在本次校準範圍。
 // 校準錨:bal ①(清波剩餘 EHP 三機種同時朝 40% 收斂)、④(drone 站外攻堅秒數上升,有預算上限)、
 //         ⑤(機種對稱 / 角色離群)、⑦(前線交戰機種對稱)。改 K MUST 四條一起看。
@@ -5600,7 +5602,7 @@ export const BOSS = {
   // 逐段體型大小縮放 (第1/2/3/4階段大小增加 0%/20%/50%/100%)
   SCALE_F: [1.0, 1.2, 1.5, 2.0],
   ZONE_F: 0.5,      // 活動半徑 = 砲塔射程 × 此值(使用者:半個塔射程)
-  HEAL_SKILL_F: 0.5, // 技能 HP 恢復減半(其他來源恆 0)
+  HEAL_DEF_F: 0.5, // 技能 HP 恢復減半(其他來源恆 0)
   // 第 4 階段額外狂暴模式參數:
   ENRAGE_NPC_DMG_F: 0.25, // 受到兵波NPC/砲塔/主堡的傷害減少至25%
   ENRAGE_SPD_F: 0.5,      // 移動速度減半 (×0.5)
@@ -5647,7 +5649,7 @@ export function bossSlotPlan(n) {
   return out.slice(0, n);
 }
 /** BOSS 的 HP 恢復倍率:技能來源減半、其他一律無效(使用者定案)。非 BOSS MUST NOT 走這一支 */
-export const bossHealF = (src) => (src === 'skill' ? BOSS.HEAL_SKILL_F : 0);
+export const bossHealF = (src) => (src === 'def' ? BOSS.HEAL_DEF_F : 0);
 
 /**
  * 塔位求解(sim._spawnStructures 與 biomes 淨空共用的唯一的縫)。
@@ -6190,7 +6192,7 @@ export const AIRDROP = {
   MEDKIT_HP: 0.35,         // 回復裝甲 HP(× maxHp × 箱型 mul,夾 maxHp)
   MEDKIT_SP: 0.5,          // 回復護盾(× maxSp × 箱型 mul,夾 maxSp)
   BATTERY_MP: 0.6,         // 回復電力(× maxMp × 箱型 mul;可 overcharge 超過上限)
-  BATTERY_CD: 5,           // 招式冷卻減少秒數(skill + ult,× 箱型 mul)
+  BATTERY_CD: 5,           // 招式冷卻減少秒數(def + atk,× 箱型 mul)
   MONEY: 50,               // 金錢(× 箱型 mul)
 };
 
@@ -6452,7 +6454,7 @@ export const BOT_ROLE_FEATS = {
   mob:   { name: '機動', raw: _hexVal.mob },
   siege: { name: '攻堅', raw: (ch) => buildDps(ch, 'light') + buildDps(ch, 'heavy') },
   aid:   { name: '支援', ratio: true,   // 已是 0~1 的佔比(見上方 ②),不取分位
-    raw: (ch) => ['skill', 'ult'].reduce((s, slot) => {
+    raw: (ch) => ['def', 'atk'].reduce((s, slot) => {
       const A = heroAbility(ch, slot);
       return s + (!A ? 0 : A.target === 'team' ? 1 : AID_FX.has(A.fx) ? 0.5 : 0);
     }, 0) / 2 },
@@ -6476,28 +6478,28 @@ export const BOT_ROLE_FEATS = {
 export const BOT_ROLES = {
   raider: { name: '突襲',
     w: { mob: 0.45, zone: -0.15, aid: -0.15, dur: -0.13, armor: -0.12 },
-    buy: ['lw', 'hw', 'sk', 'ult', 'sp', 'hp', 'ch', 'ar'],
+    buy: ['lw', 'hw', 'def', 'atk', 'sp', 'hp', 'ch', 'ar'],
     mul: { KITE_NEAR: 0.80, KEEP_F: 0.80, KEEP_STRUCT: 1.00, W_OUTPUT: 1.25, W_EXEC: 1.30,
       PRIO_HERO: 0.85, PRIO_STRUCT: 1.20, PULL_HP: 1.15, PULL_SP: 1.10, RALLY_BACK_M: 0.80, CAST_HURT: 1.00 } },
   zoner: { name: '壓制',
     w: { zone: 0.45, fire: 0.25, mob: -0.20, siege: -0.10 },
-    buy: ['hw', 'lw', 'ult', 'sk', 'hp', 'ar', 'sp', 'ch'],
+    buy: ['hw', 'lw', 'atk', 'def', 'hp', 'ar', 'sp', 'ch'],
     mul: { KITE_NEAR: 1.20, KEEP_F: 1.20, KEEP_STRUCT: 1.10, W_OUTPUT: 1.00, W_EXEC: 1.00,
       PRIO_HERO: 1.00, PRIO_STRUCT: 1.00, PULL_HP: 1.00, PULL_SP: 1.00, RALLY_BACK_M: 1.10, CAST_HURT: 1.00 } },
   siege: { name: '攻堅',
     w: { siege: 0.35, dur: 0.20, armor: 0.20, mob: -0.15, zone: -0.10 },
-    buy: ['hw', 'ar', 'hp', 'lw', 'ult', 'sk', 'sp', 'ch'],
+    buy: ['hw', 'ar', 'hp', 'lw', 'atk', 'def', 'sp', 'ch'],
     mul: { KITE_NEAR: 0.85, KEEP_F: 0.85, KEEP_STRUCT: 0.85, W_OUTPUT: 0.75, W_EXEC: 0.75,
       PRIO_HERO: 1.20, PRIO_STRUCT: 0.70, PULL_HP: 0.90, PULL_SP: 0.85, RALLY_BACK_M: 0.75, CAST_HURT: 0.90 } },
   support: { name: '支援',
     w: { aid: 0.65, fire: -0.15, siege: -0.20 },
-    buy: ['sk', 'ult', 'ch', 'lw', 'sp', 'hp', 'hw', 'ar'],
+    buy: ['def', 'atk', 'ch', 'lw', 'sp', 'hp', 'hw', 'ar'],
     mul: { KITE_NEAR: 1.15, KEEP_F: 1.20, KEEP_STRUCT: 1.10, W_OUTPUT: 1.20, W_EXEC: 0.85,
       PRIO_HERO: 0.95, PRIO_STRUCT: 1.15, PULL_HP: 1.25, PULL_SP: 1.20, RALLY_BACK_M: 1.25, CAST_HURT: 1.30 } },
 };
 export const BOT_ROLE_KEYS = Object.keys(BOT_ROLES);
 /** 八軌採購順序的基準(沒有定位時 = 舊制;bots.js BUY_ORDER 已收到這裡,MUST NOT 兩邊各一份) */
-export const BOT_BUY_ORDER = ['hw', 'lw', 'ult', 'sk', 'hp', 'sp', 'ar', 'ch'];
+export const BOT_BUY_ORDER = ['hw', 'lw', 'atk', 'def', 'hp', 'sp', 'ar', 'ch'];
 export const BOT_ROLE = {
   MUL_MAX: 1.5,   // 乘數的合法幅度 [1/MUL_MAX, MUL_MAX](防呆上限;現役最大 1.30)
   // 覆寫後的合法域。與 BOT_LEARN.KEYS 重疊的那幾個 MUST 收在學習邊界之內(稽核反查)——
