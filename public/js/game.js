@@ -6188,6 +6188,10 @@ export class BattleClient {
         sp: active.sp || 0,
         maxSp: active.maxSp || 0,
         glow: bossGlow(seg),
+        ch: active.ch || null,       // BOSS 頭像:角色 ID(main.js 走 avatarURL,與名冊同一縫)
+        side: active.side || null,   // BOSS 頭像站位與框體:SWARM 左 / STEEL 右
+        pch: this.ch || null,        // 自機頭像:擺另一端(觀戰無座機則隱藏)
+        pside: this.side || null,
       });
     } else {
       this.hud.bossBar?.(null);

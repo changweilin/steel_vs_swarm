@@ -29,6 +29,13 @@ const sideColor = (id) => {
   return c.side === 'MERC' ? '#b9a06a' : SIDES[c.side].color;
 };
 
+/**
+ * Portrait faction tag (drives frame style + side).
+ * SWARM → left, STEEL → right (mirrors HUD base bars); MERC → left with gold double frame
+ * (team context is unknowable here, so mercenaries take a fixed neutral seat).
+ */
+const facOf = (id) => CHARACTERS[id]?.side || 'MERC';
+
 export class Dialogue {
   /** @param {HTMLElement} root Dialogue overlay layer mounted over canvas (#dialogueLayer) */
   constructor(root) {
@@ -58,11 +65,27 @@ export class Dialogue {
     el.innerHTML = `
       <div class="dlg-note"><b>${esc(sc.title)}</b><span>${esc(sc.note)}</span></div>
       <div class="dlg-row">
-        <img class="dlg-av" src="" alt="" draggable="false">
+        <img class="dlg-av dlg-av-l" src="" alt="" draggable="false">
         <div class="dlg-txt"><span class="dlg-who"></span><span class="dlg-line"></span></div>
+        <img class="dlg-av dlg-av-r" src="" alt="" draggable="false">
       </div>`;
     this.root.appendChild(el);
-    const av = el.querySelector('.dlg-av');
+    // 雙頭像:取本場台詞最多的兩名發言者固定鎮守兩端(左 SWARM 系 / 右 STEEL,同 HUD 主堡條站位),
+    // 逐句只切換高亮 —— 頭像不再每句跳動(RPG 對話框站位)。
+    const tally = new Map();
+    for (const l of sc.lines) tally.set(l.ch, (tally.get(l.ch) || 0) + 1);
+    const leads = [...tally.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+    const L = leads.find((id) => facOf(id) !== 'STEEL') ?? leads[0];
+    const R = leads.find((id) => id !== L) ?? null;
+    const avL = el.querySelector('.dlg-av-l');
+    const avR = el.querySelector('.dlg-av-r');
+    for (const [av, id] of [[avL, L], [avR, R]]) {
+      if (!av) continue;
+      if (!id) { av.style.display = 'none'; continue; }
+      av.src = avatarURL(id);
+      av.dataset.fac = facOf(id);
+      av.dataset.ch = id;
+    }
     const who = el.querySelector('.dlg-who');
     const txt = el.querySelector('.dlg-line');
     let i = 0;
@@ -71,7 +94,10 @@ export class Dialogue {
       const l = sc.lines[i++];
       const c = CHARACTERS[l.ch];
       el.style.setProperty('--dlg-side', sideColor(l.ch));
-      av.src = avatarURL(l.ch);
+      // 非固定班底臨時插話:借用該端頭像(框色跟著發言者走,下一句自動歸位)
+      const av = facOf(l.ch) === 'STEEL' ? avR : avL;
+      if (av && av.dataset.ch !== l.ch) { av.src = avatarURL(l.ch); av.dataset.fac = facOf(l.ch); av.dataset.ch = l.ch; }
+      for (const a of [avL, avR]) a?.classList.toggle('on', a === av);
       who.textContent = c ? `「${c.code}」${c.name}` : l.ch;
       txt.textContent = l.t;
       this.at = i;                       // Current line index (storybook progress indicator; unused in live gameplay)
@@ -104,7 +130,8 @@ export class Dialogue {
     // Portraits display the two most frequent speakers in this scenario
     const tally = new Map();
     for (const l of sc.lines) tally.set(l.ch, (tally.get(l.ch) || 0) + 1);
-    const leads = [...tally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([id]) => id);
+    const leads = [...tally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([id]) => id)
+      .sort((a, b) => (facOf(a) === 'STEEL' ? 1 : 0) - (facOf(b) === 'STEEL' ? 1 : 0));
     const wrap = document.createElement('div');
     wrap.className = 'dlg-scene';
     wrap.innerHTML = `
@@ -118,10 +145,13 @@ export class Dialogue {
     host.appendChild(wrap);
     sc.lines.forEach((l, i) => {
       const c = CHARACTERS[l.ch];
+      const fac = facOf(l.ch);
       const row = document.createElement('div');
-      row.className = 'dlg-say';
+      // SWARM 系頭像在左 / STEEL 在右(與無線電條同序);傭兵固定左、金色雙框
+      row.className = 'dlg-say' + (fac === 'STEEL' ? ' flip' : '');
+      row.dataset.fac = fac;
       row.style.setProperty('--dlg-side', sideColor(l.ch));
-      row.innerHTML = `<img class="dlg-av" src="${esc(avatarURL(l.ch))}" alt="" draggable="false">
+      row.innerHTML = `<img class="dlg-av" src="${esc(avatarURL(l.ch))}" alt="" draggable="false" data-fac="${fac}">
         <div class="dlg-txt"><span class="dlg-who">${esc(c ? `「${c.code}」${c.name}` : l.ch)}</span>
         <span class="dlg-line">${esc(l.t)}</span></div>`;
       script.appendChild(row);

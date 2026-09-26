@@ -3357,9 +3357,21 @@ function makeHud() {
     bossBar: (info) => {
       const wrap = $('bossBarWrap');
       if (!wrap) return;
+      // 頭像掛載:BOSS 站自家陣營那一端(SWARM 左 / STEEL 右,與 HUD 主堡條同序),自機站另一端。
+      // src 快取在 element 上,逐幀更新不重設(避免閃爍);未知角色直接隱藏該端。
+      const setAv = (el, chId) => {
+        if (!el) return;
+        const c = chId && CHARACTERS[chId];
+        if (!c) { el.style.display = 'none'; el._src = ''; el.removeAttribute('src'); return; }
+        el.dataset.fac = c.side || 'MERC';
+        const url = avatarURL(chId);
+        if (el._src !== url) { el._src = url; el.src = url; }
+        el.style.display = '';
+      };
       if (!info) {
         wrap.style.display = 'none';
         document.body.classList.remove('has-boss-bar');
+        delete wrap.dataset.prev;   // 下次出現不誤判扣血/補血
         return;
       }
       wrap.style.display = 'flex';
@@ -3369,6 +3381,24 @@ function makeHud() {
       if ($('bossPhase')) $('bossPhase').textContent = `階段 ${info.phase} / 4`;
       if ($('bossHpText')) $('bossHpText').textContent = `${Math.max(0, Math.round(info.hp))} / ${Math.round(info.maxHp)}`;
       const pct = Math.max(0, Math.min(100, (info.hp / (info.maxHp || 1)) * 100));
+      const bossLeft = info.side !== 'STEEL';
+      setAv($('bossAvL'), bossLeft ? info.ch : info.pch);
+      setAv($('bossAvR'), bossLeft ? info.pch : info.ch);
+      if (info.side) wrap.dataset.fac = info.side;
+      // 扣血/補血效果:與上一幀比(0.05 個百分點以下視為浮點抖動);只在方向切換時重起動畫,
+      // 逐幀強制 reflow 太貴,持續同方向則沿用進行中的動畫。
+      const prev = wrap.dataset.prev == null ? pct : +wrap.dataset.prev;
+      const dir = pct < prev - 0.05 ? 'boss-dmg' : pct > prev + 0.05 ? 'boss-heal' : '';
+      const cur = wrap.classList.contains('boss-dmg') ? 'boss-dmg'
+        : wrap.classList.contains('boss-heal') ? 'boss-heal' : '';
+      if (dir && dir !== cur) {
+        wrap.classList.remove('boss-dmg', 'boss-heal');
+        void wrap.offsetWidth;
+        wrap.classList.add(dir);
+        clearTimeout(wrap._fxT);
+        wrap._fxT = setTimeout(() => wrap.classList.remove('boss-dmg', 'boss-heal'), 480);
+      }
+      wrap.dataset.prev = pct;
       if ($('bossHpBar')) {
         $('bossHpBar').style.width = `${pct}%`;
         if (info.glow) $('bossHpBar').style.background = `linear-gradient(90deg, #b71c1c, ${info.glow})`;
