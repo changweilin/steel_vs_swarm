@@ -60,6 +60,7 @@ const KIND_KEY = {
   hyper: 'hyper',     // 極音速飛彈(機甲長按招式的彈體;位置/朝向全由伺服器回報)
   drone_wingman: 'summon:drone_wingman',
   assault_rover: 'summon:assault_rover',
+  decoy_beacon: 'summon:drone_wingman',
   heli_squad: 'summon:heli_squad',
   main_battle_tank: 'summon:main_battle_tank',
   veteran_squad: 'summon:veteran_squad',

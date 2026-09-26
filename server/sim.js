@@ -2425,11 +2425,7 @@ export class BattleSim {
     }
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen, 0, (0, wp.def), { origin: [h.x, h.z] });
-    if (wp.id === 'light' && h.clones && h.clones.length) {
-      for (const c of h.clones) {
-        if (!c.dead) this._damage(t, dmg, h, wp.def.pen, 0, (0, wp.def), { origin: [h.x, h.z] });
-      }
-    }
+    // 分身自律化後獨立索敵開火(見 _tickClones),不再鏡像本尊目標 —— 留著就是雙重給付。
     this._echo(h, t, wp.def);
   }
 
@@ -3991,6 +3987,8 @@ export class BattleSim {
       const dur = (A.dur || 6.0) * frac;
       const count = A.count || 2;
       const ry = h.ry || 0;
+      // 幻影弱攻擊:取本尊當下輕武器射程/射速/破甲,傷害 × HOLO_DECOY_DMG_F(單一縫,見下方)
+      const wp = this._heroWeapon(h, 'light');
       this.hologramDecoys = this.hologramDecoys || [];
       for (let i = 0; i < count; i++) {
         const offX = (i === 0 ? -3 : 3) * Math.cos(ry);
@@ -3999,6 +3997,7 @@ export class BattleSim {
         const dec = {
           id: decId,
           pid: h.pid,
+          ownerPid: h.pid,
           side: h.side,
           kind: 'decoy_beacon',
           isHoloDecoy: true,
@@ -4012,6 +4011,11 @@ export class BattleSim {
           armor: 0,
           speed: 18,
           r: 1.5,
+          sight: wp?.def.range || 200,
+          range: wp?.def.range || 200,
+          rate: wp?.def.rate || 3,
+          cd: 0,
+          offset: { x: offX * 3, z: offZ * 3 },
           until: this.t + dur,
           blindR: A.blindR || 14,
           blindDur: A.blindDur || 1.5,
@@ -4213,6 +4217,7 @@ export class BattleSim {
         hero: true,
         isClone: true,
         owner: h,
+        ownerPid: h.pid,
         kind: h.kind,
         ch: h.ch,
         hp: h.hp,
@@ -4226,6 +4231,10 @@ export class BattleSim {
         z: h.z + Math.sin(ang) * 4,
         ry: h.ry || 0,
         dead: false,
+        // 自律作戰狀態(武器/視野逐發取本尊當下輕武器,不快照 —— 等級提升即時生效)
+        cd: 0,
+        slotA: (i / count) * Math.PI * 2,
+        offset: { x: Math.cos(ang) * 12, z: Math.sin(ang) * 12 },
       };
       h.clones.push(c);
       this.ents.set(cid, c);
@@ -4242,6 +4251,35 @@ export class BattleSim {
     h.clones = [];
     delete h.clonesUntil;
     delete h.noLightReloadUntil;
+  }
+
+  /**
+   * 自律單位的目標選擇(唯一縫;_tickSummons / _tickClones / _tickDecoyBeacons 共用):
+   * 優先集火主人的攻擊目標(focusFire),否則在 sight 內按 英雄 > 塔/主堡 > 小兵 就近索敵。
+   */
+  _autoTarget(s, owner) {
+    let target = null;
+    if (owner?.lastHitTargetId) {
+      const lt = this.ents.get(owner.lastHitTargetId);
+      // 超級方召喚物不集火第三方(互為中立,打也打不動;見 _damage 唯一縫)
+      if (lt && lt.hp > 0 && lt.side !== s.side && (!lt.hero || !lt.dead) && dist2d(s.x, s.z, lt.x, lt.z) <= (s.sight || 200) * 1.5
+        && !(isSuperSide(s.side) && isThirdSide(lt.side))) {
+        target = lt;
+      }
+    }
+    if (!target) {
+      let best = null, bestScore = Infinity;
+      for (const e of this.ents.values()) {
+        if (e.side === s.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        const d = dist2d(s.x, s.z, e.x, e.z);
+        if (d > (s.sight || 200)) continue;
+        const prio = e.hero ? 0 : (e.kind === 'tower' || e.kind === 'base' ? 50 : 100);
+        const score = prio + d;
+        if (score < bestScore) { bestScore = score; best = e; }
+      }
+      target = best;
+    }
+    return target;
   }
 
   _tickClones(dt) {
@@ -4268,14 +4306,60 @@ export class BattleSim {
         this._despawnClones(h);
         continue;
       }
+      // 自律作戰:獨立索敵 + 獨立開火(武器取本尊當下輕武器,等同戰力快照即時版)
+      const wp = this._heroWeapon(h, 'light');
+      const sight = UNITS[h.kind]?.sight || h.sight || wp?.def.range || 200;
       for (let i = 0; i < h.clones.length; i++) {
         const c = h.clones[i];
         if (c.dead) continue;
-        const ang = (h.ry || 0) + (i === 0 ? 2.1 : -2.1);
-        c.x = h.x + Math.cos(ang) * 4;
-        c.z = h.z + Math.sin(ang) * 4;
+        c.cd = Math.max(0, (c.cd || 0) - dt);
+        c.sight = sight;
         c.y = h.y;
-        c.ry = h.ry;
+        const target = this._autoTarget(c, h);
+        if (target && wp) {
+          const d = dist2d(c.x, c.z, target.x, target.z);
+          if (d <= wp.def.range) {
+            c.ry = Math.atan2(-(target.x - c.x), target.z - c.z);
+            if (c.cd === 0) {
+              const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+              const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
+              c.cd = 1 / ((wp.def.rate || 3) * sandMul);
+              const dmg = this._rollCrit(c, wp.def, this._heroDmg(h, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul, target);
+              this._damage(target, dmg, c, wp.def.pen, 0, wp.def, { origin: [c.x, c.z] });
+              this.events.push({
+                e: 'shot', id: c.id, kind: c.kind,
+                from: [c.x, c.z], to: [target.x, target.z],
+                x: c.x, z: c.z, y: c.y || 0, tx: target.x, tz: target.z, ty: target.y || 0,
+                side: c.side,
+              });
+            }
+            continue;
+          }
+          // 接敵:推進到射程 85% 處
+          const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
+          const windMul = this.curWeatherDyn ? windSpeedFactor(target.x - c.x, target.z - c.z, wDir, this.curWeatherDyn.wind) : 1;
+          const moveD = Math.min((h.speed || 21) * windMul * dt, d - wp.def.range * 0.85);
+          if (moveD > 0) {
+            c.x += ((target.x - c.x) / d) * moveD;
+            c.z += ((target.z - c.z) / d) * moveD;
+            c.ry = Math.atan2(-(target.x - c.x), target.z - c.z);
+          }
+          continue;
+        }
+        // 脫戰:跟隨本尊編隊站位
+        const targetX = h.x + (c.offset?.x || 0);
+        const targetZ = h.z + (c.offset?.z || 0);
+        const od = dist2d(c.x, c.z, targetX, targetZ);
+        if (od > 6) {
+          const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
+          const windMul = this.curWeatherDyn ? windSpeedFactor(targetX - c.x, targetZ - c.z, wDir, this.curWeatherDyn.wind) : 1;
+          const moveD = Math.min((h.speed || 21) * windMul * dt, od - 4);
+          if (moveD > 0) {
+            c.x += ((targetX - c.x) / od) * moveD;
+            c.z += ((targetZ - c.z) / od) * moveD;
+          }
+        }
+        c.ry = h.ry || 0;
       }
     }
   }
@@ -4529,6 +4613,10 @@ export class BattleSim {
     }
   }
 
+  // 幻影誘餌弱攻擊倍率(唯一縫):本尊輕武器傷害 × 此值,射程/射速/破甲沿用本尊輕武器。
+  // 誘餌本職仍是吸火 + 被擊毀致盲,火力只是讓它不像木樁(2 架合計約 0.6 台本尊輕武器)。
+  _holoDecoyDmgF() { return 0.3; }
+
   _tickDecoyBeacons(dt) {
     if (!this.hologramDecoys || !this.hologramDecoys.length) return;
     for (let i = this.hologramDecoys.length - 1; i >= 0; i--) {
@@ -4540,8 +4628,64 @@ export class BattleSim {
         this.hologramDecoys.splice(i, 1);
         continue;
       }
-      dec.x += -Math.sin(dec.ry) * dec.speed * dt;
-      dec.z += Math.cos(dec.ry) * dec.speed * dt;
+      const owner = this.heroes.get(dec.ownerPid) || dec.owner;
+      dec.cd = Math.max(0, (dec.cd || 0) - dt);
+      // 幻影類跟隨開火:優先打主人的目標,主人沒目標才就近自衛
+      const wp = owner && !owner.dead ? this._heroWeapon(owner, 'light') : null;
+      let target = null;
+      if (owner && !owner.dead && owner.lastHitTargetId) {
+        const lt = this.ents.get(owner.lastHitTargetId);
+        if (lt && lt.hp > 0 && lt.side !== dec.side && (!lt.hero || !lt.dead)
+          && dist2d(dec.x, dec.z, lt.x, lt.z) <= (dec.sight || 200) * 1.5
+          && !(isSuperSide(dec.side) && isThirdSide(lt.side))) {
+          target = lt;
+        }
+      }
+      if (!target) target = this._autoTarget(dec, owner);
+      if (target && wp) {
+        const d = dist2d(dec.x, dec.z, target.x, target.z);
+        if (d <= (dec.range || wp.def.range)) {
+          dec.ry = Math.atan2(-(target.x - dec.x), target.z - dec.z);
+          if (dec.cd === 0) {
+            const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+            const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
+            dec.cd = 1 / ((dec.rate || wp.def.rate || 3) * sandMul);
+            const dmg = this._heroDmg(owner, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul * this._holoDecoyDmgF();
+            this._damage(target, dmg, dec, wp.def.pen, 0, wp.def, { origin: [dec.x, dec.z] });
+            this.events.push({
+              e: 'shot', id: dec.id, kind: dec.kind,
+              from: [dec.x, dec.z], to: [target.x, target.z],
+              x: dec.x, z: dec.z, y: dec.y || 0, tx: target.x, tz: target.z, ty: target.y || 0,
+              side: dec.side,
+            });
+          }
+        } else {
+          // 靠近到射程內,但不遠離主人護衛圈
+          const dx = target.x - dec.x, dz = target.z - dec.z;
+          const step = Math.min(dec.speed * dt, d - (dec.range || wp.def.range) * 0.85);
+          if (step > 0) {
+            dec.x += (dx / d) * step;
+            dec.z += (dz / d) * step;
+            dec.ry = Math.atan2(-dx, dz);
+          }
+        }
+        continue;
+      }
+      // 無目標:回主人身邊游走護衛
+      if (owner && !owner.dead) {
+        const targetX = owner.x + (dec.offset?.x || 0);
+        const targetZ = owner.z + (dec.offset?.z || 0);
+        const od = dist2d(dec.x, dec.z, targetX, targetZ);
+        if (od > 4) {
+          const step = Math.min(dec.speed * dt, od);
+          dec.x += ((targetX - dec.x) / od) * step;
+          dec.z += ((targetZ - dec.z) / od) * step;
+          dec.ry = Math.atan2(-(targetX - dec.x), targetZ - dec.z);
+        }
+      } else {
+        dec.x += -Math.sin(dec.ry) * dec.speed * dt;
+        dec.z += Math.cos(dec.ry) * dec.speed * dt;
+      }
     }
   }
 
@@ -4674,29 +4818,8 @@ export class BattleSim {
         continue;
       }
       const owner = this.heroes.get(s.ownerPid);
-      // 目標選擇:優先集火主人攻擊中的目標 (focusFire)
-      let target = null;
-      if (owner?.lastHitTargetId) {
-        const lt = this.ents.get(owner.lastHitTargetId);
-        // 超級方召喚物不集火第三方(互為中立,打也打不動;見 _damage 唯一縫)
-        if (lt && lt.hp > 0 && lt.side !== s.side && (!lt.hero || !lt.dead) && dist2d(s.x, s.z, lt.x, lt.z) <= s.sight * 1.5
-          && !(isSuperSide(s.side) && isThirdSide(lt.side))) {
-          target = lt;
-        }
-      }
-      if (!target) {
-        // 主動索敵警戒半徑 45m (英雄 > 塔 > 小兵)
-        let best = null, bestScore = Infinity;
-        for (const e of this.ents.values()) {
-          if (e.side === s.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
-          const d = dist2d(s.x, s.z, e.x, e.z);
-          if (d > (s.sight || 200)) continue;
-          const prio = e.hero ? 0 : (e.kind === 'tower' || e.kind === 'base' ? 50 : 100);
-          const score = prio + d;
-          if (score < bestScore) { bestScore = score; best = e; }
-        }
-        target = best;
-      }
+      // 目標選擇吃 _autoTarget 唯一縫(集火主人目標 → 就近索敵)
+      let target = this._autoTarget(s, owner);
 
       s.cd = Math.max(0, (s.cd || 0) - dt);
       if (target) {
@@ -6196,8 +6319,8 @@ export class BattleSim {
     this._structs = _all.filter((s) => s.kind === 'tower' || s.kind === 'base');
     this._buildTickIndex();   // 索敵網格 + (side|lane) 推擠分桶:一趟建好,tick 尾清空
     for (const e of _all) {
-      // 集束轟炸機/護衛機/極音速飛彈/神木/暗月/石板/自律部隊:由各自的 _tick* 管、自己不推線
-      if (e.hero || e.neutral || e.decoy || e.kami || e.hyper || e.isTree || e.isMoon || e.isSlab || e.summoned || e.hp <= 0) continue;
+      // 集束轟炸機/護衛機/極音速飛彈/神木/暗月/石板/全息誘餌/自律部隊:由各自的 _tick* 管、自己不推線
+      if (e.hero || e.neutral || e.decoy || e.kami || e.hyper || e.isTree || e.isMoon || e.isSlab || e.isHoloDecoy || e.summoned || e.hp <= 0) continue;
       const u = UNITS[e.kind];
       e.cd = Math.max(0, e.cd - dt);
       if (u.guns) this._tickBaseGuns(e, u.guns, dt);   // 主堡兩門大砲(獨立於本體火砲,砲塔級射程/傷害)
