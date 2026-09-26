@@ -39,7 +39,7 @@ export const PROLOGUE_SCENES = [
     badge: '第二節',
     title: '蜂群的鎮魂曲',
     paragraphs: [
-      '烏克蘭的天空最先黑成一片。成群結隊、以千計數的廉價無人機像蜂群一樣撲向鋼鐵的軍隊，一種新的信仰隨之誕生——「死的是機器，不是人。」',
+      '烏克蘭的天空最先黑成一片。成群結隊、以千計數的廉價無人機像蜂群一樣撲向鋼鐵的軍隊，一種新的信仰隨之誕生——蜂群主義，「死的是機器，不是人。」',
       '把人從危險裡撤出來，躲在螢幕後面遙控，讓便宜的、可拋棄的機器去死。',
       '同盟由此集結：一群工程師、電競選手、音樂老師、退役感測官，用車庫改裝的六旋翼與跳頻晶片，把「用數量淹沒質量」寫成了整個時代的戰術。',
       '他們的旗幟是一位在馬里烏波爾失去弟弟的指揮官，她把六十架蜂群指揮得像一支管弦樂團，卻拒絕替任何一架機器取名：「哀悼留給人。機器，我們再印一台。」',
@@ -99,9 +99,9 @@ export const PROLOGUE_SCENES = [
     ],
     camera: {
       landscape: {
-        start: { scale: 1.0, x: 0, y: 0 },
-        mid:   { scale: 1.0, x: 0, y: 0 },
-        end:   { scale: 1.0, x: 0, y: 0 },
+        start: { scale: 1.14, x: 6, y: -6 },
+        mid:   { scale: 1.09, x: 0, y: -8 },
+        end:   { scale: 1.05, x: -4, y: -4 },
       },
       portrait: {
         start: { scale: 1.24, x: -14, y: -8 },
@@ -126,9 +126,9 @@ export const PROLOGUE_SCENES = [
     ],
     camera: {
       landscape: {
-        start: { scale: 1.0, x: 0, y: 0 },
-        mid:   { scale: 1.0, x: 0, y: 0 },
-        end:   { scale: 1.0, x: 0, y: 0 },
+        start: { scale: 1.12, x: -4, y: -8 },
+        mid:   { scale: 1.08, x: 0, y: -6 },
+        end:   { scale: 1.05, x: 3, y: -4 },
       },
       portrait: {
         start: { scale: 1.30, x: -4, y: -14 },
@@ -164,27 +164,20 @@ function isLandscape() {
 }
 
 function calcCameraTransform(camGroup, t) {
-  const isLand = isLandscape();
-  if (isLand) {
-    // 橫式規範：上下不可裁切，置中全圖完整顯示
-    return 'translate3d(0, 0, 0) scale(1)';
-  }
-  const cam = camGroup?.portrait;
+  // 鏡頭推軌：只做以中心為軸的縮放，不平移——左右邊界固定，
+  // 不會有整張圖在滑動的感覺。位移表(x/y)保留在鏡位資料內供日後微調。
+  const cam = camGroup?.[isLandscape() ? 'landscape' : 'portrait'];
   if (!cam) return 'none';
   const f = Math.max(0, Math.min(1, t));
-  let scale, x, y;
+  let scale;
   if (f < 0.5) {
     const p = easeInOutQuad(f * 2);
     scale = cam.start.scale + (cam.mid.scale - cam.start.scale) * p;
-    x = cam.start.x + (cam.mid.x - cam.start.x) * p;
-    y = cam.start.y + (cam.mid.y - cam.start.y) * p;
   } else {
     const p = easeInOutQuad((f - 0.5) * 2);
     scale = cam.mid.scale + (cam.end.scale - cam.mid.scale) * p;
-    x = cam.mid.x + (cam.end.x - cam.mid.x) * p;
-    y = cam.mid.y + (cam.end.y - cam.mid.y) * p;
   }
-  return `translate3d(${x.toFixed(2)}%, ${y.toFixed(2)}%, 0) scale(${scale.toFixed(3)})`;
+  return `translate3d(0, 0, 0) scale(${scale.toFixed(3)})`;
 }
 
 /** Preloads assets into browser cache while reporting real-time progress. */
@@ -275,8 +268,8 @@ export class PrologueIntroController {
     this.destroyed = false;
     this.animRaf = null;
 
-    // Scrolling kinetics (tuned to ~30px/sec for comfortable natural reading)
-    this.autoScrollSpeed = 30;
+    // Scrolling kinetics (tuned to ~20px/sec for comfortable natural reading)
+    this.autoScrollSpeed = 20;
     this.lastFrameTime = 0;
     this.userScrollPauseUntil = 0;
 
@@ -287,6 +280,7 @@ export class PrologueIntroController {
 
   initDOM() {
     if (this.scenesContainer) {
+      // 模糊底圖一律用當下節劇照，並跟隨同一運鏡（單一鏡頭感）。
       this.scenesContainer.innerHTML = PROLOGUE_SCENES.map((sc, idx) => `
         <div class="prologue-scene-item" id="prologueSceneItem-${idx}" data-idx="${idx}">
           <div class="prologue-bg-blur" style="background-image: url('${sc.img}')"></div>
@@ -472,8 +466,12 @@ export class PrologueIntroController {
 
     const activeItem = document.getElementById(`prologueSceneItem-${idx}`);
     if (activeItem && transformStr) {
+      // 前景與模糊底圖施加同一運鏡（單一鏡頭感；底圖用當下劇照）；
+      // 前景 0.2s / 底圖 0.2s 同步補間，兩層不脫鉤。
       const fg = activeItem.querySelector('.prologue-fg-art');
       if (fg) fg.style.transform = transformStr;
+      const bg = activeItem.querySelector('.prologue-bg-blur');
+      if (bg) bg.style.transform = transformStr;
     }
   }
 
@@ -487,18 +485,28 @@ export class PrologueIntroController {
     // Reading focus point is located 36% below the top edge of the text box
     const focusY = scrollTop + viewportH * 0.36;
 
-    let targetIdx = 0;
+    // 章節之間有 margin 空隙(offsetHeight 不含 margin)：焦點落在空隙時
+    // 不可預設回第 0 節(否則每次轉場都閃現第一張圖)，改取最近一節，
+    // 空隙內運鏡停在該節邊緣，保持連續不跳閃。
+    let targetIdx = (Number.isInteger(this.activeSceneIdx) && this.activeSceneIdx >= 0)
+      ? this.activeSceneIdx : 0;
     let secProgress = 0;
+    let bestDist = Infinity;
 
     sections.forEach((sec, idx) => {
       const top = sec.offsetTop;
       const h = sec.offsetHeight;
       if (focusY >= top && focusY <= top + h) {
         targetIdx = idx;
-        secProgress = (focusY - top) / h;
-      } else if (idx === sections.length - 1 && focusY > top + h) {
-        targetIdx = idx;
-        secProgress = 1;
+        secProgress = h > 0 ? (focusY - top) / h : 0;
+        bestDist = -1;
+      } else if (bestDist >= 0) {
+        const d = focusY < top ? top - focusY : focusY - (top + h);
+        if (d < bestDist) {
+          bestDist = d;
+          targetIdx = idx;
+          secProgress = focusY < top ? 0 : 1;
+        }
       }
     });
 
@@ -507,8 +515,12 @@ export class PrologueIntroController {
     this.setScene(targetIdx, trans);
   }
 
-  play() {
+  play(startIdx = 0) {
     if (!this.root) return;
+    const n = Math.floor(Number(startIdx));
+    const clamped = Number.isFinite(n)
+      ? Math.max(0, Math.min(PROLOGUE_SCENES.length - 1, n))
+      : 0;
     this.initDOM();
     this.root.style.display = 'flex';
     this.root.classList.remove('prologue-fadeout');
@@ -516,9 +528,24 @@ export class PrologueIntroController {
 
     if (this.viewport) this.viewport.scrollTop = 0;
 
-    // Initial scene
-    this.setScene(0);
+    // Initial scene (supports jumping straight into a middle chapter)
+    this.setScene(clamped);
     this.renderStatus();
+
+    // 跳轉到指定章節：把捲動位置移到該節內，使焦點落在該節前段，
+    // 之後自動上捲會自然接續後面章節。
+    if (clamped > 0) {
+      requestAnimationFrame(() => {
+        if (this.destroyed || !this.viewport || !this.content) return;
+        const sec = this.content.querySelector(`.prologue-crawl-section[data-idx="${clamped}"]`);
+        if (sec) {
+          const focusTop = sec.offsetTop + sec.offsetHeight * 0.15;
+          this.viewport.scrollTop = Math.max(0, focusTop - this.viewport.clientHeight * 0.36);
+        }
+        this.updateSceneState();
+        if (this.activeSceneIdx !== clamped) this.setScene(clamped);
+      });
+    }
 
     // Start background buffering
     bufferGameCache((p) => {
@@ -580,14 +607,14 @@ export class PrologueIntroController {
   }
 }
 
-/** Entry function to play prologue if first visit or forced. */
-export function playPrologueIntro({ onFinished, force = false } = {}) {
+/** Entry function to play prologue if first visit or forced. `startIdx` jumps straight into a middle chapter. */
+export function playPrologueIntro({ onFinished, force = false, startIdx = 0 } = {}) {
   if (!force && hasSeenPrologue()) {
     onFinished?.();
     return null;
   }
 
   const controller = new PrologueIntroController({ onFinished });
-  controller.play();
+  controller.play(startIdx);
   return controller;
 }

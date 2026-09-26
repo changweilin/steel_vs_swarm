@@ -4702,31 +4702,27 @@ $('worldTabs')?.addEventListener('click', (e) => {
   if (b?.dataset.worldtab) switchWorldTab(b.dataset.worldtab);
 });
 
-function launchWorldPrologueAnim() {
+function launchWorldPrologueAnim(startIdx = 0) {
   $('worldOverlay').style.display = 'none';
   playPrologueIntro({
     force: true,
+    startIdx,
     onFinished: () => {
       $('worldOverlay').style.display = '';
       switchWorldTab('anim');
     },
   });
 }
-$('worldPlayAnimBtn')?.addEventListener('click', launchWorldPrologueAnim);
+$('worldPlayAnimBtn')?.addEventListener('click', () => launchWorldPrologueAnim(0));
 document.querySelectorAll('#worldAnimPanel .world-scene-card').forEach((card) => {
-  card.addEventListener('click', launchWorldPrologueAnim);
+  card.addEventListener('click', () => launchWorldPrologueAnim(Number(card.dataset.scene) || 0));
 });
 
 $('worldBtn')?.addEventListener('click', () => {
   $('worldBody').innerHTML = `<p>${esc(WORLD).replace(/\n\n+/g, '</p><p>')}</p>`;
-  switchWorldTab('read');
-  $('worldOverlay').style.display = '';
-  $('worldBody').scrollTop = 0;
-});
-$('prologuePlayBtn')?.addEventListener('click', () => {
-  $('worldBody').innerHTML = `<p>${esc(WORLD).replace(/\n\n+/g, '</p><p>')}</p>`;
   switchWorldTab('anim');
   $('worldOverlay').style.display = '';
+  $('worldBody').scrollTop = 0;
 });
 $('worldCloseBtn')?.addEventListener('click', () => { $('worldOverlay').style.display = 'none'; });
 $('worldOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'worldOverlay') $('worldOverlay').style.display = 'none'; });
