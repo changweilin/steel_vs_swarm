@@ -64,6 +64,7 @@ import {
   installTouchUI, touchCapable, touchDiagnostics, lowPower, setLowPower as setLowPowerPref,
   renderTouchSettings, syncTouchSettings, renderCtrlSettings, syncCtrlSettings,
   renderCtrlModeRow, syncCtrlModeRow, isTouchUI, openTouchTest, closeTouchTest, toggleFullscreen,
+  enterFullscreenAuto,
 } from './mobile.js';
 import {
   CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange,
@@ -195,6 +196,11 @@ app.audio.setScene('menu');
 // 觸控操控層的戰鬥鈕(射擊/瞄準/招式…)排除在外 —— 那些有自己的武器音效,再疊 UI 音會變成連發噪音。
 document.addEventListener('pointerdown', (e) => {
   if (e.target.closest('.btn, button') && !e.target.closest('#touchLayer, [data-act]')) app.audio?.ui('click');
+}, true);
+// 觸控版讀取/開戰自動全螢幕的補位:非手勢路徑(開戰廣播/載入完成)調 requestFullscreen 會被拒,
+// 讀取與戰鬥畫面內的下一次觸控再試一次(enterFullscreenAuto 內已閘觸控版與現態,桌機零作用)。
+document.addEventListener('pointerdown', () => {
+  if (app.phaseShown === 'loading' || app.phaseShown === 'game') enterFullscreenAuto();
 }, true);
 
 // 還沒進戰區的畫面(這些畫面上沒有房主定案 ⇒ 操作方式退回「我的預設」)
@@ -2787,6 +2793,7 @@ function installDevSceneHook() {
 // ================= 載入 + 開戰 =================
 async function enterLoading(cfg) {
   app.battleCfg = cfg;
+  enterFullscreenAuto();
   if (app.battle) {
     const oldBattle = app.battle;
     app.battle.dispose(); app.battle = null;
@@ -2912,6 +2919,7 @@ async function enterGame() {
     return;
   }
   show('game');
+  enterFullscreenAuto();
   app.audio?.setScene('battle');   // 進戰場 → 切戰鬥 BGM(離開由 BattleClient.dispose 交還大廳)
   const hud = makeHud();
   const meLobby = app.lobby?.clients.find((c) => c.id === app.youId);
@@ -5007,6 +5015,7 @@ window.addEventListener('DOMContentLoaded', () => {
     app.net?.send({ t: 'setReady', ready: !me?.ready });
   };
   $('startBattleBtn').onclick = () => {
+    enterFullscreenAuto();
     const me = app.lobby?.clients.find((c) => c.id === app.youId);
     if (app.lobby?.battleConfig?.super && me && !me.ready) {
       app.net?.send({ t: 'setReady', ready: true });

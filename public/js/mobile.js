@@ -323,6 +323,23 @@ export async function toggleFullscreen() {
   return !!document.fullscreenElement;
 }
 
+/**
+ * 觸控版讀取/開戰時自動進入全螢幕(與 toggleFullscreen 同一條路徑,同樣 MUST NOT 鎖方向)。
+ * 只進不出:已在全螢幕或非觸控版直接回報,不做任何事。
+ * 全螢幕 API 在非使用者手勢中會被拒(開戰廣播/載入完成都是非同步回呼)⇒ 這裡一律吞錯、
+ * 由呼叫端在手勢路徑(開戰鈕)與非手勢路徑(讀取/進場)各試一次:手勢那次會成功,非手勢的失敗無感。
+ */
+export async function enterFullscreenAuto() {
+  try {
+    if (document.fullscreenElement) return true;
+    if (!isTouchUI()) return false;
+    await (document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
+      ?? document.documentElement.webkitRequestFullscreen?.());
+    try { window.screen?.orientation?.unlock?.(); } catch { /* iOS 不支援 */ }
+  } catch { /* 非手勢被拒或不支援 → 維持原狀,等下一次呼叫 */ }
+  return !!document.fullscreenElement;
+}
+
 /* ---------------- 陀螺儀 ---------------- */
 
 const ZEE = new THREE.Vector3(0, 0, 1);
