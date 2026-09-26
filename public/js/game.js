@@ -481,6 +481,54 @@ function factionMarkTex(side) {
   _markTex.set(side, t);
   return t;
 }
+// ---- 友方標示:同陣營單位頭上的小型圓徽(與敵方下指箭頭分形)----
+// 敵我雙軌:敵 = 下指箭頭(注意),友 = 圓環徽(安心);顏色同吃陣營識別色,
+// 形狀分家後混戰中只看輪廓就能敵我辨識,不必先讀顏色。
+const _allyTex = new Map();
+function allyMarkTex(side) {
+  if (_allyTex.has(side)) return _allyTex.get(side);
+  const S = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const col = sideInfo(side).color;
+  g.lineJoin = 'round';
+  g.strokeStyle = 'rgba(10,14,18,0.9)';
+  g.fillStyle = col;
+  g.lineWidth = 8;
+  g.beginPath();                                   // 外圓環
+  g.arc(64, 62, 34, 0, Math.PI * 2);
+  g.stroke(); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,0.9)';         // 內圈白環:友軍一律有白邊
+  g.lineWidth = 4;
+  g.beginPath();
+  g.arc(64, 62, 26, 0, Math.PI * 2);
+  g.stroke();
+  g.fillStyle = 'rgba(10,14,18,0.85)';             // 徽記底盤
+  g.beginPath();
+  g.arc(64, 62, 18, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = col;                               // 中央陣營徽記(鋼鐵正三角 / 蜂群倒三角 / 第三方菱形)
+  g.strokeStyle = 'rgba(10,14,18,0.9)';
+  g.lineWidth = 3;
+  g.beginPath();
+  if (SIDES[side]) {
+    const up = side === 'STEEL', cx = 64, cy = 62, r = 13;
+    for (let k = 0; k < 3; k++) {
+      const a = (up ? -Math.PI / 2 : Math.PI / 2) + k * Math.PI * 2 / 3;
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      k ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+  } else {
+    g.moveTo(64, 49); g.lineTo(75, 62); g.lineTo(64, 75); g.lineTo(53, 62);
+  }
+  g.closePath();
+  g.fill();
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  _allyTex.set(side, t);
+  return t;
+}
 // 副視窗(PiP):無人機僚機視角 / 變形者集束轟炸機視角
 // 靠左上:右下角是 minimap、右上角是 kill-feed(兩者都是 DOM,永遠疊在 WebGL 畫布上方)
 const PIP = { W_FRAC: 0.17, MAX_W: 250, ASPECT: 0.62, PAD: 12, TOP: 58, GAP: 8, FOV: 78 };
@@ -4026,7 +4074,9 @@ export class BattleClient {
       const inner = plane(0x39424c, 0.95, -0.02, w + M, stackH + M);            inner.position.y = cy;
       grp.add(frame); grp.add(inner);
       grp.add(plane(0x111417, 1, 0));            // HP 底槽
-      const fg = plane(0xe23b34, 1, 0.02);       // 現有 HP:紅
+      // 敵我配色:敵方紅 / 友方綠(護盾玻璃藍不動);中立/未知沿用紅
+      const foeInit = ent.side && this.side ? ent.side !== this.side : true;
+      const fg = plane(foeInit ? 0xe23b34 : 0x35d06a, 1, 0.02);
       grp.add(fg);
       // 分段刻痕(間隔):固定不隨血量縮放的暗線,把長條切成數格 → 一眼判讀血量段位
       const segN = ent.isStatic ? 10 : 5, tickW = Math.max(0.05, w * 0.014);
@@ -4054,6 +4104,8 @@ export class BattleClient {
       ent.mesh.add(grp);
       ent.bar = grp; ent.barFg = fg; ent.barSfg = sfg; ent.barW = w;
     }
+    // 敵我配色逐幀對齊(觀戰切換視角邊跟著換色,不只建條那一幀)
+    ent.barFg.material.color.set(ent.side && this.side && ent.side === this.side ? 0x35d06a : 0xe23b34);
     ent.barFg.scale.x = Math.max(0.001, frac);
     ent.barFg.position.x = -(1 - frac) * ent.barW / 2;
     // BOSS 光暈:顏色 = 該段的顏色(每破一段換一次)。色表只有 data.js `bossGlow` 一份。
@@ -4189,6 +4241,32 @@ export class BattleClient {
     const m = ent.mark.material;
     m.opacity = Math.min(0.92, m.opacity + dt * 3.5);                 // 進入視野:淡入
     ent.mark.position.y = ent.markY + Math.sin(now * 2.6) * 0.45;     // 浮沉
+  }
+
+  /**
+   * 友方標示:同陣營單位頭上的小型圓徽,淡入 + 輕微浮沉。
+   * 與 `_enemyMark` 分形(圓徽 vs 下指箭頭),混戰中只看輪廓即分敵我;
+   * 尺寸與不透明度刻意小一號 —— 友軍是背景資訊,不搶敵方箭頭的注意。
+   */
+  _allyMark(ent, dt, now) {
+    if (!ent.side) return;
+    if (!ent.allyMark) {
+      const h = Math.max(2, ent.dimH ?? (() => {
+        const box = new THREE.Box3().setFromObject(ent.mesh);
+        return box.max.y - box.min.y;
+      })());
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: allyMarkTex(ent.side), transparent: true, opacity: 0, depthTest: false, depthWrite: false,
+      }));
+      sp.scale.setScalar(Math.max(2.4, h * 0.5));
+      sp.renderOrder = 997;
+      ent.allyMarkY = (ent.dimTop ?? h) + 2.6 + sp.scale.y * 0.5;
+      ent.mesh.add(sp);
+      ent.allyMark = sp;
+    }
+    const m = ent.allyMark.material;
+    m.opacity = Math.min(0.8, m.opacity + dt * 3);
+    ent.allyMark.position.y = ent.allyMarkY + Math.sin(now * 2.2 + 1.3) * 0.3;
   }
 
   /** 快照裡的飛彈同步:建/移/更新目標點(渲染時再插值) */
@@ -6534,7 +6612,8 @@ export class BattleClient {
     this._clearLockGlow();
     this._lockId = ent.id;
     // 基準尺寸(排除受擊殼等子節點)→ 光暈剛好包住目標,塔不再是巨球
-    this._lockGlow = lockGlow(ent.mesh, sideInfo(this.side).color,
+    // 鎖定光暈吃「目標」陣營色(舊制吃自機色會誤導成自己人)
+    this._lockGlow = lockGlow(ent.mesh, sideInfo(ent.side || this.side).color,
       ent.dimH != null ? { h: ent.dimH, r: ent.dimR, top: ent.dimTop } : null);
     this.hud.feed?.(`🎯 鎖定 ${UNITS[ent.kind]?.name || ent.kind}`);
   }
@@ -10044,9 +10123,10 @@ export class BattleClient {
       // 血條面向相機
       if (ent.bar) ent.bar.lookAt(this.camera.position);
       this._updateStatusFx(ent, dt, now);
-      // 敵方單位:頭上掛對方陣營主視覺的箭頭(在快照裡 = 已進入我方視野)
+      // 敵我標示(在快照裡 = 已進入我方視野):敵 = 下指箭頭,友 = 小圓徽
       if (ent.civ) this._civMark(ent, dt, now);   // 平民:不分我方/敵方都掛陣營箭頭(外觀只能分辨陣營)
       else if (this.side && ent.side && ent.side !== this.side) this._enemyMark(ent, dt, now);
+      else if (this.side && ent.side && ent.side === this.side && !ent.isSelf) this._allyMark(ent, dt, now);
     }
   }
 
@@ -10577,13 +10657,20 @@ export class BattleClient {
       } else if (ent.hero) {
         if (!ent.isSelf) {
           ctx.beginPath(); ctx.arc(mx, my, 4, 0, 7); ctx.fill();
-          ctx.strokeStyle = '#fff'; ctx.stroke();
+          // 英雄描邊即敵我:敵紅 / 友白(填充仍是陣營色,兩軌並存)
+          const foe = this.side && ent.side !== this.side;
+          ctx.lineWidth = foe ? 2 : 1.2;
+          ctx.strokeStyle = foe ? '#ff5252' : '#ffffff'; ctx.stroke();
+          if (foe) { ctx.beginPath(); ctx.arc(mx, my, 5.6, 0, 7); ctx.stroke(); }
         }
       } else {
-        // NPC 兵團:實心圓點標位置(直升機加外環,一眼看出空中單位),深色描邊拉出對比
+        // NPC 兵團:填充 = 陣營色,描邊 = 敵我(敵紅/友白);直升機加外環,一眼看出空中單位
         const r = ent.kind === 'heli' ? 3 : 2.4;
+        const foe = this.side && ent.side !== this.side;
         ctx.beginPath(); ctx.arc(mx, my, r, 0, 7); ctx.fill();
-        ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
+        ctx.lineWidth = foe ? 1.6 : 0.8;
+        ctx.strokeStyle = foe ? '#ff5252' : (ent.side === this.side ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.55)');
+        ctx.stroke();
         if (ent.kind === 'heli') {
           ctx.beginPath(); ctx.arc(mx, my, r + 1.6, 0, 7);
           ctx.lineWidth = 1; ctx.strokeStyle = c; ctx.stroke();
