@@ -3581,7 +3581,7 @@ body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .fo
   opacity: 1;
 }
 
-/* 左右模糊延伸背景 (滿版鋪滿，高斯模糊使左右兩側形成自然延伸) */
+/* 左右模糊延伸背景 (滿版鋪滿，高斯模糊使左右兩側形成自然延伸；運鏡時靜止，邊界感來自前景框) */
 .prologue-bg-blur {
   position: absolute;
   inset: -30px;
@@ -3589,19 +3589,41 @@ body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .fo
   background-position: center;
   filter: blur(36px) brightness(0.55) saturate(1.25);
   transform: scale(1.12);
-  will-change: transform;
-  transition: transform 0.2s cubic-bezier(0.1, 0.8, 0.3, 1);
 }
 
-/* 前景核心插畫層 (橫式時上下不可裁切，置中 contain 顯示) */
-.prologue-fg-art {
+/* 橫式固定邊界框：左右邊界不動，框內照片超出即裁切 (overflow)；
+   框外由上方 blurred 背景做當前照片的外推模糊 */
+.prologue-fg-frame {
   position: absolute;
   inset: 0;
-  background-size: contain;
+  overflow: hidden;
+  pointer-events: none;
+}
+@media (orientation: landscape) {
+  .prologue-fg-frame {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 94vw;
+    border-left: 1px solid rgba(122, 158, 178, 0.28);
+    border-right: 1px solid rgba(122, 158, 178, 0.28);
+    box-shadow: -18px 0 42px -22px rgba(0, 0, 0, 0.85), 18px 0 42px -22px rgba(0, 0, 0, 0.85);
+  }
+}
+
+/* 前景核心插畫層 (框內 cover 填滿；運鏡只動此層，邊界框本身不動) */
+.prologue-fg-art {
+  position: absolute;
+  inset: -3%;
+  background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
   will-change: transform;
-  transition: transform 0.2s cubic-bezier(0.1, 0.8, 0.3, 1);
+  transition: transform 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
 }
 .prologue-overlay-vignette {
   position: absolute;

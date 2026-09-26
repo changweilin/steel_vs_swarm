@@ -164,20 +164,30 @@ function isLandscape() {
 }
 
 function calcCameraTransform(camGroup, t) {
-  // 鏡頭推軌：只做以中心為軸的縮放，不平移——左右邊界固定，
-  // 不會有整張圖在滑動的感覺。位移表(x/y)保留在鏡位資料內供日後微調。
+  // 運鏡只動框內照片：邊界框本身不動，照片在框內做中幅平移 + 明顯推拉。
+  // 位移 ±3.2% / ±2.6%，縮放 1.06~1.22；框體 inset -3% 安全邊內永不露邊。
+  // 文字捲速由 autoScrollSpeed 單獨控制，此處只改幅度、不動速度。
   const cam = camGroup?.[isLandscape() ? 'landscape' : 'portrait'];
   if (!cam) return 'none';
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const f = Math.max(0, Math.min(1, t));
-  let scale;
+  const lerp = (a, b, p) => a + (b - a) * p;
+  let scale, x, y;
   if (f < 0.5) {
     const p = easeInOutQuad(f * 2);
-    scale = cam.start.scale + (cam.mid.scale - cam.start.scale) * p;
+    scale = lerp(cam.start.scale, cam.mid.scale, p);
+    x = lerp(cam.start.x, cam.mid.x, p);
+    y = lerp(cam.start.y, cam.mid.y, p);
   } else {
     const p = easeInOutQuad((f - 0.5) * 2);
-    scale = cam.mid.scale + (cam.end.scale - cam.mid.scale) * p;
+    scale = lerp(cam.mid.scale, cam.end.scale, p);
+    x = lerp(cam.mid.x, cam.end.x, p);
+    y = lerp(cam.mid.y, cam.end.y, p);
   }
-  return `translate3d(0, 0, 0) scale(${scale.toFixed(3)})`;
+  const s = clamp(scale, 1.06, 1.22).toFixed(3);
+  const tx = clamp(x * 0.22, -3.2, 3.2).toFixed(2);
+  const ty = clamp(y * 0.18, -2.6, 2.6).toFixed(2);
+  return `translate3d(${tx}%, ${ty}%, 0) scale(${s})`;
 }
 
 /** Preloads assets into browser cache while reporting real-time progress. */
@@ -280,11 +290,11 @@ export class PrologueIntroController {
 
   initDOM() {
     if (this.scenesContainer) {
-      // 模糊底圖一律用當下節劇照，並跟隨同一運鏡（單一鏡頭感）。
+      // 模糊底圖一律用當下節劇照做靜態外推（邊界以外）；運鏡只動框內照片。
       this.scenesContainer.innerHTML = PROLOGUE_SCENES.map((sc, idx) => `
         <div class="prologue-scene-item" id="prologueSceneItem-${idx}" data-idx="${idx}">
           <div class="prologue-bg-blur" style="background-image: url('${sc.img}')"></div>
-          <div class="prologue-fg-art" style="background-image: url('${sc.img}')"></div>
+          <div class="prologue-fg-frame"><div class="prologue-fg-art" style="background-image: url('${sc.img}')"></div></div>
         </div>
       `).join('');
     }
@@ -466,12 +476,10 @@ export class PrologueIntroController {
 
     const activeItem = document.getElementById(`prologueSceneItem-${idx}`);
     if (activeItem && transformStr) {
-      // 前景與模糊底圖施加同一運鏡（單一鏡頭感；底圖用當下劇照）；
-      // 前景 0.2s / 底圖 0.2s 同步補間，兩層不脫鉤。
+      // 運鏡只動框內照片：邊界框靜止，照片在框內平移/推拉、超出即裁切；
+      // 框外模糊底圖用當下劇照靜態外推，不跟運鏡，避免邊界晃動。
       const fg = activeItem.querySelector('.prologue-fg-art');
       if (fg) fg.style.transform = transformStr;
-      const bg = activeItem.querySelector('.prologue-bg-blur');
-      if (bg) bg.style.transform = transformStr;
     }
   }
 
