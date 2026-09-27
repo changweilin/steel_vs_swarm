@@ -3417,6 +3417,7 @@ export class BattleClient {
         if (selfHero || statik) ent = this._spawnEnt(e);
         else { this._spawnPend.set(e.id, e); continue; }
       }
+      if (!ent) continue;
       // 受擊回饋二分(純表現層):無護盾一律火光濺射 + 點煙(含塔/主堡/雜兵,走 _victimHitFx);
       // 工事舊制閃 hex 殼,讀感像護盾 ⇒ 不再閃殼(網格留著,平時不可見)。英雄見下方舉盾分流。
       const prevHpSnap = ent.hp;
@@ -3746,8 +3747,10 @@ export class BattleClient {
       const raw = this._spawnPend.get(id);
       this._spawnPend.delete(id);
       const ent = this._spawnEnt(raw);
-      ent._snapPos = true;
-      n++;
+      if (ent) {
+        ent._snapPos = true;
+        n++;
+      }
     }
   }
 
@@ -3811,6 +3814,7 @@ export class BattleClient {
   _spawnUnit(e) {
     const civ = e.k === 'civilian';
     const key = e.k === 'base' ? `base:${e.s}` : civ ? 'civ' : KIND_KEY[e.k];
+    if (!key) return null;
     // 平民:陣營看 cs(伺服器 side=null,讓兩陣營都能開槍),ch = 職業 index(選 buildCivilian 變體)
     // 餌機:不畫陣營光環(它是一枚飛行中的彈體,不是站在地上的單位)
     const { group, mixer } = makeUnit(key, civ ? e.cs : e.s,
@@ -3860,7 +3864,7 @@ export class BattleClient {
       isBoss, bossSeg: e.bs ?? (isBoss ? 0 : null),
       flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami' || e.k === 'hyper' || e.k === 'drone_wingman' || e.k === 'heli_squad' || e.k === 'carnival_heli',
       decoy: e.k === 'decoy', kami: e.k === 'kami', hyper: e.k === 'hyper', si: e.si || 0,
-      isStatic,
+      isStatic, isClone: !!e.clone,
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch, e.sv || 0) : null,
     };

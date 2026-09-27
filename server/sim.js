@@ -3540,6 +3540,12 @@ export class BattleSim {
       this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1, ox: org.x, oz: org.z, castDur: A.castTime || ATK_CAST_S });
       return;
     }
+    // 分身化影招式(如齊天大聖):身外化影直接由本尊分化,不走遠程工事輔助載具
+    if (A.add?.fx === 'clone') {
+      this._castEffect(h, A, h.x, h.z, 1, null, true);
+      this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 0, castDur: A.castTime || ATK_CAST_S });
+      return;
+    }
     // 自身強化型攻招:派出 supportN 架跟隨玩家的輔助機
     this._launchAtkSupport(h, A, org, slot);
     this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 1, sup: supportN(h.ch, slot), ox: org.x, oz: org.z, castDur: A.castTime || ATK_CAST_S });
@@ -4986,12 +4992,13 @@ export class BattleSim {
       // 集束轟炸機形式:飛向落點,進 BOMB_R 起每 BOMB_GAP 投遞一份(間斷型);投完飛離解體。
       // 擊落 = 剩餘份全數否定(_kill 的 decoy 分支對 uA 載具沒有 bombsLeft ⇒ 天然不補投)。
       const sq = h.sq;
+      const flyS = d0 / DECOY.SPEED;
       const d = this._add({
         kind: 'decoy', side: h.side, pid: h.pid, decoy: true,
         uA: A, uDrops: Array.from({ length: n }, (_, i) => ({ frac: 1 / n, n: partImp(i) })),
         pt: { x, z }, nextBomb: 0,
         x: o.x, z: o.z, y: (o.y || 0) + DECOY.ALT, ry: lry,
-        hp: decoyHp(), armor: 0, tid: 0, lost: false, dieAt: this.t + DECOY.TTL_S,
+        hp: decoyHp(), armor: 0, tid: 0, lost: false, dieAt: this.t + flyS + n * DECOY.BOMB_GAP + DECOY.TTL_S,
       });
       d.maxSp = 0; d.sp = 0;
       if (sq) { (sq.decoys ||= []).push(d); }
@@ -5003,6 +5010,7 @@ export class BattleSim {
       if (sq) sq.kamis ??= [];
       const fx = -Math.sin(lry), fz = Math.cos(lry);
       const rx = Math.cos(lry), rz = Math.sin(lry);
+      const flyS = d0 / (UNITS.drone.speed * K.SPEED_MUL);
       for (let i = 0; i < n; i++) {
         const s = kamiSide(i);
         const k = this._add({
@@ -5012,7 +5020,7 @@ export class BattleSim {
           x: o.x + fx * K.FWD + rx * K.SIDE * s,
           z: o.z + fz * K.FWD + rz * K.SIDE * s,
           y: o.y || 0, ry: lry + K.SPREAD * s,
-          hp: kamiHp(), armor: 0, tid: 0, dieAt: this.t + K.TTL_S,
+          hp: kamiHp(), armor: 0, tid: 0, dieAt: this.t + flyS + K.TTL_S,
         });
         k.maxSp = 0; k.sp = 0;
         if (sq) sq.kamis.push(k);
@@ -7309,8 +7317,9 @@ export class BattleSim {
       // NPC BOSS:目前段位(0 起算)。**存在這一格 = 這是 BOSS** —— 客戶端據此把血條外圍
       // 光暈換成該段的顏色(黑>青>銀>金)。段位是小隊層級的,同隊每架都帶同一個值。
       if (e.sq?.boss) o.bs = e.sq.bossSeg | 0;
-      // 主視野機(小隊只有一架):共用的玩家狀態只跟著它發一份
-      o.act = !e.sq || e.sq.bodies[e.sq.act] === e ? 1 : 0;
+      // 主視野機(小隊只有一架;分身非本尊):共用的玩家狀態只跟著它發一份
+      o.act = !e.isClone && (!e.sq || e.sq.bodies[e.sq.act] === e) ? 1 : 0;
+      if (e.isClone) o.clone = 1;
       if (o.act) {
         // 升級/招式階級 MUST 傳「值快照」不可傳權威物件本身:單機模式(LocalNet)不經 JSON
         // 序列化 —— 快照直接以參考傳到客戶端。客戶端 `this.upg = e.up` 後樂觀購買會 mutate
@@ -7509,6 +7518,7 @@ export class BattleSim {
     const sources = side && !pulse ? this._visionSources(side) : null;
     const ents = [];
     for (const e of this.ents.values()) {
+      if (e.isTree || e.isMoon || e.isSlab) continue;
       if (sources && !this._visibleTo(e, side, sources)) continue;
       ents.push(this._serializeEnt(e));
     }
