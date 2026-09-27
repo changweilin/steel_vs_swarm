@@ -699,13 +699,13 @@
       <div id="liftBox" class="liftbar hidden"><div id="liftBar" class="liftbar-fill"></div><span id="liftText" class="lift-text"></span></div>
       <!-- 這一整塊(角色數據)是**純顯示**:觸控版的動作全在虛擬搖桿上(見 #touchLayer),
            搖桿 MUST NOT 蓋住這裡。招式名稱/冷卻仍以此為唯一渲染來源,再由 main.js 鏡射到搖桿鈕面。 -->
-      <div class="wpn-box"><span id="wpnName"></span><span id="wpnAmmo" class="wpn-ammo"></span></div>
-      <div class="burst-box"><span id="burstName">重武器</span> <span id="burstCd" class="burst-cd">就緒</span></div>
+      <div class="wpn-box"><div class="wpn-fill" id="wpnFill"></div><span id="wpnName"></span><span id="wpnAmmo" class="wpn-ammo"></span></div>
+      <div class="burst-box"><div class="burst-fill" id="burstFill"></div><span id="burstName">重武器</span> <span id="burstCd" class="burst-cd">就緒</span></div>
       <div class="ab-row">
-        <div class="ab-box" id="abDef"><span class="ab-key">Q</span><span class="ab-name" id="abDefName">—</span><span class="ab-cd" id="abDefCd"></span></div>
-        <div class="ab-box" id="abAtk"><span class="ab-key">E</span><span class="ab-name" id="abAtkName">—</span><span class="ab-cd" id="abAtkCd"></span></div>
+        <div class="ab-box" id="abDef"><div class="ab-fill" id="abDefFill"></div><span class="ab-key">Q</span><span class="ab-name" id="abDefName">—</span><span class="ab-cd" id="abDefCd"></span></div>
+        <div class="ab-box" id="abAtk"><div class="ab-fill" id="abAtkFill"></div><span class="ab-key">E</span><span class="ab-name" id="abAtkName">—</span><span class="ab-cd" id="abAtkCd"></span></div>
         <!-- 空白鍵機動能力:無人機=完美迴避 / 機甲=蓄力跳躍 / 變形機甲=升空變形(CD 顯示) -->
-        <div class="ab-box" id="abMobil"><span class="ab-key">␣</span><span class="ab-name" id="abMobilName">—</span><span class="ab-cd" id="abMobilCd"></span></div>
+        <div class="ab-box" id="abMobil"><div class="ab-fill" id="abMobilFill"></div><span class="ab-key">␣</span><span class="ab-name" id="abMobilName">—</span><span class="ab-cd" id="abMobilCd"></span></div>
       </div>
       <div class="money-box">$ <span id="moneyText">0</span> ・ 分 <span id="knText">0</span> <span class="shop-hint" id="shopHint">B 升級</span></div>
       <!-- 觀戰限定:跟隨中那位玩家的八軌商店升級(內容由 main.js renderSpecUpg 灌,

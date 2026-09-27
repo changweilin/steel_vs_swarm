@@ -8546,8 +8546,11 @@ export class BattleClient {
       return {
         name: def.name, lvl: this.abil[id], ammo: st.ammo, mag: def.mag,
         reload: st.reloadEnd > 0 ? Math.max(0, st.reloadEnd - now) : 0,
+        // 填彈總長(HUD 進度條分母;天氣雪地倍率已烤進 st.reloadDur,見 _startReload)
+        reloadMax: Math.max(0.001, st.reloadDur || def.reload || 0),
       };
     };
+    const snowMul = this.env?.getWeatherDynamics?.()?.snowCdMul ?? 1;
     const abHud = (slot, idx) => {
       const lvl = this.abil[slot] || 1;
       const A = heroAbility(this.ch, slot, lvl);
@@ -8558,6 +8561,8 @@ export class BattleClient {
       const nextCd = chg[2] || 0;
       return {
         name: A.name, lvl, cd: this.cds[idx] || 0, mp: mpc,
+        // 冷卻總長(HUD 進度條分母;與 _tryCast 落子時的 (A.cd||10)*snowMul 同一條)
+        cdMax: Math.max(0.001, (A.cd || 10) * snowMul),
         ready: (this.cds[idx] || 0) <= 0 && this.mp >= mpc,
         charges, maxCharges, nextCd,
       };
@@ -8577,9 +8582,10 @@ export class BattleClient {
       // CD 一律由上面的 def / atk 兩格顯示 —— 再畫一顆機種絕招格就是「鈕面說有、按下去沒有」的假招。
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
       // 空白鍵機動能力 CD(HUD 顯示;完美迴避 30s / 蓄力跳躍 15s / 升空變形 15s,皆客戶端時戳)
-      mobil: this.isDrone ? { name: '完美迴避', cd: Math.max(0, (this._dodgeCd || 0) - now) }
-        : this.isMorph ? { name: '升空變形', cd: Math.max(0, (this._morphCd || 0) - now) }
-          : { name: '蓄力跳躍', cd: Math.max(0, (this._cjumpCd || 0) - now) },
+      // cdMax 與各自落子處同源(dodge:IFRAME.DRONE_CD / morph:MORPH.CD / 機甲:CJUMP.CD)
+      mobil: this.isDrone ? { name: '完美迴避', cd: Math.max(0, (this._dodgeCd || 0) - now), cdMax: IFRAME.DRONE_CD }
+        : this.isMorph ? { name: '升空變形', cd: Math.max(0, (this._morphCd || 0) - now), cdMax: MORPH.CD }
+          : { name: '蓄力跳躍', cd: Math.max(0, (this._cjumpCd || 0) - now), cdMax: CJUMP.CD },
     };
   }
 
@@ -9680,16 +9686,16 @@ export class BattleClient {
     const slotHud = (id) => {
       const def = heroWeapon(tgt.ch, id, ab[id] || 1);
       // 取不到就給一格空欄(HUD 端無條件讀 .name/.mag;回 null 會直接炸掉整個面板)
-      return def ? { name: def.name, lvl: ab[id] || 1, ammo: null, mag: def.mag, reload: 0 }
-        : { name: '—', lvl: 0, ammo: null, mag: 0, reload: 0 };
+      return def ? { name: def.name, lvl: ab[id] || 1, ammo: null, mag: def.mag, reload: 0, reloadMax: def.reload || 0 }
+        : { name: '—', lvl: 0, ammo: null, mag: 0, reload: 0, reloadMax: 0 };
     };
     const abHud = (slot, idx) => {
       const lvl = ab[slot] || 1;
       const A = heroAbility(tgt.ch, slot, lvl);
-      if (!A) return { name: '—', lvl: 0, cd: 0, mp: 0, ready: false };
+      if (!A) return { name: '—', lvl: 0, cd: 0, cdMax: 0, mp: 0, ready: false };
       const mpc = Math.round(A.mp);
       const cd = (tgt.cds || [])[idx] || 0;
-      return { name: A.name, lvl, cd, mp: mpc, ready: cd <= 0 && mp >= mpc };
+      return { name: A.name, lvl, cd, cdMax: A.cd || 10, mp: mpc, ready: cd <= 0 && mp >= mpc };
     };
     return {
       spec: true, follow: true,
