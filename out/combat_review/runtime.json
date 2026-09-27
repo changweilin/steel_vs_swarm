@@ -1,0 +1,12 @@
+{
+  "profiles": 64,
+  "showcasePlays": 128,
+  "unitKinds": 14,
+  "unitShowcasePlays": 28,
+  "unitPeakCalls": 9,
+  "peakCalls": 7,
+  "memory": {
+    "geometries": 29,
+    "textures": 112
+  }
+}

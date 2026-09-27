@@ -42,7 +42,7 @@ import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampR
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { animWeights } from './animweights.js';
-import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
+import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
@@ -5075,8 +5075,8 @@ export class BattleClient {
       if (ev.from) {
         const sx = ev.from[0], sz = -ev.from[1];
         const sy = this.terrain.heightAt(sx, sz) + 2;
-        starburst(this.scene, this.effects, sx, sy, sz, 2.2, 0xffc79a);
-        starburst(this.scene, this.effects, sx, sy + 1.5, sz, 1.2, 0xffe9c8);
+        const launch = new THREE.Vector3(sx, sy, sz);
+        unitShotFx(this.scene, this.effects, launch, launch, { kind: 'base', color: 0xffc79a, core: 0xffe9c8 });
       }
       if (ev.tpid === this.youId) {
         this.hud.feed?.(ev.ambush
@@ -5358,78 +5358,25 @@ export class BattleClient {
       } else {
         const ent = ev.id != null ? this.ents.get(ev.id) : null;
         const from = this._npcMuzzle(ent, ev, fx, fz);
+        const wid = ev.wid || (ent ? UNITS[ent.kind]?.wid : null);
+        const kind = ev.kind || ent?.kind;
+        const style = unitShotStyle(kind, wid);
         if (ent) {
           ent._aimAt = { x: tx, z: tz, y: to.y, until: t0 + 2.5 };   // 交戰面向:槍口朝攻擊方向
           if (ent.isStatic) ent._turKick = 1;                // 塔/主堡:砲塔後座
           else {
-            ent.fireFx = { t0, slot: 'light' };              // 一般單位:stepCombatFx 後座 + 槍口焰
+            ent.fireFx = { t0, slot: style.mode === 'gun' || style.mode === 'beam' ? 'light' : 'heavy' };
             if (ent.mesh.userData.turret) ent._turKick = 1;  // 車載砲塔:砲管另補上撇後座
           }
         }
         const { col, hot } = this._shotCols(ev.side);
-        starburst(this.scene, this.effects, from.x, from.y, from.z, 1.0, hot);
-
-        // 專屬召喚部隊武器與 NPC 火力演出分流
-        const wid = ev.wid || (ent ? UNITS[ent.kind]?.wid : null);
-        const kind = ev.kind || ent?.kind;
-
-        if (wid === 'wingman_beam' || kind === 'drone_wingman') {
-          // 「哀歌」自律微型光束標槍:紫色同調光束 (0xd4afff) + 雙層白熾雷射核心
-          const clip = this._clipBeam(from, to);
-          beamLine(this.scene, this.effects, from, clip.to, 0xd4afff, { ttl: 0.22, w: 0.12 });
-          beamLine(this.scene, this.effects, from, clip.to, 0xffffff, { ttl: 0.14, w: 0.04 });
-          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.4, 0xd4afff);
-          starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 1.6, 0xd4afff);
-        } else if (wid === 'rover_autocannon' || kind === 'assault_rover') {
-          // 「狂歡節」雙聯破片速射砲:金色高射速曳光彈 (0xffdf66) + 碎裂火花
-          const clip = this._clipBeam(from, to);
-          beamLine(this.scene, this.effects, from, clip.to, 0xffdf66, { ttl: 0.10, w: 0.09 });
-          beamLine(this.scene, this.effects, from, clip.to, 0xffffff, { ttl: 0.06, w: 0.03 });
-          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.2, 0xffdf66);
-          impactBurst(this.scene, this.effects, clip.to, 0xffdf66, 1.0);
-        } else if (wid === 'squad_rocket' || kind === 'heli_squad') {
-          // 「賦格」雷導集束微型火箭:淡藍色火箭尾跡 (0x9ecfff) + 推進衝擊環
-          const clip = this._clipBeam(from, to);
-          beamLine(this.scene, this.effects, from, clip.to, 0x9ecfff, { ttl: 0.25, w: 0.14, op: 0.85 });
-          beamLine(this.scene, this.effects, from, clip.to, 0xffffff, { ttl: 0.16, w: 0.05 });
-          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.3, 0x9ecfff);
-          shockRing(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 0x9ecfff, { r: 3.5, ttl: 0.28 });
-          starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 2.0, 0x9ecfff);
-        } else if (wid === 'mbt_cannon' || kind === 'main_battle_tank') {
-          // 「凌霄破陣」130mm 穿甲滑膛砲:極速鎢芯脫殼穿甲彈道 (0xffebd2) + 動能震波
-          const clip = this._clipBeam(from, to);
-          beamLine(this.scene, this.effects, from, clip.to, 0xffebd2, { ttl: 0.18, w: 0.22 });
-          beamLine(this.scene, this.effects, from, clip.to, 0xffffff, { ttl: 0.12, w: 0.08 });
-          shockRing(this.scene, this.effects, from.x, from.y, from.z, 0xffebd2, { r: 3.2, ttl: 0.25 });
-          shockRing(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 0xffebd2, { r: 5.5, ttl: 0.35 });
-          starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 2.6, 0xffebd2);
-        } else if (wid === 'veteran_hmg' || kind === 'veteran_squad') {
-          // 「老戰士」特裝 12.7mm 穿甲重機槍:鎢芯穿甲彈曳光與高熱火花
-          const clip = this._clipBeam(from, to);
-          beamLine(this.scene, this.effects, from, clip.to, 0xffaa44, { ttl: 0.12, w: 0.08 });
-          beamLine(this.scene, this.effects, from, clip.to, 0xe0e8ff, { ttl: 0.07, w: 0.04 });
-          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.1, 0xffaa44);
-          debrisBurst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 0xffaa44);
-        } else if (wid === 'carnival_missile' || kind === 'carnival_heli') {
-          // 「森巴熱浪」空對地燃燒火箭巢:帶烈焰尾跡的燃燒火箭 (0xff6b35 / 0xffd23f)
-          const clip = this._clipBeam(from, to);
-          beamLine(this.scene, this.effects, from, clip.to, 0xff6b35, { ttl: 0.26, w: 0.16 });
-          beamLine(this.scene, this.effects, from, clip.to, 0xffd23f, { ttl: 0.18, w: 0.08 });
-          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.5, 0xff6b35);
-          shockRing(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 0xff6b35, { r: 4.2, ttl: 0.3 });
-          starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 2.4, 0xff6b35);
-        } else if (ev.kind === 'howitzer' || ev.kind === 'tank') {
-          // 拋物線曳光:榴彈兵 + 坦克攻城砲(wid 'siege' 彈道學拋物線)—— 砲管仰角與弧線一致
-          this._arcTracer(from, to, col, ent);
-        } else if (ev.kind !== 'base') {
-          // NPC/塔曳光被大型障礙截斷(伺服器 LOS 已擋開火,這裡吸收兩端幾何不同形的殘餘穿幫)
-          const clip = this._clipBeam(from, to);
-          beamLine(this.scene, this.effects, from, clip.to, col, { ttl: 0.11, w: 0.06 });
-          if (clip.cut) starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 1.2, col);
+        if (style.mode === 'shell') {
+          this._arcTracer(from, to, col, ent, kind, wid);
+        } else {
+          unitShotFx(this.scene, this.effects, from, to, {
+            kind, wid, color: col, core: hot, clip: (a, b) => this._clipBeam(a, b),
+          });
         }
-        // 主堡是射後不理導彈(2026-08-13):這裡只留槍口焰 + 砲管轉向/後座,不畫瞬發曳光 ——
-        // 命中前的飛行路徑由快照 `sm`(this.missiles)另外同步一顆真的飛彈網格(_syncMissiles),
-        // 兩者疊在一起會變成「曳光線先到、飛彈本體後到」的穿幫。
       }
     } else if (ev.e === 'wave') {
       this.hud.feed?.(`⚔️ 第 ${ev.n} 波兵線出擊(含攻擊直升機)`);
@@ -7606,10 +7553,8 @@ export class BattleClient {
     return new THREE.Vector3(fx, gy + oy, fz);
   }
 
-  /** 拋物線曳光(榴彈兵/坦克攻城砲):多段短束沿彈道畫弧,並把「出膛切線角」回寫射手 ——
-   *  手持榴彈槍走 rig.gunR.aim(gunPitch 每幀消費);車載砲塔走 ent._arcPitch
-   *  (_aimVehicleTurret 的 pitch 節點消費)—— 拋物線武器的槍口角度與射擊角度一致。 */
-  _arcTracer(from, to, col, ent) {
+  /** Artillery presentation and barrel elevation share the existing ballistic solution. */
+  _arcTracer(from, to, col, ent, kind = ent?.kind, wid = UNITS[kind]?.wid) {
     // 彈道學真解(2026-07-23):舊制用 h = 射距 × 0.22 畫弧 —— 那是一條與距離等比的裝飾曲線,
     // 不是彈道(使用者:「拋物線都固定線條」)。改與玩家榴彈共用 _lobVel:取**打得到的最低裝藥號數**
     // (真實榴彈砲選裝藥的作法),弧高與出膛仰角因此隨射距/高差改變。
@@ -7623,20 +7568,10 @@ export class BattleClient {
     }
     const vel = this._lobVel(from, to, v0);
     const T = d / Math.max(1e-3, Math.hypot(vel.x, vel.z));   // 飛抵目標的飛行時間
-    const N = 8;
-    let prev = from;
-    for (let i = 1; i <= N; i++) {
-      const t = T * i / N;
-      const p = new THREE.Vector3(
-        from.x + vel.x * t,
-        from.y + vel.y * t - 0.5 * BALLISTIC.G * t * t,
-        from.z + vel.z * t);
-      // 拋物線逐段吃障礙截斷:弧線打進建物/神木/巨岩即止於面上(火花),不畫穿體
-      const clip = this._clipBeam(prev, p);
-      beamLine(this.scene, this.effects, prev, clip.to, col, { ttl: 0.3, w: 0.05 });
-      if (clip.cut) { starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 1.2, col); break; }
-      prev = p;
-    }
+    unitShotFx(this.scene, this.effects, from, to, {
+      kind, wid, color: col, velocity: vel, gravity: BALLISTIC.G, flight: T,
+      clip: (a, b) => this._clipBeam(a, b),
+    });
     const ang = Math.atan2(vel.y, Math.hypot(vel.x, vel.z));   // 出膛仰角 = 火控解的發射角
     const gp = ent?.mesh?.userData?.rig?.gunR;
     if (gp) gp.aim = (gp.comp || 0) - ang;
@@ -8889,38 +8824,7 @@ export class BattleClient {
   }
 
   _explosion(x, y, z, r, color) {
-    // 接觸白芯 → 色彩綻放 → 衝擊環，所有爆炸共用同一拍。
-    impactBurst(this.scene, this.effects, new THREE.Vector3(x, y, z),
-      { r, color, core: 0xfff3d0, heavy: true });
-    const n = 26;
-    const pos = new Float32Array(n * 3);
-    const vels = [];
-    for (let i = 0; i < n; i++) {
-      pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
-      const th = Math.random() * Math.PI * 2, ph = Math.random() * Math.PI;
-      const sp = r * (1.2 + Math.random() * 2.5);
-      vels.push(new THREE.Vector3(Math.sin(ph) * Math.cos(th) * sp, Math.abs(Math.cos(ph)) * sp, Math.sin(ph) * Math.sin(th) * sp));
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    // 火焰貼圖:取代預設方形點精靈的粗糙塊感,帶內部火舌結構(第一人稱近距離殉爆看得最清楚)
-    const pts = new THREE.Points(geo, new THREE.PointsMaterial({
-      color, size: Math.max(1.4, r * 0.3), map: this._fireTex(), transparent: true, opacity: 1, depthWrite: false }));
-    this.scene.add(pts);
-    this.effects.push({
-      obj: pts, ttl: 0.8, vels,
-      fade: (o, f, dt) => {
-        const p = o.geometry.attributes.position;
-        for (let i = 0; i < n; i++) {
-          p.array[i * 3] += vels[i].x * dt;
-          p.array[i * 3 + 1] += vels[i].y * dt;
-          p.array[i * 3 + 2] += vels[i].z * dt;
-          vels[i].y -= 18 * dt;
-        }
-        p.needsUpdate = true;
-        o.material.opacity = f;
-      },
-    });
+    explosionBurst(this.scene, this.effects, x, y, z, r, color);
   }
 
   /**

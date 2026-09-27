@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import { CHARACTERS, SIDES } from './data.js';
 import { markShared, disposeTree } from './toon.js';
 import { spawnParticleCast } from './castparticles.js';
+import { lowPower } from './mobile.js';
 
 const TAU = Math.PI * 2;
 
@@ -693,6 +694,7 @@ const M = (map, color, o = 1) => {
   const m = new THREE.MeshBasicMaterial({
     map, color, transparent: true, opacity: o, depthWrite: false,
     blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    forceSinglePass: true,
   });
   m.userData.o = o;
   return m;
@@ -1706,7 +1708,9 @@ function profileCastCompositor(scene, effects, P) {
   const g = new THREE.Group();
   const layers = [];
   const addLayer = (name, mesh) => { mesh.userData.noOutline = true; g.add(mesh); layers.push(name); return mesh; };
-  const seal = addLayer('struct.culturalSeal', flat(new THREE.Mesh(PLANE, M(culturalSealTex(P), P.col, 0.78))));
+  const directional = ['dash', 'slash', 'snipe', 'veil'].includes(profile.arch);
+  const vertical = ['gate', 'heal', 'notewave'].includes(profile.arch);
+  const seal = addLayer('struct.culturalSeal', flat(new THREE.Mesh(PLANE, M(directional ? signatureTex(profile.tellShape) : culturalSealTex(P), P.col, 0.78))));
   seal.scale.setScalar(rv * 0.74);
   const tell = addLayer('struct.layoutStructure', flat(new THREE.Mesh(PLANE, M(signatureTex(profile.layoutStructure), P.col2, 0.66))));
   tell.scale.setScalar(rv * (0.42 + (LAYOUT_SCALE[profile.layout] || 1) * 0.22));
@@ -1714,6 +1718,7 @@ function profileCastCompositor(scene, effects, P) {
   let field = null;
   const fieldMaterials = [];
   let accent = null;
+  const stamp = new THREE.Object3D();
   if (profile.arch === 'dome') {
     field = shieldField(P, rv, 0.30);
     // 建立時收集一次；逐幀只走固定材質陣列，不巡覽場景樹。
@@ -1722,34 +1727,89 @@ function profileCastCompositor(scene, effects, P) {
     g.add(field.g);
     layers.push('struct.shieldField');
   } else {
-    accent = addLayer('struct.accentMotif', flat(new THREE.Mesh(PLANE, M(glyphTex(profile.accentMotif, profile.variant), P.col, 0.72))));
+    accent = addLayer('struct.accentMotif', new THREE.InstancedMesh(PLANE,
+      M(signatureTex(profile.tellShape), P.col, 0.72), directional ? 3 : (P.big ? 6 : 4)));
+    accent.frustumCulled = false;
+    accent.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     accent.scale.setScalar(P.scale * (0.34 + (profile.tempo - 0.82) * 0.18));
     accent.rotation.z = (LAYOUT_STYLE[profile.layout] || 0) * 0.5 + profile.phase;
   }
   g.userData.castLayers = layers;
-  anchorCaster(g, P);
+  g.userData.castPresentation = true;
+  const follows = ['aura', 'veil', 'dash', 'slash', 'atfield'].includes(profile.arch);
+  const origin = P.casterPos?.();
+  const bearing = origin ? Math.atan2(P.at.x - origin.x, P.at.z - origin.z) : profile.phase;
+  g.rotation.y = bearing;
+  const anchor = () => {
+    if (follows) anchorCaster(g, P);
+    else { g.position.copy(P.at); g.position.y += 0.35; }
+  };
+  anchor();
+  // Short anticipation and a sharp release keep long-lived buffs from washing out contact.
+  const attack = Math.min(dur * 0.25, 0.16 / profile.tempo);
+  const contactAt = Math.min(dur * 0.65, attack + (directional ? 0.12 : 0.26) / profile.tempo);
+  const motion = MOTION_STYLE[profile.motion] || {};
+  const contact = CONTACT_STYLE[profile.contact] || 'fade';
   push(scene, effects, g, dur, (t, dt) => {
-    anchorCaster(g, P);
-    const env = bell(t, dur, 0.14, 0.42);
-    const motion = MOTION_STYLE[profile.motion] || {};
-    const contact = CONTACT_STYLE[profile.contact] || 'fade';
-    const hit = contact === 'flash' || contact === 'pulse' ? Math.max(0, 1 - Math.abs(t - dur * 0.58) * 8) : 0;
-    const amp = P.scale * 0.08;
-    seal.scale.setScalar(Math.max(0.01, rv * (0.66 + ease01(Math.min(1, t / 0.3)) * 0.16)));
-    seal.rotation.z += dt * (0.24 + profile.tempo * 0.12);
-    tell.position.x = Math.sin(profile.phase + t * profile.tempo) * amp * (motion.x || 0);
-    tell.position.y = (motion.y || 0) * amp * Math.sin(Math.min(1, t / 0.34) * Math.PI);
-    tell.scale.setScalar(Math.max(0.01, rv * (0.42 + (LAYOUT_SCALE[profile.layout] || 1) * 0.22) * (1 + (motion.scale || 0) * 0.12 * ease01(Math.min(1, t / 0.5)))));
-    tell.material.opacity = tell.material.userData.o * env;
-    seal.material.opacity = seal.material.userData.o * env;
+    anchor();
+    const charge = ease01(Math.min(1, t / attack));
+    const release = ease01(Math.max(0, Math.min(1, (t - attack) / (contactAt - attack))));
+    const tail = Math.max(0, 1 - Math.max(0, t - contactAt) / Math.max(0.001, dur - contactAt));
+    const hit = Math.max(0, 1 - Math.abs(t - contactAt) / 0.075);
+    const env = charge * tail * tail;
+    const pulse = contact === 'pulse' ? 0.78 + 0.22 * Math.cos((t - contactAt) * 22) : 1;
+    const collapse = contact === 'snap' || contact === 'blackout' ? 0.3 + 0.7 * tail : 1;
+    const spread = (0.3 + release * 0.66) * collapse;
+    seal.scale.set(rv * spread * (directional ? 0.18 : 1), rv * spread, 1);
+    seal.rotation.z = directional ? 0 : profile.phase + t * (motion.x || 0.12);
+    tell.position.set((motion.x || 0) * P.scale * release * 0.15,
+      vertical ? P.scale * (0.2 + release * 0.7) : 0.06,
+      directional ? rv * release * 0.4 : 0);
+    tell.rotation.x = vertical ? 0 : -Math.PI / 2;
+    tell.scale.set(rv * spread * (directional ? 0.25 : 0.72), rv * spread * (vertical ? 0.55 : 0.8), 1);
+    tell.material.opacity = tell.material.userData.o * env * pulse * (0.65 + hit * 0.35);
+    seal.material.opacity = seal.material.userData.o * env * (1 - release * 0.55);
     if (accent) {
-      accent.position.y = P.scale * 0.24 + (motion.y || 0) * amp;
-      accent.rotation.z += dt * (0.5 + profile.tempo * 0.25);
-      accent.material.opacity = accent.material.userData.o * Math.max(env, hit);
+      const split = contact === 'split' ? (1 - tail) * P.scale * 0.5 : 0;
+      accent.position.set(split, P.scale * (0.35 + (motion.y || 0) * release * 0.25), directional ? rv * release * 0.6 : 0);
+      accent.rotation.z = profile.phase + t * (directional ? 0 : profile.tempo);
+      const size = P.scale * (0.18 + release * 0.38 + hit * 0.12) * collapse;
+      accent.scale.set(size * (directional ? 0.45 : 1), size, 1);
+      accent.material.opacity = accent.material.userData.o * Math.max(release * env * pulse, hit);
+      for (let i = 0; i < accent.count; i++) {
+        const a = i / accent.count * TAU + profile.phase;
+        const orbit = 0.5 + release * (1 + (motion.scale || 0) * 0.4);
+        stamp.position.set(Math.cos(a) * orbit, 0, Math.sin(a) * orbit);
+        stamp.rotation.set(0, -a, 0);
+        stamp.scale.setScalar(0.6 + (i % 2) * 0.15);
+        if (directional) {
+          stamp.position.set((i - 1) * 0.32, 0, -i * release * P.scale * 0.2);
+          stamp.rotation.set(0, 0, profile.arch === 'slash' ? a : 0);
+          stamp.scale.set(0.9 - i * 0.2, 1.4 - i * 0.3, 1);
+        } else if (profile.arch === 'gate') {
+          stamp.position.y = (1 - release) * 1.6;
+          stamp.scale.set(0.7, 1.3, 1);
+        } else if (profile.arch === 'zone') {
+          stamp.position.y = (1 - release) * (2 + i * 0.3);
+          stamp.rotation.x = -Math.PI / 2 * release;
+        } else if (profile.arch === 'heal') {
+          stamp.position.y = release * (1 + i * 0.2);
+        } else if (profile.arch === 'bind') {
+          stamp.position.multiplyScalar(1.2 - release * 0.7);
+          stamp.scale.y = 1.8;
+        } else if (profile.arch === 'scan' || profile.arch === 'notewave') {
+          stamp.position.set(0, i * 0.15, (i - 2) * release * 0.7);
+          stamp.rotation.set(0, 0, 0);
+          stamp.scale.set(1.2 + i * 0.3, 0.5, 1);
+        }
+        stamp.updateMatrix();
+        accent.setMatrixAt(i, stamp.matrix);
+      }
+      accent.instanceMatrix.needsUpdate = true;
     }
     if (field) {
-      field.g.scale.setScalar(Math.max(0.01, outBack(Math.min(1, t / 0.34)) * (1 + hit * 0.14)));
-      field.g.rotation.y += dt * (field.spin || 0.1) * (1 + profile.tempo * 0.2);
+      field.g.scale.setScalar(Math.max(0.01, 0.25 + release * 0.75));
+      field.g.rotation.y = t * (field.spin || 0.1) * profile.tempo;
       for (const material of fieldMaterials) material.opacity = material.userData.o * env;
     }
   });
@@ -1918,6 +1978,10 @@ export function spawnCastFx(scene, effects, opts) {
     }
     return;
   }
+  // Omit decorative casts under crowd pressure; authority and status visuals remain independent.
+  let active = 0;
+  for (const effect of effects) if (effect.obj?.userData.castPresentation && effect.ttl > 0) active++;
+  if (active >= (lowPower() ? 6 : 12)) return;
   const fx = opts.fx || CHARACTERS[opts.ch]?.[opts.slot]?.fx;
   const col = new THREE.Color(conf.c ?? CHARACTERS[opts.ch]?.visual?.hue
     ?? (opts.side ? SIDES[opts.side].color : 0xffffff));
