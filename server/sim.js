@@ -14,11 +14,11 @@ import {
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   ATK_CARRIER, atkDelivered, atkParts, atkPartN, SELF_ATK, selfAtkBoost,
   ATK_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND, ATK_CAST_S,
-  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
   shieldDefKindFactor, balanceMul, upgradeCurveMul,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
-  aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
+  aoeClass, trajClass, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   HIGH_SUP, highSupF, highSupDodgeF, highSupMissP, unbalMissP,
   selfCollider, COLLIDE_KINDS,
@@ -2598,7 +2598,7 @@ export class BattleSim {
       for (let i = 0; i < hits.length; i++) {
         const k = hits[i];
         if (k.t === t) continue;
-        const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3) * offAxisFalloff(k.off) * LANCE.DECAY ** i;
+        const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3) * offAxisFalloff(k.off) * LANCE.DECAY ** k.j;
         this._applyHitEmp(h, wp.def, k.t);
         this._damage(k.t, kd, h, wp.def.pen, 0, (0, wp.def), { origin: [h.x, h.z] });
       }
@@ -2706,7 +2706,9 @@ export class BattleSim {
   /**
    * 扇形範圍攻擊(aoeClass 'fan':shotgun / flamethrower / plasma)。
    * 客戶端回報 3D 射向(dx, dz, dy;已單位化),傷害判定全在伺服器:
-   * 圓錐內、射程內、迷霧可見、LOS 未遮蔽的敵方單位全數受創(偏心傷害遞減)。
+   * 錐按方位角切成 fanSubs 個小錐形區塊,每區塊只命中最近的一名敵人
+   * (量體橫跨多格的大目標在多格各吃一次);射程/迷霧/LOS/稜線閘門逐目標照舊。
+   * 傷害不隨距離變化,只剩偏心傷害遞減 offAxisFalloff。
    */
   heroPlasma(pid, dx, dz, slot = 'heavy', o = null, dy = 0) {
     const h = this.heroes.get(pid);
@@ -2724,6 +2726,7 @@ export class BattleSim {
     const pulse = this.visionUntil?.[h.side] > this.t;
     const src = this._visionSources(h.side);
     const arcHalf = fanArcHalf(wp.def);   // 偏心遞減的分母(量體只放寬「打不打得到」,不放大傷害)
+    const NSUB = fanSubs(wp.def);         // 小錐格數(錐角推導;分格走 fanBinSpan 單一縫)
     // 槍口必須在自己身邊(防作弊:不能從任意座標噴一個錐;與 heroLance 同一道閘)
     const mz = Array.isArray(o) && [+o[0], +o[1], +o[2]].every(Number.isFinite)
       && dist2d(h.x, h.z, +o[0], +o[1]) <= 12 ? [+o[0], +o[1], +o[2]] : null;
@@ -2733,6 +2736,7 @@ export class BattleSim {
       const lead = mz && b === h;
       const bx = lead ? mz[0] : b.x, bz = lead ? mz[1] : b.z;
       const byE = lead ? mz[2] : (b.y || 0) + LOS.EYE_M;
+      const bins = new Array(NSUB).fill(null);   // 每格最近的 { t, d3, ang }(同格後到者不換 ⇒ 確定性)
       for (const t of [...this.ents.values()]) {
         if (t.side === h.side || t.gar || (t.hero && t.dead)) continue;
         const tx = t.x - bx, tz = t.z - bz;
@@ -2757,9 +2761,20 @@ export class BattleSim {
         // 也不穿山
         if (this._ridgeBlocked(bx, bz, this._absSightY(b, byE, bx, bz),
                                t.x, t.z, this._absSightY(t, this._tgtY(t), t.x, t.z), b, t)) continue;
-        // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額)
-        const offF = offAxisFalloff(ang / arcHalf);
-        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offF, b, wp.def.pen, 0, (0, wp.def), { origin: [bx, bz] });
+        // 小錐分格(fanBinSpan 單一縫):量體覆蓋到的格都登記(大目標橫跨多格 ⇒ 多格各取它一次)
+        const phi = Math.atan2(tx * uz - tz * ux, tx * ux + tz * uz);
+        const aw = Math.atan2(hr, Math.max(1, d2));
+        const [b0, b1] = fanBinSpan(wp.def, phi, aw);
+        for (let bi = b0; bi <= b1; bi++) {
+          if (!bins[bi] || d3 < bins[bi].d3) bins[bi] = { t, d3, ang };
+        }
+      }
+      for (const win of bins) {
+        if (!win) continue;
+        // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額);不隨距離變化;
+        // 每格再 ×FAN_SUB_F(單一小錐單價 —— 大目標多格多吃不變,只是每格便宜一點)
+        const offF = offAxisFalloff(win.ang / arcHalf);
+        this._damage(win.t, this._heroDmg(b, wp.def, win.t.kind) * offF * FAN_SUB_F, b, wp.def.pen, 0, (0, wp.def), { origin: [bx, bz] });
       }
     }
     this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
@@ -2768,7 +2783,7 @@ export class BattleSim {
 
   /**
    * 直線貫穿命中列表(line 類重武器:beam 光束 / rail 電磁彈射 / gun 反器材砲)。
-   * 回傳沿射線由近至遠排序的敵方單位(至多 LANCE.MAX 個),供呼叫端逐一套貫穿衰減。
+   * 回傳沿射線由近至遠排序的敵方單位(個數只由穿透力預算截斷,無上限),供呼叫端逐一套貫穿衰減。
    *
    * 幾何近似(刻意):圓柱判定取**水平**垂距 + 一條垂直帶 —— 伺服器無地形高程,
    * y 的語意是「離站立表面高」,射線的絕對高度算不出來(見 _losBlocked 同一組近似)。
@@ -2781,6 +2796,11 @@ export class BattleSim {
    *   ② **射線被目標自己截斷**:客戶端回報的 len 止於「彈道終點」—— beam 的準星射線、
    *      動能彈的落點都停在目標**近側表面**,而目標中心在那之後 ⇒ s > maxS 判成落空。
    *      改為量到「線段上最近點」(s 夾制到 [0, maxS])而非要求中心落在線段內。
+   * 穿透力(2026-09-27 使用者需求):沿射線由近至遠累計截面積 lancePenCost,
+   * 預算 lancePen 見底後更遠的目標不再進名單(耗盡的那一個仍結算)—— 砲塔/主堡擋線。
+   * 截面分區(2026-09-27 使用者需求 1 內圈 + 6 外扇區):預算 9 等分每區各自累計、
+   * 各自截斷(lanceZonePen);量體跨幾區就在幾區各列一次(同區同一單位只列一次),
+   * 每列帶該區內的名次 j —— 呼叫端逐區套 LANCE.DECAY^j。
    */
   _lanceHits(shooter, def, ox, oz, oy, dx, dz, dy, len) {
     const R = lanceR(def);
@@ -2811,7 +2831,8 @@ export class BattleSim {
       }
       const ty = this._tgtY(t);
       const tx = t.x - ox, tz = t.z - oz;
-      const rr = R + hitR(t);                                  // 圓柱半徑 + 目標自身水平量體
+      const hr = hitR(t);
+      const rr = R + hr;                                       // 圓柱半徑 + 目標自身水平量體
       let s, perp;
       if (vert) {
         s = (ty - oy) * sy;                                    // 垂直射線:軸向 = 高度差
@@ -2840,19 +2861,36 @@ export class BattleSim {
       // 順帶收掉真人那條的端點外溢(圓柱端帽可以外溢 R + hitR,剛好落在山背後)。
       if (this._ridgeBlocked(ox, oz, this._absSightY(shooter, oy, ox, oz),
                              t.x, t.z, this._absSightY(t, ty, t.x, t.z), shooter, t)) continue;
+      // 截面分區(lanceZones 單一縫):量體跨幾區就在幾區各列一次(同區只列一次);
       // off = 偏心比例(0 正中 / 1 貼邊):heroLance 據此套 offAxisFalloff(偏心傷害遞減)
-      out.push({ t, s, d3: Math.hypot(tx, tz, ty - oy), off: Math.min(1, dev / rr) });   // 排序用**原始**軸距,貫穿先後才對
+      const d3 = Math.hypot(tx, tz, ty - oy), off = Math.min(1, dev / rr);
+      const ex = vert ? tx : tx - ux * sc, ez = vert ? tz : tz - uz * sc;   // 線段夾制點的橫向偏移
+      for (const zone of lanceZones(ex, ez, hr, R)) out.push({ t, s, d3, off, zone });   // 排序用**原始**軸距,貫穿先後才對
     }
-    out.sort((a, b) => a.s - b.s);
-    return out.length > LANCE.MAX ? out.slice(0, LANCE.MAX) : out;
+    out.sort((a, b) => a.s - b.s || a.zone - b.zone);
+    // 逐區穿透(唯一的個數閘;與 game._lancePierced 同式):各區沿射線各自累計,
+    // 耗盡的那一個仍進名單(j = 區內名次,呼叫端套 DECAY^j),之後該區更遠的一律不進
+    const kept = [];
+    const rem = [], shut = [], cnt = [];
+    for (const k of out) {
+      const z = k.zone;
+      if (shut[z]) continue;
+      if (rem[z] === undefined) rem[z] = lanceZonePen(def, z);
+      rem[z] -= lancePenCost(k.t);
+      k.j = cnt[z] || 0; cnt[z] = k.j + 1;
+      kept.push(k);
+      if (rem[z] < 0) shut[z] = true;
+    }
+    return kept;
   }
 
   /**
    * 直線貫穿攻擊(aoeClass 'line':beam / rail / gun 重武器)。客戶端回報射線:
    *   o = [x, z, y] 槍口(sim 座標,y = 離站立表面高)、d = [dx, dz, dy] 單位方向、len = 射線長
    *   (已被本端地形/障礙截斷 —— 伺服器再夾一次射程 ×RANGE_TOL 寬容)。
-   * 命中判定全在伺服器:圓柱內、射程內、迷霧可見、LOS 未遮蔽的敵方單位全數受創,
-   * 依沿線先後套 LANCE.DECAY^i(首個全額 ⇒ 單體 DPS 與 heroHit 相同,bal 不變式不受影響)。
+   * 命中判定全在伺服器:圓柱內、射程內、迷霧可見、LOS 未遮蔽的敵方單位,
+   * 跨幾區吃幾次(同區只一次),每區依沿線先後套 LANCE.DECAY^j(各區首個全額 ⇒
+   * 單體 DPS 與 heroHit 相同,bal 不變式不受影響),各區穿透力耗盡處截斷(見 _lanceHits)。
    * 一發只扣一次彈藥/電力/射速 —— 與 heroPlasma(扇形)、heroBurst(爆炸)同一條「AoE 一發一結算」。
    */
   heroLance(pid, o, d, len) {
@@ -2883,11 +2921,11 @@ export class BattleSim {
       const bx = b === h ? ox : b.x, bz = b === h ? oz : b.z, by = b === h ? oy : (b.y || 0) + LOS.EYE_M;
       const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max);
       for (let i = 0; i < hits.length; i++) {
-        const { t, d3, off } = hits[i];
+        const { t, d3, off, j } = hits[i];
         // 直線圓柱誠實界:軸向表面距離不超過有效射程
         if (hits[i].s - hitR(t) > wp.def.range * this._altRange(b, t, wp.def)) continue;
         const dmg = this._rollCrit(b, wp.def,
-          this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** i, t);
+          this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** j, t);
         this._applyHitEmp(b, wp.def, t);
         this._damage(t, dmg, b, wp.def.pen, 0, (0, wp.def), { origin: [bx, bz], dir: [dx, dz] });
       }
@@ -3622,6 +3660,12 @@ export class BattleSim {
     if (A.carrier) {
       this._launchAtkCarrier(h, A, x, z, org);
       this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1, ox: org.x, oz: org.z, castDur: A.castTime || ATK_CAST_S });
+      return;
+    }
+    // 分身化影招式(如齊天大聖):身外化影直接由本尊分化,不走遠程工事輔助載具
+    if (A.add?.fx === 'clone') {
+      this._castEffect(h, A, h.x, h.z, 1, null, true);
+      this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 0, castDur: A.castTime || ATK_CAST_S });
       return;
     }
     // 自身強化型攻招:派出 supportN 架跟隨玩家的輔助機
@@ -5070,12 +5114,13 @@ export class BattleSim {
       // 集束轟炸機形式:飛向落點,進 BOMB_R 起每 BOMB_GAP 投遞一份(間斷型);投完飛離解體。
       // 擊落 = 剩餘份全數否定(_kill 的 decoy 分支對 uA 載具沒有 bombsLeft ⇒ 天然不補投)。
       const sq = h.sq;
+      const flyS = d0 / DECOY.SPEED;
       const d = this._add({
         kind: 'decoy', side: h.side, pid: h.pid, decoy: true,
         uA: A, uDrops: Array.from({ length: n }, (_, i) => ({ frac: 1 / n, n: partImp(i) })),
         pt: { x, z }, nextBomb: 0,
         x: o.x, z: o.z, y: (o.y || 0) + DECOY.ALT, ry: lry,
-        hp: decoyHp(), armor: 0, tid: 0, lost: false, dieAt: this.t + DECOY.TTL_S,
+        hp: decoyHp(), armor: 0, tid: 0, lost: false, dieAt: this.t + flyS + n * DECOY.BOMB_GAP + DECOY.TTL_S,
       });
       d.maxSp = 0; d.sp = 0;
       if (sq) { (sq.decoys ||= []).push(d); }
@@ -5087,6 +5132,7 @@ export class BattleSim {
       if (sq) sq.kamis ??= [];
       const fx = -Math.sin(lry), fz = Math.cos(lry);
       const rx = Math.cos(lry), rz = Math.sin(lry);
+      const flyS = d0 / (UNITS.drone.speed * K.SPEED_MUL);
       for (let i = 0; i < n; i++) {
         const s = kamiSide(i);
         const k = this._add({
@@ -5096,7 +5142,7 @@ export class BattleSim {
           x: o.x + fx * K.FWD + rx * K.SIDE * s,
           z: o.z + fz * K.FWD + rz * K.SIDE * s,
           y: o.y || 0, ry: lry + K.SPREAD * s,
-          hp: kamiHp(), armor: 0, tid: 0, dieAt: this.t + K.TTL_S,
+          hp: kamiHp(), armor: 0, tid: 0, dieAt: this.t + flyS + K.TTL_S,
         });
         k.maxSp = 0; k.sp = 0;
         if (sq) sq.kamis.push(k);
@@ -7397,8 +7443,9 @@ export class BattleSim {
       // NPC BOSS:目前段位(0 起算)。**存在這一格 = 這是 BOSS** —— 客戶端據此把血條外圍
       // 光暈換成該段的顏色(黑>青>銀>金)。段位是小隊層級的,同隊每架都帶同一個值。
       if (e.sq?.boss) o.bs = e.sq.bossSeg | 0;
-      // 主視野機(小隊只有一架):共用的玩家狀態只跟著它發一份
-      o.act = !e.sq || e.sq.bodies[e.sq.act] === e ? 1 : 0;
+      // 主視野機(小隊只有一架;分身非本尊):共用的玩家狀態只跟著它發一份
+      o.act = !e.isClone && (!e.sq || e.sq.bodies[e.sq.act] === e) ? 1 : 0;
+      if (e.isClone) o.clone = 1;
       if (o.act) {
         // 升級/招式階級 MUST 傳「值快照」不可傳權威物件本身:單機模式(LocalNet)不經 JSON
         // 序列化 —— 快照直接以參考傳到客戶端。客戶端 `this.upg = e.up` 後樂觀購買會 mutate
@@ -7599,6 +7646,7 @@ export class BattleSim {
     const ents = [];
     for (const e of this.ents.values()) {
       if (e.kind === 'mapbuilding') continue;
+      if (e.isTree || e.isMoon || e.isSlab) continue;
       if (sources && !this._visibleTo(e, side, sources)) continue;
       ents.push(this._serializeEnt(e));
     }

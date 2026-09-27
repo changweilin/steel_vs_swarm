@@ -784,11 +784,12 @@ body.has-boss-bar .hud-top {
   gap: 4px;
   min-width: 0;
 }
-/* -- 陣營頭像框:蜂群琥珀切角 / 鋼鐵冷藍鍍邊 / 傭兵金色雙線(與對話頭像同一組 data-fac) -- */
+/* -- 陣營頭像框:蜂群琥珀切角 / 鋼鐵冷藍鍍邊 / 傭兵金色雙線(與對話頭像同一組 data-fac) --
+   尺寸隨遊戲畫面 vmin 流體縮放 */
 .boss-av {
-  width: 60px;
-  height: 60px;
-  flex: 0 0 60px;
+  width: clamp(44px, 8.4vmin, 68px);
+  height: clamp(44px, 8.4vmin, 68px);
+  flex: 0 0 clamp(44px, 8.4vmin, 68px);
   object-fit: cover;
   background: #0c0e12;
 }
@@ -842,7 +843,7 @@ body.has-boss-bar .hud-top {
 }
 .boss-badge {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: clamp(9px, 1.4vmin, 12px);
   font-weight: 900;
   letter-spacing: 2px;
   background: #d32f2f;
@@ -853,14 +854,14 @@ body.has-boss-bar .hud-top {
 }
 .boss-name {
   font-family: var(--serif);
-  font-size: 15px;
+  font-size: clamp(13px, 2.1vmin, 18px);
   font-weight: 900;
   letter-spacing: 2px;
   color: #fff;
   text-shadow: 0 0 10px rgba(255, 60, 60, 0.6);
 }
 .boss-sub {
-  font-size: 11px;
+  font-size: clamp(10px, 1.55vmin, 13px);
   color: var(--dim);
   letter-spacing: 1px;
 }
@@ -871,19 +872,19 @@ body.has-boss-bar .hud-top {
   font-family: var(--mono);
 }
 .boss-phase {
-  font-size: 11px;
+  font-size: clamp(10px, 1.55vmin, 13px);
   color: #ffd54a;
   letter-spacing: 1px;
   font-weight: 700;
 }
 .boss-hp-text {
-  font-size: 12px;
+  font-size: clamp(10px, 1.67vmin, 14px);
   color: rgba(255, 255, 255, 0.85);
   letter-spacing: 1px;
 }
 .boss-bar-track {
   position: relative;
-  height: 14px;
+  height: clamp(12px, 1.95vmin, 18px);
   background: rgba(6, 9, 14, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 1px;
@@ -933,10 +934,10 @@ body.touch-ui .boss-bar-wrap {
   gap: 6px;
 }
 body.touch-ui .boss-av {
-  width: 44px; height: 44px; flex-basis: 44px;
+  width: clamp(40px, 8.4vmin, 56px); height: clamp(40px, 8.4vmin, 56px); flex-basis: clamp(40px, 8.4vmin, 56px);
 }
 body.touch-ui .boss-name {
-  font-size: 13px;
+  font-size: clamp(11px, 1.9vmin, 15px);
 }
 
 .hud-top {
@@ -948,12 +949,12 @@ body.touch-ui .boss-name {
 .base-bar { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 420px; }
 .base-bar.steel { justify-content: flex-end; }
 .base-label {
-  font-family: var(--serif); font-size: 12px; font-weight: 900; letter-spacing: 3px; white-space: nowrap;
+  font-family: var(--serif); font-size: clamp(10px, 1.67vmin, 14px); font-weight: 900; letter-spacing: 3px; white-space: nowrap;
   padding: 1px 8px;
 }
 .base-bar.swarm .base-label { color: #0d0900; background: var(--swarm); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 .base-bar.steel .base-label { color: #04080b; background: var(--steel); clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%); }
-.bbar { flex: 1; height: 12px; background: rgba(4, 7, 11, 0.85); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.bbar { flex: 1; height: clamp(10px, 1.67vmin, 14px); background: rgba(4, 7, 11, 0.85); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 /* 條的刻度只是細分隔線(1px),不是粗條紋 —— 條紋會吃掉疊在上面的數值文字 */
 .bbar-fill { height: 100%; transition: width 0.3s steps(12); }
 .bbar-fill.swarm { background: repeating-linear-gradient(90deg, var(--swarm) 0 9px, rgba(5, 7, 10, 0.5) 9px 10px); }
@@ -961,9 +962,9 @@ body.touch-ui .boss-name {
   background: repeating-linear-gradient(90deg, var(--steel) 0 9px, rgba(5, 7, 10, 0.5) 9px 10px);
   float: right;
 }
-.score { font-size: 10px; color: var(--dim); white-space: nowrap; font-family: var(--mono); }
+.score { font-size: clamp(9px, 1.4vmin, 12px); color: var(--dim); white-space: nowrap; font-family: var(--mono); }
 .wave-box {
-  font-family: var(--mono); font-size: 12px; letter-spacing: 3px; white-space: nowrap;
+  font-family: var(--mono); font-size: clamp(10px, 1.67vmin, 14px); letter-spacing: 3px; white-space: nowrap;
   color: var(--railW); border: 1px solid var(--line); padding: 6px 20px;
   background: rgba(4, 7, 11, 0.85);
   clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
@@ -975,7 +976,7 @@ body.touch-ui .boss-name {
 }
 .kill-feed div {
   background: rgba(4, 7, 11, 0.82); border-right: 3px solid var(--danger);
-  padding: 4px 10px; font-size: 12px; font-family: var(--mono); animation: feedIn 0.15s steps(3);
+  padding: 4px 10px; font-size: clamp(10px, 1.67vmin, 14px); font-family: var(--mono); animation: feedIn 0.15s steps(3);
 }
 @keyframes feedIn { from { transform: translateX(20px); opacity: 0; } }
 
@@ -1110,15 +1111,15 @@ body.aiming .scope-vig { display: block; }
   padding: 6px 10px;
   background: linear-gradient(0deg, rgba(3, 5, 8, 0.85), transparent);
 }
-.hud-self { display: flex; flex-direction: column; gap: 3px; min-width: 240px; max-width: 260px; }
+.hud-self { display: flex; flex-direction: column; gap: 3px; min-width: clamp(200px, 34vmin, 320px); max-width: clamp(240px, 37vmin, 340px); }
 .hud-side {
-  font-family: var(--serif); font-size: 11px; letter-spacing: 3px; font-weight: 900;
+  font-family: var(--serif); font-size: clamp(10px, 1.55vmin, 14px); letter-spacing: 3px; font-weight: 900;
   padding: 1px 8px; align-self: flex-start;
 }
 body[data-side="SWARM"] .hud-side { color: #0d0900; background: var(--swarm); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
-/* 條類一律硬邊 + 內部格柵 */
-.hpbar { position: relative; height: 14px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+/* 條類一律硬邊 + 內部格柵(高與字級隨遊戲畫面 vmin 流體縮放,上下限保可讀不爆版) */
+.hpbar { position: relative; height: clamp(12px, 1.95vmin, 18px); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .hpbar-fill {
   height: 100%;
   background: repeating-linear-gradient(90deg, #6fae3e 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
@@ -1126,26 +1127,40 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 }
 .hp-text {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #fff;
+  font-family: var(--mono); font-size: clamp(9px, 1.55vmin, 14px); font-weight: 700; letter-spacing: 2px; color: #fff;
   text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
-.burst-box { font-size: 11px; color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
+.burst-box { position: relative; overflow: hidden; font-size: clamp(10px, 1.55vmin, 13px); color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
+.burst-box > span { position: relative; z-index: 1; }
 .burst-cd { color: var(--danger); margin-left: 6px; letter-spacing: 1px; }
 .burst-cd.ready { color: var(--ok); }
+/* 區塊式 CD/填彈進度條:fill 寬 = 剩餘比例(滿 = 剛用掉,歸零 = 就緒),半透明罩在區塊底,文字浮於其上 */
+.burst-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+  background: rgba(255, 68, 54, 0.22); border-right: 1px solid rgba(255, 68, 54, 0.65);
+  pointer-events: none; transition: width 0.15s linear;
+}
 
 /* 武器 / 彈藥 / 金錢 HUD */
 .wpn-box {
+  position: relative; overflow: hidden;
   display: flex; justify-content: space-between; align-items: center;
   background: rgba(4, 7, 11, 0.82); border: 1px solid var(--line); border-left: 3px solid var(--railS);
-  padding: 2px 8px; font-size: 12px;
+  padding: 2px 8px; font-size: clamp(10px, 1.67vmin, 15px);
   clip-path: var(--notch-sm);
+}
+.wpn-box > span { position: relative; z-index: 1; }
+.wpn-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+  background: rgba(95, 208, 242, 0.20); border-right: 1px solid rgba(95, 208, 242, 0.6);
+  pointer-events: none; transition: width 0.15s linear;
 }
 .wpn-ammo { font-family: var(--mono); font-weight: 700; color: #eaf5ea; letter-spacing: 3px; }
 .wpn-ammo.low { color: var(--danger); }
 .wpn-ammo.reloading { color: var(--railW); animation: reloadBlink 0.4s steps(1) infinite alternate; }
 @keyframes reloadBlink { from { opacity: 1; } to { opacity: 0.25; } }
-.money-box { font-size: 11px; color: var(--railW); font-family: var(--mono); letter-spacing: 1px; }
-.shop-hint { color: var(--dim); font-size: 10px; margin-left: 8px; }
+.money-box { font-size: clamp(10px, 1.55vmin, 13px); color: var(--railW); font-family: var(--mono); letter-spacing: 1px; }
+.shop-hint { color: var(--dim); font-size: clamp(9px, 1.4vmin, 12px); margin-left: 8px; }
 
 /* 觀戰的角色數據面板(2026-08-02):**與交戰共用同一塊 .hud-self** —— 沒跟人時只留標題(上帝視角
    本來就沒有「誰的數據」可顯示),跟上某位玩家才整塊攤開,並在最下方補一列八軌商店升級。
@@ -1210,8 +1225,8 @@ body.spectating.spec-follow .spec-upg { display: flex; }
   text-align: left; border-left: 2px solid var(--line); padding-left: 10px;
 }
 #minimap {
-  /* 顯示尺寸縮到與機體數據面板等高(繪製解析度仍是 220,CSS 縮放) */
-  width: 172px; height: 172px;
+  /* 顯示尺寸隨遊戲畫面 vmin 流體縮放(繪製解析度仍是 220,CSS 縮放) */
+  width: clamp(120px, 24vmin, 210px); height: clamp(120px, 24vmin, 210px);
   border: 1px solid var(--railS); border-radius: 0;
   background: rgba(4, 7, 10, 0.92); pointer-events: none;
   clip-path: var(--notch);
@@ -1346,7 +1361,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   .side-name { font-size: 15px; letter-spacing: 3px; }
   .side-hero { font-size: 10px; letter-spacing: 0; }
   .hud-bottom { flex-wrap: wrap; }
-  #minimap { width: 140px; height: 140px; }
+  #minimap { width: clamp(104px, 24vmin, 150px); height: clamp(104px, 24vmin, 150px); }
   .sysbar { display: none; }
   .title { flex-direction: column; letter-spacing: 8px; }
 }
@@ -2260,17 +2275,17 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .slot-char { color: var(--railW); font-weight: 400; font-size: 11px; font-family: var(--mono); }
 .slot-char.dim { color: var(--dim); }
 
-/* 護盾 / 電力條(與 .hpbar 同族) */
-.spbar { position: relative; height: 10px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+/* 護盾 / 電力條(與 .hpbar 同族;尺寸隨遊戲畫面 vmin 流體縮放) */
+.spbar { position: relative; height: clamp(8px, 1.4vmin, 13px); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .spbar-fill {
   height: 100%; background: repeating-linear-gradient(90deg, #2f8fb8 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
   transition: width 0.2s steps(10);
 }
 .sp-text {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 9px; font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
+  font-family: var(--mono); font-size: clamp(8px, 1.25vmin, 11px); font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
-.mpbar { position: relative; height: 8px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.mpbar { position: relative; height: clamp(7px, 1.12vmin, 11px); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .mpbar-fill {
   height: 100%; background: repeating-linear-gradient(90deg, #7d55c7 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
   transition: width 0.2s steps(10);
@@ -2283,10 +2298,10 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 @keyframes mp-oc { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
 .mp-text {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 8px; font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
+  font-family: var(--mono); font-size: clamp(7px, 1.12vmin, 10px); font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
 /* 爬升動力條(飛行機體專屬;非飛行狀態整條收起 —— 地面機甲的版型不變) */
-.liftbar { position: relative; height: 8px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.liftbar { position: relative; height: clamp(7px, 1.12vmin, 11px); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .liftbar.hidden { display: none; }
 .liftbar-fill {
   height: 100%; background: repeating-linear-gradient(90deg, #46b8a0 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
@@ -2299,7 +2314,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 }
 .lift-text {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 8px; font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
+  font-family: var(--mono); font-size: clamp(7px, 1.12vmin, 10px); font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
 
 /* 三機小隊狀態列(無人機專屬;V 循環切換、1~3 直選主視野) */
@@ -2308,7 +2323,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .sq-box {
   flex: 1; position: relative; overflow: hidden;
   background: rgba(4, 7, 11, 0.82); border: 1px solid var(--line); border-radius: 0;
-  padding: 2px 6px; font-family: var(--mono); font-size: 10px; color: var(--dim); text-align: center;
+  padding: 2px 6px; font-family: var(--mono); font-size: clamp(9px, 1.4vmin, 12px); color: var(--dim); text-align: center;
 }
 .sq-fill { position: absolute; inset: 0 auto 0 0; background: rgba(169, 221, 107, 0.25); }
 .sq-box > span { position: relative; }
@@ -2318,7 +2333,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 
 /* ---- 異常狀態圖示列(status icons strip above HP bar) ----
    排列規則:依剩餘秒數升序(最快到期在最左)。
-   圖示為 28×28px 正方形,顏色由 --si-bg 注入。
+   圖示邊長隨遊戲畫面 vmin 流體縮放,顏色由 --si-bg 注入。
    三個角徽:
      右上 = 剩餘秒數(白字)
      右下 = 正/負效果箭頭(綠↑ / 紅↓)
@@ -2327,7 +2342,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .status-icons:empty { display: none; }
 .si {
   position: relative;
-  width: 28px; height: 28px;
+  width: clamp(24px, 3.9vmin, 34px); height: clamp(24px, 3.9vmin, 34px);
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 2px;
   background-color: var(--si-bg, #1a1a2e);
@@ -2339,7 +2354,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 /* 右上:剩餘秒數 */
 .si-t {
   position: absolute; top: -1px; right: -1px;
-  font-family: var(--mono); font-size: 7px; font-weight: 700;
+  font-family: var(--mono); font-size: clamp(6px, 1vmin, 9px); font-weight: 700;
   color: #fff; background: rgba(0,0,0,0.65);
   padding: 0 2px; line-height: 1.4;
   pointer-events: none;
@@ -2347,7 +2362,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 /* 右下:極性箭頭 */
 .si-p {
   position: absolute; bottom: -1px; right: -1px;
-  font-size: 8px; line-height: 1;
+  font-size: clamp(7px, 1.12vmin, 10px); line-height: 1;
   pointer-events: none;
 }
 .si-p.pos { color: #4cde6a; }   /* 正面效果:綠↑ */
@@ -2355,29 +2370,63 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 /* 左下:層數(僅多層顯示) */
 .si-n {
   position: absolute; bottom: -1px; left: -1px;
-  font-family: var(--mono); font-size: 7px; font-weight: 700;
+  font-family: var(--mono); font-size: clamp(6px, 1vmin, 9px); font-weight: 700;
   color: #ffd54f; background: rgba(0,0,0,0.65);
   padding: 0 2px; line-height: 1.4;
   pointer-events: none;
 }
 
-/* 招式盒(Q 小招 / E 大招) */
+/* 招式盒(Q 小招 / E 大招;字級隨遊戲畫面 vmin 流體縮放) */
 .ab-row { display: flex; gap: 5px; }
 .ab-box {
+  position: relative; overflow: hidden;
   flex: 1; display: flex; align-items: center; gap: 6px;
   background: rgba(4, 7, 11, 0.82); border: 1px solid var(--line); border-radius: 0;
-  padding: 2px 7px; font-size: 11px; color: var(--dim);
+  padding: 2px 7px; font-size: clamp(10px, 1.55vmin, 13px); color: var(--dim);
   clip-path: var(--notch-sm);
+}
+.ab-box > span { position: relative; z-index: 1; }
+/* 招式 CD 進度條:琥珀半透明(與就緒綠明確分色),寬 = 剩餘/總長 */
+.ab-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+  background: rgba(255, 194, 71, 0.20); border-right: 1px solid rgba(255, 194, 71, 0.6);
+  pointer-events: none; transition: width 0.15s linear;
 }
 .ab-box.ready { border-color: var(--ok); color: var(--fg); background: rgba(169, 221, 107, 0.1); }
 .ab-box.locked { opacity: 0.5; }
 .ab-key {
-  font-family: var(--mono); font-weight: 700; font-size: 11px; color: #05070a;
+  font-family: var(--mono); font-weight: 700; font-size: clamp(10px, 1.55vmin, 13px); color: #05070a;
   background: var(--dim); padding: 0 7px; border-radius: 0;
 }
 .ab-box.ready .ab-key { background: var(--ok); }
 .ab-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ab-cd { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; }
+.ab-cd { font-family: var(--mono); font-size: clamp(9px, 1.4vmin, 12px); letter-spacing: 1px; }
+
+/* ---------- 寬版大螢幕:機體資訊區塊再放大一階 ----------
+   只進非觸控桌機(`body:not(.touch-ui)` ⇒ 觸控四分區版型零影響);
+   高度仍受 game.js `fitHudBand()` 的 1/6 上限箝制,這裡只放大基底(上限內等比呈現)。
+   小地圖維持原上限(它是下帶的高度主導件,跟著放大会吃掉整條預算)。 */
+@media (min-width: 1600px) {
+  body:not(.touch-ui) .hud-self { min-width: 340px; max-width: 480px; gap: 5px; }
+  body:not(.touch-ui) .hud-side { font-size: 15px; }
+  body:not(.touch-ui) .hpbar { height: 22px; }
+  body:not(.touch-ui) .hp-text { font-size: 15px; }
+  body:not(.touch-ui) .spbar { height: 16px; }
+  body:not(.touch-ui) .sp-text { font-size: 12px; }
+  body:not(.touch-ui) .mpbar,
+  body:not(.touch-ui) .liftbar { height: 13px; }
+  body:not(.touch-ui) .mp-text,
+  body:not(.touch-ui) .lift-text { font-size: 11px; }
+  body:not(.touch-ui) .wpn-box { padding: 4px 12px; font-size: 16px; }
+  body:not(.touch-ui) .burst-box { font-size: 14px; }
+  body:not(.touch-ui) .ab-box { padding: 5px 12px; font-size: 14px; }
+  body:not(.touch-ui) .ab-key { font-size: 14px; }
+  body:not(.touch-ui) .ab-cd { font-size: 13px; }
+  body:not(.touch-ui) .money-box { font-size: 14px; }
+  body:not(.touch-ui) .shop-hint { font-size: 12px; }
+  body:not(.touch-ui) .sq-box { font-size: 13px; }
+  body:not(.touch-ui) .si { width: 36px; height: 36px; }
+}
 
 /* ===== 招式立繪演出(cutin.js;參照 plan 的 2D Comic Billboard VFX)=====
    z-index 15:蓋過 HUD(10),但讓陣亡(20)/商店(30)畫面壓在上面。 */
@@ -2476,7 +2525,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
   display: none;
   padding: 5px 16px; border: 0; border-radius: 0;
   background: repeating-linear-gradient(45deg, rgba(255, 68, 54, 0.95) 0 9px, rgba(20, 6, 10, 0.95) 9px 18px);
-  color: #fff; font-family: var(--serif); font-weight: 900; letter-spacing: 5px; font-size: 14px;
+  color: #fff; font-family: var(--serif); font-weight: 900; letter-spacing: 5px; font-size: clamp(12px, 1.95vmin, 17px);
   text-shadow: 0 0 6px #000, 0 2px 3px #000;
 }
 .lock-warn.on { display: block; animation: lockPulse 0.5s steps(1) infinite; }
@@ -2489,7 +2538,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
   display: none;
   padding: 5px 14px; border-radius: 4px;
   background: rgba(12, 16, 22, 0.82); border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #e8edf2; font-family: var(--serif); font-size: 13px; letter-spacing: 1px; white-space: nowrap;
+  color: #e8edf2; font-family: var(--serif); font-size: clamp(11px, 1.8vmin, 15px); letter-spacing: 1px; white-space: nowrap;
   text-shadow: 0 1px 2px #000;
 }
 .civ-prompt.on { display: block; }
@@ -2927,10 +2976,10 @@ body.touch-ui .burst-box, body.touch-ui .money-box {
 }
 /* 招式方塊在觸控版是資訊卡(動作在 X/Y/B 鈕上):壓成一行,別跟搖桿爭空間 */
 body.touch-ui .ab-row { gap: 4px; }
-body.touch-ui .ab-box { min-width: 0; flex: 1; padding: 2px 4px; gap: 2px; }
-body.touch-ui .ab-box .ab-key { font-size: 9px; padding: 0 4px; }
-body.touch-ui .ab-box .ab-name { font-size: 9px; }
-body.touch-ui .ab-box .ab-cd { font-size: 9px; }
+body.touch-ui .ab-box { min-width: 0; flex: 1; padding: 2px 4px; gap: 2px; font-size: clamp(9px, 1.5vmin, 12px); }
+body.touch-ui .ab-box .ab-key { font-size: clamp(8px, 1.35vmin, 11px); padding: 0 4px; }
+body.touch-ui .ab-box .ab-name { font-size: clamp(8px, 1.35vmin, 11px); }
+body.touch-ui .ab-box .ab-cd { font-size: clamp(8px, 1.35vmin, 11px); }
 body.touch-ui .shop-hint { display: none; }
 
 /* ================= 橫式:左右兩直欄(A 上 / L 下 ・ M 上 / R 下)=================
@@ -2951,7 +3000,7 @@ body.touch-ui.ori-landscape .hud-top {
   padding: 5px 10px; padding-left: calc(10px + var(--tl-sl)); padding-right: calc(10px + var(--tl-sr));
 }
 body.touch-ui.ori-landscape .base-bar { max-width: 30vw; }
-body.touch-ui.ori-landscape .wave-box { font-size: 10px; padding: 3px 10px; letter-spacing: 2px; }
+body.touch-ui.ori-landscape .wave-box { font-size: clamp(9px, 1.4vmin, 11px); padding: 3px 10px; letter-spacing: 2px; }
 
 /* .hud-bottom 當定位框用:角色數據貼左上、小地圖貼右上(HTML 未動,只換定位)。
    ⚠ 觸控版這一層是**定位框**不是資料帶(inset:0 = 整個畫面)⇒ 1/6 的縮放 MUST 在此失效:
@@ -3008,23 +3057,23 @@ body.touch-ui.ori-landscape .tl-gp {
 /* A 機體資訊在橫式的**壓縮版**:左欄上段只有約 120px 可用(下方是移動搖桿 + 十字鍵兩層),
    故字級與條高再收一階。**MUST NOT** 改成隱藏整列 —— 招式名稱/重武器 CD 沒有第二個顯示處
    (鈕面只鏡射冷卻數字,不含名稱)。 */
-body.touch-ui.ori-landscape .hud-side { font-size: 9px; letter-spacing: 1px; }
+body.touch-ui.ori-landscape .hud-side { font-size: clamp(8px, 1.35vmin, 10px); letter-spacing: 1px; }
 body.touch-ui.ori-landscape .squad-row { gap: 2px; }
 body.touch-ui.ori-landscape .hpbar,
 body.touch-ui.ori-landscape .spbar,
 body.touch-ui.ori-landscape .mpbar,
-body.touch-ui.ori-landscape .liftbar { height: 10px; }
+body.touch-ui.ori-landscape .liftbar { height: clamp(8px, 1.4vmin, 11px); }
 body.touch-ui.ori-landscape .hp-text,
 body.touch-ui.ori-landscape .sp-text,
-body.touch-ui.ori-landscape .mp-text { font-size: 9px; letter-spacing: 0; }
-body.touch-ui.ori-landscape .wpn-box { padding: 0 5px; font-size: 10px; }
+body.touch-ui.ori-landscape .mp-text { font-size: clamp(8px, 1.25vmin, 10px); letter-spacing: 0; }
+body.touch-ui.ori-landscape .wpn-box { padding: 0 5px; font-size: clamp(9px, 1.4vmin, 11px); }
 body.touch-ui.ori-landscape .ab-row { gap: 3px; }
 body.touch-ui.ori-landscape .burst-box,
-body.touch-ui.ori-landscape .money-box { font-size: 9px; }
+body.touch-ui.ori-landscape .money-box { font-size: clamp(8px, 1.25vmin, 10px); }
 body.touch-ui.ori-landscape .ab-box { padding: 1px 3px; }
 body.touch-ui.ori-landscape .ab-box .ab-key,
 body.touch-ui.ori-landscape .ab-box .ab-name,
-body.touch-ui.ori-landscape .ab-box .ab-cd { font-size: 8px; }
+body.touch-ui.ori-landscape .ab-box .ab-cd { font-size: clamp(7px, 1.15vmin, 9px); }
 
 /* 平民互動提示(內含觸控鈕):置中放在準星上方的中央帶。MUST 避開搖桿 —— 提示層 z 11 > 搖桿 9,
    壓上去會變成按到「跟隨/驅趕」而不是搖桿鈕。提示底板 pointer-events:none,只有鈕吃事件。 */
@@ -3061,8 +3110,8 @@ body.touch-ui.ori-portrait .hud-top {
 }
 body.touch-ui.ori-portrait .base-bar { max-width: none; }
 body.touch-ui.ori-portrait .base-bar.steel { flex-direction: row-reverse; }
-body.touch-ui.ori-portrait .base-label { font-size: 10px; letter-spacing: 2px; }
-body.touch-ui.ori-portrait .wave-box { align-self: center; font-size: 10px; padding: 3px 12px; }
+body.touch-ui.ori-portrait .base-label { font-size: clamp(9px, 1.4vmin, 11px); letter-spacing: 2px; }
+body.touch-ui.ori-portrait .wave-box { align-self: center; font-size: clamp(9px, 1.4vmin, 11px); padding: 3px 12px; }
 /* 上緣資訊帶:A 機體資訊(左)+ M 小地圖(右),同一列切齊 */
 body.touch-ui.ori-portrait .hud-self {
   left: 8px; top: calc(80px + var(--tl-st));

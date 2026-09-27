@@ -16,7 +16,7 @@ import {
   kamiHp, kamiSide, decoyHp, towerDps, kamiExposureS, decoyExposureS,
   TOWER_SITE_N, frontDps, overflyDps, waveDps, blastFootprintR,
   upgradePrice, upgradeScore, BATTLE_SCORE, battleScoreGain, addBattleScore, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
-  BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
+  BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE, fanBinSpan,
   FLIGHT, airSinkM,
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
   BUILDING_VS_CAP, shieldSplit, SHIELD_DEFENSE, shieldRoleName, shieldDefKindFactor, EX_SIEGE_WEAPONS, counterDmgF,
@@ -526,10 +526,16 @@ log('— sim:扇形錐緣量到命中量體(2026-08-03「打得到一般單位�
     // 量體只放寬「打不打得到」,MUST NOT 讓大目標的傷害跟著變高
     assert(spray(kind, 0.9) <= spray(kind, 0) + 1e-9, `${kind}:靠量體才進錐 → 吃錐緣保底,不高於正中`);
   }
-  // 量體外一律照舊:小兵在錐外仍打不到、錐內傷害逐位元不變
+  // 量體外一律照舊:小兵在錐外仍打不到
+  // 小錐分格下近距小兵的量體張角橫跨多格 ⇒ 同一隻吃多次;單格傷害仍與正中同額
+  // (量體只放寬「打不打得到」,不放大單格傷害 —— 2026-08-03 不變式的分格版)。
   const sd = hitR({ kind: 'soldier', side: foe });
-  assert(spray('soldier', 0) > 0 && Math.abs(spray('soldier', 0.9) - spray('soldier', 0)) < 1e-9,
-    `小兵(hitR ${sd}):錐內傷害不受本次改動影響`);
+  const s0 = spray('soldier', 0), s09 = spray('soldier', 0.9);
+  const awS = Math.atan2(sd, sd + 5);
+  const n0 = fanBinSpan(w, 0, awS), n09 = fanBinSpan(w, Math.asin(Math.min(1, sd / (sd + 5))) * 0.9, awS);
+  const perBin0 = s0 / (n0[1] - n0[0] + 1), perBin09 = s09 / (n09[1] - n09[0] + 1);
+  assert(s0 > 0 && s09 > 0 && Math.abs(perBin0 - perBin09) < 1e-9,
+    `小兵(hitR ${sd}):單格傷害不受量體/瞄準偏移影響(${perBin0.toFixed(1)} = ${perBin09.toFixed(1)};格數 ${n0} vs ${n09})`);
   const far = sim._add({ kind: 'soldier', side: foe, x: h.x + 40, z: h.z + 60, y: 0, hp: 1e9 });
   sim.t += 10; h.fireAt = {}; h.ammo = {}; h.reloadUntil = {};
   sim.heroPlasma('p_fan', 1, 0, 'heavy', null);
@@ -854,14 +860,17 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     const arc = (wf.arc || 15) * Math.PI / 180;
     const mkT = (ang) => sim._add({ kind: 'soldier', side: 'STEEL',
       x: fh.x + 30 * Math.sin(ang), z: fh.z + 30 * Math.cos(ang), y: 0, hp: 99999 });
-    const tc = mkT(0), te = mkT(arc * 0.8);   // 正對錐軸 / 錐緣 80%(同距離 ⇒ 距離衰減互相抵銷)
+    const tc = mkT(0), te = mkT(arc * 0.8);   // 正對錐軸 / 錐緣 80%(同距離;傷害已不隨距離變化)
     sim.t += 5;
     sim.heroPlasma('p_f', 0, 1, 'light');
     const dc = 99999 - tc.hp, de = 99999 - te.hp;
     assert(dc > 0 && de > 0, '錐內兩目標(正對錐軸 / 錐緣 80%)都命中');
-    const expF = offAxisFalloff(0.8);
+    // 小錐分格:tc 壓在格界上吃 2 格、te 吃 1 格 ⇒ 總傷比 = 偏心比 × 格數比
+    const awL = Math.atan2(hitR({ kind: 'soldier' }), 30);
+    const nTc = fanBinSpan(wf, 0, awL), nTe = fanBinSpan(wf, arc * 0.8, awL);
+    const expF = offAxisFalloff(0.8) * (nTe[1] - nTe[0] + 1) / (nTc[1] - nTc[0] + 1);
     assert(Math.abs(de / dc - expF) < 0.03,
-      `偏心遞減 ×${(de / dc).toFixed(3)}(期望 ${expF.toFixed(3)};正對錐軸滿額)`);
+      `偏心遞減 ×${(de / dc).toFixed(3)}(期望 ${expF.toFixed(3)};正對錐軸滿額,格數 [${nTc}] vs [${nTe}])`);
     assert(Math.abs(offAxisFalloff(1) - AOE_EDGE) < 1e-9, `錐緣保底 = AOE_EDGE(${AOE_EDGE})`);
     sim.ents.delete(tc.id); sim.ents.delete(te.id);   // 測試假人沒有 lane,tick 前先移除
   }

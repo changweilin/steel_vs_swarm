@@ -516,15 +516,14 @@ export function gundamBeam(scene, effects, from, to, color, { r = 3.6, ttl = 0.5
 /**
  * 離子吐息(哥吉拉式 atomic breath;扇形離子重武器的主噴流):
  *   噴口錐(近粗遠細的能量喉)+ coil 條螺旋纏繞的能量帶(繞射線旋進)+ 末端灼燒綻放。
- * 扇形的「越近越強」由伺服器 fanFalloff 結算 —— 這裡以噴口最粗、末端收束把它畫出來。
+ * 錐形外形(噴口最粗、末端收束)維持 —— 扇形傷害已改小錐分格且不隨距離衰減,外形只表範圍錐。
  */
 export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45, coil = 3, core = 0xffffff } = {}) {
   const dir = to.clone().sub(from);
   const len = dir.length();
   if (len < 0.01) return;
   const axis = dir.clone().normalize();
-  // 噴口喉:錐形(**槍口端最粗、末端收束**)—— 這是吐息與雷射最大的外形差異,
-  // 同時也是扇形「越近越強」(fanFalloff)的可視化。
+  // 噴口喉:錐形(**槍口端最粗、末端收束**)—— 這是吐息與雷射最大的外形差異。
   const throat = new THREE.Mesh(unitThroat(), energyMat(color, 0.45));
   throat.scale.set(r, len, r);
   throat.position.copy(from).addScaledVector(dir, 0.5);

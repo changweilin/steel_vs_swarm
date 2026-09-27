@@ -1,6 +1,7 @@
 // ============ AoE Radius Convergence and 3-Axis Budget (AoE / Mobility / Range) Audit ============
 // Scope: Run after modifying data.js (AREA_WEAPONS, soloBlastRmax, towerPairSepM, AOE_BUDGET,
-//        MOB_BUDGET, RANGE_BUDGET, weapon r, GAME.TOWER_SIDE_OFF, TARGET_R.tower, BLAST)
+//        MOB_BUDGET, RANGE_BUDGET, weapon r, GAME.TOWER_SIDE_OFF, TARGET_R.tower, BLAST,
+//        LANCE.PEN, FAN_SUB_DEG, weapon arc)
 //        or tools/lanesim.mjs.
 // Usage: node tools/audit_aoe_trim.mjs
 //
@@ -25,6 +26,7 @@ import {
   towerPairSepM, soloBlastRmax, blastFootprintR, areaValue, aoeTrimRaw, aoeTrimF,
   mobMid, mobDmgF, rangeMid, rngDmgF,
   BLAST_BAND, blastCapR, blastFamily, trajClass,
+  LANCE, lancePen, lancePenCost, lanceZones, lanceZonePen, FAN_SUB_DEG, FAN_SUB_F, fanSubs, waveComp,
 } from '../public/js/data.js';
 import { LANE, laneBattle, hits, mech } from './lanesim.mjs';
 
@@ -283,8 +285,16 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
   const hn = hits(shooter, nearFoes[0], fanDef, nearFoes), hf = hits(shooter, farFoes[0], fanDef, farFoes);
   t(`fan:同一個橫向偏移 ${off}m —— 貼身掃不到、拉遠掃得到(錐寬隨距離張開)`,
     hn.length === 1 && hf.length === 2);
-  t('fan:越近越強(fanFalloff),所以拉遠掃得多但每個都更痛不了',
-    hn[0].f > hf.find((x) => x.ent === farFoes[0]).f);
+  t('fan:不隨距離衰減 —— 同軸近/遠吃到同樣的 f(偏心遞減 × 單格單價)',
+    near(hn[0].f, hf.find((x) => x.ent === farFoes[0]).f) && near(hn[0].f, FAN_SUB_F));
+  // 小錐分格:同一格內只取最近(後方同線的不再順帶);大目標橫跨多格則多格各取一次。
+  const col = [{ kind: 'soldier', x: 60, y: 0, hp: 1 }, { kind: 'soldier', x: 100, y: 0, hp: 1 }];
+  const hc = hits(shooter, col[0], fanDef, col);
+  t('fan:同一小錐內只取最近一名', hc.length === 1 && hc[0].ent === col[0]);
+  const tw = [{ kind: 'tower', x: 30, y: 0, hp: 1800 }];
+  const ht = hits(shooter, tw[0], fanDef, tw);
+  t(`fan:近距大目標橫跨全錐 → ${fanSubs(fanDef)} 格各取一次(單一敵人多次傷害)`,
+    ht.length === fanSubs(fanDef) && ht.every((x) => x.ent === tw[0]));
   // line: piercing cylinder with sequential decay up to target cap.
   const lineCh = Object.keys(CHARACTERS).find((c) => aoeClass(heroWeapon(c, 'heavy', 1, true)) === 'line');
   const lineDef = heroWeapon(lineCh, 'heavy', 1, true);
@@ -292,6 +302,14 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
   const hl = hits(shooter, row[0], lineDef, row);
   t('line:一線貫穿多名,且後續目標逐一衰減(LANCE.DECAY)',
     hl.length === 3 && hl[0].f > hl[1].f && hl[1].f > hl[2].f);
+  // 分區穿透截斷:beam 內圈 45 / 外圈單格 15,小兵(1.13) + 砲塔(153.9)見底 ⇒
+  // 塔本身 7 區全中、塔後同區目標截斷。
+  const col2 = [{ kind: 'soldier', x: 30, y: 0, hp: 1 }, { kind: 'tower', x: 60, y: 0, hp: 1800 },
+    { kind: 'soldier', x: 90, y: 0, hp: 1 }];
+  const hp2 = hits(shooter, col2[0], lineDef, col2);
+  t('line:塔耗盡各區穿透力 → 塔本身 7 區全中、塔後目標不再進名單',
+    hp2.length === 8 && hp2.filter((x) => x.ent === col2[1]).length === 7
+    && !hp2.some((x) => x.ent === col2[2]) && hp2[0].ent === col2[0]);
 
   // Win conditions: kill enemy mech or destroy one tower.
   const r = laneBattle('t01', 't01');
@@ -302,6 +320,50 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
   t('開場資金 = ECON.START,且八軌起始全 0', M.cash === ECON.START && LANE.TRACKS.every((k) => M.up[k] === 0));
   t('升級只買模型算得到的六軌(小招/大招不在模型內 ⇒ 不進採購清單)',
     !LANE.TRACKS.includes('sk') && !LANE.TRACKS.includes('ult') && LANE.TRACKS.length === 6);
+}
+
+console.log('\nⅥ 穿透預算 / 小錐格數:推導不手寫,單一縫');
+{
+  t('LANCE.PEN 三階梯 beam 135 > rail 90 > gun 60(與圓柱粗細同序)',
+    LANCE.PEN.beam === 135 && LANCE.PEN.rail === 90 && LANCE.PEN.gun === 60);
+  t('lancePen 按彈種解析,未知退回 gun',
+    lancePen({ type: 'beam' }) === 135 && lancePen({ type: 'rail' }) === 90
+    && lancePen({ type: 'gun' }) === 60 && lancePen({ type: 'nosuch' }) === 60);
+  const cS = lancePenCost({ kind: 'soldier' }), cT = lancePenCost({ kind: 'tank' }),
+    cH = lancePenCost({ kind: 'heli' }), cTw = lancePenCost({ kind: 'tower' }),
+    cB = lancePenCost({ kind: 'base', side: 'SWARM' });
+  t(`截面積階梯 小兵 ${cS.toFixed(2)} < 坦克 ${cT.toFixed(2)} < 直升機 ${cH.toFixed(2)} < 砲塔 ${cTw.toFixed(1)} < 主堡 ${cB.toFixed(0)}`,
+    cS < cT && cT < cH && cH < cTw && cTw < cB);
+  t('截面積 = π·hitR²(小兵 π×0.36、砲塔 π×49,改 hitR 自動跟著走)',
+    near(cS, Math.PI * 0.36, 1e-9) && near(cTw, Math.PI * 49, 1e-9));
+  const waveCost = waveComp().reduce((s, k) => s + lancePenCost({ kind: k }), 0);
+  t(`一波兵(3 步槍＋火箭＋榴彈＋坦克＋直升機)截面積和 ${waveCost.toFixed(2)}m²:gun 約 1.3 波、rail 約 2 波、beam 約 3 波`,
+    waveCost < LANCE.PEN.gun && waveCost * 2 > LANCE.PEN.rail && waveCost * 3 > LANCE.PEN.beam);
+  t('FAN_SUB_DEG = 4(小錐寬約 4°)',
+    FAN_SUB_DEG === 4);
+  t('fanSubs 由錐角推導且恆為奇數:10°→5 格、15°→9 格、26°→13 格、缺省(15°)→9 格',
+    fanSubs({ arc: 10 }) === 5 && fanSubs({ arc: 15 }) === 9
+    && fanSubs({ arc: 26 }) === 13 && fanSubs({}) === 9
+    && [10, 13, 15, 20, 26].every((a) => fanSubs({ arc: a }) % 2 === 1));
+  t('FAN_SUB_F = 0.8(單一小錐單價;壓格不壓錐)',
+    FAN_SUB_F === 0.8);
+  t('LANCE.CORE_F = 0.5(內圈半徑 = R × 0.5,與 BLAST.CORE 同式)',
+    LANCE.CORE_F === 0.5);
+  t('分區預算:內圈 = 3 × 外圈單格,且 9 份總和 = 全額(推導不手寫)',
+    lanceZonePen({ type: 'rail' }, 0) === 30
+    && [1, 2, 3, 4, 5, 6].every((z) => lanceZonePen({ type: 'rail' }, z) === 10)
+    && lanceZonePen({ type: 'rail' }, 0) + 6 * lanceZonePen({ type: 'rail' }, 1) === lancePen({ type: 'rail' }));
+  t('lanceZones:軸上小兵只進內圈 [0];軸上砲塔進 7 區;貼邊小兵只進外圈(無 0)',
+    JSON.stringify(lanceZones(0, 0, 0.6, 5.4)) === '[0]'
+    && lanceZones(0, 0, 7, 5.4).length === 7
+    && !lanceZones(5, 0, 0.6, 5.4).includes(0));
+  t('原文:lancePen / lancePenCost / fanSubs / FAN_SUB_F / lanceZones / lanceZonePen 各只有一處定義(單一縫)',
+    count(DATA_B, /export const lancePen\s*=/g) === 1
+    && count(DATA_B, /export const lancePenCost\s*=/g) === 1
+    && count(DATA_B, /export const fanSubs\s*=/g) === 1
+    && count(DATA_B, /export const FAN_SUB_F\s*=/g) === 1
+    && count(DATA_B, /export const lanceZones\s*=/g) === 1
+    && count(DATA_B, /export const lanceZonePen\s*=/g) === 1);
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 攻擊範圍收斂 / 三軸預算稽核:${pass}/${pass + fail} 通過`);

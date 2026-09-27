@@ -3081,6 +3081,9 @@ function makeHud() {
           $('liftBar').classList.toggle('low', p2 <= FLIGHT.LOW_F);
           $('liftText').textContent = `爬升動力 ${Math.round(p2 * 100)}%`;
         }
+        // 區塊式 CD/填彈進度條的唯一換算縫:fill 寬 = 剩餘/總長,歸零 = 就緒(純呈現,不碰任何權威值)
+        const fracOf = (rem, max) => (max > 0 ? Math.max(0, Math.min(1, (rem || 0) / max)) : 0);
+        const setFill = (id, f) => { const n = $(id); if (n) n.style.width = `${(f * 100).toFixed(1)}%`; };
         // 輕武器:彈藥 / 填彈(瞄準中 HUD 高亮重武器)
         const l = w.light;
         $('wpnName').textContent = `${l.name} Lv.${l.lvl}${w.emp > 0 ? ' ⚡離線' : ''}`;
@@ -3089,6 +3092,7 @@ function makeHud() {
           : l.reload > 0 ? `填彈 ${l.reload.toFixed(1)}s` : `${l.ammo} / ${l.mag}`;
         $('wpnAmmo').classList.toggle('reloading', l.reload > 0);
         $('wpnAmmo').classList.toggle('low', l.ammo != null && l.reload <= 0 && l.ammo <= l.mag * 0.25);
+        setFill('wpnFill', fracOf(l.reload, l.reloadMax));
         // 重武器(CD 型;右鍵瞄準 + 左鍵發射)+ 無人機自爆提示 / 變形者型態指示
         const hv = w.heavy;
         const morphTag = w.morph
@@ -3101,32 +3105,39 @@ function makeHud() {
         const abCd = (w.defending ? w.def.cd : w.atk.cd) || 0;
         $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${morphTag}`;
         // 招式:Q 防守招式 / E 攻擊招式(鎖定 / 冷卻 / 就緒)
-        const abEl = (box, nameEl, cdEl2, a) => {
+        // CD 同時以區塊內的半透明進度條呈現(fill 寬 = 剩餘比例,歸零 = 就緒;鎖定格不掛條)
+        const abEl = (box, nameEl, cdEl2, fillEl, a) => {
           $(nameEl).textContent = a.lvl > 0 ? `${a.name} Lv.${a.lvl}` : `${a.name} 🔒`;
           if (a.lvl === 0) {
             $(cdEl2).textContent = '';
+            setFill(fillEl, 0);
           } else if (a.maxCharges > 1) {
             if (a.charges === a.maxCharges) {
               $(cdEl2).textContent = `${a.charges}/${a.maxCharges} (${a.mp}MP)`;
+              setFill(fillEl, 0);
             } else if (a.charges > 0) {
               $(cdEl2).textContent = `${a.charges}/${a.maxCharges} (${(a.nextCd || 0).toFixed(0)}s)`;
+              setFill(fillEl, fracOf(a.nextCd || 0, a.cdMax));
             } else {
               $(cdEl2).textContent = `0/${a.maxCharges} (${(a.nextCd || a.cd || 0).toFixed(0)}s)`;
+              setFill(fillEl, fracOf(a.nextCd || a.cd || 0, a.cdMax));
             }
           } else {
             $(cdEl2).textContent = a.cd > 0 ? `${a.cd.toFixed(0)}s` : `${a.mp}MP`;
+            setFill(fillEl, fracOf(a.cd, a.cdMax));
           }
           $(box).classList.toggle('ready', a.ready);
           $(box).classList.toggle('locked', a.lvl === 0);
         };
-        abEl('abDef', 'abDefName', 'abDefCd', w.def);
-        abEl('abAtk', 'abAtkName', 'abAtkCd', w.atk);
-        // 空白鍵機動能力 CD(完美迴避 / 蓄力跳躍 / 升空變形):就緒亮綠、冷卻顯示秒數
+        abEl('abDef', 'abDefName', 'abDefCd', 'abDefFill', w.def);
+        abEl('abAtk', 'abAtkName', 'abAtkCd', 'abAtkFill', w.atk);
+        // 空白鍵機動能力 CD(完美迴避 / 蓄力跳躍 / 升空變形):就緒亮綠、冷卻顯示秒數 + 區塊進度條
         const mob = w.mobil;
         if (mob) {
           $('abMobilName').textContent = mob.name;
           $('abMobilCd').textContent = mob.cd > 0.05 ? `${mob.cd.toFixed(0)}s` : '就緒';
           $('abMobil').classList.toggle('ready', mob.cd <= 0.05);
+          setFill('abMobilFill', fracOf(mob.cd, mob.cdMax));
         }
         // 觸控版:同一份就緒/冷卻鏡射到虛擬搖桿的 X / Y / B 鈕面 —— 角色數據那一欄是唯一渲染來源,
         // 搖桿只是鏡子。MUST NOT 在 mobile.js 另算一份 CD(兩份會漂)。
@@ -3152,6 +3163,15 @@ function makeHud() {
       // 觀戰讀不到別人的重武器裝填計時器 ⇒ 留白(顯示「就緒」會誤導)
       cdEl.textContent = w?.spec ? '' : cd > 0 ? `CD ${cd.toFixed(1)}s` : '就緒';
       cdEl.classList.toggle('ready', !w?.spec && cd <= 0);
+      // 重武器填彈進度條:剩餘/總長(觀戰無計時器 ⇒ 不掛條)
+      {
+        const bf = $('burstFill');
+        if (bf) {
+          const mx = w?.heavy?.reloadMax || 0;
+          const f = (!w?.spec && mx > 0) ? Math.max(0, Math.min(1, cd / mx)) : 0;
+          bf.style.width = `${(f * 100).toFixed(1)}%`;
+        }
+      }
     },
     // 三機小隊:HP 條 + 陣亡重生倒數;高亮主視野那一架
     squad: (list) => {

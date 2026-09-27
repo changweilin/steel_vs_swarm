@@ -2093,7 +2093,7 @@ function forgeHero(heroKind, ch, side) {
 export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false } = {}) {
   const vis = ch && CHARACTERS[ch] ? CHARACTERS[ch].visual : null;
   // 英雄體型綁角色護甲(heroTargetH 內含獸型矮化);其餘查表
-  const heroKind = kind.startsWith('hero:') ? kind.slice(5) : null;
+  const heroKind = kind.startsWith('hero:') ? (ch && CHARACTERS[ch]?.kind ? CHARACTERS[ch].kind : kind.slice(5)) : null;
   const target = heroKind ? heroTargetH(heroKind, ch) : (TARGET_H[kind] || 4);
   // 2026-08-14:**英雄機體一律走 forge**(新版建模全面替換舊版)—— GLB 覆蓋
   // (MODEL_MANIFEST_EXTRA)與舊程序建構器都不再參與 hero 分支;舊建模只留在機體台。

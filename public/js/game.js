@@ -16,7 +16,7 @@ import {
   GLINT, glintDur, glintAlpha, glintDropR,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-  aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
+   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
@@ -83,11 +83,14 @@ const ARC_MAXP = 384;
 // RAY_PER_FRAME / TTL_S)整組退場,MUST NOT 復辟(那是「每個敵人各跑一次彈道積分」時代的節流)。
 const RANGE_GLOW = { SURF_TOL_M: 0.5 };
 // 第三人稱視線遮擋(純表現層):低頻檢查避免每幀對全場 Mesh 做 raycast;
-// 只淡化射線實際穿過的不透明件,離開視線後短暫保留避免鏡頭轉動時閃爍。
+// 只淡化射線實際穿過的不透明件;透明度快進慢出 + 離開視線後短暫保留,
+// 掠過邊緣時停在半透明而不二元閃爍。
 const TPS_OCCLUSION = {
   OPACITY_F: 0.24,
   UPDATE_S: 0.05,
-  RELEASE_S: 0.12,
+  RELEASE_S: 0.25,
+  FADE_IN_K: 10,    // 淡入(進透明)速率 1/s:中件即淡,畫面不被擋
+  FADE_OUT_K: 2.5,  // 淡出(恢復)速率 1/s:慢出 + 保留窗,掠邊不閃
 };
 // 集束炸彈的投擲軌跡(純表現層;使用者需求「炸彈投擲軌跡同榴彈」)。
 // GRAV_F:比自由落體略重的墜落感(投擲解與逐幀積分 MUST 吃同一個值,否則畫出來的落點會偏)。
@@ -2609,8 +2612,7 @@ export class BattleClient {
     const blades = plasma ? 7 : 9;
     const wF = 1, rF = 1;
     this._muzzleBurst(muzzle, plasma, this.side);   // 電漿重武器槍口爆(明顯度)
-    // 離子吐息主噴流(哥吉拉式;使用者指定參考):錐狀噴口 + 螺旋纏繞能量帶。
-    // 扇形的「越近越強」由伺服器 fanFalloff 結算 —— 噴口最粗、末端收束就是它的可視化。
+    // 離子吐息主噴流(哥吉拉式;使用者指定參考):錐狀噴口 + 螺旋纏繞能量帶(只表範圍錐形)。
     if (plasma) {
       const core = this._shotCols(this.side).hot;
       const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, rng * rF * 0.82));
@@ -2911,6 +2913,41 @@ export class BattleClient {
       if (maxT <= 0) break;
     }
     if (maxT < dlen) { cam.x = ox + ux * maxT; cam.z = oz + uz * maxT; }
+    // 真 3D 拉回詳見 _cameraPullSegment(第三人稱全擋修復):錨點取機體中段,
+    // 與 _updateViewOcclusion 的取樣高度同一條(約 0.55h)。
+    this._cameraPullSegment(ox, this.pos.y + (this.viewMode === 'tps' ? this.selfH * 0.55 : this._eyeH()), oz);
+  }
+
+  /**
+   * 真 3D 線段拉回(純視覺,不動 pos/vel/權威狀態):水平版只看 camY 會漏掉
+   * 「低處機體→高處鏡頭」斜穿盒側/頂角的情形,且丘陵/橋板不在 blockers 內,
+   * 鏡頭卡進物件內部或被隔開時就是整個畫面全擋。
+   * 沿「錨點→鏡頭」用 _blockerHitT(與彈道同一把尺)再夾一次,並沿線取樣
+   * _surf(地形∪橋面唯一縫;terrain.mesh 絕不進 raycaster)防丘陵擋視線。
+   * 只往錨點方向拉,錨點已被 _collide 擋在障礙外,絕不推出去。
+   */
+  _cameraPullSegment(ax, ay, az) {
+    const cam = this.camera.position;
+    const dx = cam.x - ax, dy = cam.y - ay, dz = cam.z - az;
+    const len = Math.hypot(dx, dy, dz);
+    if (len < 1e-3) return;
+    let f = 1;
+    if (this._blockerHitT) {
+      const hit = this._blockerHitT(ax, ay, az, cam.x, cam.y, cam.z);
+      if (hit != null) f = Math.min(f, Math.max(0, (hit - 1.2) / len));
+    }
+    if (typeof this._surf === 'function') {
+      const N = Math.max(2, Math.min(12, Math.ceil(len / 4)));
+      for (let i = 1; i <= N; i++) {
+        const t = i / N;
+        const px = ax + dx * t, py = ay + dy * t, pz = az + dz * t;
+        let s = null;
+        try { s = this._surf(px, pz, py); } catch (e) { s = null; }
+        if (s == null || !Number.isFinite(s)) continue;
+        if (py < s + 1.0) { f = Math.min(f, Math.max(0, (i - 1) / N - 0.02)); break; }
+      }
+    }
+    if (f < 1) { cam.x = ax + dx * f; cam.y = ay + dy * f; cam.z = az + dz * f; }
   }
 
   /** 註冊第三人稱視線可淡化的 Mesh;描邊旗標與碰撞旗標彼此獨立。 */
@@ -2946,32 +2983,29 @@ export class BattleClient {
     return false;
   }
 
-  /** 將命中的 Mesh 與其描邊殼一起換成獨立半透明材質,不污染共用材質。 */
+  /** 將命中的 Mesh 與其描邊殼一起換成獨立半透明材質,不污染共用材質。
+   *  每件獨立 clone(逐件透明度動畫互不干擾);k = 目前淡化係數(0 不透明 → 1 全淡),
+   *  由 _stepViewFade 每幀快進慢出推進,掠過射線邊緣時停在半透明不閃爍。 */
   _fadeViewMesh(mesh, now) {
     if (!mesh?.isMesh || this._viewOcclusionSkip.has(mesh)) return;
-    const cache = this._fadedMatCache || (this._fadedMatCache = new WeakMap());
     const fade = (o) => {
       if (!o.isMesh || this._viewFades.has(o)) return;
       const base = o.material;
       const mats = Array.isArray(base) ? base : [base];
-      const clones = [];
+      const items = [];
       const faded = mats.map((m) => {
         if (!m || m.transparent) return m;
-        let c = cache.get(m);
-        if (!c) {
-          c = m.clone();
-          c.transparent = true;
-          c.opacity = (m.opacity ?? 1) * TPS_OCCLUSION.OPACITY_F;
-          c.depthWrite = false;
-          c.needsUpdate = true;
-          cache.set(m, c);
-        }
-        clones.push(c);
+        const c = m.clone();
+        c.transparent = true;
+        c.opacity = m.opacity ?? 1;
+        c.depthWrite = false;
+        c.needsUpdate = true;
+        items.push({ c, o: m.opacity ?? 1 });
         return c;
       });
-      if (!clones.length) return;
+      if (!items.length) return;
       o.material = Array.isArray(base) ? faded : faded[0];
-      this._viewFades.set(o, { base, faded: o.material, clones, lastHit: now });
+      this._viewFades.set(o, { base, faded: o.material, items, lastHit: now, k: 0 });
     };
     fade(mesh);
     mesh.traverse?.((o) => { if (o.userData?.isOutline) fade(o); });
@@ -2981,12 +3015,32 @@ export class BattleClient {
     const state = this._viewFades.get(mesh);
     if (!state) return;
     if (mesh.material === state.faded) mesh.material = state.base;
+    for (const it of state.items || []) it.c.dispose?.();
     this._viewFades.delete(mesh);
+  }
+
+  /** 每幀推進淡化透明度(快進慢出):命中保留窗內 → 目標全淡,否則 → 目標不透明;
+   *  完全恢復才換回原材質。描邊殼各有獨立 state,與本體同受 refresh,不會先跳回。 */
+  _stepViewFade(now) {
+    if (!this._viewFades.size) { this._viewFadePrev = now; return; }
+    const p = this._viewFadePrev ?? now;
+    const dt = Math.min(0.1, Math.max(0, now - p));
+    this._viewFadePrev = now;
+    if (dt <= 0) return;
+    for (const [mesh, state] of [...this._viewFades]) {
+      const want = (now - state.lastHit <= TPS_OCCLUSION.RELEASE_S) ? 1 : 0;
+      const rate = want > state.k ? TPS_OCCLUSION.FADE_IN_K : TPS_OCCLUSION.FADE_OUT_K;
+      state.k += Math.max(-rate * dt, Math.min(rate * dt, want - state.k));
+      const f = 1 - (1 - TPS_OCCLUSION.OPACITY_F) * state.k;
+      for (const it of state.items) it.c.opacity = it.o * f;
+      if (want === 0 && state.k <= 0) this._restoreViewFade(mesh);
+    }
   }
 
   _clearViewOcclusion() {
     for (const mesh of [...this._viewFades.keys()]) this._restoreViewFade(mesh);
     this._viewOcclusionNext = 0;
+    this._viewFadePrev = 0;
   }
 
   /**
@@ -2998,6 +3052,7 @@ export class BattleClient {
       this._clearViewOcclusion();
       return;
     }
+    this._stepViewFade(now);   // 透明度每幀推進(射線檢測仍低頻);掠邊時停在半透明不閃
     if (now < this._viewOcclusionNext) return;
     this._viewOcclusionNext = now + TPS_OCCLUSION.UPDATE_S;
     const self = [...this.ents.values()].find((ent) => ent.isSelf && ent.mesh?.visible && !ent.dead);
@@ -3075,15 +3130,33 @@ export class BattleClient {
           if (!mesh.isMesh || this._isViewDescendant(mesh, self.mesh)) continue;
           blocked.add(mesh);
         }
+        // 反向再掃一次:眼在物件內部時,正向打到的是出口內壁(FrontSide 背面剔除 ⇒ 零命中),
+        // 反向(機體→眼)打到的是入口外壁(正面),才能把罩住鏡頭的那一件淡化。
+        delta.copy(eye).sub(target);
+        delta.normalize();
+        this._viewRaycaster.set(target, delta);
+        this._viewRaycaster.near = 0.05;
+        this._viewRaycaster.far = Math.max(0.05, dist - 0.05);
+        const hitsR = this._viewRaycaster.intersectObjects(cand, false);
+        for (const hit of hitsR) {
+          if (hit.distance >= dist - 0.05) break;
+          const mesh = hit.object;
+          if (!mesh.isMesh || this._isViewDescendant(mesh, self.mesh)) continue;
+          blocked.add(mesh);
+        }
       }
     }
     for (const mesh of blocked) {
       this._fadeViewMesh(mesh, now);
       const state = this._viewFades.get(mesh);
       if (state) state.lastHit = now;
-    }
-    for (const [mesh, state] of [...this._viewFades]) {
-      if (now - state.lastHit > TPS_OCCLUSION.RELEASE_S) this._restoreViewFade(mesh);
+      // 描邊殼各有獨立 state:一併 refresh,否則殼會比本體早跳回不透明(閃爍)
+      mesh.traverse?.((o) => {
+        if (o.userData?.isOutline) {
+          const s = this._viewFades.get(o);
+          if (s) s.lastHit = now;
+        }
+      });
     }
   }
 
@@ -3478,6 +3551,7 @@ export class BattleClient {
         if (selfHero || statik) ent = this._spawnEnt(e);
         else { this._spawnPend.set(e.id, e); continue; }
       }
+      if (!ent) continue;
       // 受擊回饋二分(純表現層):無護盾一律火光濺射 + 點煙(含塔/主堡/雜兵,走 _victimHitFx);
       // 工事舊制閃 hex 殼,讀感像護盾 ⇒ 不再閃殼(網格留著,平時不可見)。英雄見下方舉盾分流。
       const prevHpSnap = ent.hp;
@@ -3831,8 +3905,10 @@ export class BattleClient {
       const raw = this._spawnPend.get(id);
       this._spawnPend.delete(id);
       const ent = this._spawnEnt(raw);
-      ent._snapPos = true;
-      n++;
+      if (ent) {
+        ent._snapPos = true;
+        n++;
+      }
     }
   }
 
@@ -3896,6 +3972,7 @@ export class BattleClient {
   _spawnUnit(e) {
     const civ = e.k === 'civilian';
     const key = e.k === 'base' ? `base:${e.s}` : civ ? 'civ' : KIND_KEY[e.k];
+    if (!key) return null;
     // 平民:陣營看 cs(伺服器 side=null,讓兩陣營都能開槍),ch = 職業 index(選 buildCivilian 變體)
     // 餌機:不畫陣營光環(它是一枚飛行中的彈體,不是站在地上的單位)
     const { group, mixer } = makeUnit(key, civ ? e.cs : e.s,
@@ -3945,7 +4022,7 @@ export class BattleClient {
       isBoss, bossSeg: e.bs ?? (isBoss ? 0 : null),
       flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami' || e.k === 'hyper' || e.k === 'drone_wingman' || e.k === 'heli_squad' || e.k === 'carnival_heli',
       decoy: e.k === 'decoy', kami: e.k === 'kami', hyper: e.k === 'hyper', si: e.si || 0,
-      isStatic,
+      isStatic, isClone: !!e.clone,
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch, e.sv || 0) : null,
     };
@@ -6515,8 +6592,8 @@ export class BattleClient {
    *      的人、落點外緣的敵人照吃濺射 —— 這正是 ③ 這一代最想讓玩家看見的那一組單位。
    *    ・fan → `sim.heroPlasma`:水平夾角在錐內(d2 ≤ 8 的正上/正下視為錐內)+ 逐目標有效
    *      射程 + 射線淨空。
-   *    ・line → `sim._lanceHits` 的客戶端鏡射 `_lancePierced`(圓柱半徑 = lanceR + 目標水平量體,
-   *      含 `LANCE.MAX` 上限);射程再以逐目標誠實界夾回(伺服器 heroLance 同一條)。
+    *    ・line → `sim._lanceHits` 的客戶端鏡射 `_lancePierced`(圓柱半徑 = lanceR + 目標水平量體,
+    *      含穿透力截斷);射程再以逐目標誠實界夾回(伺服器 heroLance 同一條)。
    *    ・null(單體直擊輕武器)→ 只有準星那一個目標。
    */
   _shotVictims(def, rule) {
@@ -6570,6 +6647,10 @@ export class BattleClient {
     } else if (cls === 'fan') {
       const fwd = this.camera.getWorldDirection(this._rgDir || (this._rgDir = new THREE.Vector3()));
       const hl = Math.hypot(fwd.x, fwd.z) || 1;
+      // 小錐分格(與 sim.heroPlasma 同式):每格只列最近的一名,跨格大目標可列多次
+      const NSUB = fanSubs(def);
+      const ax = fwd.x / hl, az = fwd.z / hl;
+      const bins = new Array(NSUB).fill(null);
       for (const e of this.ents.values()) {
         if (!foe(e)) continue;
         const p = e.mesh.position;
@@ -6589,11 +6670,28 @@ export class BattleClient {
           const ang = Math.acos(Math.min(1, Math.max(-1, dot)));
           if (ang > fanConeHalf(def, d3, hr)) continue;
         }
-        if (this._inShotRange(e, def, from)) hits.push(e);
+        if (!this._inShotRange(e, def, from)) continue;
+        const phi = Math.atan2(tx * az - tz * ax, tx * ax + tz * az);
+        const aw = Math.atan2(hr, Math.max(1, d2));
+        const [b0, b1] = fanBinSpan(def, phi, aw);   // 分格走單一縫
+        for (let bi = b0; bi <= b1; bi++) {
+          if (!bins[bi] || d3 < bins[bi].d3) bins[bi] = { e, d3 };
+        }
+      }
+      // 光暈名冊去重:同一敵人只亮一次(跨格多次傷害是伺服器結算的事;相鄰格同一人恆連續)
+      let prev = null;
+      for (const win of bins) {
+        if (!win || win.e === prev) continue;
+        prev = win.e;
+        hits.push(win.e);
       }
     } else if (cls === 'line') {
-      for (const h of this._lancePierced(from, impact, lanceR(def))) {
-        if (foe(h.ent) && this._inShotRange(h.ent, def, from)) hits.push(h.ent);
+      // 光暈名冊去重:同一敵人只亮一次(跨區多次傷害是伺服器結算的事;同區同人恆連續)
+      let prevLine = null;
+      for (const h of this._lancePierced(from, impact, lanceR(def), def)) {
+        if (!foe(h.ent) || !this._inShotRange(h.ent, def, from) || h.ent === prevLine) continue;
+        prevLine = h.ent;
+        hits.push(h.ent);
       }
     } else if (ent) hits.push(ent);
     return hits.length ? { hits, warn } : null;
@@ -7751,18 +7849,24 @@ export class BattleClient {
       d: [q(d.x), q(-d.z), q(d.y)],
       len: Math.round(len * 10) / 10,
     });
-    return this._lancePierced(from, to, lanceR(def));
+    return this._lancePierced(from, to, lanceR(def), def);
   }
 
   /**
    * 射線圓柱內的敵方單位(純本地估算:傷害數字/命中標記;伺服器另有迷霧 + LOS 複驗)。
    * 幾何 MUST 與伺服器 sim._lanceHits 同構:半徑 = r + 目標自身水平量體 hitR(ent),
-   * 軸距量到**線段**最近點(射線止於目標近側表面時,中心仍在線段外 —— 見該處註解)。
+   * 軸距量到**線段**最近點(射線止於目標近側表面時,中心仍在線段外 —— 見該處註解),
+   * 截面分區 + 逐區穿透截斷(lanceZones/lanceZonePen 單一縫;投影是各自的近似:
+   * 客戶端扇區基底取自射向,伺服器取水平投影,兩端扇區劃分不逐位元相同 —— 名冊只看有無)。
    */
-  _lancePierced(from, to, r) {
+  _lancePierced(from, to, r, def = null) {
     const seg = to.clone().sub(from);
     const len = seg.length() || 1;
     const d = seg.clone().divideScalar(len);
+    // 截面基底:與射向垂直的兩軸(分區用;幾乎垂直射線時換參考軸,免退化)
+    const up = Math.abs(d.y) > 0.99 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    const e1 = new THREE.Vector3().crossVectors(d, up).normalize();
+    const e2 = new THREE.Vector3().crossVectors(d, e1);
     const rel = new THREE.Vector3();
     const out = [];
     for (const ent of this.ents.values()) {
@@ -7770,14 +7874,32 @@ export class BattleClient {
       rel.copy(ent.mesh.position).sub(from);
       const s = rel.dot(d);
       const sc = s < 0 ? 0 : (s > len ? len : s);
-      const rr = r + this._hitR(ent);
+      const hr = this._hitR(ent);
+      const rr = r + hr;
       const dev = rel.addScaledVector(d, -sc).length();
       if (dev > rr) continue;
       // off = 偏心比例(與 sim._lanceHits 同構):估算數字套 offAxisFalloff 才與伺服器結算對得上
-      out.push({ ent, s, off: Math.min(1, dev / rr) });
+      const off = Math.min(1, dev / rr);
+      const ex = rel.dot(e1), ez = rel.dot(e2);
+      for (const zone of lanceZones(ex, ez, hr, r)) out.push({ ent, s, off, zone });
     }
-    out.sort((a, b) => a.s - b.s);
-    return out.slice(0, LANCE.MAX);
+    out.sort((a, b) => a.s - b.s || a.zone - b.zone);
+    if (def) {
+      const kept = [];
+      const rem = [], shut = [], cnt = [];
+      for (const k of out) {
+        const z = k.zone;
+        if (shut[z]) continue;
+        if (rem[z] === undefined) rem[z] = lanceZonePen(def, z);
+        rem[z] -= lancePenCost(k.ent);
+        k.j = cnt[z] || 0; cnt[z] = k.j + 1;
+        kept.push(k);
+        if (rem[z] < 0) shut[z] = true;
+      }
+      return kept;
+    }
+    for (const k of out) k.j = 0;   // 無 def(舊呼叫端):不做穿透截斷,全按首個估算
+    return out;
   }
 
   /** 單位水平量體(公尺):走 data.js hitR 單一真相縫(含 BOSS 階段體型縮放) */
@@ -7785,12 +7907,12 @@ export class BattleClient {
     return hitR(ent);
   }
 
-  /** 貫穿命中回饋:首個目標全額,之後逐個 ×LANCE.DECAY × 偏心遞減 offAxisFalloff(與伺服器 heroLance 同一條公式) */
+  /** 貫穿命中回饋:各區首個全額,同區之後逐個 ×LANCE.DECAY × 偏心遞減 offAxisFalloff(與伺服器 heroLance 同一條公式) */
   _lanceFeedback(def, hits, point) {
     if (!hits.length) { starburst(this.scene, this.effects, point.x, point.y, point.z, 1.4, 0xcfc4a8); return; }
     this.hud.hitmark?.();
     for (let i = 0; i < hits.length; i++) {
-      const { ent, off } = hits[i];
+      const { ent, off, j } = hits[i];
       const p = ent.mesh.position;
       if (this._lockId === ent.id) this._flashLockGlow();
       // 護盾二分(同 _hitFeedback):舉盾接住 → 小火光 + 護盾劇烈發光;無護盾 → 火光濺射 + 火星。
@@ -7808,7 +7930,7 @@ export class BattleClient {
         continue;
       }
       const mult = vsMult(def, ent.kind);
-      const raw = def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * offAxisFalloff(off || 0) * LANCE.DECAY ** i;
+      const raw = def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * offAxisFalloff(off || 0) * LANCE.DECAY ** (j || 0);
       const sp = shieldSplit(def, raw, ent.sp || 0);   // 護盾分軌(見 _hitFeedback 同註)
       const est = Math.round(sp.toSp + sp.toHp);
       damageNumber(this.scene, this.effects,
@@ -8665,8 +8787,11 @@ export class BattleClient {
       return {
         name: def.name, lvl: this.abil[id], ammo: st.ammo, mag: def.mag,
         reload: st.reloadEnd > 0 ? Math.max(0, st.reloadEnd - now) : 0,
+        // 填彈總長(HUD 進度條分母;天氣雪地倍率已烤進 st.reloadDur,見 _startReload)
+        reloadMax: Math.max(0.001, st.reloadDur || def.reload || 0),
       };
     };
+    const snowMul = this.env?.getWeatherDynamics?.()?.snowCdMul ?? 1;
     const abHud = (slot, idx) => {
       const lvl = this.abil[slot] || 1;
       const A = heroAbility(this.ch, slot, lvl);
@@ -8677,6 +8802,8 @@ export class BattleClient {
       const nextCd = chg[2] || 0;
       return {
         name: A.name, lvl, cd: this.cds[idx] || 0, mp: mpc,
+        // 冷卻總長(HUD 進度條分母;與 _tryCast 落子時的 (A.cd||10)*snowMul 同一條)
+        cdMax: Math.max(0.001, (A.cd || 10) * snowMul),
         ready: (this.cds[idx] || 0) <= 0 && this.mp >= mpc,
         charges, maxCharges, nextCd,
       };
@@ -8696,9 +8823,10 @@ export class BattleClient {
       // CD 一律由上面的 def / atk 兩格顯示 —— 再畫一顆機種絕招格就是「鈕面說有、按下去沒有」的假招。
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
       // 空白鍵機動能力 CD(HUD 顯示;完美迴避 30s / 蓄力跳躍 15s / 升空變形 15s,皆客戶端時戳)
-      mobil: this.isDrone ? { name: '完美迴避', cd: Math.max(0, (this._dodgeCd || 0) - now) }
-        : this.isMorph ? { name: '升空變形', cd: Math.max(0, (this._morphCd || 0) - now) }
-          : { name: '蓄力跳躍', cd: Math.max(0, (this._cjumpCd || 0) - now) },
+      // cdMax 與各自落子處同源(dodge:IFRAME.DRONE_CD / morph:MORPH.CD / 機甲:CJUMP.CD)
+      mobil: this.isDrone ? { name: '完美迴避', cd: Math.max(0, (this._dodgeCd || 0) - now), cdMax: IFRAME.DRONE_CD }
+        : this.isMorph ? { name: '升空變形', cd: Math.max(0, (this._morphCd || 0) - now), cdMax: MORPH.CD }
+          : { name: '蓄力跳躍', cd: Math.max(0, (this._cjumpCd || 0) - now), cdMax: CJUMP.CD },
     };
   }
 
@@ -9799,16 +9927,16 @@ export class BattleClient {
     const slotHud = (id) => {
       const def = heroWeapon(tgt.ch, id, ab[id] || 1);
       // 取不到就給一格空欄(HUD 端無條件讀 .name/.mag;回 null 會直接炸掉整個面板)
-      return def ? { name: def.name, lvl: ab[id] || 1, ammo: null, mag: def.mag, reload: 0 }
-        : { name: '—', lvl: 0, ammo: null, mag: 0, reload: 0 };
+      return def ? { name: def.name, lvl: ab[id] || 1, ammo: null, mag: def.mag, reload: 0, reloadMax: def.reload || 0 }
+        : { name: '—', lvl: 0, ammo: null, mag: 0, reload: 0, reloadMax: 0 };
     };
     const abHud = (slot, idx) => {
       const lvl = ab[slot] || 1;
       const A = heroAbility(tgt.ch, slot, lvl);
-      if (!A) return { name: '—', lvl: 0, cd: 0, mp: 0, ready: false };
+      if (!A) return { name: '—', lvl: 0, cd: 0, cdMax: 0, mp: 0, ready: false };
       const mpc = Math.round(A.mp);
       const cd = (tgt.cds || [])[idx] || 0;
-      return { name: A.name, lvl, cd, mp: mpc, ready: cd <= 0 && mp >= mpc };
+      return { name: A.name, lvl, cd, cdMax: A.cd || 10, mp: mpc, ready: cd <= 0 && mp >= mpc };
     };
     return {
       spec: true, follow: true,
@@ -9895,6 +10023,8 @@ export class BattleClient {
         const floor = this._surf(this.camera.position.x, this.camera.position.z, this.camera.position.y)
           + SPEC_CAM.FLOOR_M;
         if (this.camera.position.y < floor) this.camera.position.y = floor;
+        // 鏡頭卡進建物內或被隔開時整個畫面全擋 ⇒ 沿注視點(視軸必經點)→鏡頭拉回(與交戰第三人稱同一縫)
+        this._cameraPullSegment(a.x, a.y + h * SPEC_CAM.AIM_F, a.z);
       }
     } else {
       // 上帝視角:自由飛行。升降是**移動**不是姿態 ⇒ 與飛行機體同一組鍵(Space 升 / C・Ctrl 降),

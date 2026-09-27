@@ -32,7 +32,7 @@
 import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
-  REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
+  REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, fanSubs, fanBinSpan, armingOf, lobMinRange, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, TARGET_H, MAPGEO, WEAPONS, UNITS,
   GAME, STRUCT_W, NPC_BLAST, npcBlastR, towerDps, BASE_DPS_MULT, BASE_MISSILE,
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
@@ -308,13 +308,16 @@ class V3 {
     divideScalar(s) { this.x /= s; this.y /= s; this.z /= s; return this; }
     length() { return Math.hypot(this.x, this.y, this.z); }
     normalize() { const l = this.length() || 1; this.x /= l; this.y /= l; this.z /= l; return this; }
+    crossVectors(a, b) {
+      return this.set(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    }
   distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
 }
 const THREE = { Vector3: V3 };
 const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
 const RANGE_GLOW = new Function(`return ${/const RANGE_GLOW = (\{[^}]*\});/.exec(G)[1]}`)();
 const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf, shotV0,
-  aoeClass, blastFalloff, fanConeHalf, lanceR, LANCE, inWeaponRange, weaponMaxHoriz, isSuperSide, isThirdSide,
+  aoeClass, blastFalloff, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, inWeaponRange, weaponMaxHoriz, isSuperSide, isThirdSide,
   bossScaleF, superScaleF };
 const M = (n) => pickMethod(n, G, env);
 // 牆 = 沿 +X 的一道垂直面(擋住 x ≥ w.x 且高度低於 w.top 的射線);回傳截斷距離
@@ -453,8 +456,8 @@ sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)')
   ok(/aoeClass\(def\)/.test(sv), '足跡分類走 aoeClass(def)(唯一分類縫)');
   ok(/blastFalloff\(def\.r,/.test(sv),
     'blast 足跡以 blastFalloff 判入列(與伺服器 _blast 同一條曲線,MUST NOT 自己寫半徑比較)');
-  ok(/this\._lancePierced\(from, impact, lanceR\(def\)\)/.test(sv),
-    'line 足跡走既有的 _lancePierced(sim._lanceHits 的客戶端鏡射)');
+  ok(/this\._lancePierced\(from, impact, lanceR\(def\), def\)/.test(sv),
+    'line 足跡走既有的 _lancePierced(sim._lanceHits 的客戶端鏡射,含穿透截斷)');
   // 扇形錐緣 MUST 量到命中量體近側表面(fanConeHalf 單一縫)—— 量中心 = 貼著砲塔/主堡牆面噴
   // 光暈全滅而伺服器那半照樣結算(2026-08-03 使用者回報「打得到一般單位、但不到建築」)
   ok(/fanConeHalf\(def, (d2|d3), (this\._hitR\(e\)|hr)\)/.test(sv),
@@ -1640,7 +1643,7 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
     const paths = [
       ['heroHit', /const d3 = Math\.hypot\(h\.x - t\.x, h\.z - t\.z, \(h\.y \|\| 0\) - \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);/, '單體直擊'],
       ['heroPlasma', /const d3 = Math\.hypot\(tx, ty, tz\);/, '扇形(散彈/電漿)'],
-      ['_lanceHits', /d3: Math\.hypot\(tx, tz, ty - oy\)/, '直線貫穿'],
+      ['_lanceHits', /const d3 = Math\.hypot\(tx, tz, ty - oy\)/, '直線貫穿'],
       ['hitMissile', /const d3 = Math\.hypot\(h\.x - m\.x, h\.z - m\.z, \(h\.y \|\| 0\) - m\.y\);/, '攔截來襲飛彈'],
       ['botFire', /const d3 = Math\.hypot\(h\.x - t\.x, h\.z - t\.z, \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);|const d3 = Math\.hypot\(h\.x - t\.x, h\.z - t\.z, \(h\.y \|\| 0\) - \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);/, '電腦玩家開火'],
       ['heroLock', /Math\.hypot\(t\.x - h\.x, t\.z - h\.z, ty - \(h\.y \|\| 0\)\)/, '準星鎖定(決定射後不理能不能鎖)'],
@@ -1690,7 +1693,8 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
       return h;
     };
     const shoot = (withMuzzle) => {
-      for (const s of [...sim.ents.values()]) if (s.tp || s.hero) sim.ents.delete(s.id);
+      // 小錐分格下同格近處的小兵會遮擋目標 ⇒ 量測前清掉戰場殘留兵線(只留下面新放的目標)
+      for (const s of [...sim.ents.values()]) sim.ents.delete(s.id);
       sim.heroes.clear();
       const h = mk();
       // 目標:離機體 R+5(超程)、離槍口 R−5(射程內)

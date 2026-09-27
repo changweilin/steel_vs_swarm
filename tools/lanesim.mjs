@@ -29,9 +29,10 @@
 // ---- 攻擊範圍怎麼算(使用者「考量實質戰鬥角度」)----
 // 三類範圍攻擊各按自己的幾何在 2D 平面上選目標,分類縫仍是 data.js aoeClass():
 //   blast 圓形超壓:爆心 r × BLAST.EDGE 內全員,逐一吃 blastFalloff(量到命中量體最近點)。
-//   fan   錐形:半角 arc 的錐內全員,吃 fanFalloff(越近越強)——**錐寬隨距離張開、傷害隨距離
-//         衰減**,兩者同時作用才是扇形武器的真實形狀(貼身掃不到幾個、拉遠掃得到卻不痛)。
-//   line  圓柱貫穿:半徑 lanceR + hitR 的圓柱內,依序吃 LANCE.DECAY,最多 LANCE.MAX 個。
+//   fan   錐形:按方位角切 fanSubs 個小錐,每格只取最近一名(大目標跨格多吃),
+//         不隨距離衰減、只剩偏心遞減 —— 與 sim.heroPlasma 同式(錐寬仍隨距離張開)。
+//   line  圓柱貫穿:半徑 lanceR + hitR 的圓柱內,截面分區(1 內圈 + 6 外扇區)跨幾區吃幾次,
+//         每區依序吃 LANCE.DECAY、各區穿透力耗盡處截斷 —— 與 sim._lanceHits 同式。
 // 偏心遞減走 offAxisFalloff(fan/line),與 sim.heroPlasma / _lanceHits 同一條曲線。
 //
 // ---- 長按攻擊(機種絕招)也在模型內(2026-08-02 使用者定案「只使用輕/重武器 + 長按攻擊」)----
@@ -53,7 +54,8 @@
 import {
   CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, evadable, evadeExpF, LANCE, SQUAD, DECOY,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
-  dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, fanConeHalf, blastFootprintR, aoeClass,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, blastFootprintR, aoeClass,
+  lancePen, lancePenCost, lanceZones, lanceZonePen,
   shieldSplit, heavyMpCost, upgradePrice, canUpgrade, battleScoreGain, addBattleScore, waveComp, waveMarchSpeed, hitR, lanceR,
   kamiHp, kamiSide, decoyHp, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd, hyperTrackR,
   heroAbility, atkDelivered, atkParts, atkPartN, ATK_CARRIER, SELF_ATK, selfAtkBoost,
@@ -248,15 +250,25 @@ export function hits(shooter, aim, def, foes) {
   }
   const ux = (aim.x - shooter.x) / (d0 || 1), uy = (aim.y - shooter.y) / (d0 || 1);
   if (cls === 'fan') {
-    const half = (def.arc || 0) * Math.PI / 180, out = [];
+    const half = (def.arc || 0) * Math.PI / 180, n = fanSubs(def);
+    const bins = new Array(n).fill(null);   // 每格最近的一名(與 sim.heroPlasma 同式)
     for (const e of foes) {
       const dx = e.x - shooter.x, dy = e.y - shooter.y, d = Math.hypot(dx, dy);
       if (d > def.range) continue;
-      const ang = Math.abs(Math.atan2(dx * uy - dy * ux, dx * ux + dy * uy));
-      if (ang > fanConeHalf(def, d, hitR(e))) continue;   // 錐緣算到命中量體(data.js 單一縫;sim/客戶端同吃)
-      out.push({ ent: e, f: fanFalloff(def.range, d) * offAxisFalloff(half > 0 ? ang / half : 0) });
+      const dot = dx * ux + dy * uy;
+      if (dot <= 0) continue;
+      const cross = dx * uy - dy * ux;
+      const ang = Math.abs(Math.atan2(cross, dot));
+      if (ang > fanConeHalf(def, d, hitR(e))) continue;
+      const phi = Math.atan2(cross, dot);
+      const aw = Math.atan2(hitR(e), Math.max(1, d));     // 量體張角:橫跨多格的大目標多格各取一次
+      const [b0, b1] = fanBinSpan(def, phi, aw);          // 分格走單一縫
+      const f = offAxisFalloff(half > 0 ? ang / half : 0) * FAN_SUB_F;   // 不隨距離衰減、每格單價(與 sim.heroPlasma 同式)
+      for (let bi = b0; bi <= b1; bi++) {
+        if (!bins[bi] || d < bins[bi].d) bins[bi] = { ent: e, f, d };
+      }
     }
-    return out;
+    return bins.filter(Boolean).map(({ ent, f }) => ({ ent, f }));
   }
   if (cls === 'line') {
     const R = lanceR(def), out = [];
@@ -264,12 +276,25 @@ export function hits(shooter, aim, def, foes) {
       const dx = e.x - shooter.x, dy = e.y - shooter.y;
       const s = dx * ux + dy * uy;                        // 線段上最近點(對齊 sim._lanceHits)
       if (s < 0 || s > def.range) continue;
-      const off = Math.abs(dx * uy - dy * ux), lim = R + hitR(e);
+      const ex = dx - ux * s, ez = dy - uy * s;           // 橫向偏移向量(分區用)
+      const off = Math.hypot(ex, ez), lim = R + hitR(e);
       if (off > lim) continue;
-      out.push({ ent: e, s, f: dmgFalloff(def, s) * offAxisFalloff(off / lim) });
+      const f = dmgFalloff(def, s) * offAxisFalloff(off / lim);
+      for (const zone of lanceZones(ex, ez, hitR(e), R)) out.push({ ent: e, s, f, zone });
     }
-    out.sort((a, b) => a.s - b.s);                        // 排序用原始 s(A18)
-    return out.slice(0, LANCE.MAX).map((h, i) => ({ ent: h.ent, f: h.f * LANCE.DECAY ** i }));
+    out.sort((a, b) => a.s - b.s || a.zone - b.zone);     // 排序用原始 s(A18)
+    const kept = [];                                      // 逐區穿透(對齊 sim._lanceHits)
+    const rem = [], shut = [], cnt = [];
+    for (const hEnt of out) {
+      const z = hEnt.zone;
+      if (shut[z]) continue;
+      if (rem[z] === undefined) rem[z] = lanceZonePen(def, z);
+      rem[z] -= lancePenCost(hEnt.ent);
+      hEnt.j = cnt[z] || 0; cnt[z] = hEnt.j + 1;
+      kept.push(hEnt);
+      if (rem[z] < 0) shut[z] = true;
+    }
+    return kept.map((h) => ({ ent: h.ent, f: h.f * LANCE.DECAY ** h.j }));
   }
   // 非扇形輕武器:單體直擊
   return [{ ent: aim, f: dmgFalloff(def, d0) }];
@@ -283,7 +308,7 @@ function dpsAt(S, T, d) {
   for (const s of S.slots) {
     if (d > s.def.range) continue;
     const cyc = s.def.mag / (s.def.rate || 3) + s.def.reload;
-    const fall = s.def.fan ? fanFalloff(s.def.range, d) : dmgFalloff(s.def, d);
+    const fall = s.def.fan ? FAN_SUB_F : dmgFalloff(s.def, d);   // 範圍扇形:單格單價、不隨距離衰減(與 sim.heroPlasma 同式)
     v += s.def.dmg * vsMult(s.def, T.kind) * fall * critF(s.def)
       * evadeExpF(s.def, dodgeP(T)) * s.def.mag / cyc * armorMul(T.armor, s.def.pen);
   }
