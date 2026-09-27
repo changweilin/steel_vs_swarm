@@ -1,4 +1,10 @@
-// AoE 三類範圍傷害平衡稽核 —— 爆炸 / 扇形 / 直線的角色分工驗收。
+// AoE 三類範圍傷害平衡稽核 —— 爆炸 / 扇形 / 直線的角色分工驗收(跨類對比層)。
+//
+// 機制細節的擁有者(本檔不重驗公式,只驗角色分工;數字分家 = 同一發在兩處掃到不同人):
+//   fan 小錐分格(同格取最近、不隨距離衰減、大目標多格多吃、偏心遞減) → audit_fan_cone
+//   line 貫穿序/衰減公式、穿透預算截斷、截面分區 → audit_lance_hit
+//   lanesim 側三類幾何、穿透/格數推導不手寫 → audit_aoe_trim Ⅴ/Ⅵ
+// 本檔只守跨類角色門;同機制在兩處出現時,門只留一處(另一處標 ⓘ參考)。
 //
 // 使用者定案角色:
 //   blast 爆炸傷害:高密集兵波陣列有優勢,且傷害不會被大物件阻隔(球形超壓,無 LOS 阻擋、無穿透預算)。
@@ -13,15 +19,16 @@
 //
 // 情境(全部直測 server/sim.js,確定性:骰子旁路、固定站位):
 //   S1 密集兵波:7 名小兵 3m 間距緊密陣列 —— blast 總傷應為三類最高。
-//   S2 大物件阻隔:砲塔(60m)後方小兵(90m)同軸 —— blast(瞄後方)後方仍受傷;
-//       line 耗盡穿透力、fan 同格只取最近 ⇒ 後方不受傷。
+//   S2 大物件阻隔:砲塔(60m)後方小兵(90m)同軸 —— 只守 blast 繞過(瞄後方仍受傷);
+//       line/fan 後方數值僅印參考(機制門在 audit_lance_hit ⑩ / audit_fan_cone ②)。
 //   S3 中型多目標:10 輛坦克橫列 —— fan 總傷應為三類最高(小錐分格多格多吃,
 //       line 逐區耗穿透力截斷、blast 足跡只罩中間幾輛)。
-//   S3c 巨型單一結構:近距砲塔 —— fan 應勝 blast(分格多吃 > 單球單次);line 憑截面
-//       7 區全額領先為已知權衡(它是縱深角色的代價面,不設門,數字印出追蹤)。
-//   S4 遠近平衡:同軸小兵 60m vs 140m —— line 比值應落在 [0.55, 1.0](距離衰減 + 貫穿衰減,
-//       不得出現遠距剩不到一半);fan 比值應 ≈1(不隨距離衰減,窗 ±3%)。
-//   S5 分割角單調:同距離砲塔,寬錐(m07)總傷 > 窄錐(t06)。
+//   S3c 巨型單一結構:近距砲塔 —— fan 應勝 blast(分格多吃 > 單球單次;幾何面見
+//       audit_fan_cone ④);line 憑截面 7 區全額領先為已知權衡(它是縱深角色的代價面,
+//       不設門,數字印出追蹤)。
+//   S4 遠近平衡:同軸小兵 60m vs 140m —— 只守 line 比值 [0.55, 1.0];fan 不隨距離衰減
+//       的公式面在 audit_fan_cone ③(audit_lance_hit ⑤同理只驗 DECAY 公式,角色頻帶歸這裡)。
+//   S5 分割角覆蓋:5 名小兵橫向 ±30m @120m —— 寬錐(m07)命中數 > 窄錐(s04)。
 //
 // 用法:node tools/audit_aoe_balance.mjs
 
@@ -139,29 +146,27 @@ console.log('— S1 密集兵波陣列(7 名小兵,3m 緊密陣列 @100m):blast 
     `blast 平均 ${avg(totals.blast).toFixed(0)} > line ${avg(totals.line).toFixed(0)} / fan ${avg(totals.fan).toFixed(0)}`);
 }
 
-console.log('— S2 大物件阻隔(砲塔@60m + 小兵@90m 同軸):blast 繞過、line/fan 被擋 —');
+console.log('— S2 大物件阻隔(砲塔@60m + 小兵@90m 同軸):只守 blast 繞過 —');
 {
-  // blast 瞄準後方小兵:球形超壓不查 LOS ⇒ 後方照吃(砲塔在 30m 外,足跡外不分傷)
+  // blast 瞄準後方小兵:球形超壓不查 LOS ⇒ 後方照吃(砲塔在 30m 外,足跡外不分傷)。
+  // line/fan 後方兩列僅印參考 —— 機制門在 audit_lance_hit ⑩(穿透耗盡截斷)/
+  // audit_fan_cone ②(同格只取最近),這裡不設第二道門。
   const bBack = REPS.blast.map((ch) => {
     const { dmg } = fireOnce(ch, [['tower', 0, 60, 99999], ['soldier', 0, 90, 99999]], [0, 90]);
     return dmg[1];
   });
-  // line 沿軸貫穿:砲塔耗盡各區穿透力 ⇒ 後方截斷
   const lBack = REPS.line.map((ch) => {
     const { dmg } = fireOnce(ch, [['soldier', 0, 50, 99999], ['tower', 0, 60, 99999], ['soldier', 0, 90, 99999]]);
     return dmg[2];
   });
-  // fan 同格只取最近:砲塔擋住同軸後方
   const fBack = REPS.fan.map((ch) => {
     const { dmg } = fireOnce(ch, [['tower', 0, 60, 99999], ['soldier', 0, 90, 99999]]);
     return dmg[1];
   });
   console.log(`   ⓘ blast 後方受傷 ${bBack.map((v) => v.toFixed(1)).join(' / ')}`);
-  console.log(`   ⓘ line  後方受傷 ${lBack.map((v) => v.toFixed(1)).join(' / ')}`);
-  console.log(`   ⓘ fan   後方受傷 ${fBack.map((v) => v.toFixed(1)).join(' / ')}`);
+  console.log(`   ⓘ line  後方受傷 ${lBack.map((v) => v.toFixed(1)).join(' / ')}(參考:門在 audit_lance_hit ⑩)`);
+  console.log(`   ⓘ fan   後方受傷 ${fBack.map((v) => v.toFixed(1)).join(' / ')}(參考:門在 audit_fan_cone ②)`);
   ok(bBack.every((v) => v > 0), 'blast 瞄後方:後方小兵仍受傷(不被大物件阻隔)');
-  ok(lBack.every((v) => v === 0), 'line 塔後:後方小兵不受傷(穿透力耗盡截斷)');
-  ok(fBack.every((v) => v === 0), 'fan 塔後:後方小兵不受傷(同格只取最近)');
 }
 
 console.log('— S3 中型多目標(10 輛坦克橫列 ±18m @60m):fan 總傷應居首(小錐多格多吃) —');
@@ -203,23 +208,23 @@ console.log('— S3c 巨型單一結構(砲塔@30m):fan 應勝 blast;line 區段
     `fan 平均 ${avg(totals.fan).toFixed(0)} > blast ${avg(totals.blast).toFixed(0)}(分格多吃 > 單球單次)`);
 }
 
-console.log('— S4 遠近平衡(同軸小兵 60m vs 140m) —');
+console.log('— S4 遠近平衡(同軸小兵 60m vs 140m):只守 line 頻帶 —');
 {
+  // fan 不隨距離衰減的公式面在 audit_fan_cone ③(60/140 逐位元相等),這裡不重驗;
+  // audit_lance_hit ⑤只驗 DECAY 公式(讀 LANCE.DECAY 自洽恆過),遠近角色頻帶歸這道門。
   const ratios = {};
-  for (const cls of ['blast', 'fan', 'line']) {
+  for (const cls of ['blast', 'line']) {
     ratios[cls] = REPS[cls].map((ch) => {
       const n = fireOnce(ch, [['soldier', 0, 60, 99999]]).dmg[0];
       const f = fireOnce(ch, [['soldier', 0, 140, 99999]]).dmg[0];
       return n > 0 ? f / n : NaN;
     });
   }
-  for (const cls of ['blast', 'fan', 'line']) {
+  for (const cls of ['blast', 'line']) {
     console.log(`   ⓘ ${cls} 遠/近比 ${ratios[cls].map((v) => v.toFixed(3)).join(' / ')}`);
   }
   ok(ratios.line.every((v) => v >= 0.55 && v <= 1.0),
     'line 遠近平衡:遠距保有 55%~100% 傷害');
-  ok(ratios.fan.every((v) => Math.abs(v - 1) < 0.03),
-    'fan 不隨距離衰減:遠/近 ≈ 1(窗 ±3%)');
 }
 
 console.log('— S5 分割角覆蓋(5 名小兵橫向 ±30m @120m):寬錐命中數應多於窄錐 —');
