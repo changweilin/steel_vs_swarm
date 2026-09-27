@@ -3804,7 +3804,7 @@ export const CHARACTERS = {
       dmg: [14, 18, 22], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.1, building: 0.5 } },
     heavy: { name: '「神聖裁決」電磁獵魔長槍', rw: '軌道級重型電磁狙擊管・高能穿甲針・初速 2200m/s', type: 'rail', mv: 2200,
-      dmg: [66, 99, 149], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
+      dmg: [58, 87, 132], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
     def: { name: '晨鐘・聖域庇護', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 85, 110], shieldExpand: true,
       dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '敲響克拉科夫破曉晨鐘：聖光洗禮修復機體裝甲與磁力，並在防守時大幅擴大護盾庇護範圍' },
