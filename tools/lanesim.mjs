@@ -55,7 +55,7 @@ import {
   CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, evadable, evadeExpF, LANCE, SQUAD, DECOY,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
   dmgFalloff, blastFalloff, offAxisFalloff, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, blastFootprintR, aoeClass,
-  lancePen, lancePenCost, lanceZones, lanceZonePen,
+  lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF,
   shieldSplit, heavyMpCost, upgradePrice, canUpgrade, battleScoreGain, addBattleScore, waveComp, waveMarchSpeed, hitR, lanceR,
   kamiHp, kamiSide, decoyHp, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd, hyperTrackR,
   heroAbility, atkDelivered, atkParts, atkPartN, ATK_CARRIER, SELF_ATK, selfAtkBoost,
@@ -294,7 +294,13 @@ export function hits(shooter, aim, def, foes) {
       kept.push(hEnt);
       if (rem[z] < 0) shut[z] = true;
     }
-    return kept.map((h) => ({ ent: h.ent, f: h.f * LANCE.DECAY ** h.j }));
+    const keptQ = new Map();
+    return kept.map((h) => {
+      // 同一單位跨區多吃收斂(對齊 sim._lanceHits 的 q):同 ent 第 2 個起的區 ×lanceRehitF
+      const n = keptQ.get(h.ent) || 0;
+      keptQ.set(h.ent, n + 1);
+      return { ent: h.ent, f: h.f * LANCE.DECAY ** h.j * lanceRehitF(n) };
+    });
   }
   // 非扇形輕武器:單體直擊
   return [{ ent: aim, f: dmgFalloff(def, d0) }];
