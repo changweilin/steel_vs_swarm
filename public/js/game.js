@@ -16,7 +16,7 @@ import {
   GLINT, glintDur, glintAlpha, glintDropR,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
+   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
@@ -7896,6 +7896,12 @@ export class BattleClient {
         kept.push(k);
         if (rem[z] < 0) shut[z] = true;
       }
+      const seenQ = new Map();   // 同一單位跨區多吃收斂(與 sim._lanceHits 同式):同 ent 第 2 個起的區 ×lanceRehitF
+      for (const k of kept) {
+        const n = seenQ.get(k.ent) || 0;
+        seenQ.set(k.ent, n + 1);
+        k.q = n;
+      }
       return kept;
     }
     for (const k of out) k.j = 0;   // 無 def(舊呼叫端):不做穿透截斷,全按首個估算
@@ -7907,12 +7913,12 @@ export class BattleClient {
     return hitR(ent);
   }
 
-  /** 貫穿命中回饋:各區首個全額,同區之後逐個 ×LANCE.DECAY × 偏心遞減 offAxisFalloff(與伺服器 heroLance 同一條公式) */
+  /** 貫穿命中回饋:各區首個全額,同區之後逐個 ×LANCE.DECAY,同一單位第 2 區起 ×lanceRehitF × 偏心遞減 offAxisFalloff(與伺服器 heroLance 同一條公式) */
   _lanceFeedback(def, hits, point) {
     if (!hits.length) { starburst(this.scene, this.effects, point.x, point.y, point.z, 1.4, 0xcfc4a8); return; }
     this.hud.hitmark?.();
     for (let i = 0; i < hits.length; i++) {
-      const { ent, off, j } = hits[i];
+      const { ent, off, j, q } = hits[i];
       const p = ent.mesh.position;
       if (this._lockId === ent.id) this._flashLockGlow();
       // 護盾二分(同 _hitFeedback):舉盾接住 → 小火光 + 護盾劇烈發光;無護盾 → 火光濺射 + 火星。
@@ -7930,7 +7936,7 @@ export class BattleClient {
         continue;
       }
       const mult = vsMult(def, ent.kind);
-      const raw = def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * offAxisFalloff(off || 0) * LANCE.DECAY ** (j || 0);
+      const raw = def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * offAxisFalloff(off || 0) * LANCE.DECAY ** (j || 0) * lanceRehitF(q || 0);
       const sp = shieldSplit(def, raw, ent.sp || 0);   // 護盾分軌(見 _hitFeedback 同註)
       const est = Math.round(sp.toSp + sp.toHp);
       damageNumber(this.scene, this.effects,

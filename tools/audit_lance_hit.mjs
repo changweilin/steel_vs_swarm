@@ -202,14 +202,16 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
   const off = rr * 0.8;
   const dEdge = shot(off);
   assert(dCenter > 0 && dEdge > 0, '正中與偏心(80% 半寬)兩發都命中(偏移仍在 R + hitR 內)');
-  // 期望比值 = 分區格數比 × 偏心遞減 × 兩發 d3 的距離衰減比
-  // (截面分區:正中只進內圈 1 格,偏心 80% 半寬橫跨外圈 nE 格 —— 同單位跨幾區吃幾次;
-  // 距離衰減與貫穿衰減是兩條獨立的乘數,逐區首個 j = 0 ⇒ DECAY 不進比值)
+  // 期望比值 = 加權格數比 × 偏心遞減 × 兩發 d3 的距離衰減比
+  // (截面分區:正中只進內圈 1 格,偏心 80% 半寬橫跨外圈 nE 格 —— 同單位跨幾區吃幾次,
+  // 首區全額、第 2 區起 ×LANCE.REHIT_F(跨區多吃收斂);距離衰減與貫穿衰減是兩條獨立的
+  // 乘數,逐區首個 j = 0 ⇒ DECAY 不進比值)
   const R = lanceR(w.def);
   const nC = lanceZones(0, 0, hitR(t), R).length;
   const nE = lanceZones(-off, 0, hitR(t), R).length;
   const dy = sim._tgtY(t) - oy;
-  const exp = (nE / nC) * offAxisFalloff(off / rr)
+  const wC = 1 + (nC - 1) * LANCE.REHIT_F, wE = 1 + (nE - 1) * LANCE.REHIT_F;
+  const exp = (wE / wC) * offAxisFalloff(off / rr)
     * dmgFalloff(w.def, Math.hypot(off, 100, dy)) / dmgFalloff(w.def, Math.hypot(0, 100, dy));
   const ratio = dEdge / dCenter;
   assert(nC === 1 && Math.abs(ratio - exp) < 0.02,

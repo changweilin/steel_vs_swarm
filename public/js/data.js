@@ -2343,6 +2343,12 @@ export const LANCE = {
   // 一律擋線,一波兵線(約 45m²)gun 約 1.3 波、rail 約 2 波、beam 約 3 波。
   PEN: { beam: 135, rail: 90, gun: 60 },
   CORE_F: 0.5,      // 內圈半徑 = R × 此值(與 BLAST.CORE 同式);之外是 6 等分外扇區
+  // REHIT_F:同一單位第 2 個起的跨區命中傷害 ×此值(首區全額;0 = 跨區只吃首區)。
+  // 分區多吃是機制(大目標跨幾區吃幾次),但逐區全額讓瞄準中的大目標(機體/砲塔
+  // 恆跨 7 區)一發吃滿 7 倍:bal 4.3 blast 31.9% 跌破 40% 下限即此造成。
+  // 首區全額 ⇒ 單體(恆 1 區) DPS 與 heroHit 相同;分區穿透截斷照走
+  // (擋線是機制,見 lanceZonePen),audit_lance_hit ⑤b 的期望式同步更新(見該檔)。
+  REHIT_F: 0,
 };
 /** 貫穿圓柱半徑(公尺);判定與演出共用同一支 */
 export const lanceR = (def) => LANCE.R[def?.type] ?? LANCE.R.gun;
@@ -2363,6 +2369,8 @@ export const lancePenCost = (e) => Math.PI * hitR(e) ** 2;
 // MUST 全吃 lanceZones 分區,各寫一份 = 同一發在三處掃到不同人。
 /** 某區的穿透力預算(平方公尺):內圈 3/9、外圈單格 1/9(推導不手寫) */
 export const lanceZonePen = (def, zone) => lancePen(def) * (zone === 0 ? 3 : 1) / 9;
+/** 同一單位第 n 個跨區命中的傷害乘數(n = 0 起算):首區全額,第 2 區起 ×REHIT_F */
+export const lanceRehitF = (n) => (n < 1 ? 1 : LANCE.REHIT_F);
 /**
  * 目標量體覆蓋到哪幾個區(唯一縫)。
  * ex,ez = 目標在截面上的橫向偏移向量(公尺,已夾到線段),hr = 目標水平量體,R = 圓柱半徑。
