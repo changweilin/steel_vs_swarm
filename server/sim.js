@@ -17,7 +17,7 @@ import {
   shieldDefKindFactor, balanceMul, upgradeCurveMul,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
-  aoeClass, trajClass, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
+  aoeClass, trajClass, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   HIGH_SUP, highSupF, highSupDodgeF, highSupMissP, unbalMissP,
   selfCollider, COLLIDE_KINDS,
@@ -2526,7 +2526,7 @@ export class BattleSim {
       for (let i = 0; i < hits.length; i++) {
         const k = hits[i];
         if (k.t === t) continue;
-        const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3) * offAxisFalloff(k.off) * LANCE.DECAY ** k.j;
+        const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3) * offAxisFalloff(k.off) * LANCE.DECAY ** k.j * lanceRehitF(k.q || 0);
         this._applyHitEmp(h, wp.def, k.t);
         this._damage(k.t, kd, h, wp.def.pen, 0, (0, wp.def), { origin: [h.x, h.z] });
       }
@@ -2785,7 +2785,9 @@ export class BattleSim {
     }
     out.sort((a, b) => a.s - b.s || a.zone - b.zone);
     // 逐區穿透(唯一的個數閘;與 game._lancePierced 同式):各區沿射線各自累計,
-    // 耗盡的那一個仍進名單(j = 區內名次,呼叫端套 DECAY^j),之後該區更遠的一律不進
+    // 耗盡的那一個仍進名單(j = 區內名次,呼叫端套 DECAY^j),之後該區更遠的一律不進。
+    // 同一單位跨區多吃收斂:q = 該單位第幾個區(kept 恒按 s/區號排序 ⇒ 同單位連續且區號遞增),
+    // 呼叫端另套 lanceRehitF(q)(首區全額)。
     const kept = [];
     const rem = [], shut = [], cnt = [];
     for (const k of out) {
@@ -2797,6 +2799,12 @@ export class BattleSim {
       kept.push(k);
       if (rem[z] < 0) shut[z] = true;
     }
+    const seenQ = new Map();
+    for (const k of kept) {
+      const n = seenQ.get(k.t) || 0;
+      seenQ.set(k.t, n + 1);
+      k.q = n;
+    }
     return kept;
   }
 
@@ -2805,8 +2813,8 @@ export class BattleSim {
    *   o = [x, z, y] 槍口(sim 座標,y = 離站立表面高)、d = [dx, dz, dy] 單位方向、len = 射線長
    *   (已被本端地形/障礙截斷 —— 伺服器再夾一次射程 ×RANGE_TOL 寬容)。
    * 命中判定全在伺服器:圓柱內、射程內、迷霧可見、LOS 未遮蔽的敵方單位,
-   * 跨幾區吃幾次(同區只一次),每區依沿線先後套 LANCE.DECAY^j(各區首個全額 ⇒
-   * 單體 DPS 與 heroHit 相同,bal 不變式不受影響),各區穿透力耗盡處截斷(見 _lanceHits)。
+   * 跨幾區吃幾次(同區只一次),每區依沿線先後套 LANCE.DECAY^j;同一單位第 2 區起
+   * 另套 lanceRehitF 收斂(首區全額 ⇒ 單體 DPS 與 heroHit 相同),各區穿透力耗盡處截斷(見 _lanceHits)。
    * 一發只扣一次彈藥/電力/射速 —— 與 heroPlasma(扇形)、heroBurst(爆炸)同一條「AoE 一發一結算」。
    */
   heroLance(pid, o, d, len) {
@@ -2837,11 +2845,11 @@ export class BattleSim {
       const bx = b === h ? ox : b.x, bz = b === h ? oz : b.z, by = b === h ? oy : (b.y || 0) + LOS.EYE_M;
       const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max);
       for (let i = 0; i < hits.length; i++) {
-        const { t, d3, off, j } = hits[i];
+        const { t, d3, off, j, q } = hits[i];
         // 直線圓柱誠實界:軸向表面距離不超過有效射程
         if (hits[i].s - hitR(t) > wp.def.range * this._altRange(b, t, wp.def)) continue;
         const dmg = this._rollCrit(b, wp.def,
-          this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** j, t);
+          this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** j * lanceRehitF(q || 0), t);
         this._applyHitEmp(b, wp.def, t);
         this._damage(t, dmg, b, wp.def.pen, 0, (0, wp.def), { origin: [bx, bz], dir: [dx, dz] });
       }
