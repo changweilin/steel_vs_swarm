@@ -11,7 +11,7 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, b
   bloodScreenUv, bloodDirFromUv,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
   botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG,
-  WEATHER_DEBUFFS, windSpeedFactor } from '../public/js/data.js';
+  WEATHER_DEBUFFS, windSpeedFactor, altTier } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // Drone cruise altitude (AGL; at/above AA_MIN_ALT eats air-defense missiles -- bots fly at deliberate risk)
@@ -203,6 +203,18 @@ export class BotBrain {
    *  與客戶端 `game.js _flying()` 同語意 —— 碰撞量體的 fly 旗標兩端 MUST 是同一件事。 */
   _fly(h) { return h.kind === 'drone' || (h.kind === 'morph' && (h.y || 0) > FLY_Y); }
 
+  /** 無人機交戰高度決策:鎖定目標上方一層(altTier)搶 +射程/+閃避。
+   *  只在有 `tactic` 旗標的難度啟用(新手/低難度維持舊制固定高度,逐位元同舊制);
+   *  讀的是鎖定目標的快照高度(瞄準/引信同一份 `t.y`,非透視)—— 未鎖定 = 維持巡航。
+   *  夾在既有包絡內,不開新暴露面:下限 = 既有交戰低空(武器好瞄),上限 = 巡航上限
+   *  (既有 SAM 風險;高過 AA_MIN_ALT 照樣吃防空飛彈,見 CRUISE_ALT)。 */
+  _wantAlt(h, target) {
+    const floor = Math.max(GAME.AA_MIN_ALT * 0.6, this.alt * 0.6);
+    if (this.state !== 'ENGAGE' || !this.diff.tactic) return this.state === 'ENGAGE' ? floor : this.alt;
+    const ty = target && (target.hero || target.kind === 'heli') ? (target.y || 0) : 0;
+    return Math.min(CRUISE_ALT.max, Math.max(floor, ty + altTier()));
+  }
+
   /** 地速:變形者飛行型態用飛行巡航速度(變形趕路才有意義)× 控場折速。
    *  取速一律經 `heroMobility`(A32「電腦玩家 MUST NOT 比真人多看/多走」的同一條):
    *  那支才含角色 `mods.speed` 與移速壓縮,直接讀 `UNITS[kind].speed` = bot 跑的是機種基準速。 */
@@ -377,10 +389,12 @@ export class BotBrain {
     this._alertLook(h);
     this._turn(h, dt);
 
-    // 高度:無人機巡航;交戰時降到武器好瞄的高度(仍在防空威脅圈內)
+    // 高度:無人機巡航;交戰時按目標高度搶高一層(見 _wantAlt),垂直速率與真人同上限
     if (h.kind === 'drone') {
-      const want = this.state === 'ENGAGE' ? Math.max(GAME.AA_MIN_ALT * 0.6, this.alt * 0.6) : this.alt;
-      h.y = (h.y || 0) + (want - (h.y || 0)) * Math.min(1, dt * 1.5);
+      const want = this._wantAlt(h, target);
+      const vsp = u?.vspeed || 0;   // UNITS.vspeed = 真人 Space 全速爬升率(game._updatePlayer 同一支)
+      const y0 = h.y || 0, dy = want - y0;
+      h.y = Math.abs(dy) <= vsp * dt ? want : y0 + Math.sign(dy) * vsp * dt;
     } else if (h.kind === 'morph') {
       // 變形者:推線時飛行型態趕路,交戰/撤退回堡時落地變形(y=0 才吃地雷、脫離防空)
       const want = this.state === 'PUSH' ? this.alt : 0;
