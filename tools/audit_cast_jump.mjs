@@ -8,12 +8,27 @@
 // ⑤ 靜止後包圍盒高度回歸基線 ±20%(aerial 免驗)
 // ⑥ 展示台共用 spawnCastFx 跑完整個 fade / cleanup 生命週期,攔截首幀 ReferenceError
 import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';
+import { readFile } from 'node:fs/promises';
 
 // 埠可由 SVS_URL 覆寫:8620 上常常跑著**另一個 checkout**(工作區之間共用那個埠),
 // 在那裡驗到的是別份程式碼而且不會報錯。
 const browser = await chromium.launch();
 const page = await browser.newPage();
 page.on('pageerror', (e) => console.log('PAGEERROR:', e.message));
+if (process.env.THREE_MODULE) {
+  const body = await readFile(process.env.THREE_MODULE, 'utf8');
+  await page.route('**/three@0.160.0/build/three.module.js', route => route.fulfill({ contentType: 'text/javascript', body }));
+}
+if (process.env.THREE_GEOMETRY_UTILS) {
+  const body = await readFile(process.env.THREE_GEOMETRY_UTILS, 'utf8');
+  await page.route('**/utils/BufferGeometryUtils.js', route => route.fulfill({ contentType: 'text/javascript', body }));
+}
+for (const [env, path] of [['THREE_GLTF_LOADER', 'loaders/GLTFLoader.js'], ['THREE_SKELETON_UTILS', 'utils/SkeletonUtils.js']]) {
+  if (!process.env[env]) continue;
+  const body = await readFile(process.env[env], 'utf8');
+  await page.route(`**/${path}`, route => route.fulfill({ contentType: 'text/javascript', body }));
+}
+await page.route('**/main.js', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
 if (process.argv.includes('--break-vfx-ease')) {
   await page.route('**/public/js/castfx.js', async (route) => {
     const response = await route.fetch();
@@ -70,7 +85,7 @@ const report = await page.evaluate(async () => {
       const base = bboxH(meshA);
 
       // ① 施法四組合
-      for (const slot of ['skill', 'ult']) {
+      for (const slot of ['def', 'atk']) {
         for (const dir of [null, { x: 0, z: -1 }]) {
           A.castFx = { t0: t, slot, dir };
           let frames = 0;
@@ -83,7 +98,7 @@ const report = await page.evaluate(async () => {
 
       // ⑥ 展示台招式 VFX:直接跑與 CharPreview._updateEffects 同一個生命週期。
       // 只解析成功不夠；未定義 helper 會在第一個 fade 幀才拋錯，必須實際逐幀執行。
-      for (const slot of ['skill', 'ult']) {
+      for (const slot of ['def', 'atk']) {
         const a = heroAbility(id, slot, 1);
         const scene = new THREE.Scene();
         const effects = [];
@@ -94,6 +109,7 @@ const report = await page.evaluate(async () => {
           groundY: () => 0,
           r: Math.min(a.r || 8, 12), rvCap: 12, dur: a.dur, scale: 6,
         });
+        if (!effects.length) throw new Error(`Missing cast presentation: ${id}.${slot}`);
         for (let frame = 0; frame < 300 && effects.length; frame++) {
           for (let i = effects.length - 1; i >= 0; i--) {
             const e = effects[i];

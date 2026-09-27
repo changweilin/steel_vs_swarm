@@ -29,6 +29,7 @@ const VS = `
   uniform float uSystem;
   varying vec4 vColor;
   varying vec2 vUv;
+  varying float vShape;
   void main() {
     float age = uNow - aData.x;
     float live = step(0.0, age) * step(age, aData.y);
@@ -36,7 +37,7 @@ const VS = `
     float shape = aStyle.x;
     float motion = aStyle.y;
     float contact = aStyle.z;
-    float layout = aStyle.w;
+    float arrangement = aStyle.w;
     float arc = sin(p * 3.14159265);
     vec3 drift = aVelocity.xyz * age;
     if (motion < 0.5) drift.xz *= 1.0 + p * 1.5;
@@ -51,29 +52,39 @@ const VS = `
     float fade = min(smoothstep(0.0, 0.12, p), 1.0 - smoothstep(0.72, 1.0, p));
     if (contact < 1.5) fade *= smoothstep(0.04, 0.22, p);
     else if (contact < 2.5) fade *= 0.72 + 0.28 * sin(p * 12.5663);
-    else if (contact < 3.5) fade *= smoothstep(0.82, 0.58, p);
+    else if (contact < 3.5) fade *= 1.0 - smoothstep(0.58, 0.82, p);
     else if (contact < 4.5) fade *= 0.75 + 0.25 * (1.0 - p);
     vec4 mv = modelViewMatrix * vec4(world, 1.0);
     vec2 local = position.xy;
-    if (layout < 1.5) local *= vec2(1.6, 0.58);
-    else if (layout < 2.5) local = local.yx;
-    else if (layout < 3.5) local *= vec2(0.52, 1.65);
-    else if (layout < 4.5) local = vec2(local.x - local.y * 0.42, local.y);
-    else if (layout < 5.5) local = vec2(local.x + local.y * 0.42, local.y);
+    if (arrangement < 1.5) local *= vec2(1.6, 0.58);
+    else if (arrangement < 2.5) local = local.yx;
+    else if (arrangement < 3.5) local *= vec2(0.52, 1.65);
+    else if (arrangement < 4.5) local = vec2(local.x - local.y * 0.42, local.y);
+    else if (arrangement < 5.5) local = vec2(local.x + local.y * 0.42, local.y);
     else local *= vec2(1.18, 1.18);
     if (uSystem > 0.5) { local = local.yx; fade *= 0.78 + 0.22 * arc; }
     mv.xy += local * aData.z * (0.65 + arc * 0.35);
     gl_Position = projectionMatrix * mv;
     vColor = vec4(aColor.rgb, aColor.a * fade * live);
     vUv = uv;
+    vShape = shape;
   }
 `;
 const FS = `
   ${INK_INFO_DECL}
   varying vec4 vColor;
   varying vec2 vUv;
+  varying float vShape;
   void main() {
-    float edge = 1.0 - smoothstep(0.28, 1.0, length(vUv - 0.5) * 2.0);
+    vec2 q = abs(vUv * 2.0 - 1.0);
+    float d = length(q);
+    if (vShape < 0.5) d = max(q.x * 0.45, q.y * 2.8);
+    else if (vShape < 1.5) d = abs(d - 0.65) * 4.0;
+    else if (vShape < 2.5) d = q.x + q.y;
+    else if (vShape < 3.5) d = min(max(q.x * 3.0, q.y), max(q.x, q.y * 3.0));
+    else if (vShape < 4.5) d = max(q.x, q.y);
+    float edge = 1.0 - smoothstep(0.65, 1.0, d);
+    if (vColor.a * edge < 0.01) discard;
     gl_FragColor = vec4(vColor.rgb, vColor.a * edge);
     ${INK_INFO_NONE}
   }
@@ -152,14 +163,15 @@ function flush(sys) {
   if (sys.dirty[1] < 0) return;
   const start = sys.dirty[0] * 4, count = (sys.dirty[1] - sys.dirty[0] + 1) * 4;
   for (const a of sys.attrs) {
-    a.clearUpdateRanges(); a.addUpdateRange(start, count); a.needsUpdate = true;
+    // Keep earlier casts' pending uploads until the renderer consumes them.
+    a.addUpdateRange(start, count); a.needsUpdate = true;
   }
   sys.dirty[0] = Infinity; sys.dirty[1] = -1;
 }
 function acquireRoot(engine, scene) {
   const roots = engine.roots;
-  let root = roots.find((r) => !r.handle);
-  if (!root) { root = roots.reduce((a, b) => a.age < b.age ? a : b); root.handle?.release(); }
+  const root = roots.find((r) => !r.handle);
+  if (!root) return null;
   root.obj.visible = true; if (root.obj.parent !== scene) scene.add(root.obj); return root;
 }
 function recipeKind(name) {
@@ -199,6 +211,7 @@ export function spawnParticleCast(scene, effects, P, recipe) {
   const systems = engine.systems;
   for (const sys of systems) if (sys.mesh.parent !== scene) scene.add(sys.mesh);
   const root = acquireRoot(engine, scene);
+  if (!root) return;
   const count = Math.max(PARTICLE_COUNT_MIN, Math.min(PARTICLE_COUNT_MAX, recipe.count | 0)) >> (lowPower() ? 1 : 0);
   const start = nowS();
   const rand = P.rand;
@@ -211,14 +224,13 @@ export function spawnParticleCast(scene, effects, P, recipe) {
   const motion = namedMode(recipe.motion || '', MOTION_MODE);
   const contact = namedMode(recipe.contact || '', CONTACT_MODE);
   const layout = namedMode(recipe.layout || '', LAYOUT_MODE);
-  const ttl = Math.max(0.3, P.dur || 1);
+  const ttl = Math.max(0.3, Math.min(P.dur || 1.4, P.big ? 2.4 : 1.8));
   for (let i = 0; i < count; i++) {
     const slot = engine.cursor++ % engine.capacity;
-    const old = engine.slots[slot]; old?.release?.();
     // Each global slot maps to a fixed layer, so overwriting never leaves a live ghost particle on the other layer.
     const sys = systems[slot % PARTICLE_SYSTEM_COUNT];
     const index = Math.floor(slot / PARTICLE_SYSTEM_COUNT);
-    const a = rand() * Math.PI * 2 + (recipe.phase || 0), rr = Math.sqrt(rand()) * Math.max(P.r || P.scale, P.scale);
+    const a = rand() * Math.PI * 2 + (recipe.phase || 0), rr = Math.sqrt(rand()) * Math.min(P.r || P.scale, P.cap ?? Infinity);
     let lx = Math.cos(a) * rr, lz = Math.sin(a) * rr;
     if (layout === 1) { lx = (rand() - 0.5) * P.scale * 1.8; lz = (rand() - 0.5) * P.scale * 0.3; }
     else if (layout === 2) { lx = (rand() - 0.5) * P.scale * 0.35; lz = (rand() - 0.5) * P.scale * 1.8; }
@@ -230,19 +242,31 @@ export function spawnParticleCast(scene, effects, P, recipe) {
     const life = Math.min(ttl, 0.65 + rand() * 0.75);
     engine.slots[slot] = handle; slotsForCast.push(slot);
     const particleColor = (i % 4 === accentMode % 4) ? accent : color;
-    write(sys, index, px, py, pz, start, life,
+    const delay = (i % 3) * Math.min(0.12, ttl * 0.12);
+    write(sys, index, px, py, pz, start + delay, Math.min(life, ttl - delay),
       P.scale * (0.08 + rand() * 0.12) * (0.88 + (recipe.tempo || 1) * 0.14), shape, motion, contact, layout,
       (rand() - 0.5) * 1.2, (rand() - 0.25) * 1.8, (rand() - 0.5) * 1.2,
       P.scale * (0.4 + rand() * 0.6) * (0.8 + (recipe.tempo || 1) * 0.2),
       particleColor.r, particleColor.g, particleColor.b, 0.78);
   }
   flush(systems[0]); flush(systems[1]);
+  let released = false;
   const release = () => {
-    for (const slot of slotsForCast) if (engine.slots[slot] === handle) engine.slots[slot] = null;
+    if (released) return;
+    released = true;
+    for (const slot of slotsForCast) if (engine.slots[slot] === handle) {
+      engine.slots[slot] = null;
+      const sys = systems[slot % PARTICLE_SYSTEM_COUNT];
+      const index = Math.floor(slot / PARTICLE_SYSTEM_COUNT);
+      sys.color.array[index * 4 + 3] = 0;
+      touch(sys, index);
+    }
+    flush(systems[0]); flush(systems[1]);
     root.handle = null; root.age = 0; root.obj.visible = false;
   };
   handle.release = release; root.handle = handle; root.age = start;
   effects.push({ obj: root.obj, ttl, fade: () => {
+    if (released) return;
     const n = nowS(); systems[0].mesh.material.uniforms.uNow.value = n; systems[1].mesh.material.uniforms.uNow.value = n;
   }, dispose: release });
 }

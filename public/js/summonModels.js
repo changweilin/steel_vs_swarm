@@ -184,7 +184,7 @@ export function buildAssaultRover(side) {
       rim.rotation.z = Math.PI / 2;
       sph(wGroup, 0.12, 0, 0, 0, cFlame);
 
-      wheels.push(wGroup);
+      wheels.push({ m: wGroup, r: tire.geometry.parameters.radiusTop });
     }
   }
 
@@ -402,7 +402,7 @@ export function buildMainBattleTank(side) {
       const rw = cyl(hull, 0.36, 0.36, 0.24, 10, sx * 1.12, 0.36, z, cDark, { metalness: 0.8 });
       rw.rotation.z = Math.PI / 2;
       sph(hull, 0.12, sx * 1.25, 0.36, z, cGold);
-      wheels.push(rw);
+      wheels.push({ m: rw, r: rw.geometry.parameters.radiusTop });
     }
   }
 
@@ -589,7 +589,10 @@ export function buildVeteranSquad(side) {
     legR,
     armL,
     armR,
-    gunR,
+    gunArm: true,
+    gunR: { g: gunR, rest: 0, aim: 0.45 },
+    aimPose: { rShoulderX: -0.45 },
+    weap: { light: 'R', heavy: 'R' },
     hipsY0: 0.95,
     muzzles: { light: { n: muzzle, r: 0.12 } },
   };

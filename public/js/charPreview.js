@@ -14,7 +14,8 @@ import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility, cas
 import { makeUnit, heroTargetH } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { updateCelLight, disposeTree } from './toon.js';
-import { starburst, shockRing, impactBurst, beamLine, projectileMesh, stepProjectileFx } from './vfx.js';
+import { unitShotStyle, unitShotFx, starburst, shockRing, impactBurst, explosionBurst, beamLine, gundamBeam, ionBreath, projectileMesh, stepProjectileFx } from './vfx.js';
+import { SUMMON_BUILDERS } from './summonModels.js';
 import { spawnCastFx } from './castfx.js';
 
 const SUN = new THREE.Vector3(0.4, 0.8, 0.4);
@@ -160,9 +161,12 @@ export class CharPreview {
     this._clearUnit();
     this.charId = null;
     this.isUnit = true;
+    this.unitKind = kind;
+    this._unitMuzzleIndex = -1;
     if (!UNITS[kind]) return;
     const mapKind = kind === 'tower' ? 'tower' : kind === 'base' ? `base:${side}`
-      : kind === 'bunker' ? 'bunker' : kind === 'civilian' ? 'civ' : `creep:${kind}`;   // 平民 = civ builder(ch=職業)
+      : kind === 'bunker' ? 'bunker' : kind === 'civilian' ? 'civ'
+      : SUMMON_BUILDERS[`summon:${kind}`] ? `summon:${kind}` : `creep:${kind}`;
     const { group, mixer } = makeUnit(mapKind, side, { ch: kind === 'civilian' ? prof : null });
     this.unit = group;
     this.unit.userData.side = side;
@@ -290,7 +294,7 @@ export class CharPreview {
   }
 
   // ---- 招式演出 ----
-  /** @param {'light'|'heavy'|'skill'|'ult'} slot */
+  /** @param {'light'|'heavy'|'def'|'atk'} slot */
   play(slot) {
     if (!this.charId) return;
     const id = this.charId;
@@ -327,7 +331,7 @@ export class CharPreview {
         this._ent.castFx = { t0: this._now(), slot, dir };
       }
       // 大招法陣/劍氣最大到 ~2.2R + 浮空,取景放大以完整入鏡
-      this.wantR = slot === 'ult' ? R * 2.2 : R * 1.5;
+      this.wantR = slot === 'atk' ? R * 2.2 : R * 1.5;
     }
     this._auto = true;
     this.idle = 0;
@@ -345,6 +349,14 @@ export class CharPreview {
   /** 槍口世界座標(slot 'light'|'heavy'):優先讀 rig.muzzles 錨(models.js 各 builder
    *  登記的實際槍口)—— 光束/焰舌從手上/背上的槍管射出;查無錨退回概略點(機體正前腰高) */
   _muzzle(slot = 'light') {
+    if (this.isUnit) {
+      const anchors = this.unit?.userData?.turretMuzzles;
+      if (anchors?.length) {
+        this._unitMuzzleIndex = (this._unitMuzzleIndex + 1) % anchors.length;
+        return anchors[this._unitMuzzleIndex].getWorldPosition(new THREE.Vector3());
+      }
+      if (this.unit?.userData?.muzzle) return this.unit.userData.muzzle.getWorldPosition(new THREE.Vector3());
+    }
     const mz = this.unit?.userData?.rig?.muzzles?.[slot];
     // 飛行型態錨照用(與戰場 _entMuzzle 同語意,2026-07-22 對齊):手持機種雙臂前伸、
     // 肩扛機種轉背部,槍口在飛行中一樣朝航向;fxOnly 後向錨才退概略點
@@ -401,8 +413,7 @@ export class CharPreview {
         A.spark = A.t + 0.12;
       }
       if (chg >= 1) {
-        const end = m.clone().addScaledVector(fwd, R * 7);
-        beamLine(this.scene, this.effects, m, end, 0xaef4ff, { ttl: 0.5, w: R * 0.035 });
+        gundamBeam(this.scene, this.effects, m, aim, 0xaef4ff, { ttl: 0.5, r: R * 0.035 });
         starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.35, 0xffffff);
         this.holder.position.z -= R * 0.2;                            // 極速彈的重後座
         this.holder.rotation.x -= 0.14;
@@ -414,8 +425,7 @@ export class CharPreview {
       // 0.25s 起持續 1 秒的穩定輸出:短壽命光束連續刷新 = 駐留光束
       if (A.t >= 0.25 && A.t <= 1.35 && A.t >= (A.tick || 0)) {
         if (!A.tick) { this._fireCue(true); this._followShell(m, aim, 1.1); }   // 首拍 = 擊發
-        const end = m.clone().addScaledVector(fwd, R * 5);
-        beamLine(this.scene, this.effects, m, end, hue, { ttl: 0.18, w: R * 0.02 });
+        gundamBeam(this.scene, this.effects, m, aim, hue, { ttl: 0.18, r: R * 0.04, rings: 2 });
         starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.12, hue);
         this.holder.position.z -= R * 0.004;                          // 持續微反壓
         A.tick = A.t + 0.11;
@@ -428,13 +438,7 @@ export class CharPreview {
       if (A.fired === 0 && A.t < 0.45) {
         this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.45 * Math.PI);   // 蓄壓下蹲
       } else if (A.fired === 0) {
-        const arc = (w.arc || 15) * Math.PI / 180;                    // 扇形大面積焰舌
-        for (let k = -2; k <= 2; k++) {
-          const dk = fwd.clone().applyAxisAngle(up, arc * k / 2);
-          const end = m.clone().addScaledVector(dk, R * 3.5);
-          beamLine(this.scene, this.effects, m, end, 0x7fe8ff, { ttl: 0.35, w: R * 0.05 });
-          starburst(this.scene, this.effects, end.x, end.y, end.z, R * 0.2, 0x7fe8ff);
-        }
+        ionBreath(this.scene, this.effects, m, aim, 0x7fe8ff, { ttl: 0.35, r: R * 0.12 });
         shockRing(this.scene, this.effects, aim.x, 0, aim.z, R * 2.0, 0x7fe8ff);
         this.holder.position.z -= R * 0.1;
         this._fireCue(true);
@@ -449,7 +453,7 @@ export class CharPreview {
         const v = boomPos.clone().sub(m);
         const side = fwd.clone().cross(up).normalize();
         // 彈藥同源(2026-07-22):與戰場 FPV/第三人稱同一顆 projectileMesh(+z 朝前),依包圍球定尺
-        const proj = projectileMesh(w, { col: hue, hue });
+        const proj = projectileMesh(w, { col: hue, hue, heavy: true });
         proj.scale.setScalar(R * 0.09);
         proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd);
         proj.position.copy(m);
@@ -489,8 +493,7 @@ export class CharPreview {
         A.fired = 1;
       } else if (A.fired === 1 && A.t >= A.boomAt) {
         const p = A.boomPos;
-        impactBurst(this.scene, this.effects, p,
-          { r: Math.max(R * 0.9, w.r || 0), color: 0xffaa33, core: 0xfff1bd, heavy: true });
+        explosionBurst(this.scene, this.effects, p.x, p.y, p.z, Math.min(R * 2, Math.max(R * 0.9, w.r || 0)), 0xffaa33);
         A.fired = 2;
       }
     } else if (A.fired === 0 && A.t >= 0.55) {
@@ -514,7 +517,18 @@ export class CharPreview {
     A.t += dt;
     const R = this.fitR;   // 演出尺度綁包圍球:機甲與無人機體型差 3 倍,同一組常數才讀得出來
 
-    if (A.slot === 'light' || A.slot === 'heavy') {
+    if (A.unitShot) {
+      while (A.fired < A.shots && A.t >= A.next) {
+        const m = this._muzzle();
+        unitShotFx(this.scene, this.effects, m, A.aimAt, {
+          kind: this.unitKind, wid: UNITS[this.unitKind]?.wid, preview: true,
+          color: this.unit.userData.side === 'SWARM' ? 0xffb300 : 0x4fc3f7,
+        });
+        this._fireCue(A.slot === 'heavy');
+        this.holder.position.z -= R * (A.slot === 'heavy' ? 0.04 : 0.015);
+        A.fired++; A.next += A.gap;
+      }
+    } else if (A.slot === 'light' || A.slot === 'heavy') {
       if (A.slot === 'light') {
         while (A.fired < A.shots && A.t >= A.next) {
           const m = this._muzzle();
@@ -533,7 +547,7 @@ export class CharPreview {
         this._stepHeavy(A, R);                          // 重武器:依機制型別分家演出
       }
     } else {
-      const isUlt = A.slot === 'ult';
+      const isUlt = A.slot === 'atk';
       // 角色專屬演出(castfx.js;與戰場 cast 事件同一套):蓄勢半拍後施放
       if (A.fired === 0 && A.t >= (isUlt ? 0.45 : 0.25)) {
         spawnCastFx(this.scene, this.effects, {
@@ -615,16 +629,15 @@ export class CharPreview {
     if (!this.unit) return;
     const R = this.fitR;
     const aimPos = this._showTarget(this._aimDist(w));
-    if (w.type === 'gun') {
+    const style = unitShotStyle(this.unitKind, UNITS[this.unitKind]?.wid);
+    if (style.mode === 'gun') {
       const rate = w.rate || 4;
       const gap = Math.max(0.08, 1 / rate);
       const shots = Math.min(6, w.mag || 6);
-      this.anim = { slot: 'light', t: 0, next: 0, fired: 0, shots, gap, w, dur: shots * gap + 0.6, aimAt: aimPos };
+      this.anim = { unitShot: true, slot: 'light', t: 0, next: 0, fired: 0, shots, gap, w, dur: shots * gap + 0.6, aimAt: aimPos };
       this.wantR = R;
     } else {
-      const durH = { missile: 2.2, launcher: 2.2, rail: 2.2 }[w.type] ?? 1.6;
-      this.anim = { slot: 'heavy', t: 0, fired: 0, w, dur: durH, aimAt: aimPos, wide: 2.4 };
-      if (this._ent) this._ent.heavyFx = { phase: 'charge', t0: this._now() };
+      this.anim = { unitShot: true, slot: 'heavy', t: 0, next: 0.18, shots: 1, gap: 1, fired: 0, w, dur: 1.4, aimAt: aimPos };
       this.wantR = R;
     }
     this._auto = true;

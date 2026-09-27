@@ -1487,12 +1487,12 @@ const ease01 = (p) => p * p * (3 - 2 * p);
 function stepCastPose(L, rig, ent, dt, now) {
   const cf = ent.castFx;
   if (!cf) return;
-  const dur = cf.slot === 'ult' ? 1.35 : 0.95;
+  const dur = cf.slot === 'atk' ? 1.35 : 0.95;
   const p = (now - cf.t0) / dur;
   if (p >= 1 || p < 0) { ent.castFx = null; return; }
   const sig = rig.castSig || CAST_DEF[rig.kind] || CAST_DEF.biped;
   const arch = cf.dir ? (sig.dir || 'jab') : (sig.omni || 'stomp');
-  const K = cf.slot === 'ult' ? 1 : 0.7;                          // 大招全幅、小招收斂
+  const K = cf.slot === 'atk' ? 1 : 0.7;
   const env = Math.sin(Math.min(1, p * 1.15) * Math.PI) * K;      // 全向:緩起緩收
   const d0 = castDrive(p);
   const lift = Math.max(0, -d0) * K;                              // 定向前段:蓄勢
