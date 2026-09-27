@@ -3540,6 +3540,12 @@ export class BattleSim {
       this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1, ox: org.x, oz: org.z, castDur: A.castTime || ATK_CAST_S });
       return;
     }
+    // 分身化影招式(如齊天大聖):身外化影直接由本尊分化,不走遠程工事輔助載具
+    if (A.add?.fx === 'clone') {
+      this._castEffect(h, A, h.x, h.z, 1, null, true);
+      this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 0, castDur: A.castTime || ATK_CAST_S });
+      return;
+    }
     // 自身強化型攻招:派出 supportN 架跟隨玩家的輔助機
     this._launchAtkSupport(h, A, org, slot);
     this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 1, sup: supportN(h.ch, slot), ox: org.x, oz: org.z, castDur: A.castTime || ATK_CAST_S });
@@ -7309,8 +7315,9 @@ export class BattleSim {
       // NPC BOSS:目前段位(0 起算)。**存在這一格 = 這是 BOSS** —— 客戶端據此把血條外圍
       // 光暈換成該段的顏色(黑>青>銀>金)。段位是小隊層級的,同隊每架都帶同一個值。
       if (e.sq?.boss) o.bs = e.sq.bossSeg | 0;
-      // 主視野機(小隊只有一架):共用的玩家狀態只跟著它發一份
-      o.act = !e.sq || e.sq.bodies[e.sq.act] === e ? 1 : 0;
+      // 主視野機(小隊只有一架;分身非本尊):共用的玩家狀態只跟著它發一份
+      o.act = !e.isClone && (!e.sq || e.sq.bodies[e.sq.act] === e) ? 1 : 0;
+      if (e.isClone) o.clone = 1;
       if (o.act) {
         // 升級/招式階級 MUST 傳「值快照」不可傳權威物件本身:單機模式(LocalNet)不經 JSON
         // 序列化 —— 快照直接以參考傳到客戶端。客戶端 `this.upg = e.up` 後樂觀購買會 mutate

@@ -3860,7 +3860,7 @@ export class BattleClient {
       isBoss, bossSeg: e.bs ?? (isBoss ? 0 : null),
       flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami' || e.k === 'hyper' || e.k === 'drone_wingman' || e.k === 'heli_squad' || e.k === 'carnival_heli',
       decoy: e.k === 'decoy', kami: e.k === 'kami', hyper: e.k === 'hyper', si: e.si || 0,
-      isStatic,
+      isStatic, isClone: !!e.clone,
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch, e.sv || 0) : null,
     };
