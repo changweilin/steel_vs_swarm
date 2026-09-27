@@ -27,6 +27,10 @@
     "audit:osm-catalog": "node tools/audit_osm_catalog.mjs",
     "audit:osm-fixtures": "node tools/audit_osm_fixtures.mjs",
     "shot:background": "node tools/shot_background_objects.mjs",
+    "audit:scene-damage": "node tools/audit_scene_damage.mjs",
+    "audit:building-damage": "node tools/audit_building_damage.mjs",
+    "audit:unit-damage": "node tools/audit_unit_damage.mjs",
+    "shot:building-damage": "node tools/shot_building_damage.mjs",
     "story": "node tools/story_book.mjs",
     "preview:gen": "node tools/arch_preview.mjs"
   },

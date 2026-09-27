@@ -9,6 +9,8 @@
 | Move penalty while firing | `audit_recoil_move` | Firing slows movement without canceling recoil. |
 | Blast families and area budgets | `audit_aoe_trim` | Area trades against single-target power through one family seam. |
 | Building damage convergence | `audit_shield_counter` | Anti-building output converges through the single derivation loop. |
+| Building HP, rubble and damage presentation | `audit_building_damage`, `shot_building_damage` | Server-owned HP and shared wall/roof geometry survive collapse and late joins; damaged batches isolate neighbours. |
+| Mobile unit and skill-object damage presentation | `audit_unit_damage` | Damage follows articulated parts without editing shared vertices; healing restores materials; missile HP comes from snapshots. |
 | Shield split and shield-axis setup | `audit_shield_counter` | Shield and armor handling stays single-track. |
 | Codex hexagon chart | `audit_hex_stats` | Chart bands derive from weapon output. |
 | Upgrade steps and battle score | `audit_shop_auto` | Step prices and score gates advance together. |

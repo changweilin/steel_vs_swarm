@@ -27,6 +27,8 @@ import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, treeHabitat
 // 立體掩體三本柱(2026-07-10):建物 26~170m,神木 / 巨岩隨等比放大可達 ~220m,
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
+import { registerMapBuildings, detachMapBuilding } from './mapBuildingRender.js';
+import { buildingNear } from './mapBuilding.js';
 import {
   ENV, solveTowerSites, siteCPs, mapArg, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
   WORLD_EDGE, edgeWallInsetM, edgeWallHM, edgeWallDeepM, xzToLL, SLOPE, slopeDeg,
@@ -12216,7 +12218,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       // 都吃它),改由 `ty` 餵給 climb.js 的設施幾何。量測 = 自盒心垂直下射(rockProbe 同一支射線工具,
       // 此時 g 已定位/縮放/旋轉 ⇒ 世界座標);射空(盒心正上方是中庭)回 null ⇒ 設施退回碰撞柱頂。
       const lmTop = rockProbe(g).topAt(bx, bz);
+      g.userData.buildingKey = `landmark/${lm.type}/${lm.x}/${lm.z}`;
       blockers.push({
+        buildingKey: g.userData.buildingKey,
         x: bx, z: bz,
         y: gy - 1, h: col.h * sc + 1,   // 高度沿用 LANDMARK_COL(細長尖頂不該整段擋彈),只改橫斷面
         bld: 1, cl: 'bld', hw2, hd2, ry: g.rotation.y,
@@ -12501,6 +12505,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   await onProgress?.(1, '地貌完成');
   group.userData.blockers = blockers;   // 建物碰撞柱(main.js → terrain.blockers → game.js _collide)
+  group.userData.mapBuildings = registerMapBuildings(group, blockers, osmRoofPlatforms, osmBuildingMeshes, landmarkG);
   group.userData.roofPlatforms = osmRoofPlatforms;
   group.userData.edgeMotionN = edgeMotionN;
   // 立體交通走廊(隧道全段 + 橋樑走廊):main.js 上傳伺服器 → sim 清除走廊內第三方障礙/地雷
@@ -12569,6 +12574,13 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 視覺與碰撞用同一個「圓重疊」判定(距離 − 半徑 < r)⇒ A6 砲火/碰撞一致:不會出現看得見卻穿得過、
   // 或看不見卻擋彈的物件。回傳是否有動到碰撞柱(供 game.js 決定是否重建 _blockGrid)。
   group.userData.clearAround = (wx, wz, r) => {
+    const clearedKeys = new Set();
+    for (const record of group.userData.mapBuildings.values()) {
+      if (record.cleared || !buildingNear(record.bounds,wx,wz,r)) continue;
+      detachMapBuilding(record).visible = false;
+      record.cleared = true; clearedKeys.add(record.key);
+      for (const p of record.platforms) p.active = false;
+    }
     const P = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), M = new THREE.Matrix4();
     for (const o of bldMeshes) {
       if (!o.isInstancedMesh) continue;
@@ -12582,15 +12594,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (hit) o.instanceMatrix.needsUpdate = true;
     }
     for (const lm of landmarkG) {
-      if (!lm.cleared && Math.hypot(lm.x - wx, lm.z - wz) - lm.r < r) { lm.g.visible = false; lm.cleared = true; }
+      if (!lm.g.userData.buildingKey && !lm.cleared && Math.hypot(lm.x - wx, lm.z - wz) - lm.r < r) { lm.g.visible = false; lm.cleared = true; }
     }
     // 同步清建物/地標碰撞柱(bld=1):in-place splice 讓 terrain.blockers(同一陣列參照)一併生效
     let removed = false;
     const blk = group.userData.blockers;
     for (let i = blk.length - 1; i >= 0; i--) {
       const b = blk[i];
-      // OSM 建物按型別合批，無法只隱藏單棟；保留其同源 wall blocker，避免留下可穿越的可見牆。
-      if (b.bld && !b.osm && Math.hypot(b.x - wx, b.z - wz) - (b.r || 0) < r) { blk.splice(i, 1); removed = true; }
+      // Batched buildings clear all owned walls together with their detached mesh.
+      if (clearedKeys.has(b.buildingKey) || (b.bld && !b.buildingKey && !b.osm && Math.hypot(b.x - wx, b.z - wz) - (b.r || 0) < r)) { blk.splice(i, 1); removed = true; }
     }
     // 攀爬路線同步清掉:樓沒了梯子不能留在空中(路線持有 blocker 參照 ⇒ 直接比對即可)。
     // 幾何是 InstancedMesh 不逐條拆(碉堡淨空區內的殘留梯子由建物一併消失時的視覺落差承擔),

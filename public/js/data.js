@@ -656,6 +656,7 @@ export function tacticalScore(sinuosity, turnsPerKm, maxOverlap) {
 // ---- 目標類型(武器克制查表:單位種類 → 類別)----
 // howitzer 2026-07-17 改制:榴彈兵是「手持榴彈槍的步兵」(flesh),不再是牽引砲車(armor)。
 export const TARGET_CLASS = {
+  mapbuilding: 'building',
   soldier: 'flesh', apc: 'armor', tank: 'armor', rocketeer: 'flesh', howitzer: 'flesh', heli: 'air',
   robot: 'armor', drone: 'air', morph: 'armor', decoy: 'air', tower: 'building', base: 'building',
   kami: 'air', hyper: 'air',   // 機種絕招的可擊落載具(飽和攻擊護衛機 / 極音速飛彈)—— 對空武器該吃得到加成
@@ -3091,6 +3092,7 @@ export const TARGET_H = {
  */
 export function hitH(e) {
   if (!e) return SOLDIER_H;
+  if (e.kind === 'mapbuilding') return e.mapBounds?.h || 1;
   if (e.hero) {
     const scale = (e.sq?.boss && e.sq.bossSeg != null ? bossScaleF(e.sq.bossSeg) : (e.bossSeg != null ? bossScaleF(e.bossSeg) : 1));
     return heroTargetH(e.kind, e.ch) * scale * superScaleF(e.sv ?? e.upg?.super);
@@ -3123,6 +3125,7 @@ export const TARGET_R = {
  */
 export function hitR(e) {
   if (!e) return SOLDIER_H * 0.5;
+  if (e.kind === 'mapbuilding') return Math.hypot(e.mapBounds?.w || 0, e.mapBounds?.d || 0) / 2;
   if (e.hero) {
     const scale = (e.sq?.boss && e.sq.bossSeg != null ? bossScaleF(e.sq.bossSeg) : (e.bossSeg != null ? bossScaleF(e.bossSeg) : 1));
     return heroTargetH(e.kind, e.ch) * (HERO_HIT_R[e.kind] ?? 0.43) * scale * superScaleF(e.sv ?? e.upg?.super);

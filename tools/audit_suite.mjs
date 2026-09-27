@@ -42,6 +42,7 @@ const AUDIT_SCRIPTS = [
   'tools/audit_object_joints.mjs',
   'tools/audit_npc_collide.mjs',
   'tools/audit_lance_hit.mjs',
+  'tools/audit_building_damage.mjs',
   'tools/audit_weapon_gate.mjs',
   'tools/audit_aoe_trim.mjs',
   'tools/audit_fire_rate.mjs',

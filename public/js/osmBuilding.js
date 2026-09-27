@@ -6,6 +6,7 @@ import { architecturePartGeometry, facetCylinderGeometry } from './architectureP
 // Wall segments share the same edge records with blockers; roof ShapeGeometry preserves inner holes.
 // Distinct semantics are batched separately so draw calls scale with archetype count, not building count.
 import * as THREE from 'three';
+import { buildingRanges } from './mapBuildingRender.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { envMat, sceneObjectMat } from './toon.js';
 import { sampleBuildingSite } from './buildingDiversity.js';
@@ -301,7 +302,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
     const height = heightOf(area, kind);
     let areaGenerated = 0;
     let effectiveKind = kind;
-    for (const raw of area.worldPolygons || []) {
+    for (const [polygonIndex, raw] of (area.worldPolygons || []).entries()) {
       const poly = polyOf(raw);
       if (!poly) { invalid.push({ sourceId: area.sourceId, reason: 'invalid_footprint' }); continue; }
       if (rings.some((rg) => polyHitsDisc(poly, rg.x, rg.z, rg.r))) {
@@ -358,6 +359,8 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
       if (!batch) { batch = { kind: effectiveKind, walls: [], roofs: [], details: [], count: 0 }; batches.set(effectiveKind, batch); }
       const wallStart = batch.walls.length, roofStart = batch.roofs.length, detailStart = batch.details.length;
       const blockerStart = blockers.length;
+      const platformStart = platforms.length;
+      const buildingKey = `${area.sourceId}/${polygonIndex}`;
       batch.roofs.push(roofGeometry(poly, topY));
       const detail = !architecture ? attachmentGeometry(effectiveKind, poly, topY) : null;
       if (detail) batch.details.push(detail);
@@ -512,6 +515,9 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         outer: poly.outer, holes: poly.holes, y: topY,
         bounds: { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) },
       });
+      for (const geometry of [...batch.walls.slice(wallStart), ...batch.roofs.slice(roofStart), ...batch.details.slice(detailStart)]) geometry.userData.buildingKey = buildingKey;
+      for (const b of blockers.slice(blockerStart)) b.buildingKey = buildingKey;
+      for (const p of platforms.slice(platformStart)) p.buildingKey = buildingKey;
       batch.count++; areaGenerated++;
     }
     if (areaGenerated) generatedByKind[effectiveKind] = (generatedByKind[effectiveKind] || 0) + areaGenerated;
@@ -520,26 +526,32 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
   for (const batch of batches.values()) {
     const mats = materialOf(batch.kind, batch, BUILDING_STYLE_ROWS[batch.kind]) || defaultMaterials(batch.kind);
     if (batch.walls.length) {
+      const ranges = buildingRanges(batch.walls);
       const geometry = batch.walls.length === 1 ? batch.walls[0] : mergeGeometries(batch.walls, false);
       if (batch.walls.length > 1) for (const geo of batch.walls) geo.dispose();
       const mesh = new THREE.Mesh(geometry, mats.wall);
       mesh.userData.osmBuildingBatch = batch.kind;
+      mesh.userData.buildingRanges = ranges;
       mesh.frustumCulled = false;
       group.add(mesh); meshes.push(mesh);
     }
     if (batch.roofs.length) {
+      const ranges = buildingRanges(batch.roofs);
       const geometry = batch.roofs.length === 1 ? batch.roofs[0] : mergeGeometries(batch.roofs, false);
       if (batch.roofs.length > 1) for (const geo of batch.roofs) geo.dispose();
       const mesh = new THREE.Mesh(geometry, mats.roof);
       mesh.userData.osmBuildingRoofBatch = batch.kind;
+      mesh.userData.buildingRanges = ranges;
       mesh.frustumCulled = false;
       group.add(mesh); meshes.push(mesh);
     }
     if (batch.details.length) {
+      const ranges = buildingRanges(batch.details);
       const geometry = batch.details.length === 1 ? batch.details[0] : mergeGeometries(batch.details, false);
       if (batch.details.length > 1) for (const geo of batch.details) geo.dispose();
       const mesh = new THREE.Mesh(geometry, mats.detail || mats.roof);
       mesh.userData.osmBuildingDetailBatch = batch.kind;
+      mesh.userData.buildingRanges = ranges;
       mesh.frustumCulled = false;
       group.add(mesh); meshes.push(mesh);
     }

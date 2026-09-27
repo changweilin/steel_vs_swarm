@@ -2293,6 +2293,21 @@ ${CEL_SEA_GLSL}
  * 事後掛塗裝(paint.js paintUnit):材質在建模時就已 applyCelPatch 過,
  * 這裡沿用它當初的 cel 選項(metal/rim…)重新注入,只多一層花紋。
  */
+export function cloneVisualMaterial(source) {
+  const mat = source.clone();
+  if (source.userData.celOpts) {
+    delete mat.userData.celDisU;
+    delete mat.userData.celDisO;
+    applyCelPatch(mat, source.userData.celOpts);
+    if (source.userData.celDisU) mat.userData.celDisU.value = source.userData.celDisU.value;
+    if (source.userData.celDisO) mat.userData.celDisO.value.copy(source.userData.celDisO.value);
+  } else {
+    mat.onBeforeCompile = source.onBeforeCompile;
+    mat.customProgramCacheKey = source.customProgramCacheKey;
+  }
+  return mat;
+}
+
 export function applyPaint(mat, paint) {
   applyCelPatch(mat, { ...(mat.userData.celOpts || {}), paint });
   mat.needsUpdate = true;

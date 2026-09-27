@@ -2540,6 +2540,7 @@ function startPrebuild(cfg) {
     terrain.group.add(biomes);
     terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
     terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
+    terrain.mapBuildings = biomes.userData.mapBuildings || new Map();
     // 給 dev-only 固定鏡位與 headless 量測讀取已定案結構；資料仍是 buildBiomes 的原始列，
     // 不另建幾何或索引，正式碰撞/渲染消費端維持下面既有的 userData→index 接線。
     // 沒有 fixture query 時不掛額外的公開欄位，避免驗收 hook 的資料面滲入正式頁。
@@ -2874,7 +2875,7 @@ async function enterLoading(cfg) {
       // MAX_OCC 必須涵蓋完整靜態碰撞名冊：截掉尾端會讓客戶端真人撞得到、伺服器 bot 穿得過。
       const occ = (ud.blockers || []).slice(0, LOS.MAX_OCC).map((b) => (b.hw2 != null
         ? [rd(b.x), rd(-b.z), rd(Math.min(60, Math.hypot(b.hw2, b.hd2))), rd(Math.min(300, b.h)),
-           rd(b.hw2), rd(b.hd2), Math.round(-b.ry * 1e3) / 1e3]
+           rd(b.hw2), rd(b.hd2), Math.round(-b.ry * 1e3) / 1e3, b.buildingKey || null, rd(b.y)]
         : [rd(b.x), rd(-b.z), rd(Math.min(60, b.r)), rd(Math.min(300, b.h))]));
       const cor = (ud.gradeCorridors || []).slice(0, LOS.MAX_CORR)
         .map((c) => [rd(c.x1), rd(-c.z1), rd(c.x2), rd(-c.z2), rd(c.hw), c.kind === 'tun' ? 1 : 0]);
@@ -2896,7 +2897,10 @@ async function enterLoading(cfg) {
       // 供伺服器中立單位(平民/第三方)佈點與移動迴避 —— 不涉任何權威傷害(領機水沼效果走客戶端 pos.wet 回報)。
       // hgt = 粗高程網格(2026-08-01):伺服器的稜線遮蔽 —— 沒有它,扇形/直線攻擊會隔山打牛
       // (客戶端的射程光暈吃 `hit:'clear'` 逐段淨空,早就說打不到)。
-      app.net?.send({ t: 'world', occ, cor, wet: bakeWetGrid(app.terrain), slabs, hgt: bakeHeightGrid(app.terrain) });
+      const roofs = [...(app.terrain.mapBuildings?.values() || [])].flatMap(r => r.platforms.map(p => ({
+        buildingKey:r.key, y:p.y, outer:p.outer.map(q=>[q[0],-q[1]]), holes:(p.holes || []).map(h=>h.map(q=>[q[0],-q[1]])),
+      })));
+      app.net?.send({ t: 'world', occ, cor, roofs, wet: bakeWetGrid(app.terrain), slabs, hgt: bakeHeightGrid(app.terrain) });
     }
     app.net?.send({ t: 'loaded' });
     if ((app.lobby?.phase === 'game' || app.lobby?.phase === 'over') && !app.battle) {
