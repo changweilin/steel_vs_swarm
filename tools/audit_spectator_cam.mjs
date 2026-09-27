@@ -159,7 +159,7 @@ const THREE_STUB = { Vector3: V3 };
 const HERO_VIEW = () => ({ e: 0.85, f: 0.1 });   // 視點比例:真品住 game.js 模組層,行為與本測無關
 const proto = new Function(
   'THREE', 'SPEC_CAM', 'specViewLocked', 'lerpFPS', 'camAngleStep', 'CHARACTERS', 'SIDES', 'heroTargetH', 'heroView',
-  `return ({ ${grabMethod(gameSrc, '_updateSpectator')} });`,
+  `return ({ ${grabMethod(gameSrc, '_updateSpectator')}, ${grabMethod(gameSrc, '_cameraPullSegment')} });`,
 )(THREE_STUB, SPEC_CAM, specViewLocked, lerpFPS, camAngleStep, CHARACTERS, SIDES, heroTargetH, HERO_VIEW);
 
 const CH = Object.keys(CHARACTERS)[0];

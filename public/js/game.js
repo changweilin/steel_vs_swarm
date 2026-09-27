@@ -10019,12 +10019,12 @@ export class BattleClient {
           a.y + h * SPEC_CAM.AIM_F - Math.sin(this.pitch) * dist,
           a.z + Math.cos(this.yaw) * dist * cp,
         );
+        // 鏡頭卡進建物內或被隔開時整個畫面全擋 ⇒ 沿注視點(視軸必經點)→鏡頭拉回(與交戰第三人稱同一縫)
+        this._cameraPullSegment(a.x, a.y + h * SPEC_CAM.AIM_F, a.z);
         // 鑽進地形/橋面底下只會看到黑畫面 ⇒ 抬回站立面上方(與上帝視角同一條地板規則)
         const floor = this._surf(this.camera.position.x, this.camera.position.z, this.camera.position.y)
           + SPEC_CAM.FLOOR_M;
         if (this.camera.position.y < floor) this.camera.position.y = floor;
-        // 鏡頭卡進建物內或被隔開時整個畫面全擋 ⇒ 沿注視點(視軸必經點)→鏡頭拉回(與交戰第三人稱同一縫)
-        this._cameraPullSegment(a.x, a.y + h * SPEC_CAM.AIM_F, a.z);
       }
     } else {
       // 上帝視角:自由飛行。升降是**移動**不是姿態 ⇒ 與飛行機體同一組鍵(Space 升 / C・Ctrl 降),
