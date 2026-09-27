@@ -79,11 +79,14 @@ const ARC_MAXP = 384;
 // RAY_PER_FRAME / TTL_S)整組退場,MUST NOT 復辟(那是「每個敵人各跑一次彈道積分」時代的節流)。
 const RANGE_GLOW = { SURF_TOL_M: 0.5 };
 // 第三人稱視線遮擋(純表現層):低頻檢查避免每幀對全場 Mesh 做 raycast;
-// 只淡化射線實際穿過的不透明件,離開視線後短暫保留避免鏡頭轉動時閃爍。
+// 只淡化射線實際穿過的不透明件;透明度快進慢出 + 離開視線後短暫保留,
+// 掠過邊緣時停在半透明而不二元閃爍。
 const TPS_OCCLUSION = {
   OPACITY_F: 0.24,
   UPDATE_S: 0.05,
-  RELEASE_S: 0.12,
+  RELEASE_S: 0.25,
+  FADE_IN_K: 10,    // 淡入(進透明)速率 1/s:中件即淡,畫面不被擋
+  FADE_OUT_K: 2.5,  // 淡出(恢復)速率 1/s:慢出 + 保留窗,掠邊不閃
 };
 // 集束炸彈的投擲軌跡(純表現層;使用者需求「炸彈投擲軌跡同榴彈」)。
 // GRAV_F:比自由落體略重的墜落感(投擲解與逐幀積分 MUST 吃同一個值,否則畫出來的落點會偏)。
@@ -2851,6 +2854,41 @@ export class BattleClient {
       if (maxT <= 0) break;
     }
     if (maxT < dlen) { cam.x = ox + ux * maxT; cam.z = oz + uz * maxT; }
+    // 真 3D 拉回詳見 _cameraPullSegment(第三人稱全擋修復):錨點取機體中段,
+    // 與 _updateViewOcclusion 的取樣高度同一條(約 0.55h)。
+    this._cameraPullSegment(ox, this.pos.y + (this.viewMode === 'tps' ? this.selfH * 0.55 : this._eyeH()), oz);
+  }
+
+  /**
+   * 真 3D 線段拉回(純視覺,不動 pos/vel/權威狀態):水平版只看 camY 會漏掉
+   * 「低處機體→高處鏡頭」斜穿盒側/頂角的情形,且丘陵/橋板不在 blockers 內,
+   * 鏡頭卡進物件內部或被隔開時就是整個畫面全擋。
+   * 沿「錨點→鏡頭」用 _blockerHitT(與彈道同一把尺)再夾一次,並沿線取樣
+   * _surf(地形∪橋面唯一縫;terrain.mesh 絕不進 raycaster)防丘陵擋視線。
+   * 只往錨點方向拉,錨點已被 _collide 擋在障礙外,絕不推出去。
+   */
+  _cameraPullSegment(ax, ay, az) {
+    const cam = this.camera.position;
+    const dx = cam.x - ax, dy = cam.y - ay, dz = cam.z - az;
+    const len = Math.hypot(dx, dy, dz);
+    if (len < 1e-3) return;
+    let f = 1;
+    if (this._blockerHitT) {
+      const hit = this._blockerHitT(ax, ay, az, cam.x, cam.y, cam.z);
+      if (hit != null) f = Math.min(f, Math.max(0, (hit - 1.2) / len));
+    }
+    if (typeof this._surf === 'function') {
+      const N = Math.max(2, Math.min(12, Math.ceil(len / 4)));
+      for (let i = 1; i <= N; i++) {
+        const t = i / N;
+        const px = ax + dx * t, py = ay + dy * t, pz = az + dz * t;
+        let s = null;
+        try { s = this._surf(px, pz, py); } catch (e) { s = null; }
+        if (s == null || !Number.isFinite(s)) continue;
+        if (py < s + 1.0) { f = Math.min(f, Math.max(0, (i - 1) / N - 0.02)); break; }
+      }
+    }
+    if (f < 1) { cam.x = ax + dx * f; cam.y = ay + dy * f; cam.z = az + dz * f; }
   }
 
   /** 註冊第三人稱視線可淡化的 Mesh;描邊旗標與碰撞旗標彼此獨立。 */
@@ -2886,32 +2924,29 @@ export class BattleClient {
     return false;
   }
 
-  /** 將命中的 Mesh 與其描邊殼一起換成獨立半透明材質,不污染共用材質。 */
+  /** 將命中的 Mesh 與其描邊殼一起換成獨立半透明材質,不污染共用材質。
+   *  每件獨立 clone(逐件透明度動畫互不干擾);k = 目前淡化係數(0 不透明 → 1 全淡),
+   *  由 _stepViewFade 每幀快進慢出推進,掠過射線邊緣時停在半透明不閃爍。 */
   _fadeViewMesh(mesh, now) {
     if (!mesh?.isMesh || this._viewOcclusionSkip.has(mesh)) return;
-    const cache = this._fadedMatCache || (this._fadedMatCache = new WeakMap());
     const fade = (o) => {
       if (!o.isMesh || this._viewFades.has(o)) return;
       const base = o.material;
       const mats = Array.isArray(base) ? base : [base];
-      const clones = [];
+      const items = [];
       const faded = mats.map((m) => {
         if (!m || m.transparent) return m;
-        let c = cache.get(m);
-        if (!c) {
-          c = m.clone();
-          c.transparent = true;
-          c.opacity = (m.opacity ?? 1) * TPS_OCCLUSION.OPACITY_F;
-          c.depthWrite = false;
-          c.needsUpdate = true;
-          cache.set(m, c);
-        }
-        clones.push(c);
+        const c = m.clone();
+        c.transparent = true;
+        c.opacity = m.opacity ?? 1;
+        c.depthWrite = false;
+        c.needsUpdate = true;
+        items.push({ c, o: m.opacity ?? 1 });
         return c;
       });
-      if (!clones.length) return;
+      if (!items.length) return;
       o.material = Array.isArray(base) ? faded : faded[0];
-      this._viewFades.set(o, { base, faded: o.material, clones, lastHit: now });
+      this._viewFades.set(o, { base, faded: o.material, items, lastHit: now, k: 0 });
     };
     fade(mesh);
     mesh.traverse?.((o) => { if (o.userData?.isOutline) fade(o); });
@@ -2921,12 +2956,32 @@ export class BattleClient {
     const state = this._viewFades.get(mesh);
     if (!state) return;
     if (mesh.material === state.faded) mesh.material = state.base;
+    for (const it of state.items || []) it.c.dispose?.();
     this._viewFades.delete(mesh);
+  }
+
+  /** 每幀推進淡化透明度(快進慢出):命中保留窗內 → 目標全淡,否則 → 目標不透明;
+   *  完全恢復才換回原材質。描邊殼各有獨立 state,與本體同受 refresh,不會先跳回。 */
+  _stepViewFade(now) {
+    if (!this._viewFades.size) { this._viewFadePrev = now; return; }
+    const p = this._viewFadePrev ?? now;
+    const dt = Math.min(0.1, Math.max(0, now - p));
+    this._viewFadePrev = now;
+    if (dt <= 0) return;
+    for (const [mesh, state] of [...this._viewFades]) {
+      const want = (now - state.lastHit <= TPS_OCCLUSION.RELEASE_S) ? 1 : 0;
+      const rate = want > state.k ? TPS_OCCLUSION.FADE_IN_K : TPS_OCCLUSION.FADE_OUT_K;
+      state.k += Math.max(-rate * dt, Math.min(rate * dt, want - state.k));
+      const f = 1 - (1 - TPS_OCCLUSION.OPACITY_F) * state.k;
+      for (const it of state.items) it.c.opacity = it.o * f;
+      if (want === 0 && state.k <= 0) this._restoreViewFade(mesh);
+    }
   }
 
   _clearViewOcclusion() {
     for (const mesh of [...this._viewFades.keys()]) this._restoreViewFade(mesh);
     this._viewOcclusionNext = 0;
+    this._viewFadePrev = 0;
   }
 
   /**
@@ -2938,6 +2993,7 @@ export class BattleClient {
       this._clearViewOcclusion();
       return;
     }
+    this._stepViewFade(now);   // 透明度每幀推進(射線檢測仍低頻);掠邊時停在半透明不閃
     if (now < this._viewOcclusionNext) return;
     this._viewOcclusionNext = now + TPS_OCCLUSION.UPDATE_S;
     const self = [...this.ents.values()].find((ent) => ent.isSelf && ent.mesh?.visible && !ent.dead);
@@ -3015,15 +3071,33 @@ export class BattleClient {
           if (!mesh.isMesh || this._isViewDescendant(mesh, self.mesh)) continue;
           blocked.add(mesh);
         }
+        // 反向再掃一次:眼在物件內部時,正向打到的是出口內壁(FrontSide 背面剔除 ⇒ 零命中),
+        // 反向(機體→眼)打到的是入口外壁(正面),才能把罩住鏡頭的那一件淡化。
+        delta.copy(eye).sub(target);
+        delta.normalize();
+        this._viewRaycaster.set(target, delta);
+        this._viewRaycaster.near = 0.05;
+        this._viewRaycaster.far = Math.max(0.05, dist - 0.05);
+        const hitsR = this._viewRaycaster.intersectObjects(cand, false);
+        for (const hit of hitsR) {
+          if (hit.distance >= dist - 0.05) break;
+          const mesh = hit.object;
+          if (!mesh.isMesh || this._isViewDescendant(mesh, self.mesh)) continue;
+          blocked.add(mesh);
+        }
       }
     }
     for (const mesh of blocked) {
       this._fadeViewMesh(mesh, now);
       const state = this._viewFades.get(mesh);
       if (state) state.lastHit = now;
-    }
-    for (const [mesh, state] of [...this._viewFades]) {
-      if (now - state.lastHit > TPS_OCCLUSION.RELEASE_S) this._restoreViewFade(mesh);
+      // 描邊殼各有獨立 state:一併 refresh,否則殼會比本體早跳回不透明(閃爍)
+      mesh.traverse?.((o) => {
+        if (o.userData?.isOutline) {
+          const s = this._viewFades.get(o);
+          if (s) s.lastHit = now;
+        }
+      });
     }
   }
 
@@ -9782,6 +9856,8 @@ export class BattleClient {
         const floor = this._surf(this.camera.position.x, this.camera.position.z, this.camera.position.y)
           + SPEC_CAM.FLOOR_M;
         if (this.camera.position.y < floor) this.camera.position.y = floor;
+        // 鏡頭卡進建物內或被隔開時整個畫面全擋 ⇒ 沿注視點(視軸必經點)→鏡頭拉回(與交戰第三人稱同一縫)
+        this._cameraPullSegment(a.x, a.y + h * SPEC_CAM.AIM_F, a.z);
       }
     } else {
       // 上帝視角:自由飛行。升降是**移動**不是姿態 ⇒ 與飛行機體同一組鍵(Space 升 / C・Ctrl 降),
