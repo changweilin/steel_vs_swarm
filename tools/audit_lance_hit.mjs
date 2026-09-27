@@ -15,7 +15,7 @@
 import { readSrc } from './audit_src.mjs';
 import { BattleSim } from '../server/sim.js';
 import {
-  UNITS, CHARACTERS, heroWeapon, aoeClass, lanceR, LANCE, MAPGEO, LOS, hitR, hitH, TARGET_R, dmgFalloff,
+  UNITS, CHARACTERS, heroWeapon, aoeClass, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, MAPGEO, LOS, hitR, hitH, TARGET_R, dmgFalloff,
   offAxisFalloff, AOE_EDGE,
 } from '../public/js/data.js';
 
@@ -168,7 +168,17 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
   const r1 = dmg[1] / dmg[0], r2 = dmg[2] / dmg[1];
   assert(Math.abs(r1 - exp1) < 0.02 && Math.abs(r2 - exp2) < 0.02,
     `貫穿衰減逐個 ×${LANCE.DECAY}(實測 ${r1.toFixed(3)}/${r2.toFixed(3)},期望 ${exp1.toFixed(3)}/${exp2.toFixed(3)})`);
-  assert(hits.length <= LANCE.MAX, `單發貫穿數不超過 LANCE.MAX(${LANCE.MAX})`);
+  // MAX 已移除(2026-09-27):個數只由穿透力管 —— 10 名縱列小兵(11.3m²)全數進名單,不再砍到 6 個
+  {
+    const sim10 = sandbox();
+    const h10 = sim10.addHero('SWARM', 'p_col', w.id);
+    h10.x = 0; h10.z = 0; h10.y = 0;
+    for (let i = 0; i < 10; i++) {
+      sim10._add({ kind: 'soldier', side: 'STEEL', x: 0, z: 40 + i * 10, y: 0, hp: 99999, m: 99999 });
+    }
+    const hits10 = sim10._lanceHits(h10, w.def, 0, 0, oy, 0, 1, 0, 400);
+    assert(hits10.length === 10, `無個數上限:10 名縱列小兵全數進名單(實得 ${hits10.length})`);
+  }
 }
 
 // ---------- ⑤b 偏心傷害遞減:正中滿額、貼邊 AOE_EDGE 保底(2026-07-29 使用者需求)----------
@@ -192,13 +202,18 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
   const off = rr * 0.8;
   const dEdge = shot(off);
   assert(dCenter > 0 && dEdge > 0, '正中與偏心(80% 半寬)兩發都命中(偏移仍在 R + hitR 內)');
-  // 期望比值 = 偏心遞減 × 兩發 d3 的距離衰減比(距離衰減與偏心遞減是兩條獨立的乘數)
+  // 期望比值 = 分區格數比 × 偏心遞減 × 兩發 d3 的距離衰減比
+  // (截面分區:正中只進內圈 1 格,偏心 80% 半寬橫跨外圈 nE 格 —— 同單位跨幾區吃幾次;
+  // 距離衰減與貫穿衰減是兩條獨立的乘數,逐區首個 j = 0 ⇒ DECAY 不進比值)
+  const R = lanceR(w.def);
+  const nC = lanceZones(0, 0, hitR(t), R).length;
+  const nE = lanceZones(-off, 0, hitR(t), R).length;
   const dy = sim._tgtY(t) - oy;
-  const exp = offAxisFalloff(off / rr)
+  const exp = (nE / nC) * offAxisFalloff(off / rr)
     * dmgFalloff(w.def, Math.hypot(off, 100, dy)) / dmgFalloff(w.def, Math.hypot(0, 100, dy));
   const ratio = dEdge / dCenter;
-  assert(Math.abs(ratio - exp) < 0.02,
-    `偏心傷害遞減生效於伺服器結算:偏離軸心 ${off.toFixed(1)}m 傷害 ×${ratio.toFixed(3)}(期望 ${exp.toFixed(3)})`);
+  assert(nC === 1 && Math.abs(ratio - exp) < 0.02,
+    `偏心傷害遞減生效於伺服器結算:偏離軸心 ${off.toFixed(1)}m 傷害 ×${ratio.toFixed(3)}(期望 ${exp.toFixed(3)},格數 ${nC} vs ${nE})`);
   assert(offAxisFalloff(0) === 1 && Math.abs(offAxisFalloff(1) - AOE_EDGE) < 1e-9,
     `曲線端點:正中 1.0 / 邊緣保底 ${AOE_EDGE}(bal/duel 全數模型化「瞄準正中」⇒ 不變式天然不動)`);
 }
@@ -329,6 +344,46 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
   const relY = LOS.EYE_M + 3.7;
   assert(sim._lanceBandY(h, h.x, h.z, LOS.EYE_M, tower, relY) === relY,
     '未上傳高程網格 ⇒ 逐位元退回舊近似(原則 6;e2e 的確定性斷言不變)');
+}
+
+// ---------- ⑩ 穿透力(2026-09-27 使用者需求):截面積耗預算,耗盡後更遠的不受傷 ----------
+{
+  assert(LANCE.PEN.beam > LANCE.PEN.rail && LANCE.PEN.rail > LANCE.PEN.gun,
+    `穿透預算階梯 beam > rail > gun(${LANCE.PEN.beam} / ${LANCE.PEN.rail} / ${LANCE.PEN.gun} m²)`);
+  assert(Math.abs(lancePenCost({ kind: 'soldier' }) - Math.PI * 0.36) < 1e-9
+    && Math.abs(lancePenCost({ kind: 'tower' }) - Math.PI * 49) < 1e-9,
+    '消耗 = π·hitR²(小兵 1.13 / 砲塔 153.9 m²)');
+  assert(lancePen({ type: 'beam' }) === LANCE.PEN.beam && lancePen({ type: 'nosuch' }) === LANCE.PEN.gun,
+    '預算按彈種解析,未知退回 gun');
+  // beam(135 → 內圈 45 / 外圈單格 15):塔(153.9)在哪一區都見底 ⇒ 塔本身 7 區全中、
+  // 小兵(內圈 1 格)正常列入、塔後同區的小兵截斷
+  const sim = sandbox();
+  const w = charWithHeavy('beam');
+  const h = sim.addHero('SWARM', 'p_pen', w.id);
+  h.x = 0; h.z = 0; h.y = 0;
+  const oy = LOS.EYE_M;
+  const s1 = sim._add({ kind: 'soldier', side: 'STEEL', x: 0, z: 60, y: 0, hp: 99999, m: 99999 });
+  const tower = sim._add({ kind: 'tower', side: 'STEEL', x: 0, z: 90, y: 0, hp: 99999, m: 99999 });
+  const s2 = sim._add({ kind: 'soldier', side: 'STEEL', x: 0, z: 120, y: 0, hp: 99999, m: 99999 });
+  const hits = sim._lanceHits(h, w.def, 0, 0, oy, 0, 1, 0, 400);
+  const towerHits = hits.filter((k) => k.t === tower);
+  const towerZones = towerHits.map((k) => k.zone).sort((a, b) => a - b);
+  assert(hits.length === 8 && JSON.stringify(towerZones) === '[0,1,2,3,4,5,6]'
+    && towerHits.find((k) => k.zone === 0).j === 1   // 內圈:s1 先、塔後(j = 區內名次)
+    && towerHits.filter((k) => k.zone !== 0).every((k) => k.j === 0)
+    && hits.filter((k) => k.t === s1).length === 1 && !hits.some((k) => k.t === s2),
+    `塔耗盡各區穿透力:塔本身 7 區全中、塔後目標不再進名單(實得 ${hits.length} 列)`);
+  // gun(60 → 內圈 20):塔擺第一個 ⇒ 塔仍 7 區全中(耗盡者仍結算)、之後全截斷(含 1.13 的小兵)
+  const sim2 = sandbox();
+  const wg = charWithHeavy('gun');
+  const hg = sim2.addHero('SWARM', 'p_pen2', wg.id);
+  hg.x = 0; hg.z = 0; hg.y = 0;
+  const tower2 = sim2._add({ kind: 'tower', side: 'STEEL', x: 0, z: 60, y: 0, hp: 99999, m: 99999 });
+  const s3 = sim2._add({ kind: 'soldier', side: 'STEEL', x: 0, z: 90, y: 0, hp: 99999, m: 99999 });
+  const hits2 = sim2._lanceHits(hg, wg.def, 0, 0, oy, 0, 1, 0, 400);
+  assert(hits2.length === 7 && hits2.every((k) => k.t === tower2),
+    '耗盡的那一個仍結算:首個即超預算也 7 區全中,之後全截斷');
+  assert(!hits2.some((k) => k.t === s3), '穿透耗盡後更遠的敵人不受傷');
 }
 
 log(failed ? '\n❌ 直線貫穿命中判定稽核未通過' : '\n✅ 直線貫穿命中判定稽核全數通過');

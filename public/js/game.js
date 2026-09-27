@@ -16,7 +16,7 @@ import {
   GLINT, glintDur, glintAlpha, glintDropR,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-  aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
+   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
@@ -2552,8 +2552,7 @@ export class BattleClient {
     const blades = plasma ? 7 : 9;
     const wF = 1, rF = 1;
     this._muzzleBurst(muzzle, plasma, this.side);   // 電漿重武器槍口爆(明顯度)
-    // 離子吐息主噴流(哥吉拉式;使用者指定參考):錐狀噴口 + 螺旋纏繞能量帶。
-    // 扇形的「越近越強」由伺服器 fanFalloff 結算 —— 噴口最粗、末端收束就是它的可視化。
+    // 離子吐息主噴流(哥吉拉式;使用者指定參考):錐狀噴口 + 螺旋纏繞能量帶(只表範圍錐形)。
     if (plasma) {
       const core = this._shotCols(this.side).hot;
       const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, rng * rF * 0.82));
@@ -6472,8 +6471,8 @@ export class BattleClient {
    *      的人、落點外緣的敵人照吃濺射 —— 這正是 ③ 這一代最想讓玩家看見的那一組單位。
    *    ・fan → `sim.heroPlasma`:水平夾角在錐內(d2 ≤ 8 的正上/正下視為錐內)+ 逐目標有效
    *      射程 + 射線淨空。
-   *    ・line → `sim._lanceHits` 的客戶端鏡射 `_lancePierced`(圓柱半徑 = lanceR + 目標水平量體,
-   *      含 `LANCE.MAX` 上限);射程再以逐目標誠實界夾回(伺服器 heroLance 同一條)。
+    *    ・line → `sim._lanceHits` 的客戶端鏡射 `_lancePierced`(圓柱半徑 = lanceR + 目標水平量體,
+    *      含穿透力截斷);射程再以逐目標誠實界夾回(伺服器 heroLance 同一條)。
    *    ・null(單體直擊輕武器)→ 只有準星那一個目標。
    */
   _shotVictims(def, rule) {
@@ -6527,6 +6526,10 @@ export class BattleClient {
     } else if (cls === 'fan') {
       const fwd = this.camera.getWorldDirection(this._rgDir || (this._rgDir = new THREE.Vector3()));
       const hl = Math.hypot(fwd.x, fwd.z) || 1;
+      // 小錐分格(與 sim.heroPlasma 同式):每格只列最近的一名,跨格大目標可列多次
+      const NSUB = fanSubs(def);
+      const ax = fwd.x / hl, az = fwd.z / hl;
+      const bins = new Array(NSUB).fill(null);
       for (const e of this.ents.values()) {
         if (!foe(e)) continue;
         const p = e.mesh.position;
@@ -6546,11 +6549,28 @@ export class BattleClient {
           const ang = Math.acos(Math.min(1, Math.max(-1, dot)));
           if (ang > fanConeHalf(def, d3, hr)) continue;
         }
-        if (this._inShotRange(e, def, from)) hits.push(e);
+        if (!this._inShotRange(e, def, from)) continue;
+        const phi = Math.atan2(tx * az - tz * ax, tx * ax + tz * az);
+        const aw = Math.atan2(hr, Math.max(1, d2));
+        const [b0, b1] = fanBinSpan(def, phi, aw);   // 分格走單一縫
+        for (let bi = b0; bi <= b1; bi++) {
+          if (!bins[bi] || d3 < bins[bi].d3) bins[bi] = { e, d3 };
+        }
+      }
+      // 光暈名冊去重:同一敵人只亮一次(跨格多次傷害是伺服器結算的事;相鄰格同一人恆連續)
+      let prev = null;
+      for (const win of bins) {
+        if (!win || win.e === prev) continue;
+        prev = win.e;
+        hits.push(win.e);
       }
     } else if (cls === 'line') {
-      for (const h of this._lancePierced(from, impact, lanceR(def))) {
-        if (foe(h.ent) && this._inShotRange(h.ent, def, from)) hits.push(h.ent);
+      // 光暈名冊去重:同一敵人只亮一次(跨區多次傷害是伺服器結算的事;同區同人恆連續)
+      let prevLine = null;
+      for (const h of this._lancePierced(from, impact, lanceR(def), def)) {
+        if (!foe(h.ent) || !this._inShotRange(h.ent, def, from) || h.ent === prevLine) continue;
+        prevLine = h.ent;
+        hits.push(h.ent);
       }
     } else if (ent) hits.push(ent);
     return hits.length ? { hits, warn } : null;
@@ -7707,18 +7727,24 @@ export class BattleClient {
       d: [q(d.x), q(-d.z), q(d.y)],
       len: Math.round(len * 10) / 10,
     });
-    return this._lancePierced(from, to, lanceR(def));
+    return this._lancePierced(from, to, lanceR(def), def);
   }
 
   /**
    * 射線圓柱內的敵方單位(純本地估算:傷害數字/命中標記;伺服器另有迷霧 + LOS 複驗)。
    * 幾何 MUST 與伺服器 sim._lanceHits 同構:半徑 = r + 目標自身水平量體 hitR(ent),
-   * 軸距量到**線段**最近點(射線止於目標近側表面時,中心仍在線段外 —— 見該處註解)。
+   * 軸距量到**線段**最近點(射線止於目標近側表面時,中心仍在線段外 —— 見該處註解),
+   * 截面分區 + 逐區穿透截斷(lanceZones/lanceZonePen 單一縫;投影是各自的近似:
+   * 客戶端扇區基底取自射向,伺服器取水平投影,兩端扇區劃分不逐位元相同 —— 名冊只看有無)。
    */
-  _lancePierced(from, to, r) {
+  _lancePierced(from, to, r, def = null) {
     const seg = to.clone().sub(from);
     const len = seg.length() || 1;
     const d = seg.clone().divideScalar(len);
+    // 截面基底:與射向垂直的兩軸(分區用;幾乎垂直射線時換參考軸,免退化)
+    const up = Math.abs(d.y) > 0.99 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    const e1 = new THREE.Vector3().crossVectors(d, up).normalize();
+    const e2 = new THREE.Vector3().crossVectors(d, e1);
     const rel = new THREE.Vector3();
     const out = [];
     for (const ent of this.ents.values()) {
@@ -7726,14 +7752,32 @@ export class BattleClient {
       rel.copy(ent.mesh.position).sub(from);
       const s = rel.dot(d);
       const sc = s < 0 ? 0 : (s > len ? len : s);
-      const rr = r + this._hitR(ent);
+      const hr = this._hitR(ent);
+      const rr = r + hr;
       const dev = rel.addScaledVector(d, -sc).length();
       if (dev > rr) continue;
       // off = 偏心比例(與 sim._lanceHits 同構):估算數字套 offAxisFalloff 才與伺服器結算對得上
-      out.push({ ent, s, off: Math.min(1, dev / rr) });
+      const off = Math.min(1, dev / rr);
+      const ex = rel.dot(e1), ez = rel.dot(e2);
+      for (const zone of lanceZones(ex, ez, hr, r)) out.push({ ent, s, off, zone });
     }
-    out.sort((a, b) => a.s - b.s);
-    return out.slice(0, LANCE.MAX);
+    out.sort((a, b) => a.s - b.s || a.zone - b.zone);
+    if (def) {
+      const kept = [];
+      const rem = [], shut = [], cnt = [];
+      for (const k of out) {
+        const z = k.zone;
+        if (shut[z]) continue;
+        if (rem[z] === undefined) rem[z] = lanceZonePen(def, z);
+        rem[z] -= lancePenCost(k.ent);
+        k.j = cnt[z] || 0; cnt[z] = k.j + 1;
+        kept.push(k);
+        if (rem[z] < 0) shut[z] = true;
+      }
+      return kept;
+    }
+    for (const k of out) k.j = 0;   // 無 def(舊呼叫端):不做穿透截斷,全按首個估算
+    return out;
   }
 
   /** 單位水平量體(公尺):走 data.js hitR 單一真相縫(含 BOSS 階段體型縮放) */
@@ -7741,12 +7785,12 @@ export class BattleClient {
     return hitR(ent);
   }
 
-  /** 貫穿命中回饋:首個目標全額,之後逐個 ×LANCE.DECAY × 偏心遞減 offAxisFalloff(與伺服器 heroLance 同一條公式) */
+  /** 貫穿命中回饋:各區首個全額,同區之後逐個 ×LANCE.DECAY × 偏心遞減 offAxisFalloff(與伺服器 heroLance 同一條公式) */
   _lanceFeedback(def, hits, point) {
     if (!hits.length) { starburst(this.scene, this.effects, point.x, point.y, point.z, 1.4, 0xcfc4a8); return; }
     this.hud.hitmark?.();
     for (let i = 0; i < hits.length; i++) {
-      const { ent, off } = hits[i];
+      const { ent, off, j } = hits[i];
       const p = ent.mesh.position;
       if (this._lockId === ent.id) this._flashLockGlow();
       // 護盾二分(同 _hitFeedback):舉盾接住 → 小火光 + 護盾劇烈發光;無護盾 → 火光濺射 + 火星。
@@ -7764,7 +7808,7 @@ export class BattleClient {
         continue;
       }
       const mult = vsMult(def, ent.kind);
-      const raw = def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * offAxisFalloff(off || 0) * LANCE.DECAY ** i;
+      const raw = def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * offAxisFalloff(off || 0) * LANCE.DECAY ** (j || 0);
       const sp = shieldSplit(def, raw, ent.sp || 0);   // 護盾分軌(見 _hitFeedback 同註)
       const est = Math.round(sp.toSp + sp.toHp);
       damageNumber(this.scene, this.effects,

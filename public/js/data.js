@@ -2221,6 +2221,8 @@ export function dmgFalloff(def, d) {
 // FAN_FLOOR 同時 0.25 → 0.45:扇形武器的**實用交戰帶整段落在射程末端**(交戰距離由雙方輕武器
 // 射程決定,而扇形射程本來就短)⇒ 舊保底等於「長期以 25% 傷害作戰」。連帶 bal ④ 最差站外拆塔
 // (s07 防空散射矩陣)787s → 437s。
+// 2026-09-27 起範圍扇形(sim.heroPlasma)改小錐分格且不隨距離衰減,不再吃本曲線;
+// 本曲線僅供 bot 輕扇形單體直射(dmgFalloff 經 fan 分支)沿用。
 export const FAN_FLOOR = 0.45;
 export const FAN_MUZZLE = 1 / (1 - FALLOFF.PLATEAU);
 export function fanFalloff(range, d) {
@@ -2265,11 +2267,44 @@ export function offAxisFalloff(frac) {
 export const fanArcHalf = (def) => (def?.arc || 15) * Math.PI / 180;
 /** 對「距離 d、水平量體 hr」的這個目標,錐的有效半角(rad)= 標稱半角 + 量體張角 */
 export const fanConeHalf = (def, d, hr) => fanArcHalf(def) + Math.atan2(Math.max(0, hr || 0), Math.max(1, d));
+// ---- 扇形小錐切割(2026-09-27 使用者需求)----
+// 錐按方位角切成 N 個小錐形區塊,每區塊只命中最近的一名敵人;量體橫跨多格的大目標
+// (近距離砲塔/主堡)會在多格各吃一次 ⇒ 單一敵人可受多次傷害。格數由錐角推導不手寫:
+// 小錐寬約 SUB_DEG(4°)—— 10° 錐切 5 格、26° 錐切 13 格。傷害不隨距離變化(去 fanFalloff),
+// 只剩偏心遞減 offAxisFalloff。伺服器 sim.heroPlasma、模型 lanesim、客戶端 _shotVictims
+// 三端 MUST 全吃 fanBinSpan 分格,各寫一份 = 同一發在三處掃到不同人。
+export const FAN_SUB_DEG = 4;
+// ---- 單一小錐傷害乘數(2026-09-27 使用者需求「單一小扇形傷害調低」)----
+// 每一格命中固定 × 此值(大小目標、遠近一律)：壓的是「格」的單價，不是錐的總價 ——
+// 近距大目標照樣多格多吃，只是每格便宜一點。結算(sim.heroPlasma)與模型(lanesim)
+// MUST 同吃這一支；bot 輕扇形單體直射不經分格，不吃。
+export const FAN_SUB_F = 0.8;
+/**
+ * 扇形小錐格數(推導 = 全寬 ÷ SUB_DEG,強制奇數):奇數格的中央格恆以錐軸為中心 ⇒
+ * 軸上小目標只中一格(格界壓軸心會讓每一發軸上傷害系統性吃兩次,而且偶/奇格數行為不一)。
+ */
+export const fanSubs = (def) => {
+  // 以「度」整算(避開弧度 π 往返的浮點塵:30°/4° 在二進位恰為 7.5,Math.round 半進位確定)
+  const n0 = Math.max(1, Math.round(((def?.arc || 15) * 2) / FAN_SUB_DEG));
+  return n0 % 2 === 1 ? n0 : n0 + 1;
+};
+// ---- 小錐分格的格網(唯一縫)----
+// 中央格以錐軸為中心向兩側展開(見 fanSubs 強制奇數)⇒ 軸上小目標只中一格。
+// 三端(sim.heroPlasma / lanesim.hits / game._shotVictims) MUST 全吃 fanBinSpan 分格,
+// 各寫一份 = 同一發在三處掃到不同人。
+/** 方位角 phi 落在哪一格(夾回 [0, N) —— 錐外由呼叫端的 fanConeHalf 先擋,這裡只分布) */
+export const fanBinOf = (def, phi) => {
+  const half = fanArcHalf(def), n = fanSubs(def), w = half * 2 / n;
+  const b = Math.floor(phi / w + n / 2);
+  return b < 0 ? 0 : b > n - 1 ? n - 1 : b;
+};
+/** 量體(方位角 phi ± 張角 aw)橫跨的格區間 [b0, b1];起訖單調 ⇒ b0恆 ≤ b1 */
+export const fanBinSpan = (def, phi, aw) => [fanBinOf(def, phi - aw), fanBinOf(def, phi + aw)];
 
 // ================= 重武器範圍攻擊三分類 + 彈道五分類(2026-07-23 使用者定案)=================
 // 使用者規則:「重武器必屬於其中一種範圍攻擊」—— 沒有單體直擊的重武器。
 //   blast 爆炸傷害:球形超壓(launcher 榴彈/火箭、missile 飛彈)→ sim._blast + blastFalloff
-//   fan   扇形傷害:越近越強、無貫穿(plasma 離子、fan:true 霰彈)→ sim.heroPlasma + fanFalloff
+//   fan   扇形傷害:小錐分格各取最近一名、不隨距離衰減(plasma 離子、fan:true 霰彈)→ sim.heroPlasma
 //   line  直線傷害:沿射線的圓柱貫穿(beam 光束、rail 電磁彈射、gun 反器材砲)→ sim.heroLance
 // **唯一分類縫 = aoeClass(def)**;sim / game.js / HUD 一律經此判定,MUST NOT 各自比對 def.type
 // (第二份 type 比對 = 三分類分家)。輕武器(非扇形)不屬任何一類 —— 仍是單體直擊 heroHit,
@@ -2294,17 +2329,63 @@ export const AOE_NAME = { blast: '爆炸傷害', fan: '扇形傷害', line: '直
 //   平衡不動:bal 四不變式只模型化 1v1,首個目標恆為全額 ⇒ 加粗只改「順路掃到幾個」。
 // DECAY:每貫穿一名目標,後續目標傷害 ×此值。**首個目標恆為全額** ⇒ 單體 DPS 與舊 heroHit 相同,
 //   npm run bal 的四不變式(全部只模型化 1v1)不受影響 —— MUST NOT 改成首發也衰減。
-// MAX:單發最多貫穿目標數(防一條線掃穿整條兵線)。
 // 2026-08-01:舊 BARRAGE_F(重砲傾洩窗加粗)隨巨砲一併移除 —— 貫穿粗細不再有任何情境倍率,
 //   `lanceR(def)` 是**唯一**半徑來源。演出端 MUST NOT 自己乘任何倍率(A18「看到多粗就是打到多粗」)。
+// 2026-09-27:舊 MAX(單發最多 6 個,防掃穿整條兵線)移除 —— 個數**只由穿透力管**:
+//   同一條線能掃幾個 = 預算 ÷ 沿線截面積,大目標擋線、小兵放行,逐把差異走 PEN 階梯。
 export const LANCE = {
   R: { beam: 5.4, rail: 4.2, gun: 3.3 },
   DECAY: 0.75,
-  MAX: 6,
   VBAND_F: 2.2,     // 垂直帶寬容 = R × 此值(伺服器無地形高程,射線高度只能近似 —— 見 sim.heroLance)
+  // PEN:直線貫穿的穿透力預算(平方公尺,截面積):沿射線由近至遠累計 lancePenCost,
+  // 耗盡後更遠的目標不再受創(命中的那一個仍結算)。截面積越大耗得越多 —— 砲塔/主堡
+  // 一律擋線,一波兵線(約 45m²)gun 約 1.3 波、rail 約 2 波、beam 約 3 波。
+  PEN: { beam: 135, rail: 90, gun: 60 },
+  CORE_F: 0.5,      // 內圈半徑 = R × 此值(與 BLAST.CORE 同式);之外是 6 等分外扇區
 };
 /** 貫穿圓柱半徑(公尺);判定與演出共用同一支 */
 export const lanceR = (def) => LANCE.R[def?.type] ?? LANCE.R.gun;
+/** 穿透力預算(平方公尺);判定(sim._lanceHits)與估算(game._lancePierced)共用同一支 */
+export const lancePen = (def) => LANCE.PEN[def?.type] ?? LANCE.PEN.gun;
+/**
+ * 穿透力消耗(平方公尺)= 目標水平截面積 π·hitR²(唯一縫)。
+ * 越大截面積的物件耗越多穿透力 —— 小兵 1.13 / 坦克 11.3 / 直升機 28.3 /
+ * 碉堡 36.3 / 砲塔 153.9 / 主堡 1256.6(見稽核 audit_lance_hit;改 hitR 自動跟著走)。
+ */
+export const lancePenCost = (e) => Math.PI * hitR(e) ** 2;
+// ---- 圓柱截面分區(2026-09-27 使用者需求:1 內圈 + 6 外扇區)----
+// 1 內圈(區號 0,半徑 R×CORE_F)+ 6 外扇區(區號 1..6,世界 +x 軸起算每 60° 一格)。
+// 穿透預算 9 等分:內圈 3 份、外圈每格 1 份(內圈 = 3 × 外圈單格;9 份總和 = lancePen
+// 全額 ⇒ 火力水位不動)。每區沿射線各自累計消耗、各自截斷:同單位跨幾區吃幾次,
+// 同區同一單位只算一次。集中縱列(全擠內圈)比散開橫列更快見底 —— 穿透看的是分布,
+// 不是個數。伺服器 sim._lanceHits、模型 lanesim、客戶端 game._lancePierced 三端
+// MUST 全吃 lanceZones 分區,各寫一份 = 同一發在三處掃到不同人。
+/** 某區的穿透力預算(平方公尺):內圈 3/9、外圈單格 1/9(推導不手寫) */
+export const lanceZonePen = (def, zone) => lancePen(def) * (zone === 0 ? 3 : 1) / 9;
+/**
+ * 目標量體覆蓋到哪幾個區(唯一縫)。
+ * ex,ez = 目標在截面上的橫向偏移向量(公尺,已夾到線段),hr = 目標水平量體,R = 圓柱半徑。
+ * 內圈:量體碰到內圈(dev − hr ≤ Rc)即入列;外圈:量體張角掃到的扇區全入列
+ * (量體含軸 ⇒ 全扇區;呼叫端已驗 dev ≤ R + hr ⇒ 回傳恆非空)。
+ * 回傳區號陣列(由小到大;0 = 內圈)。
+ */
+export const lanceZones = (ex, ez, hr, R) => {
+  const Rc = R * LANCE.CORE_F;
+  const dev = Math.hypot(ex, ez);
+  const zones = [];
+  if (dev - hr <= Rc) zones.push(0);
+  if (dev + hr > Rc) {
+    if (dev <= hr) {
+      for (let b = 1; b <= 6; b++) zones.push(b);
+    } else {
+      const phi = Math.atan2(ez, ex), aw = Math.asin(Math.min(1, hr / dev));
+      const SEG = Math.PI * 2 / 6;
+      const b0 = Math.floor((phi - aw + Math.PI) / SEG), b1 = Math.floor((phi + aw + Math.PI) / SEG);
+      for (let b = b0; b <= b1; b++) zones.push(((b % 6) + 6) % 6 + 1);   // 環繞取模(aw ≤ 90° ⇒ 無重複)
+    }
+  }
+  return zones.sort((a, b) => a - b);
+};
 
 // ---- 彈道五分類(2026-07-23 使用者定案)----
 //   lob   低初速拋物線:榴彈/火箭吊射(BALLISTIC.LAUNCH_MV;對空時換 AA_MV 見 _updateAaMode)
@@ -3545,11 +3626,11 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side]?.her
 //   launcher 火箭/榴彈:AoE 戰鬥部;guide:1 = 狙擊視角雷射導引(彈體追準星修正航向)
 //   missile  飛彈:發射時有準星鎖定 → 自動追蹤該目標近炸;無鎖定 = 直飛(AoE 戰鬥部)
 //   beam     定向能:光速直擊無下墜,穩定輸出;吃大氣消光;emp 附帶 = 電磁癱瘓控場
-//   plasma   電漿:扇形 arc(半角度°)大面積,範圍內敵人全數命中(伺服器結算),消散快、射程短
+//   plasma   電漿:扇形 arc(半角度°)切小錐、每格只命中最近一名(伺服器結算),消散快、射程短
 // 重武器範圍攻擊三分類(blast/fan/line)與彈道五分類(lob/flat/line/guide/fnf)見上方
 //   aoeClass() / trajClass() —— 重武器一律屬於三分類之一,rail/gun/beam 重武器走 sim.heroLance
 //   圓柱貫穿(輕武器不變,仍是單體 heroHit)。
-// 扇形武器(fan:電漿 / 散彈 shotgun):dmgFalloff 走 fanFalloff(越近越高)、sim.heroPlasma 錐判定。
+// 扇形武器(fan:電漿 / 散彈 shotgun):範圍錐判定走 sim.heroPlasma 小錐分格(不隨距離衰減,只剩偏心遞減)。
 // 輕武器類型(2026-07-13 多元化;2026-07-14 開放散彈):launcher/missile 在 heroBurst、
 //   plasma/fan 在 heroPlasma —— heroPlasma 已收 slot 參數,故「散彈輕武器(fan:true)」可經
 //   {t:'plasma', slot:'light'} 走同一條錐判定(唯一破例;launcher/missile 仍只准重武器)。
