@@ -25,7 +25,7 @@ import {
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
   WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
   FIRE_WEATHER, fireDotMul,
-   SCENE_STRUCT, sceneIsPhysical, sceneIsVehicle, clampHeroSpawn,
+   SCENE_STRUCT, sceneIsPhysical, clampHeroSpawn,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -34,6 +34,10 @@ import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './m
 import { applyEnvironment } from './environment.js';
 import { Pipeline } from './postfx.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
+import { applySceneDamage, sceneDamageStage, sceneDamageProfile, sceneDamageBurst, releaseMobileDamage } from './sceneDamage.js';
+import { buildHpSkillObject } from './vfx.js';
+import { MAP_BUILDING, collapseBuildingBoxes, buildingRoofIndex } from './mapBuilding.js';
+import { detachMapBuilding, mapBuildingTarget } from './mapBuildingRender.js';
 import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree, isWeatherFrozen } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
@@ -891,6 +895,56 @@ export class BattleClient {
     // 障礙碰撞柱空間索引(建物/神木/巨岩/橋墩):彈道/準星射線的遮蔽判定用。
     // 障礙有物理碰撞就不可讓砲火穿越 —— 與 _collide 用同一份 terrain.blockers,牆與彈道一致。
     this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);
+    this.mapBuildings = new Map();
+    this._buildingRoofHit = buildingRoofIndex([...(this.terrain.mapBuildings?.values() || [])].flatMap(r=>r.platforms));
+    for (const [key, record] of this.terrain.mapBuildings || []) {
+      this.mapBuildings.set(key,mapBuildingTarget(record));
+    }
+  }
+
+  _syncMapBuildings(rows) {
+    const initial = !this._mapBuildingsSynced;
+    this._mapBuildingsSynced = true;
+    let collisionChanged = false;
+    for (const [key, hp, max] of rows || []) {
+      const ent = this.mapBuildings?.get(key);
+      if (!ent || ent.record.cleared || !Number.isFinite(hp) || !(max > 0) || ent.collapsed) continue;
+      const stage = sceneDamageStage(hp,max);
+      ent.hp = hp; ent.max = max;
+      if (stage || hp < max) {
+        ent.mesh = detachMapBuilding(ent.record);
+        if (!ent.sceneDamageNodes) { ent.sceneStage = undefined; applySceneDamage(ent,0); }
+      }
+      if (stage === 3) {
+        applySceneDamage(ent,3);
+        ent.collapsed = true;
+        if (ent.bar) { ent.mesh.remove(ent.bar); disposeTree(ent.bar); ent.bar = null; }
+        if (ent.dmgFx) { ent.mesh.remove(ent.dmgFx); disposeTree(ent.dmgFx); ent.dmgFx = null; this.damaged.delete(ent); }
+        collapseBuildingBoxes(ent.record.boxes, ent.record.bounds.y);
+        for (const p of ent.record.platforms) p.y = ent.record.bounds.y + (p.y-ent.record.bounds.y) * MAP_BUILDING.RUBBLE_H;
+        const pose = (f) => { ent.mesh.scale.y = 1-(1-MAP_BUILDING.RUBBLE_H)*f; };
+        if (initial) pose(1);
+        else {
+          sceneDamageBurst(this.scene,this.effects,ent,3);
+          this.effects.push({ obj: new THREE.Group(), ttl: 0.85, fade: (o,f) => pose(1-f*f), dispose: () => pose(1) });
+        }
+        collisionChanged = true;
+      } else {
+        if (!initial && stage > ent.sceneStage) sceneDamageBurst(this.scene,this.effects,ent,stage);
+        applySceneDamage(ent,stage);
+        this._updateSceneHpBar(ent);
+        this._updateDamageStage(ent);
+      }
+    }
+    if (collisionChanged) {
+      this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);
+      this.terrain.rebuildBlockerTops?.();
+      const climbs = this.terrain.climbs;
+      if (climbs) for (let i=climbs.length-1; i>=0; i--) {
+        if ((climbs[i].b?.buildingKey && !climbs[i].b.cl) || (climbs[i].link?.buildingKey && !climbs[i].link.cl)) climbs.splice(i,1);
+      }
+      this.terrain.rebuildClimbs?.();
+    }
   }
 
   /**
@@ -960,6 +1014,7 @@ export class BattleClient {
    * 圓仍是 broad-phase(盒的 r MUST 是**外接**半對角,見 main.js occ 上傳處的同一條註)。
    */
   _blockerHitT(ax, ay, az, bx, by, bz) {
+    this._hitBuildingKey = null;
     if (!this._blockGrid) return null;
     const { C, grid } = this._blockGrid;
     const i0 = Math.floor(Math.min(ax, bx) / C), i1 = Math.floor(Math.max(ax, bx) / C);
@@ -1037,7 +1092,7 @@ export class BattleClient {
             if (s1 < tB) tB = s1;
           } else if (ay <= yLo || ay >= yHi) continue;   // 水平線段整條在柱身之上/之下
           if (tB < tA) continue;
-          if (bestT === null || tA < bestT) bestT = tA;
+          if (bestT === null || tA < bestT) { bestT = tA; this._hitBuildingKey = b.buildingKey || null; }
         }
       }
     }
@@ -1098,7 +1153,12 @@ export class BattleClient {
   _obstHitT(ax, ay, az, bx, by, bz) {
     const a = this._blockerHitT(ax, ay, az, bx, by, bz);
     const b = this._slabHitT(ax, ay, az, bx, by, bz);
-    return a == null ? b : b == null ? a : Math.min(a, b);
+    if (b != null && (a == null || b < a)) this._hitBuildingKey = null;
+    const nearest = a == null ? b : b == null ? a : Math.min(a,b);
+    const roof = this._buildingRoofHit?.(ax,ay,az,bx,by,bz);
+    const roofDistance = roof ? roof.f*Math.hypot(bx-ax,by-ay,bz-az) : Infinity;
+    if (roof && (nearest == null || roofDistance < nearest)) { this._hitBuildingKey = roof.key; return roofDistance; }
+    return nearest;
   }
 
   /**
@@ -3459,6 +3519,7 @@ export class BattleClient {
   onSnap(m) { this._snapQueue = m; }
 
   _applySnap(m) {
+    if (m.mb) this._syncMapBuildings(m.mb);
     // 日夜時鐘對錶(權威 = 伺服器經過秒數):平常只把本地那份**拉向**快照值,
     // 差太多(斷線重連 / 分頁背景化很久)才直接貼上。硬貼每一格的話,快照的整數量化
     // 會讓太陽每 1/8 秒抖一下(48× 速率下那是可見的)。
@@ -3496,6 +3557,13 @@ export class BattleClient {
       const prevHpSnap = ent.hp;
       if (e.hp < prevHpSnap && !HERO_KINDS.has(e.k)) this._victimHitFx(ent, false);
       ent.hp = e.hp; ent.max = e.m;
+      if (!ent.collapsed && sceneDamageProfile(ent.kind)) {
+        const stage = sceneDamageStage(e.hp, e.m, !!e.col);
+        if (stage < 3 || (ent.hero && e.dead)) {
+          if (stage > ent.sceneStage) sceneDamageBurst(this.scene, this.effects, ent, stage);
+          applySceneDamage(ent, stage);
+        }
+      }
       ent.lk = !!e.lk;   // 攻堅鎖血:這一座打不動(範圍光暈把它排除,見 _updateRangeGlows)
       // 場景物件坍塌(伺服器權威 col 旗標):傾倒為低矮殘骸,只做一次
       if (e.col && ent.neutral && !ent.collapsed) this._applyCollapse(ent, false);
@@ -3662,14 +3730,14 @@ export class BattleClient {
       this._updateDamageStage(ent);
     }
     // 移除消失的單位。快照缺席也可能是迷霧過濾;只有同幀權威 die 事件可留純渲染殘影。
-    const deadIds = new Set((m.ev || []).filter((ev) => ev.e === 'die').map((ev) => ev.id));
+    const deadIds = new Set((m.ev || []).filter((ev) => ev.e === 'die' || ev.e === 'moon_boom').map((ev) => ev.id));
     for (const [id, ent] of this.ents) {
       if (!seen.has(id)) { this._removeEnt(id, ent, deadIds.has(id)); }
     }
     // 事件
     for (const ev of m.ev || []) this._onEvent(ev);
     // 防空飛彈(伺服器權威 3D 追蹤)
-    this._syncMissiles(m.sm || []);
+    this._syncMissiles(m.sm || [],m.ev || []);
     // 戰場物資(擊毀障礙物掉落,靠近拾取)
     this._syncLoot(m.lt || []);
     // 空投物資(非兵線隨機空投,降落傘飄降後靠近拾取)
@@ -3770,6 +3838,18 @@ export class BattleClient {
   }
 
   _spawnEnt(e) {
+    if (['tree','moon','slab'].includes(e.k)) {
+      const mesh=buildHpSkillObject(e.k), box=new THREE.Box3().setFromObject(mesh), size=box.getSize(new THREE.Vector3());
+      const padY=this.terrain.heightAt(e.x,-e.z)+(e.y || 0);
+      mesh.position.set(e.x,padY,-e.z); mesh.rotation.y=-(e.ang || 0);
+      mesh.userData.kind=e.k;
+      const ent={id:e.id,kind:e.k,side:e.s,mesh,hp:e.hp,max:e.m,isStatic:true,padY,ownedDamageBody:true,
+        tgt:new THREE.Vector3(e.x,0,-e.z),dimR:Math.max(size.x,size.z)/2,dimH:size.y,dimTop:box.max.y};
+      this.scene.add(mesh); this.ents.set(e.id,ent);
+      applySceneDamage(ent,sceneDamageStage(e.hp,e.m));
+      this._updateHpBar(ent); this._updateDamageStage(ent);
+      return ent;
+    }
     // 中立危險區實體(障礙物 / 防空陣地 / 偵察中繼站):程序生成低多邊形,不吃 makeUnit
     const hazDef = HAZARDS[e.k];
     if (hazDef || e.k === 'aasite' || e.k === 'relay') {
@@ -3795,10 +3875,15 @@ export class BattleClient {
       if (e.k === 'flood') this.floods.push({ x: e.x, z: -e.z, r, slow: hazDef.slow });
       if (FIRE_KINDS_C.has(e.k)) this.fires.push({ x: e.x, z: -e.z, r });   // 火場滯留霧化判定
       this.ents.set(e.id, ent);
-      // 車船受損火舌定位:量體取自權威半徑/碰撞高(其餘障礙沿用預設小火舌)
-      if (sceneIsVehicle(e.k)) { ent.dimR = r; ent.dimTop = ent.colH; ent.dimH = ent.colH; }
+      // Measure pristine geometry before damage, bars, and effects can expand its bounds.
+      const bounds = new THREE.Box3().setFromObject(group);
+      ent.dimR = Math.max(1, (bounds.max.x - bounds.min.x) / 2, (bounds.max.z - bounds.min.z) / 2);
+      ent.dimTop = Math.max(1, bounds.max.y - group.position.y);
+      ent.dimH = Math.max(1, bounds.max.y - bounds.min.y);
+      applySceneDamage(ent, sceneDamageStage(e.hp, e.m, !!e.col));
       // 坍塌殘骸(重進視野/重連):直接套用傾倒姿態,不走動畫
       if (e.col) this._applyCollapse(ent, true);
+      this._updateDamageStage(ent);
       return ent;
     }
     // 覆蓋:此處回退,續建一般單位
@@ -3941,6 +4026,7 @@ export class BattleClient {
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch, e.sv || 0) : null,
     };
+    if (sceneDamageProfile(ent.kind)) applySceneDamage(ent,sceneDamageStage(e.hp,e.m));
     if (hero) {
       const r = (ent.heroCol?.r || dims.dimR || 2.5) * 1.15;
       const h = ent.heroCol?.h || dims.dimH || 5.0;
@@ -4076,6 +4162,8 @@ export class BattleClient {
   }
 
   _removeEnt(id, ent, dissolve = false) {
+    if (!dissolve) releaseMobileDamage(ent);
+    if (dissolve && ent.neutral && !ent.collapsed) sceneDamageBurst(this.scene, this.effects, ent, 3);
     if (this._lockId === id) this._clearLockGlow();   // 光暈是目標 mesh 的子節點,別留下懸空參照
     if (ent._rgGlow) { ent._rgGlow.parent?.remove(ent._rgGlow); this._rgPool?.push(ent._rgGlow); ent._rgGlow = null; }   // 武器射程光暈回收進池(共用材質,MUST NOT 隨 mesh 一起丟)
     if (ent._rgGlowS) { ent._rgGlowS.parent?.remove(ent._rgGlowS); this._rgPoolS?.push(ent._rgGlowS); ent._rgGlowS = null; }  // 招式光暈同上
@@ -4089,14 +4177,27 @@ export class BattleClient {
     this.damaged.delete(ent);
     this._unregisterViewOccluders(ent.mesh);
     this.ents.delete(id);
+    if (dissolve && !ent.neutral && sceneDamageProfile(ent.kind)) {
+      applySceneDamage(ent,3);
+      sceneDamageBurst(this.scene,this.effects,ent,3);
+      if (ent.bar) ent.bar.visible = false;
+      if (ent.dmgFx) ent.dmgFx.visible = false;
+      const scaleY = ent.mesh.scale.y;
+      this.effects.push({ obj: ent.mesh, ttl: 0.85,
+        dispose: () => { releaseMobileDamage(ent); disposeTree(ent.mesh); },
+        fade: (o,f) => { o.scale.y = scaleY * (sceneDamageProfile(ent.kind).mobile ? .6+.4*f : MAP_BUILDING.RUBBLE_H + (1-MAP_BUILDING.RUBBLE_H)*f*f); } });
+      return;
+    }
     // 戰鬥參照全部已在上面清掉,之後才能把 mesh 當純渲染殘影留在 scene。
     // 迷霧消失(dissolve=false)必須即時收起,不得洩漏視野外位置。
     const origin = ent.mesh.position.clone();
     if (dissolve && ent.mesh.visible && DISSOLVE.OUT_S > 0 && setDissolve(ent.mesh, 1, origin) > 0) {
       if (ent.bar) ent.bar.visible = false;
-      this._dissolveGhosts.push({ mesh: ent.mesh, origin, t: 0 });
+      this._dissolveGhosts.push({ mesh: ent.mesh, origin, t: 0, damageEnt:ent, dispose: ent.neutral || ent.ownedDamageBody });
     } else {
       this.scene.remove(ent.mesh);
+      releaseMobileDamage(ent);
+      if (ent.neutral || ent.ownedDamageBody) disposeTree(ent.mesh);
     }
   }
 
@@ -4109,6 +4210,8 @@ export class BattleClient {
       setDissolve(g.mesh, k, g.origin);
       if (k > 0) continue;
       this.scene.remove(g.mesh);
+      if (g.damageEnt) releaseMobileDamage(g.damageEnt);
+      if (g.dispose) disposeTree(g.mesh);
       this._dissolveGhosts.splice(i, 1);
     }
   }
@@ -4205,7 +4308,7 @@ export class BattleClient {
   _updateSceneHpBar(ent) {
     if (ent.collapsed) return;   // 殘骸不再顯示血條
     // 可破壞場景物才掛條:實體障礙 + 防空陣地;地面狀態/中繼站/火場不掛
-    if (!sceneIsPhysical(ent.kind) && ent.kind !== 'aasite') return;
+    if (!sceneDamageProfile(ent.kind)) return;
     const frac = ent.max > 0 ? Math.max(0, ent.hp / ent.max) : 1;
     if (frac >= 1) {
       if (ent.bar) { ent.mesh.remove(ent.bar); ent.bar = null; ent.barFg = null; }
@@ -4238,20 +4341,28 @@ export class BattleClient {
    */
   _applyCollapse(ent, instant) {
     if (!ent || ent.collapsed) return;
+    applySceneDamage(ent, 3);
     ent.collapsed = true;
     if (ent.bar) { ent.mesh.remove(ent.bar); ent.bar = null; ent.barFg = null; }
-    if (ent.dmgFx) { ent.mesh.remove(ent.dmgFx); ent.dmgFx = null; this.damaged.delete(ent); }
+    if (ent.dmgFx) { ent.mesh.remove(ent.dmgFx); disposeTree(ent.dmgFx); ent.dmgFx = null; this.damaged.delete(ent); }
     ent.dmgStage = 0;
     const s = (ent.id % 2 === 0 ? 1 : -1);
-    ent.mesh.scale.y *= 0.35;
-    ent.mesh.rotation.z += s * 0.12;
-    ent.mesh.rotation.x += 0.08;
+    const scaleY = ent.mesh.scale.y, rx = ent.mesh.rotation.x, rz = ent.mesh.rotation.z;
+    const pose = (f) => {
+      ent.mesh.scale.y = scaleY * (1 - 0.65 * f);
+      ent.mesh.rotation.z = rz + s * 0.12 * f;
+      ent.mesh.rotation.x = rx + 0.08 * f;
+    };
+    if (instant) pose(1);
+    else {
+      const controller = new THREE.Group();
+      this.effects.push({ obj: controller, ttl: 0.7, fade: (o, f) => pose(1 - f * f), dispose: () => pose(1) });
+    }
     const rf = SCENE_STRUCT?.RUBBLE_F || 0.45;
     ent.colR = (ent.colR || 0) * rf;
     ent.colH = (ent.colH || 6) * 0.35;
     if (!instant) {
-      const p = ent.mesh.position;
-      debrisBurst(this.scene, this.effects, p.x, p.y + 2, p.z, { big: false, accent: 0x8a7a5a });
+      sceneDamageBurst(this.scene, this.effects, ent, 3);
     }
   }
 
@@ -4264,7 +4375,7 @@ export class BattleClient {
     if (ent.isSelf || ent.civ || ent.decoy || ent.kami) return;
     // 中立物:只有可破壞場景物(實體障礙 + 防空陣地)掛火災階段,
     // 與砲塔/主堡同閾值(DMG_FX);地面狀態與坍塌殘骸不掛
-    if (ent.neutral && !sceneIsPhysical(ent.kind) && ent.kind !== 'aasite') return;
+    if (ent.neutral && !sceneDamageProfile(ent.kind)) return;
     if (ent.collapsed) return;
     if (!ent.max || ent.max <= 0) return;
     let stage = 0;
@@ -4276,12 +4387,13 @@ export class BattleClient {
     if (stage === (ent.dmgStage || 0)) return;
     ent.dmgStage = stage;
     if (stage === 0) {
-      if (ent.dmgFx) { ent.mesh.remove(ent.dmgFx); ent.dmgFx = null; }
+      if (ent.dmgFx) { ent.mesh.remove(ent.dmgFx); disposeTree(ent.dmgFx); ent.dmgFx = null; }
       this.damaged.delete(ent);
       return;
     }
     if (!ent.dmgFx) {
-      ent.dmgFx = makeDamageFx({ r: ent.dimR || 2, top: ent.dimTop || 3, h: ent.dimH || 3 });
+      ent.dmgFx = makeDamageFx({ r: ent.dimR || 2, top: ent.dimTop || 3, h: ent.dimH || 3,
+        fire: sceneDamageProfile(ent.kind)?.fire !== false, surfaceCracks: !sceneDamageProfile(ent.kind) });
       ent.mesh.add(ent.dmgFx);
       this.damaged.add(ent);
     }
@@ -4348,7 +4460,7 @@ export class BattleClient {
   }
 
   /** 快照裡的飛彈同步:建/移/更新目標點(渲染時再插值) */
-  _syncMissiles(sm) {
+  _syncMissiles(sm, events = []) {
     const seen = new Set();
     for (const s of sm) {
       seen.add(s.id);
@@ -4358,18 +4470,29 @@ export class BattleClient {
         const mesh = projectileMesh({ type: 'missile' }, { hue: 0xff6633 });
         mesh.scale.setScalar(1.55);
         this.scene.add(mesh);
-        ms = { mesh, tgt: new THREE.Vector3(), prev: new THREE.Vector3(), age: 0 };
+        const size=new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3());
+        ms = { id:s.id,kind:'missile',mesh,dimH:size.y,dimTop:size.y/2,dimR:Math.max(size.x,size.z)/2,
+          tgt: new THREE.Vector3(), prev: new THREE.Vector3(), age: 0 };
         const y0 = this.terrain.heightAt(s.x, -s.z) + s.y;
         mesh.position.set(s.x, y0, -s.z);
         ms.tgt.copy(mesh.position);
         this.samMeshes.set(s.id, ms);
+      }
+      if (Number.isFinite(s.hp) && s.m>0) {
+        const stage=sceneDamageStage(s.hp,s.m);
+        if (ms.sceneStage!=null && stage>ms.sceneStage) sceneDamageBurst(this.scene,this.effects,ms,stage);
+        ms.hp=s.hp; ms.max=s.m;
+        applySceneDamage(ms,stage); this._updateDamageStage(ms);
       }
       ms.prev.copy(ms.tgt);
       // 飛彈 y 是離地高度(以目標地面為準做近似)
       ms.tgt.set(s.x, this.terrain.heightAt(s.x, -s.z) + s.y, -s.z);
     }
     for (const [id, ms] of this.samMeshes) {
-      if (!seen.has(id)) { this.scene.remove(ms.mesh); disposeTree(ms.mesh); this.samMeshes.delete(id); }
+      if (!seen.has(id)) {
+        if (events.some(ev=>ev.e==='boom' && ev.missileId===id)) sceneDamageBurst(this.scene,this.effects,ms,3);
+        this.damaged.delete(ms); this.scene.remove(ms.mesh); releaseMobileDamage(ms); disposeTree(ms.mesh); this.samMeshes.delete(id);
+      }
     }
   }
 
@@ -4743,8 +4866,7 @@ export class BattleClient {
       if (ent && !ent.collapsed) this._applyCollapse(ent, false);
       const [cx, cz] = [ev.x, -ev.z];
       const cy = this.terrain.heightAt(cx, cz) + 2;
-      this._explosion(cx, cy, cz, 6, 0xff8844);
-      debrisBurst(this.scene, this.effects, cx, cy + 1, cz, { big: false, accent: 0x8a7a5a });
+      if (!ent) debrisBurst(this.scene, this.effects, cx, cy + 1, cz, { big: false, accent: 0x8a7a5a });
       if (HAZARDS[ev.kind]) {
         if (ev.kind === 'car') this.hud.feed?.(ev.ev ? '⚡ 電動車起火了!鋰電池燒得久,遠離殘骸!' : '🚗 汽車被擊毀起火了!');
         else if (ev.kind === 'ship') this.hud.feed?.('🚢 擱淺船被擊毀起火了!');
@@ -4771,15 +4893,14 @@ export class BattleClient {
       this._spawnDecoyBomb(ev.x, -ev.z, ev.y != null ? ev.y : 8, ev.bomb || 'fire', ev.r || 14,
         ev.fx != null ? { x: ev.fx, z: -ev.fz, y: ev.fy || 0 } : null);
     } else if (ev.e === 'tree_grow') {
-      const trees = ev.trees ? ev.trees.map((t) => ({ x: t.x, z: -t.z, r: t.r, h: t.h })) : null;
-      spawnTreesVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, trees, dur: ev.dur });
+      shockRing(this.scene,this.effects,ev.x,this.terrain.heightAt(ev.x,-ev.z),-ev.z,8,0x587443);
     } else if (ev.e === 'moon_spawn') {
-      spawnDarkMoonVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, y: ev.y || 4.5, r: ev.r || 3.5, dur: ev.dur });
+      shockRing(this.scene,this.effects,ev.x,this.terrain.heightAt(ev.x,-ev.z)+(ev.y || 4.5),-ev.z,ev.r || 3.5,0xc8d8ff);
     } else if (ev.e === 'moon_boom') {
       starburst(this.scene, this.effects, ev.x, ev.y || 4.5, -ev.z, (ev.r || 16) * 1.5, 0xcfd8ff);
       shockRing(this.scene, this.effects, ev.x, this.terrain.heightAt(ev.x, -ev.z), -ev.z, ev.r || 16, 0x8aa8ff);
     } else if (ev.e === 'cube_spawn') {
-      spawnCubicSlabsVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, r: ev.r || 5.5, dur: ev.dur });
+      shockRing(this.scene,this.effects,ev.x,this.terrain.heightAt(ev.x,-ev.z),-ev.z,ev.r || 5.5,0xffe28a);
     } else if (ev.e === 'fog_spawn') {
       const isAlly = ev.side === this.side;
       spawnFogVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, r: ev.r || 35, dur: ev.dur, isAlly });
@@ -7618,7 +7739,8 @@ export class BattleClient {
       return { point: h.point, ent: null, missileId: null };   // 無 kind 標記的目標:照舊當落點
     }
     if (dStop < Infinity) {
-      return { point: this.raycaster.ray.at(dStop, new THREE.Vector3()), ent: null, missileId: null };
+      return { point: this.raycaster.ray.at(dStop, new THREE.Vector3()),
+        ent: dBlock != null && dBlock <= (dTerr ?? Infinity) ? this.mapBuildings?.get(this._hitBuildingKey) || null : null, missileId: null };
     }
     return { point: rEnd, ent: null, missileId: null };
   }
@@ -8376,7 +8498,8 @@ export class BattleClient {
         // 不穿越造成傷害(伺服器 heroHit 另有 LOS 複驗,這裡是彈道本體)。
         const dB = this._obstHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z);
         if (dB != null && dB < hitDist) {
-          hit = { point: prev.clone().addScaledVector(dir, dB), terrain: true };
+          const building = this.mapBuildings?.get(this._hitBuildingKey);
+          hit = { point: prev.clone().addScaledVector(dir, dB), terrain: !building, ent: building || null };
           hitDist = dB;
         }
       }
@@ -10092,6 +10215,7 @@ export class BattleClient {
   }
 
   _updateEnts(dt, now) {
+    for (const ent of this.mapBuildings?.values() || []) if (ent.bar) ent.bar.lookAt(this.camera.position);
     if (this._fpsShieldMesh) {
       this._fpsShieldMesh.visible = (this.viewMode === 'fpv' && this.defending && (this.sp || 0) > 0 && !this.dead);
       if (this._fpsShieldMesh.visible && this._fpsShieldMesh.userData.mat) stepShieldMaterial(this._fpsShieldMesh.userData.mat, dt);
@@ -11165,6 +11289,9 @@ export class BattleClient {
   }
 
   dispose() {
+    for (const ent of this.ents.values()) releaseMobileDamage(ent);
+    for (const ent of this.samMeshes.values()) releaseMobileDamage(ent);
+    for (const ghost of this._dissolveGhosts || []) if (ghost.damageEnt) releaseMobileDamage(ghost.damageEnt);
     this.disposed = true;
     this._clearViewOcclusion();
     this.audio?.setScene('menu');   // 離開戰場 → BGM 交還大廳(audio 為 app 層物件,不在此銷毀)

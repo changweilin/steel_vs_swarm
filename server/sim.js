@@ -3,6 +3,7 @@
 // towers and core engage automatically; hero (drone/mech) positions arrive from
 // client reports while HP and damage settle here. Plane is in meters about the
 // battlefield center (x east, z north; height is client-side, simulation is 2D + lane paths).
+import { MAP_BUILDING, buildingBounds, buildingNear, buildingDistance, buildingRayHit, buildingRoofIndex, collapseBuildingBoxes, mapBuildingHp, mapBuildingId } from '../public/js/mapBuilding.js';
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, BASE_MISSILE, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
@@ -313,11 +314,23 @@ export class BattleSim {
         }
       }
       occ.push(e);
+      if (e.length === 8 && typeof o[7] === 'string' && o[7].length <= 160 && Number.isFinite(o[8])) {
+        e.buildingKey = o[7]; e.baseY = o[8];
+      }
     }
     // 碉堡淨空:清掉與野營重疊(BLD_CLEAR_R 內)的遮蔽柱 —— 客戶端已移除這些重疊建物,
     // 伺服器 LOS 同步不再當它們擋線(setWorld 契約:上傳資料只能「減少」遮蔽,合規)。
+    const buildingGroups = new Map();
+    for (const o of occ) if (o.buildingKey) {
+      if (!buildingGroups.has(o.buildingKey)) buildingGroups.set(o.buildingKey,[]);
+      buildingGroups.get(o.buildingKey).push({ x:o[0],z:o[1],y:o.baseY,h:o[3],hw2:o[4],hd2:o[5],ry:Math.atan2(-o[7],o[6]) });
+    }
+    const cleared = new Set([...buildingGroups].filter(([,boxes]) => {
+      const bounds=buildingBounds(boxes);
+      return this.camps?.some(c=>buildingNear(bounds,c.x,c.z,THIRD.BLD_CLEAR_R));
+    }).map(([key])=>key));
     this.worldOcc = this.camps?.length
-      ? occ.filter((o) => !this.camps.some((c) => dist2d(o[0], o[1], c.x, c.z) < THIRD.BLD_CLEAR_R))
+      ? occ.filter((o) => o.buildingKey ? !cleared.has(o.buildingKey) : !this.camps.some((c) => dist2d(o[0], o[1], c.x, c.z) < THIRD.BLD_CLEAR_R))
       : occ;
     const cor = [];
     for (const c of Array.isArray(w.cor) ? w.cor.slice(0, LOS.MAX_CORR) : []) {
@@ -330,6 +343,56 @@ export class BattleSim {
     this._ingestSlabs(w);
     this._ingestHgt(w);
     this._rebuildLosGrid();
+    this._registerMapBuildings(w.roofs);
+  }
+
+  _registerMapBuildings(roofs) {
+    this.mapBuildings = new Map();
+    for (const o of this.worldOcc || []) {
+      if (!o.buildingKey) continue;
+      const id = mapBuildingId(o.buildingKey);
+      let e = this.mapBuildings.get(id);
+      if (!e) {
+        e = { id, key: o.buildingKey, kind: 'mapbuilding', side: null, neutral: true, boxes: [], occ: [], roofs: [] };
+        this.mapBuildings.set(id, e);
+      }
+      o.buildingId = id;
+      e.boxes.push({ x: o[0], z: o[1], y: o.baseY, h: o[3], hw2: o[4], hd2: o[5], ry: Math.atan2(-o[7],o[6]) });
+      o.buildingBoxes = [e.boxes[e.boxes.length-1]];
+      e.occ.push(o);
+    }
+    for (const e of this.mapBuildings.values()) {
+      e.mapBounds = buildingBounds(e.boxes);
+      e.x = e.mapBounds.x; e.z = e.mapBounds.z;
+      e.hp = e.maxHp = mapBuildingHp(e.mapBounds.w, e.mapBounds.d, e.mapBounds.h);
+      e.armor = MAP_BUILDING.ARMOR;
+      this.ents.set(e.id, e);
+    }
+    const valid = [];
+    for (const p of Array.isArray(roofs) ? roofs.slice(0,LOS.MAX_OCC) : []) {
+      const e = this.mapBuildings.get(mapBuildingId(p?.buildingKey));
+      if (!e || !Number.isFinite(p.y)) continue;
+      const b=e.mapBounds;
+      if (p.y < b.y-2 || p.y > b.y+b.h+20) continue;
+      const ringOk = ring => Array.isArray(ring) && ring.length>=3 && ring.length<=128 && ring.every(q=>
+        Array.isArray(q) && q.length===2 && q.every(Number.isFinite) && Math.abs(q[0]-b.x)<=b.w/2+2 && Math.abs(q[1]-b.z)<=b.d/2+2);
+      if (!ringOk(p.outer) || !Array.isArray(p.holes) || p.holes.length>16 || !p.holes.every(ringOk)) continue;
+      const roof = { buildingKey:e.key, y:p.y, outer:p.outer.map(q=>[...q]), holes:p.holes.map(h=>h.map(q=>[...q])) };
+      e.roofs.push(roof); valid.push(roof);
+    }
+    this._buildingRoofHit = buildingRoofIndex(valid);
+  }
+
+  _collapseMapBuilding(e) {
+    if (e.collapsed) return;
+    e.hp = 0; e.collapsed = true; e.inv = true;
+    collapseBuildingBoxes(e.boxes, e.mapBounds.y);
+    for (const p of e.roofs) p.y=e.mapBounds.y+(p.y-e.mapBounds.y)*MAP_BUILDING.RUBBLE_H;
+    for (let i=0; i<e.occ.length; i++) {
+      e.occ[i][3] = e.boxes[i].y-e.mapBounds.y+e.boxes[i].h;
+    }
+    e.mapBounds = buildingBounds(e.boxes);
+    this._losDirty = true;
   }
 
   /**
@@ -618,6 +681,8 @@ export class BattleSim {
    * —— MUST NOT 加回 per-call Set/字串鍵(V8 minor GC 會吃掉 tick 預算)。
    */
   _losBlocked(ax, az, ay, bx, bz, by, ea, eb) {
+    const absAy=this._absSightY(ea,ay,ax,az), absBy=this._absSightY(eb,by,bx,bz);
+    if (this._buildingRoofHit?.(ax,absAy,az,bx,absBy,bz,ea?.key,eb?.key)) return true;
     // 橋面/隧道天花水平薄板(#1):兩端同 ribbon 且分屬板體兩側 → 擋(未上傳 slabs 則 _slabGrid 不存在,no-op)
     if (this._slabGrid && ea && eb && this._slabBlocked(ax, az, bx, bz, ea, eb)) return true;
     if (this._skillBarriersBlocked(ax, az, ay, bx, bz, by)) return true;
@@ -641,6 +706,11 @@ export class BattleSim {
       const arr = grid.get((i + 32768) * 65536 + (j + 32768));
       if (arr) {
         for (const o of arr) {
+          if (o.buildingId && (o.buildingId === ea?.id || o.buildingId === eb?.id)) continue;
+          if (o.buildingBoxes) {
+            if (buildingRayHit(o.buildingBoxes,ax,absAy,az,bx,absBy,bz)!=null) return true;
+            continue;
+          }
           const [x, z, r, h] = o;
           if (Math.min(ay, by) >= h) continue;   // 兩端都高於此柱 → 穿柱段必也高於(線性內插)
           const ox = ax - x, oz = az - z;
@@ -2394,7 +2464,9 @@ export class BattleSim {
     // 射程驗證(球面射程 + 高度差加成;留 25% 寬容給網路延遲/彈道飛行)
     // 量到目標**近側表面**(_surfD3):彈著本來就停在建築牆面上,量中心會讓砲塔/主堡吃掉整段寬容
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (this._surfD3(d3, t) > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL) return;
+    const targetDistance = t.kind === 'mapbuilding'
+      ? buildingDistance(t.boxes,h.x,h.z,this._absSightY(h,(h.y || 0)+LOS.EYE_M,h.x,h.z),t.roofs) : this._surfD3(d3,t);
+    if (targetDistance > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL) return;
     // 迷霧內的目標不可命中:射手陣營看不見(非瞄準模式看不到)就打不到 —
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
     const pulse = this.visionUntil?.[h.side] > this.t;
@@ -2478,7 +2550,7 @@ export class BattleSim {
     }
     if (m.hp <= 0) {
       this.missiles.splice(this.missiles.indexOf(m), 1);
-      this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y, r: 8, side: h.side, sam: true });
+      this.events.push({ e: 'boom', missileId:m.id, x: m.x, z: m.z, y: m.y, r: 8, side: h.side, sam: true });
       h.money += ECON.BOUNTY.missile;
     }
   }
@@ -2743,8 +2815,20 @@ export class BattleSim {
     const pulse = this.visionUntil?.[shooter.side] > this.t;
     const src = this._visionSources(shooter.side);
     const out = [];
+    const absoluteY=this._absSightY(shooter,oy,ox,oz);
+    const roof=this._buildingRoofHit?.(ox,absoluteY,oz,ox+dx*len,absoluteY+dy*len,oz+dz*len);
     for (const t of this.ents.values()) {
       if (t.side === shooter.side || t.gar || (t.hero && t.dead)) continue;
+      if (t.kind === 'mapbuilding') {
+        if (t.hp<=0) continue;
+        const ay=absoluteY;
+        const f=buildingRayHit(t.boxes,ox,ay,oz,ox+dx*len,ay+dy*len,oz+dz*len,R,band);
+        const fraction=roof?.key===t.key ? Math.min(f ?? Infinity,roof.f) : f;
+        if (fraction==null || !Number.isFinite(fraction)) continue;
+        if (this._losBlocked(ox,oz,oy,t.x,t.z,this._tgtY(t),shooter,t)) continue;
+        out.push({ t,s:fraction*maxS,d3:fraction*len,off:0 });
+        continue;
+      }
       const ty = this._tgtY(t);
       const tx = t.x - ox, tz = t.z - oz;
       const hr = hitR(t);
@@ -2868,7 +2952,7 @@ export class BattleSim {
       m.hp -= this._heroDmg(h, wp.def, 'missile') * dmgFalloff(wp.def, d3);
       if (m.hp <= 0) {
         this.missiles.splice(i, 1);
-        this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y, r: 8, side: h.side, sam: true });
+        this.events.push({ e: 'boom', missileId:m.id, x: m.x, z: m.z, y: m.y, r: 8, side: h.side, sam: true });
         h.money += ECON.BOUNTY.missile;
       }
     }
@@ -3794,7 +3878,7 @@ export class BattleSim {
         if (ms.side === h.side) continue;
         if (dist2d(ms.x, ms.z, h.x, h.z) > ir) continue;
         this.missiles.splice(i, 1);
-        this.events.push({ e: 'boom', x: ms.x, z: ms.z, y: ms.y, r: 8, side: h.side, sam: true });
+        this.events.push({ e: 'boom', missileId:ms.id, x: ms.x, z: ms.z, y: ms.y, r: 8, side: h.side, sam: true });
       }
       if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
     } else if (A.fx === 'storm') {
@@ -4489,7 +4573,7 @@ export class BattleSim {
     this.ents.delete(m.id);
     this._blast(m.owner, { dmg: m.dmg, r: 16, vs: { armor: 1.2, building: 1.2 } }, m.x, m.z, 0, 0);
     this._applyCC(m.owner, { fx: 'stun', dur: 0.8 }, m.x, m.z, 16);
-    this.events.push({ e: 'moon_boom', x: m.x, z: m.z, y: m.y || 4.5, r: 16 });
+    this.events.push({ e: 'moon_boom', id:m.id, x: m.x, z: m.z, y: m.y || 4.5, r: 16 });
   }
 
   _tickDarkMoons(dt) {
@@ -5383,7 +5467,8 @@ export class BattleSim {
       // 的爆風版(與 2026-07-28 _lanceHits、2026-07-29 _surfD3 同一條病灶的最後一塊)。
       // 砲塔(hitR 7)本就多半落在核心帶內,平衡位移極小;bal 四不變式不模型化爆風幾何。
       const dh = Math.max(0, Math.hypot(x - t.x, z - t.z) - hitR(t));
-      const d = Math.hypot(dh, this._bodyDy(t, y));
+      const d = t.kind === 'mapbuilding' ? buildingDistance(t.boxes,x,z,(this._hgtAt(x,z) ?? t.mapBounds.y)+y,t.roofs)
+        : Math.hypot(dh, this._bodyDy(t, y));
       const f = blastFalloff(def.r, d);
       if (f <= 0) continue;
       // 閃避:**逐目標各自擲骰**(2026-08-11 使用者定案「爆炸傷害就算沒擊中原先的目標,也會造成
@@ -5943,6 +6028,7 @@ export class BattleSim {
   }
 
   _kill(t, by) {
+    if (t.kind === 'mapbuilding') { this._collapseMapBuilding(t); return; }
     const bySide = by?.side || null;
     this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side, ...(t.hero || t.decoy ? { pid: t.pid } : {}) });
     // 平民/間諜:誤殺平民一律負值賞金,揪出敵方間諜才 +6(以步槍兵賞金 ECON.BOUNTY.soldier 為單位)。
@@ -6659,7 +6745,7 @@ export class BattleSim {
       h.thirdCd = this.t + GAME.THREAT_CD_S;
       this.missiles.push({
         id: nextEntId++, byId: best.id, side: OTHER_SIDE[h.side], tid: h.id, tpid: h.pid,
-        x: best.x, z: best.z, y: 2, speed: A.SPEED, dmg: A.DMG, pen: A.PEN, r: A.R, hp: A.HP, ttl: 14,
+        x: best.x, z: best.z, y: 2, speed: A.SPEED, dmg: A.DMG, pen: A.PEN, r: A.R, hp: A.HP, maxHp: A.HP, ttl: 14,
         amb: true, ox: best.x, oy: 2, oz: best.z, range: S.range,   // 出了陣地射程就失鎖直飛
       });
       this.events.push({ e: 'sam', from: [best.x, best.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
@@ -7113,7 +7199,7 @@ export class BattleSim {
       this.missiles.push({
         id: nextEntId++, byId: e.id, side: e.side, tid: target.id, tpid: target.pid,
         x: mx, y: my, z: mz, speed: BASE_MISSILE.SPEED, dmg: g.dmg, pen: STRUCT_W.base.pen || 0,
-        r: STRUCT_W.base.r, hp: BASE_MISSILE.HP, ttl: g.range / BASE_MISSILE.SPEED + BASE_MISSILE.TTL_PAD,
+        r: STRUCT_W.base.r, hp: BASE_MISSILE.HP, maxHp: BASE_MISSILE.HP, ttl: g.range / BASE_MISSILE.SPEED + BASE_MISSILE.TTL_PAD,
         ox: mx, oy: my, oz: mz, range: g.range,   // 出了主堡射程就失鎖直飛(與其他飛彈同一條規則)
       });
       // gi = 第幾門砲:客戶端把該門砲管轉向目標、播放槍口焰(飛彈本身由 sm 快照另行渲染飛行路徑)
@@ -7323,6 +7409,8 @@ export class BattleSim {
   // ---------- 快照(霧戰爭:單位類實體限視野範圍,建築/中立物永遠可見)----------
   _serializeEnt(e) {
     const o = { id: e.id, k: e.kind, s: e.side, x: Math.round(e.x * 10) / 10, z: Math.round(e.z * 10) / 10, hp: Math.round(e.hp), m: e.maxHp };
+    if (e.isMoon) o.y=e.y;
+    if (e.isSlab) o.ang=e.ang;
     if (e.sc) o.sc = e.sc;   // 障礙物實例尺寸(客戶端外觀 / 碰撞半徑)
     if (e.collapsed) o.col = 1;   // 場景物件已坍塌 = 低矮殘骸(客戶端傾倒姿態 + 藏血條)
     // 攻堅鎖血:客戶端血條變灰 + 掛鎖,並把它排除在射程光暈之外(打不掉的東西不該亮燈)
@@ -7543,6 +7631,7 @@ export class BattleSim {
     this.events = [];
     const sm = this.missiles.map((m) => ({
       id: m.id, x: Math.round(m.x * 10) / 10, y: Math.round(m.y * 10) / 10, z: Math.round(m.z * 10) / 10,
+      hp: Math.ceil(m.hp), m: m.maxHp,
     }));
     const lt = this.loots.map((l) => ({
       id: l.id, x: Math.round(l.x * 10) / 10, z: Math.round(l.z * 10) / 10, a: l.ammo ? 1 : 0,
@@ -7564,6 +7653,7 @@ export class BattleSim {
     const sources = side && !pulse ? this._visionSources(side) : null;
     const ents = [];
     for (const e of this.ents.values()) {
+      if (e.kind === 'mapbuilding') continue;
       if (e.isTree || e.isMoon || e.isSlab) continue;
       if (sources && !this._visibleTo(e, side, sources)) continue;
       ents.push(this._serializeEnt(e));
@@ -7590,6 +7680,8 @@ export class BattleSim {
       nextWave: Math.max(0, Math.round(this.nextWaveAt - this.t)), wave: this.wave,
       ...cuPart,
       ...sgPart,
+      ...(this.mapBuildings?.size ? { mb: [...this.mapBuildings.values()].filter(e => e.hp < e.maxHp)
+        .map(e => [e.key, Math.ceil(e.hp), e.maxHp]) } : {}),
       ents, ev, sm, lt, ad, stats: this.stats, over: this.over, winner: this.winner,
     };
   }

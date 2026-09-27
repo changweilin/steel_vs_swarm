@@ -826,7 +826,7 @@ const _chunkMats = [0x51565b, 0x3a4148, 0x6d757c, 0x2c3238].map((c) => toonMat(c
  * 機械碎片爆散:radial impulse + 重力 + 自旋,最後 30% 壽命縮小despawn。
  * big=true(塔/主堡/坦克)碎片更多更大。
  */
-export function debrisBurst(scene, effects, x, y, z, { big = false, accent } = {}) {
+export function debrisBurst(scene, effects, x, y, z, { big = false, accent, random = Math.random } = {}) {
   const n = big ? 14 : 7;
   const g = new THREE.Group();
   const chunks = [];
@@ -836,16 +836,16 @@ export function debrisBurst(scene, effects, x, y, z, { big = false, accent } = {
       _chunkGeos[i % _chunkGeos.length],
       (accMat && i % 4 === 3) ? accMat : _chunkMats[i % _chunkMats.length],
     );
-    const sc = (big ? 1.6 : 0.7) * (0.6 + Math.random() * 0.9);
+    const sc = (big ? 1.6 : 0.7) * (0.6 + random() * 0.9);
     mesh.scale.setScalar(sc);
     mesh.position.set(x, y, z);
-    const th = Math.random() * Math.PI * 2;
-    const up = 6 + Math.random() * (big ? 22 : 12);
-    const out = (big ? 14 : 8) * (0.4 + Math.random());
+    const th = random() * Math.PI * 2;
+    const up = 6 + random() * (big ? 22 : 12);
+    const out = (big ? 14 : 8) * (0.4 + random());
     chunks.push({
       mesh, sc,
       vel: new THREE.Vector3(Math.cos(th) * out, up, Math.sin(th) * out),
-      ang: new THREE.Vector3(Math.random() * 9, Math.random() * 9, Math.random() * 9),
+      ang: new THREE.Vector3(random() * 9, random() * 9, random() * 9),
     });
     g.add(mesh);
   }
@@ -937,7 +937,7 @@ function crackTexture() {
  * 受損特效群組。dims = 呼叫端量好的基準包圍盒 { r 半徑, top 頂高, h 全高 }。
  * 回傳 Group 掛在 ent.mesh 底下;setStage(1|2) 切階、update(dt, now) 逐幀動畫。
  */
-export function makeDamageFx({ r = 2, top = 3, h = 3 }) {
+export function makeDamageFx({ r = 2, top = 3, h = 3, fire = true, surfaceCracks = true }) {
   const g = new THREE.Group();
   g.userData.noOutline = true;
   const rr = Math.max(0.8, r);
@@ -1022,17 +1022,17 @@ export function makeDamageFx({ r = 2, top = 3, h = 3 }) {
   g.userData.setStage = (s) => {
     g.userData.stage = s;
     const heavy = s >= 2;
-    for (const f of flames) f.visible = heavy;
-    for (const hc of hotCracks) hc.visible = heavy;
-    for (const em of embers) em.visible = heavy;
+    for (const f of flames) f.visible = heavy && fire;
+    for (const hc of hotCracks) hc.visible = heavy && fire && surfaceCracks;
+    for (const em of embers) em.visible = heavy && fire;
     // 暗裂:階段1露前 3 道,階段2全露(破損加劇)
-    cracks.forEach((c, i) => { c.visible = heavy || i < 3; });
+    cracks.forEach((c, i) => { c.visible = surfaceCracks && (heavy || i < 3); });
   };
 
   g.userData.update = (dt, now) => {
     const heavy = g.userData.stage >= 2;
     // 煙:濃黑(重傷)/ 淺灰(輕傷),循環上升淡出
-    const smCol = heavy ? 0x2a2a2e : 0x6f757c;
+    const smCol = !fire ? 0x968776 : heavy ? 0x2a2a2e : 0x6f757c;
     const opMax = heavy ? 0.62 : 0.44, scEnd = rr * (heavy ? 1.9 : 1.3);
     for (const sp of smoke) {
       sp.userData.ph = (sp.userData.ph + dt * 0.33) % 1;
@@ -1178,6 +1178,17 @@ export function spawnTreesVFX(scene, effects, { x, z, trees, dur = 8 }) {
   });
 }
 
+/** Snapshot-owned skill bodies reuse the event models without a second lifetime. */
+export function buildHpSkillObject(kind) {
+  const scene=new THREE.Group(), effects=[];
+  if (kind==='tree') spawnTreesVFX(scene,effects,{x:0,z:0,trees:[{x:0,z:0,r:2,h:9}]});
+  else if (kind==='moon') spawnDarkMoonVFX(scene,effects,{x:0,z:0,y:0});
+  else spawnCubicSlabsVFX(scene,effects,{x:0,z:0,r:0,count:1});
+  const group=effects[0].obj;
+  group.removeFromParent(); group.scale.setScalar(1);
+  return group;
+}
+
 /** 暗月引爆:浮空月岩與引力漩渦 */
 export function spawnDarkMoonVFX(scene, effects, { x, z, y = 4.5, r = 3.5, dur = 3.5 }) {
   const g = new THREE.Group();
@@ -1204,12 +1215,12 @@ export function spawnDarkMoonVFX(scene, effects, { x, z, y = 4.5, r = 3.5, dur =
 }
 
 /** 幾何神碑:法老立方石板牢籠 */
-export function spawnCubicSlabsVFX(scene, effects, { x, z, r = 5.5, dur = 5 }) {
+export function spawnCubicSlabsVFX(scene, effects, { x, z, r = 5.5, dur = 5, count = 6 }) {
   const g = new THREE.Group();
   g.position.set(x, 0, z);
   const slabMat = toonMat(0xd2b77a);
   const runeMat = new THREE.MeshBasicMaterial({ color: 0xffe28a });
-  for (let k = 0; k < 6; k++) {
+  for (let k = 0; k < count; k++) {
     const ang = (k * Math.PI) / 3;
     const sx = Math.cos(ang) * r, sz = Math.sin(ang) * r;
     const sg = new THREE.Group();
