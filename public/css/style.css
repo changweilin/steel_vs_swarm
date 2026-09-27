@@ -759,7 +759,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(680px, 88vw);
+  /* 寬度只吃螢幕佔比:88vw 保窄螢幕滿版、90vmin 管寬螢幕上限(1080p ≈ 972px,
+     1440p 跟著長到 ≈ 1296px,不再被 680px 絕對值釘住)。 */
+  width: min(88vw, 90vmin);
   z-index: 25;
   pointer-events: none;
   display: flex;
@@ -785,11 +787,12 @@ body.has-boss-bar .hud-top {
   min-width: 0;
 }
 /* -- 陣營頭像框:蜂群琥珀切角 / 鋼鐵冷藍鍍邊 / 傭兵金色雙線(與對話頭像同一組 data-fac) --
-   尺寸隨遊戲畫面 vmin 流體縮放 */
+   邊長只吃螢幕佔比:下限 vh 保直式手機可辨、上限 vw 管超寬螢幕(1080p ≈ 91px,
+   不再被 68px 釘住;直式手機維持 ≈ 44px)。 */
 .boss-av {
-  width: clamp(44px, 8.4vmin, 68px);
-  height: clamp(44px, 8.4vmin, 68px);
-  flex: 0 0 clamp(44px, 8.4vmin, 68px);
+  width: clamp(5.2vh, 8.4vmin, 5.4vw);
+  height: clamp(5.2vh, 8.4vmin, 5.4vw);
+  flex: 0 0 clamp(5.2vh, 8.4vmin, 5.4vw);
   object-fit: cover;
   background: #0c0e12;
 }
@@ -843,7 +846,7 @@ body.has-boss-bar .hud-top {
 }
 .boss-badge {
   font-family: var(--mono);
-  font-size: clamp(9px, 1.4vmin, 12px);
+  font-size: clamp(1.1vh, 1.4vmin, 1vw);
   font-weight: 900;
   letter-spacing: 2px;
   background: #d32f2f;
@@ -854,14 +857,14 @@ body.has-boss-bar .hud-top {
 }
 .boss-name {
   font-family: var(--serif);
-  font-size: clamp(13px, 2.1vmin, 18px);
+  font-size: clamp(1.55vh, 2.1vmin, 1.5vw);
   font-weight: 900;
   letter-spacing: 2px;
   color: #fff;
   text-shadow: 0 0 10px rgba(255, 60, 60, 0.6);
 }
 .boss-sub {
-  font-size: clamp(10px, 1.55vmin, 13px);
+  font-size: clamp(1.2vh, 1.55vmin, 1.1vw);
   color: var(--dim);
   letter-spacing: 1px;
 }
@@ -872,19 +875,19 @@ body.has-boss-bar .hud-top {
   font-family: var(--mono);
 }
 .boss-phase {
-  font-size: clamp(10px, 1.55vmin, 13px);
+  font-size: clamp(1.2vh, 1.55vmin, 1.1vw);
   color: #ffd54a;
   letter-spacing: 1px;
   font-weight: 700;
 }
 .boss-hp-text {
-  font-size: clamp(10px, 1.67vmin, 14px);
+  font-size: clamp(1.2vh, 1.67vmin, 1.2vw);
   color: rgba(255, 255, 255, 0.85);
   letter-spacing: 1px;
 }
 .boss-bar-track {
   position: relative;
-  height: clamp(12px, 1.95vmin, 18px);
+  height: clamp(1.45vh, 1.95vmin, 1.4vw);
   background: rgba(6, 9, 14, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 1px;
@@ -930,14 +933,14 @@ body.has-boss-bar .hud-top {
 }
 body.touch-ui .boss-bar-wrap {
   top: 6px;
-  width: min(600px, 82vw);
+  width: min(82vw, 140vmin);
   gap: 6px;
 }
 body.touch-ui .boss-av {
-  width: clamp(40px, 8.4vmin, 56px); height: clamp(40px, 8.4vmin, 56px); flex-basis: clamp(40px, 8.4vmin, 56px);
+  width: clamp(4.7vh, 8.4vmin, 5.4vw); height: clamp(4.7vh, 8.4vmin, 5.4vw); flex-basis: clamp(4.7vh, 8.4vmin, 5.4vw);
 }
 body.touch-ui .boss-name {
-  font-size: clamp(11px, 1.9vmin, 15px);
+  font-size: clamp(1.3vh, 1.9vmin, 1.35vw);
 }
 
 .hud-top {
@@ -946,15 +949,15 @@ body.touch-ui .boss-name {
   padding: 10px 16px; pointer-events: none;
   background: linear-gradient(180deg, rgba(3, 5, 8, 0.85), transparent);
 }
-.base-bar { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 420px; }
+.base-bar { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 39vmin; }
 .base-bar.steel { justify-content: flex-end; }
 .base-label {
-  font-family: var(--serif); font-size: clamp(10px, 1.67vmin, 14px); font-weight: 900; letter-spacing: 3px; white-space: nowrap;
+  font-family: var(--serif); font-size: clamp(1.2vh, 1.67vmin, 1.2vw); font-weight: 900; letter-spacing: 3px; white-space: nowrap;
   padding: 1px 8px;
 }
 .base-bar.swarm .base-label { color: #0d0900; background: var(--swarm); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 .base-bar.steel .base-label { color: #04080b; background: var(--steel); clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%); }
-.bbar { flex: 1; height: clamp(10px, 1.67vmin, 14px); background: rgba(4, 7, 11, 0.85); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.bbar { flex: 1; height: clamp(1.2vh, 1.67vmin, 1.2vw); background: rgba(4, 7, 11, 0.85); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 /* 條的刻度只是細分隔線(1px),不是粗條紋 —— 條紋會吃掉疊在上面的數值文字 */
 .bbar-fill { height: 100%; transition: width 0.3s steps(12); }
 .bbar-fill.swarm { background: repeating-linear-gradient(90deg, var(--swarm) 0 9px, rgba(5, 7, 10, 0.5) 9px 10px); }
@@ -962,9 +965,9 @@ body.touch-ui .boss-name {
   background: repeating-linear-gradient(90deg, var(--steel) 0 9px, rgba(5, 7, 10, 0.5) 9px 10px);
   float: right;
 }
-.score { font-size: clamp(9px, 1.4vmin, 12px); color: var(--dim); white-space: nowrap; font-family: var(--mono); }
+.score { font-size: clamp(1.1vh, 1.4vmin, 1vw); color: var(--dim); white-space: nowrap; font-family: var(--mono); }
 .wave-box {
-  font-family: var(--mono); font-size: clamp(10px, 1.67vmin, 14px); letter-spacing: 3px; white-space: nowrap;
+  font-family: var(--mono); font-size: clamp(1.2vh, 1.67vmin, 1.2vw); letter-spacing: 3px; white-space: nowrap;
   color: var(--railW); border: 1px solid var(--line); padding: 6px 20px;
   background: rgba(4, 7, 11, 0.85);
   clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
@@ -976,7 +979,7 @@ body.touch-ui .boss-name {
 }
 .kill-feed div {
   background: rgba(4, 7, 11, 0.82); border-right: 3px solid var(--danger);
-  padding: 4px 10px; font-size: clamp(10px, 1.67vmin, 14px); font-family: var(--mono); animation: feedIn 0.15s steps(3);
+  padding: 4px 10px; font-size: clamp(1.2vh, 1.67vmin, 1.2vw); font-family: var(--mono); animation: feedIn 0.15s steps(3);
 }
 @keyframes feedIn { from { transform: translateX(20px); opacity: 0; } }
 
@@ -1111,15 +1114,15 @@ body.aiming .scope-vig { display: block; }
   padding: 6px 10px;
   background: linear-gradient(0deg, rgba(3, 5, 8, 0.85), transparent);
 }
-.hud-self { display: flex; flex-direction: column; gap: 3px; min-width: clamp(200px, 34vmin, 320px); max-width: clamp(240px, 37vmin, 340px); }
+.hud-self { display: flex; flex-direction: column; gap: 3px; min-width: clamp(24vh, 34vmin, 30vw); max-width: clamp(28vh, 37vmin, 32vw); }
 .hud-side {
-  font-family: var(--serif); font-size: clamp(10px, 1.55vmin, 14px); letter-spacing: 3px; font-weight: 900;
+  font-family: var(--serif); font-size: clamp(1.2vh, 1.55vmin, 1.1vw); letter-spacing: 3px; font-weight: 900;
   padding: 1px 8px; align-self: flex-start;
 }
 body[data-side="SWARM"] .hud-side { color: #0d0900; background: var(--swarm); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 /* 條類一律硬邊 + 內部格柵(高與字級隨遊戲畫面 vmin 流體縮放,上下限保可讀不爆版) */
-.hpbar { position: relative; height: clamp(12px, 1.95vmin, 18px); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.hpbar { position: relative; height: clamp(1.45vh, 1.95vmin, 1.4vw); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .hpbar-fill {
   height: 100%;
   background: repeating-linear-gradient(90deg, #6fae3e 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
@@ -1127,10 +1130,10 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 }
 .hp-text {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: clamp(9px, 1.55vmin, 14px); font-weight: 700; letter-spacing: 2px; color: #fff;
+  font-family: var(--mono); font-size: clamp(1.1vh, 1.55vmin, 1.1vw); font-weight: 700; letter-spacing: 2px; color: #fff;
   text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
-.burst-box { position: relative; overflow: hidden; font-size: clamp(10px, 1.55vmin, 13px); color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
+.burst-box { position: relative; overflow: hidden; font-size: clamp(1.2vh, 1.55vmin, 1.1vw); color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
 .burst-box > span { position: relative; z-index: 1; }
 .burst-cd { color: var(--danger); margin-left: 6px; letter-spacing: 1px; }
 .burst-cd.ready { color: var(--ok); }
@@ -1146,7 +1149,7 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
   position: relative; overflow: hidden;
   display: flex; justify-content: space-between; align-items: center;
   background: rgba(4, 7, 11, 0.82); border: 1px solid var(--line); border-left: 3px solid var(--railS);
-  padding: 2px 8px; font-size: clamp(10px, 1.67vmin, 15px);
+  padding: 2px 8px; font-size: clamp(1.2vh, 1.67vmin, 1.2vw);
   clip-path: var(--notch-sm);
 }
 .wpn-box > span { position: relative; z-index: 1; }
@@ -1159,8 +1162,8 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .wpn-ammo.low { color: var(--danger); }
 .wpn-ammo.reloading { color: var(--railW); animation: reloadBlink 0.4s steps(1) infinite alternate; }
 @keyframes reloadBlink { from { opacity: 1; } to { opacity: 0.25; } }
-.money-box { font-size: clamp(10px, 1.55vmin, 13px); color: var(--railW); font-family: var(--mono); letter-spacing: 1px; }
-.shop-hint { color: var(--dim); font-size: clamp(9px, 1.4vmin, 12px); margin-left: 8px; }
+.money-box { font-size: clamp(1.2vh, 1.55vmin, 1.1vw); color: var(--railW); font-family: var(--mono); letter-spacing: 1px; }
+.shop-hint { color: var(--dim); font-size: clamp(1.1vh, 1.4vmin, 1vw); margin-left: 8px; }
 
 /* 觀戰的角色數據面板(2026-08-02):**與交戰共用同一塊 .hud-self** —— 沒跟人時只留標題(上帝視角
    本來就沒有「誰的數據」可顯示),跟上某位玩家才整塊攤開,並在最下方補一列八軌商店升級。
@@ -1225,8 +1228,9 @@ body.spectating.spec-follow .spec-upg { display: flex; }
   text-align: left; border-left: 2px solid var(--line); padding-left: 10px;
 }
 #minimap {
-  /* 顯示尺寸隨遊戲畫面 vmin 流體縮放(繪製解析度仍是 220,CSS 縮放) */
-  width: clamp(120px, 24vmin, 210px); height: clamp(120px, 24vmin, 210px);
+  /* 顯示尺寸只吃螢幕佔比:下限 vh 保直式手機可辨、上限 vw 管超寬螢幕
+     (1080p ≈ 259px,1440p ≈ 346px,不再被 210px 釘住;繪製解析度仍是 220,CSS 縮放) */
+  width: clamp(14vh, 24vmin, 20vw); height: clamp(14vh, 24vmin, 20vw);
   border: 1px solid var(--railS); border-radius: 0;
   background: rgba(4, 7, 10, 0.92); pointer-events: none;
   clip-path: var(--notch);
@@ -2276,16 +2280,16 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .slot-char.dim { color: var(--dim); }
 
 /* 護盾 / 電力條(與 .hpbar 同族;尺寸隨遊戲畫面 vmin 流體縮放) */
-.spbar { position: relative; height: clamp(8px, 1.4vmin, 13px); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.spbar { position: relative; height: clamp(0.95vh, 1.4vmin, 1vw); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .spbar-fill {
   height: 100%; background: repeating-linear-gradient(90deg, #2f8fb8 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
   transition: width 0.2s steps(10);
 }
 .sp-text {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: clamp(8px, 1.25vmin, 11px); font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
+  font-family: var(--mono); font-size: clamp(0.95vh, 1.25vmin, 0.9vw); font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
-.mpbar { position: relative; height: clamp(7px, 1.12vmin, 11px); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.mpbar { position: relative; height: clamp(0.85vh, 1.12vmin, 0.8vw); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .mpbar-fill {
   height: 100%; background: repeating-linear-gradient(90deg, #7d55c7 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
   transition: width 0.2s steps(10);
@@ -2298,10 +2302,10 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 @keyframes mp-oc { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
 .mp-text {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: clamp(7px, 1.12vmin, 10px); font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
+  font-family: var(--mono); font-size: clamp(0.85vh, 1.12vmin, 0.8vw); font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
 /* 爬升動力條(飛行機體專屬;非飛行狀態整條收起 —— 地面機甲的版型不變) */
-.liftbar { position: relative; height: clamp(7px, 1.12vmin, 11px); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.liftbar { position: relative; height: clamp(0.85vh, 1.12vmin, 0.8vw); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .liftbar.hidden { display: none; }
 .liftbar-fill {
   height: 100%; background: repeating-linear-gradient(90deg, #46b8a0 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
@@ -2314,7 +2318,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 }
 .lift-text {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: clamp(7px, 1.12vmin, 10px); font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
+  font-family: var(--mono); font-size: clamp(0.85vh, 1.12vmin, 0.8vw); font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
 
 /* 三機小隊狀態列(無人機專屬;V 循環切換、1~3 直選主視野) */
@@ -2323,7 +2327,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .sq-box {
   flex: 1; position: relative; overflow: hidden;
   background: rgba(4, 7, 11, 0.82); border: 1px solid var(--line); border-radius: 0;
-  padding: 2px 6px; font-family: var(--mono); font-size: clamp(9px, 1.4vmin, 12px); color: var(--dim); text-align: center;
+  padding: 2px 6px; font-family: var(--mono); font-size: clamp(1.1vh, 1.4vmin, 1vw); color: var(--dim); text-align: center;
 }
 .sq-fill { position: absolute; inset: 0 auto 0 0; background: rgba(169, 221, 107, 0.25); }
 .sq-box > span { position: relative; }
@@ -2342,7 +2346,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .status-icons:empty { display: none; }
 .si {
   position: relative;
-  width: clamp(24px, 3.9vmin, 34px); height: clamp(24px, 3.9vmin, 34px);
+  width: clamp(2.85vh, 3.9vmin, 2.8vw); height: clamp(2.85vh, 3.9vmin, 2.8vw);
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 2px;
   background-color: var(--si-bg, #1a1a2e);
@@ -2354,7 +2358,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 /* 右上:剩餘秒數 */
 .si-t {
   position: absolute; top: -1px; right: -1px;
-  font-family: var(--mono); font-size: clamp(6px, 1vmin, 9px); font-weight: 700;
+  font-family: var(--mono); font-size: clamp(0.72vh, 1vmin, 0.72vw); font-weight: 700;
   color: #fff; background: rgba(0,0,0,0.65);
   padding: 0 2px; line-height: 1.4;
   pointer-events: none;
@@ -2362,7 +2366,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 /* 右下:極性箭頭 */
 .si-p {
   position: absolute; bottom: -1px; right: -1px;
-  font-size: clamp(7px, 1.12vmin, 10px); line-height: 1;
+  font-size: clamp(0.85vh, 1.12vmin, 0.8vw); line-height: 1;
   pointer-events: none;
 }
 .si-p.pos { color: #4cde6a; }   /* 正面效果:綠↑ */
@@ -2370,7 +2374,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 /* 左下:層數(僅多層顯示) */
 .si-n {
   position: absolute; bottom: -1px; left: -1px;
-  font-family: var(--mono); font-size: clamp(6px, 1vmin, 9px); font-weight: 700;
+  font-family: var(--mono); font-size: clamp(0.72vh, 1vmin, 0.72vw); font-weight: 700;
   color: #ffd54f; background: rgba(0,0,0,0.65);
   padding: 0 2px; line-height: 1.4;
   pointer-events: none;
@@ -2382,7 +2386,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
   position: relative; overflow: hidden;
   flex: 1; display: flex; align-items: center; gap: 6px;
   background: rgba(4, 7, 11, 0.82); border: 1px solid var(--line); border-radius: 0;
-  padding: 2px 7px; font-size: clamp(10px, 1.55vmin, 13px); color: var(--dim);
+  padding: 2px 7px; font-size: clamp(1.2vh, 1.55vmin, 1.1vw); color: var(--dim);
   clip-path: var(--notch-sm);
 }
 .ab-box > span { position: relative; z-index: 1; }
@@ -2395,37 +2399,58 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .ab-box.ready { border-color: var(--ok); color: var(--fg); background: rgba(169, 221, 107, 0.1); }
 .ab-box.locked { opacity: 0.5; }
 .ab-key {
-  font-family: var(--mono); font-weight: 700; font-size: clamp(10px, 1.55vmin, 13px); color: #05070a;
+  font-family: var(--mono); font-weight: 700; font-size: clamp(1.2vh, 1.55vmin, 1.1vw); color: #05070a;
   background: var(--dim); padding: 0 7px; border-radius: 0;
 }
 .ab-box.ready .ab-key { background: var(--ok); }
 .ab-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.ab-cd { font-family: var(--mono); font-size: clamp(9px, 1.4vmin, 12px); letter-spacing: 1px; }
+.ab-cd { font-family: var(--mono); font-size: clamp(1.1vh, 1.4vmin, 1vw); letter-spacing: 1px; }
 
-/* ---------- 寬版大螢幕:機體資訊區塊再放大一階 ----------
-   只進非觸控桌機(`body:not(.touch-ui)` ⇒ 觸控四分區版型零影響);
-   高度仍受 game.js `fitHudBand()` 的 1/6 上限箝制,這裡只放大基底(上限內等比呈現)。
-   小地圖維持原上限(它是下帶的高度主導件,跟著放大会吃掉整條預算)。 */
+/* ---------- 寬版大螢幕:HUD 再放大一階(全佔比單位) ----------
+   只進非觸控桌機(`body:not(.touch-ui)` ⇒ 觸控四分區版型零影響)。
+   上限全是 vw/vmin(60vw、120vmin 這類):螢幕越大長越大,不再有 px 天花板。
+   高度仍受 game.js `fitHudBand()` 的 1/6 上限箝制 —— 下帶總高封頂時,
+   這裡放大的基底只是在固定預算內重新分配(字相對更大、小地圖相對更小),
+   反之內容不足 1/6 的高螢幕才會等比長大。機體資訊與小地圖同吃這份預算,
+   兩邊同時放大會互相擠壓;要突破 1/6 需另行裁決(它同時是座艙頂緣線)。 */
 @media (min-width: 1600px) {
-  body:not(.touch-ui) .hud-self { min-width: 340px; max-width: 480px; gap: 5px; }
-  body:not(.touch-ui) .hud-side { font-size: 15px; }
-  body:not(.touch-ui) .hpbar { height: 22px; }
-  body:not(.touch-ui) .hp-text { font-size: 15px; }
-  body:not(.touch-ui) .spbar { height: 16px; }
-  body:not(.touch-ui) .sp-text { font-size: 12px; }
+  /* 上方 BOSS 血條 */
+  body:not(.touch-ui) .boss-bar-wrap { width: min(60vw, 120vmin); }
+  body:not(.touch-ui) .boss-av { width: 10vmin; height: 10vmin; flex-basis: 10vmin; }
+  body:not(.touch-ui) .boss-badge { font-size: 1.7vmin; }
+  body:not(.touch-ui) .boss-name { font-size: 2.5vmin; }
+  body:not(.touch-ui) .boss-sub,
+  body:not(.touch-ui) .boss-phase { font-size: 1.85vmin; }
+  body:not(.touch-ui) .boss-hp-text { font-size: 2vmin; }
+  body:not(.touch-ui) .boss-bar-track { height: 2.4vmin; }
+  /* 上緣主堡條 / 波次 / 擊殺播報 */
+  body:not(.touch-ui) .base-bar { max-width: 46vmin; }
+  body:not(.touch-ui) .base-label { font-size: 2vmin; }
+  body:not(.touch-ui) .bbar { height: 2vmin; }
+  body:not(.touch-ui) .score { font-size: 1.7vmin; }
+  body:not(.touch-ui) .wave-box { font-size: 2vmin; }
+  body:not(.touch-ui) .kill-feed div { font-size: 2vmin; }
+  /* 下帶:機體資訊 + 小地圖 */
+  body:not(.touch-ui) #minimap { width: 28vmin; height: 28vmin; }
+  body:not(.touch-ui) .hud-self { min-width: 21vw; max-width: 28vw; gap: 0.5vmin; }
+  body:not(.touch-ui) .hud-side { font-size: 1.9vmin; }
+  body:not(.touch-ui) .hpbar { height: 2.4vmin; }
+  body:not(.touch-ui) .hp-text { font-size: 1.9vmin; }
+  body:not(.touch-ui) .spbar { height: 1.75vmin; }
+  body:not(.touch-ui) .sp-text { font-size: 1.5vmin; }
   body:not(.touch-ui) .mpbar,
-  body:not(.touch-ui) .liftbar { height: 13px; }
+  body:not(.touch-ui) .liftbar { height: 1.4vmin; }
   body:not(.touch-ui) .mp-text,
-  body:not(.touch-ui) .lift-text { font-size: 11px; }
-  body:not(.touch-ui) .wpn-box { padding: 4px 12px; font-size: 16px; }
-  body:not(.touch-ui) .burst-box { font-size: 14px; }
-  body:not(.touch-ui) .ab-box { padding: 5px 12px; font-size: 14px; }
-  body:not(.touch-ui) .ab-key { font-size: 14px; }
-  body:not(.touch-ui) .ab-cd { font-size: 13px; }
-  body:not(.touch-ui) .money-box { font-size: 14px; }
-  body:not(.touch-ui) .shop-hint { font-size: 12px; }
-  body:not(.touch-ui) .sq-box { font-size: 13px; }
-  body:not(.touch-ui) .si { width: 36px; height: 36px; }
+  body:not(.touch-ui) .lift-text { font-size: 1.35vmin; }
+  body:not(.touch-ui) .wpn-box { padding: 0.4vh 0.7vw; font-size: 2vmin; }
+  body:not(.touch-ui) .burst-box { font-size: 1.8vmin; }
+  body:not(.touch-ui) .ab-box { padding: 0.5vh 0.7vw; font-size: 1.8vmin; }
+  body:not(.touch-ui) .ab-key { font-size: 1.8vmin; }
+  body:not(.touch-ui) .ab-cd { font-size: 1.65vmin; }
+  body:not(.touch-ui) .money-box { font-size: 1.8vmin; }
+  body:not(.touch-ui) .shop-hint { font-size: 1.55vmin; }
+  body:not(.touch-ui) .sq-box { font-size: 1.65vmin; }
+  body:not(.touch-ui) .si { width: 4.4vmin; height: 4.4vmin; }
 }
 
 /* ===== 招式立繪演出(cutin.js;參照 plan 的 2D Comic Billboard VFX)=====
