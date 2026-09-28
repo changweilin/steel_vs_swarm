@@ -5687,8 +5687,11 @@ export const BOSS = {
   // 逐段 HP 權重,自**最先被打掉的那一段**起算(使用者:由薄到厚)
   SEG_W: [1, 2, 3, 4],
   HP_MUL: 0,        // 於下方 derive = Σ SEG_W(MUST NOT 手寫 10)
-  // 血條外圍光暈:黑 > 青 > 銀 > 金(逐段;index = 已被擊破的段數)
-  GLOW: ['#0b0e12', '#3fe0d0', '#c8d2dc', '#ffcc33'],
+  // 血條外框 / 外圍光暈:黑 > 藍 > 銀 > 金(逐段;index = 已被擊破的段數)
+  GLOW: ['#0b0e12', '#3f7fff', '#c8d2dc', '#ffcc33'],
+  // 逐段血條填充:同色系純色、只走明度(0 段淺白 → 末段鮮豔);兩處 BOSS 血條共用,
+  // MUST NOT 漸層(常見進度條 = 純色填充 + 實線外框)。長度 MUST 與 SEG_W 同步。
+  SEG_FILL: ['#f0d4cd', '#ea9689', '#dd5140', '#bd2121'],
   // 進入第 1/2/3/4 階段時的無敵時間 (秒;第2/3/4階段有 2/3/4 秒無敵時間)
   INVULN_S: [0, 2, 3, 4],
   // 逐段體型大小縮放 (第1/2/3/4階段大小增加 0%/20%/50%/100%)
@@ -5720,8 +5723,15 @@ export const bossSegOf = (frac) => {
   for (let k = 0; k < bossSegN(); k++) if (frac > bossSegCapF(k + 1) + 1e-9) return k;
   return bossSegN() - 1;
 };
-/** 這一段的血條外圍光暈色 */
+/** 這一段的血條外圍光暈 / 外框色 */
 export const bossGlow = (k) => BOSS.GLOW[Math.max(0, Math.min(BOSS.GLOW.length - 1, k | 0))];
+/** 這一段的血條填充純色(淺白 → 鮮豔;與 GLOW 同 index) */
+export const bossSegFill = (k) => BOSS.SEG_FILL[Math.max(0, Math.min(BOSS.SEG_FILL.length - 1, k | 0))];
+/** 總 HP 比例 → 第 k 段在自身區間內的剩餘(0~1):多段血條各列填充共用此縫 */
+export const bossSegFrac = (frac, k) => {
+  const hi = bossSegCapF(k), lo = bossSegCapF(k + 1);
+  return Math.max(0, Math.min(1, (frac - lo) / Math.max(1e-9, hi - lo)));
+};
 /** 這一段的 BOSS 機體大小縮放倍率 (第1/2/3/4階段: 1.0 / 1.2 / 1.5 / 2.0) */
 export const bossScaleF = (k) => BOSS.SCALE_F[Math.max(0, Math.min(BOSS.SCALE_F.length - 1, k | 0))] ?? 1.0;
 /** 進入這一段時的無敵時間秒數 (第1/2/3/4階段: 0s / 2s / 3s / 4s) */

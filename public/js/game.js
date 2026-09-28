@@ -18,7 +18,7 @@ import {
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
    aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
-  reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
+  reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossSegFill, bossSegFrac, bossSegN, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
    CREEP_UPG, DISSOLVE, dissolveOutAt, ATK_CAST_S, fogSightMult, scopeRvminFog,
@@ -4230,7 +4230,11 @@ export class BattleClient {
       const w = ent.isStatic ? 18 : 5, hh = w * 0.09;
       const M = hh * 0.26;                      // 框邊寬
       const hasSp = maxSp > 0;
-      const shY = hh * 1.55;                     // 護盾列的高度(與 HP 列間留間隔)
+      const pitch = hh * 1.55;                   // 護盾列高(與 HP 列間留間隔,沿用舊 shY)
+      // BOSS 多段血條:上層覆蓋下層 —— 四段同軌同幾何疊放、早段在前(z 高),
+      // 各段寬 = 自身區間剩餘,上段扣掉的部分才露出下段;一般單位維持單列。
+      const isBossBar = ent.bossSeg != null;
+      const stackH = hasSp ? pitch + hh : hh, cy = hasSp ? pitch / 2 : 0;
       // 全部走 transparent + 顯式 renderOrder(z 疊序直翻繪製順序):框→槽→填色→刻痕的
       // 分層不再賭 three 的排序細節,紅 HP / 玻璃藍護盾在任何角度都壓在框與底槽之上。
       const plane = (color, opacity, z, pw = w, ph = hh) => {
@@ -4242,38 +4246,57 @@ export class BattleClient {
       };
       const grp = new THREE.Group();
       // 外框:雙層描邊(暗外緣 + 金屬灰內緣)罩住整組,擺脫舊版單調的裸長條
-      const stackH = hasSp ? shY + hh : hh, cy = hasSp ? shY / 2 : 0;
-      // NPC BOSS:再往外一圈**光暈**,顏色隨已擊破的 HP 段數走(黑>青>銀>金,見 data.js BOSS)。
+      // NPC BOSS:再往外一圈**光暈**,顏色隨已擊破的 HP 段數走(黑>藍>銀>金,見 data.js BOSS)。
       // 只有 BOSS 建這一片(一般單位連幾何都不生 ⇒ 逐位元同舊制);顏色逐幀由下方更新。
-      if (ent.bossSeg != null) {
+      if (isBossBar) {
         const glow = plane(0x000000, 0.55, -0.05, w + M * 5.2, stackH + M * 5.2);
         glow.position.y = cy;
         grp.add(glow);
         ent.barGlow = glow;
       }
       const frame = plane(0x05070a, 0.94, -0.03, w + M * 2.4, stackH + M * 2.4); frame.position.y = cy;
+      // BOSS 外框吃逐段色(黑>藍>銀>金,與光暈同一格);一般單位維持深色框
+      if (isBossBar) ent.barFrame = frame;
       const inner = plane(0x39424c, 0.95, -0.02, w + M, stackH + M);            inner.position.y = cy;
       grp.add(frame); grp.add(inner);
       grp.add(plane(0x111417, 1, 0));            // HP 底槽
-      // 敵我配色:敵方紅 / 友方綠(護盾玻璃藍不動);中立/未知沿用紅
-      const foeInit = ent.side && this.side ? ent.side !== this.side : true;
-      const fg = plane(foeInit ? 0xe23b34 : 0x35d06a, 1, 0.02);
-      grp.add(fg);
-      // 分段刻痕(間隔):固定不隨血量縮放的暗線,把長條切成數格 → 一眼判讀血量段位
-      const segN = ent.isStatic ? 10 : 5, tickW = Math.max(0.05, w * 0.014);
-      const ticks = (y, col) => {
-        for (let s = 1; s < segN; s++) {
-          const tk = plane(col, 0.95, 0.05, tickW, hh);
-          tk.position.set(-w / 2 + (w / segN) * s, y, 0); grp.add(tk);
+      // HP 填充:一般單位沿用敵我單色;BOSS 四段同軌疊放(z 階梯:早段在前蓋住晚段,
+      // 色建條時烤死 SEG_FILL,寬逐幀由下方按自身區間剩餘推)
+      const fills = [];
+      if (isBossBar) {
+        for (let k = 0; k < bossSegN(); k++) {
+          const fg = plane(new THREE.Color(bossSegFill(k)).getHex(), 1,
+            0.02 + (bossSegN() - 1 - k) * 0.01);
+          grp.add(fg);
+          fills.push(fg);
         }
-      };
-      ticks(0, 0x111417);
+      } else {
+        // 敵我配色:敵方紅 / 友方綠(護盾玻璃藍不動);中立/未知沿用紅
+        const foeInit = ent.side && this.side ? ent.side !== this.side : true;
+        const fg = plane(foeInit ? 0xe23b34 : 0x35d06a, 1, 0.02);
+        grp.add(fg);
+        fills.push(fg);
+      }
+      // 分段刻痕(間隔):一般單位才有 —— BOSS 的段就是列本身,不再畫線
+      if (!isBossBar) {
+        const segN = ent.isStatic ? 10 : 5, tickW = Math.max(0.05, w * 0.014);
+        for (let s = 1; s < segN; s++) {
+          const tk = plane(0x111417, 0.95, 0.05, tickW, hh);
+          tk.position.set(-w / 2 + (w / segN) * s, 0, 0); grp.add(tk);
+        }
+      }
       let sfg = null;
       if (hasSp) {                               // 護盾:玻璃藍,獨立一列並與 HP 列留間隔
-        const sbg = plane(0x0a1723, 0.85, 0.01); sbg.position.y = shY;
-        sfg = plane(0x7fd4ff, 0.95, 0.03);       sfg.position.y = shY;
+        const sbg = plane(0x0a1723, 0.85, 0.01); sbg.position.y = pitch;
+        sfg = plane(0x7fd4ff, 0.95, 0.03);       sfg.position.y = pitch;
         grp.add(sbg); grp.add(sfg);
-        ticks(shY, 0x0a1723);
+        if (!isBossBar) {
+          const segN = ent.isStatic ? 10 : 5, tickW = Math.max(0.05, w * 0.014);
+          for (let s = 1; s < segN; s++) {
+            const tk = plane(0x0a1723, 0.95, 0.05, tickW, hh);
+            tk.position.set(-w / 2 + (w / segN) * s, pitch, 0); grp.add(tk);
+          }
+        }
       }
       // 靜態建築(砲塔/主堡)的血條貼著頂端(剛好在上方,不再高高浮起);單位維持 2.2 抬高。
       // 高度用 spawn 時的基準包圍盒(dimTop)—— 事後的 Box3 會把受擊殼/敵方標記一起量進去。
@@ -4283,16 +4306,28 @@ export class BattleClient {
       })();
       grp.position.y = top + (ent.isStatic ? 1.4 : 2.2);
       ent.mesh.add(grp);
-      ent.bar = grp; ent.barFg = fg; ent.barSfg = sfg; ent.barW = w;
+      ent.bar = grp; ent.barFills = fills; ent.barSfg = sfg; ent.barW = w;
     }
-    // 敵我配色逐幀對齊(觀戰切換視角邊跟著換色,不只建條那一幀)
-    ent.barFg.material.color.set(ent.side && this.side && ent.side === this.side ? 0x35d06a : 0xe23b34);
-    ent.barFg.scale.x = Math.max(0.001, frac);
-    ent.barFg.position.x = -(1 - frac) * ent.barW / 2;
-    // BOSS 光暈:顏色 = 該段的顏色(每破一段換一次)。色表只有 data.js `bossGlow` 一份。
-    if (ent.barGlow && ent.bossSeg != null && ent.barGlowSeg !== ent.bossSeg) {
-      ent.barGlowSeg = ent.bossSeg;
-      ent.barGlow.material.color.set(bossGlow(ent.bossSeg));
+    // 敵我配色逐幀對齊(觀戰切換視角邊跟著換色,不只建條那一幀)。
+    // BOSS 不吃敵我色:各段填充是建條時烤死的段純色(SEG_FILL 淺白→鮮豔),
+    // 寬 = 自身區間剩餘(上段蓋下段,扣掉才露出來);外框與光暈走逐段框色,
+    // 進段才換(純表現,權威段位來自快照 bs)。
+    if (ent.bossSeg != null) {
+      if (ent.barGlow && ent.barGlowSeg !== ent.bossSeg) {
+        ent.barGlowSeg = ent.bossSeg;
+        const segCol = bossGlow(ent.bossSeg);
+        ent.barGlow.material.color.set(segCol);
+        if (ent.barFrame) ent.barFrame.material.color.set(segCol);
+      }
+      for (let k = 0; k < ent.barFills.length; k++) {
+        const f = bossSegFrac(frac, k);
+        ent.barFills[k].scale.x = Math.max(0.001, f);
+        ent.barFills[k].position.x = -(1 - f) * ent.barW / 2;
+      }
+    } else {
+      ent.barFills[0].material.color.set(ent.side && this.side && ent.side === this.side ? 0x35d06a : 0xe23b34);
+      ent.barFills[0].scale.x = Math.max(0.001, frac);
+      ent.barFills[0].position.x = -(1 - frac) * ent.barW / 2;
     }
     if (ent.barSfg) {
       ent.barSfg.scale.x = Math.max(0.001, sfrac);
@@ -6401,17 +6436,31 @@ export class BattleClient {
 
     if (active) {
       const seg = active.bossSeg != null ? active.bossSeg : 0;
-      const phase = Math.min(4, Math.max(1, seg + 1));
+      const phase = Math.min(bossSegN(), Math.max(1, seg + 1));
       const ch = CHARACTERS[active.ch];
+      // 小隊總量(data.js ①:段位量的是 Σhp/Σmaxhp,含已墜毀機體):同 pid 的 BOSS 機體加總。
+      // MUST NOT 用單機 hp/maxHp —— active 只是小隊其中一架,打中別架時它根本不動;
+      // 且非自機 ent 沒有 maxHp 那一格(只有快照 max),分母會掉成 1、整條恆滿。
+      let hp = 0, max = 0, sp = 0, maxSp = 0;
+      if (active.pid != null) {
+        for (const ent of this.ents.values()) {
+          if (!ent.isBoss || ent.pid !== active.pid) continue;
+          hp += Math.max(0, ent.hp || 0);
+          max += ent.max || 0;
+          sp += ent.sp || 0;
+          maxSp += ent.maxSp || 0;
+        }
+      }
+      if (!(max > 0)) { hp = active.hp || 0; max = active.max || 1; sp = active.sp || 0; maxSp = active.maxSp || 0; }
       this.hud.bossBar?.({
         name: ch?.name || active.name || '戰地首領',
         sub: ch?.machine || (active.side === 'STEEL' ? '鋼鐵帝國 BOSS' : '異星蜂群 BOSS'),
         phase,
-        hp: active.hp,
-        maxHp: active.maxHp || 1,
-        sp: active.sp || 0,
-        maxSp: active.maxSp || 0,
-        glow: bossGlow(seg),
+        hp,
+        maxHp: max,
+        sp,
+        maxSp,
+        seg,   // 已擊破段數:頂部條的填充/外框逐段色由 main.js 向 data.js 取,不經此轉手
         ch: active.ch || null,       // BOSS 頭像:角色 ID(main.js 走 avatarURL,與名冊同一縫)
         side: active.side || null,   // BOSS 頭像站位與框體:SWARM 左 / STEEL 右
         pch: this.ch || null,        // 自機頭像:擺另一端(觀戰無座機則隱藏)
@@ -9851,6 +9900,7 @@ export class BattleClient {
     return {
       spec: true, follow: true,
       who: `${this._specName(tgt)}${c ? ` ・ ${c.machine}` : ''} ・ ${vname}`,
+      ch: tgt.ch,   // 跟隨頭像:Hud 自機頭像同一縫(main.js avatarURL),快照實值不虛構
       hp: tgt.hp, max: tgt.max, dead: !!tgt.dead, rs: tgt.rs || 0,
       upg: tgt.up || null,        // 八軌商店升級(名稱取自 ECON.UPGRADES 同一份,見 main.js)
       money: tgt.money || 0, kn: tgt.kn || 0, atBase: false, aiming: false,

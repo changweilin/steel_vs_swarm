@@ -756,13 +756,14 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 /* ---------- 劇情 BOSS 頂部血條 ---------- */
 .boss-bar-wrap {
   position: absolute;
-  top: 10px;
+  /* 下移讓位:hud-top(主堡條 + 波次)維持全亮,BOSS 條貼在其下方置中,
+     不再蓋住任何資訊;窄寬度讓兩側主堡條露出來。 */
+  top: 54px;
   left: 50%;
   transform: translateX(-50%);
-  /* 寬度只吃螢幕佔比:88vw 保窄螢幕滿版、90vmin 管寬螢幕上限(1080p ≈ 972px,
-     1440p 跟著長到 ≈ 1296px,不再被 680px 絕對值釘住)。 */
-  width: min(88vw, 90vmin);
-  z-index: 25;
+  /* 窄版置中:兩側各留主堡條空間,不再 88vw 滿版橫掃。 */
+  width: min(46vw, 72vmin);
+  z-index: 10;
   pointer-events: none;
   display: flex;
   flex-direction: row;
@@ -775,8 +776,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 body.has-boss-bar .hud-top {
-  opacity: 0.15;
-  transition: opacity 0.3s ease;
+  opacity: 1;
+}
+/* BOSS 條已下移讓位,戰報再往下閃一格,不被 BOSS 條蓋住。 */
+body.has-boss-bar .kill-feed {
+  top: 116px;
 }
 /* 血條中柱(標題 + 條體);兩端頭像:左 = SWARM、BOSS 在 SWARM 時站左,右 = STEEL */
 .boss-bar-mid {
@@ -796,17 +800,17 @@ body.has-boss-bar .hud-top {
   object-fit: cover;
   background: #0c0e12;
 }
-.boss-av[data-fac="SWARM"] {
+.boss-av[data-fac="SWARM"], .self-av[data-fac="SWARM"] {
   border: 2px solid var(--swarm);
   clip-path: polygon(14% 0, 100% 0, 100% 86%, 86% 100%, 0 100%, 0 14%);
 }
-.boss-av[data-fac="STEEL"] {
+.boss-av[data-fac="STEEL"], .self-av[data-fac="STEEL"] {
   border: 2px solid var(--steel);
   border-radius: 2px;
   outline: 1px solid rgba(79, 195, 247, 0.45);
   outline-offset: 2px;
 }
-.boss-av[data-fac="MERC"] {
+.boss-av[data-fac="MERC"], .self-av[data-fac="MERC"] {
   border: 4px double #b9a06a;
   border-radius: 6px;
 }
@@ -817,7 +821,7 @@ body.has-boss-bar .hud-top {
 .boss-bar-wrap[data-fac="STEEL"] .boss-name { text-shadow: 0 0 10px rgba(79, 195, 247, 0.65); }
 /* -- 扣血:條體震動 + 血條過曝 + 頭像受擊閃;補血:條體綠光脈衝(白殘影本來就有 0.5s 拖尾) -- */
 .boss-bar-wrap.boss-dmg .boss-bar-track { animation: bossShake 0.32s steps(5); }
-.boss-bar-wrap.boss-dmg .boss-hp-bar { filter: brightness(1.9) saturate(1.4); }
+.boss-bar-wrap.boss-dmg .boss-seg { filter: brightness(1.9) saturate(1.4); }
 .boss-bar-wrap.boss-dmg .boss-av { animation: bossAvHit 0.32s steps(4); }
 @keyframes bossShake {
   25% { transform: translateX(-4px); }
@@ -828,7 +832,7 @@ body.has-boss-bar .hud-top {
   50% { filter: brightness(2) sepia(1) hue-rotate(-50deg); transform: scale(1.07); }
 }
 .boss-bar-wrap.boss-heal .boss-bar-track { animation: bossHealPulse 0.45s ease-out; }
-.boss-bar-wrap.boss-heal .boss-hp-bar { box-shadow: 0 0 14px rgba(105, 240, 174, 0.9); }
+.boss-bar-wrap.boss-heal .boss-seg { box-shadow: 0 0 14px rgba(105, 240, 174, 0.9); }
 @keyframes bossHealPulse {
   0% { box-shadow: 0 0 0 rgba(105, 240, 174, 0); }
   40% { box-shadow: 0 0 18px rgba(105, 240, 174, 0.8); }
@@ -889,25 +893,27 @@ body.has-boss-bar .hud-top {
   position: relative;
   height: clamp(1.45vh, 1.95vmin, 1.4vw);
   background: rgba(6, 9, 14, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  /* 常見進度條:2px 實線外框,顏色逐段走(黑>藍>銀>金,JS 逐幀設 borderColor);
+     四段填充同軌上下重疊(SP 護盾條絕對定位貼頂),DOM 順序即疊放順序 */
+  border: 2px solid #0b0e12;
   border-radius: 1px;
   overflow: hidden;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7);
 }
-.boss-hp-ghost {
+.boss-ghost {
   position: absolute;
   top: 0; left: 0; bottom: 0;
   width: 0%;
   background: rgba(255, 255, 255, 0.45);
   transition: width 0.5s ease-out;
 }
-.boss-hp-bar {
+/* 段填充:常見進度條 = 純色無漸層;段色由 JS 設(淺白→鮮豔),這裡只留幾何 */
+.boss-seg {
   position: absolute;
   top: 0; left: 0; bottom: 0;
   width: 0%;
-  background: linear-gradient(90deg, #b71c1c, #f44336);
+  background: #bd2121;
   transition: width 0.15s ease-out;
-  box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
 }
 .boss-sp-bar {
   position: absolute;
@@ -918,23 +924,28 @@ body.has-boss-bar .hud-top {
   box-shadow: 0 0 6px #4fc3f7;
   transition: width 0.15s ease-out;
 }
-.boss-bar-segments {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: space-evenly;
-  pointer-events: none;
-  z-index: 3;
-}
-.boss-bar-segments span {
-  width: 1px;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.65);
-}
-body.touch-ui .boss-bar-wrap {
-  top: 6px;
-  width: min(82vw, 140vmin);
+body.touch-ui.ori-landscape .boss-bar-wrap {
+  top: calc(32px + var(--tl-st));
+  width: min(44vw, 90vmin);
   gap: 6px;
+}
+body.touch-ui.ori-landscape.has-boss-bar .kill-feed {
+  top: calc(88px + var(--tl-st));
+}
+body.touch-ui.ori-portrait .boss-bar-wrap {
+  top: calc(118px + var(--tl-st));
+  width: min(92vw, 90vmin);
+  gap: 6px;
+}
+/* 直式 hud-top 是上下堆疊的高條,BOSS 條貼其下方;機體資訊/小地圖/戰報同步下移,不被蓋住。 */
+body.touch-ui.ori-portrait.has-boss-bar .hud-self {
+  top: calc(178px + var(--tl-st));
+}
+body.touch-ui.ori-portrait.has-boss-bar #minimap {
+  top: calc(178px + var(--tl-st));
+}
+body.touch-ui.ori-portrait.has-boss-bar .kill-feed {
+  top: calc(186px + var(--tl-info) + var(--tl-st));
 }
 body.touch-ui .boss-av {
   width: clamp(4.7vh, 8.4vmin, 5.4vw); height: clamp(4.7vh, 8.4vmin, 5.4vw); flex-basis: clamp(4.7vh, 8.4vmin, 5.4vw);
@@ -1114,7 +1125,19 @@ body.aiming .scope-vig { display: block; }
   padding: 6px 10px;
   background: linear-gradient(0deg, rgba(3, 5, 8, 0.85), transparent);
 }
-.hud-self { display: flex; flex-direction: column; gap: 3px; min-width: clamp(24vh, 34vmin, 30vw); max-width: clamp(28vh, 37vmin, 32vw); }
+.hud-self {
+  display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; align-items: start;
+  min-width: clamp(24vh, 34vmin, 30vw); max-width: clamp(28vh, 37vmin, 32vw);
+}
+.hud-self > * { grid-column: 2; min-width: 0; }
+/* 自機頭像:資訊列左邊那格,縱跨整個資訊欄(行數隨 liftBox/觀戰收合浮動,span 取足);
+   框色沿用 BOSS 頭像同一組 data-fac(蜂群切角 / 鋼鐵鍍邊 / 傭兵雙線)。 */
+.self-av {
+  grid-column: 1; grid-row: 1 / span 20; align-self: start;
+  width: clamp(9vh, 14vmin, 8vw); aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: #0c0e12;
+}
 .hud-side {
   font-family: var(--serif); font-size: clamp(1.2vh, 1.55vmin, 1.1vw); letter-spacing: 3px; font-weight: 900;
   padding: 1px 8px; align-self: flex-start;
@@ -2414,8 +2437,8 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
    反之內容不足 1/6 的高螢幕才會等比長大。機體資訊與小地圖同吃這份預算,
    兩邊同時放大會互相擠壓;要突破 1/6 需另行裁決(它同時是座艙頂緣線)。 */
 @media (min-width: 1600px) {
-  /* 上方 BOSS 血條 */
-  body:not(.touch-ui) .boss-bar-wrap { width: min(60vw, 120vmin); }
+  /* 上方 BOSS 血條(窄版置中,不蓋兩側主堡條) */
+  body:not(.touch-ui) .boss-bar-wrap { width: min(40vw, 80vmin); }
   body:not(.touch-ui) .boss-av { width: 10vmin; height: 10vmin; flex-basis: 10vmin; }
   body:not(.touch-ui) .boss-badge { font-size: 1.7vmin; }
   body:not(.touch-ui) .boss-name { font-size: 2.5vmin; }
@@ -2432,7 +2455,8 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
   body:not(.touch-ui) .kill-feed div { font-size: 2vmin; }
   /* 下帶:機體資訊 + 小地圖 */
   body:not(.touch-ui) #minimap { width: 28vmin; height: 28vmin; }
-  body:not(.touch-ui) .hud-self { min-width: 21vw; max-width: 28vw; gap: 0.5vmin; }
+  body:not(.touch-ui) .hud-self { min-width: 21vw; max-width: 28vw; gap: 0.5vmin 1vmin; }
+  body:not(.touch-ui) .self-av { width: 12vmin; }
   body:not(.touch-ui) .hud-side { font-size: 1.9vmin; }
   body:not(.touch-ui) .hpbar { height: 2.4vmin; }
   body:not(.touch-ui) .hp-text { font-size: 1.9vmin; }
@@ -2988,7 +3012,9 @@ body.tl-test::after {
 
 /* ---------- HUD 在觸控版:純顯示,搖桿 MUST NOT 覆蓋 ---------- */
 /* 角色數據欄與小地圖不吃事件也不被搬走 —— 只把字級收斂到手機可讀的最小尺寸。 */
-body.touch-ui .hud-self { gap: 2px; }
+body.touch-ui .hud-self { gap: 2px; grid-template-columns: 1fr; }
+/* 觸控版不留頭像位:強制隱藏(!important 蓋掉 JS 寫的行內 display),版型量測零影響 */
+body.touch-ui .self-av { display: none !important; }
 body.touch-ui .hud-side {
   font-size: 10px; letter-spacing: 2px; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; max-width: 100%;

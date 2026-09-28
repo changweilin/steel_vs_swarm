@@ -7449,7 +7449,7 @@ export class BattleSim {
       if (e.defending && (e.sp || 0) > 0) o.df = (e.shieldExpandUntil || 0) > this.t ? 2 : 1; // 防守姿態且有磁力: 正面生成護盾(2 為護盾擴大)
       o.si = e.si || 0;                                          // 小隊機位(HUD 三機狀態列)
       // NPC BOSS:目前段位(0 起算)。**存在這一格 = 這是 BOSS** —— 客戶端據此把血條外圍
-      // 光暈換成該段的顏色(黑>青>銀>金)。段位是小隊層級的,同隊每架都帶同一個值。
+      // 光暈 / 外框換成該段的顏色(黑>藍>銀>金)。段位是小隊層級的,同隊每架都帶同一個值。
       if (e.sq?.boss) o.bs = e.sq.bossSeg | 0;
       // 主視野機(小隊只有一架;分身非本尊):共用的玩家狀態只跟著它發一份
       o.act = !e.isClone && (!e.sq || e.sq.bodies[e.sq.act] === e) ? 1 : 0;

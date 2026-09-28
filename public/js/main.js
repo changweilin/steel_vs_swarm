@@ -19,6 +19,7 @@ import {
    FLIGHT, SQUAD, scopeRvminFog, weatherFogStops, WEATHER_FOG_MASK,
   heroHexStats, SIEGE,
   SPEC_CAM,
+  bossSegFill, bossGlow, bossSegFrac, bossSegN,
 } from './data.js';
 import { LORE } from './lore.js';
 import { protoOf } from './codex.js';
@@ -2961,6 +2962,7 @@ async function enterGame() {
   $('hudSideName').textContent = app.mySide
     ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
     : '觀戰模式';
+  setSelfAv(myCh);   // 自機頭像掛資訊列左邊(觀戰上帝視角 = 收起,跟隨後由 hud.self 補)
   // 觀戰版角色數據面板:沒跟人時只留標題(其餘欄位由 CSS 收起,見 body.spectating);
   // 跟上某位玩家時 hud.self 會補掛 .spec-follow 把整塊攤開(見 makeHud().self)
   document.body.classList.toggle('spectating', !app.mySide);
@@ -3012,6 +3014,22 @@ function renderSpecHelp() {
 function shopHintText() { return TOUCH_UI() ? '' : 'B 升級'; }
 
 /**
+ * 自機頭像(資訊列左邊那格):圖源 `avatarURL` 唯一縫,與 BOSS 頭像同一張圖。
+ * src 快取在 element 上,逐幀呼叫不重設(避免閃爍);沒角色直接收起。
+ * 觸控版由 CSS 強制隱藏,這裡照設不分支。
+ */
+function setSelfAv(chId) {
+  const el = $('selfAv');
+  if (!el) return;
+  const c = chId && CHARACTERS[chId];
+  if (!c) { el.style.display = 'none'; el._src = ''; el.removeAttribute('src'); return; }
+  el.dataset.fac = c.side || 'MERC';
+  const url = avatarURL(chId);
+  if (el._src !== url) { el._src = url; el.src = url; }
+  el.style.display = '';
+}
+
+/**
  * 觸控版:把招式的冷卻/就緒/鎖定狀態鏡射到虛擬搖桿鈕面(X 守招 / Y 攻招 / B 機動)。
  * 狀態的唯一計算來源是 makeHud().self 裡那份 w(角色數據欄同源),這裡只搬字與 class。
  */
@@ -3059,6 +3077,7 @@ function makeHud() {
         $('hudSideName').textContent = w.who;
         document.body.classList.toggle('spec-follow', !!w.follow);
         renderSpecUpg(w.follow ? w.upg : null);
+        setSelfAv(w.follow ? w.ch : null);   // 跟隨中那位玩家的頭像,上帝視角收起
         if (!w.follow) return;
       }
       $('hpBar').style.width = `${Math.max(0, hp / max * 100)}%`;
@@ -3396,15 +3415,17 @@ function makeHud() {
         wrap.style.display = 'none';
         document.body.classList.remove('has-boss-bar');
         delete wrap.dataset.prev;   // 下次出現不誤判扣血/補血
+        wrap._segInit = false;      // 下次出現重釘段色
         return;
       }
       wrap.style.display = 'flex';
       document.body.classList.add('has-boss-bar');
       if ($('bossName')) $('bossName').textContent = info.name;
       if ($('bossSub')) $('bossSub').textContent = info.sub || '';
-      if ($('bossPhase')) $('bossPhase').textContent = `階段 ${info.phase} / 4`;
+      if ($('bossPhase')) $('bossPhase').textContent = `階段 ${info.phase} / ${bossSegN()}`;
       if ($('bossHpText')) $('bossHpText').textContent = `${Math.max(0, Math.round(info.hp))} / ${Math.round(info.maxHp)}`;
       const pct = Math.max(0, Math.min(100, (info.hp / (info.maxHp || 1)) * 100));
+      const seg = Math.max(0, Math.min(bossSegN() - 1, info.seg | 0));
       const bossLeft = info.side !== 'STEEL';
       setAv($('bossAvL'), bossLeft ? info.ch : info.pch);
       setAv($('bossAvR'), bossLeft ? info.pch : info.ch);
@@ -3423,11 +3444,25 @@ function makeHud() {
         wrap._fxT = setTimeout(() => wrap.classList.remove('boss-dmg', 'boss-heal'), 480);
       }
       wrap.dataset.prev = pct;
-      if ($('bossHpBar')) {
-        $('bossHpBar').style.width = `${pct}%`;
-        if (info.glow) $('bossHpBar').style.background = `linear-gradient(90deg, #b71c1c, ${info.glow})`;
+      // 多段血條上層覆蓋下層:四段同軌疊放、早段在上,各段寬 = 自身區間剩餘(純色、無漸層),
+      // 上段扣掉的部分才露出下段;外框吃當前段框色(黑>藍>銀>金)。顏色只向 data.js 取(首現 memo,逐幀不重設)。
+      const track = $('bossBarTrack');
+      if (track) track.style.borderColor = bossGlow(seg);
+      if (!wrap._segInit) {
+        wrap._segInit = true;
+        for (let k = 0; k < bossSegN(); k++) {
+          const el = $(`bossSeg${k}`);
+          if (el) el.style.background = bossSegFill(k);
+        }
       }
-      if ($('bossHpGhost')) $('bossHpGhost').style.width = `${pct}%`;
+      const frac01 = Math.max(0, Math.min(1, info.hp / (info.maxHp || 1)));
+      for (let k = 0; k < bossSegN(); k++) {
+        const wdt = `${(bossSegFrac(frac01, k) * 100).toFixed(1)}%`;
+        const el = $(`bossSeg${k}`);
+        if (el) el.style.width = wdt;
+        const gh = $(`bossGhost${k}`);
+        if (gh) gh.style.width = wdt;   // transition 較慢 ⇒ 白殘影拖尾
+      }
       if ($('bossSpBar')) {
         if (info.maxSp > 0) {
           $('bossSpBar').style.display = '';

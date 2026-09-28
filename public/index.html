@@ -620,13 +620,13 @@
         <span id="bossHpText" class="boss-hp-text"></span>
       </div>
     </div>
-    <div class="boss-bar-track">
+    <div class="boss-bar-track" id="bossBarTrack">
       <div id="bossSpBar" class="boss-sp-bar"></div>
-      <div id="bossHpGhost" class="boss-hp-ghost"></div>
-      <div id="bossHpBar" class="boss-hp-bar"></div>
-      <div class="boss-bar-segments">
-        <span></span><span></span><span></span>
-      </div>
+      <!-- 上層覆蓋下層:四段同軌疊放、早段在上;下段只有上段扣掉的部分才露出來(DOM 由底到頂) -->
+      <div id="bossGhost3" class="boss-ghost"></div><div id="bossSeg3" class="boss-seg"></div>
+      <div id="bossGhost2" class="boss-ghost"></div><div id="bossSeg2" class="boss-seg"></div>
+      <div id="bossGhost1" class="boss-ghost"></div><div id="bossSeg1" class="boss-seg"></div>
+      <div id="bossGhost0" class="boss-ghost"></div><div id="bossSeg0" class="boss-seg"></div>
     </div>
     </div>
     <img id="bossAvR" class="boss-av" src="" alt="" draggable="false" style="display: none;">
@@ -685,6 +685,8 @@
 
   <div class="hud-bottom">
     <div class="hud-self">
+      <!-- 自機頭像:資訊列左邊那格(桌機限定,觸控版由 CSS 收起);圖源 avatarURL,與 BOSS 頭像同一縫 -->
+      <img id="selfAv" class="self-av" src="" alt="" draggable="false" style="display: none;">
       <div class="hud-side" id="hudSideName"></div>
       <!-- 觀戰限定:常駐的觀戰操作說明(內容由 main.js renderSpecHelp 灌,
            文字唯一真相 = help.js SPEC_CONTROLS;非觀戰時清空 + CSS 收起) -->
