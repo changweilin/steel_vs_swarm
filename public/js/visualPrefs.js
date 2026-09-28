@@ -24,6 +24,19 @@ const KEY = 'svs_visual';
  *   sample 樣品畫面要示範哪一種材質(matsample.js 用;null = 全部)
  */
 export const VISUAL_KNOBS = {
+  renderStyle: {
+    label: '渲染風格', def: 'cel',
+    choices: ['cel', 'realistic', 'impasto', 'inkwash', 'watercolor', 'oil'],
+    choiceLabels: {
+      cel: '賽璐璐',
+      realistic: '寫實',
+      impasto: '厚塗',
+      inkwash: '彩色水墨',
+      watercolor: '水彩',
+      oil: '油畫',
+    },
+    hint: '切換全場與展示台的繪畫渲染風格：**賽璐璐**為預設硬邊色階與墨線；**寫實**為連續光影與微表面高光；**厚塗**為塊面筆觸與濃厚色彩過渡；**彩色水墨**為飛白濃淡墨韻與宣紙留白暈染；**水彩**為濕畫法邊緣積色、紙紋與柔化色塊；**油畫**為方向性厚重筆觸與畫布肌理。即時切換，不影響任何戰鬥判定。',
+  },
   // 兩根偏色拉桿的 `max` MUST 與 `toon.js TINT_MAX_A` 相同(稽核 Ⅱ 逐值比對)。
   // 上限 > 1 的理由住在 toon.js 那個常數旁邊:偏色只乘得到暗階的**直接光**那一項,
   // 100% 在真瀏覽器上量到的峰值只有 +5/255,拉了跟沒拉一樣。
