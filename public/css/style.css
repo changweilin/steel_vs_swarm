@@ -510,11 +510,23 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .side-card.swarm .side-name { color: var(--swarm); }
 .side-card.steel .side-name { color: var(--steel); }
 .side-card.super .side-name {
-  background: linear-gradient(90deg, #5fd0f2 10%, #ffffff 50%, #ffc247 90%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 8px rgba(95, 208, 242, 0.5)) drop-shadow(0 0 8px rgba(255, 194, 71, 0.5));
+  color: #ffd54a;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 14px rgba(0, 0, 0, 0.9), 0 0 18px rgba(255, 213, 74, 0.35);
 }
+/* 超級卡內文:動畫雷電 + 幾何碎線底上,灰字对比不足 → 換暖金/米白系實色(與超級金主題同系) */
+.side-card.super .side-en { color: #ffe6ad; }
+.side-card.super .side-hero { color: #ece4d2; }
+.side-card.super .slot {
+  background: rgba(4, 7, 11, 0.85);
+  border-color: rgba(255, 213, 74, 0.35);
+  color: var(--text);
+}
+.side-card.super .slot .slot-empty-label,
+.side-card.super .slot .slot-x { color: #cfc6ae; }
+.side-card.super .slot-char.dim { color: #cfc6ae; }
+/* 超級大戰兩側壓縮卡:9px 灰字壓在窄欄會糊 → 提亮一階(不動字級與版式) */
+.side-cards.super-battle .side-card.steel .side-hero,
+.side-cards.super-battle .side-card.swarm .side-hero { color: #c9d6de; }
 
 /* 超級大戰:中央超級戰士、兩側雙陣營各壓縮一半(總寬度跟開戰時刻一致) */
 .side-cards.super-battle {

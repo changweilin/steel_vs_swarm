@@ -875,7 +875,7 @@ function renderFavsOpenRoom() {
       warmModels();   // 選定最愛地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
       app.teamSize = f.teamSize;
       const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
-      savePrefs({ teamSize: f.teamSize });
+      savePrefs(app.isSuperDeploy ? { superTeamSize: f.teamSize } : { teamSize: f.teamSize });
       app.favCfg = cfg;
       app.venueSelOpen = null;   // 最愛的兵線是存檔時就烤死的配置,跟即時場地選擇互斥
       for (const el of grid.children) el.classList.remove('on');
@@ -914,7 +914,10 @@ function enterOpenRoom(opts = {}) {
     if ($('openRoomSysLeft')) $('openRoomSysLeft').innerHTML = '<b>SUPER</b> // 超級戰區生成';
     $('createRoomBtn').textContent = '⚡ 建立戰區';
     $('createRoomBtn').className = 'btn big super-btn';
-    $('roomNameInput').value = '超級大戰';
+    // 超級選項獨立記憶(與開戰時刻互不覆蓋):人數 / 房名走 super 命名空間
+    const sprefs = loadPrefs();
+    if (sprefs.superTeamSize >= TEAM.MIN && sprefs.superTeamSize <= TEAM.MAX) app.teamSize = sprefs.superTeamSize;
+    $('roomNameInput').value = sprefs.superRoomName || '超級大戰';
     $('createPublic').checked = false;
     $('createPublic').parentElement.style.display = 'none';
   } else {
@@ -923,6 +926,8 @@ function enterOpenRoom(opts = {}) {
     $('createRoomBtn').textContent = '▶ 建立戰區';
     $('createRoomBtn').className = 'btn big steel-btn';
     const prefs = loadPrefs();
+    // 切回一般模式時還原一般的人數(超級的人數只活在 super 命名空間)
+    if (prefs.teamSize >= TEAM.MIN && prefs.teamSize <= TEAM.MAX) app.teamSize = prefs.teamSize;
     $('roomNameInput').value = prefs.roomName || '';
     $('createPublic').checked = true;
     $('createPublic').parentElement.style.display = '';
@@ -933,8 +938,9 @@ function enterOpenRoom(opts = {}) {
   renderVenuesOpen();
   renderEnvSelects();
   renderFavsOpenRoom();
-  // 還原上次選的預設場地(記憶設定):命中則即時重算兵線並解鎖開房
-  const lastId = loadPrefs().lastVenueId;
+  // 還原上次選的預設場地(記憶設定):超級讀 superVenueId(初次則沿用一般場地),命中則即時重算兵線並解鎖開房
+  const prefsAll = loadPrefs();
+  const lastId = app.isSuperDeploy ? (prefsAll.superVenueId || prefsAll.lastVenueId) : prefsAll.lastVenueId;
   const lastV = lastId && VENUES.find((v) => v.id === lastId);
   if (lastV) selectVenueOpen(lastV);
 }
@@ -954,7 +960,7 @@ function renderTeamSizeOpen() {
 
 function setTeamSizeOpen(n) {
   app.teamSize = n;
-  savePrefs({ teamSize: n });
+  savePrefs(app.isSuperDeploy ? { superTeamSize: n } : { teamSize: n });
   for (const [i, b] of [...$('tsRowOpen').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
   updateTsInfoOpen();
   syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
@@ -982,7 +988,7 @@ function selectVenueOpen(v) {
   const cfg = venueConfig(v, app.teamSize);
   app.venueSelOpen = v;
   app.favCfg = cfg;
-  savePrefs({ lastVenueId: v.id });
+  savePrefs(app.isSuperDeploy ? { superVenueId: v.id } : { lastVenueId: v.id });
   for (const el of $('venueGridOpen').querySelectorAll('button.venue-btn')) el.classList.remove('on');
   const btn = $('venueGridOpen').querySelector(`button.venue-btn[data-vid="${v.id}"]`);
   if (btn) btn.classList.add('on');
@@ -995,11 +1001,13 @@ function selectVenueOpen(v) {
 }
 
 function renderEnvSelects() {
-  // 環境選擇記憶:與人數/場地/房名同存於 svs_prefs.env,重啟瀏覽器仍還原
-  const saved = loadPrefs().env || {};
-  const persist = () => savePrefs({
-    env: { season: $('envSeason').value, time: $('envTime').value, weather: $('envWeather').value },
-  });
+  // 環境選擇記憶:與人數/場地/房名同存於 svs_prefs;超級走 superEnv 命名空間(與開戰時刻互不覆蓋),重啟瀏覽器仍還原
+  const superMode = !!app.isSuperDeploy;
+  const saved = superMode ? (loadPrefs().superEnv || loadPrefs().env || {}) : (loadPrefs().env || {});
+  const persist = () => {
+    const v = { season: $('envSeason').value, time: $('envTime').value, weather: $('envWeather').value };
+    savePrefs(superMode ? { superEnv: v } : { env: v });
+  };
   const fill = (id, obj, label, key) => {
     const sel = $(id);
     sel.innerHTML = `<option value="random">🎲 隨機${label}</option>`;
@@ -1249,7 +1257,8 @@ $('createRoomBtn')?.addEventListener('click', () => {
     roomName: $('roomNameInput').value.trim() || (isSuper ? `超級大戰・${cfg.placeName || '未知戰區'}` : ''),
     isPublic: isSuper ? false : $('createPublic').checked,
     teamSize: app.teamSize,
-    botDiff: loadPrefs().botDiff || DEFAULT_BOT_DIFF,
+    // 超級難度獨立記憶(初次則沿用一般難度)
+    botDiff: isSuper ? (loadPrefs().superBotDiff || loadPrefs().botDiff || DEFAULT_BOT_DIFF) : (loadPrefs().botDiff || DEFAULT_BOT_DIFF),
     // 操作方式:開房時先帶自己的預設,進戰區後房主仍可隨時改(整房一致,見 renderRoomCtrl)
     ctrl: ctrlPref(),
     battleConfig: cfg,
@@ -1383,7 +1392,9 @@ function renderRoom() {
   const specs = lb.clients.filter((c) => c.mode === 'spectator');
   $('specList').textContent = specs.length ? `◇ 觀戰:${specs.map((c) => c.name).join('、')}` : '';
 
+  // 超級大戰是單人遊戲:不設準備流程,藏起準備鈕,按開戰即走(開戰時自動帶上已準備,伺服器權威檢查不動)
   const readyBtn = $('readyBtn');
+  readyBtn.style.display = superMode ? 'none' : '';
   readyBtn.disabled = !me?.side;
   readyBtn.textContent = me?.ready ? '取消' : '✔ 準備';
   readyBtn.classList.toggle('on', !!me?.ready);
@@ -1395,7 +1406,7 @@ function renderRoom() {
   startBtn.disabled = superMode ? !me?.side : !allReady;
   startBtn.textContent = superMode ? '⚡ 開戰' : '⚔️ 開戰';
   $('roomHint').textContent = app.isHost
-    ? (superMode ? (me?.ready ? '已準備,隨時可開戰!' : '確認角色配置後按「開戰」或「準備」。')
+    ? (superMode ? '確認角色配置後按「⚡ 開戰」。'
       : (allReady ? '全員就緒,可以開戰!' : '各自選好陣營並按「準備」後,由你開戰。'))
     : '等待房主開戰…';
 }
@@ -1415,7 +1426,8 @@ function renderBotDiff(lb) {
     b.disabled = !app.isHost;
     b.onclick = () => {
       const v = b.dataset.diff;
-      savePrefs({ botDiff: v });
+      // 超級房難度只寫入 super 命名空間(開房時初次沿用一般難度,見 createRoom 分支)
+      savePrefs(app.lobby?.battleConfig?.super ? { superBotDiff: v } : { botDiff: v });
       app.net?.send({ t: 'setRoomConfig', botDiff: v });   // 生效值等伺服器廣播回來,不先斬後奏
     };
   }
@@ -1992,7 +2004,7 @@ function selectChar(id) {
   if (!app.pickEditable) return;
   app.net?.send(app.pickIsSelf ? { t: 'pickChar', ch: id } : { t: 'setBotChar', id: app.pickSubject.id, ch: id });
   if (app.pickIsSelf) {
-    savePrefs({ lastChar: id, lastSide: app.pickSide });
+    savePrefs(app.pickSide === 'SUPER' ? { lastChar: id, lastSide: app.pickSide, superChar: id } : { lastChar: id, lastSide: app.pickSide });
   }
   showCharDetail(id, app.pickSide);
 }
@@ -2204,7 +2216,7 @@ function renderCharPick(me) {
     const curSide = subject.ch && CHARACTERS[subject.ch]?.side;
     app.charSideTab = (curSide && allowedTabs.includes(curSide))
       ? curSide
-      : (isSuper ? 'STEEL' : subject.side);
+      : (isSuper ? 'MERC' : subject.side);
   }
 
   const tabsEl = $('charSideTabs');
@@ -4933,13 +4945,18 @@ function onSync(m) {
     if (app.story) { if (!app.story.launched) launchStoryBattle(); return; }
 
     // 建立遊戲時記得上一場的陣營角色選擇:房主初次進房且尚未入座時自動入座並選角
+    // (超級房:沿用上次超級角色;超級可駕任意角色,故只驗角色存在)
     if (app.isHost && !app._autoPickedRoom) {
       const me = m.lobby.clients.find((c) => c.id === app.youId);
       if (me && me.mode === 'player' && !me.side) {
         app._autoPickedRoom = true;
         const prefs = loadPrefs();
         const lastSide = prefs.lastSide;
-        if (lastSide === 'SWARM' || lastSide === 'STEEL') {
+        if (lastSide === 'SUPER' && m.lobby?.battleConfig?.super) {
+          app.net?.send({ t: 'pickSide', side: 'SUPER' });
+          const sc = prefs.superChar || prefs.lastChar;
+          if (sc && CHARACTERS[sc]) app.net?.send({ t: 'pickChar', ch: sc });
+        } else if (lastSide === 'SWARM' || lastSide === 'STEEL') {
           app.net?.send({ t: 'pickSide', side: lastSide });
           const lastChar = prefs.lastChar;
           if (lastChar && charsOf(lastSide).includes(lastChar)) {
@@ -4989,6 +5006,7 @@ function recordGameSession(lobby) {
     lastSession: session,
     lastSide: me.side,
     lastChar: me.ch || null,
+    ...(me.side === 'SUPER' && me.ch ? { superChar: me.ch } : null),
   });
   syncQuickRestartFab();
 }
@@ -5059,7 +5077,7 @@ function syncQuickRestartFab() {
   if (!valid) return;
   const cfg = session.battleConfig;
   const placeName = cfg.placeName || '自訂戰區';
-  const sideName = session.player.side === 'SWARM' ? '蜂群' : '鋼鐵';
+  const sideName = session.player.side === 'SWARM' ? '蜂群' : session.player.side === 'SUPER' ? '超級' : '鋼鐵';
   const charCode = session.player.ch && CHARACTERS[session.player.ch]
     ? `「${CHARACTERS[session.player.ch].code}」`
     : '隨機角色';
@@ -5140,7 +5158,10 @@ window.addEventListener('DOMContentLoaded', () => {
   const prefs = loadPrefs();
   if (prefs.teamSize >= TEAM.MIN && prefs.teamSize <= TEAM.MAX) app.teamSize = prefs.teamSize;
   $('roomNameInput').value = prefs.roomName || '';
-  $('roomNameInput').addEventListener('input', (e) => savePrefs({ roomName: e.target.value.trim() }));
+  $('roomNameInput').addEventListener('input', (e) => {
+    const v = e.target.value.trim();
+    savePrefs(app.isSuperDeploy ? { superRoomName: v } : { roomName: v });
+  });
 
   // 操作方式已改為**房主在戰區畫面決定**(整房一致)⇒ 大廳面板不再有這一區;
   // 個人的「目前操控」選擇併入設定頁(見上面三個 renderCtrlSettings 掛載點)。
