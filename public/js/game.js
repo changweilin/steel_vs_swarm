@@ -41,6 +41,7 @@ import { detachMapBuilding, mapBuildingTarget } from './mapBuildingRender.js';
 import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree, isWeatherFrozen } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
+import { lodStrideByD2, lodDue } from './lod.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
@@ -10257,7 +10258,12 @@ export class BattleClient {
   }
 
   _updateEnts(dt, now) {
-    for (const ent of this.mapBuildings?.values() || []) if (ent.bar) ent.bar.lookAt(this.camera.position);
+    // Distance LOD decimation (presentation only; authority untouched): heavy
+    // channels update every Nth frame with accumulated dt. Position stays per-frame.
+    const lodFrame = (this._lodFrame = ((this._lodFrame | 0) + 1) >>> 0);
+    const camP = this.camera.position;
+    const lp = (() => { try { return lowPower(); } catch { return false; } })();
+    for (const ent of this.mapBuildings?.values() || []) if (ent.bar) ent.bar.lookAt(camP);
     if (this._fpsShieldMesh) {
       this._fpsShieldMesh.visible = (this.viewMode === 'fpv' && this.defending && (this.sp || 0) > 0 && !this.dead);
       if (this._fpsShieldMesh.visible && this._fpsShieldMesh.userData.mat) stepShieldMaterial(this._fpsShieldMesh.userData.mat, dt);
@@ -10291,10 +10297,17 @@ export class BattleClient {
       if (ent.isStatic) {
         const y = ent.padY ?? this.terrain.heightAt(ent.tgt.x, ent.tgt.z);   // padY:橋上砲塔的墩座台面
         ent.mesh.position.set(ent.tgt.x, y, ent.tgt.z);
-        if (ent.kind === 'tower') this._aimTurret(ent, dt, now);
-        if (ent.kind === 'base') this._aimBaseGuns(ent, dt, now);
-        if (ent.bar) ent.bar.lookAt(this.camera.position);
-        this._updateStatusFx(ent, dt, now);
+        const sdx = ent.tgt.x - camP.x, sdz = ent.tgt.z - camP.z;
+        const sDue = lodDue(lodFrame, ent.id ?? ent.kind, lodStrideByD2(sdx * sdx + sdz * sdz, lp));
+        ent._lodAcc = (ent._lodAcc || 0) + dt;
+        if (sDue) {
+          const acc = ent._lodAcc || dt;
+          ent._lodAcc = 0;
+          if (ent.kind === 'tower') this._aimTurret(ent, acc, now);
+          if (ent.kind === 'base') this._aimBaseGuns(ent, acc, now);
+          if (ent.bar) ent.bar.lookAt(camP);
+          this._updateStatusFx(ent, acc, now);
+        }
         continue;
       }
       if (ent.hero && ent.shieldMesh) {
@@ -10315,11 +10328,17 @@ export class BattleClient {
         snapped = true;
         ent.loco = null;   // 重生瞬移:骨架動畫狀態歸零,不殘留舊速度
         ent.cfx = null; ent.fireFx = null; ent.heavyFx = null; ent.castFx = null;   // 戰鬥動畫狀態一併歸零
+        ent._lodAcc = 0; ent._lodX = undefined; ent._lodZ = undefined; ent._lodYaw = undefined; ent._lodGy = undefined;
       } else {
         const k = lerpFPS(9, dt);
         nx = cur.x + (ent.tgt.x - cur.x) * k;
         nz = cur.z + (ent.tgt.z - cur.z) * k;
       }
+      // LOD stride by camera distance (presentation only): self never decimates.
+      const ddx = cur.x - camP.x, ddz = cur.z - camP.z;
+      const stride = lodStrideByD2(ddx * ddx + ddz * ddz, lp);
+      const due = snapped || lodDue(lodFrame, ent.id ?? 0, stride);
+      ent._lodAcc = (ent._lodAcc || 0) + dt;
       // 貼地取樣吃橋面/隧道:主陣營兵線小兵/敵機改以「兵線貼地剖面場」的最近取樣高當 surfaceAt
       // 種子(_buildLaneSurf 從線頭穩定 march,不吃迷霧刪重建/重生瞬移/插值橫移汙染的 cur.y)⇒
       // 隧道段一定落在洞內、陸橋段一定落在橋面。離線遠(繞塔遠側等)查無取樣 → 退回逐幀棘輪(cur.y)。
@@ -10327,17 +10346,23 @@ export class BattleClient {
       // 免把山頂的第三方吸進洞內;英雄自由走位 → 退回棘輪。
       // 飛行體(NPC 直升機/餌機/自殺機/飛彈)MUST 走 `_flySurf`(座標的純函式)—— 逐幀棘輪
       // 對它們是**單向**的:在橋上被側推出橋面足跡一次,基準面就永久掉回河床(見 _flySurf 檔頭)。
+      // 遠距降頻:地形採樣只在 heavy 幀重算,其餘幀沿用快取(幾幀位移 < 1m,遠處不可見)。
       const lift = (ent.hero || ent.flies) ? ent.heroY : 0;
       let gy;
-      if (ent.flies) {
-        gy = this._flySurf(nx, nz);
-      } else {
-        let curSeed = cur.y - lift;
-        if (!ent.hero && (ent.side === 'SWARM' || ent.side === 'STEEL')) {
-          const laneY = this._laneSurfAt?.(nx, nz);
-          if (laneY != null) curSeed = laneY + 1.2;   // +1.2:維持上橋 mount 台階 + 洞內 curY<ceil(同 march 配方)
+      if (due || ent._lodGy === undefined) {
+        if (ent.flies) {
+          gy = this._flySurf(nx, nz);
+        } else {
+          let curSeed = cur.y - lift;
+          if (!ent.hero && (ent.side === 'SWARM' || ent.side === 'STEEL')) {
+            const laneY = this._laneSurfAt?.(nx, nz);
+            if (laneY != null) curSeed = laneY + 1.2;   // +1.2:維持上橋 mount 台階 + 洞內 curY<ceil(同 march 配方)
+          }
+          gy = this._surf(nx, nz, curSeed);
         }
-        gy = this._surf(nx, nz, curSeed);
+        ent._lodGy = gy;
+      } else {
+        gy = ent._lodGy;
       }
       let ny = gy + lift;
       // 兵線過水必走橋(#2 倫敦泡水保底 + 2026-07-22 棘輪修):地面小兵設計上過水一律走橋、
@@ -10406,25 +10431,33 @@ export class BattleClient {
       // = 幀率相依)專門餵移動環境音 —— 那是與 `locomotion.js` 的 `L.speed` 量同一件事
       // 而不同結果的**第二份速度推導**。已整行刪除,消費端改讀 `ent.loco.w`
       // (唯一產生點 = `stepLocomotion` 收尾的 `animWeights`)。
-      // 車載砲塔(坦克):獨立於車體轉向,咬住交戰目標
-      const tur = ent.mesh.userData.turret;
-      if (tur) this._aimVehicleTurret(ent, tur, dt, now);
-      // 共軛俯仰槍架(直升機):槍管補對目標仰角
-      const gt = ent.mesh.userData.gunTilt;
-      if (gt) this._aimGunTilt(ent, gt, dt, now);
-      // 戰鬥開火/蓄力動畫(locomotion stepCombatFx):由 fireFx/heavyFx 事件推導 rig 驅動場
-      // (射姿保持/後座脈衝/蓄力反向)+ 直接驅動掛點 glow/pivot 與槍口閃光 ——
-      // MUST 在 stepLocomotion 之前呼叫,本幀步態才吃得到驅動場
-      stepCombatFx(ent, now, dt);
-      // 程序化骨架動畫:實際位移驅動步態/輪速/壓坡(locomotion.js)
-      stepLocomotion(ent, dt, now, px, pz, pyaw);
-      // 血條面向相機
-      if (ent.bar) ent.bar.lookAt(this.camera.position);
-      this._updateStatusFx(ent, dt, now);
-      // 敵我標示(在快照裡 = 已進入我方視野):敵 = 下指箭頭,友 = 小圓徽
-      if (ent.civ) this._civMark(ent, dt, now);   // 平民:不分我方/敵方都掛陣營箭頭(外觀只能分辨陣營)
-      else if (this.side && ent.side && ent.side !== this.side) this._enemyMark(ent, dt, now);
-      else if (this.side && ent.side && ent.side === this.side && !ent.isSelf) this._allyMark(ent, dt, now);
+      // 遠距 heavy 通道:骨骼/戰鬥特效/砲塔/狀態/標示只在 due 幀跑,dt 用累積值保持幀率無關。
+      if (due) {
+        const acc = ent._lodAcc || dt;
+        ent._lodAcc = 0;
+        // 車載砲塔(坦克):獨立於車體轉向,咬住交戰目標
+        const tur = ent.mesh.userData.turret;
+        if (tur) this._aimVehicleTurret(ent, tur, acc, now);
+        // 共軛俯仰槍架(直升機):槍管補對目標仰角
+        const gt = ent.mesh.userData.gunTilt;
+        if (gt) this._aimGunTilt(ent, gt, acc, now);
+        // 戰鬥開火/蓄力動畫(locomotion stepCombatFx):由 fireFx/heavyFx 事件推導 rig 驅動場
+        // (射姿保持/後座脈衝/蓄力反向)+ 直接驅動掛點 glow/pivot 與槍口閃光 ——
+        // MUST 在 stepLocomotion 之前呼叫,本幀步態才吃得到驅動場
+        stepCombatFx(ent, now, acc);
+        // 程序化骨架動畫:實際位移驅動步態/輪速/壓坡(locomotion.js)。
+        // 位移基準是上次 heavy 幀的位置,速度 = 多幀位移 ÷ 累積 dt(平均速度,阻尼收斂不變)。
+        stepLocomotion(ent, acc, now,
+          ent._lodX ?? px, ent._lodZ ?? pz, ent._lodYaw ?? pyaw);
+        ent._lodX = nx; ent._lodZ = nz; ent._lodYaw = ent.mesh.rotation.y;
+        // 血條面向相機
+        if (ent.bar) ent.bar.lookAt(camP);
+        this._updateStatusFx(ent, acc, now);
+        // 敵我標示(在快照裡 = 已進入我方視野):敵 = 下指箭頭,友 = 小圓徽
+        if (ent.civ) this._civMark(ent, acc, now);   // 平民:不分我方/敵方都掛陣營箭頭(外觀只能分辨陣營)
+        else if (this.side && ent.side && ent.side !== this.side) this._enemyMark(ent, acc, now);
+        else if (this.side && ent.side && ent.side === this.side && !ent.isSelf) this._allyMark(ent, acc, now);
+      }
     }
   }
 

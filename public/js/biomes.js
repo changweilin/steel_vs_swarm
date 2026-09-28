@@ -1468,12 +1468,30 @@ function buildFlocks(group, terrain, dynamics, { anchors, low }) {
   };
 
   write(0);   // 首幀就位(dynamics 還沒跑時不會整批疊在原點)
+  // Ambient tick decimation (presentation only): flocks are far-field backdrop by
+  // design (shore / grove / landmark anchors, never lanes/towers). Physics steps
+  // time-sliced round-robin with dt scaled up; render write stays every frame so
+  // wings/tails (pure f(t)) never freeze. Friction/spring stay frame-rate
+  // independent via frictionFPS/specSpringPS; no camera needed, no shared RNG.
+  let flockFrame = 0;
+  const flockDiv = low ? 4 : 2;
+  const allFlocks = [
+    ...birdFlocks.map((f) => ({ f, spec: null, bird: true })),
+    ...fishFlocks.map((f) => ({ f, spec: FISH })),
+    ...catFlocks.map((f) => ({ f, spec: CAT })),
+    ...dogFlocks.map((f) => ({ f, spec: DOG })),
+  ];
   dynamics.push((dt) => {
     const t = celWindTime();   // 全場共用的風時鐘(雲 / 植被同一支)
-    for (const f of birdFlocks) flockStep(f.st, t, dt);
-    for (const f of fishFlocks) wildlifeStep(f.st, t, dt, FISH);
-    for (const f of catFlocks) wildlifeStep(f.st, t, dt, CAT);
-    for (const f of dogFlocks) wildlifeStep(f.st, t, dt, DOG);
+    flockFrame++;
+    const slot = flockFrame % flockDiv;
+    const sdt = dt * flockDiv;
+    for (let i = 0; i < allFlocks.length; i++) {
+      if ((i % flockDiv) !== slot) continue;
+      const e = allFlocks[i];
+      if (e.bird) flockStep(e.f.st, t, sdt);
+      else wildlifeStep(e.f.st, t, sdt, e.spec);
+    }
     write(t);
   });
   return total;
