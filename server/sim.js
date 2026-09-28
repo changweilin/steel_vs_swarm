@@ -1740,8 +1740,10 @@ export class BattleSim {
 
   /**
    * 出生/重生點:每名玩家(squadIdx)分配到不同兵線 + 交替左右側,彼此避開;由主堡中心沿該兵線
-   * 推出 HERO_SPAWN_OFF(> NPC 波次生成點沿線距離 WAVE_SPAWN_OFF_M,故落在 NPC 隊列之前),
-   * 再垂直偏到路旁(避開落在兵線中央的 NPC 生成點)。同隊各機(bodyIdx)沿側向再錯開不疊在一起。
+   * 推出 HERO_SPAWN_OFF(< NPC 波次生成點沿線距離 WAVE_SPAWN_OFF_M,故落在己方兵波之後),
+   * 再垂直偏到路旁緊貼兵線。同隊各機(bodyIdx)沿側向再錯開不疊在一起。
+   * 朝向見 _spawnAimDir:由落點看向「主堡→下一據點(同兵線己方最近塔位)中點」,
+   * 視線中心壓住主堡至下一據點的兵線全線,兵波正在正前方。
    * 終點吃 data.js clampHeroSpawn 唯一縫:不與主堡重疊 + 平台上 + 治療環內(與客戶端同式)。
    */
   /**
@@ -1807,6 +1809,62 @@ export class BattleSim {
     return pick;
   }
 
+  /** 兵線前進方向(_spawnPoint 落點同吃這一支) */
+  _spawnDir(side, squadIdx = 0) {
+    const lanes = this.lanes.filter((p) => p.length >= 2);
+    if (!lanes.length) {
+      const other = side === 'SWARM' ? 'STEEL' : 'SWARM';
+      const [bx, bz] = this.basePos[side] || [0, 0];
+      const [ex, ez] = this.basePos[other] || [bx + 1, bz];
+      const l = Math.hypot(ex - bx, ez - bz) || 1;
+      return [(ex - bx) / l, (ez - bz) / l];
+    }
+    const pts = lanes[squadIdx % lanes.length];
+    const end = side === 'SWARM' ? pts[0] : pts[pts.length - 1];
+    const nxt = side === 'SWARM' ? pts[1] : pts[pts.length - 2];
+    const l = Math.hypot(nxt[0] - end[0], nxt[1] - end[1]) || 1;
+    return [(nxt[0] - end[0]) / l, (nxt[1] - end[1]) / l];
+  }
+
+  /**
+   * 出生/重生視線方向(朝向的唯一縫):由落點(sx,sz)看向「主堡→下一據點」兵線的弧長中點 ——
+   * 下一據點 = 所屬兵線离己方主堡最近的塔位(towerSites[li][0][side],單階時即前線塔);
+   * 劇情攻方沒有己方塔位 ⇒ 下一據點 = 敵方前線塔(末組的防守方位置),正是兵波行進方向。
+   * 彎曲兵線沿路取中(不切彎):視線中心壓住主堡至據點的路面全線,兵波正在正前方。
+   * 無塔位 / 中點落在身後(極小圖)回退兵線前進方向。
+   */
+  _spawnAimDir(side, squadIdx, sx, sz) {
+    const fallback = () => this._spawnDir(side, squadIdx);
+    if (!this.lanes.length) return fallback();
+    const li = squadIdx % this.lanes.length;
+    const pts = this.lanes[li];
+    if (!pts || pts.length < 2) return fallback();
+    // 下一據點塔位 entry + 它在 entry 內鍵方(tSide)—— frac 量尺見 solveTowerSites:site() 距 SWARM 端
+    const sites = this.towerSites?.[li];
+    let entry = sites?.[0]?.[side] ? sites[0] : null;
+    let tSide = side;
+    if (!entry && this.defSide) {
+      const front = sites?.[sites.length - 1];
+      if (front?.[this.defSide]) { entry = front; tSide = this.defSide; }
+    }
+    if (!entry) return fallback();
+    const cum = this._laneCum(li);
+    const total = cum[cum.length - 1];
+    if (!(total > 0)) return fallback();
+    const dFromSwarm = tSide === 'SWARM' ? total * entry.frac : total * (1 - entry.frac);
+    const fromMine = side === 'SWARM' ? dFromSwarm : total - dFromSwarm;
+    const dMid = side === 'SWARM' ? fromMine / 2 : total - fromMine / 2;
+    const [tx, tz] = pointAt(pts, cum, Math.max(0, Math.min(total, dMid)));
+    let mx = tx - sx, mz = tz - sz;
+    const l = Math.hypot(mx, mz);
+    if (!(l > 0)) return fallback();
+    mx /= l; mz /= l;
+    // 中點在身後 ⇒ 不轉頭回望,沿兵線向前
+    const [dx, dz] = this._spawnDir(side, squadIdx);
+    if (mx * dx + mz * dz <= 0.15) return [dx, dz];
+    return [mx, mz];
+  }
+
   _spawnPoint(side, squadIdx = 0, bodyIdx = 0, pid = null) {
     if (isSuperSide(side)) return this._superSpawnPoint(pid);
     const [bx, bz] = this.basePos[side];
@@ -1814,16 +1872,11 @@ export class BattleSim {
     // 無兵線(極端測試):主堡旁散開,仍吃同一夾制(不與主堡重疊 + 治療環內)
     if (!lanes.length) return clampHeroSpawn(bx, bz, bx + squadIdx * 14 + bodyIdx * 8, bz + squadIdx * 8 + bodyIdx * 5);
     const nL = lanes.length;
-    const li = squadIdx % nL;                                     // 不同玩家分散到不同兵線
     const layer = Math.floor(squadIdx / nL);                      // 兵線數用罄後的外圈
     const s = layer % 2 === 0 ? 1 : -1;                           // 交替兵線左右兩側
-    const pts = lanes[li];
-    const end = side === 'SWARM' ? pts[0] : pts[pts.length - 1];
-    const nxt = side === 'SWARM' ? pts[1] : pts[pts.length - 2];
-    let dx = nxt[0] - end[0], dz = nxt[1] - end[1];
-    const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;          // 沿兵線指向戰場
+    const [dx, dz] = this._spawnDir(side, squadIdx);              // 沿兵線指向戰場(落點用;朝向見 _spawnAimDir)
     const px = dz, pz = -dx;                                      // 兵線垂直向(路旁)
-    // 側偏:基準偏移 + 外圈漸遠 + 同隊各機錯開(都 < 走廊半寬 LANE_SAFE_M 45,仍貼兵線)
+    // 側偏:基準偏移 + 外圈漸遠 + 同隊各機錯開(貼兵線那一側,仍在走廊內)
     const lat = GAME.HERO_SPAWN_SIDE + Math.floor(layer / 2) * 11 + bodyIdx * 10;
     // 起點一律由主堡中心推出(兵線端點經道路吸附可能偏主堡數十公尺,拿端點當原點會把落點
     // 推回堡內);終點吃 clampHeroSpawn 唯一縫:不與主堡重疊 + 平台上 + 治療環內(方位不變)
@@ -1897,13 +1950,16 @@ export class BattleSim {
       this._bossLeft[side][sq.bossStage] = (this._bossLeft[side][sq.bossStage] || 0) + 1;
     }
     const n = kind === 'drone' ? SQUAD.N : 1;
+    // 出生朝向:看向「主堡→下一據點中點」(見 _spawnAimDir);BOSS 守據點/超級方不吃這一支
+    const aimSide = hold || isSuperSide(side);
     for (let i = 0; i < n; i++) {
       const [ox, oz] = hold
         ? [hold.x + bossSlotOff(i) , hold.z]          // BOSS:整組就位在據點上(小隊多架則橫向錯開)
         : this._spawnPoint(side, idx, i, pid);
+      const [fdx, fdz] = aimSide ? [null, null] : this._spawnAimDir(side, idx, ox, oz);
       const b = this._add({
         kind, side, pid, ch, si: i, spawnIdx: idx,
-        x: ox, z: oz, y: 0, ry: 0, rx: 0,
+        x: ox, z: oz, y: 0, ry: fdx == null ? 0 : Math.atan2(-fdx, fdz), rx: 0,
         ...(boss ? { boss: true, sg: sq.bossStage } : {}),
         hp: Math.round(u.hp * (m.hp ?? 1) * (boss ? BOSS.HP_MUL : 1) * upgradeCurveMul('hp', 0)), hero: true,
         dead: false, respawnAt: 0, deaths: 0, aaCd: 0,
@@ -6549,6 +6605,11 @@ export class BattleSim {
     b._trail = null;              // 重生是瞬移:留著上一條命的軌跡會讓落點閘門回推到主堡外
     const [sx, sz] = this._spawnPoint(b.side, b.spawnIdx || 0, b.si || 0, b.pid);
     b.x = sx; b.z = sz;
+    // 重生朝向:看向「主堡→下一據點中點」(與出生同式;超級方不吃兵線,維持原朝向)
+    if (!isSuperSide(b.side)) {
+      const [rdx, rdz] = this._spawnAimDir(b.side, b.spawnIdx || 0, sx, sz);
+      b.ry = Math.atan2(-rdx, rdz);
+    }
     // 無人機重生落在離地下限(FLIGHT.HOVER_M),不直接放到 SQUAD.REGROUP_ALT 那個(三機小隊時代
     // 遺留的)巡航高度 —— 重生動力補滿是為了讓玩家/bot 自己爬升,不是省了這段爬升(單一縫:
     // 與客戶端 game._spawnAt/飛行下限鉗制同吃 FLIGHT.HOVER_M)。

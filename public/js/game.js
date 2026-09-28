@@ -25,7 +25,7 @@ import {
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
   WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
   FIRE_WEATHER, fireDotMul,
-   SCENE_STRUCT, sceneIsPhysical, clampHeroSpawn,
+    SCENE_STRUCT, sceneIsPhysical, clampHeroSpawn, solveTowerSites, mapArg,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -6922,6 +6922,14 @@ export class BattleClient {
         this._lastSuperSpawn = [rx, rz];
         this._placeAt(rx, rz, -rx, -rz);
       }
+    } else if (sx != null && sz != null) {
+      // 重生:落在伺服器權威座標(出生/重生點已在己方兵波之後、緊貼兵線那一側),
+      // 視線看向「主堡→下一據點中點」(不本地重算落點,免與權威分家)。
+      const pick = this._laneDirAt(sx, sz);
+      if (pick) {
+        const [ax, az] = this._laneAimAt(sx, sz, pick[2], pick[0], pick[1]);
+        this._placeAt(sx, sz, ax, az);
+      } else this._spawnAt();
     } else {
       this._spawnAt();
     }
@@ -7240,7 +7248,74 @@ export class BattleClient {
     return pick;
   }
 
-  /** 己方主堡往敵方方向 100m、面向敵方主堡 */
+  /** 重生點所屬兵線的前進方向(three 系):權威落點是哪條兵線放的,就面向那條兵線;回傳 [dx, dz, li] */
+  _laneDirAt(x, z) {
+    const mySide = this.side || 'SWARM';
+    const b = this.cfg.bases?.[mySide];
+    if (!b) return null;
+    const [bx, bz] = llToWorld(b[0], b[1], this.center);
+    const vx = x - bx, vz = z - bz;
+    let best = null, bs = Infinity;
+    (this.cfg.lanes || []).forEach((L, li) => {
+      const w = L.map(([lat, lng]) => llToWorld(lat, lng, this.center));
+      if (w.length < 2) return;
+      const seq = mySide === 'SWARM' ? w : w.slice().reverse();   // 從我方主堡端往敵方排序
+      let dx = seq[1][0] - seq[0][0], dz = seq[1][1] - seq[0][1];
+      const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl;
+      // 落點 = 主堡 + 該兵線方向×OFF + 側偏 ⇒ 所屬兵線的側向殘差最小、 forward 最接近 OFF
+      const fwd = vx * dx + vz * dz, lat = Math.abs(vx * dz - vz * dx);
+      const score = lat + Math.abs(fwd - GAME.HERO_SPAWN_OFF) * 0.1;
+      if (score < bs) { bs = score; best = [dx, dz, li]; }
+    });
+    return best;
+  }
+
+  /** 所屬兵線下一據點塔位項 {frac,[side]}(與伺服器 towerSites[li] 同一解;劇情攻方看末組防守方) */
+  _towerSiteW(li, side) {
+    try {
+      this._towerSitesW ??= solveTowerSites(
+        (this.cfg.lanes || []).map((L) => L.map(([lat, lng]) => llToWorld(lat, lng, this.center))),
+        mapArg(this.cfg));
+    } catch { return null; }
+    const sites = this._towerSitesW?.[li];
+    if (sites?.[0]?.[side]) return { entry: sites[0], tSide: side };
+    const def = this.cfg?.defSide;
+    const front = sites?.[sites.length - 1];
+    if (def && front?.[def]) return { entry: front, tSide: def };
+    return null;
+  }
+
+  /** 出生/重生視線(three 系):由落點看向「主堡→下一據點」兵線的弧長中點(與伺服器 _spawnAimDir 同式);無塔位/中點在身後回退兵線前進方向 */
+  _laneAimAt(x, z, li, ldx, ldz) {
+    const fallback = () => [ldx, ldz];
+    const mySide = this.side || 'SWARM';
+    if (li == null) return fallback();
+    const w = (this.cfg.lanes || [])[li]?.map(([lat, lng]) => llToWorld(lat, lng, this.center));
+    if (!w || w.length < 2) return fallback();
+    const tw = this._towerSiteW(li, mySide);
+    if (!tw) return fallback();
+    const cum = [0];
+    for (let i = 1; i < w.length; i++) cum.push(cum[i - 1] + Math.hypot(w[i][0] - w[i - 1][0], w[i][1] - w[i - 1][1]));
+    const total = cum[cum.length - 1];
+    if (!(total > 0)) return fallback();
+    // frac 量尺:SWARM 端為 0(見 solveTowerSites:site());換算成「我方端起算」再取半
+    const dFromSwarm = tw.tSide === 'SWARM' ? total * tw.entry.frac : total * (1 - tw.entry.frac);
+    const fromMine = mySide === 'SWARM' ? dFromSwarm : total - dFromSwarm;
+    const dMid = mySide === 'SWARM' ? fromMine / 2 : total - fromMine / 2;
+    const d = Math.max(0, Math.min(total, dMid));
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < d) i++;
+    const f = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+    const tx = w[i - 1][0] + (w[i][0] - w[i - 1][0]) * f, tz = w[i - 1][1] + (w[i][1] - w[i - 1][1]) * f;
+    let mx = tx - x, mz = tz - z;
+    const l = Math.hypot(mx, mz);
+    if (!(l > 0)) return fallback();
+    mx /= l; mz /= l;
+    if (mx * ldx + mz * ldz <= 0.15) return fallback();
+    return [mx, mz];
+  }
+
+  /** 主堡沿所屬兵線推出、緊貼兵線那一側,視線看向「主堡→下一據點中點」(兵線全線壓住視線中心,兵波在正前方) */
   _spawnAt() {
     if (isSuperSide(this.side)) {
       const [sx, sz] = this._superSpawnAt();
@@ -7251,18 +7326,18 @@ export class BattleClient {
     const mySide = this.side || 'SWARM';
     const other = mySide === 'SWARM' ? 'STEEL' : 'SWARM';
     const [bx, bz] = llToWorld(this.cfg.bases[mySide][0], this.cfg.bases[mySide][1], this.center);
-    // 沿「主堡所在的那條兵線」推出生成點 + 面向兵線前進方向 → 一重生就正對兵線箭頭(而非直線指向敵堡)。
+    // 沿「主堡所在的那條兵線」推出生成點 + 視線看向「主堡→下一據點中點」(而非直線指向敵堡)。
     // 與伺服器 _spawnPoint 同式:由主堡中心沿首段直線推出(彎曲兵線的沿線取點會把落點推回堡內,
     // 兩端分家),終點吃 clampHeroSpawn 唯一縫:不與主堡重疊 + 平台上 + 治療環內。
     let sx, sz, dx, dz;
-    let bestLane = null, bd = Infinity;
-    for (const L of (this.cfg.lanes || [])) {
+    let bestLane = null, bestLi = null, bd = Infinity;
+    (this.cfg.lanes || []).forEach((L, li) => {
       const w = L.map(([lat, lng]) => llToWorld(lat, lng, this.center));
-      if (w.length < 2) continue;
+      if (w.length < 2) return;
       const seq = mySide === 'SWARM' ? w : w.slice().reverse();   // 從我方主堡端往敵方排序
       const d = Math.hypot(seq[0][0] - bx, seq[0][1] - bz);
-      if (d < bd) { bd = d; bestLane = seq; }
-    }
+      if (d < bd) { bd = d; bestLane = seq; bestLi = li; }
+    });
     if (bestLane) {
       dx = bestLane[1][0] - bestLane[0][0]; dz = bestLane[1][1] - bestLane[0][1];
       const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl;
@@ -7272,13 +7347,17 @@ export class BattleClient {
       dx = ex - bx; dz = ez - bz; const len = Math.hypot(dx, dz) || 1; dx /= len; dz /= len;
       sx = bx + dx * GAME.HERO_SPAWN_OFF; sz = bz + dz * GAME.HERO_SPAWN_OFF;
     }
-    // 橫向偏移到路旁:重生點落在兵線中央會被剛生出/行進中的 NPC 波次撞開,偏出兵線走廊即可避開
-    // (伺服器 _spawnPoint 同一偏移;垂直於兵線前進方向,不影響面向兵線箭頭的 yaw)
+    // 橫向偏移到路旁緊貼兵線:落點在己方兵波之後,沿線已與波次生成點錯開,
+    // 側偏只需偏出波次抖動帶即不與 NPC 撞到。符號是伺服器 _spawnPoint 的鏡射:
+    // 伺服器框 z=北、客戶端框 z=南,同一個物理側在這裡是 (-dz,+dx)(寫成 (+dz,-dx)
+    // 會落在兵線另一側,與權威落點差兩倍側偏 —— 彎曲兵線直接把兵線甩出視野)。
+    // (垂直於兵線前進方向,不影響視線 yaw)
     const pl = Math.hypot(dx, dz) || 1;
-    sx += (dz / pl) * GAME.HERO_SPAWN_SIDE;
-    sz += (-dx / pl) * GAME.HERO_SPAWN_SIDE;
+    sx += (-dz / pl) * GAME.HERO_SPAWN_SIDE;
+    sz += (dx / pl) * GAME.HERO_SPAWN_SIDE;
     [sx, sz] = clampHeroSpawn(bx, bz, sx, sz);
-    this._placeAt(sx, sz, dx, dz);
+    // 視線:由落點看向「主堡→下一據點中點」(與伺服器 _spawnAimDir 同式)
+    this._placeAt(sx, sz, ...this._laneAimAt(sx, sz, bestLi, dx, dz));
   }
 
   /** 落點安置(出生/重生共用尾段):貼地 + 面向行進方向 + 變形者歸零,超級與常規同吃這一支 */
@@ -7287,7 +7366,7 @@ export class BattleClient {
     // 無人機重生落在離地下限(FLIGHT.HOVER_M)貼地起飛,不直接放到巡航高度 —— 重生動力補滿
     // (見 _onSelfRespawn 的 this.lift = null)MUST 真的被拿來爬升,不然滿動力形同虛設。
     this.pos.set(sx, gy + (this.isDrone ? FLIGHT.HOVER_M : 0), sz);
-    this.yaw = Math.atan2(-dx, -dz);   // 面向兵線前進方向(three:-z 前方)→ 看得到兵線箭頭
+    this.yaw = Math.atan2(-dx, -dz);   // 面向「主堡→下一據點」兵線(three:-z 前方)→ 兵線全線壓住視線中心
     this.bodyYaw = this.yaw;
     this.pitch = -0.05;
     this.roll = 0;
