@@ -49,6 +49,7 @@ import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { visualPref, onVisualChange } from './visualPrefs.js';
 import { INK_UNPACK_GLSL } from './toon.js';
+import { renderStyleIndex } from './toon.js';
 import { DOF, WIPE, combatReachM, wipeAt } from './data.js';
 
 // ---- 勾線資訊緩衝(2026-08-12;材質端的契約住 `toon.js` 的同名段)----
@@ -327,7 +328,10 @@ export class Pipeline {
     // 拉到 0 = 沒有線(等同 `?ink=0`,但不必重開);預設 1 = 定場照調校出來的現值。
     // MUST 是 uniform 不是重建材質:重建會在拉桿拖動時每一格丟一次 shader 編譯。
     this._syncPrefs = () => {
+      this._styleIdx = renderStyleIndex(visualPref('renderStyle'));
       this.inkQuad.material.uniforms.uInk.value = visualPref('ink');
+      this.inkQuad.material.uniforms.uRenderStyle.value = this._styleIdx;
+      this.gradeQuad.material.uniforms.uRenderStyle.value = this._styleIdx;
       // 景深強度同理走 uniform;但**拉到 0 時整個 pass 退出鏈**(見 render 組 chain 那一段)
       // —— 這一 pass 與勾線不同,它是後加的成本,0% MUST 是「不跑」而不是「跑一個乘 0 的」。
       this._dofA = DOF.MAX_R * visualPref('dof');
@@ -412,12 +416,14 @@ export class Pipeline {
       // MUST NOT 走 _syncLutSrc —— 那支對 `file` 會再讀一次檔。
       if (this._air) this.setAirFog(...this._air);
       this.setLut(this._lutTex || null, this._lutN || LUT.SIZE);
+      this.gradeQuad.material.uniforms.uRenderStyle.value = this._styleIdx ?? 0;
     }
     this._inkMrt = wantInk;
     this._inkGrp = wantGrp;
     this.inkQuad.material.dispose();           // 著色器把 mrt 編進去了,MUST 重建
     this.inkQuad.material = this._inkMaterial();
     this.inkQuad.material.uniforms.uInk.value = visualPref('ink');
+    this.inkQuad.material.uniforms.uRenderStyle.value = this._styleIdx ?? 0;
   }
 
   /**
@@ -581,7 +587,7 @@ export class Pipeline {
       uniforms: {
         tColor: { value: null }, tDepth: { value: null }, tInfo: { value: null },
         uTexel: { value: new THREE.Vector2() },
-        uNear: { value: 0.5 }, uFar: { value: 1000 }, uInk: { value: 1 },
+        uNear: { value: 0.5 }, uFar: { value: 1000 }, uInk: { value: 1 }, uRenderStyle: { value: 0 },
         // 遠處淡出的兩個端點(公尺)。由 `_inkFadeM()` 每幀餵入 —— **MUST NOT** 在著色器裡
         // 拿 `uFar × 比例` 算(那就是錨回相機 far 平面,見 INK.FADE0 旁邊那一段)。
         uFade0: { value: 1e9 }, uFade1: { value: 2e9 },
@@ -590,6 +596,7 @@ export class Pipeline {
       fragmentShader: `
         uniform sampler2D tColor; uniform sampler2D tDepth;
         uniform vec2 uTexel; uniform float uNear; uniform float uFar; uniform float uInk;
+        uniform float uRenderStyle;
         uniform float uFade0; uniform float uFade1;
         varying vec2 vUv;
         ${useInfo ? `uniform sampler2D tInfo;\n${INK_UNPACK_GLSL}` : ''}
@@ -705,8 +712,36 @@ export class Pipeline {
           // 強度拉桿:夾在 [0,1] —— 拉桿最大到 150% 是為了讓「線更濃」有得調,
           // 但覆蓋率本身是機率意義的權重,超過 1 只會把半透明的線推成實線,不會更黑。
           ink = clamp( ink * uInk, 0.0, 1.0 );
+          vec3 inkTarget = base.rgb * ${INK.DARK.toFixed(2)};
+          if ( uRenderStyle > 0.5 ) {
+            vec2 pPx = vUv / max( uTexel, vec2( 1e-5 ) );
+            float pHash = fract( sin( dot( floor( pPx * 0.35 ), vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
+            if ( uRenderStyle < 1.5 ) {
+              // 寫實:抑制卡通黑線，僅保留凹角與折縫的自然環境光遮蔽(Contact Crease AO)
+              ink *= ( e > 0.0 ) ? 0.34 : 0.06;
+              inkTarget = base.rgb * 0.44;
+            } else if ( uRenderStyle < 2.5 ) {
+              // 厚塗:斷續乾刷的深色塊面交界重音(偏深群青/熟褐補色而非死黑)
+              ink *= mix( 0.35, 0.88, pHash );
+              inkTarget = base.rgb * vec3( 0.18, 0.16, 0.28 );
+            } else if ( uRenderStyle < 3.5 ) {
+              // 彩色水墨:飛白乾筆斷續 + 濃墨與淡墨交織
+              float brushWave = sin( pPx.x * 0.11 + pPx.y * 0.07 ) * 0.5 + 0.5;
+              float feibai = smoothstep( 0.18, 0.78, pHash * 0.65 + brushWave * 0.35 );
+              ink = clamp( ink * mix( 0.24, 1.38, feibai ), 0.0, 1.0 );
+              inkTarget = mix( vec3( 0.04, 0.05, 0.07 ), base.rgb * vec3( 0.22, 0.25, 0.28 ), 1.0 - feibai );
+            } else if ( uRenderStyle < 4.5 ) {
+              // 水彩:邊緣水漬積色(高彩度深色顏料沉積於輪廓與鉛筆淡稿線)
+              ink = clamp( ink * mix( 0.44, 0.92, pHash ), 0.0, 1.0 );
+              inkTarget = pow( max( base.rgb, vec3( 0.02 ) ), vec3( 1.45 ) ) * vec3( 0.42, 0.38, 0.52 );
+            } else {
+              // 油畫:刮刀與底塗深色溝槽重音
+              ink *= mix( 0.22, 0.66, pHash );
+              inkTarget = base.rgb * vec3( 0.20, 0.15, 0.12 );
+            }
+          }
           // ① 墨色與底色相混,不是塗黑
-          gl_FragColor = vec4( mix( base.rgb, base.rgb * ${INK.DARK.toFixed(2)}, ink ), base.a );
+          gl_FragColor = vec4( mix( base.rgb, inkTarget, ink ), base.a );
         }`,
     });
   }
@@ -764,6 +799,7 @@ export class Pipeline {
     return new THREE.ShaderMaterial({
       uniforms: {
         tColor: { value: null },
+        uTexel: { value: new THREE.Vector2() }, uRenderStyle: { value: 0 },
         // tDepth / uNear / uFar 由 render() 的共用接線自動餵(與勾線、景深同一段)
         tDepth: { value: null }, uNear: { value: 0.5 }, uFar: { value: 1000 },
         ...(info ? { tInfo: { value: null } } : {}),
@@ -774,6 +810,7 @@ export class Pipeline {
       vertexShader: QUAD_VS,
       fragmentShader: `
         uniform sampler2D tColor; uniform sampler2D tDepth;
+        uniform vec2 uTexel; uniform float uRenderStyle;
         uniform float uNear; uniform float uFar;
         uniform vec3 uAirNear; uniform vec3 uAirFar;
         uniform float uFogN; uniform float uFogF; uniform float uAirA;
@@ -783,6 +820,15 @@ export class Pipeline {
         ${SRGB_GLSL}
         vec3 toLinear( vec3 c ) {
           return mix( c / 12.92, pow( ( c + 0.055 ) / 1.055, vec3( 2.4 ) ), step( 0.04045, c ) );
+        }
+        float styH2( vec2 p ) {
+          return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
+        }
+        float styN2( vec2 p ) {
+          vec2 i = floor( p ), f = fract( p );
+          f = f * f * ( 3.0 - 2.0 * f );
+          return mix( mix( styH2( i ), styH2( i + vec2( 1.0, 0.0 ) ), f.x ),
+                      mix( styH2( i + vec2( 0.0, 1.0 ) ), styH2( i + vec2( 1.0, 1.0 ) ), f.x ), f.y );
         }
         /**
          * 條狀 LUT 取樣(寬 = size²、高 = size;第 i 片放在 [i·size, (i+1)·size) 那一段)。
@@ -858,6 +904,102 @@ export class Pipeline {
             float cls = inkCls( texture2D( tInfo, vUv ).a );
             if ( cls > 0.5 && cls < 1.5 ) lc = lutApplyLand( pre );` : ''}
             c = mix( c, lc, uLutA );
+          }
+          // ---- 螢幕空間繪畫媒材濾鏡(uRenderStyle: 0=賽璐璐早退, 1=寫實, 2=厚塗, 3=彩色水墨, 4=水彩, 5=油畫)----
+          if ( uRenderStyle > 0.5 ) {
+            vec2 px = vUv / max( uTexel, vec2( 1e-5 ) );
+            vec3 lumaW = vec3( 0.2126, 0.7152, 0.0722 );
+            if ( uRenderStyle < 1.5 ) {
+              // ① 寫實:微反差銳化(Unsharp Micro-Contrast)+ 膠片S曲線色調映射
+              vec2 r = uTexel * 1.25;
+              vec3 avg = 0.25 * (
+                texture2D( tColor, vUv + vec2( r.x, 0.0 ) ).rgb +
+                texture2D( tColor, vUv - vec2( r.x, 0.0 ) ).rgb +
+                texture2D( tColor, vUv + vec2( 0.0, r.y ) ).rgb +
+                texture2D( tColor, vUv - vec2( 0.0, r.y ) ).rgb );
+              c = max( vec3( 0.0 ), c + ( c - avg ) * 0.42 );
+              vec3 film = ( c * ( 2.51 * c + 0.03 ) ) / ( c * ( 2.43 * c + 0.59 ) + 0.14 );
+              c = mix( c, film, 0.36 );
+            } else if ( uRenderStyle < 2.5 ) {
+              // ② 厚塗:方向性塊面筆觸(Kuwahara 雙象限低變異度平坦化)+ 厚重不透明水粉/丙烯筆觸邊
+              float bAng = styN2( px * 0.08 ) * 6.28318;
+              vec2 bDir = vec2( cos( bAng ), sin( bAng ) ) * uTexel * 2.2;
+              vec2 bOrt = vec2( -bDir.y, bDir.x ) * 0.65;
+              vec3 qA0 = texture2D( tColor, vUv + bDir ).rgb;
+              vec3 qA1 = texture2D( tColor, vUv + bDir * 0.5 + bOrt ).rgb;
+              vec3 qB0 = texture2D( tColor, vUv - bDir ).rgb;
+              vec3 qB1 = texture2D( tColor, vUv - bDir * 0.5 - bOrt ).rgb;
+              vec3 mA = ( c + qA0 + qA1 ) / 3.0;
+              vec3 mB = ( c + qB0 + qB1 ) / 3.0;
+              float vA = dot( abs( qA0 - mA ) + abs( qA1 - mA ), lumaW );
+              float vB = dot( abs( qB0 - mB ) + abs( qB1 - mB ), lumaW );
+              vec3 kC = ( vA < vB ) ? mA : mB;
+              float ridge = ( styN2( px * vec2( 0.22, 0.09 ) ) - 0.5 ) * 0.06;
+              float kLum = dot( kC, lumaW );
+              c = max( vec3( 0.0 ), mix( vec3( kLum ), kC, 1.22 ) + ridge );
+            } else if ( uRenderStyle < 3.5 ) {
+              // ③ 彩色水墨:宣紙纖維肌理 + 水墨毛細暈染擴散 + 青黛/赭石/松煙設色
+              float bleedN = styN2( px * 0.06 );
+              vec2 r = uTexel * ( 1.8 + bleedN * 1.6 );
+              vec3 c1 = texture2D( tColor, vUv + vec2( r.x, r.y * 0.4 ) ).rgb;
+              vec3 c2 = texture2D( tColor, vUv - vec2( r.x, r.y * 0.4 ) ).rgb;
+              vec3 c3 = texture2D( tColor, vUv + vec2( -r.x * 0.4, r.y ) ).rgb;
+              vec3 c4 = texture2D( tColor, vUv - vec2( -r.x * 0.4, r.y ) ).rgb;
+              vec3 avg = 0.25 * ( c1 + c2 + c3 + c4 );
+              // 濃墨向宣紙四周暈開(取暗部擴散與均值混合)
+              vec3 inkBleed = mix( c, min( c, avg * 1.06 ), 0.48 );
+              float y = dot( inkBleed, lumaW );
+              // 宣紙簾紋(橫向竹簾細紋 + 雙尺度纖維雜訊)
+              float xuan = ( styN2( px * vec2( 0.35, 0.12 ) ) - 0.5 ) * 0.055
+                         + sin( px.y * 1.4 + styN2( px * 0.05 ) * 4.0 ) * 0.012;
+              vec3 mineral = mix( vec3( y ), inkBleed, 0.62 );
+              vec3 paperTone = vec3( 0.96, 0.92, 0.84 );
+              vec3 sumiShadow = vec3( 0.11, 0.13, 0.16 );
+              float paperW = smoothstep( 0.36, 0.86, y );
+              c = mix( mineral * vec3( 0.92, 0.95, 0.98 ), paperTone * max( y, 0.28 ), paperW * 0.42 );
+              c = mix( sumiShadow * y * 2.2, c, smoothstep( 0.02, 0.38, y ) );
+              c = max( vec3( 0.0 ), c + xuan );
+            } else if ( uRenderStyle < 4.5 ) {
+              // ④ 水彩:濕畫法紙面水波漫溢扭曲 + 水彩邊緣顏料沉積(Pigment Ring)+ 冷壓水彩紙粗紋
+              vec2 wOff = vec2(
+                styN2( px * 0.045 + vec2( 0.0, 3.7 ) ) - 0.5,
+                styN2( px * 0.045 + vec2( 9.1, 1.3 ) ) - 0.5 ) * uTexel * 3.2;
+              vec3 wCenter = texture2D( tColor, vUv + wOff ).rgb;
+              vec2 r = uTexel * 2.0;
+              vec3 wL = texture2D( tColor, vUv + wOff - vec2( r.x, 0.0 ) ).rgb;
+              vec3 wR = texture2D( tColor, vUv + wOff + vec2( r.x, 0.0 ) ).rgb;
+              vec3 wU = texture2D( tColor, vUv + wOff + vec2( 0.0, r.y ) ).rgb;
+              vec3 wD = texture2D( tColor, vUv + wOff - vec2( 0.0, r.y ) ).rgb;
+              vec3 wAvg = 0.2 * ( wCenter + wL + wR + wU + wD );
+              float edgeGrad = length( wL - wR ) + length( wU - wD );
+              // 水彩粗紋紙(Cold-Pressed Paper Tooth):凹處積色較深、凸處透出紙白
+              float paperTooth = styN2( px * 0.22 ) * 0.65 + styN2( px * 0.08 + 5.2 ) * 0.35;
+              float poolMask = clamp( edgeGrad * 1.6 + ( 0.5 - paperTooth ) * 0.32, 0.0, 1.0 );
+              vec3 pooled = pow( max( wAvg, vec3( 1e-4 ) ), vec3( 1.26 ) ) * vec3( 0.86, 0.82, 0.94 );
+              vec3 airy = mix( wAvg, vec3( 0.98, 0.96, 0.90 ), 0.16 + ( paperTooth - 0.5 ) * 0.12 );
+              c = mix( airy, pooled, poolMask * 0.52 );
+            } else {
+              // ⑤ 油畫:方向性鬃毛筆觸塗抹 + 亞麻畫布經緯編織浮雕受光(Canvas Weave Relief)+ 古典清漆濃彩
+              float strokeAng = styN2( px * 0.035 ) * 3.14159 + 0.52;
+              vec2 sDir = vec2( cos( strokeAng ), sin( strokeAng ) ) * uTexel * 2.4;
+              vec3 o1 = texture2D( tColor, vUv + sDir ).rgb;
+              vec3 o2 = texture2D( tColor, vUv - sDir ).rgb;
+              vec3 o3 = texture2D( tColor, vUv + sDir * 0.5 ).rgb;
+              vec3 smear = 0.34 * c + 0.22 * ( o1 + o2 + o3 );
+              // 亞麻畫布經緯線與厚塗鬃毛凹槽的受光浮雕
+              float weaveX = sin( px.x * 1.35 );
+              float weaveY = sin( px.y * 1.35 );
+              float canvasWeave = ( weaveX * weaveY ) * 0.024;
+              vec2 bCoord = vec2(
+                px.x * cos( strokeAng ) + px.y * sin( strokeAng ),
+                -px.x * sin( strokeAng ) + px.y * cos( strokeAng ) );
+              float bristle = ( styN2( bCoord * vec2( 0.08, 0.55 ) ) - 0.5 ) * 0.075;
+              float oLum = dot( smear, lumaW );
+              vec3 richOil = mix( vec3( oLum ), smear, 1.28 );
+              // 暗部深群青熟褐、亮部古典暖金清漆感
+              richOil *= mix( vec3( 0.88, 0.86, 0.96 ), vec3( 1.08, 1.02, 0.90 ), smoothstep( 0.12, 0.68, oLum ) );
+              c = max( vec3( 0.0 ), richOil * ( 1.0 + canvasWeave + bristle ) );
+            }
           }
           gl_FragColor = vec4( c, 1.0 );
         }`,

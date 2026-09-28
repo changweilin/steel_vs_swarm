@@ -587,6 +587,22 @@ const _foamC = { value: new THREE.Color(0.94, 0.97, 1) };
 // 形狀常數住 `INK_BREAK`(見「軟性物質」段下方)—— 那一份不進 syncVisualPrefs,可以晚一點宣告。
 const _inkBreakA = { value: 0 };
 const _landInkA = { value: 0 };
+// 繪畫渲染風格(賽璐璐 / 寫實 / 厚塗 / 彩色水墨 / 水彩 / 油畫)的共享 uniform 與編號映射。
+// 宣告排在 syncVisualPrefs 之前(模組載入即同步一次)。
+export const RENDER_STYLES = {
+  cel: 0,
+  realistic: 1,
+  impasto: 2,
+  inkwash: 3,
+  watercolor: 4,
+  oil: 5,
+};
+const OUTLINE_STYLE_SCALE = [1.0, 0.0, 0.35, 1.35, 0.22, 0.16];
+export function renderStyleIndex(style = visualPref('renderStyle')) {
+  return RENDER_STYLES[style] ?? 0;
+}
+const _renderStyle = { value: 0 };
+const _outlineStyleScale = { value: 1 };
 let _landTex = null;
 const _landField = { value: null };
 const _landRect = { value: new THREE.Vector4(0, 0, 1, 1) };
@@ -683,6 +699,9 @@ function syncVisualPrefs() {
   _foamA.value = visualPref('foam');
   _inkBreakA.value = visualPref('inkBreak');
   _landInkA.value = visualPref('landInk');
+  const styleIdx = renderStyleIndex(visualPref('renderStyle'));
+  _renderStyle.value = styleIdx;
+  _outlineStyleScale.value = OUTLINE_STYLE_SCALE[styleIdx] ?? 1.0;
 }
 syncVisualPrefs();
 onVisualChange(syncVisualPrefs);
@@ -1509,6 +1528,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uCelWField = preview ? _wFieldPrev : _wField;
     shader.uniforms.uCelWRect = preview ? _wRectPrev : _wRect;
     shader.uniforms.uCelWSpread = _wSpread;
+    shader.uniforms.uRenderStyle = _renderStyle;
     shader.uniforms.uCelRim = { value: rim };
     shader.uniforms.uCelWash = { value: wash };
     shader.uniforms.uCelCool = { value: cool };
@@ -1975,6 +1995,104 @@ ${CEL_SEA_GLSL}
             #endif
             outgoingLight *= mix( uCelRampTint, vec3( 1.0 ), celFbW );
           }
+          // ---- 多風格繪畫著色(uRenderStyle: 0=賽璐璐, 1=寫實, 2=厚塗, 3=彩色水墨, 4=水彩, 5=油畫)----
+          // 預設 0(賽璐璐)走 uniform 分支早退 ⇒ 逐位元與既有材質完全相同。
+          if ( uRenderStyle > 0.5 ) {
+            vec3 styWN = normalize( inverseTransformDirection( normal, viewMatrix ) );
+            vec3 styH = normalize( uCelLightDir + celV );
+            float styNL = dot( normal, uCelLightDir );
+            float styNH = saturate( dot( normal, styH ) );
+            vec3 styP = vViewPosition;
+            #ifdef CEL_INKB
+              styP = vCelInkP;
+            #endif
+            #ifdef CEL_WP
+              styP = vCelWP * 0.35;
+            #endif
+            vec3 styLumaW = vec3( ${LUMA_709.join(', ')} );
+            float styOutL = dot( outgoingLight, styLumaW );
+            vec3 styAlb = max( diffuseColor.rgb, vec3( 0.02 ) );
+            float styAlbL = max( 1e-4, dot( styAlb, styLumaW ) );
+            // 由當下 outgoingLight 反推場景光照能量包絡(含日夜燈色與陰影遮罩)
+            float styEnergy = styOutL / styAlbL;
+
+            if ( uRenderStyle < 1.5 ) {
+              // ① 寫實(Realistic):撫平硬切色階，重建連續微表面漫反射、天光半球環境光、Fresnel 與 GGX 高光
+              float stySmoothL = mix( 0.34, 1.16, smoothstep( -0.32, 0.88, styNL ) );
+              vec3 styHemi = mix( vec3( 0.86, 0.82, 0.78 ), vec3( 1.06, 1.09, 1.15 ), styWN.y * 0.5 + 0.5 );
+              vec3 styPbr = styAlb * styEnergy * stySmoothL * styHemi;
+              #ifdef CEL_METAL
+                float stySpec = pow( styNH, 96.0 ) * 0.75 + pow( styNH, 20.0 ) * 0.25;
+                styPbr = styPbr * 0.88 + mix( styAlb, vec3( 1.0 ), 0.65 ) * stySpec * max( 0.25, styEnergy );
+              #else
+                float stySpec = pow( styNH, 32.0 ) * 0.16 * saturate( styNL + 0.2 );
+                styPbr += vec3( stySpec ) * max( 0.25, styEnergy );
+              #endif
+              float styFres = pow( celRim, 3.6 ) * 0.18;
+              outgoingLight = mix( outgoingLight, styPbr + styAlb * styFres * styEnergy, 0.78 ) + totalEmissiveRadiance * 0.22;
+            } else if ( uRenderStyle < 2.5 ) {
+              // ② 厚塗(Impasto):塊面化筆觸法線擾動 + 四階厚重色溫階梯 + 塊狀高光筆觸
+              float styB1 = celNoise( styP.xz * 1.85 + styP.xy * 0.95 );
+              float styB2 = celNoise( styP.yz * 3.40 - styP.xz * 1.30 + 7.3 );
+              float styBrush = ( styB1 * 0.62 + styB2 * 0.38 ) - 0.5;
+              float styFacetNL = styNL + styBrush * 0.42;
+              float styBand = floor( saturate( styFacetNL * 0.5 + 0.5 ) * 4.0 ) / 3.0;
+              // 明暗交界帶暖色偏(厚塗古典冷暖對比：暗部群青冷紫、交界朱砂暖橙、亮部厚重暖黃白)
+              float styTerm = smoothstep( -0.25, 0.05, styFacetNL ) * ( 1.0 - smoothstep( 0.05, 0.38, styFacetNL ) );
+              vec3 styCoolSh = outgoingLight * vec3( 0.78, 0.84, 1.12 );
+              vec3 styWarmMid = outgoingLight * vec3( 1.24, 0.94, 0.76 );
+              vec3 styWarmHi = outgoingLight * vec3( 1.14, 1.08, 0.94 );
+              vec3 styImp = mix( styCoolSh, styWarmHi, styBand );
+              styImp = mix( styImp, styWarmMid, styTerm * 0.58 );
+              float styDab = smoothstep( 0.54, 0.66, styNH + styBrush * 0.16 );
+              outgoingLight = styImp + mix( styAlb, vec3( 1.0, 0.97, 0.88 ), 0.7 ) * styDab * 0.28 * max( 0.3, styEnergy );
+            } else if ( uRenderStyle < 3.5 ) {
+              // ③ 彩色水墨(Color Ink-wash):焦/濃/重/淡/清五墨層次 + 飛白乾筆 + 青綠赭石設色與宣紙留白
+              float styInkN = celNoise( styP.xz * 1.4 + styP.yy * 0.8 ) * 0.6 + celNoise( styP.yz * 3.1 + 4.7 ) * 0.4;
+              float styGraz = pow( celRim, 1.45 );
+              // 飛白:高速掠射邊緣受乾筆噪聲切出留白絲縷
+              float styFeibai = smoothstep( 0.24, 0.76, styGraz + ( styInkN - 0.48 ) * 0.45 );
+              float styWashL = dot( outgoingLight, styLumaW );
+              // 設色水墨:降低鮮豔原色飽和度，往青黛/赭石靠攏
+              vec3 styMineral = mix( vec3( styWashL ), outgoingLight, 0.56 );
+              styMineral *= mix( vec3( 0.88, 0.95, 0.98 ), vec3( 1.06, 0.98, 0.86 ), saturate( styNL * 0.5 + 0.5 ) );
+              // 宣紙高光留白(受光面化開為溫潤紙白)與濃墨積邊
+              vec3 styPaper = vec3( 0.96, 0.93, 0.86 ) * max( styWashL, 0.32 );
+              float styWhiteBleed = smoothstep( 0.42, 0.88, styNL + ( styInkN - 0.5 ) * 0.28 ) * 0.46;
+              vec3 stySumi = mix( styMineral, styPaper, styWhiteBleed );
+              vec3 styDarkInk = stySumi * vec3( 0.22, 0.24, 0.28 );
+              outgoingLight = mix( stySumi, styDarkInk, styFeibai * 0.65 );
+            } else if ( uRenderStyle < 4.5 ) {
+              // ④ 水彩(Watercolor):濕畫法透明罩染 + 明暗交界與輪廓水漬積色邊(Edge Darkening)+ 紙白透光
+              float styWn1 = celNoise( styP.xz * 0.75 + styP.xy * 0.45 );
+              float styWn2 = celNoise( styP.yz * 1.90 + 9.2 );
+              float styTurb = ( styWn1 * 0.65 + styWn2 * 0.35 ) - 0.5;
+              // 水彩標誌性的水漬邊(Pigment Pooling):在明暗交界線與輪廓邊緣形成深色顏料沉積環
+              float styTermRing = exp( -pow( ( styNL + styTurb * 0.32 - 0.04 ) * 4.8, 2.0 ) );
+              float styEdgePool = smoothstep( 0.48, 0.86, celRim + styTurb * 0.22 );
+              float styPool = max( styTermRing * 0.75, styEdgePool * 0.65 );
+              // 顏料積色處彩度升高、明度壓深；受光處透出溫潤水彩紙白
+              vec3 styPigment = pow( max( outgoingLight, vec3( 1e-4 ) ), vec3( 1.28 ) ) * vec3( 0.82, 0.78, 0.92 );
+              vec3 styPaperHi = mix( outgoingLight, vec3( 0.99, 0.97, 0.92 ) * max( styOutL * 1.25, 0.38 ),
+                                     smoothstep( 0.25, 0.82, styNL - styTurb * 0.25 ) * 0.52 );
+              outgoingLight = mix( styPaperHi, styPigment, styPool * 0.58 );
+            } else {
+              // ⑤ 油畫(Oil Painting):方向性鬃毛筆觸浮雕受光(Impasto Bristle Relief)+ 古典油彩厚重罩染
+              vec2 styFlow = vec2( styP.x * 3.8 + styP.z * 1.2, styP.y * 0.95 - styP.z * 0.65 );
+              float styBr0 = celNoise( styFlow );
+              float styBr1 = celNoise( styFlow + vec2( 0.35, 0.08 ) );
+              float styRidge = ( styBr1 - styBr0 ) * 3.2;   // 筆觸脊線斜率 → 產生凹凸受光高光與溝槽暗影
+              float styOilNL = styNL + styRidge * 0.28;
+              float styWarmth = smoothstep( -0.35, 0.65, styOilNL );
+              vec3 styOilSh = outgoingLight * vec3( 0.74, 0.80, 1.08 );   // 群青/熟褐深邃暗部
+              vec3 styOilHi = outgoingLight * vec3( 1.18, 1.06, 0.86 );   // 琥珀金暖亮部
+              vec3 styOil = mix( styOilSh, styOilHi, styWarmth );
+              styOil *= 1.0 + styRidge * 0.22;
+              // 油彩清漆(Varnish)沿筆觸脊線的濕潤反光
+              float styVarnish = pow( saturate( styNH + styRidge * 0.18 ), 24.0 ) * 0.34;
+              outgoingLight = styOil + vec3( 1.0, 0.95, 0.82 ) * styVarnish * max( 0.25, styEnergy );
+            }
+          }
         }
         #include <opaque_fragment>
         #ifdef CEL_INKA
@@ -2121,6 +2239,7 @@ ${CEL_SEA_GLSL}
       .replace('void main() {', `
         uniform vec3 uCelLightDir;
         uniform float uCelRim;
+        uniform float uRenderStyle;
         uniform float uSurfId;
         uniform float uInkClass;
         uniform float uInkCtr;${_school === 'b' ? CEL_CUT_DECL_GLSL : ''}
@@ -2545,13 +2664,14 @@ function outlineMaterial(w, invS) {
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uOW = { value: w };
     shader.uniforms.uOMin = { value: OUTLINE_MIN_NDC * invS };
-    shader.vertexShader = ('uniform float uOW;\nuniform float uOMin;\n' + shader.vertexShader)
+    shader.uniforms.uOScale = _outlineStyleScale;
+    shader.vertexShader = ('uniform float uOW;\nuniform float uOMin;\nuniform float uOScale;\n' + shader.vertexShader)
       .replace('#include <begin_vertex>', `
         // 視距:骨骼變形前的綁定姿勢即可(同一根骨頭上的頂點距離差異遠小於一個像素)
         float oDist = max( 0.05, -( modelViewMatrix * vec4( position, 1.0 ) ).z );
         // uOMin(NDC ÷ 世界縮放)換回這個距離上的**局部**寬度;projectionMatrix[1][1] = 1/tan(fov/2)
         float oMinW = uOMin * oDist / max( 0.001, projectionMatrix[1][1] );
-        vec3 transformed = position + normal * max( uOW, oMinW );`);
+        vec3 transformed = position + normal * ( max( uOW, oMinW ) * uOScale );`);
   };
   m.customProgramCacheKey = () => 'celOutline';
   return m;
