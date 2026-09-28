@@ -650,6 +650,11 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       && guidedLaunchPitchDeg(fnf, zeroPitchM + 1) === 0
       && guidedLaunchPitchDeg(lob, 0) === 0,
       '0 度門檻 = 1.5 個砲塔高,離地高度增加時抬頭角線性遞減');
+    ok(GUIDED_LAUNCH.PITCH_DEG_FNF === 22.5
+      && guidedLaunchPitchDeg(fnf, 0) === GUIDED_LAUNCH.PITCH_DEG_FNF
+      && guidedLaunchPitchDeg(fnf, zeroPitchM / 2) === GUIDED_LAUNCH.PITCH_DEG_FNF / 2
+      && guidedLaunchPitchDeg(fnf, 0) < guidedLaunchPitchDeg(guide, 0),
+      '射後不理抬頭角 22.5°(雷射導引維持 35°),同樣隨離地高度線性遞減');
     const launch = methodSrc('_guidedLaunchVel', G);
     const fire = methodSrc('_tryFire', G);
     const ub = methodSrc('_updateBullets', G);

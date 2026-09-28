@@ -2431,9 +2431,11 @@ export const armingOf = (def) => ARMING[trajClass(def)] || null;
 // 從地面或接近地面發射的雷射導引 / 射後不理彈體,先用固定上仰角離開地面與背景物件,
 // 到既有 ARMING 距離後才接手導引。抬頭距離直接吃 ARMING.m,避免新增第二個「穩定」門檻。
 // 只影響表現層彈道;命中與傷害仍由伺服器既有落點回報/驗證結算。
+// 2026-09-28 使用者定案:射後不理抬頭角降為 22.5°(雷射導引維持 35°);初速另見各彈 mv。
 export const GUIDED_LAUNCH = {
   ZERO_PITCH_TOWER_F: 1.5, // 發射點離站立面達 1.5 個砲塔高時,抬頭角降為 0 度
-  PITCH_DEG: 35,      // 初始上仰角;保持水平分速,不改武器初速
+  PITCH_DEG: 35,      // 雷射導引初始上仰角;保持水平分速,不改武器初速
+  PITCH_DEG_FNF: 22.5, // 射後不理初始上仰角(低於雷射導引,更快進入追蹤)
 };
 export const guidedLaunchOf = (def) => {
   const cls = trajClass(def);
@@ -2444,7 +2446,8 @@ export const guidedLaunchPitchDeg = (def, height) => {
   const cfg = guidedLaunchOf(def);
   if (!cfg) return 0;
   const h = Math.max(0, Number(height) || 0);
-  return cfg.PITCH_DEG * Math.max(0, 1 - h / guidedLaunchZeroPitchM());
+  const base = trajClass(def) === 'fnf' ? cfg.PITCH_DEG_FNF : cfg.PITCH_DEG;
+  return base * Math.max(0, 1 - h / guidedLaunchZeroPitchM());
 };
 export const guidedLaunchDist = (def) => {
   const cfg = guidedLaunchOf(def);
@@ -3773,7 +3776,7 @@ export const CHARACTERS = {
     light: { name: '「星流」超導磁軌轉輪槍', rw: '高頻線性磁軌機關槍・電磁加速彈・初速 1400m/s', type: 'rail', mv: 1400,
       dmg: [9, 11, 14], rate: [14, 16, 18], mag: [70, 90, 110], reload: 2.8, range: 180, crit: 0.05,
       vs: { flesh: 1.2, armor: 0.6, air: 1.4, building: 0.4 } },
-    heavy: { name: '「星穹之影」巡飛蜂群', rw: '微型高動態巡飛彈掛架・複合制導・巡航 90m/s', type: 'missile', mv: 90,
+    heavy: { name: '「星穹之影」巡飛蜂群', rw: '微型高動態巡飛彈掛架・複合制導・巡航 72m/s', type: 'missile', mv: 72,
       dmg: [44, 63, 88], r: [13, 15, 17], mag: 4, reload: 11, range: 320, pen: 12,
       vs: { flesh: 1.0, armor: 1.6, air: 0.6, building: 1.1 } },
     def: { name: '極限・超頻充能', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60],
@@ -3796,7 +3799,7 @@ export const CHARACTERS = {
     // r 6 → 8(2026-08-02 機體混編):她從飛行機體換到地面四足平台,sight 270 → 240 ⇒ 重武器解析
     // 射程 194 → 173m,導引頭在「剛解除保險」的近帶只剩約 26m 修正距離(audit_weapon_gate Ⅵ 的
     // s06@50% 由此翻紅)。核心帶 6 → 8m 把承諾(射程光暈)拉回實際彈道,仍是全機種最小的戰鬥部。
-    heavy: { name: '「淨化之矢」超音速防空飛彈', rw: '近程空對空攔截飛彈・全向光電尋的・初速 1000m/s', type: 'missile', mv: 1000,
+    heavy: { name: '「淨化之矢」超音速防空飛彈', rw: '近程空對空攔截飛彈・全向光電尋的・初速 800m/s', type: 'missile', mv: 800,
       dmg: [45, 68, 102], r: [8, 9, 10], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.6, armor: 0.9, air: 2.5, building: 0.3 } },
     def: { name: '聖靈・不墜穹頂', fx: 'intercept', r: [140, 170, 200], intercept: true, shieldDefBoost: [0.55, 0.45, 0.35],
@@ -4102,7 +4105,7 @@ export const CHARACTERS = {
     light: { name: '「千夜」守衛機關槍', rw: '經典速射機關槍・7.62mm 穿甲彈・初速 820m/s', type: 'gun', mv: 820,
       dmg: [14, 18, 22], rate: 8, mag: [40, 48, 56], reload: 2.2, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
-    heavy: { name: '「天罰見證」136 巡飛彈發射槽', rw: '三角翼自主攻擊巡飛彈・Shahed-136 縮裝・巡飛 100m/s', type: 'missile', mv: 100,
+    heavy: { name: '「天罰見證」136 巡飛彈發射槽', rw: '三角翼自主攻擊巡飛彈・Shahed-136 縮裝・巡飛 80m/s', type: 'missile', mv: 80,
       dmg: [38, 55, 77], r: [15, 17, 19], mag: 4, reload: 11, range: 360, pen: 10,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
     def: { name: '悼文・鐵壁殘卷', fx: 'buff', target: 'self', intercept: true, r: 16, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
@@ -4119,7 +4122,7 @@ export const CHARACTERS = {
     light: { name: '「碎星」30mm 截擊速射砲', rw: '高射速轉膛截擊砲・30mm 破片彈・初速 960m/s', type: 'gun', mv: 960,
       dmg: [18, 22, 27], rate: 5.5, mag: [28, 34, 40], reload: 2.3, range: 210, pen: 6,
       vs: { flesh: 1.1, armor: 1.0, air: 1.5, building: 0.5 } },
-    heavy: { name: '「天穹衛士」垂直防空飛彈', rw: '垂直冷發射防空攔截飛彈・9M330 衍生・初速 800m/s', type: 'missile', mv: 800,
+    heavy: { name: '「天穹衛士」垂直防空飛彈', rw: '垂直冷發射防空攔截飛彈・9M330 衍生・初速 640m/s', type: 'missile', mv: 640,
       dmg: [50, 75, 113], r: [11, 13, 15], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.7, armor: 0.7, air: 2.4, building: 0.4 } },
     def: { name: '聖石・神聖幾何', fx: 'cube', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
@@ -4196,7 +4199,7 @@ export const CHARACTERS = {
     // 破甲彈的金屬射流截面極小、速度極高,護盾場來不及耦合就被穿過去,一半動能直接打在裝甲上。
     // 代價寫在兩處:總量偏低(vsHp < 1)、基礎傷害再吃 counterDmgF —— 它同時還留著 vs.armor 1.7
     // 這個大加成,依紀律③「加成越多含金量越低」,折減會比只掛一項的武器更重。
-    heavy: { name: '「滅靈地獄火」穿盾導引飛彈', rw: '雷射駕束穿甲導引飛彈・AGM-114 衍生・初速 450m/s', type: 'missile', mv: 450,
+    heavy: { name: '「滅靈地獄火」穿盾導引飛彈', rw: '雷射駕束穿甲導引飛彈・AGM-114 衍生・初速 360m/s', type: 'missile', mv: 360,
       dmg: [50, 72, 103], r: [12, 14, 16], mag: 4, reload: 11, range: 320, pen: [14, 18, 22],
       spPierce: 0.45, vsHp: 0.9,
       vs: { flesh: 0.9, armor: 1.7, air: 0.55, building: 1.1 } },
@@ -4273,7 +4276,7 @@ export const CHARACTERS = {
     light: { name: '「噬魂」12.7mm 三管電磁機砲', rw: '三管旋轉線圈機砲・高斯加速・初速 1300m/s', type: 'rail', mv: 1300,
       dmg: [19, 24, 30], rate: 6, mag: [36, 44, 52], reload: 2.4, range: 200, crit: 0.06,
       vs: { flesh: 0.85, armor: 1.0, air: 0.9, building: 0.6 } },
-    heavy: { name: '「冥府追魂」全向自導飛彈', rw: '智慧鎖定追蹤飛彈・破甲多用途彈頭・初速 400m/s', type: 'missile', mv: 400,
+    heavy: { name: '「冥府追魂」全向自導飛彈', rw: '智慧鎖定追蹤飛彈・破甲多用途彈頭・初速 320m/s', type: 'missile', mv: 320,
       dmg: [50, 72, 103], r: [13, 15, 17], mag: 4, reload: 11, range: 330, pen: [12, 15, 18],
       vs: { flesh: 1.0, armor: 1.5, air: 0.55, building: 1.2 } },
     def: { name: '避雷・幽夜絕緣', fx: 'emp', r: 16, dur: [3.5, 4.0, 4.5], spRestore: [40, 60, 80], shieldDefBoost: [0.6, 0.5, 0.4],
