@@ -225,6 +225,10 @@ function show(screen) {
   }
   // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
   if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
+  // 致命錯誤計時:進新階段就重計,離開 loading/game 收窗(關閉鈕已收,這裡防殘留)
+  if (screen === 'loading') { hideFatal(); fatal.loadT0 = Date.now(); fatal.lastSnap = Date.now(); fatal.lastNetUp = Date.now(); }
+  else if (screen === 'game') { hideFatal(); fatal.lastSnap = Date.now(); fatal.lastNetUp = Date.now(); }
+  else if (screen === 'connect' || screen === 'room') { hideFatal(); }
 }
 
 function toast(msg, ms = 3200) {
@@ -234,6 +238,80 @@ function toast(msg, ms = 3200) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.remove('on'), ms);
 }
+
+// ================= 致命錯誤(開啟失敗 / 一段時間無法遊戲)=================
+// 只在 loading / game 階段彈窗:原因寫入 #fatalReason,關閉或重啟(單人)。
+// 觸發:地形建構雙敗、戰鬥模組載入失敗、單機模擬核心載入失敗、
+//      載入逾時、對戰中快照停滯、連線中斷逾時。逾時閾值只住這一份。
+const FATAL = { LOAD_MS: 90000, SNAP_MS: 20000, NET_MS: 30000 };
+const fatal = { shown: false, loadT0: 0, lastSnap: 0, lastNetUp: Date.now(), lastFrame: performance.now() };
+// 頁面級幀心跳(與戰場迴圈獨立):戰場凍結但快照照收時,快照看門狗看不出來,這裡補一層。
+// 背景分頁 rAF 本來就停擺,看門狗屆時跳過此項(見 fatalWatchdog)。
+const fatalFrame = () => { fatal.lastFrame = performance.now(); requestAnimationFrame(fatalFrame); };
+requestAnimationFrame(fatalFrame);
+function fatalArmed() { return app.phaseShown === 'loading' || app.phaseShown === 'game'; }
+function showFatal(reason, force = false) {
+  if (fatal.shown) return;
+  if (!force && !fatalArmed()) { toast(`⚠️ ${reason}`); return; }
+  fatal.shown = true;
+  $('fatalReason').textContent = reason;
+  // 重啟只在單人模式提供(連線對戰的重建由房主/伺服器定案,客戶端重發無意義)
+  $('fatalRestartBtn').style.display = netMode() === 'solo' ? '' : 'none';
+  $('fatalOverlay').style.display = '';
+}
+function hideFatal() {
+  fatal.shown = false;
+  const el = $('fatalOverlay');
+  if (el) el.style.display = 'none';
+}
+/** 關閉:收掉戰場回到大廳(不重整,保留連線機制與代號) */
+function fatalClose() {
+  hideFatal();
+  try { app.net?.send({ t: 'leaveRoom' }); } catch { /* 斷線中即略過 */ }
+  sessionStorage.removeItem('svs_token');
+  if (app.battle) { try { app.battle.dispose(); } catch { /* 忽略 */ } app.battle = null; }
+  app.dlg?.dispose(); app.dlg = null;
+  app.terrain = null; app.fieldMsg = null;
+  app.story = null; app.super = null; app.quickRestart = null;
+  for (const id of ['overOverlay', 'pauseOverlay', 'shopOverlay', 'deadOverlay']) {
+    const el = $(id);
+    if (el) el.style.display = 'none';
+  }
+  delete $('overOverlay').dataset.done;
+  show('connect');
+  refreshRooms();
+}
+/** 重啟(單人):有上一場配置就地重開,否則整頁重整(單機房只活在分頁記憶體) */
+function fatalRestart() {
+  if (netMode() !== 'solo') { fatalClose(); return; }
+  const session = loadPrefs().lastSession;
+  hideFatal();
+  fatal.loadT0 = 0; fatal.lastSnap = Date.now(); fatal.lastNetUp = Date.now();
+  if (app.net?.connected && session?.battleConfig) quickRestartGame();
+  else location.reload();
+}
+/** 背景看門狗(2s 一次):載入逾時 / 快照停滯 / 斷線逾時才彈窗,不洗正常 toast */
+function fatalWatchdog() {
+  if (fatal.shown || !fatalArmed()) return;
+  const now = Date.now();
+  if (app.phaseShown === 'loading' && fatal.loadT0 && now - fatal.loadT0 > FATAL.LOAD_MS) {
+    showFatal(`載入超過 ${Math.round(FATAL.LOAD_MS / 1000)} 秒仍無法進入戰場,可能是網路阻塞或圖資服務異常。`);
+    return;
+  }
+  if (app.net && !app.net.connected && now - fatal.lastNetUp > FATAL.NET_MS) {
+    showFatal('與伺服器斷線超過一段時間仍無法重連,請檢查網路。');
+    return;
+  }
+  if (app.phaseShown === 'game' && fatal.lastSnap && now - fatal.lastSnap > FATAL.SNAP_MS) {
+    showFatal(`超過 ${Math.round(FATAL.SNAP_MS / 1000)} 秒沒有收到對戰進度,遊戲已停滯。`);
+    return;
+  }
+  // 頁面凍結(前景分頁 rAF 長時間不跳):快照照收也玩不了,報畫面停滯
+  if (app.phaseShown === 'game' && !document.hidden && performance.now() - fatal.lastFrame > FATAL.SNAP_MS) {
+    showFatal('遊戲畫面長時間沒有更新,可能是瀏覽器或顯示卡異常。');
+  }
+}
+setInterval(fatalWatchdog, 2000);
 
 // ================= 連線機制(雲端 / 區網 Tailscale / 單機)=================
 // 【單一真相縫】模式判定全在 netmode.js;本節只做「畫出來 + 換了就重建傳輸層」。
@@ -246,6 +324,8 @@ const NET_HANDLERS = {
   error: (m) => {
     // 回連失敗(座位已失效:房間結束/清位逾期)→ 清掉過期憑證,免每次開頁都吃一次錯誤
     if (m.code === 'reattach') sessionStorage.removeItem('svs_token');
+    // 單機模擬核心載入失敗 = 開啟失敗,直接彈窗(不限階段);其餘維持 toast + 斷線看門狗
+    if (/模擬核心|單機模式載入失敗/.test(m.msg || '')) { showFatal(m.msg, true); return; }
     toast(`⚠️ ${m.msg}`);
     // 開房被拒(驗證失敗)→ 解鎖建立鈕讓房主重試
     if (app.phaseShown === 'openroom') $('createRoomBtn').disabled = !app.favCfg;
@@ -257,14 +337,15 @@ const NET_HANDLERS = {
   osm: (m) => onOsmRelay(m),
   // 對局中 WS 斷線重連,伺服器會補送 battleConfig:戰場還活著就不重建(快照恢復即續戰);
   // 只有沒有現役戰場(初載/跳頁後回連/中途觀戰加入)才走載入流程
-  battleConfig: (m) => { if (!app.battle) enterLoading(m.config); },
+  battleConfig: (m) => { fatal.lastNetUp = Date.now(); if (!app.battle) enterLoading(m.config); },
   // 危險區靜態資料(地雷等):可能比 BattleClient 早到,先暫存
   field: (m) => { app.fieldMsg = m; app.battle?.onField(m); },
-  snap: (m) => app.battle?.onSnap(m),
+  snap: (m) => { fatal.lastSnap = Date.now(); fatal.lastNetUp = Date.now(); app.battle?.onSnap(m); },
   tracer: (m) => app.battle?.onTracer(m),
   heavyCharge: (m) => app.battle?.onHeavyCharge(m),
   heavyFire: (m) => app.battle?.onHeavyFire(m),
   reconnect: () => {
+    fatal.lastNetUp = Date.now();
     const tk = sessionStorage.getItem('svs_token');
     if (tk) app.net?.sendNow({ t: 'reattach', token: tk });
     app.net?.flushQueue();
@@ -2910,6 +2991,7 @@ async function enterLoading(cfg) {
   } catch (e) {
     console.error(e);
     setP(1, `❌ 地形建構失敗:${e.message}(檢查網路後重新整理)`);
+    showFatal(`開啟失敗:地形建構失敗(${e.message || '未知錯誤'})。請檢查網路。`);
   }
 }
 
@@ -2920,7 +3002,7 @@ async function enterGame() {
     Ctor = await battleClientCtor();
   } catch (e) {
     console.error(e);
-    toast('戰鬥模組載入失敗,檢查網路後重試。');
+    showFatal('開啟失敗:戰鬥模組載入失敗,請檢查網路。');
     return;
   }
   show('game');
@@ -2930,6 +3012,7 @@ async function enterGame() {
   const meLobby = app.lobby?.clients.find((c) => c.id === app.youId);
   const myCh = meLobby?.ch || null;   // 開戰時伺服器已定案(隨機也回寫)
   app.dlg = new Dialogue($('dialogueLayer'), { mySide: app.mySide });   // 對白站位:我左敵右
+  try {
   app.battle = new Ctor({
     canvas: $('gameCanvas'),
     minimapCanvas: $('minimap'),
@@ -2952,6 +3035,12 @@ async function enterGame() {
     // 攻堅進度條:目前打得動敵方的哪一階(權威值來自快照,客戶端不自己數塔)
     onSiegeTrack: (sg) => app.dlg?.track(app.story ? sg[app.story.foe] : null),
   });
+  } catch (e) {
+    console.error(e);
+    app.dlg?.dispose(); app.dlg = null;
+    showFatal(`開啟失敗:戰場建立失敗(${e.message || '未知錯誤'})。`);
+    return;
+  }
   installDevSceneHook();
   if (app.fieldMsg) app.battle.onField(app.fieldMsg);   // 開戰前就收到的危險區資料
   // 陣營樣式 & 操作說明
@@ -3801,6 +3890,9 @@ $('backRoomBtn')?.addEventListener('click', () => {
   app.net?.send({ t: 'backToRoom' });
 });
 $('leaveGameBtn')?.addEventListener('click', () => location.reload());
+// 致命錯誤視窗:關閉回大廳 / 重新開始(單人)
+$('fatalCloseBtn')?.addEventListener('click', () => fatalClose());
+$('fatalRestartBtn')?.addEventListener('click', () => fatalRestart());
 
 // 戰場選單(暫停):繼續 / 離開戰場
 $('resumeBtn')?.addEventListener('click', () => app.battle?._setPaused(false));
@@ -4826,6 +4918,7 @@ $('worldOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'world
 
 // ================= 伺服器訊息 =================
 function onSync(m) {
+  fatal.lastNetUp = Date.now();
   app.youId = m.youId;
   app.isHost = m.isHost;
   app.token = m.token;

@@ -1346,6 +1346,14 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 .toast::after { content: none; }
 .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ---------- 致命錯誤(開啟失敗 / 卡住):蓋過戰場疊層,原因為唯一動態文案 ---------- */
+.fatal-overlay { position: fixed; z-index: 200; }
+.fatal-box { border-color: var(--danger); }
+.fatal-title {
+  font-family: var(--serif); font-size: 26px; font-weight: 900; color: var(--danger); letter-spacing: 6px;
+}
+.fatal-reason { color: var(--text); font-size: 14px; line-height: 1.8; word-break: break-word; }
+
 /* ---------- 觸控版常駐工具列(總聲音 / 視角 / 全螢幕) ----------
    位置固定右上角,退避掉頂部 .sysbar 的裝飾文字與 .scanlines 的兩個 L 形邊角。
    z-index 刻意落在 .hud-top(10)之上、.overlay(20)/.map-panel(1000)之下:疊層或選址面板蓋住

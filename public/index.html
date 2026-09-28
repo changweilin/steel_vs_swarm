@@ -1066,6 +1066,18 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- 致命錯誤(開啟失敗 / 一段時間無法遊戲):顯示原因,關閉或重啟(單人) -->
+<div id="fatalOverlay" class="overlay fatal-overlay" style="display:none">
+  <div class="overlay-box fatal-box">
+    <div class="fatal-title" id="fatalTitle">無法繼續遊戲</div>
+    <div class="fatal-reason" id="fatalReason"></div>
+    <div class="row" style="justify-content:center">
+      <button id="fatalRestartBtn" class="btn big steel-btn">↻ 重新開始</button>
+      <button id="fatalCloseBtn" class="btn big">關閉</button>
+    </div>
+  </div>
+</div>
+
 <!-- 觸控裝置常駐工具列:總聲音 / 視角 / 全螢幕。MUST 留在 body 層(position:fixed),
      跨越所有 `.screen` 並與 #touchLayer 分開,避免滿版視角層吃掉按鈕事件。
      顯示與行為沿用既有縫:音效由 GameAudio、視角由 ctrlmode.js / game.js、全螢幕由
