@@ -35,3 +35,19 @@
   one local frame and wind parameters so joints never separate. Each plant merges to
   2-4 draw batches; flower/fruit ride independent seeds so seasons never reshape
   trunks, roots, or collision.
+
+- Seasonal appearance uses `seasonalEnvironment.js` across plants, rock covers and
+  ground textures. Latitude and elevation modulate local named seasons (no hemisphere
+  inversion of an explicitly selected season); explicit temperature is the current
+  temperature and receives no additional seasonal offset. Habitat sampling retains
+  its long-term baseline so dormant plants do not relocate.
+- Species opt into deciduous or drought shedding in `forestSpecies.js`; evergreen
+  is the default. A separate seed hides crowns while preserving woody geometry and
+  colliders. Flower/fruit calendars additionally require growing conditions. Snow
+  needs both cold and moisture and shares tree-local wind with its supporting parts.
+  These are stylized opening-scene states, not a live phenology simulation.
+- Flower/fruit growth also uses the species' existing soil-pH suitability curve.
+  Explicit pH overrides the geological proxy; unknown substrate adds no penalty.
+  Soil stress suppresses reproductive organs without reshaping the woody skeleton.
+- Legacy instanced shrubs and grasses apply local seasonal strength, drought and
+  snow through instance colors, retaining shared meshes and instance transforms.

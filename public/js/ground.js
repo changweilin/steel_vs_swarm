@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { mulberry32 } from './rng.js';
 import { DEFS, ZONES, CARPET, FAMS, SIZE, SURFACES } from './groundCatalog.js';
-import { paintGround, surfaceEnvironment, surfaceAllowed, surfaceParameters, probeSurface, groundSeed } from './proceduralGround.js';
+import { paintGround, surfaceEnvironment, surfaceAllowed, surfaceParameters, probeSurface, groundSeed, groundPlantState } from './proceduralGround.js';
 import { GROUND_ATTACHMENTS, GROUND_PART_PALETTES } from './groundPartCatalog.js';
 import { createGroundParts } from './proceduralGroundParts.js';
 import { ENV, inkCtrM, edgeWallInsetM, optimalSolarTiltRad, mapRot } from './data.js';
@@ -125,11 +125,11 @@ function vnoise(x, z, seed) {
 }
 
 // ---- 程序生成地表筆刷貼圖(固定種子;「地表#變體」為鍵快取共用)----
-// 季節只進**快取鍵**(bucket 鍵仍是 `sub#variant`)⇒ 一場戰鬥只有一個季節,draw call 不變;
+// Climate buckets share textures; brush seeds remain independent of environment.
 // 畫筆種子仍只由 `sub#variant` 導 ⇒ 同一塊田的壟溝/缺株位置四季不動,只有作物換了(§四季設計 ③)
 function groundTex(sub, variant, fit, season, environment, seed, cache) {
   const key = `${sub}#${variant}`;
-  const ck = `${key}@${season}/${fit}`;
+  const ck = `${key}@${season}/${fit}/${environment.snow}/${environment.growth}/${environment.wetness}/${environment.autumn}/${environment.geology}`;
   if (cache.has(ck)) return cache.get(ck);
   const S = sub === 'track' ? 1024 : 256;
   const cv = document.createElement('canvas');
@@ -180,8 +180,7 @@ function baseFill(hex, rnd) {
 // 使用者原話:「田除了田也加入菜園/牧場/魚塭與果園等農牧區,**包含原本的田在內依四季不同
 // 而對應設計**」。舊制的季節只有 `SEASON_TINT` 一個乘色濾鏡 —— 那是把整張圖調黃,不是
 // 「秋天的水田長什麼樣」(秋天的水田是割過的稻茬與金黃穗浪,不是綠稻加濾鏡)。三條:
-//  ①**畫筆吃季節,材質不吃**:季節只進 `groundTex` 的**快取鍵**,bucket 鍵仍是 `sub#variant`
-//    ⇒ 一場戰鬥只有一個季節,**draw call 一個都沒有多**。
+//  1. Seasonal paint and quantized local climate share cached textures.
 //  ②有四季設計的地表 MUST 標 `seasonal` 並**跳過 `SEASON_TINT`** —— 不跳就是調兩次色
 //    (畫筆已經畫成金黃,再乘一層 0xffd9a8 就成了褪色的舊照片)。
 //  ③畫筆吃的是自己那一支 `mulberry32`(不是共享 `rnd`)⇒ 季節分支要抽幾枚都不推移佈局(§2.3)。
@@ -1824,8 +1823,18 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const environmentAt = (x, z) => surfaceEnvironment({ ...environment, season,
     latitude: environment.latitude ?? terrain.center?.lat,
     altitude: terrain.elevationAt?.(x, z) ?? environment.altitude ?? 0 });
-  const renderEnvironment = environmentAt(0, 0), textureCache = new Map();
-  const textureOf = (sub, variant, fit) => groundTex(sub, variant, fit, season, renderEnvironment, seed, textureCache);
+  const textureCache = new Map();
+  const textureOf = (sub, variant, fit, env) => groundTex(sub, variant, fit, season, env, seed, textureCache);
+  // Reuse textures across nearby climate states; altitude must not create one
+  // material per tile. Bucket changes never enter placement seeds or seam heights.
+  const climateBucket = (bmap, key, x, z) => {
+    const env = environmentAt(x, z);
+    for (const field of ['snow', 'growth', 'wetness', 'autumn']) env[field] = Math.round(env[field] * 8) / 8;
+    const state = [env.snow, env.growth, env.wetness, env.autumn].join('/');
+    const b = bucketOf(bmap, key + '@' + state);
+    b.surfaceKey = key; b.environment = env;
+    return b;
+  };
   const generatedSurfaces = [];
   const inb = edgeWallInsetM();
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
@@ -1835,7 +1844,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // 蘆葦/荷葉貼在水面上、魚在水面下,兩者共用同一道岸線豁免。水深不足(池底離水面比這個
   // 數字還淺)就不擺:魚半個身子插在泥裡比沒有魚還糟(§4 寧缺勿錯)
   const DIVE = { fish: 0.5 };
-  const buckets = new Map();   // `${sub}#${variant}` -> 幾何桶
+  const buckets = new Map();   // Surface/variant plus local climate state.
   const occupied = makeFootprintIndex([...blockers.map(blockerFoot), ...reservedFootprints]);
   const det = {};
   for (const t in DETAIL_DEFS) det[t] = [];
@@ -1968,10 +1977,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
 
   // ---- 高地/季節分區:量測全場高程「起伏」(絕對海拔無意義,高原城市會誤判),
   // 相對高處改鋪高原/岩屑/冰原 ----
-  let hMin = Infinity, hMax = -Infinity;
+  let hMin = Infinity, hMax = -Infinity, snowAvailable = false;
   for (let j = 0; j <= 20; j++) {
     for (let i = 0; i <= 20; i++) {
       const h = terrain.heightAt(terrain.minX + terrain.worldW * i / 20, terrain.minZ + terrain.worldH * j / 20);
+      if (environmentAt(terrain.minX + terrain.worldW * i / 20, terrain.minZ + terrain.worldH * j / 20).snow > .05) snowAvailable = true;
       if (h < hMin) hMin = h;
       if (h > hMax) hMax = h;
     }
@@ -1980,7 +1990,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const alpineH = relief > 40 ? hMin + relief * 0.62 : Infinity;   // 平坦地圖不出現高地地貌
   const zoneLists = { ...ZONES };
   const carpetLists = { ...CARPET };
-  if (season === 'winter') {                            // 冬季:裸露地混入冰原、高地以冰原為主
+  if (snowAvailable) {                  // Snow requires cold and available moisture.
     zoneLists.bare = ['icefield', ...ZONES.bare, 'icefield'];
     zoneLists.alpine = ['plateau', 'icefield', 'scree', 'icefield', 'plateau', 'icefield'];
     carpetLists.bare = ['icefield', ...CARPET.bare, 'icefield'];
@@ -2189,7 +2199,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 中間樣態脊帶(st.band)固定壓在其他外溢之上(0.108 仍 < fade 下限 0.110)—— 它是
     // 「疊在兩側淡出上的第三種地表」;一般外溢走每 key 微升差
     const lift = alphas ? (st?.band ? SLIFT + 0.008 : SLIFT + seamLift(key)) : CLIFT;
-    const b = bucketOf(bmap, key);
+    const b = climateBucket(bmap, key, G[4][0], G[4][1]);
     G.forEach(([px, pz], k) => {
       const w = wash(px, pz);
       let a = AL[k];
@@ -2337,7 +2347,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 「疊在兩側淡出上的第三種地表」;一般外溢走每 key 微升差
     const lift = alphas ? (st?.band ? SLIFT + 0.008 : SLIFT + seamLift(key)) : CLIFT;
     const wy = aq && terrain.waterY != null ? terrain.waterY + 0.05 : null;
-    const b = bucketOf(bmap, key);
+    const b = climateBucket(bmap, key, G[4][0], G[4][1]);
     const putQuad = (x0, x1, z0, z1) => {
       // 頂點序 (x,z)/(x+1,z)/(x,z+1)/(x+1,z+1),索引取**反對角線** —— 與 terrain.js 的
       // (a,c,b)(b,c,d) 逐字同向 ⇒ 兩張皮的三角形完全重合(共面的本錢在這一行)
@@ -2809,7 +2819,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
     const shade = 1 + parameters.lightness;
     const pt = [shade, shade, shade];
-    const b = bucketOf(buckets, `${sub}#${variant}`);
+    const b = climateBucket(buckets, `${sub}#${variant}`, x, z);
     const patchSag = (px, pz) => drapeSag(terrain.heightAt, px, pz);
     if (def.shape === 'rect') {
       const flipU = rnd() < .5, flipV = rnd() < .5;
@@ -3135,7 +3145,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // ---- 底毯 Mesh(不透明,墊在最底)+ 外溢 Mesh(透明淡出)+ 中間樣態脊帶 Mesh
   //      (透明,壓在外溢之上),皆先於特徵/特效繪製 ----
   for (const [bmap, pass] of [[carpetBuckets, 0], [spillBuckets, 1], [bandBuckets, 2]]) {
-    for (const [key, b] of bmap) {
+    for (const b of bmap.values()) {
+      const key = b.surfaceKey;
       if (!b.idx.length) continue;
       const [sub, v] = key.split('#');
       const geo = new THREE.BufferGeometry();
@@ -3148,7 +3159,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       // 有四季設計的地表**跳過**季節濾鏡:畫筆已經畫成那個季節了,再乘一層 = 調兩次色
       const tint = DEFS[sub].green && !DEFS[sub].seasonal ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;
       const m = new THREE.Mesh(geo, envMat(tint, {
-        map: textureOf(sub, +v, false),
+        map: textureOf(sub, +v, false, b.environment),
         vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,   // 貼地面關 rim:掠射角全開會把遠處洗白
         transparent: pass > 0,   // 外溢/脊帶靠頂點 alpha 淡出;depthWrite 保持 true
         landNrm: true,           // 地貌類別 + 真地形法線(見 landNrmAt 那一段)
@@ -3163,7 +3174,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       m.frustumCulled = false;
       m.userData.noOutline = true;
       // 冒煙測試識別標記(同特徵拼圖的 gsub/gvar 慣例):截圖工具據此認出「這一格是哪種地表」
-      m.userData.gsub = sub; m.userData.gvar = +v;
+      m.userData.gsub = sub; m.userData.gvar = +v; m.userData.surfaceEnvironment = b.environment;
       m.userData.glayer = pass === 0 ? 'carpet' : pass === 1 ? 'spill' : 'band';
       group.add(m);
     }
@@ -3711,7 +3722,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // ---- 特徵色塊 Mesh(每「地表×變體」一個 draw call)----
   for (const [key, b] of buckets) {
     if (!b.idx.length) continue;
-    const [sub, v] = key.split('#');
+    const [sub, v] = b.surfaceKey.split('#');
     const def = DEFS[sub];
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
@@ -3722,7 +3733,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     geo.setIndex(b.idx);
     const tint = def.green && !def.seasonal ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;   // 同底毯:四季設計不再吃濾鏡
     const m = new THREE.Mesh(geo, envMat(tint, {
-      map: textureOf(sub, +v, def.uv === 'fit'),
+      map: textureOf(sub, +v, def.uv === 'fit', b.environment),
       vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,   // 貼地面關 rim(同底毯)
       transparent: def.edge === 'fade',   // 淡出邊融入地形;depthWrite 保持 true(貼花式)
       landNrm: true,                      // 地貌類別 + 真地形法線(同底毯)
@@ -3730,7 +3741,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     m.frustumCulled = false;
     m.userData.noOutline = true;
     // 特徵拼圖識別標記:冒煙測試核對不疊置/反重複/分區相符用
-    m.userData.gsub = sub; m.userData.gvar = +v; m.userData.gshape = def.shape;
+    m.userData.gsub = sub; m.userData.gvar = +v; m.userData.surfaceEnvironment = b.environment; m.userData.gshape = def.shape;
     group.add(m);
   }
 
@@ -3759,13 +3770,15 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   }
 
   // ---- 細節 InstancedMesh(每零件一個 draw call;實例色抖動同植被)----
-  const sn = ENV.seasons[season] || ENV.seasons.summer;
+  const sn = ENV.seasons.summer;
   const partColor = (c) => c === 'grass' ? sn.grass : c === 'foliage' ? sn.foliage : c === 'palette' ? 0xffffff : c;
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
   const P = new THREE.Vector3(), S = new THREE.Vector3(), tint = new THREE.Color();
+  const dryPlantColor = new THREE.Color(0xa08c58);
   for (const type in det) {
+    const appearance = new Map(det[type].map(it => [it, groundPlantState(type, environmentAt(it.x, it.z))]));
     for (let variant = 0; variant < DETAIL_VARIANTS[type].length; variant++) {
-    const items = det[type].filter(it => it.variant === variant);
+    const items = det[type].filter(it => it.variant === variant && appearance.get(it).visible);
     if (!items.length) continue;
     // ---- 表面群組 + outlineContribution(2026-08-16;序 3 的 S3 / S4 消費端)----
     // 使用者追加的「石堆的處置」:一顆石頭在畫面上是**一個東西**。現況是 `boulder` 的大小
@@ -3787,7 +3800,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       // 人造附件再疊程序貼圖(貨櫃浪板/太陽能電池格/看板畫面/木箱板紋)
       // 軟性(A39):稻/草/芒草/蘆葦/花/灌木隨風飄揚 + 細勾線。錨點 base = 0 —— 這一張表的
       // 落地平移烤在幾何裡,頂點的 y 本身就是整株座標(見 DETAIL_DEFS 檔頭那一段)。
-      const mat = envMat(partColor(part.c), {
+      const plantColor = part.c === 'grass' || part.c === 'foliage';
+      const plantBase = plantColor ? new THREE.Color(partColor(part.c)) : null;
+      const plantTint = plantColor ? new THREE.Color() : null;
+      const mat = envMat(plantColor ? 0xffffff : partColor(part.c), {
         wash: 0.35, cool: 0.4,
         surf: sg, contrib: sCtr,
         ...(part.sf ? { soft: { k: part.sf, span: detailSpan(type), base: 0, sy: part.sy ?? 1 } } : {}),
@@ -3808,6 +3824,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           const j3 = ((i * 3812015801) >>> 0) % 100 / 100;
           tint.setRGB(0.84 + j1 * 0.3, 0.84 + j2 * 0.3, 0.84 + j3 * 0.3);
         }
+        if (plantColor) tint.multiply(plantTint.copy(plantBase).lerp(dryPlantColor, appearance.get(it).dry));
         m.setColorAt(i, tint);
       });
       m.instanceMatrix.needsUpdate = true;

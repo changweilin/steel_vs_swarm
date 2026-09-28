@@ -317,6 +317,7 @@ export const TREE_SPECIES = {
     fruit: {"chance":0.6,"count":[3,10],"size":[0.08,0.16],"color":10057030,"seasons":["autumn"]},
   },
   willow: {
+    phenology: { habit: 'deciduous', autumn: 0xcdb54b },
     name: "白柳",
     regions: ["歐洲與西亞"],
     climates: ["temperate"],
@@ -395,6 +396,7 @@ export const TREE_SPECIES = {
     fruit: {"chance":0.8,"count":[3,9],"size":[0.2,0.4],"color":10454847,"seasons":["spring","summer","autumn","winter"]},
   },
   baobab: {
+    phenology: { habit: 'drought', autumn: 0xa78342 },
     name: "猴麵包樹",
     regions: ["非洲"],
     climates: ["tropical","arid"],
@@ -485,6 +487,7 @@ export const TREE_SPECIES = {
     scientific: "Pinus spp.",
   },
   forestBirch: {
+    phenology: { habit: 'deciduous', autumn: 0xe3b53e },
     name: "樺木",
     regions: ["東亞","歐洲與西亞","北美洲"],
     climates: ["temperate","boreal"],
@@ -669,6 +672,7 @@ export const TREE_SPECIES = {
     scientific: "Argyroxiphium sandwicense",
   },
   desertRose: {
+    phenology: { habit: 'drought', autumn: 0xa78342 },
     name: "沙漠玫瑰",
     regions: ["非洲","歐洲與西亞"],
     climates: ["arid"],
@@ -688,6 +692,7 @@ export const TREE_SPECIES = {
     scientific: "Adenium obesum",
   },
   cucumberTree: {
+    phenology: { habit: 'drought', autumn: 0xa78342 },
     name: "黃瓜樹",
     regions: ["索科特拉島"],
     climates: ["arid"],
@@ -724,6 +729,7 @@ export const TREE_SPECIES = {
     scientific: "Carnegiea gigantea",
   },
   pedunculateOak: {
+    phenology: { habit: 'deciduous', autumn: 0xb85b36 },
     h: 35,
     r: 1.2,
     form: "open",
@@ -743,6 +749,7 @@ export const TREE_SPECIES = {
     climates: ["temperate"],
   },
   ginkgo: {
+    phenology: { habit: 'deciduous', autumn: 0xe6bd32 },
     h: 30,
     r: 1,
     form: "open",
@@ -761,6 +768,7 @@ export const TREE_SPECIES = {
     climates: ["temperate"],
   },
   umbrellaAcacia: {
+    phenology: { habit: 'drought', autumn: 0xa78342 },
     h: 18,
     r: 0.65,
     form: "umbrella",

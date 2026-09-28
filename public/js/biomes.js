@@ -1,6 +1,6 @@
 import { TOWER_BUILDINGS, buildTowerBuilding, towerSides } from './towerBuildings.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, treeHabitatWeight, pickTreeType, forestSeed, FOREST_STEEP_DEG } from './forest.js';
+import { TREE_SPECIES, createForestDefs, createForestTree, treePhenology, treeBend, treeHabitatWeight, pickTreeType, forestSeed, FOREST_STEEP_DEG } from './forest.js';
 // ============ 地貌系統:五類地被 + 圖資建物 + 兵線淨空 ============
 // 依衛星影像逐點分類五種地貌,鋪設對應的 3D 地物:
 //   綠地   — 竹林(大小不一的群落)/ 闊葉林 / 針葉林(高海拔)
@@ -48,6 +48,7 @@ import {
 } from './osmQuery.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
+import { seasonalEnvironment } from './seasonalEnvironment.js';
 import { buildGroundCover, makeFootprintIndex } from './ground.js';
 import { buildLandField } from './landfield.js';
 import { setLandField } from './toon.js';
@@ -800,7 +801,8 @@ const SEASON_GIANT_TINT = { spring: 0xe4f2be, summer: 0xffffff, autumn: 0xd8b06a
 const mulHex = (a, b) => ((((a >> 16 & 255) * (b >> 16 & 255) / 255) | 0) << 16)
   | ((((a >> 8 & 255) * (b >> 8 & 255) / 255) | 0) << 8) | (((a & 255) * (b & 255) / 255) | 0);
 
-function seasonColor(key, fixed, season) {
+function seasonColor(key, fixed, season, settled = false) {
+  if (settled) return fixed;
   const s = ENV.seasons[season] || ENV.seasons.summer;
   if (key === 'foliage') return s.foliage;
   if (key === 'grass') return s.grass;
@@ -993,10 +995,11 @@ function surfIdGeo(geo, attr, treeAttr, owned = false) {
 // gives wood and leaves identical displacement at their joints, even on tilted branches.
 function forestRenderDef(type, item, season) {
   const tree = createForestTree(type, forestSeed(item.x, item.z),
-    (rt, rb, h, n, sections) => new THREE.CylinderGeometry(rt, rb, h, n, sections), ico, item.s ?? 1, season);
+    (rt, rb, h, n, sections) => new THREE.CylinderGeometry(rt, rb, h, n, sections), ico, item.s ?? 1, season, item.environment);
   const buckets = { wood: [], leaf: [], flower: [], fruit: [] };
   let cards = false;
   for (const [i, part] of tree.parts.entries()) {
+    if (part.hidden) { part.g.dispose(); continue; }
     const isLeaf = part.key === 'gleaf';
     const card = isLeaf && !part.noCard && leafCardOn(part, 'leaf') ? leafRowGeo(null, part, i) : null;
     const g = card || part.g;
@@ -1110,7 +1113,9 @@ export function buildVegMeshes(type, items, season, generated = null) {
     }
     if (part.vertexColors) mo.vertexColors = true;
     if (card) { mo.map = leafCardTex(); mo.alphaTest = 0.5; mo.transparent = false; mo.card = true; }
-    const mat = toonMat(seasonColor(part.key, part.c, season), mo);
+    const mat = toonMat(seasonColor(part.key, part.c, generated ? season : 'summer', !!generated), mo);
+    const localColor = new THREE.Color(), seasonalColor = new THREE.Color(seasonColor(part.key, part.c, season));
+    const dryColor = new THREE.Color(0xa08c58), snowColor = new THREE.Color(0xe9f0f4);
     // 畫的是 partGeo 解析結果(AI 零件庫 ?? 保險絲);佈局(span/冠幅)仍吃 p.g,見 partGeo 檔頭
     const m = new THREE.InstancedMesh(partGeo(part), mat, items.length);
     // 卡片與逐株面號/樹基**只換這一列的幾何**,那一行的解析縫一格未動:卡片是「畫什麼」的第三個
@@ -1145,6 +1150,14 @@ export function buildVegMeshes(type, items, season, generated = null) {
       else {
         const l = 0.84 + j1 * 0.28;
         tint.setRGB(l * (0.97 + j2 * 0.06), l, l * (0.97 + j3 * 0.06));
+      }
+      if (!generated && part.key) {
+        const env = seasonalEnvironment({ ...it.environment, season });
+        localColor.copy(mat.color).lerp(seasonalColor, env.seasonalStrength);
+        localColor.lerp(dryColor, env.drought).lerp(snowColor, env.snow * .65);
+        tint.r *= localColor.r / Math.max(.001, mat.color.r);
+        tint.g *= localColor.g / Math.max(.001, mat.color.g);
+        tint.b *= localColor.b / Math.max(.001, mat.color.b);
       }
       m.setColorAt(i, tint);
     });
@@ -1497,10 +1510,19 @@ function foliageCrown(def) {
 function buildPetals(group, terrain, items, season, mode, dynamics, gseed) {
   const crowns = [];
   for (const type in items) {
-    const cr = foliageCrown(VEG_DEFS[type]);   // 針葉常綠 / 草類 / 神木一律不在此列
-    if (!cr) continue;
+    const spec = TREE_SPECIES[type];
+    const cr = spec ? null : foliageCrown(VEG_DEFS[type]);
+    if (!spec && !cr) continue;
     for (const it of items[type]) {
-      crowns.push({ x: it.x, z: it.z, top: it.y + cr.top * it.s, r: cr.r * it.s });
+      if (spec) {
+        const state = treePhenology(type, { ...it.environment, season });
+        if (mode === 'bloom' ? !spec.flower?.seasons.includes(season) || state.growth <= 0 : state.litter <= .1) continue;
+        const tree = createForestTree(type, forestSeed(it.x, it.z), undefined, undefined, 1, season, it.environment);
+        const leaves = tree.parts.filter(p => p.role === 'leaf' && !p.hidden);
+        if (!leaves.length) continue;
+        const radius = Math.max(...leaves.map(p => Math.hypot(p.px || 0, p.pz || 0) + (p.g.parameters.radius || 0)));
+        crowns.push({ x: it.x, z: it.z, top: it.y + tree.h * it.s, r: radius * it.s });
+      } else crowns.push({ x: it.x, z: it.z, top: it.y + cr.top * it.s, r: cr.r * it.s });
     }
   }
   if (!crowns.length) return 0;
@@ -3057,7 +3079,7 @@ export const buildBldBucket = {
 
 // 巨岩的三支建構器**具名匯出**:MEGA_LIB 的節點只長在命令式建造端;
 // placeMegaliths 仍是遊戲內唯一的呼叫點。
-export function decorateMegalith(g, anchor, rnd, s) {
+export function decorateMegalith(g, anchor, rnd, s, environment = {}) {
   if (anchor.generated) return; // Shared generator already attaches details to measured triangles.
   if (!anchor) return;
   const probe = rockProbe(g);
@@ -3182,7 +3204,7 @@ export function decorateMegalith(g, anchor, rnd, s) {
       gill.position.set(jx, jy + 0.15, 0); t.add(gill);
     } else {
       // The same connected pine skeleton serves terrain and rock-wall attachments.
-      const tree = createForestTree('cliffPine', Math.floor(lr() * 4294967296), cyl, ico);
+      const tree = createForestTree('cliffPine', Math.floor(lr() * 4294967296), cyl, ico, 1, environment.season, environment);
       const sc = .8;
       for (const part of tree.parts) {
         if (part.role === 'root') continue;
@@ -3819,7 +3841,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, sites, basesW, road
       const probeR = fSynth ? SYNTH_GEOLOGY.col.r * SYNTH_GEOLOGY.s[1] * OVER.mega : MEGALITHS[fType].col.r * MEGALITHS[fType].s[1] * OVER.mega;
       const slope = battleGeologySlope((px, pz) => terrain.heightAt(px, pz), x, z, probeR);
       if (slope == null) continue;
-      const environment = { ...forestEnvironmentAt(terrain, x, z), slope,
+      const environment = { ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z), slope,
         latitude: terrain.center?.lat,
         altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z),
         formationSeed: beaconSeed(fx, fz) };
@@ -3880,7 +3902,8 @@ function placeMegaliths({ group, terrain, blocked, blockers, sites, basesW, road
       // 不是景觀。不同露頭群之間維持舊制的孤立感(`SEP` 已在外層擋掉,這裡是逐顆的保險)。
       if (placedM.some((p) => Math.hypot(x - p.x, z - p.z)
         < r + p.r + (p.f === fields.length ? ROCKFIELD.GAP_M : 70))) continue;
-      decorateMegalith(g, meta.anchor, rnd, s);
+      decorateMegalith(g, meta.anchor, rnd, s, { ...terrain.objectEnvironment, season: terrain.season,
+        latitude: terrain.center?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) });
       // 岩色隨生成/風化各異(2026-07-29):整顆色相/彩度/明度偏移 = 同名岩兩顆不同礦源;
       // 逐塊再抖一點明度 = 塊面風化深淺。只動 rockMat 標記的材質(綠冠/木門/描邊不動);
       // envMat 每次呼叫都建新材質,就地調色不會污染他顆。traverse 順序 = 加入序,rnd 序確定
@@ -4139,7 +4162,9 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
       let y = Math.min(...heights);
       const rise = Math.max(...heights) - y;
       if (!water && (wet || y < .4 || Math.abs(slopeDeg(rise, radius * 2)) > SLOPE.EASE_DEG)) continue;
-      const parts = environmentParts(kind, { size, seed: localSeed, season: terrain.season || 'summer' });
+      const parts = environmentParts(kind, { size, seed: localSeed, season: terrain.season || 'summer',
+        environment: { ...terrain.objectEnvironment,
+          latitude: terrain.center?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) } });
       if (water) {
         if (!Number.isFinite(terrain.waterY) || !def.draft) continue;
         const boxes = parts.map(partBox);
@@ -9570,6 +9595,8 @@ function buildEdgeWall({ group, terrain, blockers }) {
     // 盒心 = 內面往圖界方向退半個厚度 ⇒ 內緣恆落在夾制線上(不管這一款多厚)
     const x = e.ax ? s.x : s.x + e.sz * hd2;
     const z = e.ax ? s.z + e.sz * hd2 : s.z;
+    const environment = { ...terrain.objectEnvironment, latitude: terrain.center?.lat,
+      altitude: terrain.elevationAt?.(x, z) ?? s.hi };
     const seed = edgeSeed(x, z);
     const variant = wallVariant(kind, seed, kind === prevKind ? prevVariant : -1);
     const segJoins = [-1, 1].map(sign => {
@@ -9582,7 +9609,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
     const joined = (def.terrainFit && !isContinuousGeology) ? buildSlopeBoundary(kind, {
       len: step, depth: def.depth, h: kh0, x, z, ry: e.fry, seed,
       heightAt: (px, pz) => terrain.heightAt(px, pz), waterY: s.water ? wy : null,
-      season: terrain.season || 'summer', joins: segJoins,
+      season: terrain.season || 'summer', joins: segJoins, environment,
       fill: def.bufferFill && Number.isFinite(terrain.bufferM) && terrain.bufferM > 0 && terrain.bufferHeightAt ? {
         depth: inset + terrain.bufferM, crest,
         heightAt: (px, pz) => px >= terrain.minX && px <= terrain.maxX && pz >= terrain.minZ && pz <= terrain.maxZ
@@ -9596,11 +9623,11 @@ function buildEdgeWall({ group, terrain, blockers }) {
       ? buildBoundaryRunParts(kind, {
           len: step, depth: def.depth, bufferDepth: bufAvailable, h: kh0,
           seed, variant, season: terrain.season || 'summer', water: s.water,
-          biome: s.biome, joins: segJoins,
+          biome: s.biome, joins: segJoins, environment,
         })
       : null;
     const parts = (def.terrainFit && !isContinuousGeology) ? (joined?.parts || []) : (boundaryBatch?.parts || wallParts(kind, {
-      len: half * 2, depth: def.depth, h: kh0, seed, variant, season: terrain.season || 'summer',
+      len: half * 2, depth: def.depth, h: kh0, seed, variant, season: terrain.season || 'summer', environment,
     }));
     const kh = kh0; // 固定邊界包絡；本體間的可見空隙同樣禁止穿越。
     // 零件的落地基準:段內最高的地形,水域段改取水面(否則海堤/貨輪整艘沉在水面下)
@@ -9838,7 +9865,9 @@ function buildBufferProps({ group, terrain }) {
       const y = terrain.bufferHeightAt(x, z);
       return p.kind === 'islet' && wy != null ? Math.max(y, wy) - 0.6 : y;
     };
-    emitWallParts(batch, propParts(p.kind, p.seed), p.x, gy(p.x, p.z), p.z, p.ry, p.s, gy);
+    emitWallParts(batch, propParts(p.kind, p.seed, { season: terrain.season || 'summer',
+      environment: { ...terrain.objectEnvironment, latitude: terrain.center?.lat,
+        altitude: terrain.elevationAt?.(p.x, p.z) ?? gy(p.x, p.z) } }), p.x, gy(p.x, p.z), p.z, p.ry, p.s, gy);
   }
   flushPartBatch(group, batch, { wash: 0.5, cool: 0.5 });
   return plan.length;
@@ -9873,7 +9902,9 @@ function buildBackdrop({ group, terrain, ctr }) {
       const y = terrain.bufferHeightAt(x, z);
       return wy != null && b.kind === 'sea' ? Math.max(y, wy) - 1 : y;
     };
-    emitWallParts(batch, backdropParts(b.kind, { len: b.len, h, seed: b.seed, season }),
+    emitWallParts(batch, backdropParts(b.kind, { len: b.len, h, seed: b.seed, season,
+      environment: { ...terrain.objectEnvironment, latitude: terrain.center?.lat,
+        altitude: terrain.elevationAt?.(b.x, b.z) ?? gy(b.x, b.z) } }),
       b.x, gy(b.x, b.z), b.z, b.ry, 1, gy);
   }
   // 遠景:洗白拉高、冷色重一點(大氣透視)⇒ 與近處的世界分得開,不會誤讀成可以走過去的地形。
@@ -11502,6 +11533,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   await onProgress?.(0.7, '隨機生成植被…');
   for (const type in items) {
+    for (const item of items[type]) {
+      item.environment = { ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, item.x, item.z),
+        latitude: center.lat, altitude: terrain.elevationAt?.(item.x, item.z) ?? item.y };
+    }
     const meshes = buildVegMeshes(type, items[type], season);
     for (const m of meshes) group.add(m);
   }
@@ -12361,7 +12396,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadRank: roadRankAt, roadClear: roadClearAt, roadPolys,
     reservedFootprints,
     surfaceField: landField,
-    environment: { ...cfg.env, latitude: center.lat },
+    environment: { ...terrain.objectEnvironment, latitude: center.lat },
     // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
     // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
   });

@@ -1,7 +1,9 @@
 import { paintVenue, paintTrack, paintBasketball, paintCourtArray, paintParking } from './groundMarkings.js';
 import { mulberry32 } from './rng.js';
-import { forestEnvironment, forestSeed } from './forest.js';
+import { forestSeed } from './forest.js';
+import { seasonalEnvironment, GEOLOGY_MINERAL_COLORS } from './seasonalEnvironment.js';
 import { DEFS, SURFACES, SURFACE_LIMITS, LANDSCAPES, VISITOR_SITES } from './groundCatalog.js';
+import { GROUND_PARTS } from './groundPartCatalog.js';
 export { forestSeed as groundSeed } from './forest.js';
 
 export function paintLandscape(g, spec, rnd) {
@@ -78,21 +80,26 @@ export function paintVisitorSite(g, site) {
 const sample = (r, [a, b]) => a + r() * (b - a);
 const within = (v, [a, b]) => v >= a && v <= b;
 export function surfaceEnvironment(input = {}) {
-  const latitude = Number.isFinite(input.latitude) ? Math.max(-90, Math.min(90, input.latitude)) : 25;
-  const altitude = Number.isFinite(input.altitude) ? input.altitude : 0;
-  const season = SURFACE_LIMITS.seasons.includes(input.season) ? input.season : 'summer';
-  const env = forestEnvironment(latitude, altitude, input);
-  const temperature = env.temperature + { spring: 0, summer: 6, autumn: -3, winter: -12 }[season];
-  return { ...env, latitude, altitude, temperature, season,
-    climate: input.climate || (temperature < 0 ? 'alpine' : Math.abs(latitude) > 55 ? 'boreal' : temperature > 22 ? 'tropical' : 'temperate'),
-    weather: SURFACE_LIMITS.weather.includes(input.weather) ? input.weather : 'clear',
-    geology: SURFACE_LIMITS.geology.includes(input.geology) ? input.geology : 'unknown' };
+  const env = seasonalEnvironment(input);
+  return { ...env,
+    weather: SURFACE_LIMITS.weather.includes(env.weather) ? env.weather : 'clear',
+    geology: SURFACE_LIMITS.geology.includes(env.geology) ? env.geology : 'unknown' };
 }
 
 export function surfaceAllowed(id, env) {
   const spec = SURFACES[id];
   return !!spec && within(env.latitude, spec.latitude) && within(env.altitude, spec.altitude)
     && within(env.temperature, spec.temperature);
+}
+
+// Decorative plants retain their placement; dormancy never feeds collision/scatter.
+export function groundPlantState(type, env) {
+  const family = GROUND_PARTS[type]?.[0];
+  const flower = family === 'flower';
+  const visible = !flower || (env.growth > .15
+    && (['spring', 'summer'].includes(env.season) || env.seasonalStrength < .35));
+  return { visible, dry: Math.max(env.drought, env.autumn * .65,
+    env.season === 'winter' ? env.seasonalStrength * (1 - env.growth) : 0) };
 }
 
 export function surfaceParameters(id, seed, x, z) {
@@ -128,24 +135,22 @@ export function paintGround(g, size, id, seed, env, baseColor, widthM, depthM) {
   if (!spec) throw new RangeError(`Unknown surface ${id}`);
   const rnd = mulberry32(seed), base = baseColor ?? spec.color;
   const wear = sample(rnd, SURFACE_LIMITS.wear);
-  // 打雷/強風是乾基底:只有夏季伴隨降雨才比照雨天潤濕,春(無)/秋(沙)/冬(雪)不濕
-  const wet = env.weather === 'rain'
-    || ((env.weather === 'storm' || env.weather === 'windy') && env.season === 'summer');
-  const snow = env.temperature < 2 && (env.weather === 'snow'
-    || ((env.weather === 'storm' || env.weather === 'windy') && env.season === 'winter'));
+  const wet = env.wetness > 0;
+  const snow = env.snow > .05;
   const seasonal = spec.landscape === 'grassland' || spec.landscape === 'woodland' || spec.landscape === 'cultivated';
-  const factor = (wet ? .8 : 1) * (seasonal && env.season === 'winter' ? .88 : 1);
+  const factor = (wet ? .8 : 1) * (seasonal ? 1 - .12 * (1 - env.growth) : 1);
   const rgb = [base >> 16 & 255, base >> 8 & 255, base & 255].map(v => Math.round(v * factor));
-  if (seasonal && env.season === 'autumn') { rgb[0] = Math.min(255, rgb[0] + 26); rgb[1] = Math.max(0, rgb[1] - 12); }
+  if (seasonal) { rgb[0] = Math.min(255, rgb[0] + Math.round(26 * env.autumn)); rgb[1] = Math.max(0, rgb[1] - Math.round(12 * env.autumn)); }
   g.fillStyle = `rgb(${rgb})`; g.fillRect(0, 0, size, size);
   g.save(); g.scale(size, size);
   const line = (x, y, a, b) => { g.beginPath(); g.moveTo(x, y); g.lineTo(a, b); g.stroke(); };
   g.lineWidth = .005;
   // Low-frequency fragments, with sediment hue controlled by the known lithology.
-  const mineral = { basalt: '#46545d', granite: '#a5a2a0', limestone: '#d1c4a0', sandstone: '#c29864', alluvium: '#887055' };
+  const mineralColor = GEOLOGY_MINERAL_COLORS[env.geology];
+  const mineral = mineralColor === undefined ? null : '#' + mineralColor.toString(16).padStart(6, '0');
   for (let i = 0, n = Math.round(50 + wear * 300); i < n; i++) {
     g.globalAlpha = wear * (.4 + rnd() * .6) * (['venue', 'court', 'track'].includes(spec.pattern) ? .2 : 1);
-    g.fillStyle = snow ? '#edf4f7' : mineral[env.geology] || (rnd() < .5 ? '#f2deb0' : '#36493d');
+    g.fillStyle = snow ? '#edf4f7' : mineral || (rnd() < .5 ? '#f2deb0' : '#36493d');
     const x = rnd(), y = rnd(), a = .008 + rnd() * .07;
     g.beginPath(); g.ellipse(x, y, a, a * (.15 + rnd() * .55), rnd() * 6.28, 0, 6.28); g.fill();
   }
@@ -157,11 +162,11 @@ export function paintGround(g, size, id, seed, env, baseColor, widthM, depthM) {
     }
   }
   if (seasonal) {
-    const n = { spring: 32, summer: 48, autumn: 25, winter: 9 }[env.season];
+    const n = Math.round(48 * env.growth + 25 * env.autumn);
     for (let i = 0; i < n; i++) {
       const x = rnd(), y = rnd();
       g.fillStyle = { spring: '#e9b6bf', summer: '#a7ba65', autumn: '#c7954e', winter: '#d4dbcb' }[env.season];
-      g.beginPath(); g.ellipse(x, y, env.season === 'autumn' ? .018 : .007, .005, rnd() * 6.28, 0, 6.28); g.fill();
+      g.beginPath(); g.ellipse(x, y, env.autumn > .2 ? .018 : .007, .005, rnd() * 6.28, 0, 6.28); g.fill();
     }
   }
   g.strokeStyle = '#dce2c9';
@@ -204,6 +209,17 @@ export function paintGround(g, size, id, seed, env, baseColor, widthM, depthM) {
     for (let i = 0; i < 55; i++) {
       const x = rnd(), y = rnd();
       line(x, y, x + .015 + rnd() * .045, y + (pattern === 'ripples' ? 0 : .025));
+    }
+    g.globalAlpha = 1;
+  }
+  // Snow settles above the surface pattern; a dedicated stream preserves markings and wear.
+  if (snow && !DEFS[id].aq) {
+    const coverRnd = mulberry32(seed ^ 0x534e4f57);
+    g.fillStyle = '#e9f0f4'; g.globalAlpha = env.snow * .8;
+    g.fillRect(0, 0, 1, 1);
+    g.globalAlpha = Math.min(1, env.snow + .15);
+    for (let i = 0; i < Math.round(80 * env.snow); i++) {
+      g.beginPath(); g.ellipse(coverRnd(), coverRnd(), .02 + coverRnd() * .07, .015 + coverRnd() * .03, coverRnd() * 6.28, 0, 6.28); g.fill();
     }
     g.globalAlpha = 1;
   }

@@ -1,5 +1,6 @@
 // 本機視覺驗收：僅測試伺服器，正式遊戲不包含此路由。
 import http from 'node:http';
+import { GEOLOGY_ENVIRONMENT_CONTROLS } from './architecturePreviewContent.mjs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -428,6 +429,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
       <details style="margin-bottom:8px; font-size: 11px; color:#475569;">
         <summary style="cursor:pointer; font-weight:600; color:#2563eb;">▸ 展開進階環境滑桿 (植被 / 侵蝕 / 地熱 / 坡度 / 斷層)</summary>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin-top: 6px; background:#fff; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+          ${GEOLOGY_ENVIRONMENT_CONTROLS}
           <label>自然地質寬度 m（留空自動）<input type="number" id="geo-width" min="0.01" step="any" placeholder="自動"></label>
           <label>自然地質深度 m（留空自動）<input type="number" id="geo-depth" min="0.01" step="any" placeholder="自動"></label>
           <label>自然地質高度 m（受地貌比例限制）<input type="number" id="geo-height" min="0.01" step="any" placeholder="自動"></label>
@@ -982,7 +984,7 @@ import { mulberry32 } from '/js/rng.js';
 // 植物生成模組
 import { forestCatalog, sampleForestCatalog } from '/js/forestCatalog.js';
 import { FOREST_FORMS } from '/js/forestSpecies.js';
-import { TREE_SPECIES, createForestTree, treeHabitatWeight, treeSections, treeBend, forestEnvironment } from '/js/forest.js';
+import { TREE_SPECIES, createForestTree, treeHabitatWeight, treeSections, treeBend } from '/js/forest.js';
 // 車輛生成模組
 import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, vehicleCandidates, VEHICLE_CONSISTS, CONSIST_PREFIX, RIM_NAMES } from '/js/vehicleCatalog.js';
 import { makeProceduralVehicle } from '/js/vehicleModels.js';
@@ -1998,18 +2000,22 @@ function getGeologyInputs(seed = 0, idx = 0) {
   const climateVal = document.querySelector('#geo-climate').value;
   const waterVal = document.querySelector('#geo-water').value;
   const input = {
+    season: currentEnv.season, weather: currentEnv.weather,
+    latitude: Number(document.querySelector('#geo-latitude').value),
+    altitude: Number(document.querySelector('#geo-altitude').value),
+    geology: document.querySelector('#geo-substrate').value,
     climate: climateVal === 'all' ? climates[idx % climates.length] : climateVal,
     water: waterVal === 'all' ? waters[idx % waters.length] : waterVal,
-    moisture: parseFloat(document.querySelector('#geo-moisture').value) || 0.65,
-    vegetation: parseFloat(document.querySelector('#geo-vegetation').value) || 0.6,
-    conifers: parseFloat(document.querySelector('#geo-conifers').value) || 0.3,
-    exposure: parseFloat(document.querySelector('#geo-exposure').value) || 0.5,
-    slope: parseFloat(document.querySelector('#geo-slope').value) || 35,
-    fault: parseFloat(document.querySelector('#geo-fault').value) || 0.2,
-    volcanic: parseFloat(document.querySelector('#geo-volcanic').value) || 0.2,
-    dissolution: parseFloat(document.querySelector('#geo-dissolution').value) || 0.6,
-    geothermal: parseFloat(document.querySelector('#geo-geothermal').value) || 0.5,
-    activity: parseFloat(document.querySelector('#geo-activity').value) || 0.7,
+    moisture: Number(document.querySelector('#geo-moisture').value),
+    vegetation: Number(document.querySelector('#geo-vegetation').value),
+    conifers: Number(document.querySelector('#geo-conifers').value),
+    exposure: Number(document.querySelector('#geo-exposure').value),
+    slope: Number(document.querySelector('#geo-slope').value),
+    fault: Number(document.querySelector('#geo-fault').value),
+    volcanic: Number(document.querySelector('#geo-volcanic').value),
+    dissolution: Number(document.querySelector('#geo-dissolution').value),
+    geothermal: Number(document.querySelector('#geo-geothermal').value),
+    activity: Number(document.querySelector('#geo-activity').value),
   };
   for (const key of ['width', 'depth', 'height']) {
     const value = document.querySelector('#geo-' + key).value;
@@ -2032,7 +2038,7 @@ function pickAutoGeologyType(seed, input) {
 function createSceneBoulderMesh(seed, posX = 0, posZ = 0) {
   try {
     const season = document.querySelector('#sim-season')?.value || 'summer';
-    const rows = environmentParts('boulder', { seed, season });
+    const rows = environmentParts('boulder', { seed, season, environment: getGeologyInputs(seed) });
     const mesh = assembleEnvironmentParts(rows, false);
     mesh.position.set(posX, 0, posZ);
 
@@ -2320,7 +2326,7 @@ const cylGeoFactory = (rt, rb, h, n, sec) => new THREE.CylinderGeometry(rt, rb, 
 const icoGeoFactory = (radius) => new THREE.IcosahedronGeometry(Math.max(0.1, radius), 1);
 
 function createSceneTreeObject(type, seed, season = 'summer', posX = 0, posZ = 0) {
-  const rows = environmentParts(type, { seed, season });
+  const rows = environmentParts(type, { seed, season, environment: getPlantEnvironment() });
   const group = assembleEnvironmentParts(rows, false);
   group.position.set(posX, 0, posZ);
   const bounds = new THREE.Box3().setFromObject(group);
@@ -2363,34 +2369,40 @@ function createSceneTreeObject(type, seed, season = 'summer', posX = 0, posZ = 0
   return { group, tree, spec, meta, labelObj };
 }
 
+function getPlantEnvironment() {
+  return {
+    latitude: Number(document.querySelector('#plant-lat').value),
+    altitude: Number(document.querySelector('#plant-altitude').value),
+    climate: document.querySelector('#plant-climate').value,
+    moisture: Number(document.querySelector('#plant-moisture').value),
+    ph: Number(document.querySelector('#plant-ph').value),
+    salinity: Number(document.querySelector('#plant-salinity').value),
+    wet: document.querySelector('#plant-wet').checked,
+    weather: currentEnv.weather,
+  };
+}
+
 function createPlantObject(type, seed, scale = 1, season = 'summer', posX = 0, posZ = 0) {
   if (type === 'gianttree' || type === 'fallentree') {
     return createSceneTreeObject(type, seed, season, posX, posZ);
   }
   let actualType = type;
+  const environment = getPlantEnvironment();
   if (type === 'auto') {
-    const lat = Number(document.querySelector('#plant-lat').value);
-    const alt = Number(document.querySelector('#plant-altitude').value);
-    const env = forestEnvironment(lat, alt, {
-      climate: document.querySelector('#plant-climate').value,
-      moisture: Number(document.querySelector('#plant-moisture').value),
-      ph: Number(document.querySelector('#plant-ph').value),
-      salinity: Number(document.querySelector('#plant-salinity').value),
-      wet: document.querySelector('#plant-wet').checked,
-    });
-    actualType = sampleForestCatalog(plantFilters(), seed, lat, alt, env);
+    actualType = sampleForestCatalog(plantFilters(), seed, environment.latitude, environment.altitude, environment);
     if (!actualType) return null;
   }
 
   const spec = TREE_SPECIES[actualType] || TREE_SPECIES.redwood;
-  const tree = createForestTree(actualType, seed, cylGeoFactory, icoGeoFactory, scale, season);
+  const tree = createForestTree(actualType, seed, cylGeoFactory, icoGeoFactory, scale, season, environment);
 
   const group = new THREE.Group();
   group.position.set(posX, 0, posZ);
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
 
   for (const part of tree.parts) {
-    const geom = part.g.clone();
+    if (part.hidden) { part.g.dispose(); continue; }
+    const geom = part.g;
     const count = geom.attributes.position.count;
     const col = new THREE.Color(part.c || 0x3d6642);
     const colors = new Float32Array(count * 3);
@@ -2616,7 +2628,7 @@ document.querySelector('#btn-geo-random-seed')?.addEventListener('click', () => 
   document.querySelector('#input-geo-seed').value = Math.floor(Math.random() * 90000) + 1000;
   buildGeologyMode();
 });
-['#geo-type', '#geo-view-mode', '#geo-climate', '#geo-water', '#geo-region', '#geo-ruin-type', '#geo-scale', '#sample-cols-geo', '#sample-rows-geo', '#select-seed-mode-geo', '#input-geo-seed'].forEach((sel) => {
+['#geo-substrate', '#geo-type', '#geo-view-mode', '#geo-climate', '#geo-water', '#geo-region', '#geo-ruin-type', '#geo-scale', '#sample-cols-geo', '#sample-rows-geo', '#select-seed-mode-geo', '#input-geo-seed'].forEach((sel) => {
   document.querySelector(sel)?.addEventListener('change', () => {
     const typeVal = document.querySelector('#geo-type')?.value;
     const isAncient = GEOLOGY_TYPES[typeVal]?.lithology === 'manufactured' || typeVal === 'monument' || typeVal === 'ruins';
@@ -2625,7 +2637,7 @@ document.querySelector('#btn-geo-random-seed')?.addEventListener('click', () => 
     buildGeologyMode();
   });
 });
-['#geo-scale', '#geo-moisture', '#geo-vegetation', '#geo-conifers', '#geo-exposure', '#geo-slope', '#geo-fault', '#geo-volcanic', '#geo-dissolution', '#geo-geothermal', '#geo-activity'].forEach((sel) => {
+['#geo-latitude', '#geo-altitude', '#geo-scale', '#geo-moisture', '#geo-vegetation', '#geo-conifers', '#geo-exposure', '#geo-slope', '#geo-fault', '#geo-volcanic', '#geo-dissolution', '#geo-geothermal', '#geo-activity'].forEach((sel) => {
   document.querySelector(sel)?.addEventListener('input', () => {
     buildGeologyMode();
   });
@@ -2654,9 +2666,7 @@ document.querySelector('#btn-plant-random-seed')?.addEventListener('click', () =
 });
 ['#plant-lat', '#plant-altitude', '#plant-moisture', '#plant-ph', '#plant-salinity', '#plant-wet'].forEach((sel) => {
   document.querySelector(sel)?.addEventListener('input', () => {
-    if (document.querySelector('#plant-species').value === 'auto' || document.querySelector('#plant-view-mode').value === 'grove') {
-      buildPlantMode();
-    }
+    buildPlantMode();
   });
 });
 
@@ -3405,7 +3415,7 @@ const ICE_LABELS = { icefloe: '浮冰群', iceberg: '極地冰山' };
 function createIndustryInstance(kind, seed, posX = 0, posZ = 0) {
   const season = document.querySelector('#sim-season')?.value || 'summer';
   const bb = boundaryLayoutOf('industry') === 'boundary';
-  const rows = environmentParts(kind, { seed, season });
+  const rows = environmentParts(kind, { seed, season, environment: { weather: currentEnv.weather } });
   const model = withObjectLayout({ model: assembleEnvironmentParts(rows, false), meta: { seed } }, 'industry').model;
   model.position.set(posX, 0, posZ);
   industryGroup.add(model);
@@ -3485,7 +3495,7 @@ function buildIndustryMode() {
       const curKind = listPool[idx % listPool.length];
       const season = document.querySelector('#sim-season')?.value || 'summer';
       const curBb = boundaryLayoutOf('industry') === 'boundary';
-      const partRows = environmentParts(curKind, { seed: curSeed, season });
+      const partRows = environmentParts(curKind, { seed: curSeed, season, environment: { weather: currentEnv.weather } });
       const model = withObjectLayout({ model: assembleEnvironmentParts(partRows, false), meta: { seed: curSeed } }, 'industry').model;
       const bounds = new THREE.Box3().setFromObject(model);
       const size = bounds.getSize(new THREE.Vector3());
@@ -3550,7 +3560,7 @@ function buildIndustryMode() {
 function createIceInstance(kind, seed, posX = 0, posZ = 0) {
   const season = document.querySelector('#sim-season')?.value || 'summer';
   const bb = boundaryLayoutOf('ice') === 'boundary';
-  const rows = environmentParts(kind, { seed, season });
+  const rows = environmentParts(kind, { seed, season, environment: { weather: currentEnv.weather } });
   const model = withObjectLayout({ model: assembleEnvironmentParts(rows, true), meta: { seed } }, 'ice').model;
   model.position.set(posX, 0, posZ);
   iceGroup.add(model);
@@ -3630,7 +3640,7 @@ function buildIceMode() {
       const curKind = listPool[idx % listPool.length];
       const season = document.querySelector('#sim-season')?.value || 'summer';
       const curBb = boundaryLayoutOf('ice') === 'boundary';
-      const partRows = environmentParts(curKind, { seed: curSeed, season });
+      const partRows = environmentParts(curKind, { seed: curSeed, season, environment: { weather: currentEnv.weather } });
       const model = withObjectLayout({ model: assembleEnvironmentParts(partRows, true), meta: { seed: curSeed } }, 'ice').model;
       const bounds = new THREE.Box3().setFromObject(model);
       const size = bounds.getSize(new THREE.Vector3());
@@ -3756,14 +3766,15 @@ function assembleEnvironmentParts(rows, water = false) {
 // 邊界列組裝單一入口：單體與陣列共用同一段長、同一坡度取樣與同一端面規則。
 function boundaryRows(kind, def, mode, seed) {
   const season = document.querySelector('#sim-season').value;
+  const environment = previewBoundaryEnvironment(seed);
   const heightAt = (x, z) => mode === 'water' || mode === 'flat' ? 0 : x * (mode === 'mid' ? 0.15 : 0.85) + Math.sin(x / 13 + seed) * (mode === 'mid' ? 1 : 4) + z * 0.2;
   if (!['slope', 'mid', 'flat', 'water'].includes(mode)) {
-    return wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed, season });
+    return wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed, season, environment });
   }
   return [-30, 0, 30].flatMap((x) => (
     def.terrainFit
-      ? buildSlopeBoundary(kind, { len: 30, depth: def.depth, h: def.h, x, z: 0, seed, season, waterY: mode === 'water' ? 0 : null, heightAt }).parts
-      : wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed, season }).map((p) => ({ ...p, p: [p.p[0], p.p[1] + heightAt(x, 0), p.p[2]] }))
+      ? buildSlopeBoundary(kind, { len: 30, depth: def.depth, h: def.h, x, z: 0, seed, season, environment, waterY: mode === 'water' ? 0 : null, heightAt }).parts
+      : wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed, season, environment }).map((p) => ({ ...p, p: [p.p[0], p.p[1] + heightAt(x, 0), p.p[2]] }))
   ).map((p) => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
 }
 
@@ -3773,11 +3784,16 @@ function boundaryRows(kind, def, mode, seed) {
 // 透明牆（權威碰撞環）遊戲內本就連續封閉，此處僅以透明包絡盒視覺化提醒，不新增遊戲邏輯。
 const PREVIEW_BOUNDARY_SEG_LEN = 30;
 const PREVIEW_BOUNDARY_BUFFER_DEPTH = 32;
+function previewBoundaryEnvironment(seed) {
+  return currentTab === 'plant' ? getPlantEnvironment()
+    : currentTab === 'geology' ? getGeologyInputs(seed) : { weather: currentEnv.weather };
+}
 function previewBoundaryBatch(boundaryKind, seed, season) {
   const def = WALL_KINDS[boundaryKind];
   const batch = buildBoundaryRunParts(boundaryKind, {
     len: PREVIEW_BOUNDARY_SEG_LEN, depth: def.depth, bufferDepth: PREVIEW_BOUNDARY_BUFFER_DEPTH,
     h: def.h, seed, season,
+    environment: previewBoundaryEnvironment(seed),
   });
   return { def, parts: batch.parts, bufferParts: batch.bufferParts, rows: [...batch.parts, ...batch.bufferParts] };
 }
@@ -4202,7 +4218,7 @@ document.querySelector('#sim-hour')?.addEventListener('input', (e) => {
 document.querySelector('#sim-weather')?.addEventListener('change', (e) => {
   currentEnv.weather = e.target.value;
   initEnvironment();
-  render();
+  rebuildActiveTab();
 });
 
 document.querySelector('#btn-sim-toggle')?.addEventListener('click', () => {

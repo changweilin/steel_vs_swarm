@@ -2,6 +2,7 @@
 // A fixed, continuous collision ring blocks visible gaps as well as the objects themselves.
 // Geometry must stay inside the declared envelope; it need not fill the envelope.
 // The catalog imports only render-free generators and never consumes the shared scene RNG.
+import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
 import { mulberry32 } from './rng.js';
 import { boundaryGrid } from './objectLayout.js';
 import { partAABB, VEHICLE_SPEC } from './vehicles.js';
@@ -424,20 +425,20 @@ const rep = (len, pitch, fn) => {
 const pick = (rnd, arr) => arr[Math.floor(rnd() * arr.length) % arr.length];
 
 // Visible gaps remain blocked by the continuous authoritative ring.
-export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed), season = 'summer', yaw = false, joins = null }) {
+export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed), season = 'summer', yaw = false, joins = null, environment = {} }) {
   const def = WALL_KINDS[kind];
   if (!def) throw new RangeError('Unknown boundary kind: ' + kind);
   if (![len, depth, h].every(n => Number.isFinite(n) && n > 0)) throw new RangeError('Invalid boundary dimensions');
   const objectSeed = (seed ^ Math.imul(variant, 0x45d9f3b)) >>> 0;
   // 邊界本體是沿邊連續構造，單體朝向維持軸向對齊(預設除外)；獨立散布經 standaloneBoundaryParts 另開。
   // 連續地質改用自然地質拉狹長型單體（高低變化大的連綿起伏），不再是單向斷面擠出。
-  if (NARROW_GEOLOGY_BOUNDARY[kind]) return narrowGeologyBoundary(kind, { len, depth, h, seed: objectSeed, season });
-  if (def.object) return environmentParts(def.object, { size: [len, h, depth], seed: objectSeed, season, yaw });
+  if (NARROW_GEOLOGY_BOUNDARY[kind]) return narrowGeologyBoundary(kind, { len, depth, h, seed: objectSeed, season, environment });
+  if (def.object) return environmentParts(def.object, { size: [len, h, depth], seed: objectSeed, season, yaw, environment });
   if (EXPANDED_BOUNDARIES[kind] || ['barricade', 'levee', 'seawall'].includes(kind)) return buildSlopeBoundary(kind, {
     len, depth, h: h - .4, x: objectSeed % 997 * 11, z: objectSeed % 953 * 7,
-    seed: objectSeed, season, heightAt: () => .4, joins,
+    seed: objectSeed, season, environment, heightAt: () => .4, joins,
   }).parts;
-  return linearEnvironmentParts(kind, { len, depth, h, seed: objectSeed, season, joins });
+  return linearEnvironmentParts(kind, { len, depth, h, seed: objectSeed, season, joins, environment });
 }
 
 /**
@@ -457,6 +458,7 @@ export function standaloneBoundaryParts(kind, opts = {}) {
     seed: opts.seed ?? 1,
     variant: opts.variant ?? wallVariant(kind, opts.seed ?? 1),
     season: opts.season ?? 'summer',
+    environment: opts.environment,
     yaw: opts.yaw ?? true,
   });
 }
@@ -563,21 +565,21 @@ const ROW0_FLIP_KINDS = new Set(['trucks', 'car', 'train', 'ship', 'strandedship
  * 邊界本體與緩衝區共用同一生成器，確保大小、顏色、風格、構件完全一致（單一縫）。
  * 物件尺寸嚴格採用標準遊戲空間真實尺寸，絕不故意放大。
  */
-function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBuffer = false }) {
+function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBuffer = false, environment = {} }) {
   const def = WALL_KINDS[kind];
   const objKey = layout?.object || def?.object;
 
   if (objKey === 'wind' || kind.startsWith('wind')) {
-    return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season });
+    return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season, environment });
   }
   if (objKey === 'solar' || kind.includes('solar')) {
-    return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season });
+    return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season, environment });
   }
   if (objKey === 'aquaculture' || ['searanch', 'oysterracks'].includes(kind)) {
-    return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season });
+    return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season, environment });
   }
   if (kind === 'deeprig') {
-    return linearEnvironmentParts('deeprig', { len: w, depth: d, h, seed, season });
+    return linearEnvironmentParts('deeprig', { len: w, depth: d, h, seed, season, environment });
   }
   if (objKey === 'tank' || kind === 'tankfarm') {
     return storageTankParts({ w, d, h, seed });
@@ -623,7 +625,7 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
     return makeSceneVehicleParts('sedan', { fit, crush, paint });
   }
   if (objKey === 'viaduct' || kind === 'viaduct') {
-    return linearEnvironmentParts('viaduct', { len: w, depth: d, h, seed, season });
+    return linearEnvironmentParts('viaduct', { len: w, depth: d, h, seed, season, environment });
   }
   if (objKey && ENVIRONMENT_OBJECTS[objKey]) {
     // 嚴格錨定正常物件世界標準尺寸，不可為了當障礙物就故意放大；
@@ -632,9 +634,9 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
     const unitSize = isBuffer
       ? normalSize
       : [Math.min(normalSize[0], w), Math.min(normalSize[1], h), Math.min(normalSize[2], d)];
-    return environmentParts(objKey, { size: unitSize, seed, season, yaw: isBuffer });
+    return environmentParts(objKey, { size: unitSize, seed, season, yaw: isBuffer, environment });
   }
-  return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season });
+  return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season, environment });
 }
 
 /**
@@ -644,27 +646,27 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
  * @returns {{ parts: Array, bufferParts: Array }}
  */
 export function buildBoundaryRunParts(kind, {
-  len, depth, bufferDepth = 0, h = 18, seed = 1, variant = 0, season = 'summer', water = false, biome = null, joins = null,
+  len, depth, bufferDepth = 0, h = 18, seed = 1, variant = 0, season = 'summer', water = false, biome = null, joins = null, environment = {},
 }) {
   const layout = BOUNDARY_BUFFER_LAYOUTS[kind];
   const def = WALL_KINDS[kind];
   const targetH = Math.max(h, def?.h || 18);
   if (!layout) {
     if (NARROW_GEOLOGY_BOUNDARY[kind]) {
-      const geoParts = narrowGeologyBoundary(kind, { len, depth, bufferDepth, h: targetH, seed, season });
+      const geoParts = narrowGeologyBoundary(kind, { len, depth, bufferDepth, h: targetH, seed, season, environment });
       return {
         parts: geoParts.parts || geoParts.filter(p => !p.boundaryBuffer),
         bufferParts: geoParts.bufferParts || geoParts.filter(p => p.boundaryBuffer),
       };
     }
     return {
-      parts: wallParts(kind, { len, depth, h: targetH, seed, variant, season, joins }),
+      parts: wallParts(kind, { len, depth, h: targetH, seed, variant, season, joins, environment }),
       bufferParts: [],
     };
   }
 
   if (layout.continuousGeology || NARROW_GEOLOGY_BOUNDARY[kind]) {
-    const geoParts = narrowGeologyBoundary(kind, { len, depth, bufferDepth, h: targetH, seed, season });
+    const geoParts = narrowGeologyBoundary(kind, { len, depth, bufferDepth, h: targetH, seed, season, environment });
     return {
       parts: geoParts.parts || geoParts.filter(p => !p.boundaryBuffer),
       bufferParts: geoParts.bufferParts || geoParts.filter(p => p.boundaryBuffer),
@@ -682,7 +684,7 @@ export function buildBoundaryRunParts(kind, {
   if (layout.continuous) {
     // 連續組裝邊界障礙物：本體（Row 0）透過 wallParts 產生連續無縫長構造；
     // 城牆/河堤自身延伸時透過甕城/閘門連接；與非峭壁/土石流/崩塌地物件相接時建立甕城/閘門作為端點，兩端向緩衝區繼續鋪設
-    const wallObstacleParts = wallParts(kind, { len, depth, h: targetH, seed, variant, season, joins });
+    const wallObstacleParts = wallParts(kind, { len, depth, h: targetH, seed, variant, season, joins, environment });
     for (const p of wallObstacleParts) parts.push(p);
 
     if (kind === 'levee') {
@@ -795,7 +797,7 @@ export function buildBoundaryRunParts(kind, {
         if (u - nw / 2 < -len / 2 - 2 || u + nw / 2 > len / 2 + 2) continue;
         if (v - nd / 2 < -depth / 2 - bufferDepth - 2) continue;
 
-        const modelParts = environmentParts(objKind, { size: normalSize, seed: ptSeed, season });
+        const modelParts = environmentParts(objKind, { size: normalSize, seed: ptSeed, season, environment });
         for (const p of modelParts) {
           const [px = 0, py = 0, pz = 0] = p.p || [];
           bufferParts.push({
@@ -836,7 +838,7 @@ export function buildBoundaryRunParts(kind, {
         if (isBuffer && (v - objD / 2 < -depth / 2 - bufferDepth - 2)) continue;
 
         const modelParts = generateBoundaryUnit(kind, {
-          w: objW, d: objD, h: objH, seed: ptSeed, season, water, layout, isBuffer,
+          w: objW, d: objD, h: objH, seed: ptSeed, season, water, layout, isBuffer, environment,
         });
 
         // 隨機方向旋轉（Row 0 位於權威碰撞盒內：ROW0_FLIP_KINDS 採 180° 翻轉，
@@ -886,7 +888,7 @@ export function buildBoundaryRunParts(kind, {
         if (isBuffer && (v - unitD / 2 < -depth / 2 - bufferDepth - 2)) continue;
 
         const modelParts = generateBoundaryUnit(kind, {
-          w: unitW, d: unitD, h: targetH, seed: ptSeed, season, water, layout, isBuffer,
+          w: unitW, d: unitD, h: targetH, seed: ptSeed, season, water, layout, isBuffer, environment,
         });
 
         for (const p of modelParts) {
@@ -932,19 +934,19 @@ export const PROP_KINDS = {
 };
 
 const PROP_PARTS = {
-  grove: (rnd) => environmentParts('gianttree', { size: [18, 28, 18], seed: Math.floor(rnd() * 0x10000000) }),
-  boulder: (rnd) => environmentParts('boulder', { size: [14, 12, 14], seed: Math.floor(rnd() * 0x10000000) }),
-  hamlet: (rnd) => environmentParts('house', { size: [12, 10, 10], seed: Math.floor(rnd() * 0x10000000) }),
-  islet: (rnd) => environmentParts('boulder', { size: [16, 10, 16], seed: Math.floor(rnd() * 0x10000000) }),
+  grove: (rnd, season, environment) => environmentParts('gianttree', { size: [18, 28, 18], seed: Math.floor(rnd() * 0x10000000), season, environment }),
+  boulder: (rnd, season, environment) => environmentParts('boulder', { size: [14, 12, 14], seed: Math.floor(rnd() * 0x10000000), season, environment }),
+  hamlet: (rnd, season, environment) => environmentParts('house', { size: [12, 10, 10], seed: Math.floor(rnd() * 0x10000000), season, environment }),
+  islet: (rnd, season, environment) => environmentParts('boulder', { size: [16, 10, 16], seed: Math.floor(rnd() * 0x10000000), season, environment }),
 };
 
 /** 地貌 → 緩衝空間物件款(找不到就用岩塊墊底) */
 export const propKindFor = (biome) => Object.keys(PROP_KINDS).find((k) => PROP_KINDS[k].bio.includes(biome)) || 'boulder';
 
 /** 取一件緩衝空間物件的零件表 */
-export function propParts(kind, seed = 1) {
+export function propParts(kind, seed = 1, { season = 'summer', environment = {} } = {}) {
   const fn = PROP_PARTS[kind] || PROP_PARTS.boulder;
-  return fn(mulberry32((seed * 2246822519) >>> 0));
+  return fn(mulberry32((seed * 2246822519) >>> 0), season, environment);
 }
 
 /**
@@ -995,40 +997,29 @@ export const BACKDROP_KINDS = {
   sea:      { bio: ['water'], hF: 0.14 },
 };
 
-// 邊界山脈四季雪線高度比例（佔最高天花板 H 的比例；夏天無雪）
-export const MOUNTAIN_SNOWLINE = {
-  spring: 0.74,  // 春季雪線：高海拔積雪（山頂 26% 覆雪）
-  summer: 1.0,   // 夏季無雪：雪線在山頂之上（0% 覆雪）
-  autumn: 0.80,  // 秋季初雪：最高峰頂積雪（山頂 20% 覆雪）
-  winter: 0.52,  // 冬季雪線：雪線大幅下降至中高海拔（山頂 48% 覆雪）
-};
-
 /** 地貌 → 背景款 */
 export const backdropKindFor = (biome) => Object.keys(BACKDROP_KINDS).find((k) => BACKDROP_KINDS[k].bio.includes(biome)) || 'mountain';
 
-function backdropCluster(kind, len, h, rnd, season) {
+function backdropCluster(kind, len, h, rnd, season, environment) {
   return rep(len, Math.max(8, h * .7), (x, step) => environmentParts(kind, {
     size: [step * .94, h * (.55 + rnd() * .45), Math.max(1, h * .65)],
-    seed: Math.floor(rnd() * 0x100000000), season,
+    seed: Math.floor(rnd() * 0x100000000), season, environment,
   }).map(p => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
 }
 
 const BACKDROP_PARTS = {
-  // 假山:兩排錯開的山稜(後排高、前排矮)+ 稜線上的雪/裸岩帶
-  // 雪線高度隨季節變化(夏天無雪);雪錐底面半徑嚴格由山稜斜率等比推導,頂點與山頂對齊,不外突也不懸空
-  mountain: (len, H, rnd, season = 'summer') => {
-    const snowLineF = MOUNTAIN_SNOWLINE[season] ?? MOUNTAIN_SNOWLINE.summer;
-    const ySnow = H * snowLineF;
+  // Snow caps follow the local climate at each summit, preserving cone slopes.
+  mountain: (len, H, rnd, season = 'summer', environment = {}) => {
     return [
       ...rep(len, H * 0.62, (x, s) => {
         const h = H * (0.62 + rnd() * 0.38);
         const rBase = s * 0.78;
+        const climate = seasonalEnvironment({ ...environment, season, altitude: (environment.altitude ?? 0) + h });
         const parts = [
-          { g: ['cone', rBase, h, 5], c: pick(rnd, [0x5c6470, 0x525a66, 0x666e79]), p: [x, h / 2, -H * 0.18] },
+          { g: ['cone', rBase, h, 5], c: geologyColor('mountain', environment.geology, pick(rnd, [0x5c6470, 0x525a66, 0x666e79])), p: [x, h / 2, -H * 0.18] },
         ];
-        // 峰頂超過季節雪線才覆雪(夏天 ySnow = H ⇒ h <= ySnow 故無雪)
-        if (h > ySnow) {
-          const hs = h - ySnow;
+        if (climate.snow > 0) {
+          const hs = h * .7 * climate.snow;
           // 斜率嚴格等比(rSnow / hs ≈ rBase / h),微量 1.01 避免 WebGL 共面 Z-fighting
           const rSnow = rBase * (hs / h) * 1.01;
           const py = h - hs / 2;
@@ -1043,15 +1034,15 @@ const BACKDROP_PARTS = {
     ];
   },
   // Distant silhouettes use the same species/building/rock constructors as the scene.
-  forest: (len, H, rnd, season) => backdropCluster('gianttree', len, H, rnd, season),
-  city: (len, H, rnd, season) => backdropCluster('skyscraper', len, H, rnd, season),
-  sea: (len, H, rnd, season) => backdropCluster('boulder', len, H, rnd, season),
+  forest: (len, H, rnd, season, environment) => backdropCluster('gianttree', len, H, rnd, season, environment),
+  city: (len, H, rnd, season, environment) => backdropCluster('skyscraper', len, H, rnd, season, environment),
+  sea: (len, H, rnd, season, environment) => backdropCluster('boulder', len, H, rnd, season, environment),
 };
 
 /** 取一段背景的零件表(局部座標:x = 沿邊、y = 由地面往上、z = 厚度方向) */
-export function backdropParts(kind, { len, h, seed = 1, season = 'summer' }) {
+export function backdropParts(kind, { len, h, seed = 1, season = 'summer', environment = {} }) {
   const fn = BACKDROP_PARTS[kind] || BACKDROP_PARTS.mountain;
-  return fn(len, h, mulberry32((seed * 3266489917) >>> 0), season);
+  return fn(len, h, mulberry32((seed * 3266489917) >>> 0), season, environment);
 }
 
 /**

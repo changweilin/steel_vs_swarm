@@ -1,4 +1,6 @@
 import { mulberry32 } from './rng.js';
+import { forestEnvironment, seasonalEnvironment } from './seasonalEnvironment.js';
+export { forestEnvironment, FOREST_GEOLOGY_PH } from './seasonalEnvironment.js';
 
 import { TREE_SPECIES } from './forestSpecies.js';
 export { TREE_SPECIES } from './forestSpecies.js';
@@ -17,24 +19,6 @@ function rangeWeight(value, [a, b, c, d]) {
   return 1;
 }
 
-// Optional map-author inputs. Rock -> pH is an art-direction proxy, not a soil survey.
-export const FOREST_GEOLOGY_PH = { limestone: 7.8, granite: 5.2, sandstone: 5.6, volcanic: 5.8, alluvium: 6.8, sand: 6.5, peat: 4.8 };
-const CLIMATE = {
-  tropical: { temperature: 26, moisture: .8 }, temperate: { temperature: 13, moisture: .6 },
-  boreal: { temperature: 2, moisture: .5 }, arid: { temperature: 27, moisture: .15 },
-  mediterranean: { temperature: 18, moisture: .3 }, alpine: { temperature: 3, moisture: .55 },
-};
-export function forestEnvironment(latitude, altitude, input = {}) {
-  const climate = CLIMATE[input.climate] || {};
-  const finite = (value, fallback) => Number.isFinite(value) ? value : fallback;
-  return {
-    temperature: finite(input.temperature, climate.temperature ?? 29 - Math.abs(latitude) * .48 - Math.max(0, altitude) * .006),
-    moisture: Math.max(0, Math.min(1, finite(input.moisture, input.wet ? .95 : climate.moisture ?? .55))),
-    ph: finite(input.ph, FOREST_GEOLOGY_PH[input.geology]),
-    rainfall: finite(input.rainfall, undefined), salinity: Math.max(0, Math.min(1, finite(input.salinity, 0))),
-    slope: finite(input.slope, undefined), wet: !!input.wet,
-  };
-}
 export function treeHabitatWeight(type, latitude, altitude, input = {}) {
   const spec = TREE_SPECIES[type];
   if (!spec) return 0;
@@ -88,8 +72,28 @@ const treeCylinder = (radiusTop, radiusBottom, height, radialSegments, heightSeg
   ({ parameters: { radiusTop, radiusBottom, height, radialSegments, heightSegments } });
 const treeCrown = radius => ({ parameters: { radius } });
 
+export function treePhenology(type, input = {}) {
+  const spec = TREE_SPECIES[type];
+  if (!spec) throw new RangeError('Unknown forest species: ' + type);
+  const env = seasonalEnvironment(input), trait = spec.phenology;
+  const dormant = trait?.habit === 'deciduous'
+    && ((env.season === 'winter' && env.seasonalStrength >= .55) || env.temperature <= 0);
+  const shed = trait?.habit === 'drought' ? env.drought : trait?.habit === 'deciduous' ? env.autumn * .55 : 0;
+  const retention = dormant ? 0 : 1 - shed;
+  const tint = trait?.habit === 'deciduous' ? env.autumn : trait?.habit === 'drought' ? env.drought : 0;
+  const target = trait?.autumn ?? spec.leaf;
+  const soilGrowth = Number.isFinite(env.ph) && spec.habitat.ph ? rangeWeight(env.ph, spec.habitat.ph) : 1;
+  let leafColor = 0;
+  for (const shift of [16, 8, 0]) {
+    const from = spec.leaf >> shift & 255, to = target >> shift & 255;
+    leafColor |= Math.round(from + (to - from) * tint) << shift;
+  }
+  return { retention, leafColor, snow: env.snow, growth: dormant ? 0 : env.growth * soilGrowth,
+    litter: shed, season: env.season };
+}
+
 /** A per-tree connected skeleton. Factories keep layout independent of THREE. */
-export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown, scale = 1, season = 'summer') {
+export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown, scale = 1, season = 'summer', environment = {}) {
   const spec = TREE_SPECIES[type];
   if (!spec) throw new RangeError('Unknown forest species: ' + type);
   const rnd = mulberry32(seed), g = spec.growth;
@@ -99,7 +103,9 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
   const count = integer(g.branches), density = g.density * (.8 + rnd() * .2);
   const crownScale = sample(g.crown), rootCount = integer(g.rootCount);
   const parts = [], stems = [], crowns = [];
+  const partShapes = new Map();
   const { bark, leaf, form } = spec;
+  const phenology = treePhenology(type, { ...environment, season });
   const conifer = form === 'spire' || form === 'tiers';
   const top = h * (conifer ? .95 : form === 'palm' ? .84 : form === 'shrub' ? .68 : .83);
   let footprint = r * 1.6;
@@ -112,6 +118,7 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
       px: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2, pz: (a[2] + b[2]) / 2,
       rx: Math.atan2(dz, dy), rz: -Math.asin(dx / len), c: color, role,
       ...(role === 'leaf' ? { key: 'gleaf', noCard: true } : {}) });
+    partShapes.set(parts[parts.length - 1], { radiusTop: radius * .22, radiusBottom: radius, height: len, heightSegments: treeSections(len * scale) });
   };
   const stem = (x, z, height, radius) => {
     parts.push({ g: cyl(radius * .28, radius, height, 9, treeSections(height * scale)),
@@ -122,6 +129,7 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
     // Crown tops stay inside the sampled height; their centers still enclose branch tips.
     sy = Math.min(sy, Math.max(.05, (h - p[1]) / radius));
     parts.push({ g: ico(radius), px: p[0], y: p[1], pz: p[2], sy, key: 'gleaf', c: leaf, role: 'leaf' });
+    partShapes.set(parts[parts.length - 1], { radius });
     crowns.push({ p, radius, sy });
   };
   if (['snag', 'lightning', 'fallen'].includes(form)) {
@@ -316,9 +324,9 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
     }
   }
   const organs = (kind, trait) => {
-    if (!trait || !crowns.length || !trait.seasons.includes(season)) return;
+    if (!trait || !crowns.length || !trait.seasons.includes(season) || phenology.growth <= 0) return;
     const random = mulberry32(seed ^ (kind === 'flower' ? 0x464c4f57 : 0x46525549));
-    if (random() >= trait.chance) return;
+    if (random() >= trait.chance * phenology.growth) return;
     const n = Math.floor(trait.count[0] + random() * (trait.count[1] - trait.count[0] + 1));
     for (let i = 0; i < n; i++) {
       const cr = crowns[Math.floor(random() * crowns.length)], a = random() * Math.PI * 2;
@@ -338,9 +346,33 @@ export function createForestTree(type, seed, cyl = treeCylinder, ico = treeCrown
     }
   };
   organs('flower', spec.flower); organs('fruit', spec.fruit);
+  // Visibility uses a separate stream: winter exposes the same branches and roots.
+  const seasonalRnd = mulberry32(seed ^ 0x53454153), snowParts = [];
+  for (const part of parts) {
+    if (part.role !== 'leaf') continue;
+    if (spec.phenology) part.c = phenology.leafColor;
+    part.hidden = seasonalRnd() >= phenology.retention;
+    const radius = partShapes.get(part)?.radius;
+    if (!part.hidden && radius && phenology.snow > .05) {
+      const capRadius = radius * .8, capHeight = Math.min(radius * .12, .25) * phenology.snow;
+      snowParts.push({ g: ico(capRadius), px: part.px, pz: part.pz,
+        y: part.y + radius * part.sy - capHeight, sy: capHeight / capRadius,
+        c: 0xe9f0f4, role: 'snow' });
+    }
+  }
+  // Bare deciduous branches still collect snow; caps share their local wind frame.
+  if (phenology.snow > .05 && phenology.retention === 0) {
+    for (const part of parts.filter(p => p.role === 'branch')) {
+      const p = partShapes.get(part);
+      if (Math.abs(Math.cos(part.rx || 0) * Math.cos(part.rz || 0)) > .65) continue;
+      snowParts.push({ ...part, g: cyl(p.radiusTop * .5, p.radiusBottom * .5, p.height, 5, p.heightSegments),
+        y: part.y + p.radiusBottom * .5, c: 0xe9f0f4, role: 'snow' });
+    }
+  }
+  parts.push(...snowParts);
   footprint = Math.max(footprint, ...stems.map(s => Math.hypot(s.x, s.z) + s.r));
   return { h, r, girth: 2 * Math.PI * r, branchCount: count, density, roots: spec.roots, footprint, stems,
-    sections: treeSections(top * scale), parts };
+    sections: treeSections(top * scale), phenology, parts };
 }
 
 // Representative specimens for catalog tools; live trees always use their own coordinate seed.

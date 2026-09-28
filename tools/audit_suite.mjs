@@ -34,6 +34,7 @@ const AUDIT_SCRIPTS = [
   'tools/audit_slope_platform.mjs',
   'tools/audit_world_height.mjs',
   'tools/audit_forest.mjs',
+  'tools/audit_seasonal_environment.mjs',
   'tools/audit_geology.mjs',
   'tools/audit_zone_cut.mjs',
 

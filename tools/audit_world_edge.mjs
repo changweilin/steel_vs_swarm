@@ -37,7 +37,7 @@
 //       短 run 併回去時取**較陡**的那一級、零共享亂數、決定性。
 //   Ⅷ 緩衝布景與視線邊界背景 —— 只擺在地形範圍之外、四種背景各對應陸/水域、高度吃
 //       `objHeightMax()` 同一個天花板、零共享亂數、決定性、**逐零件落地不懸空**(2026-08-12)。
-//   Ⅸ 邊界山脈雪線高度與山頂積雪接合 —— MOUNTAIN_SNOWLINE 四季階梯、夏季無雪、冬季覆雪最大、
+//   IX Summit snow requires cold and moisture, including alpine summer snow;
 //       雪錐斜率嚴格等比貼合山稜、頂點重合、無外擴懸空(2026-08-29)。
 //
 // 跑法:`node tools/audit_world_edge.mjs`(不需伺服器/瀏覽器/網路)
@@ -76,7 +76,6 @@ const BREAK_MOTION = process.argv.includes('--break-motion');
 const BREAK_FACILITY_MIX = process.argv.includes('--break-facility-mix');
 const BREAK_SHARED_CATALOG = process.argv.includes('--break-shared-catalog');
 const BREAK_GLASS = process.argv.includes('--break-glass');
-if (BREAK_SNOW_SUMMER) EW.MOUNTAIN_SNOWLINE.summer = 0.5;
 if (process.argv.includes('--break-rock-season')) {
   for (const s of Object.keys(EW.ROCK_SEASON_TINT)) EW.ROCK_SEASON_TINT[s] = 0xffffff;
 }
@@ -106,6 +105,8 @@ const planWallKinds = (run, segs, prevKind = null) => (
 
 const backdropParts = (kind, o) => {
   const parts = EW.backdropParts(kind, o);
+  if (BREAK_SNOW_SUMMER && kind === 'mountain' && o.season === 'summer')
+    parts.push({ g: ['cone', 1, 1, 5], c: 0xd8dee4, p: [0, 1, 0] });
   if (BREAK_SNOW_SLOPE && kind === 'mountain') {
     for (const p of parts) {
       if (p.c === 0xd8dee4 && p.g?.[0] === 'cone') {
@@ -631,10 +632,10 @@ console.log('\nⅥ 純表現層(伺服器對這一整套一無所知)');
   t('edgewall.js 全檔無 Math.random(A4)', !/Math\.random/.test(strip(ewSrc)));
   t('edgewall.js 零 THREE(這才是型錄與規劃器能離線驗的原因)', !/\bTHREE\b/.test(strip(ewSrc)));
   t("edgewall.js 只依賴亂數、幾何量尺與共用程序生成器",
-    (strip(ewSrc).match(/^import .*$/gm) || []).length === 5
+    (strip(ewSrc).match(/^import .*$/gm) || []).length === 6
     && /from '\.\/rng\.js'/.test(ewSrc) && /from '\.\/vehicles\.js'/.test(ewSrc)
     && /from '\.\/environmentParts\.js'/.test(ewSrc) && /from '\.\/edgeSlope\.js'/.test(ewSrc)
-    && /from '\.\/objectLayout\.js'/.test(ewSrc));
+    && /from '\.\/objectLayout\.js'/.test(ewSrc) && /from '\.\/seasonalEnvironment\.js'/.test(ewSrc));
 }
 
 // ============ Ⅶ 型錄與切分規則 ============
@@ -995,41 +996,27 @@ console.log('\nⅨ 邊界山脈雪線高度與山頂積雪接合(四季變化 + 
       wallParts(kind, { len: WORLD_EDGE.SEG_M * WORLD_EDGE.SEG_LAP_F, depth: d.depth, h: d.h, seed: 17, season })));
     t(`${EW.WALL_KINDS[kind].label}四季幾何不動、岩色四種皆不同`, new Set(variants).size === 4);
   }
-  t('MOUNTAIN_SNOWLINE 定義完整四季雪線(spring/summer/autumn/winter)',
-    EW.MOUNTAIN_SNOWLINE && ['spring', 'summer', 'autumn', 'winter'].every((s) => typeof EW.MOUNTAIN_SNOWLINE[s] === 'number'));
-  t('夏季雪線在天際線之上(summer ≥ 1.0 ⇒ 夏天無雪)',
-    EW.MOUNTAIN_SNOWLINE.summer >= 1.0);
-  t('四季雪線階梯符合常理(winter < spring < autumn < summer)',
-    EW.MOUNTAIN_SNOWLINE.winter < EW.MOUNTAIN_SNOWLINE.spring
-    && EW.MOUNTAIN_SNOWLINE.spring <= EW.MOUNTAIN_SNOWLINE.autumn
-    && EW.MOUNTAIN_SNOWLINE.autumn < EW.MOUNTAIN_SNOWLINE.summer);
-
-  const H = objHeightMax();
-  const len = EW.EDGE_WALL.BACK_SEG_M;
-
-  // 1. 夏季實測：0 個雪錐
-  let summerSnowCount = 0;
-  for (let s = 1; s <= 30; s++) {
-    const parts = backdropParts('mountain', { len, h: H, seed: s, season: 'summer' });
-    const snows = parts.filter((p) => p.c === 0xd8dee4);
-    summerSnowCount += snows.length;
+  const H = objHeightMax(), len = EW.EDGE_WALL.BACK_SEG_M;
+  const cold = { temperature: -15, moisture: .8 };
+  const warm = { temperature: 25, moisture: .8 };
+  let warmCount = 0, coldCount = 0, dryCount = 0, alpineCount = 0;
+  for (let seed = 1; seed <= 30; seed++) {
+    const count = (season, environment) => backdropParts('mountain', { len, h: H, seed, season, environment })
+      .filter(p => p.c === 0xd8dee4).length;
+    warmCount += count('summer', warm) + count('winter', warm);
+    coldCount += count('winter', cold);
+    dryCount += count('winter', { ...cold, moisture: 0 });
+    alpineCount += count('summer', { latitude: 0, altitude: 6000, moisture: .8 });
   }
-  t(`夏季無雪(實測 30 個種子共 ${summerSnowCount} 個雪錐 === 0)`, summerSnowCount === 0);
-
-  // 2. 冬季/春季/秋季實測階梯
-  let winterSnowCount = 0, springSnowCount = 0, autumnSnowCount = 0;
-  for (let s = 1; s <= 30; s++) {
-    winterSnowCount += backdropParts('mountain', { len, h: H, seed: s, season: 'winter' }).filter((p) => p.c === 0xd8dee4).length;
-    springSnowCount += backdropParts('mountain', { len, h: H, seed: s, season: 'spring' }).filter((p) => p.c === 0xd8dee4).length;
-    autumnSnowCount += backdropParts('mountain', { len, h: H, seed: s, season: 'autumn' }).filter((p) => p.c === 0xd8dee4).length;
-  }
-  t(`冬季覆雪最多、春季次之、秋季初雪(冬 ${winterSnowCount} ≥ 春 ${springSnowCount} ≥ 秋 ${autumnSnowCount} > 夏 0)`,
-    winterSnowCount >= springSnowCount && springSnowCount >= autumnSnowCount && autumnSnowCount > 0);
+  t('Warm mountains stay snow-free in every season', warmCount === 0);
+  t('Cold moist mountains carry summit snow', coldCount > 0);
+  t('Cold dry mountains stay bare without snowfall', dryCount === 0);
+  t('High tropical mountains can retain snow in summer', alpineCount > 0);
 
   // 3. 斜率與頂點貼合測試
   let slopeMisaligned = 0, apexMisaligned = 0, flareOut = 0;
   for (let s = 1; s <= 40; s++) {
-    const parts = backdropParts('mountain', { len, h: H, seed: s, season: 'winter' });
+    const parts = backdropParts('mountain', { len, h: H, seed: s, season: 'winter', environment: cold });
     // 找出山稜錐體與其對應的雪錐（同 x 座標）
     const mtnCones = parts.filter((p) => p.p?.[2] < 0 && p.c !== 0xd8dee4 && p.g?.[0] === 'cone');
     const snowCones = parts.filter((p) => p.c === 0xd8dee4 && p.g?.[0] === 'cone');
