@@ -2400,7 +2400,7 @@ export const lanceZones = (ex, ez, hr, R) => {
 //   lob   低初速拋物線:榴彈/火箭吊射(BALLISTIC.LAUNCH_MV;對空時換 AA_MV 見 _updateAaMode)
 //   flat  高初速近似直線:動能彈(gun,mv 900~2500)—— 本質仍是拋物線,只是彈道極平
 //   line  完全直線:光速/準光速直擊(beam 光束、rail 電磁砲、plasma 離子)—— 無重力下墜
-//   guide 雷射導引:launcher + guide:1,FPV 有導引雷射指向準星目標,彈體騎波修正
+//   guide 雷射導引:launcher + guide:1,FPV 有導引雷射指向準星目標,發射瞬間凍結落點為固定打擊點(射後不理式,不隨目標移動)
 //   fnf   射後不理:missile,離架後自行追蹤發射瞬間的鎖定目標
 // **唯一分類縫 = trajClass(def)**(與 aoeClass 同框,MUST NOT 在別處重寫 type 判斷)。
 export function trajClass(def) {
@@ -2422,7 +2422,7 @@ export const TRAJ_NAME = {
 // 伺服器不模擬彈道 ⇒ 此為**純客戶端**規則(與 RECOIL / BALLISTIC 同層;伺服器仍只驗落點)。
 // m 為遊戲公尺(已是 COMBAT_SCALE 後的尺度,與 def.range 同單位)。
 export const ARMING = {
-  guide: { m: 45, spread: 0.055 },   // 雷射導引:騎波修正需要一段飛行距離
+  guide: { m: 45, spread: 0.055 },   // 雷射導引:固定點修正需要一段飛行距離
   fnf:   { m: 60, spread: 0.075 },   // 射後不理:發射後才鎖定 + 引信解保險
 };
 export const armingOf = (def) => ARMING[trajClass(def)] || null;
@@ -3651,7 +3651,7 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side]?.her
 // 武器 type 一覽(2026-07-11 機制多元化;傷害距離衰減見 dmgFalloff):
 //   gun      動能彈:彈道學拋物線,動能隨空阻衰減
 //   rail     磁軌炮:極速直擊(幾乎無衰減、高破甲);2026-07-18 取消蓄力,改彈夾連發
-//   launcher 火箭/榴彈:AoE 戰鬥部;guide:1 = 狙擊視角雷射導引(彈體追準星修正航向)
+//   launcher 火箭/榴彈:AoE 戰鬥部;guide:1 = 狙擊視角雷射導引(發射瞬間凍結打擊點,不隨目標移動)
 //   missile  飛彈:發射時有準星鎖定 → 自動追蹤該目標近炸;無鎖定 = 直飛(AoE 戰鬥部)
 //   beam     定向能:光速直擊無下墜,穩定輸出;吃大氣消光;emp 附帶 = 電磁癱瘓控場
 //   plasma   電漿:扇形 arc(半角度°)切小錐、每格只命中最近一名(伺服器結算),消散快、射程短

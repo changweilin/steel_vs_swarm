@@ -5885,7 +5885,7 @@ export class BattleClient {
     });
     fc.on = false; fc.ok = false; fc.ent = null; fc.sup = 0; fc.close = false; fc.cut = false;
     const { id, def } = this._curWeapon();
-    // 雷射導引(trajClass 'guide')由 _updateGuideLaser 指示 —— 彈體解保險後騎波不吃重力,
+    // 雷射導引(trajClass 'guide')由 _updateGuideLaser 指示 —— 彈體解保險後朝固定打擊點修正,
     // 走拋物線火控是錯的指示,兩者互斥。
     if (this.dead || this.shopOpen || !this.side || !this.ch || id !== 'heavy'
         || !def || trajClass(def) !== 'lob' || !this.gunGroup) return;
@@ -8044,7 +8044,8 @@ export class BattleClient {
 
   /**
    * 雷射導引武器(trajClass 'guide')的第一人稱導引雷射:瞄準時自槍口射出一條指向準星目標的
-   * 細雷射 + 落點十字環 —— 彈體離架後就是騎這條波修正航向(見 _updateBullets 的 guide 分支)。
+   * 細雷射 + 落點十字環 —— 擊發瞬間把落點凍結為固定打擊點(見 _updateBullets 的 guide 分支),
+   * 離架後不再隨準星/目標移動。
    * 逐幀更新故 **MUST NOT** 每幀重建幾何:單一持久 Mesh 以 position/scale/quaternion 驅動
    * (與 _arcGuide 的預配置緩衝同一條紀律)。
    */
@@ -8082,7 +8083,7 @@ export class BattleClient {
     const group = new THREE.Group();
     group.userData.noOutline = true;
     const mat = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false });
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 5, 1, true), mat(0xff5f4a, 0.55));
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 5, 1, true), mat(0xff5f4a, 0.25));
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.72, 20), mat(0xff5f4a, 0.9));
     ring.material.side = THREE.DoubleSide;
     beam.userData.noOutline = ring.userData.noOutline = true;
@@ -8318,6 +8319,9 @@ export class BattleClient {
     // 爆風核心帶之外(tools/audit_weapon_gate.mjs Ⅵ)。導引對象是**表現層決策**(彈道本就客戶端
     // 權威),傷害仍由伺服器驗落點 —— 不涉 A1。
     const homing = def.type === 'missile' ? (this._aimTarget(rng)?.id ?? null) : null;
+    // 雷射導引(2026-09-28 使用者定案):與射後不理同為「發射瞬間凍結」—— 打擊點取擊發當下
+    // 的準星解落點(`_resolveAim`,與導引雷射圓環同一點),離架後不再隨準星/目標移動。
+    const guidePt = def.guide ? this._resolveAim(rng).point.clone() : null;
     const v0 = this._shotV0(def, !!this._aaAim);   // 對空彈射(_updateAaMode 於本幀擊發前定案,與瞄準虛線同一份)
     // 最短距離(軌跡修正期):導引/射後不理武器離架後 arm.m 內導引尚未接手,且帶一次性初期散布
     // ⇒ 貼臉開導引彈會偏(命中率較低),拉開距離後導引/追蹤才把偏差修回來。
@@ -8334,7 +8338,7 @@ export class BattleClient {
       max: lobFc ? lobFc.max : rng, mesh, origin: muzzle.clone(),   // origin:射程球面/失鎖判定的球心(攻擊範圍);高度制空拉遠
       oy: (this._altAG || 0) + (muzzle.y - this.pos.y),   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
       cyclone: null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
-      mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0,
+      mv: v0, guide: !!def.guide, guidePt, homing, arm: arm ? arm.m : 0,
       launchDist: launch?.dist || 0,
       // 射後不理(2026-08-01 使用者定案):鎖定之後持續追擊,不受射程影響。
       // fnf 只是「這顆彈有沒有資格改吃燃料」的旗標;真正切換在 _updateBullets 的 b.chase。
@@ -8342,7 +8346,7 @@ export class BattleClient {
       dud: false,   // 飛出射程球面 = 解除武裝(引爆 = 碰撞;見 _updateBullets)
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
-    else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
+    else if (def.guide) this.hud.feed?.('🔦 雷射導引:打擊位置鎖定,發射後不再追蹤');
     // 自己 FPV 的槍口爆:重武器一律比輕武器大一號(輕武器已有 this.flash 球體,重武器再補世界爆閃)
     if (id === 'heavy') this._muzzleBurst(muzzle, true, this.side);
     // 其他客戶端的槍口視覺(對方不模擬我的彈道,給一條短曳光示意射向;帶 slot 讓對方分辨輕/重)。
@@ -8493,12 +8497,12 @@ export class BattleClient {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
       const prev = _TMP_B.copy(b.pos);
-      // 失鎖規則(與伺服器 _tickMissiles 同一條):目標/導引點跑出「攻擊範圍」(以發射點為圓心)
+      // 失鎖規則(與伺服器 _tickMissiles 同一條):追蹤目標跑出「攻擊範圍」(以發射點為圓心)
       // → 導引失效,之後只沿當下航向直線飛(吃重力),不再追擊。
       let tgt = b.homing ? this.ents.get(b.homing) : null;
-      // 射後不理(2026-08-01 使用者定案)**不吃這條**:鎖定之後一路追到底,射程只管「能不能鎖定」
-      // (客戶端 _tickLock 的 _effRange 閘門 + 伺服器 heroLock 複驗)。失鎖規則因此只剩雷射導引
-      // 那半(下方 b.guide 分支)—— 那是要玩家持續指示的武器,離開射程本來就該失效。
+      // 射後不理(2026-08-01 使用者定案)與雷射導引(2026-09-28 使用者定案)**不吃這條**:前者鎖定
+      // 之後一路追到底,後者打擊點在發射瞬間凍結、根本沒有鎖可失;射程只管「能不能鎖定」
+      // (客戶端 _tickLock 的 _effRange 閘門 + 伺服器 heroLock 複驗)。
       if (tgt && !b.fnf && tgt.mesh.position.distanceTo(b.origin) > b.max) {
         b.homing = null; tgt = null;
         this.hud.feed?.('📡 目標脫離射程:飛彈失鎖(直線飛行)');
@@ -8517,21 +8521,12 @@ export class BattleClient {
         // 飛彈自動追蹤:朝鎖定目標修正航向(動力飛行,升力抵銷重力)
         const want = _TMP_A.copy(tgt.mesh.position); want.y += 1.5;
         steer(b, want.sub(b.pos).normalize(), seekTurn(SEEK.HOME_W, b.mv));   // 轉彎半徑上限見 data.js SEEK
-      } else if (armed && b.guide && this.aiming && b.slot === 'heavy') {
-        // 雷射導引(騎波):朝準星射線上、彈體前方 40m 的導引點修正。
-        // 使用者定案(2026-08-02)與榴彈**同一條**:中途碰撞就爆(下方 hit 分支)、目標移開而沒
-        // 碰撞就繼續飛、飛到射程球面就原地爆(下方 `spent >= b.max`)—— 導引失效 MUST NOT 讓彈體
-        // 提早消失或原地蒸發,它只是不再修正航向而已。
-        const ro = this.camera.position;
-        const rd = this.camera.getWorldDirection(_TMP_C);
-        const along = Math.max(20, _TMP_A.copy(b.pos).sub(ro).dot(rd) + 40);
-        const gp = _TMP_A.copy(ro).addScaledVector(rd, along);
-        if (gp.distanceTo(b.origin) > b.max) {
-          b.guide = false;                     // 導引點出了射程球面 → 雷射導引失效(彈體照飛)
-          b.vel.y -= BALLISTIC.G * dt;
-        } else {
-          steer(b, gp.sub(b.pos).normalize(), seekTurn(SEEK.RIDE_W, b.mv));
-        }
+      } else if (armed && b.guide && b.guidePt) {
+        // 雷射導引(2026-09-28 使用者定案):與射後不理**同一條**「發射瞬間凍結」—— 朝擊發當下
+        // 的固定打擊點修正(同一個追蹤頭 HOME_W),發射後不再讀準星,打擊位置不隨目標移動。
+        // 使用者定案(2026-08-02)與榴彈**同一條**:中途碰撞就爆(下方 hit 分支)、掠過鎖定點即引爆
+        // (下方固定點近炸引信)、飛到射程球面就解除武裝(下方 `b.dud`)。
+        steer(b, _TMP_A.copy(b.guidePt).sub(b.pos).normalize(), seekTurn(SEEK.HOME_W, b.mv));
       } else {
         b.vel.y -= BALLISTIC.G * dt;                  // 重力下墜(拋物線彈道)
       }
@@ -8597,6 +8592,21 @@ export class BattleClient {
         const nx = prev.x + dx * s, ny = prev.y + dy * s, nz = prev.z + dz * s;
         if (Math.hypot(nx - c.x, ny - c.y, nz - c.z) < (b.core || 0) + this._hitR(tgt)) {
           hit = { point: new THREE.Vector3(nx, ny, nz), ent: tgt };
+        }
+      }
+      // 雷射導引固定打擊點的近炸引信:與上方追蹤引信同一條線段最近點規則,半徑只取爆風核心帶
+      // (固定點沒有目標量體)。鎖定空域目標後目標移開,彈體掠過鎖定點即引爆 —— MUST NOT 穿點
+      // 而過後繞圈飛到解除武裝。
+      if (!hit && b.guidePt) {
+        const c = b.guidePt;
+        const dx = b.pos.x - prev.x, dy = b.pos.y - prev.y, dz = b.pos.z - prev.z;
+        const l2 = dx * dx + dy * dy + dz * dz;
+        const s = l2 > 1e-9
+          ? Math.max(0, Math.min(1, ((c.x - prev.x) * dx + (c.y - prev.y) * dy + (c.z - prev.z) * dz) / l2))
+          : 0;
+        const nx = prev.x + dx * s, ny = prev.y + dy * s, nz = prev.z + dz * s;
+        if (Math.hypot(nx - c.x, ny - c.y, nz - c.z) < (b.core || 0)) {
+          hit = { point: new THREE.Vector3(nx, ny, nz) };
         }
       }
       // 射程 = **以射擊點為中心的球面,與軌跡無關**(2026-08-02 使用者定案)—— 逐彈道**唯一一把尺**:

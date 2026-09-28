@@ -10,7 +10,7 @@
 | A5 | Heavy-weapon cooldown has exactly one implementation (`mag:1 + reload=cd`); MUST NOT invent a second scheme. | — |
 | A6 | Fire raycast MUST target units only; terrain uses analytic rays, buildings use analytic cylinder/box tests. MUST NOT add terrain, vegetation, or building meshes as raycast targets; fire MUST NOT cross blocking obstacles. | — |
 | A6b | Solid faces separating spaces MUST block fire in both directions except transparent passables; a fire-blocking face MUST also be standable. Gating MUST use segment tests, MUST NOT gate on height-at-point; vertical tests MUST use crossing-intervals against bands. | `audit_layer_block` |
-| A7 | Fly-straight-on-lost-lock applies to laser-guided and tower SAM only, judged identically on both ends; fire-and-forget MUST NOT use it. Chase caps are chase envelopes, MUST NOT serve as range. | `audit_weapon_gate` |
+| A7 | Fly-straight-on-lost-lock applies to tower SAM only; laser-guided now freezes its strike point at fire (fire-and-forget style, fixed point) and has no lock to lose; fire-and-forget MUST NOT use it. Chase caps are chase envelopes, MUST NOT serve as range. | `audit_weapon_gate` |
 | A9 | Client/server ammo micro-drift is by design (misses unreported); MUST NOT be "fixed". | — |
 | A10 | Fog is server snapshot filtering; the client MUST NOT apply a second masking pass. | — |
 | A11 | Blast intentionally ignores LOS (diffraction approximation) and range (range limits only the spread center). MUST NOT add range gates inside blast. Aiming halo governs aimability only, never splash. | — |

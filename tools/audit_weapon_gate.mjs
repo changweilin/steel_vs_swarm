@@ -875,8 +875,8 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
     ok(narrowed === 0, `seekTurn 對任何武器都不收緊(收緊 ${narrowed} 例)`);
     ok(widened > 0, `確實有轉不過來的導引頭被拉高角速度(${widened} 例;沒有 = 這道上限沒作用)`);
     const ub = methodSrc('_updateBullets', G);
-    ok(/seekTurn\(SEEK\.HOME_W, b\.mv\)/.test(ub) && /seekTurn\(SEEK\.RIDE_W, b\.mv\)/.test(ub),
-      '_updateBullets 的兩處轉向都經 seekTurn(MUST NOT 手寫 rad/s)');
+    ok(/seekTurn\(SEEK\.HOME_W, b\.mv\)/.test(ub) && !/seekTurn\(SEEK\.RIDE_W, b\.mv\)/.test(ub),
+      '_updateBullets 的追蹤/固定點兩處轉向皆吃同一具追蹤頭 HOME_W(雷射導引已是發射瞬間凍結,不再騎波)');
     ok(!/, 3\.2\)/.test(ub) && !/, 2\.2\)/.test(ub), '_updateBullets 不再殘留手寫轉角常數');
   }
 
@@ -887,8 +887,11 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
   // 兩條導引點原文。任何一項被改掉,原文斷言先紅。
   {
     const ub = methodSrc('_updateBullets', G);
-    ok(/Math\.max\(20, _TMP_A\.copy\(b\.pos\)\.sub\(ro\)\.dot\(rd\) \+ 40\)/.test(ub),
-      '騎波導引點 = 準星射線上、彈體前方 40m(鏡射積分吃同一組數)');
+    const fire = methodSrc('_tryFire', G);
+    ok(/const guidePt = def\.guide \? this\._resolveAim\(rng\)\.point\.clone\(\) : null;/.test(fire),
+      '固定打擊點 = 擊發當下的準星解落點(與導引雷射圓環同一點,離架後不再讀準星)');
+    ok(/_TMP_A\.copy\(b\.guidePt\)\.sub\(b\.pos\)\.normalize\(\), seekTurn\(SEEK\.HOME_W, b\.mv\)/.test(ub),
+      '固定點修正吃追蹤頭 HOME_W(與射後不理同一條,鏡射積分吃同一組數)');
     ok(/const armed = prev\.distanceTo\(b\.origin\) >= \(b\.arm \|\| 0\);/.test(ub),
       '解保險距離與射程量同一顆球(離發射點的直線距離)');
 
@@ -901,7 +904,7 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       const s = l2 > 1e-9 ? Math.max(0, Math.min(1, dot3(sub3(c, p0), d) / l2)) : 0;
       return len3(sub3([p0[0] + d[0] * s, p0[1] + d[1] * s, p0[2] + d[2] * s], c));
     };
-    /** mode:'home' 追蹤 / 'guide' 騎波 / 'dumb' 無導引(純重力)。回傳整段航程的最近通過距離 */
+    /** mode:'home' 追蹤移動目標 / 'guide' 追蹤固定打擊點 / 'dumb' 無導引(純重力)。回傳整段航程的最近通過距離 */
     const fly = (def, dist, mode) => {
       const v0 = shotV0(def), arm = armingOf(def).m, max = def.range, sp = armingOf(def).spread;
       const eye = [0, 2, 0], tgt = [dist, 2, 0];
@@ -919,9 +922,7 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
         if (mode === 'home' && armed) {
           turn(nrm3(sub3([tgt[0], tgt[1] + 1.5, tgt[2]], pos)), seekTurn(SEEK.HOME_W, v0));
         } else if (mode === 'guide' && armed) {
-          const rd = nrm3(sub3(tgt, eye));
-          const along = Math.max(20, dot3(sub3(pos, eye), rd) + 40);
-          turn(nrm3(sub3(eye.map((e, k2) => e + rd[k2] * along), pos)), seekTurn(SEEK.RIDE_W, v0));
+          turn(nrm3(sub3(tgt, pos)), seekTurn(SEEK.HOME_W, v0));
         } else vel[1] -= BALLISTIC.G * dt;
         const prev = [...pos];
         pos = pos.map((p, k2) => p + vel[k2] * dt);
@@ -1606,20 +1607,21 @@ sec('Ⅺ 榴彈:準星是唯一目標來源 + 對地 45° 拋投 + 射程量直�
     }
   }
 
-  // ---- ⑤ 雷射導引吃同一條規則(2026-08-02 使用者定案;2026-08-15 收尾改制)----
+  // ---- ⑤ 雷射導引吃同一條規則(2026-08-02 使用者定案;2026-08-15 收尾改制;2026-09-28 發射瞬間凍結)----
   // 「中途碰撞就爆炸,因為目標移動而沒碰撞的話會繼續飛」—— 舊制的下半句是「直到超出射程就
   // 原地爆炸」,2026-08-15 使用者改成「直到碰撞後爆炸」:出球面只解除武裝(見 ④-b)。
-  // 導引失效(導引點出球面)這一條**沒有變**:MUST 只是「不再修正航向」,MUST NOT 讓彈體提早消失。
+  // 2026-09-28 起打擊點在發射瞬間凍結:分支內不再有「導引點出球面 → 失鎖」改道,失鎖規則
+  // 只剩 tower SAM(見 A7);分支 MUST 只是「朝固定點修正航向」,MUST NOT 讓彈體提早消失。
   {
     const ub = methodSrc('_updateBullets', G);
     const guideBlock = /} else if \(armed && b\.guide[\s\S]*?\n      } else \{/.exec(ub)?.[0] || '';
     ok(guideBlock.length > 0, '_updateBullets 取得雷射導引分支原文');
-    ok(/gp\.distanceTo\(b\.origin\) > b\.max/.test(guideBlock),
-      '雷射導引的失效判據 = 導引點出了同一顆球(MUST NOT 另量航跡長)');
-    ok(/b\.guide = false;/.test(guideBlock) && !/splice|_dropBullet|done = true/.test(guideBlock),
-      '導引失效只關掉導引(彈體照飛下去,碰撞才是引爆 —— MUST NOT 在這裡把彈體收掉)');
-    ok(/b\.vel\.y -= BALLISTIC\.G \* dt;/.test(guideBlock),
-      '導引失效後改吃重力直飛(與 A7「失鎖後直線飛行」同一條)');
+    ok(!/b\.guide = false;/.test(guideBlock),
+      '固定打擊點沒有失鎖改道(發射瞬間凍結,根本沒有鎖可失 —— A7 只剩 tower SAM)');
+    ok(!/splice|_dropBullet|done = true/.test(guideBlock),
+      '導引分支只做轉向(彈體照飛下去,碰撞/引信才是引爆 —— MUST NOT 在這裡把彈體收掉)');
+    ok(/seekTurn\(SEEK\.HOME_W, b\.mv\)/.test(guideBlock),
+      '固定點修正吃追蹤頭 HOME_W(與射後不理同一條)');
     {
       const { def } = heavyOf('guide');
       ok(trajClass(def) === 'guide' && aoeClass(def) === 'blast',
