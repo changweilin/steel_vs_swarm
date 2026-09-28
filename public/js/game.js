@@ -2857,7 +2857,7 @@ export class BattleClient {
     const dlen = Math.hypot(dx, dz);
     if (dlen < 1e-3) return;
     const ux = dx / dlen, uz = dz / dlen;
-    const SKIN = 0.9;                       // near(0.5)+餘裕:障礙外緣再退一截,免貼面破圖
+    const SKIN = 1.2;                       // near(0.5)+餘裕:障礙外緣再退一截,免貼面破圖
     let maxT = dlen;                        // 鏡頭相對 pos 的前伸量上限(不超過原本 headF 水平量)
     // 射線 P(t)=pos+t·u 進入圓柱(半徑 R,水平圓)的最小 t(較小根);pos 在柱內 → 縮回 pos(t=0)
     const clamp = (cx, cz, cr) => {
@@ -2934,7 +2934,7 @@ export class BattleClient {
     let f = 1;
     if (this._blockerHitT) {
       const hit = this._blockerHitT(ax, ay, az, cam.x, cam.y, cam.z);
-      if (hit != null) f = Math.min(f, Math.max(0, (hit - 1.2) / len));
+      if (hit != null) f = Math.min(f, Math.max(0, (hit - 1.8) / len));
     }
     if (typeof this._surf === 'function') {
       const N = Math.max(2, Math.min(12, Math.ceil(len / 4)));
@@ -2944,7 +2944,7 @@ export class BattleClient {
         let s = null;
         try { s = this._surf(px, pz, py); } catch (e) { s = null; }
         if (s == null || !Number.isFinite(s)) continue;
-        if (py < s + 1.0) { f = Math.min(f, Math.max(0, (i - 1) / N - 0.02)); break; }
+        if (py < s + 1.5) { f = Math.min(f, Math.max(0, (i - 1) / N - 0.02)); break; }
       }
     }
     if (f < 1) { cam.x = ax + dx * f; cam.y = ay + dy * f; cam.z = az + dz * f; }
@@ -3044,7 +3044,7 @@ export class BattleClient {
   }
 
   /**
-   * 第三人稱相機完成定位後,從相機向機體包圍盒取 5 條視線。
+   * 第三人稱相機完成定位後,從相機向機體包圍盒取 9 條視線。
    * 命中的不透明 Mesh 進透明佇列且停止寫深度,因此機體仍可穿透讀取。
    */
   _updateViewOcclusion(now) {
@@ -3078,16 +3078,21 @@ export class BattleClient {
     const right = (this._tpsRight || (this._tpsRight = new THREE.Vector3())).set(1, 0, 0).applyQuaternion(this.camera.quaternion);
     right.y = 0;
     if (right.lengthSq() < 1e-6) right.set(1, 0, 0); else right.normalize();
-    const span = Math.max(0.15, Math.max(size.x, size.z) * 0.28);
+    const span = Math.max(0.25, Math.max(size.x, size.z) * 0.45);
     const y0 = box.min.y, h = Math.max(size.y, this.selfH, 0.5);
     const targets = this._tpsTargets || (this._tpsTargets = [
       new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(),
+      new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(),
     ]);
     targets[0].set(center.x, y0 + h * 0.52, center.z);
     targets[1].set(center.x, y0 + h * 0.80, center.z);
     targets[2].set(center.x, y0 + h * 0.22, center.z);
-    targets[3].copy(center).addScaledVector(right, span);
-    targets[4].copy(center).addScaledVector(right, -span);
+    targets[3].set(center.x, y0 + h * 0.52, center.z).addScaledVector(right, span);
+    targets[4].set(center.x, y0 + h * 0.52, center.z).addScaledVector(right, -span);
+    targets[5].set(center.x, y0 + h * 0.80, center.z).addScaledVector(right, span);
+    targets[6].set(center.x, y0 + h * 0.80, center.z).addScaledVector(right, -span);
+    targets[7].set(center.x, y0 + h * 0.22, center.z).addScaledVector(right, span);
+    targets[8].set(center.x, y0 + h * 0.22, center.z).addScaledVector(right, -span);
 
     const eye = this.camera.position;
     const camDist = eye.distanceTo(center);
