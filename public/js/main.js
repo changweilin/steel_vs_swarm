@@ -2929,7 +2929,7 @@ async function enterGame() {
   const hud = makeHud();
   const meLobby = app.lobby?.clients.find((c) => c.id === app.youId);
   const myCh = meLobby?.ch || null;   // 開戰時伺服器已定案(隨機也回寫)
-  app.dlg = new Dialogue($('dialogueLayer'));
+  app.dlg = new Dialogue($('dialogueLayer'), { mySide: app.mySide });   // 對白站位:我左敵右
   app.battle = new Ctor({
     canvas: $('gameCanvas'),
     minimapCanvas: $('minimap'),
@@ -3400,7 +3400,7 @@ function makeHud() {
     bossBar: (info) => {
       const wrap = $('bossBarWrap');
       if (!wrap) return;
-      // 頭像掛載:BOSS 站自家陣營那一端(SWARM 左 / STEEL 右,與 HUD 主堡條同序),自機站另一端。
+      // 頭像掛載:BOSS 固定右端;左端自機頭像不顯示(BOSS 條只站 BOSS)。
       // src 快取在 element 上,逐幀更新不重設(避免閃爍);未知角色直接隱藏該端。
       const setAv = (el, chId) => {
         if (!el) return;
@@ -3426,9 +3426,9 @@ function makeHud() {
       if ($('bossHpText')) $('bossHpText').textContent = `${Math.max(0, Math.round(info.hp))} / ${Math.round(info.maxHp)}`;
       const pct = Math.max(0, Math.min(100, (info.hp / (info.maxHp || 1)) * 100));
       const seg = Math.max(0, Math.min(bossSegN() - 1, info.seg | 0));
-      const bossLeft = info.side !== 'STEEL';
-      setAv($('bossAvL'), bossLeft ? info.ch : info.pch);
-      setAv($('bossAvR'), bossLeft ? info.pch : info.ch);
+      const avL = $('bossAvL');
+      if (avL) { avL.style.display = 'none'; avL.removeAttribute('src'); }
+      setAv($('bossAvR'), info.ch);
       if (info.side) wrap.dataset.fac = info.side;
       // 扣血/補血效果:與上一幀比(0.05 個百分點以下視為浮點抖動);只在方向切換時重起動畫,
       // 逐幀強制 reflow 太貴,持續同方向則沿用進行中的動畫。

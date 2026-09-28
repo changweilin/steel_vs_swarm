@@ -917,7 +917,7 @@ body.has-boss-bar .kill-feed {
 }
 .boss-sp-bar {
   position: absolute;
-  top: 0; left: 0; height: 3px;
+  top: 0; left: 0; height: 6px;
   width: 0%;
   background: #4fc3f7;
   z-index: 2;

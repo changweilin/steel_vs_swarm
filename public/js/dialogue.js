@@ -14,7 +14,7 @@
 //      stale dialogue leaking across deaths, phase changes, and chapter exits.
 //   3. Text is treated as untrusted data and escaped via `esc()`.
 
-import { CHARACTERS, SIDES, SIEGE } from './data.js';
+import { CHARACTERS, SIDES, SIEGE, OTHER_SIDE } from './data.js';
 import { avatarURL, portraitURL } from './portraits.js';
 
 /** Display duration per line: clamped linear scale based on character count. */
@@ -30,19 +30,26 @@ const sideColor = (id) => {
 };
 
 /**
- * Portrait faction tag (drives frame style + side).
- * SWARM → left, STEEL → right (mirrors HUD base bars); MERC → left with gold double frame
- * (team context is unknowable here, so mercenaries take a fixed neutral seat).
+ * Portrait faction tag (drives frame style).
+ * 站位不吃陣營、吃「相對觀戰者」:我方(含傭兵中立位)固定左、敵方固定右。
+ * 觀戰者 / storybook 無我方時退回舊制(SWARM 左 / STEEL 右,與 HUD 主堡條同序)。
  */
 const facOf = (id) => CHARACTERS[id]?.side || 'MERC';
 
 export class Dialogue {
-  /** @param {HTMLElement} root Dialogue overlay layer mounted over canvas (#dialogueLayer) */
-  constructor(root) {
+  /**
+   * @param {HTMLElement} root Dialogue overlay layer mounted over canvas (#dialogueLayer)
+   * @param {object} [opt] `{ mySide }` —— 觀戰者本陣營(決定敵我站位;不傳 = 陣營舊制)
+   */
+  constructor(root, opt = {}) {
     this.root = root;
     this.timers = new Set();
     this.bar = null;
+    this.mySide = opt.mySide || null;
   }
+
+  /** 觀戰者的敵方陣營(站右邊那一端);無我方時退回 STEEL(舊制站位不變) */
+  _foe() { return (this.mySide && OTHER_SIDE[this.mySide]) || 'STEEL'; }
 
   _after(ms, fn) {
     const t = setTimeout(() => { this.timers.delete(t); fn(); }, ms);
@@ -70,12 +77,13 @@ export class Dialogue {
         <img class="dlg-av dlg-av-r" src="" alt="" draggable="false">
       </div>`;
     this.root.appendChild(el);
-    // 雙頭像:取本場台詞最多的兩名發言者固定鎮守兩端(左 SWARM 系 / 右 STEEL,同 HUD 主堡條站位),
+    // 雙頭像:取本場台詞最多的兩名發言者固定鎮守兩端(左 = 我方 / 右 = 敵方),
     // 逐句只切換高亮 —— 頭像不再每句跳動(RPG 對話框站位)。
     const tally = new Map();
     for (const l of sc.lines) tally.set(l.ch, (tally.get(l.ch) || 0) + 1);
     const leads = [...tally.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
-    const L = leads.find((id) => facOf(id) !== 'STEEL') ?? leads[0];
+    const foe = this._foe();
+    const L = leads.find((id) => facOf(id) !== foe) ?? leads[0];
     const R = leads.find((id) => id !== L) ?? null;
     const avL = el.querySelector('.dlg-av-l');
     const avR = el.querySelector('.dlg-av-r');
@@ -95,7 +103,7 @@ export class Dialogue {
       const c = CHARACTERS[l.ch];
       el.style.setProperty('--dlg-side', sideColor(l.ch));
       // 非固定班底臨時插話:借用該端頭像(框色跟著發言者走,下一句自動歸位)
-      const av = facOf(l.ch) === 'STEEL' ? avR : avL;
+      const av = facOf(l.ch) === foe ? avR : avL;
       if (av && av.dataset.ch !== l.ch) { av.src = avatarURL(l.ch); av.dataset.fac = facOf(l.ch); av.dataset.ch = l.ch; }
       for (const a of [avL, avR]) a?.classList.toggle('on', a === av);
       who.textContent = c ? `「${c.code}」${c.name}` : l.ch;
@@ -128,10 +136,11 @@ export class Dialogue {
   scene(host, sc) {
     if (!host || !sc?.lines?.length) return null;
     // Portraits display the two most frequent speakers in this scenario
+    const foe = this._foe();
     const tally = new Map();
     for (const l of sc.lines) tally.set(l.ch, (tally.get(l.ch) || 0) + 1);
     const leads = [...tally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([id]) => id)
-      .sort((a, b) => (facOf(a) === 'STEEL' ? 1 : 0) - (facOf(b) === 'STEEL' ? 1 : 0));
+      .sort((a, b) => (facOf(a) === foe ? 1 : 0) - (facOf(b) === foe ? 1 : 0));
     const wrap = document.createElement('div');
     wrap.className = 'dlg-scene';
     wrap.innerHTML = `
@@ -147,8 +156,8 @@ export class Dialogue {
       const c = CHARACTERS[l.ch];
       const fac = facOf(l.ch);
       const row = document.createElement('div');
-      // SWARM 系頭像在左 / STEEL 在右(與無線電條同序);傭兵固定左、金色雙框
-      row.className = 'dlg-say' + (fac === 'STEEL' ? ' flip' : '');
+      // 我方頭像在左 / 敵方在右(與無線電條同序);傭兵固定左、金色雙框
+      row.className = 'dlg-say' + (fac === foe ? ' flip' : '');
       row.dataset.fac = fac;
       row.style.setProperty('--dlg-side', sideColor(l.ch));
       row.innerHTML = `<img class="dlg-av" src="${esc(avatarURL(l.ch))}" alt="" draggable="false" data-fac="${fac}">
