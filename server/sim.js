@@ -24,7 +24,7 @@ import {
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
   weaponMaxHoriz, inWeaponRange,
-  waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
+  waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT, FLY_Y, PUSH_EPS, baseCollideR,
   weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor, fogSightMult,
   FIRE_WEATHER, fireDotMul,
   SCENE_STRUCT, sceneIsPhysical, sceneIsVehicle, sceneIsEV, sceneHpFor, sceneArmorFor, sceneFireTtl, sceneVehicleFireTtl,
@@ -118,7 +118,8 @@ function tunnelSideExit(ix, iz, ox, oz, s) {
 // 否則就是「真人撞得到、電腦穿得過」(碰撞版的 A30 兩端分家)。
 const COL_SKIN = 0.3;   // 掃掠夾在進入面之後再退一截,免貼面(與客戶端 _sweepBlockers 同值)
 
-/** push-out:機體圓盤(半徑 myR)與 solid 重疊時,沿最小穿透軸推出的位移;不重疊回 null */
+/** push-out:機體圓盤(半徑 myR)與 solid 重疊時,沿最小穿透軸推出的位移;不重疊回 null
+ *  推出點落在外緣 + PUSH_EPS(見 data.js:貼邊靜止 + 掃掠起點判定合起來會穿牆)。 */
 function solidPush(o, x, z, myR) {
   if (o[4] > 0) {
     const cs = o[6], sn = o[7];
@@ -128,14 +129,14 @@ function solidPush(o, x, z, myR) {
     if (Math.abs(lx) >= ex || Math.abs(lz) >= ez) return null;
     const px = ex - Math.abs(lx), pz = ez - Math.abs(lz);
     let dlx = 0, dlz = 0;
-    if (px < pz) dlx = lx < 0 ? -px : px; else dlz = lz < 0 ? -pz : pz;
+    if (px < pz) dlx = lx < 0 ? -(px + PUSH_EPS) : px + PUSH_EPS; else dlz = lz < 0 ? -(pz + PUSH_EPS) : pz + PUSH_EPS;
     return [dlx * cs - dlz * sn, dlx * sn + dlz * cs];       // local→world(繞 +ry)
   }
   const dx = x - o[0], dz = z - o[1];
   const d = Math.hypot(dx, dz);
   const min = myR + o[2];
   if (d >= min || d === 0) return null;
-  return [dx / d * (min - d), dz / d * (min - d)];
+  return [dx / d * (min - d + PUSH_EPS), dz / d * (min - d + PUSH_EPS)];
 }
 
 /** 掃掠:位移 (ax,az)→(bx,bz) 是否**單幀橫越** solid;回傳進入參數 t ∈ (0,1],否則 null。
@@ -796,7 +797,10 @@ export class BattleSim {
         if (grid) continue;                                // 已隨 _rebuildLosGrid 進了格網
         r = haz.r * (e.sc || 1); top = haz.hgt || 6;
       } else if (e.hero || COLLIDE_KINDS.includes(e.kind)) {
-        r = hitR(e); [base, top] = this._bodySpan(e);   // 命中量體 = 碰撞量體(同一把尺)
+        // 主堡吃碰撞半徑(命中圓 + 視覺外擴,見 data.js baseCollideR):裙樓頂點貼著 r=20,
+        // 機體槍械視覺外伸會輕微穿牆;命中/彈道仍吃 hitR(打擊判定不動)。
+        r = e.kind === 'base' ? baseCollideR(e.side) : hitR(e);
+        [base, top] = this._bodySpan(e);   // 高度仍吃命中量體;半徑唯主堡加視覺外擴(見上)
       } else continue;
       // bbox 篩選 MUST 帶上**該實體自己的半徑**(所以排在算出 r 之後)—— 只比中心點的話,
       // 20m 半徑的主堡站在 22m 外就被篩掉 = 從主堡牆裡穿過去(半徑越大的越容易漏,
@@ -851,10 +855,33 @@ export class BattleSim {
     return [x, z];
   }
 
-  /** 射手眼高(離地):塔的砲位過半塔身,能越過矮牆射擊 */
-  _eyeY(e) { return (e.y || 0) + (e.kind === 'tower' ? LOS.TOWER_EYE_M : LOS.EYE_M); }
+  /**
+   * 該實體的碰撞量體是否吃飛行型(`selfCollider` 的 fly 旗標)。
+   * 英雄走 `bots._fly` 同語意(無人機恆飛、變形者逾 FLY_Y 才算);其餘吃機種表:
+   * 直升機/自殺機/餌機/極音速飛彈與 `UNITS[kind].fly` 的召喚單位恆飛,餘者地面型。
+   * 真人驗證(`heroPos`)與一切技能位移(`_placeSolid`)同吃這一支,各寫一份就是兩套量體。
+   */
+  _solidFly(e) {
+    if (!e) return false;
+    if (e.kind === 'drone' || e.kind === 'heli' || e.decoy || e.kami || e.hyper) return true;
+    if (e.kind === 'morph') return (e.y || 0) > FLY_Y;
+    return !!UNITS[e.kind]?.fly;
+  }
 
-  /** 目標取樣高(離地):塔/主堡是高聳工事,露頭就打得到;BOSS 體型巨大,取量體中點避免低矮掩體誤判遮蔽 */
+  /**
+   * 伺服器直接位移的**唯一落點縫**:技能牽引/分身走位/召喚走位等一切「非玩家回報、
+   * 非 bot `_move`」的位置寫入 MUST 經 `solidResolve` 夾在實體障礙之外。
+   * 直接寫 x/z 就是把機體瞬移進牆裡(主堡/建物/塔照穿);無重疊時原值寫回。
+   */
+  _placeSolid(e, nx, nz) {
+    if (!e || e.dead || !Number.isFinite(nx) || !Number.isFinite(nz)) return;
+    if (!Number.isFinite(e.x) || !Number.isFinite(e.z)) { e.x = nx; e.z = nz; return; }
+    const [rx, rz] = this.solidResolve(e, e.x, e.z, nx, nz, this._solidFly(e));
+    e.x = rx; e.z = rz;
+  }
+
+  /** 射手眼高(離地):塔的砲位過半塔身,能越過矮牆射擊 */
+  _eyeY(e) { return (e.y || 0) + (e.kind === 'tower' ? LOS.TOWER_EYE_M : LOS.EYE_M); }  /** 目標取樣高(離地):塔/主堡是高聳工事,露頭就打得到;BOSS 體型巨大,取量體中點避免低矮掩體誤判遮蔽 */
   _tgtY(e) {
     if (e.kind === 'tower' || e.kind === 'base') return LOS.TOWER_EYE_M;
     const base = (e.hero || e.kind === 'heli' || e.decoy || e.kami || e.hyper ? (e.y || 0) : 0);
@@ -2294,13 +2321,23 @@ export class BattleSim {
   heroPos(pid, x, y, z, ry, wet, lev, ay) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return;
+    if ((h.rootedUntil || 0) > this.t && h._rootX != null) { x = h._rootX; z = h._rootZ; }
+    // 實體碰撞:真人領機與電腦玩家走同一條碰撞法則 —— 回報位置先經 `solidResolve`
+    // (客戶端 `_collide` 的伺服器鏡像,`bots._move` 的同一支)夾在實體障礙之外再寫回。
+    // 第三人稱遮擋淡化(`game.js _updateViewOcclusion`/`_cameraDeClip`)是純視覺,不動
+    // 位置/速度/權威狀態 —— 鏡頭看穿遮住視線的物件,不代表機體可以穿過去。
+    // 無重疊時原值回傳,舊行為逐位元不變。
+    h.y = y;   // 先更新高度:垂直帶(`_bodySpan`)與飛行判定都吃它(回報 y 為離站立表面高)
+    const ox = h.x, oz = h.z;
+    this._placeSolid(h, x, z);   // 與電腦玩家同一條碰撞法則(見 bots._move)
     // 瞬時移速(閃避判定用):this.t 只在 tick 前進(8Hz),同一 tick 內多次回報 dt=0 略過。
     // 首次回報先初始化 _posT(否則 dt 恆為 0、_spd 永遠算不出來 = 閃避永遠不觸發)。
+    // 以夾制後的實際位移計速(與客戶端被牆擋下就跑不動同語意)。
     if (h._posT == null) h._posT = this.t;
     const dt = this.t - h._posT;
-    if (dt > 0) { h._spd = Math.hypot(x - h.x, z - h.z) / dt; h._posT = this.t; }
-    if ((h.rootedUntil || 0) > this.t && h._rootX != null) { x = h._rootX; z = h._rootZ; }
-    h.x = x; h.y = y; h.z = z; h.ry = ry;
+    if (dt > 0) { h._spd = Math.hypot(h.x - ox, h.z - oz) / dt; h._posT = this.t; }
+    h.ry = ry;
     // 絕對視線高程(地形+跳躍+飛行;高度差空戰 _sightY 用)—— 位置本就客戶端權威,ay 同屬輸入。缺值退回離地眼高近似。
     if (Number.isFinite(ay)) h.ay = ay;
     // 領機身處環境(0 乾 / 1 水 / 2 沼 / 3 凍結;客戶端偵測回報 —— 位置本就客戶端權威,env 同屬輸入非狀態改寫)。
@@ -4080,8 +4117,7 @@ export class BattleSim {
 
       const origX = h.x, origZ = h.z;
       if (hitEnemy && hitEnemyD <= hitObsD) {
-        hitEnemy.x = h.x + nx * 2.5;
-        hitEnemy.z = h.z + nz * 2.5;
+        this._placeSolid(hitEnemy, h.x + nx * 2.5, h.z + nz * 2.5);
         const dmg = (A.dmg || 85) * frac;
         const pen = A.pen || 16;
         this._damage(hitEnemy, dmg, h, pen, 0, { pen });
@@ -4093,8 +4129,7 @@ export class BattleSim {
         });
       } else if (hitObsD < Infinity) {
         const pullDist = Math.max(0, hitObsD - 1.5);
-        h.x = h.x + nx * pullDist;
-        h.z = h.z + nz * pullDist;
+        this._placeSolid(h, h.x + nx * pullDist, h.z + nz * pullDist);
         this.events.push({
           e: 'harpoon', pid: h.pid, side: h.side,
           sx: origX, sz: origZ, tx: h.x, tz: h.z,
@@ -4491,8 +4526,7 @@ export class BattleSim {
         if (best.e !== h) {
           h.hp = best.hp;
           h.sp = best.sp;
-          h.x = best.x;
-          h.z = best.z;
+          this._placeSolid(h, best.x, best.z);
           this.events.push({ e: 'clone_time_swap', pid: h.pid, side: h.side, x: h.x, z: h.z });
         }
         this._despawnClones(h);
@@ -4532,8 +4566,7 @@ export class BattleSim {
           const windMul = this.curWeatherDyn ? windSpeedFactor(target.x - c.x, target.z - c.z, wDir, this.curWeatherDyn.wind) : 1;
           const moveD = Math.min((h.speed || 21) * windMul * dt, d - wp.def.range * 0.85);
           if (moveD > 0) {
-            c.x += ((target.x - c.x) / d) * moveD;
-            c.z += ((target.z - c.z) / d) * moveD;
+            this._placeSolid(c, c.x + ((target.x - c.x) / d) * moveD, c.z + ((target.z - c.z) / d) * moveD);
             c.ry = Math.atan2(-(target.x - c.x), target.z - c.z);
           }
           continue;
@@ -4547,8 +4580,7 @@ export class BattleSim {
           const windMul = this.curWeatherDyn ? windSpeedFactor(targetX - c.x, targetZ - c.z, wDir, this.curWeatherDyn.wind) : 1;
           const moveD = Math.min((h.speed || 21) * windMul * dt, od - 4);
           if (moveD > 0) {
-            c.x += ((targetX - c.x) / od) * moveD;
-            c.z += ((targetZ - c.z) / od) * moveD;
+            this._placeSolid(c, c.x + ((targetX - c.x) / od) * moveD, c.z + ((targetZ - c.z) / od) * moveD);
           }
         }
         c.ry = h.ry || 0;
@@ -4648,8 +4680,8 @@ export class BattleSim {
         if (d <= 22 && d > 1.2) {
           const pullSpeed = (m.imp || 22) * dt;
           const nx = (m.x - e.x) / d, nz = (m.z - e.z) / d;
-          e.x += nx * Math.min(pullSpeed, d - 1.0);
-          e.z += nz * Math.min(pullSpeed, d - 1.0);
+          const step = Math.min(pullSpeed, d - 1.0);
+          this._placeSolid(e, e.x + nx * step, e.z + nz * step);
         }
       }
     }
@@ -4942,8 +4974,7 @@ export class BattleSim {
           const d = dist2d(s.x, s.z, e.x, e.z);
           if (d <= s.pullR && d > 0.5) {
             const pullSpd = 12 * (1 - d / s.pullR) * dt;
-            e.x += ((s.x - e.x) / d) * pullSpd;
-            e.z += ((s.z - e.z) / d) * pullSpd;
+            this._placeSolid(e, e.x + ((s.x - e.x) / d) * pullSpd, e.z + ((s.z - e.z) / d) * pullSpd);
           }
         }
       }
@@ -5037,8 +5068,7 @@ export class BattleSim {
           const windMul = this.curWeatherDyn ? windSpeedFactor(target.x - s.x, target.z - s.z, wDir, this.curWeatherDyn.wind) : 1;
           const moveD = Math.min(s.speed * windMul * dt, d - s.range * 0.85);
           if (moveD > 0) {
-            s.x += ((target.x - s.x) / d) * moveD;
-            s.z += ((target.z - s.z) / d) * moveD;
+            this._placeSolid(s, s.x + ((target.x - s.x) / d) * moveD, s.z + ((target.z - s.z) / d) * moveD);
           }
         }
       } else if (owner && !owner.dead) {
@@ -5050,8 +5080,7 @@ export class BattleSim {
           const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
           const windMul = this.curWeatherDyn ? windSpeedFactor(targetX - s.x, targetZ - s.z, wDir, this.curWeatherDyn.wind) : 1;
           const moveD = Math.min(s.speed * windMul * dt, od - 4);
-          s.x += ((targetX - s.x) / od) * moveD;
-          s.z += ((targetZ - s.z) / od) * moveD;
+          this._placeSolid(s, s.x + ((targetX - s.x) / od) * moveD, s.z + ((targetZ - s.z) / od) * moveD);
         }
       }
     }
@@ -5425,8 +5454,7 @@ export class BattleSim {
           this.events.push({ e: 'cc', k: 'pull', tpid: t.pid, x, z, imp });
         } else {
           const m = Math.min(imp * 0.5, dd);   // 伺服器擁有的位置(NPC/bot/僚機):直接拖向彈著中心
-          t.x += (x - t.x) / dd * m;
-          t.z += (z - t.z) / dd * m;
+          this._placeSolid(t, t.x + (x - t.x) / dd * m, t.z + (z - t.z) / dd * m);
         }
       }
       if (!this._inEntangle && this.entangleGroups?.length) {
@@ -6459,8 +6487,7 @@ export class BattleSim {
             const dot = (fx * dx + fz * dz) / (d || 1);
             if (dot >= 0.5) {
               const pushD = 12 * dt;
-              e.x += (dx / (d || 1)) * pushD;
-              e.z += (dz / (d || 1)) * pushD;
+              this._placeSolid(e, e.x + (dx / (d || 1)) * pushD, e.z + (dz / (d || 1)) * pushD);
               this._damage(e, 35 * dt, h, 10, 0, null);
               if ((e._bashAt || 0) + 1.0 < this.t) {
                 e._bashAt = this.t;

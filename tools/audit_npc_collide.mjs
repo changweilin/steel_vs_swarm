@@ -34,6 +34,7 @@
 // 退出碼:0 = 全綠;1 = 有紅字
 import { readSrc, grabMethod, grabFn } from './audit_src.mjs';
 import { pedestrianEntranceCollider } from '../public/js/pedestrian.js';
+import { PUSH_EPS } from '../public/js/data.js';
 
 const ARGV = new Set(process.argv.slice(2));
 const BREAK_RATCHET = ARGV.has('--break-ratchet');
@@ -182,13 +183,14 @@ sec('Ⅲ 消費端單一縫:_updateEnts 的飛行分支');
 
 // ---------------- ② 單位碰撞 ----------------
 // 伺服器那半:抽 sim.js 的 solidEnter / solidPush 原文(module 私有,沒 export)
+// solidPush 吃 data.js 的 PUSH_EPS(真品 import)⇒ 抽出來評估時同值注入,驗的仍是真品公式
 const solidEnter = new Function(`return ${grabFn(S, 'solidEnter')}`)();
-const solidPush = new Function(`return ${grabFn(S, 'solidPush')}`)();
+const solidPush = new Function('PUSH_EPS', `return ${grabFn(S, 'solidPush')}`)(PUSH_EPS);
 
 const clientEnv = () => ({
   pos: { x: 0, y: 0, z: 0 },
   vel: { x: 0, y: 0, z: 0 },
-  _pushOutCircle: meth('_pushOutCircle'),
+  _pushOutCircle: meth('_pushOutCircle', G, { PUSH_EPS }),
   _circleEnter: meth('_circleEnter'),
 });
 
@@ -259,6 +261,7 @@ sec('Ⅵ 行為直測:機體 ⇄ NPC 不穿透、不被推進牆裡');
     const free = {
       BattleClient: { COLLIDER },
       selfCollider: (H, fly) => ({ r: H * 0.317, bot: fly ? -H * 0.2 : 0, top: H * 1.0 }),
+      PUSH_EPS,
     };
     return {
       pos: { x: 0, y: 0, z: 0 },
@@ -270,9 +273,9 @@ sec('Ⅵ 行為直測:機體 ⇄ NPC 不穿透、不被推進牆裡');
       _flying: () => false,
       _surf: function (x, z, c) { return this.terrain.surfaceAt(x, z, c); },
       _unitSolids: meth('_unitSolids', src, free),
-      _pushOutCircle: meth('_pushOutCircle', src),
-      _circleEnter: meth('_circleEnter', src),
-      _sweepBlockers: meth('_sweepBlockers', src),
+      _pushOutCircle: meth('_pushOutCircle', src, free),
+      _circleEnter: meth('_circleEnter', src, free),
+      _sweepBlockers: meth('_sweepBlockers', src, free),
       _collide: meth('_collide', src, free),
     };
   };

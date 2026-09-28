@@ -3370,6 +3370,23 @@ export const selfCollider = (H, fly) => ({
 // MUST NOT 隨 TARGET_R 增列而擴張 —— 那會讓直升機/碉堡突然開始擋路;量體本身則永遠由
 // hitR/hitH 推導,與命中判定同步。英雄不在此表(體型綁角色,逐機由 hitR/hitH 動態推導)。
 export const COLLIDE_KINDS = ['base', 'tower', 'tank', 'apc', 'soldier'];
+// 飛行狀態的離地高度判定線(公尺;AGL —— 客戶端回報 y 與伺服器機體 y 同為離站立表面高)。
+// **唯一縫**:無人機恆為飛行型態、變形者逾此線才算飛行型態 —— 地速與碰撞量體同判;
+// `bots._fly` 與 `sim.heroPos` 的真人驗證 MUST 同吃這一支,各寫一份就是兩套碰撞法則。
+export const FLY_Y = 2;
+// 推擠靜止點外擴(公尺):push-out 把機體停在「量體外緣 + PUSH_EPS」,而不是恰好貼在邊界上。
+// 恰好貼邊 + 掃掠起點判定(`d <= R` 視為已在內部、交給 push-out)合起來 = 貼牆之後單步跨過
+// 圓心會被推到對側 = 穿牆(主堡/建物/塔皆同)。0.1mm 遠小於掃掠 skin(0.3m)與任何量體,
+// 手感與舊制無別;`sim.solidPush` 與客戶端 `_pushOutCircle`/建物盒推擠 MUST 同吃這一支
+// (兩端各寫一份就是兩套靜止點,又是 A30 家族)。
+export const PUSH_EPS = 1e-4;
+// 主堡碰撞外擴(公尺):視覺體(蜂群裙樓頂點 r=20、鋼鐵底板 ±19.5)幾乎貼著命中圓 r=20,
+// 加上機體槍械/手臂的視覺外伸(超出自機碰撞圓盤),貼牆站會輕微穿牆。碰撞半徑 = 命中圓
+// + 外擴;命中/彈道/出生意向仍吃 hitR(打擊判定不動,只是把身體擋遠一點)。
+// 客戶端 `COLLIDER` 與伺服器 `_solidsNear` MUST 同吃 `baseCollideR`,各寫一份就是兩套牆。
+export const BASE_COLLIDE_PAD = 1.5;
+/** 主堡碰撞半徑(公尺):命中圓 + 視覺外擴 */
+export const baseCollideR = (side) => (TARGET_R[`base:${side}`] ?? 20) + BASE_COLLIDE_PAD;
 
 // ---- 戰鬥分數(kn;2026-08-11 使用者定案:八軌升級的第二道門檻,金錢之外還要打出戰績)----
 // 助攻 +1 / 擊殺 +4;打「玩家(含電腦玩家)與砲塔」×HARD_F —— 硬目標才是戰績,刷小兵不算。
@@ -5376,7 +5393,7 @@ export const HERO_SPAWN = {
   HEAL_MARGIN: 6,   // 治療光環內緣保留(機體半徑 + 貼邊餘裕,免半台機體露在環外)
 };
 /** 出生點離主堡中心的最小距離(公尺):主堡碰撞半徑 + 淨空(推導不手寫) */
-export const heroSpawnMinD = () => (TARGET_R['base:SWARM'] ?? 20) + HERO_SPAWN.BASE_MARGIN;
+export const heroSpawnMinD = () => baseCollideR('SWARM') + HERO_SPAWN.BASE_MARGIN;
 /** 出生點離主堡中心的最大距離(公尺):治療光環半徑 − 內縮(呼叫期讀 GAME,吃 COMBAT_SCALE 後的值) */
 export const heroSpawnMaxD = () => Math.max(heroSpawnMinD() + 1, GAME.HERO_HEAL_R - HERO_SPAWN.HEAL_MARGIN);
 /** 出生/重生點徑向夾制:同一射向只調距離,不改方位(朝向兵線的 yaw 不變) */

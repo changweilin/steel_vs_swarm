@@ -10,12 +10,12 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, b
   botScopeSearchRad, botScopeSearchPitchRad, botScopeSearchFreq,
   bloodScreenUv, bloodDirFromUv,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
-  botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG,
+  botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG, FLY_Y,
   WEATHER_DEBUFFS, windSpeedFactor, altTier } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // Drone cruise altitude (AGL; at/above AA_MIN_ALT eats air-defense missiles -- bots fly at deliberate risk)
-const FLY_Y = 2;                            // Above this AGL = flight regime (ground speed / collision volume judged together, single seam)
+// FLY_Y(飛行判定線)住 data.js 唯一縫,與 `sim.heroPos` 的真人驗證同吃(見該處註)。
 const LANE_JITTER_M = 24;                   // Lateral lane spread (peak-to-peak): bots on one lane never stack
 // Push lookahead: once vision runs through the view cone, "looking at the lane target point"
 // means looking sideways (the body stands beside the target point at +-LANE_JITTER_M/2, so that

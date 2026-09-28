@@ -20,7 +20,7 @@ import {
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossSegFill, bossSegFrac, bossSegN, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
-  SELF_F, selfCollider, COLLIDE_KINDS,
+  SELF_F, selfCollider, COLLIDE_KINDS, PUSH_EPS, baseCollideR,
    CREEP_UPG, DISSOLVE, dissolveOutAt, ATK_CAST_S, fogSightMult, scopeRvminFog,
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
   WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
@@ -2346,11 +2346,14 @@ export class BattleClient {
   // 單位碰撞半徑 / 高度(公尺):玩家座機不能穿過單位與建築。
   // 人員/載具 = 真實世界尺寸(見 models.js TARGET_H);英雄機體體型綁角色護甲,
   // 故不查此表,改由 heroCollider() 依 heroTargetH 動態推導(見 _makeEnt 的 ent.heroCol)。
-  // **數值不手寫**:一律由 data.js 的 hitR / hitH 推導(伺服器貫穿判定同一把尺)。
+  // **數值不手寫**:一律由 data.js 的 hitR / hitH 推導(伺服器貫穿判定同一把尺);
+  // 唯主堡吃 `baseCollideR`(命中圓 + 視覺外擴,見 data.js —— 裙樓頂點貼著 r=20,機體槍械會輕微穿牆)。
   // 鍵集 = 「會擋住玩家座機」的機種,MUST NOT 隨 TARGET_R 增列而擴張(那會讓直升機/碉堡
   // 突然開始擋路);量體本身則永遠與命中判定同步。
   static COLLIDER = Object.fromEntries(
-    COLLIDE_KINDS.map((kind) => [kind, { r: hitR({ kind, side: 'STEEL' }), h: hitH({ kind, side: 'STEEL' }) }]),
+    COLLIDE_KINDS.map((kind) => [kind, kind === 'base'
+      ? { r: baseCollideR('STEEL'), h: hitH({ kind, side: 'STEEL' }) }
+      : { r: hitR({ kind, side: 'STEEL' }), h: hitH({ kind, side: 'STEEL' }) }]),
   );
 
   /** 自機機體實高(公尺):碰撞圓柱與座艙視點高度一律由它推導;超級升級同步放大 */
@@ -2658,7 +2661,8 @@ export class BattleClient {
 
   /**
    * 圓柱 push-out(**唯一實作**;逐行鏡射伺服器 `solidPush` 的圓柱分支):機體圓盤與圓柱重疊時
-   * 沿圓心→機體推出,並吃掉衝向它的速度分量(不回彈)。回傳這一趟有沒有真的動到。
+   * 沿圓心→機體推出,並吃掉衝向它的速度分量(不回彈)。推出點落在外緣 + PUSH_EPS(見 data.js:
+   * 貼邊靜止 + 掃掠起點判定合起來會穿牆)。回傳這一趟有沒有真的動到。
    */
   _pushOutCircle(cx, cz, cr, myR) {
     const dx = this.pos.x - cx, dz = this.pos.z - cz;
@@ -2666,8 +2670,8 @@ export class BattleClient {
     const min = myR + cr;
     if (d >= min || d === 0) return false;
     const nx = dx / d, nz = dz / d;
-    this.pos.x += nx * (min - d);
-    this.pos.z += nz * (min - d);
+    this.pos.x += nx * (min - d + PUSH_EPS);
+    this.pos.z += nz * (min - d + PUSH_EPS);
     const into = this.vel.x * nx + this.vel.z * nz;
     if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }
     return true;
@@ -2759,7 +2763,7 @@ export class BattleClient {
           if (Math.abs(lx) >= ex || Math.abs(lz) >= ez) continue;  // 盒外
           const px = ex - Math.abs(lx), pz = ez - Math.abs(lz);    // 各軸穿透深度 → 沿最小穿透軸推出
           let dlx = 0, dlz = 0;
-          if (px < pz) dlx = lx < 0 ? -px : px; else dlz = lz < 0 ? -pz : pz;
+          if (px < pz) dlx = lx < 0 ? -(px + PUSH_EPS) : px + PUSH_EPS; else dlz = lz < 0 ? -(pz + PUSH_EPS) : pz + PUSH_EPS;
           const dwx = dlx * cs - dlz * sn, dwz = dlx * sn + dlz * cs;   // local→world(繞 +ry)
           this.pos.x += dwx; this.pos.z += dwz; moved = true;
           const nl = Math.hypot(dwx, dwz) || 1, nx = dwx / nl, nz = dwz / nl;
