@@ -9,9 +9,9 @@
 //       邊長固定取三線母體框架,與人數無關)
 //     - A、B 之間能建出三線母體(真實道路,OSRM),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
-//     - 當下啟用子集按人數切(L1=[中路]、L2=[上,下路];見 data.js laneSubsetFor)
+//     - 三線母體固定全開,與人數無關
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit, lanePathBalanceAudit, laneCssColor, MOTHER_LANES, laneSubsetFor } from './data.js';
+import { MAPGEO, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit, lanePathBalanceAudit, laneCssColor, MOTHER_LANES, laneSubsetFor } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -177,8 +177,7 @@ const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
  * 中路 = 直達路線;側翼 = 經側向中繼點,與中路重合率過高就加大側移重試;
  * via 全失敗才補合成弧線(synthetic 標記)。
  * 直達路線失敗(海面/無路網)回傳 null,由呼叫端淘汰該方位。
- * 啟用子集由呼叫端按 `laneSubsetFor(當下兵線數)` 切(L1=[中]、L2=[上,下])——
- * 框架(兩堡/尺寸)與母體不隨人數變,換人數只換子集。
+ * 三線母體固定全開,框架(兩堡/尺寸)與母體不隨人數變。
  */
 async function buildLanes(A, B, signal, directRoute = null) {
   const cell = overlapCellM(MOTHER_LANES);
@@ -243,7 +242,6 @@ export class MapSelect {
     this.candidates = [];        // {latlng, lanes, maxOverlap, distM, sizeM, diagM, synthetic}
     this.chosen = null;
     this.venue = null;           // 使用中的預設場地(含 mix),自訂點為 null
-    this.teamSize = TEAM.DEFAULT;
     this._layers = [];
     this._searchAbort = null;
     this.placeNameSkips = 0;
@@ -286,33 +284,10 @@ export class MapSelect {
     this.placeNameLastSkipped = false;
   }
 
-  /** 兵線數(隨隊伍規模) */
-  get laneCount() { return lanesFor(this.teamSize); }
-  /** 兩堡目標距離:母體框架恆取三線(與人數無關),啟用子集才隨人數 */
+  /** 兵線數(固定三線母體,與人數無關) */
+  get laneCount() { return MOTHER_LANES; }
+  /** 兩堡目標距離:母體框架恆取三線(與人數無關) */
   get targetDist() { return targetDistFor(MOTHER_LANES); }
-
-  /** 改隊伍規模:框架與母體不變,已選定就地重切子集(免重掃);搜尋中/未選才重置 */
-  setTeamSize(n) {
-    n = Math.max(TEAM.MIN, Math.min(TEAM.MAX, n | 0));
-    if (n === this.teamSize) return;
-    this.teamSize = n;
-    if (this.chosen?.motherLanes) { this._reSliceChosen(); return; }
-    if (this.anchor) this.reset();
-  }
-
-  /** 母體就地重切啟用子集(換人數不換圖):重算 lanes/tactics,重畫兵線層,重送確認 */
-  _reSliceChosen() {
-    const c = this.chosen;
-    if (!c?.motherLanes || !this.anchor) return;
-    const sub = laneSubsetFor(this.laneCount);
-    c.lanes = sub.map((i) => c.motherLanes[i]);
-    c.laneIds = [...sub];
-    c.tactics = lanesTactics(c.lanes, this.anchor, c.maxOverlap);
-    this._clearLayers('lanes');
-    this._clearLayers('cand');
-    this._drawChosenFrame(c);
-    this.h.confirmReady?.(this.buildConfig());
-  }
 
   /** 純預覽已存好的戰場設定(我的最愛):畫主堡/兵線/邊界,不重新搜尋 */
   showConfig(cfg) {
@@ -412,12 +387,11 @@ export class MapSelect {
       const result = await buildLanes(A, B, signal, direct);
       if (!result) continue;
       const { lanes: mother, all3, maxOverlap, overlaps, synthetic, roadDist } = result;
-      // 當下啟用子集(L1=[中]、L2=[上,下];見 data.js laneSubsetFor)
-      const sub = laneSubsetFor(L);
+      // 三線母體固定全開(與人數無關)
+      const sub = laneSubsetFor(MOTHER_LANES);
       const lanes = sub.map((i) => mother[i]);
       const dist = distM(A, B) / MAPGEO.REAL_SCALE;   // 真實 → 遊戲世界公尺
-      // 母體三線全驗(同一張圖要撐起所有人數,未啟用的線也不能是壞線;子集繼承母體結論,
-      // 唯平衡稽核 L2/L3 規則不同,子集另驗一次)
+      // 母體三線全驗
       const uSc = 1 / MAPGEO.REAL_SCALE;
       const gMother = mother.map((lane) => lane.map((c) => { const [x, z] = toMeters(c, A); return [x * uSc, z * uSc]; }));
       // 折返門檻(同 bake / MAPGEO.MAX_BACKTRACK):任一兵線往主堡折返超標 → 淘汰此推薦點
@@ -432,12 +406,8 @@ export class MapSelect {
       const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP
         && maxBt <= MAPGEO.MAX_BACKTRACK && maxUturn < MAPGEO.UTURN_MAX_DEG && accumOK;
       if (!ok) continue;
-      // 兵線路徑平衡稽核:母體按 L3,啟用子集按當下 L(規則不同,兩次)
+      // 兵線路徑平衡稽核:母體按 L3
       if (!lanePathBalanceAudit(gMother, MOTHER_LANES).ok) continue;
-      if (L >= 2) {
-        const gSub = lanes.map((lane) => lane.map((c) => { const [x, z] = toMeters(c, A); return [x * uSc, z * uSc]; }));
-        if (!lanePathBalanceAudit(gSub, L).ok) continue;
-      }
       // Part 3:沿線有高程資料且坡度超標 → 淘汰(避開現實陡坡道路)
       if (elev && maxLaneGrade(mother, elev) > gradeCap) continue;
       // 砲塔規則(規則 #4):此推薦點的兵線幾何會讓 solveTowerSites 佈出「殘餘 >80% / 疊塔」→ 淘汰
@@ -458,9 +428,9 @@ export class MapSelect {
       this.candidates.forEach((c, i) => this._drawCandidate(c, i));
     }
 
-    // 完全連不上 OSRM(離線)→ 全合成兵線,遊戲照樣能開(母體三線先建,再切當下子集)
+    // 完全連不上 OSRM(離線)→ 全合成兵線,遊戲照樣能開(三線母體固定全開)
     if (this.candidates.length === 0 && osrmDead === nB && !signal.aborted) {
-      const sub = laneSubsetFor(L);
+      const sub = laneSubsetFor(MOTHER_LANES);
       const cell = overlapCellM(MOTHER_LANES);
       for (const bearing of [0, 90, 180, 270]) {
         const B = destPoint(A, bearing, realD);
@@ -502,7 +472,7 @@ export class MapSelect {
     });
   }
 
-  /** 選定候選的框架繪製(主堡標記 + 兵線 + 邊界;色號吃母體下標,換人數重切可重用) */
+  /** 選定候選的框架繪製(主堡標記 + 兵線 + 邊界;色號吃母體下標) */
   _drawChosenFrame(cand) {
     this._addLayer(L.circleMarker(cand.latlng, {
       radius: 12, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
@@ -576,7 +546,7 @@ export class MapSelect {
     return {
       center: { lat: c[0], lng: c[1] },
       bases: { SWARM: this.anchor, STEEL: this.chosen.latlng },
-      lanes: this.chosen.lanes,          // 方向:SWARM → STEEL;當下啟用子集
+      lanes: this.chosen.lanes,          // 方向:SWARM → STEEL;三線母體固定全開
       laneCount: this.chosen.lanes.length,
       laneIds: [...(this.chosen.laneIds || this.chosen.lanes.map((_, i) => i))],
       motherLanes: (this.chosen.motherLanes || this.chosen.lanes).map((l) => l.map((p) => [...p])),

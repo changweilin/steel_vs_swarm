@@ -1,5 +1,5 @@
 // ============ 無人戰略:鋼鐵與蜂群 — 前端主控 ============
-// 畫面流程:connect(大廳)→ mapbuilder(建地圖:隊伍規模/場地/選址,存入最愛)
+// 畫面流程:connect(大廳)→ mapbuilder(建地圖:場地/選址,存入最愛)
 //          → openroom(開戰時刻:從最愛挑地圖 + 房名/公開性/環境 → 開房)
 //          → room(配對,每陣營 N 席)→ loading(地形+地貌建構)→ game → over
 import { makeNet } from './net.js';
@@ -478,7 +478,9 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
-// ================= 建立地圖(隊伍規模/場地/選址,建好後存入最愛)=================
+// ================= 建立地圖(場地/選址,建好後存入最愛;三線母體固定,與人數無關)=================
+// 製作地圖一律建三線母體全開(lanesFor = 3 的隊伍規模);開戰時刻才依人數切子集或直接沿用。
+const MAP_BUILD_TEAMSIZE = TEAM.MAX;
 // Leaflet 按需載入:首屏不掛全域 `L`,進建圖頁才注入 CSS+JS(單航班,失敗回提示不炸頁)。
 let _leafletReady = null;
 function ensureLeaflet() {
@@ -551,8 +553,6 @@ async function enterMapBuilder(initialMode = 'preset') {
         }
       },
     });
-    app.mapSel.setTeamSize(app.teamSize);
-    renderTeamSize();
     renderVenues();
     initMapGenUI();
     setTimeout(() => app.mapSel.map.invalidateSize(), 60);
@@ -566,41 +566,7 @@ async function enterMapBuilder(initialMode = 'preset') {
     : '選一個場地,或在地圖上點選主堡位置自動計算兵線。';
 }
 
-function renderTeamSize() {
-  const row = $('tsRow');
-  row.innerHTML = '';
-  for (let n = TEAM.MIN; n <= TEAM.MAX; n++) {
-    const b = document.createElement('button');
-    b.className = 'btn ts-btn' + (n === app.teamSize ? ' on' : '');
-    b.textContent = `${n}v${n}`;
-    b.onclick = () => { setTeamSize(n); };
-    row.appendChild(b);
-  }
-  updateTsInfo();
-}
-
-function setTeamSize(n) {
-  app.teamSize = n;
-  savePrefs({ teamSize: n });
-  const prevGen = !!app.favCfg?.gen;
-  app.favCfg = null;
-  app.mapSel?.setTeamSize(n);
-  setFavBtnDisabled(true);
-  for (const [i, b] of [...$('tsRow').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
-  updateTsInfo();
-  syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
-  // 預設場地已選:換規模直接重算(預先計算是確定性幾何,瞬間完成)
-  if (app.venueSel) selectVenue(app.venueSel);
-  // 擴充模式已生成:換規模依同條件重生成(種子/來源不變,只改啟用兵線數,框架與母體不變)
-  else if (prevGen && app.mapSel) {
-    if (app.mapGenMode === 'mixed') genMixedFromUI();
-    else if (app.mapGenMode === 'random') genRandomFromUI();
-  }
-}
-
-function updateTsInfo() { $('tsInfo').textContent = tsInfoText(); }
-
-/** 人數/兵線/地圖規模摘要一行(兩處設定畫面共用同一份文字,MUST NOT 各寫一套)*/
+/** 人數/兵線/地圖規模摘要一行(開戰時刻用;MUST NOT 在製作地圖頁另寫一套)*/
 function tsInfoText() {
   const L = lanesFor(app.teamSize);
   const size = sideMFor(MOTHER_LANES);   // 同一張圖:框架恆為三線母體,與人數無關
@@ -608,9 +574,10 @@ function tsInfoText() {
 }
 
 // 場地鈕的路線/地形說明:2026-08-02 起走 tip.js 的懸浮提示單一縫(觸控長按也看得到);
-// MUST NOT 退回 `title=`(手機沒有 hover)。摘要吃當下人數 ⇒ 換人數要重掛(見 syncVenueTips)。
+// MUST NOT 退回 `title=`(手機沒有 hover)。開戰時刻摘要吃當下人數 ⇒ 換人數要重掛(見 syncVenueTips);
+// 製作地圖頁固定三線母體,說明一律按 MAP_BUILD_TEAMSIZE 掛。
 /** 場地鈕(唯一縫):預設 18 張帶變化名,劇情戰役帶劇情籤 */
-function venueBtn(v) {
+function venueBtn(v, teamSize = app.teamSize) {
   const b = document.createElement('button');
   b.className = 'venue-btn' + (v.story ? ' story' : '');
   b.dataset.vid = v.id;
@@ -620,12 +587,12 @@ function venueBtn(v) {
     + (vdef ? `<span class="venue-var var-${v.variant}">${vdef.name}</span>` : '')
     + (v.story ? '<span class="venue-var story-tag">劇情</span>' : '')
     + '</span>';
-  attachTip(b, venueTip(v, app.teamSize));
+  attachTip(b, venueTip(v, teamSize));
   return b;
 }
 
 /** 3×6 分組 + 劇情分類(另計,不佔名額):主地形分組,組內照六變化順序 */
-function renderVenueGroups(grid, onPick) {
+function renderVenueGroups(grid, onPick, teamSize = app.teamSize) {
   grid.innerHTML = '';
   const presets = PRESET_VENUES();
   for (const base of VENUE_BASES) {
@@ -636,7 +603,7 @@ function renderVenueGroups(grid, onPick) {
     for (const vd of VARIANT_DEFS) {
       const v = presets.find((x) => (x.base || x.type) === base && x.variant === vd.key);
       if (!v) continue;
-      const b = venueBtn(v);
+      const b = venueBtn(v, teamSize);
       b.onclick = () => onPick(v);
       grid.appendChild(b);
     }
@@ -648,7 +615,7 @@ function renderVenueGroups(grid, onPick) {
     head.textContent = `▎劇情戰役（另計,不佔 3×6 名額）`;
     grid.appendChild(head);
     for (const v of stories) {
-      const b = venueBtn(v);
+      const b = venueBtn(v, teamSize);
       b.onclick = () => onPick(v);
       grid.appendChild(b);
     }
@@ -680,7 +647,7 @@ function fitVenueMarquee(grid) {
 }
 
 function renderVenues() {
-  renderVenueGroups($('venueGrid'), (v) => selectVenue(v));
+  renderVenueGroups($('venueGrid'), (v) => selectVenue(v), MAP_BUILD_TEAMSIZE);
 }
 
 /* 視窗縮放/字體載入改變欄寬時重掛跑馬燈(量測無害,短名直接跳過) */
@@ -697,22 +664,24 @@ function refitVenueMarquee() {
 window.addEventListener('resize', refitVenueMarquee);
 document.fonts?.ready?.then(() => refitVenueMarquee());
 
-/** 換人數 ⇒ 兵線條數/長度/彎曲度整組變 ⇒ 兩處場地清單的說明 MUST 跟著重掛(唯一出口) */
+/** 開戰時刻換人數 ⇒ 兵線條數/長度/彎曲度整組變 ⇒ 場地清單說明 MUST 跟著重掛(唯一出口);
+ * 製作地圖頁固定三線母體,說明一律按 MAP_BUILD_TEAMSIZE 掛 */
 function syncVenueTips() {
   for (const gid of ['venueGrid', 'venueGridOpen', 'venueGridSuper']) {
     const grid = $(gid);
     if (!grid) continue;
+    const ts = gid === 'venueGrid' ? MAP_BUILD_TEAMSIZE : app.teamSize;
     for (const b of grid.querySelectorAll('button.venue-btn')) {
       const v = VENUES.find((x) => x.id === b.dataset.vid);
-      if (v) attachTip(b, venueTip(v, app.teamSize));
+      if (v) attachTip(b, venueTip(v, ts));
     }
   }
 }
 
-/** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描 */
+/** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描;製作地圖一律建三線母體 */
 function selectVenue(v) {
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
-  const cfg = venueConfig(v, app.teamSize);
+  const cfg = venueConfig(v, MAP_BUILD_TEAMSIZE);
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
   app.venueSel = v;
   app.favCfg = cfg;
@@ -722,7 +691,7 @@ function selectVenue(v) {
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,加入最愛地圖後即可開房。` +
     `(想用真實道路兵線,可改在地圖上手動點選錨點)` +
-    `<div class="venue-desc">${esc(venueBrief(v, app.teamSize))}</div>`;
+    `<div class="venue-desc">${esc(venueBrief(v, MAP_BUILD_TEAMSIZE))}</div>`;
   $('mapProgressBar').style.width = '100%';
   setFavBtnDisabled(false);
 }
@@ -830,14 +799,14 @@ function mixedSourcesFromUI() {
 function genMixedFromUI() {
   const sources = mixedSourcesFromUI();
   if (!sources.length) { toast('請至少勾選一處混合來源'); return; }
-  acceptGenCfg(mixedMapConfig(sources, { teamSize: app.teamSize, mixOverride: readMixedSliders() }));
+  acceptGenCfg(mixedMapConfig(sources, { teamSize: MAP_BUILD_TEAMSIZE, mixOverride: readMixedSliders() }));
 }
 
 function genRandomFromUI() {
   const raw = ($('randomSeedInput')?.value || '').trim();
   const seed = /^\d+$/.test(raw) ? Number(raw) >>> 0 : (Math.random() * 4294967296) >>> 0;
   if ($('randomSeedInput')) $('randomSeedInput').value = String(seed);
-  const cfg = randomMapConfig({ teamSize: app.teamSize, seed, anchors: VENUES.map((v) => ({ ll: v.ll })) });
+  const cfg = randomMapConfig({ teamSize: MAP_BUILD_TEAMSIZE, seed, anchors: VENUES.map((v) => ({ ll: v.ll })) });
   acceptGenCfg(cfg);
   if (cfg && $('randomHint')) {
     $('randomHint').textContent = `中心 ${cfg.center.lat.toFixed(4)}, ${cfg.center.lng.toFixed(4)} ・ 種子 ${seed} ・ 同一種子跨端同一張圖`;
@@ -1230,7 +1199,7 @@ $('saveFavBtn')?.addEventListener('click', async () => {
   } finally { setFavBtnDisabled(false); $('mapStatus').innerHTML = prevStatus; }
   const name = prompt('地圖名稱:', cfg.placeName)?.trim();
   if (!name) return;
-  saveFavorite(name, app.teamSize, cfg);
+  saveFavorite(name, MAP_BUILD_TEAMSIZE, cfg);
   setFavBtnDisabled(true);
   const rotDeg = cfg.center.rot * 180 / Math.PI;
   toast(`⭐ 已加入最愛地圖:${name}(可到「開戰時刻」選用)`
