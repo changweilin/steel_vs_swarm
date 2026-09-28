@@ -25,3 +25,22 @@
 - Presentation-only weathering: opening weather tints base colors and textures once;
   mid-battle dynamic weather stays with the existing weather/material systems and
   never regenerates textures per frame.
+- Ground and geology consume `seasonalEnvironment.js` so explicit temperatures,
+  latitude/elevation cooling and snow availability agree with plant presentation.
+  Snow paints above natural surface patterns; tropical winter alone does not create
+  snow, and known geology continues to drive soil pH and mineral fragments.
+- Decorative flower visibility and grass/crop colors read each instance's environment
+  after placement. Dormancy cannot alter scatter consumption or physical-detail
+  collision; manufactured accessories retain their original colors.
+- Boundary and buffer rock covers use `seasonalSurface.js` on existing linear vertex
+  colors. Upward-facing surfaces retain snow; vertical walls and undersides do not.
+  Wetness darkens exposed stone without changing topology, bounds or colliders.
+- Generic rock landforms share the ground mineral palette in `seasonalEnvironment.js`.
+  Named rock types and vegetated hills retain their authored materials; substrate
+  changes affect vertex colors without consuming randomness or rebuilding geometry.
+- Ground textures sample local elevation. Quantized cover/growth states share
+  textures and geometry batches, while placement seeds and seam heights stay
+  independent of those states. One map can contain both bare valleys and snowy peaks.
+- Buffer props and backdrop constructors accept the same environmental snapshot.
+  Summit snow uses the temperature and moisture at its elevation, including high
+  alpine summer snow; the seasonal label alone cannot create snow in warm climates.

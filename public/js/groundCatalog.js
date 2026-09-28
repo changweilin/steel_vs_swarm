@@ -33,7 +33,7 @@ export const SURFACE_LIMITS = {
   detailDensity: [0.6, 1.4], wear: [0.02, 0.22], graffiti: [0, 4],
   seasons: ['spring', 'summer', 'autumn', 'winter'],
   geology: ['unknown', 'granite', 'basalt', 'limestone', 'sandstone', 'alluvium'],
-  weather: ['clear', 'cloudy', 'rain', 'storm', 'fog', 'snow', 'sandstorm'],
+  weather: ['clear', 'cloudy', 'rain', 'heavy_rain', 'storm', 'windy', 'fog', 'snow', 'sandstorm'],
 };
 export const DEFS = {
   turf:         { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.40, reg: 0, green: true, fam: 'blobGreen' },

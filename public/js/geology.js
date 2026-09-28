@@ -1,6 +1,6 @@
 // Pure, seeded visual geology. Metres / degrees / Ma; ranges are art direction, not surveys.
 import { mulberry32 } from './rng.js';
-import { forestEnvironment } from './forest.js';
+import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
 import { selectAncientStone, ancientStoneGeometry, ancientStoneDistribution } from './ancientStone.js';
 import { generateHeritageSite } from './heritageSites.js';
 // Stylized event snapshots. These meshes never settle terrain motion, heat or damage.
@@ -182,13 +182,12 @@ export function geologyEnvironment(input = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError('Geology environment must be an object');
   const latitude = number(input.latitude, 25, -90, 90);
   const altitude = number(input.altitude, 100, -11000, 9000);
-  const climate = forestEnvironment(latitude, altitude, input);
-  const referenceLatitude = { tropical: 10, temperate: 35, boreal: 60, arid: 25, mediterranean: 35, alpine: 45 }[input.climate];
-  const temperature = Number.isFinite(input.temperature) ? input.temperature : climate.temperature
-    - (referenceLatitude === undefined ? 0 : Math.max(0, altitude) * .0065 + (Math.abs(latitude) - referenceLatitude) * .25);
+  const climate = seasonalEnvironment({ ...input, latitude, altitude });
+  const temperature = climate.temperature;
   const water = input.water ?? 'none';
   if (!['none', 'stream', 'river', 'lake', 'sea'].includes(water)) throw new RangeError('Unknown geology water body');
   return { latitude, altitude, temperature, moisture: climate.moisture,
+    season: climate.season, geology: climate.geology, snow: climate.snow, autumn: climate.autumn, growth: climate.growth,
     water, depth: number(input.depth, 0, 0, 11000),
     vegetation: number(input.vegetation, .4, 0, 1), conifers: number(input.conifers, 0, 0, 1),
     wind: number(input.wind, .4, 0, 1), fault: number(input.fault, 0, 0, 1),
@@ -233,13 +232,13 @@ function surfaceWeights(e, type) {
   return { mud: land && e.moisture > .55 ? e.moisture * e.sediment : 0,
     sand: (1 - e.moisture) * e.wind + (type === 'dune' ? 1 : 0),
     gravel: e.exposure * (type === 'moraine' ? 1 : .4),
-    wood: land ? e.vegetation * .2 : 0, leaves: land ? e.vegetation * (1 - e.conifers) : 0,
+    wood: land ? e.vegetation * .2 : 0, leaves: land ? e.vegetation * (1 - e.conifers) * (.15 + e.autumn * .85) * (1 - e.snow) : 0,
     cones: land ? e.vegetation * e.conifers : 0,
     grass: land && e.temperature > 0 ? e.moisture * e.vegetation : 0,
     moss: land && stableRock && e.moisture > .35 && e.temperature > -5 ? e.moisture * .8 : 0,
     lichen: land && stableRock ? e.exposure * .5 : 0,
     water: land && e.temperature > 0 ? Math.max(0, e.moisture - .65) : 0,
-    snow: land && e.temperature < 1 ? .8 : 0 };
+    snow: land ? e.snow : 0 };
 }
 
 /** Independent streams: surface edits cannot change the rock's shape or scene RNG. */
@@ -355,6 +354,7 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
   const model = generateGeology(type, seed, input), { parameters: p, environment: e } = model;
   type = model.type;
   const spec = GEOLOGY_TYPES[type];
+  const baseColor = geologyColor(type, e.geology, spec.color);
   const n = Number.isInteger(input.segments) ? Math.max(8, Math.min(28, input.segments)) : 28;
   const points = [], bases = [], vertices = [], faces = [], colors = [];
   let peakRelief = 0;
@@ -417,7 +417,7 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     if (Math.hypot(...normal) < 1e-12) return;
     const up = normal[1] / Math.hypot(...normal), center = a.map((v, k) => (v + b[k] + c[k]) / 3);
     const band = Math.floor((center[1] + center[0] * Math.tan(p.dip * Math.PI / 180)) / p.height * p.layers);
-    let color = rgb(stoneColor ?? spec.color, .91 + (band % 2 ? .09 : 0));
+    let color = rgb(stoneColor ?? baseColor, .91 + (band % 2 ? .09 : 0));
     // Coherent patches span neighbouring triangles instead of confetti per face.
     const patchX = center[0] / p.width, patchZ = center[2] / p.width;
     let selected = null, roll = clamp(.5 + .25 * Math.sin(patchX * 11 + patchZ * 3 + phases[0])
@@ -638,7 +638,7 @@ export function elongatedGeologyParams(len, depth, seed) {
 //    任何方向觀察均具備波峰波谷交替起伏。
 // 3. 四周邊界遵守地質邊緣高度 = 0（雙向 smooth01 落地包絡）。
 // 4. 支援 2 維延伸往緩衝區擴大（bufferDepth > 0），產出同源無縫分割的本體與緩衝填滿網格。
-export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0xffffff, bufferDepth = 0, pattern = null } = {}) {
+export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0xffffff, bufferDepth = 0, pattern = null, color = null } = {}) {
   const s = GEOLOGY_TYPES[type];
   if (!s) throw new RangeError(`Unknown geology type: ${type}`);
   if (s.lithology === 'manufactured') throw new RangeError('Elongated ridge needs a natural terrain type');
@@ -709,7 +709,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
   const paint = (y, shade) => {
     const t = clamp(y / height, 0, 1);
     const k = (.80 + .20 * t) * shade;
-    return [16, 8, 0].map((shift, i) => linear(clamp(((s.color >> shift) & 255) / 255 * k * tintCh[i], 0, 1)));
+    return [16, 8, 0].map((shift, i) => linear(clamp((((color ?? s.color) >> shift) & 255) / 255 * k * tintCh[i], 0, 1)));
   };
 
   const taperL = Math.max(1e-9, wavelengths[0] / 2);

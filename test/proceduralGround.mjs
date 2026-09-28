@@ -58,13 +58,13 @@ assert.notEqual(summer.length, winter.length, 'Seasons change patterns, not only
 globalThis.document = { createElement: () => ({ getContext: () => context() }) };
 globalThis.window = { location: { search: '' } };
 const { buildGroundCover } = await import('../public/js/ground.js');
-function build(slope = 0) {
+function build(slope = 0, environment = {}, elevationAt = () => 150) {
   const group = new THREE.Group(), blockers = [];
   const heightAt = (x, z) => 20 + x * slope;
   const terrain = { minX: -160, maxX: 160, minZ: -160, maxZ: 160, worldW: 320, worldH: 320, gridM: 4,
-    heightAt, elevationAt: () => 150, center: { lat: 25 } };
+    heightAt, elevationAt, center: { lat: 25 } };
   const stats = buildGroundCover(group, terrain, { isBlocked: () => false, classifyAt: () => 'urban',
-    classifyPureAt: () => 'urban', blockers, season: 'summer', seed: 7123, rnd: mulberry32(7123) });
+    classifyPureAt: () => 'urban', blockers, season: 'summer', seed: 7123, rnd: mulberry32(7123), environment });
   for (const mesh of group.children) {
     assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite), mesh.name);
   }
@@ -76,6 +76,32 @@ assert.deepEqual(a.group.userData.proceduralSurfaces, b.group.userData.procedura
 assert.deepEqual(a.blockers, b.blockers);
 assert.equal(slope.group.userData.proceduralSurfaces.some(p => SURFACES[p.sub].flat), false);
 assert.ok(a.group.children.some(m => m.userData.proceduralGroundPart));
+const mild = build(0, { temperature: 20, moisture: .6 });
+const frost = build(0, { temperature: -2, moisture: .6 });
+const drought = build(0, { temperature: 20, moisture: 0 });
+const flowerMeshes = result => result.group.children.filter(m => m.userData.proceduralGroundPart?.type === 'flower');
+assert.ok(flowerMeshes(a).length > 0, 'Fixture contains blooming flowers');
+assert.ok(flowerMeshes(mild).length > 0, 'Warm moist soil supports blooms');
+assert.equal(flowerMeshes(drought).length, 0, 'Drought suppresses decorative blooms');
+assert.equal(flowerMeshes(frost).length, 0, 'Frost suppresses decorative blooms');
+assert.deepEqual(mild.blockers, frost.blockers, 'Dormancy does not change physical detail collision');
+const mountain = build(0, { climate: 'temperate', moisture: .8 }, x => (x + 160) * 20);
+const mountainAgain = build(0, { climate: 'temperate', moisture: .8 }, x => (x + 160) * 20);
+const groundMeshes = result => result.group.children.filter(m => m.userData.surfaceEnvironment);
+const localMeshes = groundMeshes(mountain);
+assert.ok(localMeshes.some(m => m.userData.surfaceEnvironment.snow === 0), 'Warm valley stays bare');
+assert.ok(localMeshes.some(m => m.userData.surfaceEnvironment.snow > 0), 'High ground gets snow within the same map');
+assert.deepEqual(mountain.blockers, mountainAgain.blockers);
+assert.deepEqual(localMeshes.map(m => [...m.geometry.attributes.position.array]),
+  groundMeshes(mountainAgain).map(m => [...m.geometry.attributes.position.array]));
+const materialStates = new Map();
+for (const mesh of localMeshes) {
+  const e = mesh.userData.surfaceEnvironment;
+  const state = [e.snow, e.growth, e.wetness, e.autumn].join('/');
+  const texture = mesh.material.map;
+  if (materialStates.has(texture)) assert.equal(materialStates.get(texture), state, 'Texture cache cannot mix local climates');
+  materialStates.set(texture, state);
+}
 const originalUrban = ZONES.urban;
 ZONES.urban = ['court'];
 const courtFixture = build();

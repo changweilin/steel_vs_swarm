@@ -1,3 +1,5 @@
+import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
+import { seasonalSurfaceColors } from './seasonalSurface.js';
 // Shared, seeded environment construction. Metres are supplied by the host, never sampled.
 // Descriptors remain render-free so scene and boundary consumers can use the same model.
 import { mulberry32 } from './rng.js';
@@ -406,11 +408,10 @@ function extraction(kind, w, h, d, rnd) {
   return rows;
 }
 
-function rocks(type, seed, season, { yaw = true } = {}) {
-  const model = geologyBackgroundObject(type, seed, { segments: 12 });
+function rocks(type, seed, season, { yaw = true, environment = {} } = {}) {
+  const model = geologyBackgroundObject(type, seed, { ...environment, season, segments: 12 });
   const { min, max, size } = model.bounds, center = min.map((v, i) => (v + max[i]) / 2);
-  const tint = rockTints[season] || rockTints.summer;
-  const colors = model.meshData.colors.map((value, i) => value * ((tint >> (16 - i % 3 * 8)) & 255) / 255);
+  const colors = model.meshData.colors;
   const meshData = { ...model.meshData, colors,
     vertices: model.meshData.vertices.map((v, i) => v - center[i % 3]) };
   // rocks 本身無 rnd 流，朝向另起一種子流(不推移既有幾何)；連續無縫的邊界連排由呼叫端關掉。
@@ -439,7 +440,7 @@ function ship(seed) {
   return rows;
 }
 
-export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size, seed = 1, season = 'summer', yaw = true } = {}) {
+export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size, seed = 1, season = 'summer', yaw = true, environment = {} } = {}) {
   if (!ENVIRONMENT_OBJECTS[kind]) throw new RangeError(`Unknown environment object: ${kind}`);
   if (!Number.isSafeInteger(seed) || !Array.isArray(size) || size.length !== 3
     || size.some(v => !Number.isFinite(v) || v <= 0)) throw new RangeError('Invalid environment dimensions or seed');
@@ -448,14 +449,14 @@ export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size,
   if (ENVIRONMENT_OBJECTS[kind].draft) rows = iceParts(kind, size, seed, { yaw });
   else if (kind === 'car') rows = makeSceneVehicleParts('sedan', { fit: { L: w, H: h, W: d }, paint: seed });
   else if (kind === 'gianttree' || kind === 'fallentree') {
-    const tree = createForestTree(choose(rnd, ['redwood', 'sequoia']), seed, undefined, undefined, 1, season);
-    rows = tree.parts.filter(p => kind !== 'fallentree' || !['leaf', 'flower', 'fruit'].includes(p.role)).map(p => {
+    const tree = createForestTree(choose(rnd, ['redwood', 'sequoia']), seed, undefined, undefined, 1, season, environment);
+    rows = tree.parts.filter(p => !p.hidden && (kind !== 'fallentree' || !['leaf', 'flower', 'fruit', 'snow'].includes(p.role))).map(p => {
       const g = p.g.parameters;
       return { g: g.height ? ['cyl', g.radiusTop, g.radiusBottom, g.height, g.radialSegments] : ['ico', g.radius],
         p: [p.px || 0, p.y || 0, p.pz || 0], r: [p.rx || 0, 0, p.rz || 0], s: [1, p.sy || 1, 1], c: p.c, role: p.role };
     });
     if (kind === 'fallentree') rows = layDown(rows);
-  } else if (kind === 'boulder') rows = rocks(choose(rnd, ['granite', 'sandstone', 'basalt']), seed, season, { yaw });
+  } else if (kind === 'boulder') rows = rocks(choose(rnd, ['granite', 'sandstone', 'basalt']), seed, season, { yaw, environment });
   else if (kind === 'mine' || kind === 'oilfield') rows = extraction(kind, w, h, d, rnd);
   else if (kind === 'strandedship') rows = ship(seed);
   else if (kind === 'skyfall') rows = layDown(building('skyscraper', h * .55, w, d * .8, rnd));
@@ -554,7 +555,7 @@ export const ROCKERY_BASES = Object.freeze(['granite', 'sandstone', 'tor', 'moun
 // 起伏程度由長寬比推導的種子隨機範圍決定），不再逐段零星散置。
 // 支援 2 維延伸往緩衝區擴大（bufferDepth > 0），把緩衝區完全填滿。
 // 幾何與季節無關（四季共用同一網格），季節差異只在 tint 色調。零共享亂數、決定性。
-export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season = 'summer', bufferDepth = 0 }) {
+export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season = 'summer', bufferDepth = 0, environment = {} }) {
   let type = NARROW_GEOLOGY_BOUNDARY[kind];
   if (!type) throw new RangeError(`Not a narrow geology boundary: ${kind}`);
   if (kind === 'rockery') {
@@ -565,7 +566,11 @@ export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season
     throw new RangeError('Invalid narrow geology boundary dimensions or seed');
   const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
   const tint = rockTints[season] || rockTints.summer;
-  const ridge = elongatedGeologyMesh(type, seed >>> 0, { len, depth: d, height: h, tint, bufferDepth: bufD });
+  const ridge = elongatedGeologyMesh(type, seed >>> 0, { len, depth: d, height: h, tint, bufferDepth: bufD,
+    color: geologyColor(kind, environment.geology, null) });
+  const climate = seasonalEnvironment({ ...environment, season });
+  ridge.meshData.colors = seasonalSurfaceColors(ridge.meshData, climate);
+  if (ridge.bufferMeshData) ridge.bufferMeshData.colors = seasonalSurfaceColors(ridge.bufferMeshData, climate, [0, 0, -d / 2 - bufD / 2]);
   // 網格頂點 y ∈ [0, peakY]；後移半高使 AABB 量尺與渲染位置一致（同 rocks 的置中慣例）。
   const centered = { ...ridge.meshData,
     vertices: ridge.meshData.vertices.map((v, i) => (i % 3 === 1 ? v - ridge.size[1] / 2 : v)) };
@@ -615,9 +620,9 @@ export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season
   return rows;
 }
 
-export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, season = 'summer', latDeg = 25.0, joins = null }) {
+export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, season = 'summer', latDeg = 25.0, joins = null, environment = {} }) {
   if (kind === 'searanch' || kind === 'oysterracks') return aquacultureParts(kind, len, d, h, seed);
-  if (NARROW_GEOLOGY_BOUNDARY[kind]) return narrowGeologyBoundary(kind, { len, depth: d, h, seed, season });
+  if (NARROW_GEOLOGY_BOUNDARY[kind]) return narrowGeologyBoundary(kind, { len, depth: d, h, seed, season, environment });
   const rnd = mulberry32(seed >>> 0), rows = [];
   const count = Math.max(1, Math.floor(len / (kind === 'deeprig'
     ? sample(rnd, ENVIRONMENT_STRUCTURE_PARAMETERS.offshoreRig.bay) : kind === 'viaduct'
@@ -754,7 +759,7 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
       }
     } else if (['train', 'trucks', 'ship', 'rowhouse', 'edgehamlet', 'giantforest'].includes(kind)) {
       const object = { rowhouse: 'house', edgehamlet: 'house', ship: 'strandedship', giantforest: 'gianttree' }[kind];
-      const parts = object ? environmentParts(object, { size: [step * .92, h, d * .9], seed: seed ^ (i + 1), season })
+      const parts = object ? environmentParts(object, { size: [step * .92, h, d * .9], seed: seed ^ (i + 1), season, environment })
         : makeSceneVehicleParts(kind === 'train' ? 'railcar' : 'truck',
           { fit: { L: step * .95, H: h, W: d * .9 }, paint: seed ^ (i + 1) });
       // 車輛／船隻連排：逐架 180° 翻轉＋縱向微小間距誤差（決定性 local 流；
