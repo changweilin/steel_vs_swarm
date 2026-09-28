@@ -281,14 +281,30 @@ function fatalClose() {
   show('connect');
   refreshRooms();
 }
-/** 重啟(單人):有上一場配置就地重開,否則整頁重整(單機房只活在分頁記憶體) */
-function fatalRestart() {
+/** 重啟(單人):先清除所有緩衝再重開 —— 壞掉的地形/預建/模組/圖資快取/傳輸層全換新,
+ * 有上一場配置就地重開,否則回大廳(傳輸層已重建,等同乾淨啟動) */
+async function fatalRestart() {
   if (netMode() !== 'solo') { fatalClose(); return; }
-  const session = loadPrefs().lastSession;
   hideFatal();
+  try { app.net?.send({ t: 'leaveRoom' }); } catch { /* 斷線中即略過 */ }
+  sessionStorage.removeItem('svs_token');
+  if (app.battle) { try { app.battle.dispose(); } catch { /* 忽略 */ } app.battle = null; }
+  app.dlg?.dispose(); app.dlg = null;
+  app.terrain = null; app.pre = null; app.fieldMsg = null;   // 地形預建下次重建(模型/高程/OSM 重抓)
+  app.story = null; app.super = null; app.quickRestart = null;
+  _BattleClient = null;   // 戰鬥模組下次重載,載入失敗不殘留 rejected promise
+  for (const id of ['overOverlay', 'pauseOverlay', 'shopOverlay', 'deadOverlay']) {
+    const el = $(id);
+    if (el) el.style.display = 'none';
+  }
+  delete $('overOverlay').dataset.done;
+  try { resetOsmMisses(); } catch { /* 忽略 */ }   // OSM 失敗記憶清除,重啟後重查(否則同查詢直接沿用失敗)
+  try { await geoClear(); } catch { /* 靜默降級(見 geocache.js) */ }   // 高程/影像/圖資快取清空
+  connectNet();   // 傳輸層重建(單機模擬核心 / 斷線 socket 全換新;單機開房訊息會排隊等核心就緒)
   fatal.loadT0 = 0; fatal.lastSnap = Date.now(); fatal.lastNetUp = Date.now();
-  if (app.net?.connected && session?.battleConfig) quickRestartGame();
-  else location.reload();
+  const session = loadPrefs().lastSession;
+  if (session?.battleConfig) quickRestartGame();
+  else { show('connect'); refreshRooms(); }
 }
 /** 背景看門狗(2s 一次):載入逾時 / 快照停滯 / 斷線逾時才彈窗,不洗正常 toast */
 function fatalWatchdog() {
