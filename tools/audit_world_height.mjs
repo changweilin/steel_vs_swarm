@@ -228,7 +228,9 @@ console.log('\nⅢ 現役物件:五族逐款重算世界高度');
   }
   t(`地標 ${Object.keys(LANDMARK_COL).length} 款全數 ≤ 上限`, !badL.length, badL.join(', '));
   t('地標的標稱高**實測**而不是讀手寫的 LANDMARK_COL.h(細長尖頂會低報)',
-    /objScaleFit\(sc, new THREE\.Box3\(\)\.setFromObject\(g\)\.max\.y/.test(bioCode));
+    /objScaleFit\(sc, layoutBounds \? layoutBounds.max\[1\] : new THREE\.Box3\(\)\.setFromObject\(g\)\.max\.y/.test(bioCode)
+    && /const bounds = new THREE\.Box3\(\)\.setFromObject\(group\)/.test(bioCode)
+    && /layoutBounds = \{ min: bounds.min.toArray\(\), max: bounds.max.toArray\(\) \}/.test(bioCode));
 
   // 語意化地標:結構性低於上限(不需夾制 —— 這一條是「將來加高了就會紅字」的守門線)
   const badB = Object.entries(BEACON_KINDS).filter(([, v]) => v.h > CAP).map(([k, v]) => `${k} ${v.h}`);

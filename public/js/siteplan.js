@@ -29,6 +29,8 @@ import * as THREE from 'three';
 import { envMat, toonMat, bakeContactAO } from './toon.js';
 import { partExtent, mergeGeos } from './beacons.js';
 // 載具/擺件型錄唯一縫(零 import ⇒ 本檔「純區塊」的零 THREE 契約不破,離線稽核照樣執行原文)
+import { furnitureSceneGeometry, fitSceneGeometry, compileSceneParts } from './scenePropModels.js';
+import { groundPlantParts } from './scenePlantParts.js';
 import { makeRecess } from './vehicles.js';
 import { makeSceneVehicleParts as makeVehicle } from './vehicleCatalog.js';
 
@@ -231,7 +233,7 @@ export const CIVIC_PARTS = {
     { g: ['box', 62, 0.5, 42], c: 0x5f8a4a, p: [0, -0.25, 0], sf: 'turf' },  // 草坪(軟性)
     { g: ['box', 62, 0.56, 4.6], c: 0xbfae90, p: [0, -0.2, -6] },            // 橫向步道
     { g: ['box', 4.6, 0.56, 42], c: 0xbfae90, p: [8, -0.2, 0] },             // 縱向步道
-    { g: ['cyl', 7.2, 7.2, 0.62, 12], c: 0x4c7f96, p: [-17, -0.18, 8] },     // 水池
+    { g: ['cyl', 7.2, 7.2, 0.62, 12], c: 0x4c7f96, p: [-17, -0.18, 8], visual: 'pond' },     // 水池
     { g: ['cyl', 7.8, 7.8, 0.4, 12], c: 0x9aa0a6, p: [-17, -0.34, 8] },      // 池緣石
     // 涼亭:六角柱列 + 錐頂(全園唯一有量體的結構)
     ..._row(6, (i) => ({
@@ -239,13 +241,13 @@ export const CIVIC_PARTS = {
       p: [19 + Math.cos(i / 6 * Math.PI * 2) * 3.4, 1.8, 9 + Math.sin(i / 6 * Math.PI * 2) * 3.4],
     })),
     { g: ['cyl', 4.4, 4.4, 0.3, 6], c: 0x7a5a3c, p: [19, 3.75, 9], col: 1 },
-    { g: ['cone', 4.6, 2.4, 6], c: 0xa8503c, p: [19, 5.1, 9], vc: 30 },
+    { g: ['cone', 4.6, 2.4, 6], c: 0xa8503c, p: [19, 5.1, 9], vc: 30, visual: 'gazeboRoof' },
     // 長椅(座面 + 兩腳;0.9m 高,與灌木同級 ⇒ 不掛碰撞)
     // `opt`:非碰撞小件的存缺通道(座面與椅背同通道 ⇒ 同進退)—— 同圖兩座公園不再逐位元相同
-    ..._row(4, (i) => ({ g: ['box', 3.2, 0.22, 0.9], c: 0x8a6a48, p: [-20 + i * 13, 0.86, -9.4], opt: 1 + i })),
-    ..._row(4, (i) => ({ g: ['box', 3.2, 0.7, 0.16], c: 0x7a5a3c, p: [-20 + i * 13, 1.2, -9.85], opt: 1 + i })),
+    ..._row(4, (i) => ({ g: ['box', 3.2, 0.22, 0.9], c: 0x8a6a48, p: [-20 + i * 13, 0.86, -9.4], opt: 1 + i, visual: 'bench' })),
+    ..._row(4, (i) => ({ g: ['box', 3.2, 0.7, 0.16], c: 0x7a5a3c, p: [-20 + i * 13, 1.2, -9.85], opt: 1 + i, collisionOnly: true })),
     // 花圃(`vc`:色相變異通道 —— 這座公園開紅花、那座開黃花)
-    ..._row(3, (i) => ({ g: ['box', 7, 0.7, 3.2], c: 0xc06a7a, p: [-6 + i * 12, 0.1, 15], sf: 'grass', vc: 21 + i })),
+    ..._row(3, (i) => ({ g: ['box', 7, 0.7, 3.2], c: 0xc06a7a, p: [-6 + i * 12, 0.1, 15], sf: 'grass', vc: 21 + i, visual: 'flowers' })),
     { g: ['cyl', 0.16, 0.2, 5.2, 6], c: 0x585e64, p: [-2, 2.6, -12] },       // 園燈
     { g: ['ico', 0.5], c: 0xffe9b0, p: [-2, 5.4, -12], e: 1 },
   ],
@@ -261,7 +263,7 @@ export const CIVIC_PARTS = {
     ..._row(2, (i) => ({ g: ['box', 0.32, 3.4, 0.32], c: 0xe8ecef, p: [(i ? 1 : -1) * 27, 1.7, 3.6] })),
     ..._row(2, (i) => ({ g: ['box', 0.32, 0.32, 7.5], c: 0xe8ecef, p: [(i ? 1 : -1) * 27, 3.4, 0] })),
     // 看台:三階 + 遮棚(整體有量體)
-    ..._row(3, (i) => ({ g: ['box', 40, 1.1, 2.8], c: 0xb9bec4, p: [0, 0.55 + i * 1.1, -20 - i * 2.8], col: 1 })),
+    ..._row(3, (i) => ({ g: ['box', 40, 1.1, 2.8], c: 0xb9bec4, p: [0, 0.55 + i * 1.1, -20 - i * 2.8], col: 1, visual: 'stand' })),
     ..._row(2, (i) => ({ g: ['cyl', 0.34, 0.34, 7.5, 6], c: 0x8d949c, p: [(i ? 1 : -1) * 17, 3.75, -27] })),
     { g: ['box', 40, 0.4, 9], c: 0x51585f, p: [0, 7.6, -24.5] },             // 遮棚頂
     // 照明燈柱(四角)
@@ -525,7 +527,7 @@ export function buildCivic(kind, seed = 0) {
     // 靜態表,視覺缺席就是隱形牆,A30 反面);`vc` = 色相變異通道(成對零件共用通道 ⇒
     // 同一台車的車體與車頂一起轉色)。全由 seed 雜湊(`frac`)推導,零共享 rnd(A38 ②)。
     if (p.opt && !p.col && frac(seed ^ 0x51ed, 100 + p.opt) > 0.72) continue;
-    const pc = p.vc
+    const pc = p.visual ? null : p.vc
       ? new THREE.Color(p.c).offsetHSL(
           (frac(seed ^ 0x51ed, p.vc) - 0.5) * 0.14,
           (frac(seed ^ 0x9d2c, p.vc) - 0.5) * 0.1,
@@ -533,7 +535,21 @@ export function buildCivic(kind, seed = 0) {
       : p.c;
     // 軟性旗標 MUST 進分桶鍵:同一桶只有一份材質,混桶的話同色的鋪面與草坪會共用一份旗標
     const key = `${pc}|${p.e ? 1 : 0}|${p.sf || ''}`;
-    const geo = _geo(p.g);
+    let geo;
+    if (p.visual) {
+      const [shape, a, b, c] = p.g;
+      const size = shape === 'box' ? [a,b,c] : shape === 'cyl' ? [a*2,c,a*2] : [a*2,b,a*2];
+      if (p.visual === 'flowers') {
+        const parts = [];
+        for(let i=0;i<12;i++) {
+          const x=(i%6-2.5)*.8, z=(Math.floor(i/6)-.5)*1.1;
+          parts.push(...groundPlantParts('crop', seed+i).map(part => ({...part,p:[(part.p?.[0]||0)+x,part.p?.[1]||0,(part.p?.[2]||0)+z]})),
+            {g:['ico',.18],p:[x,.85,z],s:[1,.55,1],c:[0xbf7082,0xd8ad66,0xad947d][i%3]});
+        }
+        geo = fitSceneGeometry(compileSceneParts(parts),size).translate(0,-size[1]/2,0);
+      } else if (p.visual === 'bench') geo = furnitureSceneGeometry('bench',[3.2,1.55,1]).translate(0,-p.p[1],0);
+      else geo = furnitureSceneGeometry(p.visual,size).translate(0,-size[1]/2,0);
+    } else geo = _geo(p.g);
     const m = new THREE.Matrix4();
     const [px = 0, py = 0, pz = 0] = p.p || [];
     const [rx = 0, ry = 0, rz = 0] = p.r || [];

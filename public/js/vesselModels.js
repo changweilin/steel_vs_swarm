@@ -127,6 +127,8 @@ export function buildVesselEquipment(item, materials) {
     if(k==='tank_container') {
       const tank=cylinder('iso_tank',0.38,0.92,0,0.5,0,light);tank.rotation.x=Math.PI/2;
       for(const x of [-0.46,0.46])for(const z of [-0.46,0.46])box('iso_frame',0.05,1,0.05,x,0.5,z,paint);
+      for(const z of [-0.46,0.46])box('iso_crossbeam',0.97,0.06,0.06,0,0.03,z,paint);
+      for(const z of [-0.32,0.32])box('iso_saddle',0.92,0.2,0.3,0,0.1,z,metal);
     } else {
       box('container',1,1,1,0,0.5,0,paint);
       if(k==='reefer')box('refrigeration',0.76,0.67,0.02,0,0.54,0.49,light);

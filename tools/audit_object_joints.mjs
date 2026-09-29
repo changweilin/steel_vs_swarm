@@ -54,9 +54,13 @@
 import { HAZARDS } from '../public/js/data.js';
 import { vegPartXform } from '../public/js/xform.js';
 import { makeVehicle } from '../public/js/vehicles.js';
-import { readSrc, grabConst } from './audit_src.mjs';
+import { readSrc, grabConst, grabMethod } from './audit_src.mjs';
 import { auditBattleGeology } from './audit_battle_geology.mjs';
 import { createForestDefs } from '../public/js/forest.js';
+import { LEGACY_PLANT_SPECIES, GROUND_PLANTS } from '../public/js/scenePlantParts.js';
+import { TREE_ATTACHMENTS } from '../public/js/sceneAttachmentParts.js';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
 const SEEDS = Math.max(1, +arg('--seeds', 4));
@@ -705,8 +709,16 @@ function report(title, { rows, loose, lone }, note = '') {
 
 // ---- 障礙物(hazards.js)----
 const hzKinds = Object.keys(HAZARDS).filter((k) => !HAZARDS[k].noModel).concat(['aasite', 'relay']);
+const compiledKinds = hzKinds.filter(kind => /addSceneGeometry|brokenGroundGeometry|flameGeometry/.test(grabMethod(hzSrc,kind)));
+const compiledPlants = new Set([...Object.keys(LEGACY_PLANT_SPECIES), ...GROUND_PLANTS, ...TREE_ATTACHMENTS]);
+// Compiled triangle assemblies cannot be approximated by the legacy primitive stubs.
+// Their shipped browser path checks component support, fitting, ownership and determinism.
+if ([...compiledKinds,...compiledPlants].some(kind => !ONLY || kind.includes(ONLY))) {
+  execFileSync(process.execPath,[fileURLToPath(new URL('./audit_scene_models.mjs',import.meta.url)),'--no-shots'],{stdio:'inherit'});
+}
 for (const kind of hzKinds) {
   if (ONLY && !kind.includes(ONLY)) continue;
+  if (compiledKinds.includes(kind)) continue;
   const ex = HZ_EXEMPT[kind] || {};
   if (ex.skip) { say(`\n== 障礙物 ${kind} == 略過:${ex.skip}`); continue; }
   const why = [ex.scatter, ex.loose, ex.joints].find((v) => typeof v === 'string');
@@ -740,6 +752,7 @@ const INSTANCES = [
 for (const [group, table] of [['神木', defs.GIANT_DEFS], ['植被', defs.VEG_DEFS]]) {
   for (const [name, def] of Object.entries(table)) {
     if (ONLY && !name.includes(ONLY)) continue;
+    if (group === '植被' && compiledPlants.has(name)) continue;
     // Live procedural trees bake one specimen and disable per-part jitter before instancing.
     for (const [variant, parts] of (def.variants || [def.parts]).entries()) {
       for (const inst of INSTANCES) report(`${group} ${name}/${variant}(${inst.name})`,
@@ -753,6 +766,7 @@ for (const [group, table] of [['神木', defs.GIANT_DEFS], ['植被', defs.VEG_D
 const BARK = halfSolid([-1, 0, 0], 0);
 for (const [name, def] of Object.entries(defs.GIANT_DECO)) {
   if (ONLY && !name.includes(ONLY)) continue;
+  if (compiledPlants.has(name)) continue;
   for (const inst of INSTANCES) {
     // 特徵件不吃植株微傾斜(世界尺寸恆定);dj 自 2026-08-05 起由 hang() 以落點雜湊給
     // ⇒ 接合 MUST 在細節抖動之下仍成立(與神木/植被同一組抽樣種子)

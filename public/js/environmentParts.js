@@ -15,6 +15,7 @@ import { chooseArchitecture } from './buildingDiversity.js';
 import { calculateFootprintMetrics, resolveAdaptiveRoofForm } from './architectureStyles.js';
 import { architecturalFacadeParts } from './architectureFacadeParts.js';
 import { architecturalRoofParts } from './architectureRoofParts.js';
+import { functionalBuildingParts } from './functionalBuildingParts.js';
 import { optimalSolarTiltRad } from './data.js';
 
 export const ENVIRONMENT_OBJECTS = Object.freeze({
@@ -197,29 +198,33 @@ function hollowShell(profile, thickness, x, y, z, color, role) {
     p: [x, y + height / 2, z], c: color, role };
 }
 
-export function environmentBuildingPlan(kind, size, seed) {
+export function environmentBuildingPlan(kind, size, seed, functionType = null) {
   const spec = ENVIRONMENT_BUILDINGS[kind];
   if (!spec) throw new RangeError('Unknown environment building: ' + kind);
   const rnd = mulberry32(seed), sampleRange = range => range[0] + rnd() * (range[1] - range[0]);
   const [width, height, depth] = size;
   const w = width * sampleRange(spec.width), d = depth * sampleRange(spec.depth), bodyH = height * sampleRange(spec.body);
-  const functional = BUILDING_FUNCTIONS[spec.type];
-  const functionInfo = functional ? { type: spec.type, key: functional.range, category: functional.category, locked: true }
+  const type = functionType || spec.type, functional = BUILDING_FUNCTIONS[type];
+  if (functionType && !functional) throw new RangeError('Unknown building function: ' + functionType);
+  const functionInfo = functional ? { type, key: functional.range, category: functional.category, locked: true }
     : { type: spec.type, key: spec.key, category: spec.category, locked: false };
-  const style = chooseArchitecture(seed, `environment/${kind}`, { functionInfo, affinity: spec.affinity,
-    urban: kind !== 'house', rural: kind === 'house', building: { tags: { height: bodyH } } });
+  const style = chooseArchitecture(seed, `environment/${kind}`, { functionInfo, affinity: functionType ? undefined : spec.affinity,
+    urban: functionType ? true : kind !== 'house', rural: !functionType && kind === 'house', building: { tags: { height: bodyH } } });
   const poly = { outer: [[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]], holes: [] };
   const metrics = calculateFootprintMetrics(poly);
   const roofForm = resolveAdaptiveRoofForm(style.roofForm, metrics, bodyH, functionInfo.category);
   const edges = poly.outer.map((a, i) => {
     const b = poly.outer[(i + 1) % 4], dx = b[0] - a[0], dz = b[1] - a[1];
     return { x: (a[0] + b[0]) / 2, z: (a[1] + b[1]) / 2, y: 0, h: bodyH,
-      hw2: Math.hypot(dx, dz) / 2, ry: Math.atan2(dz, dx), sourceId: `environment/${kind}/${seed}` };
+      hw2: Math.hypot(dx, dz) / 2, ...(functionType ? { hd2: .06 } : {}), ry: Math.atan2(dz, dx), sourceId: `environment/${kind}/${seed}` };
   });
+  const semantic = functionType ? functionalBuildingParts(edges, 0, bodyH, style, [0, 0], Math.min(w, d) / 2, height - bodyH)
+    : { parts: [], replacesRoof: false };
   const parts = [{ g: ['box', w, bodyH, d], p: [0, bodyH / 2, 0], c: style.wall, role: 'building-body',
     architecture: { style: style.id, roofForm, function: functionInfo.key, seed } },
     ...architecturalFacadeParts(edges, style, .12),
-    ...architecturalRoofParts(poly, bodyH, style, roofForm, metrics, bodyH)];
+    ...semantic.parts,
+    ...(semantic.replacesRoof ? [] : architecturalRoofParts(poly, bodyH, style, roofForm, metrics, bodyH))];
   return { parts, style, w, d, bodyH };
 }
 
