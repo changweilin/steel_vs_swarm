@@ -16,6 +16,7 @@ import { lowPower } from './mobile.js';
 import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, siteCPs, mapArg, curveMaxEdgeM, edgeBufferM, edgeWallInsetM, isMarineWater } from './data.js';
 import { procReliefAt, sanitizeProcRelief } from './mapgen.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
+import { registerStreamTex } from './tex.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
 // 舊引用路徑照舊有效。
@@ -552,6 +553,7 @@ export async function buildTerrain(cfg, onProgress) {
     const tex = new THREE.CanvasTexture(imagery.canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
+    registerStreamTex(tex);
     mat = envMat(0xffffff, { map: tex, rim: 0, bands: 4, land: true, landField: true });
   } else {
     paintTerrainTones(geo, pos, { minX, maxX, minZ, maxZ }, center);

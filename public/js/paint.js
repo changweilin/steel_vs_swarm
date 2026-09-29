@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { SIDES } from './data.js';
 import { applyPaint } from './toon.js';
+import { registerStreamTex } from './tex.js';
 
 // ---- 色版階梯(亮度 / 飽和倍率;由亮到深)----
 // light = 人形機甲/雙足獸(亮面裝甲);dark = 無人機/獸型/變形者(碳纖深色機體)
@@ -274,6 +275,7 @@ function paintTexture(pattern, pal, hue, tone, opts) {
   tex.wrapS = tex.wrapT = single ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
+  registerStreamTex(tex);
   cache.set(key, tex);
   return tex;
 }
@@ -429,6 +431,7 @@ function roundelTexture() {
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;         // 圓外透明 → 露機身色、不重複
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
+  registerStreamTex(tex);
   return (_roundelTex = tex);
 }
 

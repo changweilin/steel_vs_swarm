@@ -8,6 +8,7 @@ import { createGroundParts } from './proceduralGroundParts.js';
 import { ENV, inkCtrM, edgeWallInsetM, optimalSolarTiltRad, mapRot } from './data.js';
 import { envMat, surfGroup } from './toon.js';
 import { gridAngle } from './roadgrid.js';
+import { registerStreamTex } from './tex.js';
 
 const MAX_DETAIL = 19000;  // 3D 細節實例總上限(特徵層 + 底毯撒佈;全 InstancedMesh,draw call 不變;
                            // 2026-07-12 15000→19000:綠地雜草/花帶密集散佈需要更多實例配額)
@@ -149,6 +150,7 @@ function groundTex(sub, variant, fit, season, environment, seed, cache) {
   t.colorSpace = THREE.SRGBColorSpace;
   // 鏡射重複:筆刷特徵跨磚無接縫(fit 型單張鋪滿,不重複)
   t.wrapS = t.wrapT = fit ? THREE.ClampToEdgeWrapping : THREE.MirroredRepeatWrapping;
+  registerStreamTex(t);
   cache.set(ck, t);
   return t;
 }
@@ -1799,6 +1801,7 @@ function borderTex(kind) {
   t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
+  registerStreamTex(t);
   _bdTexCache.set(kind, t);
   return t;
 }

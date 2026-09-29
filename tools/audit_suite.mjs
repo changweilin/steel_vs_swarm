@@ -74,6 +74,7 @@ const AUDIT_SCRIPTS = [
   'tools/audit_audio_layers.mjs',
   'tools/audit_damp_fps.mjs',
   'tools/audit_cull.mjs',
+  'tools/audit_tex_stream.mjs',
 ];
 
 const ARGS = new Set(process.argv.slice(2));
