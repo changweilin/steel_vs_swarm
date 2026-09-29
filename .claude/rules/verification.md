@@ -44,6 +44,8 @@
 | World height caps | `audit_world_height` | Ceiling and object caps stay consistent. |
 | World edge and buffer skirt | `audit_world_edge`, `audit_edge_fill` | Ring bodies stay inside collision; solid buffer fill stays outside playable bounds with continuous joints. |
 | Resource lifecycle and adaptive resolution | `audit_gpu_lifecycle` | Resource release stays complete. |
+| Pre-shading culling | `audit_cull` | Visibility flips stay confined to `_renderCulledMain`; distance, frustum, scope, and inscribed-sphere occlusion share single seams. |
+| Texture mipmap and VRAM streaming | `audit_tex_stream` | Camera-view and distance-driven mip streaming disposes old WebGL buffers before level swaps and stays isolated from authority. |
 | Audio layers | `audit_audio_layers` | Movement bed follows the weight vector with registered sources. |
 | Page touch hardening | `audit_ctrl_mode` | Device and layout flags stay separated. |
 | Site layout, shyness, geology | `audit_siteplan` | Passages stay walkable after placement. |

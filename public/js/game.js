@@ -43,7 +43,7 @@ import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { lodStrideByD2, lodDue, GEO, geoTrimKeep, geoOutlineKeep, applyGeoLod } from './lod.js';
 import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep } from './cull.js';
-import { TEX_STREAM, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, flushTexStream } from './tex.js';
+import { TEX_STREAM, finishTex, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, flushTexStream } from './tex.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
@@ -431,16 +431,22 @@ const _TMP_D = new THREE.Vector3();            // 命中點暫存(_updateBullets
 const _TMP_E = new THREE.Vector3();            // 第二命中暫存(氣旋/拖尾方向解;同上)
 const _TMP_F = new THREE.Vector3();            // 氣旋正交軸暫存(_spinCyclone 專用;呼叫期間 D/E/F 皆視為已借出)
 const _FWD_Z = new THREE.Vector3(0, 0, 1);     // 彈體幾何朝向(+z);對準航向的固定基準軸
+const _UP_Y = new THREE.Vector3(0, 1, 0);      // 垂直軸(+y);圓柱/法線對齊的固定基準軸
 
 // ---- 池化特效的共用 fade(無閉包:參數全在 obj.userData,同一支函式服務全池)----
 // 逐發閉包 (`fade: (o,f) => {...}`) 本身就是每發一次的配置;池化 sprite/曳光若還配閉包,
 // 池等於白建。改由 userData 帶參 + 共用函式,acquire 只寫值不配函式。
 function _tracerFade(o, f) { o.material.opacity = 0.9 * f; }
-// 等速漂移 sprite(煙/火拖尾/觸地煙):userData { vel(等速,含上升), base, grow, op }
+// 等速漂移 sprite(煙/火拖尾/觸地煙/殉爆火煙柱):userData { vel(等速,含上升), base, grow, op, delay? }
 function _spriteDriftFade(o, f, dt) {
   const u = o.userData;
+  const p = 1 - f;
+  if (u.delay > 0) {
+    if (p < u.delay) { o.visible = false; return; }
+    o.visible = true;
+  }
   o.position.addScaledVector(u.vel, dt);
-  o.scale.setScalar(u.base + (1 - f) * u.grow);
+  o.scale.setScalar(u.base + p * u.grow);
   o.material.opacity = u.op * f;
 }
 // 重力餘燼:userData { vel(逐幀下墜), op } ;尺寸固定(base,acquire 時寫死)
@@ -510,8 +516,7 @@ function factionMarkTex(side) {
   g.strokeStyle = 'rgba(255,255,255,0.85)';        // 內描白邊:暗底/亮底都讀得出來
   g.lineWidth = 2;
   g.stroke();
-  const t = new THREE.CanvasTexture(cv);
-  t.colorSpace = THREE.SRGBColorSpace;
+  const t = finishTex(new THREE.CanvasTexture(cv), { srgb: true, stream: false });
   _markTex.set(side, t);
   return t;
 }
@@ -558,8 +563,7 @@ function allyMarkTex(side) {
   }
   g.closePath();
   g.fill();
-  const t = new THREE.CanvasTexture(cv);
-  t.colorSpace = THREE.SRGBColorSpace;
+  const t = finishTex(new THREE.CanvasTexture(cv), { srgb: true, stream: false });
   _allyTex.set(side, t);
   return t;
 }
@@ -973,6 +977,7 @@ export class BattleClient {
       }
     }
     if (collisionChanged) {
+      this._cullOccDirty = true;
       this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);
       this.terrain.rebuildBlockerTops?.();
       const climbs = this.terrain.climbs;
@@ -2807,7 +2812,7 @@ export class BattleClient {
         if (Math.abs(this.pos.x - b.x) > maxR || Math.abs(this.pos.z - b.z) > maxR) continue;
         if (b.hw2 != null) {
           // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
-          const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
+          const cs = b._cs ?? Math.cos(b.ry), sn = b._sn ?? -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
           const rx = this.pos.x - b.x, rz = this.pos.z - b.z;
           const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world→local(繞 -ry)
           const ex = b.hw2 + myR, ez = b.hd2 + myR;                // Minkowski 近似:盒面外擴機體半徑
@@ -2865,7 +2870,7 @@ export class BattleClient {
       // (圓柱那半的同一條規則住 `_circleEnter`,此處是有向盒版)
       if (b.hw2 != null) {
         const fwd = (this.pos.x - b.x) * dx + (this.pos.z - b.z) * dz;
-        const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
+        const cs = b._cs ?? Math.cos(b.ry), sn = b._sn ?? -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
         const ex = b.hw2 + myR, ez = b.hd2 + myR;
         const o0x = (px0 - b.x) * cs + (pz0 - b.z) * sn, o0z = -(px0 - b.x) * sn + (pz0 - b.z) * cs;
         if (Math.abs(o0x) < ex && Math.abs(o0z) < ez) continue;    // P0 已在盒內 → push-out 脫出
@@ -2874,10 +2879,17 @@ export class BattleClient {
         if (Math.abs(p1x) < ex && Math.abs(p1z) < ez && fwd < 0) continue;   // 終點在盒內近半 → push-out 沿牆滑
         const ux = dx * cs + dz * sn, uz = -dx * sn + dz * cs;     // 位移轉盒 local
         let tmin = -Infinity, tmax = Infinity, ok = true;
-        for (const [o, u, e] of [[o0x, ux, ex], [o0z, uz, ez]]) {
-          if (Math.abs(u) < 1e-9) { if (o < -e || o > e) { ok = false; break; } continue; }
-          let t1 = (-e - o) / u, t2 = (e - o) / u; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
-          tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+        if (Math.abs(ux) < 1e-9) { if (o0x < -ex || o0x > ex) ok = false; }
+        else {
+          let t1 = (-ex - o0x) / ux, t2 = (ex - o0x) / ux; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+          if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
+        }
+        if (ok) {
+          if (Math.abs(uz) < 1e-9) { if (o0z < -ez || o0z > ez) ok = false; }
+          else {
+            let t1 = (-ez - o0z) / uz, t2 = (ez - o0z) / uz; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+            if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
+          }
         }
         if (ok && tmax >= tmin && tmin > 0 && tmin <= 1) tEnter = tmin;
       } else {
@@ -2928,17 +2940,21 @@ export class BattleClient {
     };
     // 有向盒版(建物):射線在盒 local frame 走 slab 求進入 t(盒外擴 SKIN);pos 已在盒內 → 縮回 pos
     const clampBox = (b) => {
-      const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
+      const cs = b._cs ?? Math.cos(b.ry), sn = b._sn ?? -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
       const olx = (ox - b.x) * cs + (oz - b.z) * sn, olz = -(ox - b.x) * sn + (oz - b.z) * cs;
       const ulx = ux * cs + uz * sn, ulz = -ux * sn + uz * cs;
       const ex = b.hw2 + SKIN, ez = b.hd2 + SKIN;
       if (Math.abs(olx) < ex && Math.abs(olz) < ez) { maxT = 0; return; }
       let tmin = -Infinity, tmax = Infinity;
-      const axes = [[olx, ulx, ex], [olz, ulz, ez]];
-      for (const [o, d, e] of axes) {
-        if (Math.abs(d) < 1e-9) { if (o < -e || o > e) return; continue; }   // 平行且在板外 → 不相交
-        let t1 = (-e - o) / d, t2 = (e - o) / d; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
-        tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+      if (Math.abs(ulx) < 1e-9) { if (olx < -ex || olx > ex) return; }
+      else {
+        let t1 = (-ex - olx) / ulx, t2 = (ex - olx) / ulx; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+        if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
+      }
+      if (Math.abs(ulz) < 1e-9) { if (olz < -ez || olz > ez) return; }
+      else {
+        let t1 = (-ez - olz) / ulz, t2 = (ez - olz) / ulz; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+        if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
       }
       if (tmax < tmin || tmax < 0) return;   // 射線不進盒體(或盒在後方)
       const t = tmin > 0 ? tmin : 0;
@@ -7937,7 +7953,7 @@ export class BattleClient {
       // 無敵幀中的目標:伺服器 _damage 完全免傷 —— 跳灰字「-0」而非誤導性的滿額估算數字
       if ((ent.inv || 0) > 0) {
         damageNumber(this.scene, this.effects,
-          point.clone().add(new THREE.Vector3(0, 1.2, 0)), 0, { text: '-0' });
+          _TMP_A.set(point.x, point.y + 1.2, point.z), 0, { text: '-0' });
         return;
       }
       const mult = vsMult(def, ent.kind);
@@ -7948,7 +7964,7 @@ export class BattleClient {
       const sp = shieldSplit(def, raw, ent.sp || 0);
       const est = Math.round(sp.toSp + sp.toHp);
       damageNumber(this.scene, this.effects,
-        point.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: mult >= 1.5 });
+        _TMP_A.set(point.x, point.y + 1.2, point.z), est, { big: mult >= 1.5 });
     }
   }
 
@@ -7986,6 +8002,8 @@ export class BattleClient {
     const len = seg.length() || 1;
     const d = seg.clone().divideScalar(len);
     // 截面基底:與射向垂直的兩軸(分區用;幾乎垂直射線時換參考軸,免退化)
+    // local Vector3 — called once per fire (not per-frame); audit sandbox
+    // extracts this method via new Function() and has no module-level _TMP_*
     const up = Math.abs(d.y) > 0.99 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
     const e1 = new THREE.Vector3().crossVectors(d, up).normalize();
     const e2 = new THREE.Vector3().crossVectors(d, e1);
@@ -8054,7 +8072,7 @@ export class BattleClient {
       }
       // 無敵幀目標:同 _hitFeedback,跳灰字 -0(伺服器免傷)
       if ((ent.inv || 0) > 0) {
-        damageNumber(this.scene, this.effects, p.clone().add(new THREE.Vector3(0, 1.2, 0)), 0, { text: '-0' });
+        damageNumber(this.scene, this.effects, _TMP_A.set(p.x, p.y + 1.2, p.z), 0, { text: '-0' });
         continue;
       }
       const mult = vsMult(def, ent.kind);
@@ -8062,7 +8080,7 @@ export class BattleClient {
       const sp = shieldSplit(def, raw, ent.sp || 0);   // 護盾分軌(見 _hitFeedback 同註)
       const est = Math.round(sp.toSp + sp.toHp);
       damageNumber(this.scene, this.effects,
-        p.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: i === 0 && mult >= 1.5 });
+        _TMP_A.set(p.x, p.y + 1.2, p.z), est, { big: i === 0 && mult >= 1.5 });
     }
   }
 
@@ -8109,18 +8127,18 @@ export class BattleClient {
     const g = this._gLaser;
     g.group.visible = true;
     this.camera.updateMatrixWorld();
-    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    const dir = this.camera.getWorldDirection(_TMP_D);
     const from = this.viewMode === 'tps'
       ? this._selfMuzzle(null, this._maxRange(def), 'heavy')
       : this.gunGroup?.localToWorld(this._muzzle.clone()) || this.camera.position.clone();
     const { point } = this._resolveAim(this._maxRange(def));
-    const seg = point.clone().sub(from);
+    const seg = _TMP_E.copy(point).sub(from);
     const len = Math.max(0.5, seg.length());
     g.beam.position.copy(from).addScaledVector(seg, 0.5);
-    g.beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), seg.clone().normalize());
+    g.beam.quaternion.setFromUnitVectors(_UP_Y, _TMP_F.copy(seg).normalize());
     g.beam.scale.set(1, len, 1);
     g.ring.position.copy(point).addScaledVector(dir, -0.4);
-    g.ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+    g.ring.quaternion.setFromUnitVectors(_FWD_Z, dir);
     // 導引窗:最短距離(ARMING.guide.m)內彈體仍在軌跡修正期 —— 環變紅示警「太近,會打歪」
     const armed = len >= ARMING.guide.m;
     g.ring.material.color.setHex(armed ? 0xff5f4a : 0xffd24a);
@@ -8600,6 +8618,7 @@ export class BattleClient {
     sp.scale.setScalar(scale);
     sp.material.color.setHex(color);
     sp.material.opacity = op;
+    sp.userData.delay = 0;
     sp.visible = true;
     this.scene.add(sp);
     return sp;
@@ -8627,9 +8646,9 @@ export class BattleClient {
 
   /** 軌跡修正期的初期散布:在 dir 周圍的圓錐內取一個隨機偏角(離架瞬間一次性,之後由導引修正) */
   _armSpread(dir, spread) {
-    const up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
-    const nx = new THREE.Vector3().crossVectors(dir, up).normalize();
-    const nz = new THREE.Vector3().crossVectors(dir, nx).normalize();
+    const up = Math.abs(dir.y) > 0.9 ? _TMP_A.set(1, 0, 0) : _TMP_A.set(0, 1, 0);
+    const nx = _TMP_B.crossVectors(dir, up).normalize();
+    const nz = _TMP_C.crossVectors(dir, nx).normalize();
     const a = Math.random() * Math.PI * 2, m = Math.tan(Math.random() * spread);
     return dir.clone().addScaledVector(nx, m * Math.cos(a)).addScaledVector(nz, m * Math.sin(a)).normalize();
   }
@@ -9313,8 +9332,8 @@ export class BattleClient {
 
   /** 第一人稱「座艙被火吞沒」:在鏡頭前方近距離撒火焰 + 火星,填滿 FPV(殉爆過場專用,強化第一人稱燃燒感)。 */
   _engulfFPV(cam) {
-    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
+    const fwd = _TMP_A.set(0, 0, -1).applyQuaternion(cam.quaternion);
+    const right = _TMP_B.set(1, 0, 0).applyQuaternion(cam.quaternion);
     // 火 + 煙集中在左右兩側帶,中央 ~1/3 正前方留空 —— 被擊殺過場仍看得見前方戰況(可讀性優先)。
     // 交替左右均衡;每顆側向強制外推(lat 絕對值 ≥1.7),焰/煙球不侵入正前方視野。
     for (let i = 0; i < 4; i++) {
@@ -9374,7 +9393,7 @@ export class BattleClient {
       pg.addColorStop(0, `rgba(255,250,220,${0.3 + Math.random() * 0.4})`); pg.addColorStop(1, 'rgba(255,180,90,0)');
       c.fillStyle = pg; c.beginPath(); c.arc(px, py, pr, 0, 7); c.fill();
     }
-    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    const t = finishTex(new THREE.CanvasTexture(cv), { srgb: true, stream: false });
     this._fireTexC = t; return t;
   }
 
@@ -9403,7 +9422,7 @@ export class BattleClient {
     const m = c.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
     m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(0.66, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)');
     c.fillStyle = m; c.fillRect(0, 0, S, S);
-    const t = new THREE.CanvasTexture(cv);
+    const t = finishTex(new THREE.CanvasTexture(cv), { stream: false });
     this._smokeTexC = t; return t;
   }
 
@@ -9420,45 +9439,29 @@ export class BattleClient {
   }
 
   /** 殉爆火煙柱(~2s):噴發火(加法橙)+ 煙(灰上升),沿飛彈煙尾 idiom;地面路徑起始演出。
-   *  改用柔邊 sprite billboard(徑向漸層貼圖):恆面向相機、無 facet → 第一人稱近距離仍高解析度、不粗糙;
-   *  depthWrite:false 不 z-fight,掛 userData.noOutline 讓 outlinify 跳過。貼圖共用快取,dispose 只釋放材質。 */
+   *  改用池化柔邊 sprite billboard(徑向漸層貼圖):恆面向相機、無 facet,共用 _spriteDriftFade 零新配置。 */
   _deathPlume(x, y, z) {
-    const g = new THREE.Group();
-    g.userData.noOutline = true;
-    const parts = [], NF = 22, NS = 18;
+    const NF = 22, NS = 18;
     for (let i = 0; i < NF + NS; i++) {
       const fire = i < NF;
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: fire ? this._fireTex() : this._smokeTex(),
-        color: fire ? (Math.random() < 0.5 ? 0xff8a3a : 0xffd166) : 0x4a4e52,
-        transparent: true, opacity: fire ? 0.95 : 0.62, depthWrite: false,
-        blending: fire ? THREE.AdditiveBlending : THREE.NormalBlending }));
       const th = Math.random() * Math.PI * 2, rad = Math.random() * 3;
-      sp.position.set(x + Math.cos(th) * rad, y + Math.random() * 2, z + Math.sin(th) * rad);
       const base = fire ? 3.0 + Math.random() * 2 : 5 + Math.random() * 3;
-      sp.scale.setScalar(base);
-      parts.push({ sp, fire, base,
-        rise: fire ? 4 + Math.random() * 4 : 7 + Math.random() * 6,
-        drift: new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2),
-        grow: fire ? 1.8 : 3.2, delay: fire ? 0 : Math.random() * 0.5 });   // 煙稍晚冒
-      g.add(sp);
+      const op = fire ? 0.95 : 0.62;
+      const sp = this._takeSprite(fire,
+        x + Math.cos(th) * rad, y + Math.random() * 2, z + Math.sin(th) * rad,
+        base, fire ? (Math.random() < 0.5 ? 0xff8a3a : 0xffd166) : 0x4a4e52, op);
+      sp.userData.vel.set(
+        (Math.random() - 0.5) * 2,
+        fire ? 4 + Math.random() * 4 : 7 + Math.random() * 6,
+        (Math.random() - 0.5) * 2,
+      );
+      sp.userData.base = base;
+      sp.userData.grow = base * (fire ? 1.8 : 3.2);
+      sp.userData.op = op;
+      sp.userData.delay = fire ? 0 : Math.random() * 0.5;
+      if (sp.userData.delay > 0) sp.visible = false;
+      this._pushSpriteFx(sp, 2.0, _spriteDriftFade);
     }
-    this.scene.add(g);
-    this.effects.push({
-      obj: g, ttl: 2.0,
-      fade: (o, f, dt) => {
-        const p = 1 - f;
-        for (const c of parts) {
-          if (p < c.delay) { c.sp.visible = false; continue; }
-          c.sp.visible = true;
-          c.sp.position.y += c.rise * dt;
-          c.sp.position.addScaledVector(c.drift, dt);
-          c.sp.scale.setScalar(c.base * (1 + p * c.grow));
-          c.sp.material.opacity = c.fire ? Math.max(0, f * 1.4 - 0.2) * 0.95 : 0.6 * f;
-        }
-      },
-      dispose: () => { for (const c of parts) c.sp.material.dispose(); },   // 貼圖共用快取不 dispose
-    });
     this._emberBurst(x, y + 1, z, 14, 4);   // 起始迸射一批火星補顆粒細節
   }
 
@@ -10257,13 +10260,14 @@ export class BattleClient {
     } else {
       // 上帝視角:自由飛行。升降是**移動**不是姿態 ⇒ 與飛行機體同一組鍵(Space 升 / C・Ctrl 降),
       // 觸控 B・ZL 經 `_cmd` 對映到同兩顆鍵,MUST NOT 在觸控層另寫一套垂直位移。
-      const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-      const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+      const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+      const rx = -fz, rz = fx;
       const ax = this._moveAxis();
       const sp = SPEC_CAM.MOVE_MPS * (ax.boost ? SPEC_CAM.BOOST_F : 1);
       const k = ax.mag > 1 ? 1 / ax.mag : 1;   // 鍵盤對角線夾回單位長(舊版逐軸相加會快 √2 倍,此處與交戰視角一致)
-      this.pos.addScaledVector(fwd, ax.f * k * sp * dt);
-      this.pos.addScaledVector(right, ax.r * k * sp * dt);
+      const step = k * sp * dt;
+      this.pos.x += (fx * ax.f + rx * ax.r) * step;
+      this.pos.z += (fz * ax.f + rz * ax.r) * step;
       if (this.keys.Space) this.pos.y += sp * dt;
       if (this.keys.KeyC || this.keys.ControlLeft) this.pos.y -= sp * dt;
       // 下降的地板:降到站立面上方 FLOOR_M 就停住(地形/橋面同一個縫 `_surf`)
@@ -10382,7 +10386,7 @@ export class BattleClient {
       const world = Math.atan2(p.x - ent.mesh.position.x, p.z - ent.mesh.position.z);
       wantLocal = wrap(world - ent.mesh.rotation.y);
       const dx = p.x - ent.mesh.position.x, dz = p.z - ent.mesh.position.z;
-      const turY = tur.getWorldPosition(new THREE.Vector3()).y;
+      const turY = tur.getWorldPosition(_TMP_A).y;
       wantPitch = Math.atan2(((p.y ?? turY) - turY), Math.hypot(dx, dz) || 1);
     }
     tur.rotation.y += wrap(wantLocal - tur.rotation.y) * lerpFPS(5, dt);
@@ -10408,7 +10412,7 @@ export class BattleClient {
     const aim = ent._aimAt && now < ent._aimAt.until ? ent._aimAt : null;
     let want = 0;
     if (aim) {
-      const py = piv.getWorldPosition(new THREE.Vector3()).y;
+      const py = piv.getWorldPosition(_TMP_A).y;
       const d = Math.hypot(aim.x - ent.mesh.position.x, aim.z - ent.mesh.position.z) || 1;
       want = Math.max(-1.1, Math.min(0.5, Math.atan2((aim.y ?? py) - py, d)));
     }
@@ -11455,7 +11459,7 @@ export class BattleClient {
       applyGeoLod(mesh, trimHi, outHi);
     };
     for (const ent of this.ents.values()) tick(ent, ent.id ?? ent.kind ?? 0);
-    for (const b of this.mapBuildings?.values() || []) tick(b, b.id ?? 0);
+    for (const b of this.mapBuildings?.values() || []) if (b.record?.mesh) tick(b, b.id ?? 0);
   }
 
   // ---------------- Pre-shading cull (presentation only) ----------------
@@ -11466,18 +11470,22 @@ export class BattleClient {
    * deathcam render after restore, hence always see the full scene (small
    * viewports; correctness over savings there). Threshold truth stays in
    * data.js (dofNearM/dofFarM/scopeRvminFog) and lod.js (lodDue stagger);
-   * predicates stay in cull.js. Spectators skip (side == null): wheel zoom
-   * would misread as sniper blend, same reason setDofBlend gates on side.
+   * predicates stay in cull.js. Spectators/dead gate aimBlend to 0 (wheel zoom
+   * would misread as sniper blend, same reason setDofBlend gates on side).
    */
   _tickCull() {
     this._culled = null;
-    if (!this.side || this.dead || !this.camera || !this.ents) return;
+    if (!this.camera || !this.ents) return;
     const cam = this.camera, camP = cam.position;
     cam.updateMatrixWorld();
     const frustum = this._cullFrustum || (this._cullFrustum = new THREE.Frustum());
     const cm = this._cullM || (this._cullM = new THREE.Matrix4());
     frustum.setFromProjectionMatrix(cm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
-    const aimBlend = dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov);
+    let aimBlend = 0;
+    try {
+      aimBlend = (this.side && !this.dead)
+        ? dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0;
+    } catch { aimBlend = 0; }
     const farNear = dofNearM(), farFar = dofFarM();
     let rPx = 0, projF = 0, HW = 0, HH = 0;
     if (aimBlend > 0.001) {
@@ -11486,14 +11494,20 @@ export class BattleClient {
       rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
       projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
     }
-    const occ = this._cullOcc || (this._cullOcc = []);
-    occ.length = 0;
-    for (const b of this.mapBuildings?.values() || []) {
-      const r = b.record?.bounds;
-      if (!r || b.collapsed || b.record?.cleared) continue;
-      const or = Math.hypot(r.w, r.d) * 0.5;
-      if (or < CULL.OCCLUDE_MIN_R_M) continue;
-      occ.push(r.x, r.y + r.h * 0.5, r.z, or * 0.8);
+    let occ = this._cullOcc;
+    if (!occ || this._cullOccDirty) {
+      occ = this._cullOcc || (this._cullOcc = []);
+      occ.length = 0;
+      for (const b of this.mapBuildings?.values() || []) {
+        const r = b.record?.bounds;
+        if (!r || b.collapsed || b.record?.cleared) continue;
+        // Inscribed sphere radius of the building AABB/OBB: never protrudes
+        // outside walls or roof (circumscribed hypot false-occludes on narrow/low boxes).
+        const or = Math.min(r.w, r.d, r.h) * 0.5;
+        if (or < CULL.OCCLUDE_MIN_R_M) continue;
+        occ.push(r.x, r.y + r.h * 0.5, r.z, or);
+      }
+      this._cullOccDirty = false;
     }
     const frame = this._lodFrame | 0;
     const v = this._cullV || (this._cullV = new THREE.Vector3());
@@ -11530,27 +11544,27 @@ export class BattleClient {
       else if (dc) { const b = far * CULL.DIST_HYST; dc = d2 > b * b; }
       else dc = !keepDistance(d2, far);
       ent._distCull = dc;
-      if (dc) { out.push(ent); return; }
+      if (dc) { ent._cullFrame = frame; out.push(ent); return; }
       s.center.set(cx, cy, cz); s.radius = rTgt * CULL.FRUSTUM_PAD_F;
-      if (!frustum.intersectsSphere(s)) { out.push(ent); return; }
+      if (!frustum.intersectsSphere(s)) { ent._cullFrame = frame; out.push(ent); return; }
       // Scope mask skips the near field: a sphere straddling the near plane
       // projects wild NDC while still covering the screen. Never culls inside 5m.
       if (rPx > 0 && d2 > 25) {
         v.set(cx, cy, cz).project(cam);
         const d = Math.sqrt(d2) || 1;
-        if (!scopeKeep(v.x * HW, v.y * HH, rPx, (rTgt / d) * projF * CULL.SCOPE_PAD_F)) { out.push(ent); return; }
+        if (!scopeKeep(v.x * HW, v.y * HH, rPx, (rTgt / d) * projF * CULL.SCOPE_PAD_F)) { ent._cullFrame = frame; out.push(ent); return; }
       }
       // Occlusion verdict persists between staggered re-tests: testing 1-in-4
       // frames while hiding only on test frames is a 15Hz blink (and the
       // per-frame visibility flapping churns the render list = stutter).
-      // Re-test when due, or when either end moved enough to void the stamp.
+      // Re-test when due, or when either end moved enough (3D) to void the stamp.
       // Static blockers skip this tier too: an occluded tower still collides
       // and fires while hidden, and parallax on approach flaps the single-margin
       // verdict into a disappear/reappear blink. Frustum/scope still apply.
       if (!staticBlocker && d2 > occMin2 && occ.length) {
         const moved = ent._occX === undefined
-          || (p.x - ent._occX) * (p.x - ent._occX) + (p.z - ent._occZ) * (p.z - ent._occZ) > 1
-          || (camP.x - ent._occCX) * (camP.x - ent._occCX) + (camP.z - ent._occCZ) * (camP.z - ent._occCZ) > 4;
+          || (p.x - ent._occX) * (p.x - ent._occX) + (p.y - ent._occY) * (p.y - ent._occY) + (p.z - ent._occZ) * (p.z - ent._occZ) > 1
+          || (camP.x - ent._occCX) * (camP.x - ent._occCX) + (camP.y - ent._occCY) * (camP.y - ent._occCY) + (camP.z - ent._occCZ) * (camP.z - ent._occCZ) > 4;
         if (moved || lodDue(frame, ent.id ?? ent.kind ?? 0, CULL.OCCLUDE_STRIDE)) {
           ent._occCull = false;
           const dTgt = Math.sqrt(d2);
@@ -11563,17 +11577,24 @@ export class BattleClient {
             if (occludedBySphere(dTgt, Math.sqrt(ox * ox + oy * oy + oz * oz),
               Math.sqrt(qx * qx + qy * qy + qz * qz), rTgt, occ[i + 3])) { ent._occCull = true; break; }
           }
-          ent._occX = p.x; ent._occZ = p.z; ent._occCX = camP.x; ent._occCZ = camP.z;
+          ent._occX = p.x; ent._occY = p.y; ent._occZ = p.z;
+          ent._occCX = camP.x; ent._occCY = camP.y; ent._occCZ = camP.z;
         }
-        if (ent._occCull) { out.push(ent); return; }
+        if (ent._occCull) { ent._cullFrame = frame; out.push(ent); return; }
       } else {
         ent._occCull = false;
       }
     };
     for (const ent of this.ents.values())
       consider(ent, !!(ent.hero || ent.decoy || ent.civ || ent.isStatic || ent.kind === 'tower' || ent.kind === 'base'));
-    for (const b of this.mapBuildings?.values() || []) consider(b, true);
-    if (out.length) this._culled = [...out];
+    for (const b of this.mapBuildings?.values() || []) if (b.record?.mesh) consider(b, true);
+    if (out.length) this._culled = out;
+    this._cullStamp = frame;
+    this._cullAimBlend = aimBlend;
+    this._cullRPx = rPx;
+    this._cullProjF = projF;
+    this._cullHW = HW;
+    this._cullHH = HH;
   }
 
   // ---------------- Texture streaming / Virtual Texturing (presentation only) ----------------
@@ -11589,28 +11610,44 @@ export class BattleClient {
   _tickTexStream() {
     if (!this.camera) return;
     const cam = this.camera, camP = cam.position;
-    cam.updateMatrixWorld();
-    const frustum = this._cullFrustum || (this._cullFrustum = new THREE.Frustum());
-    const cm = this._cullM || (this._cullM = new THREE.Matrix4());
-    frustum.setFromProjectionMatrix(cm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
-    let aimBlend = 0;
-    try {
-      aimBlend = (this.side && !this.dead)
-        ? dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0;
-    } catch { aimBlend = 0; }
-    let rPx = 0, projF = 0, HW = 0, HH = 0;
-    if (aimBlend > 0.001 && this.canvas) {
-      const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
-      HW = W / 2; HH = H / 2;
-      rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
-      projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
-    }
     const frame = this._lodFrame | 0;
+    let frustum = this._cullFrustum;
+    let aimBlend = 0, rPx = 0, projF = 0, HW = 0, HH = 0;
+    if (frustum && this._cullStamp === frame) {
+      aimBlend = this._cullAimBlend || 0;
+      rPx = this._cullRPx || 0;
+      projF = this._cullProjF || 0;
+      HW = this._cullHW || 0;
+      HH = this._cullHH || 0;
+    } else {
+      cam.updateMatrixWorld();
+      frustum = frustum || (this._cullFrustum = new THREE.Frustum());
+      const cm = this._cullM || (this._cullM = new THREE.Matrix4());
+      frustum.setFromProjectionMatrix(cm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+      try {
+        aimBlend = (this.side && !this.dead)
+          ? dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0;
+      } catch { aimBlend = 0; }
+      if (aimBlend > 0.001 && this.canvas) {
+        const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
+        HW = W / 2; HH = H / 2;
+        rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
+        projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
+      }
+    }
     const v = this._cullV || (this._cullV = new THREE.Vector3());
     const s = this._cullS || (this._cullS = new THREE.Sphere());
     const reg = this._streamTexReg || (this._streamTexReg = new Set());
-    const culledSet = this._culled ? new Set(this._culled) : null;
-    const cullActive = !!(this.side && !this.dead && this.ents);
+    const cullActive = this._cullStamp === frame;
+    const forceAll = !this._texStreamInit;
+    const anyDue = (texs) => {
+      if (forceAll) return true;
+      for (let i = 0; i < texs.length; i++) {
+        const st = texs[i].userData?.texStream;
+        if (st && lodDue(frame, st.id, TEX_STREAM.STRIDE)) return true;
+      }
+      return false;
+    };
 
     const evalEnt = (ent) => {
       const mesh = ent?.mesh;
@@ -11621,12 +11658,12 @@ export class BattleClient {
         for (const t of ent._streamTexs) reg.add(t);
       }
       const texs = ent._streamTexs;
-      if (!texs || !texs.length) return;
+      if (!texs || !texs.length || !anyDue(texs)) return;
       if (ent.isSelf && !ent.dead) {
         for (const t of texs) noteTexDemand(t, 0, true, frame);
         return;
       }
-      if (ent.dead || ent.gar || !mesh.visible || (culledSet && culledSet.has(ent))) {
+      if (ent.dead || ent.gar || !mesh.visible || (cullActive && ent._cullFrame === frame)) {
         for (const t of texs) noteTexDemand(t, Infinity, false, frame);
         return;
       }
@@ -11650,13 +11687,12 @@ export class BattleClient {
     };
 
     if (this.ents) for (const ent of this.ents.values()) evalEnt(ent);
-    if (this.mapBuildings) for (const b of this.mapBuildings.values()) evalEnt(b);
+    if (this.mapBuildings) for (const b of this.mapBuildings.values()) if (b.record?.mesh) evalEnt(b);
 
     const evalStaticRoot = (root) => {
       if (!root) return;
       const ud = root.userData || (root.userData = {});
-      const chLen = root.children ? root.children.length : 0;
-      if (!ud._streamEntries || ud._streamChildrenLen !== chLen) {
+      if (!ud._streamEntries) {
         root.updateMatrixWorld(true);
         const entries = [];
         root.traverse((o) => {
@@ -11679,9 +11715,9 @@ export class BattleClient {
           });
         });
         ud._streamEntries = entries;
-        ud._streamChildrenLen = chLen;
       }
       for (const entry of ud._streamEntries) {
+        if (!anyDue(entry.texs)) continue;
         if (!entry.mesh.visible) {
           for (const t of entry.texs) noteTexDemand(t, Infinity, false, frame);
           continue;
@@ -11711,9 +11747,9 @@ export class BattleClient {
     evalStaticRoot(this.biomes);
     evalStaticRoot(this.terrain?.group);
 
-    const forceAll = !this._texStreamInit;
+    const maxAniso = this._maxAniso || (this._maxAniso = this.renderer?.capabilities?.getMaxAnisotropy?.() || 0);
     this._texStreamInit = true;
-    this._texStreamStats = flushTexStream(reg, frame, aimBlend, { isDue: lodDue, forceAll });
+    this._texStreamStats = flushTexStream(reg, frame, aimBlend, { isDue: lodDue, forceAll, maxAniso });
   }
 
   /** Main-scene render with the culled set hidden; restores before PiP. */
@@ -11845,7 +11881,7 @@ export class BattleClient {
     if (this.cockpit) this.cockpit.visible = false;
     const srcVis = src?.mesh?.visible;
     if (src?.mesh) src.mesh.visible = false;   // 隱藏自身模型,避免相機在幾何內部被遮擋穿模
-    const clear0 = r.getClearColor(new THREE.Color()), alpha0 = r.getClearAlpha();
+    const clear0 = r.getClearColor(this._pipClear0 || (this._pipClear0 = new THREE.Color())), alpha0 = r.getClearAlpha();
     r.setScissorTest(true);
     r.setViewport(px, y, pw, ph);
     r.setScissor(px, y, pw, ph);
@@ -11909,8 +11945,11 @@ export class BattleClient {
     this._spritePoolFire = null;
     this._spritePoolSmoke?.clear((sp) => sp.material.dispose());
     this._spritePoolSmoke = null;
+    this._fireTexC?.dispose(); this._fireTexC = null;
+    this._smokeTexC?.dispose(); this._smokeTexC = null;
     this._recPool?.clear(); this._recPool = null;
     this._fxShellPool?.clear(); this._fxShellPool = null;
+    this._cullOcc = null; this._cullOut = null; this._culled = null;
     this._streamTexReg?.clear(); this._streamTexReg = null;
     this._texStreamStats = null;
     this.renderer.dispose();

@@ -41,12 +41,8 @@ export function lodHash(id) {
 
 /** Distance -> update stride (frames per heavy update). Self / near = 1 (no-op). */
 export function lodStride(dist, lowPower = false) {
-  let s = dist < LOD.NEAR_M ? LOD.STRIDE_NEAR
-    : dist < LOD.MID_M ? LOD.STRIDE_MID
-    : dist < LOD.FAR_M ? LOD.STRIDE_FAR
-    : LOD.STRIDE_VERYFAR;
-  if (lowPower && s > 1) s = Math.min(LOD.STRIDE_MAX_LOWPOWER, s * 2);
-  return s;
+  const d = Math.max(0, dist || 0);
+  return lodStrideByD2(d * d, lowPower);
 }
 
 /** Squared-distance variant (hot path: skips sqrt; thresholds pre-squared). */

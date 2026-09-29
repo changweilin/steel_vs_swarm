@@ -176,6 +176,19 @@ export function streamTargetLevel(
 
 let _nextStreamId = 1;
 
+function _applyTexDefaults(tex, opts = {}) {
+  if (opts.srgb) tex.colorSpace = SRGB_COLOR_SPACE;
+  if (opts.wrapS !== undefined) tex.wrapS = opts.wrapS;
+  if (opts.wrapT !== undefined) tex.wrapT = opts.wrapT;
+  if (opts.mag !== undefined) tex.magFilter = opts.mag;
+  else if (!tex.magFilter) tex.magFilter = LINEAR_FILTER;
+  tex.minFilter = opts.min !== undefined ? opts.min : LINEAR_MIPMAP_LINEAR_FILTER;
+  tex.anisotropy = capAniso(
+    opts.aniso !== undefined ? opts.aniso : (tex.anisotropy > 1 ? tex.anisotropy : MIP_ANISO),
+    opts.maxAniso,
+  );
+}
+
 /**
  * Register a CanvasTexture for camera-view mip streaming.
  * Stores state on non-enumerable `tex.userData.texStream` so `JSON.stringify(tex.userData)`
@@ -189,6 +202,7 @@ export function registerStreamTex(tex, opts = {}) {
   if (tex.userData.texStream) return tex;
   const src = tex.image;
   if (!src || !(src.width > 0) || !(src.height > 0)) return tex;
+  _applyTexDefaults(tex, opts);
   const chain = (Array.isArray(opts.chain) && opts.chain.length > 0)
     ? opts.chain
     : buildMipChain(src, MIP_MIN_SIZE);
@@ -264,12 +278,7 @@ export function applyTexLevel(tex, targetLevel) {
  */
 export function finishTex(tex, opts = {}) {
   if (!tex) return tex;
-  if (opts.srgb) tex.colorSpace = SRGB_COLOR_SPACE;
-  if (opts.wrapS !== undefined) tex.wrapS = opts.wrapS;
-  if (opts.wrapT !== undefined) tex.wrapT = opts.wrapT;
-  tex.magFilter = opts.mag !== undefined ? opts.mag : LINEAR_FILTER;
-  tex.minFilter = opts.min !== undefined ? opts.min : LINEAR_MIPMAP_LINEAR_FILTER;
-  tex.anisotropy = capAniso(opts.aniso !== undefined ? opts.aniso : MIP_ANISO, opts.maxAniso);
+  _applyTexDefaults(tex, opts);
   tex.generateMipmaps = opts.generateMipmaps !== undefined ? !!opts.generateMipmaps : true;
   if (opts.stream !== false) registerStreamTex(tex, opts);
   if (opts.needsUpdate !== false) tex.needsUpdate = true;
@@ -277,8 +286,10 @@ export function finishTex(tex, opts = {}) {
 }
 
 /** One-call construction seam for CanvasTexture call sites. */
-export function canvasTexture(cv, opts = {}) {
-  const Ctor = opts.Ctor || globalThis.THREE?.CanvasTexture;
+export function canvasTexture(cv, CtorOrOpts = {}, maybeOpts = undefined) {
+  const isFn = typeof CtorOrOpts === 'function';
+  const opts = (isFn ? maybeOpts : CtorOrOpts) || {};
+  const Ctor = (isFn ? CtorOrOpts : opts.Ctor) || globalThis.THREE?.CanvasTexture;
   const tex = Ctor ? new Ctor(cv) : { image: cv, isTexture: true, isCanvasTexture: true, mipmaps: [], userData: {} };
   return finishTex(tex, opts);
 }
@@ -372,9 +383,8 @@ export function meshStreamAnchors(mesh, cellM = TEX_STREAM.CELL_M) {
   if (mesh.isInstancedMesh && mesh.instanceMatrix?.array && mesh.count > 0) {
     const arr = mesh.instanceMatrix.array;
     const n = mesh.count | 0;
-    const step = Math.max(1, Math.floor(n / 512));
     const pts = [];
-    for (let i = 0; i < n; i += step) {
+    for (let i = 0; i < n; i++) {
       const base = i * 16;
       const [wx, wy, wz] = transformPt(arr[base + 12], arr[base + 13], arr[base + 14]);
       pts.push(wx, wy, wz);
@@ -449,11 +459,15 @@ export function flushTexStream(textures, frame, aimBlend = 0, opts = {}) {
   const budget = opts.budget !== undefined ? opts.budget : TEX_STREAM.BUDGET_PER_TICK;
   const forceAll = !!opts.forceAll;
   const isDue = opts.isDue;
+  const maxAniso = opts.maxAniso > 0 ? opts.maxAniso : 0;
   const pending = [];
 
   for (const tex of textures || []) {
     const st = tex?.userData?.texStream;
     if (!st) continue;
+    if (maxAniso > 0 && tex.anisotropy > maxAniso) {
+      tex.anisotropy = capAniso(tex.anisotropy, maxAniso);
+    }
     if (!forceAll && stride > 1 && typeof isDue === 'function' && !isDue(frame, st.id, stride)) {
       continue;
     }

@@ -14,10 +14,16 @@
 //      吃單位幾何 + scale。
 // 跑法:`node tools/audit_gpu_lifecycle.mjs`
 import { readSrc } from './audit_src.mjs';
+import {
+  LOD, GEO, lodHash, lodStride, lodStrideByD2, lodDue, lodSlot,
+  geoFarM, geoKeep, geoTrimKeep, geoOutlineKeep, geoTrimTest, applyGeoLod,
+} from '../public/js/lod.js';
+import { Pool } from '../public/js/pool.js';
 
 const read = (f) => readSrc('public', 'js', f);
 const game = read('game.js'), vfx = read('vfx.js'), toon = read('toon.js'), castfx = read('castfx.js');
-const postfx = read('postfx.js');
+const postfx = read('postfx.js'), lodSrc = read('lod.js'), poolSrc = read('pool.js'), biomesSrc = read('biomes.js');
+const simSrc = readSrc('server', 'sim.js');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -191,6 +197,61 @@ console.log('\n⑦ 後製管線(postfx.js)的資源生命週期與 RES_GOV 交�
     'FXAA pass 恆執行(它兼任色彩空間轉換),?fxaa=0 只把邊緣混合關掉');
   ok(/r\.setRenderTarget\(null\)/.test(P), 'render() 結束時 render target 歸零(PiP 照樣畫在畫布上)');
   ok(/off\('post'\) \? null/.test(G), '?post=0 退回舊的直接 render(整支管線可關)');
+}
+
+console.log('\n⑧ 距離 LOD(Tick 降頻 + 幾何 LOD)單一縫與純數學驗證');
+{
+  const L = code(lodSrc), S = code(simSrc), B = code(biomesSrc);
+  ok(!/^\s*import\s/m.test(L) && !/Math\.random|mulberry32/.test(L) && !/lod\.js/.test(S),
+    'lod.js 零依賴、零亂數、伺服器權威層(sim.js)完全隔離');
+  ok(lodStride(80, false) === 1 && lodStride(200, false) === 2
+    && lodStride(400, false) === 4 && lodStride(700, false) === 6
+    && lodStride(400, true) === 8 && lodStride(200, false) === lodStrideByD2(200 * 200, false),
+    'lodStride / lodStrideByD2 單一縫一致(150/300/600m 對應 1/2/4/6 幀,低功耗加倍上限 8)');
+  ok(lodHash('ent_42') === lodHash('ent_42') && lodDue(0, 'ent_42', 1) === true
+    && [0, 1, 2, 3].filter((f) => lodDue(f, 'ent_42', 4)).length === 1,
+    'lodDue 以 FNV-1a 確定性雜湊均勻錯幀(stride=4 每 4 幀必命中 1 次)');
+  ok(lodSlot(5, 1, 4) === true && lodSlot(5, 2, 4) === false && /lodSlot\(flockFrame, i, flockDiv\)/.test(B),
+    'lodSlot 輪詢時間片純函式與 biomes.js 生態群落接線');
+  ok(geoFarM(GEO.TRIM_M, 0) === 150 && geoFarM(GEO.TRIM_M, 1) === 300
+    && geoTrimKeep(140 * 140, 0, false) === false && geoTrimKeep(130 * 130, 0, false) === true
+    && geoOutlineKeep(280 * 280, 0, true) === true && geoOutlineKeep(310 * 310, 0, true) === false,
+    '幾何 LOD(TRIM=150m / OUTLINE=300m)支援狙擊倍率延伸與 HYST=0.9 遲滯防抖');
+  ok(geoTrimTest(0.10, {}) === true && geoTrimTest(0.20, {}) === false
+    && geoTrimTest(0.08, { er: 1, ei: 1 }) === false && geoTrimTest(0.08, { outline: true }) === false,
+    'geoTrimTest 只標記 <0.15m 非自發光/非透明/非描邊微件(保留槍口焰與自發光識別)');
+  const nOut = { userData: { isOutline: true }, visible: true };
+  const nDet = { userData: { geoDetail: true }, visible: true };
+  const nKeep = { userData: { geoDetail: true, geoKeep: true }, visible: true };
+  const mockRoot = { traverse(fn) { [nOut, nDet, nKeep].forEach(fn); } };
+  const flips = applyGeoLod(mockRoot, false, false);
+  ok(flips === 2 && !nOut.visible && !nDet.visible && nKeep.visible && applyGeoLod(mockRoot, false, false) === 0,
+    'applyGeoLod 僅翻轉 isOutline / geoDetail 子節點(豁免 geoKeep,同態零翻轉)');
+  ok(/_tickGeoLod\(\)/.test(G) && /if \(b\.record\?\.mesh\) tick\(b/.test(G),
+    'game.js _tickGeoLod 已接線並跳過未拆離的靜態 mapBuildings 空殼');
+}
+
+console.log('\n⑨ 通用物件池(pool.js)生命週期與零配置熱路徑驗證');
+{
+  const P = code(poolSrc), S = code(simSrc);
+  ok(!/^\s*import\s/m.test(P) && !/Math\.random|mulberry32/.test(P), 'pool.js 零依賴、零亂數');
+  let made = 0, resetN = 0, disposedN = 0;
+  const pool = new Pool(() => ({ id: ++made }), { reset: (o) => { o.clean = true; resetN++; }, max: 2, prewarm: 1 });
+  const a = pool.acquire(), b = pool.acquire(), c = pool.acquire();
+  const r1 = pool.release(a), r2 = pool.release(b), r3 = pool.release(c);
+  pool.clear(() => { disposedN++; });
+  ok(made === 3 && resetN === 3 && r1 === true && r2 === true && r3 === false && disposedN === 2 && pool.size === 0,
+    'Pool prewarm / acquire / release(池滿回傳 false 交呼叫端處置) / clear(dispose) 契約完整');
+  ok(/this\._tracerPool\?\.clear/.test(G) && /this\._spritePoolFire\?\.clear/.test(G)
+    && /this\._fireTexC\?\.dispose\(\)/.test(G) && /this\._smokeTexC\?\.dispose\(\)/.test(G),
+    'BattleClient.dispose() 完整釋放曳光池、粒子池與火/煙專屬 CanvasTexture');
+  ok(/const _numPool = new Pool/.test(V) && /const _popPool = new Pool/.test(V)
+    && /_pushPooledFx\(effects, _numPool/.test(V) && /_pushPooledFx\(effects, _popPool/.test(V),
+    'vfx.js damageNumber 與 comicPop 納入物件池(_numPool / _popPool + 共用 fade,零閉包與材質重建)');
+  ok(/_deathPlume\(x, y, z\) \{[\s\S]*?this\._takeSprite\(fire/.test(G),
+    'game.js _deathPlume 複用 _spritePoolFire / _spritePoolSmoke 與 _spriteDriftFade(零逐死材質配置)');
+  ok(/_takeMissile\(byId, side, tid, tpid/.test(S) && !/Object\.assign\(this\._missilePool\.acquire\(\)/.test(S),
+    'sim.js _takeMissile 直接寫入池化飛彈欄位(消除每發物件字面量配置與 Object.assign)');
 }
 
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);

@@ -65,6 +65,7 @@ const res = await page.evaluate(async ({ ONLY, COLS, HEIGHTS }) => {
   ].join('\n');
   const mk = new Function('mulberry32', 'objHeightMax', `
     const _facadeCache = new Map();
+    const registerStreamTex = (t) => t;
     const THREE = { CanvasTexture: class { constructor(c) { this.image = c; } }, SRGBColorSpace: 1, NearestFilter: 2 };
     ${code}
     return { facadeTex, FACADES, FACADES_PITCHED, MASS, STOREY, ROW_LADDER, facadeRows };

@@ -28,6 +28,7 @@ import { TREE_SPECIES, createForestDefs, createForestTree, treePhenology, treeBe
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
 import { registerMapBuildings, detachMapBuilding } from './mapBuildingRender.js';
+import { lodSlot } from './lod.js';
 import { buildingNear } from './mapBuilding.js';
 import {
   ENV, solveTowerSites, siteCPs, mapArg, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
@@ -54,7 +55,7 @@ import { buildLandField } from './landfield.js';
 import { setLandField } from './toon.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
-import { registerStreamTex } from './tex.js';
+import { MIP_ANISO, registerStreamTex } from './tex.js';
 import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed, mergeGeos } from './beacons.js';
 // 邊界牆型錄 / 緩衝空間布景 / 視線邊界背景(2026-08-11 使用者定案)——
 // 型錄、切分規則、落點規劃全在那一支(純資料、零 THREE、離線可驗);本檔只負責取樣地貌與建幾何。
@@ -1486,10 +1487,9 @@ function buildFlocks(group, terrain, dynamics, { anchors, low }) {
   dynamics.push((dt) => {
     const t = celWindTime();   // 全場共用的風時鐘(雲 / 植被同一支)
     flockFrame++;
-    const slot = flockFrame % flockDiv;
     const sdt = dt * flockDiv;
     for (let i = 0; i < allFlocks.length; i++) {
-      if ((i % flockDiv) !== slot) continue;
+      if (!lodSlot(flockFrame, i, flockDiv)) continue;
       const e = allFlocks[i];
       if (e.bird) flockStep(e.f.st, t, sdt);
       else wildlifeStep(e.f.st, t, sdt, e.spec);
@@ -1625,7 +1625,7 @@ function flagTex(iso) {
   t.colorSpace = THREE.SRGBColorSpace;
   t.magFilter = THREE.LinearFilter;
   t.minFilter = THREE.LinearMipmapLinearFilter;
-  t.anisotropy = 4;
+  t.anisotropy = MIP_ANISO;
   registerStreamTex(t);
   _flagTexCache.set(iso, t);
   return t;

@@ -6839,11 +6839,10 @@ export class BattleSim {
       }
       if (!best) continue;   // 附近陣地已被摧毀 → 這條非正規路線是打出來的安全通道
       h.thirdCd = this.t + GAME.THREAT_CD_S;
-      this.missiles.push(this._takeMissile({
-        id: nextEntId++, byId: best.id, side: OTHER_SIDE[h.side], tid: h.id, tpid: h.pid,
-        x: best.x, z: best.z, y: 2, speed: A.SPEED, dmg: A.DMG, pen: A.PEN, r: A.R, hp: A.HP, maxHp: A.HP, ttl: 14,
-        amb: true, ox: best.x, oy: 2, oz: best.z, range: S.range,   // 出了陣地射程就失鎖直飛
-      }));
+      this.missiles.push(this._takeMissile(
+        best.id, OTHER_SIDE[h.side], h.id, h.pid,
+        best.x, 2, best.z, A.SPEED, A.DMG, A.PEN, A.R, A.HP, 14, S.range, true,
+      ));
       this.events.push({ e: 'sam', from: [best.x, best.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
       ambN++;   // 本 tick 新發射的伏擊飛彈計入上限(與逐架 filter 同語意)
     }
@@ -7067,9 +7066,16 @@ export class BattleSim {
    * 演出取用的就是結算用的那一份(原則 4)。傷害基準走 npcDmg = `m.dmg`(建築/第三方陣地皆
    * 不吃 `vs` 剋制,與 NPC 分支同一條)。
    */
-  /** 飛彈記錄取用:池空即新建,欄位由呼叫端 Object.assign 完整覆寫。 */
-  _takeMissile(o) {
-    return Object.assign(this._missilePool.acquire(), o);
+  /** 飛彈記錄取用:池空即新建,直接覆寫純量欄位(零每發物件配置、零 Object.assign)。 */
+  _takeMissile(byId, side, tid, tpid, x, y, z, speed, dmg, pen, r, hp, ttl, range, amb = false) {
+    const m = this._missilePool.acquire();
+    m.id = nextEntId++;
+    m.byId = byId; m.side = side; m.tid = tid; m.tpid = tpid;
+    m.x = x; m.y = y; m.z = z; m.ox = x; m.oy = y; m.oz = z;
+    m.speed = speed; m.dmg = dmg; m.pen = pen; m.r = r;
+    m.hp = hp; m.maxHp = hp; m.ttl = ttl; m.range = range;
+    m.amb = amb || undefined;
+    return m;
   }
 
   /** 飛彈移除(保序 splice + 記錄回池);回傳移除的記錄(呼叫端若還需讀殘值可用)。 */
@@ -7306,12 +7312,11 @@ export class BattleSim {
       e.gunCd[i] = 1 / (g.rate * sandMul);
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
       const mx = e.x + off, mz = e.z, my = BASE_MISSILE.LAUNCH_Y;
-      this.missiles.push(this._takeMissile({
-        id: nextEntId++, byId: e.id, side: e.side, tid: target.id, tpid: target.pid,
-        x: mx, y: my, z: mz, speed: BASE_MISSILE.SPEED, dmg: g.dmg, pen: STRUCT_W.base.pen || 0,
-        r: STRUCT_W.base.r, hp: BASE_MISSILE.HP, maxHp: BASE_MISSILE.HP, ttl: g.range / BASE_MISSILE.SPEED + BASE_MISSILE.TTL_PAD,
-        ox: mx, oy: my, oz: mz, range: g.range,   // 出了主堡射程就失鎖直飛(與其他飛彈同一條規則)
-      }));
+      this.missiles.push(this._takeMissile(
+        e.id, e.side, target.id, target.pid,
+        mx, my, mz, BASE_MISSILE.SPEED, g.dmg, STRUCT_W.base.pen || 0,
+        STRUCT_W.base.r, BASE_MISSILE.HP, g.range / BASE_MISSILE.SPEED + BASE_MISSILE.TTL_PAD, g.range, false,
+      ));
       // gi = 第幾門砲:客戶端把該門砲管轉向目標、播放槍口焰(飛彈本身由 sm 快照另行渲染飛行路徑)
       this.events.push({
         e: 'shot', id: e.id, kind: 'base', gi: i, from: [mx, mz], to: [target.x, target.z],

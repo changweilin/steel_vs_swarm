@@ -193,6 +193,20 @@ function _beamFade(o, f) {
   o.material.opacity = u.op * f * f;
   o.scale.x = o.scale.z = u.w * (0.12 + 0.88 * f * f);
 }
+function _popFade(o, f) {
+  const u = o.userData;
+  const p = 1 - f;
+  const t01 = Math.min(1, p * u.ttl / 0.15);
+  const back = 1 + 2.2 * Math.pow(t01 - 1, 3) + 1.2 * Math.pow(t01 - 1, 2);
+  o.scale.setScalar(u.size * Math.max(0.01, back));
+  o.material.opacity = f < 0.3 ? f / 0.3 : 1;
+}
+function _numFade(o, f, dt) {
+  const u = o.userData;
+  o.position.y += dt * 6;
+  o.position.x += u.vx * dt;
+  o.material.opacity = f < 0.5 ? f / 0.5 : 1;
+}
 function _releasePooledFx(pool, obj) {
   const sh = obj.userData.shell;
   if (!sh) return;                    // 重入保護(殼已取走)
@@ -243,8 +257,28 @@ const _beamPool = new Pool(() => {
   beam.userData.releaseFx = () => _releasePooledFx(_beamPool, beam);
   return beam;
 }, { max: 48, prewarm: 16 });
+const _popPool = new Pool(() => {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: sparkTexture(), transparent: true, depthWrite: false, depthTest: false,
+  }));
+  sp.userData.noOutline = true;
+  sp.userData.releaseFx = () => _releasePooledFx(_popPool, sp);
+  sp.renderOrder = 998;
+  sp.visible = false;
+  return sp;
+}, { max: 16, prewarm: 4, reset: (sp) => { sp.material.map = sparkTexture(); } });
+const _numPool = new Pool(() => {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: sparkTexture(), transparent: true, depthWrite: false, depthTest: false,
+  }));
+  sp.userData.noOutline = true;
+  sp.userData.releaseFx = () => _releasePooledFx(_numPool, sp);
+  sp.renderOrder = 999;
+  sp.visible = false;
+  return sp;
+}, { max: 48, prewarm: 12, reset: (sp) => { sp.material.map = sparkTexture(); } });
 const _fxShellPool = new Pool(() => ({ obj: null, ttl: 0, fade: null, dispose: null, age: 0 }),
-  { max: 160, reset: (e) => { e.obj = null; e.ttl = 0; e.fade = null; e.dispose = null; e.age = 0; } });
+  { max: 240, reset: (e) => { e.obj = null; e.ttl = 0; e.fade = null; e.dispose = null; e.age = 0; } });
 _fxShellPool.prewarm(32);
 
 // ---------------- 特效 ----------------
@@ -253,32 +287,23 @@ const POP_SMALL = ['POW!', 'BAM!', 'BLAM!', 'ZAP!'];
 
 /**
  * 漫畫字卡:彈跳放大(150ms 內衝到 1.15 倍再回彈)→ 停留 → 淡出。
- * big=true 拆塔/擊殺英雄用(大字卡 + 暖色),否則小字卡。
+ * big=true 拆塔/擊殺英雄用(大字卡 + 暖色),否則小字卡(池化 sprite + 共用 fade)。
  */
 export function comicPop(scene, effects, x, y, z, { text, big = false, hue } = {}) {
   const t = text || (big ? POP_BIG : POP_SMALL)[Math.floor(Math.random() * 4)];
-  const mat = new THREE.SpriteMaterial({
-    map: comicTexture(t, hue ?? (big ? 18 : 48)),
-    transparent: true, depthWrite: false, depthTest: false,
-    rotation: (Math.random() - 0.5) * 0.5,
-  });
-  const sp = new THREE.Sprite(mat);
+  const sp = _popPool.acquire();
+  sp.material.map = comicTexture(t, hue ?? (big ? 18 : 48));
+  sp.material.rotation = (Math.random() - 0.5) * 0.5;
+  sp.material.opacity = 1;
   const size = big ? 26 : 9;
+  const ttl = big ? 0.9 : 0.6;
   sp.position.set(x, y, z);
   sp.scale.setScalar(0.01);
-  sp.renderOrder = 998;
+  sp.visible = true;
+  sp.userData.size = size;
+  sp.userData.ttl = ttl;
   scene.add(sp);
-  const ttl = big ? 0.9 : 0.6;
-  effects.push({
-    obj: sp, ttl,
-    fade(o, f) {
-      const p = 1 - f;                       // 0→1 進度
-      const t01 = Math.min(1, p * ttl / 0.15);
-      const back = 1 + 2.2 * Math.pow(t01 - 1, 3) + 1.2 * Math.pow(t01 - 1, 2); // easeOutBack
-      o.scale.setScalar(size * Math.max(0.01, back));
-      o.material.opacity = f < 0.3 ? f / 0.3 : 1;
-    },
-  });
+  _pushPooledFx(effects, _popPool, sp, ttl, _popFade);
 }
 
 /** 星爆命中火花:150ms 放大淡出 + 硬邊(加法混色;池化 sprite + 共用 fade,逐顆不配物件) */
@@ -879,30 +904,19 @@ export function unitShotFx(scene, effects, from, to, {
   } });
 }
 
-/** 浮動傷害數字:命中點上飄 + 微隨機橫移,0.6s 淡出。
+/** 浮動傷害數字:命中點上飄 + 微隨機橫移,0.6s 淡出(池化 sprite + 共用 fade,逐擊不配材質與閉包)。
  *  text:覆寫顯示字面(灰字)—— 打無敵幀目標的「-0」等零傷害回饋用,與一般數字同一條快取。 */
 export function damageNumber(scene, effects, pos, dmg, { big = false, text = null } = {}) {
-  const mat = new THREE.SpriteMaterial({
-    map: numberTexture(text ?? Math.round(dmg), text ? '#aab4bd' : (big ? '#ff5f4a' : '#ffd94a')),
-    transparent: true, depthWrite: false, depthTest: false,
-  });
-  const sp = new THREE.Sprite(mat);
+  const sp = _numPool.acquire();
+  sp.material.map = numberTexture(text ?? Math.round(dmg), text ? '#aab4bd' : (big ? '#ff5f4a' : '#ffd94a'));
+  sp.material.opacity = 1;
   sp.position.copy(pos);
   const s = big ? 5 : 3;
   sp.scale.set(s * 2, s, 1);
-  sp.renderOrder = 999;
+  sp.visible = true;
+  sp.userData.vx = (Math.random() - 0.5) * 2.5;
   scene.add(sp);
-  const vx = (Math.random() - 0.5) * 2.5;
-  effects.push({
-    obj: sp, ttl: 0.6,
-    fade(o, f, dt) {
-      o.position.y += dt * 6;
-      o.position.x += vx * dt;
-      o.material.opacity = f < 0.5 ? f / 0.5 : 1;
-    },
-    // 貼圖已改為快取共用(numberTexture),MUST NOT 在這裡 dispose —— 只釋放本次的材質
-    dispose() { mat.dispose(); },
-  });
+  _pushPooledFx(effects, _numPool, sp, 0.6, _numFade);
 }
 
 // ---------------- 能量護盾(六角格紋 shader)----------------

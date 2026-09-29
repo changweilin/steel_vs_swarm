@@ -39,7 +39,7 @@ import * as THREE from 'three';
 import { envMat } from './toon.js';
 import { visualPref } from './visualPrefs.js';
 import { pickName, pickRef } from './vernacular.js';
-import { registerStreamTex } from './tex.js';
+import { MIP_ANISO, registerStreamTex } from './tex.js';
 
 // ---- atlas ----
 const ATLAS_MAX = 2048;            // 單張畫布上限(行動裝置的實務底線)
@@ -260,7 +260,7 @@ export class SignSheet {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
-    tex.anisotropy = 4;
+    tex.anisotropy = MIP_ANISO;
     // 圖集**絕不可** Repeat:取樣溢出格緣會抓到隔壁那塊牌的字(半像素內縮是第二道防線)
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
     registerStreamTex(tex);
