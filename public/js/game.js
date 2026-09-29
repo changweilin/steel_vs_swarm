@@ -11516,9 +11516,15 @@ export class BattleClient {
       const d2 = dx * dx + dy * dy + dz * dz;
       // Distance hysteresis: cull past far, re-admit inside far*HYST.
       // Interpolation jitter exactly on the boundary otherwise shimmers in/out.
+      // Static blockers skip this tier: their colliders stay live while culled,
+      // so a far tower reads as open road then pops in on approach (invisible
+      // wall). Frustum/occlusion/scope below still apply.
+      const staticBlocker = ent.isStatic || ent.kind === 'tower' || ent.kind === 'base'
+        || ent.kind === 'mapbuilding';
       const far = cullFarM(farNear, farFar, rTgt, aimBlend, isUnit);
       let dc = ent._distCull;
-      if (dc === undefined) dc = !keepDistance(d2, far);
+      if (staticBlocker) dc = false;
+      else if (dc === undefined) dc = !keepDistance(d2, far);
       else if (dc) { const b = far * CULL.DIST_HYST; dc = d2 > b * b; }
       else dc = !keepDistance(d2, far);
       ent._distCull = dc;
@@ -11536,7 +11542,10 @@ export class BattleClient {
       // frames while hiding only on test frames is a 15Hz blink (and the
       // per-frame visibility flapping churns the render list = stutter).
       // Re-test when due, or when either end moved enough to void the stamp.
-      if (d2 > occMin2 && occ.length) {
+      // Static blockers skip this tier too: an occluded tower still collides
+      // and fires while hidden, and parallax on approach flaps the single-margin
+      // verdict into a disappear/reappear blink. Frustum/scope still apply.
+      if (!staticBlocker && d2 > occMin2 && occ.length) {
         const moved = ent._occX === undefined
           || (p.x - ent._occX) * (p.x - ent._occX) + (p.z - ent._occZ) * (p.z - ent._occZ) > 1
           || (camP.x - ent._occCX) * (camP.x - ent._occCX) + (camP.z - ent._occCZ) * (camP.z - ent._occCZ) > 4;
