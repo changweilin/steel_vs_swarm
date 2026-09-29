@@ -135,7 +135,9 @@ sec('Ⅱ 兩端射程閘門同界:客戶端飛得到的,伺服器 MUST 收得下
     '搜尋上限 _maxRange = range × altRangeMax(def)(= 伺服器 impCap 的誠實界)');
   // 拋物線武器取火控解夾制時用的**同一個**包絡(`lobFc.max`):兩個數字只要差一格浮點數,
   // 夾好的落點就落在球面外側 = 那一發變成不會爆的啞彈(見 Ⅺ ④ 的瞄準點夾制)。
-  ok(/max: lobFc \? lobFc\.max : rng, mesh, origin: muzzle\.clone\(\),/.test(G),
+  // 彈體記錄已池化(向量常駐逐發覆寫):包絡寫 `b.max = …`、球心 `b.origin.copy(muzzle)`,
+  // 與舊字面 `max: lobFc … / origin: muzzle.clone()` 同值,比對形狀跟著搬家。
+  ok(/b\.max = lobFc \? lobFc\.max : rng; b\.mesh = mesh; b\.origin\.copy\(muzzle\);/.test(G),
     '客戶端彈體射程上限 = 這一發的有效射程(拋物線吃火控解的同一份 lobFc.max)、球心 = 槍口');
   ok(!/\brMul\b/.test(G.replace(/^\s*(\/\/|\*).*$/gm, '')) || /const rMul = this\._altRangeTo\(/.test(G),
     'rMul 若仍出現在可執行原文 MUST 有宣告(巨砲移除後遺留的未宣告變數 = 一開火就 ReferenceError)');
@@ -664,7 +666,7 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       && /pitchDeg <= 0/.test(launch),
       '低空判定量發射點離實際站立面的高度,上仰角由高度推導並可降至 0 度');
     ok(/const launch = lobFc \? null : this\._guidedLaunchVel\(muzzle, fdir, def, v0\);/.test(fire)
-      && /launchDist: launch\?\.dist \|\| 0/.test(fire),
+      && /b\.launchDist = launch\?\.dist \|\| 0;/.test(fire),
       '自機導引彈記錄抬頭距離並沿同一支初速解發射');
     ok(/const climbing = b\.launchDist > 0 && prev\.distanceTo\(b\.origin\) < b\.launchDist;/.test(ub)
       && /if \(climbing\) \{\s*b\.vel\.y -= BALLISTIC\.G \* dt;/.test(ub),
@@ -856,7 +858,7 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       '近炸引信不再手寫 max(4, r×0.5)(r×0.5 是手抄的 BLAST.CORE = 第二份實作)');
     ok(/\(b\.core \|\| 0\) \+ this\._hitR\(tgt\)/.test(ub),
       '引信半徑 = 爆風核心帶 + 目標水平量體(與 _reachable 的 blastCoreR(def) + hr 同一式)');
-    ok(/core: blastCoreR\(def\)/.test(methodSrc('_tryFire', G)), '核心帶於擊發當下由 blastCoreR 推導一次');
+    ok(/b\.core = blastCoreR\(def\)/.test(methodSrc('_tryFire', G)), '核心帶於擊發當下由 blastCoreR 推導一次');
     ok(/const s = l2 > 1e-9/.test(ub) && /Math\.max\(0, Math\.min\(1,/.test(ub),
       '引信量的是**這一幀掃過的線段**上的最近點(夾制在 [0,1];點取樣會被高速彈跨過去)');
     ok(/const spent = b\.pos\.distanceTo\(b\.origin\);/.test(ub),
@@ -893,7 +895,8 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
   {
     const ub = methodSrc('_updateBullets', G);
     const fire = methodSrc('_tryFire', G);
-    ok(/const guidePt = def\.guide \? this\._resolveAim\(rng\)\.point\.clone\(\) : null;/.test(fire),
+    ok(/b\.guide = !!def\.guide;/.test(fire)
+      && /if \(b\.guide\) b\.guidePt\.copy\(this\._resolveAim\(rng\)\.point\);/.test(fire),
       '固定打擊點 = 擊發當下的準星解落點(與導引雷射圓環同一點,離架後不再讀準星)');
     ok(/_TMP_A\.copy\(b\.guidePt\)\.sub\(b\.pos\)\.normalize\(\), seekTurn\(SEEK\.HOME_W, b\.mv\)/.test(ub),
       '固定點修正吃追蹤頭 HOME_W(與射後不理同一條,鏡射積分吃同一組數)');
@@ -1196,7 +1199,7 @@ const FNF = heavyOf('fnf');   // 任一名射後不理角色(不寫死角色代�
     '失鎖規則(離開發射源射程 → 直線飛行)對射後不理 MUST NOT 生效(A7 已改寫)');
   ok(/if \(b\.fnf && tgt\) b\.chase = true;/.test(upd),
     '追擊旗標一經鎖定即不可逆(目標中途陣亡也照飛,不會突然被射程包絡砍掉)');
-  ok(/if \(b\.aoe && !hit && \(b\.chase \? b\.age >= b\.fuel : spent >= b\.max\)\) b\.dud = true;/.test(upd),
+  ok(/if \(b\.aoe && !hitKind && \(b\.chase \? b\.age >= b\.fuel : spent >= b\.max\)\) b\.dud = true;/.test(upd),
     '追擊中射程包絡整條讓位給燃料;沒追擊的彈體維持原本的 b.max 包絡(逐位元不變)');
   const tl = methodSrc('_tickLock', G);
   ok(/this\._effRange\(def, t0\)/.test(tl), '對照:①「只能射程內鎖定」仍由 _tickLock 的 _effRange 把關');
@@ -1482,11 +1485,11 @@ sec('Ⅺ 榴彈:準星是唯一目標來源 + 對地 45° 拋投 + 射程量直�
     // 「無論引爆原因是什麼都要造成範圍爆炸傷害」+「目標移動導致沒有引爆時會繼續沿著軌跡運動,
     // 直到碰撞後爆炸」。舊制在射程球面上**原地引爆**,而球面幾乎總是落在半空中(實測見下方
     // 行為直測)⇒ 玩家看到一朵爆炸、地面上一個人都沒掉血。改制:出球面只**解除武裝**。
-    ok(/if \(b\.aoe && !hit && \(b\.chase \? b\.age >= b\.fuel : spent >= b\.max\)\) b\.dud = true;/.test(ub),
+    ok(/if \(b\.aoe && !hitKind && \(b\.chase \? b\.age >= b\.fuel : spent >= b\.max\)\) b\.dud = true;/.test(ub),
       '爆炸戰鬥部飛出射程球面/燒完追擊燃料 = **解除武裝**(b.dud),MUST NOT 在那裡原地引爆');
-    ok(/const done = hit \|\| \(b\.aoe \? \(b\.dud && b\.age >= b\.fuel\) : spent >= b\.max\);/.test(ub),
+    ok(/const done = hitKind !== 0 \|\| \(b\.aoe \? \(b\.dud && b\.age >= b\.fuel\) : spent >= b\.max\);/.test(ub),
       '彈體終止條件 = 碰撞優先(引爆 = 碰撞);啞彈續飛到自己的燃料燒完才丟(推導不手寫)');
-    ok(/if \(b\.dud\) \{\n\s*if \(hit\) starburst\(/.test(ub),
+    ok(/const wasDud = b\.dud;/.test(ub) && /if \(wasDud\) \{\n\s*if \(hitKind\) starburst\(/.test(ub),
       '啞彈碰撞只留土塵:MUST NOT 畫爆炸、MUST NOT 回報 burst(伺服器 impCap 收不下 = 爆炸沒有傷害)');
     ok(/if \(b\.aoe\) \{/.test(ub) && /t: 'burst'/.test(ub),
       '武裝狀態下的碰撞一律回報爆點(直擊/落地皆引爆)');
@@ -1524,7 +1527,8 @@ sec('Ⅺ 榴彈:準星是唯一目標來源 + 對地 45° 拋投 + 射程量直�
     const raySolid = (o) => o.isMesh === true;
     const env = { THREE: { Vector3: V3 }, BALLISTIC, SEEK, seekTurn, ARC_MAXP, starburst, stepProjectileFx, raySolid,
       shotV0, trajClass, lobMinRange, blastCoreR, altRangeF, LOS, altRangeMax, inWeaponRange, weaponMaxHoriz,
-      _TMP_A: new V3(), _TMP_B: new V3(), _TMP_C: new V3(), _FWD_Z: new V3(0, 0, 1) };
+      _TMP_A: new V3(), _TMP_B: new V3(), _TMP_C: new V3(),
+      _TMP_D: new V3(), _TMP_E: new V3(), _TMP_F: new V3(), _FWD_Z: new V3(0, 0, 1) };
     const M = (n) => pickMethod(n, G, env);
     const { id: lobId, def } = heavyOf('lob', 'SWARM');
     // 樁:平地 y=0(地形/薄板/障礙都只有這一面),準星解由測試直接注入
@@ -1792,7 +1796,7 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
   }
 
   // ---- ⑸ 球心 = **彈藥擊發當下的位置**,後續機體的移動不影響(2026-08-05 使用者定案)----
-  // 客戶端一向如此(`b.origin = muzzle.clone()`,見 ④);伺服器少的是那份記憶 —— AoE 彈頭是
+  // 客戶端一向如此(球心 = 擊發當下槍口位置,現為池化 `b.origin.copy(muzzle)`,見 ④);伺服器少的是那份記憶 —— AoE 彈頭是
   // **著彈**才回報,而 45° 拋投的榴彈滿射程要飛近 6 秒,舊制的落點閘門拿的是機體**當下**的
   // 位置 ⇒ 球心跟著機體跑。兩個方向都沒有錯誤訊息:退後 = 合法彈著被靜默丟棄(零傷害)、
   // 前衝 = 射程外的彈著被收下(隱形射程)。
@@ -1834,7 +1838,8 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
       `保留窗 ${shotTrailS().toFixed(1)}s 蓋得住最長的拋物線飛行時間 ${flightCapS(heavyOf('lob').def).toFixed(1)}s`);
 
     // 對照:客戶端那一半本來就是擊發點(兩端同一個球心的另一端)
-    ok(/origin: muzzle\.clone\(\),/.test(G), '對照:客戶端彈體的球心 = 擊發當下的槍口(烤死,不隨機體移動)');
+    // 彈體記錄已池化:球心寫 `b.origin.copy(muzzle)`,與舊字面同值(烤死,不隨機體移動)。
+    ok(/b\.origin\.copy\(muzzle\)/.test(G), '對照:客戶端彈體的球心 = 擊發當下的槍口(烤死,不隨機體移動)');
 
     // ---- 行為直測:真 BattleSim + 真 _trailPush / _shotOrigin / heroBurst ----
     const { id: lid } = heavyOf('lob');
@@ -2223,7 +2228,7 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   const guns = code(S.slice(S.indexOf('_tickBaseGuns(e, g, dt)')));
   ok(!/this\._blast\(e, STRUCT_W\.base/.test(guns) && !/this\._damage\(target, g\.dmg/.test(guns.slice(0, 1200)),
     '主堡火砲 MUST NOT 再即時結算(舊制的 _blast/_damage 單體直擊 MUST 已經不在)');
-  ok(/this\.missiles\.push\(\{[\s\S]{0,300}?r: STRUCT_W\.base\.r,[\s\S]{0,200}?\}\);/.test(guns)
+  ok(/this\.missiles\.push\(this\._takeMissile\(\{[\s\S]{0,340}?r: STRUCT_W\.base\.r,[\s\S]{0,280}?\}\)\);/.test(guns)
     && /dmg: g\.dmg, pen: STRUCT_W\.base\.pen \|\| 0/.test(guns),
     '主堡火砲推入 this.missiles 吃既有 STRUCT_W.base(r/pen)與 g.dmg(MUST NOT 複製第二份)');
   // _samBlast 一律讀飛彈自己的 m.r(2026-08-13 主堡飛彈化後不再只有防空伏擊一個來源,

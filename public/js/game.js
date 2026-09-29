@@ -51,6 +51,7 @@ import { onCtrlChange, viewMode, setViewMode, onViewModeChange } from './ctrlmod
 import { lookPref } from './lookPrefs.js';
 import { visualPref } from './visualPrefs.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
+import { Pool } from './pool.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
 
 // 所有火場類型(模組級常數；MUST NOT 在 _spawnEnt / 每幀熱路徑中重複構造)
@@ -424,7 +425,29 @@ const _NO_HITS = [];                           // 空命中列表(免得每次 r
 const _TMP_A = new THREE.Vector3();
 const _TMP_B = new THREE.Vector3();
 const _TMP_C = new THREE.Vector3();
+const _TMP_D = new THREE.Vector3();            // 命中點暫存(_updateBullets/_updateVisShells:當幀消費,不跨幀)
+const _TMP_E = new THREE.Vector3();            // 第二命中暫存(氣旋/拖尾方向解;同上)
+const _TMP_F = new THREE.Vector3();            // 氣旋正交軸暫存(_spinCyclone 專用;呼叫期間 D/E/F 皆視為已借出)
 const _FWD_Z = new THREE.Vector3(0, 0, 1);     // 彈體幾何朝向(+z);對準航向的固定基準軸
+
+// ---- 池化特效的共用 fade(無閉包:參數全在 obj.userData,同一支函式服務全池)----
+// 逐發閉包 (`fade: (o,f) => {...}`) 本身就是每發一次的配置;池化 sprite/曳光若還配閉包,
+// 池等於白建。改由 userData 帶參 + 共用函式,acquire 只寫值不配函式。
+function _tracerFade(o, f) { o.material.opacity = 0.9 * f; }
+// 等速漂移 sprite(煙/火拖尾/觸地煙):userData { vel(等速,含上升), base, grow, op }
+function _spriteDriftFade(o, f, dt) {
+  const u = o.userData;
+  o.position.addScaledVector(u.vel, dt);
+  o.scale.setScalar(u.base + (1 - f) * u.grow);
+  o.material.opacity = u.op * f;
+}
+// 重力餘燼:userData { vel(逐幀下墜), op } ;尺寸固定(base,acquire 時寫死)
+function _spriteGravFade(o, f, dt) {
+  const u = o.userData;
+  u.vel.y -= 6 * dt;
+  o.position.addScaledVector(u.vel, dt);
+  o.material.opacity = u.op * f;
+}
 
 /**
  * 射線只認**實體網格**(**唯一縫**;兩個消費端:準星解析 `_resolveAim` 與彈道 `_updateBullets`)。
@@ -561,6 +584,15 @@ const MM_NEAR = {
 const FX_MAX = 260;
 // 同型彈體的池深:同時在空中的同型彈遠少於此,超量代表換過武器 → 真的釋放
 const PROJ_POOL_MAX = 24;
+// ---- 高頻物件池深(純效能保險,不是平衡數值 ⇒ 住這裡不進 data.js)----
+// 子彈/曳光/粒子 sprite 每發/每中/每幀都在配置,池深按「同框在空上限」取整:
+// 曳光(輕武器 rate 8 + 他人/bot 齊射)、火/煙 sprite(爆炸餘燼 + 拖尾 + 墜機煙)、
+// 彈體記錄(含自機 bullets + 他人 _visShells + 拋擲 _decoyBombs 共用一種記錄)。
+// 超量歸還直接丟棄並走原 dispose 路徑(只慢一發,不漏)。
+const TRACER_POOL_MAX = 48;
+const SPRITE_POOL_MAX = 96;
+const BULLET_REC_MAX = 64;
+const FX_SHELL_MAX = 128;
 // 觸控裝置的像素比上限:手機 DPR 常見 2.5~3.5,照單全收等於算 6~12 倍於邏輯解析度的像素,
 // 行動 GPU 是**填充率**瓶頸 ⇒ 高功耗模式一樣掉幀。1.5 已看不出鋸齒差(還有 FXAA 級的 DPR 抗鋸齒)。
 const TOUCH_DPR_MAX = 1.5;
@@ -649,6 +681,7 @@ export class BattleClient {
     this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
     this._visShells = [];            // 他人重武器視覺彈體(2026-07-22 彈藥同源;純表現層)
     this._decoyBombs = [];           // 集束炸彈的「拋擲彈體」動畫(榴彈拋物線,落地才引爆演出,依類型上色)
+    this._initFxPools();             // 高頻物件池(曳光/sprite/彈體記錄/特效殼;預先分配,見 pool.js)
     this._wdefCache = new Map();     // 他人武器 def 快取(ch:slot → heroWeapon Lv1)
     this.lootMeshes = new Map();     // 戰場物資(快照 lt 同步)
     this.airdropMeshes = new Map();  // 空投物資補給箱(快照 ad 同步)
@@ -5605,52 +5638,55 @@ export class BattleClient {
     // 兩條不同的弧(對方看到的砲彈從山腰擦過去、我這邊是吊過山頭)。初速由幾何反解(與射手同式),
     // 上限吃全裝藥 —— 拿回報的 mv 當上限會在四捨五入邊界上忽解忽不解。
     const v45 = def.type === 'launcher' && !aa ? this._lob45Vel(from, to, this._shotV0(def, false)) : null;
-    const baseDir = to.clone().sub(from).normalize();
+    const baseDir = _TMP_D.copy(to).sub(from).normalize();       // baseDir(暫存 _TMP_D, _guidedLaunchVel 只讀)
     const launch = this._guidedLaunchVel(from, baseDir, def, v0);
-    const vel = launch?.vel || v45 || (def.type === 'launcher'
-      ? this._lobVel(from, to, v0)                              // 對空彈射:初速高 ⇒ 解自然拉平
-      : to.clone().sub(from).normalize().multiplyScalar(v0));   // 飛彈/動能:直指目標(近似,純視覺)
-    const ldir = vel.clone().normalize();
+    const b = this._recPool.acquire();                           // 記錄走池(向量常駐,下段逐個覆寫)
+    b.pos.copy(from); b.origin.copy(from); b.target.copy(to);
+    if (launch?.vel) b.vel.copy(launch.vel);
+    else if (v45) b.vel.copy(v45);
+    else if (def.type === 'launcher') b.vel.copy(this._lobVel(from, to, v0));   // 對空彈射:初速高 ⇒ 解自然拉平
+    else b.vel.copy(to).sub(from).normalize().multiplyScalar(v0);              // 飛彈/動能:直指目標(近似,純視覺)
     const mesh = this._takeProjectile(def, heavy, side, ch);   // 同池:他人彈體與自機彈體共用回收路徑
     mesh.position.copy(from);
-    mesh.quaternion.setFromUnitVectors(_FWD_Z, ldir);
+    mesh.quaternion.setFromUnitVectors(_FWD_Z, _TMP_D.copy(b.vel).normalize());
     this.scene.add(mesh);
-    this._visShells.push({
-      pos: from.clone(), vel,
-      origin: from.clone(), max: (def.range || 300) * 1.35, mesh,   // 射程 = 以射擊點為中心的球面(與自機彈體同一把尺)
-      cyclone: null, cycAcc: 0, cycCol: this._shotCols(side).col, age: 0,
-      guided: !!launch, launchDist: launch?.dist || 0, target: to.clone(),
-    });
-    return ldir;
+    b.mesh = mesh;
+    b.max = (def.range || 300) * 1.35;   // 射程 = 以射擊點為中心的球面(與自機彈體同一把尺)
+    b.cyclone = null; b.cycAcc = 0; b.cycCol = this._shotCols(side).col; b.age = 0;
+    b.guided = !!launch; b.launchDist = launch?.dist || 0;
+    b.guide = false; b.homing = null; b.slot = null;
+    this._visShells.push(b);
+    return b.vel.clone().normalize();    // 發射角回寫(呼叫端同步消費;保留新向量,不借暫存)
   }
 
-  /** 視覺彈體逐幀積分:低空導引彈先抬頭,其餘重力下墜 + 地形/實體障礙截斷(純視覺不進 A6 raycast 目標) */
+  /** 視覺彈體逐幀積分:低空導引彈先抬頭,其餘重力下墜 + 地形/實體障礙截斷(純視覺不進 A6 raycast 目標;暫存零配置) */
   _updateVisShells(dt) {
-    const steer = (b, want, maxTurn) => {
-      const cur = b.vel.clone().normalize();
-      const ang = cur.angleTo(want);
-      if (ang > 1e-4) cur.lerp(want, Math.min(1, maxTurn * dt / ang)).normalize();
-      b.vel.copy(cur.multiplyScalar(b.vel.length()));
-    };
     for (let i = this._visShells.length - 1; i >= 0; i--) {
       const b = this._visShells[i];
       b.age += dt;
-      const prev = b.pos.clone();
+      const prev = _TMP_D.copy(b.pos);                               // prev(暫存 _TMP_D,當次迭代有效)
       const climbing = b.guided && prev.distanceTo(b.origin) < b.launchDist;
       if (climbing) b.vel.y -= BALLISTIC.G * dt;
       else if (b.guided) {
-        const want = b.target.clone().sub(b.pos);
-        if (want.lengthSq() > 1e-6) steer(b, want.normalize(), seekTurn(SEEK.RIDE_W, b.vel.length()));
+        _TMP_E.copy(b.target).sub(b.pos);                            // want
+        if (_TMP_E.lengthSq() > 1e-6) {
+          _TMP_E.normalize();
+          // 等速改向(舊 steer 閉包內聯:逐彈每幀一個閉包 + 一顆 clone,現全暫存)
+          _TMP_F.copy(b.vel).normalize();
+          const ang = _TMP_F.angleTo(_TMP_E);
+          if (ang > 1e-4) _TMP_F.lerp(_TMP_E, Math.min(1, seekTurn(SEEK.RIDE_W, b.vel.length()) * dt / ang)).normalize();
+          b.vel.copy(_TMP_F.multiplyScalar(b.vel.length()));
+        }
       } else b.vel.y -= BALLISTIC.G * dt;
       b.pos.addScaledVector(b.vel, dt);
-      const seg = b.pos.clone().sub(prev);
+      const seg = _TMP_E.copy(b.pos).sub(prev);                      // seg(prev 仍有效)
       const len = seg.length();
       // 地形/障礙/薄板一律走 _layerHitT 的**雙面**解析截斷(與 _updateBullets 同一組規則):
       // 舊制 `pos.y <= heightAt` 是單面「在地表以下」判定 —— 覆蓋段山體高度沒被開挖,隧道裡
       // 每一發他人彈體都在槍口原地炸;由下往上穿地表也整條漏放。
       const dB = len > 0.01 ? this._layerHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z) : null;
       let hit = false;
-      if (dB != null) { b.pos.copy(prev).addScaledVector(seg.clone().divideScalar(len), dB); hit = true; }
+      if (dB != null) { b.pos.copy(prev).addScaledVector(_TMP_F.copy(seg).divideScalar(len), dB); hit = true; }
       if (hit || b.pos.distanceTo(b.origin) >= b.max) {
         starburst(this.scene, this.effects, b.pos.x, b.pos.y, b.pos.z, hit ? 1.6 : 0.8, 0xffc79a);
         this._dropBullet(b);
@@ -5658,7 +5694,7 @@ export class BattleClient {
         continue;
       }
       b.mesh.position.copy(b.pos);
-      if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(_FWD_Z, seg.normalize());
+      if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(_FWD_Z, _TMP_E.normalize());
       stepProjectileFx(b.mesh, b.age, b.vel.length());
       if (b.cyclone) this._spinCyclone(b, dt);
     }
@@ -5672,36 +5708,35 @@ export class BattleClient {
     return cyc;
   }
 
-  /** 氣旋自旋 + 沿行進軸撒外旋螺旋煙圈(讀感 = 氣旋捲動);b.cycAcc 節流撒點,b.cycCol 陣營色 */
+  /** 氣旋自旋 + 沿行進軸撒外旋螺旋煙圈(讀感 = 氣旋捲動);b.cycAcc 節流撒點,b.cycCol 陣營色(池化 sprite + 暫存向量,逐點不配物件) */
   _spinCyclone(b, dt) {
     b.cyclone.rotation.z += dt * 26;                 // 高速自旋
     b.cycAcc = (b.cycAcc || 0) + dt;
     if (b.cycAcc < 0.03) return;
     b.cycAcc = 0;
     // 行進軸的兩條正交向量 → 在垂直於航向的平面上取旋轉相位,撒一顆略微外旋的加法煙點
-    const dir = b.vel.clone().normalize();
-    const up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
-    const rx = new THREE.Vector3().crossVectors(dir, up).normalize();
-    const ry = new THREE.Vector3().crossVectors(dir, rx).normalize();
+    // 暫存紀律:呼叫端(_updateBullets/_updateVisShells 的 !done 分支)至此已用完 A/B,D/E/F 出借中
+    const dir = _TMP_D.copy(b.vel).normalize();
+    if (Math.abs(dir.y) > 0.9) _TMP_F.set(1, 0, 0); else _TMP_F.set(0, 1, 0);
+    const rx = _TMP_E.crossVectors(dir, _TMP_F).normalize();
+    const ry = _TMP_F.crossVectors(dir, rx).normalize();
     const ph = (b.cycPh = (b.cycPh || 0) + 1.1);     // 相位遞進 → 螺旋
-    const rad = 0.9;
-    const off = rx.clone().multiplyScalar(Math.cos(ph) * rad).addScaledVector(ry, Math.sin(ph) * rad);
-    const p = b.pos.clone().addScaledVector(dir, -0.6).add(off);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: this._fireTex(), color: b.cycCol || 0xffd27a,
-      transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
-    sp.userData.noOutline = true;
-    sp.position.copy(p);
-    sp.scale.setScalar(1.5);
-    this.scene.add(sp);
+    const rad = 0.9, c = Math.cos(ph), s = Math.sin(ph);
+    const sp = this._takeSprite(true,
+      b.pos.x - dir.x * 0.6 + rx.x * c * rad + ry.x * s * rad,
+      b.pos.y - dir.y * 0.6 + rx.y * c * rad + ry.y * s * rad,
+      b.pos.z - dir.z * 0.6 + rx.z * c * rad + ry.z * s * rad,
+      1.5, b.cycCol || 0xffd27a, 0.85);
     // 切向速度(繞航向旋轉)+ 略外擴,快速淡出 → 拖成氣旋螺旋
-    const tang = rx.clone().multiplyScalar(-Math.sin(ph)).addScaledVector(ry, Math.cos(ph)).multiplyScalar(9)
-      .addScaledVector(off.clone().normalize(), 3).addScaledVector(dir, -6);
-    this.effects.push({
-      obj: sp, ttl: 0.32,
-      fade: (o, f, dtt) => { o.position.addScaledVector(tang, dtt); o.scale.setScalar(1.5 + (1 - f) * 2.2); o.material.opacity = 0.85 * f; },
-      dispose: () => sp.material.dispose(),
-    });
+    // off 單位化 = (rx*c + ry*s)(rad>0 約掉)⇒ 外擴項 = (rx*c + ry*s)*3
+    sp.userData.vel.set(
+      rx.x * (-s * 9 + c * 3) + ry.x * (c * 9 + s * 3) - dir.x * 6,
+      rx.y * (-s * 9 + c * 3) + ry.y * (c * 9 + s * 3) - dir.y * 6,
+      rx.z * (-s * 9 + c * 3) + ry.z * (c * 9 + s * 3) - dir.z * 6);
+    sp.userData.base = 1.5;
+    sp.userData.grow = 2.2;
+    sp.userData.op = 0.85;
+    this._pushSpriteFx(sp, 0.32, _spriteDriftFade);
   }
 
   // ---------------- 集束炸彈投擲動畫(2026-08-01 使用者需求:軌跡同榴彈)----------------
@@ -5718,28 +5753,29 @@ export class BattleClient {
     const col = (DECOY_BOMB[type] || DECOY_BOMB.fire).color;
     const mesh = decoyBombMesh(type, col);
     const G = BALLISTIC.G * DECOY_BOMB_GRAV_F;
-    const start = from
-      ? new THREE.Vector3(from.x, this.terrain.heightAt(from.x, from.z) + Math.max(1, from.y), from.z)
-      : new THREE.Vector3(x, gy + Math.max(4, alt), z);
-    const end = new THREE.Vector3(x, gy + 0.5, z);
-    let vel;
+    // 起/落點走暫存(同步消費,不進記錄);記錄向量常駐,下段覆寫
+    if (from) _TMP_D.set(from.x, this.terrain.heightAt(from.x, from.z) + Math.max(1, from.y), from.z);
+    else _TMP_D.set(x, gy + Math.max(4, alt), z);
+    _TMP_E.set(x, gy + 0.5, z);
+    const b = this._recPool.acquire();
     if (from) {
       // 拋擲解:水平勻速 + 垂直 (Δy + ½G·T²)/T ⇒ T 秒後精準落在 end(與榴彈火控同一條物理)
-      const d = Math.hypot(end.x - start.x, end.z - start.z);
+      const d = Math.hypot(_TMP_E.x - _TMP_D.x, _TMP_E.z - _TMP_D.z);
       const T = Math.max(DECOY_BOMB_T.MIN, Math.min(DECOY_BOMB_T.MAX, d / DECOY_BOMB_T.SPD));
-      vel = new THREE.Vector3(
-        (end.x - start.x) / T, (end.y - start.y + 0.5 * G * T * T) / T, (end.z - start.z) / T);
+      b.vel.set(
+        (_TMP_E.x - _TMP_D.x) / T, (_TMP_E.y - _TMP_D.y + 0.5 * G * T * T) / T, (_TMP_E.z - _TMP_D.z) / T);
     } else {
-      vel = new THREE.Vector3((Math.random() - 0.5) * 4, -2, (Math.random() - 0.5) * 4);
+      b.vel.set((Math.random() - 0.5) * 4, -2, (Math.random() - 0.5) * 4);
     }
-    mesh.position.copy(start);
+    b.pos.copy(_TMP_D);
+    b.spin.set(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3);
+    b.mesh = mesh; b.type = type; b.col = col; b.r = r;
+    b.gy = this.terrain.heightAt(_TMP_D.x, _TMP_D.z);
+    b.trailAcc = 0; b.age = 0;
+    b.guide = false; b.guided = false; b.homing = null; b.cyclone = null;
+    mesh.position.copy(_TMP_D);
     this.scene.add(mesh);
-    this._decoyBombs.push({
-      mesh, type, col, r, gy: this.terrain.heightAt(start.x, start.z),
-      pos: start.clone(), vel,
-      spin: new THREE.Vector3(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3),
-      trailAcc: 0,
-    });
+    this._decoyBombs.push(b);
   }
 
   /** 拋擲彈體逐幀:重力墜落 + 翻滾 + 類型拖尾;觸地(或逾時)→ 引爆演出 */
@@ -5753,30 +5789,26 @@ export class BattleClient {
       b.mesh.rotation.y += b.spin.y * dt;
       b.mesh.rotation.z += b.spin.z * dt;
       b.gy = this.terrain.heightAt(b.pos.x, b.pos.z);
-      // 類型拖尾(節流):燃燒/雷爆 = 加法火星,凍結/毒霧 = 柔煙
+      // 類型拖尾(節流):燃燒/雷爆 = 加法火星,凍結/毒霧 = 柔煙(池化 sprite + 共用 fade)
       b.trailAcc += dt;
       if (b.trailAcc >= 0.045) {
         b.trailAcc = 0;
         const additive = b.type === 'fire' || b.type === 'thunder';
-        const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-          map: additive ? this._fireTex() : this._smokeTex(), color: b.col,
-          transparent: true, opacity: additive ? 0.9 : 0.6, depthWrite: false,
-          blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
-        sp.userData.noOutline = true;
-        sp.position.set(b.pos.x, b.pos.y + 0.2, b.pos.z);
-        sp.scale.setScalar(additive ? 1.0 : 1.4);
-        this.scene.add(sp);
-        this.effects.push({
-          obj: sp, ttl: 0.4,
-          fade: (o, f) => { o.material.opacity = (additive ? 0.9 : 0.6) * f; o.scale.setScalar((additive ? 1.0 : 1.4) * (1 + (1 - f))); },
-          dispose: () => sp.material.dispose(),
-        });
+        const base = additive ? 1.0 : 1.4, op = additive ? 0.9 : 0.6;
+        const sp = this._takeSprite(additive, b.pos.x, b.pos.y + 0.2, b.pos.z, base, b.col, op);
+        sp.userData.vel.set(0, 0, 0);
+        sp.userData.base = base;
+        sp.userData.grow = base;
+        sp.userData.op = op;
+        this._pushSpriteFx(sp, 0.4, _spriteDriftFade);
       }
       if (b.pos.y <= b.gy + 0.5) {
         b.mesh.parent && this.scene.remove(b.mesh);
         disposeTree(b.mesh);   // decoyBombMesh 每顆都是新幾何/材質(含描邊外殼)⇒ 落地即釋放
         this._decoyBombLandFx(b.pos.x, b.gy, b.pos.z, b.type, b.col, b.r);
         this._decoyBombs.splice(i, 1);
+        b.mesh = null;
+        this._recPool?.release(b);   // 記錄回池(炸彈本體仍逐顆釋放,見上)
       }
     }
   }
@@ -8319,32 +8351,37 @@ export class BattleClient {
     // 爆風核心帶之外(tools/audit_weapon_gate.mjs Ⅵ)。導引對象是**表現層決策**(彈道本就客戶端
     // 權威),傷害仍由伺服器驗落點 —— 不涉 A1。
     const homing = def.type === 'missile' ? (this._aimTarget(rng)?.id ?? null) : null;
-    // 雷射導引(2026-09-28 使用者定案):與射後不理同為「發射瞬間凍結」—— 打擊點取擊發當下
-    // 的準星解落點(`_resolveAim`,與導引雷射圓環同一點),離架後不再隨準星/目標移動。
-    const guidePt = def.guide ? this._resolveAim(rng).point.clone() : null;
     const v0 = this._shotV0(def, !!this._aaAim);   // 對空彈射(_updateAaMode 於本幀擊發前定案,與瞄準虛線同一份)
     // 最短距離(軌跡修正期):導引/射後不理武器離架後 arm.m 內導引尚未接手,且帶一次性初期散布
     // ⇒ 貼臉開導引彈會偏(命中率較低),拉開距離後導引/追蹤才把偏差修回來。
     const arm = armingOf(def);
     const fdir = arm ? this._armSpread(dir, arm.spread) : dir;
     const launch = lobFc ? null : this._guidedLaunchVel(muzzle, fdir, def, v0);
-    const fvel = lobFc ? lobFc.vel.clone() : launch?.vel || fdir.clone().multiplyScalar(v0);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fvel.clone().normalize());
-    this.bullets.push({
-      slot: id, aoe, pierce, r: def.r || 0, core: blastCoreR(def),   // core:近炸引信半徑的爆風項(見 _updateBullets)
-      pos: muzzle.clone(), vel: fvel,
-      // 射程球面 = 火控解夾制時用的**同一個**包絡(`lobFc.max`)—— 兩個數字差一格浮點數,
-      // 夾好的落點就會落在球面外側 = 那一發變成不會爆的啞彈(見 _lobAim 的瞄準點夾制 ①)。
-      max: lobFc ? lobFc.max : rng, mesh, origin: muzzle.clone(),   // origin:射程球面/失鎖判定的球心(攻擊範圍);高度制空拉遠
-      oy: (this._altAG || 0) + (muzzle.y - this.pos.y),   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
-      cyclone: null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
-      mv: v0, guide: !!def.guide, guidePt, homing, arm: arm ? arm.m : 0,
-      launchDist: launch?.dist || 0,
-      // 射後不理(2026-08-01 使用者定案):鎖定之後持續追擊,不受射程影響。
-      // fnf 只是「這顆彈有沒有資格改吃燃料」的旗標;真正切換在 _updateBullets 的 b.chase。
-      fnf: trajClass(def) === 'fnf', fuel: chaseCapS(def), age: 0, chase: false,
-      dud: false,   // 飛出射程球面 = 解除武裝(引爆 = 碰撞;見 _updateBullets)
-    });
+    // 彈體記錄走池(向量常駐逐發覆寫,不 clone;mesh 由 _takeProjectile 另池)
+    const b = this._recPool.acquire();
+    b.slot = id; b.aoe = aoe; b.pierce = pierce; b.r = def.r || 0; b.core = blastCoreR(def);   // core:近炸引信半徑的爆風項(見 _updateBullets)
+    b.pos.copy(muzzle);
+    if (lobFc) b.vel.copy(lobFc.vel);
+    else if (launch?.vel) b.vel.copy(launch.vel);
+    else b.vel.copy(fdir).multiplyScalar(v0);
+    // 射程球面 = 火控解夾制時用的**同一個**包絡(`lobFc.max`)—— 兩個數字差一格浮點數,
+    // 夾好的落點就會落在球面外側 = 那一發變成不會爆的啞彈(見 _lobAim 的瞄準點夾制 ①)。
+    b.max = lobFc ? lobFc.max : rng; b.mesh = mesh; b.origin.copy(muzzle);   // origin:射程球面/失鎖判定的球心(攻擊範圍);高度制空拉遠
+    b.oy = (this._altAG || 0) + (muzzle.y - this.pos.y);   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
+    b.cyclone = null; b.cycAcc = 0; b.cycCol = this._shotCols(this.side).col;
+    b.mv = v0; b.guide = !!def.guide;
+    // 雷射導引(2026-09-28 使用者定案):與射後不理同為「發射瞬間凍結」—— 打擊點取擊發當下
+    // 的準星解落點(`_resolveAim`,與導引雷射圓環同一點),離架後不再隨準星/目標移動。
+    if (b.guide) b.guidePt.copy(this._resolveAim(rng).point);
+    b.homing = homing; b.arm = arm ? arm.m : 0;
+    b.launchDist = launch?.dist || 0;
+    // 射後不理(2026-08-01 使用者定案):鎖定之後持續追擊,不受射程影響。
+    // fnf 只是「這顆彈有沒有資格改吃燃料」的旗標;真正切換在 _updateBullets 的 b.chase。
+    b.fnf = trajClass(def) === 'fnf'; b.fuel = chaseCapS(def); b.age = 0; b.chase = false;
+    b.dud = false;   // 飛出射程球面 = 解除武裝(引爆 = 碰撞;見 _updateBullets)
+    b.guided = false; b.type = null;
+    mesh.quaternion.setFromUnitVectors(_FWD_Z, _TMP_D.copy(b.vel).normalize());
+    this.bullets.push(b);
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
     else if (def.guide) this.hud.feed?.('🔦 雷射導引:打擊位置鎖定,發射後不再追蹤');
     // 自己 FPV 的槍口爆:重武器一律比輕武器大一號(輕武器已有 this.flash 球體,重武器再補世界爆閃)
@@ -8442,10 +8479,133 @@ export class BattleClient {
     if (b.cyclone) { m.remove(b.cyclone); disposeTree(b.cyclone); b.cyclone = null; }
     const key = m.userData.poolKey;
     const pool = this._projPool;
-    if (!key || !pool) { disposeTree(m); return; }
-    const free = pool.get(key) || pool.set(key, []).get(key);
-    // 池深上限:同型彈體同時在空中的數量有限,超量就真的釋放(避免換武器後留一堆殭屍)
-    if (free.length < PROJ_POOL_MAX) free.push(m); else disposeTree(m);
+    if (!key || !pool) { disposeTree(m); }
+    else {
+      const free = pool.get(key) || pool.set(key, []).get(key);
+      // 池深上限:同型彈體同時在空中的數量有限,超量就真的釋放(避免換武器後留一堆殭屍)
+      if (free.length < PROJ_POOL_MAX) free.push(m); else disposeTree(m);
+    }
+    // 彈體記錄本體回池(向量常駐,下發覆寫;mesh/cyclone 引用已在上段清空,見 _initFxPools)
+    b.mesh = null;
+    this._recPool?.release(b);
+  }
+
+  // ---------------- 高頻物件池(子彈記錄/曳光/粒子 sprite/特效殼)----------------
+  /**
+   * 子彈/曳光/粒子是**開火即配置**的熱路徑:輕武器 rate 8 按住就是每秒 8 發,
+   * 每發舊制 = 彈體記錄物件 + 2~4 顆 Vector3 + 曳光(幾何 + 材質)+ 命中星爆/餘燼若干,
+   * 加上每顆子彈每幀的 `clone()` 內插 —— 年輕代 GC 轉一圈就是一次掉幀(GC Spike)。
+   * 本池預先分配並循環重用(A25 同一處置:超量溢出才走原 dispose,不漏):
+   *   ・彈體記錄(`_recPool`):自機 bullets + 他人 _visShells + 拋擲 _decoyBombs 共用一種
+   *     記錄,向量常駐逐發覆寫。`guide` 布林承接原 `guidePt=null` 語義(無導引不讀向量)。
+   *   ・曳光(`_tracerPool`):2 點預分配 position + 獨立材質(透明度逐條動畫)。
+   *   ・粒子 sprite(火/煙兩池):貼圖 + 混色固定(免切 map 重編 shader),顏色/透明度逐發寫。
+   *   ・特效殼(`_fxShellPool`):{obj,ttl,fade,dispose,age} 殼本體;fade/dispose 皆共用函式
+   *     引用(`_tracerFade`/`_spriteDriftFade`/`_spriteGravFade` + 各自 userData.releaseFx),
+   *     逐發不配閉包。releaseFx 一生一條(隨池物件出生),讀當下 userData.shell 動態歸還。
+   * MUST NOT 把 _TMP_* 存進任何池化記錄(暫存只准同同步區塊用完即丟,見上)。
+   */
+  _initFxPools() {
+    const mkTracer = () => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+      const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }));
+      line.frustumCulled = false;
+      line.visible = false;
+      line.userData.releaseFx = () => this._releaseFxLine(line);
+      return line;
+    };
+    this._tracerPool = new Pool(mkTracer, { max: TRACER_POOL_MAX });
+    const mkSprite = (fire) => () => {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: fire ? this._fireTex() : this._smokeTex(),
+        color: 0xffffff, transparent: true, opacity: 1, depthWrite: false,
+        blending: fire ? THREE.AdditiveBlending : THREE.NormalBlending,
+      }));
+      sp.userData.noOutline = true;
+      sp.userData.fire = fire;
+      sp.userData.vel = new THREE.Vector3();
+      sp.userData.releaseFx = () => this._releaseFxSprite(sp);
+      sp.visible = false;
+      return sp;
+    };
+    this._spritePoolFire = new Pool(mkSprite(true), { max: SPRITE_POOL_MAX });
+    this._spritePoolSmoke = new Pool(mkSprite(false), { max: SPRITE_POOL_MAX });
+    const mkRec = () => ({
+      slot: null, aoe: false, pierce: false, r: 0, core: 0,
+      pos: new THREE.Vector3(), vel: new THREE.Vector3(), origin: new THREE.Vector3(),
+      guidePt: new THREE.Vector3(), target: new THREE.Vector3(), spin: new THREE.Vector3(),
+      max: 0, mesh: null, oy: 0, cyclone: null, cycAcc: 0, cycCol: 0, cycPh: 0,
+      mv: 0, guide: false, homing: null, arm: 0, launchDist: 0, guided: false,
+      fnf: false, fuel: 0, age: 0, chase: false, dud: false,
+      type: null, col: 0, gy: 0, trailAcc: 0,
+    });
+    this._recPool = new Pool(mkRec, { max: BULLET_REC_MAX,
+      reset: (b) => {
+        b.mesh = null; b.cyclone = null; b.homing = null;
+        b.age = 0; b.chase = false; b.dud = false;
+        b.guide = false; b.guided = false; b.trailAcc = 0; b.cycAcc = 0; b.cycPh = 0;
+      } });
+    this._fxShellPool = new Pool(() => ({ obj: null, ttl: 0, fade: null, dispose: null, age: 0 }),
+      { max: FX_SHELL_MAX,
+        reset: (e) => { e.obj = null; e.ttl = 0; e.fade = null; e.dispose = null; e.age = 0; } });
+    // 開場預熱(避開首發卡頓;只填空閒棧,不進場景)
+    this._tracerPool.prewarm(16);
+    this._spritePoolFire.prewarm(24);
+    this._spritePoolSmoke.prewarm(12);
+    this._recPool.prewarm(16);
+    this._fxShellPool.prewarm(32);
+  }
+
+  /** 池化曳光殼:呼叫端只給端點/色/壽命,本體(線 + 殼)全重用,不配閉包。 */
+  _pushTracerFx(line, ttl) {
+    const sh = this._fxShellPool.acquire();
+    sh.obj = line; sh.ttl = ttl; sh.fade = _tracerFade; sh.dispose = line.userData.releaseFx; sh.age = 0;
+    line.userData.shell = sh;
+    this.effects.push(sh);
+  }
+
+  /** 池化曳光線歸還(特效殼 dispose 唯一入口;重入保護:殼已取走即 no-op)。 */
+  _releaseFxLine(line) {
+    const sh = line.userData.shell;
+    if (!sh) return;
+    line.userData.shell = null;
+    line.visible = false;
+    this.scene.remove(line);
+    if (!this._tracerPool.release(line)) { line.geometry.dispose(); line.material.dispose(); }
+    this._fxShellPool.release(sh);
+  }
+
+  /** 池化粒子 sprite 取用(火/煙兩池;顏色/透明度/尺寸逐發覆寫)。 */
+  _takeSprite(fire, x, y, z, scale, color, op) {
+    const sp = (fire ? this._spritePoolFire : this._spritePoolSmoke).acquire();
+    sp.position.set(x, y, z);
+    sp.scale.setScalar(scale);
+    sp.material.color.setHex(color);
+    sp.material.opacity = op;
+    sp.visible = true;
+    this.scene.add(sp);
+    return sp;
+  }
+
+  /** 池化 sprite 特效殼:fade 為共用函式引用,dispose 為 sprite 自帶 releaseFx(不配閉包)。 */
+  _pushSpriteFx(sp, ttl, fade) {
+    const sh = this._fxShellPool.acquire();
+    sh.obj = sp; sh.ttl = ttl; sh.fade = fade; sh.dispose = sp.userData.releaseFx; sh.age = 0;
+    sp.userData.shell = sh;
+    this.effects.push(sh);
+  }
+
+  /** 池化 sprite 歸還(特效殼 dispose 唯一入口;超量才真釋材質,幾何是 three 全域共用不動)。 */
+  _releaseFxSprite(sp) {
+    const sh = sp.userData.shell;
+    if (!sh) return;
+    sp.userData.shell = null;
+    sp.visible = false;
+    this.scene.remove(sp);
+    const pool = sp.userData.fire ? this._spritePoolFire : this._spritePoolSmoke;
+    if (!pool.release(sp)) sp.material.dispose();
+    this._fxShellPool.release(sh);
   }
 
   /** 軌跡修正期的初期散布:在 dir 周圍的圓錐內取一個隨機偏角(離架瞬間一次性,之後由導引修正) */
@@ -8521,7 +8681,7 @@ export class BattleClient {
         // 飛彈自動追蹤:朝鎖定目標修正航向(動力飛行,升力抵銷重力)
         const want = _TMP_A.copy(tgt.mesh.position); want.y += 1.5;
         steer(b, want.sub(b.pos).normalize(), seekTurn(SEEK.HOME_W, b.mv));   // 轉彎半徑上限見 data.js SEEK
-      } else if (armed && b.guide && b.guidePt) {
+      } else if (armed && b.guide) {
         // 雷射導引(2026-09-28 使用者定案):與射後不理**同一條**「發射瞬間凍結」—— 朝擊發當下
         // 的固定打擊點修正(同一個追蹤頭 HOME_W),發射後不再讀準星,打擊位置不隨目標移動。
         // 使用者定案(2026-08-02)與榴彈**同一條**:中途碰撞就爆(下方 hit 分支)、掠過鎖定點即引爆
@@ -8533,7 +8693,9 @@ export class BattleClient {
       b.pos.addScaledVector(b.vel, dt);
       const seg = _TMP_A.copy(b.pos).sub(prev);
       const len = seg.length();
-      let hit = null;
+      // 命中改旗標 + 命中點暫存 _TMP_D(舊制每分支一個 {point,…} 物件 + clone,每顆每幀配;
+      // kind:0 無 1 地形 2 飛彈 3 單位 4 通用(導引固定點近炸,無分類);D 只在當次迭代消費)
+      let hitKind = 0, hitMissileId = null, hitEnt = null;
       let hitDist = Infinity;
       if (len > 0.01) {
         const dir = seg.divideScalar(len);          // seg 就地正規化(之後只當方向用)
@@ -8541,7 +8703,7 @@ export class BattleClient {
         // 地形:解析高度場行進(舊版把 terrain.mesh 丟進 raycaster = 每顆子彈每幀掃 73,728 面)
         const dT = this._terrainHitT(prev, dir, far);
         if (dT != null) {
-          hit = { point: prev.clone().addScaledVector(dir, dT), terrain: true };
+          _TMP_D.copy(prev).addScaledVector(dir, dT); hitKind = 1;
           hitDist = dT;
         }
         // 單位/飛彈:先過包圍球廣相(通常 0 個候選),再交給 raycaster 做精確判定
@@ -8556,9 +8718,9 @@ export class BattleClient {
             while (o && !o.userData.kind && o.userData.missileId == null && o.parent) o = o.parent;
             // 貫穿彈(aoeClass 'line'):單位不擋彈道,只有地形/障礙才終止 —— 圓柱內的目標
             // 由伺服器 heroLance 一次結算(這裡不逐個回報,避免同一發送出多筆傷害)
-            if (o && o.userData.missileId != null) { if (b.pierce) continue; hit = { point: h.point, missileId: o.userData.missileId }; hitDist = h.distance; break; }
-            if (o && o.userData.kind) { if (b.pierce) continue; hit = { point: h.point, ent: this._entByMesh(o) }; hitDist = h.distance; break; }
-            hit = { point: h.point, terrain: true }; hitDist = h.distance;
+            if (o && o.userData.missileId != null) { if (b.pierce) continue; _TMP_D.copy(h.point); hitKind = 2; hitMissileId = o.userData.missileId; hitDist = h.distance; break; }
+            if (o && o.userData.kind) { if (b.pierce) continue; _TMP_D.copy(h.point); hitKind = 3; hitEnt = this._entByMesh(o); hitDist = h.distance; break; }
+            _TMP_D.copy(h.point); hitKind = 1; hitDist = h.distance;
             break;
           }
         }
@@ -8567,7 +8729,8 @@ export class BattleClient {
         const dB = this._obstHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z);
         if (dB != null && dB < hitDist) {
           const building = this.mapBuildings?.get(this._hitBuildingKey);
-          hit = { point: prev.clone().addScaledVector(dir, dB), terrain: !building, ent: building || null };
+          _TMP_D.copy(prev).addScaledVector(dir, dB);
+          hitKind = building ? 3 : 1; hitEnt = building || null;
           hitDist = dB;
         }
       }
@@ -8582,7 +8745,7 @@ export class BattleClient {
       //      (A18 / _blast / _surfD3 同一條「量中心而非近側表面」的病灶)。
       // 引信半徑因此 = 爆風核心帶 + 目標水平量體,與射程光暈承諾「打得到」的 tol
       // (`_reachable` 的 `blastCoreR(def) + hr`)逐位元同一式:掠過「會吃滿額超壓」的範圍就引爆。
-      if (!hit && tgt) {
+      if (!hitKind && tgt) {
         const c = tgt.mesh.position;
         const dx = b.pos.x - prev.x, dy = b.pos.y - prev.y, dz = b.pos.z - prev.z;
         const l2 = dx * dx + dy * dy + dz * dz;
@@ -8591,13 +8754,13 @@ export class BattleClient {
           : 0;
         const nx = prev.x + dx * s, ny = prev.y + dy * s, nz = prev.z + dz * s;
         if (Math.hypot(nx - c.x, ny - c.y, nz - c.z) < (b.core || 0) + this._hitR(tgt)) {
-          hit = { point: new THREE.Vector3(nx, ny, nz), ent: tgt };
+          _TMP_D.set(nx, ny, nz); hitKind = 3; hitEnt = tgt;
         }
       }
       // 雷射導引固定打擊點的近炸引信:與上方追蹤引信同一條線段最近點規則,半徑只取爆風核心帶
       // (固定點沒有目標量體)。鎖定空域目標後目標移開,彈體掠過鎖定點即引爆 —— MUST NOT 穿點
-      // 而過後繞圈飛到解除武裝。
-      if (!hit && b.guidePt) {
+      // 而過後繞圈飛到解除武裝。(池化記錄 guidePt 常駐向量,閘門改吃 b.guide 布林,語義同舊 `b.guidePt` 空判)
+      if (!hitKind && b.guide) {
         const c = b.guidePt;
         const dx = b.pos.x - prev.x, dy = b.pos.y - prev.y, dz = b.pos.z - prev.z;
         const l2 = dx * dx + dy * dy + dz * dz;
@@ -8606,7 +8769,7 @@ export class BattleClient {
           : 0;
         const nx = prev.x + dx * s, ny = prev.y + dy * s, nz = prev.z + dz * s;
         if (Math.hypot(nx - c.x, ny - c.y, nz - c.z) < (b.core || 0)) {
-          hit = { point: new THREE.Vector3(nx, ny, nz) };
+          _TMP_D.set(nx, ny, nz); hitKind = 4;
         }
       }
       // 射程 = **以射擊點為中心的球面,與軌跡無關**(2026-08-02 使用者定案)—— 逐彈道**唯一一把尺**:
@@ -8631,10 +8794,10 @@ export class BattleClient {
       // `_lobAim` 的瞄準點夾制退進包絡內(退一個爆風核心帶),所以對地拋投**恆在武裝狀態下著地**。
       // 解除武裝的門檻 MUST 維持 `b.max`(誠實界)—— 放寬成 `b.max × RANGE_TOL` 等於送給爆炸型
       // 武器 25% 的隱形射程(光暈不亮的敵人照樣掉血,見 heroPlasma 檔頭同一條)。
-      if (b.aoe && !hit && (b.chase ? b.age >= b.fuel : spent >= b.max)) b.dud = true;
+      if (b.aoe && !hitKind && (b.chase ? b.age >= b.fuel : spent >= b.max)) b.dud = true;
       // 啞彈的存活上限沿用彈體本來就帶著的燃料(`chaseCapS`,推導不手寫)= 這把武器的彈頭
       // 最長可以合法留在空中的時間;碰撞優先,所以正常情況下它在落地那一刻就結束了。
-      const done = hit || (b.aoe ? (b.dud && b.age >= b.fuel) : spent >= b.max);
+      const done = hitKind !== 0 || (b.aoe ? (b.dud && b.age >= b.fuel) : spent >= b.max);
       if (!done) {
         b.mesh.position.copy(b.pos);
         // 彈體一律對準航向(2026-07-22 彈藥同源:火箭/飛彈也是有頭尾的彈體,不再是無方向灰球)
@@ -8644,16 +8807,20 @@ export class BattleClient {
         if (b.cyclone) this._spinCyclone(b, dt);
         continue;
       }
+      // 落點快照:_dropBullet 把記錄回池即清旗標(dud 首當其衝),MUST 先讀完再歸還。
+      // p 走 _TMP_D(命中,當次迭代現算現用,下方消費全同步)或彈頭當下位置(脫靶);
+      // 其餘落點欄(slot/r/aoe/origin/oy/向量)reset() 不動,留給下方結算讀完,下發覆寫。
+      const wasDud = b.dud;
       this._dropBullet(b);
       this.bullets.splice(i, 1);
-      const p = hit?.point || b.pos;
+      const p = hitKind ? _TMP_D : b.pos;
       const def = this.wdef[b.slot];
       if (b.aoe) {
         // 啞彈(已飛出射程球面才碰上東西):MUST NOT 畫爆炸、MUST NOT 回報 —— 伺服器的落點閘門
         // (`heroBurst` 的 impCap)收不下這一發,畫了就正好是使用者回報的那個症狀:看得到爆炸、
         // 範圍內一個人都沒掉血。落地留土塵(與下方直擊彈的地形分支同一支),彈體本身照樣回收。
-        if (b.dud) {
-          if (hit) starburst(this.scene, this.effects, p.x, p.y, p.z, 1.2, 0xcfc4a8);
+        if (wasDud) {
+          if (hitKind) starburst(this.scene, this.effects, p.x, p.y, p.z, 1.2, 0xcfc4a8);
           continue;
         }
         // 發射器:著彈點回報伺服器結算範圍傷害(直擊/落地皆引爆)
@@ -8678,13 +8845,13 @@ export class BattleClient {
         // 高初速近似直線(trajClass 'flat')⇒ 以「槍口→終點」的直線圓柱近似實際彈道,誤差 < 0.4m。
         this._lanceVisual(b.origin, p, def, this.side);
         this._lanceFeedback(def, this._sendLance(b.origin, p, def, b.oy), p);
-      } else if (hit?.missileId != null) {
-        this.net.send({ t: 'hitMissile', id: hit.missileId, w: b.slot });
+      } else if (hitMissileId != null) {
+        this.net.send({ t: 'hitMissile', id: hitMissileId, w: b.slot });
         this._hitFeedback(def, null, p);
-      } else if (hit?.ent) {
-        this.net.send({ t: 'hit', id: hit.ent.id, w: b.slot });
-        this._hitFeedback(def, hit.ent, p);
-      } else if (hit?.terrain) {
+      } else if (hitEnt) {
+        this.net.send({ t: 'hit', id: hitEnt.id, w: b.slot });
+        this._hitFeedback(def, hitEnt, p);
+      } else if (hitKind === 1) {
         starburst(this.scene, this.effects, p.x, p.y, p.z, 1.2, 0xcfc4a8);   // 打土塵
       }
     }
@@ -8920,11 +9087,18 @@ export class BattleClient {
   }
 
   // ---------------- 特效 ----------------
+  // 曳光短線(池化:每發舊制 = 幾何 + 材質各一份;現本體循環重用,只寫兩端點與顏色)
   _tracer(from, to, color, ttl = 0.1) {
-    const geo = new THREE.BufferGeometry().setFromPoints([from, to]);
-    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 }));
+    const line = this._tracerPool.acquire();
+    const p = line.geometry.attributes.position;
+    p.setXYZ(0, from.x, from.y, from.z);
+    p.setXYZ(1, to.x, to.y, to.z);
+    p.needsUpdate = true;
+    line.material.color.setHex(color);
+    line.material.opacity = 0.9;
+    line.visible = true;
     this.scene.add(line);
-    this.effects.push({ obj: line, ttl, fade: (o, f) => { o.material.opacity = 0.9 * f; } });
+    this._pushTracerFx(line, ttl);
   }
 
   /**
@@ -9134,25 +9308,17 @@ export class BattleClient {
       // 側向外推量與尺寸掛鉤:大焰球推更遠 → 內緣不越過中央 1/3(FOV 68°,中央 1/3 = ±11°);
       // 焰/煙自畫面左右邊緣舔入(集中兩側),正前方 1/3 保持視野。
       const lat = side * ((smoke ? 2.4 : 1.9) + base * 0.35 + Math.random() * 1.2);
-      const p = cam.position.clone()
-        .addScaledVector(fwd, d)
-        .addScaledVector(right, lat)
-        .add(new THREE.Vector3(0, (smoke ? 0.2 : -0.4) - Math.random() * 0.9, 0));   // 火從下往上舔、煙齊眼高翻騰
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: smoke ? this._smokeTex() : this._fireTex(),
-        color: smoke ? 0x4a4e52 : (Math.random() < 0.5 ? 0xff7a2a : 0xffd166),
-        transparent: true, opacity: smoke ? 0.55 : 0.9, depthWrite: false,
-        blending: smoke ? THREE.NormalBlending : THREE.AdditiveBlending }));
-      sp.userData.noOutline = true;
-      sp.position.copy(p);
-      sp.scale.setScalar(base);
-      this.scene.add(sp);
+      // 火從下往上舔、煙齊眼高翻騰(池化 sprite;暫存只在本同步區塊用,不進池化記錄)
+      _TMP_D.copy(cam.position).addScaledVector(fwd, d).addScaledVector(right, lat);
+      _TMP_D.y += (smoke ? 0.2 : -0.4) - Math.random() * 0.9;
       const rise = smoke ? 2 : 3 + Math.random() * 3, grow = smoke ? 1.2 : 0.8, op = smoke ? 0.55 : 0.9;
-      this.effects.push({
-        obj: sp, ttl: (smoke ? 0.5 : 0.32) + Math.random() * 0.26,
-        fade: (o, f, dt) => { o.position.y += rise * dt; o.scale.setScalar(base * (1 + (1 - f) * grow)); o.material.opacity = op * f; },
-        dispose: () => sp.material.dispose(),
-      });
+      const sp = this._takeSprite(!smoke, _TMP_D.x, _TMP_D.y, _TMP_D.z, base,
+        smoke ? 0x4a4e52 : (Math.random() < 0.5 ? 0xff7a2a : 0xffd166), op);
+      sp.userData.vel.set(0, rise, 0);
+      sp.userData.base = base;
+      sp.userData.grow = base * grow;
+      sp.userData.op = op;
+      this._pushSpriteFx(sp, (smoke ? 0.5 : 0.32) + Math.random() * 0.26, _spriteDriftFade);
     }
     // 火星只沿兩側迸射(以 right 軸偏移),中央不撒 → 正前方保持通透
     for (const s of [-1, 1]) this._emberBurst(
@@ -9224,24 +9390,15 @@ export class BattleClient {
     this._smokeTexC = t; return t;
   }
 
-  /** 火星/餘燼(加法小亮點,上升飄散淡出):替殉爆火煙補細節顆粒感。n 顆一批。 */
+  /** 火星/餘燼(加法小亮點,上升飄散淡出):替殉爆火煙補細節顆粒感。n 顆一批(池化 sprite + 共用 fade,逐顆不配物件)。 */
   _emberBurst(x, y, z, n = 8, spread = 2) {
-    const tex = this._fireTex();
     for (let i = 0; i < n; i++) {
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: tex, color: Math.random() < 0.5 ? 0xffd27a : 0xff9840,
-        transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending }));
-      sp.userData.noOutline = true;
-      sp.position.set(x + (Math.random() - 0.5) * spread, y + (Math.random() - 0.5) * spread, z + (Math.random() - 0.5) * spread);
-      const base = 0.35 + Math.random() * 0.5;
-      sp.scale.setScalar(base);
-      this.scene.add(sp);
-      const vel = new THREE.Vector3((Math.random() - 0.5) * 6, 4 + Math.random() * 8, (Math.random() - 0.5) * 6);
-      this.effects.push({
-        obj: sp, ttl: 0.7 + Math.random() * 0.6,
-        fade: (o, f, dt) => { vel.y -= 6 * dt; o.position.addScaledVector(vel, dt); o.material.opacity = 0.95 * f; },
-        dispose: () => sp.material.dispose(),
-      });
+      const sp = this._takeSprite(true,
+        x + (Math.random() - 0.5) * spread, y + (Math.random() - 0.5) * spread, z + (Math.random() - 0.5) * spread,
+        0.35 + Math.random() * 0.5, Math.random() < 0.5 ? 0xffd27a : 0xff9840, 0.95);
+      sp.userData.vel.set((Math.random() - 0.5) * 6, 4 + Math.random() * 8, (Math.random() - 0.5) * 6);
+      sp.userData.op = 0.95;
+      this._pushSpriteFx(sp, 0.7 + Math.random() * 0.6, _spriteGravFade);
     }
   }
 
@@ -9288,21 +9445,16 @@ export class BattleClient {
     this._emberBurst(x, y + 1, z, 14, 4);   // 起始迸射一批火星補顆粒細節
   }
 
-  /** 單顆上升灰煙(墜機拖尾 / 觸地煙,單一縫共用);scale 控大小。柔邊 sprite,恆面向相機、無 facet。 */
+  /** 單顆上升灰煙(墜機拖尾 / 觸地煙,單一縫共用);scale 控大小。柔邊 sprite,恆面向相機、無 facet(池化)。 */
   _crashSmoke(x, y, z, scale = 1) {
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: this._smokeTex(), color: 0x484c50, transparent: true, opacity: 0.6, depthWrite: false }));
-    sp.userData.noOutline = true;
-    sp.position.set(x + (Math.random() - 0.5) * 2, y, z + (Math.random() - 0.5) * 2);
     const base = 3.4 * scale;
-    sp.scale.setScalar(base);
-    this.scene.add(sp);
-    const rise = 5 + Math.random() * 4;
-    this.effects.push({
-      obj: sp, ttl: 1.1,
-      fade: (o, f, dt) => { o.position.y += rise * dt; o.scale.setScalar(base * (1 + (1 - f) * 2.2)); o.material.opacity = 0.6 * f; },
-      dispose: () => { sp.material.dispose(); },
-    });
+    const sp = this._takeSprite(false,
+      x + (Math.random() - 0.5) * 2, y, z + (Math.random() - 0.5) * 2, base, 0x484c50, 0.6);
+    sp.userData.vel.set(0, 5 + Math.random() * 4, 0);
+    sp.userData.base = base;
+    sp.userData.grow = base * 2.2;
+    sp.userData.op = 0.6;
+    this._pushSpriteFx(sp, 1.1, _spriteDriftFade);
   }
 
   /**
@@ -11418,6 +11570,15 @@ export class BattleClient {
       if (list) list.length = 0;
     }
     if (this._projPool) { for (const l of this._projPool.values()) for (const m of l) disposeTree(m); this._projPool = null; }
+    // 高頻池一併釋放(曳光幾何 + sprite/曳光材質;記錄/殼是純 CPU 物件,置空即回收)
+    this._tracerPool?.clear((line) => { line.geometry.dispose(); line.material.dispose(); });
+    this._tracerPool = null;
+    this._spritePoolFire?.clear((sp) => sp.material.dispose());
+    this._spritePoolFire = null;
+    this._spritePoolSmoke?.clear((sp) => sp.material.dispose());
+    this._spritePoolSmoke = null;
+    this._recPool?.clear(); this._recPool = null;
+    this._fxShellPool?.clear(); this._fxShellPool = null;
     this.renderer.dispose();
   }
 }

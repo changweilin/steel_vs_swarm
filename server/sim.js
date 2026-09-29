@@ -4,6 +4,7 @@
 // client reports while HP and damage settle here. Plane is in meters about the
 // battlefield center (x east, z north; height is client-side, simulation is 2D + lane paths).
 import { MAP_BUILDING, buildingBounds, buildingNear, buildingDistance, buildingRayHit, buildingRoofIndex, collapseBuildingBoxes, mapBuildingHp, mapBuildingId } from '../public/js/mapBuilding.js';
+import { Pool } from '../public/js/pool.js';
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, BASE_MISSILE, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
@@ -198,6 +199,11 @@ export class BattleSim {
     this.heroes = new Map();          // pid(玩家連線 id;電腦玩家為 'b1' 之類字串)-> 目前主視野機體
     this.squads = new Map();          // pid -> { bodies:[ent], act, lock, lockAt, ps }(機甲小隊只有 1 架)
     this.missiles = [];               // 防空飛彈(伺服器權威 3D 追蹤)
+    // 飛彈記錄池:伏擊 / 主堡兩處 push 逐發一個物件 + 失鎖/命中 splice 丟棄。
+    // 兩處欄位集不同(amb 只伏擊有),歸還時清掉揮發欄位,下發 Object.assign 覆寫 ——
+    // 存活陣列的順序與 splice 語義不動(保序 ⇒ 確定性/快照順序不變),只省配置。
+    this._missilePool = new Pool(() => ({}), { max: 24,
+      reset: (m) => { m.lost = undefined; m.vx = undefined; m.vy = undefined; m.vz = undefined; m.amb = undefined; } });
     this.events = [];                 // 快照間累積的事件
     this.sacredTrees = [];            // 黑森林神木防線
     this.darkMoons = [];              // 暗月引爆巨石
@@ -2642,7 +2648,7 @@ export class BattleSim {
       m.hp -= this._heroDmg(h, wp.def, 'missile') * dmgFalloff(wp.def, bd);
     }
     if (m.hp <= 0) {
-      this.missiles.splice(this.missiles.indexOf(m), 1);
+      this._freeMissileAt(this.missiles.indexOf(m));
       this.events.push({ e: 'boom', missileId:m.id, x: m.x, z: m.z, y: m.y, r: 8, side: h.side, sam: true });
       h.money += ECON.BOUNTY.missile;
     }
@@ -3044,7 +3050,7 @@ export class BattleSim {
       if (d3 > wp.def.range * RANGE_TOL) continue;
       m.hp -= this._heroDmg(h, wp.def, 'missile') * dmgFalloff(wp.def, d3);
       if (m.hp <= 0) {
-        this.missiles.splice(i, 1);
+        this._freeMissileAt(i);
         this.events.push({ e: 'boom', missileId:m.id, x: m.x, z: m.z, y: m.y, r: 8, side: h.side, sam: true });
         h.money += ECON.BOUNTY.missile;
       }
@@ -3970,7 +3976,7 @@ export class BattleSim {
         const ms = this.missiles[i];
         if (ms.side === h.side) continue;
         if (dist2d(ms.x, ms.z, h.x, h.z) > ir) continue;
-        this.missiles.splice(i, 1);
+        this._freeMissileAt(i);
         this.events.push({ e: 'boom', missileId:ms.id, x: ms.x, z: ms.z, y: ms.y, r: 8, side: h.side, sam: true });
       }
       if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
@@ -4982,7 +4988,7 @@ export class BattleSim {
         const m = this.missiles[mIdx];
         if (dist2d(s.x, s.z, m.x, m.z) <= s.pullR) {
           s.capturedCount = (s.capturedCount || 0) + 1;
-          this.missiles.splice(mIdx, 1);
+          this._freeMissileAt(mIdx);
           this.events.push({ e: 'singularity_capture', id: s.id, mx: m.x, mz: m.z });
         }
       }
@@ -6831,11 +6837,11 @@ export class BattleSim {
       }
       if (!best) continue;   // 附近陣地已被摧毀 → 這條非正規路線是打出來的安全通道
       h.thirdCd = this.t + GAME.THREAT_CD_S;
-      this.missiles.push({
+      this.missiles.push(this._takeMissile({
         id: nextEntId++, byId: best.id, side: OTHER_SIDE[h.side], tid: h.id, tpid: h.pid,
         x: best.x, z: best.z, y: 2, speed: A.SPEED, dmg: A.DMG, pen: A.PEN, r: A.R, hp: A.HP, maxHp: A.HP, ttl: 14,
         amb: true, ox: best.x, oy: 2, oz: best.z, range: S.range,   // 出了陣地射程就失鎖直飛
-      });
+      }));
       this.events.push({ e: 'sam', from: [best.x, best.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
     }
   }
@@ -7058,6 +7064,19 @@ export class BattleSim {
    * 演出取用的就是結算用的那一份(原則 4)。傷害基準走 npcDmg = `m.dmg`(建築/第三方陣地皆
    * 不吃 `vs` 剋制,與 NPC 分支同一條)。
    */
+  /** 飛彈記錄取用:池空即新建,欄位由呼叫端 Object.assign 完整覆寫。 */
+  _takeMissile(o) {
+    return Object.assign(this._missilePool.acquire(), o);
+  }
+
+  /** 飛彈移除(保序 splice + 記錄回池);回傳移除的記錄(呼叫端若還需讀殘值可用)。 */
+  _freeMissileAt(i) {
+    const m = this.missiles[i];
+    this.missiles.splice(i, 1);
+    this._missilePool.release(m);
+    return m;
+  }
+
   _samBlast(m, x, z, y, lev = null) {
     const by = this.ents.get(m.byId) || { side: m.side };
     this._blast(by, { r: m.r, pen: m.pen || 0 }, x, z, y, lev, false, m.dmg);
@@ -7078,7 +7097,7 @@ export class BattleSim {
     for (let i = this.missiles.length - 1; i >= 0; i--) {
       const m = this.missiles[i];
       m.ttl -= dt;
-      if (m.ttl <= 0) { this.missiles.splice(i, 1); continue; }
+      if (m.ttl <= 0) { this._freeMissileAt(i); continue; }
       const ox = m.x, oy = m.y, oz = m.z;
       const step = m.speed * dt;
       // 導引飛彈吸附(2026-07-17):目標是「有存活自殺攻擊機的無人機玩家」→ 改追最近的自殺機
@@ -7126,7 +7145,7 @@ export class BattleSim {
             if (adist > 0.01 && (fx * ax + fz * az) / adist >= Math.cos((t.reflectArc || (120 * Math.PI / 180)) / 2)) {
               this.events.push({ e: 'reflect_hit', pid: t.pid, x: m.x, z: m.z, deflected: true });
               this.events.push({ e: 'boom', x: m.x + fx * 15, z: m.z + fz * 15, y: m.y, r: m.r, side: t.side });
-              this.missiles.splice(i, 1);
+              this._freeMissileAt(i);
               continue;
             }
           }
@@ -7135,7 +7154,7 @@ export class BattleSim {
           // 的超壓帶 —— 演出與結算分家(原則 4)。半徑是推導值 GAME.AA_AMBUSH.R(data.js),
           // 演出取用的就是結算用的那一份。
           this._samBlast(m, t.x, t.z, t.y || 0, this._unitLev(t));
-          this.missiles.splice(i, 1);
+          this._freeMissileAt(i);
           continue;
         }
         // 目標跑出發射源的攻擊範圍 → 失鎖(記下當下航向,之後直線飛)
@@ -7148,12 +7167,12 @@ export class BattleSim {
           m.x += dx / d * step; m.y += dy / d * step; m.z += dz / d * step;
           if (hitObst(ox, oz, oy, m)) {
             this._samBlast(m, m.x, m.z, m.y);   // 半路撞上障礙就地引爆:一樣是爆風(與 A7 「中途爆炸也要有傷害」同一條)
-            this.missiles.splice(i, 1);
+            this._freeMissileAt(i);
           }
           continue;
         }
       } else if (!m.lost) {
-        this.missiles.splice(i, 1);   // 目標消失(陣亡/離場):飛彈自毀
+        this._freeMissileAt(i);   // 目標消失(陣亡/離場):飛彈自毀
         continue;
       }
       // 失鎖:等速直線
@@ -7162,7 +7181,7 @@ export class BattleSim {
       m.z += (m.vz || 0) * dt;
       if (hitObst(ox, oz, oy, m)) {
         this._samBlast(m, m.x, m.z, m.y);   // 半路撞上障礙就地引爆:一樣是爆風(與 A7 「中途爆炸也要有傷害」同一條)
-        this.missiles.splice(i, 1);
+        this._freeMissileAt(i);
       }
     }
   }
@@ -7284,12 +7303,12 @@ export class BattleSim {
       e.gunCd[i] = 1 / (g.rate * sandMul);
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
       const mx = e.x + off, mz = e.z, my = BASE_MISSILE.LAUNCH_Y;
-      this.missiles.push({
+      this.missiles.push(this._takeMissile({
         id: nextEntId++, byId: e.id, side: e.side, tid: target.id, tpid: target.pid,
         x: mx, y: my, z: mz, speed: BASE_MISSILE.SPEED, dmg: g.dmg, pen: STRUCT_W.base.pen || 0,
         r: STRUCT_W.base.r, hp: BASE_MISSILE.HP, maxHp: BASE_MISSILE.HP, ttl: g.range / BASE_MISSILE.SPEED + BASE_MISSILE.TTL_PAD,
         ox: mx, oy: my, oz: mz, range: g.range,   // 出了主堡射程就失鎖直飛(與其他飛彈同一條規則)
-      });
+      }));
       // gi = 第幾門砲:客戶端把該門砲管轉向目標、播放槍口焰(飛彈本身由 sm 快照另行渲染飛行路徑)
       this.events.push({
         e: 'shot', id: e.id, kind: 'base', gi: i, from: [mx, mz], to: [target.x, target.z],

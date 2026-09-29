@@ -8,9 +8,10 @@
 // 特效物件全部走 game.js 的 effects 陣列({ obj, ttl, fade(o, f, dt) },
 // f = 剩餘壽命比例 1→0),不自帶迴圈。
 import * as THREE from 'three';
-import { toonMat, outlinify, markShared, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
+import { toonMat, outlinify, markShared, disposeTree, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
 import { lowPower } from './mobile.js';
 import { UNITS, WEAPONS, BALLISTIC, shotFlightS } from './data.js';
+import { Pool } from './pool.js';
 
 // Decorative effects yield under load without suppressing projectiles or hit reports.
 const crowded = (effects) => effects.length >= (lowPower() ? 90 : 180);
@@ -161,6 +162,87 @@ const unitBead = () => unitGeo('bead', () => new THREE.SphereGeometry(1, 7, 5));
 /** 單位環(能量環 / 衝擊環;內外徑比例固定,靠 scale 定大小) */
 const unitRing = (key, ri, ro, seg) => unitGeo(key, () => new THREE.RingGeometry(ri, ro, seg));
 
+// ---------------- 高頻圖元池(星爆/衝擊環/光束)----------------
+// 星爆/衝擊環/光束是**每發數個**的最高頻圖元(輕武器每發 1 束 + 1~2 星,重武器翻倍,
+// 再乘上全場他人/bot 齊射)。舊制每圖元 = Mesh/Sprite + 材質各一份,逐發配置;
+// 現本體(幾何共用 + 獨立材質)與特效殼全循環重用,逐發只寫值(位置/縮放/顏色/透明度)。
+// 契約(A25 同一處置):歸還只是自場景摘下藏起;池滿溢出才走 disposeTree(與非池路徑同語義,
+// 共用幾何由 markShared 跳過)。fade 全是共用函式(參數在 userData),逐發不配閉包。
+// 特效殼 `_fxShellPool` 與 game.js 同形但各守一池:game 守自機彈道系,vfx 守共用圖元系,
+// 兩池皆經呼叫端 effects 陣列進 `_freeEffect`(自帶 dispose 優先那條)回收。
+function _sparkFade(o, f) {
+  const u = o.userData;
+  const age = (1 - f) * u.ttl - u.delay;
+  o.visible = age >= 0;
+  if (age < 0) return;
+  const p = Math.min(1, age / 0.15), remain = 1 - p;
+  o.scale.setScalar(u.r * (0.4 + 1.4 * (1 - remain * remain)));
+  o.material.opacity = Math.max(0, 1 - p * 1.15) ** 2;
+}
+function _ringFade(o, f) {
+  const r = o.userData.r;
+  o.scale.setScalar(r * (0.15 + 0.85 * (1 - f * f * f)));
+  o.material.opacity = 0.95 * f * f;
+}
+function _beamFade(o, f) {
+  const u = o.userData;
+  o.material.opacity = u.op * f * f;
+  o.scale.x = o.scale.z = u.w * (0.12 + 0.88 * f * f);
+}
+function _releasePooledFx(pool, obj) {
+  const sh = obj.userData.shell;
+  if (!sh) return;                    // 重入保護(殼已取走)
+  obj.userData.shell = null;
+  obj.visible = false;
+  obj.removeFromParent();
+  if (!pool.release(obj)) disposeTree(obj);   // 超量才真釋(共用幾何自動跳過)
+  _fxShellPool.release(sh);
+}
+function _pushPooledFx(effects, pool, obj, ttl, fade) {
+  const sh = _fxShellPool.acquire();
+  sh.obj = obj; sh.ttl = ttl; sh.fade = fade; sh.dispose = obj.userData.releaseFx; sh.age = 0;
+  obj.userData.shell = sh;
+  effects.push(sh);
+}
+const _sparkPool = new Pool(() => {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: sparkTexture(), color: 0xffffff, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  sp.userData.noOutline = true;
+  sp.userData.releaseFx = () => _releasePooledFx(_sparkPool, sp);
+  sp.visible = false;
+  return sp;
+}, { max: 96, prewarm: 24 });
+const _ringPool = new Pool(() => {
+  const ring = new THREE.Mesh(
+    unitRing('shock', 0.88, 1.0, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.95,
+      side: THREE.DoubleSide, depthWrite: false, forceSinglePass: true,
+    }));
+  ring.userData.noOutline = true;
+  ring.rotation.x = -Math.PI / 2;
+  ring.visible = false;
+  ring.userData.releaseFx = () => _releasePooledFx(_ringPool, ring);
+  return ring;
+}, { max: 32, prewarm: 8 });
+const _beamPool = new Pool(() => {
+  const beam = new THREE.Mesh(
+    unitCylinder(6),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+  beam.userData.noOutline = true;
+  beam.visible = false;
+  beam.userData.releaseFx = () => _releasePooledFx(_beamPool, beam);
+  return beam;
+}, { max: 48, prewarm: 16 });
+const _fxShellPool = new Pool(() => ({ obj: null, ttl: 0, fade: null, dispose: null, age: 0 }),
+  { max: 160, reset: (e) => { e.obj = null; e.ttl = 0; e.fade = null; e.dispose = null; e.age = 0; } });
+_fxShellPool.prewarm(32);
+
 // ---------------- 特效 ----------------
 const POP_BIG = ['BOOM!!', 'KA-BOOM!', 'CRASH!!', 'WRECKED!'];
 const POP_SMALL = ['POW!', 'BAM!', 'BLAM!', 'ZAP!'];
@@ -195,30 +277,19 @@ export function comicPop(scene, effects, x, y, z, { text, big = false, hue } = {
   });
 }
 
-/** 星爆命中火花:150ms 放大淡出 + 硬邊(加法混色) */
+/** 星爆命中火花:150ms 放大淡出 + 硬邊(加法混色;池化 sprite + 共用 fade,逐顆不配物件) */
 export function starburst(scene, effects, x, y, z, r, color = 0xffe27a, delay = 0) {
   if (crowded(effects)) return;
-  const mat = new THREE.SpriteMaterial({
-    map: sparkTexture(), color, transparent: true,
-    blending: THREE.AdditiveBlending, depthWrite: false,
-    rotation: Math.random() * Math.PI,
-  });
-  const sp = new THREE.Sprite(mat);
+  const sp = _sparkPool.acquire();
+  sp.material.color.setHex(color);
+  sp.material.rotation = Math.random() * Math.PI;
+  sp.material.opacity = 1;
   sp.position.set(x, y, z);
   sp.scale.setScalar(r * 0.4);
   sp.visible = delay <= 0;
+  sp.userData.r = r; sp.userData.delay = delay; sp.userData.ttl = delay + 0.15;
   scene.add(sp);
-  effects.push({
-    obj: sp, ttl: delay + 0.15,
-    fade(o, f) {
-      const age = (1 - f) * (delay + 0.15) - delay;
-      o.visible = age >= 0;
-      if (age < 0) return;
-      const p = Math.min(1, age / 0.15), remain = 1 - p;
-      o.scale.setScalar(r * (0.4 + 1.4 * (1 - remain * remain)));
-      o.material.opacity = Math.max(0, 1 - p * 1.15) ** 2;
-    },
-  });
+  _pushPooledFx(effects, _sparkPool, sp, delay + 0.15, _sparkFade);
 }
 
 /**
@@ -358,32 +429,33 @@ export function stepProjectileFx(projectile, age = 0, speed = 0) {
  * 餌機投彈的拋擲彈體(2026-07-22):依機體類型上色 + 專屬造型的手榴彈。
  * 幾何原點置中(呼叫端逐幀 tumble 自旋);不自行加入場景。
  * type: 'fire'|'freeze'|'poison'|'thunder'  color: DECOY_BOMB[type].color(彈殼識別色;thunder = 閃光彈)
+ * 幾何全走共用單位體(逐顆不再配頂點緩衝;材質仍逐顆—— 拋擲彈是低頻招式物,CPU 小物件可接受)。
  */
 export function decoyBombMesh(type, color = 0xff6a2a) {
   const g = new THREE.Group();
   const dark = new THREE.Color(color).multiplyScalar(0.55).getHex();
   // 彈殼(圓潤彈體)+ 頂部保險蓋(引信)
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8),
+  const body = new THREE.Mesh(unitGeo('decoyBody', () => new THREE.SphereGeometry(0.42, 10, 8)),
     toonMat(dark, { celMetal: true, emissive: color, emissiveIntensity: 0.35 }));
   body.scale.y = 1.15;
   g.add(body);
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.22, 8), toonMat(0x2b3239, { celMetal: true }));
+  const cap = new THREE.Mesh(unitGeo('decoyCap', () => new THREE.CylinderGeometry(0.14, 0.18, 0.22, 8)), toonMat(0x2b3239, { celMetal: true }));
   cap.position.y = 0.46;
   g.add(cap);
-  const lever = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.34, 0.12), toonMat(0x9aa2a8, { celMetal: true }));
+  const lever = new THREE.Mesh(unitGeo('decoyLever', () => new THREE.BoxGeometry(0.05, 0.34, 0.12)), toonMat(0x9aa2a8, { celMetal: true }));
   lever.position.set(0.14, 0.42, 0);
   g.add(lever);
   // 類型專屬識別造型(投擲中一眼可辨)
   if (type === 'fire') {
     // 燃燒彈:頂部竄出的加法火苗
-    const fl = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.4, 8),
+    const fl = new THREE.Mesh(unitGeo('decoyFlame', () => new THREE.ConeGeometry(0.13, 0.4, 8)),
       new THREE.MeshBasicMaterial({ color: 0xffb457, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
     fl.position.y = 0.72; fl.userData.noOutline = true;
     g.add(fl);
   } else if (type === 'freeze') {
     // 凍結彈:放射冰晶尖刺
     for (let i = 0; i < 5; i++) {
-      const sh = new THREE.Mesh(new THREE.TetrahedronGeometry(0.16),
+      const sh = new THREE.Mesh(unitGeo('decoyShard', () => new THREE.TetrahedronGeometry(0.16)),
         toonMat(0xbfeaff, { emissive: 0x8fd8ff, emissiveIntensity: 0.5 }));
       const a = (i / 5) * Math.PI * 2;
       sh.position.set(Math.cos(a) * 0.42, 0.05 + Math.sin(i * 2) * 0.12, Math.sin(a) * 0.42);
@@ -393,7 +465,7 @@ export function decoyBombMesh(type, color = 0xff6a2a) {
   } else if (type === 'poison') {
     // 毒霧彈:側掛三顆毒氣囊
     for (let i = 0; i < 3; i++) {
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6),
+      const bulb = new THREE.Mesh(unitGeo('decoyBulb', () => new THREE.SphereGeometry(0.16, 8, 6)),
         toonMat(0x6fbf46, { emissive: 0x8fe36a, emissiveIntensity: 0.45 }));
       const a = (i / 3) * Math.PI * 2;
       bulb.position.set(Math.cos(a) * 0.4, -0.05, Math.sin(a) * 0.4);
@@ -402,7 +474,7 @@ export function decoyBombMesh(type, color = 0xff6a2a) {
   } else if (type === 'thunder') {
     // 閃光彈:上下電極針
     for (let i = 0; i < 2; i++) {
-      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.02, 0.5, 6),
+      const rod = new THREE.Mesh(unitGeo('decoyRod', () => new THREE.CylinderGeometry(0.035, 0.02, 0.5, 6)),
         toonMat(0xfff3a0, { emissive: 0xffe14f, emissiveIntensity: 0.7 }));
       rod.position.set((i ? 0.24 : -0.24), 0.3, 0);
       rod.rotation.z = (i ? -1 : 1) * 0.4;
@@ -417,6 +489,8 @@ export function decoyBombMesh(type, color = 0xff6a2a) {
  * 氣旋噴射尾流(2026-07-22 巨炮砲彈):附掛在砲彈子體(+z 朝前)底下的旋轉渦輪葉片 + 熾亮尾焰。
  * 呼叫端逐幀轉 rotation.z(自旋)並另撒螺旋煙圈(見 game._updateBullets 的 cyclone 分支);
  * 純加法混色、userData.noOutline。回傳 Group(不自行加入場景)。
+ * 幾何共用(渦輪葉/尾焰各一份,disposeTree 自動跳過);材質仍逐組配置—— disposeTree 沒有
+ * 材質共用註冊表,快取材質會在首次回收時被連帶 dispose,下一組同色直接拿到壞材質。
  */
 export function cycloneJet(color = 0xffd27a) {
   const g = new THREE.Group();
@@ -424,7 +498,7 @@ export function cycloneJet(color = 0xffd27a) {
   const mat = () => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   // 3 片後掠渦輪葉:繞行進軸環列 → 自旋即成氣旋
   for (let i = 0; i < 3; i++) {
-    const vane = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 1.4), mat());
+    const vane = new THREE.Mesh(unitGeo('cycVane', () => new THREE.PlaneGeometry(0.5, 1.4)), mat());
     const a = (i / 3) * Math.PI * 2;
     vane.position.set(Math.cos(a) * 0.32, Math.sin(a) * 0.32, -0.3);
     vane.rotation.z = a;
@@ -432,7 +506,7 @@ export function cycloneJet(color = 0xffd27a) {
     g.add(vane);
   }
   // 熾亮尾焰(比一般彈體尾焰長且亮)
-  const jet = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.5, 10),
+  const jet = new THREE.Mesh(unitGeo('cycJet', () => new THREE.ConeGeometry(0.22, 1.5, 10)),
     new THREE.MeshBasicMaterial({ color: 0xfff0c0, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
   jet.rotation.x = -Math.PI / 2;   // 錐尖朝 -z(尾部)
   jet.position.z = -1.0;
@@ -441,32 +515,25 @@ export function cycloneJet(color = 0xffd27a) {
   return g;
 }
 
-/** 能量光束:兩點間的發光圓柱(雷射/磁軌/電漿焰舌;展示台與戰場共用) */
+/** 能量光束:兩點間的發光圓柱(雷射/磁軌/電漿焰舌;展示台與戰場共用;池化 mesh + 共用 fade) */
 // op:不透明度(預設 0.85)。滿寬的貫穿通道要壓低,否則整根實心柱子會把畫面糊掉。
 export function beamLine(scene, effects, from, to, color, { ttl = 0.4, w = 0.08, op = 0.85 } = {}) {
   if (crowded(effects)) return;
   const dir = to.clone().sub(from);
   const len = dir.length();
   if (len < 0.01) return;
-  const beam = new THREE.Mesh(
-    unitCylinder(6),   // 共用單位圓柱:粗細/長度靠 scale(不再每條配一份幾何)
-    new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity: op,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    }),
-  );
+  const beam = _beamPool.acquire();
+  // 共用單位圓柱:粗細/長度靠 scale(池化 mesh 吃同一份,幾何永不重配)
+  if (beam.geometry !== unitCylinder(6)) beam.geometry = unitCylinder(6);
+  beam.material.color.setHex(color);
+  beam.material.opacity = op;
   beam.scale.set(w, len, w);
-  beam.userData.noOutline = true;
   beam.position.copy(from).addScaledVector(dir, 0.5);
   beam.quaternion.setFromUnitVectors(_UP, dir.normalize());
+  beam.visible = true;
   scene.add(beam);
-  effects.push({
-    obj: beam, ttl,
-    fade(o, f) {
-      o.material.opacity = op * f * f;
-      o.scale.x = o.scale.z = w * (0.12 + 0.88 * f * f);
-    },
-  });
+  beam.userData.w = w; beam.userData.op = op;
+  _pushPooledFx(effects, _beamPool, beam, ttl, _beamFade);
 }
 
 // ================= 直線貫穿(line)/ 扇形離子(fan)的範圍演出 =================
@@ -646,29 +713,20 @@ export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45
   starburst(scene, effects, from.x, from.y, from.z, r * 1.7, core);   // 噴口綻放
 }
 
-/** AoE 衝擊環:貼地放射環,250ms 擴張到傷害半徑邊界後消散 */
+/** AoE 衝擊環:貼地放射環,250ms 擴張到傷害半徑邊界後消散(池化 mesh + 共用 fade) */
 export function shockRing(scene, effects, x, y, z, r, color = 0xffd27a) {
   if (crowded(effects)) return;
-  const ring = new THREE.Mesh(
-    unitRing('shock', 0.88, 1.0, 32),
-    new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity: 0.95,
-      side: THREE.DoubleSide, depthWrite: false,
-      forceSinglePass: true,
-    }),
-  );
-  ring.userData.noOutline = true;
-  ring.rotation.x = -Math.PI / 2;
+  const ring = _ringPool.acquire();
+  // 共用單位環(池化 mesh 吃同一份,幾何永不重配)
+  if (ring.geometry !== unitRing('shock', 0.88, 1.0, 32)) ring.geometry = unitRing('shock', 0.88, 1.0, 32);
+  ring.material.color.setHex(color);
+  ring.material.opacity = 0.95;
   ring.position.set(x, y + 0.6, z);
   ring.scale.setScalar(r * 0.15);
+  ring.visible = true;
   scene.add(ring);
-  effects.push({
-    obj: ring, ttl: 0.28,
-    fade(o, f) {
-      o.scale.setScalar(r * (0.15 + 0.85 * (1 - f * f * f)));
-      o.material.opacity = 0.95 * f * f;
-    },
-  });
+  ring.userData.r = r;
+  _pushPooledFx(effects, _ringPool, ring, 0.28, _ringFade);
 }
 
 /**
