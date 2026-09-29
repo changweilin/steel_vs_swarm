@@ -42,6 +42,7 @@ import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampR
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { lodStrideByD2, lodDue } from './lod.js';
+import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep } from './cull.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
@@ -11382,7 +11383,8 @@ export class BattleClient {
     this.pipeline?.setDofBlend(this.side && !this.dead
       ? dofAimBlend(this.camera.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0);
     // 後製管線結束時 render target 一律歸零 ⇒ 後面的 PiP / 陣亡鏡頭照樣直接畫在畫布上(行為不變)
-    if (this.pipeline) this.pipeline.render(); else this.renderer.render(this.scene, this.camera);
+    this._tickCull();
+    this._renderCulledMain();
     this._renderPips();
     this._renderDeathCam();
     this.hud.locked?.(now < (this._lockedUntil || 0));
@@ -11390,6 +11392,123 @@ export class BattleClient {
     const nc = this._nearestCiv();
     this._civTarget = nc;
     this.hud.civPrompt?.(nc ? { cs: nc.cs, self: nc.cs === this.side, follow: !!nc.fo } : null);
+  }
+
+  // ---------------- Pre-shading cull (presentation only) ----------------
+  /**
+   * Collect this._culled WITHOUT touching visibility: gameplay gates read
+   * mesh.visible (collision, audio, foe()), so the hide/restore pair lives
+   * strictly inside the synchronous _renderCulledMain window below. PiP and
+   * deathcam render after restore, hence always see the full scene (small
+   * viewports; correctness over savings there). Threshold truth stays in
+   * data.js (dofNearM/dofFarM/scopeRvminFog) and lod.js (lodDue stagger);
+   * predicates stay in cull.js. Spectators skip (side == null): wheel zoom
+   * would misread as sniper blend, same reason setDofBlend gates on side.
+   */
+  _tickCull() {
+    this._culled = null;
+    if (!this.side || this.dead || !this.camera || !this.ents) return;
+    const cam = this.camera, camP = cam.position;
+    cam.updateMatrixWorld();
+    const frustum = this._cullFrustum || (this._cullFrustum = new THREE.Frustum());
+    const cm = this._cullM || (this._cullM = new THREE.Matrix4());
+    frustum.setFromProjectionMatrix(cm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    const aimBlend = dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov);
+    const farNear = dofNearM(), farFar = dofFarM();
+    let rPx = 0, projF = 0, HW = 0, HH = 0;
+    if (aimBlend > 0.001) {
+      const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
+      HW = W / 2; HH = H / 2;
+      rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
+      projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
+    }
+    const occ = this._cullOcc || (this._cullOcc = []);
+    occ.length = 0;
+    for (const b of this.mapBuildings?.values() || []) {
+      const r = b.record?.bounds;
+      if (!r || b.collapsed || b.record?.cleared) continue;
+      const or = Math.hypot(r.w, r.d) * 0.5;
+      if (or < CULL.OCCLUDE_MIN_R_M) continue;
+      occ.push(r.x, r.y + r.h * 0.5, r.z, or * 0.8);
+    }
+    const frame = this._lodFrame | 0;
+    const v = this._cullV || (this._cullV = new THREE.Vector3());
+    const s = this._cullS || (this._cullS = new THREE.Sphere());
+    const out = this._cullOut || (this._cullOut = []);
+    out.length = 0;
+    const occMin2 = CULL.OCCLUDE_MIN_M * CULL.OCCLUDE_MIN_M;
+    const consider = (ent, isUnit) => {
+      if (ent.isSelf || ent.dead || ent.gar) return;
+      const mesh = ent.mesh;
+      if (!mesh || !mesh.visible) return;
+      if (ent.id != null && ent.id === this._vlockId) return;   // locked target never culls (no lock flicker)
+      const p = mesh.position;
+      // Live scale widens the authored spawn-time bounds: boss / super-form
+      // scaling with an unscaled sphere is a straight false-cull of the crown.
+      const msc = mesh.scale;
+      const sk = Math.max(1, msc.x || 1, msc.y || 1, msc.z || 1);
+      const h = ent.dimH || 4;
+      const rTgt = Math.max(ent.dimR || 2, h * 0.5) * sk;
+      const cx = p.x, cy = p.y + h * 0.5 * sk, cz = p.z;
+      const dx = cx - camP.x, dy = cy - camP.y, dz = cz - camP.z;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      // Distance hysteresis: cull past far, re-admit inside far*HYST.
+      // Interpolation jitter exactly on the boundary otherwise shimmers in/out.
+      const far = cullFarM(farNear, farFar, rTgt, aimBlend, isUnit);
+      let dc = ent._distCull;
+      if (dc === undefined) dc = !keepDistance(d2, far);
+      else if (dc) { const b = far * CULL.DIST_HYST; dc = d2 > b * b; }
+      else dc = !keepDistance(d2, far);
+      ent._distCull = dc;
+      if (dc) { out.push(ent); return; }
+      s.center.set(cx, cy, cz); s.radius = rTgt * CULL.FRUSTUM_PAD_F;
+      if (!frustum.intersectsSphere(s)) { out.push(ent); return; }
+      // Scope mask skips the near field: a sphere straddling the near plane
+      // projects wild NDC while still covering the screen. Never culls inside 5m.
+      if (rPx > 0 && d2 > 25) {
+        v.set(cx, cy, cz).project(cam);
+        const d = Math.sqrt(d2) || 1;
+        if (!scopeKeep(v.x * HW, v.y * HH, rPx, (rTgt / d) * projF * CULL.SCOPE_PAD_F)) { out.push(ent); return; }
+      }
+      // Occlusion verdict persists between staggered re-tests: testing 1-in-4
+      // frames while hiding only on test frames is a 15Hz blink (and the
+      // per-frame visibility flapping churns the render list = stutter).
+      // Re-test when due, or when either end moved enough to void the stamp.
+      if (d2 > occMin2 && occ.length) {
+        const moved = ent._occX === undefined
+          || (p.x - ent._occX) * (p.x - ent._occX) + (p.z - ent._occZ) * (p.z - ent._occZ) > 1
+          || (camP.x - ent._occCX) * (camP.x - ent._occCX) + (camP.z - ent._occCZ) * (camP.z - ent._occCZ) > 4;
+        if (moved || lodDue(frame, ent.id ?? ent.kind ?? 0, CULL.OCCLUDE_STRIDE)) {
+          ent._occCull = false;
+          const dTgt = Math.sqrt(d2);
+          const ix = dx / dTgt, iy = dy / dTgt, iz = dz / dTgt;
+          for (let i = 0; i < occ.length; i += 4) {
+            const ox = occ[i] - camP.x, oy = occ[i + 1] - camP.y, oz = occ[i + 2] - camP.z;
+            const t = ox * ix + oy * iy + oz * iz;
+            if (t <= 0 || t >= dTgt) continue;
+            const qx = ox - ix * t, qy = oy - iy * t, qz = oz - iz * t;
+            if (occludedBySphere(dTgt, Math.sqrt(ox * ox + oy * oy + oz * oz),
+              Math.sqrt(qx * qx + qy * qy + qz * qz), rTgt, occ[i + 3])) { ent._occCull = true; break; }
+          }
+          ent._occX = p.x; ent._occZ = p.z; ent._occCX = camP.x; ent._occCZ = camP.z;
+        }
+        if (ent._occCull) { out.push(ent); return; }
+      } else {
+        ent._occCull = false;
+      }
+    };
+    for (const ent of this.ents.values())
+      consider(ent, !!(ent.hero || ent.decoy || ent.civ || ent.isStatic || ent.kind === 'tower' || ent.kind === 'base'));
+    for (const b of this.mapBuildings?.values() || []) consider(b, true);
+    if (out.length) this._culled = [...out];
+  }
+
+  /** Main-scene render with the culled set hidden; restores before PiP. */
+  _renderCulledMain() {
+    const list = this._culled;
+    if (list) for (const ent of list) ent.mesh.visible = false;
+    if (this.pipeline) this.pipeline.render(); else this.renderer.render(this.scene, this.camera);
+    if (list) { for (const ent of list) ent.mesh.visible = true; this._culled = null; }
   }
 
   // ---------------- 副視窗(PiP)----------------
