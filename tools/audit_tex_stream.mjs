@@ -18,6 +18,8 @@ import {
   mipLevels,
   mipExtent,
   vramBytesOfChain,
+  capAniso,
+  finishTex,
   streamBandM,
   streamMaxDrop,
   streamTargetLevel,
@@ -129,6 +131,9 @@ console.log('\n③ 貼圖生命週期、多消費端需求匯流與分幀預算�
   const st = mockTex.userData.texStream;
   ok(st && st.chain.length === mipLevels(512, 512) && mockTex.generateMipmaps === false,
     'registerStreamTex 建立完整 CPU mip 鏈並關閉自動 generateMipmaps');
+  ok(mockTex.anisotropy === MIP_ANISO && mockTex.minFilter === 1008 && mockTex.magFilter === 1006
+    && capAniso(8, 4) === 4 && finishTex({ image: { width: 32, height: 32 }, userData: {} }, { maxAniso: 2 }).anisotropy === 2,
+    'registerStreamTex / finishTex 統一套用三線性過濾與 MIP_ANISO(=4)各向異性單一縫');
   ok(JSON.stringify(mockTex.userData) === '{}',
     'tex.userData.texStream 設為 non-enumerable(避免 Texture.copy JSON.stringify 破壞 canvas 鏈)');
 
@@ -216,14 +221,18 @@ console.log('\n④ 貼圖產出端與 game.js 渲染管線接線驗證');
   ok((code(paintSrc).match(/registerStreamTex\(tex\)/g) || []).length >= 2, 'paint.js 機體塗裝與日之丸貼花已註冊串流');
   ok(/registerStreamTex\(tex\)/.test(code(worldtextSrc)), 'worldtext.js 世界文字圖集已註冊串流');
   ok(/registerStreamTex\(texture\)/.test(code(vesselSrc)), 'vesselModels.js 船舷字樣貼圖已註冊串流');
+  ok([terrainSrc, biomesSrc, paintSrc, worldtextSrc].every((s) => /MIP_ANISO/.test(code(s)) && !/\.anisotropy\s*=\s*4\b/.test(code(s))),
+    '各貼圖產出端(terrain/biomes/paint/worldtext)統一引用 MIP_ANISO 單一縫(消除散落 .anisotropy = 4)');
 
+  ok((G.match(/finishTex\(/g) || []).length >= 4,
+    'game.js 陣營標示與火/煙粒子貼圖統一經 finishTex 單一縫初始化');
   ok(/import \{[^}]*flushTexStream[^}]*\} from '\.\/tex\.js'/.test(G), 'game.js 引用 tex.js 串流介面');
   ok(/this\._tickCull\(\);\s*this\._tickTexStream\(\);\s*this\._renderCulledMain\(\);/.test(G),
     '_tickTexStream 嚴格位於 _tickCull 之後、_renderCulledMain 之前(首幀渲染前先降階遠處/視野外貼圖)');
   ok(/ent\._cullFrame === frame/.test(G) && !/new Set\(this\._culled\)/.test(G),
     '_tickTexStream 透過 _cullFrame 戳記 O(1) 判定剔除態(零 Set 配置)');
-  ok(/flushTexStream\(reg, frame, aimBlend, \{ isDue: lodDue, forceAll \}\)/.test(G),
-    '_tickTexStream 複用 lod.js lodDue 節流與 dofAimBlend 狙擊曲線');
+  ok(/flushTexStream\(reg, frame, aimBlend, \{ isDue: lodDue, forceAll, maxAniso \}\)/.test(G),
+    '_tickTexStream 複用 lod.js lodDue 節流、dofAimBlend 狙擊曲線與硬體 maxAniso 上限');
   ok(/this\._streamTexReg\?\.clear\(\)/.test(G), 'dispose() 離場清空 _streamTexReg 貼圖註冊表');
 }
 

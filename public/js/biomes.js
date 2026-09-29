@@ -55,7 +55,7 @@ import { buildLandField } from './landfield.js';
 import { setLandField } from './toon.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
-import { registerStreamTex } from './tex.js';
+import { MIP_ANISO, registerStreamTex } from './tex.js';
 import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed, mergeGeos } from './beacons.js';
 // 邊界牆型錄 / 緩衝空間布景 / 視線邊界背景(2026-08-11 使用者定案)——
 // 型錄、切分規則、落點規劃全在那一支(純資料、零 THREE、離線可驗);本檔只負責取樣地貌與建幾何。
@@ -1625,7 +1625,7 @@ function flagTex(iso) {
   t.colorSpace = THREE.SRGBColorSpace;
   t.magFilter = THREE.LinearFilter;
   t.minFilter = THREE.LinearMipmapLinearFilter;
-  t.anisotropy = 4;
+  t.anisotropy = MIP_ANISO;
   registerStreamTex(t);
   _flagTexCache.set(iso, t);
   return t;

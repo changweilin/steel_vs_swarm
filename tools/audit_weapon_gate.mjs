@@ -2228,15 +2228,15 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   const guns = code(S.slice(S.indexOf('_tickBaseGuns(e, g, dt)')));
   ok(!/this\._blast\(e, STRUCT_W\.base/.test(guns) && !/this\._damage\(target, g\.dmg/.test(guns.slice(0, 1200)),
     '主堡火砲 MUST NOT 再即時結算(舊制的 _blast/_damage 單體直擊 MUST 已經不在)');
-  ok(/this\.missiles\.push\(this\._takeMissile\(\{[\s\S]{0,340}?r: STRUCT_W\.base\.r,[\s\S]{0,280}?\}\)\);/.test(guns)
-    && /dmg: g\.dmg, pen: STRUCT_W\.base\.pen \|\| 0/.test(guns),
+  ok(/this\.missiles\.push\(this\._takeMissile\([\s\S]{0,340}?STRUCT_W\.base\.r,[\s\S]{0,280}?\)\);/.test(guns)
+    && /g\.dmg,\s*STRUCT_W\.base\.pen \|\| 0/.test(guns),
     '主堡火砲推入 this.missiles 吃既有 STRUCT_W.base(r/pen)與 g.dmg(MUST NOT 複製第二份)');
   // _samBlast 一律讀飛彈自己的 m.r(2026-08-13 主堡飛彈化後不再只有防空伏擊一個來源,
   // MUST NOT 假設固定常數 —— 那會讓非防空伏擊來源的飛彈半徑全部讀錯)。
   const mis = code(S.slice(S.indexOf('_samBlast(m, x, z, y')));
   ok(/_blast\(by, \{ r: m\.r, pen: m\.pen \|\| 0 \}/.test(mis) && /r: m\.r, side: m\.side, sam: true/.test(mis),
     '飛彈的結算與演出取**同一個** m.r(舊制手寫 14 / 8,誰都對不上;現制固定常數也 MUST NOT 復辟)');
-  ok(/r: A\.R,/.test(code(S.slice(S.indexOf('_tickAmbush(dt) {'), S.indexOf('_tickRelays(dt) {')))),
+  ok(/A\.DMG,\s*A\.PEN,\s*A\.R,/.test(code(S.slice(S.indexOf('_tickAmbush(dt) {'), S.indexOf('_tickRelays(dt) {')))),
     '防空伏擊飛彈發射時把 GAME.AA_AMBUSH.R 明寫進 m.r(與主堡飛彈同一套欄位契約)');
   // 只掃 `_tickMissiles` 這一段:別處的 `r: 8` 是**攔截成功**的煙火(極音速飛彈被擊落刻意不引爆、
   // 玩家打掉來襲飛彈),那是「完全否定」的定案,MUST NOT 被這條順手改掉。

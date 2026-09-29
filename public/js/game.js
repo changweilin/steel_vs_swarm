@@ -43,7 +43,7 @@ import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { lodStrideByD2, lodDue, GEO, geoTrimKeep, geoOutlineKeep, applyGeoLod } from './lod.js';
 import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep } from './cull.js';
-import { TEX_STREAM, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, flushTexStream } from './tex.js';
+import { TEX_STREAM, finishTex, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, flushTexStream } from './tex.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
@@ -431,16 +431,22 @@ const _TMP_D = new THREE.Vector3();            // 命中點暫存(_updateBullets
 const _TMP_E = new THREE.Vector3();            // 第二命中暫存(氣旋/拖尾方向解;同上)
 const _TMP_F = new THREE.Vector3();            // 氣旋正交軸暫存(_spinCyclone 專用;呼叫期間 D/E/F 皆視為已借出)
 const _FWD_Z = new THREE.Vector3(0, 0, 1);     // 彈體幾何朝向(+z);對準航向的固定基準軸
+const _UP_Y = new THREE.Vector3(0, 1, 0);      // 垂直軸(+y);圓柱/法線對齊的固定基準軸
 
 // ---- 池化特效的共用 fade(無閉包:參數全在 obj.userData,同一支函式服務全池)----
 // 逐發閉包 (`fade: (o,f) => {...}`) 本身就是每發一次的配置;池化 sprite/曳光若還配閉包,
 // 池等於白建。改由 userData 帶參 + 共用函式,acquire 只寫值不配函式。
 function _tracerFade(o, f) { o.material.opacity = 0.9 * f; }
-// 等速漂移 sprite(煙/火拖尾/觸地煙):userData { vel(等速,含上升), base, grow, op }
+// 等速漂移 sprite(煙/火拖尾/觸地煙/殉爆火煙柱):userData { vel(等速,含上升), base, grow, op, delay? }
 function _spriteDriftFade(o, f, dt) {
   const u = o.userData;
+  const p = 1 - f;
+  if (u.delay > 0) {
+    if (p < u.delay) { o.visible = false; return; }
+    o.visible = true;
+  }
   o.position.addScaledVector(u.vel, dt);
-  o.scale.setScalar(u.base + (1 - f) * u.grow);
+  o.scale.setScalar(u.base + p * u.grow);
   o.material.opacity = u.op * f;
 }
 // 重力餘燼:userData { vel(逐幀下墜), op } ;尺寸固定(base,acquire 時寫死)
@@ -510,8 +516,7 @@ function factionMarkTex(side) {
   g.strokeStyle = 'rgba(255,255,255,0.85)';        // 內描白邊:暗底/亮底都讀得出來
   g.lineWidth = 2;
   g.stroke();
-  const t = new THREE.CanvasTexture(cv);
-  t.colorSpace = THREE.SRGBColorSpace;
+  const t = finishTex(new THREE.CanvasTexture(cv), { srgb: true, stream: false });
   _markTex.set(side, t);
   return t;
 }
@@ -558,8 +563,7 @@ function allyMarkTex(side) {
   }
   g.closePath();
   g.fill();
-  const t = new THREE.CanvasTexture(cv);
-  t.colorSpace = THREE.SRGBColorSpace;
+  const t = finishTex(new THREE.CanvasTexture(cv), { srgb: true, stream: false });
   _allyTex.set(side, t);
   return t;
 }
@@ -7949,7 +7953,7 @@ export class BattleClient {
       // 無敵幀中的目標:伺服器 _damage 完全免傷 —— 跳灰字「-0」而非誤導性的滿額估算數字
       if ((ent.inv || 0) > 0) {
         damageNumber(this.scene, this.effects,
-          point.clone().add(new THREE.Vector3(0, 1.2, 0)), 0, { text: '-0' });
+          _TMP_A.set(point.x, point.y + 1.2, point.z), 0, { text: '-0' });
         return;
       }
       const mult = vsMult(def, ent.kind);
@@ -7960,7 +7964,7 @@ export class BattleClient {
       const sp = shieldSplit(def, raw, ent.sp || 0);
       const est = Math.round(sp.toSp + sp.toHp);
       damageNumber(this.scene, this.effects,
-        point.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: mult >= 1.5 });
+        _TMP_A.set(point.x, point.y + 1.2, point.z), est, { big: mult >= 1.5 });
     }
   }
 
@@ -7998,6 +8002,8 @@ export class BattleClient {
     const len = seg.length() || 1;
     const d = seg.clone().divideScalar(len);
     // 截面基底:與射向垂直的兩軸(分區用;幾乎垂直射線時換參考軸,免退化)
+    // local Vector3 — called once per fire (not per-frame); audit sandbox
+    // extracts this method via new Function() and has no module-level _TMP_*
     const up = Math.abs(d.y) > 0.99 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
     const e1 = new THREE.Vector3().crossVectors(d, up).normalize();
     const e2 = new THREE.Vector3().crossVectors(d, e1);
@@ -8066,7 +8072,7 @@ export class BattleClient {
       }
       // 無敵幀目標:同 _hitFeedback,跳灰字 -0(伺服器免傷)
       if ((ent.inv || 0) > 0) {
-        damageNumber(this.scene, this.effects, p.clone().add(new THREE.Vector3(0, 1.2, 0)), 0, { text: '-0' });
+        damageNumber(this.scene, this.effects, _TMP_A.set(p.x, p.y + 1.2, p.z), 0, { text: '-0' });
         continue;
       }
       const mult = vsMult(def, ent.kind);
@@ -8074,7 +8080,7 @@ export class BattleClient {
       const sp = shieldSplit(def, raw, ent.sp || 0);   // 護盾分軌(見 _hitFeedback 同註)
       const est = Math.round(sp.toSp + sp.toHp);
       damageNumber(this.scene, this.effects,
-        p.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: i === 0 && mult >= 1.5 });
+        _TMP_A.set(p.x, p.y + 1.2, p.z), est, { big: i === 0 && mult >= 1.5 });
     }
   }
 
@@ -8121,18 +8127,18 @@ export class BattleClient {
     const g = this._gLaser;
     g.group.visible = true;
     this.camera.updateMatrixWorld();
-    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    const dir = this.camera.getWorldDirection(_TMP_D);
     const from = this.viewMode === 'tps'
       ? this._selfMuzzle(null, this._maxRange(def), 'heavy')
       : this.gunGroup?.localToWorld(this._muzzle.clone()) || this.camera.position.clone();
     const { point } = this._resolveAim(this._maxRange(def));
-    const seg = point.clone().sub(from);
+    const seg = _TMP_E.copy(point).sub(from);
     const len = Math.max(0.5, seg.length());
     g.beam.position.copy(from).addScaledVector(seg, 0.5);
-    g.beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), seg.clone().normalize());
+    g.beam.quaternion.setFromUnitVectors(_UP_Y, _TMP_F.copy(seg).normalize());
     g.beam.scale.set(1, len, 1);
     g.ring.position.copy(point).addScaledVector(dir, -0.4);
-    g.ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+    g.ring.quaternion.setFromUnitVectors(_FWD_Z, dir);
     // 導引窗:最短距離(ARMING.guide.m)內彈體仍在軌跡修正期 —— 環變紅示警「太近,會打歪」
     const armed = len >= ARMING.guide.m;
     g.ring.material.color.setHex(armed ? 0xff5f4a : 0xffd24a);
@@ -8612,6 +8618,7 @@ export class BattleClient {
     sp.scale.setScalar(scale);
     sp.material.color.setHex(color);
     sp.material.opacity = op;
+    sp.userData.delay = 0;
     sp.visible = true;
     this.scene.add(sp);
     return sp;
@@ -8639,9 +8646,9 @@ export class BattleClient {
 
   /** 軌跡修正期的初期散布:在 dir 周圍的圓錐內取一個隨機偏角(離架瞬間一次性,之後由導引修正) */
   _armSpread(dir, spread) {
-    const up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
-    const nx = new THREE.Vector3().crossVectors(dir, up).normalize();
-    const nz = new THREE.Vector3().crossVectors(dir, nx).normalize();
+    const up = Math.abs(dir.y) > 0.9 ? _TMP_A.set(1, 0, 0) : _TMP_A.set(0, 1, 0);
+    const nx = _TMP_B.crossVectors(dir, up).normalize();
+    const nz = _TMP_C.crossVectors(dir, nx).normalize();
     const a = Math.random() * Math.PI * 2, m = Math.tan(Math.random() * spread);
     return dir.clone().addScaledVector(nx, m * Math.cos(a)).addScaledVector(nz, m * Math.sin(a)).normalize();
   }
@@ -9325,8 +9332,8 @@ export class BattleClient {
 
   /** 第一人稱「座艙被火吞沒」:在鏡頭前方近距離撒火焰 + 火星,填滿 FPV(殉爆過場專用,強化第一人稱燃燒感)。 */
   _engulfFPV(cam) {
-    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
+    const fwd = _TMP_A.set(0, 0, -1).applyQuaternion(cam.quaternion);
+    const right = _TMP_B.set(1, 0, 0).applyQuaternion(cam.quaternion);
     // 火 + 煙集中在左右兩側帶,中央 ~1/3 正前方留空 —— 被擊殺過場仍看得見前方戰況(可讀性優先)。
     // 交替左右均衡;每顆側向強制外推(lat 絕對值 ≥1.7),焰/煙球不侵入正前方視野。
     for (let i = 0; i < 4; i++) {
@@ -9386,7 +9393,7 @@ export class BattleClient {
       pg.addColorStop(0, `rgba(255,250,220,${0.3 + Math.random() * 0.4})`); pg.addColorStop(1, 'rgba(255,180,90,0)');
       c.fillStyle = pg; c.beginPath(); c.arc(px, py, pr, 0, 7); c.fill();
     }
-    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    const t = finishTex(new THREE.CanvasTexture(cv), { srgb: true, stream: false });
     this._fireTexC = t; return t;
   }
 
@@ -9415,7 +9422,7 @@ export class BattleClient {
     const m = c.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
     m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(0.66, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)');
     c.fillStyle = m; c.fillRect(0, 0, S, S);
-    const t = new THREE.CanvasTexture(cv);
+    const t = finishTex(new THREE.CanvasTexture(cv), { stream: false });
     this._smokeTexC = t; return t;
   }
 
@@ -9432,45 +9439,29 @@ export class BattleClient {
   }
 
   /** 殉爆火煙柱(~2s):噴發火(加法橙)+ 煙(灰上升),沿飛彈煙尾 idiom;地面路徑起始演出。
-   *  改用柔邊 sprite billboard(徑向漸層貼圖):恆面向相機、無 facet → 第一人稱近距離仍高解析度、不粗糙;
-   *  depthWrite:false 不 z-fight,掛 userData.noOutline 讓 outlinify 跳過。貼圖共用快取,dispose 只釋放材質。 */
+   *  改用池化柔邊 sprite billboard(徑向漸層貼圖):恆面向相機、無 facet,共用 _spriteDriftFade 零新配置。 */
   _deathPlume(x, y, z) {
-    const g = new THREE.Group();
-    g.userData.noOutline = true;
-    const parts = [], NF = 22, NS = 18;
+    const NF = 22, NS = 18;
     for (let i = 0; i < NF + NS; i++) {
       const fire = i < NF;
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: fire ? this._fireTex() : this._smokeTex(),
-        color: fire ? (Math.random() < 0.5 ? 0xff8a3a : 0xffd166) : 0x4a4e52,
-        transparent: true, opacity: fire ? 0.95 : 0.62, depthWrite: false,
-        blending: fire ? THREE.AdditiveBlending : THREE.NormalBlending }));
       const th = Math.random() * Math.PI * 2, rad = Math.random() * 3;
-      sp.position.set(x + Math.cos(th) * rad, y + Math.random() * 2, z + Math.sin(th) * rad);
       const base = fire ? 3.0 + Math.random() * 2 : 5 + Math.random() * 3;
-      sp.scale.setScalar(base);
-      parts.push({ sp, fire, base,
-        rise: fire ? 4 + Math.random() * 4 : 7 + Math.random() * 6,
-        drift: new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2),
-        grow: fire ? 1.8 : 3.2, delay: fire ? 0 : Math.random() * 0.5 });   // 煙稍晚冒
-      g.add(sp);
+      const op = fire ? 0.95 : 0.62;
+      const sp = this._takeSprite(fire,
+        x + Math.cos(th) * rad, y + Math.random() * 2, z + Math.sin(th) * rad,
+        base, fire ? (Math.random() < 0.5 ? 0xff8a3a : 0xffd166) : 0x4a4e52, op);
+      sp.userData.vel.set(
+        (Math.random() - 0.5) * 2,
+        fire ? 4 + Math.random() * 4 : 7 + Math.random() * 6,
+        (Math.random() - 0.5) * 2,
+      );
+      sp.userData.base = base;
+      sp.userData.grow = base * (fire ? 1.8 : 3.2);
+      sp.userData.op = op;
+      sp.userData.delay = fire ? 0 : Math.random() * 0.5;
+      if (sp.userData.delay > 0) sp.visible = false;
+      this._pushSpriteFx(sp, 2.0, _spriteDriftFade);
     }
-    this.scene.add(g);
-    this.effects.push({
-      obj: g, ttl: 2.0,
-      fade: (o, f, dt) => {
-        const p = 1 - f;
-        for (const c of parts) {
-          if (p < c.delay) { c.sp.visible = false; continue; }
-          c.sp.visible = true;
-          c.sp.position.y += c.rise * dt;
-          c.sp.position.addScaledVector(c.drift, dt);
-          c.sp.scale.setScalar(c.base * (1 + p * c.grow));
-          c.sp.material.opacity = c.fire ? Math.max(0, f * 1.4 - 0.2) * 0.95 : 0.6 * f;
-        }
-      },
-      dispose: () => { for (const c of parts) c.sp.material.dispose(); },   // 貼圖共用快取不 dispose
-    });
     this._emberBurst(x, y + 1, z, 14, 4);   // 起始迸射一批火星補顆粒細節
   }
 
@@ -10269,13 +10260,14 @@ export class BattleClient {
     } else {
       // 上帝視角:自由飛行。升降是**移動**不是姿態 ⇒ 與飛行機體同一組鍵(Space 升 / C・Ctrl 降),
       // 觸控 B・ZL 經 `_cmd` 對映到同兩顆鍵,MUST NOT 在觸控層另寫一套垂直位移。
-      const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-      const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+      const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+      const rx = -fz, rz = fx;
       const ax = this._moveAxis();
       const sp = SPEC_CAM.MOVE_MPS * (ax.boost ? SPEC_CAM.BOOST_F : 1);
       const k = ax.mag > 1 ? 1 / ax.mag : 1;   // 鍵盤對角線夾回單位長(舊版逐軸相加會快 √2 倍,此處與交戰視角一致)
-      this.pos.addScaledVector(fwd, ax.f * k * sp * dt);
-      this.pos.addScaledVector(right, ax.r * k * sp * dt);
+      const step = k * sp * dt;
+      this.pos.x += (fx * ax.f + rx * ax.r) * step;
+      this.pos.z += (fz * ax.f + rz * ax.r) * step;
       if (this.keys.Space) this.pos.y += sp * dt;
       if (this.keys.KeyC || this.keys.ControlLeft) this.pos.y -= sp * dt;
       // 下降的地板:降到站立面上方 FLOOR_M 就停住(地形/橋面同一個縫 `_surf`)
@@ -10394,7 +10386,7 @@ export class BattleClient {
       const world = Math.atan2(p.x - ent.mesh.position.x, p.z - ent.mesh.position.z);
       wantLocal = wrap(world - ent.mesh.rotation.y);
       const dx = p.x - ent.mesh.position.x, dz = p.z - ent.mesh.position.z;
-      const turY = tur.getWorldPosition(new THREE.Vector3()).y;
+      const turY = tur.getWorldPosition(_TMP_A).y;
       wantPitch = Math.atan2(((p.y ?? turY) - turY), Math.hypot(dx, dz) || 1);
     }
     tur.rotation.y += wrap(wantLocal - tur.rotation.y) * lerpFPS(5, dt);
@@ -10420,7 +10412,7 @@ export class BattleClient {
     const aim = ent._aimAt && now < ent._aimAt.until ? ent._aimAt : null;
     let want = 0;
     if (aim) {
-      const py = piv.getWorldPosition(new THREE.Vector3()).y;
+      const py = piv.getWorldPosition(_TMP_A).y;
       const d = Math.hypot(aim.x - ent.mesh.position.x, aim.z - ent.mesh.position.z) || 1;
       want = Math.max(-1.1, Math.min(0.5, Math.atan2((aim.y ?? py) - py, d)));
     }
@@ -11755,8 +11747,9 @@ export class BattleClient {
     evalStaticRoot(this.biomes);
     evalStaticRoot(this.terrain?.group);
 
+    const maxAniso = this._maxAniso || (this._maxAniso = this.renderer?.capabilities?.getMaxAnisotropy?.() || 0);
     this._texStreamInit = true;
-    this._texStreamStats = flushTexStream(reg, frame, aimBlend, { isDue: lodDue, forceAll });
+    this._texStreamStats = flushTexStream(reg, frame, aimBlend, { isDue: lodDue, forceAll, maxAniso });
   }
 
   /** Main-scene render with the culled set hidden; restores before PiP. */
@@ -11888,7 +11881,7 @@ export class BattleClient {
     if (this.cockpit) this.cockpit.visible = false;
     const srcVis = src?.mesh?.visible;
     if (src?.mesh) src.mesh.visible = false;   // 隱藏自身模型,避免相機在幾何內部被遮擋穿模
-    const clear0 = r.getClearColor(new THREE.Color()), alpha0 = r.getClearAlpha();
+    const clear0 = r.getClearColor(this._pipClear0 || (this._pipClear0 = new THREE.Color())), alpha0 = r.getClearAlpha();
     r.setScissorTest(true);
     r.setViewport(px, y, pw, ph);
     r.setScissor(px, y, pw, ph);
