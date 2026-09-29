@@ -28,6 +28,7 @@ import { TREE_SPECIES, createForestDefs, createForestTree, treePhenology, treeBe
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
 import { registerMapBuildings, detachMapBuilding } from './mapBuildingRender.js';
+import { lodSlot } from './lod.js';
 import { buildingNear } from './mapBuilding.js';
 import {
   ENV, solveTowerSites, siteCPs, mapArg, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
@@ -1486,10 +1487,9 @@ function buildFlocks(group, terrain, dynamics, { anchors, low }) {
   dynamics.push((dt) => {
     const t = celWindTime();   // 全場共用的風時鐘(雲 / 植被同一支)
     flockFrame++;
-    const slot = flockFrame % flockDiv;
     const sdt = dt * flockDiv;
     for (let i = 0; i < allFlocks.length; i++) {
-      if ((i % flockDiv) !== slot) continue;
+      if (!lodSlot(flockFrame, i, flockDiv)) continue;
       const e = allFlocks[i];
       if (e.bird) flockStep(e.f.st, t, sdt);
       else wildlifeStep(e.f.st, t, sdt, e.spec);

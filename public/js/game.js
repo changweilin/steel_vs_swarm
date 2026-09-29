@@ -973,6 +973,7 @@ export class BattleClient {
       }
     }
     if (collisionChanged) {
+      this._cullOccDirty = true;
       this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);
       this.terrain.rebuildBlockerTops?.();
       const climbs = this.terrain.climbs;
@@ -2807,7 +2808,7 @@ export class BattleClient {
         if (Math.abs(this.pos.x - b.x) > maxR || Math.abs(this.pos.z - b.z) > maxR) continue;
         if (b.hw2 != null) {
           // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
-          const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
+          const cs = b._cs ?? Math.cos(b.ry), sn = b._sn ?? -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
           const rx = this.pos.x - b.x, rz = this.pos.z - b.z;
           const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world→local(繞 -ry)
           const ex = b.hw2 + myR, ez = b.hd2 + myR;                // Minkowski 近似:盒面外擴機體半徑
@@ -2865,7 +2866,7 @@ export class BattleClient {
       // (圓柱那半的同一條規則住 `_circleEnter`,此處是有向盒版)
       if (b.hw2 != null) {
         const fwd = (this.pos.x - b.x) * dx + (this.pos.z - b.z) * dz;
-        const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
+        const cs = b._cs ?? Math.cos(b.ry), sn = b._sn ?? -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
         const ex = b.hw2 + myR, ez = b.hd2 + myR;
         const o0x = (px0 - b.x) * cs + (pz0 - b.z) * sn, o0z = -(px0 - b.x) * sn + (pz0 - b.z) * cs;
         if (Math.abs(o0x) < ex && Math.abs(o0z) < ez) continue;    // P0 已在盒內 → push-out 脫出
@@ -2874,10 +2875,17 @@ export class BattleClient {
         if (Math.abs(p1x) < ex && Math.abs(p1z) < ez && fwd < 0) continue;   // 終點在盒內近半 → push-out 沿牆滑
         const ux = dx * cs + dz * sn, uz = -dx * sn + dz * cs;     // 位移轉盒 local
         let tmin = -Infinity, tmax = Infinity, ok = true;
-        for (const [o, u, e] of [[o0x, ux, ex], [o0z, uz, ez]]) {
-          if (Math.abs(u) < 1e-9) { if (o < -e || o > e) { ok = false; break; } continue; }
-          let t1 = (-e - o) / u, t2 = (e - o) / u; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
-          tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+        if (Math.abs(ux) < 1e-9) { if (o0x < -ex || o0x > ex) ok = false; }
+        else {
+          let t1 = (-ex - o0x) / ux, t2 = (ex - o0x) / ux; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+          if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
+        }
+        if (ok) {
+          if (Math.abs(uz) < 1e-9) { if (o0z < -ez || o0z > ez) ok = false; }
+          else {
+            let t1 = (-ez - o0z) / uz, t2 = (ez - o0z) / uz; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+            if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
+          }
         }
         if (ok && tmax >= tmin && tmin > 0 && tmin <= 1) tEnter = tmin;
       } else {
@@ -2928,17 +2936,21 @@ export class BattleClient {
     };
     // 有向盒版(建物):射線在盒 local frame 走 slab 求進入 t(盒外擴 SKIN);pos 已在盒內 → 縮回 pos
     const clampBox = (b) => {
-      const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
+      const cs = b._cs ?? Math.cos(b.ry), sn = b._sn ?? -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
       const olx = (ox - b.x) * cs + (oz - b.z) * sn, olz = -(ox - b.x) * sn + (oz - b.z) * cs;
       const ulx = ux * cs + uz * sn, ulz = -ux * sn + uz * cs;
       const ex = b.hw2 + SKIN, ez = b.hd2 + SKIN;
       if (Math.abs(olx) < ex && Math.abs(olz) < ez) { maxT = 0; return; }
       let tmin = -Infinity, tmax = Infinity;
-      const axes = [[olx, ulx, ex], [olz, ulz, ez]];
-      for (const [o, d, e] of axes) {
-        if (Math.abs(d) < 1e-9) { if (o < -e || o > e) return; continue; }   // 平行且在板外 → 不相交
-        let t1 = (-e - o) / d, t2 = (e - o) / d; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
-        tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+      if (Math.abs(ulx) < 1e-9) { if (olx < -ex || olx > ex) return; }
+      else {
+        let t1 = (-ex - olx) / ulx, t2 = (ex - olx) / ulx; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+        if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
+      }
+      if (Math.abs(ulz) < 1e-9) { if (olz < -ez || olz > ez) return; }
+      else {
+        let t1 = (-ez - olz) / ulz, t2 = (ez - olz) / ulz; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+        if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
       }
       if (tmax < tmin || tmax < 0) return;   // 射線不進盒體(或盒在後方)
       const t = tmin > 0 ? tmin : 0;
@@ -11455,7 +11467,7 @@ export class BattleClient {
       applyGeoLod(mesh, trimHi, outHi);
     };
     for (const ent of this.ents.values()) tick(ent, ent.id ?? ent.kind ?? 0);
-    for (const b of this.mapBuildings?.values() || []) tick(b, b.id ?? 0);
+    for (const b of this.mapBuildings?.values() || []) if (b.record?.mesh) tick(b, b.id ?? 0);
   }
 
   // ---------------- Pre-shading cull (presentation only) ----------------
@@ -11466,18 +11478,22 @@ export class BattleClient {
    * deathcam render after restore, hence always see the full scene (small
    * viewports; correctness over savings there). Threshold truth stays in
    * data.js (dofNearM/dofFarM/scopeRvminFog) and lod.js (lodDue stagger);
-   * predicates stay in cull.js. Spectators skip (side == null): wheel zoom
-   * would misread as sniper blend, same reason setDofBlend gates on side.
+   * predicates stay in cull.js. Spectators/dead gate aimBlend to 0 (wheel zoom
+   * would misread as sniper blend, same reason setDofBlend gates on side).
    */
   _tickCull() {
     this._culled = null;
-    if (!this.side || this.dead || !this.camera || !this.ents) return;
+    if (!this.camera || !this.ents) return;
     const cam = this.camera, camP = cam.position;
     cam.updateMatrixWorld();
     const frustum = this._cullFrustum || (this._cullFrustum = new THREE.Frustum());
     const cm = this._cullM || (this._cullM = new THREE.Matrix4());
     frustum.setFromProjectionMatrix(cm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
-    const aimBlend = dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov);
+    let aimBlend = 0;
+    try {
+      aimBlend = (this.side && !this.dead)
+        ? dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0;
+    } catch { aimBlend = 0; }
     const farNear = dofNearM(), farFar = dofFarM();
     let rPx = 0, projF = 0, HW = 0, HH = 0;
     if (aimBlend > 0.001) {
@@ -11486,14 +11502,20 @@ export class BattleClient {
       rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
       projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
     }
-    const occ = this._cullOcc || (this._cullOcc = []);
-    occ.length = 0;
-    for (const b of this.mapBuildings?.values() || []) {
-      const r = b.record?.bounds;
-      if (!r || b.collapsed || b.record?.cleared) continue;
-      const or = Math.hypot(r.w, r.d) * 0.5;
-      if (or < CULL.OCCLUDE_MIN_R_M) continue;
-      occ.push(r.x, r.y + r.h * 0.5, r.z, or * 0.8);
+    let occ = this._cullOcc;
+    if (!occ || this._cullOccDirty) {
+      occ = this._cullOcc || (this._cullOcc = []);
+      occ.length = 0;
+      for (const b of this.mapBuildings?.values() || []) {
+        const r = b.record?.bounds;
+        if (!r || b.collapsed || b.record?.cleared) continue;
+        // Inscribed sphere radius of the building AABB/OBB: never protrudes
+        // outside walls or roof (circumscribed hypot false-occludes on narrow/low boxes).
+        const or = Math.min(r.w, r.d, r.h) * 0.5;
+        if (or < CULL.OCCLUDE_MIN_R_M) continue;
+        occ.push(r.x, r.y + r.h * 0.5, r.z, or);
+      }
+      this._cullOccDirty = false;
     }
     const frame = this._lodFrame | 0;
     const v = this._cullV || (this._cullV = new THREE.Vector3());
@@ -11530,27 +11552,27 @@ export class BattleClient {
       else if (dc) { const b = far * CULL.DIST_HYST; dc = d2 > b * b; }
       else dc = !keepDistance(d2, far);
       ent._distCull = dc;
-      if (dc) { out.push(ent); return; }
+      if (dc) { ent._cullFrame = frame; out.push(ent); return; }
       s.center.set(cx, cy, cz); s.radius = rTgt * CULL.FRUSTUM_PAD_F;
-      if (!frustum.intersectsSphere(s)) { out.push(ent); return; }
+      if (!frustum.intersectsSphere(s)) { ent._cullFrame = frame; out.push(ent); return; }
       // Scope mask skips the near field: a sphere straddling the near plane
       // projects wild NDC while still covering the screen. Never culls inside 5m.
       if (rPx > 0 && d2 > 25) {
         v.set(cx, cy, cz).project(cam);
         const d = Math.sqrt(d2) || 1;
-        if (!scopeKeep(v.x * HW, v.y * HH, rPx, (rTgt / d) * projF * CULL.SCOPE_PAD_F)) { out.push(ent); return; }
+        if (!scopeKeep(v.x * HW, v.y * HH, rPx, (rTgt / d) * projF * CULL.SCOPE_PAD_F)) { ent._cullFrame = frame; out.push(ent); return; }
       }
       // Occlusion verdict persists between staggered re-tests: testing 1-in-4
       // frames while hiding only on test frames is a 15Hz blink (and the
       // per-frame visibility flapping churns the render list = stutter).
-      // Re-test when due, or when either end moved enough to void the stamp.
+      // Re-test when due, or when either end moved enough (3D) to void the stamp.
       // Static blockers skip this tier too: an occluded tower still collides
       // and fires while hidden, and parallax on approach flaps the single-margin
       // verdict into a disappear/reappear blink. Frustum/scope still apply.
       if (!staticBlocker && d2 > occMin2 && occ.length) {
         const moved = ent._occX === undefined
-          || (p.x - ent._occX) * (p.x - ent._occX) + (p.z - ent._occZ) * (p.z - ent._occZ) > 1
-          || (camP.x - ent._occCX) * (camP.x - ent._occCX) + (camP.z - ent._occCZ) * (camP.z - ent._occCZ) > 4;
+          || (p.x - ent._occX) * (p.x - ent._occX) + (p.y - ent._occY) * (p.y - ent._occY) + (p.z - ent._occZ) * (p.z - ent._occZ) > 1
+          || (camP.x - ent._occCX) * (camP.x - ent._occCX) + (camP.y - ent._occCY) * (camP.y - ent._occCY) + (camP.z - ent._occCZ) * (camP.z - ent._occCZ) > 4;
         if (moved || lodDue(frame, ent.id ?? ent.kind ?? 0, CULL.OCCLUDE_STRIDE)) {
           ent._occCull = false;
           const dTgt = Math.sqrt(d2);
@@ -11563,17 +11585,24 @@ export class BattleClient {
             if (occludedBySphere(dTgt, Math.sqrt(ox * ox + oy * oy + oz * oz),
               Math.sqrt(qx * qx + qy * qy + qz * qz), rTgt, occ[i + 3])) { ent._occCull = true; break; }
           }
-          ent._occX = p.x; ent._occZ = p.z; ent._occCX = camP.x; ent._occCZ = camP.z;
+          ent._occX = p.x; ent._occY = p.y; ent._occZ = p.z;
+          ent._occCX = camP.x; ent._occCY = camP.y; ent._occCZ = camP.z;
         }
-        if (ent._occCull) { out.push(ent); return; }
+        if (ent._occCull) { ent._cullFrame = frame; out.push(ent); return; }
       } else {
         ent._occCull = false;
       }
     };
     for (const ent of this.ents.values())
       consider(ent, !!(ent.hero || ent.decoy || ent.civ || ent.isStatic || ent.kind === 'tower' || ent.kind === 'base'));
-    for (const b of this.mapBuildings?.values() || []) consider(b, true);
-    if (out.length) this._culled = [...out];
+    for (const b of this.mapBuildings?.values() || []) if (b.record?.mesh) consider(b, true);
+    if (out.length) this._culled = out;
+    this._cullStamp = frame;
+    this._cullAimBlend = aimBlend;
+    this._cullRPx = rPx;
+    this._cullProjF = projF;
+    this._cullHW = HW;
+    this._cullHH = HH;
   }
 
   // ---------------- Texture streaming / Virtual Texturing (presentation only) ----------------
@@ -11589,28 +11618,44 @@ export class BattleClient {
   _tickTexStream() {
     if (!this.camera) return;
     const cam = this.camera, camP = cam.position;
-    cam.updateMatrixWorld();
-    const frustum = this._cullFrustum || (this._cullFrustum = new THREE.Frustum());
-    const cm = this._cullM || (this._cullM = new THREE.Matrix4());
-    frustum.setFromProjectionMatrix(cm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
-    let aimBlend = 0;
-    try {
-      aimBlend = (this.side && !this.dead)
-        ? dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0;
-    } catch { aimBlend = 0; }
-    let rPx = 0, projF = 0, HW = 0, HH = 0;
-    if (aimBlend > 0.001 && this.canvas) {
-      const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
-      HW = W / 2; HH = H / 2;
-      rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
-      projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
-    }
     const frame = this._lodFrame | 0;
+    let frustum = this._cullFrustum;
+    let aimBlend = 0, rPx = 0, projF = 0, HW = 0, HH = 0;
+    if (frustum && this._cullStamp === frame) {
+      aimBlend = this._cullAimBlend || 0;
+      rPx = this._cullRPx || 0;
+      projF = this._cullProjF || 0;
+      HW = this._cullHW || 0;
+      HH = this._cullHH || 0;
+    } else {
+      cam.updateMatrixWorld();
+      frustum = frustum || (this._cullFrustum = new THREE.Frustum());
+      const cm = this._cullM || (this._cullM = new THREE.Matrix4());
+      frustum.setFromProjectionMatrix(cm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+      try {
+        aimBlend = (this.side && !this.dead)
+          ? dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0;
+      } catch { aimBlend = 0; }
+      if (aimBlend > 0.001 && this.canvas) {
+        const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
+        HW = W / 2; HH = H / 2;
+        rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
+        projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
+      }
+    }
     const v = this._cullV || (this._cullV = new THREE.Vector3());
     const s = this._cullS || (this._cullS = new THREE.Sphere());
     const reg = this._streamTexReg || (this._streamTexReg = new Set());
-    const culledSet = this._culled ? new Set(this._culled) : null;
-    const cullActive = !!(this.side && !this.dead && this.ents);
+    const cullActive = this._cullStamp === frame;
+    const forceAll = !this._texStreamInit;
+    const anyDue = (texs) => {
+      if (forceAll) return true;
+      for (let i = 0; i < texs.length; i++) {
+        const st = texs[i].userData?.texStream;
+        if (st && lodDue(frame, st.id, TEX_STREAM.STRIDE)) return true;
+      }
+      return false;
+    };
 
     const evalEnt = (ent) => {
       const mesh = ent?.mesh;
@@ -11621,12 +11666,12 @@ export class BattleClient {
         for (const t of ent._streamTexs) reg.add(t);
       }
       const texs = ent._streamTexs;
-      if (!texs || !texs.length) return;
+      if (!texs || !texs.length || !anyDue(texs)) return;
       if (ent.isSelf && !ent.dead) {
         for (const t of texs) noteTexDemand(t, 0, true, frame);
         return;
       }
-      if (ent.dead || ent.gar || !mesh.visible || (culledSet && culledSet.has(ent))) {
+      if (ent.dead || ent.gar || !mesh.visible || (cullActive && ent._cullFrame === frame)) {
         for (const t of texs) noteTexDemand(t, Infinity, false, frame);
         return;
       }
@@ -11650,13 +11695,12 @@ export class BattleClient {
     };
 
     if (this.ents) for (const ent of this.ents.values()) evalEnt(ent);
-    if (this.mapBuildings) for (const b of this.mapBuildings.values()) evalEnt(b);
+    if (this.mapBuildings) for (const b of this.mapBuildings.values()) if (b.record?.mesh) evalEnt(b);
 
     const evalStaticRoot = (root) => {
       if (!root) return;
       const ud = root.userData || (root.userData = {});
-      const chLen = root.children ? root.children.length : 0;
-      if (!ud._streamEntries || ud._streamChildrenLen !== chLen) {
+      if (!ud._streamEntries) {
         root.updateMatrixWorld(true);
         const entries = [];
         root.traverse((o) => {
@@ -11679,9 +11723,9 @@ export class BattleClient {
           });
         });
         ud._streamEntries = entries;
-        ud._streamChildrenLen = chLen;
       }
       for (const entry of ud._streamEntries) {
+        if (!anyDue(entry.texs)) continue;
         if (!entry.mesh.visible) {
           for (const t of entry.texs) noteTexDemand(t, Infinity, false, frame);
           continue;
@@ -11711,7 +11755,6 @@ export class BattleClient {
     evalStaticRoot(this.biomes);
     evalStaticRoot(this.terrain?.group);
 
-    const forceAll = !this._texStreamInit;
     this._texStreamInit = true;
     this._texStreamStats = flushTexStream(reg, frame, aimBlend, { isDue: lodDue, forceAll });
   }
@@ -11909,8 +11952,11 @@ export class BattleClient {
     this._spritePoolFire = null;
     this._spritePoolSmoke?.clear((sp) => sp.material.dispose());
     this._spritePoolSmoke = null;
+    this._fireTexC?.dispose(); this._fireTexC = null;
+    this._smokeTexC?.dispose(); this._smokeTexC = null;
     this._recPool?.clear(); this._recPool = null;
     this._fxShellPool?.clear(); this._fxShellPool = null;
+    this._cullOcc = null; this._cullOut = null; this._culled = null;
     this._streamTexReg?.clear(); this._streamTexReg = null;
     this._texStreamStats = null;
     this.renderer.dispose();

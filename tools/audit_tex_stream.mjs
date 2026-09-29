@@ -188,6 +188,22 @@ console.log('\n③ 貼圖生命週期、多消費端需求匯流與分幀預算�
   const anchors = meshStreamAnchors(wideMesh, 64);
   ok(anchors.length === 2 && anchors[0].x < 0 && anchors[1].x > 0,
     'meshStreamAnchors 將跨區大網格切分為空間格網錨球(遠處分塊不釘死近處解析度)');
+
+  const instCount = 2048;
+  const instArr = new Float32Array(instCount * 16);
+  for (let i = 0; i < instCount; i++) {
+    const base = i * 16;
+    instArr[base] = 1; instArr[base + 5] = 1; instArr[base + 10] = 1; instArr[base + 15] = 1;
+    instArr[base + 12] = i === 17 ? 10 : 900;
+    instArr[base + 14] = i === 17 ? 10 : 900;
+  }
+  const instAnchors = meshStreamAnchors({
+    isInstancedMesh: true,
+    count: instCount,
+    instanceMatrix: { array: instArr },
+  }, 64);
+  ok(instAnchors.length === 2 && instAnchors.some((a) => Math.abs(a.x - 10) < 1),
+    'meshStreamAnchors 完整掃描 InstancedMesh 全部實例(不因抽樣步進漏掉近處格網)');
 }
 
 console.log('\n④ 貼圖產出端與 game.js 渲染管線接線驗證');
@@ -204,6 +220,8 @@ console.log('\n④ 貼圖產出端與 game.js 渲染管線接線驗證');
   ok(/import \{[^}]*flushTexStream[^}]*\} from '\.\/tex\.js'/.test(G), 'game.js 引用 tex.js 串流介面');
   ok(/this\._tickCull\(\);\s*this\._tickTexStream\(\);\s*this\._renderCulledMain\(\);/.test(G),
     '_tickTexStream 嚴格位於 _tickCull 之後、_renderCulledMain 之前(首幀渲染前先降階遠處/視野外貼圖)');
+  ok(/ent\._cullFrame === frame/.test(G) && !/new Set\(this\._culled\)/.test(G),
+    '_tickTexStream 透過 _cullFrame 戳記 O(1) 判定剔除態(零 Set 配置)');
   ok(/flushTexStream\(reg, frame, aimBlend, \{ isDue: lodDue, forceAll \}\)/.test(G),
     '_tickTexStream 複用 lod.js lodDue 節流與 dofAimBlend 狙擊曲線');
   ok(/this\._streamTexReg\?\.clear\(\)/.test(G), 'dispose() 離場清空 _streamTexReg 貼圖註冊表');

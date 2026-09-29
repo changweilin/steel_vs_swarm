@@ -72,10 +72,15 @@ console.log('\n③ 可見性翻轉只住渲染窗口(玩法判定看不到剔除
   const hideN = (G.match(/for \(const ent of list\) ent\.mesh\.visible = false;/g) || []).length;
   const showN = (G.match(/for \(const ent of list\) ent\.mesh\.visible = true;/g) || []).length;
   ok(hideN === 1 && showN === 1, `藏匿/還原各恰一處(實測 hide×${hideN}/show×${showN})`);
-  // Blink guards: staggered occlusion MUST persist its verdict (hiding only on
-  // test frames is a 15Hz blink + render-list churn); distance needs hysteresis.
-  ok(/ent\._occCull/.test(G) && /ent\._occX/.test(G),
-    '遮擋判據帶戳記跨幀沿用(到期或任一端位移才重測)');
+  // Blink & false-cull guards: staggered occlusion MUST persist its verdict (hiding
+  // only on test frames is a 15Hz blink + render-list churn), track 3D movement
+  // (including vertical y so jumping/flying units re-test), use inscribed building
+  // spheres Math.min(r.w, r.d, r.h) * 0.5 (never circumscribed hypot), and cache
+  // _cullOcc until _cullOccDirty; distance needs hysteresis.
+  ok(/ent\._occCull/.test(G) && /ent\._occX/.test(G) && /ent\._occY/.test(G) && /ent\._occCY/.test(G),
+    '遮擋判據帶 3D 座標戳記跨幀沿用(含垂直位移 _occY/_occCY,跳躍/升空即刻重測)');
+  ok(/Math\.min\(r\.w, r\.d, r\.h\) \* 0\.5/.test(G) && /this\._cullOccDirty/.test(G),
+    '遮擋球取建物真實內切半徑 Math.min(w,d,h)*0.5 並快取 _cullOcc(建物坍塌才重算)');
   ok(/ent\._distCull/.test(G) && /CULL\.DIST_HYST/.test(G),
     '距離剔除帶遲滯(邊界抖動不閃進閃出)');
   ok(/CULL\.FRUSTUM_PAD_F/.test(G), '視錐球帶擴張邊距(掠邊不閃)');

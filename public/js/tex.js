@@ -372,9 +372,8 @@ export function meshStreamAnchors(mesh, cellM = TEX_STREAM.CELL_M) {
   if (mesh.isInstancedMesh && mesh.instanceMatrix?.array && mesh.count > 0) {
     const arr = mesh.instanceMatrix.array;
     const n = mesh.count | 0;
-    const step = Math.max(1, Math.floor(n / 512));
     const pts = [];
-    for (let i = 0; i < n; i += step) {
+    for (let i = 0; i < n; i++) {
       const base = i * 16;
       const [wx, wy, wz] = transformPt(arr[base + 12], arr[base + 13], arr[base + 14]);
       pts.push(wx, wy, wz);
