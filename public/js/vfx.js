@@ -110,15 +110,19 @@ function sparkTexture() {
 /**
  * 浮動傷害數字貼圖(**快取**:同一把武器打同一種目標,數字重複率極高)。
  * 舊版每次命中都新建 canvas + CanvasTexture ⇒ 每發一次 GPU 貼圖上傳,持續開火時
- * 在手機上就是可見的頓挫。快取上限 240 筆(逾量整批清空 —— 傷害數字是短命特效,
- * 清掉最多只是下一次重畫一張)。
+ * 在手機上就是可見的頓挫。快取上限 240 筆(逾量淘汰最舊 60 筆 —— 傷害數字是短命特效,
+ * 清掉最多只是下一次重畫一張;整批清空會在持續交火中把 240 張 GPU 貼圖的 dispose
+ * 擠在同一幀 = 偶發嚴重頓挫,故分攤)。
  */
 const _numTex = new Map();
 function numberTexture(num, color) {
   const key = `${num}|${color}`;
   const hit = _numTex.get(key);
   if (hit) return hit;
-  if (_numTex.size >= 240) { for (const t of _numTex.values()) t.dispose(); _numTex.clear(); }
+  if (_numTex.size >= 240) {
+    let n = 0;
+    for (const [k, t] of _numTex) { t.dispose(); _numTex.delete(k); if (++n >= 60) break; }
+  }
   const cv = document.createElement('canvas');
   cv.width = 128; cv.height = 64;
   const ctx = cv.getContext('2d');

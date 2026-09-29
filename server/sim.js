@@ -6819,9 +6819,11 @@ export class BattleSim {
     const A = GAME.AA_AMBUSH;
     const S = FIELD.AA_SITE;
     let sites = null;   // lazy:多數 tick 沒人觸發
+    let ambN = 0;
+    for (const m of this.missiles) if (m.amb) ambN++;   // 計數提到迴圈外:逐機體 filter 是逐 tick 逐架的配置,交火期機體多時毫無意義地燒 tick 預算
     for (const h of this._allBodies()) {   // 每一架無人機各自可能被伏擊
       // 全場同時只准 1 發第三方伏擊飛彈在空中(THREAT_MISSILES_MAX)
-      if (this.missiles.filter((m) => m.amb).length >= GAME.THREAT_MISSILES_MAX) return;
+      if (ambN >= GAME.THREAT_MISSILES_MAX) return;
       // 無人機恆為空中目標;變形者僅飛行型態(y ≥ AA_MIN_ALT)會被伏擊鎖定
       if (h.dead) continue;
       if (h.kind !== 'drone' && !(h.kind === 'morph' && (h.y || 0) >= GAME.AA_MIN_ALT)) continue;
@@ -6843,6 +6845,7 @@ export class BattleSim {
         amb: true, ox: best.x, oy: 2, oz: best.z, range: S.range,   // 出了陣地射程就失鎖直飛
       }));
       this.events.push({ e: 'sam', from: [best.x, best.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
+      ambN++;   // 本 tick 新發射的伏擊飛彈計入上限(與逐架 filter 同語意)
     }
   }
 

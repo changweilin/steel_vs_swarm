@@ -991,12 +991,15 @@ export class BattleClient {
     const C = 64;
     const grid = new Map();
     blockers.forEach((b) => {
+      // 有向盒的 local 軸餘弦收料時算好:_blockerHitT 是交火期逐發逐盒的熱路徑,
+      // 逐盒重算三角函數等於白燒幀預算(格鍵亦改整數,見下 —— 逐格配字串鍵同屬 per-call 配置)。
+      if (b.hw2 != null) { b._cs = Math.cos(b.ry); b._sn = -Math.sin(b.ry); }
       const r = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;
       const i0 = Math.floor((b.x - r) / C), i1 = Math.floor((b.x + r) / C);
       const j0 = Math.floor((b.z - r) / C), j1 = Math.floor((b.z + r) / C);
       for (let i = i0; i <= i1; i++) {
         for (let j = j0; j <= j1; j++) {
-          const k = `${i},${j}`;
+          const k = (i + 32768) * 65536 + (j + 32768);
           let a = grid.get(k);
           if (!a) grid.set(k, a = []);
           a.push(b);
@@ -1016,14 +1019,14 @@ export class BattleClient {
     const i0 = Math.floor((x - r) / C), i1 = Math.floor((x + r) / C);
     const j0 = Math.floor((z - r) / C), j1 = Math.floor((z + r) / C);
     if (i0 === i1 && j0 === j1) {
-      return grid.get(`${i0},${j0}`) || [];
+      return grid.get((i0 + 32768) * 65536 + (j0 + 32768)) || [];
     }
     const out = [];
     const seen = this._blockerNearSet || (this._blockerNearSet = new Set());
     seen.clear();
     for (let i = i0; i <= i1; i++) {
       for (let j = j0; j <= j1; j++) {
-        const list = grid.get(`${i},${j}`);
+        const list = grid.get((i + 32768) * 65536 + (j + 32768));
         if (!list) continue;
         for (let k = 0; k < list.length; k++) {
           const b = list[k];
@@ -1069,7 +1072,7 @@ export class BattleClient {
           const nx = ax + tProj * dx - cx, nz = az + tProj * dz - cz;
           if (nx * nx + nz * nz > maxCellDistSq) continue;
         }
-        const a = grid.get(`${i},${j}`);
+        const a = grid.get((i + 32768) * 65536 + (j + 32768));
         if (!a) continue;
         for (const b of a) {
           if (seen.has(b)) continue;
@@ -1078,7 +1081,7 @@ export class BattleClient {
           let t0, t1;
           if (b.hw2 != null) {
             // 有向盒:射線在盒 local frame 走 slab(與 _cameraDeClip clampBox / _sweepBlockers 同式)
-            const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
+            const cs = b._cs ?? Math.cos(b.ry), sn = b._sn ?? -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin);收料預算見 _buildBlockGrid
             const ox = ax - b.x, oz = az - b.z;
             const olx = ox * cs + oz * sn, olz = -ox * sn + oz * cs;
             if (A2 < 1e-8) {                        // 垂直線段:XZ 不動,只看是否在盒內
@@ -1086,11 +1089,23 @@ export class BattleClient {
               t0 = 0; t1 = 1;
             } else {
               const ulx = dx * cs + dz * sn, ulz = -dx * sn + dz * cs;
+              // 逐軸 slab,手動展開(熱路徑不配置暫存陣列;與伺服器 _losBlocked 同一條紀律)
               let tmin = -Infinity, tmax = Infinity, ok = true;
-              for (const [o, u, e] of [[olx, ulx, b.hw2], [olz, ulz, b.hd2]]) {
-                if (Math.abs(u) < 1e-9) { if (o < -e || o > e) { ok = false; break; } continue; }
-                let s0 = (-e - o) / u, s1 = (e - o) / u; if (s0 > s1) { const s = s0; s0 = s1; s1 = s; }
-                tmin = Math.max(tmin, s0); tmax = Math.min(tmax, s1);
+              if (Math.abs(ulx) < 1e-9) { if (olx < -b.hw2 || olx > b.hw2) ok = false; }
+              else {
+                let s0 = (-b.hw2 - olx) / ulx, s1 = (b.hw2 - olx) / ulx;
+                if (s0 > s1) { const s = s0; s0 = s1; s1 = s; }
+                if (s0 > tmin) tmin = s0;
+                if (s1 < tmax) tmax = s1;
+              }
+              if (ok) {
+                if (Math.abs(ulz) < 1e-9) { if (olz < -b.hd2 || olz > b.hd2) ok = false; }
+                else {
+                  let s0 = (-b.hd2 - olz) / ulz, s1 = (b.hd2 - olz) / ulz;
+                  if (s0 > s1) { const s = s0; s0 = s1; s1 = s; }
+                  if (s0 > tmin) tmin = s0;
+                  if (s1 < tmax) tmax = s1;
+                }
               }
               if (!ok || tmax < tmin || tmax < 0 || tmin > 1) continue;
               t0 = tmin; t1 = tmax;
@@ -10724,7 +10739,7 @@ export class BattleClient {
    *   ① water / swamp ← `this._env.ground`(`_envAt` 每幀已算過,見 `_updatePlayer`)
    *   ② tunnel ← 既有的 `terrain.tunnelAt`
    *   ③ urban / forest ← **既有的 A6 碰撞網格** `this._blockGrid`(64m 格)逐格計數,
-   *      結果快取在 `this._ambDens`(鍵同為 `"i,j"`)⇒ 走進新格才算一次。
+    *      結果快取在 `this._ambDens`(鍵同為整數格鍵)⇒ 走進新格才算一次。
    *      四鄰格心雙線性內插:不插的話走過格界會有一次聽得出來的音量跳變,
    *      而每一條離線斷言都會過(gain 仍在 [0,1]、優先序仍對)。
    *  「哪一床贏」的規則住 `audio.ambienceMix`(純函式,宣告順序 = 優先序);本處只量。 */
@@ -10761,7 +10776,7 @@ export class BattleClient {
     const URB_FULL = 26, FOR_FULL = 14;        // 「一格算滿」的計數(純聽感調校旋鈕)
     const cache = (this._ambDens ??= new Map());
     const cell = (i, j) => {
-      const k = `${i},${j}`;
+      const k = (i + 32768) * 65536 + (j + 32768);
       let v = cache.get(k);
       if (v) return v;
       let nb = 0, nt = 0;

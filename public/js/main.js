@@ -3144,6 +3144,31 @@ function renderSpecUpg(upg) {
   }).join('');
 }
 
+/**
+ * 命中/受擊閃光重觸發(唯一縫;與 boss 血條同一條紀律「逐發強制 reflow 太貴」)。
+ * 舊制每次 remove→(void offsetWidth)→add,機槍 ~4 命中/秒 = 每秒數次整頁同步排版。
+ * class 由 animationend 清掉:跨幀的 remove/add 不會被瀏覽器合併 ⇒ 重啟不需要 reflow。
+ * 背景分頁可能漏接 animationend(class 殘留),由時間戳兜底(動畫時長兩倍後強制重啟,
+ * 稀有路徑才走一次舊制 reflow)。
+ */
+function _reflash(el, animMs) {
+  const now = performance.now();
+  if (el.classList.contains('on')) {
+    if (now - (el._rfAt || 0) < animMs * 2) return;   // 還在閃:沿用,免整頁同步排版
+    el._rfAt = now;                                    // 漏接 animationend:強制重啟
+    el.classList.remove('on');
+    void el.offsetWidth;
+    el.classList.add('on');
+    return;
+  }
+  if (!el._rfWired) {
+    el._rfWired = true;
+    el.addEventListener('animationend', () => el.classList.remove('on'));
+  }
+  el._rfAt = now;
+  el.classList.add('on');
+}
+
 function makeHud() {
   const feedBox = $('killFeed');
   // 狙擊鏡圈組合半徑的兩個輸入(火場滯留 / 天氣濃霧密度):envFog 與 weatherFog 各推一份,
@@ -3639,19 +3664,9 @@ function makeHud() {
         + `<span class="civ-hint">${keys}</span>`;
       el.classList.add('on');
     },
-    hitmark: () => {
-      const el = $('hitmark');
-      el.classList.remove('on');
-      void el.offsetWidth;
-      el.classList.add('on');
-    },
+    hitmark: () => _reflash($('hitmark'), 200),   // hitPop 0.2s(見 style.css)
     // 受傷暈影:自機被擊(HP/護盾下降)時全屏邊緣紅光閃一下(重觸發動畫同 hitmark 手法)
-    hurt: () => {
-      const el = $('hurtVig');
-      el.classList.remove('on');
-      void el.offsetWidth;
-      el.classList.add('on');
-    },
+    hurt: () => _reflash($('hurtVig'), 500),   // hurtFlash 0.5s(見 style.css)
     // 火場滯留視野霧化(2026-07-19;game.js 每幀推 0~1 濃度,離場漸清)—— 純表現,傷害由伺服器結算。
     // 越濃越嚴重:邊緣全黑(CSS 漸層)+ 中央漸模糊(backdrop blur)+ 狙擊視野縮圈(--scope-r)。
     // 鏡圈組合半徑住 data.js `scopeRvminFog`(火場縮圈 × 天氣霧等比縮)—— 視野鎖定的取景判定吃同一支
