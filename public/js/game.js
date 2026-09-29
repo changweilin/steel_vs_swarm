@@ -43,6 +43,7 @@ import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { lodStrideByD2, lodDue, GEO, geoTrimKeep, geoOutlineKeep, applyGeoLod } from './lod.js';
 import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep } from './cull.js';
+import { TEX_STREAM, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, flushTexStream } from './tex.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
@@ -11403,6 +11404,7 @@ export class BattleClient {
     // cull is a whole-mesh switch restored around render -- the layers never meet.
     this._tickGeoLod();
     this._tickCull();
+    this._tickTexStream();
     this._renderCulledMain();
     this._renderPips();
     this._renderDeathCam();
@@ -11572,6 +11574,146 @@ export class BattleClient {
       consider(ent, !!(ent.hero || ent.decoy || ent.civ || ent.isStatic || ent.kind === 'tower' || ent.kind === 'base'));
     for (const b of this.mapBuildings?.values() || []) consider(b, true);
     if (out.length) this._culled = [...out];
+  }
+
+  // ---------------- Texture streaming / Virtual Texturing (presentation only) ----------------
+  /**
+   * Camera-view & distance-driven VRAM mip streaming:
+   * - Runs after `_tickCull()` and before `_renderCulledMain()` so frame-0 (`forceAll`)
+   *   downgrades distant/off-screen textures before `renderer.render()` uploads them.
+   * - Only textures inside the camera frustum (and sniper scope circle when zoomed,
+   *   and unoccluded for dynamic entities) keep their distance-matched mip tier
+   *   (level 0/1/2); distant (`> FAR_M`) or invisible/culled textures drop to
+   *   `maxDrop` (`chain.slice(maxDrop)`) in VRAM via `applyTexLevel`.
+   */
+  _tickTexStream() {
+    if (!this.camera) return;
+    const cam = this.camera, camP = cam.position;
+    cam.updateMatrixWorld();
+    const frustum = this._cullFrustum || (this._cullFrustum = new THREE.Frustum());
+    const cm = this._cullM || (this._cullM = new THREE.Matrix4());
+    frustum.setFromProjectionMatrix(cm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    let aimBlend = 0;
+    try {
+      aimBlend = (this.side && !this.dead)
+        ? dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0;
+    } catch { aimBlend = 0; }
+    let rPx = 0, projF = 0, HW = 0, HH = 0;
+    if (aimBlend > 0.001 && this.canvas) {
+      const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
+      HW = W / 2; HH = H / 2;
+      rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
+      projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
+    }
+    const frame = this._lodFrame | 0;
+    const v = this._cullV || (this._cullV = new THREE.Vector3());
+    const s = this._cullS || (this._cullS = new THREE.Sphere());
+    const reg = this._streamTexReg || (this._streamTexReg = new Set());
+    const culledSet = this._culled ? new Set(this._culled) : null;
+    const cullActive = !!(this.side && !this.dead && this.ents);
+
+    const evalEnt = (ent) => {
+      const mesh = ent?.mesh;
+      if (!mesh) return;
+      if (ent._streamMesh !== mesh) {
+        ent._streamMesh = mesh;
+        ent._streamTexs = collectTreeStreamTexs(mesh);
+        for (const t of ent._streamTexs) reg.add(t);
+      }
+      const texs = ent._streamTexs;
+      if (!texs || !texs.length) return;
+      if (ent.isSelf && !ent.dead) {
+        for (const t of texs) noteTexDemand(t, 0, true, frame);
+        return;
+      }
+      if (ent.dead || ent.gar || !mesh.visible || (culledSet && culledSet.has(ent))) {
+        for (const t of texs) noteTexDemand(t, Infinity, false, frame);
+        return;
+      }
+      const p = mesh.position;
+      const msc = mesh.scale;
+      const sk = Math.max(1, msc?.x || 1, msc?.y || 1, msc?.z || 1);
+      const h = ent.dimH || 4;
+      const rTgt = Math.max(ent.dimR || 2, h * 0.5) * sk;
+      const cx = p.x, cy = p.y + h * 0.5 * sk, cz = p.z;
+      const dx = cx - camP.x, dy = cy - camP.y, dz = cz - camP.z;
+      const dCenter = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const dSurf = Math.max(0, dCenter - rTgt);
+      const d2 = dSurf * dSurf;
+      let vis = true;
+      if (!cullActive) {
+        s.center.set(cx, cy, cz);
+        s.radius = rTgt * CULL.FRUSTUM_PAD_F;
+        vis = frustum.intersectsSphere(s);
+      }
+      for (const t of texs) noteTexDemand(t, d2, vis, frame);
+    };
+
+    if (this.ents) for (const ent of this.ents.values()) evalEnt(ent);
+    if (this.mapBuildings) for (const b of this.mapBuildings.values()) evalEnt(b);
+
+    const evalStaticRoot = (root) => {
+      if (!root) return;
+      const ud = root.userData || (root.userData = {});
+      const chLen = root.children ? root.children.length : 0;
+      if (!ud._streamEntries || ud._streamChildrenLen !== chLen) {
+        root.updateMatrixWorld(true);
+        const entries = [];
+        root.traverse((o) => {
+          if (!o.isMesh) return;
+          const texs = [];
+          const m = o.material;
+          if (Array.isArray(m)) {
+            for (const sub of m) collectMatStreamTexs(sub, texs);
+          } else if (m) {
+            collectMatStreamTexs(m, texs);
+          }
+          const st = o.userData?.signTex;
+          if (st?.userData?.texStream && !texs.includes(st)) texs.push(st);
+          if (!texs.length) return;
+          for (const t of texs) reg.add(t);
+          entries.push({
+            mesh: o,
+            texs,
+            anchors: meshStreamAnchors(o, TEX_STREAM.CELL_M),
+          });
+        });
+        ud._streamEntries = entries;
+        ud._streamChildrenLen = chLen;
+      }
+      for (const entry of ud._streamEntries) {
+        if (!entry.mesh.visible) {
+          for (const t of entry.texs) noteTexDemand(t, Infinity, false, frame);
+          continue;
+        }
+        let bestD2 = Infinity;
+        let anyVis = false;
+        for (const a of entry.anchors) {
+          const r = Math.max(2, a.r || 2);
+          s.center.set(a.x, a.y, a.z);
+          s.radius = r * CULL.FRUSTUM_PAD_F;
+          if (!frustum.intersectsSphere(s)) continue;
+          const dx = a.x - camP.x, dy = a.y - camP.y, dz = a.z - camP.z;
+          const dCenter = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          const dSurf = Math.max(0, dCenter - r);
+          const d2 = dSurf * dSurf;
+          if (rPx > 0 && d2 > 25) {
+            v.set(a.x, a.y, a.z).project(cam);
+            if (!scopeKeep(v.x * HW, v.y * HH, rPx, (r / (dCenter || 1)) * projF * CULL.SCOPE_PAD_F)) continue;
+          }
+          anyVis = true;
+          if (d2 < bestD2) bestD2 = d2;
+        }
+        for (const t of entry.texs) noteTexDemand(t, bestD2, anyVis, frame);
+      }
+    };
+
+    evalStaticRoot(this.biomes);
+    evalStaticRoot(this.terrain?.group);
+
+    const forceAll = !this._texStreamInit;
+    this._texStreamInit = true;
+    this._texStreamStats = flushTexStream(reg, frame, aimBlend, { isDue: lodDue, forceAll });
   }
 
   /** Main-scene render with the culled set hidden; restores before PiP. */
@@ -11769,6 +11911,8 @@ export class BattleClient {
     this._spritePoolSmoke = null;
     this._recPool?.clear(); this._recPool = null;
     this._fxShellPool?.clear(); this._fxShellPool = null;
+    this._streamTexReg?.clear(); this._streamTexReg = null;
+    this._texStreamStats = null;
     this.renderer.dispose();
   }
 }

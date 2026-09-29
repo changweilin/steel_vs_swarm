@@ -2,6 +2,7 @@ import { loftMeshData, hullRing, vesselHullSections } from './vesselGeometry.js'
 import * as THREE from 'three';
 import { mulberry32 } from './rng.js';
 import { toonMat, toonPlain } from './toon.js';
+import { registerStreamTex } from './tex.js';
 
 export function buildShipWakeGroup() {
   const g = new THREE.Group();
@@ -384,7 +385,7 @@ export function buildGeneratedVesselMesh(v, { wake = true } = {}) {
     if(ctx) {
       ctx.fillStyle='#f4eee0';ctx.font='bold 36px sans-serif';ctx.textAlign='center';ctx.fillText(v.vesselName+' '+v.registry,256,46);
       ctx.font='italic 30px sans-serif';ctx.fillText(v.graffiti,256,95);
-      const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+      const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;registerStreamTex(texture);
       const mat=toonPlain({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide});mat.addEventListener('dispose',()=>texture.dispose());
       for(const side of [-1,1]) {const label=add('hull_lettering',new THREE.PlaneGeometry(L*0.34,F*0.65),mat,side*B*0.505,F*0.55,0);label.rotation.y=side*Math.PI/2;}
     }

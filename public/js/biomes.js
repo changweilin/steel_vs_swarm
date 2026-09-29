@@ -54,6 +54,7 @@ import { buildLandField } from './landfield.js';
 import { setLandField } from './toon.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
+import { registerStreamTex } from './tex.js';
 import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed, mergeGeos } from './beacons.js';
 // 邊界牆型錄 / 緩衝空間布景 / 視線邊界背景(2026-08-11 使用者定案)——
 // 型錄、切分規則、落點規劃全在那一支(純資料、零 THREE、離線可驗);本檔只負責取樣地貌與建幾何。
@@ -919,6 +920,7 @@ function leafCardTex() {
   }
   _cardTex = new THREE.CanvasTexture(cv);
   _cardTex.colorSpace = THREE.SRGBColorSpace;
+  registerStreamTex(_cardTex);
   return _cardTex;
 }
 
@@ -1624,6 +1626,7 @@ function flagTex(iso) {
   t.magFilter = THREE.LinearFilter;
   t.minFilter = THREE.LinearMipmapLinearFilter;
   t.anisotropy = 4;
+  registerStreamTex(t);
   _flagTexCache.set(iso, t);
   return t;
 }
@@ -1979,6 +1982,7 @@ function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'pla
     // ——貼圖橫向本來就是逐欄重複的,環繞是恆等的。**縱向 MUST 維持 clamp**:
     // v 是三條帶,捲起來就是屋頂帶接在窗牆帶上面。
     t.wrapS = THREE.RepeatWrapping;
+    registerStreamTex(t);
     return t;
   };
   const out = { map: mk(cv), emissiveMap: mk(em) };
@@ -4942,6 +4946,7 @@ function roadTex(kind) {
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
+  registerStreamTex(t);
   _roadTexCache.set(kind, t);
   return t;
 }
@@ -8261,6 +8266,7 @@ function baseMarkingTex(side) {
 
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
+  registerStreamTex(t);
   _platformTexCache.set(key, t);
   return t;
 }
@@ -8333,6 +8339,7 @@ function towerMarkingTex(side = 'STEEL') {
 
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
+  registerStreamTex(t);
   _platformTexCache.set(key, t);
   return t;
 }
@@ -8462,6 +8469,7 @@ function retainingWallTex() {
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;
+  registerStreamTex(t);
   _platformTexCache.set(key, t);
   return t;
 }
