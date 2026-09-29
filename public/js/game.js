@@ -41,7 +41,7 @@ import { detachMapBuilding, mapBuildingTarget } from './mapBuildingRender.js';
 import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree, isWeatherFrozen } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { lodStrideByD2, lodDue } from './lod.js';
+import { lodStrideByD2, lodDue, GEO, geoTrimKeep, geoOutlineKeep, applyGeoLod } from './lod.js';
 import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep } from './cull.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
@@ -11383,6 +11383,10 @@ export class BattleClient {
     this.pipeline?.setDofBlend(this.side && !this.dead
       ? dofAimBlend(this.camera.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0);
     // 後製管線結束時 render target 一律歸零 ⇒ 後面的 PiP / 陣亡鏡頭照樣直接畫在畫布上(行為不變)
+    // MUST run after `_updateEnts` (positions are this frame's interpolated values)
+    // and before `_tickCull`: shells/attachments are persistent child switches,
+    // cull is a whole-mesh switch restored around render -- the layers never meet.
+    this._tickGeoLod();
     this._tickCull();
     this._renderCulledMain();
     this._renderPips();
@@ -11392,6 +11396,49 @@ export class BattleClient {
     const nc = this._nearestCiv();
     this._civTarget = nc;
     this.hud.civPrompt?.(nc ? { cs: nc.cs, self: nc.cs === this.side, follow: !!nc.fo } : null);
+  }
+
+  // ---------------- Geometric LOD (presentation only) ----------------
+  /**
+   * Per-entity detail verdict: hides geoDetail micro parts past GEO.TRIM_M and
+   * inverted-hull outline shells past GEO.OUTLINE_M. Child visibility only --
+   * mesh.visible (collision/audio/foe gates) and hit volumes never change, so
+   * unlike _tickCull no render-window restore is needed. Staggered by lodDue
+   * (same hash as tick LOD/cull: reconnects agree), hysteresis in geoKeep stops
+   * boundary flapping, aimBlend extends both bands under sniper magnification.
+   * First sighting evaluates immediately (prev undefined bypasses the stagger
+   * gate) so far spawns never pay one full-detail frame. Self never trims.
+   * Vegetation whole-map InstancedMesh batches have no per-instance distance
+   * and stay out until batches gain a spatial index; they already opt out of
+   * outlines (noOut) and decimate per-frame work via lod.js tick bands.
+   */
+  _tickGeoLod() {
+    if (!this.camera || !this.ents) return;
+    const camP = this.camera.position;
+    const frame = this._lodFrame | 0;
+    let aimBlend = 0;
+    try {
+      aimBlend = (this.side && !this.dead)
+        ? dofAimBlend(this.camera.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0;
+    } catch { aimBlend = 0; }
+    const tick = (ent, key) => {
+      if (ent.isSelf || ent.dead || ent.gar) return;
+      const mesh = ent.mesh;
+      if (!mesh || !mesh.visible) return;
+      if (ent._geoTrim !== undefined && !lodDue(frame, key, GEO.STRIDE)) return;
+      const p = mesh.position;
+      const h = ent.dimH || 4;
+      const dx = p.x - camP.x, dy = (p.y + h * 0.5) - camP.y, dz = p.z - camP.z;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      const trimHi = geoTrimKeep(d2, aimBlend, ent._geoTrim);
+      const outHi = geoOutlineKeep(d2, aimBlend, ent._geoOut);
+      if (trimHi === ent._geoTrim && outHi === ent._geoOut) return;
+      ent._geoTrim = trimHi;
+      ent._geoOut = outHi;
+      applyGeoLod(mesh, trimHi, outHi);
+    };
+    for (const ent of this.ents.values()) tick(ent, ent.id ?? ent.kind ?? 0);
+    for (const b of this.mapBuildings?.values() || []) tick(b, b.id ?? 0);
   }
 
   // ---------------- Pre-shading cull (presentation only) ----------------

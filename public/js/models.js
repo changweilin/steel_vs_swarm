@@ -18,6 +18,7 @@ import { mat, outlineW, dim, bx, cyl, rbz } from './geo3d.js';
 // 鷹架住 forge/forge.js —— 遊戲本體與機體台從此吃**同一棵**零件樹。
 import { forgeMech, forgeMorphUnit, specOf } from './forge/forge.js';
 import { entryKey } from './forge/roster.js';
+import { geoTrimTest } from './lod.js';
 // 非玩家單位新版宣告式建模；英雄機體仍只走 forge，兩條路徑不相交。
 import { buildNpcModel } from './npcModels.js';
 import { buildBuildingUnit, buildBuildingUnitTurret } from './buildingUnitModels.js';
@@ -293,6 +294,7 @@ function attachMuzzleFlames(rig) {
         blending: THREE.AdditiveBlending, depthWrite: false }));
     f.userData.noOutline = true;
     f.userData.noPaint = true;
+    f.userData.geoKeep = true;   // LOD MUST NOT touch: stepCombatFx owns visible every heavy frame
     f.visible = false;
     f.scale.setScalar(0.01);   // 待機縮到近零:Box3 量測(血條/鎖定光暈基準)不被隱形焰球撐大
     node.add(f);
@@ -399,7 +401,7 @@ function buildApc(side) {
     { emissive: 0x9adfff, emissiveIntensity: 0.6 });                     // 駕駛觀察窗
   const pipe = cyl(hull, 0.09, 0.09, 0.7, 6, -1.15, 2.1, -2.5, 0x2c3033, { metalness: 0.6 });
   pipe.rotation.x = 0.5;                                                 // 排氣管
-  cyl(hull, 0.02, 0.03, 1.4, 5, 1.15, 3.0, -2.3, 0x23262a);              // 通訊天線
+  const apcAnt = cyl(hull, 0.02, 0.03, 1.4, 5, 1.15, 3.0, -2.3, 0x23262a);   // 通訊天線(auto-flagged trim: flagTrimDetail)
   // 遙控槍塔(2026-07-22 規則 1:塔座可轉 yaw、砲管可俯仰 —— 不再焊死在車頂):
   // turret 追瞄目標(game.js _aimVehicleTurret)、pitch 節點解算對目標仰角
   const turret = new THREE.Group();
@@ -496,7 +498,7 @@ function buildTank(side) {
   bx(turret, 0.28, 0.22, 0.28, 0.55, 0.85, 0.25, 0x141a20,
     { emissive: 0x9adfff, emissiveIntensity: 0.7 });                     // 觀瞄鏡
   bx(turret, 1.7, 0.45, 0.7, 0, 0.28, -1.05, 0x3a4136);                  // 尾艙置物架
-  cyl(turret, 0.02, 0.03, 0.4, 5, -0.7, 0.5, -0.6, 0x23262a);            // 天線(壓進砲塔頂高內:MUST NOT 超過塔體頂 —— fitToHeight 量整體包圍盒,天線一竄高就把車體/履帶等比縮小)
+  cyl(turret, 0.02, 0.03, 0.4, 5, -0.7, 0.5, -0.6, 0x23262a);            // 天線(auto-flagged trim: flagTrimDetail;壓進砲塔頂高內:MUST NOT 超過塔體頂 —— fitToHeight 量整體包圍盒,天線一竄高就把車體/履帶等比縮小)
   // 主砲俯仰節點(2026-07-22 規則 1:攻城砲彈道是拋物線,砲管仰角由 game.js
   // _arcTracer/_aimVehicleTurret 解算 —— 不再焊死水平);樞軸在防盾耳軸
   const tkPit = new THREE.Group();
@@ -2086,6 +2088,59 @@ function forgeHero(heroKind, ch, side) {
 }
 
 /**
+ * Batch-flag micro parts as GEO trim tier (single call site: makeUnit tail --
+ * every hero/NPC/summon/tower/base flows through here, so one pass covers the
+ * whole roster with no per-builder lists to rot). Flags userData.geoDetail on
+ * meshes passing lod.js geoTrimTest (world radius < TRIM_R_M, opaque,
+ * non-emissive); game.js _tickGeoLod hides them past TRIM_M.
+ *
+ * Never flagged (would fight their visibility drivers or readability cues):
+ * outline shells, teamRing, transparent, emissive (muzzle rings, visors,
+ * headlights), InstancedMesh (shared-geometry radius lies), muzzle flames and
+ * morph fade nodes (locomotion owns their visible every heavy frame -- marked
+ * geoKeep). Morph form Groups and jet/decoy Groups toggle at parent level, so
+ * flagged children compose under them safely. Paint/fit/outline run before
+ * this; flagging writes userData only, geometry and measureBox untouched.
+ * @returns flagged count (build log only)
+ */
+function flagTrimDetail(root) {
+  if (!root || typeof root.traverse !== 'function') return 0;
+  const driven = new Set();
+  for (const r of [root.userData?.rig, root.userData?.rigAir]) {
+    if (!r) continue;
+    for (const k of ['light', 'heavy']) for (const f of r.flames?.[k] || []) driven.add(f);
+  }
+  const mp = root.userData?.morph?.plan;
+  const fadeSides = mp ? [mp.g, mp.a] : null;
+  if (mp) {
+    for (const s of fadeSides) for (const e of s?.fade || []) if (e?.n) driven.add(e.n);
+  } else if (root.userData?.morph) {
+    for (const t of [root.userData.morph.ag, root.userData.morph.gg]) {
+      if (t) t.traverse((o) => { if (o.isMesh) driven.add(o); });
+    }
+  }
+  root.updateMatrixWorld(true);
+  const s = new THREE.Sphere();
+  let n = 0;
+  root.traverse((o) => {
+    if (!o.isMesh || o.isInstancedMesh) return;
+    const u = o.userData;
+    if (u.isOutline || u.geoDetail || u.geoKeep || u.teamRing) return;
+    if (driven.has(o)) { u.geoKeep = true; return; }
+    const m = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (!m || !o.geometry) return;
+    if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+    s.copy(o.geometry.boundingSphere).applyMatrix4(o.matrixWorld);
+    const e = m.emissive;
+    if (geoTrimTest(s.radius, {
+      transparent: !!m.transparent,
+      er: e?.r || 0, eg: e?.g || 0, eb: e?.b || 0, ei: m.emissiveIntensity,
+    })) { u.geoDetail = true; n++; }
+  });
+  return n;
+}
+
+/**
  * 建立一個單位 mesh。回傳 { group, mixer? }。
  * kind: 'hero:drone' | 'hero:robot' | 'creep:soldier' | 'creep:apc' | 'creep:tank' | 'tower' | 'base:SWARM' | 'base:STEEL'
  * opts.ch:英雄角色 id — 依 CHARACTERS[ch].visual 生成專屬機體(主色/機架/掛件)。
@@ -2214,6 +2269,9 @@ export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false 
   }
 
   if (ring) g.add(teamRing(side, Math.max(1.1, target * 0.55)));
+  // Micro-part trim flags (one pass over the finished tree: built + decoy pod +
+  // tower head; teamRing skipped inside by role). Writes userData only.
+  flagTrimDetail(g);
   // ---- 投影旗標(2026-08-14 太陽/月亮與影子)----
   // **單一縫**:所有單位(英雄 / NPC / 砲塔 / 主堡 / 載具)都經過 makeUnit ⇒ 這一段掃一次就
   // 全場都有影子,MUST NOT 在 game.js 的各個生成點各設一次。三條排除:
