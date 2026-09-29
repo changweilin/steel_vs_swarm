@@ -72,6 +72,10 @@ import { makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
 import { selectRoadCar } from './vehicleCatalog.js';
 import { deploySceneBatches } from './sceneObjects.js';
+import { forestSceneGeometry, compileSceneParts, fitSceneGeometry, furnitureSceneGeometry, furnitureSceneBatches } from './scenePropModels.js';
+import { rebuildLandmarkGeometry } from './sceneLandmarkModels.js';
+import { TREE_ATTACHMENTS, treeAttachmentParts } from './sceneAttachmentParts.js';
+import { LEGACY_PLANT_SPECIES, GROUND_PLANTS, groundPlantParts } from './scenePlantParts.js';
 import { createArchitecturePlanner } from './buildingDiversity.js';
 import { sceneObjectMat } from './toon.js';
 import { buildOsmPolygonBuildings } from './osmBuilding.js';
@@ -1047,6 +1051,27 @@ function forestRenderDef(type, item, season) {
  * 不然「原版」跟遊戲裡的原版不是同一個東西而且不會報錯(對照台檔頭紀律 ①)。遊戲路徑不變。
  */
 export function buildVegMeshes(type, items, season, generated = null) {
+  if (!generated && TREE_ATTACHMENTS.includes(type)) {
+    const geometry = compileSceneParts(treeAttachmentParts(type)), span = vegSpan(GIANT_DECO[type]);
+    return buildVegMeshes(type, items.map(item => ({ ...item, dj: 0 })), season,
+      { h: span, parts: [{ g: geometry, c: 0xffffff, vertexColors: true, role: 'wood' }] });
+  }
+  if (!generated && (LEGACY_PLANT_SPECIES[type] || GROUND_PLANTS.includes(type))) {
+    const span = vegSpan(VEG_DEFS[type]), radius = VEG_FOOT_R[type] || 1;
+    const variants = Array.from({ length: 3 }, () => []);
+    for (const item of items) variants[forestSeed(item.x, item.z) % variants.length].push(item);
+    return variants.flatMap((rows, index) => {
+      if (!rows.length) return [];
+      const size = [radius * 2, span, radius * 2], seed = 0x504c414e ^ index * 7919;
+      const geometry = LEGACY_PLANT_SPECIES[type]
+        ? forestSceneGeometry(LEGACY_PLANT_SPECIES[type], seed, size, season)
+        : fitSceneGeometry(compileSceneParts(groundPlantParts(type, seed)
+          .map(part => ({ ...part, c: seasonColor(part.key, part.c, season) }))), size);
+      return buildVegMeshes(type, rows, season, { h: span, bend: treeBend(span, Math.max(.1, radius * .15)),
+        parts: [{ g: geometry, c: 0xffffff, vertexColors: true, role: 'wood',
+          ...(['silvergrass','arrowbamboo','reed'].includes(type) ? { sf: 'grass' } : {}) }] });
+    });
+  }
   if (GIANT_DEFS[type] && !generated) {
     return items.flatMap(item => buildVegMeshes(type, [{ ...item, dj: 0 }], season, forestRenderDef(type, item, season)));
   }
@@ -2737,6 +2762,22 @@ const LANDMARKS = {
   },
 };
 
+export const LEGACY_LANDMARK_TYPES = Object.freeze(Object.keys(LANDMARK_COL)
+  .filter(type => !Object.hasOwn(TOWER_BUILDINGS, type) && !type.startsWith('heritage_')));
+
+export function buildLandmark(type, rnd, nation, context = {}) {
+  if (!LANDMARKS[type]) throw new RangeError('Unknown landmark: ' + type);
+  const group = new THREE.Group();
+  LANDMARKS[type](group, rnd, nation, context);
+  if (LEGACY_LANDMARK_TYPES.includes(type)) {
+    const bounds = new THREE.Box3().setFromObject(group);
+    group.userData.layoutBounds = { min: bounds.min.toArray(), max: bounds.max.toArray() };
+    rebuildLandmarkGeometry(group, type, context.seed ?? 0);
+  }
+  return group;
+}
+
+
 // ---- 巨岩地標(裸露地;取材世界知名岩體/巨石遺跡)----
 // 烏魯魯(艾爾斯岩)/ 奧古斯都山(單體岩山)/
 // 大霸尖山(酒桶狀霸尖)/ 摩艾石像群 / 馬丘比丘梯田遺跡 / 巨石陣 /
@@ -3080,8 +3121,8 @@ function profGeo(prof, uvb) {
 // InstancedMesh 一次定案在這裡(遊戲內唯一呼叫點在下方一般建物繪製段)。
 export const buildBldBucket = {
   chimney: (n) => new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x9a5a44, { wash: 0.5 }), n),
-  tank: (n) => new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), bmat(0xb0b8be), n),
-  acbox: (n) => new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), n),
+  tank: (n) => new THREE.InstancedMesh(furnitureSceneGeometry('tank', [2, 1, 2]).translate(0, -.5, 0), bmat(0xffffff, { vertexColors: true }), n),
+  acbox: (n) => new THREE.InstancedMesh(furnitureSceneGeometry('acbox', [1, 1, 1]).translate(0, -.5, 0), bmat(0xffffff, { vertexColors: true }), n),
   // 整棟量體:材質由呼叫端傳入 —— 立面貼圖是**逐立面款**現做的(窗格 + 夜間自發光),
   // 這裡自己 new 一份就是第二套立面材質,而症狀是「那幾棟高樓晚上不亮」。傳單一 wall
   // 材質即可(頂面也吃立面貼圖,是刻意的取捨:換到的是最高的十幾棟,俯視看得到頂面的
@@ -4954,14 +4995,14 @@ const ROAD_TEX_OF = { urban: 'asphalt', green: 'dirt', wet: 'dirt', bare: 'grave
 
 // ---- 道路附屬 3D 件(路燈/紅綠燈/行道樹):多零件 InstancedMesh,常數 draw call ----
 // part = { g, y, px, pz, c, e? };px/pz 隨實例朝向 ry 旋轉,e = 恆亮燈件
-function roadPropMeshes(group, parts, items) {
+export function roadPropMeshes(group, parts, items) {
   if (!items.length) return;
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
   const P = new THREE.Vector3(), S = new THREE.Vector3(), tint = new THREE.Color();
   for (const part of parts) {
     const mat = part.e
-      ? toonMat(part.c, { emissive: new THREE.Color(part.e), emissiveIntensity: 0.95 })
-      : toonMat(part.c);
+      ? toonMat(part.c, { vertexColors: !!part.g.attributes.color, emissive: new THREE.Color(part.e), emissiveIntensity: 0.95 })
+      : toonMat(part.c, { vertexColors: !!part.g.attributes.color });
     const m = new THREE.InstancedMesh(part.g, mat, items.length);
     items.forEach((it, i) => {
       E.set(0, it.ry, 0);
@@ -7914,30 +7955,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     }
   }
   // ---- 3D 附屬件:路燈 / 紅綠燈 / 行道樹(全 InstancedMesh)----
-  roadPropMeshes(group, [
-    { g: cyl(0.09, 0.13, 5.4, 6), y: 2.7, c: 0x50565e },
-    { g: cyl(0.05, 0.07, 1.7, 5).rotateZ(Math.PI / 2), y: 5.32, px: 0.75, c: 0x50565e },
-    { g: new THREE.BoxGeometry(0.66, 0.2, 0.32), y: 5.28, px: 1.5, c: 0xe8e2cc, e: 0xffe9a0 },
-  ], lamps);
-  roadPropMeshes(group, [
-    { g: cyl(0.07, 0.1, 3.2, 6), y: 1.6, c: 0x493c35 },
-    { g: new THREE.BoxGeometry(0.9, 0.08, 0.08), y: 2.95, px: 0.42, c: 0x493c35 },
-    { g: new THREE.BoxGeometry(0.42, 0.58, 0.42), y: 2.68, px: 0.82, c: 0xb33b30, e: 0xffa65b },
-  ], marketLamps);
-  roadPropMeshes(group, [
-    { g: cyl(0.1, 0.14, 5.6, 6), y: 2.8, c: 0x3f464e },
-    { g: cyl(0.06, 0.09, 3.0, 5).rotateZ(Math.PI / 2), y: 5.45, px: 1.4, c: 0x3f464e },
-    { g: new THREE.BoxGeometry(1.1, 0.42, 0.3), y: 5.0, px: 2.4, c: 0x22262c },       // 橫式三燈箱
-    { g: new THREE.BoxGeometry(0.22, 0.22, 0.08), y: 5.0, px: 2.06, pz: 0.16, c: 0x551512, e: 0xff3b30 },
-    { g: new THREE.BoxGeometry(0.22, 0.22, 0.08), y: 5.0, px: 2.4, pz: 0.16, c: 0x554512, e: 0xffb200 },
-    { g: new THREE.BoxGeometry(0.22, 0.22, 0.08), y: 5.0, px: 2.74, pz: 0.16, c: 0x124a22, e: 0x2ee06a },
-  ], lights);
-  const leafC = (ENV.seasons[season] || ENV.seasons.summer).foliage;   // 行道樹樹冠吃季節色
-  roadPropMeshes(group, [
-    { g: cyl(0.14, 0.2, 2.8, 5), y: 1.4, c: 0x6b4a2f },
-    { g: ico(1.6).scale(1, 0.85, 1), y: 3.7, c: leafC },
-    { g: ico(1.0).scale(1, 0.8, 1), y: 4.9, c: leafC },
-  ], roadTrees);
+  for (const [kind, items, height] of [['streetlamp', lamps, 5.4], ['marketlamp', marketLamps, 3.2], ['signal', lights, 5.6]]) {
+    if (!items.length) continue;
+    roadPropMeshes(group, furnitureSceneBatches(kind, height), items);
+  }
+  if (roadTrees.length) roadPropMeshes(group, [{
+    g: forestSceneGeometry('holmOak', 0x524f4144, [3.2, 5.7, 3.2], season), y: 0, c: 0xffffff,
+  }], roadTrees);
   // 橋墩 → 碰撞柱:機體不能穿過橋墩(視覺已存在,補上物理;柱距 24m,通行綽綽有餘)。
   // 柱頂 MUST 封在橋面「底緣」(y1 − 1.2,與 ceilingAt 的 deck 厚度一致)—— 封到橋面上表面的話,
   // 站在橋上的機體 myBot == 柱頂,_collide 的嚴格不等式不會跳過 → 過橋時每 24m 被隱形柱側推。
@@ -12066,9 +12090,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(gm2);
     }
     if (roofBushes.length) {
-      const bm2 = new THREE.InstancedMesh(ico(0.8), toonMat(0x4f8a44), roofBushes.length);
+      const bushGeo = forestSceneGeometry('scrubOak', 0x42555348, [1.6, 1.2, 1.6], season);
+      const bm2 = new THREE.InstancedMesh(bushGeo, toonMat(0xffffff, { vertexColors: true }), roofBushes.length);
       roofBushes.forEach((p, i) => {
-        P.set(p.x, p.y + 0.55 * p.s, p.z); S.set(p.s, p.s * 0.72, p.s);
+        P.set(p.x, p.y, p.z); S.set(p.s, p.s * 0.72, p.s);
         M.compose(P, new THREE.Quaternion(), S);
         bm2.setMatrixAt(i, M);
         const j1 = ((i * 2654435761) >>> 0) % 100 / 100;
@@ -12081,23 +12106,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(bm2);
     }
     if (roofTreeList.length) {
-      // 盆栽闊葉樹:盆 + 幹 + 冠(三個 InstancedMesh)
-      const potM = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.55, 0.7, 0.6, 7), bmat(0x8a6a52), roofTreeList.length);
-      const trkM = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.18, 1.8, 5), toonMat(0x6b4a30), roofTreeList.length);
-      const cnpM = new THREE.InstancedMesh(ico(1.1), toonMat(0x4f8a44), roofTreeList.length);
-      roofTreeList.forEach((p, i) => {
-        P.set(p.x, p.y + 0.3 * p.s, p.z); S.set(p.s, p.s, p.s);
-        M.compose(P, new THREE.Quaternion(), S); potM.setMatrixAt(i, M);
-        P.set(p.x, p.y + 1.4 * p.s, p.z);
-        M.compose(P, new THREE.Quaternion(), S); trkM.setMatrixAt(i, M);
-        P.set(p.x, p.y + 2.9 * p.s, p.z); S.set(p.s * 1.25, p.s * 0.95, p.s * 1.25);
-        M.compose(P, new THREE.Quaternion(), S); cnpM.setMatrixAt(i, M);
-      });
-      for (const m2 of [potM, trkM, cnpM]) {
-        m2.instanceMatrix.needsUpdate = true;
-        m2.frustumCulled = false;
-        group.add(m2);
-      }
+      roadPropMeshes(group, [
+        { g: new THREE.CylinderGeometry(.55, .7, .6, 12), y: .3, c: 0x8a6a52 },
+        { g: forestSceneGeometry('holmOak', 0x524f4f46, [2.5, 3.3, 2.5], season), y: .45, c: 0xffffff },
+      ], roofTreeList.map(p => ({ ...p, ry: 0 })));
     }
     if (cellMasts.length) {
       const mm2 = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.09, 0.16, 1, 6), toonMat(0xc4ccd2), cellMasts.length);
@@ -12206,8 +12218,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 屋頂廣告看板同上:牌面走 worldtext(buildWorldSigns ⑥),這裡只留落點。
     if (antennas.length) {
       const am = new THREE.InstancedMesh(
-        new THREE.CylinderGeometry(0.12, 0.28, 1, 6),
-        toonMat(0xc4ccd2, { emissive: new THREE.Color(0x8a1408), emissiveIntensity: night ? 1.2 : 0.15 }),
+        furnitureSceneGeometry('antenna', [1.4, 1, .5]).translate(0, -.5, 0),
+        toonMat(0xffffff, { vertexColors: true, emissive: new THREE.Color(0x8a1408), emissiveIntensity: night ? 1.2 : 0.15 }),
         antennas.length,
       );
       antennas.forEach((a, i) => {
@@ -12226,12 +12238,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 特殊地標(超尺度 + 碰撞柱)
   await onProgress?.(0.85, '放置地標建物…');
   for (const lm of landmarks) {
-    const g = new THREE.Group();
     const heritageSeed = (Math.imul(Math.round(lm.x*16),73856093) ^ Math.imul(Math.round(lm.z*16),19349663)) >>> 0;
     const landmarkRnd = (lm.localTower || lm.type.startsWith('heritage_') || Object.hasOwn(TOWER_BUILDINGS, lm.type)) ? mulberry32(heritageSeed) : rnd;
     // 第三參數 = 這一座地標該掛哪一國的旗(依落點的戰場半邊;makeNationPicker)。
     // 不掛旗的型別忽略它 ⇒ 逐位元同舊制。**rnd 仍是第二參數且照抽**(§2.3)。
-    LANDMARKS[lm.type](g, landmarkRnd, nation(lm.x, lm.z), {
+    const g = buildLandmark(lm.type, landmarkRnd, nation(lm.x, lm.z), {
       seed: heritageSeed, tags: lm.tags,
       latitude: center?.lat, longitude: center?.lng,
       ruinType: heritageRuinType(lm.tags),
@@ -12243,7 +12254,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     //(同一族病灶已在 `ty` 屋頂實測那段記過一次)⇒ 拿它當分母會讓那幾座地標的真正頂端
     // 越過上限,而碰撞柱卻乖乖收在上限之下 = 看得到的尖頂打不到。此時 g 尚未 scale/rotate
     // ⇒ 世界軸 = 局部軸,量到的就是 s = 1 的標稱高。
-    sc = objScaleFit(sc, new THREE.Box3().setFromObject(g).max.y, OVER.lm * 1.15);
+    const layoutBounds = g.userData.layoutBounds;
+    sc = objScaleFit(sc, layoutBounds ? layoutBounds.max[1] : new THREE.Box3().setFromObject(g).max.y, OVER.lm * 1.15);
     // 山丘頂容不下就縮(同巨岩);地標縮太小不像公共建築 → 下限 0.55×
     const lr0 = (LANDMARK_COL[lm.type]?.r || 10) * sc;
     const lfr = flatRadiusAt(terrain, lm.x, lm.z, lr0 + 6, 5);
@@ -12258,7 +12270,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     g.position.set(lm.x, gy + (lm.type === 'heritage_tourism' ? 0.02 : -0.3), lm.z);
     // 碰撞橫斷面用的**局部**包圍盒 MUST 在套朝向之前量(此時 g 未旋轉 ⇒ 世界軸 = 局部軸);
     // 量完才轉。轉完再 setFromObject 拿到的是旋轉後的世界 AABB,拿它當盒面就整個歪掉。
-    const lbb = new THREE.Box3().setFromObject(g);
+    g.updateMatrixWorld(true);
+    const lbb = layoutBounds
+      ? new THREE.Box3(new THREE.Vector3(...layoutBounds.min), new THREE.Vector3(...layoutBounds.max)).applyMatrix4(g.matrixWorld)
+      : new THREE.Box3().setFromObject(g);
     g.rotation.y = landmarkRnd() * Math.PI * 2;
     group.add(g);
     landmarkG.push({ g, x: lm.x, z: lm.z, r: (LANDMARK_COL[lm.type]?.r || 10) * sc });   // 碉堡淨空:整棟隱藏用

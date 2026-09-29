@@ -1,6 +1,7 @@
 // Exercise shipped scene damage on every destructible kind, including direct jumps and restored snapshots.
 import assert from 'node:assert/strict';
 import { mkdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { chromiumOrNull, chromePath, serve } from './pw.mjs';
 import { readSrc, grabMethod } from './audit_src.mjs';
 
@@ -15,6 +16,11 @@ try {
   if (process.env.THREE_MODULE) {
     const source = await readFile(process.env.THREE_MODULE, 'utf8');
     await page.route('**/three@0.160.0/build/three.module.js', (route) => route.fulfill({ contentType: 'text/javascript', body: source }));
+    await page.route('**/three@0.160.0/examples/jsm/**', async route => {
+      const suffix=route.request().url().split('/examples/jsm/')[1].replaceAll('/','_');
+      try { await route.fulfill({contentType:'text/javascript',body:await readFile(path.join(path.dirname(process.env.THREE_MODULE),suffix),'utf8')}); }
+      catch { await route.continue(); }
+    });
   }
   await page.route('**/main.js', (route) => route.fulfill({ contentType: 'text/javascript', body: '' }));
   await page.goto(server.url, { waitUntil: 'domcontentloaded' });
@@ -25,6 +31,7 @@ try {
     const { applySceneDamage, sceneDamageStage, sceneDamageProfile, sceneDamageBurst } = await import('/public/js/sceneDamage.js');
     const { makeDamageFx } = await import('/public/js/vfx.js');
     const { disposeTree, setCelSun, updateCelLight } = await import('/public/js/toon.js');
+    const { Pipeline } = await import('/public/js/postfx.js');
     setCelSun(new THREE.Vector3(0.4, 0.8, 0.4));
     const check = (value, message) => { if (!value) throw new Error(message); };
     for (const [hp, max, stage] of [[100,100,0],[50.01,100,0],[50,100,1],[25.01,100,1],[25,100,2],[0,100,3],[-1,100,3],[NaN,100,0],[1,0,0]]) {
@@ -118,7 +125,8 @@ try {
         camera.lookAt(0, ent.dimH*0.35, 0);
         camera.updateMatrixWorld();
         updateCelLight(camera);
-        renderer.render(scene, camera);
+        const pipeline = new Pipeline(renderer,scene,camera,{dof:false,wipe:false});
+        pipeline.render(); pipeline.dispose();
         const cell = document.createElement('div');
         cell.innerHTML = `<div>${kind} — ${[100,50,25,0][stage]}%</div>`;
         const img = document.createElement('img'); img.src = renderer.domElement.toDataURL(); cell.append(img); row.append(cell);

@@ -544,7 +544,8 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         // 增刪桶 MUST 同步這裡與 tri_budget families.building(名冊桶數是 deco 那三桶的除數;
         // mass 刻意不進那個除數,理由見 tri_budget 的 mass.justification)。
       ok(!/bldGeo\(/.test(bioC)
-        && ['chimney', 'tank', 'acbox'].every(kind => bioC.includes(kind + ': (n) => new THREE.InstancedMesh(new THREE.')),
+          && bioC.includes('chimney: (n) => new THREE.InstancedMesh(new THREE.')
+          && ['tank', 'acbox'].every(kind => bioC.includes(kind + ": (n) => new THREE.InstancedMesh(furnitureSceneGeometry('" + kind + "'")),
         '屋頂附件使用程序 primitive，舊 bldGeo 消費端已移除');
       // 兩個整棟量體桶只差**名冊與挑選規則**,幾何/材質/保險絲同一份實作 ⇒ 桶建構表
       // MUST NOT 長出第二支;`buildBldBucket.masslow` 一出現就是「兩桶的保險絲不一樣」。

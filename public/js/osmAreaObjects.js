@@ -2,9 +2,15 @@
 // 每種 generator 只有一列資料與一個幾何建構器；落點、holes、容量與同輪互撞皆由
 // osmAreas.js 的單一配置縫決定。此層只負責把已核准落點批次轉成 Three.js 幾何。
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeos } from './beacons.js';
 import { areaAreaM2, buildContainmentIndex, placeAreaCandidates } from './osmAreas.js';
 import { envMat } from './toon.js';
+import { compileSceneParts, fitSceneGeometry, forestSceneGeometry, geologySceneGeometry } from './scenePropModels.js';
+import { sceneFurnitureParts } from './sceneFurnitureParts.js';
+import { groundPlantParts } from './scenePlantParts.js';
+import { makeSceneVehicleParts } from './vehicleCatalog.js';
+import { environmentBuildingPlan } from './environmentParts.js';
+import { taggedBuildingFunction } from './buildingFunctions.js';
 
 const ROWS = Object.freeze({
   industrial: { shape: 'tank', radius: 4.0, minArea: 700, max: 2, color: 0x707a82, solid: true },
@@ -32,32 +38,24 @@ const ROWS = Object.freeze({
   power: { shape: 'transformer', radius: 3.2, minArea: 900, max: 3, color: 0x68767c, solid: true },
 });
 
-const box = (w, h, d, y = h / 2) => {
-  const g = new THREE.BoxGeometry(w, h, d); g.translate(0, y, 0); return g;
-};
-const cylinder = (r0, r1, h, n = 8, y = h / 2) => {
-  const g = new THREE.CylinderGeometry(r1, r0, h, n); g.translate(0, y, 0); return g;
-};
-
-const SHAPES = Object.freeze({
-  tank: () => [cylinder(3.2, 3.2, 5, 12)],
-  crop: () => [box(3.4, 0.7, 1.2, 0.35), box(3.4, 0.7, 1.2, 0.35)],
-  tree: () => [cylinder(0.5, 0.42, 4, 7), cylinder(2.4, 0.2, 5, 8, 6)],
-  bench: () => [box(3, 0.35, 0.75, 0.9), box(0.25, 0.9, 0.25, 0.45), box(0.25, 0.9, 0.25, 0.45)],
-  goal: () => [box(5, 0.18, 0.18, 2.4), box(0.18, 2.5, 0.18, 1.25), box(0.18, 2.5, 0.18, 1.25)],
-  car: () => [box(4.2, 1.2, 1.9, 0.7), box(2.1, 0.7, 1.7, 1.55)],
-  motorcycle: () => [cylinder(0.35, 0.35, 0.14, 8, 0.35), cylinder(0.35, 0.35, 0.14, 8, 0.35), box(1.3, 0.55, 0.45, 0.55), box(0.08, 0.08, 0.7, 0.85)],
-  solar: () => [box(2.5, 0.06, 1.4, 0.7), box(2.3, 0.35, 0.06, 0.18)],
-  facility: () => [box(8, 7, 7), box(3, 2, 3, 8)],
-  spire: () => [box(6, 5, 6), cylinder(3.2, 0, 6, 8, 8)],
-  marker: () => [box(0.7, 1.3, 0.35, 0.65)],
-  barrier: () => [box(4, 1.1, 0.8, 0.55)],
-  signal: () => [cylinder(0.18, 0.18, 4, 8), box(0.9, 1.1, 0.45, 3.8)],
-  buoy: () => [cylinder(0.7, 0.45, 1.3, 10, 0.65)],
-  reed: () => [cylinder(0.08, 0.04, 2.1, 5), cylinder(0.08, 0.04, 1.7, 5)],
-  rock: () => [cylinder(2.0, 1.1, 3.2, 7, 1.6)],
-  transformer: () => [box(4.5, 3.8, 3.2), cylinder(0.35, 0.35, 4.8, 8, 5.8)],
-});
+/** Shared content builders feed the existing area-placement and collision contracts. */
+export function osmAreaGeometry(kind, seed, radius, functionType = null) {
+  if (kind === 'tree') return forestSceneGeometry('holmOak', seed, [radius * 1.8, radius * 1.8, radius * 1.8]);
+  if (kind === 'rock') return geologySceneGeometry('granite', seed, [radius * 1.8, radius * 1.5, radius * 1.8]);
+  if (kind === 'car' || kind === 'motorcycle') return compileSceneParts(makeSceneVehicleParts(kind === 'car' ? 'sedan' : kind,
+    { paint: seed, fit: kind === 'car' ? { L: 4.2, W: 1.9, H: 1.9 } : { L: 2, W: .8, H: 1.4 } }));
+  if (kind === 'crop' || kind === 'reed') return fitSceneGeometry(compileSceneParts(groundPlantParts(kind, seed)),
+    [radius * 1.5, kind === 'crop' ? .85 : 2.1, radius * 1.5]);
+  if (kind === 'facility' || kind === 'spire') return fitSceneGeometry(compileSceneParts(
+    environmentBuildingPlan('house', [radius * 1.7, radius * 1.6, radius * 1.5], seed,
+      functionType || (kind === 'spire' ? 'worship' : 'civic')).parts), [radius * 1.7, radius * 1.6, radius * 1.5]);
+  const geometry = compileSceneParts(sceneFurnitureParts(kind));
+  geometry.computeBoundingBox();
+  const extent = geometry.boundingBox.getSize(new THREE.Vector3());
+  const scale = Math.min(1, radius * 2 / extent.x, radius * 2 / extent.z, Math.max(1, radius * 1.8) / extent.y);
+  geometry.scale(scale, scale, scale);
+  return geometry;
+}
 
 function translateGeos(geos, x, y, z, seed, slopeFit = false, heightAt = null) {
   const ry = ((seed * 0.61803398875) % 1) * Math.PI * 2;
@@ -129,9 +127,10 @@ export function buildOsmAreaObjects(group, areas = [], options = {}) {
       const isSolar = p.area?.tags?.['plant:source'] === 'solar' || p.area?.tags?.['generator:source'] === 'solar' || p.area?.tags?.power === 'solar';
       if (isSolar) shapeKey = 'solar';
     }
-    const make = SHAPES[shapeKey] || SHAPES[row.shape];
-    if (!make) continue;
-    const geos = make();
+    const seed = (Math.imul(Math.round(p.x * 16), 73856093) ^ Math.imul(Math.round(p.z * 16), 19349663)) >>> 0;
+    const functionType = taggedBuildingFunction(p.area.tags)?.type
+      || { campus: 'school', hospital: 'hospital', station: 'station', civic: 'civic', religious: 'worship' }[cls.generator];
+    const geos = [osmAreaGeometry(shapeKey, seed, row.radius, functionType)];
     const y = Number(options.heightAt?.(p.x, p.z)) || 0;
     // OSM 太陽能電廠順著地形高程鋪設，面向角度保持不變；其餘用地物件維持直立
     const ry = translateGeos(geos, p.x, y, p.z, index + String(p.sourceId).length, false, options.heightAt);
@@ -146,9 +145,9 @@ export function buildOsmAreaObjects(group, areas = [], options = {}) {
   }
   for (const [generator, batch] of batches) {
     if (!batch.geos.length) continue;
-    const geometry = batch.geos.length === 1 ? batch.geos[0] : mergeGeometries(batch.geos, false);
+    const geometry = batch.geos.length === 1 ? batch.geos[0] : mergeGeos(batch.geos, batch.geos.map(() => null));
     const material = options.materialOf?.(generator, batch.row)
-      || envMat(batch.row.color, { wash: 0.38, cool: 0.42 });
+      || envMat(0xffffff, { vertexColors: true, wash: 0.38, cool: 0.42, rim: .035 });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData.osmAreaBatch = generator; mesh.frustumCulled = false; group.add(mesh);
   }

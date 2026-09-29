@@ -23,6 +23,9 @@ import { partId, partJitter } from './xform.js';
 // ---- 載具 / 擺件型錄(唯一縫;該檔零 import、零 THREE ⇒ 離線稽核吃得到同一份)----
 import { makeSceneVehicleParts as makeVehicle } from './vehicleCatalog.js';
 import { mergeGeos } from './beacons.js';
+import { flameGeometry, smokeGeometry, brokenGroundGeometry } from './sceneDisasterGeometry.js';
+import { HAZARDS } from './data.js';
+import { addSceneGeometry, forestSceneGeometry, vesselSceneGeometry, furnitureSceneGeometry, scenePartGeometry, geologySceneGeometry } from './scenePropModels.js';
 
 // ---- 幾何速記 ----
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -87,29 +90,18 @@ const BUILDERS = {
   construction(g, r, rnd) {
     const n = 3 + Math.floor(rnd() * 3);
     for (let i = 0; i < n; i++) {
-      const a = rnd() * Math.PI * 2, d = r * (0.25 + rnd() * 0.6);
-      const seg = new THREE.Group();
-      const col = jitterColor(0xe8842c, rnd);
-      const panel = mesh(seg, box(3.2, 1.1, 0.18), col, 0, 1.0, 0);
-      panel.material.emissive = new THREE.Color(0x331803); panel.material.emissiveIntensity = 0.25;
-      mesh(seg, box(3.2, 0.22, 0.2), 0xf4f0e6, 0, 1.35, 0);
-      for (const s of [-1.4, 1.4]) mesh(seg, cyl(0.06, 0.06, 1.5), 0x8d949a, s, 0.75, 0);
-      seg.position.set(Math.cos(a) * d, 0, Math.sin(a) * d);
-      seg.rotation.y = rnd() * Math.PI;
-      g.add(seg);
+      const a = rnd() * Math.PI * 2, d = r * (.2 + rnd() * .4);
+      const barrier = addSceneGeometry(g, furnitureSceneGeometry('barrier'), 'construction-barrier');
+      barrier.position.set(Math.cos(a) * d, 0, Math.sin(a) * d);
+      barrier.rotation.y = a + Math.PI / 2;
     }
-    for (let i = 0; i < 2 + rnd() * 3; i++) {
-      const a = rnd() * Math.PI * 2, d = r * rnd() * 0.8;
-      const c = mesh(g, cone(0.28, 0.75, 8), 0xe8552c, Math.cos(a) * d, 0.38, Math.sin(a) * d);
-      c.material.emissive = new THREE.Color(0x2a0a02); c.material.emissiveIntensity = 0.3;
+    for (let i = 0; i < 4; i++) {
+      const a = rnd() * Math.PI * 2, d = r * (.35 + rnd() * .3);
+      const cone = addSceneGeometry(g, furnitureSceneGeometry('cone'), 'traffic-cone');
+      cone.position.set(Math.cos(a) * d, 0, Math.sin(a) * d);
     }
-    if (rnd() < 0.6) {   // 鷹架一角
-      const sc = new THREE.Group();
-      for (const [x, z] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) mesh(sc, cyl(0.08, 0.08, 3.4), 0xb8a25a, x, 1.7, z);
-      mesh(sc, box(2.4, 0.12, 2.4), 0x9c8648, 0, 3.4, 0);
-      sc.position.set((rnd() - 0.5) * r, 0, (rnd() - 0.5) * r);
-      g.add(sc);
-    }
+    const scaffold = addSceneGeometry(g, furnitureSceneGeometry('scaffold'), 'scaffold');
+    scaffold.position.set(-r * .2, 0, r * .2);
   },
 
   /** 車禍殘骸:2~3 台撞毀車輛(翻覆/斜插),烤漆隨機 */
@@ -188,18 +180,8 @@ const BUILDERS = {
 
   /** 擱淺船:鏽蝕船殼坐灘 + 艦橋 + 貨櫃(可被擊毀 → 短暫火災;全部件相接,無懸空) */
   ship(g, r, rnd) {
-    const hullC = jitterColor(0x5a3a2e, rnd);
-    mesh(g, box(24, 5, 9), hullC, 0, 2.5, 0);                        // 船殼(底坐灘)
-    const bow = mesh(g, cyl(3.5, 3.5, 5, 4), hullC, 11.5, 2.5, 0);   // 船艏(四稜柱轉 45° 接船殼)
-    bow.rotation.y = Math.PI / 4;
-    mesh(g, box(20, 0.5, 8), jitterColor(0x6a5a48, rnd), 0, 5.25, 0); // 主甲板(貼船殼頂)
-    mesh(g, box(5, 4, 7), jitterColor(0xd8dce0, rnd), -8, 7.5, 0);    // 艦橋(坐甲板)
-    mesh(g, cyl(0.9, 1.1, 3, 8), jitterColor(0x8a2a20, rnd), -8, 11, 0); // 煙囪(接艦橋頂)
-    const boxCs = [0x2e6da4, 0x3f7a3c, 0xb8642a];
-    for (let i = 0; i < 2; i++) {                                     // 貨櫃(坐甲板,互相緊靠)
-      mesh(g, box(6, 2.6, 2.5), jitterColor(boxCs[i % boxCs.length], rnd), -1 + i * 6.2, 6.8, 0);
-    }
-    mesh(g, cyl(0.12, 0.15, 6, 5), jitterColor(0x8d949a, rnd), 13, 8, 0); // 前桅(立於船艏頂)
+    addSceneGeometry(g, vesselSceneGeometry(Math.floor(rnd() * 0x100000000),
+      [r * 1.65, HAZARDS.ship.hgt, r * .6]), 'stranded-ship');
   },
 
   /** 火場:焦土 + 火舌(閃爍動畫)+ 濃煙柱 */
@@ -211,7 +193,7 @@ const BUILDERS = {
     for (let i = 0; i < n; i++) {
       const a = rnd() * Math.PI * 2, d = r * rnd() * 0.7;
       const h = 1.6 + rnd() * 2.6;
-      const f = mesh(g, cone(0.5 + rnd() * 0.5, h, 6),
+      const f = mesh(g, flameGeometry(0.5 + rnd() * 0.5, h),
         i % 3 === 0 ? 0xffd23c : 0xff7a1f, Math.cos(a) * d, h / 2, Math.sin(a) * d,
         { emissive: new THREE.Color(i % 3 === 0 ? 0xffaa00 : 0xff4400), emissiveIntensity: 1.6, transparent: true, opacity: 0.92 });
       f.userData.h0 = h;
@@ -219,7 +201,7 @@ const BUILDERS = {
       flames.push(f);
     }
     for (let i = 0; i < 3; i++) {
-      mesh(g, ico(0.9 + rnd() * 0.8), 0x2c2c30,
+      mesh(g, smokeGeometry(0.9 + rnd() * 0.8), 0x2c2c30,
         (rnd() - 0.5) * r, 3.4 + i * 1.7 + rnd(), (rnd() - 0.5) * r,
         { transparent: true, opacity: 0.55 });
     }
@@ -236,14 +218,14 @@ const BUILDERS = {
     for (let i = 0; i < n; i++) {
       const a = rnd() * Math.PI * 2, d = r * rnd() * 0.82;
       const h = 2.8 + rnd() * 5.2;   // 森林火焰更高
-      const f = mesh(g, cone(0.7 + rnd() * 0.8, h, 6),
+      const f = mesh(g, flameGeometry(0.7 + rnd() * 0.8, h),
         i % 3 === 0 ? 0xffd23c : 0xff6a1f, Math.cos(a) * d, h / 2, Math.sin(a) * d,
         { emissive: new THREE.Color(i % 3 === 0 ? 0xffaa00 : 0xff3300), emissiveIntensity: 1.8, transparent: true, opacity: 0.88 });
       f.userData.h0 = h; f.userData.ph = rnd() * Math.PI * 2;
       flames.push(f);
     }
     for (let i = 0; i < 4; i++) {   // 更厚的黑煙柱
-      mesh(g, ico(1.2 + rnd() * 1.2), 0x1c1c20,
+      mesh(g, smokeGeometry(1.2 + rnd() * 1.2), 0x1c1c20,
         (rnd() - 0.5) * r, 5.0 + i * 2.4 + rnd(), (rnd() - 0.5) * r,
         { transparent: true, opacity: 0.6 });
     }
@@ -259,14 +241,14 @@ const BUILDERS = {
     for (let i = 0; i < n; i++) {
       const a = rnd() * Math.PI * 2, d = r * (0.2 + rnd() * 0.75);
       const h = 0.6 + rnd() * 1.4;   // 草原火焰低矮
-      const f = mesh(g, cone(0.35 + rnd() * 0.45, h, 5),
+      const f = mesh(g, flameGeometry(0.35 + rnd() * 0.45, h),
         i % 4 === 0 ? 0xffe050 : 0xff8820, Math.cos(a) * d, h / 2, Math.sin(a) * d,
         { emissive: new THREE.Color(i % 4 === 0 ? 0xffcc00 : 0xff5500), emissiveIntensity: 1.5, transparent: true, opacity: 0.9 });
       f.userData.h0 = h; f.userData.ph = rnd() * Math.PI * 2;
       flames.push(f);
     }
     for (let i = 0; i < 2; i++) {   // 薄煙（草原火煙少）
-      mesh(g, ico(0.7 + rnd() * 0.6), 0x3a3840,
+      mesh(g, smokeGeometry(0.7 + rnd() * 0.6), 0x3a3840,
         (rnd() - 0.5) * r * 0.8, 2.0 + i * 1.4 + rnd(), (rnd() - 0.5) * r * 0.8,
         { transparent: true, opacity: 0.42 });
     }
@@ -288,14 +270,14 @@ const BUILDERS = {
     for (let i = 0; i < n; i++) {
       const a = rnd() * Math.PI * 2, d = r * rnd() * 0.75;
       const h = 2.2 + rnd() * 4.0;
-      const f = mesh(g, cone(0.6 + rnd() * 0.7, h, 7),
+      const f = mesh(g, flameGeometry(0.6 + rnd() * 0.7, h),
         i % 2 === 0 ? 0xff4a10 : 0xffa020, Math.cos(a) * d, h / 2, Math.sin(a) * d,
         { emissive: new THREE.Color(i % 2 === 0 ? 0xff2200 : 0xff8800), emissiveIntensity: 2.0, transparent: true, opacity: 0.94 });
       f.userData.h0 = h; f.userData.ph = rnd() * Math.PI * 2;
       flames.push(f);
     }
     for (let i = 0; i < 5; i++) {   // 濃厚黑煙（工廠特色）
-      mesh(g, ico(1.4 + rnd() * 1.6), 0x111115,
+      mesh(g, smokeGeometry(1.4 + rnd() * 1.6), 0x111115,
         (rnd() - 0.5) * r * 0.9, 4.0 + i * 3.0 + rnd(), (rnd() - 0.5) * r * 0.9,
         { transparent: true, opacity: 0.7 });
     }
@@ -304,7 +286,7 @@ const BUILDERS = {
 
   /** 路面塌陷:黑洞 + 傾斜裂板 */
   sinkhole(g, r, rnd) {
-    mesh(g, cyl(r * 0.8, r * 0.55, 1.6, 10), 0x0c0e10, 0, -0.75, 0);
+    mesh(g, brokenGroundGeometry(r, 1.6), 0x262726, 0, .04, 0);
     const rim = 5 + Math.floor(rnd() * 4);
     for (let i = 0; i < rim; i++) {
       const a = (i / rim) * Math.PI * 2 + rnd() * 0.5;
@@ -320,7 +302,7 @@ const BUILDERS = {
 
   /** 坑洞:路面破損的淺坑 + 底部積水 + 邊緣碎裂柏油塊(減速,不阻擋) */
   pothole(g, r, rnd) {
-    mesh(g, cyl(r * 0.75, r * 0.5, 0.5, 12), 0x14161a, 0, -0.22, 0);   // 淺坑
+    mesh(g, brokenGroundGeometry(r * .85, .45), 0x24282a, 0, .04, 0);   // 淺坑
     const water = mesh(g, cyl(r * 0.55, r * 0.55, 0.1, 12), 0x243033, 0, -0.05, 0,
       { transparent: true, opacity: 0.7 });
     water.userData.water = true;                                       // 底部積水(反光/漣漪)
@@ -335,7 +317,7 @@ const BUILDERS = {
 
   /** 淹水區:半透明水面 + 漣漪圈 + 露出水面的雜物 */
   flood(g, r, rnd) {
-    const water = mesh(g, cyl(r, r, 0.22, 18), 0x2e6f95, 0, 0.32, 0,
+    const water = mesh(g, brokenGroundGeometry(r, .1), 0x2e6f95, 0, .42, 0,
       { transparent: true, opacity: 0.72, emissive: new THREE.Color(0x0a2433), emissiveIntensity: 0.4 });
     water.userData.water = true;
     for (let i = 0; i < 3; i++) {
@@ -345,6 +327,9 @@ const BUILDERS = {
       );
       ring.rotation.x = -Math.PI / 2;
       ring.position.y = 0.46;
+      ring.name = 'water-ripple';
+      // Local-Y jitter would tilt the already horizontal ring out of the water.
+      ring.userData.sceneAssembly = true;
       g.add(ring);
     }
     for (let i = 0; i < 2 + rnd() * 3; i++) {   // 水面露頭的箱子/輪胎
@@ -359,251 +344,43 @@ const BUILDERS = {
 
   /** 坍方 / 土石流:泥石流舌狀堆 + 大石 */
   landslide(g, r, rnd) {
-    const dirA = rnd() * Math.PI * 2;
-    for (let i = 0; i < 8 + rnd() * 5; i++) {
-      const t = rnd();
-      const d = r * (t * 1.2 - 0.2);
-      const spread = r * 0.5 * (1 - t * 0.5);
-      // 新崩的土石不長苔;鑿刻碎面 + 泥/岩兩色系交錯 = 手繪土石流
-      // 落石軸心高度綁自身尺寸(ico 最低頂點 = 0.851r × scale.y):寫成固定 0.4~1.1
-      // 會讓小石塊整顆浮在土石流上方
-      const size = 0.9 + rnd() * 1.6;
-      const rock = rockMesh(g, size, rnd, jitterColor(rnd() < 0.6 ? 0x76604a : 0x7d7f82, rnd, 0.02, 0.12),
-        Math.cos(dirA) * d + (rnd() - 0.5) * spread,
-        size * (0.28 + rnd() * 0.14),
-        Math.sin(dirA) * d + (rnd() - 0.5) * spread, null);
-      rock.scale.y = 0.55 + rnd() * 0.3;
-      rock.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
-    }
-    for (let i = 0; i < 3; i++) {   // 被沖倒的樹(軸心 ≈ 幹半徑 → 橫躺觸地,不浮在土石上方)
-      const log = mesh(g, cyl(0.14, 0.2, 3 + rnd() * 2), 0x5c452e,
-        (rnd() - 0.5) * r * 1.4, 0.18, (rnd() - 0.5) * r * 1.4);
-      log.rotation.set(Math.PI / 2 + (rnd() - 0.5) * 0.4, rnd() * 3, 0);
-    }
+    addSceneGeometry(g, geologySceneGeometry('moraine', Math.floor(rnd() * 0x100000000),
+      [r * 1.8, 6, r * 1.35]), 'landslide');
   },
 
   /** 落石:鑿刻巨石群(可擊毀開路)— 硬邊碎面 + 頂部苔蘚投影 */
   rockfall(g, r, rnd) {
-    const moss = { color: 0x63834a, amount: 0.75 };
-    for (let i = 0; i < 4 + rnd() * 3; i++) {
-      const a = rnd() * Math.PI * 2, d = r * rnd() * 0.75;
-      const size = 0.8 + rnd() * (i === 0 ? 2.4 : 1.4);
-      const rock = rockMesh(g, size, rnd, jitterColor(0x83878b, rnd, 0.01, 0.14),
-        Math.cos(a) * d, size * 0.55, Math.sin(a) * d, moss);
-      rock.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
-      rock.scale.set(1, 0.75 + rnd() * 0.4, 0.85 + rnd() * 0.3);
-    }
+    addSceneGeometry(g, geologySceneGeometry('tor', Math.floor(rnd() * 0x100000000),
+      [r * 1.8, 6, r * 1.4]), 'rockfall');
   },
 
   /** 倒木:橫躺樹幹 + 翹起的根盤 + 殘枝 */
   fallentree(g, r, rnd) {
-    const dirA = rnd() * Math.PI * 2;
-    const len = r * 1.7;
-    const trunk = mesh(g, cyl(0.35 + rnd() * 0.2, 0.55 + rnd() * 0.2, len, 7), jitterColor(0x6b4a2f, rnd), 0, 0.6, 0,
-      { moss: { color: 0x6a8a4c, amount: 0.7 } });   // 橫躺樹幹朝天側著苔(投影自動貼上緣)
-    trunk.rotation.set(Math.PI / 2, 0, dirA);
-    // 幹軸單一縫:rotation(π/2, 0, dirA) 的局部 +y 在世界是 (−sin dirA, 0, cos dirA)
-    // (three 的 Euler 'XYZ' = Rx·Ry·Rz)。根盤/殘枝/枯葉團一律沿這條軸擺,MUST NOT 各自
-    // 手寫 cos(dirA+π/2) / sin(dirA−π/2) —— 後者的 z 分量正負相反(等於沿鏡射軸擺),
-    // 只有 cos dirA ≈ 0 時才碰巧對得上,其餘角度整組零件飄在樹幹旁邊
-    // (2026-07-27「樹幹與樹根沒接好」同一類病灶,見 A26)。
-    const along = (t) => [-Math.sin(dirA) * len * t, Math.cos(dirA) * len * t];
-    const [rootX, rootZ] = along(-0.5);              // 根端 = 幹軸的 −y 端(粗的那頭)
-    const root = mesh(g, cyl(1.3, 0.4, 0.7, 8), 0x54412e, rootX, 0.9, rootZ);
-    root.rotation.set(Math.PI / 2, 0, dirA);
-    for (let i = 0; i < 3 + rnd() * 3; i++) {
-      const [bx, bz] = along(rnd() - 0.5);
-      // 殘枝中心必須落在幹身之內(幹軸 y = 0.6、半徑 0.35~0.75)才不會有半數枝條
-      // 隨機轉出去後整根飄在樹幹上方
-      const br = mesh(g, cyl(0.06, 0.1, 1 + rnd() * 1.4, 5), 0x5c452e, bx, 0.5 + rnd() * 0.4, bz);
-      br.rotation.set(rnd() * 2, rnd() * 3, rnd() * 2);
-    }
-    if (rnd() < 0.7) {   // 殘留枯葉團
-      const [lx, lz] = along(rnd() * 0.4 + 0.1);
-      mesh(g, ico(1.2 + rnd() * 0.8), 0x9c8a3c, lx, 1.05, lz).scale.y = 0.7;   // 團心壓在幹身內
-    }
+    addSceneGeometry(g, forestSceneGeometry('fallenLog', Math.floor(rnd() * 0x100000000),
+      [r * 1.8, 3.2, r * .7]), 'fallen-tree');
   },
 
   /** 神木:超尺度巨樹 — 板根裙 + 樹瘤 + 多層樹冠 + 注連繩(遮視線的立體掩體) */
   sacredtree(g, r, rnd) {
-    const H = 20 + rnd() * 8;                       // 主幹高(含 sc 可達 ~38m,遠超現實同座標樹木)
-    const tR = r * 0.42;                            // 主幹半徑(粗壯:視覺佔地貼近碰撞半徑 r)
-    // 主幹收分的單一縫:樹皮上的一切(板根/樹瘤/氣根/注連繩/紙垂)都以「該高度的幹半徑」
-    // 為錨。MUST NOT 拿基部 tR 當通用半徑 —— 幹身往上收 38%,用基部半徑掛件會越掛越浮。
-    const trunkR = (y) => tR * (1 - 0.38 * Math.min(1, Math.max(0, y / H)));
-    const bark = jitterColor(0x5e4630, rnd, 0.02, 0.08);
-    const mossy = { color: 0x64854a, amount: 0.6 };  // 老樹陰面著苔(朝上面投影)
-    const trunk = mesh(g, cyl(tR * 0.62, tR, H, 9), bark, 0, H / 2, 0);
-    trunk.rotation.y = rnd() * Math.PI;
-    // 板根裙:環繞主幹的放射狀鰭板(內緣埋進幹身、外緣 ≈ 碰撞半徑 r)。
-    // 徑向 = `rotation.y = -a`;`-a + π/2` 是**切向** —— 鰭板會變成圍著樹幹的一圈柵欄,
-    // 與幹身之間整圈開縫(2026-07-27「神木樹幹與樹根沒接好」的成因,見 A26)。
-    const fins = 5 + Math.floor(rnd() * 3);
-    for (let i = 0; i < fins; i++) {
-      const a = (i / fins) * Math.PI * 2 + rnd() * 0.5;
-      const fin = mesh(g, box(tR * 2.0, 3.2 + rnd() * 2.2, 0.55), new THREE.Color(bark).multiplyScalar(0.9),
-        Math.cos(a) * tR * 1.4, 1.6, Math.sin(a) * tR * 1.4, { moss: mossy });
-      fin.rotation.y = -a;
-      fin.rotation.z = (rnd() - 0.5) * 0.15;
-    }
-    // 根丘:板根外圈的隆起土丘,把「不可通行」的地面範圍畫出來
-    for (let i = 0; i < 4; i++) {
-      const a = rnd() * Math.PI * 2;
-      const mound = mesh(g, ico(0.9 + rnd() * 0.8), new THREE.Color(bark).offsetHSL(0.02, 0, -0.06),
-        Math.cos(a) * r * 0.7, 0.35, Math.sin(a) * r * 0.7, { moss: mossy });
-      mound.scale.y = 0.45;
-      mound.rotation.y = rnd() * 3;
-    }
-    // 樹瘤 + 垂落氣根(錨半徑取該高度的幹半徑:樹瘤半埋、氣根上端貼皮往下沒入幹身)
-    for (let i = 0; i < 4; i++) {
-      const a = rnd() * Math.PI * 2, y = H * (0.15 + rnd() * 0.5);
-      const kR = trunkR(y);
-      mesh(g, ico(0.5 + rnd() * 0.6), new THREE.Color(bark).offsetHSL(0, 0, -0.04),
-        Math.cos(a) * kR * 0.85, y, Math.sin(a) * kR * 0.85);
-      if (rnd() < 0.6) {
-        const vine = mesh(g, cyl(0.05, 0.09, y * 0.7, 5), 0x4e5a38,
-          Math.cos(a) * kR, y - y * 0.35, Math.sin(a) * kR);
-        vine.rotation.z = (rnd() - 0.5) * 0.2;
-      }
-    }
-    // 注連繩:神木的識別記號(繩環壓進樹皮 + 紙垂綁在繩上)
-    // 繩環半徑取「該高度幹半徑的邊心距」(九邊形幹身的平面 = 0.94R):繩身在稜線處沒入、
-    // 在平面處露出 = 勒進樹皮的繩子;紙垂則掛在繩心半徑上,與繩身相交才不會飄在旁邊。
-    const ropeY = H * 0.22, ropeR = trunkR(ropeY) * 0.94;
-    const rope = mesh(g, new THREE.TorusGeometry(ropeR, 0.14, 5, 12), 0xd8c894, 0, ropeY, 0);
-    rope.rotation.x = Math.PI / 2;
-    for (let i = 0; i < 3; i++) {
-      const a = (i / 3) * Math.PI * 2 + 0.4;
-      const shide = mesh(g, box(0.22, 0.7, 0.05), 0xf4f0e6,
-        Math.cos(a) * ropeR, ropeY - 0.3, Math.sin(a) * ropeR);
-      shide.rotation.y = -a + Math.PI / 2;   // 紙面朝外 = 長邊沿切向(與板根的徑向剛好差 90°)
-    }
-    // 多層樹冠:由大到小疊三~四層(壓扁 ico,每層色相微差 → 手繪層次)
-    const layers = 3 + (rnd() < 0.5 ? 1 : 0);
-    const canopies = [];
-    for (let i = 0; i < layers; i++) {
-      const t = i / layers;
-      const cr = r * (1.35 - t * 0.75);
-      const canopy = mesh(g, ico(cr), jitterColor(0x3e7a36, rnd, 0.05, 0.1),
-        (rnd() - 0.5) * r * 0.35, H * (0.82 + t * 0.28), (rnd() - 0.5) * r * 0.35);
-      canopy.scale.y = 0.55 + rnd() * 0.15;
-      canopy.rotation.y = rnd() * Math.PI;
-      canopies.push(canopy);
-    }
-    // 樹冠法線球化(botw_plan Task 3.2):所有層的法線一律改成
-    // 「從樹冠團中心向外」— 整團樹冠像一朵實心雲,cel 明暗帶橫跨
-    // 整個冠層,而不是每顆 ico 各自為政的破碎光影
-    const cCen = new THREE.Vector3(0, H * 0.95, 0);
-    const q = new THREE.Quaternion(), qi = new THREE.Quaternion();
-    const cv = new THREE.Vector3();
-    for (const cm of canopies) {
-      q.setFromEuler(cm.rotation);
-      qi.copy(q).invert();
-      const p = cm.geometry.attributes.position, n = cm.geometry.attributes.normal;
-      for (let i = 0; i < p.count; i++) {
-        cv.fromBufferAttribute(p, i).multiply(cm.scale).applyQuaternion(q)
-          .add(cm.position).sub(cCen).normalize().applyQuaternion(qi);
-        n.setXYZ(i, cv.x, cv.y, cv.z);
-      }
-      n.needsUpdate = true;
-    }
+    addSceneGeometry(g, forestSceneGeometry('banyan', Math.floor(rnd() * 0x100000000),
+      [r * 2, HAZARDS.sacredtree.hgt, r * 2]), 'sacred-tree');
   },
 
   /** 巨石:比現實高大的獨立巨岩 — 鑿刻主碑岩 + 倚靠斜岩 + 苔蘚投影 + 碎石裙 */
   boulder(g, r, rnd) {
-    const H = 9 + rnd() * 5;                        // 主岩高(含 sc 可達 ~19m)
-    const rockC = jitterColor(rnd() < 0.5 ? 0x7d8288 : 0x8a8274, rnd, 0.01, 0.1);
-    const moss = { color: 0x5e7a44, amount: 0.9 };  // 世界 Y 軸投影:朝上岩面自動長苔(參考圖 cliff-rocks)
-    const main = rockMesh(g, r * 0.62, rnd, rockC, 0, H * 0.42, 0, moss);
-    main.scale.set(1, H / (r * 0.62) * 0.5, 0.8 + rnd() * 0.3);   // 拉高成碑狀
-    main.rotation.y = rnd() * Math.PI;
-    // 倚靠的斜岩(兩塊,構成可鑽的視覺縫隙感)
-    for (let i = 0; i < 2; i++) {
-      const a = rnd() * Math.PI * 2;
-      const s = r * (0.3 + rnd() * 0.2);
-      const lean = rockMesh(g, s, rnd, new THREE.Color(rockC).offsetHSL(0, 0, (rnd() - 0.5) * 0.08),
-        Math.cos(a) * r * 0.65, s * (0.9 + rnd() * 0.6), Math.sin(a) * r * 0.65, moss);
-      lean.scale.y = 1.4 + rnd() * 0.8;
-      lean.rotation.set((rnd() - 0.5) * 0.7, rnd() * 3, (rnd() - 0.5) * 0.7);
-    }
-    // 岩面色帶(沉積紋;苔蘚改由投影著生,不再用貼片球)
-    const band = mesh(g, cyl(r * 0.55, r * 0.58, 0.8, 9), new THREE.Color(rockC).multiplyScalar(0.82),
-      0, H * (0.3 + rnd() * 0.25), 0);
-    band.rotation.z = (rnd() - 0.5) * 0.2;
-    // 碎石裙
-    for (let i = 0; i < 5 + rnd() * 4; i++) {
-      const a = rnd() * Math.PI * 2, d = r * (0.6 + rnd() * 0.5);
-      const s = 0.5 + rnd() * 1.1;
-      const rk = rockMesh(g, s, rnd, new THREE.Color(rockC).offsetHSL(0, 0, (rnd() - 0.5) * 0.1),
-        Math.cos(a) * d, s * 0.5, Math.sin(a) * d, rnd() < 0.5 ? moss : null);
-      rk.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
-      rk.scale.y = 0.6 + rnd() * 0.4;
-    }
+    addSceneGeometry(g, geologySceneGeometry('granite', Math.floor(rnd() * 0x100000000),
+      [r * 1.8, HAZARDS.boulder.hgt, r * 1.4]), 'boulder');
   },
 
   /** 匿蹤防空陣地:迷彩偽裝網 + 飛彈發射架 + 沙包圈 */
   aasite(g, r, rnd) {
-    const R = 5.5;
-    // 沙包圈:長邊沿環的切向(`rotation.y = -a + π/2`;寫成 `a` 會是鏡射角 —— 繞一圈
-    // 在徑向與切向之間交錯)。第二層壓在下層那袋正上方,MUST NOT 用 y 交錯堆疊
-    // (舊版 `0.25 + (i%2)*0.4` 讓半數沙包整袋浮空 0.4m)。
-    const n = 10;
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2;
-      const bag = mesh(g, box(1.1, 0.5, 0.6), jitterColor(0x9a8c62, rnd, 0.01, 0.08),
-        Math.cos(a) * R * 0.85, 0.25, Math.sin(a) * R * 0.85);
-      bag.rotation.y = -a + Math.PI / 2;
-      if (i % 3 === 0) {
-        const up = mesh(g, box(1.0, 0.46, 0.56), jitterColor(0x9a8c62, rnd, 0.01, 0.08),
-          Math.cos(a) * R * 0.85, 0.71, Math.sin(a) * R * 0.85);
-        up.rotation.y = -a + Math.PI / 2 + 0.25;
-      }
-    }
-    // 發射架:斜置飛彈管 ×3。基座貼地(y = 半高);管與彈頭沿同一條傾倒軸
-    // u = (0, cos TILT, sin TILT) 推算 —— 管尾正好落進基座內、彈頭同軸疊在管口,
-    // MUST NOT 手寫兩組座標(舊版彈頭偏離管軸 0.4m、管尾懸在基座邊緣外)。
-    const rack = new THREE.Group();
-    mesh(rack, box(2.4, 0.5, 2.0), 0x4a523e, 0, 0.25, 0);
-    const TILT = -0.9, uy = Math.cos(TILT), uz = Math.sin(TILT);
-    const cy = 0.25 + 1.7 * uy, cz = 0.6 + 1.7 * uz;      // 管心:管尾埋在基座裡(y 0.25 / z 0.6)
-    for (let i = -1; i <= 1; i++) {
-      const tube = mesh(rack, cyl(0.22, 0.22, 3.4, 8), 0x39412f, i * 0.6, cy, cz);
-      tube.rotation.x = TILT;
-      const tip = mesh(rack, cone(0.22, 0.5, 8), 0x8f9a86,
-        i * 0.6, cy + 1.89 * uy, cz + 1.89 * uz);         // 1.7 + 0.25 − 0.06:錐底埋進管口
-      tip.rotation.x = TILT;
-    }
-    rack.rotation.y = rnd() * Math.PI * 2;
-    g.add(rack);
-    // 偽裝網:半透明迷彩帳(低伏,難遠距辨識)。下緣落地、上緣罩住發射架 ——
-    // MUST NOT 做成上寬下窄的漏斗(舊版整頂浮在半空 1.7m,四周全是縫)。
-    const NET_H = 3.0, NET_LO = R * 1.05, NET_HI = R * 0.42;
-    const net = mesh(g, cyl(NET_HI, NET_LO, NET_H, 9), jitterColor(0x5d6b46, rnd, 0.04, 0.08),
-      0, NET_H / 2, 0, { transparent: true, opacity: 0.85 });
-    for (let i = 0; i < 6; i++) {   // 網上的偽裝色塊(半徑隨帳面收分,貼在網皮上)
-      const a = rnd() * Math.PI * 2, hy = 0.5 + rnd() * 1.8;
-      const rr = NET_LO + (NET_HI - NET_LO) * (hy / NET_H);   // 圓心落在網皮上 = 色塊跨過網面
-      mesh(g, ico(0.55 + rnd() * 0.4), rnd() < 0.5 ? 0x6f7d50 : 0x8a7a4e,
-        Math.cos(a) * rr, hy, Math.sin(a) * rr).scale.y = 0.4;
-    }
+    addSceneGeometry(g, furnitureSceneGeometry('aasite'), 'air-defence-site');
   },
 
   /** 偵察中繼站:格架天線塔 + 碟形天線 + 發光信標(佔用 3 秒 → 全隊限時無霧視野) */
   relay(g, r, rnd) {
-    mesh(g, cyl(2.4, 2.8, 0.7, 8), 0x4a5158, 0, 0.35, 0);                 // 基座
-    mesh(g, cyl(0.28, 0.42, 7.5, 6), 0x7a848c, 0, 4.4, 0);                // 天線塔
-    for (let i = 0; i < 3; i++) {                                          // 斜撐:上端頂住塔身
-      const a = (i / 3) * Math.PI * 2 + rnd();
-      const leg = mesh(g, cyl(0.12, 0.12, 4.2, 5), 0x606a72,
-        Math.cos(a) * 1.5, 2.0, Math.sin(a) * 1.5);
-      // 傾角符號決定上端往哪倒:(−sin a, 0, +cos a) = 上端收向軸心(斜撐該有的樣子);
-      // 寫成 (+sin a, 0, −cos a) 上端會朝外開,頂端離塔身 2m 全懸空
-      leg.rotation.set(-Math.sin(a) * 0.5, 0, Math.cos(a) * 0.5);
-    }
-    const dish = mesh(g, cone(1.5, 0.9, 10), 0xb8c4cc, 0, 7.2, 0);         // 碟形天線
-    dish.rotation.x = -1.1;
-    dish.rotation.y = rnd() * Math.PI * 2;
-    mesh(g, ico(0.4), 0x66ffe0, 0, 8.4, 0,                                 // 信標(可佔用提示)
+    addSceneGeometry(g, furnitureSceneGeometry('relay'), 'relay-station');
+    mesh(g, cyl(.18, .18, .25, 12), 0x66ffe0, 0, 8.04, 0,
       { emissive: new THREE.Color(0x1f8a70), emissiveIntensity: 1.6 });
   },
 };
@@ -619,8 +396,27 @@ const BUILDERS = {
 // MUST NOT 憑感覺調大。
 const PART_JIT = 0.06;
 const _jbox = new THREE.Box3();
+function fitSceneAssemblies(group, radius) {
+  const assemblies=group.children.filter(mesh=>mesh.userData.sceneAssembly), point=new THREE.Vector3();
+  let extent=0;
+  for(const mesh of assemblies) {
+    mesh.updateMatrix();
+    const positions=mesh.geometry.attributes.position;
+    for(let i=0;i<positions.count;i++) {
+      point.fromBufferAttribute(positions,i).applyMatrix4(mesh.matrix);
+      extent=Math.max(extent,Math.hypot(point.x,point.z));
+    }
+  }
+  if(extent<=radius)return;
+  const scale=radius/extent;
+  for(const mesh of assemblies) {
+    mesh.scale.x*=scale;mesh.scale.z*=scale;
+    mesh.position.x*=scale;mesh.position.z*=scale;
+  }
+}
 function jitterParts(g, dj, r) {
   for (const o of g.children) {
+    if (o.userData.sceneAssembly) continue;
     const { jr, spin } = partJitter(
       partId(o.position.y, o.position.x, o.position.z), dj, PART_JIT,
       o.position.x === 0 && o.position.z === 0,
@@ -648,10 +444,11 @@ function batchHazardParts(g) {
   g.updateMatrixWorld(true);
   const buckets = new Map();
   g.traverse((o) => {
-    if (!o.isMesh || o.material.transparent || o.userData.outlineGeo || Object.keys(o.userData).length) return;
+    if (!o.isMesh || o.material.transparent || o.userData.outlineGeo
+      || Object.keys(o.userData).some(key => key !== 'sceneAssembly')) return;
     const m = o.material;
     const key = [m.type, m.color?.getHex(), m.emissive?.getHex(), m.emissiveIntensity,
-      m.opacity, m.side, JSON.stringify(m.userData.celOpts || {})].join('|');
+      m.opacity, m.side, m.vertexColors, JSON.stringify(m.userData.celOpts || {})].join('|');
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key).push(o);
   });
@@ -659,7 +456,7 @@ function batchHazardParts(g) {
     if (meshes.length < 2) continue;
     const keep = meshes[0].material;
     const geos = meshes.map((o) => o.geometry.clone().applyMatrix4(o.matrixWorld));
-    const merged = new THREE.Mesh(mergeGeos(geos), keep);
+    const merged = new THREE.Mesh(mergeGeos(geos, keep.vertexColors ? geos.map(() => null) : null), keep);
     for (const o of meshes) {
       o.parent.remove(o);
       o.geometry.dispose();
@@ -679,6 +476,7 @@ export function buildHazard(kind, seed, r = 8) {
   const g = new THREE.Group();
   const rnd = mulberry32((seed * 2654435761) >>> 0);
   (BUILDERS[kind] || BUILDERS.rockfall)(g, r, rnd);
+  fitSceneAssemblies(g, r);
   // 零件級細節抖動(P2-B;2026-08-03):BUILDERS 本來就逐顆抽尺寸/數量/朝向,但**同一顆裡的
   // 各個零件**是逐位元一樣的比例 —— 兩顆落石的每一塊石頭都同一副長寬比。dj 由 seed 推
   // (確定性:全房同一顆障礙長得一樣,§2.3),規則整組沿用植被那一份縫(xform.js)。
@@ -700,7 +498,7 @@ export function buildMineBump(rgb) {
   const color = rgb
     ? new THREE.Color(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255).offsetHSL(0, 0, 0.03)
     : new THREE.Color(0x5a5f52);
-  const m = new THREE.Mesh(ico(0.55), toonMat(color, { transparent: true, opacity: 0 }));
+  const m = new THREE.Mesh(scenePartGeometry({ g: ['lathe', [[0,0],[.42,0],[.5,.12],[.38,.4],[.16,.49],[0,.49]], 16] }), toonMat(color, { transparent: true, opacity: 0 }));
   m.scale.y = 0.18;   // 極輕微突起
   m.visible = false;
   return m;
@@ -710,21 +508,14 @@ export function buildMineBump(rgb) {
  *  game.js 逐幀旋轉+浮動 */
 export function buildLoot(isAmmo, isAffix) {
   const g = new THREE.Group();
-  if (isAffix) {
-    mesh(g, ico(0.9), 0x9a5ce0, 0, 1.1, 0,
-      { emissive: new THREE.Color(0x4a1a8a), emissiveIntensity: 1.1 });
-    mesh(g, box(1.3, 0.2, 1.3), 0x5a3a8a, 0, 0.4, 0);
-  } else if (isAmmo) {
-    mesh(g, box(1.3, 0.8, 0.9), 0x4c7a3c, 0, 1.0, 0,
-      { emissive: new THREE.Color(0x1c3a12), emissiveIntensity: 0.7 });
-    mesh(g, box(1.4, 0.16, 1.0), 0x2f5226, 0, 1.45, 0);
-    const b = mesh(g, cyl(0.1, 0.1, 0.5, 6), 0xd8c14a, 0.3, 1.62, 0);
-    b.rotation.z = 0.4;
-  } else {
-    mesh(g, box(1.1, 0.9, 1.1), 0xd8b04a, 0, 1.0, 0,
-      { emissive: new THREE.Color(0x8a5c10), emissiveIntensity: 0.8 });
-    mesh(g, box(1.2, 0.18, 0.3), 0x8a6a1a, 0, 1.0, 0);
-    mesh(g, box(0.3, 0.18, 1.2), 0x8a6a1a, 0, 1.0, 0);
+  const body = addSceneGeometry(g, furnitureSceneGeometry('crate'), 'supply-case');
+  body.position.y = .4;
+  body.material.color.setHex(isAffix ? 0xb897dd : isAmmo ? 0xb8d39e : 0xf3d899);
+  if (isAffix) mesh(g, ico(.45), 0xb47bdf, 0, 1.95, 0,
+    { emissive: new THREE.Color(0x632c9d), emissiveIntensity: 1.1 });
+  else if (isAmmo) for(const x of [-.22,0,.22]) {
+    mesh(g, cyl(.065,.065,.35,8), 0xc7ac62, x,1.86,0);
+    mesh(g, cone(.065,.13,8), 0xe0c18a, x,2.09,0);
   }
   const halo = new THREE.Mesh(
     new THREE.RingGeometry(1.0, 1.3, 18),
@@ -752,10 +543,7 @@ export function buildAirdrop(sizeKey = 'S') {
   // 木箱(bob 動畫的主體;game.js 以 userData.crate 驅動起伏)—— 2026-07-17 加大更醒目
   const crate = new THREE.Group();
   const s = 1.75 * sc;
-  mesh(crate, box(s, s * 0.85, s), 0x5a6b3a, 0, s * 0.5, 0,
-    { emissive: new THREE.Color(0x232b16), emissiveIntensity: 0.55 });
-  mesh(crate, box(s * 1.05, s * 0.16, s * 0.28), tone, 0, s * 0.5, 0);   // 打包束帶(稀有色)
-  mesh(crate, box(s * 0.28, s * 0.16, s * 1.05), tone, 0, s * 0.5, 0);
+  addSceneGeometry(crate, furnitureSceneGeometry('crate', [s, s * .93, s]), 'airdrop-case');
   // 頂面補給十字
   mesh(crate, box(s * 0.5, s * 0.08, s * 0.14), 0xe8ede4, 0, s * 0.94, 0);
   mesh(crate, box(s * 0.14, s * 0.08, s * 0.5), 0xe8ede4, 0, s * 0.94, 0);
@@ -765,7 +553,7 @@ export function buildAirdrop(sizeKey = 'S') {
   // 空投傘(飄降中顯示;落地後 game.js 隱藏 userData.chute,改顯示地面攤開傘)
   const chute = new THREE.Group();
   const cr = 3.0 * sc, chY = 5.4 * sc;
-  mesh(chute, cone(cr, 1.9 * sc, 12), tone, 0, chY, 0,
+  mesh(chute, scenePartGeometry({g:['lathe', [[0,1.9*sc],[.8*cr,1.25*sc],[cr,0],[cr*.98,-.04*sc],[.79*cr,1.2*sc],[0,1.86*sc]], 24]}), tone, 0, chY - .9 * sc, 0,
     { emissive: toneC, emissiveIntensity: 0.35 });
   mesh(chute, cyl(cr, cr * 0.55, 0.28 * sc, 12), 0xd7dbe2, 0, chY - 0.9 * sc, 0);
   for (let i = 0; i < 4; i++) {   // 吊索:傘緣 → 箱角
@@ -785,7 +573,7 @@ export function buildAirdrop(sizeKey = 'S') {
   // 落地攤開的降落傘:攤在箱子旁地面的傘布(壓扁淺穹頂 = 傘幅切面)+ 散落吊索(落地後顯示)
   const gchute = new THREE.Group();
   const gr = 3.4 * sc, off = s * 0.5 + gr * 0.72;               // 傘布中心 = 箱側邊外
-  const canopy = mesh(gchute, cone(gr, 0.9 * sc, 14), tone, off, 0.05, 0,
+  const canopy = mesh(gchute, scenePartGeometry({g:['lathe', [[0,.9*sc],[gr*.6,.65*sc],[gr,.05*sc],[0,0]],24]}), tone, off, 0.05, 0,
     { emissive: toneC, emissiveIntensity: 0.26 });
   canopy.scale.y = 0.3;                                          // 壓扁 = 攤在地面的傘布
   mesh(gchute, cyl(gr * 0.16, gr * 0.16, 0.12 * sc, 10), 0xd7dbe2, off, 0.28 * sc, 0);  // 傘頂氣孔帽
