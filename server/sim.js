@@ -3532,7 +3532,7 @@ export class BattleSim {
             e.followT += dt;
             if (e.followT >= CIVILIAN.FOLLOW_REWARD_S) {
               e.followT -= CIVILIAN.FOLLOW_REWARD_S;
-              const ev = { e: 'civaid', pid: owner.pid, side: owner.side, x: e.x, z: e.z, prof: e.prof,
+              const ev = { e: 'civaid', id: e.id, pid: owner.pid, side: owner.side, x: e.x, z: e.z, prof: e.prof,
                 ...this._grantReward(owner, CIVILIANS[e.prof].reward, CIVILIAN.FOLLOW_MUL) };
               this.events.push(ev);
             }

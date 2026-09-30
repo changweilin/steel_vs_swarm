@@ -13,6 +13,8 @@ import * as THREE from 'three';
 import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility, castDirF } from './data.js';
 import { makeUnit, heroTargetH } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
+import { fireUnitMotion, stepUnitSpinners } from './unitMotion.js';
+import { buildBaseBattery } from './buildingUnitModels.js';
 import { updateCelLight, disposeTree } from './toon.js';
 import { unitShotStyle, unitShotFx, starburst, shockRing, impactBurst, explosionBurst, beamLine, gundamBeam, ionBreath, projectileMesh, stepProjectileFx } from './vfx.js';
 import { SUMMON_BUILDERS } from './summonModels.js';
@@ -168,6 +170,14 @@ export class CharPreview {
       : kind === 'bunker' ? 'bunker' : kind === 'civilian' ? 'civ'
       : SUMMON_BUILDERS[`summon:${kind}`] ? `summon:${kind}` : `creep:${kind}`;
     const { group, mixer } = makeUnit(mapKind, side, { ch: kind === 'civilian' ? prof : null });
+    if (kind === 'base') {
+      const bounds = new THREE.Box3().setFromObject(group);
+      const battery = buildBaseBattery(side, bounds.max.y - bounds.min.y);
+      battery.position.y += bounds.min.y;
+      group.add(battery);
+      group.userData.turretMuzzles = battery.userData.muzzles;
+      group.userData.rig.attacks = battery.userData.attacks;
+    }
     this.unit = group;
     this.unit.userData.side = side;
     this.mixer = mixer;
@@ -184,9 +194,9 @@ export class CharPreview {
     this.holder.position.set(0, 0, 0);
     this.holder.rotation.set(0, 0, 0);
 
-    // 單位不做移動演示(徽章隱藏),但保留假實體讓 stepCombatFx/後座在有 rig 時仍作用
+    // Preview consumes the same movement and attack rigs as the battlefield.
     this._ent = { id: kind, mesh: group, heroY: 0 };
-    this.topSpeed = 0; this.moving = false; this.speed = 0; this.travel = 0;
+    this.topSpeed = UNITS[kind].speed || 0; this.moving = false; this.speed = 0; this.travel = 0;
     this._resetDemo();
     this._buildGround();
     this.onMove?.(false, 0);
@@ -343,6 +353,9 @@ export class CharPreview {
     if (!this._ent) return;
     const t0 = this._now();
     this._ent.fireFx = { t0, slot: heavy ? 'heavy' : 'light' };
+    const data = this.unit?.userData;
+    const muzzle = data?.turretMuzzles?.[this._unitMuzzleIndex] || data?.rig?.muzzles?.light?.n;
+    fireUnitMotion(data?.rig, muzzle, t0);
     if (heavy) this._ent.heavyFx = { phase: 'fire', t0 };
   }
 
@@ -525,7 +538,9 @@ export class CharPreview {
           color: this.unit.userData.side === 'SWARM' ? 0xffb300 : 0x4fc3f7,
         });
         this._fireCue(A.slot === 'heavy');
-        this.holder.position.z -= R * (A.slot === 'heavy' ? 0.04 : 0.015);
+        if (this.unit.userData.rig?.kind !== 'static') {
+          this.holder.position.z -= R * (A.slot === 'heavy' ? 0.04 : 0.015);
+        }
         A.fired++; A.next += A.gap;
       }
     } else if (A.slot === 'light' || A.slot === 'heavy') {
@@ -687,7 +702,7 @@ export class CharPreview {
     }
     // 旋翼/螺旋槳(game.js spinners 同口徑)
     const spin = this.unit.userData.spin;
-    if (spin) for (const p of spin) p.rotation.y += dt * 40;
+    stepUnitSpinners(spin, dt);
     this.onMove?.(this.moving, this.speed);
   }
 

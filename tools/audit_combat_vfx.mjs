@@ -23,6 +23,7 @@ try {
   const methods = ['_onEvent', '_npcMuzzle', '_arcTracer', '_lobSolve', '_lobVel'].map(name => grabMethod(game, name));
   const result = await page.evaluate(async methods => {
     const T = await import('three');
+    const { fireUnitMotion } = await import('/public/js/unitMotion.js');
     const { CHARACTERS, heroAbility, UNITS, WEAPONS, BALLISTIC } = await import('/public/js/data.js');
     const { spawnCastFx } = await import('/public/js/castfx.js');
     const { disposeTree } = await import('/public/js/toon.js');
@@ -71,8 +72,8 @@ try {
     const unitKinds = [...Object.keys(UNITS).filter(k => UNITS[k].wid), 'tower', 'base'];
     const unitAtlas = document.createElement('canvas'); unitAtlas.width = 7 * 240; unitAtlas.height = Math.ceil(unitKinds.length / 7) * 3 * 184;
     const uc = unitAtlas.getContext('2d'); uc.fillStyle = '#101822'; uc.fillRect(0, 0, unitAtlas.width, unitAtlas.height);
-    const client = new Function('THREE', 'UNITS', 'BALLISTIC', 'unitShotStyle', 'unitShotFx',
-      `return new (class { ${methods.join('\n')} })()`)(T, UNITS, BALLISTIC, V.unitShotStyle, V.unitShotFx);
+    const client = new Function('THREE', 'UNITS', 'BALLISTIC', 'unitShotStyle', 'unitShotFx', 'fireUnitMotion',
+      `return new (class { ${methods.join('\n')} })()`)(T, UNITS, BALLISTIC, V.unitShotStyle, V.unitShotFx, fireUnitMotion);
     Object.assign(client, { scene, effects, terrain: { heightAt: () => 0 }, ents: new Map(),
       _shotCols: () => ({ col: 0x4fc3f7, hot: 0xffffff }), _clipBeam: (a, b) => ({ to: b, cut: false }) });
     let unitPeakCalls = 0;

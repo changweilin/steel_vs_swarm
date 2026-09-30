@@ -57,7 +57,7 @@ const report = await page.evaluate(async () => {
   const { BUILDING_PARTS } = await import('/public/js/runtimeParts.js');
   const { makeRuntimePartModel } = await import('/public/js/runtimePartModel.js');
   const { buildNpcModel } = await import('/public/js/npcModels.js');
-  const { buildBuildingUnit, buildBuildingUnitTurret } = await import('/public/js/buildingUnitModels.js');
+  const { buildBuildingUnit } = await import('/public/js/buildingUnitModels.js');
   const { setCelSun, updateCelLight } = await import('/public/js/toon.js');
   setCelSun(new THREE.Vector3(0.4, 0.8, 0.4));
 
@@ -83,13 +83,7 @@ const report = await page.evaluate(async () => {
     ['蜂群直升機', () => buildNpcModel('creep:heli', 'SWARM')],
     ['第三方碉堡', () => buildNpcModel('bunker', 'GUER')],
     ['平民', () => buildNpcModel('civ', 'MILI', { profile: 2 })],
-    ['蜂群防禦塔', () => {
-      const g = buildBuildingUnit('tower', 'SWARM');
-      const turret = buildBuildingUnitTurret('SWARM');
-      turret.position.y = 20 * 0.92;
-      g.add(turret);
-      return g;
-    }],
+    ['蜂群防禦塔', () => buildBuildingUnit('tower', 'SWARM')],
     ['蜂群主堡', () => buildBuildingUnit('base:SWARM', 'SWARM')],
     ['鋼鐵主堡', () => buildBuildingUnit('base:STEEL', 'STEEL')],
   ];

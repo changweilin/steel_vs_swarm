@@ -12,6 +12,7 @@ import { MORPH, lerpFPS } from './data.js';
 import { bodyBounce, cycleU, dutyOf, hipDrive, humanRunPose, limbProfile, limbFlex } from './gaitcurve.js';
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 import { animWeights } from './animweights.js';
+import { stepUnitMotion } from './unitMotion.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -52,6 +53,7 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   // 變形者:先決定「現在是哪一棵樹」再取 rig(兩棵樹並存,見 morphSwap)
   if (mesh.userData.morph) morphSwap(ent, mesh, dt);
   const rig = mesh.userData.rig;
+  if (rig?.kind === 'static') return;
   const walk = mesh.userData.walk;
   if (!rig && !walk) return;
   let L = ent.loco;
@@ -206,6 +208,7 @@ const FX_K = 10;                      // 彈簧阻尼:目標值突變也不瞬�
 export function stepCombatFx(ent, now, dt) {
   const rig = ent.mesh?.userData?.rig;
   if (!rig || dt <= 0) return;
+  stepUnitMotion(rig, now);
   const C = ent.cfx || (ent.cfx = { aim: 0, hA: 0, kL: 0, kR: 0, kB: 0, chg: 0, lg: 0, fireT: -1, aimUntil: -1, hUntil: -1 });
   // 開火事件邊緣觸發(以 t0 去重):一次後座脈衝 + 展開射姿保持窗
   const fx = ent.fireFx;

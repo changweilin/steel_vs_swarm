@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { CIVILIANS, isThirdSide, sideInfo } from './data.js';
 import { bx, cyl, rbz, sph, cone, torus, dim } from './geo3d.js';
+import { limbChain, recoilMount } from './unitRig.js';
+import { generateCivilian } from './civilianAppearance.js';
 
 const TAU = Math.PI * 2;
 
@@ -25,25 +27,30 @@ export const NPC_MODEL_CONTRACTS = Object.freeze({
     'rig.kind=biped', 'rig.hips', 'rig.legL', 'rig.legR', 'rig.armL', 'rig.armR',
     'rig.hipsY0', 'rig.gunR', 'rig.aimPose', 'rig.weap', 'rig.hvy',
     'rig.lightGlow', 'rig.muzzles.light.n',
+    'rig.legChainL', 'rig.legChainR', 'rig.armChainL', 'rig.armChainR', 'rig.attacks',
   ]),
   civilian: Object.freeze([
     'rig.kind=biped', 'rig.hips', 'rig.legL', 'rig.legR', 'rig.armL', 'rig.armR',
     'rig.hipsY0',
+    'rig.legChainL', 'rig.legChainR', 'rig.armChainL', 'rig.armChainR',
   ]),
   wheeled: Object.freeze([
     'rig.kind=wheeled', 'rig.hull', 'rig.hullY0', 'rig.wheels',
+    'rig.attacks',
     'rig.lightGlow', 'rig.muzzles.light.n', 'userData.turret', 'turret.userData.pitch',
   ]),
   tracked: Object.freeze([
     'rig.kind=tracked', 'rig.hull', 'rig.hullY0', 'rig.wheels',
+    'rig.attacks',
     'rig.lightGlow', 'rig.muzzles.light.n', 'userData.turret', 'turret.userData.pitch',
   ]),
   aerial: Object.freeze([
     'rig.kind=aerial', 'rig.tilt', 'rig.tiltY0', 'rig.lightGlow',
     'rig.muzzles.light.n', 'userData.spin', 'userData.gunTilt',
     'userData.turretMuzzles',
+    'rig.attacks',
   ]),
-  bunker: Object.freeze(['static geometry; no rig']),
+  bunker: Object.freeze(['rig.kind=static']),
 });
 
 const FACTION = Object.freeze({
@@ -326,17 +333,27 @@ function buildTrooper(side, role) {
       ...(spec.weapon === 'grenade' ? { comp: 0.55 } : {}) };
   }
   const mounted = spec.weapon === 'rocket';
+  const legChainL = limbChain(legL, -0.61, -1.12);
+  const legChainR = limbChain(legR, -0.61, -1.12);
+  const armChainL = limbChain(armL, -0.47);
+  const armChainR = limbChain(armR, -0.47);
+  if (!mounted) {
+    gunR.aim += 0.65;
+    if (gunR.comp != null) gunR.comp += 0.65;
+  }
   g.userData.rig = {
     kind: 'biped', hips, legL, legR, armL, armR,
+    legChainL, legChainR, armChainL, armChainR,
     hipsY0: hipY, stride: spec.stride, bob: 0.065, sway: 0.055, top: 8,
     gunArm: true, gunR,
     aimPose: mounted
-      ? { rShoulderX: -0.7, lShoulderX: -0.85, lShoulderY: 0.55 }
-      : { rShoulderX: -0.55, lShoulderX: -0.5, lShoulderY: 0.45 },
+      ? { rShoulderX: -0.7, lShoulderX: -0.85, lShoulderY: 0.55, rElbowX: -0.65, lElbowX: -0.65 }
+      : { rShoulderX: -0.55, lShoulderX: -0.5, lShoulderY: 0.45, rElbowX: -0.65, lElbowX: -0.65 },
     weap: { light: mounted ? 'N' : 'R', heavy: mounted ? 'N' : 'R' },
     hvy: { chest: mounted ? 0.05 : 0.04, gun: mounted ? 0.1 : 0 },
     lightGlow: [{ mesh: weapon.muzzle, base: 0.8 }],
     muzzles: { light: { n: weapon.muzzle, r: role === 'soldier' ? 0.075 : 0.095 }, heavy: null },
+    attacks: [recoilMount(weapon.g, [...weapon.g.children], [weapon.muzzle], mounted ? 0.1 : 0.065)],
   };
   return g;
 }
@@ -411,6 +428,7 @@ function vehicleTurret(parent, role, accent, P, S) {
   const muzzle = torus(pitch, bore * 1.28, bore * 0.3, 0, 0, S.barrel + 0.02, accent,
     { emissive: accent, emissiveIntensity: 0.85 });
   turret.userData.modelReference = S.reference;
+  turret.userData.attack = recoilMount(pitch, [...pitch.children], [muzzle], role === 'tank' ? 0.5 : 0.18);
   return { turret, muzzle };
 }
 
@@ -461,6 +479,7 @@ function buildApc(side) {
   g.userData.turret = turret;
   g.userData.rig = {
     kind: 'wheeled', hull, hullY0: 0, wheels, top: 11,
+    attacks: [turret.userData.attack],
     weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0 }, kickAmp: { light: 1.6 },
     lightGlow: [{ mesh: muzzle, base: 0.8 }],
     muzzles: { light: { n: muzzle, r: 0.12 }, heavy: null },
@@ -505,6 +524,7 @@ function buildTank(side) {
   g.userData.turret = turret;
   g.userData.rig = {
     kind: 'tracked', hull, hullY0: 0, wheels, top: 9,
+    attacks: [turret.userData.attack],
     weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0 }, kickAmp: { light: 2.2 },
     lightGlow: [{ mesh: muzzle, base: 0.8 }],
     muzzles: { light: { n: muzzle, r: 0.22 }, heavy: null },
@@ -597,6 +617,7 @@ function buildHeli(side) {
   const podSpan = S.profile === 'huey' ? 1.12 : 0.92;
   bx(gunTilt, podSpan * 2.25, 0.11, 0.44, 0, 0, 0, P.dark);
   const muzzles = [];
+  const attacks = [];
   for (const sideX of [-1, 1]) {
     const pod = cyl(gunTilt, 0.17, 0.2, 0.92, 8, sideX * podSpan, -0.04, 0.22,
       P.mid, { metalness: 0.62 });
@@ -604,6 +625,7 @@ function buildHeli(side) {
     const muzzle = torus(gunTilt, 0.15, 0.035, sideX * podSpan, -0.04, 0.7, accent,
       { emissive: accent, emissiveIntensity: 0.82 });
     muzzles.push(muzzle);
+    attacks.push(recoilMount(gunTilt, [pod, muzzle], [muzzle], 0.14));
   }
   g.userData.modelReference = S.reference;
   g.userData.spin = spin;
@@ -611,6 +633,7 @@ function buildHeli(side) {
   g.userData.turretMuzzles = muzzles;
   g.userData.rig = {
     kind: 'aerial', tilt, tiltY0: 1.65, bob: 0.055, top: 16,
+    attacks,
     weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0.03 },
     lightGlow: muzzles.map((mesh) => ({ mesh, base: 0.82 })),
     muzzles: { light: { n: muzzles[1], r: 0.15 }, heavy: null },
@@ -666,15 +689,10 @@ function buildBunker(side) {
     glowPlate(g, 0.18, 0.48, 0.08, 1.55, 3.6, -0.36, accent, 0.65);
   }
   g.userData.factionLanguage = side;
+  g.userData.rig = { kind: 'static', attacks: [] };
   g.userData.modelReference = S.reference;
   return g;
 }
-
-const CIV_COLOURS = Object.freeze([
-  0x667487, 0x8a6658, 0x6c7455, 0x836f8d, 0x5d7c79, 0x8b7b55,
-]);
-const SKIN = Object.freeze([0xf0c8a4, 0xe0ac82, 0xc99063, 0xad754b, 0x8e5d3b]);
-const HAIR = Object.freeze([0x191512, 0x2a211b, 0x473326, 0x765337, 0x8c9299]);
 
 // 一個職業一列，只描述剪影語意；同族零件由 addProfessionKit 統一生成。
 export const CIVILIAN_PROFESSION_KITS = Object.freeze({
@@ -700,8 +718,7 @@ export const CIVILIAN_PROFESSION_KITS = Object.freeze({
   '心理師': Object.freeze({ head: 'none', coat: 'cardigan', prop: 'notepad' }),
 });
 
-function addProfessionKit(hips, row, cloth) {
-  const kit = CIVILIAN_PROFESSION_KITS[row.name] || CIVILIAN_PROFESSION_KITS['教師'];
+function addProfessionKit(hips, row, cloth, kit = CIVILIAN_PROFESSION_KITS[row.name]) {
   const hat = row.hat ?? dim(cloth, 0.8);
   const bag = row.bag ?? dim(cloth, 0.55);
   if (kit.coat === 'lab') bx(hips, 0.43, 0.58, 0.055, 0, 0.54, 0.25, 0xe3e5e1);
@@ -770,64 +787,165 @@ function addProfessionKit(hips, row, cloth) {
   return kit;
 }
 
-function buildCivilian(side, profile = 0) {
-  const idx = ((profile | 0) % Math.max(1, CIVILIANS.length) + Math.max(1, CIVILIANS.length))
-    % Math.max(1, CIVILIANS.length);
-  const row = CIVILIANS[idx] || {};
-  const female = row.g === 'F';
-  const cloth = CIV_COLOURS[idx % CIV_COLOURS.length];
-  const skin = SKIN[(idx * 3 + 1) % SKIN.length];
-  const hair = HAIR[(idx * 5 + 2) % HAIR.length];
-  const g = markBatch(new THREE.Group(), 'civilian', String(row.name || idx));
+function addCivilianHair(head, a) {
+  const color = a.hairColor;
+  if (a.hairStyle !== 'bald') frustum(head, { rt: 0.18, rb: 0.225,
+    h: a.hairStyle === 'cropped' ? 0.07 : 0.14, seg: 10, y: 0.16, z: -0.025, color });
+  if (['bob', 'long', 'wavy'].includes(a.hairStyle)) {
+    const length = a.hairStyle === 'bob' ? 0.25 : 0.48;
+    for (const x of [-0.19, 0.19]) {
+      const lock = bx(head, 0.1, length, 0.23, x, 0.05 - length / 2, -0.065, color);
+      lock.rotation.z = a.hairStyle === 'wavy' ? x * 0.8 : 0;
+    }
+    bx(head, 0.32, length, 0.1, 0, 0.05 - length / 2, -0.19, color);
+  } else if (a.hairStyle === 'ponytail') {
+    const tail = cyl(head, 0.085, 0.045, 0.38, 7, 0, -0.04, -0.25, color);
+    tail.rotation.x = 0.3;
+  } else if (a.hairStyle === 'bun') sph(head, 0.12, 0, 0.22, -0.18, color);
+  else if (a.hairStyle === 'braids') {
+    for (const x of [-0.19, 0.19]) for (let i = 0; i < 5; i++)
+      sph(head, 0.065, x, 0.04 - i * 0.075, -0.09, color);
+  } else if (a.hairStyle === 'curly' || a.hairStyle === 'afro') {
+    const r = a.hairStyle === 'afro' ? 0.12 : 0.075;
+    for (let i = 0; i < 8; i++) {
+      const t = i * TAU / 8;
+      sph(head, r, Math.cos(t) * 0.18, 0.14, Math.sin(t) * 0.17 - 0.035, color);
+    }
+    sph(head, r, 0, 0.23, -0.04, color);
+  } else if (a.hairStyle === 'mohawk') bx(head, 0.08, 0.19, 0.33, 0, 0.24, -0.02, color);
+  else if (a.hairStyle === 'sidepart') {
+    const fringe = bx(head, 0.26, 0.09, 0.1, -0.035, 0.15, 0.15, color);
+    fringe.rotation.z = -0.22;
+  }
+  if (a.facialHair !== 'none') bx(head, a.facialHair === 'moustache' ? 0.13 : 0.25,
+    a.facialHair === 'beard' ? 0.16 : 0.04, 0.06, 0, a.facialHair === 'moustache' ? -0.065 : -0.14, 0.17, color);
+  if (a.age >= 55) for (const x of [-0.085, 0.085])
+    bx(head, 0.07, 0.012, 0.012, x, -0.025, 0.206, dim(a.skinColor, 0.72));
+}
+
+function addCivilianClothing(hips, head, a) {
+  const trim = a.accentColor, cloth = a.clothColor;
+  if (['jacket', 'vest', 'coat'].includes(a.clothing)) {
+    for (const x of [-0.14, 0.14]) bx(hips, 0.19, a.clothing === 'coat' ? 0.87 : 0.54,
+      0.09, x, a.clothing === 'coat' ? 0.42 : 0.58, 0.18, trim);
+  } else if (a.clothing === 'hoodie') {
+    sph(hips, 0.25, 0, 0.95, -0.12, cloth);
+    bx(hips, 0.25, 0.12, 0.07, 0, 0.35, 0.23, trim);
+    for (const x of [-0.07, 0.07]) bx(hips, 0.018, 0.22, 0.025, x, 0.73, 0.25, trim);
+  } else if (a.clothing === 'overalls') {
+    bx(hips, 0.28, 0.46, 0.075, 0, 0.4, 0.23, a.trouserColor);
+    for (const x of [-0.13, 0.13]) bx(hips, 0.055, 0.43, 0.055, x, 0.69, 0.2, a.trouserColor);
+  } else if (a.clothing === 'sweater') {
+    for (const y of [0.4, 0.58, 0.76]) bx(hips, 0.45, 0.055, 0.05, 0, y, 0.2, trim);
+  } else if (a.clothing === 'shirt') {
+    for (const y of [0.4, 0.55, 0.7]) sph(hips, 0.018, 0, y, 0.21, trim);
+  }
+  if (a.bottoms === 'jeans') for (const x of [-0.14, 0.14])
+    bx(hips, 0.11, 0.12, 0.035, x, 0.12, -0.18, dim(a.trouserColor, 0.7));
+  if (a.clothing !== 'professional') {
+    if (a.headwear === 'beanie') sph(head, 0.23, 0, 0.15, -0.025, trim);
+    else if (a.headwear === 'cap' || a.headwear === 'brimmed') {
+      cyl(head, 0.17, 0.225, 0.12, 10, 0, 0.2, -0.02, trim);
+      if (a.headwear === 'brimmed') cyl(head, 0.32, 0.32, 0.03, 12, 0, 0.15, 0, trim);
+      else bx(head, 0.26, 0.035, 0.22, 0, 0.15, 0.19, trim);
+    }
+  }
+  if (a.accessory === 'glasses' || a.accessory === 'sunglasses') {
+    for (const x of [-0.08, 0.08]) {
+      if (a.accessory === 'sunglasses') bx(head, 0.13, 0.08, 0.025, x, 0.02, 0.22, 0x262e36);
+      else {
+        const lens = torus(head, 0.055, 0.012, x, 0.02, 0.22, trim);
+        lens.rotation.x = Math.PI / 2;
+      }
+    }
+    bx(head, 0.07, 0.016, 0.025, 0, 0.025, 0.23, trim);
+  } else if (a.accessory === 'scarf') {
+    cyl(hips, 0.19, 0.24, 0.11, 8, 0, 0.92, 0, trim);
+    bx(hips, 0.13, 0.34, 0.07, 0.12, 0.69, 0.26, trim);
+  } else if (a.accessory === 'backpack') {
+    bx(hips, 0.38, 0.49, 0.22, 0, 0.56, -0.29, trim);
+    for (const x of [-0.2, 0.2]) bx(hips, 0.045, 0.5, 0.04, x, 0.62, 0.2, trim);
+  } else if (a.accessory === 'crossbody') {
+    strut(hips, [-0.25, 0.87, 0.25], [0.3, 0.17, 0.25], 0.025, trim);
+    bx(hips, 0.23, 0.22, 0.12, 0.31, 0.12, 0.18, trim);
+  } else if (a.accessory === 'earrings') for (const x of [-0.225, 0.225]) sph(head, 0.035, x, -0.07, 0, trim);
+  else if (a.accessory === 'necklace') {
+    strut(hips, [-0.12, 0.86, 0.22], [0, 0.65, 0.25], 0.01, trim);
+    strut(hips, [0.12, 0.86, 0.22], [0, 0.65, 0.25], 0.01, trim);
+  }
+}
+
+function buildCivilian(side, profile = 0, seed = 0) {
+  const appearance = generateCivilian(seed, profile);
+  const row = CIVILIANS[appearance.family];
+  const { clothColor: cloth, skinColor: skin } = appearance;
+  const g = markBatch(new THREE.Group(), 'civilian', appearance.occupation);
+  const body = new THREE.Group();
+  body.scale.set(appearance.widthScale, 1, appearance.widthScale);
+  g.add(body);
   const hipY = 1.28;
   const makeLeg = (sgn) => {
     const leg = new THREE.Group();
-    leg.position.set(sgn * (female ? 0.16 : 0.19), hipY, 0);
+    leg.position.set(sgn * 0.18, hipY, 0);
     frustum(leg, { rt: 0.12, rb: 0.15, h: 0.58, seg: 6, y: -0.31,
-      sx: 0.86, sz: 0.74, color: dim(cloth, 0.62) });
+      sx: 0.86, sz: 0.74, color: appearance.trouserColor });
     frustum(leg, { rt: 0.1, rb: 0.13, h: 0.5, seg: 6, y: -0.85,
-      sx: 0.86, sz: 0.74, color: dim(cloth, 0.56) });
-    bx(leg, 0.22, 0.12, 0.38, 0, -1.16, 0.06, 0x2a2622);
-    g.add(leg);
+      sx: 0.86, sz: 0.74, color: appearance.bottoms === 'shorts' ? skin : dim(appearance.trouserColor, 0.8) });
+    const boots = appearance.footwear === 'boots';
+    const sandals = appearance.footwear === 'sandals';
+    const foot = new THREE.Group();
+    leg.add(foot);
+    bx(foot, 0.22, boots ? 0.28 : 0.12, 0.38, 0, boots ? -1.08 : -1.16, 0.06,
+      sandals ? skin : appearance.footwear === 'sneakers' ? appearance.accentColor : 0x2a2622);
+    if (sandals) for (const z of [-0.02, 0.16]) bx(foot, 0.23, 0.025, 0.05, 0, -1.09, z, appearance.accentColor);
+    else if (appearance.footwear === 'sneakers') bx(foot, 0.23, 0.025, 0.39, 0, -1.205, 0.06, 0xd2d1c8);
+    body.add(leg);
     return leg;
   };
   const legL = makeLeg(-1), legR = makeLeg(1);
   const hips = new THREE.Group();
   hips.position.y = hipY;
-  g.add(hips);
-  const shoulder = female ? 0.46 : 0.54;
+  body.add(hips);
+  const shoulder = 0.5 * appearance.shoulderScale;
   frustum(hips, { rt: shoulder * 0.44, rb: shoulder * 0.52, h: 0.62,
     seg: 8, y: 0.55, sx: 1.12, sz: 0.68, color: cloth });
   bx(hips, shoulder * 0.92, 0.22, 0.34, 0, 0.14, 0, dim(cloth, 0.7));
-  if (female) frustum(hips, { rt: 0.28, rb: 0.4, h: 0.3, seg: 8,
-    y: 0.26, sx: 1.1, sz: 0.75, color: cloth });
+  if (appearance.bottoms === 'skirt') frustum(hips, { rt: 0.28, rb: 0.4, h: 0.48, seg: 8,
+    y: 0.03, sx: 1.1, sz: 0.75, color: appearance.trouserColor });
   const makeArm = (sgn) => {
     const arm = new THREE.Group();
     arm.position.set(sgn * shoulder * 0.82, 0.84, 0);
     frustum(arm, { rt: 0.09, rb: 0.12, h: 0.42, seg: 6, y: -0.22,
       sx: 0.88, sz: 0.75, color: cloth });
     frustum(arm, { rt: 0.075, rb: 0.095, h: 0.36, seg: 6, y: -0.58,
-      sx: 0.88, sz: 0.75, color: skin });
+      sx: 0.88, sz: 0.75, color: ['jacket', 'hoodie', 'sweater', 'coat'].includes(appearance.clothing) ? cloth : skin });
     sph(arm, 0.085, 0, -0.81, 0.02, skin);
     hips.add(arm);
     return arm;
   };
   const armL = makeArm(-1), armR = makeArm(1);
-  sph(hips, 0.22, 0, 1.13, 0, skin);
-  // 髮型只由職業索引決定；不使用亂數，也不借用陣營識別色。
-  if (female && idx % 2 === 0) {
-    sph(hips, 0.23, 0, 1.23, -0.06, hair);
-    sph(hips, 0.11, 0, 1.34, -0.2, hair);
-  } else {
-    frustum(hips, { rt: 0.18, rb: 0.23, h: 0.16, seg: 8,
-      y: 1.28, z: -0.02, color: hair });
-  }
-  // 20 種職業逐列指定頭飾、制服與手持件；只改視覺樹，不帶戰鬥欄位。
-  const professionKit = addProfessionKit(hips, row, cloth);
-  g.userData.profession = row.name;
+  const head = new THREE.Group();
+  head.position.y = 1.13;
+  head.scale.setScalar(appearance.headScale);
+  hips.add(head);
+  sph(head, 0.22, 0, 0, 0, skin);
+  for (const x of [-0.075, 0.075]) sph(head, 0.018, x, 0.02, 0.205, 0x302a28);
+  sph(head, 0.035, 0, -0.03, 0.218, skin);
+  addCivilianHair(head, appearance);
+  addCivilianClothing(hips, head, appearance);
+  const baseKit = CIVILIAN_PROFESSION_KITS[row.name];
+  const kit = appearance.clothing === 'professional' ? baseKit
+    : { ...baseKit, coat: 'casual', head: 'none' };
+  const professionKit = addProfessionKit(hips, row, cloth, kit);
+  g.userData.appearance = appearance;
+  g.userData.profession = appearance.occupation;
   g.userData.professionKit = professionKit;
   g.userData.rig = {
     kind: 'biped', hips, legL, legR, armL, armR,
+    legChainL: limbChain(legL, -0.6, -1.1),
+    legChainR: limbChain(legR, -0.6, -1.1),
+    armChainL: limbChain(armL, -0.42),
+    armChainR: limbChain(armR, -0.42),
     hipsY0: hipY, stride: 0.82, bob: 0.06, sway: 0.06, top: 7,
   };
   return g;
@@ -841,7 +959,7 @@ export function supportsNpcModel(kind) {
  * 建立非玩家視覺樹；呼叫端仍負責 fitToHeight、outlinify、投影旗標與隊伍環。
  * 玩家 drone／robot／morph 刻意不在名冊中，也沒有任何通用 fallback 會吃到它們。
  */
-export function buildNpcModel(kind, side, { profile = 0 } = {}) {
+export function buildNpcModel(kind, side, { profile = 0, appearanceSeed = 0 } = {}) {
   switch (kind) {
     case 'creep:soldier': return buildTrooper(side, 'soldier');
     case 'creep:apc': return buildApc(side);
@@ -850,7 +968,7 @@ export function buildNpcModel(kind, side, { profile = 0 } = {}) {
     case 'creep:howitzer': return buildTrooper(side, 'howitzer');
     case 'creep:heli': return buildHeli(side);
     case 'bunker': return buildBunker(side);
-    case 'civ': return buildCivilian(side, profile);
+    case 'civ': return buildCivilian(side, profile, appearanceSeed);
     default: return null;
   }
 }
