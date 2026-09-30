@@ -5,6 +5,7 @@ export const WEATHER_FX = Object.freeze({
   box: 180, height: 120, lowPowerScale: .5,
   particles: Object.freeze({ rain: 1600, snow: 1200, sand: 1400 }),
   snowFineParticles: 1800,
+  fogGrid: 8, fogTileM: 22,
   lightningSegments: 24, lightningBranches: 5, lightningBranchSegments: 7,
 });
 
@@ -28,6 +29,27 @@ export function resolveWeatherVisuals(dyn = {}, out = {}) {
   c.altitude = mix(.3, .08, fog);
   c.darkness = unit(dyn.cloudDarkness);
   c.storm = storm;
+
+  const f = out.fog ||= {};
+  f.strength = unit(dyn.effectiveFog);
+  f.density = Math.pow(f.strength, .7);
+  f.opacity = .24 * Math.sqrt(f.strength);
+  f.height = mix(2, 14, ramp(.15, 1, f.strength));
+  f.size = mix(24, 42, f.strength);
+  f.drift = mix(.15, 4, wind);
+  f.turbulence = mix(.15, 1.4, wind) * f.strength;
+
+  const w = out.wind ||= {};
+  w.strength = wind;
+  w.lean = ramp(.25, .9, wind) * .85;
+  w.flutter = ramp(.45, 1, wind) * .16;
+  w.gust = mix(.18, 1, wind);
+  w.gustSpeed = mix(.55, 1.7, wind);
+
+  const water = out.water ||= {};
+  water.crest = ramp(.3, 1, wind) * .65;
+  water.cross = mix(.08, .3, wind);
+  water.chop = ramp(.35, .95, wind);
 
   for (const [kind, strength] of Object.entries({ rain, snow, sand })) {
     const p = out[kind] ||= {};

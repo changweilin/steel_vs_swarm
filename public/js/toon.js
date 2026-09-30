@@ -11,6 +11,7 @@ import { weatherUniforms, WEATHER_MATERIAL_DECL, WEATHER_MATERIAL_COLOR } from '
 import { visualPref, onVisualChange } from './visualPrefs.js';
 import { makeField, bakeFieldTexture } from './field.js';
 import { curveKneeM, curveR, SOLDIER_H, DISSOLVE } from './data.js';
+import { resolveWeatherVisuals } from './weatherVisuals.js';
 
 // ============ 世界曲面(2026-08-09;規則與推導全文見 data.js 的 CURVE 區塊)============
 // 使用者要的東西只有一句:**平面算完、擺完,最後一步才轉成曲面**。這裡就是那「最後一步」,
@@ -934,6 +935,8 @@ export const seaSegM = () => WIND.SEA_M / WIND.SEA_SEG;
 // **時鐘刻意不取模**:各 kind 的頻率彼此不可通約,取模會在週期邊界跳一下;
 // float32 在一小時(t = 3600)上的相位解析度仍有 ~0.001 rad,一場對局綽綽有餘。
 const _windT = { value: 0 };
+const _windPhase = { value: 0 }, _wavePhase = { value: 0 }, _gustPhase = { value: 0 };
+const _weatherVisuals = resolveWeatherVisuals();
 const _windDir = { value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]) };
 const _windK = {
   value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.WAVE_M),
@@ -948,18 +951,22 @@ const _weatherWind = {
   freq: { value: 1.0 },
   waveAmp: { value: 1.0 },
   waveSpeed: { value: 1.0 },
+  shape: { value: new THREE.Vector4(_weatherVisuals.wind.lean, _weatherVisuals.wind.flutter, _weatherVisuals.wind.gust, _weatherVisuals.wind.gustSpeed) },
+  water: { value: new THREE.Vector3(_weatherVisuals.water.crest, _weatherVisuals.water.cross, _weatherVisuals.water.chop) },
 };
 
 /**
- * 安裝當前天氣的風浪動態係數與即時風向 (唯一寫入點;呼叫端 = environment.js / game.js)
- * @param {{ windAmp?:number, windFreq?:number, waveAmp?:number, waveSpeed?:number, windDir?:number[], windDirDeg?:number }} dyn
+ * Install resolved dynamics and optional reusable presentation profiles at the shared uniform seam.
  */
-export function setWeatherDynamics(dyn) {
+export function setWeatherDynamics(dyn, visuals = null) {
   if (!dyn) return;
   _weatherWind.amp.value = dyn.windAmp ?? 1.0;
   _weatherWind.freq.value = dyn.windFreq ?? 1.0;
   _weatherWind.waveAmp.value = dyn.waveAmp ?? 1.0;
   _weatherWind.waveSpeed.value = dyn.waveSpeed ?? 1.0;
+  const profile = visuals || resolveWeatherVisuals(dyn, _weatherVisuals);
+  _weatherWind.shape.value.set(profile.wind.lean, profile.wind.flutter, profile.wind.gust, profile.wind.gustSpeed);
+  _weatherWind.water.value.set(profile.water.crest, profile.water.cross, profile.water.chop);
 
   if (dyn.windDir && Array.isArray(dyn.windDir) && dyn.windDir.length >= 2) {
     _windDir.value.set(dyn.windDir[0], dyn.windDir[1]);
@@ -1078,11 +1085,16 @@ const CEL_WIND_GLSL = `
         uniform float uWeatherWindFreq;
         uniform float uWeatherWaveAmp;
         uniform float uWeatherWaveSpeed;
+        uniform float uWeatherWindT;
+        uniform float uWeatherWaveT;
+        uniform float uWeatherGustT;
+        uniform vec4 uWeatherWindShape;
+        uniform vec3 uWeatherWaterShape;
         // 陣風包絡(單一實作,擺動與海浪同吃)。振幅乘上一層「波長長一個量級、走得慢一半」
         // 的行波 ⇒ 掃到的那一帶倒得深、其餘幾乎靜止 = 眼睛讀得出「一道浪推過去」。
         // 平均值恆為 1 ⇒ 這一層**不改變平均擺幅**,只重新分配;GUST_F = 0 恆回 1.0(舊制)。
         float celGust( vec2 celGxz ) {
-          return 1.0 + ${WIND.GUST_F.toFixed(3)} * sin( uWindT * ${WIND.GUST_S.toFixed(3)} + dot( celGxz, uGustK ) );
+          return 1.0 + ${WIND.GUST_F.toFixed(3)} * uWeatherWindShape.z * sin( uWeatherGustT * ${WIND.GUST_S.toFixed(3)} + dot( celGxz, uGustK ) );
         }`;
 
 // ---- 沼澤漣漪(2026-08-26):圓形衰減波,模擬沼氣泡上浮/泥魚/生物擾動 ----
@@ -1147,13 +1159,13 @@ const CEL_SEA_GLSL = `
           if ( uWeatherWaveAmp <= 0.001 ) return 0.0;
           // ① 非直線波前：領域扭曲 (Domain Warping)，消除筆直條紋感
           vec2 celWarp = vec2(
-            sin( celSxz.y * 0.038 + celSxz.x * 0.015 + uWindT * 0.16 ) * 5.2
+            sin( celSxz.y * 0.038 + celSxz.x * 0.015 + uWeatherWaveT * 0.16 ) * 5.2
               + sin( celSxz.y * 0.082 - celSxz.x * 0.041 + 2.37 ) * 2.6,
-            cos( celSxz.x * 0.034 - celSxz.y * 0.019 + uWindT * 0.13 ) * 5.2
+            cos( celSxz.x * 0.034 - celSxz.y * 0.019 + uWeatherWaveT * 0.13 ) * 5.2
               + cos( celSxz.x * 0.076 + celSxz.y * 0.043 + 1.19 ) * 2.6
           );
           vec2 celWxz = celSxz + celWarp;
-          float celSp = dot( celWxz, uWindK );
+          float celSp = dot( celWxz, uWindDir ) * ${(Math.PI * 2 / WIND.SEA_M).toFixed(5)};
 
           // 空間多頻干涉與相位偏移 (特徵尺度 ~${WIND.SEA_NOISE_M.toFixed(0)}m,打破單一行波空間均勻性)
           float celSn = sin( dot( celWxz, vec2( 0.0523, 0.0321 ) ) ) * 0.62
@@ -1179,22 +1191,29 @@ const CEL_SEA_GLSL = `
           float celSeaBed = celSeaBedError( celSxz );
           float seaBedWarp = celSeaBed * 0.25;
           float celMsp = ( celSp + seaBedWarp ) * celWaveK + celPhJit;
+          float celPrimary = sin( uWeatherWaveT * uSoftFreq + celMsp );
+          // Crest sharpening stays on the sampled wavelength; short waves belong in shading.
+          float celCrest = celPrimary + uWeatherWaterShape.x * ( celPrimary * celPrimary - 0.5 );
+          vec2 celCrossDir = vec2( -uWindDir.y, uWindDir.x );
+          float celCross = sin( dot( celWxz, celCrossDir ) * ${(Math.PI * 2 / WIND.SEA_M).toFixed(5)}
+            - uWeatherWaveT * uSoftFreq * 0.83 + celPhJit );
           float celHSea = ( uSoftAmp * uWeatherWaveAmp ) * (
             celAmpD * celAmpMod * celObD * celGust( celSxz )
-            * ( sin( uWindT * uSoftFreq + celMsp ) * 0.72
-              + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28 )
+            * ( celCrest * ( 0.72 - uWeatherWaterShape.y )
+              + sin( uWeatherWaveT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28
+              + celCross * uWeatherWaterShape.y )
             + celSeaBed * 0.15 * mix( 0.85, 0.25, celDepF )
           );
 
           // 沼澤專屬公式 (黏滯微波 + 底部高密度強塊狀起伏誤差 + 多頻領域扭曲 + 碎浪微紋理)
           float celBedErr = celSwampBedError( celSxz );
-          float celSwampWarp = sin( dot( celSxz, vec2( 0.35, 0.24 ) ) + uWindT * 0.55 ) * 1.2
-                             + cos( dot( celSxz, vec2( -0.28, 0.36 ) ) + uWindT * 0.42 ) * 0.8
+          float celSwampWarp = sin( dot( celSxz, vec2( 0.35, 0.24 ) ) + uWeatherWaveT * 0.55 ) * 1.2
+                             + cos( dot( celSxz, vec2( -0.28, 0.36 ) ) + uWeatherWaveT * 0.42 ) * 0.8
                              + vec2( cos( celBedErr * 3.14159 ), sin( celBedErr * 3.14159 ) ).x * 0.65;
           float celHSwamp = ( uSoftAmp * uWeatherWaveAmp ) * (
-            sin( uWindT * 0.95 + dot( celSxz, vec2( 0.45, 0.32 ) ) + celSwampWarp + celBedErr * 1.15 ) * 0.45
-            + cos( uWindT * 0.72 + dot( celSxz, vec2( -0.36, 0.48 ) ) + celSwampWarp * 0.4 ) * 0.30
-            + sin( uWindT * 1.25 + dot( celSxz, vec2( 0.65, -0.55 ) ) ) * 0.15
+            sin( uWeatherWaveT * 0.95 + dot( celSxz, vec2( 0.45, 0.32 ) ) + celSwampWarp + celBedErr * 1.15 ) * 0.45
+            + cos( uWeatherWaveT * 0.72 + dot( celSxz, vec2( -0.36, 0.48 ) ) + celSwampWarp * 0.4 ) * 0.30
+            + sin( uWeatherWaveT * 1.25 + dot( celSxz, vec2( 0.65, -0.55 ) ) ) * 0.15
             + celBedErr * 0.55
           );
 
@@ -1213,10 +1232,10 @@ const CEL_SEA_GLSL = `
           celFragW = max( celFragW, 0.95 );
           #endif
           if ( celFragW > 0.01 ) {
-            float celChop = sin( dot( celSxz, vec2( 0.95, 0.68 ) ) + uWindT * 1.5 + celSwampWarp * 0.6 )
-                          * cos( dot( celSxz, vec2( -0.72, 0.85 ) ) + uWindT * 1.2 )
-                          + sin( dot( celSxz, vec2( 1.45, -1.12 ) ) - uWindT * 1.8 ) * 0.4;
-            celH += uSoftAmp * 0.45 * celFragW * celChop;
+            float celChop = sin( dot( celSxz, vec2( 0.95, 0.68 ) ) + uWeatherWaveT * 1.5 + celSwampWarp * 0.6 )
+                          * cos( dot( celSxz, vec2( -0.72, 0.85 ) ) + uWeatherWaveT * 1.2 )
+                          + sin( dot( celSxz, vec2( 1.45, -1.12 ) ) - uWeatherWaveT * 1.8 ) * 0.4;
+            celH += uSoftAmp * uWeatherWaveAmp * 0.45 * celFragW * celChop * mix( 0.15, 1.0, uWeatherWaterShape.z );
           }
 
           // ⑤ 遺跡/沉船/橋墩周邊：環繞物件切面的同心波前與干涉條紋 (水波範圍與波長放大 2 倍，重疊時計算干涉條紋)
@@ -1232,32 +1251,32 @@ const CEL_SEA_GLSL = `
 
             // 波長放大 2 倍 (波數 k 由 3.8 減半為 1.9，波長倍增)
             float relicJit = sin( dot( celSxz, vec2( 0.12, -0.16 ) ) + celRawD * 7.0 ) * 0.55
-                           + cos( dot( celSxz, vec2( -0.09, 0.18 ) ) + uWindT * 0.5 ) * 0.45;
-            float relicPhase = relicDist * 1.9 - uWindT * 1.6 * celFlowSign + relicJit;
+                           + cos( dot( celSxz, vec2( -0.09, 0.18 ) ) + uWeatherWaveT * 0.5 ) * 0.45;
+            float relicPhase = relicDist * 1.9 - uWeatherWaveT * 1.6 * celFlowSign + relicJit;
 
             // 越外圈自然消失 (衰減距離放大 2 倍: 0.95 -> 0.48)
             float relicFade = exp( -relicDist * 0.48 ) * ( 1.0 - smoothstep( 0.15, 0.95, celRawD ) );
             float relicWave = sin( relicPhase ) * relicFade * ( uSoftAmp * 1.25 );
 
             // ⑥ 水波重疊干涉條紋計算 (Interference Fringes: 相長/相消干涉)
-            float seaPhase = celMsp + uWindT * uSoftFreq;
+            float seaPhase = celMsp + uWeatherWaveT * uSoftFreq;
             float celInterference = cos( relicPhase - seaPhase )
-                                  + cos( relicPhase * 1.25 + dot( celSxz, vec2( 0.18, -0.14 ) ) - uWindT * 1.1 ) * 0.5;
+                                  + cos( relicPhase * 1.25 + dot( celSxz, vec2( 0.18, -0.14 ) ) - uWeatherWaveT * 1.1 ) * 0.5;
             float fringeWeight = relicFade * smoothstep( 0.04, 0.35, celRawD );
             float interferenceFringes = celInterference * fringeWeight * ( uSoftAmp * 0.75 );
 
             #ifdef CEL_SWAMP_RIPPLE
             // 沼澤/封閉水域：浪花變化改為正號到微小負號 (負號數值遠小於正號，負號時不顯示)
-            float swampWavePulse = sin( uWindT * 1.4 + relicDist * 1.0 ) * 0.54 + 0.46; // [-0.08, +1.00]
+            float swampWavePulse = sin( uWeatherWaveT * 1.4 + relicDist * 1.0 ) * 0.54 + 0.46; // [-0.08, +1.00]
             relicWave *= clamp( swampWavePulse, 0.0, 1.0 );
             interferenceFringes *= clamp( swampWavePulse, 0.0, 1.0 );
             #endif
 
-            celH += relicWave + interferenceFringes;
+            celH += ( relicWave + interferenceFringes ) * uWeatherWaveAmp;
           }
 
           #ifdef CEL_SWAMP_RIPPLE
-          celH += celSwampRipple( celSxz );
+          celH += celSwampRipple( celSxz ) * uWeatherWaveAmp;
           #endif
           return celH;
         }`;
@@ -1268,6 +1287,11 @@ const CEL_SEA_GLSL = `
  */
 export function stepCelWind(dt) {
   _windT.value += Math.min(0.25, Math.max(0, dt || 0));
+  // Integrate rates so changing weather never multiplies the accumulated age into a phase jump.
+  const d = Number.isFinite(dt) ? Math.min(.25, Math.max(0, dt)) : 0;
+  _windPhase.value += d * _weatherWind.freq.value;
+  _wavePhase.value += d * _weatherWind.waveSpeed.value;
+  _gustPhase.value += d * _weatherWind.shape.value.w;
 }
 
 /** 目前的風時鐘(秒);雲朵那半(environment.js)與植被同吃一個時鐘 */
@@ -1522,6 +1546,11 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uWeatherWindFreq = _weatherWind.freq;
     shader.uniforms.uWeatherWaveAmp = _weatherWind.waveAmp;
     shader.uniforms.uWeatherWaveSpeed = _weatherWind.waveSpeed;
+    shader.uniforms.uWeatherWindT = _windPhase;
+    shader.uniforms.uWeatherWaveT = _wavePhase;
+    shader.uniforms.uWeatherGustT = _gustPhase;
+    shader.uniforms.uWeatherWindShape = _weatherWind.shape;
+    shader.uniforms.uWeatherWaterShape = _weatherWind.water;
     // 陰影偏色(P1-B):共享 uniform 物件 ⇒ 拉桿一動,全場材質同一幀跟著換
     // **兩派共用同一份色相**(同一張 `SHADOW_HUE`、同一根拉桿、同一條 mech/env 兩軌),
     // MUST NOT 為 School B 另建第二份 —— 那就是「兩派的陰影是兩種顏色」。
@@ -1707,7 +1736,7 @@ ${CEL_SEA_GLSL}
             swP -= sw * ${(0.8 * Math.PI * 2).toFixed(3)};
           #endif
           // 一個共用的雙頻波形；旗面另以實例原點雜湊取速率 / 相位，避免整圈旗陣像機械連桿。
-          float swRate = uSoftFreq * uWeatherWindFreq;
+          float swRate = uSoftFreq;
           float swPhase = swP;
           float swBeat = ${WIND.BEAT.toFixed(3)};
           float swSlowW = 0.84;
@@ -1724,9 +1753,12 @@ ${CEL_SEA_GLSL}
             swFastW = 0.25;
             swFastPhase = swPhase;
           #endif
+          swSlowW -= uWeatherWindShape.y;
+          swFastW += uWeatherWindShape.y;
           // 兩個不可通約的正弦相加 = 週期性(使用者要的「重複性變化」)但看不出重複點。
-          float swOsc = sin( uWindT * swRate + swPhase ) * swSlowW
-                      + sin( uWindT * swRate * swBeat + swFastPhase ) * swFastW;
+          float swOsc = sin( uWeatherWindT * swRate + swPhase ) * swSlowW
+                      + sin( uWeatherWindT * swRate * swBeat + swFastPhase ) * swFastW;
+          swOsc = mix( swOsc, 0.65 + swOsc * 0.35, uWeatherWindShape.x );
           // 世界風向 → 零件局部方向。**精確逆映射,不是轉置**:M = R·S 而轉置 = S·R^T,
           // 兩者差一個 S² —— 等比縮放下只是常數倍(正規化消掉),但冠盤 sy = 0.34 這種
           // 非等比縮放會把站姿微傾的污染放大:下沉能偏離世界垂直 30°,
@@ -2130,23 +2162,23 @@ ${CEL_SEA_GLSL}
           // 沼澤專屬破碎波紋光帶 (細緻破碎化賽璐璐水波紋，有機領域扭曲 + 底部密集塊狀起伏誤差撕裂)
           float celFragBedErr = celSwampBedError( vCelWP.xz );
           vec2 celWarpUV = vCelWP.xz + vec2(
-            sin( vCelWP.z * 0.28 + uWindT * 0.42 ) * 1.8 + cos( vCelWP.x * 0.45 + 1.7 ) * 1.0 + celFragBedErr * 0.45,
-            cos( vCelWP.x * 0.24 - uWindT * 0.38 ) * 1.8 + sin( vCelWP.z * 0.41 + 2.3 ) * 1.0 - celFragBedErr * 0.45
+            sin( vCelWP.z * 0.28 + uWeatherWaveT * 0.42 ) * 1.8 + cos( vCelWP.x * 0.45 + 1.7 ) * 1.0 + celFragBedErr * 0.45,
+            cos( vCelWP.x * 0.24 - uWeatherWaveT * 0.38 ) * 1.8 + sin( vCelWP.z * 0.41 + 2.3 ) * 1.0 - celFragBedErr * 0.45
           );
           vec2 celSwRipUV = celWarpUV * 0.65;
-          float celRipN1 = celNoise( celSwRipUV * 2.0 + vec2( uWindT * 0.22, -uWindT * 0.18 ) );
-          float celRipN2 = celNoise( celSwRipUV * 3.8 - vec2( uWindT * 0.28, uWindT * 0.22 ) + 5.17 );
-          float celRipN3 = celNoise( celSwRipUV * 7.2 + vec2( -uWindT * 0.35, uWindT * 0.30 ) + 3.41 );
+          float celRipN1 = celNoise( celSwRipUV * 2.0 + vec2( uWeatherWaveT * 0.22, -uWeatherWaveT * 0.18 ) );
+          float celRipN2 = celNoise( celSwRipUV * 3.8 - vec2( uWeatherWaveT * 0.28, uWeatherWaveT * 0.22 ) + 5.17 );
+          float celRipN3 = celNoise( celSwRipUV * 7.2 + vec2( -uWeatherWaveT * 0.35, uWeatherWaveT * 0.30 ) + 3.41 );
           
           // 破碎化多向波紋 (非線性彎曲、多向干涉、底部塊狀起伏造成波痕折射撕裂)
-          float celWave1 = sin( dot( celWarpUV, vec2( 0.52, 0.36 ) ) * 2.2 + uWindT * 1.15 + celRipN1 * 3.6 + celFragBedErr * 0.95 ) * 0.5 + 0.5;
-          float celWave2 = cos( dot( celWarpUV, vec2( -0.42, 0.62 ) ) * 2.5 - uWindT * 0.95 + celRipN2 * 3.2 - celFragBedErr * 0.85 ) * 0.5 + 0.5;
-          float celWave3 = sin( dot( celWarpUV, vec2( 0.78, -0.65 ) ) * 3.1 + uWindT * 1.35 + celRipN3 * 2.4 ) * 0.5 + 0.5;
+          float celWave1 = sin( dot( celWarpUV, vec2( 0.52, 0.36 ) ) * 2.2 + uWeatherWaveT * 1.15 + celRipN1 * 3.6 + celFragBedErr * 0.95 ) * 0.5 + 0.5;
+          float celWave2 = cos( dot( celWarpUV, vec2( -0.42, 0.62 ) ) * 2.5 - uWeatherWaveT * 0.95 + celRipN2 * 3.2 - celFragBedErr * 0.85 ) * 0.5 + 0.5;
+          float celWave3 = sin( dot( celWarpUV, vec2( 0.78, -0.65 ) ) * 3.1 + uWeatherWaveT * 1.35 + celRipN3 * 2.4 ) * 0.5 + 0.5;
           
           // 破碎條紋：高階干涉 + 碎裂斷筆遮罩 (使波痕呈現自然破碎散佈的弧光)
           float celBrokenBand = pow( celWave1 * celWave2 * 1.35, 2.4 ) + pow( celWave2 * celWave3 * 1.35, 2.6 ) * 0.8;
           float celBreakMask = smoothstep( 0.25, 0.65, celRipN2 * 0.55 + celRipN3 * 0.45 );
-          float celSwampRippleLine = step( 0.60, celBrokenBand * celBreakMask ) * vSeaFade * min( 1.0, uWeatherWaveAmp * 2.0 );
+          float celSwampRippleLine = step( 0.60, celBrokenBand * celBreakMask ) * vSeaFade * min( 1.0, uWeatherWaveAmp * 2.0 ) * mix( 0.2, 1.0, uWeatherWaterShape.z );
           
           if ( celSwampRippleLine > 0.0 ) {
             vec3 swampRippleColor = vec3( 0.72, 0.86, 0.62 ); // 沼澤青翠碎波紋色相
@@ -2171,10 +2203,15 @@ ${CEL_SEA_GLSL}
           #else
           vec2 celBedShimmerOffset = vec2( celFragSeaBed * 0.15, -celFragSeaBed * 0.15 );
           #endif
-          vec2 celShimmerUV = vCelWP.xz * 2.4 + vec2( sin( uWindT * 1.8 + vCelWP.z * 0.4 ), cos( uWindT * 1.5 + vCelWP.x * 0.4 ) ) * 0.35 + celBedShimmerOffset;
+          vec2 celShimmerUV = vCelWP.xz * 2.4 + vec2( sin( uWeatherWaveT * 1.8 + vCelWP.z * 0.4 ), cos( uWeatherWaveT * 1.5 + vCelWP.x * 0.4 ) ) * 0.35 + celBedShimmerOffset;
           float celShN1 = celNoise( celShimmerUV );
-          float celShN2 = celNoise( celShimmerUV * 2.5 + vec2( 5.31, 11.17 ) + uWindT * 0.9 );
+          float celShN2 = celNoise( celShimmerUV * 2.5 + vec2( 5.31, 11.17 ) + uWeatherWaveT * 0.9 );
           float celSparkle = pow( celShN1 * celShN2, 3.2 );
+          // Broken capillary highlights add roughness without undersampling the water mesh.
+          float celChopLine = smoothstep( 0.82, 0.96,
+            sin( dot( vCelWP.xz, uWindDir ) * 0.9 - uWeatherWaveT * 1.6 + celShN1 * 2.0 ) * 0.5 + 0.5 );
+          celChopLine *= celShN2 * uWeatherWaterShape.z * vSeaFade * min( 1.0, uWeatherWaveAmp * 2.0 );
+          gl_FragColor.rgb = mix( gl_FragColor.rgb, vec3( 0.86, 0.94, 0.98 ), celChopLine * 0.28 );
           vec3 celWaterV = normalize( vViewPosition );
           vec3 celWaterH = normalize( uCelLightDir + celWaterV );
           float celWaterSpec = pow( max( 0.0, dot( normal, celWaterH ) ), 32.0 );

@@ -15,7 +15,7 @@ import {
 import { setCelSun, celWindTime, INK_INFO_DECL, INK_INFO_NONE, setWeatherDynamics } from './toon.js';
 import { mulberry32 } from './rng.js';
 import { resolveWeatherVisuals } from './weatherVisuals.js';
-import { makeClouds, makeParticles, makeLightningSystem } from './weatherFx.js';
+import { makeClouds, makeFog, makeParticles, makeLightningSystem } from './weatherFx.js';
 import { stepWeatherSurface } from './weatherState.js';
 import { makeScorchAtlas, setSurfaceWeather } from './weatherMaterial.js';
 import { makeWeatherDeposits } from './weatherDeposits.js';
@@ -284,6 +284,8 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
   scene.add(dome);
 
   const visuals = resolveWeatherVisuals(curDyn);
+  const fog = makeFog(terrain, seed, opts);
+  scene.add(fog.obj);
   const previewRnd = mulberry32((seed ^ 0x62A391) >>> 0);
   const clouds = makeClouds(span, seed, opts);
   if (clouds) scene.add(clouds.obj);
@@ -412,7 +414,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       dt = Number.isFinite(dt) ? Math.max(0, dt) : 0;
       curDyn = resolveWeatherDynamics(weatherVec, curDyn, dt);
       resolveWeatherVisuals(curDyn, visuals);
-      if (!backgroundOnly) setWeatherDynamics(curDyn);
+      if (!backgroundOnly) setWeatherDynamics(curDyn, visuals);
       if (!surfaceSynced) surfaceState = stepWeatherSurface(surfaceState, curDyn, dt);
       if (!backgroundOnly) setSurfaceWeather(surfaceState);
       deposits?.update(dt, camera, surfaceState);
@@ -485,6 +487,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
 
       // 6. 粒子與雲群動態步進
       particles.update(dt, camera, curDyn, visuals);
+      fog.update(dt, camera, curDyn, visuals.fog, fogC);
 
       dome.position.copy(camera.position);
       if (clouds) {
@@ -518,6 +521,8 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       }
       scene.remove(particles.obj);
       particles.dispose();
+      scene.remove(fog.obj);
+      fog.dispose();
       scene.remove(lightning.obj);
       lightning.dispose();
       scene.remove(dome);
