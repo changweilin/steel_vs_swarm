@@ -720,7 +720,7 @@ export class BattleClient {
     this.flight = false;                        // morph:目前是否飛行型態
     this.charge = 0;                            // morph:蓄力跳進度 0~1(按住 Space)
     // 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT):爬升動力條 + 受擊掉高
-    this.lift = null;                           // 目前爬升動力(null = 尚未知電力上限 ⇒ 首幀補滿)
+    this.lift = null;                           // 目前爬升動力(null = 首幀補滿到統一上限)
     this._airSink = 0;                          // 受擊掉高:待落公尺數(逐幀以 _airSinkV 消化)
     this._airSinkV = 0;                         // 待落公尺數的下降速率(= 待落總量 / FLIGHT.SINK_S)
     this._liftLockUntil = 0;                    // 受擊掉高動力回復鎖定截止時刻(FLIGHT.HIT_LOCK_S)
@@ -741,7 +741,7 @@ export class BattleClient {
     this._resSent = {};               // 預約已下單的階(item → {lvl, t}):擋住權威回覆前的重複下單
     this.sp = 0; this.maxSp = 1;      // 護盾(雙層 HP 第一層,脫戰自然回復)
     this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
-    this._mpAuth = false;             // maxMp 是否已收到伺服器權威值(爬升動力上限 MUST NOT 拿上面那個佔位的 1 去解析)
+    this._mpAuth = false;             // maxMp 是否已收到伺服器權威值(電力資源用;爬升動力為固定上限,不吃此閘)
     this.kn = 0;                      // 戰鬥分數(八軌升級的第二道門檻;伺服器權威,只增不減)
     this.cds = [0, 0];                // [守招, 攻招] 冷卻(伺服器倒數)
     this.chg = [[1, 1, 0], [1, 1, 0]]; // [[守招可用, 守招上限, 下次冷卻], [攻招可用, 攻招上限, 下次冷卻]]
@@ -3780,7 +3780,7 @@ export class BattleClient {
           this._prevVital = vital;
           this._prevSp = this.sp;
           this.mp = e.mp ?? this.mp; this.maxMp = e.mm ?? this.maxMp;
-          if (e.mm != null) this._mpAuth = true;   // 電力上限定案 → 爬升動力才解析得出真正的上限
+          if (e.mm != null) this._mpAuth = true;   // 電力上限定案(爬升動力為固定上限,不吃此閘)
           this.money = e.$ ?? this.money;
           this.upg = e.up || this.upg;
           this.kn = e.kn ?? this.kn;
@@ -9552,8 +9552,8 @@ export class BattleClient {
   }
 
   // ---------------- 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT)----------------
-  /** 爬升動力上限(正比於伺服器權威的電力上限;缺值退回機種基準電力;變形者吃 FLIGHT.MORPH_F) */
-  _liftMax() { return liftMax((this._mpAuth && this.maxMp) || UNITS[this.heroKind]?.mp || 0, this.isMorph); }
+  /** 爬升動力上限(全機體共用固定值 FLIGHT.LIFT_MAX) */
+  _liftMax() { return liftMax(); }
 
   /** 飛行機體是否處於受擊失衡狀態?(2026-09-01 使用者需求:跌落到穩住期間進入失衡,命中/暴擊減半,無法恢復動力) */
   _unbalanced(now) {
@@ -9565,19 +9565,15 @@ export class BattleClient {
   /**
    * 爬升動力條:往上飛消耗、其餘時間回充。**唯一消費點** —— target.y > 0 才扣,扣速 ∝ 爬升率
    * (全速 = liftDrainPS ⇒ 滿動力撐 FLIGHT.DRAIN_S 秒);動力見底把上升分量歸零(= 爬不上去,
-   * 不是變慢),水平/下降/懸停不受影響。回速正比於電力回速 × 充能軌(liftRegen)。
+   * 不是變慢),水平/下降/懸停不受影響。回速為固定值(liftRegen)。
    * 正常操作下降高度時會回充 2/3 的電力(liftDescentPS ∝ 下降率,2026-09-11 使用者需求)。
    * 高度越高同速爬升越耗動力、同速下降回充也越多(× 同一條高度曲線 liftAltF,連續無階梯)。
    */
   _stepLift(dt, now, target, u) {
-    // 電力上限是伺服器權威值(快照 e.mm)。它到達之前 MUST NOT 解析動力上限 —— 建構子的佔位值
-    // 是 1,拿它把 `lift == null`(= 補滿)夾成幾乎空的一格,之後只能靠回充慢慢爬回上限:
-    // 開場第一幀就會發生 ⇒ 無人機一出場動力條就是空的(2026-08-03 使用者回報)。
-    // 未定案前一律視同滿動力:不扣、不夾、不擋(HUD 的 `lift ?? _liftMax()` 同樣顯示滿格)。
-    if (!this._mpAuth) return;
     const lMax = this._liftMax();
-    if (this.lift == null || this.lift > lMax) this.lift = lMax;   // 首幀 / 電力上限變動 → 夾回上限
-    const vsp = Math.max(1e-6, u?.vspeed || 0);
+    if (this.lift == null || this.lift > lMax) this.lift = lMax;   // 首幀 → 夾回統一上限
+    const upV = Math.max(1e-6, u?.vspeed || 0);                   // 上升全速(變形者 = 無人機 × MORPH.UP_F)
+    const dnV = Math.max(1e-6, u?.vdown ?? u?.vspeed ?? 0);        // 下降全速(變形者 = 無人機 × MORPH.DOWN_F)
     if (target.y > 0) {
       if (this.lift <= 0) {
         target.y = 0;                                  // 動力耗盡:爬不上去(仍可懸停/下降/平飛)
@@ -9587,17 +9583,17 @@ export class BattleClient {
         }
       } else {
         this.lift = Math.max(0, this.lift
-          - liftDrainPS(this.maxMp || 0, this.isMorph) * liftAltF(this.pos.y, this._liftBaseY(), this._ceilY()) * Math.min(1, target.y / vsp) * dt);
+          - liftDrainPS() * liftAltF(this.pos.y, this._liftBaseY(), this._ceilY()) * Math.min(1, target.y / upV) * dt);
       }
     } else {
       // 受擊失衡期間禁止回充(2026-09-01 使用者需求:失衡時無法恢復飛行動力)
       if (!this._unbalanced(now)) {
         const wet = this._env?.code || 0;
-        const descF = target.y < 0 ? Math.min(1, -target.y / vsp) : 0;
+        const descF = target.y < 0 ? Math.min(1, -target.y / dnV) : 0;
         // 下降回充吃同一條高度曲線:高處爬升貴、同高下降回得也多 ⇒ 2/3 比例在任何高度都成立
-        const descRecharge = liftDescentPS(this.maxMp || 0, this.isMorph) * liftAltF(this.pos.y, this._liftBaseY(), this._ceilY()) * descF;
+        const descRecharge = liftDescentPS() * liftAltF(this.pos.y, this._liftBaseY(), this._ceilY()) * descF;
         this.lift = Math.min(lMax, this.lift
-          + (liftRegen(u?.mpRegen, this.upg?.ch) + descRecharge) * fluidFactor(wet) * dt);
+          + (liftRegen() + descRecharge) * fluidFactor(wet) * dt);
       }
     }
   }
@@ -9688,11 +9684,11 @@ export class BattleClient {
         this._spaceWas = this.keys.Space;
       }
       if (this.keys.Space) target.y += u.vspeed * ccF * tSlow;
-      if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed * ccF * tSlow;
+      if (this.keys.KeyC || this.keys.ControlLeft) target.y -= (u.vdown ?? u.vspeed) * ccF * tSlow;
       // 爬升動力(2026-07-30 使用者需求;唯一縫 data.js FLIGHT):**往上飛才耗動力** ——
       // 耗速/回充 ∝ (爬升率/下降率) × 高度曲線(起點全速爬升 = liftDrainPS × 1 ⇒ 起點滿動力恰好撐 FLIGHT.DRAIN_S 秒),
-      // 見底 = 爬不上去(上升分量歸零,水平/下降/懸停完全不受影響),不爬升即回充(∝ 電力回速)。
-      // 上限/回速皆正比於電力(伺服器權威的 maxMp 與充能軌等級)⇒ MUST NOT 在此手寫係數。
+      // 見底 = 爬不上去(上升分量歸零,水平/下降/懸停完全不受影響)。上限/回速全機固定(FLIGHT.LIFT_MAX/REGEN_PS),
+      // 升降速率上限見 UNITS(變形者 vdown ≠ vspeed)⇒ MUST NOT 在此手寫係數。
       this._stepLift(dt, now, target, u);
       this.vel.x += (target.x - this.vel.x) * lerpFPS(4, dt);
       this.vel.z += (target.z - this.vel.z) * lerpFPS(4, dt);

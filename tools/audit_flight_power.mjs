@@ -14,8 +14,10 @@
 //   ②**受擊掉高**:掉的公尺數 ∝ 傷害,校準錨 = 打完「平均護盾+裝甲」掉 SINK_TOWERS 個砲塔高。
 //      無聲寫壞法:在 game.js 手寫公尺數/係數(校準錨一改就分家)、把掉幅做成「速度」
 //      (同一份傷害分幾發打完就掉不一樣多)、忘了在陣亡/換座機/觸地清帳(舊帳把新機體往下拉)。
-//   ③**爬升動力**:只有往上飛消耗,滿動力全速爬升撐 DRAIN_S 秒,上限/回速正比於電力。
-//      無聲寫壞法:耗速手寫(改 DRAIN_S 無效)、動力見底改「減速」而不是「爬不上去」
+//   ③**爬升動力**:只有往上飛消耗,滿動力全速爬升撐 DRAIN_S 秒,上限/回速全機共用固定值
+//      (LIFT_MAX = 100、REGEN_PS = 10);大跳躍滿蓄耗 60%、變形滿蓄耗 40%(皆 × 蓄力比例)。
+//      無聲寫壞法:耗速手寫(改 DRAIN_S 無效)、按機體區分上限/回速(改一隻漏一隻)、
+//      跳躍/變形耗能手寫固定點數(改 LIFT_MAX 就分家)、動力見底改「減速」而不是「爬不上去」
 //      (玩家分不出來,且會與坡度阻擋 slopeBlocked 的語意分家)、把水平分量一起砍掉。
 //      高度越高同速爬升越耗動力:連續曲線 liftAltF(起點 = 1、天花板 = ALT_TOP_F = 4),
 //      起點 = 有海面取海平面、否則取全圖地形最低點;下降回充吃同一條(高處回得多,2/3 比例處處成立)。
@@ -30,6 +32,7 @@
 import { readSrc } from './audit_src.mjs';
 import {
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, unbalMissP,
+  cjumpLiftCost, morphLiftCost, CJUMP, MORPH,
   SQUAD, TARGET_H, UNITS, CHARACTERS, ECON, chargeF,
   HYPER, DECOY, LANCE, lanceR, towerDps, towerSurviveHp, towerKillHp,
   kamiHp, kamiExposureS, kamiSide, hyperHp, hyperFlightS, hyperMaxArcM, ultLaunchLegM,
@@ -330,42 +333,44 @@ console.log('■ Ⅲ 受擊掉高:推導(校準錨 = 打完平均護盾+裝甲 �
 }
 
 // ---------------------------------------------------------------------------
-console.log('■ Ⅳ 爬升動力:推導(滿動力全速爬升撐 DRAIN_S 秒;上限/回速正比於電力)');
+console.log('■ Ⅳ 爬升動力:推導(滿動力全速爬升撐 DRAIN_S 秒;上限/回速全機固定)');
 // ---------------------------------------------------------------------------
 {
-  for (const mp of [60, 100, 145]) {
-    t(`電力上限 ${mp}:滿動力全速爬升 = DRAIN_S(${FLIGHT.DRAIN_S}s)`,
-      near(liftMax(mp) / liftDrainPS(mp), FLIGHT.DRAIN_S, 1e-9),
-      `${(liftMax(mp) / liftDrainPS(mp)).toFixed(3)}s`);
-  }
-  t('動力上限正比於電力上限', near(liftMax(200), liftMax(100) * 2) && liftMax(0) === 0);
-  t('耗速正比於電力上限(大電力 = 大條也耗得快 ⇒ 秒數不變)',
-    near(liftDrainPS(200), liftDrainPS(100) * 2));
+  t(`滿動力全速爬升 = DRAIN_S(${FLIGHT.DRAIN_S}s)`,
+    near(liftMax() / liftDrainPS(), FLIGHT.DRAIN_S, 1e-9),
+    `${(liftMax() / liftDrainPS()).toFixed(3)}s`);
+  t('動力上限全機相同 = FLIGHT.LIFT_MAX(100)',
+    FLIGHT.LIFT_MAX === 100 && liftMax() === 100);
+  t('上限 MUST NOT 按機體/電力區分(舊 MAX_F / MORPH_F 已退場)',
+    FLIGHT.MAX_F === undefined && FLIGHT.MORPH_F === undefined
+    && liftMax(60) === liftMax(200) && liftMax(200, true) === liftMax(100, false));
   t('liftDrainPS 由 liftMax / DRAIN_S 推導(MUST NOT 手寫每秒耗量)',
-    /export const liftDrainPS[\s\S]{0,140}?liftMax\([\s\S]{0,40}?FLIGHT\.DRAIN_S/.test(dataSrc));
-  t('回速正比於電力回速(mpRegen)', near(liftRegen(8, 3), liftRegen(4, 3) * 2));
-  t('回速隨「充能」軌單調成長(充能軌 = 飛行續航軌)', (() => {
-    let prev = -1;
-    for (let l = 0; l <= ECON.UPGRADES.ch.max; l++) {
-      const v = liftRegen(UNITS.drone.mpRegen, l);
-      if (v <= prev) return false;
-      prev = v;
-    }
-    return true;
-  })(), `${liftRegen(UNITS.drone.mpRegen, 0)} → ${liftRegen(UNITS.drone.mpRegen, ECON.UPGRADES.ch.max)}`);
-  t('回速吃 chargeF(與電力回復同一條升級軌)',
-    /export const liftRegen[\s\S]{0,160}?chargeF\(/.test(dataSrc));
+    /export const liftDrainPS[\s\S]{0,140}?liftMax\(\)[\s\S]{0,40}?FLIGHT\.DRAIN_S/.test(dataSrc)
+    && near(liftDrainPS(), FLIGHT.LIFT_MAX / FLIGHT.DRAIN_S, 1e-9));
+  t('回速全機相同 = FLIGHT.REGEN_PS(10),MUST NOT 吃電力/充能軌(舊 REGEN_F 已退場)',
+    FLIGHT.REGEN_PS === 10 && liftRegen() === 10
+    && FLIGHT.REGEN_F === undefined
+    && liftRegen(8, 3) === liftRegen(4, 0)
+    && !/export const liftRegen[\s\S]{0,160}?chargeF\(/.test(dataSrc));
   t('回充比耗盡慢(爬升是有代價的機動)',
-    liftMax(UNITS.drone.mp) / liftRegen(UNITS.drone.mpRegen, ECON.UPGRADES.ch.max) > FLIGHT.DRAIN_S,
-    `${(liftMax(UNITS.drone.mp) / liftRegen(UNITS.drone.mpRegen, ECON.UPGRADES.ch.max)).toFixed(1)}s 回滿`);
+    liftMax() / liftRegen() > FLIGHT.DRAIN_S,
+    `${(liftMax() / liftRegen()).toFixed(1)}s 回滿`);
+  t('大跳躍滿蓄耗上限 60%(輕按按蓄力比例折算,推導不手寫)',
+    FLIGHT.CJUMP_F === 0.6 && cjumpLiftCost(1) === Math.ceil(liftMax() * 0.6)
+    && cjumpLiftCost(0.5) === Math.ceil(liftMax() * 0.6 * 0.5)
+    && /export const cjumpLiftCost[\s\S]{0,160}?FLIGHT\.CJUMP_F/.test(dataSrc));
+  t('變形滿蓄耗上限 40%(輕按按蓄力比例折算,推導不手寫)',
+    FLIGHT.MORPH_COST_F === 0.4 && morphLiftCost(1) === Math.ceil(liftMax() * 0.4)
+    && morphLiftCost(0.5) === Math.ceil(liftMax() * 0.4 * 0.5)
+    && /export const morphLiftCost[\s\S]{0,160}?FLIGHT\.MORPH_COST_F/.test(dataSrc));
+  t('舊 CJUMP.LIFT / MORPH.LIFT 固定點數已退場(改上限就分家的那一組)',
+    CJUMP.LIFT === undefined && MORPH.LIFT === undefined);
   t('DESCENT_RECHARGE_F = 2 / 3(正常操作下降高度回充 2/3 電力)',
     near(FLIGHT.DESCENT_RECHARGE_F, 2 / 3, 1e-9));
   t('liftDescentPS 由 liftDrainPS * FLIGHT.DESCENT_RECHARGE_F 推導(MUST NOT 手寫每秒回充量)',
-    /export const liftDescentPS[\s\S]{0,140}?liftDrainPS\([\s\S]{0,40}?FLIGHT\.DESCENT_RECHARGE_F/.test(dataSrc));
-  for (const mp of [60, 100, 145]) {
-    t(`電力上限 ${mp}:全速下降回充 = 全速爬升耗速 × 2/3`,
-      near(liftDescentPS(mp) / liftDrainPS(mp), FLIGHT.DESCENT_RECHARGE_F, 1e-9));
-  }
+    /export const liftDescentPS[\s\S]{0,140}?liftDrainPS\(\)[\s\S]{0,40}?FLIGHT\.DESCENT_RECHARGE_F/.test(dataSrc));
+  t('全速下降回充 = 全速爬升耗速 × 2/3',
+    near(liftDescentPS() / liftDrainPS(), FLIGHT.DESCENT_RECHARGE_F, 1e-9));
   // ---- 高度爬升曲線(2026-09-30 使用者需求:高度越高,爬升相同高度需要更多動力)----
   // 起點 = 有海面取海平面、否則取全圖地形最低點;天花板 = 4 倍。
   t('高度曲線由 FLIGHT.ALT_TOP_F 推導(MUST NOT 手寫倍率)',
@@ -432,15 +437,14 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
   t('_botAirSink 只作用於 bot 的飛行機體(真人由客戶端物理結算,套兩次會打架)',
     /isBotId\(t\.pid\)/.test(grab('_botAirSink', simSrc))
     && /kind === 'drone'/.test(grab('_botAirSink', simSrc)));
-  // 電力上限的權威旗標:唯一寫入點 = 快照解析(收到 e.mm 那一行旁邊)。自己在別處補 true
-  // 就等於又拿佔位值當上限,而症狀只是「開場動力條是空的」,沒有任何錯誤訊息。
+  // 電力上限的權威旗標:唯一寫入點 = 快照解析(收到 e.mm 那一行旁邊)。
   t('_mpAuth 只在收到快照的 e.mm 時寫 true(建構子那一次 false 不算)',
     count(code, 'this._mpAuth = true') === 1
     && /this\.maxMp = e\.mm \?\? this\.maxMp;[\s\S]{0,120}?this\._mpAuth = true/.test(code)
     && count(code, 'this._mpAuth = false') === 1);
-  t('_stepLift 與 _liftMax 都以 _mpAuth 為閘(未定案 = 視同滿動力,不扣不夾)',
-    /if \(!this\._mpAuth\) return;/.test(grab('_stepLift'))
-    && /this\._mpAuth && this\.maxMp/.test(grab('_liftMax')));
+  t('爬升動力不吃 _mpAuth 閘(固定上限,開場即解析)',
+    !/this\._mpAuth/.test(grab('_stepLift'))
+    && /_liftMax\(\) \{ return liftMax\(\); \}/.test(grab('_liftMax')));
   t('_stepLift 於飛行段與地面段各呼叫一次,且飛行段排在速度積分之前',
     count(code, 'this._stepLift(') === 2
     && /this\._stepLift\(dt, now, target, u\);[\s\S]{0,200}?this\.vel\.y \+= \(target\.y - this\.vel\.y\)/.test(code));
@@ -524,31 +528,22 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     t('動力見底:下降不受影響', down.y === -u.vspeed);
     t('不爬升即回充(下降/懸停都回)', c2.lift > 0);
   }
-  // ④ 回充上限與比例
+  // ④ 回充上限固定(全機相同,不吃充能軌)
   {
-    const c = mk({ lift: 0, upg: { ch: ECON.UPGRADES.ch.max } });
+    const c = mk({ lift: 0 });
     const hover = { x: 0, y: 0, z: 0 };
     for (let i = 0; i < 60 * 60; i++) c._stepLift(1 / 60, i / 60, hover, u);
-    t('回充夾在上限(不會超充)', near(c.lift, c._liftMax(), 1e-9), `${c.lift}`);
-    const lo = mk({ lift: 0, upg: { ch: 0 } });
-    const hi = mk({ lift: 0, upg: { ch: ECON.UPGRADES.ch.max } });
-    for (let i = 0; i < 60; i++) { lo._stepLift(1 / 60, i / 60, { x: 0, y: 0, z: 0 }, u); hi._stepLift(1 / 60, i / 60, { x: 0, y: 0, z: 0 }, u); }
-    t('充能軌越高回得越快(回復正比於電力回速)', hi.lift > lo.lift * 1.5, `${lo.lift.toFixed(1)} vs ${hi.lift.toFixed(1)}`);
+    t('回充夾在統一上限(不會超充)', near(c.lift, FLIGHT.LIFT_MAX, 1e-9), `${c.lift}`);
+    t('回滿約 2 × DRAIN_S(固定回速)',
+      near(FLIGHT.LIFT_MAX / liftRegen(), FLIGHT.DRAIN_S * 2, 1e-9),
+      `${(FLIGHT.LIFT_MAX / liftRegen()).toFixed(1)}s`);
   }
-  // ④' 電力上限未定案(開場第一幀):MUST 視同滿動力,MUST NOT 拿建構子佔位的 maxMp 去夾
-  //     ——夾了就是「無人機一出場動力條是空的,只能靠回充慢慢爬回上限」(2026-08-03 使用者回報)
+  // ④' 開場第一幀:lift = null 即補滿統一上限(固定值,不吃電力快照)
   {
-    const boot = mk({ _mpAuth: false, maxMp: 1, lift: null });
-    const up = { x: 0, y: u.vspeed, z: 0 };
-    for (let i = 0; i < 60 * 3; i++) boot._stepLift(1 / 60, i / 60, { x: 0, y: u.vspeed, z: 0 }, u);
-    boot._stepLift(1 / 60, 3, up, u);
-    t('上限未定案:不解析動力(lift 維持 null = 滿)', boot.lift === null);
-    t('上限未定案:爬升不被擋(寧可放行,不可誤鎖)', up.y === u.vspeed);
-    t('上限未定案:_liftMax 退回機種基準電力,MUST NOT 吃佔位的 maxMp',
-      near(boot._liftMax(), liftMax(UNITS.drone.mp, false), 1e-9), `${boot._liftMax()}`);
-    boot._mpAuth = true; boot.maxMp = UNITS.drone.mp;
-    boot._stepLift(1 / 60, 4, { x: 0, y: 0, z: 0 }, u);
-    t('上限定案的第一幀補滿(開場動力條 = 滿格)', near(boot.lift, boot._liftMax(), 1e-9), `${boot.lift}`);
+    const boot = mk({ lift: null });
+    boot._stepLift(1 / 60, 0, { x: 0, y: 0, z: 0 }, u);
+    t('開場第一幀補滿(開場動力條 = 滿格)', near(boot.lift, FLIGHT.LIFT_MAX, 1e-9), `${boot.lift}`);
+    t('全機上限相同:變形者不再打折', near(mk({})._liftMax(), FLIGHT.LIFT_MAX, 1e-9));
   }
   // ⑤ 掉高:總掉幅只由傷害決定(分幾次打完/幀率都不影響)
   {
@@ -592,7 +587,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     const cFull = mk({ lift: 0 });
     const fullDown = { x: 0, y: -u.vspeed, z: 0 };
     cFull._stepLift(dt, 0, fullDown, u);
-    const expectedFull = (liftRegen(u.mpRegen, 0) + liftDescentPS(UNITS.drone.mp, false)) * dt;
+    const expectedFull = (liftRegen() + liftDescentPS()) * dt;
     t('正常操作全速下降:回充量 = (liftRegen + liftDescentPS) * dt',
       near(cFull.lift, expectedFull, 1e-6), `${cFull.lift} vs ${expectedFull}`);
 
@@ -600,7 +595,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     const cHalf = mk({ lift: 0 });
     const halfDown = { x: 0, y: -u.vspeed * 0.5, z: 0 };
     cHalf._stepLift(dt, 0, halfDown, u);
-    const expectedHalf = (liftRegen(u.mpRegen, 0) + liftDescentPS(UNITS.drone.mp, false) * 0.5) * dt;
+    const expectedHalf = (liftRegen() + liftDescentPS() * 0.5) * dt;
     t('正常操作半速下降:位能回充量折半(正比於下降率)',
       near(cHalf.lift, expectedHalf, 1e-6), `${cHalf.lift} vs ${expectedHalf}`);
 
@@ -611,7 +606,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
 
     // 下降回充位能增量恰好為全速爬升耗電的 2/3
     const descContribution = cFull.lift - cHover.lift;
-    const climbDrainPerDt = liftDrainPS(UNITS.drone.mp, false) * dt;
+    const climbDrainPerDt = liftDrainPS() * dt;
     t('下降每公尺回充之動力 = 爬升該公尺耗電之 2/3 (DESCENT_RECHARGE_F)',
       near(descContribution / climbDrainPerDt, FLIGHT.DESCENT_RECHARGE_F, 1e-6));
 
@@ -635,7 +630,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     t('天花板耗速 = 起點耗速 × ALT_TOP_F',
       near(dHi / dLo, FLIGHT.ALT_TOP_F, 1e-9), `${(dHi / dLo).toFixed(3)} vs ${FLIGHT.ALT_TOP_F}`);
     t('起點耗速 = 既有 liftDrainPS(高度錨點不動,DRAIN_S 節奏不變)',
-      near(dLo, liftDrainPS(UNITS.drone.mp, false), 1e-9));
+      near(dLo, liftDrainPS(), 1e-9));
     // 起點規則的行為版:同一個相對高度,海平面起算與最低點起算耗速相同
     const drainBase = (y, base, ceil) => {
       const c = mk({ pos: { y }, _liftBaseY: () => base, _ceilY: () => ceil });
@@ -666,6 +661,50 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
       t(`${tag}:下降位能回充 = 爬升耗速 × 2/3(同曲線 ⇒ 比例處處成立)`,
         near(extra / drain, FLIGHT.DESCENT_RECHARGE_F, 1e-9),
         `${extra.toFixed(2)} / ${drain.toFixed(2)}`);
+    }
+  }
+  // ⑨ 變形者升降速率:上升 = 無人機 × 2/3、下降 = 無人機 × 3/2(推導不手寫)
+  {
+    t('MORPH.UP_F = 2/3、DOWN_F = 3/2', MORPH.UP_F === 2 / 3 && MORPH.DOWN_F === 3 / 2);
+    t('變形者 vspeed 由無人機 vspeed 推導(MUST NOT 手寫公尺數)',
+      /vspeed: UNITS\.drone\.vspeed \* MORPH\.UP_F/.test(dataSrc)
+      && near(UNITS.morph.vspeed, UNITS.drone.vspeed * 2 / 3, 1e-9),
+      `${UNITS.morph.vspeed} vs ${UNITS.drone.vspeed}`);
+    t('變形者 vdown 由無人機 vspeed 推導(無此欄者回退 vspeed)',
+      /vdown: UNITS\.drone\.vspeed \* MORPH\.DOWN_F/.test(dataSrc)
+      && near(UNITS.morph.vdown, UNITS.drone.vspeed * 3 / 2, 1e-9)
+      && UNITS.drone.vdown === undefined,
+      `${UNITS.morph.vdown} vs ${UNITS.drone.vspeed}`);
+    t('vdown 吃 COMBAT_SCALE 縮放(與 vspeed 同表)',
+      /'fly', 'vspeed', 'vdown', 'jump'/.test(dataSrc));
+    t('game.js 下降吃 vdown(回退 vspeed):飛行分支 + _stepLift 歸一化各一處',
+      count(code, 'vdown') === 2
+      && /target\.y -= \(u\.vdown \?\? u\.vspeed\)/.test(code)
+      && /-target\.y \/ dnV/.test(grab('_stepLift'))
+      && /target\.y \/ upV/.test(grab('_stepLift')));
+    // 行為:變形者全速爬升同樣撐 DRAIN_S 秒(耗速按自家速率歸一化),全速下降回充比照 2/3
+    const um = { vspeed: UNITS.morph.vspeed, vdown: UNITS.morph.vdown };
+    const cm = mk();
+    {
+      const dt = 1 / 60;
+      let s = 0;
+      for (let i = 0; i < 60 * 30; i++) {
+        const target = { x: 0, y: um.vspeed, z: 0 };
+        cm._stepLift(dt, i * dt, target, um);
+        if (target.y <= 0) break;
+        s += dt;
+      }
+      t(`變形者全速爬升同樣撐 DRAIN_S(實測 ${s.toFixed(2)}s)`, Math.abs(s - FLIGHT.DRAIN_S) <= 2 * dt);
+    }
+    {
+      const dt = 1 / 60;
+      const cM = mk({ lift: 0 });
+      cM._stepLift(dt, 0, { x: 0, y: -um.vdown, z: 0 }, um);
+      const cH = mk({ lift: 0 });
+      cH._stepLift(dt, 0, { x: 0, y: 0, z: 0 }, um);
+      const drain = liftDrainPS() * dt;
+      t('變形者全速下降位能回充 = 爬升耗速 × 2/3',
+        near((cM.lift - cH.lift) / drain, FLIGHT.DESCENT_RECHARGE_F, 1e-6));
     }
   }
 }

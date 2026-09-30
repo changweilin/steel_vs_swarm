@@ -843,12 +843,14 @@ export const MORPH = {
   LAND_M: 0.5,       // 飛行型離地 ≤ 此距離 → 觸地變形回地面型
   CROUCH_M: 1.4,     // 滿蓄力時機體下蹲幅度(公尺;FPV 鏡頭同步下沉)
   GROUND_Y: 2,       // 伺服器:y ≤ 此值視為地面型(踩雷判定)
-  LIFT: 30,          // launch cost at full charge (actual = LIFT x charge ratio; insufficient = small hop only)
+  UP_F: 2 / 3,       // 飛行型上升速率 = 無人機 vspeed × 此比(UNITS.morph.vspeed 推導)
+  DOWN_F: 3 / 2,     // 飛行型下降速率 = 無人機 vspeed × 此比(UNITS.morph.vdown 推導)
+  // 起飛耗動力 = 上限 × FLIGHT.MORPH_COST_F × 蓄力比例(推導不手寫;MUST NOT 另寫固定點數)
 };
 // Cost fns (single seam; client prediction + server authority share this):
-// proportional to charge ratio so tap hops are cheap and full launches cost the full LIFT.
+// proportional to charge ratio so tap hops are cheap and full launches cost the full share.
 export const morphLiftCost = (charge) =>
-  Math.ceil(MORPH.LIFT * Math.max(0, Math.min(1, charge || 0)));
+  Math.ceil(liftMax() * FLIGHT.MORPH_COST_F * Math.max(0, Math.min(1, charge || 0)));
 // ---- 騰空/空中狀態(2026-07-23;跳躍脫離地面效果的唯一縫)----
 // GRAV:地面機體跳躍重力(game.js 物理與下方頂點推導共用,MUST NOT 各寫一份 24)。
 // OFF_GROUND:離地 ε(與 game.js onGround 同一個門檻)。
@@ -890,11 +892,11 @@ export const CJUMP = {
   AIR_SPD_F: 2.0,
   GRAV_F: 0.45,      // 蓄力跳騰空重力係數(< 1 = 太空漫步)
   CROUCH_M: 1.1,     // 蓄力下蹲幅度(公尺;FPV 鏡頭同步下沉)
-  LIFT: 30,          // jump cost at full charge (actual = LIFT x charge ratio; insufficient = small hop only)
+  // 起跳耗動力 = 上限 × FLIGHT.CJUMP_F × 蓄力比例(推導不手寫;MUST NOT 另寫固定點數)
 };
 /** Charge jump lift cost (single seam; proportional to charge ratio) */
 export const cjumpLiftCost = (charge) =>
-  Math.ceil(CJUMP.LIFT * Math.max(0, Math.min(1, charge || 0)));
+  Math.ceil(liftMax() * FLIGHT.CJUMP_F * Math.max(0, Math.min(1, charge || 0)));
 // ---- 飛行動力學(2026-07-30 使用者需求;飛行機體 = 無人機 + 飛行型態的變形者)----
 // 兩條規則共用這一個縫,MUST NOT 在 game.js / HUD 各自手寫係數:
 //  ①**受擊掉高**:飛行機體挨打會掉高度,掉的公尺數**正比於該次傷害**。校準錨(使用者定調)=
@@ -906,13 +908,13 @@ export const cjumpLiftCost = (charge) =>
 //    掉高是**位移**不是速度:同一份傷害無論分幾發打完,掉的總高度相同(SINK_S 只管「掉多快才
 //    像被打趴」的展開節奏,MUST NOT 拿它縮放總量)。
 //  ②**爬升動力**:往上飛消耗專屬動力條(與電力分開的第二條資源;水平/下降/懸停不吃)。
-//    滿動力全速爬升可持續 DRAIN_S 秒(使用者定調 5s)⇒ 耗速 = 上限 ÷ DRAIN_S(liftDrainPS,
-//    推導不手寫);上限與回復**正比於電力**(liftMax ← 電力上限、liftRegen ← 電力回速 × 充能軌)。
+//    全機體共用同一個固定上限 LIFT_MAX(使用者定調 100);滿動力全速爬升可持續 DRAIN_S 秒
+//    (使用者定調 5s)⇒ 耗速 = 上限 ÷ DRAIN_S(liftDrainPS,推導不手寫)。
+//    回速亦為固定值 REGEN_PS(滿池回滿約 2 × DRAIN_S ≈10s)—— 不吃電力/充能軌(使用者定調完全固定)。
 //    動力見底 = **爬不上去**(不是變慢)—— 與 slopeBlocked 同語意:玩家要分得出「上不去」。
-// 位置本就客戶端權威(見 sim.heroPos)⇒ 這兩條與蓄力跳/攀爬同層,住客戶端物理;驅動它們的量
-// (受擊傷害、電力上限/回速)仍是伺服器權威快照,MUST NOT 在客戶端自算。
+// 位置本就客戶端權威(見 sim.heroPos)⇒ 這兩條與蓄力跳/攀爬同層,住客戶端物理。
 // 適用對象刻意只有**玩家操控的飛行機體**:NPC 直升機/集束轟炸機/護衛機/極音速飛彈走的是伺服器腳本航線(定高飛行),
-// 掉高會讓它們陷進地形、動力條也無電力可正比 —— MUST NOT 為了「一致」把規則套過去。
+// 掉高會讓它們陷進地形 —— MUST NOT 為了「一致」把規則套過去。
 export const FLIGHT = {
   SINK_TOWERS: 2,    // 受擊掉高校準:掉光「平均護盾 + 裝甲」= 掉幾個砲塔高
   SINK_S: 0.5,       // 一次掉高的展開秒數(純手感節奏;總掉幅由 airSinkM 決定)
@@ -921,15 +923,10 @@ export const FLIGHT = {
   UNBAL_CRIT_MUL: 0.5, // 失衡異常狀態:暴擊率減半(2026-09-01 使用者需求)
   UNBAL_S: 0.7,        // 失衡異常狀態持續時長(= SINK_S + HIT_LOCK_S,跌落到穩住;0.5 + 0.2 = 0.7s)
   DRAIN_S: 5,        // 滿動力全速爬升可持續秒數
-  MAX_F: 1.0,        // 動力上限 = 電力上限 × 此比(正比於電力;現值 = 電力上限本身)
-  // 變形者(飛行型態)的飛行動力上限校準(2026-08-02 使用者定案「變形者的飛行動力減少 1/3」):
-  // 只降變形者的動力**上限**,耗速 `liftDrainPS` 由上限推導 ⇒ 滿動力仍撐 DRAIN_S 秒(節奏不變、
-  // 續航變短);無人機不吃此係數(MUST NOT 套用到 isDrone)。
-  MORPH_F: 2 / 3,
-  // 動力回復 = 電力回速(mpRegen × chargeF(充能軌))× 此比 ⇒ **充能軌 = 飛行續航軌**:
-  // 滿充能約 2 × DRAIN_S(≈10s)回滿、充能 Lv0 約 5 × DRAIN_S(≈25s)—— 爬升是有代價的機動,
-  // 回充比耗盡慢是刻意的(不然動力條等於不存在)。
-  REGEN_F: 2.5,
+  LIFT_MAX: 100,     // 爬升動力上限(全機體共用固定值;使用者定調)
+  REGEN_PS: 10,      // 爬升動力回速(每秒固定值;滿池回滿 ≈2 × DRAIN_S ≈10s)
+  CJUMP_F: 0.6,      // 大跳躍滿蓄力耗上限的 60%(cjumpLiftCost 推導)
+  MORPH_COST_F: 0.4, // 變形滿蓄力耗上限的 40%(morphLiftCost 推導)
   LOW_F: 0.15,       // HUD 低動力警示門檻(佔上限比例)
   // 正常操作下降高度時回充電力比例(2026-09-11 使用者需求:正常操作下降高度時,會回充2/3的電力):
   // 正常操作下降時每秒回充電力 = liftDrainPS × DESCENT_RECHARGE_F × 下降率(全速下降回充全速爬升耗速的 2/3,推導不手寫)
@@ -949,15 +946,14 @@ export const FLIGHT = {
 /** 受擊掉高(公尺):該次傷害造成的下降量 —— 推導不手寫 */
 export const airSinkM = (dmg) =>
   Math.max(0, dmg || 0) / SQUAD.DRONE_AVG_HP * FLIGHT.SINK_TOWERS * TARGET_H.tower;
-/** 爬升動力上限(正比於電力上限;變形者額外乘 MORPH_F) */
-export const liftMax = (maxMp, isMorph) =>
-  Math.max(0, maxMp || 0) * FLIGHT.MAX_F * (isMorph ? FLIGHT.MORPH_F : 1);
-/** 爬升動力回復(每秒;正比於電力回速 —— 同吃「充能」軌等級) */
-export const liftRegen = (mpRegen, chLvl) => Math.max(0, mpRegen || 0) * chargeF(chLvl) * FLIGHT.REGEN_F;
+/** 爬升動力上限(全機體共用固定值 FLIGHT.LIFT_MAX;參數保留僅為相容,MUST NOT 再按機體區分) */
+export const liftMax = () => FLIGHT.LIFT_MAX;
+/** 爬升動力回復(每秒固定值 FLIGHT.REGEN_PS;參數保留僅為相容) */
+export const liftRegen = () => FLIGHT.REGEN_PS;
 /** 全速爬升的動力耗速(每秒;= 動力上限 ÷ DRAIN_S,推導不手寫) */
-export const liftDrainPS = (maxMp, isMorph) => liftMax(maxMp, isMorph) / FLIGHT.DRAIN_S;
+export const liftDrainPS = () => liftMax() / FLIGHT.DRAIN_S;
 /** 正常操作全速下降的動力回充電力(每秒;= 全速爬升耗速 × DESCENT_RECHARGE_F(2/3),推導不手寫) */
-export const liftDescentPS = (maxMp, isMorph) => liftDrainPS(maxMp, isMorph) * FLIGHT.DESCENT_RECHARGE_F;
+export const liftDescentPS = () => liftDrainPS() * FLIGHT.DESCENT_RECHARGE_F;
 /**
  * 高度爬升動力係數(**唯一縫**;`game.js _stepLift` 唯一消費端,爬升扣 + 下降回充兩處)。
  * @param y     絕對飛行高度(公尺;`game.js pos.y`)
@@ -978,8 +974,8 @@ export const unbalMissP = (missP, unbalanced) =>
   unbalanced ? 1 - (1 - (missP || 0)) * FLIGHT.UNBAL_ACC_MUL : (missP || 0);
 // ---- 無敵幀(2026-07-16;起跳離地 1 秒無敵)----
 // 客戶端在「起跳離地當下」送 {t:'iframe'},伺服器 sim.heroIframe 驗 CD 後結算(_damage 免傷、控場免疫)。
-// 時長與 CD 都夾在伺服器 —— 客戶端只能決定「何時用」,不能延長。跳躍/變形本身改吃動力
-// (CJUMP.LIFT / MORPH.LIFT × 蓄力比例),可連發;無敵幀仍吃獨立 CD(robot/morph = CD 15s;無人機完美迴避 = DRONE_CD 30s)。
+// 時長與 CD 都夾在伺服器 —— 客戶端只能決定「何時用」,不能延長。跳躍/變形本身改吃爬升動力
+// (上限 × FLIGHT.CJUMP_F / MORPH_COST_F × 蓄力比例),可連發;無敵幀仍吃獨立 CD(robot/morph = CD 15s;無人機完美迴避 = DRONE_CD 30s)。
 // 完美迴避(2026-07-21):無人機在戰鬥狀態(近 COMBAT_S 秒內攻擊或被攻擊)按空白鍵飛行 →
 //   向上飛的同時 1s 無敵,30s CD。觸發時點由客戶端(位置本就客戶端權威),CD/免傷伺服器把關。
 export const IFRAME = { DUR: 1.0, CD: 15, DRONE_CD: 30, COMBAT_S: 5 };
@@ -4683,7 +4679,9 @@ for (const w of VS_DEFS) {
 UNITS.morph = {
   ...UNITS.robot,
   name: '變形者',
-  fly: 36, vspeed: 20,                  // 飛行型態:巡航 / 垂直速度(略慢於無人機)
+  fly: 36,                                     // 飛行型態巡航(水平;略慢於無人機)
+  vspeed: UNITS.drone.vspeed * MORPH.UP_F,     // 上升速率 = 無人機 × 2/3(推導不手寫)
+  vdown: UNITS.drone.vspeed * MORPH.DOWN_F,    // 下降速率 = 無人機 × 3/2(推導不手寫;無此欄者回退 vspeed)
   fov: 68, fovAir: 68, zoomFov: 35, sight: 240,   // 全型態 = 人眼視角(FPV 視覺大小雙陣營一致,飛行不再放寬)
 };
 // 主堡的武器**只有一把**(2026-08-13 使用者定案「主堡兩個武器合併,射程/範圍/傷害等參數都挑
@@ -5422,7 +5420,7 @@ export function rngDmgF(ch, slot) {
 {
   const CS = COMBAT_SCALE;
   for (const u of Object.values(UNITS)) {
-    for (const key of ['range', 'sight', 'speed', 'fly', 'vspeed', 'jump']) if (typeof u[key] === 'number') u[key] *= CS;
+    for (const key of ['range', 'sight', 'speed', 'fly', 'vspeed', 'vdown', 'jump']) if (typeof u[key] === 'number') u[key] *= CS;
     if (typeof u.guns?.range === 'number') u.guns.range *= CS;  // 主堡加裝砲(derive 自塔,獨立縮)
   }
   for (const w of Object.values(WEAPONS)) if (typeof w.range === 'number') w.range *= CS;   // NPC 武器射程(留 blast r/AoE)
