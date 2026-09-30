@@ -54,3 +54,6 @@ node_modules/.bin/
 # 暫存日誌
 *.log
 .*.log
+
+# Reproducible weather effect captures and cached browser runtime.
+out/weather_fx_review/

@@ -12,8 +12,10 @@ import {
   weatherVectorAt, resolveWeatherDynamics, WEATHER_ATTRS, WEATHER_PRESETS, mapRot,
   lunarMoonDirAt, tideLevelAt,
 } from './data.js';
-import { setCelSun, WIND, celWindTime, INK_INFO_DECL, INK_INFO_NONE, setWeatherDynamics } from './toon.js';
+import { setCelSun, celWindTime, INK_INFO_DECL, INK_INFO_NONE, setWeatherDynamics } from './toon.js';
 import { mulberry32 } from './rng.js';
+import { resolveWeatherVisuals } from './weatherVisuals.js';
+import { makeClouds, makeParticles, makeLightningSystem } from './weatherFx.js';
 import { stepWeatherSurface } from './weatherState.js';
 import { makeScorchAtlas, setSurfaceWeather } from './weatherMaterial.js';
 import { makeWeatherDeposits } from './weatherDeposits.js';
@@ -45,7 +47,6 @@ function mixTime(out, a, b, t) {
 }
 const _tmpC = new THREE.Color();
 const WHITE = new THREE.Color(0xffffff);
-const DARK_CLOUD_COLOR = new THREE.Color(0x23272e);
 const FLASH_COLOR = new THREE.Color(0xdbeeff);
 
 const newPhase = () => ({
@@ -137,232 +138,6 @@ function makeSkyDome(span, skyC, fogC, W) {
   dome.frustumCulled = false;
   dome.renderOrder = -10;
   return dome;
-}
-
-/** 賽璐璐雲的多樣態貼圖:多種硬邊圓程序化疊合形態,整場共享 */
-let _cloudTextures = null;
-function cloudTextures() {
-  if (_cloudTextures) return _cloudTextures;
-  const S = 128;
-  const puffConfigs = [
-    // 1. 標準積雲 (典型多丘起伏)
-    [[0.28, 0.62, 0.20], [0.46, 0.44, 0.28], [0.68, 0.58, 0.22], [0.84, 0.66, 0.14]],
-    // 2. 扁平層積雲 (橫向延展)
-    [[0.20, 0.64, 0.15], [0.38, 0.52, 0.24], [0.58, 0.46, 0.26], [0.76, 0.52, 0.22], [0.88, 0.65, 0.12]],
-    // 3. 高聳堡狀雲 (中央隆起圓頂)
-    [[0.25, 0.58, 0.20], [0.48, 0.36, 0.32], [0.72, 0.52, 0.23], [0.52, 0.66, 0.16]],
-    // 4. 複合滾軸雲 (雙峰交疊)
-    [[0.24, 0.60, 0.18], [0.42, 0.42, 0.26], [0.62, 0.40, 0.25], [0.80, 0.58, 0.17], [0.36, 0.38, 0.16]],
-    // 5. 飄逸卷積雲 (尾翼拖曳)
-    [[0.18, 0.66, 0.13], [0.34, 0.56, 0.21], [0.54, 0.48, 0.27], [0.74, 0.54, 0.20], [0.90, 0.68, 0.10]],
-    // 6. 緊湊團塊雲 (圓潤豐滿)
-    [[0.30, 0.54, 0.22], [0.50, 0.42, 0.30], [0.70, 0.50, 0.25], [0.40, 0.64, 0.18], [0.60, 0.64, 0.18]],
-    // 7. 斜向羽狀雲 (不對稱掠風)
-    [[0.22, 0.68, 0.14], [0.40, 0.58, 0.22], [0.60, 0.46, 0.28], [0.82, 0.40, 0.22], [0.88, 0.62, 0.12]],
-    // 8. 廣域砧狀雲 (寬頂覆蓋)
-    [[0.26, 0.48, 0.24], [0.48, 0.40, 0.29], [0.70, 0.44, 0.27], [0.38, 0.66, 0.17], [0.62, 0.66, 0.17]],
-  ];
-  _cloudTextures = puffConfigs.map((puffs) => {
-    const cv = document.createElement('canvas');
-    cv.width = S; cv.height = S / 2;
-    const g = cv.getContext('2d');
-    g.fillStyle = '#fff';
-    for (const [cx, cy, r] of puffs) {
-      g.beginPath(); g.arc(cx * S, cy * S / 2, r * S / 2 * 2, 0, Math.PI * 2); g.fill();
-    }
-    const tex = new THREE.CanvasTexture(cv);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  });
-  return _cloudTextures;
-}
-
-/**
- * 多元動態雲層系統:
- * 1. 雲量 (0~100%): 控制水平密度; >50% 轉為烏雲, 越黑且照度越低。
- * 2. 雲朵動態: 隨風漂移、微幅隨機飄動、生命週期顯現/消失。
- * 3. 聚合與分散: 小雲聚合成大雲 (Clustering), 大雲分散為小雲 (Dispersal)。
- * 4. 緩慢變形機制: 多頻非對稱縱橫拉伸、內部子結構慢速旋流位移與風切微旋轉。
- */
-const CLOUD_N = 28;        // 雲量基數;實際枚數與 WEATHERS[w].light 反比
-const CLOUD_BOB = 0.020;      // 逐朵上下起伏
-const CLOUD_BREATH = 0.10;    // 逐朵尺寸呼吸
-function makeClouds(span, skyC, W, seed) {
-  if (W?.fogNear <= 0.05) return null;
-  const rnd = mulberry32(((seed ?? 0) ^ 0x93B7C1) >>> 0);
-  const grp = new THREE.Group();
-  const texs = cloudTextures();
-
-  const numClusters = 12;
-  const spritesPerCluster = 6;
-  const totalClouds = numClusters * spritesPerCluster; // 72 枚雲朵群
-
-  const WRAP = span * 3.2;
-  const clusters = [];
-  for (let c = 0; c < numClusters; c++) {
-    const a = (c / numClusters) * Math.PI * 2 + (rnd() - 0.5) * 0.35;
-    const r = span * (0.15 + (c % 4) * 0.28 + rnd() * 0.22);
-    const cx = Math.cos(a) * r;
-    const cz = Math.sin(a) * r;
-    const y = span * (0.20 + (c % 3) * 0.08 + rnd() * 0.09);
-    const speedScale = 0.85 + rnd() * 0.3;
-    const phase = rnd() * Math.PI * 2;
-    clusters.push({ cx, cz, y, speedScale, phase, along: cx, side: cz });
-  }
-
-  const cloudItems = [];
-  const drift = [];
-  for (let i = 0; i < totalClouds; i++) {
-    const cIdx = i % numClusters;
-    const c = clusters[cIdx];
-    const tex = texs[i % texs.length];
-    const spMat = new THREE.SpriteMaterial({
-      map: tex, color: new THREE.Color(0xffffff), transparent: true, opacity: 0.85, depthWrite: false, fog: false,
-    });
-    const sp = new THREE.Sprite(spMat);
-    grp.add(sp);
-
-    const offA = rnd() * Math.PI * 2;
-    const offR = span * (0.05 + rnd() * 0.16);
-    const baseScale = span * (0.10 + rnd() * 0.16);
-    // 初始形狀形態多樣化 (非對稱寬高比與層級高度初始偏移)
-    const baseScaleX = baseScale * (0.90 + rnd() * 0.40);
-    const baseScaleY = baseScale * (0.80 + rnd() * 0.35);
-    const tierAltitude = (rnd() - 0.5) * span * 0.09;
-    const lifePeriod = 18.0 + rnd() * 14.0;
-    const lifePhase = rnd() * Math.PI * 2;
-
-    // 緩慢變形參數 (慢速非線性多頻相位與速率，週期 25s ~ 60s)
-    const morphSpeedX = 0.035 + rnd() * 0.025;
-    const morphSpeedY = 0.028 + rnd() * 0.022;
-    const morphPhaseX = rnd() * Math.PI * 2;
-    const morphPhaseY = rnd() * Math.PI * 2;
-    const rotSpeed = 0.015 + rnd() * 0.018;
-    const rotPhase = rnd() * Math.PI * 2;
-    const rot0 = (rnd() - 0.5) * 0.25;
-    const swirlSpeed = 0.020 + rnd() * 0.025;
-    const swirlPhase = rnd() * Math.PI * 2;
-
-    const item = {
-      sp,
-      cIdx,
-      offA,
-      offR,
-      baseScaleX,
-      baseScaleY,
-      tierAltitude,
-      lifePeriod,
-      lifePhase,
-      bobPhase: rnd() * Math.PI * 2,
-      morphSpeedX,
-      morphSpeedY,
-      morphPhaseX,
-      morphPhaseY,
-      rotSpeed,
-      rotPhase,
-      rot0,
-      swirlSpeed,
-      swirlPhase,
-    };
-    cloudItems.push(item);
-    drift.push({ sp, along: c.cx + Math.cos(offA) * offR, side: c.cz + Math.sin(offA) * offR, y: c.y + tierAltitude, s: baseScale, ph: lifePhase });
-  }
-
-  grp.frustumCulled = false;
-  grp.renderOrder = -9;
-
-  let driftOffset = 0;
-  return {
-    obj: grp,
-    mats: cloudItems.map((c) => c.sp.material),
-    /**
-     * @param {number} t 風時鐘
-     * @param {number} dt 幀時間差
-     * @param {THREE.Color} currentSkyC 天空顏色
-     * @param {{ clouds:number, fog:number, effectiveFog:number, isDarkCloud:boolean, cloudDarkness:number, windDir:number[], windAmp:number }} dyn
-     */
-    step(t, dt, currentSkyC, dyn) {
-      const cloudsPct = dyn?.clouds ?? 50;
-      const fogPct = dyn?.fog ?? 0;
-      const darkness = dyn?.cloudDarkness ?? 0;
-      const windDir = dyn?.windDir ?? [1, 0];
-      const windAmp = dyn?.windAmp ?? 1.0;
-
-      // 1. 高空風力直接驅動雲層飄移速度 (Wind drift speed)
-      driftOffset += WIND.CLOUD_MPS * windAmp * (dt || 0.016);
-
-      // 雲色更新: >50% 時由亮白/天色過渡為烏雲黑灰色
-      const baseCloudColor = (currentSkyC || skyC).clone().lerp(WHITE, 0.70);
-      if (dyn?.isDarkCloud) {
-        baseCloudColor.lerp(DARK_CLOUD_COLOR, Math.min(1.0, darkness * 0.90));
-      }
-
-      // 2. 雲朵數量與雲量成嚴格正比，並受霧數值垂直擴展與低空凝結增益
-      const fogFactor = fogPct / 100;
-      const fogCountBoost = fogFactor * 0.20;
-      const activeRatio = Math.max(0.08, Math.min(1.0, Math.pow(cloudsPct / 100, 0.85) + fogCountBoost));
-      const activeCount = Math.min(totalClouds, Math.max(4, Math.round(totalClouds * activeRatio)));
-
-      // 3. 陰天時 (>=50%) 大幅擴展雲朵尺寸與水平覆蓋率，使一半以上的天空都是雲朵
-      const overcastF = Math.max(0, (cloudsPct - 40) / 60);
-      const scaleFactor = (0.80 + (cloudsPct / 100) * 1.30) * (1.0 + overcastF * 0.50);
-      const spreadFactor = 0.55 + (cloudsPct / 100) * 0.90;
-      const cloudCoverage = Math.max(0.08, Math.min(1.0, (cloudsPct / 100) * 1.15));
-
-      // 4. 霧數值垂直擴展: 越濃雲朵最小高度越低 (貼近地平線與低空)，且垂直厚度展布越大
-      const minAltitude = span * Math.max(0.04, 0.26 * (1.0 - fogFactor * 0.85) + 0.04);
-      const vertExpansion = 1.0 + fogFactor * 0.75;
-
-      for (let i = 0; i < cloudItems.length; i++) {
-        const item = cloudItems[i];
-        if (i >= activeCount) {
-          item.sp.visible = false;
-          continue;
-        }
-
-        const d = drift[i];
-        const c = clusters[item.cIdx];
-
-        // 5. 風力直接驅動雲層飄移位置 (Wind drift position)
-        const a = ((d.along + WIND.CLOUD_MPS * windAmp * t + WRAP * 0.5) % WRAP + WRAP) % WRAP - WRAP * 0.5;
-
-        // 生命週期淡入淡出 (顯現 / 消失)
-        const life = Math.sin(t * (Math.PI * 2 / item.lifePeriod) * Math.max(0.5, windAmp * 0.8) + item.lifePhase) * 0.5 + 0.5;
-        const fadeAlpha = Math.max(0, Math.min(1, life * 1.5 - 0.15)) * cloudCoverage;
-
-        // 6. 風力驅動高空聚散速率 (Clustering & Dispersal pulse frequency scales with windAmp)
-        const clusterPulse = Math.sin(t * 0.085 * Math.max(0.4, windAmp) + c.phase) * 0.5 + 0.5; // 聚合 -> 分散循環
-        const clusterMerge = (cloudsPct > 50 ? 0.35 : 0.65) * clusterPulse + (cloudsPct > 50 ? 0.45 : 0.15);
-
-        // 7. 緩慢變形動態 (Slow Morphing Dynamics, 速率隨風力加乘)
-        // a. 雲團內部子結構慢速旋流位移 (Swirl Deformation)
-        const curSwirlA = item.offA + Math.sin(t * item.swirlSpeed * Math.max(0.5, windAmp) + item.swirlPhase) * 0.45;
-        const curSwirlR = item.offR * (0.85 + Math.cos(t * item.swirlSpeed * Math.max(0.5, windAmp) * 1.3 + item.swirlPhase) * 0.30);
-        const curOffX = Math.cos(curSwirlA) * curSwirlR * (1.6 - clusterMerge * 0.9) * spreadFactor;
-        const curOffZ = Math.sin(curSwirlA) * curSwirlR * (1.6 - clusterMerge * 0.9) * spreadFactor;
-
-        // b. 縱橫非對稱拉伸變形 (Aspect-Ratio Stretch Morphing)
-        const morphX = 1.0 + Math.sin(t * item.morphSpeedX * Math.max(0.5, windAmp) + item.morphPhaseX) * 0.26 + Math.cos(t * item.morphSpeedX * 0.47) * 0.08;
-        const morphY = 1.0 + Math.cos(t * item.morphSpeedY * Math.max(0.5, windAmp) + item.morphPhaseY) * 0.22 + Math.sin(t * item.morphSpeedY * 0.53) * 0.07;
-        const scaleMul = (0.75 + clusterMerge * 0.75) * (1 + Math.sin(t * 0.13 * Math.max(0.5, windAmp) + item.bobPhase) * CLOUD_BREATH);
-
-        // c. 風切與渦流慢速自轉微傾 (Eddy Rotation Morphing)
-        item.sp.material.rotation = item.rot0 + Math.sin(t * item.rotSpeed * Math.max(0.5, windAmp) + item.rotPhase) * 0.16 + Math.cos(t * item.rotSpeed * 0.38) * 0.05;
-
-        const posX = a * windDir[0] - d.side * windDir[1] + curOffX;
-        const posZ = a * windDir[1] + d.side * windDir[0] + curOffZ;
-
-        // 雲層垂直高度: 霧越濃，雲底越低 (minAltitude)，垂直跨度 (vertExpansion) 越大
-        const posY = minAltitude + (d.y - span * 0.18) * vertExpansion + Math.sin(t * 0.09 * Math.max(0.5, windAmp) + item.bobPhase) * span * CLOUD_BOB;
-
-        item.sp.position.set(posX, posY, posZ);
-        item.sp.scale.set(item.baseScaleX * 2 * scaleMul * morphX * scaleFactor, item.baseScaleY * scaleMul * morphY * scaleFactor, 1);
-        item.sp.material.color.copy(baseCloudColor);
-        item.sp.material.opacity = fadeAlpha * (dyn?.isDarkCloud ? 0.95 : 0.80);
-        item.sp.visible = fadeAlpha > 0.01;
-      }
-    },
-  };
 }
 
 function makeBodies(span, lunarDay = 15) {
@@ -472,486 +247,6 @@ function makeBodies(span, lunarDay = 15) {
   };
 }
 
-/** 粒子專屬程序化 Canvas 紋理快取 (雨絲 / 結晶雪花 / 粗粒砂塵) */
-let _particleTextures = null;
-function particleTextures() {
-  if (_particleTextures) return _particleTextures;
-  // 1. 雨絲紋理: 高長寬比細長雨滴, 帶半透明導光與尖端漸層
-  const rainCv = document.createElement('canvas');
-  rainCv.width = 32; rainCv.height = 128;
-  const rg = rainCv.getContext('2d');
-  const rGr = rg.createLinearGradient(16, 0, 16, 128);
-  rGr.addColorStop(0, 'rgba(255, 255, 255, 0)');
-  rGr.addColorStop(0.35, 'rgba(210, 235, 255, 0.45)');
-  rGr.addColorStop(0.85, 'rgba(240, 248, 255, 0.95)');
-  rGr.addColorStop(1.0, 'rgba(255, 255, 255, 1.0)');
-  rg.fillStyle = rGr;
-  rg.beginPath();
-  rg.moveTo(14, 0); rg.lineTo(18, 0); rg.lineTo(19, 116);
-  rg.arc(16, 118, 3.5, 0, Math.PI); rg.lineTo(13, 0);
-  rg.fill();
-  const rainTex = new THREE.CanvasTexture(rainCv);
-  rainTex.colorSpace = THREE.SRGBColorSpace;
-
-  // 2. 雪花紋理: 柔軟羽狀六角結晶, 具備核心微光與枝狀分叉
-  const snowCv = document.createElement('canvas');
-  snowCv.width = 64; snowCv.height = 64;
-  const sg = snowCv.getContext('2d');
-  const sC = 32;
-  const sGr = sg.createRadialGradient(sC, sC, 2, sC, sC, 28);
-  sGr.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
-  sGr.addColorStop(0.35, 'rgba(240, 248, 255, 0.85)');
-  sGr.addColorStop(0.7, 'rgba(215, 235, 255, 0.4)');
-  sGr.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
-  sg.fillStyle = sGr;
-  sg.beginPath(); sg.arc(sC, sC, 28, 0, Math.PI * 2); sg.fill();
-  sg.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-  sg.lineWidth = 2.5;
-  for (let a = 0; a < 6; a++) {
-    const rad = a * Math.PI / 3;
-    const cos = Math.cos(rad), sin = Math.sin(rad);
-    sg.beginPath();
-    sg.moveTo(sC, sC);
-    sg.lineTo(sC + cos * 22, sC + sin * 22);
-    sg.stroke();
-    const mx = sC + cos * 14, my = sC + sin * 14;
-    const pCos = Math.cos(rad + Math.PI / 4), pSin = Math.sin(rad + Math.PI / 4);
-    const nCos = Math.cos(rad - Math.PI / 4), nSin = Math.sin(rad - Math.PI / 4);
-    sg.beginPath();
-    sg.moveTo(mx, my); sg.lineTo(mx + pCos * 7, my + pSin * 7);
-    sg.moveTo(mx, my); sg.lineTo(mx + nCos * 7, my + nSin * 7);
-    sg.stroke();
-  }
-  const snowTex = new THREE.CanvasTexture(snowCv);
-  snowTex.colorSpace = THREE.SRGBColorSpace;
-
-  // 3. 沙塵紋理: 粗糙不規則多角砂粒, 帶磨蝕質感與微細砂塵
-  const sandCv = document.createElement('canvas');
-  sandCv.width = 64; sandCv.height = 64;
-  const dg = sandCv.getContext('2d');
-  const dC = 32;
-  const dGr = dg.createRadialGradient(dC, dC, 3, dC, dC, 26);
-  dGr.addColorStop(0, 'rgba(255, 220, 150, 1.0)');
-  dGr.addColorStop(0.45, 'rgba(212, 163, 89, 0.85)');
-  dGr.addColorStop(0.85, 'rgba(180, 130, 60, 0.35)');
-  dGr.addColorStop(1.0, 'rgba(180, 130, 60, 0)');
-  dg.fillStyle = dGr;
-  dg.beginPath();
-  const pts = [[-12, -18], [14, -14], [22, 6], [8, 22], [-16, 18], [-22, -2]];
-  dg.moveTo(dC + pts[0][0], dC + pts[0][1]);
-  for (let i = 1; i < pts.length; i++) dg.lineTo(dC + pts[i][0], dC + pts[i][1]);
-  dg.closePath();
-  dg.fill();
-  dg.fillStyle = 'rgba(255, 235, 180, 0.9)';
-  for (const [ox, oy, r] of [[-4, -3, 2.5], [6, 4, 3], [-7, 6, 2], [5, -8, 2]]) {
-    dg.beginPath(); dg.arc(dC + ox, dC + oy, r, 0, Math.PI * 2); dg.fill();
-  }
-  const sandTex = new THREE.CanvasTexture(sandCv);
-  sandTex.colorSpace = THREE.SRGBColorSpace;
-
-  _particleTextures = { rain: rainTex, snow: snowTex, sand: sandTex };
-  return _particleTextures;
-}
-
-/**
- * 粒子系統 (雨 / 沙 / 雪 實體微粒):
- * 根據多元天氣之有效雨量 (effectiveRain)、沙量 (effectiveSand)、雪量 (effectiveSnow) 與即時風向風力更新。
- * 雨/雪/沙塵各自具備專屬程序化紋理與完全相異之運動物理軌跡。
- * 風力數值不使用虛擬氣流條紋，高空透過雲朵飄移與聚散表現，低空透過落花落葉表現。
- */
-// 快速餘弦查表 (256 階，消除粒子每幀的動態三角計算)
-const _COS_LUT = new Float32Array(256);
-for (let i = 0; i < 256; i++) _COS_LUT[i] = Math.cos((i / 256) * Math.PI * 2);
-
-function makeParticles() {
-  const pTexs = particleTextures();
-  const systems = {};
-  const kinds = ['rain', 'sand', 'snow'];
-  const grp = new THREE.Group();
-
-  for (const k of kinds) {
-    let N = 900, size = 1.60, speed = 135, color = 0xa4c6df;
-    if (k === 'sand')       { N = 700; size = 2.60; speed = 28;  color = 0xd4a359; }
-    else if (k === 'snow')  { N = 600; size = 2.40; speed = 12;  color = 0xffffff; }
-
-    const BOX = 260, H = 180, pos = new Float32Array(N * 3), seed = new Float32Array(N);
-    for (let i = 0; i < N; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * BOX;
-      pos[i * 3 + 1] = Math.random() * H;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * BOX;
-      seed[i] = Math.random() * Math.PI * 2;
-    }
-
-    // 預先計算粒子種子相位之三角常數 (雪花與沙塵紊流)
-    const sinS1 = new Float32Array(N), cosS1 = new Float32Array(N);
-    const sinS2 = new Float32Array(N), cosS2 = new Float32Array(N);
-    const sinS3 = new Float32Array(N), cosS3 = new Float32Array(N);
-    const sinS4 = new Float32Array(N), cosS4 = new Float32Array(N);
-    const sinS5 = new Float32Array(N), cosS5 = new Float32Array(N);
-
-    if (k === 'snow') {
-      for (let i = 0; i < N; i++) {
-        const s = seed[i];
-        sinS1[i] = Math.sin(s * 4.1); cosS1[i] = Math.cos(s * 4.1);
-        sinS2[i] = Math.sin(s);       cosS2[i] = Math.cos(s);
-        sinS3[i] = Math.sin(s * 2.3); cosS3[i] = Math.cos(s * 2.3);
-        sinS4[i] = Math.sin(s * 1.7); cosS4[i] = Math.cos(s * 1.7);
-        sinS5[i] = Math.sin(s * 3.1); cosS5[i] = Math.cos(s * 3.1);
-      }
-    } else if (k === 'sand') {
-      for (let i = 0; i < N; i++) {
-        const s = seed[i];
-        sinS1[i] = Math.sin(s * 3.7); cosS1[i] = Math.cos(s * 3.7);
-        sinS2[i] = Math.sin(s);       cosS2[i] = Math.cos(s);
-      }
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({
-      color,
-      size,
-      map: pTexs[k],
-      transparent: true,
-      opacity: 0,
-      sizeAttenuation: true,
-      depthWrite: false,
-    });
-    const pts = new THREE.Points(geo, mat);
-    pts.frustumCulled = false;
-    pts.visible = false;
-    grp.add(pts);
-    systems[k] = { pts, geo, mat, N, BOX, H, seed, speed, sinS1, cosS1, sinS2, cosS2, sinS3, cosS3, sinS4, cosS4, sinS5, cosS5 };
-  }
-
-  let t = 0;
-  return {
-    obj: grp,
-    /**
-     * @param {number} dt
-     * @param {THREE.Camera} camera
-     * @param {{ effectiveRain:number, effectiveSand:number, effectiveSnow:number, windDir:number[], windAmp:number }} dyn
-     */
-    update(dt, camera, dyn) {
-      t += dt;
-      const windDir = dyn?.windDir ?? [1, 0];
-      const windAmp = dyn?.windAmp ?? 1.0;
-      const effRain = dyn?.effectiveRain ?? 0;
-      const effSand = dyn?.effectiveSand ?? 0;
-      const effSnow = dyn?.effectiveSnow ?? 0;
-
-      for (const [k, sys] of Object.entries(systems)) {
-        let isActive = false;
-        let targetOpacity = 0;
-        let driftSpeedX = windDir[0] * windAmp;
-        let driftSpeedZ = windDir[1] * windAmp;
-
-        if (k === 'rain' && effRain > 0.01) {
-          isActive = true;
-          targetOpacity = Math.min(0.88, 0.28 + effRain * 0.60);
-          driftSpeedX *= 32;
-          driftSpeedZ *= 32;
-        } else if (k === 'sand' && effSand > 0.01) {
-          isActive = true;
-          targetOpacity = Math.min(0.85, 0.32 + effSand * 0.50);
-          driftSpeedX *= 70;
-          driftSpeedZ *= 70;
-        } else if (k === 'snow' && effSnow > 0.01) {
-          isActive = true;
-          targetOpacity = Math.min(0.92, 0.35 + effSnow * 0.55);
-          driftSpeedX *= 12;
-          driftSpeedZ *= 12;
-        }
-
-        sys.pts.visible = isActive;
-        if (!isActive) continue;
-
-        sys.mat.opacity = targetOpacity;
-        sys.pts.position.set(camera.position.x, camera.position.y - sys.H * 0.45, camera.position.z);
-        const p = sys.geo.attributes.position;
-        const arr = p.array;
-        const halfBox = sys.BOX * 0.5;
-
-        if (k === 'rain') {
-          // 雨滴: 高速垂直直墜穿刺 + 隨風強烈傾斜 (純線性浮點運算)
-          const vy = sys.speed * dt;
-          const vx = driftSpeedX * dt;
-          const vz = driftSpeedZ * dt;
-          for (let i = 0; i < sys.N; i++) {
-            const idx = i * 3;
-            let px = arr[idx] + vx;
-            let y = arr[idx + 1] - vy;
-            let pz = arr[idx + 2] + vz;
-
-            if (y < 0) {
-              y = sys.H;
-              px = (Math.random() - 0.5) * sys.BOX;
-              pz = (Math.random() - 0.5) * sys.BOX;
-            }
-            if (px > halfBox) px -= sys.BOX; else if (px < -halfBox) px += sys.BOX;
-            if (pz > halfBox) pz -= sys.BOX; else if (pz < -halfBox) pz += sys.BOX;
-
-            arr[idx] = px; arr[idx + 1] = y; arr[idx + 2] = pz;
-          }
-        } else if (k === 'snow') {
-          // 雪花: 和角公式展開，迴圈外計算一次時間諧波，迴圈內零三角呼叫
-          const sinT1 = Math.sin(t * 2.2), cosT1 = Math.cos(t * 2.2);
-          const sinT2 = Math.sin(t * 1.8), cosT2 = Math.cos(t * 1.8);
-          const sinT3 = Math.sin(t * 0.8), cosT3 = Math.cos(t * 0.8);
-          const sinT4 = Math.sin(t * 1.6), cosT4 = Math.cos(t * 1.6);
-          const sinT5 = Math.sin(t * 0.7), cosT5 = Math.cos(t * 0.7);
-
-          const { sinS1, cosS1, sinS2, cosS2, sinS3, cosS3, sinS4, cosS4, sinS5, cosS5 } = sys;
-          const baseVy = sys.speed * dt;
-          const baseVx = driftSpeedX * dt;
-          const baseVz = driftSpeedZ * dt;
-
-          for (let i = 0; i < sys.N; i++) {
-            const idx = i * 3;
-            const sinW1 = sinT1 * cosS1[i] + cosT1 * sinS1[i];
-            const sinW2 = sinT2 * cosS2[i] + cosT2 * sinS2[i];
-            const cosW3 = cosT3 * cosS3[i] - sinT3 * sinS3[i];
-            const cosW4 = cosT4 * cosS4[i] - sinT4 * sinS4[i];
-            const sinW5 = sinT5 * cosS5[i] + cosT5 * sinS5[i];
-
-            let y = arr[idx + 1] - baseVy - sinW1 * dt * 2.0;
-            let px = arr[idx] + (sinW2 * 7.5 + cosW3 * 3.5) * dt + baseVx;
-            let pz = arr[idx + 2] + (cosW4 * 7.5 + sinW5 * 3.5) * dt + baseVz;
-
-            if (y < 0) {
-              y = sys.H;
-              px = (Math.random() - 0.5) * sys.BOX;
-              pz = (Math.random() - 0.5) * sys.BOX;
-            } else if (y > sys.H) {
-              y = 0;
-            }
-            if (px > halfBox) px -= sys.BOX; else if (px < -halfBox) px += sys.BOX;
-            if (pz > halfBox) pz -= sys.BOX; else if (pz < -halfBox) pz += sys.BOX;
-
-            arr[idx] = px; arr[idx + 1] = y; arr[idx + 2] = pz;
-          }
-        } else if (k === 'sand') {
-          // 沙塵: 和角展開 + 查表地滾翻，迴圈內零三角呼叫
-          const sinT1 = Math.sin(t * 4.2), cosT1 = Math.cos(t * 4.2);
-          const sinT2 = Math.sin(t * 3.5), cosT2 = Math.cos(t * 3.5);
-          const tPhase = t * 3.0;
-
-          const { sinS1, cosS1, sinS2, cosS2 } = sys;
-          const baseVy = sys.speed * dt;
-          const lutMul = 256 / 6.2831853;
-
-          for (let i = 0; i < sys.N; i++) {
-            const idx = i * 3;
-            let px = arr[idx];
-            let y = arr[idx + 1];
-            let pz = arr[idx + 2];
-
-            const sinW1 = sinT1 * cosS1[i] + cosT1 * sinS1[i];
-            const cosW2 = cosT2 * cosS2[i] - sinT2 * sinS2[i];
-            const sinW2 = sinT2 * cosS2[i] + cosT2 * sinS2[i];
-
-            const lutIdx = (((px * 0.05 + tPhase) * lutMul) & 255);
-            const roll = _COS_LUT[lutIdx] * 8.0;
-
-            y -= baseVy;
-            y += (sinW1 * 16.0 + roll) * dt;
-            px += (driftSpeedX + cosW2 * 12.0) * dt;
-            pz += (driftSpeedZ + sinW2 * 12.0) * dt;
-
-            if (y < 0) {
-              y = sys.H;
-              px = (Math.random() - 0.5) * sys.BOX;
-              pz = (Math.random() - 0.5) * sys.BOX;
-            } else if (y > sys.H) {
-              y = 0;
-            }
-            if (px > halfBox) px -= sys.BOX; else if (px < -halfBox) px += sys.BOX;
-            if (pz > halfBox) pz -= sys.BOX; else if (pz < -halfBox) pz += sys.BOX;
-
-            arr[idx] = px; arr[idx + 1] = y; arr[idx + 2] = pz;
-          }
-        }
-        p.needsUpdate = true;
-      }
-    },
-    dispose() {
-      for (const sys of Object.values(systems)) {
-        sys.geo.dispose();
-        sys.mat.dispose();
-      }
-      if (_particleTextures) {
-        for (const tex of Object.values(_particleTextures)) tex.dispose();
-        _particleTextures = null;
-      }
-    },
-  };
-}
-
-/**
- * 3D 烏雲閃電電弧系統 (3D Branching Lightning Bolts)
- * 在打雷天從高空烏雲群向下擊出真實折線分支閃電弧光與地面衝擊光暈。
- */
-function makeLightningSystem(span, terrain) {
-  const grp = new THREE.Group();
-  const MAX_POINTS = 128;
-  const mainPos = new Float32Array(MAX_POINTS * 3);
-  const branchPos = new Float32Array(MAX_POINTS * 3);
-
-  const mainGeo = new THREE.BufferGeometry();
-  mainGeo.setAttribute('position', new THREE.BufferAttribute(mainPos, 3));
-  const branchGeo = new THREE.BufferGeometry();
-  branchGeo.setAttribute('position', new THREE.BufferAttribute(branchPos, 3));
-
-  const mainMat = new THREE.LineBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0,
-    depthWrite: false,
-    fog: false,
-  });
-  const branchMat = new THREE.LineBasicMaterial({
-    color: 0x98dcff,
-    transparent: true,
-    opacity: 0,
-    depthWrite: false,
-    fog: false,
-  });
-
-  const mainLine = new THREE.LineSegments(mainGeo, mainMat);
-  const branchLine = new THREE.LineSegments(branchGeo, branchMat);
-  mainLine.frustumCulled = false;
-  branchLine.frustumCulled = false;
-  grp.add(mainLine);
-  grp.add(branchLine);
-
-  // 地面落雷光暈
-  const glowCv = document.createElement('canvas');
-  glowCv.width = 64; glowCv.height = 64;
-  const gg = glowCv.getContext('2d');
-  const gGr = gg.createRadialGradient(32, 32, 2, 32, 32, 30);
-  gGr.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
-  gGr.addColorStop(0.3, 'rgba(180, 230, 255, 0.85)');
-  gGr.addColorStop(0.7, 'rgba(100, 180, 255, 0.35)');
-  gGr.addColorStop(1.0, 'rgba(100, 180, 255, 0)');
-  gg.fillStyle = gGr;
-  gg.beginPath(); gg.arc(32, 32, 30, 0, Math.PI * 2); gg.fill();
-  const glowTex = new THREE.CanvasTexture(glowCv);
-  glowTex.colorSpace = THREE.SRGBColorSpace;
-
-  const glowMat = new THREE.SpriteMaterial({ map: glowTex, transparent: true, opacity: 0, depthWrite: false, fog: false });
-  const glowSprite = new THREE.Sprite(glowMat);
-  glowSprite.scale.set(span * 0.15, span * 0.15, 1);
-  glowSprite.visible = false;
-  grp.add(glowSprite);
-
-  let active = false;
-  let timer = 0;
-  const DURATION = 0.26;
-
-  return {
-    obj: grp,
-    /**
-     * 從烏雲向地面擊出閃電電弧
-     * @param {THREE.Vector3} start 起點 (高空烏雲)
-     * @param {THREE.Vector3} end 終點 (地面/建築)
-     */
-    strike(start, end) {
-      active = true;
-      timer = DURATION;
-      grp.visible = true;
-
-      let mPtr = 0;
-      let bPtr = 0;
-
-      // 1. 主電弧折線 (分 16 段)
-      const SEGMENTS = 16;
-      let cur = start.clone();
-      const delta = end.clone().sub(start);
-
-      for (let i = 0; i < SEGMENTS; i++) {
-        const next = start.clone().add(delta.clone().multiplyScalar((i + 1) / SEGMENTS));
-        if (i < SEGMENTS - 1) {
-          const jitterAmp = span * (0.022 * (1.0 - i / SEGMENTS) + 0.008);
-          next.x += (Math.random() - 0.5) * jitterAmp * 2;
-          next.y += (Math.random() - 0.5) * jitterAmp * 0.8;
-          next.z += (Math.random() - 0.5) * jitterAmp * 2;
-        }
-
-        // 寫入主電弧線段 (每段兩頂點)
-        if (mPtr + 6 <= MAX_POINTS * 3) {
-          mainPos[mPtr++] = cur.x; mainPos[mPtr++] = cur.y; mainPos[mPtr++] = cur.z;
-          mainPos[mPtr++] = next.x; mainPos[mPtr++] = next.y; mainPos[mPtr++] = next.z;
-        }
-
-        // 2. 隨機生成 2~3 條側向分叉電弧
-        if ((i === 4 || i === 8 || i === 12) && Math.random() < 0.85) {
-          let bCur = cur.clone();
-          const branchDir = new THREE.Vector3(
-            (Math.random() - 0.5) * 2,
-            -0.8 - Math.random() * 0.6,
-            (Math.random() - 0.5) * 2
-          ).normalize();
-          const bSegs = 4 + Math.floor(Math.random() * 4);
-          const bStepLen = span * (0.015 + Math.random() * 0.012);
-
-          for (let b = 0; b < bSegs; b++) {
-            const bNext = bCur.clone().add(branchDir.clone().multiplyScalar(bStepLen));
-            bNext.x += (Math.random() - 0.5) * span * 0.012;
-            bNext.y += (Math.random() - 0.5) * span * 0.008;
-            bNext.z += (Math.random() - 0.5) * span * 0.012;
-
-            if (bPtr + 6 <= MAX_POINTS * 3) {
-              branchPos[bPtr++] = bCur.x; branchPos[bPtr++] = bCur.y; branchPos[bPtr++] = bCur.z;
-              branchPos[bPtr++] = bNext.x; branchPos[bPtr++] = bNext.y; branchPos[bPtr++] = bNext.z;
-            }
-            bCur = bNext;
-          }
-        }
-        cur = next;
-      }
-
-      // 清空剩餘線段緩衝
-      while (mPtr < MAX_POINTS * 3) mainPos[mPtr++] = 0;
-      while (bPtr < MAX_POINTS * 3) branchPos[bPtr++] = 0;
-
-      mainGeo.attributes.position.needsUpdate = true;
-      branchGeo.attributes.position.needsUpdate = true;
-
-      glowSprite.position.set(end.x, end.y + 1.5, end.z);
-      glowSprite.visible = true;
-    },
-    update(dt) {
-      if (!active) {
-        grp.visible = false;
-        return;
-      }
-      timer -= dt;
-      if (timer <= 0) {
-        active = false;
-        grp.visible = false;
-        mainMat.opacity = 0;
-        branchMat.opacity = 0;
-        glowMat.opacity = 0;
-        return;
-      }
-      // 快速放電頻閃與餘暉衰減
-      const strobe = Math.sin(timer * 55.0) > -0.2 ? 1.0 : 0.25;
-      const fade = Math.max(0, timer / DURATION);
-      mainMat.opacity = fade * strobe * 0.95;
-      branchMat.opacity = fade * strobe * 0.75;
-      glowMat.opacity = fade * strobe * 0.90;
-    },
-    dispose() {
-      mainGeo.dispose();
-      mainMat.dispose();
-      branchGeo.dispose();
-      branchMat.dispose();
-      glowTex.dispose();
-      glowMat.dispose();
-    },
-  };
-}
-
 export function applyEnvironment(scene, terrain, env, opts = {}) {
   const span = Math.max(terrain.worldW, terrain.worldH);
   const backgroundOnly = !!opts.backgroundOnly;
@@ -988,7 +283,9 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
   const dome = makeSkyDome(span, skyC, fogC, curDyn);
   scene.add(dome);
 
-  const clouds = makeClouds(span, skyC, curDyn, seed);
+  const visuals = resolveWeatherVisuals(curDyn);
+  const previewRnd = mulberry32((seed ^ 0x62A391) >>> 0);
+  const clouds = makeClouds(span, seed, opts);
   if (clouds) scene.add(clouds.obj);
 
   const bodies = makeBodies(span, sched?.lunarDay ?? 15);
@@ -1019,10 +316,10 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
   }
   const shTexel = (shR * 2) / shSize;
 
-  const particles = makeParticles();
+  const particles = makeParticles(seed, opts);
   scene.add(particles.obj);
 
-  const lightning = makeLightningSystem(span, terrain);
+  const lightning = makeLightningSystem(seed);
   scene.add(lightning.obj);
 
   const air = { near: new THREE.Color(), far: new THREE.Color(), fogNear: span * curDyn.fogNear, fogFar: span * curDyn.fogFar };
@@ -1030,7 +327,6 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
 
   // 雷電計時器
   let lightningTimer = 3.5;
-  let flashTimer = 0;
   let flashStrength = 0;
 
   const out = { air, hour: 0, sunUp: true, weather: curDyn.dominantWeather, weatherVec, dynamics: curDyn };
@@ -1113,40 +409,32 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
 
       // 1. 連續 7 維布朗運動與四季時段氣候演化 (含大雪凍結保溫與解凍動態)
       weatherVec = weatherVectorAt(startSeason, startTime, startWeather, elapsedS, seed, latDeg);
+      dt = Number.isFinite(dt) ? Math.max(0, dt) : 0;
       curDyn = resolveWeatherDynamics(weatherVec, curDyn, dt);
+      resolveWeatherVisuals(curDyn, visuals);
       if (!backgroundOnly) setWeatherDynamics(curDyn);
       if (!surfaceSynced) surfaceState = stepWeatherSurface(surfaceState, curDyn, dt);
       if (!backgroundOnly) setSurfaceWeather(surfaceState);
       deposits?.update(dt, camera, surfaceState);
 
-      // 2. 打雷閃電系統 (>75% 觸發實體 3D 閃電擊向地面與全場強光頻閃)
-      flashStrength = 0;
-      if (backgroundOnly && curDyn.effectiveThunder > 0.01) {
+      // Background previews schedule visual strikes; battles render server events only.
+      if (backgroundOnly && curDyn.effectiveThunder > 0) {
         lightningTimer -= dt;
         if (lightningTimer <= 0) {
-          flashTimer = 0.22 + (Math.sin(elapsedS * 13.7) * 0.5 + 0.5) * 0.15;
-          lightningTimer = Math.max(1.8, (1.0 - curDyn.effectiveThunder) * 6.5 + (Math.sin(elapsedS * 7.9) * 0.5 + 0.5) * 3.0);
-          // 從高空烏雲群向地面擊出 3D 分支閃電
-          const angle = Math.random() * Math.PI * 2;
-          const dist = span * (0.12 + Math.random() * 0.42);
-          const startX = camera.position.x + Math.cos(angle) * dist;
-          const startZ = camera.position.z + Math.sin(angle) * dist;
-          const startY = span * (0.35 + Math.random() * 0.15);
-          const endX = startX + (Math.random() - 0.5) * span * 0.20;
-          const endZ = startZ + (Math.random() - 0.5) * span * 0.20;
-          const endY = terrain?.heightAt ? terrain.heightAt(endX, endZ) : 0;
-          lightning.strike(new THREE.Vector3(startX, startY, startZ), new THREE.Vector3(endX, endY, endZ));
-        }
-        if (flashTimer > 0) {
-          flashTimer -= dt;
-          flashStrength = Math.sin(flashTimer * 42.0) > 0 ? (flashTimer / 0.25) * curDyn.effectiveThunder : 0;
+          lightningTimer = 2 + (1 - curDyn.effectiveThunder) * 6 + previewRnd() * 2;
+          const angle = previewRnd() * Math.PI * 2;
+          const dist = span * (.12 + previewRnd() * .42);
+          const endX = camera.position.x + Math.cos(angle) * dist;
+          const endZ = camera.position.z + Math.sin(angle) * dist;
+          const endY = terrain.heightAt?.(endX, endZ);
+          if (Number.isFinite(endY)) {
+            const start = new THREE.Vector3(endX + (previewRnd() - .5) * span * .15,
+              endY + Math.min(span * .35, 180), endZ + (previewRnd() - .5) * span * .15);
+            lightning.strike(start, new THREE.Vector3(endX, endY, endZ), visuals.lightning);
+          }
         }
       }
-      lightning.update(dt);
-      if (!backgroundOnly && flashTimer > 0) {
-        flashTimer = Math.max(0, flashTimer - dt);
-        flashStrength = Math.sin(flashTimer * 42) > 0 ? flashTimer / .25 : 0;
-      }
+      flashStrength = lightning.update(dt, camera);
 
       // 3. 推進日照時段與更新光影
       const h = clockHour(startTime, elapsedS, sched.startH);
@@ -1196,22 +484,21 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       }
 
       // 6. 粒子與雲群動態步進
-      particles.update(dt, camera, curDyn);
+      particles.update(dt, camera, curDyn, visuals);
 
       dome.position.copy(camera.position);
       if (clouds) {
         clouds.obj.position.copy(camera.position);
-        clouds.step(backgroundOnly ? elapsedS : celWindTime(), dt, skyC, curDyn);
+        clouds.step(backgroundOnly ? elapsedS : celWindTime(), dt, skyC, curDyn, visuals.clouds);
       }
     },
     strikeLightningAt(targetX, targetY, targetZ) {
-      flashTimer = 0.25;
-      const angle = Math.random() * Math.PI * 2;
-      const dist = Math.min(span * 0.25, 120);
-      const startX = targetX + Math.cos(angle) * dist;
-      const startZ = targetZ + Math.sin(angle) * dist;
-      const startY = (targetY || 0) + Math.min(span * 0.35, 180);
-      lightning.strike(new THREE.Vector3(startX, startY, startZ), new THREE.Vector3(targetX, targetY || 0, targetZ));
+      if (![targetX, targetY, targetZ].every(Number.isFinite)) return;
+      const angle = previewRnd() * Math.PI * 2;
+      const dist = Math.min(span * .25, 120);
+      const start = new THREE.Vector3(targetX + Math.cos(angle) * dist,
+        targetY + Math.min(span * .35, 180), targetZ + Math.sin(angle) * dist);
+      lightning.strike(start, new THREE.Vector3(targetX, targetY, targetZ), visuals.lightning);
     },
     getWeatherDynamics() {
       return curDyn;
@@ -1239,7 +526,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       bodies.dispose();
       if (clouds) {
         scene.remove(clouds.obj);
-        clouds.mats.forEach((m) => m.dispose());
+        clouds.dispose();
       }
     },
   });
