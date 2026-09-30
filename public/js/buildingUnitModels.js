@@ -5,7 +5,9 @@ import * as THREE from 'three';
 import { SIDES } from './data.js';
 import { mat, bx, cyl, sph, torus, dim, rbz } from './geo3d.js';
 import { outlinify } from './toon.js';
-import { recoilMount } from './unitRig.js';
+import { recoilMount, mechanism } from './unitRig.js';
+import { finishUnitSurfaces } from './unitSurfaces.js';
+import { tboxF } from './forge/geo.js';
 
 const TAU = Math.PI * 2;
 
@@ -90,6 +92,7 @@ function buildTower(side) {
   const top = frame.top;
   const seatY = top * frame.turretSeatF;
   const g = new THREE.Group();
+  const mechanisms = [];
 
   if (spec.language === 'ukrainian-lattice-radar') {
     // 36D6 語彙：低基座、四腳外露桁架、大片負空間與偏置雷達架。
@@ -115,8 +118,13 @@ function buildTower(side) {
     bx(g, 6.8, 0.65, 6.2, 0, seatY - 0.55, 0, spec.dark, { metalness: 0.62 });
     cyl(g, 0.2, 0.28, 3.1, 8, 0, seatY - 2.15, 0, spec.dark);
     // 偏置相位陣列與通訊環讓正面方向可讀。
-    const radar = bx(g, 4.5, 2.2, 0.22, -2.2, 13.7, 0.9, spec.mid);
+    const radarMount = new THREE.Group();
+    radarMount.position.set(-2.2, 13.7, 0.9);
+    g.add(radarMount);
+    const radar = bx(radarMount, 4.5, 2.2, 0.22, 0, 0, 0, spec.mid);
     radar.rotation.y = -0.24;
+    for (let i = 0; i < 4; i++) bx(radarMount, 0.055, 1.8, 0.04, -1.6 + i * 1.06, 0, 0.14, spec.dark);
+    mechanisms.push(mechanism(radarMount, 'y', 0.4, 0.35));
     torus(g, 0.78, 0.09, 2.6, 14.2, -0.9, accent,
       { emissive: accent, emissiveIntensity: 0.78 });
     addStrut(g, [2.6, 12.2, -0.9], [2.6, 15.8, -0.9], 0.07, spec.dark);
@@ -145,7 +153,7 @@ function buildTower(side) {
   g.userData.turretSeatF = frame.turretSeatF;
   g.userData.turret = turret;
   g.userData.turretMuzzles = turret.userData.muzzles;
-  g.userData.rig = { kind: 'static', attacks: turret.userData.attacks };
+  g.userData.rig = { kind: 'static', attacks: turret.userData.attacks, mechanisms };
   g.userData.modelLanguage = spec.language;
   g.userData.modelReference = spec.reference;
   return g;
@@ -153,7 +161,7 @@ function buildTower(side) {
 
 function buildBase(spec, side) {
   const g = new THREE.Group();
-  g.userData.rig = { kind: 'static', attacks: [] };
+  g.userData.rig = { kind: 'static', attacks: [], mechanisms: [], blink: [] };
   const accent = accentOf(side);
   const top = spec.top;
 
@@ -169,7 +177,12 @@ function buildBase(spec, side) {
       const roofL = bx(hangar, 3.2, 0.42, 8.7, -1.35, 2.05, 0, spec.mid);
       const roofR = bx(hangar, 3.2, 0.42, 8.7, 1.35, 2.05, 0, spec.mid);
       roofL.rotation.z = 0.28; roofR.rotation.z = -0.28;
-      bx(hangar, 3.9, 2.4, 0.16, 0, -0.35, 4.15, spec.dark);
+      const shutter = new THREE.Group();
+      shutter.position.set(0, -0.35, 4.15);
+      hangar.add(shutter);
+      for (let j = 0; j < 8; j++) bx(shutter, 3.9, 0.27, 0.16, 0, -1.05 + j * 0.3, 0, spec.dark);
+      g.userData.rig.mechanisms.push(mechanism(shutter, 'y', 0.28, 0.45, i * 1.1, 'position'));
+      for (const x of [-2.12, 2.12]) bx(hangar, 0.18, 2.8, 0.24, x, -0.2, 4.17, spec.mid);
       bx(hangar, 0.2, 0.65, 0.08, 1.85, -0.25, 4.27, accent,
         { emissive: accent, emissiveIntensity: 0.65 });
     }, Math.PI / 6);
@@ -181,11 +194,12 @@ function buildBase(spec, side) {
     }
     bx(g, 7.0, 2.0, 7.0, 0, 27.3, 0, spec.body);
     rbz(g, 5.3, 2.7, 5.3, 0, 29.55, 0, spec.mid);
-    for (const a of [0, Math.PI / 2]) {
+    for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
       const panel = bx(g, 5.2, 1.55, 0.16, Math.sin(a) * 3.4, 29.7, Math.cos(a) * 3.4, spec.dark);
       panel.rotation.y = a;
     }
-    sph(g, 1.25, 0, top - 1.25, 0, accent, { emissive: accent, emissiveIntensity: 0.95 });
+    const beacon = sph(g, 1.25, 0, top - 1.25, 0, accent, { emissive: accent, emissiveIntensity: 0.95 });
+    g.userData.rig.blink.push({ mesh: beacon, f: 1.8, lo: 0.65 });
   } else {
     // 蘇式潛艇堡／飛彈井：矩形厚牆、雙井筒與跨橋，幾乎沒有穿透負空間。
     bx(g, 39.0, 3.2, 34.0, 0, 1.6, 0, spec.dark, { metalness: 0.68 });
@@ -194,11 +208,17 @@ function buildBase(spec, side) {
       bx(g, 6.4, 13.0, 24.0, x, 13.6, -1.0, spec.dark, { metalness: 0.7 });
       addFacet(g, spec, 4.2, 5.2, 12.5, 22.2, spec.body, { metalness: 0.72 }).position.x = x;
       addFacet(g, spec, 4.6, 4.6, 1.0, 28.95, spec.mid, { metalness: 0.78 }).position.x = x;
+      for (let i = 0; i < 4; i++) {
+        const plate = tboxF(g, { w0: 1.5, d0: 0.3, w1: 1.3, d1: 0.2, h: 8.5 },
+          x, 21, 4.45, spec.dark, { metalness: 0.7 });
+        plate.position.x += (i - 1.5) * 1.02;
+      }
       torus(g, 2.65, 0.24, x, 29.55, 0, spec.dark, { metalness: 0.8 });
     }
     bx(g, 20.0, 2.1, 8.2, 0, 24.0, 0, spec.mid, { metalness: 0.7 });
     bx(g, 6.4, 6.0, 6.4, 0, 27.8, 0, spec.dark, { metalness: 0.76 });
-    sph(g, 1.3, 0, top - 1.3, 0, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    const beacon = sph(g, 1.3, 0, top - 1.3, 0, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    g.userData.rig.blink.push({ mesh: beacon, f: 1.5, lo: 0.65 });
     // 正面三道大型發射井門，從遠距即可讀出水平方向。
     for (const x of [-9, 0, 9]) {
       bx(g, 6.2, 5.2, 0.32, x, 8.0, 12.85, spec.dark);
@@ -207,6 +227,14 @@ function buildBase(spec, side) {
     }
   }
 
+  const scanner = new THREE.Group();
+  scanner.position.set(0, top - 3.5, -2.4);
+  g.add(scanner);
+  bx(scanner, 3.4, 0.65, 0.7, 0, 0, 0, spec.mid, { metalness: 0.65 });
+  for (const x of [-1.3, 0, 1.3]) bx(scanner, 0.22, 0.12, 0.08, x, 0, 0.4, accent,
+    { emissive: accent, emissiveIntensity: 0.8 });
+  g.userData.rig.mechanisms.push(mechanism(scanner, 'y', 0.9, 0.3));
+
   g.userData.modelLanguage = spec.language;
   g.userData.modelReference = spec.reference;
   return g;
@@ -214,9 +242,9 @@ function buildBase(spec, side) {
 
 /** Build the complete tower or base body; unknown keys retain the existing fallback. */
 export function buildBuildingUnit(kind, side) {
-  if (kind === 'tower') return buildTower(side);
+  if (kind === 'tower') return finishUnitSurfaces(buildTower(side));
   const spec = BUILDING_UNIT_MODELS[kind];
-  return spec ? buildBase(spec, side) : null;
+  return spec ? finishUnitSurfaces(buildBase(spec, side)) : null;
 }
 
 // The battery stays a separate scene tree for the existing damage/teardown path.
@@ -230,6 +258,10 @@ export function buildBaseBattery(side, bodyHeight = 0) {
     yaw.position.set(x, 0, 6);
     g.add(yaw);
     bx(yaw, 4, 4, 5, 0, 0, 0, spec.body, { metalness: 0.7 });
+    for (const sideX of [-1, 1]) {
+      tboxF(yaw, { w0: 0.5, d0: 5.4, w1: 0.3, d1: 4.5, h: 2.7 },
+        sideX * 2, 0.15, 0.1, spec.mid, { metalness: 0.75 });
+    }
     const pitch = new THREE.Group();
     pitch.rotation.x = -0.14;
     yaw.add(pitch);
@@ -238,6 +270,9 @@ export function buildBaseBattery(side, bodyHeight = 0) {
     const muzzle = new THREE.Group();
     muzzle.position.z = 15.6;
     pitch.add(muzzle);
+    const sleeve = cyl(pitch, 1.5, 1.6, 3.2, 12, 0, 0, 2.2, spec.mid, { metalness: 0.75 });
+    sleeve.rotation.x = Math.PI / 2;
+    for (const z of [4.2, 8.2, 12.2]) torus(pitch, 1.15, 0.09, 0, 0, z, spec.mid, { metalness: 0.8 });
     attacks.push(recoilMount(pitch, [barrel, muzzle], [muzzle], 1.8, 0.045));
     yaw.userData.pitch = pitch;
     pivots.push(yaw);
@@ -246,6 +281,7 @@ export function buildBaseBattery(side, bodyHeight = 0) {
   g.userData.pivots = pivots;
   g.userData.muzzles = muzzles;
   g.userData.attacks = attacks;
+  finishUnitSurfaces(g);
   outlinify(g);
   return g;
 }
@@ -306,6 +342,7 @@ export function buildBuildingUnitTurret(side, { outline = true } = {}) {
   yaw.userData.muzzles = muzzles;
   yaw.userData.muzzleAxis = '+z';
   yaw.userData.modelReference = spec.reference;
+  finishUnitSurfaces(yaw);
   if (outline) outlinify(yaw, 0.1);
   return yaw;
 }

@@ -5,10 +5,13 @@ import { FUNCTIONAL_DETAIL_LIMIT } from './functionalArchitectureCatalog.js';
 // Semantic ornament uses the existing part format. Roof patches require a caller-validated convex site.
 export function functionalBuildingParts(edges, baseY, topY, style, roofSite = null, roofHalf = 0, roofBudget = 12) {
   const design = style?.functionalDesign;
-  if (!design || !edges.length) return { parts: [], replacesRoof: false };
-  const parts = [], motif = design.motif;
+  if (!edges.length || (!design && style?.actualRoofForm !== 'flat')) return { parts: [], replacesRoof: false };
+  const parts = [], motif = design?.motif || 'ventilation';
   const add = (g, p, c, role, r = [0, 0, 0]) => {
-    if (parts.length < FUNCTIONAL_DETAIL_LIMIT) parts.push({ g, p, c, role: `function-${role}`, r, colorVariant: style.variant });
+    if (parts.length >= FUNCTIONAL_DETAIL_LIMIT) return null;
+    const part = { g, p, c, role: `function-${role}`, r, colorVariant: style.variant };
+    parts.push(part);
+    return part;
   };
   const front = edges.reduce((a, b) => a.hw2 >= b.hw2 ? a : b);
   const fronts = edges.filter(edge => edge.hw2 >= front.hw2 * 0.9 && Math.abs(Math.cos(edge.ry - front.ry)) > 0.99).slice(0, 2);
@@ -20,7 +23,7 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
       add(g, [edge.x + x * ca - z * sa, baseY + y, edge.z + x * sa + z * ca], c, role, [0, -edge.ry, 0]);
     }
   };
-  facade(['box', w, Math.min(0.5, h * 0.12), 0.2], 0, h * 0.92, style.trim, 'entrance-lintel');
+  if (design) facade(['box', w, Math.min(0.5, h * 0.12), 0.2], 0, h * 0.92, style.trim, 'entrance-lintel');
   const cross = (emit, x, y, size, color, role) => {
     emit(['box', size * 0.2, size, size * 0.15], x, y, color, role);
     emit(['box', size * 0.68, size * 0.2, size * 0.15], x, y + size * 0.16, color, role);
@@ -107,7 +110,9 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
       for (const x of [-r * 0.55, r * 0.55]) block(r * 0.55, r * 0.18, r * 1.5, x, 0, 0, 0x769aa4, 'gallery-skylight');
     } else if (motif === 'civic' || motif === 'school') {
       cylinder(r * 0.03, r * 1.5, 0, 0, 0, style.trim, 'flagpole');
-      block(r * 0.55, r * 0.3, r * 0.04, r * 0.27, r * 1.1, 0, style.roof, 'civic-banner');
+      const banner = roof(['box', r * 0.55, r * 0.3, r * 0.04], r * 0.27, r * 1.25, 0, style.roof, 'civic-banner');
+      if (banner) banner.motion = { id: 'civic-banner', kind: 'swing', axis: 'y',
+        pivot: [cx, topY + r * 1.25, cz], speed: 1.7, amplitude: 0.12 };
     }
   } else if (motif === 'solar') {
     for (let i = -1; i <= 1; i++) block(r * 1.7, r * 0.12, r * 0.45, 0, r * 0.12, i * r * 0.6, 0x284f70, 'solar-panel');
@@ -115,9 +120,12 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
     cylinder(r * 0.06, r * 1.7, 0, 0, 0, style.trim, 'turbine-mast');
     for (let i = 0; i < 3; i++) {
       const a = i * Math.PI * 2 / 3;
-      roof(['box', r * 0.1, r, r * 0.08], Math.sin(a) * r * 0.5, r * 1.7 + Math.cos(a) * r * 0.5, 0, style.wall, 'turbine-blade', [0, 0, -a]);
+      const blade = roof(['box', r * 0.1, r, r * 0.08], Math.sin(a) * r * 0.5, r * 1.7 + Math.cos(a) * r * 0.5, 0, style.wall, 'turbine-blade', [0, 0, -a]);
+      if (blade) blade.motion = { id: 'roof-turbine', kind: 'spin', axis: 'z',
+        pivot: [cx, topY + r * 1.7, cz], speed: 1.9 };
     }
-  } else if (['energy', 'thermal', 'nuclear', 'water', 'hydro', 'substation', 'hospital'].includes(motif)) {
+  } else if (['energy', 'thermal', 'nuclear', 'water', 'hydro', 'substation', 'hospital', 'ventilation'].includes(motif)
+    || style.actualRoofForm === 'flat') {
     for (const x of [-r * 0.55, r * 0.55]) {
       if (motif === 'substation') {
         block(r * 0.7, r * 0.6, r * 0.8, x, 0, 0, style.trim, 'transformer');
@@ -125,7 +133,18 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
       } else if (motif === 'water' || motif === 'hydro') cylinder(r * 0.4, r * 0.3, x, 0, 0, 0x608e9b, 'water-tank');
       else if (motif === 'thermal') cylinder(r * 0.15, r * 2, x, 0, 0, style.trim, 'plant-stack');
       else if (motif === 'nuclear') cylinder(r * 0.4, r, x, 0, 0, style.wall, 'cooling-tower', r * 0.28);
-      else block(r * 0.6, r * 0.35, r * 0.8, x, 0, 0, style.trim, 'ventilation-unit');
+      else {
+        block(r * 0.6, r * 0.35, r * 0.8, x, 0, 0, style.trim, 'ventilation-unit');
+        cylinder(r * 0.22, r * 0.035, x, r * 0.35, 0, 0x35434a, 'fan-guard');
+        for (let i = 0; i < 4; i++) {
+          const a = i * Math.PI / 2;
+          const blade = roof(['box', r * 0.07, r * 0.018, r * 0.2],
+            x + Math.sin(a) * r * 0.1, r * 0.39, Math.cos(a) * r * 0.1,
+            style.wall, 'fan-blade', [0, a, 0]);
+          if (blade) blade.motion = { id: `vent-fan/${x}`, kind: 'spin', axis: 'y',
+            pivot: [cx + x, topY + r * 0.39, cz], speed: 5.5 };
+        }
+      }
     }
   }
   // Uniform compression preserves joints when a tagged building is already near the world cap.
@@ -141,6 +160,11 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
     const scale = roofBudget / rise;
     part.p = [cx + (part.p[0] - cx) * scale, topY + (part.p[1] - topY) * scale, cz + (part.p[2] - cz) * scale];
     part.s = [scale, scale, scale];
+    if (part.motion) part.motion = { ...part.motion, pivot: [
+      cx + (part.motion.pivot[0] - cx) * scale,
+      topY + (part.motion.pivot[1] - topY) * scale,
+      cz + (part.motion.pivot[2] - cz) * scale,
+    ] };
   }
   return { parts, replacesRoof: religious && roofs.length > 0 };
 }

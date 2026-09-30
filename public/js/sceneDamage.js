@@ -38,6 +38,9 @@ export function applySceneDamage(ent, stage) {
   if (!stage && !ent.sceneDamageParts && !ent.mobileDamage) return;
   if (profile.mobile) { applyMobileDamage(ent,stage,profile); return; }
   const root = ent.mesh;
+  if (ent.kind === 'mapbuilding') root.traverse(node => {
+    if (node.userData.partMotionUpdate) node.userData.partMotionPaused = stage === 3;
+  });
   if (!ent.sceneDamageParts) {
     if (!ent.neutral) {
       const geometries = new Map(), materials = new Map();

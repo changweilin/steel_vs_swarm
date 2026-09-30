@@ -88,7 +88,7 @@ const otherPoly = rectangle(20,10); otherPoly.outer=otherPoly.outer.map(([x,z])=
 buildOsmPolygonBuildings(mixed,[area,{...area,sourceId:'regression/2',worldPolygons:[otherPoly]}],{
  terrain:{heightAt:()=>0},architectureOf:()=>style,modelOf:p=>p.outer[0][0]<0?painted:null,
 });
-assert.ok(mixed.children.every(m=>m.geometry?.attributes.position.array.every(Number.isFinite)));
+mixed.traverse(m => { if (m.isMesh) assert.ok(m.geometry.attributes.position.array.every(Number.isFinite)); });
 assert.equal(fitApprovedPolygon({outer:[[0,0],[20,0],[0,10]],holes:[]},10,style),null);
 assert.equal(fitApprovedPolygon({...poly,holes:[rectangle(2,2).outer]},10,style),null);
 

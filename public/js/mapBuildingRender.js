@@ -9,7 +9,7 @@ export function mapBuildingTarget(record) {
     neutral:true,isStatic:true,sceneStage:0,dimR:Math.max(b.w,b.d)/2,dimH:b.h,dimTop:b.h,colH:b.h };
 }
 
-/** Vertex ownership survives batching; intact cities retain their existing draw-call count. */
+/** Vertex ownership survives batching; intact structural meshes remain merged. */
 export function buildingRanges(geometries) {
   let start = 0, indexStart = 0;
   return geometries.map((geometry) => {
@@ -35,6 +35,10 @@ export function registerMapBuildings(group, blockers, platforms, meshes, landmar
     const record = records.get(lm.g.userData.buildingKey);
     if (record) record.direct = lm.g;
   }
+  group.traverse(node => {
+    const record = records.get(node.userData.buildingAttachmentKey);
+    if (record) (record.attachments ??= []).push(node);
+  });
   for (const [key, record] of records) {
     if (!record.sources.length && !record.direct) { records.delete(key); continue; }
     record.bounds = buildingBounds(record.boxes);
@@ -71,6 +75,7 @@ export function detachMapBuilding(record) {
       position.needsUpdate = true;
     }
   }
+  for (const attachment of record.attachments || []) root.attach(attachment);
   record.mesh = root;
   return root;
 }

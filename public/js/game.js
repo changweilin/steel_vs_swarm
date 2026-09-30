@@ -4223,7 +4223,7 @@ export class BattleClient {
     g.rotation.y = Math.atan2(dirX, dirZ);
     ent.gunPivots = g.userData.pivots;
     ent.gunMuzzles = g.userData.muzzles;
-    ent.mesh.userData.rig = { kind: 'static', attacks: g.userData.attacks };
+    ent.mesh.userData.rig.attacks = g.userData.attacks;
     this.scene.add(g);
     ent.guns = g;
   }

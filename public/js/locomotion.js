@@ -12,7 +12,7 @@ import { MORPH, lerpFPS } from './data.js';
 import { bodyBounce, cycleU, dutyOf, hipDrive, humanRunPose, limbProfile, limbFlex } from './gaitcurve.js';
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 import { animWeights } from './animweights.js';
-import { stepUnitMotion } from './unitMotion.js';
+import { stepUnitMotion, stepVehicleMotion } from './unitMotion.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -826,8 +826,7 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
 
 /** 輪/履帶載具:輪速耦合 + 離心側傾 + 煞車點頭(Task 1.2) */
 function stepVehicle(L, rig, dt, now, speed, vFwd, yawRate) {
-  const s = rig.s || 1;
-  for (const w of rig.wheels) w.m.rotation.x += vFwd / Math.max(0.05, w.r * s) * dt;
+  stepVehicleMotion(rig, L, dt, now, speed, vFwd, yawRate);
   const tracked = rig.kind === 'tracked';
   // 右轉(yawRate>0)離心力把車體甩向左(局部 +x 抬升 = rotation.z 正)
   const roll = clamp(yawRate * vFwd * (tracked ? 0.004 : 0.009), -0.1, 0.1);

@@ -36,7 +36,7 @@ try {
     const { buildBaseBattery } = await import('/public/js/buildingUnitModels.js');
     const { CIVILIANS, TARGET_H, UNITS, lerpFPS } = await import('/public/js/data.js');
     const { stepCombatFx, stepLocomotion } = await import('/public/js/locomotion.js');
-    const { fireUnitMotion, stepUnitMotion, stepUnitSpinners } = await import('/public/js/unitMotion.js');
+    const { fireUnitMotion, stepUnitMotion, stepUnitSpinners, stepVehicleMotion } = await import('/public/js/unitMotion.js');
     const { disposeTree, setCelSun, updateCelLight } = await import('/public/js/toon.js');
     const check = (v, m) => { if (!v) throw Error(m); };
     const near = (a, b) => Math.abs(a - b) < 1e-8;
@@ -68,8 +68,31 @@ try {
         rig.attacks = battery.userData.attacks;
       }
       if (rig.kind === 'biped') {
+        check(rig.head, `${row.kind}: missing articulated head`);
         check(rig.legChainL?.length === 2 && rig.legChainR?.length === 2, `${row.kind}: knees/ankles`);
         check(rig.armChainL?.length && rig.armChainR?.length, `${row.kind}: elbows`);
+      }
+      if (rig.wheels?.length) {
+        check(rig.suspension?.length === rig.wheels.length, `${row.kind}: missing suspension`);
+        const wheel = rig.wheels[0].m, rest = wheel.rotation.x;
+        stepVehicleMotion(rig, {}, .1, 1, 4, NaN, 0);
+        check(wheel.rotation.x === rest, 'invalid velocity changed wheel pose');
+        stepVehicleMotion(rig, {}, .1, 1, 4, 4, 0);
+        check(wheel.rotation.x !== rest, `${row.kind}: wheel does not roll`);
+        stepVehicleMotion(rig, {}, .1, 1, 4, -4, 0);
+        check(near(wheel.rotation.x, rest), `${row.kind}: reversing wheel drifts`);
+        stepVehicleMotion(rig, {}, .1, 1, 0, 0, .5);
+        if (rig.kind === 'tracked') {
+          check(rig.tracks?.length === 2, `${row.kind}: missing tread assemblies`);
+          check(rig.tracks[0].travel * rig.tracks[1].travel < 0, `${row.kind}: differential turn`);
+          for (const t of rig.tracks) check(t.mesh.instanceMatrix.array.every(Number.isFinite), 'invalid tread matrices');
+        } else check(rig.suspension.some(a => a.mount.rotation.y !== 0), `${row.kind}: missing front steering`);
+      }
+      for (const m of rig.mechanisms || []) {
+        stepUnitMotion(rig, 0);
+        const before = m.node[m.channel][m.axis];
+        stepUnitMotion(rig, 3);
+        check(before !== m.node[m.channel][m.axis], `${row.kind}: static mechanism`);
       }
       if (!['civ', 'bunker'].includes(row.kind)) check(rig.attacks?.length, `${row.kind}: missing attack assembly`);
       for (const fps of [30, 60, 144]) {
@@ -96,6 +119,7 @@ try {
         for (const other of rig.attacks) if (other !== a) check(other.node.position.z === 0, 'wrong barrel fired');
         stepUnitMotion(rig, 10.8);
         check(a.node.position.z === 0 && a.node.rotation.x === 0, 'recoil never returns to rest');
+        for (const m of a.cycle || []) check(m.node[m.channel][m.axis] === m.rest, 'breech never returns to rest');
         check(muzzle.getWorldPosition(new THREE.Vector3()).distanceTo(before) < 1e-8, 'rest drift');
         a.firedAt = -Infinity;
         shots++;
@@ -126,8 +150,12 @@ try {
     }
     check(outputs.every(v => near(v, outputs[0])), 'FPS-dependent recoil');
     const spinner = new THREE.Group(); spinner.userData.spinAxis = 'z';
+    stepVehicleMotion({ kind: 'wheeled' }, {}, .1, 1, 4, 4, 0);
     stepUnitSpinners([spinner], 0.25);
     check(spinner.rotation.z === 10 && spinner.rotation.y === 0, 'launcher spins away from its bore');
+    spinner.userData.spinRate = -20;
+    stepUnitSpinners([spinner], .5);
+    check(spinner.rotation.z === 0, 'counter-rotation rate ignored');
     fireUnitMotion(rig, {}, 3);
     check(a.firedAt === 2, 'unknown muzzle fired a weapon');
     stepUnitMotion(rig, 9);
@@ -150,6 +178,13 @@ try {
     aimTower({ mesh: tower, _aimAt: { x: 50, z: 100, y: height - 2, until: 10 } }, 1, 5);
     check(near(turret.userData.pitch.rotation.x, 0), 'tower ignores fitted parent height');
     disposeTree(tower);
+    const base = makeUnit('base:STEEL', 'STEEL', { ring: false }).group;
+    const bodyRig = base.userData.rig;
+    const addBase = new Function('THREE', 'buildBaseBattery', 'llToWorld', `return ({${methods.addBase}})._addBaseGuns;`)(THREE, buildBaseBattery, () => [0, 0]);
+    const baseEnt = { mesh: base }, scene = new THREE.Scene();
+    addBase.call({ cfg: {}, scene }, baseEnt, { s: 'STEEL', x: 0, z: 0 });
+    check(base.userData.rig === bodyRig && bodyRig.mechanisms.length > 0, 'battery discarded body mechanisms');
+    disposeTree(baseEnt.guns); disposeTree(base);
 
     document.body.innerHTML = '';
     document.body.style.cssText = 'margin:0;background:#ddd8ce;color:#242931;font:16px sans-serif';
@@ -194,7 +229,7 @@ try {
     }
     renderer.dispose();
     return { models, civilianProfiles: CIVILIANS.length, attackAssemblies: shots, frameRates: [30, 60, 144] };
-  }, { aim: grabMethod(game, '_aimBaseGuns'), tower: grabMethod(game, '_aimTurret') });
+  }, { aim: grabMethod(game, '_aimBaseGuns'), tower: grabMethod(game, '_aimTurret'), addBase: grabMethod(game, '_addBaseGuns') });
   assert.deepEqual(errors, []);
   await mkdir('tools/.shots', { recursive: true });
   await page.screenshot({ path: 'tools/.shots/unit-motion.png', fullPage: true });

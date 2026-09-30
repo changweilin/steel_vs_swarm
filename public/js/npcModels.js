@@ -5,7 +5,9 @@
 import * as THREE from 'three';
 import { CIVILIANS, isThirdSide, sideInfo } from './data.js';
 import { bx, cyl, rbz, sph, cone, torus, dim } from './geo3d.js';
-import { limbChain, recoilMount } from './unitRig.js';
+import { limbChain, recoilMount, mechanism } from './unitRig.js';
+import { tboxF, finF } from './forge/geo.js';
+import { finishUnitSurfaces } from './unitSurfaces.js';
 import { generateCivilian } from './civilianAppearance.js';
 
 const TAU = Math.PI * 2;
@@ -247,7 +249,13 @@ function weaponGroup(role, accent, palette) {
       emissive: accent, emissiveIntensity: 0.8,
     });
   }
-  return { g, muzzle };
+  const bolt = bx(g, 0.07, 0.07, 0.22, 0.14, 0.07, -0.04, palette.trim, { metalness: 0.8 });
+  if (role !== 'rocket') {
+    tboxF(g, { w0: 0.16, d0: 0.22, w1: 0.21, d1: 0.3, h: 0.18 },
+      0, 0.17, -0.2, palette.mid, { metalness: 0.6 });
+    bx(g, 0.045, 0.06, 0.35, 0, 0.28, -0.15, palette.deep);
+  }
+  return { g, muzzle, bolt };
 }
 
 function buildTrooper(side, role) {
@@ -277,8 +285,8 @@ function buildTrooper(side, role) {
   g.add(hips);
   frustum(hips, { rt: 0.34, rb: 0.43, h: 0.28, seg: 6, y: 0.12,
     sx: 1.1, sz: 0.72, color: P.dark });
-  frustum(hips, { rt: 0.43 * spec.armour, rb: 0.34, h: 0.64, seg: machine ? 6 : 8,
-    y: 0.58, sx: 1.18, sz: 0.7, color: P.shell });
+  tboxF(hips, { w0: 0.62, d0: 0.38, w1: 0.84 * spec.armour, d1: 0.46, h: 0.64 },
+    0, 0.58, 0, P.shell, { metalness: machine ? 0.65 : 0.1 });
   // 胸甲只覆前側，讓背包與腰節仍讀得出三層剪影。
   const chest = frustum(hips, { rt: 0.39 * spec.armour, rb: 0.32, h: 0.48, seg: 6,
     y: 0.61, z: 0.13, sx: 1.2, sz: 0.58, color: P.mid, opts: { metalness: machine ? 0.58 : 0.08 } });
@@ -308,12 +316,16 @@ function buildTrooper(side, role) {
   };
   const armL = makeArm(-1), armR = makeArm(1);
 
-  sph(hips, machine ? 0.23 : 0.22, 0, 1.18, 0.01,
+  const head = new THREE.Group();
+  head.position.set(0, 1.18, 0.01);
+  hips.add(head);
+  sph(head, machine ? 0.23 : 0.22, 0, 0, 0,
     machine ? P.dark : 0xb88968, { metalness: machine ? 0.45 : 0 });
-  frustum(hips, { rt: machine ? 0.22 : 0.24, rb: machine ? 0.28 : 0.3,
-    h: 0.22, seg: 8, y: 1.31, color: P.mid });
-  const visor = glowPlate(hips, machine ? 0.34 : 0.38, 0.09, 0.06,
-    0, 1.22, 0.22, machine ? accent : P.glass, machine ? 1.2 : 0.38);
+  tboxF(head, { w0: 0.55, d0: 0.48, w1: 0.38, d1: 0.36, h: 0.25 },
+    0, 0.13, -0.015, P.mid, { metalness: machine ? 0.6 : 0.1 });
+  for (const x of [-0.25, 0.25]) bx(head, 0.07, 0.2, 0.16, x, -0.02, -0.04, P.dark);
+  const visor = glowPlate(head, machine ? 0.34 : 0.38, 0.09, 0.06,
+    0, 0.04, 0.21, machine ? accent : P.glass, machine ? 1.2 : 0.38);
   visor.userData.noOutline = true;
   if (role !== 'soldier') {
     bx(hips, 0.12, 0.34, 0.18, -0.28, 0.65, -0.42, P.trim); // 專職彈藥筒
@@ -342,7 +354,7 @@ function buildTrooper(side, role) {
     if (gunR.comp != null) gunR.comp += 0.65;
   }
   g.userData.rig = {
-    kind: 'biped', hips, legL, legR, armL, armR,
+    kind: 'biped', hips, legL, legR, armL, armR, head, headY0: head.position.y,
     legChainL, legChainR, armChainL, armChainR,
     hipsY0: hipY, stride: spec.stride, bob: 0.065, sway: 0.055, top: 8,
     gunArm: true, gunR,
@@ -355,6 +367,11 @@ function buildTrooper(side, role) {
     muzzles: { light: { n: weapon.muzzle, r: role === 'soldier' ? 0.075 : 0.095 }, heavy: null },
     attacks: [recoilMount(weapon.g, [...weapon.g.children], [weapon.muzzle], mounted ? 0.1 : 0.065)],
   };
+  g.userData.rig.attacks[0].cycle = [mechanism(weapon.bolt, 'z', -0.16, 0, 0, 'position')];
+  for (const chain of [legChainL, legChainR]) {
+    const knee = chain[0].g;
+    tboxF(knee, { w0: 0.24, d0: 0.08, w1: 0.28, d1: 0.13, h: 0.23 }, 0, 0.04, 0.14, P.trim);
+  }
   return g;
 }
 
@@ -437,6 +454,12 @@ function buildApc(side) {
   const g = markBatch(new THREE.Group(), 'vehicle', `apc:${S.reference}`);
   const hull = new THREE.Group();
   g.add(hull);
+  for (const x of [-1, 1]) {
+    for (let i = 0; i < 3; i++) tboxF(hull,
+      { w0: 0.12, d0: S.L * 0.19, w1: 0.09, d1: S.L * 0.17, h: 0.44 },
+      x * S.W * 0.46, S.waist - 0.22, (i - 1) * S.L * 0.23, P.dark);
+    bx(hull, 0.08, 0.08, S.L * 0.68, x * S.W * 0.43, S.roof - 0.12, -0.2, P.trim);
+  }
   bx(hull, S.W * 0.84, 0.34, S.L * 0.92, 0, S.sill, -0.08, P.deep, { metalness: 0.58 });
   if (S.profile === 'btr4') {
     bx(hull, S.W * 0.92, S.waist - S.sill, S.L * 0.78, 0,
@@ -492,6 +515,9 @@ function buildTank(side) {
   const g = markBatch(new THREE.Group(), 'vehicle', `tank:${S.reference}`);
   const hull = new THREE.Group();
   g.add(hull);
+  for (const x of [-1, 1]) for (let i = 0; i < 4; i++) tboxF(hull,
+    { w0: 0.13, d0: S.L * 0.16, w1: 0.1, d1: S.L * 0.14, h: 0.42 },
+    x * S.W * 0.48, 1.15, (i - 1.5) * S.L * 0.19, P.shell, { metalness: 0.65 });
   bx(hull, S.W * 0.7, 0.9, S.L * 0.8, 0, S.hullY, -0.08, P.shell, { metalness: 0.56 });
   const glacis = bx(hull, S.W * 0.68, S.profile === 'armata' ? 0.78 : 0.62,
     S.profile === 'abrams' ? 2.15 : 1.55, 0, S.hullY + 0.12, S.L * 0.37, P.mid,
@@ -589,9 +615,15 @@ function buildHeli(side) {
     P.deep, { metalness: 0.72 });
   const spin = [];
   spin.push(addRotor(tilt, S.coaxial ? 1.34 : 1.16, S.blades, S.profile === 'huey' ? 4.9 : 4.35));
-  if (S.coaxial) spin.push(addRotor(tilt, 1.62, S.blades, 4.15, Math.PI / S.blades));
+  if (S.coaxial) {
+    const upper = addRotor(tilt, 1.62, S.blades, 4.15, Math.PI / S.blades);
+    upper.userData.spinRate = -40;
+    spin.push(upper);
+  }
   if (S.tailRotor) {
     const tailRotor = new THREE.Group();
+    tailRotor.userData.spinAxis = 'z';
+    tailRotor.userData.spinRate = 54;
     tailRotor.position.set(0.24, 0.36, tailEnd + 0.05);
     tilt.add(tailRotor);
     const tailBlades = S.profile === 'apache' ? 4 : 3;
@@ -628,6 +660,14 @@ function buildHeli(side) {
     attacks.push(recoilMount(gunTilt, [pod, muzzle], [muzzle], 0.14));
   }
   g.userData.modelReference = S.reference;
+  for (const x of [-1, 1]) {
+    const intakeX = x * S.bodyW * 0.33;
+    rbz(tilt, 0.35, 0.35, 1.4, intakeX, 0.65, -0.5, P.dark, { metalness: 0.7 });
+    for (let i = 0; i < 3; i++) bx(tilt, 0.28, 0.025, 0.08, intakeX, 0.84, -0.85 + i * 0.2, P.mid);
+    const fin = finF(tilt, { len: 0.7, w0: 0.45, w1: 0.24, t: 0.06, sweep: 0.15 },
+      x * 0.2, 0.36, tailEnd + 0.2, P.shell);
+    fin.rotation.z = x * -Math.PI / 2;
+  }
   g.userData.spin = spin;
   g.userData.gunTilt = gunTilt;
   g.userData.turretMuzzles = muzzles;
@@ -689,7 +729,13 @@ function buildBunker(side) {
     glowPlate(g, 0.18, 0.48, 0.08, 1.55, 3.6, -0.36, accent, 0.65);
   }
   g.userData.factionLanguage = side;
-  g.userData.rig = { kind: 'static', attacks: [] };
+  const sensor = new THREE.Group();
+  sensor.position.set(0, S.profile === 'stone-sangar' ? 3.5 : 2.5, -0.4);
+  g.add(sensor);
+  cyl(sensor, 0.12, 0.15, 0.42, 8, 0, 0.21, 0, P.deep);
+  const head = bx(sensor, 0.45, 0.24, 0.34, 0, 0.48, 0, P.mid);
+  glowPlate(head, 0.24, 0.05, 0.05, 0, 0, 0.19, accent, 0.75);
+  g.userData.rig = { kind: 'static', attacks: [], mechanisms: [mechanism(sensor, 'y', 0.75, 0.45)] };
   g.userData.modelReference = S.reference;
   return g;
 }
@@ -941,7 +987,7 @@ function buildCivilian(side, profile = 0, seed = 0) {
   g.userData.profession = appearance.occupation;
   g.userData.professionKit = professionKit;
   g.userData.rig = {
-    kind: 'biped', hips, legL, legR, armL, armR,
+    kind: 'biped', hips, legL, legR, armL, armR, head, headY0: head.position.y,
     legChainL: limbChain(legL, -0.6, -1.1),
     legChainR: limbChain(legR, -0.6, -1.1),
     armChainL: limbChain(armL, -0.42),
@@ -960,15 +1006,17 @@ export function supportsNpcModel(kind) {
  * 玩家 drone／robot／morph 刻意不在名冊中，也沒有任何通用 fallback 會吃到它們。
  */
 export function buildNpcModel(kind, side, { profile = 0, appearanceSeed = 0 } = {}) {
+  let model;
   switch (kind) {
-    case 'creep:soldier': return buildTrooper(side, 'soldier');
-    case 'creep:apc': return buildApc(side);
-    case 'creep:tank': return buildTank(side);
-    case 'creep:rocketeer': return buildTrooper(side, 'rocketeer');
-    case 'creep:howitzer': return buildTrooper(side, 'howitzer');
-    case 'creep:heli': return buildHeli(side);
-    case 'bunker': return buildBunker(side);
-    case 'civ': return buildCivilian(side, profile, appearanceSeed);
+    case 'creep:soldier': model = buildTrooper(side, 'soldier'); break;
+    case 'creep:apc': model = buildApc(side); break;
+    case 'creep:tank': model = buildTank(side); break;
+    case 'creep:rocketeer': model = buildTrooper(side, 'rocketeer'); break;
+    case 'creep:howitzer': model = buildTrooper(side, 'howitzer'); break;
+    case 'creep:heli': model = buildHeli(side); break;
+    case 'bunker': model = buildBunker(side); break;
+    case 'civ': model = buildCivilian(side, profile, appearanceSeed); break;
     default: return null;
   }
+  return finishUnitSurfaces(model);
 }

@@ -16,6 +16,7 @@ import { calculateFootprintMetrics, resolveAdaptiveRoofForm } from './architectu
 import { architecturalFacadeParts } from './architectureFacadeParts.js';
 import { architecturalRoofParts } from './architectureRoofParts.js';
 import { functionalBuildingParts } from './functionalBuildingParts.js';
+import { sceneFurnitureParts } from './sceneFurnitureParts.js';
 import { optimalSolarTiltRad } from './data.js';
 
 export const ENVIRONMENT_OBJECTS = Object.freeze({
@@ -166,6 +167,11 @@ function fit(rows, size) {
     p: [(p.p[0] - (b.x0 + b.x1) / 2) * scale, (p.p[1] - b.y0) * scale,
       (p.p[2] - (b.z0 + b.z1) / 2) * scale],
     s: (p.s || [1, 1, 1]).map(v => v * scale),
+    ...(p.motion ? { motion: { ...p.motion, pivot: [
+      (p.motion.pivot[0] - (b.x0 + b.x1) / 2) * scale,
+      (p.motion.pivot[1] - b.y0) * scale,
+      (p.motion.pivot[2] - (b.z0 + b.z1) / 2) * scale,
+    ] } } : {}),
   }));
 }
 
@@ -237,6 +243,14 @@ function building(kind, w, h, d, rnd) {
   const trim = style.trim;
   const industrial = ['factory', 'powerplant', 'incinerator'].includes(kind);
   if (industrial) {
+    for (const x of [-w * .22, w * .22]) {
+      const parts = sceneFurnitureParts('acbox');
+      for (const part of parts) rows.push({ ...part, visualOnly: true,
+        p: [part.p[0] + x, part.p[1] + bodyH, part.p[2] + d * .2],
+        ...(part.motion ? { motion: { ...part.motion, id: `roof/${x}/${part.motion.id}`,
+          pivot: [part.motion.pivot[0] + x, part.motion.pivot[1] + bodyH, part.motion.pivot[2] + d * .2] } } : {}),
+      });
+    }
     const stacks = kind === 'incinerator' ? 3 : integer(rnd, 1, 2);
     const stackSpec = ENVIRONMENT_STRUCTURE_PARAMETERS.chimney;
     for (let i = 0; i < stacks; i++) {
@@ -405,7 +419,14 @@ function extraction(kind, w, h, d, rnd) {
     rows.push(box(w * .44 * crown + radius * 2, h * .025, d * .46 * crown + radius * 2,
       cx, topY, 0, steel, 'crown-block'));
     rows.push(cyl(radius * .3, radius * .3, topY - baseY,
-      cx, (topY + baseY) / 2, 0, 0x464e52, 'drill-string'));
+      cx, (topY + baseY) / 2, 0, 0x464e52, 'drill-string', {
+        motion: { id: 'drill-string', kind: 'spin', axis: 'y', pivot: [cx, baseY, 0], speed: 2.8 },
+      }));
+    for (const side of [-1, 1]) rows.push(box(radius * .2, radius * 1.4, radius * .35,
+      cx + side * radius * .35, baseY + (topY - baseY) * .35, 0, 0xc6a665, 'drill-coupling', {
+        visualOnly: true,
+        motion: { id: 'drill-string', kind: 'spin', axis: 'y', pivot: [cx, baseY, 0], speed: 2.8 },
+      }));
     const tankH = h * sample(rnd, spec.tankHeightRatio), tankR = Math.min(w * .095, d * .12);
     rows.push(cyl(tankR, tankR, tankH, w * .35, tankH / 2, d * .15, 0xaaa99b, 'storage-tank'));
     rows.push(cyl(0, tankR, h * .035, w * .35, tankH + h * .0175, d * .15, 0x737f80, 'tank-roof'));

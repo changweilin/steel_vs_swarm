@@ -311,14 +311,14 @@ if (process.env.THREE_MODULE && process.env.THREE_BUFFER_UTILS) {
     assert.deepEqual(result.platforms, base.platforms);
     assert.equal(result.architectureCounts[`plain:${id}`], 3);
     let vertices = 0;
-    for (const mesh of group.children) {
+    for (const mesh of result.meshes) {
       assert.ok(mesh.geometry);
       assert.ok(mesh.geometry.attributes.position.array.every(Number.isFinite));
       assert.equal(mesh.geometry.attributes.color.count, mesh.geometry.attributes.position.count);
       vertices += mesh.geometry.attributes.position.count;
     }
     signatures.add(vertices);
-    assert.equal(group.children.length, 3, '文化混搭不增加每用途批次數');
+    assert.equal(result.meshes.length, 3, '文化混搭不增加每用途批次數');
   }
   assert.ok(signatures.size >= 6, '文化差異包含幾何，不能只有換色');
   const farmland = { sourceId: 'land/1', tags: { landuse: 'farmland' }, worldPolygons: [polygons[0]] };

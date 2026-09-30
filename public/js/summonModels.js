@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { bx, cyl, sph, cone, torus, mat, dim, rbz } from './geo3d.js';
 import { SOLDIER_H } from './data.js';
 import { partJoint, limbChain, recoilMount } from './unitRig.js';
+import { finishUnitSurfaces } from './unitSurfaces.js';
 
 const TAU = Math.PI * 2;
 
@@ -302,6 +303,7 @@ export function buildHeliSquad(side) {
 
   // 下層旋翼 (3 葉)
   const rotorBottom = new THREE.Group();
+  rotorBottom.userData.spinRate = -40;
   rotorBottom.position.set(0, 2.15, 0.2);
   fuselage.add(rotorBottom);
   spinRotors.push(rotorBottom);
@@ -604,6 +606,8 @@ export function buildVeteranSquad(side) {
     armChainR: limbChain(armR, -0.36),
     attacks: [recoilMount(gunR, [...gunR.children], [muzzle], 0.08)],
     hips,
+    head,
+    headY0: head.position.y,
     legL,
     legR,
     armL,
@@ -688,6 +692,8 @@ export function buildCarnivalHeli(side) {
 
   // 尾旋翼 (Tail rotor)
   const tailRotor = new THREE.Group();
+  tailRotor.userData.spinAxis = 'z';
+  tailRotor.userData.spinRate = 54;
   tailRotor.position.set(0.18, 2.05, -3.85);
   tilt.add(tailRotor);
   spinList.push(tailRotor);
@@ -769,7 +775,7 @@ export const SUMMON_BUILDERS = {
 
 export function buildSummonModel(kind, side) {
   const builder = SUMMON_BUILDERS[kind];
-  if (builder) return builder(side);
+  if (builder) return finishUnitSurfaces(builder(side));
   console.warn(`未知的自律召喚部隊型態: ${kind}，退回 drone_wingman`);
-  return buildDroneWingman(side);
+  return finishUnitSurfaces(buildDroneWingman(side));
 }

@@ -72,7 +72,8 @@ import { makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
 import { selectRoadCar } from './vehicleCatalog.js';
 import { deploySceneBatches } from './sceneObjects.js';
-import { forestSceneGeometry, compileSceneParts, fitSceneGeometry, furnitureSceneGeometry, furnitureSceneBatches } from './scenePropModels.js';
+import { forestSceneGeometry, compileSceneParts, fitSceneGeometry, furnitureSceneGeometry, furnitureSceneBatches, scenePartGeometry } from './scenePropModels.js';
+import { buildPartMotion } from './partMotion.js';
 import { rebuildLandmarkGeometry } from './sceneLandmarkModels.js';
 import { TREE_ATTACHMENTS, treeAttachmentParts } from './sceneAttachmentParts.js';
 import { LEGACY_PLANT_SPECIES, GROUND_PLANTS, groundPlantParts } from './scenePlantParts.js';
@@ -4247,13 +4248,19 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
       }
       // Scene gaps remain traversable: register the solid parts, not the boundary ring envelope.
       for (const part of parts) {
+        if (part.visualOnly) continue;
         if (['leaf', 'flower', 'fruit', 'window', 'side-window'].includes(part.role)) continue;
         const b = partBox(part), hw2 = (b.x1 - b.x0) / 2, hd2 = (b.z1 - b.z0) / 2;
         if (hw2 < .12 || hd2 < .12) continue;
         blockers.push({ x: x + (b.x0 + b.x1) / 2, z: z + (b.z0 + b.z1) / 2,
           y: y + b.y0, h: b.y1 - b.y0, hw2, hd2, ry: 0, r: Math.hypot(hw2, hd2) });
       }
-      emitWallParts(batch, parts, x, y, z, 0, 1);
+      emitWallParts(batch, parts.filter(p => !p.motion), x, y, z, 0, 1);
+      if (parts.some(p => p.motion)) {
+        const moving = buildPartMotion(parts, scenePartGeometry);
+        moving.position.set(x, y, z);
+        group.add(moving);
+      }
       blockArea(blocked, x, z, radius); occ.add(x, z, radius);
       placed.push({ kind, x, y, z, size, category: def.category, seed: localSeed });
     }
@@ -9801,13 +9808,24 @@ const newBatch = () => ({
  */
 function buildEdgeMotion({ group, segs, dynamics }) {
   const rotors = [], floats = [], machines = [], plumes = [];
+  let articulatedN = 0;
   for (const s of segs) {
     if (!s.motion?.length) continue;
     const sets = new Map();
     for (const p of s.motion) {
+      if (['spin', 'swing'].includes(p.motion.kind)) continue;
       const id = p.motion.id;
       if (!sets.has(id)) sets.set(id, []);
       sets.get(id).push(p);
+    }
+    const articulated = s.motion.filter(p => ['spin', 'swing'].includes(p.motion.kind));
+    if (articulated.length) {
+      const moving = buildPartMotion(articulated, scenePartGeometry);
+      moving.position.set(s.x, s.ground, s.z);
+      moving.rotation.y = s.fry;
+      group.add(moving);
+      dynamics.push(() => moving.userData.partMotionUpdate(celWindTime()));
+      articulatedN += moving.children.length;
     }
     for (const rows of sets.values()) {
       const mot = rows[0].motion, [px = 0, py = 0, pz = 0] = mot.pivot || [];
@@ -9843,7 +9861,7 @@ function buildEdgeMotion({ group, segs, dynamics }) {
       }
     }
   }
-  if (!rotors.length && !floats.length && !machines.length && !plumes.length) return 0;
+  if (!rotors.length && !floats.length && !machines.length && !plumes.length) return articulatedN;
   dynamics.push((dt) => {
     const step = Math.min(0.25, Math.max(0, dt || 0));
     const wind = celWindAmount(), wave = celWaveAmount(), t = celWindTime();
@@ -9883,7 +9901,7 @@ function buildEdgeMotion({ group, segs, dynamics }) {
       p.pivot.position.z = Math.cos(a * 0.61 + p.phase) * drift * (p.kind === 'dust' ? 1 : 0.55);
     }
   });
-  return rotors.length + floats.length + machines.length + plumes.length;
+  return rotors.length + floats.length + machines.length + plumes.length + articulatedN;
 }
 
 // ---- 緩衝空間的 3D 物件(使用者定案:「邊界延伸不可進入的緩衝空間…並加入少許 3D 物件」)----
@@ -12489,6 +12507,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ---- 鐵路/捷運(含行駛列車)+ 瀑布(動態物件)----
   await onProgress?.(0.92, '鋪設鐵路與瀑布…');
   const dynamics = [];
+  group.traverse(node => {
+    const update = node.userData.partMotionUpdate;
+    if (update) dynamics.push(() => update(celWindTime()));
+  });
   const edgeMotionN = buildEdgeMotion({ group, segs: edgeSegs, dynamics });
   buildWaterEdges(group, terrain);   // 沼澤潮間帶(靜態;水岸泡沫 2026-08-16 退場,見該支檔頭)
   // 水面倒影塊(⑤-3):MUST 排在**所有** `blockers.push` 之後(名冊由碰撞柱推導 ——
