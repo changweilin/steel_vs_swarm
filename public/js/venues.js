@@ -190,7 +190,7 @@ export const VENUES = [
   V({ id: 'kyoto',        name: '京都・嵐山竹林寺町', country: '🇯🇵', base: '綠地', variant: 'mixed',  type: '綠地', ll: [35.010032, 135.710095], bearing: 90, relief: 8 }),
   V({ id: 'taroko',       name: '太魯閣・燕子口',     country: '🇹🇼', base: '綠地', variant: 'rugged', type: '綠地', ll: [24.171200, 121.556000], bearing: 262, scen: ['tunnel', 'underpass', 'gallery', 'highGround'], relief: 371 }),
   V({ id: 'mekong',       name: '越南・湄公河三角洲水鄉', country: '🇻🇳', base: '綠地', variant: 'swamp',  type: '綠地', ll: [10.355000, 106.350000], bearing: 140, scen: ['bridge'], relief: 2 }),
-  V({ id: 'bergen',       name: '挪威・卑爾根峽灣',   country: '🇳🇴', base: '綠地', variant: 'water',  type: '綠地', ll: [60.400000, 5.225000], bearing: 250, scen: ['bridge'], relief: 35 }),
+  V({ id: 'bergen',       name: '挪威・卑爾根峽灣',   country: '🇳🇴', base: '綠地', variant: 'water',  type: '綠地', ll: [60.397000, 5.240000], bearing: 250, scen: ['bridge'], relief: 35 }),
   // ---- 裸露地 ×6----
   V({ id: 'phoenix',    name: '鳳凰城・索諾拉沙漠', country: '🇺🇸', base: '裸露地', variant: 'plain',  type: '裸露地', ll: [33.495000, -112.170000], bearing: 30, relief: 2 }),
   V({ id: 'cappadocia', name: '土耳其・卡帕多奇亞岩原', country: '🇹🇷', base: '裸露地', variant: 'light',  type: '裸露地', ll: [38.643000, 34.829000], bearing: 25, scen: ['tunnel'], relief: 15 }),
