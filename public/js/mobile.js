@@ -20,6 +20,7 @@ import {
 } from './ctrlmode.js';
 import { tipHTML } from './tip.js';
 import { LOOK_PREFS, lookPref, setLookPref, onLookPrefChange } from './lookPrefs.js';
+import { MOVE_PREFS, movePref, setMovePref, onMovePrefChange } from './movePrefs.js';
 
 /* ---------------- 裝置判定 ---------------- */
 // 判定本身住 `ctrlmode.js`(操作方式唯一真相縫):本檔只轉呼,MUST NOT 在這裡再寫一份
@@ -826,6 +827,25 @@ export function renderCtrlSettings(mount, opts = {}) {
       notice(`${d.label}:${on ? '開' : '關'}`, 3000);
     });
   }
+  // 水平移動鎖定(飛行機體 W/S 是否只走水平面):值住 movePrefs.js(唯一真相),此處只渲染開關 ——
+  // 大廳 / 戰場 / 手機面板三處共用同一份。
+  {
+    const d = MOVE_PREFS.levelMove;
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    row.innerHTML = `<span class="set-label">${_esc(d.label)}</span>`
+      + '<button class="switch tset-move-levelMove" type="button" role="switch" aria-checked="false"'
+      + ` aria-label="${_esc(d.label)}"><span></span></button>`
+      + _tipDot('tset-move-levelMove-hint');
+    mount.appendChild(row);
+    row.querySelector('.switch').addEventListener('click', (e) => {
+      const el = e.currentTarget;
+      const on = el.getAttribute('aria-checked') !== 'true';
+      setMovePref('levelMove', on);
+      syncCtrlSettings();
+      notice(`${d.label}:${on ? '開' : '關'}`, 3000);
+    });
+  }
   _ctrlMounts.push(mount);
   syncCtrlSettings();
 }
@@ -895,9 +915,17 @@ export function syncCtrlSettings() {
       const hh2 = mount.querySelector(`.tset-look-${k}-hint`);
       if (hh2) hh2.dataset.tip = LOOK_PREFS[k].hint;
     }
+    // 水平移動鎖定:飛行機體 W/S 是否只走水平面
+    {
+      const el = mount.querySelector('.tset-move-levelMove');
+      if (el) el.setAttribute('aria-checked', movePref('levelMove') ? 'true' : 'false');
+      const mh = mount.querySelector('.tset-move-levelMove-hint');
+      if (mh) mh.dataset.tip = MOVE_PREFS.levelMove.hint;
+    }
   }
 }
 onLookPrefChange(() => syncCtrlSettings());
+onMovePrefChange(() => syncCtrlSettings());
 
 /**
  * 把觸控設定列渲染進 mount(冪等:同一個 mount 只建一次)。

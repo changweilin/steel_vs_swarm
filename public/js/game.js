@@ -56,6 +56,7 @@ import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
 import { onCtrlChange, viewMode, setViewMode, onViewModeChange } from './ctrlmode.js';
 import { lookPref } from './lookPrefs.js';
+import { movePref } from './movePrefs.js';
 import { visualPref } from './visualPrefs.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
 import { Pool } from './pool.js';
@@ -9635,13 +9636,15 @@ export class BattleClient {
     if (climbing) {
       // 攀爬中:位移已由 _stepClimb 定案(垂直沿路線、水平吸附到攀爬軸)
     } else if (this._flying()) {
-      // FPV 3D 操作:2D 按鍵(W/S)沿「視線方向」飛 — 抬頭爬升、低頭俯衝;
-      // A/D 水平橫移;Space/C 純垂直(懸停微調)。變形者飛行型態用 fly 巡航速度。
+      // FPV 3D 操作:2D 按鍵(W/S)預設沿「視線方向」飛 — 抬頭爬升、低頭俯衝;
+      // 開啟「水平移動鎖定」(movePrefs.js levelMove)時只走水平面、不改變上下方向,
+      // 上下改由 Space/C 控制。A/D 恆為水平橫移;Space/C 純垂直(懸停微調)。變形者飛行型態用 fly 巡航速度。
       const spd = this._mobility(true);   // 飛行巡航(變形者取 fly);唯一取速處,見 _mobility
+      const level = movePref('levelMove');
       const look = _TMP_D.set(
-        -Math.sin(this.yaw) * Math.cos(this.pitch),
-        Math.sin(this.pitch),
-        -Math.cos(this.yaw) * Math.cos(this.pitch),
+        -Math.sin(this.yaw) * (level ? 1 : Math.cos(this.pitch)),
+        level ? 0 : Math.sin(this.pitch),
+        -Math.cos(this.yaw) * (level ? 1 : Math.cos(this.pitch)),
       );
       // look 與 right 互為正交單位向量 ⇒ target 長度 = 推杆量;>1(鍵盤對角線)才夾回 1
       const target = _TMP_E.set(0, 0, 0).addScaledVector(look, ax.f).addScaledVector(right, ax.r);
