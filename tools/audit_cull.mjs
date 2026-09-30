@@ -17,6 +17,7 @@
 //      PiP/deathcam render with their own camera after restore.
 // Run: `node tools/audit_cull.mjs`
 import { readSrc } from './audit_src.mjs';
+import { CULL, scopeRadiusPx } from '../public/js/cull.js';
 
 const cull = readSrc('public', 'js', 'cull.js');
 let game = readSrc('public', 'js', 'game.js');
@@ -48,7 +49,16 @@ console.log('① cull.js 是零 import 純數學(單一縫、可離線直測)');
   ok(/export function cullFarM\(baseNear, baseFar,/.test(cull), 'cullFarM 由呼叫端餵錨(不手寫公尺)');
   ok(/export function keepDistance\(/.test(cull)
     && /export function occludedBySphere\(/.test(cull)
-    && /export function scopeKeep\(/.test(cull), '三判據全在同一縫(距離/遮擋/鏡圈)');
+    && /export function scopeKeep\(/.test(cull)
+    && /export function scopeRadiusPx\(/.test(cull), '四判據全在同一縫(距離/遮擋/鏡圈/鏡圈退場半徑)');
+  ok(CULL.FRUSTUM_PAD_F >= 1.3 && CULL.FRUSTUM_PAD_M >= 5,
+    `視錐保護邊距充足(FRUSTUM_PAD_F=${CULL.FRUSTUM_PAD_F}, FRUSTUM_PAD_M=${CULL.FRUSTUM_PAD_M}m)`);
+  const hw = 960, hh = 540, rScope = 432, rDiag = Math.hypot(hw, hh);
+  ok(scopeRadiusPx(rScope, hw, hh, 1) === rScope, '滿倍狙擊鏡(aimBlend=1)鏡圈半徑 = rScope');
+  ok(scopeRadiusPx(rScope, hw, hh, 0.5) > rScope && scopeRadiusPx(rScope, hw, hh, 0.5) < rDiag,
+    '退鏡過渡期鏡圈平滑擴張至螢幕對角線');
+  ok(scopeRadiusPx(rScope, hw, hh, CULL.AIM_BLEND_EPS) === 0 && scopeRadiusPx(rScope, hw, hh, 0) === 0,
+    '切回一般視野(aimBlend ≤ AIM_BLEND_EPS)鏡圈剔除完整歸零還原');
 }
 
 console.log('\n② 節流與曲線吃現有單一縫(無第二份實作)');
@@ -59,7 +69,12 @@ console.log('\n② 節流與曲線吃現有單一縫(無第二份實作)');
   ok(/dofAimBlend\(cam\.fov, this\.baseFov,/.test(G), '狙擊/一般是 fov 連續 blend(非 aiming 布林)');
   ok(!/this\.aiming \? (cull|CULL)/.test(G), '無 aiming 三元分支的第二條剔除曲線');
   ok(/dofNearM\(\), farFar = dofFarM\(\)/.test(G), '距離錨取 dofNearM/dofFarM(與 DOF 全糊圈同一組)');
-  ok(/scopeRvminFog\(this\._scopeFog/.test(G), '鏡圈半徑取 scopeRvminFog(與視野鎖定同一支)');
+  ok(/scopeRvminFog\(this\._scopeFog/.test(G) && /scopeRadiusPx\(rScope, HW, HH, aimBlend\)/.test(G),
+    '鏡圈半徑取 scopeRvminFog 並經 scopeRadiusPx 隨退鏡平滑還原至全螢幕');
+  ok(/else if \(this\.camera\.fov !== wantFov\) \{\s*this\.camera\.fov = wantFov;/.test(G),
+    '_updatePlayer 於 FOV 差 ≤ 0.05° 時精確吸附 wantFov(防退鏡卡在殘餘 blend)');
+  ok(/_onSelfDeath\(\) \{[\s\S]*?this\.camera\.fov = this\.baseFov;/.test(G),
+    '_onSelfDeath 立即還原 camera.fov = baseFov(防開鏡陣亡卡住狙擊鏡剔除)');
 }
 
 console.log('\n③ 可見性翻轉只住渲染窗口(玩法判定看不到剔除態)');
@@ -83,7 +98,11 @@ console.log('\n③ 可見性翻轉只住渲染窗口(玩法判定看不到剔除
     '遮擋球取建物真實內切半徑 Math.min(w,d,h)*0.5 並快取 _cullOcc(建物坍塌才重算)');
   ok(/ent\._distCull/.test(G) && /CULL\.DIST_HYST/.test(G),
     '距離剔除帶遲滯(邊界抖動不閃進閃出)');
-  ok(/CULL\.FRUSTUM_PAD_F/.test(G), '視錐球帶擴張邊距(掠邊不閃)');
+  ok(/Math\.hypot\(rHoriz \* Math\.SQRT2, h \* 0\.5\) \* sk \* CULL\.FRUSTUM_PAD_F \+ CULL\.FRUSTUM_PAD_M/.test(G)
+    && /\(top - h \* 0\.5\) \* sk/.test(G),
+    '視錐球採 3D 外接球 + FRUSTUM_PAD_M 保護帶並對齊 dimTop(頭頂血條/陣營標/建築轉角掠邊不消失)');
+  ok(/d2 > Math\.max\(25, rFrustum \* rFrustum\)/.test(G) && /v\.z <= 1 && !scopeKeep/.test(G),
+    '鏡圈剔除防護近平面跨越球體(d ≤ rFrustum 或 z > 1 不誤剔)');
   ok(/if \(this\.pipeline\) this\.pipeline\.render\(\); else this\.renderer\.render\(this\.scene, this\.camera\);/.test(G),
     '主相機渲染唯一出口在 _renderCulledMain 內(PiP/陣亡鏡頭走自己的相機)');
 }

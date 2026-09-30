@@ -38,17 +38,34 @@
 
 /** Tunables (presentation only; changing them never changes damage or range). */
 export const CULL = {
-  SMALL_R_M: 2,       // Below this bounding radius = "small prop" tier.
+  SMALL_R_M: 2,         // Below this bounding radius = "small prop" tier.
   OCCLUDE_MARGIN: 0.03, // Angular slack (rad) against false occlusion pops.
-  SCOPE_PAD_F: 1.12,  // Screen-space pad on the scope-circle test.
-  FRUSTUM_PAD_F: 1.08, // Sphere growth for the frustum test only (edge shimmer).
-  DIST_HYST: 0.95,    // Distance re-admit band: cull past far, return inside far*HYST.
-  OCCLUDE_STRIDE: 4,  // Occlusion re-tests per entity (frames; via lodDue).
-  OCCLUDE_MIN_M: 60,  // Below this camera distance occlusion never pays off.
-  OCCLUDE_MIN_R_M: 8, // Only buildings this wide qualify as occluders.
+  SCOPE_PAD_F: 1.25,    // Screen-space pad on the scope-circle test.
+  FRUSTUM_PAD_F: 1.35,  // Sphere growth for the frustum test (3D corner + sway guard).
+  FRUSTUM_PAD_M: 6,     // Additive frustum guard (m) for overhead HP bars / markers / ground rings.
+  AIM_BLEND_EPS: 0.01,  // Below this aimBlend, scope-circle culling turns off completely.
+  DIST_HYST: 0.95,      // Distance re-admit band: cull past far, return inside far*HYST.
+  OCCLUDE_STRIDE: 4,    // Occlusion re-tests per entity (frames; via lodDue).
+  OCCLUDE_MIN_M: 60,    // Below this camera distance occlusion never pays off.
+  OCCLUDE_MIN_R_M: 8,   // Only buildings this wide qualify as occluders.
 };
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/**
+ * Effective sniper scope-circle radius (px) as a continuous function of aimBlend.
+ * At full zoom (aimBlend = 1) returns rScopePx; as fov eases back toward baseFov,
+ * expands smoothly (cubic in aimBlend) to the viewport half-diagonal hypot(hw, hh)
+ * and returns 0 (disabled) once aimBlend <= AIM_BLEND_EPS.
+ */
+export function scopeRadiusPx(rScopePx, hw, hh, aimBlend) {
+  const b = clamp01(aimBlend || 0);
+  if (b <= CULL.AIM_BLEND_EPS) return 0;
+  const rFull = Math.hypot(hw || 0, hh || 0);
+  const rScope = Math.max(0, rScopePx || 0);
+  const k = b * b * b;
+  return rFull + (rScope - rFull) * k;
+}
 
 /**
  * Distance far plane (m) for one object.
@@ -93,3 +110,4 @@ export function scopeKeep(dxPx, dyPx, rPx, padPx) {
   const rr = Math.max(0, rPx || 0) + Math.max(0, padPx || 0);
   return dxPx * dxPx + dyPx * dyPx <= rr * rr;
 }
+
