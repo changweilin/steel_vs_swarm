@@ -329,8 +329,8 @@ for (const [w, h] of [[1920, 1080], [1366, 768], [960, 540]]) {
     q('liftText').textContent = '爬升 100%';
     q('wpnName').textContent = '突擊步槍';
     q('wpnAmmo').textContent = '30/30';
-    q('abSkillName').textContent = '震盪彈幕';
-    q('abUltName').textContent = '軌道炮擊';
+    q('abDefName').textContent = '震盪彈幕';
+    q('abAtkName').textContent = '軌道炮擊';
     q('abMobilName').textContent = '蓄力跳躍';
     q('moneyText').textContent = '1200';
     q('knText').textContent = '48';

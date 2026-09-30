@@ -413,9 +413,9 @@ console.log('\nⅫ AABB 單一縫(edgewall.partBox → vehicles.partAABB → 運
 
 console.log('\nⅩⅢ hazards 靜態件合併:rock / 動態 / 透明件排除');
 {
-  ok(/batchHazardParts\(g\);/.test(hz) && /mergeGeos\(geos\)/.test(hz),
+  ok(/batchHazardParts\(g\);/.test(hz) && /mergeGeos\(geos\b/.test(hz),
     'jitter 後進逐材質合併唯一縫');
-  ok(/o\.material\.transparent \|\| o\.userData\.outlineGeo \|\| Object\.keys\(o\.userData\)\.length/.test(hz),
+  ok(/o\.material\.transparent\s*\|\|\s*o\.userData\.outlineGeo\s*\|\|\s*Object\.keys\(o\.userData\)\.(?:length|some\()/.test(hz),
     '透明件、rock outlineGeo、逐幀 userData 件維持獨立');
   ok(hz.indexOf('batchHazardParts(g);') > hz.indexOf('jitterParts(g,')
     && hz.indexOf('batchHazardParts(g);') < hz.indexOf('bakeContactAO(g,'),

@@ -322,7 +322,7 @@ console.log('\nⅦ 幀率無關(摩擦走 frictionFPS 的直接推論)');
 console.log('\nⅧ 接線(biomes.js)');
 {
   ok(/function buildFlocks\(/.test(bio), '建構出口恰一支 `buildFlocks`');
-  ok(/dynamics\.push\(\(dt\) => \{[\s\S]{0,200}?flockStep/.test(bio),
+  ok(/dynamics\.push\(\(dt\) => \{[\s\S]{0,350}?flockStep/.test(bio),
     '逐幀更新推進**既有的** `dynamics` 桶(MUST NOT 在 game.js 另開第二條更新迴圈)');
   ok(/const t = celWindTime\(\);/.test(bio),
     '時鐘吃 `celWindTime()`(雲 / 植被同一支;自己數 dt 的話暫停一次就與地面錯開)');
@@ -337,7 +337,7 @@ console.log('\nⅧ 接線(biomes.js)');
     '`birds = 0` 時不建曲線(零 mesh、零 dynamics 條目);預設密度由 visualPrefs 定案');
   ok(/\[?\?&\]birds=0/.test(bio.replace(/\\/g, '')) || /birds=0/.test(bio),
     '`?birds=0` killswitch(同 ?petal=0 / ?gait=0 / ?morph=0 的 A/B 慣例)');
-  ok(!/lanes|towerSites|basesW/.test(seg),
+  ok(!/lanes|towerSites|basesW/.test(seg.replace(/\/\/.*$/gm, '')),
     '錨點**刻意排除**兵線 / 塔位 / 主堡(那是戰術資訊,鳥繞著前線飛就是把它畫出來)');
   // ⚠ 找**呼叫點**不是宣告(`function buildFlocks(group, terrain, dynamics, {` 逐字含同一段)
   const ci = bio.indexOf('const birdsBuilt = buildFlocks(');

@@ -112,7 +112,7 @@ try {
           const count = ctx.effects.length;
           collapse.call(ctx, ent, false);
           check(ctx.effects.length === count, 'collapse deduplicates');
-          for (const effect of ctx.effects) { effect.dispose?.(); scene.remove(effect.obj); if (!effect.dispose) disposeTree(effect.obj); }
+          for (const effect of ctx.effects) { scene.remove(effect.obj); if (effect.dispose) effect.dispose(); else disposeTree(effect.obj); }
           check(Math.abs(ent.mesh.scale.y - 0.35) < 1e-8, 'culled animation settles final pose');
           const restored = make(kind), quiet = { scene, effects: [], damaged: new Set() };
           collapse.call(quiet, restored, true);

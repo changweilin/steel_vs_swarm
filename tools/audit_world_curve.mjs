@@ -125,7 +125,7 @@ console.log('\nⅡ 核心不變式:交戰距離內逐位元是平的');
   for (const ch of Object.keys(CHARACTERS)) {
     for (const slot of ['light', 'heavy']) for (let lv = 1; lv <= 4; lv++)
       wMax = Math.max(wMax, (heroWeapon(ch, slot, lv, true)?.range || 0) * wF);
-    for (const slot of ['skill', 'ult']) for (let lv = 1; lv <= 4; lv++)
+    for (const slot of ['def', 'atk']) for (let lv = 1; lv <= 4; lv++)
       aMax = Math.max(aMax, heroAbility(ch, slot, lv, true)?.range || 0);
   }
   probes.push(['武器誠實界(含高度制空 × RANGE_TOL)', wMax], ['招式施放距離', aMax]);

@@ -198,7 +198,7 @@ sec('Ⅳ 常駐床:MUST NOT 走 `_play`、MUST NOT 每幀 pause');
     // Measure maximum single-step jump across cell boundary along x axis.
     const src = grabMethod(gameSrc, '_ambDensityAt');
     const obj = new Function(`return {${src}\n};`)();
-    const grid = new Map([['0,0', [{ bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 },
+    const grid = new Map([[(0 + 32768) * 65536 + (0 + 32768), [{ bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 },
       { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 },
       { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 },
       { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }, { bld: 1 }]]]);

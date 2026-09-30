@@ -104,7 +104,7 @@ export function createFighter(ch, lvl = 1, morphMode = 'ground') {
   }
 
   const abilities = [];
-  for (const slot of ['skill', 'ult']) {
+  for (const slot of ['def', 'atk']) {
     const a = heroAbility(ch, slot, lvl);
     if (a) {
       abilities.push({
