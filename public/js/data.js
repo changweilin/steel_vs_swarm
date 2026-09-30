@@ -686,11 +686,12 @@ export const WEAPONS = {
   rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 220, mag: 48, reload: 2.2, pen: 0,  vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
   // rocket vs.air 1.2(2026-07-17 火箭筒對空化):肩射火箭筒是合格的防空武器,
   // 火箭兵優先鎖定空中目標(vs 進 _acquireTarget 的目標偏好;NPC 傷害本身不吃 vs)。
-  rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, pen: 10, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 1.2, building: 1.3 } },
+  // npcAa: NPC 飛彈仰射射程加成觸發旗標(sim._tgBlockedD 消費;npcAaRangeF)。
+  rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, pen: 10, npcAa: true, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 1.2, building: 1.3 } },
   // bomb 只留「彈體規格」(半徑/破甲/vs);**傷害刻意不住這裡** —— 飽和攻擊與另兩招
   // (集束炸彈/極音速飛彈)共用機種絕招傷害預算,由 kamiBlast()/selfBoomBlast() 推導(見 SPECIAL)。
   bomb:   { name: '重型炸彈',   r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
-  siege:  { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, pen: 14, needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
+  siege:  { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, pen: 14, npcAa: true, needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
   // 自律召喚部隊專屬武裝
   wingman_beam:     { name: '「哀歌」自律微型光束標槍', dmg: 26, rate: 0.8, range: 170, mag: 20, reload: 2.0, pen: 8,  type: 'beam', vs: { flesh: 1.2, armor: 0.8, air: 1.4, building: 0.5 } },
   rover_autocannon: { name: '「狂歡節」雙聯破片速射砲', dmg: 28, rate: 0.7, range: 140, mag: 24, reload: 2.2, pen: 6,  mv: 850, vs: { flesh: 1.3, armor: 1.0, air: 0.9, building: 0.6 } },
@@ -739,6 +740,9 @@ export const ALTITUDE = {
   ATK_CRIT_DMG: 0.05,  // 較高方攻擊時:爆傷加成 ×(1 − 此值·s)→ 封頂 ×0.95
   RCV_CRIT_RATE: 0.10, // 較高方受擊時:爆率 ×(1 + 此值·s)  → 封頂 ×1.10
   RCV_CRIT_DMG: 0.05,  // 較高方受擊時:爆傷加成 ×(1 + 此值·s)→ 封頂 +5%
+  // NPC 飛彈仰射加成:火箭兵/榴彈兵對空中目標的射程隨目標高度線性補償
+  NPC_AA_RANGE:  0.20, // 射程加成上限(+20%);對應基準高差 NPC_AA_REF_DH
+  NPC_AA_REF_DH: 40,   // 基準高差(m;對齊 GAME.AA_MIN_ALT);目標高過射手此值時加成封頂
 };
 /** 觸發門檻/一階高度 = 一個砲塔高(公尺,實體高不吃 COMBAT_SCALE);推導不手寫 */
 export const altTier = () => TARGET_H.tower;
@@ -771,6 +775,14 @@ export const altDhMax = () => altTier() * ALTITUDE.TIERS;
  * 2026-09-03 使用者需求：移除額外的高度差射程加成，恆回傳 1（幾何優勢由圓錐包絡承擔）。
  */
 export const altRangeF = (dh, slotOrDef) => (dh > 0 ? 1 + altRangeAdv(slotOrDef) * altScale(dh) : 1);
+
+/**
+ * NPC 飛彈仰射射程補償(唯一縫;伺服器 sim._tgBlockedD 消費)。
+ * 目標高過射手 dh(= ty − ey)時線性補償射程,封頂於 NPC_AA_REF_DH 對齊 GAME.AA_MIN_ALT。
+ * 地面或同高目標回 1(無加成),不影響對地 DPS 或現有 altRangeF 計算。
+ */
+export const npcAaRangeF = (dh) =>
+  dh > 0 ? 1 + ALTITUDE.NPC_AA_RANGE * Math.min(1, dh / ALTITUDE.NPC_AA_REF_DH) : 1;
 
 // ---- 武器射程範圍幾何（2026-09-03 使用者需求：上段球體 / 中下段 60° 圓錐體）----
 export const SQRT3 = Math.sqrt(3);

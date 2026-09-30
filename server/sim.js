@@ -23,7 +23,7 @@ import {
   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   HIGH_SUP, highSupF, highSupDodgeF, highSupMissP, unbalMissP,
   selfCollider, COLLIDE_KINDS,
-  ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
+  ALTITUDE, altScale, altRangeF, altRangeMax, npcAaRangeF, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
   weaponMaxHoriz, inWeaponRange,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT, FLY_Y, PUSH_EPS, baseCollideR,
   weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor, fogSightMult,
@@ -7404,7 +7404,11 @@ export class BattleSim {
       if (d > maxH) return true;
       if (d > maxH * fogSightMult(this.curWeatherVec?.fog ?? 0)) return true;
     } else {
-      const effR = u.range * this._altRange(e, t, wd);
+      const ey = e.hero ? (e.y || 0) : this._sightY(e);
+      const ty = t.hero ? (t.y || 0) : this._sightY(t);
+      // NPC 飛彈仰射補償:火箭兵/榴彈兵(wd.npcAa)對高空目標的射程隨高度差線性提升
+      const aaMul = (!e.hero && wd?.npcAa) ? npcAaRangeF(ty - ey) : 1;
+      const effR = u.range * this._altRange(e, t, wd) * aaMul;
       if (d > effR) return true;
       if (d > effR * fogSightMult(this.curWeatherVec?.fog ?? 0)) return true;
     }
