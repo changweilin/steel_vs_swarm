@@ -10,7 +10,7 @@ import { stepWeatherSurface, lightningFireSeconds, lightningFireWet, lightningSt
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, BASE_MISSILE, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
-  vsMult, upgradePrice, upgradeScore,   chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId, clampHeroSpawn,
+  vsMult, upgradePrice, upgradeScore,   chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, cjumpMpCost, morphMpCost, TARGET_CLASS, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId, clampHeroSpawn,
   isSuperSide, isThirdSide, SUPER_UPG, superCombatLvl, superDefLvl,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
   hyperClimbVx, hyperArcY, hyperTrackR,
@@ -2207,9 +2207,13 @@ export class BattleSim {
   /** 英雄傷害倍率(目標類別剋制 × 招式增益;火力成長走武器面向 lw/hw 的階級數值)。
    *  2026-08-01:巨砲移除後這裡**恆無任何情境倍率**;MUST NOT 為新招式在此加特例(招式傷害走 hyperBlast)。
    *  2026-08-02:對建築的額外加成(舊 grenadeBuildingMul)已整組移除,MUST NOT 復辟。
+   *  大跳躍滯空(airUnit):地面機體在大跳躍滯空期間,自身所有武器的地對空加成消失
+   *  (vs.air > 1 → 1;懲罰 < 1 保留)—— 滯空射擊對空不再有加成,落地即恢復。
    *  護盾/裝甲分軌剋制**不在這裡** —— 那要看目標當下的護盾水位,只能在 _damage 分層時結算。 */
   _heroDmg(h, def, targetKind) {
-    return def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg');
+    let m = vsMult(def, targetKind);
+    if (m > 1 && TARGET_CLASS[targetKind] === 'air' && airUnit(h.kind, h.y)) m = 1;
+    return def.dmg * m * this._buffMul(h, 'dmg');
   }
 
   /** 空中判定:無人機/直升機/集束轟炸機/護衛機/極音速飛彈恆算飛行;其餘以高度 ≥ AA_MIN_ALT 論 */
@@ -2478,9 +2482,10 @@ export class BattleSim {
     return e.kind === 'drone' || (e.kind === 'morph' && (e.y || 0) > MORPH.GROUND_Y) || (e.y || 0) >= GAME.AA_MIN_ALT;
   }
 
-  /** 飛行機體受擊失衡戳記(2026-09-01 使用者需求:跌落到穩住期間進入失衡狀態;持盾減輕失衡) */
+  /** 受擊失衡戳記(2026-09-01 飛行機體跌落到穩住期間;持盾減輕失衡。
+   *  大跳躍滯空被攻擊同樣進入失衡(airUnit 判定:蓄力跳高過一般跳躍頂點的區間)。 */
   _stampUnbal(t, factor = 1) {
-    if (!this._isFlyingHero(t)) return;
+    if (!this._isFlyingHero(t) && !airUnit(t.kind, t.y)) return;
     const f = t._unbalFactor ?? factor;
     t._unbalFactor = null;
     const dur = FLIGHT.UNBAL_S * Math.max(0.1, f);
@@ -5498,8 +5503,22 @@ export class BattleSim {
     }
   }
 
+  /** 大跳躍/變形起飛電力結算(權威;客戶端本地預測 + 快照校正)。
+   *  跳躍本身是客戶端物理(位置回報制)—— 伺服器只結算電力,不擋移動;
+   *  電力不足的客戶端根本不會起跳(只小跳),作弊者硬跳也只會把自己扣到 0。
+   *  防守大跳窗(defJumpUntil + 防守中)免電力(舊制免 CD 的延續)。 */
+  heroJump(pid, charge, isMorph) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over) return;
+    if (h.defending && (h.defJumpUntil || 0) > this.t) return;   // 防守大跳窗:免電力追加次數
+    const cost = isMorph ? morphMpCost(charge) : cjumpMpCost(charge);
+    if (cost <= 0) return;
+    h.mp = Math.max(0, (h.mp || 0) - cost);
+  }
+
   /** 無敵幀(蓄力跳躍 / 升空變形起跳離地 / 無人機完美迴避):客戶端於起跳離地當下請求,
    *  伺服器驗 CD 後給 1s 免傷。時長/CD 皆夾在伺服器(data.js IFRAME)—— 客戶端只能決定何時用。
+   *  跳躍/變形本身改吃電力可連發;無敵幀仍吃獨立 CD(與跳躍電力脫鉤)。
    *  CD 依機種:機甲/傭兵 = IFRAME.CD(15s);無人機完美迴避 = IFRAME.DRONE_CD(30s)。 */
   heroIframe(pid) {
     const h = this.heroes.get(pid);

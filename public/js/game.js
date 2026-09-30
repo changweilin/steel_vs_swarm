@@ -8,9 +8,9 @@ import { generateCivilian } from './civilianAppearance.js';
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, upgradeScore, canUpgrade, HAZARDS, FIELD, AFFIXES,
-   CHARACTERS, heroWeapon, heroAbility, castDirF, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
+   CHARACTERS, heroWeapon, heroAbility, castDirF, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, morphMpCost, LOCK, VIEW_LOCK, viewLockStep, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
   heroMobility, highSupSpeedF,
-  WATER, CJUMP, IFRAME, AIR, envTrigger, fluidFactor, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
+  WATER, CJUMP, cjumpMpCost, IFRAME, AIR, envTrigger, fluidFactor, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur, VISION_BLIND,
   weaponMaxHoriz, inWeaponRange,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
@@ -9124,11 +9124,10 @@ export class BattleClient {
       // kami / decoy / hyper 三格。長按右鍵改成招式手勢(一般 = 守招、狙擊 = 攻招),
       // CD 一律由上面的 def / atk 兩格顯示 —— 再畫一顆機種絕招格就是「鈕面說有、按下去沒有」的假招。
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
-      // 空白鍵機動能力 CD(HUD 顯示;完美迴避 30s / 蓄力跳躍 15s / 升空變形 15s,皆客戶端時戳)
-      // cdMax 與各自落子處同源(dodge:IFRAME.DRONE_CD / morph:MORPH.CD / 機甲:CJUMP.CD)
+      // 空白鍵機動能力(HUD):無人機完美迴避吃 CD;機甲蓄力跳躍/變形升空改吃電力(無 CD,顯示滿蓄耗電)
       mobil: this.isDrone ? { name: '完美迴避', cd: Math.max(0, (this._dodgeCd || 0) - now), cdMax: IFRAME.DRONE_CD }
-        : this.isMorph ? { name: '升空變形', cd: Math.max(0, (this._morphCd || 0) - now), cdMax: MORPH.CD }
-          : { name: '蓄力跳躍', cd: Math.max(0, (this._cjumpCd || 0) - now), cdMax: CJUMP.CD },
+        : this.isMorph ? { name: '升空變形', mp: morphMpCost(1), cur: this.mp }
+          : { name: '蓄力跳躍', mp: cjumpMpCost(1), cur: this.mp },
     };
   }
 
@@ -9726,14 +9725,18 @@ export class BattleClient {
       if ((this.stunLeft || 0) > 0) {
         this.charge = 0;
       } else if (this.isMorph) {
-        // 蓄力跳:按住 Space 蓄力 → 放開時蓄力足夠且變形起飛未冷卻即彈射變形為飛行型,否則只是小跳
+        // 蓄力彈射:按住 Space 蓄力 → 放開時蓄力足夠且電力足夠即彈射變形為飛行型,否則只是小跳(無 CD,改吃電力)
         if (onGround && this.keys.Space) {
           this.charge = Math.min(1, this.charge + dt / MORPH.CHARGE_S);
         } else if (this.charge > 0) {
-          if (onGround && this.charge >= MORPH.JUMP_MIN && now >= (this._morphCd || 0)) {
-            this._morphLaunch(gy); this._morphCd = now + MORPH.CD;   // 變形起飛:15s CD
+          const k = this.charge;
+          const free = this.defending && (this.defJumpUntil || 0) > now;   // 防守大跳窗:免電力追加次數
+          const cost = free ? 0 : morphMpCost(k);
+          if (onGround && k >= MORPH.JUMP_MIN && (free || this.mp >= cost)) {
+            if (!free) { this.mp = Math.max(0, this.mp - cost); this.net?.send({ t: 'jump', k, morph: true }); }
+            this._morphLaunch(gy);
           } else if (onGround) {
-            if (this.charge >= MORPH.JUMP_MIN) this.hud.feed?.(`🛫 變形起飛冷卻中(${Math.ceil((this._morphCd || 0) - now)}s)`);
+            if (k >= MORPH.JUMP_MIN) this.hud.feed?.(`🔋 電力不足(變形起飛需 ${cost} MP)`);
             this.vy = u.jump * this._modF('jump'); this.charge = 0;
           } else this.charge = 0;
         }
@@ -9742,13 +9745,15 @@ export class BattleClient {
         // 騰空低重力 = 太空漫步;蓄力不足 = 普通小跳。與 morph 共用 this.charge(下蹲/減速一致)。
         this.charge = Math.min(1, this.charge + dt / CJUMP.CHARGE_S);
       } else if (!this.isMorph && this.charge > 0) {
-        const canDefJump = this.defending && (this.defJumpUntil || 0) > now;
-        if (onGround && this.charge >= CJUMP.MIN && (canDefJump || now >= (this._cjumpCd || 0))) {
+        const k = this.charge;
+        const free = this.defending && (this.defJumpUntil || 0) > now;   // 防守大跳窗:免電力追加次數
+        const cost = free ? 0 : cjumpMpCost(k);
+        if (onGround && k >= CJUMP.MIN && (free || this.mp >= cost)) {
+          if (!free) { this.mp = Math.max(0, this.mp - cost); this.net?.send({ t: 'jump', k }); }
           this._chargeJump();
-          if (!canDefJump) this._cjumpCd = now + CJUMP.CD;   // 防守大跳期間免 CD 支援追加次數
-        } else if (onGround && this.charge >= CJUMP.MIN) {
+        } else if (onGround && k >= CJUMP.MIN) {
           this.vy = u.jump * this._modF('jump');
-          this.hud.feed?.(`🦿 蓄力跳冷卻中(${Math.ceil((this._cjumpCd || 0) - now)}s)`);
+          this.hud.feed?.(`🔋 電力不足(蓄力跳躍需 ${cost} MP)`);
         } else if (onGround) this.vy = u.jump * this._modF('jump');
         this.charge = 0;
       }

@@ -3238,13 +3238,22 @@ function makeHud() {
         };
         abEl('abDef', 'abDefName', 'abDefCd', 'abDefFill', w.def);
         abEl('abAtk', 'abAtkName', 'abAtkCd', 'abAtkFill', w.atk);
-        // 空白鍵機動能力 CD(完美迴避 / 蓄力跳躍 / 升空變形):就緒亮綠、冷卻顯示秒數 + 區塊進度條
+        // 空白鍵機動能力(完美迴避 CD / 蓄力跳躍・升空變形電力):就緒亮綠、未就緒顯示秒數或電力不足 + 區塊進度條
         const mob = w.mobil;
         if (mob) {
-          $('abMobilName').textContent = mob.name;
-          $('abMobilCd').textContent = mob.cd > 0.05 ? `${mob.cd.toFixed(0)}s` : '就緒';
-          $('abMobil').classList.toggle('ready', mob.cd <= 0.05);
-          setFill('abMobilFill', fracOf(mob.cd, mob.cdMax));
+          if (mob.cd != null) {
+            $('abMobilName').textContent = mob.name;
+            $('abMobilCd').textContent = mob.cd > 0.05 ? `${mob.cd.toFixed(0)}s` : '就緒';
+            $('abMobil').classList.toggle('ready', mob.cd <= 0.05);
+            setFill('abMobilFill', fracOf(mob.cd, mob.cdMax));
+          } else {
+            const need = Math.max(0, (mob.mp || 0) - (mob.cur || 0));
+            const ready = need <= 0;
+            $('abMobilName').textContent = `${mob.name}(${mob.mp}MP)`;
+            $('abMobilCd').textContent = ready ? '就緒' : '電力不足';
+            $('abMobil').classList.toggle('ready', ready);
+            setFill('abMobilFill', fracOf(need, mob.mp));
+          }
         }
         // 觸控版:同一份就緒/冷卻鏡射到虛擬搖桿的 X / Y / B 鈕面 —— 角色數據那一欄是唯一渲染來源,
         // 搖桿只是鏡子。MUST NOT 在 mobile.js 另算一份 CD(兩份會漂)。
@@ -3254,7 +3263,10 @@ function makeHud() {
           const chgStr = (a) => (a.maxCharges > 1 ? `${a.charges}/${a.maxCharges}` : '');
           padMirror('def', w.def.cd, w.def.ready, w.def.lvl === 0, chgStr(w.def));
           padMirror('atk', w.atk.cd, w.atk.ready, w.atk.lvl === 0, chgStr(w.atk));
-          if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
+          if (mob) {
+            if (mob.cd != null) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
+            else padMirror('jump', Math.max(0, (mob.mp || 0) - (mob.cur || 0)), (mob.cur || 0) >= (mob.mp || 0), false);
+          }
           // 招式鈕(十字鍵左):長按 R 的同一個派發縫 ⇒ 鈕面 CD 鏡射**當下防守狀態那一格**招式
           // (非防守 = 攻擊招式 / 防守中 = 防守招式),與上面 X / Y 兩顆同源,搖桿只是鏡子
           const activeAb = w.defending ? w.def : w.atk;

@@ -843,8 +843,12 @@ export const MORPH = {
   LAND_M: 0.5,       // 飛行型離地 ≤ 此距離 → 觸地變形回地面型
   CROUCH_M: 1.4,     // 滿蓄力時機體下蹲幅度(公尺;FPV 鏡頭同步下沉)
   GROUND_Y: 2,       // 伺服器:y ≤ 此值視為地面型(踩雷判定)
-  CD: 15,            // 變形起飛(蓄力彈射)冷卻(秒;客戶端閘門,與 IFRAME.CD 對齊 —— CD 中放開只普通小跳)
+  MP: 30,            // launch cost at full charge (actual = MP x charge ratio; insufficient = small hop only)
 };
+// Cost fns (single seam; client prediction + server authority share this):
+// proportional to charge ratio so tap hops are cheap and full launches cost the full MP.
+export const morphMpCost = (charge) =>
+  Math.ceil(MORPH.MP * Math.max(0, Math.min(1, charge || 0)));
 // ---- 騰空/空中狀態(2026-07-23;跳躍脫離地面效果的唯一縫)----
 // GRAV:地面機體跳躍重力(game.js 物理與下方頂點推導共用,MUST NOT 各寫一份 24)。
 // OFF_GROUND:離地 ε(與 game.js onGround 同一個門檻)。
@@ -886,8 +890,11 @@ export const CJUMP = {
   AIR_SPD_F: 2.0,
   GRAV_F: 0.45,      // 蓄力跳騰空重力係數(< 1 = 太空漫步)
   CROUCH_M: 1.1,     // 蓄力下蹲幅度(公尺;FPV 鏡頭同步下沉)
-  CD: 15,            // 蓄力跳躍冷卻(秒;客戶端閘門,與無敵幀 IFRAME.CD 對齊 —— CD 中放開只普通小跳)
+  MP: 30,            // jump cost at full charge (actual = MP x charge ratio; insufficient = small hop only)
 };
+/** Charge jump power cost (single seam; proportional to charge ratio) */
+export const cjumpMpCost = (charge) =>
+  Math.ceil(CJUMP.MP * Math.max(0, Math.min(1, charge || 0)));
 // ---- 飛行動力學(2026-07-30 使用者需求;飛行機體 = 無人機 + 飛行型態的變形者)----
 // 兩條規則共用這一個縫,MUST NOT 在 game.js / HUD 各自手寫係數:
 //  ①**受擊掉高**:飛行機體挨打會掉高度,掉的公尺數**正比於該次傷害**。校準錨(使用者定調)=
@@ -951,8 +958,8 @@ export const unbalMissP = (missP, unbalanced) =>
   unbalanced ? 1 - (1 - (missP || 0)) * FLIGHT.UNBAL_ACC_MUL : (missP || 0);
 // ---- 無敵幀(2026-07-16;起跳離地 1 秒無敵)----
 // 客戶端在「起跳離地當下」送 {t:'iframe'},伺服器 sim.heroIframe 驗 CD 後結算(_damage 免傷、控場免疫)。
-// 時長與 CD 都夾在伺服器 —— 客戶端只能決定「何時用」,不能延長。三機動能力共用此縫:
-//   機甲蓄力跳躍(CJUMP)/ 傭兵升空變形(MORPH)= 15s CD;蜂群無人機完美迴避 = DRONE_CD 30s。
+// 時長與 CD 都夾在伺服器 —— 客戶端只能決定「何時用」,不能延長。跳躍/變形本身改吃電力
+// (CJUMP.MP / MORPH.MP × 蓄力比例),可連發;無敵幀仍吃獨立 CD(robot/morph = CD 15s;無人機完美迴避 = DRONE_CD 30s)。
 // 完美迴避(2026-07-21):無人機在戰鬥狀態(近 COMBAT_S 秒內攻擊或被攻擊)按空白鍵飛行 →
 //   向上飛的同時 1s 無敵,30s CD。觸發時點由客戶端(位置本就客戶端權威),CD/免傷伺服器把關。
 export const IFRAME = { DUR: 1.0, CD: 15, DRONE_CD: 30, COMBAT_S: 5 };

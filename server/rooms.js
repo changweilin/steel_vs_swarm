@@ -663,7 +663,8 @@ export class RoomHub {
       if (m.t === 'lock' && client.side) { b.heroLock(myId, m.id); return; }
       if (m.t === 'civ' && client.side) { b.civInteract(myId, m.id, m.act); return; }   // 平民互動:跟隨/驅趕
       if (m.t === 'cast' && client.side) { b.heroCast(myId, m.slot, m.x, m.z); return; }
-      if (m.t === 'iframe' && client.side) { b.heroIframe(myId); return; }   // 蓄力跳/變形中段無敵幀(CD 由 sim 把關)
+      if (m.t === 'iframe' && client.side) { b.heroIframe(myId); return; }   // 蓄力跳/變形中段無敵幀(CD 由 sim 把關,與跳躍電力脫鉤)
+      if (m.t === 'jump' && client.side) { b.heroJump(myId, m.k, m.morph); return; }   // 大跳躍/變形起飛電力結算(權威扣電)
       if (m.t === 'reload' && client.side) { b.heroReload(myId, m.w); return; }
       if (m.t === 'buy' && client.side) {
         const err = b.buy(myId, m.item, m.lane);   // lane 只有 item==='creep'(陣營小兵強化)會用到
