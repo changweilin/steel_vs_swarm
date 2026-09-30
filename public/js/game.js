@@ -34,8 +34,9 @@ import { aquaticTransition } from './aquatics.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './models.js';
 import { applyEnvironment } from './environment.js';
 import { Pipeline } from './postfx.js';
-import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
+import { buildHazard, buildMineBump, buildLoot, buildAirdrop, stepFireVisual } from './hazards.js';
 import { applySceneDamage, sceneDamageStage, sceneDamageProfile, sceneDamageBurst, releaseMobileDamage } from './sceneDamage.js';
+import { syncLightningScorch, releaseLightningScorch } from './lightningScorch.js';
 import { buildHpSkillObject } from './vfx.js';
 import { MAP_BUILDING, collapseBuildingBoxes, buildingRoofIndex } from './mapBuilding.js';
 import { detachMapBuilding, mapBuildingTarget } from './mapBuildingRender.js';
@@ -895,7 +896,7 @@ export class BattleClient {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = shadowOn;
     this.envFx = applyEnvironment(this.scene, this.terrain, this.cfg.env,
-      { shadow: shadowOn, lowPower: lowGpu });
+      { shadow: shadowOn, lowPower: lowGpu, surface: (x, z) => this._surf(x, z, Infinity) });
     this._simT = 0;      // 伺服器權威經過秒數(快照 `time`);日夜時鐘的唯一來源
 
     this.scene.add(this.terrain.group);
@@ -3598,6 +3599,7 @@ export class BattleClient {
   onSnap(m) { this._snapQueue = m; }
 
   _applySnap(m) {
+    this.envFx?.syncSurface(m.weatherSurface, m.weatherScars);
     if (m.mb) this._syncMapBuildings(m.mb);
     // 日夜時鐘對錶(權威 = 伺服器經過秒數):平常只把本地那份**拉向**快照值,
     // 差太多(斷線重連 / 分頁背景化很久)才直接貼上。硬貼每一格的話,快照的整數量化
@@ -3646,6 +3648,7 @@ export class BattleClient {
       ent.lk = !!e.lk;   // 攻堅鎖血:這一座打不動(範圍光暈把它排除,見 _updateRangeGlows)
       // 場景物件坍塌(伺服器權威 col 旗標):傾倒為低矮殘骸,只做一次
       if (e.col && ent.neutral && !ent.collapsed) this._applyCollapse(ent, false);
+      syncLightningScorch(ent, !!e.charred);
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
       // 第三方步槍兵駐守碉堡:人在工事裡,機體隱藏(出堡的快照會把 gar 拿掉 → 復現)
@@ -4141,6 +4144,7 @@ export class BattleClient {
     // 自殺攻擊機**不常駐**(2026-08-06 使用者定案「拿掉常駐模組,攻擊時再出現」):
     // 觸發時由 sim 生成 kind 'kami' 實體,走 _spawnEnt 的一般渲染路徑(SIZE_F 縮小)⇒ 這裡什麼都不做。
     this.ents.set(e.id, ent);
+    syncLightningScorch(ent, !!e.charred);
     return ent;
   }
 
@@ -4224,6 +4228,7 @@ export class BattleClient {
   }
 
   _removeEnt(id, ent, dissolve = false) {
+    releaseLightningScorch(ent);
     if (!dissolve) releaseMobileDamage(ent);
     if (dissolve && ent.neutral && !ent.collapsed) sceneDamageBurst(this.scene, this.effects, ent, 3);
     if (this._lockId === id) this._clearLockGlow();   // 光暈是目標 mesh 的子節點,別留下懸空參照
@@ -4690,19 +4695,7 @@ export class BattleClient {
     const _weatherDyn = this.envFx?.getWeatherDynamics?.() ?? null;
     const _firVisMul = fireDotMul(_weatherDyn);   // 0 = 完全熄滅；>1 = 強風助燃
     for (const grp of this.flamers) {
-      const flames = grp.userData.flames;
-      if (!flames) continue;
-      if (_firVisMul <= 0) {
-        // 熄滅：隱藏所有火舌
-        for (const f of flames) f.visible = false;
-        continue;
-      }
-      for (const f of flames) {
-        f.visible = true;
-        const k = (0.75 + 0.35 * Math.sin(now * 9 + f.userData.ph) + 0.12 * Math.sin(now * 23 + f.userData.ph * 2)) * _firVisMul;
-        f.scale.set(1, k, 1);
-        f.position.y = f.userData.h0 * k / 2;
-      }
+      stepFireVisual(grp, now, _firVisMul, _weatherDyn);
     }
   }
 
@@ -5104,7 +5097,7 @@ export class BattleClient {
       for (const p of ev.pts || []) {
         const x = p.x, z = -p.z;
         const y = this.terrain ? this.terrain.heightAt(x, z) + (p.y || 0) : (p.y || 0);
-        this.env?.strikeLightningAt?.(x, y, z);
+        this.envFx?.strikeLightningAt?.(x, p.absolute ? p.y : y, z);
         if (p.id === this.bodyId || (this.hero && p.id === this.hero.id) || p.id === this.youId) {
           this.hud?.feed?.(`⚡ 遭打雷閃電擊中! 受損 ${WEATHER_DEBUFFS.LIGHTNING.BASE_DMG} HP`);
           this._lastHurtAt = performance.now() / 1000;
@@ -11904,7 +11897,7 @@ export class BattleClient {
   }
 
   dispose() {
-    for (const ent of this.ents.values()) releaseMobileDamage(ent);
+    for (const ent of this.ents.values()) { releaseLightningScorch(ent); releaseMobileDamage(ent); }
     for (const ent of this.samMeshes.values()) releaseMobileDamage(ent);
     for (const ghost of this._dissolveGhosts || []) if (ghost.damageEnt) releaseMobileDamage(ghost.damageEnt);
     this.disposed = true;

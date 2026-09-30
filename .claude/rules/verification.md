@@ -4,6 +4,7 @@
 
 | Change area | Guards | Invariant |
 |---|---|---|
+| Weather accumulation, lightning scars and fire extinction | `audit_weather_surface`, `shot_weather_surface`, `audit_weather_dynamics`, `audit_weather_visuals`, `audit_unit_damage`, `audit_gpu_lifecycle` | History survives rejoin; recovery clears unit scorch; precipitation and one game day permanently extinguish lightning fires; deposited geometry stays outside collision. |
 | Fire-rate compression and burst presentation | `audit_fire_rate` | Rate changes preserve expected output ordering. |
 | Movement-speed compression | `audit_speed_comp` | Speed gaps narrow while ordering stays unchanged. |
 | Move penalty while firing | `audit_recoil_move` | Firing slows movement without canceling recoil. |

@@ -19,6 +19,7 @@ const AUDIT_SCRIPTS = [
   // ── 核心模擬、連線機制與語法守門 ──
   'tools/audit_net_modes.mjs',
   'tools/audit_client_syntax.mjs',
+  'tools/audit_weather_surface.mjs',
 
   // ── 核心地圖規則、兵線拓撲與通行阻擋 ──
   'tools/audit_map_rules.mjs',
