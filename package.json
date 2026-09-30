@@ -35,6 +35,8 @@
     "audit:unit-motion": "node tools/audit_unit_motion.mjs",
     "audit:civilians": "node tools/audit_civilian_generator.mjs",
     "audit:vfx": "node tools/audit_combat_vfx.mjs",
+    "audit:weather": "node tools/audit_weather_surface.mjs",
+    "shot:weather": "node tools/shot_weather_surface.mjs",
     "shot:building-damage": "node tools/shot_building_damage.mjs",
     "story": "node tools/story_book.mjs",
     "preview:gen": "node tools/arch_preview.mjs"

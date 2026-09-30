@@ -14,6 +14,9 @@ import {
 } from './data.js';
 import { setCelSun, WIND, celWindTime, INK_INFO_DECL, INK_INFO_NONE, setWeatherDynamics } from './toon.js';
 import { mulberry32 } from './rng.js';
+import { stepWeatherSurface } from './weatherState.js';
+import { makeScorchAtlas, setSurfaceWeather } from './weatherMaterial.js';
+import { makeWeatherDeposits } from './weatherDeposits.js';
 
 // 環境標籤的唯一縫已抽到 `data.js`(它只是 ENV 的取名查表,而本檔 import three ⇒ Node 端載不動)。
 // 這裡只留**舊入口**(同 `hazards.js` re-export `rng.js` 的 mulberry32),MUST NOT 在此重寫一份。
@@ -952,6 +955,11 @@ function makeLightningSystem(span, terrain) {
 export function applyEnvironment(scene, terrain, env, opts = {}) {
   const span = Math.max(terrain.worldW, terrain.worldH);
   const backgroundOnly = !!opts.backgroundOnly;
+  let surfaceState = stepWeatherSurface();
+  let surfaceSynced = false;
+  const scorchAtlas = backgroundOnly ? null : makeScorchAtlas(terrain);
+  const deposits = backgroundOnly ? null : makeWeatherDeposits(scene, terrain, opts);
+  if (!backgroundOnly) setSurfaceWeather(surfaceState);
   const startTime = TIMES[env?.time] ? env.time : 'day';
   const startSeason = env?.season || 'summer';
   const startWeather = env?.weather || 'clear';
@@ -1107,10 +1115,13 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       weatherVec = weatherVectorAt(startSeason, startTime, startWeather, elapsedS, seed, latDeg);
       curDyn = resolveWeatherDynamics(weatherVec, curDyn, dt);
       if (!backgroundOnly) setWeatherDynamics(curDyn);
+      if (!surfaceSynced) surfaceState = stepWeatherSurface(surfaceState, curDyn, dt);
+      if (!backgroundOnly) setSurfaceWeather(surfaceState);
+      deposits?.update(dt, camera, surfaceState);
 
       // 2. 打雷閃電系統 (>75% 觸發實體 3D 閃電擊向地面與全場強光頻閃)
       flashStrength = 0;
-      if (curDyn.effectiveThunder > 0.01) {
+      if (backgroundOnly && curDyn.effectiveThunder > 0.01) {
         lightningTimer -= dt;
         if (lightningTimer <= 0) {
           flashTimer = 0.22 + (Math.sin(elapsedS * 13.7) * 0.5 + 0.5) * 0.15;
@@ -1132,6 +1143,10 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
         }
       }
       lightning.update(dt);
+      if (!backgroundOnly && flashTimer > 0) {
+        flashTimer = Math.max(0, flashTimer - dt);
+        flashStrength = Math.sin(flashTimer * 42) > 0 ? flashTimer / .25 : 0;
+      }
 
       // 3. 推進日照時段與更新光影
       const h = clockHour(startTime, elapsedS, sched.startH);
@@ -1201,7 +1216,14 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
     getWeatherDynamics() {
       return curDyn;
     },
+    syncSurface(state, marks) {
+      if (state) { surfaceState = state; surfaceSynced = true; }
+      scorchAtlas?.sync(marks);
+    },
     dispose() {
+      deposits?.dispose();
+      scorchAtlas?.dispose();
+      if (!backgroundOnly) setSurfaceWeather();
       if (hemi) scene.remove(hemi);
       if (sun) {
         scene.remove(sun);

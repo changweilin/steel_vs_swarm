@@ -33,7 +33,7 @@ export function applySceneDamage(ent, stage) {
   ent.sceneStage = stage;
   if (!ent.sceneDamageNodes) {
     ent.sceneDamageNodes = [];
-    ent.mesh.traverse((node) => { if (node.isMesh && !node.userData.teamRing) ent.sceneDamageNodes.push(node); });
+    ent.mesh.traverse((node) => { if (node.isMesh && !node.userData.teamRing && !node.userData.weatherScorch) ent.sceneDamageNodes.push(node); });
   }
   if (!stage && !ent.sceneDamageParts && !ent.mobileDamage) return;
   if (profile.mobile) { applyMobileDamage(ent,stage,profile); return; }

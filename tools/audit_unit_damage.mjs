@@ -31,6 +31,7 @@ try {
     const {forgeMech,specOf}=await import('/public/js/forge/forge.js');
     const {entryKey}=await import('/public/js/forge/roster.js');
     const {applySceneDamage,sceneDamageStage,sceneDamageProfile,sceneDamageBurst,releaseMobileDamage}=await import('/public/js/sceneDamage.js');
+    const {syncLightningScorch,releaseLightningScorch}=await import('/public/js/lightningScorch.js');
     const {projectileMesh,buildHpSkillObject,makeDamageFx,DMG_FX}=await import('/public/js/vfx.js');
     const {disposeTree,setCelSun,updateCelLight}=await import('/public/js/toon.js');
     const check=(ok,msg)=>{if(!ok)throw new Error(msg);};
@@ -58,6 +59,11 @@ try {
       const ent={id:42,kind:row.kind,mesh,dimR:Math.max(size.x,size.z)/2,dimH:size.y,dimTop:box.max.y};
       const original=[];mesh.traverse(n=>{if(n.isMesh)original.push({n,g:n.geometry,p:n.geometry.attributes.position.array.slice(),q:n.quaternion.clone(),c:n.material.color?.clone()});});
       applySceneDamage(ent,0);
+      syncLightningScorch(ent,true);
+      const scorchShells=ent.weatherScorch.shells;
+      check(scorchShells.length>0,`${row.kind}: lightning reaches model surfaces`);
+      syncLightningScorch(ent,true);check(ent.weatherScorch.shells===scorchShells,'repeat scorch reuses shells');
+      syncLightningScorch(ent,false);check(!ent.weatherScorch && scorchShells.every(s=>!s.parent),'recovery releases scorch shells');
       const line=document.createElement('div');line.style.cssText='display:flex;gap:8px;padding:8px';
       // Keep the review sheet compact while testing every character and stance.
       const draw=!row.label || !document.querySelector(`[data-kind="${row.kind}"]`);
@@ -90,7 +96,7 @@ try {
       }
       releaseMobileDamage(ent);disposeTree(mesh);
     }
-    const deps={THREE,projectileMesh,buildHpSkillObject,sceneDamageStage,sceneDamageBurst,sceneDamageProfile,applySceneDamage,releaseMobileDamage,disposeTree,makeDamageFx,DMG_FX};
+    const deps={THREE,projectileMesh,buildHpSkillObject,sceneDamageStage,sceneDamageBurst,sceneDamageProfile,applySceneDamage,releaseMobileDamage,releaseLightningScorch,disposeTree,makeDamageFx,DMG_FX};
     const proto=new Function('D',`const {${Object.keys(deps)}}=D;return {${methods.join(',')}};`)(deps);
     const ctx=Object.assign(Object.create(proto),{scene:new THREE.Scene(),effects:[],damaged:new Set(),samMeshes:new Map(),ents:new Map(),
       spinners:new Set(),flamers:new Set(),_unregisterViewOccluders(){},_updateHpBar(){},terrain:{heightAt:()=>100}});
