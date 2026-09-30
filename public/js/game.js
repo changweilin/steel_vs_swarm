@@ -6271,8 +6271,29 @@ export class BattleClient {
     // 鎖定目標刻意不亮射程光暈而改亮 lockGlow,兩者若不同界就會出現「鎖得到卻打不到」)。
     const t0 = this._aimTarget(this._maxRange(def));
     const t = t0 && this.pos.distanceTo(t0.mesh.position) - this._hitR(t0) <= this._effRange(def, t0) ? t0 : null;
-    if (t) this.net.send({ t: 'lock', id: t.id });
-    else this._clearLockGlow();
+    if (t) { this.net.send({ t: 'lock', id: t.id }); return; }
+    // 在外彈頭的鎖定維持(射後不理):收鏡切回輕武器後,離架時已鎖定的目標超出輕武器射程,
+    // 準星解從此報 miss;若放任不報,伺服器 LOCK.TTL 到期後著彈被當無鎖定丟棄 = 收鏡即丟追擊。
+    // 在外 fnf 彈頭的 homing(擊發當下的準星解)輪流續報,仍以重武器有效射程誠實夾回
+    // (「只能在射程內鎖定」不變,只是改吃重武器那一把;伺服器 heroLock 另以同一目標續報複驗)。
+    // 都報不上才清光暈。
+    const hd = this.wdef.heavy;
+    if (hd && trajClass(hd) === 'fnf') {
+      const cands = [];
+      for (const b of this.bullets) {
+        if (!b.fnf || b.homing == null) continue;
+        const ht = this.ents.get(b.homing);
+        if (!ht || ht.dead || !this._isFoeEnt(ht)) continue;
+        if (this.pos.distanceTo(ht.mesh.position) - this._hitR(ht) > this._effRange(hd, ht)) continue;
+        if (!cands.includes(ht)) cands.push(ht);
+      }
+      if (cands.length) {
+        this._lockKeepRi = ((this._lockKeepRi || 0) + 1) % cands.length;
+        this.net.send({ t: 'lock', id: cands[this._lockKeepRi].id });
+        return;
+      }
+    }
+    this._clearLockGlow();
   }
 
   /**
@@ -8396,6 +8417,7 @@ export class BattleClient {
     // 射後不理(2026-08-01 使用者定案):鎖定之後持續追擊,不受射程影響。
     // fnf 只是「這顆彈有沒有資格改吃燃料」的旗標;真正切換在 _updateBullets 的 b.chase。
     b.fnf = trajClass(def) === 'fnf'; b.fuel = chaseCapS(def); b.age = 0; b.chase = false;
+    b.homePtSet = false; b.hx = 0; b.hy = 0; b.hz = 0; b.hr = 0;   // 射後不理最後已知點(目標離開快照後的追擊錨,見 _updateBullets)
     b.dud = false;   // 飛出射程球面 = 解除武裝(引爆 = 碰撞;見 _updateBullets)
     b.guided = false; b.type = null;
     mesh.quaternion.setFromUnitVectors(_FWD_Z, _TMP_D.copy(b.vel).normalize());
@@ -8700,12 +8722,20 @@ export class BattleClient {
         // 飛彈自動追蹤:朝鎖定目標修正航向(動力飛行,升力抵銷重力)
         const want = _TMP_A.copy(tgt.mesh.position); want.y += 1.5;
         steer(b, want.sub(b.pos).normalize(), seekTurn(SEEK.HOME_W, b.mv));   // 轉彎半徑上限見 data.js SEEK
+        // 射後不理最後已知點:目標因收鏡縮視野/迷霧離開快照被移除後,彈頭改朝此點追擊
+        // (下方 fnf 分支),而不是當場變直線 —— 收鏡即丟追擊的使用者回報。只記接手後的解算點。
+        if (b.fnf) { b.hx = tgt.mesh.position.x; b.hy = tgt.mesh.position.y + 1.5; b.hz = tgt.mesh.position.z; b.hr = this._hitR(tgt); b.homePtSet = true; }
       } else if (armed && b.guide) {
         // 雷射導引(2026-09-28 使用者定案):與射後不理**同一條**「發射瞬間凍結」—— 朝擊發當下
         // 的固定打擊點修正(同一個追蹤頭 HOME_W),發射後不再讀準星,打擊位置不隨目標移動。
         // 使用者定案(2026-08-02)與榴彈**同一條**:中途碰撞就爆(下方 hit 分支)、掠過鎖定點即引爆
         // (下方固定點近炸引信)、飛到射程球面就解除武裝(下方 `b.dud`)。
         steer(b, _TMP_A.copy(b.guidePt).sub(b.pos).normalize(), seekTurn(SEEK.HOME_W, b.mv));
+      } else if (armed && b.fnf && b.chase && b.homePtSet && !tgt) {
+        // 射後不理失聯追擊:目標已不在快照(收鏡縮視野/迷霧),朝最後已知點修正 —— 與雷射導引
+        // 同一具追蹤頭;目標重回快照即由上方 tgt 分支接手(位置即時更新),此處只是不斷線。
+        // 雷射導引(固定打擊點)優先:兩者皆有時打擊點才是定案(2026-09-28 發射瞬間凍結)。
+        steer(b, _TMP_A.set(b.hx, b.hy, b.hz).sub(b.pos).normalize(), seekTurn(SEEK.HOME_W, b.mv));
       } else {
         b.vel.y -= BALLISTIC.G * dt;                  // 重力下墜(拋物線彈道)
       }
@@ -8779,15 +8809,19 @@ export class BattleClient {
       // 雷射導引固定打擊點的近炸引信:與上方追蹤引信同一條線段最近點規則,半徑只取爆風核心帶
       // (固定點沒有目標量體)。鎖定空域目標後目標移開,彈體掠過鎖定點即引爆 —— MUST NOT 穿點
       // 而過後繞圈飛到解除武裝。(池化記錄 guidePt 常駐向量,閘門改吃 b.guide 布林,語義同舊 `b.guidePt` 空判)
-      if (!hitKind && b.guide) {
-        const c = b.guidePt;
+      // 射後不理失聯引信:目標已不在快照時朝最後已知點(b.hx/hy/hz,上文失聯追擊分支的同一點)
+      // 掠過即引爆 —— 同一條線段最近點規則(半徑多含當時目標量體 b.hr,與追蹤引信同一式),
+      // MUST NOT 穿點而過後繞圈。目標重回快照即由上方追蹤引信接手,此處只是不斷線。
+      if (!hitKind && (b.guide || (!tgt && b.fnf && b.chase && b.homePtSet))) {
+        const cx = b.guide ? b.guidePt.x : b.hx, cy = b.guide ? b.guidePt.y : b.hy, cz = b.guide ? b.guidePt.z : b.hz;
+        const cr = (b.core || 0) + (b.guide ? 0 : (b.hr || 0));
         const dx = b.pos.x - prev.x, dy = b.pos.y - prev.y, dz = b.pos.z - prev.z;
         const l2 = dx * dx + dy * dy + dz * dz;
         const s = l2 > 1e-9
-          ? Math.max(0, Math.min(1, ((c.x - prev.x) * dx + (c.y - prev.y) * dy + (c.z - prev.z) * dz) / l2))
+          ? Math.max(0, Math.min(1, ((cx - prev.x) * dx + (cy - prev.y) * dy + (cz - prev.z) * dz) / l2))
           : 0;
         const nx = prev.x + dx * s, ny = prev.y + dy * s, nz = prev.z + dz * s;
-        if (Math.hypot(nx - c.x, ny - c.y, nz - c.z) < (b.core || 0)) {
+        if (Math.hypot(nx - cx, ny - cy, nz - cz) < cr) {
           _TMP_D.set(nx, ny, nz); hitKind = 4;
         }
       }

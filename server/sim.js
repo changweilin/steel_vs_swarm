@@ -2077,8 +2077,17 @@ export class BattleSim {
     if (!t || t.neutral || t.gar || t.side === sq.side || t.hp <= 0 || (t.hero && t.dead)) return;
     // 超級大戰:第三方與超級方互為中立,鎖了也打不動(見 _damage)⇒ 鎖定一併拒絕,免假火控
     if ((isSuperSide(sq.side) && isThirdSide(t.side)) || (isThirdSide(sq.side) && isSuperSide(t.side))) return;
-    // 射程閘門:用玩家當下手上那把武器(瞄準中 = 重武器),留與 heroHit 同一份彈道寬容
-    const wp = this._heroWeapon(h, h.aiming ? 'heavy' : 'light');
+    // 射程閘門:用玩家當下手上那把武器(瞄準中 = 重武器),留與 heroHit 同一份彈道寬容。
+    // 在外彈頭的鎖定維持:收鏡切回輕武器後,射後不理彈頭仍在飛;同一目標的續報在收鏡寬容窗內
+    // 改以重武器複驗(窗口 = 重武器滿射程飛行時間 flightCapS:鎖只續得上射程內的目標,
+    // 超出射程的追擊本就由 LOCK.TTL 收尾,見 audit Ⅸ)。新目標/過期鎖定仍吃輕武器 ——
+    // 續報並不建立新的火控解,只是讓已合法離架那一發的追擊不斷訊(射後不理 = 發射後不用再瞄準)。
+    let slot = h.aiming ? 'heavy' : 'light';
+    if (!h.aiming && sq.lock === targetId && this.t - sq.lockAt <= LOCK.TTL) {
+      const hd = this._heroWeapon(h, 'heavy');
+      if (hd && this.t - (h.aimOffAt ?? -Infinity) <= flightCapS(hd.def)) slot = 'heavy';
+    }
+    const wp = this._heroWeapon(h, slot);
     if (!wp) return;
     const ty = t.hero || t.kind === 'heli' || t.decoy ? (t.y || 0) : 0;
     // 量到近側表面(_surfD3):鎖定光暈的語意 = 「準星壓在表面上且打得到」,與 heroHit 閘門同一把尺
