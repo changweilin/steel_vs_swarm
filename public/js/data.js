@@ -3958,7 +3958,7 @@ export const CHARACTERS = {
     visual: { hue: 0xd6e4ef, pod: 'none', proto: 'bastion', paint: 'natflag', flag: [0xffffff, 0x0039a6, 0xd52b1e] },
     mods: { hp: 1.15, sp: 1.0, mp: 1.1, speed: 0.9, armor: 18 },
     light: { name: '「暴風雪」12.7mm 同軸重機槍', rw: '重型同軸壓制機關槍・12.7mm 穿甲彈・初速 860m/s', type: 'gun', mv: 860,
-      dmg: [22, 27, 33], rate: 4.5, mag: [40, 48, 56], reload: 2.4, range: 200, pen: 4,
+      dmg: [22, 27, 33], rate: 4.5, mag: [40, 48, 56], reload: 2.4, range: 210, pen: 4,
       vs: { flesh: 1.3, armor: 1.0, air: 1.05, building: 0.6 } },
     // 護盾軸示範 ④【反裝甲】(原 vs.building 1.8 —— 全表最高的攻城加乘之一,在 EX_SIEGE_WEAPONS
     // 名冊內,紀律①)。反護盾的鏡像:榴彈的超壓是「大面積、慢」的能量,護盾場整個消化得掉;
@@ -4215,7 +4215,7 @@ export const CHARACTERS = {
     visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'vampire', bulk: 1.0, paint: 'natflag', flag: [0xc6363c, 0x0c4076, 0xffffff] },
     mods: { hp: 1.05, sp: 1.05, mp: 1.0, speed: 1.1, armor: 14 },
     light: { name: '「冥火」7.62mm 六管加特林機槍', rw: '多管旋轉速射機關槍・M134 改・初速 850m/s', type: 'gun', mv: 850,
-      dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 185, crit: 0.05,
+      dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 210, crit: 0.05,
       vs: { flesh: 0.85, armor: 0.75, air: 1.3, building: 0.4 } },
     // 護盾軸示範 ③【穿盾】(原 vs.building 1.1,在 EX_SIEGE_WEAPONS 名冊內 —— 紀律①):
     // 破甲彈的金屬射流截面極小、速度極高,護盾場來不及耦合就被穿過去,一半動能直接打在裝甲上。
@@ -4315,7 +4315,7 @@ export const CHARACTERS = {
     visual: { hue: 0xf0c24a, pod: 'rack', form: 'beast', creature: 'stego', paint: 'totem' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 14 },
     light: { name: '「狂歡風暴」雙聯機關槍', rw: '雙聯裝高射速機槍・7.62mm 穿甲彈・初速 825m/s', type: 'gun', mv: 825,
-      dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 180, crit: 0.05,
+      dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 210, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.6, air: 1.2, building: 0.5 } },
     heavy: { name: '「萬象盛宴」集束子母巨彈', rw: '大範圍散布集束子母彈・拋撒破片・初速 400m/s', type: 'launcher', mv: 400,
       dmg: [55, 79, 112], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 6,   // range:榴彈類短射程帶(見 s02 同欄註)
