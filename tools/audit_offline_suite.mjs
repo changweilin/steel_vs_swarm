@@ -20,7 +20,7 @@ const __dirname = dirname(__filename);
 const rootDir = resolve(__dirname, '..');
 
 const OFFLINE_AUDIT_SCRIPTS = [
-  // ── A. 純視覺風格與賽璐璐渲染管線 (8 項) ──
+  // Cel rendering and water fields.
   'tools/audit_cel_pipeline.mjs',
   'tools/audit_visual_prefs.mjs',
   'tools/audit_soft_stroke.mjs',
@@ -29,6 +29,7 @@ const OFFLINE_AUDIT_SCRIPTS = [
   'tools/audit_rock_ink.mjs',
   'tools/audit_leaf_card.mjs',
   'tools/audit_water_edge.mjs',
+  'tools/audit_wavefronts.mjs',
 
   // ── B. 環境裝飾與背景動態 (6 項) ──
   'tools/audit_ambient_motion.mjs',

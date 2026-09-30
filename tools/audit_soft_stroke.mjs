@@ -731,7 +731,7 @@ console.log('\nⅩ 玩家位移擾動(S5)+ 岸邊泡沫 / 倒影(S6)');
     'seaFieldN 內除了上限夾制之外沒有手寫解析度');
   ok(/old\?\.dispose\(\);/.test(block(toon, 'export function setSeaDepthField(')),
     'setSeaDepthField 釋放上一場的場貼圖(A25:不放掉就是每開一場漏一張)');
-  ok(/new Uint8Array\(\[255\]\)/.test(T) && /function neutralSeaField/.test(T),
+  ok(/new Uint8Array\(\[255, 255, 128, 128\]\)/.test(T) && /function neutralSeaField/.test(T),
     '預設是 1×1 的「很深」中性貼圖 ⇒ 沒有水域 / 還沒烤 ⇒ **沒有泡沫**而不是滿場泡沫(原則 6)');
   // ---- S6 泡沫:GLSL 原文 ----
   let FSRC = /float celFoam\( vec2 celFxz \) \{[\s\S]*?\n        \}/.exec(T);
