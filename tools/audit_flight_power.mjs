@@ -391,8 +391,8 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
   t('_stepLift 與 _liftMax 都以 _mpAuth 為閘(未定案 = 視同滿動力,不扣不夾)',
     /if \(!this\._mpAuth\) return;/.test(grab('_stepLift'))
     && /this\._mpAuth && this\.maxMp/.test(grab('_liftMax')));
-  t('_stepLift 只在飛行段呼叫一次,且排在速度積分之前',
-    count(code, 'this._stepLift(') === 1
+  t('_stepLift 於飛行段與地面段各呼叫一次,且飛行段排在速度積分之前',
+    count(code, 'this._stepLift(') === 2
     && /this\._stepLift\(dt, now, target, u\);[\s\S]{0,200}?this\.vel\.y \+= \(target\.y - this\.vel\.y\)/.test(code));
   t('掉高只作用於高度(pos.y),且在飛行段消化待落帳',
     /if \(this\._airSink > 0\) \{[\s\S]{0,220}?this\.pos\.y -= d;[\s\S]{0,80}?this\._airSink -= d;/.test(code));
@@ -408,8 +408,8 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
   t('失衡暴擊率減半在伺服器唯一暴擊處(_rollCrit)結算', /UNBAL_CRIT_MUL/.test(simSrc));
   t('飛行動力回充以 _unbalanced 為閘', /if \(!this\._unbalanced\(now\)\)/.test(grab('_stepLift')));
   t('HUD _ccFeed 有失衡警示', /_unbalOn/.test(grab('_ccFeed')));
-  t('HUD:飛行機體才送 lift(地面機甲 null ⇒ 整條收起)',
-    /lift: this\._flying\(\) \? \{ v:[\s\S]{0,120}?\} : null,/.test(code));
+  t('HUD:全機種皆送 lift 動力數據',
+    /lift: \{ v: Math\.max\(0, this\.lift \?\? this\._liftMax\(\)\), max: this\._liftMax\(\) \},/.test(code));
   t('main.js 依 lift 有無顯隱動力條、低動力才轉警示色(唯一渲染來源)',
     /\$\('liftBox'\)\.classList\.toggle\('hidden', !lf\)/.test(mainSrc)
     && /classList\.toggle\('low', p2 <= FLIGHT\.LOW_F\)/.test(mainSrc));

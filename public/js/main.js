@@ -3181,6 +3181,7 @@ function makeHud() {
         $('mpText').textContent = `電力 ${Math.floor(w.mp)} / ${w.mm}${mpo ? ' ⚡' : ''}`;
         // 動力(全機種皆有;地面機體大跳躍/變形消耗,飛行機體爬升消耗)—— 見底 = 行動受限,橘紅警示
         const lf = w.lift;
+        $('liftBox').classList.toggle('hidden', !lf);
         if (lf) {
           const p2 = lf.max > 0 ? lf.v / lf.max : 0;
           $('liftBar').style.width = `${Math.max(0, Math.min(100, p2 * 100))}%`;
