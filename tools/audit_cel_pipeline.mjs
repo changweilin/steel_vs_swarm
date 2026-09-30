@@ -816,11 +816,11 @@ console.log('\nⅨ 溶入的材質契約(④-2)+ 地貌分區子帶(①-3)');
     && /if \(dissolve\) enableDissolve\(g\);/.test(code(models))
     && /dissolve: true/.test(G),
     '只有戰場 makeUnit 開溶解材質;圖鑑 / 機體台不多編一組 shader');
-  ok(/const deadIds = new Set\(\(m\.ev \|\| \[\]\)\.filter\(\(ev\) => ev\.e === 'die'\)\.map\(\(ev\) => ev\.id\)\);/.test(G)
+  ok(/const deadIds = new Set\(\(m\.ev \|\| \[\]\)\.filter\(\(ev\) => ev\.e === 'die'(?:\s*\|\|\s*ev\.e === 'moon_boom')?\)\.map\(\(ev\) => ev\.id\)\);/.test(G)
     && /_removeEnt\(id, ent, deadIds\.has\(id\)\)/.test(G),
     '溶出只認同幀權威 die 事件;快照缺席(迷霧)必須即時收起');
   const iEntDrop = G.indexOf('this.ents.delete(id);');
-  const iGhostAdd = G.indexOf('this._dissolveGhosts.push({ mesh: ent.mesh, origin, t: 0 });');
+  const iGhostAdd = G.indexOf('this._dissolveGhosts.push({ mesh: ent.mesh, origin, t: 0');
   ok(iEntDrop >= 0 && iGhostAdd > iEntDrop
     && /_updateDissolveGhosts\(dt\)[\s\S]*?dissolveOutAt\(g\.t\)[\s\S]*?this\.scene\.remove\(g\.mesh\);[\s\S]*?_dissolveGhosts\.splice\(i, 1\);/.test(G),
     '先摘掉 ents 再留純渲染殘影;時間到由同一迴圈收 scene 與清單');

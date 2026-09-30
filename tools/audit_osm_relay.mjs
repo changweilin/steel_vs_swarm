@@ -337,7 +337,7 @@ sec('Ⅳ 客戶端接線:早退順序、真的等、與地形建構並行');
     /osmRelayFit\(sanitizeOsmRelay\(/.test(gate));
 
   const pre = strip(grabFn(mainSrc, 'startPrebuild'));
-  const iGate = pre.indexOf('osmGate(cfg'), iModels = pre.indexOf('await warmModels'), iAwait = pre.indexOf('await gate;'), iBio = pre.indexOf('buildBiomes(');
+  const iGate = pre.indexOf('osmGate(cfg'), iModels = pre.indexOf('warmModels('), iAwait = pre.indexOf('await gate;'), iBio = pre.indexOf('buildBiomes(');
   t('閘門與模型/地形建構**並行**:開閘排在 warmModels 之前,await 排在 buildBiomes 之前',
     iGate >= 0 && iModels > iGate && iAwait > iModels && iBio > iAwait);
   t('閘門失敗一律吞掉(每一種失敗都有備援,MUST NOT 把整份預建判成 pre.error)',

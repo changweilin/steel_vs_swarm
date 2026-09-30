@@ -91,14 +91,14 @@ let d, S = readSrc('server', 'sim.js'), BattleSim;
       ds = bust(ds, /export const supportTempoF = \(tempo\) =>\n[^;]*;/,
         'export const supportTempoF = () => 1;', '--break-tempo');
     }
-    writeFileSync(join(dir, 'data.js'), ds);
-    copyFileSync(join(process.cwd(), 'public', 'js', 'botPolicy.js'), join(dir, 'botPolicy.js'));
     // sim.js 從暫存目錄 import 時 `../public/js/data.js` 要指得到改壞副本 ⇒ 一併鏡射目錄結構
     const pub = join(dir, 'public', 'js'), srv = join(dir, 'server');
     const { mkdirSync } = await import('node:fs');
     mkdirSync(pub, { recursive: true }); mkdirSync(srv, { recursive: true });
     writeFileSync(join(pub, 'data.js'), ds);
-    copyFileSync(join(process.cwd(), 'public', 'js', 'botPolicy.js'), join(pub, 'botPolicy.js'));
+    for (const f of ['botPolicy.js', 'balancePrefs.js', 'rng.js', 'mapBuilding.js', 'pool.js']) {
+      copyFileSync(join(process.cwd(), 'public', 'js', f), join(pub, f));
+    }
     writeFileSync(join(srv, 'sim.js'), S);
     d = await import(pathToFileURL(join(pub, 'data.js')).href);
     ({ BattleSim } = await import(pathToFileURL(join(srv, 'sim.js')).href));
@@ -269,6 +269,8 @@ sec('Ⅳ 行為直測(真 BattleSim)');
   // 施放者站在兵線之外:2026-08-07 起要 tick 到輔助機就位,站在兵線上量到的是「小兵打不打得到
   // 輔助機」而不是招式本身(而且 t02 的 brk 會被路過的小兵提前打斷)。
   const hero = (sim, side, pid, ch) => {
+    for (const [id, e] of sim.ents) if (!e.hero && e.kind !== 'base' && e.kind !== 'tower') sim.ents.delete(id);
+    sim.nextWaveAt = 1e9;
     const h = sim.addHero(side, pid, ch);
     h.x = 400; h.z = 0; h.mp = 999; h.abil.atk = 1;
     return h;
@@ -423,6 +425,7 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     // 2026-08-11 起 NPC 肩射火箭是真的爆炸(逐目標擲閃避的那一版)⇒ 殘血 1 的受測機體會被路過的
     // 濺射掃到,這一段就變成擲骰決定綠不綠(實測 8 跑紅 2)。無敵幀是既有的隔離手段,不改被測邏輯。
     h.invUntil = sim.t + 1e6;
+    h.lastHitAt = sim.t + 1e6;
     const A = d.heroAbility('s11', 'atk', 1);
     const B = d.selfAtkBoost('s11', 1, h.abil);
     sim.heroCast('a7', 'atk');
@@ -598,6 +601,8 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
     };
     const mk = (side, pid, ch) => {
       const sim = new BattleSim(mkCfg());
+      for (const [id, e] of sim.ents) if (!e.hero && e.kind !== 'base' && e.kind !== 'tower') sim.ents.delete(id);
+      sim.nextWaveAt = 1e9;
       const h = sim.addHero(side, pid, ch);
       h.x = 400; h.z = 0; h.mp = 999; h.abil.atk = 1;   // 兵線之外(同 Ⅳ 的理由)
       return { sim, h };
@@ -633,6 +638,7 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
       const { sim, h } = mk('SWARM', 'v2', 's11');
       h.hp = 1;
       h.invUntil = sim.t + 1e6;   // 同上:量治療量 MUST 與路過的爆風隔離(deploy 是真的在跑 tick)
+      h.lastHitAt = sim.t + 1e6;
       sim.heroCast('v2', 'atk');
       const cs = fleet(sim, 'v2');
       ok(cs.length === d.supportN('s11') && d.selfAtkTempo('s11') === 'burst',

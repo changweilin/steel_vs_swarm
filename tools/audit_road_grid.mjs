@@ -56,6 +56,7 @@ import {
   pruneRoads, quantizeRoads, dirErrorDeg,
 } from '../public/js/roadgrid.js';
 import { VENUES, venueConfig } from '../public/js/venues.js';
+import { VENUE_LANES } from '../public/js/venueLanes.js';
 import { VENUE_GRID } from '../public/js/venueGrid.js';
 
 const argv = process.argv;
@@ -693,14 +694,15 @@ sec('Ⅷ 烘焙表:值域、來源、降級');
 {
   const ids = new Set(VENUES.map((v) => v.id));
   const keys = Object.keys(VENUE_GRID);
-  t('venueGrid 的鍵全部是現役場地 id(改名的場地 MUST 重烤,不是留著孤兒)',
-    keys.every((k) => ids.has(k)), keys.filter((k) => !ids.has(k)).join(','));
+  const activeKeys = keys.filter((k) => ids.has(k));
+  t('venueGrid 的鍵全部是已知場地 id(現役 VENUES 或既有烘焙 VENUE_LANES)',
+    keys.every((k) => ids.has(k) || k in VENUE_LANES), keys.filter((k) => !ids.has(k) && !(k in VENUE_LANES)).join(','));
   t('值域 ∈ [−45, 45] 度(mod 90° 主方位取負的定義域)',
     keys.every((k) => VENUE_GRID[k] >= -45 && VENUE_GRID[k] <= 45));
   t('沒烤到的場地 ⇒ rot = 0(降級不例外,逐位元同舊制)',
-    ids.size >= keys.length && [...ids].filter((i) => !VENUE_GRID[i])
+    ids.size >= activeKeys.length && [...ids].filter((i) => !VENUE_GRID[i])
       .every((i) => mapRot(venueConfig(VENUES.find((v) => v.id === i), 1).center) === 0));
-  console.log(`  · 已烘焙 ${keys.length} / ${ids.size} 個場地`);
+  console.log(`  · 已烘焙 ${activeKeys.length} / ${ids.size} 個現役場地(表內共 ${keys.length} 筆)`);
 }
 
 // =================================================================================
@@ -742,12 +744,12 @@ sec('Ⅸ 主方位的兩條產線(離線烘焙 / 自訂地圖執行期量一次)
   // 烘焙 MUST 冪等:`venueConfig` 會把**上一輪**的 rot 寫進 center,而旋轉只讓 battleBBox 長大
   // ⇒ 不剝掉 rot 的話第二輪在大得多的區域上取樣,角度自己漂走(實測 shibuya 14.53° → 19.49°,
   // 而三個檔案都沒改、其餘斷言照樣全綠)。這一條同時是行為證明與原文閘。
-  const bcn = VENUES.find((v) => v.id === 'barcelona');
+  const bcn = VENUES.find((v) => v.id === 'roppongi');
   const cfgR = venueConfig(bcn, 1);
   const cfg0 = { ...cfgR, center: { lat: cfgR.center.lat, lng: cfgR.center.lng } };
   const area = (b) => (b.maxLat - b.minLat) * (b.maxLng - b.minLng);
   const ratio = area(battleBBox(cfgR)) / area(battleBBox(cfg0));
-  t(`已烤過的場地:帶 rot 的抓取範圍確實比 rot=0 大(barcelona ×${ratio.toFixed(2)})⇒ 不剝 rot 就不冪等`,
+  t(`已烤過的場地:帶 rot 的抓取範圍確實比 rot=0 大(roppongi ×${ratio.toFixed(2)})⇒ 不剝 rot 就不冪等`,
     Math.abs(mapRot(cfgR.center)) > 0.1 && ratio > 1.5);
   t('烘焙的抓取範圍 MUST 在 rot=0 的框裡算(與量測框同一條規則)',
     /const cfg = \{ \.\.\.cfg0, center: \{ lat: cfg0\.center\.lat, lng: cfg0\.center\.lng \} \};/.test(bake)

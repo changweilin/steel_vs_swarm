@@ -2,11 +2,11 @@
 import assert from 'node:assert/strict';
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { chromiumOrNull, chromePath, serve } from './pw.mjs';
+import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
 import { readSrc, grabMethod } from './audit_src.mjs';
 
 const chromium = await chromiumOrNull();
-assert.ok(chromium, 'Playwright is required for geometry and visual verification');
+if (!chromium) skipNoPlaywright('場景損毀瀏覽器量測');
 const server = await serve();
 const browser = await chromium.launch({ headless: true, executablePath: chromePath() });
 try {
@@ -112,7 +112,7 @@ try {
           const count = ctx.effects.length;
           collapse.call(ctx, ent, false);
           check(ctx.effects.length === count, 'collapse deduplicates');
-          for (const effect of ctx.effects) { effect.dispose?.(); scene.remove(effect.obj); if (!effect.dispose) disposeTree(effect.obj); }
+          for (const effect of ctx.effects) { scene.remove(effect.obj); if (effect.dispose) effect.dispose(); else disposeTree(effect.obj); }
           check(Math.abs(ent.mesh.scale.y - 0.35) < 1e-8, 'culled animation settles final pose');
           const restored = make(kind), quiet = { scene, effects: [], damaged: new Set() };
           collapse.call(quiet, restored, true);
