@@ -487,7 +487,56 @@ export function buildHazard(kind, seed, r = 8) {
   bakeContactAO(g, 2.4);
   outlinify(g, 0.07);   // 漫畫描邊(透明件:水面/偽裝網/火舌 自動跳過)
   g.userData.kind = kind;
+  if (g.userData.flames) {
+    const flames = new Set(g.userData.flames);
+    g.userData.smoke = [];
+    g.traverse(node => {
+      if (!node.isMesh || !node.material.transparent) return;
+      node.userData.fireOrigin = node.position.clone();
+      node.userData.fireScale = node.scale.clone();
+      node.userData.fireOpacity = node.material.opacity;
+      if (!flames.has(node)) g.userData.smoke.push(node);
+    });
+    for (const flame of flames) {
+      const core = new THREE.Mesh(flame.geometry, toonMat(0xffefaf, { emissive: 0xffb840,
+        emissiveIntensity: 2, transparent: true, opacity: .9, depthWrite: false }));
+      core.scale.set(.48, .72, .48);
+      core.position.y = -flame.userData.h0 * .12;
+      flame.add(core);
+      flame.material.depthWrite = false;
+    }
+  }
   return g;
+}
+
+export function stepFireVisual(group, now, strength, dynamics) {
+  const wind = Math.max(0, Math.min(1, (dynamics?.wind || 0) / 100));
+  const direction = dynamics?.windDir || [1, 0];
+  for (const flame of group.userData.flames || []) {
+    flame.visible = strength > 0;
+    if (!flame.visible) continue;
+    const u = flame.userData, flicker = .82 + .18 * Math.sin(now * 8 + u.ph) + .1 * Math.sin(now * 19 + u.ph * 2);
+    const height = flicker * Math.sqrt(strength);
+    flame.scale.set(u.fireScale.x / Math.sqrt(flicker), u.fireScale.y * height, u.fireScale.z / Math.sqrt(flicker));
+    flame.position.copy(u.fireOrigin);
+    flame.position.y += u.h0 * (height - 1) / 2;
+    flame.rotation.z = -direction[0] * wind * .32;
+    flame.rotation.x = direction[1] * wind * .32;
+    flame.material.opacity = u.fireOpacity * Math.min(1, strength * 2);
+  }
+  for (let i = 0; i < (group.userData.smoke?.length || 0); i++) {
+    const smoke = group.userData.smoke[i], u = smoke.userData;
+    smoke.visible = strength > 0;
+    if (!smoke.visible) continue;
+    const life = (now * .16 + i * .31) % 1;
+    smoke.position.copy(u.fireOrigin);
+    smoke.position.x += direction[0] * wind * life * 7;
+    smoke.position.z += direction[1] * wind * life * 7;
+    smoke.position.y += life * 6;
+    smoke.scale.copy(u.fireScale).multiplyScalar(.65 + life * .9);
+    smoke.material.opacity = u.fireOpacity * Math.sin(life * Math.PI) * Math.min(1, strength);
+    smoke.material.depthWrite = false;
+  }
 }
 
 /**

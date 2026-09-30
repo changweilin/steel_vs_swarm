@@ -7,6 +7,7 @@
 //      onBeforeCompile 注入,非模糊的白色反光帶 → 機甲/槍械像動漫插畫的金屬
 // 全專案共用:hazards.js re-export 舊入口(toonMat/toonify/toonGradient)保持相容。
 import * as THREE from 'three';
+import { weatherUniforms, WEATHER_MATERIAL_DECL, WEATHER_MATERIAL_COLOR } from './weatherMaterial.js';
 import { visualPref, onVisualChange } from './visualPrefs.js';
 import { makeField, bakeFieldTexture } from './field.js';
 import { curveKneeM, curveR, SOLDIER_H, DISSOLVE } from './data.js';
@@ -1412,7 +1413,9 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   if (paint?.flat) defines.CEL_PAINT_FLAT = '';
   // 需要世界座標 varying。海浪那一族**顯式**列進來:泡沫要世界 XZ,而水面現況剛好有
   // `wash: 0.5` —— 靠巧合成立的東西沒有斷言守得住。
-  if (wash > 0 || moss || sk?.axis === 'w' || landField) defines.CEL_WP = '';
+  const weatherSurface = tint === 'env' && !preview && !mat.transparent && sk?.axis !== 'w';
+  if (weatherSurface) defines.CEL_WEATHER_SURFACE = '';
+  if (wash > 0 || moss || sk?.axis === 'w' || landField || weatherSurface) defines.CEL_WP = '';
   // 細勾線與擺動**分兩個 define**:草坪要前者不要後者(它是鋪面,擺起來只會跟步道錯開)。
   // 細勾線那半**只給不透明件**:通道是「場景 RT 的 alpha」,而半透明件的 alpha 是**不透明度**
   // ——`gl_FragColor.a = uSoftInk` 寫下去就是把水面從 0.82 直接改成 0.30。檔頭那條契約本來就
@@ -1473,6 +1476,8 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   const inkKey = refl ? 'none' : (land && ink === 'hard' ? 'land' : ink);
   const inkCls = INK_CLASS[INK_KIND[inkKey] || 'HARD'];
   mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, weatherUniforms);
+    shader.uniforms.uSurfaceTime = _windT;
     shader.uniforms.uSurfId = { value: mat.userData.celSurfId };
     shader.uniforms.uInkClass = { value: inkCls };
     // **MUST 經 inkQuant 量化**:呼叫端傳 0.4 而緩衝裡是 0.4000 / 0.4667,稽核與定裝照
@@ -1958,7 +1963,8 @@ ${CEL_SEA_GLSL}
           #endif
           diffuseColor.rgb = mix( diffuseColor.rgb, pc.rgb / max( pc.a, 0.001 ), pa );
         }
-        #endif`)
+        #endif
+        ${WEATHER_MATERIAL_COLOR}`)
       .replace('#include <opaque_fragment>', `
         {${_school === 'b' ? CEL_CUT_MIX_GLSL : ''}
           vec3 celV = normalize( vViewPosition );
@@ -2257,6 +2263,8 @@ ${INK_PACK_GLSL}
         uniform sampler2D uCelWField;
         uniform vec4 uCelWRect;
         uniform float uCelWSpread;
+        uniform float uSurfaceTime;
+        ${WEATHER_MATERIAL_DECL}
         #ifdef CEL_PAINT
         uniform sampler2D uPaintTex;
         uniform vec3 uPaintFace;
@@ -2403,7 +2411,7 @@ ${CEL_SEA_GLSL}
   // ⚠ **每一個新的 define 都 MUST 進這把鑰匙,而 uniform 一個都不准進**:
   // 漏掉 `card`/`surfAttr` 的症狀是「四個角都落在中心 ⇒ 整叢卡片塌成一個點」,
   // 而 `contrib`(uniform)進去的話就是每一個貢獻值編一支新程式(編譯尖峰 + 記憶體)。
-  mat.customProgramCacheKey = () =>
+  mat.customProgramCacheKey = () => (weatherSurface ? 'weather:' : '') +
     `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${coolOn ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${surfAttr ? 'A' : ''}${card ? 'K' : ''}${refl ? 'R' : ''}${inkAlpha ? 'B' : ''}${dissolve ? 'D' : ''}${sk?.ripple ? 'V' : ''}${landId ? 'Z' : ''}${landField ? 'X' : ''}${rim}${treeO ? 'T' : ''}`;
   return mat;
 }

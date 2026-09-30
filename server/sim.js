@@ -5,6 +5,8 @@
 // battlefield center (x east, z north; height is client-side, simulation is 2D + lane paths).
 import { MAP_BUILDING, buildingBounds, buildingNear, buildingDistance, buildingRayHit, buildingRoofIndex, collapseBuildingBoxes, mapBuildingHp, mapBuildingId } from '../public/js/mapBuilding.js';
 import { Pool } from '../public/js/pool.js';
+import { mulberry32 } from '../public/js/rng.js';
+import { stepWeatherSurface, lightningFireSeconds, lightningFireWet, lightningStatus, clearLightningScorch, WEATHER_SURFACE } from '../public/js/weatherState.js';
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, BASE_MISSILE, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
@@ -288,6 +290,8 @@ export class BattleSim {
     this.curWeatherVec = weatherVectorAt(this.startSeason, this.startTime, this.startWeather, 0, this.weatherSeed, this.latDeg);
     this.curWeatherDyn = resolveWeatherDynamics(this.curWeatherVec);
     this._lightningTimer = 0;
+    this.weatherSurface = stepWeatherSurface();
+    this.weatherScars = [];
   }
 
   // ---------- 世界障礙(2026-07-15:LOS 遮蔽 + 立體交通走廊淨空)----------
@@ -6109,6 +6113,7 @@ export class BattleSim {
     const cap = b.maxHp * (boss ? bossSegCapF(b.sq.bossSeg) : 1);
     const before = b.hp;
     b.hp = Math.min(cap, b.hp + amt * f);
+    if (b.hp > before) delete b.lightningScorch;
     return Math.max(0, b.hp - before);
   }
 
@@ -6356,6 +6361,8 @@ export class BattleSim {
    */
   _tickWeather(dt) {
     const dyn = this.curWeatherDyn;
+    this.weatherSurface = stepWeatherSurface(this.weatherSurface, dyn, dt);
+    for (const entity of this.ents.values()) clearLightningScorch(entity, this.t);
     if (!dyn || dyn.effectiveThunder <= 0) {
       this._lightningTimer = 0;
       return;
@@ -6387,7 +6394,7 @@ export class BattleSim {
         // 收集存活的候選目標: NPC (小兵/平民/中立)、機體 (英雄主機/僚機/bot)、建築 (防禦塔/主堡)
         const candidates = [];
         for (const e of this.ents.values()) {
-          if (!e.dead && (e.hp > 0 || (e.sp || 0) > 0)) {
+          if (!e.dead && !e.inv && (e.hp > 0 || (e.sp || 0) > 0)) {
             candidates.push(e);
           }
         }
@@ -6402,14 +6409,56 @@ export class BattleSim {
             const idx = Math.floor(targetRoll * candidates.length);
             const target = candidates.splice(idx, 1)[0];
             this._damage(target, cfg.BASE_DMG, null, cfg.PEN);
-            strikes.push({ id: target.id, x: target.x, y: target.y || 0, z: target.z, kind: target.kind });
+            if (target.neutral && !UNITS[target.kind]) {
+              const ground = this._hgtAt(target.x, target.z);
+              if (ground != null) this._markWeatherScorch(target.x, ground + hitH(target), target.z);
+            } else {
+              target.lightningScorch = { hp: target.hp, states: lightningStatus(target, this.t) };
+            }
+            strikes.push({ id: target.id, x: target.x, y: (target.y || 0) + hitH(target), z: target.z, kind: target.kind });
           }
           if (strikes.length > 0) {
             this.events.push({ e: 'lightning_strike', pts: strikes });
           }
         }
+        this._strikeWeatherSurface(mulberry32((this.weatherSeed ^ stepIdx ^ 0x57ea7) >>> 0));
       }
     }
+  }
+
+  _markWeatherScorch(x, y, z) {
+    if (![x, y, z].every(Number.isFinite)) return;
+    const r = WEATHER_SURFACE.strikeR;
+    // Repeated strikes in the same footprint keep one permanent mark.
+    if (!this.weatherScars.some(p => Math.hypot(p.x - x, p.y - y, p.z - z) < r * .5)) this.weatherScars.push({ x, y, z, r });
+  }
+
+  _strikeWeatherSurface(random) {
+    if (!this._hgtGrid || !this._wetGrid) return;
+    const b = this.bounds, x = b.minX + random() * (b.maxX - b.minX), z = b.minZ + random() * (b.maxZ - b.minZ);
+    const ground = this._hgtAt(x, z);
+    if (!Number.isFinite(ground) || this._wetAt(x, z)) return;
+    if (this._slabLevAt(x, z)) return; // The uploaded slab index has no absolute roof height.
+    let y = ground, object = false;
+    for (const o of this.worldOcc || []) {
+      const dx = x - o[0], dz = z - o[1];
+      if (Math.hypot(dx, dz) > o[2]) continue;
+      if (o.length >= 8 && (Math.abs(dx * o[6] + dz * o[7]) > o[4] || Math.abs(-dx * o[7] + dz * o[6]) > o[5])) continue;
+      const top = (o.baseY ?? this._hgtAt(o[0], o[1])) + o[3];
+      if (top > y) { y = top; object = true; }
+    }
+    const r = WEATHER_SURFACE.strikeR;
+    this._markWeatherScorch(x, y, z);
+    this.events.push({ e: 'lightning_strike', pts: [{ x, y, z, absolute: true }] });
+    if (object || lightningFireWet(this.curWeatherDyn) || (this._fires?.length || 0) >= 40) return;
+    const ring = [[x-r,z],[x+r,z],[x,z-r],[x,z+r]];
+    if (ring.some(([sx,sz]) => sx < b.minX || sx > b.maxX || sz < b.minZ || sz > b.maxZ || this._wetAt(sx,sz) || this._slabLevAt(sx,sz))) return;
+    const samples = ring.map(([sx,sz]) => this._hgtAt(sx,sz));
+    if (samples.some(h => !Number.isFinite(h) || Math.abs(h - ground) / r > WEATHER_SURFACE.flatGrade)) return;
+    const fire = this._add({ kind: 'fire', side: null, neutral: true, haz: true, x, z,
+      sc: r / HAZARDS.fire.r, hp: 1, inv: true, ttl: lightningFireSeconds(), lightningFire: true });
+    (this._fires ||= []).push(fire);
+    this._rebuildAvoidZones();
   }
 
   // ---------- 主迴圈 ----------
@@ -6891,9 +6940,11 @@ export class BattleSim {
         const f = this._fires[i];
         if (f.ttl == null) continue;
         f.ttl -= dt;
+        if (f.lightningFire && lightningFireWet(this.curWeatherDyn)) f.ttl = 0;
         if (f.ttl <= 0) {
           this.ents.delete(f.id);
           this._fires.splice(i, 1);
+          this._rebuildAvoidZones();
           this.events.push({ e: 'die', id: f.id, kind: f.kind, x: f.x, z: f.z, side: f.side });
         }
       }
@@ -7537,6 +7588,7 @@ export class BattleSim {
   // ---------- 快照(霧戰爭:單位類實體限視野範圍,建築/中立物永遠可見)----------
   _serializeEnt(e) {
     const o = { id: e.id, k: e.kind, s: e.side, x: Math.round(e.x * 10) / 10, z: Math.round(e.z * 10) / 10, hp: Math.round(e.hp), m: e.maxHp };
+    if (e.lightningScorch) o.charred = 1;
     if (e.isMoon) o.y=e.y;
     if (e.isSlab) o.ang=e.ang;
     if (e.sc) o.sc = e.sc;   // 障礙物實例尺寸(客戶端外觀 / 碰撞半徑)
@@ -7803,8 +7855,11 @@ export class BattleSim {
       ? { sg: { SWARM: this._siegeOpen.SWARM, STEEL: this._siegeOpen.STEEL } } : {};
     if (cuPart.cu) sent.cu = cuV;
     if (sgPart.sg) sent.sg = sgV;
+    const scarsPart = base || sent.scars !== this.weatherScars.length ? { weatherScars: this.weatherScars } : {};
+    if (scarsPart.weatherScars) sent.scars = this.weatherScars.length;
     return {
       t: 'snap', time: Math.round(this.t),
+      weatherSurface: this.weatherSurface, ...scarsPart,
       nextWave: Math.max(0, Math.round(this.nextWaveAt - this.t)), wave: this.wave,
       ...cuPart,
       ...sgPart,
