@@ -1,10 +1,11 @@
 import { functionalBuildingParts } from './functionalBuildingParts.js';
+import { buildPartMotion } from './partMotion.js';
 import { architecturalFacadeParts } from './architectureFacadeParts.js';
 import { architecturePartGeometry, facetCylinderGeometry } from './architecturePartGeometry.js';
 // ============ OSM Exact Building Footprint Generator ============
 // Consumes only projected outer/holes from osmAreas.js; does not collapse footprints into bounding boxes.
 // Wall segments share the same edge records with blockers; roof ShapeGeometry preserves inner holes.
-// Distinct semantics are batched separately so draw calls scale with archetype count, not building count.
+// Static structure batches scale with archetype count; moving equipment retains per-building ownership.
 import * as THREE from 'three';
 import { buildingRanges } from './mapBuildingRender.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -492,7 +493,12 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         if (!functionalParts.replacesRoof) {
           batch.details.push(...architecturalRoof(poly, topY, architecture, adaptiveRoofForm, metrics, targetH));
         }
-        batch.details.push(...functionalParts.parts.map(architecturePartGeometry));
+        batch.details.push(...functionalParts.parts.filter(p => !p.motion).map(architecturePartGeometry));
+        if (functionalParts.parts.some(p => p.motion)) {
+          const moving = buildPartMotion(functionalParts.parts, architecturePartGeometry);
+          moving.userData.buildingAttachmentKey = buildingKey;
+          group.add(moving);
+        }
 
         // Phase 3: Architectural facade features (glazing, wall panels, pilasters, grilles)
         // Door openings resolved first: replaced ground-floor window slots omit glass so door mounts flush.

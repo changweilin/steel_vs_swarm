@@ -14,6 +14,8 @@ register('data:text/javascript,' + encodeURIComponent(`export async function res
 const THREE = await import('three');
 const { runtimeMeshDataGeometry, mergeRuntimeParts } = await import('../public/js/runtimePartModel.js');
 const { mergeGeos } = await import('../public/js/beacons.js');
+const { buildPartMotion } = await import('../public/js/partMotion.js');
+const { scenePartGeometry } = await import('../public/js/scenePropModels.js');
 const wallGeo = new Function('THREE', 'runtimeMeshDataGeometry',
   grabFn(readSrc('public', 'js', 'biomes.js'), 'wallGeo') + '\nreturn wallGeo;')(THREE, runtimeMeshDataGeometry);
 let count = 0;
@@ -62,14 +64,14 @@ for (const kind of Object.keys(SLOPE_BOUNDARIES)) {
 console.log('PASS: terrain-conforming boundary meshes compile and batch through the actual renderer.');
 
 // Run the real dynamic builder: waterline must shift the root, not only static meshes.
-const buildEdgeMotion = new Function('THREE', 'wallGeo', 'mergeGeos', 'envMat', 'EDGE_MOTION', `
+const buildEdgeMotion = new Function('THREE', 'wallGeo', 'mergeGeos', 'envMat', 'EDGE_MOTION', 'buildPartMotion', 'scenePartGeometry', `
   const _we = new THREE.Euler(), _wm = new THREE.Matrix4(), _wp = new THREE.Vector3();
   const _wq = new THREE.Quaternion(), _ws = new THREE.Vector3();
   const celWindAmount = () => 0, celWaveAmount = () => 0, celWindTime = () => 0;
   const celWindHeading = () => [1, 0];
   ${grabFn(readSrc('public', 'js', 'biomes.js'), 'buildEdgeMotion')}
   return buildEdgeMotion;
-`)(THREE, wallGeo, mergeGeos, color => new THREE.MeshBasicMaterial({ color }), EDGE_MOTION);
+`)(THREE, wallGeo, mergeGeos, color => new THREE.MeshBasicMaterial({ color }), EDGE_MOTION, buildPartMotion, scenePartGeometry);
 for (const seed of [0, 42, 79]) {
   const group = new THREE.Group(), dynamics = [], ground = 10;
   const { parts: motion, bufferParts } = buildBoundaryRunParts('searanch', {
@@ -93,3 +95,15 @@ for (const seed of [0, 42, 79]) {
   group.traverse(object => { object.geometry?.dispose(); object.material?.dispose(); });
 }
 console.log('PASS: floating net cages keep their waterline in the real dynamic renderer.');
+for (const kind of ['factory', 'powerplant', 'incinerator', 'oilfield']) {
+  const group = new THREE.Group(), dynamics = [];
+  const motion = wallParts(kind, { len: 30, depth: WALL_KINDS[kind].depth, h: WALL_KINDS[kind].h, seed: 42 }).filter(p => p.motion);
+  assert(buildEdgeMotion({ group, dynamics, segs: [{ x: 50, z: -30, ground: 10, fry: .3, motion }] }) > 0);
+  for (const update of dynamics) update(1 / 60);
+  group.updateMatrixWorld(true);
+  group.traverse(node => {
+    assert(node.matrixWorld.elements.every(Number.isFinite));
+    node.geometry?.dispose(); node.material?.dispose();
+  });
+}
+console.log('PASS: industrial fans and drill strings use the boundary renderer and its existing dynamics.');

@@ -11,7 +11,7 @@
 | Move penalty while firing | `audit_recoil_move` | Firing slows movement without canceling recoil. |
 | Blast families and area budgets | `audit_aoe_trim` | Area trades against single-target power through one family seam. |
 | Building damage convergence | `audit_shield_counter` | Anti-building output converges through the single derivation loop. |
-| Building HP, rubble and damage presentation | `audit_building_damage`, `shot_building_damage` | Server-owned HP and shared wall/roof geometry survive collapse and late joins; damaged batches isolate neighbours. |
+| Building HP, rubble and damage presentation | `audit_building_damage`, `audit_building_motion`, `shot_building_damage` | Server-owned HP and shared wall/roof geometry survive collapse and late joins; damaged batches isolate neighbours and retain their equipment. |
 | Mobile unit and skill-object damage presentation | `audit_unit_damage` | Damage follows articulated parts without editing shared vertices; healing restores materials; missile HP comes from snapshots. |
 | NPC and combat-building motion | `audit_unit_motion`, `audit_unit_damage`, `audit_client_syntax` | Limb chains stay finite; per-barrel recoil follows event time, returns to rest and carries its muzzle anchor. |
 | Generated civilian appearance | `audit_civilian_generator`, `audit_unit_motion`, `audit_lance_hit`, `audit_ui_layout` | Entity seeds replay across clients; visual height and hit dimensions share one body generator; civilians have no encyclopedia entry. |

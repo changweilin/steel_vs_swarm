@@ -31,6 +31,20 @@ const BUSY_FACADE_DETAIL = new Set([
   'recess_bands', 'carved_frame', 'brise_soleil',
 ]);
 
+function windowReveal(w, h, rim, depth) {
+  const vertices = [], faces = [];
+  for (const z of [-depth / 2, depth / 2]) for (const [x, y] of [
+    [-w/2-rim,-h/2-rim], [w/2+rim,-h/2-rim], [w/2+rim,h/2+rim], [-w/2-rim,h/2+rim],
+    [-w/2,-h/2], [w/2,-h/2], [w/2,h/2], [-w/2,h/2],
+  ]) vertices.push(x, y, z);
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4;
+    for (const [a,b,c,d] of [[i,j,j+4,i+4], [i+8,i+12,j+12,j+8],
+      [i,i+8,j+8,j], [i+4,j+4,j+12,i+12]]) faces.push(a,c,b,a,d,c);
+  }
+  return ['mesh', { vertices, faces }, [w + rim * 2, h + rim * 2, depth]];
+}
+
 /** 飾件雜湊（FNV-1a）：窗間飾／外推結構的「插或不插」只吃雜湊，零共享 rnd 消耗、
  * 跨幀跨端同值；只決定飾件有無，不影響玻璃存在性（玻璃恆鋪滿、不留破洞）。 */
 function ornamentHash(text) {
@@ -181,6 +195,17 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
     // 玻璃已鋪數量從本面牆均攤額度扣除：全棟總量恆 ≤ LIMIT（短棟裝飾豐富、
     // 高棟玻璃優先，裝飾讓路），額度耗盡則後續窗框裝飾逐窗跳過。
     budget -= (geos.length - edgeStart);
+
+    // One hollow reveal per opening keeps depth readable without consuming four draw primitives.
+    if (plainFrame) for (const win of wins) {
+      if (budget <= 0) break;
+      if (win.doorway || ['oculus', 'arch', 'dormer'].includes(win.shape)) continue;
+      const rim = Math.min(0.09, (bayW - win.w) * 0.22, (floorH - win.h) * 0.22);
+      if (rim < 0.025) continue;
+      geos.push(placeFacadePart(windowReveal(win.w, win.h, rim, thickness + 0.11),
+        edge, win.u, win.y, 0, trimColor, style, [0, 0, 0], 'window-reveal'));
+      budget--;
+    }
 
     // 牆面渲染（含窗戶）彼此不可重疊：窗玻璃佔位 wins，後續飾帶／柱體凡壓窗即跳過或分段。
     const hitsWin = (u, y, w, h) => {

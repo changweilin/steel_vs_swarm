@@ -80,7 +80,10 @@ export function sceneFurnitureParts(kind) {
     for(const x of [-.63,.63]) {
       add(cyl(.48,.48,.06,x,1.55,0,steel),cyl(.14,.14,.08,x,1.6,0,light));
       for(let i=0;i<4;i++) {
-        const blade=box(.75,.025,.055,x,1.59,0,0x9aa7a5);blade.r=[0,i*Math.PI/4,0];add(blade);
+        const blade=box(.75,.025,.055,x,1.59,0,0x9aa7a5);
+        blade.r=[0,i*Math.PI/4,0];
+        blade.motion={id:`fan/${x}`,kind:'spin',axis:'y',pivot:[x,1.59,0],speed:5.5};
+        add(blade);
       }
     }
     for(let i=0;i<9;i++)add(box(2.1,.035,.035,0,.37+i*.105,.768,steel));

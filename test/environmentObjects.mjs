@@ -78,13 +78,14 @@ console.log(`Procedural environment: ${samples} boundary envelopes, ${Object.key
 const biomeSource = readSrc('public', 'js', 'biomes.js');
 const placementDeps = { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable, edgeSeed, edgeWallInsetM,
   objScaleFit, slopeDeg, SLOPE, WATER, mulberry32, partBox,
+  buildPartMotion: () => ({ position: { set() {} } }), scenePartGeometry: () => {},
   newBatch: () => [], emitWallParts: (batch, parts) => batch.push(parts), flushPartBatch: () => {} };
 const placementHelpers = ['areaFreeCore', 'areaFree', 'blockArea', 'makeOccupancy', 'classifyImg', 'terrainEnvCode', 'placeSharedEnvironment'];
 const placement = new Function(...Object.keys(placementDeps),
   biomeSource.match(/const CELL = \d+;/)[0] + '\n' + placementHelpers.map(k => grabFn(biomeSource, k)).join('\n')
   + '\nreturn {placeSharedEnvironment,makeOccupancy,blockArea};')(...Object.values(placementDeps));
 function field(overrides = {}, gates = {}) {
-  const blocked = new Set(), blockers = [], group = { userData: {} };
+  const blocked = new Set(), blockers = [], group = { userData: {}, add() {} };
   placement.blockArea(blocked, 0, 0, 150);
   const terrain = { minX: -600, maxX: 600, minZ: -600, maxZ: 600, heightAt: () => 20,
     sampleColor: () => [110, 110, 110], objectEnvironment: { temperature: -5 }, ...overrides };

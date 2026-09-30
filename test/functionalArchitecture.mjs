@@ -85,10 +85,11 @@ for (const [family, rows] of Object.entries(FUNCTIONAL_VARIANTS)) {
       }
       assert.ok(found, `${row.id}: semantic marker must reach the actual render batch`);
       expectedGeometry.dispose();
-      for (const mesh of group.children) {
+      group.traverse(mesh => {
+        if (!mesh.isMesh) return;
         assert.ok(mesh.geometry.attributes.position.array.every(Number.isFinite), row.id);
         mesh.geometry.dispose();
-      }
+      });
     }
     variants++;
   }

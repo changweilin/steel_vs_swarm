@@ -76,6 +76,7 @@ for (const form of ['flat', 'gable', 'mansard', 'stepped', 'tiered', 'dome', 'sh
     { terrain, architectureOf: () => arch });
   const bags = [];
   for (const m of group.children) {
+    if (!m.isMesh) continue;
     const name = m.userData.osmBuildingRoofBatch ? 'roofs' : m.userData.osmBuildingDetailBatch ? 'details' : 'walls';
     bags.push({ name, all: trisOf(m.geometry) });
   }
@@ -92,7 +93,7 @@ for (const form of ['flat', 'gable', 'mansard', 'stepped', 'tiered', 'dome', 'sh
     overlap += clipArea(A.v.map(([x, , z]) => [x, z]), B.v.map(([x, , z]) => [x, z]));
   }
   assert(overlap < 1e-6, form + ': cross-batch coplanar roof overlap = ' + overlap.toFixed(4) + 'm2');
-  for (const m of group.children) m.geometry.dispose();
+  group.traverse(m => m.geometry?.dispose());
 }
 
 // 屋頂網格法線污染：同三角形三頂點法線夾角不得超過群組閾值（圓頂自身環差 27° 內放行）。
@@ -134,6 +135,7 @@ for (const [styleId, form, h] of [['alpine', 'gable', 9], ['deco', 'stepped', 12
     { terrain, architectureOf: () => arch });
   const buckets = new Map();
   for (const m of group.children) {
+    if (!m.isMesh) continue;
     const bag = m.userData.osmBuildingRoofBatch ? 'roofs' : m.userData.osmBuildingDetailBatch ? 'details' : 'walls';
     for (const t of trisOf(m.geometry)) {
       const d = -(t.fn[0] * t.v[0][0] + t.fn[1] * t.v[0][1] + t.fn[2] * t.v[0][2]);
@@ -154,7 +156,7 @@ for (const [styleId, form, h] of [['alpine', 'gable', 9], ['deco', 'stepped', 12
     }
   }
   assert(overlap < 1e-6, `${styleId}/${form}: cross-batch coplanar overlap = ${overlap.toFixed(4)}m2 (${worst})`);
-  for (const m of group.children) m.geometry.dispose();
+  group.traverse(m => m.geometry?.dispose());
 }
 
 console.log('PASS: no coplanar seams in any orientation, windows included');
