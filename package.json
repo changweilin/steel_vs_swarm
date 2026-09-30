@@ -32,6 +32,8 @@
     "audit:scene-damage": "node tools/audit_scene_damage.mjs",
     "audit:building-damage": "node tools/audit_building_damage.mjs",
     "audit:unit-damage": "node tools/audit_unit_damage.mjs",
+    "audit:unit-motion": "node tools/audit_unit_motion.mjs",
+    "audit:civilians": "node tools/audit_civilian_generator.mjs",
     "audit:vfx": "node tools/audit_combat_vfx.mjs",
     "shot:building-damage": "node tools/shot_building_damage.mjs",
     "story": "node tools/story_book.mjs",

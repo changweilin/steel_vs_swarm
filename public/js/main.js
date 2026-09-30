@@ -13,7 +13,7 @@ import {
   aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME, shieldRoleName,
   UNITS, WEAPONS, STRUCT_W, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc, llToXZ,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
-  THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
+  THIRD, isThirdSide, sideInfo,
   CREEP_UPG, creepUpgMul,
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
    FLIGHT, SQUAD, scopeRvminFog, weatherFogStops, WEATHER_FOG_MASK,
@@ -160,7 +160,7 @@ const app = {
   stages: { char: null, unit: null },   // 角色卡 / NPC 卡各一台持久展示台(各自 WebGLRenderer,同框並存)
   modalRole: null,      // 放大視窗當前展示的 role('char'|'unit'|null=關閉)
   unitSide: null,       // NPC 圖鑑檢視陣營(可切換);unitKind = 目前選的單位;unitShown = 已載入的 kind:side
-  unitKind: null, unitShown: null, civProf: 0, civFaction: 'STEEL',   // 平民圖鑑:目前檢視的職業 index + 陣營
+  unitKind: null, unitShown: null,
   pickSubject: null, pickSide: null, pickEditable: false, pickIsSelf: false,   // 選角上下文(供放大視窗角色格)
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
@@ -1749,19 +1749,6 @@ const bunkerNoteRow = () => `<div class="cd-row">
   <div><b>無武裝工事</b>
   <div class="cd-nums">駐守 ${THIRD.GAR_CAP} 名步槍兵:免傷 ・ 回血 ${Math.round(THIRD.GAR_REGEN_PS * 100)}%/s ・ 射程 ×${THIRD.GAR_RANGE_F} ・ 被拆 ${THIRD.BUNKER_RESPAWN_S / 60} 分鐘原地重生</div></div></div>`;
 
-/** 平民專用說明列(非戰鬥人員;平民/間諜同外觀,只能分辨陣營) */
-const civNoteRow = () => `<div class="cd-row">
-  <span class="cd-key">身分</span>
-  <div><b>非戰鬥人員</b>
-  <div class="cd-nums">平民與間諜外觀完全相同(只能分辨陣營)・移速 平民 ×${CIVILIAN.CIV_SPEED_F} / 間諜 ×${CIVILIAN.SPY_SPEED_F} 步槍兵 —— 細看走位可辨 ・ 誤殺平民一律負賞金,揪出敵方間諜 +${CIVILIAN.KILL_F.enemySpy} 步槍兵賞金</div></div></div>`;
-const CIV_REWARD_ICON = { medkit: '🩹', battery: '🔋', money: '💰' };
-/** 職業選擇格(男女 20 種,點選切換展示台外觀;圖示 = 我方跟隨時提供的物資) */
-const civProfGrid = () => `<div class="civ-prof-grid">${CIVILIANS.map((c, i) =>
-  `<button class="civ-prof-btn ${i === (app.civProf || 0) ? 'on' : ''}" data-civprof="${i}">${c.g === 'F' ? '♀' : '♂'} ${esc(c.name)} ${CIV_REWARD_ICON[c.reward]}</button>`).join('')}</div>`;
-/** 平民陣營子切換(鋼鐵/蜂群;外觀只換貼地光環色) */
-const civFactionToggle = (side) => `<div class="civ-fac-toggle seg seg-sm">${['STEEL', 'SWARM'].map((s) =>
-  `<button class="segb unit-side-btn ${s === side ? 'on' : ''}" type="button" data-civfac="${s}">${esc(sideInfo(s).name)}</button>`).join('')}</div>`;
-
 /** 建一台展示台(角色 'char' / NPC 'unit' 各一,持久重用):自帶 canvas + shell + CharPreview 實例。
  *  按鈕以 class 定位 + 閉包綁定(兩台 shell 並存,不可用共用 id)。 */
 function buildStage(role) {
@@ -1897,7 +1884,6 @@ function stageKitHTML(st) {
       + charAbilityRow(id, 'def', 'Q') + charAbilityRow(id, 'atk', 'E');
   }
   return subject.kind === 'bunker' ? bunkerNoteRow()
-    : subject.kind === 'civilian' ? civFactionToggle(subject.side) + civNoteRow() + civProfGrid()
       : (st.weapons || []).map((w, i) => unitWeaponRow(w, i)).join('');
 }
 /** modal 側欄面板(標題/數值/武器/操作提示)依目前放大的 role 填 */
@@ -2076,11 +2062,6 @@ function modalCharBtn(id, side, selectable) {
 $('charStageModalClose').onclick = closeStageModal;
 $('charStageModal').addEventListener('click', (e) => { if (e.target.id === 'charStageModal') closeStageModal(); });
 $('stageModalKit').addEventListener('click', (e) => {
-  // 平民放大視窗:職業格 / 陣營子切換(重載 → mountStageInline 偵測放大中會回填 modal 面板)
-  const cp = e.target.closest('[data-civprof]');
-  if (cp) { app.civProf = +cp.dataset.civprof; showUnitDetail('civilian', 'CIV'); return; }
-  const cf = e.target.closest('[data-civfac]');
-  if (cf) { app.civFaction = cf.dataset.civfac; showUnitDetail('civilian', 'CIV'); return; }
   const row = e.target.closest('.cd-row'); if (!row) return;
   const st = activeStage(); if (!st) return;
   if (row.dataset.slot) st.preview.play(row.dataset.slot);
@@ -2097,13 +2078,9 @@ $('modalUnitToggle').addEventListener('click', (e) => {
 // ================= NPC / 攻擊建築圖鑑(選角牆下方獨立區塊;雙陣營 + 第三方,與角色卡同框並存) =================
 const UNIT_ROSTER = ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'tower', 'base'];   // tank 2026-07-17 入列(波次追加坦克)
 const UNIT_SIDES = ['STEEL', 'SWARM', 'GUER', 'MILI'];   // 圖鑑可切陣營(2026-07-17 起含第三方)
-// 切換列另加「平民」獨立按鈕(2026-07-18;偽陣營 'CIV',非真實 side)——雙方平民從這裡切換職業/陣營
-const UNIT_TOGGLE = [...UNIT_SIDES, 'CIV'];
-const toggleLabel = (sd) => sd === 'CIV' ? '平民' : sideInfo(sd).name;
-// 第三方單位牆 = 編制唯一真相 THIRD.COMP(去重)+ 碉堡;雙陣營維持現役清單;平民只有一格(職業在詳情選)
-const unitRosterOf = (side) => side === 'CIV' ? ['civilian']
-  : isThirdSide(side) ? [...new Set(THIRD.COMP[side]), 'bunker'] : UNIT_ROSTER;
-const sideToggleHTML = (side, attr) => UNIT_TOGGLE.map((sd) =>
+const toggleLabel = (side) => sideInfo(side).name;
+const unitRosterOf = (side) => isThirdSide(side) ? [...new Set(THIRD.COMP[side]), 'bunker'] : UNIT_ROSTER;
+const sideToggleHTML = (side, attr) => UNIT_SIDES.map((sd) =>
   `<button class="segb unit-side-btn ${sd === side ? 'on' : ''}" type="button" data-${attr}="${sd}">${esc(toggleLabel(sd))}</button>`).join('');
 const UNIT_PROMPT = '<div class="unit-empty">點左側單位查看數值與武器 ・ 點武器列播放攻擊演出(對虛擬目標)。</div>';
 function unitDetailHTML(kind, side) {
@@ -2116,38 +2093,27 @@ function unitDetailHTML(kind, side) {
       <div class="unit-name">${esc(u.name)} <span class="dim">${esc(sideName(side))} ・ ${esc(unitClassLabel(kind))}</span></div>
       <div class="cd-stats">${unitStatCells(kind)}</div>
       <div class="cd-kit">${kind === 'bunker' ? bunkerNoteRow()
-        : kind === 'civilian' ? civFactionToggle(side) + civNoteRow() + civProfGrid()
           : list.map((w, i) => unitWeaponRow(w, i)).join('')}</div>
       <div class="cd-foot">${tipHTML(uiTip('unitFoot', TOUCH_UI()))} 操作說明</div>
     </div>
   </div>`;
 }
 function showUnitDetail(kind, side) {
-  const civ = kind === 'civilian';
-  const mside = civ ? (app.civFaction || 'STEEL') : side;   // 平民實際陣營走 civFaction('CIV' 偽陣營無模型)
-  const prof = app.civProf || 0;
-  $('unitDetail').innerHTML = unitDetailHTML(kind, mside);
+  if (!UNIT_SIDES.includes(side) || !unitRosterOf(side).includes(kind)) return;
+  $('unitDetail').innerHTML = unitDetailHTML(kind, side);
   const st = getStage('unit');
   st.weapons = unitWeaponList(kind);
-  mountStageInline('unit', { type: 'unit', kind, side: mside, prof }, $('unitStageBottom'));
-  st.preview.setUnit(kind, mside, prof);
+  mountStageInline('unit', { type: 'unit', kind, side }, $('unitStageBottom'));
+  st.preview.setUnit(kind, side);
   st.preview.start();
-  app.unitShown = civ ? `civilian:${mside}:${prof}` : kind + ':' + side;
-  // 平民圖鑑:職業格 + 陣營子切換(點選重載本卡;不揭露間諜)
-  if (civ) {
-    for (const b of $('unitDetail').querySelectorAll('[data-civprof]'))
-      b.onclick = () => { app.civProf = +b.dataset.civprof; showUnitDetail('civilian', side); };
-    for (const b of $('unitDetail').querySelectorAll('[data-civfac]'))
-      b.onclick = () => { app.civFaction = b.dataset.civfac; showUnitDetail('civilian', side); };
-  }
+  app.unitShown = kind + ':' + side;
 }
 /** 圖鑑陣營切換 + 單位牆(highlight);不重建 detail(避免每次房間同步重載模型) */
 function renderUnitGrid(side) {
+  if (!UNIT_SIDES.includes(side)) side = 'STEEL';
   app.unitSide = side;
   const roster = unitRosterOf(side);
-  // 平民列只有一格 → 自動選取(切進來即顯示);切到沒有此兵種的陣營 → 落到第一個單位
-  if (side === 'CIV') { if (app.unitKind !== 'civilian') { app.unitKind = 'civilian'; app.unitShown = null; } }
-  else if (app.unitKind && !roster.includes(app.unitKind)) { app.unitKind = roster[0]; app.unitShown = null; }
+  if (app.unitKind && !roster.includes(app.unitKind)) { app.unitKind = roster[0]; app.unitShown = null; }
   $('unitSideToggle').innerHTML = sideToggleHTML(side, 'uside');
   const grid = $('unitGrid');
   grid.innerHTML = '';
@@ -2163,9 +2129,7 @@ function renderUnitGrid(side) {
 function renderUnitSection(defaultSide) {
   renderUnitGrid(app.unitSide || defaultSide);
   if (app.unitKind) {
-    const key = app.unitKind === 'civilian'
-      ? `civilian:${app.civFaction || 'STEEL'}:${app.civProf || 0}`
-      : app.unitKind + ':' + app.unitSide;
+    const key = app.unitKind + ':' + app.unitSide;
     if (app.unitShown !== key) showUnitDetail(app.unitKind, app.unitSide);
   } else {
     $('unitDetail').innerHTML = UNIT_PROMPT;
@@ -4283,9 +4247,7 @@ function renderBalanceSettings(mount) {
 // unitStatCells/unitWeaponRow),MUST NOT 另寫第二份數值標記。
 // 預覽是各掛載點獨立的一台 CharPreview(房間 'char'/'unit' 兩台不動);離開設定頁即 stop(A25)。
 const MECHA_MOUNTS = ['pauseMechaMount', 'lobbyMechaMount'];
-// 機體資訊頁頂層頁籤(2026-09):機體按歸屬拆三頁(鋼鐵/蜂群/傭兵)、陣營單位按陣營拆兩頁(鋼鐵/蜂群)、第三方合一、平民。
-// 機體三頁籤各一組英雄牆;單位三頁籤共用同一套 NPC 牆 + 展示台(鋼鐵/蜂群單側無切換,第三方 GUER/MILI 內切換);平民單一種直接進詳情。
-const MECHA_TABS = [['steelHero', '鋼鐵機體'], ['swarmHero', '蜂群機體'], ['mercHero', '傭兵機體'], ['steelUnit', '鋼鐵單位'], ['swarmUnit', '蜂群單位'], ['third', '第三方單位'], ['civ', '平民']];
+const MECHA_TABS = [['steelHero', '鋼鐵機體'], ['swarmHero', '蜂群機體'], ['mercHero', '傭兵機體'], ['steelUnit', '鋼鐵單位'], ['swarmUnit', '蜂群單位'], ['third', '第三方單位']];
 const MECHA_HERO_SIDE = { steelHero: 'STEEL', swarmHero: 'SWARM', mercHero: 'MERC' };
 const MECHA_HERO_TITLE = { steelHero: '▲ 協約 鋼鐵', swarmHero: '▼ 同盟 蜂群', mercHero: '⚔ 傭兵' };
 const MECHA_TAB_SIDES = { steelUnit: ['STEEL'], swarmUnit: ['SWARM'], third: ['GUER', 'MILI'] };
@@ -4346,7 +4308,7 @@ function ensureMechaScope(mount) {
   mount.addEventListener('click', (e) => mechaScopeClick(mount, e));
   return st;
 }
-/** 設定頁機體瀏覽事件委派(單一縫):英雄牆 / NPC 牆 / 陣營切換 / 平民選項 / 武器招式演出 */
+/** 設定頁機體瀏覽事件委派(單一縫):英雄牆 / NPC 牆 / 陣營切換 / 武器招式演出 */
 function mechaScopeClick(mount, e) {
   const st = mount._mecha;
   if (!st) return;
@@ -4357,8 +4319,7 @@ function mechaScopeClick(mount, e) {
       const want = MECHA_HERO_SIDE[st.tab];
       if (st.sel.type !== 'char' || CHARACTERS[st.sel.id]?.side !== want)
         st.sel = { type: 'char', id: mechaHeroIds(st.tab)[0], side: mechaHeroViewSide(st.tab) };
-    } else if (st.tab === 'civ') {
-      st.sel = { type: 'unit', kind: 'civilian', side: 'CIV' };
+
     } else if (isMechaUnitTab(st.tab)) {
       st.unitSide = MECHA_TAB_UNIT_SIDE[st.tab] || st.unitSide;
       const sides = MECHA_TAB_SIDES[st.tab];
@@ -4385,10 +4346,7 @@ function mechaScopeClick(mount, e) {
   const ms = e.target.closest('[data-mside]');
   if (ms) {
     st.unitSide = ms.dataset.mside;
-    if (st.unitSide === 'CIV') {
-      st.tab = 'civ';
-      st.sel = { type: 'unit', kind: 'civilian', side: 'CIV' };
-    } else if (st.unitSide === 'STEEL') {
+    if (st.unitSide === 'STEEL') {
       st.tab = 'steelUnit';
       const roster = unitRosterOf(st.unitSide);
       if (st.sel.type === 'unit' && st.sel.kind !== 'civilian' && roster.includes(st.sel.kind)) st.sel.side = st.unitSide;
@@ -4406,10 +4364,6 @@ function mechaScopeClick(mount, e) {
     }
     refreshMechaScope(mount); app.audio?.ui('click'); return;
   }
-  const cp = e.target.closest('[data-civprof]');
-  if (cp) { app.civProf = +cp.dataset.civprof; refreshMechaScope(mount); return; }
-  const cf = e.target.closest('[data-civfac]');
-  if (cf) { app.civFaction = cf.dataset.civfac; refreshMechaScope(mount); return; }
   const bio = e.target.closest('[data-mbio]');
   if (bio) { showCharBioModal(bio.dataset.mbio, CHARACTERS[bio.dataset.mbio]?.side); return; }
   const row = e.target.closest('.cd-row');
@@ -4441,7 +4395,6 @@ function mechaHeroDetail(id) {
 function mechaUnitDetail(kind, side) {
   const u = UNITS[kind];
   const kit = kind === 'bunker' ? bunkerNoteRow()
-    : kind === 'civilian' ? civFactionToggle(side) + civNoteRow() + civProfGrid()
       : unitWeaponList(kind).map((w, i) => unitWeaponRow(w, i)).join('');
   return `<div class="unit-name">${esc(u.name)} <span class="dim">${esc(sideName(side))} ・ ${esc(unitClassLabel(kind))}</span></div>
     <div class="cd-stats">${unitStatCells(kind)}</div>
@@ -4454,13 +4407,12 @@ function refreshMechaScope(mount) {
   if (st.tab === 'hero') st.tab = 'steelHero';   // 舊版四頁籤遷移
   if (st.tab === 'faction') st.tab = st.unitSide === 'SWARM' ? 'swarmUnit' : 'steelUnit';
   if (!st.tab || !MECHA_TABS.some(([k]) => k === st.tab)) st.tab = 'steelHero';
-  if (st.unitSide === 'CIV') st.unitSide = 'STEEL';
+  if (!UNIT_SIDES.includes(st.unitSide)) st.unitSide = 'STEEL';
   if (isMechaHeroTab(st.tab)) {
     const want = MECHA_HERO_SIDE[st.tab];
     if (st.sel.type !== 'char' || CHARACTERS[st.sel.id]?.side !== want)
       st.sel = { type: 'char', id: mechaHeroIds(st.tab)[0], side: mechaHeroViewSide(st.tab) };
   }
-  if (st.tab === 'civ' && (st.sel.type !== 'unit' || st.sel.kind !== 'civilian')) st.sel = { type: 'unit', kind: 'civilian', side: 'CIV' };
   if (MECHA_TAB_UNIT_SIDE[st.tab]) st.unitSide = MECHA_TAB_UNIT_SIDE[st.tab];
   if (isMechaUnitTab(st.tab)) {
     const sides = MECHA_TAB_SIDES[st.tab];
@@ -4523,11 +4475,10 @@ function refreshMechaScope(mount) {
     mb.hidden = charKind(st.sel.id) !== 'morph'; mb.textContent = '✈ 變形';
     run.style.display = '';
   } else {
-    const civ = st.sel.kind === 'civilian';
-    const mside = civ ? (app.civFaction || 'STEEL') : st.sel.side;
+    const mside = st.sel.side;
     detail.innerHTML = mechaUnitDetail(st.sel.kind, mside);
     st.weapons = unitWeaponList(st.sel.kind);
-    st.preview.setUnit(st.sel.kind, mside, app.civProf || 0);
+    st.preview.setUnit(st.sel.kind, mside);
     mb.hidden = true;
     run.style.display = 'none';
   }

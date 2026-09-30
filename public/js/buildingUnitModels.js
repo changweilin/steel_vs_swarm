@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { SIDES } from './data.js';
 import { mat, bx, cyl, sph, torus, dim, rbz } from './geo3d.js';
 import { outlinify } from './toon.js';
+import { recoilMount } from './unitRig.js';
 
 const TAU = Math.PI * 2;
 
@@ -81,10 +82,7 @@ function addStrut(parent, a, b, r, color, opts) {
   return m;
 }
 
-/**
- * 防禦塔固定介面。塔頂座圈嚴格位於全高 92%，供 models.js 掛載 yaw 砲塔；
- * 塔身結構則由國家／型號資料列分流，蜂群走外露桁架、鋼鐵走實心砲廓。
- */
+/** The seat and articulated head share the body's model-space scale. */
 function buildTower(side) {
   const frame = BUILDING_UNIT_MODELS.tower;
   const spec = frame.sides[side] || frame.sides.STEEL;
@@ -140,7 +138,14 @@ function buildTower(side) {
       { emissive: accent, emissiveIntensity: 0.78 });
   }
 
+  // Fit the complete articulated tower once; fitting the body alone buried the head in its deck.
+  const turret = buildBuildingUnitTurret(side, { outline: false });
+  turret.position.y = seatY;
+  g.add(turret);
   g.userData.turretSeatF = frame.turretSeatF;
+  g.userData.turret = turret;
+  g.userData.turretMuzzles = turret.userData.muzzles;
+  g.userData.rig = { kind: 'static', attacks: turret.userData.attacks };
   g.userData.modelLanguage = spec.language;
   g.userData.modelReference = spec.reference;
   return g;
@@ -148,6 +153,7 @@ function buildTower(side) {
 
 function buildBase(spec, side) {
   const g = new THREE.Group();
+  g.userData.rig = { kind: 'static', attacks: [] };
   const accent = accentOf(side);
   const top = spec.top;
 
@@ -206,24 +212,56 @@ function buildBase(spec, side) {
   return g;
 }
 
-/** 建立塔身或主堡；未知鍵回傳 null，讓既有備援鏈決定降級。 */
+/** Build the complete tower or base body; unknown keys retain the existing fallback. */
 export function buildBuildingUnit(kind, side) {
   if (kind === 'tower') return buildTower(side);
   const spec = BUILDING_UNIT_MODELS[kind];
   return spec ? buildBase(spec, side) : null;
 }
 
+// The battery stays a separate scene tree for the existing damage/teardown path.
+export function buildBaseBattery(side, bodyHeight = 0) {
+  const g = new THREE.Group();
+  g.position.y = bodyHeight * 0.58;
+  const spec = BUILDING_UNIT_MODELS[`base:${side}`] || BUILDING_UNIT_MODELS['base:STEEL'];
+  const pivots = [], muzzles = [], attacks = [];
+  for (const x of [10, -10]) {
+    const yaw = new THREE.Group();
+    yaw.position.set(x, 0, 6);
+    g.add(yaw);
+    bx(yaw, 4, 4, 5, 0, 0, 0, spec.body, { metalness: 0.7 });
+    const pitch = new THREE.Group();
+    pitch.rotation.x = -0.14;
+    yaw.add(pitch);
+    const barrel = cyl(pitch, 1.1, 1.4, 16, 12, 0, 0, 8, spec.dark, { metalness: 0.8 });
+    barrel.rotation.x = Math.PI / 2;
+    const muzzle = new THREE.Group();
+    muzzle.position.z = 15.6;
+    pitch.add(muzzle);
+    attacks.push(recoilMount(pitch, [barrel, muzzle], [muzzle], 1.8, 0.045));
+    yaw.userData.pitch = pitch;
+    pivots.push(yaw);
+    muzzles.push(muzzle);
+  }
+  g.userData.pivots = pivots;
+  g.userData.muzzles = muzzles;
+  g.userData.attacks = attacks;
+  outlinify(g);
+  return g;
+}
+
 /**
  * 建立防禦塔旋轉頭。回傳 yaw 根節點，並維持現役 API：
  * `yaw.userData.pitch` 是俯仰樞軸、`yaw.userData.muzzles` 是沿局部 +z 的槍口陣列。
  */
-export function buildBuildingUnitTurret(side) {
+export function buildBuildingUnitTurret(side, { outline = true } = {}) {
   const swarm = side === 'SWARM';
   const spec = BUILDING_UNIT_MODELS.tower.sides[swarm ? 'SWARM' : 'STEEL'];
   const accent = accentOf(side);
   const yaw = new THREE.Group();
   const pitch = new THREE.Group();
   const muzzles = [];
+  const attacks = [];
 
   addFacet(yaw, spec, swarm ? 1.5 : 1.7, swarm ? 2.1 : 2.3, 0.9, 0.45, spec.dark,
     { metalness: 0.7 });
@@ -244,6 +282,7 @@ export function buildBuildingUnitTurret(side) {
       }
     }
     sph(pitch, 0.38, 0, 0.95, 1.15, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    attacks.push(recoilMount(pitch, [...pitch.children], muzzles, 0.4, 0.07));
   } else {
     // 雙軌砲：砲尾、套筒、砲口皆由同一 x 座標派生，接點不靠手猜。
     bx(pitch, 3.8, 1.45, 3.3, 0, 0, 0.55, spec.body, { metalness: 0.7 });
@@ -256,15 +295,17 @@ export function buildBuildingUnitTurret(side) {
         { emissive: accent, emissiveIntensity: 0.72 });
       muzzle.rotation.x = Math.PI / 2;
       muzzles.push(muzzle);
+      attacks.push(recoilMount(pitch, [sleeve, barrel, muzzle], [muzzle], 0.85));
     }
     bx(pitch, 0.18, 0.9, 1.4, 0, 1.05, 1.2, accent,
       { emissive: accent, emissiveIntensity: 0.72 });
   }
 
   yaw.userData.pitch = pitch;
+  yaw.userData.attacks = attacks;
   yaw.userData.muzzles = muzzles;
   yaw.userData.muzzleAxis = '+z';
   yaw.userData.modelReference = spec.reference;
-  outlinify(yaw, 0.1);
+  if (outline) outlinify(yaw, 0.1);
   return yaw;
 }

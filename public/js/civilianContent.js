@@ -1,0 +1,38 @@
+// Presentation catalog; reward families remain in data.js.
+export const CIVILIAN_OCCUPATIONS = Object.freeze([
+  ['醫師', '急診醫師', '復健醫師', '牙醫'],
+  ['工程師', '土木工程師', '機械工程師', '測量員'],
+  ['商人', '採購員', '房仲', '物流專員'],
+  ['廚師', '烘焙師', '甜點師', '咖啡師'],
+  ['電工', '水電技師', '配線員', '電梯技師'],
+  ['教師', '圖書館員', '音樂教師', '研究助理'],
+  ['農夫', '園藝師', '果農', '養蜂人'],
+  ['記者', '攝影師', '剪輯師', '紀錄片工作者'],
+  ['郵差', '快遞員', '倉管員', '送貨員'],
+  ['建築工', '木工', '泥作師傅', '油漆工'],
+  ['護理師', '照服員', '助產師', '居家護理師'],
+  ['藥師', '檢驗師', '營養師', '藥劑助理'],
+  ['銀行員', '理財專員', '出納員', '保險專員'],
+  ['程式設計師', '網管工程師', '遊戲開發者', '資安工程師'],
+  ['會計師', '記帳員', '審計員', '行政專員'],
+  ['律師', '法務助理', '公證人', '調解員'],
+  ['獸醫', '動物照護員', '寵物美容師', '野生動物救傷員'],
+  ['技師', '汽修師傅', '冷氣技師', '自行車技師'],
+  ['攤販', '花店店員', '書店店員', '市集店主'],
+  ['心理師', '社工', '輔導員', '職能治療師'],
+].map(Object.freeze));
+
+export const CIVILIAN_OPTIONS = Object.freeze({
+  gender: ['male', 'female', 'nonbinary'],
+  ethnicity: ['eastAsian', 'southeastAsian', 'southAsian', 'westAsian', 'african', 'european', 'latinAmerican', 'mixed'],
+  hairStyle: ['cropped', 'sidepart', 'bob', 'long', 'ponytail', 'bun', 'curly', 'afro', 'braids', 'mohawk', 'bald', 'wavy'],
+  hairColor: [0x191512, 0x34241c, 0x68422d, 0xb27e44, 0xd7bc7d, 0xa65336, 0x827874, 0xc9c7c2, 0x4d355f, 0x344f64],
+  skinColor: [0xffd8be, 0xefc5a1, 0xdbaf88, 0xc78d65, 0xae7550, 0x8e5d3b, 0x70472f, 0x4d3024],
+  clothing: ['professional', 'shirt', 'jacket', 'hoodie', 'sweater', 'vest', 'coat', 'overalls'],
+  bottoms: ['trousers', 'jeans', 'shorts', 'skirt'],
+  headwear: ['none', 'none', 'cap', 'beanie', 'brimmed'],
+  accessory: ['none', 'glasses', 'sunglasses', 'scarf', 'backpack', 'crossbody', 'earrings', 'necklace'],
+  footwear: ['sneakers', 'boots', 'loafers', 'sandals'],
+  facialHair: ['none', 'none', 'stubble', 'moustache', 'beard'],
+  palette: [0x667487, 0x8a6658, 0x6c7455, 0x836f8d, 0x5d7c79, 0x8b7b55, 0xb07764, 0xc6bba1, 0x464858, 0x9d5471, 0x46677b, 0xc4a359],
+});

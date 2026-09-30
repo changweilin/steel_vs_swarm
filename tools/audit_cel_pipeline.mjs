@@ -812,7 +812,7 @@ console.log('\nⅨ 溶入的材質契約(④-2)+ 地貌分區子帶(①-3)');
     && /m\.transparent \|\| seen\.has\(m\) \|\| !m\.userData\?\.celOpts/.test(T)
     && /applyCelPatch\(m, \{ \.\.\.m\.userData\.celOpts, dissolve: true \}\)/.test(T),
     '溶解 define 事後只掛已走 cel 的不透明材質(alpha 特效不復辟第二份淡出)');
-  ok(/makeUnit\(kind, side, \{ ring = true, ch = null, dissolve = false \}/.test(code(models))
+  ok(/makeUnit\(kind, side, \{[^}]*\bdissolve = false\b[^}]*\}/.test(code(models))
     && /if \(dissolve\) enableDissolve\(g\);/.test(code(models))
     && /dissolve: true/.test(G),
     '只有戰場 makeUnit 開溶解材質;圖鑑 / 機體台不多編一組 shader');

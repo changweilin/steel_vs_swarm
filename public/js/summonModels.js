@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { bx, cyl, sph, cone, torus, mat, dim, rbz } from './geo3d.js';
 import { SOLDIER_H } from './data.js';
+import { partJoint, limbChain, recoilMount } from './unitRig.js';
 
 const TAU = Math.PI * 2;
 
@@ -97,12 +98,16 @@ export function buildDroneWingman(side) {
   muzzle.position.set(0, -0.12, 1.0);
   g.add(muzzle);
 
-  g.userData.turret = turretBall;
+  const tilt = partJoint(g, 'airframe', [0, 0, 0], [...g.children]);
+  const emitter = partJoint(tilt, 'emitter', [0, 0, 0], [turretBall, muzzle]);
+  const attack = recoilMount(emitter, [...emitter.children], [muzzle], 0.055, 0.015);
   g.userData.turretMuzzles = [muzzle];
   g.userData.muzzle = muzzle;
   g.userData.rig = {
     kind: 'aerial',
-    tilt: g,
+    tilt,
+    attacks: [attack],
+    weap: { light: 'N', heavy: 'N' },
     tiltY0: 0,
     muzzles: { light: { n: muzzle, r: 0.15 } },
   };
@@ -203,7 +208,7 @@ export function buildAssaultRover(side) {
   turret.userData.pitch = pitch;
 
   // 雙聯砲管與砲口制退器
-  const muzzles = [];
+  const muzzles = [], attacks = [];
   for (const bxOff of [-0.18, 0.18]) {
     const barrel = cyl(pitch, 0.065, 0.075, 1.15, 8, bxOff, 0, 0.55, cFrame, { metalness: 0.85 });
     barrel.rotation.x = Math.PI / 2;
@@ -214,6 +219,7 @@ export function buildAssaultRover(side) {
     mzNode.position.set(bxOff, 0, 1.18);
     pitch.add(mzNode);
     muzzles.push(mzNode);
+    attacks.push(recoilMount(pitch, [barrel, brake, mzNode], [mzNode], 0.2));
   }
 
   g.userData.turret = turret;
@@ -221,6 +227,8 @@ export function buildAssaultRover(side) {
   g.userData.wheels = wheels;
   g.userData.rig = {
     kind: 'wheeled',
+    attacks,
+    weap: { light: 'N', heavy: 'N' },
     hull,
     hullY0: 0,
     wheels,
@@ -320,7 +328,7 @@ export function buildHeliSquad(side) {
   }
 
   // 短翼與微型火箭巢 (Dual wingstub micro-rocket pods)
-  const muzzles = [];
+  const muzzles = [], attacks = [];
   for (const sx of [-1, 1]) {
     // 短翼
     const stubWing = bx(fuselage, 0.85, 0.08, 0.42, sx * 0.95, 0.95, 0.35, cOlive);
@@ -328,6 +336,7 @@ export function buildHeliSquad(side) {
     bx(stubWing, 0.88, 0.1, 0.08, 0, 0, 0.18, cGold);
 
     // 火箭巢發射筒 (微型火箭彈筒)
+    const start = fuselage.children.length;
     const pod = cyl(fuselage, 0.28, 0.32, 1.05, 8, sx * 1.35, 0.82, 0.42, cDark);
     pod.rotation.x = Math.PI / 2;
     // 前端多孔端蓋
@@ -346,12 +355,15 @@ export function buildHeliSquad(side) {
     mz.position.set(sx * 1.35, 0.82, 1.05);
     fuselage.add(mz);
     muzzles.push(mz);
+    attacks.push(recoilMount(fuselage, fuselage.children.slice(start), [mz], 0.16));
   }
 
   g.userData.spin = spinRotors;
   g.userData.turretMuzzles = muzzles;
   g.userData.rig = {
     kind: 'aerial',
+    attacks,
+    weap: { light: 'N', heavy: 'N' },
     tilt: fuselage,
     tiltY0: 0,
     muzzles: { light: { n: muzzles[0], r: 0.2 } },
@@ -461,6 +473,8 @@ export function buildMainBattleTank(side) {
   g.userData.wheels = wheels;
   g.userData.rig = {
     kind: 'tracked',
+    attacks: [recoilMount(pitch, [...pitch.children], [muzzle], 0.45)],
+    weap: { light: 'N', heavy: 'N' },
     hull,
     hullY0: 0,
     wheels,
@@ -584,14 +598,19 @@ export function buildVeteranSquad(side) {
   g.userData.turretMuzzles = [muzzle];
   g.userData.rig = {
     kind: 'biped',
+    legChainL: limbChain(legL, -0.43, -0.85, 2),
+    legChainR: limbChain(legR, -0.43, -0.85, 2),
+    armChainL: limbChain(armL, -0.36),
+    armChainR: limbChain(armR, -0.36),
+    attacks: [recoilMount(gunR, [...gunR.children], [muzzle], 0.08)],
     hips,
     legL,
     legR,
     armL,
     armR,
     gunArm: true,
-    gunR: { g: gunR, rest: 0, aim: 0.45 },
-    aimPose: { rShoulderX: -0.45 },
+    gunR: { g: gunR, rest: 0, aim: 1.1 },
+    aimPose: { rShoulderX: -0.45, rElbowX: -0.65 },
     weap: { light: 'R', heavy: 'R' },
     hipsY0: 0.95,
     muzzles: { light: { n: muzzle, r: 0.12 } },
@@ -691,13 +710,15 @@ export function buildCarnivalHeli(side) {
 
   // 旋轉火箭彈筒 (Revolving rocket canister on stub pylons)
   bx(tilt, 1.85, 0.12, 0.45, 0, 0.95, 0.35, cBathtub);
-  const muzzles = [];
+  const muzzles = [], attacks = [];
 
   for (const sx of [-1, 1]) {
     const canisterGroup = new THREE.Group();
     canisterGroup.position.set(sx * 1.15, 0.88, 0.35);
     tilt.add(canisterGroup);
-    spinList.push(canisterGroup); // 火箭彈筒亦可自旋
+    // Spin around the bore, so rotation cannot swing the tubes away from their muzzle.
+    canisterGroup.userData.spinAxis = 'z';
+    spinList.push(canisterGroup);
 
     // 6 管旋轉筒體
     const podBody = cyl(canisterGroup, 0.32, 0.32, 1.1, 8, 0, 0, 0, cOrange);
@@ -717,12 +738,15 @@ export function buildCarnivalHeli(side) {
     mzNode.position.set(sx * 1.15, 0.88, 0.95);
     tilt.add(mzNode);
     muzzles.push(mzNode);
+    attacks.push(recoilMount(tilt, [canisterGroup, mzNode], [mzNode], 0.2, 0.06));
   }
 
   g.userData.spin = spinList;
   g.userData.turretMuzzles = muzzles;
   g.userData.rig = {
     kind: 'aerial',
+    attacks,
+    weap: { light: 'N', heavy: 'N' },
     tilt,
     tiltY0: 0,
     muzzles: { light: { n: muzzles[0], r: 0.22 } },

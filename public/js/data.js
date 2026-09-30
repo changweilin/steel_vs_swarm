@@ -3,6 +3,7 @@
 // 模式沿用 ai_tycoon:server 直接 import '../public/js/data.js'。
 import { BOT_POLICY } from './botPolicy.js';   // 電腦玩家學習策略(工具產出;見檔尾 BOT_LEARN 區塊)
 import { balanceMul, upgradeCurveMul } from './balancePrefs.js';
+import { mulberry32 } from './rng.js';
 
 export { balanceMul, upgradeCurveMul };
 
@@ -3182,6 +3183,15 @@ export const TARGET_H = {
  * MUST NOT 只拿單位底部(腳下光圈)當唯一取樣點:26m 高的塔被打中塔頂、10m 機甲被爆頭,
  * 若量到腳底就會落在爆風衰減帶外 = 打中了卻不痛。伺服器 sim._blast / _lanceHits 唯一入口。
  */
+// Per-entity body dimensions are shared by visual fitting and authoritative hit tests.
+export function civilianBody(seed = 0) {
+  const random = mulberry32((seed >>> 0) ^ 0x63766264);
+  const heightScale = 0.88 + random() * 0.28;
+  const waistCm = 62 + random() * 70;
+  const widthScale = 0.82 + (waistCm - 62) / 70 * 0.52;
+  return { heightScale, waistCm, widthScale, radiusScale: heightScale * widthScale };
+}
+
 export function hitH(e) {
   if (!e) return SOLDIER_H;
   if (e.kind === 'mapbuilding') return e.mapBounds?.h || 1;
@@ -3190,7 +3200,7 @@ export function hitH(e) {
     return heroTargetH(e.kind, e.ch) * scale * superScaleF(e.sv ?? e.upg?.super);
   }
   if (e.kind === 'base') return TARGET_H[`base:${e.side}`] ?? 46;
-  if (e.civ) return TARGET_H.civ;
+  if (e.civ) return TARGET_H.civ * civilianBody(e.id).heightScale;
   return TARGET_H[`creep:${e.kind}`] ?? TARGET_H[e.kind] ?? SOLDIER_H * 1.6;
 }
 
@@ -3223,7 +3233,7 @@ export function hitR(e) {
     return heroTargetH(e.kind, e.ch) * (HERO_HIT_R[e.kind] ?? 0.43) * scale * superScaleF(e.sv ?? e.upg?.super);
   }
   if (e.kind === 'base') return TARGET_R[`base:${e.side}`] ?? 20;
-  if (e.civ) return TARGET_R.civ;
+  if (e.civ) return TARGET_R.civ * civilianBody(e.id).radiusScale;
   return TARGET_R[`creep:${e.kind}`] ?? TARGET_R[e.kind] ?? SOLDIER_H * 0.5;
 }
 

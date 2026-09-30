@@ -1,3 +1,4 @@
+import { generateCivilian } from './civilianAppearance.js';
 // ============ 戰鬥客戶端:第一人稱 無人機 vs 機甲 + DOTA 兵線 ============
 // 伺服器權威(HP/傷害/波次),客戶端負責:
 //  - 3D 渲染(地形 + 單位 + 特效)
@@ -41,6 +42,8 @@ import { detachMapBuilding, mapBuildingTarget } from './mapBuildingRender.js';
 import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree, isWeatherFrozen } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
+import { fireUnitMotion, stepUnitSpinners } from './unitMotion.js';
+import { buildBaseBattery } from './buildingUnitModels.js';
 import { lodStrideByD2, lodDue, GEO, geoTrimKeep, geoOutlineKeep, applyGeoLod } from './lod.js';
 import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep } from './cull.js';
 import { TEX_STREAM, finishTex, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, flushTexStream } from './tex.js';
@@ -4052,7 +4055,8 @@ export class BattleClient {
     // 平民:陣營看 cs(伺服器 side=null,讓兩陣營都能開槍),ch = 職業 index(選 buildCivilian 變體)
     // 餌機:不畫陣營光環(它是一枚飛行中的彈體,不是站在地上的單位)
     const { group, mixer } = makeUnit(key, civ ? e.cs : e.s,
-      { ch: civ ? e.pf : e.ch, ring: e.k !== 'decoy' && e.k !== 'kami' && e.k !== 'hyper', dissolve: true });
+      { ch: civ ? e.pf : e.ch, appearanceSeed: civ ? e.id : 0,
+        ring: e.k !== 'decoy' && e.k !== 'kami' && e.k !== 'hyper', dissolve: true });
     if (e.k === 'kami') group.scale.setScalar(SQUAD.KAMI.SIZE_F);   // 護衛自殺機衝出:SIZE_F(1/2)體型
     if (e.bs != null) group.scale.setScalar(bossScaleF(e.bs));      // NPC BOSS 階段體型縮放
     if (e.sv != null) group.scale.setScalar(superScaleF(e.sv));   // 超級戰士升級體型(命中/碰撞同一把尺)
@@ -4071,7 +4075,8 @@ export class BattleClient {
     // 同類機種/陣營的原始體積純為確定性靜態幾何,透過快取消除每波小兵生成時數十毫秒的遍歷卡頓。
     const dimCache = (this._unitDimCache || (this._unitDimCache = new Map()));
     const dimKey = `${key}:${e.s}:${e.bs ?? ''}:${civ ? e.pf : (e.ch ?? '')}:${e.k === 'kami' ? 1 : 0}`;
-    let dims = dimCache.get(dimKey);
+    // Generated civilians have per-entity dimensions; do not grow the archetype cache with their IDs.
+    let dims = civ ? null : dimCache.get(dimKey);
     if (!dims) {
       const bb = new THREE.Box3();
       const bbT = new THREE.Box3();
@@ -4087,7 +4092,7 @@ export class BattleClient {
         dimH: bb.max.y - bb.min.y,
         dimR: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2,
       };
-      dimCache.set(dimKey, dims);
+      if (!civ) dimCache.set(dimKey, dims);
     }
     const isBoss = (e.bs != null) || !!(this.cfg?.defSide && e.s === this.cfg.defSide && hero);
     const ent = {
@@ -4208,31 +4213,12 @@ export class BattleClient {
     const eb = this.cfg.bases?.[foe];
     let dirX = 0, dirZ = 1;
     if (eb) { const [ex, ez] = llToWorld(eb[0], eb[1], this.center); dirX = ex - wx; dirZ = ez - wz; }
-    const g = new THREE.Group();
-    g.position.set(wx, box.min.y + bh * 0.58, wz);
-    g.rotation.y = Math.atan2(dirX, dirZ);   // 本地 +z = 朝敵方
-    const barrelGeo = new THREE.CylinderGeometry(1.1, 1.4, 16, 12).rotateX(Math.PI / 2).translate(0, 0, 8);
-    const mountGeo = new THREE.BoxGeometry(4, 4, 5);
-    const barMat = toonMat(0x2e343c, { celMetal: true });
-    const mntMat = toonMat(0x3a4048, { celMetal: true });
-    ent.gunPivots = [];    // 每門砲的 yaw 樞軸(_aimBaseGuns 轉向攻擊目標)
-    ent.gunMuzzles = [];   // 砲口節點(shot 事件曳光起點;gi 對應 sim _tickBaseGuns 的砲序)
-    for (const sx of [10, -10]) {
-      const c = new THREE.Group();
-      c.position.set(sx, 0, 6);
-      const mount = new THREE.Mesh(mountGeo, mntMat);
-      const barrel = new THREE.Mesh(barrelGeo, barMat);
-      barrel.rotation.x = -0.14;   // 略微仰角
-      c.userData.barrel = barrel;  // 後座上撇用(_aimBaseGuns)
-      const mz = new THREE.Group();
-      mz.position.set(0, 0, 15.6);
-      barrel.add(mz);
-      c.add(mount); c.add(barrel);
-      g.add(c);
-      ent.gunPivots.push(c);
-      ent.gunMuzzles.push(mz);
-    }
-    outlinify(g);
+    const g = buildBaseBattery(e.s, bh);
+    g.position.set(wx, box.min.y + g.position.y, wz);
+    g.rotation.y = Math.atan2(dirX, dirZ);
+    ent.gunPivots = g.userData.pivots;
+    ent.gunMuzzles = g.userData.muzzles;
+    ent.mesh.userData.rig = { kind: 'static', attacks: g.userData.attacks };
     this.scene.add(g);
     ent.guns = g;
   }
@@ -5163,7 +5149,8 @@ export class BattleClient {
     } else if (ev.e === 'civaid') {
       // 我方跟隨平民每 3 分提供的物資(依職業)
       if (ev.pid === this.youId) {
-        const nm = CIVILIANS[ev.prof]?.name || '平民';
+        const nm = ev.id == null ? (CIVILIANS[ev.prof]?.name || '平民')
+          : generateCivilian(ev.id, ev.prof).occupation;
         const msg = ev.r === 'medkit' ? `急救包(裝甲 +${ev.hp}・護盾 +${ev.sp})`
           : ev.r === 'battery' ? `電池(電力 +${ev.mp}・冷卻 −${ev.cd}s)`
             : `資金(+$${ev.v})`;
@@ -5474,10 +5461,12 @@ export class BattleClient {
         const style = unitShotStyle(kind, wid);
         if (ent) {
           ent._aimAt = { x: tx, z: tz, y: to.y, until: t0 + 2.5 };   // 交戰面向:槍口朝攻擊方向
-          if (ent.isStatic) ent._turKick = 1;                // 塔/主堡:砲塔後座
-          else {
-            ent.fireFx = { t0, slot: style.mode === 'gun' || style.mode === 'beam' ? 'light' : 'heavy' };
-            if (ent.mesh.userData.turret) ent._turKick = 1;  // 車載砲塔:砲管另補上撇後座
+          ent.fireFx = { t0, slot: style.mode === 'gun' || style.mode === 'beam' ? 'light' : 'heavy' };
+          const muzzle = ent.kind === 'base' ? ent.gunMuzzles?.[ev.gi ?? 0]
+            : ent.mesh.userData.turretMuzzles?.[ent._mzi] || ent.mesh.userData.rig?.muzzles?.light?.n;
+          fireUnitMotion(ent.mesh.userData.rig, muzzle, t0);
+          if (ent.kind === 'base') {
+            (ent._gunAim ??= [])[ev.gi ?? 0] = { x: tx, z: tz, y: to.y, until: t0 + 3 };
           }
         }
         const { col, hot } = this._shotCols(ev.side);
@@ -7731,13 +7720,7 @@ export class BattleClient {
       }
       if (ent.kind === 'base') {
         const mz = ent.gunMuzzles?.[ev.gi ?? 0];
-        if (mz) {
-          // 記下本發目標:_updateEnts 把該門砲管平滑轉向它(槍口朝攻擊方向)
-          const tox = ev.to ? ev.to[0] : (ev.tx ?? 0);
-          const toz = ev.to ? -ev.to[1] : -(ev.tz ?? 0);
-          (ent._gunAim ??= [])[ev.gi ?? 0] = { x: tox, z: toz, until: performance.now() / 1000 + 3 };
-          return mz.getWorldPosition(new THREE.Vector3());
-        }
+        if (mz) return mz.getWorldPosition(new THREE.Vector3());
       } else {
         const mz = ent.mesh.userData.rig?.muzzles?.light;
         if (mz?.n) return mz.n.getWorldPosition(new THREE.Vector3());
@@ -10330,7 +10313,7 @@ export class BattleClient {
       const p = aim || (t.isSelf ? this.pos : t.mesh.position);
       const dx = p.x - ent.mesh.position.x, dz = p.z - ent.mesh.position.z;
       wantYaw = Math.atan2(dx, dz);
-      const turY = ent.mesh.position.y + tur.position.y;
+      const turY = tur.getWorldPosition(_TMP_A).y;
       wantPitch = Math.atan2(((p.y ?? turY - 2) + 2) - turY, Math.hypot(dx, dz));
     } else {
       wantYaw = tur.rotation.y + dt * 2;   // 警戒掃描
@@ -10341,32 +10324,29 @@ export class BattleClient {
     tur.rotation.y += wrap(wantYaw - tur.rotation.y) * lerpFPS(4, dt);
     const pit = tur.userData.pitch;
     pit.rotation.x += (-wantPitch - pit.rotation.x) * lerpFPS(4, dt);
-    // 開火後座(shot 事件標記 _turKick):砲管上撇一記、指數回穩
-    if (ent._turKick > 0.01) {
-      pit.rotation.x -= ent._turKick * 0.07;
-      ent._turKick *= Math.max(0, 1 - dt * 5);
-    }
   }
 
   /** 主堡兩門大砲追瞄:shot 事件記下各門砲的攻擊目標(_gunAim),砲管平滑轉向它;
-   *  逾時回正朝敵方主堡(建置時的 rest 朝向)。後座共用 _turKick(雙砲齊仰)。 */
+   *  Each gun tracks its own event target; recoil lives below the pitch joint. */
   _aimBaseGuns(ent, dt, now) {
     const g = ent.guns;
     if (!g || !ent.gunPivots) return;
     const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
     ent.gunPivots.forEach((c, i) => {
       const aim = ent._gunAim?.[i];
-      let wantLocal = 0;   // 無目標:回正 = 建置朝向(敵方主堡)
+      let wantLocal = 0, wantPitch = -0.14;
       if (aim && now < aim.until) {
-        const world = Math.atan2(aim.x - g.position.x, aim.z - g.position.z);
+        const origin = c.getWorldPosition(_TMP_A);
+        const dx = aim.x - origin.x, dz = aim.z - origin.z;
+        const world = Math.atan2(dx, dz);
         wantLocal = wrap(world - g.rotation.y);
+        wantPitch = -Math.max(-Math.PI / 6, Math.min(Math.PI / 3,
+          Math.atan2((aim.y ?? origin.y) - origin.y, Math.hypot(dx, dz))));
       }
       c.rotation.y += wrap(wantLocal - c.rotation.y) * lerpFPS(3, dt);
+      const pitch = c.userData.pitch;
+      pitch.rotation.x += (wantPitch - pitch.rotation.x) * lerpFPS(3, dt);
     });
-    if (ent._turKick > 0.01) {
-      for (const c of ent.gunPivots) c.userData.barrel.rotation.x = -0.14 - ent._turKick * 0.06;
-      ent._turKick *= Math.max(0, 1 - dt * 5);
-    }
   }
 
   /**
@@ -10398,11 +10378,6 @@ export class BattleClient {
       const arc = ent._arcPitch && now < ent._arcPitch.until ? ent._arcPitch.v : null;
       const wp = Math.max(-Math.PI / 6, Math.min(Math.PI / 3, arc ?? wantPitch));
       pit.rotation.x += (-wp - pit.rotation.x) * lerpFPS(4, dt);
-      // 開火後座(shot 事件標 _turKick):砲管上撇一記、指數回穩(同塔砲語意)
-      if (ent._turKick > 0.01) {
-        pit.rotation.x -= ent._turKick * 0.06;
-        ent._turKick *= Math.max(0, 1 - dt * 5);
-      }
     }
   }
 
@@ -10488,6 +10463,7 @@ export class BattleClient {
           ent._lodAcc = 0;
           if (ent.kind === 'tower') this._aimTurret(ent, acc, now);
           if (ent.kind === 'base') this._aimBaseGuns(ent, acc, now);
+          stepCombatFx(ent, now, acc);
           if (ent.bar) ent.bar.lookAt(camP);
           this._updateStatusFx(ent, acc, now);
         }
@@ -11348,14 +11324,14 @@ export class BattleClient {
     this.terrain.biomesUpdate?.(dt);   // 地貌動態物件(火車 / 瀑布)
     for (const m of this.mixers) m.update(dt);
     for (const g of this.spinners) {
-      for (const p of g.userData.spin) p.rotation.y += dt * 40;
+      stepUnitSpinners(g.userData.spin, dt);
     }
     // 座艙:旋翼恆轉、撲翼拍動、型態切換、槍身後坐回彈、槍口焰熄滅
     if (this.cockpit) {
       const ct = (this._cockT += dt);
       // 自轉件是**真品旋翼的複本**(_cockBody 以自轉節點為樞軸複製)⇒ 轉速 MUST 與第三人稱
       // 那一條(上面的 `spinners`)同值,否則同一具旋翼在座艙裡與世界裡轉得不一樣快。
-      for (const p of this.cockpitSpin) p.rotation.y += dt * 40;
+      stepUnitSpinners(this.cockpitSpin, dt);
       for (const f of this.cockpitFlap) f.o.rotation[f.ax] = f.base + f.amp * Math.sin(ct * f.hz * 6.283 + f.ph);
       this._syncCockpitWeapon();
       this.weaponKick = Math.max(0, this.weaponKick - dt * 9);

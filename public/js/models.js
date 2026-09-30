@@ -8,7 +8,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import {
   SIDES, CHARACTERS, recoilTier, THIRD, isThirdSide, sideInfo, CIVILIANS,
-  SOLDIER_H, MORPH_HUMANOID, heroTargetH, TARGET_H,
+  SOLDIER_H, MORPH_HUMANOID, heroTargetH, TARGET_H, civilianBody,
 } from './data.js';
 import { toonify, outlinify, enableDissolve } from './toon.js';
 import { heroPalette, paintUnit, paintFactionUnit } from './paint.js';
@@ -1954,7 +1954,7 @@ const FALLBACK = {
   'creep:heli': (side) => buildNpcModel('creep:heli', side),
   bunker: (side) => buildNpcModel('bunker', side),
   // 平民/間諜(ch = 職業 index;陣營靠 side 決定 teamRing,外觀共用不分間諜)
-  civ: (side, vis, ch) => buildNpcModel('civ', side, { profile: ch | 0 }),
+  civ: (side, vis, ch, appearanceSeed) => buildNpcModel('civ', side, { profile: ch | 0, appearanceSeed }),
   tower: (side) => buildBuildingUnit('tower', side),
   'base:SWARM': () => buildBuildingUnit('base:SWARM', 'SWARM'),
   'base:STEEL': () => buildBuildingUnit('base:STEEL', 'STEEL'),
@@ -2145,11 +2145,12 @@ function flagTrimDetail(root) {
  * kind: 'hero:drone' | 'hero:robot' | 'creep:soldier' | 'creep:apc' | 'creep:tank' | 'tower' | 'base:SWARM' | 'base:STEEL'
  * opts.ch:英雄角色 id — 依 CHARACTERS[ch].visual 生成專屬機體(主色/機架/掛件)。
  */
-export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false } = {}) {
+export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false, appearanceSeed = 0 } = {}) {
   const vis = ch && CHARACTERS[ch] ? CHARACTERS[ch].visual : null;
   // 英雄體型綁角色護甲(heroTargetH 內含獸型矮化);其餘查表
   const heroKind = kind.startsWith('hero:') ? (ch && CHARACTERS[ch]?.kind ? CHARACTERS[ch].kind : kind.slice(5)) : null;
-  const target = heroKind ? heroTargetH(heroKind, ch) : (TARGET_H[kind] || 4);
+  const target = heroKind ? heroTargetH(heroKind, ch)
+    : kind === 'civ' ? TARGET_H.civ * civilianBody(appearanceSeed).heightScale : (TARGET_H[kind] || 4);
   // 2026-08-14:**英雄機體一律走 forge**(新版建模全面替換舊版)—— GLB 覆蓋
   // (MODEL_MANIFEST_EXTRA)與舊程序建構器都不再參與 hero 分支;舊建模只留在機體台。
   const forged = heroKind && ch ? forgeHero(heroKind, ch, side) : null;
@@ -2199,7 +2200,7 @@ export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false 
     }
   } else {
     const build = FALLBACK[kind] || FALLBACK['creep:apc'];
-    const built = build(side, vis, ch);
+    const built = build(side, vis, ch, appearanceSeed);
     // 角色性格花紋(paint.js):MUST 在 fitToHeight/outlinify 之前 —— 靜止姿勢矩陣才是
     // 花紋的錨(縮放後仍成立:矩陣取的是「相對 built 根」的局部變換);描邊外殼不吃塗裝。
     if (vis) paintUnit(built, vis, side, 'light');
@@ -2210,6 +2211,7 @@ export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false 
     fitToHeight(built, target);
     outlinify(built, outlineW(target));
     g.add(built);
+    if (built.userData.appearance) g.userData.appearance = built.userData.appearance;
     if (built.userData.spin) g.userData.spin = built.userData.spin;
     // 車載砲塔(坦克):提上外層 group,game.js _aimVehicleTurret 才找得到
     if (built.userData.turret) g.userData.turret = built.userData.turret;
@@ -2258,14 +2260,14 @@ export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false 
     g.userData.decoyPod = pod;
   }
 
-  // 防禦塔:頂部加程序砲塔頭(每幀追蹤目標;見 game.js _aimTurret)
-  if (kind === 'tower') {
+  // Optional GLB tower bodies still need the procedural weapon assembly.
+  if (kind === 'tower' && !g.userData.turret) {
     const turret = buildBuildingUnitTurret(side);
     turret.position.y = target * 0.92;
     g.add(turret);
     g.userData.turret = turret;
-    // 砲口節點(shot 事件曳光起點/開火閃;鋼鐵雙管/蜂群六管輪替)
-    g.userData.turretMuzzles = turret.userData.muzzles || null;
+    g.userData.turretMuzzles = turret.userData.muzzles;
+    g.userData.rig = { kind: 'static', attacks: turret.userData.attacks };
   }
 
   if (ring) g.add(teamRing(side, Math.max(1.1, target * 0.55)));
