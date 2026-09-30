@@ -61,30 +61,69 @@ try {
     const fire = buildHazard('fire', 42, 6); fire.position.set(23, 0, 5); scene.add(fire);
     stepFireVisual(fire, 3, 0, {});
     if ([...fire.userData.flames, ...fire.userData.smoke].some(n => n.visible)) throw new Error('Extinguished fire still emits smoke/flames');
-    const captures = [];
-    for (const [name, state] of Object.entries({ dry: {}, puddles: { water: .42 }, rain: { water: .9 }, draining: { water: .22 }, snow: { snow: .95 }, sand: { sand: .95 } })) {
+    const captures = [], growth = [];
+    const duneMesh = scene.children.find(n => n.isMesh && n !== ground && n !== road && n !== building && n !== unit);
+    const positions = duneMesh.geometry.attributes.position;
+    const duneHeights = () => {
+      const heights = new Map();
+      for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i) + duneMesh.position.x, z = positions.getZ(i) + duneMesh.position.z;
+        if (Math.abs(x) <= 60 && Math.abs(z) <= 60) heights.set(`${x},${z}`, positions.getY(i));
+      }
+      return heights;
+    };
+    for (const [name, state] of Object.entries({ dry: {}, puddles: { water: .42 }, rain: { water: .9 }, draining: { water: .22 }, snow: { snow: .95 },
+      sand_early: { sand: .28 }, sand_growing: { sand: .6 }, sand: { sand: .95 } })) {
+      if (state.sand) {
+        camera.position.set(42, 18, 68); camera.lookAt(0, 2, 0); camera.updateMatrixWorld(); updateCelLight(camera);
+        light.position.set(-48, 24, 20);
+      }
       setSurfaceWeather(state); dunes.update(1, camera, state);
-      if (name === 'sand') {
-        const duneMesh = scene.children.find(n => n.isMesh && n !== ground && n !== road && n !== building && n !== unit);
-        const positions = duneMesh.geometry.attributes.position;
+      if (state.sand) {
         for (let i = 0; i < positions.count; i++) {
           const x = positions.getX(i) + duneMesh.position.x, z = positions.getZ(i) + duneMesh.position.z;
           if (Math.abs(x + 24) < 10 && Math.abs(z + 12) < 11 && positions.getY(i) > 0) throw new Error('Dunes entered a sheltered building footprint');
         }
+        const heights = duneHeights();
+        const previous = growth.at(-1);
+        if (previous && [...heights].some(([key, height]) => height < previous.heights.get(key) - 1e-5)) throw new Error('Accumulation shrank a dune');
+        const raised = [...heights.values()].filter(h => h > .05);
+        growth.push({ name, heights, coverage: raised.length / heights.size, peak: Math.max(...raised) });
       }
       stepFireVisual(fire, 3, state.water || state.snow ? 0 : 1.3, { wind: 80, windDir: [1, .2] });
       pipeline.render();
       captures.push({ name, image: renderer.domElement.toDataURL() });
     }
+    const [early, growing, mature] = growth;
+    if (!(early.coverage > 0 && early.coverage < .15 && early.peak > .1 && early.peak < 1)) throw new Error('Early sand must form sparse small geometry');
+    if (!(growing.coverage > early.coverage * 3 && mature.coverage > .75 && mature.peak > 5 && mature.peak > growing.peak * 1.5)) throw new Error('Dunes must spread and develop large relief');
+    camera.position.x += 24; dunes.update(1, camera, { sand: .95 });
+    for (const [key, height] of duneHeights()) {
+      if (Math.abs(height - mature.heights.get(key)) > 1e-5) throw new Error('Camera movement reseeded dune geometry');
+    }
+    camera.position.x -= 24; dunes.update(1, camera, { sand: .95 });
+    const lowScene = new THREE.Scene(), lowDunes = makeWeatherDeposits(lowScene, terrain, { lowPower: true,
+      surface: (x, z) => Math.abs(x + 24) < 10 && Math.abs(z + 12) < 11 ? 18 : 0 });
+    lowDunes.update(1, camera, { sand: .95 });
+    const lowMesh = lowScene.children[0], lowPositions = lowMesh.geometry.attributes.position;
+    for (let i = 0; i < lowPositions.count; i++) {
+      const x = lowPositions.getX(i) + lowMesh.position.x, z = lowPositions.getZ(i) + lowMesh.position.z;
+      if (Math.abs(x) <= 60 && Math.abs(z) <= 60 && Math.abs(lowPositions.getX(i)) <= 72 && Math.abs(lowPositions.getZ(i)) <= 72
+        && Math.abs(lowPositions.getY(i) - mature.heights.get(`${x},${z}`)) > 1e-5) throw new Error('Low-power mode changed dune geometry');
+    }
+    lowDunes.dispose();
+    camera.position.set(42, 42, 58); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(); updateCelLight(camera);
+    light.position.set(-30, 60, 20);
     setSurfaceWeather({}); dunes.update(1, camera, {});
     atlas.sync([{ x: -24, y: 18, z: 12, r: 5 }]); syncLightningScorch(ent, true);
     pipeline.render(); captures.push({ name: 'lightning', image: renderer.domElement.toDataURL() });
     const programs = renderer.info.programs.map(p => ({ runnable: p.diagnostics?.runnable, log: p.diagnostics?.programLog }));
     releaseLightningScorch(ent); dunes.dispose(); atlas.dispose(); disposeTree(scene); pipeline.dispose(); renderer.dispose();
-    return { captures, programs };
+    return { captures, programs, growth: growth.map(({ name, coverage, peak }) => ({ name, coverage, peak })) };
   });
   assert.deepEqual(errors, []);
   assert(result.programs.every(p => p.runnable !== false), JSON.stringify(result.programs));
+  console.log('Dune growth:', result.growth);
   await mkdir('out/weather_review', { recursive: true });
   const { writeFile } = await import('node:fs/promises');
   for (const capture of result.captures) await writeFile(`out/weather_review/${capture.name}.png`, Buffer.from(capture.image.split(',')[1], 'base64'));

@@ -130,8 +130,7 @@ export const WEATHER_MATERIAL_COLOR = /* glsl */`
   float rippleDistance = abs(length(fract(rippleUv) - 0.5) - rippleAge * 0.6);
   float ripple = (1.0 - smoothstep(0.01, 0.03, rippleDistance)) * (1.0 - rippleAge) * step(0.65, rippleSeed);
   diffuseColor.rgb += wet * (0.05 + ripple * 0.035);
-  float ridge = 0.92 + 0.08 * sin(vCelWP.x * 2.0 + sin(vCelWP.z * 0.5) * 3.0);
-  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.57, 0.39, 0.19) * ridge, sand * 0.93);
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.57, 0.39, 0.19), sand * 0.93);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.82, 0.89, 0.95), snow * 0.97);
   diffuseColor.rgb *= 1.0 - weatherScorch(vCelWP) * 0.92;
 }
