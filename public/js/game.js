@@ -48,6 +48,7 @@ import { buildBaseBattery } from './buildingUnitModels.js';
 import { lodStrideByD2, lodDue, GEO, geoTrimKeep, geoOutlineKeep, applyGeoLod } from './lod.js';
 import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep, scopeRadiusPx } from './cull.js';
 import { TEX_STREAM, finishTex, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, notePageDemand, flushTexStream } from './tex.js';
+import { DRS, drsComplexity, drsEffectiveMs, drsStepDown, drsHoldS, drsRecoverLoMs } from './taa.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
@@ -619,22 +620,23 @@ const TOUCH_DPR_MAX = 1.5;
 // 自動的。桌機恆能撐滿檔時 `_resScale` 一路停在 1 ⇒ **逐位元同舊制**(升階分支在
 // `_resScale < 1` 就早退,一次 `setPixelRatio` 都不會打)。
 const RES_GOV = {
-  MIN: 0.7,        // 縮放下限(乘在 _dpr() 天花板上):再糊就影響瞄準辨識,寧可掉幀
-  STEP: 0.1,       // 每次調整一階(drawing buffer 重配有成本,小步走 + 冷卻防震盪)
-  HI_MS: 20,       // 平均幀時 > 20ms(< 50fps)⇒ 降一階
-  LO_MS: 17.2,     // 平均幀時 < 17.2ms(60Hz vsync 滿速)⇒ 有餘裕,升一階
-  HOLD_S: 0.8,     // 任兩次調整的最小間隔(也給 EMA 重新收斂的時間)
-  COOL_S: 3,       // 升階基礎冷卻(降階只吃 HOLD_S:掉幀要快救,畫質可以慢慢還)
-  FAIL_S: 6,       // 升階後這麼久內又被打回 ⇒ 判定「上不去」,升階冷卻翻倍
-  COOL_MAX: 24,    // 升階冷卻上限(避免在能力邊界永久震盪,也不至於永不再試)
-  SPIKE_MS: 80,    // 單幀尖峰(GC / 資源載入 / 分頁切回)不入帳,只看穩態
-  EMA: 0.1,        // 指數移動平均權重(時間常數約 10 幀)
+  ...DRS,
+  MIN: DRS.MIN,        // 縮放下限(乘在 _dpr() 天花板上):再糊就影響瞄準辨識,寧可掉幀
+  STEP: DRS.STEP,      // 每次調整基礎一階(drawing buffer 重配有成本,小步走 + 冷卻防震盪)
+  HI_MS: DRS.HI_MS,    // 平均幀時 > 20ms(< 50fps)⇒ 降階
+  LO_MS: DRS.LO_MS,    // 平均幀時 < 17.2ms(60Hz vsync 滿速)⇒ 有餘裕,升一階
+  HOLD_S: DRS.HOLD_S,  // 任兩次調整的基礎最小間隔(也給 EMA 重新收斂的時間)
+  COOL_S: DRS.COOL_S,  // 升階基礎冷卻(降階只吃 HOLD_S:掉幀要快救,畫質可以慢慢還)
+  FAIL_S: DRS.FAIL_S,  // 升階後這麼久內又被打回 ⇒ 判定「上不去」,升階冷卻翻倍
+  COOL_MAX: DRS.COOL_MAX, // 升階冷卻上限(避免在能力邊界永久震盪,也不至於永不再試)
+  SPIKE_MS: DRS.SPIKE_MS, // 單幀尖峰(GC / 資源載入 / 分頁切回)不入帳,只看穩態
+  EMA: DRS.EMA,        // 指數移動平均權重(時間常數約 10 幀)
   // **震盪熄火**:方向反轉這麼多次就永久停手,停在當下那一階。指數退避拉長的是「多久
   // 再試一次」,它救不了「這台機器的能力剛好卡在兩階之間」—— 那種機器上升降會一直交替,
   // 而每一次調整都要重配 drawing buffer(整條後製鏈的 RT 跟著重建)。與其永遠付那個成本,
   // 不如認賠停在一階。⚠ 熄火 MUST NOT 順手把 `_resScale` 拉回 1:那等於把玩家丟回撐不住
   // 的那一階,而且下一輪又會降下來 —— 熄火要的是「停在現在這裡」。
-  FLIP_MAX: 4,
+  FLIP_MAX: DRS.FLIP_MAX,
 };
 
 export class BattleClient {
@@ -919,12 +921,13 @@ export class BattleClient {
     // —— 那是像素比改變不是視窗改變,沒有連發問題,也不該多等 50~500ms。
     this._offResize = onViewportSettled(this._onResize);
 
-    // 賽璐璐後製管線(勾線 → 調色 → FXAA);開關見上方 `off()`。
+    // 賽璐璐後製管線(勾線 → 景深 → 調色 → TAA → FXAA);開關見上方 `off()`。
     // 低功耗/觸控走 8bit RT(半浮點在 tile GPU 上是頻寬成本,與關 MSAA 同一個瓶頸)。
     this.pipeline = off('post') ? null : new Pipeline(this.renderer, this.scene, this.camera, {
-      ink: !off('ink'), dof: !off('dof'), grade: !off('grade'), fxaa: !off('fxaa'),
+      ink: !off('ink'), dof: !off('dof'), grade: !off('grade'), taa: !off('taa'), fxaa: !off('fxaa'),
       lowPower: lowPower() || isTouchUI(),
     });
+    this.pipeline?.setResScale?.(this._resScale);
     // 景深的兩個轉折點:**一律到 data.js 取**(由全場最遠交戰距離推導),game.js MUST NOT
     // 自己乘 sight / 射程 —— 第二份實作的症狀是「射程調了之後遠景糊的距離沒跟著走」,
     // 而那要等到有人抱怨「打得到卻看不清楚」才會發現。與機種無關(交戰上界是全場的性質:
@@ -3556,12 +3559,28 @@ export class BattleClient {
   /** 像素比落地的唯一出口:天花板 `_dpr()` × 動態縮放 `_resScale`(桌機恆為 1)*/
   _applyRes() {
     this.renderer.setPixelRatio(this._dpr() * this._resScale);
+    this.pipeline?.setResScale?.(this._resScale);
     this._onResize();
   }
 
   /**
-   * 自適應解析度調節器(**全平台**;每幀餵入未夾制的原始幀時)。
-   * 規則:EMA 幀時 > HI_MS 降一階、< LO_MS 升一階;降階只受 HOLD_S 節流(掉幀要快救),
+   * 畫面複雜度取樣(0~1):聚合 WebGL 繪製呼叫數、三角形數、同場實體與粒子特效壓力。
+   * 供 DRS(_tickResGov)在畫面複雜度飆升且幀率下滑時加速降解析度穩幀。
+   */
+  _sceneComplexity() {
+    const ren = this.renderer?.info?.render;
+    return drsComplexity({
+      calls: ren?.calls || 0,
+      triangles: ren?.triangles || 0,
+      entities: this.ents?.size || 0,
+      effects: (this.effects?.length || 0) + (this.bullets?.length || 0) + (this._visShells?.length || 0),
+    }, RES_GOV);
+  }
+
+  /**
+   * 動態解析度調節器(DRS,**全平台**;每幀餵入未夾制的原始幀時與畫面複雜度)。
+   * 規則:結合畫面複雜度加權後的 EMA 幀時 > HI_MS 動態降階(重度複雜度 + 嚴重掉幀可跨雙階、縮短觀察窗)、
+   * < 複雜度調變後之 LO_MS 升一階;降階只受 HOLD_S 節流(掉幀要快救),
    * 升階吃指數退避(升上去 FAIL_S 內又被打回 ⇒ 冷卻翻倍),避免在 GPU 能力邊界反覆震盪。
    * 尖峰幀(GC / 載入 / 分頁切回的補償幀)不入帳 —— 調節器只回應穩態負載。
    * 退避仍壓不住(方向反轉累計 FLIP_MAX 次)⇒ **永久熄火**,停在當下那一階。
@@ -3574,14 +3593,18 @@ export class BattleClient {
     const g = this._resGov;
     if (!g || g.off || !(ms > 0) || ms > RES_GOV.SPIKE_MS) return;
     if (typeof document !== 'undefined' && document.hidden) return;
-    g.ema += (ms - g.ema) * RES_GOV.EMA;
-    if (now - g.last < RES_GOV.HOLD_S) return;
+    const complexity = this._sceneComplexity();
+    g.complexity = complexity;
+    const effMs = drsEffectiveMs(ms, complexity, RES_GOV);
+    g.ema += (effMs - g.ema) * RES_GOV.EMA;
+    if (now - g.last < drsHoldS(g.ema, complexity, RES_GOV)) return;
     let dir = 0;
     if (g.ema > RES_GOV.HI_MS && this._resScale > RES_GOV.MIN) {
-      this._resScale = Math.max(RES_GOV.MIN, +(this._resScale - RES_GOV.STEP).toFixed(2));
+      const stepDown = drsStepDown(g.ema, complexity, RES_GOV);
+      this._resScale = Math.max(RES_GOV.MIN, +(this._resScale - stepDown).toFixed(2));
       if (now - g.raiseAt < RES_GOV.FAIL_S) g.cool = Math.min(RES_GOV.COOL_MAX, g.cool * 2);
       dir = -1;
-    } else if (g.ema < RES_GOV.LO_MS && this._resScale < 1 && now - g.last >= g.cool) {
+    } else if (g.ema < drsRecoverLoMs(complexity, RES_GOV) && this._resScale < 1 && now - g.last >= g.cool) {
       this._resScale = Math.min(1, +(this._resScale + RES_GOV.STEP).toFixed(2));
       g.raiseAt = now;
       dir = 1;
