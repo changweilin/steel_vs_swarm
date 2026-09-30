@@ -3,11 +3,11 @@
 import assert from 'node:assert/strict';
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { chromiumOrNull, chromePath, serve } from './pw.mjs';
+import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
 import { readSrc, grabMethod } from './audit_src.mjs';
 
 const chromium = await chromiumOrNull();
-assert.ok(chromium, 'Playwright is required for rig verification');
+if (!chromium) skipNoPlaywright('單位骨架運動瀏覽器量測');
 const server = await serve();
 let browser;
 try {

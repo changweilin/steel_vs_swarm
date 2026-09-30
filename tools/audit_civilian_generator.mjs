@@ -6,7 +6,7 @@ import path from 'node:path';
 import { generateCivilian } from '../public/js/civilianAppearance.js';
 import { CIVILIAN_OPTIONS, CIVILIAN_OCCUPATIONS } from '../public/js/civilianContent.js';
 import { CIVILIANS, hitH, hitR } from '../public/js/data.js';
-import { chromiumOrNull, chromePath, serve } from './pw.mjs';
+import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
 import { readSrc } from './audit_src.mjs';
 
 assert.equal(CIVILIAN_OCCUPATIONS.length, CIVILIANS.length);
@@ -40,7 +40,7 @@ const main = readSrc('public', 'js', 'main.js');
 assert.ok(!/data-civprof|data-civfac|\['civ',\s*'平民'\]/.test(main), 'civilian encyclopedia controls removed');
 
 const chromium = await chromiumOrNull();
-assert.ok(chromium, 'Playwright is required');
+if (!chromium) skipNoPlaywright('平民生成器瀏覽器量測');
 const server = await serve();
 let browser;
 try {
