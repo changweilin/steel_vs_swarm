@@ -51,6 +51,9 @@ import { visualPref, onVisualChange } from './visualPrefs.js';
 import { INK_UNPACK_GLSL } from './toon.js';
 import { renderStyleIndex } from './toon.js';
 import { DOF, WIPE, combatReachM, wipeAt } from './data.js';
+import {
+  TAA, taaJitterPx, taaProjectionOffset, taaBlendAlpha, taaSharpenWeight,
+} from './taa.js';
 
 // ---- 勾線資訊緩衝(2026-08-12;材質端的契約住 `toon.js` 的同名段)----
 // 第二張附件帶著**視空間法線與 surfaceId**,補上深度看不見的那些線(牆腳與地面、退縮平台的
@@ -268,8 +271,8 @@ export class Pipeline {
     this.camera = camera;
     this.enabled = {
       ink: opts.ink !== false, dof: opts.dof !== false,
-      grade: opts.grade !== false, fxaa: opts.fxaa !== false,
-      wipe: opts.wipe !== false,
+      grade: opts.grade !== false, taa: opts.taa !== false,
+      fxaa: opts.fxaa !== false, wipe: opts.wipe !== false,
     };
     // 半浮點 RT 在 tile GPU 上是**頻寬**成本(與 game.js 關 MSAA 同一個瓶頸)⇒ 低功耗走 8bit。
     // 8bit 線性緩衝在暗部會有輕微色帶,但那遠比掉幀好。
@@ -292,18 +295,31 @@ export class Pipeline {
     this.rtScene = this._mkRT(true);
     this.rtA = this._mkRT(false);
     this.rtB = this._mkRT(false);
+    this.rtHistA = this._mkRT(false);
+    this.rtHistB = this._mkRT(false);
 
     this.inkQuad = new FullScreenQuad(this._inkMaterial());
     // 取樣數折半走與 8bit RT 同一條降級規則(tile GPU 的瓶頸是頻寬,而這一 pass 對焦外
     // 的每個像素都是 1 + n 次取樣)。展開在 shader 原始碼裡 ⇒ 兩者是不同的程式,不是分支。
     this.dofQuad = new FullScreenQuad(this._dofMaterial(opts.lowPower ? Math.max(2, DOF.TAPS >> 1) : DOF.TAPS));
     this.gradeQuad = new FullScreenQuad(this._gradeMaterial());
+    this.taaQuad = new FullScreenQuad(this._taaMaterial());
     this.fxaaQuad = new FullScreenQuad(this._fxaaMaterial());
     this.wipeQuad = new FullScreenQuad(this._wipeMaterial());
     this._quads = {
       ink: this.inkQuad, dof: this.dofQuad, grade: this.gradeQuad,
-      wipe: this.wipeQuad, fxaa: this.fxaaQuad,
+      taa: this.taaQuad, wipe: this.wipeQuad, fxaa: this.fxaaQuad,
     };
+    // 時間性抗鋸齒(TAA):歷史畫格雙緩衝與預先配置的相機重投影矩陣(零每幀配置)
+    this._taaOn = opts.taa !== false;
+    this._taaFrame = 0;
+    this._histIdx = 0;
+    this._taaHistValid = false;
+    this._resScale = 1;
+    this._currVP = new THREE.Matrix4();
+    this._prevVP = new THREE.Matrix4();
+    this._invCurrVP = new THREE.Matrix4();
+    this._reprojMat = new THREE.Matrix4();
     // 斜向轉場(序 8 ④-1)。同 `_dofRange` 的寧缺勿錯:沒有轉場在跑就**整個 pass 退出鏈**。
     this._wipeKnob = 0;    // = visualPref('wipe');0 ⇒ playWipe 同步走回呼、幕從不出現
     this._wipeA = 0;       // 這一幀有沒有東西要畫(閘門形狀逐字鏡射 dof 那一列)
@@ -1007,6 +1023,150 @@ export class Pipeline {
   }
 
   /**
+   * 同步動態解析度縮放比(_resScale)至 TAA pass:
+   * 當 DRS 調低渲染解析度時,自動提升時間性歷史權重與微反差銳化補償,以歷史畫格累積超解析度細節。
+   */
+  setResScale(scale) {
+    const s = Number.isFinite(scale) ? Math.max(0.5, Math.min(1, scale)) : 1;
+    this._resScale = s;
+    const u = this.taaQuad?.material?.uniforms;
+    if (u) {
+      u.uTaaAlpha.value = taaBlendAlpha(s, 0);
+      u.uTaaSharp.value = taaSharpenWeight(s);
+    }
+  }
+
+  /** 重置時間性歷史緩衝(場景跳切或瞬間傳送時避免單幀殘影) */
+  resetTaaHistory() {
+    this._taaHistValid = false;
+    this._taaFrame = 0;
+  }
+
+  /**
+   * 時間性抗鋸齒與超解析度細節重建(TAA):
+   *   1. 3D 深度重投影(Depth Reprojection):由當下像素深度與 uReprojMat(prevVP * invCurrVP)
+   *      反推該世界點在上一畫格的螢幕座標 prevUv。
+   *   2. YCoCg 3x3 變異數鄰域夾制(Variance Clipping):量測當下 3x3 鄰域的一階與二階統計動差,
+   *      依運動速度收緊容許包絡 gamma,根除快速轉頭與遮擋解除(Disocclusion)時的鬼影。
+   *   3. Karis 亮度權重混合 + DRS 自適應微反差銳化(Contrast-Adaptive Sharpening):
+   *      抑制次像素高光閃爍(Flicker),並在動態降解析度時補償取樣糊化。
+   */
+  _taaMaterial() {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        tColor: { value: null },
+        tHistory: { value: null },
+        tDepth: { value: null },
+        uTexel: { value: new THREE.Vector2() },
+        uNear: { value: 0.5 }, uFar: { value: 1000 },
+        uReprojMat: { value: new THREE.Matrix4() },
+        uJitterUv: { value: new THREE.Vector2() },
+        uTaaAlpha: { value: taaBlendAlpha(1, 0) },
+        uTaaSharp: { value: taaSharpenWeight(1) },
+        uTaaValid: { value: 0 },
+      },
+      vertexShader: QUAD_VS,
+      fragmentShader: `
+        uniform sampler2D tColor;
+        uniform sampler2D tHistory;
+        uniform sampler2D tDepth;
+        uniform vec2 uTexel;
+        uniform float uNear; uniform float uFar;
+        uniform mat4 uReprojMat;
+        uniform vec2 uJitterUv;
+        uniform float uTaaAlpha;
+        uniform float uTaaSharp;
+        uniform float uTaaValid;
+        varying vec2 vUv;
+
+        vec3 rgbToYCoCg( vec3 c ) {
+          return vec3(
+             0.25 * c.r + 0.5 * c.g + 0.25 * c.b,
+             0.5  * c.r             - 0.5  * c.b,
+            -0.25 * c.r + 0.5 * c.g - 0.25 * c.b
+          );
+        }
+
+        vec3 ycocgToRgb( vec3 y ) {
+          float tmp = y.x - y.z;
+          return vec3( tmp + y.y, y.x + y.z, tmp - y.y );
+        }
+
+        void main() {
+          // 當前畫格去除微幅次像素抖動偏移以還原銳利取樣基準
+          vec2 unjitterUv = clamp( vUv - uJitterUv, 0.0, 1.0 );
+          vec4 base = texture2D( tColor, unjitterUv );
+          if ( uTaaValid < 0.5 ) {
+            gl_FragColor = base;
+            return;
+          }
+
+          // 3D 相機運動重投影:重建 NDC 座標並投影至上一畫格 UV
+          float zTex = texture2D( tDepth, vUv ).x;
+          vec4 clipCurr = vec4( vUv * 2.0 - 1.0, zTex * 2.0 - 1.0, 1.0 );
+          vec4 clipPrev = uReprojMat * clipCurr;
+          vec2 prevNdc = clipPrev.xy / max( 1e-5, clipPrev.w );
+          vec2 prevUv = prevNdc * 0.5 + 0.5;
+
+          // 超出畫面邊界(新進場像素)直接採用當下畫格
+          if ( prevUv.x < 0.0 || prevUv.x > 1.0 || prevUv.y < 0.0 || prevUv.y > 1.0 ) {
+            gl_FragColor = base;
+            return;
+          }
+
+          // 3x3 鄰域取樣與 YCoCg 一階/二階動差統計(Variance-Guided Neighborhood Clamping)
+          vec2 tx = uTexel;
+          vec3 c00 = rgbToYCoCg( base.rgb );
+          vec3 cN  = rgbToYCoCg( texture2D( tColor, vUv + vec2(  0.0, -tx.y ) ).rgb );
+          vec3 cS  = rgbToYCoCg( texture2D( tColor, vUv + vec2(  0.0,  tx.y ) ).rgb );
+          vec3 cW  = rgbToYCoCg( texture2D( tColor, vUv + vec2( -tx.x,  0.0 ) ).rgb );
+          vec3 cE  = rgbToYCoCg( texture2D( tColor, vUv + vec2(  tx.x,  0.0 ) ).rgb );
+          vec3 cNW = rgbToYCoCg( texture2D( tColor, vUv + vec2( -tx.x, -tx.y ) ).rgb );
+          vec3 cNE = rgbToYCoCg( texture2D( tColor, vUv + vec2(  tx.x, -tx.y ) ).rgb );
+          vec3 cSW = rgbToYCoCg( texture2D( tColor, vUv + vec2( -tx.x,  tx.y ) ).rgb );
+          vec3 cSE = rgbToYCoCg( texture2D( tColor, vUv + vec2(  tx.x,  tx.y ) ).rgb );
+
+          vec3 m1 = c00 + cN + cS + cW + cE + cNW + cNE + cSW + cSE;
+          vec3 m2 = c00 * c00 + cN * cN + cS * cS + cW * cW + cE * cE
+                  + cNW * cNW + cNE * cNE + cSW * cSW + cSE * cSE;
+          vec3 mean = m1 / 9.0;
+          vec3 sigma = sqrt( max( vec3( 0.0 ), m2 / 9.0 - mean * mean ) );
+
+          // 依螢幕空間運動速率動態收緊變異數包絡,消除高速運動殘影
+          vec2 velUv = vUv - prevUv;
+          float uvSpeed = length( velUv );
+          float pxSpeed = length( velUv / max( tx, vec2( 1e-5 ) ) );
+          float gamma = mix( ${TAA.GAMMA_STATIC.toFixed(2)}, ${TAA.GAMMA_MOTION.toFixed(2)}, clamp( pxSpeed * 0.25, 0.0, 1.0 ) );
+
+          vec3 boxMin = mean - gamma * sigma;
+          vec3 boxMax = mean + gamma * sigma;
+
+          vec3 histYcc = rgbToYCoCg( texture2D( tHistory, prevUv ).rgb );
+          vec3 clampedHistYcc = clamp( histYcc, boxMin, boxMax );
+          vec3 histRgb = max( vec3( 0.0 ), ycocgToRgb( clampedHistYcc ) );
+
+          // 運動衰減歷史權重 + Karis 亮度反比壓制次像素高光閃爍
+          float alpha = clamp(
+            uTaaAlpha / ( 1.0 + uvSpeed * ${TAA.MOTION_SCALE.toFixed(1)} ),
+            ${TAA.MIN_ALPHA.toFixed(2)},
+            ${TAA.MAX_ALPHA.toFixed(2)}
+          );
+          float wCurr = ( 1.0 - alpha ) / ( 1.0 + max( 0.0, c00.x ) );
+          float wHist = alpha / ( 1.0 + max( 0.0, clampedHistYcc.x ) );
+          vec3 resolved = ( base.rgb * wCurr + histRgb * wHist ) / max( 1e-5, wCurr + wHist );
+
+          // DRS 自適應對比度微銳化:補償時間性濾波與動態降解析度的取樣柔化,在強輪廓邊自動收斂不產生光暈
+          vec3 crossMeanYcc = 0.25 * ( cN + cS + cW + cE );
+          vec3 detailRgb = ycocgToRgb( vec3( c00.x - crossMeanYcc.x, 0.0, 0.0 ) );
+          float contrastGate = 1.0 - clamp( sigma.x * 3.2, 0.0, 0.85 );
+          resolved = max( vec3( 0.0 ), resolved + detailRgb * ( uTaaSharp * contrastGate ) );
+
+          gl_FragColor = vec4( resolved, base.a );
+        }`,
+    });
+  }
+
+  /**
    * 斜向轉場(序 8 ④-1)。**兩支獨立的 0→1 uniform** 而不是一支:
    * 幕的覆蓋區間是 `[w2, w1]` —— 遮幕推前緣、揭幕推後緣,同一支著色器兩種用法,
    * 而「幕走到一半停住」(過場載入)在這個形狀上是免費的。
@@ -1152,6 +1312,7 @@ export class Pipeline {
     const r = this.renderer;
     this.setSize();
     const texel = this._texelVec.set(1 / this._size.x, 1 / this._size.y);
+    const useTaa = !!(this.enabled.taa && this._taaOn);
     const chain = [];
     if (this.enabled.ink) chain.push('ink');
     // 景深 MUST 排在勾線**之後**(檔頭 ②:先糊後勾 = 糊掉的色塊配上銳利的黑線)。
@@ -1160,6 +1321,9 @@ export class Pipeline {
     // 退出時輸出**逐位元**同這一批改動之前 —— 一般視角因此完全不付這一 pass 的錢。
     if (this.enabled.dof && this._dofRange && this._dofA * this._dofBlend > 0) chain.push('dof');
     if (this.enabled.grade) chain.push('grade');
+    // 時間性抗鋸齒(TAA):排在調色(grade)之後、斜向轉場(wipe)與 FXAA 之前 ——
+    // 累積已完成勾線與色調映射的場景像素,且轉場黑幕不進歷史緩衝避免拖影。
+    if (useTaa) chain.push('taa');
     // 轉場 MUST 排在 **grade 之後、fxaa 之前**(序 8 ④-1)。四條理由缺一不可:
     //   ①FXAA MUST 留在鏈尾(它兼任線性 → sRGB);
     //   ②幕的斜邊是硬邊,擺在 FXAA **之前**才有抗鋸齒 —— 擺之後就是一條裸鋸齒對角線,
@@ -1176,6 +1340,28 @@ export class Pipeline {
     chain.push('fxaa');
     this.fxaaQuad.material.uniforms.uAA.value = this.enabled.fxaa ? 1 : 0;
 
+    // 計算無抖動基準 ViewProjection 矩陣並套用 Halton(2,3) 次像素投影微偏移;
+    // 場景繪製完成後 MUST 立即還原 projectionMatrix,確保準星射線、剔除與 HUD 投影零偏移。
+    const cam = this.camera;
+    const pe = cam?.projectionMatrix?.elements;
+    const p8 = pe ? pe[8] : 0, p9 = pe ? pe[9] : 0;
+    if (useTaa && pe && cam.matrixWorldInverse) {
+      this._currVP.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+      const [jx, jy] = taaJitterPx(this._taaFrame, this._resScale);
+      const [dxNdc, dyNdc] = taaProjectionOffset(jx, jy, this._size.x, this._size.y);
+      pe[8] = p8 + dxNdc;
+      pe[9] = p9 + dyNdc;
+      const tu = this.taaQuad.material.uniforms;
+      tu.uJitterUv.value.set(dxNdc * 0.5, dyNdc * 0.5);
+      this._invCurrVP.copy(this._currVP).invert();
+      if (this._taaHistValid) this._reprojMat.multiplyMatrices(this._prevVP, this._invCurrVP);
+      else this._reprojMat.identity();
+      tu.uReprojMat.value.copy(this._reprojMat);
+      tu.uTaaAlpha.value = taaBlendAlpha(this._resScale, 0);
+      tu.uTaaSharp.value = taaSharpenWeight(this._resScale);
+      tu.uTaaValid.value = this._taaHistValid ? 1 : 0;
+    }
+
     r.setRenderTarget(this.rtScene);
     r.clear();
     if (this._mrt) {
@@ -1186,12 +1372,14 @@ export class Pipeline {
       gl.clearBufferfv(gl.COLOR, 1, [0, 0, 0, 0]);
     }
     r.render(this.scene, this.camera);
+    if (useTaa && pe) { pe[8] = p8; pe[9] = p9; }
 
     let src = this.rtScene;
     for (let i = 0; i < chain.length; i++) {
+      const passName = chain[i];
       const last = i === chain.length - 1;
-      const dst = last ? null : (src === this.rtA ? this.rtB : this.rtA);
-      const quad = this._quads[chain[i]];
+      let dst = last ? null : (src === this.rtA ? this.rtB : this.rtA);
+      const quad = this._quads[passName];
       const u = quad.material.uniforms;
       // MRT 的 `.texture` 是**陣列**(第 0 張才是顏色)—— 直接餵整個陣列的話 three 會把它
       // 當成一張沒有 image 的貼圖丟給 sampler,畫面整片黑而沒有任何錯誤訊息。
@@ -1205,6 +1393,23 @@ export class Pipeline {
       }
       // 勾線淡出帶(④-3):與 tDepth 同一段共用接線 —— 天氣 / 隊制一換,霧遠端跟著換
       if (u.uFade0) { const fade = this._inkFadeM(); u.uFade0.value = fade[0]; u.uFade1.value = fade[1]; }
+      if (passName === 'taa') {
+        const histRead = this._histIdx === 0 ? this.rtHistA : this.rtHistB;
+        const histWrite = this._histIdx === 0 ? this.rtHistB : this.rtHistA;
+        const w = Math.max(1, this._size.x), h = Math.max(1, this._size.y);
+        // 延遲調整寫入端尺寸:讓讀取端 histRead 在 DRS 升降解析度過渡幀仍保有上一幀像素內容(硬體雙線性重取樣)
+        if (histWrite.width !== w || histWrite.height !== h) histWrite.setSize(w, h);
+        u.tHistory.value = histRead.texture;
+        dst = last ? null : histWrite;
+        r.setRenderTarget(dst);
+        quad.render(r);
+        src = dst || src;
+        this._prevVP.copy(this._currVP);
+        this._histIdx ^= 1;
+        this._taaHistValid = true;
+        this._taaFrame = (this._taaFrame + 1) & 0x7fffffff;
+        continue;
+      }
       r.setRenderTarget(dst);
       quad.render(r);
       src = dst || src;
@@ -1213,15 +1418,15 @@ export class Pipeline {
   }
 
   /**
-   * A25:3 個 RT + depthTexture + **`_quads` 那張表上的每一支**全螢幕材質,一個都不能漏
-   * (拉桿訂閱也要退掉)。名冊由 `_quads` **推導** —— 手寫的那一份會在加 pass 時靜默過期,
-   * 而漏掉一支的症狀是每開一場漏一支 shader program,`audit_gpu_lifecycle` 照樣全綠。
+   * A25:5 個 RT(含 TAA 雙歷史緩衝)+ depthTexture + **`_quads` 那張表上的每一支**全螢幕材質,
+   * 一個都不能漏(拉桿訂閱也要退掉)。名冊由 `_quads` **推導** —— 手寫的那一份會在加 pass 時
+   * 靜默過期,而漏掉一支的症狀是每開一場漏一支 shader program,`audit_gpu_lifecycle` 照樣全綠。
    */
   dispose() {
     this._offPrefs?.();   // 不解訂閱 = 已 dispose 的材質被拉桿的 closure 抓著不放
     this._offPrefs = null;
     this._wipe = null;    // 播到一半就離場:回呼跟著丟掉(它是幀迴圈驅動的,沒有計時器要清)
-    for (const rt of [this.rtScene, this.rtA, this.rtB]) {
+    for (const rt of [this.rtScene, this.rtA, this.rtB, this.rtHistA, this.rtHistB]) {
       rt.depthTexture?.dispose();
       rt.dispose();
     }
