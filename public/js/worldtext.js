@@ -39,7 +39,7 @@ import * as THREE from 'three';
 import { envMat } from './toon.js';
 import { visualPref } from './visualPrefs.js';
 import { pickName, pickRef } from './vernacular.js';
-import { MIP_ANISO, registerStreamTex } from './tex.js';
+import { MIP_ANISO, registerStreamTex, registerVirtualPages } from './tex.js';
 
 // ---- atlas ----
 const ATLAS_MAX = 2048;            // 單張畫布上限(行動裝置的實務底線)
@@ -226,7 +226,7 @@ export class SignSheet {
     cv.width = lay.W;
     cv.height = lay.H;
     const ctx = cv.getContext('2d');
-    const pos = [], nrm = [], uv = [], idx = [];
+    const pos = [], nrm = [], uv = [], idx = [], pages = [];
     let drawn = 0;
 
     this.items.forEach((it, i) => {
@@ -238,6 +238,11 @@ export class SignSheet {
       const u0 = (r.x + 0.5) / cv.width, u1 = (r.x + r.w - 0.5) / cv.width;
       const v1 = 1 - (r.y + 0.5) / cv.height, v0 = 1 - (r.y + r.h - 0.5) / cv.height;
       const w = it.h * signAspect(it.style);
+      pages.push({
+        px: r.x, py: r.y, pw: r.w, ph: r.h,
+        x: it.x, y: it.y, z: it.z,
+        r: Math.max(2, Math.hypot(w, it.h) * 0.5),
+      });
       const cos = Math.cos(it.ry), sin = Math.sin(it.ry);
       // 牌面在水平面上的「右」向量(法線 = (sin, 0, cos) 的水平垂直)
       const rx = cos, rz = -sin;
@@ -264,6 +269,7 @@ export class SignSheet {
     // 圖集**絕不可** Repeat:取樣溢出格緣會抓到隔壁那塊牌的字(半像素內縮是第二道防線)
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
     registerStreamTex(tex);
+    registerVirtualPages(tex, pages);
     tex.needsUpdate = true;
 
     const geo = new THREE.BufferGeometry();

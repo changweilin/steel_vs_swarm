@@ -41,7 +41,8 @@ export const TEX_STREAM = {
   ZOOM_F: 1.0,          // Sniper aimBlend extension: band * (1 + ZOOM_F * aimBlend)
   STRIDE: 4,            // Staggered evaluation cadence (frames; via lod.js lodDue)
   BUDGET_PER_TICK: 8,   // Max GPU texture re-allocations per frame (prevents upload spikes)
-  CELL_M: 64,           // Spatial grid cell size (m) for wide static / instanced meshes
+  CELL_M: 32,           // Spatial grid cell size (m) for wide static / instanced meshes
+  VIRTUAL_GRID: 4,      // Default virtual-texture tile grid per axis (4x4 = 16 pages)
 };
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v || 0);
@@ -199,7 +200,10 @@ export function registerStreamTex(tex, opts = {}) {
     return tex;
   }
   if (!tex.userData) tex.userData = {};
-  if (tex.userData.texStream) return tex;
+  if (tex.userData.texStream) {
+    if (Array.isArray(opts.pages) && opts.pages.length > 0) registerVirtualPages(tex, opts.pages);
+    return tex;
+  }
   const src = tex.image;
   if (!src || !(src.width > 0) || !(src.height > 0)) return tex;
   _applyTexDefaults(tex, opts);
@@ -222,6 +226,7 @@ export function registerStreamTex(tex, opts = {}) {
   const fullBytes = vramBytesOfChain(baseW, baseH, 0);
   const state = {
     id,
+    sourceImage: src,
     chain,
     baseW,
     baseH,
@@ -230,9 +235,15 @@ export function registerStreamTex(tex, opts = {}) {
     minD2: Infinity,
     visible: false,
     stamp: -1,
+    init: false,
     switches: 0,
     vramBytes: fullBytes,
     fullVramBytes: fullBytes,
+    pages: null,
+    pageCanvas: null,
+    pageActiveVramBytes: fullBytes,
+    pageFullVramBytes: fullBytes,
+    refresh: () => refreshStreamTex(tex),
   };
   Object.defineProperty(tex.userData, 'texStream', {
     value: state,
@@ -241,7 +252,185 @@ export function registerStreamTex(tex, opts = {}) {
     writable: true,
   });
   attachMipChain(tex, chain);
+  if (Array.isArray(opts.pages) && opts.pages.length > 0) {
+    registerVirtualPages(tex, opts.pages);
+  }
   return tex;
+}
+
+/**
+ * Rebuild a registered texture's mip chain after its source canvas is painted in place
+ * (e.g. `terrain.js` `carveTunnels` painting corridor strokes onto `imagery.canvas`).
+ */
+export function refreshStreamTex(tex) {
+  const st = tex?.userData?.texStream;
+  if (!st || !st.sourceImage) return false;
+  const chain = buildMipChain(st.sourceImage, MIP_MIN_SIZE);
+  if (chain.length === 0) return false;
+  st.chain = chain;
+  const curLvl = Math.max(0, Math.min(st.maxDrop, st.level | 0));
+  st.level = -1;
+  applyTexLevel(tex, curLvl);
+  return true;
+}
+
+/**
+ * Partition a world-mapped texture `(baseW, baseH)` over `bounds = { minX, maxX, minZ, maxZ }`
+ * into a `gridN x gridN` virtual page table (pure; deterministic, zero RNG).
+ */
+export function buildGridVirtualPages(
+  baseW,
+  baseH,
+  bounds,
+  gridN = TEX_STREAM.VIRTUAL_GRID,
+  opts = {},
+) {
+  const W = Math.max(1, baseW | 0), H = Math.max(1, baseH | 0);
+  const n = Math.max(1, gridN | 0);
+  const minX = +bounds?.minX || 0, maxX = +bounds?.maxX || 0;
+  const minZ = +bounds?.minZ || 0, maxZ = +bounds?.maxZ || 0;
+  const spanX = maxX - minX, spanZ = maxZ - minZ;
+  if (!(spanX > 0) || !(spanZ > 0)) return [];
+  const hAt = typeof opts.heightAt === 'function' ? opts.heightAt : null;
+  const projUV = typeof opts.projectUV === 'function'
+    ? opts.projectUV
+    : (x, z) => [(x - minX) / spanX, 1 - (z - minZ) / spanZ];
+  const pages = [];
+  for (let iz = 0; iz < n; iz++) {
+    const z0 = minZ + (spanZ * iz) / n;
+    const z1 = minZ + (spanZ * (iz + 1)) / n;
+    const cz = (z0 + z1) * 0.5;
+    for (let ix = 0; ix < n; ix++) {
+      const x0 = minX + (spanX * ix) / n;
+      const x1 = minX + (spanX * (ix + 1)) / n;
+      const cx = (x0 + x1) * 0.5;
+      const samples = [[x0, z0], [x1, z0], [x0, z1], [x1, z1], [cx, cz]];
+      let uLo = 1, uHi = 0, vLo = 1, vHi = 0;
+      let yLo = Infinity, yHi = -Infinity;
+      for (const [sx, sz] of samples) {
+        const uv = projUV(sx, sz);
+        const u = clamp01(uv ? uv[0] : 0);
+        const v = clamp01(uv ? uv[1] : 0);
+        if (u < uLo) uLo = u;
+        if (u > uHi) uHi = u;
+        if (v < vLo) vLo = v;
+        if (v > vHi) vHi = v;
+        const sy = hAt ? (+hAt(sx, sz) || 0) : 0;
+        if (sy < yLo) yLo = sy;
+        if (sy > yHi) yHi = sy;
+      }
+      if (!Number.isFinite(yLo)) { yLo = 0; yHi = 0; }
+      const cy = (yLo + yHi) * 0.5;
+      const r = Math.max(4, Math.hypot((x1 - x0) * 0.5, (yHi - yLo) * 0.5, (z1 - z0) * 0.5) + 2);
+      const px0 = Math.max(0, Math.min(W - 1, Math.floor(uLo * W)));
+      const px1 = Math.max(px0 + 1, Math.min(W, Math.ceil(uHi * W)));
+      const py0 = Math.max(0, Math.min(H - 1, Math.floor((1 - vHi) * H)));
+      const py1 = Math.max(py0 + 1, Math.min(H, Math.ceil((1 - vLo) * H)));
+      pages.push({
+        id: `tile_${ix}_${iz}`,
+        px: px0,
+        py: py0,
+        pw: px1 - px0,
+        ph: py1 - py0,
+        u0: uLo,
+        v0: vLo,
+        u1: uHi,
+        v1: vHi,
+        x: cx,
+        y: cy,
+        z: cz,
+        r,
+      });
+    }
+  }
+  return pages;
+}
+
+/**
+ * Attach virtual texture pages `[{ px, py, pw, ph, u0, v0, u1, v1, x, y, z, r }]`
+ * to a stream-registered texture so each UV / world region streams at its own
+ * camera-view and distance resolution tier.
+ */
+export function registerVirtualPages(tex, pages) {
+  const st = tex?.userData?.texStream;
+  if (!st || !Array.isArray(pages) || pages.length === 0) return tex;
+  const W = st.baseW, H = st.baseH;
+  const list = [];
+  let sumFull = 0;
+  for (let i = 0; i < pages.length; i++) {
+    const p = pages[i];
+    if (!p) continue;
+    let px = p.px, py = p.py, pw = p.pw, ph = p.ph;
+    if (!(pw > 0 && ph > 0)) {
+      const u0 = clamp01(Math.min(p.u0 ?? 0, p.u1 ?? 1));
+      const u1 = clamp01(Math.max(p.u0 ?? 0, p.u1 ?? 1));
+      const v0 = clamp01(Math.min(p.v0 ?? 0, p.v1 ?? 1));
+      const v1 = clamp01(Math.max(p.v0 ?? 0, p.v1 ?? 1));
+      px = Math.max(0, Math.min(W - 1, Math.floor(u0 * W)));
+      py = Math.max(0, Math.min(H - 1, Math.floor((1 - v1) * H)));
+      pw = Math.max(1, Math.min(W - px, Math.ceil((u1 - u0) * W)));
+      ph = Math.max(1, Math.min(H - py, Math.ceil((v1 - v0) * H)));
+    } else {
+      px = Math.max(0, Math.min(W - 1, px | 0));
+      py = Math.max(0, Math.min(H - 1, py | 0));
+      pw = Math.max(1, Math.min(W - px, pw | 0));
+      ph = Math.max(1, Math.min(H - py, ph | 0));
+    }
+    const minTilePx = Math.min(TEX_STREAM.MIN_RES_PX, Math.max(2, Math.min(pw, ph) >> st.maxDrop));
+    const pageMaxDrop = Math.min(st.maxDrop, streamMaxDrop(pw, ph, st.maxDrop, minTilePx));
+    const fullBytes = vramBytesOfChain(pw, ph, 0);
+    sumFull += fullBytes;
+    list.push({
+      id: p.id !== undefined ? p.id : `${st.id}_p${list.length}`,
+      index: list.length,
+      px,
+      py,
+      pw,
+      ph,
+      u0: px / W,
+      v0: 1 - (py + ph) / H,
+      u1: (px + pw) / W,
+      v1: 1 - py / H,
+      x: +p.x || 0,
+      y: +p.y || 0,
+      z: +p.z || 0,
+      r: Math.max(2, +p.r || 4),
+      level: 0,
+      maxDrop: pageMaxDrop,
+      minD2: Infinity,
+      visible: false,
+      stamp: -1,
+      switches: 0,
+      vramBytes: fullBytes,
+      fullVramBytes: fullBytes,
+    });
+  }
+  if (list.length > 0) {
+    st.pages = list;
+    st.pageFullVramBytes = sumFull || st.fullVramBytes;
+    st.pageActiveVramBytes = st.pageFullVramBytes;
+  }
+  return tex;
+}
+
+/**
+ * Record one virtual page's camera visibility and squared distance for `frame`.
+ * Also forwards demand to the parent texture so its base mip ceiling tracks the
+ * sharpest visible page.
+ */
+export function notePageDemand(tex, pageIndex, d2, visible, frame) {
+  const st = tex?.userData?.texStream;
+  const p = st?.pages?.[pageIndex | 0];
+  if (!p) return;
+  if (p.stamp !== frame) {
+    p.stamp = frame;
+    p.visible = !!visible;
+    p.minD2 = visible && d2 >= 0 ? d2 : Infinity;
+  } else if (visible) {
+    p.visible = true;
+    if (d2 >= 0 && d2 < p.minD2) p.minD2 = d2;
+  }
+  noteTexDemand(tex, d2, visible, frame);
 }
 
 /**
@@ -267,6 +456,89 @@ export function applyTexLevel(tex, targetLevel) {
   st.switches++;
   st.vramBytes = vramBytesOfChain(st.baseW, st.baseH, lvl);
   return true;
+}
+
+/**
+ * Evaluate and apply per-page resolution tiers for a virtual-paged texture.
+ * Pages inside the camera view load their distance-matched tier (`0 / 1 / 2`),
+ * while distant (`> FAR_M`) or invisible/culled/occluded pages drop to `maxDrop`.
+ */
+export function applyPageLevels(tex, aimBlend = 0, frame = -1) {
+  const st = tex?.userData?.texStream;
+  const pages = st?.pages;
+  if (!st || !Array.isArray(pages) || pages.length === 0) return 0;
+  let pageSwitched = 0;
+  let minLvl = st.maxDrop;
+  let maxLvl = 0;
+  let activePageBytes = 0;
+  for (let i = 0; i < pages.length; i++) {
+    const p = pages[i];
+    const vis = p.stamp === frame ? p.visible : false;
+    const d2 = vis ? p.minD2 : Infinity;
+    const target = streamTargetLevel(d2, vis, aimBlend, p.level, p.maxDrop);
+    if (target !== p.level) {
+      p.level = target;
+      p.vramBytes = vramBytesOfChain(p.pw, p.ph, target);
+      p.switches++;
+      pageSwitched++;
+    }
+    if (p.level < minLvl) minLvl = p.level;
+    if (p.level > maxLvl) maxLvl = p.level;
+    activePageBytes += p.vramBytes;
+  }
+  minLvl = Math.max(0, Math.min(st.maxDrop, minLvl));
+  st.pageActiveVramBytes = activePageBytes;
+  const lvlChanged = minLvl !== st.level;
+  if (!pageSwitched && !lvlChanged) return 0;
+
+  if (minLvl === maxLvl || typeof document === 'undefined') {
+    applyTexLevel(tex, minLvl);
+  } else {
+    const [rw, rh] = mipExtent(st.baseW, st.baseH, minLvl);
+    let cv = st.pageCanvas;
+    if (!cv || cv.width !== rw || cv.height !== rh) {
+      cv = document.createElement('canvas');
+      cv.width = rw;
+      cv.height = rh;
+      st.pageCanvas = cv;
+    }
+    const ctx = cv.getContext('2d');
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'low';
+      const bg = st.chain[Math.min(st.chain.length - 1, maxLvl)];
+      if (bg) ctx.drawImage(bg, 0, 0, rw, rh);
+      for (let lvl = maxLvl; lvl >= minLvl; lvl--) {
+        const srcImg = st.chain[Math.min(st.chain.length - 1, lvl)];
+        if (!srcImg) continue;
+        for (let i = 0; i < pages.length; i++) {
+          const p = pages[i];
+          if (p.level !== lvl) continue;
+          const sx = Math.floor(p.px / (2 ** lvl));
+          const sy = Math.floor(p.py / (2 ** lvl));
+          const sw = Math.max(1, Math.floor(p.pw / (2 ** lvl)));
+          const sh = Math.max(1, Math.floor(p.ph / (2 ** lvl)));
+          const dx = Math.floor(p.px / (2 ** minLvl));
+          const dy = Math.floor(p.py / (2 ** minLvl));
+          const dw = Math.max(1, Math.floor(p.pw / (2 ** minLvl)));
+          const dh = Math.max(1, Math.floor(p.ph / (2 ** minLvl)));
+          ctx.drawImage(srcImg, sx, sy, sw, sh, dx, dy, dw, dh);
+        }
+      }
+    }
+    const sub = buildMipChain(cv, MIP_MIN_SIZE);
+    if (lvlChanged && typeof tex.dispose === 'function') tex.dispose();
+    tex.image = sub[0];
+    attachMipChain(tex, sub);
+    st.level = minLvl;
+    st.switches++;
+  }
+  const ratio = st.pageFullVramBytes > 0 ? activePageBytes / st.pageFullVramBytes : 1;
+  st.vramBytes = Math.min(
+    vramBytesOfChain(st.baseW, st.baseH, minLvl),
+    Math.max(vramBytesOfChain(st.baseW, st.baseH, st.maxDrop), Math.round(st.fullVramBytes * ratio)),
+  );
+  return pageSwitched || (lvlChanged ? 1 : 0);
 }
 
 /**
@@ -346,7 +618,7 @@ export function meshStreamAnchors(mesh, cellM = TEX_STREAM.CELL_M) {
       me[2] * lx + me[6] * ly + me[10] * lz + me[14],
     ];
   };
-  const bucketPoints = (pts, baseR = 2) => {
+  const bucketPoints = (pts, baseR = 1.5) => {
     const cells = new Map();
     for (let i = 0; i < pts.length; i += 3) {
       const wx = pts[i], wy = pts[i + 1], wz = pts[i + 2];
@@ -389,13 +661,13 @@ export function meshStreamAnchors(mesh, cellM = TEX_STREAM.CELL_M) {
       const [wx, wy, wz] = transformPt(arr[base + 12], arr[base + 13], arr[base + 14]);
       pts.push(wx, wy, wz);
     }
-    if (pts.length > 0) return bucketPoints(pts, 4);
+    if (pts.length > 0) return bucketPoints(pts, 2.5);
   }
 
   const pos = mesh.geometry?.attributes?.position;
   if (pos && pos.count > 0) {
     const n = pos.count | 0;
-    const step = Math.max(1, Math.floor(n / 512));
+    const step = Math.max(1, Math.floor(n / 4096));
     const pts = [];
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (let i = 0; i < n; i += step) {
@@ -411,15 +683,15 @@ export function meshStreamAnchors(mesh, cellM = TEX_STREAM.CELL_M) {
     }
     if (pts.length > 0) {
       const span = Math.hypot(maxX - minX, maxY - minY, maxZ - minZ) * 0.5;
-      if (span <= cs) {
+      if (span <= cs * 0.5) {
         return [{
           x: (minX + maxX) * 0.5,
           y: (minY + maxY) * 0.5,
           z: (minZ + maxZ) * 0.5,
-          r: Math.max(2, span),
+          r: Math.max(1.5, span),
         }];
       }
-      return bucketPoints(pts, 4);
+      return bucketPoints(pts, 2);
     }
   }
 
@@ -449,10 +721,11 @@ export function noteTexDemand(tex, d2, visible, frame) {
 }
 
 /**
- * Evaluate registered textures for `frame` and apply resident mip switches.
+ * Evaluate registered textures for `frame` and apply resident mip / virtual-page switches.
  * - `opts.isDue`: stagger predicate `(frame, id, stride) => bool` (caller passes `lodDue`).
- * - `opts.forceAll`: bypass stagger and budget (used on frame 0 before first render
- *   so distant/off-screen textures never upload their full-res pyramid to VRAM).
+ * - `opts.forceAll`: bypass stagger and budget (used on frame 0 before first render).
+ * - Newly registered textures (`!st.init`) also evaluate immediately without budget cap
+ *   so mid-battle spawns never upload a full-res pyramid when distant or off-screen.
  */
 export function flushTexStream(textures, frame, aimBlend = 0, opts = {}) {
   const stride = opts.stride !== undefined ? opts.stride : TEX_STREAM.STRIDE;
@@ -461,6 +734,8 @@ export function flushTexStream(textures, frame, aimBlend = 0, opts = {}) {
   const isDue = opts.isDue;
   const maxAniso = opts.maxAniso > 0 ? opts.maxAniso : 0;
   const pending = [];
+  let switched = 0;
+  let pageSwitched = 0;
 
   for (const tex of textures || []) {
     const st = tex?.userData?.texStream;
@@ -468,18 +743,32 @@ export function flushTexStream(textures, frame, aimBlend = 0, opts = {}) {
     if (maxAniso > 0 && tex.anisotropy > maxAniso) {
       tex.anisotropy = capAniso(tex.anisotropy, maxAniso);
     }
-    if (!forceAll && stride > 1 && typeof isDue === 'function' && !isDue(frame, st.id, stride)) {
+    const firstSight = !st.init;
+    if (!forceAll && !firstSight && stride > 1 && typeof isDue === 'function' && !isDue(frame, st.id, stride)) {
+      continue;
+    }
+    st.init = true;
+    if (Array.isArray(st.pages) && st.pages.length > 0) {
+      const ps = applyPageLevels(tex, aimBlend, frame);
+      if (ps > 0) {
+        pageSwitched += ps;
+        switched++;
+      }
       continue;
     }
     const vis = st.stamp === frame ? st.visible : false;
     const d2 = vis ? st.minD2 : Infinity;
     const target = streamTargetLevel(d2, vis, aimBlend, st.level, st.maxDrop);
     if (target !== st.level) {
-      pending.push({ tex, st, target, d2 });
+      if (forceAll || firstSight) {
+        if (applyTexLevel(tex, target)) switched++;
+      } else {
+        pending.push({ tex, st, target, d2 });
+      }
     }
   }
 
-  if (pending.length > 1 && !forceAll) {
+  if (pending.length > 1) {
     // Urgent close promotions first (lowest d2), then largest-VRAM demotions.
     pending.sort((a, b) => {
       const aUp = a.target < a.st.level ? 0 : 1;
@@ -490,14 +779,18 @@ export function flushTexStream(textures, frame, aimBlend = 0, opts = {}) {
     });
   }
 
-  const limit = forceAll ? pending.length : Math.max(0, budget | 0);
-  let switched = 0;
-  for (let i = 0; i < pending.length && switched < limit; i++) {
-    if (applyTexLevel(pending[i].tex, pending[i].target)) switched++;
+  const limit = Math.max(0, budget | 0);
+  let budgetedSwitched = 0;
+  for (let i = 0; i < pending.length && budgetedSwitched < limit; i++) {
+    if (applyTexLevel(pending[i].tex, pending[i].target)) {
+      budgetedSwitched++;
+      switched++;
+    }
   }
 
-  let total = 0, activeVramBytes = 0, fullVramBytes = 0;
+  let total = 0, pageTotal = 0, activeVramBytes = 0, fullVramBytes = 0;
   const counts = [0, 0, 0, 0];
+  const pageCounts = [0, 0, 0, 0];
   for (const tex of textures || []) {
     const st = tex?.userData?.texStream;
     if (!st) continue;
@@ -506,15 +799,26 @@ export function flushTexStream(textures, frame, aimBlend = 0, opts = {}) {
     fullVramBytes += st.fullVramBytes;
     const bucket = Math.min(3, Math.max(0, st.level | 0));
     counts[bucket]++;
+    if (Array.isArray(st.pages)) {
+      for (let i = 0; i < st.pages.length; i++) {
+        pageTotal++;
+        const pb = Math.min(3, Math.max(0, st.pages[i].level | 0));
+        pageCounts[pb]++;
+      }
+    }
   }
 
   return {
     total,
     switched,
+    pageTotal,
+    pageSwitched,
     activeVramBytes,
     fullVramBytes,
     savedVramBytes: Math.max(0, fullVramBytes - activeVramBytes),
     counts,
+    pageCounts,
   };
 }
+
 
