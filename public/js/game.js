@@ -47,7 +47,7 @@ import { fireUnitMotion, stepUnitSpinners } from './unitMotion.js';
 import { buildBaseBattery } from './buildingUnitModels.js';
 import { lodStrideByD2, lodDue, GEO, geoTrimKeep, geoOutlineKeep, applyGeoLod } from './lod.js';
 import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep, scopeRadiusPx } from './cull.js';
-import { TEX_STREAM, finishTex, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, flushTexStream } from './tex.js';
+import { TEX_STREAM, finishTex, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, notePageDemand, flushTexStream } from './tex.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
@@ -4498,6 +4498,7 @@ export class BattleClient {
       ent.dmgFx = makeDamageFx({ r: ent.dimR || 2, top: ent.dimTop || 3, h: ent.dimH || 3,
         fire: sceneDamageProfile(ent.kind)?.fire !== false, surfaceCracks: !sceneDamageProfile(ent.kind) });
       ent.mesh.add(ent.dmgFx);
+      ent._streamMesh = null;
       this.damaged.add(ent);
     }
     ent.dmgFx.userData.setStage(stage);
@@ -11668,6 +11669,39 @@ export class BattleClient {
         projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
       }
     }
+    const me = cam.matrixWorld?.elements;
+    let camFx = me ? -me[8] : 0, camFy = me ? -me[9] : 0, camFz = me ? -me[10] : -1;
+    const camFL = Math.hypot(camFx, camFy, camFz) || 1;
+    camFx /= camFL; camFy /= camFL; camFz /= camFL;
+
+    let occ = this._cullOcc;
+    if ((!occ || this._cullOccDirty) && this.mapBuildings) {
+      occ = this._cullOcc || (this._cullOcc = []);
+      occ.length = 0;
+      for (const b of this.mapBuildings.values()) {
+        const r = b.record?.bounds;
+        if (!r || b.collapsed || b.record?.cleared) continue;
+        const or = Math.min(r.w, r.d, r.h) * 0.5;
+        if (or < CULL.OCCLUDE_MIN_R_M) continue;
+        occ.push(r.x, r.y + r.h * 0.5, r.z, or);
+      }
+      this._cullOccDirty = false;
+    }
+    const occMin = CULL.OCCLUDE_MIN_M;
+    const isSphereOccluded = (dx, dy, dz, dTgt, rTgt) => {
+      if (!occ || !occ.length || dTgt <= occMin) return false;
+      const ix = dx / dTgt, iy = dy / dTgt, iz = dz / dTgt;
+      for (let i = 0; i < occ.length; i += 4) {
+        const ox = occ[i] - camP.x, oy = occ[i + 1] - camP.y, oz = occ[i + 2] - camP.z;
+        const t = ox * ix + oy * iy + oz * iz;
+        if (t <= 0 || t >= dTgt) continue;
+        const qx = ox - ix * t, qy = oy - iy * t, qz = oz - iz * t;
+        if (occludedBySphere(dTgt, Math.sqrt(ox * ox + oy * oy + oz * oz),
+          Math.sqrt(qx * qx + qy * qy + qz * qz), rTgt, occ[i + 3])) return true;
+      }
+      return false;
+    };
+
     const v = this._cullV || (this._cullV = new THREE.Vector3());
     const s = this._cullS || (this._cullS = new THREE.Sphere());
     const reg = this._streamTexReg || (this._streamTexReg = new Set());
@@ -11677,7 +11711,7 @@ export class BattleClient {
       if (forceAll) return true;
       for (let i = 0; i < texs.length; i++) {
         const st = texs[i].userData?.texStream;
-        if (st && lodDue(frame, st.id, TEX_STREAM.STRIDE)) return true;
+        if (st && (!st.init || lodDue(frame, st.id, TEX_STREAM.STRIDE))) return true;
       }
       return false;
     };
@@ -11696,7 +11730,7 @@ export class BattleClient {
         for (const t of texs) noteTexDemand(t, 0, true, frame);
         return;
       }
-      if (ent.dead || ent.gar || !mesh.visible || (cullActive && ent._cullFrame === frame)) {
+      if (ent.dead || ent.gar || ent.record?.cleared || !mesh.visible || (cullActive && ent._cullFrame === frame)) {
         for (const t of texs) noteTexDemand(t, Infinity, false, frame);
         return;
       }
@@ -11713,11 +11747,19 @@ export class BattleClient {
       const dCenter = Math.sqrt(dx * dx + dy * dy + dz * dz);
       const dSurf = Math.max(0, dCenter - rTgt);
       const d2 = dSurf * dSurf;
-      let vis = true;
-      if (!cullActive) {
+      let vis = dx * camFx + dy * camFy + dz * camFz >= -rTgt;
+      if (vis && !cullActive) {
         s.center.set(cx, cy, cz);
         s.radius = rFrustum;
         vis = frustum.intersectsSphere(s);
+        if (vis && rPx > 0 && dCenter * dCenter > Math.max(25, rFrustum * rFrustum)) {
+          v.set(cx, cy, cz).project(cam);
+          if (v.z <= 1 && !scopeKeep(v.x * HW, v.y * HH, rPx, (rFrustum / (dCenter || 1)) * projF * CULL.SCOPE_PAD_F)) vis = false;
+        }
+      }
+      if (vis) {
+        const staticBlocker = ent.isStatic || ent.kind === 'tower' || ent.kind === 'base' || ent.kind === 'mapbuilding';
+        if ((staticBlocker || !cullActive) && isSphereOccluded(dx, dy, dz, dCenter, rTgt)) vis = false;
       }
       for (const t of texs) noteTexDemand(t, d2, vis, frame);
     };
@@ -11731,6 +11773,7 @@ export class BattleClient {
       if (!ud._streamEntries) {
         root.updateMatrixWorld(true);
         const entries = [];
+        const pagedEntries = [];
         root.traverse((o) => {
           if (!o.isMesh) return;
           const texs = [];
@@ -11743,14 +11786,25 @@ export class BattleClient {
           const st = o.userData?.signTex;
           if (st?.userData?.texStream && !texs.includes(st)) texs.push(st);
           if (!texs.length) return;
-          for (const t of texs) reg.add(t);
-          entries.push({
-            mesh: o,
-            texs,
-            anchors: meshStreamAnchors(o, TEX_STREAM.CELL_M),
-          });
+          const nonPaged = [];
+          for (const t of texs) {
+            reg.add(t);
+            if (t.userData?.texStream?.pages?.length) {
+              pagedEntries.push({ mesh: o, tex: t });
+            } else {
+              nonPaged.push(t);
+            }
+          }
+          if (nonPaged.length) {
+            entries.push({
+              mesh: o,
+              texs: nonPaged,
+              anchors: meshStreamAnchors(o, TEX_STREAM.CELL_M),
+            });
+          }
         });
         ud._streamEntries = entries;
+        ud._streamPagedTexs = pagedEntries;
       }
       for (const entry of ud._streamEntries) {
         if (!anyDue(entry.texs)) continue;
@@ -11762,22 +11816,66 @@ export class BattleClient {
         let anyVis = false;
         for (const a of entry.anchors) {
           const r = Math.max(2, a.r || 2);
-          const rFrustum = r * CULL.FRUSTUM_PAD_F + CULL.FRUSTUM_PAD_M;
+          const dx = a.x - camP.x, dy = a.y - camP.y, dz = a.z - camP.z;
+          if (dx * camFx + dy * camFy + dz * camFz < -r) continue;
+          const rFrustum = r * CULL.FRUSTUM_PAD_F;
           s.center.set(a.x, a.y, a.z);
           s.radius = rFrustum;
           if (!frustum.intersectsSphere(s)) continue;
-          const dx = a.x - camP.x, dy = a.y - camP.y, dz = a.z - camP.z;
           const dCenter = Math.sqrt(dx * dx + dy * dy + dz * dz);
-          const dSurf = Math.max(0, dCenter - r);
-          const d2 = dSurf * dSurf;
           if (rPx > 0 && dCenter * dCenter > Math.max(25, rFrustum * rFrustum)) {
             v.set(a.x, a.y, a.z).project(cam);
             if (v.z <= 1 && !scopeKeep(v.x * HW, v.y * HH, rPx, (rFrustum / (dCenter || 1)) * projF * CULL.SCOPE_PAD_F)) continue;
           }
+          if (isSphereOccluded(dx, dy, dz, dCenter, r)) continue;
+          const dSurf = Math.max(0, dCenter - r);
+          const d2 = dSurf * dSurf;
           anyVis = true;
           if (d2 < bestD2) bestD2 = d2;
         }
         for (const t of entry.texs) noteTexDemand(t, bestD2, anyVis, frame);
+      }
+      if (ud._streamPagedTexs) {
+        for (const pe of ud._streamPagedTexs) {
+          const t = pe.tex;
+          if (!anyDue([t])) continue;
+          const pages = t.userData?.texStream?.pages;
+          if (!pages || !pages.length) continue;
+          if (!pe.mesh.visible) {
+            for (let i = 0; i < pages.length; i++) notePageDemand(t, i, Infinity, false, frame);
+            continue;
+          }
+          for (let i = 0; i < pages.length; i++) {
+            const pg = pages[i];
+            const r = Math.max(2, pg.r || 2);
+            const dx = pg.x - camP.x, dy = pg.y - camP.y, dz = pg.z - camP.z;
+            if (dx * camFx + dy * camFy + dz * camFz < -r) {
+              notePageDemand(t, i, Infinity, false, frame);
+              continue;
+            }
+            const rFrustum = r * CULL.FRUSTUM_PAD_F;
+            s.center.set(pg.x, pg.y, pg.z);
+            s.radius = rFrustum;
+            if (!frustum.intersectsSphere(s)) {
+              notePageDemand(t, i, Infinity, false, frame);
+              continue;
+            }
+            const dCenter = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (rPx > 0 && dCenter * dCenter > Math.max(25, rFrustum * rFrustum)) {
+              v.set(pg.x, pg.y, pg.z).project(cam);
+              if (v.z <= 1 && !scopeKeep(v.x * HW, v.y * HH, rPx, (rFrustum / (dCenter || 1)) * projF * CULL.SCOPE_PAD_F)) {
+                notePageDemand(t, i, Infinity, false, frame);
+                continue;
+              }
+            }
+            if (isSphereOccluded(dx, dy, dz, dCenter, r)) {
+              notePageDemand(t, i, Infinity, false, frame);
+              continue;
+            }
+            const dSurf = Math.max(0, dCenter - r);
+            notePageDemand(t, i, dSurf * dSurf, true, frame);
+          }
+        }
       }
     };
 

@@ -12,6 +12,7 @@ import { toonMat, outlinify, markShared, disposeTree, INK_INFO_DECL, INK_INFO_NO
 import { lowPower } from './mobile.js';
 import { UNITS, WEAPONS, BALLISTIC, shotFlightS } from './data.js';
 import { Pool } from './pool.js';
+import { registerStreamTex } from './tex.js';
 
 // Decorative effects yield under load without suppressing projectiles or hit reports.
 const crowded = (effects) => effects.length >= (lowPower() ? 90 : 180);
@@ -1157,6 +1158,7 @@ function smokeTexture() {
   ctx.fillStyle = gr;
   ctx.fillRect(0, 0, S, S);
   const tex = new THREE.CanvasTexture(cv);
+  registerStreamTex(tex);
   _texCache.set('smoke', tex);
   return tex;
 }
@@ -1191,6 +1193,7 @@ function crackTexture() {
     ctx.stroke();
   }
   const tex = new THREE.CanvasTexture(cv);
+  registerStreamTex(tex);
   _texCache.set('crack', tex);
   return tex;
 }

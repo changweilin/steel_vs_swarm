@@ -16,7 +16,7 @@ import { lowPower } from './mobile.js';
 import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, siteCPs, mapArg, curveMaxEdgeM, edgeBufferM, edgeWallInsetM, isMarineWater } from './data.js';
 import { procReliefAt, sanitizeProcRelief } from './mapgen.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
-import { MIP_ANISO, registerStreamTex } from './tex.js';
+import { MIP_ANISO, registerStreamTex, registerVirtualPages, buildGridVirtualPages } from './tex.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
 // 舊引用路徑照舊有效。
@@ -554,6 +554,22 @@ export async function buildTerrain(cfg, onProgress) {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = MIP_ANISO;
     registerStreamTex(tex);
+    registerVirtualPages(tex, buildGridVirtualPages(
+      imagery.canvas.width,
+      imagery.canvas.height,
+      { minX, maxX, minZ, maxZ },
+      undefined,
+      {
+        heightAt: (x, z) => sampleField(heights, x, z),
+        projectUV: (x, z) => {
+          const [lat, lng] = xzToLL(x, z, center);
+          return [
+            ((lon2tx(lng, imagery.z) - imagery.tx0) * 256) / imagery.canvas.width,
+            1 - ((lat2ty(lat, imagery.z) - imagery.ty0) * 256) / imagery.canvas.height,
+          ];
+        },
+      },
+    ));
     mat = envMat(0xffffff, { map: tex, rim: 0, bands: 4, land: true, landField: true });
   } else {
     paintTerrainTones(geo, pos, { minX, maxX, minZ, maxZ }, center);
@@ -1084,6 +1100,7 @@ export async function buildTerrain(cfg, onProgress) {
         }
       }
       ictx.restore();
+      mat.map.userData?.texStream?.refresh?.();
       mat.map.needsUpdate = true;
     }
   }

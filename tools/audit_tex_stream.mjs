@@ -24,6 +24,11 @@ import {
   streamMaxDrop,
   streamTargetLevel,
   registerStreamTex,
+  refreshStreamTex,
+  buildGridVirtualPages,
+  registerVirtualPages,
+  notePageDemand,
+  applyPageLevels,
   applyTexLevel,
   collectMatStreamTexs,
   collectTreeStreamTexs,
@@ -41,6 +46,7 @@ const biomesSrc = readSrc('public', 'js', 'biomes.js');
 const paintSrc = readSrc('public', 'js', 'paint.js');
 const worldtextSrc = readSrc('public', 'js', 'worldtext.js');
 const vesselSrc = readSrc('public', 'js', 'vesselModels.js');
+const vfxSrc = readSrc('public', 'js', 'vfx.js');
 const simSrc = readSrc('server', 'sim.js');
 
 let pass = 0, fail = 0;
@@ -118,7 +124,7 @@ console.log('\n② 距離、視野剔除、狙擊倍率與遲滯純數學驗證'
     '邊界遲滯(135m~150m 遲滯帶):原 L0 維持 L0、原 L1 需進入 ≤135m 才升回 L0,杜絕邊界抖動');
 }
 
-console.log('\n③ 貼圖生命週期、多消費端需求匯流與分幀預算實測');
+console.log('\n③ 貼圖生命週期、虛擬分頁(Virtual Texturing)、多消費端需求匯流與分幀預算實測');
 {
   let disposedCount = 0;
   const mockTex = {
@@ -151,18 +157,47 @@ console.log('\n③ 貼圖生命週期、多消費端需求匯流與分幀預算�
     && st.vramBytes === vramBytesOfChain(512, 512, 0),
     '升階回 Level 0:先 dispose 低清緩衝,再還原 512×512 完整 mip 鏈');
 
-  // Multi-consumer demand aggregation + flushTexStream
-  const texShared = registerStreamTex({ image: { width: 256, height: 256 }, mipmaps: [], userData: {} }, { id: 'shared' });
-  const texCulled = registerStreamTex({ image: { width: 256, height: 256 }, mipmaps: [], userData: {} }, { id: 'culled' });
-  // Frame 1: texShared is used by an invisible mesh at 30m, a visible mesh at 400m, and a visible mesh at 180m
-  noteTexDemand(texShared, 30 * 30, false, 1);
-  noteTexDemand(texShared, 400 * 400, true, 1);
-  noteTexDemand(texShared, 180 * 180, true, 1);
-  // texCulled is only used by an invisible/culled mesh at 40m
-  noteTexDemand(texCulled, 40 * 40, false, 1);
-  const stats = flushTexStream([texShared, texCulled], 1, 0, { forceAll: true, isDue: lodDue });
+  // In-place canvas repaint refresh (e.g. terrain.js carveTunnels)
+  applyTexLevel(mockTex, 2);
+  refreshStreamTex(mockTex);
+  ok(st.level === 2 && mockTex.image.width === 128 && mockTex.needsUpdate === true,
+    'refreshStreamTex 重建母體 mip 鏈並保持當前串流階層(供 carveTunnels 原地重繪後同步)');
+
+  // Virtual Texturing page table: independent UV/world tiles on a single texture/atlas
+  const vtTex = registerStreamTex({ image: { width: 1024, height: 1024 }, mipmaps: [], userData: {} }, { id: 'vt_terrain' });
+  const gridPages = buildGridVirtualPages(1024, 1024, { minX: -400, maxX: 400, minZ: -400, maxZ: 400 }, 4, {
+    heightAt: () => 12,
+  });
+  registerVirtualPages(vtTex, gridPages);
+  const vtSt = vtTex.userData.texStream;
+  ok(vtSt.pages.length === 16 && vtSt.pages[0].pw === 256 && vtSt.pages[0].y === 12,
+    'buildGridVirtualPages / registerVirtualPages 建立 4×4 虛擬紋理分頁表(含地塊世界座標與包圍球)');
+
+  // Frame 1: Page 0 is visible & near (60m -> L0), Page 1 is visible & mid (220m -> L1), remaining 14 pages are behind camera / culled (-> L3)
+  notePageDemand(vtTex, 0, 60 * 60, true, 1);
+  notePageDemand(vtTex, 1, 220 * 220, true, 1);
+  for (let i = 2; i < 16; i++) notePageDemand(vtTex, i, 40 * 40, false, 1);
+  const vtChanged = applyPageLevels(vtTex, 0, 1);
+  ok(vtChanged && vtSt.pages[0].level === 0 && vtSt.pages[1].level === 1 && vtSt.pages[2].level === 3 && vtSt.level === 0,
+    'applyPageLevels 逐分頁獨立定階:視野內近處分頁 L0、中景分頁 L1、視野外分頁僅載入 L3 低清塊');
+
+  // Frame 2: All pages are invisible/distant -> entire GPU texture downsizes to L3 (128x128)
+  for (let i = 0; i < 16; i++) notePageDemand(vtTex, i, 800 * 800, false, 2);
+  applyPageLevels(vtTex, 0, 2);
+  ok(vtSt.level === 3 && vtTex.image.width === 128 && vtSt.vramBytes === vramBytesOfChain(1024, 1024, 3),
+    'applyPageLevels 當全部分頁皆在遠處或視野外時,自動將整張 GPU 紋理降階為 1/8 尺寸釋放顯存');
+
+  // Multi-consumer demand aggregation + flushTexStream + uninitialized immediate evaluation
+  const texShared = registerStreamTex({ image: { width: 256, height: 256 }, mipmaps: [], userData: {} }, { id: 1 });
+  const texCulled = registerStreamTex({ image: { width: 256, height: 256 }, mipmaps: [], userData: {} }, { id: 2 });
+  // Frame 3 (not matching id=1 or id=2 under STRIDE=4 when forceAll=false, but !st.init forces immediate evaluation!)
+  noteTexDemand(texShared, 30 * 30, false, 3);
+  noteTexDemand(texShared, 400 * 400, true, 3);
+  noteTexDemand(texShared, 180 * 180, true, 3);
+  noteTexDemand(texCulled, 40 * 40, false, 3);
+  const stats = flushTexStream([texShared, texCulled], 3, 0, { forceAll: false, isDue: lodDue });
   ok(texShared.userData.texStream.level === 1 && texCulled.userData.texStream.level === 3 && stats.savedVramBytes > 0,
-    '多消費端匯流:共用貼圖取最近可見距離(180m→L1),全不可見貼圖降為最低清(L3)');
+    '多消費端匯流與首見即決:共用貼圖取最近可見距離(180m→L1),全不可見貼圖首幀即降為最低清(L3)');
 
   // Tree collection & spatial cell anchors
   const root = {
@@ -214,23 +249,32 @@ console.log('\n③ 貼圖生命週期、多消費端需求匯流與分幀預算�
 console.log('\n④ 貼圖產出端與 game.js 渲染管線接線驗證');
 {
   const G = code(gameSrc);
-  ok(/registerStreamTex\(tex\)/.test(code(terrainSrc)), 'terrain.js 衛星影像貼圖已註冊串流');
+  const T = code(terrainSrc);
+  const W = code(worldtextSrc);
+  ok(/registerStreamTex\(tex\)/.test(T) && /registerVirtualPages\(tex,\s*buildGridVirtualPages\(/.test(T)
+    && /texStream\?\.refresh\?\.\(\)/.test(T),
+    'terrain.js 衛星影像貼圖已註冊串流 + 4×4 虛擬分頁 + 隧道開挖後 refresh 同步');
   ok((code(groundSrc).match(/registerStreamTex\(t\)/g) || []).length >= 2, 'ground.js 地被與邊界貼圖已註冊串流');
   ok((code(biomesSrc).match(/registerStreamTex\(/g) || []).length >= 7,
     'biomes.js 葉卡/國旗/立面(map+emissive)/道路/基地與砲塔標線/擋土牆貼圖全數註冊串流');
   ok((code(paintSrc).match(/registerStreamTex\(tex\)/g) || []).length >= 2, 'paint.js 機體塗裝與日之丸貼花已註冊串流');
-  ok(/registerStreamTex\(tex\)/.test(code(worldtextSrc)), 'worldtext.js 世界文字圖集已註冊串流');
+  ok(/registerStreamTex\(tex\)/.test(W) && /registerVirtualPages\(tex,\s*pages\)/.test(W),
+    'worldtext.js 世界文字圖集已註冊串流與逐招牌虛擬紋理分頁');
   ok(/registerStreamTex\(texture\)/.test(code(vesselSrc)), 'vesselModels.js 船舷字樣貼圖已註冊串流');
+  ok((code(vfxSrc).match(/registerStreamTex\(tex\)/g) || []).length >= 2, 'vfx.js 受損煙霧與裂痕常駐貼圖已註冊串流');
   ok([terrainSrc, biomesSrc, paintSrc, worldtextSrc].every((s) => /MIP_ANISO/.test(code(s)) && !/\.anisotropy\s*=\s*4\b/.test(code(s))),
     '各貼圖產出端(terrain/biomes/paint/worldtext)統一引用 MIP_ANISO 單一縫(消除散落 .anisotropy = 4)');
 
   ok((G.match(/finishTex\(/g) || []).length >= 4,
     'game.js 陣營標示與火/煙粒子貼圖統一經 finishTex 單一縫初始化');
-  ok(/import \{[^}]*flushTexStream[^}]*\} from '\.\/tex\.js'/.test(G), 'game.js 引用 tex.js 串流介面');
+  ok(/import \{[^}]*notePageDemand[^}]*flushTexStream[^}]*\} from '\.\/tex\.js'/.test(G),
+    'game.js 引用 tex.js 串流與虛擬分頁介面(noteTexDemand + notePageDemand + flushTexStream)');
   ok(/this\._tickCull\(\);\s*this\._tickTexStream\(\);\s*this\._renderCulledMain\(\);/.test(G),
     '_tickTexStream 嚴格位於 _tickCull 之後、_renderCulledMain 之前(首幀渲染前先降階遠處/視野外貼圖)');
   ok(/ent\._cullFrame === frame/.test(G) && !/new Set\(this\._culled\)/.test(G),
     '_tickTexStream 透過 _cullFrame 戳記 O(1) 判定剔除態(零 Set 配置)');
+  ok(/dx \* camFx \+ dy \* camFy \+ dz \* camFz/.test(G) && /isSphereOccluded\(/.test(G),
+    '_tickTexStream 具備相機背面平面剔除與建築遮擋球(occludedBySphere)降階判定');
   ok(/flushTexStream\(reg, frame, aimBlend, \{ isDue: lodDue, forceAll, maxAniso \}\)/.test(G),
     '_tickTexStream 複用 lod.js lodDue 節流、dofAimBlend 狙擊曲線與硬體 maxAniso 上限');
   ok(/this\._streamTexReg\?\.clear\(\)/.test(G), 'dispose() 離場清空 _streamTexReg 貼圖註冊表');
