@@ -196,7 +196,7 @@ export const VENUES = [
   V({ id: 'cappadocia', name: '土耳其・卡帕多奇亞岩原', country: '🇹🇷', base: '裸露地', variant: 'light',  type: '裸露地', ll: [38.643000, 34.829000], bearing: 25, scen: ['tunnel'], relief: 15 }),
   V({ id: 'uluru',      name: '澳洲・烏魯魯巨岩',   country: '🇦🇺', base: '裸露地', variant: 'mixed',  type: '裸露地', ll: [-25.240662, 130.989010], bearing: 80, relief: 13 }),
   V({ id: 'todra',      name: '摩洛哥・托德拉大峽谷', country: '🇲🇦', base: '裸露地', variant: 'rugged', type: '裸露地', ll: [31.550000, -5.600000], bearing: 56, scen: ['tunnel', 'highGround'], relief: 45 }),
-  V({ id: 'dubai',      name: '杜拜・火烈鳥濕地保護區', country: '🇦🇪', base: '裸露地', variant: 'swamp', type: '裸露地', ll: [25.195000, 55.325000], bearing: 45, scen: ['bridge'], relief: 4 }),
+  V({ id: 'dubai',      name: '杜拜・火烈鳥濕地保護區', country: '🇦🇪', base: '裸露地', variant: 'swamp', type: '裸露地', ll: [25.198000, 55.310000], bearing: 45, scen: ['bridge'], relief: 4 }),
   V({ id: 'walvisbay',  name: '納米比亞・鯨灣港沙漠海濱', country: '🇳🇦', base: '裸露地', variant: 'water',  type: '裸露地', ll: [-22.958000, 14.505000], bearing: 300, scen: ['bridge'], relief: 3 }),
   // ---- 劇情戰役(另計分類,不佔 3×6 名額;story.js 六章 venueId 錨定此六張)----
   { id: 'taipei101',  name: '台北・101 信義計畫區', country: '🇹🇼', type: '市區', story: true, ll: [25.034009, 121.563871], bearing: 190, mix: { urban: 0.85, green: 0.1, water: 0.05 }, scen: ['underBridge', 'highGround'], relief: 34 },
