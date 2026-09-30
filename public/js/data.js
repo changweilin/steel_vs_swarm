@@ -934,6 +934,11 @@ export const FLIGHT = {
   // 正常操作下降高度時回充電力比例(2026-09-11 使用者需求:正常操作下降高度時,會回充2/3的電力):
   // 正常操作下降時每秒回充電力 = liftDrainPS × DESCENT_RECHARGE_F × 下降率(全速下降回充全速爬升耗速的 2/3,推導不手寫)
   DESCENT_RECHARGE_F: 2 / 3,
+  // 高度爬升曲線(2026-09-30 使用者需求:高度越高,爬升相同高度需要更多動力):
+  // 全速爬升耗速 × liftAltF(高度, 起點, 天花板);起點(有海面 = 海平面,否則 = 全圖地形最低點)= 1
+  // (既有的 DRAIN_S 節奏錨點在起點不動),線性升到天花板 = ALT_TOP_F。連續單調、無階梯;
+  // 下降回充吃同一條(高處爬升貴、同高下降回得多,2/3 比例處處成立)。
+  ALT_TOP_F: 4,
   // 無人機離地下限(=貼地懸停高):飛行中不貼地的下限、以及**重生落地高**共用同一個值(2026-08-03
   // 使用者定案「重生時應該貼地起飛,靠滿動力自己爬升,而不是一出生就懸在半空」)——
   // 重生 MUST NOT 直接把高度設到巡航高度(那樣動力滿格就沒有意義),而是落在這個離地下限,
@@ -953,6 +958,21 @@ export const liftRegen = (mpRegen, chLvl) => Math.max(0, mpRegen || 0) * chargeF
 export const liftDrainPS = (maxMp, isMorph) => liftMax(maxMp, isMorph) / FLIGHT.DRAIN_S;
 /** 正常操作全速下降的動力回充電力(每秒;= 全速爬升耗速 × DESCENT_RECHARGE_F(2/3),推導不手寫) */
 export const liftDescentPS = (maxMp, isMorph) => liftDrainPS(maxMp, isMorph) * FLIGHT.DESCENT_RECHARGE_F;
+/**
+ * 高度爬升動力係數(**唯一縫**;`game.js _stepLift` 唯一消費端,爬升扣 + 下降回充兩處)。
+ * @param y     絕對飛行高度(公尺;`game.js pos.y`)
+ * @param baseY 曲線起點絕對高程:有海面 = 海平面,否則 = 全圖地形最低點(`game.js _liftBaseY`)
+ * @param ceilY 世界天花板絕對高程(`worldCeilY`/`_ceilY` 同一值;取不到或無限 = 不設限)
+ * @returns ≥1 的連續乘數:起點以下 = 1,天花板 = `FLIGHT.ALT_TOP_F`,之間線性內插;
+ *          起點缺失或區間無效(天花板 ≤ 起點/非有限)降級回 1(原則 6)。
+ */
+export const liftAltF = (y, baseY, ceilY) => {
+  if (baseY == null) return 1;
+  const c = Number(ceilY), b = Number(baseY);
+  if (!Number.isFinite(c) || !Number.isFinite(b) || c <= b) return 1;
+  const t = Math.min(1, Math.max(0, ((Number(y) || 0) - b) / (c - b)));
+  return 1 + (FLIGHT.ALT_TOP_F - 1) * t;
+};
 /** 失衡失準機率:若射手失衡,命中率減半(失準機率相應增加) */
 export const unbalMissP = (missP, unbalanced) =>
   unbalanced ? 1 - (1 - (missP || 0)) * FLIGHT.UNBAL_ACC_MUL : (missP || 0);

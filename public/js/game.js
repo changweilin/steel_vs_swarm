@@ -15,7 +15,7 @@ import {
   weaponMaxHoriz, inWeaponRange,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
   GLINT, glintDur, glintAlpha, glintDropR,
-  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
+  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
    aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
@@ -9538,6 +9538,19 @@ export class BattleClient {
     return this._worldCeil;
   }
 
+  /**
+   * 高度曲線的起算點(**絕對**高程;2026-09-30 使用者需求)—— 有海面吃海面(`terrain.waterY`,
+   * 無水域 = null),否則吃全圖地形最低點(`terrain.minH`)。與 `_ceilY` 不同,這裡**不快取**:
+   * 潮汐會動海面(`updateTide`),快取等於把起點凍在第一幀。取不到一律回 null ⇒ `liftAltF`
+   * 降級回 1(原則 6)。`_stepLift` 爬升扣 + 下降回充兩處同吃這一支。
+   */
+  _liftBaseY() {
+    const t = this.terrain;
+    if (t && Number.isFinite(t.waterY)) return t.waterY;
+    if (t && Number.isFinite(t.minH)) return t.minH;
+    return null;
+  }
+
   // ---------------- 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT)----------------
   /** 爬升動力上限(正比於伺服器權威的電力上限;缺值退回機種基準電力;變形者吃 FLIGHT.MORPH_F) */
   _liftMax() { return liftMax((this._mpAuth && this.maxMp) || UNITS[this.heroKind]?.mp || 0, this.isMorph); }
@@ -9554,6 +9567,7 @@ export class BattleClient {
    * (全速 = liftDrainPS ⇒ 滿動力撐 FLIGHT.DRAIN_S 秒);動力見底把上升分量歸零(= 爬不上去,
    * 不是變慢),水平/下降/懸停不受影響。回速正比於電力回速 × 充能軌(liftRegen)。
    * 正常操作下降高度時會回充 2/3 的電力(liftDescentPS ∝ 下降率,2026-09-11 使用者需求)。
+   * 高度越高同速爬升越耗動力、同速下降回充也越多(× 同一條高度曲線 liftAltF,連續無階梯)。
    */
   _stepLift(dt, now, target, u) {
     // 電力上限是伺服器權威值(快照 e.mm)。它到達之前 MUST NOT 解析動力上限 —— 建構子的佔位值
@@ -9573,14 +9587,15 @@ export class BattleClient {
         }
       } else {
         this.lift = Math.max(0, this.lift
-          - liftDrainPS(this.maxMp || 0, this.isMorph) * Math.min(1, target.y / vsp) * dt);
+          - liftDrainPS(this.maxMp || 0, this.isMorph) * liftAltF(this.pos.y, this._liftBaseY(), this._ceilY()) * Math.min(1, target.y / vsp) * dt);
       }
     } else {
       // 受擊失衡期間禁止回充(2026-09-01 使用者需求:失衡時無法恢復飛行動力)
       if (!this._unbalanced(now)) {
         const wet = this._env?.code || 0;
         const descF = target.y < 0 ? Math.min(1, -target.y / vsp) : 0;
-        const descRecharge = liftDescentPS(this.maxMp || 0, this.isMorph) * descF;
+        // 下降回充吃同一條高度曲線:高處爬升貴、同高下降回得也多 ⇒ 2/3 比例在任何高度都成立
+        const descRecharge = liftDescentPS(this.maxMp || 0, this.isMorph) * liftAltF(this.pos.y, this._liftBaseY(), this._ceilY()) * descF;
         this.lift = Math.min(lMax, this.lift
           + (liftRegen(u?.mpRegen, this.upg?.ch) + descRecharge) * fluidFactor(wet) * dt);
       }
@@ -9675,7 +9690,7 @@ export class BattleClient {
       if (this.keys.Space) target.y += u.vspeed * ccF * tSlow;
       if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed * ccF * tSlow;
       // 爬升動力(2026-07-30 使用者需求;唯一縫 data.js FLIGHT):**往上飛才耗動力** ——
-      // 耗速 ∝ 爬升率(全速爬升 = liftDrainPS ⇒ 滿動力恰好撐 FLIGHT.DRAIN_S 秒),
+      // 耗速/回充 ∝ (爬升率/下降率) × 高度曲線(起點全速爬升 = liftDrainPS × 1 ⇒ 起點滿動力恰好撐 FLIGHT.DRAIN_S 秒),
       // 見底 = 爬不上去(上升分量歸零,水平/下降/懸停完全不受影響),不爬升即回充(∝ 電力回速)。
       // 上限/回速皆正比於電力(伺服器權威的 maxMp 與充能軌等級)⇒ MUST NOT 在此手寫係數。
       this._stepLift(dt, now, target, u);
