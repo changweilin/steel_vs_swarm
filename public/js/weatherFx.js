@@ -85,6 +85,112 @@ export function makeClouds(span, seed, { lowPower = false } = {}) {
 }
 const newWhite = new THREE.Color(0xffffff);
 
+const FOG_VERTEX = `
+  attribute vec3 aOrigin;
+  attribute vec3 aSeed;
+  uniform vec3 uCamera;
+  uniform vec2 uSize;
+  uniform float uRange;
+  uniform float uDensity;
+  uniform float uTime;
+  uniform float uTurbulence;
+  varying vec2 vUv;
+  varying vec2 vWorld;
+  varying float vFade;
+  void main() {
+    vec3 p = aOrigin;
+    p.y += uSize.y * 0.42 + sin(uTime * 0.3 + aSeed.x) * uTurbulence;
+    vec4 view = modelViewMatrix * vec4(p, 1.0);
+    view.xy += position.xy * uSize;
+    gl_Position = projectionMatrix * view;
+    vUv = uv;
+    vWorld = p.xz + position.xy * uSize.x;
+    vec2 edge = abs(p.xz - uCamera.xz) / uRange;
+    vFade = (1.0 - smoothstep(0.55, 0.85, max(edge.x, edge.y)))
+      * smoothstep(0.7, 3.0, -view.z) * aSeed.z
+      * (1.0 - smoothstep(uDensity - 0.08, uDensity, aSeed.y));
+  }
+`;
+const FOG_FRAGMENT = `
+  ${INK_INFO_DECL}
+  uniform vec3 uColor;
+  uniform vec2 uTravel;
+  uniform float uOpacity;
+  varying vec2 vUv;
+  varying vec2 vWorld;
+  varying float vFade;
+  void main() {
+    vec2 p = vUv * 2.0 - 1.0;
+    vec2 flow = (vWorld - uTravel) * 0.13;
+    float folds = sin(flow.x + sin(flow.y * 0.73))
+      * cos(flow.y * 1.3 + sin(flow.x * 0.61));
+    float alpha = (1.0 - smoothstep(0.25, 1.0, dot(p, p)))
+      * (0.65 + folds * 0.35) * uOpacity * vFade;
+    if (alpha < 0.003) discard;
+    gl_FragColor = vec4(uColor, alpha);
+    ${INK_INFO_NONE}
+  }
+`;
+
+// Terrain samples change only when a bank enters a new tile; invalid samples omit it.
+export function makeFog(terrain, seed, { lowPower = false } = {}) {
+  const grid = lowPower ? Math.round(WEATHER_FX.fogGrid * Math.sqrt(WEATHER_FX.lowPowerScale)) : WEATHER_FX.fogGrid;
+  const tile = WEATHER_FX.fogTileM, count = grid * grid;
+  const rnd = mulberry32((seed ^ 0xF063A1) >>> 0);
+  const plane = new THREE.PlaneGeometry(1, 1);
+  const geometry = new THREE.InstancedBufferGeometry().copy(plane); plane.dispose();
+  const origins = new Float32Array(count * 3), seeds = new Float32Array(count * 3), items = [];
+  for (let i = 0; i < count; i++) {
+    seeds.set([rnd() * Math.PI * 2, rnd(), 0], i * 3);
+    items.push({ x: (i % grid + rnd() * .7) * tile, z: (Math.floor(i / grid) + rnd() * .7) * tile,
+      cellX: NaN, cellZ: NaN });
+  }
+  const originAttr = new THREE.InstancedBufferAttribute(origins, 3).setUsage(THREE.DynamicDrawUsage);
+  const seedAttr = new THREE.InstancedBufferAttribute(seeds, 3).setUsage(THREE.DynamicDrawUsage);
+  geometry.setAttribute('aOrigin', originAttr); geometry.setAttribute('aSeed', seedAttr);
+  geometry.instanceCount = count;
+  const uniforms = {
+    uCamera: { value: new THREE.Vector3() }, uSize: { value: new THREE.Vector2() },
+    uRange: { value: grid * tile / 2 }, uDensity: { value: 0 }, uTime: { value: 0 },
+    uTravel: { value: new THREE.Vector2() }, uTurbulence: { value: 0 },
+    uColor: { value: new THREE.Color() }, uOpacity: { value: 0 },
+  };
+  const material = new THREE.ShaderMaterial({ uniforms, vertexShader: FOG_VERTEX, fragmentShader: FOG_FRAGMENT,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide });
+  const obj = new THREE.Mesh(geometry, material); obj.name = 'weather-fog'; obj.frustumCulled = false; obj.visible = false;
+  return {
+    obj,
+    update(dt, camera, dyn, profile, color) {
+      dt = Number.isFinite(dt) ? Math.max(0, Math.min(.25, dt)) : 0;
+      const dir = dyn.windDir || [1, 0], u = uniforms;
+      u.uTime.value += dt;
+      u.uTravel.value.x += dir[0] * profile.drift * dt;
+      u.uTravel.value.y += dir[1] * profile.drift * dt;
+      u.uOpacity.value += (profile.opacity - u.uOpacity.value) * (1 - Math.exp(-dt * 2));
+      u.uDensity.value += (profile.density - u.uDensity.value) * (1 - Math.exp(-dt * 2));
+      obj.visible = u.uOpacity.value > .003;
+      if (!obj.visible) return;
+      u.uCamera.value.copy(camera.position); u.uColor.value.copy(color);
+      u.uSize.value.set(profile.size, profile.height); u.uTurbulence.value = profile.turbulence;
+      let changed = false;
+      for (let i = 0; i < count; i++) {
+        const item = items[i];
+        const cellX = Math.floor((camera.position.x - item.x + grid * tile / 2) / (grid * tile));
+        const cellZ = Math.floor((camera.position.z - item.z + grid * tile / 2) / (grid * tile));
+        if (item.cellX === cellX && item.cellZ === cellZ) continue;
+        item.cellX = cellX; item.cellZ = cellZ;
+        const x = item.x + cellX * grid * tile, z = item.z + cellZ * grid * tile;
+        const ground = terrain.heightAt?.(x, z);
+        seeds[i * 3 + 2] = Number.isFinite(ground) ? 1 : 0;
+        const y = Number.isFinite(ground) ? Math.max(ground, Number.isFinite(terrain.waterY) ? terrain.waterY : ground) : 0;
+        origins.set([x, y, z], i * 3); changed = true;
+      }
+      if (changed) { originAttr.needsUpdate = true; seedAttr.needsUpdate = true; }
+    },
+    dispose() { geometry.dispose(); material.dispose(); },
+  };
+}
+
 // Instanced quads avoid square point-size limits and project rain along its actual velocity.
 const PARTICLE_VERTEX = `
   attribute vec3 aOrigin;

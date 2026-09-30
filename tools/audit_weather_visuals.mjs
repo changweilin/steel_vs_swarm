@@ -50,6 +50,29 @@ assert.equal(resolveWeatherVisuals({}, reusable), reusable);
 assert.equal(reusable.rain, rainProfile); assert.equal(reusable.rain.opacity, 0);
 const invalid = resolveWeatherVisuals({ effectiveRain: NaN, effectiveSnow: Infinity, effectiveSand: -10 });
 for (const kind of ['rain', 'snow', 'sand']) assert.equal(invalid[kind].strength, 0);
+// Fog follows the resolved threshold; shape changes remain continuous and bounded.
+assert.equal(calm.fog.opacity, 0);
+assert.equal(calm.fog.density, 0);
+let previousShape = calm;
+for (let i = 1; i <= 100; i++) {
+  const profile = resolveWeatherVisuals({ wind: i, effectiveFog: i / 100 });
+  for (const key of ['density', 'opacity', 'height', 'size']) assert(profile.fog[key] >= previousShape.fog[key]);
+  for (const key of ['lean', 'flutter', 'gust', 'gustSpeed']) assert(profile.wind[key] >= previousShape.wind[key]);
+  for (const key of ['crest', 'cross', 'chop']) assert(profile.water[key] >= previousShape.water[key]);
+  previousShape = profile;
+}
+assert(previousShape.wind.lean < 1 && previousShape.wind.flutter < .2);
+for (const fog of [0, 74.99, 75, 75.01, 80, 90, 100]) {
+  const dyn = resolveWeatherDynamics({ fog });
+  assert.equal(resolveWeatherVisuals(dyn).fog.strength, dyn.effectiveFog);
+}
+const invalidShape = resolveWeatherVisuals({ effectiveFog: NaN, wind: Infinity });
+assert.equal(invalidShape.fog.opacity, 0); assert.equal(invalidShape.wind.lean, 0);
+const shapes = [reusable.fog, reusable.wind, reusable.water];
+resolveWeatherVisuals({ wind: 100, effectiveFog: 1 }, reusable);
+resolveWeatherVisuals({}, reusable);
+assert.equal(reusable.fog, shapes[0]); assert.equal(reusable.wind, shapes[1]); assert.equal(reusable.water, shapes[2]);
+assert.equal(reusable.wind.lean, 0); assert.equal(reusable.water.chop, 0);
 for (const clouds of [0, 50, 100]) for (const value of [74.99, 75, 75.01, 100]) {
   const dyn = resolveWeatherDynamics({ clouds, rain: value, snow: value, sand: value, thunder: value });
   const p = resolveWeatherVisuals(dyn);
@@ -189,5 +212,6 @@ assert.match(fxSrc, /slot\.core\.dispose\(\); slot\.halo\.dispose\(\)/, 'Instanc
 assert.match(envSrc, /clouds\.dispose\(\)/, 'Clouds own their textures');
 assert.match(envSrc, /lightning\.dispose\(\)/);
 assert.match(envSrc, /particles\.dispose\(\)/);
+assert.match(envSrc, /fog\.dispose\(\)/);
 console.log('  ✓ Seeded scatter, pooled lightning and independent GPU ownership');
 console.log('Weather visual profiles and existing freeze/fog/season seams passed.');
