@@ -593,6 +593,7 @@ export async function buildTerrain(cfg, onProgress) {
   //   但它讀的 `seaData`/`seaN` 是 `let` ⇒ 擺在呼叫點之後就是 **TDZ ReferenceError**,
   //   而錯誤訊息指向完全無關的地方(同 toon.js `_foamA` 那一段的坑)。
   let seaData = null, seaN = 0;
+  let seaDepths = null;
 
   // 水面(有低於海平面的區域才加);waterY = 水面高(無水域 = null,供 game.js 涉水/深水物理)。
   // 水面(有低於海平面的區域才加);waterY = 水面高(無水域 = null,供 game.js 涉水/深水物理)。
@@ -666,16 +667,18 @@ export async function buildTerrain(cfg, onProgress) {
     if (waterY == null) return false;
     const n = seaFieldN(worldW, worldH, lowPower());
     if (!seaData || seaN !== n) { seaData = new Uint8Array(n * n); seaN = n; }
+    if (!seaDepths || seaDepths.length !== n * n) seaDepths = new Float32Array(n * n);
     for (let i = 0; i < n; i++) {
       const z = minZ + worldH * (i + 0.5) / n;          // 列 = z(同 field.bakeFieldTexture;
       for (let j = 0; j < n; j++) {                      //  DataTexture 的 flipY 恆 false)
         const x = minX + worldW * (j + 0.5) / n;
         const d = waterY - sampleField(heights, x, z);   // 水深(負 = 陸地)
+        seaDepths[i * n + j] = Math.max(0, d);
         seaData[i * n + j] = d <= 0 ? 0
           : d >= FOAM.RANGE_M ? 255 : Math.round(d / FOAM.RANGE_M * 255);
       }
     }
-    setSeaDepthField(seaData, n, { minX, minZ, w: worldW, h: worldH });
+    setSeaDepthField(seaData, n, { minX, minZ, w: worldW, h: worldH }, seaDepths);
     return true;
   }
 
@@ -699,7 +702,8 @@ export async function buildTerrain(cfg, onProgress) {
     let hit = 0;
     const ext = FOAM.RANGE_M;
     for (const b of blockers) {
-      if (!b || b.y + b.h <= waterY) continue;          // 整根都在水面以下 ⇒ 蓋了也看不到
+      if (!b || ![b.x, b.z, b.y, b.h].every(Number.isFinite) || b.h <= 0 || b.y > waterY) continue;
+      const topDepth = Math.max(0, waterY - (b.y + b.h));
       const rr = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;   // broad-phase = 外接半對角(A30)
       if (!(rr > 0)) continue;
       const volF = b.volFactor != null ? Math.max(0.65, Math.min(2.5, b.volFactor)) : 1.0;
@@ -723,6 +727,9 @@ export async function buildTerrain(cfg, onProgress) {
             dist = Math.max(0, Math.hypot(ox, oz) - (b.r || rr));
           }
           const idx = i * n + j;
+          // Submerged solids affect refraction through their tops, without acquiring surface foam.
+          if (dist === 0) seaDepths[idx] = Math.min(seaDepths[idx], topDepth);
+          if (topDepth > 0) continue;
           if (dist === 0) {
             if (seaData[idx]) { seaData[idx] = 0; hit++; }
           } else if (dist < ext) {
@@ -732,7 +739,7 @@ export async function buildTerrain(cfg, onProgress) {
         }
       }
     }
-    setSeaDepthField(seaData, n, { minX, minZ, w: worldW, h: worldH });
+    setSeaDepthField(seaData, n, { minX, minZ, w: worldW, h: worldH }, seaDepths);
     return hit;
   }
 

@@ -872,7 +872,7 @@ export const WIND = {
   // 波長是**尺**不是外觀旋鈕:水面的分段數由它推導(`seaSegM()`),手寫分段數的話改波長
   // 之後取樣率會掉到 Nyquist 以下,而畫面上只表現成「遠處的海在亂跳」。
   SEA_M: 64,         // 海浪波長(遊戲公尺;REAL_SCALE 2× ⇒ 真實 32m 的長浪)
-  SEA_SEG: 8,        // 一個波長至少切幾段(= 取樣率;8 段對兩諧波合成後的最短波 1.6× 仍有 5 段)
+  SEA_SEG: 8,        // Resolves the directional trains and the sharpened primary crest.
   // ---- 水波空間變異化(2026-08-26 使用者「不同位置的水波都很像…加入更多隨機差異」)----
   // 三個機制打破 celSeaH 的空間均勻性:①噪聲擾動 ②深度調變 ③沼澤漣漪。
   // 全部只動 GLSL 的 celSeaH,**純表現層**(§0-4);waterY / 涉水 / 碰撞一行不動。
@@ -882,6 +882,9 @@ export const WIND = {
   // 障礙物附近(深度場 0)自動衰減,不需另寫一份遮罩。
   SEA_DEPTH_LO: 0.6,   // 淺水波長壓縮倍率:depth→0 時波數 ×(1/0.6) ≈ 1.67
   SEA_DEPTH_AMP: 1.3,  // 淺水振幅增益:波陡增加 = 白浪碎波
+  SEA_REFRACT_F: 0.65,
+  SEA_REFLECT_F: 0.24,
+  SEA_SOURCE_N: 12,   // Bounded surface-vessel sources; distant sources skip waveform evaluation.
   // 沼澤局部漣漪(氣泡上浮 / 泥魚擾動):圓形衰減波,由確定性時鐘 + 世界座標雜湊驅動。
   SWAMP_RIPPLE_N: 5,     // 活躍漣漪源數(uniform vec4 陣列長度)
   SWAMP_RIPPLE_R: 8,     // 單一漣漪最大半徑(m)
@@ -1005,22 +1008,58 @@ let _seaTex = null;
 const _seaField = { value: null };
 const _seaRect = { value: new THREE.Vector4(0, 0, 1, 1) };   // (minX, minZ, 1/寬, 1/高)
 function neutralSeaField() {
-  const t = new THREE.DataTexture(new Uint8Array([255]), 1, 1, THREE.RedFormat);
+  const t = new THREE.DataTexture(new Uint8Array([255, 255, 128, 128]), 1, 1, THREE.RGBAFormat);
   t.needsUpdate = true;
   return t;
 }
 _seaField.value = neutralSeaField();
 
-/**
- * 安裝海面深度場(唯一寫入點;呼叫端 = `terrain.js` 的 `bakeSeaDepth`,每場一次)。
- * 逐條照抄 `setWeatherField` —— 包括 `old?.dispose()`(A25:不放掉就是每開一場漏一張)。
- * @param data   Uint8Array(size × size);值 = `clamp(水深 / FOAM.RANGE_M, 0, 1) × 255`
- * @param size   邊長格數(MUST 由 `seaFieldN()` 推導)
- * @param bounds { minX, minZ, w, h } 世界取樣框
- */
-export function setSeaDepthField(data, size, bounds) {
+// R retains foam depth; G stores bathymetry, BA stores its signed world-XZ gradient.
+function packSeaDepthField(data, size, bounds, depths) {
+  if (!(data instanceof Uint8Array) || !Number.isInteger(size) || size < 1
+    || data.length !== size * size || !bounds
+    || ![bounds.minX, bounds.minZ, bounds.w, bounds.h].every(Number.isFinite)
+    || bounds.w <= 0 || bounds.h <= 0) return null;
+  const maxDepth = WIND.SEA_M / 2;
+  const tx = bounds.w / size, tz = bounds.h / size;
+  let field = Float32Array.from(data, (v, i) => depths && Number.isFinite(depths[i])
+    ? Math.max(0, Math.min(maxDepth, depths[i])) : v / 255 * maxDepth);
+  // Smooth at the water mesh's sampling scale so object edges cannot alias into tall spikes.
+  for (const [stride, step] of [[1, tx], [size, tz]]) {
+    const radius = Math.min(size - 1, Math.max(1, Math.ceil(seaSegM() / step)));
+    const smooth = new Float32Array(field.length);
+    for (let line = 0; line < size; line++) {
+      const base = stride === 1 ? line * size : line;
+      const at = p => field[base + Math.max(0, Math.min(size - 1, p)) * stride];
+      let sum = 0;
+      for (let p = -radius; p <= radius; p++) sum += at(p);
+      for (let p = 0; p < size; p++) {
+        smooth[base + p * stride] = sum / (radius * 2 + 1);
+        sum += at(p + radius + 1) - at(p - radius);
+      }
+    }
+    field = smooth;
+  }
+  const packed = new Uint8Array(size * size * 4);
+  const encodeSlope = v => 128 + Math.round(Math.max(-1, Math.min(1, v)) * 127);
+  for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) {
+    const idx = i * size + j;
+    const j0 = Math.max(0, j - 1), j1 = Math.min(size - 1, j + 1);
+    const i0 = Math.max(0, i - 1), i1 = Math.min(size - 1, i + 1);
+    packed[idx * 4] = data[idx];
+    packed[idx * 4 + 1] = Math.round(field[idx] / maxDepth * 255);
+    packed[idx * 4 + 2] = encodeSlope((field[i * size + j1] - field[i * size + j0]) / Math.max(tx, (j1 - j0) * tx));
+    packed[idx * 4 + 3] = encodeSlope((field[i1 * size + j] - field[i0 * size + j]) / Math.max(tz, (i1 - i0) * tz));
+  }
+  return packed;
+}
+
+// Legacy preview callers can omit bathymetry; saturated foam depth then means open water.
+export function setSeaDepthField(data, size, bounds, depths = null) {
+  const packed = packSeaDepthField(data, size, bounds, depths);
+  if (!packed) return;
   const old = _seaTex;
-  const t = new THREE.DataTexture(data, size, size, THREE.RedFormat);
+  const t = new THREE.DataTexture(packed, size, size, THREE.RGBAFormat);
   t.minFilter = THREE.LinearFilter;
   t.magFilter = THREE.LinearFilter;
   t.wrapS = THREE.ClampToEdgeWrapping;
@@ -1031,6 +1070,24 @@ export function setSeaDepthField(data, size, bounds) {
   _seaRect.value.set(bounds.minX, bounds.minZ,
     1 / Math.max(1e-6, bounds.w), 1 / Math.max(1e-6, bounds.h));
   old?.dispose();
+}
+
+const _seaSources = { value: Array.from({ length: WIND.SEA_SOURCE_N }, () => new THREE.Vector4()) };
+const _seaSourceShape = { value: Array.from({ length: WIND.SEA_SOURCE_N }, () => new THREE.Vector4()) };
+
+export function setSeaWaveSources(sources) {
+  let slot = 0;
+  for (const source of Array.isArray(sources) ? sources : []) {
+    if (slot >= WIND.SEA_SOURCE_N) break;
+    if (!source || ![source.x, source.z, source.dx, source.dz, source.length, source.beam, source.speed].every(Number.isFinite)
+      || source.length <= 0 || source.beam <= 0 || source.speed < 0) continue;
+    const len = Math.hypot(source.dx, source.dz);
+    if (len <= 1e-6) continue;
+    _seaSources.value[slot].set(source.x, source.z, source.dx / len, source.dz / len);
+    _seaSourceShape.value[slot].set(source.length, source.beam, source.speed, 1);
+    slot++;
+  }
+  for (; slot < WIND.SEA_SOURCE_N; slot++) _seaSourceShape.value[slot].set(0, 0, 0, 0);
 }
 
 // ---- 岸邊泡沫 / 水面倒影(2026-08-16;S6 的 toon.js 那一半)----
@@ -1125,6 +1182,55 @@ const CEL_SWAMP_RIPPLE_GLSL = `
         #endif`;
 
 const CEL_SEA_GLSL = `
+        uniform vec4 uSeaSources[ ${WIND.SEA_SOURCE_N} ];
+        uniform vec4 uSeaSourceShape[ ${WIND.SEA_SOURCE_N} ];
+
+        // Scalar travel phases keep bent and reflected fronts continuous across world origins.
+        vec3 celSeaPhases( vec2 p, vec2 dir, vec4 field, float scale ) {
+          float k = ${(Math.PI * 2 / WIND.SEA_M).toFixed(5)} * scale;
+          vec2 slope = ( field.ba * 255.0 - 128.0 ) / 127.0;
+          float slopeLen = length( slope );
+          vec2 normal = -slope / max( slopeLen, 0.0001 );
+          float incidence = dot( dir, normal );
+          float depth = field.g * ${(WIND.SEA_M / 2).toFixed(2)};
+          float travel = min( depth / max( slopeLen, 0.02 ), ${WIND.SEA_M.toFixed(2)} );
+          float bend = smoothstep( 0.015, 0.14, slopeLen ) * ( 1.0 - field.g );
+          float delay = k * incidence * travel * bend * ${(WIND.SEA_REFRACT_F * (1 / WIND.SEA_DEPTH_LO - 1)).toFixed(4)};
+          float phase = dot( p, dir ) * k;
+          float reflected = phase + 2.0 * k * incidence * travel + delay;
+          float reflectWeight = smoothstep( 0.02, 0.18, slopeLen )
+            * ( 1.0 - smoothstep( 0.03, 0.45, field.g ) )
+            * smoothstep( 0.05, 0.65, incidence ) * ${WIND.SEA_REFLECT_F.toFixed(3)};
+          return vec3( phase - delay, reflected, reflectWeight );
+        }
+
+        float celVesselWaves( vec2 p ) {
+          float height = 0.0;
+          for ( int i = 0; i < ${WIND.SEA_SOURCE_N}; i++ ) {
+            vec4 shape = uSeaSourceShape[ i ];
+            if ( shape.w <= 0.0 ) continue;
+            vec4 source = uSeaSources[ i ];
+            vec2 rel = p - source.xy;
+            float range = min( ${WIND.SEA_M.toFixed(2)} * 2.0, max( ${WIND.SEA_M.toFixed(2)} * 0.5, shape.x * 2.0 ) );
+            if ( dot( rel, rel ) > range * range ) continue;
+            float along = dot( rel, source.zw );
+            float across = dot( rel, vec2( -source.w, source.z ) );
+            float stern = max( 0.0, -along - shape.x * 0.5 );
+            float spread = max( shape.y, ${seaSegM().toFixed(2)} );
+            float moving = smoothstep( 0.2, 2.0, shape.z );
+            // The V front follows the hull heading; moored hulls scatter incoming waves radially.
+            float wakeDist = abs( across ) - stern * 0.36;
+            float wake = exp( -wakeDist * wakeDist / ( spread * spread ) )
+              * smoothstep( 0.0, spread, stern ) * exp( -stern / range );
+            float radial = length( vec2( across, max( 0.0, abs( along ) - shape.x * 0.5 ) ) );
+            float phase = mix( radial, wakeDist, moving ) * ${(Math.PI * 2 / (seaSegM() * 4)).toFixed(5)}
+              - uWeatherWaveT * uSoftFreq * mix( 0.8, 1.8, moving );
+            float envelope = mix( exp( -radial / spread ) * 0.18, wake * 0.35, moving );
+            height += sin( phase ) * envelope * ( 1.0 - smoothstep( range * 0.65, range, length( rel ) ) );
+          }
+          return height * uSoftAmp * uWeatherWaveAmp;
+        }
+
         // 水底密集隨機塊狀起伏誤差 (Water & Swamp Bed Blocky Undulation Error)
         // 沼澤水域 (高密度、小塊、強起伏):
         float celSwampBedError( vec2 p ) {
@@ -1149,12 +1255,7 @@ const CEL_SEA_GLSL = `
         // 浪高(世界 XZ 的純函式)。**位移與法線 MUST 吃同一支** —— 兩邊各寫一份的話,
         // 光影的浪與幾何的浪會差半個波長,而畫面上只表現成「水面的亮帶跟浪對不上」。
         //
-        // 程序化水波特效升級 (純表現層,§0-4):
-        //   ① 非筆直直線波前：領域扭曲 (Domain Warping) 與空間非線性有機彎曲擾動
-        //   ② 深度調變與破碎化微波：淺水與沼澤水面注入破碎化短波微紋理
-        //   ③ 遺跡/沈船切面同心波前：依 uSeaField 物件剖面等值線生成同心波，有機擾動且向外淡出
-        //   ④ 障礙物近場衰減與基礎行波合成
-        //   ⑤ 沼澤漣漪(CEL_SWAMP_RIPPLE):疊加局部圓形衰減波
+        // Bathymetry and hull sources affect presentation only; all consumers share this height.
         float celSeaH( vec2 celSxz ) {
           if ( uWeatherWaveAmp <= 0.001 ) return 0.0;
           // ① 非直線波前：領域扭曲 (Domain Warping)，消除筆直條紋感
@@ -1165,7 +1266,6 @@ const CEL_SEA_GLSL = `
               + cos( celSxz.x * 0.076 + celSxz.y * 0.043 + 1.19 ) * 2.6
           );
           vec2 celWxz = celSxz + celWarp;
-          float celSp = dot( celWxz, uWindDir ) * ${(Math.PI * 2 / WIND.SEA_M).toFixed(5)};
 
           // 空間多頻干涉與相位偏移 (特徵尺度 ~${WIND.SEA_NOISE_M.toFixed(0)}m,打破單一行波空間均勻性)
           float celSn = sin( dot( celWxz, vec2( 0.0523, 0.0321 ) ) ) * 0.62
@@ -1177,31 +1277,40 @@ const CEL_SEA_GLSL = `
 
           // ② 深度調變:取樣同一張 uSeaField(含障礙物蓋章)
           vec2 celDuv = clamp( ( celSxz - uSeaRect.xy ) * uSeaRect.zw, vec2( 0.0 ), vec2( 1.0 ) );
-          float celRawD = texture2D( uSeaField, celDuv ).r;
+          vec4 celWaterField = texture2D( uSeaField, celDuv );
+          float celRawD = celWaterField.r;
           float celDepF = smoothstep( 0.0, 0.5, celRawD );
 
-          // 淺水與沼澤:波數增大(波長壓縮)、振幅增加(碎浪微紋理)
-          float celWaveK = mix( ${(1 / WIND.SEA_DEPTH_LO).toFixed(3)}, 1.0, celDepF );
+          // Phase compression settles in celSeaPhases; shoaling also raises the crest amplitude.
           float celAmpD = mix( ${WIND.SEA_DEPTH_AMP.toFixed(3)}, 1.0, celDepF );
 
-          // ③ 障礙物近場衰減:深度場 0 的位置附近主波幅壓低 (留給同心切面波)
+          // Dry footprints suppress incident crests while neighbouring water retains reflections.
           float celObD = smoothstep( 0.0, 0.15, celRawD );
 
           // 一般水域底部起伏誤差 (低密度、平緩起伏，隨水深在淺水處稍強、深水處淡化)
           float celSeaBed = celSeaBedError( celSxz );
           float seaBedWarp = celSeaBed * 0.25;
-          float celMsp = ( celSp + seaBedWarp ) * celWaveK + celPhJit;
-          float celPrimary = sin( uWeatherWaveT * uSoftFreq + celMsp );
+          float celSpread = mix( 0.45, 1.05, uWeatherWaterShape.z );
+          vec2 celCrossDir = vec2( uWindDir.x * cos( celSpread ) - uWindDir.y * sin( celSpread ),
+            uWindDir.x * sin( celSpread ) + uWindDir.y * cos( celSpread ) );
+          vec2 celSwellDir = vec2( ${Math.cos((WIND.DIR_DEG - 67) * Math.PI / 180).toFixed(5)},
+            ${Math.sin((WIND.DIR_DEG - 67) * Math.PI / 180).toFixed(5)} );
+          vec3 celMainP = celSeaPhases( celWxz, uWindDir, celWaterField, 1.0 );
+          vec3 celCrossP = celSeaPhases( celWxz, celCrossDir, celWaterField, 1.25 );
+          vec3 celSwellP = celSeaPhases( celWxz, celSwellDir, celWaterField, 0.72 );
+          float celMsp = celMainP.x + seaBedWarp + celPhJit;
+          float celPrimary = sin( celMsp - uWeatherWaveT * uSoftFreq );
           // Crest sharpening stays on the sampled wavelength; short waves belong in shading.
           float celCrest = celPrimary + uWeatherWaterShape.x * ( celPrimary * celPrimary - 0.5 );
-          vec2 celCrossDir = vec2( -uWindDir.y, uWindDir.x );
-          float celCross = sin( dot( celWxz, celCrossDir ) * ${(Math.PI * 2 / WIND.SEA_M).toFixed(5)}
-            - uWeatherWaveT * uSoftFreq * 0.83 + celPhJit );
+          float celCross = sin( celCrossP.x - uWeatherWaveT * uSoftFreq * 1.12 + celPhJit );
+          float celSwell = sin( celSwellP.x - uWeatherWaveT * uSoftFreq * 0.85 + 1.7 );
+          float celReflected = sin( celMainP.y - uWeatherWaveT * uSoftFreq + celPhJit ) * celMainP.z
+            + sin( celCrossP.y - uWeatherWaveT * uSoftFreq * 1.12 + celPhJit ) * celCrossP.z * 0.5
+            + sin( celSwellP.y - uWeatherWaveT * uSoftFreq * 0.85 + 1.7 ) * celSwellP.z * 0.4;
           float celHSea = ( uSoftAmp * uWeatherWaveAmp ) * (
             celAmpD * celAmpMod * celObD * celGust( celSxz )
             * ( celCrest * ( 0.72 - uWeatherWaterShape.y )
-              + sin( uWeatherWaveT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28
-              + celCross * uWeatherWaterShape.y )
+              + celSwell * 0.28 + celCross * uWeatherWaterShape.y + celReflected )
             + celSeaBed * 0.15 * mix( 0.85, 0.25, celDepF )
           );
 
@@ -1238,42 +1347,7 @@ const CEL_SEA_GLSL = `
             celH += uSoftAmp * uWeatherWaveAmp * 0.45 * celFragW * celChop * mix( 0.15, 1.0, uWeatherWaterShape.z );
           }
 
-          // ⑤ 遺跡/沉船/橋墩周邊：環繞物件切面的同心波前與干涉條紋 (水波範圍與波長放大 2 倍，重疊時計算干涉條紋)
-          if ( celRawD > 0.001 && celRawD < 0.98 ) {
-            // 物件位置決定水流向內(-1)或向外(+1)
-            float celFlowSign = sign( sin( dot( floor( celSxz * 0.08 ), vec2( 12.9898, 78.233 ) ) * 43758.5453 ) );
-            if ( celFlowSign == 0.0 ) celFlowSign = 1.0;
-
-            // 判斷障礙物大小/類型: 大範圍遺跡/沉船 vs 橋墩 (水波範圍放大 2 倍)
-            float isRelic = smoothstep( 0.04, 0.20, celRawD );
-            float waveExtent = mix( ${FOAM.RANGE_M.toFixed(2)} * 2.3, ${FOAM.RANGE_M.toFixed(2)} * 4.6, isRelic );
-            float relicDist = celRawD * waveExtent;
-
-            // 波長放大 2 倍 (波數 k 由 3.8 減半為 1.9，波長倍增)
-            float relicJit = sin( dot( celSxz, vec2( 0.12, -0.16 ) ) + celRawD * 7.0 ) * 0.55
-                           + cos( dot( celSxz, vec2( -0.09, 0.18 ) ) + uWeatherWaveT * 0.5 ) * 0.45;
-            float relicPhase = relicDist * 1.9 - uWeatherWaveT * 1.6 * celFlowSign + relicJit;
-
-            // 越外圈自然消失 (衰減距離放大 2 倍: 0.95 -> 0.48)
-            float relicFade = exp( -relicDist * 0.48 ) * ( 1.0 - smoothstep( 0.15, 0.95, celRawD ) );
-            float relicWave = sin( relicPhase ) * relicFade * ( uSoftAmp * 1.25 );
-
-            // ⑥ 水波重疊干涉條紋計算 (Interference Fringes: 相長/相消干涉)
-            float seaPhase = celMsp + uWeatherWaveT * uSoftFreq;
-            float celInterference = cos( relicPhase - seaPhase )
-                                  + cos( relicPhase * 1.25 + dot( celSxz, vec2( 0.18, -0.14 ) ) - uWeatherWaveT * 1.1 ) * 0.5;
-            float fringeWeight = relicFade * smoothstep( 0.04, 0.35, celRawD );
-            float interferenceFringes = celInterference * fringeWeight * ( uSoftAmp * 0.75 );
-
-            #ifdef CEL_SWAMP_RIPPLE
-            // 沼澤/封閉水域：浪花變化改為正號到微小負號 (負號數值遠小於正號，負號時不顯示)
-            float swampWavePulse = sin( uWeatherWaveT * 1.4 + relicDist * 1.0 ) * 0.54 + 0.46; // [-0.08, +1.00]
-            relicWave *= clamp( swampWavePulse, 0.0, 1.0 );
-            interferenceFringes *= clamp( swampWavePulse, 0.0, 1.0 );
-            #endif
-
-            celH += ( relicWave + interferenceFringes ) * uWeatherWaveAmp;
-          }
+          celH += celVesselWaves( celSxz );
 
           #ifdef CEL_SWAMP_RIPPLE
           celH += celSwampRipple( celSxz ) * uWeatherWaveAmp;
@@ -1512,6 +1586,8 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uCharSpd = _charSpd;
     shader.uniforms.uSeaField = _seaField;
     shader.uniforms.uSeaRect = _seaRect;
+    shader.uniforms.uSeaSources = _seaSources;
+    shader.uniforms.uSeaSourceShape = _seaSourceShape;
     shader.uniforms.uFoamA = _foamA;
     shader.uniforms.uFoamC = _foamC;
     shader.uniforms.uRipple = _ripple;   // 沼澤漣漪源(CEL_SWAMP_RIPPLE;無沼澤 ⇒ 初始值全早退)

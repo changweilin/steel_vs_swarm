@@ -22,7 +22,7 @@ import { mulberry32 } from './rng.js';
 import { WATER } from './data.js';
 import {
   toonMat, toonPlain, envMat, markShared, disposeTree,
-  SURF_ID
+  SURF_ID, setSeaWaveSources
 } from './toon.js';
 import { terrainEnvCode } from './biomes.js';
 import { generateVessel, vesselFitsAt } from './vesselCatalog.js';
@@ -1442,6 +1442,7 @@ export function createSurfaceVessels(terrain, seed) {
 
   const cruisers = [];
   const mooredBoats = [];
+  const waveSources = [];
 
   const SHIP_MARGIN = 24.0;
   const clampMinX = minX + SHIP_MARGIN;
@@ -1501,6 +1502,7 @@ export function createSurfaceVessels(terrain, seed) {
     const cruiser = cruisers[cruisers.length-1];
     shipMesh.position.set(cx+Math.cos(cruiser.angle)*radius,wy+0.1,cz+Math.sin(cruiser.angle)*radius);
     shipMesh.rotation.y=Math.atan2(-Math.sin(cruiser.angle)*cruiser.rotDir,Math.cos(cruiser.angle)*cruiser.rotDir);
+    waveSources.push({ mesh: shipMesh, length: vessel.length, beam: vessel.beam, speed: cruiser.speed });
   }
 
   // B. 停泊小艇（岸邊繫留搖擺，嚴格在邊界內）
@@ -1518,6 +1520,7 @@ export function createSurfaceVessels(terrain, seed) {
         boatMesh.position.set(rx, wy, rz);
         boatMesh.rotation.y = rnd() * Math.PI * 2;
         vesselGroup.add(boatMesh);
+        waveSources.push({ mesh: boatMesh, length: vessel.length, beam: vessel.beam, speed: 0 });
 
         mooredBoats.push({
           mesh: boatMesh,
@@ -1542,6 +1545,17 @@ export function createSurfaceVessels(terrain, seed) {
     mooredBoats.push({mesh,baseY,phase:0,bobAmp:0.02});
     break;
   }
+
+  function updateWaveSources() {
+    for (const source of waveSources) {
+      source.x = source.mesh.position.x;
+      source.z = source.mesh.position.z;
+      source.dx = Math.sin(source.mesh.rotation.y);
+      source.dz = Math.cos(source.mesh.rotation.y);
+    }
+    setSeaWaveSources(waveSources);
+  }
+  updateWaveSources();
 
   return {
     group: vesselGroup,
@@ -1582,8 +1596,10 @@ export function createSurfaceVessels(terrain, seed) {
         b.mesh.position.y = b.baseY + bob;
         b.mesh.rotation.z = roll;
       }
+      updateWaveSources();
     },
     dispose() {
+      setSeaWaveSources([]);
       disposeTree(vesselGroup);
     }
   };

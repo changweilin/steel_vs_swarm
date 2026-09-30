@@ -31,7 +31,7 @@
 //   --break-fade    倒影的 seaFade 不再除以寫入處數 ⇒ Ⅲ **紅 1**(補償條)
 //   --break-size    倒影寬度退回 broad-phase 半徑 ⇒ Ⅲ **紅 1**(巨船變懸浮平板)
 //   --break-length  低視點鏡像長度不再封頂 ⇒ Ⅲ **紅 1**(碎倒影變百公尺棧板)
-import { readSrc, grabBlock, grabConst } from './audit_src.mjs';
+import { readSrc, grabBlock, grabConst, grabFn } from './audit_src.mjs';
 
 const A = process.argv.slice(2);
 const BRK = {
@@ -74,11 +74,11 @@ console.log('Ⅰ 深度場的烤(bakeSeaDepth;泡沫的驅動量是水深不是�
   const mk = (waterY, hFn, n = 8) => {
     let got = null;
     const fn = new Function('waterY', 'seaFieldN', 'lowPower', 'worldW', 'worldH', 'minX', 'minZ',
-      'sampleField', 'heights', 'FOAM', 'setSeaDepthField', 'seaData', 'seaN',
+      'sampleField', 'heights', 'FOAM', 'setSeaDepthField', 'seaData', 'seaN', 'seaDepths',
       `${bakeSrc}\nreturn bakeSeaDepth;`)(
       waterY, () => n, () => false, 120, 120, -60, -60,
       (f, x, z) => f(x, z), hFn, FOAM,
-      (data, size, bounds) => { got = { data: Array.from(data), size, bounds }; }, null, 0);
+      (data, size, bounds, depths) => { got = { data: Array.from(data), size, bounds, depths: Array.from(depths) }; }, null, 0, null);
     return { ran: fn(), got: () => got };
   };
   // 灘面:高度只隨 z 變(z = −60 ⇒ −12m 深水 / z = +60 ⇒ +12m 高地)
@@ -132,17 +132,19 @@ console.log('\nⅡ 蓋章(stampSeaBlockers;繞過每一根柱子的那一步)');
   const run = (blockers, n = 64) => {
     let got = null;
     const stamp = new Function('waterY', 'seaFieldN', 'lowPower', 'worldW', 'worldH', 'minX', 'minZ',
-      'sampleField', 'heights', 'FOAM', 'setSeaDepthField', 'seaData', 'seaN',
+      'sampleField', 'heights', 'FOAM', 'setSeaDepthField', 'seaData', 'seaN', 'seaDepths',
       `${bakeSrc}\n${stampSrc}\nreturn stampSeaBlockers;`)(
       0.3, () => n, () => false, 120, 120, -60, -60,
       (f, x, z) => f(x, z), () => -50, FOAM,
-      (data, size, bounds) => { got = { data, size, bounds }; }, null, 0);
+      (data, size, bounds, depths) => { got = { data, size, bounds, depths }; }, null, 0, null);
     const hit = stamp(blockers);
     const N = got.size, tx = 120 / N, tz = 120 / N;
     // 世界座標 → texel 讀數(與烤場同一個取樣點約定:texel 中心)
     const read = (x, z) => got.data[Math.min(N - 1, Math.max(0, Math.floor((z + 60) / tz))) * N
       + Math.min(N - 1, Math.max(0, Math.floor((x + 60) / tx)))];
-    return { hit, read };
+    const depthAt = (x, z) => got.depths[Math.min(N - 1, Math.max(0, Math.floor((z + 60) / tz))) * N
+      + Math.min(N - 1, Math.max(0, Math.floor((x + 60) / tx)))];
+    return { hit, read, depthAt };
   };
   // 深湖(整片 255)+ 一根 r = 6m 的圓柱
   const cyl = run([{ x: 0, z: 0, y: -1, h: 20, r: 6 }]);
@@ -160,6 +162,11 @@ console.log('\nⅡ 蓋章(stampSeaBlockers;繞過每一根柱子的那一步)');
   // 整根都在水面以下的柱子:蓋了也看不到
   const sunk = run([{ x: -30, z: -30, y: -20, h: 5, r: 6 }]);
   ok(sunk.read(-30, -30) === 255, '整根在水面以下的柱子 MUST NOT 蓋(它撐不出水面,泡沫沒有理由繞它)');
+  ok(Math.abs(sunk.depthAt(-30, -30) - 15.3) < 1e-4 && sunk.depthAt(20, 20) > 50,
+    'Submerged tops alter wave bathymetry only inside their actual footprint');
+  const overhead = run([{ x: 0, z: 0, y: 5, h: 20, r: 6 }]);
+  ok(overhead.read(0, 0) === 255 && overhead.depthAt(0, 0) > 50,
+    'Overhead solids cannot reflect waves or acquire surface foam');
 
   const stampReal = `function stampSeaBlockers(blockers) ${grabBlock(terrC, 'function stampSeaBlockers(blockers) {')}`;
   ok(/-Math\.sin\(b\.ry/.test(stampReal),
@@ -329,6 +336,50 @@ console.log('\nⅤ 純表現層(waterY / 涉水物理 / 水沼分類一格不碰
   const fadeOf = /^function seaFadeOf\(geo, w, h\) \{[\s\S]*?^\}/m.exec(terrC);
   ok(!!fadeOf && !/seaFadeAt/.test(fadeOf[0]),
     '`seaFadeOf` MUST 保持自給自足(只用 smooth01 / edgeWallInsetM)—— audit_soft_stroke Ⅵ 把它的原文丟進只注入那兩支的沙箱,反過來抽會讓那支在**呼叫時**丟 ReferenceError');
+}
+
+// Bathymetry must survive foam saturation, retain world axes, and remain deterministic.
+console.log('\nVI Wave bathymetry and bounded surface sources');
+{
+  const WIND = new Function(`${grabConst(toonSrc, 'WIND')}\nreturn WIND;`)();
+  const pack = new Function('WIND', 'seaSegM', `${grabFn(toonSrc, 'packSeaDepthField')}\nreturn packSeaDepthField;`)(
+    WIND, () => WIND.SEA_M / WIND.SEA_SEG);
+  const n = 32, bounds = { minX: -64, minZ: -48, w: 128, h: 96 };
+  const foam = new Uint8Array(n * n).fill(255);
+  const depths = Float32Array.from(foam, (_, i) => 3 + i % n * 0.6);
+  const packed = pack(foam, n, bounds, depths);
+  const center = ((n / 2) * n + n / 2) * 4;
+  ok(packed.every((v, i) => i % 4 !== 0 || v === 255), 'Wave packing preserves every foam sample');
+  ok(packed[center + 1] > packed[center - 8 * 4 + 1], 'Offshore depths deeper than the foam range remain distinct');
+  ok(packed[center + 2] > 128 && packed[center + 3] === 128, 'An X slope keeps positive X and zero Z components');
+  const zDepths = Float32Array.from(foam, (_, i) => 3 + Math.floor(i / n) * 0.5);
+  const zPacked = pack(foam, n, bounds, zDepths);
+  ok(zPacked[center + 2] === 128 && zPacked[center + 3] > 128, 'A Z slope keeps positive Z and zero X components');
+  const flat = pack(foam, n, bounds, new Float32Array(n * n).fill(80));
+  ok(flat.every((v, i) => v === (i % 4 < 2 ? 255 : 128)), 'Flat deep water has no bend or reflection normal');
+  ok(pack(foam, n, { ...bounds, w: 0 }, depths) === null
+    && pack(new Uint8Array(1), n, bounds, depths) === null, 'Malformed fields are omitted before creating textures');
+  ok(pack(foam, n, bounds, depths).every((v, i) => v === packed[i]), 'Wave fields replay without consuming layout RNG');
+  ok(pack(new Uint8Array([255]), 1, { minX: 0, minZ: 0, w: 1, h: 1 }, null).join(',') === '255,255,128,128',
+    'One-texel legacy fields retain the neutral deep-water value');
+
+  const vector = () => ({ value: Array.from({ length: WIND.SEA_SOURCE_N }, () => ({
+    values: [0, 0, 0, 0], set(...values) { this.values = values; },
+  })) });
+  const positions = vector(), shapes = vector();
+  const setSources = new Function('WIND', '_seaSources', '_seaSourceShape',
+    `${grabFn(toonSrc, 'setSeaWaveSources')}\nreturn setSeaWaveSources;`)(WIND, positions, shapes);
+  const source = { x: 4, z: -8, dx: 3, dz: 4, length: 20, beam: 6, speed: 3 };
+  setSources([{ ...source, dx: NaN }, { ...source, dx: 0, dz: 0 }, source]);
+  ok(positions.value[0].values.join(',') === '4,-8,0.6,0.8' && shapes.value[1].values[3] === 0,
+    'Invalid hulls are omitted and headings normalize without NaNs');
+  setSources(Array.from({ length: WIND.SEA_SOURCE_N + 4 }, () => source));
+  ok(shapes.value.length === WIND.SEA_SOURCE_N && shapes.value.every(v => v.values[3] === 1),
+    'Surface sources stay within the shader budget');
+  setSources([]);
+  ok(shapes.value.every(v => v.values[3] === 0), 'Disposal clears all hull sources before the next scene');
+  setSources({});
+  ok(shapes.value.every(v => v.values[3] === 0), 'Malformed source collections leave every shader slot disabled');
 }
 
 const flags = [BRK.foam && '--break-foam', BRK.stamp && '--break-stamp',
