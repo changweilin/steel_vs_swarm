@@ -3179,14 +3179,14 @@ function makeHud() {
         $('mpBar').style.width = `${Math.max(0, Math.min(100, w.mp / w.mm * 100))}%`;
         $('mpBar').classList.toggle('overcharge', mpo);
         $('mpText').textContent = `電力 ${Math.floor(w.mp)} / ${w.mm}${mpo ? ' ⚡' : ''}`;
-        // 爬升動力(飛行機體才有這條;地面機甲整條收起)—— 見底 = 爬不上去,橘紅警示
+        // 動力(全機種皆有;地面機體大跳躍/變形消耗,飛行機體爬升消耗)—— 見底 = 行動受限,橘紅警示
         const lf = w.lift;
         $('liftBox').classList.toggle('hidden', !lf);
         if (lf) {
           const p2 = lf.max > 0 ? lf.v / lf.max : 0;
           $('liftBar').style.width = `${Math.max(0, Math.min(100, p2 * 100))}%`;
           $('liftBar').classList.toggle('low', p2 <= FLIGHT.LOW_F);
-          $('liftText').textContent = `爬升動力 ${Math.round(p2 * 100)}%`;
+          $('liftText').textContent = `動力 ${Math.round(p2 * 100)}%`;
         }
         // 區塊式 CD/填彈進度條的唯一換算縫:fill 寬 = 剩餘/總長,歸零 = 就緒(純呈現,不碰任何權威值)
         const fracOf = (rem, max) => (max > 0 ? Math.max(0, Math.min(1, (rem || 0) / max)) : 0);
@@ -3247,12 +3247,13 @@ function makeHud() {
             $('abMobil').classList.toggle('ready', mob.cd <= 0.05);
             setFill('abMobilFill', fracOf(mob.cd, mob.cdMax));
           } else {
-            const need = Math.max(0, (mob.mp || 0) - (mob.cur || 0));
+            const need = Math.max(0, (mob.lift || 0) - (mob.cur || 0));
             const ready = need <= 0;
-            $('abMobilName').textContent = `${mob.name}(${mob.mp}MP)`;
-            $('abMobilCd').textContent = ready ? '就緒' : '電力不足';
+            const pct = mob.liftMax > 0 ? Math.round(mob.lift / mob.liftMax * 100) : 0;
+            $('abMobilName').textContent = `${mob.name}(${pct}% 動力)`;
+            $('abMobilCd').textContent = ready ? '就緒' : '動力不足';
             $('abMobil').classList.toggle('ready', ready);
-            setFill('abMobilFill', fracOf(need, mob.mp));
+            setFill('abMobilFill', fracOf(need, mob.lift));
           }
         }
         // 觸控版:同一份就緒/冷卻鏡射到虛擬搖桿的 X / Y / B 鈕面 —— 角色數據那一欄是唯一渲染來源,

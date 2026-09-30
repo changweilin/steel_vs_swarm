@@ -10,7 +10,7 @@ import { stepWeatherSurface, lightningFireSeconds, lightningFireWet, lightningSt
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, BASE_MISSILE, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
-  vsMult, upgradePrice, upgradeScore,   chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, cjumpMpCost, morphMpCost, TARGET_CLASS, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId, clampHeroSpawn,
+  vsMult, upgradePrice, upgradeScore,   chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, TARGET_CLASS, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId, clampHeroSpawn,
   isSuperSide, isThirdSide, SUPER_UPG, superCombatLvl, superDefLvl,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
   hyperClimbVx, hyperArcY, hyperTrackR,
@@ -5503,18 +5503,9 @@ export class BattleSim {
     }
   }
 
-  /** 大跳躍/變形起飛電力結算(權威;客戶端本地預測 + 快照校正)。
-   *  跳躍本身是客戶端物理(位置回報制)—— 伺服器只結算電力,不擋移動;
-   *  電力不足的客戶端根本不會起跳(只小跳),作弊者硬跳也只會把自己扣到 0。
-   *  防守大跳窗(defJumpUntil + 防守中)免電力(舊制免 CD 的延續)。 */
-  heroJump(pid, charge, isMorph) {
-    const h = this.heroes.get(pid);
-    if (!h || h.dead || this.over) return;
-    if (h.defending && (h.defJumpUntil || 0) > this.t) return;   // 防守大跳窗:免電力追加次數
-    const cost = isMorph ? morphMpCost(charge) : cjumpMpCost(charge);
-    if (cost <= 0) return;
-    h.mp = Math.max(0, (h.mp || 0) - cost);
-  }
+  /** 大跳躍/變形起飛動力結算已移至客戶端(lift 純客戶端物理)。
+   *  保留此方法作為路由進入點;防守窗口免費邏輯由客戶端自行判斷。 */
+  heroJump(_pid, _charge, _isMorph) {}
 
   /** 無敵幀(蓄力跳躍 / 升空變形起跳離地 / 無人機完美迴避):客戶端於起跳離地當下請求,
    *  伺服器驗 CD 後給 1s 免傷。時長/CD 皆夾在伺服器(data.js IFRAME)—— 客戶端只能決定何時用。
