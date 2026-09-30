@@ -308,6 +308,7 @@ async function fatalRestart() {
 }
 /** 背景看門狗(2s 一次):載入逾時 / 快照停滯 / 斷線逾時才彈窗,不洗正常 toast */
 function fatalWatchdog() {
+  if (document.hidden) return;   // 背景分頁不彈窗:時鐘在回可見時重定(見 visibilitychange)
   if (fatal.shown || !fatalArmed()) return;
   const now = Date.now();
   if (app.phaseShown === 'loading' && fatal.loadT0 && now - fatal.loadT0 > FATAL.LOAD_MS) {
@@ -328,6 +329,17 @@ function fatalWatchdog() {
   }
 }
 setInterval(fatalWatchdog, 2000);
+// 背景分頁不計時:切走再回來不彈錯誤。rAF 在背景本來就停擺,回可見時把各看門狗時鐘重定,
+// 免得拿陳舊時間戳誤報畫面/快照停滯;載入計時只順延隱藏時長(真的卡死仍會計滿)。
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { fatal.hiddenAt = Date.now(); return; }
+  fatal.lastFrame = performance.now();
+  const dt = fatal.hiddenAt ? Date.now() - fatal.hiddenAt : 0;
+  fatal.hiddenAt = 0;
+  if (fatal.loadT0) fatal.loadT0 += dt;
+  fatal.lastSnap = Date.now();
+  fatal.lastNetUp = Date.now();
+});
 
 // ================= 連線機制(雲端 / 區網 Tailscale / 單機)=================
 // 【單一真相縫】模式判定全在 netmode.js;本節只做「畫出來 + 換了就重建傳輸層」。
@@ -342,7 +354,8 @@ const NET_HANDLERS = {
     if (m.code === 'reattach') sessionStorage.removeItem('svs_token');
     // 單機模擬核心載入失敗 = 開啟失敗,直接彈窗(不限階段);其餘維持 toast + 斷線看門狗
     if (/模擬核心|單機模式載入失敗/.test(m.msg || '')) { showFatal(m.msg, true); return; }
-    toast(`⚠️ ${m.msg}`);
+    // 背景分頁的錯誤不彈(多半是切走期間的斷線重連通知):回可見後若仍斷線,看門狗會在新的計時窗內再報
+    if (!document.hidden) toast(`⚠️ ${m.msg}`);
     // 開房被拒(驗證失敗)→ 解鎖建立鈕讓房主重試
     if (app.phaseShown === 'openroom') $('createRoomBtn').disabled = !app.favCfg;
     // 劇情部署被拒 → 清狀態退回章節列表

@@ -45,6 +45,7 @@ export class Net {
     this.ws.onopen = () => {
       this.connected = true;
       this._fails = 0;
+      clearTimeout(this._toastT);   // 短暫抖動內恢復:前面排隊的斷線通知作廢
       if (this._everOpen) {
         this.h.reconnect?.();     // Reconnection: client emits reattach to reclaim player slot
       } else {
@@ -66,12 +67,19 @@ export class Net {
       this.connected = false;
       if (this._dead) return;
       // 1009 = Message exceeds frame size limit (typically world/map payload upload).
-      this.h.error?.({ msg: e?.code === 1009 ? '上傳資料超過上限被斷線,重連中…(反覆發生請重整後重試)' : '與伺服器斷線,重連中…' });
+      const msg = e?.code === 1009 ? '上傳資料超過上限被斷線,重連中…(反覆發生請重整後重試)' : '與伺服器斷線,重連中…';
+      // 短暫抖動不彈錯:4 秒內重連成功就當沒事,免得正常等待被錯誤洗版;背景分頁全程靜默(回可見後看門狗接手)
+      clearTimeout(this._toastT);
+      this._toastT = setTimeout(() => {
+        if (this._dead || this.connected) return;
+        if (typeof document !== 'undefined' && document.hidden) return;
+        this.h.error?.({ msg });
+      }, 4000);
       this._later();
     };
   }
 
-  kill() { this._dead = true; this._queue = []; clearTimeout(this._timer); try { this.ws.close(); } catch { /* ignore */ } }
+  kill() { this._dead = true; this._queue = []; clearTimeout(this._timer); clearTimeout(this._toastT); try { this.ws.close(); } catch { /* ignore */ } }
 
   // Socket transmission: during race conditions where connected is true but underlying socket is closing,
   // ws.send throws. Handled as disconnect by triggering backoff retry while returning false.
