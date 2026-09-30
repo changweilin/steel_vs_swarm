@@ -28,7 +28,7 @@ const envelope = new Function('THREE', grabFn(src, 'addTransparentWallEnvelope')
 const arrange = new Function('THREE', 'boundaryGrid', 'edgeWallHM', 'boundaryLayoutOf', 'clickableObjects', 'addTransparentWallEnvelope',
   grabFn(src, 'withObjectLayout') + ';return withObjectLayout;')(THREE, boundaryGrid, edgeWallHM, () => layout, clickable, envelope);
 
-for (const prefix of ['geo', 'plant', 'veh', 'vessel', 'industry', 'ice']) {
+for (const prefix of ['geo', 'plant', 'veh', 'vessel', 'industry', 'ice', 'civ']) {
   layout = 'scene';
   const parent = new THREE.Group();
   const geometry = new THREE.BoxGeometry(4, 3, 2);

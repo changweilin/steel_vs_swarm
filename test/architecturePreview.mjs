@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../public/js/', import.meta.url));
-const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 · 建築 / 地質 / 植物立體視覺工作室</title>
+const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 · 建築 / 地質 / 植物 / 載具 / 平民立體視覺工作室</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body { margin: 0; background: #cdd9e2; color: #273649; font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; user-select: none; }
@@ -198,6 +198,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     <button id="tab-btn-ice" class="cat-tab-btn" type="button" data-tab="ice">❄️ 冰雪</button>
     <button id="tab-btn-infrastructure" class="cat-tab-btn" type="button" data-tab="infrastructure">⚙️ 能源與工程</button>
     <button id="tab-btn-env" class="cat-tab-btn" type="button" data-tab="env">🌐 邊界構造</button>
+    <button id="tab-btn-civ" class="cat-tab-btn" type="button" data-tab="civ">🧍 平民</button>
   </div>
   <div class="env-sim-bar">
     <div class="env-sim-group">
@@ -925,6 +926,69 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     </div>
   </div>
 
+  <!-- 平民類別控制面板 -->
+  <div id="panel-civ" class="cat-panel" style="display: none;">
+    <div class="dim-panel">
+      <div class="dim-title">
+        <span>平民紙娃娃與職業外觀</span>
+        <span class="badge" id="civ-info-badge">20 職業家族 · 種子重播</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">職業家族</label>
+          <select id="civ-family" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all" selected>全部家族輪播 (All Families)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">陣營呈現</label>
+          <select id="civ-side" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all" selected>兩陣營輪播 (STEEL / SWARM)</option>
+            <option value="STEEL">鋼鐵議會 (STEEL)</option>
+            <option value="SWARM">蜂群兵團 (SWARM)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
+          <select id="civ-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單體細節檢驗 (Single Civilian)</option>
+            <option value="catalog">全家族目錄陳列 (All Catalog)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">排列方式</label>
+          <select id="layout-civ" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="scene" selected>場景散布 (Scene Scatter)</option>
+            <option value="boundary">邊界沿邊排列＋緩衝區＋透明牆 (Boundary Run)</option>
+          </select>
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="btn-civ-generate" class="btn-generate" title="生成平民陣列">⚡</button>
+        <button id="btn-civ-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
+        <div class="sample-control">
+          <span class="sample-label">取樣規模:</span>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-civ" value="5" min="1" max="20"></label>
+          <span>×</span>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-civ" value="4" min="1" max="20"></label>
+        </div>
+        <div class="seed-control">
+          <label for="input-civ-seed">種子碼</label>
+          <input type="number" id="input-civ-seed" value="1001" min="1" max="999999">
+        </div>
+        <div class="seed-mode-control">
+          <span class="sample-label">生成種子規則:</span>
+          <select id="select-seed-mode-civ" class="seed-mode-select">
+            <option value="fixed">固定種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="nav-bar">
     <button id="btn-back" class="btn-back" title="返回分類矩陣">←</button>
     <div class="nav-status" id="nav-status">目前展示：【建築分類與變體】</div>
@@ -993,6 +1057,12 @@ import { makeProceduralVehicle } from '/js/vehicleModels.js';
 import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel, VESSEL_EQUIPMENT } from '/js/vesselCatalog.js';
 import { buildGeneratedVesselMesh } from '/js/vesselModels.js';
 import { disposeTree } from '/js/toon.js';
+
+// 平民生成模組(單一真相縫:外觀 = civilianAppearance.generateCivilian, 建模 = npcModels.buildNpcModel)
+import { generateCivilian } from '/js/civilianAppearance.js';
+import { CIVILIAN_OCCUPATIONS } from '/js/civilianContent.js';
+import { CIVILIANS, hitH } from '/js/data.js';
+import { buildNpcModel } from '/js/npcModels.js';
 
 // 環境物件與邊界生成模組
 import { environmentParts } from '/js/environmentParts.js';
@@ -1162,6 +1232,9 @@ scene.add(industryGroup);
 let iceGroup = new THREE.Group();
 scene.add(iceGroup);
 
+let civGroup = new THREE.Group();
+scene.add(civGroup);
+
 const waterMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(3200, 3200),
   new THREE.MeshStandardMaterial({
@@ -1256,7 +1329,7 @@ function getActiveDimItems(dimKey) {
   return list.length > 0 ? list : col.items;
 }
 
-let currentTab = 'arch'; // 'arch' | 'geology' | 'plant' | 'vehicle' | 'vessel' | 'industry' | 'ice' | 'env'
+let currentTab = 'arch'; // 'arch' | 'geology' | 'plant' | 'vehicle' | 'vessel' | 'industry' | 'ice' | 'env' | 'civ'
 let currentMode = 'matrix'; // 'matrix' | 'variants' | 'random'
 let selectedDims = ['func', 'style'];
 const clickableObjects = [];
@@ -1319,7 +1392,7 @@ function estimateAppurtenances(poly, arch, heightInfo, seed) {
 
 // ---- 清除與重設 ----
 function clearScene() {
-  for (const group of [buildingGroup, roadGroup, geologyGroup, plantGroup, vehicleGroup, vesselGroup, envGroup, industryGroup, iceGroup]) disposeTree(group);
+  for (const group of [buildingGroup, roadGroup, geologyGroup, plantGroup, vehicleGroup, vesselGroup, envGroup, industryGroup, iceGroup, civGroup]) disposeTree(group);
   scene.remove(buildingGroup);
   buildingGroup = new THREE.Group();
   scene.add(buildingGroup);
@@ -1355,6 +1428,10 @@ function clearScene() {
   scene.remove(iceGroup);
   iceGroup = new THREE.Group();
   scene.add(iceGroup);
+
+  scene.remove(civGroup);
+  civGroup = new THREE.Group();
+  scene.add(civGroup);
 
   labels.length = 0;
   labelContainer.innerHTML = '';
@@ -2585,6 +2662,9 @@ function switchTab(tabKey) {
   } else if (tabKey === 'env') {
     if (titleEl) titleEl.textContent = '🌐 邊界構造 · 連續陡坡接縫';
     if (descEl) descEl.textContent = '56 款邊界障礙 · 固定尺寸權威碰撞 · 陡坡緩坡平地水域';
+  } else if (tabKey === 'civ') {
+    if (titleEl) titleEl.textContent = '🧍 平民紙娃娃與職業外觀生成';
+    if (descEl) descEl.textContent = CIVILIANS.length + ' 職業家族 · 種子重播 · 陣列 / 單體 / 目錄';
   }
 
   const activePanel = document.querySelector('#panel-' + (tabKey === 'infrastructure' ? 'env' : tabKey));
@@ -2606,6 +2686,8 @@ function switchTab(tabKey) {
     buildIceMode();
   } else if (tabKey === 'env' || tabKey === 'infrastructure') {
     buildEnvironmentMode();
+  } else if (tabKey === 'civ') {
+    buildCivilianMode();
   }
 }
 
@@ -4050,8 +4132,158 @@ function buildEnvironmentMode() {
   render();
 }
 
+// ==========================================
+// 平民紙娃娃 (Civilian Mode)
+// ==========================================
+// 外觀與建模走遊戲同一條管線:generateCivilian(種子重播) + buildNpcModel('civ');
+// 此處只做陣列 / 單體 / 目錄陳列與兩階段量測佈局,不另寫外觀邏輯。
+let civInitialized = false;
+function initCivilianOptions() {
+  if (civInitialized) return;
+  civInitialized = true;
+  const sel = document.querySelector('#civ-family');
+  if (!sel) return;
+  CIVILIANS.forEach((row, i) => {
+    sel.add(new Option(row.name + ' · ' + CIVILIAN_OCCUPATIONS[i][0] + '等 4 款', String(i)));
+  });
+  const badge = document.querySelector('#civ-info-badge');
+  if (badge) badge.textContent = CIVILIANS.length + ' 職業家族 · ' + CIVILIAN_OCCUPATIONS.flat().length + ' 款職業 · 種子重播';
+}
+
+function createCivilianInstance(family, seed, side, posX = 0, posZ = 0) {
+  try {
+    const raw = buildNpcModel('civ', side, { profile: family, appearanceSeed: seed });
+    if (!raw) return null;
+    const laid = withObjectLayout({ model: raw, meta: { seed } }, 'civ');
+    const model = laid.model;
+    model.position.set(posX, 0, posZ);
+    civGroup.add(model);
+    const appearance = generateCivilian(seed, family);
+    const bounds = new THREE.Box3().setFromObject(model);
+    const size = bounds.getSize(new THREE.Vector3());
+    const meta = {
+      posX, posZ,
+      seed,
+      family,
+      side,
+      label: appearance.occupation,
+      occupation: appearance.occupation,
+      age: appearance.age,
+      gender: appearance.gender,
+      height: hitH({ id: seed, civ: true }),
+      size: [size.x, size.y, size.z],
+    };
+    model.traverse((o) => {
+      if (o.isMesh) {
+        o.userData.civilianMeta = meta;
+        clickableObjects.push(o);
+      }
+    });
+    const badge = document.createElement('div');
+    badge.className = 'badge-label';
+    badge.innerHTML = '<span class="cat">🧍</span>' + meta.label + ' · ' + meta.age + '歲 <span class="height">' + meta.height.toFixed(2) + 'm</span>';
+    labelContainer.appendChild(badge);
+    const labelObj = { element: badge, point: new THREE.Vector3(posX, bounds.max.y + 0.6, posZ) };
+    labels.push(labelObj);
+    return { model, meta, size, bounds, labelObj };
+  } catch (err) {
+    console.error('平民生成失敗:', err);
+    return null;
+  }
+}
+
+function buildCivilianMode() {
+  clearScene();
+  currentMode = 'civilian';
+  document.querySelector('#btn-back').style.display = 'none';
+  waterMesh.visible = false;
+  floor.visible = true;
+  floor.material.color.setHex(0xbed0bd);
+
+  initCivilianOptions();
+
+  const familyVal = document.querySelector('#civ-family')?.value ?? 'all';
+  const sideVal = document.querySelector('#civ-side')?.value ?? 'all';
+  const viewMode = document.querySelector('#civ-view-mode')?.value ?? 'array';
+  const seed = parseInt(document.querySelector('#input-civ-seed')?.value, 10) || 1001;
+  const seedMode = document.querySelector('#select-seed-mode-civ')?.value || 'per_building';
+  const boundaryNote = boundaryLayoutOf('civ') === 'boundary' ? ' · 邊界沿邊排列（含緩衝區＋透明牆包絡）' : '';
+  const sideOf = (idx) => (sideVal === 'all' ? (idx % 2 ? 'SWARM' : 'STEEL') : sideVal);
+
+  if (viewMode === 'single') {
+    const actFamily = (familyVal === 'all' || familyVal === '' || familyVal == null)
+      ? seed % CIVILIANS.length : Number(familyVal);
+    const res = createCivilianInstance(actFamily, seed, sideOf(0), 0, 0);
+    if (!res) return;
+    document.querySelector('#nav-status').textContent = '平民單體檢驗：【' + res.meta.label + ' · ' + res.meta.age + '歲 · ' + res.meta.gender + '】（家族 ' + CIVILIANS[actFamily].name + ' · 種子碼 ' + seed + ' · 身高 ' + res.meta.height.toFixed(2) + 'm' + boundaryNote + '）';
+    camTarget.set(0, res.meta.height * 0.5, 0);
+    camDist = Math.max(res.size.x, res.size.y, res.size.z) * 4 + 4;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  } else {
+    const isCatalog = viewMode === 'catalog';
+    const listPool = (familyVal === 'all' || familyVal === '' || familyVal == null)
+      ? CIVILIANS.map((_, i) => i) : [Number(familyVal)];
+    const cols = isCatalog
+      ? Math.min(8, Math.max(2, Math.ceil(Math.sqrt(listPool.length))))
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-civ')?.value, 10) || 5));
+    const rows = isCatalog
+      ? Math.ceil(listPool.length / cols)
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-civ')?.value, 10) || 4));
+    const count = isCatalog ? listPool.length : cols * rows;
+    clearScene();
+    waterMesh.visible = false;
+    floor.visible = true;
+
+    const items = [];
+    let maxObjW = 1, maxObjD = 1, maxObjH = 1.8;
+    for (let idx = 0; idx < count; idx++) {
+      const c = idx % cols;
+      const r = Math.floor(idx / cols);
+      const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
+      const curFamily = listPool[idx % listPool.length];
+      const res = createCivilianInstance(curFamily, curSeed, sideOf(idx), 0, 0);
+      if (res) {
+        const laid = res.model;
+        const bounds = new THREE.Box3().setFromObject(laid);
+        const size = bounds.getSize(new THREE.Vector3());
+        if (size.x > maxObjW) maxObjW = size.x;
+        if (size.z > maxObjD) maxObjD = size.z;
+        if (size.y > maxObjH) maxObjH = size.y;
+        items.push({ c, r, idx, res });
+      }
+    }
+
+    const stepX = Math.max(3, Math.ceil(maxObjW * 1.6 + 1.5));
+    const stepZ = Math.max(3, Math.ceil(maxObjD * 1.6 + 1.5));
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+    for (const it of items) {
+      const posX = startX + it.c * stepX;
+      const posZ = startZ + it.r * stepZ;
+      it.res.model.position.set(posX, 0, posZ);
+      it.res.meta.posX = posX;
+      it.res.meta.posZ = posZ;
+      if (it.res.labelObj) {
+        const topY = new THREE.Box3().setFromObject(it.res.model).max.y;
+        it.res.labelObj.point.set(posX, topY + 0.6, posZ);
+      }
+    }
+
+    document.querySelector('#nav-status').textContent = (isCatalog ? '平民全家族目錄陳列' : '平民陣列檢驗') + ' (' + cols + '×' + rows + ' 共 ' + items.length + ' 位）：【' + (listPool.length === CIVILIANS.length ? '全部家族輪播' : CIVILIANS[listPool[0]].name) + '】（基底種子 ' + seed + boundaryNote + '）';
+    const totalW = (cols - 1) * stepX + maxObjW;
+    const totalD = (rows - 1) * stepZ + maxObjD;
+    camTarget.set(0, Math.min(4, maxObjH * 0.4), 0);
+    camDist = Math.max(totalW, totalD, maxObjH * 1.5) * 1.25 + 8;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  }
+  updateCamera();
+  render();
+}
+
 // 統一陣列規模、種子模式、種子碼與排列方式監聽
-['geo', 'plant', 'veh', 'vessel', 'env', 'industry', 'ice', 'arch'].forEach((prefix) => {
+['geo', 'plant', 'veh', 'vessel', 'env', 'industry', 'ice', 'arch', 'civ'].forEach((prefix) => {
   ['cols', 'rows'].forEach((dim) => {
     document.querySelector('#sample-' + dim + '-' + prefix)?.addEventListener('change', () => {
       rebuildActiveTab();
@@ -4176,6 +4408,22 @@ document.querySelector('#chk-ice-water')?.addEventListener('change', () => {
   render();
 });
 
+// 平民事件
+document.querySelector('#btn-civ-generate')?.addEventListener('click', () => {
+  const mode = document.querySelector('#select-seed-mode-civ')?.value;
+  if (mode === 'shared_batch') {
+    document.querySelector('#input-civ-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  }
+  buildCivilianMode();
+});
+document.querySelector('#btn-civ-random-seed')?.addEventListener('click', () => {
+  document.querySelector('#input-civ-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  buildCivilianMode();
+});
+['#civ-family', '#civ-side', '#civ-view-mode'].forEach((id) => {
+  document.querySelector(id)?.addEventListener('change', buildCivilianMode);
+});
+
 // ==========================================
 // 頂部環境模擬控制列事件 (四季 × 日夜 × 多元天氣)
 // ==========================================
@@ -4187,6 +4435,7 @@ function rebuildActiveTab() {
   else if (currentTab === 'vessel') buildVesselMode();
   else if (currentTab === 'industry') buildIndustryMode();
   else if (currentTab === 'ice') buildIceMode();
+  else if (currentTab === 'civ') buildCivilianMode();
   else if (currentTab === 'env' || currentTab === 'infrastructure') buildEnvironmentMode();
 }
 
@@ -4280,6 +4529,7 @@ try {
   initVehicleOptions();
   initVesselOptions();
   initGeologyOptions();
+  initCivilianOptions();
   buildArchMode();
 } catch (err) {
   console.error('初次建構失敗:', err);
