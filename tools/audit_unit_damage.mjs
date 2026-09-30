@@ -1,7 +1,7 @@
 // Execute damage on production rigs: immutable articulation, healing, stages and missile snapshots.
 import assert from 'node:assert/strict';
 import { readFile, mkdir } from 'node:fs/promises';
-import { chromiumOrNull, chromePath, serve } from './pw.mjs';
+import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
 import { readSrc, grabMethod, grabFn } from './audit_src.mjs';
 import { BattleSim } from '../server/sim.js';
 import { MAPGEO } from '../public/js/data.js';
@@ -12,7 +12,7 @@ assert.deepEqual(sim.snapshot().sm.find(m=>m.id===999),{id:999,x:0,y:2,z:0,hp:25
 assert.equal(sim._serializeEnt({id:1,kind:'moon',isMoon:true,x:0,z:0,y:4.5,hp:25,maxHp:100}).y,4.5);
 assert.equal(sim._serializeEnt({id:2,kind:'slab',isSlab:true,x:0,z:0,ang:1.2,hp:25,maxHp:100}).ang,1.2);
 const chromium=await chromiumOrNull();
-assert.ok(chromium,'Playwright is required');
+if (!chromium) skipNoPlaywright('單位損毀瀏覽器量測');
 const server=await serve(), browser=await chromium.launch({headless:true,executablePath:chromePath()});
 try {
   const page=await browser.newPage({viewport:{width:1200,height:1000}}),errors=[];

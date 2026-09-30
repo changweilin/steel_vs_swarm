@@ -172,7 +172,7 @@ console.log('\n■ Ⅳ 伺服器原文:方位只從 _damage 記帳,flush 排在�
   t('高程只在「攻擊者也是英雄且有 ay」時附上(跨框相減的坑)',
     /by\.hero && by\.ay != null/.test(strip(hurtLog)));
   t('MUST NOT 拿 _sightY/離地高當高程來源(那是離地框)',
-    !/_sightY|LOS\.EYE_M|LOS\.TGT_M/.test(strip(hurtLog)) && !/_sightY/.test(strip(flush)));
+    !/_sightY|LOS\.EYE_M|LOS\.TGT_M/.test(strip(hurtLog).slice(strip(hurtLog).indexOf('t._hurt'))) && !/_sightY/.test(strip(flush)));
 }
 
 // ---------------------------------------------------------------------------
@@ -264,8 +264,8 @@ console.log('\n■ Ⅵ 客戶端原文:方位只來自伺服器事件、位置�
     /this\._blood\.length > BLOOD\.MAX[\s\S]{0,40}?shift\(\)/.test(splat));
   t('逐幀衰減 ← bloodAlpha,清空那幀仍推一次後才早退',
     /bloodAlpha\(b\.left\)/.test(upd) && /this\._bloodOn/.test(upd));
-  t('_updateBlood 掛在主迴圈(與 _updateCcFlash 同一處)',
-    /this\._updateCcFlash\(dt\);[\s\S]{0,200}?this\._updateBlood\(dt\);/.test(gameCode));
+  t('_updateBlood 掛在主迴圈(_updatePlayer 內與 _updateEnvFog 同一處)',
+    /this\._updateEnvFog\(dt\);[\s\S]{0,200}?this\._updateBlood\(dt\);/.test(gameCode));
   t('陣亡 / 換座機 MUST 清帳(血漬不跟著下一條命 / 下一具機體)',
     count(gameCode, 'this._clearBlood()') >= 2
     && /_clearCcFlash\(\);[\s\S]{0,200}?_clearBlood\(\)/.test(gameCode),

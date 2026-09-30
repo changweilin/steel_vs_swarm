@@ -1,11 +1,11 @@
 // Browser integration: batched neighbours, real snapshot consumer, rooftop/wall collision, and combat models.
 import assert from 'node:assert/strict';
 import { readFile, mkdir } from 'node:fs/promises';
-import { chromiumOrNull, chromePath, serve } from './pw.mjs';
+import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
 import { readSrc, grabMethod } from './audit_src.mjs';
 
 const chromium=await chromiumOrNull();
-assert.ok(chromium,'Playwright is required');
+if (!chromium) skipNoPlaywright('建築損毀截圖量測');
 const server=await serve(), browser=await chromium.launch({headless:true,executablePath:chromePath()});
 try {
   const page=await browser.newPage({viewport:{width:1280,height:2200},deviceScaleFactor:1});
