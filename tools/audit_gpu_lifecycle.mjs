@@ -252,6 +252,11 @@ console.log('\n⑨ 通用物件池(pool.js)生命週期與零配置熱路徑驗�
     'game.js _deathPlume 複用 _spritePoolFire / _spritePoolSmoke 與 _spriteDriftFade(零逐死材質配置)');
   ok(/_takeMissile\(byId, side, tid, tpid/.test(S) && !/Object\.assign\(this\._missilePool\.acquire\(\)/.test(S),
     'sim.js _takeMissile 直接寫入池化飛彈欄位(消除每發物件字面量配置與 Object.assign)');
+  const upMatch = G.match(/_updatePlayer\(dt, now\) \{[\s\S]*?this\._stepSelfWeights\(dt\);/);
+  ok(upMatch && !/new THREE\.Vector3/.test(upMatch[0])
+    && /this\._fireDir/.test(G) && /this\._echoDir/.test(G) && /this\._armDir/.test(G)
+    && /this\._guidedVel/.test(G) && /_shotColCache\.get\(side\)/.test(G),
+    'game.js _updatePlayer / _tryFire / _burstEchoSelf / _shotCols 消除每幀/每發 Vector3 與 Color 配置');
 }
 
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);

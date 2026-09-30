@@ -46,7 +46,7 @@ import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { fireUnitMotion, stepUnitSpinners } from './unitMotion.js';
 import { buildBaseBattery } from './buildingUnitModels.js';
 import { lodStrideByD2, lodDue, GEO, geoTrimKeep, geoOutlineKeep, applyGeoLod } from './lod.js';
-import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep } from './cull.js';
+import { CULL, cullFarM, keepDistance, occludedBySphere, scopeKeep, scopeRadiusPx } from './cull.js';
 import { TEX_STREAM, finishTex, collectMatStreamTexs, collectTreeStreamTexs, meshStreamAnchors, noteTexDemand, flushTexStream } from './tex.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
@@ -436,6 +436,7 @@ const _TMP_E = new THREE.Vector3();            // 第二命中暫存(氣旋/拖�
 const _TMP_F = new THREE.Vector3();            // 氣旋正交軸暫存(_spinCyclone 專用;呼叫期間 D/E/F 皆視為已借出)
 const _FWD_Z = new THREE.Vector3(0, 0, 1);     // 彈體幾何朝向(+z);對準航向的固定基準軸
 const _UP_Y = new THREE.Vector3(0, 1, 0);      // 垂直軸(+y);圓柱/法線對齊的固定基準軸
+const _shotColCache = new Map();               // 陣營曳光色快取(免每發 new THREE.Color 解析字串)
 
 // ---- 池化特效的共用 fade(無閉包:參數全在 obj.userData,同一支函式服務全池)----
 // 逐發閉包 (`fade: (o,f) => {...}`) 本身就是每發一次的配置;池化 sprite/曳光若還配閉包,
@@ -6929,6 +6930,10 @@ export class BattleClient {
     this.dead = true;
     this.firing = false;
     this.aiming = false;
+    if (this.camera && this.camera.fov !== this.baseFov) {
+      this.camera.fov = this.baseFov;
+      this.camera.updateProjectionMatrix();
+    }
     if (this._aimViewRestore) {
       const restore = this._aimViewRestore;
       this._aimViewRestore = null;
@@ -8281,7 +8286,7 @@ export class BattleClient {
 
     // 槍口與射向(座艙槍管末端或 TPS 機體發射點,世界座標)
     this.camera.updateMatrixWorld();
-    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    const dir = this.camera.getWorldDirection(this._fireDir || (this._fireDir = new THREE.Vector3()));
     const muzzle = this._selfMuzzle(dir, rng, id);
 
     // 後座力(依武器分級 def.recoil):視角上踢(準星上移)+ 偏擺 + 槍身後坐 + 鏡頭震動 + 位移擊退
@@ -8447,7 +8452,7 @@ export class BattleClient {
     if (!this.side || this.dead || !this.ch) return;
     const rng = def.range * this._altRangeTo(this._aimTarget(this._maxRange(def)), def);
     this.camera.updateMatrixWorld();
-    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    const dir = this.camera.getWorldDirection(this._echoDir || (this._echoDir = new THREE.Vector3()));
     const muzzle = this._selfMuzzle(dir, rng, id);
 
     // 逐發手感(見上方註):槍口焰 / 槍身後坐 / 鏡頭震動 / 準星上踢 / 擊退
@@ -8473,7 +8478,7 @@ export class BattleClient {
       return;
     }
     // 動能:與本體同初速同重力 ⇒ 三發走同一條彈道,看起來就是一串連續的曳光
-    const to = muzzle.clone().addScaledVector(dir, rng);
+    const to = (this._echoTo || (this._echoTo = new THREE.Vector3())).copy(muzzle).addScaledVector(dir, rng);
     this._spawnVisShell(muzzle, to, def, this.side, this.ch, this._shotV0(def, false), false);
   }
 
@@ -8648,7 +8653,8 @@ export class BattleClient {
     const nx = _TMP_B.crossVectors(dir, up).normalize();
     const nz = _TMP_C.crossVectors(dir, nx).normalize();
     const a = Math.random() * Math.PI * 2, m = Math.tan(Math.random() * spread);
-    return dir.clone().addScaledVector(nx, m * Math.cos(a)).addScaledVector(nz, m * Math.sin(a)).normalize();
+    const out = this._armDir || (this._armDir = new THREE.Vector3());
+    return out.copy(dir).addScaledVector(nx, m * Math.cos(a)).addScaledVector(nz, m * Math.sin(a)).normalize();
   }
 
   /** 低空導引彈的抬頭段:直到 ARMING 距離前只向上離地,避免槍口前的地面/背景物件提早引爆。 */
@@ -8657,14 +8663,14 @@ export class BattleClient {
     const height = from.y - this._surf(from.x, from.z, from.y);
     const pitchDeg = guidedLaunchPitchDeg(def, height);
     if (!cfg || pitchDeg <= 0) return null;
-    const flat = new THREE.Vector3(dir.x, 0, dir.z);
+    const flat = (this._guidedVel || (this._guidedVel = new THREE.Vector3())).set(dir.x, 0, dir.z);
     if (flat.lengthSq() <= 1e-6) flat.set(0, 0, 1);
     flat.normalize();
     const pitch = pitchDeg * Math.PI / 180;
-    return {
-      dist: guidedLaunchDist(def),
-      vel: flat.multiplyScalar(v0 * Math.cos(pitch)).setY(v0 * Math.sin(pitch)),
-    };
+    const out = this._guidedOut || (this._guidedOut = { dist: 0, vel: null });
+    out.dist = guidedLaunchDist(def);
+    out.vel = flat.multiplyScalar(v0 * Math.cos(pitch)).setY(v0 * Math.sin(pitch));
+    return out;
   }
 
   /**
@@ -9163,9 +9169,13 @@ export class BattleClient {
 
   /** 陣營射擊配色(曳光主色 / 槍口熱芯);第三方(GUER/MILI)走各自識別色 */
   _shotCols(side) {
-    if (side === 'SWARM') return { col: 0xffb300, hot: 0xffe6a0 };
-    if (side === 'STEEL') return { col: 0x4fc3f7, hot: 0xcdeeff };
-    return { col: new THREE.Color(sideInfo(side).color).getHex(), hot: 0xf4ffd9 };
+    const cached = _shotColCache.get(side);
+    if (cached) return cached;
+    const res = side === 'SWARM' ? { col: 0xffb300, hot: 0xffe6a0 }
+      : side === 'STEEL' ? { col: 0x4fc3f7, hot: 0xcdeeff }
+      : { col: new THREE.Color(sideInfo(side).color).getHex(), hot: 0xf4ffd9 };
+    _shotColCache.set(side, res);
+    return res;
   }
 
   /**
@@ -9585,12 +9595,12 @@ export class BattleClient {
     const tn0 = this.terrain.tunnelAt?.(px0, pz0);
     const inTun0 = !!(tn0 && py0 < tn0.ceil);
     const u = UNITS[this.heroKind];
-    const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+    const fwd = _TMP_A.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+    const right = _TMP_B.set(-fwd.z, 0, fwd.x);
     // 移動軸一律經 _moveAxis(鍵盤 ±1 / 觸控類比共用);對角線鍵盤輸入 mag=√2 → 夾回 1(與舊版 normalize 等價)
     const ax = this._moveAxis();
     const boost = ax.boost ? 1.35 : 1;
-    const move = new THREE.Vector3().addScaledVector(fwd, ax.f).addScaledVector(right, ax.r);
+    const move = _TMP_C.set(0, 0, 0).addScaledVector(fwd, ax.f).addScaledVector(right, ax.r);
     if (ax.mag > 1) move.multiplyScalar(1 / ax.mag);
     this._stepThirdPersonBody(dt, move);
 
@@ -9604,13 +9614,13 @@ export class BattleClient {
       // FPV 3D 操作:2D 按鍵(W/S)沿「視線方向」飛 — 抬頭爬升、低頭俯衝;
       // A/D 水平橫移;Space/C 純垂直(懸停微調)。變形者飛行型態用 fly 巡航速度。
       const spd = this._mobility(true);   // 飛行巡航(變形者取 fly);唯一取速處,見 _mobility
-      const look = new THREE.Vector3(
+      const look = _TMP_D.set(
         -Math.sin(this.yaw) * Math.cos(this.pitch),
         Math.sin(this.pitch),
         -Math.cos(this.yaw) * Math.cos(this.pitch),
       );
       // look 與 right 互為正交單位向量 ⇒ target 長度 = 推杆量;>1(鍵盤對角線)才夾回 1
-      const target = new THREE.Vector3().addScaledVector(look, ax.f).addScaledVector(right, ax.r);
+      const target = _TMP_E.set(0, 0, 0).addScaledVector(look, ax.f).addScaledVector(right, ax.r);
       // 控場:垂直升降同樣折速(麻痺 = 禁移動含爬升/下降,否則被暈仍可垂直脫離)
       const ccF = this._ccMoveF();
       const tmag = target.length();
@@ -9866,10 +9876,10 @@ export class BattleClient {
       if (this.cockpit && this.cockpit.visible) this.cockpit.visible = false;
       const h = this.selfH;
       const dist = Math.max(PLAYER_TPS.MIN_DIST, h * PLAYER_TPS.DIST_F);
-      const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-      const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+      const fwd = _TMP_A.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+      const right = _TMP_B.set(-fwd.z, 0, fwd.x);
       const cp = Math.cos(this.pitch);
-      const viewDir = new THREE.Vector3(
+      const viewDir = _TMP_C.set(
         fwd.x * cp, Math.sin(this.pitch), fwd.z * cp,
       );
       this.camera.position.copy(this.pos)
@@ -9879,7 +9889,7 @@ export class BattleClient {
       const floor = this._surf(this.camera.position.x, this.camera.position.z, this.camera.position.y)
         + PLAYER_TPS.FLOOR_M;
       if (this.camera.position.y < floor) this.camera.position.y = floor;
-      this.camera.lookAt(this.camera.position.clone().addScaledVector(viewDir, PLAYER_TPS.AIM_DISTANCE_M));
+      this.camera.lookAt(_TMP_D.copy(this.camera.position).addScaledVector(viewDir, PLAYER_TPS.AIM_DISTANCE_M));
       this.camera.rotateY(this.recoil.y + shY);
       this.camera.rotateX(this.recoil.p + shP);
       this.camera.rotateZ(this.roll + shR);
@@ -9890,8 +9900,11 @@ export class BattleClient {
       // 蓄力中重心下沉(鏡頭跟著蹲)。
       const vw = heroView(this.heroKind, this.ch, this._flying());
       const headF = this.selfH * vw.f;   // 沿正面方向前移(three:-z 為前)
-      this.camera.position.copy(this.pos).add(
-        new THREE.Vector3(-Math.sin(this.yaw) * headF, eye, -Math.cos(this.yaw) * headF));
+      this.camera.position.set(
+        this.pos.x - Math.sin(this.yaw) * headF,
+        this.pos.y + eye,
+        this.pos.z - Math.cos(this.yaw) * headF,
+      );
       this.camera.rotation.set(0, 0, 0);
       this.camera.rotateY(this.yaw + this.recoil.y + shY);
       this.camera.rotateX(this.pitch + this.recoil.p + shP);
@@ -9903,6 +9916,9 @@ export class BattleClient {
     const wantFov = this.aiming ? (UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : this.baseFov;
     if (Math.abs(this.camera.fov - wantFov) > 0.05) {
       this.camera.fov += (wantFov - this.camera.fov) * lerpFPS(10, dt);
+      this.camera.updateProjectionMatrix();
+    } else if (this.camera.fov !== wantFov) {
+      this.camera.fov = wantFov;
       this.camera.updateProjectionMatrix();
     }
     if (this.viewMode === 'tps') {
@@ -11496,10 +11512,11 @@ export class BattleClient {
     } catch { aimBlend = 0; }
     const farNear = dofNearM(), farFar = dofFarM();
     let rPx = 0, projF = 0, HW = 0, HH = 0;
-    if (aimBlend > 0.001) {
+    if (aimBlend > CULL.AIM_BLEND_EPS) {
       const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
       HW = W / 2; HH = H / 2;
-      rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
+      const rScope = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
+      rPx = scopeRadiusPx(rScope, HW, HH, aimBlend);
       projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
     }
     let occ = this._cullOcc;
@@ -11534,8 +11551,14 @@ export class BattleClient {
       const msc = mesh.scale;
       const sk = Math.max(1, msc.x || 1, msc.y || 1, msc.z || 1);
       const h = ent.dimH || 4;
-      const rTgt = Math.max(ent.dimR || 2, h * 0.5) * sk;
-      const cx = p.x, cy = p.y + h * 0.5 * sk, cz = p.z;
+      const top = ent.dimTop ?? h;
+      const rHoriz = ent.dimR || 2;
+      const rTgt = Math.max(rHoriz, h * 0.5) * sk;
+      // 3D circumsphere + additive guard (FRUSTUM_PAD_M): overhead HP bars,
+      // faction markers, ground rings, and rotated 3D box corners extend beyond
+      // the 1D axial max rTgt and must never pop at viewport/scope edges.
+      const rFrustum = Math.hypot(rHoriz * Math.SQRT2, h * 0.5) * sk * CULL.FRUSTUM_PAD_F + CULL.FRUSTUM_PAD_M;
+      const cx = p.x, cy = p.y + (top - h * 0.5) * sk, cz = p.z;
       const dx = cx - camP.x, dy = cy - camP.y, dz = cz - camP.z;
       const d2 = dx * dx + dy * dy + dz * dz;
       // Distance hysteresis: cull past far, re-admit inside far*HYST.
@@ -11553,14 +11576,15 @@ export class BattleClient {
       else dc = !keepDistance(d2, far);
       ent._distCull = dc;
       if (dc) { ent._cullFrame = frame; out.push(ent); return; }
-      s.center.set(cx, cy, cz); s.radius = rTgt * CULL.FRUSTUM_PAD_F;
+      s.center.set(cx, cy, cz); s.radius = rFrustum;
       if (!frustum.intersectsSphere(s)) { ent._cullFrame = frame; out.push(ent); return; }
-      // Scope mask skips the near field: a sphere straddling the near plane
-      // projects wild NDC while still covering the screen. Never culls inside 5m.
-      if (rPx > 0 && d2 > 25) {
+      // Scope mask skips the near field and any sphere straddling the camera:
+      // perspective projection inside rFrustum (or behind camera z > 1) produces
+      // inverted/wild NDC while the object still covers the screen.
+      if (rPx > 0 && d2 > Math.max(25, rFrustum * rFrustum)) {
         v.set(cx, cy, cz).project(cam);
         const d = Math.sqrt(d2) || 1;
-        if (!scopeKeep(v.x * HW, v.y * HH, rPx, (rTgt / d) * projF * CULL.SCOPE_PAD_F)) { ent._cullFrame = frame; out.push(ent); return; }
+        if (v.z <= 1 && !scopeKeep(v.x * HW, v.y * HH, rPx, (rFrustum / d) * projF * CULL.SCOPE_PAD_F)) { ent._cullFrame = frame; out.push(ent); return; }
       }
       // Occlusion verdict persists between staggered re-tests: testing 1-in-4
       // frames while hiding only on test frames is a 15Hz blink (and the
@@ -11636,10 +11660,11 @@ export class BattleClient {
         aimBlend = (this.side && !this.dead)
           ? dofAimBlend(cam.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0;
       } catch { aimBlend = 0; }
-      if (aimBlend > 0.001 && this.canvas) {
+      if (aimBlend > CULL.AIM_BLEND_EPS && this.canvas) {
         const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
         HW = W / 2; HH = H / 2;
-        rPx = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
+        const rScope = scopeRvminFog(this._scopeFog || 0, this._weatherFogD || 0) / 100 * Math.min(W, H);
+        rPx = scopeRadiusPx(rScope, HW, HH, aimBlend);
         projF = HH / Math.tan(THREE.MathUtils.degToRad(cam.fov) * 0.5);
       }
     }
@@ -11679,8 +11704,11 @@ export class BattleClient {
       const msc = mesh.scale;
       const sk = Math.max(1, msc?.x || 1, msc?.y || 1, msc?.z || 1);
       const h = ent.dimH || 4;
-      const rTgt = Math.max(ent.dimR || 2, h * 0.5) * sk;
-      const cx = p.x, cy = p.y + h * 0.5 * sk, cz = p.z;
+      const top = ent.dimTop ?? h;
+      const rHoriz = ent.dimR || 2;
+      const rTgt = Math.max(rHoriz, h * 0.5) * sk;
+      const rFrustum = Math.hypot(rHoriz * Math.SQRT2, h * 0.5) * sk * CULL.FRUSTUM_PAD_F + CULL.FRUSTUM_PAD_M;
+      const cx = p.x, cy = p.y + (top - h * 0.5) * sk, cz = p.z;
       const dx = cx - camP.x, dy = cy - camP.y, dz = cz - camP.z;
       const dCenter = Math.sqrt(dx * dx + dy * dy + dz * dz);
       const dSurf = Math.max(0, dCenter - rTgt);
@@ -11688,7 +11716,7 @@ export class BattleClient {
       let vis = true;
       if (!cullActive) {
         s.center.set(cx, cy, cz);
-        s.radius = rTgt * CULL.FRUSTUM_PAD_F;
+        s.radius = rFrustum;
         vis = frustum.intersectsSphere(s);
       }
       for (const t of texs) noteTexDemand(t, d2, vis, frame);
@@ -11734,16 +11762,17 @@ export class BattleClient {
         let anyVis = false;
         for (const a of entry.anchors) {
           const r = Math.max(2, a.r || 2);
+          const rFrustum = r * CULL.FRUSTUM_PAD_F + CULL.FRUSTUM_PAD_M;
           s.center.set(a.x, a.y, a.z);
-          s.radius = r * CULL.FRUSTUM_PAD_F;
+          s.radius = rFrustum;
           if (!frustum.intersectsSphere(s)) continue;
           const dx = a.x - camP.x, dy = a.y - camP.y, dz = a.z - camP.z;
           const dCenter = Math.sqrt(dx * dx + dy * dy + dz * dz);
           const dSurf = Math.max(0, dCenter - r);
           const d2 = dSurf * dSurf;
-          if (rPx > 0 && d2 > 25) {
+          if (rPx > 0 && dCenter * dCenter > Math.max(25, rFrustum * rFrustum)) {
             v.set(a.x, a.y, a.z).project(cam);
-            if (!scopeKeep(v.x * HW, v.y * HH, rPx, (r / (dCenter || 1)) * projF * CULL.SCOPE_PAD_F)) continue;
+            if (v.z <= 1 && !scopeKeep(v.x * HW, v.y * HH, rPx, (rFrustum / (dCenter || 1)) * projF * CULL.SCOPE_PAD_F)) continue;
           }
           anyVis = true;
           if (d2 < bestD2) bestD2 = d2;
