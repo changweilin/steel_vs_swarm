@@ -17,6 +17,8 @@ import {
 // stays zero-import with no top-level window access, so Node and in-tab solo both load it
 // via the same mirrored-layout relative path as data.js.
 import { CTRL_MODES, DEFAULT_CTRL_MODE } from '../public/js/ctrlmode.js';
+import { evidenceFrame, evidenceFrameKey } from '../public/js/mapEvidence.js';
+import { sanitizeEvidenceRelay } from '../public/js/mapEvidenceRelay.js';
 // Road-relay payload shape/limits: host-side send and server-side receive MUST share the single
 // sanitizer (a copied limit set here would rot). That module keeps zero imports and zero
 // module-level state for the same dual-runtime reason.
@@ -481,6 +483,7 @@ export class RoomHub {
         // MUST NOT 塞進 `sync`:那則會重播多次,幾百 KB 乘上去不可接受(§7.4-1)。
         const relay = hub.osmPayload(room);
         if (relay) send(relay);
+        if (room.mapEvidence) send(room.mapEvidence);
         // 加入中途對局:立即補送階段與戰場設定(含危險區)
         if (room.phase === 'game' || room.phase === 'loading') {
           send({ t: 'battleConfig', config: room.battleConfig });
@@ -498,6 +501,7 @@ export class RoomHub {
               hub.broadcast(room);
               const relay = hub.osmPayload(room);   // 重連後可能整份預建要重來 → 圖資照樣要跟上
               if (relay) send(relay);
+              if (room.mapEvidence) send(room.mapEvidence);
               if (room.battleConfig && (room.phase === 'loading' || room.phase === 'game')) {
                 send({ t: 'battleConfig', config: room.battleConfig });
                 if (room.battle) send(room.battle.fieldPayload());
@@ -605,6 +609,14 @@ export class RoomHub {
           room.world = { occ: m.occ, cor: m.cor, roofs: m.roofs, wet: m.wet, slabs: m.slabs, hgt: m.hgt };   // wet:水沼粗網格;slabs:橋面/隧道天花薄板(LOS);hgt:粗高程網格(稜線遮蔽,避免隔山打牛)
           if (room.battle) room.battle.setWorld(room.world);
         }
+        return;
+      }
+      if (m.t === 'mapEvidence') {
+        if (myId !== room.hostId || room.mapEvidence || !room.battleConfig) return;
+        const clean = sanitizeEvidenceRelay(m);
+        if (!clean || clean.key !== evidenceFrameKey(evidenceFrame(room.battleConfig))) return;
+        room.mapEvidence = clean;
+        for (const [id, c] of room.clients) if (id !== myId) c.send(clean);
         return;
       }
       if (m.t === 'osm') {

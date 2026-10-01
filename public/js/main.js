@@ -33,6 +33,10 @@ import {
 } from './biomes.js';
 import { roadGridRotDeg } from './roadgrid.js';
 import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from './osmrelay.js';
+import { MAP_EVIDENCE, evidenceFrame, evidenceFrameKey } from './mapEvidence.js';
+import { prepareMapEvidence } from './mapEvidenceLoader.js';
+import { encodeEvidenceRelay, decodeEvidenceRelay } from './mapEvidenceRelay.js';
+import { prepareMapCreation } from './mapPreparation.js';
 import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
@@ -58,7 +62,7 @@ function battleClientCtor() {
   return _BattleClient;
 }
 import { GameAudio } from './audio.js';
-import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel, uiTip, specControls } from './help.js';
+import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel, uiTip, specControls, MAP_EVIDENCE_COPY } from './help.js';
 import { installTips, attachTip, tipHTML } from './tip.js';
 import { npcIconHTML, kindIconHTML } from './npcicon.js';
 import {
@@ -367,6 +371,7 @@ const NET_HANDLERS = {
   info: (m) => toast(m.msg),
   // 路網中繼:房主抓到的 OSM 圖資(見 osmGate)。可能比 sync 早到,也可能晚到 —— 兩種都要收。
   osm: (m) => onOsmRelay(m),
+  mapEvidence: (m) => onMapEvidenceRelay(m),
   // 對局中 WS 斷線重連,伺服器會補送 battleConfig:戰場還活著就不重建(快照恢復即續戰);
   // 只有沒有現役戰場(初載/跳頁後回連/中途觀戰加入)才走載入流程
   battleConfig: (m) => { fatal.lastNetUp = Date.now(); if (!app.battle) enterLoading(m.config); },
@@ -1101,7 +1106,7 @@ function showStoryBrief(i) {
 }
 
 /** 出擊:組 battleConfig 開私人房;僚機/敵方角色於 launchStoryBattle 指派 */
-function startStoryChapter(i) {
+async function startStoryChapter(i) {
   const ch = STORY[i];
   const side = app.storySide, foe = side === 'STEEL' ? 'SWARM' : 'STEEL';
   const sc = chapterSide(ch, side), ec = chapterSide(ch, foe);
@@ -1120,6 +1125,20 @@ function startStoryChapter(i) {
   $('storyBrief').style.display = 'none';
   $('storyDeploy').style.display = '';
   $('storyDeploy').textContent = `⚙ 部署中:${sc.title}(${v.name})…`;
+  const deployment = app.story;
+  try {
+    const evidence = await prepareMapCreation(cfg, label => { $('storyDeploy').textContent = label; return buildYield(); });
+    if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
+  } catch (error) {
+    console.error('Story map preparation failed:', error);
+    if (app.story !== deployment) return;
+    app.story = null;
+    $('storyDeploy').style.display = 'none';
+    $('storyBrief').style.display = '';
+    toast(MAP_EVIDENCE_COPY.failed);
+    return;
+  }
+  if (app.story !== deployment) return;
   app.net?.send({
     t: 'createRoom', name: myName(), roomName: sc.title, isPublic: false,
     teamSize: ch.teamSize, botDiff: STORY_DIFF[i] || 'medium', ctrl: ctrlPref(), battleConfig: cfg,
@@ -1216,10 +1235,16 @@ $('saveFavBtn')?.addEventListener('click', async () => {
     await app.mapSel.fetchPlaceName(cfg);
     if (cfg.center?.rot == null) $('mapStatus').textContent = '量測地圖主方位(對齊大馬路)…';
     await resolveMapRot(cfg);
+    const evidence = await prepareMapCreation(cfg, label => { $('mapStatus').textContent = label; return buildYield(); });
+    if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
     if (app.mapSel.placeNameLastSkipped) {
       $('mapStatus').textContent = '地圖建立完成，補試地圖名稱(最久 5 秒)…';
       await app.mapSel.fetchPlaceName(cfg);
     }
+  } catch (error) {
+    console.error('Map creation failed:', error);
+    toast(MAP_EVIDENCE_COPY.failed);
+    return;
   } finally { setFavBtnDisabled(false); $('mapStatus').innerHTML = prevStatus; }
   const name = prompt('地圖名稱:', cfg.placeName)?.trim();
   if (!name) return;
@@ -1252,7 +1277,7 @@ $('backLobbyBtn')?.addEventListener('click', () => {
 $('goOpenRoomBtn')?.addEventListener('click', () => enterOpenRoom());
 $('goMapBuilderBtn')?.addEventListener('click', () => enterMapBuilder());
 
-$('createRoomBtn')?.addEventListener('click', () => {
+$('createRoomBtn')?.addEventListener('click', async () => {
   const cfg = app.favCfg;
   if (!cfg) return;
   if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
@@ -1266,6 +1291,17 @@ $('createRoomBtn')?.addEventListener('click', () => {
 
   const isSuper = !!app.isSuperDeploy;
   cfg.super = isSuper;
+
+  try {
+    const evidence = await prepareMapCreation(cfg, label => { $('openRoomStatus').textContent = label; return buildYield(); });
+    if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
+  } catch (error) {
+    console.error('Map preparation failed:', error);
+    $('openRoomStatus').textContent = MAP_EVIDENCE_COPY.failed;
+    $('createRoomBtn').disabled = false;
+    return;
+  }
+  if (app.phaseShown !== 'openroom' || app.favCfg !== cfg) return;
 
   app.net?.send({
     t: 'createRoom',
@@ -2299,7 +2335,7 @@ function prebuildKey(cfg) {
   // `defSide` MUST 進 key:劇情戰役的塔位是非對稱的(只有防守方有塔)⇒ 換邊就是換一個世界,
   // 漏掉它會讓房間階段預建好的地形被原樣沿用,而塔的淨空/墩座全長在錯的那一側。
   return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, cfg.defSide || null,
-    cfg.architectureSeed || 0, devOsmFixtureName()]);
+    cfg.architectureSeed || 0, devOsmFixtureName(), MAP_EVIDENCE.VERSION]);
 }
 
 /** 房間畫面的預載狀態列(#roomPreload 獨立於 roomMapInfo,renderRoom 的 sync 重繪不會覆寫進度) */
@@ -2328,6 +2364,53 @@ function renderPreloadStatus() {
 // 【MUST NOT 從中繼取得 θ】座標框(含地圖主方位)隨 battleConfig 在開房當下凍結(A42 ③);
 // 這條路徑只搬路網。路網可以從無到有,座標框不行。
 let _osmWait = null;   // { key, p, done, timer } —— 入房者的等待閘(同一房只有一份)
+
+let _mapEvidence = null;
+function mapEvidenceRoomKey() { return JSON.stringify([app.lobby?.pin, app.youId]); }
+function mapEvidenceState(cfg) {
+  const key = mapEvidenceRoomKey() + '|' + evidenceFrameKey(evidenceFrame(cfg));
+  if (_mapEvidence?.key === key) return _mapEvidence;
+  if (_mapEvidence) { clearTimeout(_mapEvidence.timer); _mapEvidence.done?.(null); }
+  _mapEvidence = { key, pack: null, promise: null, done: null, timer: null, omitted: false };
+  return _mapEvidence;
+}
+
+function onMapEvidenceRelay(message) {
+  const cfg = app.lobby?.battleConfig, pack = decodeEvidenceRelay(message);
+  if (!cfg || !pack || message.key !== evidenceFrameKey(evidenceFrame(cfg))) return;
+  const state = mapEvidenceState(cfg);
+  if (state.pack) return;
+  state.pack = pack;
+  clearTimeout(state.timer); state.done?.(pack);
+  if (state.omitted && app.phaseShown === 'room' && app.pre?.key === prebuildKey(cfg)) {
+    app.pre = null;
+    startPrebuild(cfg);
+  }
+}
+
+async function mapEvidenceGate(cfg, terrain, areas, onWait, roomKey) {
+  if (roomKey !== mapEvidenceRoomKey() || !app.lobby?.battleConfig
+    || evidenceFrameKey(evidenceFrame(cfg)) !== evidenceFrameKey(evidenceFrame(app.lobby.battleConfig))) return null;
+  const state = mapEvidenceState(cfg);
+  if (state.pack) return state.pack;
+  if (app.isHost) {
+    const pack = await prepareMapEvidence(cfg, terrain, areas);
+    const message = encodeEvidenceRelay(pack);
+    if (_mapEvidence !== state || roomKey !== mapEvidenceRoomKey()) return null;
+    // The host consumes the exact sanitized bytes that all room members receive.
+    state.pack = decodeEvidenceRelay(message);
+    clearTimeout(state.timer); state.done?.(state.pack);
+    app.net?.send(message);
+    return state.pack;
+  }
+  onWait?.();
+  if (!state.promise) {
+    state.promise = new Promise(resolve => { state.done = resolve; });
+    state.timer = setTimeout(() => { state.omitted = true; state.done(null); }, OSM_RELAY.WAIT_MS);
+  }
+  // An unavailable host observation is omitted rather than independently guessed.
+  return state.promise;
+}
 
 function waitOsmRelay(bbox) {
   const key = osmRelayKey(bbox);
@@ -2550,6 +2633,7 @@ function makeRoofPlatformIndex(platforms = [], cell = 64) {
  */
 function startPrebuild(cfg) {
   const key = prebuildKey(cfg);
+  const roomKey = mapEvidenceRoomKey();
   if (app.pre && app.pre.key === key && !app.pre.error) return app.pre;
   // 快速模式:房間階段跳過預建,等進入 loading 才建(避免舊預載資料在程式碼更新後卡住)
   if (quickMode() && app.phaseShown === 'room') return null;
@@ -2595,7 +2679,10 @@ function startPrebuild(cfg) {
     // 唯一「畫面沒說明」的窗口 —— 它不寫,狀態列就停在上一句地形文案上乾等 20 秒。
     if (pre.osmLabel) setP(0.60, pre.osmLabel);
     await gate;
-    const biomes = await buildBiomes(cfg, terrain, (f, label) => setP(0.60 + f * 0.36, label));
+    const biomes = await buildBiomes(cfg, terrain, (f, label) => setP(0.60 + f * 0.36, label), {
+      prepareEvidence: (cfg, terrain, areas) => mapEvidenceGate(cfg, terrain, areas,
+        () => setP(0.615, MAP_EVIDENCE_COPY.waiting), roomKey),
+    });
     terrain.group.add(biomes);
     terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
     terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
@@ -5023,7 +5110,7 @@ function launchQuickRestartBattle() {
 }
 
 /** 發起快速開始對戰 */
-function quickRestartGame() {
+async function quickRestartGame() {
   const session = loadPrefs().lastSession;
   if (!session || !session.battleConfig || !session.player?.side) {
     toast('⚠️ 尚未有上一場對戰記錄');
@@ -5035,6 +5122,18 @@ function quickRestartGame() {
   }
   app.quickRestart = { ...session, launched: false };
   toast('⚡ 正在套用上次配置快速開戰…');
+  const restart = app.quickRestart;
+  try {
+    const evidence = await prepareMapCreation(session.battleConfig, () => buildYield());
+    if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
+  } catch (error) {
+    console.error('Restart map preparation failed:', error);
+    if (app.quickRestart !== restart) return;
+    app.quickRestart = null;
+    toast(MAP_EVIDENCE_COPY.failed);
+    return;
+  }
+  if (app.quickRestart !== restart) return;
   app.net?.send({
     t: 'createRoom',
     name: myName(),

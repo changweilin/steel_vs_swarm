@@ -290,7 +290,7 @@ function stylizeImagery(canvas) {
  *   worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH }
  * sampleColor:取衛星影像該點的 [r,g,b],供 biomes.js 做地被分類。
  */
-export async function buildTerrain(cfg, onProgress) {
+export async function buildTerrain(cfg, onProgress, options) {
   const bbox = battleBBox(cfg);   // 資料抓取範圍(經緯度;已覆蓋旋轉後的世界方框)
   const rect = battleRect(cfg);   // 世界方框(遊戲公尺,恆軸對齊)
   const center = cfg.center;
@@ -303,6 +303,7 @@ export async function buildTerrain(cfg, onProgress) {
   const elevKey = geoKey('elev', 1, bbox, `n${GRID_N}`);
   let rawElev = await geoGet(elevKey);
   let usedFallback = false;
+  let elevationComplete = true;
   if (!(rawElev instanceof Float32Array) || rawElev.length !== GRID_N * GRID_N) {
     let sampleElev;
     try {
@@ -322,10 +323,11 @@ export async function buildTerrain(cfg, onProgress) {
         const x = rect.minX + (rect.maxX - rect.minX) * j / (GRID_N - 1);
         const [lat, lng] = xzToLL(x, z, center);
         const h = sampleElev(lat, lng);
+        if (!Number.isFinite(h)) elevationComplete = false;
         rawElev[i * GRID_N + j] = Number.isFinite(h) ? h : 0;
       }
     }
-    if (!usedFallback) geoPut(elevKey, rawElev);
+    if (!usedFallback && elevationComplete) geoPut(elevKey, rawElev);
   }
 
   await onProgress?.(0.34, '下載衛星影像…');
@@ -340,7 +342,7 @@ export async function buildTerrain(cfg, onProgress) {
     const canvas = document.createElement('canvas');
     canvas.width = cachedImg.w; canvas.height = cachedImg.h;
     canvas.getContext('2d').putImageData(new ImageData(cachedImg.data, cachedImg.w, cachedImg.h), 0, 0);
-    imagery = { canvas, z: cachedImg.z, tx0: cachedImg.tx0, ty0: cachedImg.ty0 };
+    imagery = { canvas, z: cachedImg.z, tx0: cachedImg.tx0, ty0: cachedImg.ty0, complete: true };
     idata = cachedImg.data;
   } else {
     try {
@@ -358,16 +360,17 @@ export async function buildTerrain(cfg, onProgress) {
       }
     }
     const iw = imagery.canvas.width, ih = imagery.canvas.height;
-    sampleColor = (x, z) => {
+    sampleColor = (x, z, validOnly = false) => {
       // 遊戲世界公尺 → 經緯度(`llToWorld` 的逆運算,含地圖主方位的反向旋轉)
       const [lat, lng] = xzToLL(x, z, center);
       const px = Math.round((lon2tx(lng, imagery.z) - imagery.tx0) * 256);
       const py = Math.round((lat2ty(lat, imagery.z) - imagery.ty0) * 256);
       if (px < 0 || py < 0 || px >= iw || py >= ih) return null;
       const k = (py * iw + px) * 4;
+      if (validOnly && !idata[k + 3]) return null;
       return [idata[k], idata[k + 1], idata[k + 2]];
     };
-    stylizeImagery(imagery.canvas);   // 原始像素已捕捉進 idata,底圖轉水彩色塊
+    if (!options?.sourceOnly) stylizeImagery(imagery.canvas); // Analysis never needs rendered pixels.
   }
 
   await onProgress?.(0.68, '建構地形網格…');
@@ -377,6 +380,10 @@ export async function buildTerrain(cfg, onProgress) {
   const worldW = maxX - minX, worldH = maxZ - minZ;
 
   const N = GRID_N;
+  const sourceQuality = { imageryComplete: !!imagery?.complete, elevationComplete: elevationComplete && !usedFallback };
+  // Creation/restart preparation must not allocate scene meshes or replace live shader fields.
+  if (options?.sourceOnly) return { center, bbox, sampleColor, sourceQuality,
+    elevationAt: (x, z) => sampleField(rawElev, x, z) };
   // rawElev = 上方定案的 N×N 原始高程(i:z 方向北→南 = maxLat→minLat;快取命中或現抓皆同一組網格點)
   const heights = new Float32Array(rawElev);
   let minH = Infinity, maxH = -Infinity;
@@ -1464,5 +1471,5 @@ export async function buildTerrain(cfg, onProgress) {
   // `gridM` = 高程網格的格距(公尺)。對外只有一個用途:**貼地地被層要拿地形法線**
   // (ground.js 的 landN)—— 中央差分的取樣距 MUST 是這一格,取更小是在同一個雙線性面內
   // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
-  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, get waterY() { return waterY; }, set waterY(v) { waterY = v; }, isMarine, baseWaterY, updateTide, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
+  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, sourceQuality, get waterY() { return waterY; }, set waterY(v) { waterY = v; }, isMarine, baseWaterY, updateTide, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
 }

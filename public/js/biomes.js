@@ -52,6 +52,9 @@ import { mulberry32 } from './rng.js';
 import { seasonalEnvironment } from './seasonalEnvironment.js';
 import { buildGroundCover, makeFootprintIndex } from './ground.js';
 import { buildLandField } from './landfield.js';
+import { prepareMapEvidence, installMapEvidence } from './mapEvidenceLoader.js';
+import { evidenceDryBiome } from './mapEvidence.js';
+import { MAP_EVIDENCE_COPY } from './help.js';
 import { setLandField } from './toon.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
@@ -10391,7 +10394,7 @@ function densifyUrban({ seeds, generic, blocked, terrain, rnd, inb, occ, roadFac
  * 建立整張圖的地物。回傳 THREE.Group(加進 terrain.group 同層即可)。
  * cfg 需含 lanes/bases/center/env/venue;terrain 來自 buildTerrain()。
  */
-export async function buildBiomes(cfg, terrain, onProgress) {
+export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = prepareMapEvidence } = {}) {
   const center = cfg.center;
   const season = cfg.env?.season || 'summer';
   const night = cfg.env?.time === 'night';
@@ -10466,6 +10469,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 建物與用地只讀 areas，絕不重建第二份 covers。
     osmData = { ...osmData, ...pf, areas: cat.areas };
   }
+  await onProgress?.(0.04, MAP_EVIDENCE_COPY.analyzing);
+  const evidence = await prepareEvidence(cfg, terrain, osmSource ? osmData.areas : null);
+  if (evidence) installMapEvidence(terrain, evidence);
   let architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
     center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
@@ -12441,7 +12447,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const landField = await buildLandField({
     terrain, center, roads: roadInput, rails: osmData?.rails || [], waters: osmData?.waters || [],
     areas: osmData?.areas || [], covers: osmData?.covers || [], boundaries: osmData?.boundaries || [], gradeCorridors,
-    classifyPureAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null),
+    classifyPureAt: (x, z) => evidenceDryBiome(terrain.evidenceAt?.(x, z))
+      || classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null),
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z), projectAt: llToWorld,
     seed: gseed, onProgress,
   });
@@ -12687,6 +12694,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     signs: signsBuilt,   // 世界文字塊數(0 = 圖資沒名字或整批缺字 ⇒ 一塊都不掛)
     // `osm` 是來源是否成功，不是建物數量；成功但零 area 也必須阻斷程序城市 fallback。
     osm: osmSource,
+    mapEvidence: evidence ? { version: evidence.version, checksum: evidence.checksum,
+      prior: !!evidence.priorDigest, complete: evidence.complete, cells: evidence.frame.cols * evidence.frame.rows } : null,
     osmAreas: osmData?.areas?.length || 0,
     osmObjects: osmAreaObjectResult.generated,
     osmCatalog: {
