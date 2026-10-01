@@ -280,7 +280,7 @@ try {
   // 「▶ 啟動」)。這一條 MUST 隨 TOOLS 一起長:新增一支工具就會多一列 import 要驗。
   {
     const sup = await import('./dev_supervisor.mjs');
-    const srcOf = { codex: 'codex_review', story: 'story_book', arch: 'arch_preview' };
+    const srcOf = { codex: 'codex_review', story: 'story_book', arch: 'arch_preview', mech: 'mech_prompt_review' };
     for (const key of Object.keys(sup.TOOLS)) {
 
       const t = sup.TOOLS[key];
@@ -336,8 +336,8 @@ try {
   const lo = await devReq('127.0.0.1', '/dev/tools');
   let tools = [];
   try { tools = JSON.parse(lo.body).tools || []; } catch { /* 下一行會紅 */ }
-  ok(lo.code === 200 && ['story', 'arch'].every((k) => tools.some((t) => t.key === k)) && !tools.some((t) => t.key === 'codex'),
-    'loopback 拿得到工具清單(story 本地故事書 / arch 建模隨機生成器;codex 已退場)');
+  ok(lo.code === 200 && ['story', 'arch', 'mech'].every((k) => tools.some((t) => t.key === k)) && !tools.some((t) => t.key === 'codex'),
+    'loopback 拿得到工具清單(story 本地故事書 / arch 建模隨機生成器 / mech 機體視覺比對台;codex 已退場)');
   ok(tools.filter((t) => t.kind === 'server')
     .every((t) => typeof t.url === 'string' && /^http:\/\/localhost:\d+\/$/.test(t.url)),
     '伺服器型工具自己帶網址(客戶端因此一個埠號都不用寫死)');

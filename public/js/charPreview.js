@@ -78,6 +78,7 @@ export class CharPreview {
     this.dist = 1;
     this.idle = 0;
     this.drag = null;
+    this.spinScale = 1;      // 展示台自轉開關(1=自轉,0=暫停;預設行為不變)
 
     this.anim = null;
     this._auto = true;       // 自動取景中(施展招式拉遠 / 待命特寫);手動滾輪後關閉
@@ -780,7 +781,7 @@ export class CharPreview {
 
     if (this.unit) {
       this.idle += dt;
-      if (!this.drag && !this.anim && this.idle > IDLE_DELAY) this.yaw += AUTO_SPIN * dt;
+      if (!this.drag && !this.anim && this.idle > IDLE_DELAY) this.yaw += AUTO_SPIN * (this.spinScale ?? 1) * dt;
 
       const wasAnim = !!this.anim;
       this._stepAnim(adt);

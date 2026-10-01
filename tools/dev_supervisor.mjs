@@ -21,6 +21,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_PORT as STORY_PORT } from './story_book.mjs';
 import { DEFAULT_PORT as ARCH_PORT } from './arch_preview.mjs';
+import { DEFAULT_PORT as MECH_PORT } from './mech_prompt_review.mjs';
 
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -52,6 +53,15 @@ export const TOOLS = {
     args: [],
 
     hint: '建模隨機生成器：建築、地質、植物、車輛、船隻、產業設施、冰雪、能源工程、邊界構造與平民紙娃娃分頁切換，支援文化與功能維度展開、自然與人造地質成因抽樣、植物區域氣候形態交叉篩選、平民職業家族種子重播，包含即時 3D 預覽與參數檢驗。',
+  },
+  mech: {
+    key: 'mech',
+    kind: 'server',
+    label: '機體視覺比對台',
+    port: MECH_PORT,
+    script: path.join('tools', 'mech_prompt_review.mjs'),
+    args: [],
+    hint: '機體立繪與 3D Prompt 比對審查：32 機體 2D 立繪對 3D 即時模型雙視圖比對，視覺判定寫回 docs/art_gen_*.md。',
   },
 };
 

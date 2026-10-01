@@ -934,27 +934,52 @@ function renderHtmlPage() {
 </main>
 
 <script type="module">
-import { CharPreview } from '/public/js/charPreview.js';
-
 let allMechs = [];
 let currentMech = null;
 let activeCat = 'all';
 let activeVerdict = 'all';
 let searchQuery = '';
 let preview3D = null;
+let preview3DError = '';
 let imgMode = 'png'; // 'png' or 'jpg'
 let autoSpin = true;
 let showGrid = true;
 
-// 初始化 3D 展示台
-const cv3d = document.getElementById('cv3d');
-preview3D = new CharPreview(cv3d);
-preview3D.start();
+// 3D 展示台與名冊載入解耦:3D 失敗(CDN 被擋/WebGL 不可用/模組錯誤)不可拖垮左側清單。
+// 動態 import + try/catch,名冊 fetch 不等待 3D。
+async function initPreview3D() {
+  try {
+    const { CharPreview } = await import('/public/js/charPreview.js');
+    const cv3d = document.getElementById('cv3d');
+    preview3D = new CharPreview(cv3d);
+    preview3D.start();
+  } catch (err) {
+    preview3D = null;
+    preview3DError = String(err?.message || err);
+    console.error('3D 展示台初始化失敗(名冊不受影響):', err);
+  }
+}
 
-// 載入機體資料
+// 載入機體資料(獨立於 3D;失敗要顯示原因而非空白清單)
 async function fetchMechs() {
-  const res = await fetch('/api/mechs');
-  allMechs = await res.json();
+  const rosterCount = document.getElementById('rosterCount');
+  const statsBadge = document.getElementById('statsBadge');
+  try {
+    const res = await fetch('/api/mechs');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    allMechs = Array.isArray(data) ? data : [];
+    if (!allMechs.length) throw new Error('後端回傳 0 筆(檢查 docs/art_gen_*.md 表格)');
+  } catch (err) {
+    allMechs = [];
+    console.error('機體清單載入失敗:', err);
+    if (rosterCount) rosterCount.textContent = '載入失敗';
+    if (statsBadge) statsBadge.textContent = '清單載入失敗: ' + String(err?.message || err);
+    const container = document.getElementById('rosterList');
+    if (container) container.innerHTML = '<div style="padding:12px;font-size:12px;color:#f87171;">載入失敗: '
+      + String(err?.message || err) + '</div>';
+    return;
+  }
   updateStats();
   renderRoster();
   if (allMechs.length > 0) {
@@ -990,6 +1015,12 @@ function renderRoster() {
   document.getElementById('rosterCount').textContent = \`\${filtered.length} / \${allMechs.length}\`;
   const container = document.getElementById('rosterList');
   container.innerHTML = '';
+  if (!filtered.length) {
+    container.innerHTML = allMechs.length
+      ? '<div style="padding:12px;font-size:12px;color:#94a3b8;">篩選條件下無機體(切換分類/狀態/搜尋)</div>'
+      : '<div style="padding:12px;font-size:12px;color:#94a3b8;">無機體資料</div>';
+    return;
+  }
 
   filtered.forEach(m => {
     const card = document.createElement('div');
@@ -1069,6 +1100,14 @@ function updateStandeeImage() {
 
 function update3DModel() {
   if (!currentMech) return;
+  if (!preview3D) {
+    const morphLabel = document.getElementById('morphPoseLabel');
+    if (morphLabel) {
+      morphLabel.style.display = 'inline-block';
+      morphLabel.textContent = preview3DError ? '3D 不可用(' + preview3DError + ')' : '3D 初始化中…';
+    }
+    return;
+  }
   try {
     preview3D.setChar(currentMech.id, currentMech.side);
 
@@ -1108,7 +1147,7 @@ function renderTableFields() {
     const isLong = val.length > 50 || val.includes('\\n') || val.includes('<br>');
     const input = document.createElement(isLong ? 'textarea' : 'input');
     input.className = isLong ? 'field-textarea' : 'field-input';
-    input.value = val.replace(/<br\s*\/?>/gi, '\\n');
+    input.value = val.replace(/<br\\s*\\/?>/gi, '\\n');
     input.dataset.key = key;
     input.oninput = (e) => {
       currentMech.fields[key] = e.target.value.replace(/\\n/g, '<br>');
@@ -1255,39 +1294,41 @@ document.getElementById('btnMorphToggle').onclick = () => {
 
 document.getElementById('btnActionAttack').onclick = () => {
   if (!preview3D || !currentMech) return;
-  preview3D.play(1);
+  preview3D.play('heavy');
 };
 
 document.getElementById('btnRunMode').onclick = () => {
   if (!preview3D) return;
-  preview3D.cycleRunMode();
+  preview3D.cycleRun(1);
   const label = preview3D.runMode === 'idle' ? '靜止' : (preview3D.runMode === 'slow' ? '慢跑' : '衝刺');
   document.getElementById('btnRunMode').textContent = '🏃 運動：' + label;
 };
 
 document.getElementById('btn3dSpin').onclick = () => {
   autoSpin = !autoSpin;
-  preview3D.autoSpin = autoSpin ? 0.35 : 0;
+  if (preview3D) preview3D.spinScale = autoSpin ? 1 : 0;
   document.getElementById('btn3dSpin').textContent = autoSpin ? '暫停自轉' : '恢復自轉';
 };
 
 document.getElementById('btn3dReset').onclick = () => {
   if (preview3D) {
-    preview3D.rotX = 0.2;
-    preview3D.rotY = -0.4;
+    preview3D.yaw = Math.PI;
+    preview3D.pitch = 0.18;
+    preview3D.dist = preview3D._fitDist(preview3D.fitR);
     preview3D.viewR = preview3D.wantR = preview3D.fitR;
   }
 };
 
 document.getElementById('btn3dGrid').onclick = () => {
   showGrid = !showGrid;
-  if (preview3D && preview3D.grid) {
-    preview3D.grid.visible = showGrid;
+  if (preview3D && preview3D.ground) {
+    preview3D.ground.visible = showGrid;
   }
   document.getElementById('btn3dGrid').textContent = showGrid ? '隱藏地網' : '顯示地網';
 };
 
 fetchMechs();
+initPreview3D().then(() => { if (currentMech) update3DModel(); });
 </script>
 </body>
 </html>`;
@@ -1317,7 +1358,7 @@ export function serve(port = DEFAULT_PORT) {
       // API: 獲取全部機體
       if (pathname === '/api/mechs') {
         const data = await getAllMechsData();
-        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
         res.end(JSON.stringify(data));
         return;
       }
@@ -1342,7 +1383,7 @@ export function serve(port = DEFAULT_PORT) {
 
       // 首頁
       if (pathname === '/' || pathname === '/index.html') {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
         res.end(renderHtmlPage());
         return;
       }
