@@ -12,9 +12,10 @@ import { environmentBuildingPlan } from './environmentParts.js';
 import { taggedBuildingFunction } from './buildingFunctions.js';
 import { OSM_AREA_OBJECT_ROWS as ROWS } from './osmAreaCatalog.js';
 import { planOsmAreaObjects } from './osmAreaLayout.js';
+import { createOsmSportRenderer } from './osmSportsRender.js';
 
 /** Shared content builders feed the existing area-placement and collision contracts. */
-function rawAreaGeometry(kind, seed, radius, functionType) {
+function rawAreaGeometry(kind, seed, radius, functionType, context) {
   if (kind === 'tree') return forestSceneGeometry('holmOak', seed, [radius * 1.8, radius * 1.8, radius * 1.8]);
   if (kind === 'rock') return geologySceneGeometry('granite', seed, [radius * 1.8, radius * 1.5, radius * 1.8]);
   if (kind === 'car' || kind === 'motorcycle') return compileSceneParts(makeSceneVehicleParts(kind === 'car' ? 'sedan' : kind,
@@ -23,12 +24,12 @@ function rawAreaGeometry(kind, seed, radius, functionType) {
     [radius * 1.5, kind === 'crop' ? .85 : 2.1, radius * 1.5]);
   if (kind === 'facility' || kind === 'spire') return fitSceneGeometry(compileSceneParts(
     environmentBuildingPlan('house', [radius * 1.7, radius * 1.6, radius * 1.5], seed,
-      functionType || (kind === 'spire' ? 'worship' : 'civic')).parts), [radius * 1.7, radius * 1.6, radius * 1.5]);
+      functionType || (kind === 'spire' ? 'worship' : 'civic'), context).parts), [radius * 1.7, radius * 1.6, radius * 1.5]);
   return compileSceneParts(sceneFurnitureParts(kind));
 }
 
-export function osmAreaGeometry(kind, seed, radius, functionType = null) {
-  const geometry = rawAreaGeometry(kind, seed, radius, functionType);
+export function osmAreaGeometry(kind, seed, radius, functionType = null, context = {}) {
+  const geometry = rawAreaGeometry(kind, seed, radius, functionType, context);
   geometry.computeBoundingBox();
   const extent = geometry.boundingBox.getSize(new THREE.Vector3());
   const center = geometry.boundingBox.getCenter(new THREE.Vector3());
@@ -68,12 +69,20 @@ function translateGeos(geos, x, y, z, ry, slopeFit = false, heightAt = null) {
 export function buildOsmAreaObjects(group, areas = [], options = {}) {
   const plan = planOsmAreaObjects(areas, options);
   const batches = new Map(), blockers = [], footprints = [], generatedByKind = {};
+  const sports = createOsmSportRenderer(group, options.terrain);
   for (let index = 0; index < plan.placed.length; index++) {
     const p = plan.placed[index], cls = p.area.classification, row = ROWS[cls.generator];
     const { shape: shapeKey, seed, y } = p;
+    if (p.sport) {
+      if (sports.add(p)) generatedByKind[cls.kind] = (generatedByKind[cls.kind] || 0) + 1;
+      else plan.skipped.push({ sourceId: p.sourceId, reason: 'missing_surface' });
+      continue;
+    }
     const functionType = taggedBuildingFunction(p.area.tags)?.type
       || { campus: 'school', hospital: 'hospital', station: 'station', civic: 'civic', religious: 'worship' }[cls.generator];
-    const geos = [osmAreaGeometry(shapeKey, seed, row.radius, functionType)];
+    const geos = [osmAreaGeometry(shapeKey, seed, row.radius, functionType, {
+      building: p.area, location: options.location, ...options.environmentAt?.(p.x, p.z),
+    })];
     geos[0].computeBoundingBox();
     const extent = geos[0].boundingBox.getSize(new THREE.Vector3());
     const ry = translateGeos(geos, p.x, y, p.z, p.ry);
@@ -87,6 +96,8 @@ export function buildOsmAreaObjects(group, areas = [], options = {}) {
       hw2: extent.x / 2, hd2: extent.z / 2, ry, cl: 'prop', osmArea: 1, sourceId: p.sourceId,
     });
   }
+  const sportResult = sports.flush();
+  blockers.push(...sportResult.blockers); footprints.push(...sportResult.footprints);
   for (const [generator, batch] of batches) {
     if (!batch.geos.length) continue;
     const geometry = batch.geos.length === 1 ? batch.geos[0] : mergeGeos(batch.geos, batch.geos.map(() => null));

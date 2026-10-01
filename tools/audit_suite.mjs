@@ -25,6 +25,7 @@ const AUDIT_SCRIPTS = [
   'tools/audit_map_rules.mjs',
   'tools/audit_map_evidence.mjs',
   'tools/audit_habitat.mjs',
+  'tools/audit_facility_fusion.mjs',
   'tools/audit_lane_sep.mjs',
   'tools/audit_lane_navigation.mjs',
   'tools/audit_mother_lanes.mjs',

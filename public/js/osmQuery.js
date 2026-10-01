@@ -3,7 +3,7 @@
 // Runtime, fixture extractors, and payload validation tools all source from here to prevent divergent query filters.
 import { OSM_AREA_KEYS, buildAreaRecords } from './osmAreas.js';
 
-export const OSM_FEATURE_QUERY_VERSION = 8;
+export const OSM_FEATURE_QUERY_VERSION = 9;
 export const OSM_ROAD_QUERY_VERSION = 1;
 export const OSM_QUERY_TIMEOUT_S = 15;
 
@@ -58,6 +58,9 @@ export function osmFeatureQuery(bbox) {
     + `node["aeroway"="control_tower"](${bb});out tags ${nBld};`
     + `node["power"="tower"](${bb});out tags ${nBld};`
     + `node["power"="generator"]["generator:source"="wind"](${bb});out tags ${nBld};`
+    + `node["amenity"~"^(place_of_worship|school|university|college|kindergarten|hospital|clinic|library|townhall|courthouse|community_centre|bus_station|ferry_terminal)$"](${bb});out tags 240;`
+    + `node["tourism"~"^(museum|gallery)$"](${bb});out tags 80;`
+    + `node["office"="government"](${bb});out tags 80;`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`
     + `node["waterway"="waterfall"](${bb});out 20;`
@@ -118,7 +121,8 @@ export function parseOsmFeatureElements(elements = []) {
       || (tags.entrance && /^(station|subway)$/.test(tags.public_transport || '')))) {
       entrances.push({ lat: el.lat, lng: el.lon, tags });
     } else if (el?.type === 'node' && (tags.place || tags.natural === 'peak'
-      || tags.highway === 'motorway_junction' || tags.railway || tags.power === 'tower'
+      || tags.highway === 'motorway_junction' || tags.railway || tags.amenity
+      || ['museum', 'gallery'].includes(tags.tourism) || tags.office === 'government' || tags.power === 'tower'
       || (tags.power === 'generator' && tags['generator:source'] === 'wind')
       || ['tower', 'mast', 'communications_tower', 'lighthouse'].includes(tags.man_made) || tags.aeroway === 'control_tower')) {
       pois.push({ lat: el.lat, lng: el.lon, tags });

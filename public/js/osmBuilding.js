@@ -15,6 +15,7 @@ import { architecturalRoofParts, ROOF_RIM_LIP, CYL_FACET_DEG } from './architect
 import { generateBuildingAppurtenances, resolveFrontDoorOpening, resolveSideDoorOpening } from './buildingAppurtenances.js';
 import { resolveAdaptiveRoofForm, calculateFootprintMetrics } from './architectureStyles.js';
 import { WATER, objHeightMax } from './data.js';
+import { areaCandidates, projectedAreaContainsRect } from './osmAreas.js';
 
 const EPS = 1e-5;
 const DEFAULT_H = Object.freeze({
@@ -179,6 +180,18 @@ export function attachmentSite(poly, half) {
   const points = [[cx, cz], ...poly.outer.map((p) => [(p[0] + cx) / 2, (p[1] + cz) / 2])];
   return points.find(([x, z]) => [[-half, -half], [half, -half], [half, half], [-half, half]].every(([dx, dz]) =>
     pointInRing(x + dx, z + dz, poly.outer) && !poly.holes.some((hole) => pointInRing(x + dx, z + dz, hole)))) || null;
+}
+
+/** Concave and courtyard buildings still expose a fitted cultural roof on a verified solid patch. */
+export function functionalRoofSite(poly, maxHalf) {
+  const candidates = areaCandidates({ worldPolygons: [poly] }, 24);
+  const xs = poly.outer.map(p => p[0]), zs = poly.outer.map(p => p[1]);
+  candidates.unshift({ x: (Math.min(...xs) + Math.max(...xs)) / 2, z: (Math.min(...zs) + Math.max(...zs)) / 2 });
+  for (let half = maxHalf; half >= .8; half *= .7) {
+    const site = candidates.find(p => projectedAreaContainsRect(p.x, p.z, half, half, 0, poly));
+    if (site) return { point: [site.x, site.z], half };
+  }
+  return null;
 }
 
 function attachmentGeometry(kind, poly, y) {
@@ -487,10 +500,9 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
           architecture.functionInfo?.category
         ) : 'flat';
         architecture.actualRoofForm = adaptiveRoofForm;
-        const featureHalf = Math.min(12, metrics.span * 0.44, targetH * 0.8);
-        const featureSite = metrics.frame ? attachmentSite(poly, featureHalf) : null;
+        const feature = functionalRoofSite(poly, Math.min(12, metrics.span * 0.44, targetH * 0.8));
         const functionalParts = functionalBuildingParts(outer.edges, baseY, topY, architecture,
-          featureSite, featureHalf, Math.max(0, objHeightMax() - targetH));
+          feature?.point, feature?.half || 0, Math.max(0, objHeightMax() - targetH));
         if (!functionalParts.replacesRoof) {
           batch.details.push(...architecturalRoof(poly, topY, architecture, adaptiveRoofForm, metrics, targetH));
         }

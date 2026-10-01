@@ -5,7 +5,7 @@ import {
   BUILDING_FUNCTION_RANGES, CULTURAL_REGIONS, CULTURAL_AFFINITY_RATIO,
 } from './architectureStyles.js';
 import { buildContainmentIndex, pointInProjectedArea } from './osmAreas.js';
-import { BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
+import { BUILDING_FUNCTIONS, INHERITABLE_BUILDING_FUNCTIONS, taggedBuildingFunction } from './buildingFunctions.js';
 import { architectureHash } from './wallDecorations.js';
 import { WATER, llToXZ } from './data.js';
 
@@ -234,7 +234,7 @@ export function inferBuildingFunction(building = {}, poly = null, context = {}) 
   // 宿舍、車庫、禮拜堂等已有自身形制的建物不繼承整個園區用途。
   if (!bld || bld === 'yes') {
     const parent = taggedBuildingFunction(context.parentTags);
-    if (parent && ['hospital', 'school', 'university', 'kindergarten', 'station', 'plant', 'substation', 'water'].includes(parent.type)) {
+    if (parent && INHERITABLE_BUILDING_FUNCTIONS.includes(parent.type)) {
       return { ...parent, inherited: true };
     }
   }
@@ -479,6 +479,7 @@ export function chooseArchitecture(seed, identity, context = {}) {
 export function createArchitecturePlanner({
   areas = [], terrain, seed = 0, mix = null, center = null, venue = null, country = null, location = null, terrainEnvCode = null,
   roads = [], rails = [], toXZ = null, environmentAt = null,
+  pois = [],
 } = {}) {
   const land = buildContainmentIndex(areas);
   const cells = new Map();
@@ -492,6 +493,11 @@ export function createArchitecturePlanner({
   const loc = location || { center, venue, country: country || venue?.country };
   const region = detectCulturalRegion(loc);
   const transitIndex = buildTransitPassageIndex({ roads, rails, toXZ, center: loc?.center || center });
+  const semanticPoints = pois.flatMap(p => {
+    if (!taggedBuildingFunction(p.tags)) return [];
+    const point = toXZ?.(p) || (Number.isFinite(p.x) && Number.isFinite(p.z) ? [p.x, p.z] : null);
+    return point?.every(Number.isFinite) ? [{ point, tags: p.tags }] : [];
+  });
 
   return (building, poly = null, settlement = false) => {
     const centerPt = building.centroid || { x: building.x || 0, z: building.z || 0 };
@@ -527,15 +533,32 @@ export function createArchitecturePlanner({
 
     const transitPassage = contextTransit(poly, building, transitIndex);
     const environment = environmentAt?.(x, z) || {};
+    // POIs belong only to enclosing walls; ambiguous tenants and courtyard points assign no function.
+    const matches = poly ? semanticPoints.filter(p => pointInProjectedArea(...p.point, poly)) : [];
+    const types = new Set(matches.map(p => taggedBuildingFunction(p.tags).type));
+    const ownFunction = taggedBuildingFunction(building.tags);
+    const parentFunction = taggedBuildingFunction(parent?.tags);
+    let semanticTags = null;
+    if (types.size === 1 && (!ownFunction || [...types][0] === ownFunction.type)) {
+      semanticTags = [...matches].sort((a, b) => a.point[0] - b.point[0] || a.point[1] - b.point[1]
+        || JSON.stringify(a.tags).localeCompare(JSON.stringify(b.tags)))[0].tags;
+    } else if ((!ownFunction && ['yes', undefined].includes(building.tags?.building) && INHERITABLE_BUILDING_FUNCTIONS.includes(parentFunction?.type))
+      || (ownFunction && ownFunction.type === parentFunction?.type)) semanticTags = parent.tags;
+    const semanticKeys = ['amenity', 'healthcare', 'religion', 'denomination', 'power', 'plant:source',
+      'generator:source', 'office', 'tourism', 'railway', 'public_transport', 'man_made'];
+    if (matches.some(p => p.tags === semanticTags)) semanticKeys.push('building:architecture', 'architecture',
+      'building:material', 'roof:shape', 'building:start_date', 'construction_date', 'start_date');
+    const inheritedTags = semanticTags && Object.fromEntries(semanticKeys.filter(k => semanticTags[k] != null).map(k => [k, semanticTags[k]]));
+    const semanticBuilding = inheritedTags ? { ...building, tags: { ...inheritedTags, ...building.tags } } : building;
 
     const ctx = {
       slope, urban, rural, courtyard: !!poly?.holes?.length, elongated,
-      density, landuse: use, parentTags: parent?.tags, building, poly, region, location: loc,
+      density, landuse: use, parentTags: parent?.tags, building: semanticBuilding, poly, region, location: loc,
       seed, identity, aquatic, transitPassage, transitIndex,
       climate: environment.climate || venue?.climate,
       geology: environment.geology || venue?.geology,
     };
-    ctx.functionInfo = inferBuildingFunction(building, poly, ctx);
+    ctx.functionInfo = inferBuildingFunction(semanticBuilding, poly, ctx);
     return { ...chooseArchitecture(seed, identity, ctx), site };
   };
 }

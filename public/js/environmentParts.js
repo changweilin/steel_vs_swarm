@@ -204,7 +204,7 @@ function hollowShell(profile, thickness, x, y, z, color, role) {
     p: [x, y + height / 2, z], c: color, role };
 }
 
-export function environmentBuildingPlan(kind, size, seed, functionType = null) {
+export function environmentBuildingPlan(kind, size, seed, functionType = null, context = {}) {
   const spec = ENVIRONMENT_BUILDINGS[kind];
   if (!spec) throw new RangeError('Unknown environment building: ' + kind);
   const rnd = mulberry32(seed), sampleRange = range => range[0] + rnd() * (range[1] - range[0]);
@@ -214,8 +214,10 @@ export function environmentBuildingPlan(kind, size, seed, functionType = null) {
   if (functionType && !functional) throw new RangeError('Unknown building function: ' + functionType);
   const functionInfo = functional ? { type, key: functional.range, category: functional.category, locked: true }
     : { type: spec.type, key: spec.key, category: spec.category, locked: false };
-  const style = chooseArchitecture(seed, `environment/${kind}`, { functionInfo, affinity: functionType ? undefined : spec.affinity,
-    urban: functionType ? true : kind !== 'house', rural: !functionType && kind === 'house', building: { tags: { height: bodyH } } });
+  const style = chooseArchitecture(seed, context.building?.sourceId || `environment/${kind}`, { ...context,
+    functionInfo, affinity: functionType ? undefined : spec.affinity,
+    urban: functionType ? true : kind !== 'house', rural: !functionType && kind === 'house',
+    building: { ...context.building, tags: { ...context.building?.tags, height: bodyH } } });
   const poly = { outer: [[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]], holes: [] };
   const metrics = calculateFootprintMetrics(poly);
   const roofForm = resolveAdaptiveRoofForm(style.roofForm, metrics, bodyH, functionInfo.category);

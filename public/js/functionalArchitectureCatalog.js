@@ -1,9 +1,11 @@
-// 用途語彙與變體資料；不改寫圖資用途、建築外環或權威碰撞。
+// Function-specific visual vocabulary never rewrites mapped footprints or authority.
 export const FUNCTIONAL_VARIANTS = Object.freeze({
   temple: [
     { id: 'east_asian_hall', regions: ['east_asia', 'korea'], era: 'historic', roofForm: 'xieshan', motif: 'temple', palette: 'lacquer' },
     { id: 'japanese_hall', regions: ['japan'], era: 'historic', roofForm: 'yingshan', motif: 'temple', palette: 'timber' },
-    { id: 'theravada_hall', regions: ['southeast_asia', 'south_asia'], era: 'historic', roofForm: 'tiered', motif: 'temple', palette: 'gold' },
+    { id: 'theravada_hall', religions: ['buddhist'], denominations: ['theravada'], regions: ['southeast_asia', 'south_asia'], era: 'historic', roofForm: 'tiered', motif: 'temple', palette: 'gold' },
+    { id: 'taoist_hall', religions: ['taoist'], era: 'historic', roofForm: 'xieshan', motif: 'temple', palette: 'lacquer' },
+    { id: 'confucian_hall', religions: ['confucian'], era: 'historic', roofForm: 'yingshan', motif: 'temple', palette: 'timber' },
     { id: 'modern_dharma_hall', era: 'modern', roofForm: 'xieshan', motif: 'temple', palette: 'pale' },
   ],
   mosque: [
@@ -14,8 +16,10 @@ export const FUNCTIONAL_VARIANTS = Object.freeze({
   ],
   church: [
     { id: 'gothic_church', aliases: ['gothic', 'neo-gothic'], era: 'historic', roofForm: 'steep_gable', motif: 'church', palette: 'stone' },
+    { id: 'romanesque_church', aliases: ['romanesque'], era: 'historic', roofForm: 'gable', motif: 'church', palette: 'stone' },
+    { id: 'baroque_church', aliases: ['baroque', 'renaissance'], era: 'historic', roofForm: 'dome', motif: 'church', palette: 'sandstone' },
     { id: 'orthodox_church', denominations: ['orthodox', 'eastern_orthodox', 'russian_orthodox', 'greek_orthodox'], era: 'historic', roofForm: 'dome', motif: 'orthodox', palette: 'gold' },
-    { id: 'modern_church', era: 'modern', roofForm: 'gable', motif: 'church', palette: 'pale' },
+    { id: 'modern_church', aliases: ['modern', 'modernism'], era: 'modern', roofForm: 'gable', motif: 'church', palette: 'pale' },
   ],
   shrine: [{ id: 'shinto_hall', roofForm: 'yingshan', motif: 'shrine', palette: 'lacquer', era: 'historic' }],
   mandir: [{ id: 'shikhara_temple', roofForm: 'spire', motif: 'mandir', palette: 'sandstone', era: 'historic' }],
@@ -130,19 +134,23 @@ export function functionalArchitecture(functionInfo, context = {}, seed = 0) {
   const variants = own(FUNCTIONAL_VARIANTS, family);
   if (!variants) return null;
   const tags = context.building?.tags || {};
+  const religion = normalized(tags.religion);
   const denomination = normalized(tags.denomination);
   const source = normalized(tags['plant:source'] || tags['generator:source']);
   const architecture = normalized(tags['building:architecture'] || tags.architecture);
   const climate = normalized(tags.climate || context.climate || context.location?.venue?.climate);
-  const yearMatch = /^(?:c\.?\s*)?(\d{4})(?:$|[-;/])/.exec(normalized(tags.start_date || tags['building:start_date']));
+  const yearMatch = /^(?:c\.?\s*)?(\d{4})(?:$|[-;/])/.exec(normalized(tags['building:start_date'] || tags.construction_date || tags.start_date));
   const year = yearMatch ? Number(yearMatch[1]) : null;
   const era = year === null ? null : year < 1945 ? 'historic' : 'modern';
-  let candidates = variants.filter(row => (!row.denominations || row.denominations.includes(denomination))
+  let candidates = variants.filter(row => (!row.religions || row.religions.includes(religion))
+    && (!row.denominations || row.denominations.includes(denomination))
     && (!row.sources || row.sources.includes(source)));
   const sourced = candidates.filter(row => row.sources?.includes(source));
   const denominated = candidates.filter(row => row.denominations?.includes(denomination));
+  const religious = candidates.filter(row => row.religions?.includes(religion));
   if (sourced.length) candidates = sourced;
   if (denominated.length) candidates = denominated;
+  else if (religious.length) candidates = religious;
   const explicit = candidates.filter(row => row.id === architecture || row.aliases?.includes(architecture));
   if (explicit.length) candidates = explicit;
   else if (era && candidates.some(row => row.era === era)) candidates = candidates.filter(row => row.era === era);
@@ -165,9 +173,12 @@ export function functionalArchitecture(functionInfo, context = {}, seed = 0) {
   const masonry = ['stone', 'sandstone', 'earth'].includes(selected.palette);
   const localStone = masonry ? own(FUNCTIONAL_MATERIALS, geology) : null;
   const warm = ['tropical', 'arid', 'hot', 'mediterranean'].includes(climate);
-  const cold = ['cold', 'polar', 'alpine', 'continental'].includes(climate);
-  const roofForm = cold && ['flat', 'shed'].includes(selected.roofForm)
-    && !['energy', 'substation', 'water'].includes(family) ? 'gable' : selected.roofForm;
+  const cold = ['cold', 'polar', 'alpine', 'continental', 'boreal'].includes(climate);
+  const roofAliases = { gabled: 'gable', hipped: 'wudian', pyramidal: 'wudian', skillion: 'shed',
+    flat: 'flat', dome: 'dome', onion: 'dome', mansard: 'mansard', gambrel: 'gambrel', round: 'vault' };
+  const taggedRoof = own(roofAliases, normalized(tags['roof:shape']));
+  const roofForm = taggedRoof || (cold && ['flat', 'shed'].includes(selected.roofForm)
+    && !['energy', 'substation', 'water'].includes(family) ? 'gable' : selected.roofForm);
   const facade = FUNCTIONAL_FACADES[selected.motif];
   return {
     wall: own(FUNCTIONAL_MATERIALS, material) ?? localStone ?? wall, roof, trim,
@@ -177,6 +188,7 @@ export function functionalArchitecture(functionInfo, context = {}, seed = 0) {
     functionalDesign: {
       id: selected.id, family, motif: selected.motif, region: context.region || null,
       denomination: denomination || null, year, climate: climate || null,
+      religion: religion || null, architecture: architecture || null, taggedRoof: taggedRoof || null,
       material: material || (localStone ? geology : null), shade: warm, snowRoof: cold,
     },
   };

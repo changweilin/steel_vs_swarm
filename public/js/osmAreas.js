@@ -120,11 +120,15 @@ for (const value of ['station', 'halt', 'tram_stop', 'subway_entrance']) AREA_BY
 AREA_BY_KEY_VALUE.set('public_transport=station', AREA_CATALOG.station);
 for (const value of ['base', 'barracks', 'training_area', 'range', 'airfield', 'naval_base']) AREA_BY_KEY_VALUE.set(`military=${value}`, AREA_CATALOG.military);
 for (const value of ['lake', 'pond', 'reservoir', 'basin', 'lagoon', 'moat']) AREA_BY_KEY_VALUE.set(`water=${value}`, AREA_CATALOG.water);
-for (const value of ['pitch', 'sports_centre', 'stadium', 'track', 'golf_course', 'swimming_pool']) AREA_BY_KEY_VALUE.set(`leisure=${value}`, AREA_CATALOG.sports);
+for (const value of ['pitch', 'practice_pitch', 'sports_centre', 'stadium', 'track', 'golf_course', 'swimming_pool']) AREA_BY_KEY_VALUE.set(`leisure=${value}`, AREA_CATALOG.sports);
 for (const value of ['soccer', 'football', 'tennis', 'basketball', 'baseball', 'athletics', 'golf']) AREA_BY_KEY_VALUE.set(`sport=${value}`, AREA_CATALOG.sports);
-for (const value of ['townhall', 'fire_station', 'police', 'courthouse', 'community_centre']) {
+for (const value of ['townhall', 'fire_station', 'police', 'courthouse', 'community_centre', 'library']) {
   AREA_BY_KEY_VALUE.set(`amenity=${value}`, Object.freeze({ kind: 'civic', family: 'civic', key: 'amenity', values: [value], generator: 'civic', surface: 'urban', priority: 82 }));
 }
+for (const value of ['museum', 'gallery']) AREA_BY_KEY_VALUE.set(`tourism=${value}`,
+  Object.freeze({ kind: 'culture', family: 'culture', key: 'tourism', values: [value], generator: 'civic', surface: 'urban', priority: 82 }));
+AREA_BY_KEY_VALUE.set('office=government', Object.freeze({ kind: 'civic', family: 'civic', key: 'office',
+  values: ['government'], generator: 'civic', surface: 'urban', priority: 82 }));
 
 const isObj = (v) => !!v && typeof v === 'object';
 const finite = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -629,6 +633,31 @@ export function projectedAreaIntersectsDisk(x, z, radius, polygon) {
     || [polygon.outer, ...(polygon.holes || [])].some(ring => ringNearDisk(x, z, radius, ring));
 }
 
+/** Full boundary tests reject enclosed holes and notches even when every corner is inside. */
+export function projectedAreaContainsRect(x, z, hw, hd, ry, polygon) {
+  if (![x, z, hw, hd, ry].every(Number.isFinite) || hw <= 0 || hd <= 0 || !polygon?.outer?.length) return false;
+  const c = Math.cos(ry), s = Math.sin(ry);
+  const local = ([px, pz]) => [(px - x) * c - (pz - z) * s, (px - x) * s + (pz - z) * c];
+  for (const [u, v] of [[-hw,-hd],[hw,-hd],[hw,hd],[-hw,hd]]) {
+    if (!pointInProjectedArea(x + u * c + v * s, z - u * s + v * c, polygon)) return false;
+  }
+  for (const ring of [polygon.outer, ...(polygon.holes || [])]) for (let i = 0; i < ring.length; i++) {
+    const a = local(ring[i]), b = local(ring[(i + 1) % ring.length]);
+    let lo = 0, hi = 1;
+    for (const [axis, half] of [[0, hw], [1, hd]]) {
+      const delta = b[axis] - a[axis];
+      if (Math.abs(delta) < 1e-10) {
+        if (Math.abs(a[axis]) > half) { hi = -1; break; }
+      } else {
+        const t0 = (-half - a[axis]) / delta, t1 = (half - a[axis]) / delta;
+        lo = Math.max(lo, Math.min(t0, t1)); hi = Math.min(hi, Math.max(t0, t1));
+      }
+    }
+    if (lo <= hi) return false;
+  }
+  return true;
+}
+
 /** 建物／用地 containment：最小包含父面優先，輸入順序不影響。 */
 export function buildContainmentIndex(areas = []) {
   const ordered = [...areas].sort((a, b) => areaAreaM2(a) - areaAreaM2(b) || String(a.sourceId).localeCompare(String(b.sourceId)));
@@ -694,7 +723,7 @@ export function placeAreaCandidates(areas = [], options = {}) {
       if (![p.x, p.z, radius].every(Number.isFinite) || !contains(area, p, radius)) {
         skipped.push({ sourceId: area.sourceId, reason: 'outside_footprint' }); continue;
       }
-      if (blocked(p.x, p.z, radius, area)) { skipped.push({ sourceId: area.sourceId, reason: 'blocked' }); continue; }
+      if (blocked(p.x, p.z, radius, area, p)) { skipped.push({ sourceId: area.sourceId, reason: 'blocked' }); continue; }
       let clash = false;
       for (const q of placed) {
         const gap = radius + q.radius + minGap;

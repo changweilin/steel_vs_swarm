@@ -3,6 +3,7 @@ import { areaAreaM2, areaCandidates, buildContainmentIndex, placeAreaCandidates,
 import { OSM_AREA_OBJECT_ROWS as ROWS } from './osmAreaCatalog.js';
 import { forestSeed } from './forest.js';
 import { mulberry32 } from './rng.js';
+import { osmSportSpec, osmSportCandidates, osmSportSamples } from './osmSports.js';
 
 /** A parcel's longest edge supplies a repeatable local frame, never an inferred satellite road. */
 export function areaLayoutAngle(area) {
@@ -59,6 +60,7 @@ export function planOsmAreaObjects(areas = [], { terrain, inset = 0, heightAt, e
   const eligible = [...areas, ...points].filter(area => {
     const row = ROWS[area?.classification?.generator];
     if (!row || area.tags?.building != null || area.tags?.['building:part'] != null) return false;
+    if (area.classification.generator === 'sports') return !!osmSportSpec(area.tags);
     if (!area.point && area.classification.generator === 'wind' && points.some(p =>
       (area.worldPolygons || []).some(poly => pointInProjectedArea(p.point.x, p.point.z, poly)))) return false;
     return !row.representative || !containment.childrenOf(area).some(child =>
@@ -67,21 +69,25 @@ export function planOsmAreaObjects(areas = [], { terrain, inset = 0, heightAt, e
   });
   const plan = placeAreaCandidates(eligible, {
     maxObjects, maxPerArea: Math.max(...Object.values(ROWS).map(row => row.max)), minGap: 1.5,
-    candidatesOf: (area, max) => area.point ? [area.point] : rowCandidates(area, max),
-    contains: (area, p, r) => area.point ? p === area.point
+    candidatesOf: (area, max) => area.point ? [area.point] : area.classification.generator === 'sports'
+      ? osmSportCandidates(area, max, areaLayoutAngle(area)) : rowCandidates(area, max),
+    contains: (area, p, r) => p.sport ? true : area.point ? p === area.point
       : (area.worldPolygons || []).some(poly => projectedAreaContainsDisk(p.x, p.z, r, poly)),
-    radiusOf: area => ROWS[area.classification.generator].radius,
+    radiusOf: (area, p) => p.sport ? Math.hypot(p.sport.hw, p.sport.hd) : ROWS[area.classification.generator].radius,
     countOf: area => {
       const row = ROWS[area.classification.generator];
+      if (area.classification.generator === 'sports') return 1;
       if (area.point) return 1;
       return Math.min(row.max, Math.max(1, Math.floor(areaAreaM2(area) / row.minArea)));
     },
-    blocked: (x, z, r, area) => {
+    blocked: (x, z, r, area, p) => {
       if (terrain && (x - r < terrain.minX + inset || x + r > terrain.maxX - inset
         || z - r < terrain.minZ + inset || z + r > terrain.maxZ - inset)) return true;
-      const samples = [[0, 0], [-r, -r], [r, -r], [r, r], [-r, r]];
+      const samples = p.sport ? osmSportSamples(p).map(([px, pz]) => [px - x, pz - z])
+        : [[0, 0], [-r, -r], [r, -r], [r, r], [-r, r]];
       const heights = samples.map(([dx, dz]) => heightAt(x + dx, z + dz));
-      if (!heights.every(Number.isFinite) || Math.max(...heights) - Math.min(...heights) > Math.max(.35, r * .22)) return true;
+      if (!heights.every(Number.isFinite) || Math.max(...heights) - Math.min(...heights)
+        > (p.sport ? .3 : Math.max(.35, r * .22))) return true;
       const generator = area.classification.generator;
       if (masks.some(mask => mask.area !== area && x + r >= mask.minX && x - r <= mask.maxX
         && z + r >= mask.minZ && z - r <= mask.maxZ
@@ -108,7 +114,7 @@ export function planOsmAreaObjects(areas = [], { terrain, inset = 0, heightAt, e
     }
     const floating = ['water', 'aquaculture'].includes(p.area.classification.generator);
     return [{ ...p, seed: localSeed, y: floating ? terrain.waterY : heightAt(p.x, p.z),
-      shape, ry: p.ry ?? (localSeed / 4294967296) * Math.PI * 2 }];
+      shape: p.shape || shape, ry: p.ry ?? (localSeed / 4294967296) * Math.PI * 2 }];
   });
   return plan;
 }

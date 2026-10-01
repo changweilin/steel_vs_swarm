@@ -2,6 +2,25 @@ import { mat3FromEulerXYZ } from './partTransform.js';
 import { architecturalRoofParts } from './architectureRoofParts.js';
 import { FUNCTIONAL_DETAIL_LIMIT } from './functionalArchitectureCatalog.js';
 
+function crescentGeometry(radius, depth) {
+  const inner = radius * .85, offset = radius * .28;
+  const x = (radius * radius - inner * inner + offset * offset) / (2 * offset);
+  const a = Math.acos(x / radius), b = Math.acos((x - offset) / inner), steps = 20;
+  const vertices = [], faces = [], width = (steps + 1) * 2;
+  for (const z of [-depth / 2, depth / 2]) for (let i = 0; i <= steps; i++) {
+    const outerAngle = a + i / steps * (Math.PI * 2 - 2 * a);
+    const innerAngle = b + i / steps * (Math.PI * 2 - 2 * b);
+    vertices.push(Math.cos(outerAngle) * radius, Math.sin(outerAngle) * radius, z,
+      offset + Math.cos(innerAngle) * inner, Math.sin(innerAngle) * inner, z);
+  }
+  for (let i = 0; i < steps; i++) {
+    const p = i * 2, q = p + 2;
+    faces.push(p,q,p+1,q,q+1,p+1,p+width,p+1+width,q+width,q+width,p+1+width,q+1+width,
+      p,p+width,q,q,p+width,q+width,p+1,q+1,p+1+width,q+1,q+1+width,p+1+width);
+  }
+  return ['mesh', { vertices, faces }, [radius * 2, radius * 2, depth]];
+}
+
 // Semantic ornament uses the existing part format. Roof patches require a caller-validated convex site.
 export function functionalBuildingParts(edges, baseY, topY, style, roofSite = null, roofHalf = 0, roofBudget = 12) {
   const design = style?.functionalDesign;
@@ -16,11 +35,11 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
   const front = edges.reduce((a, b) => a.hw2 >= b.hw2 ? a : b);
   const fronts = edges.filter(edge => edge.hw2 >= front.hw2 * 0.9 && Math.abs(Math.cos(edge.ry - front.ry)) > 0.99).slice(0, 2);
   const w = Math.min(front.hw2 * 1.3, 10), h = Math.min(topY - baseY, 5);
-  const facade = (g, x, y, c, role, depth = 0.12) => {
+  const facade = (g, x, y, c, role, depth = 0.12, spin = 0) => {
     // Both wall faces work for either polygon winding; thickness stays within existing facade trim depth.
     for (const edge of fronts) for (const side of [-1, 1]) {
       const ca = Math.cos(edge.ry), sa = Math.sin(edge.ry), z = side * (edge.hd2 + depth);
-      add(g, [edge.x + x * ca - z * sa, baseY + y, edge.z + x * sa + z * ca], c, role, [0, -edge.ry, 0]);
+      add(g, [edge.x + x * ca - z * sa, baseY + y, edge.z + x * sa + z * ca], c, role, [0, -edge.ry, spin]);
     }
   };
   if (design) facade(['box', w, Math.min(0.5, h * 0.12), 0.2], 0, h * 0.92, style.trim, 'entrance-lintel');
@@ -57,9 +76,20 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
       facade(['box', w, h * 0.1, 0.28], 0, h * 0.8, style.trim, 'torii-crossbeam');
       facade(['box', w * 1.05, h * 0.1, 0.28], 0, h * 0.96, style.roof, 'torii-cap');
     }
+    if (design.religion === 'buddhist') {
+      const radius = Math.min(w * .15, h * .23);
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        facade(['box', radius * .1, radius, .16], Math.sin(a) * radius / 2, h * .5 + Math.cos(a) * radius / 2,
+          style.trim, 'dharma-wheel-spoke', .12, -a);
+        facade(['box', radius * .78, radius * .1, .18], Math.sin(a) * radius, h * .5 + Math.cos(a) * radius,
+          style.trim, 'dharma-wheel-rim', .12, -a);
+      }
+    }
   }
   if (!roofSite || roofHalf < 0.8 || roofBudget < 0.3) return { parts, replacesRoof: false };
-  const [cx, cz] = roofSite, r = roofHalf * 0.7, roofStart = parts.length;
+  const religious = ['temple','shrine','mandir','pagoda','stupa','gurdwara','church','orthodox','synagogue','mosque','square_minaret'].includes(motif);
+  const [cx, cz] = roofSite, r = roofHalf * (religious ? .85 : .7), roofStart = parts.length;
   const roof = (g, x, y, z, color, role, rotation = [0, 0, 0]) => add(g, [cx + x, topY + y, cz + z], color, role, rotation);
   const block = (w, height, d, x, y, z, color, role) => roof(['box', w, height, d], x, y + height / 2, z, color, role);
   const cylinder = (radius, height, x, y, z, color, role, topRadius = radius, segments = 12) => roof(['cyl', topRadius, radius, height, segments], x, y + height / 2, z, color, role);
@@ -69,7 +99,6 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
       if (parts.length < FUNCTIONAL_DETAIL_LIMIT) parts.push({ ...part, role: `function-${motif}-roof` });
     }
   };
-  const religious = ['temple','shrine','mandir','pagoda','stupa','gurdwara','church','orthodox','synagogue','mosque','square_minaret'].includes(motif);
   if (['mosque', 'square_minaret', 'gurdwara', 'orthodox', 'stupa'].includes(motif)) {
     cylinder(r * 0.63, r * 0.3, 0, 0, 0, style.wall, 'dome-drum');
     if (motif !== 'square_minaret') patch('dome', 0, 0, r * 1.26, r * 1.26, r * 0.3);
@@ -83,6 +112,9 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
       else cylinder(r * 0.23, r * 0.5, x, r * 1.65, z, style.roof, 'tower-cap', 0);
     }
     cylinder(r * 0.05, r * 0.4, 0, r * 0.9, 0, style.trim, 'finial');
+    if (motif === 'mosque' || motif === 'square_minaret') {
+      roof(crescentGeometry(r * .15, r * .04), 0, r * 1.45, 0, style.trim, 'crescent-finial', [0, 0, -Math.PI / 2]);
+    }
     if (motif === 'orthodox') {
       const emit = (g, x, y, color, role) => roof(g, x, y, 0, color, role);
       cross(emit, 0, r * 1.35, r * 0.45, style.trim, 'christian-cross');
@@ -147,17 +179,19 @@ export function functionalBuildingParts(edges, baseY, topY, style, roofSite = nu
       }
     }
   }
-  // Uniform compression preserves joints when a tagged building is already near the world cap.
+  // One uniform fit preserves joints inside both the verified roof patch and the world cap.
   const roofs = parts.slice(roofStart);
-  const halfHeight = part => {
+  const halfExtent = (part, axis) => {
     const dims = part.g[0] === 'mesh' ? part.g[2] : part.g[0] === 'box' ? part.g.slice(1, 4)
       : [2 * Math.max(part.g[1], part.g[2]), part.g[3], 2 * Math.max(part.g[1], part.g[2])];
     const matrix = mat3FromEulerXYZ(part.r);
-    return dims.reduce((sum, value, i) => sum + Math.abs(matrix[3 + i]) * value / 2, 0);
+    return dims.reduce((sum, value, i) => sum + Math.abs(matrix[axis * 3 + i]) * value / 2, 0);
   };
-  const rise = roofs.reduce((max, p) => Math.max(max, p.p[1] - topY + halfHeight(p)), 0);
-  if (rise > roofBudget) for (const part of roofs) {
-    const scale = roofBudget / rise;
+  const rise = roofs.reduce((max, p) => Math.max(max, p.p[1] - topY + halfExtent(p, 1)), 0);
+  const span = roofs.reduce((max, p) => Math.max(max,
+    Math.abs(p.p[0] - cx) + halfExtent(p, 0), Math.abs(p.p[2] - cz) + halfExtent(p, 2)), 0);
+  const scale = Math.min(1, roofBudget / rise, roofHalf / span);
+  if (scale < 1) for (const part of roofs) {
     part.p = [cx + (part.p[0] - cx) * scale, topY + (part.p[1] - topY) * scale, cz + (part.p[2] - cz) * scale];
     part.s = [scale, scale, scale];
     if (part.motion) part.motion = { ...part.motion, pivot: [
