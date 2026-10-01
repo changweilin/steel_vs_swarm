@@ -15,7 +15,7 @@
     "maxLat": 25.03601618956498,
     "maxLng": 121.56685867609212
   },
-  "capturedAt": "2026-09-01T05:19:46.745Z",
+  "capturedAt": "2026-10-01T13:45:55.617Z",
   "source": {
     "features": "https://overpass-api.de/api/interpreter",
     "roads": "https://overpass-api.de/api/interpreter",
@@ -23,13 +23,13 @@
   },
   "queries": {
     "features": {
-      "version": 6,
+      "version": 9,
       "quotas": {
         "nBld": 513,
         "nCover": 241,
         "nArea": 724
       },
-      "text": "[out:json][timeout:15];(way[\"building\"](25.02819,121.55999,25.03602,121.56686);way[\"building:part\"](25.02819,121.55999,25.03602,121.56686);way[\"landuse\"](25.02819,121.55999,25.03602,121.56686);way[\"landcover\"](25.02819,121.55999,25.03602,121.56686);way[\"amenity\"](25.02819,121.55999,25.03602,121.56686);way[\"leisure\"](25.02819,121.55999,25.03602,121.56686);way[\"natural\"](25.02819,121.55999,25.03602,121.56686);way[\"healthcare\"](25.02819,121.55999,25.03602,121.56686);way[\"tourism\"](25.02819,121.55999,25.03602,121.56686);way[\"shop\"](25.02819,121.55999,25.03602,121.56686);way[\"office\"](25.02819,121.55999,25.03602,121.56686);way[\"craft\"](25.02819,121.55999,25.03602,121.56686);way[\"industrial\"](25.02819,121.55999,25.03602,121.56686);way[\"man_made\"](25.02819,121.55999,25.03602,121.56686);way[\"power\"](25.02819,121.55999,25.03602,121.56686);way[\"public_transport\"](25.02819,121.55999,25.03602,121.56686);way[\"railway\"](25.02819,121.55999,25.03602,121.56686);way[\"aeroway\"](25.02819,121.55999,25.03602,121.56686);way[\"military\"](25.02819,121.55999,25.03602,121.56686);way[\"historic\"](25.02819,121.55999,25.03602,121.56686);way[\"sport\"](25.02819,121.55999,25.03602,121.56686);way[\"water\"](25.02819,121.55999,25.03602,121.56686);way[\"waterway\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"building\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"building:part\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"landuse\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"landcover\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"amenity\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"leisure\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"natural\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"healthcare\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"tourism\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"shop\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"office\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"craft\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"industrial\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"man_made\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"power\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"public_transport\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"railway\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"aeroway\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"military\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"historic\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"sport\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"water\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"waterway\"](25.02819,121.55999,25.03602,121.56686););out body geom 724;node[\"power\"=\"tower\"](25.02819,121.55999,25.03602,121.56686);out tags 513;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](25.02819,121.55999,25.03602,121.56686);out geom 60;node[\"railway\"=\"level_crossing\"](25.02819,121.55999,25.03602,121.56686);out 40;node[\"waterway\"=\"waterfall\"](25.02819,121.55999,25.03602,121.56686);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](25.02819,121.55999,25.03602,121.56686);out 24;node[\"natural\"=\"peak\"](25.02819,121.55999,25.03602,121.56686);out 12;node[\"highway\"=\"motorway_junction\"](25.02819,121.55999,25.03602,121.56686);out 12;node[\"railway\"~\"^(station|halt)$\"](25.02819,121.55999,25.03602,121.56686);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](25.02819,121.55999,25.03602,121.56686);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](25.02819,121.55999,25.03602,121.56686);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](25.02819,121.55999,25.03602,121.56686);out geom 120;way[\"landuse\"](25.02819,121.55999,25.03602,121.56686);out geom 241;way[\"natural\"](25.02819,121.55999,25.03602,121.56686);out geom 241;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](25.02819,121.55999,25.03602,121.56686);out geom 241;rel[\"boundary\"=\"administrative\"](25.02819,121.55999,25.03602,121.56686);way(r);out geom 400;"
+      "text": "[out:json][timeout:15];(way[\"building\"](25.02819,121.55999,25.03602,121.56686);way[\"building:part\"](25.02819,121.55999,25.03602,121.56686);way[\"landuse\"](25.02819,121.55999,25.03602,121.56686);way[\"landcover\"](25.02819,121.55999,25.03602,121.56686);way[\"amenity\"](25.02819,121.55999,25.03602,121.56686);way[\"leisure\"](25.02819,121.55999,25.03602,121.56686);way[\"natural\"](25.02819,121.55999,25.03602,121.56686);way[\"healthcare\"](25.02819,121.55999,25.03602,121.56686);way[\"tourism\"](25.02819,121.55999,25.03602,121.56686);way[\"shop\"](25.02819,121.55999,25.03602,121.56686);way[\"office\"](25.02819,121.55999,25.03602,121.56686);way[\"craft\"](25.02819,121.55999,25.03602,121.56686);way[\"industrial\"](25.02819,121.55999,25.03602,121.56686);way[\"man_made\"](25.02819,121.55999,25.03602,121.56686);way[\"power\"](25.02819,121.55999,25.03602,121.56686);way[\"public_transport\"](25.02819,121.55999,25.03602,121.56686);way[\"railway\"](25.02819,121.55999,25.03602,121.56686);way[\"aeroway\"](25.02819,121.55999,25.03602,121.56686);way[\"military\"](25.02819,121.55999,25.03602,121.56686);way[\"historic\"](25.02819,121.55999,25.03602,121.56686);way[\"sport\"](25.02819,121.55999,25.03602,121.56686);way[\"water\"](25.02819,121.55999,25.03602,121.56686);way[\"waterway\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"building\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"building:part\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"landuse\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"landcover\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"amenity\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"leisure\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"natural\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"healthcare\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"tourism\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"shop\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"office\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"craft\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"industrial\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"man_made\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"power\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"public_transport\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"railway\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"aeroway\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"military\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"historic\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"sport\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"water\"](25.02819,121.55999,25.03602,121.56686);rel[\"type\"=\"multipolygon\"][\"waterway\"](25.02819,121.55999,25.03602,121.56686););out body geom 724;node[\"man_made\"~\"^(tower|mast|communications_tower|lighthouse)$\"](25.02819,121.55999,25.03602,121.56686);out tags 513;node[\"aeroway\"=\"control_tower\"](25.02819,121.55999,25.03602,121.56686);out tags 513;node[\"power\"=\"tower\"](25.02819,121.55999,25.03602,121.56686);out tags 513;node[\"power\"=\"generator\"][\"generator:source\"=\"wind\"](25.02819,121.55999,25.03602,121.56686);out tags 513;node[\"amenity\"~\"^(place_of_worship|school|university|college|kindergarten|hospital|clinic|library|townhall|courthouse|community_centre|bus_station|ferry_terminal)$\"](25.02819,121.55999,25.03602,121.56686);out tags 240;node[\"tourism\"~\"^(museum|gallery)$\"](25.02819,121.55999,25.03602,121.56686);out tags 80;node[\"office\"=\"government\"](25.02819,121.55999,25.03602,121.56686);out tags 80;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](25.02819,121.55999,25.03602,121.56686);out geom 60;node[\"railway\"=\"level_crossing\"](25.02819,121.55999,25.03602,121.56686);out 40;node[\"waterway\"=\"waterfall\"](25.02819,121.55999,25.03602,121.56686);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](25.02819,121.55999,25.03602,121.56686);out 24;node[\"natural\"=\"peak\"](25.02819,121.55999,25.03602,121.56686);out 12;node[\"highway\"=\"motorway_junction\"](25.02819,121.55999,25.03602,121.56686);out 12;node[\"railway\"~\"^(station|halt)$\"](25.02819,121.55999,25.03602,121.56686);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](25.02819,121.55999,25.03602,121.56686);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](25.02819,121.55999,25.03602,121.56686);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](25.02819,121.55999,25.03602,121.56686);out geom 120;way[\"landuse\"](25.02819,121.55999,25.03602,121.56686);out geom 241;way[\"natural\"](25.02819,121.55999,25.03602,121.56686);out geom 241;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](25.02819,121.55999,25.03602,121.56686);out geom 241;rel[\"boundary\"=\"administrative\"](25.02819,121.55999,25.03602,121.56686);way(r);out geom 400;"
     },
     "roads": {
       "version": 1,
@@ -43,6 +43,56 @@
   "responses": {
     "features": {
       "elements": [
+        {
+          "type": "node",
+          "id": 2616960456,
+          "tags": {
+            "addr:city": "臺北市",
+            "addr:country": "TW",
+            "addr:district": "信義區",
+            "addr:floor": "4;5",
+            "addr:full": "11041臺北市吳興街156巷6號4、5樓",
+            "addr:housenumber": "6",
+            "addr:postcode": "11041",
+            "addr:street": "吳興街156巷",
+            "amenity": "library",
+            "email": "b12@email.tpml.edu.tw",
+            "fax": "+886 2 8732 1064",
+            "name": "三興分館",
+            "official_name": "台北市立圖書館三興分館",
+            "opening_hours": "Su-Mo 09:00-17:00; Tu-Sa 08:30-21:00",
+            "phone": "+886 2 8732 1063",
+            "wikidata": "Q97751880"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2619323827,
+          "tags": {
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "healthcare:speciality": "otolaryngology",
+            "name": "莊敬耳鼻喉科"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2619324215,
+          "tags": {
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "name": "高眼科"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2619324445,
+          "tags": {
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "name": "翁內兒科"
+          }
+        },
         {
           "type": "node",
           "id": 2636658001,
@@ -141,6 +191,58 @@
         },
         {
           "type": "node",
+          "id": 4524863650,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "比珥信心教會",
+            "religion": "christian"
+          }
+        },
+        {
+          "type": "node",
+          "id": 6183746782,
+          "tags": {
+            "addr:city": "臺北市",
+            "addr:country": "TW",
+            "addr:district": "信義區",
+            "addr:full": "110臺北市信義區莊敬路325巷58號",
+            "addr:housenumber": "58",
+            "addr:postcode": "110",
+            "addr:street": "莊敬路325巷",
+            "amenity": "place_of_worship",
+            "name": "普光精舍",
+            "religion": "buddhist"
+          }
+        },
+        {
+          "type": "node",
+          "id": 6284503808,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "華嚴聖因精舍",
+            "religion": "buddhist"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9631754013,
+          "tags": {
+            "addr:city": "臺北市",
+            "addr:country": "TW",
+            "addr:district": "信義區",
+            "addr:floor": "1",
+            "addr:full": "臺北市信義區莊敬路391巷11弄2號",
+            "addr:housenumber": "2",
+            "addr:street": "莊敬路391巷11弄",
+            "government": "ministry",
+            "level": "1",
+            "name": "松山地政事務所",
+            "office": "government",
+            "official_name": "臺北市松山地政事務所"
+          }
+        },
+        {
+          "type": "node",
           "id": 9974435156,
           "lat": 25.0329794,
           "lon": 121.5624453,
@@ -196,6 +298,25 @@
             "railway": "subway_entrance",
             "ref": "5",
             "wheelchair": "designated"
+          }
+        },
+        {
+          "type": "node",
+          "id": 12450421087,
+          "tags": {
+            "addr:city": "臺北市",
+            "addr:country": "TW",
+            "addr:district": "信義區",
+            "addr:full": "110臺北市信義區景新里11鄰松平路30巷6弄7號",
+            "addr:hamlet": "景新里",
+            "addr:housenumber": "7",
+            "addr:neighbourhood": "11",
+            "addr:postcode": "110",
+            "addr:street": "松平路30巷6弄",
+            "amenity": "place_of_worship",
+            "denomination": "true_jesus",
+            "name": "真耶穌教會信義教會",
+            "religion": "christian"
           }
         },
         {
@@ -66808,7 +66929,7 @@
       "generator": "Overpass API 0.7.62.11 87bfad18",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T05:18:27Z"
+        "timestamp_osm_base": "2026-10-01T13:43:56Z"
       },
       "version": 0.6
     },
@@ -85649,14 +85770,14 @@
       "generator": "Overpass API 0.7.62.11 87bfad18",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T05:18:27Z"
+        "timestamp_osm_base": "2026-10-01T13:43:56Z"
       },
       "version": 0.6
     }
   },
   "stats": {
     "bboxKm2": 0.6036606882174963,
-    "featureElements": 974,
+    "featureElements": 983,
     "roadElements": 444
   }
 }

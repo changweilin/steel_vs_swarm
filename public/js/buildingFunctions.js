@@ -70,11 +70,15 @@ const buildingTypes = {
   shrine: 'shrine', synagogue: 'synagogue', gurdwara: 'gurdwara', stupa: 'stupa', pagoda: 'pagoda',
   castle: 'castle', ruins: 'ruins', pyramid: 'pyramid', lighthouse: 'lighthouse', hotel: 'hotel', retail: 'market', supermarket: 'market',
   industrial: 'factory', factory: 'factory', warehouse: 'warehouse', depot: 'warehouse', greenhouse: 'greenhouse',
+  library: 'library', government: 'civic', public: 'civic', townhall: 'civic', courthouse: 'civic',
   tower: 'watchtower', bell_tower: 'bell_tower', clock_tower: 'clock_tower', control_tower: 'control_tower', watchtower: 'watchtower', beacon_tower: 'beacon_tower', gun_tower: 'gun_tower', iron_tower: 'iron_tower', observation_tower: 'observation_tower', radio_tower: 'radio_tower',
   sports_hall: 'sports', stadium: 'stadium', civic: 'civic', fire_station: 'emergency',
 };
 const religions = { christian: 'church', muslim: 'mosque', buddhist: 'temple', taoist: 'temple', confucian: 'temple', shinto: 'shrine', hindu: 'mandir', jewish: 'synagogue', sikh: 'gurdwara' };
 const powerTypes = { tower: 'power_tower', plant: 'plant', substation: 'substation', generator: 'generator', transformer: 'substation' };
+export const INHERITABLE_BUILDING_FUNCTIONS = Object.freeze(['hospital', 'school', 'university', 'kindergarten',
+  'station', 'plant', 'substation', 'water', 'library', 'museum', 'civic',
+  'worship', 'temple', 'church', 'mosque', 'shrine', 'mandir', 'synagogue', 'gurdwara']);
 const normalized = value => String(value || '').trim().toLowerCase();
 const lookup = (table, key) => Object.hasOwn(table, key) ? table[key] : null;
 
@@ -89,7 +93,7 @@ export function taggedBuildingFunction(tags = {}) {
   if (!type && normalized(tags.healthcare)) type = ['hospital', 'clinic'].includes(normalized(tags.healthcare)) ? normalized(tags.healthcare) : null;
   if (!type && ['museum', 'gallery', 'hotel', 'motel', 'hostel'].includes(normalized(tags.tourism))) type = ['museum', 'gallery'].includes(normalized(tags.tourism)) ? 'museum' : 'hotel';
   if (!type && normalized(tags.office) === 'government') type = 'civic';
-  if (!type && normalized(tags.railway) === 'station') type = 'station';
+  if (!type && (['station', 'halt'].includes(normalized(tags.railway)) || normalized(tags.public_transport) === 'station')) type = 'station';
   if (!type && ['terminal', 'hangar'].includes(normalized(tags.aeroway))) type = normalized(tags.aeroway);
   if (!type && ['water_works', 'wastewater_plant', 'pumping_station'].includes(normalized(tags.man_made))) type = 'water';
   if (!type && normalized(tags.aeroway) === 'control_tower') type = 'control_tower';
@@ -105,6 +109,7 @@ export function taggedBuildingFunction(tags = {}) {
   if (!type && normalized(tags.leisure) === 'stadium') type = 'stadium';
   if (!type && a === 'parking' && normalized(tags.parking) === 'multi-storey') type = 'parking';
   if (!type && b === 'temple') type = lookup(religions, normalized(tags.religion));
+  if (!type && b === 'yes') type = lookup(buildingTypes, normalized(tags['building:use']));
   if (!type) type = lookup(buildingTypes, b);
   if (!type && ['castle', 'fort', 'manor', 'ruins', 'archaeological_site', 'building', 'monument', 'memorial'].includes(normalized(tags.historic))) {
     const historic = normalized(tags.historic);

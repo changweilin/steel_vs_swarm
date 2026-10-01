@@ -293,7 +293,7 @@ export const VENUE_LANE_KEYS = [
   { key: venueLaneKey(1, false), L: 1, mapA: false },
   { key: venueLaneKey(2, false), L: 2, mapA: false },
   { key: venueLaneKey(3, false), L: 3, mapA: false },
-  { key: venueLaneKey(1, true), L: 1, mapA: true },
+  { key: venueLaneKey(1, 'SWARM'), L: 1, mapA: 'SWARM' },
 ];
 /**
  * 這個鍵的兵線要服務哪些地圖型態 —— **砲塔規則一次驗全部**。
@@ -301,7 +301,7 @@ export const VENUE_LANE_KEYS = [
  * 而劇情的守方可能是任一邊(章節陣營 + `rollSideSwap` 各擲一次)⇒ 全部型態驗過才算合規。
  * 少驗一種的症狀是「換個章節就疊塔」,而烘焙報告與既有稽核照樣全綠。
  */
-export const venueLaneModes = (mapA) => (mapA ? [true, 'SWARM', 'STEEL'] : [false]);
+export const venueLaneModes = (mapA) => (mapPlan(mapA).mode === 'story' ? ['SWARM', 'STEEL'] : [false]);
 
 /**
  * 兵線兩端**對稱剪短**到指定的兩端直線距離(真實公尺)—— 縮小尺度的縮圖手法(唯一縫)。

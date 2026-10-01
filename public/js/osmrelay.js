@@ -42,7 +42,7 @@ export const OSM_RELAY = {
   MAX_RAIL: 80,          // 鐵路 way(額度 60)
   MAX_FALL: 40,          // 瀑布(額度 20)
   MAX_XING: 60,          // 平交道(額度 40)
-  MAX_POI: 80,           // 具名點位(地名 24 + 山峰 12 + 交流道 12 + 車站 12)
+  MAX_POI: 480,          // Bounded named, utility and functional POIs share the room snapshot.
   MAX_ENTRANCE: 120,     // 捷運／車站入口(80 + public_transport 補查 40)
   MAX_COVER: 900,        // landuse / natural / leisure 面(線工切面 + 面標籤)
   MAX_AREA: 1800,        // closed way / multipolygon 面域；超額由來源 ID 決定性保留前段

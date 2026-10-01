@@ -9,12 +9,12 @@ import { envMat } from './toon.js';
 
 const FACADES = new Set(['hospital','school','station','temple','church','mosque','museum','factory','castle','shrine','mandir','synagogue','gurdwara']);
 
-function facadeGeometry(kind, seed, size, color) {
+function facadeGeometry(kind, seed, size, color, context = {}) {
   const [w,h,d] = size, type = kind;
   const spec = BUILDING_FUNCTIONS[type];
-  const style = chooseArchitecture(seed, `landmark/${kind}`, {
+  const style = chooseArchitecture(seed, `landmark/${kind}`, { ...context,
     functionInfo: { type, key: spec.range, category: spec.category, locked: true },
-    building: { tags: { height: h } },
+    building: { tags: { ...context.tags, height: h } },
   });
   // The established silhouette supplies the mass; windows and cultural details share the map-building seam.
   style.wall = color;
@@ -86,7 +86,7 @@ function saddleRoof(width, length, rise) {
 }
 
 /** Replace visual surfaces inside each existing local envelope. Placement RNG and collision measurement stay stable. */
-export function rebuildLandmarkGeometry(group, kind, seed) {
+export function rebuildLandmarkGeometry(group, kind, seed, context = {}) {
   let index=0;
   const retired = new Set();
   group.traverse(mesh => {
@@ -99,7 +99,7 @@ export function rebuildLandmarkGeometry(group, kind, seed) {
     const dims=bakedBox ? [p.width,p.height,p.depth] : size.toArray(), color=material.color.getHex();
     let geometry=null, colored=false;
     if (old.type==='BoxGeometry' && Math.min(p.width,p.depth)>3 && p.height>3 && FACADES.has(kind)) {
-      geometry=facadeGeometry(kind,seed+index,dims,color);colored=true;
+      geometry=facadeGeometry(kind,seed+index,dims,color,context);colored=true;
     } else if (old.type==='BoxGeometry' && Math.min(p.width,p.depth)>1.5 && p.height>1.2) {
       geometry=masonryGeometry(dims,color);colored=true;
     } else if (old.type==='ConeGeometry' && p.radius>1 && p.height>1) {

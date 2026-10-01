@@ -13,7 +13,7 @@ export const OSM_AREA_OBJECT_ROWS = Object.freeze({
   wind: { shape: 'windturbine', radius: 6.0, minArea: 6000, max: 6, color: 0xc8d0c8, solid: true, rows: true },
   pylon: { shape: 'pylon', radius: 5.0, minArea: 4500, max: 4, color: 0x78868a, solid: true, rows: true },
   park: { shape: 'bench', radius: 1.8, minArea: 1200, max: 3, color: 0x687c50, solid: true },
-  sports: { shape: 'goal', radius: 2.8, minArea: 1800, max: 2, color: 0xd9ded5, solid: true },
+  sports: { shape: 'sport', radius: 0, minArea: 1, max: 1, color: 0xd9ded5, solid: false },
   parking: { shape: 'car', radius: 2.2, minArea: 55, max: 24, color: 0x657587, solid: true },
   campus: { shape: 'facility', radius: 5.0, minArea: 3000, max: 1, color: 0x98aa86, solid: true, representative: true },
   hospital: { shape: 'facility', radius: 5.0, minArea: 3000, max: 1, color: 0xb57d7d, solid: true, representative: true },

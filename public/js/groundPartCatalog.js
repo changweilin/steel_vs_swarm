@@ -48,8 +48,12 @@ for (const id of ['beachvolley', 'petanque', 'bocce', 'sumo', 'longjump']) VENUE
 for (const id of ['tennis', 'pickleball', 'netball']) VENUES[id].color = 0x547e99;
 for (const id of ['volleyball', 'handball', 'wrestling', 'kabaddi']) VENUES[id].color = 0xb58263;
 export const TRACK = { straight: 84.39, radius: 36.5, lane: 1.22, lanes: 8, margin: 12, lineWidth: .45 };
-export const TRACK_WIDTH = TRACK.straight + 2 * (TRACK.radius + TRACK.lanes * TRACK.lane + TRACK.margin);
-export const TRACK_DEPTH = 2 * (TRACK.radius + TRACK.lanes * TRACK.lane + TRACK.margin);
+export function trackDimensions(lanes = TRACK.lanes) {
+  const depth = 2 * (TRACK.radius + lanes * TRACK.lane + TRACK.margin);
+  return { width: TRACK.straight + depth, depth };
+}
+export const TRACK_WIDTH = trackDimensions().width;
+export const TRACK_DEPTH = trackDimensions().depth;
 
 // Feature patches supplement the continuous carpet. No new shared random stream.
 const greenLandscape = (label, pattern, color, parts, limits = {}) => ({

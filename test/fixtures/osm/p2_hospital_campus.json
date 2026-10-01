@@ -15,21 +15,21 @@
     "maxLat": 25.044,
     "maxLng": 121.518
   },
-  "capturedAt": "2026-09-01T11:03:44.453Z",
+  "capturedAt": "2026-10-01T13:47:07.029Z",
   "source": {
     "features": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-    "roads": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "roads": "https://overpass-api.de/api/interpreter",
     "userAgent": "steel-vs-swarm-osm-fixture/1.0 (maintainer-updated regression data)"
   },
   "queries": {
     "features": {
-      "version": 6,
+      "version": 9,
       "quotas": {
         "nBld": 400,
         "nCover": 200,
         "nArea": 600
       },
-      "text": "[out:json][timeout:15];(way[\"building\"](25.03900,121.51200,25.04400,121.51800);way[\"building:part\"](25.03900,121.51200,25.04400,121.51800);way[\"landuse\"](25.03900,121.51200,25.04400,121.51800);way[\"landcover\"](25.03900,121.51200,25.04400,121.51800);way[\"amenity\"](25.03900,121.51200,25.04400,121.51800);way[\"leisure\"](25.03900,121.51200,25.04400,121.51800);way[\"natural\"](25.03900,121.51200,25.04400,121.51800);way[\"healthcare\"](25.03900,121.51200,25.04400,121.51800);way[\"tourism\"](25.03900,121.51200,25.04400,121.51800);way[\"shop\"](25.03900,121.51200,25.04400,121.51800);way[\"office\"](25.03900,121.51200,25.04400,121.51800);way[\"craft\"](25.03900,121.51200,25.04400,121.51800);way[\"industrial\"](25.03900,121.51200,25.04400,121.51800);way[\"man_made\"](25.03900,121.51200,25.04400,121.51800);way[\"power\"](25.03900,121.51200,25.04400,121.51800);way[\"public_transport\"](25.03900,121.51200,25.04400,121.51800);way[\"railway\"](25.03900,121.51200,25.04400,121.51800);way[\"aeroway\"](25.03900,121.51200,25.04400,121.51800);way[\"military\"](25.03900,121.51200,25.04400,121.51800);way[\"historic\"](25.03900,121.51200,25.04400,121.51800);way[\"sport\"](25.03900,121.51200,25.04400,121.51800);way[\"water\"](25.03900,121.51200,25.04400,121.51800);way[\"waterway\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"building\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"building:part\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"landuse\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"landcover\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"amenity\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"leisure\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"natural\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"healthcare\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"tourism\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"shop\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"office\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"craft\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"industrial\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"man_made\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"power\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"public_transport\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"railway\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"aeroway\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"military\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"historic\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"sport\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"water\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"waterway\"](25.03900,121.51200,25.04400,121.51800););out body geom 600;node[\"power\"=\"tower\"](25.03900,121.51200,25.04400,121.51800);out tags 400;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](25.03900,121.51200,25.04400,121.51800);out geom 60;node[\"railway\"=\"level_crossing\"](25.03900,121.51200,25.04400,121.51800);out 40;node[\"waterway\"=\"waterfall\"](25.03900,121.51200,25.04400,121.51800);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](25.03900,121.51200,25.04400,121.51800);out 24;node[\"natural\"=\"peak\"](25.03900,121.51200,25.04400,121.51800);out 12;node[\"highway\"=\"motorway_junction\"](25.03900,121.51200,25.04400,121.51800);out 12;node[\"railway\"~\"^(station|halt)$\"](25.03900,121.51200,25.04400,121.51800);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](25.03900,121.51200,25.04400,121.51800);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](25.03900,121.51200,25.04400,121.51800);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](25.03900,121.51200,25.04400,121.51800);out geom 120;way[\"landuse\"](25.03900,121.51200,25.04400,121.51800);out geom 200;way[\"natural\"](25.03900,121.51200,25.04400,121.51800);out geom 200;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](25.03900,121.51200,25.04400,121.51800);out geom 200;rel[\"boundary\"=\"administrative\"](25.03900,121.51200,25.04400,121.51800);way(r);out geom 400;"
+      "text": "[out:json][timeout:15];(way[\"building\"](25.03900,121.51200,25.04400,121.51800);way[\"building:part\"](25.03900,121.51200,25.04400,121.51800);way[\"landuse\"](25.03900,121.51200,25.04400,121.51800);way[\"landcover\"](25.03900,121.51200,25.04400,121.51800);way[\"amenity\"](25.03900,121.51200,25.04400,121.51800);way[\"leisure\"](25.03900,121.51200,25.04400,121.51800);way[\"natural\"](25.03900,121.51200,25.04400,121.51800);way[\"healthcare\"](25.03900,121.51200,25.04400,121.51800);way[\"tourism\"](25.03900,121.51200,25.04400,121.51800);way[\"shop\"](25.03900,121.51200,25.04400,121.51800);way[\"office\"](25.03900,121.51200,25.04400,121.51800);way[\"craft\"](25.03900,121.51200,25.04400,121.51800);way[\"industrial\"](25.03900,121.51200,25.04400,121.51800);way[\"man_made\"](25.03900,121.51200,25.04400,121.51800);way[\"power\"](25.03900,121.51200,25.04400,121.51800);way[\"public_transport\"](25.03900,121.51200,25.04400,121.51800);way[\"railway\"](25.03900,121.51200,25.04400,121.51800);way[\"aeroway\"](25.03900,121.51200,25.04400,121.51800);way[\"military\"](25.03900,121.51200,25.04400,121.51800);way[\"historic\"](25.03900,121.51200,25.04400,121.51800);way[\"sport\"](25.03900,121.51200,25.04400,121.51800);way[\"water\"](25.03900,121.51200,25.04400,121.51800);way[\"waterway\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"building\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"building:part\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"landuse\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"landcover\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"amenity\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"leisure\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"natural\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"healthcare\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"tourism\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"shop\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"office\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"craft\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"industrial\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"man_made\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"power\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"public_transport\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"railway\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"aeroway\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"military\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"historic\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"sport\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"water\"](25.03900,121.51200,25.04400,121.51800);rel[\"type\"=\"multipolygon\"][\"waterway\"](25.03900,121.51200,25.04400,121.51800););out body geom 600;node[\"man_made\"~\"^(tower|mast|communications_tower|lighthouse)$\"](25.03900,121.51200,25.04400,121.51800);out tags 400;node[\"aeroway\"=\"control_tower\"](25.03900,121.51200,25.04400,121.51800);out tags 400;node[\"power\"=\"tower\"](25.03900,121.51200,25.04400,121.51800);out tags 400;node[\"power\"=\"generator\"][\"generator:source\"=\"wind\"](25.03900,121.51200,25.04400,121.51800);out tags 400;node[\"amenity\"~\"^(place_of_worship|school|university|college|kindergarten|hospital|clinic|library|townhall|courthouse|community_centre|bus_station|ferry_terminal)$\"](25.03900,121.51200,25.04400,121.51800);out tags 240;node[\"tourism\"~\"^(museum|gallery)$\"](25.03900,121.51200,25.04400,121.51800);out tags 80;node[\"office\"=\"government\"](25.03900,121.51200,25.04400,121.51800);out tags 80;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](25.03900,121.51200,25.04400,121.51800);out geom 60;node[\"railway\"=\"level_crossing\"](25.03900,121.51200,25.04400,121.51800);out 40;node[\"waterway\"=\"waterfall\"](25.03900,121.51200,25.04400,121.51800);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](25.03900,121.51200,25.04400,121.51800);out 24;node[\"natural\"=\"peak\"](25.03900,121.51200,25.04400,121.51800);out 12;node[\"highway\"=\"motorway_junction\"](25.03900,121.51200,25.04400,121.51800);out 12;node[\"railway\"~\"^(station|halt)$\"](25.03900,121.51200,25.04400,121.51800);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](25.03900,121.51200,25.04400,121.51800);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](25.03900,121.51200,25.04400,121.51800);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](25.03900,121.51200,25.04400,121.51800);out geom 120;way[\"landuse\"](25.03900,121.51200,25.04400,121.51800);out geom 200;way[\"natural\"](25.03900,121.51200,25.04400,121.51800);out geom 200;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](25.03900,121.51200,25.04400,121.51800);out geom 200;rel[\"boundary\"=\"administrative\"](25.03900,121.51200,25.04400,121.51800);way(r);out geom 400;"
     },
     "roads": {
       "version": 1,
@@ -43,6 +43,40 @@
   "responses": {
     "features": {
       "elements": [
+        {
+          "type": "node",
+          "id": 2441149448,
+          "tags": {
+            "addr:city": "臺北市",
+            "addr:country": "TW",
+            "addr:district": "中正區",
+            "addr:full": "10045臺北市中正區重慶南路一段133號",
+            "addr:housenumber": "133",
+            "addr:postcode": "10045",
+            "addr:street": "重慶南路一段",
+            "branch": "重慶南路分店",
+            "name": "勝大莊",
+            "stationery": "chinese calligraphy",
+            "tourism": "gallery"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2446576189,
+          "tags": {
+            "addr:city": "台北市",
+            "addr:country": "TW",
+            "addr:district": "中正區",
+            "addr:floor": "6",
+            "addr:full": "100台北市中正區重慶南路一段62號六樓",
+            "addr:housenumber": "62",
+            "addr:postcode": "100",
+            "addr:street": "重慶南路一段",
+            "name": "周連玉書畫大師台北藝術館",
+            "source": "Survey 1 Sep 2013",
+            "tourism": "gallery"
+          }
+        },
         {
           "type": "node",
           "id": 2652063385,
@@ -140,6 +174,45 @@
         },
         {
           "type": "node",
+          "id": 3724770027,
+          "tags": {
+            "addr:city": "台北市",
+            "addr:country": "TW",
+            "addr:district": "中正區",
+            "addr:full": "100台北市中正區懷寧街78號",
+            "addr:housenumber": "78",
+            "addr:postcode": "100",
+            "addr:street": "懷寧街",
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "name": "禾馨婦產科",
+            "name:en": "Diathus MFM Clinic",
+            "name:zh": "禾馨婦產科",
+            "phone": "+886-2-23612323",
+            "website": "https://www.mfmclinic.com.tw/"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4838087639,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "主滿教會",
+            "religion": "christian"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4838087640,
+          "tags": {
+            "amenity": "place_of_worship",
+            "check_date": "2023-08-02",
+            "name": "榮光小組教會",
+            "religion": "christian"
+          }
+        },
+        {
+          "type": "node",
           "id": 5343462541,
           "lat": 25.0423532,
           "lon": 121.5131779,
@@ -160,6 +233,123 @@
             "source": "survey",
             "wikidata": "Q27918568",
             "wikipedia": "zh:臺北城內"
+          }
+        },
+        {
+          "type": "node",
+          "id": 6419235797,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "醫公醫婆",
+            "name:zh": "醫公醫婆",
+            "name:zh-Hans": "医公医婆",
+            "name:zh-Hant": "醫公醫婆"
+          }
+        },
+        {
+          "type": "node",
+          "id": 6886599776,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "臺大地藏庵",
+            "name:en": "National Taiwan University Hospital Dizang Temple",
+            "name:zh": "臺大地藏庵",
+            "name:zh-Hans": "台大地藏庵",
+            "name:zh-Hant": "臺大地藏庵",
+            "religion": "taoist",
+            "wikidata": "Q47513047"
+          }
+        },
+        {
+          "type": "node",
+          "id": 8381353695,
+          "tags": {
+            "name": "地方創生專案辦公室",
+            "name:zh": "地方創生專案辦公室",
+            "name:zh-Hans": "地方创生专案办公室",
+            "name:zh-Hant": "地方創生專案辦公室",
+            "office": "government"
+          }
+        },
+        {
+          "type": "node",
+          "id": 8381353696,
+          "tags": {
+            "government": "yes",
+            "name": "雙語國家辦公室",
+            "name:zh": "雙語國家辦公室",
+            "name:zh-Hans": "双语国家办公室",
+            "name:zh-Hant": "雙語國家辦公室",
+            "office": "government"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9748205713,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "財神會館"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9808147156,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "文殊院"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10736611670,
+          "tags": {
+            "amenity": "college",
+            "name": "國立臺灣大學牙醫專業學院",
+            "name:en": "School of Dentistry",
+            "office": "educational_institution",
+            "operator": "國立臺灣大學",
+            "operator:en": "National Taiwan University",
+            "operator:type": "university"
+          }
+        },
+        {
+          "type": "node",
+          "id": 11276987648,
+          "tags": {
+            "addr:city": "臺北市",
+            "addr:country": "TW",
+            "addr:district": "中正區",
+            "addr:floor": "4",
+            "addr:full": "100臺北市中正區黎明里13鄰公園路40號四樓",
+            "addr:hamlet": "黎明里",
+            "addr:housenumber": "40號",
+            "addr:neighborhood": "13",
+            "addr:postcode": "100",
+            "addr:street": "公園路",
+            "government": "investment",
+            "name": "投資台灣事務所",
+            "name:en": "Invest Taiwan",
+            "name:zh": "投資台灣事務所",
+            "office": "government"
+          }
+        },
+        {
+          "type": "node",
+          "id": 12185852066,
+          "tags": {
+            "addr:city": "臺北市",
+            "addr:country": "TW",
+            "addr:district": "中正區",
+            "addr:full": "100臺北市中正區建國里1鄰衡陽路34號",
+            "addr:hamlet": "建國里",
+            "addr:housenumber": "34",
+            "addr:neighbourhood": "1",
+            "addr:postcode": "100",
+            "addr:street": "衡陽路",
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "name": "力安妥診所",
+            "opening_hours": "Mo-Fr 9:30-13:30.15:30-19:30"
           }
         },
         {
@@ -6032,14 +6222,13 @@
           "bounds": {
             "minlat": 25.0425737,
             "minlon": 121.5133057,
-            "maxlat": 25.0426675,
+            "maxlat": 25.0426655,
             "maxlon": 121.5137172
           },
           "nodes": [
             2756229700,
             2756229709,
             2756229715,
-            2756229713,
             2756229717,
             2441149447,
             2756229697,
@@ -6057,10 +6246,6 @@
             {
               "lat": 25.0426636,
               "lon": 121.5135775
-            },
-            {
-              "lat": 25.0426675,
-              "lon": 121.5133072
             },
             {
               "lat": 25.0426655,
@@ -13619,6 +13804,7 @@
             9654678419,
             9654678418,
             9654678417,
+            7330912587,
             9654678451
           ],
           "geometry": [
@@ -13805,6 +13991,10 @@
             {
               "lat": 25.0432711,
               "lon": 121.5149068
+            },
+            {
+              "lat": 25.0432154,
+              "lon": 121.5149065
             },
             {
               "lat": 25.0430706,
@@ -13872,6 +14062,7 @@
             9654678419,
             9654678418,
             9654678417,
+            7330912587,
             9654678451
           ],
           "geometry": [
@@ -14058,6 +14249,10 @@
             {
               "lat": 25.0432711,
               "lon": 121.5149068
+            },
+            {
+              "lat": 25.0432154,
+              "lon": 121.5149065
             },
             {
               "lat": 25.0430706,
@@ -59297,7 +59492,7 @@
       "generator": "Overpass API 0.7.62.4 2390de5a",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T11:01:21Z"
+        "timestamp_osm_base": "2026-10-01T13:45:00Z"
       },
       "version": 0.6
     },
@@ -65281,6 +65476,7 @@
             }
           ],
           "tags": {
+            "foot": "yes",
             "footway": "sidewalk",
             "highway": "footway",
             "surface": "asphalt"
@@ -76531,24 +76727,24 @@
           ],
           "tags": {
             "access": "private",
-            "check_date": "2026-07-27",
+            "check_date": "2026-09-19",
             "highway": "service",
             "oneway": "no",
             "service": "driveway"
           }
         }
       ],
-      "generator": "Overpass API 0.7.62.4 2390de5a",
+      "generator": "Overpass API 0.7.62.11 87bfad18",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T11:02:20Z"
+        "timestamp_osm_base": "2026-10-01T13:45:00Z"
       },
       "version": 0.6
     }
   },
   "stats": {
     "bboxKm2": 0.3368189665161828,
-    "featureElements": 701,
+    "featureElements": 715,
     "roadElements": 337
   }
 }

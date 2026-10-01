@@ -31,15 +31,15 @@
     },
     "roppongi": {
       "file": "roppongi.json",
-      "digest": "91e3f83b9780ff97c624241785ebc4eb9898daa1d8187aaacbcdb72870894ac9",
-      "checksum": "5e03424f",
+      "digest": "a5b3eac033435b929c043fce25e4916e91cf713bd464b76b55674022e20c3872",
+      "checksum": "df4f46af",
       "grid": {
-        "west": 139.71975,
-        "north": 35.66625,
+        "west": 139.72016666666667,
+        "north": 35.67241666666666,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 206,
-        "rows": 154
+        "cols": 262,
+        "rows": 186
       },
       "product": "2021-v200"
     },
@@ -255,15 +255,15 @@
     },
     "taipei101": {
       "file": "taipei101.json",
-      "digest": "36fdd036eeabc7d63aab81e4792a94acc0f62b5f733bd79223d5ed3760012010",
-      "checksum": "461d842f",
+      "digest": "112df8e73e76b6cff81e5df9f09d60128db711a0dc6408ab46798ca730bb1e23",
+      "checksum": "af30c525",
       "grid": {
-        "west": 121.55633333333333,
-        "north": 25.038083333333333,
+        "west": 121.55616666666667,
+        "north": 25.035999999999998,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 163,
-        "rows": 143
+        "cols": 193,
+        "rows": 162
       },
       "product": "2021-v200"
     },

@@ -20,21 +20,21 @@
     "minLng": 0.07761654436780649,
     "maxLng": 0.09437718707964624
   },
-  "capturedAt": "2026-09-01T16:37:17.941Z",
+  "capturedAt": "2026-10-01T13:36:06.370Z",
   "source": {
-    "features": "https://overpass-api.de/api/interpreter",
+    "features": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "roads": "https://overpass-api.de/api/interpreter",
     "userAgent": "steel-vs-swarm-osm-fixture/1.0 (maintainer-updated regression data)"
   },
   "queries": {
     "features": {
-      "version": 6,
+      "version": 9,
       "quotas": {
         "nBld": 1199,
         "nCover": 564,
         "nArea": 1693
       },
-      "text": "[out:json][timeout:15];(way[\"building\"](51.55260,0.07762,51.56352,0.09438);way[\"building:part\"](51.55260,0.07762,51.56352,0.09438);way[\"landuse\"](51.55260,0.07762,51.56352,0.09438);way[\"landcover\"](51.55260,0.07762,51.56352,0.09438);way[\"amenity\"](51.55260,0.07762,51.56352,0.09438);way[\"leisure\"](51.55260,0.07762,51.56352,0.09438);way[\"natural\"](51.55260,0.07762,51.56352,0.09438);way[\"healthcare\"](51.55260,0.07762,51.56352,0.09438);way[\"tourism\"](51.55260,0.07762,51.56352,0.09438);way[\"shop\"](51.55260,0.07762,51.56352,0.09438);way[\"office\"](51.55260,0.07762,51.56352,0.09438);way[\"craft\"](51.55260,0.07762,51.56352,0.09438);way[\"industrial\"](51.55260,0.07762,51.56352,0.09438);way[\"man_made\"](51.55260,0.07762,51.56352,0.09438);way[\"power\"](51.55260,0.07762,51.56352,0.09438);way[\"public_transport\"](51.55260,0.07762,51.56352,0.09438);way[\"railway\"](51.55260,0.07762,51.56352,0.09438);way[\"aeroway\"](51.55260,0.07762,51.56352,0.09438);way[\"military\"](51.55260,0.07762,51.56352,0.09438);way[\"historic\"](51.55260,0.07762,51.56352,0.09438);way[\"sport\"](51.55260,0.07762,51.56352,0.09438);way[\"water\"](51.55260,0.07762,51.56352,0.09438);way[\"waterway\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"building\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"building:part\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"landuse\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"landcover\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"amenity\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"leisure\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"natural\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"healthcare\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"tourism\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"shop\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"office\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"craft\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"industrial\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"man_made\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"power\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"public_transport\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"railway\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"aeroway\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"military\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"historic\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"sport\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"water\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"waterway\"](51.55260,0.07762,51.56352,0.09438););out body geom 1693;node[\"power\"=\"tower\"](51.55260,0.07762,51.56352,0.09438);out tags 1199;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](51.55260,0.07762,51.56352,0.09438);out geom 60;node[\"railway\"=\"level_crossing\"](51.55260,0.07762,51.56352,0.09438);out 40;node[\"waterway\"=\"waterfall\"](51.55260,0.07762,51.56352,0.09438);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](51.55260,0.07762,51.56352,0.09438);out 24;node[\"natural\"=\"peak\"](51.55260,0.07762,51.56352,0.09438);out 12;node[\"highway\"=\"motorway_junction\"](51.55260,0.07762,51.56352,0.09438);out 12;node[\"railway\"~\"^(station|halt)$\"](51.55260,0.07762,51.56352,0.09438);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](51.55260,0.07762,51.56352,0.09438);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](51.55260,0.07762,51.56352,0.09438);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](51.55260,0.07762,51.56352,0.09438);out geom 120;way[\"landuse\"](51.55260,0.07762,51.56352,0.09438);out geom 564;way[\"natural\"](51.55260,0.07762,51.56352,0.09438);out geom 564;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](51.55260,0.07762,51.56352,0.09438);out geom 564;rel[\"boundary\"=\"administrative\"](51.55260,0.07762,51.56352,0.09438);way(r);out geom 400;"
+      "text": "[out:json][timeout:15];(way[\"building\"](51.55260,0.07762,51.56352,0.09438);way[\"building:part\"](51.55260,0.07762,51.56352,0.09438);way[\"landuse\"](51.55260,0.07762,51.56352,0.09438);way[\"landcover\"](51.55260,0.07762,51.56352,0.09438);way[\"amenity\"](51.55260,0.07762,51.56352,0.09438);way[\"leisure\"](51.55260,0.07762,51.56352,0.09438);way[\"natural\"](51.55260,0.07762,51.56352,0.09438);way[\"healthcare\"](51.55260,0.07762,51.56352,0.09438);way[\"tourism\"](51.55260,0.07762,51.56352,0.09438);way[\"shop\"](51.55260,0.07762,51.56352,0.09438);way[\"office\"](51.55260,0.07762,51.56352,0.09438);way[\"craft\"](51.55260,0.07762,51.56352,0.09438);way[\"industrial\"](51.55260,0.07762,51.56352,0.09438);way[\"man_made\"](51.55260,0.07762,51.56352,0.09438);way[\"power\"](51.55260,0.07762,51.56352,0.09438);way[\"public_transport\"](51.55260,0.07762,51.56352,0.09438);way[\"railway\"](51.55260,0.07762,51.56352,0.09438);way[\"aeroway\"](51.55260,0.07762,51.56352,0.09438);way[\"military\"](51.55260,0.07762,51.56352,0.09438);way[\"historic\"](51.55260,0.07762,51.56352,0.09438);way[\"sport\"](51.55260,0.07762,51.56352,0.09438);way[\"water\"](51.55260,0.07762,51.56352,0.09438);way[\"waterway\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"building\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"building:part\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"landuse\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"landcover\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"amenity\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"leisure\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"natural\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"healthcare\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"tourism\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"shop\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"office\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"craft\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"industrial\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"man_made\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"power\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"public_transport\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"railway\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"aeroway\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"military\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"historic\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"sport\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"water\"](51.55260,0.07762,51.56352,0.09438);rel[\"type\"=\"multipolygon\"][\"waterway\"](51.55260,0.07762,51.56352,0.09438););out body geom 1693;node[\"man_made\"~\"^(tower|mast|communications_tower|lighthouse)$\"](51.55260,0.07762,51.56352,0.09438);out tags 1199;node[\"aeroway\"=\"control_tower\"](51.55260,0.07762,51.56352,0.09438);out tags 1199;node[\"power\"=\"tower\"](51.55260,0.07762,51.56352,0.09438);out tags 1199;node[\"power\"=\"generator\"][\"generator:source\"=\"wind\"](51.55260,0.07762,51.56352,0.09438);out tags 1199;node[\"amenity\"~\"^(place_of_worship|school|university|college|kindergarten|hospital|clinic|library|townhall|courthouse|community_centre|bus_station|ferry_terminal)$\"](51.55260,0.07762,51.56352,0.09438);out tags 240;node[\"tourism\"~\"^(museum|gallery)$\"](51.55260,0.07762,51.56352,0.09438);out tags 80;node[\"office\"=\"government\"](51.55260,0.07762,51.56352,0.09438);out tags 80;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](51.55260,0.07762,51.56352,0.09438);out geom 60;node[\"railway\"=\"level_crossing\"](51.55260,0.07762,51.56352,0.09438);out 40;node[\"waterway\"=\"waterfall\"](51.55260,0.07762,51.56352,0.09438);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](51.55260,0.07762,51.56352,0.09438);out 24;node[\"natural\"=\"peak\"](51.55260,0.07762,51.56352,0.09438);out 12;node[\"highway\"=\"motorway_junction\"](51.55260,0.07762,51.56352,0.09438);out 12;node[\"railway\"~\"^(station|halt)$\"](51.55260,0.07762,51.56352,0.09438);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](51.55260,0.07762,51.56352,0.09438);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](51.55260,0.07762,51.56352,0.09438);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](51.55260,0.07762,51.56352,0.09438);out geom 120;way[\"landuse\"](51.55260,0.07762,51.56352,0.09438);out geom 564;way[\"natural\"](51.55260,0.07762,51.56352,0.09438);out geom 564;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](51.55260,0.07762,51.56352,0.09438);out geom 564;rel[\"boundary\"=\"administrative\"](51.55260,0.07762,51.56352,0.09438);way(r);out geom 400;"
     },
     "roads": {
       "version": 1,
@@ -181,6 +181,14 @@
           "lon": 0.0782316,
           "tags": {
             "railway": "level_crossing"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10604268036,
+          "tags": {
+            "amenity": "courthouse",
+            "name": "Ilford County Court"
           }
         },
         {
@@ -6357,12 +6365,12 @@
               "lon": 0.0782075
             },
             {
-              "lat": 51.5586612,
-              "lon": 0.0782586
+              "lat": 51.5586591,
+              "lon": 0.0782599
             },
             {
-              "lat": 51.5586879,
-              "lon": 0.0783445
+              "lat": 51.5586746,
+              "lon": 0.0783619
             },
             {
               "lat": 51.5587263,
@@ -6709,12 +6717,12 @@
               "lon": 0.0782075
             },
             {
-              "lat": 51.5586612,
-              "lon": 0.0782586
+              "lat": 51.5586591,
+              "lon": 0.0782599
             },
             {
-              "lat": 51.5586879,
-              "lon": 0.0783445
+              "lat": 51.5586746,
+              "lon": 0.0783619
             },
             {
               "lat": 51.5587263,
@@ -21165,8 +21173,8 @@
           "type": "way",
           "id": 548078284,
           "bounds": {
-            "minlat": 51.558565,
-            "minlon": 0.0783387,
+            "minlat": 51.5585633,
+            "minlon": 0.0783535,
             "maxlat": 51.5587155,
             "maxlon": 0.0787175
           },
@@ -21183,12 +21191,12 @@
               "lon": 0.0787175
             },
             {
-              "lat": 51.558565,
-              "lon": 0.0783822
+              "lat": 51.5585633,
+              "lon": 0.0784003
             },
             {
-              "lat": 51.5586455,
-              "lon": 0.0783387
+              "lat": 51.5586392,
+              "lon": 0.0783535
             },
             {
               "lat": 51.5587155,
@@ -73551,10 +73559,10 @@
           }
         }
       ],
-      "generator": "Overpass API 0.7.62.11 87bfad18",
+      "generator": "Overpass API 0.7.62.4 2390de5a",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T16:35:10Z"
+        "timestamp_osm_base": "2026-10-01T13:33:38Z"
       },
       "version": 0.6
     },
@@ -75397,8 +75405,8 @@
           "id": 4342907,
           "bounds": {
             "minlat": 51.5573654,
-            "minlon": 0.0782103,
-            "maxlat": 51.5585572,
+            "minlon": 0.0782008,
+            "maxlat": 51.5586029,
             "maxlon": 0.0788707
           },
           "nodes": [
@@ -75409,12 +75417,12 @@
           ],
           "geometry": [
             {
-              "lat": 51.5585572,
-              "lon": 0.0782103
+              "lat": 51.5586029,
+              "lon": 0.0782008
             },
             {
-              "lat": 51.5585,
-              "lon": 0.0782347
+              "lat": 51.5585015,
+              "lon": 0.0782617
             },
             {
               "lat": 51.5580991,
@@ -75427,7 +75435,8 @@
           ],
           "tags": {
             "highway": "residential",
-            "name": "Richmond Road"
+            "name": "Richmond Road",
+            "surface": "paving_stones"
           }
         },
         {
@@ -78641,8 +78650,8 @@
           "type": "way",
           "id": 54676579,
           "bounds": {
-            "minlat": 51.5585,
-            "minlon": 0.0782347,
+            "minlat": 51.5585015,
+            "minlon": 0.0782617,
             "maxlat": 51.5587703,
             "maxlon": 0.079611
           },
@@ -78653,8 +78662,8 @@
           ],
           "geometry": [
             {
-              "lat": 51.5585,
-              "lon": 0.0782347
+              "lat": 51.5585015,
+              "lon": 0.0782617
             },
             {
               "lat": 51.5586198,
@@ -80720,10 +80729,10 @@
           "type": "way",
           "id": 144114736,
           "bounds": {
-            "minlat": 51.5585572,
-            "minlon": 0.078191,
-            "maxlat": 51.5586076,
-            "maxlon": 0.0782103
+            "minlat": 51.5586029,
+            "minlon": 0.0782008,
+            "maxlat": 51.5586072,
+            "maxlon": 0.0782192
           },
           "nodes": [
             1576942932,
@@ -80731,18 +80740,20 @@
           ],
           "geometry": [
             {
-              "lat": 51.5586076,
-              "lon": 0.078191
+              "lat": 51.5586072,
+              "lon": 0.0782192
             },
             {
-              "lat": 51.5585572,
-              "lon": 0.0782103
+              "lat": 51.5586029,
+              "lon": 0.0782008
             }
           ],
           "tags": {
             "foot": "yes",
             "highway": "cycleway",
-            "oneway": "no"
+            "oneway": "no",
+            "segregated": "no",
+            "surface": "paving_stones"
           }
         },
         {
@@ -81560,8 +81571,8 @@
           "type": "way",
           "id": 315543966,
           "bounds": {
-            "minlat": 51.5586523,
-            "minlon": 0.0783048,
+            "minlat": 51.5588095,
+            "minlon": 0.0787559,
             "maxlat": 51.5591893,
             "maxlon": 0.0800536
           },
@@ -81571,15 +81582,7 @@
             10736081229,
             10736081230,
             10736081238,
-            1576942933,
-            10736081231,
-            10736081234,
-            10736081232,
-            10736081235,
-            10736081233,
-            1576942934,
-            10736081223,
-            10945199653
+            14185361989
           ],
           "geometry": [
             {
@@ -81599,44 +81602,12 @@
               "lon": 0.079227
             },
             {
-              "lat": 51.5588291,
-              "lon": 0.0788663
+              "lat": 51.5588192,
+              "lon": 0.0788121
             },
             {
-              "lat": 51.5587959,
-              "lon": 0.0786869
-            },
-            {
-              "lat": 51.5587493,
-              "lon": 0.0784534
-            },
-            {
-              "lat": 51.5587411,
-              "lon": 0.0784156
-            },
-            {
-              "lat": 51.5587215,
-              "lon": 0.0783864
-            },
-            {
-              "lat": 51.5586994,
-              "lon": 0.0783824
-            },
-            {
-              "lat": 51.5586772,
-              "lon": 0.0783799
-            },
-            {
-              "lat": 51.558662,
-              "lon": 0.0783279
-            },
-            {
-              "lat": 51.5586562,
-              "lon": 0.0783142
-            },
-            {
-              "lat": 51.5586523,
-              "lon": 0.0783048
+              "lat": 51.5588095,
+              "lon": 0.0787559
             }
           ],
           "tags": {
@@ -81943,13 +81914,15 @@
           "type": "way",
           "id": 535795317,
           "bounds": {
-            "minlat": 51.5586076,
+            "minlat": 51.5586072,
             "minlon": 0.0781265,
             "maxlat": 51.5587963,
             "maxlon": 0.0782322
           },
           "nodes": [
             1576942932,
+            14185361983,
+            14185361984,
             10750736735,
             5192190625,
             11916999940,
@@ -81957,8 +81930,16 @@
           ],
           "geometry": [
             {
-              "lat": 51.5586076,
-              "lon": 0.078191
+              "lat": 51.5586072,
+              "lon": 0.0782192
+            },
+            {
+              "lat": 51.5586252,
+              "lon": 0.0782083
+            },
+            {
+              "lat": 51.5586308,
+              "lon": 0.0782027
             },
             {
               "lat": 51.5586697,
@@ -86958,22 +86939,32 @@
           "bounds": {
             "minlat": 51.5587497,
             "minlon": 0.0782641,
-            "maxlat": 51.5588553,
-            "maxlon": 0.0788663
+            "maxlat": 51.5588568,
+            "maxlon": 0.0788121
           },
           "nodes": [
             10736081238,
+            14185361998,
             10736081219,
+            14185361997,
             10736081220
           ],
           "geometry": [
             {
-              "lat": 51.5588291,
-              "lon": 0.0788663
+              "lat": 51.5588192,
+              "lon": 0.0788121
             },
             {
-              "lat": 51.5588553,
-              "lon": 0.078769
+              "lat": 51.558832,
+              "lon": 0.0787945
+            },
+            {
+              "lat": 51.5588568,
+              "lon": 0.0787802
+            },
+            {
+              "lat": 51.5588376,
+              "lon": 0.0786841
             },
             {
               "lat": 51.5587497,
@@ -87011,34 +87002,74 @@
             }
           ],
           "tags": {
-            "highway": "steps"
+            "highway": "steps",
+            "incline": "up"
           }
         },
         {
           "type": "way",
           "id": 1154393903,
           "bounds": {
-            "minlat": 51.5586562,
-            "minlon": 0.0782888,
-            "maxlat": 51.5587049,
-            "maxlon": 0.0783142
+            "minlat": 51.5586755,
+            "minlon": 0.0783867,
+            "maxlat": 51.5588376,
+            "maxlon": 0.0787001
           },
           "nodes": [
-            10736081222,
-            10736081223
+            14185361988,
+            14185361990,
+            14185361991,
+            14185361992,
+            14185361993,
+            14185361994,
+            14185361995,
+            14185361996,
+            14185361997
           ],
           "geometry": [
             {
-              "lat": 51.5587049,
-              "lon": 0.0782888
+              "lat": 51.5586755,
+              "lon": 0.0783955
             },
             {
-              "lat": 51.5586562,
-              "lon": 0.0783142
+              "lat": 51.5587002,
+              "lon": 0.0783867
+            },
+            {
+              "lat": 51.5587245,
+              "lon": 0.0783883
+            },
+            {
+              "lat": 51.5587394,
+              "lon": 0.0784107
+            },
+            {
+              "lat": 51.5587508,
+              "lon": 0.0784601
+            },
+            {
+              "lat": 51.5587924,
+              "lon": 0.078685
+            },
+            {
+              "lat": 51.5588023,
+              "lon": 0.0787001
+            },
+            {
+              "lat": 51.5588241,
+              "lon": 0.0786937
+            },
+            {
+              "lat": 51.5588376,
+              "lon": 0.0786841
             }
           ],
           "tags": {
-            "highway": "footway"
+            "bicycle": "designated",
+            "foot": "designated",
+            "highway": "cycleway",
+            "incline": "down",
+            "surface": "paved"
           }
         },
         {
@@ -88950,7 +88981,8 @@
           "tags": {
             "foot": "no",
             "highway": "cycleway",
-            "oneway": "yes"
+            "oneway": "yes",
+            "surface": "asphalt"
           }
         },
         {
@@ -90689,10 +90721,10 @@
           "type": "way",
           "id": 1178214844,
           "bounds": {
-            "minlat": 51.5586076,
-            "minlon": 0.078191,
-            "maxlat": 51.5586275,
-            "maxlon": 0.0782429
+            "minlat": 51.5586072,
+            "minlon": 0.0782192,
+            "maxlat": 51.5586153,
+            "maxlon": 0.0782538
           },
           "nodes": [
             10945199652,
@@ -90700,19 +90732,19 @@
           ],
           "geometry": [
             {
-              "lat": 51.5586275,
-              "lon": 0.0782429
+              "lat": 51.5586153,
+              "lon": 0.0782538
             },
             {
-              "lat": 51.5586076,
-              "lon": 0.078191
+              "lat": 51.5586072,
+              "lon": 0.0782192
             }
           ],
           "tags": {
             "foot": "yes",
             "highway": "cycleway",
             "oneway": "no",
-            "segregated": "yes",
+            "segregated": "no",
             "surface": "paving_stones"
           }
         },
@@ -90720,35 +90752,35 @@
           "type": "way",
           "id": 1178214845,
           "bounds": {
-            "minlat": 51.5586275,
-            "minlon": 0.0782429,
-            "maxlat": 51.5586523,
-            "maxlon": 0.0783048
+            "minlat": 51.5586153,
+            "minlon": 0.0782538,
+            "maxlat": 51.5586482,
+            "maxlon": 0.078357
           },
           "nodes": [
-            10945199653,
-            1576942936,
+            14185361986,
+            10736081223,
             10945199652
           ],
           "geometry": [
             {
-              "lat": 51.5586523,
-              "lon": 0.0783048
+              "lat": 51.5586482,
+              "lon": 0.078357
             },
             {
-              "lat": 51.5586399,
-              "lon": 0.0782752
+              "lat": 51.5586272,
+              "lon": 0.0782927
             },
             {
-              "lat": 51.5586275,
-              "lon": 0.0782429
+              "lat": 51.5586153,
+              "lon": 0.0782538
             }
           ],
           "tags": {
-            "foot": "yes",
             "highway": "cycleway",
+            "lanes": "2",
+            "name": "Philpot Path",
             "oneway": "no",
-            "segregated": "yes",
             "surface": "asphalt"
           }
         },
@@ -92068,19 +92100,325 @@
             "sidewalk:right": "separate",
             "surface": "asphalt"
           }
+        },
+        {
+          "type": "way",
+          "id": 1559367206,
+          "bounds": {
+            "minlat": 51.5586914,
+            "minlon": 0.0782888,
+            "maxlat": 51.5587049,
+            "maxlon": 0.078295
+          },
+          "nodes": [
+            10736081222,
+            14185361981
+          ],
+          "geometry": [
+            {
+              "lat": 51.5587049,
+              "lon": 0.0782888
+            },
+            {
+              "lat": 51.5586914,
+              "lon": 0.078295
+            }
+          ],
+          "tags": {
+            "highway": "footway"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559367207,
+          "bounds": {
+            "minlat": 51.5586634,
+            "minlon": 0.078295,
+            "maxlat": 51.5586914,
+            "maxlon": 0.0783078
+          },
+          "nodes": [
+            14185361981,
+            14185361982
+          ],
+          "geometry": [
+            {
+              "lat": 51.5586914,
+              "lon": 0.078295
+            },
+            {
+              "lat": 51.5586634,
+              "lon": 0.0783078
+            }
+          ],
+          "tags": {
+            "highway": "steps",
+            "incline": "up"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559367208,
+          "bounds": {
+            "minlat": 51.5586366,
+            "minlon": 0.0782772,
+            "maxlat": 51.5586471,
+            "maxlon": 0.0782854
+          },
+          "nodes": [
+            14185361980,
+            14185361985
+          ],
+          "geometry": [
+            {
+              "lat": 51.5586471,
+              "lon": 0.0782772
+            },
+            {
+              "lat": 51.5586366,
+              "lon": 0.0782854
+            }
+          ],
+          "tags": {
+            "highway": "footway"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559367209,
+          "bounds": {
+            "minlat": 51.5586272,
+            "minlon": 0.0782854,
+            "maxlat": 51.5586366,
+            "maxlon": 0.0782927
+          },
+          "nodes": [
+            14185361985,
+            10736081223
+          ],
+          "geometry": [
+            {
+              "lat": 51.5586366,
+              "lon": 0.0782854
+            },
+            {
+              "lat": 51.5586272,
+              "lon": 0.0782927
+            }
+          ],
+          "tags": {
+            "crossing": "unmarked",
+            "footway": "crossing",
+            "highway": "footway"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559367210,
+          "bounds": {
+            "minlat": 51.5586559,
+            "minlon": 0.0783078,
+            "maxlat": 51.5586634,
+            "maxlon": 0.0783112
+          },
+          "nodes": [
+            14185361979,
+            14185361982
+          ],
+          "geometry": [
+            {
+              "lat": 51.5586559,
+              "lon": 0.0783112
+            },
+            {
+              "lat": 51.5586634,
+              "lon": 0.0783078
+            }
+          ],
+          "tags": {
+            "highway": "footway",
+            "surface": "paving_stones"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559367211,
+          "bounds": {
+            "minlat": 51.5586482,
+            "minlon": 0.078357,
+            "maxlat": 51.5586587,
+            "maxlon": 0.0783889
+          },
+          "nodes": [
+            1576942934,
+            14185361986
+          ],
+          "geometry": [
+            {
+              "lat": 51.5586587,
+              "lon": 0.0783889
+            },
+            {
+              "lat": 51.5586482,
+              "lon": 0.078357
+            }
+          ],
+          "tags": {
+            "foot": "yes",
+            "highway": "cycleway",
+            "name": "Philpot Path",
+            "oneway": "no",
+            "segregated": "yes",
+            "surface": "paved"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559367212,
+          "bounds": {
+            "minlat": 51.5586587,
+            "minlon": 0.0783889,
+            "maxlat": 51.5588095,
+            "maxlon": 0.0787674
+          },
+          "nodes": [
+            14185361989,
+            1576942933,
+            10736081231,
+            10736081234,
+            10736081232,
+            10736081235,
+            10736081233,
+            1576942934
+          ],
+          "geometry": [
+            {
+              "lat": 51.5588095,
+              "lon": 0.0787559
+            },
+            {
+              "lat": 51.5587657,
+              "lon": 0.0787674
+            },
+            {
+              "lat": 51.5587503,
+              "lon": 0.0787437
+            },
+            {
+              "lat": 51.5587381,
+              "lon": 0.0787162
+            },
+            {
+              "lat": 51.5587032,
+              "lon": 0.0785467
+            },
+            {
+              "lat": 51.5586835,
+              "lon": 0.078455
+            },
+            {
+              "lat": 51.5586689,
+              "lon": 0.0784042
+            },
+            {
+              "lat": 51.5586587,
+              "lon": 0.0783889
+            }
+          ],
+          "tags": {
+            "foot": "yes",
+            "highway": "cycleway",
+            "name": "Philpot Path",
+            "oneway": "no",
+            "segregated": "yes",
+            "surface": "paved"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559367213,
+          "bounds": {
+            "minlat": 51.5586308,
+            "minlon": 0.0782027,
+            "maxlat": 51.5586755,
+            "maxlon": 0.0783955
+          },
+          "nodes": [
+            14185361984,
+            14185361980,
+            14185361987,
+            14185361979,
+            14185361988
+          ],
+          "geometry": [
+            {
+              "lat": 51.5586308,
+              "lon": 0.0782027
+            },
+            {
+              "lat": 51.5586471,
+              "lon": 0.0782772
+            },
+            {
+              "lat": 51.5586515,
+              "lon": 0.0782942
+            },
+            {
+              "lat": 51.5586559,
+              "lon": 0.0783112
+            },
+            {
+              "lat": 51.5586755,
+              "lon": 0.0783955
+            }
+          ],
+          "tags": {
+            "highway": "footway",
+            "surface": "paving_stones"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559367214,
+          "bounds": {
+            "minlat": 51.5586689,
+            "minlon": 0.0783955,
+            "maxlat": 51.5586755,
+            "maxlon": 0.0784042
+          },
+          "nodes": [
+            10736081233,
+            14185361988
+          ],
+          "geometry": [
+            {
+              "lat": 51.5586689,
+              "lon": 0.0784042
+            },
+            {
+              "lat": 51.5586755,
+              "lon": 0.0783955
+            }
+          ],
+          "tags": {
+            "bicycle": "designated",
+            "foot": "designated",
+            "highway": "cycleway",
+            "surface": "paved"
+          }
         }
       ],
       "generator": "Overpass API 0.7.62.11 87bfad18",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T16:36:11Z"
+        "timestamp_osm_base": "2026-10-01T13:33:38Z"
       },
       "version": 0.6
     }
   },
   "stats": {
     "bboxKm2": 1.4105785433282683,
-    "featureElements": 1211,
-    "roadElements": 393
+    "featureElements": 1212,
+    "roadElements": 402
   }
 }

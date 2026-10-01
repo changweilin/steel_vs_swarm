@@ -2778,7 +2778,7 @@ export function buildLandmark(type, rnd, nation, context = {}) {
   if (LEGACY_LANDMARK_TYPES.includes(type)) {
     const bounds = new THREE.Box3().setFromObject(group);
     group.userData.layoutBounds = { min: bounds.min.toArray(), max: bounds.max.toArray() };
-    rebuildLandmarkGeometry(group, type, context.seed ?? 0);
+    rebuildLandmarkGeometry(group, type, context.seed ?? 0, { ...context, location: context.location || { country: nation } });
   }
   return group;
 }
@@ -10478,7 +10478,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   let architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
     center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
-    environmentAt: (x, z) => forestEnvironmentAt(terrain, x, z),
+    environmentAt: (x, z) => ({ ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z) }),
+    pois: osmData?.pois || [],
     roads: osmRoads || [], rails: osmData?.rails || [],
     toXZ: (p) => llToWorld(p.lat, p.lon ?? p.lng, center),
   });
@@ -10708,7 +10709,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
     center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
-    environmentAt: (x, z) => forestEnvironmentAt(terrain, x, z),
+    environmentAt: (x, z) => ({ ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z) }),
+    pois: osmData?.pois || [],
     roads: roadInput || osmRoads || [], rails: osmData?.rails || [],
     toXZ: (p) => llToWorld(p.lat, p.lon ?? p.lng, center),
   });
@@ -11115,6 +11117,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
       heightAt: (x, z) => terrain.heightAt(x, z),
       envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
       seed: sceneSeed,
+      location: { center, venue: cfg.venue, country: cfg.venue?.country },
+      environmentAt: (x, z) => ({ ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z) }),
       utilityPoints: (osmData.pois || []).filter(p => p.tags?.power === 'generator').map(p => {
         const [x, z] = llToWorld(p.lat, p.lng, center);
         return { x, z, tags: p.tags };
@@ -11126,12 +11130,15 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
         return !areaFree(blocked, x, z, r) || !occ.free(x, z, r, 1)
           || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < (b.r || 0) + r + 0.5);
       },
-      materialOf: (_generator, row) => envMat(row.color, { wash: 0.38, cool: 0.42 }),
+      materialOf: () => envMat(0xffffff, { vertexColors: true, wash: 0.38, cool: 0.42 }),
     });
     blockers.push(...osmAreaObjectResult.blockers);
     for (const b of osmAreaObjectResult.blockers) occ.add(b.x, b.z, b.r);
     // 先佔 vegFootIndex:後續散布的植被以同一索引避讓(放置時避開,不再事後拔除為主)。
-    for (const foot of osmAreaObjectResult.footprints) vegFootIndex.add(foot);
+    for (const foot of osmAreaObjectResult.footprints) {
+      vegFootIndex.add(foot);
+      if (Number.isFinite(foot.hw) && Number.isFinite(foot.hd)) occ.add(foot.x, foot.z, foot.r);
+    }
     const areaById2 = new Map(osmData.areas.map((a) => [a.sourceId, a]));
     const append2 = (entry, reason) => {
       const area = areaById2.get(entry?.sourceId);

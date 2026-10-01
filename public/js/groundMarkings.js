@@ -1,4 +1,5 @@
-import { VENUES, TRACK, TRACK_WIDTH, TRACK_DEPTH } from './groundCatalog.js';
+import { VENUES, TRACK } from './groundCatalog.js';
+import { trackDimensions } from './groundPartCatalog.js';
 
 // Coordinates are metres before one uniform projection into the rectangular UV.
 export function stadiumPath(g, straight, radius) {
@@ -7,22 +8,23 @@ export function stadiumPath(g, straight, radius) {
   g.lineTo(-straight / 2, radius);
   g.arc(-straight / 2, 0, radius, Math.PI / 2, Math.PI * 1.5); g.closePath();
 }
-export function paintTrack(g) {
-  g.save(); g.translate(.5, .5); g.scale(1 / TRACK_WIDTH, 1 / TRACK_DEPTH);
+export function paintTrack(g, lanes = TRACK.lanes, surfaceColor = '#b46950') {
+  const { width, depth } = trackDimensions(lanes);
+  g.save(); g.translate(.5, .5); g.scale(1 / width, 1 / depth);
   // A visible safety apron separates the outer lane from mesh-edge shading and filtering.
-  g.fillStyle = '#798969'; g.fillRect(-TRACK_WIDTH / 2, -TRACK_DEPTH / 2, TRACK_WIDTH, TRACK_DEPTH);
-  stadiumPath(g, TRACK.straight, TRACK.radius + TRACK.lanes * TRACK.lane);
-  g.fillStyle = '#b46950'; g.fill();
+  g.fillStyle = '#798969'; g.fillRect(-width / 2, -depth / 2, width, depth);
+  stadiumPath(g, TRACK.straight, TRACK.radius + lanes * TRACK.lane);
+  g.fillStyle = surfaceColor; g.fill();
   g.lineWidth = TRACK.lineWidth; g.strokeStyle = '#eee6d7';
   stadiumPath(g, TRACK.straight, TRACK.radius); g.fillStyle = '#718956'; g.fill();
-  for (let lane = 0; lane <= TRACK.lanes; lane++) {
+  for (let lane = 0; lane <= lanes; lane++) {
     stadiumPath(g, TRACK.straight, TRACK.radius + lane * TRACK.lane); g.stroke();
   }
   // Common finish on the straight; lane numbers stay within their own lanes.
   g.beginPath(); g.moveTo(TRACK.straight / 2 - 3, TRACK.radius);
-  g.lineTo(TRACK.straight / 2 - 3, TRACK.radius + TRACK.lanes * TRACK.lane); g.stroke();
+  g.lineTo(TRACK.straight / 2 - 3, TRACK.radius + lanes * TRACK.lane); g.stroke();
   g.font = '1px sans-serif'; g.fillStyle = '#f5edde';
-  for (let i = 0; i < TRACK.lanes; i++) g.fillText(String(i + 1), TRACK.straight / 2 - 6, TRACK.radius + (i + .7) * TRACK.lane);
+  for (let i = 0; i < lanes; i++) g.fillText(String(i + 1), TRACK.straight / 2 - 6, TRACK.radius + (i + .7) * TRACK.lane);
   g.restore();
 }
 

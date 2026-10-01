@@ -86,7 +86,9 @@ import {
   llToWorld, elevSampler, buildHeightField, osmFor, makeCarvedField, TUN, BRIDGE_RISE,
   buildStructs, projectArc, ptAt, ptPoly, ptSeg, strucTunnel,
 } from './venue_field.mjs';
-import { readSrc } from './audit_src.mjs';
+import { readSrc, grabFn } from './audit_src.mjs';
+import { sampleBuildingSite } from '../public/js/buildingDiversity.js';
+import { ROOF_RIM_LIP } from '../public/js/architectureRoofParts.js';
 import { catalogAreas, pointInProjectedArea, projectAreaRecord } from '../public/js/osmAreas.js';
 import {
   DEFAULT_FIXTURE_DIR, elevationDirForFixtureDir, elevationFixtureContract, fixtureElevationSampler,
@@ -139,9 +141,14 @@ function loadOsmBuilder() {
       .replace(/^import.*$/gm, '')
       .replace(/^export\s+/gm, '');
     class StubGeometry {
+      constructor() {
+        this.userData = {};
+        this.attributes = { position: { count: 0 } };
+      }
       rotateX() { return this; }
       rotateY() { return this; }
       translate() { return this; }
+      dispose() {}
     }
     class StubPath {
       constructor() { this.holes = []; }
@@ -161,9 +168,11 @@ function loadOsmBuilder() {
       BoxGeometry: StubGeometry, CylinderGeometry: StubGeometry,
       ConeGeometry: StubGeometry, Mesh: StubMesh,
     };
-    const factory = new Function('THREE', 'mergeGeometries', 'envMat',
-      `${src}\nreturn { buildOsmPolygonBuildings };`);
-    OSM_BUILDER = factory(THREE, () => new StubGeometry(), () => ({})).buildOsmPolygonBuildings;
+    // Execute imported production helpers rather than leaving unresolved closures in the harness.
+    const ranges = grabFn(readSrc('public', 'js', 'mapBuildingRender.js'), 'buildingRanges');
+    const factory = new Function('THREE', 'mergeGeometries', 'envMat', 'sampleBuildingSite', 'ROOF_RIM_LIP', 'WATER',
+      `${ranges}\n${src}\nreturn { buildOsmPolygonBuildings };`);
+    OSM_BUILDER = factory(THREE, () => new StubGeometry(), () => ({}), sampleBuildingSite, ROOF_RIM_LIP, WATER).buildOsmPolygonBuildings;
   } catch (error) {
     OSM_BUILDER = { error };
   }
