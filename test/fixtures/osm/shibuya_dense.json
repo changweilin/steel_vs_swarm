@@ -20,21 +20,21 @@
     "minLng": 139.68789599099784,
     "maxLng": 139.7052369086754
   },
-  "capturedAt": "2026-08-31T13:30:01.130Z",
+  "capturedAt": "2026-10-01T13:56:24.315Z",
   "source": {
-    "features": "https://overpass-api.de/api/interpreter",
+    "features": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "roads": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "userAgent": "steel-vs-swarm-osm-fixture/1.0 (maintainer-updated regression data)"
   },
   "queries": {
     "features": {
-      "version": 6,
+      "version": 9,
       "quotas": {
         "nBld": 1200,
         "nCover": 900,
         "nArea": 1800
       },
-      "text": "[out:json][timeout:15];(way[\"building\"](35.65346,139.68790,35.66801,139.70524);way[\"building:part\"](35.65346,139.68790,35.66801,139.70524);way[\"landuse\"](35.65346,139.68790,35.66801,139.70524);way[\"landcover\"](35.65346,139.68790,35.66801,139.70524);way[\"amenity\"](35.65346,139.68790,35.66801,139.70524);way[\"leisure\"](35.65346,139.68790,35.66801,139.70524);way[\"natural\"](35.65346,139.68790,35.66801,139.70524);way[\"healthcare\"](35.65346,139.68790,35.66801,139.70524);way[\"tourism\"](35.65346,139.68790,35.66801,139.70524);way[\"shop\"](35.65346,139.68790,35.66801,139.70524);way[\"office\"](35.65346,139.68790,35.66801,139.70524);way[\"craft\"](35.65346,139.68790,35.66801,139.70524);way[\"industrial\"](35.65346,139.68790,35.66801,139.70524);way[\"man_made\"](35.65346,139.68790,35.66801,139.70524);way[\"power\"](35.65346,139.68790,35.66801,139.70524);way[\"public_transport\"](35.65346,139.68790,35.66801,139.70524);way[\"railway\"](35.65346,139.68790,35.66801,139.70524);way[\"aeroway\"](35.65346,139.68790,35.66801,139.70524);way[\"military\"](35.65346,139.68790,35.66801,139.70524);way[\"historic\"](35.65346,139.68790,35.66801,139.70524);way[\"sport\"](35.65346,139.68790,35.66801,139.70524);way[\"water\"](35.65346,139.68790,35.66801,139.70524);way[\"waterway\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"building\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"building:part\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"landuse\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"landcover\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"amenity\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"leisure\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"natural\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"healthcare\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"tourism\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"shop\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"office\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"craft\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"industrial\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"man_made\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"power\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"public_transport\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"railway\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"aeroway\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"military\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"historic\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"sport\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"water\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"waterway\"](35.65346,139.68790,35.66801,139.70524););out body geom 1800;node[\"power\"=\"tower\"](35.65346,139.68790,35.66801,139.70524);out tags 1200;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](35.65346,139.68790,35.66801,139.70524);out geom 60;node[\"railway\"=\"level_crossing\"](35.65346,139.68790,35.66801,139.70524);out 40;node[\"waterway\"=\"waterfall\"](35.65346,139.68790,35.66801,139.70524);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](35.65346,139.68790,35.66801,139.70524);out 24;node[\"natural\"=\"peak\"](35.65346,139.68790,35.66801,139.70524);out 12;node[\"highway\"=\"motorway_junction\"](35.65346,139.68790,35.66801,139.70524);out 12;node[\"railway\"~\"^(station|halt)$\"](35.65346,139.68790,35.66801,139.70524);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](35.65346,139.68790,35.66801,139.70524);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](35.65346,139.68790,35.66801,139.70524);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](35.65346,139.68790,35.66801,139.70524);out geom 120;way[\"landuse\"](35.65346,139.68790,35.66801,139.70524);out geom 900;way[\"natural\"](35.65346,139.68790,35.66801,139.70524);out geom 900;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](35.65346,139.68790,35.66801,139.70524);out geom 900;rel[\"boundary\"=\"administrative\"](35.65346,139.68790,35.66801,139.70524);way(r);out geom 400;"
+      "text": "[out:json][timeout:15];(way[\"building\"](35.65346,139.68790,35.66801,139.70524);way[\"building:part\"](35.65346,139.68790,35.66801,139.70524);way[\"landuse\"](35.65346,139.68790,35.66801,139.70524);way[\"landcover\"](35.65346,139.68790,35.66801,139.70524);way[\"amenity\"](35.65346,139.68790,35.66801,139.70524);way[\"leisure\"](35.65346,139.68790,35.66801,139.70524);way[\"natural\"](35.65346,139.68790,35.66801,139.70524);way[\"healthcare\"](35.65346,139.68790,35.66801,139.70524);way[\"tourism\"](35.65346,139.68790,35.66801,139.70524);way[\"shop\"](35.65346,139.68790,35.66801,139.70524);way[\"office\"](35.65346,139.68790,35.66801,139.70524);way[\"craft\"](35.65346,139.68790,35.66801,139.70524);way[\"industrial\"](35.65346,139.68790,35.66801,139.70524);way[\"man_made\"](35.65346,139.68790,35.66801,139.70524);way[\"power\"](35.65346,139.68790,35.66801,139.70524);way[\"public_transport\"](35.65346,139.68790,35.66801,139.70524);way[\"railway\"](35.65346,139.68790,35.66801,139.70524);way[\"aeroway\"](35.65346,139.68790,35.66801,139.70524);way[\"military\"](35.65346,139.68790,35.66801,139.70524);way[\"historic\"](35.65346,139.68790,35.66801,139.70524);way[\"sport\"](35.65346,139.68790,35.66801,139.70524);way[\"water\"](35.65346,139.68790,35.66801,139.70524);way[\"waterway\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"building\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"building:part\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"landuse\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"landcover\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"amenity\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"leisure\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"natural\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"healthcare\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"tourism\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"shop\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"office\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"craft\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"industrial\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"man_made\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"power\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"public_transport\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"railway\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"aeroway\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"military\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"historic\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"sport\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"water\"](35.65346,139.68790,35.66801,139.70524);rel[\"type\"=\"multipolygon\"][\"waterway\"](35.65346,139.68790,35.66801,139.70524););out body geom 1800;node[\"man_made\"~\"^(tower|mast|communications_tower|lighthouse)$\"](35.65346,139.68790,35.66801,139.70524);out tags 1200;node[\"aeroway\"=\"control_tower\"](35.65346,139.68790,35.66801,139.70524);out tags 1200;node[\"power\"=\"tower\"](35.65346,139.68790,35.66801,139.70524);out tags 1200;node[\"power\"=\"generator\"][\"generator:source\"=\"wind\"](35.65346,139.68790,35.66801,139.70524);out tags 1200;node[\"amenity\"~\"^(place_of_worship|school|university|college|kindergarten|hospital|clinic|library|townhall|courthouse|community_centre|bus_station|ferry_terminal)$\"](35.65346,139.68790,35.66801,139.70524);out tags 240;node[\"tourism\"~\"^(museum|gallery)$\"](35.65346,139.68790,35.66801,139.70524);out tags 80;node[\"office\"=\"government\"](35.65346,139.68790,35.66801,139.70524);out tags 80;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](35.65346,139.68790,35.66801,139.70524);out geom 60;node[\"railway\"=\"level_crossing\"](35.65346,139.68790,35.66801,139.70524);out 40;node[\"waterway\"=\"waterfall\"](35.65346,139.68790,35.66801,139.70524);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](35.65346,139.68790,35.66801,139.70524);out 24;node[\"natural\"=\"peak\"](35.65346,139.68790,35.66801,139.70524);out 12;node[\"highway\"=\"motorway_junction\"](35.65346,139.68790,35.66801,139.70524);out 12;node[\"railway\"~\"^(station|halt)$\"](35.65346,139.68790,35.66801,139.70524);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](35.65346,139.68790,35.66801,139.70524);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](35.65346,139.68790,35.66801,139.70524);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](35.65346,139.68790,35.66801,139.70524);out geom 120;way[\"landuse\"](35.65346,139.68790,35.66801,139.70524);out geom 900;way[\"natural\"](35.65346,139.68790,35.66801,139.70524);out geom 900;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](35.65346,139.68790,35.66801,139.70524);out geom 900;rel[\"boundary\"=\"administrative\"](35.65346,139.68790,35.66801,139.70524);way(r);out geom 400;"
     },
     "roads": {
       "version": 1,
@@ -89,6 +89,133 @@
         },
         {
           "type": "node",
+          "id": 597719549,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "渋谷日本基督会",
+            "religion": "christian"
+          }
+        },
+        {
+          "type": "node",
+          "id": 732207766,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "渋谷福音教会",
+            "religion": "christian"
+          }
+        },
+        {
+          "type": "node",
+          "id": 732207809,
+          "tags": {
+            "amenity": "place_of_worship",
+            "church": "United Church of Christ in Japan",
+            "denomination": "protestant",
+            "denomination:ja": "日本キリスト教団",
+            "name": "聖ヶ丘教会",
+            "religion": "christian",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 741609972,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "惟神會本部",
+            "name:en": "Yuishinkai Headquarters",
+            "religion": "shinto"
+          }
+        },
+        {
+          "type": "node",
+          "id": 742560879,
+          "tags": {
+            "amenity": "place_of_worship",
+            "church": "United Church of Christ in Japan",
+            "denomination": "protestant",
+            "denomination:ja": "日本キリスト教団",
+            "name": "中渋谷教会",
+            "name:en": "Naka-Shibuya Church",
+            "name:ja": "中渋谷教会",
+            "religion": "christian"
+          }
+        },
+        {
+          "type": "node",
+          "id": 742561029,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "幸福の科学渋谷精舎",
+            "name:en": "Happy Science"
+          }
+        },
+        {
+          "type": "node",
+          "id": 748883660,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "東京教会",
+            "religion": "*",
+            "religion:ja": "天光教"
+          }
+        },
+        {
+          "type": "node",
+          "id": 760366329,
+          "tags": {
+            "amenity": "college",
+            "check_date": "2024-10-27",
+            "education": "college",
+            "name": "日本デザイナー学院",
+            "name:en": "Nippon Designer Institute",
+            "name:ja": "日本デザイナー学院"
+          }
+        },
+        {
+          "type": "node",
+          "id": 760366339,
+          "tags": {
+            "amenity": "college",
+            "check_date": "2024-10-27",
+            "education": "college",
+            "name": "日本写真芸術専門学校",
+            "name:en": "Nippon Photography Institute",
+            "name:ja": "日本写真芸術専門学校"
+          }
+        },
+        {
+          "type": "node",
+          "id": 760366345,
+          "tags": {
+            "amenity": "college",
+            "check_date": "2024-10-27",
+            "education": "college",
+            "name": "青山製図専門学校",
+            "name:en": "Aoyama Technical College",
+            "name:ja": "青山製図専門学校",
+            "wikidata": "Q11661340",
+            "wikimedia_commons": "Category:Aoyama Technical College",
+            "wikipedia": "ja:青山製図専門学校"
+          }
+        },
+        {
+          "type": "node",
+          "id": 761230873,
+          "tags": {
+            "amenity": "college",
+            "education": "college",
+            "name": "青山製図専門学校",
+            "name:en": "Aoyama Technical College",
+            "name:ja": "青山製図専門学校",
+            "wikidata": "Q11661340",
+            "wikimedia_commons": "Category:Aoyama Technical College",
+            "wikipedia": "ja:青山製図専門学校"
+          }
+        },
+        {
+          "type": "node",
           "id": 861115229,
           "lat": 35.6591162,
           "lon": 139.7001168,
@@ -130,6 +257,238 @@
             "ref": "B4",
             "source": "survey",
             "was:ref": "12"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420772948,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "大向保育園",
+            "name:en": "Omukai Nursery",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420780494,
+          "tags": {
+            "addr:block_number": "11",
+            "addr:city": "渋谷区",
+            "addr:housenumber": "3",
+            "addr:neighbourhood": "松濤一丁目",
+            "addr:province": "東京都",
+            "museum": "art",
+            "name": "戸栗美術館",
+            "name:en": "Toguri Museum of Art",
+            "name:ja": "戸栗美術館",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "opening_hours": "Tu-Su 10:00-17:00",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "tourism": "museum",
+            "website": "https://www.toguri-museum.or.jp/",
+            "wikidata": "Q11496415",
+            "wikimedia_commons": "Category:Toguri Museum of Art",
+            "wikipedia": "ja:戸栗美術館"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420781368,
+          "tags": {
+            "addr:full": "東京都渋谷区松濤2-18-1",
+            "amenity": "hospital",
+            "healthcare": "hospital",
+            "name": "明生会セントラル病院",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "operator:type": "private",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420781369,
+          "tags": {
+            "amenity": "hospital",
+            "healthcare": "hospital",
+            "name": "明生会セントラル病院分院",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420782790,
+          "tags": {
+            "name": "東京労働局渋谷労働基準監督署",
+            "name:en": "Shibuya Labor Standard Inspection Office",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "office": "government",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "wheelchair": "limited"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420784532,
+          "tags": {
+            "government": "yes",
+            "name": "東京法務局渋谷出張所",
+            "name:en": "Tokyo Legal Affairs Office Shibuya Branch",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "office": "government",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420786041,
+          "tags": {
+            "addr:full": "東京都渋谷区神山町21-11",
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "松村幼稚園",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator:type": "private",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420786054,
+          "tags": {
+            "addr:full": "東京都渋谷区松涛1-10-14",
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "松涛幼稚園",
+            "name:en": "Shoto Kindergarten",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator:type": "private",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420786178,
+          "tags": {
+            "addr:full": "東京都目黒区駒場3-3-18",
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "枝光会駒場幼稚園",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "operator:type": "private",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420789191,
+          "tags": {
+            "addr:full": "東京都渋谷区渋谷1-21-18",
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "渋谷幼稚園",
+            "name:en": "Shibuya Kindergarten",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator:type": "private",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "wheelchair": "no"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420789206,
+          "tags": {
+            "addr:block_number": "12",
+            "addr:city": "渋谷区",
+            "addr:housenumber": "1",
+            "addr:neighbourhood": "神南一丁目",
+            "addr:postcode": "150-8334",
+            "addr:province": "東京都",
+            "admin_level": "2",
+            "government": "pension_fund",
+            "name": "渋谷年金事務所",
+            "name:en": "Shibuya Pension Office",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "office": "government",
+            "old_name": "渋谷社会保険事務所",
+            "old_name:en": "Shibuya Social Insurance Office",
+            "opening_hours": "Mo-Fr 08:30-17:15",
+            "operator": "日本年金機構",
+            "operator:wikidata": "Q11508070",
+            "phone": "+81 3-3462-1241",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420792291,
+          "tags": {
+            "addr:full": "東京都渋谷区神宮前6-10-14",
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "神宮前保育園",
+            "name:en": "Jingumae Nursery",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator": "東京都渋谷区",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420794664,
+          "tags": {
+            "addr:full": "東京都渋谷区渋谷1-21-18",
+            "amenity": "school",
+            "education": "school",
+            "name": "私立渋谷教育学園渋谷中学校",
+            "name:en": "Shibuya Junior High School",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator:type": "private",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "wheelchair": "no"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420794676,
+          "tags": {
+            "addr:full": "東京都渋谷区渋谷1-21-18",
+            "amenity": "school",
+            "education": "school",
+            "name": "私立渋谷教育学園渋谷高等学校",
+            "name:en": "Shibuya High School",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator:type": "private",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "wheelchair": "no"
           }
         },
         {
@@ -233,6 +592,26 @@
         },
         {
           "type": "node",
+          "id": 1657336557,
+          "tags": {
+            "amenity": "college",
+            "education": "college",
+            "name": "FUJITSU パソコン スクール",
+            "source": "survey"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1673403880,
+          "tags": {
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "name": "イセアクリニック",
+            "name:en": "Tokyo Isea Clinic"
+          }
+        },
+        {
+          "type": "node",
           "id": 1681068414,
           "lat": 35.6590258,
           "lon": 139.7009281,
@@ -244,6 +623,74 @@
             "railway": "subway_entrance",
             "ref": "8",
             "source": "Bing"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1681422095,
+          "tags": {
+            "amenity": "college",
+            "education": "college",
+            "name": "東京ダンス ＆ アクターズ 専門学校",
+            "name:en": "Tokyo Dance & Actors School",
+            "source": "survey　2012/03/18"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1681422101,
+          "tags": {
+            "amenity": "hospital",
+            "healthcare": "hospital",
+            "name": "湘南美容外科",
+            "name:en": "Shonan Beauty Clinic",
+            "name:ja": "湘南美容外科",
+            "source": "survey　2012/03/18"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1681422121,
+          "tags": {
+            "amenity": "hospital",
+            "healthcare": "hospital",
+            "name": "衣笠眼科",
+            "name:en": "Kinugasa Optician",
+            "name:ja": "衣笠眼科",
+            "source": "survey　2012/03/18"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1681496679,
+          "tags": {
+            "amenity": "college",
+            "education": "college",
+            "name": "アイディア ヒューマン サポート アカデミー",
+            "name:en": "Idea Human Support Academy",
+            "source": "survey;2012/03/18"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1681496789,
+          "tags": {
+            "amenity": "college",
+            "education": "college",
+            "name": "ベターホームの お料理教室",
+            "name:en": "Better Home Cooking School",
+            "source": "survey;2012/03/18"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1681496885,
+          "tags": {
+            "amenity": "college",
+            "education": "college",
+            "name": "資格の大原",
+            "name:en": "Ohara",
+            "source": "survey;2012/03/18"
           }
         },
         {
@@ -309,6 +756,47 @@
         },
         {
           "type": "node",
+          "id": 1692587736,
+          "tags": {
+            "name": "visionary arts",
+            "source": "survey",
+            "tourism": "gallery"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1692587791,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "四谷大塚",
+            "name:en": "Yotsuya Otsuka",
+            "source": "survey",
+            "wheelchair": "limited"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1692587794,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "末日イエスキリスト教会",
+            "religion": "christian",
+            "source": "survey"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1692587803,
+          "tags": {
+            "name": "石島アトリエ",
+            "name:en": "Ishijima Atelier",
+            "source": "survey",
+            "tourism": "gallery"
+          }
+        },
+        {
+          "type": "node",
           "id": 2121099765,
           "lat": 35.6620752,
           "lon": 139.6974957,
@@ -333,6 +821,17 @@
         },
         {
           "type": "node",
+          "id": 2142546701,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "桜上宮保育園",
+            "name:en": "Sakura Uenomiya Nursery",
+            "source": "image,2013-02;Bing"
+          }
+        },
+        {
+          "type": "node",
           "id": 2183413256,
           "lat": 35.6618126,
           "lon": 139.7050733,
@@ -346,6 +845,78 @@
             "name:ja-Latn": "Shibuya 1-chōme",
             "name:ko": "시부야1초메",
             "place": "neighbourhood"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2201158054,
+          "tags": {
+            "amenity": "school",
+            "education": "school",
+            "name": "ヒコ・みづの　ジュエリーカレッジ",
+            "name:en": "Hiko Mizuno Jewelry College"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2356798099,
+          "tags": {
+            "amenity": "library",
+            "name": "こもれび大和田図書館",
+            "name:en": "Komorebi Owada Library",
+            "wikidata": "Q35442244"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2399915113,
+          "tags": {
+            "amenity": "community_centre",
+            "name": "美竹の丘・しぶや",
+            "name:ja": "美竹の丘・しぶや",
+            "name:ja-Hira": "みたけのおか・しぶや",
+            "name:ja_rm": "Mitake no oka Shibuya",
+            "operator": "渋谷区"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2619511165,
+          "tags": {
+            "alt_name": "Intercity Buses & Airport Limousines",
+            "amenity": "bus_station",
+            "bus": "yes",
+            "internet_access": "wlan",
+            "internet_access:fee": "no",
+            "internet_access:ssid": "-SHIBUYA-Wi-Wi-Fi-",
+            "level": "5",
+            "name": "渋谷マークシティ",
+            "name:en": "Mark City Shibuya",
+            "name:ja": "渋谷マークシティ",
+            "public_transport": "station",
+            "wikidata": "Q5364903",
+            "wikimedia_commons": "Category:Shibuya Mark City",
+            "wikipedia": "en:Shibuya Mark City"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2637894217,
+          "tags": {
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "name": "一橋クリニック"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2806173915,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "千代田稲荷神社",
+            "religion": "shinto",
+            "wikidata": "Q117808981",
+            "wikipedia": "ja:千代田稲荷神社 (渋谷区)"
           }
         },
         {
@@ -373,6 +944,29 @@
             "name:en": "Shibuya",
             "name:es": "Shibuya",
             "ref": "303"
+          }
+        },
+        {
+          "type": "node",
+          "id": 3340683543,
+          "tags": {
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "layer": "2",
+            "level": "2",
+            "name": "渋谷サンクスクリニック",
+            "wheelchair": "no"
+          }
+        },
+        {
+          "type": "node",
+          "id": 3528208791,
+          "tags": {
+            "amenity": "college",
+            "education": "college",
+            "name": "医歯専門学校 メルリックス学園",
+            "name:en": "Melurix",
+            "name:ja": "医歯専門学校 メルリックス学園"
           }
         },
         {
@@ -473,6 +1067,99 @@
         },
         {
           "type": "node",
+          "id": 4579436893,
+          "tags": {
+            "museum": "craft;design",
+            "name": "d47 MUSEUM",
+            "name:en": "d47 MUSEUM",
+            "name:es": "Museo D47",
+            "tourism": "museum",
+            "website": "https://www.gltjp.com/en/directory/item/13895/"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4789669522,
+          "tags": {
+            "amenity": "school",
+            "education": "school",
+            "name:en": "En Dance Studio"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5000995275,
+          "tags": {
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "name": "漢一クリニック"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5020289824,
+          "tags": {
+            "amenity": "school",
+            "education": "school",
+            "name": "清水とき・きものアカデミア"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5066843823,
+          "tags": {
+            "amenity": "bus_station",
+            "bus": "yes",
+            "name:en": "Club AGEHA bus stop",
+            "public_transport": "station"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5193725721,
+          "tags": {
+            "amenity": "school",
+            "education": "school",
+            "name": "ながぬま日本語学校",
+            "name:en": "Naganuma School for Japanese Language"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5260701418,
+          "tags": {
+            "communication:microwave": "yes",
+            "ele": "148",
+            "man_made": "mast"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5278436429,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "北谷稲荷",
+            "name:en": "KITAYA shrine",
+            "name:es": "KITAYA shrine",
+            "religion": "shinto",
+            "wikidata": "Q11404090",
+            "wikimedia_commons": "Category:Kitaya-Inari-jinja",
+            "wikipedia": "ja:北谷稲荷神社"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5619189083,
+          "tags": {
+            "amenity": "clinic",
+            "description": "内科・胃腸科・外科・肛門科",
+            "healthcare": "clinic",
+            "level": "-1",
+            "name": "サンクリニック原宿"
+          }
+        },
+        {
+          "type": "node",
           "id": 5657973394,
           "lat": 35.657697,
           "lon": 139.7031437,
@@ -495,6 +1182,14 @@
             "ref": "C1",
             "source": "survey",
             "was:ref": "16c"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5859963085,
+          "tags": {
+            "amenity": "library",
+            "name:fr": "Lighthouse records"
           }
         },
         {
@@ -625,6 +1320,25 @@
         },
         {
           "type": "node",
+          "id": 6407841585,
+          "tags": {
+            "amenity": "school",
+            "education": "school",
+            "name:en": "The British School in Tokyo, Shibuya Campus",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 6595311685,
+          "tags": {
+            "amenity": "school",
+            "education": "school",
+            "name:en": "Japan Travel Helper Association"
+          }
+        },
+        {
+          "type": "node",
           "id": 7092260266,
           "lat": 35.658423,
           "lon": 139.7025159,
@@ -635,6 +1349,21 @@
             "railway": "subway_entrance",
             "ref": "15",
             "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 7169150983,
+          "tags": {
+            "addr:block_number": "5-5",
+            "addr:city": "渋谷区",
+            "addr:neighbourhood": "5丁目",
+            "addr:postcode": "150-0047",
+            "addr:province": "東京都",
+            "addr:quarter": "神山町",
+            "amenity": "school",
+            "education": "school",
+            "name": "株式会社NHKグローバルメディアサービス バイリンガルセンター 国際研修室"
           }
         },
         {
@@ -923,6 +1652,146 @@
         },
         {
           "type": "node",
+          "id": 8401621448,
+          "tags": {
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "level": "2",
+            "name": "慶友整形外科渋谷"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10113431667,
+          "tags": {
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "name": "ひろクリニック",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10113436717,
+          "tags": {
+            "amenity": "college",
+            "education": "college",
+            "name": "国際文化理容美容専門学校渋谷校",
+            "wikidata": "Q11422453",
+            "wikipedia": "ja:国際文化理容美容専門学校渋谷校"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10113436825,
+          "tags": {
+            "addr:block_number": "23",
+            "addr:city": "渋谷区",
+            "addr:housenumber": "3",
+            "addr:neighbourhood": "宇田川町",
+            "addr:province": "東京都",
+            "amenity": "clinic",
+            "healthcare": "clinic",
+            "name": "あおばクリニック"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10289966935,
+          "tags": {
+            "addr:block_number": "21-3",
+            "addr:city": "渋谷区",
+            "addr:neighbourhood": "1丁目",
+            "addr:postcode": "150-0041",
+            "addr:province": "東京都",
+            "addr:quarter": "神南",
+            "addr:suburb": "渋谷",
+            "description": "Last admission is at 7:30 p.m.",
+            "name": "東京アニメセンター",
+            "name:en": "Tokyo Anime Center",
+            "name:ja": "東京アニメセンター",
+            "opening_hours": "Mo-Su 11:00-20:00",
+            "tourism": "museum",
+            "wheelchair": "yes",
+            "wikidata": "Q6128676",
+            "wikipedia": "ja:東京アニメセンター"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10687423405,
+          "tags": {
+            "amenity": "community_centre",
+            "internet_access": "wlan",
+            "name:en": "Civic Creative Base Tokyo"
+          }
+        },
+        {
+          "type": "node",
+          "id": 11409109496,
+          "tags": {
+            "alt_name": "東京国税局渋谷税務署",
+            "government": "tax",
+            "name": "渋谷税務署",
+            "name:en": "Shibuya Tax Office",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "office": "government",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 11903948346,
+          "tags": {
+            "amenity": "place_of_worship",
+            "assembly_point:unable_to_move": "yes",
+            "emergency": "assembly_point",
+            "name": "東京山手教会",
+            "name:en": "Tokyo Yamate Church",
+            "name:es": "Iglesia Yamate de Tokio",
+            "name:ja": "東京山手教会",
+            "name:ja-Hira": "とうきょうやまてきょうかい",
+            "name:ja-Latn": "Tōkyō Yamate Kyōkai",
+            "official_name": "日本基督教団 東京山手教会",
+            "official_name:es": "Iglesia Yamate de Tokio de la Iglesia Unida de Cristo en Japón",
+            "official_name:ja": "日本基督教団 東京山手教会",
+            "official_name:ja-Hira": "にほんきりすときょうだん とうきょうやまてきょうかい",
+            "official_name:ja-Latn": "Nihon Kirisuto Kyōdan Tōkyō Yamate Kyōkai",
+            "operator": "日本基督教団",
+            "religion": "christian",
+            "short_name": "山手教会",
+            "short_name:es": "Iglesia Yamate",
+            "short_name:ja": "山手教会",
+            "short_name:ja-Hira": "やまてきょうかい",
+            "short_name:ja-Latn": "Yamate Kyōkai"
+          }
+        },
+        {
+          "type": "node",
+          "id": 12167894732,
+          "tags": {
+            "communication:television": "yes",
+            "ele": "148",
+            "height": "16",
+            "man_made": "tower",
+            "tower:type": "communication"
+          }
+        },
+        {
+          "type": "node",
+          "id": 12192494042,
+          "tags": {
+            "internet_access": "wlan",
+            "level": "-1;2-5",
+            "name": "ギャラリー・ルデコ",
+            "name:en": "LE DECO",
+            "tourism": "gallery"
+          }
+        },
+        {
+          "type": "node",
           "id": 12336491226,
           "lat": 35.6592033,
           "lon": 139.7015768,
@@ -979,6 +1848,184 @@
         },
         {
           "type": "node",
+          "id": 12452329274,
+          "tags": {
+            "addr:block_number": "22",
+            "addr:city": "渋谷区",
+            "addr:housenumber": "16",
+            "addr:neighbourhood": "渋谷二丁目",
+            "addr:postcode": "150-0002",
+            "addr:province": "東京都",
+            "amenity": "place_of_worship",
+            "name": "hi-b.a. High School Bible Evangelism Association",
+            "name:ja": "hi-b.a.高校生聖書伝道協会",
+            "phone": "+81 3-3409-5072",
+            "religion": "christian",
+            "website": "https://www.hi-ba.com/"
+          }
+        },
+        {
+          "type": "node",
+          "id": 12452359647,
+          "tags": {
+            "addr:block_number": "1",
+            "addr:city": "渋谷区",
+            "addr:housenumber": "4",
+            "addr:neighbourhood": "桜丘町",
+            "addr:postcode": "150-0031",
+            "addr:province": "東京都",
+            "amenity": "community_centre",
+            "community_centre": "cultural_centre",
+            "name": "404 Not Found",
+            "opening_hours": "Mo-Su 10:00-21:00",
+            "website": "https://www.404shibuya.tokyo/",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 12914982265,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "ベネッセ 美竹の丘保育園",
+            "website": "https://hoiku.benesse-style-care.co.jp/facilities/area_tokyo/shibuya/h-mitakenooka/"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13031025555,
+          "tags": {
+            "amenity": "hospital",
+            "healthcare": "hospital",
+            "name": "アイシークリニック渋谷院"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13302738106,
+          "tags": {
+            "man_made": "mast",
+            "tower:type": "lighting"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13302738107,
+          "tags": {
+            "man_made": "mast",
+            "tower:type": "lighting"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13302738108,
+          "tags": {
+            "man_made": "mast",
+            "tower:type": "lighting"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13302738109,
+          "tags": {
+            "man_made": "mast",
+            "tower:type": "lighting"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13302738110,
+          "tags": {
+            "man_made": "mast",
+            "tower:type": "lighting"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13302738111,
+          "tags": {
+            "man_made": "mast",
+            "tower:type": "lighting"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13302738112,
+          "tags": {
+            "man_made": "mast",
+            "tower:type": "lighting"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13302738113,
+          "tags": {
+            "man_made": "mast",
+            "tower:type": "lighting"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13433345048,
+          "tags": {
+            "amenity": "university",
+            "education": "university",
+            "level": "1",
+            "name": "The Film School of Tokyo",
+            "name:ja": "映画美学校",
+            "phone": "+81354591850",
+            "website": "http://eigabigakkou.com/"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13524208445,
+          "tags": {
+            "addr:block_number": "15",
+            "addr:city": "渋谷区",
+            "addr:housename": "渋谷PARCO",
+            "addr:housenumber": "1",
+            "addr:neighbourhood": "宇田川町",
+            "addr:postcode": "150-8377",
+            "addr:province": "東京都",
+            "addr:quarter": "宇田川町",
+            "contact:phone": "+81 3-6455-2697",
+            "contact:website": "https://art.parco.jp/",
+            "level": "3",
+            "level:ref": "4F",
+            "name": "Parco Museum Tokyo",
+            "name:en": "Parco Museum Tokyo",
+            "name:fr": "Parco Museum Tokyo",
+            "opening_hours": "Mo-Su 11:00-20:30",
+            "tourism": "museum"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13524208446,
+          "tags": {
+            "addr:block_number": "15",
+            "addr:city": "渋谷区",
+            "addr:housename": "渋谷PARCO",
+            "addr:housenumber": "1",
+            "addr:neighbourhood": "宇田川町",
+            "addr:postcode": "150-8377",
+            "addr:province": "東京都",
+            "addr:quarter": "宇田川町",
+            "contact:phone": "+81 3-6712-7505",
+            "contact:website": "https://art.parco.jp/",
+            "level": "-1",
+            "level:ref": "B1F",
+            "name": "GALLERY X BY PARCO",
+            "name:en": "Gallery X",
+            "name:fr": "Gallery X",
+            "opening_hours": "Mo-Su 11:00-21:00",
+            "tourism": "gallery"
+          }
+        },
+        {
+          "type": "node",
           "id": 13782042836,
           "lat": 35.659939,
           "lon": 139.6997378,
@@ -989,6 +2036,29 @@
             "railway": "subway_entrance",
             "source": "survey",
             "was:ref": "6-1"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13915592157,
+          "tags": {
+            "museum": "dolls",
+            "name": "川本喜八郎人形ギャラリー",
+            "name:en": "Kihachiro Kawamoto Doll Gallery",
+            "tourism": "museum",
+            "website": "https://www.city.shibuya.tokyo.jp/shisetsu/bunka-shisetsu/bunka-shisetsu/gallery.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 14232671801,
+          "tags": {
+            "amenity": "clinic",
+            "check_date": "2026-09-30",
+            "healthcare": "clinic",
+            "level": "3",
+            "name": "渋谷メンタルクリニック",
+            "website": "https://www.shibuya-mental.com/access"
           }
         },
         {
@@ -12220,10 +13290,10 @@
           "type": "way",
           "id": 133753624,
           "bounds": {
-            "minlat": 35.6581502,
-            "minlon": 139.6893938,
-            "maxlat": 35.6582347,
-            "maxlon": 139.6895165
+            "minlat": 35.65816,
+            "minlon": 139.6893941,
+            "maxlat": 35.6582445,
+            "maxlon": 139.6895168
           },
           "nodes": [
             1472156681,
@@ -12241,52 +13311,52 @@
           ],
           "geometry": [
             {
-              "lat": 35.6582222,
-              "lon": 139.6894829
+              "lat": 35.658232,
+              "lon": 139.6894832
             },
             {
-              "lat": 35.6582347,
-              "lon": 139.6894921
+              "lat": 35.6582445,
+              "lon": 139.6894924
             },
             {
-              "lat": 35.6582229,
-              "lon": 139.6895165
+              "lat": 35.6582327,
+              "lon": 139.6895168
             },
             {
-              "lat": 35.6581502,
-              "lon": 139.689463
+              "lat": 35.65816,
+              "lon": 139.6894633
             },
             {
-              "lat": 35.6581621,
-              "lon": 139.6894386
+              "lat": 35.6581719,
+              "lon": 139.6894389
             },
             {
-              "lat": 35.6581839,
-              "lon": 139.6893938
+              "lat": 35.6581937,
+              "lon": 139.6893941
             },
             {
-              "lat": 35.6582067,
-              "lon": 139.6894107
+              "lat": 35.6582165,
+              "lon": 139.689411
             },
             {
-              "lat": 35.6582022,
-              "lon": 139.6894199
+              "lat": 35.658212,
+              "lon": 139.6894202
             },
             {
-              "lat": 35.6582229,
-              "lon": 139.6894352
+              "lat": 35.6582327,
+              "lon": 139.6894355
             },
             {
-              "lat": 35.6582176,
-              "lon": 139.6894461
+              "lat": 35.6582274,
+              "lon": 139.6894464
             },
             {
-              "lat": 35.6582342,
-              "lon": 139.6894583
+              "lat": 35.658244,
+              "lon": 139.6894586
             },
             {
-              "lat": 35.6582222,
-              "lon": 139.6894829
+              "lat": 35.658232,
+              "lon": 139.6894832
             }
           ],
           "tags": {
@@ -12854,10 +13924,10 @@
           "type": "way",
           "id": 133753637,
           "bounds": {
-            "minlat": 35.658097,
-            "minlon": 139.6893526,
-            "maxlat": 35.6581744,
-            "maxlon": 139.6894573
+            "minlat": 35.6581068,
+            "minlon": 139.6893529,
+            "maxlat": 35.6581842,
+            "maxlon": 139.6894576
           },
           "nodes": [
             1472156646,
@@ -12868,24 +13938,24 @@
           ],
           "geometry": [
             {
-              "lat": 35.658133,
-              "lon": 139.6893526
+              "lat": 35.6581428,
+              "lon": 139.6893529
             },
             {
-              "lat": 35.6581744,
-              "lon": 139.6893831
+              "lat": 35.6581842,
+              "lon": 139.6893834
             },
             {
-              "lat": 35.6581384,
-              "lon": 139.6894573
+              "lat": 35.6581482,
+              "lon": 139.6894576
             },
             {
-              "lat": 35.658097,
-              "lon": 139.6894268
+              "lat": 35.6581068,
+              "lon": 139.6894271
             },
             {
-              "lat": 35.658133,
-              "lon": 139.6893526
+              "lat": 35.6581428,
+              "lon": 139.6893529
             }
           ],
           "tags": {
@@ -15786,10 +16856,10 @@
           "type": "way",
           "id": 133755320,
           "bounds": {
-            "minlat": 35.6581634,
-            "minlon": 139.6895738,
-            "maxlat": 35.6582557,
-            "maxlon": 139.6896737
+            "minlat": 35.6581525,
+            "minlon": 139.6895818,
+            "maxlat": 35.6582448,
+            "maxlon": 139.6896817
           },
           "nodes": [
             1472171722,
@@ -15800,24 +16870,24 @@
           ],
           "geometry": [
             {
-              "lat": 35.6582557,
-              "lon": 139.6896124
+              "lat": 35.6582448,
+              "lon": 139.6896204
             },
             {
-              "lat": 35.6581857,
-              "lon": 139.6896737
+              "lat": 35.6581748,
+              "lon": 139.6896817
             },
             {
-              "lat": 35.6581634,
-              "lon": 139.6896351
+              "lat": 35.6581525,
+              "lon": 139.6896431
             },
             {
-              "lat": 35.6582334,
-              "lon": 139.6895738
+              "lat": 35.6582225,
+              "lon": 139.6895818
             },
             {
-              "lat": 35.6582557,
-              "lon": 139.6896124
+              "lat": 35.6582448,
+              "lon": 139.6896204
             }
           ],
           "tags": {
@@ -15829,10 +16899,10 @@
           "type": "way",
           "id": 133755321,
           "bounds": {
-            "minlat": 35.6580397,
-            "minlon": 139.6897715,
-            "maxlat": 35.65816,
-            "maxlon": 139.6898942
+            "minlat": 35.6580582,
+            "minlon": 139.6897842,
+            "maxlat": 35.6581432,
+            "maxlon": 139.6898747
           },
           "nodes": [
             1472171703,
@@ -15843,29 +16913,28 @@
           ],
           "geometry": [
             {
-              "lat": 35.6581397,
-              "lon": 139.6897715
+              "lat": 35.6581244,
+              "lon": 139.6897842
             },
             {
-              "lat": 35.65816,
-              "lon": 139.6898066
+              "lat": 35.6581432,
+              "lon": 139.6898166
             },
             {
-              "lat": 35.65806,
-              "lon": 139.6898942
+              "lat": 35.6580769,
+              "lon": 139.6898747
             },
             {
-              "lat": 35.6580397,
-              "lon": 139.6898591
+              "lat": 35.6580582,
+              "lon": 139.6898423
             },
             {
-              "lat": 35.6581397,
-              "lon": 139.6897715
+              "lat": 35.6581244,
+              "lon": 139.6897842
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -17291,43 +18360,87 @@
           "type": "way",
           "id": 133755356,
           "bounds": {
-            "minlat": 35.6578899,
-            "minlon": 139.6901349,
-            "maxlat": 35.6580785,
-            "maxlon": 139.6903523
+            "minlat": 35.6578893,
+            "minlon": 139.6900483,
+            "maxlat": 35.6581091,
+            "maxlon": 139.6904041
           },
           "nodes": [
             1472171687,
+            14173647630,
+            14173647634,
+            14173647628,
+            14173647633,
+            14173647631,
+            14173647632,
             1472171653,
+            14173647635,
+            14173647629,
             1472171635,
             1472171669,
+            14173647627,
             1472171687
           ],
           "geometry": [
             {
-              "lat": 35.6580785,
-              "lon": 139.6902444
+              "lat": 35.658073,
+              "lon": 139.690254
             },
             {
-              "lat": 35.6579511,
-              "lon": 139.6903523
+              "lat": 35.6580243,
+              "lon": 139.6902953
             },
             {
-              "lat": 35.6578899,
-              "lon": 139.6902429
+              "lat": 35.6580301,
+              "lon": 139.6903058
             },
             {
-              "lat": 35.6580173,
-              "lon": 139.6901349
+              "lat": 35.6580052,
+              "lon": 139.6903269
             },
             {
-              "lat": 35.6580785,
-              "lon": 139.6902444
+              "lat": 35.6580111,
+              "lon": 139.6903373
+            },
+            {
+              "lat": 35.6579322,
+              "lon": 139.6904041
+            },
+            {
+              "lat": 35.6579054,
+              "lon": 139.6903561
+            },
+            {
+              "lat": 35.6579237,
+              "lon": 139.6903406
+            },
+            {
+              "lat": 35.6578994,
+              "lon": 139.6902971
+            },
+            {
+              "lat": 35.65792,
+              "lon": 139.6902796
+            },
+            {
+              "lat": 35.6578893,
+              "lon": 139.6902248
+            },
+            {
+              "lat": 35.6581031,
+              "lon": 139.6900483
+            },
+            {
+              "lat": 35.6581091,
+              "lon": 139.690057
+            },
+            {
+              "lat": 35.658073,
+              "lon": 139.690254
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -17551,9 +18664,9 @@
           "type": "way",
           "id": 133755362,
           "bounds": {
-            "minlat": 35.6581514,
+            "minlat": 35.6581443,
             "minlon": 139.689705,
-            "maxlat": 35.6582393,
+            "maxlat": 35.6582322,
             "maxlon": 139.6897955
           },
           "nodes": [
@@ -17565,23 +18678,23 @@
           ],
           "geometry": [
             {
-              "lat": 35.6582223,
+              "lat": 35.6582152,
               "lon": 139.689705
             },
             {
-              "lat": 35.6582393,
+              "lat": 35.6582322,
               "lon": 139.6897355
             },
             {
-              "lat": 35.6581684,
+              "lat": 35.6581613,
               "lon": 139.6897955
             },
             {
-              "lat": 35.6581514,
+              "lat": 35.6581443,
               "lon": 139.689765
             },
             {
-              "lat": 35.6582223,
+              "lat": 35.6582152,
               "lon": 139.689705
             }
           ],
@@ -18158,10 +19271,10 @@
           "type": "way",
           "id": 133755375,
           "bounds": {
-            "minlat": 35.6581225,
-            "minlon": 139.6895194,
-            "maxlat": 35.6581981,
-            "maxlon": 139.689629
+            "minlat": 35.6581127,
+            "minlon": 139.6895254,
+            "maxlat": 35.6581883,
+            "maxlon": 139.689635
           },
           "nodes": [
             1472171700,
@@ -18176,40 +19289,40 @@
           ],
           "geometry": [
             {
-              "lat": 35.6581339,
-              "lon": 139.6895812
+              "lat": 35.6581241,
+              "lon": 139.6895872
             },
             {
-              "lat": 35.6581282,
-              "lon": 139.6895775
+              "lat": 35.6581184,
+              "lon": 139.6895835
             },
             {
-              "lat": 35.6581527,
-              "lon": 139.6895194
+              "lat": 35.6581429,
+              "lon": 139.6895254
             },
             {
-              "lat": 35.6581981,
-              "lon": 139.6895484
+              "lat": 35.6581883,
+              "lon": 139.6895544
             },
             {
-              "lat": 35.6581735,
-              "lon": 139.6896066
+              "lat": 35.6581637,
+              "lon": 139.6896126
             },
             {
-              "lat": 35.6581662,
-              "lon": 139.6896019
+              "lat": 35.6581564,
+              "lon": 139.6896079
             },
             {
-              "lat": 35.6581548,
-              "lon": 139.689629
+              "lat": 35.658145,
+              "lon": 139.689635
             },
             {
-              "lat": 35.6581225,
-              "lon": 139.6896083
+              "lat": 35.6581127,
+              "lon": 139.6896143
             },
             {
-              "lat": 35.6581339,
-              "lon": 139.6895812
+              "lat": 35.6581241,
+              "lon": 139.6895872
             }
           ],
           "tags": {
@@ -21428,103 +22541,182 @@
           "type": "way",
           "id": 133858347,
           "bounds": {
-            "minlat": 35.6565981,
-            "minlon": 139.6891083,
-            "maxlat": 35.6567058,
-            "maxlon": 139.6894232
+            "minlat": 35.6564637,
+            "minlon": 139.6889808,
+            "maxlat": 35.6567473,
+            "maxlon": 139.6893857
           },
           "nodes": [
+            14173647622,
+            14173647623,
+            14173647624,
+            14173647625,
+            1472997022,
+            1472997027,
+            1472997058,
+            1472997050,
+            14173647626,
+            1472997034,
+            1472997016,
+            1472997021,
+            1472997042,
+            1472997040,
+            1472997047,
+            1472997045,
+            1472997043,
             1472997032,
             1472997011,
             1472997005,
             1472997001,
             1472997003,
-            1472996998,
-            1472997021,
-            1472997016,
-            1472997034,
-            1472997040,
-            1472997042,
-            1472997047,
-            1472997035,
             1472997037,
-            1472997043,
-            1472997045,
-            1472997032
+            1472996998,
+            1472997035,
+            14173647619,
+            14173647620,
+            14173647621,
+            1472997007,
+            1472996985,
+            1472996991,
+            1472997012,
+            14173647622
           ],
           "geometry": [
             {
-              "lat": 35.6566831,
-              "lon": 139.6893626
+              "lat": 35.6565536,
+              "lon": 139.6890823
             },
             {
-              "lat": 35.6566202,
-              "lon": 139.6894232
+              "lat": 35.6565685,
+              "lon": 139.6889876
             },
             {
-              "lat": 35.6566092,
-              "lon": 139.689377
+              "lat": 35.6565899,
+              "lon": 139.6889927
             },
             {
-              "lat": 35.6566029,
-              "lon": 139.6893132
+              "lat": 35.6565917,
+              "lon": 139.6889808
             },
             {
-              "lat": 35.6566075,
-              "lon": 139.6893022
+              "lat": 35.6566608,
+              "lon": 139.6889973
             },
             {
-              "lat": 35.6565981,
-              "lon": 139.6892312
+              "lat": 35.6566631,
+              "lon": 139.6889825
             },
             {
-              "lat": 35.6566468,
-              "lon": 139.6892214
+              "lat": 35.6567085,
+              "lon": 139.6889933
             },
             {
-              "lat": 35.6566336,
-              "lon": 139.6891083
+              "lat": 35.6567033,
+              "lon": 139.6890262
             },
             {
-              "lat": 35.6566839,
-              "lon": 139.6891167
+              "lat": 35.6567473,
+              "lon": 139.6890368
             },
             {
-              "lat": 35.6566942,
-              "lon": 139.6892119
+              "lat": 35.6567293,
+              "lon": 139.6891505
+            },
+            {
+              "lat": 35.6566565,
+              "lon": 139.689133
+            },
+            {
+              "lat": 35.6566532,
+              "lon": 139.689154
+            },
+            {
+              "lat": 35.6566833,
+              "lon": 139.6891612
+            },
+            {
+              "lat": 35.6566789,
+              "lon": 139.6891891
+            },
+            {
+              "lat": 35.6567193,
+              "lon": 139.6891987
             },
             {
               "lat": 35.6566963,
-              "lon": 139.6892115
+              "lon": 139.6893436
             },
             {
-              "lat": 35.6567058,
-              "lon": 139.6892825
+              "lat": 35.6566565,
+              "lon": 139.6893341
             },
             {
-              "lat": 35.6566855,
-              "lon": 139.6892866
+              "lat": 35.6566483,
+              "lon": 139.6893857
             },
             {
-              "lat": 35.6566873,
-              "lon": 139.6893031
+              "lat": 35.6565997,
+              "lon": 139.6893741
             },
             {
-              "lat": 35.656698,
-              "lon": 139.6893018
+              "lat": 35.6566016,
+              "lon": 139.689362
             },
             {
-              "lat": 35.6567014,
-              "lon": 139.6893454
+              "lat": 35.6565814,
+              "lon": 139.6893161
             },
             {
-              "lat": 35.6566831,
-              "lon": 139.6893626
+              "lat": 35.6565847,
+              "lon": 139.6892954
+            },
+            {
+              "lat": 35.6565523,
+              "lon": 139.6892876
+            },
+            {
+              "lat": 35.6565633,
+              "lon": 139.6892177
+            },
+            {
+              "lat": 35.6565131,
+              "lon": 139.6892057
+            },
+            {
+              "lat": 35.6565177,
+              "lon": 139.6891764
+            },
+            {
+              "lat": 35.6565011,
+              "lon": 139.6891394
+            },
+            {
+              "lat": 35.6564766,
+              "lon": 139.6891335
+            },
+            {
+              "lat": 35.6564782,
+              "lon": 139.689123
+            },
+            {
+              "lat": 35.6564637,
+              "lon": 139.6891012
+            },
+            {
+              "lat": 35.6564673,
+              "lon": 139.6890757
+            },
+            {
+              "lat": 35.6565132,
+              "lon": 139.6890726
+            },
+            {
+              "lat": 35.6565536,
+              "lon": 139.6890823
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -21976,49 +23168,6 @@
         },
         {
           "type": "way",
-          "id": 133858357,
-          "bounds": {
-            "minlat": 35.6565636,
-            "minlon": 139.689004,
-            "maxlat": 35.6566235,
-            "maxlon": 139.6890847
-          },
-          "nodes": [
-            1472996991,
-            1472997012,
-            1472997007,
-            1472996985,
-            1472996991
-          ],
-          "geometry": [
-            {
-              "lat": 35.6565769,
-              "lon": 139.689004
-            },
-            {
-              "lat": 35.6566235,
-              "lon": 139.6890182
-            },
-            {
-              "lat": 35.6566102,
-              "lon": 139.6890847
-            },
-            {
-              "lat": 35.6565636,
-              "lon": 139.6890705
-            },
-            {
-              "lat": 35.6565769,
-              "lon": 139.689004
-            }
-          ],
-          "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
-          }
-        },
-        {
-          "type": "way",
           "id": 133858358,
           "bounds": {
             "minlat": 35.6566172,
@@ -22397,49 +23546,6 @@
             {
               "lat": 35.6561827,
               "lon": 139.6899835
-            }
-          ],
-          "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
-          }
-        },
-        {
-          "type": "way",
-          "id": 133858367,
-          "bounds": {
-            "minlat": 35.6566521,
-            "minlon": 139.6889798,
-            "maxlat": 35.6567263,
-            "maxlon": 139.6890848
-          },
-          "nodes": [
-            1472997058,
-            1472997050,
-            1472997022,
-            1472997027,
-            1472997058
-          ],
-          "geometry": [
-            {
-              "lat": 35.6567263,
-              "lon": 139.6889948
-            },
-            {
-              "lat": 35.6567113,
-              "lon": 139.6890848
-            },
-            {
-              "lat": 35.6566521,
-              "lon": 139.6890699
-            },
-            {
-              "lat": 35.6566671,
-              "lon": 139.6889798
-            },
-            {
-              "lat": 35.6567263,
-              "lon": 139.6889948
             }
           ],
           "tags": {
@@ -23010,10 +24116,10 @@
           "type": "way",
           "id": 133858381,
           "bounds": {
-            "minlat": 35.65639,
-            "minlon": 139.6891434,
-            "maxlat": 35.6564768,
-            "maxlon": 139.6892484
+            "minlat": 35.6563849,
+            "minlon": 139.6891585,
+            "maxlat": 35.6564907,
+            "maxlon": 139.6892584
           },
           "nodes": [
             1472996917,
@@ -23024,24 +24130,24 @@
           ],
           "geometry": [
             {
-              "lat": 35.6564467,
-              "lon": 139.6891434
+              "lat": 35.6564729,
+              "lon": 139.6891585
             },
             {
-              "lat": 35.6564768,
-              "lon": 139.689209
+              "lat": 35.6564907,
+              "lon": 139.6891973
             },
             {
-              "lat": 35.6564201,
-              "lon": 139.6892484
+              "lat": 35.6564027,
+              "lon": 139.6892584
             },
             {
-              "lat": 35.65639,
-              "lon": 139.6891828
+              "lat": 35.6563849,
+              "lon": 139.6892197
             },
             {
-              "lat": 35.6564467,
-              "lon": 139.6891434
+              "lat": 35.6564729,
+              "lon": 139.6891585
             }
           ],
           "tags": {
@@ -26244,53 +27350,92 @@
           "type": "way",
           "id": 133859853,
           "bounds": {
-            "minlat": 35.6561215,
-            "minlon": 139.688833,
-            "maxlat": 35.656215,
-            "maxlon": 139.6889707
+            "minlat": 35.6560492,
+            "minlon": 139.6887625,
+            "maxlat": 35.6562006,
+            "maxlon": 139.6889815
           },
           "nodes": [
+            1473005750,
+            1473005744,
             1473005756,
             1473005761,
             1473005752,
-            1473005744,
-            1473005756
+            1473005742,
+            1473005737,
+            1473005729,
+            1473005736,
+            14173647618,
+            1473005755,
+            1473005740,
+            1473005750
           ],
           "geometry": [
             {
-              "lat": 35.6561789,
-              "lon": 139.688833
+              "lat": 35.6561344,
+              "lon": 139.6887625
             },
             {
-              "lat": 35.656215,
-              "lon": 139.6889418
+              "lat": 35.6561741,
+              "lon": 139.6888812
             },
             {
-              "lat": 35.6561576,
-              "lon": 139.6889707
+              "lat": 35.6561812,
+              "lon": 139.6888776
             },
             {
-              "lat": 35.6561215,
-              "lon": 139.6888618
+              "lat": 35.6562006,
+              "lon": 139.6889356
             },
             {
-              "lat": 35.6561789,
-              "lon": 139.688833
+              "lat": 35.6561164,
+              "lon": 139.6889783
+            },
+            {
+              "lat": 35.6561124,
+              "lon": 139.6889664
+            },
+            {
+              "lat": 35.6560824,
+              "lon": 139.6889815
+            },
+            {
+              "lat": 35.6560634,
+              "lon": 139.6889245
+            },
+            {
+              "lat": 35.6560825,
+              "lon": 139.6889148
+            },
+            {
+              "lat": 35.6560492,
+              "lon": 139.6888154
+            },
+            {
+              "lat": 35.6560891,
+              "lon": 139.6887952
+            },
+            {
+              "lat": 35.6560863,
+              "lon": 139.6887869
+            },
+            {
+              "lat": 35.6561344,
+              "lon": 139.6887625
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
           "type": "way",
           "id": 133859854,
           "bounds": {
-            "minlat": 35.656747,
-            "minlon": 139.6885901,
-            "maxlat": 35.6569034,
-            "maxlon": 139.688756
+            "minlat": 35.6568148,
+            "minlon": 139.6886505,
+            "maxlat": 35.6568932,
+            "maxlon": 139.6887516
           },
           "nodes": [
             1473005857,
@@ -26301,30 +27446,31 @@
           ],
           "geometry": [
             {
-              "lat": 35.6568217,
-              "lon": 139.6885901
+              "lat": 35.6568529,
+              "lon": 139.6886505
             },
             {
-              "lat": 35.6569034,
-              "lon": 139.6886938
+              "lat": 35.6568932,
+              "lon": 139.6886858
             },
             {
-              "lat": 35.6568557,
-              "lon": 139.688756
+              "lat": 35.6568551,
+              "lon": 139.6887516
             },
             {
-              "lat": 35.656747,
-              "lon": 139.6886804
+              "lat": 35.6568148,
+              "lon": 139.6887163
             },
             {
-              "lat": 35.6568217,
-              "lon": 139.6885901
+              "lat": 35.6568529,
+              "lon": 139.6886505
             }
           ],
           "tags": {
-            "amenity": "parking",
-            "parking": "surface",
-            "source": "Bing,2007-04"
+            "building": "house",
+            "building:levels": "3",
+            "ele": "24.5",
+            "height": "9.0"
           }
         },
         {
@@ -27223,49 +28369,6 @@
             {
               "lat": 35.656953,
               "lon": 139.6884813
-            }
-          ],
-          "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
-          }
-        },
-        {
-          "type": "way",
-          "id": 133859923,
-          "bounds": {
-            "minlat": 35.656033,
-            "minlon": 139.6887992,
-            "maxlat": 35.6561108,
-            "maxlon": 139.6889501
-          },
-          "nodes": [
-            1473005736,
-            1473005742,
-            1473005737,
-            1473005729,
-            1473005736
-          ],
-          "geometry": [
-            {
-              "lat": 35.6560707,
-              "lon": 139.6887992
-            },
-            {
-              "lat": 35.6561108,
-              "lon": 139.688933
-            },
-            {
-              "lat": 35.6560731,
-              "lon": 139.6889501
-            },
-            {
-              "lat": 35.656033,
-              "lon": 139.6888163
-            },
-            {
-              "lat": 35.6560707,
-              "lon": 139.6887992
             }
           ],
           "tags": {
@@ -28180,43 +29283,52 @@
           "type": "way",
           "id": 133859971,
           "bounds": {
-            "minlat": 35.6557445,
-            "minlon": 139.6893912,
-            "maxlat": 35.6558313,
-            "maxlon": 139.6895405
+            "minlat": 35.6557129,
+            "minlon": 139.6892984,
+            "maxlat": 35.6558236,
+            "maxlon": 139.689537
           },
           "nodes": [
+            1473005654,
             1473005665,
+            14173647612,
+            14173647613,
             1473005676,
             1473005661,
-            1473005654,
-            1473005665
+            1473005654
           ],
           "geometry": [
             {
-              "lat": 35.6557936,
-              "lon": 139.6893912
+              "lat": 35.6557129,
+              "lon": 139.6893479
             },
             {
-              "lat": 35.6558313,
-              "lon": 139.6895185
+              "lat": 35.6557361,
+              "lon": 139.6893371
             },
             {
-              "lat": 35.6557823,
-              "lon": 139.6895405
+              "lat": 35.6557283,
+              "lon": 139.689312
             },
             {
-              "lat": 35.6557445,
-              "lon": 139.6894132
+              "lat": 35.6557573,
+              "lon": 139.6892984
             },
             {
-              "lat": 35.6557936,
-              "lon": 139.6893912
+              "lat": 35.6558236,
+              "lon": 139.6895126
+            },
+            {
+              "lat": 35.6557715,
+              "lon": 139.689537
+            },
+            {
+              "lat": 35.6557129,
+              "lon": 139.6893479
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -28384,49 +29496,6 @@
             {
               "lat": 35.6568685,
               "lon": 139.6884874
-            }
-          ],
-          "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
-          }
-        },
-        {
-          "type": "way",
-          "id": 133859989,
-          "bounds": {
-            "minlat": 35.656105,
-            "minlon": 139.6887619,
-            "maxlat": 35.6561727,
-            "maxlon": 139.6888522
-          },
-          "nodes": [
-            1473005750,
-            1473005755,
-            1473005747,
-            1473005740,
-            1473005750
-          ],
-          "geometry": [
-            {
-              "lat": 35.6561503,
-              "lon": 139.6887619
-            },
-            {
-              "lat": 35.6561727,
-              "lon": 139.6888294
-            },
-            {
-              "lat": 35.6561274,
-              "lon": 139.6888522
-            },
-            {
-              "lat": 35.656105,
-              "lon": 139.6887847
-            },
-            {
-              "lat": 35.6561503,
-              "lon": 139.6887619
             }
           ],
           "tags": {
@@ -28813,53 +29882,72 @@
           "type": "way",
           "id": 133860016,
           "bounds": {
-            "minlat": 35.6556661,
-            "minlon": 139.6893928,
-            "maxlat": 35.6557611,
-            "maxlon": 139.6895765
+            "minlat": 35.6555982,
+            "minlon": 139.6893489,
+            "maxlat": 35.6557663,
+            "maxlon": 139.6895696
           },
           "nodes": [
+            1473005648,
             1473005656,
             1473005647,
-            1473005635,
             1473005641,
+            14173647616,
+            14173647614,
+            14173647617,
+            1473005635,
             1473005639,
-            1473005648,
-            1473005656
+            14173647615,
+            1473005648
           ],
           "geometry": [
             {
-              "lat": 35.6557611,
-              "lon": 139.6895521
+              "lat": 35.6557042,
+              "lon": 139.6893533
             },
             {
-              "lat": 35.6557062,
-              "lon": 139.6895765
+              "lat": 35.6557663,
+              "lon": 139.6895501
             },
             {
-              "lat": 35.6556661,
-              "lon": 139.68944
+              "lat": 35.6557256,
+              "lon": 139.6895696
             },
             {
-              "lat": 35.6556849,
-              "lon": 139.6894316
+              "lat": 35.6557055,
+              "lon": 139.6895058
             },
             {
-              "lat": 35.6556782,
-              "lon": 139.6894088
+              "lat": 35.6556937,
+              "lon": 139.6895115
             },
             {
-              "lat": 35.6557142,
-              "lon": 139.6893928
+              "lat": 35.6557018,
+              "lon": 139.6895404
             },
             {
-              "lat": 35.6557611,
-              "lon": 139.6895521
+              "lat": 35.6556672,
+              "lon": 139.6895511
+            },
+            {
+              "lat": 35.6556503,
+              "lon": 139.6894495
+            },
+            {
+              "lat": 35.6555982,
+              "lon": 139.6894473
+            },
+            {
+              "lat": 35.655601,
+              "lon": 139.6893489
+            },
+            {
+              "lat": 35.6557042,
+              "lon": 139.6893533
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -40002,93 +41090,152 @@
           "type": "way",
           "id": 136373572,
           "bounds": {
-            "minlat": 35.6535944,
-            "minlon": 139.6912331,
-            "maxlat": 35.653926,
-            "maxlon": 139.6915669
+            "minlat": 35.6536044,
+            "minlon": 139.6913356,
+            "maxlat": 35.6538012,
+            "maxlon": 139.6915972
           },
           "nodes": [
-            1496020629,
-            1496020632,
-            1496020665,
-            1496020648,
-            1496020635,
-            1496020627,
-            1496020625,
-            1496020581,
-            1496020570,
-            1496020571,
             1496020577,
             1496020597,
             1496020610,
             1496020623,
-            1496020629
+            1496020629,
+            1496020632,
+            14173647652,
+            14173647651,
+            14173647646,
+            14173647647,
+            1496020635,
+            1496020665,
+            1496020648,
+            14173647642,
+            14173647641,
+            14173647643,
+            14173647644,
+            14173647645,
+            14173647648,
+            14173647649,
+            14173647650,
+            1496020571,
+            1496020627,
+            1496020570,
+            1496020625,
+            1496020581,
+            1496020577
           ],
           "geometry": [
             {
-              "lat": 35.6537045,
-              "lon": 139.6913279
+              "lat": 35.6536125,
+              "lon": 139.6913613
             },
             {
-              "lat": 35.6537702,
-              "lon": 139.6912331
+              "lat": 35.653667,
+              "lon": 139.6913642
             },
             {
-              "lat": 35.653926,
-              "lon": 139.6913976
+              "lat": 35.6536675,
+              "lon": 139.6913484
             },
             {
-              "lat": 35.6538676,
-              "lon": 139.6914859
+              "lat": 35.6537076,
+              "lon": 139.6913505
             },
             {
-              "lat": 35.6537961,
-              "lon": 139.6914185
-            },
-            {
-              "lat": 35.6537012,
-              "lon": 139.6915648
-            },
-            {
-              "lat": 35.6536938,
-              "lon": 139.6915669
-            },
-            {
-              "lat": 35.6536046,
-              "lon": 139.6915604
-            },
-            {
-              "lat": 35.6535944,
-              "lon": 139.6915394
-            },
-            {
-              "lat": 35.6535983,
-              "lon": 139.6914748
-            },
-            {
-              "lat": 35.653603,
+              "lat": 35.6537081,
               "lon": 139.6913356
             },
             {
-              "lat": 35.6536331,
-              "lon": 139.6913381
+              "lat": 35.6537522,
+              "lon": 139.691338
             },
             {
-              "lat": 35.6536588,
-              "lon": 139.691341
+              "lat": 35.6537511,
+              "lon": 139.6913676
             },
             {
-              "lat": 35.6536824,
-              "lon": 139.6913417
+              "lat": 35.6537724,
+              "lon": 139.6913687
             },
             {
-              "lat": 35.6537045,
-              "lon": 139.6913279
+              "lat": 35.6537716,
+              "lon": 139.6913912
+            },
+            {
+              "lat": 35.6537814,
+              "lon": 139.6913918
+            },
+            {
+              "lat": 35.6537804,
+              "lon": 139.6914213
+            },
+            {
+              "lat": 35.6538012,
+              "lon": 139.6914224
+            },
+            {
+              "lat": 35.6538,
+              "lon": 139.6914559
+            },
+            {
+              "lat": 35.6537894,
+              "lon": 139.6914553
+            },
+            {
+              "lat": 35.6537891,
+              "lon": 139.6914654
+            },
+            {
+              "lat": 35.6537843,
+              "lon": 139.6914652
+            },
+            {
+              "lat": 35.6537839,
+              "lon": 139.6914742
+            },
+            {
+              "lat": 35.6537785,
+              "lon": 139.6914739
+            },
+            {
+              "lat": 35.6537779,
+              "lon": 139.6914932
+            },
+            {
+              "lat": 35.653768,
+              "lon": 139.6914927
+            },
+            {
+              "lat": 35.653767,
+              "lon": 139.6915209
+            },
+            {
+              "lat": 35.6537458,
+              "lon": 139.6915197
+            },
+            {
+              "lat": 35.653745,
+              "lon": 139.691543
+            },
+            {
+              "lat": 35.6536923,
+              "lon": 139.6915402
+            },
+            {
+              "lat": 35.6536903,
+              "lon": 139.6915972
+            },
+            {
+              "lat": 35.6536044,
+              "lon": 139.6915926
+            },
+            {
+              "lat": 35.6536125,
+              "lon": 139.6913613
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -41550,11 +42697,13 @@
           "bounds": {
             "minlat": 35.6536018,
             "minlon": 139.6916104,
-            "maxlat": 35.6537183,
-            "maxlon": 139.6917536
+            "maxlat": 35.6537733,
+            "maxlon": 139.6918159
           },
           "nodes": [
             1496020630,
+            14173647639,
+            14173647640,
             1496020596,
             1496020579,
             1496020573,
@@ -41563,12 +42712,20 @@
           ],
           "geometry": [
             {
-              "lat": 35.6537183,
-              "lon": 139.6916743
+              "lat": 35.6537035,
+              "lon": 139.6916503
             },
             {
-              "lat": 35.6536324,
-              "lon": 139.6917536
+              "lat": 35.6537319,
+              "lon": 139.6916221
+            },
+            {
+              "lat": 35.6537733,
+              "lon": 139.6916758
+            },
+            {
+              "lat": 35.6536349,
+              "lon": 139.6918159
             },
             {
               "lat": 35.6536037,
@@ -41583,8 +42740,8 @@
               "lon": 139.6916104
             },
             {
-              "lat": 35.6537183,
-              "lon": 139.6916743
+              "lat": 35.6537035,
+              "lon": 139.6916503
             }
           ],
           "tags": {
@@ -43547,43 +44704,42 @@
           "type": "way",
           "id": 136379441,
           "bounds": {
-            "minlat": 35.6544937,
-            "minlon": 139.6917163,
-            "maxlat": 35.6547062,
-            "maxlon": 139.6919178
+            "minlat": 35.6544829,
+            "minlon": 139.6917333,
+            "maxlat": 35.6545511,
+            "maxlon": 139.6918166
           },
           "nodes": [
-            1496039615,
-            1496039671,
             1496039662,
             1496039602,
-            1496039615
+            1496039615,
+            1496039671,
+            1496039662
           ],
           "geometry": [
             {
-              "lat": 35.6545282,
-              "lon": 139.6917163
+              "lat": 35.6545263,
+              "lon": 139.6918166
             },
             {
-              "lat": 35.6547062,
-              "lon": 139.6918463
+              "lat": 35.6544829,
+              "lon": 139.6917851
             },
             {
-              "lat": 35.6546717,
-              "lon": 139.6919178
+              "lat": 35.6545078,
+              "lon": 139.6917333
             },
             {
-              "lat": 35.6544937,
-              "lon": 139.6917878
+              "lat": 35.6545511,
+              "lon": 139.6917648
             },
             {
-              "lat": 35.6545282,
-              "lon": 139.6917163
+              "lat": 35.6545263,
+              "lon": 139.6918166
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -43635,11 +44791,13 @@
           "bounds": {
             "minlat": 35.6545408,
             "minlon": 139.6916215,
-            "maxlat": 35.6549027,
-            "maxlon": 139.6919282
+            "maxlat": 35.6547959,
+            "maxlon": 139.6918249
           },
           "nodes": [
             1496039701,
+            14173647638,
+            14173647637,
             1496039695,
             1496039620,
             1496039628,
@@ -43647,12 +44805,20 @@
           ],
           "geometry": [
             {
-              "lat": 35.6549027,
-              "lon": 139.6917069
+              "lat": 35.6547959,
+              "lon": 139.6916774
             },
             {
-              "lat": 35.6548349,
-              "lon": 139.6919282
+              "lat": 35.6547742,
+              "lon": 139.6917649
+            },
+            {
+              "lat": 35.6547268,
+              "lon": 139.6917596
+            },
+            {
+              "lat": 35.6546949,
+              "lon": 139.6918249
             },
             {
               "lat": 35.6545408,
@@ -43663,14 +44829,13 @@
               "lon": 139.6916215
             },
             {
-              "lat": 35.6549027,
-              "lon": 139.6917069
+              "lat": 35.6547959,
+              "lon": 139.6916774
             }
           ],
           "tags": {
             "amenity": "parking",
-            "parking": "surface",
-            "source": "Bing,2007-04"
+            "parking": "surface"
           }
         },
         {
@@ -66467,10 +67632,10 @@
           "type": "way",
           "id": 136427254,
           "bounds": {
-            "minlat": 35.6569932,
-            "minlon": 139.6921927,
-            "maxlat": 35.6571392,
-            "maxlon": 139.692307
+            "minlat": 35.6569416,
+            "minlon": 139.6919185,
+            "maxlat": 35.6570536,
+            "maxlon": 139.6920284
           },
           "nodes": [
             1496471100,
@@ -66481,29 +67646,28 @@
           ],
           "geometry": [
             {
-              "lat": 35.6571226,
-              "lon": 139.6921927
+              "lat": 35.6570325,
+              "lon": 139.6919185
             },
             {
-              "lat": 35.6571392,
-              "lon": 139.6922507
+              "lat": 35.6570536,
+              "lon": 139.6919841
             },
             {
-              "lat": 35.6570098,
-              "lon": 139.692307
+              "lat": 35.6569626,
+              "lon": 139.6920284
             },
             {
-              "lat": 35.6569932,
-              "lon": 139.692249
+              "lat": 35.6569416,
+              "lon": 139.6919627
             },
             {
-              "lat": 35.6571226,
-              "lon": 139.6921927
+              "lat": 35.6570325,
+              "lon": 139.6919185
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -68094,113 +69258,52 @@
           "type": "way",
           "id": 136467355,
           "bounds": {
-            "minlat": 35.6574745,
-            "minlon": 139.692163,
-            "maxlat": 35.6576828,
-            "maxlon": 139.692338
+            "minlat": 35.6576139,
+            "minlon": 139.6922253,
+            "maxlat": 35.6576902,
+            "maxlon": 139.6923207
           },
           "nodes": [
-            1496842296,
-            1496842294,
-            1496842322,
-            1496842338,
             1496842343,
             1496842354,
             1496842317,
-            1496842307,
-            1496842298,
-            1496842287,
-            1496842282,
-            1496842286,
-            1496842272,
-            1496842266,
-            1496842278,
-            1496842279,
-            1496842284,
-            1496842289,
-            1496842296
+            1496842338,
+            1496842322,
+            1496842294,
+            1496842343
           ],
           "geometry": [
             {
-              "lat": 35.6575667,
-              "lon": 139.692213
+              "lat": 35.6576605,
+              "lon": 139.6922253
             },
             {
-              "lat": 35.6575617,
-              "lon": 139.6922012
+              "lat": 35.6576902,
+              "lon": 139.6922974
             },
             {
-              "lat": 35.6576206,
-              "lon": 139.692163
+              "lat": 35.6576527,
+              "lon": 139.6923207
             },
             {
-              "lat": 35.6576553,
-              "lon": 139.6922441
+              "lat": 35.6576296,
+              "lon": 139.6922647
             },
             {
-              "lat": 35.6576607,
-              "lon": 139.6922406
+              "lat": 35.6576205,
+              "lon": 139.6922704
             },
             {
-              "lat": 35.6576828,
-              "lon": 139.6922923
+              "lat": 35.6576139,
+              "lon": 139.6922543
             },
             {
-              "lat": 35.6576123,
-              "lon": 139.692338
-            },
-            {
-              "lat": 35.6575943,
-              "lon": 139.692296
-            },
-            {
-              "lat": 35.6575712,
-              "lon": 139.6923109
-            },
-            {
-              "lat": 35.6575429,
-              "lon": 139.6922447
-            },
-            {
-              "lat": 35.6575308,
-              "lon": 139.6922525
-            },
-            {
-              "lat": 35.65754,
-              "lon": 139.6922741
-            },
-            {
-              "lat": 35.6574999,
-              "lon": 139.6923001
-            },
-            {
-              "lat": 35.6574745,
-              "lon": 139.6922407
-            },
-            {
-              "lat": 35.6575146,
-              "lon": 139.6922147
-            },
-            {
-              "lat": 35.6575163,
-              "lon": 139.6922188
-            },
-            {
-              "lat": 35.6575365,
-              "lon": 139.6922057
-            },
-            {
-              "lat": 35.6575456,
-              "lon": 139.6922267
-            },
-            {
-              "lat": 35.6575667,
-              "lon": 139.692213
+              "lat": 35.6576605,
+              "lon": 139.6922253
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -69279,10 +70382,10 @@
           "type": "way",
           "id": 136467380,
           "bounds": {
-            "minlat": 35.6576589,
-            "minlon": 139.6921042,
-            "maxlat": 35.6577722,
-            "maxlon": 139.6922654
+            "minlat": 35.657648,
+            "minlon": 139.6921015,
+            "maxlat": 35.6577613,
+            "maxlon": 139.6922627
           },
           "nodes": [
             1496842368,
@@ -69293,24 +70396,24 @@
           ],
           "geometry": [
             {
-              "lat": 35.6577202,
-              "lon": 139.6921042
+              "lat": 35.6577093,
+              "lon": 139.6921015
             },
             {
-              "lat": 35.6577722,
-              "lon": 139.6922257
+              "lat": 35.6577613,
+              "lon": 139.692223
             },
             {
-              "lat": 35.6577109,
-              "lon": 139.6922654
+              "lat": 35.6577,
+              "lon": 139.6922627
             },
             {
-              "lat": 35.6576589,
-              "lon": 139.6921439
+              "lat": 35.657648,
+              "lon": 139.6921412
             },
             {
-              "lat": 35.6577202,
-              "lon": 139.6921042
+              "lat": 35.6577093,
+              "lon": 139.6921015
             }
           ],
           "tags": {
@@ -69795,10 +70898,10 @@
           "type": "way",
           "id": 136467391,
           "bounds": {
-            "minlat": 35.6576905,
-            "minlon": 139.6922552,
-            "maxlat": 35.6578129,
-            "maxlon": 139.6923972
+            "minlat": 35.6576587,
+            "minlon": 139.6922512,
+            "maxlat": 35.6578167,
+            "maxlon": 139.6924121
           },
           "nodes": [
             1496842387,
@@ -69809,29 +70912,28 @@
           ],
           "geometry": [
             {
-              "lat": 35.6577759,
-              "lon": 139.6922552
+              "lat": 35.657782,
+              "lon": 139.6922512
             },
             {
-              "lat": 35.6578129,
-              "lon": 139.6923418
+              "lat": 35.6578167,
+              "lon": 139.6923321
             },
             {
-              "lat": 35.6577275,
-              "lon": 139.6923972
+              "lat": 35.6576933,
+              "lon": 139.6924121
             },
             {
-              "lat": 35.6576905,
-              "lon": 139.6923106
+              "lat": 35.6576587,
+              "lon": 139.6923312
             },
             {
-              "lat": 35.6577759,
-              "lon": 139.6922552
+              "lat": 35.657782,
+              "lon": 139.6922512
             }
           ],
           "tags": {
-            "building": "yes",
-            "source": "Bing,2007-04"
+            "building": "yes"
           }
         },
         {
@@ -94206,6 +95308,204 @@
         },
         {
           "type": "way",
+          "id": 136690954,
+          "bounds": {
+            "minlat": 35.6599154,
+            "minlon": 139.6994199,
+            "maxlat": 35.660073,
+            "maxlon": 139.6995315
+          },
+          "nodes": [
+            1499530715,
+            1499530710,
+            1499530640,
+            1499530645,
+            1499530715
+          ],
+          "geometry": [
+            {
+              "lat": 35.660073,
+              "lon": 139.6994575
+            },
+            {
+              "lat": 35.6600604,
+              "lon": 139.6995315
+            },
+            {
+              "lat": 35.6599154,
+              "lon": 139.699494
+            },
+            {
+              "lat": 35.6599281,
+              "lon": 139.6994199
+            },
+            {
+              "lat": 35.660073,
+              "lon": 139.6994575
+            }
+          ],
+          "tags": {
+            "building": "yes",
+            "building:levels": "4",
+            "building:material": "glass",
+            "ele": "15.9",
+            "height": "18.9",
+            "source": "Bing,2007-04"
+          }
+        },
+        {
+          "type": "way",
+          "id": 136690959,
+          "bounds": {
+            "minlat": 35.6601425,
+            "minlon": 139.6987494,
+            "maxlat": 35.6602711,
+            "maxlon": 139.6989172
+          },
+          "nodes": [
+            1499530756,
+            1499530747,
+            12332999970,
+            12332999969,
+            1499530720,
+            1499530744,
+            1499530756
+          ],
+          "geometry": [
+            {
+              "lat": 35.6602711,
+              "lon": 139.6988166
+            },
+            {
+              "lat": 35.6602339,
+              "lon": 139.6989172
+            },
+            {
+              "lat": 35.6601457,
+              "lon": 139.6988678
+            },
+            {
+              "lat": 35.6601745,
+              "lon": 139.6987899
+            },
+            {
+              "lat": 35.6601425,
+              "lon": 139.698772
+            },
+            {
+              "lat": 35.6601509,
+              "lon": 139.6987494
+            },
+            {
+              "lat": 35.6602711,
+              "lon": 139.6988166
+            }
+          ],
+          "tags": {
+            "addr:block_number": "26",
+            "addr:housenumber": "9",
+            "building": "yes",
+            "building:levels": "6",
+            "ele": "15.7",
+            "height": "17.3",
+            "name": "太田ビルディング",
+            "source": "Bing,2007-04"
+          }
+        },
+        {
+          "type": "way",
+          "id": 136690961,
+          "bounds": {
+            "minlat": 35.6599253,
+            "minlon": 139.6987438,
+            "maxlat": 35.6600807,
+            "maxlon": 139.6988855
+          },
+          "nodes": [
+            1499530723,
+            1499530704,
+            1499530643,
+            1499530650,
+            1499530723
+          ],
+          "geometry": [
+            {
+              "lat": 35.6600807,
+              "lon": 139.6988189
+            },
+            {
+              "lat": 35.6600553,
+              "lon": 139.6988855
+            },
+            {
+              "lat": 35.6599253,
+              "lon": 139.6988104
+            },
+            {
+              "lat": 35.6599507,
+              "lon": 139.6987438
+            },
+            {
+              "lat": 35.6600807,
+              "lon": 139.6988189
+            }
+          ],
+          "tags": {
+            "building": "yes",
+            "building:levels": "6",
+            "ele": "16.2",
+            "height": "20.7",
+            "source": "Bing,2007-04"
+          }
+        },
+        {
+          "type": "way",
+          "id": 136690963,
+          "bounds": {
+            "minlat": 35.6599859,
+            "minlon": 139.6995586,
+            "maxlat": 35.6600545,
+            "maxlon": 139.6996072
+          },
+          "nodes": [
+            1499530698,
+            1499530667,
+            1499530676,
+            1499530703,
+            1499530698
+          ],
+          "geometry": [
+            {
+              "lat": 35.660049,
+              "lon": 139.6996072
+            },
+            {
+              "lat": 35.6599859,
+              "lon": 139.6995909
+            },
+            {
+              "lat": 35.6599914,
+              "lon": 139.6995586
+            },
+            {
+              "lat": 35.6600545,
+              "lon": 139.6995749
+            },
+            {
+              "lat": 35.660049,
+              "lon": 139.6996072
+            }
+          ],
+          "tags": {
+            "building": "retail",
+            "building:levels": "4",
+            "craft": "electronics_repair",
+            "electronics_repair": "phone",
+            "source": "Bing,2007-04"
+          }
+        },
+        {
+          "type": "way",
           "id": 136730009,
           "bounds": {
             "minlat": 35.6607393,
@@ -109264,54 +110564,6 @@
             "admin_level": "7",
             "boundary": "administrative",
             "source": "KSJ2/N03"
-          }
-        },
-        {
-          "type": "way",
-          "id": 740993331,
-          "bounds": {
-            "minlat": 35.6616674,
-            "minlon": 139.7028819,
-            "maxlat": 35.6620531,
-            "maxlon": 139.7033994
-          },
-          "nodes": [
-            6937408602,
-            6937408603,
-            6937408604,
-            6937408605,
-            6937408602
-          ],
-          "geometry": [
-            {
-              "lat": 35.6620531,
-              "lon": 139.7030132
-            },
-            {
-              "lat": 35.6617993,
-              "lon": 139.7028819
-            },
-            {
-              "lat": 35.6616674,
-              "lon": 139.7032681
-            },
-            {
-              "lat": 35.6619212,
-              "lon": 139.7033994
-            },
-            {
-              "lat": 35.6620531,
-              "lon": 139.7030132
-            }
-          ],
-          "tags": {
-            "leisure": "park",
-            "name": "美竹公園",
-            "name:en": "Mitake Park",
-            "name:es": "Parque Mitake",
-            "name:ja": "美竹公園",
-            "source": "survey",
-            "wikidata": "Q42312074"
           }
         },
         {
@@ -135010,12 +136262,78 @@
             "wikidata": "Q11561721",
             "wikipedia": "ja:渋谷川"
           }
+        },
+        {
+          "type": "way",
+          "id": 1558469714,
+          "bounds": {
+            "minlat": 35.6613057,
+            "minlon": 139.7029149,
+            "maxlat": 35.6624264,
+            "maxlon": 139.7046697
+          },
+          "nodes": [
+            14177332310,
+            14177332311,
+            14177332312,
+            14177332316,
+            14177332313,
+            14177332317,
+            14177332314,
+            14177332315,
+            14177332310
+          ],
+          "geometry": [
+            {
+              "lat": 35.6613057,
+              "lon": 139.7043906
+            },
+            {
+              "lat": 35.6618079,
+              "lon": 139.7029149
+            },
+            {
+              "lat": 35.6624264,
+              "lon": 139.7032683
+            },
+            {
+              "lat": 35.6621859,
+              "lon": 139.7040745
+            },
+            {
+              "lat": 35.662093,
+              "lon": 139.7040232
+            },
+            {
+              "lat": 35.6619871,
+              "lon": 139.7043212
+            },
+            {
+              "lat": 35.6616404,
+              "lon": 139.7041758
+            },
+            {
+              "lat": 35.6615004,
+              "lon": 139.7046697
+            },
+            {
+              "lat": 35.6613057,
+              "lon": 139.7043906
+            }
+          ],
+          "tags": {
+            "landuse": "construction",
+            "name": "MITAKE Link Park",
+            "opening_date": "2027-06-30",
+            "operator": "清水建設",
+            "website": "https://www.city.shibuya.tokyo.jp/shisetsu/koen/kuritsu-koen/mitake-saiseibi.html"
+          }
         }
       ],
-      "generator": "Overpass API 0.7.62.11 87bfad18",
+      "generator": "Overpass API 0.7.62.4 2390de5a",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-08-31T13:27:36Z"
+        "timestamp_osm_base": "2026-10-01T13:53:11Z"
       },
       "version": 0.6
     },
@@ -137756,6 +139074,7 @@
             "highway": "unclassified",
             "lit": "yes",
             "name": "夢二通り",
+            "official_name": "特別区道第412号路線",
             "oneway": "yes",
             "surface": "asphalt"
           }
@@ -137826,6 +139145,10 @@
             "highway": "unclassified",
             "name": "渋谷中央通り",
             "name:en": "Shibuya Chuo-dori Street",
+            "name:es": "Calle Central de Shibuya",
+            "name:ja": "渋谷中央通り",
+            "name:ja-Hira": "しぶやちゅうおうどおり",
+            "name:ja-Latn": "Shibuya Chūō-gai",
             "sidewalk": "both",
             "source": "bing",
             "surface": "paved"
@@ -137858,6 +139181,10 @@
             "highway": "unclassified",
             "name": "渋谷中央通り",
             "name:en": "Shibuya Chuo-dori Street",
+            "name:es": "Calle Central de Shibuya",
+            "name:ja": "渋谷中央通り",
+            "name:ja-Hira": "しぶやちゅうおうどおり",
+            "name:ja-Latn": "Shibuya Chūō-gai",
             "oneway": "yes",
             "sidewalk": "both",
             "source": "bing",
@@ -142258,6 +143585,7 @@
           "nodes": [
             556232885,
             556232859,
+            14222203357,
             556232877
           ],
           "geometry": [
@@ -142268,6 +143596,10 @@
             {
               "lat": 35.6608309,
               "lon": 139.6873555
+            },
+            {
+              "lat": 35.6607549,
+              "lon": 139.6876688
             },
             {
               "lat": 35.6606502,
@@ -142696,8 +144028,11 @@
             "lane_markings": "no",
             "lit": "yes",
             "name": "宇田川通り",
-            "name:en": "Bunkamura Street. (Orchard Road)",
+            "name:en": "Udagawa-dori Street",
+            "name:ja": "宇田川通り",
+            "name:ja-Hira": "うだがわどおり",
             "name:ja-Latn": "Bunkamura‑dōri",
+            "official_name": "特別区道第890号路線",
             "oneway": "yes",
             "sidewalk": "right",
             "source": "Bing,2007-04",
@@ -143457,7 +144792,6 @@
             "lit": "yes",
             "maxheight": "default",
             "maxheight:signed": "no",
-            "name": "松涛文化村ストリート",
             "surface": "asphalt"
           }
         },
@@ -143811,6 +145145,7 @@
             "maxspeed": "30",
             "name": "オーチャードロード",
             "name:en": "Orchard Road",
+            "name:ja": "オーチャードロード",
             "oneway": "yes",
             "surface": "asphalt"
           }
@@ -144248,14 +145583,10 @@
           "bounds": {
             "minlat": 35.6595537,
             "minlon": 139.6997166,
-            "maxlat": 35.6605612,
-            "maxlon": 139.700011
+            "maxlat": 35.6600694,
+            "maxlon": 139.6997874
           },
           "nodes": [
-            614607906,
-            2268223553,
-            13038529016,
-            13782042833,
             13782042830,
             3572902296,
             3608568748,
@@ -144264,22 +145595,6 @@
             1014529169
           ],
           "geometry": [
-            {
-              "lat": 35.6605612,
-              "lon": 139.700011
-            },
-            {
-              "lat": 35.6605086,
-              "lon": 139.6999863
-            },
-            {
-              "lat": 35.6602322,
-              "lon": 139.6998591
-            },
-            {
-              "lat": 35.6601722,
-              "lon": 139.6998309
-            },
             {
               "lat": 35.6600694,
               "lon": 139.6997874
@@ -144311,6 +145626,7 @@
             "lanes": "1",
             "lit": "yes",
             "motor_vehicle:conditional": "no @ (00:00-05:00,15:00-24:00; Su,PH: 00:00-05:00,12:00-24:00)",
+            "official_name": "特別区道第991号路線",
             "oneway": "yes",
             "surface": "paving_stones"
           }
@@ -144443,6 +145759,7 @@
             "name": "渋谷センター街",
             "name:en": "Shibuya Center-gai Street",
             "name:ja": "渋谷センター街",
+            "official_name": "特別区道第982号路線",
             "oneway": "yes",
             "surface": "asphalt",
             "wikidata": "Q5059296",
@@ -145287,8 +146604,8 @@
           "bounds": {
             "minlat": 35.6571868,
             "minlon": 139.6876976,
-            "maxlat": 35.657828,
-            "maxlon": 139.6904162
+            "maxlat": 35.6576625,
+            "maxlon": 139.6901564
           },
           "nodes": [
             381122946,
@@ -145305,8 +146622,7 @@
             381111841,
             381111845,
             1472171353,
-            381111847,
-            381111850
+            381111847
           ],
           "geometry": [
             {
@@ -145368,10 +146684,6 @@
             {
               "lat": 35.6576625,
               "lon": 139.6901564
-            },
-            {
-              "lat": 35.657828,
-              "lon": 139.6904162
             }
           ],
           "tags": {
@@ -147461,8 +148773,8 @@
           "type": "way",
           "id": 58982800,
           "bounds": {
-            "minlat": 35.6565628,
-            "minlon": 139.6960264,
+            "minlat": 35.6570943,
+            "minlon": 139.6965539,
             "maxlat": 35.657794,
             "maxlon": 139.6983043
           },
@@ -147475,9 +148787,7 @@
             1014530026,
             730918424,
             5925771446,
-            730918436,
-            5925771448,
-            730918438
+            730918436
           ],
           "geometry": [
             {
@@ -147515,21 +148825,11 @@
             {
               "lat": 35.6570943,
               "lon": 139.6965539
-            },
-            {
-              "lat": 35.6570582,
-              "lon": 139.6965024
-            },
-            {
-              "lat": 35.6565628,
-              "lon": 139.6960264
             }
           ],
           "tags": {
             "highway": "unclassified",
             "lanes": "2",
-            "name": "ウェーヴ通り",
-            "name:en": "Wave-dori Street",
             "oneway": "yes",
             "sidewalk": "both",
             "source": "Bing,2007-04",
@@ -149043,16 +150343,15 @@
           "bounds": {
             "minlat": 35.6566956,
             "minlon": 139.6969684,
-            "maxlat": 35.6572137,
-            "maxlon": 139.6985824
+            "maxlat": 35.6571073,
+            "maxlon": 139.6982489
           },
           "nodes": [
             381044679,
             5925771445,
             1354438491,
             686510431,
-            686510430,
-            762229249
+            686510430
           ],
           "geometry": [
             {
@@ -149074,16 +150373,10 @@
             {
               "lat": 35.6571073,
               "lon": 139.6982489
-            },
-            {
-              "lat": 35.6572137,
-              "lon": 139.6985824
             }
           ],
           "tags": {
             "highway": "unclassified",
-            "name": "渋谷中央通り",
-            "name:en": "Shibuya Chuo-dori Street",
             "oneway": "yes",
             "source": "bing",
             "surface": "paved"
@@ -151506,6 +152799,7 @@
             "name": "ウェーヴ通り",
             "name:en": "Wave-dori Street",
             "name:es": "Calle Wave",
+            "name:ja": "ウェーヴ通り",
             "oneway": "yes",
             "source": "bing",
             "surface": "paving_stones"
@@ -152110,13 +153404,11 @@
           "id": 93868050,
           "bounds": {
             "minlat": 35.6658475,
-            "minlon": 139.6908083,
-            "maxlat": 35.6675345,
+            "minlon": 139.6909813,
+            "maxlat": 35.6673432,
             "maxlon": 139.6922517
           },
           "nodes": [
-            353653627,
-            2637894198,
             353653651,
             353653653,
             353653654,
@@ -152127,14 +153419,6 @@
             1517318790
           ],
           "geometry": [
-            {
-              "lat": 35.6675345,
-              "lon": 139.6908083
-            },
-            {
-              "lat": 35.6674523,
-              "lon": 139.6908827
-            },
             {
               "lat": 35.6673432,
               "lon": 139.6909813
@@ -152381,12 +153665,12 @@
           "bounds": {
             "minlat": 35.6603263,
             "minlon": 139.6974764,
-            "maxlat": 35.6610264,
-            "maxlon": 139.6979516
+            "maxlat": 35.6610199,
+            "maxlon": 139.6979704
           },
           "nodes": [
             614613004,
-            6219729324,
+            14201840677,
             1108870925,
             13782042827,
             3608568769,
@@ -152394,12 +153678,12 @@
           ],
           "geometry": [
             {
-              "lat": 35.6610264,
-              "lon": 139.6979516
+              "lat": 35.6610199,
+              "lon": 139.6979704
             },
             {
-              "lat": 35.6610003,
-              "lon": 139.6979347
+              "lat": 35.6609944,
+              "lon": 139.6979523
             },
             {
               "lat": 35.6607412,
@@ -162955,6 +164239,7 @@
             "name": "宇田川通り",
             "name:en": "Orchard Road",
             "name:ja-Latn": "Bunkamura‑dōri",
+            "official_name": "特別区道第890号路線",
             "oneway": "yes"
           }
         },
@@ -163583,8 +164868,8 @@
           "id": 202129903,
           "bounds": {
             "minlat": 35.6604356,
-            "minlon": 139.6955906,
-            "maxlat": 35.6634794,
+            "minlon": 139.6977258,
+            "maxlat": 35.6617607,
             "maxlon": 139.7008224
           },
           "nodes": [
@@ -163603,27 +164888,15 @@
             353659883,
             1014529124,
             614612844,
-            13782042815,
+            14201840675,
             2207504009,
+            14201840678,
             614612858,
             6219729379,
             353660172,
             353660173,
             6219729387,
-            353661237,
-            353660174,
-            597715183,
-            11932522322,
-            250652233,
-            11932522324,
-            508448391,
-            1517481739,
-            1014530043,
-            2866947417,
-            13903743455,
-            508449297,
-            9790667172,
-            6227331934
+            353661237
           ],
           "geometry": [
             {
@@ -163687,12 +164960,16 @@
               "lon": 139.6984352
             },
             {
-              "lat": 35.6609607,
-              "lon": 139.6983598
+              "lat": 35.6609457,
+              "lon": 139.6983793
             },
             {
               "lat": 35.660976,
               "lon": 139.6983405
+            },
+            {
+              "lat": 35.6611064,
+              "lon": 139.6982157
             },
             {
               "lat": 35.6611749,
@@ -163717,58 +164994,6 @@
             {
               "lat": 35.6617607,
               "lon": 139.6977258
-            },
-            {
-              "lat": 35.6618828,
-              "lon": 139.6976405
-            },
-            {
-              "lat": 35.6620392,
-              "lon": 139.6975118
-            },
-            {
-              "lat": 35.6621303,
-              "lon": 139.6973995
-            },
-            {
-              "lat": 35.6621911,
-              "lon": 139.6973246
-            },
-            {
-              "lat": 35.6622127,
-              "lon": 139.6972799
-            },
-            {
-              "lat": 35.6622959,
-              "lon": 139.6971076
-            },
-            {
-              "lat": 35.6623757,
-              "lon": 139.6969424
-            },
-            {
-              "lat": 35.6624293,
-              "lon": 139.6968431
-            },
-            {
-              "lat": 35.6624823,
-              "lon": 139.6967787
-            },
-            {
-              "lat": 35.6630832,
-              "lon": 139.6960491
-            },
-            {
-              "lat": 35.6631762,
-              "lon": 139.6959362
-            },
-            {
-              "lat": 35.6634519,
-              "lon": 139.695622
-            },
-            {
-              "lat": 35.6634794,
-              "lon": 139.6955906
             }
           ],
           "tags": {
@@ -165416,6 +166641,7 @@
             "highway": "tertiary",
             "name": "オーチャードロード",
             "name:en": "Orchard Road",
+            "name:ja": "オーチャードロード",
             "oneway": "no",
             "surface": "asphalt"
           }
@@ -166464,7 +167690,7 @@
             13782042822,
             13782042817,
             6219729323,
-            6219729324,
+            14201840677,
             6219729332
           ],
           "geometry": [
@@ -166481,8 +167707,8 @@
               "lon": 139.6982873
             },
             {
-              "lat": 35.6610003,
-              "lon": 139.6979347
+              "lat": 35.6609944,
+              "lon": 139.6979523
             },
             {
               "lat": 35.6610075,
@@ -170115,10 +171341,10 @@
           "type": "way",
           "id": 296689656,
           "bounds": {
-            "minlat": 35.6610264,
+            "minlat": 35.6610199,
             "minlon": 139.6974835,
             "maxlat": 35.6611981,
-            "maxlon": 139.6979516
+            "maxlon": 139.6979704
           },
           "nodes": [
             614612983,
@@ -170140,15 +171366,18 @@
               "lon": 139.6979297
             },
             {
-              "lat": 35.6610264,
-              "lon": 139.6979516
+              "lat": 35.6610199,
+              "lon": 139.6979704
             }
           ],
           "tags": {
             "highway": "unclassified",
             "lit": "yes",
             "name": "宇田川通り",
-            "name:en": "Utagawa-dori Street",
+            "name:en": "Udagawa-dori Street",
+            "name:ja": "宇田川通り",
+            "name:ja-Hira": "うだがわどおり",
+            "official_name": "特別区道第981号路線",
             "oneway": "yes"
           }
         },
@@ -174973,6 +176202,7 @@
           ],
           "tags": {
             "highway": "service",
+            "name": "メトロ通り",
             "oneway": "yes",
             "service": "alley",
             "source": "Bing",
@@ -178122,6 +179352,7 @@
             "motor_vehicle:conditional": "no @ (00:00-05:00,15:00-24:00; Su,PH: 00:00-05:00,12:00-24:00)",
             "name": "渋谷センター街",
             "name:en": "Shibuya Center-gai Street",
+            "official_name": "特別区道第992号路線",
             "oneway": "yes",
             "surface": "paving_stones",
             "wikidata": "Q5059296",
@@ -185281,8 +186512,8 @@
           "bounds": {
             "minlat": 35.6610075,
             "minlon": 139.6979131,
-            "maxlat": 35.6610633,
-            "maxlon": 139.6979475
+            "maxlat": 35.6610535,
+            "maxlon": 139.6979408
           },
           "nodes": [
             6219729332,
@@ -185299,8 +186530,8 @@
               "lon": 139.6979297
             },
             {
-              "lat": 35.6610633,
-              "lon": 139.6979475
+              "lat": 35.6610535,
+              "lon": 139.6979408
             }
           ],
           "tags": {
@@ -189363,55 +190594,6 @@
         },
         {
           "type": "way",
-          "id": 731814367,
-          "bounds": {
-            "minlat": 35.6609322,
-            "minlon": 139.6979516,
-            "maxlat": 35.6610264,
-            "maxlon": 139.6983598
-          },
-          "nodes": [
-            13782042815,
-            13782042816,
-            13782042820,
-            1499449568,
-            614613004
-          ],
-          "geometry": [
-            {
-              "lat": 35.6609607,
-              "lon": 139.6983598
-            },
-            {
-              "lat": 35.6609378,
-              "lon": 139.6983009
-            },
-            {
-              "lat": 35.6609322,
-              "lon": 139.6982666
-            },
-            {
-              "lat": 35.6609322,
-              "lon": 139.6982401
-            },
-            {
-              "lat": 35.6610264,
-              "lon": 139.6979516
-            }
-          ],
-          "tags": {
-            "highway": "residential",
-            "lane_markings": "no",
-            "lit": "yes",
-            "name": "宇田川通り",
-            "name:en": "Utagawa-dori Street",
-            "oneway": "yes",
-            "oneway:bicycle": "no",
-            "surface": "asphalt"
-          }
-        },
-        {
-          "type": "way",
           "id": 731814368,
           "bounds": {
             "minlat": 35.6611981,
@@ -189443,7 +190625,10 @@
             "lane_markings": "no",
             "lit": "yes",
             "name": "宇田川通り",
-            "name:en": "Utagawa-dori Street",
+            "name:en": "Udagawa-dori Street",
+            "name:ja": "宇田川通り",
+            "name:ja-Hira": "うだがわどおり",
+            "official_name": "特別区道第981号路線",
             "oneway": "yes",
             "source": "Bing,2007-04",
             "surface": "asphalt"
@@ -193333,6 +194518,7 @@
           "tags": {
             "highway": "unclassified",
             "motor_vehicle:conditional": "no @ (17:00-05:00; Su: 12:00-05:00)",
+            "name": "希望通り",
             "oneway": "yes",
             "source": "bing",
             "surface": "paved"
@@ -193659,6 +194845,10 @@
             "motor_vehicle:conditional": "no @ (17:00-05:00; Su: 12:00-05:00)",
             "name": "渋谷中央通り",
             "name:en": "Shibuya Chuo-dori Street",
+            "name:es": "Calle Central de Shibuya",
+            "name:ja": "渋谷中央通り",
+            "name:ja-Hira": "しぶやちゅうおうどおり",
+            "name:ja-Latn": "Shibuya Chūō-gai",
             "oneway": "yes",
             "sidewalk": "both",
             "source": "bing",
@@ -194720,23 +195910,18 @@
           "id": 904652300,
           "bounds": {
             "minlat": 35.6589149,
-            "minlon": 139.7014353,
-            "maxlat": 35.659052,
+            "minlon": 139.7014438,
+            "maxlat": 35.659055,
             "maxlon": 139.7014782
           },
           "nodes": [
             8401492096,
-            8401471651,
             8401492095
           ],
           "geometry": [
             {
-              "lat": 35.659052,
-              "lon": 139.7014353
-            },
-            {
-              "lat": 35.6589759,
-              "lon": 139.7014591
+              "lat": 35.659055,
+              "lon": 139.7014438
             },
             {
               "lat": 35.6589149,
@@ -194755,13 +195940,12 @@
           "id": 904652301,
           "bounds": {
             "minlat": 35.6589163,
-            "minlon": 139.701446,
-            "maxlat": 35.659055,
+            "minlon": 139.7014578,
+            "maxlat": 35.6590566,
             "maxlon": 139.7014916
           },
           "nodes": [
             8401492098,
-            8401471650,
             8401492097
           ],
           "geometry": [
@@ -194770,12 +195954,8 @@
               "lon": 139.7014916
             },
             {
-              "lat": 35.6589781,
-              "lon": 139.7014713
-            },
-            {
-              "lat": 35.659055,
-              "lon": 139.701446
+              "lat": 35.6590566,
+              "lon": 139.7014578
             }
           ],
           "tags": {
@@ -194858,28 +196038,23 @@
           "type": "way",
           "id": 904652315,
           "bounds": {
-            "minlat": 35.6582287,
-            "minlon": 139.701484,
-            "maxlat": 35.6583778,
-            "maxlon": 139.7015503
+            "minlat": 35.6582413,
+            "minlon": 139.7015189,
+            "maxlat": 35.6583967,
+            "maxlon": 139.7015947
           },
           "nodes": [
             8401492116,
-            8401471669,
             8401492115
           ],
           "geometry": [
             {
-              "lat": 35.6582287,
-              "lon": 139.7015503
+              "lat": 35.6582413,
+              "lon": 139.7015947
             },
             {
-              "lat": 35.658318,
-              "lon": 139.7015099
-            },
-            {
-              "lat": 35.6583778,
-              "lon": 139.701484
+              "lat": 35.6583967,
+              "lon": 139.7015189
             }
           ],
           "tags": {
@@ -194964,28 +196139,23 @@
           "type": "way",
           "id": 904652338,
           "bounds": {
-            "minlat": 35.6582233,
-            "minlon": 139.7014633,
-            "maxlat": 35.6583732,
-            "maxlon": 139.7015322
+            "minlat": 35.6582319,
+            "minlon": 139.7014877,
+            "maxlat": 35.6583881,
+            "maxlon": 139.7015621
           },
           "nodes": [
             8401501118,
-            8401471670,
             8401501117
           ],
           "geometry": [
             {
-              "lat": 35.6583732,
-              "lon": 139.7014633
+              "lat": 35.6583881,
+              "lon": 139.7014877
             },
             {
-              "lat": 35.6583134,
-              "lon": 139.7014914
-            },
-            {
-              "lat": 35.6582233,
-              "lon": 139.7015322
+              "lat": 35.6582319,
+              "lon": 139.7015621
             }
           ],
           "tags": {
@@ -195945,8 +197115,9 @@
             }
           ],
           "tags": {
-            "conveying": "yes",
+            "conveying": "forward",
             "highway": "steps",
+            "incline": "up",
             "indoor": "yes",
             "level": "1;2"
           }
@@ -196221,8 +197392,8 @@
           "bounds": {
             "minlat": 35.6589069,
             "minlon": 139.699888,
-            "maxlat": 35.6589227,
-            "maxlon": 139.6999533
+            "maxlat": 35.6589258,
+            "maxlon": 139.6999661
           },
           "nodes": [
             8402189749,
@@ -196234,13 +197405,14 @@
               "lon": 139.699888
             },
             {
-              "lat": 35.6589227,
-              "lon": 139.6999533
+              "lat": 35.6589258,
+              "lon": 139.6999661
             }
           ],
           "tags": {
-            "conveying": "yes",
+            "conveying": "forward",
             "highway": "steps",
+            "incline": "down",
             "indoor": "yes",
             "level": "2;3"
           }
@@ -197401,10 +198573,10 @@
           "type": "way",
           "id": 906194276,
           "bounds": {
-            "minlat": 35.6580715,
+            "minlat": 35.6580718,
             "minlon": 139.7018333,
             "maxlat": 35.6581064,
-            "maxlon": 139.7018505
+            "maxlon": 139.7018514
           },
           "nodes": [
             8415239588,
@@ -197412,8 +198584,8 @@
           ],
           "geometry": [
             {
-              "lat": 35.6580715,
-              "lon": 139.7018505
+              "lat": 35.6580718,
+              "lon": 139.7018514
             },
             {
               "lat": 35.6581064,
@@ -197486,12 +198658,12 @@
               "lon": 139.7018687
             },
             {
-              "lat": 35.6580715,
-              "lon": 139.7018505
+              "lat": 35.6580718,
+              "lon": 139.7018514
             },
             {
-              "lat": 35.6579945,
-              "lon": 139.7016281
+              "lat": 35.6579962,
+              "lon": 139.7016342
             },
             {
               "lat": 35.6579811,
@@ -197515,8 +198687,8 @@
           "type": "way",
           "id": 906194282,
           "bounds": {
-            "minlat": 35.6581469,
-            "minlon": 139.7015518,
+            "minlat": 35.6581487,
+            "minlon": 139.7015573,
             "maxlat": 35.6584581,
             "maxlon": 139.7018257
           },
@@ -197555,8 +198727,8 @@
               "lon": 139.7017863
             },
             {
-              "lat": 35.6581469,
-              "lon": 139.7015518
+              "lat": 35.6581487,
+              "lon": 139.7015573
             }
           ],
           "tags": {
@@ -197891,31 +199063,26 @@
           "type": "way",
           "id": 906194297,
           "bounds": {
-            "minlat": 35.6584025,
-            "minlon": 139.7014494,
+            "minlat": 35.6584196,
+            "minlon": 139.7014821,
             "maxlat": 35.6585248,
             "maxlon": 139.7016628
           },
           "nodes": [
             8415239137,
             8401488491,
-            8415239140,
             8401484871,
             8415239139,
             8401484891
           ],
           "geometry": [
             {
-              "lat": 35.6584025,
-              "lon": 139.7014494
+              "lat": 35.6584196,
+              "lon": 139.7014821
             },
             {
-              "lat": 35.6584086,
-              "lon": 139.7014707
-            },
-            {
-              "lat": 35.6584576,
-              "lon": 139.70155
+              "lat": 35.6584424,
+              "lon": 139.7015156
             },
             {
               "lat": 35.6585148,
@@ -197940,10 +199107,10 @@
           "type": "way",
           "id": 906194298,
           "bounds": {
-            "minlat": 35.6583732,
+            "minlat": 35.6583881,
             "minlon": 139.7014367,
             "maxlat": 35.6584294,
-            "maxlon": 139.7014633
+            "maxlon": 139.7014877
           },
           "nodes": [
             8415239138,
@@ -197956,12 +199123,12 @@
               "lon": 139.7014367
             },
             {
-              "lat": 35.6584025,
-              "lon": 139.7014494
+              "lat": 35.6584196,
+              "lon": 139.7014821
             },
             {
-              "lat": 35.6583732,
-              "lon": 139.7014633
+              "lat": 35.6583881,
+              "lon": 139.7014877
             }
           ],
           "tags": {
@@ -197974,10 +199141,10 @@
           "type": "way",
           "id": 906194299,
           "bounds": {
-            "minlat": 35.6583778,
-            "minlon": 139.7014707,
-            "maxlat": 35.6584086,
-            "maxlon": 139.701484
+            "minlat": 35.6583967,
+            "minlon": 139.7015156,
+            "maxlat": 35.6584424,
+            "maxlon": 139.7015189
           },
           "nodes": [
             8401488491,
@@ -197985,12 +199152,12 @@
           ],
           "geometry": [
             {
-              "lat": 35.6584086,
-              "lon": 139.7014707
+              "lat": 35.6584424,
+              "lon": 139.7015156
             },
             {
-              "lat": 35.6583778,
-              "lon": 139.701484
+              "lat": 35.6583967,
+              "lon": 139.7015189
             }
           ],
           "tags": {
@@ -198106,6 +199273,7 @@
           ],
           "tags": {
             "alt_name": "道玄坂",
+            "cycleway:both": "no",
             "destination:backward": "道玄坂下",
             "destination:forward": "道玄坂上",
             "highway": "tertiary",
@@ -199492,6 +200660,7 @@
             "lit": "yes",
             "name": "オーチャードロード",
             "name:en": "Orchard Road",
+            "name:ja": "オーチャードロード",
             "oneway": "no",
             "surface": "asphalt"
           }
@@ -200012,8 +201181,6 @@
           "tags": {
             "highway": "unclassified",
             "lanes": "2",
-            "name": "ウェーヴ通り",
-            "name:en": "Wave-dori Street",
             "oneway": "no",
             "sidewalk": "both",
             "source": "Bing,2007-04",
@@ -202968,7 +204135,7 @@
             "maxlon": 139.7000524
           },
           "nodes": [
-            8415255153,
+            8402189748,
             3608572652,
             3608572653
           ],
@@ -211738,6 +212905,7 @@
           },
           "nodes": [
             2850364779,
+            14144424194,
             8007279053,
             8007394265
           ],
@@ -211745,6 +212913,10 @@
             {
               "lat": 35.6580452,
               "lon": 139.700332
+            },
+            {
+              "lat": 35.6580233,
+              "lon": 139.700269
             },
             {
               "lat": 35.6579635,
@@ -211760,6 +212932,10 @@
             "motor_vehicle:conditional": "no @ (17:00-05:00; Su: 12:00-05:00)",
             "name": "渋谷中央通り",
             "name:en": "Shibuya Chuo-dori Street",
+            "name:es": "Calle Central de Shibuya",
+            "name:ja": "渋谷中央通り",
+            "name:ja-Hira": "しぶやちゅうおうどおり",
+            "name:ja-Latn": "Shibuya Chūō-gai",
             "sidewalk": "both",
             "source": "bing"
           }
@@ -213220,6 +214396,7 @@
             "name": "渋谷センター街",
             "name:en": "Shibuya Center-gai Street",
             "name:ja": "渋谷センター街",
+            "official_name": "特別区道第983号路線",
             "oneway": "yes",
             "surface": "paving_stones",
             "wikidata": "Q5059296",
@@ -213480,21 +214657,16 @@
           "id": 1160235256,
           "bounds": {
             "minlat": 35.6588707,
-            "minlon": 139.6999533,
+            "minlon": 139.6999661,
             "maxlat": 35.6589258,
             "maxlon": 139.6999762
           },
           "nodes": [
             8402189748,
-            8415255153,
             8402189746,
             10790545689
           ],
           "geometry": [
-            {
-              "lat": 35.6589227,
-              "lon": 139.6999533
-            },
             {
               "lat": 35.6589258,
               "lon": 139.6999661
@@ -218211,10 +219383,10 @@
           "type": "way",
           "id": 1286507145,
           "bounds": {
-            "minlat": 35.6610633,
-            "minlon": 139.6979475,
+            "minlat": 35.6610496,
+            "minlon": 139.6979408,
             "maxlat": 35.661237,
-            "maxlon": 139.6980669
+            "maxlon": 139.698087
           },
           "nodes": [
             6219729382,
@@ -218225,16 +219397,16 @@
           ],
           "geometry": [
             {
-              "lat": 35.6610633,
-              "lon": 139.6979475
+              "lat": 35.6610535,
+              "lon": 139.6979408
             },
             {
-              "lat": 35.6610654,
-              "lon": 139.6979791
+              "lat": 35.6610496,
+              "lon": 139.6980113
             },
             {
-              "lat": 35.6611616,
-              "lon": 139.6980669
+              "lat": 35.6611469,
+              "lon": 139.698087
             },
             {
               "lat": 35.6612216,
@@ -221571,6 +222743,40 @@
         },
         {
           "type": "way",
+          "id": 1330873766,
+          "bounds": {
+            "minlat": 35.6573704,
+            "minlon": 139.7014552,
+            "maxlat": 35.6573983,
+            "maxlon": 139.7015613
+          },
+          "nodes": [
+            12314075768,
+            12314075771,
+            12291256955
+          ],
+          "geometry": [
+            {
+              "lat": 35.6573704,
+              "lon": 139.7014552
+            },
+            {
+              "lat": 35.6573844,
+              "lon": 139.7015224
+            },
+            {
+              "lat": 35.6573983,
+              "lon": 139.7015613
+            }
+          ],
+          "tags": {
+            "bridge": "yes",
+            "highway": "pedestrian",
+            "layer": "1"
+          }
+        },
+        {
+          "type": "way",
           "id": 1330873775,
           "bounds": {
             "minlat": 35.657308,
@@ -222426,19 +223632,180 @@
             "surface": "asphalt",
             "wikidata": "Q11372758"
           }
+        },
+        {
+          "type": "way",
+          "id": 1559825585,
+          "bounds": {
+            "minlat": 35.6673432,
+            "minlon": 139.6908083,
+            "maxlat": 35.6675345,
+            "maxlon": 139.6909813
+          },
+          "nodes": [
+            353653627,
+            2637894198,
+            353653651
+          ],
+          "geometry": [
+            {
+              "lat": 35.6675345,
+              "lon": 139.6908083
+            },
+            {
+              "lat": 35.6674523,
+              "lon": 139.6908827
+            },
+            {
+              "lat": 35.6673432,
+              "lon": 139.6909813
+            }
+          ],
+          "tags": {
+            "highway": "tertiary",
+            "maxspeed": "30",
+            "name": "富ヶ谷1丁目通り",
+            "oneway": "yes",
+            "surface": "asphalt"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1561126436,
+          "bounds": {
+            "minlat": 35.6621911,
+            "minlon": 139.6955906,
+            "maxlat": 35.6634794,
+            "maxlon": 139.6973246
+          },
+          "nodes": [
+            250652233,
+            11932522324,
+            508448391,
+            1517481739,
+            1014530043,
+            2866947417,
+            13903743455,
+            508449297,
+            9790667172,
+            6227331934
+          ],
+          "geometry": [
+            {
+              "lat": 35.6621911,
+              "lon": 139.6973246
+            },
+            {
+              "lat": 35.6622127,
+              "lon": 139.6972799
+            },
+            {
+              "lat": 35.6622959,
+              "lon": 139.6971076
+            },
+            {
+              "lat": 35.6623757,
+              "lon": 139.6969424
+            },
+            {
+              "lat": 35.6624293,
+              "lon": 139.6968431
+            },
+            {
+              "lat": 35.6624823,
+              "lon": 139.6967787
+            },
+            {
+              "lat": 35.6630832,
+              "lon": 139.6960491
+            },
+            {
+              "lat": 35.6631762,
+              "lon": 139.6959362
+            },
+            {
+              "lat": 35.6634519,
+              "lon": 139.695622
+            },
+            {
+              "lat": 35.6634794,
+              "lon": 139.6955906
+            }
+          ],
+          "tags": {
+            "highway": "tertiary",
+            "lane_markings": "no",
+            "lit": "yes",
+            "maxspeed": "30",
+            "name": "井ノ頭通り",
+            "name:en": "Inokashira-dori Street",
+            "oneway": "yes",
+            "sidewalk": "separate",
+            "surface": "asphalt"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1561126437,
+          "bounds": {
+            "minlat": 35.6617607,
+            "minlon": 139.6973246,
+            "maxlat": 35.6621911,
+            "maxlon": 139.6977258
+          },
+          "nodes": [
+            353661237,
+            353660174,
+            597715183,
+            11932522322,
+            250652233
+          ],
+          "geometry": [
+            {
+              "lat": 35.6617607,
+              "lon": 139.6977258
+            },
+            {
+              "lat": 35.6618828,
+              "lon": 139.6976405
+            },
+            {
+              "lat": 35.6620392,
+              "lon": 139.6975118
+            },
+            {
+              "lat": 35.6621303,
+              "lon": 139.6973995
+            },
+            {
+              "lat": 35.6621911,
+              "lon": 139.6973246
+            }
+          ],
+          "tags": {
+            "highway": "tertiary",
+            "lane_markings": "no",
+            "lit": "yes",
+            "maxspeed": "30",
+            "name": "井ノ頭通り",
+            "name:en": "Inokashira-dori Street",
+            "oneway": "yes",
+            "sidewalk": "separate",
+            "surface": "asphalt"
+          }
         }
       ],
       "generator": "Overpass API 0.7.62.4 2390de5a",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-08-31T13:28:36Z"
+        "timestamp_osm_base": "2026-10-01T13:55:13Z"
       },
       "version": 0.6
     }
   },
   "stats": {
     "bboxKm2": 2.540802887040508,
-    "featureElements": 2359,
-    "roadElements": 1849
+    "featureElements": 2445,
+    "roadElements": 1852
   }
 }

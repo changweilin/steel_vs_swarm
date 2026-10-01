@@ -20,21 +20,21 @@
     "minLng": 13.410347281442881,
     "maxLng": 13.426256434679527
   },
-  "capturedAt": "2026-09-01T16:39:01.771Z",
+  "capturedAt": "2026-10-01T13:33:50.722Z",
   "source": {
-    "features": "https://overpass-api.de/api/interpreter",
+    "features": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "roads": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "userAgent": "steel-vs-swarm-osm-fixture/1.0 (maintainer-updated regression data)"
   },
   "queries": {
     "features": {
-      "version": 6,
+      "version": 9,
       "quotas": {
         "nBld": 899,
         "nCover": 423,
         "nArea": 1269
       },
-      "text": "[out:json][timeout:15];(way[\"building\"](52.53388,13.41035,52.54270,13.42626);way[\"building:part\"](52.53388,13.41035,52.54270,13.42626);way[\"landuse\"](52.53388,13.41035,52.54270,13.42626);way[\"landcover\"](52.53388,13.41035,52.54270,13.42626);way[\"amenity\"](52.53388,13.41035,52.54270,13.42626);way[\"leisure\"](52.53388,13.41035,52.54270,13.42626);way[\"natural\"](52.53388,13.41035,52.54270,13.42626);way[\"healthcare\"](52.53388,13.41035,52.54270,13.42626);way[\"tourism\"](52.53388,13.41035,52.54270,13.42626);way[\"shop\"](52.53388,13.41035,52.54270,13.42626);way[\"office\"](52.53388,13.41035,52.54270,13.42626);way[\"craft\"](52.53388,13.41035,52.54270,13.42626);way[\"industrial\"](52.53388,13.41035,52.54270,13.42626);way[\"man_made\"](52.53388,13.41035,52.54270,13.42626);way[\"power\"](52.53388,13.41035,52.54270,13.42626);way[\"public_transport\"](52.53388,13.41035,52.54270,13.42626);way[\"railway\"](52.53388,13.41035,52.54270,13.42626);way[\"aeroway\"](52.53388,13.41035,52.54270,13.42626);way[\"military\"](52.53388,13.41035,52.54270,13.42626);way[\"historic\"](52.53388,13.41035,52.54270,13.42626);way[\"sport\"](52.53388,13.41035,52.54270,13.42626);way[\"water\"](52.53388,13.41035,52.54270,13.42626);way[\"waterway\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"building\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"building:part\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"landuse\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"landcover\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"amenity\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"leisure\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"natural\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"healthcare\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"tourism\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"shop\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"office\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"craft\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"industrial\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"man_made\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"power\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"public_transport\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"railway\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"aeroway\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"military\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"historic\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"sport\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"water\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"waterway\"](52.53388,13.41035,52.54270,13.42626););out body geom 1269;node[\"power\"=\"tower\"](52.53388,13.41035,52.54270,13.42626);out tags 899;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](52.53388,13.41035,52.54270,13.42626);out geom 60;node[\"railway\"=\"level_crossing\"](52.53388,13.41035,52.54270,13.42626);out 40;node[\"waterway\"=\"waterfall\"](52.53388,13.41035,52.54270,13.42626);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](52.53388,13.41035,52.54270,13.42626);out 24;node[\"natural\"=\"peak\"](52.53388,13.41035,52.54270,13.42626);out 12;node[\"highway\"=\"motorway_junction\"](52.53388,13.41035,52.54270,13.42626);out 12;node[\"railway\"~\"^(station|halt)$\"](52.53388,13.41035,52.54270,13.42626);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](52.53388,13.41035,52.54270,13.42626);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](52.53388,13.41035,52.54270,13.42626);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](52.53388,13.41035,52.54270,13.42626);out geom 120;way[\"landuse\"](52.53388,13.41035,52.54270,13.42626);out geom 423;way[\"natural\"](52.53388,13.41035,52.54270,13.42626);out geom 423;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](52.53388,13.41035,52.54270,13.42626);out geom 423;rel[\"boundary\"=\"administrative\"](52.53388,13.41035,52.54270,13.42626);way(r);out geom 400;"
+      "text": "[out:json][timeout:15];(way[\"building\"](52.53388,13.41035,52.54270,13.42626);way[\"building:part\"](52.53388,13.41035,52.54270,13.42626);way[\"landuse\"](52.53388,13.41035,52.54270,13.42626);way[\"landcover\"](52.53388,13.41035,52.54270,13.42626);way[\"amenity\"](52.53388,13.41035,52.54270,13.42626);way[\"leisure\"](52.53388,13.41035,52.54270,13.42626);way[\"natural\"](52.53388,13.41035,52.54270,13.42626);way[\"healthcare\"](52.53388,13.41035,52.54270,13.42626);way[\"tourism\"](52.53388,13.41035,52.54270,13.42626);way[\"shop\"](52.53388,13.41035,52.54270,13.42626);way[\"office\"](52.53388,13.41035,52.54270,13.42626);way[\"craft\"](52.53388,13.41035,52.54270,13.42626);way[\"industrial\"](52.53388,13.41035,52.54270,13.42626);way[\"man_made\"](52.53388,13.41035,52.54270,13.42626);way[\"power\"](52.53388,13.41035,52.54270,13.42626);way[\"public_transport\"](52.53388,13.41035,52.54270,13.42626);way[\"railway\"](52.53388,13.41035,52.54270,13.42626);way[\"aeroway\"](52.53388,13.41035,52.54270,13.42626);way[\"military\"](52.53388,13.41035,52.54270,13.42626);way[\"historic\"](52.53388,13.41035,52.54270,13.42626);way[\"sport\"](52.53388,13.41035,52.54270,13.42626);way[\"water\"](52.53388,13.41035,52.54270,13.42626);way[\"waterway\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"building\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"building:part\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"landuse\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"landcover\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"amenity\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"leisure\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"natural\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"healthcare\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"tourism\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"shop\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"office\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"craft\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"industrial\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"man_made\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"power\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"public_transport\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"railway\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"aeroway\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"military\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"historic\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"sport\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"water\"](52.53388,13.41035,52.54270,13.42626);rel[\"type\"=\"multipolygon\"][\"waterway\"](52.53388,13.41035,52.54270,13.42626););out body geom 1269;node[\"man_made\"~\"^(tower|mast|communications_tower|lighthouse)$\"](52.53388,13.41035,52.54270,13.42626);out tags 899;node[\"aeroway\"=\"control_tower\"](52.53388,13.41035,52.54270,13.42626);out tags 899;node[\"power\"=\"tower\"](52.53388,13.41035,52.54270,13.42626);out tags 899;node[\"power\"=\"generator\"][\"generator:source\"=\"wind\"](52.53388,13.41035,52.54270,13.42626);out tags 899;node[\"amenity\"~\"^(place_of_worship|school|university|college|kindergarten|hospital|clinic|library|townhall|courthouse|community_centre|bus_station|ferry_terminal)$\"](52.53388,13.41035,52.54270,13.42626);out tags 240;node[\"tourism\"~\"^(museum|gallery)$\"](52.53388,13.41035,52.54270,13.42626);out tags 80;node[\"office\"=\"government\"](52.53388,13.41035,52.54270,13.42626);out tags 80;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](52.53388,13.41035,52.54270,13.42626);out geom 60;node[\"railway\"=\"level_crossing\"](52.53388,13.41035,52.54270,13.42626);out 40;node[\"waterway\"=\"waterfall\"](52.53388,13.41035,52.54270,13.42626);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](52.53388,13.41035,52.54270,13.42626);out 24;node[\"natural\"=\"peak\"](52.53388,13.41035,52.54270,13.42626);out 12;node[\"highway\"=\"motorway_junction\"](52.53388,13.41035,52.54270,13.42626);out 12;node[\"railway\"~\"^(station|halt)$\"](52.53388,13.41035,52.54270,13.42626);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](52.53388,13.41035,52.54270,13.42626);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](52.53388,13.41035,52.54270,13.42626);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](52.53388,13.41035,52.54270,13.42626);out geom 120;way[\"landuse\"](52.53388,13.41035,52.54270,13.42626);out geom 423;way[\"natural\"](52.53388,13.41035,52.54270,13.42626);out geom 423;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](52.53388,13.41035,52.54270,13.42626);out geom 423;rel[\"boundary\"=\"administrative\"](52.53388,13.41035,52.54270,13.42626);way(r);out geom 400;"
     },
     "roads": {
       "version": 1,
@@ -48,6 +48,84 @@
   "responses": {
     "features": {
       "elements": [
+        {
+          "type": "node",
+          "id": 268915343,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "21",
+            "addr:postcode": "10437",
+            "addr:street": "Lychener Straße",
+            "addr:suburb": "Prenzlauer Berg",
+            "amenity": "kindergarten",
+            "check_date": "2025-04-23",
+            "contact:email": "kita.domino@web.de",
+            "contact:phone": "+49 30 85615101",
+            "contact:website": "https://www.kita-domino.de/",
+            "language:de": "main",
+            "language:fr": "main",
+            "name": "Domino",
+            "operator": "Deutsch-Französiche Kita Domino e.V.",
+            "wheelchair": "limited"
+          }
+        },
+        {
+          "type": "node",
+          "id": 268915863,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "41",
+            "addr:postcode": "10405",
+            "addr:street": "Christburger Straße",
+            "addr:suburb": "Prenzlauer Berg",
+            "amenity": "kindergarten",
+            "check_date": "2025-09-26",
+            "contact:phone": "+493047378599",
+            "contact:website": "http://www.ekt-obst-und-gemüse.de",
+            "name": "Obst und Gemüse",
+            "operator": "EKT Obst und Gemüse e. V."
+          }
+        },
+        {
+          "type": "node",
+          "id": 268916255,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "11",
+            "addr:postcode": "10437",
+            "addr:street": "Göhrener Straße",
+            "amenity": "kindergarten",
+            "contact:phone": "+49 30 4422405",
+            "name": "Evangelische Kita Elias",
+            "note": "Kita der Ev. Kirchengem. Elias",
+            "operator": "Evangelischer Kirchenkreisverband für Kindertageseinrichtungen Berlin Mitte-Nord",
+            "operator:type": "religious",
+            "operator:wikidata": "Q130405005",
+            "wheelchair": "limited"
+          }
+        },
+        {
+          "type": "node",
+          "id": 521747740,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "3",
+            "addr:postcode": "10437",
+            "addr:street": "Göhrener Straße",
+            "addr:suburb": "Prenzlauer Berg",
+            "amenity": "kindergarten",
+            "check_date": "2024-01-04",
+            "contact:email": "mail@kinderschlummerland.de",
+            "contact:phone": "+49 30 66775321",
+            "contact:website": "https://www.kinderschlummerland.de/",
+            "name": "Kinderschlummerland",
+            "operator": "KinderSchlummerLand gGmbH",
+            "wheelchair": "limited"
+          }
+        },
         {
           "type": "node",
           "id": 1861798319,
@@ -66,6 +144,28 @@
         },
         {
           "type": "node",
+          "id": 3090369566,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "32",
+            "addr:postcode": "10435",
+            "addr:street": "Husemannstraße",
+            "addr:suburb": "Prenzlauer Berg",
+            "amenity": "school",
+            "name": "iek",
+            "wheelchair": "no"
+          }
+        },
+        {
+          "type": "node",
+          "id": 3314515604,
+          "tags": {
+            "tourism": "gallery"
+          }
+        },
+        {
+          "type": "node",
           "id": 3842675463,
           "lat": 52.5422426,
           "lon": 13.4122257,
@@ -76,6 +176,17 @@
             "name:ja": "エベルスヴァルダー通り",
             "railway": "subway_entrance",
             "ref": "A",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5223291551,
+          "tags": {
+            "amenity": "clinic",
+            "check_date": "2025-10-12",
+            "healthcare": "clinic",
+            "name": "Ärztehaus Danziger Tor",
             "wheelchair": "yes"
           }
         },
@@ -100,12 +211,258 @@
         },
         {
           "type": "node",
+          "id": 6880841996,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "5/6",
+            "addr:postcode": "10437",
+            "addr:street": "Senefelderstraße",
+            "addr:suburb": "Prenzlauer Berg",
+            "check_date": "2023-01-28",
+            "fee": "yes",
+            "kids_area": "yes",
+            "kids_area:fee": "yes",
+            "kids_area:indoor": "yes",
+            "museum": "children",
+            "name": "MACHmit! Museum für Kinder",
+            "note": "Das MachMitMuseum ist in der ehemaligen Eliaskirche untergebracht",
+            "opening_hours": "Th-Fr 14:00-18:00; Sa-Su 10:00-18:00; Dec 24-26 off",
+            "payment:mastercard": "yes",
+            "payment:visa": "yes",
+            "phone": "+49 30 74778200",
+            "toilets": "yes",
+            "toilets:access": "customers",
+            "tourism": "museum",
+            "website": "https://www.machmitmuseum.de/",
+            "wheelchair": "yes",
+            "wikidata": "Q1881085",
+            "wikipedia": "de:MACHmit! Museum für Kinder"
+          }
+        },
+        {
+          "type": "node",
+          "id": 7276177546,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "90a",
+            "addr:postcode": "10437",
+            "addr:street": "Dunckerstraße",
+            "addr:suburb": "Prenzlauer Berg",
+            "amenity": "kindergarten",
+            "check_date": "2023-04-13",
+            "contact:website": "http://daschinabuero.org/",
+            "language:de": "main",
+            "language:zh": "main",
+            "name": "Deutsch-Chinesische Kita",
+            "operator": "Das China Büro e.V."
+          }
+        },
+        {
+          "type": "node",
+          "id": 7288732050,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "42",
+            "addr:postcode": "10437",
+            "addr:street": "Schliemannstraße",
+            "addr:suburb": "Prenzlauer Berg",
+            "amenity": "kindergarten",
+            "contact:email": "office@interkulturelle-kindheit.org",
+            "contact:phone": "+49 30 63962261",
+            "contact:website": "http://www.interkulturelle-kindheit.org/",
+            "language:de": "main",
+            "language:zh": "main",
+            "name": "Berliner Pandabären",
+            "operator": "Interkulturelle Kindheit gUG"
+          }
+        },
+        {
+          "type": "node",
+          "id": 7288749672,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "47",
+            "addr:postcode": "10437",
+            "addr:street": "Schliemannstraße",
+            "addr:suburb": "Prenzlauer Berg",
+            "amenity": "kindergarten",
+            "check_date": "2026-06-09",
+            "contact:website": "http://www.schaukelpferd-berlin.de/",
+            "name": "Schaukelpferd"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9003375272,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "7",
+            "addr:postcode": "10405",
+            "addr:street": "Christburger Straße",
+            "amenity": "kindergarten",
+            "check_date": "2025-01-20",
+            "contact:website": "https://netzwerkhort.an-der-marie.de",
+            "description": "Hort in freier Trägerschaft in der Grundschule an der Marie",
+            "name": "Netzwerkhort",
+            "operator": "Netzwerk Spiel/Kultur Prenzlauer Berg e.V.",
+            "operator:type": "private_non_profit"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9003418727,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "49",
+            "addr:postcode": "10405",
+            "addr:street": "Winsstraße",
+            "amenity": "kindergarten",
+            "check_date": "2024-07-26",
+            "contact:website": "https://www.hort-im-gartenhaus.de",
+            "description": "Hort in freier Trägerschaft an der Grundschule an der Marie",
+            "name": "Hort im Gartenhaus",
+            "operator": "Netzwerk Spiel/Kultur Prenzlauer Berg e.V.",
+            "operator:type": "private_non_profit"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9099183759,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "19",
+            "addr:postcode": "10437",
+            "addr:street": "Raumerstraße",
+            "addr:suburb": "Prenzlauer Berg",
+            "amenity": "kindergarten",
+            "check_date": "2025-03-08",
+            "contact:phone": "+49 30 48814706",
+            "name": "KiBa",
+            "operator": "KiBa e.V."
+          }
+        },
+        {
+          "type": "node",
+          "id": 9690316618,
+          "tags": {
+            "fee": "no",
+            "name": "pigasus polish poster music film gallery",
+            "tourism": "gallery",
+            "website": "https://polishpostershop.com/"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9775768261,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "36",
+            "addr:postcode": "10435",
+            "addr:street": "Schönhauser Allee",
+            "addr:suburb": "Prenzlauer Berg",
+            "amenity": "university",
+            "contact:website": "https://www.nyu.edu/berlin.html",
+            "name": "New York University"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10107178444,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "25",
+            "addr:postcode": "10405",
+            "addr:street": "Chodowieckistraße",
+            "check_date": "2025-01-24",
+            "check_date:opening_hours": "2025-01-24",
+            "email": "galerie@vinogradov.org",
+            "fee": "no",
+            "level": "0",
+            "name": "Galerie Vinogradov",
+            "opening_hours": "\"nach Vereinbarung\"",
+            "operator": "Marina Vinogradova",
+            "phone": "+493086430410",
+            "tourism": "gallery",
+            "website": "https://eurusart.com"
+          }
+        },
+        {
+          "type": "node",
+          "id": 11782366094,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "12",
+            "addr:postcode": "10435",
+            "addr:street": "Husemannstraße",
+            "amenity": "kindergarten",
+            "check_date": "2026-09-23",
+            "name": "Elterninitiativ-Kindergarten Wald & Wiesen e.V.",
+            "operator": "Wald & Wiesen e.V.",
+            "operator:type": "association",
+            "phone": "+49 1515 6319672",
+            "preschool": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 12473371571,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "44",
+            "addr:postcode": "10437",
+            "addr:street": "Schliemannstraße",
+            "amenity": "kindergarten",
+            "name": "Kinderladen Prenzlpanther",
+            "operator": "Kinderladen Prenzlpanther e.V.",
+            "website": "https://www.kita-prenzlpanther.de/"
+          }
+        },
+        {
+          "type": "node",
           "id": 13087984392,
           "lat": 52.5409692,
           "lon": 13.4213227,
           "tags": {
             "name": "Göhrener Ei",
             "place": "neighbourhood"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13308471228,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "216",
+            "addr:postcode": "10405",
+            "addr:street": "Prenzlauer Allee",
+            "amenity": "library",
+            "contact:email": "info@totschka-berlin.de",
+            "contact:phone": "+491742099477",
+            "name": "Totschka",
+            "opening_hours": "Mo 15:00-18:00; Th 09:00-13:00; Fr 15:00-18:00; Sa 14:00-17:00; Su 11:00-17:00",
+            "website": "https://www.totschka-berlin.de/"
+          }
+        },
+        {
+          "type": "node",
+          "id": 14177208484,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "73a",
+            "addr:postcode": "10405",
+            "addr:street": "Danziger Straße",
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "email": "traegerloftschloss2011@googlemail.com",
+            "name": "Kita unterm Regenschirm",
+            "operator": "Loftschloss gGmbH",
+            "operator:type": "private",
+            "preschool": "yes"
           }
         },
         {
@@ -2255,6 +2612,7 @@
             5777233331,
             4135377277,
             5777233339,
+            14167118466,
             5777233342,
             5777233340,
             5777233341,
@@ -2310,6 +2668,10 @@
             {
               "lat": 52.5393663,
               "lon": 13.4134405
+            },
+            {
+              "lat": 52.5393959,
+              "lon": 13.4134395
             },
             {
               "lat": 52.5394398,
@@ -12651,6 +13013,7 @@
             507073548,
             5777233310,
             5777233311,
+            14167118465,
             5777233298,
             5777233299,
             5777233300,
@@ -12886,6 +13249,10 @@
             {
               "lat": 52.5391845,
               "lon": 13.4133277
+            },
+            {
+              "lat": 52.5393498,
+              "lon": 13.4133264
             },
             {
               "lat": 52.5394583,
@@ -13031,6 +13398,7 @@
             507073548,
             5777233310,
             5777233311,
+            14167118465,
             5777233298,
             5777233299,
             5777233300,
@@ -13266,6 +13634,10 @@
             {
               "lat": 52.5391845,
               "lon": 13.4133277
+            },
+            {
+              "lat": 52.5393498,
+              "lon": 13.4133264
             },
             {
               "lat": 52.5394583,
@@ -22192,10 +22564,10 @@
           "type": "way",
           "id": 41108893,
           "bounds": {
-            "minlat": 52.5418079,
-            "minlon": 13.4261482,
-            "maxlat": 52.5418763,
-            "maxlon": 13.426235
+            "minlat": 52.5418088,
+            "minlon": 13.4261463,
+            "maxlat": 52.5418752,
+            "maxlon": 13.4262364
           },
           "nodes": [
             501564545,
@@ -22206,29 +22578,31 @@
           ],
           "geometry": [
             {
-              "lat": 52.5418763,
-              "lon": 13.4261809
+              "lat": 52.5418752,
+              "lon": 13.4261818
             },
             {
-              "lat": 52.5418227,
-              "lon": 13.4261482
+              "lat": 52.5418224,
+              "lon": 13.4261463
             },
             {
-              "lat": 52.5418079,
-              "lon": 13.4262014
+              "lat": 52.5418088,
+              "lon": 13.4262009
             },
             {
-              "lat": 52.5418612,
-              "lon": 13.426235
+              "lat": 52.5418617,
+              "lon": 13.4262364
             },
             {
-              "lat": 52.5418763,
-              "lon": 13.4261809
+              "lat": 52.5418752,
+              "lon": 13.4261818
             }
           ],
           "tags": {
-            "building": "civic",
-            "building:levels": "1"
+            "building": "service",
+            "building:levels": "1",
+            "power": "substation",
+            "substation": "minor_distribution"
           }
         },
         {
@@ -27109,7 +27483,7 @@
             "minlat": 52.5395184,
             "minlon": 13.4248094,
             "maxlat": 52.5401452,
-            "maxlon": 13.4254872
+            "maxlon": 13.4254862
           },
           "nodes": [
             524606297,
@@ -27119,7 +27493,6 @@
             4536054933,
             4536054932,
             4536054931,
-            524606335,
             5074948397,
             524606342,
             5074948825,
@@ -27171,12 +27544,8 @@
               "lon": 13.4252635
             },
             {
-              "lat": 52.5400497,
-              "lon": 13.4254872
-            },
-            {
-              "lat": 52.5400441,
-              "lon": 13.4254824
+              "lat": 52.5400483,
+              "lon": 13.4254862
             },
             {
               "lat": 52.5399721,
@@ -32537,22 +32906,25 @@
             "addr:street": "Kastanienallee",
             "addr:suburb": "Prenzlauer Berg",
             "amenity": "biergarten",
-            "brewery": "prater",
+            "brewery": "Bayreuther",
             "capacity": "600",
-            "check_date": "2023-11-11",
+            "check_date": "2026-09-10",
             "check_date:opening_hours": "2023-06-07",
             "cuisine": "german",
             "diet:vegetarian": "yes",
             "food": "yes",
             "indoor_seating": "no",
             "internet_access": "no",
+            "microbrewery": "no",
             "name": "Prater Biergarten",
+            "note": "das Bayreuther Bier wird unter dem Namen \"Prater\" angeboten",
             "opening_hours": "Apr-Sep: Mo-Su 12:00+",
             "outdoor_seating": "yes",
             "payment:cash": "yes",
             "payment:credit_cards": "yes",
             "payment:debit_cards": "yes",
             "payment:free": "yes",
+            "self_service": "only",
             "short_name": "Prater",
             "start_date": "1837",
             "surface": "paving_stones",
@@ -68776,8 +69148,8 @@
               "lon": 13.425885
             },
             {
-              "lat": 52.5400936,
-              "lon": 13.425534
+              "lat": 52.5400598,
+              "lon": 13.4256416
             },
             {
               "lat": 52.5401689,
@@ -68925,8 +69297,8 @@
               "lon": 13.425885
             },
             {
-              "lat": 52.5400936,
-              "lon": 13.425534
+              "lat": 52.5400598,
+              "lon": 13.4256416
             },
             {
               "lat": 52.5401689,
@@ -71806,11 +72178,12 @@
           "bounds": {
             "minlat": 52.5402525,
             "minlon": 13.4256628,
-            "maxlat": 52.542663,
+            "maxlat": 52.5426914,
             "maxlon": 13.4293851
           },
           "nodes": [
             506912675,
+            14170568394,
             506912673,
             506911352,
             346446798,
@@ -71821,36 +72194,34 @@
             346446423,
             598465908,
             506523452,
+            14170568389,
             9358571581,
             9358571610,
-            598465911,
+            14166366812,
             506523450,
             598465912,
             602798169,
-            602798185,
-            345612590,
-            4536055237,
-            4536055238,
-            614729936,
+            14166366820,
+            14166366823,
             4536055234,
             4536055233,
             614729938,
-            345616650,
+            14166366818,
             345616649,
             501564539,
             501564540,
             5782268924,
             5782268925,
             4536055108,
-            5782268926,
-            5782268923,
-            5782268837,
-            501564541,
-            4536055110,
-            5782268836,
-            5782268835,
-            501564542,
-            345616560,
+            14166366813,
+            14166366811,
+            14166366822,
+            14166366817,
+            14166366816,
+            14166366821,
+            14166366819,
+            14166366815,
+            14166366814,
             345612594,
             506911350,
             501564545,
@@ -71867,16 +72238,20 @@
           ],
           "geometry": [
             {
-              "lat": 52.5404959,
+              "lat": 52.540496,
               "lon": 13.4272842
             },
             {
-              "lat": 52.5404652,
-              "lon": 13.4273743
+              "lat": 52.5404643,
+              "lon": 13.4273784
             },
             {
-              "lat": 52.5404483,
-              "lon": 13.4274209
+              "lat": 52.5404592,
+              "lon": 13.4273936
+            },
+            {
+              "lat": 52.540447,
+              "lon": 13.4274246
             },
             {
               "lat": 52.5404029,
@@ -71911,6 +72286,10 @@
               "lon": 13.4287583
             },
             {
+              "lat": 52.5411074,
+              "lon": 13.4287769
+            },
+            {
               "lat": 52.5415296,
               "lon": 13.4291681
             },
@@ -71931,40 +72310,28 @@
               "lon": 13.4269623
             },
             {
-              "lat": 52.542663,
-              "lon": 13.4267128
+              "lat": 52.5426707,
+              "lon": 13.4266478
             },
             {
-              "lat": 52.542643,
-              "lon": 13.4266998
+              "lat": 52.5426914,
+              "lon": 13.4265403
             },
             {
-              "lat": 52.5426156,
-              "lon": 13.4266894
+              "lat": 52.5423488,
+              "lon": 13.4263381
             },
             {
-              "lat": 52.5425982,
-              "lon": 13.4266744
+              "lat": 52.5423171,
+              "lon": 13.4265051
             },
             {
-              "lat": 52.5426105,
-              "lon": 13.4266179
+              "lat": 52.5422983,
+              "lon": 13.4264942
             },
             {
-              "lat": 52.5423292,
-              "lon": 13.4264534
-            },
-            {
-              "lat": 52.5423164,
-              "lon": 13.4265033
-            },
-            {
-              "lat": 52.5422976,
-              "lon": 13.4264952
-            },
-            {
-              "lat": 52.5422699,
-              "lon": 13.4266291
+              "lat": 52.5422695,
+              "lon": 13.4266287
             },
             {
               "lat": 52.5422048,
@@ -72035,16 +72402,16 @@
               "lon": 13.4263864
             },
             {
-              "lat": 52.5419391,
-              "lon": 13.4262615
+              "lat": 52.5419121,
+              "lon": 13.4263009
             },
             {
-              "lat": 52.5418763,
-              "lon": 13.4261809
+              "lat": 52.5418752,
+              "lon": 13.4261818
             },
             {
-              "lat": 52.5418227,
-              "lon": 13.4261482
+              "lat": 52.5418224,
+              "lon": 13.4261463
             },
             {
               "lat": 52.5410139,
@@ -72079,7 +72446,7 @@
               "lon": 13.4268272
             },
             {
-              "lat": 52.5404959,
+              "lat": 52.540496,
               "lon": 13.4272842
             }
           ],
@@ -72103,11 +72470,12 @@
           "bounds": {
             "minlat": 52.5402525,
             "minlon": 13.4256628,
-            "maxlat": 52.542663,
+            "maxlat": 52.5426914,
             "maxlon": 13.4293851
           },
           "nodes": [
             506912675,
+            14170568394,
             506912673,
             506911352,
             346446798,
@@ -72118,36 +72486,34 @@
             346446423,
             598465908,
             506523452,
+            14170568389,
             9358571581,
             9358571610,
-            598465911,
+            14166366812,
             506523450,
             598465912,
             602798169,
-            602798185,
-            345612590,
-            4536055237,
-            4536055238,
-            614729936,
+            14166366820,
+            14166366823,
             4536055234,
             4536055233,
             614729938,
-            345616650,
+            14166366818,
             345616649,
             501564539,
             501564540,
             5782268924,
             5782268925,
             4536055108,
-            5782268926,
-            5782268923,
-            5782268837,
-            501564541,
-            4536055110,
-            5782268836,
-            5782268835,
-            501564542,
-            345616560,
+            14166366813,
+            14166366811,
+            14166366822,
+            14166366817,
+            14166366816,
+            14166366821,
+            14166366819,
+            14166366815,
+            14166366814,
             345612594,
             506911350,
             501564545,
@@ -72164,16 +72530,20 @@
           ],
           "geometry": [
             {
-              "lat": 52.5404959,
+              "lat": 52.540496,
               "lon": 13.4272842
             },
             {
-              "lat": 52.5404652,
-              "lon": 13.4273743
+              "lat": 52.5404643,
+              "lon": 13.4273784
             },
             {
-              "lat": 52.5404483,
-              "lon": 13.4274209
+              "lat": 52.5404592,
+              "lon": 13.4273936
+            },
+            {
+              "lat": 52.540447,
+              "lon": 13.4274246
             },
             {
               "lat": 52.5404029,
@@ -72208,6 +72578,10 @@
               "lon": 13.4287583
             },
             {
+              "lat": 52.5411074,
+              "lon": 13.4287769
+            },
+            {
               "lat": 52.5415296,
               "lon": 13.4291681
             },
@@ -72228,40 +72602,28 @@
               "lon": 13.4269623
             },
             {
-              "lat": 52.542663,
-              "lon": 13.4267128
+              "lat": 52.5426707,
+              "lon": 13.4266478
             },
             {
-              "lat": 52.542643,
-              "lon": 13.4266998
+              "lat": 52.5426914,
+              "lon": 13.4265403
             },
             {
-              "lat": 52.5426156,
-              "lon": 13.4266894
+              "lat": 52.5423488,
+              "lon": 13.4263381
             },
             {
-              "lat": 52.5425982,
-              "lon": 13.4266744
+              "lat": 52.5423171,
+              "lon": 13.4265051
             },
             {
-              "lat": 52.5426105,
-              "lon": 13.4266179
+              "lat": 52.5422983,
+              "lon": 13.4264942
             },
             {
-              "lat": 52.5423292,
-              "lon": 13.4264534
-            },
-            {
-              "lat": 52.5423164,
-              "lon": 13.4265033
-            },
-            {
-              "lat": 52.5422976,
-              "lon": 13.4264952
-            },
-            {
-              "lat": 52.5422699,
-              "lon": 13.4266291
+              "lat": 52.5422695,
+              "lon": 13.4266287
             },
             {
               "lat": 52.5422048,
@@ -72332,16 +72694,16 @@
               "lon": 13.4263864
             },
             {
-              "lat": 52.5419391,
-              "lon": 13.4262615
+              "lat": 52.5419121,
+              "lon": 13.4263009
             },
             {
-              "lat": 52.5418763,
-              "lon": 13.4261809
+              "lat": 52.5418752,
+              "lon": 13.4261818
             },
             {
-              "lat": 52.5418227,
-              "lon": 13.4261482
+              "lat": 52.5418224,
+              "lon": 13.4261463
             },
             {
               "lat": 52.5410139,
@@ -72376,7 +72738,7 @@
               "lon": 13.4268272
             },
             {
-              "lat": 52.5404959,
+              "lat": 52.540496,
               "lon": 13.4272842
             }
           ],
@@ -114862,73 +115224,43 @@
           "type": "way",
           "id": 610588348,
           "bounds": {
-            "minlat": 52.5418195,
-            "minlon": 13.4262347,
-            "maxlat": 52.5418838,
-            "maxlon": 13.4263677
+            "minlat": 52.5418257,
+            "minlon": 13.4262304,
+            "maxlat": 52.5418834,
+            "maxlon": 13.4263212
           },
           "nodes": [
-            5782268834,
-            5782268833,
             5782268832,
+            14166366897,
             5782268831,
             5782268830,
             5782268829,
-            5782268828,
-            5782268827,
-            5782268826,
-            5782268825,
-            5782268824,
-            5782268834
+            5782268832
           ],
           "geometry": [
             {
-              "lat": 52.5418545,
-              "lon": 13.4263375
+              "lat": 52.5418643,
+              "lon": 13.4263212
             },
             {
-              "lat": 52.54186,
-              "lon": 13.4263199
+              "lat": 52.5418793,
+              "lon": 13.4262787
             },
             {
-              "lat": 52.5418656,
-              "lon": 13.4263251
+              "lat": 52.5418834,
+              "lon": 13.4262675
             },
             {
-              "lat": 52.5418838,
-              "lon": 13.4262707
+              "lat": 52.5418447,
+              "lon": 13.4262304
             },
             {
-              "lat": 52.541846,
-              "lon": 13.4262347
+              "lat": 52.5418257,
+              "lon": 13.4262842
             },
             {
-              "lat": 52.5418259,
-              "lon": 13.4262875
-            },
-            {
-              "lat": 52.5418344,
-              "lon": 13.4262964
-            },
-            {
-              "lat": 52.5418195,
-              "lon": 13.4263454
-            },
-            {
-              "lat": 52.5418429,
-              "lon": 13.4263677
-            },
-            {
-              "lat": 52.541855,
-              "lon": 13.4263665
-            },
-            {
-              "lat": 52.5418604,
-              "lon": 13.4263521
-            },
-            {
-              "lat": 52.5418545,
-              "lon": 13.4263375
+              "lat": 52.5418643,
+              "lon": 13.4263212
             }
           ],
           "tags": {
@@ -143623,8 +143955,8 @@
               "lon": 13.425885
             },
             {
-              "lat": 52.5400936,
-              "lon": 13.425534
+              "lat": 52.5400598,
+              "lon": 13.4256416
             },
             {
               "lat": 52.5401689,
@@ -146192,8 +146524,8 @@
           "id": 1309467232,
           "bounds": {
             "minlat": 52.5395733,
-            "minlon": 13.425534,
-            "maxlat": 52.5400936,
+            "minlon": 13.4256416,
+            "maxlat": 52.5400598,
             "maxlon": 13.4265142
           },
           "nodes": [
@@ -146223,8 +146555,8 @@
           ],
           "geometry": [
             {
-              "lat": 52.5400936,
-              "lon": 13.425534
+              "lat": 52.5400598,
+              "lon": 13.4256416
             },
             {
               "lat": 52.5400575,
@@ -146311,8 +146643,8 @@
               "lon": 13.4260514
             },
             {
-              "lat": 52.5400936,
-              "lon": 13.425534
+              "lat": 52.5400598,
+              "lon": 13.4256416
             }
           ],
           "tags": {
@@ -146324,13 +146656,12 @@
           "id": 1309467233,
           "bounds": {
             "minlat": 52.5396946,
-            "minlon": 13.4254824,
-            "maxlat": 52.5400587,
+            "minlon": 13.4255926,
+            "maxlat": 52.5400293,
             "maxlon": 13.4260206
           },
           "nodes": [
-            5074948397,
-            524606335,
+            14159636696,
             12125325352,
             12125325353,
             12124895452,
@@ -146340,20 +146671,16 @@
             5074948394,
             5074948395,
             5074948396,
-            5074948397
+            14159636696
           ],
           "geometry": [
             {
-              "lat": 52.5400441,
-              "lon": 13.4254824
+              "lat": 52.5400109,
+              "lon": 13.4255926
             },
             {
-              "lat": 52.5400497,
-              "lon": 13.4254872
-            },
-            {
-              "lat": 52.5400587,
-              "lon": 13.4254986
+              "lat": 52.5400293,
+              "lon": 13.4256076
             },
             {
               "lat": 52.5398819,
@@ -146388,8 +146715,8 @@
               "lon": 13.425906
             },
             {
-              "lat": 52.5400441,
-              "lon": 13.4254824
+              "lat": 52.5400109,
+              "lon": 13.4255926
             }
           ],
           "tags": {
@@ -147857,10 +148184,10 @@
           }
         }
       ],
-      "generator": "Overpass API 0.7.62.11 87bfad18",
+      "generator": "Overpass API 0.7.62.4 2390de5a",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T16:36:11Z"
+        "timestamp_osm_base": "2026-10-01T13:29:35Z"
       },
       "version": 0.6
     },
@@ -152387,8 +152714,8 @@
           "id": 45856957,
           "bounds": {
             "minlat": 52.5425685,
-            "minlon": 13.4177795,
-            "maxlat": 52.5437845,
+            "minlon": 13.419266,
+            "maxlat": 52.5431524,
             "maxlon": 13.4206388
           },
           "nodes": [
@@ -152396,12 +152723,7 @@
             583589181,
             6670888950,
             1220035109,
-            9793155104,
-            358522004,
-            9793155108,
-            5005978370,
-            10931657057,
-            358522012
+            9793155104
           ],
           "geometry": [
             {
@@ -152423,26 +152745,6 @@
             {
               "lat": 52.5431524,
               "lon": 13.419266
-            },
-            {
-              "lat": 52.5431923,
-              "lon": 13.4191721
-            },
-            {
-              "lat": 52.5432173,
-              "lon": 13.4191178
-            },
-            {
-              "lat": 52.5434923,
-              "lon": 13.4184666
-            },
-            {
-              "lat": 52.5437055,
-              "lon": 13.4179651
-            },
-            {
-              "lat": 52.5437845,
-              "lon": 13.4177795
             }
           ],
           "tags": {
@@ -152620,6 +152922,7 @@
           "tags": {
             "highway": "footway",
             "lit": "no",
+            "smoothness": "good",
             "surface": "paving_stones"
           }
         },
@@ -152654,6 +152957,7 @@
           "tags": {
             "highway": "footway",
             "lit": "no",
+            "smoothness": "good",
             "surface": "paving_stones"
           }
         },
@@ -152688,6 +152992,7 @@
           "tags": {
             "highway": "footway",
             "lit": "no",
+            "smoothness": "good",
             "surface": "paving_stones"
           }
         },
@@ -152933,15 +153238,17 @@
           "type": "way",
           "id": 59263123,
           "bounds": {
-            "minlat": 52.5393857,
-            "minlon": 13.4133282,
+            "minlat": 52.5393498,
+            "minlon": 13.4133264,
             "maxlat": 52.5396319,
-            "maxlon": 13.4133723
+            "maxlon": 13.4133663
           },
           "nodes": [
             734877123,
             5777233899,
-            5777233330
+            14185288576,
+            14185288571,
+            14167118465
           ],
           "geometry": [
             {
@@ -152953,8 +153260,16 @@
               "lon": 13.4133603
             },
             {
-              "lat": 52.5393857,
-              "lon": 13.4133723
+              "lat": 52.5395371,
+              "lon": 13.4133635
+            },
+            {
+              "lat": 52.5393952,
+              "lon": 13.4133663
+            },
+            {
+              "lat": 52.5393498,
+              "lon": 13.4133264
             }
           ],
           "tags": {
@@ -158117,8 +158432,8 @@
           "bounds": {
             "minlat": 52.5409387,
             "minlon": 13.425376,
-            "maxlat": 52.5420172,
-            "maxlon": 13.4260197
+            "maxlat": 52.5420062,
+            "maxlon": 13.4260143
           },
           "nodes": [
             27484529,
@@ -158140,8 +158455,8 @@
               "lon": 13.4254181
             },
             {
-              "lat": 52.5420172,
-              "lon": 13.4260197
+              "lat": 52.5420062,
+              "lon": 13.4260143
             }
           ],
           "tags": {
@@ -164604,10 +164919,10 @@
           "type": "way",
           "id": 457462504,
           "bounds": {
-            "minlat": 52.5400735,
+            "minlat": 52.5400436,
             "minlon": 13.4249672,
             "maxlat": 52.5402405,
-            "maxlon": 13.425508
+            "maxlon": 13.42562
           },
           "nodes": [
             4536054937,
@@ -164618,8 +164933,8 @@
           ],
           "geometry": [
             {
-              "lat": 52.5400735,
-              "lon": 13.425508
+              "lat": 52.5400436,
+              "lon": 13.42562
             },
             {
               "lat": 52.5401909,
@@ -166332,6 +166647,8 @@
           },
           "nodes": [
             1150762473,
+            14166976298,
+            14166986906,
             12030499726,
             506357754
           ],
@@ -166339,6 +166656,14 @@
             {
               "lat": 52.5408644,
               "lon": 13.426212
+            },
+            {
+              "lat": 52.5409597,
+              "lon": 13.4263047
+            },
+            {
+              "lat": 52.5411057,
+              "lon": 13.4264466
             },
             {
               "lat": 52.5412851,
@@ -166359,10 +166684,10 @@
           "type": "way",
           "id": 824642254,
           "bounds": {
-            "minlat": 52.5419391,
-            "minlon": 13.4260197,
-            "maxlat": 52.5420172,
-            "maxlon": 13.4262615
+            "minlat": 52.5419121,
+            "minlon": 13.4260143,
+            "maxlat": 52.5420062,
+            "maxlon": 13.4263009
           },
           "nodes": [
             506911350,
@@ -166372,24 +166697,23 @@
           ],
           "geometry": [
             {
-              "lat": 52.5419391,
-              "lon": 13.4262615
+              "lat": 52.5419121,
+              "lon": 13.4263009
             },
             {
-              "lat": 52.5419955,
-              "lon": 13.4261125
+              "lat": 52.5419845,
+              "lon": 13.4261071
             },
             {
-              "lat": 52.5420034,
-              "lon": 13.4260804
+              "lat": 52.5419924,
+              "lon": 13.426075
             },
             {
-              "lat": 52.5420172,
-              "lon": 13.4260197
+              "lat": 52.5420062,
+              "lon": 13.4260143
             }
           ],
           "tags": {
-            "access": "private",
             "highway": "service",
             "service": "driveway",
             "surface": "sett"
@@ -166446,6 +166770,7 @@
             "ref": "B 96a",
             "sidewalk:left": "no",
             "sidewalk:right": "separate",
+            "smoothness": "good",
             "surface": "asphalt",
             "wikidata": "Q314207",
             "wikipedia": "de:Danziger Straße",
@@ -167007,8 +167332,8 @@
               "lon": 13.4256669
             },
             {
-              "lat": 52.5420034,
-              "lon": 13.4260804
+              "lat": 52.5419924,
+              "lon": 13.426075
             },
             {
               "lat": 52.5420561,
@@ -167563,9 +167888,11 @@
             8701377901,
             8701377889,
             8701377890,
+            14166366836,
             8701377891,
             8701377920,
             8701377892,
+            14166366899,
             8701377893,
             8701377928,
             8701377894,
@@ -167589,8 +167916,12 @@
               "lon": 13.4258215
             },
             {
-              "lat": 52.5419955,
-              "lon": 13.4261125
+              "lat": 52.5419551,
+              "lon": 13.4260903
+            },
+            {
+              "lat": 52.5419845,
+              "lon": 13.4261071
             },
             {
               "lat": 52.5420495,
@@ -167599,6 +167930,10 @@
             {
               "lat": 52.5422594,
               "lon": 13.4262644
+            },
+            {
+              "lat": 52.5424981,
+              "lon": 13.4264044
             },
             {
               "lat": 52.5425721,
@@ -179149,6 +179484,7 @@
             "footway": "sidewalk",
             "highway": "footway",
             "lit": "yes",
+            "smoothness": "good",
             "surface": "paving_stones",
             "width": "3.2"
           }
@@ -182928,8 +183264,8 @@
           "type": "way",
           "id": 1091626603,
           "bounds": {
-            "minlat": 52.5420172,
-            "minlon": 13.4260197,
+            "minlat": 52.5420062,
+            "minlon": 13.4260143,
             "maxlat": 52.5422717,
             "maxlon": 13.426153
           },
@@ -182940,8 +183276,8 @@
           ],
           "geometry": [
             {
-              "lat": 52.5420172,
-              "lon": 13.4260197
+              "lat": 52.5420062,
+              "lon": 13.4260143
             },
             {
               "lat": 52.5420694,
@@ -185017,7 +185353,8 @@
             "oneway": "yes",
             "smoothness": "intermediate",
             "surface": "paving_stones",
-            "traffic_sign": "DE:237"
+            "traffic_sign": "DE:237",
+            "width": "1"
           }
         },
         {
@@ -186273,6 +186610,7 @@
             "ref": "B 96a",
             "sidewalk:left": "no",
             "sidewalk:right": "separate",
+            "smoothness": "intermediate",
             "surface": "asphalt",
             "turn:lanes": "left|through|none",
             "wikidata": "Q314207",
@@ -199066,8 +199404,8 @@
           "id": 1309424825,
           "bounds": {
             "minlat": 52.539895,
-            "minlon": 13.425508,
-            "maxlat": 52.5400735,
+            "minlon": 13.42562,
+            "maxlat": 52.5400436,
             "maxlon": 13.4260324
           },
           "nodes": [
@@ -199076,8 +199414,8 @@
           ],
           "geometry": [
             {
-              "lat": 52.5400735,
-              "lon": 13.425508
+              "lat": 52.5400436,
+              "lon": 13.42562
             },
             {
               "lat": 52.539895,
@@ -201093,6 +201431,7 @@
             12997787365,
             12997787366,
             12997787367,
+            14170568395,
             12997787368,
             12997787369,
             12997787370,
@@ -201117,8 +201456,12 @@
               "lon": 13.4267588
             },
             {
-              "lat": 52.5403697,
-              "lon": 13.4273512
+              "lat": 52.5404001,
+              "lon": 13.4272611
+            },
+            {
+              "lat": 52.5403692,
+              "lon": 13.4273528
             },
             {
               "lat": 52.5401696,
@@ -205409,7 +205752,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205442,7 +205786,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205475,7 +205820,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205508,7 +205854,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205541,7 +205888,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205574,7 +205922,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205607,7 +205956,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205640,7 +205990,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205673,7 +206024,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205706,7 +206058,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205772,7 +206125,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205805,7 +206159,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -205871,7 +206226,8 @@
           ],
           "tags": {
             "highway": "service",
-            "service": "driveway"
+            "service": "driveway",
+            "surface": "sett"
           }
         },
         {
@@ -206971,9 +207327,13 @@
             }
           ],
           "tags": {
+            "handrail": "no",
             "highway": "steps",
             "incline": "up",
+            "ramp": "yes",
+            "ramp:stroller": "yes",
             "step_count": "6",
+            "surface": "concrete",
             "tactile_paving": "no"
           }
         },
@@ -209699,19 +210059,225 @@
             "footway": "crossing",
             "highway": "footway"
           }
+        },
+        {
+          "type": "way",
+          "id": 1557590929,
+          "bounds": {
+            "minlat": 52.5418872,
+            "minlon": 13.4260903,
+            "maxlat": 52.5419551,
+            "maxlon": 13.426284
+          },
+          "nodes": [
+            14166366836,
+            14166366834
+          ],
+          "geometry": [
+            {
+              "lat": 52.5419551,
+              "lon": 13.4260903
+            },
+            {
+              "lat": 52.5418872,
+              "lon": 13.426284
+            }
+          ],
+          "tags": {
+            "footway": "sidewalk",
+            "highway": "footway",
+            "surface": "sett"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559357506,
+          "bounds": {
+            "minlat": 52.5393957,
+            "minlon": 13.4134144,
+            "maxlat": 52.5393958,
+            "maxlon": 13.4134269
+          },
+          "nodes": [
+            14185288572,
+            14185288570
+          ],
+          "geometry": [
+            {
+              "lat": 52.5393958,
+              "lon": 13.4134144
+            },
+            {
+              "lat": 52.5393957,
+              "lon": 13.4134269
+            }
+          ],
+          "tags": {
+            "highway": "steps"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559357507,
+          "bounds": {
+            "minlat": 52.5393952,
+            "minlon": 13.4133663,
+            "maxlat": 52.5393958,
+            "maxlon": 13.4134144
+          },
+          "nodes": [
+            14185288571,
+            14185288578,
+            14185288572
+          ],
+          "geometry": [
+            {
+              "lat": 52.5393952,
+              "lon": 13.4133663
+            },
+            {
+              "lat": 52.5393954,
+              "lon": 13.4133862
+            },
+            {
+              "lat": 52.5393958,
+              "lon": 13.4134144
+            }
+          ],
+          "tags": {
+            "highway": "footway"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559357508,
+          "bounds": {
+            "minlat": 52.5393957,
+            "minlon": 13.4133635,
+            "maxlat": 52.5395379,
+            "maxlon": 13.4134395
+          },
+          "nodes": [
+            14185288576,
+            14185288577,
+            14185288570,
+            14167118466
+          ],
+          "geometry": [
+            {
+              "lat": 52.5395371,
+              "lon": 13.4133635
+            },
+            {
+              "lat": 52.5395379,
+              "lon": 13.4134235
+            },
+            {
+              "lat": 52.5393957,
+              "lon": 13.4134269
+            },
+            {
+              "lat": 52.5393959,
+              "lon": 13.4134395
+            }
+          ],
+          "tags": {
+            "highway": "footway"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559357509,
+          "bounds": {
+            "minlat": 52.5393589,
+            "minlon": 13.4133862,
+            "maxlat": 52.5393954,
+            "maxlon": 13.4133863
+          },
+          "nodes": [
+            14185288578,
+            14185288573
+          ],
+          "geometry": [
+            {
+              "lat": 52.5393954,
+              "lon": 13.4133862
+            },
+            {
+              "lat": 52.5393589,
+              "lon": 13.4133863
+            }
+          ],
+          "tags": {
+            "highway": "footway"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559357510,
+          "bounds": {
+            "minlat": 52.539626,
+            "minlon": 13.4134003,
+            "maxlat": 52.5396262,
+            "maxlon": 13.4134335
+          },
+          "nodes": [
+            14185288569,
+            14185288575
+          ],
+          "geometry": [
+            {
+              "lat": 52.539626,
+              "lon": 13.4134003
+            },
+            {
+              "lat": 52.5396262,
+              "lon": 13.4134335
+            }
+          ],
+          "tags": {
+            "highway": "steps"
+          }
+        },
+        {
+          "type": "way",
+          "id": 1559357511,
+          "bounds": {
+            "minlat": 52.539341,
+            "minlon": 13.4133862,
+            "maxlat": 52.5393589,
+            "maxlon": 13.4133863
+          },
+          "nodes": [
+            14185288568,
+            14185288573
+          ],
+          "geometry": [
+            {
+              "lat": 52.539341,
+              "lon": 13.4133862
+            },
+            {
+              "lat": 52.5393589,
+              "lon": 13.4133863
+            }
+          ],
+          "tags": {
+            "highway": "steps"
+          }
         }
       ],
       "generator": "Overpass API 0.7.62.4 2390de5a",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T16:37:11Z"
+        "timestamp_osm_base": "2026-10-01T13:31:39Z"
       },
       "version": 0.6
     }
   },
   "stats": {
     "bboxKm2": 1.0574881452533116,
-    "featureElements": 1460,
-    "roadElements": 1310
+    "featureElements": 1481,
+    "roadElements": 1317
   }
 }

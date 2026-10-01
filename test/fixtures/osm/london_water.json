@@ -15,21 +15,21 @@
     "minLng": -0.12749041196580446,
     "maxLng": -0.11586419774725536
   },
-  "capturedAt": "2026-09-01T02:37:24.116Z",
+  "capturedAt": "2026-10-01T13:37:58.947Z",
   "source": {
     "features": "https://overpass-api.de/api/interpreter",
-    "roads": "https://overpass-api.de/api/interpreter",
+    "roads": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "userAgent": "steel-vs-swarm-osm-fixture/1.0 (maintainer-updated regression data)"
   },
   "queries": {
     "features": {
-      "version": 6,
+      "version": 9,
       "quotas": {
         "nBld": 449,
         "nCover": 211,
         "nArea": 634
       },
-      "text": "[out:json][timeout:15];(way[\"building\"](51.49720,-0.12749,51.50309,-0.11586);way[\"building:part\"](51.49720,-0.12749,51.50309,-0.11586);way[\"landuse\"](51.49720,-0.12749,51.50309,-0.11586);way[\"landcover\"](51.49720,-0.12749,51.50309,-0.11586);way[\"amenity\"](51.49720,-0.12749,51.50309,-0.11586);way[\"leisure\"](51.49720,-0.12749,51.50309,-0.11586);way[\"natural\"](51.49720,-0.12749,51.50309,-0.11586);way[\"healthcare\"](51.49720,-0.12749,51.50309,-0.11586);way[\"tourism\"](51.49720,-0.12749,51.50309,-0.11586);way[\"shop\"](51.49720,-0.12749,51.50309,-0.11586);way[\"office\"](51.49720,-0.12749,51.50309,-0.11586);way[\"craft\"](51.49720,-0.12749,51.50309,-0.11586);way[\"industrial\"](51.49720,-0.12749,51.50309,-0.11586);way[\"man_made\"](51.49720,-0.12749,51.50309,-0.11586);way[\"power\"](51.49720,-0.12749,51.50309,-0.11586);way[\"public_transport\"](51.49720,-0.12749,51.50309,-0.11586);way[\"railway\"](51.49720,-0.12749,51.50309,-0.11586);way[\"aeroway\"](51.49720,-0.12749,51.50309,-0.11586);way[\"military\"](51.49720,-0.12749,51.50309,-0.11586);way[\"historic\"](51.49720,-0.12749,51.50309,-0.11586);way[\"sport\"](51.49720,-0.12749,51.50309,-0.11586);way[\"water\"](51.49720,-0.12749,51.50309,-0.11586);way[\"waterway\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"building\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"building:part\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"landuse\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"landcover\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"amenity\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"leisure\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"natural\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"healthcare\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"tourism\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"shop\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"office\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"craft\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"industrial\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"man_made\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"power\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"public_transport\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"railway\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"aeroway\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"military\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"historic\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"sport\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"water\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"waterway\"](51.49720,-0.12749,51.50309,-0.11586););out body geom 634;node[\"power\"=\"tower\"](51.49720,-0.12749,51.50309,-0.11586);out tags 449;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](51.49720,-0.12749,51.50309,-0.11586);out geom 60;node[\"railway\"=\"level_crossing\"](51.49720,-0.12749,51.50309,-0.11586);out 40;node[\"waterway\"=\"waterfall\"](51.49720,-0.12749,51.50309,-0.11586);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](51.49720,-0.12749,51.50309,-0.11586);out 24;node[\"natural\"=\"peak\"](51.49720,-0.12749,51.50309,-0.11586);out 12;node[\"highway\"=\"motorway_junction\"](51.49720,-0.12749,51.50309,-0.11586);out 12;node[\"railway\"~\"^(station|halt)$\"](51.49720,-0.12749,51.50309,-0.11586);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](51.49720,-0.12749,51.50309,-0.11586);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](51.49720,-0.12749,51.50309,-0.11586);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](51.49720,-0.12749,51.50309,-0.11586);out geom 120;way[\"landuse\"](51.49720,-0.12749,51.50309,-0.11586);out geom 211;way[\"natural\"](51.49720,-0.12749,51.50309,-0.11586);out geom 211;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](51.49720,-0.12749,51.50309,-0.11586);out geom 211;rel[\"boundary\"=\"administrative\"](51.49720,-0.12749,51.50309,-0.11586);way(r);out geom 400;"
+      "text": "[out:json][timeout:15];(way[\"building\"](51.49720,-0.12749,51.50309,-0.11586);way[\"building:part\"](51.49720,-0.12749,51.50309,-0.11586);way[\"landuse\"](51.49720,-0.12749,51.50309,-0.11586);way[\"landcover\"](51.49720,-0.12749,51.50309,-0.11586);way[\"amenity\"](51.49720,-0.12749,51.50309,-0.11586);way[\"leisure\"](51.49720,-0.12749,51.50309,-0.11586);way[\"natural\"](51.49720,-0.12749,51.50309,-0.11586);way[\"healthcare\"](51.49720,-0.12749,51.50309,-0.11586);way[\"tourism\"](51.49720,-0.12749,51.50309,-0.11586);way[\"shop\"](51.49720,-0.12749,51.50309,-0.11586);way[\"office\"](51.49720,-0.12749,51.50309,-0.11586);way[\"craft\"](51.49720,-0.12749,51.50309,-0.11586);way[\"industrial\"](51.49720,-0.12749,51.50309,-0.11586);way[\"man_made\"](51.49720,-0.12749,51.50309,-0.11586);way[\"power\"](51.49720,-0.12749,51.50309,-0.11586);way[\"public_transport\"](51.49720,-0.12749,51.50309,-0.11586);way[\"railway\"](51.49720,-0.12749,51.50309,-0.11586);way[\"aeroway\"](51.49720,-0.12749,51.50309,-0.11586);way[\"military\"](51.49720,-0.12749,51.50309,-0.11586);way[\"historic\"](51.49720,-0.12749,51.50309,-0.11586);way[\"sport\"](51.49720,-0.12749,51.50309,-0.11586);way[\"water\"](51.49720,-0.12749,51.50309,-0.11586);way[\"waterway\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"building\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"building:part\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"landuse\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"landcover\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"amenity\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"leisure\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"natural\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"healthcare\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"tourism\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"shop\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"office\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"craft\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"industrial\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"man_made\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"power\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"public_transport\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"railway\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"aeroway\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"military\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"historic\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"sport\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"water\"](51.49720,-0.12749,51.50309,-0.11586);rel[\"type\"=\"multipolygon\"][\"waterway\"](51.49720,-0.12749,51.50309,-0.11586););out body geom 634;node[\"man_made\"~\"^(tower|mast|communications_tower|lighthouse)$\"](51.49720,-0.12749,51.50309,-0.11586);out tags 449;node[\"aeroway\"=\"control_tower\"](51.49720,-0.12749,51.50309,-0.11586);out tags 449;node[\"power\"=\"tower\"](51.49720,-0.12749,51.50309,-0.11586);out tags 449;node[\"power\"=\"generator\"][\"generator:source\"=\"wind\"](51.49720,-0.12749,51.50309,-0.11586);out tags 449;node[\"amenity\"~\"^(place_of_worship|school|university|college|kindergarten|hospital|clinic|library|townhall|courthouse|community_centre|bus_station|ferry_terminal)$\"](51.49720,-0.12749,51.50309,-0.11586);out tags 240;node[\"tourism\"~\"^(museum|gallery)$\"](51.49720,-0.12749,51.50309,-0.11586);out tags 80;node[\"office\"=\"government\"](51.49720,-0.12749,51.50309,-0.11586);out tags 80;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](51.49720,-0.12749,51.50309,-0.11586);out geom 60;node[\"railway\"=\"level_crossing\"](51.49720,-0.12749,51.50309,-0.11586);out 40;node[\"waterway\"=\"waterfall\"](51.49720,-0.12749,51.50309,-0.11586);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](51.49720,-0.12749,51.50309,-0.11586);out 24;node[\"natural\"=\"peak\"](51.49720,-0.12749,51.50309,-0.11586);out 12;node[\"highway\"=\"motorway_junction\"](51.49720,-0.12749,51.50309,-0.11586);out 12;node[\"railway\"~\"^(station|halt)$\"](51.49720,-0.12749,51.50309,-0.11586);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](51.49720,-0.12749,51.50309,-0.11586);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](51.49720,-0.12749,51.50309,-0.11586);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](51.49720,-0.12749,51.50309,-0.11586);out geom 120;way[\"landuse\"](51.49720,-0.12749,51.50309,-0.11586);out geom 211;way[\"natural\"](51.49720,-0.12749,51.50309,-0.11586);out geom 211;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](51.49720,-0.12749,51.50309,-0.11586);out geom 211;rel[\"boundary\"=\"administrative\"](51.49720,-0.12749,51.50309,-0.11586);way(r);out geom 400;"
     },
     "roads": {
       "version": 1,
@@ -88,6 +88,25 @@
         },
         {
           "type": "node",
+          "id": 1233822757,
+          "tags": {
+            "alt_name": "Westminster Millennium Pier",
+            "amenity": "ferry_terminal",
+            "ferry": "yes",
+            "layer": "1",
+            "name": "Westminster Pier",
+            "naptan:AtcoCode": "9300WMR",
+            "network": "London River Services",
+            "network:wikidata": "Q371343",
+            "network:wikipedia": "en:London River Services",
+            "payment:contactless": "yes",
+            "payment:oyster": "yes",
+            "public_transport": "stop_position",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
           "id": 1587633281,
           "lat": 51.5012268,
           "lon": -0.1259759,
@@ -112,6 +131,26 @@
         },
         {
           "type": "node",
+          "id": 2548473333,
+          "tags": {
+            "addr:city": "London",
+            "addr:housenumber": "100",
+            "addr:postcode": "SW1A 2BQ",
+            "addr:street": "Parliament Street",
+            "alt_name": "HMRC",
+            "building": "government",
+            "government": "ministry",
+            "name": "His Majesty's Revenue and Customs",
+            "name:ar": "وزارة الإيرادات والجمارك",
+            "office": "government",
+            "toilets:wheelchair": "yes",
+            "wheelchair": "limited",
+            "wikidata": "Q166559",
+            "wikipedia": "en:HM Revenue and Customs"
+          }
+        },
+        {
+          "type": "node",
           "id": 2621668682,
           "lat": 51.5007807,
           "lon": -0.1242229,
@@ -119,6 +158,87 @@
             "railway": "subway_entrance",
             "wheelchair": "no",
             "wheelchair:description": "Steps down and in subway"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4629068654,
+          "tags": {
+            "addr:city": "London",
+            "addr:housenumber": "100",
+            "addr:postcode": "SW1A 2BQ",
+            "addr:street": "Parliament Street",
+            "alt_name": "DCMS",
+            "description": "Government Department",
+            "government": "ministry",
+            "name": "Department for Culture, Media and Sport",
+            "name:ar": "وزارة الثقافة والإعلام والرياضة",
+            "office": "government",
+            "toilets:wheelchair": "yes",
+            "website": "https://gov.uk/dcms",
+            "wheelchair": "limited",
+            "wikidata": "Q910019",
+            "wikipedia": "en:Department for Culture, Media and Sport"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5741257603,
+          "tags": {
+            "addr:city": "London",
+            "addr:housename": "Gassiot House",
+            "addr:housenumber": "2",
+            "addr:postcode": "SE1 7EP",
+            "addr:street": "Lambeth Palace Road",
+            "charge": "12 GBP",
+            "email": "info@florence-nightingale.co.uk",
+            "fee": "yes",
+            "fee:conditional": "no @ (age < 5)",
+            "museum": "person",
+            "name": "The Florence Nightingale Museum",
+            "opening_hours": "Tu-Su 10:00-17:00; \"Last Th of month close at 20:00\"",
+            "opening_hours:url": "https://www.florence-nightingale.co.uk/visiting-us/",
+            "phone": "+44 207 188 4400",
+            "tourism": "museum",
+            "website": "https://www.florence-nightingale.co.uk/",
+            "wheelchair": "yes",
+            "wikidata": "Q5460739",
+            "wikipedia": "en:Florence Nightingale Museum"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9849031118,
+          "tags": {
+            "addr:city": "London",
+            "addr:housenumber": "199",
+            "addr:postcode": "SE1 7FX",
+            "addr:street": "Westminster Bridge Road",
+            "amenity": "school",
+            "capacity": "750",
+            "check_date": "2025-08-30",
+            "contact:website": "https://www.dldcollege.co.uk/",
+            "isced:level": "2;3",
+            "max_age": "21",
+            "min_age": "13",
+            "name": "DLD College London",
+            "official_name": "DLD College",
+            "phone": "+44 20 7935 8411",
+            "ref:GB:uprn": "10091909062",
+            "ref:edubase": "100529",
+            "school:boarding": "yes",
+            "school:type": "independent",
+            "wikidata": "Q66220595"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10656359430,
+          "tags": {
+            "government": "legislative",
+            "historic:building": "residential",
+            "name": "Speaker's House",
+            "office": "government"
           }
         },
         {
@@ -142,16 +262,78 @@
           }
         },
         {
+          "type": "node",
+          "id": 13104010959,
+          "tags": {
+            "government": "parliament",
+            "name": "House of Commons",
+            "office": "government",
+            "wheelchair": "limited"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13104010960,
+          "tags": {
+            "government": "parliament",
+            "name": "House of Lords",
+            "office": "government",
+            "wheelchair": "limited"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13288027765,
+          "tags": {
+            "access": "private",
+            "alt_name": "Peers' Library",
+            "amenity": "library",
+            "name": "House of Lords Library",
+            "website": "https://lordslibrary.parliament.uk/",
+            "wikidata": "Q5915114"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13288027766,
+          "tags": {
+            "access": "private",
+            "amenity": "library",
+            "name": "Commons Library",
+            "website": "https://commonslibrary.parliament.uk/",
+            "wikidata": "Q15226006"
+          }
+        },
+        {
+          "type": "node",
+          "id": 13628535135,
+          "tags": {
+            "addr:city": "London",
+            "addr:housenumber": "100",
+            "addr:postcode": "SW1A 2BQ",
+            "addr:street": "Parliament Street",
+            "alt_name": "DSIT",
+            "description": "Government Department",
+            "government": "ministry",
+            "name": "Department for Science, Innovation and Technology",
+            "office": "government",
+            "toilets:wheelchair": "yes",
+            "wheelchair": "limited"
+          }
+        },
+        {
           "type": "way",
           "id": 4259627,
           "bounds": {
-            "minlat": 51.4975986,
+            "minlat": 51.4976195,
             "minlon": -0.1264268,
             "maxlat": 51.4985852,
             "maxlon": -0.1258505
           },
           "nodes": [
             25534096,
+            14156387990,
+            14156387991,
             25534097,
             1103676537,
             1493486654,
@@ -167,12 +349,20 @@
           ],
           "geometry": [
             {
-              "lat": 51.4976011,
-              "lon": -0.1258766
+              "lat": 51.4976463,
+              "lon": -0.125875
             },
             {
-              "lat": 51.4975986,
-              "lon": -0.1263706
+              "lat": 51.4976487,
+              "lon": -0.1262088
+            },
+            {
+              "lat": 51.4976204,
+              "lon": -0.1262096
+            },
+            {
+              "lat": 51.4976195,
+              "lon": -0.1263419
             },
             {
               "lat": 51.4978705,
@@ -215,8 +405,8 @@
               "lon": -0.1258734
             },
             {
-              "lat": 51.4976011,
-              "lon": -0.1258766
+              "lat": 51.4976463,
+              "lon": -0.125875
             }
           ],
           "tags": {
@@ -233,13 +423,15 @@
           "type": "way",
           "id": 4259627,
           "bounds": {
-            "minlat": 51.4975986,
+            "minlat": 51.4976195,
             "minlon": -0.1264268,
             "maxlat": 51.4985852,
             "maxlon": -0.1258505
           },
           "nodes": [
             25534096,
+            14156387990,
+            14156387991,
             25534097,
             1103676537,
             1493486654,
@@ -255,12 +447,20 @@
           ],
           "geometry": [
             {
-              "lat": 51.4976011,
-              "lon": -0.1258766
+              "lat": 51.4976463,
+              "lon": -0.125875
             },
             {
-              "lat": 51.4975986,
-              "lon": -0.1263706
+              "lat": 51.4976487,
+              "lon": -0.1262088
+            },
+            {
+              "lat": 51.4976204,
+              "lon": -0.1262096
+            },
+            {
+              "lat": 51.4976195,
+              "lon": -0.1263419
             },
             {
               "lat": 51.4978705,
@@ -303,8 +503,8 @@
               "lon": -0.1258734
             },
             {
-              "lat": 51.4976011,
-              "lon": -0.1258766
+              "lat": 51.4976463,
+              "lon": -0.125875
             }
           ],
           "tags": {
@@ -1045,7 +1245,7 @@
             "operator": "Lambeth Council",
             "operator:type": "government",
             "operator:wikidata": "Q6481450",
-            "website": "https://beta.lambeth.gov.uk/parks/archbishops-park",
+            "website": "https://www.lambeth.gov.uk/parks/archbishops-park",
             "wikidata": "Q105561291"
           }
         },
@@ -1269,7 +1469,7 @@
             "operator": "Lambeth Council",
             "operator:type": "government",
             "operator:wikidata": "Q6481450",
-            "website": "https://beta.lambeth.gov.uk/parks/archbishops-park",
+            "website": "https://www.lambeth.gov.uk/parks/archbishops-park",
             "wikidata": "Q105561291"
           }
         },
@@ -55379,6 +55579,7 @@
             8334860831,
             8334859868,
             8334860580,
+            14148970863,
             8334860583,
             8334860948,
             8334860806,
@@ -55438,6 +55639,10 @@
             {
               "lat": 51.4227076,
               "lon": -0.1069871
+            },
+            {
+              "lat": 51.4227162,
+              "lon": -0.1070346
             },
             {
               "lat": 51.4227541,
@@ -55792,8 +55997,8 @@
               "lon": -0.079606
             },
             {
-              "lat": 51.4196966,
-              "lon": -0.0797924
+              "lat": 51.4196974,
+              "lon": -0.0797922
             },
             {
               "lat": 51.4196851,
@@ -55809,7 +56014,7 @@
             },
             {
               "lat": 51.4196821,
-              "lon": -0.0804512
+              "lon": -0.0804544
             },
             {
               "lat": 51.4196864,
@@ -96766,7 +96971,7 @@
       "generator": "Overpass API 0.7.62.11 87bfad18",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T02:35:51Z"
+        "timestamp_osm_base": "2026-10-01T13:33:38Z"
       },
       "version": 0.6
     },
@@ -97392,7 +97597,6 @@
           },
           "nodes": [
             1493486653,
-            13720408150,
             25378052,
             10313083363,
             25378049,
@@ -97403,10 +97607,6 @@
             {
               "lat": 51.4975649,
               "lon": -0.1264026
-            },
-            {
-              "lat": 51.4975658,
-              "lon": -0.1265477
             },
             {
               "lat": 51.4975662,
@@ -100942,7 +101142,6 @@
           "nodes": [
             1493486653,
             9931638875,
-            13720408140,
             1493486654
           ],
           "geometry": [
@@ -100953,10 +101152,6 @@
             {
               "lat": 51.4975977,
               "lon": -0.1264014
-            },
-            {
-              "lat": 51.4976032,
-              "lon": -0.1264012
             },
             {
               "lat": 51.4978692,
@@ -108315,11 +108510,11 @@
             "foot": "no",
             "highway": "cycleway",
             "is_sidepath": "yes",
-            "is_sidepath:of:name": "Westminster Bridge Road",
             "layer": "1",
             "lit": "yes",
             "oneway": "yes",
             "smoothness": "excellent",
+            "street:name": "Westminster Bridge Road",
             "surface": "asphalt"
           }
         },
@@ -109683,6 +109878,8 @@
             "footway": "sidewalk",
             "highway": "footway",
             "lit": "yes",
+            "name": "Victoria Embankment",
+            "street:name": "Victoria Embankment",
             "surface": "paving_stones"
           }
         },
@@ -109756,8 +109953,8 @@
           "id": 498958794,
           "bounds": {
             "minlat": 51.5011428,
-            "minlon": -0.1294918,
-            "maxlat": 51.5013085,
+            "minlon": -0.1295409,
+            "maxlat": 51.5013113,
             "maxlon": -0.1273762
           },
           "nodes": [
@@ -109772,8 +109969,8 @@
           ],
           "geometry": [
             {
-              "lat": 51.5013085,
-              "lon": -0.1294918
+              "lat": 51.5013113,
+              "lon": -0.1295409
             },
             {
               "lat": 51.5013055,
@@ -115755,13 +115952,12 @@
           "type": "way",
           "id": 679070803,
           "bounds": {
-            "minlat": 51.5007413,
-            "minlon": -0.1175443,
+            "minlat": 51.5008261,
+            "minlon": -0.1175222,
             "maxlat": 51.5013873,
             "maxlon": -0.1171884
           },
           "nodes": [
-            2263204223,
             13097352538,
             12698908843,
             3252174066,
@@ -115771,10 +115967,6 @@
             2089584869
           ],
           "geometry": [
-            {
-              "lat": 51.5007413,
-              "lon": -0.1175443
-            },
             {
               "lat": 51.5008261,
               "lon": -0.1175222
@@ -117935,7 +118127,6 @@
             "foot": "no",
             "highway": "cycleway",
             "is_sidepath": "yes",
-            "is_sidepath:of:name": "Westminster Bridge Road",
             "layer": "1",
             "lit": "yes",
             "name": "Westminster Bridge",
@@ -117946,6 +118137,7 @@
             "sidewalk:left": "separate",
             "smoothness": "excellent",
             "source": "https://planning.lambeth.gov.uk/online-applications/files/356981DE9188D8BC5202ADCD1A199D44/pdf/21_00789_LB-OVERVIEW_PLAN_GA__GENERAL_ARRANGEMENTS-2628476.pdf",
+            "street:name": "Westminster Bridge Road",
             "surface": "asphalt"
           }
         },
@@ -118645,15 +118837,13 @@
           "bounds": {
             "minlat": 51.5011452,
             "minlon": -0.127439,
-            "maxlat": 51.5012871,
-            "maxlon": -0.1263943
+            "maxlat": 51.5012063,
+            "maxlon": -0.126432
           },
           "nodes": [
             8785165372,
             4194445845,
-            9914358353,
-            4194445844,
-            4194445843
+            9914358353
           ],
           "geometry": [
             {
@@ -118667,19 +118857,9 @@
             {
               "lat": 51.5011452,
               "lon": -0.126432
-            },
-            {
-              "lat": 51.5011577,
-              "lon": -0.1264123
-            },
-            {
-              "lat": 51.5012871,
-              "lon": -0.1263943
             }
           ],
           "tags": {
-            "bicycle": "dismount",
-            "foot": "yes",
             "footway": "sidewalk",
             "highway": "footway",
             "lit": "yes",
@@ -119189,6 +119369,7 @@
             "highway": "footway",
             "lit": "yes",
             "name": "Upper Marsh",
+            "street:name": "Upper Marsh",
             "surface": "paved"
           }
         },
@@ -123465,28 +123646,28 @@
           "type": "way",
           "id": 1083766756,
           "bounds": {
-            "minlat": 51.4975369,
-            "minlon": -0.1258728,
-            "maxlat": 51.4975962,
-            "maxlon": -0.1258703
+            "minlat": 51.4975327,
+            "minlon": -0.1258453,
+            "maxlat": 51.4975923,
+            "maxlon": -0.1258407
           },
           "nodes": [
-            9931638857,
+            9931701216,
             9931638858,
-            13720408121
+            9931638857
           ],
           "geometry": [
             {
-              "lat": 51.4975962,
-              "lon": -0.1258707
+              "lat": 51.4975327,
+              "lon": -0.1258407
             },
             {
-              "lat": 51.497562,
-              "lon": -0.1258728
+              "lat": 51.4975624,
+              "lon": -0.125843
             },
             {
-              "lat": 51.4975369,
-              "lon": -0.1258703
+              "lat": 51.4975923,
+              "lon": -0.1258453
             }
           ],
           "tags": {
@@ -123495,55 +123676,55 @@
             "footway": "crossing",
             "highway": "footway",
             "lit": "yes",
-            "surface": "asphalt"
+            "surface": "paving_stones"
           }
         },
         {
           "type": "way",
           "id": 1083766757,
           "bounds": {
-            "minlat": 51.4975962,
+            "minlat": 51.4975923,
             "minlon": -0.1259611,
             "maxlat": 51.4987054,
             "maxlon": -0.1258301
           },
           "nodes": [
-            9931691200,
-            9931638861,
-            9931638860,
-            9931638859,
-            9931638877,
+            9931638857,
             9931638876,
-            9931638857
+            9931638877,
+            9931638859,
+            9931638860,
+            9931638861,
+            9931691200
           ],
           "geometry": [
             {
-              "lat": 51.4987054,
-              "lon": -0.1259611
+              "lat": 51.4975923,
+              "lon": -0.1258453
             },
             {
-              "lat": 51.4986679,
-              "lon": -0.1259485
-            },
-            {
-              "lat": 51.4985233,
-              "lon": -0.1259063
-            },
-            {
-              "lat": 51.4982563,
-              "lon": -0.1258301
+              "lat": 51.4976085,
+              "lon": -0.1258461
             },
             {
               "lat": 51.4976616,
               "lon": -0.1258492
             },
             {
-              "lat": 51.4976085,
-              "lon": -0.1258523
+              "lat": 51.4982563,
+              "lon": -0.1258301
             },
             {
-              "lat": 51.4975962,
-              "lon": -0.1258707
+              "lat": 51.4985233,
+              "lon": -0.1259063
+            },
+            {
+              "lat": 51.4986679,
+              "lon": -0.1259485
+            },
+            {
+              "lat": 51.4987054,
+              "lon": -0.1259611
             }
           ],
           "tags": {
@@ -123560,7 +123741,7 @@
             "minlat": 51.4976085,
             "minlon": -0.1262639,
             "maxlat": 51.4976126,
-            "maxlon": -0.1258523
+            "maxlon": -0.1258461
           },
           "nodes": [
             9931638876,
@@ -123569,7 +123750,7 @@
           "geometry": [
             {
               "lat": 51.4976085,
-              "lon": -0.1258523
+              "lon": -0.1258461
             },
             {
               "lat": 51.4976126,
@@ -123650,23 +123831,23 @@
           "type": "way",
           "id": 1083777880,
           "bounds": {
-            "minlat": 51.4974292,
-            "minlon": -0.125793,
-            "maxlat": 51.4974316,
-            "maxlon": -0.1257435
+            "minlat": 51.4974271,
+            "minlon": -0.1258268,
+            "maxlat": 51.4974295,
+            "maxlon": -0.1257802
           },
           "nodes": [
-            9931701207,
-            9931701208
+            9931701208,
+            9931701207
           ],
           "geometry": [
             {
-              "lat": 51.4974292,
-              "lon": -0.125793
+              "lat": 51.4974295,
+              "lon": -0.1257802
             },
             {
-              "lat": 51.4974316,
-              "lon": -0.1257435
+              "lat": 51.4974271,
+              "lon": -0.1258268
             }
           ],
           "tags": {
@@ -123680,43 +123861,40 @@
           "id": 1083777884,
           "bounds": {
             "minlat": 51.4970214,
-            "minlon": -0.1258689,
-            "maxlat": 51.4975236,
+            "minlon": -0.1258407,
+            "maxlat": 51.4975327,
             "maxlon": -0.1257921
           },
           "nodes": [
-            9931701216,
-            11787359281,
-            9931701207,
+            9931567498,
             13720408124,
-            9931567498
+            9931701207,
+            9931701216
           ],
           "geometry": [
             {
-              "lat": 51.4975236,
-              "lon": -0.1258689
-            },
-            {
-              "lat": 51.4975125,
-              "lon": -0.125822
-            },
-            {
-              "lat": 51.4974292,
-              "lon": -0.125793
+              "lat": 51.4970214,
+              "lon": -0.1257946
             },
             {
               "lat": 51.4970497,
               "lon": -0.1257921
             },
             {
-              "lat": 51.4970214,
-              "lon": -0.1257946
+              "lat": 51.4974271,
+              "lon": -0.1258268
+            },
+            {
+              "lat": 51.4975327,
+              "lon": -0.1258407
             }
           ],
           "tags": {
             "footway": "sidewalk",
             "highway": "footway",
             "lit": "yes",
+            "name": "Millbank",
+            "street:name": "Millbank",
             "surface": "paving_stones"
           }
         },
@@ -123730,17 +123908,17 @@
             "maxlon": -0.125579
           },
           "nodes": [
-            9931731217,
-            9931731218
+            9931731218,
+            9931731217
           ],
           "geometry": [
             {
-              "lat": 51.4974438,
-              "lon": -0.1256066
-            },
-            {
               "lat": 51.4974437,
               "lon": -0.125579
+            },
+            {
+              "lat": 51.4974438,
+              "lon": -0.1256066
             }
           ],
           "tags": {
@@ -123753,31 +123931,37 @@
           "type": "way",
           "id": 1083777886,
           "bounds": {
-            "minlat": 51.4974316,
-            "minlon": -0.1257435,
+            "minlat": 51.4974295,
+            "minlon": -0.1257802,
             "maxlat": 51.4974438,
             "maxlon": -0.1256066
           },
           "nodes": [
-            9931701208,
+            9931731217,
             9931731230,
-            9931731217
+            14156387989,
+            9931701208
           ],
           "geometry": [
             {
-              "lat": 51.4974316,
-              "lon": -0.1257435
+              "lat": 51.4974438,
+              "lon": -0.1256066
             },
             {
               "lat": 51.4974369,
               "lon": -0.1256841
             },
             {
-              "lat": 51.4974438,
-              "lon": -0.1256066
+              "lat": 51.4974303,
+              "lon": -0.1257682
+            },
+            {
+              "lat": 51.4974295,
+              "lon": -0.1257802
             }
           ],
           "tags": {
+            "access": "no",
             "crossing": "uncontrolled",
             "crossing:island": "no",
             "crossing:markings": "zebra;dots",
@@ -123849,6 +124033,8 @@
             "footway": "sidewalk",
             "highway": "footway",
             "lit": "yes",
+            "name": "Millbank",
+            "street:name": "Millbank",
             "surface": "paving_stones"
           }
         },
@@ -124524,11 +124710,11 @@
             "foot": "yes",
             "footway": "sidewalk",
             "highway": "footway",
-            "is_sidepath:of:name": "Great George Street",
             "lit": "yes",
             "name": "Great George Street",
             "name:etymology:wikidata": "Q131981",
             "smoothness": "excellent",
+            "street:name": "Great George Street",
             "surface": "paving_stones"
           }
         },
@@ -124560,10 +124746,10 @@
             "foot": "yes",
             "footway": "sidewalk",
             "highway": "footway",
-            "is_sidepath:of:name": "Great George Street",
             "lit": "yes",
             "name": "Great George Street",
             "name:etymology:wikidata": "Q131981",
+            "street:name": "Great George Street",
             "surface": "paving_stones"
           }
         },
@@ -124732,12 +124918,14 @@
           "type": "way",
           "id": 1128951593,
           "bounds": {
-            "minlat": 51.5012871,
-            "minlon": -0.1263943,
+            "minlat": 51.5011452,
+            "minlon": -0.126432,
             "maxlat": 51.5020536,
             "maxlon": -0.1262861
           },
           "nodes": [
+            9914358353,
+            4194445844,
             4194445843,
             10363909444,
             10363909443,
@@ -124745,6 +124933,14 @@
             10363909441
           ],
           "geometry": [
+            {
+              "lat": 51.5011452,
+              "lon": -0.126432
+            },
+            {
+              "lat": 51.5011577,
+              "lon": -0.1264123
+            },
             {
               "lat": 51.5012871,
               "lon": -0.1263943
@@ -124767,14 +124963,12 @@
             }
           ],
           "tags": {
-            "bicycle": "dismount",
-            "foot": "yes",
             "footway": "sidewalk",
             "highway": "footway",
-            "is_sidepath:of:name": "Great George Street",
             "lit": "yes",
-            "name": "Great George Street",
-            "name:etymology:wikidata": "Q131981",
+            "name": "Parliament Street",
+            "smoothness": "excellent",
+            "street:name": "Parliament Street",
             "surface": "paving_stones"
           }
         },
@@ -124784,11 +124978,12 @@
           "bounds": {
             "minlat": 51.5011219,
             "minlon": -0.125975,
-            "maxlat": 51.5019714,
-            "maxlon": -0.1258959
+            "maxlat": 51.5019878,
+            "maxlon": -0.1258942
           },
           "nodes": [
-            13728746157,
+            10439632947,
+            10439632943,
             10439632957,
             10363909415,
             10363909416,
@@ -124796,8 +124991,12 @@
           ],
           "geometry": [
             {
-              "lat": 51.5019714,
-              "lon": -0.1258959
+              "lat": 51.5019878,
+              "lon": -0.1258942
+            },
+            {
+              "lat": 51.5019821,
+              "lon": -0.1258948
             },
             {
               "lat": 51.5012457,
@@ -124820,6 +125019,8 @@
             "footway": "sidewalk",
             "highway": "footway",
             "lit": "yes",
+            "name": "Parliament Street",
+            "street:name": "Parliament Street",
             "surface": "paving_stones"
           }
         },
@@ -125073,8 +125274,8 @@
             "foot": "yes",
             "footway": "crossing",
             "highway": "footway",
-            "is_sidepath:of:name": "Parliament Street",
             "lit": "yes",
+            "street:name": "Parliament Street",
             "surface": "paving_stones"
           }
         },
@@ -125234,9 +125435,9 @@
           "tags": {
             "footway": "sidewalk",
             "highway": "footway",
-            "is_sidepath:of:name": "Parliament Street",
             "lit": "yes",
             "name": "Parliament Street",
+            "street:name": "Parliament Street",
             "surface": "paving_stones"
           }
         },
@@ -125373,10 +125574,10 @@
           "tags": {
             "footway": "sidewalk",
             "highway": "footway",
-            "is_sidepath:of:name": "Whitehall",
             "lit": "yes",
             "name": "Whitehall",
             "name:etymology:wikidata": "Q391620",
+            "street:name": "Whitehall",
             "surface": "paving_stones"
           }
         },
@@ -125426,9 +125627,9 @@
           "tags": {
             "footway": "sidewalk",
             "highway": "footway",
-            "is_sidepath:of:name": "Parliament Street",
             "lit": "yes",
             "name": "Parliament Street",
+            "street:name": "Parliament Street",
             "surface": "paving_stones"
           }
         },
@@ -125473,9 +125674,9 @@
           "tags": {
             "footway": "sidewalk",
             "highway": "footway",
-            "is_sidepath:of:name": "Parliament Street",
             "lit": "yes",
             "name": "Parliament Street",
+            "street:name": "Parliament Street",
             "surface": "paving_stones"
           }
         },
@@ -125484,22 +125685,17 @@
           "id": 1129738136,
           "bounds": {
             "minlat": 51.5026959,
-            "minlon": -0.1263541,
-            "maxlat": 51.5031687,
+            "minlon": -0.1263533,
+            "maxlat": 51.5031599,
             "maxlon": -0.1263469
           },
           "nodes": [
-            12633733445,
             10449493520,
             10449493509,
             10449493519,
             10449493516
           ],
           "geometry": [
-            {
-              "lat": 51.5031687,
-              "lon": -0.1263541
-            },
             {
               "lat": 51.5031599,
               "lon": -0.1263533
@@ -125520,10 +125716,10 @@
           "tags": {
             "footway": "sidewalk",
             "highway": "footway",
-            "is_sidepath:of:name": "Whitehall",
             "lit": "yes",
             "name": "Whitehall",
             "name:etymology:wikidata": "Q391620",
+            "street:name": "Whitehall",
             "surface": "paving_stones"
           }
         },
@@ -125950,29 +126146,24 @@
           "type": "way",
           "id": 1164438113,
           "bounds": {
-            "minlat": 51.497562,
+            "minlat": 51.4975623,
             "minlon": -0.1264026,
             "maxlat": 51.4975649,
-            "maxlon": -0.1257004
+            "maxlon": -0.1258156
           },
           "nodes": [
-            25534085,
             9931638874,
             9931638858,
             1493486653
           ],
           "geometry": [
             {
-              "lat": 51.4975631,
-              "lon": -0.1257004
+              "lat": 51.4975623,
+              "lon": -0.1258156
             },
             {
-              "lat": 51.4975634,
-              "lon": -0.1258218
-            },
-            {
-              "lat": 51.497562,
-              "lon": -0.1258728
+              "lat": 51.4975624,
+              "lon": -0.125843
             },
             {
               "lat": 51.4975649,
@@ -127037,7 +127228,6 @@
             "footway": "crossing",
             "highway": "footway",
             "lit": "yes",
-            "name": "Lambeth Palace Road",
             "surface": "asphalt"
           }
         },
@@ -133084,17 +133274,17 @@
           }
         }
       ],
-      "generator": "Overpass API 0.7.62.11 87bfad18",
+      "generator": "Overpass API 0.7.62.4 2390de5a",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-09-01T02:35:51Z"
+        "timestamp_osm_base": "2026-10-01T13:35:45Z"
       },
       "version": 0.6
     }
   },
   "stats": {
     "bboxKm2": 0.528560118200472,
-    "featureElements": 775,
+    "featureElements": 786,
     "roadElements": 837
   }
 }

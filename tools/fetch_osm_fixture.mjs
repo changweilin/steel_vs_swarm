@@ -21,7 +21,7 @@ import { captureElevationFixture } from './elevation_fixture.mjs';
 
 const MIRRORS = [
   'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 const UA = 'steel-vs-swarm-osm-fixture/1.0 (maintainer-updated regression data)';

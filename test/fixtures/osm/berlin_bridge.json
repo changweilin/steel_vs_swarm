@@ -15,21 +15,21 @@
     "maxLat": 52.509,
     "maxLng": 13.453
   },
-  "capturedAt": "2026-08-31T13:33:04.148Z",
+  "capturedAt": "2026-10-01T13:34:13.888Z",
   "source": {
-    "features": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-    "roads": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "features": "https://overpass-api.de/api/interpreter",
+    "roads": "https://overpass-api.de/api/interpreter",
     "userAgent": "steel-vs-swarm-osm-fixture/1.0 (maintainer-updated regression data)"
   },
   "queries": {
     "features": {
-      "version": 6,
+      "version": 9,
       "quotas": {
         "nBld": 400,
         "nCover": 200,
         "nArea": 600
       },
-      "text": "[out:json][timeout:15];(way[\"building\"](52.50200,13.44500,52.50900,13.45300);way[\"building:part\"](52.50200,13.44500,52.50900,13.45300);way[\"landuse\"](52.50200,13.44500,52.50900,13.45300);way[\"landcover\"](52.50200,13.44500,52.50900,13.45300);way[\"amenity\"](52.50200,13.44500,52.50900,13.45300);way[\"leisure\"](52.50200,13.44500,52.50900,13.45300);way[\"natural\"](52.50200,13.44500,52.50900,13.45300);way[\"healthcare\"](52.50200,13.44500,52.50900,13.45300);way[\"tourism\"](52.50200,13.44500,52.50900,13.45300);way[\"shop\"](52.50200,13.44500,52.50900,13.45300);way[\"office\"](52.50200,13.44500,52.50900,13.45300);way[\"craft\"](52.50200,13.44500,52.50900,13.45300);way[\"industrial\"](52.50200,13.44500,52.50900,13.45300);way[\"man_made\"](52.50200,13.44500,52.50900,13.45300);way[\"power\"](52.50200,13.44500,52.50900,13.45300);way[\"public_transport\"](52.50200,13.44500,52.50900,13.45300);way[\"railway\"](52.50200,13.44500,52.50900,13.45300);way[\"aeroway\"](52.50200,13.44500,52.50900,13.45300);way[\"military\"](52.50200,13.44500,52.50900,13.45300);way[\"historic\"](52.50200,13.44500,52.50900,13.45300);way[\"sport\"](52.50200,13.44500,52.50900,13.45300);way[\"water\"](52.50200,13.44500,52.50900,13.45300);way[\"waterway\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"building\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"building:part\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"landuse\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"landcover\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"amenity\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"leisure\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"natural\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"healthcare\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"tourism\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"shop\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"office\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"craft\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"industrial\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"man_made\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"power\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"public_transport\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"railway\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"aeroway\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"military\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"historic\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"sport\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"water\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"waterway\"](52.50200,13.44500,52.50900,13.45300););out body geom 600;node[\"power\"=\"tower\"](52.50200,13.44500,52.50900,13.45300);out tags 400;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](52.50200,13.44500,52.50900,13.45300);out geom 60;node[\"railway\"=\"level_crossing\"](52.50200,13.44500,52.50900,13.45300);out 40;node[\"waterway\"=\"waterfall\"](52.50200,13.44500,52.50900,13.45300);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](52.50200,13.44500,52.50900,13.45300);out 24;node[\"natural\"=\"peak\"](52.50200,13.44500,52.50900,13.45300);out 12;node[\"highway\"=\"motorway_junction\"](52.50200,13.44500,52.50900,13.45300);out 12;node[\"railway\"~\"^(station|halt)$\"](52.50200,13.44500,52.50900,13.45300);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](52.50200,13.44500,52.50900,13.45300);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](52.50200,13.44500,52.50900,13.45300);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](52.50200,13.44500,52.50900,13.45300);out geom 120;way[\"landuse\"](52.50200,13.44500,52.50900,13.45300);out geom 200;way[\"natural\"](52.50200,13.44500,52.50900,13.45300);out geom 200;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](52.50200,13.44500,52.50900,13.45300);out geom 200;rel[\"boundary\"=\"administrative\"](52.50200,13.44500,52.50900,13.45300);way(r);out geom 400;"
+      "text": "[out:json][timeout:15];(way[\"building\"](52.50200,13.44500,52.50900,13.45300);way[\"building:part\"](52.50200,13.44500,52.50900,13.45300);way[\"landuse\"](52.50200,13.44500,52.50900,13.45300);way[\"landcover\"](52.50200,13.44500,52.50900,13.45300);way[\"amenity\"](52.50200,13.44500,52.50900,13.45300);way[\"leisure\"](52.50200,13.44500,52.50900,13.45300);way[\"natural\"](52.50200,13.44500,52.50900,13.45300);way[\"healthcare\"](52.50200,13.44500,52.50900,13.45300);way[\"tourism\"](52.50200,13.44500,52.50900,13.45300);way[\"shop\"](52.50200,13.44500,52.50900,13.45300);way[\"office\"](52.50200,13.44500,52.50900,13.45300);way[\"craft\"](52.50200,13.44500,52.50900,13.45300);way[\"industrial\"](52.50200,13.44500,52.50900,13.45300);way[\"man_made\"](52.50200,13.44500,52.50900,13.45300);way[\"power\"](52.50200,13.44500,52.50900,13.45300);way[\"public_transport\"](52.50200,13.44500,52.50900,13.45300);way[\"railway\"](52.50200,13.44500,52.50900,13.45300);way[\"aeroway\"](52.50200,13.44500,52.50900,13.45300);way[\"military\"](52.50200,13.44500,52.50900,13.45300);way[\"historic\"](52.50200,13.44500,52.50900,13.45300);way[\"sport\"](52.50200,13.44500,52.50900,13.45300);way[\"water\"](52.50200,13.44500,52.50900,13.45300);way[\"waterway\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"building\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"building:part\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"landuse\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"landcover\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"amenity\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"leisure\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"natural\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"healthcare\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"tourism\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"shop\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"office\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"craft\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"industrial\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"man_made\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"power\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"public_transport\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"railway\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"aeroway\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"military\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"historic\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"sport\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"water\"](52.50200,13.44500,52.50900,13.45300);rel[\"type\"=\"multipolygon\"][\"waterway\"](52.50200,13.44500,52.50900,13.45300););out body geom 600;node[\"man_made\"~\"^(tower|mast|communications_tower|lighthouse)$\"](52.50200,13.44500,52.50900,13.45300);out tags 400;node[\"aeroway\"=\"control_tower\"](52.50200,13.44500,52.50900,13.45300);out tags 400;node[\"power\"=\"tower\"](52.50200,13.44500,52.50900,13.45300);out tags 400;node[\"power\"=\"generator\"][\"generator:source\"=\"wind\"](52.50200,13.44500,52.50900,13.45300);out tags 400;node[\"amenity\"~\"^(place_of_worship|school|university|college|kindergarten|hospital|clinic|library|townhall|courthouse|community_centre|bus_station|ferry_terminal)$\"](52.50200,13.44500,52.50900,13.45300);out tags 240;node[\"tourism\"~\"^(museum|gallery)$\"](52.50200,13.44500,52.50900,13.45300);out tags 80;node[\"office\"=\"government\"](52.50200,13.44500,52.50900,13.45300);out tags 80;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](52.50200,13.44500,52.50900,13.45300);out geom 60;node[\"railway\"=\"level_crossing\"](52.50200,13.44500,52.50900,13.45300);out 40;node[\"waterway\"=\"waterfall\"](52.50200,13.44500,52.50900,13.45300);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](52.50200,13.44500,52.50900,13.45300);out 24;node[\"natural\"=\"peak\"](52.50200,13.44500,52.50900,13.45300);out 12;node[\"highway\"=\"motorway_junction\"](52.50200,13.44500,52.50900,13.45300);out 12;node[\"railway\"~\"^(station|halt)$\"](52.50200,13.44500,52.50900,13.45300);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](52.50200,13.44500,52.50900,13.45300);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](52.50200,13.44500,52.50900,13.45300);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](52.50200,13.44500,52.50900,13.45300);out geom 120;way[\"landuse\"](52.50200,13.44500,52.50900,13.45300);out geom 200;way[\"natural\"](52.50200,13.44500,52.50900,13.45300);out geom 200;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](52.50200,13.44500,52.50900,13.45300);out geom 200;rel[\"boundary\"=\"administrative\"](52.50200,13.44500,52.50900,13.45300);way(r);out geom 400;"
     },
     "roads": {
       "version": 1,
@@ -43,6 +43,28 @@
   "responses": {
     "features": {
       "elements": [
+        {
+          "type": "node",
+          "id": 537161358,
+          "tags": {
+            "amenity": "college",
+            "check_date": "2025-01-07",
+            "name": "Die Managementschule Berlin"
+          }
+        },
+        {
+          "type": "node",
+          "id": 537161656,
+          "tags": {
+            "amenity": "kindergarten",
+            "brand": "Deutsches Rotes Kreuz",
+            "brand:short": "DRK",
+            "brand:wikidata": "Q694104",
+            "brand:wikipedia": "de:Deutsches Rotes Kreuz",
+            "name": "DRK-Bildungswerk Nord",
+            "short_name": "DRK"
+          }
+        },
         {
           "type": "node",
           "id": 1925850329,
@@ -111,6 +133,7 @@
           "lat": 52.5053593,
           "lon": 13.4491354,
           "tags": {
+            "door": "no",
             "entrance": "yes",
             "entrance_marker:subway": "yes",
             "name": "Warschauer Straße/Stralauer Allee/Mühlenstraße/Helsingforser Straße/East Side Mall",
@@ -137,6 +160,38 @@
             "wheelchair": "limited",
             "wikidata": "Q664036",
             "wikipedia": "de:Bahnhof Berlin Warschauer Straße"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4215688690,
+          "tags": {
+            "addr:housenumber": "1",
+            "addr:place": "Helsingforser Platz",
+            "addr:postcode": "10243",
+            "check_date": "2024-07-02",
+            "contact:facebook": "https://www.facebook.com/fotogaleriefriedrichshain/",
+            "email": "fotogalerie@kulturring.org",
+            "fee": "no",
+            "name": "Fotogalerie Friedrichshain",
+            "opening_hours": "Tu,We,Fr,Sa 14:00-18:00; Th 10:00-20:00",
+            "phone": "+49 30 2961684",
+            "tourism": "gallery",
+            "website": "https://fotogalerie.berlin/",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 8982662903,
+          "tags": {
+            "check_date": "2025-01-13",
+            "check_date:opening_hours": "2025-01-13",
+            "government": "ministry",
+            "name": "Der Regierende Bürgermeister von Berlin, Senatskanzlei - Wissenschaft und Forschung",
+            "office": "government",
+            "opening_hours:signed": "no",
+            "wheelchair": "yes"
           }
         },
         {
@@ -173,6 +228,68 @@
           "lon": 13.4509704,
           "tags": {
             "railway": "level_crossing"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9806828893,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:country": "DE",
+            "addr:housenumber": "80",
+            "addr:postcode": "10243",
+            "addr:street": "Mühlenstraße",
+            "addr:suburb": "Friedrichshain",
+            "contact:website": "https://thewallmuseum.com",
+            "fee": "yes",
+            "name": "The Wall Museum",
+            "opening_hours": "Mo-Su 10:00-19:00",
+            "tourism": "museum",
+            "wikidata": "Q54453799",
+            "wikipedia": "de:The Wall Museum Berlin"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10156230805,
+          "tags": {
+            "addr:city": "Berlin",
+            "addr:housenumber": "105",
+            "addr:postcode": "10243",
+            "addr:street": "Marchlewskistraße",
+            "check_date": "2026-03-19",
+            "description": "Blacklight pychedelic art atelier & gallery",
+            "email": "info@caos-conzept.de",
+            "fee": "no",
+            "image": "https://upload.wikimedia.org/wikipedia/commons/0/08/Caos_Conzept_Atelier_%26_Gallery.jpg",
+            "name": "Caos Conzept",
+            "note": "Visiting dates only by appointment",
+            "opening_hours": "\"nach Vereinbarung, laut Website\"",
+            "operator": "Martin Hartmann",
+            "phone": "+49 173 6162083",
+            "tourism": "gallery",
+            "website": "https://caos-conzept.de/",
+            "wheelchair": "no",
+            "wikimedia_commons": "File:Caos Conzept Atelier & Gallery.jpg"
+          }
+        },
+        {
+          "type": "node",
+          "id": 11601418469,
+          "tags": {
+            "addr:housenumber": "100",
+            "addr:postcode": "10243",
+            "addr:street": "Revaler Straße",
+            "amenity": "clinic",
+            "check_date": "2025-09-02",
+            "check_date:opening_hours": "2025-09-02",
+            "healthcare": "clinic",
+            "name": "Orthomed Berlin",
+            "name:de": "Orthomed Berlin – Bartholomäus Gabrys - Orthopädie Friedrichshain",
+            "name:en": "Orthomed Berlin - Bartholomäus Gabrys",
+            "opening_hours": "Mo-Tu 08:00-09:00,10:00-13:00,14:00-17:00; We-Fr 08:00-09:00,10:00-13:00",
+            "phone": "+49 30 700758900",
+            "website": "https://orthomed.berlin/"
           }
         },
         {
@@ -7817,6 +7934,7 @@
             "addr:suburb": "Friedrichshain",
             "amenity": "arts_centre",
             "building": "commercial",
+            "building:colour": "black",
             "building:levels": "2",
             "check_date": "2024-07-02",
             "contact:email": "contact@urbanspree.com",
@@ -7827,6 +7945,9 @@
             "contact:twitter": "https://twitter.com/urban_spree",
             "contact:website": "http://www.urbanspree.com",
             "name": "Urban Spree",
+            "roof:colour": "#898a85",
+            "roof:levels": "0",
+            "roof:shape": "gabled",
             "wheelchair": "limited",
             "wikidata": "Q48753601",
             "wikimedia_commons": "Category:Urban Spree",
@@ -8121,7 +8242,7 @@
             "addr:street": "Revaler Straße",
             "addr:suburb": "Friedrichshain",
             "amenity": "nightclub",
-            "building": "commercial",
+            "building": "industrial",
             "building:levels": "1",
             "contact:email": "info@astra-berlin.de",
             "contact:facebook": "http://www.facebook.com/astraberlin",
@@ -8130,13 +8251,13 @@
             "contact:phone": "+49 30 20056767",
             "contact:website": "https://www.astra-berlin.de/",
             "drink:club-mate": "yes",
-            "leisure": "music_venue",
             "live_music": "yes",
             "name": "Astra Kulturhaus",
             "opening_hours": "\"irregular events\"",
             "operator": "Kreuzberg Musik Produktion GmbH",
             "operator:type": "business",
             "owner": "Kreuzberg Musik Produktion GmbH",
+            "short_name": "Astra",
             "smoking": "isolated",
             "toilets:wheelchair": "yes",
             "wheelchair": "yes",
@@ -9452,9 +9573,11 @@
             "lit": "yes",
             "name": "S+U Warschauer Straße",
             "passenger_information_display": "yes",
+            "passenger_information_display:speech_output": "no",
             "public_transport": "platform",
             "railway": "platform",
             "shelter": "yes",
+            "surface": "paved",
             "tactile_paving": "yes",
             "tram": "yes",
             "wheelchair": "yes"
@@ -9533,6 +9656,7 @@
             "public_transport": "platform",
             "railway": "platform",
             "shelter": "no",
+            "surface": "paved",
             "tactile_paving": "yes",
             "tram": "yes",
             "wheelchair": "yes"
@@ -11601,8 +11725,8 @@
               "lon": 13.4551114
             },
             {
-              "lat": 52.5077224,
-              "lon": 13.4549939
+              "lat": 52.5077372,
+              "lon": 13.4548812
             },
             {
               "lat": 52.5078772,
@@ -11937,8 +12061,8 @@
               "lon": 13.4551114
             },
             {
-              "lat": 52.5077224,
-              "lon": 13.4549939
+              "lat": 52.5077372,
+              "lon": 13.4548812
             },
             {
               "lat": 52.5078772,
@@ -13142,6 +13266,7 @@
             "public_transport": "platform",
             "railway": "platform",
             "shelter": "yes",
+            "surface": "paved",
             "tactile_paving": "yes",
             "tram": "yes",
             "wheelchair": "yes"
@@ -13195,6 +13320,7 @@
             "public_transport": "platform",
             "railway": "platform",
             "shelter": "yes",
+            "surface": "paved",
             "tactile_paving": "yes",
             "tram": "yes",
             "wheelchair": "yes"
@@ -16148,8 +16274,8 @@
           "id": 200158735,
           "bounds": {
             "minlat": 52.5078948,
-            "minlon": 13.4428637,
-            "maxlat": 52.5109387,
+            "minlon": 13.4434209,
+            "maxlat": 52.5105653,
             "maxlon": 13.4478947
           },
           "nodes": [
@@ -16158,10 +16284,8 @@
             30214858,
             10290541037,
             10290541038,
-            10290541039,
-            10290541040,
-            30214860,
-            3285228777
+            14211282539,
+            14211282536
           ],
           "geometry": [
             {
@@ -16173,32 +16297,24 @@
               "lon": 13.447152
             },
             {
-              "lat": 52.5094874,
-              "lon": 13.4452944
+              "lat": 52.5095387,
+              "lon": 13.4452105
             },
             {
-              "lat": 52.509649,
-              "lon": 13.4450099
+              "lat": 52.5096135,
+              "lon": 13.4450807
             },
             {
-              "lat": 52.5098082,
-              "lon": 13.444696
+              "lat": 52.5097764,
+              "lon": 13.4447579
             },
             {
-              "lat": 52.5100796,
-              "lon": 13.4442448
+              "lat": 52.5098499,
+              "lon": 13.4446287
             },
             {
-              "lat": 52.5106812,
-              "lon": 13.4432244
-            },
-            {
-              "lat": 52.5108,
-              "lon": 13.443052
-            },
-            {
-              "lat": 52.5109387,
-              "lon": 13.4428637
+              "lat": 52.5105653,
+              "lon": 13.4434209
             }
           ],
           "tags": {
@@ -16215,8 +16331,8 @@
           "id": 200158735,
           "bounds": {
             "minlat": 52.5078948,
-            "minlon": 13.4428637,
-            "maxlat": 52.5109387,
+            "minlon": 13.4434209,
+            "maxlat": 52.5105653,
             "maxlon": 13.4478947
           },
           "nodes": [
@@ -16225,10 +16341,8 @@
             30214858,
             10290541037,
             10290541038,
-            10290541039,
-            10290541040,
-            30214860,
-            3285228777
+            14211282539,
+            14211282536
           ],
           "geometry": [
             {
@@ -16240,32 +16354,24 @@
               "lon": 13.447152
             },
             {
-              "lat": 52.5094874,
-              "lon": 13.4452944
+              "lat": 52.5095387,
+              "lon": 13.4452105
             },
             {
-              "lat": 52.509649,
-              "lon": 13.4450099
+              "lat": 52.5096135,
+              "lon": 13.4450807
             },
             {
-              "lat": 52.5098082,
-              "lon": 13.444696
+              "lat": 52.5097764,
+              "lon": 13.4447579
             },
             {
-              "lat": 52.5100796,
-              "lon": 13.4442448
+              "lat": 52.5098499,
+              "lon": 13.4446287
             },
             {
-              "lat": 52.5106812,
-              "lon": 13.4432244
-            },
-            {
-              "lat": 52.5108,
-              "lon": 13.443052
-            },
-            {
-              "lat": 52.5109387,
-              "lon": 13.4428637
+              "lat": 52.5105653,
+              "lon": 13.4434209
             }
           ],
           "tags": {
@@ -27367,7 +27473,8 @@
           ],
           "tags": {
             "building": "apartments",
-            "building:levels": "7"
+            "building:levels": "7",
+            "roof:shape": "flat"
           }
         },
         {
@@ -27818,7 +27925,7 @@
             "bench": "yes",
             "bin": "yes",
             "bus": "yes",
-            "check_date:shelter": "2024-09-22",
+            "check_date:shelter": "2026-09-24",
             "highway": "platform",
             "kerb": "raised",
             "kerb:approach_aid": "no",
@@ -27944,11 +28051,13 @@
             "check_date:shelter": "2024-09-22",
             "check_date:tactile_paving": "2021-06-15",
             "highway": "platform",
+            "kerb": "yes",
             "lit": "yes",
             "name": "S+U Warschauer Straße",
             "passenger_information_display": "no",
             "public_transport": "platform",
             "shelter": "yes",
+            "surface": "paved",
             "tactile_paving": "yes",
             "wheelchair": "yes"
           }
@@ -30738,8 +30847,8 @@
               "lon": 13.4541086
             },
             {
-              "lat": 52.5077224,
-              "lon": 13.4549939
+              "lat": 52.5077372,
+              "lon": 13.4548812
             },
             {
               "lat": 52.5077003,
@@ -31390,8 +31499,8 @@
               "lon": 13.4541086
             },
             {
-              "lat": 52.5077224,
-              "lon": 13.4549939
+              "lat": 52.5077372,
+              "lon": 13.4548812
             },
             {
               "lat": 52.5077003,
@@ -33259,7 +33368,8 @@
           ],
           "tags": {
             "building": "apartments",
-            "building:levels": "7"
+            "building:levels": "7",
+            "roof:shape": "flat"
           }
         },
         {
@@ -33302,7 +33412,8 @@
           ],
           "tags": {
             "building": "apartments",
-            "building:levels": "7"
+            "building:levels": "7",
+            "roof:shape": "flat"
           }
         },
         {
@@ -33385,7 +33496,8 @@
           ],
           "tags": {
             "building": "apartments",
-            "building:levels": "7"
+            "building:levels": "7",
+            "roof:shape": "flat"
           }
         },
         {
@@ -33735,7 +33847,8 @@
           ],
           "tags": {
             "building": "apartments",
-            "building:levels": "6"
+            "building:levels": "6",
+            "roof:shape": "flat"
           }
         },
         {
@@ -33798,7 +33911,8 @@
           ],
           "tags": {
             "building": "apartments",
-            "building:levels": "6"
+            "building:levels": "6",
+            "roof:shape": "flat"
           }
         },
         {
@@ -33841,7 +33955,8 @@
           ],
           "tags": {
             "building": "apartments",
-            "building:levels": "6"
+            "building:levels": "6",
+            "roof:shape": "flat"
           }
         },
         {
@@ -39219,22 +39334,8 @@
             }
           ],
           "tags": {
-            "addr:city": "Berlin",
-            "addr:country": "DE",
-            "addr:housename": "Halle 28 / Halle 29",
-            "addr:housenumber": "99",
-            "addr:postcode": "10245",
-            "addr:street": "Revaler Straße",
-            "addr:suburb": "Friedrichshain",
-            "contact:email": "contact@urbanspree.com",
-            "contact:fax": "+49 30 94047328",
-            "contact:phone": "+49 30 74078597",
-            "contact:website": "http://www.urbanspree.com",
             "leisure": "outdoor_seating",
-            "name": "Urban Spree",
-            "opening_hours": "Tu-Su 12:00-19:00",
             "operator": "Urban Spree GmbH",
-            "toilets:wheelchair": "yes",
             "wheelchair": "yes"
           }
         },
@@ -39961,13 +40062,13 @@
           ],
           "tags": {
             "branch": "& Hades",
-            "brand": "OLYMP",
+            "brand": "Olymp",
             "brand:wikidata": "Q1415523",
             "brand:wikipedia": "de:Olymp Bezner",
             "clothes": "men",
             "indoor": "area",
             "level": "2",
-            "name": "OLYMP",
+            "name": "Olymp",
             "shop": "clothes"
           }
         },
@@ -40420,14 +40521,18 @@
             "brand": "Uniqlo",
             "brand:wikidata": "Q26070",
             "brand:wikipedia": "en:Uniqlo",
-            "check_date": "2026-06-08",
+            "check_date": "2026-09-18",
             "check_date:opening_hours": "2026-06-08",
             "level": "1",
             "name": "Uniqlo",
             "opening_hours": "Mo-Sa 10:00-20:00",
             "opening_hours:signed": "no",
+            "payment:cash": "yes",
+            "payment:credit_cards": "yes",
+            "payment:debit_cards": "yes",
             "self_checkout": "yes",
-            "shop": "clothes"
+            "shop": "clothes",
+            "wheelchair": "yes"
           }
         },
         {
@@ -40784,6 +40889,7 @@
             "brand": "Rewe",
             "brand:wikidata": "Q16968817",
             "brand:wikipedia": "de:Rewe",
+            "check_date:opening_hours": "2026-09-18",
             "level": "0",
             "name": "REWE",
             "opening_hours": "Mo-Th 07:00-23:00; Fr-Sa 07:00-24:00; Su,PH off",
@@ -41438,7 +41544,7 @@
           ],
           "tags": {
             "brand": "ONLY",
-            "brand:wikidata": "Q61799370",
+            "brand:wikidata": "Q12329792",
             "level": "2",
             "name": "ONLY",
             "shop": "clothes"
@@ -41606,7 +41712,9 @@
             "brand": "Klier",
             "brand:wikidata": "Q121888036",
             "brand:wikipedia": "de:Klier Hair Group",
+            "female": "yes",
             "level": "2",
+            "male": "yes",
             "name": "Klier",
             "shop": "hairdresser"
           }
@@ -53416,8 +53524,8 @@
             "building": "kiosk",
             "building:levels": "1",
             "check_date": "2024-07-02",
-            "cuisine": "fast_food",
-            "diet:vegan": "yes",
+            "cuisine": "kebab",
+            "diet:vegan": "only",
             "indoor_seating": "no",
             "name": "Wat is' mit vegan?",
             "outdoor_seating": "yes"
@@ -61911,10 +62019,10 @@
           }
         }
       ],
-      "generator": "Overpass API 0.7.62.4 2390de5a",
+      "generator": "Overpass API 0.7.62.11 87bfad18",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-08-31T13:30:43Z"
+        "timestamp_osm_base": "2026-10-01T13:31:39Z"
       },
       "version": 0.6
     },
@@ -62117,6 +62225,7 @@
             "postal_code": "10245",
             "sidewalk:left": "no",
             "sidewalk:right": "separate",
+            "smoothness": "intermediate",
             "source:width": "ARCore",
             "surface": "sett",
             "width": "10.1",
@@ -62532,9 +62641,8 @@
           "tags": {
             "bridge": "yes",
             "cycleway:left": "no",
-            "cycleway:right": "lane",
+            "cycleway:right": "track",
             "cycleway:right:bicycle": "designated",
-            "cycleway:right:lane": "exclusive",
             "cycleway:right:separation:left": "bump",
             "cycleway:right:traffic_sign": "DE:237",
             "cycleway:right:width": "3.0",
@@ -62589,9 +62697,8 @@
           "tags": {
             "bridge": "yes",
             "cycleway:left": "no",
-            "cycleway:right": "lane",
+            "cycleway:right": "track",
             "cycleway:right:bicycle": "designated",
-            "cycleway:right:lane": "exclusive",
             "cycleway:right:separation:left": "bump",
             "cycleway:right:traffic_sign": "DE:237",
             "cycleway:right:width": "3.0",
@@ -62653,10 +62760,9 @@
           ],
           "tags": {
             "cycleway:left": "no",
-            "cycleway:right": "lane",
+            "cycleway:right": "track",
             "cycleway:right:bicycle": "designated",
             "cycleway:right:buffer:left": "no",
-            "cycleway:right:lane": "exclusive",
             "cycleway:right:separation:left": "solid_line",
             "cycleway:right:traffic_sign": "DE:237",
             "cycleway:right:width": "2.0",
@@ -63033,6 +63139,7 @@
             "incline": "up",
             "lit": "yes",
             "name": "Max-Koch-Passage",
+            "platform_lift": "no",
             "ramp": "no",
             "step_count": "15",
             "surface": "paving_stones",
@@ -63320,6 +63427,7 @@
           ],
           "tags": {
             "bridge": "yes",
+            "check_date:smoothness": "2026-09-30",
             "highway": "footway",
             "layer": "1",
             "level": "1",
@@ -64343,14 +64451,13 @@
           "bounds": {
             "minlat": 52.5025573,
             "minlon": 13.4467067,
-            "maxlat": 52.502743,
-            "maxlon": 13.4469344
+            "maxlat": 52.5026374,
+            "maxlon": 13.446801
           },
           "nodes": [
             3517797351,
             7695908262,
-            29275987,
-            29275992
+            29275987
           ],
           "geometry": [
             {
@@ -64364,10 +64471,6 @@
             {
               "lat": 52.5026374,
               "lon": 13.446801
-            },
-            {
-              "lat": 52.502743,
-              "lon": 13.4469344
             }
           ],
           "tags": {
@@ -64385,7 +64488,7 @@
             "destination:to": "Hamburg;Prenzlau",
             "dual_carriageway": "yes",
             "foot": "use_sidepath",
-            "highway": "primary",
+            "highway": "secondary",
             "lanes": "3",
             "lit": "yes",
             "maxspeed": "30",
@@ -65148,7 +65251,7 @@
             "layer": "1",
             "level": "1",
             "lit": "yes",
-            "smoothness": "excellent",
+            "smoothness": "good",
             "surface": "paving_stones"
           }
         },
@@ -65215,11 +65318,11 @@
             }
           ],
           "tags": {
-            "check_date:surface": "2021-06-08",
+            "check_date:surface": "2026-09-30",
             "est_width": "8",
             "highway": "footway",
             "lit": "yes",
-            "smoothness": "excellent",
+            "smoothness": "good",
             "surface": "paving_stones"
           }
         },
@@ -66568,7 +66671,7 @@
             "layer": "1",
             "level": "1",
             "lit": "yes",
-            "smoothness": "excellent",
+            "smoothness": "good",
             "surface": "concrete",
             "width": "3.4"
           }
@@ -69550,6 +69653,7 @@
             "highway": "steps",
             "incline": "up",
             "indoor": "yes",
+            "platform_lift": "no",
             "ramp": "no",
             "step_count": "7",
             "surface": "paved",
@@ -69992,6 +70096,7 @@
           "tags": {
             "highway": "footway",
             "lit": "yes",
+            "smoothness": "intermediate",
             "surface": "paving_stones"
           }
         },
@@ -72980,6 +73085,9 @@
             "parking:both": "no",
             "parking:both:restriction": "no_stopping",
             "postal_code": "10245",
+            "sidewalk:left": "no",
+            "sidewalk:right": "yes",
+            "smoothness": "intermediate",
             "surface": "sett",
             "wikidata": "Q50234362",
             "wikimedia_commons": "Category:Warschauer Platz (Berlin-Friedrichshain)",
@@ -74868,6 +74976,7 @@
             "layer": "1",
             "level": "1",
             "lit": "yes",
+            "smoothness": "good",
             "surface": "asphalt",
             "width": "3.4"
           }
@@ -75927,6 +76036,7 @@
             "ref": "B 96a",
             "sidewalk:left": "no",
             "sidewalk:right": "separate",
+            "smoothness": "good",
             "surface": "asphalt",
             "turn:lanes": "left|through|through|right",
             "wikidata": "Q2112018",
@@ -76174,8 +76284,8 @@
               "lon": 13.4547039
             },
             {
-              "lat": 52.5073698,
-              "lon": 13.4548562
+              "lat": 52.5073701,
+              "lon": 13.4548329
             },
             {
               "lat": 52.5071235,
@@ -76190,8 +76300,8 @@
               "lon": 13.4565119
             },
             {
-              "lat": 52.5069309,
-              "lon": 13.4564572
+              "lat": 52.5069317,
+              "lon": 13.4564576
             },
             {
               "lat": 52.5068265,
@@ -78283,6 +78393,7 @@
             }
           ],
           "tags": {
+            "check_date:cycleway": "2026-10-01",
             "cycleway:both": "no",
             "foot": "use_sidepath",
             "highway": "residential",
@@ -79035,6 +79146,7 @@
             }
           ],
           "tags": {
+            "check_date:cycleway": "2026-09-24",
             "cycleway:both": "no",
             "foot": "use_sidepath",
             "highway": "residential",
@@ -80937,6 +81049,7 @@
             }
           ],
           "tags": {
+            "check_date:cycleway": "2026-10-01",
             "cycleway:both": "no",
             "foot": "use_sidepath",
             "highway": "residential",
@@ -82815,9 +82928,8 @@
           ],
           "tags": {
             "cycleway:left": "no",
-            "cycleway:right": "lane",
+            "cycleway:right": "track",
             "cycleway:right:bicycle": "designated",
-            "cycleway:right:lane": "exclusive",
             "cycleway:right:separation:left": "bump",
             "cycleway:right:traffic_sign": "DE:237",
             "cycleway:right:width": "3",
@@ -87307,6 +87419,7 @@
             "lit": "yes",
             "mapillary": "364651763071174",
             "oneway": "yes",
+            "segregated": "yes",
             "separation:left": "kerb",
             "separation:right": "fence",
             "source:cycleway:width": "Messung aus Punktwolke (Infra3DViewer)",
@@ -87943,7 +88056,7 @@
             "destination:to:lanes": "Dresden|Dresden||",
             "dual_carriageway": "yes",
             "foot": "use_sidepath",
-            "highway": "primary",
+            "highway": "secondary",
             "lanes": "4",
             "lit": "yes",
             "maxspeed": "30",
@@ -88121,7 +88234,7 @@
             "destination:to:lanes": "Dresden|Dresden||",
             "dual_carriageway": "yes",
             "foot": "use_sidepath",
-            "highway": "primary",
+            "highway": "secondary",
             "lanes": "4",
             "lit": "yes",
             "maxspeed": "30",
@@ -89173,19 +89286,79 @@
             "wikidata": "Q552931",
             "wikipedia": "de:Warschauer_Straße"
           }
+        },
+        {
+          "type": "way",
+          "id": 1554769368,
+          "bounds": {
+            "minlat": 52.5026374,
+            "minlon": 13.446801,
+            "maxlat": 52.502743,
+            "maxlon": 13.4469344
+          },
+          "nodes": [
+            29275987,
+            29275992
+          ],
+          "geometry": [
+            {
+              "lat": 52.5026374,
+              "lon": 13.446801
+            },
+            {
+              "lat": 52.502743,
+              "lon": 13.4469344
+            }
+          ],
+          "tags": {
+            "cycleway:left": "no",
+            "cycleway:right": "lane",
+            "cycleway:right:bicycle": "designated",
+            "cycleway:right:buffer:left": "no",
+            "cycleway:right:lane": "exclusive",
+            "cycleway:right:separation:left": "solid_line",
+            "cycleway:right:traffic_sign": "DE:237",
+            "cycleway:right:width": "2",
+            "destination": "Prenzlauer Berg",
+            "destination:ref:to": "A 114",
+            "destination:symbol:to": "motorway",
+            "destination:to": "Hamburg;Prenzlau",
+            "dual_carriageway": "yes",
+            "foot": "use_sidepath",
+            "highway": "primary",
+            "lanes": "3",
+            "lit": "yes",
+            "maxspeed": "30",
+            "name": "Warschauer Straße",
+            "name:etymology:wikidata": "Q2009149",
+            "name:etymology:wikipedia": "de:Baum (Sperranlage)",
+            "oneway": "yes",
+            "parking:both": "no",
+            "parking:both:reason": "junction",
+            "postal_code": "10243",
+            "ref": "B 96a",
+            "sidewalk:left": "no",
+            "sidewalk:right": "separate",
+            "smoothness": "good",
+            "source:cycleway:right:width": "Luftbild 2025",
+            "surface": "asphalt",
+            "turn:lanes": "left|through|right",
+            "wikidata": "Q552931",
+            "wikipedia": "de:Warschauer_Straße"
+          }
         }
       ],
-      "generator": "Overpass API 0.7.62.4 2390de5a",
+      "generator": "Overpass API 0.7.62.11 87bfad18",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-08-31T13:30:43Z"
+        "timestamp_osm_base": "2026-10-01T13:32:40Z"
       },
       "version": 0.6
     }
   },
   "stats": {
     "bboxKm2": 0.4224032142135468,
-    "featureElements": 663,
-    "roadElements": 576
+    "featureElements": 670,
+    "roadElements": 577
   }
 }

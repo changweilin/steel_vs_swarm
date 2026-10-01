@@ -20,21 +20,21 @@
     "minLng": 139.72132670260694,
     "maxLng": 139.73952835037235
   },
-  "capturedAt": "2026-08-31T13:32:04.160Z",
+  "capturedAt": "2026-10-01T13:43:53.925Z",
   "source": {
-    "features": "https://overpass-api.de/api/interpreter",
+    "features": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "roads": "https://overpass-api.de/api/interpreter",
     "userAgent": "steel-vs-swarm-osm-fixture/1.0 (maintainer-updated regression data)"
   },
   "queries": {
     "features": {
-      "version": 6,
+      "version": 9,
       "quotas": {
         "nBld": 1200,
         "nCover": 900,
         "nArea": 1800
       },
-      "text": "[out:json][timeout:15];(way[\"building\"](35.65793,139.72133,35.67316,139.73953);way[\"building:part\"](35.65793,139.72133,35.67316,139.73953);way[\"landuse\"](35.65793,139.72133,35.67316,139.73953);way[\"landcover\"](35.65793,139.72133,35.67316,139.73953);way[\"amenity\"](35.65793,139.72133,35.67316,139.73953);way[\"leisure\"](35.65793,139.72133,35.67316,139.73953);way[\"natural\"](35.65793,139.72133,35.67316,139.73953);way[\"healthcare\"](35.65793,139.72133,35.67316,139.73953);way[\"tourism\"](35.65793,139.72133,35.67316,139.73953);way[\"shop\"](35.65793,139.72133,35.67316,139.73953);way[\"office\"](35.65793,139.72133,35.67316,139.73953);way[\"craft\"](35.65793,139.72133,35.67316,139.73953);way[\"industrial\"](35.65793,139.72133,35.67316,139.73953);way[\"man_made\"](35.65793,139.72133,35.67316,139.73953);way[\"power\"](35.65793,139.72133,35.67316,139.73953);way[\"public_transport\"](35.65793,139.72133,35.67316,139.73953);way[\"railway\"](35.65793,139.72133,35.67316,139.73953);way[\"aeroway\"](35.65793,139.72133,35.67316,139.73953);way[\"military\"](35.65793,139.72133,35.67316,139.73953);way[\"historic\"](35.65793,139.72133,35.67316,139.73953);way[\"sport\"](35.65793,139.72133,35.67316,139.73953);way[\"water\"](35.65793,139.72133,35.67316,139.73953);way[\"waterway\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"building\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"building:part\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"landuse\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"landcover\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"amenity\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"leisure\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"natural\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"healthcare\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"tourism\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"shop\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"office\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"craft\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"industrial\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"man_made\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"power\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"public_transport\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"railway\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"aeroway\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"military\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"historic\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"sport\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"water\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"waterway\"](35.65793,139.72133,35.67316,139.73953););out body geom 1800;node[\"power\"=\"tower\"](35.65793,139.72133,35.67316,139.73953);out tags 1200;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](35.65793,139.72133,35.67316,139.73953);out geom 60;node[\"railway\"=\"level_crossing\"](35.65793,139.72133,35.67316,139.73953);out 40;node[\"waterway\"=\"waterfall\"](35.65793,139.72133,35.67316,139.73953);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](35.65793,139.72133,35.67316,139.73953);out 24;node[\"natural\"=\"peak\"](35.65793,139.72133,35.67316,139.73953);out 12;node[\"highway\"=\"motorway_junction\"](35.65793,139.72133,35.67316,139.73953);out 12;node[\"railway\"~\"^(station|halt)$\"](35.65793,139.72133,35.67316,139.73953);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](35.65793,139.72133,35.67316,139.73953);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](35.65793,139.72133,35.67316,139.73953);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](35.65793,139.72133,35.67316,139.73953);out geom 120;way[\"landuse\"](35.65793,139.72133,35.67316,139.73953);out geom 900;way[\"natural\"](35.65793,139.72133,35.67316,139.73953);out geom 900;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](35.65793,139.72133,35.67316,139.73953);out geom 900;rel[\"boundary\"=\"administrative\"](35.65793,139.72133,35.67316,139.73953);way(r);out geom 400;"
+      "text": "[out:json][timeout:15];(way[\"building\"](35.65793,139.72133,35.67316,139.73953);way[\"building:part\"](35.65793,139.72133,35.67316,139.73953);way[\"landuse\"](35.65793,139.72133,35.67316,139.73953);way[\"landcover\"](35.65793,139.72133,35.67316,139.73953);way[\"amenity\"](35.65793,139.72133,35.67316,139.73953);way[\"leisure\"](35.65793,139.72133,35.67316,139.73953);way[\"natural\"](35.65793,139.72133,35.67316,139.73953);way[\"healthcare\"](35.65793,139.72133,35.67316,139.73953);way[\"tourism\"](35.65793,139.72133,35.67316,139.73953);way[\"shop\"](35.65793,139.72133,35.67316,139.73953);way[\"office\"](35.65793,139.72133,35.67316,139.73953);way[\"craft\"](35.65793,139.72133,35.67316,139.73953);way[\"industrial\"](35.65793,139.72133,35.67316,139.73953);way[\"man_made\"](35.65793,139.72133,35.67316,139.73953);way[\"power\"](35.65793,139.72133,35.67316,139.73953);way[\"public_transport\"](35.65793,139.72133,35.67316,139.73953);way[\"railway\"](35.65793,139.72133,35.67316,139.73953);way[\"aeroway\"](35.65793,139.72133,35.67316,139.73953);way[\"military\"](35.65793,139.72133,35.67316,139.73953);way[\"historic\"](35.65793,139.72133,35.67316,139.73953);way[\"sport\"](35.65793,139.72133,35.67316,139.73953);way[\"water\"](35.65793,139.72133,35.67316,139.73953);way[\"waterway\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"building\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"building:part\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"landuse\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"landcover\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"amenity\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"leisure\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"natural\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"healthcare\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"tourism\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"shop\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"office\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"craft\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"industrial\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"man_made\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"power\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"public_transport\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"railway\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"aeroway\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"military\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"historic\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"sport\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"water\"](35.65793,139.72133,35.67316,139.73953);rel[\"type\"=\"multipolygon\"][\"waterway\"](35.65793,139.72133,35.67316,139.73953););out body geom 1800;node[\"man_made\"~\"^(tower|mast|communications_tower|lighthouse)$\"](35.65793,139.72133,35.67316,139.73953);out tags 1200;node[\"aeroway\"=\"control_tower\"](35.65793,139.72133,35.67316,139.73953);out tags 1200;node[\"power\"=\"tower\"](35.65793,139.72133,35.67316,139.73953);out tags 1200;node[\"power\"=\"generator\"][\"generator:source\"=\"wind\"](35.65793,139.72133,35.67316,139.73953);out tags 1200;node[\"amenity\"~\"^(place_of_worship|school|university|college|kindergarten|hospital|clinic|library|townhall|courthouse|community_centre|bus_station|ferry_terminal)$\"](35.65793,139.72133,35.67316,139.73953);out tags 240;node[\"tourism\"~\"^(museum|gallery)$\"](35.65793,139.72133,35.67316,139.73953);out tags 80;node[\"office\"=\"government\"](35.65793,139.72133,35.67316,139.73953);out tags 80;way[\"railway\"~\"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$\"](35.65793,139.72133,35.67316,139.73953);out geom 60;node[\"railway\"=\"level_crossing\"](35.65793,139.72133,35.67316,139.73953);out 40;node[\"waterway\"=\"waterfall\"](35.65793,139.72133,35.67316,139.73953);out 20;node[\"place\"~\"^(city|town|village|suburb|neighbourhood)$\"](35.65793,139.72133,35.67316,139.73953);out 24;node[\"natural\"=\"peak\"](35.65793,139.72133,35.67316,139.73953);out 12;node[\"highway\"=\"motorway_junction\"](35.65793,139.72133,35.67316,139.73953);out 12;node[\"railway\"~\"^(station|halt)$\"](35.65793,139.72133,35.67316,139.73953);out 12;node[\"railway\"~\"^(subway_entrance|station_entrance)$\"](35.65793,139.72133,35.67316,139.73953);out 80;node[\"entrance\"][\"public_transport\"~\"^(station|subway)$\"](35.65793,139.72133,35.67316,139.73953);out 40;way[\"waterway\"~\"^(river|stream|canal|drain|ditch)$\"](35.65793,139.72133,35.67316,139.73953);out geom 120;way[\"landuse\"](35.65793,139.72133,35.67316,139.73953);out geom 900;way[\"natural\"](35.65793,139.72133,35.67316,139.73953);out geom 900;way[\"leisure\"~\"^(park|garden|golf_course|nature_reserve|recreation_ground)$\"](35.65793,139.72133,35.67316,139.73953);out geom 900;rel[\"boundary\"=\"administrative\"](35.65793,139.72133,35.67316,139.73953);way(r);out geom 400;"
     },
     "roads": {
       "version": 1,
@@ -110,6 +110,18 @@
         },
         {
           "type": "node",
+          "id": 389635180,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "妙像寺",
+            "name:en": "Myozoji Temple",
+            "religion": "buddhist",
+            "wikidata": "Q29407962",
+            "wikipedia": "ja:妙像寺"
+          }
+        },
+        {
+          "type": "node",
           "id": 574460605,
           "lat": 35.6580565,
           "lon": 139.7364593,
@@ -120,11 +132,225 @@
         },
         {
           "type": "node",
+          "id": 1111315509,
+          "tags": {
+            "name": "外務省飯倉公館",
+            "name:en": "MOFA Iikura House",
+            "office": "government",
+            "wikidata": "Q100148213",
+            "wikimedia_commons": "Category:Iikura Guest House"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1188381007,
+          "tags": {
+            "amenity": "bus_station",
+            "bus": "yes",
+            "name": "赤坂駅前",
+            "public_transport": "station",
+            "source": "survey",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1279272173,
+          "tags": {
+            "amenity": "place_of_worship",
+            "check_date": "2026-03-01",
+            "name": "狸穴稲荷大明神",
+            "name:ja": "狸穴稲荷大明神",
+            "religion": "shinto",
+            "wheelchair": "no"
+          }
+        },
+        {
+          "type": "node",
           "id": 1312610141,
           "lat": 35.6613941,
           "lon": 139.7295217,
           "tags": {
             "railway": "subway_entrance"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420770860,
+          "tags": {
+            "addr:full": "東京都港区南青山1-3-5-101",
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "南青山保育園",
+            "name:en": "Minami Aoyama Nursery",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator": "東京都港区",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420785927,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "東洋英和幼稚園",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "wikidata": "Q17220922",
+            "wikipedia": "ja:東洋英和幼稚園"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420786660,
+          "tags": {
+            "addr:block_number": "10",
+            "addr:city": "港区",
+            "addr:housenumber": "1",
+            "addr:neighbourhood": "6丁目",
+            "addr:postcode": "106-6122",
+            "addr:province": "東京都",
+            "addr:quarter": "六本木",
+            "contact:phone": "+81 357778600",
+            "fee": "yes",
+            "museum": "art",
+            "name": "森美術館",
+            "name:en": "Mori Art Museum",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "opening_hours": "We-Mo 10:00-22:00; Tu 10:00-17:00",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "tourism": "museum",
+            "website": "https://www.mori.art.museum/jp/index.html",
+            "wheelchair": "yes",
+            "wikidata": "Q4410434",
+            "wikimedia_commons": "Category:Mori Art Museum",
+            "wikipedia": "en:Mori Art Museum"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420797898,
+          "tags": {
+            "addr:full": "東京都港区西麻布2-13-3",
+            "amenity": "kindergarten",
+            "check_date": "2024-03-04",
+            "education": "kindergarten",
+            "name": "西麻布保育園",
+            "name:en": "Nishiazabu Nursery",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator": "東京都港区",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420797899,
+          "tags": {
+            "addr:full": "東京都港区西麻布2-13-3",
+            "amenity": "community_centre",
+            "name": "西麻布児童館",
+            "name:en": "Nishiazabu Children's Hall",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator": "東京都港区",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420798241,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "赤坂保育園",
+            "name:en": "Akasaka Nursery",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420798627,
+          "tags": {
+            "addr:block_number": "10",
+            "addr:city": "港区",
+            "addr:housenumber": "21",
+            "addr:neighbourhood": "赤坂八丁目",
+            "addr:province": "東京都",
+            "branch": "東日本支社赤坂住宅管理センター",
+            "government": "administrative",
+            "name": "都市再生機構",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "office": "government",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "wikidata": "Q11643596",
+            "wikipedia": "en:Urban Renaissance Agency"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420800058,
+          "tags": {
+            "addr:full": "東京都港区赤坂8-10-16",
+            "amenity": "hospital",
+            "healthcare": "hospital",
+            "name": "順和会山王病院",
+            "name:en": "Sanno Hospital",
+            "name:es": "Hospital Sanno",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年 国土交通省",
+            "operator:type": "private",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "wikidata": "Q11470055",
+            "wikipedia": "ja:山王病院"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420800568,
+          "tags": {
+            "addr:block_number": "21",
+            "addr:housenumber": "6",
+            "addr:neighbourhood": "3丁目",
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "麻布みこころ幼稚園",
+            "name:en": "Azabu Mikokoro Kindergarten",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "religion": "christian",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html",
+            "website": "https://tokyo.catholic.jp/archdiocese/kindergarten/k1/"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1420800573,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "麻布幼稚園",
+            "name:en": "Azabu Kindergarten",
+            "note": "National-Land Numerical Information (Public Facility) 2006, MLIT Japan",
+            "note:ja": "国土数値情報（公共施設データ）平成19年　国土交通省",
+            "source": "KSJ2",
+            "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-P02-v2_0.html"
           }
         },
         {
@@ -168,6 +394,85 @@
         },
         {
           "type": "node",
+          "id": 1646657354,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "智明寺 繁成寺",
+            "name:en": "Hanjoji Temple",
+            "religion": "buddhist",
+            "source": "survey;bing",
+            "wikidata": "Q119928675",
+            "wikipedia": "ja:繁成寺"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1656983002,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "出雲大社東京分祀",
+            "name:en": "Izumo Taisha Shrine Tokyo Branch",
+            "name:ja": "出雲大社 東京分祠",
+            "religion": "shinto",
+            "wheelchair": "limited",
+            "wikidata": "Q18700589",
+            "wikimedia_commons": "Category:Izumo-Taisha-Tokyo-bunshi",
+            "wikipedia": "ja:出雲大社東京分祠"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1894070052,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "桜田神社",
+            "name:en": "Sakurada-jinja Shrine",
+            "religion": "shinto",
+            "wheelchair": "no",
+            "wikidata": "Q97376109"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1894071164,
+          "tags": {
+            "amenity": "college",
+            "education": "college",
+            "level": "2",
+            "name": "GLOCOM",
+            "wheelchair": "limited",
+            "wikidata": "Q11201209",
+            "wikipedia": "ja:GLOCOM"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1895720128,
+          "tags": {
+            "amenity": "hospital",
+            "healthcare": "hospital",
+            "name": "心臓血管研究所付属病院",
+            "name:en": "The Cardiovascular Institute Hospital",
+            "wheelchair": "yes",
+            "wikidata": "Q30254277"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1926436510,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "圓通寺",
+            "name:ja": "圓通寺",
+            "religion": "buddhist",
+            "source": "Bing 2010",
+            "wikidata": "Q48756174",
+            "wikimedia_commons": "Category:Entsū-ji (Akasaka, Minato)",
+            "wikipedia": "ja:圓通寺 (東京都港区)"
+          }
+        },
+        {
+          "type": "node",
           "id": 1962624587,
           "lat": 35.665617,
           "lon": 139.7249,
@@ -176,6 +481,32 @@
             "railway": "subway_entrance",
             "ref": "5",
             "wheelchair": "no"
+          }
+        },
+        {
+          "type": "node",
+          "id": 1988275174,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "玉窓寺",
+            "religion": "buddhist",
+            "wikidata": "Q110645338",
+            "wikipedia": "ja:玉窓寺 (東京都港区)"
+          }
+        },
+        {
+          "type": "node",
+          "id": 2047918992,
+          "tags": {
+            "government": "archive",
+            "name": "外務省外交史料館",
+            "name:en": "Diplomatic Archives (Ministry of Foreign Affairs)",
+            "office": "government",
+            "opening_hours": "10:00-17:30",
+            "source": "image,2012-11;Bing",
+            "wikidata": "Q3788463",
+            "wikimedia_commons": "Category:Diplomatic Archives of the Ministry of Foreign Affairs of Japan",
+            "wikipedia": "ja:外務省外交史料館"
           }
         },
         {
@@ -373,6 +704,48 @@
         },
         {
           "type": "node",
+          "id": 3488836561,
+          "tags": {
+            "check_date": "2026-01-01",
+            "name": "Gallery 2104",
+            "source": "survey",
+            "tourism": "gallery"
+          }
+        },
+        {
+          "type": "node",
+          "id": 3488836562,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "彌助稲荷大明神",
+            "religion": "shinto",
+            "source": "survey",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 3498644611,
+          "tags": {
+            "amenity": "place_of_worship",
+            "denomination": "jodo_shu",
+            "denomination:ja": "浄土宗",
+            "name": "教運寺",
+            "name:en": "Kyoun-ji Temple",
+            "religion": "buddhist"
+          }
+        },
+        {
+          "type": "node",
+          "id": 3569004697,
+          "tags": {
+            "amenity": "school",
+            "education": "school",
+            "name": "UJS Language Institute"
+          }
+        },
+        {
+          "type": "node",
           "id": 3731452880,
           "lat": 35.6724349,
           "lon": 139.7364336,
@@ -406,6 +779,16 @@
             "railway": "subway_entrance",
             "ref": "5",
             "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 3782895619,
+          "tags": {
+            "name": "画廊 くにまつ",
+            "name:en": "Gallery KUNIMATSU aoyama",
+            "shop": "art",
+            "tourism": "gallery"
           }
         },
         {
@@ -454,6 +837,34 @@
             "name:en": "Nogizaka",
             "railway": "subway_entrance",
             "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 3882098873,
+          "tags": {
+            "amenity": "library",
+            "int_name": "Akasaka Library",
+            "name": "区立赤坂図書館",
+            "name:en": "Akasaka Library"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4149454389,
+          "tags": {
+            "addr:block_number": "10",
+            "addr:city": "港区",
+            "addr:housenumber": "1",
+            "addr:neighbourhood": "6丁目",
+            "addr:postcode": "106-6122",
+            "addr:province": "東京都",
+            "addr:quarter": "六本木",
+            "name": "Roppongi hills - Kojipro?",
+            "name:zh": "六本木hills",
+            "office": "government",
+            "wheelchair": "no",
+            "wikidata": "Q1071084"
           }
         },
         {
@@ -509,6 +920,21 @@
         },
         {
           "type": "node",
+          "id": 4459864589,
+          "tags": {
+            "addr:housenumber": "港区六本木6-7-14",
+            "amenity": "place_of_worship",
+            "contact:phone": "+81 3-3401-5790",
+            "name": "朝日神社",
+            "religion": "shinto",
+            "website": "http://www.asahi-jinja.com/",
+            "wikidata": "Q119409418",
+            "wikimedia_commons": "Category:Roppongi Asahi jinja",
+            "wikipedia": "ja:朝日神社 (東京都港区)"
+          }
+        },
+        {
+          "type": "node",
           "id": 4511371901,
           "lat": 35.6720678,
           "lon": 139.7367021,
@@ -532,6 +958,134 @@
         },
         {
           "type": "node",
+          "id": 4731579022,
+          "tags": {
+            "fee": "no",
+            "name": "富士フィルム 写真歴史博物館",
+            "name:en": "Fujifilm Photo History Museum",
+            "tourism": "museum",
+            "website": "https://fujifilmsquare.jp/guide/museum.html"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4733665329,
+          "tags": {
+            "amenity": "hospital",
+            "healthcare": "hospital",
+            "name": "Sanno Medical Center",
+            "name:ja": "Sanno Medical Center"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4733665330,
+          "tags": {
+            "name": "Toda Building",
+            "name:ja": "Toda Building",
+            "office": "government"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4807675725,
+          "tags": {
+            "architect": "隈研吾",
+            "architect:wikidata": "Q725462",
+            "contact:facebook": "SuntoryMuseumOfArt",
+            "contact:phone": "+81 3-3479-8600",
+            "contact:tripadvisor": "1986242",
+            "contact:twitter": "sun_sma",
+            "contact:website": "https://www.suntory.co.jp/sma/",
+            "fee": "yes",
+            "name": "サントリー美術館",
+            "name:da": "Suntory kunstmuseet",
+            "name:en": "Suntory Museum of Art",
+            "name:es": "Museo de Arte Suntory",
+            "name:fr": "Musée d'art Suntory",
+            "name:ja": "サントリー美術館",
+            "name:ja-Hira": "サントリーびじゅつかん",
+            "name:ja-Latn": "Santorī-bijutsukan",
+            "name:ko": "산토리 미술관",
+            "name:zh": "三得利美術館",
+            "opening_hours": "Fr 10:00-20:00; Sa-We 10:00-18:00; Th off",
+            "operator": "サントリー芸術財団",
+            "operator:wikidata": "Q11305847",
+            "start_date": "1961-11-20",
+            "tourism": "museum",
+            "wheelchair": "yes",
+            "wikidata": "Q11249110",
+            "wikimedia_commons": "Category:Suntory Museum of Art",
+            "wikipedia": "ja:サントリー美術館"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4877962822,
+          "tags": {
+            "amenity": "place_of_worship",
+            "check_date": "2026-03-08",
+            "denomination": "nichiren",
+            "name": "妙経寺",
+            "name:en": "Myokyo-ji Temple",
+            "name:ja": "妙経寺",
+            "religion": "buddhist",
+            "wheelchair": "no",
+            "wikidata": "Q141207921"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4878000421,
+          "tags": {
+            "amenity": "place_of_worship",
+            "check_date": "2026-05-02",
+            "denomination": "protestant",
+            "name": "六本木ルーテル教会",
+            "name:en": "Roppongi Lutheran Church",
+            "name:ja": "六本木ルーテル教会",
+            "religion": "christian",
+            "wheelchair": "yes"
+          }
+        },
+        {
+          "type": "node",
+          "id": 4971567741,
+          "tags": {
+            "level": "2",
+            "name": "Nanatsu Gallery",
+            "tourism": "gallery"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5402955777,
+          "tags": {
+            "amenity": "clinic",
+            "check_date": "2023-10-23",
+            "healthcare": "clinic",
+            "level": "2",
+            "name": "よしもとブレストクリニック",
+            "name:en": "Yoshimoto Breast Clinic",
+            "source": "survey"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5618676521,
+          "tags": {
+            "amenity": "place_of_worship",
+            "denomination": "catholic",
+            "name": "カトリック麻布教会",
+            "name:en": "Azabu Church",
+            "religion": "christian",
+            "website": "http://www.azabu-catholic.jp/",
+            "wikidata": "Q15088329",
+            "wikipedia": "ja:カトリック麻布教会"
+          }
+        },
+        {
+          "type": "node",
           "id": 5669279270,
           "lat": 35.6628589,
           "lon": 139.7319152,
@@ -540,6 +1094,53 @@
             "name:en": "Roppongi entrada 3",
             "railway": "subway_entrance",
             "wheelchair": "no"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5882507950,
+          "tags": {
+            "amenity": "place_of_worship",
+            "religion": "buddhist"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5882508310,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "法典寺",
+            "religion": "buddhist"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5882508324,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "長耀寺",
+            "religion": "buddhist",
+            "wikidata": "Q119928141",
+            "wikipedia": "ja:長耀寺"
+          }
+        },
+        {
+          "type": "node",
+          "id": 5882508354,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "鳥居坂教会",
+            "religion": "christian",
+            "wikidata": "Q18337548"
+          }
+        },
+        {
+          "type": "node",
+          "id": 6068032068,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten",
+            "name": "中之町幼稚園"
           }
         },
         {
@@ -676,6 +1277,27 @@
         },
         {
           "type": "node",
+          "id": 7231031105,
+          "tags": {
+            "addr:block_number": "6",
+            "addr:housenumber": "20",
+            "addr:neighbourhood": "5",
+            "addr:province": "東京都",
+            "addr:quarter": "六本木",
+            "addr:suburb": "港区",
+            "amenity": "conference_centre",
+            "name": "六本木ミュージアム",
+            "name:en": "Roppongi Museum",
+            "name:ja": "六本木ミュージアム",
+            "opening_hours": "10:00-20:00",
+            "phone": "+81 3-6328-3005",
+            "tourism": "museum",
+            "website": "https://roppongimuseum.jp/",
+            "wikidata": "Q115977950"
+          }
+        },
+        {
+          "type": "node",
           "id": 7599007904,
           "lat": 35.6624311,
           "lon": 139.7301613,
@@ -759,6 +1381,30 @@
             "subway": "yes",
             "wikidata": "Q1326723",
             "wikipedia": "ja:六本木駅"
+          }
+        },
+        {
+          "type": "node",
+          "id": 7996716690,
+          "tags": {
+            "addr:block_number": "6",
+            "addr:housename": "青二ビル",
+            "addr:housenumber": "4",
+            "addr:neighbourhood": "1",
+            "addr:postcode": "106-0031",
+            "addr:province": "東京都",
+            "addr:quarter": "西麻布",
+            "addr:suburb": "港区",
+            "amenity": "school",
+            "branch": "東京校",
+            "branch:en": "Tokyo",
+            "branch:ja": "東京校",
+            "education": "school",
+            "name": "青二塾",
+            "name:en": "Aonijuku",
+            "name:ja": "青二塾",
+            "phone": "03-6455-5418",
+            "website": "https://www.aonijuku-tokyo.jp/"
           }
         },
         {
@@ -1016,11 +1662,95 @@
         },
         {
           "type": "node",
+          "id": 9694477865,
+          "tags": {
+            "amenity": "library",
+            "name": "Mitsui Gardens Libray"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9875632294,
+          "tags": {
+            "man_made": "tower",
+            "name": "梵鐘",
+            "tower:type": "bell_tower"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9875632295,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "種徳寺",
+            "religion": "buddhist",
+            "wikidata": "Q113001636",
+            "wikimedia_commons": "Category:Shutoku-ji (Akasaka, Minato)",
+            "wikipedia": "ja:種徳寺 (東京都港区)"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9875632468,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "道教寺",
+            "religion": "buddhist",
+            "wikidata": "Q113001476",
+            "wikimedia_commons": "Category:Dōkyō-ji (Akasaka, Minato)"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9875655153,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name": "専福寺",
+            "religion": "buddhist",
+            "wikidata": "Q113001498",
+            "wikimedia_commons": "Category:Senpuku-ji (Akasaka, Minato)",
+            "wikipedia": "ja:専福寺 (東京都港区)"
+          }
+        },
+        {
+          "type": "node",
+          "id": 9877625591,
+          "tags": {
+            "man_made": "tower",
+            "tower:type": "bell_tower"
+          }
+        },
+        {
+          "type": "node",
           "id": 9929149700,
           "lat": 35.6650049,
           "lon": 139.7382743,
           "tags": {
             "railway": "subway_entrance"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10132612402,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10132680954,
+          "tags": {
+            "amenity": "kindergarten",
+            "education": "kindergarten"
+          }
+        },
+        {
+          "type": "node",
+          "id": 10166670514,
+          "tags": {
+            "amenity": "community_centre",
+            "name": "麻布区民センター"
           }
         },
         {
@@ -1032,6 +1762,47 @@
             "name": "けやき坂",
             "name:en": "Keyaki-zaka",
             "natural": "peak"
+          }
+        },
+        {
+          "type": "node",
+          "id": 11145446839,
+          "tags": {
+            "amenity": "place_of_worship",
+            "check_date": "2023-08-26",
+            "level": "0",
+            "name": "専称寺",
+            "name:ja": "専称寺",
+            "religion": "buddhist"
+          }
+        },
+        {
+          "type": "node",
+          "id": 11539593851,
+          "tags": {
+            "amenity": "school",
+            "education": "school",
+            "name": "ゼロ高等学院"
+          }
+        },
+        {
+          "type": "node",
+          "id": 11563440614,
+          "tags": {
+            "name": "TOTOギャラリー・間",
+            "name:en": "TOTO GALLERY · MA",
+            "tourism": "museum",
+            "wikidata": "Q55526821",
+            "wikipedia": "ja:TOTOギャラリー・間"
+          }
+        },
+        {
+          "type": "node",
+          "id": 11782000169,
+          "tags": {
+            "amenity": "place_of_worship",
+            "name:en": "Grave of Ibe Kozan",
+            "name:ru": "Могила Ибэ Козан"
           }
         },
         {
@@ -2845,9 +3616,12 @@
             }
           ],
           "tags": {
+            "check_date": "2026-09-20",
+            "check_date:opening_hours": "2026-09-20",
             "leisure": "park",
             "name": "狸穴公園",
-            "name:en": "Mamiana Park"
+            "name:en": "Mamiana Park",
+            "opening_hours": "24/7"
           }
         },
         {
@@ -2909,9 +3683,12 @@
             }
           ],
           "tags": {
+            "check_date": "2026-09-20",
+            "check_date:opening_hours": "2026-09-20",
             "leisure": "park",
             "name": "狸穴公園",
-            "name:en": "Mamiana Park"
+            "name:en": "Mamiana Park",
+            "opening_hours": "24/7"
           }
         },
         {
@@ -3124,6 +3901,9 @@
           ],
           "tags": {
             "building": "apartments",
+            "building:levels": "8",
+            "ele": "23.7",
+            "height": "26.3",
             "name": "麻布永坂ハウス",
             "name:en": "Azabu Nagasaka House",
             "source": "Bing, 2007-04"
@@ -3644,7 +4424,10 @@
           ],
           "tags": {
             "building": "yes",
+            "building:levels": "2",
+            "ele": "13.6",
             "government": "legislative",
+            "height": "8.6",
             "name": "参議院副議長公邸",
             "name:en": "Official Residence of the Vice Chairperson of the House of Councillors",
             "office": "government",
@@ -4440,6 +5223,9 @@
           ],
           "tags": {
             "building": "yes",
+            "building:levels": "3",
+            "ele": "22.8",
+            "height": "14.4",
             "source": "Bing, 2007-04"
           }
         },
@@ -45595,6 +46381,7 @@
           ],
           "tags": {
             "building": "yes",
+            "name": "赤坂キヨシビル",
             "source": "Bing,2007-04"
           }
         },
@@ -45683,6 +46470,8 @@
           ],
           "tags": {
             "building": "yes",
+            "name": "関根ビル",
+            "name:en": "Sekine Building",
             "source": "Bing,2007-04"
           }
         },
@@ -45901,7 +46690,15 @@
             }
           ],
           "tags": {
+            "addr:block_number": "13",
+            "addr:city": "港区",
+            "addr:housenumber": "20",
+            "addr:neighbourhood": "2丁目",
+            "addr:province": "東京都",
+            "addr:quarter": "赤坂",
             "building": "yes",
+            "name": "Tsumugiビル",
+            "name:en": "Tsugumi Building",
             "source": "Bing,2007-04"
           }
         },
@@ -46121,8 +46918,10 @@
             }
           ],
           "tags": {
+            "addr:housenumber": "1",
             "building": "yes",
             "building:levels": "7",
+            "name": "ルーセント赤坂",
             "source": "Bing,2007-04"
           }
         },
@@ -46166,6 +46965,7 @@
           ],
           "tags": {
             "building": "yes",
+            "name": "栗原ビル",
             "source": "Bing,2007-04"
           }
         },
@@ -46699,6 +47499,7 @@
             }
           ],
           "tags": {
+            "addr:housenumber": "2",
             "building": "yes",
             "source": "Bing,2007-04"
           }
@@ -46967,6 +47768,8 @@
           ],
           "tags": {
             "building": "yes",
+            "name": "赤坂会館ビル",
+            "name:en": "Akasakakaikan Building",
             "source": "Bing,2007-04"
           }
         },
@@ -47010,6 +47813,8 @@
           ],
           "tags": {
             "building": "yes",
+            "name": "赤坂田町ビル",
+            "name:en": "Akasaka Tamachi Building",
             "source": "Bing,2007-04"
           }
         },
@@ -47417,6 +48222,7 @@
           "tags": {
             "building": "yes",
             "building:levels": "7",
+            "name": "富谷ビル",
             "source": "Bing,2007-04"
           }
         },
@@ -47673,6 +48479,8 @@
           ],
           "tags": {
             "building": "yes",
+            "name": "Frames Akasaka",
+            "name:ja": "フラームス赤坂",
             "source": "Bing,2007-04"
           }
         },
@@ -48045,6 +48853,7 @@
           ],
           "tags": {
             "building": "yes",
+            "name": "レックス赤坂レジデンス",
             "source": "Bing,2007-04"
           }
         },
@@ -48349,7 +49158,10 @@
             }
           ],
           "tags": {
+            "addr:housenumber": "4",
             "building": "yes",
+            "name": "EL Cerrito",
+            "name:ja": "エルセリート赤坂",
             "source": "Bing,2007-04"
           }
         },
@@ -50144,6 +50956,8 @@
           ],
           "tags": {
             "building": "yes",
+            "name": "ハットビル",
+            "name:en": "Hat",
             "source": "Bing,2007-04"
           }
         },
@@ -50581,6 +51395,7 @@
             "amenity": "restaurant",
             "branch": "赤坂店",
             "building": "yes",
+            "building:levels": "2",
             "cuisine": "noodle",
             "name": "室町砂場",
             "source": "Bing,2007-04"
@@ -100341,7 +101156,9 @@
             1600682352,
             1600682348,
             10775513528,
+            14208077695,
             10775513529,
+            14208127109,
             10775513530,
             10775513531,
             1594674109,
@@ -100383,8 +101200,16 @@
               "lon": 139.7375924
             },
             {
+              "lat": 35.671559,
+              "lon": 139.7375113
+            },
+            {
               "lat": 35.6714373,
               "lon": 139.7374019
+            },
+            {
+              "lat": 35.6716263,
+              "lon": 139.7371838
             },
             {
               "lat": 35.6722219,
@@ -100431,7 +101256,9 @@
             "construction": "commercial",
             "landuse": "construction",
             "name": "赤坂二・六丁目地区開発計画 東棟",
-            "opening_date": "2028-11"
+            "note": "建築主 TBS、三菱地所",
+            "opening_date": "2028-11",
+            "operator": "鹿島建設"
           }
         },
         {
@@ -125407,10 +126234,12 @@
           "nodes": [
             10775513537,
             10775513538,
+            14208127103,
             10775513539,
             10775513540,
             10775513541,
             10775513542,
+            14208127112,
             10775513537
           ],
           "geometry": [
@@ -125421,6 +126250,10 @@
             {
               "lat": 35.6717078,
               "lon": 139.7368945
+            },
+            {
+              "lat": 35.6717993,
+              "lon": 139.7367841
             },
             {
               "lat": 35.6721517,
@@ -125439,6 +126272,10 @@
               "lon": 139.7358414
             },
             {
+              "lat": 35.6713763,
+              "lon": 139.7360243
+            },
+            {
               "lat": 35.6712003,
               "lon": 139.7362513
             }
@@ -125447,7 +126284,8 @@
             "construction": "commercial",
             "landuse": "construction",
             "name": "赤坂二・六丁目地区開発計画 西棟",
-            "opening_date": "2028-04"
+            "opening_date": "2028-04",
+            "operator": "大林組"
           }
         },
         {
@@ -138249,10 +139087,10 @@
           }
         }
       ],
-      "generator": "Overpass API 0.7.62.11 87bfad18",
+      "generator": "Overpass API 0.7.62.4 2390de5a",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-08-31T13:30:43Z"
+        "timestamp_osm_base": "2026-10-01T13:41:51Z"
       },
       "version": 0.6
     },
@@ -139048,6 +139886,7 @@
             }
           ],
           "tags": {
+            "destination": "赤羽橋;芝公園",
             "highway": "primary",
             "lanes": "2",
             "lit": "yes",
@@ -141700,6 +142539,8 @@
           "nodes": [
             1609816999,
             499190315,
+            14208127115,
+            14208127114,
             1600682343,
             499191483,
             1600682338,
@@ -141727,6 +142568,14 @@
             {
               "lat": 35.6718385,
               "lon": 139.7384742
+            },
+            {
+              "lat": 35.6717502,
+              "lon": 139.738097
+            },
+            {
+              "lat": 35.6717488,
+              "lon": 139.7380909
             },
             {
               "lat": 35.6716918,
@@ -146835,8 +147684,8 @@
           "bounds": {
             "minlat": 35.6653471,
             "minlon": 139.7239033,
-            "maxlat": 35.6661209,
-            "maxlon": 139.7246437
+            "maxlat": 35.6661202,
+            "maxlon": 139.7246397
           },
           "nodes": [
             1061683042,
@@ -146918,8 +147767,8 @@
               "lon": 139.7245342
             },
             {
-              "lat": 35.6661209,
-              "lon": 139.7246437
+              "lat": 35.6661202,
+              "lon": 139.7246397
             }
           ],
           "tags": {
@@ -147058,7 +147907,7 @@
             "bridge": "yes",
             "highway": "primary",
             "lanes": "2",
-            "layer": "1",
+            "layer": "2",
             "name": "外苑東通り",
             "name:en": "Gaien Higashi Street",
             "name:es": "Calle Gaien Higashi",
@@ -147144,7 +147993,7 @@
             "bridge": "yes",
             "highway": "primary",
             "lanes": "2",
-            "layer": "1",
+            "layer": "2",
             "name": "外苑東通り",
             "name:en": "Gaien Higashi Street",
             "name:es": "Calle Gaien Higashi",
@@ -148888,37 +149737,30 @@
           "type": "way",
           "id": 95934764,
           "bounds": {
-            "minlat": 35.6666637,
+            "minlat": 35.6666629,
             "minlon": 139.7274458,
             "maxlat": 35.6677492,
-            "maxlon": 139.7279334
+            "maxlon": 139.7279553
           },
           "nodes": [
             5297154479,
-            8661699296,
             1111556649,
             1111556653,
             1606250049,
             1111556650,
             1606250018,
-            1111556651,
             1111556652,
             1606249994,
             1606249984,
             1111556654,
             1111556655,
-            2398039263,
-            2282509782,
+            14189076155,
             2398039255
           ],
           "geometry": [
             {
               "lat": 35.6677492,
               "lon": 139.7274458
-            },
-            {
-              "lat": 35.6677458,
-              "lon": 139.7274466
             },
             {
               "lat": 35.6675967,
@@ -148941,40 +149783,32 @@
               "lon": 139.7277155
             },
             {
-              "lat": 35.666913,
-              "lon": 139.7277744
-            },
-            {
               "lat": 35.6668607,
               "lon": 139.7278951
             },
             {
-              "lat": 35.6668392,
-              "lon": 139.7279149
+              "lat": 35.6668409,
+              "lon": 139.7279256
             },
             {
-              "lat": 35.6668182,
-              "lon": 139.7279261
+              "lat": 35.6668174,
+              "lon": 139.7279474
             },
             {
-              "lat": 35.6667747,
-              "lon": 139.7279334
+              "lat": 35.666783,
+              "lon": 139.7279553
             },
             {
-              "lat": 35.6667387,
-              "lon": 139.7279272
+              "lat": 35.6667465,
+              "lon": 139.7279496
             },
             {
-              "lat": 35.6667198,
-              "lon": 139.7279137
+              "lat": 35.6667192,
+              "lon": 139.727924
             },
             {
-              "lat": 35.6667001,
-              "lon": 139.7278996
-            },
-            {
-              "lat": 35.6666637,
-              "lon": 139.7278627
+              "lat": 35.6666629,
+              "lon": 139.7278673
             }
           ],
           "tags": {
@@ -162537,43 +163371,18 @@
           "type": "way",
           "id": 172122991,
           "bounds": {
-            "minlat": 35.6677492,
-            "minlon": 139.7274458,
+            "minlat": 35.6680797,
+            "minlon": 139.7282831,
             "maxlat": 35.6684345,
             "maxlon": 139.7294088
           },
           "nodes": [
-            5297154479,
-            8661699298,
-            1606250260,
-            5297154482,
-            5302311251,
             1312654756,
             1312654818,
             258041493,
             5302300446
           ],
           "geometry": [
-            {
-              "lat": 35.6677492,
-              "lon": 139.7274458
-            },
-            {
-              "lat": 35.6678089,
-              "lon": 139.7275333
-            },
-            {
-              "lat": 35.6678685,
-              "lon": 139.7276412
-            },
-            {
-              "lat": 35.6679338,
-              "lon": 139.7278005
-            },
-            {
-              "lat": 35.6680109,
-              "lon": 139.7280503
-            },
             {
               "lat": 35.6680797,
               "lon": 139.7282831
@@ -162598,7 +163407,7 @@
             "alt_name:zh": "乃木坂",
             "highway": "secondary",
             "lanes": "2",
-            "name": "赤坂通り／乃木坂",
+            "name": "赤坂通り",
             "name:en": "Akasaka-dori",
             "name:es": "Calle Akasaka",
             "name:fr": "Rue Akasaka",
@@ -163232,6 +164041,7 @@
             }
           ],
           "tags": {
+            "destination": "西麻布;天現寺橋",
             "highway": "tertiary",
             "lanes": "2",
             "lit": "yes",
@@ -167034,6 +167844,7 @@
             2282509765,
             2282509771,
             2282509774,
+            14189076154,
             2282509779,
             2282509785,
             2282509790,
@@ -167061,7 +167872,6 @@
             2283027754,
             2283027757,
             2283027760,
-            2283027782,
             3198620683
           ],
           "geometry": [
@@ -167112,6 +167922,10 @@
             {
               "lat": 35.6666481,
               "lon": 139.7279897
+            },
+            {
+              "lat": 35.6666634,
+              "lon": 139.7279941
             },
             {
               "lat": 35.6666833,
@@ -167220,10 +168034,6 @@
             {
               "lat": 35.6679004,
               "lon": 139.7278664
-            },
-            {
-              "lat": 35.6680164,
-              "lon": 139.7282567
             },
             {
               "lat": 35.6680358,
@@ -167341,7 +168151,7 @@
           "tags": {
             "bridge": "yes",
             "highway": "footway",
-            "layer": "1",
+            "layer": "2",
             "level": "1",
             "name": "乃木坂陸橋",
             "name:en": "Nogizaka Footbridge",
@@ -172960,14 +173770,14 @@
           "bounds": {
             "minlat": 35.6663278,
             "minlon": 139.7270409,
-            "maxlat": 35.6665741,
-            "maxlon": 139.7278723
+            "maxlat": 35.6666152,
+            "maxlon": 139.7278275
           },
           "nodes": [
             2391561356,
             2391561348,
             3498644599,
-            2391561354
+            2282509768
           ],
           "geometry": [
             {
@@ -172983,8 +173793,8 @@
               "lon": 139.7278275
             },
             {
-              "lat": 35.6665741,
-              "lon": 139.7278723
+              "lat": 35.6666152,
+              "lon": 139.7278161
             }
           ],
           "tags": {
@@ -173026,10 +173836,10 @@
           "type": "way",
           "id": 231409619,
           "bounds": {
-            "minlat": 35.6666637,
+            "minlat": 35.6666629,
             "minlon": 139.7274082,
             "maxlat": 35.6671183,
-            "maxlon": 139.7278627
+            "maxlon": 139.7278673
           },
           "nodes": [
             2398039269,
@@ -173040,7 +173850,7 @@
             5297154471,
             5297154476,
             5297154477,
-            2398039260,
+            14189076161,
             2398039255
           ],
           "geometry": [
@@ -173077,12 +173887,12 @@
               "lon": 139.7275411
             },
             {
-              "lat": 35.6667448,
-              "lon": 139.7277474
+              "lat": 35.6667559,
+              "lon": 139.7277396
             },
             {
-              "lat": 35.6666637,
-              "lon": 139.7278627
+              "lat": 35.6666629,
+              "lon": 139.7278673
             }
           ],
           "tags": {
@@ -188839,7 +189649,9 @@
             3498644602,
             3498644601,
             3498644600,
+            14189076159,
             3498644599,
+            14189076156,
             11563440612,
             3498644597,
             8664036156,
@@ -188907,8 +189719,16 @@
               "lon": 139.7276046
             },
             {
+              "lat": 35.6666778,
+              "lon": 139.7276568
+            },
+            {
               "lat": 35.6665502,
               "lon": 139.7278275
+            },
+            {
+              "lat": 35.666525,
+              "lon": 139.7278628
             },
             {
               "lat": 35.6664218,
@@ -205217,7 +206037,6 @@
             258041491,
             5302300448,
             5297154478,
-            8661699297,
             5297154479
           ],
           "geometry": [
@@ -205232,10 +206051,6 @@
             {
               "lat": 35.6677177,
               "lon": 139.7274012
-            },
-            {
-              "lat": 35.6677472,
-              "lon": 139.7274429
             },
             {
               "lat": 35.6677492,
@@ -205267,8 +206082,8 @@
           "bounds": {
             "minlat": 35.6666152,
             "minlon": 139.7278161,
-            "maxlat": 35.6666637,
-            "maxlon": 139.7278627
+            "maxlat": 35.6666629,
+            "maxlon": 139.7278673
           },
           "nodes": [
             2398039255,
@@ -205276,8 +206091,8 @@
           ],
           "geometry": [
             {
-              "lat": 35.6666637,
-              "lon": 139.7278627
+              "lat": 35.6666629,
+              "lon": 139.7278673
             },
             {
               "lat": 35.6666152,
@@ -205302,7 +206117,7 @@
           },
           "nodes": [
             2282509768,
-            2398039264,
+            14189076160,
             1599482846,
             5297154468,
             5297154469,
@@ -205322,8 +206137,8 @@
               "lon": 139.7278161
             },
             {
-              "lat": 35.6667016,
-              "lon": 139.7276938
+              "lat": 35.6667066,
+              "lon": 139.7276873
             },
             {
               "lat": 35.6667796,
@@ -205396,13 +206211,13 @@
           "id": 772808952,
           "bounds": {
             "minlat": 35.6657144,
-            "minlon": 139.7278627,
-            "maxlat": 35.6666637,
+            "minlon": 139.7278673,
+            "maxlat": 35.6666629,
             "maxlon": 139.7292186
           },
           "nodes": [
             2398039255,
-            2398039266,
+            14189076158,
             2398039256,
             2398054968,
             8664036158,
@@ -205410,12 +206225,12 @@
           ],
           "geometry": [
             {
-              "lat": 35.6666637,
-              "lon": 139.7278627
+              "lat": 35.6666629,
+              "lon": 139.7278673
             },
             {
-              "lat": 35.6666089,
-              "lon": 139.727947
+              "lat": 35.6666025,
+              "lon": 139.7279561
             },
             {
               "lat": 35.6665834,
@@ -209963,6 +210778,7 @@
           ],
           "tags": {
             "cycleway:left": "shared_lane",
+            "cycleway:left:lane": "pictogram",
             "highway": "primary",
             "lanes": "2",
             "maxspeed": "40",
@@ -209972,6 +210788,8 @@
             "name:fr": "Rue Gaien-Higashi",
             "oneway": "yes",
             "ref": "319",
+            "sidewalk:left": "separate",
+            "sidewalk:right": "no",
             "source": "Bing 2010",
             "surface": "asphalt",
             "wikidata": "Q10932386"
@@ -213730,8 +214548,7 @@
             8664036157,
             1492968683,
             11563440611,
-            2398039265,
-            2391561354,
+            14189076157,
             2282509768
           ],
           "geometry": [
@@ -213784,12 +214601,8 @@
               "lon": 139.7280373
             },
             {
-              "lat": 35.6665553,
-              "lon": 139.7278986
-            },
-            {
-              "lat": 35.6665741,
-              "lon": 139.7278723
+              "lat": 35.666555,
+              "lon": 139.727899
             },
             {
               "lat": 35.6666152,
@@ -225725,6 +226538,7 @@
             }
           ],
           "tags": {
+            "destination": "西麻布;天現寺橋",
             "highway": "cycleway",
             "oneway": "yes"
           }
@@ -226312,6 +227126,7 @@
           },
           "nodes": [
             499191180,
+            14188768445,
             4906963628,
             1061683010,
             12290165802
@@ -226320,6 +227135,10 @@
             {
               "lat": 35.6653057,
               "lon": 139.7247118
+            },
+            {
+              "lat": 35.665873,
+              "lon": 139.7245855
             },
             {
               "lat": 35.6659112,
@@ -226740,6 +227559,7 @@
           },
           "nodes": [
             1598763441,
+            14188768444,
             1061683059,
             736002521
           ],
@@ -226749,8 +227569,12 @@
               "lon": 139.7245489
             },
             {
-              "lat": 35.6661209,
-              "lon": 139.7246437
+              "lat": 35.6662442,
+              "lon": 139.7246063
+            },
+            {
+              "lat": 35.6661202,
+              "lon": 139.7246397
             },
             {
               "lat": 35.66593,
@@ -228355,19 +229179,82 @@
             "sidewalk": "both",
             "surface": "asphalt"
           }
+        },
+        {
+          "type": "way",
+          "id": 1559880146,
+          "bounds": {
+            "minlat": 35.6677492,
+            "minlon": 139.7274458,
+            "maxlat": 35.6680797,
+            "maxlon": 139.7282831
+          },
+          "nodes": [
+            5297154479,
+            8661699298,
+            1606250260,
+            5297154482,
+            5302311251,
+            1312654756
+          ],
+          "geometry": [
+            {
+              "lat": 35.6677492,
+              "lon": 139.7274458
+            },
+            {
+              "lat": 35.6678089,
+              "lon": 139.7275333
+            },
+            {
+              "lat": 35.6678685,
+              "lon": 139.7276412
+            },
+            {
+              "lat": 35.6679338,
+              "lon": 139.7278005
+            },
+            {
+              "lat": 35.6680109,
+              "lon": 139.7280503
+            },
+            {
+              "lat": 35.6680797,
+              "lon": 139.7282831
+            }
+          ],
+          "tags": {
+            "alt_name": "乃木坂",
+            "alt_name:en": "Nogizaka",
+            "alt_name:ja": "乃木坂",
+            "alt_name:zh": "乃木坂",
+            "highway": "secondary",
+            "lanes": "2",
+            "name": "赤坂通り;乃木坂",
+            "name:en": "Akasaka-dori",
+            "name:es": "Calle Akasaka",
+            "name:fr": "Rue Akasaka",
+            "name:ja": "赤坂通り",
+            "name:ja-Hira": "あかさかどうり",
+            "name:ja-Latn": "Akasaka-dōri",
+            "name:ko": "아카사카도리",
+            "name:zh": "赤坂通",
+            "ref": "413",
+            "surface": "asphalt"
+          }
         }
       ],
       "generator": "Overpass API 0.7.62.11 87bfad18",
       "osm3s": {
         "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
-        "timestamp_osm_base": "2026-08-31T13:30:43Z"
+        "timestamp_osm_base": "2026-10-01T13:41:51Z"
       },
       "version": 0.6
     }
   },
   "stats": {
     "bboxKm2": 2.7911627594794344,
-    "featureElements": 2259,
-    "roadElements": 1835
+    "featureElements": 2318,
+    "roadElements": 1836
   }
 }
