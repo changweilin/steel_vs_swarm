@@ -2380,47 +2380,68 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 
 /* ---- 異常狀態圖示列(status icons strip above HP bar) ----
    排列規則:依剩餘秒數升序(最快到期在最左)。
-   圖示邊長隨遊戲畫面 vmin 流體縮放,顏色由 --si-bg 注入。
+   時鐘式進度表:順時針 360 度環繞,繞完一圈表示結束。
+   圖示邊長隨遊戲畫面 vmin 流體縮放,顏色由 --si-bg / --si-fg 注入。
    三個角徽:
      右上 = 剩餘秒數(白字)
      右下 = 正/負效果箭頭(綠↑ / 紅↓)
      左下 = 層數計數(金字;僅多層狀態出現)              */
-.status-icons { display: flex; flex-wrap: wrap; gap: 2px; }
+.status-icons { display: flex; flex-wrap: wrap; gap: 4px; }
 .status-icons:empty { display: none; }
 .si {
   position: relative;
-  width: clamp(2.85vh, 3.9vmin, 2.8vw); height: clamp(2.85vh, 3.9vmin, 2.8vw);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 2px;
+  width: clamp(2.9vh, 4.0vmin, 2.9vw); height: clamp(2.9vh, 4.0vmin, 2.9vw);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 50%;
   background-color: var(--si-bg, #1a1a2e);
   overflow: visible;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
-/* SVG 圖形主體塞滿磚塊 */
-.si > svg { display: block; width: 100%; height: 100%; }
+/* 時鐘半透明扇形掃掠遮罩 (順時針遮蔽已逝時間) */
+.si-clock-wipe {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+/* SVG 圖形主體塞滿正圓，z-index 高於扇形遮罩 */
+.si > svg {
+  display: block; width: 100%; height: 100%;
+  position: relative; z-index: 2;
+  overflow: visible;
+}
 /* 右上:剩餘秒數 */
 .si-t {
-  position: absolute; top: -1px; right: -1px;
+  position: absolute; top: -3px; right: -3px;
   font-family: var(--mono); font-size: clamp(0.72vh, 1vmin, 0.72vw); font-weight: 700;
-  color: #fff; background: rgba(0,0,0,0.65);
-  padding: 0 2px; line-height: 1.4;
+  color: #fff; background: rgba(0,0,0,0.75);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
+  padding: 0 2px; line-height: 1.3;
   pointer-events: none;
+  z-index: 4;
 }
 /* 右下:極性箭頭 */
 .si-p {
-  position: absolute; bottom: -1px; right: -1px;
+  position: absolute; bottom: -3px; right: -3px;
   font-size: clamp(0.85vh, 1.12vmin, 0.8vw); line-height: 1;
   pointer-events: none;
+  z-index: 4;
+  text-shadow: 0 0 2px #000;
 }
 .si-p.pos { color: #4cde6a; }   /* 正面效果:綠↑ */
 .si-p.neg { color: #ff4436; }   /* 負面效果:紅↓ */
 /* 左下:層數(僅多層顯示) */
 .si-n {
-  position: absolute; bottom: -1px; left: -1px;
+  position: absolute; bottom: -3px; left: -3px;
   font-family: var(--mono); font-size: clamp(0.72vh, 1vmin, 0.72vw); font-weight: 700;
-  color: #ffd54f; background: rgba(0,0,0,0.65);
-  padding: 0 2px; line-height: 1.4;
+  color: #ffd54f; background: rgba(0,0,0,0.75);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
+  padding: 0 2px; line-height: 1.3;
   pointer-events: none;
+  z-index: 4;
 }
 
 /* 招式盒(Q 小招 / E 大招;字級隨遊戲畫面 vmin 流體縮放) */

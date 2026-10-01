@@ -3871,11 +3871,30 @@ export class BattleClient {
     // 異常狀態圖示列(僅自機;觀戰不顯示)
     if (!sh) {
       const icons = [];
+      this._statusMax = this._statusMax || {};
+      const activeIds = new Set();
       const push = (id, remS, positive, label, stacks) => {
-        if (remS > 0) icons.push({ id, remS, positive, label, stacks });
+        if (remS > 0) {
+          activeIds.add(id);
+          if (!this._statusMax[id] || remS > this._statusMax[id]) this._statusMax[id] = remS;
+          icons.push({ id, remS, positive, label, stacks, maxS: this._statusMax[id] });
+        }
       };
-      // ── 暈眩:移速×0,行動全鎖 ─────────────────────────────────────────
-      push('stun', this.stunLeft, false, '暈眩');
+
+      // ── 控場:麻痺 / 癱瘓 / 暈眩 ──────────────────────────────────────
+      // 1. 麻痺 (pz/stunLeft): 動力系統離線,武器仍可運作
+      // 2. 癱瘓 (emp/empLeft): 武器系統離線,機體仍可移動
+      // 3. 暈眩 (stun): 動力+武器雙重離線 (全行動鎖定組合狀態)
+      if (this.stunLeft > 0 && this.empLeft > 0) {
+        const stunRem = Math.min(this.stunLeft, this.empLeft);
+        push('stun', stunRem, false, '暈眩');
+        if (this.stunLeft > this.empLeft + 0.1) push('paralyze', this.stunLeft, false, '麻痺');
+        if (this.empLeft > this.stunLeft + 0.1) push('emp', this.empLeft, false, '電磁干擾');
+      } else {
+        if (this.stunLeft > 0) push('paralyze', this.stunLeft, false, '麻痺');
+        if (this.empLeft > 0) push('emp', this.empLeft, false, '電磁干擾');
+      }
+
       // ── 減速/凍結:用 slowF 區分(≤0.4=凍結,>0.4=一般減速) ───────────────
       if (this.slowLeft > 0) {
         const sf = this.slowF || 0.6;
@@ -3886,23 +3905,25 @@ export class BattleClient {
           push(sf <= 0.4 ? 'freeze' : 'slow', this.slowLeft, false, sf <= 0.4 ? '凍結' : '減速');
         }
       }
-      // ── 灼燒/中毒:bleed 欄位(火焰=純DoT,毒=DoT+減速組合) ──────────────
+
+      // ── 灼燒/流血/中毒:bleed 欄位(火焰=純DoT,流血=裝甲破口,毒=DoT+減速組合) ──
       if (this.bleedLeft > 0) {
         const sf = this.slowF || 0.6;
         const hasPoisonSlow = this.slowLeft > 0 && sf > 0.5;
+        const isBurn = !!this._burnAt && (performance.now() / 1000 - this._burnAt < 2.5);
         if (hasPoisonSlow) {
           // 中毒(組合):以兩者較短的剩餘時間顯示毒圖示(代表 DoT+減速並行期)
           const poisonRem = Math.min(this.bleedLeft, this.slowLeft);
           push('poison', poisonRem, false, '中毒');
-          // 若 bleed 超過 slow,剩餘純 DoT 段顯示為灼燒(毒液掉盡後依舊灼燒)
-          if (this.bleedLeft > this.slowLeft + 0.1) push('burn', this.bleedLeft, false, '灼燒');
+          // 若 bleed 超過 slow,剩餘純 DoT 段顯示為灼燒或流血
+          if (this.bleedLeft > this.slowLeft + 0.1) {
+            push(isBurn ? 'burn' : 'bleed', this.bleedLeft, false, isBurn ? '灼燒' : '流血');
+          }
         } else {
-          // 純灼燒(fire DoT,無減速或凍結組合)
-          push('burn', this.bleedLeft, false, '灼燒');
+          push(isBurn ? 'burn' : 'bleed', this.bleedLeft, false, isBurn ? '灼燒' : '流血');
         }
       }
-      // ── 武器/招式離線 ─────────────────────────────────────────────────
-      push('emp', this.empLeft, false, '電磁干擾');
+
       // ── 視野+火控喪失 ─────────────────────────────────────────────────
       push('blind', this.blindLeft, false, '致盲');
       // ── 移速折半+方向反轉 ─────────────────────────────────────────────
@@ -3923,7 +3944,12 @@ export class BattleClient {
         push('mod', minRem, true, '招式增益', activeMods.length);
       }
       // 詞綴強化(AFFIXES: tempered/hardened/vampiric/bounty)
-      for (const [id, remS] of (this._buffsLeft || [])) push(id, remS, true);
+      const affixNames = { tempered: '淬火', hardened: '複合裝甲', vampiric: '汲能', bounty: '懸賞' };
+      for (const [id, remS] of (this._buffsLeft || [])) push(id, remS, true, affixNames[id] || id);
+
+      // 清理已結束狀態的最大秒數紀錄
+      for (const id in this._statusMax) if (!activeIds.has(id)) delete this._statusMax[id];
+
       icons.sort((a, b) => a.remS - b.remS);
       this.hud.statusIcons?.(icons);
     } else {
@@ -5105,6 +5131,7 @@ export class BattleClient {
       spawnSingularityImplosionVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, y: iy, r: ev.r || 18 });
     } else if (ev.e === 'burn') {
       if (ev.pid === this.youId) {
+        this._burnAt = performance.now() / 1000;
         // mul 由伺服器傳入:強風助燃 >1.0,正常 ≈1.0（舊事件無 mul 欄位時退回預設值 1）
         const mul = ev.mul ?? 1;
         this.trauma = Math.min(1, this.trauma + (mul >= 1.4 ? 0.40 : 0.25));
