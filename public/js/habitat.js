@@ -1,16 +1,18 @@
-import { HABITATS, HABITAT_SCENE } from './habitatCatalog.js';
+import { HABITATS, HABITAT_SCENE, HABITAT_FILL } from './habitatCatalog.js';
 import { forestSeed } from './forest.js';
 import { mulberry32 } from './rng.js';
 import { procReliefAt } from './mapgen.js';
-import { areaSurfaceRows, pointInProjectedArea } from './osmAreas.js';
+import { areaSurfaceRows, pointInProjectedArea, projectedAreaContainsDisk, projectedAreaIntersectsDisk, classifyArea } from './osmAreas.js';
+import { areaLayoutAngle } from './osmAreaLayout.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const fallback = { green: 'meadow', urban: 'built', bare: 'exposed', alpine: 'alpine', cliff: 'cliff' };
+const fallback = { green: 'meadow', urban: 'built', bare: 'exposed', alpine: 'alpine', cliff: 'cliff', wet: 'marsh' };
 const vegetation = { 10: 'woodland', 20: 'scrub', 30: 'meadow', 40: 'cropland', 95: 'woodland', 100: 'meadow' };
 
 /** Resolved geometry/OSM zones outrank observations, including water and slope gates. */
-export function habitatAt(sample, zone, tags = {}) {
+export function habitatAt(sample, zone, tags = {}, depth = null) {
   let key = fallback[zone];
+  if (zone === 'water' && Number.isFinite(depth) && depth >= 0 && depth <= HABITAT_SCENE.SHALLOW_DEPTH_M) key = 'shallows';
   if (!key) return null;
   const observed = !!sample?.confidence;
   if (observed && zone === 'green') key = vegetation[sample.code] || key;
@@ -18,7 +20,20 @@ export function habitatAt(sample, zone, tags = {}) {
     if (tags.natural === 'wood' || tags.landuse === 'forest') key = 'woodland';
     else if (tags.natural === 'scrub' || tags.natural === 'heath') key = 'scrub';
     else if (tags.landuse === 'farmland' || tags.landuse === 'plant_nursery') key = 'cropland';
+    else if (tags.landuse === 'orchard') key = 'orchard';
+    else if (['vineyard', 'allotments'].includes(tags.landuse)) key = 'cropland';
     else if (tags.natural === 'grassland' || ['grass', 'meadow'].includes(tags.landuse)) key = 'meadow';
+    else if (tags.landuse === 'greenhouse_horticulture') key = 'cropland';
+    if (tags.landuse === 'animal_keeping' || tags.meadow === 'pasture'
+      || tags.power || tags['plant:source'] || tags['generator:source']) key = 'pasture';
+  }
+  if (zone === 'wet') {
+    if (tags.wetland === 'tidalflat' || tags.natural === 'mud' || tags.landuse === 'salt_pond') key = 'mudflat';
+    else if (tags.wetland === 'wet_meadow' || tags.basin === 'infiltration') key = 'wetmeadow';
+  }
+  if (zone === 'bare') {
+    if (['beach', 'sand'].includes(tags.natural)) key = 'sand';
+    else if (['bare_rock', 'rock', 'scree', 'shingle'].includes(tags.natural)) key = 'rocky';
   }
   const spec = HABITATS[key], rgb = observed && !!(sample.sources & 2);
   const texture = rgb ? sample.texture / 255 : .35;
@@ -29,15 +44,19 @@ export function habitatAt(sample, zone, tags = {}) {
   const density = spec.density * (observed ? 1 : .65) * (.72 + green * .35)
     * (sample?.landform === 5 ? .4 : 1);
   return { key, zone, color, density, texture, coherence: rgb ? sample.coherence / 255 : 0,
-    height: spec.height, canopy: spec.canopy * (observed ? 1 : .65), plant: spec.plant, stone: spec.stone, observed };
+    height: spec.height, canopy: spec.canopy * (observed ? 1 : .65), plant: spec.plant, stone: spec.stone, observed,
+    leafType: ['broadleaved', 'needleleaved', 'mixed'].includes(tags.leaf_type) ? tags.leaf_type : 'unknown',
+    landform: sample?.landform || 0, geology: 'unknown' };
 }
 
 /** Exact semantic masks retain holes; the same priority ordering serves canopy and ground detail. */
-export function createHabitatSampler({ areas = [], evidenceAt, zoneAt, envCodeAt }) {
+export function createHabitatSampler({ areas = [], evidenceAt, zoneAt, envCodeAt, depthAt }) {
   const grid = new Map(), cell = 64;
   const rows = areaSurfaceRows(areas).filter(r => r.zone && r.outer?.length >= 3)
     .sort((a, b) => b.priority - a.priority || String(a.sourceId).localeCompare(String(b.sourceId)));
   for (const row of rows) {
+    row.ry = areaLayoutAngle({ worldPolygons: [{ outer: row.outer }] });
+    row.landuse = classifyArea(row.tags).kind;
     const xs = row.outer.map(p => p[0]), zs = row.outer.map(p => p[1]);
     const i0 = Math.floor(Math.min(...xs) / cell), i1 = Math.floor(Math.max(...xs) / cell);
     const j0 = Math.floor(Math.min(...zs) / cell), j1 = Math.floor(Math.max(...zs) / cell);
@@ -47,12 +66,33 @@ export function createHabitatSampler({ areas = [], evidenceAt, zoneAt, envCodeAt
       grid.get(key).push(row);
     }
   }
-  return (x, z) => {
-    if (!Number.isFinite(x) || !Number.isFinite(z) || envCodeAt(x, z) !== 0) return null;
+  const sampleAt = (x, z) => {
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
+    const ec = envCodeAt(x, z);
+    if (![0, 1, 2].includes(ec)) return null;
     const area = grid.get(`${Math.floor(x / cell)},${Math.floor(z / cell)}`)?.find(r => pointInProjectedArea(x, z, r));
     const observation = evidenceAt?.(x, z);
-    return habitatAt(observation, zoneAt(x, z, area, observation), area?.tags);
+    const zone = ec === 1 ? 'water' : ec === 2 ? 'wet' : zoneAt(x, z, area, observation);
+    const habitat = habitatAt(observation, zone, area?.tags, depthAt?.(x, z));
+    return habitat && { ...habitat, ry: area?.ry || 0, landuse: area?.landuse || 'unknown' };
   };
+  sampleAt.contains = ({ x, z, r }) => {
+    if (![x, z, r].every(Number.isFinite) || r < 0) return false;
+    const candidates = new Set();
+    for (let j = Math.floor((z - r) / cell); j <= Math.floor((z + r) / cell); j++) {
+      for (let i = Math.floor((x - r) / cell); i <= Math.floor((x + r) / cell); i++) {
+        for (const row of grid.get(`${i},${j}`) || []) candidates.add(row);
+      }
+    }
+    const ordered = [...candidates].sort((a, b) => b.priority - a.priority || String(a.sourceId).localeCompare(String(b.sourceId)));
+    for (const row of ordered) {
+      if (!projectedAreaIntersectsDisk(x, z, r, row)) continue;
+      // Reject the entire envelope at semantic boundaries, including tiny holes and higher-priority slivers.
+      return projectedAreaContainsDisk(x, z, r, row);
+    }
+    return true;
+  };
+  return sampleAt;
 }
 
 export function habitatPatch(seed, x, z) {
@@ -62,22 +102,33 @@ export function habitatPatch(seed, x, z) {
 
 /** Canopy spacing follows cover structure; botanical species remain owned by the climate-aware forest seam. */
 export function planHabitatCanopy({ bounds, seed = 0, sampleAt, maxPlants }) {
-  const rows = [], urban = [];
+  const rows = [], urban = [], occupied = new Set();
   const { minX, maxX, minZ, maxZ } = bounds || {};
   if (![minX, maxX, minZ, maxZ].every(Number.isFinite) || maxX <= minX || maxZ <= minZ
     || !Number.isInteger(maxPlants) || maxPlants < 0 || typeof sampleAt !== 'function') throw new TypeError('Invalid habitat canopy');
   const cell = Math.max(HABITAT_SCENE.CANOPY_CELL_M, Math.sqrt((maxX - minX) * (maxZ - minZ) / HABITAT_SCENE.MAX_CELLS));
   for (let j = Math.floor(minZ / cell); j * cell < maxZ; j++) for (let i = Math.floor(minX / cell); i * cell < maxX; i++) {
     const localSeed = forestSeed(i * cell, j * cell, seed ^ 0x43414e), rnd = mulberry32(localSeed);
-    const x = (i + .15 + rnd() * .7) * cell, z = (j + .15 + rnd() * .7) * cell;
+    let x = (i + .15 + rnd() * .7) * cell, z = (j + .15 + rnd() * .7) * cell;
     if (x < minX || x > maxX || z < minZ || z > maxZ) continue;
-    const habitat = sampleAt(x, z);
+    let habitat = sampleAt(x, z);
     if (!habitat) continue;
+    if (habitat.key === 'orchard') {
+      const c = Math.cos(habitat.ry || 0), s = Math.sin(habitat.ry || 0);
+      const u = Math.round((x * c - z * s) / cell) * cell, v = Math.round((x * s + z * c) / cell) * cell;
+      x = u * c + v * s; z = -u * s + v * c;
+      habitat = sampleAt(x, z);
+      if (x < minX || x > maxX || z < minZ || z > maxZ || habitat?.key !== 'orchard') continue;
+    }
+    const key = `${Math.round(x * 16)},${Math.round(z * 16)}`;
+    if (occupied.has(key)) continue;
+    occupied.add(key);
     if (habitat.key === 'built') { urban.push({ x, z, rank: rnd() }); continue; }
     const patch = habitatPatch(seed, x, z);
-    if (rnd() > habitat.canopy * (.2 + patch * 1.4)) continue;
-    const shrub = habitat.key === 'scrub' || habitat.key === 'exposed' || habitat.key === 'alpine';
-    rows.push({ x, z, seed: localSeed, shrub, scale: shrub ? .1 + rnd() * .13 : .65 + rnd() * .7, rank: rnd() });
+    if (rnd() > habitat.canopy * (habitat.key === 'orchard' ? 1 : .2 + patch * 1.4)) continue;
+    const shrub = habitat.key === 'scrub' || habitat.zone === 'bare' || habitat.key === 'alpine';
+    rows.push({ x, z, seed: localSeed, shrub, leafType: habitat.leafType,
+      scale: shrub ? .1 + rnd() * .13 : habitat.key === 'orchard' ? .45 + rnd() * .1 : .65 + rnd() * .7, rank: rnd() });
   }
   rows.sort((a, b) => a.rank - b.rank || a.seed - b.seed);
   rows.length = Math.min(rows.length, maxPlants);
@@ -85,39 +136,66 @@ export function planHabitatCanopy({ bounds, seed = 0, sampleAt, maxPlants }) {
   return { rows, urban: urban.slice(0, 500).map(p => [p.x, p.z]) };
 }
 
-/** Pure plan; every candidate owns its random stream and survives budget changes at the same position. */
+/** Coverage first, then bounded density; disjoint slots keep full geometry envelopes separated. */
 export function planHabitatDetails({ bounds, seed = 0, sampleAt, heightAt, fits, maxDetails = HABITAT_SCENE.DETAIL_LIMIT }) {
   const rows = [], counts = {};
   const { minX, maxX, minZ, maxZ } = bounds || {};
   if (![minX, maxX, minZ, maxZ].every(Number.isFinite) || maxX <= minX || maxZ <= minZ
     || !Number.isInteger(maxDetails) || maxDetails < 0 || typeof sampleAt !== 'function'
     || typeof heightAt !== 'function' || typeof fits !== 'function') throw new TypeError('Invalid habitat plan');
-  const cell = Math.max(HABITAT_SCENE.CELL_M, Math.sqrt((maxX - minX) * (maxZ - minZ) / HABITAT_SCENE.MAX_CELLS));
+  // Fix the lattice to the normal budget so large maps retain coverage and low-power survivors stay identical.
+  const coverageCells = Math.min(HABITAT_SCENE.MAX_CELLS, Math.floor(HABITAT_SCENE.DETAIL_LIMIT * HABITAT_SCENE.COVERAGE_BUDGET_F));
+  const cell = Math.max(HABITAT_SCENE.CELL_M, Math.sqrt((maxX - minX) * (maxZ - minZ) / coverageCells));
+  if (!maxDetails) return { rows, counts, cell };
   for (let j = Math.floor(minZ / cell); j * cell < maxZ; j++) {
     for (let i = Math.floor(minX / cell); i * cell < maxX; i++) {
-      const localSeed = forestSeed(i * cell, j * cell, seed ^ 0x484142), rnd = mulberry32(localSeed);
-      const x = (i + .15 + rnd() * .7) * cell, z = (j + .15 + rnd() * .7) * cell;
-      if (x < minX || x > maxX || z < minZ || z > maxZ) continue;
-      const habitat = sampleAt(x, z);
-      if (!habitat || habitat.zone === 'cliff') continue;
-      const patch = habitatPatch(seed, x, z), roll = rnd();
-      let kind;
-      if (roll < habitat.density * (.15 + patch * 1.4)) kind = habitat.plant;
-      else if (rnd() < habitat.stone * (.25 + habitat.texture)) kind = 'stone';
-      if (!kind) continue;
-      const size = .7 + rnd() * .8;
-      const h = kind === 'stone' ? .08 + rnd() * .24 : habitat.height * size;
-      const r = kind === 'scrub' ? .8 * size : kind === 'stone' ? .5 * size : .6 * size;
-      if (!fits({ x, z, r }, habitat.zone)) continue;
-      const y = heightAt(x, z);
-      if (!Number.isFinite(y)) continue;
-      rows.push({ kind, x, y, z, r, height: h, size, ry: rnd() * Math.PI * 2,
-        variant: Math.floor(rnd() * HABITAT_SCENE.VARIANTS), seed: localSeed, habitat: habitat.key,
-        color: habitat.color, rank: rnd() });
+      const available = [];
+      const slot = cell / 2;
+      for (let k = 0; k < 4; k++) {
+        const sx = i * cell + (k % 2) * slot, sz = j * cell + Math.floor(k / 2) * slot;
+        const localSeed = forestSeed(sx, sz, seed ^ 0x494e46), rnd = mulberry32(localSeed);
+        for (let attempt = 0; attempt < HABITAT_SCENE.INFILL_TRIES; attempt++) {
+          const x = sx + (.38 + rnd() * .24) * slot, z = sz + (.38 + rnd() * .24) * slot;
+          if (x < minX || x > maxX || z < minZ || z > maxZ) continue;
+          const habitat = sampleAt(x, z), fill = HABITAT_FILL[habitat?.key];
+          if (!fill || !habitat.plant) continue;
+          const patch = habitatPatch(seed, x, z);
+          const plantWeight = habitat.density * (.35 + patch), stoneWeight = habitat.stone * (.25 + habitat.texture);
+          let kind = rnd() * (plantWeight + stoneWeight) < plantWeight ? habitat.plant : 'stone';
+          // One potential planter per furniture-scale cell; industrial equipment remains owned by OSM layouts.
+          if (habitat.key === 'built' && ['unknown', 'residential', 'commercial', 'park', 'civic'].includes(habitat.landuse || 'unknown')) {
+            const stride = Math.max(1, Math.ceil(HABITAT_SCENE.FURNITURE_STEP_M / cell));
+            const macro = mulberry32(forestSeed(Math.floor(i / stride), Math.floor(j / stride), seed ^ 0x504c4e));
+            if (((i % stride + stride) % stride) === Math.floor(macro() * stride)
+              && ((j % stride + stride) % stride) === Math.floor(macro() * stride) && k === 0) kind = 'planter';
+          }
+          const radiusScale = kind === 'scrub' ? .8 : kind === 'stone' ? .5 : .6;
+          const room = Math.min(x - sx, sx + slot - x, z - sz, sz + slot - z) - HABITAT_SCENE.DETAIL_GAP_M / 2;
+          const size = Math.min(1.2 + rnd() * .6, room / radiusScale), r = radiusScale * size;
+          if (!(size >= .7) || x - r < minX || x + r > maxX || z - r < minZ || z + r > maxZ
+            || !fits({ x, z, r }, habitat.zone)) continue;
+          if ([[0, 0], [-r, -r], [r, -r], [r, r], [-r, r]]
+            .some(([dx, dz]) => sampleAt(x + dx, z + dz)?.key !== habitat.key)) continue;
+          const y = heightAt(x, z);
+          if (!Number.isFinite(y)) continue;
+          const h = kind === 'stone' ? .12 + rnd() * .28 : kind === 'planter' ? .9 : habitat.height * size;
+          const ry = rnd() * Math.PI * 2;
+          available.push({ kind, x, y, z, r, height: h, size, ry: kind === 'crop' ? habitat.ry || 0 : ry,
+            variant: Math.floor(rnd() * HABITAT_SCENE.VARIANTS), seed: localSeed, habitat: habitat.key,
+            color: habitat.color, rank: rnd(), target: Math.min(fill[1], fill[0] + Math.floor(patch * (fill[1] - fill[0] + 1))) });
+          break;
+        }
+      }
+      available.sort((a, b) => a.rank - b.rank || a.seed - b.seed);
+      for (let k = 0; k < available.length; k++) {
+        const { target, ...row } = available[k];
+        if (k >= target) continue;
+        rows.push({ ...row, round: k });
+      }
     }
   }
-  // Rank across the whole map before truncation; row-order truncation empties one side of the battlefield.
-  rows.sort((a, b) => a.rank - b.rank || a.seed - b.seed || a.x - b.x || a.z - b.z);
+  // Complete the first coverage round over the whole map before spending the budget on denser cells.
+  rows.sort((a, b) => a.round - b.round || a.rank - b.rank || a.seed - b.seed || a.x - b.x || a.z - b.z);
   rows.length = Math.min(rows.length, maxDetails);
   for (const row of rows) counts[row.habitat] = (counts[row.habitat] || 0) + 1;
   return { rows, counts, cell };
@@ -157,12 +235,38 @@ export function planHabitatStreets({ segments = [], seed = 0, sampleAt, heightAt
       const heights = corners.map(p => p[1]);
       if (Math.max(...heights) - Math.min(...heights) > step * .20) continue;
       keys.add(key);
-      rows.push({ x, z, corners, seed: forestSeed(x, z, seed), ry: Math.atan2(dz, dx) });
+      rows.push({ x, z, corners, side, seed: forestSeed(x, z, seed), ry: Math.atan2(dz, dx) });
     }
   }
   rows.sort((a, b) => a.seed - b.seed || a.x - b.x || a.z - b.z);
   rows.length = Math.min(rows.length, maxPanels);
   return rows;
+}
+
+/** Sparse furniture follows verified built road verges and has its own coordinate stream. */
+export function planHabitatFurniture({ panels = [], seed = 0, fits, heightAt, sampleAt,
+  maxObjects = HABITAT_SCENE.FURNITURE_LIMIT }) {
+  if (!Number.isInteger(maxObjects) || maxObjects < 0 || typeof fits !== 'function'
+    || typeof heightAt !== 'function' || typeof sampleAt !== 'function') throw new TypeError('Invalid street furniture');
+  const rows = [], cells = new Map();
+  for (const panel of panels) {
+    const key = `${Math.floor(panel.x / HABITAT_SCENE.FURNITURE_STEP_M)},${Math.floor(panel.z / HABITAT_SCENE.FURNITURE_STEP_M)}`;
+    if (!cells.has(key) || panel.seed < cells.get(key).seed) cells.set(key, panel);
+  }
+  for (const panel of [...cells.values()].sort((a, b) => a.seed - b.seed || a.x - b.x || a.z - b.z)) {
+    const localSeed = forestSeed(panel.x, panel.z, seed ^ 0x535452), rnd = mulberry32(localSeed);
+    const kind = ['streetlamp', 'bench', 'planter'][Math.floor(rnd() * 3)], r = kind === 'planter' ? 1.1 : 1.5;
+    const offset = (panel.side || 1) * .7;
+    const x = panel.x - Math.sin(panel.ry) * offset, z = panel.z + Math.cos(panel.ry) * offset;
+    if (!fits({ x, z, r }, 'urban') || [[-r, -r], [r, -r], [r, r], [-r, r]]
+      .some(([dx, dz]) => sampleAt(x + dx, z + dz)?.key !== 'built')) continue;
+    const y = heightAt(x, z);
+    if (!Number.isFinite(y)) continue;
+    if (rows.some(row => Math.hypot(row.x - x, row.z - z) < row.r + r + .5)) continue;
+    rows.push({ kind, x, y, z, r, ry: Math.PI / 2 - panel.ry, seed: localSeed, rank: rnd() });
+  }
+  rows.sort((a, b) => a.rank - b.rank || a.seed - b.seed);
+  return rows.slice(0, maxObjects);
 }
 
 /** Clip into the shipped a,c,b / b,c,d terrain faces so no panel chord can cut through a slope. */

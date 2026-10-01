@@ -17,6 +17,75 @@ export function sceneFurnitureParts(kind) {
         box(.09, .09, .65, x, .78, 0, steel), box(.09, .65, .07, x, 1.05, -.34, steel),
         box(.12, .07, .48, x, 1.13, 0, steel));
     }
+  } else if (kind === 'planter') {
+    add(box(1.5, .6, 1.5, 0, .3, 0, concrete), box(1.3, .04, 1.3, 0, .62, 0, 0x665340),
+      { g: ['crown', .65], p: [0, 1, 0], s: [1, .65, 1], c: 0x607748 });
+  } else if (kind === 'trough') {
+    add(box(3, .12, .9, 0, .3, 0, concrete), box(3, .4, .1, 0, .5, -.45, concrete),
+      box(3, .4, .1, 0, .5, .45, concrete), box(2.8, .035, .7, 0, .56, 0, 0x69888a));
+    for (const x of [-1.5, 1.5]) add(box(.1, .4, 1, x, .5, 0, concrete));
+    for (const x of [-1.1, 1.1]) add(box(.2, .3, .8, x, .15, 0, steel));
+    for (const x of [-1.8, 0, 1.8]) add(box(.12, 1.3, .12, x, .65, -1.1, wood));
+    for (const y of [.5, 1.05]) add(box(3.7, .08, .08, 0, y, -1.1, wood));
+  } else if (kind === 'logpile') {
+    for (let level = 0; level < 3; level++) for (let i = 0; i < 3 - level; i++) {
+      const log = cyl(.30, .34, 3.5, (i - (2 - level) / 2) * .65, .34 + level * .52, 0, wood);
+      log.r = [Math.PI / 2, 0, 0]; add(log);
+      for (const z of [-1.76, 1.76]) {
+        const end = cyl(.28, .28, .025, log.p[0], log.p[1], z, 0xc5a778);
+        end.r = [Math.PI / 2, 0, 0]; add(end);
+      }
+    }
+  } else if (kind === 'fishcage') {
+    for (const x of [-2.5, 2.5]) add(box(.22, .35, 5.2, x, .18, 0, steel));
+    for (const z of [-2.5, 2.5]) add(box(5.2, .35, .22, 0, .18, z, steel));
+    for (const x of [-2.5, 2.5]) for (const z of [-2.5, 2.5]) add(cyl(.38, .38, .45, x, .225, z, 0xdbc786));
+    for (let i = -2; i <= 2; i++) for (const side of [-2.4, 2.4]) {
+      add(box(.025, .6, .025, i, .3, side, 0x829393), box(.025, .6, .025, side, .3, i, 0x829393));
+    }
+    add(box(4.7, .02, 4.7, 0, .08, 0, 0x597f7c));
+  } else if (kind === 'sluice') {
+    for (const x of [-2.2, 2.2]) add(box(.65, 3.2, 1.5, x, 1.6, 0, concrete));
+    add(box(4.5, 1.8, .25, 0, 1.1, 0, steel), box(5, .2, 1.5, 0, 3.1, 0, concrete),
+      cyl(.08, .08, 3.1, 0, 1.8, 0, light), cyl(.28, .28, .12, 0, 3.4, 0, steel));
+  } else if (kind === 'greenhouse') {
+    add(box(5.2, .2, 7, 0, .1, 0, concrete));
+    for (const x of [-2.5, 2.5]) add(box(.05, 2.3, 7, x, 1.3, 0, 0xb4c7bd));
+    for (const z of [-3.5, -1.75, 0, 1.75, 3.5]) {
+      for (const x of [-2.5, 2.5]) add(sceneRod([x, .2, z], [x, 2.4, z], .04, steel),
+        sceneRod([x, 2.4, z], [0, 3.6, z], .04, steel));
+    }
+    for (const side of [-1, 1]) {
+      const roof = box(Math.hypot(2.5, 1.2), .04, 7, side * 1.25, 3, 0, 0xa6c2b3);
+      roof.r = [0, 0, -side * Math.atan2(1.2, 2.5)]; add(roof);
+    }
+    add(box(1, 2, .07, 0, 1.2, 3.5, 0x728987));
+  } else if (kind === 'windturbine') {
+    add(cyl(.14, .45, 8, 0, 4, 0, light), cyl(.9, 1, .25, 0, .125, 0, concrete),
+      box(.8, .65, 1.65, 0, 8.1, 0, light), { g: ['ico', .32], p: [0, 8.1, .9], c: light });
+    for (let i = 0; i < 3; i++) {
+      const angle = i * Math.PI * 2 / 3;
+      const blade = box(.28, 3.3, .08, -Math.sin(angle) * 1.8, 8.1 + Math.cos(angle) * 1.8, .92, light);
+      blade.r = [0, 0, angle]; add(blade);
+    }
+  } else if (kind === 'pylon') {
+    for (let level = 0; level < 4; level++) {
+      const y = level * 2, top = y + 2, r = 1.8 - level * .35, rt = r - .35;
+      for (const x of [-1, 1]) for (const z of [-1, 1]) {
+        add(sceneRod([x * r, y, z * r], [x * rt, top, z * rt], .07, steel),
+          sceneRod([x * r, y, z * r], [-x * rt, top, z * rt], .045, steel));
+      }
+    }
+    for (const y of [5.5, 7.5]) {
+      add(box(8, .14, .16, 0, y, 0, steel));
+      for (const x of [-3.8, 3.8]) add(cyl(.13, .13, .65, x, y - .35, 0, light));
+    }
+  } else if (kind === 'conveyor') {
+    const belt = box(6, .2, 1, 0, 1.4, 0, 0x625b4b); belt.r = [0, 0, .18]; add(belt);
+    for (const x of [-2.5, 0, 2.5]) for (const z of [-.5, .5]) {
+      add(sceneRod([x, 0, z], [x, 1.4 + x * .18, z], .08, steel));
+    }
+    add({ g: ['ico', 1], p: [-2.3, .35, 0], s: [1.6, .5, 1.5], c: 0x9d9079 });
   } else if (kind === 'goal') {
     for (const x of [-2.4, 2.4]) {
       add(cyl(.065, .065, 2.5, x, 1.25, 0, light), box(.08, .08, 1.4, x, .04, -.66, light));

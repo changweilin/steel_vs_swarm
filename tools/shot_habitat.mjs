@@ -39,9 +39,12 @@ try {
     const { buildLandField } = await import('/public/js/landfield.js');
     const { buildHabitatScene } = await import('/public/js/habitatRender.js');
     const { habitatAt, planHabitatCanopy } = await import('/public/js/habitat.js');
+    const { HABITAT_SCENE } = await import('/public/js/habitatCatalog.js');
     const { forestSceneGeometry } = await import('/public/js/scenePropModels.js');
     const { envMat, setLandField, updateCelLight, setCelSun, disposeTree } = await import('/public/js/toon.js');
     const { buildOsmPolygonBuildings } = await import('/public/js/osmBuilding.js');
+    const { buildOsmAreaObjects } = await import('/public/js/osmAreaObjects.js');
+    const { classifyArea } = await import('/public/js/osmAreas.js');
     const { Pipeline } = await import('/public/js/postfx.js');
     document.body.innerHTML = '<canvas id="habitat" width="1200" height="760"></canvas>';
     document.body.style.margin = '0';
@@ -59,25 +62,68 @@ try {
     const results = [], shots = [], memory = [];
     const terrain = { minX: -110, maxX: 110, minZ: -85, maxZ: 85, worldW: 220, worldH: 170, gridM: 220 / 64,
       heightAt: () => 3, center: { lat: 25, lng: 121 }, minH: 3, maxH: 3 };
-    for (const [name, code, zone] of [['street', 50, 'urban'], ['meadow', 30, 'green'],
-      ['woodland', 10, 'green'], ['scrub', 20, 'green'], ['exposed', 60, 'bare']]) {
+    const scenarios = [['street', 50, 'urban', {}], ['meadow', 30, 'green', {}],
+      ['woodland', 10, 'green', {}], ['scrub', 20, 'green', {}], ['exposed', 60, 'bare', {}],
+      ['cropland', 40, 'green', { landuse: 'farmland' }], ['orchard', 10, 'green', { landuse: 'orchard' }],
+      ['sand', 60, 'bare', { natural: 'sand' }], ['rocky', 60, 'bare', { natural: 'scree' }],
+      ['marsh', 90, 'wet', { natural: 'wetland', wetland: 'reedbed' }],
+      ['mudflat', 90, 'wet', { natural: 'wetland', wetland: 'tidalflat' }],
+      ['shallows', 80, 'water', { natural: 'water' }],
+      ['solar', 50, 'urban', { power: 'plant', 'plant:source': 'solar' }],
+      ['wind', 30, 'green', { power: 'plant', 'plant:source': 'wind' }],
+      ['livestock', 30, 'green', { landuse: 'animal_keeping' }],
+      ['aquaculture', 80, 'water', { landuse: 'aquaculture' }],
+      ['flood', 90, 'wet', { landuse: 'basin', basin: 'detention' }],
+      ['forestry', 50, 'urban', { landuse: 'industrial', craft: 'sawmill' }],
+      ['mining', 60, 'bare', { landuse: 'quarry' }],
+      ['greenhouse', 40, 'green', { landuse: 'greenhouse_horticulture' }]];
+    for (const [name, code, zone, tags] of scenarios) {
       terrain.evidenceAt = () => observations(code);
+      terrain.waterY = zone === 'water' || zone === 'wet' ? 3.5 : null;
+      const envCodeAt = () => zone === 'water' ? 1 : zone === 'wet' ? 2 : 0;
       const areas = name === 'street' ? [{ sourceId: 'fixture-building', tags: { building: 'house', height: '12' },
         classification: { type: 'building', generator: 'polygonBuilding', family: 'residential', kind: 'house', surface: 'urban', priority: 10 },
-        worldPolygons: [{ outer: square(-32, 13, -12, 30), holes: [] }], areaM2: 340, centroid: { x: -22, z: 21.5 } }] : [];
+        worldPolygons: [{ outer: square(-32, 13, -12, 30), holes: [] }], areaM2: 340, centroid: { x: -22, z: 21.5 } }]
+        : Object.keys(tags).length ? [{ sourceId: 'fixture-' + name, tags, classification: classifyArea(tags),
+          worldPolygons: [{ outer: square(-110, -85, 110, 85), holes: [] }], areaM2: 37400, centroid: { x: 0, z: 0 } }] : [];
       const field = await buildLandField({ terrain, center: terrain.center, areas, classifyPureAt: () => zone,
-        envCodeAt: () => 0, projectAt: () => [0, 0], seed: 7717 });
+        envCodeAt, projectAt: () => [0, 0], seed: 7717 });
       setLandField(field.data, field.nx, field.nz, field.bounds, field.appearance);
       const root = new THREE.Group(); scene.add(root);
       const groundGeo = new THREE.PlaneGeometry(220, 170, 64, 64); groundGeo.rotateX(-Math.PI / 2); groundGeo.translate(0, 3, 0);
       root.add(new THREE.Mesh(groundGeo, envMat(0xffffff, { land: true, landField: true, landNrm: true, rim: 0 })));
       const roadClear = (x, z, f) => name === 'street' && Math.abs(z) < 5 + f.r;
-      const args = { surfaceField: field, seed: 7717, areas, envCodeAt: () => 0, isBlocked: () => false, roadClear,
+      const areaResult = name === 'street' || !areas.length ? null : buildOsmAreaObjects(root, areas, {
+        terrain, heightAt: terrain.heightAt, envCodeAt, seed: 7717,
+      });
+      if (areaResult?.blockers.some(b => ![b.x, b.y, b.z, b.r, b.h, b.hw2, b.hd2, b.ry].every(Number.isFinite)
+        || Math.abs(b.r - Math.hypot(b.hw2, b.hd2)) > 1e-6)) throw new Error('Invalid fitted facility collider');
+      if (areaResult && (areaResult.footprints.length !== areaResult.generated
+        || areaResult.footprints.some(f => ![f.x, f.z, f.r].every(Number.isFinite) || f.r <= 0))) {
+        throw new Error('Every facility, including non-solid crops and fish cages, must reserve its visual footprint');
+      }
+      const args = { surfaceField: field, seed: 7717, areas, envCodeAt, isBlocked: () => false, roadClear,
+        blockers: areaResult?.blockers || [],
         roadSegments: name === 'street' ? [{ a: [-100, 0], b: [100, 0], hw: 5 }] : [],
-        reservedFootprints: name === 'street' ? [{ x: -22, z: 21.5, hw: 10, hd: 8.5, ry: 0, r: 14 }] : [],
+        reservedFootprints: name === 'street' ? [{ x: -22, z: 21.5, hw: 10, hd: 8.5, ry: 0, r: 14 }]
+          : areaResult?.footprints || [],
         environment: { latitude: 25 }, season: 'summer' };
       const batch = new THREE.Group(); root.add(batch);
       const stats = buildHabitatScene(batch, terrain, args);
+      for (const mesh of batch.children) {
+        if (!mesh.isInstancedMesh || !areaResult) continue;
+        let radius = 0;
+        const positions = mesh.geometry.attributes.position;
+        for (let i = 0; i < positions.count; i++) radius = Math.max(radius, Math.hypot(positions.getX(i), positions.getZ(i)));
+        for (let i = 0; i < mesh.count; i++) {
+          const values = mesh.instanceMatrix.array, offset = i * 16;
+          const scale = Math.max(Math.hypot(values[offset], values[offset + 2]), Math.hypot(values[offset + 8], values[offset + 10]));
+          for (const foot of areaResult.footprints) {
+            if (Math.hypot(values[offset + 12] - foot.x, values[offset + 14] - foot.z)
+              < radius * scale + foot.r + HABITAT_SCENE.DETAIL_GAP_M - 1e-4) throw new Error('Surface infill overlaps a facility');
+          }
+        }
+      }
       const signature = group => {
         const values = [];
         group.traverse(node => {
@@ -95,6 +141,13 @@ try {
       disposeTree(again);
       const low = new THREE.Group(); const lowStats = buildHabitatScene(low, terrain, { ...args, low: true });
       if (lowStats.details > stats.details || lowStats.models > 16) throw new Error('Habitat budget exceeded');
+      low.traverse(node => {
+        if (!node.isMesh) return;
+        const full = batch.children.find(child => child.name === node.name);
+        const small = node.instanceMatrix?.array || node.geometry.attributes.position.array;
+        const large = full?.instanceMatrix?.array || full?.geometry.attributes.position.array;
+        if (!large || [...small].some((value, i) => value !== large[i])) throw new Error('Low-power layout changed a surviving object');
+      });
       disposeTree(low);
       if (name === 'street') {
         const roadGeo = new THREE.PlaneGeometry(220, 10); roadGeo.rotateX(-Math.PI / 2); roadGeo.translate(0, 3.025, 0);
@@ -103,20 +156,27 @@ try {
         if (!buildings.generated) throw new Error('OSM street fixture failed to generate');
       }
       const canopy = planHabitatCanopy({ bounds: field.bounds, seed: 7717, maxPlants: 60,
-        sampleAt: () => habitatAt(observations(code), zone) });
-      if (name === 'woodland' || name === 'meadow') {
+        sampleAt: () => habitatAt(observations(code), zone, tags, .5) });
+      if (name === 'woodland' || name === 'meadow' || name === 'orchard') {
         for (const row of canopy.rows) {
           const mesh = new THREE.Mesh(forestSceneGeometry('holmOak', row.seed, [5, 8, 5]), envMat(0xffffff, { vertexColors: true }));
           mesh.position.set(row.x, 3, row.z); root.add(mesh);
         }
       }
+      if (zone === 'water') {
+        const waterGeo = new THREE.PlaneGeometry(220, 170); waterGeo.rotateX(-Math.PI / 2); waterGeo.translate(0, terrain.waterY, 0);
+        root.add(new THREE.Mesh(waterGeo, envMat(0x638a94, { transparent: true, opacity: .45, rim: 0 })));
+      }
       camera.position.set(44, 18, 53); camera.lookAt(-6, 3.5, -7); camera.updateMatrixWorld(true);
       updateCelLight(camera);
       renderer.render(scene, camera);
       const draws = renderer.info.render.calls, triangles = renderer.info.render.triangles;
+      if (name === 'cropland' || name === 'marsh') {
+        if (triangles > stats.details * 400 + (areaResult?.generated || 0) * 1200 + 20000) throw new Error('Dense plant geometry budget exceeded');
+      }
       pipeline.render();
       shots.push({ name, data: renderer.domElement.toDataURL('image/png') });
-      results.push({ name, ...stats, draws, triangles });
+      results.push({ name, ...stats, objects: areaResult?.generated || 0, draws, triangles });
       scene.remove(root); disposeTree(root); pipeline.render();
       memory.push({ ...renderer.info.memory });
     }
@@ -158,7 +218,7 @@ try {
       if (terrain.usedFallback) throw new Error('Real elevation fixture fell back');
       commitOsmIn(terrain.bbox, { feats: osm.features, roads: osm.roads });
       const bio = await buildBiomes(cfg, terrain);
-      if (bio.userData.stats.habitatScene.recipe !== 'evidence-habitat-v1' || !bio.userData.stats.mapEvidence) {
+      if (bio.userData.stats.habitatScene.recipe !== 'evidence-habitat-v2' || !bio.userData.stats.mapEvidence) {
         throw new Error('Full prebuild bypassed habitat/evidence generation');
       }
       const scene = new THREE.Scene(); scene.add(terrain.group, bio);
