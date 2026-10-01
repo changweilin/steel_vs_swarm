@@ -2820,27 +2820,29 @@ export function shieldRoleName(wd) {
 // ---- 防守姿態與正面護盾機制 ----
 // 受到爆炸範圍涵蓋護盾的爆炸傷害: 磁力損失減為 BLAST_F (依機種差異化)
 // 受到擊中護盾的子彈/直線/散射傷害: 磁力損失減為 DIRECT_F (依機種差異化)
-// 機甲 / 變形者 / 無人機: 爆炸傷害減輕至 40% / 50% / 60%, 正面傷害減輕至 20% / 25% / 30%
+// 護盾減傷效果增加 50%: 傷害承受倍率下修為 2/3; 攻擊時減傷效果下降(輕武器減半 ×2，重武器減至 1/3 ×3)
 export const SHIELD_DEFENSE = {
-  BLAST_F: 0.5,
-  DIRECT_F: 0.25,
+  BLAST_F: 0.5 * 2 / 3,
+  DIRECT_F: 0.25 * 2 / 3,
   FRONT_ARC: 140 * Math.PI / 180,
-  BOOST_BLAST_F: 0.25,
-  BOOST_DIRECT_F: 0.1,
+  BOOST_BLAST_F: 0.25 * 2 / 3,
+  BOOST_DIRECT_F: 0.1 * 2 / 3,
   EXPAND_ARC: 240 * Math.PI / 180,
   KINDS: {
-    robot: { blast: 0.40, direct: 0.20, boostBlast: 0.20, boostDirect: 0.08 },
-    morph: { blast: 0.50, direct: 0.25, boostBlast: 0.25, boostDirect: 0.10 },
-    drone: { blast: 0.60, direct: 0.30, boostBlast: 0.30, boostDirect: 0.12 },
+    robot: { blast: 0.40 * 2 / 3, direct: 0.20 * 2 / 3, boostBlast: 0.20 * 2 / 3, boostDirect: 0.08 * 2 / 3 },
+    morph: { blast: 0.50 * 2 / 3, direct: 0.25 * 2 / 3, boostBlast: 0.25 * 2 / 3, boostDirect: 0.10 * 2 / 3 },
+    drone: { blast: 0.60 * 2 / 3, direct: 0.30 * 2 / 3, boostBlast: 0.30 * 2 / 3, boostDirect: 0.12 * 2 / 3 },
   },
   // 飛行時護盾格檔減輕失衡效果: 爆炸傷害減輕至 1/2, 正面抵擋減輕至 1/4
   FLIGHT_UNBAL_BLAST_F: 0.5,
   FLIGHT_UNBAL_DIRECT_F: 0.25,
 };
-export const shieldDefKindFactor = (kind, isBlast, boosted = false) => {
+export const shieldDefKindFactor = (kind, isBlast, boosted = false, atkSlot = null) => {
   const k = SHIELD_DEFENSE.KINDS[kind] || SHIELD_DEFENSE.KINDS.drone;
-  if (isBlast) return boosted ? k.boostBlast : k.blast;
-  return boosted ? k.boostDirect : k.direct;
+  let f = isBlast ? (boosted ? k.boostBlast : k.blast) : (boosted ? k.boostDirect : k.direct);
+  if (atkSlot === 'light') f = Math.min(1, f * 2);
+  else if (atkSlot === 'heavy') f = Math.min(1, f * 3);
+  return f;
 };
 
 // ---- 水域規則(2026-07-15;客戶端物理 + 道路生成共用)----
@@ -4586,7 +4588,7 @@ export const UNITS = {
     // 198m(#INC-104 的 y=250 高空射擊測試要求 ×1.25 > 250)。240 = 與變形者齊平。
     // fov 68:自然人眼的舒適垂直視角 = 全機種 FPV 基準(2026-07-12 起無人機/變形者一律對齊,
     // 雙陣營同距離目標的視覺大小才一致;差異化只靠座艙造型與視點高度)
-    name: '執法者機甲', hp: 640, shield: 220, mp: 100, mpRegen: 4,
+    name: '執法者機甲', hp: 640, shield: Math.round(220 * 2 / 3), mp: 100, mpRegen: 4,
     speed: 21, jump: 9, fov: 68, zoomFov: 35, sight: 240,
     regen: 0,                            // 裝甲回復速率:UNITS 後 derive = hp × VITALS.HP_REGEN_PS
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久

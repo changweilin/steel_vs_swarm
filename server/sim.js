@@ -18,7 +18,7 @@ import {
   ATK_CARRIER, atkDelivered, atkParts, atkPartN, SELF_ATK, selfAtkBoost,
   ATK_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND, ATK_CAST_S,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
-  shieldDefKindFactor, balanceMul, upgradeCurveMul,
+  shieldDefKindFactor, balanceMul, upgradeCurveMul, RATE_DEF,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
   aoeClass, trajClass, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
@@ -2146,7 +2146,8 @@ export class BattleSim {
     if (h.cast || (h.castLockUntil || 0) > now) return false;      // 招式施展前搖期間鎖定武器開火
     const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
     const rateMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_RATE_F : 1) * sandMul;
-    if (now - (h.fireAt[id] || 0) < 1 / (def.rate * rateMul * (lenient ? 1.5 : 1))) return false;
+    const defRateMul = (h.defending && (h.sp || 0) > 0) ? 0.5 : 1;
+    if (now - (h.fireAt[id] || 0) < 1 / (def.rate * rateMul * defRateMul * (lenient ? 1.5 : 1))) return false;
     // 三個火槍手(t06):分身期間只能使用輕武器
     if (id === 'heavy' && (h.clonesUntil || 0) > now) return false;
     if (h.ammo[id] == null) h.ammo[id] = def.mag;
@@ -2341,7 +2342,7 @@ export class BattleSim {
     return v;
   }
 
-  heroPos(pid, x, y, z, ry, wet, lev, ay) {
+  heroPos(pid, x, y, z, ry, wet, lev, ay, rx) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return;
@@ -2361,6 +2362,7 @@ export class BattleSim {
     const dt = this.t - h._posT;
     if (dt > 0) { h._spd = Math.hypot(h.x - ox, h.z - oz) / dt; h._posT = this.t; }
     h.ry = ry;
+    if (Number.isFinite(rx)) h.rx = rx;
     // 絕對視線高程(地形+跳躍+飛行;高度差空戰 _sightY 用)—— 位置本就客戶端權威,ay 同屬輸入。缺值退回離地眼高近似。
     if (Number.isFinite(ay)) h.ay = ay;
     // 領機身處環境(0 乾 / 1 水 / 2 沼 / 3 凍結;客戶端偵測回報 —— 位置本就客戶端權威,env 同屬輸入非狀態改寫)。
@@ -2523,12 +2525,20 @@ export class BattleSim {
     h.aiming = !!on;
   }
 
-  /** 防守姿態切換: 磁力歸零無法生成護盾，攻擊時會取消防守狀態 */
+  /** 防守姿態切換: 磁力歸零無法生成護盾，攻擊時不會取消防守狀態 */
   heroDefend(pid, on) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     if (on && (h.sp || 0) <= 0) return;   // 磁力歸零無法生成護盾
     h.defending = !!on;
+  }
+
+  /** 記錄開火時戳(真人客戶端開火 tracer / 投射結算同步更新) */
+  heroFireRecord(pid, slot) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over) return;
+    const s = slot === 'heavy' ? 'heavy' : 'light';
+    (h.fireAt ||= {})[s] = this.t;
   }
 
   /**
@@ -2592,7 +2602,6 @@ export class BattleSim {
     // 偵察脈衝給的是「情報」,不會讓砲彈穿牆 —— 不吃 pulse 旁路)
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
-    h.defending = false;
     // 定位標記(招式追加效果 mark):下一擊必中(無視閃避)必爆(強制爆擊);一擊即耗
     const marked = (h.markUntil || 0) > this.t;
     if (marked) h.markUntil = 0;
@@ -2657,7 +2666,6 @@ export class BattleSim {
     const d3 = Math.hypot(h.x - m.x, h.z - m.z, (h.y || 0) - m.y);
     if (d3 > wp.def.range * RANGE_TOL) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
-    h.defending = false;
     // 僚機同步射擊(單機傷害是 1/3,三機齊射才打得掉飛彈)
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
@@ -2689,7 +2697,6 @@ export class BattleSim {
     // 電腦玩家不能透視:彈道被實體障礙擋住 = 不開火(與真人 heroHit 同一條 LOS 規則)
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return false;
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
-    h.defending = false;
     h._shotN = (h._shotN || 0) + 1;
     // pid/slot:客戶端據此解析 bot 英雄機體的 rig 槍口錨 + 標記開火動畫(後座/射姿,與真人 tracer 同路)
     if (h._shotN % 3 === 0 || wp.id === 'heavy') {
@@ -2791,7 +2798,6 @@ export class BattleSim {
     // `_shotOrigin` 已經夾好的那一份,MUST NOT 在這裡拿 dImp 再算一次(兩份會在機體移動時分家)。
     const back = org.back;
     if (!this._gateFire(h, wp.id, wp.def, true, back)) return;
-    h.defending = false;
     h.lastBurst = this.t;
     // 榴彈類最小安全射程(2026-07-27):落點近於 lobMinRange ⇒ 射手落在自身爆風內 → 爆風改「無差別」
     // (不分敵我,波及友軍 + 自身),自損量由 blastFalloff 自然導出。決策以回報射手 h 定案、整組僚機齊射一致套用。
@@ -2839,7 +2845,6 @@ export class BattleSim {
     const dl = Math.hypot(dx, dz, Number.isFinite(dy) ? dy : 0) || 1;
     const ux = dx / dl, uz = dz / dl, uy = (Number.isFinite(dy) ? dy : 0) / dl;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
-    h.defending = false;
     const pulse = this.visionUntil?.[h.side] > this.t;
     const src = this._visionSources(h.side);
     const arcHalf = fanArcHalf(wp.def);   // 偏心遞減的分母(量體只放寬「打不打得到」,不放大傷害)
@@ -3039,7 +3044,6 @@ export class BattleSim {
     // 與 heroBurst 的 impCap 同一條理由)。len 本來就是客戶端夾過的,這裡只防作弊放大。
     const max = Math.min(Math.max(0, +len), wp.def.range * altRangeMax(wp.def));
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
-    h.defending = false;
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
       // 僚機以各自位置沿同射向貫穿(與 heroPlasma 同構;N=1 時只有本機)
@@ -5749,6 +5753,18 @@ export class BattleSim {
     return null;
   }
 
+  /** 檢查英雄當前是否處於攻擊狀態 (輕武器 / 重武器)，攻擊動作時長以防守姿態減半後的射速週期判定 */
+  _heroAtkSlot(h) {
+    if (!h || !h.fireAt) return null;
+    const hw = this._heroWeapon(h, 'heavy');
+    const hwRate = ((hw?.def?.rate || RATE_DEF) * (h.defending ? 0.5 : 1));
+    if (this.t - (h.fireAt.heavy || -Infinity) < 1 / hwRate) return 'heavy';
+    const lw = this._heroWeapon(h, 'light');
+    const lwRate = ((lw?.def?.rate || RATE_DEF) * (h.defending ? 0.5 : 1));
+    if (this.t - (h.fireAt.light || -Infinity) < 1 / lwRate) return 'light';
+    return null;
+  }
+
   // ---------- 傷害 / 擊殺(FPS × DOTA:護盾 → 裝甲,護甲值曲線減免,破甲抵銷)----------
   /** 防守姿態護盾減傷判定: 正面護盾覆蓋或涵蓋 */
   _shieldDefFactor(t, by, wd, hitCtx = null) {
@@ -5759,8 +5775,9 @@ export class BattleSim {
     const sx = t.x + fx * hr, sz = t.z + fz * hr;
 
     const boosted = (t.shieldDefBoostUntil || 0) > this.t;
-    const blastF = shieldDefKindFactor(t.kind, true, boosted);
-    const directF = shieldDefKindFactor(t.kind, false, boosted);
+    const atkSlot = this._heroAtkSlot(t);
+    const blastF = shieldDefKindFactor(t.kind, true, boosted, atkSlot);
+    const directF = shieldDefKindFactor(t.kind, false, boosted, atkSlot);
     const arc = (t.shieldExpandUntil || 0) > this.t ? SHIELD_DEFENSE.EXPAND_ARC : SHIELD_DEFENSE.FRONT_ARC;
 
     const isBlast = aoeClass(wd) === 'blast' || (hitCtx && hitCtx.blast);

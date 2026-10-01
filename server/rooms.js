@@ -660,7 +660,7 @@ export class RoomHub {
         if (m.t === 'leaveRoom') { hub.leaveRoom(client, room, myId); room = null; client = null; }
         return;
       }
-      if (m.t === 'pos' && client.side) { b.heroPos(myId, m.x, m.y, m.z, m.ry, m.wet, m.lev, m.ay); return; }
+      if (m.t === 'pos' && client.side) { b.heroPos(myId, m.x, m.y, m.z, m.ry, m.wet, m.lev, m.ay, m.rx); return; }
       if (m.t === 'aim' && client.side) { b.heroAim(myId, m.on); return; }
       if (m.t === 'defend' && client.side) { b.heroDefend(myId, m.on); return; }
       if (m.t === 'hit' && client.side) { b.heroHit(myId, m.id, m.w); return; }
@@ -684,6 +684,7 @@ export class RoomHub {
         return;
       }
       if (m.t === 'tracer') {
+        if (client.side && m.slot) b.heroFireRecord?.(myId, m.slot);
         // 純視覺:轉播給其他客戶端畫彈道;pid 供接收端驅動射手機體的開火動畫(比照 heavyCharge,伺服器附上,不信任客戶端)
         // mv:拋物線武器的實際初速(火控解的裝藥號數;純視覺轉播,讓對方畫出與射手同一條弧)
         for (const [id, c] of room.clients) if (id !== myId) c.send({ t: 'tracer', pid: myId, from: m.from, to: m.to, side: client.side, slot: m.slot, hit: m.hit, mv: m.mv });
