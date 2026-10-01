@@ -40,6 +40,7 @@
     "audit:building-motion": "node tools/audit_building_motion.mjs",
     "audit:unit-damage": "node tools/audit_unit_damage.mjs",
     "audit:unit-motion": "node tools/audit_unit_motion.mjs",
+    "audit:faction-models": "node tools/audit_faction_models.mjs",
     "audit:civilians": "node tools/audit_civilian_generator.mjs",
     "audit:vfx": "node tools/audit_combat_vfx.mjs",
     "audit:weather": "node tools/audit_weather_surface.mjs",

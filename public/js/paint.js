@@ -249,10 +249,10 @@ const PATTERNS = {
 
 export const PAINT_PATTERNS = Object.keys(PATTERNS);
 
-// 非玩家陣營單位共用識別語彙：圖樣與明暗階同時區分四個陣營，功能種類另由幾何生成器負責。
+// Primary faction shells carry their own panel colours; full-body decals obscure their segmentation.
 export const FACTION_LIVERIES = Object.freeze({
-  SWARM: Object.freeze({ paint: 'totem', tone: 'dark' }),
-  STEEL: Object.freeze({ paint: 'minimal', tone: 'light' }),
+  SWARM: Object.freeze({ paint: 'solid', tone: 'dark' }),
+  STEEL: Object.freeze({ paint: 'solid', tone: 'light' }),
   GUER: Object.freeze({ paint: 'camo', tone: 'dark' }),
   MILI: Object.freeze({ paint: 'flag', tone: 'light' }),
 });

@@ -1,61 +1,30 @@
-// ============ 戰鬥建築單位模型（防禦塔 / 雙陣營主堡）============
-// 本檔只產生純視覺樹；高度、碰撞與命中量體仍由 data.js TARGET_H / TARGET_R 定案。
-// 所有建物以同一張規格表驅動，避免塔身、砲塔與主堡各自長出不可稽核的尺寸副本。
+// Combat structures are presentation trees; data.js owns height, collision and hit volumes.
 import * as THREE from 'three';
 import { SIDES } from './data.js';
-import { mat, bx, cyl, sph, torus, dim, rbz } from './geo3d.js';
+import { bx, cyl, torus } from './geo3d.js';
 import { outlinify } from './toon.js';
 import { recoilMount, mechanism } from './unitRig.js';
 import { finishUnitSurfaces } from './unitSurfaces.js';
-import { tboxF } from './forge/geo.js';
+import { tboxF, finF } from './forge/geo.js';
+import { FACTION_MODEL_STYLE } from './factionModelStyle.js';
 
 const TAU = Math.PI * 2;
+const HIVE = FACTION_MODEL_STYLE.SWARM, STEEL = FACTION_MODEL_STYLE.STEEL;
 
 export const BUILDING_UNIT_MODELS = Object.freeze({
   tower: Object.freeze({
-    top: 20,
-    turretSeatF: 0.92,
+    top: 20, turretSeatF: 0.92,
     sides: Object.freeze({
-      SWARM: Object.freeze({
-        facets: 6,
-        yaw: Math.PI / 6,
-        body: 0x514b3d,
-        mid: 0x68604b,
-        dark: 0x302f2b,
-        reference: '烏克蘭 36D6 機動雷達塔',
-        language: 'ukrainian-lattice-radar',
-      }),
-      STEEL: Object.freeze({
-        facets: 10,
-        yaw: Math.PI / 10,
-        body: 0x667380,
-        mid: 0x7d8995,
-        dark: 0x343c45,
-        reference: '蘇式裝甲海岸砲台',
-        language: 'soviet-armored-battery',
-      }),
+      SWARM: Object.freeze({ ...HIVE, facets: 6, yaw: Math.PI / 6,
+        body: HIVE.shell, reference: 'Hive defense spire' }),
+      STEEL: Object.freeze({ ...STEEL, facets: 4, yaw: Math.PI / 4,
+        body: STEEL.shell, reference: 'Bastion rail battery' }),
     }),
   }),
-  'base:SWARM': Object.freeze({
-    top: 32,
-    facets: 8,
-    yaw: Math.PI / 8,
-    body: 0x554c39,
-    mid: 0x706449,
-    dark: 0x2d2b27,
-    reference: '烏克蘭加固機庫群與無人機管制塔',
-    language: 'ukrainian-drone-airbase',
-  }),
-  'base:STEEL': Object.freeze({
-    top: 34,
-    facets: 10,
-    yaw: Math.PI / 10,
-    body: 0x596774,
-    mid: 0x74828e,
-    dark: 0x303842,
-    reference: '蘇式潛艇堡與洲際飛彈井',
-    language: 'soviet-silo-citadel',
-  }),
+  'base:SWARM': Object.freeze({ ...HIVE, top: 32, facets: 6, yaw: Math.PI / 6,
+    body: HIVE.shell, reference: 'Distributed hive nexus' }),
+  'base:STEEL': Object.freeze({ ...STEEL, top: 34, facets: 4, yaw: Math.PI / 4,
+    body: STEEL.shell, reference: 'Foundry command citadel' }),
 });
 
 function accentOf(side) {
@@ -75,274 +44,239 @@ function addRadial(parent, n, radius, fn, phase = 0) {
   }
 }
 
-function addStrut(parent, a, b, r, color, opts) {
+function addStrut(parent, a, b, r, color) {
   const p0 = new THREE.Vector3(...a), p1 = new THREE.Vector3(...b);
   const d = p1.clone().sub(p0);
   const m = cyl(parent, r, r, Math.max(0.001, d.length()), 6,
-    (p0.x + p1.x) * 0.5, (p0.y + p1.y) * 0.5, (p0.z + p1.z) * 0.5, color, opts);
+    (p0.x + p1.x) * 0.5, (p0.y + p1.y) * 0.5, (p0.z + p1.z) * 0.5, color);
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
   return m;
 }
 
-/** The seat and articulated head share the body's model-space scale. */
 function buildTower(side) {
   const frame = BUILDING_UNIT_MODELS.tower;
   const spec = frame.sides[side] || frame.sides.STEEL;
-  const accent = accentOf(side);
-  const top = frame.top;
-  const seatY = top * frame.turretSeatF;
-  const g = new THREE.Group();
-  const mechanisms = [];
+  const accent = accentOf(side), seatY = frame.top * frame.turretSeatF;
+  const g = new THREE.Group(), mechanisms = [];
 
-  if (spec.language === 'ukrainian-lattice-radar') {
-    // 36D6 語彙：低基座、四腳外露桁架、大片負空間與偏置雷達架。
-    addFacet(g, spec, 5.7, 6.6, 1.2, 0.6, spec.dark);
-    bx(g, 10.2, 0.55, 8.8, 0, 1.45, 0, spec.body);
-    const feet = [[-4.0, 0, -3.2], [4.0, 0, -3.2], [-4.0, 0, 3.2], [4.0, 0, 3.2]];
-    const heads = [[-1.9, seatY - 1.0, -1.6], [1.9, seatY - 1.0, -1.6],
-      [-1.9, seatY - 1.0, 1.6], [1.9, seatY - 1.0, 1.6]];
-    for (let i = 0; i < feet.length; i++) {
-      const foot = feet[i], head = heads[i];
-      addStrut(g, [foot[0], 1.5, foot[2]], head, 0.24, spec.dark, { metalness: 0.66 });
-      const mid = [(foot[0] + head[0]) * 0.5, 9.2, (foot[2] + head[2]) * 0.5];
-      addStrut(g, [foot[0], 1.5, foot[2]], [-mid[0], mid[1], mid[2]], 0.11, spec.mid);
-      addStrut(g, [head[0], head[1], head[2]], [-mid[0], mid[1], mid[2]], 0.11, spec.mid);
+  if (side === 'SWARM') {
+    addFacet(g, spec, 5.5, 6.6, 1.2, 0.6, spec.dark);
+    addFacet(g, spec, 3.2, 4.5, 3.0, 2.7, spec.body);
+    cyl(g, 1.25, 1.5, seatY - 4, 6, 0, (seatY + 4) / 2, 0, spec.deep);
+    // Thin petal ribs reveal the core between plates at combat viewing distances.
+    addRadial(g, 3, 3.2, ({ a, x, z }) => {
+      const petal = new THREE.Group();
+      petal.position.set(x, 0, z); petal.rotation.y = a; g.add(petal);
+      tboxF(petal, { w0: 2.7, d0: 0.85, w1: 1.3, d1: 0.42, h: 10.4 },
+        0, 8.1, 0, spec.body);
+      tboxF(petal, { w0: 1.3, d0: 0.42, w1: 2.6, d1: 0.65, h: 4.4 },
+        0, 15.4, -0.45, spec.mid);
+      bx(petal, 0.12, 7.4, 0.1, 0, 8.0, 0.47, accent,
+        { emissive: accent, emissiveIntensity: 0.55 });
+    }, Math.PI / 3);
+    for (const y of [5.0, 11.5, 17.5]) addFacet(g, spec, 3.7, 4.2, 0.45, y, spec.trim);
+    addFacet(g, spec, 3.5, 3.1, 0.8, seatY - 0.4, spec.dark);
+    const scanner = new THREE.Group(); scanner.position.y = 13.5; g.add(scanner);
+    torus(scanner, 2.15, 0.12, 0, 0, 0, spec.trim).rotation.x = Math.PI / 2;
+    for (const x of [-2.15, 2.15]) {
+      addStrut(scanner, [0, 0, 0], [x, 0, 0], 0.055, spec.dark);
+      cyl(scanner, 0.15, 0.15, 0.24, 6, x, 0, 0, accent,
+        { emissive: accent, emissiveIntensity: 0.85 });
     }
-    for (const y of [6.1, 10.7, 15.0]) {
-      const f = 1 - y / seatY * 0.48;
-      bx(g, 7.6 * f, 0.28, 0.35, 0, y, -2.5 * f, spec.mid);
-      bx(g, 7.6 * f, 0.28, 0.35, 0, y, 2.5 * f, spec.mid);
-      bx(g, 0.35, 0.28, 5.0 * f, -3.8 * f, y, 0, spec.mid);
-      bx(g, 0.35, 0.28, 5.0 * f, 3.8 * f, y, 0, spec.mid);
-    }
-    bx(g, 6.8, 0.65, 6.2, 0, seatY - 0.55, 0, spec.dark, { metalness: 0.62 });
-    cyl(g, 0.2, 0.28, 3.1, 8, 0, seatY - 2.15, 0, spec.dark);
-    // 偏置相位陣列與通訊環讓正面方向可讀。
-    const radarMount = new THREE.Group();
-    radarMount.position.set(-2.2, 13.7, 0.9);
-    g.add(radarMount);
-    const radar = bx(radarMount, 4.5, 2.2, 0.22, 0, 0, 0, spec.mid);
-    radar.rotation.y = -0.24;
-    for (let i = 0; i < 4; i++) bx(radarMount, 0.055, 1.8, 0.04, -1.6 + i * 1.06, 0, 0.14, spec.dark);
-    mechanisms.push(mechanism(radarMount, 'y', 0.4, 0.35));
-    torus(g, 0.78, 0.09, 2.6, 14.2, -0.9, accent,
-      { emissive: accent, emissiveIntensity: 0.78 });
-    addStrut(g, [2.6, 12.2, -0.9], [2.6, 15.8, -0.9], 0.07, spec.dark);
+    mechanisms.push(mechanism(scanner, 'y', 0.7, 0.4));
   } else {
-    // 蘇式海岸砲台語彙：實心砲廓、外凸扶壁與厚重裝甲甲板。
-    bx(g, 12.6, 2.0, 10.8, 0, 1.0, 0, spec.dark, { metalness: 0.68 });
-    bx(g, 10.4, 3.8, 8.5, 0, 3.9, -0.25, spec.body, { metalness: 0.62 });
-    for (const x of [-4.9, 4.9]) {
-      const buttress = bx(g, 2.1, 8.8, 3.4, x, 7.2, -0.1, spec.dark, { metalness: 0.72 });
-      buttress.rotation.z = x < 0 ? -0.1 : 0.1;
-      bx(g, 0.18, 5.8, 0.42, x * 1.07, 7.8, 1.62, accent,
-        { emissive: accent, emissiveIntensity: 0.5 });
+    bx(g, 12.6, 1.8, 10.8, 0, 0.9, 0, spec.dark);
+    tboxF(g, { w0: 10.8, d0: 8.8, w1: 6.4, d1: 5.7, h: 13.0 },
+      0, 8.3, 0, spec.body);
+    for (const x of [-4.2, 4.2]) {
+      tboxF(g, { w0: 2.2, d0: 5.8, w1: 1.2, d1: 3.8, h: 12.8 },
+        x, 8.2, -0.35, spec.dark);
+      bx(g, 0.15, 8.8, 0.16, x, 8.0, 2.65, accent,
+        { emissive: accent, emissiveIntensity: 0.55 });
     }
-    addFacet(g, spec, 3.8, 5.2, 7.8, 11.5, spec.body, { metalness: 0.66 });
-    addFacet(g, spec, 3.25, 3.8, 2.9, 16.85, spec.mid, { metalness: 0.7 });
-    addFacet(g, spec, 4.2, 4.2, 0.65, seatY - 0.33, spec.dark, { metalness: 0.76 });
-    bx(g, 2.0, 3.8, 1.9, 4.45, 14.5, -1.3, spec.dark, { metalness: 0.72 });
-    torus(g, 0.75, 0.1, 4.45, 16.6, -1.3, accent,
-      { emissive: accent, emissiveIntensity: 0.78 });
+    for (const y of [4.5, 7.5, 10.5, 13.5]) {
+      const w = 10.8 - (y - 1.8) / 13 * 4.4;
+      bx(g, w + 0.45, 0.42, 6.9 - (y - 4.5) * 0.11, 0, y, 0, spec.mid);
+    }
+    bx(g, 5.8, 3.2, 5.2, 0, 16.25, 0, spec.dark);
+    bx(g, 6.9, 0.65, 6.2, 0, seatY - 0.325, 0, spec.mid);
+    for (const y of [15.4, 15.9, 16.4, 16.9]) bx(g, 3.6, 0.14, 0.18, 0, y, 2.68, spec.trim);
   }
 
-  // Fit the complete articulated tower once; fitting the body alone buried the head in its deck.
+  // Fit body and articulated head together so the muzzle remains above the deck.
   const turret = buildBuildingUnitTurret(side, { outline: false });
-  turret.position.y = seatY;
-  g.add(turret);
+  turret.position.y = seatY; g.add(turret);
   g.userData.turretSeatF = frame.turretSeatF;
   g.userData.turret = turret;
   g.userData.turretMuzzles = turret.userData.muzzles;
   g.userData.rig = { kind: 'static', attacks: turret.userData.attacks, mechanisms };
-  g.userData.modelLanguage = spec.language;
   g.userData.modelReference = spec.reference;
   return g;
 }
 
 function buildBase(spec, side) {
-  const g = new THREE.Group();
-  g.userData.rig = { kind: 'static', attacks: [], mechanisms: [], blink: [] };
-  const accent = accentOf(side);
-  const top = spec.top;
+  const g = new THREE.Group(), accent = accentOf(side);
+  const rig = { kind: 'static', attacks: [], mechanisms: [], blink: [] };
+  g.userData.rig = rig;
 
-  if (spec.language === 'ukrainian-drone-airbase') {
-    // 低矮加固機庫群：六片分散機庫決定水平輪廓，中央管制塔只佔小面積。
-    addFacet(g, spec, 17.5, 20.0, 2.0, 1.0, spec.dark);
+  if (spec.language === HIVE.language) {
+    addFacet(g, spec, 18.0, 20.0, 2.0, 1.0, spec.dark);
     addRadial(g, 6, 12.3, ({ i, a, x, z }) => {
-      const hangar = new THREE.Group();
-      hangar.position.set(x, 3.5, z);
-      hangar.rotation.y = a;
-      g.add(hangar);
-      bx(hangar, 5.2, 3.8, 8.3, 0, 0, 0, i % 2 ? spec.body : dim(spec.body, 0.9));
-      const roofL = bx(hangar, 3.2, 0.42, 8.7, -1.35, 2.05, 0, spec.mid);
-      const roofR = bx(hangar, 3.2, 0.42, 8.7, 1.35, 2.05, 0, spec.mid);
-      roofL.rotation.z = 0.28; roofR.rotation.z = -0.28;
-      const shutter = new THREE.Group();
-      shutter.position.set(0, -0.35, 4.15);
-      hangar.add(shutter);
-      for (let j = 0; j < 8; j++) bx(shutter, 3.9, 0.27, 0.16, 0, -1.05 + j * 0.3, 0, spec.dark);
-      g.userData.rig.mechanisms.push(mechanism(shutter, 'y', 0.28, 0.45, i * 1.1, 'position'));
-      for (const x of [-2.12, 2.12]) bx(hangar, 0.18, 2.8, 0.24, x, -0.2, 4.17, spec.mid);
-      bx(hangar, 0.2, 0.65, 0.08, 1.85, -0.25, 4.27, accent,
-        { emissive: accent, emissiveIntensity: 0.65 });
+      const cell = new THREE.Group(); cell.position.set(x, 0, z); cell.rotation.y = a; g.add(cell);
+      addFacet(cell, spec, 4.0, 4.8, 5.4, 4.7, spec.body);
+      addFacet(cell, spec, 3.3, 4.2, 2.0, 8.4, i % 2 ? spec.mid : spec.body);
+      const mouth = cyl(cell, 1.55, 1.55, 0.12, 6, 0, 5.0, 4.0, spec.deep);
+      mouth.rotation.x = Math.PI / 2;
+      const crown = finF(cell, { len: 4.2, w0: 2.5, w1: 0.55, t: 0.25, sweep: 0.6 },
+        0, 9.1, -0.4, spec.trim);
+      crown.rotation.x = -0.3;
+      bx(cell, 1.25, 0.14, 0.14, 0, 6.4, 3.8, accent,
+        { emissive: accent, emissiveIntensity: 0.6 });
+      addStrut(g, [x * 0.58, 2.0, z * 0.58], [x, 6.8, z], 0.17, spec.mid);
     }, Math.PI / 6);
-    addFacet(g, spec, 6.2, 9.2, 7.2, 7.4, spec.body);
-    addFacet(g, spec, 3.3, 5.8, 8.0, 15.0, spec.mid);
-    // 四腳管制塔以桁架承載，與鋼鐵實心飛彈井形成負空間差。
-    for (const x of [-3.3, 3.3]) for (const z of [-3.3, 3.3]) {
-      addStrut(g, [x, 11.0, z], [x * 0.48, 26.8, z * 0.48], 0.17, spec.dark);
+    addFacet(g, spec, 6.0, 9.0, 10.0, 7.0, spec.body);
+    addFacet(g, spec, 3.8, 6.3, 9.0, 16.5, spec.mid);
+    cyl(g, 1.65, 2.0, 10.8, 6, 0, 26.0, 0, spec.deep);
+    addRadial(g, 3, 3.4, ({ a, x, z }) => {
+      const blade = new THREE.Group(); blade.position.set(x, 23.0, z); blade.rotation.y = a; g.add(blade);
+      tboxF(blade, { w0: 2.5, d0: 0.8, w1: 0.6, d1: 0.35, h: 15.0 }, 0, 0, 0, spec.body);
+      bx(blade, 0.16, 7.5, 0.14, 0, 0, 0.45, accent,
+        { emissive: accent, emissiveIntensity: 0.55 });
+    });
+    const ring = new THREE.Group(); ring.position.y = 25; g.add(ring);
+    torus(ring, 5.4, 0.22, 0, 0, 0, spec.trim).rotation.x = Math.PI / 2;
+    for (const x of [-5.4, 5.4]) {
+      addStrut(ring, [0, 0, 0], [x, 0, 0], 0.12, spec.dark);
+      cyl(ring, 0.24, 0.24, 0.32, 6, x, 0, 0, accent,
+        { emissive: accent, emissiveIntensity: 0.8 });
     }
-    bx(g, 7.0, 2.0, 7.0, 0, 27.3, 0, spec.body);
-    rbz(g, 5.3, 2.7, 5.3, 0, 29.55, 0, spec.mid);
-    for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
-      const panel = bx(g, 5.2, 1.55, 0.16, Math.sin(a) * 3.4, 29.7, Math.cos(a) * 3.4, spec.dark);
-      panel.rotation.y = a;
-    }
-    const beacon = sph(g, 1.25, 0, top - 1.25, 0, accent, { emissive: accent, emissiveIntensity: 0.95 });
-    g.userData.rig.blink.push({ mesh: beacon, f: 1.8, lo: 0.65 });
+    rig.mechanisms.push(mechanism(ring, 'y', 0.7, 0.28));
+    const beacon = cyl(g, 0.55, 1.35, 1.2, 6, 0, spec.top - 0.6, 0, accent,
+      { emissive: accent, emissiveIntensity: 0.9 });
+    rig.blink.push({ mesh: beacon, f: 1.8, lo: 0.65 });
   } else {
-    // 蘇式潛艇堡／飛彈井：矩形厚牆、雙井筒與跨橋，幾乎沒有穿透負空間。
-    bx(g, 39.0, 3.2, 34.0, 0, 1.6, 0, spec.dark, { metalness: 0.68 });
-    bx(g, 31.0, 7.4, 27.0, 0, 6.9, -0.8, spec.body, { metalness: 0.62 });
+    bx(g, 39, 3.2, 34, 0, 1.6, 0, spec.dark);
+    tboxF(g, { w0: 34, d0: 29, w1: 27, d1: 23, h: 13.0 }, 0, 9.7, -0.8, spec.body);
+    bx(g, 30, 1.2, 26, 0, 16.8, -0.8, spec.mid);
     for (const x of [-12.5, 12.5]) {
-      bx(g, 6.4, 13.0, 24.0, x, 13.6, -1.0, spec.dark, { metalness: 0.7 });
-      addFacet(g, spec, 4.2, 5.2, 12.5, 22.2, spec.body, { metalness: 0.72 }).position.x = x;
-      addFacet(g, spec, 4.6, 4.6, 1.0, 28.95, spec.mid, { metalness: 0.78 }).position.x = x;
-      for (let i = 0; i < 4; i++) {
-        const plate = tboxF(g, { w0: 1.5, d0: 0.3, w1: 1.3, d1: 0.2, h: 8.5 },
-          x, 21, 4.45, spec.dark, { metalness: 0.7 });
-        plate.position.x += (i - 1.5) * 1.02;
-      }
-      torus(g, 2.65, 0.24, x, 29.55, 0, spec.dark, { metalness: 0.8 });
+      tboxF(g, { w0: 7.4, d0: 12.0, w1: 5.0, d1: 8.0, h: 19.0 },
+        x, 16.0, -5.0, spec.dark);
+      bx(g, 6.4, 1.1, 9.4, x, 25.5, -5.0, spec.mid);
+      for (const y of [12, 16, 20, 24]) bx(g, 6.6, 0.5, 0.5, x, y, -0.15, spec.trim);
+      bx(g, 0.28, 12, 0.16, x, 18, 1.0, accent,
+        { emissive: accent, emissiveIntensity: 0.55 });
     }
-    bx(g, 20.0, 2.1, 8.2, 0, 24.0, 0, spec.mid, { metalness: 0.7 });
-    bx(g, 6.4, 6.0, 6.4, 0, 27.8, 0, spec.dark, { metalness: 0.76 });
-    const beacon = sph(g, 1.3, 0, top - 1.3, 0, accent, { emissive: accent, emissiveIntensity: 1.0 });
-    g.userData.rig.blink.push({ mesh: beacon, f: 1.5, lo: 0.65 });
-    // 正面三道大型發射井門，從遠距即可讀出水平方向。
+    tboxF(g, { w0: 13, d0: 12, w1: 9, d1: 8, h: 13 }, 0, 24.0, -4.0, spec.body);
+    bx(g, 11.0, 1.4, 10.0, 0, 31.2, -4.0, spec.mid);
     for (const x of [-9, 0, 9]) {
-      bx(g, 6.2, 5.2, 0.32, x, 8.0, 12.85, spec.dark);
-      bx(g, 0.22, 3.4, 0.12, x, 8.0, 13.06, accent,
+      bx(g, 6.2, 5.2, 0.32, x, 8.0, 12.85, spec.deep);
+      for (const sx of [-2.65, 2.65]) bx(g, 0.4, 5.4, 0.6, x + sx, 8, 13.05, spec.mid);
+      bx(g, 4.5, 0.16, 0.14, x, 9.6, 13.06, accent,
         { emissive: accent, emissiveIntensity: 0.5 });
     }
+    const shutters = new THREE.Group(); shutters.position.set(0, 23.0, 0.15); g.add(shutters);
+    for (const y of [-2, -1, 0, 1, 2]) bx(shutters, 6.2, 0.35, 0.4, 0, y, 0, spec.dark);
+    rig.mechanisms.push(mechanism(shutters, 'x', 0.06, 0.5));
+    const beacon = bx(g, 1.6, 2.0, 1.6, 0, spec.top - 1.0, -4, accent,
+      { emissive: accent, emissiveIntensity: 0.95 });
+    rig.blink.push({ mesh: beacon, f: 1.5, lo: 0.65 });
   }
-
-  const scanner = new THREE.Group();
-  scanner.position.set(0, top - 3.5, -2.4);
-  g.add(scanner);
-  bx(scanner, 3.4, 0.65, 0.7, 0, 0, 0, spec.mid, { metalness: 0.65 });
-  for (const x of [-1.3, 0, 1.3]) bx(scanner, 0.22, 0.12, 0.08, x, 0, 0.4, accent,
-    { emissive: accent, emissiveIntensity: 0.8 });
-  g.userData.rig.mechanisms.push(mechanism(scanner, 'y', 0.9, 0.3));
-
-  g.userData.modelLanguage = spec.language;
   g.userData.modelReference = spec.reference;
   return g;
 }
 
-/** Build the complete tower or base body; unknown keys retain the existing fallback. */
 export function buildBuildingUnit(kind, side) {
-  if (kind === 'tower') return finishUnitSurfaces(buildTower(side));
+  if (kind === 'tower') return finishUnitSurfaces(buildTower(side), FACTION_MODEL_STYLE[side]);
   const spec = BUILDING_UNIT_MODELS[kind];
-  return spec ? finishUnitSurfaces(buildBase(spec, side)) : null;
+  return spec ? finishUnitSurfaces(buildBase(spec, side), spec) : null;
 }
 
-// The battery stays a separate scene tree for the existing damage/teardown path.
+// The battery retains its separate scene tree for aiming, damage and teardown.
 export function buildBaseBattery(side, bodyHeight = 0) {
-  const g = new THREE.Group();
-  g.position.y = bodyHeight * 0.58;
+  const g = new THREE.Group(); g.position.y = bodyHeight * 0.58;
   const spec = BUILDING_UNIT_MODELS[`base:${side}`] || BUILDING_UNIT_MODELS['base:STEEL'];
+  const swarm = side === 'SWARM', accent = accentOf(side);
   const pivots = [], muzzles = [], attacks = [];
   for (const x of [10, -10]) {
-    const yaw = new THREE.Group();
-    yaw.position.set(x, 0, 6);
-    g.add(yaw);
-    bx(yaw, 4, 4, 5, 0, 0, 0, spec.body, { metalness: 0.7 });
-    for (const sideX of [-1, 1]) {
-      tboxF(yaw, { w0: 0.5, d0: 5.4, w1: 0.3, d1: 4.5, h: 2.7 },
-        sideX * 2, 0.15, 0.1, spec.mid, { metalness: 0.75 });
+    const yaw = new THREE.Group(); yaw.position.set(x, 0, 6); g.add(yaw);
+    if (swarm) {
+      addFacet(yaw, spec, 2.0, 3.0, 2.2, 0, spec.body);
+      for (const sgn of [-1, 1]) {
+        const fin = finF(yaw, { len: 3.6, w0: 2.3, w1: 0.7, t: 0.28, sweep: 0.5 },
+          sgn * 1.5, 0.35, -0.5, spec.mid);
+        fin.rotation.z = sgn * -0.6;
+      }
+    } else {
+      tboxF(yaw, { w0: 5.4, d0: 5.8, w1: 4.2, d1: 4.6, h: 3.5 }, 0, 0, 0, spec.body);
+      for (const x of [-2.2, 2.2]) bx(yaw, 0.55, 2.5, 5.2, x, 0, 0, spec.mid);
     }
-    const pitch = new THREE.Group();
-    pitch.rotation.x = -0.14;
-    yaw.add(pitch);
-    const barrel = cyl(pitch, 1.1, 1.4, 16, 12, 0, 0, 8, spec.dark, { metalness: 0.8 });
+    const pitch = new THREE.Group(); pitch.rotation.x = -0.14; yaw.add(pitch);
+    const barrel = cyl(pitch, 1.1, 1.4, 16, swarm ? 6 : 8, 0, 0, 8, spec.dark);
     barrel.rotation.x = Math.PI / 2;
-    const muzzle = new THREE.Group();
-    muzzle.position.z = 15.6;
-    pitch.add(muzzle);
-    const sleeve = cyl(pitch, 1.5, 1.6, 3.2, 12, 0, 0, 2.2, spec.mid, { metalness: 0.75 });
-    sleeve.rotation.x = Math.PI / 2;
-    for (const z of [4.2, 8.2, 12.2]) torus(pitch, 1.15, 0.09, 0, 0, z, spec.mid, { metalness: 0.8 });
-    attacks.push(recoilMount(pitch, [barrel, muzzle], [muzzle], 1.8, 0.045));
-    yaw.userData.pitch = pitch;
-    pivots.push(yaw);
-    muzzles.push(muzzle);
+    const muzzle = new THREE.Group(); muzzle.position.z = 15.6; pitch.add(muzzle);
+    const parts = [barrel, muzzle];
+    if (swarm) {
+      for (const z of [3.2, 6.4, 9.6]) {
+        const collar = cyl(pitch, 1.35, 1.65, 1.5, 6, 0, 0, z, spec.body);
+        collar.rotation.x = Math.PI / 2; parts.push(collar);
+      }
+    } else {
+      for (const x of [-1.25, 1.25]) {
+        parts.push(bx(pitch, 0.45, 1.8, 12.4, x, 0, 7.4, spec.mid));
+        parts.push(bx(pitch, 0.12, 0.14, 10.2, x, 0.93, 7.4, accent,
+          { emissive: accent, emissiveIntensity: 0.6 }));
+      }
+    }
+    attacks.push(recoilMount(pitch, parts, [muzzle], 1.8, 0.045));
+    yaw.userData.pitch = pitch; pivots.push(yaw); muzzles.push(muzzle);
   }
-  g.userData.pivots = pivots;
-  g.userData.muzzles = muzzles;
-  g.userData.attacks = attacks;
-  finishUnitSurfaces(g);
-  outlinify(g);
+  g.userData.pivots = pivots; g.userData.muzzles = muzzles; g.userData.attacks = attacks;
+  finishUnitSurfaces(g, spec); outlinify(g);
   return g;
 }
 
-/**
- * 建立防禦塔旋轉頭。回傳 yaw 根節點，並維持現役 API：
- * `yaw.userData.pitch` 是俯仰樞軸、`yaw.userData.muzzles` 是沿局部 +z 的槍口陣列。
- */
+/** Yaw root, pitch pivot and ordered +z muzzle anchors are the existing weapon API. */
 export function buildBuildingUnitTurret(side, { outline = true } = {}) {
   const swarm = side === 'SWARM';
   const spec = BUILDING_UNIT_MODELS.tower.sides[swarm ? 'SWARM' : 'STEEL'];
-  const accent = accentOf(side);
-  const yaw = new THREE.Group();
-  const pitch = new THREE.Group();
-  const muzzles = [];
-  const attacks = [];
-
-  addFacet(yaw, spec, swarm ? 1.5 : 1.7, swarm ? 2.1 : 2.3, 0.9, 0.45, spec.dark,
-    { metalness: 0.7 });
-  pitch.position.set(0, 1.0, 0.35);
-  yaw.add(pitch);
-
+  const accent = accentOf(side), yaw = new THREE.Group(), pitch = new THREE.Group();
+  const muzzles = [], attacks = [];
+  addFacet(yaw, spec, swarm ? 1.5 : 1.7, swarm ? 2.1 : 2.3, 0.9, 0.45, spec.dark);
+  pitch.position.set(0, 1.0, 0.35); yaw.add(pitch);
   if (swarm) {
-    // 一體莢艙避免六支方盒各自產生內輪廓；只讓槍口環切出節奏。
-    bx(pitch, 3.4, 1.55, 2.7, 0, 0, 0.55, spec.body, { metalness: 0.65 });
-    for (const sx of [-1.0, 0, 1.0]) {
-      for (const sy of [-0.38, 0.38]) {
-        const barrel = cyl(pitch, 0.25, 0.3, 0.7, 6, sx, sy, 1.8, spec.dark, { metalness: 0.75 });
-        barrel.rotation.x = Math.PI / 2;
-        const muzzle = cyl(pitch, 0.33, 0.33, 0.10, 6, sx, sy, 2.18, accent,
-          { emissive: accent, emissiveIntensity: 0.95 });
-        muzzle.rotation.x = Math.PI / 2;
-        muzzles.push(muzzle);
-      }
+    for (const sx of [-1.0, 0, 1.0]) for (const sy of [-0.38, 0.38]) {
+      const cell = cyl(pitch, 0.5, 0.56, 2.5, 6, sx, sy, 0.7, spec.body);
+      cell.rotation.x = Math.PI / 2;
+      const throat = cyl(pitch, 0.29, 0.29, 0.16, 6, sx, sy, 2.02, spec.deep);
+      throat.rotation.x = Math.PI / 2;
+      const muzzle = torus(pitch, 0.33, 0.045, sx, sy, 2.18, accent,
+        { emissive: accent, emissiveIntensity: 0.95 });
+      muzzles.push(muzzle);
     }
-    sph(pitch, 0.38, 0, 0.95, 1.15, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    bx(pitch, 2.7, 0.35, 1.2, 0, 0, -0.45, spec.dark);
+    cyl(pitch, 0.25, 0.36, 0.55, 6, 0, 1.0, 0.5, spec.trim);
     attacks.push(recoilMount(pitch, [...pitch.children], muzzles, 0.4, 0.07));
   } else {
-    // 雙軌砲：砲尾、套筒、砲口皆由同一 x 座標派生，接點不靠手猜。
-    bx(pitch, 3.8, 1.45, 3.3, 0, 0, 0.55, spec.body, { metalness: 0.7 });
+    tboxF(pitch, { w0: 4.2, d0: 3.6, w1: 3.2, d1: 2.9, h: 1.65 }, 0, 0, 0.55, spec.body);
     for (const sx of [-0.62, 0.62]) {
-      const sleeve = cyl(pitch, 0.31, 0.37, 2.0, 8, sx, 0, 2.45, spec.mid, { metalness: 0.8 });
-      sleeve.rotation.x = Math.PI / 2;
-      const barrel = cyl(pitch, 0.20, 0.25, 3.6, 8, sx, 0, 4.55, spec.dark, { metalness: 0.85 });
-      barrel.rotation.x = Math.PI / 2;
+      const parts = [];
+      parts.push(bx(pitch, 0.8, 0.75, 4.65, sx, 0, 3.95, spec.dark));
+      for (const sgn of [-1, 1]) {
+        parts.push(bx(pitch, 0.16, 0.85, 4.3, sx + sgn * 0.33, 0, 3.8, spec.mid));
+        parts.push(bx(pitch, 0.08, 0.1, 3.5, sx + sgn * 0.33, 0.48, 3.9, accent,
+          { emissive: accent, emissiveIntensity: 0.65 }));
+      }
       const muzzle = cyl(pitch, 0.31, 0.31, 0.35, 8, sx, 0, 6.42, accent,
         { emissive: accent, emissiveIntensity: 0.72 });
-      muzzle.rotation.x = Math.PI / 2;
-      muzzles.push(muzzle);
-      attacks.push(recoilMount(pitch, [sleeve, barrel, muzzle], [muzzle], 0.85));
+      muzzle.rotation.x = Math.PI / 2; parts.push(muzzle); muzzles.push(muzzle);
+      attacks.push(recoilMount(pitch, parts, [muzzle], 0.85));
     }
-    bx(pitch, 0.18, 0.9, 1.4, 0, 1.05, 1.2, accent,
+    bx(pitch, 1.1, 0.2, 0.1, 0, 1.1, 1.2, accent,
       { emissive: accent, emissiveIntensity: 0.72 });
   }
-
-  yaw.userData.pitch = pitch;
-  yaw.userData.attacks = attacks;
-  yaw.userData.muzzles = muzzles;
-  yaw.userData.muzzleAxis = '+z';
-  yaw.userData.modelReference = spec.reference;
-  finishUnitSurfaces(yaw);
+  yaw.userData.pitch = pitch; yaw.userData.attacks = attacks; yaw.userData.muzzles = muzzles;
+  yaw.userData.muzzleAxis = '+z'; yaw.userData.modelReference = spec.reference;
+  finishUnitSurfaces(yaw, spec);
   if (outline) outlinify(yaw, 0.1);
   return yaw;
 }
