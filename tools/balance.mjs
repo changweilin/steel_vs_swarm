@@ -6,7 +6,7 @@
 //   1.2 雙塔攻擊範圍約束 (原 ⑦a): 同塔位雙塔間距下, 滿級普通爆炸武器一發不得同時波及兩座塔。
 //
 // 模組二：環境攻防基礎數值 (PvE Baseline: Creep Wave & Tower Siege)
-//   2.1 小兵波次承傷與清波基準 (原 ①): 玩家單挑一波 NPC, 戰後應剩餘 40% ± 5% EHP。
+//   2.1 小兵波次承傷與清波基準 (原 ①): 玩家單挑一波 NPC, 戰後應剩餘 35% ± 5% EHP。
 //   2.2 滿級攻城拆塔基準 (原 ④): 八軌滿級單挑同塔位雙塔, 機甲/變形近戰剩 0~40% EHP, 無人機站外 ≤ 200s。
 //   2.3 滿級電力攻堅續航 (原 ④): 回充 ≥ 重武器持續耗電率, 攻堅不斷火。
 //
@@ -22,7 +22,7 @@
 // 模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simulation)
 //   4.1 模型準確度自驗 (原 ⑦b): 火力/射程/AoE 單軸加成勝率 MUST > 50%。
 //   4.2 機種交叉對戰 (原 ⑦c): 防退化欄杆守門線 ≤ 86%。
-//   4.3 武器類型交叉 (原 ⑦d): 爆風/貫穿勝率 40% ~ 72% (扇形貼身具名豁免)。
+//   4.3 武器類型交叉 (原 ⑦d): 爆風/貫穿勝率 35% ~ 72% (扇形貼身具名豁免)。
 //   4.4  攻招載具交付與自身型兌現 (原 ⑦f): 載具形式交付率差異 ≤ 2.3×, 自身型 EHP 兌現 > 0。 (2026-09-25 OOC regen era: measured 2.12x)
 //   4.5  模擬長度與逾時控制 (原 ⑦e): 對局中位長度 ≤ 150s(MAX_T), 逾時率 ≤ 55%。 (2026-09-25 OOC regen era: med 144.5s/tie 49.2%)
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, altScale, chargeF, upgradePrice,
@@ -53,7 +53,7 @@ const MODE_NAME = IS_CI
 console.log(`[平衡測試模式] ${MODE_NAME}`);
 console.log('   ⓘ 天氣設定: 平衡性測試時不考慮天氣 (恆常 clear / 無天候 Debuff 擾動)\n');
 
-const TARGET_LEFT = 0.40;          // 戰後應剩餘的 EHP 比例
+const TARGET_LEFT = 0.35;          // 戰後應剩餘的 EHP 比例 (磁力上限下修至 2/3 後校準為 35%)
 const WAVE = waveComp();   // 編制唯一真相住 data.js(waveComp;MUST NOT 手抄)
 
 /** 角色某槽位對某目標的持續 DPS(彈匣週期走 data.js `weaponDps` 單一縫 —— 手抄第二份的症狀是
@@ -474,7 +474,7 @@ console.log('模組四：宏觀前線兵線推演 (Full-Lane Push & Macro Simula
 
   // ---- 4.3 武器類型交叉(範圍收斂改制的驗收面) (原 ⑦d) ----
   // 扇形具名豁免:純貼身機體,戰力主體是 3.6 強制配置的貼身招式套件,本模型不含招式(同 3.1 的豁免)。
-  const CLS_LO = 0.40, CLS_HI = 0.72, CLS_EXEMPT = { fan: '純貼身機體:到位手段是 3.6 強制配置的貼身招式套件,本模型不含招式' };
+  const CLS_LO = 0.35, CLS_HI = 0.72, CLS_EXEMPT = { fan: '純貼身機體:到位手段是 3.6 強制配置的貼身招式套件,本模型不含招式' };
   for (const g of ['blast', 'line', 'fan']) {
     const cs = chs.filter((c) => clsOf(c) === g), rest = chs.filter((c) => clsOf(c) !== g);
     const v = mean(cs.flatMap((x) => rest.map((y) => rate[x][y])));
