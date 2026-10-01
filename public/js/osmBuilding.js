@@ -137,10 +137,10 @@ function baseOf(poly, terrain, fallback = 0) {
 }
 
 function defaultMaterials(style, batch = null) {
-  if (batch?.architecture) return {
-    wall: sceneObjectMat(0xffffff, { vertexColors: true }),
-    roof: sceneObjectMat(0xffffff, { vertexColors: true }),
-  };
+  if (batch?.architecture) {
+    const shared = sceneObjectMat(0xffffff, { vertexColors: true });
+    return { wall: shared, roof: shared, detail: shared };
+  }
   const row = BUILDING_STYLE_ROWS[style] || BUILDING_STYLE_ROWS.house;
   return {
     wall: envMat(row.wall, { wash: 0.42, cool: 0.4 }),
@@ -356,8 +356,9 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
       const platformY = aquaticSite.aquatic ? Math.max(aquaticSite.surfaceY + 0.8, baseOf(poly, terrain, 0) + 1.2) : 0;
       const baseY = aquaticSite.aquatic ? platformY : (raised ? site.max + 0.15 : baseOf(poly, terrain, 0));
       const topY = baseY + targetH;
-      let batch = batches.get(effectiveKind) || batches.get(kind);
-      if (!batch) { batch = { kind: effectiveKind, walls: [], roofs: [], details: [], count: 0 }; batches.set(effectiveKind, batch); }
+      const batchKey = architecture ? 'architecture' : effectiveKind;
+      let batch = batches.get(batchKey) || (!architecture && batches.get(kind));
+      if (!batch) { batch = { kind: effectiveKind, walls: [], roofs: [], details: [], count: 0 }; batches.set(batchKey, batch); }
       const wallStart = batch.walls.length, roofStart = batch.roofs.length, detailStart = batch.details.length;
       const blockerStart = blockers.length;
       const platformStart = platforms.length;
