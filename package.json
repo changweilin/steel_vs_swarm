@@ -43,7 +43,8 @@
     "shot:weather-fx": "node tools/shot_weather_fx.mjs",
     "shot:building-damage": "node tools/shot_building_damage.mjs",
     "story": "node tools/story_book.mjs",
-    "preview:gen": "node tools/arch_preview.mjs"
+    "preview:gen": "node tools/arch_preview.mjs",
+    "review:mechs": "node tools/mech_prompt_review.mjs"
   },
 
   "dependencies": {
