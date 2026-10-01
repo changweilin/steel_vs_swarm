@@ -151,7 +151,8 @@ try {
       check(group.children.reduce((n, mesh) => n + mesh.count, 0) === items.length, kind + ': instances lost');
       disposeTree(group); checked++;
     }
-    const shapes = ['tank','crop','tree','bench','goal','car','motorcycle','solar','facility','spire','marker','barrier','signal','buoy','reed','rock','transformer'];
+    const shapes = ['tank','crop','tree','bench','goal','car','motorcycle','solar','facility','spire','marker','barrier','signal','buoy','reed','rock','transformer',
+      'trough','logpile','fishcage','sluice','greenhouse','windturbine','pylon','conveyor','planter'];
     for (const kind of shapes) {
       const group = new THREE.Group(); addSceneGeometry(group, osmAreaGeometry(kind, 42, 3), kind);
       signature(group); disposeTree(group); checked++;

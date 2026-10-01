@@ -506,9 +506,9 @@ function forestEnvironmentAt(terrain, x, z) {
     heightAt(x, z + step) - heightAt(x, z - step)) / (2 * step)) * 180 / Math.PI;
   return { ...input, slope: Math.max(Number.isFinite(input.slope) ? input.slope : 0, slope), wet: terrainEnvCode(terrain, x, z) !== 0 };
 }
-function forestTypeAt(terrain, x, z, roll) {
+function forestTypeAt(terrain, x, z, roll, leafType = 'unknown') {
   const altitude = terrain.elevationAt?.(x, z) ?? terrain.natureAt?.(x, z) ?? terrain.heightAt(x, z);
-  const environment = forestEnvironmentAt(terrain, x, z);
+  const environment = { ...forestEnvironmentAt(terrain, x, z), leafType };
   if (!Number.isFinite(environment.slope)) return null;
   return pickTreeType(terrain.center?.lat, altitude, roll, forestSeed(x, z), environment);
 }
@@ -10818,7 +10818,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const items = {};   // type -> [{x,y,z,s,ry}]
   const urbanPts = [];
   let placed = 0;
-  const put = (type, x, z, s, plantRnd = rnd) => {
+  const put = (type, x, z, s, plantRnd = rnd, leafType = 'unknown') => {
     let actualS = s * (VEG_SCALE[type] || 1);
     // 拒絕前仍固定抽完姿態亂數，地圖上的後續物件不因道路淘汰而漂移。
     const item = {
@@ -10832,7 +10832,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     const procedural = TRUNK_TYPES.has(type) || type === 'succulent' || type === 'shrub';
     let tree = null;
     if (procedural) {
-      type = forestTypeAt(terrain, x, z, mulberry32(forestSeed(x, z, 0x504c414e))());
+      type = forestTypeAt(terrain, x, z, mulberry32(forestSeed(x, z, 0x504c414e))(), leafType);
       if (!type) return;
       const spec = TREE_SPECIES[type];
       tree = createForestTree(type, forestSeed(x, z));
@@ -11106,13 +11106,19 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   // 非建築用地物件:道路/兵線/主堡/塔位與既有建物先佔位,再依面積、間距與硬上限配置。
   // 住宅/商業 district 不補樓;校園/醫院/車站已有子建物時不生成代表建築。
   // 先放 → 隨機背景以 occ/vegFootIndex 避讓;植被拔除保留在散布之後(見下,安全網)。
-  let osmAreaObjectResult = { generated: 0, generatedByKind: {}, blockers: [], capacity: [], skipped: [] };
-  if (osmSource && osmData?.areas?.length) {
+  let osmAreaObjectResult = { generated: 0, generatedByKind: {}, blockers: [], footprints: [], capacity: [], skipped: [] };
+  if (osmSource && (osmData?.areas?.length || osmData?.pois?.length)) {
     osmAreaObjectResult = buildOsmAreaObjects(group, osmData.areas, {
       maxObjects: 480,
       terrain,
       inset: inb,
       heightAt: (x, z) => terrain.heightAt(x, z),
+      envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
+      seed: sceneSeed,
+      utilityPoints: (osmData.pois || []).filter(p => p.tags?.power === 'generator').map(p => {
+        const [x, z] = llToWorld(p.lat, p.lng, center);
+        return { x, z, tags: p.tags };
+      }),
       // 優先序:兵線/塔位/主堡淨空高於圖資物件 ⇒ 足印半徑掃 areaFree(單格驗擋不住設施)
       blocked: (x, z, r) => {
         if (x < terrain.minX + inb + r || x > terrain.maxX - inb - r
@@ -11125,7 +11131,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     blockers.push(...osmAreaObjectResult.blockers);
     for (const b of osmAreaObjectResult.blockers) occ.add(b.x, b.z, b.r);
     // 先佔 vegFootIndex:後續散布的植被以同一索引避讓(放置時避開,不再事後拔除為主)。
-    for (const b of osmAreaObjectResult.blockers) vegFootIndex.add({ x: b.x, z: b.z, r: b.r });
+    for (const foot of osmAreaObjectResult.footprints) vegFootIndex.add(foot);
     const areaById2 = new Map(osmData.areas.map((a) => [a.sourceId, a]));
     const append2 = (entry, reason) => {
       const area = areaById2.get(entry?.sourceId);
@@ -11205,7 +11211,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   for (let i = 0; i < canopy.rows.length; i++) {
     if ((i & 255) === 0) await onProgress?.(0.08 + i / Math.max(1, canopy.rows.length) * .27, '鋪設植被地貌…');
     const row = canopy.rows[i];
-    put(row.shrub ? 'shrub' : 'broadleaf', row.x, row.z, row.scale, mulberry32(row.seed));
+    put(row.shrub ? 'shrub' : 'broadleaf', row.x, row.z, row.scale, mulberry32(row.seed), row.leafType);
   }
   // ---- 圖資建物(OSM 已於開頭抓取;植被網格延後到建物定案之後才建:
   // 先拔掉落在建物腳印內的植被(見下),樹才不會穿屋頂)----
@@ -12419,10 +12425,10 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   await onProgress?.(0.88, '鋪設地表覆蓋層…');
   const gcStart = group.children.length;   // Portal carving consumes only the following surface-detail meshes.
   // 已存在的獨立平面場地 + 貼地植被：ground.js 會再與 blockers 合併成單一占用索引。
-  const reservedFootprints = civics.map((c) => ({
+  const reservedFootprints = osmAreaObjectResult.footprints.concat(civics.map((c) => ({
     x: c.x, z: c.z, hw: c.w / 2, hd: c.d / 2, ry: c.ry,
     r: Math.hypot(c.w, c.d) / 2,
-  }));
+  })));
   // ground.js 的地被落點同樣避開 OSM 建物 footprint；holes 由 surface API 保留。
   for (const p of osmBuildingFootprints) {
     const xs = p.outer.map((q) => q[0]), zs = p.outer.map((q) => q[1]);
@@ -12626,7 +12632,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     baseFlags,
     ground: ground.patches,
     groundDetails: ground.details,
-    habitatScene: { recipe: ground.recipe, habitats: ground.habitats, models: ground.models },
+    habitatScene: { recipe: ground.recipe, habitats: ground.habitats, models: ground.models,
+      furniture: ground.furniture, filledCells: ground.filledCells },
     groundAligned: ground.aligned,   // 沿路對齊件數(拼圖 + 物件;整齊度 reg 稽核用)
     groundBuffer: ground.bufCells,   // 緩衝空間的底毯格數(2026-08-12;0 = 那一圈沒鋪成)
     petals: petalsBuilt,             // 落花 / 落葉粒子數(0 = 夏冬、沒有落葉樹、或 ?petal=0)

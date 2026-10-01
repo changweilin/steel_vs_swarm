@@ -5,7 +5,7 @@ import { habitatAt, habitatPatch } from './habitat.js';
 // 這裡只產純資料；DataTexture 與 shader 生命週期由 toon.js 管。
 import { SLOPE } from './data.js';
 import { rasterLines, corridorKeepOut, floodFaces, assignWallTexels, mergeSmall, faceSamples } from './zonecut.js';
-import { areaSurfaceRows } from './osmAreas.js';
+import { areaSurfaceRows, classifyArea } from './osmAreas.js';
 
 export const LAND_ZONES = ['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'];
 export const LAND_FIELD_N = 1024;
@@ -21,6 +21,8 @@ const ROAD_W = {
 };
 
 export function coverZone(tags = {}) {
+  const classified = classifyArea(tags).surface;
+  if (classified) return tags.natural === 'cliff' ? 'cliff' : classified;
   const lu = tags.landuse, na = tags.natural, le = tags.leisure;
   if (na === 'cliff') return 'cliff';
   if (na === 'water' || lu === 'reservoir' || lu === 'basin' || na === 'bay' || na === 'strait') return 'water';
@@ -34,11 +36,6 @@ export function coverZone(tags = {}) {
   return lu ? 'urban' : null;
 }
 
-const hash01 = (i, j, seed) => {
-  let n = ((i * 374761393 + j * 668265263) ^ seed) | 0;
-  n = Math.imul(n ^ (n >>> 13), 1274126177);
-  return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
-};
 const pointInPoly = (x, z, pts, holes = []) => {
   let inside = false;
   for (let a = 0, b = pts.length - 1; a < pts.length; b = a++) {
@@ -205,7 +202,7 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
       else if (slope[k] > .28 && zi !== 1) zi = 3;
       else if ((zi === 2 || zi === 3) && height[k] > alpineH) zi = 5;
     }
-    const n = hash01(i, j, seed), s = slope[k], h = height[k];
+    const patch = habitatPatch(seed, x, z), n = patch, s = slope[k], h = height[k];
     let variant = 0;
     if (zi === 0) variant = terrain.waterY != null && h < terrain.waterY - 2.5 ? 1 : 0;
     else if (zi === 1) variant = n > 0.62 ? 1 : 0;
@@ -216,9 +213,10 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
     else if (zi === 6) variant = s > 1.25 ? 1 : 0;
     variant = evidenceLandVariant(observation, LAND_ZONES[zi]) ?? variant;
     const o = k * 4;
-    data[o] = zi; data[o + 1] = variant; data[o + 2] = Math.round(habitatPatch(seed, x, z) * 255);
+    data[o] = zi; data[o + 1] = variant; data[o + 2] = Math.round(patch * 255);
     data[o + 3] = roadMask[k] || polyZone[k] === 4 ? 255 : 0;
-    const habitat = habitatAt(observation, LAND_ZONES[zi], polys[polyOwner[k]]?.tags);
+    const habitat = habitatAt(observation, LAND_ZONES[zi], polys[polyOwner[k]]?.tags,
+      Number.isFinite(terrain.waterY) ? terrain.waterY - h : null);
     if (habitat) { appearance.set(habitat.color, o); appearance[o + 3] = 255; }
   }
   const bounds = { minX: terrain.minX, maxX: terrain.maxX, minZ: terrain.minZ, maxZ: terrain.maxZ };

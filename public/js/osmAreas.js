@@ -27,10 +27,21 @@ export const AREA_CATALOG = rows([
   { kind: 'residential', family: 'residential', key: 'landuse', values: ['residential'], generator: 'district', surface: 'urban', priority: 50 },
   { kind: 'commercial', family: 'commercial', key: 'landuse', values: ['commercial', 'retail'], generator: 'district', surface: 'urban', priority: 50 },
   { kind: 'industrial', family: 'industrial', key: 'landuse', values: ['industrial'], generator: 'industrial', surface: 'urban', priority: 60 },
-  { kind: 'agriculture', family: 'agriculture', key: 'landuse', values: ['farmland', 'farmyard', 'greenhouse_horticulture', 'plant_nursery', 'aquaculture', 'meadow'], generator: 'field', surface: 'green', priority: 40 },
-  { kind: 'orchard', family: 'agriculture', key: 'landuse', values: ['orchard', 'vineyard', 'allotments'], generator: 'orchard', surface: 'green', priority: 41 },
-  { kind: 'forest', family: 'forestry', key: 'landuse', values: ['forest'], generator: 'forest', surface: 'green', priority: 40 },
-  { kind: 'wood', family: 'forestry', key: 'natural', values: ['wood', 'scrub', 'heath'], generator: 'forest', surface: 'green', priority: 40 },
+  { kind: 'agriculture', family: 'agriculture', key: 'landuse', values: ['farmland', 'plant_nursery'], generator: 'field', surface: 'green', priority: 40 },
+  { kind: 'meadow', family: 'agriculture', key: 'landuse', values: ['meadow', 'grass'], generator: null, surface: 'green', priority: 40 },
+  { kind: 'farmyard', family: 'agriculture', key: 'landuse', values: ['farmyard'], generator: 'farmyard', surface: 'urban', priority: 42 },
+  { kind: 'greenhouse', family: 'agriculture', key: 'landuse', values: ['greenhouse_horticulture'], generator: 'greenhouse', surface: 'green', priority: 43 },
+  { kind: 'livestock', family: 'agriculture', key: 'landuse', values: ['animal_keeping'], generator: 'livestock', surface: 'green', priority: 44 },
+  { kind: 'pasture', family: 'agriculture', key: 'meadow', values: ['pasture'], generator: 'livestock', surface: 'green', priority: 44 },
+  { kind: 'aquaculture', family: 'agriculture', key: 'landuse', values: ['aquaculture'], generator: 'aquaculture', surface: 'water', priority: 101 },
+  { kind: 'salt_pond', family: 'industry', key: 'landuse', values: ['salt_pond'], generator: 'aquaculture', surface: 'wet', priority: 101 },
+  { kind: 'orchard', family: 'agriculture', key: 'landuse', values: ['orchard'], generator: 'orchard', surface: 'green', priority: 41 },
+  { kind: 'horticulture', family: 'agriculture', key: 'landuse', values: ['vineyard', 'allotments'], generator: 'field', surface: 'green', priority: 41 },
+  { kind: 'forest', family: 'forestry', key: 'landuse', values: ['forest'], generator: null, surface: 'green', priority: 40 },
+  { kind: 'sawmill', family: 'forestry', key: 'craft', values: ['sawmill'], generator: 'forest', surface: 'urban', priority: 62 },
+  { kind: 'wood', family: 'forestry', key: 'natural', values: ['wood'], generator: null, surface: 'green', priority: 40 },
+  { kind: 'scrub', family: 'natural', key: 'natural', values: ['scrub', 'heath'], generator: null, surface: 'green', priority: 40 },
+  { kind: 'grassland', family: 'natural', key: 'natural', values: ['grassland'], generator: null, surface: 'green', priority: 40 },
   { kind: 'park', family: 'park', key: 'leisure', values: ['park', 'garden', 'nature_reserve', 'recreation_ground', 'village_green'], generator: 'park', surface: 'green', priority: 45 },
   { kind: 'sports', family: 'sports', key: 'sport', values: ['soccer', 'football', 'tennis', 'basketball', 'baseball', 'athletics', 'golf'], generator: 'sports', surface: 'green', priority: 70 },
   { kind: 'sports', family: 'sports', key: 'leisure', values: ['pitch', 'sports_centre', 'stadium', 'track', 'golf_course', 'swimming_pool'], generator: 'sports', surface: 'green', priority: 70 },
@@ -44,12 +55,17 @@ export const AREA_CATALOG = rows([
   { kind: 'airport', family: 'transport', key: 'aeroway', values: ['aerodrome', 'apron', 'terminal', 'runway', 'taxiway'], generator: 'airport', surface: 'urban', priority: 72 },
   { kind: 'water', family: 'water', key: 'natural', values: ['water', 'bay', 'strait'], generator: 'water', surface: 'water', priority: 100 },
   { kind: 'reservoir', family: 'water', key: 'landuse', values: ['reservoir', 'basin'], generator: 'water', surface: 'water', priority: 100 },
-  { kind: 'wetland', family: 'water', key: 'natural', values: ['wetland', 'marsh', 'mud'], generator: 'wetland', surface: 'wet', priority: 90 },
+  { kind: 'flood_basin', family: 'water', key: 'basin', values: ['detention', 'retention', 'infiltration'], generator: 'flood', surface: 'wet', priority: 102 },
+  { kind: 'flood_works', family: 'utility', key: 'waterway', values: ['dam', 'weir'], generator: 'flood', surface: 'urban', priority: 102 },
+  { kind: 'wetland', family: 'water', key: 'natural', values: ['wetland', 'marsh', 'mud'], generator: null, surface: 'wet', priority: 90 },
   { kind: 'beach', family: 'natural', key: 'natural', values: ['beach', 'sand', 'shingle'], generator: 'bare', surface: 'bare', priority: 40 },
   { kind: 'rock', family: 'natural', key: 'natural', values: ['bare_rock', 'rock', 'scree', 'cliff'], generator: 'rock', surface: 'bare', priority: 60 },
   { kind: 'quarry', family: 'mining', key: 'landuse', values: ['quarry', 'landfill'], generator: 'quarry', surface: 'bare', priority: 65 },
   { kind: 'construction', family: 'construction', key: 'landuse', values: ['construction', 'brownfield', 'greenfield'], generator: 'construction', surface: 'bare', priority: 35 },
   { kind: 'power', family: 'utility', key: 'power', values: ['plant', 'substation', 'generator', 'transformer'], generator: 'power', surface: 'urban', priority: 85 },
+  { kind: 'solar', family: 'utility', key: 'plant:source', values: ['solar'], generator: 'solar', surface: 'urban', priority: 86 },
+  { kind: 'wind', family: 'utility', key: 'plant:source', values: ['wind'], generator: 'wind', surface: 'green', priority: 86 },
+  { kind: 'power_tower', family: 'utility', key: 'power', values: ['tower', 'pole'], generator: 'pylon', surface: 'urban', priority: 86 },
   { kind: 'utility', family: 'utility', key: 'man_made', values: ['water_works', 'wastewater_plant', 'storage_tank', 'works'], generator: 'power', surface: 'urban', priority: 78 },
   { kind: 'tourism', family: 'tourism', key: 'tourism', values: ['attraction', 'zoo', 'theme_park', 'camp_site', 'caravan_site'], generator: 'park', surface: 'green', priority: 55 },
   { kind: 'heritage', family: 'culture', key: 'historic', values: ['archaeological_site', 'ruins', 'monument', 'memorial', 'fort'], generator: 'civic', surface: 'bare', priority: 72 },
@@ -95,8 +111,10 @@ for (const value of ['supermarket', 'mall', 'department_store', 'retail', 'marke
   AREA_BY_KEY_VALUE.set(`shop=${value}`, AREA_CATALOG.commercial);
 }
 for (const value of ['office', 'company', 'government']) AREA_BY_KEY_VALUE.set(`office=${value}`, AREA_CATALOG.commercial);
-for (const value of ['factory', 'workshop', 'warehouse', 'sawmill']) AREA_BY_KEY_VALUE.set(`craft=${value}`, AREA_CATALOG.industrial);
-for (const value of ['plant', 'works', 'mine', 'kiln']) AREA_BY_KEY_VALUE.set(`industrial=${value}`, AREA_CATALOG.industrial);
+for (const value of ['factory', 'workshop', 'warehouse']) AREA_BY_KEY_VALUE.set(`craft=${value}`, AREA_CATALOG.industrial);
+for (const value of ['plant', 'works', 'kiln']) AREA_BY_KEY_VALUE.set(`industrial=${value}`, AREA_CATALOG.industrial);
+AREA_BY_KEY_VALUE.set('industrial=mine', AREA_CATALOG.quarry);
+for (const source of ['solar', 'wind']) AREA_BY_KEY_VALUE.set(`generator:source=${source}`, AREA_CATALOG[source]);
 for (const value of ['clinic', 'hospital', 'doctors', 'dentist', 'rehabilitation']) AREA_BY_KEY_VALUE.set(`healthcare=${value}`, AREA_CATALOG.hospital);
 for (const value of ['station', 'halt', 'tram_stop', 'subway_entrance']) AREA_BY_KEY_VALUE.set(`railway=${value}`, AREA_CATALOG.station);
 AREA_BY_KEY_VALUE.set('public_transport=station', AREA_CATALOG.station);
@@ -375,14 +393,7 @@ function directBuilding(tags) {
 
 function parentRow(tags) {
   const candidates = [];
-  for (const [key, value] of [
-    ['landuse', tags?.landuse], ['landcover', tags?.landcover], ['amenity', tags?.amenity],
-    ['leisure', tags?.leisure], ['natural', tags?.natural], ['water', tags?.water],
-    ['waterway', tags?.waterway], ['aeroway', tags?.aeroway], ['military', tags?.military],
-    ['shop', tags?.shop], ['office', tags?.office], ['craft', tags?.craft],
-    ['industrial', tags?.industrial], ['healthcare', tags?.healthcare],
-    ['railway', tags?.railway], ['public_transport', tags?.public_transport], ['sport', tags?.sport],
-  ]) {
+  for (const [key, value] of Object.entries(tags || {})) {
     if (value == null) continue;
     const r = AREA_BY_KEY_VALUE.get(`${key}=${String(value)}`);
     if (r) candidates.push(r);
@@ -597,6 +608,27 @@ export function pointInProjectedArea(x, z, polygon) {
   return !!polygon && inside(polygon.outer) && !(polygon.holes || []).some(inside);
 }
 
+function ringNearDisk(x, z, radius, ring) {
+  return ring.some((a, i) => {
+    const b = ring[(i + 1) % ring.length], dx = b[0] - a[0], dz = b[1] - a[1];
+    const length = dx * dx + dz * dz;
+    const t = length ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / length)) : 0;
+    return (x - a[0] - t * dx) ** 2 + (z - a[1] - t * dz) ** 2 < radius * radius;
+  });
+}
+
+/** Edge distance catches tiny holes and concave notches missed by corner probes. */
+export function projectedAreaContainsDisk(x, z, radius, polygon) {
+  return !!polygon?.outer?.length && [x, z, radius].every(Number.isFinite) && radius >= 0 && pointInProjectedArea(x, z, polygon)
+    && ![polygon.outer, ...(polygon.holes || [])].some(ring => ringNearDisk(x, z, radius, ring));
+}
+
+export function projectedAreaIntersectsDisk(x, z, radius, polygon) {
+  if (![x, z, radius].every(Number.isFinite) || radius < 0 || !polygon?.outer?.length) return false;
+  return pointInProjectedArea(x, z, polygon)
+    || [polygon.outer, ...(polygon.holes || [])].some(ring => ringNearDisk(x, z, radius, ring));
+}
+
 /** 建物／用地 containment：最小包含父面優先，輸入順序不影響。 */
 export function buildContainmentIndex(areas = []) {
   const ordered = [...areas].sort((a, b) => areaAreaM2(a) - areaAreaM2(b) || String(a.sourceId).localeCompare(String(b.sourceId)));
@@ -644,6 +676,9 @@ export function placeAreaCandidates(areas = [], options = {}) {
   const radiusOf = typeof options.radiusOf === 'function' ? options.radiusOf : (() => 1);
   const countOf = typeof options.countOf === 'function' ? options.countOf : (() => maxPerArea);
   const blocked = typeof options.blocked === 'function' ? options.blocked : (() => false);
+  const candidatesOf = typeof options.candidatesOf === 'function' ? options.candidatesOf : areaCandidates;
+  const contains = typeof options.contains === 'function' ? options.contains : (area, p, radius) =>
+    (area.worldPolygons || []).some(poly => projectedAreaContainsDisk(p.x, p.z, radius, poly));
   const ordered = [...areas].sort((a, b) => (b.classification?.priority || 0) - (a.classification?.priority || 0)
     || areaAreaM2(b) - areaAreaM2(a) || String(a.sourceId).localeCompare(String(b.sourceId)));
   const placed = [], capacity = [], skipped = [];
@@ -651,11 +686,14 @@ export function placeAreaCandidates(areas = [], options = {}) {
     if (placed.length >= maxObjects) { capacity.push({ sourceId: area.sourceId, reason: 'capacity' }); continue; }
     const wanted = Math.max(0, Math.min(maxPerArea, Math.floor(Number(countOf(area)) || 0)));
     if (!wanted) continue;
-    const candidates = areaCandidates(area, Math.max(wanted * 6, 12));
+    const candidates = candidatesOf(area, Math.max(wanted * 6, 12));
     let added = 0;
     for (const p of candidates) {
       if (added >= wanted || placed.length >= maxObjects) break;
       const radius = Math.max(0, Number(radiusOf(area, p)) || 0);
+      if (![p.x, p.z, radius].every(Number.isFinite) || !contains(area, p, radius)) {
+        skipped.push({ sourceId: area.sourceId, reason: 'outside_footprint' }); continue;
+      }
       if (blocked(p.x, p.z, radius, area)) { skipped.push({ sourceId: area.sourceId, reason: 'blocked' }); continue; }
       let clash = false;
       for (const q of placed) {

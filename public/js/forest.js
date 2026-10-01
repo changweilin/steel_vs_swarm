@@ -22,6 +22,9 @@ function rangeWeight(value, [a, b, c, d]) {
 export function treeHabitatWeight(type, latitude, altitude, input = {}) {
   const spec = TREE_SPECIES[type];
   if (!spec) return 0;
+  // Explicit OSM leaf structure narrows visual forms; climate still determines eligible species.
+  if (input.leafType === 'needleleaved' && spec.form !== 'spire') return 0;
+  if (input.leafType === 'broadleaved' && spec.form === 'spire') return 0;
   if (input.slope !== undefined && !Number.isFinite(input.slope)) return 0;
   const env = forestEnvironment(latitude, altitude, input);
   if (Number.isFinite(env.slope) && !forestSlopeAllowed(type, env.slope)) return 0;

@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { HABITAT_SCENE } from './habitatCatalog.js';
-import { createHabitatSampler, planHabitatDetails, planHabitatStreets, drapeHabitatPanel } from './habitat.js';
+import { createHabitatSampler, planHabitatDetails, planHabitatStreets, planHabitatFurniture, drapeHabitatPanel } from './habitat.js';
 import { groundPlantParts } from './scenePlantParts.js';
 import { compileSceneParts } from './scenePropModels.js';
 import { envMat } from './toon.js';
 import { makeFootprintIndex, blockerFoot } from './ground.js';
 import { seasonalEnvironment } from './seasonalEnvironment.js';
+import { sceneFurnitureParts } from './sceneFurnitureParts.js';
 
 function detailGeometry(kind, variant) {
   if (kind === 'scrub') {
@@ -24,8 +25,11 @@ function detailGeometry(kind, variant) {
     geo.translate(0, .5, 0);
     return geo;
   }
-  const geometry = compileSceneParts(groundPlantParts('silvergrass', variant * 7717).filter(part => part.key === 'grass').slice(0, 4));
-  geometry.deleteAttribute('color');
+  const parts = kind === 'planter' ? sceneFurnitureParts(kind)
+    : groundPlantParts(kind === 'crop' || kind === 'reed' ? kind : 'silvergrass', variant * 7717);
+  const geometry = compileSceneParts(kind === 'planter' ? parts : kind === 'crop' || kind === 'reed'
+    ? parts.slice(0, HABITAT_SCENE.DETAIL_PLANT_PARTS) : parts.filter(part => part.key === 'grass').slice(0, 4));
+  if (kind !== 'planter') geometry.deleteAttribute('color');
   geometry.computeBoundingBox();
   const box = geometry.boundingBox, size = box.getSize(new THREE.Vector3());
   geometry.translate(-box.getCenter(new THREE.Vector3()).x, -box.min.y, -box.getCenter(new THREE.Vector3()).z);
@@ -33,24 +37,37 @@ function detailGeometry(kind, variant) {
   return geometry;
 }
 
-/** Ground material belongs to terrain triangles; these batches add only small surface detail. */
+/** Ground material belongs to terrain triangles; these batches fill free slots with bounded surface detail. */
 export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, blockers = [], reservedFootprints = [],
   roadSegments = [], areas = [], roadClear, envCodeAt, isBlocked, inset = 0, low = false, season = 'summer', environment = {} }) {
   const occupied = makeFootprintIndex([...blockers.map(blockerFoot), ...reservedFootprints]);
   const bounds = { minX: terrain.minX + inset, maxX: terrain.maxX - inset,
     minZ: terrain.minZ + inset, maxZ: terrain.maxZ - inset };
   const sampleAt = createHabitatSampler({ areas, evidenceAt: terrain.evidenceAt,
-    zoneAt: (x, z) => surfaceField.sample(x, z), envCodeAt });
+    zoneAt: (x, z) => surfaceField.sample(x, z), envCodeAt,
+    depthAt: (x, z) => Number.isFinite(terrain.waterY) ? terrain.waterY - terrain.heightAt(x, z) : null });
   const fits = (foot, zone) => {
     const { x, z, r } = foot;
     if (x - r < bounds.minX || x + r > bounds.maxX || z - r < bounds.minZ || z + r > bounds.maxZ
-      || isBlocked(x, z) || occupied.near(foot, .15) || roadClear(x, z, foot)) return false;
+      || isBlocked(x, z) || occupied.near(foot, HABITAT_SCENE.DETAIL_GAP_M) || roadClear(x, z, foot)
+      || !sampleAt.contains(foot)) return false;
     for (const [dx, dz] of [[0, 0], [-r, -r], [r, -r], [r, r], [-r, r]]) {
-      if (envCodeAt(x + dx, z + dz) !== 0 || surfaceField.sample(x + dx, z + dz) !== zone) return false;
+      const ec = envCodeAt(x + dx, z + dz), expected = zone === 'water' ? 1 : zone === 'wet' ? 2 : 0;
+      if (ec !== expected || surfaceField.sample(x + dx, z + dz) !== zone) return false;
+      if (zone === 'water' && sampleAt(x + dx, z + dz)?.key !== 'shallows') return false;
     }
     const heights = [[0, 0], [-r, -r], [r, -r], [r, r], [-r, r]].map(([dx, dz]) => terrain.heightAt(x + dx, z + dz));
     return heights.every(Number.isFinite) && Math.max(...heights) - Math.min(...heights) <= Math.max(.12, r * .6);
   };
+  const streetPlan = planHabitatStreets({ segments: roadSegments, seed, sampleAt, heightAt: terrain.heightAt, fits });
+  const allFurniture = planHabitatFurniture({ panels: streetPlan, seed, fits, sampleAt, heightAt: terrain.heightAt });
+  for (const foot of allFurniture) occupied.add(foot);
+  for (const panel of streetPlan) {
+    const hw = Math.hypot(panel.corners[0][0] - panel.corners[3][0], panel.corners[0][2] - panel.corners[3][2]) / 2;
+    const hd = HABITAT_SCENE.STREET_WIDTH_M / 2;
+    occupied.add({ x: panel.x, z: panel.z, hw, hd, ry: panel.ry, r: Math.hypot(hw, hd) });
+  }
+  const furniture = allFurniture.slice(0, low ? HABITAT_SCENE.LOW_FURNITURE_LIMIT : HABITAT_SCENE.FURNITURE_LIMIT);
   const plan = planHabitatDetails({ bounds, seed, sampleAt, heightAt: terrain.heightAt, fits,
     maxDetails: low ? HABITAT_SCENE.LOW_DETAIL_LIMIT : HABITAT_SCENE.DETAIL_LIMIT });
   const env = seasonalEnvironment({ ...environment, season });
@@ -65,7 +82,7 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
     const [kind, variant] = key.split('/'), geometry = detailGeometry(kind, +variant);
     const material = envMat(0xffffff, { vertexColors: !!geometry.attributes.color, side: THREE.DoubleSide,
       wash: .08, cool: .12, land: true, rim: 0, ink: 'land',
-      soft: kind === 'stone' ? null : { k: kind === 'scrub' ? 'leaf' : 'grass' } });
+      soft: kind === 'stone' || kind === 'planter' ? null : { k: kind === 'scrub' ? 'leaf' : 'grass' } });
     const mesh = new THREE.InstancedMesh(geometry, material, rows.length);
     mesh.name = 'habitat/' + key;
     for (let i = 0; i < rows.length; i++) {
@@ -75,7 +92,7 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
       scale.set(row.size, row.height, row.size);
       matrix.compose(position, rotation, scale);
       mesh.setMatrixAt(i, matrix);
-      const tint = kind === 'scrub' ? [255, 255, 255] : kind === 'stone' ? [row.color[0] * .85, row.color[1] * .82, row.color[2] * .8]
+      const tint = kind === 'scrub' || kind === 'planter' ? [255, 255, 255] : kind === 'stone' ? [row.color[0] * .85, row.color[1] * .82, row.color[2] * .8]
         : [row.color[0] * .72 + (1 - env.growth) * 28, row.color[1] * .82, row.color[2] * .55];
       color.setRGB(...tint.map(n => Math.min(1, n / 255)), THREE.SRGBColorSpace);
       mesh.setColorAt(i, color);
@@ -84,8 +101,23 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
     mesh.receiveShadow = true;
     group.add(mesh);
   }
-  const panels = planHabitatStreets({ segments: roadSegments, seed, sampleAt, heightAt: terrain.heightAt, fits,
-    maxPanels: low ? HABITAT_SCENE.LOW_STREET_LIMIT : HABITAT_SCENE.STREET_LIMIT });
+  const furnitureKinds = new Map();
+  for (const row of furniture) {
+    if (!furnitureKinds.has(row.kind)) furnitureKinds.set(row.kind, []);
+    furnitureKinds.get(row.kind).push(row);
+  }
+  for (const [kind, rows] of furnitureKinds) {
+    const geometry = compileSceneParts(sceneFurnitureParts(kind));
+    const mesh = new THREE.InstancedMesh(geometry, envMat(0xffffff, { vertexColors: true }), rows.length);
+    mesh.name = 'habitat/' + kind;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      position.set(row.x, row.y, row.z); rotation.setFromEuler(new THREE.Euler(0, row.ry, 0));
+      scale.set(1, 1, 1); matrix.compose(position, rotation, scale); mesh.setMatrixAt(i, matrix);
+    }
+    mesh.computeBoundingBox(); mesh.computeBoundingSphere(); mesh.receiveShadow = true; group.add(mesh);
+  }
+  const panels = streetPlan.slice(0, low ? HABITAT_SCENE.LOW_STREET_LIMIT : HABITAT_SCENE.STREET_LIMIT);
   if (panels.length) {
     const vertices = [], colors = [];
     for (const panel of panels) {
@@ -107,5 +139,7 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
     group.add(mesh);
   }
   return { patches: panels.length, details: plan.rows.length, aligned: panels.length, bufCells: 0,
-    bandDryAt: null, habitats: plan.counts, models: buckets.size, recipe: 'evidence-habitat-v1' };
+    bandDryAt: null, habitats: plan.counts, furniture: furniture.length,
+    filledCells: plan.rows.filter(row => row.round === 0).length,
+    models: buckets.size + furnitureKinds.size, recipe: 'evidence-habitat-v2' };
 }
