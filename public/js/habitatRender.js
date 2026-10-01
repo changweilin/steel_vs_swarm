@@ -1,0 +1,111 @@
+import * as THREE from 'three';
+import { HABITAT_SCENE } from './habitatCatalog.js';
+import { createHabitatSampler, planHabitatDetails, planHabitatStreets, drapeHabitatPanel } from './habitat.js';
+import { groundPlantParts } from './scenePlantParts.js';
+import { compileSceneParts } from './scenePropModels.js';
+import { envMat } from './toon.js';
+import { makeFootprintIndex, blockerFoot } from './ground.js';
+import { seasonalEnvironment } from './seasonalEnvironment.js';
+
+function detailGeometry(kind, variant) {
+  if (kind === 'scrub') {
+    const parts = [];
+    for (let i = 0; i < 3; i++) {
+      const angle = i * Math.PI * 2 / 3 + variant * .7;
+      const x = Math.cos(angle) * .22, z = Math.sin(angle) * .22;
+      const height = .44 + ((i + variant) % 3) * .08;
+      parts.push({ g: ['cyl', .025, .04, height, 5], p: [x, height / 2, z], c: 0x715e42 });
+      parts.push({ g: ['crown', .30], p: [x, height + .10, z], s: [1, .75, 1], c: [0x78834d, 0x687747, 0x8b8c53][i] });
+    }
+    return compileSceneParts(parts);
+  }
+  if (kind === 'stone') {
+    const geo = new THREE.IcosahedronGeometry(.5, 0);
+    geo.translate(0, .5, 0);
+    return geo;
+  }
+  const geometry = compileSceneParts(groundPlantParts('silvergrass', variant * 7717).filter(part => part.key === 'grass').slice(0, 4));
+  geometry.deleteAttribute('color');
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox, size = box.getSize(new THREE.Vector3());
+  geometry.translate(-box.getCenter(new THREE.Vector3()).x, -box.min.y, -box.getCenter(new THREE.Vector3()).z);
+  geometry.scale(.8 / Math.max(.01, size.x), 1 / Math.max(.01, size.y), .8 / Math.max(.01, size.z));
+  return geometry;
+}
+
+/** Ground material belongs to terrain triangles; these batches add only small surface detail. */
+export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, blockers = [], reservedFootprints = [],
+  roadSegments = [], areas = [], roadClear, envCodeAt, isBlocked, inset = 0, low = false, season = 'summer', environment = {} }) {
+  const occupied = makeFootprintIndex([...blockers.map(blockerFoot), ...reservedFootprints]);
+  const bounds = { minX: terrain.minX + inset, maxX: terrain.maxX - inset,
+    minZ: terrain.minZ + inset, maxZ: terrain.maxZ - inset };
+  const sampleAt = createHabitatSampler({ areas, evidenceAt: terrain.evidenceAt,
+    zoneAt: (x, z) => surfaceField.sample(x, z), envCodeAt });
+  const fits = (foot, zone) => {
+    const { x, z, r } = foot;
+    if (x - r < bounds.minX || x + r > bounds.maxX || z - r < bounds.minZ || z + r > bounds.maxZ
+      || isBlocked(x, z) || occupied.near(foot, .15) || roadClear(x, z, foot)) return false;
+    for (const [dx, dz] of [[0, 0], [-r, -r], [r, -r], [r, r], [-r, r]]) {
+      if (envCodeAt(x + dx, z + dz) !== 0 || surfaceField.sample(x + dx, z + dz) !== zone) return false;
+    }
+    const heights = [[0, 0], [-r, -r], [r, -r], [r, r], [-r, r]].map(([dx, dz]) => terrain.heightAt(x + dx, z + dz));
+    return heights.every(Number.isFinite) && Math.max(...heights) - Math.min(...heights) <= Math.max(.12, r * .6);
+  };
+  const plan = planHabitatDetails({ bounds, seed, sampleAt, heightAt: terrain.heightAt, fits,
+    maxDetails: low ? HABITAT_SCENE.LOW_DETAIL_LIMIT : HABITAT_SCENE.DETAIL_LIMIT });
+  const env = seasonalEnvironment({ ...environment, season });
+  const buckets = new Map(), matrix = new THREE.Matrix4(), rotation = new THREE.Quaternion();
+  const color = new THREE.Color(), scale = new THREE.Vector3(), position = new THREE.Vector3();
+  for (const row of plan.rows) {
+    const key = row.kind + '/' + row.variant;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(row);
+  }
+  for (const [key, rows] of buckets) {
+    const [kind, variant] = key.split('/'), geometry = detailGeometry(kind, +variant);
+    const material = envMat(0xffffff, { vertexColors: !!geometry.attributes.color, side: THREE.DoubleSide,
+      wash: .08, cool: .12, land: true, rim: 0, ink: 'land',
+      soft: kind === 'stone' ? null : { k: kind === 'scrub' ? 'leaf' : 'grass' } });
+    const mesh = new THREE.InstancedMesh(geometry, material, rows.length);
+    mesh.name = 'habitat/' + key;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      position.set(row.x, row.y - .025, row.z);
+      rotation.setFromEuler(new THREE.Euler(0, row.ry, 0));
+      scale.set(row.size, row.height, row.size);
+      matrix.compose(position, rotation, scale);
+      mesh.setMatrixAt(i, matrix);
+      const tint = kind === 'scrub' ? [255, 255, 255] : kind === 'stone' ? [row.color[0] * .85, row.color[1] * .82, row.color[2] * .8]
+        : [row.color[0] * .72 + (1 - env.growth) * 28, row.color[1] * .82, row.color[2] * .55];
+      color.setRGB(...tint.map(n => Math.min(1, n / 255)), THREE.SRGBColorSpace);
+      mesh.setColorAt(i, color);
+    }
+    mesh.computeBoundingBox(); mesh.computeBoundingSphere();
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+  const panels = planHabitatStreets({ segments: roadSegments, seed, sampleAt, heightAt: terrain.heightAt, fits,
+    maxPanels: low ? HABITAT_SCENE.LOW_STREET_LIMIT : HABITAT_SCENE.STREET_LIMIT });
+  if (panels.length) {
+    const vertices = [], colors = [];
+    for (const panel of panels) {
+      const tone = .60 + (panel.seed % 81) / 1000;
+      const draped = drapeHabitatPanel(panel, terrain);
+      vertices.push(...draped);
+      for (let i = 0; i < draped.length; i += 3) {
+        color.setRGB(tone, tone * .98, tone * .91, THREE.SRGBColorSpace);
+        colors.push(color.r, color.g, color.b);
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, envMat(0xffffff, { vertexColors: true, wash: .06, land: true,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+    mesh.name = 'habitat/street-verges'; mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+  return { patches: panels.length, details: plan.rows.length, aligned: panels.length, bufCells: 0,
+    bandDryAt: null, habitats: plan.counts, models: buckets.size, recipe: 'evidence-habitat-v1' };
+}

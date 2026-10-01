@@ -1,4 +1,5 @@
-import { evidenceLandVariant } from './mapEvidence.js';
+import { evidenceDryBiome, evidenceLandVariant } from './mapEvidence.js';
+import { habitatAt, habitatPatch } from './habitat.js';
 // ============ 線工切面 → 七分區地貌場(執行期唯一組裝點)============
 // R=分區索引、G=有幾何理由的外觀段、B=決定性連續場、A=道路/建成遮罩。
 // 這裡只產純資料；DataTexture 與 shader 生命週期由 toon.js 管。
@@ -98,9 +99,10 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
   // 不再維護 covers 的第二份分類。areaSurfaceRows 只讀既有投影結果，避免 landfield 重算投影。
   const areaRows = areaSurfaceRows(areas);
   const areaPolys = areaRows
-    .map((r) => ({ zone: r.zone || coverZone(r.tags), pts: r.outer, holes: r.holes || [], priority: r.priority || 0 }))
+    .map((r) => ({ zone: r.zone || coverZone(r.tags), tags: r.tags, sourceId: r.sourceId,
+      pts: r.outer, holes: r.holes || [], priority: r.priority || 0 }))
     .filter((p) => p.zone && Array.isArray(p.pts) && p.pts.length >= 3)
-    .sort((a, b) => b.priority - a.priority);
+    .sort((a, b) => a.priority - b.priority || String(b.sourceId).localeCompare(String(a.sourceId)));
   const ringSegs = (pts, hw) => {
     const out = [];
     for (let i = 0; i < pts.length; i++) {
@@ -157,15 +159,18 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
   });
   await yieldFrame();
 
-  const polyZone = new Int8Array(nx * nz).fill(-1);
-  const polys = areaPolys.length ? areaPolys : coverWays.map((w) => ({ zone: coverZone(w.tags), pts: w.geometry.map(proj), holes: [] }));
-  for (const p of polys) {
+  const polyZone = new Int8Array(nx * nz).fill(-1), polyOwner = new Int32Array(nx * nz).fill(-1);
+  const polys = areaPolys.length ? areaPolys : coverWays.map((w) => ({ zone: coverZone(w.tags), tags: w.tags, pts: w.geometry.map(proj), holes: [] }));
+  for (let pi = 0; pi < polys.length; pi++) {
+    const p = polys[pi];
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (const [x, z] of p.pts) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
     const i0 = Math.max(0, Math.floor(ti(minX))), i1 = Math.min(nx - 1, Math.ceil(ti(maxX)));
     const j0 = Math.max(0, Math.floor(tj(minZ))), j1 = Math.min(nz - 1, Math.ceil(tj(maxZ)));
     const zi = LAND_ZONES.indexOf(p.zone);
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (pointInPoly(xOf(i), zOf(j), p.pts, p.holes)) polyZone[j * nx + i] = zi;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (pointInPoly(xOf(i), zOf(j), p.pts, p.holes)) {
+      polyZone[j * nx + i] = zi; polyOwner[j * nx + i] = pi;
+    }
   }
 
   const samples = faceSamples(mg.face, mg.n, 24), labels = new Int8Array(mg.n);
@@ -188,10 +193,18 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
     labels[f] = zi;
   }
 
-  const data = new Uint8Array(nx * nz * 4);
+  const data = new Uint8Array(nx * nz * 4), appearance = new Uint8Array(nx * nz * 4);
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
     const k = j * nx + i, x = xOf(i), z = zOf(j), ec = envCodeAt(x, z);
     let zi = ec === 1 ? 0 : ec === 2 ? 1 : labels[mg.face[k]];
+    const observation = terrain.evidenceAt?.(x, z);
+    if (ec === 0) {
+      const dry = polyZone[k] >= 0 ? LAND_ZONES[polyZone[k]] : evidenceDryBiome(observation);
+      if (dry && dry !== 'water' && dry !== 'wet') zi = LAND_ZONES.indexOf(dry);
+      if (slope[k] > .75) zi = 6;
+      else if (slope[k] > .28 && zi !== 1) zi = 3;
+      else if ((zi === 2 || zi === 3) && height[k] > alpineH) zi = 5;
+    }
     const n = hash01(i, j, seed), s = slope[k], h = height[k];
     let variant = 0;
     if (zi === 0) variant = terrain.waterY != null && h < terrain.waterY - 2.5 ? 1 : 0;
@@ -201,10 +214,12 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
     else if (zi === 4) variant = polyZone[k] === 4 ? 3 : n > 0.82 ? 2 : n > 0.62 ? 1 : 0;
     else if (zi === 5) variant = h > hMin + (hMax - hMin) * 0.84 ? 2 : s > 0.28 ? 1 : 0;
     else if (zi === 6) variant = s > 1.25 ? 1 : 0;
-    variant = evidenceLandVariant(terrain.evidenceAt?.(x, z), LAND_ZONES[zi]) ?? variant;
+    variant = evidenceLandVariant(observation, LAND_ZONES[zi]) ?? variant;
     const o = k * 4;
-    data[o] = zi; data[o + 1] = variant; data[o + 2] = Math.round(n * 255);
+    data[o] = zi; data[o + 1] = variant; data[o + 2] = Math.round(habitatPatch(seed, x, z) * 255);
     data[o + 3] = roadMask[k] || polyZone[k] === 4 ? 255 : 0;
+    const habitat = habitatAt(observation, LAND_ZONES[zi], polys[polyOwner[k]]?.tags);
+    if (habitat) { appearance.set(habitat.color, o); appearance[o + 3] = 255; }
   }
   const bounds = { minX: terrain.minX, maxX: terrain.maxX, minZ: terrain.minZ, maxZ: terrain.maxZ };
   const sample = (x, z) => {
@@ -212,5 +227,5 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
     const j = Math.max(0, Math.min(nz - 1, Math.floor(tj(z))));
     return LAND_ZONES[data[(j * nx + i) * 4]];
   };
-  return { data, nx, nz, bounds, sample, faces: mg.n, merged: mg.merged };
+  return { data, appearance, nx, nz, bounds, sample, faces: mg.n, merged: mg.merged };
 }

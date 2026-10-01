@@ -1140,8 +1140,9 @@ console.log('\nⅦ 建物來源信任階梯(biomes.js)');
     const cSrc = strip(bio.slice(c0, bio.indexOf('\n}', c0)));
     ok(!/\brnd\b/.test(cSrc), 'classifyImg 零亂數(收集閘多呼叫一次不推移共享序列,§2.3)');
   }
-  ok(/\(!rgb \|\| classifyImg\(rgb\) === 'urban'\) && urbanPts\.length < 500/.test(bcode),
-    '市區種子:影像在手只收純影像判為 urban 的點;無影像才退回 classify(mix 是最後備援)');
+  ok(/urbanPts\.push\(\.\.\.canopy\.urban\.filter/.test(bcode)
+    && /cfg\.synthetic\s*\|\| evidenceDryBiome\(terrain\.evidenceAt\?\.\(x, z\)\) === 'urban'/.test(bcode),
+    '市區種子:真實場地需融合建成證據;合成場地保留配置來源,灰岩與陰影不能生成城市');
   ok(/if \(!osmSource && \(!mix \|\| \(mix\.urban \|\| 0\) > 0\.1\)\s*&& !landmarks\.length && !generic\.length && urbanPts\.length > 8\)/.test(bcode),
     '備援程序街區只在圖資**查詢失敗**(!osm)且場地宣告有市區成分時觸發 —— '
     + '查詢成功但零建物 = 荒野維持荒野;宣告 urban ≤ 10% = 沒有市區可重建(mix 是階梯第三層的否決票)');
@@ -1380,7 +1381,8 @@ console.log('\nⅨ 背景實體互斥(圖資優先)');
   ok(bcode9.indexOf('buildOsmAreaObjects(group, osmData.areas') >= 0
     && bcode9.indexOf('buildOsmAreaObjects(group, osmData.areas') < bcode9.indexOf('const megalithsBuilt = placeMegaliths({'),
     '圖資用地物件先於巨岩群落配置(隨機背景放置時避開)');
-  ok(bcode9.indexOf('buildOsmAreaObjects(group, osmData.areas') < bcode9.indexOf('const attempts = vegTarget * 3;'),
+  ok(bcode9.indexOf('const canopy = planHabitatCanopy({') >= 0
+    && bcode9.indexOf('buildOsmAreaObjects(group, osmData.areas') < bcode9.indexOf('const canopy = planHabitatCanopy({'),
     '圖資用地物件先於植被散布(植被放置時以 vegFoot 避開)');
   ok(/blockers\.push\(\.\.\.osmAreaObjectResult\.blockers\);/.test(bcode9),
     '用地物件 blockers 先登記(隨機背景以 occ/vegFoot 避讓)');

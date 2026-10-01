@@ -16,6 +16,8 @@
     "check": "node tools/audit_suite.mjs",
     "map:evidence": "node tools/prepare_map_evidence.mjs",
     "audit:map-evidence": "node tools/audit_map_evidence.mjs",
+    "audit:habitat": "node tools/audit_habitat.mjs",
+    "shot:habitat": "node tools/shot_habitat.mjs",
     "shot:map-evidence": "node tools/shot_map_evidence.mjs --creation",
     "audit:core": "node tools/audit_suite.mjs",
     "audit:offline": "node tools/audit_offline_suite.mjs",

@@ -614,6 +614,7 @@ const _renderStyle = { value: 0 };
 const _outlineStyleScale = { value: 1 };
 let _landTex = null;
 const _landField = { value: null };
+const _landAppearance = { value: null };
 const _landRect = { value: new THREE.Vector4(0, 0, 1, 1) };
 
 /** 中性場(還沒載入戰場、或展示台/角色預覽):恆 0.5 ⇒ 乘數恆 1 */
@@ -627,20 +628,32 @@ _wField.value = neutralWField();
   const t = new THREE.DataTexture(new Uint8Array([2, 0, 128, 0]), 1, 1, THREE.RGBAFormat);
   t.needsUpdate = true;
   _landField.value = t;
+  const appearance = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1, THREE.RGBAFormat);
+  appearance.needsUpdate = true;
+  _landAppearance.value = appearance;
 }
 
 /** 安裝線工切面地貌場；上一場貼圖立即釋放(A25)。 */
-export function setLandField(data, nx, nz, bounds) {
+export function setLandField(data, nx, nz, bounds, appearance = null) {
   const old = _landTex;
+  const oldAppearance = _landAppearance.value;
   const t = new THREE.DataTexture(data, nx, nz, THREE.RGBAFormat);
   t.minFilter = t.magFilter = THREE.NearestFilter; // R/G 是類別，線性過濾會插出不存在的分區。
   t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   t.needsUpdate = true;
   _landTex = t;
   _landField.value = t;
+  const colors = new THREE.DataTexture(appearance || new Uint8Array([0, 0, 0, 0]),
+    appearance ? nx : 1, appearance ? nz : 1, THREE.RGBAFormat);
+  colors.minFilter = colors.magFilter = THREE.LinearFilter;
+  colors.colorSpace = THREE.SRGBColorSpace;
+  colors.wrapS = colors.wrapT = THREE.ClampToEdgeWrapping;
+  colors.needsUpdate = true;
+  _landAppearance.value = colors;
   _landRect.value.set(bounds.minX, bounds.minZ,
     1 / Math.max(1e-6, bounds.maxX - bounds.minX), 1 / Math.max(1e-6, bounds.maxZ - bounds.minZ));
   old?.dispose();
+  oldAppearance?.dispose();
 }
 
 /**
@@ -1608,6 +1621,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     // 而且不必為它多切一支程式(紀律③:改值 MUST NOT 重建材質)。
     shader.uniforms.uLandInk = _landInkA;
     shader.uniforms.uLandField = _landField;
+    shader.uniforms.uLandAppearance = _landAppearance;
     shader.uniforms.uLandRect = _landRect;
     // 溶入:進度 + 該單位的世界原點(錨在單位自己身上 —— 拿純世界座標的話機體會從一張
     // 固定的網格裡「游」過去,與 ①-2 的斷筆錨點是同一條理由)
@@ -2014,7 +2028,9 @@ ${CEL_SEA_GLSL}
               : v < 2.5 ? vec3( 0.34, 0.45, 0.31 ) : vec3( 0.55, 0.55, 0.52 );
           } else if ( z < 5.5 ) c = v < 0.5 ? vec3( 0.47, 0.49, 0.48 ) : v < 1.5 ? vec3( 0.42, 0.43, 0.42 ) : vec3( 0.74, 0.78, 0.81 );
           else c = v > 0.5 ? vec3( 0.29, 0.27, 0.26 ) : vec3( 0.39, 0.36, 0.34 );
-          float grain = ( lf.b - 0.5 ) * 0.10;
+          vec4 habitatColor = texture2D( uLandAppearance, lfUv );
+          c = mix( c, habitatColor.rgb, habitatColor.a );
+          float grain = ( lf.b - 0.5 ) * 0.16;
           diffuseColor.rgb = c * ( 1.0 + grain );
 
           // 苔草 / 濕痕(計畫 ②-2):低頻分區回答「這裡是什麼」，三平面噪聲只負責
@@ -2023,10 +2039,16 @@ ${CEL_SEA_GLSL}
           vec3 lmN = normalize( inverseTransformDirection( normal, viewMatrix ) );
           float lmA = celTriNoise( vCelWP * 0.24, lmN );
           float lmB = celTriNoise( vCelWP * 0.075 + vec3( 7.1, 3.7, 11.9 ), lmN );
+          float fine = celTriNoise( vCelWP * 1.7, lmN );
+          diffuseColor.rgb *= 1.0 + ( fine - 0.5 ) * mix( 0.05, 0.13, step( 2.5, z ) );
           float lmOpen = 1.0 - step( 0.5, lf.a );
           float lmGrassZone = step( 1.5, z ) * ( 1.0 - step( 3.5, z ) ) + step( 4.5, z );
           float lmGrass = lmOpen * lmGrassZone
             * step( 0.64, max( 0.0, lmN.y ) * 0.62 + lmA * 0.48 - lmB * 0.16 );
+          if ( habitatColor.a > 0.5 ) {
+            lmGrass = lmOpen * ( 1.0 - step( 0.5, abs( z - 2.0 ) ) )
+              * smoothstep( 0.48, 0.86, lmA * 0.65 + lmB * 0.35 ) * 0.16;
+          }
           float lmWetZone = 1.0 - step( 0.5, abs( z - 1.0 ) );
           float lmWet = lmOpen * lmWetZone
             * step( 0.66, ( 1.0 - max( 0.0, lmN.y ) ) * 0.22 + lmA * 0.46 + lmB * 0.34 );
@@ -2445,6 +2467,7 @@ ${INK_PACK_GLSL}
         #ifdef CEL_LAND_FIELD
         uniform float uLandInk;
         uniform sampler2D uLandField;
+        uniform sampler2D uLandAppearance;
         uniform vec4 uLandRect;
         #endif
         #ifdef CEL_DIS
