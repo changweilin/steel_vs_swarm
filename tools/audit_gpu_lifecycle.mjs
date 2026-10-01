@@ -259,5 +259,34 @@ console.log('\n⑨ 通用物件池(pool.js)生命週期與零配置熱路徑驗�
     'game.js _updatePlayer / _tryFire / _burstEchoSelf / _shotCols 消除每幀/每發 Vector3 與 Color 配置');
 }
 
+console.log('\n⑩ 場景靜態批次合併與 Draw Call 優化');
+{
+  const B = code(biomesSrc);
+  const osmBld = code(read('osmBuilding.js'));
+  const climbC = code(read('climb.js'));
+  const pmC = code(read('partMotion.js'));
+  ok(/const batchKey = architecture \? 'architecture' : effectiveKind;/.test(osmBld)
+    && /return \{ wall: shared, roof: shared, detail: shared \};/.test(osmBld),
+    'osmBuilding.js 具建築樣式之多邊形建物跨類型合併為單一 wall/roof/detail 批次並共用單一材質');
+  ok(/const portalWallGeos = \[\], portalMouthGeos = \[\], portalLitGeos = \[\], portalDarkGeos = \[\];/.test(B)
+    && /if \(pi === portals\.length - 1\)/.test(B),
+    'biomes.js 隧道門洞跨全圖合併為至多 4 個 Mesh 與 4 支材質(消除逐座洞口 14 個 Mesh 與重複材質)');
+  ok(/const pedMat = envMat\(0xffffff, \{ vertexColors: true/.test(B)
+    && /new THREE\.InstancedMesh\(mergeGeos\(partGeos, partCols\), pedMat, list\.length\)/.test(B),
+    'biomes.js 地下步道/車站出入口逐型錄合併零件為單一頂點色 InstancedMesh 並共用材質');
+  ok(/let _lcCache = null;/.test(B)
+    && /bodyGeo: markShared\(mergeGeos\(bodyGeos, bodyCols\)\)/.test(B)
+    && /lampGeo: markShared\(mergeGeos\(lampGeos\)\)/.test(B),
+    'biomes.js 平交道(makeLevelCrossing)烘焙為 2 顆 markShared 共用幾何與材質(消除每座 26 個 Mesh)');
+  ok(/if \(typeof mergeGeos === 'function' && rbGroups\.length\)/.test(B)
+    && /new THREE\.Mesh\(mergeGeos\(rbGeos, rbCols\), toonMat\(0xffffff, \{ vertexColors: true \}\)\)/.test(B),
+    'biomes.js 邊界封路事件(buildRoadBlocks)非貼圖構件跨全圖合併為單一頂點色 Mesh 並回收臨時材質');
+  ok(/for \(const m of rungs\) rails\.push\(m\);\s*add\(rails, unitBox\(\), mats\.ladder\);/.test(climbC)
+    && !/add\(rungs, unitBox\(\), mats\.ladder\)/.test(climbC),
+    'climb.js 鋼梯護欄與踏階合併為單一 InstancedMesh(消除同幾何同材質重複 Draw Call)');
+  ok(/sharedMotionMat = markShared\(envMat\(0xffffff, \{ vertexColors: true/.test(pmC),
+    'partMotion.js 動態構件共用單一 markShared 頂點色材質(消除逐關節配置新材質與 surfaceId)');
+}
+
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);
 process.exit(fail === 0 ? 0 : 1);

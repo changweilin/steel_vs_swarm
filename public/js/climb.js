@@ -583,8 +583,8 @@ export function buildClimbMeshes(routes) {
     im.userData.noOutline = true;  // 細桿描邊會糊成一團
     g.add(im);
   };
+  for (const m of rungs) rails.push(m);
   add(rails, unitBox(), mats.ladder);
-  add(rungs, unitBox(), mats.ladder);
   add(holds, unitIco(), mats.holds);
   add(ropes, unitCyl(), mats.rope);
   add(anchors, unitBox(), mats.anchor);

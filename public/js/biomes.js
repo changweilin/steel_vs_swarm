@@ -5420,42 +5420,46 @@ function buildPedestrianEntrances(group, terrain, sites) {
     return fit;
   };
 
+  const pedMat = envMat(0xffffff, { vertexColors: true, wash: 0.3, cool: 0.45 });
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+  const P = new THREE.Vector3(), S = new THREE.Vector3();
   for (const kind of Object.keys(PED_ARCHETYPES)) {
     const list = rows.filter((r) => r.archKey === kind || (!r.archKey && r.kind === kind));
     if (!list.length) continue;
     const def = PED_ARCHETYPES[kind];
     const parts = STYLE_PARTS[def.style] || STYLE_PARTS[kind] || DEFAULT_PARTS;
     const fit = jointFit(parts, def);
+    const roofLy = fit.get(parts[0])?.ly ?? val(parts[0].ly, def);
+    const partGeos = [], partCols = [];
     for (let pi = 0; pi < parts.length; pi++) {
       const part = parts[pi];
-      const color = part.fixed ?? def[part.color] ?? def.frame;
-      const baseGeo = geos[part.geo || 'box'] || geos.box;
-      const mesh = new THREE.InstancedMesh(baseGeo,
-        envMat(color, { wash: part.wash ?? (part.fixed ? 0.08 : 0.3), cool: part.cool ?? 0.45 }), list.length);
-      mesh.name = `ped-entrance-${kind}-${part.key || pi}`;
-      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
-      const P = new THREE.Vector3(), S = new THREE.Vector3();
-      list.forEach((r, i) => {
-        const d = r.def;
-        const lx = val(part.lx, d), ly = val(part.ly, d), lz = val(part.lz, d);
-        const ca = Math.cos(r.ry), sa = Math.sin(r.ry);
-        const px = r.x + lx * ca + lz * sa;
-        const py = r.y + ly;
-        const pz = r.z - lx * sa + lz * ca;
-        P.set(px, py, pz);
-        E.set(part.rx || 0, r.ry + (part.ry || 0), part.rz || 0, 'YXZ');
-        Q.setFromEuler(E);
-        const f = fit.get(part);
-        S.set(f?.sx ?? val(part.sx, d), f?.sy ?? val(part.sy, d), f?.sz ?? val(part.sz, d));
-        if (f) P.y += f.ly - ly;
-        M.compose(P, Q, S);
-        mesh.setMatrixAt(i, M);
-      });
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.castShadow = false;
-      mesh.frustumCulled = false;
-      group.add(mesh);
+      const f = fit.get(part);
+      const lx = val(part.lx, def), ly = f?.ly ?? val(part.ly, def), lz = val(part.lz, def);
+      const sx = f?.sx ?? val(part.sx, def), sy = f?.sy ?? val(part.sy, def), sz = f?.sz ?? val(part.sz, def);
+      P.set(lx * 0.5, (ly - roofLy) * 0.5, lz * 0.5);
+      E.set(part.rx || 0, part.ry || 0, part.rz || 0, 'YXZ');
+      Q.setFromEuler(E);
+      S.set(sx * 0.5, sy * 0.5, sz * 0.5);
+      M.compose(P, Q, S);
+      const g = (geos[part.geo || 'box'] || geos.box).clone();
+      g.applyMatrix4(M);
+      partGeos.push(g);
+      partCols.push(part.fixed ?? def[part.color] ?? def.frame);
     }
+    const mesh = new THREE.InstancedMesh(mergeGeos(partGeos, partCols), pedMat, list.length);
+    mesh.name = `ped-entrance-${kind}-${parts[0].key || 'roof'}`;
+    S.set(2, 2, 2);
+    list.forEach((r, i) => {
+      P.set(r.x, r.y + roofLy, r.z);
+      E.set(0, r.ry, 0, 'YXZ');
+      Q.setFromEuler(E);
+      M.compose(P, Q, S);
+      mesh.setMatrixAt(i, M);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.castShadow = false;
+    mesh.frustumCulled = false;
+    group.add(mesh);
   }
   const signSpots = rows.map((r) => {
     const d = r.def, f = d.d * 0.34;
@@ -7884,66 +7888,73 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     }
   }
   // ---- 隧道門洞:額牆 + 兩翼擋土牆(嵌進山壁,面朝來路)----
+  const portalWallGeos = [], portalMouthGeos = [], portalLitGeos = [], portalDarkGeos = [];
+  const portalMat = new THREE.Matrix4();
+  let portalMats = null;
+  const addPortalGeo = (bucket, geo, x, y, z, ry = 0) => {
+    if (ry) geo.rotateY(ry);
+    geo.translate(x, y, z);
+    geo.applyMatrix4(portalMat);
+    bucket.push(geo);
+  };
   for (const [pi, p] of portals.entries()) {
-    const g = new THREE.Group();
     const W = Math.max(6, p.w), H2 = Math.max(6.5, p.h || 6.5);   // 門洞高 ≥ 隧道淨空(最大機甲進得去)
-    // `surf`(⑨-4):額牆(立柱 + 頂梁)與兩翼擋土牆 —— 與 collar / 外露頂板同一座構造物。
-    // 本專案沒有「坑門冠石」這種零件,額牆頂梁 `lintel` 就是計畫 §⑨ 那一格的實際落點,而它
-    // 吃的正是這一份 `wallM` ⇒ 冠石那一列自動成立(貢獻維持推導值 1:門洞高 ≥ 6.5m)。
-    const wallM = envMat(0x9a958c, { wash: 0.4, cool: 0.45, surf: SURF_ID.CONCRETE });
+    portalMat.makeRotationY(p.ry).setPosition(p.x, p.y - 0.4, p.z);
     // 門洞是「真的洞」(2026-07-15 隧道有實體內部後改版):額牆 = 兩側立柱 + 頂梁,中央開口
     // (寬 W−1.6、高 H2−1.2)直通隧道路面 —— MUST NOT 退回蓋住路面的黑色實心塞子。
-    const lintel = new THREE.Mesh(new THREE.BoxGeometry(W + 3, 3.2, 1.2), wallM);
-    lintel.position.y = H2 + 0.4;                        // 底緣 = 開口頂(H2 − 1.2)
-    g.add(lintel);
+    addPortalGeo(portalWallGeos, new THREE.BoxGeometry(W + 3, 3.2, 1.2), 0, H2 + 0.4, 0);
     for (const s of [1, -1]) {
-      const pil = new THREE.Mesh(new THREE.BoxGeometry(2.3, H2 - 1.2, 1.2), wallM);
-      pil.position.set(s * (W / 2 + 0.35), (H2 - 1.2) / 2, 0);
-      g.add(pil);
+      addPortalGeo(portalWallGeos, new THREE.BoxGeometry(2.3, H2 - 1.2, 1.2), s * (W / 2 + 0.35), (H2 - 1.2) / 2, 0);
     }
     for (const s of [1, -1]) {                             // 翼牆:向來路外八張開的擋土牆
-      const wing = new THREE.Mesh(new THREE.BoxGeometry(1.0, H2 - 0.8, 6), wallM);
-      wing.position.set(s * (W / 2 + 1.8), (H2 - 0.8) / 2 - 0.3, 2.4);
-      wing.rotation.y = s * 0.5;
-      g.add(wing);
+      addPortalGeo(portalWallGeos, new THREE.BoxGeometry(1.0, H2 - 0.8, 6), s * (W / 2 + 1.8), (H2 - 0.8) / 2 - 0.3, 2.4, s * 0.5);
     }
     // 洞口暗面(2026-07-22;2026-07-23 退居備援;2026-07-27 收斂為「無打洞能力」才掛):嵌在開口內側、
     // 只朝外(FrontSide)遮住覆蓋轉換面的拉伸地形布幕。能打洞時土牆已不存在(collar 封邊)或本來就沒有土牆
     // ⇒ 這片黑板多餘,且正是「洞外一片黑 / 某側出入口封死」的元凶,一律不掛。**只有 terrain 完全無
     // punchPortalHoles 能力**(整批降級)才掛回 —— 寧可黑,不可露出土牆(§4 失敗策略 = 降級不例外)。
     if (!punched) {
+      addPortalGeo(portalMouthGeos, new THREE.PlaneGeometry(W - 1.6, H2 - 1.2), 0, (H2 - 1.2) / 2, -1.3);
+    }
+    const stripeN = 8, stripeSpan = W - 1.6, stripeW = stripeSpan / stripeN;
+    if (pi === portals.length - 1) {
+      // `surf`(⑨-4):額牆(立柱 + 頂梁)與兩翼擋土牆 —— 與 collar / 外露頂板同一座構造物。
+      // 本專案沒有「坑門冠石」這種零件,額牆頂梁 `lintel` 就是計畫 §⑨ 那一格的實際落點,而它
+      // 吃的正是這一份 `wallM` ⇒ 冠石那一列自動成立(貢獻維持推導值 1:門洞高 ≥ 6.5m)。
+      const wallM = envMat(0x9a958c, { wash: 0.4, cool: 0.45, surf: SURF_ID.CONCRETE });
       // 貢獻 = 具名否決(唯一容許手寫的那一個):這一片是**降級用的黑布幕**不是構造物,
       // 被天空描出一圈輪廓正好把「它是一塊板子」畫出來 —— 那是 `outlineContribution` 存在
       // 的理由。同時它是「最近面覆寫」的活體測試:布幕在前 ⇒ 它後面那一格的線也一起讓開。
-      const mouth = new THREE.Mesh(new THREE.PlaneGeometry(W - 1.6, H2 - 1.2),
-        envMat(0x0e1013, { wash: 0, cool: 0.1, rim: 0, contrib: INK_CONTRIB_NONE }));
-      mouth.position.set(0, (H2 - 1.2) / 2, -1.3);
-      g.add(mouth);
+      const mouthM = !punched
+        ? envMat(0x0e1013, { wash: 0, cool: 0.1, rim: 0, contrib: INK_CONTRIB_NONE }) : null;
+      // 洞口警示條紋(黃黑相間,貼在洞頂上緣):標示通行淨空邊界
+      // ⑨-5 洞內照明:School B 之下洞內整片落在暗帶是**預期**,處方是「亮的東西自己亮」——
+      // 黃格補 `emissive`(反光帶的語意就是亮的那一半),黑格不補。**底色兩個 hex 逐位元不動**:
+      // 既有定案是「不亮的凹處要 emissive,**不是換淺一點的顏色**」(自動販賣機取出口那一課),
+      // 換底色的症狀是白天整條發白。MUST NOT 順手調高牆的底色或天花燈的 emissiveIntensity。
+      // 材質提到迴圈外:舊制逐 stripe 各建一支 ⇒ 每座洞口 8 支、48 座洞口最多 384 支材質,
+      // 而 `nextSurfId` 只有 64 個槽(撞號 = 別處少一條線,沒有任何錯誤訊息)。
+      // 貢獻走節距軸吃**呼叫端自己算出來的** `stripeW`(每格 0.55~1.6m ⇒ 一絲筆觸):
+      // 八格黃黑相間各描一圈黑邊就是把警示帶讀成八個獨立物件。
+      const stripeCtr = inkRepeat(stripeW);
+      const stripeLit = envMat(0xf2c230, { wash: 0.2, cool: 0.2, contrib: stripeCtr,
+        emissive: new THREE.Color(0x6a5210), emissiveIntensity: 0.55 });
+      const stripeDark = envMat(0x1a1a1a, { wash: 0.2, cool: 0.2, contrib: stripeCtr });
+      portalMats = [[portalWallGeos, wallM], [portalMouthGeos, mouthM], [portalLitGeos, stripeLit], [portalDarkGeos, stripeDark]];
     }
-    // 洞口警示條紋(黃黑相間,貼在洞頂上緣):標示通行淨空邊界
-    // ⑨-5 洞內照明:School B 之下洞內整片落在暗帶是**預期**,處方是「亮的東西自己亮」——
-    // 黃格補 `emissive`(反光帶的語意就是亮的那一半),黑格不補。**底色兩個 hex 逐位元不動**:
-    // 既有定案是「不亮的凹處要 emissive,**不是換淺一點的顏色**」(自動販賣機取出口那一課),
-    // 換底色的症狀是白天整條發白。MUST NOT 順手調高牆的底色或天花燈的 emissiveIntensity。
-    // 材質提到迴圈外:舊制逐 stripe 各建一支 ⇒ 每座洞口 8 支、48 座洞口最多 384 支材質,
-    // 而 `nextSurfId` 只有 64 個槽(撞號 = 別處少一條線,沒有任何錯誤訊息)。
-    // 貢獻走節距軸吃**呼叫端自己算出來的** `stripeW`(每格 0.55~1.6m ⇒ 一絲筆觸):
-    // 八格黃黑相間各描一圈黑邊就是把警示帶讀成八個獨立物件。
-    const stripeN = 8, stripeSpan = W - 1.6, stripeW = stripeSpan / stripeN;
-    const stripeCtr = inkRepeat(stripeW);
-    const stripeLit = envMat(0xf2c230, { wash: 0.2, cool: 0.2, contrib: stripeCtr,
-      emissive: new THREE.Color(0x6a5210), emissiveIntensity: 0.55 });
-    const stripeDark = envMat(0x1a1a1a, { wash: 0.2, cool: 0.2, contrib: stripeCtr });
     for (let si = 0; si < stripeN; si++) {
-      const seg = new THREE.Mesh(new THREE.BoxGeometry(stripeW * 0.94, 0.5, 0.15),
-        si % 2 === 0 ? stripeLit : stripeDark);
-      seg.position.set(-stripeSpan / 2 + stripeW * (si + 0.5), H2 - 1.0, 0.76);
-      g.add(seg);
+      addPortalGeo(si % 2 === 0 ? portalLitGeos : portalDarkGeos,
+        new THREE.BoxGeometry(stripeW * 0.94, 0.5, 0.15), -stripeSpan / 2 + stripeW * (si + 0.5), H2 - 1.0, 0.76);
     }
-    g.traverse((o) => { if (o.isMesh) o.userData.noOutline = true; });
-    g.position.set(p.x, p.y - 0.4, p.z);
-    g.rotation.y = p.ry;
-    group.add(g);
+    if (portalMats) {
+      for (const [geos, mat] of portalMats) {
+        if (!geos.length || !mat) continue;
+        const pm = new THREE.Mesh(mergeGeos(geos), mat);
+        pm.frustumCulled = false;
+        pm.userData.noOutline = true;
+        group.add(pm);
+      }
+    }
     // 門洞立柱 + 翼牆 + 頂樑 → 精確有向盒:額牆旁邊不能直接走穿、飛行體不能穿頂樑，
     // 只有中央開口可通行。量體逐件吃上方 BoxGeometry 的同一份尺寸/姿態；圓柱近似會在
     // 斜翼牆外製造隱形牆、同時漏掉真正的牆角(A30 兩端同量體)。
@@ -9401,50 +9412,52 @@ function buildLevelCrossings(group, crossings, lines, terrain, center) {
 }
 
 /** 平交道 3D 建模:兩支警示柱(交叉警示牌 + 紅燈箱)+ 抬起狀態的紅白遮斷器(平交道開放,不擋兵線)*/
+let _lcCache = null;
 function makeLevelCrossing(x, gy, z, rdx, rdz) {
   const g = new THREE.Group();
   g.position.set(x, gy, z);
   g.rotation.y = Math.atan2(-rdz, rdx);   // 本地 +X ← 鐵軌方向;道路 ≈ 本地 Z
-  const ROADW = 9, TRK = 5.5, red = 0xd23a2e, white = 0xf2f2f2, dark = 0x2b2f33;
-  const post = (sx, sz, face, armDir) => {
-    const a = new THREE.Group();
-    a.position.set(sx, 0, sz);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 4.2, 6), toonMat(dark));
-    pole.position.y = 2.1; a.add(pole);
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.7), toonMat(0x55595e));
-    base.position.y = 0.25; a.add(base);
-    // 紅燈箱(面向道路)
-    const box = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.28), toonMat(dark));
-    box.position.set(0, 3.0, face * 0.22); a.add(box);
-    for (const lx of [-0.45, 0.45]) {
-      const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.2, 12),
-        toonMat(0x7a1c17, { emissive: new THREE.Color(0x3a0d0a), emissiveIntensity: 0.4 }));
-      lamp.position.set(lx, 3.0, face * 0.37);
-      lamp.rotation.y = face > 0 ? 0 : Math.PI;
-      a.add(lamp);
-    }
-    // 交叉警示牌(St. Andrew's cross,面向道路)
-    for (const rot of [Math.PI / 4, -Math.PI / 4]) {
-      const bar = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.42, 0.1), toonMat(white));
-      bar.position.set(0, 3.75, face * 0.32); bar.rotation.z = rot; a.add(bar);
-      const edge = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.14, 0.12), toonMat(red));
-      edge.position.set(0, 3.75, face * 0.34); edge.rotation.z = rot; a.add(edge);
-    }
-    // 遮斷器:抬起狀態(平交道開放,不擋兵線),紅白條紋臂
-    const boom = new THREE.Group();
-    boom.position.set(0, 2.4, 0);
-    boom.rotation.z = armDir * 1.28;   // ~73° 抬起
-    const ARM = ROADW * 0.62, seg = 6;
-    for (let i = 0; i < seg; i++) {
-      const s = new THREE.Mesh(new THREE.BoxGeometry(ARM / seg * 0.96, 0.24, 0.18), toonMat(i % 2 ? white : red));
-      s.position.x = armDir * (ARM / seg) * (i + 0.5);
-      boom.add(s);
-    }
-    a.add(boom);
-    return a;
-  };
-  g.add(post(ROADW / 2 + 0.4, TRK, 1, -1));     // +Z 進場側:右肩 +X,臂朝 -X 跨路
-  g.add(post(-ROADW / 2 - 0.4, -TRK, -1, 1));   // -Z 進場側:右肩 -X,臂朝 +X 跨路
+  if (!_lcCache) {
+    const ROADW = 9, TRK = 5.5, red = 0xd23a2e, white = 0xf2f2f2, dark = 0x2b2f33;
+    const bodyGeos = [], bodyCols = [], lampGeos = [];
+    const M = new THREE.Matrix4(), B = new THREE.Matrix4(), R = new THREE.Matrix4();
+    const pushGeo = (geo, col, m) => {
+      geo.applyMatrix4(m);
+      if (col == null) lampGeos.push(geo);
+      else { bodyGeos.push(geo); bodyCols.push(col); }
+    };
+    const post = (sx, sz, face, armDir) => {
+      pushGeo(new THREE.CylinderGeometry(0.16, 0.2, 4.2, 6), dark, M.makeTranslation(sx, 2.1, sz));
+      pushGeo(new THREE.BoxGeometry(0.7, 0.5, 0.7), 0x55595e, M.makeTranslation(sx, 0.25, sz));
+      pushGeo(new THREE.BoxGeometry(1.5, 0.5, 0.28), dark, M.makeTranslation(sx, 3.0, sz + face * 0.22));
+      for (const lx of [-0.45, 0.45]) {
+        M.makeRotationY(face > 0 ? 0 : Math.PI).setPosition(sx + lx, 3.0, sz + face * 0.37);
+        pushGeo(new THREE.CircleGeometry(0.2, 12), null, M);
+      }
+      for (const rot of [Math.PI / 4, -Math.PI / 4]) {
+        M.makeRotationZ(rot).setPosition(sx, 3.75, sz + face * 0.32);
+        pushGeo(new THREE.BoxGeometry(2.4, 0.42, 0.1), white, M);
+        M.makeRotationZ(rot).setPosition(sx, 3.75, sz + face * 0.34);
+        pushGeo(new THREE.BoxGeometry(2.4, 0.14, 0.12), red, M);
+      }
+      B.makeRotationZ(armDir * 1.28).setPosition(sx, 2.4, sz);
+      const ARM = ROADW * 0.62, seg = 6;
+      for (let i = 0; i < seg; i++) {
+        R.makeTranslation(armDir * (ARM / seg) * (i + 0.5), 0, 0);
+        M.multiplyMatrices(B, R);
+        pushGeo(new THREE.BoxGeometry(ARM / seg * 0.96, 0.24, 0.18), i % 2 ? white : red, M);
+      }
+    };
+    post(ROADW / 2 + 0.4, TRK, 1, -1);     // +Z 進場側:右肩 +X,臂朝 -X 跨路
+    post(-ROADW / 2 - 0.4, -TRK, -1, 1);   // -Z 進場側:右肩 -X,臂朝 +X 跨路
+    _lcCache = {
+      bodyGeo: markShared(mergeGeos(bodyGeos, bodyCols)),
+      bodyMat: markShared(toonMat(0xffffff, { vertexColors: true })),
+      lampGeo: markShared(mergeGeos(lampGeos)),
+      lampMat: markShared(toonMat(0x7a1c17, { emissive: new THREE.Color(0x3a0d0a), emissiveIntensity: 0.4 })),
+    };
+  }
+  g.add(new THREE.Mesh(_lcCache.bodyGeo, _lcCache.bodyMat), new THREE.Mesh(_lcCache.lampGeo, _lcCache.lampMat));
   return g;
 }
 
@@ -10112,7 +10125,9 @@ function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
   const z0 = terrain.minZ + INSET, z1 = terrain.maxZ - INSET;
   const inside = (p) => p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1;
   const noOut = (grp) => { grp.traverse((o) => { if (o.isMesh) o.userData.noOutline = true; }); return grp; };
-  const placed = [];
+  const placed = [], rbGroups = [];
+  const matCache = new Map();
+  const rbMat = (c) => { let m = matCache.get(c); if (!m) matCache.set(c, m = toonMat(c)); return m; };
 
   // 轎車(車禍用):形狀走 `vehicles.js` 的**唯一縫**,本支只決定「多長、什麼漆」。
   // ⚠ **零 `rnd()` 消耗**(舊制也是零)—— 這一支的宿主 `buildRoadBlocks(…, rnd)` 吃的是
@@ -10121,23 +10136,23 @@ function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
   const car = (c, len = 4.4) => vehGroup('sedan', { fit: { L: len, W: 1.9, H: 1.55 }, paint: c });
   const barrier = () => {   // 工程拒馬:橙白條紋橫板 + 雙腳
     const bg = new THREE.Group();
-    const board = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.7, 0.2), toonMat(0xd97b29));
+    const board = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.7, 0.2), rbMat(0xd97b29));
     board.position.y = 1.0; bg.add(board);
     for (const sx of [-0.9, 0.3]) {
-      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.24), toonMat(0xf2ede2));
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.24), rbMat(0xf2ede2));
       stripe.position.set(sx, 1.0, 0); bg.add(stripe);
     }
     for (const sx of [-1.2, 1.2]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.3, 0.7), toonMat(0x6a7278));
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.3, 0.7), rbMat(0x6a7278));
       leg.position.set(sx, 0.65, 0); bg.add(leg);
     }
     return bg;
   };
   const cone2 = () => {   // 交通錐(橙 + 白環)
     const gg = new THREE.Group();
-    const c1 = new THREE.Mesh(cone(0.34, 0.9, 7), toonMat(0xd9622e));
+    const c1 = new THREE.Mesh(cone(0.34, 0.9, 7), rbMat(0xd9622e));
     c1.position.y = 0.45; gg.add(c1);
-    const band = new THREE.Mesh(cyl(0.21, 0.26, 0.18, 7), toonMat(0xf2ede2));
+    const band = new THREE.Mesh(cyl(0.21, 0.26, 0.18, 7), rbMat(0xf2ede2));
     band.position.y = 0.55; gg.add(band);
     return gg;
   };
@@ -10149,10 +10164,10 @@ function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
       const c2 = car(0x9aa2a8, 4.0);
       c2.rotation.set(0.12, -0.5, 0.55);   // 半翻覆騎上前車
       c2.position.set(1.8, 0.35, 0.7); g.add(c2);
-      const tri = new THREE.Mesh(cone(0.4, 0.7, 3), toonMat(0xd93a2b));
+      const tri = new THREE.Mesh(cone(0.4, 0.7, 3), rbMat(0xd93a2b));
       tri.position.set(-5.5, 0.35, 0.5); g.add(tri);
       for (let i = 0; i < 4; i++) {   // 撞擊碎片
-        const shard = new THREE.Mesh(ico(0.22), toonMat(0x3a4046));
+        const shard = new THREE.Mesh(ico(0.22), rbMat(0x3a4046));
         shard.position.set((rnd() - 0.5) * 6, 0.15, (rnd() - 0.5) * 3);
         g.add(shard);
       }
@@ -10170,17 +10185,17 @@ function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
         c.position.set(-4 + i * 4 + (rnd() - 0.5), 0, 2.2 + rnd());
         g.add(c);
       }
-      const spoil = new THREE.Mesh(ico(1.5), toonMat(0x8a6f52));
+      const spoil = new THREE.Mesh(ico(1.5), rbMat(0x8a6f52));
       spoil.scale.y = 0.55; spoil.position.set(1.5, 0.5, -2.4); g.add(spoil);
       return 5;
     },
     pit: (g, rnd) => {   // 路面巨坑:黑洞盤 + 崩裂瀝青塊 + 圍欄
       const pr = 4.5 + rnd() * 2.5;
-      const hole = new THREE.Mesh(cyl(pr, pr * 0.92, 0.5, 12), toonMat(0x11151a));
+      const hole = new THREE.Mesh(cyl(pr, pr * 0.92, 0.5, 12), rbMat(0x11151a));
       hole.position.y = 0.28; g.add(hole);
       for (let i = 0; i < 6; i++) {
         const a = i / 6 * Math.PI * 2 + rnd();
-        const chunk = new THREE.Mesh(ico(0.7 + rnd() * 0.6), toonMat(0x3c4046));
+        const chunk = new THREE.Mesh(ico(0.7 + rnd() * 0.6), rbMat(0x3c4046));
         chunk.scale.y = 0.5;
         chunk.position.set(Math.cos(a) * (pr + 0.8), 0.25, Math.sin(a) * (pr + 0.8));
         g.add(chunk);
@@ -10235,8 +10250,35 @@ function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
       g.position.set(ox, gy - 0.15, oz);
       g.rotation.y = Math.atan2(-dz, dx);   // +x 對齊路向
       group.add(g);
+      rbGroups.push(g);
       blockers.push({ x: ox, z: oz, y: gy - 1, r: or2, h: 3 });
       placed.push([ox, oz]);
+    }
+  }
+  if (typeof mergeGeos === 'function' && rbGroups.length) {
+    const rbGeos = [], rbCols = [], toRemove = [];
+    for (const rg of rbGroups) {
+      rg.updateMatrixWorld(true);
+      rg.traverse((o) => {
+        if (!o.isMesh || o.material?.map) return;
+        const geo = o.geometry.userData?.shared ? o.geometry.clone() : o.geometry;
+        geo.applyMatrix4(o.matrixWorld);
+        rbGeos.push(geo);
+        rbCols.push(geo.attributes.color ? null : o.material.color.getHex());
+        toRemove.push(o);
+      });
+    }
+    for (const o of toRemove) {
+      if (o.material && !o.material.userData?.shared) o.material.dispose();
+      o.parent?.remove(o);
+    }
+    for (const m of matCache.values()) m.dispose();
+    for (const rg of rbGroups) if (!rg.children.length) group.remove(rg);
+    if (rbGeos.length) {
+      const m = new THREE.Mesh(mergeGeos(rbGeos, rbCols), toonMat(0xffffff, { vertexColors: true }));
+      m.frustumCulled = false;
+      m.userData.noOutline = true;
+      group.add(m);
     }
   }
   return placed.length;

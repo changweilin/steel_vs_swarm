@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import { mergeGeos } from './beacons.js';
-import { envMat } from './toon.js';
+import { envMat, markShared } from './toon.js';
+
+let sharedMotionMat = null;
+function partMotionMat() {
+  if (!sharedMotionMat) sharedMotionMat = markShared(envMat(0xffffff, { vertexColors: true, wash: .35, cool: .4 }));
+  return sharedMotionMat;
+}
 
 /** Static structures stay batched; only declared moving assemblies acquire a pivot. */
 export function buildPartMotion(parts, geometryOf) {
@@ -24,8 +30,7 @@ export function buildPartMotion(parts, geometryOf) {
       geo.translate(-motion.pivot[0], -motion.pivot[1], -motion.pivot[2]);
       return geo;
     });
-    const mesh = new THREE.Mesh(mergeGeos(geos, rows.map(p => p.c ?? null)),
-      envMat(0xffffff, { vertexColors: true, wash: .35, cool: .4 }));
+    const mesh = new THREE.Mesh(mergeGeos(geos, rows.map(p => p.c ?? null)), partMotionMat());
     mesh.frustumCulled = false;
     pivot.add(mesh); root.add(pivot);
     joints.push({ pivot, motion });
