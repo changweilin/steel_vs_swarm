@@ -1,17 +1,9 @@
-// ============ 設定頁的「樣品」畫面(art-direction 拉桿的即時預覽)============
-// 拉桿如果沒有樣品,玩家得「拉一下 → 關掉選單 → 看戰場 → 再開回來」,而陰影偏色這種
-// 色相層級的差異在那個來回之間根本記不住 —— 不給樣品等於不給拉桿。
-//
-// **樣品 MUST 走真品材質**(`toonMat` / `envMat` / `postfx.Pipeline`),MUST NOT 另寫一份
-// 「看起來差不多」的 2D 塗色:那就是同一個場景兩套明暗規則(§2.1 的老病),而且症狀是
-// 「樣品調好了、進戰場不是那樣」—— 玩家只會覺得這個設定壞了。
-//
-// 成本:一顆額外的 WebGL context(480×270),只在設定頁開著時存在,`dispose()` 一律
-// 連 renderer 一起收(A25)。低功耗/觸控走 8bit RT,與戰場同一條降級規則。
+// Style previews use the game's materials, environment and post-processing to avoid a second renderer.
+// The 480x270 WebGL context exists only while settings are open and shares the game's low-power fallback.
 import * as THREE from 'three';
 import { toonMat, envMat, updateCelLight, disposeTree } from './toon.js';
 import { Pipeline } from './postfx.js';
-import { onVisualChange, visualPref } from './visualPrefs.js';
+import { onVisualChange, visualPref, VISUAL_COPY, VISUAL_PREVIEW_ENVIRONMENTS } from './visualPrefs.js';
 import { lowPower, isTouchUI } from './mobile.js';
 import { makeUnit } from './models.js';
 import { charKind } from './data.js';
@@ -25,17 +17,7 @@ import { seaSoft, swampSoft, stepCelWind, stepSwampRipples } from './toon.js';
 
 const W = 480, H = 270;
 
-// 樣品的鍵光方向(世界空間;**這一盞燈與 `uCelLightDir` 同吃這一個常數**,分家的話
-// ramp 的階落在一邊、硬邊高光與 CEL_COOL 的暗面落在另一邊)。
-//
-// **MUST NOT 是「從相機肩膀上打過去」的光**(2026-08-04 使用者回報「機體陰影、環境陰影
-// 調整時,展示樣品看不出差異」的另一半原因):偏色只作用在 ramp 的**暗階**上,而舊制的
-// (0.4, 0.8, 0.4) 幾乎與視線同向 ⇒ 逐像素量測(照抄本檔場景離線複刻整條像素鏈:
-// ramp → rim/metal/cool → postfx grade → sRGB)得到的暗階佔比是
-//   地面 0%(整片壓在**最亮**階 = 偏色的定義值就是 0)、岩塊 0%、機甲臂 0%、機甲球 1%
-// —— 也就是說,這根拉桿控制的那一階在畫面上**幾乎不存在**,不管拉到哪裡都一樣。
-// 改成側後方鍵光之後:地面 100% 落到中間階(吃得到偏色)、岩塊 80% / 機甲臂 55% /
-// 機甲球 19% 進暗階,全畫面「看得出來在動」的像素比從 6% → 23%。
+// Used only if the environment cannot provide its own light direction.
 const SUN_DIR = new THREE.Vector3(0.9, 0.42, -0.35).normalize();
 
 // 樣品自己的景深帶(公尺)。
@@ -94,6 +76,37 @@ export class MatSample {
     });
     mount.appendChild(this.switcher);
 
+    this.environmentSwitcher = document.createElement('div');
+    this.environmentSwitcher.className = 'seg seg-sm vset-environments';
+    this.environmentSwitcher.setAttribute('role', 'group');
+    this.environmentSwitcher.setAttribute('aria-label', VISUAL_COPY.previewEnvironment);
+    this._environmentBtns = [
+      { id: 'current', label: VISUAL_COPY.previewCurrent }, ...VISUAL_PREVIEW_ENVIRONMENTS,
+    ].map((environment) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'segb';
+      button.textContent = environment.label;
+      button.dataset.environment = environment.id;
+      button.setAttribute('aria-pressed', String(environment.id === 'current'));
+      button.classList.toggle('on', environment.id === 'current');
+      button.addEventListener('click', () => {
+        if (!this.renderer) return;
+        this.setEnvironment(environment.id === 'current' ? this._envConfig
+          : { ...this._envConfig, season: environment.season || this._envConfig.season,
+            time: environment.time, weather: environment.weather });
+        for (const item of this._environmentBtns) {
+          const selected = item === button;
+          item.classList.toggle('on', selected);
+          item.setAttribute('aria-pressed', String(selected));
+        }
+        this.render();
+      });
+      this.environmentSwitcher.appendChild(button);
+      return button;
+    });
+    mount.appendChild(this.environmentSwitcher);
+
     this.canvas = document.createElement('canvas');
     this.canvas.width = W; this.canvas.height = H;
     this.canvas.className = 'vset-sample';
@@ -119,9 +132,10 @@ export class MatSample {
     this.camera.position.set(0, 4.6, 11.8);
     this.camera.lookAt(0, 1.9, 0);
 
-    const sun = new THREE.DirectionalLight(0xffffff, 2.0);
-    sun.position.copy(SUN_DIR).multiplyScalar(20);
-    this.scene.add(sun, new THREE.AmbientLight(0x556070, 0.55));
+    this._previewLights = {
+      sun: new THREE.DirectionalLight(0xffffff, 1),
+      hemi: new THREE.HemisphereLight(0xffffff, 0xffffff, 1),
+    };
 
     // ── 1. 機體展示台 (機甲本體、懸浮伴隨機、戰術台座與環境巨岩) ──
     const mechM = toonMat(0x8d97a6, { celMetal: true });
@@ -526,20 +540,7 @@ export class MatSample {
       : terrain ? DEMO_SCENES.map(() => terrain) : null;
     this.setTerrains(initialTerrains);
 
-    // 背景直接借用戰場同一套天空/雲/天氣；樣品的地面霧帶仍保留，讓空氣透視旋鈕在小視口裡可見。
-    const envSource = this._terrainSources.find(Boolean);
-    const envTerrain = {
-      worldW: PREVIEW_ENV_SPAN,
-      worldH: PREVIEW_ENV_SPAN,
-      center: envSource?.center || { lat: 25.0, lng: 0.0 },
-      heightAt: (x, z) => this._terrainSources[this._sceneIdx]?.heightAt?.(x, z) ?? 0,
-    };
-    this.envFx = applyEnvironment(this.scene, envTerrain, this._envConfig, {
-      lowPower: lowPower() || isTouchUI(),
-      backgroundOnly: true,
-    });
-    // applyEnvironment 的穹頂與 scene.background 都保留，讓預覽的背景和戰場走同一條天空路徑。
-    this.scene.fog = new THREE.Fog(FOG_FAR_C.clone(), FOG_NEAR, FOG_FAR);
+    this.setEnvironment(this._envConfig);
 
     // 勾線/調色走真品後製管線
     this.pipeline = new Pipeline(this.renderer, this.scene, this.camera, {
@@ -569,6 +570,25 @@ export class MatSample {
       this._rafId = requestAnimationFrame(this._animate);
     };
     this._rafId = requestAnimationFrame(this._animate);
+  }
+
+  setEnvironment(env) {
+    this.envFx?.dispose();
+    const source = this._terrainSources.find(Boolean);
+    this.envFx = applyEnvironment(this.scene, {
+      worldW: PREVIEW_ENV_SPAN, worldH: PREVIEW_ENV_SPAN,
+      center: source?.center || { lat: 25.0, lng: 0.0 },
+      heightAt: (x, z) => this._terrainSources[this._sceneIdx]?.heightAt?.(x, z) ?? 0,
+    }, env, {
+      lowPower: lowPower() || isTouchUI(), backgroundOnly: true, previewLights: this._previewLights,
+    });
+    this._environmentTime = this._time;
+    this.envFx.update(0, this.camera, 0);
+    if (this.pipeline) {
+      const air = this.envFx.air;
+      this.pipeline.setAirFog(air.near, air.far, air.fogNear, air.fogFar);
+      this.pipeline.resetTaaHistory();
+    }
   }
 
   /** 五個樣品各吃自己的實機空間地形；地形只屬展示，不進戰場碰撞。 */
@@ -654,7 +674,7 @@ export class MatSample {
     if (this._gSwamp?.visible) {
       stepSwampRipples([{ x: 0, z: 0 }], dt);
     }
-    this.envFx?.update(dt, this.camera, t);
+    this.envFx?.update(dt, this.camera, t - this._environmentTime);
     const air = this.envFx?.air;
     if (air && this.pipeline) {
       this.pipeline.setAirFog(air.near, air.far, air.fogNear, air.fogFar);
@@ -748,7 +768,7 @@ export class MatSample {
       for (const lm of this._leafCardMeshes) lm.visible = leafPref !== 'off';
     }
 
-    updateCelLight(this.camera, SUN_DIR);
+    updateCelLight(this.camera, this.envFx?.lightDirection || SUN_DIR);
     this.pipeline.render();
   }
 
@@ -771,6 +791,7 @@ export class MatSample {
     this.renderer?.dispose();
     this.renderer = null;
     this.switcher?.remove();
+    this.environmentSwitcher?.remove();
     this.canvas?.remove();
   }
 }

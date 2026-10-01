@@ -1,19 +1,6 @@
-// ============ 畫面表現微調(art-direction 旋鈕的唯一縫)============
-// 視覺調校集中在本表;P1-B 的陰影偏色與 P2-A 的風化場都是可由玩家微調的交付值。
-//
-// 這類取捨由交付值定案,設定頁保留拉桿與即時樣品供玩家微調;程式只負責
-//   ① 只有一份數值(本檔),② 預設值 = 交付定案值,③ 改了立刻看得到。
-//
-// 三條紀律:
-//   ① `def` 那一欄是**交付定案值**,不是隨手填的中間值。它可啟用新表現,不再受「需美術
-//      方向即預設不生效」的慣例限制。
-//   ② 這是**純表現層**偏好(原則 4),與 `lowPower` 同層級:只住 localStorage、不上行、
-//      不進快照、不參與任何判定。伺服器完全不知道它的存在。
-//   ③ 消費端 MUST 訂閱 `onVisualChange` 並更新**共享 uniform**,MUST NOT 在改值時重建材質
-//      —— 重建材質的話拉桿會卡成幻燈片,而且戰鬥中根本改不動(材質早就發到 GPU 了)。
-//
-// 本檔**零 import**(同 rng.js 的理由):離線稽核要能直接執行它驗預設值與夾制,
-// 綁上 three 就得再抄一份。
+// Import-free presentation preferences shared by the game, previews and offline audits.
+// Presets commit atomically so every consumer sees the same art direction in one notification.
+// Renderer controls remain internal; player settings expose curated cel styles only.
 
 const KEY = 'svs_visual';
 
@@ -169,12 +156,77 @@ export const VISUAL_KNOBS = {
   },
 };
 
+export const VISUAL_COPY = Object.freeze({
+  title: 'ACG 賽璐璐風格',
+  intro: '選一款喜歡的動畫風格，即時套用整個世界。',
+  group: '畫面風格',
+  recommended: '推薦',
+  reset: '↺ 回到經典動畫',
+  preview: '即時預覽',
+  previewCurrent: '當前場景',
+  previewEnvironment: '預覽情境',
+});
+
+const presetDefaults = Object.fromEntries(Object.entries(VISUAL_KNOBS).map(([k, d]) => [k, d.def]));
+function preset(id, label, description, palette, values, surface, grade) {
+  return Object.freeze({
+    id, label, description, palette: Object.freeze(palette),
+    values: Object.freeze({ ...presetDefaults, air: 0.55, landInk: 0, ...values }),
+    surface: Object.freeze(surface),
+    grade: Object.freeze({ nightLift: 0.3, ...grade, shadow: Object.freeze(grade.shadow), high: Object.freeze(grade.high) }),
+  });
+}
+
+// Grade and surface coefficients multiply the existing renderer's single-source baselines.
+export const VISUAL_PRESETS = Object.freeze([
+  preset('classic', '經典動畫', '俐落色塊與清晰輪廓，冒險與戰鬥都耐看。',
+    ['#6a91cb', '#8ccdcc', '#f3d19b'],
+    { inkBreak: 0.35, weather: 0.8 },
+    { cutWidth: 0.8, shadowValue: 1, rim: 1, outline: 1 },
+    { shadow: [1, 1.04, 1.06], high: [1, 1, 1], saturation: 1.12, exposure: 1.25, lift: 1, contrast: 0.12 }),
+  preset('sky', '晴空物語', '通透藍綠與明亮暖光，讓山海與城市更有層次。',
+    ['#4894de', '#63c6b6', '#ffe1a3'],
+    { ink: 0.72, inkBreak: 0.3, shadowMech: 1.7, shadowEnv: 1.8, weather: 0.65, air: 0.9 },
+    { cutWidth: 1.1, shadowValue: 1.08, rim: 1.15, outline: 0.8 },
+    { shadow: [0.94, 1.12, 1.16], high: [1.04, 1.04, 0.96], saturation: 1.2, exposure: 1.45, lift: 1.1, contrast: 0.08 }),
+  preset('soft', '柔光日常', '粉彩暖白與輕盈細線，柔和保留角色與景物細節。',
+    ['#aaa4d4', '#e4b7c8', '#f4e4c4'],
+    { ink: 0.55, inkBreak: 0.2, weather: 0.5, air: 0.7 },
+    { cutWidth: 1.65, shadowValue: 1.18, rim: 0.65, outline: 0.65 },
+    { shadow: [1.16, 1.06, 1.12], high: [1.06, 1.02, 1.08], saturation: 0.74, exposure: 1.6, lift: 1.6, contrast: -0.3 }),
+  preset('bold', '熱血漫畫', '強烈明暗與鮮明墨線，機甲與交戰場面更有張力。',
+    ['#455596', '#d96b61', '#ffd072'],
+    { ink: 1.3, inkBreak: 0.6, shadowMech: 2, shadowEnv: 1.7, weather: 0.9, air: 0.35 },
+    { cutWidth: 0.5, shadowValue: 0.9, rim: 1.2, outline: 1.15 },
+    { shadow: [1.04, 0.96, 1.08], high: [1.08, 1.02, 0.92], saturation: 1.28, exposure: 1.16, lift: 0.85, contrast: 0.45 }),
+  preset('cinema', '黃昏電影', '琥珀亮部與青紫暗面，日夜都有電影般的冷暖層次。',
+    ['#6779a4', '#c78797', '#f0bc79'],
+    { ink: 0.78, inkBreak: 0.4, shadowMech: 1.9, shadowEnv: 2, weather: 0.7, air: 0.8 },
+    { cutWidth: 0.95, shadowValue: 1.02, rim: 1.1, outline: 0.85 },
+    { shadow: [1.1, 1.02, 1.18], high: [1.18, 1.06, 0.84], saturation: 1, exposure: 1.3, lift: 1, contrast: 0.22 }),
+  preset('neon', '霓虹夜色', '青藍陰影與洋紅亮色，雨夜、窗光與能量特效更耀眼。',
+    ['#4883cf', '#52ced5', '#e285c8'],
+    { ink: 0.85, inkBreak: 0.25, shadowMech: 2.5, shadowEnv: 2.3, weather: 0.7, air: 0.65 },
+    { cutWidth: 0.7, shadowValue: 0.95, rim: 1.3, outline: 0.9 },
+    { shadow: [0.84, 1.1, 1.28], high: [1.16, 0.92, 1.2], saturation: 1.25, exposure: 1.25, lift: 0.8, contrast: 0.25 }),
+]);
+export const DEFAULT_VISUAL_PRESET = VISUAL_PRESETS[0].id;
+export const VISUAL_PREVIEW_ENVIRONMENTS = Object.freeze([
+  { id: 'day', label: '晴日', time: 'day', weather: 'clear' },
+  { id: 'dusk', label: '黃昏', time: 'dusk', weather: 'clear' },
+  { id: 'night', label: '夜景', time: 'night', weather: 'clear' },
+  { id: 'rain', label: '雨景', time: 'day', weather: 'heavy_rain' },
+  { id: 'snow', label: '雪景', season: 'winter', time: 'day', weather: 'snow' },
+  { id: 'fog', label: '霧景', time: 'day', weather: 'fog' },
+].map(Object.freeze));
+const presetById = (id) => VISUAL_PRESETS.find((p) => p.id === id) || VISUAL_PRESETS[0];
+let _presetId = DEFAULT_VISUAL_PRESET;
 const _vals = {};
 const _subs = new Set();
 
 function clamp(k, v) {
   const d = VISUAL_KNOBS[k];
-  if (!d) return 0;
+  if (!Object.hasOwn(VISUAL_KNOBS, k)) return 0;
   // 互斥選項:名單外的值一律退回預設(手改 localStorage / 舊版遺留的鍵不得穿過去)
   if (d.choices) return d.choices.includes(v) ? v : d.def;
   const n = Number(v);
@@ -187,15 +239,38 @@ function clamp(k, v) {
 {
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { /* 私密模式 / 壞字串 */ }
+  const savedPreset = raw && typeof raw === 'object' && VISUAL_PRESETS.some((p) => p.id === raw.preset);
+  _presetId = savedPreset ? raw.preset : DEFAULT_VISUAL_PRESET;
+  const selected = presetById(_presetId);
   for (const k in VISUAL_KNOBS) {
-    const v = raw && typeof raw === 'object' ? raw[k] : undefined;
-    _vals[k] = v === undefined ? VISUAL_KNOBS[k].def : clamp(k, v);
+    // Derive render values from the catalog on every load so preset tuning reaches existing players.
+    const v = k === 'worldTextLang' && raw && typeof raw === 'object' ? raw[k] : undefined;
+    _vals[k] = v === undefined ? selected.values[k] : clamp(k, v);
   }
+}
+
+export function visualPreset() { return presetById(_presetId); }
+
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify({ preset: _presetId, worldTextLang: _vals.worldTextLang })); } catch { /* Storage is optional. */ }
+}
+
+/** Keep non-art preferences independent of style selection. */
+export function setVisualPreset(id) {
+  const selected = presetById(id);
+  let changed = _presetId !== selected.id;
+  _presetId = selected.id;
+  for (const [k, v] of Object.entries(selected.values)) {
+    if (k === 'worldTextLang') continue;
+    if (_vals[k] !== v) { _vals[k] = v; changed = true; }
+  }
+  if (changed) { save(); _emit(); }
+  return selected.id;
 }
 
 /** 目前值(恆在 [min, max] 內) */
 export function visualPref(k) {
-  return k in _vals ? _vals[k] : (VISUAL_KNOBS[k]?.def ?? 0);
+  return Object.hasOwn(_vals, k) ? _vals[k] : 0;
 }
 
 /** 整份目前值(消費端一次套用用;回傳新物件,MUST NOT 就地改) */
@@ -203,31 +278,26 @@ export function visualPrefs() {
   return { ..._vals };
 }
 
-/** 寫入一個旋鈕(夾制 + 持久化 + 廣播)。回傳夾制後的值 */
+/** Internal renderer overrides last for this session; signage language remains persistent. */
 export function setVisualPref(k, v) {
-  if (!(k in VISUAL_KNOBS)) return 0;
+  if (!Object.hasOwn(VISUAL_KNOBS, k)) return 0;
   const nv = clamp(k, v);
   if (nv === _vals[k]) return nv;
   _vals[k] = nv;
-  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* 私密模式忽略 */ }
+  save();
   _emit();
   return nv;
 }
 
 /** 全部回到交付預設 */
 export function resetVisualPrefs() {
-  let changed = false;
-  for (const k in VISUAL_KNOBS) {
-    if (_vals[k] !== VISUAL_KNOBS[k].def) { _vals[k] = VISUAL_KNOBS[k].def; changed = true; }
-  }
-  if (!changed) return;
-  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* 私密模式忽略 */ }
-  _emit();
+  setVisualPreset(DEFAULT_VISUAL_PRESET);
 }
 
-/** 是否全部維持預設(設定頁的「還原」鈕要不要亮;也是「畫面同舊制」的判據) */
+/** The reset button reflects the curated default, excluding independent signage language. */
 export function visualPrefsDefault() {
-  return Object.keys(VISUAL_KNOBS).every((k) => _vals[k] === VISUAL_KNOBS[k].def);
+  return _presetId === DEFAULT_VISUAL_PRESET
+    && Object.entries(VISUAL_PRESETS[0].values).every(([k, v]) => k === 'worldTextLang' || _vals[k] === v);
 }
 
 /** 訂閱變更;回傳解訂閱函式(消費端 dispose 時 MUST 呼叫,否則舊材質被舊 closure 抓著) */
@@ -237,8 +307,9 @@ export function onVisualChange(fn) {
 }
 
 function _emit() {
+  const snapshot = Object.freeze(visualPrefs());
   for (const fn of [..._subs]) {
     // 一個消費端炸掉不可以讓其餘的收不到(拉桿只會表現成「有些東西沒跟著變」)
-    try { fn(_vals); } catch { /* 消費端自己的問題,不阻斷廣播 */ }
+    try { fn(snapshot); } catch { /* 消費端自己的問題,不阻斷廣播 */ }
   }
 }

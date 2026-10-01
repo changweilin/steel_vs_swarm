@@ -8,7 +8,7 @@
 // 全專案共用:hazards.js re-export 舊入口(toonMat/toonify/toonGradient)保持相容。
 import * as THREE from 'three';
 import { weatherUniforms, WEATHER_MATERIAL_DECL, WEATHER_MATERIAL_COLOR } from './weatherMaterial.js';
-import { visualPref, onVisualChange } from './visualPrefs.js';
+import { visualPref, visualPreset, onVisualChange } from './visualPrefs.js';
 import { makeField, bakeFieldTexture } from './field.js';
 import { curveKneeM, curveR, SOLDIER_H, DISSOLVE } from './data.js';
 import { resolveWeatherVisuals } from './weatherVisuals.js';
@@ -529,6 +529,7 @@ const CEL_CUT_DECL_GLSL = `
         uniform float uCelCutLo;
         uniform float uCelCutHi;
         uniform float uCelShadowV;
+        uniform float uCelCutWidth;
 ${CEL_LUM_GLSL}
 ${CEL_KEY_GLSL}`;
 // 重組本體。四條鐵律(每一條壞掉都不報錯):
@@ -554,17 +555,23 @@ const CEL_CUT_MIX_GLSL = `
             vec3 celOn = diffuseColor.rgb * celKey * RECIPROCAL_PI;
             float celOnL = celLum( celOn );
             float celLit = celOnL > 1e-6 ? saturate( celLum( reflectedLight.directDiffuse ) / celOnL ) : 0.0;
+            float celMid = ( uCelCutLo + uCelCutHi ) * 0.5;
+            celLit = clamp( celMid + ( celLit - celMid ) / uCelCutWidth, 0.0, 1.0 );
             float celCut = smoothstep( uCelCutLo, uCelCutHi, celLit );
             vec3 celOff = celOn * uCelRampTint;
             celOff *= uCelShadowV * celOnL / max( 1e-6, celLum( celOff ) );
             outgoingLight = mix( celOff, celOn, celCut ) + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
           }`;
 /** School B 的三個逐材質 uniform(硬度來自這份材質自己的 `bands`)。 */
+const _celCutWidth = { value: 1 };
+const _celShadowValue = { value: CEL_CUT.SHADOW_V };
+const _celRimScale = { value: 1 };
 function celCutUniforms(shader, bands) {
   const [lo, hi] = cutOf(bands);
   shader.uniforms.uCelCutLo = { value: lo };
   shader.uniforms.uCelCutHi = { value: hi };
-  shader.uniforms.uCelShadowV = { value: CEL_CUT.SHADOW_V };
+  shader.uniforms.uCelShadowV = _celShadowValue;
+  shader.uniforms.uCelCutWidth = _celCutWidth;
 }
 
 // ---------------- 風化屬性場(P2-A;2026-08-03)----------------
@@ -695,6 +702,10 @@ function ensurePreviewField() {
 // School A 下 `_school !== 'b'` ⇒ 這一支**逐位元同舊制**(`shadowTintRGB(0)` 仍是純白)。
 const tintA = (k) => (_school === 'b' ? Math.max(visualPref(k), CEL_CUT.HUE_MIN_A) : visualPref(k));
 function syncVisualPrefs() {
+  const surface = visualPreset().surface;
+  _celCutWidth.value = surface.cutWidth;
+  _celShadowValue.value = Math.max(rampFloor(3), CEL_CUT.SHADOW_V * surface.shadowValue);
+  _celRimScale.value = surface.rim;
   _rampTint.mech.value.setRGB(...shadowTintRGB(tintA('shadowMech')));
   _rampTint.env.value.setRGB(...shadowTintRGB(tintA('shadowEnv')));
   _wSpread.value = WEATHER_SPREAD * visualPref('weather');
@@ -703,7 +714,7 @@ function syncVisualPrefs() {
   _landInkA.value = visualPref('landInk');
   const styleIdx = renderStyleIndex(visualPref('renderStyle'));
   _renderStyle.value = styleIdx;
-  _outlineStyleScale.value = OUTLINE_STYLE_SCALE[styleIdx] ?? 1.0;
+  _outlineStyleScale.value = (OUTLINE_STYLE_SCALE[styleIdx] ?? 1.0) * surface.outline;
 }
 syncVisualPrefs();
 onVisualChange(syncVisualPrefs);
@@ -1640,6 +1651,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uCelWSpread = _wSpread;
     shader.uniforms.uRenderStyle = _renderStyle;
     shader.uniforms.uCelRim = { value: rim };
+    shader.uniforms.uCelRimScale = _celRimScale;
     shader.uniforms.uCelWash = { value: wash };
     shader.uniforms.uCelCool = { value: cool };
     shader.uniforms.uCelMossC = { value: new THREE.Color(moss?.color ?? 0x6d8f4a) };
@@ -2078,7 +2090,7 @@ ${CEL_SEA_GLSL}
           vec3 celV = normalize( vViewPosition );
           // 邊緣光:背光輪廓亮一圈(硬邊 smoothstep,不是柔霧)
           float celRim = 1.0 - saturate( dot( normal, celV ) );
-          outgoingLight += diffuse.rgb * uCelRim * smoothstep( 0.62, 0.78, celRim );
+          outgoingLight += diffuse.rgb * uCelRim * uCelRimScale * smoothstep( 0.62, 0.78, celRim );
           #ifdef CEL_METAL
             // 漫畫金屬:非模糊白色反光帶(step 硬切,Gundam / Borderlands 手感)
             vec3 celH = normalize( uCelLightDir + celV );
@@ -2358,6 +2370,7 @@ ${CEL_SEA_GLSL}
       .replace('void main() {', `
         uniform vec3 uCelLightDir;
         uniform float uCelRim;
+        uniform float uCelRimScale;
         uniform float uRenderStyle;
         uniform float uSurfId;
         uniform float uInkClass;

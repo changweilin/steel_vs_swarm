@@ -293,12 +293,11 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
   const bodies = makeBodies(span, sched?.lunarDay ?? 15);
   scene.add(bodies.obj);
 
-  // 設定頁樣品只借用同一套天空/雲/天氣；燈光仍由 matsample 的鍵光控制，
-  // 避免背景預覽改寫戰場共享的 cel 光向。
-  const hemi = backgroundOnly ? null : new THREE.HemisphereLight(0xffffff, 0xffffff, 1);
+  // Preview lights follow this environment without changing the battle's shared sun or weather.
+  const hemi = backgroundOnly ? opts.previewLights?.hemi || null : new THREE.HemisphereLight(0xffffff, 0xffffff, 1);
   if (hemi) scene.add(hemi);
 
-  const sun = backgroundOnly ? null : new THREE.DirectionalLight(0xffffff, 1);
+  const sun = backgroundOnly ? opts.previewLights?.sun || null : new THREE.DirectionalLight(0xffffff, 1);
   if (sun) {
     scene.add(sun);
     scene.add(sun.target);
@@ -331,7 +330,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
   let lightningTimer = 3.5;
   let flashStrength = 0;
 
-  const out = { air, hour: 0, sunUp: true, weather: curDyn.dominantWeather, weatherVec, dynamics: curDyn };
+  const out = { air, lightDirection: _lit, hour: 0, sunUp: true, weather: curDyn.dominantWeather, weatherVec, dynamics: curDyn };
 
   function setHour(h) {
     out.hour = h;

@@ -17,6 +17,7 @@
     "audit:core": "node tools/audit_suite.mjs",
     "audit:offline": "node tools/audit_offline_suite.mjs",
     "audit:all": "node tools/audit_suite.mjs && node tools/audit_offline_suite.mjs",
+    "audit:visual": "node tools/audit_visual_presets.mjs && node tools/audit_visual_prefs.mjs && node tools/audit_cel_pipeline.mjs",
     "sim": "node test/simrun.mjs",
     "bal": "node tools/balance.mjs",
     "bal:ci": "node tools/balance.mjs --ci",

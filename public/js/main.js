@@ -71,7 +71,10 @@ import {
   CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange,
   VIEW_MODES, viewMode, setViewMode, onViewModeChange,
 } from './ctrlmode.js';
-import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault } from './visualPrefs.js';
+import {
+  VISUAL_PRESETS, VISUAL_COPY, DEFAULT_VISUAL_PRESET, visualPreset, setVisualPreset,
+  resetVisualPrefs, visualPrefsDefault, onVisualChange,
+} from './visualPrefs.js';
 import { BALANCE_KNOBS, balancePref, setBalancePref, resetBalancePrefs, balancePrefsDefault } from './balancePrefs.js';
 import { MatSample } from './matsample.js';
 import { isWeatherFrozen } from './toon.js';
@@ -3994,14 +3997,9 @@ function bindSettingsControls(p) {
 bindSettingsControls('set');
 bindSettingsControls('lset');
 
-// ── 畫面表現(art-direction 拉桿 + 即時樣品)──
-// 計畫書裡有幾項卡在「需要美術方向確認」(P1-B 陰影偏色最典型:它會改掉每一台機甲的暗面色相)。
-// 那種東西不該由 commit 定案 —— 換一台螢幕就不對了。故做成拉桿讓玩家自己定,程式只保證
-// 「只有一份數值(visualPrefs.js)」「預設 = 舊制」「改了立刻看得到(樣品走真品材質)」。
-//
-// **一份實作、兩個掛載點**(戰場暫停頁 + 大廳設定頁),與操作方式/觸控設定同一條規矩;
-// 樣品是一顆真的 WebGL context ⇒ 全程 MUST 只存在一個,換頁/關閉一律 dispose(A25)。
+// Both settings mounts share one preset selector and one disposable WebGL preview.
 let _matSample = null;
+let _offVisualSettings = null;
 function visualPreviewEnv() {
   const active = app.battle?.cfg?.env || app.lobby?.battleConfig?.env;
   if (active?.season && active?.time && active?.weather
@@ -4021,9 +4019,51 @@ function visualPreviewEnv() {
 }
 function renderVisualSettings(mount) {
   if (!mount) return;
-  _matSample?.dispose();
-  _matSample = null;
+  disposeVisualSettings();
   mount.innerHTML = '';
+
+  const intro = document.createElement('p');
+  intro.className = 'vset-intro';
+  intro.textContent = VISUAL_COPY.intro;
+  mount.appendChild(intro);
+
+  const styles = document.createElement('div');
+  styles.className = 'vset-styles';
+  styles.setAttribute('role', 'group');
+  styles.setAttribute('aria-label', VISUAL_COPY.group);
+  const cards = VISUAL_PRESETS.map((p) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'segb vset-style';
+    card.dataset.preset = p.id;
+    card.setAttribute('aria-label', p.label);
+    card.setAttribute('aria-describedby', `visual-${mount.id}-${p.id}`);
+    p.palette.forEach((c, i) => card.style.setProperty(`--style-${i}`, c));
+    const swatch = document.createElement('span');
+    swatch.className = 'vset-style-swatch';
+    swatch.setAttribute('aria-hidden', 'true');
+    const name = document.createElement('span');
+    name.className = 'vset-style-name';
+    name.textContent = p.label;
+    if (p.id === DEFAULT_VISUAL_PRESET) {
+      const badge = document.createElement('span');
+      badge.className = 'vset-style-badge';
+      badge.textContent = VISUAL_COPY.recommended;
+      name.appendChild(badge);
+    }
+    const description = document.createElement('span');
+    description.id = `visual-${mount.id}-${p.id}`;
+    description.className = 'vset-style-description';
+    description.textContent = p.description;
+    card.append(swatch, name, description);
+    card.addEventListener('click', () => {
+      setVisualPreset(p.id);
+      app.audio?.ui('click');
+    });
+    styles.appendChild(card);
+    return card;
+  });
+  mount.appendChild(styles);
 
   const preview = document.createElement('div');
   preview.className = 'vset-preview';
@@ -4031,57 +4071,8 @@ function renderVisualSettings(mount) {
 
   const terrainNote = document.createElement('div');
   terrainNote.className = 'vset-location';
-  terrainNote.textContent = '展示背景：實機空間・五個 demo 各自使用對應實機場地…';
+  terrainNote.textContent = VISUAL_COPY.preview;
   mount.insertBefore(terrainNote, preview);
-
-  // 拉桿逐項由 VISUAL_KNOBS 推導(標籤/範圍/說明都在那一份表)—— 這裡 MUST NOT 再寫一次
-  // 項目清單:兩份清單遲早分家,而症狀只是「某一根拉桿不見了」,不會報錯。
-  const vals = [];
-  for (const [k, d] of Object.entries(VISUAL_KNOBS)) {
-    const row = document.createElement('div');
-    row.className = 'set-row';
-    row.dataset.vk = k;
-    row.innerHTML = `<span class="set-label">${d.label}</span>`;
-    attachTip(row.querySelector('.set-label'), d.hint);   // 逐項說明:滑鼠移上 / 觸控長按(tip.js 委派)
-    if (d.choices) {
-      // 一組互斥選項 ⇒ 分段按鈕(`.seg` > `.segb`,§2.1「按鍵風格統一」);
-      // 控件型別由 `choices` 這一欄推導,MUST NOT 在這裡寫「哪幾項是選單」的名單。
-      const seg = document.createElement('div');
-      seg.className = 'seg seg-sm';
-      for (const c of d.choices) {
-        const b = document.createElement('button');
-        b.className = 'segb' + (visualPref(k) === c ? ' on' : '');
-        b.type = 'button';
-        b.dataset.v = c;
-        b.textContent = d.choiceLabels?.[c] ?? c;
-        b.addEventListener('click', () => {
-          setVisualPref(k, c);
-          seg.querySelectorAll('.segb').forEach((x) => x.classList.toggle('on', x.dataset.v === visualPref(k)));
-          syncReset();
-          app.audio?.ui('click');
-        });
-        seg.appendChild(b);
-      }
-      row.appendChild(seg);
-      vals.push({ k, sync: () => seg.querySelectorAll('.segb').forEach((x) => x.classList.toggle('on', x.dataset.v === visualPref(k))) });
-    } else {
-      const pct = (v) => `${Math.round(v * 100)}%`;
-      row.insertAdjacentHTML('beforeend',
-        `<input class="set-slider" type="range" min="${d.min}" max="${d.max}" step="${d.step}" aria-label="${d.label}">`
-        + `<span class="set-val">${pct(visualPref(k))}</span>`);
-      const slider = row.querySelector('.set-slider');
-      const val = row.querySelector('.set-val');
-      slider.value = String(visualPref(k));
-      slider.addEventListener('input', (e) => {
-        // 寫進單一真相 → visualPrefs 廣播 → toon.js / postfx.js 的共享 uniform 與樣品同一幀跟上。
-        // 回寫用**夾制後**的值(拉桿的 step 與 min/max 在某些瀏覽器上不保證),避免顯示與實際不符。
-        val.textContent = pct(setVisualPref(k, Number(e.target.value)));
-        syncReset();
-      });
-      vals.push({ k, sync: () => { slider.value = String(visualPref(k)); val.textContent = pct(visualPref(k)); } });
-    }
-    mount.appendChild(row);
-  }
 
   const btnRow = document.createElement('div');
   btnRow.className = 'row';
@@ -4089,17 +4080,23 @@ function renderVisualSettings(mount) {
   const reset = document.createElement('button');
   reset.className = 'btn small';
   reset.type = 'button';
-  reset.textContent = '↺ 還原預設';
+  reset.textContent = VISUAL_COPY.reset;
   btnRow.appendChild(reset);
   mount.appendChild(btnRow);
-  const syncReset = () => { reset.disabled = visualPrefsDefault(); };
+  const syncSelection = () => {
+    for (const card of cards) {
+      const selected = card.dataset.preset === visualPreset().id;
+      card.classList.toggle('on', selected);
+      card.setAttribute('aria-pressed', String(selected));
+    }
+    reset.disabled = visualPrefsDefault();
+  };
   reset.addEventListener('click', () => {
     resetVisualPrefs();
-    for (const v of vals) v.sync();
-    syncReset();
     app.audio?.ui('click');
   });
-  syncReset();
+  syncSelection();
+  _offVisualSettings = onVisualChange(syncSelection);
 
   // 樣品最後建:上面若有任何一行拋出,至少不會留下一顆沒人收得掉的 WebGL context
   try {
@@ -4114,23 +4111,23 @@ function renderVisualSettings(mount) {
     }
     const sample = new MatSample(preview, { terrains: initialTerrains, env: visualPreviewEnv() });
     _matSample = sample;
-    const updateTerrainNote = (idx, terrain = sample.terrainSources[idx], site = GAME_SHOWCASE_SITES[idx]) => {
-      const isLive = terrain === app.terrain;
-      const mode = isLive ? '當前實機' : terrain?.usedFallback ? '備援空間' : terrain ? '實機圖資' : '載入中';
-      const slope = Math.round(sample.terrainSites[idx]?.slopeDeg || 0);
-      terrainNote.textContent = `展示背景：實機空間・${site?.area || '指定場地'}・${mode}・地點坡度 ${slope}°`;
+    const updateTerrainNote = (idx) => {
+      const site = GAME_SHOWCASE_SITES[idx];
+      terrainNote.textContent = `${VISUAL_COPY.preview} · ${site?.area || ''}`;
     };
-    sample.onSceneChange = (idx) => updateTerrainNote(idx);
+    sample.onSceneChange = updateTerrainNote;
     updateTerrainNote(0);
     ensureShowcaseTerrains().then((terrains) => {
       if (_matSample !== sample) return;
       sample.setTerrains(terrains);
-      updateTerrainNote(sample._sceneIdx, terrains[sample._sceneIdx]);
+      updateTerrainNote(sample._sceneIdx);
     });
   } catch { preview.remove(); terrainNote.remove(); }   // WebGL 建不起來就不給樣品(原則 6)
 }
 /** 設定頁收起時把樣品收掉(一顆 context 常駐在背景是實打實的成本) */
 function disposeVisualSettings() {
+  _offVisualSettings?.();
+  _offVisualSettings = null;
   _matSample?.dispose();
   _matSample = null;
 }
