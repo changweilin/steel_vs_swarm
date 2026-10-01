@@ -50,7 +50,9 @@ import {
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { seasonalEnvironment } from './seasonalEnvironment.js';
-import { buildGroundCover, makeFootprintIndex } from './ground.js';
+import { makeFootprintIndex } from './ground.js';
+import { buildHabitatScene } from './habitatRender.js';
+import { createHabitatSampler, planHabitatCanopy } from './habitat.js';
 import { buildLandField } from './landfield.js';
 import { prepareMapEvidence, installMapEvidence } from './mapEvidenceLoader.js';
 import { evidenceDryBiome } from './mapEvidence.js';
@@ -10399,6 +10401,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const season = cfg.env?.season || 'summer';
   const night = cfg.env?.time === 'night';
   const mix = cfg.venue?.mix || null;
+  const sceneSeed = ((Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) ^ (cfg.gen?.seed || 0)) >>> 0;
   terrain.venue = cfg.venue || null;
   terrain.mix = mix;
   terrain.forestEnv = cfg.env?.forest || cfg.venue?.forest || {};
@@ -10815,14 +10818,14 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const items = {};   // type -> [{x,y,z,s,ry}]
   const urbanPts = [];
   let placed = 0;
-  const put = (type, x, z, s) => {
+  const put = (type, x, z, s, plantRnd = rnd) => {
     let actualS = s * (VEG_SCALE[type] || 1);
     // 拒絕前仍固定抽完姿態亂數，地圖上的後續物件不因道路淘汰而漂移。
     const item = {
       x, y: terrain.heightAt(x, z), z, s: actualS,
-      ry: rnd() * Math.PI * 2,
-      tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,
-      dj: rnd(),
+      ry: plantRnd() * Math.PI * 2,
+      tx: (plantRnd() - 0.5) * 0.09, tz: (plantRnd() - 0.5) * 0.09,
+      dj: plantRnd(),
     };
     const environment = forestEnvironmentAt(terrain, x, z);
     if (!Number.isFinite(environment.slope)) return;
@@ -10869,6 +10872,11 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   // 零共享 rnd 消耗 ⇒ 插在這一行不會推移後面任何一株植被的佈局(§2.3)。
   terrain.season = season;
   const edgeSegs = buildEdgeWall({ group, terrain, blockers });
+  const habitatSampleAt = createHabitatSampler({ areas: osmData?.areas || [], evidenceAt: terrain.evidenceAt,
+    envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
+    zoneAt: (x, z, area, observation) => area?.zone || evidenceDryBiome(observation)
+      || classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null),
+  });
   // 舊緩衝區的林塊／岩塊／聚落／島礁與遠景假山已收入 edgewall 權威障礙環。
   // 不再於圖界外發射無碰撞布景，緩衝裙只保留容納邊界障礙的深度。
   const greenSites = [], bareSites = [];
@@ -10881,7 +10889,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     const b = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
     if (greenSites.length < 20) {
       const dryForest = b === 'bare' && (['arid', 'mediterranean', 'alpine'].includes(input.climate) || input.moisture < .35);
-      if (b === 'green' || dryForest || tidalForest) greenSites.push([x, z]);
+      if ((b === 'green' || dryForest || tidalForest)
+        && (!terrain.evidenceAt?.(x, z)?.confidence || habitatSampleAt(x, z)?.key === 'woodland' || tidalForest)) greenSites.push([x, z]);
     }
     if (b === 'bare' && bareSites.length < 36) bareSites.push([x, z]);
   }
@@ -11186,65 +11195,17 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   // 主堡旗陣:純表現層、零共享 rnd ⇒ 排在這裡不推移後面的植被序列(§2.3)
   const baseFlags = placeBaseFlags({ group, terrain, blocked, basesW, nation });
 
-  const attempts = vegTarget * 3;
-  for (let a = 0; a < attempts && placed < vegTarget; a++) {
-    if ((a & 1023) === 0) await onProgress?.(0.05 + (a / attempts) * 0.30, '鋪設植被地貌…');
-    const x = rx(), z = rz();
-    // 塔堡圈的格子放行到 put() 再判(地被級平面植栽可留);走廊格照舊快拒,亂數序列不為走廊漂移
-    if (blocked.has(cellKey(x, z)) && !towerBase.has(cellKey(x, z))) continue;
-    const h = terrain.heightAt(x, z);
-    if (h < 0.4) {   // 水體:偶爾在水邊補蘆葦
-      if (rnd() < 0.06) put('reed', x, z, 0.8 + rnd() * 0.6);
-      continue;
-    }
-    // 內陸影像水域(高於海平面盤、靠衛星水色判定):classify 的 mix 55% 改寫可能把水點
-    // 洗成 green 而種樹進河面 —— 比照水體處理(偶發岸邊蘆葦)。沼澤(code 2)保留 wet 分支植被。
-    if (terrainEnvCode(terrain, x, z) === 1) {
-      if (rnd() < 0.06) put('reed', x, z, 0.8 + rnd() * 0.6);
-      continue;
-    }
-    const biome = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
-    if (biome === 'water') continue;
-    if (biome === 'urban') {
-      // 建物種子的信任階梯(2026-08-05 使用者回報「綠地/裸露地建築太多、不符真實圖資」):
-      // urbanPts 是「程序生成市區」備援的唯一種子 ⇒ 影像在手就只收**純影像**判為市區的點
-      // (`classifyImg` 單一縫、零亂數)—— 手寫 mix 的 55% 改寫是植被/地被的加權,
-      // MUST NOT 讓它憑空生出市區種子(綠地場地宣告一成 urban ⇒ 全圖撒滿假種子)。
-      // 影像也取不到(全離線)才退回 classify 的結果 = mix 當最後一層備援(原則 6 降級鏈)。
-      // 不動 classify 的呼叫 ⇒ 亂數消耗逐位元不變,植被佈局不漂移(§2.3)。
-      const rgb = terrain.sampleColor?.(x, z);
-      if ((!rgb || classifyImg(rgb) === 'urban') && urbanPts.length < 500) urbanPts.push([x, z]);
-      continue;
-    }
-    if (biome === 'green') {
-      const relH = (h - terrain.minH) / Math.max(1, terrain.maxH - terrain.minH);
-      const r = rnd();
-      if (r < 0.25) {
-        // 竹林:大小不一的群落
-        const n = 6 + Math.floor(rnd() * 12);
-        const cr = 5 + rnd() * 14;
-        for (let k = 0; k < n && placed < vegTarget; k++) {
-          const bx = x + (rnd() - 0.5) * cr * 2, bz = z + (rnd() - 0.5) * cr * 2;
-          if ((blocked.has(cellKey(bx, bz)) && !towerBase.has(cellKey(bx, bz))) || terrain.heightAt(bx, bz) < 0.4) continue;
-          put('bamboo', bx, bz, 0.8 + rnd() * 0.7);
-        }
-      } else if (relH > 0.55 || r < 0.55) {
-        // 針葉林四款輪廓輪替(塔錐/簇疊/紡錘/層盤),同林異形不再滿山三角錐
-        put(['conifer', 'conifer', 'conifer2', 'conifer3', 'conifer4'][(rnd() * 5) | 0], x, z, 0.75 + rnd() * 0.9);
-      } else {
-        put(rnd() < 0.3 ? 'birch' : 'broadleaf', x, z, 0.75 + rnd() * 0.9);
-      }
-    } else if (biome === 'bare') {
-      const r = rnd();
-      if (r < 0.38) put('silvergrass', x, z, 0.8 + rnd() * 1.0);
-      else if (r < 0.58) put('arrowbamboo', x, z, 0.8 + rnd() * 0.8);
-      else if (r < 0.78) put('shrub', x, z, 0.7 + rnd() * 0.9);
-      else if (r < 0.88) put('deadtree', x, z, 0.7 + rnd() * 0.7);
-      else put('succulent', x, z, 0.7 + rnd() * 0.8);
-    } else if (biome === 'wet') {
-      if (rnd() < 0.45) put('mangrove', x, z, 0.8 + rnd() * 0.7);
-      else put('reed', x, z, 0.8 + rnd() * 0.8);
-    }
+  await onProgress?.(0.08, '鋪設植被地貌…');
+  const canopy = planHabitatCanopy({
+    bounds: { minX: terrain.minX + inb, maxX: terrain.maxX - inb, minZ: terrain.minZ + inb, maxZ: terrain.maxZ - inb },
+    seed: sceneSeed, maxPlants: vegTarget, sampleAt: habitatSampleAt,
+  });
+  urbanPts.push(...canopy.urban.filter(([x, z]) => cfg.synthetic
+    || evidenceDryBiome(terrain.evidenceAt?.(x, z)) === 'urban'));
+  for (let i = 0; i < canopy.rows.length; i++) {
+    if ((i & 255) === 0) await onProgress?.(0.08 + i / Math.max(1, canopy.rows.length) * .27, '鋪設植被地貌…');
+    const row = canopy.rows[i];
+    put(row.shrub ? 'shrub' : 'broadleaf', row.x, row.z, row.scale, mulberry32(row.seed));
   }
   // ---- 圖資建物(OSM 已於開頭抓取;植被網格延後到建物定案之後才建:
   // 先拔掉落在建物腳印內的植被(見下),樹才不會穿屋頂)----
@@ -12443,7 +12404,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const roadClearAt = (x, z, foot = { x, z, r: 0 }) => roadFootIndex.near(foot);
 
   // ---- 線工切面地貌場:地形本身著色，底毯不再另鋪一層皮 ----
-  const gseed = (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0;
+  const gseed = sceneSeed;
   const landField = await buildLandField({
     terrain, center, roads: roadInput, rails: osmData?.rails || [], waters: osmData?.waters || [],
     areas: osmData?.areas || [], covers: osmData?.covers || [], boundaries: osmData?.boundaries || [], gradeCorridors,
@@ -12452,13 +12413,11 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z), projectAt: llToWorld,
     seed: gseed, onProgress,
   });
-  setLandField(landField.data, landField.nx, landField.nz, landField.bounds);
+  setLandField(landField.data, landField.nx, landField.nz, landField.bounds, landField.appearance);
 
-  // ---- 地被特徵層:田地/球場/公園等有真實邊界的離散地塊(ground.js)----
-  // 專用 rnd(同心種子異或常數):不動用共享 rnd 序列,建物/植被佈局不受影響
+  // OSM facilities retain their mapped owners; unobserved fields never manufacture random courts or parking lots.
   await onProgress?.(0.88, '鋪設地表覆蓋層…');
-  const grnd = mulberry32(gseed ^ 0x51AB);
-  const gcStart = group.children.length;   // 洞口打洞用:此後加入 group 的都是地被層(底毯拼圖 + 細節實例)
+  const gcStart = group.children.length;   // Portal carving consumes only the following surface-detail meshes.
   // 已存在的獨立平面場地 + 貼地植被：ground.js 會再與 blockers 合併成單一占用索引。
   const reservedFootprints = civics.map((c) => ({
     x: c.x, z: c.z, hw: c.w / 2, hd: c.d / 2, ry: c.ry,
@@ -12492,21 +12451,18 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     });
   }
 
-  const ground = buildGroundCover(group, terrain, {
+  const ground = buildHabitatScene(group, terrain, {
     isBlocked: (x, z) => blocked.has(cellKey(x, z)),
-    classifyAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), mix, grnd),
-    // 底毯與特徵層一律走純色彩分類(mix=null,跳過 55% 場地隨機改寫)→
-    // 拼圖類型與衛星圖資相符;classifyAt 僅作 classifyPureAt 缺席時的備援
-
-    classifyPureAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, grnd),
-    // 水/沼分類唯一縫(WYSIWYG):底毯/特徵層的水域・沼澤專屬拼圖跟著伺服器遮罩同一規則走
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
-    blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadRank: roadRankAt, roadClear: roadClearAt, roadPolys,
+    blockers, season, seed: gseed, roadClear: roadClearAt, inset: inb, low: lowPower(),
+    roadSegments: roadFeet.map(f => {
+      const dx = Math.cos(f.ry) * f.hw, dz = Math.sin(f.ry) * f.hw;
+      return { a: [f.x - dx, f.z - dz], b: [f.x + dx, f.z + dz], hw: f.hd };
+    }),
     reservedFootprints,
+    areas: osmData?.areas || [],
     surfaceField: landField,
     environment: { ...terrain.objectEnvironment, latitude: center.lat },
-    // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
-    // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
   });
   // 落點與建物/地被淘汰全部定案後才追加：只增加物理，不反向推移既有世界佈局。
   const trunkColliders = registerTreeTrunkColliders(items, blockers);
@@ -12670,6 +12626,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     baseFlags,
     ground: ground.patches,
     groundDetails: ground.details,
+    habitatScene: { recipe: ground.recipe, habitats: ground.habitats, models: ground.models },
     groundAligned: ground.aligned,   // 沿路對齊件數(拼圖 + 物件;整齊度 reg 稽核用)
     groundBuffer: ground.bufCells,   // 緩衝空間的底毯格數(2026-08-12;0 = 那一圈沒鋪成)
     petals: petalsBuilt,             // 落花 / 落葉粒子數(0 = 夏冬、沒有落葉樹、或 ?petal=0)

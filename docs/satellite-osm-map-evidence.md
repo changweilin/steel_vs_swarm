@@ -16,8 +16,8 @@ the existing loaded handshake still gates battle entry.
 
 Custom geographic maps use available RGB, elevation and OSM observations. Numeric
 WorldCover crops are bundled for preset venues; there is no runtime WorldCover
-downloader for arbitrary user-selected locations. Synthetic maps retain their
-existing generation recipe. Sentinel multispectral indices and a learned classifier
+downloader for arbitrary user-selected locations. Synthetic maps use their own
+scene seed and conservative cover fallback when observations are unavailable. Sentinel multispectral indices and a learned classifier
 are outside this implementation.
 
 WorldCover is a dated prior, not a current survey or a building detector. See the
@@ -97,15 +97,16 @@ terminate; unsupported workers use the same pure function synchronously.
 
 ## Generation boundary
 
-Evidence refines the land field's dry fallback classification and existing green/
-alpine presentation variants. OSM surface polygons, roads, slope gates and
-terrainEnvCode() retain precedence. Water and swamp authority do not come from
-WorldCover or RGB evidence. Existing forests, building settlement, footprints,
-collision envelopes and the shared scatter RNG keep their existing consumers.
+The habitat recipe consumes the room's validated observations for dry surface
+materials, canopy structure and low vegetation. Exact OSM polygons, roads, slope
+gates and terrainEnvCode() retain precedence. Water and swamp authority do not
+come from WorldCover or RGB evidence. Buildings retain exact OSM footprints;
+botanical models and trunk collision keep the existing climate-aware forest seam.
+See [habitat generation](habitat-generation.md) for the deployed recipe.
 
-Reconstruction of terrain, building height, lithology, tree species or authoritative
-vegetation from satellite observations needs a separate shared-input generation
-recipe and labeled validation. No local accuracy estimate is claimed here.
+The generated scene is a plausible interpretation of cover structure, not a
+surveyed reconstruction of terrain, building height, lithology or tree species.
+No local accuracy estimate is claimed here.
 
 ## Verification
 

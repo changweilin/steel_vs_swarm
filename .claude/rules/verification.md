@@ -4,6 +4,7 @@
 
 | Change area | Guards | Invariant |
 |---|---|---|
+| Habitat canopy, surface materials and street detail | `audit_habitat`, `shot_habitat`, `audit_map_evidence`, `audit_siteplan`, `audit_forest`, `audit_gpu_lifecycle`, `audit_client_syntax` | OSM holes/priorities, deterministic replay, triangle draping, conservative missing-data fallback, bounded instance batches and GPU teardown remain valid. |
 | Weather accumulation, lightning scars and fire extinction | `audit_weather_surface`, `shot_weather_surface`, `audit_weather_dynamics`, `audit_weather_visuals`, `audit_unit_damage`, `audit_gpu_lifecycle` | History survives rejoin; recovery clears unit scorch; precipitation and one game day permanently extinguish lightning fires; deposited geometry stays outside collision. |
 | Atmospheric weather intensity and cloud families | `audit_weather_visuals`, `shot_weather_fx`, `audit_cel_pipeline`, `audit_client_syntax` | Intensity changes density, motion and layering without changing authority; seeded replay, simultaneous lightning, low-power budgets and repeated GPU teardown stay valid. |
 | Fire-rate compression and burst presentation | `audit_fire_rate` | Rate changes preserve expected output ordering. |

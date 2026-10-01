@@ -57,3 +57,6 @@ node_modules/.bin/
 
 # Reproducible weather effect captures and cached browser runtime.
 out/weather_fx_review/
+
+# Reproducible habitat captures; numeric source fixtures remain versioned separately.
+out/habitat_review/
