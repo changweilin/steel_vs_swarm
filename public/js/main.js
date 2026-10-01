@@ -233,9 +233,23 @@ function show(screen) {
   // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
   if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
   // 致命錯誤計時:進新階段就重計,離開 loading/game 收窗(關閉鈕已收,這裡防殘留)
-  if (screen === 'loading') { hideFatal(); fatal.loadT0 = Date.now(); fatal.lastSnap = Date.now(); fatal.lastNetUp = Date.now(); }
-  else if (screen === 'game') { hideFatal(); fatal.lastSnap = Date.now(); fatal.lastNetUp = Date.now(); }
-  else if (screen === 'connect' || screen === 'room') { hideFatal(); }
+  if (screen === 'loading') {
+    hideFatal();
+    fatal.loadT0 = Date.now();
+    fatal.loadProgressAt = Date.now();
+    fatal.localLoaded = false;
+    fatal.lastSnap = Date.now();
+    fatal.lastNetUp = Date.now();
+    fatal.disconnectedAt = 0;
+  } else if (screen === 'game') {
+    hideFatal();
+    fatal.lastSnap = Date.now();
+    fatal.lastNetUp = Date.now();
+    fatal.disconnectedAt = 0;
+  } else if (LOBBY_SCREENS.has(screen) || screen === 'room') {
+    hideFatal();
+    fatal.disconnectedAt = 0;
+  }
 }
 
 function toast(msg, ms = 3200) {
@@ -251,7 +265,16 @@ function toast(msg, ms = 3200) {
 // 觸發:地形建構雙敗、戰鬥模組載入失敗、單機模擬核心載入失敗、
 //      載入逾時、對戰中快照停滯、連線中斷逾時。逾時閾值只住這一份。
 const FATAL = { LOAD_MS: 90000, SNAP_MS: 20000, NET_MS: 30000 };
-const fatal = { shown: false, loadT0: 0, lastSnap: 0, lastNetUp: Date.now(), lastFrame: performance.now() };
+const fatal = {
+  shown: false,
+  loadT0: 0,
+  loadProgressAt: 0,
+  localLoaded: false,
+  lastSnap: 0,
+  lastNetUp: Date.now(),
+  lastFrame: performance.now(),
+  disconnectedAt: 0,
+};
 // 頁面級幀心跳(與戰場迴圈獨立):戰場凍結但快照照收時,快照看門狗看不出來,這裡補一層。
 // 背景分頁 rAF 本來就停擺,看門狗屆時跳過此項(見 fatalWatchdog)。
 const fatalFrame = () => { fatal.lastFrame = performance.now(); requestAnimationFrame(fatalFrame); };
@@ -278,7 +301,7 @@ function fatalClose() {
   sessionStorage.removeItem('svs_token');
   if (app.battle) { try { app.battle.dispose(); } catch { /* 忽略 */ } app.battle = null; }
   app.dlg?.dispose(); app.dlg = null;
-  app.terrain = null; app.fieldMsg = null;
+  app.terrain = null; app.pre = null; app.fieldMsg = null;
   app.story = null; app.super = null; app.quickRestart = null;
   for (const id of ['overOverlay', 'pauseOverlay', 'shopOverlay', 'deadOverlay']) {
     const el = $(id);
@@ -308,7 +331,8 @@ async function fatalRestart() {
   try { resetOsmMisses(); } catch { /* 忽略 */ }   // OSM 失敗記憶清除,重啟後重查(否則同查詢直接沿用失敗)
   try { await geoClear(); } catch { /* 靜默降級(見 geocache.js) */ }   // 高程/影像/圖資快取清空
   connectNet();   // 傳輸層重建(單機模擬核心 / 斷線 socket 全換新;單機開房訊息會排隊等核心就緒)
-  fatal.loadT0 = 0; fatal.lastSnap = Date.now(); fatal.lastNetUp = Date.now();
+  fatal.loadT0 = 0; fatal.loadProgressAt = 0; fatal.localLoaded = false;
+  fatal.lastSnap = Date.now(); fatal.lastNetUp = Date.now(); fatal.disconnectedAt = 0;
   const session = loadPrefs().lastSession;
   if (session?.battleConfig) quickRestartGame();
   else { show('connect'); refreshRooms(); }
@@ -318,20 +342,43 @@ function fatalWatchdog() {
   if (document.hidden) return;   // 背景分頁不彈窗:時鐘在回可見時重定(見 visibilitychange)
   if (fatal.shown || !fatalArmed()) return;
   const now = Date.now();
-  if (app.phaseShown === 'loading' && fatal.loadT0 && now - fatal.loadT0 > FATAL.LOAD_MS) {
-    showFatal(`載入超過 ${Math.round(FATAL.LOAD_MS / 1000)} 秒仍無法進入戰場,可能是網路阻塞或圖資服務異常。`);
-    return;
+
+  // 1. 斷線持續逾時(以斷線起算持續時間,不以最後封包時間混淆):避免建圖期間無封包造成短暫斷線誤判為斷線過久
+  if (!app.net || app.net.connected) {
+    fatal.disconnectedAt = 0;
+  } else {
+    if (!fatal.disconnectedAt) fatal.disconnectedAt = now;
+    if (now - fatal.disconnectedAt > FATAL.NET_MS) {
+      showFatal('與伺服器斷線超過一段時間仍無法重連,請檢查網路。');
+      return;
+    }
   }
-  if (app.net && !app.net.connected && now - fatal.lastNetUp > FATAL.NET_MS) {
-    showFatal('與伺服器斷線超過一段時間仍無法重連,請檢查網路。');
-    return;
+
+  // 2. 載入逾時判斷:若本地已載入完畢只是在等待其他玩家,不誤判為本地圖資載入失敗
+  if (app.phaseShown === 'loading') {
+    if (!fatal.localLoaded) {
+      const stuck = fatal.loadProgressAt && (now - fatal.loadProgressAt > FATAL.LOAD_MS);
+      const totalOver = fatal.loadT0 && (now - fatal.loadT0 > FATAL.LOAD_MS * 2);
+      if (stuck || totalOver) {
+        showFatal(`載入超過 ${Math.round(FATAL.LOAD_MS / 1000)} 秒仍無法進入戰場,可能是網路阻塞或圖資服務異常。`);
+        return;
+      }
+    } else {
+      if (fatal.loadT0 && now - fatal.loadT0 > FATAL.LOAD_MS * 2) {
+        showFatal('等待其他指揮官進場逾時,請檢查網路或回大廳重新開始。');
+        return;
+      }
+    }
   }
-  if (app.phaseShown === 'game' && fatal.lastSnap && now - fatal.lastSnap > FATAL.SNAP_MS) {
+
+  // 3. 對戰進度停滯:僅在戰場實例就緒且已收到過快照後判定
+  if (app.phaseShown === 'game' && app.battle && fatal.lastSnap && now - fatal.lastSnap > FATAL.SNAP_MS) {
     showFatal(`超過 ${Math.round(FATAL.SNAP_MS / 1000)} 秒沒有收到對戰進度,遊戲已停滯。`);
     return;
   }
-  // 頁面凍結(前景分頁 rAF 長時間不跳):快照照收也玩不了,報畫面停滯
-  if (app.phaseShown === 'game' && !document.hidden && performance.now() - fatal.lastFrame > FATAL.SNAP_MS) {
+
+  // 4. 頁面凍結(前景分頁 rAF 長時間不跳):快照照收也玩不了,報畫面停滯
+  if (app.phaseShown === 'game' && app.battle && !document.hidden && performance.now() - fatal.lastFrame > FATAL.SNAP_MS) {
     showFatal('遊戲畫面長時間沒有更新,可能是瀏覽器或顯示卡異常。');
   }
 }
@@ -344,8 +391,10 @@ document.addEventListener('visibilitychange', () => {
   const dt = fatal.hiddenAt ? Date.now() - fatal.hiddenAt : 0;
   fatal.hiddenAt = 0;
   if (fatal.loadT0) fatal.loadT0 += dt;
+  if (fatal.loadProgressAt) fatal.loadProgressAt += dt;
   fatal.lastSnap = Date.now();
   fatal.lastNetUp = Date.now();
+  fatal.disconnectedAt = 0;
 });
 
 // ================= 連線機制(雲端 / 區網 Tailscale / 單機)=================
@@ -1130,13 +1179,8 @@ async function startStoryChapter(i) {
     const evidence = await prepareMapCreation(cfg, label => { $('storyDeploy').textContent = label; return buildYield(); });
     if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
   } catch (error) {
-    console.error('Story map preparation failed:', error);
-    if (app.story !== deployment) return;
-    app.story = null;
-    $('storyDeploy').style.display = 'none';
-    $('storyBrief').style.display = '';
-    toast(MAP_EVIDENCE_COPY.failed);
-    return;
+    console.warn('Story map preparation degraded:', error);
+    toast(MAP_EVIDENCE_COPY.partial);
   }
   if (app.story !== deployment) return;
   app.net?.send({
@@ -1296,10 +1340,8 @@ $('createRoomBtn')?.addEventListener('click', async () => {
     const evidence = await prepareMapCreation(cfg, label => { $('openRoomStatus').textContent = label; return buildYield(); });
     if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
   } catch (error) {
-    console.error('Map preparation failed:', error);
-    $('openRoomStatus').textContent = MAP_EVIDENCE_COPY.failed;
-    $('createRoomBtn').disabled = false;
-    return;
+    console.warn('Map preparation degraded:', error);
+    toast(MAP_EVIDENCE_COPY.partial);
   }
   if (app.phaseShown !== 'openroom' || app.favCfg !== cfg) return;
 
@@ -2394,7 +2436,16 @@ async function mapEvidenceGate(cfg, terrain, areas, onWait, roomKey) {
   const state = mapEvidenceState(cfg);
   if (state.pack) return state.pack;
   if (app.isHost) {
-    const pack = await prepareMapEvidence(cfg, terrain, areas);
+    let pack = null;
+    try {
+      pack = await prepareMapEvidence(cfg, terrain, areas);
+    } catch (err) {
+      console.warn('Host map evidence preparation failed:', err);
+    }
+    if (!pack) {
+      clearTimeout(state.timer); state.done?.(null);
+      return null;
+    }
     const message = encodeEvidenceRelay(pack);
     if (_mapEvidence !== state || roomKey !== mapEvidenceRoomKey()) return null;
     // The host consumes the exact sanitized bytes that all room members receive.
@@ -2982,6 +3033,7 @@ async function enterLoading(cfg) {
     `主堡距離 ${(cfg.distM / 1000).toFixed(2)} km ・ 戰場 ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ ${cfg.lanes.length} 條兵線(重合 ≤ ${(cfg.maxOverlap * 100).toFixed(0)}%)`;
 
   const setP = (f, label) => {
+    fatal.loadProgressAt = Date.now();
     $('loadBar').style.width = `${Math.round(f * 100)}%`;
     $('loadLabel').textContent = label;
   };
@@ -3049,6 +3101,7 @@ async function enterLoading(cfg) {
       app.net?.send({ t: 'world', occ, cor, roofs, wet: bakeWetGrid(app.terrain), slabs, hgt: bakeHeightGrid(app.terrain) });
     }
     app.net?.send({ t: 'loaded' });
+    fatal.localLoaded = true;
     if ((app.lobby?.phase === 'game' || app.lobby?.phase === 'over') && !app.battle) {
       enterGame();
     }
@@ -5197,11 +5250,8 @@ async function quickRestartGame() {
     const evidence = await prepareMapCreation(session.battleConfig, () => buildYield());
     if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
   } catch (error) {
-    console.error('Restart map preparation failed:', error);
-    if (app.quickRestart !== restart) return;
-    app.quickRestart = null;
-    toast(MAP_EVIDENCE_COPY.failed);
-    return;
+    console.warn('Restart map preparation degraded:', error);
+    toast(MAP_EVIDENCE_COPY.partial);
   }
   if (app.quickRestart !== restart) return;
   app.net?.send({
