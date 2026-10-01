@@ -1,3 +1,4 @@
+import { evidenceLandVariant } from './mapEvidence.js';
 // ============ 線工切面 → 七分區地貌場(執行期唯一組裝點)============
 // R=分區索引、G=有幾何理由的外觀段、B=決定性連續場、A=道路/建成遮罩。
 // 這裡只產純資料；DataTexture 與 shader 生命週期由 toon.js 管。
@@ -200,6 +201,7 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
     else if (zi === 4) variant = polyZone[k] === 4 ? 3 : n > 0.82 ? 2 : n > 0.62 ? 1 : 0;
     else if (zi === 5) variant = h > hMin + (hMax - hMin) * 0.84 ? 2 : s > 0.28 ? 1 : 0;
     else if (zi === 6) variant = s > 1.25 ? 1 : 0;
+    variant = evidenceLandVariant(terrain.evidenceAt?.(x, z), LAND_ZONES[zi]) ?? variant;
     const o = k * 4;
     data[o] = zi; data[o + 1] = variant; data[o + 2] = Math.round(n * 255);
     data[o + 3] = roadMask[k] || polyZone[k] === 4 ? 255 : 0;

@@ -12,8 +12,8 @@
 //   - Format revisions bump the `v` parameter in geoKey to invalidate stale entries without manual migrations.
 const DB_NAME = 'svs_geo';
 const STORE = 'kv';
-// Retained entries per category (LRU): satellite images reach ~16MB each; elevation/OSM are KB-MB scale
-const KEEP = { elev: 12, img: 4, osmF: 8, osmR: 8 };
+// Retained entries per category: satellite images reach ~16MB each; elevation/OSM are KB-MB scale
+const KEEP = { elev: 12, img: 4, osmF: 8, osmR: 8, evidence: 24 };
 
 let _dbP = null;
 function db() {
@@ -51,33 +51,35 @@ export async function geoGet(key) {
 }
 
 /**
- * Fire-and-forget write with per-kind LRU eviction.
+ * Awaitable write with per-kind insertion-order eviction; existing callers may omit awaiting it.
  * Eviction uses a lightweight metadata array (`meta|kind` storing `{key, t}`)
  * to avoid reading multi-megabyte payloads during pruning. Failures degrade silently.
  */
 export function geoPut(key, data) {
-  db().then((d) => {
-    if (!d) return;
-    try {
-      const kind = key.split('|')[0];
-      const tx = d.transaction(STORE, 'readwrite');
-      tx.onerror = () => {};
-      tx.onabort = () => {};   // Quota exceeded: abort silently; subsequent runs fall back to network
-      const st = tx.objectStore(STORE);
-      const mkey = 'meta|' + kind;
-      const mreq = st.get(mkey);
-      mreq.onsuccess = () => {
-        // Metadata list is ordered by insertion time; evict oldest entries from head
-        const list = (Array.isArray(mreq.result?.data) ? mreq.result.data : []).filter((e) => e && e.key !== key);
-        list.push({ key, t: Date.now() });
-        const keep = KEEP[kind] ?? 8;
-        while (list.length > keep) st.delete(list.shift().key);
-        st.put({ key, kind, t: Date.now(), data });
-        st.put({ key: mkey, kind: 'meta', t: Date.now(), data: list });
-      };
-      mreq.onerror = () => {};
-    } catch { /* Silent degradation */ }
-  }).catch(() => {});
+  return db().then((d) => {
+    if (!d) return false;
+    return new Promise((resolve) => {
+      try {
+        const kind = key.split('|')[0];
+        const tx = d.transaction(STORE, 'readwrite');
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = tx.onabort = () => resolve(false); // Quota failures still degrade silently.
+        const st = tx.objectStore(STORE);
+        const mkey = 'meta|' + kind;
+        const mreq = st.get(mkey);
+        mreq.onsuccess = () => {
+          // Metadata list is ordered by insertion time; evict oldest entries from head
+          const list = (Array.isArray(mreq.result?.data) ? mreq.result.data : []).filter((e) => e && e.key !== key);
+          list.push({ key, t: Date.now() });
+          const keep = KEEP[kind] ?? 8;
+          while (list.length > keep) st.delete(list.shift().key);
+          st.put({ key, kind, t: Date.now(), data });
+          st.put({ key: mkey, kind: 'meta', t: Date.now(), data: list });
+        };
+        mreq.onerror = () => {};
+      } catch { resolve(false); }
+    });
+  }).catch(() => false);
 }
 
 /** Clear entire database (invoked manually after code changes; failures degrade silently). */

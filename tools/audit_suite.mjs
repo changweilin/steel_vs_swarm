@@ -23,6 +23,7 @@ const AUDIT_SCRIPTS = [
 
   // ── 核心地圖規則、兵線拓撲與通行阻擋 ──
   'tools/audit_map_rules.mjs',
+  'tools/audit_map_evidence.mjs',
   'tools/audit_lane_sep.mjs',
   'tools/audit_lane_navigation.mjs',
   'tools/audit_mother_lanes.mjs',

@@ -83,6 +83,7 @@
 | Menu layout and button text | `audit_ui_layout` | Button and stacking rules stay stable. |
 | Game modes and solo packaging | `audit_net_modes` | Mode behavior stays consistent across transports. |
 | Road network relay | `audit_osm_relay` | Payload stays sanitized, monotone, and ordered. |
+| Satellite/OSM observations and creation waits | `audit_map_evidence`, `shot_map_evidence`, `audit_net_modes`, `audit_osm_relay`, `audit_terrain_ray`, `audit_siteplan`, `audit_gpu_lifecycle` | Every venue frame has numeric provenance; raw samples, complete-only caching and immutable room replay precede presentation without consuming shared layout randomness. |
 | Multi-path LAN | `audit_net_modes` | All paths stay playable together. |
 | Side swap on room creation | `audit_net_modes` | Single implementation with exactly two call sites. |
 | Developer tool gating | `audit_net_modes` | No hard-coded ports and kind-based routing holds. |

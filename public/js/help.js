@@ -1,4 +1,11 @@
 // ============ Game Help (sole seam for client UI copy) ============
+export const MAP_EVIDENCE_COPY = Object.freeze({
+  preparing: '準備地圖來源與預先分析…',
+  analyzing: '分析衛星分類、色彩紋理與 OSM 面域…',
+  waiting: '等待房主的地貌分析…',
+  partial: '部分地圖來源暫缺，已使用可用資料；完整來源恢復後會重新分析。',
+  failed: '地圖分析失敗，請重試建立。',
+});
 // Pure presentation and navigation copy -- server simulation MUST NOT import this (per lore.js).
 // Three datasets:
 //   CONTROLS_BY_KIND -- Per-mech control hints (shared between pause menu pauseHelp and Help tab;
@@ -242,6 +249,8 @@ export const HELP = [
   },
   {
     id: 'map', label: '地圖', items: [
+      { h: '地圖來源與預先分析', p: '建立地圖時會先分析衛星色彩、紋理、高程與 OSM 面域，再暫存地貌資料。預設戰場另附 ESA WorldCover 2021 v200 的 10 公尺土地覆蓋分類；這是歷史觀測，地質與樹種沒有可靠來源時保留未知。外部來源暫缺時使用可用資料繼續部署。' },
+      { h: 'WorldCover 資料署名', p: '© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium。分類切片依 CC BY 4.0 提供；遊戲將原始數值分類裁切、融合為地表外觀。[資料來源](https://esa-worldcover.org/en/data-access) ・ [授權](https://creativecommons.org/licenses/by/4.0/)' },
       { h: '兵線與砲塔', p: '兵線沿真實道路生成、雙方持續推進。前線佈署砲塔壓制,先拆塔才能安全推進。' },
       { h: '主堡', p: '摧毀敵方主堡即獲勝;主堡火力強大,務必先清除沿線砲塔與敵軍。' },
       { h: '戰爭迷霧', p: '未進入我方視野的敵方單位不顯示(小地圖同步)。善用偵察與地形取得視野。' },

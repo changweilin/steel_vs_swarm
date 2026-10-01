@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ, xzToLL } from '../public/js/data.js';
 import { procReliefAt, sanitizeProcRelief } from '../public/js/mapgen.js';
 import { PED_PLAN, isPedestrianBridge, isPedestrianWay } from '../public/js/pedestrian.js';
+export { captureWorldCover } from './worldcover_source.mjs';
 
 export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 export const CACHE = join(ROOT, 'tools', '.scen_cache');
