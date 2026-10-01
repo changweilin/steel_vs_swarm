@@ -787,7 +787,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     const keep = { sp: rb.sp, hp: rb.hp, at: rb.lastHitAt };
     const hitBy = (wd) => {
       rb.sp = rb.maxSp; rb.hp = rb.maxHp; rb.lastHitAt = -999;
-      sim._damage(rb, 200, null, 0, 0, wd);
+      sim._damage(rb, 100, null, 0, 0, wd);
       return { sp: rb.maxSp - rb.sp, hp: rb.maxHp - rb.hp };
     };
     const dN = hitBy(null), dA = hitBy({ vsSp: 1.7, vsHp: 0.7 }), dP = hitBy({ spPierce: 0.5, vsHp: 0.9 });

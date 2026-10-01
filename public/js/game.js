@@ -2468,9 +2468,9 @@ export class BattleClient {
     return this._moveAxis().mag > 0.02;
   }
 
-  /** 第三人稱的機體朝向:移動時面向移動方向,瞄準/開火時面向相機視線。 */
+  /** 第三人稱的機體朝向:移動時面向移動方向,瞄準/開火/防守時面向相機視線。 */
   _stepThirdPersonBody(dt, move) {
-    if (this.viewMode !== 'tps') {
+    if (this.viewMode !== 'tps' || this.defending) {
       this.bodyYaw = this.yaw;
       return;
     }
@@ -3694,6 +3694,7 @@ export class BattleClient {
       if (HERO_KINDS.has(e.k)) {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
+        ent.rx = e.rx ?? 0;
         ent.si = e.si || 0;
         ent.act = !!e.act;   // 主視野機(三機小隊只有一架):觀戰玩家視角的跟隨名冊只收它
         // 受擊二分:舉盾且護盾水位下降 = 打在盾上 → 小火光 + 護盾劇烈發光(舊峰值 ×1.6,封頂 2.5);
@@ -8262,8 +8263,11 @@ export class BattleClient {
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
     if (now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
+    const defRateMul = (this.defending && (this.sp || 0) > 0) ? 0.5 : 1;
+    const effRate = def.rate * defRateMul;
+    if (defRateMul < 1 && now - (this.lastFireAt[id] || 0) < 1 / effRate) return;
     const sandMul = this.env?.getWeatherDynamics?.()?.sandRateMul ?? 1;
-    if (sandMul < 1 && now - (this.lastFireAt[id] || 0) < 1 / (def.rate * sandMul)) return;
+    if (sandMul < 1 && now - (this.lastFireAt[id] || 0) < 1 / (effRate * sandMul)) return;
     this._fallbackFromEmptyHeavy(id, st);
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
@@ -8286,7 +8290,6 @@ export class BattleClient {
         return;
       }
       if (def.type !== 'rail') {   // 非磁軌的高後座重武器:停穩計時到滿才擊發
-        if (this.defending) this._toggleDefense(false);
         if (!this._steadyAt) { this._steadyAt = now; this._setRailCharge(true); this.hud.feed?.(`🎯【${def.name}】穩定中…`); }
         const sp = (now - this._steadyAt) / prof.steady;
         this.flash.visible = true; this._flashTtl = 0.06;
@@ -8298,7 +8301,6 @@ export class BattleClient {
 
     // 磁軌炮:按住開火鍵蓄力 charge 秒,蓄滿才擊發;提前放開 = 取消(不耗彈,歸零見 _updateSelf)
     if (def.type === 'rail' && def.charge) {
-      if (this.defending) this._toggleDefense(false);
       if (!this._railAt) { this._railAt = now; this.hud.feed?.(`⚡【${def.name}】蓄力中…`); this._setRailCharge(true); }
       const p = (now - this._railAt) / def.charge;
       this.flash.visible = true;           // 蓄力視覺:槍口電光隨進度增亮
@@ -8309,7 +8311,6 @@ export class BattleClient {
       this.flash.scale.setScalar(1);
       this._setRailCharge(false);
     }
-    if (this.defending) this._toggleDefense(false);
     this.lastFireAt[id] = now;
     this.audio?.fire(def, id, this.side);   // 自機開火音(真實 def → 精確音色;閘門全過才播)
     st.ammo--;
@@ -9000,7 +9001,6 @@ export class BattleClient {
       x = point.x; z = point.z;
     }
     this.net.send({ t: 'cast', slot, x: Math.round(x * 10) / 10, z: Math.round(-z * 10) / 10 });
-    if (slot === 'atk' && this.defending) this._toggleDefense(false);
     if (A.shieldExpand) {
       this.shieldExpandUntil = now + (A.dur || 8);
       this._updateShieldVisibility();
@@ -9063,16 +9063,10 @@ export class BattleClient {
     }
   }
 
-  /** 能否進入防守姿態:非死亡/非商店、磁力>0、非攻擊動作中(開火鍵未按、無招式前搖、無磁軌/停穩蓄力、武器後搖已結束) */
-  _canEnterDefense(now = performance.now() / 1000) {
+  /** 能否進入防守姿態:非死亡/非商店、磁力>0 */
+  _canEnterDefense() {
     if (!this.side || this.dead || this.shopOpen) return false;
     if ((this.sp || 0) <= 0) return false;
-    if (this.firing) return false;
-    if (this._isCasting(now)) return false;
-    if (this._railAt || this._steadyAt) return false;
-    const { id, def } = this._curWeapon();
-    if (def && now - (this.lastFireAt[id] || 0) < 1 / def.rate) return false;
-    if (id && (this._settleUntil[id] || 0) > now) return false;
     return true;
   }
 
@@ -9082,7 +9076,6 @@ export class BattleClient {
     if (next) {
       if (!this._canEnterDefense()) {
         if ((this.sp || 0) <= 0) this.hud.feed?.('⚠️ 磁力歸零，無法生成護盾！');
-        else this.hud.feed?.('⚠️ 攻擊動作中，無法進入防守姿態！');
         return;
       }
       this.defending = true;
@@ -10040,7 +10033,8 @@ export class BattleClient {
         x: Math.round(this.pos.x * 10) / 10,
         y: Math.round(this._altAG * 10) / 10,
         z: Math.round(-this.pos.z * 10) / 10,
-        ry: Math.round((this.viewMode === 'tps' ? this.bodyYaw : this.yaw) * 100) / 100,
+        ry: Math.round((this.viewMode === 'tps' && !this.defending ? this.bodyYaw : this.yaw) * 100) / 100,
+        rx: Math.round(this.pitch * 100) / 100,
         wet: this._env.code,   // 地形異常狀態(0 無 / 1 水 / 2 沼):伺服器結算流體沉浸減傷與電力/護盾回充減速。
                                // 完全沉浸制 + 騰空歸零(見 _envAt)⇒ 跳躍/蓄力跳躍期間回報 0 = 狀態解除
         lev,
@@ -10563,6 +10557,7 @@ export class BattleClient {
             const isExpanded = (this.shieldExpandUntil || 0) > now;
             const s = isExpanded ? 1.7 : 1.0;
             ent.shieldMesh.scale.set(s, 1.0, s);
+            ent.shieldMesh.rotation.x = -this.pitch;
             if (ent.shieldMesh.userData.mat) stepShieldMaterial(ent.shieldMesh.userData.mat, dt);
           }
         }
@@ -10591,6 +10586,7 @@ export class BattleClient {
         if (ent.shieldMesh.visible) {
           const s = ent.df === 2 ? 1.7 : 1.0;
           ent.shieldMesh.scale.set(s, 1.0, s);
+          ent.shieldMesh.rotation.x = -(ent.rx || 0);
           if (ent.shieldMesh.userData.mat) stepShieldMaterial(ent.shieldMesh.userData.mat, dt);
         }
       }

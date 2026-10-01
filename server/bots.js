@@ -385,7 +385,11 @@ export class BotBrain {
     else if (sim.bossHold?.has(this.pid) && !(h.sq?.bossSeg >= 3)) this._hold(h, u, dt);   // NPC BOSS:不推線,守著據點 (狂暴後持續推進)
     else this._push(h, u, dt);
 
-    // 視角:狀態機先寫下「想看哪裡」,受擊警戒可以搶走,最後統一以角速度上限轉一步。
+    // 視角:狀態機先寫下「想看哪裡」,防守姿態鎖定威脅目標,受擊警戒可以搶走,最後統一以角速度上限轉一步。
+    if (h.defending) {
+      if (target) this._face(h, target.x, target.z, target.y);
+      else if (h._alert) this._face(h, h._alert.x, h._alert.z, h._alert.y);
+    }
     this._alertLook(h);
     this._turn(h, dt);
 
@@ -749,7 +753,7 @@ export class BotBrain {
     const d = Math.hypot(dx, dz);
     const home = this._home();
     if (d < (tx === home[0] && tz === home[1] ? 30 : 5)) return; // 到堡附近(30m)或集結點附近(5m)等
-    this._face(h, tx, tz);
+    if (!h.defending) this._face(h, tx, tz);
     const [gx, gz] = this._skirt(h, tx, tz);             // 撤退路上一樣會撞牆 ⇒ 同一套繞行
     const gd = Math.hypot(gx - h.x, gz - h.z) || 1;
     const step = this._speed(h, gx - h.x, gz - h.z) * dt;
