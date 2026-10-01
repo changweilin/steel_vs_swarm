@@ -11,7 +11,7 @@
 // 劇情戰役不進母體(專用 m1 單線)，Ⅰ 另驗其恆單線且無母體。
 // 用法:node tools/audit_mother_lanes.mjs
 import { MAPGEO, lanesFor, laneCountFor, laneSubsetFor, MOTHER_LANES, laneSeparationAudit, towerLayoutAudit } from '../public/js/data.js';
-import { VENUES, venueConfig, synthLane } from '../public/js/venues.js';
+import { VENUES, venueConfig, synthLane, VENUE_LANE_KEYS, venueLaneKey, venueLaneModes } from '../public/js/venues.js';
 import { mixedMapConfig, randomMapConfig } from '../public/js/mapgen.js';
 import { readSrc } from './audit_src.mjs';
 
@@ -30,6 +30,13 @@ const toGame = (lanes, o) => {
 
 console.log('Ⅰ 預設場地:同圖同母體');
 {
+  // Duplicate bake keys silently overwrite full routes with story routes.
+  ok(new Set(VENUE_LANE_KEYS.map(({ key }) => key)).size === VENUE_LANE_KEYS.length, 'bake keys are unique');
+  ok(VENUE_LANE_KEYS.some(({ key, mapA }) => key === 'm1' && mapA === 'SWARM'), 'story bake uses the story frame');
+  for (const { key, L, mapA } of VENUE_LANE_KEYS) {
+    ok(venueLaneModes(mapA).every((mode) => venueLaneKey(L, mode) === key), `bake ${key} validates its own frame`);
+  }
+  ok(J(venueLaneModes('SWARM')) === J(['SWARM', 'STEEL']), 'story routes validate both defending factions');
   let cfgs = 0;
   for (const v of VENUES) {
     const byTs = [];

@@ -31,6 +31,9 @@ const value = (key, fallback = null) => {
   return i >= 0 && argv[i + 1] ? argv[i + 1] : fallback;
 };
 const has = (key) => argv.includes(key);
+const preferredMirror = value('--mirror');
+if (has('--mirror') && !MIRRORS.includes(preferredMirror)) fail('--mirror must be a configured Overpass endpoint');
+const mirrors = preferredMirror ? [preferredMirror, ...MIRRORS.filter((url) => url !== preferredMirror)] : MIRRORS;
 
 function fail(message) {
   console.error(`❌ ${message}`);
@@ -71,7 +74,7 @@ function stableResponse(response) {
 
 async function request(query, label, timeoutMs) {
   let last = '未知錯誤';
-  for (const url of MIRRORS) {
+  for (const url of mirrors) {
     try {
       const response = await fetch(url, {
         method: 'POST',

@@ -2,6 +2,7 @@
 // 用法:node tools/bake_venue_lanes.mjs   (ONLY=taipei101,seoul 可只跑指定場地)
 // 固定 fixture 有界診斷:OSM_FIXTURE_DIR=test/fixtures/osm ONLY=taipei101 node tools/bake_venue_lanes.mjs
 // target component 行為證據:node tools/bake_venue_lanes.mjs --self-test-target-components
+// --out <path> stages a generated module without replacing the runtime table.
 // fixture 模式預設只列報告；FIXTURE_WRITE=1 仍會硬驗 center/bbox。真的移動場地時須另設
 // FIXTURE_RECAPTURE=1，寫入後立即用 fetch_osm_fixture.mjs --update 重抓同名 raw fixture。
 // 產出 public/js/venueLanes.js。改 ANCHORS 或 MAPGEO 的尺寸/重合率常數後 MUST 重跑。
@@ -15,7 +16,7 @@
 // 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
 // #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
 import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { MAPGEO, battleBBox, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit, lanePathBalanceAudit }
   from '../public/js/data.js';
 // 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
@@ -23,6 +24,7 @@ import { VENUE_LANES } from '../public/js/venueLanes.js';
 // 表的鍵只有 venues.js 一份(消費端與產生端同吃 —— 在這裡照抄一個字串前綴,
 // 改鍵時必漏改其中一邊,而症狀是「烤了卻沒人讀得到」,沒有任何錯誤訊息)。
 import { VENUE_LANE_KEYS, venueLaneModes } from '../public/js/venues.js';
+import { readSrc, grabBlock } from './audit_src.mjs';
 // 結構隧道資格閘(**執行 biomes.js 原文**的那一份,§2.1「離線工具的結構剖面」單一縫)。
 // 2026-08-04:舊制 buildGraph 直接看 `w.tags.tunnel` = 第二份實作,比引擎鬆 ——
 // `indoor=yes` 的 service 通道(車站地下街 / 停車場坡道)在引擎裡一律攤平成一般小路
@@ -48,6 +50,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => { console.log(...a); };
 
 const ONLY = (process.env.ONLY || '').split(',').filter(Boolean);
+const outputArg = process.argv.indexOf('--out');
+if (outputArg >= 0 && !process.argv[outputArg + 1]) throw new Error('--out requires a path');
+const OUTPUT = outputArg >= 0 ? resolve(process.argv[outputArg + 1]) : null;
 const TARGET_COMPONENT_SELF_TEST = process.argv.includes('--self-test-target-components');
 const ANCHORS_ALL = {
   taipei101: [[25.0339, 121.5645]],
@@ -318,7 +323,12 @@ function buildGraph(ways, origin, tunPrefRe) {
     }
     componentCount++;
   }
-  return { X, Z, LA, LN, adj, n: X.length, tunE, tunPrefE, brgE, portalN, component, componentCount };
+  const junction = adj.map((edges) => {
+    const neighbors = new Set();
+    for (let j = 0; j < edges.length; j += 2) neighbors.add(edges[j]);
+    return neighbors.size >= 3;
+  });
+  return { X, Z, LA, LN, adj, n: X.length, tunE, tunPrefE, brgE, portalN, component, componentCount, junction };
 }
 
 class MinHeap {
@@ -385,7 +395,15 @@ function dijkstra(g, src, dst, used, wMul) {
 }
 
 const pathLen = (g, p) => { let s = 0; for (let i = 1; i < p.length; i++) s += Math.hypot(g.X[p[i]] - g.X[p[i - 1]], g.Z[p[i]] - g.Z[p[i - 1]]); return s; };
-const banPath = (b, p, n) => { for (let i = 1; i < p.length; i++) { b.add(p[i - 1] * n + p[i]); b.add(p[i] * n + p[i - 1]); } };
+const banPath = (b, p, n, prog) => {
+  const skip = MAPGEO.LANE_SEP_SKIP_FRAC;
+  for (let i = 1; i < p.length; i++) {
+    const u = p[i - 1], v = p[i], a = prog(u), z = prog(v);
+    // Shared base fan-out is legal; penalizing it forces needless detours.
+    if ((a < skip && z < skip) || (a > 1 - skip && z > 1 - skip)) continue;
+    b.add(u * n + v); b.add(v * n + u);
+  }
+};
 
 /** Douglas-Peucker;回傳「保留下來的位置索引」(端點恆保留 ⇒ 兵線端點精確落在主堡) */
 function simplifyIdx(pts, tol) {
@@ -529,7 +547,7 @@ function rankTargetRows(rows, sourceComponent, component) {
   return rows.sort((a, b) => {
     const aLocal = component[a.i] === sourceComponent ? 0 : 1;
     const bLocal = component[b.i] === sourceComponent ? 0 : 1;
-    return aLocal - bLocal || a.off - b.off || a.i - b.i;
+    return aLocal - bLocal || Number(!!b.junction) - Number(!!a.junction) || a.off - b.off || a.i - b.i;
   });
 }
 function targetCandidates(g, aIdx, bearing, L, mapA) {
@@ -543,7 +561,7 @@ function targetCandidates(g, aIdx, bearing, L, mapA) {
   for (let i = 0; i < g.n; i++) {
     const ab = Math.hypot(g.X[i] - ax, g.Z[i] - az);
     if (ab < minAB || ab > realD * 1.15) continue;
-    rows.push({ i, off: Math.hypot(g.X[i] - bx0, g.Z[i] - bz0) });
+    rows.push({ i, off: Math.hypot(g.X[i] - bx0, g.Z[i] - bz0), junction: g.junction[i] });
   }
   // 先穩定優先 source 所在 component，再套用既有 cap；不可把 disconnected target
   // 排在可達 target 前製造假 noPath，也不可因此放寬任何後續 route gate。
@@ -566,30 +584,33 @@ function selfTestTargetComponentRanking() {
   if (!fixedReachable) throw new Error('target component self-test component-aware 排序未優先可達 target');
   log('target component self-test legacy ordering: RED (disconnected target selected)');
   log('target component self-test component-aware ordering: GREEN (same-component target selected)');
+  const junctionRows = [{ i: 1, off: 0, junction: true }, { i: 0, off: 0.01 }, { i: 2, off: 1, junction: true }];
+  if (rankTargetRows(junctionRows, component[0], component)[0].i !== 2) {
+    throw new Error('Reachable junction must precede road-interior targets and disconnected junctions');
+  }
+  log('target junction self-test: GREEN (reachable junction selected before the candidate cap)');
 }
 
 function fixtureAnchorCandidates(fixture) {
   if (!FIXTURE_DIR || !fixture?.center) return [];
   const { lat: clat, lng: clng } = fixture.center;
-  const cos = Math.cos(clat * d2r);
+  const g = buildGraph(fixtureRoads(fixture.venue?.id || fixture.name), [clat, clng]);
   const cells = new Map();
-  for (const way of fixture.responses?.roads?.elements || []) {
-    for (const point of way?.geometry || []) {
-      const lat = +point.lat, lng = +(point.lon ?? point.lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      const x = (lng - clng) * d2r * R * cos;
-      const z = (lat - clat) * d2r * R;
-      const key = `${Math.floor(x / 100)},${Math.floor(z / 100)}`;
-      const d = Math.hypot(x, z);
-      const prev = cells.get(key);
-      if (!prev || d < prev.d || (d === prev.d && `${lat},${lng}` < `${prev.lat},${prev.lng}`)) {
-        cells.set(key, { lat, lng, d });
-      }
+  for (let i = 0; i < g.n; i++) {
+    const lat = g.LA[i], lng = g.LN[i], x = g.X[i], z = g.Z[i];
+    // Three road lanes need junctions at both ends to avoid shared corridors.
+    const junction = g.junction[i];
+    const key = `${Math.floor(x / 100)},${Math.floor(z / 100)}`;
+    const d = Math.hypot(x, z);
+    const prev = cells.get(key);
+    if (!prev || junction > prev.junction || (junction === prev.junction
+      && (d < prev.d || (d === prev.d && `${lat},${lng}` < `${prev.lat},${prev.lng}`)))) {
+      cells.set(key, { lat, lng, d, junction });
     }
   }
   const limit = Number.isFinite(+process.env.FIXTURE_ANCHOR_LIMIT)
     ? Math.max(1, Math.floor(+process.env.FIXTURE_ANCHOR_LIMIT)) : 24;
-  return [...cells.values()].sort((a, b) => a.d - b.d || a.lat - b.lat || a.lng - b.lng)
+  return [...cells.values()].sort((a, b) => b.junction - a.junction || a.d - b.d || a.lat - b.lat || a.lng - b.lng)
     .slice(0, limit).map((point) => [point.lat, point.lng]);
 }
 
@@ -622,7 +643,7 @@ function fixtureContractDrift(fixture, g, route) {
   return { centerM: centerErrorM(fixture, g, route), bboxDeg };
 }
 
-function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1) {
+function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, laneOrder = null) {
   const realD = realDistFor(L, mapA);
   const { X, Z, n } = g;
   const ax = X[aIdx], az = Z[aIdx];
@@ -683,15 +704,19 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1) 
     // 規則③(2026-07-29):相對 A→B 主軸的帶號偏航累積 MUST 落在 ±TURN_ACCUM_MAX_DEG 內
     // (順逆時針抵消;背對主軸走/繞圈在此淘汰)。與迴轉閘同一組遊戲公尺取樣語彙。
     if (!laneTurnAccumAudit(gxz).ok) { why = 'turnAccum'; return null; }
-    banPath(used, p, n);                                      // 過閘後才標記已用邊(下一條被 REUSE_PEN 重罰)
+    banPath(used, p, n, prog);                                // 過閘後才標記已用邊(下一條被 REUSE_PEN 重罰)
     let s = 0;
     for (const q of idx) s += lat(q);
     return { xz, idx, full: p, lat: s / idx.length };   // full = 未簡化節點路徑(規則 #5 取隧道邊用)
   };
 
   const lanes = [];
-  if (L === 1 || L === 3) { const m = take(null); if (!m) return { fail: why }; lanes.push(m); }
-  if (L > 1) for (const s of [1, -1]) { const f = take(sideW(s, offFrac)); if (!f) return { fail: why }; lanes.push(f); }
+  const order = laneOrder || (L === 1 ? [0] : L === 2 ? [1, -1] : [0, 1, -1]);
+  for (const side of order) {
+    const lane = take(side === 0 ? null : sideW(side, offFrac));
+    if (!lane) return { fail: why };
+    lanes.push(lane);
+  }
   lanes.sort((p, q) => q.lat - p.lat);                        // [上, 中, 下]
 
   const cell = overlapCellM(L, mapA);
@@ -756,6 +781,13 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1) 
 
 if (TARGET_COMPONENT_SELF_TEST) {
   selfTestTargetComponentRanking();
+  const reserved = new Set();
+  const progress = [0, MAPGEO.LANE_SEP_SKIP_FRAC / 2, 1 - MAPGEO.LANE_SEP_SKIP_FRAC / 2, 1];
+  banPath(reserved, [0, 1, 2, 3], 4, (i) => progress[i]);
+  if (reserved.size !== 2 || !reserved.has(1 * 4 + 2) || !reserved.has(2 * 4 + 1)) {
+    throw new Error('Lane reuse must reserve the middle in both directions and leave base fan-out available');
+  }
+  log('path fan-out self-test: GREEN (shared base approaches remain available)');
   process.exit(0);
 }
 
@@ -794,13 +826,28 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
       let best = null;
       const why = {};
       let bestOv = 9;
+      const seenTargets = new Set();
       // 方位角每 5° × 三檔側移目標:離線暴搜,不放過任何一組能全線走真實道路的解
       const sectors = BEARING_SECTORS[id]?.[anchors.indexOf(anchor)];
       for (let i = 0; i < 72; i++) {
         if (sectors && !sectors.some((s) => inSector(i * 5, s))) continue;
         for (const off of OFFSET_FRACS) {
           for (const targetIdx of targetCandidates(g, aIdx, i * 5, L, mapA)) {
-            const r = tryBearing(g, aIdx, i * 5, L, off, mapA, targetIdx);
+            // With a fixed target, routing depends on its chord and offset, not the search bearing.
+            if (targetIdx >= 0) {
+              const targetKey = `${targetIdx}:${off}`;
+              if (seenTargets.has(targetKey)) continue;
+              seenTargets.add(targetKey);
+            }
+            let r = tryBearing(g, aIdx, i * 5, L, off, mapA, targetIdx);
+            // Greedy middle-first routing can consume the only viable flank corridor.
+            // Retry reservation order; every candidate still passes all route gates.
+            if (L === 3 && r?.fail && r.fail !== 'noPath' && r.fail !== 'noB') {
+              for (const order of [[1, -1, 0], [-1, 1, 0]]) {
+                const alternative = tryBearing(g, aIdx, i * 5, L, off, mapA, targetIdx, order);
+                if (!alternative?.fail) { r = alternative; break; }
+              }
+            }
             if (r?.fail) { why[r.fail] = (why[r.fail] || 0) + 1; if (r.ov != null) bestOv = Math.min(bestOv, r.ov); continue; }
             // fixture 已有正式 L3 時，先固定其兩堡中點；同中心的候選才回到原本的
             // 橋／隧偏好與戰術排序。這讓「烤路線 → 重抓 fixture → 再烤」收斂為固定點。
@@ -893,6 +940,10 @@ if (FIXTURE_DIR && process.env.FIXTURE_WRITE !== '1') {
 }
 
 if (FIXTURE_DIR) {
+  const missingMother = Object.entries(out).filter(([, picked]) => !picked.byL[3]).map(([id]) => id);
+  if (missingMother.length) {
+    throw new Error(`Refusing fixture bake without a road mother: ${missingMother.join(', ')}`);
+  }
   const drifted = Object.entries(out).flatMap(([id, picked]) => {
     const fixture = FIXTURE_BY_VENUE.get(id);
     const drift = fixtureContractDrift(fixture, picked.g, picked.byL[3]);
@@ -914,9 +965,9 @@ let js = `// ============ 預設場地兵線(離線預算,勿手改)============
 // 任兩線互不接觸/交叉(排除主堡扇出段,中段最近距離 ≥ ${MAPGEO.LANE_MIN_SEP_M} 遊戲公尺,含立體交叉亦禁)。
 // bases[0] = SWARM(錨點側)、bases[1] = STEEL;lanes 依側向排序 [上, 中, 下]。
 // 鍵(見 venues.js \`venueLaneKey\`):1/2 = 由鍵 3 母體派生的中路 / 左右兩路(同 bases);
-// m1 = 縮小尺度(迷你地圖 / 劇情戰役,兩堡距離 ×${(realDistFor(1, true) / realDistFor(1)).toFixed(1)})的單兵線 ——
-// 那是**另外挑過的一條路線**,不是完整版剪短的中段:同一張圖在兩種距離下,
-// 路網上走得通又排得出合規砲塔的路徑不同,且 m1 的砲塔規則是拿迷你 + 劇情兩側一起驗的。
+// m1 = Dedicated story route (base distance factor ${(realDistFor(1, 'SWARM') / realDistFor(1)).toFixed(1)}).
+// Different distance constraints require an independent road route rather than a truncated full route.
+// Tower placement is validated for both defending factions.
 export const VENUE_LANES = {\n`;
 // ONLY= 只烤指定場地時,**其餘場地的既有兵線 MUST 原樣保留** —— 這支一律重寫整份
 // venueLanes.js,少了這段就會把沒烤到的場地整批清空(2026-07-28 實測:ONLY=parkave
@@ -961,6 +1012,19 @@ for (const [id, v] of Object.entries(out)) {
   js += `  },\n`;
 }
 js += '};\n';
-const dest = new URL('../public/js/venueLanes.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+if (ONLY.length || FIXTURE_DIR) {
+  // Partial bakes preserve the source and ordering of every untouched venue.
+  let current = readSrc('public', 'js', 'venueLanes.js');
+  for (const id of Object.keys(out)) {
+    const marker = `\n  ${id}: `;
+    const oldBlock = grabBlock(current, marker);
+    const newBlock = grabBlock(js, marker);
+    const start = current.indexOf('{', current.indexOf(marker));
+    current = current.slice(0, start) + newBlock + current.slice(start + oldBlock.length);
+  }
+  js = current;
+}
+const dest = OUTPUT || new URL('../public/js/venueLanes.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+mkdirSync(dirname(dest), { recursive: true });
 writeFileSync(dest, js, 'utf8');
 log('\nwrote', dest, (js.length / 1024).toFixed(1) + ' KB');
