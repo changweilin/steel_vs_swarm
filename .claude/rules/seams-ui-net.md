@@ -18,6 +18,7 @@
 | Viewport settle | `mobile.js` viewport helpers consumed by the resize handler | Durations come from one helper with no hand-written milliseconds; consumers subscribe and MUST NOT bind resize directly. | `audit_ctrl_mode`, `audit_touch_gesture` |
 | Page-level touch hardening | `body.touch-dev` capability flag beside the touch-UI installer | Hardening binds device capability while layout binds room setting — the two MUST NOT merge; touch-action restrictions MUST NOT land on scrollable roots. | `audit_ctrl_mode` |
 | Audio tiers | `audio.js` ambience/SFX/BGM manifests, `ambienceMix()`, `bgmUrl()` | Four tiers (place beds, movement beds, one-shots, music); place priority is first-match-wins with exactly one audible bed; resident beds never pause and stream without decoded buffers; dry/wet chains share one oscillator; multi-take picks avoid repeats; low-memory gate exits before fetching. | `audit_audio_layers` |
+| Cel visual presets | `visualPrefs.js` catalog and atomic setter, `toon.js` shading, `postfx.js` grade | Player settings expose presets only; changes update shared uniforms once and invalidate temporal history; preferences stay local and preserve signage language; legacy knobs migrate to the default preset; previews use the environment's own lighting without writing battle sun or weather state. | `audit_visual_presets`, `audit_visual_prefs`, `audit_cel_pipeline` |
 | Deterministic random | `rng.js mulberry32()` | Sole generator project-wide; the file MUST stay import-free. | — |
 
 Assertion details live in layer-4 audit script headers.

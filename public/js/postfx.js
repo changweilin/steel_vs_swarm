@@ -47,7 +47,7 @@
 // **調節器整個變成 no-op**,而畫面上只表現成「手機還是一樣卡」,不會有任何錯誤。
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { visualPref, onVisualChange } from './visualPrefs.js';
+import { visualPref, visualPreset, onVisualChange } from './visualPrefs.js';
 import { INK_UNPACK_GLSL } from './toon.js';
 import { renderStyleIndex } from './toon.js';
 import { DOF, WIPE, combatReachM, wipeAt } from './data.js';
@@ -132,6 +132,25 @@ const GRADE = {
   HIGH: [1.05, 1.01, 0.94],
   SAT: 1.06,
 };
+const _gradeUniforms = {
+  uGradeShadow: { value: new THREE.Vector3() },
+  uGradeHigh: { value: new THREE.Vector3() },
+  uGradeSat: { value: 1 }, uGradeLift: { value: 0 }, uGradeContrast: { value: 0 },
+  uGradeExposure: { value: 1 },
+  uGradeNightLift: { value: 1 },
+};
+function syncGradePreset() {
+  const grade = visualPreset().grade;
+  _gradeUniforms.uGradeShadow.value.set(...GRADE.SHADOW.map((v, i) => v * grade.shadow[i]));
+  _gradeUniforms.uGradeHigh.value.set(...GRADE.HIGH.map((v, i) => v * grade.high[i]));
+  _gradeUniforms.uGradeSat.value = GRADE.SAT * grade.saturation;
+  _gradeUniforms.uGradeLift.value = GRADE.LIFT * grade.lift;
+  _gradeUniforms.uGradeContrast.value = grade.contrast;
+  _gradeUniforms.uGradeExposure.value = grade.exposure;
+  _gradeUniforms.uGradeNightLift.value = grade.nightLift;
+}
+syncGradePreset();
+onVisualChange(syncGradePreset);
 // ---- 空氣透視(雙色霧)----
 // three 的 `Fog` 只有**一個**顏色:近處與地平線同色 ⇒ 霧讀起來像一層均勻的灰玻璃。
 // 兩色霧 = 近端帶當下的日照色、遠端收斂到地平線色(顏色的推導住 `environment.js
@@ -155,15 +174,9 @@ const AIR = {
   KNEE: 0.65,
 };
 // ---- 3D LUT 調色(2026-08-12)----
-// `GRADE` 那四個常數是**寫死在 commit 裡的美術方向**:改一次就換掉所有人的畫面,而且只能
-// 用「乘一個係數」表達得出來的東西。LUT 把整條色彩映射變成一張圖 —— 分區調色、色相旋轉、
-// 膠片曲線這些用常數寫不出來的東西,都變成美術可以在外部工具裡調完丟進來的資產。
-//
-// **兩個來源**(2026-08-12 使用者定案「可設定 2 或 3」):
-//   ㋐ `baked` —— 由現行 `GRADE` 的數學**程序生成**一張條狀圖。它不是為了改變畫面(那一段
-//      數學一模一樣),而是給美術一個「與現況等價的起點」可以匯出去改。
-//   ㋑ `file` —— 讀 `assets/lut.png`(標準條狀 LUT:寬 = size²、高 = size)。**檔案不存在
-//      就靜靜地不套**(原則 6):出貨版沒有這張圖 ⇒ 畫面逐位元同今天。
+// Curated styles use shared grade uniforms. Internal LUT sources remain available as replacements:
+// `baked` exports the fixed GRADE baseline; `file` reads assets/lut.png and omits unavailable assets.
+// The baked baseline excludes preset contrast and environment-dependent exposure/lift.
 //
 // **格式刻意是 2D 條狀而不是 `sampler3D`**:①外部工具(Photoshop / Resolve / Lightroom)
 // 匯出的就是這個格式,`Data3DTexture` 還得先在瀏覽器裡拆一次;②GLSL1 就寫得出來,不必為了
@@ -218,14 +231,9 @@ const SRGB_GLSL = `
   }`;
 
 /**
- * 把現行 `GRADE` 那一段數學**程序生成**成一張條狀 LUT(寬 = size²、高 = size)。
- * 用途不是改變畫面(數學一模一樣),而是給美術「與現況等價的起點」—— 在設定頁切到
- * 「內建(程序生成)」看到的就該與「不使用」幾乎一樣,差的只有量化;把它另存下來丟進
- * Photoshop / Resolve 調完再換成 `assets/lut.png`,就是完整的第 ㋑ 條路。
- *
- * **表是 sRGB 進 sRGB 出**(與 shader 的索引空間同一套,見 `lutApply` ①)。
- * 這裡的數學 MUST 與 shader 那一段逐項相同 —— 兩份會分家,而症狀是「切到內建之後畫面
- * 微妙地不一樣」,沒有人查得出來為什麼。故兩邊都只寫一次 `GRADE` 的四個常數。
+ * Bake the fixed GRADE baseline into a strip LUT (width = size², height = size).
+ * This is a stable export baseline for external art tools, not a capture of the active preset.
+ * The strip uses sRGB input/output, matching lutApply's sampling coordinates.
  */
 export function makeGradeLut(size = LUT.SIZE) {
   const cv = document.createElement('canvas');
@@ -344,6 +352,7 @@ export class Pipeline {
     // 拉到 0 = 沒有線(等同 `?ink=0`,但不必重開);預設 1 = 定場照調校出來的現值。
     // MUST 是 uniform 不是重建材質:重建會在拉桿拖動時每一格丟一次 shader 編譯。
     this._syncPrefs = () => {
+      this.resetTaaHistory();
       this._styleIdx = renderStyleIndex(visualPref('renderStyle'));
       this.inkQuad.material.uniforms.uInk.value = visualPref('ink');
       this.inkQuad.material.uniforms.uRenderStyle.value = this._styleIdx;
@@ -810,11 +819,11 @@ export class Pipeline {
   }
 
   _gradeMaterial() {
-    const g = GRADE;
     const info = this._mrt;
     return new THREE.ShaderMaterial({
       uniforms: {
         tColor: { value: null },
+        ..._gradeUniforms,
         uTexel: { value: new THREE.Vector2() }, uRenderStyle: { value: 0 },
         // tDepth / uNear / uFar 由 render() 的共用接線自動餵(與勾線、景深同一段)
         tDepth: { value: null }, uNear: { value: 0.5 }, uFar: { value: 1000 },
@@ -827,6 +836,10 @@ export class Pipeline {
       fragmentShader: `
         uniform sampler2D tColor; uniform sampler2D tDepth;
         uniform vec2 uTexel; uniform float uRenderStyle;
+        uniform vec3 uGradeShadow; uniform vec3 uGradeHigh;
+        uniform float uGradeSat; uniform float uGradeLift; uniform float uGradeContrast;
+        uniform float uGradeExposure;
+        uniform float uGradeNightLift;
         uniform float uNear; uniform float uFar;
         uniform vec3 uAirNear; uniform vec3 uAirFar;
         uniform float uFogN; uniform float uFogF; uniform float uAirA;
@@ -897,16 +910,29 @@ export class Pipeline {
           // 不是已經被 split-tone 動過的圖,疊出來的結果與他在工具裡看到的不一樣。
           // 故 LUT 查的是 **調色前**的顏色,最後在兩者之間交叉淡入。
           vec3 pre = c;
+          float daylight = uFogF > 1.0 ? smoothstep( 0.015, 0.18, dot( uAirFar, vec3( 0.2126, 0.7152, 0.0722 ) ) ) : 1.0;
           float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
           // split-tone:暗部偏冷、亮部偏暖(賽璐璐的陰影是有顏色的,不是壓黑的)
-          vec3 sh = vec3( ${g.SHADOW.map((v) => v.toFixed(3)).join(', ')} );
-          vec3 hi = vec3( ${g.HIGH.map((v) => v.toFixed(3)).join(', ')} );
+          vec3 sh = uGradeShadow;
+          vec3 hi = uGradeHigh;
           c *= mix( sh, hi, smoothstep( 0.18, 0.72, l ) );
-          c = mix( vec3( l ), c, ${g.SAT.toFixed(3)} );      // 微幅提彩度
+          // Dim pixels retain their hue; vivid presets must not flood night shadows with chroma.
+          float sat = mix( 1.0, uGradeSat, smoothstep( 0.015, 0.15, l ) );
+          c = max( mix( vec3( l ), c, sat ), vec3( 0.0 ) );
+          float y = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
+          float mid = clamp( y, 0.0, 1.0 );
+          float tone = max( 0.0, y + ( mid - 0.5 ) * uGradeContrast * mid * ( 1.0 - mid ) );
+          // A monotone shoulder opens daylight midtones without clipping white or lifting night blacks.
+          float exposure = mix( 1.0, uGradeExposure, daylight );
+          float bounded = clamp( tone, 0.0, 1.0 );
+          tone += bounded * exposure / ( 1.0 + bounded * ( exposure - 1.0 ) ) - bounded;
+          c *= tone / max( y, 1e-6 );
           // 陰影抬升:最暗不落到 0。**數值是線性空間的**,而畫面是 sRGB ——
           // 線性 0.045 經 sRGB 轉換會變成 0.23(整片暗部一口氣被洗成灰),2026-08-03 定場照實測。
           // 現值 0.0055 ≈ sRGB 0.06,才是「抬離全黑」而不是「把陰影拿掉」。
-          c = c * ( 1.0 - ${g.LIFT.toFixed(4)} ) + ${g.LIFT.toFixed(4)};
+          // Fog follows the actual environment, including day/night and weather transitions.
+          float lift = uGradeLift * mix( uGradeNightLift, 1.0, daylight );
+          c = c * ( 1.0 - lift ) + lift;
           // uLutA = 0(沒餵過 LUT / 來源是 none / 拉桿歸零)⇒ 整段跳過,連取樣都不做
           // ⇒ 逐位元同舊制。
           if ( uLutA > 0.0 ) {

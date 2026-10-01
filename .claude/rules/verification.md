@@ -48,6 +48,7 @@
 | World height caps | `audit_world_height` | Ceiling and object caps stay consistent. |
 | World edge and buffer skirt | `audit_world_edge`, `audit_edge_fill` | Ring bodies stay inside collision; solid buffer fill stays outside playable bounds with continuous joints. |
 | Resource lifecycle and adaptive resolution | `audit_gpu_lifecycle`, `audit_taa_drs` | Resource release stays complete; Halton camera jitter restores immediately after scene render; ping-pong history buffers and scene-complexity DRS share one pure seam (`taa.js`). |
+| Cel style presets and scenario previews | `audit_visual_presets`, `audit_visual_prefs`, `audit_cel_pipeline`, `audit_daynight`, `audit_gpu_lifecycle` | Presets commit once, survive reload and migrate legacy settings; shade floors and local preview lighting stay valid; style changes invalidate temporal history. |
 | Pre-shading culling | `audit_cull` | Visibility flips stay confined to `_renderCulledMain`; distance, frustum, scope, and inscribed-sphere occlusion share single seams. |
 | Texture mipmap and VRAM streaming | `audit_tex_stream` | Camera-view and distance-driven mip streaming disposes old WebGL buffers before level swaps and stays isolated from authority. |
 | Audio layers | `audit_audio_layers` | Movement bed follows the weight vector with registered sources. |

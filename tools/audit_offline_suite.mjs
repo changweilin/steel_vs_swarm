@@ -23,6 +23,7 @@ const OFFLINE_AUDIT_SCRIPTS = [
   // Cel rendering and water fields.
   'tools/audit_cel_pipeline.mjs',
   'tools/audit_visual_prefs.mjs',
+  'tools/audit_visual_presets.mjs',
   'tools/audit_soft_stroke.mjs',
   'tools/audit_struct_ink.mjs',
   'tools/audit_base_water_pad.mjs',

@@ -15,7 +15,7 @@
 // MUST NOT 在本檔重寫一份公式。
 // 用法:node tools/audit_visual_prefs.mjs
 import { readSrc, grabMethod } from './audit_src.mjs';
-import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault, onVisualChange }
+import { VISUAL_KNOBS, visualPref, visualPreset, setVisualPref, resetVisualPrefs, visualPrefsDefault, onVisualChange }
   from '../public/js/visualPrefs.js';
 import { partId, partJitter, vegPartXform } from '../public/js/xform.js';
 import { makeField, bakeFieldTexture } from '../public/js/field.js';
@@ -126,8 +126,8 @@ console.log('\nⅠ 旋鈕表(visualPrefs.js)');
   ok(n2 === 0, '解訂閱後不再收到(消費端 dispose 的前提)');
 
   resetVisualPrefs();
-  ok(visualPrefsDefault() && Object.keys(VISUAL_KNOBS).every((k) => visualPref(k) === VISUAL_KNOBS[k].def),
-    '還原預設把每一項都放回 def');
+  ok(visualPrefsDefault() && Object.entries(visualPreset().values).every(([k, v]) => visualPref(k) === v),
+    'Reset restores the curated default preset');
 
   ok(!/^import /m.test(bare(prefSrc)), 'visualPrefs.js 零 import(離線稽核要直接執行它驗預設與夾制)');
   ok(count(prefSrc, /localStorage/g) >= 2 && count(prefSrc, /try \{/g) >= 3,
@@ -400,8 +400,9 @@ console.log('\nⅤ 設定頁與樣品');
   ok(count(mainSrc, /function renderVisualSettings\(/g) === 1, 'renderVisualSettings 只有一份實作');
   ok(count(mainSrc, /renderVisualSettings\(/g) === 3, '兩個掛載點(戰場暫停頁 + 大廳設定頁)');
   ok(/pauseVisualMount/.test(htmlSrc) && /lobbyVisualMount/.test(htmlSrc), 'index.html 兩處掛載點都在');
-  // 拉桿清單 MUST 由 VISUAL_KNOBS 推導 —— 在 main.js 再寫一次清單,兩份遲早分家
-  ok(/Object\.entries\(VISUAL_KNOBS\)/.test(mainSrc), '拉桿逐項由 VISUAL_KNOBS 推導');
+  // Player controls derive from the curated catalog; shader knobs stay internal.
+  ok(/VISUAL_PRESETS\.map\(/.test(mainSrc) && !/Object\.entries\(VISUAL_KNOBS\)/.test(mainSrc),
+    'Settings expose catalog presets instead of renderer knobs');
   ok(!Object.values(VISUAL_KNOBS).some((d) => mainSrc.includes(`'${d.label}'`)),
     'main.js 沒有把標籤文字抄第二份');
   // 樣品是一顆真的 WebGL context:每一條關閉路徑都要收
@@ -600,12 +601,12 @@ console.log('\nⅦ 3D LUT:取代 split-tone 而不是疊加');
     '`_pushLutA` 是 `uLutA` 的**唯一寫入點**(第二處 = 拉桿與來源各寫各的)');
   ok(VISUAL_KNOBS.lut.def === 1 && VISUAL_KNOBS.lutSrc.def === 'none',
     '出貨預設 `lut = 1` / `lutSrc = none` ⇒ 管線根本沒有 LUT ⇒ **逐位元同舊制**(拉桿預設 0 的話使用者選了來源畫面不會動)');
-  // split-tone 的四個常數 MUST 由 `${g.…}` 插值:手打數字 = 第二份調色表
-  ok(!/vec3 sh = vec3\( 0\.86/.test(P) && /vec3 sh = vec3\( \$\{g\.SHADOW/.test(P)
-    && /vec3 hi = vec3\( \$\{g\.HIGH/.test(P) && /\$\{g\.SAT/.test(P) && /\$\{g\.LIFT/.test(P),
-    'shader 的四個 split-tone 常數全部由 `${g.…}` 插值(原文 MUST NOT 手打 0.86 / 0.94 / 1.10)');
-  // **兩份數學 MUST 逐位元相同**:檔頭早就宣稱它們相同、卻一條斷言都沒有。
-  // 分家的症狀是「切到內建(程序生成)之後畫面微妙地不一樣」,而那正是它存在的理由被否定。
+  ok(!/vec3 sh = vec3\( 0\.86/.test(P) && /vec3 sh = uGradeShadow;/.test(P)
+    && /vec3 hi = uGradeHigh;/.test(P) && /GRADE\.SHADOW\.map/.test(P)
+    && /GRADE\.HIGH\.map/.test(P) && /GRADE\.SAT \* grade\.saturation/.test(P)
+    && /GRADE\.LIFT \* grade\.lift/.test(P),
+    'Grade uniforms derive from the preset and the single GRADE baseline');
+  // The fixed LUT and dynamic grade share baseline split-tone pivots; preset curves intentionally differ.
   const eLut = /const t = smooth\(([\d.]+), ([\d.]+), l\);/.exec(P);
   const eSh = /smoothstep\( ([\d.]+), ([\d.]+), l \)/.exec(main);
   ok(!!eLut && !!eSh && eLut[1] === eSh[1] && eLut[2] === eSh[2],
