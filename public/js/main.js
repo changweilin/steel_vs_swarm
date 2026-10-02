@@ -37,6 +37,7 @@ import { MAP_EVIDENCE, evidenceFrame, evidenceFrameKey } from './mapEvidence.js'
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
 import { encodeEvidenceRelay, decodeEvidenceRelay } from './mapEvidenceRelay.js';
 import { prepareMapCreation } from './mapPreparation.js';
+import { triggerBackgroundMapSetup, hideBackgroundMapSetup } from './mapSetupProgress.js';
 import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
@@ -609,6 +610,7 @@ async function enterMapBuilder(initialMode = 'preset') {
             `・${cfg.laneCount} 條兵線,最大重合 <b>${(cfg.maxOverlap * 100).toFixed(0)}%</b>` +
             (cfg.tactics ? `・彎折 <b>×${cfg.tactics.sinuosity.toFixed(2)}</b>・轉角 <b>${cfg.tactics.turnsPerKm.toFixed(1)}/km</b>` : '') +
             `${cfg.synthetic ? '(含離線模擬路徑)' : ''}`;
+          triggerBackgroundMapSetup(cfg, cfg.placeName || '自訂戰區');
         }
       },
       candidates: (list, chosenIdx) => {
@@ -758,6 +760,7 @@ function selectVenue(v) {
   app.favCfg = cfg;
   app.mapGenMode = 'preset';
   syncMapGenModeRow();
+  triggerBackgroundMapSetup(cfg, v.name);
   savePrefs({ lastVenueId: v.id });
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,加入最愛地圖後即可開房。` +
@@ -791,6 +794,7 @@ function acceptGenCfg(cfg) {
   app.mapSel?.showConfig(cfg);
   app.venueSel = null;
   app.favCfg = cfg;
+  triggerBackgroundMapSetup(cfg, cfg.placeName || '生成戰區');
   $('mapStatus').innerHTML =
     `📍 <b>${esc(cfg.placeName)}</b>:${esc(describeGen(cfg))} — 加入最愛地圖後即可開房。`;
   $('mapProgressBar').style.width = '100%';
@@ -948,6 +952,7 @@ function renderFavsOpenRoom() {
       const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
       savePrefs(app.isSuperDeploy ? { superTeamSize: f.teamSize } : { teamSize: f.teamSize });
       app.favCfg = cfg;
+      triggerBackgroundMapSetup(cfg, f.name);
       app.venueSelOpen = null;   // 最愛的兵線是存檔時就烤死的配置,跟即時場地選擇互斥
       for (const el of grid.children) el.classList.remove('on');
       for (const el of $('venueGridOpen').children) el.classList.remove('on');
@@ -1059,6 +1064,7 @@ function selectVenueOpen(v) {
   const cfg = venueConfig(v, app.teamSize);
   app.venueSelOpen = v;
   app.favCfg = cfg;
+  triggerBackgroundMapSetup(cfg, v.name);
   savePrefs(app.isSuperDeploy ? { superVenueId: v.id } : { lastVenueId: v.id });
   for (const el of $('venueGridOpen').querySelectorAll('button.venue-btn')) el.classList.remove('on');
   const btn = $('venueGridOpen').querySelector(`button.venue-btn[data-vid="${v.id}"]`);
@@ -1138,7 +1144,14 @@ function renderStoryChapters() {
 function showStoryBrief(i) {
   const ch = STORY[i];
   const side = app.storySide;
+  const foe = side === 'STEEL' ? 'SWARM' : 'STEEL';
   const sc = chapterSide(ch, side);
+  const v = VENUES.find((x) => x.id === ch.venueId);
+  if (v) {
+    const cfg = venueConfig(v, ch.teamSize, foe);
+    cfg.env = { ...ch.env };
+    triggerBackgroundMapSetup(cfg, sc.title);
+  }
   app.storyPilot = [...sc.heroes, ...sc.mercs][0];   // 預設主駕 = 第一名陣營角色
   // 圖文並茂:全幅立繪 → 長篇敘事 → 雙方陣容(選主駕)→ 任務目標。
   // 標記走 storyui.briefHTML(與故事書同一份);這裡只負責掛事件與出擊。
@@ -2702,6 +2715,7 @@ function startPrebuild(cfg) {
     return buildYield();
   };
   pre.promise = (async () => {
+    battleClientCtor();
     setP(0.02, '載入 3D 模型(Quaternius CC0)…');
     // 路網中繼閘:與模型/地形建構**並行**跑(見 osmGate ②)。失敗一律吞掉 —— 這條路徑的
     // 每一種失敗都有備援(房主自己抓不到 = 走兵線備援;入房者等不到 = 退回自己抓),
@@ -2993,6 +3007,7 @@ function installDevSceneHook() {
 
 // ================= 載入 + 開戰 =================
 async function enterLoading(cfg) {
+  hideBackgroundMapSetup();
   app.battleCfg = cfg;
   enterFullscreenAuto();
   if (app.battle) {

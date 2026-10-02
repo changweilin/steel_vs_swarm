@@ -1060,6 +1060,27 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- 地圖設立與背景預處理懸浮小視窗 -->
+<div id="bgMapProgress" class="bg-map-progress-panel" style="display:none">
+  <div class="bg-map-progress-header">
+    <div class="bg-map-progress-title">
+      <span id="bgMapPulse" class="bg-map-progress-pulse"></span>
+      <span id="bgMapTitle">戰場背景處理</span>
+    </div>
+    <div class="bg-map-progress-actions">
+      <button id="bgMapMinBtn" class="bg-map-btn" type="button" title="最小化">_</button>
+      <button id="bgMapCloseBtn" class="bg-map-btn" type="button" title="關閉">✕</button>
+    </div>
+  </div>
+  <div class="bg-map-progress-body" id="bgMapBody">
+    <div id="bgMapName" class="bg-map-progress-mapname">載入地圖中…</div>
+    <div class="bg-map-bar-wrap">
+      <div id="bgMapBar" class="bg-map-bar-fill"></div>
+    </div>
+    <div id="bgMapStatus" class="bg-map-status-text">背景分析中…</div>
+  </div>
+</div>
+
 <!-- 致命錯誤(開啟失敗 / 一段時間無法遊戲):顯示原因,關閉或重啟(單人) -->
 <div id="fatalOverlay" class="overlay fatal-overlay" style="display:none">
   <div class="overlay-box fatal-box">

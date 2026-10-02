@@ -640,6 +640,8 @@ const RES_GOV = {
   FLIP_MAX: DRS.FLIP_MAX,
 };
 
+const _GLOBAL_UNIT_DIM_CACHE = new Map();
+
 export class BattleClient {
   /**
    * opts: { canvas, minimapCanvas, cfg, side(可 null=觀戰), youId, net, terrain, hud }
@@ -948,6 +950,9 @@ export class BattleClient {
     this._buildingRoofHit = buildingRoofIndex([...(this.terrain.mapBuildings?.values() || [])].flatMap(r=>r.platforms));
     for (const [key, record] of this.terrain.mapBuildings || []) {
       this.mapBuildings.set(key,mapBuildingTarget(record));
+    }
+    if (this.renderer?.compile) {
+      try { this.renderer.compile(this.scene, this.camera); } catch { /* 容錯降級 */ }
     }
   }
 
@@ -4032,9 +4037,11 @@ export class BattleClient {
     const statik = (e) => (e.k === 'tower' || e.k === 'base' || e.k === 'bunker') ? 0 : 1;
     const ids = [...this._spawnPend.keys()]
       .sort((a, b) => statik(this._spawnPend.get(a)) - statik(this._spawnPend.get(b)));
+    const startT = performance.now();
     let n = 0;
     for (const id of ids) {
-      if (n >= 24) break;   // 每幀 24 隻:首包 ~200 隻約 9 幀排空,單幀建模成本壓回 1/8
+      // 節流分幀建模:靜態工事優先;每幀至多 8 隻且超過 6ms 讓步以維持 60 FPS
+      if (n >= 1 && (n >= 8 || (performance.now() - startT) > 6)) break;
       if (this.ents.has(id)) { this._spawnPend.delete(id); continue; }
       const raw = this._spawnPend.get(id);
       this._spawnPend.delete(id);
@@ -4127,8 +4134,8 @@ export class BattleClient {
     // 基準包圍盒:MUST 在掛受擊殼/血條/敵方標記之前量(它們都是 mesh 子節點,事後 Box3 會被
     // 撐大 —— 塔的受擊殼半徑(舊制手寫 11m),曾把鎖定光暈吹成 49m 巨球、血條抬到半空)。
     // 貼地陣營光環(teamRing,塔的圈 r≈14)同樣排除:光暈/血條要包的是機體本體。
-    // 同類機種/陣營的原始體積純為確定性靜態幾何,透過快取消除每波小兵生成時數十毫秒的遍歷卡頓。
-    const dimCache = (this._unitDimCache || (this._unitDimCache = new Map()));
+    // 同類機種/陣營的原始體積純為確定性靜態幾何,透過跨場快取消除每波小兵生成時數十毫秒的遍歷卡頓。
+    const dimCache = _GLOBAL_UNIT_DIM_CACHE;
     const dimKey = `${key}:${e.s}:${e.bs ?? ''}:${civ ? e.pf : (e.ch ?? '')}:${e.k === 'kami' ? 1 : 0}`;
     // Generated civilians have per-entity dimensions; do not grow the archetype cache with their IDs.
     let dims = civ ? null : dimCache.get(dimKey);
