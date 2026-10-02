@@ -12,7 +12,7 @@ import { MORPH, lerpFPS } from './data.js';
 import { bodyBounce, cycleU, dutyOf, hipDrive, humanRunPose, limbProfile, limbFlex } from './gaitcurve.js';
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 import { animWeights } from './animweights.js';
-import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion, poseReferenceShield } from './unitMotion.js';
+import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion, poseReferenceShield, resetReferenceShieldPose } from './unitMotion.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -85,6 +85,7 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
     walk.timeScale = L.ts;
   }
   if (!rig) return;
+  if (rig.kind === 'biped') resetReferenceShieldPose(rig.shield);
   if (rig.kind === 'biped') stepBiped(L, rig, dt, now, speed, yawRate);
   else if (rig.kind === 'aerial') stepAerial(L, rig, dt, now, vFwd, vLat, yawRate);
   else if (rig.kind === 'quad') stepQuad(L, rig, dt, now, speed, yawRate);
@@ -96,13 +97,16 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   stepCastPose(L, rig, ent, dt, now);
   stepJumpPose(L, rig, ent, dt);
   stepStab(rig);
-  stepReferenceMotion(rig, ent, dt, now);
+  const shieldPosture = idleOf(L.amp) * (1 - clamp(rig._fireAim || 0, 0, 1));
+  if (rig.shield) rig.shield.posture = rig.kind === 'biped' ? shieldPosture : 0;
+  stepReferenceMotion(rig, ent, dt, now, !mesh.userData.morph);
   // 變形姿態 MUST 排最後(morphSwap 紀律 ③):過渡中它對這一棵樹的零件有最終發言權
   if (mesh.userData.morph) morphPose(mesh.userData.morph);
   const morph = mesh.userData.morph;
   if (morph?.ground.shield?.state) {
-    poseReferenceShield(morph.ground.shield);
-    poseReferenceShield(morph.air.shield);
+    const posture = (1 - morphEase(morph.m)) * shieldPosture;
+    poseReferenceShield(morph.ground.shield, posture);
+    poseReferenceShield(morph.air.shield, posture);
   }
   // 開火槍軸校正是最後的 post-pass：跑步扭腰、飛行壓坡、跳躍與變形姿態都已結算後，
   // 再把本次發射槽的每根槍軸鎖回機體 +z。否則任一個後續父骨驅動都會把槍口帶偏。
@@ -558,6 +562,31 @@ function morphSide(S, t, k, a) {
   }
 }
 
+function poseBipedAim(rig, idle) {
+  const aimF = Math.min(1, (rig.aimWhileIdle === false ? 0 : idle) + (rig._fireAim || 0));
+  const ap = rig.aimPose;
+  if (!ap) return aimF;
+  for (const side of ['R', 'L']) {
+    const shoulder = ap[`${side.toLowerCase()}ShoulderX`];
+    if (shoulder == null) continue;
+    const arm = rig[`arm${side}`], chain = rig[`armChain${side}`];
+    arm.rotation.x += (shoulder - arm.rotation.x) * aimF;
+    arm.rotation.y = (ap[`${side.toLowerCase()}ShoulderY`] || 0) * aimF;
+    if (chain?.[0]) chain[0].g.rotation.x += (ap[`${side.toLowerCase()}ElbowX`] - chain[0].g.rotation.x) * aimF;
+  }
+  return aimF;
+}
+
+function braceBipedArms(rig, weight) {
+  if (!rig.naturalArms || weight <= 0) return;
+  // A forward local pose needs to cancel the carrier lean, especially during hopping.
+  for (const arm of [rig.armL, rig.armR]) {
+    let pitch = 0;
+    for (let parent = arm.parent; parent && parent !== rig.hips.parent; parent = parent.parent) pitch += parent.rotation.x;
+    arm.rotation.x -= pitch * weight;
+  }
+}
+
 function stepBiped(L, rig, dt, now, speed, yawRate) {
   if (rig.hop) return stepHop(L, rig, dt, now, speed, yawRate);
   const strideW = (rig.stride || 0.9) * (rig.s || 1);   // 一步的世界長度
@@ -605,20 +634,20 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   // 手臂與腿反相(follow-through);跳奔時雙臂轉為同相前撐(前肢落在後腿併蹬的半拍後 =
   // 四足跳奔的節奏);持械手平時擺幅收斂穩住槍口,跳奔時它就是前腳,也得撐地
   const oAL = Math.PI, oAR = Math.PI * bnd;
-  if (rig.tuckArms) {
+  if (rig.tuckArms && !rig.naturalArms) {
     // 前肢收起蓄勢(迅猛龍/鴕鳥翼):不隨步伐甩大臂,收在體前 —— 奔跑越快收得越緊,
     // 只留與步頻同調的微幅開合與待機顫動 = 隨時能出爪/展翼的預備式
     const tk = armB - 0.2 * a;
     rig.armL.rotation.x = tk + Math.sin(L.ph * 2) * 0.035 * a + idle * Math.sin(now * 1.3) * 0.02;
     rig.armR.rotation.x = tk + Math.sin(L.ph * 2 + 0.5) * 0.035 * a + idle * Math.sin(now * 1.3 + 0.6) * 0.02;
-  } else if (rig.tinyArms) {
+  } else if (rig.tinyArms && !rig.naturalArms) {
     // 退化短前臂(暴龍):奔跑中幾乎不參與步態,只做抓握狀微顫,MUST NOT 套用一般雙足
     // 對側擺臂公式(那是給會前後甩動的手臂用的,暴龍的短前臂始終深屈在胸前)
     rig.armL.rotation.x = armB + Math.sin(L.ph * 2) * 0.05 * a + idle * Math.sin(now * 1.3) * 0.02;
     rig.armR.rotation.x = armB + Math.sin(L.ph * 2 + 0.5) * 0.05 * a + idle * Math.sin(now * 1.3 + 0.6) * 0.02;
   } else {
     // 指節/掌行(rig.knuckle,猩猩):前肢就是前腳 —— 擺幅與腿同級、對角相位真的撐地
-    const kn = rig.knuckle ? 1.0 : 0.75;
+    const kn = rig.naturalArms ? rig.armSwing : rig.knuckle ? 1.0 : 0.75;
     const armDriveL = Math.sin(L.ph + oAL)
       + (humanRunPose(cycleU(L.ph + oAL), duty).arm - Math.sin(L.ph + oAL)) * humanF;
     const armDriveR = Math.sin(L.ph + oAR)
@@ -626,7 +655,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     rig.armL.rotation.x = armB + armDriveL * legA * (kn + bnd * 0.3)
       + idle * Math.sin(now * 1.3) * 0.025;
     rig.armR.rotation.x = armB + armDriveR * legA
-      * (rig.gunArm ? 0.25 + bnd * 0.55 : kn + bnd * 0.3)
+      * (rig.gunArm && !rig.naturalArms ? 0.25 + bnd * 0.55 : kn + bnd * 0.3)
       + idle * Math.sin(now * 1.3 + 0.6) * (rig.gunArm ? 0.008 : 0.025);   // 持械手待機也穩住槍口
   }
   // 膝→踝、肘→腕:分節鏈(有掛才跑;舊的單節機體照舊只擺髖/肩)
@@ -637,15 +666,15 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     const AH = { P: LP.hind, P2: humanP, mix: humanF, duty };
     flexChain(rig.legChainL, phL, la, idle, now, 0.45, 0, AH);
     flexChain(rig.legChainR, phR, la, idle, now + 1.9, 0.45, 0, AH);
-    if (rig.tuckArms) {
+    if (rig.tuckArms && !rig.naturalArms) {
       // 收起的前肢:肘/腕鎖在深屈蓄勢角(hold ∝ 速度),只留待機微顫 —— 不是凍結
       flexChain(rig.armChainL, L.ph, a * 0.1, idle, now + 0.7, 0.1, 0.35 * a);
       flexChain(rig.armChainR, L.ph + 0.4, a * 0.1, idle, now + 2.6, 0.1, 0.35 * a);
-    } else if (rig.tinyArms) {
+    } else if (rig.tinyArms && !rig.naturalArms) {
       // 退化短前臂(暴龍):肘/腕只做微幅抓握顫動,不做人形的恆屈泵動或大幅擺盪
       flexChain(rig.armChainL, L.ph, a * 0.15, idle, now + 0.7, 0.15, 0.15 * a);
       flexChain(rig.armChainR, L.ph + 0.4, a * 0.15, idle, now + 2.6, 0.15, 0.15 * a);
-    } else if (rig.knuckle) {
+    } else if (rig.knuckle && !rig.naturalArms) {
       // 指節行走的前肢**就是前腳** ⇒ 吃 fore profile(肘小幅 + 腕支撐相鎖死),
       // 與後腿的 hind profile 分家 —— 猩猩的手腕在撐地那半週期是硬柱,不是彈簧
       const AF = { P: LP.fore, duty };
@@ -655,26 +684,15 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
       // 臂:奔跑的手肘是「恆屈 + 前後泵動」,不是甩直的鐘擺(hold 隨奔跑度增加);
       // 持械側 hold 收斂(端槍的手肘本來就鎖著托槍)
       flexChain(rig.armChainL, L.ph + oAL, a, idle, now + 0.7, 0.15, 0.5 * runF);
-      flexChain(rig.armChainR, L.ph + oAR, a * (rig.gunArm ? 0.45 + bnd * 0.55 : 1),
-        idle * (rig.gunArm ? 0.3 : 1), now + 2.6, 0.15, (rig.gunArm ? 0.2 : 0.5) * runF);
+      const held = rig.gunArm && !rig.naturalArms;
+      flexChain(rig.armChainR, L.ph + oAR, a * (held ? 0.45 + bnd * 0.55 : 1),
+        idle * (held ? 0.3 : 1), now + 2.6, 0.15, (held ? 0.2 : 0.5) * runF);
     }
   }
   // 手持武器射擊姿勢(雙手托一把 / 雙槍 / 單手槍,由 aimPose 欄位有無決定):
   // 靜止(交戰)或開火保持(rig._aim)= 標準射擊姿勢 —— 移動中開火也舉槍,步態擺臂讓位;
   // 未開火的移動 = 交還步態擺臂(行軍持槍)。連續混成 → 停下/開火自然舉槍、起步自然放下。
-  const aimF = Math.min(1, idle + (rig._fireAim || 0));
-  if (rig.aimPose) {
-    const ap = rig.aimPose;
-    rig.armR.rotation.x += (ap.rShoulderX - rig.armR.rotation.x) * aimF;
-    if (rig.armChainR && rig.armChainR[0])
-      rig.armChainR[0].g.rotation.x += (ap.rElbowX - rig.armChainR[0].g.rotation.x) * aimF;
-    if (ap.lShoulderX != null) {   // 單手槍機種不給左臂欄位 → 左臂交還步態(自由)
-      rig.armL.rotation.x += (ap.lShoulderX - rig.armL.rotation.x) * aimF;
-      rig.armL.rotation.y = (ap.lShoulderY || 0) * aimF;   // 左臂朝中線內收扶護木(移動時歸零)
-      if (rig.armChainL && rig.armChainL[0])
-        rig.armChainL[0].g.rotation.x += (ap.lElbowX - rig.armChainL[0].g.rotation.x) * aimF;
-    }
-  }
+  const aimF = poseBipedAim(rig, idle);
   // 後座/蓄力(登記 rig.weap 的持武機種):後座 = 持械肩上抬 + 肘回折(左右手各自吃自己的脈衝);
   // 蓄力/擊發走 rig.hvy 的帶符號幅度(brace 正值 = 蓄力托壓/擊發上跳;punch 正值 = 蓄力後拉/擊發前突)
   const kL = rig._kickL || 0, kR = rig._kickR || 0, chg = rig._chg || 0, hv = rig.hvy || S0;
@@ -739,6 +757,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     // 抬尾配平:速度越快尾根抬得越高(暴龍/鴕鳥/袋鼠的重尾就是前傾的反向配重)
     rig.tailSegs[0].rotation.x += (rig.tailUp || 0) * a;
   }
+  braceBipedArms(rig, aimF);
 }
 
 /**
@@ -769,11 +788,12 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
     flexChain(rig.legChainL, L.ph, a * 1.15, idle, now);
     flexChain(rig.legChainR, L.ph + 0.12, a * 1.15, idle, now + 1.9);
     // 拳砲雙臂收在胸前的拳擊架式:只隨跳動微幅開合,不甩大臂
-    flexChain(rig.armChainL, L.ph, a * 0.2, idle * 0.3, now + 0.7);
-    flexChain(rig.armChainR, L.ph, a * 0.2, idle * 0.3, now + 2.6);
+    flexChain(rig.armChainL, L.ph + (rig.naturalArms ? Math.PI : 0), a * (rig.naturalArms ? .75 : .2), idle * 0.3, now + 0.7);
+    flexChain(rig.armChainR, L.ph, a * (rig.naturalArms ? .75 : .2), idle * 0.3, now + 2.6);
   }
-  rig.armL.rotation.x = armB + air * 0.12 * a + idle * Math.sin(now * 1.3) * 0.02;
-  rig.armR.rotation.x = armB + air * 0.12 * a + idle * Math.sin(now * 1.3 + 0.6) * 0.008;
+  rig.armL.rotation.x = armB + (rig.naturalArms ? -Math.sin(L.ph) * .55 * rig.armSwing : air * .12) * a + idle * Math.sin(now * 1.3) * .02;
+  rig.armR.rotation.x = armB + (rig.naturalArms ? Math.sin(L.ph) * .55 * rig.armSwing : air * .12) * a + idle * Math.sin(now * 1.3 + .6) * .008;
+  const hopAim = poseBipedAim(rig, idle);
   // 拳砲戰鬥動畫(袋鼠 punch 原型,hv.armR 為正):蓄力 = 右拳向後收滿(chg→+1 的大幅後拉蓄勢),
   // 擊發 = chg 瞬間翻負 → 直拳全幅前突;輕武器(左腕槍)開火 = 左臂小幅後座
   const kL = rig._kickL || 0, kR = rig._kickR || 0, chg = rig._chg || 0, hv = rig.hvy || S0;
@@ -782,7 +802,6 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
     rig.armL.rotation.x += -kL * 0.15 + chg * (hv.armL || 0);
   }
   // 腕槍俯仰(roo 左腕雙管的迴旋槍架):據槍水平 + 每發後座槍口上跳
-  const hopAim = Math.min(1, idle + (rig._fireAim || 0));
   gunPitch(rig.gunR, hopAim, kR, chg, hv);
   gunPitch(rig.gunL, hopAim, kL, chg, hv);
   const hips = rig.hips;
@@ -828,6 +847,7 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
       t.rotation.x += counter - Math.sin(L.ph - i * 0.55) * (0.1 + i * 0.03) * a;
     });
   }
+  braceBipedArms(rig, hopAim);
 }
 
 /** 輪/履帶載具:輪速耦合 + 離心側傾 + 煞車點頭(Task 1.2) */

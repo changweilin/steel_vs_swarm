@@ -1,0 +1,47 @@
+{
+  "beforeRuntime": "8d4257e20d259337dcde4976ae60f3c5c0293153e324d45aba7a1671b4473aa2",
+  "afterRuntime": "90c5aebd063244f95a33e60c9bfb15e33de123da3ef5079b2fbbaca304285e66",
+  "retainedParts": 326,
+  "joints": 99,
+  "triangles": 12908,
+  "changedMeshes": [
+    {
+      "material": "armor",
+      "parts": [
+        "Right isosceles triangular helmet nose"
+      ]
+    },
+    {
+      "material": "dark",
+      "parts": [
+        "Atlas black observation face"
+      ]
+    },
+    {
+      "material": "white",
+      "parts": [
+        "Old ivory observation slit"
+      ]
+    }
+  ],
+  "outsideHeadGeometry": "byte_identical",
+  "otherJointPivotsAndMotion": "unchanged",
+  "flightHeadCounterRotation": "removed",
+  "gates": {
+    "headShapeVisualReview": "pass",
+    "groundHeadFacing": "pass",
+    "flightNoseFacing": "pass",
+    "retainedPartInventory": "pass",
+    "outsideHeadGeometry": "pass",
+    "bipedPosture": "pass",
+    "cleanRebuild": "pass",
+    "destination": "pass"
+  },
+  "evidence": {
+    "headComparison": "t11-head-review.png",
+    "source": "../t11/source-validation.json",
+    "destination": "../t11/runtime-validation.json",
+    "posture": "biped-posture-validation.json",
+    "rebuild": "../rebuild-validation.json"
+  }
+}

@@ -1,9 +1,9 @@
 // Exact authored bytes through the shipped registry, morph solver and defense presentation.
 import assert from 'node:assert/strict';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { chromiumOrNull, chromePath } from './pw.mjs';
+import { chromiumOrNull, chromePath, captureReview, writeReview as writeFile } from './pw.mjs';
 import { serve } from './mech_prompt_review.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -288,18 +288,18 @@ try {
     return { trianglesPerVisibleForm: triangles, effectTriangles, effectMeshes, retainedTriangles: triangles * 2 + effectTriangles, meshesPerVisibleForm: gm.length,
       pairs: morph.plan.n, maxSeamError, samples, forms: formResults, clips };
   }, { limits: shared.limits, id, spec });
-  await page.screenshot({ path: path.join(output, 'ground-bench.png') });
+  await captureReview(page, path.join(output, 'ground-bench.png'));
   await page.locator('#btnShieldDeploy').click();
   await page.waitForFunction(() => window.__MECH_REVIEW.preview.unit.userData.rig.shield.phase === 1);
-  await page.screenshot({ path: path.join(output, 'ground-shield.png') });
+  await captureReview(page, path.join(output, 'ground-shield.png'));
   await page.locator('#btnMorphToggle').click();
   await page.waitForFunction(() => window.__MECH_REVIEW.preview.morphM > .9995);
-  await page.screenshot({ path: path.join(output, 'flight-shield.png') });
+  await captureReview(page, path.join(output, 'flight-shield.png'));
   await page.locator('#btnShieldRetract').click();
   await page.waitForFunction(() => window.__MECH_REVIEW.preview.unit.userData.rig.shield.phase === 0);
-  await page.screenshot({ path: path.join(output, 'flight-bench.png') });
+  await captureReview(page, path.join(output, 'flight-bench.png'));
   await page.locator('#btnRig').click();
-  await page.screenshot({ path: path.join(output, 'flight-rig.png') });
+  await captureReview(page, path.join(output, 'flight-rig.png'));
   assert.deepEqual(errors, []);
   const report = { source: asset.source, hashes: { runtime: sha(await readFile(`public/js/forge/assets/${id}.js`)), glb: sha(glb) },
     measurements, gates: { structure: 'pass', same_parts: 'pass', same_geometry: 'pass', same_scale: 'pass',

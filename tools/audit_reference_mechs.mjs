@@ -1,9 +1,9 @@
 // Reference candidates: real registry, exact exports, reversible shield posture and GPU ownership.
 import assert from 'node:assert/strict';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { chromiumOrNull, chromePath } from './pw.mjs';
+import { chromiumOrNull, chromePath, captureReview, writeReview as writeFile } from './pw.mjs';
 import { serve } from './mech_prompt_review.mjs';
 import { charKind } from '../public/js/data.js';
 
@@ -220,14 +220,14 @@ try {
       preview.spinScale = 0; preview.yaw = .7; preview.pitch = .34;
     }, id);
     await page.waitForTimeout(350);
-    await page.screenshot({ path: path.join(root, `${id}-bench.png`) });
+    await captureReview(page, path.join(root, `${id}-bench.png`));
     await page.locator('#btnShieldDeploy').click();
     await page.waitForTimeout(1000);
     assert.equal(await page.evaluate(() => window.__MECH_REVIEW.preview.unit.userData.rig.shield.phase), 1);
-    await page.screenshot({ path: path.join(root, `${id}-shield.png`) });
+    await captureReview(page, path.join(root, `${id}-shield.png`));
     await page.locator('#btnRig').click();
     await page.waitForTimeout(100);
-    await page.screenshot({ path: path.join(root, `${id}-rig.png`) });
+    await captureReview(page, path.join(root, `${id}-rig.png`));
     await page.locator('#btnShieldRetract').click();
     await page.waitForTimeout(1000);
     assert.equal(await page.evaluate(() => window.__MECH_REVIEW.preview.unit.userData.rig.shield.phase), 0);

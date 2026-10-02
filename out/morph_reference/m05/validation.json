@@ -6,11 +6,11 @@
     "meshes": 91,
     "joints": 44,
     "source": {
-      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
-      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
-      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+      "contract": "73f9c57aa6bd0decc2cc3dce80bc9312bc606a5787004a72341b17067470e534",
+      "builder": "19eb5bb693e24f02ef35c172a149887a3d347939c011ef2767971db22beb7b72",
+      "catalog": "59ee73c8f074d16220b0cb8eb413ffcc44c88cc7a4d252c30fb44e7843b2e188",
       "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
-      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedContract": "68a3f9d04df4ed42bf39263613fef82e0e48580ab595407ba0f38b0d9c6ec9e4",
       "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
     }
   },
@@ -33,11 +33,40 @@
     "flight_shield_deploy",
     "flight_shield_retract"
   ],
-  "renders": [],
+  "renders": [
+    "reference.png",
+    "front.png",
+    "side.png",
+    "back.png",
+    "top.png",
+    "shield_deploy.png",
+    "light.png",
+    "heavy.png",
+    "run.png",
+    "flight_reference.png",
+    "flight_front.png",
+    "flight_side.png",
+    "flight_back.png",
+    "flight_top.png",
+    "transform_0.png",
+    "transform_1.png",
+    "transform_2.png",
+    "transform_3.png",
+    "transform_4.png",
+    "shield_retract.png",
+    "flight_shield_deploy.png",
+    "flight_shield_retract.png",
+    "flight_light.png",
+    "flight_heavy.png",
+    "skill.png",
+    "ult.png",
+    "flight_skill.png",
+    "flight_ult.png"
+  ],
   "hashes": {
-    "runtime": "fa595038d9d7485a6f7f58a5a46f2131ba3a5b7b2ee55091fbf46549fcf9a6ee",
-    "blend": "f36fab7c411cc468ae4f7de9c0b8f9af5dda0d80f4080feedc3d197460bd6c97",
-    "glb": "bf36818a7b57c4c241cc00280973620f1fe1888739201675a5f3fe4558bcfe9c"
+    "runtime": "941b2171f216b53c8e3098646cc281c49a967d4330476f178b4fa06eb49e9fd9",
+    "blend": "2c83ef4053f3f151376a08502181094ebb6e06d09b563427b1183c4145e35093",
+    "glb": "8afd6c1273cfc052b506eeae47073eb243bb66c374a8e469f1bd5dce4144a030"
   },
   "gates": {
     "structure": "pass",
@@ -54,5 +83,13 @@
     "runtime": "runtime-validation.json",
     "source": "source-validation.json",
     "rebuild": "../rebuild-validation.json"
+  },
+  "editableSourceRecipe": {
+    "contract": "ae9b2d12018a555fd24ef68a3a276b79bfbb85df645cbba7c3cda6571ea58ff9",
+    "builder": "19eb5bb693e24f02ef35c172a149887a3d347939c011ef2767971db22beb7b72",
+    "catalog": "74397067ce56028b3a653e3c797ab6f60f0717e5736c796063f5938ba52c4c4d",
+    "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
+    "sharedContract": "68a3f9d04df4ed42bf39263613fef82e0e48580ab595407ba0f38b0d9c6ec9e4",
+    "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
   }
 }

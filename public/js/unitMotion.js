@@ -8,7 +8,7 @@ export function stepUnitSpinners(nodes, dt) {
 }
 
 /** Secondary rigid joints share the combat clock; shield posture follows defense presentation only. */
-export function stepReferenceMotion(rig, ent, dt, now) {
+export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
   if (!rig?.referenceMotion || !Number.isFinite(dt) || dt <= 0 || !Number.isFinite(now)) return;
   const motion = rig.referenceMotion;
   const kick = Math.max(rig._kickL || 0, rig._kickR || 0, rig._kickB || 0);
@@ -26,11 +26,15 @@ export function stepReferenceMotion(rig, ent, dt, now) {
   const defending = ent.isSelf ? ent.visualDefense : ent.df && (ent.sp == null || ent.sp > 0);
   const target = !ent.dead && !!defending;
   shield.phase = Math.max(0, Math.min(1, shield.phase + (target ? 1 : -1) * dt / shield.duration));
-  poseReferenceShield(shield);
+  if (applyShield) poseReferenceShield(shield, shield.posture ?? 1);
+}
+
+export function resetReferenceShieldPose(shield) {
+  for (const track of shield?.pose || []) track.node.quaternion.copy(track.rest);
 }
 
 /** Reapply presentation after a morph pose without advancing its shared clock twice. */
-export function poseReferenceShield(shield) {
+export function poseReferenceShield(shield, posture = 1) {
   if (!shield) return;
   const u = shield.phase, weight = u * u * (3 - 2 * u);
   for (const hinge of shield.hinges) {
@@ -40,6 +44,11 @@ export function poseReferenceShield(shield) {
     const arm = shield.arm;
     for (const key of ['shoulder', 'elbow', 'wrist']) {
       arm[key].rotation.x += (arm[`${key}X`] - arm[key].rotation.x) * weight;
+    }
+  }
+  if (weight * posture > 0) {
+    for (const track of shield.pose || []) {
+      track.node.quaternion.slerpQuaternions(track.rest, track.deploy, weight * posture);
     }
   }
   const projection = Math.max(0, Math.min(1, (weight - .18) / .82));

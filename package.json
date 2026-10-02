@@ -41,6 +41,7 @@
     "audit:building-motion": "node tools/audit_building_motion.mjs",
     "audit:unit-damage": "node tools/audit_unit_damage.mjs",
     "audit:unit-motion": "node tools/audit_unit_motion.mjs",
+    "audit:biped-posture": "node tools/audit_biped_posture.mjs",
     "audit:faction-models": "node tools/audit_faction_models.mjs",
     "audit:civilians": "node tools/audit_civilian_generator.mjs",
     "audit:vfx": "node tools/audit_combat_vfx.mjs",

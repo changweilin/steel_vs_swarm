@@ -12,6 +12,9 @@ mesh inventory; the flight wrapper cannot introduce another geometry source.
 
 The existing morph solver derives motion from the two endpoint rigs. Stable joint/material
 tags keep the same parts paired across the rig swap. Cape panels retain their dimensions.
+Ground rest endpoints derive from gait joint bases so idle and transformation share the same
+crouch. Form endpoints precede secondary action poses; flight propulsion continues through
+attack, cast and shield clips without overwriting those joints.
 Sealed hulls contain only the limbs explicitly listed as stowed by each contract.
 Monkey and vampire limbs remain exposed; the raptor retains two hind talons in flight.
 The whale keeps its tusks fixed and aligns its head, hull and tail along one axis.
@@ -21,6 +24,11 @@ Solid shield petals fold into the rotor ducts in flight. Bird primary and second
 feathers overlap at their articulated roots; folded wings pack against the back
 without changing scale.
 Only the beetle membrane wings enter the flap driver; its elytra remain protective armor.
+
+Atlas shield and rotor centers share a fixed hand-back mount in both forms. Its authored
+left-arm defense pose yields to travel and firing; both morph trees receive the same
+weighted pose to preserve continuity. Biped firing arms compensate carrier lean, while
+travel retains shoulder swing and forward elbow flexion.
 
 Animal load chains expose humerus, radius/ulna and metacarpal links separately from
 femur, tibia/fibula and metatarsal links. Elbows point aft; stifles point forward and
@@ -48,4 +56,7 @@ recovers actions and tests folded limb vertices against each authored hull profi
 [Runtime validation](../out/morph_reference/runtime-validation.json) exercises the shipped
 registry, reversible transitions, fire/cast/shield motion, frame rates and independently loaded
 GLB clips. Comparison sheets preserve original images alongside exact renders.
+[Biped posture validation](../out/morph_reference/refinement/biped-posture-validation.json)
+measures running arm travel, forward firing forearms and hand-mounted disk alignment
+at multiple frame rates, including defense-to-fire and defense-to-run transitions.
 Visual approval remains a separate user review gate.

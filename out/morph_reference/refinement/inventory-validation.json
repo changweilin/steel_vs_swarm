@@ -1,0 +1,61 @@
+{
+  "m01": {
+    "parts": 233,
+    "joints": 31,
+    "triangles": 10684,
+    "partInventory": "unchanged",
+    "changedMounts": []
+  },
+  "s03": {
+    "parts": 281,
+    "joints": 49,
+    "triangles": 14316,
+    "partInventory": "unchanged",
+    "changedMounts": []
+  },
+  "s10": {
+    "parts": 293,
+    "joints": 69,
+    "triangles": 13316,
+    "partInventory": "unchanged",
+    "changedMounts": []
+  },
+  "t06": {
+    "parts": 205,
+    "joints": 31,
+    "triangles": 10336,
+    "partInventory": "unchanged",
+    "changedMounts": []
+  },
+  "t11": {
+    "parts": 326,
+    "joints": 99,
+    "triangles": 12908,
+    "partInventory": "unchanged",
+    "changedMounts": [
+      "rotor_hinge_l",
+      "rotor_hinge_r"
+    ]
+  },
+  "m05": {
+    "parts": 293,
+    "joints": 44,
+    "triangles": 13144,
+    "partInventory": "unchanged",
+    "changedMounts": []
+  },
+  "m07": {
+    "parts": 270,
+    "joints": 94,
+    "triangles": 13544,
+    "partInventory": "unchanged",
+    "changedMounts": []
+  },
+  "m08": {
+    "parts": 270,
+    "joints": 59,
+    "triangles": 13228,
+    "partInventory": "unchanged",
+    "changedMounts": []
+  }
+}

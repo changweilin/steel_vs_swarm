@@ -62,8 +62,30 @@ class Asset:
         spec = copy.deepcopy(spec)
         self.spec = spec
         rig = spec['rig']
-        if rig.get('gunR') and rig.get('aimPose'):
-            rig['gunR']['aim'] = -(rig['aimPose']['rShoulderX'] + rig['aimPose']['rElbowX'])
+        if spec['kind'] == 'biped':
+            rig['naturalArms'] = True
+            rig['aimWhileIdle'] = False
+            rig['armSwing'] = .24 if rig.get('tinyArms') else .42 if rig.get('tuckArms') else .75
+            aim = rig.setdefault('aimPose', {'rShoulderX': -.55, 'rElbowX': -.92})
+            aim.setdefault('lShoulderX', aim['rShoulderX'])
+            aim.setdefault('lElbowX', aim['rElbowX'])
+            for side in ['L', 'R']:
+                elbow = rig['armChain' + side][0]
+                elbow['base'] = min(elbow['base'], -.18)
+                elbow['k'] = -abs(elbow['k'])
+            parents = {name: parent for name, parent, _ in spec['joints']}
+            for weapon in rig['wpn'].values():
+                name = weapon['nodes'][0]
+                parent = parents[name]
+                while parent:
+                    for side in ['L', 'R']:
+                        if parent == rig['arm' + side]:
+                            rig.setdefault('gun' + side, {'g': name, 'rest': 0})
+                    parent = parents[parent]
+        for side in ['R', 'L']:
+            if rig.get('gun' + side) and rig.get('aimPose'):
+                aim = rig['aimPose']
+                rig['gun' + side]['aim'] = -(aim[side.lower() + 'ShoulderX'] + aim[side.lower() + 'ElbowX'])
         if rig.get('rider') and rig.get('gunR'):
             base = rig['armBase'][0]
             rig['gunR']['rest'] = rig['gunR']['aim'] = -(base['shX'] + base['elX'])
@@ -97,7 +119,7 @@ class Asset:
             material = bpy.data.materials.new(name)
             material.diffuse_color = rgba(desc['color'])[:3] + (desc.get('opacity', 1),)
             material.use_nodes = True
-            bsdf = material.node_tree.nodes.get('Principled BSDF')
+            bsdf = next(node for node in material.node_tree.nodes if node.type == 'BSDF_PRINCIPLED')
             bsdf.inputs['Base Color'].default_value = rgba(desc['color'])
             bsdf.inputs['Metallic'].default_value = desc.get('metal', 0)
             bsdf.inputs['Roughness'].default_value = .46
@@ -415,6 +437,8 @@ class Asset:
         u = max(0, min(1, t))
         e = u * u * (3 - 2 * u)
         rig = self.spec['rig']
+        if hasattr(self, '_pose_form'):
+            rig = rig | self.spec['forms'][self._pose_form]['rig']
         if rig.get('rider'):
             for shoulder, elbow, base in zip(rig['armSh'], rig['armEl'], rig['armBase']):
                 self.rotate(self.nodes[shoulder], 'x', base['shX'])
@@ -434,20 +458,25 @@ class Asset:
                 arm = motion['shield']['arm']
                 for key in ['shoulder', 'elbow', 'wrist']:
                     self.rotate(self.nodes[arm[key]], 'x', arm[key + 'X'] * e)
+            if motion['shield'].get('pose') and getattr(self, '_pose_form', 'ground') == 'ground':
+                for track in motion['shield']['pose']:
+                    from morph_recipe import rotation
+                    self.nodes[track['node']].rotation_euler = rotation(track['rest']).slerp(rotation(track['rotation']), e).to_euler()
             k = max(.001, min(1, (e - .18) / .82))
             self.nodes['barrier'].scale = (k,) * 3
         elif clip == 'run':
             if self.spec['kind'] == 'biped':
                 for side, phase in [('l', 0), ('r', 0 if rig.get('hop') else math.pi)]:
                     angle = math.sin(t * math.tau + phase)
-                    self.rotate(self.nodes['hip_' + side], 'x', angle * .55)
-                    self.rotate(self.nodes['knee_' + side], 'x', max(0, -angle) * .7)
-                    self.rotate(self.nodes['shoulder_' + side], 'x', -angle * .34)
-                    self.rotate(self.nodes['elbow_' + side], 'x', -.35)
+                    self.rotate(self.nodes['hip_' + side], 'x', rig.get('legBase', 0) + angle * .55)
+                    self.rotate(self.nodes['knee_' + side], 'x', rig['legChain' + side.upper()][0]['base'] + max(0, -angle) * .7)
+                    arm_angle = math.sin(t * math.tau + (0 if side == 'l' else math.pi))
+                    self.rotate(self.nodes['shoulder_' + side], 'x', rig.get('armBase', 0) - arm_angle * .34 * rig['armSwing'] / .75)
+                    self.rotate(self.nodes['elbow_' + side], 'x', rig['armChain' + side.upper()][0]['base'] - .28 - .08 * arm_angle)
                     if self.p.get('legAnatomy'):
                         for joint in rig['legChain' + side.upper()]:
                             self.rotate(self.nodes[joint['g']], joint.get('axis', 'x'),
-                                        joint['k'] * max(0, -angle) * .75)
+                                        joint['base'] + joint['k'] * max(0, -angle) * .75)
                 if rig.get('hop'):
                     self.nodes['hips'].location.z += max(0, math.sin(t * math.tau)) * .4
             elif self.spec['kind'] == 'quad':
@@ -488,12 +517,19 @@ class Asset:
                     self.rotate(node, track['axis'], value)
                 else:
                     node.location = xyz([value if axis == track['axis'] else 0 for axis in 'xyz'])
-            if self.spec['rig'].get('aimPose'):
-                rig = self.spec['rig']
-                self.rotate(self.nodes[rig['armR']], 'x', rig['aimPose']['rShoulderX'] * weight)
-                self.rotate(self.nodes[rig['armChainR'][0]['g']], 'x', rig['aimPose']['rElbowX'] * weight)
-                gun = rig['gunR']
-                self.rotate(self.nodes[gun['g']], 'x', gun['rest'] + (gun['aim'] - gun['rest']) * weight)
+            if rig.get('aimPose'):
+                aim = rig['aimPose']
+                for side in ['R', 'L']:
+                    sh, el = side.lower() + 'ShoulderX', side.lower() + 'ElbowX'
+                    if sh not in aim:
+                        continue
+                    base = rig.get('armBase', 0)
+                    self.rotate(self.nodes[rig['arm' + side]], 'x', base + (aim[sh] - base) * weight)
+                    base = rig['armChain' + side][0]['base']
+                    self.rotate(self.nodes[rig['armChain' + side][0]['g']], 'x', base + (aim[el] - base) * weight)
+                    gun = rig.get('gun' + side)
+                    if gun:
+                        self.rotate(self.nodes[gun['g']], 'x', gun['rest'] + (gun['aim'] - gun['rest']) * weight)
                 if clip == 'skill':
                     self.rotate(self.nodes['shoulder_l'], 'x', -.6 * weight)
                     self.rotate(self.nodes['elbow_l'], 'x', -.85 * weight)
@@ -607,18 +643,25 @@ class Asset:
             self.reset()
             camera.location = xyz(position)
             camera.rotation_euler = (target - camera.location).to_track_quat('-Z', 'Y').to_euler()
-            bpy.context.scene.render.filepath = str(directory / (name + '.png'))
-            bpy.ops.render.render(write_still=True)
+            self.render_still(directory, name)
             evidence.append(name + '.png')
         for clip in ['shield_deploy', 'light', 'heavy', 'run']:
             self.pose(clip, 1 if clip == 'shield_deploy' else .5 if clip != 'run' else .17)
             camera.location = xyz(contract['review']['views']['reference'])
             camera.rotation_euler = (target - camera.location).to_track_quat('-Z', 'Y').to_euler()
-            bpy.context.scene.render.filepath = str(directory / (clip + '.png'))
-            bpy.ops.render.render(write_still=True)
+            self.render_still(directory, clip)
             evidence.append(clip + '.png')
         self.reset()
         return evidence
+
+    @staticmethod
+    def render_still(directory, name):
+        # Keep a failed renderer write from truncating the last review image.
+        target = directory / (name + '.png')
+        temporary = directory / (name + '.render.png')
+        bpy.context.scene.render.filepath = str(temporary)
+        bpy.ops.render.render(write_still=True)
+        temporary.replace(target)
 
 
 for spec in contract['assets'].values():
@@ -639,6 +682,8 @@ for spec in contract['assets'].values():
     blend = directory / (spec['id'] + '.blend')
     bpy.context.scene.render.fps = 30
     bpy.context.scene.frame_end = 31
+    if args.no_render:
+        asset.setup_render()
     views = [] if args.no_render else asset.render(directory)
     bpy.ops.wm.save_as_mainfile(filepath=str(blend))
     asset.export_selection()

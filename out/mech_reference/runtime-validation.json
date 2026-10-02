@@ -2,7 +2,7 @@
   "identities": {
     "s01": {
       "glb": "c6eda691719d601bd3f01354c34006f006eeb0f6d1ef096d8effb883d6dd6910",
-      "runtime": "68a1356a4531a85e347d2f44db989909f4abd91823a10b4f126b9063ecc72440",
+      "runtime": "f71dc5fe34ae7642c4bb180b68103d61b10a5f056a8d0926ce27541a5c3037c3",
       "clips": [
         "idle",
         "run",
@@ -15,22 +15,22 @@
       ]
     },
     "t10": {
-      "glb": "66b1bb9fc135598d35e6d87030d01fff064937377ca8696ac1a8fdad5dac2dd2",
-      "runtime": "38c39bc67d2541c204f620c2881faf6fe1004cec997df83b822ba054f5081f96",
+      "glb": "3107e12cd780de096962fea3f524f99f0dbaffefa3d2f93241a75b1862c41a4c",
+      "runtime": "7621801e5e63c4e9870ca2e348b7d9fe75767074487072c1ddfa9d45f6e8c076",
       "clips": [
         "run",
         "idle",
         "skill",
         "ult",
         "heavy",
+        "light",
         "shield_deploy",
-        "shield_retract",
-        "light"
+        "shield_retract"
       ]
     },
     "s02": {
       "glb": "1c5c15626d0cb112799bbdb53e9abb17eebb9449f326741f2376f0e044abea67",
-      "runtime": "381e2f40ec8e95038af6f4d74da5573a3a28707672fdfed95f2577238138abeb",
+      "runtime": "bee47eb89ac9dc7d5cfb6a4ab545aa33bc591af1fb69bde66d7734e46c98565c",
       "clips": [
         "idle",
         "run",
@@ -44,7 +44,7 @@
     },
     "s04": {
       "glb": "0fc8ec078d8b8692b750dd86d108d5a532ffe207dc3364d8a6e65b6b5bf76d99",
-      "runtime": "9a3f251dde27353e49d6fea4d274252a2678b63ac5395cc0e94fb3f70ae7e784",
+      "runtime": "2de6fcff867d5964c1c93ba8fd59dfc20232f8292aa2791ee29f578f65d6c0c8",
       "clips": [
         "idle",
         "run",
@@ -58,7 +58,7 @@
     },
     "s05": {
       "glb": "c4775d7ebfb7fbc20be41f6391cf4682cba263c4b27dc3a0337710c6227fd3bc",
-      "runtime": "1dba3108eb56603cb25666dedeb6a70f1551a942bc4005a1b816f5ed065643b4",
+      "runtime": "8aa288add5ff877885ac1305c3decb9f1df300026b2620e828aca96f7673adbe",
       "clips": [
         "idle",
         "run",
@@ -72,7 +72,7 @@
     },
     "s08": {
       "glb": "c6df9ec9fe6ee2e22741165a77f8df4e2136a0540c0aaa890f107b33db85f05a",
-      "runtime": "0d9d9daef6240707d47f8d048789dc2d87e11f4870974d89119ba639943ad94f",
+      "runtime": "558bf178f3b9da40cae175c80e013e83995e61c9a644c75131255ffe871ac0ac",
       "clips": [
         "idle",
         "run",
@@ -86,7 +86,7 @@
     },
     "s11": {
       "glb": "817ffa2d052027b590c59320f75eb5287115778388a78f8e8abef844c4834d2b",
-      "runtime": "6b4802ee8c4519c449587ef77d1767f69bee744943e00845bfc1506e2ecba4c3",
+      "runtime": "178a7e84a7567659d3bd841c45c3ea5e9e8da1956e4088b18dec222b2d4f6dde",
       "clips": [
         "idle",
         "run",
@@ -100,7 +100,7 @@
     },
     "s12": {
       "glb": "99df7be358497511bab928e649a611d7fa9bcdb9381324d8113f3caa08e82258",
-      "runtime": "48940a2927ff2b07305db147a63c8963e4f571c30203daac588ca17d7f906b63",
+      "runtime": "9f7f5ad4c2ded5a47a80c494ee953eedca017332e74f0ffcb53eda34da926b4a",
       "clips": [
         "idle",
         "run",
@@ -114,7 +114,7 @@
     },
     "t07": {
       "glb": "00176626a40f9211477fb5381f45a588a42977784e8e1e9eafadf5610b92efdc",
-      "runtime": "340173c457dac85ebb257cdf9a3d56295e4314cb38682938160ca5006015876a",
+      "runtime": "45227ab9b0a7625d5793ca06b5b1eceac17642332bb5c29b6697b37821611d4a",
       "clips": [
         "idle",
         "run",
@@ -128,7 +128,7 @@
     },
     "t08": {
       "glb": "09a24b46499e2d92ba39a02624b74ec5794dc32076b85d88fdc0a8b1a33db860",
-      "runtime": "067bf550ca4e99703d41843f0ff1aff1bfc684c6cbac4e68c503b948544c728b",
+      "runtime": "b643259e5dce6674c46b8dcc5e24f72f3a2a889a08240eb5ea18b03f1d936772",
       "clips": [
         "idle",
         "run",
@@ -142,7 +142,7 @@
     },
     "t09": {
       "glb": "43a13c9a13733df7d7bcbc498eaf01f3df7045c2504894559ae9d07ec6514b70",
-      "runtime": "e1eea3e292cd99e0a15b3ee1070608ac3c7f2305b29341f030586e10ab2ed16f",
+      "runtime": "c6a656ff07c30716ff34c7ca7bc7884c9523179fd3039cb1d3353f74efb17636",
       "clips": [
         "idle",
         "run",
@@ -156,7 +156,7 @@
     },
     "m03": {
       "glb": "d9f12bc3099bb727928d516c5ad626f94e84c6a917c2180e056d9e3338f63b18",
-      "runtime": "d49e504882e465b40610ad0a466d030e2301efeefda886d9e05a18f9c041c275",
+      "runtime": "25adc41bfbe32d31d64bf7a51a1336ee8752f2d40186c8beb57b041bf118ec6c",
       "clips": [
         "idle",
         "run",
@@ -170,7 +170,7 @@
     },
     "m04": {
       "glb": "86a09b033e8b1a7b71073e8554f1c0c17357a63f771974d95a48842da5e30887",
-      "runtime": "99805df8c82feae6936d6ee5fb35dfbd626ff70daa54a66b9c8c654483410e3e",
+      "runtime": "1b0730bb1471134a3a1804d8c59488530622d14564a4548835b3800da8ba0a73",
       "clips": [
         "idle",
         "run",
@@ -184,7 +184,7 @@
     },
     "s06": {
       "glb": "2793cc021f9de4741cdcba7f17f20bb89ccc3b7b740afa42f174d7783d765ea6",
-      "runtime": "923fdffbb1bd9251cb86a15f2566e43439b9fd797d233836c0a30b7f09e02aec",
+      "runtime": "33a0430260e1ec1879e5b877c3460c6ca5e1b61e48cfa17e29fe907d83f7f033",
       "clips": [
         "idle",
         "shield_deploy",
@@ -198,7 +198,7 @@
     },
     "s07": {
       "glb": "44404c0b1b2da75a152a68485682ce526979e36801d057b1c0513b68e1909da0",
-      "runtime": "626c6bbb1c12637e6b02bd819d7e910a6fe267745d79036c75e669f5a84d7768",
+      "runtime": "f5530d16f5bb262eafa997cb037df711a0692622ad0bb4868a387ba364318182",
       "clips": [
         "idle",
         "shield_deploy",
@@ -211,8 +211,8 @@
       ]
     },
     "s09": {
-      "glb": "c4821f5161634272c32c6941c7c47eb849f659733baec71637eb9113d16fe2b6",
-      "runtime": "b302467a8614300b21854ce15039b5397a60322163227f44376ab84b1670d090",
+      "glb": "12810845342da0780c1c8b21fdee69b3e5e7c8a97fa11edc2982a1d6903bdb29",
+      "runtime": "4c59169fb43d70af47c05ac8f46483a89fcc12e2079911847a0fb59da41483b2",
       "clips": [
         "idle",
         "run",
@@ -225,8 +225,8 @@
       ]
     },
     "t01": {
-      "glb": "f17305e526897d6e459a7234c4c262eea2c50f59fc0119ae9865b92d5d5bffeb",
-      "runtime": "8dcf48262f49fbed84a7cb58faf180ed709b77e51fec2558e8f7f59376255143",
+      "glb": "e1d584aa6a53f9d04b70a67aa1eedeed799de2af97e056348abb8fb7a99d49a2",
+      "runtime": "83d0cd3dde6872ee397c2a0bc38158639a6aebd18b01dc232a6bbee5268a6fdc",
       "clips": [
         "idle",
         "shield_deploy",
@@ -239,8 +239,8 @@
       ]
     },
     "t02": {
-      "glb": "31368cece32df4d73ce893cee25fe5a7096d392e983549a3925a49e2f2571cdb",
-      "runtime": "e299693b425412d22c9d7b1ce47895005feff85c6492841a42c98c6fbd6ec88b",
+      "glb": "9799b740e581b1fbc0b73afccca678ed7a8b524367e8b541d716fce1bd641c8d",
+      "runtime": "d4767759e9089a60fb28f362ea9926b5e56fe9c1f29dfb7962b93e9dadb71774",
       "clips": [
         "idle",
         "shield_deploy",
@@ -253,8 +253,8 @@
       ]
     },
     "t03": {
-      "glb": "701eacb77e248552b1e966e2bff707974d769e5ccf501d8781f6f9786507addd",
-      "runtime": "8729e92880c772fc2551c4f9c69d3e7ea9da97b5a4ef70268eb230ca620e7cb4",
+      "glb": "6f17fabe94cc1dd34f9e38e9d74afc718dd6851670ad51e7dbefaa9ae66b8285",
+      "runtime": "883e06f035f6abbe087e13e648173945e80200127b7431170019848e2e157e24",
       "clips": [
         "idle",
         "shield_deploy",
@@ -268,7 +268,7 @@
     },
     "t04": {
       "glb": "914a7fbb7de5f15695bfa64bd72f386d0a4fcb3ca637368211857e8ba89b150a",
-      "runtime": "88acd3ec9af5a92c3382915bcc374b494b9bb29e2524852513731a662cd707a6",
+      "runtime": "53870ab19e53c666add37dc616cb97c0ebc1f47c564f4ac7f5232288b864f68a",
       "clips": [
         "idle",
         "shield_deploy",
@@ -281,8 +281,8 @@
       ]
     },
     "t05": {
-      "glb": "64745d4c466134c80acf482e2ebf7a9e0f4bd5bdd93ff73c1c970fb7ab41a7ba",
-      "runtime": "5233f729c712a21ad1369fcc6d2e8e26e55de0032049981a79854566c83bd4ce",
+      "glb": "3725270a1237691673e6487dfc51aa32db7e6f345407d8a24f4ee89ee0fe7ba7",
+      "runtime": "2a3b90d63e394842176ee9af76c853db9ef3bd6286249c0cb78a3a114b61f45e",
       "clips": [
         "idle",
         "shield_deploy",
@@ -295,8 +295,8 @@
       ]
     },
     "t12": {
-      "glb": "ee1689c1933c6f1f26f7e178caebcd35c55190d0c5848dc953c733d10e84a25e",
-      "runtime": "a4cac6437a855d605cd31e38357afa86fd431bc581e8ef817c6a442f5f1d695d",
+      "glb": "c9e123ec95b9a6983e2a1ddc1b639ca1b1f0671523c448bb20de66b9ff6c6dd7",
+      "runtime": "71a1cf3d82b7a7b809cfbfa87952de6b4b8823fc50707aa8a7d198b9f2e81b7c",
       "clips": [
         "idle",
         "shield_deploy",
@@ -309,8 +309,8 @@
       ]
     },
     "m02": {
-      "glb": "b86941b10754fdd012cfe46966fbf500dd9732f21a3bf354756692c57c808498",
-      "runtime": "c1c692a5bd182f928c2fcc2045247ac286175de3c0a9b12121403a85adb95e15",
+      "glb": "120d567b90129127a3939853e16205314214e11d3b3c3c59ddc45cc736611785",
+      "runtime": "3e4ac7a30938f9b8bc2ddb3f86a95c831429c7e8e85662065c1bc2aa9e0c26f4",
       "clips": [
         "idle",
         "shield_deploy",
@@ -324,7 +324,7 @@
     },
     "m06": {
       "glb": "22733ef64b9bfb3511eb301486873d54a6355e1692b8f51593e9a456cf78cb80",
-      "runtime": "782e5ee7d8804ccf5b25cf07d99135ab0f6533a824bed3a4110ecc259e5e5717",
+      "runtime": "5a5747dc03a35ae85c14541b5e6a1186b1c312ea4aceb61301e875caeb97ac71",
       "clips": [
         "idle",
         "shield_deploy",
@@ -381,9 +381,9 @@
         "skill",
         "ult",
         "heavy",
+        "light",
         "shield_deploy",
-        "shield_retract",
-        "light"
+        "shield_retract"
       ]
     },
     "s02": {
