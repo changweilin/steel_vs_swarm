@@ -1,0 +1,8 @@
+{
+  "audit": "audit_shield_counter",
+  "passed": 83,
+  "total": 84,
+  "failingGuard": "_heroDmg no scenario multipliers",
+  "baselineAlsoFails": true,
+  "serverSimulationUnchanged": true
+}

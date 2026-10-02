@@ -11,7 +11,7 @@
 
 import * as THREE from 'three';
 import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility, castDirF } from './data.js';
-import { makeUnit, heroTargetH } from './models.js';
+import { makeUnit, heroTargetH, measureBox } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { fireUnitMotion, stepUnitSpinners } from './unitMotion.js';
 import { buildBaseBattery } from './buildingUnitModels.js';
@@ -103,6 +103,16 @@ export class CharPreview {
   }
 
   // ---- 機體 ----
+  setShield(deployed) {
+    if (!this._ent || !this.unit?.userData.rig?.shield) return;
+    this._ent.df = !!deployed;
+    this._ent.sp = 1;
+  }
+
+  setRigVisible(visible) {
+    this.unit?.traverse(node => { if (node.isSkeletonHelper) node.visible = !!visible; });
+  }
+
   /** @param {string} id 角色 id;@param {string} side 檢視陣營(傭兵角色隨雇主換色) */
   setChar(id, side) {
     if (this.charId === id && this.unit?.userData.side === side) return;
@@ -266,11 +276,12 @@ export class CharPreview {
 
   _hideTarget() { if (this.targetMarker) this.targetMarker.visible = false; }
 
-  _measure() { this.unit.updateMatrixWorld(true); return new THREE.Box3().setFromObject(this.unit); }
+  _measure() { return measureBox(this.unit); }
 
   /** 半徑 r 的包圍球剛好內接於視錐(留邊給浮空/衝擊環) */
   _fitDist(r) {
-    const half = THREE.MathUtils.degToRad(this.camera.fov) / 2;
+    const vertical = THREE.MathUtils.degToRad(this.camera.fov) / 2;
+    const half = Math.min(vertical, Math.atan(Math.tan(vertical) * this.camera.aspect));
     return r / Math.sin(half) * 1.12;
   }
 
@@ -286,13 +297,7 @@ export class CharPreview {
     this.anim = null;
     if (this.unit) {
       this.holder.remove(this.unit);
-      this.unit.traverse((o) => {
-        if (o.isMesh || o.isSkinnedMesh) {
-          o.geometry?.dispose();
-          const m = o.material;
-          (Array.isArray(m) ? m : [m]).forEach((x) => x?.dispose());
-        }
-      });
+      disposeTree(this.unit);
       this.unit = null;
       this.mixer = null;
       this._ent = null;   // loco 狀態綁 mesh,換機體一律重建
@@ -760,6 +765,7 @@ export class CharPreview {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    if (this.unit && this._auto) this.dist = this._fitDist(this.viewR);
   }
 
   // ---- 主迴圈 ----

@@ -57,6 +57,7 @@ import { outlinify } from '../toon.js';
 import { heroPalette, paintUnit } from '../paint.js';
 import { segLimbF, outlineWF } from './geo.js';
 import { MECH_DETAIL } from './mechs/index.js';
+import { buildReferenceAsset } from './referenceAsset.js';
 import { rosterEntries } from './roster.js';
 import { tagBuilders, collectTagged, pairTagged, fadeTargets, restNodes, anchorPair } from '../morphrig.js';
 
@@ -263,6 +264,13 @@ function finishUnit(unit, spec, H, opts) {
 export function forgeMech(spec, opts = {}) {
   const D = MECH_DETAIL[spec.id];
   if (!D) throw new Error(`未知機型:${spec.id}`);
+  if (D.asset) {
+    const unit = buildReferenceAsset(D.asset, spec);
+    const K = { accentF: spec.knobs?.accentF ?? 1 };
+    // Authored material regions already carry the reference livery and insignia.
+    finishRig(unit.group, unit.rig, unit.weapons, K, spec.height, D, {}, {}, null);
+    return finishUnit(unit, spec, spec.height, opts);
+  }
   if (D.kind === 'quad') return forgeQuadMech(spec, D, opts);
   if (D.kind === 'air') return forgeAirMech(spec, D, opts);
   const P = resolveProp(spec);

@@ -12,7 +12,7 @@ import { MORPH, lerpFPS } from './data.js';
 import { bodyBounce, cycleU, dutyOf, hipDrive, humanRunPose, limbProfile, limbFlex } from './gaitcurve.js';
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 import { animWeights } from './animweights.js';
-import { stepUnitMotion, stepVehicleMotion } from './unitMotion.js';
+import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion } from './unitMotion.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -96,6 +96,7 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   stepCastPose(L, rig, ent, dt, now);
   stepJumpPose(L, rig, ent, dt);
   stepStab(rig);
+  stepReferenceMotion(rig, ent, dt, now);
   // 變形姿態 MUST 排最後(morphSwap 紀律 ③):過渡中它對這一棵樹的零件有最終發言權
   if (mesh.userData.morph) morphPose(mesh.userData.morph);
   // 開火槍軸校正是最後的 post-pass：跑步扭腰、飛行壓坡、跳躍與變形姿態都已結算後，

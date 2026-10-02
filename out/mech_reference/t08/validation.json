@@ -1,0 +1,57 @@
+{
+  "asset": "t08",
+  "blender": "5.2.0 LTS",
+  "measurements": {
+    "triangles": 14084,
+    "meshes": 67,
+    "joints": 22,
+    "source": {
+      "contract": "f4f1ae7752e1643d34fd1201be0cafad8732cf5fa1753703590e3104e6b11270",
+      "builder": "4459b6aeb49a4a202f9c0737b281862323289f49d029074f076c0bb47797c376",
+      "catalog": "bed68ca618293fdbc1d9b564f278f19b32ec1476a99d8c8c1a751d734e7d09ab",
+      "image": "f046001a41666408caabe83923bcfd804416e0fd031db2e415ca2ca327014fa4"
+    }
+  },
+  "clips": [
+    "idle",
+    "run",
+    "light",
+    "heavy",
+    "skill",
+    "ult",
+    "shield_deploy",
+    "shield_retract"
+  ],
+  "renders": [
+    "reference.png",
+    "front.png",
+    "side.png",
+    "back.png",
+    "top.png",
+    "shield_deploy.png",
+    "light.png",
+    "heavy.png",
+    "run.png"
+  ],
+  "hashes": {
+    "runtime": "d7d54c7e6680abc5e0a3e37ca3373d31f21d84fbec768f8e4a0b4cde6c1bab63",
+    "blend": "b523baab741050d396ee0e886c84b6c56d0270fbbb8f0317f3801d25797310e0",
+    "glb": "a73015379974071266469989883d6231e892c3fd3991f74c11cb2ca1d4144d53"
+  },
+  "gates": {
+    "structure": "pass",
+    "resources": "pass",
+    "geometry": "pass",
+    "appearance": "pass",
+    "export": "pass",
+    "destination": "pass",
+    "user_signoff": "pending_user_review",
+    "editable_source": "pass"
+  },
+  "evidence": {
+    "visual": "../visual-validation.json",
+    "runtime": "../runtime-validation.json",
+    "source": "../source-validation.json",
+    "rebuild": "../rebuild-validation.json"
+  }
+}
