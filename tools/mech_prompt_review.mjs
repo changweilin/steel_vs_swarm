@@ -282,7 +282,7 @@ export async function syncAllInitialReviews() {
 }
 
 // ============ 前端 HTML / CSS / JS 模板 ============
-function renderHtmlPage() {
+function renderHtmlPage(localThree = false) {
   return `<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -296,8 +296,8 @@ function renderHtmlPage() {
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    "three": "${localThree ? '/review-deps/three.module.js' : 'https://unpkg.com/three@0.160.0/build/three.module.js'}",
+    "three/addons/": "${localThree ? '/review-deps/addons/' : 'https://unpkg.com/three@0.160.0/examples/jsm/'}"
   }
 }
 </script>
@@ -525,7 +525,9 @@ function renderHtmlPage() {
     overflow: hidden;
   }
   .subpanel-bar {
-    height: 38px;
+    min-height: 38px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
     background: rgba(18, 26, 43, 0.85);
     border-bottom: 1px solid rgba(255,255,255,0.06);
     display: flex;
@@ -572,6 +574,7 @@ function renderHtmlPage() {
     left: 12px;
     right: 12px;
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
     justify-content: center;
     pointer-events: none;
@@ -861,10 +864,14 @@ function renderHtmlPage() {
       <div class="subpanel-bar">
         <span class="subpanel-title">
           <span>🎮 3D WebGL 模型 (遊戲真品)</span>
+          <span id="referenceReviewLabel" style="font-size:10px;color:var(--accent-cyan);display:none;">立繪重建・骨架與護盾動作</span>
           <span id="morphPoseLabel" style="font-size:10px;color:var(--accent-cyan);display:none;">地面型 (Pose 0)</span>
         </span>
         <div style="display:flex;gap:4px;">
-          <button class="btn-tool-sm" id="btnActionAttack">💥 招式後座</button>
+          <button class="btn-tool-sm" id="btnActionLight">輕射擊</button>
+          <button class="btn-tool-sm" id="btnActionAttack">重射擊</button>
+          <button class="btn-tool-sm" id="btnActionSkill">防守招式</button>
+          <button class="btn-tool-sm" id="btnActionUlt">攻擊招式</button>
           <button class="btn-tool-sm" id="btnRunMode">🏃 運動：靜止</button>
           <button class="btn-tool-sm" id="btnMorphToggle" style="display:none;color:#38bdf8;">🔄 切換飛行型</button>
         </div>
@@ -876,6 +883,9 @@ function renderHtmlPage() {
         <button class="btn-tool-sm" id="btn3dReset">重置視角</button>
         <button class="btn-tool-sm" id="btn3dSpin">暫停自轉</button>
         <button class="btn-tool-sm" id="btn3dGrid">參考地網</button>
+        <button class="btn-tool-sm" id="btnShieldDeploy" disabled>展開護盾</button>
+        <button class="btn-tool-sm" id="btnShieldRetract" disabled>收起護盾</button>
+        <button class="btn-tool-sm" id="btnRig" disabled>顯示骨架</button>
       </div>
     </div>
   </section>
@@ -983,7 +993,8 @@ async function fetchMechs() {
   updateStats();
   renderRoster();
   if (allMechs.length > 0) {
-    selectMech(allMechs[0].id);
+    const requested = new URLSearchParams(location.search).get('mech');
+    selectMech(allMechs.some(m => m.id === requested) ? requested : allMechs[0].id);
   }
 }
 
@@ -1110,6 +1121,12 @@ function update3DModel() {
   }
   try {
     preview3D.setChar(currentMech.id, currentMech.side);
+    const authored = !!preview3D.unit?.userData.rig?.referenceMotion;
+    document.getElementById('referenceReviewLabel').style.display = authored ? '' : 'none';
+    for (const id of ['btnShieldDeploy', 'btnShieldRetract', 'btnRig']) document.getElementById(id).disabled = !authored;
+    document.getElementById('btnRig').classList.remove('active');
+    preview3D.setRigVisible(false);
+    preview3D.setShield(false);
 
     const isMorpher = currentMech.category === 'morphers';
     const btnMorph = document.getElementById('btnMorphToggle');
@@ -1297,6 +1314,16 @@ document.getElementById('btnActionAttack').onclick = () => {
   preview3D.play('heavy');
 };
 
+for (const [id, action] of [['btnActionLight', 'light'], ['btnActionSkill', 'def'], ['btnActionUlt', 'atk']]) {
+  document.getElementById(id).onclick = () => preview3D?.play(action);
+}
+document.getElementById('btnShieldDeploy').onclick = () => preview3D?.setShield(true);
+document.getElementById('btnShieldRetract').onclick = () => preview3D?.setShield(false);
+document.getElementById('btnRig').onclick = event => {
+  const on = event.currentTarget.classList.toggle('active');
+  preview3D?.setRigVisible(on);
+};
+
 document.getElementById('btnRunMode').onclick = () => {
   if (!preview3D) return;
   preview3D.cycleRun(1);
@@ -1329,13 +1356,26 @@ document.getElementById('btn3dGrid').onclick = () => {
 
 fetchMechs();
 initPreview3D().then(() => { if (currentMech) update3DModel(); });
+window.__MECH_REVIEW = { get preview() { return preview3D; }, selectMech };
 </script>
 </body>
 </html>`;
 }
 
 // ============ HTTP 伺服器 ============
-export function serve(port = DEFAULT_PORT) {
+export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MODULE } = {}) {
+  // An optional existing dependency copy keeps the review bench usable offline.
+  const localModules = new Map();
+  if (threeModule) {
+    localModules.set('/review-deps/three.module.js', path.resolve(threeModule));
+    for (const module of ['loaders/GLTFLoader.js', 'utils/SkeletonUtils.js', 'utils/BufferGeometryUtils.js']) {
+      localModules.set('/review-deps/addons/' + module,
+        path.join(path.dirname(path.resolve(threeModule)), module.replaceAll('/', '_')));
+    }
+    for (const file of localModules.values()) {
+      if (!fs.existsSync(file)) throw new Error(`Missing offline review module: ${file}`);
+    }
+  }
   const mimeTypes = {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
@@ -1384,13 +1424,13 @@ export function serve(port = DEFAULT_PORT) {
       // 首頁
       if (pathname === '/' || pathname === '/index.html') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-        res.end(renderHtmlPage());
+        res.end(renderHtmlPage(localModules.size > 0));
         return;
       }
 
       // 靜態資源映射
-      let targetFile = null;
-      if (pathname.startsWith('/public/')) {
+      let targetFile = localModules.get(pathname) || null;
+      if (!targetFile && pathname.startsWith('/public/')) {
         targetFile = path.join(ROOT, pathname);
       } else if (pathname === '/favicon.png') {
         targetFile = path.join(ROOT, 'public', 'favicon.png');

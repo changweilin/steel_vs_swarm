@@ -74,7 +74,7 @@ export async function preloadModels(onProgress) {
  * 量測包圍盒:skinned mesh 要用 computeBoundingBox()(r151+ 會套用骨骼變換),
  * 直接 Box3.setFromObject 會量到未變形的原始幾何,縮放/定位全錯。
  */
-function measureBox(obj) {
+export function measureBox(obj) {
   // MUST 連**祖先**一起更新:量的對象可能是子樹(變形者只量地面型那一棵),
   // 而 `updateMatrixWorld` 假設父層 matrixWorld 已是最新 —— 剛改過父層 scale 的那一次
   // 會拿到上一幀的父矩陣,量出來的盒子少了那個縮放(貼地偏移因此差一截)。
@@ -84,7 +84,7 @@ function measureBox(obj) {
   obj.traverse((o) => {
     // 反轉外殼描邊(toon.outlinify)沿法線外推,量進來會讓整台機體矮 2×描邊寬 ——
     // 舊制描邊排在 fitToHeight **之後**所以碰不到;新版建模的鷹架自己收尾就描完了。
-    if (o.userData.isOutline) return;
+    if (o.userData.isOutline || o.userData.teamRing) return;
     if (o.isSkinnedMesh) {
       o.computeBoundingBox();
       tmp.copy(o.boundingBox).applyMatrix4(o.matrixWorld);

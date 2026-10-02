@@ -1,0 +1,362 @@
+{
+  "s01": {
+    "blend": "a0330d4473629c9402a6f827d35c6c39dd51ff901292c0a074c984533790eefd",
+    "sourceMeshes": 226,
+    "bones": 17,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t10": {
+    "blend": "93a3ddff777c2f1a0d0124a18898fd698acd78debc6fea824d8a89eec81f97b1",
+    "sourceMeshes": 247,
+    "bones": 26,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "s02": {
+    "blend": "4757e1c4585b7987d42bb2b2230b93aa8a9e6d2dc89a0678a9d68aef0cc1e63e",
+    "sourceMeshes": 172,
+    "bones": 18,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "s04": {
+    "blend": "4b7744b69f7cee1789fa5f99312a3b54299d38831dd4e3a0845a8cf16332875f",
+    "sourceMeshes": 150,
+    "bones": 13,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "s05": {
+    "blend": "31f0647e8979a95dbd792c88f89a0013ef42e2f1e72f5317973c1fb288ac3ad7",
+    "sourceMeshes": 169,
+    "bones": 16,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "s08": {
+    "blend": "0c772b76f7798661f020bfe1f1caa275b58044bdf2e6d10e353d64c5c83ccb50",
+    "sourceMeshes": 141,
+    "bones": 14,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "s11": {
+    "blend": "e27921e706292d94428a868afa4b777829ad30d7d6a59c1cb9efd619e6bb80df",
+    "sourceMeshes": 166,
+    "bones": 13,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "s12": {
+    "blend": "9c50b1ec31fc0f14968f52cbea4980d92f036f5fa0bb1447573e296f8bc3f578",
+    "sourceMeshes": 167,
+    "bones": 16,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t07": {
+    "blend": "20c3253d710d69cd115b1982350b6d10d2cdc649bb8cf3b7550e803a7378b63b",
+    "sourceMeshes": 178,
+    "bones": 16,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t08": {
+    "blend": "b523baab741050d396ee0e886c84b6c56d0270fbbb8f0317f3801d25797310e0",
+    "sourceMeshes": 265,
+    "bones": 22,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t09": {
+    "blend": "9868e2b46343987aefbf7583aafcca8c138342543ce810cf8a3edae2d0b59086",
+    "sourceMeshes": 176,
+    "bones": 14,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "m03": {
+    "blend": "78392ad412973ffce3d922d6086da6f2de31a7e458728e11661c2b5cf7901bda",
+    "sourceMeshes": 155,
+    "bones": 13,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "m04": {
+    "blend": "de5b3beab2353e03f94ab3e1e25098b246bfee9c163686d9e993d68aa412bb98",
+    "sourceMeshes": 205,
+    "bones": 16,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "s06": {
+    "blend": "d502865ed56b024bca6099cd390d29e3c6822bebd94389b7bcd7679eec4bf038",
+    "sourceMeshes": 244,
+    "bones": 37,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "s07": {
+    "blend": "b2d3fef4e80b204f0735d538d9460086c3256bef74623602348a15e368a8bffd",
+    "sourceMeshes": 427,
+    "bones": 55,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "s09": {
+    "blend": "99aa82fb8ab36e5da9f0ec5aeb2b304e4af7ff9693fd4a798960e84363d8cd38",
+    "sourceMeshes": 229,
+    "bones": 30,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t01": {
+    "blend": "535440248e27a5c008183ee1c69a16d0ba35c6f69cb4e1cfadb621e726e96da7",
+    "sourceMeshes": 225,
+    "bones": 25,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t02": {
+    "blend": "a6687b632f1d0f96f26a945013059b4fd83602f8af1241f9c9512d7f0c0cd271",
+    "sourceMeshes": 220,
+    "bones": 25,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t03": {
+    "blend": "27ba59bd0ca653e8723ca4057395d4f64e4fefce6de10f69fd4815bca437e0fa",
+    "sourceMeshes": 212,
+    "bones": 25,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t04": {
+    "blend": "8978f0f2b22e265a9025c102e1ec180f8f56583f1f306aea8bf950913b9d05e2",
+    "sourceMeshes": 236,
+    "bones": 29,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t05": {
+    "blend": "7176fa61ebcc8b75e45eb56cbba733331ead55d15c4d45c9faa469d6713528e9",
+    "sourceMeshes": 194,
+    "bones": 25,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "t12": {
+    "blend": "7d0224424a56c2a81699fe32a888c8dc787cf166c29b2d6353041a2d3cc9e877",
+    "sourceMeshes": 216,
+    "bones": 25,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "m02": {
+    "blend": "6abfd651a8cd65888d81e3201be42eabbbd4d5f1904a4870dbda1e4aa6970b9d",
+    "sourceMeshes": 227,
+    "bones": 30,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  },
+  "m06": {
+    "blend": "1781999189833f00baec25f4a9fcc02fc3050165fdf96dfe6a03600eb204c096",
+    "sourceMeshes": 250,
+    "bones": 30,
+    "editableClips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "skill",
+      "ult",
+      "shield_deploy",
+      "shield_retract"
+    ]
+  }
+}

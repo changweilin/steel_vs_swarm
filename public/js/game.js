@@ -10545,6 +10545,7 @@ export class BattleClient {
           ent.mesh.position.copy(this.pos);
           ent.mesh.rotation.y = (this.viewMode === 'tps' ? this.bodyYaw : this.yaw) + Math.PI;
           if (ent.bar) ent.bar.lookAt(this.camera.position);
+          ent.visualDefense = this.defending && (this.sp || 0) > 0;
           stepCombatFx(ent, now, dt);
           stepLocomotion(ent, dt, now, px, pz, pyaw);
         } else {

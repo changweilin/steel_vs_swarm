@@ -7,6 +7,40 @@ export function stepUnitSpinners(nodes, dt) {
   }
 }
 
+/** Secondary rigid joints share the combat clock; shield posture follows defense presentation only. */
+export function stepReferenceMotion(rig, ent, dt, now) {
+  if (!rig?.referenceMotion || !Number.isFinite(dt) || dt <= 0 || !Number.isFinite(now)) return;
+  const motion = rig.referenceMotion;
+  const kick = Math.max(rig._kickL || 0, rig._kickR || 0, rig._kickB || 0);
+  const cf = ent.castFx, duration = cf?.slot === 'atk' ? 1.35 : .95;
+  const age = cf ? (now - cf.t0) / duration : -1;
+  const cast = age >= 0 && age < 1 ? Math.sin(Math.PI * age) ** 2 : 0;
+  for (const [tracks, weight] of [[motion.fire, kick], [motion.charge, Math.max(0, rig._chg || 0)], [motion.cast, cast]]) {
+    for (const track of tracks) track.node[track.channel][track.axis] = track.rest + track.amplitude * weight;
+  }
+  const spinner = motion.fireSpin;
+  if (spinner) spinner.node.rotation[spinner.axis] = (spinner.node.rotation[spinner.axis]
+    + dt * spinner.rate * Math.max(kick, rig._fireAim || 0)) % (Math.PI * 2);
+  const shield = rig.shield;
+  if (!shield) return;
+  const defending = ent.isSelf ? ent.visualDefense : ent.df && (ent.sp == null || ent.sp > 0);
+  const target = !ent.dead && !!defending;
+  shield.phase = Math.max(0, Math.min(1, shield.phase + (target ? 1 : -1) * dt / shield.duration));
+  const u = shield.phase, weight = u * u * (3 - 2 * u);
+  for (const hinge of shield.hinges) {
+    hinge.node.rotation[hinge.axis] = hinge.rest + (hinge.deploy - hinge.rest) * weight;
+  }
+  if (shield.arm) {
+    const arm = shield.arm;
+    for (const key of ['shoulder', 'elbow', 'wrist']) {
+      arm[key].rotation.x += (arm[`${key}X`] - arm[key].rotation.x) * weight;
+    }
+  }
+  const projection = Math.max(0, Math.min(1, (weight - .18) / .82));
+  shield.barrier.visible = projection > 0;
+  shield.barrier.scale.setScalar(Math.max(.001, projection));
+}
+
 export function fireUnitMotion(rig, muzzle, now) {
   if (!rig?.attacks || !Number.isFinite(now)) return;
   const attack = rig.attacks.find(a => a.muzzles.includes(muzzle));

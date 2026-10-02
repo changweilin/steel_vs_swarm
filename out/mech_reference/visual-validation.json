@@ -1,0 +1,799 @@
+{
+  "contract": "f4f1ae7752e1643d34fd1201be0cafad8732cf5fa1753703590e3104e6b11270",
+  "method": "Original reference and exact final reference/front/side/back/top renders; destination bench and shield captures inspected",
+  "assets": {
+    "s01": {
+      "identities": {
+        "runtime": "fda8c9f37f608904aba88aefb9e19bc49d804b7971179f05c64cb0eb4ce98dba",
+        "blend": "a0330d4473629c9402a6f827d35c6c39dd51ff901292c0a074c984533790eefd",
+        "glb": "c6eda691719d601bd3f01354c34006f006eeb0f6d1ef096d8effb883d6dd6910"
+      },
+      "reference": "8594939b9bcfd6fae905fdc845035f49ff056cbbc485028585535b6ce9098d32",
+      "renders": {
+        "reference.png": "ef50f35769ab6d632e9a851f2cc65bc9c111e16dc6c381042ecba9bd77a15cc7",
+        "front.png": "6801bc52b64732765a18a6cd274b99bc9d1ce1220580493e9989de90e6876ddb",
+        "side.png": "e239599662336079472fc98447a2f02fd1eb2e1e9ce320470e7567f55a91273d",
+        "back.png": "6983a7677b56c1dd622e45921a223bc92432d9315148e4029ea94673a335b628",
+        "top.png": "c1b850f3aeaf6968a79d9c4a7b6352583a76f46a9d9d2c51e521c83de498043d",
+        "shield_deploy.png": "df2d7d5040d657db9f55d7c9083f4d60f48d1c8561d7741f7eed660ddb367d4e",
+        "light.png": "d41fd0700aa15392383e57b480c38ee019629e30e5cce64b9f3de870d71dea4c",
+        "heavy.png": "cf790eee2cc6a136cc982afa34d4a9b9c9ff73c988a78afdf2cb1f08b4db4922",
+        "run.png": "7aefac110686111b2ecfb23f54f088660d7b059ea4239a42475f892d667249b2"
+      },
+      "destination": {
+        "bench": "eb4dc650b4529ad454429466a0c6bcc4a57fee6d8591222d54f8ce156e7f479a",
+        "shield": "60a9be24058ad470ef1e9be2bc185ce2ca9fd5f743c9e9de00127f44c921a130",
+        "rig": "12f79a9bad6a3479e8253fbe5a0575960a919ecf6f956833c21b03eae626b9e3"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Long faceted bee fuselage with compound sensor eyes and a tapered striped abdomen; no limbs",
+        "Exactly four open enclosed rotors, paired fore/aft on carbon arms",
+        "Nose underside coaxial gun and paired lateral rocket pods",
+        "Inferred retractable dorsal emitters project a forward radar barrier without adding limbs"
+      ],
+      "inference": "oblique action; rear and underside inferred"
+    },
+    "t10": {
+      "identities": {
+        "runtime": "afbd38ca4f4c0113ad320f18606e7665e40873d49d2c897e3cbb6798a9e759e4",
+        "blend": "93a3ddff777c2f1a0d0124a18898fd698acd78debc6fea824d8a89eec81f97b1",
+        "glb": "66b1bb9fc135598d35e6d87030d01fff064937377ca8696ac1a8fdad5dac2dd2"
+      },
+      "reference": "850fbee0f4ba80e09bb4d5d49a21ea562efe257f100f148ee2db6a3810f17843",
+      "renders": {
+        "reference.png": "841ef7d5d80a5f9ebf42ff64a12effdf67e423dd8499868d964a4726eb0074b0",
+        "front.png": "5e2f208a2e6777923155e9641be56e5e6621e54089c781b63956154cfed04c8f",
+        "side.png": "41b5e878453ed68da9e0587193b3572391fb2a266829894704bcbb33989f979e",
+        "back.png": "a91ea21684432be6de7c43d10b641a3c35cd5f8ad15da86846e06a198ec4ce2d",
+        "top.png": "8e8f694dcf6856e3da33a8b39c781e7ecea71cc9a160f3dfcc6c6c25b954235a",
+        "shield_deploy.png": "09c70ea8e58e3bd8d11385899778b883e6dfe3d06effd1dc4bbcd5b25d788519",
+        "light.png": "9d34574f3754612d36aec8b4fbb4eafb3e35e9bc2f0cb31de778fadeea304045",
+        "heavy.png": "eead15d9566fd3113729584d9f8fb2c9405225ca6f36d4eb2aceeb7c50b60b1e",
+        "run.png": "c3bd662f427d86c4274c359be76d013ddfcc60bd6c636f8aefea7224e6e135c9"
+      },
+      "destination": {
+        "bench": "f5d7fcd6bdcb496fa6fbb46235bbe2df2967a40c907b639ba5377fb6455d3ab4",
+        "shield": "99ab84a430470dd4c3be1a39c2614d6e0ecbcc928516124ffcb08e4ece2f0b8d",
+        "rig": "682f13d1cc4c97b4f87b7c84cc6ac737c81a8306d36050a4679e24e562d6461a"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Tapered turquoise interceptor armor, narrow articulated abdomen and geometric right-chest marking",
+        "Trapezoid face, brow shade, two circular ear radars",
+        "Separate hip/knee/ankle and shoulder/elbow/wrist joints with rigid articulated armor",
+        "Anatomical right forearm rotary gun; exactly one anatomical left-shoulder six-cell VLS",
+        "Anatomical left palm presents a holographic radar barrier; forearm leaves unfold before projection"
+      ],
+      "inference": "oblique action; rear inferred; weapon sides corrected to prompt"
+    },
+    "s02": {
+      "identities": {
+        "runtime": "7427e060a4547bb1b15f59c65d3324340ab970395fd224de980dedc6edd5219d",
+        "blend": "4757e1c4585b7987d42bb2b2230b93aa8a9e6d2dc89a0678a9d68aef0cc1e63e",
+        "glb": "1c5c15626d0cb112799bbdb53e9abb17eebb9449f326741f2376f0e044abea67"
+      },
+      "reference": "0e1e16a7d00df7d7e8a09b167f2f026ef497ca8d4e96c648149ff655bfac8859",
+      "renders": {
+        "reference.png": "b0a115ff85a4a52fe777ae07cf23efdf73c5314bddb9c11ec129b5f2f9c318f4",
+        "front.png": "244b3172b2ce19a8566330386dbfef3a654caa5d8c3c050b45abd4111cefa5f2",
+        "side.png": "d46deee32aa9af83281e6f19623d8e1616a0bb08151b4a0a296bba47c9a506cf",
+        "back.png": "a951012c4c3f5b1ecd3a91690d4b816446b3077a2139161dc8f51694dbb1ed94",
+        "top.png": "b90ff667539a9d492ab25f1c95331dedf1e1a37346cc967bdafc526ba778f4bd",
+        "shield_deploy.png": "1dfcbc5a83e30d670f3c91b8416f8050ae88b273e99edcd337df0722c7c4a43d",
+        "light.png": "bad6d4d953542c78738c48e7c85c001b31adbf74f467ce63ca6029dcb8418ed8",
+        "heavy.png": "ca705b6b4d4566beedb1166dd84e3a09b85797aea5121f01732bd27dea503fa9",
+        "run.png": "d71eb88874190a67871045494ad1444a5c3dcb600e9c744ef359e81deef42a5e"
+      },
+      "destination": {
+        "bench": "723ae096691026448ce315a7c44b7a1d0b7a00eda66bf0b6e1e3c349659a79ac",
+        "shield": "1d4e6d8d27767c0ea9173f7db4f86a0f3e73880e87bb53e1a42785d7647f4f34",
+        "rig": "f84f3b3a71506a1dd9f6c66a05e52e89bec3e51daebf1d06de87b98315583698"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Double industrial slab, cross ribs and asymmetric patches; exactly six enclosed fans, three per side",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "s04": {
+      "identities": {
+        "runtime": "04edf7a8f5cb0c118cd28b738273fc000331fafb2e79b7eea7352def39f6a77a",
+        "blend": "4b7744b69f7cee1789fa5f99312a3b54299d38831dd4e3a0845a8cf16332875f",
+        "glb": "0fc8ec078d8b8692b750dd86d108d5a532ffe207dc3364d8a6e65b6b5bf76d99"
+      },
+      "reference": "6189be70855f29c79a5ea793f0b692d11e5dfc8a1e423267f963746ba3784f86",
+      "renders": {
+        "reference.png": "57276bda38df2c0df8f9e0062b6a3f5950adbce91bfa153ba8b3ef7a60352f82",
+        "front.png": "5e3e0831d609923e152ee086e0535cbc71ef2e9ce5083a9fb0b09ef9808125e2",
+        "side.png": "df5781af6957bf173f02b4445dad1f4e12f0216a2b1a78e4ca98da5f2d356a8c",
+        "back.png": "15d3edf0bfb68e80f08f70bfe98fecea407ae4af2851bf7ac6e2fbe3aa19aa96",
+        "top.png": "c0f79caafe73fd82f1f55820dba4fa25957d6cf29b3a9aadc415b35becd10673",
+        "shield_deploy.png": "5382f703d44e6be1a2d334b1a4885a2b52c4539c84f548f0b3ace4f400eac304",
+        "light.png": "eef4d4611c337edccff0ab57375e42478b971495071e1138211e1f4c9a02c8bc",
+        "heavy.png": "6ca86f8905bd65941ed99399ab60e6aa1be62b1124d7b405f88abc290cc69dce",
+        "run.png": "f2cc02c7817fa0481634edb62b120fd8b523b1403617d3494c2fd552edca1357"
+      },
+      "destination": {
+        "bench": "e20b7b8723bdb0c2f250d371ae5949cc724864ebc781444d84775582d68675ca",
+        "shield": "41ddfec67366db48c5d51e9911b046dd86ae1be8f3ad638864771c0305a1fcd0",
+        "rig": "ea18c5f29b8dae769a885465fec127d3e3b567e57467c11155ff98b246ad3fc0"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Zero fighter planform, nose engine cowling and downward shovel ram; red roundels on both faces of each wing",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "s05": {
+      "identities": {
+        "runtime": "ecc16f9c1dcee49a036c8abd3154d098788cc63f1a269165c6083cd1dbe31c95",
+        "blend": "31f0647e8979a95dbd792c88f89a0013ef42e2f1e72f5317973c1fb288ac3ad7",
+        "glb": "c4775d7ebfb7fbc20be41f6391cf4682cba263c4b27dc3a0337710c6227fd3bc"
+      },
+      "reference": "67cef56fb89e067c8f6958784842211b69d640fed7fc61f568997139f436daf6",
+      "renders": {
+        "reference.png": "21c933f97305bc800a87ec9e48163f714ff5131ff360be10390dd3f4c88e08a6",
+        "front.png": "2842a6d0bd790199c83fb1bbfac6cd0e1910158d59ed49c1c4c2cc2ee714c8cc",
+        "side.png": "607fe5e1a0ac9e7701b35228c0673e608bbc52a986dbed3409309456680c668f",
+        "back.png": "ede4d44e6270ce01e647bcca69903dba423e4316b202a673335615ea2f84814c",
+        "top.png": "d8383c2f0b60c3ab74cdec4caa3a4feb3ae8ebd559ff5f2e1cb9c231db08f7a3",
+        "shield_deploy.png": "10fa27e76235b660fa6d8d09c83ac2d076c0a72c42a20395fa39632562d17518",
+        "light.png": "39048904d90be2e012fb664531a5b37f7f1cda801e9c2afa8b53a454ca19ee8d",
+        "heavy.png": "98aca30490e423342a0d60253c4ab99b111b39e71e076621ef6276fecdf3a5ed",
+        "run.png": "50c931d70d6889e48ad48cd33914e9c0912e087cb5083d9640fed6a1af253f3b"
+      },
+      "destination": {
+        "bench": "ee72d30623fadd67651dcd3d76ad0a8cae89f25406815254079c48a31884ee94",
+        "shield": "a22b35cd1a7da5bedba225e7bbb9aa06934ed158c32bd077f77d868a434f811a",
+        "rig": "be75296ac052455690ba14bc5c6282866208c79624299e739fcde3b957026ab9"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Open carbon X frame, four exposed propellers, fluorescent rails, capacitors and loose external wiring; no ducts",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "s08": {
+      "identities": {
+        "runtime": "e2ed985e443f7ffd1d1673724c2ea282878545410771d0eda1f68b7820bfeca6",
+        "blend": "0c772b76f7798661f020bfe1f1caa275b58044bdf2e6d10e353d64c5c83ccb50",
+        "glb": "c6df9ec9fe6ee2e22741165a77f8df4e2136a0540c0aaa890f107b33db85f05a"
+      },
+      "reference": "b06e53dc4dd5175975802225072e01ab0acca1537e474cd84f91a6c129b74b1a",
+      "renders": {
+        "reference.png": "54b80340ef3708a7ea263d18304f9d0592a0395b241ad00061789529c293750d",
+        "front.png": "18bbd410a723544bb4a5d6bd9a47098eede6f9b4e0a4595a310fa72235016681",
+        "side.png": "dd837750f79aca7160c940b441028efcaebf8d5b9c97fd2395bc06ed0c289692",
+        "back.png": "471d3a6a1ce4d4a7e3e688536684558e95069f72f819a553a795c549ba4af874",
+        "top.png": "61613ce533a2cd7a0ce1bbd2f4e2f617493f0e3d4e20c8048db643f01b1f63d3",
+        "shield_deploy.png": "293146604b936548341d865f21a9ccc5d65ad370b57fd2a2cf05dec6f79f8425",
+        "light.png": "cda2c8f134601cbdc40138c7bc1aabc3369164ab10690f463477eb661b014eae",
+        "heavy.png": "f71693bc700b938020f44388e7df1d528f287cbd509141091a26489bf5ca51ab",
+        "run.png": "0bfe965799f92c3b33ec614deabb73d28a0b675f82f854870c3c03a39e454117"
+      },
+      "destination": {
+        "bench": "5d5fa2e5e3b13b5377171fe2a32a4f81574ed0b7b28100cea30cbc6b25f53fba",
+        "shield": "3d502f283906628a06fd6273c7a4fd394778304b81772d0c0c2f31512dc7d9fd",
+        "rig": "dfff7edaf53d2d5a90cf1329bf5949e6b64ce95e605a76232316ec710fa1ad87"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Spherical white cabin, two coaxial counter-rotating rotors, paired green-cross medical pods and brass rings",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "s11": {
+      "identities": {
+        "runtime": "fa831a8751f5694388672f94d4165d0094fbb050e3df23f5df3f1fb65d11ec50",
+        "blend": "e27921e706292d94428a868afa4b777829ad30d7d6a59c1cb9efd619e6bb80df",
+        "glb": "817ffa2d052027b590c59320f75eb5287115778388a78f8e8abef844c4834d2b"
+      },
+      "reference": "32dc4d947b40908224e594b8765ff256095f765d865ae5bc742a8d73ee218d5d",
+      "renders": {
+        "reference.png": "e403b1b1ba81626f67abf5dd3dff2b210507215aa7dcc668e8fdfba0fd21a4ba",
+        "front.png": "799331dcd67cf4493b751589ba26d5c4b72df4287ecbcefe5f405c1e46af225d",
+        "side.png": "7542ace5d7476b1ef41615ed4264ecf2df1b4968e8a0c3461b2132923fedb9e0",
+        "back.png": "ce671137db3867f4f765760a6dea553d88c841c1eb54157ab09872cd0e5fab10",
+        "top.png": "abbc41f2fd4325ef54dff780e3e88ccba29a70039182cef7264b4add81e0d680",
+        "shield_deploy.png": "708a0e8e2b2d0c0d2a2980ac54e7a65d27130b353fa615bfb1b6fbc20cbf19ca",
+        "light.png": "b0436ce83a09e01e1241a26f6f8926940f2e3d03a738d5229ddac95c0baec5da",
+        "heavy.png": "188e8b5c30eb55d825549d50098237be6a591f2f785cd3c942a1d31f7d1bc97f",
+        "run.png": "bf9d872924d8d51dcb12c127485560128e97791fc816777146c79c50e97d889c"
+      },
+      "destination": {
+        "bench": "10035e5fa0daea5cfb36227f8977d439923e2390bf05236a8b6dcb2f815d1800",
+        "shield": "c1ecd061e7e470b5a9663a82d2b86bfb5e9b85b60d4c5aa163a1c0f21a92fecd",
+        "rig": "a08defd99b3ce13d7ef1dd0ceb0b8607af22bdb4d27cd3480dfcd5727a9a171d"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Thin central rod, very high aspect wings with clock markings, V tail and central rear pusher",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "s12": {
+      "identities": {
+        "runtime": "cffa87e014c9b7e9a0c899716c39bad31897246eadbb73d585b9af55fdc683ab",
+        "blend": "9c50b1ec31fc0f14968f52cbea4980d92f036f5fa0bb1447573e296f8bc3f578",
+        "glb": "99df7be358497511bab928e649a611d7fa9bcdb9381324d8113f3caa08e82258"
+      },
+      "reference": "a26c52cdc2232d0a4960c851c92c01e0484ecd2211b1a79ef85a370946a17a51",
+      "renders": {
+        "reference.png": "ddc5a2332f7084405c2795f4f17d103056977774a5ea9f38aa71c23569afe277",
+        "front.png": "4e89208a90cc44bf28d93968630b037871262b0df0c16c417dffbfb25b049c2b",
+        "side.png": "c44647cc95b3e675dc7da190453bdcd1708d5caa781d204c7322d6a21de1fc3c",
+        "back.png": "55d67514d776992aacb9587c509ef7fbc5ea636a98c36e37eac310a632429bbb",
+        "top.png": "c42c89c7727683209a757c5c44de225e20f5a52a2290766d701ac0ab83f72461",
+        "shield_deploy.png": "0a7a671bad4afe847497db89f9b8b43cb0df63c95c7fc7166159a9aeaf541fee",
+        "light.png": "29f94fc62015da975c585b7c6e4080520a79b0a56bd26038aff810e4a18c561d",
+        "heavy.png": "f8cbb09ff88b3834edea10c2b9249e0df46263357e221c1d5e497cacad27dd9d",
+        "run.png": "c1f930dcb3e15ae7286c8f3599b4e89a2816daa4dc193c6a2503502b8e917c93"
+      },
+      "destination": {
+        "bench": "07e9d53f9bd01c8cbc967de90ff6766a73aa4ffdb3f0541fb1a46f7ff333bec8",
+        "shield": "936559c5c33b266c18516b08c63073ae76e61ff08ec5e9a3db2e052c0e60975c",
+        "rig": "af1c42068ac34cf7f5c250490f002486e2853b7b3834e46b48d101e2c8c9446e"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Blue diamond nose, forward canards, hinged rear delta wings, star engraving and rear jet",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "t07": {
+      "identities": {
+        "runtime": "8ff44eb249eb7a7e94a18e2e884444959c7bcee3c8a241b3bbb0a5b665b50280",
+        "blend": "20c3253d710d69cd115b1982350b6d10d2cdc649bb8cf3b7550e803a7378b63b",
+        "glb": "00176626a40f9211477fb5381f45a588a42977784e8e1e9eafadf5610b92efdc"
+      },
+      "reference": "0e0b9d9122cd94868496cfd170b6d0a8c4187191175313b5a88f20fab18105d4",
+      "renders": {
+        "reference.png": "963d014b8a502c3f0d44899d8cdceb67d722fc4cc72818c08f58e14c9d80e0de",
+        "front.png": "dcbf263a2291184e4fdef5ae0457e53f1d8c9a1e952ec191d60374f4e95c70fe",
+        "side.png": "a4dda26204191648b06aea49a7bb8e13dfff9821f8def990524f0ddf357dc6aa",
+        "back.png": "988e0d493104b9fcfdfc6588576b7dcde62956cdddb34c419bc19a7f6e9e67c9",
+        "top.png": "8677d84c39441176ec5badaaecb9d0632e1c607c29cde6a66c3b920182df8305",
+        "shield_deploy.png": "d7343e398c6a6e15ed047e413a90f2a05047e2281ad0c5664acb11916939c180",
+        "light.png": "9fbc0f8757c9bc10f12b6bfb0aa851dd22485c67c38e19bb2a3eeaf60e0e2bd0",
+        "heavy.png": "786c7368c4a17808f8b21da8defc0af79b41dc39267004799117e7916142063e",
+        "run.png": "fdf6e1eb34d0e9b75e13236210557e30b7abcd8c6f1fa2faf3cc2d40e7d15908"
+      },
+      "destination": {
+        "bench": "eb54c36a7e7bd07a50302508cb3d1ed5d08d980f0292fac7ed8fb2ffea979862",
+        "shield": "3d23994ed79edfea5e6351f776e6e3d90194a06d813ed347615aad9a690a519b",
+        "rig": "f3d511ff4807cd59039212ed7a6fa5a36f5fa091a6f145e3480735e32c461230"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Long sniper beak and finger-supported membrane wings, two tucked claws; no rotors",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "t08": {
+      "identities": {
+        "runtime": "d7d54c7e6680abc5e0a3e37ca3373d31f21d84fbec768f8e4a0b4cde6c1bab63",
+        "blend": "b523baab741050d396ee0e886c84b6c56d0270fbbb8f0317f3801d25797310e0",
+        "glb": "a73015379974071266469989883d6231e892c3fd3991f74c11cb2ca1d4144d53"
+      },
+      "reference": "f046001a41666408caabe83923bcfd804416e0fd031db2e415ca2ca327014fa4",
+      "renders": {
+        "reference.png": "b5e9bfd782612c67af3f15a76ee1f16742836cdee8eda2cb6679d6d195bcabdb",
+        "front.png": "24161d5624a9da823a9383e9ee4186f78d32da1eb926eee73bf6567c484f22fe",
+        "side.png": "df6ff8b9cbaf78e99364ca7024ecbf024eb65dad5812446bd51ffffd043befd7",
+        "back.png": "b9b01634a50de6b6c339220a90536eba89875746f532c6ac2fcc5a86c904e7f2",
+        "top.png": "6d87d7f01923c2d4f3c6b00d7d68d8dce2a7fdc956b90dcbeaf9269fed06ec07",
+        "shield_deploy.png": "ef2b2aecfe51278c00973c2cd2d252dbf0f25eb54461828c9248ddd936e4932e",
+        "light.png": "bff9b70ea6f256a2648500f5ac13718ab8b9b8cda7782f73ac19348b8fe8c4b4",
+        "heavy.png": "5d165dc26b117e3af57a09f2e92af9d774e56022ed5b3c227fd8172f10753fdd",
+        "run.png": "eab58e13bf5795728bbf81343548a23c58ffadcfad4148c1a1dbd6d324d0eb9f"
+      },
+      "destination": {
+        "bench": "8dbcef74d2001e57eb551487800baac14a07d02a846c777ba9dd878e1cf6726f",
+        "shield": "1c5d81c77d7246a2fc7b2951b36c1eeaffc829e276574c4870050a2785dd30bd",
+        "rig": "4e036c5d03b634ac7935499370fcb69d160d6db8916e897cfd3d6bd9e73a0680"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Serpentine eastern dragon with horned whiskered head, four tucked claws, pink blade feather wings and curved segmented tail; no rotors",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "t09": {
+      "identities": {
+        "runtime": "8d920ded4eb8ea874a7f2c6da58297a61bccf155de08a87883bc5e980e4074f8",
+        "blend": "9868e2b46343987aefbf7583aafcca8c138342543ce810cf8a3edae2d0b59086",
+        "glb": "43a13c9a13733df7d7bcbc498eaf01f3df7045c2504894559ae9d07ec6514b70"
+      },
+      "reference": "a4e45a5b8b16fc1dff850d2443a941ae8dd44c328e6c892ae7bd9bc13e25dc92",
+      "renders": {
+        "reference.png": "d0cca0b86d36eea26d7a5f20413377295313310ddb79e5ca35137e61191bdbad",
+        "front.png": "312f9d3a008473aaa180f83cb3474a71e8fcb335c1d2dfaae16cf2f7027d0f0b",
+        "side.png": "4a3c052e025a31aa4d21045358c058a822c536c7b0b77eab21966086faa47525",
+        "back.png": "8deeeda38a128ad6840014b68cb4f346b202fc02fbc0c4fa4c278ad8d962fbcf",
+        "top.png": "cea2e492edf1e5495ec28b3e06c7094aed13db0e27b49c703e8ae6c8860dd906",
+        "shield_deploy.png": "b9225b19701772a43b99a7371112a922a0fb73988822e5ec16bb5220ebb2be5b",
+        "light.png": "d722529227710db3980d19af1ff005290e41a32960deebf55840882a8da49750",
+        "heavy.png": "0efacf5f6719af1be79810aa570743ff60a8f6943da06e545996e13af5510628",
+        "run.png": "e5c487f3e406a2fde555620a8f38385ad9562a8cb64b58a9b238d4aa880ac521"
+      },
+      "destination": {
+        "bench": "69d76cdac7ee8651c13010416b08c03784e47827d045eb24baca1426e6b9e4d0",
+        "shield": "54d7dd50aafc17433d3fdd6200110fde8162f11f168a61d016387cd4f47ef1f7",
+        "rig": "b4e3f4031467a5722ea2e920736ab7b463d92db1904e6c0f70e2b0e93efeb4a1"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Tailless delta flying wing, Persian geometric ornaments, dorsal honeycomb launch bay, twin rear fins and pushers",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "m03": {
+      "identities": {
+        "runtime": "7a82a19a74f2c9a2952a3108f84578586fd80bd6283eefb58cf4eda2766bf546",
+        "blend": "78392ad412973ffce3d922d6086da6f2de31a7e458728e11661c2b5cf7901bda",
+        "glb": "d9f12bc3099bb727928d516c5ad626f94e84c6a917c2180e056d9e3338f63b18"
+      },
+      "reference": "46d95c6b27b4efc7b8ca9f7e09979a06202f4e4977ddc76bd58483a2d73072db",
+      "renders": {
+        "reference.png": "6a7efea70f462fb15e8f10636585a3157c1c55d6dda90bceb7e69098bd4c1942",
+        "front.png": "51d849f27f6f3f947ab4c3bcd77f5049940cde5e7f0f1975b827a920e42d2b67",
+        "side.png": "553d3dc433b844b48bf1f0bca21f516defcc5d0b6e01177e61c217fd119af4e0",
+        "back.png": "aaee9c60177f7ff559e94571f68dbf43c4a5d8705e848cf15414070dd7bdc79b",
+        "top.png": "cb8ffaf305cc17312905d2961a78a81302d482957d86fd4f6473213d5146ffb6",
+        "shield_deploy.png": "14b88b075e04a527f9e6cb75a65b10d58127aa0925d509ffa140652caed1ccc6",
+        "light.png": "e5257f28e224099602ccfe1c5b963b4da084e26d3d2a1484e71d6a11a8b088d8",
+        "heavy.png": "c95c36f8ca39f9ac8581e82632e5aab423433e29fd88638992c577fa821abc66",
+        "run.png": "c9d4313d423d8792e3bf757b1bd5fa50f1556e6ba3b69a61b82de17b47c5ddfe"
+      },
+      "destination": {
+        "bench": "b3b2326dd7bac55d7cce6c56d069c4210ee722f573a655e4e5253777dde854c3",
+        "shield": "38e49f087a0f88735941b2a2cd88aaa8c04fc7be8e88e757b18bf71fd5e27d02",
+        "rig": "2d62869bcf5147ae61625a3658e13c81c30927477230bd321bb6b743f4678ae7"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Octagonal center cabin, straight wing, exactly two rear booms with tail bridge and center pusher, dipole antenna rows",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "m04": {
+      "identities": {
+        "runtime": "0fdd9e3d793a3457af03e78f0bf75c7e5b608d0c757b8f68190093a091f07ee1",
+        "blend": "de5b3beab2353e03f94ab3e1e25098b246bfee9c163686d9e993d68aa412bb98",
+        "glb": "773ac8eaafea2e2e29134f658d5b369fe26bc8aa0c89ef45a154a44db511b57d"
+      },
+      "reference": "f2fd8afa576c4ae134d5d14ea751981f8255413745c33abf7761f971fe7ced08",
+      "renders": {
+        "reference.png": "87f5966a214d9d435e2a185833d1bbc359088a16d87b1c432ef3e00f444a6e59",
+        "front.png": "8ddef5298df25590abd54e520d389863da344192f6a7e8aa5f33c14d3eaf95f5",
+        "side.png": "c651d676d06d364c1b10ed0dcca1fbe341771e2d2896be78e90eb01f1653b7f2",
+        "back.png": "21c4193b591448f03f488e1c5f569681ec18dec45c98bda9f1a9fca27248b9b5",
+        "top.png": "25f11429a3bfc498600f711adc81695d476e24566307652ddcb777312ae0f3e7",
+        "shield_deploy.png": "66474fef11d95ab47778cf3625ac12ce5050e263044106a47700fb8ddae8505f",
+        "light.png": "e375af335c558e2ce6f4215c3138ddf355b191b18a0bcc6aa0624344a762155d",
+        "heavy.png": "6d3a30da6378e99534cea129d5bf121de3bfba033ceedfe8bb0141dd5249c8a8",
+        "run.png": "f34d5510a035e170805778484658396499b0f1fb74ff3732c9fdf7be7a360439"
+      },
+      "destination": {
+        "bench": "25c454ed0896750adbcbe5aa2b520a5cf57aac0f3c1abe1f5ea52f3cc78982f9",
+        "shield": "cee887592dbae09ea8179fda9d1d8100121944dfa11d933348145d864e9e935f",
+        "rig": "62eace5a0900d7c519528e613c55a9f154baf1ed56953ddda95a0e7d474b8adc"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Small eagle chest and hooked beak, gold eyes, independent splayed feather blades, exactly four shoulder missiles, two tucked claws",
+        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "s06": {
+      "identities": {
+        "runtime": "946f2d7c127599ceb1bf3e318825b28806604dff98266f65efcbbf14c34cb388",
+        "blend": "d502865ed56b024bca6099cd390d29e3c6822bebd94389b7bcd7679eec4bf038",
+        "glb": "5b046066c88dcbd9f700be60c8da149d6b4d60057fd81a5a5c064e3f7c2a4040"
+      },
+      "reference": "c306aa4c5a235e254fe1ae3946178b4d61441b627a686193250c5e29d5513e03",
+      "renders": {
+        "reference.png": "e13980e8b92980d6a9dcb9e949e6c7fefde4242c0fc730c1308eee8c4a2a61a5",
+        "front.png": "5377f6f047f253b50b490b21fce736f04e1a9afbf70d653211db0e49fcd6b5b6",
+        "side.png": "049c620ca7c0c5acefaf99ffcb3e36f2cb8b60460b2a8fb39ee1d79146a4ab44",
+        "back.png": "2a18d0a0568d14a8143b6b80702afab79dcb225aea625bdde77852cb3c4ba5c3",
+        "top.png": "001807a916d59974e50f1dcb1a214504319f61c20a9ef0e2363b72c5d1c2cded",
+        "shield_deploy.png": "8adbb47dd539fdf0f7e6b564e6c8d99edd44aa3815c1866a2a9c16e48d5c1eee",
+        "light.png": "fd130f71829e6b68dd92d802789d1befa86e90771e2dba84a6be69ca8a5ff2ee",
+        "heavy.png": "c736afb1cb8d907faaa028c3aa9ea5f61c38694571cf2c3f1db268d088e29928",
+        "run.png": "118bdef8e10ae61fbe290e104233edd5fe6171ac05bcb4beb86c97f7c5cd5cfb"
+      },
+      "destination": {
+        "bench": "5026ece01be1a69f371711426ab25a78c306ca0c7159dda8d493a8f577c176af",
+        "shield": "d74a9414343c9acebee8f6c47a597b26598b114f0b533feab77a1325091f239b",
+        "rig": "a75371650f17ae0fcab091e1afb5eafe3b19ea00768403583197ad658ae1a12c"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Four hoofed horse legs and knight upper torso without horse head; anatomical right sniper rifle and vertical back missile rack",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "s07": {
+      "identities": {
+        "runtime": "427bdd56b28ad1a63a4421cb7070a20b1ab8b5c896d7dfa65c46648509dd4570",
+        "blend": "b2d3fef4e80b204f0735d538d9460086c3256bef74623602348a15e368a8bffd",
+        "glb": "44404c0b1b2da75a152a68485682ce526979e36801d057b1c0513b68e1909da0"
+      },
+      "reference": "5122ff559180b8e2f471844c24a897380d6a085956c2115c94dcb8f52db0f5e3",
+      "renders": {
+        "reference.png": "a5253fb474aa3fb171343f93d93802512232c80ebb06bdfb5f4408e527cf363f",
+        "front.png": "e8c5aafbdc9b8638be32520b2b58fcac370f99be27d3b6bf4d58c01fe0344c6b",
+        "side.png": "b42827c7524039376612ba46a55c7d87f1df88afcddabea1f0f3304d7436ac5b",
+        "back.png": "72f01b4e569ef54584af91c88ec732f75c807e699aae7810cfdeb8449433ddca",
+        "top.png": "0c4c610b9f90923526ff3654e114e81ac86afc1594a74870be349a09e0e8d4c6",
+        "shield_deploy.png": "8c5c0d70515e575b4b688a0692f5577d5b8953b6d3d07c6bcbf3878df8d3e427",
+        "light.png": "ef8bd007ec8000fea90021e7da65d77bf155b80ecdef3f2b03e7a0af8d922173",
+        "heavy.png": "17242d382b3a3e9e4d644adbe911d8b079235a5555b38e54b1fb45a26827667f",
+        "run.png": "bf9601937b78fd843e897c9469fce2e77d2649af73319120cedfd721b0db353d"
+      },
+      "destination": {
+        "bench": "66d976e497fa3ed7ad1a3af1473eeb95247ec686b0b755dd29a075c6c71c1d06",
+        "shield": "3bc20c01a4892813306156e87069334b4d4ab59b1613d0d916a7d9845a8249e5",
+        "rig": "00d0edd258d1536cee32ef07fb01fde153224589c5bb5840e8c27979f67d86c0"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Faceless ellipsoid mantle, top sensor disc, exactly eight S-shaped segmented tentacles: four supports and four weapon arms; sucker rows",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "s09": {
+      "identities": {
+        "runtime": "d7ce5c313795ef74bea6d831e608ad27328cc867b751faca8ef1954595a857ed",
+        "blend": "99aa82fb8ab36e5da9f0ec5aeb2b304e4af7ff9693fd4a798960e84363d8cd38",
+        "glb": "c4821f5161634272c32c6941c7c47eb849f659733baec71637eb9113d16fe2b6"
+      },
+      "reference": "5ad7953be8671b0839261e485df6dcbee6c8c4c87bf54d7f2eaa66256c62891c",
+      "renders": {
+        "reference.png": "0bb24cbbdbc9880c29abc9253f3da191b15faf31efd48ac09b428c3e155dc68c",
+        "front.png": "11c44b44c6356bc595580c18bd6d64111ce49e939af5f1544de19038477c10c2",
+        "side.png": "2c7f115b9fed0ec7bb4f3eb66b6065d1836c18e956be9afb0960fc933b78c185",
+        "back.png": "74d2bef67464df9fddc4b822cb579be660b16e6f16375a9ac9613c3dc49b2bb3",
+        "top.png": "a791172067bb2bd2b681703ab6461898e172dd105512d9b0433ed149a5e7dd1c",
+        "shield_deploy.png": "b81a37ffe5b096a3c0b500b3be2ad4eaa5ee98d249f2ace7e16a584484b2ffaa",
+        "light.png": "34c29661b697971dcbe17197cdb93e26abd8dc91f5ee9578b3909be17194a9a2",
+        "heavy.png": "da68a3a1f1a4c0a7bd98adef0e562d0507fd6a972f8f99c886619df3c5d06531",
+        "run.png": "4a43d6de0fdcffa4197263a695b48e4871174feeb34b305b62b5d33f13baa1be"
+      },
+      "destination": {
+        "bench": "0ed18a8ef10e752d71705de2bc9549418eeeafc56ef72a99241deb30070ea6e9",
+        "shield": "6493c2e67cd1acf3dd45dc8a81b8df1059c447c8d102afec7b4183ae686ebf8b",
+        "rig": "9f8e0776927f7c979c6440980723c1d7c392a529bc1aacf7f4495535d7f25ad6"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Long kangaroo muzzle and two long ears, deep reverse-knee hind legs, large feet, heavy balance tail and abdominal launcher pouch",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "t01": {
+      "identities": {
+        "runtime": "201815a0e1c86f0427551f2cc4974e1448aa07be97c53143ab2d641e35d3d333",
+        "blend": "535440248e27a5c008183ee1c69a16d0ba35c6f69cb4e1cfadb621e726e96da7",
+        "glb": "f17305e526897d6e459a7234c4c262eea2c50f59fc0119ae9865b92d5d5bffeb"
+      },
+      "reference": "97ba25c19ced1a3a2388100cf3b9202297dda2cff2209075306e6a2896b69649",
+      "renders": {
+        "reference.png": "0deab527c773ec4b4088b442ba8e49382e777cfdb204e809afc528efb98a9c3c",
+        "front.png": "5fd1fa7842582bf02715c0cf2daa3bbbb4d8ea7e19ee0af297c5b16d865bd5a0",
+        "side.png": "5bb10cb88c3dfbdfce6436497b5cd2399c8a8d66af4095c23d8603182b116adf",
+        "back.png": "ad0118b4e704720e49b5d329aec8116228fde84bd55f30a56734fea988bd6264",
+        "top.png": "72d77b72aa3b33974e753b464fc0908ed94065f98711ae9396f85c6ecaecde16",
+        "shield_deploy.png": "8452ac278645eef0d2426d20dd9f141a79e2527bb270c92c0ac9748845a050bc",
+        "light.png": "699e79ce30436ab996e303d04091cffeaede75d88f68bcf418645ac6d7700965",
+        "heavy.png": "d4926bec7a03c3497d93aa56de0053d2caae941db1d6c3bd69c8bfa8cf98e13e",
+        "run.png": "3a11951e41b4d4191c026dbfc486ff1d9df23810d27a6a208f34e0a0f16003aa"
+      },
+      "destination": {
+        "bench": "f070ec1847859debffb90010040639fe4844c99d86a354cae7bd251e52beaade",
+        "shield": "c3afc196cac97fca61e622a922ce8b6235586526336ea12b264f1cc6754bf689",
+        "rig": "fbaf100cea633e2f2864c2cd0ca4fe6b6965e136f8b0f09254f92a0d18f2a78a"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "White industrial joints and ball shoulders around small skull mask with curved bull horns; right six-chamber revolver axe cannon, left belt-fed machine gun",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "t02": {
+      "identities": {
+        "runtime": "6f38c8b523a3e150a755f0fb29f5b5d3b65c2a18aa81a87892f1608318952fb2",
+        "blend": "a6687b632f1d0f96f26a945013059b4fd83602f8af1241f9c9512d7f0c0cd271",
+        "glb": "31368cece32df4d73ce893cee25fe5a7096d392e983549a3925a49e2f2571cdb"
+      },
+      "reference": "9b98b8c36c279d28d91bab19919439cf63e573e42b19b76aca69215bf95fb7e4",
+      "renders": {
+        "reference.png": "924b4c4177388db008094974f51ee190ef8fedbf10f15a3fec4f07a9a5dfc893",
+        "front.png": "c66918a7f5f99ea0213d8c70149db7ba0064604d72b29b7a23af62039f52956c",
+        "side.png": "5b24724be69cd402b7b532fe56f5aeffcab43ab3c9dff0b7095c1746f25d6e7c",
+        "back.png": "cc2fa0cbcabda387258ea452bb4e63f56f1859d317501e556fcfe0cc8c46f1ba",
+        "top.png": "53fc34bc329d569246fe6450da400a00cb98c4ccf5c6e0444554cdb8d48f8b3d",
+        "shield_deploy.png": "acd82fc0b356e8aa3ae56444bba0ed72a54e496a541b0fc65f50bc7cb678bd36",
+        "light.png": "b00996e5fe5f0d98d7ab8e327d640bd2e0713e954072d2feaabbc1200963197d",
+        "heavy.png": "c934db3eb3d391469c605de20a357e506be079adc5f56a4afaba9b0d614b0654",
+        "run.png": "6c0fb3ae791edc74912ff35681e084c732e985817eef68c9d8574df841d4e00b"
+      },
+      "destination": {
+        "bench": "84167284be869c79f7521b89534c3d1763fb17a18d52af9b0c0352077bbcfaef",
+        "shield": "6f8447b363cea36d1872995af8f88342b443aad6b70339a3783cc68b35055705",
+        "rig": "2e0a735ff94c2748f5b3cc3286c72b1ccb0c1d7d10e4423743c89921eda970f1"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Slender lavender frame with exposed brown tendon muscles, horned wedge head, four outward back thruster blades, right rail lance and waist gauss gun",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "t03": {
+      "identities": {
+        "runtime": "287fd393ff8df0b5eb6c60c399e16b5e4d3abf24711c5fb7b5a9f56af7e62fb6",
+        "blend": "27ba59bd0ca653e8723ca4057395d4f64e4fefce6de10f69fd4815bca437e0fa",
+        "glb": "701eacb77e248552b1e966e2bff707974d769e5ccf501d8781f6f9786507addd"
+      },
+      "reference": "ec8a03e5503ffd562f0083aff798f7346a7b0a90c6cbf6fb1464606c81808ba4",
+      "renders": {
+        "reference.png": "77e1fc82c503c22791d55585d2003738ba99cd8261b33b498304535500120be1",
+        "front.png": "263c4515f49b5890c03aa646b196e9423b4124bc74ae625122c9d03c4d11974d",
+        "side.png": "7f42b9605b219b0d3abac17a4dd01e04df66aa731006fa0b9c5049d846d6696a",
+        "back.png": "bec367b603515f2aa767c8b3a3f4532e894369e1793154d171271955f71307fc",
+        "top.png": "479e43f37a140f61f2e86798ba9d20e8c0feb8292f92c17a2dc62a972b7c4dd8",
+        "shield_deploy.png": "4059e518189f565ac75c266826259149c25f79ceb94f3f49ceef709ec59dab69",
+        "light.png": "4bd240eca93a9ad0433b5f842a8527244dd74f9da78ed7a29a60509bc9899417",
+        "heavy.png": "58334541e2f19ad32a73e486ca55324b50ce240dcc9d073c239f88e0cc658771",
+        "run.png": "b4449a3794d3d8466fd2f30e035be4a49cb399888131d4a788f4f7f5b35261fb"
+      },
+      "destination": {
+        "bench": "1e94029c28e1389587df2f3740b8ea5e42dc14a27cccfdc76b643aee7ce7884f",
+        "shield": "2d292759f68ca0cbe1e83c4f64310b497cc41359922c61756a7ac071b7b31154",
+        "rig": "6635ddb75aa4feecb39e8b95041221d68b42a359e1ccb8c144e0daa7a33e976b"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Low hunched gorilla, long arms reaching below knees, short stout legs, twin exhausts, right cannon and left drum shotgun behind bulldozer shield",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "t04": {
+      "identities": {
+        "runtime": "3a6e4049cf3ebc6602e1153504679ca5968f10ccbbd1de1570363847b86bb11a",
+        "blend": "8978f0f2b22e265a9025c102e1ec180f8f56583f1f306aea8bf950913b9d05e2",
+        "glb": "20e278873323dd87fe16d8b4ea53c9846d91bf0b9a40ce6fc29d7ea4d2c73afd"
+      },
+      "reference": "d10467012687689fced96ab52f66314c3f0fbc41cf353de86d780f2a805281ea",
+      "renders": {
+        "reference.png": "fe906e91d53913ec55b28090324a08cc5f1f23323c770f950a09364ea7f7eed9",
+        "front.png": "6472939f8a7514caa7aca7d18b5008652637572f651ece6156758d257bb317d0",
+        "side.png": "a75c18a7278dd816f6163dd0fcececa7f5f91aa8f5ba2a05af6cb6b6c8a209ce",
+        "back.png": "7a682b784634fef04cf889651c5fe99df1f7f76801c0a11dc834a339d1991d9a",
+        "top.png": "eff49413b23ab4452366686086806cecbb6e8a97060c6579ba00b526aaa252a2",
+        "shield_deploy.png": "962d89ebbbb64346c1492ec55232a768d6d41778e2a40839c46a554efa253680",
+        "light.png": "5a349927741a55945a5435cbc3feb4cdb3ace84c5dc83bdab83e92f8ca23ba48",
+        "heavy.png": "145db9ab517d9f12ce761855560f996e971e35abf1280594e13cf3f314943702",
+        "run.png": "fb171496cc4379b63bd08e52e308630048560948a31f0d333906a266993264ec"
+      },
+      "destination": {
+        "bench": "745fac5a1cb0f9b786f47a8a62d001e50c2bb2a9e832a1c3a9e4ff9bd06d753f",
+        "shield": "7e4f07d6a73ced4172eda7c0995e164a649f9d9519652c2d30c8a86c11c2d2e3",
+        "rig": "4497fdf0380d73a11365e117b1ab598ed4ae4bdca34e1867607e3654852eaa96"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Low four-legged dog, reverse hind hocks, toothed snout and triple red eye band, snow camouflage and stabilized dorsal antiarmor gun without grip",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "t05": {
+      "identities": {
+        "runtime": "769029dbb2679589d7a5108b3b738916d7a1f95aece2657d5389624c22b71662",
+        "blend": "7176fa61ebcc8b75e45eb56cbba733331ead55d15c4d45c9faa469d6713528e9",
+        "glb": "64745d4c466134c80acf482e2ebf7a9e0f4bd5bdd93ff73c1c970fb7ab41a7ba"
+      },
+      "reference": "d0dee31f053ea6bcf1dd33184159b5c7937f2f56ab551d65a83fc8b2de159fc0",
+      "renders": {
+        "reference.png": "bf7e2814915a4c37e5242af8808156b9d5b4dae0d889e05f07ec804f3a908331",
+        "front.png": "5a3324442fa196850ab9e31ad1464b51565a8a49d67b9ebd7d1fb67f828566a9",
+        "side.png": "8e48080842a4b80dec7189ec4f3c55de3d348d7cf850b6bd5a803d24665def16",
+        "back.png": "ce69189520d7b630a9a0f8a9d9517a6f16b27dc742859efb20b8368c26a4e018",
+        "top.png": "2c304a828c0a2cfb570cf1692087a271c7bed312dda97652a2f1e02df6673596",
+        "shield_deploy.png": "12b85a455549d5f0373e2ea3ea47e2b067b640ddf93b302789106ef80508485e",
+        "light.png": "da7295f7b64131721bfdf2e610c82e46cbc4b787b9c060c871c39bd6fa761d2b",
+        "heavy.png": "bee530c4abf4f012772b2c1b08ff3b9c1073bba94abadc34d124afcf7cc901a7",
+        "run.png": "fcf06ae550ce76add7286f91969447f9f856ca8d412604ff299ae571c269a991"
+      },
+      "destination": {
+        "bench": "2f33c6b26f2d74f42e37f967d97e1788aaa1d3238184176529c64d1eb1b8655e",
+        "shield": "73949ebc44f82b3e5c8b1eef2403801540623d0ae3a1a2ec063545cd434d8715",
+        "rig": "046d04b24de4dc506e31eeb7a0c1c3896e0838bd47004d84a0cdbb51d84f25d2"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "S-shaped segmented bird neck, tiny red-crowned wedge head, very long reverse bird legs, folded blade wings without hands; right photon lance and left coil gun",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "t12": {
+      "identities": {
+        "runtime": "14929158d418daab4c2e8fd577007bfa01930ce8b701773b07929dfcaa65f8dd",
+        "blend": "7d0224424a56c2a81699fe32a888c8dc787cf166c29b2d6353041a2d3cc9e877",
+        "glb": "ee1689c1933c6f1f26f7e178caebcd35c55190d0c5848dc953c733d10e84a25e"
+      },
+      "reference": "8eda38a83b12a0494b91d0674607c2ad03081ed5662d69e5f4ca8c580419ea5c",
+      "renders": {
+        "reference.png": "2fa02956cb41523c3175106a651c182d8208639485faa0aad917bb9b6a8c3497",
+        "front.png": "c96817edc87df3f5726cde0ddd49573f6df58bc1b8bdb6e5db4a7d34c12a9887",
+        "side.png": "18d67991aacb9e86f888a365ef83e251f93a66e3b283de7f1b0c5bfd0d43b811",
+        "back.png": "e233419d9c3399ec02089a50fba8536ac9ec382d88643406ce7db6afc6ab18ec",
+        "top.png": "2a50e98b83923e16e5fe8dabfad748292cbeefd6bacfeb96b08740deee81a596",
+        "shield_deploy.png": "1fccbf3dd01ed36e6f1cb71dccd353b29a437d0b9dac03138c1aa00078d139f0",
+        "light.png": "16ab5068ae882034dca777e903692688262eb6e074fdf758acf9dae80323285c",
+        "heavy.png": "de46533852ffba25154cc6b291efdaba7148f525ae2c705de6158a073f8877b3",
+        "run.png": "ab426b0394691c3228544bb54d4096786fdbb9cd9b083d036751c484d016b75d"
+      },
+      "destination": {
+        "bench": "721ef8426731c6b1da8cf56eac73260cee6e7cad7b731509b473b3aaf9297d0b",
+        "shield": "9a34c39a85271a898ba0a8e015fd636b33d8f14adec53ded79dad7e89fcaefec",
+        "rig": "d211f63aa296918737ad292e346649b06ac11d0205bfcdcb4085f7e387c124e4"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Rounded rectangular grey violet armor, forehead electromagnetic cannon, three chest shield layers, giant shoulder vents, right pulse rifle and left shoulder emblem",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "m02": {
+      "identities": {
+        "runtime": "5d085b88c98b18a7943f101e1443fd1f05e2645943498ffd56c6cc9d89c0bc4b",
+        "blend": "6abfd651a8cd65888d81e3201be42eabbbd4d5f1904a4870dbda1e4aa6970b9d",
+        "glb": "b86941b10754fdd012cfe46966fbf500dd9732f21a3bf354756692c57c808498"
+      },
+      "reference": "f8f8ffcc16bfcacd30b691f97eff10a415b20b563a249be9afb76be726f5b9d8",
+      "renders": {
+        "reference.png": "a2f7c1584a08a6c5dfe45753539b17ac0f2ce730becce62fde77acb1d61d674b",
+        "front.png": "0944f5caaebdc1836fc58ee2116407e6a44cae632557ab5e01df2a2b884894d2",
+        "side.png": "63f5a5702eea5b8866d1f2aac45ca27fc46de7c3da9dd6e6aa9c1b58938c3b5d",
+        "back.png": "0a84105b5ce3ddef3ff50f653a52008dbbfd0ce7c700087b52b0134e6e954372",
+        "top.png": "34160b8a0edce795542679628fa0756efb907c5d174da5175bd302a8a85deba9",
+        "shield_deploy.png": "0cc5d7a10272ddebf870a8d297741cd8404b9b60379725de001139daf1e12131",
+        "light.png": "7b2b9ae88b7a1c07fd07f47a936b9020cdceded8c294d2af4f7aecfc7fd044b8",
+        "heavy.png": "10561debef575d7ba83f2a5a419df4cad3dd5813f3352a55292862c3e1fa487f",
+        "run.png": "f3e644b61050f461b9374256a4bcc42f3b2eba4a281c8c6402f6114636e04573"
+      },
+      "destination": {
+        "bench": "26537a5da148c22f4f2234c12406fa6308d0c172c098027ea7ac0f03713c83e3",
+        "shield": "7c0d430244fe6286cc70c480141a9cdbf96d01522832cd9ed321fa2c1d71483f",
+        "rig": "b1c2c15f73bd9e860acef8ad3f02b487dca4fd8fe345222b4747cef86aa1e0bb"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Horizontal T-rex body, huge toothed jaw with throat rail cannon, tiny empty foreclaws, paired chest guns and long thick balance tail",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    },
+    "m06": {
+      "identities": {
+        "runtime": "9e75d777083e99be63d35684f9928eadef863e6d434c40b7e1a9d5bef8e3421b",
+        "blend": "1781999189833f00baec25f4a9fcc02fc3050165fdf96dfe6a03600eb204c096",
+        "glb": "2ff2254ed68ebcb22abbae10ba84ad9c25ba7927773c831c8f676b9f12dfa085"
+      },
+      "reference": "efd9cd117b8de16d594c02a88ed84b1b48f7a8da6db74d64ea6c6aa4b32d555c",
+      "renders": {
+        "reference.png": "28029906ec54f09901c24137a34d487b3d48630b035cdd9e24d25d4ec3c21c12",
+        "front.png": "a42b6c24004aff57dc112d4b6aab476a21aa23fe967522a90ecd37c2487838bf",
+        "side.png": "4459ec91d50519e57ddd064531cf1499aeef3d3a87f40a282cd827f83ccbfc2f",
+        "back.png": "a9a053230e0c155d6efccc69cee80c378d193574cefa4fac1e6fad0f94ff96b7",
+        "top.png": "32dde7061f7cab1613482770f647dfe29feceff93aea42e2e6f450634cef736e",
+        "shield_deploy.png": "7405ba731a353bb624c65ec1ef96d43c88c49613d4201479209623fbd4d93ed4",
+        "light.png": "ff51fcaa6916940db5a8a36e29a31973473680783fc55a767004c66f913c14c5",
+        "heavy.png": "057ebc31a842ff7a63562355907d97c460047559662ca78e4c6f78f40e23840e",
+        "run.png": "1150ddd3fd916c0dec37f8d702e8e70a7397a8f08af02e3f525f20ed4e8b0389"
+      },
+      "destination": {
+        "bench": "a1983f88ac5bbf3712120ee8c98c84a635974b5aef6d406f1f50d52d8f832cbb",
+        "shield": "0c7624f01169777f6316032cf195e863539e9414a748250f34896acf175595f5",
+        "rig": "0cd0ab5f2d50e8286af1795b1a9d55b54e52e37a58fcdf5b7ee232d30ebd13f5"
+      },
+      "geometry": "pass",
+      "appearance": "pass",
+      "observations": [
+        "Heavy stegosaur quadruped, exactly eight pentagonal launch plates in two staggered rows, four tail spikes and paired neck guns",
+        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
+        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
+        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+      ],
+      "inference": "Oblique action reference; concealed rear and underside inferred"
+    }
+  }
+}
