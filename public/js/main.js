@@ -29,7 +29,7 @@ import { MapSelect } from './mapSelect.js';
 import { buildTerrain, battleBBox } from './terrain.js';
 import {
   buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode, warmOsm,
-  commitOsmIn, osmInReady, resetOsmMisses, fetchGridRoads,
+  commitOsmIn, osmInReady, resetOsmMisses, clearOsmIn, fetchGridRoads,
 } from './biomes.js';
 import { roadGridRotDeg } from './roadgrid.js';
 import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from './osmrelay.js';
@@ -328,6 +328,7 @@ async function fatalRestart() {
     if (el) el.style.display = 'none';
   }
   delete $('overOverlay').dataset.done;
+  try { clearOsmIn(); } catch { /* 忽略 */ }
   try { resetOsmMisses(); } catch { /* 忽略 */ }   // OSM 失敗記憶清除,重啟後重查(否則同查詢直接沿用失敗)
   try { await geoClear(); } catch { /* 靜默降級(見 geocache.js) */ }   // 高程/影像/圖資快取清空
   connectNet();   // 傳輸層重建(單機模擬核心 / 斷線 socket 全換新;單機開房訊息會排隊等核心就緒)
@@ -2372,12 +2373,14 @@ async function fetchDevOsmRelay(name, bbox) {
   return relay;
 }
 
+const SVS_CACHE_VERSION = 'v2';
+
 function prebuildKey(cfg) {
   // 會影響地形/地貌的欄位全進 key:center/sizeM/bases/lanes(對調反轉後)/env(season/time 進地貌)/teamSize(進亂數種子)
   // `defSide` MUST 進 key:劇情戰役的塔位是非對稱的(只有防守方有塔)⇒ 換邊就是換一個世界,
   // 漏掉它會讓房間階段預建好的地形被原樣沿用,而塔的淨空/墩座全長在錯的那一側。
   return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, cfg.defSide || null,
-    cfg.architectureSeed || 0, devOsmFixtureName(), MAP_EVIDENCE.VERSION]);
+    cfg.architectureSeed || 0, devOsmFixtureName(), MAP_EVIDENCE.VERSION, SVS_CACHE_VERSION]);
 }
 
 /** 房間畫面的預載狀態列(#roomPreload 獨立於 roomMapInfo,renderRoom 的 sync 重繪不會覆寫進度) */
@@ -4196,14 +4199,25 @@ function bindSettingsControls(p) {
     app.audio?.setBgm(v / 100); if (v > 0 && !app.audio?.bgmOn) { app.audio.setBgmOn(true); setSwitch(`${p}BgmOn`, true); }
     syncFsToggleBtn();
   });
-  // 清除預載:清掉 IndexedDB svs_geo + 房間階段已建的 app.pre(選項設定本身不受影響)
-  $(`${p}QuickClear`)?.addEventListener('click', async () => {
-    app.pre = null;
-    await geoClear();
-    if (app.phaseShown === 'room') renderPreloadStatus();
-    toast('🗑 地圖快取已清除,下次開戰將重新載入');
-  });
+  // 清除預載/暫存:清掉 IndexedDB svs_geo + 記憶體暫存
+  $(`${p}QuickClear`)?.addEventListener('click', clearGameCache);
 }
+
+/** 清除遊戲暫存快取:清空 IndexedDB svs_geo、記憶體中的地貌/預建/OSM 中繼等 */
+async function clearGameCache() {
+  app.pre = null;
+  app.terrain = null;
+  app.fieldMsg = null;
+  app.showcaseTerrains = null;
+  app.showcaseTerrainsPromise = null;
+  app.quickRestart = null;
+  try { clearOsmIn(); } catch { /* 忽略 */ }
+  try { resetOsmMisses(); } catch { /* 忽略 */ }
+  await geoClear();
+  if (app.phaseShown === 'room') renderPreloadStatus();
+  toast('🗑 遊戲暫存已清除,下次開戰將重新載入');
+}
+
 bindSettingsControls('set');
 bindSettingsControls('lset');
 
@@ -5359,7 +5373,16 @@ onViewModeChange(() => syncFsToggleBtn());
 document.addEventListener('fullscreenchange', syncFsToggleBtn);
 document.addEventListener('webkitfullscreenchange', syncFsToggleBtn);
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  // 版本更新時自動清除過期暫存，避免舊版快取結構不相容導致載入卡死
+  try {
+    const cachedVer = localStorage.getItem('svs_cache_version');
+    if (cachedVer !== SVS_CACHE_VERSION) {
+      await geoClear();
+      localStorage.setItem('svs_cache_version', SVS_CACHE_VERSION);
+    }
+  } catch { /* 私密模式忽略 */ }
+
   $('myName').value = localStorage.getItem('svs_name') || '';
 
   // 還原上次的開房設定(人數 / 房名;場地在 enterOpenRoom 還原)
@@ -5397,12 +5420,7 @@ window.addEventListener('DOMContentLoaded', () => {
     app.net?.send({ t: 'joinRoom', pin, name: myName(), mode });
   };
   $('quickRestartFab')?.addEventListener('click', () => { myName(); quickRestartGame(); });
-  $('quickClearFab')?.addEventListener('click', async () => {
-    app.pre = null;
-    await geoClear();
-    if (app.phaseShown === 'room') renderPreloadStatus();
-    toast('🗑 地圖快取已清除,下次開戰將重新載入');
-  });
+  $('quickClearFab')?.addEventListener('click', clearGameCache);
 
   // 入座/離座改由槽位內的「＋ 入座」按鈕與自己槽位的 ✕ 處理(見 renderRoom),
   // 整卡不再綁 pickSide —— 點卡片/槽位是「選取檢視角色」,不會誤觸換陣營。
