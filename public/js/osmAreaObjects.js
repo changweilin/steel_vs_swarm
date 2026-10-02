@@ -18,8 +18,12 @@ import { createOsmSportRenderer } from './osmSportsRender.js';
 function rawAreaGeometry(kind, seed, radius, functionType, context) {
   if (kind === 'tree') return forestSceneGeometry('holmOak', seed, [radius * 1.8, radius * 1.8, radius * 1.8]);
   if (kind === 'rock') return geologySceneGeometry('granite', seed, [radius * 1.8, radius * 1.5, radius * 1.8]);
-  if (kind === 'car' || kind === 'motorcycle') return compileSceneParts(makeSceneVehicleParts(kind === 'car' ? 'sedan' : kind,
-    { paint: seed, fit: kind === 'car' ? { L: 4.2, W: 1.9, H: 1.9 } : { L: 2, W: .8, H: 1.4 } }));
+  if (kind === 'car' || kind === 'motorcycle') {
+    const CAR_PROFILES = ['sedan', 'taxi', 'rally', 'truck', 'van', 'pickup', 'miniTruck', 'police', 'ambulance'];
+    const profile = kind === 'motorcycle' ? 'motorcycle' : CAR_PROFILES[Math.abs(seed) % CAR_PROFILES.length];
+    return compileSceneParts(makeSceneVehicleParts(profile,
+      { paint: seed, fit: kind === 'motorcycle' ? { L: 2, W: .8, H: 1.4 } : { L: 4.2, W: 1.9, H: 1.9 } }));
+  }
   if (kind === 'crop' || kind === 'reed') return fitSceneGeometry(compileSceneParts(groundPlantParts(kind, seed)),
     [radius * 1.5, kind === 'crop' ? .85 : 2.1, radius * 1.5]);
   if (kind === 'facility' || kind === 'spire') return fitSceneGeometry(compileSceneParts(

@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../public/js/', import.meta.url));
-const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 · 建築 / 地質 / 植物 / 載具 / 平民立體視覺工作室</title>
+const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 · 建築 / 地質 / 植物 / 載具 / 船隻 / 產業設施 / 冰雪 / 能源與工程 / 邊界構造 / 平民 / 戰鬥單位立體視覺工作室</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body { margin: 0; background: #cdd9e2; color: #273649; font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; user-select: none; }
@@ -199,6 +199,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     <button id="tab-btn-infrastructure" class="cat-tab-btn" type="button" data-tab="infrastructure">⚙️ 能源與工程</button>
     <button id="tab-btn-env" class="cat-tab-btn" type="button" data-tab="env">🌐 邊界構造</button>
     <button id="tab-btn-civ" class="cat-tab-btn" type="button" data-tab="civ">🧍 平民</button>
+    <button id="tab-btn-unit" class="cat-tab-btn" type="button" data-tab="unit">⚔️ 戰鬥單位</button>
   </div>
   <div class="env-sim-bar">
     <div class="env-sim-group">
@@ -989,6 +990,98 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
     </div>
   </div>
 
+  <div id="panel-unit" class="cat-panel" style="display: none;">
+    <div class="dim-panel">
+      <div class="dim-title">
+        <span>戰鬥單位、召喚部隊與生態幾何</span>
+        <span class="badge" id="unit-info-badge">20 款戰鬥/建築/生態 · 賽璐璐 3D 模型</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px;">
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">單位類型</label>
+          <select id="unit-kind" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all" selected>全部單位輪播 (All Units)</option>
+            <optgroup label="NPC 戰鬥兵種與防禦">
+              <option value="creep:soldier">機槍步兵 (Soldier)</option>
+              <option value="creep:apc">裝甲運兵車 (APC)</option>
+              <option value="creep:tank">主戰坦克 (Tank)</option>
+              <option value="creep:rocketeer">火箭兵 (Rocketeer)</option>
+              <option value="creep:howitzer">榴彈兵 (Howitzer)</option>
+              <option value="creep:heli">攻擊直升機 (Heli)</option>
+              <option value="bunker">野營碉堡 (Bunker)</option>
+            </optgroup>
+            <optgroup label="英雄召喚自律部隊">
+              <option value="summon:drone_wingman">自律巡弋無人機 (Drone Wingman)</option>
+              <option value="summon:assault_rover">自律突擊漫遊車 (Assault Rover)</option>
+              <option value="summon:heli_squad">自律直升機小隊 (Heli Squad)</option>
+              <option value="summon:main_battle_tank">召喚主力戰車 (MB Tank)</option>
+              <option value="summon:veteran_squad">召喚老兵步兵 (Veteran Squad)</option>
+              <option value="summon:carnival_heli">嘉年華直升機 (Carnival Heli)</option>
+            </optgroup>
+            <optgroup label="陣營核心戰術建築">
+              <option value="tower">陣營防禦塔 (Defense Tower)</option>
+              <option value="base:SWARM">蜂群主堡核心 (Swarm Nexus)</option>
+              <option value="base:STEEL">鋼鐵指揮總部 (Steel Citadel)</option>
+            </optgroup>
+            <optgroup label="生態野生動物群">
+              <option value="wildlife:bird">生態飛鳥 (Bird)</option>
+              <option value="wildlife:fish">水中游魚 (Fish)</option>
+              <option value="wildlife:cat">城鎮街貓 (Cat)</option>
+              <option value="wildlife:dog">草地小狗 (Dog)</option>
+            </optgroup>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">陣營代表色</label>
+          <select id="unit-side" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="all" selected>兩陣營輪播 (STEEL / SWARM)</option>
+            <option value="STEEL">鋼鐵議會 (STEEL)</option>
+            <option value="SWARM">蜂群兵團 (SWARM)</option>
+            <option value="GUER">游擊隊 (GUER)</option>
+            <option value="MILI">武裝民兵 (MILI)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">展示模式</label>
+          <select id="unit-view-mode" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="array" selected>陣列規模檢驗 (Array X×Y)</option>
+            <option value="single">單體細節檢驗 (Single Unit)</option>
+            <option value="catalog">全單位型錄陳列 (All Catalog)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: 600; color: #334155; display:block; margin-bottom: 3px;">排列方式</label>
+          <select id="layout-unit" style="width:100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; font-weight: 600; color: #1e293b; background: #fff;">
+            <option value="scene" selected>場景散布 (Scene Scatter)</option>
+            <option value="boundary">邊界沿邊排列＋緩衝區＋透明牆 (Boundary Run)</option>
+          </select>
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="btn-unit-generate" class="btn-generate" title="生成戰鬥單位陣列">⚡</button>
+        <button id="btn-unit-random-seed" class="btn-randomize" title="隨機種子生成">🎲</button>
+        <div class="sample-control">
+          <span class="sample-label">取樣規模:</span>
+          <label class="sample-input-wrap">X欄 <input type="number" id="sample-cols-unit" value="5" min="1" max="20"></label>
+          <span>×</span>
+          <label class="sample-input-wrap">Y列 <input type="number" id="sample-rows-unit" value="4" min="1" max="20"></label>
+        </div>
+        <div class="seed-control">
+          <label for="input-unit-seed">種子碼</label>
+          <input type="number" id="input-unit-seed" value="2001" min="1" max="999999">
+        </div>
+        <div class="seed-mode-control">
+          <span class="sample-label">生成種子規則:</span>
+          <select id="select-seed-mode-unit" class="seed-mode-select">
+            <option value="fixed">固定種子</option>
+            <option value="shared_batch">陣列種子</option>
+            <option value="per_building" selected>獨立種子</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="nav-bar">
     <button id="btn-back" class="btn-back" title="返回分類矩陣">←</button>
     <div class="nav-status" id="nav-status">目前展示：【建築分類與變體】</div>
@@ -1056,13 +1149,17 @@ import { makeProceduralVehicle } from '/js/vehicleModels.js';
 // 船隻生成模組
 import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel, VESSEL_EQUIPMENT } from '/js/vesselCatalog.js';
 import { buildGeneratedVesselMesh } from '/js/vesselModels.js';
-import { disposeTree } from '/js/toon.js';
+import { disposeTree, envMat } from '/js/toon.js';
 
-// 平民生成模組(單一真相縫:外觀 = civilianAppearance.generateCivilian, 建模 = npcModels.buildNpcModel)
+// 平民與戰鬥單位生成模組
 import { generateCivilian } from '/js/civilianAppearance.js';
 import { CIVILIAN_OCCUPATIONS } from '/js/civilianContent.js';
 import { CIVILIANS, hitH } from '/js/data.js';
 import { buildNpcModel } from '/js/npcModels.js';
+import { buildSummonModel } from '/js/summonModels.js';
+import { buildBuildingUnit } from '/js/buildingUnitModels.js';
+import { birdParts, fishParts, catParts, dogParts } from '/js/wildlife.js';
+import { compileSceneParts } from '/js/scenePropModels.js';
 
 // 環境物件與邊界生成模組
 import { environmentParts } from '/js/environmentParts.js';
@@ -1235,6 +1332,9 @@ scene.add(iceGroup);
 let civGroup = new THREE.Group();
 scene.add(civGroup);
 
+let unitGroup = new THREE.Group();
+scene.add(unitGroup);
+
 const waterMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(3200, 3200),
   new THREE.MeshStandardMaterial({
@@ -1392,7 +1492,7 @@ function estimateAppurtenances(poly, arch, heightInfo, seed) {
 
 // ---- 清除與重設 ----
 function clearScene() {
-  for (const group of [buildingGroup, roadGroup, geologyGroup, plantGroup, vehicleGroup, vesselGroup, envGroup, industryGroup, iceGroup, civGroup]) disposeTree(group);
+  for (const group of [buildingGroup, roadGroup, geologyGroup, plantGroup, vehicleGroup, vesselGroup, envGroup, industryGroup, iceGroup, civGroup, unitGroup]) disposeTree(group);
   scene.remove(buildingGroup);
   buildingGroup = new THREE.Group();
   scene.add(buildingGroup);
@@ -1432,6 +1532,10 @@ function clearScene() {
   scene.remove(civGroup);
   civGroup = new THREE.Group();
   scene.add(civGroup);
+
+  scene.remove(unitGroup);
+  unitGroup = new THREE.Group();
+  scene.add(unitGroup);
 
   labels.length = 0;
   labelContainer.innerHTML = '';
@@ -2665,6 +2769,9 @@ function switchTab(tabKey) {
   } else if (tabKey === 'civ') {
     if (titleEl) titleEl.textContent = '🧍 平民紙娃娃與職業外觀生成';
     if (descEl) descEl.textContent = CIVILIANS.length + ' 職業家族 · 種子重播 · 陣列 / 單體 / 目錄';
+  } else if (tabKey === 'unit') {
+    if (titleEl) titleEl.textContent = '⚔️ 戰鬥單位與陣營軍武程序建模';
+    if (descEl) descEl.textContent = '軍團小兵 · 英雄召喚 · 陣營主堡防禦塔 · 生態動物 · 陣列 / 單體 / 目錄';
   }
 
   const activePanel = document.querySelector('#panel-' + (tabKey === 'infrastructure' ? 'env' : tabKey));
@@ -2688,6 +2795,8 @@ function switchTab(tabKey) {
     buildEnvironmentMode();
   } else if (tabKey === 'civ') {
     buildCivilianMode();
+  } else if (tabKey === 'unit') {
+    buildUnitMode();
   }
 }
 
@@ -4282,8 +4391,182 @@ function buildCivilianMode() {
   render();
 }
 
+// ==========================================
+// 戰鬥單位與陣營軍武程序建模 (Unit Mode)
+// ==========================================
+const UNIT_KINDS = [
+  'creep:soldier', 'creep:apc', 'creep:tank', 'creep:rocketeer', 'creep:howitzer', 'creep:heli', 'bunker',
+  'summon:drone_wingman', 'summon:assault_rover', 'summon:heli_squad', 'summon:main_battle_tank', 'summon:veteran_squad', 'summon:carnival_heli',
+  'tower', 'base:SWARM', 'base:STEEL',
+  'wildlife:bird', 'wildlife:fish', 'wildlife:cat', 'wildlife:dog',
+];
+
+const UNIT_LABELS = {
+  'creep:soldier': '機槍步兵',
+  'creep:apc': '裝甲運兵車',
+  'creep:tank': '主戰坦克',
+  'creep:rocketeer': '火箭兵',
+  'creep:howitzer': '榴彈兵',
+  'creep:heli': '攻擊直升機',
+  'bunker': '野營碉堡',
+  'summon:drone_wingman': '自律巡弋無人機',
+  'summon:assault_rover': '自律突擊漫遊車',
+  'summon:heli_squad': '自律直升機小隊',
+  'summon:main_battle_tank': '召喚主力戰車',
+  'summon:veteran_squad': '召喚老兵步兵',
+  'summon:carnival_heli': '嘉年華直升機',
+  'tower': '陣營防禦塔',
+  'base:SWARM': '蜂群主堡核心',
+  'base:STEEL': '鋼鐵指揮總部',
+  'wildlife:bird': '生態飛鳥',
+  'wildlife:fish': '水中游魚',
+  'wildlife:cat': '城鎮街貓',
+  'wildlife:dog': '草地小狗',
+};
+
+function createUnitInstance(kind, seed, side = 'STEEL', posX = 0, posZ = 0) {
+  let model = null;
+  if (kind.startsWith('creep:') || kind === 'bunker') {
+    model = buildNpcModel(kind, side, { profile: seed % 8, appearanceSeed: seed });
+  } else if (kind.startsWith('summon:')) {
+    model = buildSummonModel(kind, side);
+  } else if (kind === 'tower' || kind.startsWith('base:')) {
+    model = buildBuildingUnit(kind, side);
+  } else if (kind.startsWith('wildlife:')) {
+    let parts = null;
+    if (kind === 'wildlife:bird') parts = birdParts();
+    else if (kind === 'wildlife:fish') parts = fishParts();
+    else if (kind === 'wildlife:cat') parts = catParts();
+    else if (kind === 'wildlife:dog') parts = dogParts();
+    if (parts) {
+      const geom = compileSceneParts(parts);
+      model = new THREE.Mesh(geom, envMat(0xffffff, { vertexColors: true }));
+    }
+  }
+
+  if (!model) return null;
+
+  const wrapped = withObjectLayout({ model, meta: { seed } }, 'unit');
+  model = wrapped.model;
+  model.position.set(posX, 0, posZ);
+  unitGroup.add(model);
+
+  const bounds = new THREE.Box3().setFromObject(model);
+  const size = bounds.getSize(new THREE.Vector3());
+  const meta = {
+    posX, posZ,
+    seed,
+    kind,
+    side,
+    label: (UNIT_LABELS[kind] || kind) + (kind.startsWith('wildlife:') ? '' : ' (' + side + ')'),
+    size: [size.x, size.y, size.z],
+  };
+
+  model.traverse((o) => {
+    if (o.isMesh) {
+      o.userData.unitMeta = meta;
+      clickableObjects.push(o);
+    }
+  });
+
+  const badge = document.createElement('div');
+  badge.className = 'badge-label';
+  badge.innerHTML = '<span class="cat">⚔️</span>' + meta.label + ' <span class="height">' + size.y.toFixed(1) + 'm</span>';
+  labelContainer.appendChild(badge);
+  const labelObj = { element: badge, point: new THREE.Vector3(posX, bounds.max.y + 0.8, posZ) };
+  labels.push(labelObj);
+
+  return { model, meta, size, bounds, labelObj };
+}
+
+function buildUnitMode() {
+  clearScene();
+  currentMode = 'unit';
+  document.querySelector('#btn-back').style.display = 'none';
+  waterMesh.visible = false;
+  floor.visible = true;
+  floor.material.color.setHex(0xbed0bd);
+
+  const kindVal = document.querySelector('#unit-kind')?.value ?? 'all';
+  const sideVal = document.querySelector('#unit-side')?.value ?? 'all';
+  const viewMode = document.querySelector('#unit-view-mode')?.value ?? 'array';
+  const seed = parseInt(document.querySelector('#input-unit-seed')?.value, 10) || 2001;
+  const seedMode = document.querySelector('#select-seed-mode-unit')?.value || 'per_building';
+  const boundaryNote = boundaryLayoutOf('unit') === 'boundary' ? ' · 邊界沿邊排列（含緩衝區＋透明牆包絡）' : '';
+  const sideOf = (idx) => (sideVal === 'all' ? (idx % 2 ? 'SWARM' : 'STEEL') : sideVal);
+
+  if (viewMode === 'single') {
+    const actKind = (kindVal === 'all' || !kindVal)
+      ? UNIT_KINDS[seed % UNIT_KINDS.length] : kindVal;
+    const res = createUnitInstance(actKind, seed, sideOf(0), 0, 0);
+    if (!res) return;
+    document.querySelector('#nav-status').textContent = '戰鬥單位單體檢驗：【' + res.meta.label + '】（種子碼 ' + seed + ' · 尺寸 ' + res.size.x.toFixed(1) + '×' + res.size.y.toFixed(1) + '×' + res.size.z.toFixed(1) + 'm' + boundaryNote + '）';
+    camTarget.set(0, res.size.y * 0.5, 0);
+    camDist = Math.max(res.size.x, res.size.y, res.size.z) * 2.8 + 6;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  } else {
+    const isCatalog = viewMode === 'catalog';
+    const listPool = (kindVal === 'all' || !kindVal)
+      ? UNIT_KINDS : [kindVal];
+    const cols = isCatalog
+      ? Math.min(6, Math.max(2, Math.ceil(Math.sqrt(listPool.length))))
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-unit')?.value, 10) || 5));
+    const rows = isCatalog
+      ? Math.ceil(listPool.length / cols)
+      : Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-unit')?.value, 10) || 4));
+    const count = isCatalog ? listPool.length : cols * rows;
+    clearScene();
+    waterMesh.visible = false;
+    floor.visible = true;
+
+    const items = [];
+    let maxObjW = 2, maxObjD = 2, maxObjH = 2;
+    for (let idx = 0; idx < count; idx++) {
+      const c = idx % cols;
+      const r = Math.floor(idx / cols);
+      const curSeed = getGridSeed(seed, seedMode, c, r, cols, rows, idx);
+      const curKind = listPool[idx % listPool.length];
+      const res = createUnitInstance(curKind, curSeed, sideOf(idx), 0, 0);
+      if (res) {
+        const size = res.size;
+        if (size.x > maxObjW) maxObjW = size.x;
+        if (size.z > maxObjD) maxObjD = size.z;
+        if (size.y > maxObjH) maxObjH = size.y;
+        items.push({ c, r, idx, res });
+      }
+    }
+
+    const stepX = Math.max(6, Math.ceil(maxObjW * 1.4 + 4));
+    const stepZ = Math.max(6, Math.ceil(maxObjD * 1.4 + 4));
+    const startX = -(cols - 1) * stepX / 2;
+    const startZ = -(rows - 1) * stepZ / 2;
+    for (const it of items) {
+      const posX = startX + it.c * stepX;
+      const posZ = startZ + it.r * stepZ;
+      it.res.model.position.set(posX, 0, posZ);
+      it.res.meta.posX = posX;
+      it.res.meta.posZ = posZ;
+      if (it.res.labelObj) {
+        const topY = new THREE.Box3().setFromObject(it.res.model).max.y;
+        it.res.labelObj.point.set(posX, topY + 0.8, posZ);
+      }
+    }
+
+    document.querySelector('#nav-status').textContent = (isCatalog ? '戰鬥單位全型錄陳列' : '戰鬥單位陣列檢驗') + ' (' + cols + '×' + rows + ' 共 ' + items.length + ' 個）：【' + (listPool.length === UNIT_KINDS.length ? '全部單位輪播' : (UNIT_LABELS[listPool[0]] || listPool[0])) + '】（基底種子 ' + seed + boundaryNote + '）';
+    const totalW = (cols - 1) * stepX + maxObjW;
+    const totalD = (rows - 1) * stepZ + maxObjD;
+    camTarget.set(0, Math.min(10, maxObjH * 0.4), 0);
+    camDist = Math.max(totalW, totalD, maxObjH * 1.5) * 1.25 + 12;
+    activeCamTarget.copy(camTarget);
+    activeCamDist = camDist;
+  }
+  updateCamera();
+  render();
+}
+
 // 統一陣列規模、種子模式、種子碼與排列方式監聽
-['geo', 'plant', 'veh', 'vessel', 'env', 'industry', 'ice', 'arch', 'civ'].forEach((prefix) => {
+['geo', 'plant', 'veh', 'vessel', 'env', 'industry', 'ice', 'arch', 'civ', 'unit'].forEach((prefix) => {
   ['cols', 'rows'].forEach((dim) => {
     document.querySelector('#sample-' + dim + '-' + prefix)?.addEventListener('change', () => {
       rebuildActiveTab();
@@ -4424,6 +4707,22 @@ document.querySelector('#btn-civ-random-seed')?.addEventListener('click', () => 
   document.querySelector(id)?.addEventListener('change', buildCivilianMode);
 });
 
+// 戰鬥單位事件
+document.querySelector('#btn-unit-generate')?.addEventListener('click', () => {
+  const mode = document.querySelector('#select-seed-mode-unit')?.value;
+  if (mode === 'shared_batch') {
+    document.querySelector('#input-unit-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  }
+  buildUnitMode();
+});
+document.querySelector('#btn-unit-random-seed')?.addEventListener('click', () => {
+  document.querySelector('#input-unit-seed').value = Math.floor(Math.random() * 90000) + 1000;
+  buildUnitMode();
+});
+['#unit-kind', '#unit-side', '#unit-view-mode'].forEach((id) => {
+  document.querySelector(id)?.addEventListener('change', buildUnitMode);
+});
+
 // ==========================================
 // 頂部環境模擬控制列事件 (四季 × 日夜 × 多元天氣)
 // ==========================================
@@ -4436,6 +4735,7 @@ function rebuildActiveTab() {
   else if (currentTab === 'industry') buildIndustryMode();
   else if (currentTab === 'ice') buildIceMode();
   else if (currentTab === 'civ') buildCivilianMode();
+  else if (currentTab === 'unit') buildUnitMode();
   else if (currentTab === 'env' || currentTab === 'infrastructure') buildEnvironmentMode();
 }
 
