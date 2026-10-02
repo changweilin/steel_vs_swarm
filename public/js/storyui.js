@@ -11,7 +11,7 @@
 import { SIDES, CHARACTERS, charKind, envLabel } from './data.js';
 import { chapterSide } from './story.js';
 import { VENUES } from './venues.js';
-import { avatarURL } from './portraits.js';
+import { artAvatarURL, ART_MODES, isArtMode } from './portraits.js';
 import { kindIconHTML } from './npcicon.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -23,11 +23,21 @@ export const kindLabelOf = (kind) => kind === 'drone' ? '無人機' : kind === '
  * Avatar with unit kind corner badge.
  * Single seam across all avatar placements (lobby roster, modal roster, pilot chip, card label, storybook).
  * Unit kind routes strictly via `charKind(id)` (mixed compositions decouple faction from unit kind).
+ * @param {string} mode 'char' 角色立繪頭像 / 'mech' 機體立繪頭像(CSS 方形裁切共用原圖)
  */
-export function charAvatarHTML(id, cls = 'char-av') {
+export function charAvatarHTML(id, cls = 'char-av', mode = 'char') {
   const kind = charKind(id);
-  return `<span class="av-wrap"><img class="${cls}" src="${esc(avatarURL(id))}" alt="" draggable="false">`
+  const m = isArtMode(mode);
+  return `<span class="av-wrap"><img class="${cls}${m === 'mech' ? ' av-mech' : ''}" src="${esc(artAvatarURL(id, m))}" alt="" draggable="false" data-art="${m}">`
     + `<span class="av-kind" aria-label="${esc(kindLabelOf(kind))}">${kindIconHTML(kind)}</span></span>`;
+}
+
+/** Unified 角色/機體 switching tabs (single HTML seam; state lives with callers).
+ * @param {string} mode current mode; @param {string} attr dataset attr for delegation (default `data-arttab`) */
+export function artModeTabsHTML(mode = 'char', attr = 'data-arttab') {
+  const m = isArtMode(mode);
+  return ART_MODES.map(([k, label]) =>
+    `<button class="segb art-tab${k === m ? ' on' : ''}" type="button" ${attr}="${k}">${k === 'mech' ? '◈ ' : '◉ '}${esc(label)}</button>`).join('');
 }
 
 /** Character chip for pilot selection, enemy roster preview, and storybook. */
@@ -35,7 +45,7 @@ export function heroChip(id, opts = {}) {
   const c = CHARACTERS[id] || {};
   const cls = 'sb-chip' + (opts.merc ? ' merc' : '') + (opts.on ? ' on' : '') + (opts.enemy ? ' enemy' : '');
   return `<button class="${cls}" data-ch="${esc(id)}"${opts.enemy ? ' disabled' : ''}>
-      ${charAvatarHTML(id, 'sb-chip-av')}
+      ${charAvatarHTML(id, 'sb-chip-av', opts.mode)}
       <span class="sb-chip-txt"><b>「${esc(c.code || '')}」</b>${esc(c.name || '')}${opts.merc ? '<i>傭兵</i>' : ''}</span>
     </button>`;
 }
@@ -69,8 +79,9 @@ export function chapterCardHTML(ch, i, side, { unlocked = true, cleared = false 
 /**
  * Pre-battle briefing: artwork -> narrative prose -> bilateral roster (pilot picker) -> mission objective.
  * @param {string} pilot Currently selected pilot ID for highlight state
+ * @param {string} mode 'char'/'mech' avatar display mode
  */
-export function briefHTML(ch, i, side, pilot) {
+export function briefHTML(ch, i, side, pilot, mode = 'char') {
   const foe = side === 'STEEL' ? 'SWARM' : 'STEEL';
   const sc = chapterSide(ch, side), ec = chapterSide(ch, foe);
   const cine = sc.img
@@ -78,9 +89,9 @@ export function briefHTML(ch, i, side, pilot) {
     : '';
   const mercSet = new Set(sc.mercs);
   const yourChips = [...sc.heroes, ...sc.mercs]
-    .map((id) => heroChip(id, { merc: mercSet.has(id), on: id === pilot })).join('');
+    .map((id) => heroChip(id, { merc: mercSet.has(id), on: id === pilot, mode })).join('');
   const foeMerc = new Set(ec.mercs);
-  const foeChips = [...ec.heroes, ...ec.mercs].map((id) => heroChip(id, { merc: foeMerc.has(id), enemy: true })).join('');
+  const foeChips = [...ec.heroes, ...ec.mercs].map((id) => heroChip(id, { merc: foeMerc.has(id), enemy: true, mode })).join('');
   return `
     <div class="sb-cine sb-cine-${side}">
       ${cine}

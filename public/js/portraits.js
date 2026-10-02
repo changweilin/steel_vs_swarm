@@ -25,6 +25,47 @@ export const PORTRAIT_MANIFEST = Object.fromEntries(
 export const AVATAR_MANIFEST = Object.fromEntries(
   DRAWN_ART_IDS.map((id) => [id, `assets/avatars/${id}.png`]));
 
+/** Mech illustration slug per character id (basename suffix of public/assets/mechs/{id}_{slug}.png).
+ * Single seam for mech art paths; callers MUST use mechPortraitURL/mechAvatarURL, MUST NOT rebuild paths. */
+const MECH_SLUGS = {
+  s01: 'dnipro_score', s02: 'blacksmith', s03: 'leviathan', s04: 'shovel_zero',
+  s05: 'overclock', s06: 'dirge', s07: 'qed', s08: 'candlestick',
+  s09: 'gamekeeper', s10: 'feather_array', s11: 'clockwork', s12: 'star_chart',
+  t01: 'winter_general', t02: 'galatea_7', t03: 'firebox', t04: 'greyhound',
+  t05: 'bionic_crane', t06: 'qinggong', t07: 'breath_hold', t08: 'aria',
+  t09: 'elegy', t10: 'trajectory', t11: 'veteran', t12: 'colossus',
+  m01: 'raven', m02: 'ballast', m03: 'lifeline', m04: 'nameless',
+  m05: 'stranglehold', m06: 'downpour', m07: 'portcullis', m08: 'dead_number',
+};
+/** Mech illustration manifest: id -> image path (relative to public/). Full-scene art, not transparent. */
+export const MECH_PORTRAIT_MANIFEST = Object.fromEntries(
+  Object.entries(MECH_SLUGS).map(([id, slug]) => [id, `assets/mechs/${id}_${slug}.png`]));
+
+export const hasMechArt = (id) => !!MECH_PORTRAIT_MANIFEST[id];
+
+/** Mech portrait (full illustration). Falls back to pilot portrait when mech art is absent. */
+export function mechPortraitURL(id) {
+  return MECH_PORTRAIT_MANIFEST[id] || portraitURL(id);
+}
+
+/** Mech avatar: reuses the mech illustration (CSS square-crops to avatar box; no separate binary).
+ * Falls back to pilot avatar when mech art is absent. */
+export function mechAvatarURL(id) {
+  return MECH_PORTRAIT_MANIFEST[id] || avatarURL(id);
+}
+
+/** Art display modes (unified 角色/機體 tabs share these labels). */
+export const ART_MODES = [['char', '角色'], ['mech', '機體']];
+export const isArtMode = (m) => m === 'mech' ? 'mech' : 'char';
+
+/** Mode-aware portrait/avatar resolution (sole seam; callers MUST NOT branch on mode themselves). */
+export function artPortraitURL(id, mode) {
+  return isArtMode(mode) === 'mech' ? mechPortraitURL(id) : portraitURL(id);
+}
+export function artAvatarURL(id, mode) {
+  return isArtMode(mode) === 'mech' ? mechAvatarURL(id) : avatarURL(id);
+}
+
 export const hasDrawnArt = (id) => !!PORTRAIT_MANIFEST[id];
 
 /** Ability cutin manifest: id -> { skill, ult } paths (relative to public/).

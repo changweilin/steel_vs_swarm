@@ -23,7 +23,7 @@ import {
 } from './data.js';
 import { LORE } from './lore.js';
 import { protoOf } from './codex.js';
-import { avatarURL, portraitURL } from './portraits.js';
+import { avatarURL, portraitURL, artAvatarURL, artPortraitURL, isArtMode } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain, battleBBox } from './terrain.js';
@@ -51,9 +51,10 @@ import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked
 import { talkOf, stageKey } from './storytalk.js';
 // 劇情畫面的標記唯一縫 —— 遊戲本體與本地故事書(tools/story_book)共用同一份,見 storyui.js 檔頭
 import {
-  charAvatarHTML, heroChip, kindLabelOf,
+  charAvatarHTML, heroChip, kindLabelOf, artModeTabsHTML,
   chapterCardHTML, briefHTML, overText, progressText,
 } from './storyui.js';
+import { attachArtSwipe } from './artSwipe.js';
 import { Dialogue } from './dialogue.js';
 import { playPrologueIntro, playChapterIntro } from './prologue.js';
 // `game.js`(600KB+toon/postfx/vfx 鏈)進戰才動態載入,首屏不解析(單航班,失敗回提示不炸頁)。
@@ -188,7 +189,36 @@ const app = {
   battleCfg: null,
   phaseShown: null,
   roomPoll: null,
+  artMode: 'char',    // 統一頭像/立繪顯示: 'char' 角色 / 'mech' 機體(全域共用,localStorage 持久)
 };
+
+// ── 統一 角色/機體 顯示模式(全域單一縫)──
+// 所有頭像/立繪經 artAvatarURL/artPortraitURL 取圖,不再直呼 avatarURL/portraitURL;
+// 切換一處 = 集體切換全部掛載點(選角牆/詳情/簡歷/設定頁機體/放大視窗/HUD/對話)。
+const ART_KEY = 'svs_artmode';
+function loadArtMode() {
+  try { app.artMode = isArtMode(localStorage.getItem(ART_KEY)); } catch { app.artMode = 'char'; }
+}
+function setArtMode(mode, opts = {}) {
+  app.artMode = isArtMode(mode);
+  try { localStorage.setItem(ART_KEY, app.artMode); } catch { /* 靜默 */ }
+  document.body.dataset.art = app.artMode;
+  if (app.dlg) app.dlg.artMode = app.artMode;
+  if (opts.silent) return;
+  refreshArtModeAll();
+}
+/** 集體重繪所有頭像/立繪掛載點(不碰選角狀態與預覽以外的權威值)。 */
+function refreshArtModeAll() {
+  const me = app.lobby?.clients?.find((c) => c.id === app.youId);
+  if ($('charSection')?.style.display !== 'none' && me) renderCharPick(me);
+  for (const id of MECHA_MOUNTS) { const m = $(id); if (m?._mecha) refreshMechaScope(m); }
+  if (app.modalRole) renderModalPicks();
+  const bioId = $('charBioModal')?.hidden === false && $('charBioModalBody')?.dataset.ch;
+  if (bioId) showCharBioModal(bioId, CHARACTERS[bioId]?.side);
+  setSelfAv(app._lastSelfCh ?? null, true);
+}
+loadArtMode();
+if (typeof document !== 'undefined') document.body.dataset.art = app.artMode;
 
 // 觸控版版型(手機/平板):掛 body.touch-ui / .ori-portrait|.ori-landscape /
 // .touch-lefty(按鍵) / .touch-screen-lefty(HUD),
@@ -1155,12 +1185,18 @@ function showStoryBrief(i) {
   app.storyPilot = [...sc.heroes, ...sc.mercs][0];   // 預設主駕 = 第一名陣營角色
   // 圖文並茂:全幅立繪 → 長篇敘事 → 雙方陣容(選主駕)→ 任務目標。
   // 標記走 storyui.briefHTML(與故事書同一份);這裡只負責掛事件與出擊。
-  $('storyBriefBody').innerHTML = briefHTML(ch, i, side, app.storyPilot);
+  $('storyBriefBody').innerHTML = briefHTML(ch, i, side, app.storyPilot, app.artMode);
   $('sbYourChips').querySelectorAll('.sb-chip').forEach((btn) => {
     btn.onclick = () => {
       app.storyPilot = btn.dataset.ch;
       $('sbYourChips').querySelectorAll('.sb-chip').forEach((b) => b.classList.toggle('on', b === btn));
     };
+  });
+  // 簡報頭像牆左右滑 = 集體切換出戰主駕
+  $('sbYourChips')._artDetach?.();
+  $('sbYourChips')._artDetach = attachArtSwipe($('sbYourChips'), {
+    onPrev: () => stepStoryPilot(ch, -1),
+    onNext: () => stepStoryPilot(ch, 1),
   });
   const playAnim = () => {
     $('storyBrief').style.display = 'none';
@@ -1183,6 +1219,19 @@ function showStoryBrief(i) {
   $('storyFightBtn').onclick = () => startStoryChapter(i);
   $('storyBrief').style.display = '';
   $('storyBriefBody').scrollTop = 0;
+}
+
+/** 簡報頭像牆左右滑:我方名冊內集體切換出戰主駕(高亮+主駕一起換)。 */
+function stepStoryPilot(ch, dir) {
+  const side = app.storySide;
+  const sc = chapterSide(ch, side);
+  const roster = [...sc.heroes, ...sc.mercs];
+  if (!roster.length) return;
+  const cur = roster.indexOf(app.storyPilot);
+  const nxt = roster[((cur < 0 ? (dir > 0 ? -1 : 0) : cur) + dir + roster.length) % roster.length];
+  app.storyPilot = nxt;
+  $('sbYourChips')?.querySelectorAll('.sb-chip').forEach((b) => b.classList.toggle('on', b.dataset.ch === nxt));
+  app.audio?.ui('click');
 }
 
 /** 出擊:組 battleConfig 開私人房;僚機/敵方角色於 launchStoryBattle 指派 */
@@ -1721,12 +1770,12 @@ function charDetailHTML(id) {
   // NPC 卡的 .cd-art 只有展示台一件,故不掛此 class(掛了會多出一欄空白)。
   return `<div class="cd-lower">
     <div class="cd-art cd-art-char">
-      <div class="cd-portrait">
-        <img src="${portraitURL(id)}" alt="${esc(c.name)}">
+      <div class="cd-portrait" data-artswipe="${esc(id)}">
+        <img class="${app.artMode === 'mech' ? 'art-mech' : ''}" src="${artPortraitURL(id, app.artMode)}" alt="${esc(c.name)}" data-art="${app.artMode}">
         <div class="cd-tag ${c.side === 'MERC' ? 'merc' : c.side.toLowerCase()}">
           ${c.side === 'MERC' ? '⚔ 傭兵' : SIDES[c.side].name}・${kindIconHTML(kind)}${kindLabel}</div>
       </div>
-      <div class="cd-arthint">點立繪 ▸ 生平・興趣・專長・與機體的機緣</div>
+      <div class="cd-arthint">點立繪 ▸ 生平・興趣・專長・與機體的機緣 ・ 左右滑切換</div>
       <div id="stageBottom"></div>
     </div>
     <div class="cd-body">
@@ -1753,14 +1802,33 @@ function showCharBioModal(id, side) {
   const kind = charKind(id);
   const kindLabel = kind === 'drone' ? '無人機' : kind === 'morph' ? '變形者' : '機甲';
   const s = side || c.side;
-  $('charBioModalBody').innerHTML = `
-    <div class="bio-portrait">
-      <img src="${portraitURL(id)}" alt="${esc(c.name)}">
+  const body = $('charBioModalBody');
+  body.dataset.ch = id;
+  body.innerHTML = `
+    <div class="bio-arttabs seg seg-sm">${artModeTabsHTML(app.artMode)}</div>
+    <div class="bio-portrait" data-artswipe="${esc(id)}">
+      <img class="${app.artMode === 'mech' ? 'art-mech' : ''}" src="${artPortraitURL(id, app.artMode)}" alt="${esc(c.name)}" data-art="${app.artMode}">
       <div class="cd-tag ${s === 'MERC' ? 'merc' : s.toLowerCase()}">
         ${s === 'MERC' ? '⚔ 傭兵' : SIDES[s].name}・${kindLabel}</div>
     </div>
     <div class="bio-text">${charBioTextHTML(id, true)}</div>`;
   $('charBioModal').hidden = false;
+  attachArtSwipe(body.querySelector('[data-artswipe]'), {
+    onPrev: () => stepBioArt(-1),
+    onNext: () => stepBioArt(1),
+  });
+}
+/** 簡歷弹窗左右滑:同陣營內集體切換上一位/下一位(頭像+立繪+頁籤高亮一起換)。 */
+function stepBioArt(dir) {
+  const cur = $('charBioModalBody')?.dataset.ch;
+  if (!cur || !CHARACTERS[cur]) return;
+  const side = CHARACTERS[cur].side;
+  const roster = charsOf(side);
+  const i = roster.indexOf(cur);
+  if (i < 0) return;
+  const nxt = roster[(i + dir + roster.length) % roster.length];
+  showCharBioModal(nxt, CHARACTERS[nxt].side);
+  app.audio?.ui('click');
 }
 function hideCharBioModal() { $('charBioModal').hidden = true; }
 $('charBioModalClose').onclick = hideCharBioModal;
@@ -1947,6 +2015,11 @@ function showCharDetail(id, side) {
   const openBio = () => showCharBioModal(id, side);
   box.querySelector('.cd-portrait img').onclick = openBio;
   box.querySelector('.cd-arthint').onclick = openBio;
+  // 詳情立繪左右滑 = 集體切換:換選角牆高亮 + 詳情 + 預覽(選角狀態經 selectChar 送伺服器,唯讀檢視只換展示)
+  attachArtSwipe(box.querySelector('[data-artswipe]'), {
+    onPrev: () => stepRoomChar(-1),
+    onNext: () => stepRoomChar(1),
+  });
   // 傭兵隨雇主換色:展示台一律以「檢視中的陣營」建機體
   const s = side || CHARACTERS[id].side;
   const viewSide = s === 'MERC' ? 'STEEL' : s;
@@ -1956,10 +2029,55 @@ function showCharDetail(id, side) {
   st.preview.start();
 }
 
+/** 房間選角牆左右滑:同頁籤內集體切換上一位/下一位(可選角即送選角,唯讀只換展示)。 */
+function stepRoomChar(dir) {
+  const me = app.lobby?.clients?.find((c) => c.id === app.youId);
+  const subject = app.lobby?.clients?.find((c) => c.id === app.charTarget) || me;
+  if (!subject) return;
+  const isSuper = subject.side === 'SUPER';
+  const allChars = isSuper ? Object.keys(CHARACTERS) : charsOf(subject.side);
+  const roster = allChars.filter((id) => CHARACTERS[id].side === app.charSideTab);
+  if (!roster.length) return;
+  const cur = subject.ch && roster.includes(subject.ch) ? roster.indexOf(subject.ch) : (dir > 0 ? -1 : 0);
+  const nxt = roster[(cur + dir + roster.length) % roster.length];
+  if (app.pickEditable) selectChar(nxt);
+  else showCharDetail(nxt, subject.side);
+  app.audio?.ui('click');
+}
+/** 選角頭像牆左右滑掛載(單一縫;重繪時重綁,舊綁定先拆)。 */
+function attachCharGridSwipe(grid) {
+  grid._artDetach?.();
+  grid._artDetach = attachArtSwipe(grid, {
+    onPrev: () => stepRoomChar(-1),
+    onNext: () => stepRoomChar(1),
+  });
+}
+/** 房間選角區統一 角色/機體 頁籤(全域共用;切換即集體重繪全部掛載點)。 */
+function ensureCharArtTabs(sec, editable) {
+  let row = sec.querySelector('[data-arttabs-room]');
+  if (!row) {
+    row = document.createElement('div');
+    row.className = 'row seg seg-sm char-art-tabs';
+    row.setAttribute('data-arttabs-room', '');
+    const tabs = $('charSideTabs');
+    tabs?.after(row);
+  }
+  row.style.display = editable ? 'flex' : 'none';
+  row.innerHTML = `<span class="art-tabs-label">顯示</span>${artModeTabsHTML(app.artMode)}`;
+}
+
 // 點武器/招式區塊 → 角色展示台播放施展動畫(委派,charDetail 每次重繪都沿用)
 $('charDetail').addEventListener('click', (e) => {
   const row = e.target.closest('.cd-row');
   if (row?.dataset.slot) app.stages.char?.preview.play(row.dataset.slot);
+});
+
+// 統一 角色/機體 切換頁籤(全域單一委派):任一掛載點切換 = 集體切換全部頭像/立繪
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-arttab]');
+  if (!b) return;
+  setArtMode(b.dataset.arttab);
+  app.audio?.ui('click');
 });
 
 function ensureShowcaseTerrains() {
@@ -2124,6 +2242,7 @@ function selectChar(id) {
  * (只換展示台,不送任何選角訊息 —— 開戰前同一頁面看完雙方資料,選角仍只限己方)。 */
 function renderModalPicks() {
   const cg = $('modalCharGrid');
+  ensureModalArtTabs();
   const own = app.pickSide;
   const foe = own === 'STEEL' ? 'SWARM' : own === 'SWARM' ? 'STEEL' : null;
   if (!own) { cg.parentElement.style.display = 'none'; }
@@ -2133,6 +2252,11 @@ function renderModalPicks() {
     cg.appendChild(modalCharGroup(own, true));
     if (foe) cg.appendChild(modalCharGroup(foe, false));
     cg.parentElement.style.display = '';
+    cg._artDetach?.();
+    cg._artDetach = attachArtSwipe(cg, {
+      onPrev: () => stepModalChar(-1),
+      onNext: () => stepModalChar(1),
+    });
   }
 
   const side = app.unitSide || app.pickSide || 'STEEL';
@@ -2166,6 +2290,33 @@ function modalCharGroup(side, selectable) {
   wrap.appendChild(grid);
   return wrap;
 }
+/** 放大視窗統一 角色/機體 頁籤(全域共用;掛在角色欄標題旁,建一次重繪一次)。 */
+function ensureModalArtTabs() {
+  const col = $('modalCharCol');
+  if (!col) return;
+  let row = col.querySelector('[data-arttabs-modal]');
+  if (!row) {
+    row = document.createElement('div');
+    row.className = 'seg seg-sm modal-arttabs';
+    row.setAttribute('data-arttabs-modal', '');
+    col.querySelector('.smp-head')?.after(row);
+  }
+  row.innerHTML = `<span class="art-tabs-label">顯示</span>${artModeTabsHTML(app.artMode)}`;
+}
+/** 放大視窗左右滑:以目前展示中的角色為錨點,同陣營集體切換(可選即送選角)。 */
+function stepModalChar(dir) {
+  const cur = app.stages.char?.subject?.id;
+  if (!cur || !CHARACTERS[cur]) return;
+  const side = CHARACTERS[cur].side;
+  const roster = charsOf(side);
+  const list = roster.length ? roster : Object.keys(CHARACTERS);
+  const i = list.indexOf(cur);
+  const nxt = list[(((i < 0 ? (dir > 0 ? -1 : 0) : i) + dir + list.length) % list.length)];
+  if (app.pickEditable) selectChar(nxt);
+  else showCharDetail(nxt, side);
+  enlargeInModal('char'); renderModalPicks();
+  app.audio?.ui('click');
+}
 function modalCharBtn(id, side, selectable) {
   const c = CHARACTERS[id];
   const sideCls = c.side === 'STEEL' ? 'side-steel' : c.side === 'SWARM' ? 'side-swarm' : 'side-merc';
@@ -2173,7 +2324,7 @@ function modalCharBtn(id, side, selectable) {
   b.className = `char-btn ${sideCls}` + (app.stages.char?.subject?.id === id ? ' on' : '')
     + (c.side === 'MERC' ? ' merc' : '') + (selectable ? '' : ' foe');
   b.dataset.side = c.side;
-  b.innerHTML = `${charAvatarHTML(id)}
+  b.innerHTML = `${charAvatarHTML(id, 'char-av', app.artMode)}
     <span class="char-side-pill ${c.side.toLowerCase()}">${c.side === 'STEEL' ? '▲ 鋼鐵' : c.side === 'SWARM' ? '▼ 蜂群' : '⚔ 傭兵'}</span>
     <b>${c.side === 'MERC' ? '⚔ ' : ''}${esc(c.code)}</b>`;
   if (!selectable) b.title = `${c.code} ${c.name}(敵方・唯讀預覽)`;
@@ -2325,6 +2476,7 @@ function renderCharPick(me) {
       };
     }
   }
+  ensureCharArtTabs(sec, editable);
 
   const grid = $('charGrid');
   grid.style.display = editable ? '' : 'none';
@@ -2339,7 +2491,7 @@ function renderCharPick(me) {
       const b = document.createElement('button');
       b.className = `char-btn ${sideCls}` + (subject.ch === id ? ' on' : '') + (merc ? ' merc' : '');
       b.dataset.side = c.side;
-      b.innerHTML = `${charAvatarHTML(id)}
+      b.innerHTML = `${charAvatarHTML(id, 'char-av', app.artMode)}
         <span class="char-side-pill ${c.side.toLowerCase()}">${c.side === 'STEEL' ? '▲ 鋼鐵' : c.side === 'SWARM' ? '▼ 蜂群' : '⚔ 傭兵'}</span>
         <b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
       b.onclick = () => selectChar(id);   // 伺服器 sync 前先換,點擊即時有反應
@@ -2351,6 +2503,7 @@ function renderCharPick(me) {
     rnd.innerHTML = '<span class="char-dice">🎲</span><span class="char-name">隨機</span>';
     rnd.onclick = () => selectChar(null);   // 只有點擊會換展示角色(懸浮不換)
     grid.appendChild(rnd);
+    attachCharGridSwipe(grid);
   }
   showCharDetail(subject.ch || null, subject.side);
 
@@ -3163,7 +3316,7 @@ async function enterGame() {
   const hud = makeHud();
   const meLobby = app.lobby?.clients.find((c) => c.id === app.youId);
   const myCh = meLobby?.ch || null;   // 開戰時伺服器已定案(隨機也回寫)
-  app.dlg = new Dialogue($('dialogueLayer'), { mySide: app.mySide });   // 對白站位:我左敵右
+  app.dlg = new Dialogue($('dialogueLayer'), { mySide: app.mySide, artMode: app.artMode });   // 對白站位:我左敵右;頭像跟隨全域 角色/機體 模式
   try {
   app.battle = new Ctor({
     canvas: $('gameCanvas'),
@@ -3255,18 +3408,20 @@ function renderSpecHelp() {
 function shopHintText() { return TOUCH_UI() ? '' : 'B 升級'; }
 
 /**
- * 自機頭像(資訊列左邊那格):圖源 `avatarURL` 唯一縫,與 BOSS 頭像同一張圖。
+ * 自機頭像(資訊列左邊那格):圖源 `artAvatarURL` 唯一縫,與 BOSS 頭像同一張圖(跟隨全域 角色/機體 模式)。
  * src 快取在 element 上,逐幀呼叫不重設(避免閃爍);沒角色直接收起。
  * 觸控版由 CSS 強制隱藏,這裡照設不分支。
  */
-function setSelfAv(chId) {
+function setSelfAv(chId, force = false) {
   const el = $('selfAv');
   if (!el) return;
+  if (chId) app._lastSelfCh = chId;
   const c = chId && CHARACTERS[chId];
   if (!c) { el.style.display = 'none'; el._src = ''; el.removeAttribute('src'); return; }
   el.dataset.fac = c.side || 'MERC';
-  const url = avatarURL(chId);
-  if (el._src !== url) { el._src = url; el.src = url; }
+  const url = artAvatarURL(chId, app.artMode);
+  if (force || el._src !== url) { el._src = url; el.src = url; }
+  el.classList.toggle('av-mech', app.artMode === 'mech');
   el.style.display = '';
 }
 
@@ -3751,13 +3906,15 @@ function makeHud() {
       if (!wrap) return;
       // 頭像掛載:BOSS 固定右端;左端自機頭像不顯示(BOSS 條只站 BOSS)。
       // src 快取在 element 上,逐幀更新不重設(避免閃爍);未知角色直接隱藏該端。
+      // 圖源跟隨全域 角色/機體 模式(與自機頭像同一縫)。
       const setAv = (el, chId) => {
         if (!el) return;
         const c = chId && CHARACTERS[chId];
         if (!c) { el.style.display = 'none'; el._src = ''; el.removeAttribute('src'); return; }
         el.dataset.fac = c.side || 'MERC';
-        const url = avatarURL(chId);
+        const url = artAvatarURL(chId, app.artMode);
         if (el._src !== url) { el._src = url; el.src = url; }
+        el.classList.toggle('av-mech', app.artMode === 'mech');
         el.style.display = '';
       };
       if (!info) {
@@ -4546,6 +4703,7 @@ function ensureMechaScope(mount) {
     unitSide: 'STEEL', weapons: [], preview: null };
   mount.innerHTML = `
     <div class="seg seg-sm" data-mtabs></div>
+    <div class="seg seg-sm mecha-arttabs" data-marttabs></div>
     <div data-mpane="hero">
     <div class="smp-sub" data-mherotitle></div><div class="char-grid smp-grid" data-mherogrid></div>
     </div>
@@ -4668,7 +4826,19 @@ function mechaHeroDetail(id) {
       ${charAbilityRow(id, 'def', 'Q')}
       ${charAbilityRow(id, 'atk', 'E')}
     </div>
-    <div class="cd-foot">數值 Lv1 → Lv4 ・ 點立繪看完整簡歷 ・ 點武器/招式看演出</div>`;
+    <div class="cd-foot">數值 Lv1 → Lv4 ・ 點立繪看完整簡歷(左右滑切換) ・ 點武器/招式看演出</div>`;
+}
+/** 設定頁機體牆左右滑:同頁籤內集體切換上一位/下一位(頭像+立繪+預覽一起換)。 */
+function stepMechaScope(mount, dir) {
+  const st = mount?._mecha;
+  if (!st || !isMechaHeroTab(st.tab)) return;
+  const roster = mechaHeroIds(st.tab);
+  if (!roster.length) return;
+  const cur = st.sel.type === 'char' && roster.includes(st.sel.id) ? roster.indexOf(st.sel.id) : (dir > 0 ? -1 : 0);
+  const nxt = roster[(cur + dir + roster.length) % roster.length];
+  st.sel = { type: 'char', id: nxt, side: mechaHeroViewSide(st.tab) };
+  refreshMechaScope(mount);
+  app.audio?.ui('click');
 }
 /** NPC 詳情(同上,不沿用 unitDetailHTML 以免撞 id="unitStageBottom") */
 function mechaUnitDetail(kind, side) {
@@ -4712,6 +4882,8 @@ function refreshMechaScope(mount) {
     b.textContent = pair[1];
     tabsEl.appendChild(b);
   }
+  const artEl = mount.querySelector('[data-marttabs]');
+  if (artEl) artEl.innerHTML = `<span class="art-tabs-label">顯示</span>${artModeTabsHTML(app.artMode)}`;
   mount.querySelector('[data-mpane="hero"]').hidden = !isMechaHeroTab(st.tab);
   mount.querySelector('[data-mpane="unit"]').hidden = !isMechaUnitTab(st.tab);
   mount.querySelector('[data-mherotitle]').textContent = MECHA_HERO_TITLE[st.tab] || '';
@@ -4725,9 +4897,14 @@ function refreshMechaScope(mount) {
       b.className = 'char-btn' + (st.sel.type === 'char' && st.sel.id === id ? ' on' : '')
         + (c.side === 'MERC' ? ' merc' : '');
       b.dataset.mch = id; b.dataset.mside = viewSide;
-      b.innerHTML = `${charAvatarHTML(id)}<b>${c.side === 'MERC' ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
+      b.innerHTML = `${charAvatarHTML(id, 'char-av', app.artMode)}<b>${c.side === 'MERC' ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
       hgrid.appendChild(b);
     }
+    hgrid._artDetach?.();
+    hgrid._artDetach = attachArtSwipe(hgrid, {
+      onPrev: () => stepMechaScope(mount, -1),
+      onNext: () => stepMechaScope(mount, 1),
+    });
   }
   const unitSides = MECHA_TAB_SIDES[st.tab] || [];
   mount.querySelector('[data-munitside]').innerHTML = unitSides.length > 1
@@ -4746,13 +4923,17 @@ function refreshMechaScope(mount) {
   const run = st.shell.querySelector('.cd-run');
   if (st.sel.type === 'char') {
     const c = CHARACTERS[st.sel.id];
-    detail.innerHTML = `<div class="cd-portrait" data-mbio="${st.sel.id}" title="點立繪看完整簡歷">`
-      + `<img src="${portraitURL(st.sel.id)}" alt="${esc(c.name)}"></div>`
+    detail.innerHTML = `<div class="cd-portrait" data-mbio="${st.sel.id}" data-artswipe="${esc(st.sel.id)}" title="點立繪看完整簡歷・左右滑切換">`
+      + `<img class="${app.artMode === 'mech' ? 'art-mech' : ''}" src="${artPortraitURL(st.sel.id, app.artMode)}" alt="${esc(c.name)}" data-art="${app.artMode}"></div>`
       + mechaHeroDetail(st.sel.id);
     const viewSide = c.side === 'MERC' ? st.sel.side : c.side;
     st.preview.setChar(st.sel.id, viewSide);
     mb.hidden = charKind(st.sel.id) !== 'morph'; mb.textContent = '✈ 變形';
     run.style.display = '';
+    attachArtSwipe(detail.querySelector('[data-artswipe]'), {
+      onPrev: () => stepMechaScope(mount, -1),
+      onNext: () => stepMechaScope(mount, 1),
+    });
   } else {
     const mside = st.sel.side;
     detail.innerHTML = mechaUnitDetail(st.sel.kind, mside);

@@ -15,7 +15,7 @@
 //   3. Text is treated as untrusted data and escaped via `esc()`.
 
 import { CHARACTERS, SIDES, SIEGE, OTHER_SIDE } from './data.js';
-import { avatarURL, portraitURL } from './portraits.js';
+import { artAvatarURL, artPortraitURL, isArtMode } from './portraits.js';
 
 /** Display duration per line: clamped linear scale based on character count. */
 const lineMs = (s) => Math.max(1700, Math.min(4200, 900 + String(s).length * 140));
@@ -46,6 +46,7 @@ export class Dialogue {
     this.timers = new Set();
     this.bar = null;
     this.mySide = opt.mySide || null;
+    this.artMode = isArtMode(opt.artMode);
   }
 
   /** 觀戰者的敵方陣營(站右邊那一端);無我方時退回 STEEL(舊制站位不變) */
@@ -90,7 +91,7 @@ export class Dialogue {
     for (const [av, id] of [[avL, L], [avR, R]]) {
       if (!av) continue;
       if (!id) { av.style.display = 'none'; continue; }
-      av.src = avatarURL(id);
+      av.src = artAvatarURL(id, this.artMode);
       av.dataset.fac = facOf(id);
       av.dataset.ch = id;
     }
@@ -104,7 +105,7 @@ export class Dialogue {
       el.style.setProperty('--dlg-side', sideColor(l.ch));
       // 非固定班底臨時插話:借用該端頭像(框色跟著發言者走,下一句自動歸位)
       const av = facOf(l.ch) === foe ? avR : avL;
-      if (av && av.dataset.ch !== l.ch) { av.src = avatarURL(l.ch); av.dataset.fac = facOf(l.ch); av.dataset.ch = l.ch; }
+      if (av && av.dataset.ch !== l.ch) { av.src = artAvatarURL(l.ch, this.artMode); av.dataset.fac = facOf(l.ch); av.dataset.ch = l.ch; }
       for (const a of [avL, avR]) a?.classList.toggle('on', a === av);
       who.textContent = c ? `「${c.code}」${c.name}` : l.ch;
       txt.textContent = l.t;
@@ -146,7 +147,7 @@ export class Dialogue {
     wrap.innerHTML = `
       <div class="dlg-scene-h"><b>${esc(sc.title)}</b><span>${esc(sc.note)}</span></div>
       <div class="dlg-scene-body">
-        ${leads.map((id, k) => `<img class="dlg-art dlg-art-${k ? 'r' : 'l'}" src="${esc(portraitURL(id))}"
+        ${leads.map((id, k) => `<img class="dlg-art dlg-art-${k ? 'r' : 'l'}${this.artMode === 'mech' ? ' art-mech' : ''}" src="${esc(artPortraitURL(id, this.artMode))}"
              alt="" draggable="false" style="--dlg-side:${sideColor(id)}">`).join('')}
         <div class="dlg-script"></div>
       </div>`;
@@ -160,7 +161,7 @@ export class Dialogue {
       row.className = 'dlg-say' + (fac === foe ? ' flip' : '');
       row.dataset.fac = fac;
       row.style.setProperty('--dlg-side', sideColor(l.ch));
-      row.innerHTML = `<img class="dlg-av" src="${esc(avatarURL(l.ch))}" alt="" draggable="false" data-fac="${fac}">
+      row.innerHTML = `<img class="dlg-av${this.artMode === 'mech' ? ' av-mech' : ''}" src="${esc(artAvatarURL(l.ch, this.artMode))}" alt="" draggable="false" data-fac="${fac}">
         <div class="dlg-txt"><span class="dlg-who">${esc(c ? `「${c.code}」${c.name}` : l.ch)}</span>
         <span class="dlg-line">${esc(l.t)}</span></div>`;
       script.appendChild(row);

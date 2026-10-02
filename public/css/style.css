@@ -2051,8 +2051,24 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   background: rgba(240, 238, 233, 0.18);
 }
 
+/* 統一 角色/機體 切換頁籤(房間選角 + 設定頁機體 + 放大視窗 + 簡歷共用同一組標記) */
+.char-art-tabs, .mecha-arttabs, .modal-arttabs { align-items: center; }
+.art-tabs-label { font-size: 11px; color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
+.art-tab.on { color: var(--ok); border-color: var(--ok); }
+/* 頭像牆 / 立繪左右滑動區:橫向滑動手勢區,直向捲動不受影響 */
+.char-grid, .cd-portrait, .bio-portrait, .sb-chips { touch-action: pan-y; }
+[data-artswipe] { cursor: ew-resize; }
+
 .char-btn.merc { border-style: dashed; }
-.char-av { width: 56px; height: 56px; border-radius: 0; border: 1px solid var(--line); display: block; clip-path: var(--notch-sm); }
+.char-av { width: 56px; height: 56px; border-radius: 0; border: 1px solid var(--line); display: block; clip-path: var(--notch-sm); object-fit: cover; }
+/* 機體頭像:共用機體立繪原圖,以方形中央裁切呈現(不另存圖檔;object-position 偏上保留機首/旋翼) */
+.char-av.av-mech, .sb-chip-av.av-mech, .dlg-av.av-mech, .self-av.av-mech, .boss-av.av-mech {
+  object-fit: cover; object-position: center 28%;
+}
+/* 機體立繪:全幅原圖等比容納,深色底襯邊(與角色透明立繪同框並存) */
+.cd-portrait img.art-mech, .bio-portrait img.art-mech, .dlg-art.art-mech {
+  object-fit: contain; background: #0a0f16;
+}
 /* 頭像 + 機種角標(2026-08-02 使用者定案「設計無人機/機甲/變形者的圖示,標示在頭像旁邊」)。
    標記由 main.js `charAvatarHTML()` 單一縫產生;圖示吃 `currentColor` ⇒ 選取態(.char-btn.on)
    自動跟著翻色,MUST NOT 在這裡寫死 fill。角標壓在頭像右下角(不遮臉),自帶底色保證可讀。 */
@@ -2192,6 +2208,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .bio-modal-close:hover { color: var(--fg); border-color: var(--railS); }
 .bio-portrait { position: relative; align-self: start; }
 .bio-portrait img { width: 100%; border-radius: 0; display: block; background: #05070a; border: 1px solid var(--line); }
+.bio-arttabs { grid-column: 1 / -1; justify-content: center; }
 .bio-text { min-width: 0; }
 .cd-stats { margin: 8px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 3px 12px; }
 .cd-stat { display: grid; grid-template-columns: 52px 1fr 34px; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--dim); }
