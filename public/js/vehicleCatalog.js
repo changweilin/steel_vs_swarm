@@ -2,6 +2,7 @@
 import { mulberry32 } from './rng.js';
 import { partAABB, makeVehicle as collisionContract, VEHICLE_SPEC, placeParts } from './vehicles.js';
 import { buildIndividualBody } from './vehicleIndividualBodies.js';
+import { applyVehicleAppearance } from './transportAppearance.js';
 
 export const INDUSTRY_PART_NAMES = {policeStripe:'警用識別條',secureCabin:'封閉押送艙與格柵',commandCabin:'指揮通訊艙',ladder:'伸縮雲梯',outriggers:'收納式支腿',firePump:'消防泵浦櫃',hose:'軟管捲盤',waterTank:'灑水槽罐',sprayBar:'灑水排管',compactor:'壓縮箱與尾部料斗',recyclingBins:'分類回收箱',vacuumTank:'吸污真空罐',saltHopper:'撒鹽料斗',snowBlade:'除雪鏟',bucketLift:'高空工作斗',telecomMast:'折收基地台天線',generator:'隔音發電機',cableReel:'電纜捲盤',dumpBed:'傾卸貨斗',mixerDrum:'混凝土攪拌筒',pumpBoom:'折疊泵送臂',craneBoom:'伸縮吊臂與吊鉤',drillMast:'鑽架與鑽桿',dozerBlade:'推土鏟',graderBlade:'中央整平鏟',paverHopper:'瀝青料斗',screed:'後置熨平板',trenchChain:'挖溝鏈臂',pumpUnit:'防汛抽水泵',fuelTank:'燃油罐與頂部人孔',cryogenicTank:'雙層保溫罐與閥箱',potableTank:'飲用水密閉罐',sanitaryTank:'衛生級乳品罐',chemicalTank:'化學槽罐與防護閥罩',servingHatch:'餐飲販售窗口',awning:'側面遮雨棚',kitchenVent:'廚房排風罩',openBed:'開放式貨斗',vanWindows:'乘客側窗',refrigeratedBox:'保溫廂與冷凍機',medicalCabin:'醫療艙',bookShelves:'圖書展示櫃',camperCabin:'居住艙與通風口',recoveryBed:'救援平板',winch:'牽引絞盤',fifthWheel:'第五輪聯結座',logLoad:'原木與防滾樁',oreHopper:'礦石料斗與底卸口',containerLoad:'貨櫃與鎖固角座',militaryLoad:'繫固的裝甲裝備',grainHopper:'密閉穀物斗',enclosedBox:'封閉棚式貨廂',autoDeck:'雙層載車架',ballastHopper:'道碴漏斗',toolCabinet:'維修工具櫃',sealedWaste:'密閉廢料箱',machineLoad:'工程機具載荷',animalBox:'通風牲畜廂',curtainBox:'側簾貨廂'};
 
@@ -921,6 +922,7 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
     for(let i=0;i<Math.floor(v.wear*12);i++) for(const side of [-1,1]) box('paint_chip',s.x+s.length*between(r,[-.38,.38]),s.y-s.height*.32,side*(s.z+.001),s.length*.015,s.height*between(r,[.04,.12]),.002,0x86563b);
     for(const side of [-1,1]) box('dust',s.x,s.y-s.height*.4,side*(s.z+.001),s.length*.75,s.height*(.015+v.dust*.08), .002,tint(0x9a866b,.65+v.dust*.35));
   }
+  if (!options.sourceGeometry) applyVehicleAppearance(v, rows);
   const boxes = rows.map(p => p.g[0]==='ring'
     ? partAABB({...p,r:[0,0,0],g:['box',2*(p.g[1]+p.g[2]),2*(p.g[1]+p.g[2]),2*p.g[2]]}) : partAABB(p));
   const min = ['x0','y0','z0'].map(axis => Math.min(...boxes.map(b=>b[axis])));
@@ -928,7 +930,7 @@ export function vehicleBackgroundObject(key, seed = 0, options = {}) {
   const parts = rows.map((part,index) => {
     const [type,a,b,c,sides] = part.g;
     return { name: part.role || `body_${index}`, position: part.p, rotation: part.r || [0,0,0], color: part.c,
-      ...(type==='box' ? { type, dimensions:[a,b,c] } : type==='ring' ? {type:'torus_ring',radius:a,tube:b}
+      ...(type==='mesh' ? { type, meshData:a, dimensions:b } : type==='box' ? { type, dimensions:[a,b,c] } : type==='ring' ? {type:'torus_ring',radius:a,tube:b}
         : {type:'cylinder', radii:[a,b],height:c,sides}) };
   });
   return { key: `${VEHICLE_PREFIX}${key}:${seed}:${v.purpose}:${v.power}`, targetKey: VEHICLE_PREFIX+key,
@@ -1027,14 +1029,25 @@ export function makeSceneVehicleParts(kind, opts = {}) {
   const crush = opts.crush ?? 1;
   if (!Number.isFinite(crush) || crush <= 0 || crush > 1) throw new RangeError('crush 必須介於 0 與 1');
   const rows = model.parts.map(p=>{
-    if (!['box','cylinder'].includes(p.type)) throw new RangeError(`描述子宿主不支援車型零件:${p.type}`);
-    const dims=p.type==='box' ? ['box',...p.dimensions.map(n=>n*factor)]
+    if (!['box','cylinder','mesh'].includes(p.type)) throw new RangeError(`描述子宿主不支援車型零件:${p.type}`);
+    const dims=p.type==='mesh' ? ['mesh',{...p.meshData,vertices:p.meshData.vertices.map(n=>n*factor)},p.dimensions.map(n=>n*factor)]
+      : p.type==='box' ? ['box',...p.dimensions.map(n=>n*factor)]
       : ['cyl',p.radii[0]*factor,p.radii[1]*factor,p.height*factor,p.sides];
     const at=[(p.position[0]-(min[0]+max[0])/2)*factor,(p.position[1]-min[1])*factor,(p.position[2]-(min[2]+max[2])/2)*factor];
     // Wreck upper-half collapse preserves grounded wheel posture; handles procedural geometry only.
-    if (p.type==='box' && at[1]>fit.H*.5) {
+    if ((p.type==='box' || p.type==='mesh') && at[1]>fit.H*.5) {
       at[1]=fit.H*.5+(at[1]-fit.H*.5)*crush;
-      dims[2]*=crush;
+      if (p.type==='mesh') {
+        dims[1].vertices=dims[1].vertices.map((n,i)=>i%3===1?n*crush:n);
+        const normals=[];
+        for(let i=0;i<dims[1].normals.length;i+=3) {
+          const x=dims[1].normals[i],y=dims[1].normals[i+1]/crush,z=dims[1].normals[i+2];
+          const length=Math.hypot(x,y,z)||1;
+          normals.push(x/length,y/length,z/length);
+        }
+        dims[1].normals=normals;
+        dims[2][1]*=crush;
+      } else dims[2]*=crush;
     }
     return {g:dims,p:at,r:p.rotation,c:p.color,role:p.name,...(opts.vc?{vc:opts.vc}:{})};
   });

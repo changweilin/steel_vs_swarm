@@ -70,6 +70,7 @@ import {
 } from './edgewall.js';
 import { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable } from './environmentParts.js';
 import { runtimeMeshDataGeometry } from './runtimePartModel.js';
+import { sceneryGeometry, sceneryBoxGeometry } from './sceneryGeometry.js';
 import { BATTLE_GEOLOGY, SYNTH_GEOLOGY, battleGeology, battleGeologySlope } from './geology.js';
 import { buildSlopeBoundary } from './edgeSlope.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
@@ -1014,6 +1015,13 @@ function forestRenderDef(type, item, season) {
   for (const [i, part] of tree.parts.entries()) {
     if (part.hidden) { part.g.dispose(); continue; }
     const isLeaf = part.key === 'gleaf';
+    const radius = part.g.parameters?.radius;
+    if (isLeaf && radius && !part.noCard) {
+      part.g.dispose();
+      part.g = sceneryGeometry('crown', [radius * 2, radius * 2, radius * 2]);
+      part.g.parameters = { radius };
+      part.g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(part.g.attributes.position.count * 2), 2));
+    }
     const card = isLeaf && !part.noCard && leafCardOn(part, 'leaf') ? leafRowGeo(null, part, i) : null;
     const g = card || part.g;
     cards ||= !!card;
@@ -4260,7 +4268,7 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
         blockers.push({ x: x + (b.x0 + b.x1) / 2, z: z + (b.z0 + b.z1) / 2,
           y: y + b.y0, h: b.y1 - b.y0, hw2, hd2, ry: 0, r: Math.hypot(hw2, hd2) });
       }
-      emitWallParts(batch, parts.filter(p => !p.motion), x, y, z, 0, 1);
+      emitWallParts(batch, parts.filter(p => !p.motion), x, y, z, 0, 1, null, true);
       if (parts.some(p => p.motion)) {
         const moving = buildPartMotion(parts, scenePartGeometry);
         moving.position.set(x, y, z);
@@ -9775,9 +9783,9 @@ const _wp = new THREE.Vector3(), _ws = new THREE.Vector3(), _wg = new THREE.Vect
  *     相對關係一格未動。障礙環(`buildEdgeWall`)**刻意不傳** —— 它的碰撞盒是以段的落地基準
  *     量出來的,逐零件落地會讓演出掉出盒子(Ⅲ 演出 ⊆ 碰撞盒)。
  */
-function emitWallParts(batch, parts, ox, oy, oz, ry, scale, groundY = null) {
+function emitWallParts(batch, parts, ox, oy, oz, ry, scale, groundY = null, surfaceBoxes = false) {
   for (const p of parts) {
-    const geo = wallGeo(p.g);
+    const geo = surfaceBoxes && p.g[0] === 'box' ? sceneryBoxGeometry(p.g.slice(1, 4)) : wallGeo(p.g);
     if (p.boundaryBuffer || p.role === 'boundary-buffer-fill' || p.g[1]?.boundaryBuffer) {
       geo.boundaryBuffer = true;
     }

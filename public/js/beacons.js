@@ -286,6 +286,7 @@ const KIND_PARTS = {
  */
 export function partExtent(part) {
   const [t, a, b, c] = part.g;
+  if (t === 'mesh') return partExtent({ ...part, g: ['box', ...b] });
   // AI 零件庫描述子 `['lib', name, <fallback primitive>]`:離線外廓 = fallback 的外廓。
   // 契約由匯出端擔保(GLB 零件外廓 ≤ fallback 外廓才准入庫)⇒ 這裡是保守上界,
   // 執行期碰撞柱仍走 `beaconCollider` 實測(A30 兩邊都成立)。

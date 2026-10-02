@@ -1,4 +1,5 @@
 import { mulberry32 } from './rng.js';
+import { sceneryMeshData } from './sceneryAppearance.js';
 
 export const LEGACY_PLANT_SPECIES = Object.freeze({
   bamboo: 'forestBamboo', broadleaf: 'holmOak', birch: 'forestBirch',
@@ -43,9 +44,9 @@ export function groundPlantParts(kind, seed = 0) {
       const stem = radius * (kind === 'parasol' ? .12 : .22);
       parts.push(cylinder(stem * .7, stem, h, [x, h / 2, z], 0xd9c8ab));
       const color = kind === 'redcap' ? 0xb53d2f : kind === 'browncap' ? 0x78523a : 0xb88e54;
-      const profile = [[0, -.035], [radius * .8, -.04], [radius, 0],
-        [radius * .87, radius * .18], [radius * .55, radius * .37], [0, radius * .48]];
-      parts.push({ g: ['lathe', profile, 14], p: [x, h, z], c: color });
+      const capSize = [radius * 2, radius * .52, radius * 2];
+      parts.push({ g: ['mesh', sceneryMeshData('mushroomCap', capSize), capSize],
+        p: [x, h + radius * .22, z], c: color });
       parts.push({ g: ['lathe', [[0, 0], [radius * .9, .015], [0, .05]], 14],
         p: [x, h - .05, z], c: 0xcdbb93 });
       if (kind === 'redcap') for (let j = 0; j < 9; j++) {

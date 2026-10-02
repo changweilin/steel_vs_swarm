@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mulberry32 } from './rng.js';
 import { GROUND_PARTS, PART_VARIATION, GROUND_PART_PALETTES } from './groundPartCatalog.js';
 import { optimalSolarTiltRad } from './data.js';
+import { sceneryBoxGeometry } from './sceneryGeometry.js';
 
 export function createGroundParts(latDeg = 25.0) {
   return Object.fromEntries(Object.keys(GROUND_PARTS).map(type => [type,
@@ -21,7 +22,7 @@ export function generateGroundPart(type, variant = 0, latDeg = 25.0) {
   const segments = Math.floor(range(PART_VARIATION.segments));
   const parts = [];
   const add = (geo, c = color, sf = null) => { parts.push({ geo, c, sf }); };
-  const box = (x, y, z, sx, sy, sz, c = color) => add(new THREE.BoxGeometry(sx, sy, sz).translate(x, y, z), c);
+  const box = (x, y, z, sx, sy, sz, c = color) => add(sceneryBoxGeometry([sx, sy, sz]).translate(x, y, z), c);
   const stem = (x, y, z, height, radius, c = 0x776345) => add(new THREE.CylinderGeometry(radius * .7, radius, height, segments).translate(x, y + height / 2, z), c);
   const rock = (x, y, z, sx, sy, sz, c = color, soft = null) => {
     const g = new THREE.IcosahedronGeometry(1, 0), p = g.attributes.position;

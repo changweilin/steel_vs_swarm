@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createForestTree } from './forest.js';
-import { runtimeMeshDataGeometry } from './runtimePartModel.js';
+import { runtimeMeshDataGeometry, runtimePrimitiveGeometry } from './runtimePartModel.js';
+import { sceneryGeometry } from './sceneryGeometry.js';
 import { mergeGeos } from './beacons.js';
 import { envMat, disposeTree } from './toon.js';
 import { geologyBackgroundObject } from './geology.js';
@@ -13,21 +14,12 @@ export function scenePartGeometry(part) {
   const [type, a, b, c, sides] = part.g;
   let geometry;
   if (type === 'mesh') geometry = runtimeMeshDataGeometry(a);
-  else if (type === 'box') geometry = new THREE.BoxGeometry(a, b, c);
+  else if (type === 'box') geometry = runtimePrimitiveGeometry({ type: 'box', dimensions: [a, b, c] });
   else if (type === 'cyl') geometry = new THREE.CylinderGeometry(a, b, c, sides || 8);
   else if (type === 'cone') geometry = new THREE.ConeGeometry(a, b, c || 8);
-  else if (type === 'ico' || type === 'crown') {
+  else if (type === 'crown') geometry = sceneryGeometry('crown', [a * 2, a * 2, a * 2]);
+  else if (type === 'ico') {
     geometry = new THREE.IcosahedronGeometry(a, 1);
-    if (type === 'crown') {
-      const position = geometry.attributes.position;
-      for (let i = 0; i < position.count; i++) {
-        const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
-        const angle = Math.atan2(z, x);
-        const scale = .84 + .10 * Math.sin(angle * 5 + y / a * 3) + .06 * Math.cos(angle * 9 - y / a * 4);
-        position.setXYZ(i, x * scale, y * scale, z * scale);
-      }
-      geometry.computeVertexNormals();
-    }
   }
   else if (type === 'lathe') geometry = new THREE.LatheGeometry(a.map(p => new THREE.Vector2(...p)), b || 16);
   else if (type === 'torus') geometry = new THREE.TorusGeometry(a, b, c || 6, sides || 16);

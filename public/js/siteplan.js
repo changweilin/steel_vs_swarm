@@ -33,6 +33,7 @@ import { furnitureSceneGeometry, fitSceneGeometry, compileSceneParts } from './s
 import { groundPlantParts } from './scenePlantParts.js';
 import { makeRecess } from './vehicles.js';
 import { makeSceneVehicleParts as makeVehicle } from './vehicleCatalog.js';
+import { runtimeMeshDataGeometry } from './runtimePartModel.js';
 
 // ============================================================================
 // §A 都市計畫(市區:沿街配置 + 街廓 + 公設)
@@ -505,6 +506,7 @@ export function planRockField({ cx, cz, strike, pitch, seed = 1, opts = {} }) {
 // ---- 建構(以下才需要 THREE)----
 const _geo = (spec) => {
   const [t, a, b, c] = spec;
+  if (t === 'mesh') return runtimeMeshDataGeometry(a);
   if (t === 'box') return new THREE.BoxGeometry(a, b, c);
   if (t === 'cyl') return new THREE.CylinderGeometry(a, b, c, spec[4] || 6);
   if (t === 'cone') return new THREE.ConeGeometry(a, b, spec[3] || 6);

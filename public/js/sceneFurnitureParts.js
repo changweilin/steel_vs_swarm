@@ -1,4 +1,5 @@
 import { sceneRod } from './sceneAttachmentParts.js';
+import { applyFurnitureAppearance } from './sceneryAppearance.js';
 
 // Metre-space visual parts; callers own siting, collision and scaling.
 const box = (w, h, d, x, y, z, c) => ({ g: ['box', w, h, d], p: [x, y, z], c });
@@ -256,5 +257,5 @@ export function sceneFurnitureParts(kind) {
       add(box(.42,.04,.06,0,.8,z,steel),box(.055,.2,.06,-.19,.88,z,steel),box(.055,.2,.06,.19,.88,z,steel));
     }
   } else throw new RangeError('Unknown scene furniture: '+kind);
-  return parts;
+  return applyFurnitureAppearance(kind, parts);
 }

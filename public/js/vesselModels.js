@@ -1,4 +1,4 @@
-import { loftMeshData, hullRing, vesselHullSections } from './vesselGeometry.js';
+import { loftMeshData, hullRing, vesselHullRing, vesselHullSections } from './vesselGeometry.js';
 import * as THREE from 'three';
 import { mulberry32 } from './rng.js';
 import { toonMat, toonPlain } from './toon.js';
@@ -277,7 +277,7 @@ export function buildGeneratedVesselMesh(v, { wake = true } = {}) {
     }
   } else {
     const fine=['kayak','canoe','sail'].includes(hull), flat=hull==='barge';
-    const ring=(w,y,d)=>open?shellRing(w,y,d):flat?[[-w,y],[-w,-d],[w,-d],[w,y]]:hullRing(w,hull==='carrier'?y-B*0.04:y,-d*0.65,-d);
+    const ring=(w,y,d)=>open?shellRing(w,y,d):flat?[[-w,y],[-w,-d],[w,-d],[w,y]]:vesselHullRing(w,hull==='carrier'?y-B*0.04:y,d);
     add('hull',loftGeometry(vesselHullSections(v,ring,fine,flat)),hullMat);
     if(open) {
       box('recessed_floor',B*0.55,B*0.025,L*0.57,0,layout.deckY-B*0.0125,0,hull==='kayak'?dark:deck);

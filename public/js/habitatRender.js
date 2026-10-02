@@ -7,6 +7,7 @@ import { envMat } from './toon.js';
 import { makeFootprintIndex, blockerFoot } from './ground.js';
 import { seasonalEnvironment } from './seasonalEnvironment.js';
 import { sceneFurnitureParts } from './sceneFurnitureParts.js';
+import { sceneryGeometry } from './sceneryGeometry.js';
 
 function detailGeometry(kind, variant) {
   if (kind === 'scrub') {
@@ -21,7 +22,7 @@ function detailGeometry(kind, variant) {
     return compileSceneParts(parts);
   }
   if (kind === 'stone') {
-    const geo = new THREE.IcosahedronGeometry(.5, 0);
+    const geo = sceneryGeometry('stone', [1, 1, 1]);
     geo.translate(0, .5, 0);
     return geo;
   }

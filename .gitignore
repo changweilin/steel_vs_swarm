@@ -68,3 +68,11 @@ out/geographic_review/
 out/mech_reference/_rebuild/
 out/morph_reference/_rebuild/
 tools/mech_authoring/__pycache__/
+
+# Reproducible transport authoring scenes and review captures.
+out/transport_review/
+tools/transport_authoring/__pycache__/
+
+# Reproducible scenery authoring scenes and review captures.
+out/scenery_review/
+tools/scenery_authoring/__pycache__/
