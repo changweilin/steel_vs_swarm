@@ -22,6 +22,7 @@ import { partId, partJitter } from './xform.js';
 
 // ---- 載具 / 擺件型錄(唯一縫;該檔零 import、零 THREE ⇒ 離線稽核吃得到同一份)----
 import { makeSceneVehicleParts as makeVehicle } from './vehicleCatalog.js';
+import { runtimeMeshDataGeometry } from './runtimePartModel.js';
 import { mergeGeos } from './beacons.js';
 import { flameGeometry, smokeGeometry, brokenGroundGeometry } from './sceneDisasterGeometry.js';
 import { HAZARDS } from './data.js';
@@ -123,7 +124,7 @@ const BUILDERS = {
       const roll = (rnd() - 0.5) * 0.16;                                  // 塌得一邊高一邊低
       for (const p of makeVehicle('sedan', { fit: { L: bl, W: bw, H: bh + 0.65 }, crush, paint })) {
         const [t, ga, gb, gc, sg] = p.g;
-        const geo = t === 'box' ? box(ga, gb, gc)
+        const geo = t === 'mesh' ? runtimeMeshDataGeometry(ga) : t === 'box' ? box(ga, gb, gc)
           : t === 'cyl' ? cyl(ga, gb, gc, sg || 6)
             : t === 'cone' ? cone(ga, gb, sg || 6) : ico(ga);
         const [px = 0, py = 0, pz = 0] = p.p || [];
@@ -166,7 +167,7 @@ const BUILDERS = {
     // 兩者同形({g,p,c,r})⇒ 此處寫法與 wreck 的逐台迴圈同一支,不可另起爐灶。
     for (const p of makeVehicle('sedan', { fit: { L: 4.4, W: 1.9, H: 1.55 }, paint: seed })) {
       const [t, ga, gb, gc, sg] = p.g;
-      const geo = t === 'box' ? box(ga, gb, gc)
+      const geo = t === 'mesh' ? runtimeMeshDataGeometry(ga) : t === 'box' ? box(ga, gb, gc)
         : t === 'cyl' ? cyl(ga, gb, gc, sg || 6)
           : t === 'cone' ? cone(ga, gb, sg || 6) : ico(ga);
       const [px = 0, py = 0, pz = 0] = p.p || [];

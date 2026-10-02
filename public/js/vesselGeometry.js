@@ -1,4 +1,5 @@
 // Render-free loft geometry shared by vessels and boundary scenery.
+import { VESSEL_HULL_STATIONS, VESSEL_HULL_RING } from './transportMeshData.js';
 export function loftMeshData(sections) {
   const ringN = sections[0].ring.length;
   const pos = [];
@@ -27,15 +28,13 @@ export const hullRing = (halfW, deckY, chineY, keelY) => [
   [halfW * 0.82, chineY], [halfW, deckY],
 ];
 
-export function vesselHullSections(v, ring = (w, y, d) => hullRing(w, y, -d * .65, -d), fine = false, flat = false) {
+export const vesselHullRing = (halfW, deckY, draft) => VESSEL_HULL_RING
+  .map(([w,f,d]) => [halfW*w,deckY*f+draft*d]);
+
+export function vesselHullSections(v, ring = vesselHullRing, fine = false, flat = false) {
   const { length: L, beam: B, draft: D, freeboard: F } = v;
-  return [
-    { z: -L / 2, ring: ring(B * (fine ? .018 : .34), F, D * .65) },
-    { z: -L * .32, ring: ring(B * .5, F, D) },
-    { z: L * .23, ring: ring(B * .5, F, D) },
-    { z: L * .43, ring: ring(B * (flat ? .39 : .25), F * 1.08, D * .7) },
-    { z: L / 2, ring: ring(B * (flat ? .32 : .015), F * 1.12, D * .16) },
-  ];
+  const stations = VESSEL_HULL_STATIONS[flat ? 'barge' : fine ? 'fine' : 'displacement'];
+  return stations.map(([z,w,f,d]) => ({ z: L*z, ring: ring(B*w,F*f,D*d) }));
 }
 
 // 法線群組：共用頂點的面只在夾角容限內共用法線，超過即拆頂點。

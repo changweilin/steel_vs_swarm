@@ -21,7 +21,8 @@ for(const key of Object.keys(VEHICLE_PROFILES))for(const power of VEHICLE_PROFIL
   if(key==='bulldozer'||key==='paver')assert.ok(!parts.some(p=>p.name==='armored_hull'||p.name==='hatch'),'工程車不得套用裝甲上身');
   const required={concretePump:'pump_articulated_section',bucketTruck:'insulated_work_bucket',tipper:'hinged_tailgate',paver:'feed_conveyor',fireEngine:'pressure_gauge',dewatering:'centrifugal_pump_housing',generatorTruck:'power_socket_panel',prisoner:'secure_rear_door',command:'stowed_satellite_dish',libraryBus:'book_spine'};
   if(required[key])assert.ok(parts.some(p=>p.name===required[key]),`${key} 缺少專用功能幾何`);
-  const boxes=parts.map(p=>partAABB({p:p.position,r:p.rotation,g:p.type==='box'
+  const boxes=parts.map(p=>partAABB({p:p.position,r:p.rotation,g:p.type==='mesh'
+    ? ['mesh',p.meshData,p.dimensions] : p.type==='box'
     ? ['box',...p.dimensions] : p.type==='cylinder' ? ['cyl',...p.radii,p.height,p.sides]
       : ['box',2*(p.radius+p.tube),2*(p.radius+p.tube),p.tube*2]}));
   const left=new Set(parts.map((_,i)=>i)),groups=[];
@@ -38,7 +39,9 @@ for(const key of Object.keys(VEHICLE_PROFILES))for(const power of VEHICLE_PROFIL
   groups.sort((a,b)=>b.length-a.length);
   if(groups.length>1)failures.push(`${key}/${power}/${seed}: `+groups.slice(1).map(g=>[...new Set(g.map(i=>parts[i].name))].join('/')).join(', '));
   for(const cab of parts.filter(p=>p.name==='cab')) {
-    assert.ok(parts.some(p=>p.name==='front_windshield'&&p.position[0]>cab.position[0]+cab.dimensions[0]/2),'前擋必須露出駕駛艙正面');
+    // Sloped glass requires a surface ray test (transportAppearance.mjs), not the cab's widest AABB.
+    assert.ok(parts.some(p=>p.name==='front_windshield'&&p.position[0]>cab.position[0]
+      +(cab.type==='box'?cab.dimensions[0]/2:0)),'前擋必須露出駕駛艙正面');
   }
   if(key==='mixer') {
     const drum=parts.filter(p=>p.name==='mixer_drum_section').sort((a,b)=>a.position[0]-b.position[0]);

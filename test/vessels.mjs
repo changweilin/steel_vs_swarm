@@ -59,7 +59,7 @@ if (!process.env.THREE_MODULE) throw Error('Set THREE_MODULE to the game Three.j
 register('data:text/javascript,'+encodeURIComponent(`export async function resolve(s,c,next){if(s==='three')return {url:${JSON.stringify(pathToFileURL(process.env.THREE_MODULE).href)},shortCircuit:true};return next(s,c);}`),import.meta.url);
 const THREE=await import('three');
 const { buildGeneratedVesselMesh }=await import('../public/js/vesselModels.js');
-const { disposeTree }=await import('../public/js/toon.js');
+const { disposeTree, setSeaWaveSources }=await import('../public/js/toon.js');
 for(const t of VESSEL_TYPES) for(const seed of [1,42,150]) {
   const v=generateVessel(seed,{id:t.id});
   const mesh=buildGeneratedVesselMesh(v,{wake:false});
@@ -113,9 +113,9 @@ const source=readSrc('public','js','aquatics.js');
 const start=source.indexOf('export function createSurfaceVessels(');
 const end=source.indexOf('/** 建造現代巡邏艇幾何群 */',start);
 assert.ok(start>=0 && end>start);
-const create=new Function('THREE','mulberry32','generateVessel','vesselFitsAt','buildGeneratedVesselMesh','disposeTree','terrainEnvCode','AQUATIC',
+const create=new Function('THREE','mulberry32','generateVessel','vesselFitsAt','buildGeneratedVesselMesh','disposeTree','setSeaWaveSources','terrainEnvCode','AQUATIC',
   source.slice(start,end).replace('export function','function')+';return createSurfaceVessels;')(
-    THREE,mulberry32,generateVessel,vesselFitsAt,buildGeneratedVesselMesh,disposeTree,()=>1,
+    THREE,mulberry32,generateVessel,vesselFitsAt,buildGeneratedVesselMesh,disposeTree,setSeaWaveSources,()=>1,
     {SHIP_CRUISE_SPD:3,BOAT_BOB_AMP:0.05,BOAT_BOB_FREQ:1});
 assert.equal(create({...terrain,waterY:NaN},1),null);
 const dry=create({...terrain,heightAt:()=>1},8);

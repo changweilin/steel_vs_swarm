@@ -1,11 +1,12 @@
 // NPC shells share the existing articulated rig; models.js alone fits authoritative heights.
 import * as THREE from 'three';
 import { CIVILIANS, isThirdSide, sideInfo } from './data.js';
-import { bx, cyl, rbz, sph, cone, torus, dim } from './geo3d.js';
+import { bx, cyl, rbz, sph, cone, torus, dim, mat } from './geo3d.js';
 import { limbChain, recoilMount, mechanism } from './unitRig.js';
 import { tboxF, finF } from './forge/geo.js';
 import { finishUnitSurfaces } from './unitSurfaces.js';
 import { generateCivilian } from './civilianAppearance.js';
+import { sceneryGeometry } from './sceneryGeometry.js';
 import { FACTION_MODEL_STYLE } from './factionModelStyle.js';
 
 const TAU = Math.PI * 2;
@@ -914,31 +915,40 @@ function addProfessionKit(hips, row, cloth, kit = CIVILIAN_PROFESSION_KITS[row.n
   return kit;
 }
 
+function civilianSurface(parent, name, size, position, color) {
+  const mesh = new THREE.Mesh(sceneryGeometry(name, size), mat(color));
+  mesh.name = 'civilian/' + name;
+  mesh.position.set(...position);
+  parent.add(mesh);
+  return mesh;
+}
+
 function addCivilianHair(head, a) {
   const color = a.hairColor;
-  if (a.hairStyle !== 'bald') frustum(head, { rt: 0.18, rb: 0.225,
-    h: a.hairStyle === 'cropped' ? 0.07 : 0.14, seg: 10, y: 0.16, z: -0.025, color });
+  if (a.hairStyle !== 'bald') civilianSurface(head, 'hairCap',
+    [.405, a.hairStyle === 'cropped' ? .12 : .18, .39], [0, .15, -.018], color);
   if (['bob', 'long', 'wavy'].includes(a.hairStyle)) {
     const length = a.hairStyle === 'bob' ? 0.25 : 0.48;
     for (const x of [-0.19, 0.19]) {
-      const lock = bx(head, 0.1, length, 0.23, x, 0.05 - length / 2, -0.065, color);
+      const lock = civilianSurface(head, 'hairLock', [.1, length, .23], [x, .05 - length / 2, -.065], color);
       lock.rotation.z = a.hairStyle === 'wavy' ? x * 0.8 : 0;
     }
-    bx(head, 0.32, length, 0.1, 0, 0.05 - length / 2, -0.19, color);
+    civilianSurface(head, 'hairLock', [.32, length, .1], [0, .05 - length / 2, -.19], color);
   } else if (a.hairStyle === 'ponytail') {
     const tail = cyl(head, 0.085, 0.045, 0.38, 7, 0, -0.04, -0.25, color);
     tail.rotation.x = 0.3;
-  } else if (a.hairStyle === 'bun') sph(head, 0.12, 0, 0.22, -0.18, color);
+  } else if (a.hairStyle === 'bun') civilianSurface(head, 'hairCurl', [.24, .24, .24], [0, .22, -.18], color);
   else if (a.hairStyle === 'braids') {
     for (const x of [-0.19, 0.19]) for (let i = 0; i < 5; i++)
-      sph(head, 0.065, x, 0.04 - i * 0.075, -0.09, color);
+      civilianSurface(head, 'hairCurl', [.13, .13, .13], [x, .04 - i * .075, -.09], color);
   } else if (a.hairStyle === 'curly' || a.hairStyle === 'afro') {
     const r = a.hairStyle === 'afro' ? 0.12 : 0.075;
     for (let i = 0; i < 8; i++) {
       const t = i * TAU / 8;
-      sph(head, r, Math.cos(t) * 0.18, 0.14, Math.sin(t) * 0.17 - 0.035, color);
+      civilianSurface(head, 'hairCurl', [r * 2, r * 2, r * 2],
+        [Math.cos(t) * .18, .14, Math.sin(t) * .17 - .035], color);
     }
-    sph(head, r, 0, 0.23, -0.04, color);
+    civilianSurface(head, 'hairCurl', [r * 2, r * 2, r * 2], [0, .23, -.04], color);
   } else if (a.hairStyle === 'mohawk') bx(head, 0.08, 0.19, 0.33, 0, 0.24, -0.02, color);
   else if (a.hairStyle === 'sidepart') {
     const fringe = bx(head, 0.26, 0.09, 0.1, -0.035, 0.15, 0.15, color);
@@ -965,7 +975,7 @@ function addCivilianClothing(hips, head, a) {
   } else if (a.clothing === 'sweater') {
     for (const y of [0.4, 0.58, 0.76]) bx(hips, 0.45, 0.055, 0.05, 0, y, 0.2, trim);
   } else if (a.clothing === 'shirt') {
-    for (const y of [0.4, 0.55, 0.7]) sph(hips, 0.018, 0, y, 0.21, trim);
+    for (const y of [0.4, 0.55, 0.7]) civilianSurface(hips, 'hairCurl', [.028, .028, .012], [0, y, .21], trim);
   }
   if (a.bottoms === 'jeans') for (const x of [-0.14, 0.14])
     bx(hips, 0.11, 0.12, 0.035, x, 0.12, -0.18, dim(a.trouserColor, 0.7));
@@ -1014,16 +1024,16 @@ function buildCivilian(side, profile = 0, seed = 0) {
   const makeLeg = (sgn) => {
     const leg = new THREE.Group();
     leg.position.set(sgn * 0.18, hipY, 0);
-    frustum(leg, { rt: 0.12, rb: 0.15, h: 0.58, seg: 6, y: -0.31,
-      sx: 0.86, sz: 0.74, color: appearance.trouserColor });
-    frustum(leg, { rt: 0.1, rb: 0.13, h: 0.5, seg: 6, y: -0.85,
-      sx: 0.86, sz: 0.74, color: appearance.bottoms === 'shorts' ? skin : dim(appearance.trouserColor, 0.8) });
+    civilianSurface(leg, 'upperLeg', [.25, .6, .245], [0, -.30, 0], appearance.trouserColor);
+    civilianSurface(leg, 'lowerLeg', [.205, .52, .195], [0, -.85, 0],
+      appearance.bottoms === 'shorts' ? skin : dim(appearance.trouserColor, .8));
     const boots = appearance.footwear === 'boots';
     const sandals = appearance.footwear === 'sandals';
     const foot = new THREE.Group();
     leg.add(foot);
-    bx(foot, 0.22, boots ? 0.28 : 0.12, 0.38, 0, boots ? -1.08 : -1.16, 0.06,
-      sandals ? skin : appearance.footwear === 'sneakers' ? appearance.accentColor : 0x2a2622);
+    civilianSurface(foot, boots ? 'boot' : 'shoe', [.22, boots ? .28 : .12, .38],
+      [0, boots ? -1.08 : -1.16, .06], sandals ? skin
+        : appearance.footwear === 'sneakers' ? appearance.accentColor : 0x2a2622);
     if (sandals) for (const z of [-0.02, 0.16]) bx(foot, 0.23, 0.025, 0.05, 0, -1.09, z, appearance.accentColor);
     else if (appearance.footwear === 'sneakers') bx(foot, 0.23, 0.025, 0.39, 0, -1.205, 0.06, 0xd2d1c8);
     body.add(leg);
@@ -1034,19 +1044,18 @@ function buildCivilian(side, profile = 0, seed = 0) {
   hips.position.y = hipY;
   body.add(hips);
   const shoulder = 0.5 * appearance.shoulderScale;
-  frustum(hips, { rt: shoulder * 0.44, rb: shoulder * 0.52, h: 0.62,
-    seg: 8, y: 0.55, sx: 1.12, sz: 0.68, color: cloth });
-  bx(hips, shoulder * 0.92, 0.22, 0.34, 0, 0.14, 0, dim(cloth, 0.7));
+  civilianSurface(hips, 'torso', [shoulder * 1.12, .62, .34], [0, .55, 0], cloth);
+  civilianSurface(hips, 'pelvis', [shoulder * .92, .25, .34], [0, .135, 0], appearance.trouserColor);
   if (appearance.bottoms === 'skirt') frustum(hips, { rt: 0.28, rb: 0.4, h: 0.48, seg: 8,
     y: 0.03, sx: 1.1, sz: 0.75, color: appearance.trouserColor });
   const makeArm = (sgn) => {
     const arm = new THREE.Group();
-    arm.position.set(sgn * shoulder * 0.82, 0.84, 0);
-    frustum(arm, { rt: 0.09, rb: 0.12, h: 0.42, seg: 6, y: -0.22,
-      sx: 0.88, sz: 0.75, color: cloth });
-    frustum(arm, { rt: 0.075, rb: 0.095, h: 0.36, seg: 6, y: -0.58,
-      sx: 0.88, sz: 0.75, color: ['jacket', 'hoodie', 'sweater', 'coat'].includes(appearance.clothing) ? cloth : skin });
-    sph(arm, 0.085, 0, -0.81, 0.02, skin);
+    arm.position.set(sgn * shoulder * 0.64, 0.84, 0);
+    civilianSurface(arm, 'upperArm', [.195, .44, .18], [0, -.22, 0], cloth);
+    civilianSurface(arm, 'forearm', [.15, .38, .14], [0, -.59, 0],
+      ['jacket', 'hoodie', 'sweater', 'coat'].includes(appearance.clothing) ? cloth : skin);
+    const hand = civilianSurface(arm, 'hand', [.11, .17, .08], [0, -.84, .018], skin);
+    hand.scale.x = sgn;
     hips.add(arm);
     return arm;
   };
@@ -1055,9 +1064,15 @@ function buildCivilian(side, profile = 0, seed = 0) {
   head.position.y = 1.13;
   head.scale.setScalar(appearance.headScale);
   hips.add(head);
-  sph(head, 0.22, 0, 0, 0, skin);
-  for (const x of [-0.075, 0.075]) sph(head, 0.018, x, 0.02, 0.205, 0x302a28);
-  sph(head, 0.035, 0, -0.03, 0.218, skin);
+  cyl(hips, .075, .10, .18, 8, 0, .93, 0, skin);
+  civilianSurface(head, 'head', [.39, .43, .38], [0, 0, 0], skin);
+  for (const x of [-.072, .072]) {
+    civilianSurface(head, 'hairCurl', [.022, .016, .009], [x, .024, .187], 0x302a28);
+    bx(head, .06, .013, .014, x, .063, .177, appearance.hairColor);
+    civilianSurface(head, 'ear', [.045, .095, .055], [Math.sign(x) * .198, -.025, -.005], skin);
+  }
+  civilianSurface(head, 'nose', [.047, .085, .085], [0, -.033, .195], skin);
+  bx(head, .065, .015, .012, 0, -.115, .173, dim(skin, .66));
   addCivilianHair(head, appearance);
   addCivilianClothing(hips, head, appearance);
   const baseKit = CIVILIAN_PROFESSION_KITS[row.name];

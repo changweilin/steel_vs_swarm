@@ -2,6 +2,7 @@
 // 每個通過物件合併成一顆 vertex-color mesh；碰撞與場景配置不得反讀此視覺幾何。
 import * as THREE from 'three';
 import { sceneObjectMat, toonMat } from './toon.js';
+import { sceneryBoxData } from './sceneryAppearance.js';
 
 const TYPES = new Set([
   'mesh', 'box', 'cone', 'conical_frustum', 'cylinder', 'dodecahedron_polyhedron',
@@ -121,7 +122,11 @@ export function runtimePrimitiveGeometry(part) {
       if (!geo) throw new TypeError('Invalid procedural mesh');
       break;
     }
-    case 'box': geo = new THREE.BoxGeometry(...pos3(part.dimensions, 1).map((n) => Math.max(0.001, n))); break;
+    case 'box': {
+      const size = pos3(part.dimensions, 1).map(n => Math.max(0.001, n));
+      geo = Math.min(...size) < .025 ? new THREE.BoxGeometry(...size) : runtimeMeshDataGeometry(sceneryBoxData(size));
+      break;
+    }
     case 'polygonal_prism': {
       const r = Math.max(0.001, finite(part.radius) ? part.radius : 1);
       geo = new THREE.CylinderGeometry(r, r, h, sides); break;
