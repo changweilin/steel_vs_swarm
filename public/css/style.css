@@ -2061,9 +2061,9 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 
 .char-btn.merc { border-style: dashed; }
 .char-av { width: 56px; height: 56px; border-radius: 0; border: 1px solid var(--line); display: block; clip-path: var(--notch-sm); object-fit: cover; }
-/* 機體頭像:共用機體立繪原圖,以方形中央裁切呈現(不另存圖檔;object-position 偏上保留機首/旋翼) */
+/* 機體頭像:獨立頭部/座艙裁切圖檔(assets/mech_avatars),方形原樣呈現 */
 .char-av.av-mech, .sb-chip-av.av-mech, .dlg-av.av-mech, .self-av.av-mech, .boss-av.av-mech {
-  object-fit: cover; object-position: center 28%;
+  object-fit: cover; object-position: center;
 }
 /* 機體立繪:全幅原圖等比容納,深色底襯邊(與角色透明立繪同框並存) */
 .cd-portrait img.art-mech, .bio-portrait img.art-mech, .dlg-art.art-mech {

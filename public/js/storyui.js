@@ -23,7 +23,7 @@ export const kindLabelOf = (kind) => kind === 'drone' ? '無人機' : kind === '
  * Avatar with unit kind corner badge.
  * Single seam across all avatar placements (lobby roster, modal roster, pilot chip, card label, storybook).
  * Unit kind routes strictly via `charKind(id)` (mixed compositions decouple faction from unit kind).
- * @param {string} mode 'char' 角色立繪頭像 / 'mech' 機體立繪頭像(CSS 方形裁切共用原圖)
+ * @param {string} mode 'char' 角色立繪頭像 / 'mech' 機體頭像(獨立頭部裁切圖檔)
  */
 export function charAvatarHTML(id, cls = 'char-av', mode = 'char') {
   const kind = charKind(id);

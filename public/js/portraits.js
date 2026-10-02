@@ -37,9 +37,13 @@ const MECH_SLUGS = {
   m01: 'raven', m02: 'ballast', m03: 'lifeline', m04: 'nameless',
   m05: 'stranglehold', m06: 'downpour', m07: 'portcullis', m08: 'dead_number',
 };
-/** Mech illustration manifest: id -> image path (relative to public/). Full-scene art, not transparent. */
+/** Mech illustration manifest: id -> image path (relative to public/). Full-scene art. */
 export const MECH_PORTRAIT_MANIFEST = Object.fromEntries(
   Object.entries(MECH_SLUGS).map(([id, slug]) => [id, `assets/mechs/${id}_${slug}.png`]));
+/** Mech avatar manifest: per-mech head/cockpit crop of the illustration (256x256, transparent).
+ * Mirrors public/assets/mech_avatars; single seam for mech avatar paths. */
+export const MECH_AVATAR_MANIFEST = Object.fromEntries(
+  Object.keys(MECH_SLUGS).map((id) => [id, `assets/mech_avatars/${id}.png`]));
 
 export const hasMechArt = (id) => !!MECH_PORTRAIT_MANIFEST[id];
 
@@ -48,10 +52,10 @@ export function mechPortraitURL(id) {
   return MECH_PORTRAIT_MANIFEST[id] || portraitURL(id);
 }
 
-/** Mech avatar: reuses the mech illustration (CSS square-crops to avatar box; no separate binary).
- * Falls back to pilot avatar when mech art is absent. */
+/** Mech avatar: dedicated head/cockpit crop (transparent background).
+ * Falls back to full illustration, then pilot avatar, when mech art is absent. */
 export function mechAvatarURL(id) {
-  return MECH_PORTRAIT_MANIFEST[id] || avatarURL(id);
+  return MECH_AVATAR_MANIFEST[id] || MECH_PORTRAIT_MANIFEST[id] || avatarURL(id);
 }
 
 /** Art display modes (unified 角色/機體 tabs share these labels). */
