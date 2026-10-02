@@ -92,6 +92,9 @@ export function briefHTML(ch, i, side, pilot) {
         <div class="sb-cine-name">${esc(sc.title)}</div>
         <div class="sb-cine-meta">${chapterMeta(ch)}</div>
       </div>
+      <button class="sb-cine-play-btn" id="sbBriefPlayBtn" type="button" title="播放章節開場動畫">
+        ▶ 播放動畫
+      </button>
     </div>
     <div class="sb-prose"><p class="sb-intro">${esc(sc.intro).replace(/\n\n+/g, '</p><p class="sb-intro">')}</p></div>
     <div class="sb-roster" style="--own:var(${side === 'STEEL' ? '--steel' : '--swarm'});--foe:var(${side === 'STEEL' ? '--swarm' : '--steel'})">

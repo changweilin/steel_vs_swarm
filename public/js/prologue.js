@@ -4,6 +4,8 @@
 // Supports both Landscape (Desktop / mobile landscape) and Portrait (mobile portrait) layouts
 // with a fixed, non-obscuring narrative text box where prose scrolls upward smoothly.
 
+import { CHAPTER_SCENES } from './chapterScenes.js';
+
 export const PROLOGUE_SCENES = [
   {
     id: 'economy_runaway',
@@ -259,6 +261,8 @@ export function markPrologueSeen() {
 export class PrologueIntroController {
   constructor(options = {}) {
     this.options = options;
+    this.scenes = options.scenes || PROLOGUE_SCENES;
+    this.isPrologue = options.isPrologue !== false && (!options.scenes || options.scenes === PROLOGUE_SCENES);
     this.root = document.getElementById('prologueIntro');
     this.scenesContainer = document.getElementById('prologueScenes');
     this.box = document.getElementById('prologueNarrativeBox');
@@ -273,8 +277,8 @@ export class PrologueIntroController {
     this.holdCircle = document.getElementById('prologueHoldCircle');
 
     this.activeSceneIdx = -1;
-    this.isBufferComplete = false;
-    this.bufferPercent = 0;
+    this.isBufferComplete = !this.isPrologue;
+    this.bufferPercent = this.isPrologue ? 0 : 100;
     this.destroyed = false;
     this.animRaf = null;
 
@@ -291,17 +295,23 @@ export class PrologueIntroController {
   initDOM() {
     if (this.scenesContainer) {
       // 模糊底圖一律用當下節劇照做靜態外推（邊界以外）；運鏡只動框內照片。
-      this.scenesContainer.innerHTML = PROLOGUE_SCENES.map((sc, idx) => `
+      this.scenesContainer.innerHTML = this.scenes.map((sc, idx) => {
+        const bgUrl = sc.fallbackImg ? `url('${sc.img}'), url('${sc.fallbackImg}')` : `url('${sc.img}')`;
+        return `
         <div class="prologue-scene-item" id="prologueSceneItem-${idx}" data-idx="${idx}">
-          <div class="prologue-bg-blur" style="background-image: url('${sc.img}')"></div>
-          <div class="prologue-fg-frame"><div class="prologue-fg-art" style="background-image: url('${sc.img}')"></div></div>
+          <div class="prologue-bg-blur" style="background-image: ${bgUrl}"></div>
+          <div class="prologue-fg-frame"><div class="prologue-fg-art" style="background-image: ${bgUrl}"></div></div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     if (!this.content) return;
 
-    this.content.innerHTML = PROLOGUE_SCENES.map((sc, idx) => `
+    const endNote = this.isPrologue ? '—— 序幕終曲・歷史檔案解密完畢 ——' : '—— 戰役檔案解密完畢 ——';
+    const finishBtnText = this.isPrologue ? '▶ 進入戰術終端' : '▶ 返回戰區簡報';
+
+    this.content.innerHTML = this.scenes.map((sc, idx) => `
       <section class="prologue-crawl-section" data-idx="${idx}" id="prologue-crawl-${sc.id}">
         <div class="pcs-chapter-mark">
           <span class="pcs-badge">${sc.badge}</span>
@@ -314,9 +324,9 @@ export class PrologueIntroController {
     `).join('') + `
       <div class="prologue-crawl-end">
         <div class="pce-divider">❖ ❖ ❖</div>
-        <p class="pce-note">—— 序幕終曲・歷史檔案解密完畢 ——</p>
+        <p class="pce-note">${endNote}</p>
         <button id="prologueFinishBtn" class="btn big steel-btn prologue-finish-btn" type="button">
-          ▶ 進入戰術終端
+          ${finishBtnText}
         </button>
       </div>
     `;
@@ -455,8 +465,8 @@ export class PrologueIntroController {
   }
 
   setScene(idx, transformStr) {
-    if (idx < 0 || idx >= PROLOGUE_SCENES.length) return;
-    const scene = PROLOGUE_SCENES[idx];
+    if (idx < 0 || idx >= this.scenes.length) return;
+    const scene = this.scenes[idx];
 
     if (this.activeSceneIdx !== idx) {
       this.activeSceneIdx = idx;
@@ -518,7 +528,8 @@ export class PrologueIntroController {
       }
     });
 
-    const scene = PROLOGUE_SCENES[targetIdx];
+    const scene = this.scenes[targetIdx];
+    if (!scene) return;
     const trans = calcCameraTransform(scene.camera, secProgress);
     this.setScene(targetIdx, trans);
   }
@@ -527,7 +538,7 @@ export class PrologueIntroController {
     if (!this.root) return;
     const n = Math.floor(Number(startIdx));
     const clamped = Number.isFinite(n)
-      ? Math.max(0, Math.min(PROLOGUE_SCENES.length - 1, n))
+      ? Math.max(0, Math.min(this.scenes.length - 1, n))
       : 0;
     this.initDOM();
     this.root.style.display = 'flex';
@@ -555,21 +566,27 @@ export class PrologueIntroController {
       });
     }
 
-    // Start background buffering
-    bufferGameCache((p) => {
-      if (this.destroyed) return;
-      this.bufferPercent = p.pct;
-      if (p.ready) {
-        this.isBufferComplete = true;
-      }
-      this.renderStatus();
-    }).then(() => {
-      if (!this.destroyed) {
-        this.isBufferComplete = true;
-        this.bufferPercent = 100;
+    if (this.isPrologue) {
+      // Start background buffering
+      bufferGameCache((p) => {
+        if (this.destroyed) return;
+        this.bufferPercent = p.pct;
+        if (p.ready) {
+          this.isBufferComplete = true;
+        }
         this.renderStatus();
-      }
-    });
+      }).then(() => {
+        if (!this.destroyed) {
+          this.isBufferComplete = true;
+          this.bufferPercent = 100;
+          this.renderStatus();
+        }
+      });
+    } else {
+      this.isBufferComplete = true;
+      this.bufferPercent = 100;
+      this.renderStatus();
+    }
 
     // Start smooth upward crawl animation loop
     this.lastFrameTime = performance.now();
@@ -598,7 +615,9 @@ export class PrologueIntroController {
     if (this.animRaf) cancelAnimationFrame(this.animRaf);
     this.cancelLongPress();
 
-    markPrologueSeen();
+    if (this.isPrologue) {
+      markPrologueSeen();
+    }
 
     if (this.root) {
       this.root.classList.add('prologue-fadeout');
@@ -623,6 +642,22 @@ export function playPrologueIntro({ onFinished, force = false, startIdx = 0 } = 
   }
 
   const controller = new PrologueIntroController({ onFinished });
+  controller.play(startIdx);
+  return controller;
+}
+
+/** Entry function to play a specific chapter cinematic intro. */
+export function playChapterIntro({ chId, side, startIdx = 0, onFinished } = {}) {
+  const scenes = CHAPTER_SCENES[chId]?.[side];
+  if (!scenes || !scenes.length) {
+    onFinished?.();
+    return null;
+  }
+  const controller = new PrologueIntroController({
+    scenes,
+    isPrologue: false,
+    onFinished,
+  });
   controller.play(startIdx);
   return controller;
 }

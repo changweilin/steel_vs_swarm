@@ -54,7 +54,7 @@ import {
   chapterCardHTML, briefHTML, overText, progressText,
 } from './storyui.js';
 import { Dialogue } from './dialogue.js';
-import { playPrologueIntro } from './prologue.js';
+import { playPrologueIntro, playChapterIntro } from './prologue.js';
 // `game.js`(600KB+toon/postfx/vfx 鏈)進戰才動態載入,首屏不解析(單航班,失敗回提示不炸頁)。
 let _BattleClient = null;
 function battleClientCtor() {
@@ -1148,6 +1148,23 @@ function showStoryBrief(i) {
       $('sbYourChips').querySelectorAll('.sb-chip').forEach((b) => b.classList.toggle('on', b === btn));
     };
   });
+  const playAnim = () => {
+    $('storyBrief').style.display = 'none';
+    playChapterIntro({
+      chId: ch.id,
+      side,
+      onFinished: () => {
+        $('storyBrief').style.display = '';
+      },
+    });
+  };
+  $('sbBriefPlayBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    playAnim();
+  });
+  const animBtn = $('storyAnimBtn');
+  if (animBtn) animBtn.onclick = () => playAnim();
+
   $('storyFightBtn').className = 'btn big ' + (side === 'STEEL' ? 'steel-btn' : 'swarm-btn');
   $('storyFightBtn').onclick = () => startStoryChapter(i);
   $('storyBrief').style.display = '';
