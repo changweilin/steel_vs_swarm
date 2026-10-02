@@ -37,16 +37,19 @@ for id in ids:
     bpy.context.scene.frame_set(31)
     bpy.context.view_layer.update()
     depsgraph = bpy.context.evaluated_depsgraph_get()
-    envelopes, outside = {}, []
+    envelopes, exposed, outside = {}, {}, []
     cavity = spec.get('cavity')
     if cavity:
         inv = bpy.data.objects[cavity['owner']].evaluated_get(depsgraph).matrix_world.inverted()
         sections, offset = cavity['sections'], cavity['offset']
         roots=list(cavity['roots'])
         tail=spec['rig'].get('tailSegs', [])
-        if tail and tail[0] in spec['forms']['flight']['transforms']:
+        if tail and spec['acceptance'].get('flightTailStowed', False):
             roots.append(tail[0])
-        for root in roots:
+        exposed_roots = spec['acceptance'].get('flightExposedRoots', [])
+        limb_roots = {name for name, _, _ in spec['joints'] if name.startswith(('leg_', 'hip_', 'shoulder_'))}
+        assert set(cavity['roots'] + exposed_roots) == limb_roots, 'Unmeasured limb inventory: ' + id
+        for root in roots + exposed_roots:
             points = []
             for mesh in bpy.data.objects:
                 if mesh.type != 'MESH':
@@ -67,6 +70,8 @@ for id in ids:
                     points.append(point)
                     assert all(math.isfinite(x) for x in v), 'Nonfinite source geometry'
                     x, y, z = [point[i] - offset[i] for i in range(3)]
+                    if root in exposed_roots:
+                        continue
                     axial, depth = (y, z) if cavity['axis'] == 'y' else (z, y)
                     pair = next(((lo, hi) for lo, hi in zip(sections, sections[1:]) if lo[0] <= axial <= hi[0]), None)
                     if pair is None:
@@ -80,13 +85,15 @@ for id in ids:
                     if nx > 1.00001 or nz > 1.00001 or corner > 1.00001:
                         outside.append((root, point))
             assert points, 'Unmeasured limb: ' + root
-            envelopes[root] = {'min': [min(v[i] for v in points) for i in range(3)],
-                               'max': [max(v[i] for v in points) for i in range(3)]}
+            bounds = {'min': [min(v[i] for v in points) for i in range(3)],
+                      'max': [max(v[i] for v in points) for i in range(3)]}
+            (exposed if root in exposed_roots else envelopes)[root] = bounds
     else:
         assert id == 'm05' and not spec['acceptance']['flightBellyClosed'], 'Unspecified closure exception'
         assert len([n for n, _, _ in spec['joints'] if n.startswith(('hip_', 'shoulder_'))]) == 4
     result = {'blend': sha(blend), 'bones': len(skeleton.data.bones), 'clips': spec['clips'],
               'foldedLimbBoundsInHullCoordinates': envelopes, 'limbVerticesOutsideHull': len(outside),
+              'exposedLimbBoundsInHullCoordinates': exposed,
               'outsideExamples': outside[:4], 'editable_source': 'pass',
               'flight_belly': ('pass' if not outside else 'fail') if cavity else 'exposed_patagium_struts'}
     (directory / 'source-validation.json').write_text(json.dumps(result, indent=2) + '\n')

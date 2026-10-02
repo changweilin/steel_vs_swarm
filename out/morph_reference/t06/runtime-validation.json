@@ -1,24 +1,24 @@
 {
   "source": {
-    "contract": "29eecc796e30a0c8284d4859b84a389857e9e7ec2a2d46534ee8f3511c06312c",
-    "builder": "7df063248bee52282af7973f430abad4f3f0c060371e4ba2ea93cc7989126af4",
-    "catalog": "545863f0916b725d7b299e39976a0fd3b9f7c1db19ff416b631f180b5a572ad5",
+    "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+    "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+    "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
     "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
-    "sharedContract": "c1cfb10281181e13a038832f72329386cb1a33fa99956c263f5ec6ed16d5f856",
-    "sharedCatalog": "04b8b4ff9298cffa3f4d9f59b79313820ee8042deb7f43a6a4f4daf4e8d46b1d"
+    "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+    "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
   },
   "hashes": {
-    "runtime": "e9f6a867947ad7ca57ea0ec19f05ae7744c6ef26ba43858d31444fc2ec6cd754",
-    "glb": "aa647812556e4d8d6476e6cd1a27d9e580bda5e327eb91a6059188fe363fcfce"
+    "runtime": "caa23a03aa0cf90a3e735fa9ad893d5d70b3ad2d5e2b3e82dada883ac5b4d235",
+    "glb": "a2cd7b9060014165b43baeca495bb956377977be389910ef7bd798223287e7ef"
   },
   "measurements": {
-    "trianglesPerVisibleForm": 10424,
+    "trianglesPerVisibleForm": 10336,
     "effectTriangles": 3552,
     "effectMeshes": 22,
-    "retainedTriangles": 24400,
-    "meshesPerVisibleForm": 72,
+    "retainedTriangles": 24224,
+    "meshesPerVisibleForm": 70,
     "pairs": {
-      "pair": 100,
+      "pair": 98,
       "soft": 0,
       "gOnly": 0,
       "aOnly": 0

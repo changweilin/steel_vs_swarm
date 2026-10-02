@@ -444,14 +444,31 @@ class Asset:
                     self.rotate(self.nodes['knee_' + side], 'x', max(0, -angle) * .7)
                     self.rotate(self.nodes['shoulder_' + side], 'x', -angle * .34)
                     self.rotate(self.nodes['elbow_' + side], 'x', -.35)
+                    if self.p.get('legAnatomy'):
+                        for joint in rig['legChain' + side.upper()]:
+                            self.rotate(self.nodes[joint['g']], joint.get('axis', 'x'),
+                                        joint['k'] * max(0, -angle) * .75)
                 if rig.get('hop'):
                     self.nodes['hips'].location.z += max(0, math.sin(t * math.tau)) * .4
             elif self.spec['kind'] == 'quad':
-                for i, key in enumerate(['legFL', 'legFR', 'legHL', 'legHR']):
-                    self.rotate(self.nodes[self.spec['rig'][key]], 'x', math.sin(t * math.tau + [0, math.pi, math.pi, 0][i]) * .4)
-                for key in ['chFL', 'chFR', 'chHL', 'chHR']:
-                    for i, joint in enumerate(self.spec['rig'].get(key, [])):
-                        self.rotate(self.nodes[joint['g']], 'x', math.sin(t * math.tau - i * .5) * .18)
+                if rig.get('insectLegs'):
+                    for leg in rig['insectLegs']:
+                        phase = (math.pi if leg['key'] in ['FR', 'ML', 'HR'] else 0) + t * math.tau
+                        self.rotate(self.nodes[leg['root']], 'y', leg['side'] * math.sin(phase) * .25)
+                        self.rotate(self.nodes[leg['lift']], 'z', leg['side'] * max(0, -math.cos(phase)) * .28)
+                        for joint in rig[leg['chain']]:
+                            self.rotate(self.nodes[joint['g']], joint.get('axis', 'x'),
+                                        joint['base'] + joint['k'] * max(0, -math.cos(phase - joint['d'])) * .4)
+                else:
+                    for i, key in enumerate(['FL', 'FR', 'HL', 'HR']):
+                        phase = t * math.tau + [0, math.pi, math.pi, 0][i]
+                        grasp = key[0] == 'F' and rig.get('limb', {}).get('foreRole') == 'grasp'
+                        self.rotate(self.nodes[rig['leg' + key]], 'x',
+                                    rig.get('quadBase', {}).get(key, 0) + math.sin(phase) * (.07 if grasp else .4))
+                        for j, joint in enumerate(rig.get('ch' + key, [])):
+                            angle = (joint['base'] + joint['k'] * max(0, -math.sin(phase-joint['d'])) * (.10 if grasp else .65)
+                                     if self.p.get('legAnatomy') else math.sin(t * math.tau-j*.5)*.18)
+                            self.rotate(self.nodes[joint['g']], joint.get('axis', 'x'), angle)
             else:
                 self.rotate(self.nodes['tilt'], 'x', 0 if rig.get('level') else .22)
                 self.rotate(self.nodes['tilt'], 'z', math.sin(t * math.tau) * .2)

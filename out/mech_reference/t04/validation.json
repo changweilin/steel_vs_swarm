@@ -2,13 +2,13 @@
   "asset": "t04",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 12256,
-    "meshes": 80,
-    "joints": 29,
+    "triangles": 12296,
+    "meshes": 84,
+    "joints": 33,
     "source": {
-      "contract": "c1cfb10281181e13a038832f72329386cb1a33fa99956c263f5ec6ed16d5f856",
-      "builder": "7df063248bee52282af7973f430abad4f3f0c060371e4ba2ea93cc7989126af4",
-      "catalog": "04b8b4ff9298cffa3f4d9f59b79313820ee8042deb7f43a6a4f4daf4e8d46b1d",
+      "contract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec",
       "image": "d10467012687689fced96ab52f66314c3f0fbc41cf353de86d780f2a805281ea"
     }
   },
@@ -22,42 +22,19 @@
     "shield_deploy",
     "shield_retract"
   ],
-  "renders": [
-    "reference.png",
-    "front.png",
-    "side.png",
-    "back.png",
-    "top.png",
-    "shield_deploy.png",
-    "light.png",
-    "heavy.png",
-    "run.png"
-  ],
+  "renders": [],
   "hashes": {
-    "runtime": "da48780588ca30a464e887d96eb91ed33ccb307b15c8cdbf44ff0582a81d60f8",
-    "blend": "8978f0f2b22e265a9025c102e1ec180f8f56583f1f306aea8bf950913b9d05e2",
-    "glb": "20e278873323dd87fe16d8b4ea53c9846d91bf0b9a40ce6fc29d7ea4d2c73afd"
+    "runtime": "88acd3ec9af5a92c3382915bcc374b494b9bb29e2524852513731a662cd707a6",
+    "blend": "87fbcda3cbf19d23741e329fd3339723429a63a10b7366aee75201d23450208f",
+    "glb": "914a7fbb7de5f15695bfa64bd72f386d0a4fcb3ca637368211857e8ba89b150a"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pass",
-    "appearance": "pass",
-    "export": "pass",
-    "destination": "pass",
-    "user_signoff": "pending_user_review",
-    "editable_source": "pass"
-  },
-  "evidence": {
-    "visual": "../visual-validation.json",
-    "runtime": "../runtime-validation.json",
-    "source": "../source-validation.json",
-    "rebuild": "../rebuild-validation.json"
-  },
-  "editableSourceRecipe": {
-    "contract": "f4f1ae7752e1643d34fd1201be0cafad8732cf5fa1753703590e3104e6b11270",
-    "builder": "4459b6aeb49a4a202f9c0737b281862323289f49d029074f076c0bb47797c376",
-    "catalog": "bed68ca618293fdbc1d9b564f278f19b32ec1476a99d8c8c1a751d734e7d09ab",
-    "image": "d10467012687689fced96ab52f66314c3f0fbc41cf353de86d780f2a805281ea"
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pending_independent_load",
+    "destination": "pending_browser_review",
+    "user_signoff": "pending_user_review"
   }
 }

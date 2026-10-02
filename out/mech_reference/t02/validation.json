@@ -6,9 +6,9 @@
     "meshes": 73,
     "joints": 25,
     "source": {
-      "contract": "c1cfb10281181e13a038832f72329386cb1a33fa99956c263f5ec6ed16d5f856",
-      "builder": "7df063248bee52282af7973f430abad4f3f0c060371e4ba2ea93cc7989126af4",
-      "catalog": "04b8b4ff9298cffa3f4d9f59b79313820ee8042deb7f43a6a4f4daf4e8d46b1d",
+      "contract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec",
       "image": "9b98b8c36c279d28d91bab19919439cf63e573e42b19b76aca69215bf95fb7e4"
     }
   },
@@ -22,42 +22,19 @@
     "shield_deploy",
     "shield_retract"
   ],
-  "renders": [
-    "reference.png",
-    "front.png",
-    "side.png",
-    "back.png",
-    "top.png",
-    "shield_deploy.png",
-    "light.png",
-    "heavy.png",
-    "run.png"
-  ],
+  "renders": [],
   "hashes": {
-    "runtime": "d56bcdbe8a4fa8717d7cda2544254419d979baf0569e8f63e32fde1bcc52b358",
-    "blend": "a6687b632f1d0f96f26a945013059b4fd83602f8af1241f9c9512d7f0c0cd271",
+    "runtime": "e299693b425412d22c9d7b1ce47895005feff85c6492841a42c98c6fbd6ec88b",
+    "blend": "6ed81d8f08dca2846584aead447900a491a096bc04f2c2cd4aaac4a1684e9bfb",
     "glb": "31368cece32df4d73ce893cee25fe5a7096d392e983549a3925a49e2f2571cdb"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pass",
-    "appearance": "pass",
-    "export": "pass",
-    "destination": "pass",
-    "user_signoff": "pending_user_review",
-    "editable_source": "pass"
-  },
-  "evidence": {
-    "visual": "../visual-validation.json",
-    "runtime": "../runtime-validation.json",
-    "source": "../source-validation.json",
-    "rebuild": "../rebuild-validation.json"
-  },
-  "editableSourceRecipe": {
-    "contract": "f4f1ae7752e1643d34fd1201be0cafad8732cf5fa1753703590e3104e6b11270",
-    "builder": "4459b6aeb49a4a202f9c0737b281862323289f49d029074f076c0bb47797c376",
-    "catalog": "bed68ca618293fdbc1d9b564f278f19b32ec1476a99d8c8c1a751d734e7d09ab",
-    "image": "9b98b8c36c279d28d91bab19919439cf63e573e42b19b76aca69215bf95fb7e4"
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pending_independent_load",
+    "destination": "pending_browser_review",
+    "user_signoff": "pending_user_review"
   }
 }

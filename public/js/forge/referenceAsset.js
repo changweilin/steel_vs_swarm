@@ -64,13 +64,15 @@ export function buildReferenceAsset(asset, spec) {
   for (const key of ['gunR', 'gunL']) {
     if (rig[key]) rig[key] = { ...rig[key], g: nodeOf(rig[key].g) };
   }
-  for (const key of ['legChainL', 'legChainR', 'armChainL', 'armChainR', 'chFL', 'chFR', 'chHL', 'chHR']) {
+  for (const key of ['legChainL', 'legChainR', 'armChainL', 'armChainR', 'chFL', 'chFR', 'chML', 'chMR', 'chHL', 'chHR']) {
     if (rig[key]) rig[key] = rig[key].map(joint => ({ ...joint, g: nodeOf(joint.g) }));
   }
   for (const key of ['tailSegs', 'armSh', 'armEl', 'midLegs', 'midKnees', 'midTarsi']) {
     if (rig[key]) rig[key] = rig[key].map(nodeOf);
   }
   if (rig.tents) rig.tents = rig.tents.map(chain => chain.map(joint => ({ ...joint, g: nodeOf(joint.g) })));
+  if (rig.insectLegs) rig.insectLegs = rig.insectLegs.map(leg => ({ ...leg,
+    root: nodeOf(leg.root), lift: nodeOf(leg.lift), chain: rig[leg.chain] }));
   if (rig.wings) rig.wings = rig.wings.map(wing => ({ ...wing, w: nodeOf(wing.w), outer: nodeOf(wing.outer) }));
   const W = { muzzles: {}, wpn: {}, lightGlowM: [], heavyGlowM: [], heavyPivot: [] };
   for (const [slot, weapon] of Object.entries(asset.rig.wpn)) {

@@ -85,6 +85,25 @@ try {
     check(triangles + effectTriangles <= limits.trianglesPerUnit && gm.length + effectMeshes <= limits.meshesPerUnit, 'Visible form exceeds resource contract');
     const parts = gm.flatMap(mesh => mesh.userData.authoredParts);
     const count = prefix => parts.filter(name => name.startsWith(prefix)).length;
+    check(count('Rigid closing belly hatch') === 0, 'Detached ventral planes returned');
+    if (id === 's10' || id === 'm08') {
+      check(count('Continuous primary feather root web') === 2
+        && count('Overlapping secondary flight feather') === 16, 'Disconnected primary/secondary wing surface');
+      const chest = morph.gg.getObjectByName('chest');
+      morph.gg.updateMatrixWorld(true);
+      for (const side of ['l', 'r']) {
+        const wing = morph.gg.getObjectByName('wing_' + side);
+        wing.traverse(node => {
+          if (!node.isMesh) return;
+          const positions = node.geometry.attributes.position;
+          for (let i = 0; i < positions.count; i++) {
+            const point = chest.worldToLocal(node.localToWorld(new THREE.Vector3().fromBufferAttribute(positions, i)));
+            check(Math.abs(point.x) < 1, 'Folded wing protrudes across the back');
+            check(Math.abs(point.y - .32) < .24, 'Folded wing hangs below the back');
+          }
+        });
+      }
+    }
     if (id === 'm01') {
       check(count('Right gatling open barrel') === 6 && count('Left twin missile launch cell') === 2, 'Vampire weapon inventory');
       check(morph.gg.getObjectByName('gun').parent.name === 'wrist_r'
@@ -97,6 +116,32 @@ try {
       && count('Shared flying squirrel patagium cell') === 12, 'Wolf weapon/patagium inventory');
     if (id === 't11') check(morph.gg.getObjectByName('gun').parent.name === 'wing_r'
       && morph.gg.getObjectByName('heavy').parent.name === 'wing_l', 'Weapons must stay on shoulder trays');
+    if (id === 't11') {
+      check(count('Solid retractable rotor shield petal') === 48, 'Solid twin shield covers lost');
+      for (const tree of [morph.gg, morph.ag]) {
+        tree.updateMatrixWorld(true);
+        for (const side of ['l', 'r']) {
+          const hinge = tree.getObjectByName('rotor_hinge_' + side);
+          const covers = [];
+          hinge.traverse(n => { if (n.isMesh && n.userData.authoredParts?.some(p => p.startsWith('Solid retractable rotor shield petal'))) covers.push(n); });
+          for (const radius of [.1, .45, .8]) for (let i = 0; i < 16; i++) {
+            const angle = (i + .5) * Math.PI / 8;
+            const from = hinge.localToWorld(new THREE.Vector3(radius * Math.cos(angle), radius * Math.sin(angle), 2));
+            const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(hinge.getWorldQuaternion(new THREE.Quaternion()));
+            const hits = new THREE.Raycaster(from, direction).intersectObjects(covers, false);
+            check(tree === morph.gg ? hits.length > 0 : radius > .1 || hits.length === 0, 'Rotor shield does not close/open');
+          }
+          if (tree === morph.ag) {
+            const wing = tree.getObjectByName('wing_' + side);
+            for (const name of ['shoulder_', 'elbow_', 'wrist_']) {
+              const point = wing.worldToLocal(tree.getObjectByName(name + side).getWorldPosition(new THREE.Vector3()));
+              check(Math.abs(point.y - .06) < .001
+                && Math.abs(point.z - (.75 - Math.abs(point.x) * 2.03 / 3.45)) < .001, 'Atlas arm separates from leading slat');
+            }
+          }
+        }
+      }
+    }
     const ent = { id, mesh: unit, heroY: 0, df: false, sp: 1 };
     let now = 0, maxSeamError = 0;
     const finite = () => {
@@ -136,6 +181,34 @@ try {
       ent.df = false;
       for (let i = 0; i < 90; i++) step(1 / 60, 6);
       const rig = unit.userData.rig;
+      if (!flight && spec.parameters.legAnatomy) {
+        const chains = spec.kind === 'quad' ? ['chFL', 'chFR', 'chHL', 'chHR'] : ['legChainL', 'legChainR'];
+        const distal = chains.map(key => {
+          check(rig[key].length === 3, 'Missing articulated metacarpal/metatarsal link');
+          return { node: rig[key][2].g, min: Infinity, max: -Infinity };
+        });
+        for (let i = 0; i < 160; i++) {
+          step(1 / 60, rig.top * .65);
+          for (const joint of distal) {
+            joint.min = Math.min(joint.min, joint.node.rotation.x);
+            joint.max = Math.max(joint.max, joint.node.rotation.x);
+          }
+        }
+        check(distal.every(j => j.max - j.min > 1e-4), 'Distal animal joint is locked to its parent');
+      }
+      if (!flight && rig.insectLegs) {
+        check(rig.insectLegs.length === 6, 'Incomplete insect leg inventory');
+        for (let i = 0; i < 80; i++) {
+          step(1 / 60, rig.top * .65);
+          const legs = Object.fromEntries(rig.insectLegs.map(leg => [leg.key, leg]));
+          check(Math.abs(legs.FL.root.rotation.y - legs.HL.root.rotation.y) < 1e-6
+            && Math.abs(legs.ML.root.rotation.y + legs.FR.root.rotation.y) < 1e-6, 'Broken alternating tripod phase');
+          check(rig.insectLegs.every(leg => Math.abs(leg.root.rotation.x) < 1e-6
+            && leg.chain.every(j => j.axis === 'z')), 'Sprawled insect leg uses mammal flexion axes');
+        }
+      }
+      if (!flight && id === 's10') check(rig.tailSegs.every(n => Math.abs(n.rotation.x) < .04), 'Raptor counterbalance tail droops');
+      if (!flight && id === 'm05') check(morph.gg.getObjectByName('hunch').rotation.x > .3, 'Wolf attack stance lost during locomotion');
       check(rig.kind === (flight ? 'aerial' : spec.kind), 'Wrong locomotion rig');
       if (flight && id === 't11') {
         check(unit.userData.spin.length === 2, 'Twin tilt rotors lost');
@@ -252,5 +325,12 @@ try {
   await browser?.close();
   await new Promise(resolve => server.close(resolve));
 }
+}
+if (selected >= 0) for (const id of Object.keys(contract.assets)) {
+  if (results[id]) continue;
+  const file = path.join(outputRoot, id, 'runtime-validation.json');
+  const prior = JSON.parse(await readFile(file, 'utf8'));
+  if (prior.hashes.runtime === sha(await readFile(`public/js/forge/assets/${id}.js`))
+    && prior.hashes.glb === sha(await readFile(`public/assets/models/reference/${id}.glb`))) results[id] = prior;
 }
 await writeFile(path.join(outputRoot, 'runtime-validation.json'), JSON.stringify(results, null, 2) + '\n');

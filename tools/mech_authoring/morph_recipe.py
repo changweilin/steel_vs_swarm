@@ -5,7 +5,7 @@ from pathlib import Path
 
 import bpy
 from mathutils import Quaternion, Vector
-from catalog import vents, ellipsoid, wing, spike, tails
+from catalog import vents, ellipsoid, wing, spike, tails, animal_limb
 
 
 def apply_form(a, form):
@@ -210,15 +210,6 @@ def armor_cavity(a):
         rounded_hull(a, 'Shared sealed ventral hull', c['owner'], c['sections'], c['offset'], 'shade')
     else:
         a.loft('Shared sealed ventral hull', c['owner'], c['sections'], 'shade', c['offset'], c['axis'])
-    for s, n in [(1, 'l'), (-1, 'r')]:
-        if c['axis'] == 'z':
-            half = max(v[1] for v in c['sections']) * .24
-            length = (c['sections'][-1][0] - c['sections'][0][0]) * .80
-            wing(a, 'Rigid closing belly hatch', 'bay_' + n, [(-half, -length/2), (half, -length/2),
-                 (half, length/2), (-half, length/2)], (0, 0, 0), 'armor', .08)
-        else:
-            a.plate('Rigid closing belly hatch', 'bay_' + n, [(-s*.65, -.80), (0, -.70), (0, 1.1),
-                    (-s*.60, 1.2)], .07, (0, 0, 0), 'armor')
 
 
 def morph_limb(a, parent, delta, width):
@@ -237,30 +228,33 @@ def limb_inventory(a):
     insect, elephant, raptor = [a.spec['id'] == id for id in ['m07', 's03', 's10']]
     legs = a.p['legs']
     if insect:
-        for root, knee, ankle in zip(a.spec['rig']['midLegs'], a.spec['rig']['midKnees'], a.spec['rig']['midTarsi']):
-            legs.append({'root': root, 'deltas': [positions[knee], positions[ankle]], 'side': 1 if positions[root][0] > 0 else -1})
+        insect_legs(a)
+        return
     for leg in legs:
         owner = leg['root']
+        fore = 'F' in owner
         for i, delta in enumerate(leg['deltas']):
-            morph_limb(a, owner, delta, a.p['limb'] * (1 - i * .16))
+            widths = a.p.get('legWidths', {}).get('fore' if fore else 'mid' if 'M' in owner else 'hind', [1, .84])
+            width = a.p['limb'] * widths[i]
+            if a.p.get('legAnatomy'):
+                animal_limb(a, owner, delta, width, 'fore' if fore else 'hind', i)
+            else:
+                morph_limb(a, owner, delta, width)
             owner = next(n for n, parent, _ in a.spec['joints'] if parent == owner)
-        if insect:
-            for i in range(4):
-                a.disk('Segmented arthropod tarsus', owner, .055 - i*.007, .12, (0, -.04, .08+i*.10), 'steel', segments=8)
-            for s in [-1, 1]:
-                spike(a, 'Paired insect terminal hook', owner, (s*.05, -.04, .40), (s*.1, -.15, .55), .03, 'steel')
-        elif elephant:
+        if elephant:
             ellipsoid(a, 'Pillar foot armor', owner, (.82, .34, .84), (0, -.04, 0), 'armor', 12, 6)
             for x in [-.22, 0, .22]:
                 a.box('Elephant foot nail', owner, (.14, .12, .09), (x, -.10, .39), 'white', .02)
         elif raptor:
             fore = 'F' in leg['root']
-            a.box('Three digit claw palm' if fore else 'Digitigrade metatarsus', owner, (.22, .17 if fore else .34, .24), (0, -.08, .06), 'shade', .025)
-            for x in [-.12, 0, .12]:
+            a.box('Three digit claw palm' if fore else 'Raptor distal toe pad', owner, (.22, .17 if fore else .14, .24), (0, -.05, .06), 'shade', .025)
+            for x in ([-.12, 0, .12] if fore else [0, leg['side']*.14]):
                 spike(a, 'Raptor grasping digit' if fore else 'Raptor toe claw', owner, (x, -.12, .14), (x, -.20, .42), .052, 'white')
             if not fore:
-                a.plate('Raised second toe sickle blade', owner, [(-.035, 0), (.04, .16), (.27, .25),
-                        (.36, .12), (.29, .15), (.12, .07)], .055, (.16, -.05, .14), 'brass')
+                blade = a.plate('Raised second toe sickle blade', owner, [(-.02, .02), (.03, .22), (.18, .34),
+                        (.34, .30), (.42, .14), (.35, -.04), (.28, .15), (.15, .19), (.08, .06)],
+                        .055, (-leg['side']*.16, .02, .13), 'brass')
+                blade.rotation_euler = rotation((0, -math.pi/2, 0)).to_euler()
         elif a.spec['id'] == 'm08':
             ellipsoid(a, 'Matte feline paw', owner, (.38, .22, .49), (0, -.06, .05), 'shade', 12, 6)
             for x in [-.11, 0, .11]:
@@ -303,19 +297,24 @@ def feathers(a):
     p = a.p
     owl = a.spec['id'] == 'm08'
     for s, n in [(1, 'l'), (-1, 'r')]:
-        wing(a, 'Shared folded scapular wing', 'flap_'+n, [(0,.25), (s*1.82, .80 if owl else .25),
+        wing(a, 'Shared folded scapular wing', 'flap_'+n, [(0,.25), (s*1.82, .50 if owl else .25),
              (s*1.7,-.72), (s*.12,-.82)], (0,0,0), 'armor', .085)
-        a.strut('Wing leading spar', 'flap_'+n, (0,.015,.25), (s*1.78,.015,.80 if owl else .25), .038, 'steel')
+        a.strut('Wing leading spar', 'flap_'+n, (0,.015,.25), (s*1.78,.015,.50 if owl else .25), .038, 'steel')
+        wing(a, 'Continuous primary feather root web', 'outer_'+n,
+             [(-s*.15,.24),(s*1.28,.24),(s*1.40,-.70),(-s*.15,-.50)],
+             (0,0,0), 'shade', .045)
         for i in range(7):
             length=1.28-i*.055
             root=f'feather_{n}_{i}'
             wing(a, 'Independent owl silent feather' if owl else 'Independent raptor blade feather', root,
-                 [(-s*.11,.08),(s*.12,.17),(s*(length*.8+.22),-1.45-i*.1),
-                  (s*(length*.8+.03),-1.62-i*.1)], (0,0,0), 'armor' if i%2 else 'shade', .038)
+                 [(-s*.16,.14),(s*.18,.19),(s*(length*.8+.28),-1.45-i*.1),
+                  (s*(length*.8-.06),-1.62-i*.1)], (0,.028+i*.003,0), 'armor' if i%2 else 'shade', .038)
             a.strut('Feather shaft inlay', root, (0,.027,0), (s*length*.8,.027,-1.50-i*.1), .009, 'cyan' if owl else 'brass')
-        for i in range(6):
-            wing(a, 'Short overlapping wing covert', 'flap_'+n, [(s*(.15+i*.2),-.10), (s*(.36+i*.2),-.04),
-                 (s*(.85+i*.20),-.86), (s*(.65+i*.2),-.95)], (0,.06,0), 'shade', .03)
+        for i in range(8):
+            x=s*(.05+i*.22)
+            wing(a, 'Overlapping secondary flight feather', 'flap_'+n,
+                 [(x-s*.08,-.06),(x+s*.24,.02),(x+s*.37,-1.10),(x+s*.04,-1.19)],
+                 (0,.045+i*.002,0), 'armor' if i%2 else 'shade', .035)
 
 
 def feline_head(a):
@@ -368,6 +367,14 @@ def atlas(a):
         a.tube('Shared hand rotor shield rim','rotor_hinge_'+n,1.0,.88,.16,(0,0,0),'armor',segments=32)
         a.tube('Rotor shield black inner lip','rotor_hinge_'+n,.91,.86,.18,(0,0,0),'dark',segments=32)
         a.disk('Rotor shield hub','rotor_'+n,.18,.27,(0,0,0),'steel')
+        for i in range(8):
+            for j in range(3):
+                radius=.90-j*.30
+                angles=[-math.pi/8-.015,0,math.pi/8+.015]
+                corners=[(radius*math.cos(d)-radius,radius*math.sin(d)) for d in angles]
+                corners += [((radius-.30)*math.cos(d)-radius,(radius-.30)*math.sin(d)) for d in reversed(angles)]
+                node=f'shield_cover_{n}_{i}'+('' if j==0 else '_'+str(j))
+                a.plate('Solid retractable rotor shield petal',node,corners,.04,(0,0,.12),'armor')
         for i in range(3):
             ang=i*math.tau/3
             a.strut('Shared three blade tilt rotor','rotor_'+n,(.12*math.cos(ang),.12*math.sin(ang),0),(.88*math.cos(ang),.88*math.sin(ang),0),.078,'dark')
@@ -385,8 +392,10 @@ def atlas(a):
 
 def whale(a):
     c=a.spec['cavity']
-    rounded_hull(a,'Turquoise whale dorsal armor','spine',[(z,w*.99,h*.98) for z,w,h in c['sections']],(0,.09,0),'armor')
-    ellipsoid(a,'Shared neckless whale elephant head','head',(2.3,1.66,2.0),(0,.0,.25),'armor',20,10)
+    rounded_hull(a,'Turquoise whale dorsal armor','spine',[(z,w*1.03,h*1.03) for z,w,h in c['sections']],(0,0,0),'armor')
+    rounded_hull(a,'Shared neckless whale elephant head','head',
+                 [(-.95,1.80,1.40),(-.48,2.25,1.64),(.25,2.18,1.57),(.88,1.45,1.12),(1.24,.64,.62)],
+                 (0,0,0),'armor')
     for s,n in [(1,'l'),(-1,'r')]:
         a.plate('Elephant ear phased radar fin','ear_'+n,[(0,-.42),(s*1.80,-.28),(s*1.50,.64),(s*.38,.77)],.10,(0,0,0),'shade')
         a.plate('Luminous ear radar matrix','ear_'+n,[(s*.24,-.24),(s*1.43,-.13),(s*1.20,.43),(s*.36,.54)],.018,(0,0,.067),'cyan')
@@ -397,7 +406,11 @@ def whale(a):
             a.strut('Shared crescent ivory tusk','tusk_'+n,start,end,.17-i*.035,'white')
         a.plate('Whale turquoise sensor eye','head',[(s*.5,.40),(s*.97,.49),(s*.84,.21),(s*.57,.19)],.018,(0,0,1.04),'glow')
         for i in range(7):
-            a.strut('Whale ventral longitudinal rib','spine',(s*(.2+i*.12),-.75,-2.3),(s*(.25+i*.12),-.88,2.05),.035,'dark')
+            fraction=.12+i*.105
+            path=[(s*w*.515*fraction,-h*.515*math.sqrt(1-fraction*fraction),z)
+                  for z,w,h in c['sections'][1:-1]]
+            for start,end in zip(path,path[1:]):
+                a.strut('Whale ventral longitudinal rib','spine',start,end,.022,'dark')
         for i in range(4):
             a.strut('Symmetric feather tattoo stroke','spine',(s*1.65,.12,-.75+i*.18),(s*1.65,.40,-.31+i*.13),.018,'shade')
     for i in range(6):
@@ -408,27 +421,74 @@ def whale(a):
     a.loft('Dorsal command bridge','spine',[(-.6,.8,.65),(.3,.6,.44),(.70,.45,.25)],'shade',(0,.95,-.85))
     a.box('Bridge panoramic windows','spine',(.62,.14,.24),(0,1.39,-.55),'cyan',.025)
     a.tube('Bridge radar annulus','cast_dish',.34,.23,.06,(0,0,0),'steel')
+    for i,name in enumerate(a.spec['rig']['tailSegs']):
+        width=.64-i*.105
+        rounded_hull(a,'Streamlined whale caudal armor',name,
+                     [(-.40,width-.105,(width-.105)*.78),(.025,width,width*.78)],(0,0,0),'armor')
     for s in [-1,1]:
         wing(a,'Whale tail fluke','tail_4',[(0,0),(s*1.15,-.64),(s*.77,-.72),(0,-.32)],(0,0,0),'armor',.07)
 
 
 def raptor(a):
-    a.loft('Low raptor rib cage','chest',[(-.84,.83,.8),(.3,1.46,1.2),(.94,1.02,.79)],'armor',axis='z')
-    for i in range(3):
-        a.tube('Segmented dinosaur neck collar','neck',.32-i*.035,.23-i*.03,.19,(0,.07,i*.22),'shade')
-        a.strut('Red gold neck conduit','neck',(.18,.18,i*.22),(.18,.18,i*.22+.15),.017,'cyan')
-    a.loft('Shared long toothed raptor muzzle','head',[(0,.53,.55),(.91,.39,.31)],'armor',axis='z')
-    a.loft('Open dinosaur jaw','head',[(.04,.44,.14),(.88,.32,.10)],'shade',(0,-.28,0),'z')
+    rounded_hull(a,'Tapered horizontal raptor rib cage','chest',[(-1.06,.47,.48),(-.68,.90,.83),
+                 (-.12,1.02,.96),(.39,.77,.83),(.69,.43,.54)],(0,-.02,-.04),'armor')
+    path = [(0,0,0),(0,.31,.18),(0,.48,.40),(0,.42,.66)]
+    for i,(start,end) in enumerate(zip(path,path[1:])):
+        a.strut('S curved cervical load column','neck',start,end,.11,'steel')
+        ellipsoid(a,'Overlapping S neck vertebral armor','neck',(.34-i*.025,.31,.38),
+                  tuple((x+y)/2 for x,y in zip(start,end)),'armor',12,6)
+    rounded_hull(a,'Long low upturned velociraptor skull','head',
+                 [(-.15,.34,.37,.02),(.06,.58,.46,.05),(.35,.50,.39,.02),
+                  (.74,.32,.23,-.02),(1.18,.28,.23,.025),(1.38,.23,.20,.065)],(0,0,0),'armor')
+    rounded_hull(a,'Slender velociraptor lower jaw','head',
+                 [(-.04,.43,.14),(.46,.35,.11),(1.28,.22,.075)],(0,-.25,0),'shade')
     for s in [-1,1]:
-        a.disk('Raptor red gold eye','head',.085,.028,(s*.267,.17,.25),'glow','x')
+        a.disk('Raptor recessed orbit','head',.12,.035,(s*.25,.13,.23),'dark','x')
+        a.disk('Raptor red gold eye','head',.070,.04,(s*.267,.13,.23),'glow','x')
+        a.disk('Raptor nostril','head',.025,.035,(s*.14,.075,1.16),'dark','x',8)
         for i in range(9):
-            x=s*(.22-i*.006)
-            spike(a,'Raptor upper tooth','head',(x,-.08,.16+i*.083),(x,-.23,.16+i*.083),.038,'white')
-            spike(a,'Raptor lower tooth','head',(x,-.27,.17+i*.083),(x,-.20,.17+i*.083),.032,'white')
+            x=s*(.22-i*.012)
+            spike(a,'Raptor upper tooth','head',(x,-.12,.22+i*.12),(x,-.22,.22+i*.12),.027,'white')
+            spike(a,'Raptor lower tooth','head',(x,-.23,.23+i*.12),(x,-.17,.23+i*.12),.021,'white')
     for i,name in enumerate(a.spec['rig']['tailSegs']):
-        for s in [-1,1]:
-            wing(a,'Paired archaeopteryx tail feather',name,[(s*.04,0),(s*.28,-.10),(s*.57,-.68),(s*.16,-.58)],(0,.04,0),'armor',.045)
+        width=.58-i*.105
+        rounded_hull(a,'Continuous tapered raptor counterbalance tail',name,
+                     [(-.89,max(.028,width-.105),max(.028,width-.105)*.74),(.02,width,width*.74)],
+                     (0,0,0),'armor')
+        for s,n in [(1,'l'),(-1,'r')]:
+            wing(a,'Paired archaeopteryx tail feather',f'tail_feather_{n}_{i}',
+                 [(s*.04,0),(s*.28,-.10),(s*.57,-.68),(s*.16,-.58)],(0,.04,0),'armor',.045)
     feathers(a)
+
+
+def insect_legs(a):
+    positions = {name: at for name, _, at in a.spec['joints']}
+    for leg in a.spec['rig']['insectLegs']:
+        key, side = leg['key'], leg['side']
+        root, trochanter, femur = leg['root'], 'trochanter_'+key, leg['lift']
+        a.strut('Thoracic insect coxa',root,(0,0,0),positions[trochanter],.10,'shade')
+        a.strut('Short insect trochanter',trochanter,(0,0,0),positions[femur],.065,'steel')
+        for owner, end, width, label in [(femur,'knee_'+key,.24 if key[0]=='H' else .19,'Insect femur'),
+                                        ('knee_'+key,'ankle_'+key,.31 if key[0]=='F' else .13,'Insect tibia')]:
+            delta=positions[end]
+            length=Vector(delta).length
+            obj=a.loft(label,owner,[(0,width*.55,width*.6),(length*.23,width,width*.75),
+                        (length*.90,width*.62,width*.45)],'armor')
+            obj.rotation_euler=Vector((delta[0],-delta[2],delta[1])).to_track_quat('Z','Y').to_euler()
+            a.disk(label+' hinge',owner,width*.30,width*.6,(0,0,0),'steel','z',10)
+            if owner.startswith('knee'):
+                for i in range(3 if key[0]=='F' else 4):
+                    at=tuple(v*(.28+i*.16) for v in delta)
+                    reach=.17 if key[0]=='F' else .055
+                    spike(a,'Broad digging tibial tooth' if key[0]=='F' else 'Walking tibial spine',owner,
+                          at,(at[0]+side*reach,at[1]-.04,at[2]),.05 if key[0]=='F' else .018,'steel')
+        owners=['ankle_'+key]+['tarsal_'+key+'_'+str(i) for i in range(1,5)]
+        ends=owners[1:]+['pretarsus_'+key]
+        for i,(owner,end) in enumerate(zip(owners,ends)):
+            a.strut('Articulated insect tarsomere '+str(i+1),owner,(0,0,0),positions[end],.035-i*.003,'steel')
+        for s in [-1,1]:
+            spike(a,'Paired pretarsal claw','pretarsus_'+key,(0,0,s*.022),
+                  (side*.095,-.055,s*.065),.022,'steel')
 
 
 def beetle(a):
@@ -546,7 +606,7 @@ def weapons(a):
 def morpher(a):
     armor_cavity(a)
     limb_inventory(a)
-    if a.spec['rig'].get('tailSegs'):
+    if a.spec['rig'].get('tailSegs') and a.spec['id'] not in ['s03','s10']:
         tails(a)
     id=a.spec['id']
     if a.spec['kind']=='biped':
@@ -586,8 +646,9 @@ def morpher(a):
 
 def rounded_hull(a, name, parent, sections, at, material):
     count=24
-    vertices=[(math.cos(i*math.tau/count)*w/2,math.sin(i*math.tau/count)*h/2,z)
-              for z,w,h in sections for i in range(count)]
+    vertices=[(math.cos(i*math.tau/count)*section[1]/2,
+               math.sin(i*math.tau/count)*section[2]/2+(section[3] if len(section)>3 else 0),section[0])
+              for section in sections for i in range(count)]
     faces=[tuple(reversed(range(count))),tuple(range(len(vertices)-count,len(vertices)))]
     faces += [(k*count+i,k*count+(i+1)%count,(k+1)*count+(i+1)%count,(k+1)*count+i)
               for k in range(len(sections)-1) for i in range(count)]
