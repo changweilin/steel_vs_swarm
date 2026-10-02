@@ -23,7 +23,14 @@ function db() {
       if (typeof indexedDB === 'undefined') return resolve(null);
       const req = indexedDB.open(DB_NAME, 1);
       req.onupgradeneeded = () => { req.result.createObjectStore(STORE, { keyPath: 'key' }); };
-      req.onsuccess = () => resolve(req.result);
+      req.onsuccess = () => {
+        const d = req.result;
+        d.onversionchange = () => {
+          try { d.close(); } catch {}
+          _dbP = null;
+        };
+        resolve(d);
+      };
       req.onerror = () => resolve(null);
       req.onblocked = () => resolve(null);
     } catch { resolve(null); }
@@ -82,14 +89,26 @@ export function geoPut(key, data) {
   }).catch(() => false);
 }
 
-/** Clear entire database (invoked manually after code changes; failures degrade silently). */
+/** Clear entire database (invoked manually or after code/version changes; failures degrade silently). */
 export async function geoClear() {
   try {
     if (typeof indexedDB === 'undefined') return;
+    try {
+      const d = await (_dbP || db());
+      if (d) {
+        try {
+          const tx = d.transaction(STORE, 'readwrite');
+          tx.objectStore(STORE).clear();
+          await new Promise((res) => { tx.oncomplete = tx.onerror = tx.onabort = () => res(); });
+        } catch {}
+        try { d.close(); } catch {}
+      }
+    } catch {}
+    _dbP = null;
     await new Promise((res) => {
       const req = indexedDB.deleteDatabase(DB_NAME);
       req.onsuccess = req.onerror = req.onblocked = () => res();
     });
-    _dbP = null;   // Next db() call reopens a fresh store
   } catch { /* Silent degradation */ }
 }
+

@@ -338,13 +338,22 @@ export async function buildTerrain(cfg, onProgress, options) {
   let imagery = null;
   let idata = null;
   const cachedImg = await geoGet(imgKey);
-  if (cachedImg?.data?.length === cachedImg?.w * cachedImg?.h * 4) {
-    const canvas = document.createElement('canvas');
-    canvas.width = cachedImg.w; canvas.height = cachedImg.h;
-    canvas.getContext('2d').putImageData(new ImageData(cachedImg.data, cachedImg.w, cachedImg.h), 0, 0);
-    imagery = { canvas, z: cachedImg.z, tx0: cachedImg.tx0, ty0: cachedImg.ty0, complete: true };
-    idata = cachedImg.data;
-  } else {
+  if (cachedImg?.w && cachedImg?.h && cachedImg?.data?.length === cachedImg.w * cachedImg.h * 4) {
+    try {
+      const u8c = cachedImg.data instanceof Uint8ClampedArray
+        ? cachedImg.data
+        : new Uint8ClampedArray(cachedImg.data.buffer || cachedImg.data);
+      const canvas = document.createElement('canvas');
+      canvas.width = cachedImg.w; canvas.height = cachedImg.h;
+      canvas.getContext('2d').putImageData(new ImageData(u8c, cachedImg.w, cachedImg.h), 0, 0);
+      imagery = { canvas, z: cachedImg.z, tx0: cachedImg.tx0, ty0: cachedImg.ty0, complete: true };
+      idata = u8c;
+    } catch {
+      imagery = null;
+      idata = null;
+    }
+  }
+  if (!imagery) {
     try {
       imagery = await fetchImagery(bbox, (f) => onProgress?.(0.34 + f * 0.30, '下載衛星影像…'));
     } catch { /* 沒有貼圖就用素色 */ }

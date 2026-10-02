@@ -4437,6 +4437,12 @@ export function resetOsmMisses() {
   if (_osmIn.roads === null) _osmIn.roads = undefined;
 }
 
+/** 清空本輪 OSM 輸入定案表(清除暫存或重建時呼叫，強制下一輪重新抓取)。 */
+export function clearOsmIn() {
+  _osmIn = null;
+}
+
+
 /** Overpass 圖資(逾時就放棄 → 程序生成備援):建物 + 鐵路/捷運 + 瀑布 */
 async function fetchOsmFeatures(bbox) {
   // 路網中繼:本輪已定案(伺服器轉來的房主那一份,或本客戶端親自查過的結果)⇒ 直接用,
