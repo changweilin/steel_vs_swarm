@@ -6,9 +6,9 @@
     "meshes": 53,
     "joints": 25,
     "source": {
-      "contract": "f4f1ae7752e1643d34fd1201be0cafad8732cf5fa1753703590e3104e6b11270",
-      "builder": "4459b6aeb49a4a202f9c0737b281862323289f49d029074f076c0bb47797c376",
-      "catalog": "bed68ca618293fdbc1d9b564f278f19b32ec1476a99d8c8c1a751d734e7d09ab",
+      "contract": "c1cfb10281181e13a038832f72329386cb1a33fa99956c263f5ec6ed16d5f856",
+      "builder": "7df063248bee52282af7973f430abad4f3f0c060371e4ba2ea93cc7989126af4",
+      "catalog": "04b8b4ff9298cffa3f4d9f59b79313820ee8042deb7f43a6a4f4daf4e8d46b1d",
       "image": "d0dee31f053ea6bcf1dd33184159b5c7937f2f56ab551d65a83fc8b2de159fc0"
     }
   },
@@ -34,7 +34,7 @@
     "run.png"
   ],
   "hashes": {
-    "runtime": "769029dbb2679589d7a5108b3b738916d7a1f95aece2657d5389624c22b71662",
+    "runtime": "9585b69074446431ae8cdda2a046919cd6f6df0b6709895d7a22e7f8c6ac58a4",
     "blend": "7176fa61ebcc8b75e45eb56cbba733331ead55d15c4d45c9faa469d6713528e9",
     "glb": "64745d4c466134c80acf482e2ebf7a9e0f4bd5bdd93ff73c1c970fb7ab41a7ba"
   },
@@ -53,5 +53,11 @@
     "runtime": "../runtime-validation.json",
     "source": "../source-validation.json",
     "rebuild": "../rebuild-validation.json"
+  },
+  "editableSourceRecipe": {
+    "contract": "f4f1ae7752e1643d34fd1201be0cafad8732cf5fa1753703590e3104e6b11270",
+    "builder": "4459b6aeb49a4a202f9c0737b281862323289f49d029074f076c0bb47797c376",
+    "catalog": "bed68ca618293fdbc1d9b564f278f19b32ec1476a99d8c8c1a751d734e7d09ab",
+    "image": "d0dee31f053ea6bcf1dd33184159b5c7937f2f56ab551d65a83fc8b2de159fc0"
   }
 }

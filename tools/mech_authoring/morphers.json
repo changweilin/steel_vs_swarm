@@ -1,0 +1,8077 @@
+{
+  "inherit": "assets.json",
+  "requirements": {
+    "project": "assets.json#/requirements",
+    "scope": "All eight morphers, with a single rigid part inventory for both forms"
+  },
+  "authoring": {
+    "builder": "build.py",
+    "adapter": "morph_recipe",
+    "outputs": "../../out/morph_reference",
+    "runtime": "../../public/js/forge/assets",
+    "export": "../../public/assets/models/reference"
+  },
+  "assets": {
+    "m01": {
+      "id": "m01",
+      "kind": "biped",
+      "recipe": "vampire_delta",
+      "height": 6.4,
+      "inputs": {
+        "prompt": "../../docs/art_gen_morphers.md#m01",
+        "image": "../../public/assets/mechs/m01_raven.png",
+        "view": "Dual-form illustration: oblique humanoid and oblique delta glider; hidden belly, rear and depths inferred. Anatomical weapon sides follow the prompt.",
+        "rights": "../../LICENSE"
+      },
+      "components": [
+        {
+          "id": "helmet",
+          "route": "procedural",
+          "intent": "Angular silver widow peak and red sensor, high black collar; shared head folds into the glider nose"
+        },
+        {
+          "id": "armor",
+          "route": "procedural",
+          "intent": "Tall navy segmented chest, narrow waist, exposed rigid joints and Serbian red-white-blue bands"
+        },
+        {
+          "id": "cape",
+          "route": "procedural",
+          "intent": "Two rigid triangular panels rotate at shoulder hinges from ankle-length cape to one level delta wing; no scale change or new flight parts"
+        },
+        {
+          "id": "belly",
+          "route": "procedural",
+          "intent": "The same four limbs fold into the shared armored core; ventral doors close over them in flight"
+        },
+        {
+          "id": "weapons",
+          "route": "procedural",
+          "intent": "Anatomical right six-barrel rotary gun and anatomical left twin missile box remain mounted in both forms"
+        },
+        {
+          "id": "shield",
+          "route": "procedural",
+          "intent": "Inferred paired chest emitter hinges project a decorative shield, independent of wing hinges; deployment and retraction in both forms"
+        }
+      ],
+      "parameters": {
+        "width": 1.5,
+        "length": 1.3,
+        "limb": 0.36,
+        "shoulder": 1.02,
+        "upperArm": 0.94,
+        "foreArm": 0.83,
+        "gunLength": 1.8,
+        "wingSpan": 3.45,
+        "wingFore": 1.25,
+        "wingAft": -1.65
+      },
+      "materials": {
+        "armor": {
+          "color": "#283b60",
+          "metal": 0.5
+        },
+        "shade": {
+          "color": "#18253c",
+          "metal": 0.45
+        },
+        "dark": {
+          "color": "#0d1421",
+          "metal": 0.35
+        },
+        "steel": {
+          "color": "#5c6778",
+          "metal": 0.7
+        },
+        "brass": {
+          "color": "#65758c",
+          "metal": 0.65
+        },
+        "red": {
+          "color": "#b7263b",
+          "metal": 0.4
+        },
+        "blue": {
+          "color": "#203a68",
+          "metal": 0.45
+        },
+        "white": {
+          "color": "#d2dce4",
+          "metal": 0.4
+        },
+        "glow": {
+          "color": "#b92646",
+          "emission": 1.3
+        },
+        "cyan": {
+          "color": "#76dbea",
+          "emission": 1.2
+        },
+        "shield": {
+          "color": "#76dbea",
+          "opacity": 0.12,
+          "emission": 0.3
+        }
+      },
+      "joints": [
+        [
+          "tilt",
+          null,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "hips",
+          "tilt",
+          [
+            0,
+            3.1,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "hips",
+          [
+            0,
+            0.68,
+            0
+          ]
+        ],
+        [
+          "head",
+          "chest",
+          [
+            0,
+            1.68,
+            0.05
+          ]
+        ],
+        [
+          "hip_l",
+          "hips",
+          [
+            0.4,
+            -0.1,
+            0
+          ]
+        ],
+        [
+          "knee_l",
+          "hip_l",
+          [
+            0,
+            -1.42,
+            0
+          ]
+        ],
+        [
+          "ankle_l",
+          "knee_l",
+          [
+            0,
+            -1.38,
+            0
+          ]
+        ],
+        [
+          "shoulder_l",
+          "chest",
+          [
+            1.02,
+            1.15,
+            0
+          ]
+        ],
+        [
+          "elbow_l",
+          "shoulder_l",
+          [
+            0,
+            -0.94,
+            0
+          ]
+        ],
+        [
+          "wrist_l",
+          "elbow_l",
+          [
+            0,
+            -0.83,
+            0
+          ]
+        ],
+        [
+          "wing_l",
+          "chest",
+          [
+            0.18,
+            1.25,
+            -0.48
+          ]
+        ],
+        [
+          "bay_l",
+          "chest",
+          [
+            0.68,
+            0.28,
+            0.43
+          ]
+        ],
+        [
+          "hip_r",
+          "hips",
+          [
+            -0.4,
+            -0.1,
+            0
+          ]
+        ],
+        [
+          "knee_r",
+          "hip_r",
+          [
+            0,
+            -1.42,
+            0
+          ]
+        ],
+        [
+          "ankle_r",
+          "knee_r",
+          [
+            0,
+            -1.38,
+            0
+          ]
+        ],
+        [
+          "shoulder_r",
+          "chest",
+          [
+            -1.02,
+            1.15,
+            0
+          ]
+        ],
+        [
+          "elbow_r",
+          "shoulder_r",
+          [
+            0,
+            -0.94,
+            0
+          ]
+        ],
+        [
+          "wrist_r",
+          "elbow_r",
+          [
+            0,
+            -0.83,
+            0
+          ]
+        ],
+        [
+          "wing_r",
+          "chest",
+          [
+            -0.18,
+            1.25,
+            -0.48
+          ]
+        ],
+        [
+          "bay_r",
+          "chest",
+          [
+            -0.68,
+            0.28,
+            0.43
+          ]
+        ],
+        [
+          "gun",
+          "wrist_r",
+          [
+            0,
+            -0.1,
+            0.16
+          ]
+        ],
+        [
+          "gun_recoil",
+          "gun",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "gun_spin",
+          "gun_recoil",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "light_muzzle",
+          "gun_spin",
+          [
+            0,
+            0,
+            1.8
+          ]
+        ],
+        [
+          "heavy",
+          "wrist_l",
+          [
+            0,
+            -0.1,
+            0.1
+          ]
+        ],
+        [
+          "charge_hinge",
+          "heavy",
+          [
+            0,
+            0.23,
+            -0.38
+          ]
+        ],
+        [
+          "heavy_muzzle",
+          "heavy",
+          [
+            0,
+            0,
+            0.92
+          ]
+        ],
+        [
+          "cast_dish",
+          "chest",
+          [
+            0,
+            1.15,
+            -0.55
+          ]
+        ],
+        [
+          "emitter_l",
+          "chest",
+          [
+            0.76,
+            0.7,
+            0.44
+          ]
+        ],
+        [
+          "emitter_r",
+          "chest",
+          [
+            -0.76,
+            0.7,
+            0.44
+          ]
+        ],
+        [
+          "barrier",
+          "tilt",
+          [
+            0,
+            3.9,
+            1.75
+          ]
+        ]
+      ],
+      "rig": {
+        "bob": 0.05,
+        "top": 8,
+        "stride": 2.5,
+        "weap": {
+          "light": "R",
+          "heavy": "L"
+        },
+        "hvy": {
+          "chest": 0.05
+        },
+        "hips": "hips",
+        "chest": "chest",
+        "head": "head",
+        "legL": "hip_l",
+        "legR": "hip_r",
+        "armL": "shoulder_l",
+        "armR": "shoulder_r",
+        "armBase": 0,
+        "sway": 0.045,
+        "hop": false,
+        "knuckle": false,
+        "tinyArms": false,
+        "tuckArms": false,
+        "grounded": false,
+        "legChainR": [
+          {
+            "g": "knee_r",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_r",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "armChainR": [
+          {
+            "g": "elbow_r",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "wrist_r",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legChainL": [
+          {
+            "g": "knee_l",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_l",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "armChainL": [
+          {
+            "g": "elbow_l",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "wrist_l",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "wpn": {
+          "light": {
+            "nodes": [
+              "gun",
+              "gun_spin"
+            ],
+            "ref": "gun_spin",
+            "muzzle": "light_muzzle",
+            "r": 0.075
+          },
+          "heavy": {
+            "nodes": [
+              "heavy"
+            ],
+            "ref": "heavy",
+            "muzzle": "heavy_muzzle",
+            "r": 0.13
+          }
+        }
+      },
+      "motion": {
+        "shield": {
+          "duration": 0.65,
+          "barrier": "barrier",
+          "hinges": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "rest": 0,
+              "deploy": -1.05
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "rest": 0,
+              "deploy": 1.05
+            }
+          ]
+        },
+        "fire": [
+          {
+            "node": "gun_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.17
+          }
+        ],
+        "charge": [
+          {
+            "node": "charge_hinge",
+            "channel": "rotation",
+            "axis": "x",
+            "rest": 0,
+            "amplitude": -1.25
+          }
+        ],
+        "cast": [
+          {
+            "node": "cast_dish",
+            "channel": "rotation",
+            "axis": "y",
+            "rest": 0,
+            "amplitude": 0.85
+          }
+        ],
+        "fireSpin": {
+          "node": "gun_spin",
+          "axis": "z",
+          "rate": 38
+        }
+      },
+      "reviewFrame": {
+        "scale": 8.8,
+        "target": [
+          0,
+          3,
+          0
+        ]
+      },
+      "decisions": [
+        "The paired rigid panels keep their size across forms; deploying by rotation prevents material or part replacement at the rig swap.",
+        "The prompt owns anatomical weapon sides; the reference illustration is mirrored.",
+        "Rear, belly cavity, hinge travel and shield emitters are inferred mechanical design, not measured reconstruction."
+      ],
+      "forms": {
+        "ground": {
+          "kind": "biped",
+          "transforms": {
+            "wing_l": {
+              "rotation": [
+                0.04,
+                0.05,
+                -0.9
+              ]
+            },
+            "bay_l": {
+              "position": [
+                0.63,
+                -0.04,
+                -0.44
+              ],
+              "rotation": [
+                0,
+                0.2,
+                0
+              ]
+            },
+            "wing_r": {
+              "rotation": [
+                0.04,
+                -0.05,
+                0.9
+              ]
+            },
+            "bay_r": {
+              "position": [
+                -0.63,
+                -0.04,
+                -0.44
+              ],
+              "rotation": [
+                0,
+                -0.2,
+                0
+              ]
+            }
+          },
+          "rig": {}
+        },
+        "flight": {
+          "kind": "aerial",
+          "transforms": {
+            "hips": {
+              "position": [
+                0,
+                3.45,
+                -0.45
+              ],
+              "rotation": [
+                1.45,
+                0,
+                0
+              ]
+            },
+            "head": {
+              "rotation": [
+                0.4,
+                0,
+                0
+              ]
+            },
+            "hip_l": {
+              "position": [
+                0.26,
+                1.94,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "knee_l": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_l": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "shoulder_l": {
+              "position": [
+                0.43,
+                1.02,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "elbow_l": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "wrist_l": {
+              "rotation": [
+                -4.591592653589793,
+                0,
+                0
+              ]
+            },
+            "hip_r": {
+              "position": [
+                -0.26,
+                1.94,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "knee_r": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_r": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "shoulder_r": {
+              "position": [
+                -0.43,
+                1.02,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "elbow_r": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "wrist_r": {
+              "rotation": [
+                -4.591592653589793,
+                0,
+                0
+              ]
+            }
+          },
+          "rig": {
+            "tilt": "tilt",
+            "head": null,
+            "bob": 0.04,
+            "top": 30,
+            "level": true,
+            "leanF": 0.15,
+            "gunR": null,
+            "gunL": null,
+            "aimPose": null
+          }
+        }
+      },
+      "clips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract"
+      ],
+      "acceptance": {
+        "requiredForms": [
+          "ground",
+          "flight"
+        ],
+        "samePartInventory": true,
+        "sameGeometry": true,
+        "sameRigidScale": true,
+        "flightBellyClosed": true,
+        "requiredClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract",
+          "to_flight",
+          "to_ground",
+          "flight_idle",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult",
+          "flight_shield_deploy",
+          "flight_shield_retract"
+        ],
+        "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
+        "gateOwner": "../../tools/audit_reference_morph.mjs"
+      },
+      "cavity": {
+        "owner": "chest",
+        "axis": "y",
+        "sections": [
+          [
+            -0.88,
+            1.4,
+            0.76
+          ],
+          [
+            -0.4,
+            1.8,
+            0.82
+          ],
+          [
+            1.42,
+            1.9,
+            0.82
+          ],
+          [
+            1.62,
+            1.5,
+            0.76
+          ]
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "roots": [
+          "hip_l",
+          "hip_r",
+          "shoulder_l",
+          "shoulder_r"
+        ]
+      }
+    },
+    "s03": {
+      "id": "s03",
+      "kind": "quad",
+      "recipe": "elephant_whale",
+      "height": 5.6,
+      "inputs": {
+        "prompt": "../../docs/art_gen_morphers.md#s03",
+        "image": "../../public/assets/mechs/s03_leviathan.png",
+        "view": "Dual-form illustration; hidden surfaces and depth are inferred",
+        "rights": "../../LICENSE"
+      },
+      "parameters": {
+        "limb": 0.64
+      },
+      "materials": {
+        "armor": {
+          "color": "#9ee2d7",
+          "metal": 0.45
+        },
+        "shade": {
+          "color": "#4e8992",
+          "metal": 0.45
+        },
+        "dark": {
+          "color": "#233943",
+          "metal": 0.45
+        },
+        "glow": {
+          "color": "#79ecff",
+          "metal": 0,
+          "emission": 1.1
+        },
+        "brass": {
+          "color": "#cee9e8",
+          "metal": 0.45
+        },
+        "steel": {
+          "color": "#718186",
+          "metal": 0.6
+        },
+        "cyan": {
+          "color": "#79ecff",
+          "emission": 0.8
+        },
+        "white": {
+          "color": "#dddccb",
+          "metal": 0.25
+        },
+        "red": {
+          "color": "#bf4a34"
+        },
+        "blue": {
+          "color": "#314260"
+        },
+        "shield": {
+          "color": "#79ecff",
+          "opacity": 0.12,
+          "emission": 0.3
+        },
+        "membrane": {
+          "color": "#b4bcdb",
+          "opacity": 0.3,
+          "metal": 0
+        }
+      },
+      "joints": [
+        [
+          "tilt",
+          null,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "spine",
+          "tilt",
+          [
+            0,
+            2.25,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "spine",
+          [
+            0,
+            0.12,
+            0.72
+          ]
+        ],
+        [
+          "neck",
+          "chest",
+          [
+            0,
+            0.1,
+            0.85
+          ]
+        ],
+        [
+          "head",
+          "neck",
+          [
+            0,
+            0.02,
+            0.47
+          ]
+        ],
+        [
+          "leg_FL",
+          "chest",
+          [
+            1.0555999999999999,
+            -0.12,
+            0.5800000000000001
+          ]
+        ],
+        [
+          "knee_FL",
+          "leg_FL",
+          [
+            0,
+            -0.9898,
+            0
+          ]
+        ],
+        [
+          "ankle_FL",
+          "knee_FL",
+          [
+            0,
+            -1.0302,
+            0
+          ]
+        ],
+        [
+          "leg_FR",
+          "chest",
+          [
+            -1.0555999999999999,
+            -0.12,
+            0.5800000000000001
+          ]
+        ],
+        [
+          "knee_FR",
+          "leg_FR",
+          [
+            0,
+            -0.9898,
+            0
+          ]
+        ],
+        [
+          "ankle_FR",
+          "knee_FR",
+          [
+            0,
+            -1.0302,
+            0
+          ]
+        ],
+        [
+          "leg_HL",
+          "spine",
+          [
+            1.0555999999999999,
+            0,
+            -1.3
+          ]
+        ],
+        [
+          "knee_HL",
+          "leg_HL",
+          [
+            0,
+            -0.9898,
+            0
+          ]
+        ],
+        [
+          "ankle_HL",
+          "knee_HL",
+          [
+            0,
+            -1.0302,
+            0
+          ]
+        ],
+        [
+          "leg_HR",
+          "spine",
+          [
+            -1.0555999999999999,
+            0,
+            -1.3
+          ]
+        ],
+        [
+          "knee_HR",
+          "leg_HR",
+          [
+            0,
+            -0.9898,
+            0
+          ]
+        ],
+        [
+          "ankle_HR",
+          "knee_HR",
+          [
+            0,
+            -1.0302,
+            0
+          ]
+        ],
+        [
+          "bay_l",
+          "spine",
+          [
+            0.644,
+            -1.025,
+            0
+          ]
+        ],
+        [
+          "bay_r",
+          "spine",
+          [
+            -0.644,
+            -1.025,
+            0
+          ]
+        ],
+        [
+          "tail_0",
+          "spine",
+          [
+            0,
+            0.05,
+            -2.8
+          ]
+        ],
+        [
+          "tail_1",
+          "tail_0",
+          [
+            0,
+            -0.02,
+            -0.38
+          ]
+        ],
+        [
+          "tail_2",
+          "tail_1",
+          [
+            0,
+            -0.02,
+            -0.38
+          ]
+        ],
+        [
+          "tail_3",
+          "tail_2",
+          [
+            0,
+            -0.02,
+            -0.38
+          ]
+        ],
+        [
+          "tail_4",
+          "tail_3",
+          [
+            0,
+            -0.02,
+            -0.38
+          ]
+        ],
+        [
+          "ear_l",
+          "head",
+          [
+            0.82,
+            0.1,
+            -0.25
+          ]
+        ],
+        [
+          "tusk_l",
+          "head",
+          [
+            0.48,
+            -0.32,
+            0.57
+          ]
+        ],
+        [
+          "ear_r",
+          "head",
+          [
+            -0.82,
+            0.1,
+            -0.25
+          ]
+        ],
+        [
+          "tusk_r",
+          "head",
+          [
+            -0.48,
+            -0.32,
+            0.57
+          ]
+        ],
+        [
+          "trunk_0",
+          "head",
+          [
+            0,
+            -0.16,
+            0.95
+          ]
+        ],
+        [
+          "trunk_1",
+          "trunk_0",
+          [
+            0,
+            0,
+            0.43
+          ]
+        ],
+        [
+          "trunk_2",
+          "trunk_1",
+          [
+            0,
+            0,
+            0.43
+          ]
+        ],
+        [
+          "trunk_3",
+          "trunk_2",
+          [
+            0,
+            0,
+            0.43
+          ]
+        ],
+        [
+          "trunk_4",
+          "trunk_3",
+          [
+            0,
+            0,
+            0.43
+          ]
+        ],
+        [
+          "trunk_5",
+          "trunk_4",
+          [
+            0,
+            0,
+            0.43
+          ]
+        ],
+        [
+          "gun",
+          "chest",
+          [
+            -0.94,
+            0.08,
+            0.78
+          ]
+        ],
+        [
+          "gun_recoil",
+          "gun",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "light_muzzle",
+          "gun_recoil",
+          [
+            0,
+            0,
+            0.45
+          ]
+        ],
+        [
+          "heavy",
+          "chest",
+          [
+            0,
+            0.18,
+            1.25
+          ]
+        ],
+        [
+          "heavy_recoil",
+          "heavy",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "heavy_muzzle",
+          "heavy_recoil",
+          [
+            0,
+            0,
+            1.65
+          ]
+        ],
+        [
+          "charge_hinge",
+          "heavy",
+          [
+            0,
+            0.23,
+            -0.22
+          ]
+        ],
+        [
+          "cast_dish",
+          "chest",
+          [
+            0,
+            0.55,
+            -0.6
+          ]
+        ],
+        [
+          "emitter_l",
+          "chest",
+          [
+            0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "emitter_r",
+          "chest",
+          [
+            -0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "barrier",
+          "tilt",
+          [
+            0,
+            2.2,
+            3.7
+          ]
+        ]
+      ],
+      "forms": {
+        "ground": {
+          "kind": "quad",
+          "transforms": {
+            "bay_l": {
+              "rotation": [
+                0,
+                0,
+                -0.45
+              ]
+            },
+            "bay_r": {
+              "rotation": [
+                0,
+                0,
+                0.45
+              ]
+            },
+            "ear_l": {
+              "rotation": [
+                0,
+                0.7,
+                0.85
+              ]
+            },
+            "ear_r": {
+              "rotation": [
+                0,
+                -0.7,
+                -0.85
+              ]
+            },
+            "trunk_0": {
+              "rotation": [
+                1.15,
+                0,
+                0
+              ]
+            },
+            "trunk_1": {
+              "rotation": [
+                -0.26,
+                0,
+                0
+              ]
+            },
+            "trunk_2": {
+              "rotation": [
+                -0.26,
+                0,
+                0
+              ]
+            },
+            "trunk_3": {
+              "rotation": [
+                -0.26,
+                0,
+                0
+              ]
+            },
+            "trunk_4": {
+              "rotation": [
+                -0.26,
+                0,
+                0
+              ]
+            },
+            "trunk_5": {
+              "rotation": [
+                -0.26,
+                0,
+                0
+              ]
+            }
+          },
+          "rig": {}
+        },
+        "flight": {
+          "kind": "aerial",
+          "transforms": {
+            "leg_FL": {
+              "position": [
+                0.64,
+                -0.12,
+                -0.35
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "knee_FL": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_FL": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_FR": {
+              "position": [
+                -0.64,
+                -0.12,
+                -0.35
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "knee_FR": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_FR": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_HL": {
+              "position": [
+                0.64,
+                0,
+                0.12
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "knee_HL": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_HL": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_HR": {
+              "position": [
+                -0.64,
+                0,
+                0.12
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "knee_HR": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_HR": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "ear_l": {
+              "rotation": [
+                -1.5707963267948966,
+                0.3,
+                0
+              ]
+            },
+            "tusk_l": {
+              "rotation": [
+                0,
+                1.65,
+                0
+              ]
+            },
+            "ear_r": {
+              "rotation": [
+                -1.5707963267948966,
+                -0.3,
+                0
+              ]
+            },
+            "tusk_r": {
+              "rotation": [
+                0,
+                -1.65,
+                0
+              ]
+            }
+          },
+          "rig": {
+            "tilt": "tilt",
+            "head": null,
+            "bob": 0.06,
+            "top": 12,
+            "level": true,
+            "gunR": null,
+            "gunL": null,
+            "aimPose": null,
+            "tailSegs": null
+          }
+        }
+      },
+      "clips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract"
+      ],
+      "acceptance": {
+        "requiredForms": [
+          "ground",
+          "flight"
+        ],
+        "samePartInventory": true,
+        "sameGeometry": true,
+        "sameRigidScale": true,
+        "flightBellyClosed": true,
+        "requiredClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract",
+          "to_flight",
+          "to_ground",
+          "flight_idle",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult",
+          "flight_shield_deploy",
+          "flight_shield_retract"
+        ],
+        "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
+        "gateOwner": "../../tools/audit_reference_morph.mjs"
+      },
+      "decisions": [
+        "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design."
+      ],
+      "components": [
+        {
+          "id": "component_0",
+          "route": "procedural",
+          "intent": "Hull and bridge"
+        },
+        {
+          "id": "component_1",
+          "route": "procedural",
+          "intent": "Shared ear radar fins"
+        },
+        {
+          "id": "component_2",
+          "route": "procedural",
+          "intent": "Six-link trunk/horn"
+        },
+        {
+          "id": "component_3",
+          "route": "procedural",
+          "intent": "Paired crescent tusks"
+        },
+        {
+          "id": "component_4",
+          "route": "procedural",
+          "intent": "Four belly-stowed pillar legs"
+        },
+        {
+          "id": "shield",
+          "route": "procedural",
+          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+        }
+      ],
+      "rig": {
+        "spine": "spine",
+        "chest": "chest",
+        "neck": "neck",
+        "head": "head",
+        "gait": "walk",
+        "gallopType": "rotary",
+        "stride": 3.4,
+        "top": 5,
+        "bob": 0.06,
+        "rollSway": 0.05,
+        "legAmp": 0.8,
+        "pitchAmp": 0.04,
+        "wpn": {
+          "light": {
+            "nodes": [
+              "gun"
+            ],
+            "ref": "gun",
+            "muzzle": "light_muzzle",
+            "r": 0.08
+          },
+          "heavy": {
+            "nodes": [
+              "heavy"
+            ],
+            "ref": "heavy",
+            "muzzle": "heavy_muzzle",
+            "r": 0.12
+          }
+        },
+        "limb": {
+          "fore": "columnar",
+          "hind": "columnar",
+          "bounceF": 0.8
+        },
+        "legFL": "leg_FL",
+        "chFL": [
+          {
+            "g": "knee_FL",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_FL",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legFR": "leg_FR",
+        "chFR": [
+          {
+            "g": "knee_FR",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_FR",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legHL": "leg_HL",
+        "chHL": [
+          {
+            "g": "knee_HL",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_HL",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legHR": "leg_HR",
+        "chHR": [
+          {
+            "g": "knee_HR",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_HR",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "tailSegs": [
+          "tail_0",
+          "tail_1",
+          "tail_2",
+          "tail_3",
+          "tail_4"
+        ],
+        "tailAmp": 0.12
+      },
+      "cavity": {
+        "owner": "spine",
+        "axis": "z",
+        "sections": [
+          [
+            -2.5,
+            0.65,
+            0.65
+          ],
+          [
+            -1.8,
+            2.15,
+            1.65
+          ],
+          [
+            -1.1,
+            2.8,
+            2.05
+          ],
+          [
+            0.6,
+            2.8,
+            2.05
+          ],
+          [
+            1.3,
+            2.2,
+            1.7
+          ],
+          [
+            1.9,
+            1.45,
+            1.2
+          ]
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "roots": [
+          "leg_FL",
+          "leg_FR",
+          "leg_HL",
+          "leg_HR"
+        ],
+        "profile": "ellipse"
+      },
+      "motion": {
+        "shield": {
+          "duration": 0.65,
+          "barrier": "barrier",
+          "hinges": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "rest": 0,
+              "deploy": -1.05
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "rest": 0,
+              "deploy": 1.05
+            }
+          ]
+        },
+        "fire": [
+          {
+            "node": "gun_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.16
+          },
+          {
+            "node": "heavy_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.2
+          }
+        ],
+        "charge": [
+          {
+            "node": "charge_hinge",
+            "channel": "rotation",
+            "axis": "x",
+            "rest": 0,
+            "amplitude": -1.15
+          }
+        ],
+        "cast": [
+          {
+            "node": "cast_dish",
+            "channel": "rotation",
+            "axis": "y",
+            "rest": 0,
+            "amplitude": 0.9
+          }
+        ]
+      },
+      "reviewFrame": {
+        "scale": 11,
+        "target": [
+          0,
+          2.2,
+          0
+        ]
+      }
+    },
+    "s10": {
+      "id": "s10",
+      "kind": "quad",
+      "recipe": "raptor_archaeopteryx",
+      "height": 4.4,
+      "inputs": {
+        "prompt": "../../docs/art_gen_morphers.md#s10",
+        "image": "../../public/assets/mechs/s10_feather_array.png",
+        "view": "Dual-form illustration; hidden surfaces and depth are inferred",
+        "rights": "../../LICENSE"
+      },
+      "parameters": {
+        "limb": 0.39
+      },
+      "materials": {
+        "armor": {
+          "color": "#ded9bc",
+          "metal": 0.45
+        },
+        "shade": {
+          "color": "#a6997a",
+          "metal": 0.45
+        },
+        "dark": {
+          "color": "#252a30",
+          "metal": 0.45
+        },
+        "glow": {
+          "color": "#f35b28",
+          "metal": 0,
+          "emission": 1.1
+        },
+        "brass": {
+          "color": "#a8753a",
+          "metal": 0.45
+        },
+        "steel": {
+          "color": "#718186",
+          "metal": 0.6
+        },
+        "cyan": {
+          "color": "#f35b28",
+          "emission": 0.8
+        },
+        "white": {
+          "color": "#dddccb",
+          "metal": 0.25
+        },
+        "red": {
+          "color": "#bf4a34"
+        },
+        "blue": {
+          "color": "#314260"
+        },
+        "shield": {
+          "color": "#f35b28",
+          "opacity": 0.12,
+          "emission": 0.3
+        },
+        "membrane": {
+          "color": "#b4bcdb",
+          "opacity": 0.3,
+          "metal": 0
+        }
+      },
+      "joints": [
+        [
+          "tilt",
+          null,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "spine",
+          "tilt",
+          [
+            0,
+            1.78,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "spine",
+          [
+            0,
+            0.12,
+            0.58
+          ]
+        ],
+        [
+          "neck",
+          "chest",
+          [
+            0,
+            0.45,
+            0.72
+          ]
+        ],
+        [
+          "head",
+          "neck",
+          [
+            0,
+            0.02,
+            0.52
+          ]
+        ],
+        [
+          "leg_FL",
+          "chest",
+          [
+            0.57,
+            -0.12,
+            0.3400000000000001
+          ]
+        ],
+        [
+          "knee_FL",
+          "leg_FL",
+          [
+            0,
+            -0.42,
+            -0.18
+          ]
+        ],
+        [
+          "ankle_FL",
+          "knee_FL",
+          [
+            0,
+            -0.42,
+            0.3
+          ]
+        ],
+        [
+          "leg_FR",
+          "chest",
+          [
+            -0.57,
+            -0.12,
+            0.3400000000000001
+          ]
+        ],
+        [
+          "knee_FR",
+          "leg_FR",
+          [
+            0,
+            -0.42,
+            -0.18
+          ]
+        ],
+        [
+          "ankle_FR",
+          "knee_FR",
+          [
+            0,
+            -0.42,
+            0.3
+          ]
+        ],
+        [
+          "leg_HL",
+          "spine",
+          [
+            0.57,
+            0,
+            -0.92
+          ]
+        ],
+        [
+          "knee_HL",
+          "leg_HL",
+          [
+            0,
+            -0.8,
+            0.68
+          ]
+        ],
+        [
+          "ankle_HL",
+          "knee_HL",
+          [
+            0,
+            -0.68,
+            -0.57
+          ]
+        ],
+        [
+          "leg_HR",
+          "spine",
+          [
+            -0.57,
+            0,
+            -0.92
+          ]
+        ],
+        [
+          "knee_HR",
+          "leg_HR",
+          [
+            0,
+            -0.8,
+            0.68
+          ]
+        ],
+        [
+          "ankle_HR",
+          "knee_HR",
+          [
+            0,
+            -0.68,
+            -0.57
+          ]
+        ],
+        [
+          "bay_l",
+          "spine",
+          [
+            0.41400000000000003,
+            -0.52,
+            0
+          ]
+        ],
+        [
+          "bay_r",
+          "spine",
+          [
+            -0.41400000000000003,
+            -0.52,
+            0
+          ]
+        ],
+        [
+          "tail_0",
+          "spine",
+          [
+            0,
+            0.05,
+            -1.75
+          ]
+        ],
+        [
+          "tail_1",
+          "tail_0",
+          [
+            0,
+            -0.02,
+            -0.55
+          ]
+        ],
+        [
+          "tail_2",
+          "tail_1",
+          [
+            0,
+            -0.02,
+            -0.55
+          ]
+        ],
+        [
+          "tail_3",
+          "tail_2",
+          [
+            0,
+            -0.02,
+            -0.55
+          ]
+        ],
+        [
+          "tail_4",
+          "tail_3",
+          [
+            0,
+            -0.02,
+            -0.55
+          ]
+        ],
+        [
+          "wing_l",
+          "chest",
+          [
+            0.25,
+            0.4,
+            0
+          ]
+        ],
+        [
+          "flap_l",
+          "wing_l",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "outer_l",
+          "flap_l",
+          [
+            1.75,
+            0,
+            -0.4
+          ]
+        ],
+        [
+          "feather_l_0",
+          "outer_l",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "feather_l_1",
+          "outer_l",
+          [
+            0.18,
+            0,
+            -0.055
+          ]
+        ],
+        [
+          "feather_l_2",
+          "outer_l",
+          [
+            0.36,
+            0,
+            -0.11
+          ]
+        ],
+        [
+          "feather_l_3",
+          "outer_l",
+          [
+            0.54,
+            0,
+            -0.165
+          ]
+        ],
+        [
+          "feather_l_4",
+          "outer_l",
+          [
+            0.72,
+            0,
+            -0.22
+          ]
+        ],
+        [
+          "feather_l_5",
+          "outer_l",
+          [
+            0.8999999999999999,
+            0,
+            -0.275
+          ]
+        ],
+        [
+          "feather_l_6",
+          "outer_l",
+          [
+            1.08,
+            0,
+            -0.33
+          ]
+        ],
+        [
+          "wing_r",
+          "chest",
+          [
+            -0.25,
+            0.4,
+            0
+          ]
+        ],
+        [
+          "flap_r",
+          "wing_r",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "outer_r",
+          "flap_r",
+          [
+            -1.75,
+            0,
+            -0.4
+          ]
+        ],
+        [
+          "feather_r_0",
+          "outer_r",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "feather_r_1",
+          "outer_r",
+          [
+            -0.18,
+            0,
+            -0.055
+          ]
+        ],
+        [
+          "feather_r_2",
+          "outer_r",
+          [
+            -0.36,
+            0,
+            -0.11
+          ]
+        ],
+        [
+          "feather_r_3",
+          "outer_r",
+          [
+            -0.54,
+            0,
+            -0.165
+          ]
+        ],
+        [
+          "feather_r_4",
+          "outer_r",
+          [
+            -0.72,
+            0,
+            -0.22
+          ]
+        ],
+        [
+          "feather_r_5",
+          "outer_r",
+          [
+            -0.8999999999999999,
+            0,
+            -0.275
+          ]
+        ],
+        [
+          "feather_r_6",
+          "outer_r",
+          [
+            -1.08,
+            0,
+            -0.33
+          ]
+        ],
+        [
+          "gun",
+          "chest",
+          [
+            -0.28,
+            0.7,
+            -0.1
+          ]
+        ],
+        [
+          "gun_recoil",
+          "gun",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "light_muzzle",
+          "gun_recoil",
+          [
+            0,
+            0,
+            0.95
+          ]
+        ],
+        [
+          "heavy",
+          "chest",
+          [
+            0.28,
+            0.75,
+            -0.15
+          ]
+        ],
+        [
+          "heavy_recoil",
+          "heavy",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "heavy_muzzle",
+          "heavy_recoil",
+          [
+            0,
+            0,
+            2.15
+          ]
+        ],
+        [
+          "charge_hinge",
+          "heavy",
+          [
+            0,
+            0.23,
+            -0.22
+          ]
+        ],
+        [
+          "cast_dish",
+          "chest",
+          [
+            0,
+            0.55,
+            -0.6
+          ]
+        ],
+        [
+          "emitter_l",
+          "chest",
+          [
+            0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "emitter_r",
+          "chest",
+          [
+            -0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "barrier",
+          "tilt",
+          [
+            0,
+            2.2,
+            2.8
+          ]
+        ]
+      ],
+      "forms": {
+        "ground": {
+          "kind": "quad",
+          "transforms": {
+            "bay_l": {
+              "rotation": [
+                0,
+                0,
+                -0.45
+              ]
+            },
+            "bay_r": {
+              "rotation": [
+                0,
+                0,
+                0.45
+              ]
+            },
+            "wing_l": {
+              "rotation": [
+                0,
+                0,
+                -0.98
+              ]
+            },
+            "feather_l_0": {
+              "rotation": [
+                0,
+                -0.15,
+                0
+              ]
+            },
+            "feather_l_1": {
+              "rotation": [
+                0,
+                -0.255,
+                0
+              ]
+            },
+            "feather_l_2": {
+              "rotation": [
+                0,
+                -0.36,
+                0
+              ]
+            },
+            "feather_l_3": {
+              "rotation": [
+                0,
+                -0.46499999999999997,
+                0
+              ]
+            },
+            "feather_l_4": {
+              "rotation": [
+                0,
+                -0.57,
+                0
+              ]
+            },
+            "feather_l_5": {
+              "rotation": [
+                0,
+                -0.675,
+                0
+              ]
+            },
+            "feather_l_6": {
+              "rotation": [
+                0,
+                -0.78,
+                0
+              ]
+            },
+            "wing_r": {
+              "rotation": [
+                0,
+                0,
+                0.98
+              ]
+            },
+            "feather_r_0": {
+              "rotation": [
+                0,
+                0.15,
+                0
+              ]
+            },
+            "feather_r_1": {
+              "rotation": [
+                0,
+                0.255,
+                0
+              ]
+            },
+            "feather_r_2": {
+              "rotation": [
+                0,
+                0.36,
+                0
+              ]
+            },
+            "feather_r_3": {
+              "rotation": [
+                0,
+                0.46499999999999997,
+                0
+              ]
+            },
+            "feather_r_4": {
+              "rotation": [
+                0,
+                0.57,
+                0
+              ]
+            },
+            "feather_r_5": {
+              "rotation": [
+                0,
+                0.675,
+                0
+              ]
+            },
+            "feather_r_6": {
+              "rotation": [
+                0,
+                0.78,
+                0
+              ]
+            }
+          },
+          "rig": {}
+        },
+        "flight": {
+          "kind": "aerial",
+          "transforms": {
+            "leg_FL": {
+              "position": [
+                0.43,
+                -0.12,
+                -0.35
+              ],
+              "rotation": [
+                1.165904540509813,
+                0,
+                0
+              ]
+            },
+            "knee_FL": {
+              "rotation": [
+                -2.116451381321888,
+                0,
+                0
+              ]
+            },
+            "ankle_FL": {
+              "rotation": [
+                0.9505468408120751,
+                0,
+                0
+              ]
+            },
+            "leg_FR": {
+              "position": [
+                -0.43,
+                -0.12,
+                -0.35
+              ],
+              "rotation": [
+                1.165904540509813,
+                0,
+                0
+              ]
+            },
+            "knee_FR": {
+              "rotation": [
+                -2.116451381321888,
+                0,
+                0
+              ]
+            },
+            "ankle_FR": {
+              "rotation": [
+                0.9505468408120751,
+                0,
+                0
+              ]
+            },
+            "leg_HL": {
+              "position": [
+                0.28,
+                0,
+                0
+              ],
+              "rotation": [
+                2.2752903910371143,
+                0,
+                0
+              ]
+            },
+            "knee_HL": {
+              "rotation": [
+                -4.543710988902239,
+                0,
+                0
+              ]
+            },
+            "ankle_HL": {
+              "rotation": [
+                2.2684205978651244,
+                0,
+                0
+              ]
+            },
+            "leg_HR": {
+              "position": [
+                -0.28,
+                0,
+                0
+              ],
+              "rotation": [
+                2.2752903910371143,
+                0,
+                0
+              ]
+            },
+            "knee_HR": {
+              "rotation": [
+                -4.543710988902239,
+                0,
+                0
+              ]
+            },
+            "ankle_HR": {
+              "rotation": [
+                2.2684205978651244,
+                0,
+                0
+              ]
+            }
+          },
+          "rig": {
+            "tilt": "tilt",
+            "head": null,
+            "bob": 0.06,
+            "top": 27,
+            "level": true,
+            "gunR": null,
+            "gunL": null,
+            "aimPose": null,
+            "tailSegs": null,
+            "wings": [
+              {
+                "w": "flap_l",
+                "outer": "outer_l",
+                "sgn": 1
+              },
+              {
+                "w": "flap_r",
+                "outer": "outer_r",
+                "sgn": -1
+              }
+            ]
+          }
+        }
+      },
+      "clips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract"
+      ],
+      "acceptance": {
+        "requiredForms": [
+          "ground",
+          "flight"
+        ],
+        "samePartInventory": true,
+        "sameGeometry": true,
+        "sameRigidScale": true,
+        "flightBellyClosed": true,
+        "requiredClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract",
+          "to_flight",
+          "to_ground",
+          "flight_idle",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult",
+          "flight_shield_deploy",
+          "flight_shield_retract"
+        ],
+        "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
+        "gateOwner": "../../tools/audit_reference_morph.mjs"
+      },
+      "decisions": [
+        "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design."
+      ],
+      "components": [
+        {
+          "id": "component_0",
+          "route": "procedural",
+          "intent": "Low raptor and toothed muzzle"
+        },
+        {
+          "id": "component_1",
+          "route": "procedural",
+          "intent": "Digitigrade hind legs and sickle toes"
+        },
+        {
+          "id": "component_2",
+          "route": "procedural",
+          "intent": "Three-part blade-feather wings"
+        },
+        {
+          "id": "component_3",
+          "route": "procedural",
+          "intent": "Long rigid balancing tail"
+        },
+        {
+          "id": "component_4",
+          "route": "procedural",
+          "intent": "Forward dorsal lance and laser"
+        },
+        {
+          "id": "shield",
+          "route": "procedural",
+          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+        }
+      ],
+      "rig": {
+        "spine": "spine",
+        "chest": "chest",
+        "neck": "neck",
+        "head": "head",
+        "gait": "trot",
+        "gallopType": "rotary",
+        "stride": 2.4,
+        "top": 9,
+        "bob": 0.06,
+        "rollSway": 0.05,
+        "legAmp": 0.8,
+        "pitchAmp": 0.1,
+        "wpn": {
+          "light": {
+            "nodes": [
+              "gun"
+            ],
+            "ref": "gun",
+            "muzzle": "light_muzzle",
+            "r": 0.08
+          },
+          "heavy": {
+            "nodes": [
+              "heavy"
+            ],
+            "ref": "heavy",
+            "muzzle": "heavy_muzzle",
+            "r": 0.12
+          }
+        },
+        "limb": {
+          "foreRole": "grasp",
+          "hind": "digitigrade"
+        },
+        "legFL": "leg_FL",
+        "chFL": [
+          {
+            "g": "knee_FL",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_FL",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legFR": "leg_FR",
+        "chFR": [
+          {
+            "g": "knee_FR",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_FR",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legHL": "leg_HL",
+        "chHL": [
+          {
+            "g": "knee_HL",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_HL",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legHR": "leg_HR",
+        "chHR": [
+          {
+            "g": "knee_HR",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_HR",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "tailSegs": [
+          "tail_0",
+          "tail_1",
+          "tail_2",
+          "tail_3",
+          "tail_4"
+        ],
+        "tailAmp": 0.12
+      },
+      "cavity": {
+        "owner": "spine",
+        "axis": "z",
+        "sections": [
+          [
+            -1.7,
+            0.75,
+            0.6
+          ],
+          [
+            -1.4,
+            1.65,
+            0.94
+          ],
+          [
+            -0.85,
+            1.8,
+            1.04
+          ],
+          [
+            0.6,
+            1.75,
+            1
+          ],
+          [
+            1.25,
+            1.2,
+            0.76
+          ],
+          [
+            1.5,
+            0.7,
+            0.5
+          ]
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "roots": [
+          "leg_FL",
+          "leg_FR",
+          "leg_HL",
+          "leg_HR"
+        ]
+      },
+      "motion": {
+        "shield": {
+          "duration": 0.65,
+          "barrier": "barrier",
+          "hinges": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "rest": 0,
+              "deploy": -1.05
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "rest": 0,
+              "deploy": 1.05
+            }
+          ]
+        },
+        "fire": [
+          {
+            "node": "gun_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.16
+          },
+          {
+            "node": "heavy_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.2
+          }
+        ],
+        "charge": [
+          {
+            "node": "charge_hinge",
+            "channel": "rotation",
+            "axis": "x",
+            "rest": 0,
+            "amplitude": -1.15
+          }
+        ],
+        "cast": [
+          {
+            "node": "cast_dish",
+            "channel": "rotation",
+            "axis": "y",
+            "rest": 0,
+            "amplitude": 0.9
+          }
+        ]
+      },
+      "reviewFrame": {
+        "scale": 10,
+        "target": [
+          0,
+          2.2,
+          0
+        ]
+      }
+    },
+    "t06": {
+      "id": "t06",
+      "kind": "biped",
+      "recipe": "monkey_cloud",
+      "height": 6,
+      "inputs": {
+        "prompt": "../../docs/art_gen_morphers.md#t06",
+        "image": "../../public/assets/mechs/t06_qinggong.png",
+        "view": "Dual-form illustration; hidden surfaces and depth are inferred",
+        "rights": "../../LICENSE"
+      },
+      "parameters": {
+        "limb": 0.34,
+        "wingSpan": 3.3
+      },
+      "materials": {
+        "armor": {
+          "color": "#df5b21",
+          "metal": 0.45
+        },
+        "shade": {
+          "color": "#852f24",
+          "metal": 0.45
+        },
+        "dark": {
+          "color": "#2c2238",
+          "metal": 0.45
+        },
+        "glow": {
+          "color": "#ffd44e",
+          "metal": 0,
+          "emission": 1.1
+        },
+        "brass": {
+          "color": "#caa03d",
+          "metal": 0.45
+        },
+        "steel": {
+          "color": "#718186",
+          "metal": 0.6
+        },
+        "cyan": {
+          "color": "#ffd44e",
+          "emission": 0.8
+        },
+        "white": {
+          "color": "#dddccb",
+          "metal": 0.25
+        },
+        "red": {
+          "color": "#c54424"
+        },
+        "blue": {
+          "color": "#314260"
+        },
+        "shield": {
+          "color": "#ffd44e",
+          "opacity": 0.12,
+          "emission": 0.3
+        },
+        "membrane": {
+          "color": "#b4bcdb",
+          "opacity": 0.3,
+          "metal": 0
+        },
+        "vapor": {
+          "color": "#f2f6ff",
+          "opacity": 0.22,
+          "emission": 0.15
+        }
+      },
+      "joints": [
+        [
+          "tilt",
+          null,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "hips",
+          "tilt",
+          [
+            0,
+            2.9,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "hips",
+          [
+            0,
+            0.63,
+            0
+          ]
+        ],
+        [
+          "head",
+          "chest",
+          [
+            0,
+            1.52,
+            0.03
+          ]
+        ],
+        [
+          "hip_l",
+          "hips",
+          [
+            0.43,
+            -0.1,
+            0
+          ]
+        ],
+        [
+          "knee_l",
+          "hip_l",
+          [
+            0,
+            -1.28,
+            0
+          ]
+        ],
+        [
+          "ankle_l",
+          "knee_l",
+          [
+            0,
+            -1.25,
+            0
+          ]
+        ],
+        [
+          "shoulder_l",
+          "chest",
+          [
+            0.98,
+            1.02,
+            0
+          ]
+        ],
+        [
+          "elbow_l",
+          "shoulder_l",
+          [
+            0,
+            -1.2,
+            0
+          ]
+        ],
+        [
+          "wrist_l",
+          "elbow_l",
+          [
+            0,
+            -1.08,
+            0
+          ]
+        ],
+        [
+          "bay_l",
+          "chest",
+          [
+            0.68,
+            0.05,
+            0.48
+          ]
+        ],
+        [
+          "hip_r",
+          "hips",
+          [
+            -0.43,
+            -0.1,
+            0
+          ]
+        ],
+        [
+          "knee_r",
+          "hip_r",
+          [
+            0,
+            -1.28,
+            0
+          ]
+        ],
+        [
+          "ankle_r",
+          "knee_r",
+          [
+            0,
+            -1.25,
+            0
+          ]
+        ],
+        [
+          "shoulder_r",
+          "chest",
+          [
+            -0.98,
+            1.02,
+            0
+          ]
+        ],
+        [
+          "elbow_r",
+          "shoulder_r",
+          [
+            0,
+            -1.2,
+            0
+          ]
+        ],
+        [
+          "wrist_r",
+          "elbow_r",
+          [
+            0,
+            -1.08,
+            0
+          ]
+        ],
+        [
+          "bay_r",
+          "chest",
+          [
+            -0.68,
+            0.05,
+            0.48
+          ]
+        ],
+        [
+          "wing_l",
+          "chest",
+          [
+            0.25,
+            1.06,
+            -0.5
+          ]
+        ],
+        [
+          "wing_r",
+          "chest",
+          [
+            -0.25,
+            1.06,
+            -0.5
+          ]
+        ],
+        [
+          "gun",
+          "chest",
+          [
+            -0.5,
+            0.34,
+            0.42
+          ]
+        ],
+        [
+          "gun_recoil",
+          "gun",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "light_muzzle",
+          "gun_recoil",
+          [
+            0,
+            0,
+            0.95
+          ]
+        ],
+        [
+          "heavy",
+          "wrist_r",
+          [
+            0,
+            -0.1,
+            0.13
+          ]
+        ],
+        [
+          "heavy_recoil",
+          "heavy",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "heavy_muzzle",
+          "heavy_recoil",
+          [
+            0,
+            0,
+            2.2
+          ]
+        ],
+        [
+          "charge_hinge",
+          "heavy",
+          [
+            0,
+            0.23,
+            -0.22
+          ]
+        ],
+        [
+          "cast_dish",
+          "chest",
+          [
+            0,
+            0.55,
+            -0.6
+          ]
+        ],
+        [
+          "emitter_l",
+          "chest",
+          [
+            0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "emitter_r",
+          "chest",
+          [
+            -0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "barrier",
+          "tilt",
+          [
+            0,
+            3.8,
+            2.8
+          ]
+        ]
+      ],
+      "forms": {
+        "ground": {
+          "kind": "biped",
+          "transforms": {
+            "bay_l": {
+              "position": [
+                0.83,
+                0.05,
+                -0.56
+              ],
+              "rotation": [
+                0,
+                0.18,
+                0
+              ]
+            },
+            "bay_r": {
+              "position": [
+                -0.83,
+                0.05,
+                -0.56
+              ],
+              "rotation": [
+                0,
+                -0.18,
+                0
+              ]
+            },
+            "wing_l": {
+              "rotation": [
+                0,
+                0,
+                -0.98
+              ]
+            },
+            "wing_r": {
+              "rotation": [
+                0,
+                0,
+                0.98
+              ]
+            }
+          },
+          "rig": {}
+        },
+        "flight": {
+          "kind": "aerial",
+          "transforms": {
+            "hip_l": {
+              "position": [
+                0.26,
+                1.8,
+                -0.1
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "knee_l": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_l": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "shoulder_l": {
+              "position": [
+                0.48,
+                0.98,
+                -0.05
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "elbow_l": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "wrist_l": {
+              "rotation": [
+                -3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "hip_r": {
+              "position": [
+                -0.26,
+                1.8,
+                -0.1
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "knee_r": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_r": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "shoulder_r": {
+              "position": [
+                -0.48,
+                0.98,
+                -0.05
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "elbow_r": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "wrist_r": {
+              "rotation": [
+                -3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "hips": {
+              "position": [
+                0,
+                3.3,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "head": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "rig": {
+            "tilt": "tilt",
+            "head": null,
+            "bob": 0.06,
+            "top": 30,
+            "level": false,
+            "gunR": null,
+            "gunL": null,
+            "aimPose": null,
+            "tailSegs": null,
+            "pitchTop": 0.52
+          }
+        }
+      },
+      "clips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract"
+      ],
+      "acceptance": {
+        "requiredForms": [
+          "ground",
+          "flight"
+        ],
+        "samePartInventory": true,
+        "sameGeometry": true,
+        "sameRigidScale": true,
+        "flightBellyClosed": true,
+        "requiredClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract",
+          "to_flight",
+          "to_ground",
+          "flight_idle",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult",
+          "flight_shield_deploy",
+          "flight_shield_retract"
+        ],
+        "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
+        "gateOwner": "../../tools/audit_reference_morph.mjs"
+      },
+      "decisions": [
+        "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design.",
+        "Upright hover and speed-dependent forward lean preserve the prior jet flight behavior. Exhaust and condensation are presentation effects, excluded from the rigid part inventory."
+      ],
+      "components": [
+        {
+          "id": "component_0",
+          "route": "procedural",
+          "intent": "Slim red-gold monkey armor"
+        },
+        {
+          "id": "component_1",
+          "route": "procedural",
+          "intent": "Opera face and paired spiral circlet"
+        },
+        {
+          "id": "component_2",
+          "route": "procedural",
+          "intent": "Two long crown sensor antennae"
+        },
+        {
+          "id": "component_3",
+          "route": "procedural",
+          "intent": "Retractable shared jet pack"
+        },
+        {
+          "id": "component_4",
+          "route": "procedural",
+          "intent": "Handheld plasma staff and chest gun"
+        },
+        {
+          "id": "shield",
+          "route": "procedural",
+          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+        }
+      ],
+      "rig": {
+        "bob": 0.14,
+        "top": 8.5,
+        "stride": 2.6,
+        "weap": {
+          "light": "R",
+          "heavy": "R"
+        },
+        "hvy": {
+          "chest": 0.05
+        },
+        "hips": "hips",
+        "chest": "chest",
+        "head": "head",
+        "legL": "hip_l",
+        "legR": "hip_r",
+        "armL": "shoulder_l",
+        "armR": "shoulder_r",
+        "armBase": 0,
+        "sway": 0.045,
+        "hop": false,
+        "knuckle": false,
+        "tinyArms": false,
+        "tuckArms": false,
+        "grounded": false,
+        "legChainR": [
+          {
+            "g": "knee_r",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_r",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "armChainR": [
+          {
+            "g": "elbow_r",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "wrist_r",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legChainL": [
+          {
+            "g": "knee_l",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_l",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "armChainL": [
+          {
+            "g": "elbow_l",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "wrist_l",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "wpn": {
+          "light": {
+            "nodes": [
+              "gun"
+            ],
+            "ref": "gun",
+            "muzzle": "light_muzzle",
+            "r": 0.08
+          },
+          "heavy": {
+            "nodes": [
+              "heavy"
+            ],
+            "ref": "heavy",
+            "muzzle": "heavy_muzzle",
+            "r": 0.12
+          }
+        }
+      },
+      "cavity": {
+        "owner": "chest",
+        "axis": "y",
+        "sections": [
+          [
+            -0.95,
+            0.95,
+            0.9
+          ],
+          [
+            -0.35,
+            1.6,
+            1.13
+          ],
+          [
+            0.45,
+            2,
+            1.18
+          ],
+          [
+            1.05,
+            2.15,
+            1.12
+          ],
+          [
+            1.4,
+            1.6,
+            1.04
+          ]
+        ],
+        "offset": [
+          0,
+          0,
+          -0.08
+        ],
+        "roots": [
+          "hip_l",
+          "hip_r",
+          "shoulder_l",
+          "shoulder_r"
+        ]
+      },
+      "motion": {
+        "shield": {
+          "duration": 0.65,
+          "barrier": "barrier",
+          "hinges": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "rest": 0,
+              "deploy": -1.05
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "rest": 0,
+              "deploy": 1.05
+            }
+          ]
+        },
+        "fire": [
+          {
+            "node": "gun_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.16
+          },
+          {
+            "node": "heavy_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.2
+          }
+        ],
+        "charge": [
+          {
+            "node": "charge_hinge",
+            "channel": "rotation",
+            "axis": "x",
+            "rest": 0,
+            "amplitude": -1.15
+          }
+        ],
+        "cast": [
+          {
+            "node": "cast_dish",
+            "channel": "rotation",
+            "axis": "y",
+            "rest": 0,
+            "amplitude": 0.9
+          }
+        ],
+        "jets": [
+          {
+            "node": "wing_l",
+            "position": [
+              0,
+              -0.39,
+              0
+            ],
+            "radius": 0.18,
+            "length": 1.6,
+            "roll": 0.3,
+            "idle": true,
+            "lenF": {
+              "hold": 3,
+              "run": 2
+            },
+            "cloud": {
+              "radius": 0.34,
+              "count": 9
+            }
+          },
+          {
+            "node": "wing_r",
+            "position": [
+              0,
+              -0.39,
+              0
+            ],
+            "radius": 0.18,
+            "length": 1.6,
+            "roll": -0.3,
+            "idle": true,
+            "lenF": {
+              "hold": 3,
+              "run": 2
+            },
+            "cloud": {
+              "radius": 0.34,
+              "count": 9
+            }
+          }
+        ]
+      },
+      "reviewFrame": {
+        "scale": 9.5,
+        "target": [
+          0,
+          3,
+          0
+        ]
+      }
+    },
+    "t11": {
+      "id": "t11",
+      "kind": "biped",
+      "recipe": "atlas_tiltrotor",
+      "height": 6,
+      "inputs": {
+        "prompt": "../../docs/art_gen_morphers.md#t11",
+        "image": "../../public/assets/mechs/t11_veteran.png",
+        "view": "Dual-form illustration; hidden surfaces and depth are inferred",
+        "rights": "../../LICENSE"
+      },
+      "parameters": {
+        "limb": 0.52,
+        "wingSpan": 3.3
+      },
+      "materials": {
+        "armor": {
+          "color": "#758149",
+          "metal": 0.45
+        },
+        "shade": {
+          "color": "#485637",
+          "metal": 0.45
+        },
+        "dark": {
+          "color": "#232923",
+          "metal": 0.45
+        },
+        "glow": {
+          "color": "#ece5b4",
+          "metal": 0,
+          "emission": 1.1
+        },
+        "brass": {
+          "color": "#9b844c",
+          "metal": 0.45
+        },
+        "steel": {
+          "color": "#718186",
+          "metal": 0.6
+        },
+        "cyan": {
+          "color": "#ece5b4",
+          "emission": 0.8
+        },
+        "white": {
+          "color": "#dddccb",
+          "metal": 0.25
+        },
+        "red": {
+          "color": "#bf4a34"
+        },
+        "blue": {
+          "color": "#314260"
+        },
+        "shield": {
+          "color": "#ece5b4",
+          "opacity": 0.12,
+          "emission": 0.3
+        },
+        "membrane": {
+          "color": "#b4bcdb",
+          "opacity": 0.3,
+          "metal": 0
+        }
+      },
+      "joints": [
+        [
+          "tilt",
+          null,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "hips",
+          "tilt",
+          [
+            0,
+            2.9,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "hips",
+          [
+            0,
+            0.63,
+            0
+          ]
+        ],
+        [
+          "head",
+          "chest",
+          [
+            0,
+            1.52,
+            0.03
+          ]
+        ],
+        [
+          "hip_l",
+          "hips",
+          [
+            0.43,
+            -0.1,
+            0
+          ]
+        ],
+        [
+          "knee_l",
+          "hip_l",
+          [
+            0,
+            -1.28,
+            0
+          ]
+        ],
+        [
+          "ankle_l",
+          "knee_l",
+          [
+            0,
+            -1.25,
+            0
+          ]
+        ],
+        [
+          "shoulder_l",
+          "chest",
+          [
+            0.98,
+            1.02,
+            0
+          ]
+        ],
+        [
+          "elbow_l",
+          "shoulder_l",
+          [
+            0,
+            -0.92,
+            0
+          ]
+        ],
+        [
+          "wrist_l",
+          "elbow_l",
+          [
+            0,
+            -0.85,
+            0
+          ]
+        ],
+        [
+          "bay_l",
+          "chest",
+          [
+            0.68,
+            0.05,
+            0.48
+          ]
+        ],
+        [
+          "hip_r",
+          "hips",
+          [
+            -0.43,
+            -0.1,
+            0
+          ]
+        ],
+        [
+          "knee_r",
+          "hip_r",
+          [
+            0,
+            -1.28,
+            0
+          ]
+        ],
+        [
+          "ankle_r",
+          "knee_r",
+          [
+            0,
+            -1.25,
+            0
+          ]
+        ],
+        [
+          "shoulder_r",
+          "chest",
+          [
+            -0.98,
+            1.02,
+            0
+          ]
+        ],
+        [
+          "elbow_r",
+          "shoulder_r",
+          [
+            0,
+            -0.92,
+            0
+          ]
+        ],
+        [
+          "wrist_r",
+          "elbow_r",
+          [
+            0,
+            -0.85,
+            0
+          ]
+        ],
+        [
+          "bay_r",
+          "chest",
+          [
+            -0.68,
+            0.05,
+            0.48
+          ]
+        ],
+        [
+          "wing_l",
+          "chest",
+          [
+            0.25,
+            1.06,
+            -0.5
+          ]
+        ],
+        [
+          "wing_r",
+          "chest",
+          [
+            -0.25,
+            1.06,
+            -0.5
+          ]
+        ],
+        [
+          "rotor_hinge_l",
+          "wrist_l",
+          [
+            0,
+            0,
+            0.1
+          ]
+        ],
+        [
+          "rotor_l",
+          "rotor_hinge_l",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "rotor_hinge_r",
+          "wrist_r",
+          [
+            0,
+            0,
+            0.1
+          ]
+        ],
+        [
+          "rotor_r",
+          "rotor_hinge_r",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "gun",
+          "wing_r",
+          [
+            0,
+            0.18,
+            0.1
+          ]
+        ],
+        [
+          "gun_recoil",
+          "gun",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "light_muzzle",
+          "gun_recoil",
+          [
+            0,
+            0,
+            0.95
+          ]
+        ],
+        [
+          "heavy",
+          "wing_l",
+          [
+            0,
+            0.18,
+            0.1
+          ]
+        ],
+        [
+          "heavy_recoil",
+          "heavy",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "heavy_muzzle",
+          "heavy_recoil",
+          [
+            0,
+            0,
+            1.65
+          ]
+        ],
+        [
+          "charge_hinge",
+          "heavy",
+          [
+            0,
+            0.23,
+            -0.22
+          ]
+        ],
+        [
+          "cast_dish",
+          "chest",
+          [
+            0,
+            0.55,
+            -0.6
+          ]
+        ],
+        [
+          "emitter_l",
+          "chest",
+          [
+            0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "emitter_r",
+          "chest",
+          [
+            -0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "barrier",
+          "tilt",
+          [
+            0,
+            3.8,
+            2.8
+          ]
+        ]
+      ],
+      "forms": {
+        "ground": {
+          "kind": "biped",
+          "transforms": {
+            "bay_l": {
+              "position": [
+                0.83,
+                0.05,
+                -0.56
+              ],
+              "rotation": [
+                0,
+                0.18,
+                0
+              ]
+            },
+            "bay_r": {
+              "position": [
+                -0.83,
+                0.05,
+                -0.56
+              ],
+              "rotation": [
+                0,
+                -0.18,
+                0
+              ]
+            },
+            "wing_l": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "wing_r": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "rig": {}
+        },
+        "flight": {
+          "kind": "aerial",
+          "transforms": {
+            "hip_l": {
+              "position": [
+                0.26,
+                1.74,
+                -0.1
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "knee_l": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_l": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "shoulder_l": {
+              "position": [
+                1.95,
+                0.9,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                1.5707963267948966
+              ]
+            },
+            "elbow_l": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "wrist_l": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "hip_r": {
+              "position": [
+                -0.26,
+                1.74,
+                -0.1
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "knee_r": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_r": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "shoulder_r": {
+              "position": [
+                -1.95,
+                0.9,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                -1.5707963267948966
+              ]
+            },
+            "elbow_r": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "wrist_r": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "hips": {
+              "position": [
+                0,
+                3.15,
+                -0.25
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "head": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "rotor_hinge_l": {
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "rotor_hinge_r": {
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "wing_l": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "wing_r": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            }
+          },
+          "rig": {
+            "tilt": "tilt",
+            "head": null,
+            "bob": 0.06,
+            "top": 22,
+            "level": true,
+            "gunR": null,
+            "gunL": null,
+            "aimPose": null,
+            "tailSegs": null,
+            "spin": [
+              {
+                "node": "rotor_l",
+                "axis": "z",
+                "rate": 24
+              },
+              {
+                "node": "rotor_r",
+                "axis": "z",
+                "rate": -24
+              }
+            ]
+          }
+        }
+      },
+      "clips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract"
+      ],
+      "acceptance": {
+        "requiredForms": [
+          "ground",
+          "flight"
+        ],
+        "samePartInventory": true,
+        "sameGeometry": true,
+        "sameRigidScale": true,
+        "flightBellyClosed": true,
+        "requiredClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract",
+          "to_flight",
+          "to_ground",
+          "flight_idle",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult",
+          "flight_shield_deploy",
+          "flight_shield_retract"
+        ],
+        "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
+        "gateOwner": "../../tools/audit_reference_morph.mjs"
+      },
+      "decisions": [
+        "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design."
+      ],
+      "components": [
+        {
+          "id": "component_0",
+          "route": "procedural",
+          "intent": "Riveted camouflaged armor"
+        },
+        {
+          "id": "component_1",
+          "route": "procedural",
+          "intent": "Right-isosceles triangular helmet/nose"
+        },
+        {
+          "id": "component_2",
+          "route": "procedural",
+          "intent": "Shoulder trays/B-2 wing halves"
+        },
+        {
+          "id": "component_3",
+          "route": "procedural",
+          "intent": "Twin hand shields/tilt rotors"
+        },
+        {
+          "id": "component_4",
+          "route": "procedural",
+          "intent": "Tray-top twin machine gun and recoilless cannon"
+        },
+        {
+          "id": "shield",
+          "route": "procedural",
+          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+        }
+      ],
+      "rig": {
+        "bob": 0.11,
+        "top": 7,
+        "stride": 2.6,
+        "weap": {
+          "light": "R",
+          "heavy": "L"
+        },
+        "hvy": {
+          "chest": 0.05
+        },
+        "hips": "hips",
+        "chest": "chest",
+        "head": "head",
+        "legL": "hip_l",
+        "legR": "hip_r",
+        "armL": "shoulder_l",
+        "armR": "shoulder_r",
+        "armBase": 0,
+        "sway": 0.045,
+        "hop": false,
+        "knuckle": false,
+        "tinyArms": false,
+        "tuckArms": false,
+        "grounded": false,
+        "legChainR": [
+          {
+            "g": "knee_r",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_r",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "armChainR": [
+          {
+            "g": "elbow_r",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "wrist_r",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legChainL": [
+          {
+            "g": "knee_l",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_l",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "armChainL": [
+          {
+            "g": "elbow_l",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "wrist_l",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "wpn": {
+          "light": {
+            "nodes": [
+              "gun"
+            ],
+            "ref": "gun",
+            "muzzle": "light_muzzle",
+            "r": 0.08
+          },
+          "heavy": {
+            "nodes": [
+              "heavy"
+            ],
+            "ref": "heavy",
+            "muzzle": "heavy_muzzle",
+            "r": 0.12
+          }
+        }
+      },
+      "cavity": {
+        "owner": "chest",
+        "axis": "y",
+        "sections": [
+          [
+            -0.95,
+            0.95,
+            0.9
+          ],
+          [
+            -0.35,
+            1.6,
+            1.13
+          ],
+          [
+            0.45,
+            2,
+            1.18
+          ],
+          [
+            1.05,
+            2.15,
+            1.12
+          ],
+          [
+            1.4,
+            1.6,
+            1.04
+          ]
+        ],
+        "offset": [
+          0,
+          0,
+          -0.08
+        ],
+        "roots": [
+          "hip_l",
+          "hip_r"
+        ]
+      },
+      "motion": {
+        "shield": {
+          "duration": 0.65,
+          "barrier": "barrier",
+          "hinges": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "rest": 0,
+              "deploy": -1.05
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "rest": 0,
+              "deploy": 1.05
+            }
+          ]
+        },
+        "fire": [
+          {
+            "node": "gun_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.16
+          },
+          {
+            "node": "heavy_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.2
+          }
+        ],
+        "charge": [
+          {
+            "node": "charge_hinge",
+            "channel": "rotation",
+            "axis": "x",
+            "rest": 0,
+            "amplitude": -1.15
+          }
+        ],
+        "cast": [
+          {
+            "node": "cast_dish",
+            "channel": "rotation",
+            "axis": "y",
+            "rest": 0,
+            "amplitude": 0.9
+          }
+        ]
+      },
+      "reviewFrame": {
+        "scale": 12,
+        "target": [
+          0,
+          3,
+          0
+        ]
+      }
+    },
+    "m05": {
+      "id": "m05",
+      "kind": "biped",
+      "recipe": "wolf_patagium",
+      "height": 6,
+      "inputs": {
+        "prompt": "../../docs/art_gen_morphers.md#m05",
+        "image": "../../public/assets/mechs/m05_stranglehold.png",
+        "view": "Dual-form illustration; hidden surfaces and depth are inferred",
+        "rights": "../../LICENSE"
+      },
+      "parameters": {
+        "limb": 0.34,
+        "wingSpan": 3.3,
+        "membraneOutline": [
+          [
+            0.45,
+            0
+          ],
+          [
+            0.96,
+            1.05
+          ],
+          [
+            2.67,
+            0.45
+          ],
+          [
+            2.77,
+            0.18
+          ],
+          [
+            2.57,
+            -2.14
+          ],
+          [
+            2.37,
+            -2.21
+          ],
+          [
+            0.45,
+            -0.75
+          ]
+        ],
+        "membraneCuts": [
+          0.45,
+          1.224,
+          1.998,
+          2.77
+        ],
+        "membraneFoldY": -0.75
+      },
+      "materials": {
+        "armor": {
+          "color": "#55516c",
+          "metal": 0.45
+        },
+        "shade": {
+          "color": "#353349",
+          "metal": 0.45
+        },
+        "dark": {
+          "color": "#151a29",
+          "metal": 0.45
+        },
+        "glow": {
+          "color": "#48eadc",
+          "metal": 0,
+          "emission": 1.1
+        },
+        "brass": {
+          "color": "#ae704f",
+          "metal": 0.45
+        },
+        "steel": {
+          "color": "#718186",
+          "metal": 0.6
+        },
+        "cyan": {
+          "color": "#48eadc",
+          "emission": 0.8
+        },
+        "white": {
+          "color": "#dddccb",
+          "metal": 0.25
+        },
+        "red": {
+          "color": "#bf4a34"
+        },
+        "blue": {
+          "color": "#314260"
+        },
+        "shield": {
+          "color": "#48eadc",
+          "opacity": 0.12,
+          "emission": 0.3
+        },
+        "membrane": {
+          "color": "#555971",
+          "opacity": 0.44,
+          "metal": 0
+        }
+      },
+      "joints": [
+        [
+          "tilt",
+          null,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "hips",
+          "tilt",
+          [
+            0,
+            2.65,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "hips",
+          [
+            0,
+            0.63,
+            0
+          ]
+        ],
+        [
+          "head",
+          "chest",
+          [
+            0,
+            1.52,
+            0.03
+          ]
+        ],
+        [
+          "hip_l",
+          "hips",
+          [
+            0.43,
+            -0.1,
+            0
+          ]
+        ],
+        [
+          "knee_l",
+          "hip_l",
+          [
+            0,
+            -1.28,
+            0
+          ]
+        ],
+        [
+          "ankle_l",
+          "knee_l",
+          [
+            0,
+            -1.25,
+            0
+          ]
+        ],
+        [
+          "shoulder_l",
+          "chest",
+          [
+            0.98,
+            1.02,
+            0
+          ]
+        ],
+        [
+          "elbow_l",
+          "shoulder_l",
+          [
+            0,
+            -0.92,
+            0
+          ]
+        ],
+        [
+          "wrist_l",
+          "elbow_l",
+          [
+            0,
+            -0.85,
+            0
+          ]
+        ],
+        [
+          "bay_l",
+          "chest",
+          [
+            0.83,
+            0.05,
+            0.6
+          ]
+        ],
+        [
+          "hip_r",
+          "hips",
+          [
+            -0.43,
+            -0.1,
+            0
+          ]
+        ],
+        [
+          "knee_r",
+          "hip_r",
+          [
+            0,
+            -1.28,
+            0
+          ]
+        ],
+        [
+          "ankle_r",
+          "knee_r",
+          [
+            0,
+            -1.25,
+            0
+          ]
+        ],
+        [
+          "shoulder_r",
+          "chest",
+          [
+            -0.98,
+            1.02,
+            0
+          ]
+        ],
+        [
+          "elbow_r",
+          "shoulder_r",
+          [
+            0,
+            -0.92,
+            0
+          ]
+        ],
+        [
+          "wrist_r",
+          "elbow_r",
+          [
+            0,
+            -0.85,
+            0
+          ]
+        ],
+        [
+          "bay_r",
+          "chest",
+          [
+            -0.83,
+            0.05,
+            0.6
+          ]
+        ],
+        [
+          "wing_l",
+          "chest",
+          [
+            0.45,
+            0,
+            -0.01
+          ]
+        ],
+        [
+          "wing_r",
+          "chest",
+          [
+            -0.45,
+            0,
+            -0.01
+          ]
+        ],
+        [
+          "gun",
+          "chest",
+          [
+            -0.68,
+            1.1,
+            -0.48
+          ]
+        ],
+        [
+          "gun_recoil",
+          "gun",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "light_muzzle",
+          "gun_recoil",
+          [
+            0,
+            0,
+            1.55
+          ]
+        ],
+        [
+          "heavy",
+          "chest",
+          [
+            0.68,
+            1.1,
+            -0.48
+          ]
+        ],
+        [
+          "heavy_recoil",
+          "heavy",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "heavy_muzzle",
+          "heavy_recoil",
+          [
+            0,
+            0,
+            1.65
+          ]
+        ],
+        [
+          "charge_hinge",
+          "heavy",
+          [
+            0,
+            0.23,
+            -0.22
+          ]
+        ],
+        [
+          "cast_dish",
+          "chest",
+          [
+            0,
+            0.55,
+            -0.6
+          ]
+        ],
+        [
+          "emitter_l",
+          "chest",
+          [
+            0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "emitter_r",
+          "chest",
+          [
+            -0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "barrier",
+          "tilt",
+          [
+            0,
+            3.8,
+            2.8
+          ]
+        ],
+        [
+          "mem_lower_l",
+          "wing_l",
+          [
+            0,
+            -0.75,
+            0
+          ]
+        ],
+        [
+          "mem_upper_l_1",
+          "wing_l",
+          [
+            0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_upper_l_2",
+          "mem_upper_l_1",
+          [
+            0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_lower_l_1",
+          "mem_lower_l",
+          [
+            0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_lower_l_2",
+          "mem_lower_l_1",
+          [
+            0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_lower_r",
+          "wing_r",
+          [
+            0,
+            -0.75,
+            0
+          ]
+        ],
+        [
+          "mem_upper_r_1",
+          "wing_r",
+          [
+            -0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_upper_r_2",
+          "mem_upper_r_1",
+          [
+            -0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_lower_r_1",
+          "mem_lower_r",
+          [
+            -0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_lower_r_2",
+          "mem_lower_r_1",
+          [
+            -0.774,
+            0,
+            0
+          ]
+        ]
+      ],
+      "forms": {
+        "ground": {
+          "kind": "biped",
+          "transforms": {
+            "bay_l": {
+              "position": [
+                0.83,
+                0.05,
+                -0.56
+              ],
+              "rotation": [
+                0,
+                0.18,
+                0
+              ]
+            },
+            "bay_r": {
+              "position": [
+                -0.83,
+                0.05,
+                -0.56
+              ],
+              "rotation": [
+                0,
+                -0.18,
+                0
+              ]
+            },
+            "wing_l": {
+              "position": [
+                -0.35,
+                0.1,
+                -0.47
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "wing_r": {
+              "position": [
+                0.35,
+                0.1,
+                -0.47
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "knee_l": {
+              "rotation": [
+                0.9,
+                0,
+                0
+              ]
+            },
+            "knee_r": {
+              "rotation": [
+                0.9,
+                0,
+                0
+              ]
+            },
+            "hip_l": {
+              "rotation": [
+                -0.4,
+                0,
+                0
+              ]
+            },
+            "ankle_l": {
+              "rotation": [
+                -0.5,
+                0,
+                0
+              ]
+            },
+            "hip_r": {
+              "rotation": [
+                -0.4,
+                0,
+                0
+              ]
+            },
+            "ankle_r": {
+              "rotation": [
+                -0.5,
+                0,
+                0
+              ]
+            },
+            "mem_lower_l": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "mem_upper_l_1": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_upper_l_2": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_lower_l_1": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_lower_l_2": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_lower_r": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "mem_upper_r_1": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_upper_r_2": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_lower_r_1": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_lower_r_2": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            }
+          },
+          "rig": {}
+        },
+        "flight": {
+          "kind": "aerial",
+          "transforms": {
+            "hip_l": {
+              "position": [
+                0.5,
+                -0.1,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0.85
+              ]
+            },
+            "knee_l": {
+              "rotation": [
+                0,
+                0,
+                0.25
+              ]
+            },
+            "ankle_l": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "shoulder_l": {
+              "position": [
+                0.96,
+                1.05,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                1.2
+              ]
+            },
+            "elbow_l": {
+              "rotation": [
+                0,
+                0,
+                0.1
+              ]
+            },
+            "wrist_l": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "hip_r": {
+              "position": [
+                -0.5,
+                -0.1,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                -0.85
+              ]
+            },
+            "knee_r": {
+              "rotation": [
+                0,
+                0,
+                -0.25
+              ]
+            },
+            "ankle_r": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "shoulder_r": {
+              "position": [
+                -0.96,
+                1.05,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                -1.2
+              ]
+            },
+            "elbow_r": {
+              "rotation": [
+                0,
+                0,
+                -0.1
+              ]
+            },
+            "wrist_r": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "hips": {
+              "position": [
+                0,
+                3.15,
+                -0.25
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "head": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "wing_l": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "wing_r": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "rig": {
+            "tilt": "tilt",
+            "head": null,
+            "bob": 0.06,
+            "top": 30,
+            "level": true,
+            "gunR": null,
+            "gunL": null,
+            "aimPose": null,
+            "tailSegs": null
+          }
+        }
+      },
+      "clips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract"
+      ],
+      "acceptance": {
+        "requiredForms": [
+          "ground",
+          "flight"
+        ],
+        "samePartInventory": true,
+        "sameGeometry": true,
+        "sameRigidScale": true,
+        "flightBellyClosed": false,
+        "requiredClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract",
+          "to_flight",
+          "to_ground",
+          "flight_idle",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult",
+          "flight_shield_deploy",
+          "flight_shield_retract"
+        ],
+        "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
+        "gateOwner": "../../tools/audit_reference_morph.mjs"
+      },
+      "decisions": [
+        "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design.",
+        "The explicit flying-squirrel exception exposes exactly four limb struts supporting the patagium; no extra legs or feathers."
+      ],
+      "components": [
+        {
+          "id": "component_0",
+          "route": "procedural",
+          "intent": "Deep-crouched wolf and fanged muzzle"
+        },
+        {
+          "id": "component_1",
+          "route": "procedural",
+          "intent": "Exactly four articulated limbs"
+        },
+        {
+          "id": "component_2",
+          "route": "procedural",
+          "intent": "Two folded squirrel membranes"
+        },
+        {
+          "id": "component_3",
+          "route": "procedural",
+          "intent": "Right triple electromagnetic gun and left missile pod"
+        },
+        {
+          "id": "component_4",
+          "route": "procedural",
+          "intent": "Split purple livery and cyan conduits"
+        },
+        {
+          "id": "shield",
+          "route": "procedural",
+          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+        }
+      ],
+      "rig": {
+        "bob": 0.11,
+        "top": 8.5,
+        "stride": 2.6,
+        "weap": {
+          "light": "R",
+          "heavy": "L"
+        },
+        "hvy": {
+          "chest": 0.05
+        },
+        "hips": "hips",
+        "chest": "chest",
+        "head": "head",
+        "legL": "hip_l",
+        "legR": "hip_r",
+        "armL": "shoulder_l",
+        "armR": "shoulder_r",
+        "armBase": 0,
+        "sway": 0.045,
+        "hop": false,
+        "knuckle": false,
+        "tinyArms": false,
+        "tuckArms": false,
+        "grounded": false,
+        "legChainR": [
+          {
+            "g": "knee_r",
+            "base": 0.9,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_r",
+            "base": -0.5,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "armChainR": [
+          {
+            "g": "elbow_r",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "wrist_r",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legChainL": [
+          {
+            "g": "knee_l",
+            "base": 0.9,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_l",
+            "base": -0.5,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "armChainL": [
+          {
+            "g": "elbow_l",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "wrist_l",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "wpn": {
+          "light": {
+            "nodes": [
+              "gun"
+            ],
+            "ref": "gun",
+            "muzzle": "light_muzzle",
+            "r": 0.08
+          },
+          "heavy": {
+            "nodes": [
+              "heavy"
+            ],
+            "ref": "heavy",
+            "muzzle": "heavy_muzzle",
+            "r": 0.12
+          }
+        },
+        "legBase": -0.4
+      },
+      "cavity": null,
+      "motion": {
+        "shield": {
+          "duration": 0.65,
+          "barrier": "barrier",
+          "hinges": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "rest": 0,
+              "deploy": -1.05
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "rest": 0,
+              "deploy": 1.05
+            }
+          ]
+        },
+        "fire": [
+          {
+            "node": "gun_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.16
+          },
+          {
+            "node": "heavy_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.2
+          }
+        ],
+        "charge": [
+          {
+            "node": "charge_hinge",
+            "channel": "rotation",
+            "axis": "x",
+            "rest": 0,
+            "amplitude": -1.15
+          }
+        ],
+        "cast": [
+          {
+            "node": "cast_dish",
+            "channel": "rotation",
+            "axis": "y",
+            "rest": 0,
+            "amplitude": 0.9
+          }
+        ]
+      },
+      "reviewFrame": {
+        "scale": 9.5,
+        "target": [
+          0,
+          3,
+          0
+        ]
+      }
+    },
+    "m07": {
+      "id": "m07",
+      "kind": "quad",
+      "recipe": "rhino_beetle",
+      "height": 5,
+      "inputs": {
+        "prompt": "../../docs/art_gen_morphers.md#m07",
+        "image": "../../public/assets/mechs/m07_portcullis.png",
+        "view": "Dual-form illustration; hidden surfaces and depth are inferred",
+        "rights": "../../LICENSE"
+      },
+      "parameters": {
+        "limb": 0.22
+      },
+      "materials": {
+        "armor": {
+          "color": "#246449",
+          "metal": 0.45
+        },
+        "shade": {
+          "color": "#174239",
+          "metal": 0.45
+        },
+        "dark": {
+          "color": "#13232a",
+          "metal": 0.45
+        },
+        "glow": {
+          "color": "#4586eb",
+          "metal": 0,
+          "emission": 1.1
+        },
+        "brass": {
+          "color": "#659494",
+          "metal": 0.45
+        },
+        "steel": {
+          "color": "#718186",
+          "metal": 0.6
+        },
+        "cyan": {
+          "color": "#4586eb",
+          "emission": 0.8
+        },
+        "white": {
+          "color": "#dddccb",
+          "metal": 0.25
+        },
+        "red": {
+          "color": "#bf4a34"
+        },
+        "blue": {
+          "color": "#314260"
+        },
+        "shield": {
+          "color": "#4586eb",
+          "opacity": 0.12,
+          "emission": 0.3
+        },
+        "membrane": {
+          "color": "#b4bcdb",
+          "opacity": 0.3,
+          "metal": 0
+        }
+      },
+      "joints": [
+        [
+          "tilt",
+          null,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "spine",
+          "tilt",
+          [
+            0,
+            1.75,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "spine",
+          [
+            0,
+            0.12,
+            0.65
+          ]
+        ],
+        [
+          "neck",
+          "chest",
+          [
+            0,
+            0,
+            0.22
+          ]
+        ],
+        [
+          "head",
+          "neck",
+          [
+            0,
+            0,
+            0.28
+          ]
+        ],
+        [
+          "leg_FL",
+          "chest",
+          [
+            0.77,
+            -0.12,
+            0.35
+          ]
+        ],
+        [
+          "knee_FL",
+          "leg_FL",
+          [
+            0.75,
+            -0.25,
+            0
+          ]
+        ],
+        [
+          "ankle_FL",
+          "knee_FL",
+          [
+            0.28,
+            -1.2,
+            0.12
+          ]
+        ],
+        [
+          "leg_FR",
+          "chest",
+          [
+            -0.77,
+            -0.12,
+            0.35
+          ]
+        ],
+        [
+          "knee_FR",
+          "leg_FR",
+          [
+            -0.75,
+            -0.25,
+            0
+          ]
+        ],
+        [
+          "ankle_FR",
+          "knee_FR",
+          [
+            -0.28,
+            -1.2,
+            0.12
+          ]
+        ],
+        [
+          "leg_ML",
+          "spine",
+          [
+            0.77,
+            0,
+            0
+          ]
+        ],
+        [
+          "knee_ML",
+          "leg_ML",
+          [
+            0.75,
+            -0.25,
+            0
+          ]
+        ],
+        [
+          "ankle_ML",
+          "knee_ML",
+          [
+            0.28,
+            -1.2,
+            0.12
+          ]
+        ],
+        [
+          "leg_MR",
+          "spine",
+          [
+            -0.77,
+            0,
+            0
+          ]
+        ],
+        [
+          "knee_MR",
+          "leg_MR",
+          [
+            -0.75,
+            -0.25,
+            0
+          ]
+        ],
+        [
+          "ankle_MR",
+          "knee_MR",
+          [
+            -0.28,
+            -1.2,
+            0.12
+          ]
+        ],
+        [
+          "leg_HL",
+          "spine",
+          [
+            0.77,
+            0,
+            -1
+          ]
+        ],
+        [
+          "knee_HL",
+          "leg_HL",
+          [
+            0.75,
+            -0.25,
+            0
+          ]
+        ],
+        [
+          "ankle_HL",
+          "knee_HL",
+          [
+            0.28,
+            -1.2,
+            0.12
+          ]
+        ],
+        [
+          "leg_HR",
+          "spine",
+          [
+            -0.77,
+            0,
+            -1
+          ]
+        ],
+        [
+          "knee_HR",
+          "leg_HR",
+          [
+            -0.75,
+            -0.25,
+            0
+          ]
+        ],
+        [
+          "ankle_HR",
+          "knee_HR",
+          [
+            -0.28,
+            -1.2,
+            0.12
+          ]
+        ],
+        [
+          "bay_l",
+          "spine",
+          [
+            0.529,
+            -0.75,
+            0
+          ]
+        ],
+        [
+          "bay_r",
+          "spine",
+          [
+            -0.529,
+            -0.75,
+            0
+          ]
+        ],
+        [
+          "elytra_l",
+          "spine",
+          [
+            0.1,
+            0.6,
+            -0.25
+          ]
+        ],
+        [
+          "membrane_l_0",
+          "spine",
+          [
+            0.35,
+            0.5,
+            -0.18
+          ]
+        ],
+        [
+          "membrane_l_0_flap",
+          "membrane_l_0",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "membrane_l_0_outer",
+          "membrane_l_0_flap",
+          [
+            1.3,
+            0,
+            -0.1
+          ]
+        ],
+        [
+          "membrane_l_1",
+          "spine",
+          [
+            0.35,
+            0.5,
+            -0.8300000000000001
+          ]
+        ],
+        [
+          "membrane_l_1_flap",
+          "membrane_l_1",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "membrane_l_1_outer",
+          "membrane_l_1_flap",
+          [
+            1.3,
+            0,
+            -0.1
+          ]
+        ],
+        [
+          "elytra_r",
+          "spine",
+          [
+            -0.1,
+            0.6,
+            -0.25
+          ]
+        ],
+        [
+          "membrane_r_0",
+          "spine",
+          [
+            -0.35,
+            0.5,
+            -0.18
+          ]
+        ],
+        [
+          "membrane_r_0_flap",
+          "membrane_r_0",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "membrane_r_0_outer",
+          "membrane_r_0_flap",
+          [
+            -1.3,
+            0,
+            -0.1
+          ]
+        ],
+        [
+          "membrane_r_1",
+          "spine",
+          [
+            -0.35,
+            0.5,
+            -0.8300000000000001
+          ]
+        ],
+        [
+          "membrane_r_1_flap",
+          "membrane_r_1",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "membrane_r_1_outer",
+          "membrane_r_1_flap",
+          [
+            -1.3,
+            0,
+            -0.1
+          ]
+        ],
+        [
+          "gun",
+          "chest",
+          [
+            0,
+            -0.25,
+            0.55
+          ]
+        ],
+        [
+          "gun_recoil",
+          "gun",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "light_muzzle",
+          "gun_recoil",
+          [
+            0,
+            0,
+            0.95
+          ]
+        ],
+        [
+          "heavy",
+          "chest",
+          [
+            0,
+            0.94,
+            -0.68
+          ]
+        ],
+        [
+          "heavy_recoil",
+          "heavy",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "heavy_muzzle",
+          "heavy_recoil",
+          [
+            0,
+            0,
+            1.65
+          ]
+        ],
+        [
+          "charge_hinge",
+          "heavy",
+          [
+            0,
+            0.23,
+            -0.22
+          ]
+        ],
+        [
+          "cast_dish",
+          "chest",
+          [
+            0,
+            0.55,
+            -0.6
+          ]
+        ],
+        [
+          "emitter_l",
+          "chest",
+          [
+            0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "emitter_r",
+          "chest",
+          [
+            -0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "barrier",
+          "tilt",
+          [
+            0,
+            2.2,
+            2.8
+          ]
+        ]
+      ],
+      "forms": {
+        "ground": {
+          "kind": "quad",
+          "transforms": {
+            "bay_l": {
+              "rotation": [
+                0,
+                0,
+                -0.45
+              ]
+            },
+            "bay_r": {
+              "rotation": [
+                0,
+                0,
+                0.45
+              ]
+            },
+            "membrane_l_0": {
+              "rotation": [
+                0,
+                1.4,
+                -0.16
+              ]
+            },
+            "membrane_l_1": {
+              "rotation": [
+                0,
+                1.4,
+                -0.16
+              ]
+            },
+            "membrane_r_0": {
+              "rotation": [
+                0,
+                -1.4,
+                0.16
+              ]
+            },
+            "membrane_r_1": {
+              "rotation": [
+                0,
+                -1.4,
+                0.16
+              ]
+            },
+            "membrane_l_0_outer": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "membrane_l_1_outer": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "membrane_r_0_outer": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "membrane_r_1_outer": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            }
+          },
+          "rig": {}
+        },
+        "flight": {
+          "kind": "aerial",
+          "transforms": {
+            "leg_FL": {
+              "position": [
+                0.22,
+                -0.12,
+                -1.5499999999999998
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0.85
+              ]
+            },
+            "knee_FL": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_FL": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_FR": {
+              "position": [
+                -0.22,
+                -0.12,
+                -1.5499999999999998
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                -0.85
+              ]
+            },
+            "knee_FR": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_FR": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_ML": {
+              "position": [
+                0.22,
+                0,
+                -0.85
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0.85
+              ]
+            },
+            "knee_ML": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_ML": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_MR": {
+              "position": [
+                -0.22,
+                0,
+                -0.85
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                -0.85
+              ]
+            },
+            "knee_MR": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_MR": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_HL": {
+              "position": [
+                0.22,
+                0,
+                -0.85
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0.85
+              ]
+            },
+            "knee_HL": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_HL": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_HR": {
+              "position": [
+                -0.22,
+                0,
+                -0.85
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                -0.85
+              ]
+            },
+            "knee_HR": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_HR": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "elytra_l": {
+              "rotation": [
+                0,
+                0,
+                1.1
+              ]
+            },
+            "elytra_r": {
+              "rotation": [
+                0,
+                0,
+                -1.1
+              ]
+            }
+          },
+          "rig": {
+            "tilt": "tilt",
+            "head": null,
+            "bob": 0.06,
+            "top": 18,
+            "level": false,
+            "gunR": null,
+            "gunL": null,
+            "aimPose": null,
+            "tailSegs": null,
+            "insect": true,
+            "wings": [
+              {
+                "w": "membrane_l_0_flap",
+                "outer": "membrane_l_0_outer",
+                "sgn": 1,
+                "pair": 0
+              },
+              {
+                "w": "membrane_l_1_flap",
+                "outer": "membrane_l_1_outer",
+                "sgn": 1,
+                "pair": 1
+              },
+              {
+                "w": "membrane_r_0_flap",
+                "outer": "membrane_r_0_outer",
+                "sgn": -1,
+                "pair": 0
+              },
+              {
+                "w": "membrane_r_1_flap",
+                "outer": "membrane_r_1_outer",
+                "sgn": -1,
+                "pair": 1
+              }
+            ]
+          }
+        }
+      },
+      "clips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract"
+      ],
+      "acceptance": {
+        "requiredForms": [
+          "ground",
+          "flight"
+        ],
+        "samePartInventory": true,
+        "sameGeometry": true,
+        "sameRigidScale": true,
+        "flightBellyClosed": true,
+        "requiredClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract",
+          "to_flight",
+          "to_ground",
+          "flight_idle",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult",
+          "flight_shield_deploy",
+          "flight_shield_retract"
+        ],
+        "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
+        "gateOwner": "../../tools/audit_reference_morph.mjs"
+      },
+      "decisions": [
+        "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design."
+      ],
+      "components": [
+        {
+          "id": "component_0",
+          "route": "procedural",
+          "intent": "Continuous head/thorax/abdomen"
+        },
+        {
+          "id": "component_1",
+          "route": "procedural",
+          "intent": "Large curved rhinoceros horn"
+        },
+        {
+          "id": "component_2",
+          "route": "procedural",
+          "intent": "Three pairs of arthropod tarsi"
+        },
+        {
+          "id": "component_3",
+          "route": "procedural",
+          "intent": "Two protective elytra and four membrane propulsion wings"
+        },
+        {
+          "id": "component_4",
+          "route": "procedural",
+          "intent": "Central twin AA turret and mouth plasma jets"
+        },
+        {
+          "id": "shield",
+          "route": "procedural",
+          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+        }
+      ],
+      "rig": {
+        "spine": "spine",
+        "chest": "chest",
+        "neck": "neck",
+        "head": "head",
+        "gait": "tripod",
+        "gallopType": "rotary",
+        "stride": 2.4,
+        "top": 6,
+        "bob": 0.06,
+        "rollSway": 0.05,
+        "legAmp": 0.9,
+        "pitchAmp": 0.04,
+        "wpn": {
+          "light": {
+            "nodes": [
+              "gun"
+            ],
+            "ref": "gun",
+            "muzzle": "light_muzzle",
+            "r": 0.08
+          },
+          "heavy": {
+            "nodes": [
+              "heavy"
+            ],
+            "ref": "heavy",
+            "muzzle": "heavy_muzzle",
+            "r": 0.12
+          }
+        },
+        "limb": {
+          "foreRole": "arthropod",
+          "hindRole": "arthropod"
+        },
+        "legFL": "leg_FL",
+        "chFL": [
+          {
+            "g": "knee_FL",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_FL",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legFR": "leg_FR",
+        "chFR": [
+          {
+            "g": "knee_FR",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_FR",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "midLegs": [
+          "leg_ML",
+          "leg_MR"
+        ],
+        "midKnees": [
+          "knee_ML",
+          "knee_MR"
+        ],
+        "midTarsi": [
+          "ankle_ML",
+          "ankle_MR"
+        ],
+        "legHL": "leg_HL",
+        "chHL": [
+          {
+            "g": "knee_HL",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_HL",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legHR": "leg_HR",
+        "chHR": [
+          {
+            "g": "knee_HR",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_HR",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ]
+      },
+      "cavity": {
+        "owner": "spine",
+        "axis": "z",
+        "sections": [
+          [
+            -2,
+            0.8,
+            0.7
+          ],
+          [
+            -1.6,
+            1.9,
+            1.3
+          ],
+          [
+            -0.5,
+            2.3,
+            1.5
+          ],
+          [
+            0.3,
+            2.2,
+            1.4
+          ],
+          [
+            0.7,
+            1.65,
+            1.1
+          ],
+          [
+            1.1,
+            1.1,
+            0.7
+          ]
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "roots": [
+          "leg_FL",
+          "leg_FR",
+          "leg_ML",
+          "leg_MR",
+          "leg_HL",
+          "leg_HR"
+        ]
+      },
+      "motion": {
+        "shield": {
+          "duration": 0.65,
+          "barrier": "barrier",
+          "hinges": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "rest": 0,
+              "deploy": -1.05
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "rest": 0,
+              "deploy": 1.05
+            }
+          ]
+        },
+        "fire": [
+          {
+            "node": "gun_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.16
+          },
+          {
+            "node": "heavy_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.2
+          }
+        ],
+        "charge": [
+          {
+            "node": "charge_hinge",
+            "channel": "rotation",
+            "axis": "x",
+            "rest": 0,
+            "amplitude": -1.15
+          }
+        ],
+        "cast": [
+          {
+            "node": "cast_dish",
+            "channel": "rotation",
+            "axis": "y",
+            "rest": 0,
+            "amplitude": 0.9
+          }
+        ]
+      },
+      "reviewFrame": {
+        "scale": 9.5,
+        "target": [
+          0,
+          2.2,
+          0
+        ]
+      }
+    },
+    "m08": {
+      "id": "m08",
+      "kind": "quad",
+      "recipe": "panther_owl",
+      "height": 4.6,
+      "inputs": {
+        "prompt": "../../docs/art_gen_morphers.md#m08",
+        "image": "../../public/assets/mechs/m08_dead_number.png",
+        "view": "Dual-form illustration; hidden surfaces and depth are inferred",
+        "rights": "../../LICENSE"
+      },
+      "parameters": {
+        "limb": 0.39
+      },
+      "materials": {
+        "armor": {
+          "color": "#222b34",
+          "metal": 0
+        },
+        "shade": {
+          "color": "#182029",
+          "metal": 0
+        },
+        "dark": {
+          "color": "#0e151c",
+          "metal": 0
+        },
+        "glow": {
+          "color": "#7bafce",
+          "metal": 0,
+          "emission": 0.35
+        },
+        "brass": {
+          "color": "#384652",
+          "metal": 0
+        },
+        "steel": {
+          "color": "#34434f",
+          "metal": 0
+        },
+        "cyan": {
+          "color": "#7bafce",
+          "emission": 0.25
+        },
+        "white": {
+          "color": "#dddccb",
+          "metal": 0.25
+        },
+        "red": {
+          "color": "#bf4a34"
+        },
+        "blue": {
+          "color": "#314260"
+        },
+        "shield": {
+          "color": "#7bafce",
+          "opacity": 0.12,
+          "emission": 0.3
+        },
+        "membrane": {
+          "color": "#b4bcdb",
+          "opacity": 0.3,
+          "metal": 0
+        }
+      },
+      "joints": [
+        [
+          "tilt",
+          null,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "spine",
+          "tilt",
+          [
+            0,
+            1.7,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "spine",
+          [
+            0,
+            0.12,
+            0.58
+          ]
+        ],
+        [
+          "neck",
+          "chest",
+          [
+            0,
+            0.1,
+            0.32
+          ]
+        ],
+        [
+          "head",
+          "neck",
+          [
+            0,
+            -0.04,
+            0.65
+          ]
+        ],
+        [
+          "leg_FL",
+          "chest",
+          [
+            0.57,
+            -0.12,
+            0.3400000000000001
+          ]
+        ],
+        [
+          "knee_FL",
+          "leg_FL",
+          [
+            0,
+            -0.7202999999999999,
+            0
+          ]
+        ],
+        [
+          "ankle_FL",
+          "knee_FL",
+          [
+            0,
+            -0.7497,
+            0
+          ]
+        ],
+        [
+          "leg_FR",
+          "chest",
+          [
+            -0.57,
+            -0.12,
+            0.3400000000000001
+          ]
+        ],
+        [
+          "knee_FR",
+          "leg_FR",
+          [
+            0,
+            -0.7202999999999999,
+            0
+          ]
+        ],
+        [
+          "ankle_FR",
+          "knee_FR",
+          [
+            0,
+            -0.7497,
+            0
+          ]
+        ],
+        [
+          "leg_HL",
+          "spine",
+          [
+            0.57,
+            0,
+            -0.92
+          ]
+        ],
+        [
+          "knee_HL",
+          "leg_HL",
+          [
+            0,
+            -0.7202999999999999,
+            0
+          ]
+        ],
+        [
+          "ankle_HL",
+          "knee_HL",
+          [
+            0,
+            -0.7497,
+            0
+          ]
+        ],
+        [
+          "leg_HR",
+          "spine",
+          [
+            -0.57,
+            0,
+            -0.92
+          ]
+        ],
+        [
+          "knee_HR",
+          "leg_HR",
+          [
+            0,
+            -0.7202999999999999,
+            0
+          ]
+        ],
+        [
+          "ankle_HR",
+          "knee_HR",
+          [
+            0,
+            -0.7497,
+            0
+          ]
+        ],
+        [
+          "bay_l",
+          "spine",
+          [
+            0.42550000000000004,
+            -0.575,
+            0
+          ]
+        ],
+        [
+          "bay_r",
+          "spine",
+          [
+            -0.42550000000000004,
+            -0.575,
+            0
+          ]
+        ],
+        [
+          "tail_0",
+          "spine",
+          [
+            0,
+            0.05,
+            -1.75
+          ]
+        ],
+        [
+          "tail_1",
+          "tail_0",
+          [
+            0,
+            -0.02,
+            -0.38
+          ]
+        ],
+        [
+          "tail_2",
+          "tail_1",
+          [
+            0,
+            -0.02,
+            -0.38
+          ]
+        ],
+        [
+          "tail_3",
+          "tail_2",
+          [
+            0,
+            -0.02,
+            -0.38
+          ]
+        ],
+        [
+          "tail_4",
+          "tail_3",
+          [
+            0,
+            -0.02,
+            -0.38
+          ]
+        ],
+        [
+          "wing_l",
+          "chest",
+          [
+            0.25,
+            0.4,
+            0
+          ]
+        ],
+        [
+          "flap_l",
+          "wing_l",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "outer_l",
+          "flap_l",
+          [
+            1.75,
+            0,
+            0.55
+          ]
+        ],
+        [
+          "feather_l_0",
+          "outer_l",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "feather_l_1",
+          "outer_l",
+          [
+            0.18,
+            0,
+            -0.055
+          ]
+        ],
+        [
+          "feather_l_2",
+          "outer_l",
+          [
+            0.36,
+            0,
+            -0.11
+          ]
+        ],
+        [
+          "feather_l_3",
+          "outer_l",
+          [
+            0.54,
+            0,
+            -0.165
+          ]
+        ],
+        [
+          "feather_l_4",
+          "outer_l",
+          [
+            0.72,
+            0,
+            -0.22
+          ]
+        ],
+        [
+          "feather_l_5",
+          "outer_l",
+          [
+            0.8999999999999999,
+            0,
+            -0.275
+          ]
+        ],
+        [
+          "feather_l_6",
+          "outer_l",
+          [
+            1.08,
+            0,
+            -0.33
+          ]
+        ],
+        [
+          "wing_r",
+          "chest",
+          [
+            -0.25,
+            0.4,
+            0
+          ]
+        ],
+        [
+          "flap_r",
+          "wing_r",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "outer_r",
+          "flap_r",
+          [
+            -1.75,
+            0,
+            0.55
+          ]
+        ],
+        [
+          "feather_r_0",
+          "outer_r",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "feather_r_1",
+          "outer_r",
+          [
+            -0.18,
+            0,
+            -0.055
+          ]
+        ],
+        [
+          "feather_r_2",
+          "outer_r",
+          [
+            -0.36,
+            0,
+            -0.11
+          ]
+        ],
+        [
+          "feather_r_3",
+          "outer_r",
+          [
+            -0.54,
+            0,
+            -0.165
+          ]
+        ],
+        [
+          "feather_r_4",
+          "outer_r",
+          [
+            -0.72,
+            0,
+            -0.22
+          ]
+        ],
+        [
+          "feather_r_5",
+          "outer_r",
+          [
+            -0.8999999999999999,
+            0,
+            -0.275
+          ]
+        ],
+        [
+          "feather_r_6",
+          "outer_r",
+          [
+            -1.08,
+            0,
+            -0.33
+          ]
+        ],
+        [
+          "gun",
+          "chest",
+          [
+            0,
+            -0.38,
+            0.6
+          ]
+        ],
+        [
+          "gun_recoil",
+          "gun",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "light_muzzle",
+          "gun_recoil",
+          [
+            0,
+            0,
+            0.95
+          ]
+        ],
+        [
+          "heavy",
+          "chest",
+          [
+            0,
+            0.62,
+            0.02
+          ]
+        ],
+        [
+          "heavy_recoil",
+          "heavy",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "heavy_muzzle",
+          "heavy_recoil",
+          [
+            0,
+            0,
+            2.35
+          ]
+        ],
+        [
+          "charge_hinge",
+          "heavy",
+          [
+            0,
+            0.23,
+            -0.22
+          ]
+        ],
+        [
+          "cast_dish",
+          "chest",
+          [
+            0,
+            0.55,
+            -0.6
+          ]
+        ],
+        [
+          "emitter_l",
+          "chest",
+          [
+            0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "emitter_r",
+          "chest",
+          [
+            -0.64,
+            0.28,
+            0.5
+          ]
+        ],
+        [
+          "barrier",
+          "tilt",
+          [
+            0,
+            2.2,
+            2.8
+          ]
+        ]
+      ],
+      "forms": {
+        "ground": {
+          "kind": "quad",
+          "transforms": {
+            "bay_l": {
+              "rotation": [
+                0,
+                0,
+                -0.45
+              ]
+            },
+            "bay_r": {
+              "rotation": [
+                0,
+                0,
+                0.45
+              ]
+            },
+            "wing_l": {
+              "rotation": [
+                0,
+                1.2,
+                -0.98
+              ]
+            },
+            "feather_l_0": {
+              "rotation": [
+                0,
+                -0.15,
+                0
+              ]
+            },
+            "feather_l_1": {
+              "rotation": [
+                0,
+                -0.255,
+                0
+              ]
+            },
+            "feather_l_2": {
+              "rotation": [
+                0,
+                -0.36,
+                0
+              ]
+            },
+            "feather_l_3": {
+              "rotation": [
+                0,
+                -0.46499999999999997,
+                0
+              ]
+            },
+            "feather_l_4": {
+              "rotation": [
+                0,
+                -0.57,
+                0
+              ]
+            },
+            "feather_l_5": {
+              "rotation": [
+                0,
+                -0.675,
+                0
+              ]
+            },
+            "feather_l_6": {
+              "rotation": [
+                0,
+                -0.78,
+                0
+              ]
+            },
+            "wing_r": {
+              "rotation": [
+                0,
+                -1.2,
+                0.98
+              ]
+            },
+            "feather_r_0": {
+              "rotation": [
+                0,
+                0.15,
+                0
+              ]
+            },
+            "feather_r_1": {
+              "rotation": [
+                0,
+                0.255,
+                0
+              ]
+            },
+            "feather_r_2": {
+              "rotation": [
+                0,
+                0.36,
+                0
+              ]
+            },
+            "feather_r_3": {
+              "rotation": [
+                0,
+                0.46499999999999997,
+                0
+              ]
+            },
+            "feather_r_4": {
+              "rotation": [
+                0,
+                0.57,
+                0
+              ]
+            },
+            "feather_r_5": {
+              "rotation": [
+                0,
+                0.675,
+                0
+              ]
+            },
+            "feather_r_6": {
+              "rotation": [
+                0,
+                0.78,
+                0
+              ]
+            }
+          },
+          "rig": {}
+        },
+        "flight": {
+          "kind": "aerial",
+          "transforms": {
+            "leg_FL": {
+              "position": [
+                0.43,
+                -0.12,
+                -0.35
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "knee_FL": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_FL": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_FR": {
+              "position": [
+                -0.43,
+                -0.12,
+                -0.35
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "knee_FR": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_FR": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_HL": {
+              "position": [
+                0.43,
+                0,
+                -0.25
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "knee_HL": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_HL": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "leg_HR": {
+              "position": [
+                -0.43,
+                0,
+                -0.25
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "knee_HR": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "ankle_HR": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
+            },
+            "tail_0": {
+              "position": [
+                0,
+                -0.2,
+                -0.6
+              ],
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "tail_1": {
+              "position": [
+                0,
+                0,
+                -0.24
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "tail_2": {
+              "position": [
+                0,
+                0,
+                -0.24
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "tail_3": {
+              "position": [
+                0,
+                0,
+                -0.24
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "tail_4": {
+              "position": [
+                0,
+                0,
+                -0.24
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "rig": {
+            "tilt": "tilt",
+            "head": null,
+            "bob": 0.06,
+            "top": 24,
+            "level": true,
+            "gunR": null,
+            "gunL": null,
+            "aimPose": null,
+            "tailSegs": null,
+            "wings": [
+              {
+                "w": "flap_l",
+                "outer": "outer_l",
+                "sgn": 1
+              },
+              {
+                "w": "flap_r",
+                "outer": "outer_r",
+                "sgn": -1
+              }
+            ]
+          }
+        }
+      },
+      "clips": [
+        "idle",
+        "run",
+        "light",
+        "heavy",
+        "skill",
+        "ult",
+        "shield_deploy",
+        "shield_retract",
+        "to_flight",
+        "to_ground",
+        "flight_idle",
+        "flight_light",
+        "flight_heavy",
+        "flight_skill",
+        "flight_ult",
+        "flight_shield_deploy",
+        "flight_shield_retract"
+      ],
+      "acceptance": {
+        "requiredForms": [
+          "ground",
+          "flight"
+        ],
+        "samePartInventory": true,
+        "sameGeometry": true,
+        "sameRigidScale": true,
+        "flightBellyClosed": true,
+        "requiredClips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract",
+          "to_flight",
+          "to_ground",
+          "flight_idle",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult",
+          "flight_shield_deploy",
+          "flight_shield_retract"
+        ],
+        "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
+        "gateOwner": "../../tools/audit_reference_morph.mjs"
+      },
+      "decisions": [
+        "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design."
+      ],
+      "components": [
+        {
+          "id": "component_0",
+          "route": "procedural",
+          "intent": "Low matte panther and cat face"
+        },
+        {
+          "id": "component_1",
+          "route": "procedural",
+          "intent": "Four belly-stowed paws and curled metal tail"
+        },
+        {
+          "id": "component_2",
+          "route": "procedural",
+          "intent": "Forward-swept owl feathers"
+        },
+        {
+          "id": "component_3",
+          "route": "procedural",
+          "intent": "Symmetric shoulder sniper pair"
+        },
+        {
+          "id": "component_4",
+          "route": "procedural",
+          "intent": "Ventral suppressed microburst gun"
+        },
+        {
+          "id": "shield",
+          "route": "procedural",
+          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+        }
+      ],
+      "rig": {
+        "spine": "spine",
+        "chest": "chest",
+        "neck": "neck",
+        "head": "head",
+        "gait": "trot",
+        "gallopType": "rotary",
+        "stride": 2.4,
+        "top": 9,
+        "bob": 0.06,
+        "rollSway": 0.05,
+        "legAmp": 0.8,
+        "pitchAmp": 0.04,
+        "wpn": {
+          "light": {
+            "nodes": [
+              "gun"
+            ],
+            "ref": "gun",
+            "muzzle": "light_muzzle",
+            "r": 0.08
+          },
+          "heavy": {
+            "nodes": [
+              "heavy"
+            ],
+            "ref": "heavy",
+            "muzzle": "heavy_muzzle",
+            "r": 0.12
+          }
+        },
+        "limb": {
+          "fore": "digitigrade",
+          "hind": "digitigrade"
+        },
+        "legFL": "leg_FL",
+        "chFL": [
+          {
+            "g": "knee_FL",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_FL",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legFR": "leg_FR",
+        "chFR": [
+          {
+            "g": "knee_FR",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_FR",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legHL": "leg_HL",
+        "chHL": [
+          {
+            "g": "knee_HL",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_HL",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "legHR": "leg_HR",
+        "chHR": [
+          {
+            "g": "knee_HR",
+            "base": 0,
+            "k": 0.56,
+            "d": 0.15
+          },
+          {
+            "g": "ankle_HR",
+            "base": 0,
+            "k": -0.26,
+            "d": 0.55
+          }
+        ],
+        "tailSegs": [
+          "tail_0",
+          "tail_1",
+          "tail_2",
+          "tail_3",
+          "tail_4"
+        ],
+        "tailAmp": 0.12
+      },
+      "cavity": {
+        "owner": "spine",
+        "axis": "z",
+        "sections": [
+          [
+            -1.85,
+            0.65,
+            0.55
+          ],
+          [
+            -1.4,
+            1.6,
+            1.02
+          ],
+          [
+            -0.65,
+            1.85,
+            1.15
+          ],
+          [
+            0.65,
+            1.7,
+            1.1
+          ],
+          [
+            1.2,
+            1.15,
+            0.8
+          ],
+          [
+            1.55,
+            0.6,
+            0.5
+          ]
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "roots": [
+          "leg_FL",
+          "leg_FR",
+          "leg_HL",
+          "leg_HR"
+        ]
+      },
+      "motion": {
+        "shield": {
+          "duration": 0.65,
+          "barrier": "barrier",
+          "hinges": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "rest": 0,
+              "deploy": -1.05
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "rest": 0,
+              "deploy": 1.05
+            }
+          ]
+        },
+        "fire": [
+          {
+            "node": "gun_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.16
+          },
+          {
+            "node": "heavy_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.2
+          }
+        ],
+        "charge": [
+          {
+            "node": "charge_hinge",
+            "channel": "rotation",
+            "axis": "x",
+            "rest": 0,
+            "amplitude": -1.15
+          }
+        ],
+        "cast": [
+          {
+            "node": "cast_dish",
+            "channel": "rotation",
+            "axis": "y",
+            "rest": 0,
+            "amplitude": 0.9
+          }
+        ]
+      },
+      "reviewFrame": {
+        "scale": 9.5,
+        "target": [
+          0,
+          2.2,
+          0
+        ]
+      }
+    }
+  }
+}

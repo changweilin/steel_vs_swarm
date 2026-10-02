@@ -26,6 +26,12 @@ export function stepReferenceMotion(rig, ent, dt, now) {
   const defending = ent.isSelf ? ent.visualDefense : ent.df && (ent.sp == null || ent.sp > 0);
   const target = !ent.dead && !!defending;
   shield.phase = Math.max(0, Math.min(1, shield.phase + (target ? 1 : -1) * dt / shield.duration));
+  poseReferenceShield(shield);
+}
+
+/** Reapply presentation after a morph pose without advancing its shared clock twice. */
+export function poseReferenceShield(shield) {
+  if (!shield) return;
   const u = shield.phase, weight = u * u * (3 - 2 * u);
   for (const hinge of shield.hinges) {
     hinge.node.rotation[hinge.axis] = hinge.rest + (hinge.deploy - hinge.rest) * weight;

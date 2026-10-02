@@ -1,0 +1,28 @@
+{
+  "blend": "7ab61f581c500ac1b972e1bc72d5676da81ea525872733ef195e2fc9f22933f6",
+  "bones": 41,
+  "clips": [
+    "idle",
+    "run",
+    "light",
+    "heavy",
+    "skill",
+    "ult",
+    "shield_deploy",
+    "shield_retract",
+    "to_flight",
+    "to_ground",
+    "flight_idle",
+    "flight_light",
+    "flight_heavy",
+    "flight_skill",
+    "flight_ult",
+    "flight_shield_deploy",
+    "flight_shield_retract"
+  ],
+  "foldedLimbBoundsInHullCoordinates": {},
+  "limbVerticesOutsideHull": 0,
+  "outsideExamples": [],
+  "editable_source": "pass",
+  "flight_belly": "exposed_patagium_struts"
+}

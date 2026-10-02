@@ -1,0 +1,77 @@
+{
+  "blend": "9caca9afb5d2737a097d865e03ac5199565888639f2c49e3bee9f4faff16eb81",
+  "bones": 31,
+  "clips": [
+    "idle",
+    "run",
+    "light",
+    "heavy",
+    "skill",
+    "ult",
+    "shield_deploy",
+    "shield_retract",
+    "to_flight",
+    "to_ground",
+    "flight_idle",
+    "flight_light",
+    "flight_heavy",
+    "flight_skill",
+    "flight_ult",
+    "flight_shield_deploy",
+    "flight_shield_retract"
+  ],
+  "foldedLimbBoundsInHullCoordinates": {
+    "hip_l": {
+      "min": [
+        0.05939994752407074,
+        -0.24708789587020874,
+        -0.30000025033950806
+      ],
+      "max": [
+        0.46059995889663696,
+        1.3332000970840454,
+        0.0700000524520874
+      ]
+    },
+    "hip_r": {
+      "min": [
+        -0.46060001850128174,
+        -0.24708789587020874,
+        -0.30000025033950806
+      ],
+      "max": [
+        -0.05940001830458641,
+        1.3332000970840454,
+        0.0700000524520874
+      ]
+    },
+    "shoulder_l": {
+      "min": [
+        0.1499999761581421,
+        -0.36361604928970337,
+        -0.3149999976158142
+      ],
+      "max": [
+        0.8100000023841858,
+        1.1432000398635864,
+        0.2149999886751175
+      ]
+    },
+    "shoulder_r": {
+      "min": [
+        -0.8100000023841858,
+        -0.36361604928970337,
+        -0.3149999976158142
+      ],
+      "max": [
+        -0.1499999761581421,
+        1.1432000398635864,
+        0.2149999886751175
+      ]
+    }
+  },
+  "limbVerticesOutsideHull": 0,
+  "outsideExamples": [],
+  "editable_source": "pass",
+  "flight_belly": "pass"
+}

@@ -2,6 +2,7 @@
 import argparse
 import copy
 import hashlib
+import importlib
 import json
 import math
 import sys
@@ -16,14 +17,18 @@ ROOT = HERE.parent.parent
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 parser = argparse.ArgumentParser()
 parser.add_argument('--asset', default='all')
+parser.add_argument('--contract', default='assets.json')
 parser.add_argument('--no-render', action='store_true')
 parser.add_argument('--rebuild', action='store_true', help='Write isolated reproducibility evidence without replacing authored sources')
 args = parser.parse_args(ARGS)
-contract_path = HERE / 'assets.json'
+contract_path = HERE / args.contract
 contract = json.loads(contract_path.read_text(encoding='utf8'))
+if 'inherit' in contract:
+    contract = json.loads((HERE / contract['inherit']).read_text(encoding='utf8')) | contract
 assert args.asset == 'all' or args.asset in contract['assets'], 'Unknown asset: ' + args.asset
 sys.path.insert(0, str(HERE))
 from catalog import construct
+adapter = importlib.import_module(contract['authoring']['adapter']) if 'adapter' in contract['authoring'] else None
 OUT = (HERE / contract['authoring']['outputs']).resolve()
 RUNTIME = (HERE / contract['authoring']['runtime']).resolve()
 EXPORT = (HERE / contract['authoring']['export']).resolve()
@@ -479,7 +484,7 @@ class Asset:
                 self.rotate(self.nodes['tilt'], 'x', -.13 * weight)
 
     def animations(self):
-        clips = ['idle', 'run', 'light', 'heavy', 'skill', 'ult', 'shield_deploy', 'shield_retract']
+        clips = self.spec.get('clips', ['idle', 'run', 'light', 'heavy', 'skill', 'ult', 'shield_deploy', 'shield_retract'])
         for clip in clips:
             for node in self.nodes.values():
                 node.animation_data_create()
@@ -523,10 +528,15 @@ class Asset:
                     batch['normals'].extend(normal)
             evaluated.to_mesh_clear()
         data = {'id': self.spec['id'], 'kind': self.spec['kind'], 'height': self.spec['height'],
-                'source': {'contract': digest(contract_path), 'builder': digest(Path(__file__)), 'catalog': digest(HERE / 'catalog.py'),
+                'source': {'contract': digest(contract_path), 'builder': digest(Path(__file__)), 'catalog': digest(Path(adapter.__file__) if adapter else HERE / 'catalog.py'),
                            'image': digest((HERE / self.spec['inputs']['image']).resolve())},
                 'joints': self.spec['joints'], 'materials': self.spec['materials'], 'components': self.spec['components'],
                 'meshes': list(batches.values()), 'rig': self.spec['rig'], 'motion': self.spec['motion']}
+        if 'forms' in self.spec:
+            data['forms'] = self.spec['forms']
+        if 'inherit' in contract:
+            data['source']['sharedContract'] = digest(HERE / contract['inherit'])
+            data['source']['sharedCatalog'] = digest(HERE / 'catalog.py')
         triangles = sum(len(b['indices']) // 3 for b in batches.values())
         assert triangles <= contract['limits']['trianglesPerUnit'], triangles
         assert len(batches) <= contract['limits']['meshesPerUnit'], len(batches)
@@ -599,8 +609,10 @@ for spec in contract['assets'].values():
         continue
     directory = OUT / spec['id']
     directory.mkdir(parents=True, exist_ok=True)
-    asset = Asset(spec)
-    if spec.get('recipe'):
+    asset = adapter.create(Asset, spec) if adapter else Asset(spec)
+    if adapter:
+        adapter.construct(asset)
+    elif spec.get('recipe'):
         construct(asset)
     else:
         asset.drone() if spec['kind'] == 'aerial' else asset.mech()

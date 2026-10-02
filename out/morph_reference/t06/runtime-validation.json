@@ -1,0 +1,88 @@
+{
+  "source": {
+    "contract": "29eecc796e30a0c8284d4859b84a389857e9e7ec2a2d46534ee8f3511c06312c",
+    "builder": "7df063248bee52282af7973f430abad4f3f0c060371e4ba2ea93cc7989126af4",
+    "catalog": "545863f0916b725d7b299e39976a0fd3b9f7c1db19ff416b631f180b5a572ad5",
+    "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
+    "sharedContract": "c1cfb10281181e13a038832f72329386cb1a33fa99956c263f5ec6ed16d5f856",
+    "sharedCatalog": "04b8b4ff9298cffa3f4d9f59b79313820ee8042deb7f43a6a4f4daf4e8d46b1d"
+  },
+  "hashes": {
+    "runtime": "e9f6a867947ad7ca57ea0ec19f05ae7744c6ef26ba43858d31444fc2ec6cd754",
+    "glb": "aa647812556e4d8d6476e6cd1a27d9e580bda5e327eb91a6059188fe363fcfce"
+  },
+  "measurements": {
+    "trianglesPerVisibleForm": 10424,
+    "effectTriangles": 3552,
+    "effectMeshes": 22,
+    "retainedTriangles": 24400,
+    "meshesPerVisibleForm": 72,
+    "pairs": {
+      "pair": 100,
+      "soft": 0,
+      "gOnly": 0,
+      "aOnly": 0
+    },
+    "maxSeamError": 0,
+    "samples": [
+      0.05,
+      0.25,
+      0.49,
+      0.5,
+      0.51,
+      0.75,
+      0.95
+    ],
+    "forms": [
+      {
+        "form": "ground",
+        "shieldPhases": [
+          0.7692307692307694,
+          0.7692307692307696,
+          0.7692307692307686
+        ]
+      },
+      {
+        "form": "flight",
+        "shieldPhases": [
+          0.7692307692307694,
+          0.7692307692307696,
+          0.7692307692307686
+        ]
+      }
+    ],
+    "clips": [
+      "flight_idle",
+      "shield_deploy",
+      "shield_retract",
+      "flight_shield_deploy",
+      "flight_shield_retract",
+      "idle",
+      "to_flight",
+      "to_ground",
+      "skill",
+      "ult",
+      "flight_skill",
+      "flight_ult",
+      "light",
+      "flight_light",
+      "run",
+      "heavy",
+      "flight_heavy"
+    ]
+  },
+  "gates": {
+    "structure": "pass",
+    "same_parts": "pass",
+    "same_geometry": "pass",
+    "same_scale": "pass",
+    "morph_continuity": "pass",
+    "locomotion_combat_shield": "pass",
+    "export_load": "pass",
+    "registry": "pass",
+    "controls": "pass",
+    "appearance": "pending_visual_review",
+    "flight_belly": "pending_visual_review",
+    "user_signoff": "pending_user_review"
+  }
+}
