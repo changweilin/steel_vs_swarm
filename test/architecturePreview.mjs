@@ -1127,54 +1127,54 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
 <script type="module">
 import * as THREE from 'three';
 import { createGeographicPreview, geographicSnapshot, geographicVenues, GEOGRAPHIC_COPY } from '/preview/geographicPreview.js';
-import { buildOsmPolygonBuildings } from '/js/osmBuilding.js';
+import { buildOsmPolygonBuildings } from '/public/js/osmBuilding.js';
 import {
   ARCHITECTURE_STYLES, ROOF_FORMS, FACADE_TYPES, BUILDING_FUNCTION_RANGES,
   CULTURAL_REGIONS, APPURTENANCE_RULES, calculateFootprintMetrics,
-} from '/js/architectureStyles.js';
-import { inferBuildingFunction, sampleBuildingHeight, architectureHash } from '/js/buildingDiversity.js';
-import { sceneObjectMat } from '/js/toon.js';
-import { Pipeline } from '/js/postfx.js';
+} from '/public/js/architectureStyles.js';
+import { inferBuildingFunction, sampleBuildingHeight, architectureHash } from '/public/js/buildingDiversity.js';
+import { sceneObjectMat } from '/public/js/toon.js';
+import { Pipeline } from '/public/js/postfx.js';
 
 // 地質生成模組
-import { GEOLOGY_TYPES, GEOLOGY_SURFACES, geologyBackgroundObject, generateGeology, geologyDistribution } from '/js/geology.js';
-import { ANCIENT_REGIONS, ANCIENT_RUINS, RUIN_ACTIVITIES, ancientStoneDistribution } from '/js/ancientStone.js';
-import { runtimeMeshDataGeometry } from '/js/runtimePartModel.js';
-import { mulberry32 } from '/js/rng.js';
+import { GEOLOGY_TYPES, GEOLOGY_SURFACES, geologyBackgroundObject, generateGeology, geologyDistribution } from '/public/js/geology.js';
+import { ANCIENT_REGIONS, ANCIENT_RUINS, RUIN_ACTIVITIES, ancientStoneDistribution } from '/public/js/ancientStone.js';
+import { runtimeMeshDataGeometry } from '/public/js/runtimePartModel.js';
+import { mulberry32 } from '/public/js/rng.js';
 
 // 植物生成模組
-import { forestCatalog, sampleForestCatalog } from '/js/forestCatalog.js';
-import { FOREST_FORMS } from '/js/forestSpecies.js';
-import { TREE_SPECIES, createForestTree, treeHabitatWeight, treeSections, treeBend } from '/js/forest.js';
+import { forestCatalog, sampleForestCatalog } from '/public/js/forestCatalog.js';
+import { FOREST_FORMS } from '/public/js/forestSpecies.js';
+import { TREE_SPECIES, createForestTree, treeHabitatWeight, treeSections, treeBend } from '/public/js/forest.js';
 // 車輛生成模組
-import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, vehicleCandidates, VEHICLE_CONSISTS, CONSIST_PREFIX, RIM_NAMES } from '/js/vehicleCatalog.js';
-import { makeProceduralVehicle } from '/js/vehicleModels.js';
+import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, vehicleCandidates, VEHICLE_CONSISTS, CONSIST_PREFIX, RIM_NAMES } from '/public/js/vehicleCatalog.js';
+import { makeProceduralVehicle } from '/public/js/vehicleModels.js';
 
 // 船隻生成模組
-import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel, VESSEL_EQUIPMENT } from '/js/vesselCatalog.js';
-import { buildGeneratedVesselMesh } from '/js/vesselModels.js';
-import { disposeTree, envMat } from '/js/toon.js';
+import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel, VESSEL_EQUIPMENT } from '/public/js/vesselCatalog.js';
+import { buildGeneratedVesselMesh } from '/public/js/vesselModels.js';
+import { disposeTree, envMat } from '/public/js/toon.js';
 
 // 平民與戰鬥單位生成模組
-import { generateCivilian } from '/js/civilianAppearance.js';
-import { CIVILIAN_OCCUPATIONS } from '/js/civilianContent.js';
-import { CIVILIANS, hitH } from '/js/data.js';
-import { buildNpcModel } from '/js/npcModels.js';
-import { buildSummonModel } from '/js/summonModels.js';
-import { buildBuildingUnit } from '/js/buildingUnitModels.js';
-import { birdParts, fishParts, catParts, dogParts } from '/js/wildlife.js';
-import { compileSceneParts } from '/js/scenePropModels.js';
+import { generateCivilian } from '/public/js/civilianAppearance.js';
+import { CIVILIAN_OCCUPATIONS } from '/public/js/civilianContent.js';
+import { CIVILIANS, hitH } from '/public/js/data.js';
+import { buildNpcModel } from '/public/js/npcModels.js';
+import { buildSummonModel } from '/public/js/summonModels.js';
+import { buildBuildingUnit } from '/public/js/buildingUnitModels.js';
+import { birdParts, fishParts, catParts, dogParts } from '/public/js/wildlife.js';
+import { compileSceneParts } from '/public/js/scenePropModels.js';
 
 // 環境物件與邊界生成模組
-import { environmentParts } from '/js/environmentParts.js';
-import { WALL_KINDS, wallParts, buildBoundaryRunParts, BOUNDARY_OBJECT_CATEGORIES } from '/js/edgewall.js';
-import { boundaryGrid } from '/js/objectLayout.js';
-import { edgeWallHM } from '/js/data.js';
-import { SLOPE_BOUNDARIES, buildSlopeBoundary } from '/js/edgeSlope.js';
+import { environmentParts } from '/public/js/environmentParts.js';
+import { WALL_KINDS, wallParts, buildBoundaryRunParts, BOUNDARY_OBJECT_CATEGORIES } from '/public/js/edgewall.js';
+import { boundaryGrid } from '/public/js/objectLayout.js';
+import { edgeWallHM } from '/public/js/data.js';
+import { SLOPE_BOUNDARIES, buildSlopeBoundary } from '/public/js/edgeSlope.js';
 
 // 環境模擬系統 (四季 × 日夜 × 多元天氣)
-import { applyEnvironment } from '/js/environment.js';
-import { clockHour, clockLabel, DAYCLOCK } from '/js/data.js';
+import { applyEnvironment } from '/public/js/environment.js';
+import { clockHour, clockLabel, DAYCLOCK } from '/public/js/data.js';
 
 
 // ---- Three.js 核心場景初始化 ----
@@ -4964,14 +4964,14 @@ export function serve(port = DEFAULT_PORT) {
         }
       } else if (url.pathname === '/preview/geographicPreview.js') {
         body = await readFile(new URL('./geographicPreview.js', import.meta.url));
-      } else if (url.pathname.startsWith('/assets/')) {
+      } else if (url.pathname.startsWith('/public/assets/') || url.pathname.startsWith('/assets/')) {
         const assetRoot = path.resolve(root, '../assets');
-        const file = path.resolve(assetRoot, url.pathname.slice(8));
+        const file = path.resolve(assetRoot, url.pathname.slice(url.pathname.indexOf('/assets/') + 8));
         if (!file.startsWith(assetRoot + path.sep)) throw new Error('Asset outside public directory');
         body = await readFile(file);
         type = { '.json': 'application/json', '.glb': 'model/gltf-binary', '.png': 'image/png', '.jpg': 'image/jpeg' }[path.extname(file)] || 'application/octet-stream';
-      } else if (url.pathname.startsWith('/js/')) {
-        const file = path.resolve(root, url.pathname.slice(4));
+      } else if (url.pathname.startsWith('/public/js/')) {
+        const file = path.resolve(root, url.pathname.slice(11));
         if (!file.startsWith(path.resolve(root) + path.sep)) throw new Error('路徑不在模組目錄內');
         body = await readFile(file);
       } else {

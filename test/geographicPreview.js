@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { buildTerrain } from '/js/terrain.js';
-import { buildBiomes } from '/js/biomes.js';
-import { VENUES, venueConfig } from '/js/venues.js';
-import { disposeTree } from '/js/toon.js';
-import { loadVenueEvidence } from '/js/mapEvidenceLoader.js';
+import { buildTerrain } from '/public/js/terrain.js';
+import { buildBiomes } from '/public/js/biomes.js';
+import { VENUES, venueConfig } from '/public/js/venues.js';
+import { disposeTree } from '/public/js/toon.js';
+import { loadVenueEvidence } from '/public/js/mapEvidenceLoader.js';
 
 export const GEOGRAPHIC_COPY = Object.freeze({
   title: '🛰 地理融合場景',

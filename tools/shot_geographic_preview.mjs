@@ -48,9 +48,9 @@ try {
   await page.goto(url);
   await page.waitForSelector('body[data-ready="true"]');
   await page.evaluate(async ({ venueId, osm }) => {
-    const { VENUES, venueConfig } = await import('/js/venues.js');
-    const { battleBBox } = await import('/js/data.js');
-    const { commitOsmIn } = await import('/js/biomes.js');
+    const { VENUES, venueConfig } = await import('/public/js/venues.js');
+    const { battleBBox } = await import('/public/js/data.js');
+    const { commitOsmIn } = await import('/public/js/biomes.js');
     const cfg = venueConfig(VENUES.find(v => v.id === venueId), 1);
     commitOsmIn(battleBBox(cfg), { feats: osm.features, roads: osm.roads });
   }, { venueId: fixture.venue.id, osm: fixtureOsm(fixture) });
