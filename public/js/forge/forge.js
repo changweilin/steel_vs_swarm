@@ -687,6 +687,14 @@ export function forgeMorphUnit(specGround, specAir, opts = {}) {
   const DG = MECH_DETAIL[specGround.id];
   const G = forgeTagged(DG, specGround, opts);
   const A = forgeTagged(DG, specAir, opts);
+  if (G.rig.shield && A.rig.shield) {
+    // Both trees project the same defense presentation; switching rigs must not restart deployment.
+    const state = { phase: 0 };
+    for (const shield of [G.rig.shield, A.rig.shield]) {
+      shield.state = state;
+      Object.defineProperty(shield, 'phase', { get: () => state.phase, set: value => { state.phase = value; } });
+    }
+  }
   const g = new THREE.Group();
   g.add(G.group);
   g.add(A.group);

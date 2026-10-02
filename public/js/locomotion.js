@@ -12,7 +12,7 @@ import { MORPH, lerpFPS } from './data.js';
 import { bodyBounce, cycleU, dutyOf, hipDrive, humanRunPose, limbProfile, limbFlex } from './gaitcurve.js';
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 import { animWeights } from './animweights.js';
-import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion } from './unitMotion.js';
+import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion, poseReferenceShield } from './unitMotion.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -99,6 +99,11 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   stepReferenceMotion(rig, ent, dt, now);
   // 變形姿態 MUST 排最後(morphSwap 紀律 ③):過渡中它對這一棵樹的零件有最終發言權
   if (mesh.userData.morph) morphPose(mesh.userData.morph);
+  const morph = mesh.userData.morph;
+  if (morph?.ground.shield?.state) {
+    poseReferenceShield(morph.ground.shield);
+    poseReferenceShield(morph.air.shield);
+  }
   // 開火槍軸校正是最後的 post-pass：跑步扭腰、飛行壓坡、跳躍與變形姿態都已結算後，
   // 再把本次發射槽的每根槍軸鎖回機體 +z。否則任一個後續父骨驅動都會把槍口帶偏。
   stepAimForward(rig);
@@ -1169,8 +1174,10 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
   rig.head.rotation.y += L.gaze;   // 入彎凝視:獵食者先看向要去的地方
   // 尾:急轉甩向轉向反側(配重)+ 逐節延遲的鞭;高速時尾根抬起配平前傾
-  whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate, 0.12);
-  rig.tailSegs[0].rotation.x += (rig.tailUp || 0.12) * a;
+  if (rig.tailSegs?.length) {
+    whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate, 0.12);
+    rig.tailSegs[0].rotation.x += (rig.tailUp || 0.12) * a;
+  }
 }
 
 /**

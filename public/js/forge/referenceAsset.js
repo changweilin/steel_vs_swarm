@@ -1,14 +1,16 @@
 import * as THREE from 'three';
-import { mat } from '../geo3d.js';
+import { mat, jetFlame, sph } from '../geo3d.js';
 
 /** Blender batches static parts per joint/material; each unit owns its disposable GPU resources. */
 export function buildReferenceAsset(asset, spec) {
+  const form = asset.forms?.[spec.form];
   const group = new THREE.Group(), nodes = new Map();
   group.name = asset.id;
   group.userData.referenceAsset = { id: asset.id, source: asset.source };
   for (const [name, parent, position] of asset.joints) {
     const node = new THREE.Bone();
     node.name = name;
+    if (form) node.userData.mtag = `${asset.id}/joint/${name}`;
     node.position.fromArray(position);
     (parent ? nodes.get(parent) : group).add(node);
     nodes.set(name, node);
@@ -35,13 +37,21 @@ export function buildReferenceAsset(asset, spec) {
       side: desc.opacity == null ? THREE.FrontSide : THREE.DoubleSide,
     }));
     mesh.name = `${part.parent}/${part.material}`;
+    if (form) mesh.userData.mtag = `${asset.id}/mesh/${mesh.name}`;
     mesh.userData.authoredParts = part.parts;
     if (desc.emission || desc.opacity != null) mesh.userData.noOutline = true;
     nodeOf(part.parent).add(mesh);
   }
   const bindTrack = track => ({ ...track, node: nodeOf(track.node) });
-  const rig = { ...asset.rig, kind: asset.kind, s: 1,
+  for (const [name, pose] of Object.entries(form?.transforms || {})) {
+    const node = nodeOf(name);
+    if (pose.position) node.position.fromArray(pose.position);
+    if (pose.rotation) node.rotation.fromArray(pose.rotation);
+  }
+  const rig = { ...asset.rig, ...form?.rig, kind: form?.kind || asset.kind, s: 1,
     moveSig: spec.moveSig, castSig: spec.castSig };
+  // The quadruped driver requires a collection even when the reference has no tail.
+  if (rig.kind === 'quad' && rig.tailSegs == null) rig.tailSegs = [];
   for (const key of ['hips', 'chest', 'head', 'legL', 'legR', 'armL', 'armR', 'tilt',
     'spine', 'neck', 'humChest', 'humNeck', 'legFL', 'legFR', 'legHL', 'legHR']) {
     if (typeof rig[key] === 'string') rig[key] = nodeOf(rig[key]);
@@ -57,7 +67,7 @@ export function buildReferenceAsset(asset, spec) {
   for (const key of ['legChainL', 'legChainR', 'armChainL', 'armChainR', 'chFL', 'chFR', 'chHL', 'chHR']) {
     if (rig[key]) rig[key] = rig[key].map(joint => ({ ...joint, g: nodeOf(joint.g) }));
   }
-  for (const key of ['tailSegs', 'armSh', 'armEl']) {
+  for (const key of ['tailSegs', 'armSh', 'armEl', 'midLegs', 'midKnees', 'midTarsi']) {
     if (rig[key]) rig[key] = rig[key].map(nodeOf);
   }
   if (rig.tents) rig.tents = rig.tents.map(chain => chain.map(joint => ({ ...joint, g: nodeOf(joint.g) })));
@@ -86,7 +96,27 @@ export function buildReferenceAsset(asset, spec) {
     fire: asset.motion.fire.map(bindTrack), charge: asset.motion.charge.map(bindTrack), cast: asset.motion.cast.map(bindTrack),
     fireSpin: asset.motion.fireSpin ? bindTrack(asset.motion.fireSpin) : null,
   };
-  group.userData.spin = (asset.rig.spin || []).map((entry, i) => {
+  if (spec.form === 'flight' && asset.motion.jets) {
+    // Exhaust is presentation geometry; ground height fitting uses only the shared rigid inventory.
+    rig.jets = asset.motion.jets.map(entry => {
+      const jet = jetFlame(nodeOf(entry.node), entry.radius, entry.length, ...entry.position,
+        new THREE.Color(asset.materials.glow.color));
+      jet.g.rotation.z = entry.roll;
+      const cloud = entry.cloud, vapor = asset.materials.vapor;
+      for (let i = 0; i < cloud.count; i++) {
+        const u = i / (cloud.count - 1), angle = i * 2.399;
+        const radius = cloud.radius * (.55 + .75 * Math.sin(Math.PI * (.25 + .75 * u)));
+        const node = sph(jet.g, radius, Math.cos(angle) * cloud.radius * (.35 + .9 * u),
+          -entry.length - u * cloud.radius * 3.4, Math.sin(angle) * cloud.radius * (.35 + .9 * u),
+          new THREE.Color(vapor.color), { transparent: true, opacity: vapor.opacity, depthWrite: false,
+            emissive: new THREE.Color(vapor.color), emissiveIntensity: vapor.emission });
+        node.scale.set(1.15, .72, 1.15);
+      }
+      jet.g.traverse(node => { node.userData.presentationEffect = true; node.userData.noOutline = true; });
+      return { ...jet, idle: entry.idle, lenF: entry.lenF };
+    });
+  }
+  group.userData.spin = (rig.spin || []).map((entry, i) => {
     const node = nodeOf(typeof entry === 'string' ? entry : entry.node);
     node.userData.spinAxis = typeof entry === 'string' ? 'y' : entry.axis;
     node.userData.spinRate = typeof entry === 'string' ? (i % 2 ? -40 : 40) : entry.rate;

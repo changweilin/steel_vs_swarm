@@ -7,7 +7,8 @@ import { chromiumOrNull, chromePath } from './pw.mjs';
 import { serve } from './mech_prompt_review.mjs';
 import { charKind } from '../public/js/data.js';
 
-const root = path.resolve('out/mech_reference');
+const outputOption = process.argv.indexOf('--output');
+const root = path.resolve(outputOption < 0 ? 'out/mech_reference' : process.argv[outputOption + 1]);
 const contract = JSON.parse(await readFile('tools/mech_authoring/assets.json', 'utf8'));
 const ids = Object.keys(contract.assets);
 assert.equal(ids.length, 24, 'Scope must contain exactly twelve mechs and twelve drones');
@@ -200,7 +201,7 @@ try {
     }
     return result;
   }, { ids, limits: contract.limits });
-  for (const id of ids) {
+  for (const id of (process.argv.includes('--no-capture') ? [] : ids)) {
     await page.evaluate(id => {
       window.__MECH_REVIEW.selectMech(id);
       const preview = window.__MECH_REVIEW.preview;

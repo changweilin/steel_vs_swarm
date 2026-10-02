@@ -60,3 +60,8 @@ out/weather_fx_review/
 
 # Reproducible habitat captures; numeric source fixtures remain versioned separately.
 out/habitat_review/
+
+# Reproducible authoring checks and interpreter caches.
+out/mech_reference/_rebuild/
+out/morph_reference/_rebuild/
+tools/mech_authoring/__pycache__/

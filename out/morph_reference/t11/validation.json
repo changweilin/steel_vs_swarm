@@ -1,0 +1,86 @@
+{
+  "asset": "t11",
+  "blender": "5.2.0 LTS",
+  "measurements": {
+    "triangles": 12036,
+    "meshes": 84,
+    "joints": 35,
+    "source": {
+      "contract": "29eecc796e30a0c8284d4859b84a389857e9e7ec2a2d46534ee8f3511c06312c",
+      "builder": "7df063248bee52282af7973f430abad4f3f0c060371e4ba2ea93cc7989126af4",
+      "catalog": "545863f0916b725d7b299e39976a0fd3b9f7c1db19ff416b631f180b5a572ad5",
+      "image": "9ef67af27f03fc71f8b5dd0a1b1638344c354b3903adc0a97f3a3df37c854880",
+      "sharedContract": "c1cfb10281181e13a038832f72329386cb1a33fa99956c263f5ec6ed16d5f856",
+      "sharedCatalog": "04b8b4ff9298cffa3f4d9f59b79313820ee8042deb7f43a6a4f4daf4e8d46b1d"
+    }
+  },
+  "clips": [
+    "idle",
+    "run",
+    "light",
+    "heavy",
+    "skill",
+    "ult",
+    "shield_deploy",
+    "shield_retract",
+    "to_flight",
+    "to_ground",
+    "flight_idle",
+    "flight_light",
+    "flight_heavy",
+    "flight_skill",
+    "flight_ult",
+    "flight_shield_deploy",
+    "flight_shield_retract"
+  ],
+  "renders": [
+    "reference.png",
+    "front.png",
+    "side.png",
+    "back.png",
+    "top.png",
+    "shield_deploy.png",
+    "light.png",
+    "heavy.png",
+    "run.png",
+    "flight_reference.png",
+    "flight_front.png",
+    "flight_side.png",
+    "flight_back.png",
+    "flight_top.png",
+    "transform_0.png",
+    "transform_1.png",
+    "transform_2.png",
+    "transform_3.png",
+    "transform_4.png",
+    "shield_retract.png",
+    "flight_shield_deploy.png",
+    "flight_shield_retract.png",
+    "flight_light.png",
+    "flight_heavy.png",
+    "skill.png",
+    "ult.png"
+  ],
+  "hashes": {
+    "runtime": "1adc7912b9315bf941bffa3c887e89cca318322af73237d770e97677daae9cab",
+    "blend": "2392eb2b6d373260cc0d3e7d02391cf9c580d0065ac4d57722f8c5cda873e215",
+    "glb": "936dd61ca0b365e255a2dedcca6de136c522c215bc3da8ddf345c7c0bc3f4a7e"
+  },
+  "gates": {
+    "structure": "pass",
+    "resources": "pass",
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pass",
+    "destination": "pass",
+    "user_signoff": "pending_user_review",
+    "editable_source": "pass",
+    "flight_belly": "pass"
+  },
+  "renderGeometryHash": "936dd61ca0b365e255a2dedcca6de136c522c215bc3da8ddf345c7c0bc3f4a7e",
+  "validation_refs": {
+    "runtime": "runtime-validation.json",
+    "source": "source-validation.json",
+    "rebuild": "../rebuild-validation.json"
+  }
+}
