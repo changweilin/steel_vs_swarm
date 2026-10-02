@@ -2,16 +2,16 @@
   "asset": "m07",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 12832,
-    "meshes": 96,
-    "joints": 50,
+    "triangles": 13544,
+    "meshes": 112,
+    "joints": 94,
     "source": {
-      "contract": "29eecc796e30a0c8284d4859b84a389857e9e7ec2a2d46534ee8f3511c06312c",
-      "builder": "7df063248bee52282af7973f430abad4f3f0c060371e4ba2ea93cc7989126af4",
-      "catalog": "545863f0916b725d7b299e39976a0fd3b9f7c1db19ff416b631f180b5a572ad5",
+      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
       "image": "eecb4a52ca28c7af638904becd0f96de3565c87ffd966536a83c75db8d8616f1",
-      "sharedContract": "c1cfb10281181e13a038832f72329386cb1a33fa99956c263f5ec6ed16d5f856",
-      "sharedCatalog": "04b8b4ff9298cffa3f4d9f59b79313820ee8042deb7f43a6a4f4daf4e8d46b1d"
+      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
     }
   },
   "clips": [
@@ -33,38 +33,11 @@
     "flight_shield_deploy",
     "flight_shield_retract"
   ],
-  "renders": [
-    "reference.png",
-    "front.png",
-    "side.png",
-    "back.png",
-    "top.png",
-    "shield_deploy.png",
-    "light.png",
-    "heavy.png",
-    "run.png",
-    "flight_reference.png",
-    "flight_front.png",
-    "flight_side.png",
-    "flight_back.png",
-    "flight_top.png",
-    "transform_0.png",
-    "transform_1.png",
-    "transform_2.png",
-    "transform_3.png",
-    "transform_4.png",
-    "shield_retract.png",
-    "flight_shield_deploy.png",
-    "flight_shield_retract.png",
-    "flight_light.png",
-    "flight_heavy.png",
-    "skill.png",
-    "ult.png"
-  ],
+  "renders": [],
   "hashes": {
-    "runtime": "dd2e98d177d5b9cc6c384bf18473d31e83610ac1ac6b7c6291b95aaebadbd088",
-    "blend": "d37028e2841c70a33b26810a795aeec0f30eee9118fdd9d554210dc2fd93d25b",
-    "glb": "7629857e5ce456cbf30b27d227f19c185a29907dc12ca2894979bc9f1504be5f"
+    "runtime": "537fe275576414b4e87dc86da91dc37d744d037284bfaf4b71d80647d63a8280",
+    "blend": "008b194927ef3619f3d12018087963ac6cf9d1c4ced87a57680d40d620fa29d9",
+    "glb": "b1049b540c52b35db93d17521b920f3e8d2c93c805c24f8e538bc475a0fecb29"
   },
   "gates": {
     "structure": "pass",
@@ -77,7 +50,6 @@
     "editable_source": "pass",
     "flight_belly": "pass"
   },
-  "renderGeometryHash": "7629857e5ce456cbf30b27d227f19c185a29907dc12ca2894979bc9f1504be5f",
   "validation_refs": {
     "runtime": "runtime-validation.json",
     "source": "source-validation.json",

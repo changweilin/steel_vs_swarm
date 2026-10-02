@@ -138,7 +138,7 @@ function flexChain(chain, ph, a, idle = 0, t = 0, load = 0.45, hold = 0, A = nul
       const u = cycleU(ph - j.d);
       let f = limbFlex(A.P, i, u, A.duty, a);
       if (A.P2) f += (limbFlex(A.P2, i, u, A.duty, a) - f) * A.mix;
-      j.g.rotation.x = j.base + j.k * (f + hold
+      j.g.rotation[j.axis || 'x'] = j.base + j.k * (f + hold
         + 0.06 * idle * Math.sin(t * 1.6 - j.d * 1.5));   // 靜止液壓微顫(與舊制同一項)
     }
     return;
@@ -153,7 +153,7 @@ function flexChain(chain, ph, a, idle = 0, t = 0, load = 0.45, hold = 0, A = nul
     // 靜止時的液壓微顫:每節仍以自己的相位延遲呼吸(振幅 ≈ 步態的 6%)——
     // 站著的機體關節完全凍結會像模型展示台,不像通電中的機具。
     // 擺動 1.3× + 支撐 st²·load:上下肢在整個週期沒有任何一段是「鎖死的固定角」
-    j.g.rotation.x = j.base + j.k * ((sw * 1.3 + st * st * load) * a * whip + hold
+    j.g.rotation[j.axis || 'x'] = j.base + j.k * ((sw * 1.3 + st * st * load) * a * whip + hold
       + 0.06 * idle * Math.sin(t * 1.6 - j.d * 1.5));
   }
 }
@@ -391,7 +391,7 @@ function syncLegsToHips(L, rig, hips) {
  * 多節尾配重(mobility_plan Task 2.2):急轉時整條尾甩向轉向反側(角動量守恆的視覺化),
  * 尾梢逐節延遲 = 鞭;行進間再疊一道與步頻同調的擺動。基礎姿勢住幾何,這裡直接寫 rotation。
  */
-function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0, aim = null, curl = null) {
+function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0, aim = null, curl = null, stiffness = 1) {
   L.tail = damp(L.tail ?? 0, clamp(-yawRate * 0.3, -0.55, 0.55), 3.5, dt);
   // 尾砲瞄準前捲(t06 悟空:尾梢那一具熔核砲就是重武器)—— 重武器交戰時整條尾蠍式過頂,
   // 砲口轉向正前。`aim = { p, rot0, rotD }`:p = 交戰保持窗(rig._aimH,0~1),
@@ -408,11 +408,11 @@ function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0, aim = null, curl
   segs.forEach((t, i) => {
     const d = i * 0.6;                       // 逐節相位延遲(由根往梢傳的波)
     const lag = 1 + i * 0.35;                // 尾梢甩幅大於尾根
-    t.rotation.y = L.tail * lag * (1 - ap) + Math.sin(L.ph - d) * 0.1 * a;
+    t.rotation.y = (L.tail * lag * (1 - ap) + Math.sin(L.ph - d) * 0.1 * a) * stiffness;
     t.rotation.x = (i === 0 ? base : 0)
       + (curl ? (curl.rot0 + i * curl.rotD) * (1 - ap) : 0)
       + (ap ? ap * (aim.rot0 + i * aim.rotD) : 0)
-      + (Math.sin(L.ph * 2 - d) * 0.07 * a + idle * Math.sin(now * 1.1 - d) * 0.03) * (1 - ap);
+      + (Math.sin(L.ph * 2 - d) * 0.07 * a + idle * Math.sin(now * 1.1 - d) * 0.03) * (1 - ap) * stiffness;
   });
 }
 
@@ -1011,11 +1011,25 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   // 微幅呼吸。分節鏈那一半由 grasp 曲線負責,但有些機體的前肢根本沒有 chFL(整條爪是靜態件)
   // ⇒ 只改鏈是改不到的,肩這一行才是它唯一的動力來源。
   const foreF = GAIT_ANAT && LP.fore.role === 'grasp' ? 0.18 : 1;
-  rig.legFL.rotation.x = hip(phFL) * legA * foreF + idK * Math.sin(now * 1.6 * iF) * 0.025;
-  rig.legFR.rotation.x = hip(phFR) * legA * foreF + idK * Math.sin(now * 1.6 * iF + 1.5) * 0.025;
-  rig.legHL.rotation.x = hip(phHL) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 3.0) * 0.025;
-  rig.legHR.rotation.x = hip(phHR) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 4.5) * 0.025;
-  if (rig.chFL) {
+  if (rig.insectLegs) {
+    // Coxae sweep around the thorax; trochanter/femur hinges lift a sprawled leg.
+    // Sagittal mammal hip rotation would twist these lateral limbs instead of stepping.
+    const phases = { FL: phFL, FR: phFR, ML: phFL + Math.PI, MR: phFR + Math.PI, HL: phHL, HR: phHR };
+    for (const leg of rig.insectLegs) {
+      const ph = phases[leg.key], u = cycleU(ph);
+      leg.root.rotation.y = leg.side * hip(ph) * legA * .65;
+      leg.lift.rotation.z = leg.side * Math.max(0, Math.sin(Math.PI * (u-duty)/(1-duty)))
+        * (u >= duty ? .32 * a : 0);
+      flexChain(leg.chain, ph, a, idle, now, .45, 0, { P: LP.hind, duty });
+    }
+  } else {
+    const base = rig.quadBase || S0;
+    rig.legFL.rotation.x = (base.FL || 0) + hip(phFL) * legA * foreF + idK * Math.sin(now * 1.6 * iF) * 0.025;
+    rig.legFR.rotation.x = (base.FR || 0) + hip(phFR) * legA * foreF + idK * Math.sin(now * 1.6 * iF + 1.5) * 0.025;
+    rig.legHL.rotation.x = (base.HL || 0) + hip(phHL) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 3.0) * 0.025;
+    rig.legHR.rotation.x = (base.HR || 0) + hip(phHR) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 4.5) * 0.025;
+  }
+  if (rig.chFL && !rig.insectLegs) {
     if (rig.soft) {
       // 章魚觸手腿:支撐相是推進的行進波,擺動相整條抬起收成搜索/蓄勢的 S 形(softLeg);
       // 靜止時波仍以慢速自行爬行(軟體動物永遠在蠕動)
@@ -1044,7 +1058,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   // 中足對(六足機體的第三組;`tripod` 步態的另一半)—— 與對側前後足同組擺動 ⇒ 恆三足觸地。
   // 名冊與 stepBeast 那一份同形(rig.midLegs / midKnees / midTarsi),讓兩支鷹架的六足機體
   // 共用同一組節點契約;沒有 midLegs 的機體逐位元同舊制。
-  if (rig.midLegs) {
+  if (rig.midLegs && !rig.insectLegs) {
     const mp = [Math.PI, 0];                     // [左, 右] —— 與 tripod 的前後足互補
     const midIdle = idle * sg.breathK;
     // 中足與前後足吃**同一份 profile**(六足機體一律 arthropod):昆蟲的股-脛關節在支撐相
@@ -1175,8 +1189,9 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   rig.head.rotation.y += L.gaze;   // 入彎凝視:獵食者先看向要去的地方
   // 尾:急轉甩向轉向反側(配重)+ 逐節延遲的鞭;高速時尾根抬起配平前傾
   if (rig.tailSegs?.length) {
-    whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate, 0.12);
-    rig.tailSegs[0].rotation.x += (rig.tailUp || 0.12) * a;
+    whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate, rig.tailBase ?? 0.12,
+      null, null, rig.tailStiffness ?? 1);
+    rig.tailSegs[0].rotation.x += (rig.tailUp ?? 0.12) * a * (rig.tailStiffness ?? 1);
   }
 }
 

@@ -104,6 +104,18 @@ try {
         finite(unit, id);
       };
       for (let i = 0; i < 100; i++) step(1 / 60, i < 50 ? 7 : 0);
+      if (rig.chFL?.length === 3) {
+        const distal = ['chFL', 'chFR', 'chHL', 'chHR'].map(key => ({ node: rig[key][2].g, min: Infinity, max: -Infinity }));
+        for (let i = 0; i < 160; i++) {
+          step(1 / 60, rig.top * .65);
+          for (const joint of distal) {
+            joint.min = Math.min(joint.min, joint.node.rotation.x);
+            joint.max = Math.max(joint.max, joint.node.rotation.x);
+          }
+        }
+        check(distal.every(j => j.max - j.min > .01), `${id}: distal metapodial joint remains rigid`);
+        check(rig.chFL[0].k < 0 && rig.chHL[0].k > 0, `${id}: elbow and stifle bend identically`);
+      }
       const recoil = rig.referenceMotion.fire[0];
       ent.fireFx = { t0: now, slot: 'light' };
       step(1 / 60, 5);

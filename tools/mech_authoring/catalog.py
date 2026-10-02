@@ -66,8 +66,13 @@ def ground_legs(a):
     soft = r == 'octopod'
     for leg in p['legs']:
         owner = leg['root']
+        widths = p.get('legWidths', {}).get('fore' if 'F' in owner else 'hind')
         for i, delta in enumerate(leg['deltas']):
-            limb_segment(a, owner, delta, p['limb'] * (1 - i * .12), soft=soft)
+            width = p['limb'] * (widths[i] if widths else 1-i*.12)
+            if p.get('legAnatomy'):
+                animal_limb(a, owner, delta, width, 'fore' if 'F' in leg['root'] else 'hind', i)
+            else:
+                limb_segment(a, owner, delta, width, soft=soft)
             owner = next(n for n, parent, _ in a.spec['joints'] if parent == owner)
         if soft:
             ellipsoid(a, 'Support tentacle contact pad', owner, (.26, .14, .5), (0, -.02, .15), 'shade')
@@ -87,6 +92,34 @@ def ground_legs(a):
                 for x in [-.22, 0, .22]: spike(a, 'Bird digit claw', owner, (x, -.05, long * .6), (x * 1.25, -.16, long * .95), .06, 'brass')
             if r == 'roo':
                 for i in range(5): a.tube('Achilles energy spring', owner, .14, .105, .04, (0, .2 + i * .12, -.18), 'brass', 'y', 12)
+
+
+def animal_limb(a, parent, delta, width, role, segment):
+    from mathutils import Vector
+    names = ['Humerus', 'Radius ulna', 'Metacarpal'] if role == 'fore' else ['Femur', 'Tibia fibula', 'Metatarsal']
+    length = Vector(delta).length
+    if segment == 1:
+        # Paired forearm rods and the slender fibula remain visible between armor plates.
+        for side in [-1, 1]:
+            at = side * width * .23
+            a.strut(names[segment] + ' paired load rod', parent, (at, 0, 0),
+                    (delta[0] + at, delta[1], delta[2]), width * (.17 if role == 'fore' else .12), 'steel')
+    else:
+        a.strut(names[segment] + ' load rod', parent, (0, 0, 0), delta, width * .30, 'steel')
+    # A broad proximal thigh, narrow shin and long exposed hock distinguish the hind limb.
+    shape = [(length*.08, width*.72, width*.70), (length*.30, width*1.35, width*1.05),
+             (length*.73, width*.82, width*.75), (length*.95, width*.48, width*.45)]
+    if segment == 2:
+        shape = [(length*.08, width, width*.70), (length*.88, width*.62, width*.50)]
+    shell = a.loft(names[segment] + ' anatomical armor', parent, shape, 'armor')
+    shell.rotation_euler = Vector((delta[0], -delta[2], delta[1])).to_track_quat('Z', 'Y').to_euler()
+    a.disk(names[segment] + ' hinge', parent, width*.42, width*.92, (0, 0, 0), 'dark', 'x', 12)
+    if segment == 1:
+        at = (0, .04, -width*.54 if role == 'fore' else width*.54)
+        ellipsoid(a, 'Olecranon elbow projection' if role == 'fore' else 'Forward stifle cap',
+                  parent, (width*.7, width*.65, width*.7), at, 'armor', 10, 4)
+    elif segment == 2 and role == 'hind':
+        spike(a, 'Raised calcaneal heel', parent, (0, 0, 0), (0, width*.85, -width*.65), width*.26, 'steel')
 
 
 def tails(a):
@@ -314,6 +347,9 @@ def flight_feathers(a, parent, side, length, width, material='armor', count=8, m
             end = (side * length * (.3 + i * .16), 0, -.9 + i * .15)
             a.strut('Bone-white membrane finger', parent, (0, .04, .3), end, .045, 'steel')
     else:
+        wing(a, 'Continuous overlapping flight feather web', parent,
+             [(0,.20),(side*length,.08),(side*length,-.82),(side*length*.70,-1.36),(0,-1.05)],
+             (0,0,0), material, .045)
         for i in range(count):
             x = side * length * (.1 + i * .11)
             z = -.15 - i * .05

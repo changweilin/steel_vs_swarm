@@ -1,6 +1,6 @@
 {
-  "blend": "2392eb2b6d373260cc0d3e7d02391cf9c580d0065ac4d57722f8c5cda873e215",
-  "bones": 35,
+  "blend": "90b7dfd694dd036342f63a7871c0996d1b1822117a980dfe06974e503a5b4696",
+  "bones": 99,
   "clips": [
     "idle",
     "run",
@@ -47,6 +47,32 @@
     }
   },
   "limbVerticesOutsideHull": 0,
+  "exposedLimbBoundsInHullCoordinates": {
+    "shoulder_l": {
+      "min": [
+        -0.08379102498292923,
+        -0.027619395405054092,
+        -1.1091790199279785
+      ],
+      "max": [
+        2.815509796142578,
+        2.175557851791382,
+        -0.249999538064003
+      ]
+    },
+    "shoulder_r": {
+      "min": [
+        -2.815509796142578,
+        -0.027619432657957077,
+        -1.1091790199279785
+      ],
+      "max": [
+        0.08379102498292923,
+        2.175557851791382,
+        -0.249999538064003
+      ]
+    }
+  },
   "outsideExamples": [],
   "editable_source": "pass",
   "flight_belly": "pass"
