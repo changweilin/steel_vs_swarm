@@ -1,15 +1,15 @@
 {
   "source": {
-    "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
-    "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
-    "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+    "contract": "73f9c57aa6bd0decc2cc3dce80bc9312bc606a5787004a72341b17067470e534",
+    "builder": "19eb5bb693e24f02ef35c172a149887a3d347939c011ef2767971db22beb7b72",
+    "catalog": "59ee73c8f074d16220b0cb8eb413ffcc44c88cc7a4d252c30fb44e7843b2e188",
     "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
-    "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+    "sharedContract": "68a3f9d04df4ed42bf39263613fef82e0e48580ab595407ba0f38b0d9c6ec9e4",
     "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
   },
   "hashes": {
-    "runtime": "95b0b8e44ec6564d9662d1d5cd8337161d5e105f10347a2aea5b1fd8ad664456",
-    "glb": "6523bee61dd9e6b126c18d8abad3340d328011b22d6bf6646887503abc849699"
+    "runtime": "2887880c3e2268db858c19b161af28a465953238cc853b404738742bda665f62",
+    "glb": "e7900e65e2a6053dd39a214d08dd668cf2b1b09160c40294ac34c5e447e6cc85"
   },
   "measurements": {
     "trianglesPerVisibleForm": 10684,
@@ -65,9 +65,9 @@
       "flight_skill",
       "flight_ult",
       "run",
+      "light",
       "heavy",
       "flight_heavy",
-      "light",
       "flight_light"
     ]
   },

@@ -1,0 +1,6577 @@
+{
+  "m01": {
+    "parts": [
+      "Continuous armored belly keel",
+      "Tapered waist and pelvic shell",
+      "Overlapping angular abdominal armor",
+      "Overlapping angular abdominal armor.001",
+      "Overlapping angular abdominal armor.002",
+      "Faceted pectoral breastplate",
+      "Faceted pectoral breastplate.001",
+      "Chest tricolor chevron",
+      "Chest tricolor chevron.002",
+      "Chest tricolor chevron.001",
+      "Vampire collar red lining",
+      "Chest tricolor chevron.003",
+      "Vampire collar red lining.001",
+      "Tall vampire collar outer",
+      "Separated cooling louver",
+      "Separated cooling louver.001",
+      "Separated cooling louver.002",
+      "Tall vampire collar outer.001",
+      "Separated cooling louver.003",
+      "Separated cooling louver.004",
+      "Separated cooling louver.005",
+      "Closing ventral bay door",
+      "Ventral door seam",
+      "Rigid articulated load bearing link",
+      "Segmented tapered navy limb shell",
+      "Exposed joint hinge collar",
+      "Separate angular limb face plate",
+      "Rigid articulated load bearing link.001",
+      "Pointed silver knee inset",
+      "Segmented tapered navy limb shell.001",
+      "Exposed joint hinge collar.001",
+      "Separate angular limb face plate.001",
+      "Serbian tricolor armor band",
+      "Serbian tricolor armor band.001",
+      "Serbian tricolor armor band.002",
+      "Rigid articulated load bearing link.002",
+      "Segmented tapered navy limb shell.002",
+      "Layered shoulder pauldron",
+      "Exposed joint hinge collar.002",
+      "Separate angular limb face plate.002",
+      "Rigid articulated load bearing link.003",
+      "Segmented tapered navy limb shell.003",
+      "Exposed joint hinge collar.003",
+      "Separate angular limb face plate.003",
+      "Serbian tricolor armor band.003",
+      "Serbian tricolor armor band.004",
+      "Serbian tricolor armor band.005",
+      "Rigid armored hand",
+      "Pointed grounded armored boot",
+      "Boot sole",
+      "Shared triangular cape wing",
+      "Shared navy wing armor surface",
+      "Shared wing structural rib",
+      "Shared wing structural rib.001",
+      "Shared wing structural rib.002",
+      "Shared wing structural rib.003",
+      "Shared wing leading edge spar",
+      "Visible wing root hinge",
+      "Serbian tricolor armor band.006",
+      "Serbian tricolor armor band.007",
+      "Serbian tricolor armor band.008",
+      "Shared rear propulsion nozzle",
+      "Shared rear propulsion nozzle.001",
+      "Shared propulsion aperture",
+      "Shared propulsion aperture.001",
+      "Closing ventral bay door.001",
+      "Ventral door seam.001",
+      "Rigid articulated load bearing link.004",
+      "Segmented tapered navy limb shell.004",
+      "Exposed joint hinge collar.004",
+      "Separate angular limb face plate.004",
+      "Rigid articulated load bearing link.005",
+      "Pointed silver knee inset.001",
+      "Segmented tapered navy limb shell.005",
+      "Exposed joint hinge collar.005",
+      "Separate angular limb face plate.005",
+      "Serbian tricolor armor band.009",
+      "Serbian tricolor armor band.010",
+      "Serbian tricolor armor band.011",
+      "Rigid articulated load bearing link.006",
+      "Segmented tapered navy limb shell.006",
+      "Layered shoulder pauldron.001",
+      "Exposed joint hinge collar.006",
+      "Separate angular limb face plate.006",
+      "Rigid articulated load bearing link.007",
+      "Segmented tapered navy limb shell.007",
+      "Exposed joint hinge collar.007",
+      "Separate angular limb face plate.007",
+      "Serbian tricolor armor band.012",
+      "Serbian tricolor armor band.013",
+      "Serbian tricolor armor band.014",
+      "Rigid armored hand.001",
+      "Pointed grounded armored boot.001",
+      "Boot sole.001",
+      "Shared triangular cape wing.001",
+      "Shared navy wing armor surface.001",
+      "Shared wing structural rib.004",
+      "Shared wing structural rib.005",
+      "Shared wing structural rib.006",
+      "Shared wing structural rib.007",
+      "Shared wing leading edge spar.001",
+      "Visible wing root hinge.001",
+      "Serbian tricolor armor band.015",
+      "Serbian tricolor armor band.016",
+      "Serbian tricolor armor band.017",
+      "Faceted elongated vampire helmet",
+      "Silver widow peak mask",
+      "Red sensor visor slit",
+      "Central crimson sensor",
+      "Single monocular sensor socket",
+      "Anatomical right rotary gun receiver",
+      "Six barrel rotary hub",
+      "Right gatling open barrel",
+      "Right gatling open barrel.001",
+      "Right gatling open barrel.002",
+      "Right gatling open barrel.003",
+      "Right gatling open barrel.004",
+      "Right gatling open barrel.005",
+      "Six barrel forward clamp",
+      "Light muzzle emission",
+      "Anatomical left twin missile box",
+      "Left twin missile launch cell",
+      "Left twin missile launch cell.001",
+      "Missile cell red indicator",
+      "Missile cell red indicator.001",
+      "Missile charge shutter",
+      "Heavy muzzle emission",
+      "Independent retractable shield emitter",
+      "Shield emitter luminous rail",
+      "Independent retractable shield emitter.001",
+      "Shield emitter luminous rail.001",
+      "Holographic radar membrane",
+      "Radar reticle ring",
+      "Radar reticle ring.001",
+      "Radar reticle ring.002",
+      "Radar reticle ring.003",
+      "Radar reticle ring.004",
+      "Radar reticle ring.005",
+      "Radar reticle ring.006",
+      "Radar reticle ring.007",
+      "Radar reticle ring.008",
+      "Radar reticle ring.009",
+      "Radar reticle ring.010",
+      "Radar reticle ring.011",
+      "Radar reticle ring.012",
+      "Radar reticle ring.013",
+      "Radar reticle ring.014",
+      "Radar reticle ring.015",
+      "Radar reticle ring.016",
+      "Radar reticle ring.017",
+      "Radar reticle ring.018",
+      "Radar reticle ring.019",
+      "Radar reticle ring.020",
+      "Radar reticle ring.021",
+      "Radar reticle ring.022",
+      "Radar reticle ring.023",
+      "Radar reticle ring.024",
+      "Radar reticle ring.025",
+      "Radar reticle ring.026",
+      "Radar reticle ring.027",
+      "Radar reticle ring.028",
+      "Radar reticle ring.029",
+      "Radar reticle ring.030",
+      "Radar reticle ring.031",
+      "Radar reticle ring.032",
+      "Radar reticle ring.033",
+      "Radar reticle ring.034",
+      "Radar reticle ring.035",
+      "Radar reticle ring.036",
+      "Radar reticle ring.037",
+      "Radar reticle ring.038",
+      "Radar reticle ring.039",
+      "Radar reticle ring.040",
+      "Radar reticle ring.041",
+      "Radar reticle ring.042",
+      "Radar reticle ring.043",
+      "Radar reticle ring.044",
+      "Radar reticle ring.045",
+      "Radar reticle ring.046",
+      "Radar reticle ring.047",
+      "Radar reticle ring.048",
+      "Radar reticle ring.049",
+      "Radar reticle ring.050",
+      "Radar reticle ring.051",
+      "Radar reticle ring.052",
+      "Radar reticle ring.053",
+      "Radar reticle ring.054",
+      "Radar reticle ring.055",
+      "Radar reticle ring.056",
+      "Radar reticle ring.057",
+      "Radar reticle ring.058",
+      "Radar reticle ring.059",
+      "Radar reticle ring.060",
+      "Radar reticle ring.061",
+      "Radar reticle ring.062",
+      "Radar reticle ring.063",
+      "Radar reticle ring.064",
+      "Radar reticle ring.065",
+      "Radar reticle ring.066",
+      "Radar reticle ring.067",
+      "Radar reticle ring.068",
+      "Radar reticle ring.069",
+      "Radar reticle ring.070",
+      "Radar reticle ring.071",
+      "Radar reticle ring.072",
+      "Radar reticle ring.073",
+      "Radar reticle ring.074",
+      "Radar reticle ring.075",
+      "Radar reticle ring.076",
+      "Radar reticle ring.077",
+      "Radar reticle ring.078",
+      "Radar reticle ring.079",
+      "Radar reticle ring.080",
+      "Radar reticle ring.081",
+      "Radar reticle ring.082",
+      "Radar reticle ring.083",
+      "Radar reticle ring.084",
+      "Radar reticle ring.085",
+      "Radar reticle ring.086",
+      "Radar reticle ring.087",
+      "Radar reticle ring.088",
+      "Radar reticle ring.089",
+      "Radar reticle ring.090",
+      "Radar reticle ring.091",
+      "Radar reticle ring.092",
+      "Radar reticle ring.093",
+      "Radar reticle ring.094",
+      "Radar reticle ring.095",
+      "Radar quadrant tick",
+      "Radar quadrant tick.001",
+      "Radar quadrant tick.002",
+      "Radar quadrant tick.003",
+      "Articulated cast annulus"
+    ],
+    "joints": [
+      [
+        "tilt",
+        null,
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "hips",
+        "tilt",
+        [
+          0,
+          3.1,
+          0
+        ]
+      ],
+      [
+        "chest",
+        "hips",
+        [
+          0,
+          0.68,
+          0
+        ]
+      ],
+      [
+        "head",
+        "chest",
+        [
+          0,
+          1.68,
+          0.05
+        ]
+      ],
+      [
+        "hip_l",
+        "hips",
+        [
+          0.4,
+          -0.1,
+          0
+        ]
+      ],
+      [
+        "knee_l",
+        "hip_l",
+        [
+          0,
+          -1.42,
+          0
+        ]
+      ],
+      [
+        "ankle_l",
+        "knee_l",
+        [
+          0,
+          -1.38,
+          0
+        ]
+      ],
+      [
+        "shoulder_l",
+        "chest",
+        [
+          1.02,
+          1.15,
+          0
+        ]
+      ],
+      [
+        "elbow_l",
+        "shoulder_l",
+        [
+          0,
+          -0.94,
+          0
+        ]
+      ],
+      [
+        "wrist_l",
+        "elbow_l",
+        [
+          0,
+          -0.83,
+          0
+        ]
+      ],
+      [
+        "wing_l",
+        "chest",
+        [
+          0.18,
+          1.25,
+          -0.48
+        ]
+      ],
+      [
+        "bay_l",
+        "chest",
+        [
+          0.68,
+          0.28,
+          0.43
+        ]
+      ],
+      [
+        "hip_r",
+        "hips",
+        [
+          -0.4,
+          -0.1,
+          0
+        ]
+      ],
+      [
+        "knee_r",
+        "hip_r",
+        [
+          0,
+          -1.42,
+          0
+        ]
+      ],
+      [
+        "ankle_r",
+        "knee_r",
+        [
+          0,
+          -1.38,
+          0
+        ]
+      ],
+      [
+        "shoulder_r",
+        "chest",
+        [
+          -1.02,
+          1.15,
+          0
+        ]
+      ],
+      [
+        "elbow_r",
+        "shoulder_r",
+        [
+          0,
+          -0.94,
+          0
+        ]
+      ],
+      [
+        "wrist_r",
+        "elbow_r",
+        [
+          0,
+          -0.83,
+          0
+        ]
+      ],
+      [
+        "wing_r",
+        "chest",
+        [
+          -0.18,
+          1.25,
+          -0.48
+        ]
+      ],
+      [
+        "bay_r",
+        "chest",
+        [
+          -0.68,
+          0.28,
+          0.43
+        ]
+      ],
+      [
+        "gun",
+        "wrist_r",
+        [
+          0,
+          -0.1,
+          0.16
+        ]
+      ],
+      [
+        "gun_recoil",
+        "gun",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "gun_spin",
+        "gun_recoil",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "light_muzzle",
+        "gun_spin",
+        [
+          0,
+          0,
+          1.8
+        ]
+      ],
+      [
+        "heavy",
+        "wrist_l",
+        [
+          0,
+          -0.1,
+          0.1
+        ]
+      ],
+      [
+        "charge_hinge",
+        "heavy",
+        [
+          0,
+          0.23,
+          -0.38
+        ]
+      ],
+      [
+        "heavy_muzzle",
+        "heavy",
+        [
+          0,
+          0,
+          0.92
+        ]
+      ],
+      [
+        "cast_dish",
+        "chest",
+        [
+          0,
+          1.15,
+          -0.55
+        ]
+      ],
+      [
+        "emitter_l",
+        "chest",
+        [
+          0.76,
+          0.7,
+          0.44
+        ]
+      ],
+      [
+        "emitter_r",
+        "chest",
+        [
+          -0.76,
+          0.7,
+          0.44
+        ]
+      ],
+      [
+        "barrier",
+        "tilt",
+        [
+          0,
+          3.9,
+          1.75
+        ]
+      ]
+    ],
+    "triangles": 10684,
+    "hashes": {
+      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+      "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
+      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    }
+  },
+  "s03": {
+    "parts": [
+      "Shared sealed ventral hull",
+      "Symmetric feather tattoo stroke",
+      "Symmetric feather tattoo stroke.001",
+      "Symmetric feather tattoo stroke.002",
+      "Symmetric feather tattoo stroke.003",
+      "Symmetric feather tattoo stroke.004",
+      "Symmetric feather tattoo stroke.005",
+      "Symmetric feather tattoo stroke.006",
+      "Symmetric feather tattoo stroke.007",
+      "Dorsal command bridge",
+      "Humerus load rod",
+      "Humerus anatomical armor",
+      "Humerus hinge",
+      "Radius ulna paired load rod",
+      "Radius ulna paired load rod.001",
+      "Radius ulna anatomical armor",
+      "Olecranon elbow projection",
+      "Radius ulna hinge",
+      "Metacarpal load rod",
+      "Metacarpal anatomical armor",
+      "Metacarpal hinge",
+      "Pillar foot armor",
+      "Elephant foot nail",
+      "Elephant foot nail.001",
+      "Elephant foot nail.002",
+      "Humerus load rod.001",
+      "Humerus anatomical armor.001",
+      "Humerus hinge.001",
+      "Radius ulna paired load rod.002",
+      "Radius ulna paired load rod.003",
+      "Radius ulna anatomical armor.001",
+      "Olecranon elbow projection.001",
+      "Radius ulna hinge.001",
+      "Metacarpal load rod.001",
+      "Metacarpal anatomical armor.001",
+      "Metacarpal hinge.001",
+      "Pillar foot armor.001",
+      "Elephant foot nail.003",
+      "Elephant foot nail.004",
+      "Elephant foot nail.005",
+      "Femur load rod",
+      "Femur anatomical armor",
+      "Femur hinge",
+      "Tibia fibula paired load rod",
+      "Tibia fibula paired load rod.001",
+      "Tibia fibula anatomical armor",
+      "Forward stifle cap",
+      "Tibia fibula hinge",
+      "Metatarsal load rod",
+      "Raised calcaneal heel",
+      "Metatarsal anatomical armor",
+      "Metatarsal hinge",
+      "Pillar foot armor.002",
+      "Elephant foot nail.006",
+      "Elephant foot nail.007",
+      "Elephant foot nail.008",
+      "Femur load rod.001",
+      "Femur anatomical armor.001",
+      "Femur hinge.001",
+      "Tibia fibula paired load rod.002",
+      "Tibia fibula paired load rod.003",
+      "Tibia fibula anatomical armor.001",
+      "Forward stifle cap.001",
+      "Tibia fibula hinge.001",
+      "Metatarsal load rod.001",
+      "Raised calcaneal heel.001",
+      "Metatarsal anatomical armor.001",
+      "Metatarsal hinge.001",
+      "Pillar foot armor.003",
+      "Elephant foot nail.009",
+      "Elephant foot nail.010",
+      "Elephant foot nail.011",
+      "Turquoise whale dorsal armor",
+      "Shared neckless whale elephant head",
+      "Elephant ear phased radar fin",
+      "Luminous ear radar matrix",
+      "Radar array cell row",
+      "Radar array cell row.001",
+      "Radar array cell row.002",
+      "Radar array cell row.003",
+      "Radar array cell row.004",
+      "Radar array cell row.005",
+      "Radar array cell row.006",
+      "Shared crescent ivory tusk",
+      "Shared crescent ivory tusk.001",
+      "Shared crescent ivory tusk.002",
+      "Shared crescent ivory tusk.003",
+      "Whale turquoise sensor eye",
+      "Whale turquoise sensor eye.001",
+      "Whale ventral longitudinal rib",
+      "Whale ventral longitudinal rib.001",
+      "Whale ventral longitudinal rib.002",
+      "Whale ventral longitudinal rib.003",
+      "Whale ventral longitudinal rib.004",
+      "Whale ventral longitudinal rib.005",
+      "Whale ventral longitudinal rib.006",
+      "Whale ventral longitudinal rib.007",
+      "Whale ventral longitudinal rib.008",
+      "Whale ventral longitudinal rib.009",
+      "Whale ventral longitudinal rib.010",
+      "Whale ventral longitudinal rib.011",
+      "Whale ventral longitudinal rib.012",
+      "Whale ventral longitudinal rib.013",
+      "Whale ventral longitudinal rib.014",
+      "Whale ventral longitudinal rib.015",
+      "Whale ventral longitudinal rib.016",
+      "Whale ventral longitudinal rib.017",
+      "Whale ventral longitudinal rib.018",
+      "Whale ventral longitudinal rib.019",
+      "Whale ventral longitudinal rib.020",
+      "Whale ventral longitudinal rib.021",
+      "Whale ventral longitudinal rib.022",
+      "Whale ventral longitudinal rib.023",
+      "Whale ventral longitudinal rib.024",
+      "Whale ventral longitudinal rib.025",
+      "Whale ventral longitudinal rib.026",
+      "Whale ventral longitudinal rib.027",
+      "Whale ventral longitudinal rib.028",
+      "Whale ventral longitudinal rib.029",
+      "Whale ventral longitudinal rib.030",
+      "Whale ventral longitudinal rib.031",
+      "Whale ventral longitudinal rib.032",
+      "Whale ventral longitudinal rib.033",
+      "Whale ventral longitudinal rib.034",
+      "Whale ventral longitudinal rib.035",
+      "Whale ventral longitudinal rib.036",
+      "Whale ventral longitudinal rib.037",
+      "Whale ventral longitudinal rib.038",
+      "Whale ventral longitudinal rib.039",
+      "Whale ventral longitudinal rib.040",
+      "Whale ventral longitudinal rib.041",
+      "Elephant ear phased radar fin.001",
+      "Luminous ear radar matrix.001",
+      "Radar array cell row.007",
+      "Radar array cell row.008",
+      "Radar array cell row.009",
+      "Radar array cell row.010",
+      "Radar array cell row.011",
+      "Radar array cell row.012",
+      "Radar array cell row.013",
+      "Shared crescent ivory tusk.004",
+      "Shared crescent ivory tusk.005",
+      "Shared crescent ivory tusk.006",
+      "Shared crescent ivory tusk.007",
+      "Shared trunk spiral horn segment",
+      "Trunk conducting spiral ring",
+      "Shared trunk spiral horn segment.001",
+      "Trunk conducting spiral ring.001",
+      "Shared trunk spiral horn segment.002",
+      "Trunk conducting spiral ring.002",
+      "Shared trunk spiral horn segment.003",
+      "Trunk conducting spiral ring.003",
+      "Shared trunk spiral horn segment.004",
+      "Trunk conducting spiral ring.004",
+      "Shared trunk spiral horn segment.005",
+      "Trunk conducting spiral ring.005",
+      "Shared horn terminal point",
+      "Bridge panoramic windows",
+      "Bridge radar annulus",
+      "Streamlined whale caudal armor",
+      "Streamlined whale caudal armor.001",
+      "Streamlined whale caudal armor.002",
+      "Streamlined whale caudal armor.003",
+      "Streamlined whale caudal armor.004",
+      "Whale tail fluke",
+      "Whale tail fluke.001",
+      "Ear radar beam receiver",
+      "High frequency beam aperture",
+      "Forehead microwave emitter matrix",
+      "Forehead phased microwave cell",
+      "Forehead phased microwave cell.001",
+      "Forehead phased microwave cell.002",
+      "Articulated charge shutter",
+      "Weapon muzzle energy aperture",
+      "Weapon muzzle energy aperture.001",
+      "Independent retractable shield emitter",
+      "Shield luminous emitter rail",
+      "Independent retractable shield emitter.001",
+      "Shield luminous emitter rail.001",
+      "Holographic radar membrane",
+      "Radar reticle ring",
+      "Radar reticle ring.001",
+      "Radar reticle ring.002",
+      "Radar reticle ring.003",
+      "Radar reticle ring.004",
+      "Radar reticle ring.005",
+      "Radar reticle ring.006",
+      "Radar reticle ring.007",
+      "Radar reticle ring.008",
+      "Radar reticle ring.009",
+      "Radar reticle ring.010",
+      "Radar reticle ring.011",
+      "Radar reticle ring.012",
+      "Radar reticle ring.013",
+      "Radar reticle ring.014",
+      "Radar reticle ring.015",
+      "Radar reticle ring.016",
+      "Radar reticle ring.017",
+      "Radar reticle ring.018",
+      "Radar reticle ring.019",
+      "Radar reticle ring.020",
+      "Radar reticle ring.021",
+      "Radar reticle ring.022",
+      "Radar reticle ring.023",
+      "Radar reticle ring.024",
+      "Radar reticle ring.025",
+      "Radar reticle ring.026",
+      "Radar reticle ring.027",
+      "Radar reticle ring.028",
+      "Radar reticle ring.029",
+      "Radar reticle ring.030",
+      "Radar reticle ring.031",
+      "Radar reticle ring.032",
+      "Radar reticle ring.033",
+      "Radar reticle ring.034",
+      "Radar reticle ring.035",
+      "Radar reticle ring.036",
+      "Radar reticle ring.037",
+      "Radar reticle ring.038",
+      "Radar reticle ring.039",
+      "Radar reticle ring.040",
+      "Radar reticle ring.041",
+      "Radar reticle ring.042",
+      "Radar reticle ring.043",
+      "Radar reticle ring.044",
+      "Radar reticle ring.045",
+      "Radar reticle ring.046",
+      "Radar reticle ring.047",
+      "Radar reticle ring.048",
+      "Radar reticle ring.049",
+      "Radar reticle ring.050",
+      "Radar reticle ring.051",
+      "Radar reticle ring.052",
+      "Radar reticle ring.053",
+      "Radar reticle ring.054",
+      "Radar reticle ring.055",
+      "Radar reticle ring.056",
+      "Radar reticle ring.057",
+      "Radar reticle ring.058",
+      "Radar reticle ring.059",
+      "Radar reticle ring.060",
+      "Radar reticle ring.061",
+      "Radar reticle ring.062",
+      "Radar reticle ring.063",
+      "Radar reticle ring.064",
+      "Radar reticle ring.065",
+      "Radar reticle ring.066",
+      "Radar reticle ring.067",
+      "Radar reticle ring.068",
+      "Radar reticle ring.069",
+      "Radar reticle ring.070",
+      "Radar reticle ring.071",
+      "Radar reticle ring.072",
+      "Radar reticle ring.073",
+      "Radar reticle ring.074",
+      "Radar reticle ring.075",
+      "Radar reticle ring.076",
+      "Radar reticle ring.077",
+      "Radar reticle ring.078",
+      "Radar reticle ring.079",
+      "Radar reticle ring.080",
+      "Radar reticle ring.081",
+      "Radar reticle ring.082",
+      "Radar reticle ring.083",
+      "Radar reticle ring.084",
+      "Radar reticle ring.085",
+      "Radar reticle ring.086",
+      "Radar reticle ring.087",
+      "Radar reticle ring.088",
+      "Radar reticle ring.089",
+      "Radar reticle ring.090",
+      "Radar reticle ring.091",
+      "Radar reticle ring.092",
+      "Radar reticle ring.093",
+      "Radar reticle ring.094",
+      "Radar reticle ring.095",
+      "Radar quadrant tick",
+      "Radar quadrant tick.001",
+      "Radar quadrant tick.002",
+      "Radar quadrant tick.003",
+      "Articulated skill charge annulus"
+    ],
+    "joints": [
+      [
+        "tilt",
+        null,
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "spine",
+        "tilt",
+        [
+          0,
+          2.25,
+          0
+        ]
+      ],
+      [
+        "chest",
+        "spine",
+        [
+          0,
+          0.12,
+          0.72
+        ]
+      ],
+      [
+        "neck",
+        "chest",
+        [
+          0,
+          0.1,
+          0.85
+        ]
+      ],
+      [
+        "head",
+        "neck",
+        [
+          0,
+          0.02,
+          0.47
+        ]
+      ],
+      [
+        "leg_FL",
+        "chest",
+        [
+          1.0555999999999999,
+          -0.12,
+          0.5800000000000001
+        ]
+      ],
+      [
+        "knee_FL",
+        "leg_FL",
+        [
+          0,
+          -0.84,
+          -0.17
+        ]
+      ],
+      [
+        "ankle_FL",
+        "knee_FL",
+        [
+          0,
+          -0.94,
+          0.1
+        ]
+      ],
+      [
+        "toe_FL",
+        "ankle_FL",
+        [
+          0,
+          -0.24,
+          0.07
+        ]
+      ],
+      [
+        "leg_FR",
+        "chest",
+        [
+          -1.0555999999999999,
+          -0.12,
+          0.5800000000000001
+        ]
+      ],
+      [
+        "knee_FR",
+        "leg_FR",
+        [
+          0,
+          -0.84,
+          -0.17
+        ]
+      ],
+      [
+        "ankle_FR",
+        "knee_FR",
+        [
+          0,
+          -0.94,
+          0.1
+        ]
+      ],
+      [
+        "toe_FR",
+        "ankle_FR",
+        [
+          0,
+          -0.24,
+          0.07
+        ]
+      ],
+      [
+        "leg_HL",
+        "spine",
+        [
+          1.0555999999999999,
+          0,
+          -1.3
+        ]
+      ],
+      [
+        "knee_HL",
+        "leg_HL",
+        [
+          0,
+          -0.9,
+          0.24
+        ]
+      ],
+      [
+        "ankle_HL",
+        "knee_HL",
+        [
+          0,
+          -0.88,
+          -0.18
+        ]
+      ],
+      [
+        "toe_HL",
+        "ankle_HL",
+        [
+          0,
+          -0.24,
+          0.04
+        ]
+      ],
+      [
+        "leg_HR",
+        "spine",
+        [
+          -1.0555999999999999,
+          0,
+          -1.3
+        ]
+      ],
+      [
+        "knee_HR",
+        "leg_HR",
+        [
+          0,
+          -0.9,
+          0.24
+        ]
+      ],
+      [
+        "ankle_HR",
+        "knee_HR",
+        [
+          0,
+          -0.88,
+          -0.18
+        ]
+      ],
+      [
+        "toe_HR",
+        "ankle_HR",
+        [
+          0,
+          -0.24,
+          0.04
+        ]
+      ],
+      [
+        "bay_l",
+        "spine",
+        [
+          0.644,
+          -1.025,
+          0
+        ]
+      ],
+      [
+        "bay_r",
+        "spine",
+        [
+          -0.644,
+          -1.025,
+          0
+        ]
+      ],
+      [
+        "tail_0",
+        "spine",
+        [
+          0,
+          0.05,
+          -2.8
+        ]
+      ],
+      [
+        "tail_1",
+        "tail_0",
+        [
+          0,
+          -0.02,
+          -0.38
+        ]
+      ],
+      [
+        "tail_2",
+        "tail_1",
+        [
+          0,
+          -0.02,
+          -0.38
+        ]
+      ],
+      [
+        "tail_3",
+        "tail_2",
+        [
+          0,
+          -0.02,
+          -0.38
+        ]
+      ],
+      [
+        "tail_4",
+        "tail_3",
+        [
+          0,
+          -0.02,
+          -0.38
+        ]
+      ],
+      [
+        "ear_l",
+        "head",
+        [
+          0.82,
+          0.1,
+          -0.25
+        ]
+      ],
+      [
+        "tusk_l",
+        "head",
+        [
+          0.48,
+          -0.32,
+          0.57
+        ]
+      ],
+      [
+        "ear_r",
+        "head",
+        [
+          -0.82,
+          0.1,
+          -0.25
+        ]
+      ],
+      [
+        "tusk_r",
+        "head",
+        [
+          -0.48,
+          -0.32,
+          0.57
+        ]
+      ],
+      [
+        "trunk_0",
+        "head",
+        [
+          0,
+          -0.16,
+          0.95
+        ]
+      ],
+      [
+        "trunk_1",
+        "trunk_0",
+        [
+          0,
+          0,
+          0.43
+        ]
+      ],
+      [
+        "trunk_2",
+        "trunk_1",
+        [
+          0,
+          0,
+          0.43
+        ]
+      ],
+      [
+        "trunk_3",
+        "trunk_2",
+        [
+          0,
+          0,
+          0.43
+        ]
+      ],
+      [
+        "trunk_4",
+        "trunk_3",
+        [
+          0,
+          0,
+          0.43
+        ]
+      ],
+      [
+        "trunk_5",
+        "trunk_4",
+        [
+          0,
+          0,
+          0.43
+        ]
+      ],
+      [
+        "gun",
+        "chest",
+        [
+          -0.94,
+          0.08,
+          0.78
+        ]
+      ],
+      [
+        "gun_recoil",
+        "gun",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "light_muzzle",
+        "gun_recoil",
+        [
+          0,
+          0,
+          0.45
+        ]
+      ],
+      [
+        "heavy",
+        "chest",
+        [
+          0,
+          0.18,
+          1.25
+        ]
+      ],
+      [
+        "heavy_recoil",
+        "heavy",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "heavy_muzzle",
+        "heavy_recoil",
+        [
+          0,
+          0,
+          1.65
+        ]
+      ],
+      [
+        "charge_hinge",
+        "heavy",
+        [
+          0,
+          0.23,
+          -0.22
+        ]
+      ],
+      [
+        "cast_dish",
+        "chest",
+        [
+          0,
+          0.55,
+          -0.6
+        ]
+      ],
+      [
+        "emitter_l",
+        "chest",
+        [
+          0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "emitter_r",
+        "chest",
+        [
+          -0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "barrier",
+        "tilt",
+        [
+          0,
+          2.2,
+          3.7
+        ]
+      ]
+    ],
+    "triangles": 14316,
+    "hashes": {
+      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+      "image": "b335083d23ec7ec543f37bb9acf7da2657e0cf47773f5cd6101022dac7a28253",
+      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    }
+  },
+  "s10": {
+    "parts": [
+      "Shared sealed ventral hull",
+      "Humerus load rod",
+      "Humerus anatomical armor",
+      "Humerus hinge",
+      "Radius ulna paired load rod",
+      "Radius ulna paired load rod.001",
+      "Radius ulna anatomical armor",
+      "Olecranon elbow projection",
+      "Radius ulna hinge",
+      "Metacarpal load rod",
+      "Metacarpal anatomical armor",
+      "Metacarpal hinge",
+      "Three digit claw palm",
+      "Raptor grasping digit",
+      "Raptor grasping digit.001",
+      "Raptor grasping digit.002",
+      "Humerus load rod.001",
+      "Humerus anatomical armor.001",
+      "Humerus hinge.001",
+      "Radius ulna paired load rod.002",
+      "Radius ulna paired load rod.003",
+      "Radius ulna anatomical armor.001",
+      "Olecranon elbow projection.001",
+      "Radius ulna hinge.001",
+      "Metacarpal load rod.001",
+      "Metacarpal anatomical armor.001",
+      "Metacarpal hinge.001",
+      "Three digit claw palm.001",
+      "Raptor grasping digit.003",
+      "Raptor grasping digit.004",
+      "Raptor grasping digit.005",
+      "Femur load rod",
+      "Femur anatomical armor",
+      "Femur hinge",
+      "Tibia fibula paired load rod",
+      "Tibia fibula paired load rod.001",
+      "Tibia fibula anatomical armor",
+      "Forward stifle cap",
+      "Tibia fibula hinge",
+      "Metatarsal load rod",
+      "Raised calcaneal heel",
+      "Metatarsal anatomical armor",
+      "Metatarsal hinge",
+      "Raptor distal toe pad",
+      "Raptor toe claw",
+      "Raptor toe claw.001",
+      "Raised second toe sickle blade",
+      "Femur load rod.001",
+      "Femur anatomical armor.001",
+      "Femur hinge.001",
+      "Tibia fibula paired load rod.002",
+      "Tibia fibula paired load rod.003",
+      "Tibia fibula anatomical armor.001",
+      "Forward stifle cap.001",
+      "Tibia fibula hinge.001",
+      "Metatarsal load rod.001",
+      "Raised calcaneal heel.001",
+      "Metatarsal anatomical armor.001",
+      "Metatarsal hinge.001",
+      "Raptor distal toe pad.001",
+      "Raptor toe claw.002",
+      "Raptor toe claw.003",
+      "Raised second toe sickle blade.001",
+      "Tapered horizontal raptor rib cage",
+      "S curved cervical load column",
+      "S curved cervical load column.001",
+      "S curved cervical load column.002",
+      "Overlapping S neck vertebral armor",
+      "Overlapping S neck vertebral armor.001",
+      "Overlapping S neck vertebral armor.002",
+      "Long low upturned velociraptor skull",
+      "Slender velociraptor lower jaw",
+      "Raptor recessed orbit",
+      "Raptor nostril",
+      "Raptor recessed orbit.001",
+      "Raptor nostril.001",
+      "Raptor red gold eye",
+      "Raptor red gold eye.001",
+      "Raptor upper tooth",
+      "Raptor lower tooth",
+      "Raptor upper tooth.001",
+      "Raptor lower tooth.001",
+      "Raptor upper tooth.002",
+      "Raptor lower tooth.002",
+      "Raptor upper tooth.003",
+      "Raptor lower tooth.003",
+      "Raptor upper tooth.004",
+      "Raptor lower tooth.004",
+      "Raptor upper tooth.005",
+      "Raptor lower tooth.005",
+      "Raptor upper tooth.006",
+      "Raptor lower tooth.006",
+      "Raptor upper tooth.007",
+      "Raptor lower tooth.007",
+      "Raptor upper tooth.008",
+      "Raptor lower tooth.008",
+      "Raptor upper tooth.009",
+      "Raptor lower tooth.009",
+      "Raptor upper tooth.010",
+      "Raptor lower tooth.010",
+      "Raptor upper tooth.011",
+      "Raptor lower tooth.011",
+      "Raptor upper tooth.012",
+      "Raptor lower tooth.012",
+      "Raptor upper tooth.013",
+      "Raptor lower tooth.013",
+      "Raptor upper tooth.014",
+      "Raptor lower tooth.014",
+      "Raptor upper tooth.015",
+      "Raptor lower tooth.015",
+      "Raptor upper tooth.016",
+      "Raptor lower tooth.016",
+      "Raptor upper tooth.017",
+      "Raptor lower tooth.017",
+      "Continuous tapered raptor counterbalance tail",
+      "Paired archaeopteryx tail feather",
+      "Paired archaeopteryx tail feather.001",
+      "Continuous tapered raptor counterbalance tail.001",
+      "Paired archaeopteryx tail feather.002",
+      "Paired archaeopteryx tail feather.003",
+      "Continuous tapered raptor counterbalance tail.002",
+      "Paired archaeopteryx tail feather.004",
+      "Paired archaeopteryx tail feather.005",
+      "Continuous tapered raptor counterbalance tail.003",
+      "Paired archaeopteryx tail feather.006",
+      "Paired archaeopteryx tail feather.007",
+      "Continuous tapered raptor counterbalance tail.004",
+      "Paired archaeopteryx tail feather.008",
+      "Paired archaeopteryx tail feather.009",
+      "Shared folded scapular wing",
+      "Overlapping secondary flight feather.001",
+      "Overlapping secondary flight feather.003",
+      "Overlapping secondary flight feather.005",
+      "Overlapping secondary flight feather.007",
+      "Wing leading spar",
+      "Continuous primary feather root web",
+      "Independent raptor blade feather",
+      "Feather shaft inlay",
+      "Independent raptor blade feather.001",
+      "Feather shaft inlay.001",
+      "Independent raptor blade feather.002",
+      "Feather shaft inlay.002",
+      "Independent raptor blade feather.003",
+      "Feather shaft inlay.003",
+      "Independent raptor blade feather.004",
+      "Feather shaft inlay.004",
+      "Independent raptor blade feather.005",
+      "Feather shaft inlay.005",
+      "Independent raptor blade feather.006",
+      "Feather shaft inlay.006",
+      "Overlapping secondary flight feather",
+      "Overlapping secondary flight feather.002",
+      "Overlapping secondary flight feather.004",
+      "Overlapping secondary flight feather.006",
+      "Shared folded scapular wing.001",
+      "Overlapping secondary flight feather.009",
+      "Overlapping secondary flight feather.011",
+      "Overlapping secondary flight feather.013",
+      "Overlapping secondary flight feather.015",
+      "Wing leading spar.001",
+      "Continuous primary feather root web.001",
+      "Independent raptor blade feather.007",
+      "Feather shaft inlay.007",
+      "Independent raptor blade feather.008",
+      "Feather shaft inlay.008",
+      "Independent raptor blade feather.009",
+      "Feather shaft inlay.009",
+      "Independent raptor blade feather.010",
+      "Feather shaft inlay.010",
+      "Independent raptor blade feather.011",
+      "Feather shaft inlay.011",
+      "Independent raptor blade feather.012",
+      "Feather shaft inlay.012",
+      "Independent raptor blade feather.013",
+      "Feather shaft inlay.013",
+      "Overlapping secondary flight feather.008",
+      "Overlapping secondary flight feather.010",
+      "Overlapping secondary flight feather.012",
+      "Overlapping secondary flight feather.014",
+      "Forward dorsal weapon receiver",
+      "Short laser or machine gun receiver",
+      "Short dorsal phase laser barrel",
+      "Long dorsal electromagnetic lance tube",
+      "Electromagnetic dorsal lance tip",
+      "Articulated charge shutter",
+      "Weapon muzzle energy aperture",
+      "Weapon muzzle energy aperture.001",
+      "Independent retractable shield emitter",
+      "Shield luminous emitter rail",
+      "Independent retractable shield emitter.001",
+      "Shield luminous emitter rail.001",
+      "Holographic radar membrane",
+      "Radar reticle ring",
+      "Radar reticle ring.001",
+      "Radar reticle ring.002",
+      "Radar reticle ring.003",
+      "Radar reticle ring.004",
+      "Radar reticle ring.005",
+      "Radar reticle ring.006",
+      "Radar reticle ring.007",
+      "Radar reticle ring.008",
+      "Radar reticle ring.009",
+      "Radar reticle ring.010",
+      "Radar reticle ring.011",
+      "Radar reticle ring.012",
+      "Radar reticle ring.013",
+      "Radar reticle ring.014",
+      "Radar reticle ring.015",
+      "Radar reticle ring.016",
+      "Radar reticle ring.017",
+      "Radar reticle ring.018",
+      "Radar reticle ring.019",
+      "Radar reticle ring.020",
+      "Radar reticle ring.021",
+      "Radar reticle ring.022",
+      "Radar reticle ring.023",
+      "Radar reticle ring.024",
+      "Radar reticle ring.025",
+      "Radar reticle ring.026",
+      "Radar reticle ring.027",
+      "Radar reticle ring.028",
+      "Radar reticle ring.029",
+      "Radar reticle ring.030",
+      "Radar reticle ring.031",
+      "Radar reticle ring.032",
+      "Radar reticle ring.033",
+      "Radar reticle ring.034",
+      "Radar reticle ring.035",
+      "Radar reticle ring.036",
+      "Radar reticle ring.037",
+      "Radar reticle ring.038",
+      "Radar reticle ring.039",
+      "Radar reticle ring.040",
+      "Radar reticle ring.041",
+      "Radar reticle ring.042",
+      "Radar reticle ring.043",
+      "Radar reticle ring.044",
+      "Radar reticle ring.045",
+      "Radar reticle ring.046",
+      "Radar reticle ring.047",
+      "Radar reticle ring.048",
+      "Radar reticle ring.049",
+      "Radar reticle ring.050",
+      "Radar reticle ring.051",
+      "Radar reticle ring.052",
+      "Radar reticle ring.053",
+      "Radar reticle ring.054",
+      "Radar reticle ring.055",
+      "Radar reticle ring.056",
+      "Radar reticle ring.057",
+      "Radar reticle ring.058",
+      "Radar reticle ring.059",
+      "Radar reticle ring.060",
+      "Radar reticle ring.061",
+      "Radar reticle ring.062",
+      "Radar reticle ring.063",
+      "Radar reticle ring.064",
+      "Radar reticle ring.065",
+      "Radar reticle ring.066",
+      "Radar reticle ring.067",
+      "Radar reticle ring.068",
+      "Radar reticle ring.069",
+      "Radar reticle ring.070",
+      "Radar reticle ring.071",
+      "Radar reticle ring.072",
+      "Radar reticle ring.073",
+      "Radar reticle ring.074",
+      "Radar reticle ring.075",
+      "Radar reticle ring.076",
+      "Radar reticle ring.077",
+      "Radar reticle ring.078",
+      "Radar reticle ring.079",
+      "Radar reticle ring.080",
+      "Radar reticle ring.081",
+      "Radar reticle ring.082",
+      "Radar reticle ring.083",
+      "Radar reticle ring.084",
+      "Radar reticle ring.085",
+      "Radar reticle ring.086",
+      "Radar reticle ring.087",
+      "Radar reticle ring.088",
+      "Radar reticle ring.089",
+      "Radar reticle ring.090",
+      "Radar reticle ring.091",
+      "Radar reticle ring.092",
+      "Radar reticle ring.093",
+      "Radar reticle ring.094",
+      "Radar reticle ring.095",
+      "Radar quadrant tick",
+      "Radar quadrant tick.001",
+      "Radar quadrant tick.002",
+      "Radar quadrant tick.003",
+      "Articulated skill charge annulus"
+    ],
+    "joints": [
+      [
+        "tilt",
+        null,
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "spine",
+        "tilt",
+        [
+          0,
+          1.78,
+          0
+        ]
+      ],
+      [
+        "chest",
+        "spine",
+        [
+          0,
+          0.06,
+          0.6
+        ]
+      ],
+      [
+        "neck",
+        "chest",
+        [
+          0,
+          0.3,
+          0.58
+        ]
+      ],
+      [
+        "head",
+        "neck",
+        [
+          0,
+          0.42,
+          0.66
+        ]
+      ],
+      [
+        "leg_FL",
+        "chest",
+        [
+          0.57,
+          -0.12,
+          0.3400000000000001
+        ]
+      ],
+      [
+        "knee_FL",
+        "leg_FL",
+        [
+          0,
+          -0.32,
+          -0.2
+        ]
+      ],
+      [
+        "ankle_FL",
+        "knee_FL",
+        [
+          0,
+          -0.32,
+          0.25
+        ]
+      ],
+      [
+        "toe_FL",
+        "ankle_FL",
+        [
+          0,
+          -0.12,
+          0.07
+        ]
+      ],
+      [
+        "leg_FR",
+        "chest",
+        [
+          -0.57,
+          -0.12,
+          0.3400000000000001
+        ]
+      ],
+      [
+        "knee_FR",
+        "leg_FR",
+        [
+          0,
+          -0.32,
+          -0.2
+        ]
+      ],
+      [
+        "ankle_FR",
+        "knee_FR",
+        [
+          0,
+          -0.32,
+          0.25
+        ]
+      ],
+      [
+        "toe_FR",
+        "ankle_FR",
+        [
+          0,
+          -0.12,
+          0.07
+        ]
+      ],
+      [
+        "leg_HL",
+        "spine",
+        [
+          0.57,
+          0,
+          -0.92
+        ]
+      ],
+      [
+        "knee_HL",
+        "leg_HL",
+        [
+          0,
+          -0.53,
+          0.59
+        ]
+      ],
+      [
+        "ankle_HL",
+        "knee_HL",
+        [
+          0,
+          -0.65,
+          -0.54
+        ]
+      ],
+      [
+        "toe_HL",
+        "ankle_HL",
+        [
+          0,
+          -0.46,
+          0.18
+        ]
+      ],
+      [
+        "leg_HR",
+        "spine",
+        [
+          -0.57,
+          0,
+          -0.92
+        ]
+      ],
+      [
+        "knee_HR",
+        "leg_HR",
+        [
+          0,
+          -0.53,
+          0.59
+        ]
+      ],
+      [
+        "ankle_HR",
+        "knee_HR",
+        [
+          0,
+          -0.65,
+          -0.54
+        ]
+      ],
+      [
+        "toe_HR",
+        "ankle_HR",
+        [
+          0,
+          -0.46,
+          0.18
+        ]
+      ],
+      [
+        "bay_l",
+        "spine",
+        [
+          0.41400000000000003,
+          -0.52,
+          0
+        ]
+      ],
+      [
+        "bay_r",
+        "spine",
+        [
+          -0.41400000000000003,
+          -0.52,
+          0
+        ]
+      ],
+      [
+        "tail_0",
+        "spine",
+        [
+          0,
+          0.02,
+          -1.6
+        ]
+      ],
+      [
+        "tail_1",
+        "tail_0",
+        [
+          0,
+          0,
+          -0.87
+        ]
+      ],
+      [
+        "tail_2",
+        "tail_1",
+        [
+          0,
+          0,
+          -0.87
+        ]
+      ],
+      [
+        "tail_3",
+        "tail_2",
+        [
+          0,
+          0,
+          -0.87
+        ]
+      ],
+      [
+        "tail_4",
+        "tail_3",
+        [
+          0,
+          0,
+          -0.87
+        ]
+      ],
+      [
+        "wing_l",
+        "chest",
+        [
+          0.25,
+          0.4,
+          0
+        ]
+      ],
+      [
+        "flap_l",
+        "wing_l",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "outer_l",
+        "flap_l",
+        [
+          1.75,
+          0,
+          -0.4
+        ]
+      ],
+      [
+        "feather_l_0",
+        "outer_l",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "feather_l_1",
+        "outer_l",
+        [
+          0.18,
+          0,
+          -0.055
+        ]
+      ],
+      [
+        "feather_l_2",
+        "outer_l",
+        [
+          0.36,
+          0,
+          -0.11
+        ]
+      ],
+      [
+        "feather_l_3",
+        "outer_l",
+        [
+          0.54,
+          0,
+          -0.165
+        ]
+      ],
+      [
+        "feather_l_4",
+        "outer_l",
+        [
+          0.72,
+          0,
+          -0.22
+        ]
+      ],
+      [
+        "feather_l_5",
+        "outer_l",
+        [
+          0.8999999999999999,
+          0,
+          -0.275
+        ]
+      ],
+      [
+        "feather_l_6",
+        "outer_l",
+        [
+          1.08,
+          0,
+          -0.33
+        ]
+      ],
+      [
+        "wing_r",
+        "chest",
+        [
+          -0.25,
+          0.4,
+          0
+        ]
+      ],
+      [
+        "flap_r",
+        "wing_r",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "outer_r",
+        "flap_r",
+        [
+          -1.75,
+          0,
+          -0.4
+        ]
+      ],
+      [
+        "feather_r_0",
+        "outer_r",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "feather_r_1",
+        "outer_r",
+        [
+          -0.18,
+          0,
+          -0.055
+        ]
+      ],
+      [
+        "feather_r_2",
+        "outer_r",
+        [
+          -0.36,
+          0,
+          -0.11
+        ]
+      ],
+      [
+        "feather_r_3",
+        "outer_r",
+        [
+          -0.54,
+          0,
+          -0.165
+        ]
+      ],
+      [
+        "feather_r_4",
+        "outer_r",
+        [
+          -0.72,
+          0,
+          -0.22
+        ]
+      ],
+      [
+        "feather_r_5",
+        "outer_r",
+        [
+          -0.8999999999999999,
+          0,
+          -0.275
+        ]
+      ],
+      [
+        "feather_r_6",
+        "outer_r",
+        [
+          -1.08,
+          0,
+          -0.33
+        ]
+      ],
+      [
+        "gun",
+        "chest",
+        [
+          -0.38,
+          0.3,
+          -0.22
+        ]
+      ],
+      [
+        "gun_recoil",
+        "gun",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "light_muzzle",
+        "gun_recoil",
+        [
+          0,
+          0,
+          0.95
+        ]
+      ],
+      [
+        "heavy",
+        "chest",
+        [
+          0.38,
+          0.33,
+          -0.28
+        ]
+      ],
+      [
+        "heavy_recoil",
+        "heavy",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "heavy_muzzle",
+        "heavy_recoil",
+        [
+          0,
+          0,
+          2.15
+        ]
+      ],
+      [
+        "charge_hinge",
+        "heavy",
+        [
+          0,
+          0.23,
+          -0.22
+        ]
+      ],
+      [
+        "cast_dish",
+        "chest",
+        [
+          0,
+          0.55,
+          -0.6
+        ]
+      ],
+      [
+        "emitter_l",
+        "chest",
+        [
+          0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "emitter_r",
+        "chest",
+        [
+          -0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "barrier",
+        "tilt",
+        [
+          0,
+          2.2,
+          2.8
+        ]
+      ],
+      [
+        "tail_feather_l_0",
+        "tail_0",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "tail_feather_l_1",
+        "tail_1",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "tail_feather_l_2",
+        "tail_2",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "tail_feather_l_3",
+        "tail_3",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "tail_feather_l_4",
+        "tail_4",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "tail_feather_r_0",
+        "tail_0",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "tail_feather_r_1",
+        "tail_1",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "tail_feather_r_2",
+        "tail_2",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "tail_feather_r_3",
+        "tail_3",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "tail_feather_r_4",
+        "tail_4",
+        [
+          0,
+          0,
+          0
+        ]
+      ]
+    ],
+    "triangles": 13316,
+    "hashes": {
+      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+      "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
+      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    }
+  },
+  "t06": {
+    "parts": [
+      "Shared sealed ventral hull",
+      "Exposed articulated load piston",
+      "Continuous tapered limb armor",
+      "Exposed limb articulation axle",
+      "Limb silver axle cap",
+      "Exposed articulated load piston.001",
+      "Continuous tapered limb armor.001",
+      "Exposed limb articulation axle.001",
+      "Limb silver axle cap.001",
+      "Tapered armored boot",
+      "Exposed articulated load piston.002",
+      "Continuous tapered limb armor.002",
+      "Exposed limb articulation axle.002",
+      "Limb silver axle cap.002",
+      "Exposed articulated load piston.003",
+      "Continuous tapered limb armor.003",
+      "Exposed limb articulation axle.003",
+      "Limb silver axle cap.003",
+      "Tapered armored boot.001",
+      "Exposed articulated load piston.004",
+      "Continuous tapered limb armor.004",
+      "Independent shoulder cap",
+      "Exposed limb articulation axle.004",
+      "Limb silver axle cap.004",
+      "Exposed articulated load piston.005",
+      "Continuous tapered limb armor.005",
+      "Exposed limb articulation axle.005",
+      "Limb silver axle cap.005",
+      "Articulated palm",
+      "Armored finger",
+      "Armored finger.001",
+      "Armored finger.002",
+      "Exposed articulated load piston.006",
+      "Continuous tapered limb armor.006",
+      "Independent shoulder cap.001",
+      "Exposed limb articulation axle.006",
+      "Limb silver axle cap.006",
+      "Exposed articulated load piston.007",
+      "Continuous tapered limb armor.007",
+      "Exposed limb articulation axle.007",
+      "Limb silver axle cap.007",
+      "Articulated palm.001",
+      "Armored finger.003",
+      "Armored finger.004",
+      "Armored finger.005",
+      "Articulated pelvic shell",
+      "Split tapered pectoral armor",
+      "Split tapered pectoral armor.001",
+      "Chest colored conduit",
+      "Chest colored conduit.001",
+      "Separated cooling louver",
+      "Separated cooling louver.001",
+      "Separated cooling louver.002",
+      "Separated cooling louver.003",
+      "Separated cooling louver.004",
+      "Separated cooling louver.005",
+      "Separate overlapping abdominal armor",
+      "Separate overlapping abdominal armor.001",
+      "Separate overlapping abdominal armor.002",
+      "Agile monkey helmet",
+      "Pale opera monkey face",
+      "Red opera brow paint",
+      "Red opera brow paint.001",
+      "Angry monkey sensor",
+      "Angry monkey sensor.001",
+      "Monkey ear disc",
+      "Double spiral circlet",
+      "Golden circlet rim",
+      "Paired long crown sensor antenna",
+      "Paired long crown sensor antenna.001",
+      "Paired long crown sensor antenna.002",
+      "Paired long crown sensor antenna.003",
+      "Monkey ear disc.001",
+      "Double spiral circlet.001",
+      "Golden circlet rim.001",
+      "Paired long crown sensor antenna.004",
+      "Paired long crown sensor antenna.005",
+      "Paired long crown sensor antenna.006",
+      "Paired long crown sensor antenna.007",
+      "Crown forehead point",
+      "Shared retractable monkey jet pack",
+      "Shared monkey propulsion nozzle",
+      "Curved cloud wing chine",
+      "Golden plasma nozzle core",
+      "Shared retractable monkey jet pack.001",
+      "Shared monkey propulsion nozzle.001",
+      "Curved cloud wing chine.001",
+      "Golden plasma nozzle core.001",
+      "Long handheld golden plasma staff",
+      "Plasma staff golden terminal ring",
+      "Plasma staff golden terminal ring.001",
+      "Plasma staff golden terminal ring.002",
+      "Plasma staff golden terminal ring.003",
+      "Plasma staff open crown muzzle",
+      "Micro silent chest gun",
+      "Micro silent chest barrel",
+      "Articulated charge shutter",
+      "Weapon muzzle energy aperture",
+      "Weapon muzzle energy aperture.001",
+      "Independent retractable shield emitter",
+      "Shield luminous emitter rail",
+      "Independent retractable shield emitter.001",
+      "Shield luminous emitter rail.001",
+      "Holographic radar membrane",
+      "Radar reticle ring",
+      "Radar reticle ring.001",
+      "Radar reticle ring.002",
+      "Radar reticle ring.003",
+      "Radar reticle ring.004",
+      "Radar reticle ring.005",
+      "Radar reticle ring.006",
+      "Radar reticle ring.007",
+      "Radar reticle ring.008",
+      "Radar reticle ring.009",
+      "Radar reticle ring.010",
+      "Radar reticle ring.011",
+      "Radar reticle ring.012",
+      "Radar reticle ring.013",
+      "Radar reticle ring.014",
+      "Radar reticle ring.015",
+      "Radar reticle ring.016",
+      "Radar reticle ring.017",
+      "Radar reticle ring.018",
+      "Radar reticle ring.019",
+      "Radar reticle ring.020",
+      "Radar reticle ring.021",
+      "Radar reticle ring.022",
+      "Radar reticle ring.023",
+      "Radar reticle ring.024",
+      "Radar reticle ring.025",
+      "Radar reticle ring.026",
+      "Radar reticle ring.027",
+      "Radar reticle ring.028",
+      "Radar reticle ring.029",
+      "Radar reticle ring.030",
+      "Radar reticle ring.031",
+      "Radar reticle ring.032",
+      "Radar reticle ring.033",
+      "Radar reticle ring.034",
+      "Radar reticle ring.035",
+      "Radar reticle ring.036",
+      "Radar reticle ring.037",
+      "Radar reticle ring.038",
+      "Radar reticle ring.039",
+      "Radar reticle ring.040",
+      "Radar reticle ring.041",
+      "Radar reticle ring.042",
+      "Radar reticle ring.043",
+      "Radar reticle ring.044",
+      "Radar reticle ring.045",
+      "Radar reticle ring.046",
+      "Radar reticle ring.047",
+      "Radar reticle ring.048",
+      "Radar reticle ring.049",
+      "Radar reticle ring.050",
+      "Radar reticle ring.051",
+      "Radar reticle ring.052",
+      "Radar reticle ring.053",
+      "Radar reticle ring.054",
+      "Radar reticle ring.055",
+      "Radar reticle ring.056",
+      "Radar reticle ring.057",
+      "Radar reticle ring.058",
+      "Radar reticle ring.059",
+      "Radar reticle ring.060",
+      "Radar reticle ring.061",
+      "Radar reticle ring.062",
+      "Radar reticle ring.063",
+      "Radar reticle ring.064",
+      "Radar reticle ring.065",
+      "Radar reticle ring.066",
+      "Radar reticle ring.067",
+      "Radar reticle ring.068",
+      "Radar reticle ring.069",
+      "Radar reticle ring.070",
+      "Radar reticle ring.071",
+      "Radar reticle ring.072",
+      "Radar reticle ring.073",
+      "Radar reticle ring.074",
+      "Radar reticle ring.075",
+      "Radar reticle ring.076",
+      "Radar reticle ring.077",
+      "Radar reticle ring.078",
+      "Radar reticle ring.079",
+      "Radar reticle ring.080",
+      "Radar reticle ring.081",
+      "Radar reticle ring.082",
+      "Radar reticle ring.083",
+      "Radar reticle ring.084",
+      "Radar reticle ring.085",
+      "Radar reticle ring.086",
+      "Radar reticle ring.087",
+      "Radar reticle ring.088",
+      "Radar reticle ring.089",
+      "Radar reticle ring.090",
+      "Radar reticle ring.091",
+      "Radar reticle ring.092",
+      "Radar reticle ring.093",
+      "Radar reticle ring.094",
+      "Radar reticle ring.095",
+      "Radar quadrant tick",
+      "Radar quadrant tick.001",
+      "Radar quadrant tick.002",
+      "Radar quadrant tick.003",
+      "Articulated skill charge annulus"
+    ],
+    "joints": [
+      [
+        "tilt",
+        null,
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "hips",
+        "tilt",
+        [
+          0,
+          2.9,
+          0
+        ]
+      ],
+      [
+        "chest",
+        "hips",
+        [
+          0,
+          0.63,
+          0
+        ]
+      ],
+      [
+        "head",
+        "chest",
+        [
+          0,
+          1.52,
+          0.03
+        ]
+      ],
+      [
+        "hip_l",
+        "hips",
+        [
+          0.43,
+          -0.1,
+          0
+        ]
+      ],
+      [
+        "knee_l",
+        "hip_l",
+        [
+          0,
+          -1.28,
+          0
+        ]
+      ],
+      [
+        "ankle_l",
+        "knee_l",
+        [
+          0,
+          -1.25,
+          0
+        ]
+      ],
+      [
+        "shoulder_l",
+        "chest",
+        [
+          0.98,
+          1.02,
+          0
+        ]
+      ],
+      [
+        "elbow_l",
+        "shoulder_l",
+        [
+          0,
+          -1.2,
+          0
+        ]
+      ],
+      [
+        "wrist_l",
+        "elbow_l",
+        [
+          0,
+          -1.08,
+          0
+        ]
+      ],
+      [
+        "bay_l",
+        "chest",
+        [
+          0.68,
+          0.05,
+          0.48
+        ]
+      ],
+      [
+        "hip_r",
+        "hips",
+        [
+          -0.43,
+          -0.1,
+          0
+        ]
+      ],
+      [
+        "knee_r",
+        "hip_r",
+        [
+          0,
+          -1.28,
+          0
+        ]
+      ],
+      [
+        "ankle_r",
+        "knee_r",
+        [
+          0,
+          -1.25,
+          0
+        ]
+      ],
+      [
+        "shoulder_r",
+        "chest",
+        [
+          -0.98,
+          1.02,
+          0
+        ]
+      ],
+      [
+        "elbow_r",
+        "shoulder_r",
+        [
+          0,
+          -1.2,
+          0
+        ]
+      ],
+      [
+        "wrist_r",
+        "elbow_r",
+        [
+          0,
+          -1.08,
+          0
+        ]
+      ],
+      [
+        "bay_r",
+        "chest",
+        [
+          -0.68,
+          0.05,
+          0.48
+        ]
+      ],
+      [
+        "wing_l",
+        "chest",
+        [
+          0.25,
+          1.06,
+          -0.5
+        ]
+      ],
+      [
+        "wing_r",
+        "chest",
+        [
+          -0.25,
+          1.06,
+          -0.5
+        ]
+      ],
+      [
+        "gun",
+        "chest",
+        [
+          -0.5,
+          0.34,
+          0.42
+        ]
+      ],
+      [
+        "gun_recoil",
+        "gun",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "light_muzzle",
+        "gun_recoil",
+        [
+          0,
+          0,
+          0.95
+        ]
+      ],
+      [
+        "heavy",
+        "wrist_r",
+        [
+          0,
+          -0.1,
+          0.13
+        ]
+      ],
+      [
+        "heavy_recoil",
+        "heavy",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "heavy_muzzle",
+        "heavy_recoil",
+        [
+          0,
+          0,
+          2.2
+        ]
+      ],
+      [
+        "charge_hinge",
+        "heavy",
+        [
+          0,
+          0.23,
+          -0.22
+        ]
+      ],
+      [
+        "cast_dish",
+        "chest",
+        [
+          0,
+          0.55,
+          -0.6
+        ]
+      ],
+      [
+        "emitter_l",
+        "chest",
+        [
+          0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "emitter_r",
+        "chest",
+        [
+          -0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "barrier",
+        "tilt",
+        [
+          0,
+          3.8,
+          2.8
+        ]
+      ]
+    ],
+    "triangles": 10336,
+    "hashes": {
+      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+      "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
+      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    }
+  },
+  "t11": {
+    "parts": [
+      "Shared sealed ventral hull",
+      "Chest worn digital camo",
+      "Chest worn digital camo.001",
+      "Chest worn digital camo.002",
+      "Chest worn digital camo.003",
+      "Chest worn digital camo.004",
+      "Chest worn digital camo.005",
+      "Chest worn digital camo.006",
+      "Chest worn digital camo.007",
+      "Chest worn digital camo.008",
+      "Chest worn digital camo.009",
+      "Exposed articulated load piston",
+      "Continuous tapered limb armor",
+      "Exposed limb articulation axle",
+      "Limb silver axle cap",
+      "Exposed articulated load piston.001",
+      "Continuous tapered limb armor.001",
+      "Exposed limb articulation axle.001",
+      "Limb silver axle cap.001",
+      "Tapered armored boot",
+      "Exposed articulated load piston.002",
+      "Continuous tapered limb armor.002",
+      "Exposed limb articulation axle.002",
+      "Limb silver axle cap.002",
+      "Exposed articulated load piston.003",
+      "Continuous tapered limb armor.003",
+      "Exposed limb articulation axle.003",
+      "Limb silver axle cap.003",
+      "Tapered armored boot.001",
+      "Exposed articulated load piston.004",
+      "Continuous tapered limb armor.004",
+      "Independent shoulder cap",
+      "Exposed limb articulation axle.004",
+      "Limb silver axle cap.004",
+      "Exposed articulated load piston.005",
+      "Continuous tapered limb armor.005",
+      "Exposed limb articulation axle.005",
+      "Limb silver axle cap.005",
+      "Articulated palm",
+      "Armored finger",
+      "Armored finger.001",
+      "Armored finger.002",
+      "Exposed articulated load piston.006",
+      "Continuous tapered limb armor.006",
+      "Independent shoulder cap.001",
+      "Exposed limb articulation axle.006",
+      "Limb silver axle cap.006",
+      "Exposed articulated load piston.007",
+      "Continuous tapered limb armor.007",
+      "Exposed limb articulation axle.007",
+      "Limb silver axle cap.007",
+      "Articulated palm.001",
+      "Armored finger.003",
+      "Armored finger.004",
+      "Armored finger.005",
+      "Articulated pelvic shell",
+      "Split tapered pectoral armor",
+      "Split tapered pectoral armor.001",
+      "Chest colored conduit",
+      "Chest colored conduit.001",
+      "Separated cooling louver",
+      "Separated cooling louver.001",
+      "Separated cooling louver.002",
+      "Separated cooling louver.003",
+      "Separated cooling louver.004",
+      "Separated cooling louver.005",
+      "Separate overlapping abdominal armor",
+      "Separate overlapping abdominal armor.001",
+      "Separate overlapping abdominal armor.002",
+      "Right isosceles triangular helmet nose",
+      "Atlas black observation face",
+      "Old ivory observation slit",
+      "Shoulder cargo tray B-2 half",
+      "Tray warning rim",
+      "Shared hand rotor shield rim",
+      "Rotor shield black inner lip",
+      "Rotor shield hub",
+      "Solid retractable rotor shield petal",
+      "Solid retractable rotor shield petal.001",
+      "Solid retractable rotor shield petal.002",
+      "Solid retractable rotor shield petal.003",
+      "Solid retractable rotor shield petal.004",
+      "Solid retractable rotor shield petal.005",
+      "Solid retractable rotor shield petal.006",
+      "Solid retractable rotor shield petal.007",
+      "Solid retractable rotor shield petal.008",
+      "Solid retractable rotor shield petal.009",
+      "Solid retractable rotor shield petal.010",
+      "Solid retractable rotor shield petal.011",
+      "Solid retractable rotor shield petal.012",
+      "Solid retractable rotor shield petal.013",
+      "Solid retractable rotor shield petal.014",
+      "Solid retractable rotor shield petal.015",
+      "Solid retractable rotor shield petal.016",
+      "Solid retractable rotor shield petal.017",
+      "Solid retractable rotor shield petal.018",
+      "Solid retractable rotor shield petal.019",
+      "Solid retractable rotor shield petal.020",
+      "Solid retractable rotor shield petal.021",
+      "Solid retractable rotor shield petal.022",
+      "Solid retractable rotor shield petal.023",
+      "Shared three blade tilt rotor",
+      "Shared three blade tilt rotor.001",
+      "Shared three blade tilt rotor.002",
+      "Rotor blade ivory tip",
+      "Rotor blade ivory tip.001",
+      "Rotor blade ivory tip.002",
+      "Exposed shoulder tray rivet",
+      "Exposed shoulder tray rivet.001",
+      "Exposed shoulder tray rivet.002",
+      "Exposed shoulder tray rivet.003",
+      "Exposed shoulder tray rivet.004",
+      "Exposed shoulder tray rivet.005",
+      "Exposed shoulder tray rivet.006",
+      "Exposed shoulder tray rivet.007",
+      "Exposed shoulder tray rivet.008",
+      "Exposed shoulder tray rivet.009",
+      "Deterministic digital camouflage patch",
+      "Deterministic digital camouflage patch.003",
+      "Deterministic digital camouflage patch.008",
+      "Deterministic digital camouflage patch.011",
+      "Deterministic digital camouflage patch.013",
+      "Deterministic digital camouflage patch.016",
+      "Deterministic digital camouflage patch.018",
+      "Deterministic digital camouflage patch.021",
+      "Deterministic digital camouflage patch.001",
+      "Deterministic digital camouflage patch.002",
+      "Deterministic digital camouflage patch.004",
+      "Deterministic digital camouflage patch.005",
+      "Deterministic digital camouflage patch.006",
+      "Deterministic digital camouflage patch.007",
+      "Deterministic digital camouflage patch.009",
+      "Deterministic digital camouflage patch.010",
+      "Deterministic digital camouflage patch.012",
+      "Deterministic digital camouflage patch.014",
+      "Deterministic digital camouflage patch.015",
+      "Deterministic digital camouflage patch.017",
+      "Deterministic digital camouflage patch.019",
+      "Deterministic digital camouflage patch.020",
+      "Deterministic digital camouflage patch.022",
+      "Deterministic digital camouflage patch.023",
+      "Shoulder cargo tray B-2 half.001",
+      "Tray warning rim.001",
+      "Shared hand rotor shield rim.001",
+      "Rotor shield black inner lip.001",
+      "Rotor shield hub.001",
+      "Solid retractable rotor shield petal.024",
+      "Solid retractable rotor shield petal.025",
+      "Solid retractable rotor shield petal.026",
+      "Solid retractable rotor shield petal.027",
+      "Solid retractable rotor shield petal.028",
+      "Solid retractable rotor shield petal.029",
+      "Solid retractable rotor shield petal.030",
+      "Solid retractable rotor shield petal.031",
+      "Solid retractable rotor shield petal.032",
+      "Solid retractable rotor shield petal.033",
+      "Solid retractable rotor shield petal.034",
+      "Solid retractable rotor shield petal.035",
+      "Solid retractable rotor shield petal.036",
+      "Solid retractable rotor shield petal.037",
+      "Solid retractable rotor shield petal.038",
+      "Solid retractable rotor shield petal.039",
+      "Solid retractable rotor shield petal.040",
+      "Solid retractable rotor shield petal.041",
+      "Solid retractable rotor shield petal.042",
+      "Solid retractable rotor shield petal.043",
+      "Solid retractable rotor shield petal.044",
+      "Solid retractable rotor shield petal.045",
+      "Solid retractable rotor shield petal.046",
+      "Solid retractable rotor shield petal.047",
+      "Shared three blade tilt rotor.003",
+      "Shared three blade tilt rotor.004",
+      "Shared three blade tilt rotor.005",
+      "Rotor blade ivory tip.003",
+      "Rotor blade ivory tip.004",
+      "Rotor blade ivory tip.005",
+      "Exposed shoulder tray rivet.010",
+      "Exposed shoulder tray rivet.011",
+      "Exposed shoulder tray rivet.012",
+      "Exposed shoulder tray rivet.013",
+      "Exposed shoulder tray rivet.014",
+      "Exposed shoulder tray rivet.015",
+      "Exposed shoulder tray rivet.016",
+      "Exposed shoulder tray rivet.017",
+      "Exposed shoulder tray rivet.018",
+      "Exposed shoulder tray rivet.019",
+      "Deterministic digital camouflage patch.024",
+      "Deterministic digital camouflage patch.027",
+      "Deterministic digital camouflage patch.032",
+      "Deterministic digital camouflage patch.035",
+      "Deterministic digital camouflage patch.037",
+      "Deterministic digital camouflage patch.040",
+      "Deterministic digital camouflage patch.042",
+      "Deterministic digital camouflage patch.045",
+      "Deterministic digital camouflage patch.025",
+      "Deterministic digital camouflage patch.026",
+      "Deterministic digital camouflage patch.028",
+      "Deterministic digital camouflage patch.029",
+      "Deterministic digital camouflage patch.030",
+      "Deterministic digital camouflage patch.031",
+      "Deterministic digital camouflage patch.033",
+      "Deterministic digital camouflage patch.034",
+      "Deterministic digital camouflage patch.036",
+      "Deterministic digital camouflage patch.038",
+      "Deterministic digital camouflage patch.039",
+      "Deterministic digital camouflage patch.041",
+      "Deterministic digital camouflage patch.043",
+      "Deterministic digital camouflage patch.044",
+      "Deterministic digital camouflage patch.046",
+      "Deterministic digital camouflage patch.047",
+      "Atlas chest warning chevron",
+      "Forward dorsal weapon receiver",
+      "Short laser or machine gun receiver",
+      "Twin tray top machine gun barrel",
+      "Twin tray top machine gun barrel.001",
+      "Tray top recoilless cannon",
+      "Tray top recoilless cannon.001",
+      "Articulated charge shutter",
+      "Weapon muzzle energy aperture",
+      "Weapon muzzle energy aperture.001",
+      "Independent retractable shield emitter",
+      "Shield luminous emitter rail",
+      "Independent retractable shield emitter.001",
+      "Shield luminous emitter rail.001",
+      "Holographic radar membrane",
+      "Radar reticle ring",
+      "Radar reticle ring.001",
+      "Radar reticle ring.002",
+      "Radar reticle ring.003",
+      "Radar reticle ring.004",
+      "Radar reticle ring.005",
+      "Radar reticle ring.006",
+      "Radar reticle ring.007",
+      "Radar reticle ring.008",
+      "Radar reticle ring.009",
+      "Radar reticle ring.010",
+      "Radar reticle ring.011",
+      "Radar reticle ring.012",
+      "Radar reticle ring.013",
+      "Radar reticle ring.014",
+      "Radar reticle ring.015",
+      "Radar reticle ring.016",
+      "Radar reticle ring.017",
+      "Radar reticle ring.018",
+      "Radar reticle ring.019",
+      "Radar reticle ring.020",
+      "Radar reticle ring.021",
+      "Radar reticle ring.022",
+      "Radar reticle ring.023",
+      "Radar reticle ring.024",
+      "Radar reticle ring.025",
+      "Radar reticle ring.026",
+      "Radar reticle ring.027",
+      "Radar reticle ring.028",
+      "Radar reticle ring.029",
+      "Radar reticle ring.030",
+      "Radar reticle ring.031",
+      "Radar reticle ring.032",
+      "Radar reticle ring.033",
+      "Radar reticle ring.034",
+      "Radar reticle ring.035",
+      "Radar reticle ring.036",
+      "Radar reticle ring.037",
+      "Radar reticle ring.038",
+      "Radar reticle ring.039",
+      "Radar reticle ring.040",
+      "Radar reticle ring.041",
+      "Radar reticle ring.042",
+      "Radar reticle ring.043",
+      "Radar reticle ring.044",
+      "Radar reticle ring.045",
+      "Radar reticle ring.046",
+      "Radar reticle ring.047",
+      "Radar reticle ring.048",
+      "Radar reticle ring.049",
+      "Radar reticle ring.050",
+      "Radar reticle ring.051",
+      "Radar reticle ring.052",
+      "Radar reticle ring.053",
+      "Radar reticle ring.054",
+      "Radar reticle ring.055",
+      "Radar reticle ring.056",
+      "Radar reticle ring.057",
+      "Radar reticle ring.058",
+      "Radar reticle ring.059",
+      "Radar reticle ring.060",
+      "Radar reticle ring.061",
+      "Radar reticle ring.062",
+      "Radar reticle ring.063",
+      "Radar reticle ring.064",
+      "Radar reticle ring.065",
+      "Radar reticle ring.066",
+      "Radar reticle ring.067",
+      "Radar reticle ring.068",
+      "Radar reticle ring.069",
+      "Radar reticle ring.070",
+      "Radar reticle ring.071",
+      "Radar reticle ring.072",
+      "Radar reticle ring.073",
+      "Radar reticle ring.074",
+      "Radar reticle ring.075",
+      "Radar reticle ring.076",
+      "Radar reticle ring.077",
+      "Radar reticle ring.078",
+      "Radar reticle ring.079",
+      "Radar reticle ring.080",
+      "Radar reticle ring.081",
+      "Radar reticle ring.082",
+      "Radar reticle ring.083",
+      "Radar reticle ring.084",
+      "Radar reticle ring.085",
+      "Radar reticle ring.086",
+      "Radar reticle ring.087",
+      "Radar reticle ring.088",
+      "Radar reticle ring.089",
+      "Radar reticle ring.090",
+      "Radar reticle ring.091",
+      "Radar reticle ring.092",
+      "Radar reticle ring.093",
+      "Radar reticle ring.094",
+      "Radar reticle ring.095",
+      "Radar quadrant tick",
+      "Radar quadrant tick.001",
+      "Radar quadrant tick.002",
+      "Radar quadrant tick.003",
+      "Articulated skill charge annulus"
+    ],
+    "joints": [
+      [
+        "tilt",
+        null,
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "hips",
+        "tilt",
+        [
+          0,
+          2.9,
+          0
+        ]
+      ],
+      [
+        "chest",
+        "hips",
+        [
+          0,
+          0.63,
+          0
+        ]
+      ],
+      [
+        "head",
+        "chest",
+        [
+          0,
+          1.52,
+          0.03
+        ]
+      ],
+      [
+        "hip_l",
+        "hips",
+        [
+          0.43,
+          -0.1,
+          0
+        ]
+      ],
+      [
+        "knee_l",
+        "hip_l",
+        [
+          0,
+          -1.28,
+          0
+        ]
+      ],
+      [
+        "ankle_l",
+        "knee_l",
+        [
+          0,
+          -1.25,
+          0
+        ]
+      ],
+      [
+        "wing_l",
+        "chest",
+        [
+          0.25,
+          1.06,
+          -0.5
+        ]
+      ],
+      [
+        "shoulder_l",
+        "wing_l",
+        [
+          0.73,
+          -0.04,
+          0.5
+        ]
+      ],
+      [
+        "elbow_l",
+        "shoulder_l",
+        [
+          0,
+          -0.92,
+          0
+        ]
+      ],
+      [
+        "wrist_l",
+        "elbow_l",
+        [
+          0,
+          -0.85,
+          0
+        ]
+      ],
+      [
+        "bay_l",
+        "chest",
+        [
+          0.68,
+          0.05,
+          0.48
+        ]
+      ],
+      [
+        "hip_r",
+        "hips",
+        [
+          -0.43,
+          -0.1,
+          0
+        ]
+      ],
+      [
+        "knee_r",
+        "hip_r",
+        [
+          0,
+          -1.28,
+          0
+        ]
+      ],
+      [
+        "ankle_r",
+        "knee_r",
+        [
+          0,
+          -1.25,
+          0
+        ]
+      ],
+      [
+        "wing_r",
+        "chest",
+        [
+          -0.25,
+          1.06,
+          -0.5
+        ]
+      ],
+      [
+        "shoulder_r",
+        "wing_r",
+        [
+          -0.73,
+          -0.04,
+          0.5
+        ]
+      ],
+      [
+        "elbow_r",
+        "shoulder_r",
+        [
+          0,
+          -0.92,
+          0
+        ]
+      ],
+      [
+        "wrist_r",
+        "elbow_r",
+        [
+          0,
+          -0.85,
+          0
+        ]
+      ],
+      [
+        "bay_r",
+        "chest",
+        [
+          -0.68,
+          0.05,
+          0.48
+        ]
+      ],
+      [
+        "rotor_hinge_l",
+        "wrist_l",
+        [
+          0,
+          0,
+          0.1
+        ]
+      ],
+      [
+        "rotor_l",
+        "rotor_hinge_l",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "rotor_hinge_r",
+        "wrist_r",
+        [
+          0,
+          0,
+          0.1
+        ]
+      ],
+      [
+        "rotor_r",
+        "rotor_hinge_r",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "gun",
+        "wing_r",
+        [
+          0,
+          0.18,
+          0.1
+        ]
+      ],
+      [
+        "gun_recoil",
+        "gun",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "light_muzzle",
+        "gun_recoil",
+        [
+          0,
+          0,
+          0.95
+        ]
+      ],
+      [
+        "heavy",
+        "wing_l",
+        [
+          0,
+          0.18,
+          0.1
+        ]
+      ],
+      [
+        "heavy_recoil",
+        "heavy",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "heavy_muzzle",
+        "heavy_recoil",
+        [
+          0,
+          0,
+          1.65
+        ]
+      ],
+      [
+        "charge_hinge",
+        "heavy",
+        [
+          0,
+          0.23,
+          -0.22
+        ]
+      ],
+      [
+        "cast_dish",
+        "chest",
+        [
+          0,
+          0.55,
+          -0.6
+        ]
+      ],
+      [
+        "emitter_l",
+        "chest",
+        [
+          0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "emitter_r",
+        "chest",
+        [
+          -0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "barrier",
+        "tilt",
+        [
+          0,
+          3.8,
+          2.8
+        ]
+      ],
+      [
+        "shield_cover_l_0_hinge",
+        "rotor_hinge_l",
+        [
+          0.9,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_0",
+        "shield_cover_l_0_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_1_hinge",
+        "rotor_hinge_l",
+        [
+          0.6363961030678928,
+          0.6363961030678927,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_1",
+        "shield_cover_l_1_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_2_hinge",
+        "rotor_hinge_l",
+        [
+          5.5109105961630896e-17,
+          0.9,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_2",
+        "shield_cover_l_2_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_3_hinge",
+        "rotor_hinge_l",
+        [
+          -0.6363961030678927,
+          0.6363961030678928,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_3",
+        "shield_cover_l_3_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_4_hinge",
+        "rotor_hinge_l",
+        [
+          -0.9,
+          1.1021821192326179e-16,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_4",
+        "shield_cover_l_4_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_5_hinge",
+        "rotor_hinge_l",
+        [
+          -0.636396103067893,
+          -0.6363961030678927,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_5",
+        "shield_cover_l_5_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_6_hinge",
+        "rotor_hinge_l",
+        [
+          -1.6532731788489269e-16,
+          -0.9,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_6",
+        "shield_cover_l_6_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_7_hinge",
+        "rotor_hinge_l",
+        [
+          0.6363961030678926,
+          -0.636396103067893,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_7",
+        "shield_cover_l_7_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_0_hinge",
+        "rotor_hinge_r",
+        [
+          0.9,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_0",
+        "shield_cover_r_0_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_1_hinge",
+        "rotor_hinge_r",
+        [
+          0.6363961030678928,
+          0.6363961030678927,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_1",
+        "shield_cover_r_1_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_2_hinge",
+        "rotor_hinge_r",
+        [
+          5.5109105961630896e-17,
+          0.9,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_2",
+        "shield_cover_r_2_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_3_hinge",
+        "rotor_hinge_r",
+        [
+          -0.6363961030678927,
+          0.6363961030678928,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_3",
+        "shield_cover_r_3_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_4_hinge",
+        "rotor_hinge_r",
+        [
+          -0.9,
+          1.1021821192326179e-16,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_4",
+        "shield_cover_r_4_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_5_hinge",
+        "rotor_hinge_r",
+        [
+          -0.636396103067893,
+          -0.6363961030678927,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_5",
+        "shield_cover_r_5_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_6_hinge",
+        "rotor_hinge_r",
+        [
+          -1.6532731788489269e-16,
+          -0.9,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_6",
+        "shield_cover_r_6_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_7_hinge",
+        "rotor_hinge_r",
+        [
+          0.6363961030678926,
+          -0.636396103067893,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_7",
+        "shield_cover_r_7_hinge",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_0_1",
+        "shield_cover_l_0",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_0_2",
+        "shield_cover_l_0_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_1_1",
+        "shield_cover_l_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_1_2",
+        "shield_cover_l_1_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_2_1",
+        "shield_cover_l_2",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_2_2",
+        "shield_cover_l_2_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_3_1",
+        "shield_cover_l_3",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_3_2",
+        "shield_cover_l_3_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_4_1",
+        "shield_cover_l_4",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_4_2",
+        "shield_cover_l_4_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_5_1",
+        "shield_cover_l_5",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_5_2",
+        "shield_cover_l_5_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_6_1",
+        "shield_cover_l_6",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_6_2",
+        "shield_cover_l_6_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_7_1",
+        "shield_cover_l_7",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_l_7_2",
+        "shield_cover_l_7_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_0_1",
+        "shield_cover_r_0",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_0_2",
+        "shield_cover_r_0_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_1_1",
+        "shield_cover_r_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_1_2",
+        "shield_cover_r_1_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_2_1",
+        "shield_cover_r_2",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_2_2",
+        "shield_cover_r_2_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_3_1",
+        "shield_cover_r_3",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_3_2",
+        "shield_cover_r_3_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_4_1",
+        "shield_cover_r_4",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_4_2",
+        "shield_cover_r_4_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_5_1",
+        "shield_cover_r_5",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_5_2",
+        "shield_cover_r_5_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_6_1",
+        "shield_cover_r_6",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_6_2",
+        "shield_cover_r_6_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_7_1",
+        "shield_cover_r_7",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ],
+      [
+        "shield_cover_r_7_2",
+        "shield_cover_r_7_1",
+        [
+          -0.3,
+          0,
+          0
+        ]
+      ]
+    ],
+    "triangles": 12908,
+    "hashes": {
+      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+      "image": "9ef67af27f03fc71f8b5dd0a1b1638344c354b3903adc0a97f3a3df37c854880",
+      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    }
+  },
+  "m05": {
+    "parts": [
+      "Femur load rod",
+      "Femur anatomical armor",
+      "Femur hinge",
+      "Tibia fibula paired load rod",
+      "Tibia fibula paired load rod.001",
+      "Tibia fibula anatomical armor",
+      "Forward stifle cap",
+      "Tibia fibula hinge",
+      "Metatarsal load rod",
+      "Raised calcaneal heel",
+      "Metatarsal anatomical armor",
+      "Metatarsal hinge",
+      "Tapered armored boot",
+      "Wolf hind claw",
+      "Wolf hind claw.001",
+      "Wolf hind claw.002",
+      "Femur load rod.001",
+      "Femur anatomical armor.001",
+      "Femur hinge.001",
+      "Tibia fibula paired load rod.002",
+      "Tibia fibula paired load rod.003",
+      "Tibia fibula anatomical armor.001",
+      "Forward stifle cap.001",
+      "Tibia fibula hinge.001",
+      "Metatarsal load rod.001",
+      "Raised calcaneal heel.001",
+      "Metatarsal anatomical armor.001",
+      "Metatarsal hinge.001",
+      "Tapered armored boot.001",
+      "Wolf hind claw.003",
+      "Wolf hind claw.004",
+      "Wolf hind claw.005",
+      "Exposed articulated load piston",
+      "Continuous tapered limb armor",
+      "Independent shoulder cap",
+      "Exposed limb articulation axle",
+      "Limb silver axle cap",
+      "Separated cooling louver.006",
+      "Separated cooling louver.007",
+      "Separated cooling louver.008",
+      "Exposed articulated load piston.001",
+      "Continuous tapered limb armor.001",
+      "Exposed limb articulation axle.001",
+      "Limb silver axle cap.001",
+      "Articulated palm",
+      "Wolf fore claw",
+      "Wolf fore claw.001",
+      "Wolf fore claw.002",
+      "Exposed articulated load piston.002",
+      "Continuous tapered limb armor.002",
+      "Independent shoulder cap.001",
+      "Exposed limb articulation axle.002",
+      "Limb silver axle cap.002",
+      "Separated cooling louver.009",
+      "Separated cooling louver.010",
+      "Separated cooling louver.011",
+      "Exposed articulated load piston.003",
+      "Continuous tapered limb armor.003",
+      "Exposed limb articulation axle.003",
+      "Limb silver axle cap.003",
+      "Articulated palm.001",
+      "Wolf fore claw.003",
+      "Wolf fore claw.004",
+      "Wolf fore claw.005",
+      "Narrow wolf abdomen",
+      "Long canine rib armor",
+      "Split tapered pectoral armor",
+      "Split tapered pectoral armor.001",
+      "Chest colored conduit",
+      "Chest colored conduit.001",
+      "Separated cooling louver",
+      "Separated cooling louver.001",
+      "Separated cooling louver.002",
+      "Separated cooling louver.003",
+      "Separated cooling louver.004",
+      "Separated cooling louver.005",
+      "Separate overlapping abdominal armor",
+      "Separate overlapping abdominal armor.001",
+      "Separate overlapping abdominal armor.002",
+      "Angular canine skull",
+      "Canine lower jaw",
+      "Long wolf muzzle",
+      "Pointed wolf ear",
+      "Angular wolf cheek mane",
+      "Angular wolf cheek mane.001",
+      "Angular wolf cheek mane.002",
+      "Angular wolf cheek mane.003",
+      "Pointed wolf ear.001",
+      "Angular wolf cheek mane.004",
+      "Angular wolf cheek mane.005",
+      "Angular wolf cheek mane.006",
+      "Angular wolf cheek mane.007",
+      "Wolf nose",
+      "Slanted canine sensor",
+      "Slanted canine sensor.001",
+      "Canine exposed fang",
+      "Canine exposed fang.001",
+      "Canine exposed fang.002",
+      "Canine exposed fang.003",
+      "Canine exposed fang.004",
+      "Canine exposed fang.005",
+      "Canine exposed fang.006",
+      "Canine exposed fang.007",
+      "Canine exposed fang.008",
+      "Canine exposed fang.009",
+      "Shared flying squirrel patagium cell",
+      "Patagium tension edge",
+      "Patagium tension edge.001",
+      "Patagium tension edge.002",
+      "Patagium tension edge.003",
+      "Patagium tension edge.004",
+      "Patagium tension edge.005",
+      "Patagium tension edge.006",
+      "Shared flying squirrel patagium cell.001",
+      "Patagium tension edge.007",
+      "Patagium tension edge.008",
+      "Patagium tension edge.009",
+      "Patagium tension edge.010",
+      "Shared flying squirrel patagium cell.002",
+      "Patagium tension edge.011",
+      "Patagium tension edge.012",
+      "Patagium tension edge.013",
+      "Patagium tension edge.014",
+      "Patagium tension edge.015",
+      "Shared flying squirrel patagium cell.003",
+      "Patagium tension edge.016",
+      "Patagium tension edge.017",
+      "Patagium tension edge.018",
+      "Patagium tension edge.019",
+      "Shared flying squirrel patagium cell.004",
+      "Patagium tension edge.020",
+      "Patagium tension edge.021",
+      "Patagium tension edge.022",
+      "Patagium tension edge.023",
+      "Shared flying squirrel patagium cell.005",
+      "Patagium tension edge.024",
+      "Patagium tension edge.025",
+      "Patagium tension edge.026",
+      "Patagium tension edge.027",
+      "Patagium tension edge.028",
+      "Shared flying squirrel patagium cell.006",
+      "Patagium tension edge.029",
+      "Patagium tension edge.030",
+      "Patagium tension edge.031",
+      "Patagium tension edge.032",
+      "Patagium tension edge.033",
+      "Patagium tension edge.034",
+      "Patagium tension edge.035",
+      "Shared flying squirrel patagium cell.007",
+      "Patagium tension edge.036",
+      "Patagium tension edge.037",
+      "Patagium tension edge.038",
+      "Patagium tension edge.039",
+      "Shared flying squirrel patagium cell.008",
+      "Patagium tension edge.040",
+      "Patagium tension edge.041",
+      "Patagium tension edge.042",
+      "Patagium tension edge.043",
+      "Patagium tension edge.044",
+      "Shared flying squirrel patagium cell.009",
+      "Patagium tension edge.045",
+      "Patagium tension edge.046",
+      "Patagium tension edge.047",
+      "Patagium tension edge.048",
+      "Shared flying squirrel patagium cell.010",
+      "Patagium tension edge.049",
+      "Patagium tension edge.050",
+      "Patagium tension edge.051",
+      "Patagium tension edge.052",
+      "Shared flying squirrel patagium cell.011",
+      "Patagium tension edge.053",
+      "Patagium tension edge.054",
+      "Patagium tension edge.055",
+      "Patagium tension edge.056",
+      "Patagium tension edge.057",
+      "Back right folded three barrel receiver",
+      "Right triple electromagnetic barrel",
+      "Right triple electromagnetic barrel.001",
+      "Right triple electromagnetic barrel.002",
+      "Back left micro missile pod",
+      "Micro missile launch cell",
+      "Micro missile launch cell.001",
+      "Micro missile launch cell.002",
+      "Micro missile launch cell.003",
+      "Articulated charge shutter",
+      "Weapon muzzle energy aperture",
+      "Weapon muzzle energy aperture.001",
+      "Independent retractable shield emitter",
+      "Shield luminous emitter rail",
+      "Independent retractable shield emitter.001",
+      "Shield luminous emitter rail.001",
+      "Holographic radar membrane",
+      "Radar reticle ring",
+      "Radar reticle ring.001",
+      "Radar reticle ring.002",
+      "Radar reticle ring.003",
+      "Radar reticle ring.004",
+      "Radar reticle ring.005",
+      "Radar reticle ring.006",
+      "Radar reticle ring.007",
+      "Radar reticle ring.008",
+      "Radar reticle ring.009",
+      "Radar reticle ring.010",
+      "Radar reticle ring.011",
+      "Radar reticle ring.012",
+      "Radar reticle ring.013",
+      "Radar reticle ring.014",
+      "Radar reticle ring.015",
+      "Radar reticle ring.016",
+      "Radar reticle ring.017",
+      "Radar reticle ring.018",
+      "Radar reticle ring.019",
+      "Radar reticle ring.020",
+      "Radar reticle ring.021",
+      "Radar reticle ring.022",
+      "Radar reticle ring.023",
+      "Radar reticle ring.024",
+      "Radar reticle ring.025",
+      "Radar reticle ring.026",
+      "Radar reticle ring.027",
+      "Radar reticle ring.028",
+      "Radar reticle ring.029",
+      "Radar reticle ring.030",
+      "Radar reticle ring.031",
+      "Radar reticle ring.032",
+      "Radar reticle ring.033",
+      "Radar reticle ring.034",
+      "Radar reticle ring.035",
+      "Radar reticle ring.036",
+      "Radar reticle ring.037",
+      "Radar reticle ring.038",
+      "Radar reticle ring.039",
+      "Radar reticle ring.040",
+      "Radar reticle ring.041",
+      "Radar reticle ring.042",
+      "Radar reticle ring.043",
+      "Radar reticle ring.044",
+      "Radar reticle ring.045",
+      "Radar reticle ring.046",
+      "Radar reticle ring.047",
+      "Radar reticle ring.048",
+      "Radar reticle ring.049",
+      "Radar reticle ring.050",
+      "Radar reticle ring.051",
+      "Radar reticle ring.052",
+      "Radar reticle ring.053",
+      "Radar reticle ring.054",
+      "Radar reticle ring.055",
+      "Radar reticle ring.056",
+      "Radar reticle ring.057",
+      "Radar reticle ring.058",
+      "Radar reticle ring.059",
+      "Radar reticle ring.060",
+      "Radar reticle ring.061",
+      "Radar reticle ring.062",
+      "Radar reticle ring.063",
+      "Radar reticle ring.064",
+      "Radar reticle ring.065",
+      "Radar reticle ring.066",
+      "Radar reticle ring.067",
+      "Radar reticle ring.068",
+      "Radar reticle ring.069",
+      "Radar reticle ring.070",
+      "Radar reticle ring.071",
+      "Radar reticle ring.072",
+      "Radar reticle ring.073",
+      "Radar reticle ring.074",
+      "Radar reticle ring.075",
+      "Radar reticle ring.076",
+      "Radar reticle ring.077",
+      "Radar reticle ring.078",
+      "Radar reticle ring.079",
+      "Radar reticle ring.080",
+      "Radar reticle ring.081",
+      "Radar reticle ring.082",
+      "Radar reticle ring.083",
+      "Radar reticle ring.084",
+      "Radar reticle ring.085",
+      "Radar reticle ring.086",
+      "Radar reticle ring.087",
+      "Radar reticle ring.088",
+      "Radar reticle ring.089",
+      "Radar reticle ring.090",
+      "Radar reticle ring.091",
+      "Radar reticle ring.092",
+      "Radar reticle ring.093",
+      "Radar reticle ring.094",
+      "Radar reticle ring.095",
+      "Radar quadrant tick",
+      "Radar quadrant tick.001",
+      "Radar quadrant tick.002",
+      "Radar quadrant tick.003",
+      "Articulated skill charge annulus"
+    ],
+    "joints": [
+      [
+        "tilt",
+        null,
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "hips",
+        "tilt",
+        [
+          0,
+          2.65,
+          0
+        ]
+      ],
+      [
+        "hunch",
+        "hips",
+        [
+          0,
+          0.63,
+          0.12
+        ]
+      ],
+      [
+        "chest",
+        "hunch",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "head",
+        "chest",
+        [
+          0,
+          1.52,
+          0.03
+        ]
+      ],
+      [
+        "hip_l",
+        "hips",
+        [
+          0.43,
+          -0.1,
+          0
+        ]
+      ],
+      [
+        "knee_l",
+        "hip_l",
+        [
+          0,
+          -1.28,
+          0
+        ]
+      ],
+      [
+        "ankle_l",
+        "knee_l",
+        [
+          0,
+          -0.8,
+          0
+        ]
+      ],
+      [
+        "toe_l",
+        "ankle_l",
+        [
+          0,
+          -0.45,
+          0
+        ]
+      ],
+      [
+        "shoulder_l",
+        "chest",
+        [
+          0.98,
+          1.02,
+          0
+        ]
+      ],
+      [
+        "elbow_l",
+        "shoulder_l",
+        [
+          0,
+          -0.92,
+          0
+        ]
+      ],
+      [
+        "wrist_l",
+        "elbow_l",
+        [
+          0,
+          -0.85,
+          0
+        ]
+      ],
+      [
+        "bay_l",
+        "chest",
+        [
+          0.83,
+          0.05,
+          0.6
+        ]
+      ],
+      [
+        "hip_r",
+        "hips",
+        [
+          -0.43,
+          -0.1,
+          0
+        ]
+      ],
+      [
+        "knee_r",
+        "hip_r",
+        [
+          0,
+          -1.28,
+          0
+        ]
+      ],
+      [
+        "ankle_r",
+        "knee_r",
+        [
+          0,
+          -0.8,
+          0
+        ]
+      ],
+      [
+        "toe_r",
+        "ankle_r",
+        [
+          0,
+          -0.45,
+          0
+        ]
+      ],
+      [
+        "shoulder_r",
+        "chest",
+        [
+          -0.98,
+          1.02,
+          0
+        ]
+      ],
+      [
+        "elbow_r",
+        "shoulder_r",
+        [
+          0,
+          -0.92,
+          0
+        ]
+      ],
+      [
+        "wrist_r",
+        "elbow_r",
+        [
+          0,
+          -0.85,
+          0
+        ]
+      ],
+      [
+        "bay_r",
+        "chest",
+        [
+          -0.83,
+          0.05,
+          0.6
+        ]
+      ],
+      [
+        "wing_l",
+        "chest",
+        [
+          0.45,
+          0,
+          -0.01
+        ]
+      ],
+      [
+        "wing_r",
+        "chest",
+        [
+          -0.45,
+          0,
+          -0.01
+        ]
+      ],
+      [
+        "gun",
+        "chest",
+        [
+          -0.68,
+          1.1,
+          -0.48
+        ]
+      ],
+      [
+        "gun_recoil",
+        "gun",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "light_muzzle",
+        "gun_recoil",
+        [
+          0,
+          0,
+          1.55
+        ]
+      ],
+      [
+        "heavy",
+        "chest",
+        [
+          0.68,
+          1.1,
+          -0.48
+        ]
+      ],
+      [
+        "heavy_recoil",
+        "heavy",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "heavy_muzzle",
+        "heavy_recoil",
+        [
+          0,
+          0,
+          1.65
+        ]
+      ],
+      [
+        "charge_hinge",
+        "heavy",
+        [
+          0,
+          0.23,
+          -0.22
+        ]
+      ],
+      [
+        "cast_dish",
+        "chest",
+        [
+          0,
+          0.55,
+          -0.6
+        ]
+      ],
+      [
+        "emitter_l",
+        "chest",
+        [
+          0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "emitter_r",
+        "chest",
+        [
+          -0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "barrier",
+        "tilt",
+        [
+          0,
+          3.8,
+          2.8
+        ]
+      ],
+      [
+        "mem_lower_l",
+        "wing_l",
+        [
+          0,
+          -0.75,
+          0
+        ]
+      ],
+      [
+        "mem_upper_l_1",
+        "wing_l",
+        [
+          0.774,
+          0,
+          0
+        ]
+      ],
+      [
+        "mem_upper_l_2",
+        "mem_upper_l_1",
+        [
+          0.774,
+          0,
+          0
+        ]
+      ],
+      [
+        "mem_lower_l_1",
+        "mem_lower_l",
+        [
+          0.774,
+          0,
+          0
+        ]
+      ],
+      [
+        "mem_lower_l_2",
+        "mem_lower_l_1",
+        [
+          0.774,
+          0,
+          0
+        ]
+      ],
+      [
+        "mem_lower_r",
+        "wing_r",
+        [
+          0,
+          -0.75,
+          0
+        ]
+      ],
+      [
+        "mem_upper_r_1",
+        "wing_r",
+        [
+          -0.774,
+          0,
+          0
+        ]
+      ],
+      [
+        "mem_upper_r_2",
+        "mem_upper_r_1",
+        [
+          -0.774,
+          0,
+          0
+        ]
+      ],
+      [
+        "mem_lower_r_1",
+        "mem_lower_r",
+        [
+          -0.774,
+          0,
+          0
+        ]
+      ],
+      [
+        "mem_lower_r_2",
+        "mem_lower_r_1",
+        [
+          -0.774,
+          0,
+          0
+        ]
+      ]
+    ],
+    "triangles": 13144,
+    "hashes": {
+      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+      "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
+      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    }
+  },
+  "m07": {
+    "parts": [
+      "Shared sealed ventral hull",
+      "Three segment armored insect abdomen",
+      "Thoracic insect coxa",
+      "Short insect trochanter",
+      "Insect femur",
+      "Insect femur hinge",
+      "Insect tibia",
+      "Insect tibia hinge",
+      "Broad digging tibial tooth",
+      "Broad digging tibial tooth.001",
+      "Broad digging tibial tooth.002",
+      "Articulated insect tarsomere 1",
+      "Articulated insect tarsomere 2",
+      "Articulated insect tarsomere 3",
+      "Articulated insect tarsomere 4",
+      "Articulated insect tarsomere 5",
+      "Paired pretarsal claw",
+      "Paired pretarsal claw.001",
+      "Thoracic insect coxa.001",
+      "Short insect trochanter.001",
+      "Insect femur.001",
+      "Insect femur hinge.001",
+      "Insect tibia.001",
+      "Insect tibia hinge.001",
+      "Broad digging tibial tooth.003",
+      "Broad digging tibial tooth.004",
+      "Broad digging tibial tooth.005",
+      "Articulated insect tarsomere 1.001",
+      "Articulated insect tarsomere 2.001",
+      "Articulated insect tarsomere 3.001",
+      "Articulated insect tarsomere 4.001",
+      "Articulated insect tarsomere 5.001",
+      "Paired pretarsal claw.002",
+      "Paired pretarsal claw.003",
+      "Thoracic insect coxa.002",
+      "Short insect trochanter.002",
+      "Insect femur.002",
+      "Insect femur hinge.002",
+      "Insect tibia.002",
+      "Insect tibia hinge.002",
+      "Walking tibial spine",
+      "Walking tibial spine.001",
+      "Walking tibial spine.002",
+      "Walking tibial spine.003",
+      "Articulated insect tarsomere 1.002",
+      "Articulated insect tarsomere 2.002",
+      "Articulated insect tarsomere 3.002",
+      "Articulated insect tarsomere 4.002",
+      "Articulated insect tarsomere 5.002",
+      "Paired pretarsal claw.004",
+      "Paired pretarsal claw.005",
+      "Thoracic insect coxa.003",
+      "Short insect trochanter.003",
+      "Insect femur.003",
+      "Insect femur hinge.003",
+      "Insect tibia.003",
+      "Insect tibia hinge.003",
+      "Walking tibial spine.004",
+      "Walking tibial spine.005",
+      "Walking tibial spine.006",
+      "Walking tibial spine.007",
+      "Articulated insect tarsomere 1.003",
+      "Articulated insect tarsomere 2.003",
+      "Articulated insect tarsomere 3.003",
+      "Articulated insect tarsomere 4.003",
+      "Articulated insect tarsomere 5.003",
+      "Paired pretarsal claw.006",
+      "Paired pretarsal claw.007",
+      "Thoracic insect coxa.004",
+      "Short insect trochanter.004",
+      "Insect femur.004",
+      "Insect femur hinge.004",
+      "Insect tibia.004",
+      "Insect tibia hinge.004",
+      "Walking tibial spine.008",
+      "Walking tibial spine.009",
+      "Walking tibial spine.010",
+      "Walking tibial spine.011",
+      "Articulated insect tarsomere 1.004",
+      "Articulated insect tarsomere 2.004",
+      "Articulated insect tarsomere 3.004",
+      "Articulated insect tarsomere 4.004",
+      "Articulated insect tarsomere 5.004",
+      "Paired pretarsal claw.008",
+      "Paired pretarsal claw.009",
+      "Thoracic insect coxa.005",
+      "Short insect trochanter.005",
+      "Insect femur.005",
+      "Insect femur hinge.005",
+      "Insect tibia.005",
+      "Insect tibia hinge.005",
+      "Walking tibial spine.012",
+      "Walking tibial spine.013",
+      "Walking tibial spine.014",
+      "Walking tibial spine.015",
+      "Articulated insect tarsomere 1.005",
+      "Articulated insect tarsomere 2.005",
+      "Articulated insect tarsomere 3.005",
+      "Articulated insect tarsomere 4.005",
+      "Articulated insect tarsomere 5.005",
+      "Paired pretarsal claw.010",
+      "Paired pretarsal claw.011",
+      "Insect pronotum no neck",
+      "Insect head directly on thorax",
+      "Large curved metallic rhinoceros horn",
+      "Large curved metallic rhinoceros horn.001",
+      "Large curved metallic rhinoceros horn.002",
+      "Large curved metallic rhinoceros horn.003",
+      "Blue compound insect eye",
+      "Blue compound insect eye.001",
+      "Insect mouth mandible",
+      "Insect mouth mandible.001",
+      "Shared heavy protective elytron",
+      "Geometric beetle totem",
+      "Geometric beetle totem.001",
+      "Geometric beetle totem.002",
+      "Transparent insect propulsion membrane",
+      "Insect membrane vein",
+      "Insect membrane vein.001",
+      "Insect membrane vein.002",
+      "Transparent insect propulsion membrane.001",
+      "Insect membrane vein.003",
+      "Insect membrane vein.004",
+      "Insect membrane vein.005",
+      "Transparent insect propulsion membrane.002",
+      "Insect membrane vein.006",
+      "Insect membrane vein.007",
+      "Insect membrane vein.008",
+      "Transparent insect propulsion membrane.003",
+      "Insect membrane vein.009",
+      "Insect membrane vein.010",
+      "Insect membrane vein.011",
+      "Shared heavy protective elytron.001",
+      "Geometric beetle totem.003",
+      "Geometric beetle totem.004",
+      "Geometric beetle totem.005",
+      "Transparent insect propulsion membrane.004",
+      "Insect membrane vein.012",
+      "Insect membrane vein.013",
+      "Insect membrane vein.014",
+      "Transparent insect propulsion membrane.005",
+      "Insect membrane vein.015",
+      "Insect membrane vein.016",
+      "Insect membrane vein.017",
+      "Transparent insect propulsion membrane.006",
+      "Insect membrane vein.018",
+      "Insect membrane vein.019",
+      "Insect membrane vein.020",
+      "Transparent insect propulsion membrane.007",
+      "Insect membrane vein.021",
+      "Insect membrane vein.022",
+      "Insect membrane vein.023",
+      "Insect ventral abdominal segment",
+      "Insect ventral abdominal segment.001",
+      "Insect ventral abdominal segment.002",
+      "Insect ventral abdominal segment.003",
+      "Dorsal central twin AA turret",
+      "Mouth defense plasma nozzle",
+      "Mouth defense plasma nozzle.001",
+      "Twin 35mm anti-aircraft open barrel",
+      "Twin 35mm anti-aircraft open barrel.001",
+      "Articulated charge shutter",
+      "Weapon muzzle energy aperture",
+      "Weapon muzzle energy aperture.001",
+      "Independent retractable shield emitter",
+      "Shield luminous emitter rail",
+      "Independent retractable shield emitter.001",
+      "Shield luminous emitter rail.001",
+      "Holographic radar membrane",
+      "Radar reticle ring",
+      "Radar reticle ring.001",
+      "Radar reticle ring.002",
+      "Radar reticle ring.003",
+      "Radar reticle ring.004",
+      "Radar reticle ring.005",
+      "Radar reticle ring.006",
+      "Radar reticle ring.007",
+      "Radar reticle ring.008",
+      "Radar reticle ring.009",
+      "Radar reticle ring.010",
+      "Radar reticle ring.011",
+      "Radar reticle ring.012",
+      "Radar reticle ring.013",
+      "Radar reticle ring.014",
+      "Radar reticle ring.015",
+      "Radar reticle ring.016",
+      "Radar reticle ring.017",
+      "Radar reticle ring.018",
+      "Radar reticle ring.019",
+      "Radar reticle ring.020",
+      "Radar reticle ring.021",
+      "Radar reticle ring.022",
+      "Radar reticle ring.023",
+      "Radar reticle ring.024",
+      "Radar reticle ring.025",
+      "Radar reticle ring.026",
+      "Radar reticle ring.027",
+      "Radar reticle ring.028",
+      "Radar reticle ring.029",
+      "Radar reticle ring.030",
+      "Radar reticle ring.031",
+      "Radar reticle ring.032",
+      "Radar reticle ring.033",
+      "Radar reticle ring.034",
+      "Radar reticle ring.035",
+      "Radar reticle ring.036",
+      "Radar reticle ring.037",
+      "Radar reticle ring.038",
+      "Radar reticle ring.039",
+      "Radar reticle ring.040",
+      "Radar reticle ring.041",
+      "Radar reticle ring.042",
+      "Radar reticle ring.043",
+      "Radar reticle ring.044",
+      "Radar reticle ring.045",
+      "Radar reticle ring.046",
+      "Radar reticle ring.047",
+      "Radar reticle ring.048",
+      "Radar reticle ring.049",
+      "Radar reticle ring.050",
+      "Radar reticle ring.051",
+      "Radar reticle ring.052",
+      "Radar reticle ring.053",
+      "Radar reticle ring.054",
+      "Radar reticle ring.055",
+      "Radar reticle ring.056",
+      "Radar reticle ring.057",
+      "Radar reticle ring.058",
+      "Radar reticle ring.059",
+      "Radar reticle ring.060",
+      "Radar reticle ring.061",
+      "Radar reticle ring.062",
+      "Radar reticle ring.063",
+      "Radar reticle ring.064",
+      "Radar reticle ring.065",
+      "Radar reticle ring.066",
+      "Radar reticle ring.067",
+      "Radar reticle ring.068",
+      "Radar reticle ring.069",
+      "Radar reticle ring.070",
+      "Radar reticle ring.071",
+      "Radar reticle ring.072",
+      "Radar reticle ring.073",
+      "Radar reticle ring.074",
+      "Radar reticle ring.075",
+      "Radar reticle ring.076",
+      "Radar reticle ring.077",
+      "Radar reticle ring.078",
+      "Radar reticle ring.079",
+      "Radar reticle ring.080",
+      "Radar reticle ring.081",
+      "Radar reticle ring.082",
+      "Radar reticle ring.083",
+      "Radar reticle ring.084",
+      "Radar reticle ring.085",
+      "Radar reticle ring.086",
+      "Radar reticle ring.087",
+      "Radar reticle ring.088",
+      "Radar reticle ring.089",
+      "Radar reticle ring.090",
+      "Radar reticle ring.091",
+      "Radar reticle ring.092",
+      "Radar reticle ring.093",
+      "Radar reticle ring.094",
+      "Radar reticle ring.095",
+      "Radar quadrant tick",
+      "Radar quadrant tick.001",
+      "Radar quadrant tick.002",
+      "Radar quadrant tick.003",
+      "Articulated skill charge annulus"
+    ],
+    "joints": [
+      [
+        "tilt",
+        null,
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "spine",
+        "tilt",
+        [
+          0,
+          1.75,
+          0
+        ]
+      ],
+      [
+        "mesothorax",
+        "spine",
+        [
+          0,
+          0,
+          0.05
+        ]
+      ],
+      [
+        "metathorax",
+        "spine",
+        [
+          0,
+          -0.03,
+          -0.45
+        ]
+      ],
+      [
+        "chest",
+        "spine",
+        [
+          0,
+          0.12,
+          0.65
+        ]
+      ],
+      [
+        "neck",
+        "chest",
+        [
+          0,
+          0,
+          0.22
+        ]
+      ],
+      [
+        "head",
+        "neck",
+        [
+          0,
+          0,
+          0.28
+        ]
+      ],
+      [
+        "leg_FL",
+        "chest",
+        [
+          0.64,
+          -0.12,
+          0.45
+        ]
+      ],
+      [
+        "trochanter_FL",
+        "leg_FL",
+        [
+          0.16,
+          -0.05,
+          0
+        ]
+      ],
+      [
+        "femur_FL",
+        "trochanter_FL",
+        [
+          0.1,
+          -0.05,
+          0.06
+        ]
+      ],
+      [
+        "knee_FL",
+        "femur_FL",
+        [
+          0.5,
+          -0.25,
+          0.3
+        ]
+      ],
+      [
+        "ankle_FL",
+        "knee_FL",
+        [
+          0.28,
+          -1.02,
+          0.17
+        ]
+      ],
+      [
+        "tarsal_FL_1",
+        "ankle_FL",
+        [
+          0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "tarsal_FL_2",
+        "tarsal_FL_1",
+        [
+          0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "tarsal_FL_3",
+        "tarsal_FL_2",
+        [
+          0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "tarsal_FL_4",
+        "tarsal_FL_3",
+        [
+          0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "pretarsus_FL",
+        "tarsal_FL_4",
+        [
+          0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "leg_FR",
+        "chest",
+        [
+          -0.64,
+          -0.12,
+          0.45
+        ]
+      ],
+      [
+        "trochanter_FR",
+        "leg_FR",
+        [
+          -0.16,
+          -0.05,
+          0
+        ]
+      ],
+      [
+        "femur_FR",
+        "trochanter_FR",
+        [
+          -0.1,
+          -0.05,
+          0.06
+        ]
+      ],
+      [
+        "knee_FR",
+        "femur_FR",
+        [
+          -0.5,
+          -0.25,
+          0.3
+        ]
+      ],
+      [
+        "ankle_FR",
+        "knee_FR",
+        [
+          -0.28,
+          -1.02,
+          0.17
+        ]
+      ],
+      [
+        "tarsal_FR_1",
+        "ankle_FR",
+        [
+          -0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "tarsal_FR_2",
+        "tarsal_FR_1",
+        [
+          -0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "tarsal_FR_3",
+        "tarsal_FR_2",
+        [
+          -0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "tarsal_FR_4",
+        "tarsal_FR_3",
+        [
+          -0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "pretarsus_FR",
+        "tarsal_FR_4",
+        [
+          -0.065,
+          -0.045,
+          0.028
+        ]
+      ],
+      [
+        "leg_ML",
+        "mesothorax",
+        [
+          0.68,
+          0,
+          0.02
+        ]
+      ],
+      [
+        "trochanter_ML",
+        "leg_ML",
+        [
+          0.16,
+          -0.05,
+          0
+        ]
+      ],
+      [
+        "femur_ML",
+        "trochanter_ML",
+        [
+          0.1,
+          -0.05,
+          0
+        ]
+      ],
+      [
+        "knee_ML",
+        "femur_ML",
+        [
+          0.62,
+          -0.2,
+          0
+        ]
+      ],
+      [
+        "ankle_ML",
+        "knee_ML",
+        [
+          0.28,
+          -1.05,
+          0
+        ]
+      ],
+      [
+        "tarsal_ML_1",
+        "ankle_ML",
+        [
+          0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "tarsal_ML_2",
+        "tarsal_ML_1",
+        [
+          0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "tarsal_ML_3",
+        "tarsal_ML_2",
+        [
+          0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "tarsal_ML_4",
+        "tarsal_ML_3",
+        [
+          0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "pretarsus_ML",
+        "tarsal_ML_4",
+        [
+          0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "leg_MR",
+        "mesothorax",
+        [
+          -0.68,
+          0,
+          0.02
+        ]
+      ],
+      [
+        "trochanter_MR",
+        "leg_MR",
+        [
+          -0.16,
+          -0.05,
+          0
+        ]
+      ],
+      [
+        "femur_MR",
+        "trochanter_MR",
+        [
+          -0.1,
+          -0.05,
+          0
+        ]
+      ],
+      [
+        "knee_MR",
+        "femur_MR",
+        [
+          -0.62,
+          -0.2,
+          0
+        ]
+      ],
+      [
+        "ankle_MR",
+        "knee_MR",
+        [
+          -0.28,
+          -1.05,
+          0
+        ]
+      ],
+      [
+        "tarsal_MR_1",
+        "ankle_MR",
+        [
+          -0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "tarsal_MR_2",
+        "tarsal_MR_1",
+        [
+          -0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "tarsal_MR_3",
+        "tarsal_MR_2",
+        [
+          -0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "tarsal_MR_4",
+        "tarsal_MR_3",
+        [
+          -0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "pretarsus_MR",
+        "tarsal_MR_4",
+        [
+          -0.065,
+          -0.045,
+          0
+        ]
+      ],
+      [
+        "leg_HL",
+        "metathorax",
+        [
+          0.68,
+          0,
+          -0.18
+        ]
+      ],
+      [
+        "trochanter_HL",
+        "leg_HL",
+        [
+          0.16,
+          -0.05,
+          0
+        ]
+      ],
+      [
+        "femur_HL",
+        "trochanter_HL",
+        [
+          0.1,
+          -0.05,
+          -0.03
+        ]
+      ],
+      [
+        "knee_HL",
+        "femur_HL",
+        [
+          0.69,
+          -0.22,
+          -0.27
+        ]
+      ],
+      [
+        "ankle_HL",
+        "knee_HL",
+        [
+          0.28,
+          -1,
+          -0.16
+        ]
+      ],
+      [
+        "tarsal_HL_1",
+        "ankle_HL",
+        [
+          0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "tarsal_HL_2",
+        "tarsal_HL_1",
+        [
+          0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "tarsal_HL_3",
+        "tarsal_HL_2",
+        [
+          0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "tarsal_HL_4",
+        "tarsal_HL_3",
+        [
+          0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "pretarsus_HL",
+        "tarsal_HL_4",
+        [
+          0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "leg_HR",
+        "metathorax",
+        [
+          -0.68,
+          0,
+          -0.18
+        ]
+      ],
+      [
+        "trochanter_HR",
+        "leg_HR",
+        [
+          -0.16,
+          -0.05,
+          0
+        ]
+      ],
+      [
+        "femur_HR",
+        "trochanter_HR",
+        [
+          -0.1,
+          -0.05,
+          -0.03
+        ]
+      ],
+      [
+        "knee_HR",
+        "femur_HR",
+        [
+          -0.69,
+          -0.22,
+          -0.27
+        ]
+      ],
+      [
+        "ankle_HR",
+        "knee_HR",
+        [
+          -0.28,
+          -1,
+          -0.16
+        ]
+      ],
+      [
+        "tarsal_HR_1",
+        "ankle_HR",
+        [
+          -0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "tarsal_HR_2",
+        "tarsal_HR_1",
+        [
+          -0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "tarsal_HR_3",
+        "tarsal_HR_2",
+        [
+          -0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "tarsal_HR_4",
+        "tarsal_HR_3",
+        [
+          -0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "pretarsus_HR",
+        "tarsal_HR_4",
+        [
+          -0.065,
+          -0.045,
+          -0.023
+        ]
+      ],
+      [
+        "bay_l",
+        "spine",
+        [
+          0.529,
+          -0.75,
+          0
+        ]
+      ],
+      [
+        "bay_r",
+        "spine",
+        [
+          -0.529,
+          -0.75,
+          0
+        ]
+      ],
+      [
+        "elytra_l",
+        "spine",
+        [
+          0.1,
+          0.6,
+          -0.25
+        ]
+      ],
+      [
+        "membrane_l_0",
+        "spine",
+        [
+          0.35,
+          0.5,
+          -0.18
+        ]
+      ],
+      [
+        "membrane_l_0_flap",
+        "membrane_l_0",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "membrane_l_0_outer",
+        "membrane_l_0_flap",
+        [
+          1.3,
+          0,
+          -0.1
+        ]
+      ],
+      [
+        "membrane_l_1",
+        "spine",
+        [
+          0.35,
+          0.5,
+          -0.8300000000000001
+        ]
+      ],
+      [
+        "membrane_l_1_flap",
+        "membrane_l_1",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "membrane_l_1_outer",
+        "membrane_l_1_flap",
+        [
+          1.3,
+          0,
+          -0.1
+        ]
+      ],
+      [
+        "elytra_r",
+        "spine",
+        [
+          -0.1,
+          0.6,
+          -0.25
+        ]
+      ],
+      [
+        "membrane_r_0",
+        "spine",
+        [
+          -0.35,
+          0.5,
+          -0.18
+        ]
+      ],
+      [
+        "membrane_r_0_flap",
+        "membrane_r_0",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "membrane_r_0_outer",
+        "membrane_r_0_flap",
+        [
+          -1.3,
+          0,
+          -0.1
+        ]
+      ],
+      [
+        "membrane_r_1",
+        "spine",
+        [
+          -0.35,
+          0.5,
+          -0.8300000000000001
+        ]
+      ],
+      [
+        "membrane_r_1_flap",
+        "membrane_r_1",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "membrane_r_1_outer",
+        "membrane_r_1_flap",
+        [
+          -1.3,
+          0,
+          -0.1
+        ]
+      ],
+      [
+        "gun",
+        "chest",
+        [
+          0,
+          -0.25,
+          0.55
+        ]
+      ],
+      [
+        "gun_recoil",
+        "gun",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "light_muzzle",
+        "gun_recoil",
+        [
+          0,
+          0,
+          0.95
+        ]
+      ],
+      [
+        "heavy",
+        "chest",
+        [
+          0,
+          0.94,
+          -0.68
+        ]
+      ],
+      [
+        "heavy_recoil",
+        "heavy",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "heavy_muzzle",
+        "heavy_recoil",
+        [
+          0,
+          0,
+          1.65
+        ]
+      ],
+      [
+        "charge_hinge",
+        "heavy",
+        [
+          0,
+          0.23,
+          -0.22
+        ]
+      ],
+      [
+        "cast_dish",
+        "chest",
+        [
+          0,
+          0.55,
+          -0.6
+        ]
+      ],
+      [
+        "emitter_l",
+        "chest",
+        [
+          0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "emitter_r",
+        "chest",
+        [
+          -0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "barrier",
+        "tilt",
+        [
+          0,
+          2.2,
+          2.8
+        ]
+      ]
+    ],
+    "triangles": 13544,
+    "hashes": {
+      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+      "image": "eecb4a52ca28c7af638904becd0f96de3565c87ffd966536a83c75db8d8616f1",
+      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    }
+  },
+  "m08": {
+    "parts": [
+      "Shared sealed ventral hull",
+      "Humerus load rod",
+      "Humerus anatomical armor",
+      "Humerus hinge",
+      "Radius ulna paired load rod",
+      "Radius ulna paired load rod.001",
+      "Radius ulna anatomical armor",
+      "Olecranon elbow projection",
+      "Radius ulna hinge",
+      "Metacarpal load rod",
+      "Metacarpal anatomical armor",
+      "Metacarpal hinge",
+      "Matte feline paw",
+      "Feline toe pad",
+      "Feline toe pad.001",
+      "Feline toe pad.002",
+      "Humerus load rod.001",
+      "Humerus anatomical armor.001",
+      "Humerus hinge.001",
+      "Radius ulna paired load rod.002",
+      "Radius ulna paired load rod.003",
+      "Radius ulna anatomical armor.001",
+      "Olecranon elbow projection.001",
+      "Radius ulna hinge.001",
+      "Metacarpal load rod.001",
+      "Metacarpal anatomical armor.001",
+      "Metacarpal hinge.001",
+      "Matte feline paw.001",
+      "Feline toe pad.003",
+      "Feline toe pad.004",
+      "Feline toe pad.005",
+      "Femur load rod",
+      "Femur anatomical armor",
+      "Femur hinge",
+      "Tibia fibula paired load rod",
+      "Tibia fibula paired load rod.001",
+      "Tibia fibula anatomical armor",
+      "Forward stifle cap",
+      "Tibia fibula hinge",
+      "Metatarsal load rod",
+      "Raised calcaneal heel",
+      "Metatarsal anatomical armor",
+      "Metatarsal hinge",
+      "Matte feline paw.002",
+      "Feline toe pad.006",
+      "Feline toe pad.007",
+      "Feline toe pad.008",
+      "Femur load rod.001",
+      "Femur anatomical armor.001",
+      "Femur hinge.001",
+      "Tibia fibula paired load rod.002",
+      "Tibia fibula paired load rod.003",
+      "Tibia fibula anatomical armor.001",
+      "Forward stifle cap.001",
+      "Tibia fibula hinge.001",
+      "Metatarsal load rod.001",
+      "Raised calcaneal heel.001",
+      "Metatarsal anatomical armor.001",
+      "Metatarsal hinge.001",
+      "Matte feline paw.003",
+      "Feline toe pad.009",
+      "Feline toe pad.010",
+      "Feline toe pad.011",
+      "Tail segmented core",
+      "Overlapping tail scale",
+      "Tail articulation ring",
+      "Tail segmented core.001",
+      "Overlapping tail scale.001",
+      "Tail articulation ring.001",
+      "Tail segmented core.002",
+      "Overlapping tail scale.002",
+      "Tail articulation ring.002",
+      "Tail segmented core.003",
+      "Overlapping tail scale.003",
+      "Tail articulation ring.003",
+      "Tail segmented core.004",
+      "Overlapping tail scale.004",
+      "Tail articulation ring.004",
+      "Rounded matte panther skull",
+      "Triangular cat ear",
+      "Triangular cat ear.001",
+      "Paired feline muzzle lobes",
+      "Black feline nose",
+      "Low light feline eye",
+      "Low light feline eye.001",
+      "Facial matte seam",
+      "Facial matte seam.001",
+      "Shared folded scapular wing",
+      "Overlapping secondary flight feather.001",
+      "Overlapping secondary flight feather.003",
+      "Overlapping secondary flight feather.005",
+      "Overlapping secondary flight feather.007",
+      "Wing leading spar",
+      "Continuous primary feather root web",
+      "Independent owl silent feather",
+      "Feather shaft inlay",
+      "Independent owl silent feather.001",
+      "Feather shaft inlay.001",
+      "Independent owl silent feather.002",
+      "Feather shaft inlay.002",
+      "Independent owl silent feather.003",
+      "Feather shaft inlay.003",
+      "Independent owl silent feather.004",
+      "Feather shaft inlay.004",
+      "Independent owl silent feather.005",
+      "Feather shaft inlay.005",
+      "Independent owl silent feather.006",
+      "Feather shaft inlay.006",
+      "Overlapping secondary flight feather",
+      "Overlapping secondary flight feather.002",
+      "Overlapping secondary flight feather.004",
+      "Overlapping secondary flight feather.006",
+      "Shared folded scapular wing.001",
+      "Overlapping secondary flight feather.009",
+      "Overlapping secondary flight feather.011",
+      "Overlapping secondary flight feather.013",
+      "Overlapping secondary flight feather.015",
+      "Wing leading spar.001",
+      "Continuous primary feather root web.001",
+      "Independent owl silent feather.007",
+      "Feather shaft inlay.007",
+      "Independent owl silent feather.008",
+      "Feather shaft inlay.008",
+      "Independent owl silent feather.009",
+      "Feather shaft inlay.009",
+      "Independent owl silent feather.010",
+      "Feather shaft inlay.010",
+      "Independent owl silent feather.011",
+      "Feather shaft inlay.011",
+      "Independent owl silent feather.012",
+      "Feather shaft inlay.012",
+      "Independent owl silent feather.013",
+      "Feather shaft inlay.013",
+      "Overlapping secondary flight feather.008",
+      "Overlapping secondary flight feather.010",
+      "Overlapping secondary flight feather.012",
+      "Overlapping secondary flight feather.014",
+      "Faint deterministic night digital camo",
+      "Faint deterministic night digital camo.001",
+      "Faint deterministic night digital camo.002",
+      "Faint deterministic night digital camo.003",
+      "Faint deterministic night digital camo.004",
+      "Faint deterministic night digital camo.005",
+      "Faint deterministic night digital camo.006",
+      "Faint deterministic night digital camo.007",
+      "Faint deterministic night digital camo.008",
+      "Faint deterministic night digital camo.009",
+      "Faint deterministic night digital camo.010",
+      "Faint deterministic night digital camo.011",
+      "Ventral suppressed microburst receiver",
+      "Microburst gun suppressor",
+      "Symmetric shoulder anti-materiel sniper receiver",
+      "Symmetric shoulder anti-materiel sniper receiver.001",
+      "Long matte sniper barrel",
+      "Long matte sniper barrel.001",
+      "Heavy sniper suppressor",
+      "Shoulder sniper sight",
+      "Heavy sniper suppressor.001",
+      "Shoulder sniper sight.001",
+      "Muted blue sniper lens",
+      "Muted blue sniper lens.001",
+      "Articulated charge shutter",
+      "Weapon muzzle energy aperture",
+      "Weapon muzzle energy aperture.001",
+      "Independent retractable shield emitter",
+      "Shield luminous emitter rail",
+      "Independent retractable shield emitter.001",
+      "Shield luminous emitter rail.001",
+      "Holographic radar membrane",
+      "Radar reticle ring",
+      "Radar reticle ring.001",
+      "Radar reticle ring.002",
+      "Radar reticle ring.003",
+      "Radar reticle ring.004",
+      "Radar reticle ring.005",
+      "Radar reticle ring.006",
+      "Radar reticle ring.007",
+      "Radar reticle ring.008",
+      "Radar reticle ring.009",
+      "Radar reticle ring.010",
+      "Radar reticle ring.011",
+      "Radar reticle ring.012",
+      "Radar reticle ring.013",
+      "Radar reticle ring.014",
+      "Radar reticle ring.015",
+      "Radar reticle ring.016",
+      "Radar reticle ring.017",
+      "Radar reticle ring.018",
+      "Radar reticle ring.019",
+      "Radar reticle ring.020",
+      "Radar reticle ring.021",
+      "Radar reticle ring.022",
+      "Radar reticle ring.023",
+      "Radar reticle ring.024",
+      "Radar reticle ring.025",
+      "Radar reticle ring.026",
+      "Radar reticle ring.027",
+      "Radar reticle ring.028",
+      "Radar reticle ring.029",
+      "Radar reticle ring.030",
+      "Radar reticle ring.031",
+      "Radar reticle ring.032",
+      "Radar reticle ring.033",
+      "Radar reticle ring.034",
+      "Radar reticle ring.035",
+      "Radar reticle ring.036",
+      "Radar reticle ring.037",
+      "Radar reticle ring.038",
+      "Radar reticle ring.039",
+      "Radar reticle ring.040",
+      "Radar reticle ring.041",
+      "Radar reticle ring.042",
+      "Radar reticle ring.043",
+      "Radar reticle ring.044",
+      "Radar reticle ring.045",
+      "Radar reticle ring.046",
+      "Radar reticle ring.047",
+      "Radar reticle ring.048",
+      "Radar reticle ring.049",
+      "Radar reticle ring.050",
+      "Radar reticle ring.051",
+      "Radar reticle ring.052",
+      "Radar reticle ring.053",
+      "Radar reticle ring.054",
+      "Radar reticle ring.055",
+      "Radar reticle ring.056",
+      "Radar reticle ring.057",
+      "Radar reticle ring.058",
+      "Radar reticle ring.059",
+      "Radar reticle ring.060",
+      "Radar reticle ring.061",
+      "Radar reticle ring.062",
+      "Radar reticle ring.063",
+      "Radar reticle ring.064",
+      "Radar reticle ring.065",
+      "Radar reticle ring.066",
+      "Radar reticle ring.067",
+      "Radar reticle ring.068",
+      "Radar reticle ring.069",
+      "Radar reticle ring.070",
+      "Radar reticle ring.071",
+      "Radar reticle ring.072",
+      "Radar reticle ring.073",
+      "Radar reticle ring.074",
+      "Radar reticle ring.075",
+      "Radar reticle ring.076",
+      "Radar reticle ring.077",
+      "Radar reticle ring.078",
+      "Radar reticle ring.079",
+      "Radar reticle ring.080",
+      "Radar reticle ring.081",
+      "Radar reticle ring.082",
+      "Radar reticle ring.083",
+      "Radar reticle ring.084",
+      "Radar reticle ring.085",
+      "Radar reticle ring.086",
+      "Radar reticle ring.087",
+      "Radar reticle ring.088",
+      "Radar reticle ring.089",
+      "Radar reticle ring.090",
+      "Radar reticle ring.091",
+      "Radar reticle ring.092",
+      "Radar reticle ring.093",
+      "Radar reticle ring.094",
+      "Radar reticle ring.095",
+      "Radar quadrant tick",
+      "Radar quadrant tick.001",
+      "Radar quadrant tick.002",
+      "Radar quadrant tick.003",
+      "Articulated skill charge annulus"
+    ],
+    "joints": [
+      [
+        "tilt",
+        null,
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "spine",
+        "tilt",
+        [
+          0,
+          1.7,
+          0
+        ]
+      ],
+      [
+        "chest",
+        "spine",
+        [
+          0,
+          0.12,
+          0.58
+        ]
+      ],
+      [
+        "neck",
+        "chest",
+        [
+          0,
+          0.1,
+          0.32
+        ]
+      ],
+      [
+        "head",
+        "neck",
+        [
+          0,
+          -0.04,
+          0.65
+        ]
+      ],
+      [
+        "leg_FL",
+        "chest",
+        [
+          0.57,
+          -0.12,
+          0.3400000000000001
+        ]
+      ],
+      [
+        "knee_FL",
+        "leg_FL",
+        [
+          0,
+          -0.54,
+          -0.25
+        ]
+      ],
+      [
+        "ankle_FL",
+        "knee_FL",
+        [
+          0,
+          -0.75,
+          0.13
+        ]
+      ],
+      [
+        "toe_FL",
+        "ankle_FL",
+        [
+          0,
+          -0.18,
+          0.1
+        ]
+      ],
+      [
+        "leg_FR",
+        "chest",
+        [
+          -0.57,
+          -0.12,
+          0.3400000000000001
+        ]
+      ],
+      [
+        "knee_FR",
+        "leg_FR",
+        [
+          0,
+          -0.54,
+          -0.25
+        ]
+      ],
+      [
+        "ankle_FR",
+        "knee_FR",
+        [
+          0,
+          -0.75,
+          0.13
+        ]
+      ],
+      [
+        "toe_FR",
+        "ankle_FR",
+        [
+          0,
+          -0.18,
+          0.1
+        ]
+      ],
+      [
+        "leg_HL",
+        "spine",
+        [
+          0.57,
+          0,
+          -0.92
+        ]
+      ],
+      [
+        "knee_HL",
+        "leg_HL",
+        [
+          0,
+          -0.53,
+          0.46
+        ]
+      ],
+      [
+        "ankle_HL",
+        "knee_HL",
+        [
+          0,
+          -0.51,
+          -0.54
+        ]
+      ],
+      [
+        "toe_HL",
+        "ankle_HL",
+        [
+          0,
+          -0.43,
+          0.18
+        ]
+      ],
+      [
+        "leg_HR",
+        "spine",
+        [
+          -0.57,
+          0,
+          -0.92
+        ]
+      ],
+      [
+        "knee_HR",
+        "leg_HR",
+        [
+          0,
+          -0.53,
+          0.46
+        ]
+      ],
+      [
+        "ankle_HR",
+        "knee_HR",
+        [
+          0,
+          -0.51,
+          -0.54
+        ]
+      ],
+      [
+        "toe_HR",
+        "ankle_HR",
+        [
+          0,
+          -0.43,
+          0.18
+        ]
+      ],
+      [
+        "bay_l",
+        "spine",
+        [
+          0.42550000000000004,
+          -0.575,
+          0
+        ]
+      ],
+      [
+        "bay_r",
+        "spine",
+        [
+          -0.42550000000000004,
+          -0.575,
+          0
+        ]
+      ],
+      [
+        "tail_0",
+        "spine",
+        [
+          0,
+          0.05,
+          -1.75
+        ]
+      ],
+      [
+        "tail_1",
+        "tail_0",
+        [
+          0,
+          -0.02,
+          -0.38
+        ]
+      ],
+      [
+        "tail_2",
+        "tail_1",
+        [
+          0,
+          -0.02,
+          -0.38
+        ]
+      ],
+      [
+        "tail_3",
+        "tail_2",
+        [
+          0,
+          -0.02,
+          -0.38
+        ]
+      ],
+      [
+        "tail_4",
+        "tail_3",
+        [
+          0,
+          -0.02,
+          -0.38
+        ]
+      ],
+      [
+        "wing_l",
+        "chest",
+        [
+          0.25,
+          0.4,
+          0
+        ]
+      ],
+      [
+        "flap_l",
+        "wing_l",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "outer_l",
+        "flap_l",
+        [
+          1.75,
+          0,
+          0.55
+        ]
+      ],
+      [
+        "feather_l_0",
+        "outer_l",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "feather_l_1",
+        "outer_l",
+        [
+          0.18,
+          0,
+          -0.055
+        ]
+      ],
+      [
+        "feather_l_2",
+        "outer_l",
+        [
+          0.36,
+          0,
+          -0.11
+        ]
+      ],
+      [
+        "feather_l_3",
+        "outer_l",
+        [
+          0.54,
+          0,
+          -0.165
+        ]
+      ],
+      [
+        "feather_l_4",
+        "outer_l",
+        [
+          0.72,
+          0,
+          -0.22
+        ]
+      ],
+      [
+        "feather_l_5",
+        "outer_l",
+        [
+          0.8999999999999999,
+          0,
+          -0.275
+        ]
+      ],
+      [
+        "feather_l_6",
+        "outer_l",
+        [
+          1.08,
+          0,
+          -0.33
+        ]
+      ],
+      [
+        "wing_r",
+        "chest",
+        [
+          -0.25,
+          0.4,
+          0
+        ]
+      ],
+      [
+        "flap_r",
+        "wing_r",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "outer_r",
+        "flap_r",
+        [
+          -1.75,
+          0,
+          0.55
+        ]
+      ],
+      [
+        "feather_r_0",
+        "outer_r",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "feather_r_1",
+        "outer_r",
+        [
+          -0.18,
+          0,
+          -0.055
+        ]
+      ],
+      [
+        "feather_r_2",
+        "outer_r",
+        [
+          -0.36,
+          0,
+          -0.11
+        ]
+      ],
+      [
+        "feather_r_3",
+        "outer_r",
+        [
+          -0.54,
+          0,
+          -0.165
+        ]
+      ],
+      [
+        "feather_r_4",
+        "outer_r",
+        [
+          -0.72,
+          0,
+          -0.22
+        ]
+      ],
+      [
+        "feather_r_5",
+        "outer_r",
+        [
+          -0.8999999999999999,
+          0,
+          -0.275
+        ]
+      ],
+      [
+        "feather_r_6",
+        "outer_r",
+        [
+          -1.08,
+          0,
+          -0.33
+        ]
+      ],
+      [
+        "gun",
+        "chest",
+        [
+          0,
+          -0.38,
+          0.6
+        ]
+      ],
+      [
+        "gun_recoil",
+        "gun",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "light_muzzle",
+        "gun_recoil",
+        [
+          0,
+          0,
+          0.95
+        ]
+      ],
+      [
+        "heavy",
+        "chest",
+        [
+          0,
+          0.62,
+          0.02
+        ]
+      ],
+      [
+        "heavy_recoil",
+        "heavy",
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        "heavy_muzzle",
+        "heavy_recoil",
+        [
+          0,
+          0,
+          2.35
+        ]
+      ],
+      [
+        "charge_hinge",
+        "heavy",
+        [
+          0,
+          0.23,
+          -0.22
+        ]
+      ],
+      [
+        "cast_dish",
+        "chest",
+        [
+          0,
+          0.55,
+          -0.6
+        ]
+      ],
+      [
+        "emitter_l",
+        "chest",
+        [
+          0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "emitter_r",
+        "chest",
+        [
+          -0.64,
+          0.28,
+          0.5
+        ]
+      ],
+      [
+        "barrier",
+        "tilt",
+        [
+          0,
+          2.2,
+          2.8
+        ]
+      ]
+    ],
+    "triangles": 13228,
+    "hashes": {
+      "contract": "c31bb2a4601b34016abc64adb21548ac7aeba3af6d6aa508d78905e93997be5a",
+      "builder": "9f3d2566682638ffaf8030a6b46fad87613492c3830bdde9f439933e9402f5f6",
+      "catalog": "79e4c9e7c19576888f5a9fe3a99f695723e5f1f1fbf6559ed59b52682b7a8eca",
+      "image": "bf80c8b004668068ad3d1b4cbf779072aba0a7f68d2e3cc00fc68b1857be0e20",
+      "sharedContract": "c9a73660c5f8f7d1e863b4ef97b8cc2373e69457942b5358eed7e33aa6c3dc06",
+      "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    }
+  }
+}

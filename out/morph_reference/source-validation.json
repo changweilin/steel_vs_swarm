@@ -1,6 +1,6 @@
 {
   "m01": {
-    "blend": "d2e7f335f907e66ec0342c0a76473adaccabcc059f51a3e70272e17844672ebb",
+    "blend": "b047bc9b76a5c03df17d649ae9d07dccd37293075cd10f43f8b131541ad68ee7",
     "bones": 31,
     "clips": [
       "idle",
@@ -21,6 +21,7 @@
       "flight_shield_deploy",
       "flight_shield_retract"
     ],
+    "validatedClips": 17,
     "foldedLimbBoundsInHullCoordinates": {},
     "limbVerticesOutsideHull": 0,
     "exposedLimbBoundsInHullCoordinates": {
@@ -78,7 +79,7 @@
     "flight_belly": "pass"
   },
   "s03": {
-    "blend": "3c8f49ed086d6070ac70de312ffc689f74cab95b7e68bd8b2b010d681cc68407",
+    "blend": "982154c0949666caf7cf0c0dcd218870fb0e091a51020b10100a47fde54c0121",
     "bones": 49,
     "clips": [
       "idle",
@@ -99,6 +100,7 @@
       "flight_shield_deploy",
       "flight_shield_retract"
     ],
+    "validatedClips": 17,
     "foldedLimbBoundsInHullCoordinates": {
       "leg_FL": {
         "min": [
@@ -156,7 +158,7 @@
     "flight_belly": "pass"
   },
   "s10": {
-    "blend": "100fa8d6996483f55ec0a13eab59f2f17885fd53067de7519f421092df6b2e78",
+    "blend": "8403bc525f9a0c8e14f095f38e99128fb70cbf0c398f98a47a4cf93a43373e17",
     "bones": 69,
     "clips": [
       "idle",
@@ -177,6 +179,7 @@
       "flight_shield_deploy",
       "flight_shield_retract"
     ],
+    "validatedClips": 17,
     "foldedLimbBoundsInHullCoordinates": {
       "leg_FL": {
         "min": [
@@ -235,7 +238,7 @@
     "flight_belly": "pass"
   },
   "t06": {
-    "blend": "d421fb98e13d68cb4398b14540768e97ba74b92ec6bbd83add48f9e3d7e97940",
+    "blend": "04f839293305ce450a1015669660e97168f74cfb7ce4356dd6bdd82af9896472",
     "bones": 31,
     "clips": [
       "idle",
@@ -256,6 +259,7 @@
       "flight_shield_deploy",
       "flight_shield_retract"
     ],
+    "validatedClips": 17,
     "foldedLimbBoundsInHullCoordinates": {},
     "limbVerticesOutsideHull": 0,
     "exposedLimbBoundsInHullCoordinates": {
@@ -313,7 +317,7 @@
     "flight_belly": "pass"
   },
   "t11": {
-    "blend": "90b7dfd694dd036342f63a7871c0996d1b1822117a980dfe06974e503a5b4696",
+    "blend": "2e2487024d3555618aa3d7ec081c402588fd97bc1739182f634fa5a52a95b251",
     "bones": 99,
     "clips": [
       "idle",
@@ -334,29 +338,30 @@
       "flight_shield_deploy",
       "flight_shield_retract"
     ],
+    "validatedClips": 17,
     "foldedLimbBoundsInHullCoordinates": {
       "hip_l": {
         "min": [
-          -0.04680006578564644,
+          -0.031200064346194267,
           -0.37966394424438477,
-          -0.36000001430511475
+          -0.34960001707077026
         ],
         "max": [
-          0.5667999982833862,
+          0.5511999726295471,
           1.3596000671386719,
-          0.1600000113248825
+          0.14960001409053802
         ]
       },
       "hip_r": {
         "min": [
-          -0.566800057888031,
+          -0.5512000322341919,
           -0.37966394424438477,
-          -0.36000001430511475
+          -0.34960001707077026
         ],
         "max": [
-          0.04679999500513077,
+          0.031200002878904343,
           1.3596000671386719,
-          0.1600000113248825
+          0.14960001409053802
         ]
       }
     },
@@ -365,20 +370,20 @@
       "shoulder_l": {
         "min": [
           -0.08379102498292923,
-          -0.027619395405054092,
-          -1.1091790199279785
+          -0.0876193568110466,
+          -0.8291789889335632
         ],
         "max": [
-          2.815509796142578,
+          2.995509624481201,
           2.175557851791382,
           -0.249999538064003
         ]
       },
       "shoulder_r": {
         "min": [
-          -2.815509796142578,
-          -0.027619432657957077,
-          -1.1091790199279785
+          -2.995509624481201,
+          -0.08761939406394958,
+          -0.8291789889335632
         ],
         "max": [
           0.08379102498292923,
@@ -392,7 +397,7 @@
     "flight_belly": "pass"
   },
   "m05": {
-    "blend": "f36fab7c411cc468ae4f7de9c0b8f9af5dda0d80f4080feedc3d197460bd6c97",
+    "blend": "2c83ef4053f3f151376a08502181094ebb6e06d09b563427b1183c4145e35093",
     "bones": 44,
     "clips": [
       "idle",
@@ -413,6 +418,7 @@
       "flight_shield_deploy",
       "flight_shield_retract"
     ],
+    "validatedClips": 17,
     "foldedLimbBoundsInHullCoordinates": {},
     "limbVerticesOutsideHull": 0,
     "exposedLimbBoundsInHullCoordinates": {},
@@ -421,7 +427,7 @@
     "flight_belly": "exposed_patagium_struts"
   },
   "m07": {
-    "blend": "008b194927ef3619f3d12018087963ac6cf9d1c4ced87a57680d40d620fa29d9",
+    "blend": "ba69ffbd6b341440a82e95b45d0e6c2f4ae62035d210b8d5fc2eae4797b89aaf",
     "bones": 94,
     "clips": [
       "idle",
@@ -442,6 +448,7 @@
       "flight_shield_deploy",
       "flight_shield_retract"
     ],
+    "validatedClips": 17,
     "foldedLimbBoundsInHullCoordinates": {
       "leg_FL": {
         "min": [
@@ -523,7 +530,7 @@
     "flight_belly": "pass"
   },
   "m08": {
-    "blend": "d1d1aa60c195c12d823cc99549a72b577501122f59ff0074320062ab3dcf5b16",
+    "blend": "a483090a13f18142bcdec88fbe012b35d83e3ad8ac8c6e392e76dd887a7750ce",
     "bones": 59,
     "clips": [
       "idle",
@@ -544,6 +551,7 @@
       "flight_shield_deploy",
       "flight_shield_retract"
     ],
+    "validatedClips": 17,
     "foldedLimbBoundsInHullCoordinates": {
       "leg_FL": {
         "min": [

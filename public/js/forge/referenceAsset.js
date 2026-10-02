@@ -91,6 +91,12 @@ export function buildReferenceAsset(asset, spec) {
     rig.shield.arm = { ...shield.arm,
       shoulder: nodeOf(shield.arm.shoulder), elbow: nodeOf(shield.arm.elbow), wrist: nodeOf(shield.arm.wrist) };
   }
+  rig.shield.posture = spec.form === 'flight' ? 0 : 1;
+  rig.shield.pose = (shield.pose || []).map(track => ({
+    node: nodeOf(track.node),
+    rest: new THREE.Quaternion().setFromEuler(new THREE.Euler(...track.rest)),
+    deploy: new THREE.Quaternion().setFromEuler(new THREE.Euler(...track.rotation)),
+  }));
   for (const hinge of rig.shield.hinges) hinge.node.rotation[hinge.axis] = hinge.rest;
   rig.shield.barrier.visible = false;
   rig.shield.barrier.scale.setScalar(.001);

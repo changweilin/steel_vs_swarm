@@ -5,6 +5,7 @@ import math
 import sys
 from pathlib import Path
 import bpy
+from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 contract = json.loads((HERE / 'morphers.json').read_text())
@@ -13,6 +14,28 @@ args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 ids = args or list(contract['assets'])
 sha = lambda file: hashlib.sha256(file.read_bytes()).hexdigest()
 results, failures = {}, []
+
+
+def write_report(file, data):
+    pending = file.with_suffix(file.suffix + '.tmp')
+    pending.write_text(json.dumps(data, indent=2) + '\n', encoding='utf8')
+    pending.replace(file)
+
+
+def activate_clip(spec, clip, frame):
+    for name, _, _ in spec['joints']:
+        joint = bpy.data.objects[name]
+        for track in joint.animation_data.nla_tracks:
+            track.mute = True
+            if track.name == clip:
+                joint.animation_data.action = track.strips[0].action
+                joint.animation_data.action_slot = track.strips[0].action_slot
+        joint.update_tag()
+    bpy.context.scene.frame_set(1)
+    bpy.context.scene.frame_set(frame)
+    bpy.context.view_layer.update()
+
+
 for id in ids:
     spec = contract['assets'][id]
     directory = output / id
@@ -27,15 +50,70 @@ for id in ids:
         assert joint.parent.name == (parent or id), 'Lost parent: ' + name
         assert skeleton.pose.bones[name].constraints[0].target == joint
         assert set(spec['clips']).issubset({t.name for t in joint.animation_data.nla_tracks})
-        for track in joint.animation_data.nla_tracks:
-            track.mute = True
-            if track.name == 'to_flight':
-                joint.animation_data.action = track.strips[0].action
-                joint.animation_data.action_slot = track.strips[0].action_slot
-        joint.update_tag()
-    bpy.context.scene.frame_set(1)
-    bpy.context.scene.frame_set(31)
-    bpy.context.view_layer.update()
+    for clip in spec['clips']:
+        activate_clip(spec, clip, 16)
+        for name, _, _ in spec['joints']:
+            joint = bpy.data.objects[name]
+            assert all(math.isfinite(v) for row in joint.matrix_world for v in row), clip + ': nonfinite joint'
+            if name != 'barrier':
+                assert all(abs(v - 1) < 1e-6 for v in joint.scale), clip + ': resized rigid joint'
+        if id == 't11':
+            head = bpy.data.objects['head'].matrix_world.to_quaternion()
+            if clip in ['idle', 'run', 'light', 'heavy', 'skill', 'ult', 'shield_deploy', 'shield_retract']:
+                assert (head @ Vector((0, -1, 0))).y < -.97, clip + ': ground face points away from target'
+                assert (head @ Vector((0, 0, 1))).z > .97, clip + ': triangular helmet is not upright'
+            elif clip.startswith('flight_'):
+                assert (head @ Vector((0, 0, 1))).y < -.97, clip + ': triangular nose points away from flight direction'
+            for side, sign in [('l', 1), ('r', -1)]:
+                wrist, hinge, rotor = [bpy.data.objects[name + '_' + side] for name in ['wrist', 'rotor_hinge', 'rotor']]
+                expected = wrist.matrix_world @ Vector((sign * .18, -.04, -.08))
+                assert (hinge.matrix_world.translation - expected).length < 1e-5, clip + ': disk left hand back'
+                assert (rotor.matrix_world.translation - hinge.matrix_world.translation).length < 1e-5, clip + ': rotor center shifted'
+                if clip in ['idle', 'run', 'light', 'heavy']:
+                    normal = hinge.matrix_local.to_3x3() @ Vector((0, -1, 0))
+                    assert abs(normal.x) > .99999, clip + ': disk is not flat against arm outside'
+        if clip.startswith('flight_'):
+            rig = spec['forms']['flight']['rig']
+            motors = [entry['node'] for entry in rig.get('spin', [])]
+            motors += [entry['w'] for entry in rig.get('wings', [])]
+            activate_clip(spec, clip, 7)
+            before = {name: bpy.data.objects[name].rotation_euler.to_quaternion() for name in motors}
+            activate_clip(spec, clip, 13)
+            assert all(before[name].rotation_difference(bpy.data.objects[name].rotation_euler.to_quaternion()).angle > .01
+                       for name in motors), clip + ': frozen flight propulsion'
+    if spec['kind'] == 'biped':
+        activate_clip(spec, 'run', 7)
+        before = {name: bpy.data.objects[name].rotation_euler.x for name in ['shoulder_l', 'shoulder_r']}
+        activate_clip(spec, 'run', 22)
+        assert all(abs(bpy.data.objects[name].rotation_euler.x - angle) > .15 for name, angle in before.items()), 'Frozen biped running arm'
+        for clip in ['light', 'heavy']:
+            activate_clip(spec, clip, 16)
+            for side in ['l', 'r']:
+                elbow, wrist = [bpy.data.objects[name + '_' + side].matrix_world.translation for name in ['elbow', 'wrist']]
+                assert (wrist - elbow).normalized().y < -.6, clip + ': firing forearm points away from target'
+    if id == 't11':
+        helmet = bpy.data.objects['Right isosceles triangular helmet nose']
+        triangles = [face for face in helmet.data.polygons if len(face.vertices) == 3]
+        assert len(helmet.data.vertices) == 6 and len(triangles) == 2, 'Lost triangular helmet topology'
+        assert all(abs(face.normal.y) > .99999 for face in triangles), 'Helmet triangle lies outside face plane'
+        base = min(vertex.co.z for vertex in helmet.data.vertices) + helmet.location.z
+        face = bpy.data.objects['Atlas black observation face']
+        assert max(vertex.co.z for vertex in face.data.vertices) + face.location.z < base, 'Observation face is hidden by helmet'
+        activate_clip(spec, 'shield_deploy', 31)
+        hinge, barrier = [bpy.data.objects[name] for name in ['rotor_hinge_l', 'barrier']]
+        center, target = hinge.matrix_world.translation, barrier.matrix_world.translation
+        assert abs(center.x - target.x) < 1e-5 and abs(center.z - target.z) < 1e-5, 'Defense shield is off center'
+        normal = hinge.matrix_world.to_quaternion() @ Vector((0, -1, 0))
+        forward = barrier.matrix_world.to_quaternion() @ Vector((0, -1, 0))
+        assert abs(normal.dot(forward)) > .99999, 'Defense shield is not parallel to projection'
+    if id == 'm05':
+        activate_clip(spec, 'idle', 1)
+        stance = {name: bpy.data.objects[name].matrix_local.copy() for name, _, _ in spec['joints']}
+        activate_clip(spec, 'to_flight', 1)
+        assert max(abs(stance[name][i][j] - bpy.data.objects[name].matrix_local[i][j])
+                   for name in stance for i in range(4) for j in range(4)) < 1e-5, 'Wolf snaps at transform start'
+        assert abs(bpy.data.objects['knee_l'].rotation_euler.x - spec['rig']['legChainL'][0]['base']) < 1e-5, 'Wolf lost its crouch'
+    activate_clip(spec, 'to_flight', 31)
     depsgraph = bpy.context.evaluated_depsgraph_get()
     envelopes, exposed, outside = {}, {}, []
     cavity = spec.get('cavity')
@@ -91,17 +169,17 @@ for id in ids:
     else:
         assert id == 'm05' and not spec['acceptance']['flightBellyClosed'], 'Unspecified closure exception'
         assert len([n for n, _, _ in spec['joints'] if n.startswith(('hip_', 'shoulder_'))]) == 4
-    result = {'blend': sha(blend), 'bones': len(skeleton.data.bones), 'clips': spec['clips'],
+    result = {'blend': sha(blend), 'bones': len(skeleton.data.bones), 'clips': spec['clips'], 'validatedClips': len(spec['clips']),
               'foldedLimbBoundsInHullCoordinates': envelopes, 'limbVerticesOutsideHull': len(outside),
               'exposedLimbBoundsInHullCoordinates': exposed,
               'outsideExamples': outside[:4], 'editable_source': 'pass',
               'flight_belly': ('pass' if not outside else 'fail') if cavity else 'exposed_patagium_struts'}
-    (directory / 'source-validation.json').write_text(json.dumps(result, indent=2) + '\n')
+    write_report(directory / 'source-validation.json', result)
     report['gates']['editable_source'] = 'pass'
-    (directory / 'validation.json').write_text(json.dumps(report, indent=2) + '\n')
+    write_report(directory / 'validation.json', report)
     results[id] = result
     if outside:
         failures.append(id)
     print('MORPH_SOURCE ' + id + ' outside=' + str(len(outside)), flush=True)
-(output / 'source-validation.json').write_text(json.dumps(results, indent=2) + '\n')
+write_report(output / 'source-validation.json', results)
 assert not failures, 'Uncontained folded limbs: ' + ', '.join(failures)

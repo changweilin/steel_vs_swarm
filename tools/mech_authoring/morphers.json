@@ -521,7 +521,7 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.17
+            "amplitude": -0.13
           }
         ],
         "charge": [
@@ -1979,14 +1979,14 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.16
+            "amplitude": -0.035
           },
           {
             "node": "heavy_recoil",
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.2
+            "amplitude": -0.055
           }
         ],
         "charge": [
@@ -3561,14 +3561,14 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.16
+            "amplitude": -0.065
           },
           {
             "node": "heavy_recoil",
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.2
+            "amplitude": -0.14
           }
         ],
         "charge": [
@@ -4391,14 +4391,14 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.16
+            "amplitude": -0.07
           },
           {
             "node": "heavy_recoil",
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.2
+            "amplitude": -0.1
           }
         ],
         "charge": [
@@ -4484,7 +4484,14 @@
       },
       "parameters": {
         "limb": 0.52,
-        "wingSpan": 3.3
+        "wingSpan": 3.3,
+        "helmet": {
+          "points": [[-0.6, 0], [0.6, 0], [0, 0.6]],
+          "depth": 0.7,
+          "position": [0, -0.03, 0.1],
+          "facePosition": [0, -0.16, 0.435],
+          "slitPosition": [0, -0.19, 0.463]
+        }
       },
       "materials": {
         "armor": {
@@ -4722,9 +4729,9 @@
           "rotor_hinge_l",
           "wrist_l",
           [
-            0,
-            0,
-            0.1
+            0.18,
+            -0.08,
+            0.04
           ]
         ],
         [
@@ -4740,9 +4747,9 @@
           "rotor_hinge_r",
           "wrist_r",
           [
-            0,
-            0,
-            0.1
+            -0.18,
+            -0.08,
+            0.04
           ]
         ],
         [
@@ -5695,6 +5702,20 @@
                 0,
                 5.497787143782138
               ]
+            },
+            "rotor_hinge_l": {
+              "rotation": [
+                0,
+                1.5707963267948966,
+                0
+              ]
+            },
+            "rotor_hinge_r": {
+              "rotation": [
+                0,
+                -1.5707963267948966,
+                0
+              ]
             }
           },
           "rig": {}
@@ -5820,17 +5841,12 @@
             },
             "head": {
               "rotation": [
-                -1.5707963267948966,
+                0,
                 0,
                 0
               ]
             },
             "rotor_hinge_l": {
-              "position": [
-                0,
-                0.2,
-                0.1
-              ],
               "rotation": [
                 -1.5707963267948966,
                 0,
@@ -5838,11 +5854,6 @@
               ]
             },
             "rotor_hinge_r": {
-              "position": [
-                0,
-                0.2,
-                0.1
-              ],
               "rotation": [
                 -1.5707963267948966,
                 0,
@@ -6583,6 +6594,73 @@
               "rest": 0,
               "deploy": 1.05
             }
+          ],
+          "pose": [
+            {
+              "node": "hips",
+              "rest": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "node": "chest",
+              "rest": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "node": "shoulder_l",
+              "rest": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                0.6044710278511047,
+                -1.7164958715438843,
+                1.5707956552505493
+              ]
+            },
+            {
+              "node": "elbow_l",
+              "rest": [
+                -0.18,
+                0,
+                0
+              ],
+              "rotation": [
+                -1.1035298109054565,
+                0,
+                0
+              ]
+            },
+            {
+              "node": "wrist_l",
+              "rest": [
+                0,
+                0,
+                0
+              ],
+              "rotation": [
+                1.2492293119430542,
+                0,
+                -0.9663248658180237
+              ]
+            }
           ]
         },
         "fire": [
@@ -6591,14 +6669,14 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.16
+            "amplitude": -0.1
           },
           {
             "node": "heavy_recoil",
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.2
+            "amplitude": -0.16
           }
         ],
         "charge": [
@@ -7754,14 +7832,14 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.16
+            "amplitude": -0.11
           },
           {
             "node": "heavy_recoil",
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.2
+            "amplitude": -0.09
           }
         ],
         "charge": [
@@ -9683,14 +9761,14 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.16
+            "amplitude": -0.09
           },
           {
             "node": "heavy_recoil",
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.2
+            "amplitude": -0.14
           }
         ],
         "charge": [
@@ -11076,14 +11154,14 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.16
+            "amplitude": -0.04
           },
           {
             "node": "heavy_recoil",
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.2
+            "amplitude": -0.18
           }
         ],
         "charge": [

@@ -5,10 +5,22 @@
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { rename, writeFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const require = createRequire(import.meta.url);
+
+export async function captureReview(page, target) {
+  await writeReview(target, await page.screenshot({ type: 'png' }));
+}
+
+export async function writeReview(target, content) {
+  const targetPath = target instanceof URL ? fileURLToPath(target) : target;
+  const temporary = targetPath + '.tmp';
+  await writeFile(temporary, content);
+  await rename(temporary, targetPath);
+}
 // 伺服器路徑一律由本檔位置推導 —— 量測工具常從別的 cwd 呼叫,相對路徑會找不到 server.js
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 

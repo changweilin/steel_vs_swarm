@@ -1,5 +1,5 @@
 {
-  "blend": "3c8f49ed086d6070ac70de312ffc689f74cab95b7e68bd8b2b010d681cc68407",
+  "blend": "982154c0949666caf7cf0c0dcd218870fb0e091a51020b10100a47fde54c0121",
   "bones": 49,
   "clips": [
     "idle",
@@ -20,6 +20,7 @@
     "flight_shield_deploy",
     "flight_shield_retract"
   ],
+  "validatedClips": 17,
   "foldedLimbBoundsInHullCoordinates": {
     "leg_FL": {
       "min": [

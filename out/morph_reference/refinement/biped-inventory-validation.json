@@ -1,0 +1,146 @@
+{
+  "s01": {
+    "parts": 226,
+    "joints": 17,
+    "triangles": 13832,
+    "status": "unchanged"
+  },
+  "t10": {
+    "parts": 247,
+    "joints": 26,
+    "triangles": 12332,
+    "status": "unchanged"
+  },
+  "s02": {
+    "parts": 172,
+    "joints": 18,
+    "triangles": 9476,
+    "status": "unchanged"
+  },
+  "s04": {
+    "parts": 150,
+    "joints": 13,
+    "triangles": 8540,
+    "status": "unchanged"
+  },
+  "s05": {
+    "parts": 169,
+    "joints": 16,
+    "triangles": 8080,
+    "status": "unchanged"
+  },
+  "s08": {
+    "parts": 141,
+    "joints": 14,
+    "triangles": 7668,
+    "status": "unchanged"
+  },
+  "s11": {
+    "parts": 166,
+    "joints": 13,
+    "triangles": 8116,
+    "status": "unchanged"
+  },
+  "s12": {
+    "parts": 167,
+    "joints": 16,
+    "triangles": 8468,
+    "status": "unchanged"
+  },
+  "t07": {
+    "parts": 178,
+    "joints": 16,
+    "triangles": 9452,
+    "status": "unchanged"
+  },
+  "t08": {
+    "parts": 269,
+    "joints": 22,
+    "triangles": 14148,
+    "status": "unchanged"
+  },
+  "t09": {
+    "parts": 176,
+    "joints": 14,
+    "triangles": 8024,
+    "status": "unchanged"
+  },
+  "m03": {
+    "parts": 155,
+    "joints": 13,
+    "triangles": 7372,
+    "status": "unchanged"
+  },
+  "m04": {
+    "parts": 209,
+    "joints": 16,
+    "triangles": 9512,
+    "status": "unchanged"
+  },
+  "s06": {
+    "parts": 242,
+    "joints": 41,
+    "triangles": 12356,
+    "status": "unchanged"
+  },
+  "s07": {
+    "parts": 427,
+    "joints": 55,
+    "triangles": 20372,
+    "status": "unchanged"
+  },
+  "s09": {
+    "parts": 229,
+    "joints": 30,
+    "triangles": 12936,
+    "status": "unchanged"
+  },
+  "t01": {
+    "parts": 225,
+    "joints": 25,
+    "triangles": 11304,
+    "status": "unchanged"
+  },
+  "t02": {
+    "parts": 220,
+    "joints": 25,
+    "triangles": 10972,
+    "status": "unchanged"
+  },
+  "t03": {
+    "parts": 212,
+    "joints": 25,
+    "triangles": 11180,
+    "status": "unchanged"
+  },
+  "t04": {
+    "parts": 234,
+    "joints": 33,
+    "triangles": 12296,
+    "status": "unchanged"
+  },
+  "t05": {
+    "parts": 194,
+    "joints": 25,
+    "triangles": 10156,
+    "status": "unchanged"
+  },
+  "t12": {
+    "parts": 216,
+    "joints": 25,
+    "triangles": 10452,
+    "status": "unchanged"
+  },
+  "m02": {
+    "parts": 227,
+    "joints": 30,
+    "triangles": 12972,
+    "status": "unchanged"
+  },
+  "m06": {
+    "parts": 248,
+    "joints": 34,
+    "triangles": 13448,
+    "status": "unchanged"
+  }
+}

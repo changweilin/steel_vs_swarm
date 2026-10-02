@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { writeReview as writeFile } from '../pw.mjs';
 const refresh = process.argv.includes('--refresh-source');
 const option = process.argv.indexOf('--contract');
 const contractFile = option < 0 ? 'assets.json' : process.argv[option + 1];

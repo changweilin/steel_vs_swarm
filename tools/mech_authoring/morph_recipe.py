@@ -25,11 +25,29 @@ def rotation(r):
 
 def create(base, spec):
     class Morpher(base):
+        def __init__(self, spec):
+            super().__init__(spec)
+            if self.spec['kind'] == 'biped':
+                # Derive rest endpoints from the gait rig so idle and transformation start in the same stance.
+                ground = self.spec['forms']['ground']['transforms']
+                rig = self.spec['rig']
+                for side in ['L', 'R']:
+                    for name, angle in [(rig['leg' + side], rig.get('legBase', 0)),
+                                        (rig['arm' + side], rig.get('armBase', 0))]:
+                        ground.setdefault(name, {}).setdefault('rotation', [angle, 0, 0])
+                    for chain in ['legChain', 'armChain']:
+                        for joint in rig[chain + side]:
+                            r = [0, 0, 0]
+                            r['xyz'.index(joint.get('axis', 'x'))] = joint['base']
+                            ground.setdefault(joint['g'], {}).setdefault('rotation', r)
+            self.reset()
+
         def reset(self):
             super().reset()
-            apply_form(self, 'ground')
+            form = getattr(self, '_pose_form', 'ground')
+            apply_form(self, form)
             for obj in getattr(self, 'exhaust', []):
-                obj.hide_render = True
+                obj.hide_render = form != 'flight'
 
         def pose(self, clip, t):
             if clip in ('to_flight', 'to_ground'):
@@ -50,25 +68,24 @@ def create(base, spec):
                     node.rotation_euler = ends[0][1].slerp(ends[1][1], u).to_euler()
                 return
             flight = clip.startswith('flight_')
-            super().pose(clip.removeprefix('flight_'), t)
-            if clip == 'run' and self.spec['kind'] == 'biped':
-                for side in ['l', 'r']:
-                    rig=self.spec['rig']
-                    self.nodes['hip_'+side].rotation_euler.x += rig.get('legBase',0)
-                    for joint in rig['legChain'+side.upper()]:
-                        self.nodes[joint['g']].rotation_euler.x += joint['base']
+            self._pose_form = 'flight' if flight else 'ground'
+            try:
+                # Apply the endpoint before secondary motion; an endpoint post-pass would erase animated joints.
+                if clip == 'flight_idle':
+                    self.reset()
+                else:
+                    super().pose(clip.removeprefix('flight_'), t)
+            finally:
+                del self._pose_form
             if flight:
-                apply_form(self, 'flight')
-                for obj in getattr(self, 'exhaust', []):
-                    obj.hide_render = False
                 if clip == 'flight_idle':
                     self.nodes['tilt'].location.z += math.sin(t * math.tau) * self.spec['forms']['flight']['rig']['bob']
-                    rig=self.spec['forms']['flight']['rig']
-                    for entry in rig.get('spin', []):
-                        self.rotate(self.nodes[entry['node']],entry['axis'],t*math.tau*3)
-                    for entry in rig.get('wings', []):
-                        self.rotate(self.nodes[entry['w']],'z',entry['sgn']*math.sin(t*math.tau*3)*.24)
-                        self.rotate(self.nodes[entry['outer']],'z',entry['sgn']*math.sin(t*math.tau*3-.6)*.32)
+                rig=self.spec['forms']['flight']['rig']
+                for entry in rig.get('spin', []):
+                    self.rotate(self.nodes[entry['node']],entry['axis'],t*entry['rate'])
+                for entry in rig.get('wings', []):
+                    self.rotate(self.nodes[entry['w']],'z',entry['sgn']*math.sin(t*math.tau*3)*.24)
+                    self.rotate(self.nodes[entry['outer']],'z',entry['sgn']*math.sin(t*math.tau*3-.6)*.32)
             if clip in ('light', 'flight_light'):
                 spinner = self.spec['motion'].get('fireSpin')
                 if spinner:
@@ -84,13 +101,12 @@ def create(base, spec):
             poses = [('flight_' + view, 'flight_idle', 0, at) for view, at in views.items()]
             poses += [('transform_' + str(i), 'to_flight', i / 4, views['reference']) for i in range(5)]
             poses += [(clip, clip, 1 if 'shield' in clip else .5, views['reference']) for clip in ['shield_retract', 'flight_shield_deploy',
-                      'flight_shield_retract', 'flight_light', 'flight_heavy', 'skill', 'ult']]
+                      'flight_shield_retract', 'flight_light', 'flight_heavy', 'skill', 'ult', 'flight_skill', 'flight_ult']]
             for name, clip, t, at in poses:
                 self.pose(clip, t)
                 camera.location = at
                 camera.rotation_euler = (target - camera.location).to_track_quat('-Z', 'Y').to_euler()
-                bpy.context.scene.render.filepath = str(directory / (name + '.png'))
-                bpy.ops.render.render(write_still=True)
+                self.render_still(directory, name)
                 evidence.append(name + '.png')
             self.reset()
             return evidence
@@ -166,8 +182,8 @@ def vampire(a):
         a.disk('Shared propulsion aperture', 'chest', .12, .01, (side * .37, -.27, -.49), 'cyan', 'y')
     a.loft('Faceted elongated vampire helmet', 'head', [(-.13, .24, .37), (.12, .52, .50),
            (.49, .42, .41), (.61, .15, .20)], 'armor')
-    a.plate('Silver widow peak mask', 'head', [(-.25, .38), (-.09, .22), (0, .37), (.09, .22),
-            (.25, .38), (.15, -.13), (0, -.26), (-.15, -.13)], .06, (0, .04, .28), 'white')
+    a.plate('Silver widow peak mask', 'head', [(-.25, .40), (-.09, .22), (0, .43), (.09, .22),
+            (.25, .40), (.135, -.13), (0, -.28), (-.135, -.13)], .06, (0, .04, .28), 'white')
     a.plate('Red sensor visor slit', 'head', [(-.21, .19), (0, .13), (.21, .19), (.16, .145),
             (0, .08), (-.16, .145)], .016, (0, .04, .33), 'glow')
     a.tube('Single monocular sensor socket', 'head', .067, .047, .024, (.135, .21, .342), 'steel')
@@ -216,8 +232,8 @@ def morph_limb(a, parent, delta, width):
     length = Vector(delta).length
     a.strut('Exposed articulated load piston', parent, (0,0,0), delta, width*.32, 'steel')
     obj = a.loft('Continuous tapered limb armor', parent, [(length*.12,width*.90,width*.72),
-                 (length*.32,width*1.18,width), (length*.76,width*.82,width*.77),
-                 (length*.91,width*.58,width*.54)], 'armor')
+                 (length*.28,width*1.12,width*.96), (length*.76,width*.80,width*.74),
+                 (length*.91,width*.56,width*.52)], 'armor')
     obj.rotation_euler = Vector((delta[0],-delta[2],delta[1])).to_track_quat('Z','Y').to_euler()
     a.disk('Exposed limb articulation axle',parent,width*.48,width*.90,(0,0,0),'dark','x')
     a.disk('Limb silver axle cap',parent,width*.24,width*.94,(0,0,0),'brass','x')
@@ -284,7 +300,7 @@ def biped_body(a):
     else:
         a.loft('Articulated pelvic shell', 'hips', [(-.3, .62, .48), (.25, .95, .56)], 'shade')
     for s in [-1, 1]:
-        a.plate('Split tapered pectoral armor', 'chest', [(s*.06, .38), (s*.7, .30), (s*.85, 1.05),
+        a.plate('Split tapered pectoral armor', 'chest', [(s*.06, .38), (s*.67, .30), (s*.81, 1.05),
                 (s*.55, 1.34), (s*.08, 1.13)], .10, (0, 0, .56), 'armor')
         a.strut('Chest colored conduit', 'chest', (s*.22, .35, .64), (s*.70, .98, .64), .022, 'cyan')
         vents(a, 'chest', (s*.38, .05, .57), .27, 3, 'brass')
@@ -307,8 +323,8 @@ def feathers(a):
             length=1.28-i*.055
             root=f'feather_{n}_{i}'
             wing(a, 'Independent owl silent feather' if owl else 'Independent raptor blade feather', root,
-                 [(-s*.16,.14),(s*.18,.19),(s*(length*.8+.28),-1.45-i*.1),
-                  (s*(length*.8-.06),-1.62-i*.1)], (0,.028+i*.003,0), 'armor' if i%2 else 'shade', .038)
+                 [(-s*.16,.14),(s*.18,.19),(s*(length*.8+.25),-1.45-i*.1),
+                  (s*(length*.8-.035),-1.65-i*.1)], (0,.028+i*.003,0), 'armor' if i%2 else 'shade', .038)
             a.strut('Feather shaft inlay', root, (0,.027,0), (s*length*.8,.027,-1.50-i*.1), .009, 'cyan' if owl else 'brass')
         for i in range(8):
             x=s*(.05+i*.22)
@@ -318,8 +334,8 @@ def feathers(a):
 
 
 def feline_head(a):
-    ellipsoid(a, 'Rounded matte panther skull', 'head', (1.10,.82,.95), (0,.10,.25), 'armor')
-    ellipsoid(a, 'Paired feline muzzle lobes', 'head', (.67,.37,.38), (0,-.10,.67), 'shade')
+    ellipsoid(a, 'Rounded matte panther skull', 'head', (1.10,.78,.98), (0,.10,.25), 'armor')
+    ellipsoid(a, 'Paired feline muzzle lobes', 'head', (.67,.34,.38), (0,-.10,.67), 'shade')
     a.plate('Black feline nose', 'head', [(-.15,.04),(.15,.04),(0,-.10)], .035, (0,-.07,.88), 'dark')
     for s in [-1,1]:
         a.plate('Triangular cat ear', 'head', [(s*.26,.36),(s*.49,.83),(s*.56,.33)], .13, (0,0,.02), 'armor')
@@ -329,7 +345,7 @@ def feline_head(a):
 
 def wolf_head(a):
     a.loft('Angular canine skull', 'head', [(-.18,.48,.66),(.20,.73,.77),(.53,.53,.60)], 'armor')
-    a.loft('Long wolf muzzle', 'head', [(.23,.55,.35),(.90,.31,.24)], 'shade',(0,.02,0),'z')
+    a.loft('Long wolf muzzle', 'head', [(.23,.55,.35),(.94,.29,.23)], 'shade',(0,.02,0),'z')
     a.loft('Canine lower jaw', 'head', [(.22,.43,.13),(.83,.25,.10)], 'armor',(0,-.21,0),'z')
     a.box('Wolf nose', 'head', (.25,.16,.16), (0,.04,.9), 'dark', .045)
     for s in [-1,1]:
@@ -358,9 +374,11 @@ def monkey_head(a):
 
 
 def atlas(a):
-    wing(a,'Right isosceles triangular helmet nose','head',[(-.60,-.55),(.60,-.55),(0,.05)],(0,.15,.38),'armor',.8)
-    a.plate('Atlas black observation face','head',[(-.37,.10),(.37,.10),(.25,-.23),(-.25,-.23)],.045,(0,0,.52),'dark')
-    a.box('Old ivory observation slit','head',(.47,.045,.025),(0,-.03,.548),'white',.004)
+    helmet = a.spec['parameters']['helmet']
+    # Native forward-facing geometry lets the gait stabilize the face and the chest fold the nose.
+    a.plate('Right isosceles triangular helmet nose','head',helmet['points'],helmet['depth'],helmet['position'],'armor')
+    a.plate('Atlas black observation face','head',[(-.37,.10),(.37,.10),(.25,-.23),(-.25,-.23)],.045,helmet['facePosition'],'dark')
+    a.box('Old ivory observation slit','head',(.47,.045,.025),helmet['slitPosition'],'white',.004)
     for s,n in [(1,'l'),(-1,'r')]:
         wing(a,'Shoulder cargo tray B-2 half','wing_'+n,[(0,.75),(s*3.5,-1.32),(s*1.9,-1.08),(s*1.7,-.81),(0,-1.10)],(0,0,0),'armor',.18)
         a.strut('Tray warning rim','wing_'+n,(0,.13,.73),(s*3.45,.13,-1.3),.033,'white')
@@ -397,7 +415,7 @@ def whale(a):
                  [(-.95,1.80,1.40),(-.48,2.25,1.64),(.25,2.18,1.57),(.88,1.45,1.12),(1.24,.64,.62)],
                  (0,0,0),'armor')
     for s,n in [(1,'l'),(-1,'r')]:
-        a.plate('Elephant ear phased radar fin','ear_'+n,[(0,-.42),(s*1.80,-.28),(s*1.50,.64),(s*.38,.77)],.10,(0,0,0),'shade')
+        a.plate('Elephant ear phased radar fin','ear_'+n,[(0,-.42),(s*1.76,-.28),(s*1.50,.64),(s*.38,.74)],.10,(0,0,0),'shade')
         a.plate('Luminous ear radar matrix','ear_'+n,[(s*.24,-.24),(s*1.43,-.13),(s*1.20,.43),(s*.36,.54)],.018,(0,0,.067),'cyan')
         for i in range(7):
             a.strut('Radar array cell row','ear_'+n,(s*.35,-.15+i*.085,.08),(s*1.13,-.06+i*.061,.08),.013,'armor')
@@ -502,7 +520,7 @@ def beetle(a):
         a.disk('Blue compound insect eye','head',.20,.12,(s*.50,.13,.25),'glow','x')
         spike(a,'Insect mouth mandible','head',(s*.27,-.24,.58),(s*.44,-.32,.88),.095,'dark')
         # A thick convex half shell rotates as protective armor, never as a flap driver.
-        a.loft('Shared heavy protective elytron','elytra_'+n,[(-1.55,.8,.35),(-1.1,1.25,.58),(.65,1.26,.62),(.94,.68,.42)],'armor',(s*.56,.14,0),'z')
+        a.loft('Shared heavy protective elytron','elytra_'+n,[(-1.55,.76,.33),(-1.1,1.25,.58),(.65,1.26,.62),(.94,.64,.40)],'armor',(s*.56,.14,0),'z')
         for i in range(3):
             a.strut('Geometric beetle totem','elytra_'+n,(s*(.25+i*.13),.47,-1.1),(s*(.25+i*.13),.52,.42-i*.12),.014,'cyan')
         for pair in range(2):
