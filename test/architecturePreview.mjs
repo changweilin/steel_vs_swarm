@@ -1,6 +1,6 @@
 // 本機視覺驗收：僅測試伺服器，正式遊戲不包含此路由。
 import http from 'node:http';
-import { GEOLOGY_ENVIRONMENT_CONTROLS } from './architecturePreviewContent.mjs';
+import { GEOLOGY_ENVIRONMENT_CONTROLS, GEOGRAPHIC_CONTROLS } from './architecturePreviewContent.mjs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -22,8 +22,9 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
   .nav-brand { display: flex; align-items: center; gap: 8px; }
   .brand-title { font-size: 15px; font-weight: 800; color: #f8fafc; letter-spacing: 0.5px; }
   .brand-tag { font-size: 10px; background: rgba(59, 130, 246, 0.25); border: 1px solid rgba(96, 165, 250, 0.4); color: #93c5fd; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
-  .cat-tabs-row { display: flex; gap: 8px; align-items: center; }
+  .cat-tabs-row { display: flex; gap: 8px; align-items: center; min-width: 0; overflow-x: auto; }
   .cat-tab-btn {
+    flex-shrink: 0; white-space: nowrap;
     background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(148, 163, 184, 0.3); color: #94a3b8;
     font-weight: 700; font-size: 13px; padding: 7px 18px; border-radius: 8px; cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: inline-flex; align-items: center; gap: 8px;
@@ -190,6 +191,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
   </div>
   <div class="cat-tabs-row">
     <button id="tab-btn-arch" class="cat-tab-btn active" type="button" data-tab="arch">🏛 建築</button>
+    <button id="tab-btn-geographic" class="cat-tab-btn" type="button" data-tab="geographic">🛰 融合場景</button>
     <button id="tab-btn-geology" class="cat-tab-btn" type="button" data-tab="geology">🪨 地質</button>
     <button id="tab-btn-plant" class="cat-tab-btn" type="button" data-tab="plant">🌲 植物</button>
     <button id="tab-btn-vehicle" class="cat-tab-btn" type="button" data-tab="vehicle">🚗 車輛</button>
@@ -256,6 +258,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
   </div>
 
   <!-- 建築類別控制面板 -->
+  ${GEOGRAPHIC_CONTROLS}
   <div id="panel-arch" class="cat-panel">
     <div class="dim-panel">
       <div class="dim-title">
@@ -1123,6 +1126,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 
 <script type="importmap">{"imports":{"three":"/three.mjs","three/addons/utils/BufferGeometryUtils.js":"/utils.mjs","three/addons/postprocessing/Pass.js":"/pass.mjs"}}</script>
 <script type="module">
 import * as THREE from 'three';
+import { createGeographicPreview, geographicSnapshot, geographicVenues, GEOGRAPHIC_COPY } from '/preview/geographicPreview.js';
 import { buildOsmPolygonBuildings } from '/js/osmBuilding.js';
 import {
   ARCHITECTURE_STYLES, ROOF_FORMS, FACADE_TYPES, BUILDING_FUNCTION_RANGES,
@@ -1206,7 +1210,7 @@ function initEnvironment() {
     center: { lat: 25.0, lng: 121.5 },
     heightAt: () => 0,
   };
-  envHandle = applyEnvironment(scene, simTerrain, {
+  envHandle = applyEnvironment(scene, geographicPreview.record?.terrain || simTerrain, {
     season: currentEnv.season,
     time: currentEnv.time,
     weather: currentEnv.weather,
@@ -1351,6 +1355,63 @@ waterMesh.visible = false;
 scene.add(waterMesh);
 
 const labels = [];
+let geographicExporting = false;
+const geographicPreview = createGeographicPreview({ scene,
+  onProgress: (label) => { document.querySelector('#geographic-status').textContent = label; },
+  onReady: ({ terrain, metadata }) => {
+    const complete = metadata.stats.mapEvidence?.complete;
+    document.querySelector('#geographic-status').textContent = [complete ? GEOGRAPHIC_COPY.complete : GEOGRAPHIC_COPY.missing,
+      metadata.stats.mapEvidence?.prior ? GEOGRAPHIC_COPY.prior : '', GEOGRAPHIC_COPY.geology].filter(Boolean).join(' ');
+    document.querySelector('#nav-status').textContent = metadata.venue.name + ' · ' + metadata.stats.buildings
+      + ' 棟建築 · ' + metadata.stats.veg + ' 株林木 · ' + metadata.stats.groundDetails + ' 項地表細節';
+    document.querySelector('#btn-geographic-export').disabled = false;
+    camTarget.set(0, terrain.avgH, 0);
+    camDist = Math.max(terrain.worldW, terrain.worldH) * 1.25;
+    camera.far = Math.max(4000, camDist * 4); camera.updateProjectionMatrix();
+    initEnvironment(); updateCamera(); render();
+  },
+});
+for (const venue of geographicVenues()) {
+  const option = document.createElement('option'); option.value = venue.id; option.textContent = venue.name;
+  document.querySelector('#geographic-venue').append(option);
+}
+document.querySelector('#btn-geographic-build').addEventListener('click', buildGeographicScene);
+document.querySelector('#btn-geographic-export').addEventListener('click', async () => {
+  if (!geographicPreview.record) return;
+  const record = geographicPreview.record, button = document.querySelector('#btn-geographic-export');
+  button.disabled = true;
+  geographicExporting = true;
+  document.querySelector('#btn-geographic-build').disabled = true;
+  try {
+    const snapshot = await geographicSnapshot(record);
+    const blob = new Blob([JSON.stringify(snapshot)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob), anchor = document.createElement('a');
+    anchor.href = url; anchor.download = record.metadata.venue.id + '-scene.json'; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (geographicPreview.record === record) document.querySelector('#geographic-status').textContent += ' '
+      + (snapshot.omitted.length ? GEOGRAPHIC_COPY.exportPartial : GEOGRAPHIC_COPY.exported);
+  } catch (error) {
+    document.querySelector('#geographic-status').textContent += ' ' + GEOGRAPHIC_COPY.exportFailed;
+    console.error(error);
+  } finally {
+    geographicExporting = false; button.disabled = !geographicPreview.record;
+    document.querySelector('#btn-geographic-build').disabled = geographicPreview.pending;
+  }
+});
+function showGeographicMode() {
+  clearScene(); floor.visible = false; waterMesh.visible = false;
+  document.querySelector('#nav-status').textContent = GEOGRAPHIC_COPY.idle;
+}
+async function buildGeographicScene() {
+  if (currentTab !== 'geographic' || geographicPreview.pending || geographicExporting) return;
+  const button = document.querySelector('#btn-geographic-build'); button.disabled = true;
+  document.querySelector('#btn-geographic-export').disabled = true;
+  try { await geographicPreview.build(document.querySelector('#geographic-venue').value, currentEnv); }
+  catch (error) {
+    if (currentTab === 'geographic') document.querySelector('#geographic-status').textContent = GEOGRAPHIC_COPY.failed;
+    console.error(error);
+  } finally { button.disabled = false; }
+}
 const labelContainer = document.querySelector('#labels');
 const inspectorCard = document.querySelector('#inspector-card');
 
@@ -1492,6 +1553,8 @@ function estimateAppurtenances(poly, arch, heightInfo, seed) {
 
 // ---- 清除與重設 ----
 function clearScene() {
+  geographicPreview.clear(); floor.visible = true;
+  document.querySelector('#btn-geographic-export').disabled = true;
   for (const group of [buildingGroup, roadGroup, geologyGroup, plantGroup, vehicleGroup, vesselGroup, envGroup, industryGroup, iceGroup, civGroup, unitGroup]) disposeTree(group);
   scene.remove(buildingGroup);
   buildingGroup = new THREE.Group();
@@ -2742,6 +2805,9 @@ function switchTab(tabKey) {
   if (tabKey === 'arch') {
     if (titleEl) titleEl.textContent = '🏛 建築分類與隨機參數展開';
     if (descEl) descEl.textContent = '多維度文化與功能陣列 · 點擊展開 16 組隨機變體 · 懸停數值檢驗';
+  } else if (tabKey === 'geographic') {
+    if (titleEl) titleEl.textContent = GEOGRAPHIC_COPY.title;
+    if (descEl) descEl.textContent = GEOGRAPHIC_COPY.description;
   } else if (tabKey === 'geology') {
     if (titleEl) titleEl.textContent = '🪨 地質結構與古代遺跡生成';
     if (descEl) descEl.textContent = '21 種地質成因與歷史古蹟結構 · 侵蝕氣候環境模擬 · 16 變體陣列';
@@ -2779,6 +2845,8 @@ function switchTab(tabKey) {
 
   if (tabKey === 'arch') {
     buildArchMode({ advance: false });
+  } else if (tabKey === 'geographic') {
+    showGeographicMode();
   } else if (tabKey === 'geology') {
     buildGeologyMode();
   } else if (tabKey === 'plant') {
@@ -4728,6 +4796,7 @@ document.querySelector('#btn-unit-random-seed')?.addEventListener('click', () =>
 // ==========================================
 function rebuildActiveTab() {
   if (currentTab === 'arch') buildArchMode({ advance: false });
+  else if (currentTab === 'geographic') buildGeographicScene();
   else if (currentTab === 'geology') buildGeologyMode();
   else if (currentTab === 'plant') buildPlantMode();
   else if (currentTab === 'vehicle') buildVehicleMode();
@@ -4830,7 +4899,8 @@ try {
   initVesselOptions();
   initGeologyOptions();
   initCivilianOptions();
-  buildArchMode();
+  if (location.hash === '#geographic') switchTab('geographic');
+  else buildArchMode();
 } catch (err) {
   console.error('初次建構失敗:', err);
 }
@@ -4839,6 +4909,7 @@ try {
 let lastAnimTime = performance.now();
 function animate(now) {
   requestAnimationFrame(animate);
+  if (geographicExporting) { lastAnimTime = now; return; }
   const dt = Math.min(0.1, (now - lastAnimTime) / 1000);
   lastAnimTime = now;
   if (currentEnv.playing) {
@@ -4853,6 +4924,7 @@ function animate(now) {
   if (envHandle) {
     envHandle.update(dt, camera, simElapsedS);
   }
+  geographicPreview.record?.biomes.userData.update?.(dt);
   render();
 }
 requestAnimationFrame(animate);
@@ -4890,9 +4962,17 @@ export function serve(port = DEFAULT_PORT) {
           res.writeHead(302, { Location: 'https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js' });
           res.end(); return;
         }
+      } else if (url.pathname === '/preview/geographicPreview.js') {
+        body = await readFile(new URL('./geographicPreview.js', import.meta.url));
+      } else if (url.pathname.startsWith('/assets/')) {
+        const assetRoot = path.resolve(root, '../assets');
+        const file = path.resolve(assetRoot, url.pathname.slice(8));
+        if (!file.startsWith(assetRoot + path.sep)) throw new Error('Asset outside public directory');
+        body = await readFile(file);
+        type = { '.json': 'application/json', '.glb': 'model/gltf-binary', '.png': 'image/png', '.jpg': 'image/jpeg' }[path.extname(file)] || 'application/octet-stream';
       } else if (url.pathname.startsWith('/js/')) {
         const file = path.resolve(root, url.pathname.slice(4));
-        if (!file.startsWith(root)) throw new Error('路徑不在模組目錄內');
+        if (!file.startsWith(path.resolve(root) + path.sep)) throw new Error('路徑不在模組目錄內');
         body = await readFile(file);
       } else {
         res.writeHead(404); res.end(); return;
