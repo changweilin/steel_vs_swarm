@@ -45,20 +45,38 @@ def vents(a, parent, at, width, count=5, material='dark'):
 
 
 def limb_segment(a, parent, delta, width, armor='armor', soft=False):
+    from mathutils import Vector
     length = math.sqrt(sum(v * v for v in delta))
     a.strut('Exposed load-bearing piston', parent, (0, 0, 0), delta, width * .4, 'dark' if soft else 'steel')
     for k in [.18, .48, .77]:
         center = tuple(v * k for v in delta)
         if soft:
-            ellipsoid(a, 'Overlapping tentacle sleeve', parent, (width, width, width), center, armor, 10, 4)
+            obj = ellipsoid(a, 'Overlapping tentacle sleeve', parent,
+                            (width, length * .38, width), center, armor, 10, 4)
+            obj.rotation_euler = Vector((delta[0], -delta[2], delta[1])).to_track_quat('Z', 'Y').to_euler()
             a.disk('Ventral sucker ring', parent, width * .22, .05, (center[0], center[1] - width * .36, center[2]), 'brass', 'y', 8)
         else:
-            size = (width, length * .2, width * .88)
-            obj = a.box('Segmented limb armor', parent, size, center, armor, .04)
-            from mathutils import Vector
+            obj = a.loft('Segmented limb armor', parent,
+                         [(-length * .14, width * .72, width * .72),
+                          (0, width, width * .88),
+                          (length * .14, width * .8, width * .70)], armor, center)
             obj.rotation_euler = Vector((delta[0], -delta[2], delta[1])).to_track_quat('Z', 'Y').to_euler()
     a.disk('Mechanical joint collar', parent, width * .6, width * .9, (0, 0, 0), 'dark', 'x')
     a.disk('Joint axle cap', parent, width * .3, width * .98, (0, 0, 0), 'brass', 'x')
+
+
+def tentacle_segment(a, parent, delta, width):
+    from mathutils import Vector
+    direction = Vector((delta[0], -delta[2], delta[1]))
+    length = direction.length
+    obj = a.loft('Continuous flexible tentacle sheath', parent,
+                 [(-.025, width, width), (length * .48, width * .96, width * .96),
+                  (length + .025, width * .91, width * .91)], 'armor')
+    obj.rotation_euler = direction.to_track_quat('Z', 'Y').to_euler()
+    for u in [.30, .75]:
+        at = tuple(v * u for v in delta)
+        a.tube('Ventral articulated sucker', parent, width * .24, width * .13, .035,
+               (at[0], at[1] - width * .46, at[2]), 'armor', 'y', 6)
 
 
 def ground_legs(a):
@@ -69,7 +87,14 @@ def ground_legs(a):
         widths = p.get('legWidths', {}).get('fore' if 'F' in owner else 'hind')
         for i, delta in enumerate(leg['deltas']):
             width = p['limb'] * (widths[i] if widths else 1-i*.12)
-            if p.get('legAnatomy'):
+            if soft:
+                tentacle_segment(a, owner, delta, p['limb'] * (.22 + .78 * (1 - i / len(leg['deltas'])) ** 1.4))
+            elif r == 'colossus':
+                animal_limb(a,owner,delta,p['limb']*.78,'hind',i)
+                a.box('Rounded heavy leg carapace',owner,(.87,max(.7,abs(delta[1])*.67),.88),tuple(v*.48 for v in delta),'armor',.12)
+            elif r == 'seraph':
+                animal_limb(a, owner, delta, .48 if i == 0 else .31, 'hind', i)
+            elif p.get('legAnatomy'):
                 animal_limb(a, owner, delta, width, 'fore' if 'F' in leg['root'] else 'hind', i)
             else:
                 limb_segment(a, owner, delta, width, soft=soft)
@@ -127,6 +152,52 @@ def tails(a):
     if r == 'octopod':
         return
     nodes = a.spec['rig'].get('tailSegs', [])
+    if r in ['centaur', 'hound'] and 'forms' not in a.spec:
+        from mathutils import Vector
+        for i, name in enumerate(nodes):
+            delta = p['tail'][i + 1] if i + 1 < len(nodes) else p['tailTip']
+            length = Vector(delta).length
+            u = i / len(nodes)
+            width = p['tailWidth'] * ((.45 + .72 * math.sin(math.pi*u)) if r == 'centaur' else (.8 + .45*math.sin(math.pi*u)))
+            end = max(.045, width * (.25 if i == len(nodes)-1 else .88))
+            if r == 'centaur':
+                if i == 0:
+                    a.strut('Short equine tail dock',name,(0,0,0),delta,.17,'shade')
+                for strand in range(7):
+                    angle = math.tau*strand/7
+                    offset = (math.cos(angle)*width*.30,0,math.sin(angle)*width*.30)
+                    hair = a.loft('Flowing horse tail hair bundle',name,
+                                  [(-.045,width*.28,width*.23),(length*.45,width*.30,width*.24),
+                                   (length+.045,end*.26,end*.22)],'dark' if strand%3 else 'shade',offset)
+                    hair.rotation_euler=Vector((delta[0],-delta[2],delta[1])).to_track_quat('Z','Y').to_euler()
+                continue
+            shell = a.loft('Flowing horse tail hair' if r == 'centaur' else 'Canine brush tail armor', name,
+                           [(-.035,width*.72,width*.7),(length*.45,width,width*.85),
+                            (length+.035,end,end*.8)], 'shade' if r == 'centaur' else 'armor')
+            shell.rotation_euler = Vector((delta[0],-delta[2],delta[1])).to_track_quat('Z','Y').to_euler()
+            for strand in [-1,0,1]:
+                a.strut('Horse tail hair strand' if r == 'centaur' else 'Canine tail overlapping coat seam', name,
+                        (strand*width*.22,-width*.30,0),
+                        (delta[0]+strand*end*.22,delta[1]-end*.30,delta[2]), .025, 'dark' if r == 'centaur' else 'shade')
+        return
+    if 'tailWidth' in p and 'forms' not in a.spec:
+        from mathutils import Vector
+        for i, name in enumerate(nodes):
+            delta = p['tail'][i + 1] if i + 1 < len(nodes) else p['tailTip']
+            length = Vector(delta).length
+            start = p['tailWidth'] * (1 - i / len(nodes)) ** 1.2
+            end = max(.04, p['tailWidth'] * (1 - (i + 1) / len(nodes)) ** 1.2)
+            obj = a.loft('Tapered anatomical tail vertebra armor', name,
+                         [(-.04, start, start * .88), (length * .5, (start + end) * .55, (start + end) * .48),
+                          (length + .025, end, end * .88)], 'armor')
+            obj.rotation_euler = Vector((delta[0], -delta[2], delta[1])).to_track_quat('Z', 'Y').to_euler()
+            a.disk('Tail vertebral hinge', name, start * .23, .06, (0, 0, 0), 'dark', 'x', 10)
+        if r == 'stego':
+            for side in [-1, 1]:
+                for z in [-.04, -.35]:
+                    spike(a, 'Stegosaur tail spike', nodes[-1], (side * .07, .02, z),
+                          (side * .65, .5, z - .45), .15, 'brass')
+        return
     for i, name in enumerate(nodes):
         delta = p['tail'][i + 1] if i + 1 < len(p['tail']) else (0, -.14, -.6)
         width = (p.get('width', 1) * (.6 if r in ['roo', 'trex'] else .35)) * (1 - i / (len(nodes) + 1))
@@ -144,12 +215,7 @@ def tails(a):
 def arms(a, chest='chest'):
     p, r = a.p, a.spec['recipe']
     if r == 'crane':
-        for side, n in [(1, 'l'), (-1, 'r')]:
-            root = 'shoulder_' + n
-            ellipsoid(a, 'Folded bird scapula', root, (.65, .8, .85), (0, -.25, -.05), 'armor')
-            for i in range(7):
-                a.plate('Independent folded feather', root, [(-.08, 0), (.09, 0), (.15, -1.3 + i * .09), (-.07, -1.45 + i * .1)], .055,
-                        (side * (.1 + i * .045), -.1, -.25 + i * .11), 'armor' if i % 2 else 'shade')
+        flight_wings(a, folded=True)
         return
     for side, n in [(-1, 'r'), (1, 'l')]:
         shoulder, elbow, wrist = 'shoulder_' + n, 'elbow_' + n, 'wrist_' + n
@@ -157,13 +223,32 @@ def arms(a, chest='chest'):
         width = p['limb'] * (.6 if r == 'roo' else .38 if r == 'trex' else 1)
         if r == 'bastion': ellipsoid(a, 'Giant white ball shoulder', shoulder, (1.55, 1.65, 1.65), (side * .12, .12, 0), 'armor')
         elif r == 'colossus':
-            a.box('Shoulder reactor armor', shoulder, (1.25, 1.3, 1.3), (side * .1, .15, -.05), 'armor', .17)
-            vents(a, shoulder, (0, -.23, .67), .9, 6)
+            a.box('Shoulder reactor armor', shoulder, (1.55, 1.55, 1.30), (side * .12, .12, -.06), 'armor', .22)
+            a.box('Recessed shoulder radiator', shoulder, (1.03,.77,.09), (0,.05,.63), 'dark', .06)
+            vents(a, shoulder, (0, -.23, .69), .90, 7, 'brass')
         else: ellipsoid(a, 'Articulated shoulder armor', shoulder, (width * 1.8, width * 1.65, width * 1.7), (0, 0, 0), 'shade')
-        limb_segment(a, shoulder, positions[elbow], width)
-        limb_segment(a, elbow, positions[wrist], width * .9)
+        if r in ['seraph','colossus']:
+            animal_limb(a, shoulder, positions[elbow], .32, 'fore', 0)
+            animal_limb(a, elbow, positions[wrist], .29, 'fore', 1)
+            if r == 'colossus':
+                for parent,delta,size in [(shoulder,positions[elbow],(.70,.70,.80)),(elbow,positions[wrist],(.90,.69,.87))]:
+                    a.box('Rounded heavy arm carapace',parent,size,tuple(v*.52 for v in delta),'armor',.13)
+        elif p.get('legAnatomy') and r in ['roo', 'trex']:
+            animal_limb(a, shoulder, positions[elbow], width, 'fore', 0)
+            animal_limb(a, elbow, positions[wrist], width * .75, 'fore', 1)
+        else:
+            limb_segment(a, shoulder, positions[elbow], width)
+            limb_segment(a, elbow, positions[wrist], width * .9)
+        if r == 'seraph':
+            for parent, end in [(shoulder, positions[elbow]), (elbow, positions[wrist])]:
+                for x in [-.11, 0, .11]:
+                    a.strut('Exposed living arm tendon bundle', parent, (x, -.12, -.11),
+                            (end[0] + x, end[1] + .12, end[2] - .11), .065, 'shade')
         if r == 'trex':
             for x in [-.09, .09]: spike(a, 'Short empty foreclaw', wrist, (x, 0, .04), (x, -.17, .25), .05, 'brass')
+        elif r == 'roo':
+            ellipsoid(a,'Kangaroo compact forepaw',wrist,(width*.9,width*.55,width*.65),(0,-.05,.1),'shade',10,5)
+            for x in [-.08,0,.08]: spike(a,'Kangaroo forepaw digit',wrist,(x,0,.12),(x,-.13,.27),.027,'steel')
         else:
             a.box('Armored palm', wrist, (width * 1.1, width * .7, width * .65), (0, -.1, .06), 'shade')
             for i in range(4):
@@ -184,18 +269,44 @@ def eyes(a, parent, at, width=.42, red=False):
 def animal_head(a):
     r = a.spec['recipe']
     if r == 'crane':
-        # The neck is segmented in the chest frame; its head pivot stays at the chain endpoint.
-        h = next(pos for name, _, pos in a.spec['joints'] if name == 'head')
-        pts = [(0, 0, .4), (0, .6, .55), (0, 1.25, .18), (0, 1.8, -.15), tuple(h)]
-        for i in range(len(pts) - 1):
-            a.strut('S-curve bird neck piston', 'chest', pts[i], pts[i + 1], .16, 'dark')
-            ellipsoid(a, 'Bird neck armor collar', 'chest', (.32, .38, .34), pts[i + 1], 'armor', 12, 6)
+        from mathutils import Vector
+        positions = {name: pos for name, _, pos in a.spec['joints']}
+        chain = a.spec['rig']['cervicals']
+        for i, name in enumerate(chain):
+            delta = positions[chain[i + 1]] if i + 1 < len(chain) else positions['head']
+            length = Vector(delta).length
+            obj = a.loft('Forward curved cervical armor', name,
+                         [(-.04, .34, .32), (length * .5, .31, .30), (length + .04, .28, .27)], 'armor')
+            obj.rotation_euler = Vector((delta[0], -delta[2], delta[1])).to_track_quat('Z', 'Y').to_euler()
+            a.disk('Bird cervical hinge', name, .12, .38, (0, 0, 0), 'dark', 'x')
         a.loft('Crane wedge skull', 'head', [(-.2, .34, .28), (.15, .3, .28), (.45, .08, .1)], 'armor', axis='z')
         spike(a, 'Sharp bird beak', 'head', (0, -.03, .32), (0, -.05, .9), .12, 'steel')
         a.box('Red crown', 'head', (.2, .08, .25), (0, .19, .03), 'red')
         spike(a, 'Swept head crest', 'head', (0, .16, -.12), (0, .32, -.65), .12, 'dark')
         eyes(a, 'head', (0, .06, .18), .27)
-    elif r in ['hound', 'roo', 'trex']:
+    elif r == 'trex':
+        width, height, length = a.p['headSize']
+        a.loft('Massive tyrannosaur upper skull', 'head',
+               [(-.55, width * .48, height * .46), (-.12, width, height * .92),
+                (.40, width * .88, height), (.96, width * .74, height * .69),
+                (length * .63, width * .58, height * .44)],
+               'armor', (0, .20, 0), axis='z')
+        a.loft('Articulated tyrannosaur lower jaw', 'jaw',
+               [(0, width * .66, .28), (.9, width * .72, .34), (length * .75, width * .62, .26)],
+               'armor', (0, -.10, 0), axis='z')
+        a.loft('Recessed tyrannosaur upper palate', 'head', [(-.1, width * .53, .09), (1.40, width * .48, .09)],
+               'dark', (0, .12, 0), axis='z')
+        for side in [-1, 1]:
+            ellipsoid(a, 'Tyrannosaur orbital brow', 'head', (.45, .32, .54), (side * width * .41, .53, .25), 'shade', 12, 6)
+            a.disk('Fiery lateral dinosaur eye', 'head', .14, .05, (side * width * .51, .5, .26), 'glow', 'x')
+            a.disk('Tyrannosaur lateral nostril', 'head', .10, .045, (side * width * .31, .24, 1.32), 'dark', 'x')
+            a.plate('Swept tyrannosaur cheek armor', 'head', [(side*.20,.15),(side*.81,.34),(side*.74,-.08),(side*.31,-.22)], .10, (0,.05,.48), 'shade')
+            for i in range(9):
+                z=.32+i*.145; x=side*(width*.35-z*.07)
+                spike(a, 'Upper serrated dinosaur tooth', 'head', (x, -.06, z), (x*.98, -.32, z+.035), .09, 'steel')
+                spike(a, 'Lower serrated dinosaur tooth', 'jaw', (x, .02, z), (x*.98, .22, z+.03), .075, 'steel')
+            a.tube('Cranial exhaust venturi', 'head', .19, .13, .46, (side * .48, .35, -.48), 'dark', segments=12)
+    elif r in ['hound', 'roo']:
         size = (.65, .5, .85) if r == 'hound' else (.57, .7, .75) if r == 'roo' else (1.2, .9, 1.5)
         ellipsoid(a, 'Mechanical animal skull', 'head', size, (0, .1, .15), 'armor')
         a.loft('Long armored snout', 'head', [(.25, size[0], size[1] * .6), (.8 if r != 'trex' else 1.15, size[0] * .65, size[1] * .5)], 'shade', axis='z')
@@ -203,8 +314,12 @@ def animal_head(a):
         eyes(a, 'head', (0, .25, .5), size[0] * .7)
         if r == 'roo':
             for side in [-1, 1]:
-                a.plate('Long kangaroo ear', 'head', [(-.13, 0), (-.12, .75), (.02, 1.1), (.12, .68), (.13, 0)], .16, (side * .24, .34, -.12), 'armor')
-                a.plate('Dark inner ear', 'head', [(-.065, 0), (0, .72), (.065, 0)], .025, (side * .24, .5, -.01), 'shade')
+                for name, points, depth, at, material in [
+                    ('Splayed tapered kangaroo ear', [(-.13, 0), (-.12, .75), (.02, 1.1), (.12, .68), (.13, 0)], .16, (side*.24,.34,-.12),'armor'),
+                    ('Dark inner ear', [(-.065,0),(0,.72),(.065,0)], .025, (side*.24,.46,-.025),'shade')]:
+                    obj=a.plate(name,'head',points,depth,at,material)
+                    a.rotate(obj,'z',-side*.26)
+                    a.rotate(obj,'x',-.20)
         else:
             for side in [-1, 1]:
                 for j in range(6 if r == 'trex' else 4):
@@ -218,8 +333,10 @@ def animal_head(a):
         a.box('Broad ape muzzle', 'head', (.67, .38, .28), (0, -.08, .45), 'dark', .07)
         eyes(a, 'head', (0, .12, .5), .6)
     elif r == 'stego':
-        a.loft('Low herbivore wedge head', 'head', [(-.2, .72, .65), (.6, .35, .38)], 'armor', axis='z')
-        eyes(a, 'head', (0, .16, .25), .52)
+        a.loft('Long low herbivore skull', 'head', [(-.3,.70,.56),(.25,.72,.62),(.95,.45,.40),(1.12,.34,.32)], 'armor', axis='z')
+        a.loft('Herbivore lower mandible', 'head', [(.15,.51,.18),(1.04,.32,.17)], 'shade', (0,-.28,0), axis='z')
+        for side in [-1,1]:
+            a.disk('Lateral herbivore eye', 'head', .085,.035,(side*.36,.13,.25),'glow','x')
 
 
 def ground(a):
@@ -240,7 +357,11 @@ def ground(a):
         end = tuple(positions['hum_neck'][i] + positions['head'][i] for i in range(3))
         a.strut('Knight cervical actuator', 'hum_chest', (0, .65, 0), end, .2, 'dark')
     if r == 'octopod':
-        ellipsoid(a, 'Faceless armored mantle', carrier, (p['width'], 2.9, p['length']), (0, .75, 0), 'armor', 20, 10)
+        ellipsoid(a, 'Cephalopod armored mantle', carrier, (p['width'], 2.9, p['length']), (0, .75, 0), 'armor', 20, 10)
+        for side in [-1, 1]:
+            ellipsoid(a, 'Cephalopod lateral orbital socket', carrier, (.38,.35,.43), (side*.75,.73,.54), 'dark',12,6)
+            a.disk('Cephalopod luminous eye', carrier, .20,.035,(side*.77,.73,.77),'glow',segments=16)
+            a.disk('Cephalopod eye pupil', carrier,.07,.012,(side*.77,.73,.8),'dark')
         for i in range(8):
             th = math.tau * i / 8
             a.strut('Gold mantle totem rib', carrier, (.35 * math.cos(th), 1.8, .35 * math.sin(th)), (.73 * math.cos(th), .1, .73 * math.sin(th)), .055, 'brass')
@@ -249,12 +370,29 @@ def ground(a):
         for tent in p['tentacles']:
             owner = tent['root']
             for i, delta in enumerate(tent['deltas']):
-                limb_segment(a, owner, delta, p['limb'] * (1 - i * .14), soft=True)
+                tentacle_segment(a, owner, delta, p['limb'] * (.22 + .78 * (1 - i / len(tent['deltas'])) ** 1.4))
                 owner = owner + '_0' if i == 0 else tent['root'] + '_' + str(i)
     elif r in ['hound', 'stego', 'centaur']:
-        a.loft('Horizontal armored animal chassis', carrier, [(-p['length'] * .5, p['width'] * .65, .75), (-p['length'] * .25, p['width'], 1.0), (p['length'] * .28, p['width'], 1.1), (p['length'] * .45, p['width'] * .6, .72)], 'armor', axis='z')
+        if r == 'stego':
+            a.loft('Domed stegosaur rib cage', carrier,
+                   [(-2.20,1.0,.80),(-1.6,1.75,1.5),(-.6,2.1,1.85),(.45,2.05,1.9),(1.25,1.55,1.35),(1.9,.65,.65)],
+                   'armor',(0,.12,0),axis='z')
+            ellipsoid(a,'Stegosaur ventral abdomen',carrier,(1.82,1.20,3.65),(0,-.38,-.12),'shade',16,8)
+        elif r == 'hound':
+            a.loft('Canine tapering abdomen',carrier,[(-1.7,.45,.44),(-1.1,.68,.65),(-.35,.65,.76),(.4,.87,1.15),(1.25,1.03,1.22),(1.7,.59,.67)],'armor',(0,.08,0),axis='z')
+            ellipsoid(a,'Deep canine thorax',carrier,(1.0,1.18,1.25),(0,-.15,.72),'shade',16,8)
+        else:
+            a.loft('Horse thorax lumbar waist and croup',carrier,
+                   [(-1.90,.76,.77),(-1.42,1.45,1.26),(-.78,1.16,1.02),(-.22,1.04,1.00),
+                    (.50,1.44,1.62),(1.15,1.57,1.77),(1.65,1.15,1.38)],'armor',(0,-.02,0),axis='z')
+            ellipsoid(a,'Deep horse thoracic barrel',carrier,(1.38,1.50,1.72),(0,-.32,.54),'shade',16,8)
+            ellipsoid(a,'Rounded equine croup',carrier,(1.40,1.21,1.13),(0,.12,-1.28),'armor',16,8)
         for side in [-1, 1]:
-            a.box('Animal flank armor panel', carrier, (.09, .52, p['length'] * .52), (side * p['width'] * .47, -.12, -.1), 'shade', .06)
+            if r == 'centaur':
+                for z,w in [(-1.27,.73),(.68,.77)]:
+                    a.box('Separated curved horse flank armor',carrier,(.10,.54,.66),(side*w,-.12,z),'shade',.08)
+            else:
+                a.box('Animal flank armor panel', carrier, (.09, .52, p['length'] * .52), (side * p['width'] * .47, -.12, -.1), 'shade', .06)
             vents(a, carrier, (side * p['width'] * .4, -.22, p['length'] * .32), .3, 4)
         if r == 'centaur':
             a.loft('Knight saddle waist', 'neck', [(-.12, .85, .75), (.9, 1.1, .85)], 'shade')
@@ -270,12 +408,43 @@ def ground(a):
             animal_head(a)
         else: animal_head(a)
     else:
-        if r in ['trex', 'gorilla']:
+        if r == 'trex':
+            a.loft('Tyrannosaur expanding rib cage', 'chest',
+                   [(-1.1,1.2,1.0),(-.55,1.75,1.50),(.25,1.90,1.65),(.85,1.45,1.30),(1.15,.90,.90)], 'armor',axis='z')
+            ellipsoid(a,'Powerful dinosaur pelvis',carrier,(1.9,1.3,1.5),(0,.02,-.35),'shade',16,8)
+            a.loft('Dinosaur cervical transition','chest',[(.75,.95,.95),(1.25,.8,.8),(1.8,.78,.74)],'armor',(0,.4,0),axis='z')
+        elif r == 'gorilla':
             a.loft('Hunched horizontal thorax', 'chest', [(-p['length'] * .5, p['width'] * .7, 1.0), (0, p['width'] * 1.1, 1.5), (p['length'] * .5, p['width'] * .55, .85)], 'armor', axis='z')
             ellipsoid(a, 'Low pelvic armor', carrier, (p['width'], .95, 1.2), (0, 0, 0), 'shade')
         elif r == 'crane':
-            ellipsoid(a, 'Horizontal bird thorax', 'chest', (p['width'], 1.15, p['length']), (0, .05, -.1), 'armor')
-            ellipsoid(a, 'Bird hip armor', carrier, (.85, .75, 1), (0, .1, 0), 'shade')
+            ellipsoid(a, 'Deep avian breast', 'chest', (1.35, 1.25, 2.25), (0, -.04, -.24), 'armor')
+            a.loft('Horizontal avian synsacrum pelvis',carrier,[(-1.25,.58,.42),(-.70,1.07,.81),(.15,1.12,.88),(.68,.66,.57)],'shade',(0,.32,0),axis='z')
+            ellipsoid(a,'Avian sternum keel','chest',(.80,.94,1.45),(0,-.34,.13),'armor',12,6)
+            for side in [-1,1]:
+                for i in range(4):
+                    wing(a,'Short rear avian tail feather','hips',[(side*.10,-.5),(side*(.32+i*.055),-1.45),(side*.02,-1.32)],(0,.47+i*.025,0),'armor',.04)
+        elif r == 'seraph':
+            a.loft('Narrow seraph pelvic girdle',carrier,[(-.22,.65,.42),(.10,.98,.58),(.34,.76,.47)],'armor')
+            a.loft('Exposed living abdominal waist',carrier,[(.27,.53,.36),(.65,.51,.39),(1.08,.72,.42)],'shade')
+            a.loft('Slender articulated thoracic cage','chest',[(-.08,.68,.44),(.30,1.05,.58),(.73,1.22,.68),(1.0,.75,.44)],'shade')
+            for side in [-1,1]:
+                a.plate('Swept seraph pectoral armor','chest',[(side*.05,.74),(side*.55,.89),(side*.58,.52),(side*.27,.22),(side*.03,.3)],.16,(0,0,.37),'armor')
+                a.plate('Waist floating abdominal plate',carrier,[(side*.04,.55),(side*.26,.67),(side*.31,1.05),(side*.04,.93)],.12,(0,0,.30),'armor')
+                for i in range(4):
+                    x=side*(.18+i*.08)
+                    a.strut('Living oblique waist tendon',carrier,(x,.24,.24),(x*.65,1.04,.25),.065,'shade')
+        elif r == 'roo':
+            ellipsoid(a,'Kangaroo powerful pelvis',carrier,(1.35,1.12,1.52),(0,.08,-.16),'shade')
+            a.strut('Leaning marsupial lumbar spine',carrier,(0,.16,0),positions['chest'],.32,'dark')
+            ellipsoid(a,'Sloped kangaroo abdominal waist',carrier,(.89,1.04,1.16),(0,.49,.29),'armor',16,8)
+            ellipsoid(a,'Kangaroo deep forward chest','chest',(.95,1.11,1.14),(0,.30,.11),'armor',16,8)
+        elif r == 'colossus':
+            a.loft('Heavy rounded pelvic girdle',carrier,[(-.30,1.37,.85),(.06,1.80,1.11),(.34,1.29,.80)],'shade')
+            a.box('Recessed flexible abdominal core',carrier,(1.11,.73,.71),(0,.69,0),'dark',.11)
+            for i in range(3): a.box('Overlapping abdominal piston guard',carrier,(1.24,.15,.16),(0,.45+i*.20,.40),'shade',.03)
+            a.loft('Broad rounded colossus thorax','chest',[(-.53,1.42,.86),(-.10,2.06,1.38),(.60,2.42,1.50),(.95,1.68,1.05)],'armor')
+            for side in [-1,1]:
+                a.box('Scapular rear armor','chest',(.77,.90,.27),(side*.63,.35,-.77),'shade',.13)
         else:
             a.loft('Pelvic armored saddle', carrier, [(-.25, p['width'] * .72, p['length'] * .65), (.35, p['width'], p['length'] * .7)], 'shade')
             a.loft('Thoracic armor shell', 'chest', [(-.7, p['width'] * .62, p['length'] * .65), (.25, p['width'], p['length']), (.85, p['width'] * .8, p['length'] * .8)], 'armor')
@@ -284,8 +453,23 @@ def ground(a):
         arms(a)
         if r in ['roo', 'gorilla', 'crane', 'trex']: animal_head(a)
         else:
-            a.loft('Helmet shell', 'head', [(-.27, .56 if r == 'seraph' else .85, .6), (.3, .72 if r == 'seraph' else .95, .72), (.53, .4 if r == 'seraph' else .7, .5)], 'armor')
-            eyes(a, 'head', (0, .12, .4), .52)
+            if r == 'seraph':
+                a.loft('Swept seraph wedge skull','head',[(-.34,.40,.37),(.05,.63,.62),(.33,.38,.40),(.53,.10,.16)],'armor',(0,0,-.12))
+                a.plate('Seraph tapered face blade','head',[(-.15,.13),(.15,.13),(.17,-.12),(0,-.35),(-.17,-.12)],.04,(0,-.03,.32),'armor')
+                for side in [-1,1]:
+                    a.plate('Angled seraph luminous visor','head',[(side*.04,.11),(side*.21,.20),(side*.17,.06),(side*.04,.02)],.018,(0,0,.34),'glow')
+            elif r == 'colossus':
+                a.box('Broad recessed cannon helmet','head',(1.17,.95,.43),(0,.02,-.20),'armor',.11)
+                a.box('Cannon helmet roof','head',(1.12,.17,.43),(0,.45,.20),'armor',.04)
+                a.box('Colossus lower face armor','head',(1.04,.26,.35),(0,-.14,.23),'armor',.04)
+                a.box('Heavy jaw armor','head',(.84,.29,.42),(0,-.34,.24),'shade',.07)
+                for side in [-1,1]:
+                    a.box('Forehead aperture cheek rim','head',(.23,.46,.15),(side*.38,.27,.42),'shade',.04)
+                    a.box('Recessed colossus visor','head',(.28,.09,.028),(side*.20,-.10,.417),'dark',.01)
+                    a.box('White colossus eye','head',(.21,.045,.018),(side*.20,-.10,.44),'steel',.005)
+            else:
+                a.loft('Helmet shell', 'head', [(-.27,.85,.6),(.3,.95,.72),(.53,.7,.5)], 'armor')
+                eyes(a, 'head', (0,.12,.4), .52)
             if r == 'bastion':
                 a.plate('Skull nose plate', 'head', [(-.15, .13), (.15, .13), (.08, -.21), (0, -.3), (-.08, -.21)], .06, (0, 0, .43), 'steel')
                 for side in [-1, 1]:
@@ -293,13 +477,17 @@ def ground(a):
                     for i in range(3): spike(a, 'Curved segmented bull horn', 'head', points[i], points[i + 1], .18 - i * .04, 'steel')
                 ellipsoid(a, 'Back egg cockpit', 'chest', (1.6, 2.2, 1.1), (0, .3, -.8), 'shade')
             if r == 'seraph':
-                spike(a, 'Forward helmet horn', 'head', (0, .4, .1), (0, .65, .65), .12, 'steel')
+                spike(a, 'Forward helmet horn', 'head', (0, .4, .1), (0, .47, 1.15), .12, 'steel')
                 for side in [-1, 1]:
                     spike(a, 'Cheek fin', 'head', (side * .3, 0, .05), (side * .55, .12, -.35), .13, 'shade')
-                    for y in [.1, .8]:
-                        a.strut('Back thruster blade spar', 'chest', (side * .35, y, -.35), (side * 1.4, y + .6, -1), .17, 'steel')
-                        a.plate('Outward blade thruster', 'chest', [(0, 0), (.3 * side, .5), (.45 * side, .9), (.05 * side, .6)], .25, (side * 1.05, y + .2, -.85), 'armor')
-                        a.box('Thruster luminous slot', 'chest', (.09, .5, .04), (side * 1.27, y + .65, -.68), 'glow')
+                    for y, height in [(.08,1.30),(.75,2.30)]:
+                        a.strut('Back thruster blade spar', 'chest', (side*.30,y,-.35),(side*.95,y+.3,-.78),.14,'steel')
+                        a.plate('Long outward blade thruster','chest',[(0,0),(side*.15,height*.7),(side*.70,height),(side*.57,.38),(side*.21,-.15)],.22,(side*.67,y,-.82),'armor')
+                        a.strut('Thruster luminous slot','chest',(side*.84,y+.2,-.68),(side*1.28,y+height*.78,-.68),.05,'glow')
+                for side in ['l','r']:
+                    for parent,end in [('hip_'+side,positions['knee_'+side]),('knee_'+side,positions['ankle_'+side])]:
+                        for x in [-.1,0,.1]:
+                            a.strut('Exposed living leg tendon bundle',parent,(x,-.12,-.10),(x,end[1]+.12,end[2]-.10),.06,'shade')
         if r == 'gorilla':
             for side in [-1, 1]:
                 a.tube('Twin exhaust stack', 'chest', .23, .16, 1.7, (side * .7, 1, -.7), 'dark', 'y')
@@ -339,24 +527,59 @@ def rotors(a):
                 obj.rotation_euler[2] = th
 
 
-def flight_feathers(a, parent, side, length, width, material='armor', count=8, membrane=False):
+def flight_panel(a, parent, side, end, role, membrane=False):
+    x, y, z = end
+    chord = .66 if role == 'humerus' else .92
+    start_chord, end_chord = {'humerus': (1.25, 1.75), 'ulna': (1.75, 1.90), 'manus': (1.90, .12)}[role] if membrane else (chord, chord)
+    wing(a, 'Continuous ' + role + ' wing web', parent,
+         [(0,.14),(x,z+.14),(x,z-end_chord),(x*.55,z*.55-(start_chord+end_chord)*.48),(0,-start_chord)],
+         (0,0,0), 'shade' if membrane else 'armor', .05)
+    if role != 'humerus':
+        # A root gore covers the swept hinge sector when the distal panel folds.
+        overlap = .55 if membrane else .32
+        wing(a, 'Overlapping wing hinge gore', parent,
+             [(-overlap,.14),(overlap,.14),(overlap,start_chord*-.72),
+              (0,-start_chord),(-overlap,start_chord*-.72)],
+             (0,.015,0), 'shade' if membrane else 'armor', .035)
+    a.strut('Wing ' + role + ' load bone',parent,(0,.06,0),(x,y+.06,z),.105 if role != 'manus' else .075,'steel')
+    if role == 'ulna':
+        a.strut('Parallel wing radius',parent,(0,.08,-.12),(x,y+.08,z-.12),.055,'steel')
     if membrane:
-        wing(a, 'Pterosaur wing membrane', parent, [(0, .4), (side * length, .2), (side * length * .8, -.7), (side * length * .44, -1.15), (0, -.85)], (0, 0, 0), 'shade', .05)
-        a.strut('Continuous wing leading edge spar', parent, (0, .05, .3), (side * length, .05, -.15), .09, 'steel')
-        for i in range(5):
-            end = (side * length * (.3 + i * .16), 0, -.9 + i * .15)
-            a.strut('Bone-white membrane finger', parent, (0, .04, .3), end, .045, 'steel')
-    else:
-        wing(a, 'Continuous overlapping flight feather web', parent,
-             [(0,.20),(side*length,.08),(side*length,-.82),(side*length*.70,-1.36),(0,-1.05)],
-             (0,0,0), material, .045)
-        for i in range(count):
-            x = side * length * (.1 + i * .11)
-            z = -.15 - i * .05
-            points = [(0, .18), (side * width, .1), (side * width * .8, -1.0 - i * .065), (side * width * .25, -1.3 - i * .08), (-side * .04, -.55)]
-            wing(a, 'Separate articulated feather blade', parent, points, (x, .03 + i * .008, z), material if i % 3 else 'shade', .055)
-            a.strut('Feather blade luminous vein', parent, (x, .075 + i * .008, z), (x + side * width * .3, .075 + i * .008, z - .9), .018, 'brass')
-        a.strut('Wing leading edge spar', parent, (0, .08, .16), (side * length, .08, -.25), .12, material)
+        for u in [.32,.65]:
+            local_chord=start_chord+(end_chord-start_chord)*u
+            a.strut('Membrane tension rib',parent,(x*u,.04,z*u),(x*u,.025,z*u-local_chord),.032,'steel')
+        return
+    count = a.p['featherCount'] if role == 'manus' else 8 if role == 'ulna' else 5
+    for i in range(count):
+        u=i/(count-1)
+        base=(x*(.02+.72*u),z*(.02+.72*u)-.08)
+        angle=math.radians(28+70*u) if role=='manus' else math.radians(5+23*u)
+        reach=((1.10+.42*math.sin(math.pi*u)) if role=='manus' else .90 if role=='ulna' else .58)*a.p.get('featherScale',1)
+        dx,dz=side*math.sin(angle),-math.cos(angle)
+        nx,nz=-dz,dx
+        width=.23 if role=='manus' else .22
+        def at(t,w): return (base[0]+dx*reach*t+nx*width*w,base[1]+dz*reach*t+nz*width*w)
+        points=[at(-.06,-.4),at(.20,-.55),at(.80,-.32),at(1,0),at(.72,.52),at(.10,.50)]
+        label='Fanned primary feather' if role=='manus' else 'Overlapping secondary feather' if role=='ulna' else 'Layered shoulder covert'
+        wing(a,label,parent,points,(0,.045+i*.004,0),'armor',.035)
+        if role=='manus':
+            wing(a,'Primary feather dark tip',parent,[at(.78,-.33),at(1,0),at(.72,.51)],(0,.065+i*.004,0),'shade',.016)
+        a.strut('Remex central vane',parent,(base[0],.08+i*.004,base[1]),
+                (base[0]+dx*reach*.78,.08+i*.004,base[1]+dz*reach*.78),.012,'brass')
+
+
+def flight_wings(a, folded=False):
+    positions={name:pos for name,_,pos in a.spec['joints']}
+    for side,suffix in [(-1,'r'),(1,'l')]:
+        root=('shoulder_' if folded else 'wing_')+suffix
+        elbow='elbow_'+suffix if folded else root+'_outer'
+        wrist='wrist_'+suffix if folded else root+'_wrist'
+        membrane=a.p.get('membraneWing',a.spec['recipe']=='pterosaur')
+        manus=a.p.get('manusEnd',[a.p['primaryLength'],0,.08])
+        for parent,end,role in [(root,positions[elbow],'humerus'),(elbow,positions[wrist],'ulna'),
+                                (wrist,(side*manus[0],manus[1],manus[2]),'manus')]:
+            flight_panel(a,parent,side,end,role,membrane)
+            ellipsoid(a,'Overlapping wing '+role+' hinge cover',parent,(.34,.22,.38),(0,.03,0),'armor',12,6)
 
 
 def flyer_body(a):
@@ -387,19 +610,28 @@ def flyer_body(a):
             a.disk('Medical side pod', 'tilt', .65, .25, (side * 1.62, -.03, 0), 'armor', 'x', 24)
             for size in [( .045, .55, .16), (.045, .16, .55)]: a.box('Dark green medical cross', 'tilt', size, (side * 1.77, -.03, 0), 'shade', .005)
     elif r in ['dragon', 'pterosaur', 'eagle']:
-        ellipsoid(a, 'Narrow armored flight thorax', 'tilt', (p['width'], .9 if r != 'dragon' else .85, 2.2), (0, 0, -.1), 'armor')
+        ellipsoid(a,'Deep flight breast','tilt',(p['width']*1.15,1.12 if r=='dragon' else .92,1.45),(0,-.04,.06),'armor')
+        ellipsoid(a,'Tapering flight abdomen','tilt',(p['width']*.76,.61,1.50),(0,.03,-.76),'shade',16,8)
         if r == 'dragon':
-            pts = [(0, 0, .5), (0, .25, 1.05), (0, .65, 1.5), (0, .9, 1.4), (0, 1.15, 1.15)]
-            for i in range(len(pts) - 1):
-                a.strut('Curved dragon cervical core', 'tilt', pts[i], pts[i + 1], .27, 'shade')
-                ellipsoid(a, 'Dragon segmented neck scale', 'tilt', (.64, .65, .65), pts[i + 1], 'armor')
-            ellipsoid(a, 'Horned dragon head', 'sensor', (.85, .7, 1), (0, 1.12, -.5), 'armor')
-            a.loft('Dragon sonic muzzle', 'sensor', [(-.2, .65, .45), (.65, .45, .3)], 'shade', (0, 1, -.3), axis='z')
-            eyes(a, 'sensor', (0, 1.26, .0), .65)
+            from mathutils import Vector
+            positions={name:pos for name,_,pos in a.spec['joints']}
+            chain=a.spec['rig']['cervicals']
+            for i,name in enumerate(chain):
+                end=positions[chain[i+1]] if i+1<len(chain) else positions['sensor']
+                length=Vector(end).length
+                obj=a.loft('Articulated curved dragon cervical',name,[(-.04,.54,.55),(length*.5,.52,.52),(length+.04,.48,.47)],'armor')
+                obj.rotation_euler=Vector((end[0],-end[2],end[1])).to_track_quat('Z','Y').to_euler()
+                a.disk('Dragon cervical pivot',name,.15,.5,(0,0,0),'shade','x')
+            ellipsoid(a,'Horned dragon cranial vault','sensor',(1.15,.88,1.05),(0,.20,-.03),'armor')
+            a.loft('Long dragon upper snout','sensor',[(.02,.94,.51),(.61,.78,.40),(1.09,.66,.35),(1.23,.51,.27)],'armor',(0,.18,0),axis='z')
+            a.loft('Dragon lower mandible','dragon_jaw',[(.07,.78,.23),(.77,.61,.18),(1.14,.49,.15)],'shade',(0,-.08,0),axis='z')
+            eyes(a,'sensor',(0,.39,.51),.90)
             for side in [-1, 1]:
-                spike(a, 'Eastern dragon horn', 'sensor', (side * .28, 1.35, -.65), (side * .55, 1.95, -1), .13, 'brass')
-                a.strut('Long mechanical whisker', 'sensor', (side * .25, .95, .1), (side * .85, .85, .65), .026, 'steel')
-                for z in [-.12, .12, .34]: spike(a, 'Dragon visible tooth', 'sensor', (side * .21, 1.0, z), (side * .2, .83, z), .043, 'steel')
+                spike(a,'Eastern dragon horn','sensor',(side*.37,.49,-.22),(side*.61,1.05,-.60),.17,'brass')
+                spike(a,'Swept dragon cheek horn','sensor',(side*.44,.03,.03),(side*.81,.23,-.53),.12,'armor')
+                a.disk('Dragon nostril','sensor',.068,.018,(side*.28,.35,1.09),'dark','y',10)
+                a.strut('Long mechanical whisker','sensor',(side*.31,-.07,.92),(side*1.01,-.20,1.44),.030,'steel')
+                for z in [.30,.50,.70,.88]: spike(a,'Dragon visible tooth','sensor',(side*(.35-.10*z),.015,z),(side*(.34-.10*z),-.16,z+.03),.057,'steel')
             for i in range(5):
                 for side in [-1, 1]: a.plate('Sakura petal marking', 'tilt', [(0, 0), (.09, .11), (0, .2), (-.09, .11)], .014, (side * .43, .08, -.75 + i * .28), 'red')
         else:
@@ -411,24 +643,15 @@ def flyer_body(a):
                 a.loft('Long sniper beak', 'sensor', [(0, .32, .27), (1.1, .11, .09), (1.35, .02, .02)], 'steel', axis='z')
                 ellipsoid(a, 'Red monocular sensor', 'sensor', (.16, .14, .08), (-.23, .24, .2), 'glow', 10, 6)
                 spike(a, 'Pterosaur swept crest', 'sensor', (0, .3, -.2), (0, .55, -.8), .13, 'armor')
-        for side in [-1, 1]:
-            for z in ([.25, -.6] if r == 'dragon' else [-.5]):
-                start, knee, foot = (side * .33, -.25, z), (side * .55, -.55, z - .15), (side * .48, -.6, z + .3)
-                a.strut('Tucked flight thigh', 'tilt', start, knee, .13, 'shade')
-                a.strut('Tucked flight shin', 'tilt', knee, foot, .1, 'steel')
-                for j in range(3): spike(a, 'Tucked talon', 'tilt', (foot[0] + (j - 1) * .1, foot[1], foot[2]), (foot[0] + (j - 1) * .12, foot[1] - .18, foot[2] + .2), .05, 'brass')
-        for side, n in [(-1, 'r'), (1, 'l')]:
-            length = p['span'] * .24
-            ellipsoid(a, 'Flight wing shoulder hinge', 'wing_' + n, (.4, .32, .4), (0, 0, 0), 'brass', 12, 6)
-            flight_feathers(a, 'wing_' + n, side, length, .38, count=7, membrane=r == 'pterosaur')
-            flight_feathers(a, 'wing_' + n + '_outer', side, length * .8, .36, count=7, membrane=r == 'pterosaur')
-            if r == 'pterosaur':
-                pivot = next(pos for name, _, pos in a.spec['joints'] if name == 'wing_' + n + '_outer')
-                wing(a, 'Articulated elbow membrane', 'wing_' + n,
-                     [(side * length * .55, -.8), (pivot[0], pivot[2] + .2),
-                      (pivot[0], pivot[2] - .85), (side * length * .55, -1.05)], (0, 0, 0), 'shade', .05)
-                a.strut('Wing elbow linkage', 'wing_' + n, (side * length, .05, -.15), pivot, .09, 'steel')
-                ellipsoid(a, 'Wing elbow hinge cap', 'wing_' + n + '_outer', (.25, .2, .25), (0, 0, 0), 'steel', 12, 6)
+        positions={name:pos for name,_,pos in a.spec['joints']}
+        for leg in a.spec['rig']['flightLegs']:
+            owner=leg['root']
+            for i,name in enumerate(leg['chain']):
+                animal_limb(a,owner,positions[name],.20-i*.04,leg['role'],i)
+                owner=name
+            for j in range(3):
+                spike(a,'Articulated tucked flight talon',owner,((j-1)*.08,0,0),((j-1)*.1,-.18,.22),.04,'brass')
+        flight_wings(a)
         tails(a)
     else:
         width = p['width']
@@ -444,7 +667,19 @@ def flyer_body(a):
             elif r == 'twinboom': points = [(0, .5), (side * span, .1), (side * span, -.5), (0, -.65)]
             else: points = [(0, .7), (side * span * .85, .15), (side * span, -.4), (side * span * .9, -.9), (0, -.75)]
             owner = 'wing_' + ('l' if side > 0 else 'r') if r == 'canard' else 'tilt'
-            wing(a, 'Reference wing planform', owner, points, (0, 0, 0), 'armor', .13 if r != 'glider' else .055)
+            if r == 'canard':
+                # Both panels meet at the authored hinge; the outer driver must carry real geometry.
+                pivot = next(pos for name, _, pos in a.spec['joints'] if name == owner + '_outer')
+                cut = abs(pivot[0])
+                front, rear = .8 - 2.5 * cut / span, -1.7 - .3 * cut / (span * .6)
+                wing(a, 'Reference wing planform', owner,
+                     [(0, .8), (side * cut, front), (side * cut, rear), (0, -1.7)], (0, 0, 0), 'armor', .13)
+                outer = [(side * cut, front), (side * span, -1.7), (side * span * .6, -2), (side * cut, rear)]
+                wing(a, 'Articulated outer delta panel', owner + '_outer',
+                     [(x - pivot[0], z - pivot[2]) for x, z in outer], (0, 0, 0), 'armor', .13)
+                a.disk('Main wing fold hinge', owner + '_outer', .16, .28, (0, 0, 0), 'steel', 'z')
+            else:
+                wing(a, 'Reference wing planform', owner, points, (0, 0, 0), 'armor', .13 if r != 'glider' else .055)
             if r == 'zero':
                 for y in [-.083, .083]:
                     a.disk('Upper and underside red roundel', 'tilt', .47, .015, (side * span * .63, y, -.16), 'red', 'y', 24)
@@ -455,7 +690,11 @@ def flyer_body(a):
             if r in ['delta', 'canard']:
                 for i in range(4):
                     x, z = side * (1.15 + i * .48), -.55 - i * .15
-                    for dx, dz in [(.22, 0), (0, .2), (-.22, 0), (0, -.2)]: a.strut('Etched geometric wing ornament', owner, (x, .09, z), (x + dx, .09, z + dz), .025, 'brass' if r == 'delta' else 'glow')
+                    ornament_owner = owner
+                    if r == 'canard' and abs(x) > cut:
+                        ornament_owner += '_outer'
+                        x, z = x - pivot[0], z - pivot[2]
+                    for dx, dz in [(.22, 0), (0, .2), (-.22, 0), (0, -.2)]: a.strut('Etched geometric wing ornament', ornament_owner, (x, .09, z), (x + dx, .09, z + dz), .025, 'brass' if r == 'delta' else 'glow')
             if r == 'canard':
                 wing(a, 'Forward canard', 'tilt', [(0, .3), (side * 1.3, 0), (side * 1, -.38), (0, -.2)], (0, .05, 1.45), 'shade')
             if r not in ['delta', 'canard', 'twinboom']:
@@ -464,13 +703,16 @@ def flyer_body(a):
                 if r == 'glider': a.strut('V tail elevated spar', 'tilt', (0, .1, -p['length'] * .4), (side * .8, .7, -p['length'] * .5), .07, 'brass')
         if r == 'zero':
             a.tube('Nose engine cowling', 'tilt', .47, .33, .7, (0, -.02, 1.85), 'dark', segments=24)
-            a.plate('Downward triangular shovel ram', 'tilt', [(-.6, .25), (.6, .25), (.32, -.75), (0, -1.1), (-.32, -.75)], .13, (0, -.3, 2.35), 'steel')
-            a.plate('Vertical tail fin', 'tilt', [(-.1, 0), (-.2, .8), (.3, .9), (.45, 0)], .09, (0, 0, -2.1), 'shade')
+            wing(a,'Forward triangular shovel ram','tilt',[(-.58,0),(.58,0),(0,p['ramLength'])],(0,-.10,2.35),'steel',.14)
+            fin = a.plate('Vertical tail fin', 'tilt', [(-.1, 0), (-.2, .8), (.3, .9), (.45, 0)], .09, (0, 0, -2.1), 'shade')
+            a.rotate(fin, 'y', math.pi / 2)
         if r == 'canard':
             a.plate('Diamond blue nose sensor', 'sensor', [(0, .24), (.2, 0), (0, -.24), (-.2, 0)], .045, (0, .03, .55), 'glow')
             a.tube('Rear jet nozzle', 'tilt', .28, .21, .5, (0, 0, -2), 'dark')
         if r == 'delta':
-            for side in [-1, 1]: a.plate('Twin rear vertical fin', 'tilt', [(-.4, 0), (.2, 0), (.05, .8), (-.35, .5)], .085, (side * 1.5, .02, -1.55), 'dark')
+            for side in [-1, 1]:
+                fin = a.plate('Twin rear vertical fin', 'tilt', [(-.4, 0), (.2, 0), (.05, .8), (-.35, .5)], .085, (side * 1.5, .02, -1.55), 'dark')
+                a.rotate(fin, 'y', math.pi / 2)
         if r == 'twinboom':
             for side in [-1, 1]:
                 a.loft('Parallel rear tail boom', 'tilt', [(-2.5, .23, .22), (-.2, .29, .25)], 'shade', (side * 1.1, 0, 0), axis='z')
@@ -479,17 +721,22 @@ def flyer_body(a):
                     a.strut('Dipole antenna mast', 'tilt', at, (at[0], .72, at[2]), .025, 'steel')
                     a.strut('Dipole antenna crossbar', 'tilt', (at[0] - .18, .72, at[2]), (at[0] + .18, .72, at[2]), .025, 'steel')
                 a.box('Rescue orange wing band', 'tilt', (.34, .03, .58), (side * 2.8, .095, -.2), 'red')
-            a.box('Inverted U tail bridge', 'tilt', (2.4, .1, .55), (0, .2, -2.35), 'armor')
+                fin = a.plate('Twin boom vertical tail support', 'tilt',
+                              [(-.28, .08), (-.22, .85), (.22, .85), (.32, .08)],
+                              .10, (side * 1.1, 0, -2.35), 'shade')
+                a.rotate(fin, 'y', math.pi / 2)
+            a.box('Inverted U tail bridge', 'tilt', (2.4, .1, .55), (0, .85, -2.35), 'armor')
     rotors(a)
 
 
 def weapons(a):
     p, r = a.p, a.spec['recipe']
-    length = p['gunLength']
+    positions = {name: pos for name, _, pos in a.spec['joints']}
+    length = positions['light_muzzle'][2]
     a.loft('Light weapon receiver', 'gun_recoil', [(-.27, .34, .3), (.26, .32, .28)], 'brass' if r == 'roo' else 'dark', axis='z')
     count = 4 if r == 'fpv' else 2 if r in ['eagle', 'crane', 'trex', 'zero', 'canard', 'roo', 'stego', 'pterosaur'] else 1
     for i in range(count):
-        x = (i - (count - 1) / 2) * (1.5 if r == 'zero' else .12)
+        x = (i - (count - 1) / 2) * (1.8 if r == 'trex' else 1.35 if r == 'stego' else 1.5 if r == 'zero' else .12)
         if r == 'zero': a.box('Paired wingroot shotgun pod', 'gun_recoil', (.28, .28, .5), (x, 0, .15), 'shade')
         a.tube('Light weapon open bore', 'gun_recoil', .065 if count > 1 else .09, .035 if count > 1 else .052, length - .2, (x, 0, (length + .2) / 2), 'steel', segments=12)
         for z in [.3, length * .65]: a.tube('Weapon cooling collar', 'gun_recoil', .09 if count > 1 else .12, .065 if count > 1 else .09, .06, (x, 0, z), 'shade', segments=12)
@@ -507,15 +754,34 @@ def weapons(a):
             th = math.tau * i / 6
             a.tube('Revolver chamber bore', 'heavy', .105, .075, .64, (.35 * math.cos(th), .35 * math.sin(th), .24), 'steel', segments=12)
         a.tube('Revolver axe cannon bore', 'heavy', .24, .16, 1.05, (0, 0, 1), 'steel')
-        a.plate('Crescent axe blade', 'heavy', [(.12, .45), (.48, .35), (.92, -.1), (.7, -.75), (.23, -1.1), (.38, -.45), (.12, -.15)], .16, (0, -.1, .9), 'armor')
-        for i in range(5): a.box('Cyan axe rune', 'heavy', (.1, .045, .02), (.5, -.05 - i * .15, 1), 'glow', .005)
+        a.strut('Revolver axe reinforced handle','heavy',(0,-.9,.44),(0,.38,.44),.18,'dark')
+        blade = wing(a,'Crescent axe blade','heavy',[(.08,.35),(.30,.34),(.70,.56),(.96,1.0),(.96,1.45),(.69,1.73),(.29,1.55),(.10,1.18)],(0,-.14,0),'armor',.18)
+        edge = wing(a,'Axe sharpened curved cutting edge','heavy',[(.70,.56),(.96,1.0),(.96,1.45),(.69,1.73),(.61,1.55),(.82,1.36),(.82,1.02),(.59,.69)],(0,-.14,0),'steel',.20)
+        for obj in [blade,edge]: a.rotate(obj,'z',-math.pi/2)
+        for i in range(5): a.box('Cyan axe rune','heavy',(.026,.06,.10),(-.11,-.60-i*.065,.79+i*.14),'glow',.005)
+    elif r == 'colossus':
+        a.tube('Recessed forehead electromagnetic aperture','forehead_bore',.17,.125,.18,(0,0,.05),'dark',segments=16)
+        a.tube('Internal forehead coil','forehead_bore',.125,.09,.035,(0,0,.13),'steel',segments=16)
+        a.plate('Closed forehead cannon shutter','charge_hinge',[(-.29,0),(.29,0),(.29,-.39),(-.29,-.39)],.09,(0,0,0),'armor')
+        a.box('Forehead shutter central seam','charge_hinge',(.026,.34,.012),(0,-.19,.052),'shade',.002)
+    elif r == 'dragon':
+        a.tube('Recessed dragon oral sonic resonator','heavy',.18,.12,.26,(0,0,.41),'dark',segments=16)
     elif r in ['colossus', 'trex', 'crane', 'seraph', 'gorilla', 'hound', 'pterosaur', 'dragon', 'canard', 'glider', 'zero']:
-        length = 2.4 if r == 'seraph' else 1.45 if r in ['gorilla', 'pterosaur', 'glider'] else .85
+        length = positions['heavy_muzzle'][2]
         width = .1 if r == 'glider' else .16 if r == 'pterosaur' else .2 if r in ['crane', 'seraph'] else .26
         a.loft('Heavy electromagnetic receiver', 'heavy', [(-.2, width * 2.2, width * 1.9), (.3, width * 2, width * 1.8)], 'shade', axis='z')
-        a.tube('Heavy weapon open bore', 'heavy', width * .6, width * .36, length, (0, 0, length * .5), 'steel', segments=16)
-        for i in range(5): a.tube('Heavy accelerator ring', 'heavy', width, width * .68, .08, (0, 0, .15 + i * length / 6), 'brass' if r == 'seraph' else 'armor', segments=16)
-        if r == 'seraph': spike(a, 'Long superconducting lance tip', 'heavy', (0, 0, 1.9), (0, 0, 3.0), .16, 'glow')
+        barrel_parent = 'throat_barrel' if r == 'trex' else 'heavy'
+        a.tube('Heavy weapon open bore', barrel_parent, width * .6, width * .36, length, (0, 0, length * .5), 'steel', segments=16)
+        for i in range(5): a.tube('Heavy accelerator ring', barrel_parent, width, width * .68, .08, (0, 0, .15 + i * length / 6), 'shade' if r == 'seraph' else 'armor', segments=16)
+        if r == 'seraph':
+            for side in [-1,1]:
+                a.box('Long superconducting gun rail','heavy',(.09,.15,length-.85),(side*.19,0,(length-.85)*.5+.50),'shade',.02)
+            a.box('Long rifle receiver','heavy',(.52,.43,1.16),(0,.06,.31),'armor',.07)
+            a.box('Rifle shoulder stock','heavy',(.40,.47,.77),(0,.05,-.80),'shade',.06)
+            a.box('Rifle pistol grip','heavy',(.18,.50,.24),(0,-.32,-.11),'dark',.035)
+            a.box('Rifle forward support grip','heavy',(.22,.36,.28),(0,-.25,.93),'shade',.025)
+            a.tube('Long rifle open muzzle brake','heavy',.23,.115,.24,(0,0,length-.12),'dark',segments=16)
+            a.tube('Long rifle sight','heavy',.10,.055,.45,(0,.33,.20),'dark',segments=12)
         if r == 'crane': spike(a, 'Photon lance blade', 'heavy', (0, 0, .25), (0, 0, 1.55), .14, 'glow')
     elif r == 'eagle':
         for side in [-1, 1]:
@@ -525,11 +791,14 @@ def weapons(a):
     elif r == 'stego':
         for side in [-1, 1]:
             for i in range(4):
-                z = -1.7 + i * .95 + (0 if side < 0 else .25)
-                y = .1
-                a.plate('Eight pentagonal launch backplates', 'heavy', [(-.29, 0), (-.4, .65), (0, 1.12), (.4, .65), (.29, 0)], .16, (side * .45, y, z), 'armor')
-                for x in [-.14, .14]: a.box('Mechanical backplate launch rail', 'heavy', (.07, .72, .045), (side * .45 + x, y + .47, z + .1), 'dark')
-                a.box('Backplate hazard stripe', 'heavy', (.45, .09, .045), (side * .45, y + .22, z + .1), 'brass')
+                z = -1.65 + i * .94 + (.20 if side > 0 else 0)
+                height = p['plateHeights'][i]
+                # Plates lie in the sagittal YZ plane, with their thin axis across the spine.
+                plate = a.plate('Eight pentagonal launch backplates','heavy',[(-.28,0),(-.46,height*.60),(0,height),(.43,height*.70),(.3,0)],.14,(side*.40,.04,z),'armor')
+                a.rotate(plate,'y',math.pi/2)
+                for dz in [-.13,.13]:
+                    a.strut('Mechanical backplate launch rail','heavy',(side*.49,.14,z+dz),(side*.49,height*.83,z+dz),.065,'dark')
+                a.box('Backplate hazard stripe','heavy',(.03,.07,.40),(side*.49,.22,z),'brass',.005)
     elif r == 'delta':
         a.box('Honeycomb dorsal launch bay', 'heavy', (1.45, .35, 1.2), (0, .03, -.05), 'dark', .07)
         for row in range(3):
@@ -555,16 +824,18 @@ def weapons(a):
             for side in [-1, 1]:
                 a.box('Underwing rocket pod', 'heavy', (.45, .45, 1), (side * 1.7, -.6, 0), 'shade')
                 for x in [-.1, .1]: a.tube('Underwing rocket bore', 'heavy', .075, .052, .8, (side * 1.7 + x, -.6, .3), 'steel', segments=10)
-    a.box('Reversible heavy charge aperture', 'charge_hinge', (.46, .06, .42), (0, 0, .2), 'armor', .015)
-    a.box('Charge aperture luminous edge', 'charge_hinge', (.35, .025, .02), (0, .04, .4), 'glow', .003)
+    if r not in ['colossus','dragon']:
+        a.box('Reversible heavy charge aperture', 'charge_hinge', (.46, .06, .42), (0, 0, .2), 'armor', .015)
+        a.box('Charge aperture luminous edge', 'charge_hinge', (.35, .025, .02), (0, .04, .4), 'glow', .003)
     a.disk('Heavy muzzle emission', 'heavy_muzzle', .07, .012, (0, 0, 0), 'glow')
 
 
 def emitters(a):
     aerial = a.spec['kind'] == 'aerial'
     for side, name in [(1, 'emitter_l'), (-1, 'emitter_r')]:
-        a.loft('Retractable armor shield emitter', name, [(0, .23, .24), (.62 if aerial else .8, .2, .2), (.82 if aerial else 1, .12, .15)], 'armor')
-        a.box('Shield emitter luminous rail', name, (.06, .65 if aerial else .8, .025), (0, .43, .14), 'glow', .006)
+        length = a.p['emitterLength'] if aerial else 1
+        a.loft('Retractable armor shield emitter', name, [(0, .23, .24), (length*.76,.2,.2),(length,.12,.15)], 'armor')
+        a.box('Shield emitter luminous rail', name, (.06,length*.75,.025), (0,length*.48,.14), 'glow', .006)
         a.disk('Shield emitter hinge', name, .16, .12, (0, 0, 0), 'brass', 'z')
     a.barrier('barrier', 1.5 if aerial else 1.65, 1.1 if aerial else 1.9)
     a.disk('Articulated cast energy dish', 'cast_dish', .28, .08, (0, 0, 0), 'shade')

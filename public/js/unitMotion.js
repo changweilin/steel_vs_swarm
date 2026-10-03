@@ -16,7 +16,10 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
   const age = cf ? (now - cf.t0) / duration : -1;
   const cast = age >= 0 && age < 1 ? Math.sin(Math.PI * age) ** 2 : 0;
   for (const [tracks, weight] of [[motion.fire, kick], [motion.charge, Math.max(0, rig._chg || 0)], [motion.cast, cast]]) {
-    for (const track of tracks) track.node[track.channel][track.axis] = track.rest + track.amplitude * weight;
+    for (const track of tracks) {
+      const phase = track.trigger === 'heavy' ? Math.max(0, rig._chg || 0, rig._aimH || 0) : weight;
+      track.node[track.channel][track.axis] = track.rest + track.amplitude * phase;
+    }
   }
   const spinner = motion.fireSpin;
   if (spinner) spinner.node.rotation[spinner.axis] = (spinner.node.rotation[spinner.axis]

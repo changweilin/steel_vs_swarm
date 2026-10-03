@@ -2,7 +2,7 @@
 
 The contract covers all twelve mechs and twelve drones. Morphers and their alternate forms are excluded.
 The review bench reads the existing art prompt tables and original mech images; those remain the visual authority.
-T10 follows the prompt's anatomical weapon sides and single left-shoulder launcher despite the mirrored illustration.
+T10 carries the anatomical right forearm gun and paired forward-facing shoulder launchers.
 S01 follows the four enclosed rotor reference instead of the retired insect-wing body.
 
 [The asset contract](../tools/mech_authoring/assets.json) owns component plans, estimated proportions,
@@ -13,6 +13,13 @@ GLB interchange exports under `public/assets/models/reference/`, and runtime joi
 under `public/js/forge/assets/`. Runtime asset data is generated; changes belong in the contract or recipe.
 The Blender skeleton follows the named rigid driver joints. Animate these joint objects;
 armor stays rigid across elbows and knees. Export clips share their NLA track names.
+Feathered wings separate humerus, ulna and manus; overlapping secondary feathers meet fanned primaries.
+Bent elbow and wrist offsets distinguish avian wings from the pterosaur's elongated membrane-supporting digit.
+Overlapping hinge gores cover the sweep between articulated wing panels, including membrane wings.
+Ground avian wings fold along the body and spread only during running; this posture overrides humanoid arm motion.
+Cephalopod limbs use dense flexible chains. The tyrannosaur jaw and concealed throat barrel follow heavy-fire presentation.
+Eight radial cephalopod chains carry independent three-axis phases. The colossus forehead aperture stays recessed
+behind a hinged shutter and becomes visible only during heavy-fire presentation.
 Limb geometry, tail segments and rider gun compensation derive from those same joint bindings;
 the recipe does not maintain a second list of pivot coordinates.
 

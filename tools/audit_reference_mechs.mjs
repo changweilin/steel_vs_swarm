@@ -21,6 +21,8 @@ const requiredCounts = {
   s02: ['Open industrial rotor duct', 6], s04: ['Upper and underside red roundel', 4],
   s05: ['Open rotor blade', 8], s08: ['Propeller motor hub', 2],
   m04: ['Exactly four feather missiles', 4], m06: ['Eight pentagonal launch backplates', 8],
+  m03: ['Twin boom vertical tail support', 2],
+  t10: ['Forward shoulder launch cell', 12],
 };
 const sourceHash = {
   contract: hash(await readFile('tools/mech_authoring/assets.json')),
@@ -35,6 +37,21 @@ for (const id of ids) {
   if (requiredCounts[id]) {
     const [prefix, count] = requiredCounts[id];
     assert.equal(asset.meshes.flatMap(mesh => mesh.parts).filter(name => name.startsWith(prefix)).length, count, `${id}: prompt-critical ${prefix} count`);
+  }
+  if (id === 's02') {
+    const rotors = asset.joints.filter(([name]) => name.startsWith('rotor_'));
+    const diameter = contract.assets[id].parameters.rotorRadius * 2 * 1.03;
+    for (let i = 0; i < rotors.length; i++) for (let j = i + 1; j < rotors.length; j++) {
+      assert(Math.hypot(rotors[i][2][0] - rotors[j][2][0], rotors[i][2][2] - rotors[j][2][2]) > diameter,
+        's02: adjacent rotor ducts intersect');
+    }
+  }
+  if (id === 's12') {
+    for (const side of ['l', 'r']) {
+      assert(asset.meshes.some(mesh => mesh.parent === `wing_${side}_outer`
+        && mesh.parts.some(name => name.startsWith('Articulated outer delta panel'))),
+      's12: folding hinge has no outer wing geometry');
+    }
   }
   const bytes = await readFile(`public/assets/models/reference/${id}.glb`);
   const gltf = JSON.parse(bytes.subarray(20, 20 + bytes.readUInt32LE(12)).toString());
@@ -82,7 +99,9 @@ try {
       check(rig?.referenceMotion && rig.shield, `${id}: registry bypasses authored asset`);
       if (id === 't10') {
         check(rig.armR.position.x < 0 && rig.armL.position.x > 0, 't10: anatomical arms mirrored');
-        check(rig.wpn.heavy.ref.position.x > 0, 't10: launcher must occupy anatomical left shoulder');
+        check(rig.wpn.heavy.nodes.length === 2 && rig.wpn.heavy.nodes.some(node => node.position.x < 0)
+          && rig.wpn.heavy.nodes.some(node => node.position.x > 0), 't10: both shoulder launcher racks required');
+        check(rig.wpn.heavy.fwd === 'z', 't10: shoulder launcher openings must face forward');
         check(rig.shield.arm.shoulder === rig.armL, 't10: shield attached to gun arm');
       }
       if (id === 't01') {
@@ -91,11 +110,16 @@ try {
       }
       if (['t07', 't08', 'm04'].includes(id)) {
         check(!unit.userData.spin.length && rig.wings.length === 2, `${id}: winged anatomy gained rotors`);
+        check(rig.wings.every(wing => wing.hand?.isBone && wing.hand.parent === wing.outer
+          && wing.outer.parent === wing.w), `${id}: humerus/ulna/manus wing chain lost`);
       }
-      if (id === 's07') check(rig.tents.length === 4 && ['chFL', 'chFR', 'chHL', 'chHR'].every(key => rig[key].length === 4), 's07: eight distinct tentacle chains lost');
+      if (id === 's07') check(rig.tents.length === 4 && rig.tents.every(chain => chain.length >= 12)
+        && ['chFL', 'chFR', 'chHL', 'chHR'].every(key => rig[key].length >= 12), 's07: eight flexible multi-joint tentacle chains lost');
       if (rig.kind === 'quad') check(['legFL', 'legFR', 'legHL', 'legHR'].every(key => rig[key]?.isBone), `${id}: four load-bearing legs lost`);
       check(Math.abs(new THREE.Box3().setFromObject(unit).getSize(new THREE.Vector3()).y - heroTargetH(kind, id)) < .15, `${id}: authority height changed`);
       const ent = { id, mesh: unit, df: false, sp: 1, heroY: 0 };
+      if (id === 'm02') check(unit.getObjectByName('throat_barrel').scale.x <= .002, 'm02: throat cannon exposed while idle');
+      if (id === 't12') check(unit.getObjectByName('forehead_bore').scale.x <= .002, 't12: forehead cannon exposed while idle');
       let now = 0;
       const step = (dt, speed = 0) => {
         now += dt;
@@ -104,6 +128,13 @@ try {
         finite(unit, id);
       };
       for (let i = 0; i < 100; i++) step(1 / 60, i < 50 ? 7 : 0);
+      if (rig.groundWings) {
+        for (let i=0;i<120;i++) step(1/60);
+        for (const wing of rig.groundWings) check(Math.abs(wing.w.rotation.y-wing.sgn*wing.fold[0]) < .01, 't05: idle wings do not fold');
+        for (let i=0;i<120;i++) step(1/60,rig.top*.85);
+        for (const wing of rig.groundWings) check(Math.abs(wing.w.rotation.y-wing.sgn*wing.run[0]) < .01, 't05: running wings do not spread');
+      }
+      if (id === 'm02') check(unit.getObjectByName('throat_barrel').scale.x <= .002, 'm02: locomotion exposes throat cannon');
       if (rig.chFL?.length === 3) {
         const distal = ['chFL', 'chFR', 'chHL', 'chHR'].map(key => ({ node: rig[key][2].g, min: Infinity, max: -Infinity }));
         for (let i = 0; i < 160; i++) {
@@ -120,6 +151,8 @@ try {
       ent.fireFx = { t0: now, slot: 'light' };
       step(1 / 60, 5);
       check(recoil.node.position.z < recoil.rest, `${id}: no barrel recoil`);
+      if (id === 'm02') check(unit.getObjectByName('throat_barrel').scale.x <= .002, 'm02: light fire exposes throat cannon');
+      if (id === 't12') check(unit.getObjectByName('forehead_bore').scale.x <= .002, 't12: light fire exposes forehead cannon');
       const localMuzzle = rig.muzzles.light.n.getWorldPosition(new THREE.Vector3());
       unit.position.x += 4;
       check(Math.abs(rig.muzzles.light.n.getWorldPosition(new THREE.Vector3()).x - localMuzzle.x - 4) < 1e-5, `${id}: detached muzzle`);
@@ -127,9 +160,13 @@ try {
       ent.heavyFx = { t0: now, phase: 'charge' };
       for (let i = 0; i < 50; i++) step(1 / 60, 5);
       check(rig.referenceMotion.charge.some(track => Math.abs(track.node[track.channel][track.axis] - track.rest) > .1), `${id}: no charge mechanism`);
+      if (id === 'm02') check(unit.getObjectByName('throat_barrel').scale.x > .9, 'm02: heavy charge fails to deploy throat cannon');
+      if (id === 't12') check(unit.getObjectByName('forehead_bore').scale.x > .9, 't12: heavy charge fails to reveal forehead cannon');
       ent.heavyFx = { t0: now, phase: 'fire' };
       ent.fireFx = { t0: now, slot: 'heavy' };
       step(1 / 60, 5);
+      if (id === 'm02') check(unit.getObjectByName('throat_barrel').scale.x > .5, 'm02: cannon retracts before heavy shot');
+      if (id === 't12') check(unit.getObjectByName('forehead_bore').scale.x > .5, 't12: forehead cannon closes before heavy shot');
       for (const slot of ['def', 'atk']) {
         ent.castFx = { t0: now, slot, dir: slot === 'atk' };
         for (let i = 0; i < 30; i++) step(1 / 60, 5);
@@ -144,6 +181,8 @@ try {
       check(Math.abs(before - rig.shield.hinges[0].node.rotation[rig.shield.hinges[0].axis]) < .1, `${id}: retract snaps`);
       for (let i = 0; i < 90; i++) step(1 / 60);
       check(rig.shield.phase === 0 && !rig.shield.barrier.visible, `${id}: shield fails to retract`);
+      if (id === 'm02') check(unit.getObjectByName('throat_barrel').scale.x <= .002, 'm02: throat cannon remains exposed after heavy shot');
+      if (id === 't12') check(unit.getObjectByName('forehead_bore').scale.x <= .002, 't12: forehead cannon remains exposed after heavy shot');
       ent.df = true; ent.sp = 0;
       for (let i = 0; i < 60; i++) step(1 / 60);
       check(rig.shield.phase === 0, `${id}: depleted shield deploys`);
@@ -178,7 +217,8 @@ try {
         if (!node.isMesh || node.userData.isOutline) return;
         meshes++; triangles += (node.geometry.index?.count || node.geometry.attributes.position.count) / 3;
       });
-      check(meshes <= limits.meshesPerUnit && triangles <= limits.trianglesPerUnit, `${id}: resource budget exceeded`);
+      check(meshes <= limits.meshesPerUnit && triangles <= limits.trianglesPerUnit,
+        `${id}: resource budget exceeded (${meshes} meshes, ${triangles} triangles)`);
       const copy = forgeMech(specOf(id));
       check(copy.group.getObjectByName('gun_recoil').geometry === undefined, `${id}: joint is fused to mesh`);
       const firstMesh = root => {
@@ -192,6 +232,7 @@ try {
       const loaded = await new GLTFLoader().loadAsync(`/public/assets/models/reference/${id}.glb`);
       check(loaded.animations.length >= 8 && loaded.scene.getObjectByName('barrier'), `${id}: independent GLB load loses rig/clips`);
       const mixer = new THREE.AnimationMixer(loaded.scene);
+      let foldedWingQuaternion = null;
       for (const clip of loaded.animations) {
         mixer.stopAllAction();
         mixer.clipAction(clip).setLoop(THREE.LoopOnce, 1).play();
@@ -204,6 +245,28 @@ try {
           const gun = loaded.scene.getObjectByName('gun');
           const direction = new THREE.Vector3(0, 0, 1).applyQuaternion(gun.getWorldQuaternion(new THREE.Quaternion()));
           check(Math.abs(direction.y) < .05 && direction.z > .95, 't10: exported fire pose loses gun-axis compensation');
+        }
+        if (id === 't05' && ['light', 'heavy'].includes(clip.name)) {
+          const weapon = loaded.scene.getObjectByName(clip.name === 'light' ? 'gun' : 'heavy');
+          const direction = new THREE.Vector3(0, 0, 1).applyQuaternion(weapon.getWorldQuaternion(new THREE.Quaternion()));
+          check(Math.abs(direction.y) < .05 && direction.z > .95, 't05: wing-root weapon compensates an unrelated elbow');
+        }
+        if (id === 'm02' && ['idle', 'light', 'heavy'].includes(clip.name)) {
+          const deployed = loaded.scene.getObjectByName('throat_barrel').scale.x;
+          check(clip.name === 'heavy' ? deployed > .9 : deployed <= .002,
+            'm02: exported throat cannon visibility does not match the weapon action');
+        }
+        if (id === 't12' && ['idle','light','heavy'].includes(clip.name)) {
+          const deployed = loaded.scene.getObjectByName('forehead_bore').scale.x;
+          check(clip.name === 'heavy' ? deployed > .9 : deployed <= .002, 't12: exported forehead aperture visibility disagrees with the weapon action');
+        }
+        if (id === 't05') {
+          const wing = loaded.scene.getObjectByName('shoulder_l');
+          if (clip.name === 'idle') foldedWingQuaternion = wing.quaternion.clone();
+          if (foldedWingQuaternion) check(clip.name === 'run'
+            ? wing.quaternion.angleTo(foldedWingQuaternion) > .6
+            : wing.quaternion.angleTo(foldedWingQuaternion) < .01,
+          `t05: exported ${clip.name} wing differs from folded pose by ${wing.quaternion.angleTo(foldedWingQuaternion)}`);
         }
       }
       mixer.stopAllAction(); mixer.uncacheRoot(loaded.scene);

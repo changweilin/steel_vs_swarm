@@ -73,7 +73,21 @@ export function buildReferenceAsset(asset, spec) {
   if (rig.tents) rig.tents = rig.tents.map(chain => chain.map(joint => ({ ...joint, g: nodeOf(joint.g) })));
   if (rig.insectLegs) rig.insectLegs = rig.insectLegs.map(leg => ({ ...leg,
     root: nodeOf(leg.root), lift: nodeOf(leg.lift), chain: rig[leg.chain] }));
-  if (rig.wings) rig.wings = rig.wings.map(wing => ({ ...wing, w: nodeOf(wing.w), outer: nodeOf(wing.outer) }));
+  if (rig.tentacleWaves) rig.tentacleWaves = rig.tentacleWaves.map(wave => ({ ...wave, chain: wave.chain.map(nodeOf) }));
+  if (rig.groundWings) rig.groundWings = rig.groundWings.map(wing => ({ ...wing,
+    w: nodeOf(wing.w), outer: nodeOf(wing.outer), hand: nodeOf(wing.hand) }));
+  if (rig.wings) rig.wings = rig.wings.map(wing => ({ ...wing, w: nodeOf(wing.w), outer: nodeOf(wing.outer),
+    ...(wing.hand ? { hand: nodeOf(wing.hand) } : {}) }));
+  for (const wing of rig.wings || []) {
+    if (!wing.hand) continue;
+    wing.w.rotation.z = wing.sgn * (wing.dihedral || 0);
+    wing.outer.rotation.y = wing.sgn * (wing.elbowSweep || 0);
+    wing.hand.rotation.y = wing.sgn * (wing.wristSweep || 0);
+  }
+  for (const wing of rig.groundWings || []) {
+    [wing.w,wing.outer,wing.hand].forEach((node,i) => { node.rotation.y = wing.sgn * wing.fold[i]; });
+    wing.w.rotation.z = wing.sgn * -.30;
+  }
   const W = { muzzles: {}, wpn: {}, lightGlowM: [], heavyGlowM: [], heavyPivot: [] };
   for (const [slot, weapon] of Object.entries(asset.rig.wpn)) {
     const muzzle = nodeOf(weapon.muzzle);
@@ -104,6 +118,9 @@ export function buildReferenceAsset(asset, spec) {
     fire: asset.motion.fire.map(bindTrack), charge: asset.motion.charge.map(bindTrack), cast: asset.motion.cast.map(bindTrack),
     fireSpin: asset.motion.fireSpin ? bindTrack(asset.motion.fireSpin) : null,
   };
+  for (const tracks of [rig.referenceMotion.fire, rig.referenceMotion.charge, rig.referenceMotion.cast]) {
+    for (const track of tracks) if (track.channel === 'scale') track.node.scale[track.axis] = track.rest;
+  }
   if (spec.form === 'flight' && asset.motion.jets) {
     // Exhaust is presentation geometry; ground height fitting uses only the shared rigid inventory.
     rig.jets = asset.motion.jets.map(entry => {
