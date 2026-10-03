@@ -1,29 +1,33 @@
 {
-  "contract": "f4f1ae7752e1643d34fd1201be0cafad8732cf5fa1753703590e3104e6b11270",
-  "method": "Original reference and exact final reference/front/side/back/top renders; destination bench and shield captures inspected",
+  "contract": "28495a7e59b6cf7ad8116b91d20cd47420ae19429387d2519e3424cc9aa0d794",
+  "method": "Original prompt/image and requested anatomy corrections; five diagnostic views and eight action renders; all destination bench/shield/rig captures inspected",
   "assets": {
     "s01": {
       "identities": {
-        "runtime": "fda8c9f37f608904aba88aefb9e19bc49d804b7971179f05c64cb0eb4ce98dba",
-        "blend": "a0330d4473629c9402a6f827d35c6c39dd51ff901292c0a074c984533790eefd",
+        "runtime": "b00ab01885b471b90e098293540ee264e86c1bfbd4b0346a13436f48fad50bed",
+        "blend": "a2b9c7126f2ce570fd162c77baf71def959d60ef09912741d904c3b34a725a49",
         "glb": "c6eda691719d601bd3f01354c34006f006eeb0f6d1ef096d8effb883d6dd6910"
       },
       "reference": "8594939b9bcfd6fae905fdc845035f49ff056cbbc485028585535b6ce9098d32",
       "renders": {
-        "reference.png": "ef50f35769ab6d632e9a851f2cc65bc9c111e16dc6c381042ecba9bd77a15cc7",
-        "front.png": "6801bc52b64732765a18a6cd274b99bc9d1ce1220580493e9989de90e6876ddb",
-        "side.png": "e239599662336079472fc98447a2f02fd1eb2e1e9ce320470e7567f55a91273d",
-        "back.png": "6983a7677b56c1dd622e45921a223bc92432d9315148e4029ea94673a335b628",
-        "top.png": "c1b850f3aeaf6968a79d9c4a7b6352583a76f46a9d9d2c51e521c83de498043d",
-        "shield_deploy.png": "df2d7d5040d657db9f55d7c9083f4d60f48d1c8561d7741f7eed660ddb367d4e",
-        "light.png": "d41fd0700aa15392383e57b480c38ee019629e30e5cce64b9f3de870d71dea4c",
-        "heavy.png": "cf790eee2cc6a136cc982afa34d4a9b9c9ff73c988a78afdf2cb1f08b4db4922",
-        "run.png": "7aefac110686111b2ecfb23f54f088660d7b059ea4239a42475f892d667249b2"
+        "reference.png": "cfa566a1fa7d5b105973816c68e8e851a8fe749b8c595cacfbfb7c0ff99e9d54",
+        "front.png": "c3394b4b9be5116469bec7c1e77d27f1dcd26d6d001280618c8295a0d0303cc9",
+        "side.png": "4a46baed976902c4efa29af24b29848f878c232b81e43fb921926f8009be9c55",
+        "back.png": "e26133e1bc194dff26ee1461b6339fda74f88cc0aca61ea3d633f45dacda8be6",
+        "top.png": "f61a2bdf6581fd33a07606cfdb23d13f0ec3f66c51826339979694d0f87b8c45",
+        "idle.png": "27f4d4e9e34e45990ed400908eac3f2087c966a123130e5ea9335af05f14304e",
+        "shield_deploy.png": "eda5dffcfdbb9e9aa5234997313bedc8bcf284e33c27405898acac49412fe167",
+        "shield_retract.png": "062f7ff33e03b8d17fec86a4ed8725f775cf767dc18f8049f8bf938df34c1f88",
+        "light.png": "fa46af7d2ad9a68324498a2439ec3c95adddf2bc2349e45248bed244e34faaaf",
+        "heavy.png": "e713962fc98e719ed011fab9bcb08cffb9bc0c089b7baaa28e3643854db22cb4",
+        "skill.png": "f78c4c6c047e87a3fbdfb0513d8c774b89b46ddb6ab0a66e600dab611afb6a0d",
+        "ult.png": "eaa152f3b479c3fbdffd78ceee765703383c47ed6c651b88f319e6271bbb7b03",
+        "run.png": "486ad5039e9dacd6e6f1224b9efa161fc46616a9cb20c3063f735d4271c97e93"
       },
       "destination": {
-        "bench": "eb4dc650b4529ad454429466a0c6bcc4a57fee6d8591222d54f8ce156e7f479a",
-        "shield": "60a9be24058ad470ef1e9be2bc185ce2ca9fd5f743c9e9de00127f44c921a130",
-        "rig": "12f79a9bad6a3479e8253fbe5a0575960a919ecf6f956833c21b03eae626b9e3"
+        "bench": "b596db3d70c343f5dcc5743933328eb44e789f26802247ffa07a97fe60a40687",
+        "shield": "6d905797e251431f6956588f0229fae6c7590290852b0f1207903054e6fb05b6",
+        "rig": "0d198b88a62eb425da9b3e92b485c38c54e3a34c3c322a837c9d1ddac5eab7f3"
       },
       "geometry": "pass",
       "appearance": "pass",
@@ -33,64 +37,71 @@
         "Nose underside coaxial gun and paired lateral rocket pods",
         "Inferred retractable dorsal emitters project a forward radar barrier without adding limbs"
       ],
-      "inference": "oblique action; rear and underside inferred"
+      "inference": "oblique action; rear and underside inferred",
+      "poseSamples": 40
     },
     "t10": {
       "identities": {
-        "runtime": "afbd38ca4f4c0113ad320f18606e7665e40873d49d2c897e3cbb6798a9e759e4",
-        "blend": "93a3ddff777c2f1a0d0124a18898fd698acd78debc6fea824d8a89eec81f97b1",
-        "glb": "66b1bb9fc135598d35e6d87030d01fff064937377ca8696ac1a8fdad5dac2dd2"
+        "runtime": "6a5fc8421c454894497c9e45e7853f47be53f73cf76aac34d7225d2d40e308b3",
+        "blend": "e11cf23f091c2a10b28cb81b44f768d032e8d1497bbc0f083322e151ec797eee",
+        "glb": "4f63ceba6b2e0b9988c9419ebd90e5847171fef74131eaa7bf2b52d15597d3d8"
       },
       "reference": "850fbee0f4ba80e09bb4d5d49a21ea562efe257f100f148ee2db6a3810f17843",
       "renders": {
-        "reference.png": "841ef7d5d80a5f9ebf42ff64a12effdf67e423dd8499868d964a4726eb0074b0",
-        "front.png": "5e2f208a2e6777923155e9641be56e5e6621e54089c781b63956154cfed04c8f",
-        "side.png": "41b5e878453ed68da9e0587193b3572391fb2a266829894704bcbb33989f979e",
-        "back.png": "a91ea21684432be6de7c43d10b641a3c35cd5f8ad15da86846e06a198ec4ce2d",
-        "top.png": "8e8f694dcf6856e3da33a8b39c781e7ecea71cc9a160f3dfcc6c6c25b954235a",
-        "shield_deploy.png": "09c70ea8e58e3bd8d11385899778b883e6dfe3d06effd1dc4bbcd5b25d788519",
-        "light.png": "9d34574f3754612d36aec8b4fbb4eafb3e35e9bc2f0cb31de778fadeea304045",
-        "heavy.png": "eead15d9566fd3113729584d9f8fb2c9405225ca6f36d4eb2aceeb7c50b60b1e",
-        "run.png": "c3bd662f427d86c4274c359be76d013ddfcc60bd6c636f8aefea7224e6e135c9"
+        "reference.png": "5bf72e61f6d79e9c138347fbc847721d08f4280f198e23533c37f59c1afcfabe",
+        "front.png": "25ad2e0705d1e78cf4348e8b3da972135e1ae631e841c3a360fa594ce9bd7e2a",
+        "side.png": "bfdaf9892f2c8819eda110dbe864060105ab0446eabc93fccc4379608fc53be6",
+        "back.png": "b1ea6cb6fcf00ba4bb0915d86b86919c8a50e82bcd53933c3ef5a82d0cbb747b",
+        "top.png": "b5ae0803fcac91b663b5f6209910b5b866411328e7a76367d3ebcb9c00015540",
+        "idle.png": "95838f31fd9b3f460e31c2570741adb301849bbe8dfc5da67338746d670af1a6",
+        "shield_deploy.png": "89e7499fd51abf162769db22a23b623bcff8d7f1bc6a6c74b1db9088cc7ca06c",
+        "shield_retract.png": "12b9fcd28593c3f4b891ceb930d5ee38a9a368a87aaee15a5bd20cc3386cc077",
+        "light.png": "1c4795b64f605bf3aaf35336f743b4fcc02a9bbe54158b11ad5798d4992be8ef",
+        "heavy.png": "6db22033c5542779ea21d1d02af9710898261d2f2118e881cff82614e73cd20e",
+        "skill.png": "c261836fbc029e8936bca7da5a1404eb6a653eb4955f5b460cb21e189dc8034d",
+        "ult.png": "15b66b8cba2b0575e37fb177104c6c8ccd96e4289683aca549d3ad3ce300eebe",
+        "run.png": "24bbc193f9f0a5a2cd0438b03c1148573950ab5d42842cca13a525afc511deac"
       },
       "destination": {
-        "bench": "f5d7fcd6bdcb496fa6fbb46235bbe2df2967a40c907b639ba5377fb6455d3ab4",
-        "shield": "99ab84a430470dd4c3be1a39c2614d6e0ecbcc928516124ffcb08e4ece2f0b8d",
-        "rig": "682f13d1cc4c97b4f87b7c84cc6ac737c81a8306d36050a4679e24e562d6461a"
+        "bench": "feb2360bd88edac5a9aec573708d6c8a52f386276ab2e7dd17c464bbe9a5e8fe",
+        "shield": "a55aad616cc6c0b6d1165c2585c4fc984264094db025b81bcc480db2576a314a",
+        "rig": "6e76f7bbcc1b80ccec67301a6d1db9d497e80072ebc9ed4a6d3bc4944eb40582"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Tapered turquoise interceptor armor, narrow articulated abdomen and geometric right-chest marking",
-        "Trapezoid face, brow shade, two circular ear radars",
-        "Separate hip/knee/ankle and shoulder/elbow/wrist joints with rigid articulated armor",
-        "Anatomical right forearm rotary gun; exactly one anatomical left-shoulder six-cell VLS",
-        "Anatomical left palm presents a holographic radar barrier; forearm leaves unfold before projection"
+        "Anatomical right forearm gun, two shoulder racks with twelve forward-facing launch cells",
+        "Both launcher lids articulate; left palm presents the reversible shield"
       ],
-      "inference": "oblique action; rear inferred; weapon sides corrected to prompt"
+      "inference": "oblique action; rear inferred; weapon sides corrected to prompt",
+      "poseSamples": 40
     },
     "s02": {
       "identities": {
-        "runtime": "7427e060a4547bb1b15f59c65d3324340ab970395fd224de980dedc6edd5219d",
-        "blend": "4757e1c4585b7987d42bb2b2230b93aa8a9e6d2dc89a0678a9d68aef0cc1e63e",
-        "glb": "1c5c15626d0cb112799bbdb53e9abb17eebb9449f326741f2376f0e044abea67"
+        "runtime": "fd71fb02d3a7971e1b4e047b96d6d5ac5e73f011b6509f392e4bd7a198dbd26f",
+        "blend": "679f11f1bd922ac07dd47f49b1221c0390094dea35625a0a52e1662f4cde93ce",
+        "glb": "775fe135f8340dd55d954808e53527a1e36d29c355c9d644c9ab775795d91c60"
       },
       "reference": "0e1e16a7d00df7d7e8a09b167f2f026ef497ca8d4e96c648149ff655bfac8859",
       "renders": {
-        "reference.png": "b0a115ff85a4a52fe777ae07cf23efdf73c5314bddb9c11ec129b5f2f9c318f4",
-        "front.png": "244b3172b2ce19a8566330386dbfef3a654caa5d8c3c050b45abd4111cefa5f2",
-        "side.png": "d46deee32aa9af83281e6f19623d8e1616a0bb08151b4a0a296bba47c9a506cf",
-        "back.png": "a951012c4c3f5b1ecd3a91690d4b816446b3077a2139161dc8f51694dbb1ed94",
-        "top.png": "b90ff667539a9d492ab25f1c95331dedf1e1a37346cc967bdafc526ba778f4bd",
-        "shield_deploy.png": "1dfcbc5a83e30d670f3c91b8416f8050ae88b273e99edcd337df0722c7c4a43d",
-        "light.png": "bad6d4d953542c78738c48e7c85c001b31adbf74f467ce63ca6029dcb8418ed8",
-        "heavy.png": "ca705b6b4d4566beedb1166dd84e3a09b85797aea5121f01732bd27dea503fa9",
-        "run.png": "d71eb88874190a67871045494ad1444a5c3dcb600e9c744ef359e81deef42a5e"
+        "reference.png": "167cfd836a6c5a0749a6f7673a768dd608c6e11849145d42be3d65711dce441d",
+        "front.png": "30d3117042f57593ee94ff75e15e6fe5c4e02b0d702e2d1cd4832c8ccc4cf791",
+        "side.png": "78e5695b05a5aa9677106260d6a176227ab6a23f225c235f8d6637932ddf3bee",
+        "back.png": "24926d7de27e3d6f6e57309bad2b33aee9d8b25f76c8983832d486ea71f732f7",
+        "top.png": "dbf59149a346702fd26bcb5b937ab64acddbba0d31ac1b71de23ea7459d4875e",
+        "idle.png": "6c7c1746c3738a5fd1509f2f3747cab7c9b9ab3c1cf45ce9f82b187aa712699b",
+        "shield_deploy.png": "2df1c7cb7e9b3e290a14406dd4fbc72494f7a523fbaa3ee50cbd3d5690a5ba26",
+        "shield_retract.png": "5e9472ba19051b90986a9ed125553cd36ad9842563a5cad91658f1a70e9117ae",
+        "light.png": "d0443c4a8ab3198bfddaf87ae0ca9cdc14885820c28b3caaa19d09f9199b4b72",
+        "heavy.png": "3c3961cfd97002a9d604c106b91093167a69a4eceb954a4208fd1eee136b2cfa",
+        "skill.png": "064150225d18d551172dca96df931cbda8630a603d5f9f175d239efff6236dbe",
+        "ult.png": "2a5f9cd0db88f4d76e2707719d9a01584346f8de5d042ff894bbcda3f0b75615",
+        "run.png": "ce0335c2072e3164fb29f107d29483e0a3150a68081c11d9f85d34a1cec6936c"
       },
       "destination": {
-        "bench": "723ae096691026448ce315a7c44b7a1d0b7a00eda66bf0b6e1e3c349659a79ac",
-        "shield": "1d4e6d8d27767c0ea9173f7db4f86a0f3e73880e87bb53e1a42785d7647f4f34",
-        "rig": "f84f3b3a71506a1dd9f6c66a05e52e89bec3e51daebf1d06de87b98315583698"
+        "bench": "1fba631d9523f8cb4f311a77053d7245baf95269d00cf2f11bc579e00e073541",
+        "shield": "4e62975d4d61fc5b175d307ae6e3d7e9daeb936b5744034bb9bab1b128c8e021",
+        "rig": "b3e459faee91c3fbd8808ffe0940909dc9b49acf6c88db6b5ac146549654ebb0"
       },
       "geometry": "pass",
       "appearance": "pass",
@@ -100,63 +111,72 @@
         "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
         "Inferred paired retractable armor emitters project a decorative forward radar barrier"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "s04": {
       "identities": {
-        "runtime": "04edf7a8f5cb0c118cd28b738273fc000331fafb2e79b7eea7352def39f6a77a",
-        "blend": "4b7744b69f7cee1789fa5f99312a3b54299d38831dd4e3a0845a8cf16332875f",
-        "glb": "0fc8ec078d8b8692b750dd86d108d5a532ffe207dc3364d8a6e65b6b5bf76d99"
+        "runtime": "215ab3d360bfcb761d7be6eef8ec19a7ffa6a8aab037b8f699cd17f51067d774",
+        "blend": "c66ac2d36e46d78c713d107f0efb44b4555e3230f7bcf54de04cf0e9d1489df5",
+        "glb": "68353999c6c505ebf4933a7ba45502a37977a2d50a01136224c7fb91fa1c9809"
       },
       "reference": "6189be70855f29c79a5ea793f0b692d11e5dfc8a1e423267f963746ba3784f86",
       "renders": {
-        "reference.png": "57276bda38df2c0df8f9e0062b6a3f5950adbce91bfa153ba8b3ef7a60352f82",
-        "front.png": "5e3e0831d609923e152ee086e0535cbc71ef2e9ce5083a9fb0b09ef9808125e2",
-        "side.png": "df5781af6957bf173f02b4445dad1f4e12f0216a2b1a78e4ca98da5f2d356a8c",
-        "back.png": "15d3edf0bfb68e80f08f70bfe98fecea407ae4af2851bf7ac6e2fbe3aa19aa96",
-        "top.png": "c0f79caafe73fd82f1f55820dba4fa25957d6cf29b3a9aadc415b35becd10673",
-        "shield_deploy.png": "5382f703d44e6be1a2d334b1a4885a2b52c4539c84f548f0b3ace4f400eac304",
-        "light.png": "eef4d4611c337edccff0ab57375e42478b971495071e1138211e1f4c9a02c8bc",
-        "heavy.png": "6ca86f8905bd65941ed99399ab60e6aa1be62b1124d7b405f88abc290cc69dce",
-        "run.png": "f2cc02c7817fa0481634edb62b120fd8b523b1403617d3494c2fd552edca1357"
+        "reference.png": "ef6a74cd793427b1d14d63b060bf5471de23bd8c2bea0431790e1dae56e3323c",
+        "front.png": "32db8a19ade4c134f83079aa9e9f26029b24dd2dc9052d60e53192df3d93c685",
+        "side.png": "aa4143ba27488146ef1fb57795df7def5d80b7413aa76f5ecb29d54f060de147",
+        "back.png": "560ef2fba1a71298da4ec660e9cecbf5290c40159012f0fbc3e0288c520cfc43",
+        "top.png": "97f5bb59ea259f32f6545aec47a9c3c50dc6f49dd2d30b47a99398e2aea975f4",
+        "idle.png": "190f5a4891a5a9dc984fbf70760a206b853dce4454cee45f7a7f561afd85757b",
+        "shield_deploy.png": "f09d24bd6b4f5aa2a339f7f5ed70e19137eb4d56c738bacb217bb5300a549bd7",
+        "shield_retract.png": "2e9e6228d0622fbb8192eedf0a43aed293bbe6ceead8049bc50a0aa5894a0085",
+        "light.png": "b45c6d229264d34ccc2c474a9a4f51ea90695502a0085054c7c5df2921ca0a3f",
+        "heavy.png": "74b822f048a938f8cfcfbf0b658e38f8f03584225fdb819abe2e685d7471d5c7",
+        "skill.png": "8605ca5a55cd194de157aec7cd14624c6142e032ff799f052fc8192968cf29e6",
+        "ult.png": "9a9ba0bcf8c50717cdbe0e8cc5fe48c0c1eadce1a7c52b98fa83fc1c22cdf03e",
+        "run.png": "3662843a6cb37626d43681f855a1983cb2f1549a11027828cc96c3a2a751b445"
       },
       "destination": {
-        "bench": "e20b7b8723bdb0c2f250d371ae5949cc724864ebc781444d84775582d68675ca",
-        "shield": "41ddfec67366db48c5d51e9911b046dd86ae1be8f3ad638864771c0305a1fcd0",
-        "rig": "ea18c5f29b8dae769a885465fec127d3e3b567e57467c11155ff98b246ad3fc0"
+        "bench": "d88159340fae4fde9c6630259354806ed631d042431aebc8c11558a70bf37d68",
+        "shield": "c6273898ed2cec85f2fcdc951be62c5be291465748aa648667619b7ffcd44b70",
+        "rig": "7a47fb81d8f58d4abad17bcf1ba9c7f9711e439e60079676c1095f5851d31539"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Zero fighter planform, nose engine cowling and downward shovel ram; red roundels on both faces of each wing",
-        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Aircraft nose wedge tip lies on the forward +Z axis",
+        "Forward weapons and pusher propeller retain independent joints",
+        "Four upper/underside red wing roundels; folded shield emitters stay close to the fuselage"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "s05": {
       "identities": {
-        "runtime": "ecc16f9c1dcee49a036c8abd3154d098788cc63f1a269165c6083cd1dbe31c95",
-        "blend": "31f0647e8979a95dbd792c88f89a0013ef42e2f1e72f5317973c1fb288ac3ad7",
-        "glb": "c4775d7ebfb7fbc20be41f6391cf4682cba263c4b27dc3a0337710c6227fd3bc"
+        "runtime": "72719ca705ae3ae954b27d495572f64bdff1b297a516ee70f263377122ad8b0f",
+        "blend": "97cf1f467d73419f24b9d7e692aa36fd7ccb59f4f2d2e8fa700ef477eef0ba85",
+        "glb": "f39926b14a7e16f3af81ab4000718bf69d2eb1f33b05d857e61f4d8ab423721f"
       },
       "reference": "67cef56fb89e067c8f6958784842211b69d640fed7fc61f568997139f436daf6",
       "renders": {
-        "reference.png": "21c933f97305bc800a87ec9e48163f714ff5131ff360be10390dd3f4c88e08a6",
-        "front.png": "2842a6d0bd790199c83fb1bbfac6cd0e1910158d59ed49c1c4c2cc2ee714c8cc",
-        "side.png": "607fe5e1a0ac9e7701b35228c0673e608bbc52a986dbed3409309456680c668f",
-        "back.png": "ede4d44e6270ce01e647bcca69903dba423e4316b202a673335615ea2f84814c",
-        "top.png": "d8383c2f0b60c3ab74cdec4caa3a4feb3ae8ebd559ff5f2e1cb9c231db08f7a3",
-        "shield_deploy.png": "10fa27e76235b660fa6d8d09c83ac2d076c0a72c42a20395fa39632562d17518",
-        "light.png": "39048904d90be2e012fb664531a5b37f7f1cda801e9c2afa8b53a454ca19ee8d",
-        "heavy.png": "98aca30490e423342a0d60253c4ab99b111b39e71e076621ef6276fecdf3a5ed",
-        "run.png": "50c931d70d6889e48ad48cd33914e9c0912e087cb5083d9640fed6a1af253f3b"
+        "reference.png": "76e526d2caa2f34eda9ce6036e5183fc3db619d0c8a57363d3bfabe23b5c7a74",
+        "front.png": "e4a0116809d52c1ea6590f8d57f13d367bac3da786bbe7713522e6002f846479",
+        "side.png": "a84770456942a7124f4b105856fabd947492bec713c3d4a5121080a14b4f8642",
+        "back.png": "753abd6eb29b5cb9032f42f9611b5e73e76b64ef27eb3a1bcb2ad68930d4bdba",
+        "top.png": "f2edc61197ec144c672d4787c567de542b7c99b064bd1efe4e6fb738efe42341",
+        "idle.png": "cbabe50d0d2ba1d97fe520e340e0bd271366740d7023128fe805892a93245379",
+        "shield_deploy.png": "58cd727a03b3b8fa36283039be0dceab9cc046f59ef9d983cb179be94befbd27",
+        "shield_retract.png": "6f19028ed347d198b8b39091a7c863a5fea185403b299f64a765277ee52adf62",
+        "light.png": "6c3c4238bcc30c5b63c68b1493da506ea5aeba55d67b7f7c618104ccc718f973",
+        "heavy.png": "3c8206a6bd2a8e8e1874c66e76866bdf245edb008144fb31be8698614558f8aa",
+        "skill.png": "44f44a2c0e8a53bf650eba5824d3293d3b0e6e60fb8617c746f0d98b8e9d281e",
+        "ult.png": "85dd5e1c6bfa4d6c33cb1fb3572cb594baad860efd20b8f87733c479199d57a4",
+        "run.png": "4de55eaf7ec736f1644573c162a4f7599bc771fb257fc3c925e21a725a5baf5f"
       },
       "destination": {
-        "bench": "ee72d30623fadd67651dcd3d76ad0a8cae89f25406815254079c48a31884ee94",
-        "shield": "a22b35cd1a7da5bedba225e7bbb9aa06934ed158c32bd077f77d868a434f811a",
-        "rig": "be75296ac052455690ba14bc5c6282866208c79624299e739fcde3b957026ab9"
+        "bench": "4828c0d56aceaedd9e8e0f3be46f5d4033931b3dc292cbe864b1cbb02cfbae38",
+        "shield": "68761c40160b298e75545250f0e68ec72d2b524cd3be845c033f2aedf246569c",
+        "rig": "38f77294562cc1c42410b8fc89ee6db66ad13f497a892c78dd83e10327326725"
       },
       "geometry": "pass",
       "appearance": "pass",
@@ -166,30 +186,35 @@
         "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
         "Inferred paired retractable armor emitters project a decorative forward radar barrier"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "s08": {
       "identities": {
-        "runtime": "e2ed985e443f7ffd1d1673724c2ea282878545410771d0eda1f68b7820bfeca6",
-        "blend": "0c772b76f7798661f020bfe1f1caa275b58044bdf2e6d10e353d64c5c83ccb50",
-        "glb": "c6df9ec9fe6ee2e22741165a77f8df4e2136a0540c0aaa890f107b33db85f05a"
+        "runtime": "5145de7e47e176caf27eab14e2782e1cf61a4a38ccac8425648e67ffd92c2fe2",
+        "blend": "826aa46ae7043d9c95521c62fd3a4ff9bb6efc25d869e4c049a0b32bd6bfd0bd",
+        "glb": "7f0f75824a2e37a970aafc8e90c31b31c329e875115d0b6a62db0675d111e0cd"
       },
       "reference": "b06e53dc4dd5175975802225072e01ab0acca1537e474cd84f91a6c129b74b1a",
       "renders": {
-        "reference.png": "54b80340ef3708a7ea263d18304f9d0592a0395b241ad00061789529c293750d",
-        "front.png": "18bbd410a723544bb4a5d6bd9a47098eede6f9b4e0a4595a310fa72235016681",
-        "side.png": "dd837750f79aca7160c940b441028efcaebf8d5b9c97fd2395bc06ed0c289692",
-        "back.png": "471d3a6a1ce4d4a7e3e688536684558e95069f72f819a553a795c549ba4af874",
-        "top.png": "61613ce533a2cd7a0ce1bbd2f4e2f617493f0e3d4e20c8048db643f01b1f63d3",
-        "shield_deploy.png": "293146604b936548341d865f21a9ccc5d65ad370b57fd2a2cf05dec6f79f8425",
-        "light.png": "cda2c8f134601cbdc40138c7bc1aabc3369164ab10690f463477eb661b014eae",
-        "heavy.png": "f71693bc700b938020f44388e7df1d528f287cbd509141091a26489bf5ca51ab",
-        "run.png": "0bfe965799f92c3b33ec614deabb73d28a0b675f82f854870c3c03a39e454117"
+        "reference.png": "b229d527f61695fd985742687e77f27857377b6d353112da5b7d0a919907cc11",
+        "front.png": "5c488f9771a794c93d69ee17c4e748269d2ba65f2b12ba2823e227c78b7f5b99",
+        "side.png": "4b70978c964785c478ada200c6fae906353f99894616650c20887e1dfc876d30",
+        "back.png": "7a977194dcc2974f0e8ddc46134c4e5c54a25a34f40fe8e372c2c0ea725ae533",
+        "top.png": "06cf269fa691dcd97909470c8a77a43f473bc9082ca7f206370bc0c4e4f97abe",
+        "idle.png": "eb3df90540676729ea51b62f650353f3db3d8813ada7d2bb6d3e0441358fe0a1",
+        "shield_deploy.png": "fa621622c255a254e203b95ca655add10fab9d7cfee9bc645f92b9fcd2beeb47",
+        "shield_retract.png": "eb3df90540676729ea51b62f650353f3db3d8813ada7d2bb6d3e0441358fe0a1",
+        "light.png": "8ac7d4a5a215de175620d5e10f40a7e70c7e00aea832269a49cb008f50d3a4c3",
+        "heavy.png": "e42daf53c556f2f2101a9eda99f51c2d7376af4a15d82e033867f8e3f3511cb7",
+        "skill.png": "2ec8511b63ff762e1db4c90eafe946ec690f4276f709f900b5d7605a277a8d17",
+        "ult.png": "252bad7e1d94b31476ee4c5329e028e2eb76c65c7b89d850b106efa548b27dc2",
+        "run.png": "5438cfe3714b57130b26751a4175450fc1273e4495eb4af19df11b9886baa6d9"
       },
       "destination": {
-        "bench": "5d5fa2e5e3b13b5377171fe2a32a4f81574ed0b7b28100cea30cbc6b25f53fba",
-        "shield": "3d502f283906628a06fd6273c7a4fd394778304b81772d0c0c2f31512dc7d9fd",
-        "rig": "dfff7edaf53d2d5a90cf1329bf5949e6b64ce95e605a76232316ec710fa1ad87"
+        "bench": "86eeb96c07bc83a9e1425d2fcb1d709e013bd981482eecdf1be1c4f46bbc6bf4",
+        "shield": "0b8910473e3897a101cc0b87da7253973b2ff558a94a3752058df5eecdb6093b",
+        "rig": "2f439b18c2394ab44fa264a3eeb0012af56b6564dd64d9d911d6cb0151c8b51f"
       },
       "geometry": "pass",
       "appearance": "pass",
@@ -199,30 +224,35 @@
         "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
         "Inferred paired retractable armor emitters project a decorative forward radar barrier"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "s11": {
       "identities": {
-        "runtime": "fa831a8751f5694388672f94d4165d0094fbb050e3df23f5df3f1fb65d11ec50",
-        "blend": "e27921e706292d94428a868afa4b777829ad30d7d6a59c1cb9efd619e6bb80df",
-        "glb": "817ffa2d052027b590c59320f75eb5287115778388a78f8e8abef844c4834d2b"
+        "runtime": "4b9204619d6e7a887936eb7a493bcc75e73e2e3282a8dafce3120e5779609855",
+        "blend": "c741697f70842e5c3bdbfea042f1f5e13fd816b5d84d457713527d3be8f70335",
+        "glb": "63b72ffd47276614bf942510e2bb9373dd302a1c3d507c2e95dddb90ace0eea3"
       },
       "reference": "32dc4d947b40908224e594b8765ff256095f765d865ae5bc742a8d73ee218d5d",
       "renders": {
-        "reference.png": "e403b1b1ba81626f67abf5dd3dff2b210507215aa7dcc668e8fdfba0fd21a4ba",
-        "front.png": "799331dcd67cf4493b751589ba26d5c4b72df4287ecbcefe5f405c1e46af225d",
-        "side.png": "7542ace5d7476b1ef41615ed4264ecf2df1b4968e8a0c3461b2132923fedb9e0",
-        "back.png": "ce671137db3867f4f765760a6dea553d88c841c1eb54157ab09872cd0e5fab10",
-        "top.png": "abbc41f2fd4325ef54dff780e3e88ccba29a70039182cef7264b4add81e0d680",
-        "shield_deploy.png": "708a0e8e2b2d0c0d2a2980ac54e7a65d27130b353fa615bfb1b6fbc20cbf19ca",
-        "light.png": "b0436ce83a09e01e1241a26f6f8926940f2e3d03a738d5229ddac95c0baec5da",
-        "heavy.png": "188e8b5c30eb55d825549d50098237be6a591f2f785cd3c942a1d31f7d1bc97f",
-        "run.png": "bf9d872924d8d51dcb12c127485560128e97791fc816777146c79c50e97d889c"
+        "reference.png": "f0c2622f65a51df32b1fe72e60a1ec7c8cd2971ec567e18b5d27185e7e4641ca",
+        "front.png": "0eee15c07a088153d80e9c3a2f53a385bb763522d7500ad775ad14fb823f607d",
+        "side.png": "5cde6c101d77323455e4c05f3365044072d34129d8ed7e1bc319a612d5479906",
+        "back.png": "3270bd720acf4c87eef9d00acdf11234c9e10c0760cb9c1008924af59ed5ebdf",
+        "top.png": "27bb5ea58f2f0cdfb9f6c905ff153c79cac975cf624d17a8bf93f1a8132c1144",
+        "idle.png": "aeb97129cc32c8fd41b52ac575555ad010128fe9397e8a7d665a8e92578ceae6",
+        "shield_deploy.png": "004b520e2a06ab122814b23ddcee2fb9d381912e2f457fc36a9ab8b5bfc01c08",
+        "shield_retract.png": "71563d94d4d05fd4e076941aab4777cc3ae3abd581533e4e9488d5cf4b0e481c",
+        "light.png": "425b9df9b13915715aea3a9a7d05a3ec1f65c33c041bd886e68a637a7179cf96",
+        "heavy.png": "8e6dd6ae246da982331fa3165325826e8a2f0bcffaa3932efc81b520a80355a0",
+        "skill.png": "17a88b09620e1a8a8a658d7a4b59cf6646088707280d539435831b4b8583cff8",
+        "ult.png": "a77c22719a4e204fa68f7739de223f4c6e3e8faa06f93a9b1ed07580aff5543e",
+        "run.png": "bcf0c44f74eddbd3cc714b166ebafee2f0d7fb9bc5ae3f1c0375d7e12cef6d6e"
       },
       "destination": {
-        "bench": "10035e5fa0daea5cfb36227f8977d439923e2390bf05236a8b6dcb2f815d1800",
-        "shield": "c1ecd061e7e470b5a9663a82d2b86bfb5e9b85b60d4c5aa163a1c0f21a92fecd",
-        "rig": "a08defd99b3ce13d7ef1dd0ceb0b8607af22bdb4d27cd3480dfcd5727a9a171d"
+        "bench": "25df84537f9dd5d51502fe2047b4ae18c545b3dc6ebe6bd5b0310c68803550de",
+        "shield": "2cb520bf396cf731e09984184ef877389ec3b522df366fa0f275a59fedda24f6",
+        "rig": "4f10f4a4c94872a8fb68e1593c1d023151a3e8e00cb1a3c956fbc96b68e46dd0"
       },
       "geometry": "pass",
       "appearance": "pass",
@@ -232,30 +262,35 @@
         "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
         "Inferred paired retractable armor emitters project a decorative forward radar barrier"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "s12": {
       "identities": {
-        "runtime": "cffa87e014c9b7e9a0c899716c39bad31897246eadbb73d585b9af55fdc683ab",
-        "blend": "9c50b1ec31fc0f14968f52cbea4980d92f036f5fa0bb1447573e296f8bc3f578",
-        "glb": "99df7be358497511bab928e649a611d7fa9bcdb9381324d8113f3caa08e82258"
+        "runtime": "6699a0fd8f0c36f3051c2f03afd43cb0e0397e1d9d3670a738f9779a08332462",
+        "blend": "83e3674fa47155672dec18e1be6ef24e8d398808d113442c12c123effe34601f",
+        "glb": "04f60d6f70f1550132acf05d33be96c0893645a384d3092f4d1d64a3eead2b91"
       },
       "reference": "a26c52cdc2232d0a4960c851c92c01e0484ecd2211b1a79ef85a370946a17a51",
       "renders": {
-        "reference.png": "ddc5a2332f7084405c2795f4f17d103056977774a5ea9f38aa71c23569afe277",
-        "front.png": "4e89208a90cc44bf28d93968630b037871262b0df0c16c417dffbfb25b049c2b",
-        "side.png": "c44647cc95b3e675dc7da190453bdcd1708d5caa781d204c7322d6a21de1fc3c",
-        "back.png": "55d67514d776992aacb9587c509ef7fbc5ea636a98c36e37eac310a632429bbb",
-        "top.png": "c42c89c7727683209a757c5c44de225e20f5a52a2290766d701ac0ab83f72461",
-        "shield_deploy.png": "0a7a671bad4afe847497db89f9b8b43cb0df63c95c7fc7166159a9aeaf541fee",
-        "light.png": "29f94fc62015da975c585b7c6e4080520a79b0a56bd26038aff810e4a18c561d",
-        "heavy.png": "f8cbb09ff88b3834edea10c2b9249e0df46263357e221c1d5e497cacad27dd9d",
-        "run.png": "c1f930dcb3e15ae7286c8f3599b4e89a2816daa4dc193c6a2503502b8e917c93"
+        "reference.png": "4bb0399d75f3030100e3d1d6e672829790d42b4a064d46fc55cdf54a52f6d077",
+        "front.png": "49122dc612d06c918dada2ceb2720dbf1d2e12d3c5d68fa34c2863b57d7f7f4f",
+        "side.png": "55fd6706e826978baad8b34c9efc11bc074bf0797ad494a43ce1c3af5918f527",
+        "back.png": "ff015bcef449b54773c17465146a88d385324bfb4b11aef325b6a7d0a45d188d",
+        "top.png": "18b597ff9eb2231d0b2d080e1d6915eb05a62d93e7c3db85647cc7609059bdbe",
+        "idle.png": "dd4c57ad7a5fa592a04796bb7d496cfd000b2ad78adfd67d2a5e0ba239859fde",
+        "shield_deploy.png": "c25e3c7a820779672e91180167b4aa2ce31e78ba093974dd720a5355a372bb33",
+        "shield_retract.png": "0e8e0ea6e2fca9c8ddade9c0d38931b41d2b3a7d44b30f4a0cee23ea1c872913",
+        "light.png": "ab911da2888cbfb160a29e81d4393910ad2eaab5e3a5c7e6552fe7e38b5c1e4f",
+        "heavy.png": "fe9ad8a409a0e0188371426da3744c990da5027203c8b13f4290957e23b02cfa",
+        "skill.png": "1b7b45492be9d46ddee37aae8889b607a06be334c6570cbbc015d015299cbd9f",
+        "ult.png": "48baa4a15ab4b3efdf6df0866c8a05820620be1b1074ce6de1215d43ca3df2a5",
+        "run.png": "8e865b2000bfa8cc4a14c98b353d4a5555d65fad4fbd4427380bec2ef9bda149"
       },
       "destination": {
-        "bench": "07e9d53f9bd01c8cbc967de90ff6766a73aa4ffdb3f0541fb1a46f7ff333bec8",
-        "shield": "936559c5c33b266c18516b08c63073ae76e61ff08ec5e9a3db2e052c0e60975c",
-        "rig": "af1c42068ac34cf7f5c250490f002486e2853b7b3834e46b48d101e2c8c9446e"
+        "bench": "efc165f5afb796798189b2ae99b464d037bb9b8d47fb2e6f74afa68b22559c35",
+        "shield": "4d22d37dbd9afb57bb8f961d406a6c3e751657988701b36e4e7fd80fc52a44ef",
+        "rig": "34f8f79bf06c798c9e0e35256b900aea1779d7b13080a8158b357d8730267adf"
       },
       "geometry": "pass",
       "appearance": "pass",
@@ -265,96 +300,110 @@
         "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
         "Inferred paired retractable armor emitters project a decorative forward radar barrier"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "t07": {
       "identities": {
-        "runtime": "8ff44eb249eb7a7e94a18e2e884444959c7bcee3c8a241b3bbb0a5b665b50280",
-        "blend": "20c3253d710d69cd115b1982350b6d10d2cdc649bb8cf3b7550e803a7378b63b",
-        "glb": "00176626a40f9211477fb5381f45a588a42977784e8e1e9eafadf5610b92efdc"
+        "runtime": "8eabeaad348814eacf9a7d2de6b2d54b47c7f8bdbb03bf4a6b6a9d3ba4e5fa9d",
+        "blend": "5b43d71fa3132a40155b135f98d9edc1e4173f8d485bc59937b848ab8f39d2f7",
+        "glb": "8a28267753e0d23b031d3feb3989be1535396900d213b288ede085ddcf1d3613"
       },
       "reference": "0e0b9d9122cd94868496cfd170b6d0a8c4187191175313b5a88f20fab18105d4",
       "renders": {
-        "reference.png": "963d014b8a502c3f0d44899d8cdceb67d722fc4cc72818c08f58e14c9d80e0de",
-        "front.png": "dcbf263a2291184e4fdef5ae0457e53f1d8c9a1e952ec191d60374f4e95c70fe",
-        "side.png": "a4dda26204191648b06aea49a7bb8e13dfff9821f8def990524f0ddf357dc6aa",
-        "back.png": "988e0d493104b9fcfdfc6588576b7dcde62956cdddb34c419bc19a7f6e9e67c9",
-        "top.png": "8677d84c39441176ec5badaaecb9d0632e1c607c29cde6a66c3b920182df8305",
-        "shield_deploy.png": "d7343e398c6a6e15ed047e413a90f2a05047e2281ad0c5664acb11916939c180",
-        "light.png": "9fbc0f8757c9bc10f12b6bfb0aa851dd22485c67c38e19bb2a3eeaf60e0e2bd0",
-        "heavy.png": "786c7368c4a17808f8b21da8defc0af79b41dc39267004799117e7916142063e",
-        "run.png": "fdf6e1eb34d0e9b75e13236210557e30b7abcd8c6f1fa2faf3cc2d40e7d15908"
+        "reference.png": "b5c26088c11bcde75d04557e0b04205a61fc9de9c71b718f690983af6e77956f",
+        "front.png": "d221641aae75b1ddd9d93c0db550a763567b8739a5a3fa33a13feea7b111f633",
+        "side.png": "d5c74b3c59fb8def7e77b46563967473434618830d079ef67fccad86072d7a44",
+        "back.png": "40864cff0917ba1681749329e3baf0a06ed94d41f9577ab0e73665e60a1e82c2",
+        "top.png": "c5f3d7ca3eb5d0ae64effa945b5df14ff761fab873a253f0acd295ebe2c00033",
+        "idle.png": "0779d14f0a10c6750e603e9bb9738f252537a9534def6a8df768adfd29901da7",
+        "shield_deploy.png": "5bf7a73a3927aad95d5e6ad4a9a74bd9ca4dde4a4852e825a2cc95b94b28b776",
+        "shield_retract.png": "69994c56891f29d0c5d8d98e715f8990ea361a26eac0ab7c039f6c2ecabbf1ff",
+        "light.png": "1db3dfed584f6524bbc4ad077551d95b1331aa356d9beffc8ea8c20d6302f893",
+        "heavy.png": "47f179ba5f73682dd8e2068c2f4cdd596b05f8327f5a783ffe68febc62624531",
+        "skill.png": "73a972d8edaf3df77c85df2f872a47c588a3284908a697d892c0015d6e5d404b",
+        "ult.png": "908c536a25c0a1f62b01f750c1ef952e187d8ecf576665ea6787b2810c1d3711",
+        "run.png": "1364ee0077474e562b010599e4d13158f16e865694321d3096be7f22ffec4028"
       },
       "destination": {
-        "bench": "eb54c36a7e7bd07a50302508cb3d1ed5d08d980f0292fac7ed8fb2ffea979862",
-        "shield": "3d23994ed79edfea5e6351f776e6e3d90194a06d813ed347615aad9a690a519b",
-        "rig": "f3d511ff4807cd59039212ed7a6fa5a36f5fa091a6f145e3480735e32c461230"
+        "bench": "4753f9a8497a0c010baf8202f4ada2037f46179ac3f65672200fe90baa2d783a",
+        "shield": "fe6e0aa3fd4dc3a1946bc343a0d07793087266e6b2c3c7af3c509cc1581c24c7",
+        "rig": "9d695da34a897f031bc7ce31483d31727071b82ae4631d4e4ac3226eb0b316ab"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Long sniper beak and finger-supported membrane wings, two tucked claws; no rotors",
-        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Bent humerus and paired radius-ulna lead into the elongated membrane-supporting fourth digit; continuous web panels cover each section",
+        "Overlapping hinge gores cover swept membrane panel roots while folding",
+        "Long beak weapon and two three-section hind claws remain in flight posture"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "t08": {
       "identities": {
-        "runtime": "d7d54c7e6680abc5e0a3e37ca3373d31f21d84fbec768f8e4a0b4cde6c1bab63",
-        "blend": "b523baab741050d396ee0e886c84b6c56d0270fbbb8f0317f3801d25797310e0",
-        "glb": "a73015379974071266469989883d6231e892c3fd3991f74c11cb2ca1d4144d53"
+        "runtime": "3b583e9b89e01ec5c0ccb752378fcd388d5b161414ea36fab1cb5de442fd1e46",
+        "blend": "04eb90bc4a5ac685ce0a5b07ad4fd18e6f04c2f457fb52bc7d9ba74685c8d48e",
+        "glb": "1c68cbb5c6d767ac4d79d6946b034c96be1ad95de45434c0facfbbe68422102b"
       },
       "reference": "f046001a41666408caabe83923bcfd804416e0fd031db2e415ca2ca327014fa4",
       "renders": {
-        "reference.png": "b5e9bfd782612c67af3f15a76ee1f16742836cdee8eda2cb6679d6d195bcabdb",
-        "front.png": "24161d5624a9da823a9383e9ee4186f78d32da1eb926eee73bf6567c484f22fe",
-        "side.png": "df6ff8b9cbaf78e99364ca7024ecbf024eb65dad5812446bd51ffffd043befd7",
-        "back.png": "b9b01634a50de6b6c339220a90536eba89875746f532c6ac2fcc5a86c904e7f2",
-        "top.png": "6d87d7f01923c2d4f3c6b00d7d68d8dce2a7fdc956b90dcbeaf9269fed06ec07",
-        "shield_deploy.png": "ef2b2aecfe51278c00973c2cd2d252dbf0f25eb54461828c9248ddd936e4932e",
-        "light.png": "bff9b70ea6f256a2648500f5ac13718ab8b9b8cda7782f73ac19348b8fe8c4b4",
-        "heavy.png": "5d165dc26b117e3af57a09f2e92af9d774e56022ed5b3c227fd8172f10753fdd",
-        "run.png": "eab58e13bf5795728bbf81343548a23c58ffadcfad4148c1a1dbd6d324d0eb9f"
+        "reference.png": "5dfec9cd7ddd55a9139156f8d477ef7d574aae78760b13dd46985e97ce26623f",
+        "front.png": "faf39af519b5b971f7f6f77a4f789e3f8ffb2f581f25e7e599fec3213fbc550b",
+        "side.png": "282a8fbba31a0d984277d48212ff04fa9a685a2b230d4c4b85622377f558b1a0",
+        "back.png": "583aa75d73ee5a03fcb6018549a5a62e5b481498e3d013630db0f342a5a516e4",
+        "top.png": "818371adace0ba64900e1e67e824271bdb00a35fdf6535e5cd73bfb6b4d00326",
+        "idle.png": "e98ad5522dd5be0a450c834cd813528c4309f149aa2d97f7ca6f9f55319c3c1c",
+        "shield_deploy.png": "13acaad5428eb3c8fac6dc8745dea94c7cf79c1af296a36933f46fc178baaab6",
+        "shield_retract.png": "ae1a0ef430f810fe64309150fd557511af0e0c480867e1d2391d020f938f7777",
+        "light.png": "81372ae701358740fdc63893e0bf9212fb2df5ceab01fbe66aacbe6abbea6509",
+        "heavy.png": "ba0a4259d493d3a94bea74ec543fc2d16302e179699ae325e8b9c27a6dcf6fe1",
+        "skill.png": "22a3f3c00a41095a3ee54f03702d04188ddbe931fac63b9db8197acf9c9ec63d",
+        "ult.png": "22a3f3c00a41095a3ee54f03702d04188ddbe931fac63b9db8197acf9c9ec63d",
+        "run.png": "d4b9fc98a202d702791371a8ae7da4c768aa24930b82284d9f9cc7d495a10228"
       },
       "destination": {
-        "bench": "8dbcef74d2001e57eb551487800baac14a07d02a846c777ba9dd878e1cf6726f",
-        "shield": "1c5d81c77d7246a2fc7b2951b36c1eeaffc829e276574c4870050a2785dd30bd",
-        "rig": "4e036c5d03b634ac7935499370fcb69d160d6db8916e897cfd3d6bd9e73a0680"
+        "bench": "e8fa29da689e224b597da71c39c110fdc898e3c4853e4360f822e80f622c3323",
+        "shield": "dd86ebc4718ecc0d1c2a11a5cc7189aeada41eebc97f0ddad1ae807b7fda2f52",
+        "rig": "4cff77430e732210bb3841f8c1977bc59a9431497d6894bdfbc594cee9cb5b0d"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Serpentine eastern dragon with horned whiskered head, four tucked claws, pink blade feather wings and curved segmented tail; no rotors",
-        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Four-section curved cervical chain connects the dragon head to a deep breast and tapered abdomen",
+        "Bent humerus-ulna-manus wings join overlapping secondaries to fanned primaries through covered hinges",
+        "Four tucked claws separate proximal, middle and distal animal limb bones",
+        "Normal elongated dragon skull, nostrils, jaws, teeth, horns and whiskers surround a recessed oral resonator; no external head barrel"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "t09": {
       "identities": {
-        "runtime": "8d920ded4eb8ea874a7f2c6da58297a61bccf155de08a87883bc5e980e4074f8",
-        "blend": "9868e2b46343987aefbf7583aafcca8c138342543ce810cf8a3edae2d0b59086",
-        "glb": "43a13c9a13733df7d7bcbc498eaf01f3df7045c2504894559ae9d07ec6514b70"
+        "runtime": "4a092d99618e2b189f02224262cac4255bff8601bba448b0f1f339b1770e80e4",
+        "blend": "6da520d53267e453a6bbacc4b8fe8a462bfe0aefc39d10257dd2d251bf769975",
+        "glb": "3ed0e1fc33fbbb34353f6abbd11e06a5afd2b25685b691ab6b7388919c0ac441"
       },
       "reference": "a4e45a5b8b16fc1dff850d2443a941ae8dd44c328e6c892ae7bd9bc13e25dc92",
       "renders": {
-        "reference.png": "d0cca0b86d36eea26d7a5f20413377295313310ddb79e5ca35137e61191bdbad",
-        "front.png": "312f9d3a008473aaa180f83cb3474a71e8fcb335c1d2dfaae16cf2f7027d0f0b",
-        "side.png": "4a3c052e025a31aa4d21045358c058a822c536c7b0b77eab21966086faa47525",
-        "back.png": "8deeeda38a128ad6840014b68cb4f346b202fc02fbc0c4fa4c278ad8d962fbcf",
-        "top.png": "cea2e492edf1e5495ec28b3e06c7094aed13db0e27b49c703e8ae6c8860dd906",
-        "shield_deploy.png": "b9225b19701772a43b99a7371112a922a0fb73988822e5ec16bb5220ebb2be5b",
-        "light.png": "d722529227710db3980d19af1ff005290e41a32960deebf55840882a8da49750",
-        "heavy.png": "0efacf5f6719af1be79810aa570743ff60a8f6943da06e545996e13af5510628",
-        "run.png": "e5c487f3e406a2fde555620a8f38385ad9562a8cb64b58a9b238d4aa880ac521"
+        "reference.png": "f6138931032f1f59ca4dfd43cc901efa219516d7a4dac8c67206554439f27bb0",
+        "front.png": "68d02d7cb156ed7b784bc989bd332274204361a9be8d73ab64a860319eab200c",
+        "side.png": "50eb61c5efb87fd69be0e01ac1fa82675e1d6fb72d83ad0492e21c1f1040b595",
+        "back.png": "1d2ae281bcf65e59d71be1c990f700754351ca150e1eac4ae20fb233121e5dfa",
+        "top.png": "17412bc5eae193799b1415dd5ef0a4e3670a976fe10793f42474652abfcec9cf",
+        "idle.png": "f9a13c3125d62aaa75ed6ad0a1f3e2d68106d9926b26502efd02f84c1101c034",
+        "shield_deploy.png": "619bd0d7dac43f7edc5cdc55faaf67a40851d79ba9bc4d58c3177e3eb6c7f782",
+        "shield_retract.png": "ea9d9bce3e0a062bbfe1d4e1cae90759a2a0975347c2d0954b07b8033f525b72",
+        "light.png": "706de50f955270337880aed4127e2efec4154c96a2e8281cd7826c7449130f47",
+        "heavy.png": "0db729a5681af2e193a74da58cd8341a065c1f8cd766141333f35da019b1aba8",
+        "skill.png": "efd43ea52a83b6a6aff4fff96ab604ae772abc9b8f95a1d80c1e57f405245fc7",
+        "ult.png": "cd9022eb9f54af0dc6bfa28905d611630261f7ba78ac1502dd6531186c01cb83",
+        "run.png": "285fcafcd4dace466e287b07d2b2e89efd72e588f92a3efce24a469987a9a4ad"
       },
       "destination": {
-        "bench": "69d76cdac7ee8651c13010416b08c03784e47827d045eb24baca1426e6b9e4d0",
-        "shield": "54d7dd50aafc17433d3fdd6200110fde8162f11f168a61d016387cd4f47ef1f7",
-        "rig": "b4e3f4031467a5722ea2e920736ab7b463d92db1904e6c0f70e2b0e93efeb4a1"
+        "bench": "10cd524965c9aa582383f7faffd19c7b5e01b0674a84f07cc743a3411b4f7599",
+        "shield": "aee282091757b47daed68f2c89c2aad8d48d83148dbe5caebdb17bac422b54bc",
+        "rig": "99a1d65bc0e1c77c80a7ff36a5acd58f3cd8d348d7741ec13e135a103376d893"
       },
       "geometry": "pass",
       "appearance": "pass",
@@ -364,30 +413,35 @@
         "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
         "Inferred paired retractable armor emitters project a decorative forward radar barrier"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "m03": {
       "identities": {
-        "runtime": "7a82a19a74f2c9a2952a3108f84578586fd80bd6283eefb58cf4eda2766bf546",
-        "blend": "78392ad412973ffce3d922d6086da6f2de31a7e458728e11661c2b5cf7901bda",
-        "glb": "d9f12bc3099bb727928d516c5ad626f94e84c6a917c2180e056d9e3338f63b18"
+        "runtime": "e74bde475270cb9b5ace42a0f16210a57034c7b2c6a1eacf717655e60444042d",
+        "blend": "5da3a0a6c740b8ef370a22a8315be3409b0a9f8c7f59dfadb6117b4549e800b7",
+        "glb": "f6075f29de5fecf68eb664226832c143afb2093198d3eda7c7b3c3d31da8c84e"
       },
       "reference": "46d95c6b27b4efc7b8ca9f7e09979a06202f4e4977ddc76bd58483a2d73072db",
       "renders": {
-        "reference.png": "6a7efea70f462fb15e8f10636585a3157c1c55d6dda90bceb7e69098bd4c1942",
-        "front.png": "51d849f27f6f3f947ab4c3bcd77f5049940cde5e7f0f1975b827a920e42d2b67",
-        "side.png": "553d3dc433b844b48bf1f0bca21f516defcc5d0b6e01177e61c217fd119af4e0",
-        "back.png": "aaee9c60177f7ff559e94571f68dbf43c4a5d8705e848cf15414070dd7bdc79b",
-        "top.png": "cb8ffaf305cc17312905d2961a78a81302d482957d86fd4f6473213d5146ffb6",
-        "shield_deploy.png": "14b88b075e04a527f9e6cb75a65b10d58127aa0925d509ffa140652caed1ccc6",
-        "light.png": "e5257f28e224099602ccfe1c5b963b4da084e26d3d2a1484e71d6a11a8b088d8",
-        "heavy.png": "c95c36f8ca39f9ac8581e82632e5aab423433e29fd88638992c577fa821abc66",
-        "run.png": "c9d4313d423d8792e3bf757b1bd5fa50f1556e6ba3b69a61b82de17b47c5ddfe"
+        "reference.png": "71a5f873e34390983fda0ce12241b5e2b620f241826df7320c85d5e9bbd72eab",
+        "front.png": "7ce040e90aae895a00e3032e10adc97c1f913ee31cfe27232a4457c211ec691e",
+        "side.png": "b0fe26c3d7d3b45489cf09a80e145fb946cb449acd192bd7048e58105698b3c7",
+        "back.png": "69bde17f901effff1f0564d9e73769aa26a65b47c4f66af252cb7f94d5d467f0",
+        "top.png": "3dcb529cd84b4ee6d2623f85298d82f98dda35a4b0a7da5d2c1d25afe12ce745",
+        "idle.png": "1ecfdfa26290193be5e03e295770ff736ee5249e3910ac679e29ff85493b9662",
+        "shield_deploy.png": "c02cb51f891a960414d7ca48d5338485abc1af426953473eb86f7473a3c0f151",
+        "shield_retract.png": "2f5850abd4b9f752348c664acacaa024ab1989b7dd06f92d4ce9b1ffd1498d09",
+        "light.png": "9f9e18f63faf5944ad6618ebae2f49201407581623533e33ddb95d700925ebe4",
+        "heavy.png": "ffcad5005ae3f3dfaceeb225ca92625f7f36523519da462891cb4aec9fbb3d92",
+        "skill.png": "bd4137185f3313ae3e54231e48b93780e930248af2c9b7ddb4f67d0982854658",
+        "ult.png": "8f87f9864156ddaf48a2378dbc104faaaa33388bef9fec295fde8000165d19fa",
+        "run.png": "d4d0e38e13986db1f070bfea1efc2b00cbbb66b31b61aa7ab9222edb522ad835"
       },
       "destination": {
-        "bench": "b3b2326dd7bac55d7cce6c56d069c4210ee722f573a655e4e5253777dde854c3",
-        "shield": "38e49f087a0f88735941b2a2cd88aaa8c04fc7be8e88e757b18bf71fd5e27d02",
-        "rig": "2d62869bcf5147ae61625a3658e13c81c30927477230bd321bb6b743f4678ae7"
+        "bench": "9b2946fab2b21dfde8d4c7db6dcc00a277f324b36322ff5579d193c3901b7aa5",
+        "shield": "fd6bbfdbb3d17565f386a7f6f44058c1b2c7a3235575f3ed8156e66fdc4521f4",
+        "rig": "14a369acd6d2ce3e8c47bd9651b1c781e112ae67772aefbfeac0c63237ea1182"
       },
       "geometry": "pass",
       "appearance": "pass",
@@ -397,228 +451,259 @@
         "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
         "Inferred paired retractable armor emitters project a decorative forward radar barrier"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "m04": {
       "identities": {
-        "runtime": "0fdd9e3d793a3457af03e78f0bf75c7e5b608d0c757b8f68190093a091f07ee1",
-        "blend": "de5b3beab2353e03f94ab3e1e25098b246bfee9c163686d9e993d68aa412bb98",
-        "glb": "773ac8eaafea2e2e29134f658d5b369fe26bc8aa0c89ef45a154a44db511b57d"
+        "runtime": "d21cf817e4a36cd62c5e16d7ff394a6ed8e51372776de760a968812b0de1dcfb",
+        "blend": "50ce9f814fa15980fa5d68d2c856bdbf591738d77851ab302c9b9c0054804e6c",
+        "glb": "c9d68d1d75576482161242a78f9a14b44f29a342c7a8c85eccec998415321fd5"
       },
       "reference": "f2fd8afa576c4ae134d5d14ea751981f8255413745c33abf7761f971fe7ced08",
       "renders": {
-        "reference.png": "87f5966a214d9d435e2a185833d1bbc359088a16d87b1c432ef3e00f444a6e59",
-        "front.png": "8ddef5298df25590abd54e520d389863da344192f6a7e8aa5f33c14d3eaf95f5",
-        "side.png": "c651d676d06d364c1b10ed0dcca1fbe341771e2d2896be78e90eb01f1653b7f2",
-        "back.png": "21c4193b591448f03f488e1c5f569681ec18dec45c98bda9f1a9fca27248b9b5",
-        "top.png": "25f11429a3bfc498600f711adc81695d476e24566307652ddcb777312ae0f3e7",
-        "shield_deploy.png": "66474fef11d95ab47778cf3625ac12ce5050e263044106a47700fb8ddae8505f",
-        "light.png": "e375af335c558e2ce6f4215c3138ddf355b191b18a0bcc6aa0624344a762155d",
-        "heavy.png": "6d3a30da6378e99534cea129d5bf121de3bfba033ceedfe8bb0141dd5249c8a8",
-        "run.png": "f34d5510a035e170805778484658396499b0f1fb74ff3732c9fdf7be7a360439"
+        "reference.png": "6dd4c34c88f10f12048b815c3dd05ea6498afec230d96ee9707a39cd76933865",
+        "front.png": "250a38fcebdab4148bf0a206fe0c6fe8aea12368321d484bc186f4167f06e237",
+        "side.png": "18394e42629ec8909b1212ab541f027917867b6fee3800fa6b9bd33181fdbf22",
+        "back.png": "d835a1dd45218ddf67cb35a6195094dd73800fbd9d3f3358a926b8e3d8b3f950",
+        "top.png": "b470b4ff305b267399c481091b4dd58601942582589b951c575a1d3c00cdaa64",
+        "idle.png": "651b5cdabe1c65f75a730717ad099b3ec575c99168c361f61a56a4a4e25a7aa2",
+        "shield_deploy.png": "15c39dd6ad7999c0de295d5fd4c9e08c9cc0c3d46c7f455f62228ab9cfda4046",
+        "shield_retract.png": "be8a4cc3b555db03a6f176879df626a43cbec2af589dd13db0521becc38fbe01",
+        "light.png": "aa573b9b776f887d2959188bb604e670091f5c4b023bfa5d4ade83ace017671d",
+        "heavy.png": "7b9778071e422074a2d9f7177e21691b629bb2065992791b895818e3e2a8be52",
+        "skill.png": "3725e7cea3b6947170fdedab6e9498856088ff00477d4f2641a7f443026e5a47",
+        "ult.png": "aae4fca13388c760734920ab1735e4fe106f3b38d96420e116d90b9c45ad4000",
+        "run.png": "ba0c673ba622de792109368e0d4a2154afa5e4ab87535524fc87d0c9f8c8b9d0"
       },
       "destination": {
-        "bench": "25c454ed0896750adbcbe5aa2b520a5cf57aac0f3c1abe1f5ea52f3cc78982f9",
-        "shield": "cee887592dbae09ea8179fda9d1d8100121944dfa11d933348145d864e9e935f",
-        "rig": "62eace5a0900d7c519528e613c55a9f154baf1ed56953ddda95a0e7d474b8adc"
+        "bench": "70872417fc9617506fad13582c4f45d3fb2764c67775b1cede919bac46487579",
+        "shield": "bfb157ea9a25c543264d2233527ddc89f56cc7e881acfdf3353672bda514d3f8",
+        "rig": "92f0e8701a856fc07918e14dc85a3bccf2885aa5a65b14cd439597dcb041aca0"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Small eagle chest and hooked beak, gold eyes, independent splayed feather blades, exactly four shoulder missiles, two tucked claws",
-        "Independent flight joints, weapon recoil and charge aperture; no humanoid limbs",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Compact eagle body and two tucked three-section hind claws",
+        "Bent humerus-ulna-manus wings carry overlapping secondaries and fanned dark-tipped primaries",
+        "Covered wing hinges preserve surface continuity while the wings fold",
+        "Exactly four shoulder feather missiles; gold eyes and small chin guns"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "s06": {
       "identities": {
-        "runtime": "946f2d7c127599ceb1bf3e318825b28806604dff98266f65efcbbf14c34cb388",
-        "blend": "d502865ed56b024bca6099cd390d29e3c6822bebd94389b7bcd7679eec4bf038",
-        "glb": "5b046066c88dcbd9f700be60c8da149d6b4d60057fd81a5a5c064e3f7c2a4040"
+        "runtime": "1995fe44a9f6095b9519112189ca626ddef33a784b0adbda7971e5acc8542b1d",
+        "blend": "b625bf3a21f440bcaa197aca46164c51654f71fe2182c9bb9508426f605b3d3d",
+        "glb": "72ba7973dd51fda2e986edaec7dad3a04e351e0e62f9d9f8bc7edcbc5c0ddb4e"
       },
       "reference": "c306aa4c5a235e254fe1ae3946178b4d61441b627a686193250c5e29d5513e03",
       "renders": {
-        "reference.png": "e13980e8b92980d6a9dcb9e949e6c7fefde4242c0fc730c1308eee8c4a2a61a5",
-        "front.png": "5377f6f047f253b50b490b21fce736f04e1a9afbf70d653211db0e49fcd6b5b6",
-        "side.png": "049c620ca7c0c5acefaf99ffcb3e36f2cb8b60460b2a8fb39ee1d79146a4ab44",
-        "back.png": "2a18d0a0568d14a8143b6b80702afab79dcb225aea625bdde77852cb3c4ba5c3",
-        "top.png": "001807a916d59974e50f1dcb1a214504319f61c20a9ef0e2363b72c5d1c2cded",
-        "shield_deploy.png": "8adbb47dd539fdf0f7e6b564e6c8d99edd44aa3815c1866a2a9c16e48d5c1eee",
-        "light.png": "fd130f71829e6b68dd92d802789d1befa86e90771e2dba84a6be69ca8a5ff2ee",
-        "heavy.png": "c736afb1cb8d907faaa028c3aa9ea5f61c38694571cf2c3f1db268d088e29928",
-        "run.png": "118bdef8e10ae61fbe290e104233edd5fe6171ac05bcb4beb86c97f7c5cd5cfb"
+        "reference.png": "db25f266bf609a68506e6c6982bdfc625ad495e08bc9da3dc494db508698d535",
+        "front.png": "1c83e51bdd87af1d2f414e278d7e9413b544a5e389a31447f0ec717aca7bf833",
+        "side.png": "1e001af5126b1a5496060bf6ed42d74542bc3b4bc719eb489fc49d79f28016a2",
+        "back.png": "7c904a50244fab50688a08d0c7e60b823c4b5a14ec9cf0f3bb8bbb52489748a4",
+        "top.png": "ae02a787720dafa981d46275c6ce7648321e4f2316fc2728419871acebd50c63",
+        "idle.png": "8cdec0268f86b37e02f15221451a0c62411070ddfa6e9043d81b6c16b66b6c2a",
+        "shield_deploy.png": "c800166cc8a59b55a605d47dd8534bd1a6c31c14deddb3e24bef31d2e5c56959",
+        "shield_retract.png": "2fe764851d0aab0693a660160aa335ce1aaa45714ec25202e535d6bb5c4f1698",
+        "light.png": "41d3089908583ce0e4bcec45982938ae0a0f9a6c25427e089e5e1303f6f45fec",
+        "heavy.png": "45ebb9cfad1a937f0d3e1b2770e2bd13ef4c140e3feb907280d43af05923047b",
+        "skill.png": "520c1bc6aaedb2d74a3b55c6245fca408179a1fa84a7db36e4236fa41452156a",
+        "ult.png": "520c1bc6aaedb2d74a3b55c6245fca408179a1fa84a7db36e4236fa41452156a",
+        "run.png": "23993473d10e2a9c66f7f53d82936365c8e70bd441969c0546250d0a47069238"
       },
       "destination": {
-        "bench": "5026ece01be1a69f371711426ab25a78c306ca0c7159dda8d493a8f577c176af",
-        "shield": "d74a9414343c9acebee8f6c47a597b26598b114f0b533feab77a1325091f239b",
-        "rig": "a75371650f17ae0fcab091e1afb5eafe3b19ea00768403583197ad658ae1a12c"
+        "bench": "17ebb96dc618425f6d1dbcc452514f84e00721efa6f3d9ba83e7519b1bd278ba",
+        "shield": "68e5c17426fd21158d8d7a739509cb14984a376fefeeb8938abf5e544d22d4c8",
+        "rig": "0fd494521f7b99a1496ebc49b312bde027197496a35be9e40cdffe6b6b571b8a"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Four hoofed horse legs and knight upper torso without horse head; anatomical right sniper rifle and vertical back missile rack",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Horse body separates the deep thoracic barrel, narrower lumbar waist and rounded croup",
+        "A short equine tail dock supports seven flowing hair bundles on each of six articulated tail joints"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "s07": {
       "identities": {
-        "runtime": "427bdd56b28ad1a63a4421cb7070a20b1ab8b5c896d7dfa65c46648509dd4570",
-        "blend": "b2d3fef4e80b204f0735d538d9460086c3256bef74623602348a15e368a8bffd",
-        "glb": "44404c0b1b2da75a152a68485682ce526979e36801d057b1c0513b68e1909da0"
+        "runtime": "178ee45cd01d4795ae997944b1916cfaecb899c3b5c1aac6855c853e39969255",
+        "blend": "ff7bf6a6170700ffb9bc08012a0e6cda32b94ef1eafeef1347b373dabb465888",
+        "glb": "ef197549e01adfe8a2b3cc39b3ca2de2b3f028b25d47ad64a50eee27aa6f2f1f"
       },
       "reference": "5122ff559180b8e2f471844c24a897380d6a085956c2115c94dcb8f52db0f5e3",
       "renders": {
-        "reference.png": "a5253fb474aa3fb171343f93d93802512232c80ebb06bdfb5f4408e527cf363f",
-        "front.png": "e8c5aafbdc9b8638be32520b2b58fcac370f99be27d3b6bf4d58c01fe0344c6b",
-        "side.png": "b42827c7524039376612ba46a55c7d87f1df88afcddabea1f0f3304d7436ac5b",
-        "back.png": "72f01b4e569ef54584af91c88ec732f75c807e699aae7810cfdeb8449433ddca",
-        "top.png": "0c4c610b9f90923526ff3654e114e81ac86afc1594a74870be349a09e0e8d4c6",
-        "shield_deploy.png": "8c5c0d70515e575b4b688a0692f5577d5b8953b6d3d07c6bcbf3878df8d3e427",
-        "light.png": "ef8bd007ec8000fea90021e7da65d77bf155b80ecdef3f2b03e7a0af8d922173",
-        "heavy.png": "17242d382b3a3e9e4d644adbe911d8b079235a5555b38e54b1fb45a26827667f",
-        "run.png": "bf9601937b78fd843e897c9469fce2e77d2649af73319120cedfd721b0db353d"
+        "reference.png": "5f4e4b62d4b495d3b2c9b27c020a1f2eea4fd4adf087c825b0077fd5758ebbcc",
+        "front.png": "afc9799344bea43fa9b0e5968e7f6956cb2779aa03005d59b61ffa914a43b423",
+        "side.png": "00dda1b0312046b95616227fa9bb3d7c95b373fc9b4763ea0e033d02f9867a46",
+        "back.png": "a54e31ed60feb08b5da76286a138de0e79431b79aca198ed73f1fc79de2c38df",
+        "top.png": "d1e194020c97ef2cbf1e786468c7265b3c233e3ca7d960ea27fc8bcd4a3c32eb",
+        "idle.png": "63e0362f3d1d4ec5413f59ad8c81e39d9c9e1a818b8a4aa657ec3893b8f5dda3",
+        "shield_deploy.png": "a12062f41222def064579bda59e54f517fe47eea97fc695a4b8d2ba946e4e7d1",
+        "shield_retract.png": "25691916540e006494ff5c86fc5f9830f6bdc4bd8bb77b91e1bb23fbc3b86271",
+        "light.png": "bb8f63d4e67dd2a0a0cb114d79102712b07343e9edab64e52b0e74be248816c6",
+        "heavy.png": "88a0325f564328960d52966a7d6fa2555dcb07047a81fb7cbe4f7cf0947f2d50",
+        "skill.png": "7e9d4e9077517a4a33e6c2b33b9ccd24690655fa4d3ea07694f717f14ccba102",
+        "ult.png": "0a842f5ad8512b66a006cd936d0849bdcfc346176aa15df98bd233385fab2f62",
+        "run.png": "36c92629e03220075098351a11ceb405f9498bcb4a60f53c90eadc3c49b910c7"
       },
       "destination": {
-        "bench": "66d976e497fa3ed7ad1a3af1473eeb95247ec686b0b755dd29a075c6c71c1d06",
-        "shield": "3bc20c01a4892813306156e87069334b4d4ab59b1613d0d916a7d9845a8249e5",
-        "rig": "00d0edd258d1536cee32ef07fb01fde153224589c5bb5840e8c27979f67d86c0"
+        "bench": "e4617f6cfd39d14b5c5f528b31ecea166165fb334f60285159e3c6ed17b04fb7",
+        "shield": "1c195b0df2c40f222dbfe468c3d47f18390e7ee577d7a16144101c9bf10b5910",
+        "rig": "d1f1313cfd739c65b8874865567bd27556eeda8546ecbb249f4cdd78ef46a329"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Faceless ellipsoid mantle, top sensor disc, exactly eight S-shaped segmented tentacles: four supports and four weapon arms; sucker rows",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Two luminous eyes and dark pupils sit on lateral mantle sockets",
+        "Eight twelve-joint flexible tentacle chains retain continuous tapered sheaths and ventral suckers",
+        "Eight mantle roots occupy eight radial sectors; asymmetric curls and independent three-axis phases replace mirrored tentacle paths",
+        "The dummy gait tail driver adds no ninth limb"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "s09": {
       "identities": {
-        "runtime": "d7ce5c313795ef74bea6d831e608ad27328cc867b751faca8ef1954595a857ed",
-        "blend": "99aa82fb8ab36e5da9f0ec5aeb2b304e4af7ff9693fd4a798960e84363d8cd38",
-        "glb": "c4821f5161634272c32c6941c7c47eb849f659733baec71637eb9113d16fe2b6"
+        "runtime": "831e214ab71309a1bc3e84b2b5594efa1ffeb198a3290b5a7996c7245b1094dd",
+        "blend": "3b372de507cc4441d8d0b0b47475f6438305831f0c00f7c8f2341a35cea9d945",
+        "glb": "315b1054f11becf54c3518c8353c975658882c35c7fbea8212a219403a40f9d1"
       },
       "reference": "5ad7953be8671b0839261e485df6dcbee6c8c4c87bf54d7f2eaa66256c62891c",
       "renders": {
-        "reference.png": "0bb24cbbdbc9880c29abc9253f3da191b15faf31efd48ac09b428c3e155dc68c",
-        "front.png": "11c44b44c6356bc595580c18bd6d64111ce49e939af5f1544de19038477c10c2",
-        "side.png": "2c7f115b9fed0ec7bb4f3eb66b6065d1836c18e956be9afb0960fc933b78c185",
-        "back.png": "74d2bef67464df9fddc4b822cb579be660b16e6f16375a9ac9613c3dc49b2bb3",
-        "top.png": "a791172067bb2bd2b681703ab6461898e172dd105512d9b0433ed149a5e7dd1c",
-        "shield_deploy.png": "b81a37ffe5b096a3c0b500b3be2ad4eaa5ee98d249f2ace7e16a584484b2ffaa",
-        "light.png": "34c29661b697971dcbe17197cdb93e26abd8dc91f5ee9578b3909be17194a9a2",
-        "heavy.png": "da68a3a1f1a4c0a7bd98adef0e562d0507fd6a972f8f99c886619df3c5d06531",
-        "run.png": "4a43d6de0fdcffa4197263a695b48e4871174feeb34b305b62b5d33f13baa1be"
+        "reference.png": "7a2698b0e35c6a5ae5cd2e3bed0bb3862f61e8e0260541f541c31949586c7b27",
+        "front.png": "2041047c317974b826db13a7604b1b4d34fb585e2d3bc0f31a33ac46a843b493",
+        "side.png": "8680d2a9e51583dd2777844012dfa3f47332ff72f701ac790ec4d93ad555cdee",
+        "back.png": "c679fd496b005267eeaa1e0f42d2b6c6fd21644fb002bb31d7245c2388c3f99b",
+        "top.png": "af80bed9c20c8ffba14ff4079632eb13e3fbee802e78b35c7936ed62997d1fb7",
+        "idle.png": "b196cd6c8aa00bef47e4342b639465d0f7abcbe2ea7ba3a67c493105facd53af",
+        "shield_deploy.png": "4bb0faf01481440339920649cc8b42ef0a8cb0d4d6d178209566357d8a354340",
+        "shield_retract.png": "29f42bf24448c66a87035adbbc48c21d208078fc51991fb69ad42e6d51fc444c",
+        "light.png": "98d1be69567f71dced2a1b4949403d4dbc55820b837b1f53260ed9eef9026787",
+        "heavy.png": "6e4af9c591aafceb32f5a929544ec58a64cfc9273df80a4cc31a135870d529a8",
+        "skill.png": "9371e3bc19d688f621e8dc5cd9409f47914361539cbc1060e999ef0061595454",
+        "ult.png": "9371e3bc19d688f621e8dc5cd9409f47914361539cbc1060e999ef0061595454",
+        "run.png": "3f5ce944b8fe55618a892c318ee021428d660a462011d7bc0712ba38f49a9a09"
       },
       "destination": {
-        "bench": "0ed18a8ef10e752d71705de2bc9549418eeeafc56ef72a99241deb30070ea6e9",
-        "shield": "6493c2e67cd1acf3dd45dc8a81b8df1059c447c8d102afec7b4183ae686ebf8b",
-        "rig": "9f8e0776927f7c979c6440980723c1d7c392a529bc1aacf7f4495535d7f25ad6"
+        "bench": "1ea1a455ee0a48db2dc216d5efde009f15df7841ece659b2ca7798e2705f0d88",
+        "shield": "4c24661304430cae9a24539bf4775d7eacc5e9048365835ce5a9933c81ccf4cf",
+        "rig": "1727689739dba56c3adbaee337b16fb1cc5c5b23b8648f5a465d5f99fac66b6e"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Long kangaroo muzzle and two long ears, deep reverse-knee hind legs, large feet, heavy balance tail and abdominal launcher pouch",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Outward and backward tilted ears attach to the animal skull",
+        "Sloped abdominal waist and forward chest connect the crouched pelvis to short animal forelimbs",
+        "Powerful femur, narrow tibia and long metatarsal maintain kangaroo anatomy",
+        "Seven-joint thick balancing tail extends rearward from the crouched pelvis with a gently raised tip"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "t01": {
       "identities": {
-        "runtime": "201815a0e1c86f0427551f2cc4974e1448aa07be97c53143ab2d641e35d3d333",
-        "blend": "535440248e27a5c008183ee1c69a16d0ba35c6f69cb4e1cfadb621e726e96da7",
-        "glb": "f17305e526897d6e459a7234c4c262eea2c50f59fc0119ae9865b92d5d5bffeb"
+        "runtime": "a6f13371708863976c262d3cf32f0e45637bfb1a238fea8b13d3c99fe993f191",
+        "blend": "b85ed96bc57566c0c2b4ce201421c222d9b7495f0ccf91b694ee68052ccd536f",
+        "glb": "5f1f23a2a8161ba93440a5fce68e9e1e972e5ece30373f409355ab2d3ff08584"
       },
       "reference": "97ba25c19ced1a3a2388100cf3b9202297dda2cff2209075306e6a2896b69649",
       "renders": {
-        "reference.png": "0deab527c773ec4b4088b442ba8e49382e777cfdb204e809afc528efb98a9c3c",
-        "front.png": "5fd1fa7842582bf02715c0cf2daa3bbbb4d8ea7e19ee0af297c5b16d865bd5a0",
-        "side.png": "5bb10cb88c3dfbdfce6436497b5cd2399c8a8d66af4095c23d8603182b116adf",
-        "back.png": "ad0118b4e704720e49b5d329aec8116228fde84bd55f30a56734fea988bd6264",
-        "top.png": "72d77b72aa3b33974e753b464fc0908ed94065f98711ae9396f85c6ecaecde16",
-        "shield_deploy.png": "8452ac278645eef0d2426d20dd9f141a79e2527bb270c92c0ac9748845a050bc",
-        "light.png": "699e79ce30436ab996e303d04091cffeaede75d88f68bcf418645ac6d7700965",
-        "heavy.png": "d4926bec7a03c3497d93aa56de0053d2caae941db1d6c3bd69c8bfa8cf98e13e",
-        "run.png": "3a11951e41b4d4191c026dbfc486ff1d9df23810d27a6a208f34e0a0f16003aa"
+        "reference.png": "d1dc5b8dd8df92bcf299e5f33c99b4632513e996a92e412e89e07dde08e2adc9",
+        "front.png": "0779b43b9c6bc094ddd61bc5611c14a854ac7b5160fcb01f7ab35de72ef7d799",
+        "side.png": "61db6e5def7d544c449c9cdd5999f87761df56bbc1aa22253f20b13697850a7a",
+        "back.png": "8cd34808aacd0765926f6d4cebe69c6edb252b8f7515d2de050b13b48294da75",
+        "top.png": "5fdfb086a8e77dc115a7168891bb07e27ac55199d3c1f6a969bfd42251c2ebd8",
+        "idle.png": "a1287a8b7f1170fd14fb09bc58e0a1e3802534cafd71b4608fe43f449b284e8d",
+        "shield_deploy.png": "e7f2619180413fdb799c722107db1f1af30ac380e98fc1010ce60ebf1033bcd5",
+        "shield_retract.png": "bfb7d54e9812398137db2d0772aef23a5ddbe89ed347c9533ae684625760e6cf",
+        "light.png": "13dd1e8f6e617c64b3e81d7750c056c6e4b6d649cdd17746f04e87298b3bac82",
+        "heavy.png": "bfea44546a988c839a351b60caadc514634560be2fd9bda753b966e7005a0e53",
+        "skill.png": "6402860e4b514f430b70d09692e1b704b6e430d4ff86860021675741c5b94c14",
+        "ult.png": "5209ab6e6d13f54f7dc62b5de088763e6c3031b694b65fac0d0b383c2e40db80",
+        "run.png": "5e60194e9d6b98e3a3ea5d205a5be8a0c7073cbfcc1942120cb73ed5c00e2fa5"
       },
       "destination": {
-        "bench": "f070ec1847859debffb90010040639fe4844c99d86a354cae7bd251e52beaade",
-        "shield": "c3afc196cac97fca61e622a922ce8b6235586526336ea12b264f1cc6754bf689",
-        "rig": "fbaf100cea633e2f2864c2cd0ca4fe6b6965e136f8b0f09254f92a0d18f2a78a"
+        "bench": "4b3a682e3b293c7ebc4aa5096a8a346730767876a6955a6e8b30ab6a40c8d6f0",
+        "shield": "a565ed123466da3b5e457b7e461dd13e8be52df95a6b6eeb2e725df139d2ad45",
+        "rig": "8b80823ed410900c44aa691dec9e1bfa5de16bd66b441eb3aee541f991d5fe55"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "White industrial joints and ball shoulders around small skull mask with curved bull horns; right six-chamber revolver axe cannon, left belt-fed machine gun",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Revolver axe blade lies beneath the forward cannon in the sagittal plane, with a curved cutting edge and reinforced handle",
+        "Light and heavy actions raise the anatomical left gun and right axe cannon into firing poses"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "t02": {
       "identities": {
-        "runtime": "6f38c8b523a3e150a755f0fb29f5b5d3b65c2a18aa81a87892f1608318952fb2",
-        "blend": "a6687b632f1d0f96f26a945013059b4fd83602f8af1241f9c9512d7f0c0cd271",
-        "glb": "31368cece32df4d73ce893cee25fe5a7096d392e983549a3925a49e2f2571cdb"
+        "runtime": "65c958162a2a2ce5963daa922c931de5529a580fdfb6e453a50766f1106a1f0f",
+        "blend": "14baee736d0b9e65f75f8c801188365db28272c2b145ce8b66b3fbdbb1478784",
+        "glb": "41968e1e76614bd8c933ff6075cf779988082b8cf8d103ce2d1ce8e72f86a9f9"
       },
       "reference": "9b98b8c36c279d28d91bab19919439cf63e573e42b19b76aca69215bf95fb7e4",
       "renders": {
-        "reference.png": "924b4c4177388db008094974f51ee190ef8fedbf10f15a3fec4f07a9a5dfc893",
-        "front.png": "c66918a7f5f99ea0213d8c70149db7ba0064604d72b29b7a23af62039f52956c",
-        "side.png": "5b24724be69cd402b7b532fe56f5aeffcab43ab3c9dff0b7095c1746f25d6e7c",
-        "back.png": "cc2fa0cbcabda387258ea452bb4e63f56f1859d317501e556fcfe0cc8c46f1ba",
-        "top.png": "53fc34bc329d569246fe6450da400a00cb98c4ccf5c6e0444554cdb8d48f8b3d",
-        "shield_deploy.png": "acd82fc0b356e8aa3ae56444bba0ed72a54e496a541b0fc65f50bc7cb678bd36",
-        "light.png": "b00996e5fe5f0d98d7ab8e327d640bd2e0713e954072d2feaabbc1200963197d",
-        "heavy.png": "c934db3eb3d391469c605de20a357e506be079adc5f56a4afaba9b0d614b0654",
-        "run.png": "6c0fb3ae791edc74912ff35681e084c732e985817eef68c9d8574df841d4e00b"
+        "reference.png": "41253932bec507be91ba2e0043325f1b116e4b063e2de4bbe0d618f21c57ea6d",
+        "front.png": "1e231c3027c6954a546785fa24aed631d3b43fb7dab32b4a0a404a91620f101b",
+        "side.png": "e4e84d3853f60d039dd607aeeb58a88b22edacbd9176e9912527f72da7788ba1",
+        "back.png": "273b8c2546de3e4ef81ba6c7f259d2801e7b3c4fca48e7998fe2c267407bab66",
+        "top.png": "32ba6ba0bb502e99ea6c0d2e23f6c2dc6f7a63cbb1201967885ffa71486f30b6",
+        "idle.png": "1774e875ec664a75323ce9c98cef1ab85d3176c1840ab9efae55fdeaba09d477",
+        "shield_deploy.png": "e624ae748c223df2b1e70e2052e7bee7db3b8739c154056e38e7d0732532e783",
+        "shield_retract.png": "1774e875ec664a75323ce9c98cef1ab85d3176c1840ab9efae55fdeaba09d477",
+        "light.png": "a868bd188f495de7920c9a7a76de3e333918b20d81b49bbcccba80b9a6c8e40e",
+        "heavy.png": "c64617ee36e3320986dd93c3280c021c93650720f88c3234fdeb3753ddb245fc",
+        "skill.png": "173272512c04b1401ba61db071944f40e00108974825ea82b022dcabb1a2f838",
+        "ult.png": "2f26d7dd2e6f424cf83355dd20041db7af1c76211a338d32ca0d0f11ca75e867",
+        "run.png": "5a3bfd04c71fc87a38e449dc7ccd95a1d8441185e6c416720a7078bd3d65831b"
       },
       "destination": {
-        "bench": "84167284be869c79f7521b89534c3d1763fb17a18d52af9b0c0352077bbcfaef",
-        "shield": "6f8447b363cea36d1872995af8f88342b443aad6b70339a3783cc68b35055705",
-        "rig": "2e0a735ff94c2748f5b3cc3286c72b1ccb0c1d7d10e4423743c89921eda970f1"
+        "bench": "dea335bcb246f0046be91e1050c68a8227378c55ba6ed38dd2f9f50f7b0fc1b5",
+        "shield": "c2ed14ada5bcae96eeb7bec82f9de69b58dd09311d9e7ad1508f29ea1cc48b58",
+        "rig": "295b2fe8f86d426fa75c433cec80ffc24b44cf66688a43b6ea8bff991ecd009d"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Slender lavender frame with exposed brown tendon muscles, horned wedge head, four outward back thruster blades, right rail lance and waist gauss gun",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Small swept wedge head with forward horn, slender chest and abdominal waist",
+        "Continuous arm and leg armor surrounds exposed brown tendon bundles",
+        "Four outward back thruster blades; 6.8-unit superconducting rifle with stock, pistol grip, parallel rails and an open muzzle brake",
+        "Waist-mounted secondary gun remains attached to the pelvis"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "t03": {
       "identities": {
-        "runtime": "287fd393ff8df0b5eb6c60c399e16b5e4d3abf24711c5fb7b5a9f56af7e62fb6",
-        "blend": "27ba59bd0ca653e8723ca4057395d4f64e4fefce6de10f69fd4815bca437e0fa",
-        "glb": "701eacb77e248552b1e966e2bff707974d769e5ccf501d8781f6f9786507addd"
+        "runtime": "c2d50810d01b940cb51804cd524797911f3401ca75b05f4e931a57d823de747b",
+        "blend": "2aa397c4712e7b44c89abed92f87db8ed9e3e0a81e0ffcaf6c11f0ed00fd917c",
+        "glb": "224bc95dae4d3531d7ed1a9000e9529c0888a7a4e5c8e3db04bf218c3a228bbe"
       },
       "reference": "ec8a03e5503ffd562f0083aff798f7346a7b0a90c6cbf6fb1464606c81808ba4",
       "renders": {
-        "reference.png": "77e1fc82c503c22791d55585d2003738ba99cd8261b33b498304535500120be1",
-        "front.png": "263c4515f49b5890c03aa646b196e9423b4124bc74ae625122c9d03c4d11974d",
-        "side.png": "7f42b9605b219b0d3abac17a4dd01e04df66aa731006fa0b9c5049d846d6696a",
-        "back.png": "bec367b603515f2aa767c8b3a3f4532e894369e1793154d171271955f71307fc",
-        "top.png": "479e43f37a140f61f2e86798ba9d20e8c0feb8292f92c17a2dc62a972b7c4dd8",
-        "shield_deploy.png": "4059e518189f565ac75c266826259149c25f79ceb94f3f49ceef709ec59dab69",
-        "light.png": "4bd240eca93a9ad0433b5f842a8527244dd74f9da78ed7a29a60509bc9899417",
-        "heavy.png": "58334541e2f19ad32a73e486ca55324b50ce240dcc9d073c239f88e0cc658771",
-        "run.png": "b4449a3794d3d8466fd2f30e035be4a49cb399888131d4a788f4f7f5b35261fb"
+        "reference.png": "9e939818d37cf530c5980fdd694423547ecd96926372e4e162c8f204ce1517f4",
+        "front.png": "b1fc9fd81a1e0417c77342e1059970cdca5b6b974dddf43cb82a9d909fceee4f",
+        "side.png": "43a57495081e6378e6cd476bb29f4bedbd5449dce1dd3c0da20e5b40dc69e6e2",
+        "back.png": "2b8322293178a11ce6f84caec952dc55bb60d3b44e1075ff0933ee67ad7e9b18",
+        "top.png": "81a2775aded3f520dbf23aea69edf81642feb99ecdda4c57d361e861d776dbee",
+        "idle.png": "2b41217cd09aea8af4e993452b6265879d5461414f3470ce297a9534a09f1a71",
+        "shield_deploy.png": "444f67e84b0e1bafbe2ee64e7fed8eed5f3dfefaa027c5d9a49d36c391a2238e",
+        "shield_retract.png": "3fdee9ab5e1a2f26d12644536e3de14ce5cfbcb181b7258d79bbdd5ac306223d",
+        "light.png": "51afc91ebd3d01c75fcfe87d45754054aaafe7cecbf264be6dbde4a8cafda2db",
+        "heavy.png": "a14b37dc3ea6cd5f7322afd54fd16e504937ecc0f8a141daed723c0d53bc853c",
+        "skill.png": "73c5e731fa75dcb0acb915c6ee279713ef16d93898c09d58e7904301de2fa238",
+        "ult.png": "1817a0b1f95f116b57f327fbfb0b764dd57b11dfb23fd594c7f06122f989d56d",
+        "run.png": "bb3fee10983b41fdedf1145f7f839e836145a9dfa0239468336154bc2ac7f6ce"
       },
       "destination": {
-        "bench": "1e94029c28e1389587df2f3740b8ea5e42dc14a27cccfdc76b643aee7ce7884f",
-        "shield": "2d292759f68ca0cbe1e83c4f64310b497cc41359922c61756a7ac071b7b31154",
-        "rig": "6635ddb75aa4feecb39e8b95041221d68b42a359e1ccb8c144e0daa7a33e976b"
+        "bench": "92ef32f008dcfff400f2d36e600d64828726b68bda5b8fd000eef6193642b22e",
+        "shield": "bf2c7fc32b9a1ab3bc739f8db9d410bd88b2382e6329cff52de52503fb82d1bd",
+        "rig": "319b1907a08e4f33f9aca694649da028a099a0eb5a7b2371431186713c73fbce"
       },
       "geometry": "pass",
       "appearance": "pass",
@@ -628,172 +713,209 @@
         "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
         "Inferred paired retractable armor emitters project a decorative forward radar barrier"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "t04": {
       "identities": {
-        "runtime": "3a6e4049cf3ebc6602e1153504679ca5968f10ccbbd1de1570363847b86bb11a",
-        "blend": "8978f0f2b22e265a9025c102e1ec180f8f56583f1f306aea8bf950913b9d05e2",
-        "glb": "20e278873323dd87fe16d8b4ea53c9846d91bf0b9a40ce6fc29d7ea4d2c73afd"
+        "runtime": "c6159f2cec9f4caada119fcfa516fa331db9baead42d22a32011e91505a4dde9",
+        "blend": "903ee5d5a9e6dc451deb1e8ff14767522aa7186347d8806de002ac6e8e1de180",
+        "glb": "2fe287405740ba1294a27c1df5dd6114be232f1004a5e1a7b8ee3b3216950b1e"
       },
       "reference": "d10467012687689fced96ab52f66314c3f0fbc41cf353de86d780f2a805281ea",
       "renders": {
-        "reference.png": "fe906e91d53913ec55b28090324a08cc5f1f23323c770f950a09364ea7f7eed9",
-        "front.png": "6472939f8a7514caa7aca7d18b5008652637572f651ece6156758d257bb317d0",
-        "side.png": "a75c18a7278dd816f6163dd0fcececa7f5f91aa8f5ba2a05af6cb6b6c8a209ce",
-        "back.png": "7a682b784634fef04cf889651c5fe99df1f7f76801c0a11dc834a339d1991d9a",
-        "top.png": "eff49413b23ab4452366686086806cecbb6e8a97060c6579ba00b526aaa252a2",
-        "shield_deploy.png": "962d89ebbbb64346c1492ec55232a768d6d41778e2a40839c46a554efa253680",
-        "light.png": "5a349927741a55945a5435cbc3feb4cdb3ace84c5dc83bdab83e92f8ca23ba48",
-        "heavy.png": "145db9ab517d9f12ce761855560f996e971e35abf1280594e13cf3f314943702",
-        "run.png": "fb171496cc4379b63bd08e52e308630048560948a31f0d333906a266993264ec"
+        "reference.png": "a98265868d15921fbce0c429a8c25a4a19041b856f51e38dd52ed70405fdf25c",
+        "front.png": "fac50e9c947fd42a36193f8f449be264ae7122e0a48611b12d1d52ac7f33cc26",
+        "side.png": "694a6a7665d13672ac6f1cca49c895a907295b261a9d90f45b8368775596b0cf",
+        "back.png": "751903039600a2354c5be3057d91fec844eb9aaa1bb046696029dcf846bc0ba1",
+        "top.png": "34a554b555ce91adc02da94a6c5700efb004dff188eb9410dbc368c1d1a4a83f",
+        "idle.png": "6742278d8e787146a88c6f00255ecc256b380462271ec84a73e0578dae4be089",
+        "shield_deploy.png": "ad4253a70c28fed778995c7b3de80d96036628969054d5f71c8577a524e24394",
+        "shield_retract.png": "1960b08de8ed8716e03ed16bf1902b8090078754e17c7cb157d8f5e4588fb904",
+        "light.png": "e25628ce523e026c20862e9c4ce78926e9ddc8ac1c36bd68711551677fc81dde",
+        "heavy.png": "174ae6547950786c99c14cdea05805e42cf5faaccc4a4757e5187537cb32864c",
+        "skill.png": "5a5814825a686e22362366609c2ed26d81463a46d064c7ca5ba30b188c7e3b32",
+        "ult.png": "5a5814825a686e22362366609c2ed26d81463a46d064c7ca5ba30b188c7e3b32",
+        "run.png": "9af49777fa5f9ae9118894ae34ddad70a22f86f4d9d4cd774ab87e2977820e91"
       },
       "destination": {
-        "bench": "745fac5a1cb0f9b786f47a8a62d001e50c2bb2a9e832a1c3a9e4ff9bd06d753f",
-        "shield": "7e4f07d6a73ced4172eda7c0995e164a649f9d9519652c2d30c8a86c11c2d2e3",
-        "rig": "4497fdf0380d73a11365e117b1ab598ed4ae4bdca34e1867607e3654852eaa96"
+        "bench": "c277a66a6d196bb25ca9f2d85aa1563ba9a8e0896550231543ba0e041cdf81b1",
+        "shield": "f78fd9321b44cd701410c56a30becb8a4e0d7d729a9e6a165ceb1184ca1c6162",
+        "rig": "abdeed5dd6aa6f0b1f8e304495f2f9ca33e71e6aa276e1f7f1a52ba9f3861abb"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Low four-legged dog, reverse hind hocks, toothed snout and triple red eye band, snow camouflage and stabilized dorsal antiarmor gun without grip",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Deep canine chest and tapering abdomen form a horizontal four-legged body",
+        "Dorsal gun rail and barrel face forward",
+        "Seven-joint canine brush tail has a descending base, overlapping coat seams and a rounded raised tip",
+        "Fore elbow and hind stifle move in opposing anatomical directions"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "t05": {
       "identities": {
-        "runtime": "769029dbb2679589d7a5108b3b738916d7a1f95aece2657d5389624c22b71662",
-        "blend": "7176fa61ebcc8b75e45eb56cbba733331ead55d15c4d45c9faa469d6713528e9",
-        "glb": "64745d4c466134c80acf482e2ebf7a9e0f4bd5bdd93ff73c1c970fb7ab41a7ba"
+        "runtime": "493da7f74c1a6873e226dabc4478b4f111e38e5dfb20bd04ba810fc55fb850ec",
+        "blend": "8c730478dc8fd80fccdf8e88ca89d100c2496a8f4501f287fb3916b59680d983",
+        "glb": "6f3406132ae8eee7d47bf77993f834fa24ed37d4244b45db7a8f420cb435df76"
       },
       "reference": "d0dee31f053ea6bcf1dd33184159b5c7937f2f56ab551d65a83fc8b2de159fc0",
       "renders": {
-        "reference.png": "bf7e2814915a4c37e5242af8808156b9d5b4dae0d889e05f07ec804f3a908331",
-        "front.png": "5a3324442fa196850ab9e31ad1464b51565a8a49d67b9ebd7d1fb67f828566a9",
-        "side.png": "8e48080842a4b80dec7189ec4f3c55de3d348d7cf850b6bd5a803d24665def16",
-        "back.png": "ce69189520d7b630a9a0f8a9d9517a6f16b27dc742859efb20b8368c26a4e018",
-        "top.png": "2c304a828c0a2cfb570cf1692087a271c7bed312dda97652a2f1e02df6673596",
-        "shield_deploy.png": "12b85a455549d5f0373e2ea3ea47e2b067b640ddf93b302789106ef80508485e",
-        "light.png": "da7295f7b64131721bfdf2e610c82e46cbc4b787b9c060c871c39bd6fa761d2b",
-        "heavy.png": "bee530c4abf4f012772b2c1b08ff3b9c1073bba94abadc34d124afcf7cc901a7",
-        "run.png": "fcf06ae550ce76add7286f91969447f9f856ca8d412604ff299ae571c269a991"
+        "reference.png": "757a80e2b391565e2bac2593b351ef5a00f8b42f6e3517b5f65c18ad2aefb7a9",
+        "front.png": "0aa7580d67ed6494968a0bcf36b1ae5abb1c8bc32330a4255c47c8c79095f986",
+        "side.png": "c050866c1eb4cd71f050dff20c5aa2146491346e711ada1f50ab6dfe9c1c1c34",
+        "back.png": "6c86746d7558b0f70d8ce0bcf124ba8a4751fce4f3df126e4e7f278e4995092f",
+        "top.png": "5e79656b1103763a89b1140aae96772fded79efe5c9120fe9bc606d456428d1d",
+        "idle.png": "d0ef9cf0fa4909e294e4f7da1224cf9c7ab40ae29d14b428831fe3d7a106a912",
+        "shield_deploy.png": "20d5f2cbd654359a0f437a1f2fe0d4dd469ab89c83797921a5c5f02cfddb2198",
+        "shield_retract.png": "6d9ff0094c50f3ff295a03c718390e0a86873faf97e7f0bb05ebb03745f5a123",
+        "light.png": "1fe32483c961dcd8e17e5bb90445e8bd3f5f4ebbf8253d14178c5795a2a5849b",
+        "heavy.png": "933f931c59214a94344a1ba2cc8c1e38eb2afb3a24c3fcdadd31d394bc78b27d",
+        "skill.png": "1aa3686c73f496e4ef0e5168131dde6fe379f9138e51c3d96a301966c352880b",
+        "ult.png": "1aa3686c73f496e4ef0e5168131dde6fe379f9138e51c3d96a301966c352880b",
+        "run.png": "1338ab1ab9855696ff50cdaf2b898f0b1c663d4eb14b03d3be89b4307c63ab1a"
       },
       "destination": {
-        "bench": "2f33c6b26f2d74f42e37f967d97e1788aaa1d3238184176529c64d1eb1b8655e",
-        "shield": "73949ebc44f82b3e5c8b1eef2403801540623d0ae3a1a2ec063545cd434d8715",
-        "rig": "046d04b24de4dc506e31eeb7a0c1c3896e0838bd47004d84a0cdbb51d84f25d2"
+        "bench": "3fe7abf55d417a4e2907af8718d0413159bec59e8dfde70dea19d5ea188c6187",
+        "shield": "e51eea2f3d15e572f5bf6213484be3fa90191603f1870a061a5df3d58b29172d",
+        "rig": "f385e446c84fb944161addd236b07e3f9b8d804f10166bcd13b3a6baf8105efe"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "S-shaped segmented bird neck, tiny red-crowned wedge head, very long reverse bird legs, folded blade wings without hands; right photon lance and left coil gun",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Forward S-curved four-section neck joins a small wedge bird skull; horizontal avian synsacrum replaces the human pelvic saddle",
+        "Humerus-ulna-manus wings fold along the body in seven clips and spread only in the running clip",
+        "Overlapping secondary feathers meet fanned primary feathers and covered wing hinges",
+        "Long hind legs separate femur, tibia and metatarsal with a forward stifle and rear hock"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "t12": {
       "identities": {
-        "runtime": "14929158d418daab4c2e8fd577007bfa01930ce8b701773b07929dfcaa65f8dd",
-        "blend": "7d0224424a56c2a81699fe32a888c8dc787cf166c29b2d6353041a2d3cc9e877",
-        "glb": "ee1689c1933c6f1f26f7e178caebcd35c55190d0c5848dc953c733d10e84a25e"
+        "runtime": "7e487210bd2ae98fee42741db6163c6a178f7872eb3d25efd8940d9567e4845c",
+        "blend": "e6b3598b6d288cb5c94c160eac70bc2b55d90655775340f3820fd7f31104c7f6",
+        "glb": "3523ee7e4a5a242957f9d158e68ab86c37dc6a11aadb30e4e72b0dff0ac50eb6"
       },
       "reference": "8eda38a83b12a0494b91d0674607c2ad03081ed5662d69e5f4ca8c580419ea5c",
       "renders": {
-        "reference.png": "2fa02956cb41523c3175106a651c182d8208639485faa0aad917bb9b6a8c3497",
-        "front.png": "c96817edc87df3f5726cde0ddd49573f6df58bc1b8bdb6e5db4a7d34c12a9887",
-        "side.png": "18d67991aacb9e86f888a365ef83e251f93a66e3b283de7f1b0c5bfd0d43b811",
-        "back.png": "e233419d9c3399ec02089a50fba8536ac9ec382d88643406ce7db6afc6ab18ec",
-        "top.png": "2a50e98b83923e16e5fe8dabfad748292cbeefd6bacfeb96b08740deee81a596",
-        "shield_deploy.png": "1fccbf3dd01ed36e6f1cb71dccd353b29a437d0b9dac03138c1aa00078d139f0",
-        "light.png": "16ab5068ae882034dca777e903692688262eb6e074fdf758acf9dae80323285c",
-        "heavy.png": "de46533852ffba25154cc6b291efdaba7148f525ae2c705de6158a073f8877b3",
-        "run.png": "ab426b0394691c3228544bb54d4096786fdbb9cd9b083d036751c484d016b75d"
+        "reference.png": "6dcf01619b54957070e6c40b3c4a0ce7e098a306de0f36a510bf41cd7c56060a",
+        "front.png": "7619f5718d6f896de96dc76b69e255a09bef929155a591ca894520339e90f055",
+        "side.png": "cc5b986df3bcffcb2753e06c79786f781e1a3dcfa94a024561ba37d49db20dda",
+        "back.png": "2e03d25e88dc0e96b8680049d8e84e5ee9db0c70a41baf33f62c6548a61592b1",
+        "top.png": "4d0c292676f0c18e71d5a8b744164d4bcb2ac07d2f7ca2a05785a5b1b570d6ed",
+        "idle.png": "6d01550fd962a447202eff4d9e1ada641aafdaeb3a0da36374055c5f593a7067",
+        "shield_deploy.png": "c4fefdc8e4ebc3d8a0cdc2452387a108f6132f8a5931d2a5477d1af0e20e6d44",
+        "shield_retract.png": "26d3c9220d26bf253c73a0eef0f3db81f3b959d813a9fa698ce2f4e4bfb93e5f",
+        "light.png": "c3eead23420a48bb0bd2842db46104c85fa8bf95b9e67e5a093a68a72d1ddfd7",
+        "heavy.png": "26f10d1d2712426154ff4bf69241599c4e78106905e74589f5234360ddbbc8a2",
+        "skill.png": "3d8f2ed59957b6c6304cf82dec53790fc33dde246b85b502a37cefb7a419a953",
+        "ult.png": "3d8f2ed59957b6c6304cf82dec53790fc33dde246b85b502a37cefb7a419a953",
+        "run.png": "9b30647282ff1ce565c5164f2752b5ae735d9e16b244dc13772aa36ffa15c9bc"
       },
       "destination": {
-        "bench": "721ef8426731c6b1da8cf56eac73260cee6e7cad7b731509b473b3aaf9297d0b",
-        "shield": "9a34c39a85271a898ba0a8e015fd636b33d8f14adec53ded79dad7e89fcaefec",
-        "rig": "d211f63aa296918737ad292e346649b06ac11d0205bfcdcb4085f7e387c124e4"
+        "bench": "edcf3fe1410cbe585129083385345faa55799555ea1b74929e25536b7cf276b8",
+        "shield": "70f148b67ee7833f6f3fbca7edca3e3cfd17c5a6f57fa073c5c2661079344a84",
+        "rig": "0844c731e8a96aa8c0efabd0a1a7c4a3b4af4a503779dc9f1c1a3dad198499b8"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Rounded rectangular grey violet armor, forehead electromagnetic cannon, three chest shield layers, giant shoulder vents, right pulse rifle and left shoulder emblem",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Broad rounded chest, shoulder reactors, layered shield armor, recessed helmet and heavy limb carapaces",
+        "Forehead aperture stays behind an armor shutter for idle and light fire; heavy action opens the shutter and reveals the recessed bore",
+        "Right-hand pulse rifle has a long open barrel; cannon emission is concealed with the forehead bore"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "m02": {
       "identities": {
-        "runtime": "5d085b88c98b18a7943f101e1443fd1f05e2645943498ffd56c6cc9d89c0bc4b",
-        "blend": "6abfd651a8cd65888d81e3201be42eabbbd4d5f1904a4870dbda1e4aa6970b9d",
-        "glb": "b86941b10754fdd012cfe46966fbf500dd9732f21a3bf354756692c57c808498"
+        "runtime": "d955d4458cdc48742183cafbbcf3e153c48d2ef1ce94c2f3bc2cbc640d7cffe8",
+        "blend": "f79602b84251cdc2622a1b70cb71fb28f4a09af068ec22ea6994fbe83556be0d",
+        "glb": "f368e6d6330fb56942da2beeb76324d16550e779f0676e7fb0d2608d80d9a29c"
       },
       "reference": "f8f8ffcc16bfcacd30b691f97eff10a415b20b563a249be9afb76be726f5b9d8",
       "renders": {
-        "reference.png": "a2f7c1584a08a6c5dfe45753539b17ac0f2ce730becce62fde77acb1d61d674b",
-        "front.png": "0944f5caaebdc1836fc58ee2116407e6a44cae632557ab5e01df2a2b884894d2",
-        "side.png": "63f5a5702eea5b8866d1f2aac45ca27fc46de7c3da9dd6e6aa9c1b58938c3b5d",
-        "back.png": "0a84105b5ce3ddef3ff50f653a52008dbbfd0ce7c700087b52b0134e6e954372",
-        "top.png": "34160b8a0edce795542679628fa0756efb907c5d174da5175bd302a8a85deba9",
-        "shield_deploy.png": "0cc5d7a10272ddebf870a8d297741cd8404b9b60379725de001139daf1e12131",
-        "light.png": "7b2b9ae88b7a1c07fd07f47a936b9020cdceded8c294d2af4f7aecfc7fd044b8",
-        "heavy.png": "10561debef575d7ba83f2a5a419df4cad3dd5813f3352a55292862c3e1fa487f",
-        "run.png": "f3e644b61050f461b9374256a4bcc42f3b2eba4a281c8c6402f6114636e04573"
+        "reference.png": "735655f926ff68a7064ac8384ae4d9a46338089362a6be7ecdee5ef909d656f4",
+        "front.png": "408ce67a53e83f060ecee7fcc66f6cd22367ceb574b7f6b84d5f69aa907fdfcf",
+        "side.png": "37472cb5ba78674ff5d297dd8f41851b8e3fb89b7c6a28b74c9aed96cf5e1bf5",
+        "back.png": "0f7ed60351c463384def5c7181addab8ab757345051903e483b7fc8355f08ed9",
+        "top.png": "8a92d0443c5f67f655fb22f65fb655c4f7fae9c7b7fb3c7bb803281e73a1b7f6",
+        "idle.png": "5007a34a55774d41aea89d20974163c2cbacb7f51430155a299d2e1f28bd12bd",
+        "shield_deploy.png": "752dbca55bb1f06c32f2a1b0d13c8c44ad1ea9f81f28b44017e525d79a553474",
+        "shield_retract.png": "d2f822270d096779ce595fc0f0aa7c7bf406275627962fe67870b8ce0a8c5f0b",
+        "light.png": "6c8cf5c3676051a61a79bcc1205385d24ed5e730ee9606141c7ddb76db0e5443",
+        "heavy.png": "9d1f723d8c52f74048b6d77781df338e2f44c0824762b89010ca7cb7025cc443",
+        "skill.png": "39e896743f9541e36a682a0eeb81779801579a167e76a29b18c8113f507e82c6",
+        "ult.png": "1cbbf47ea0188f3427baa5847293c55e3b1b116475eaaff37c59ffc0ccac71a1",
+        "run.png": "13276446c13f8c77967c4363fd16044f5512a63ae1142bcbcb7fd30f68de11d6"
       },
       "destination": {
-        "bench": "26537a5da148c22f4f2234c12406fa6308d0c172c098027ea7ac0f03713c83e3",
-        "shield": "7c0d430244fe6286cc70c480141a9cdbf96d01522832cd9ed321fa2c1d71483f",
-        "rig": "b1c2c15f73bd9e860acef8ad3f02b487dca4fd8fe345222b4747cef86aa1e0bb"
+        "bench": "0fc6f29050b9812771066a8abe116c04850cc7a5f01e221b6379643e572ef8ba",
+        "shield": "3e5b27dbf27df3dd457ca6f6ae36c09dd4e999987beaf70a91156fa0736d65a0",
+        "rig": "240a05f7625c74e0ec46531ea0b3e21264e01aea79ff4508811f2dac184881a8"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Horizontal T-rex body, huge toothed jaw with throat rail cannon, tiny empty foreclaws, paired chest guns and long thick balance tail",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Massive tapered tyrannosaur skull, lateral brows and nostrils, serrated upper teeth and articulated lower jaw",
+        "Throat cannon retracts for idle and light fire; heavy action opens the jaw and exposes the bore",
+        "Small paired foreclaws attach beneath the thorax; hind limbs separate femur, tibia and metatarsal",
+        "Seven-joint tapered tail connects to the broad pelvis"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     },
     "m06": {
       "identities": {
-        "runtime": "9e75d777083e99be63d35684f9928eadef863e6d434c40b7e1a9d5bef8e3421b",
-        "blend": "1781999189833f00baec25f4a9fcc02fc3050165fdf96dfe6a03600eb204c096",
-        "glb": "2ff2254ed68ebcb22abbae10ba84ad9c25ba7927773c831c8f676b9f12dfa085"
+        "runtime": "849f48908744b845f11307ae02c43ac29b5882ab8034904c1c84ba7fb6b11c90",
+        "blend": "266a462a4e9dba55adf17455a350527e9b99a6578a24d2f2fd962ec80ec82442",
+        "glb": "f7ea646a14aae348f2a59b405d4bc2d3478fbb83eb5978b53c6e745e5b3e2be9"
       },
       "reference": "efd9cd117b8de16d594c02a88ed84b1b48f7a8da6db74d64ea6c6aa4b32d555c",
       "renders": {
-        "reference.png": "28029906ec54f09901c24137a34d487b3d48630b035cdd9e24d25d4ec3c21c12",
-        "front.png": "a42b6c24004aff57dc112d4b6aab476a21aa23fe967522a90ecd37c2487838bf",
-        "side.png": "4459ec91d50519e57ddd064531cf1499aeef3d3a87f40a282cd827f83ccbfc2f",
-        "back.png": "a9a053230e0c155d6efccc69cee80c378d193574cefa4fac1e6fad0f94ff96b7",
-        "top.png": "32dde7061f7cab1613482770f647dfe29feceff93aea42e2e6f450634cef736e",
-        "shield_deploy.png": "7405ba731a353bb624c65ec1ef96d43c88c49613d4201479209623fbd4d93ed4",
-        "light.png": "ff51fcaa6916940db5a8a36e29a31973473680783fc55a767004c66f913c14c5",
-        "heavy.png": "057ebc31a842ff7a63562355907d97c460047559662ca78e4c6f78f40e23840e",
-        "run.png": "1150ddd3fd916c0dec37f8d702e8e70a7397a8f08af02e3f525f20ed4e8b0389"
+        "reference.png": "0711a841a3bb16f76fb8ea63bf7c585d612ad9256ddb41a44cbea0a068cfe1bc",
+        "front.png": "409a50dc63b25da964fde6a1683eb7019d1c5add489c7fdf04e97354499871b7",
+        "side.png": "31700461a7064119ed7f0f0a6c3555f23d6a81b4cae0495ef88ad92b52d8ae06",
+        "back.png": "8311000aad5b8176344ab93203543bfbc6a7e5ac727a642771c365de3616e19f",
+        "top.png": "0f359b23c8ba8991c7c3b7ca9e90f0d4f6b4d9b7aeb742b17059a99e54633bd9",
+        "idle.png": "42d53bfb40ccb19f7e922b22a31b6f1d73b5cdaa6ba61919b9b8057ca6af098b",
+        "shield_deploy.png": "931e27b0e3ebf9d91842404db281a3904b603c47714455708a48849ef491a581",
+        "shield_retract.png": "879f4cdf31d4969dc452e3928311a24c7de489a8890cced2e47848fad27a25ca",
+        "light.png": "de6114726c629e778dfd376d2a5d65c90c9957e0053718b5e19c40fddee6d23d",
+        "heavy.png": "a6370064f07c8c68ffb4f66387a63c974c726c3efad337150369474b85028d15",
+        "skill.png": "da977d7310a0c390b544866577e1472be88d1b850a68cd18735f8e0262c6d1f3",
+        "ult.png": "501f148c05ac87a1d5684e2cdb237ff917f6ea0c26897ec8c12221b5b2abcb9c",
+        "run.png": "83c6a16bbb3c5907d7cf20ecd1c020864fde364f0f2a25210ea8bf2199507e2e"
       },
       "destination": {
-        "bench": "a1983f88ac5bbf3712120ee8c98c84a635974b5aef6d406f1f50d52d8f832cbb",
-        "shield": "0c7624f01169777f6316032cf195e863539e9414a748250f34896acf175595f5",
-        "rig": "0cd0ab5f2d50e8286af1795b1a9d55b54e52e37a58fcdf5b7ee232d30ebd13f5"
+        "bench": "099bc0e38679a2a713cd1b6aa1e17927654d80d897f66e7ab55d6cb58e2784fa",
+        "shield": "13a9a74d7adec12b8ddf700a82c848558c065524c28585b54417b6e3a24ea38c",
+        "rig": "175cf2057b7bdec649362b3516cc2412675ca8b4aef66d78c2a818727ea9cf14"
       },
       "geometry": "pass",
       "appearance": "pass",
       "observations": [
-        "Heavy stegosaur quadruped, exactly eight pentagonal launch plates in two staggered rows, four tail spikes and paired neck guns",
-        "Rigid armor on separate anatomical load-bearing chains; visible hydraulic links and joint collars",
-        "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms",
-        "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+        "Low extended neck and herbivore head join the domed thorax",
+        "Eight staggered sagittal launch backplates vary in size, with the middle plates tallest",
+        "Seven-joint long tapered tail ends in four thagomizer spikes",
+        "Separate forelimb and hindlimb bone sections preserve animal bend directions"
       ],
-      "inference": "Oblique action reference; concealed rear and underside inferred"
+      "inference": "Oblique action reference; concealed rear and underside inferred",
+      "poseSamples": 40
     }
-  }
+  },
+  "gates": {
+    "geometry": "pass",
+    "appearance": "pass",
+    "pose_attachment": "pass",
+    "destination": "pass",
+    "user_signoff": "pending_user_review"
+  },
+  "promptTables": {
+    "art_gen_robots.md": "44f6d945ef5753e327f968b4262badcf42a8e0c6b07218edafda191aebcd02c9",
+    "art_gen_drones.md": "6e7bee2daa4a1484ccccc459b914be665858cf016e1af049149e3c31081514f4"
+  },
+  "user_signoff": "pending_user_review"
 }

@@ -2,13 +2,13 @@
   "asset": "t07",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 9452,
-    "meshes": 37,
-    "joints": 16,
+    "triangles": 10668,
+    "meshes": 63,
+    "joints": 26,
     "source": {
-      "contract": "68a3f9d04df4ed42bf39263613fef82e0e48580ab595407ba0f38b0d9c6ec9e4",
-      "builder": "19eb5bb693e24f02ef35c172a149887a3d347939c011ef2767971db22beb7b72",
-      "catalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec",
+      "contract": "28495a7e59b6cf7ad8116b91d20cd47420ae19429387d2519e3424cc9aa0d794",
+      "builder": "2eb8cef5dc9ec6fc288af95a89f7148963e04e136864d7d362154bf39931a322",
+      "catalog": "8d618333f5f946d8896e9a0b836ecc13c81c22dced4e01fd91881a7e443cf87d",
       "image": "0e0b9d9122cd94868496cfd170b6d0a8c4187191175313b5a88f20fab18105d4"
     }
   },
@@ -22,20 +22,40 @@
     "shield_deploy",
     "shield_retract"
   ],
-  "renders": [],
+  "renders": [
+    "reference.png",
+    "front.png",
+    "side.png",
+    "back.png",
+    "top.png",
+    "idle.png",
+    "shield_deploy.png",
+    "shield_retract.png",
+    "light.png",
+    "heavy.png",
+    "skill.png",
+    "ult.png",
+    "run.png"
+  ],
   "hashes": {
-    "runtime": "45227ab9b0a7625d5793ca06b5b1eceac17642332bb5c29b6697b37821611d4a",
-    "blend": "a032b1203b5d01e1c5b4fd5cff86ca17df4ddf36bed4bca6e330d55958b5248b",
-    "glb": "00176626a40f9211477fb5381f45a588a42977784e8e1e9eafadf5610b92efdc"
+    "runtime": "8eabeaad348814eacf9a7d2de6b2d54b47c7f8bdbb03bf4a6b6a9d3ba4e5fa9d",
+    "blend": "5b43d71fa3132a40155b135f98d9edc1e4173f8d485bc59937b848ab8f39d2f7",
+    "glb": "8a28267753e0d23b031d3feb3989be1535396900d213b288ede085ddcf1d3613"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pending_visual_review",
-    "appearance": "pending_visual_review",
-    "export": "pending_independent_load",
-    "destination": "pending_browser_review",
+    "geometry": "pass",
+    "appearance": "pass",
+    "export": "pass",
+    "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass"
+  },
+  "editableSourceRecipe": {
+    "contract": "eafb7be04cd6b88a77474d6ab77c09a1d97e7bc589bd8e0ebe35dae3cf039809",
+    "builder": "3f5ca8bac49b69e358dd3230de009bd24c6f35dcfd6a29dc4f001e9b4dfcfbe3",
+    "catalog": "8d618333f5f946d8896e9a0b836ecc13c81c22dced4e01fd91881a7e443cf87d",
+    "image": "0e0b9d9122cd94868496cfd170b6d0a8c4187191175313b5a88f20fab18105d4"
   }
 }

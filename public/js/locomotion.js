@@ -96,6 +96,23 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   // 加法才不會跨幀累積;morph 的部件經 pose(m) 全軸 rotation.set 重設,全軸皆安全。
   stepCastPose(L, rig, ent, dt, now);
   stepJumpPose(L, rig, ent, dt);
+  if (rig.groundWings) {
+    // Folded avian arms override the humanoid arm driver in every non-running pose.
+    L.wingSpread = damp(L.wingSpread || 0, clamp((speed / (rig.top || 10) - .3) / .3, 0, 1), 7, dt);
+    for (const wing of rig.groundWings) {
+      [wing.w,wing.outer,wing.hand].forEach((node,i) => {
+        node.rotation.set(0,wing.sgn*(wing.fold[i]+(wing.run[i]-wing.fold[i])*L.wingSpread),0);
+      });
+      wing.w.rotation.z = wing.sgn * (-.30 + .58 * L.wingSpread);
+    }
+  }
+  if (rig.tentacleWaves) {
+    for (const wave of rig.tentacleWaves) wave.chain.forEach((node,i) => {
+      ['x','y','z'].forEach((axis,j) => {
+        node.rotation[axis] = wave.swing[j] * Math.sin(now * Math.PI * 2 * wave.frequency + wave.phase - i*.36 + j*1.2);
+      });
+    });
+  }
   stepStab(rig);
   const shieldPosture = idleOf(L.amp) * (1 - clamp(rig._fireAim || 0, 0, 1));
   if (rig.shield) rig.shield.posture = rig.kind === 'biped' ? shieldPosture : 0;
@@ -948,9 +965,14 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
       // 外翼多收一段 = 半收翼的俯衝輪廓。猛禽撲擊時翅膀是張開定住的,不是還在拍。
       L.flap = (L.flap || 0) + dt * (3.2 + k * 9) * (1 - 0.8 * atk);
       const amp = (0.24 + k * 0.34 + L.flr * 0.5) * (1 - 0.85 * atk);
-      for (const { w, outer, sgn } of rig.wings) {
-        w.rotation.z = sgn * (Math.sin(L.flap + L.ph) * amp - 0.10 * atk);
-        outer.rotation.z = sgn * (Math.sin(L.flap + L.ph - 0.7) * amp * 1.5 - 0.18 * atk);
+      for (const { w, outer, hand, sgn, dihedral = 0, elbowSweep = .14, wristSweep = .10 } of rig.wings) {
+        w.rotation.z = sgn * (dihedral + Math.sin(L.flap + L.ph) * amp - 0.10 * atk);
+        if (hand) {
+          outer.rotation.y = sgn * (elbowSweep + Math.sin(L.flap + L.ph - .7) * amp * .55 + .25 * atk);
+          hand.rotation.y = sgn * (wristSweep + Math.sin(L.flap + L.ph - .95) * amp * .4 + .18 * atk);
+        } else {
+          outer.rotation.z = sgn * (Math.sin(L.flap + L.ph - 0.7) * amp * 1.5 - 0.18 * atk);
+        }
       }
     }
   }
