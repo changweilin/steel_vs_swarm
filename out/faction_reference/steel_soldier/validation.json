@@ -1,0 +1,51 @@
+{
+  "asset": "steel_soldier",
+  "blender": "5.2.0 LTS",
+  "measurements": {
+    "triangles": 3448,
+    "meshes": 53,
+    "joints": 20,
+    "source": {
+      "contract": "c3c26406813faa258e6b1f7ae2e14fa3639b5b354fb4d6a71b44bc1d3316b528",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
+      "catalog": "779f1659b1ddd8e2d7ab49dfb05186771a77f61f7acec0fef6e2d3501b791f3d",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
+      "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
+      "design": "8e3e1cabac6fb32197ea616b519b8e9bb9063415d9a9b2f3c7eb197cf5ad7dcc",
+      "palette": "d9943bedd746e31a1dfd88646804357967a8c265967a355937e44f1bd307e461"
+    }
+  },
+  "clips": [
+    "idle",
+    "run",
+    "aim",
+    "light",
+    "heavy",
+    "deploy"
+  ],
+  "renders": [
+    "reference.png",
+    "front.png",
+    "side.png",
+    "back.png",
+    "top.png",
+    "run.png",
+    "aim.png",
+    "light.png",
+    "deploy.png"
+  ],
+  "hashes": {
+    "runtime": "e06659096ecbd8aee5388023f386abed3ee33fae0a5c70ce4a0b3f6dad6900b6",
+    "blend": "d473aa0426472419887ad12663aaef0b4ef79ab7a845e99642db85791b1e9bbc",
+    "glb": "658cd359da4d4daa47fd542e8a434617b7e12d72084b6d064db1a0afd6fb898c"
+  },
+  "gates": {
+    "structure": "pass",
+    "resources": "pass",
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pending_independent_load",
+    "destination": "pending_browser_review",
+    "user_signoff": "pending_user_review"
+  }
+}

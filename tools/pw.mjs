@@ -78,7 +78,7 @@ const isGame = async (url) => {
  * null,但同一個坑在別的量測工具上會安靜地量到別的頁面然後**全綠**。
  * 認不出來 MUST 換一個埠自己起,MUST NOT 沿用(也 MUST NOT 殺掉別人的伺服器)。
  */
-export async function serve(port = 8631) {
+export async function serve(port = Number(process.env.SVS_AUDIT_PORT) || 8631) {
   let p = port;
   if (await isGame(`http://localhost:${p}/`)) return { url: `http://localhost:${p}/`, close: () => {} };
   // 這個埠上有東西但不是遊戲 ⇒ 往後找一個沒人聽的埠自己起
