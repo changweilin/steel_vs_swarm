@@ -29,5 +29,6 @@
 | Env label | `data.js envLabel()` | Single naming lookup for environments; lives in `data.js` for server-side loadability. | — |
 | Duel model | `tools/duel.mjs` | Weapon-only by design (ability-driven characters exempt); chassis control runs through resolution seams only. | — |
 | Lane sim model | `tools/lanesim.mjs`, sole schedule seam `reFire()` | All distances and times derive from `data.js`; never merged with the duel model (sole model pricing attack area); ledgers split by bucket. | — |
+| Multi-weapon roles & balance | `aoeClass()`, `fanBuildingMaxHits`, `slotExpectedBuildingDmg` | Fan: single cone << expected, multi-hits large/close (tune arc/dmg); Blast: excels vs distant dense foes (tune r/dmg); Line: balanced near/far (tune pen/dmg); Others: tune dmg; Building N limit directly adjusted without balance testing to equalize building damage across all weapons. | `audit_aoe_balance` |
 
 Assertion details live in layer-4 audit script headers.

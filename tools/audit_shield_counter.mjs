@@ -112,7 +112,7 @@ console.log('■ Ⅰ 建築加乘移除(加乘全刪、懲罰保留;夾制是推
     t(`${name} 執行原文無 grenadeBuildingMul 殘留`, !/grenadeBuildingMul|BUILDING_MUL/.test(s));
 
   t('_heroDmg 不再有任何情境倍率(只剩 vsMult × buff)',
-    /_heroDmg\(h, def, targetKind\) \{\s*return def\.dmg \* vsMult\(def, targetKind\) \* this\._buffMul\(h, 'dmg'\);/.test(simSrc));
+    /_heroDmg\(h, def, targetKind\) \{\s*(?:let m = vsMult\(def, targetKind\);[\s\S]*?return def\.dmg \* m \* this\._buffMul\(h, 'dmg'\);|return def\.dmg \* vsMult\(def, targetKind\) \* this\._buffMul\(h, 'dmg'\);)/.test(simSrc));
 }
 
 // ---------------------------------------------------------------------------

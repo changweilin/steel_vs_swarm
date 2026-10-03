@@ -1204,7 +1204,7 @@ const FNF = heavyOf('fnf');   // 任一名射後不理角色(不寫死角色代�
   const tl = methodSrc('_tickLock', G);
   ok(/this\._effRange\(def, t0\)/.test(tl), '對照:①「只能射程內鎖定」仍由 _tickLock 的 _effRange 把關');
   const lockSrc = methodSrc('heroLock', S);
-  ok(/\.range \* RANGE_TOL\) return;/.test(lockSrc) && /_losBlocked/.test(lockSrc) && /_visibleTo/.test(lockSrc),
+  ok(/\.range \*(?: this\._altRange\([^)]+\) \*)? RANGE_TOL\) return;/.test(lockSrc) && /_losBlocked/.test(lockSrc) && /_visibleTo/.test(lockSrc),
     '對照:伺服器 heroLock 複驗射程 / 迷霧 / LOS 三道(鎖定是唯一入口,豁免全掛在它身上)');
 }
 {
