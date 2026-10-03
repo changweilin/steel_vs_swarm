@@ -2095,7 +2095,7 @@ export class BattleSim {
     if (!wp) return;
     const ty = t.hero || t.kind === 'heli' || t.decoy ? (t.y || 0) : 0;
     // 量到近側表面(_surfD3):鎖定光暈的語意 = 「準星壓在表面上且打得到」,與 heroHit 閘門同一把尺
-    if (this._surfD3(Math.hypot(t.x - h.x, t.z - h.z, ty - (h.y || 0)), t) > wp.def.range * RANGE_TOL) return;
+    if (this._surfD3(Math.hypot(t.x - h.x, t.z - h.z, ty - (h.y || 0)), t) > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL) return;
     // 迷霧內的目標不可鎖定(與 heroHit 同一條規則:看不見 = 沒有火控解)
     const pulse = this.visionUntil?.[h.side] > this.t;
     if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
