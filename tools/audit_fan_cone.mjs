@@ -130,7 +130,7 @@ log('— 扇形小錐分格(sim.heroPlasma)—');
   const tb = simB._add({ kind: 'tower', side: 'STEEL', x: 0, z: 30, y: 0, hp: 999999, m: 999999 });
   simB.heroPlasma('p_c3bld', 0, 1, 'heavy', null, 0);
   const dmgB = 999999 - tb.hp;
-  assert(maxB >= 2 && maxB <= 8 && dmgB > 0 && dmgB < dClose,
+  assert(maxB === 1 && dmgB > 0 && dmgB < dClose * 0.15,
     `建築物(砲塔@30m)受但書截斷上限 ${maxB} 發(傷害 ${dmgB.toFixed(1)} 遠低於無上限 11 格 ${dClose.toFixed(1)})`);
 }
 
