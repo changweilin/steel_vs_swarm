@@ -1,8 +1,10 @@
 import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
 import { seasonalSurfaceColors } from './seasonalSurface.js';
+import { BOUNDARY_SURFACES } from './boundaryMeshData.js';
+import { boundarySectionAppearance, boundaryRockTone } from './boundaryAppearance.js';
 // Continuous boundary cross-sections. Adjacent segments sample identical world coordinates;
 // segment seeds never change their end profiles. No Three.js or shared random stream.
-import { ROCK_SEASON_TINT, environmentParts, storageTankParts, leveeGateParts, citywallBarbicanParts, NATURAL_CLIFF_KINDS } from './environmentParts.js';
+import { ROCK_SEASON_TINT, environmentParts, storageTankParts, leveeGateParts, citywallBarbicanParts, NATURAL_CLIFF_KINDS, boundaryGeologyField, NARROW_GEOLOGY_BOUNDARY } from './environmentParts.js';
 import { mulberry32 } from './rng.js';
 
 const hillSection = [[-.5, 0], [-.35, .32], [-.16, .7], [0, .86], [.2, .65], [.38, .25], [.5, 0]];
@@ -28,10 +30,13 @@ export const SLOPE_BOUNDARIES = Object.freeze({
   barricade: { fillContact: true, color: 0x85918c, section: [[-.5, 0], [-.5, .22], [-.2, .58], [-.16, 1], [.16, 1], [.2, .58], [.5, .22], [.5, 0]] },
   levee: { fillContact: true, color: 0x8c9587, section: [[-.5, 0], [-.16, .9], [.16, .9], [.5, 0]] },
   seawall: { fillContact: true, color: 0x899393, section: [[-.5, 0], [-.25, .85], [-.25, 1], [.38, 1], [.38, .85], [.5, 0]] },
-  cliff: { bufferFill: true, color: 0x8c897b, rock: true, section: [[-.5, 0], [-.42, .58], [-.25, .92], [.05, 1], [.35, .86], [.5, 0]] },
+  cliff: { bufferFill: true, color: 0x8c897b, rock: true, section: BOUNDARY_SURFACES.sections.cliff },
   landslide: { bufferFill: true, color: 0x9f8667, rock: true, section: [[-.5, 0], [-.25, .58], [0, .88], [.25, .64], [.5, 0]] },
   debris: { bufferFill: true, color: 0x89816d, rock: true, section: [[-.5, 0], [-.24, .52], [0, .82], [.26, .45], [.5, 0]] },
-  ...EXPANDED_BOUNDARIES,
+  ...Object.fromEntries(Object.entries(EXPANDED_BOUNDARIES).map(([kind, def]) =>
+    [kind, NARROW_GEOLOGY_BOUNDARY[kind] ? { ...def, bufferFill: true } : def])),
+  rockery: { bufferFill: true, color: 0x8c897b, rock: true, section: hillSection },
+  isletbarrier: { bufferFill: true, color: 0x758b80, rock: true, section: hillSection },
 });
 
 const snap = value => Math.round(value * 1e6) / 1e6;
@@ -44,12 +49,15 @@ const bufferRoof = (x, z) => .70 + bufferRelief(x, z) * .28;
 
 // A filled boundary has no downhill back face. Its roof continues to the skirt's
 // outer edge; both sides of a joint evaluate the same profile and world samples.
-function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, fill, environment = {} }) {
+function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, seed, fill, environment = {} }) {
   if (!Number.isFinite(fill.depth) || fill.depth < depth || !Number.isFinite(fill.crest)
     || fill.crest <= 0 || fill.crest > depth || typeof fill.heightAt !== 'function'
+    || (fill.floorY != null && !Number.isFinite(fill.floorY))
     || (fill.joins != null && (!Array.isArray(fill.joins) || fill.joins.length !== 2
-      || fill.joins.some(j => j && (!SLOPE_BOUNDARIES[j.kind] || !Number.isFinite(j.h) || j.h <= 0))))) return null;
+      || fill.joins.some(j => j && ((!SLOPE_BOUNDARIES[j.kind] && !j.terminal) || !Number.isFinite(j.h) || j.h <= 0))))) return null;
   const def = SLOPE_BOUNDARIES[kind], ca = snap(Math.cos(ry)), sa = snap(Math.sin(ry));
+  const geology = fill.geology && NARROW_GEOLOGY_BOUNDARY[kind]
+    ? boundaryGeologyField(kind, { len, depth, h, seed, season, bufferDepth: fill.depth - depth, environment }) : null;
   const joins = fill.joins || [null, null];
   const stations = [-len / 2, len / 2];
   const axis = Math.abs(ca) > .5 ? x : z, sign = Math.abs(ca) > .5 ? ca : -sa;
@@ -86,10 +94,10 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
   };
   let lo = Infinity, hi = -Infinity, valid = true;
   const surfaceAt = (u, d, recordBounds = false) => {
-    const end = u < 0 ? joins[0] : joins[1], blend = smooth(Math.abs(u) * 2 / len);
+    const end = u < 0 ? joins[0] : joins[1], blend = smooth(Math.min(1, Math.abs(u) * 2 / len));
     const natural = end && SLOPE_BOUNDARIES[end.kind]?.bufferFill;
     const level = natural ? profile(kind, d) * (1 - blend / 2) + profile(end.kind, d) * blend / 2 : profile(kind, d);
-    const height = end ? h + (Math.min(h, end.h) - h) * blend : h;
+    const height = end && !end.terminal ? h + (Math.min(h, end.h) - h) * blend : h;
     const [wx, wz] = world(u, d), [fx, fz] = world(u, 0), [cx, cz] = world(u, fill.crest);
     const ground = fill.heightAt(wx, wz), front = heightAt(fx, fz), crest = fill.heightAt(cx, cz);
     if (![ground, front, crest].every(Number.isFinite)) {
@@ -111,14 +119,17 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
     // 相接端（joins 存在）不動故連續性不變；lo/hi 照地形取樣不動，不碰碰撞。
     const taperLen = Math.min(len / 2, depth);
     const termEnv = def.rock !== true ? 1 : Math.min(
-      !joins[0] ? smooth(Math.max(0, Math.min(1, (u + len / 2) / taperLen))) : 1,
-      !joins[1] ? smooth(Math.max(0, Math.min(1, (len / 2 - u) / taperLen))) : 1);
-    const yy = (ground - .4) + (y - (ground - .4)) * termEnv;
+      !joins[0] || joins[0].terminal ? smooth(Math.max(0, Math.min(1, (u + len / 2) / taperLen))) : 1,
+      !joins[1] || joins[1].terminal ? smooth(Math.max(0, Math.min(1, (len / 2 - u) / taperLen))) : 1);
+    // Seeded interior relief fades out at joins; the shared end profile is seed-independent.
+    const interior = geology ? 1 - (1 - geology.surfaceHeightAt(u, depth / 2 - d) / h) * .35 * (end ? 1 - blend : 1) : 1;
+    const yy = (ground - .4) + (y - (ground - .4)) * termEnv * interior;
     const tint = ROCK_SEASON_TINT[season] || ROCK_SEASON_TINT.summer;
     const color = [16, 8, 0].map(shift => {
       let c = (geologyColor(kind, environment.geology, def.color) >> shift) & 255;
       if (natural) c = c * (1 - blend / 2) + (((geologyColor(end.kind, environment.geology, SLOPE_BOUNDARIES[end.kind].color) >> shift) & 255)) * blend / 2;
-      return linear(c / 255 * (.9 + wave * .07) * ((tint >> shift) & 255) / 255);
+      return linear(c / 255 * (.9 + wave * .07) * ((tint >> shift) & 255) / 255)
+        * (geology ? boundaryRockTone(wx, yy) : 1);
     });
     return { p: [ca * (wx - x) - sa * (wz - z), yy, sa * (wx - x) + ca * (wz - z)], bottom: Math.min(ground, yy) - .4, color };
   };
@@ -126,6 +137,14 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
   const rows = stations.map(u => ds.map(d => {
     const cell = surfaceAt(u, d, true);
     if (!cell || climate.snow <= 0) return cell;
+    if (geology && joins[u < 0 ? 0 : 1] && Math.abs(u) >= len / 2 - 1e-6) {
+      // The shared end slope excludes either segment's seeded interior derivative.
+      const a = surfaceAt(u, d - .1), b = surfaceAt(u, d + .1);
+      if (!a || !b) return { ...cell, up: 0 };
+      const delta = b.p.map((v, i) => v - a.p[i]);
+      const length = Math.hypot(...delta);
+      return { ...cell, up: length > 0 ? Math.hypot(delta[0], delta[2]) / length : 0 };
+    }
     // Probe the continuous surface, not this segment's triangulation. Otherwise
     // identical roof points get different snow coverage on opposite sides of a seam.
     const probes = [surfaceAt(u - .1, d), surfaceAt(u + .1, d), surfaceAt(u, d - .1), surfaceAt(u, d + .1)];
@@ -143,7 +162,11 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
     if (from === to) continue;
     const cells = rows[i].slice(from, to + 1).concat(rows[i + 1].slice(from, to + 1));
     const n = to - from + 1, bottom = cells.length;
+    const buffer = ds[to] > depth || joins.some(joint => joint?.corner);
     const vertices = cells.flatMap(c => c.p).concat(cells.flatMap(c => [c.p[0], c.bottom, c.p[2]]));
+    // Buried toes must fit the pre-existing ring, whose terrain probes are coarser.
+    if (!buffer && fill.floorY != null) for (let k = 1; k < vertices.length; k += 3)
+      vertices[k] = Math.max(fill.floorY, vertices[k]);
     const colors = [...cells, ...cells].flatMap(c => c.color), faces = [];
     for (let j = 0; j < n - 1; j++) {
       faces.push(j, j + n, j + n + 1, j, j + n + 1, j + 1);
@@ -169,7 +192,6 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
     const min = [0,1,2].map(a => Math.min(...vertices.filter((_, k) => k % 3 === a)));
     const max = [0,1,2].map(a => Math.max(...vertices.filter((_, k) => k % 3 === a)));
     const center = min.map((v, a) => (v + max[a]) / 2), size = min.map((v, a) => max[a] - v);
-    const buffer = ds[to] > depth || joins.some(joint => joint?.corner);
     const mesh = { vertices: vertices.map((v, k) => v - center[k % 3]), colors, faces, boundaryBuffer: buffer, surfaceVertexCount: cells.length, bottomVertexOffset: cells.length };
     if (def.rock) mesh.colors = seasonalSurfaceColors(mesh, climate,
       [x + ca * center[0] + sa * center[2], center[1], z - sa * center[0] + ca * center[2]], ry,
@@ -181,7 +203,7 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
   // half of the square too, ending exactly on the masonry's existing end plane.
   for (const end of [0, 1]) {
     const joint = joins[end];
-    if (!joint?.corner || SLOPE_BOUNDARIES[joint.kind]?.bufferFill) continue;
+    if (!joint?.corner || joint.terminal || SLOPE_BOUNDARIES[joint.kind]?.bufferFill) continue;
     const edge = rows[end ? rows.length - 1 : 0], section = SLOPE_BOUNDARIES[joint.kind]?.section;
     if (!section || !Number.isFinite(joint.depth) || joint.depth <= 0) return null;
     const wall = edge.map((cell, j) => {
@@ -232,7 +254,7 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
   if (!def) throw new RangeError(`Boundary cannot conform to slopes: ${kind}`);
   if (![len, depth, h, x, z, ry].every(Number.isFinite) || Math.min(len, depth, h) <= 0
     || typeof heightAt !== 'function') throw new RangeError('Invalid slope boundary inputs');
-  if (def.bufferFill && fill) return buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, fill, environment });
+  if (def.bufferFill && fill) return buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, seed, fill, environment });
   const ca = snap(Math.cos(ry)), sa = snap(Math.sin(ry));
   const alongX = Math.abs(ca) > .5, axis = alongX ? x : z, sign = alongX ? ca : -sa;
   // Use world-aligned stations, not a separately rounded grid per segment.
@@ -283,7 +305,7 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
   vertices.forEach((v, i) => { const a = i % 3; min[a] = Math.min(min[a], v); max[a] = Math.max(max[a], v); });
   const center = min.map((v, i) => (v + max[i]) / 2), size = max.map((v, i) => v - min[i]);
-  const meshData = { vertices: vertices.map((v, i) => v - center[i % 3]), faces, colors };
+  const meshData = boundarySectionAppearance(kind, { vertices: vertices.map((v, i) => v - center[i % 3]), faces, colors }, n);
   if (def.rock) meshData.colors = seasonalSurfaceColors(meshData, seasonalEnvironment({ ...environment, season }),
     [x + ca * center[0] + sa * center[2], center[1], z - sa * center[0] + ca * center[2]], ry);
   const parts = [{ g: ['mesh', meshData, size], p: center, c: null, role: 'terrain-joined-boundary' }];

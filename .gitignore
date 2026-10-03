@@ -76,3 +76,7 @@ tools/transport_authoring/__pycache__/
 # Reproducible scenery authoring scenes and review captures.
 out/scenery_review/
 tools/scenery_authoring/__pycache__/
+
+# Reproducible boundary authoring scenes and review captures.
+out/boundary_review/
+tools/boundary_authoring/__pycache__/

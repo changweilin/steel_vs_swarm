@@ -236,14 +236,14 @@ if (BREAK_LAND) {
 // 而不是在稽核裡抄一份擺位公式)
 const mkWall = (extra = '', over = {}) => new Function(
   'THREE', 'runtimeMeshDataGeometry', 'envMat', 'mergeGeos', 'WORLD_EDGE', 'edgeWallInsetM', 'edgeWallHM', 'WATER',
-  'SLOPE', 'slopeDeg', 'wallSlopeTier', 'buildSlopeBoundary', 'edgeWallDeepM',
+  'SLOPE', 'slopeDeg', 'wallSlopeTier', 'buildSlopeBoundary', 'edgeWallDeepM', 'boundaryFillCrest', 'boundaryJoinParts',
   'classifyImg', 'terrainEnvCode', 'planWallRuns', 'planWallKinds', 'WALL_KINDS', 'wallParts', 'wallVariant', 'edgeSeed',
   'planBufferProps', 'propParts', 'planBackdrop', 'backdropParts', 'BACKDROP_KINDS',
   'EDGE_WALL', 'edgeBufferM', 'objHeightMax', 'lowPower', 'partBox', 'buildBoundaryBufferParts', 'buildBoundaryRunParts', 'BOUNDARY_BUFFER_LAYOUTS',
   `${HELPERS}\n${wallSrc}\n${grabFn(bioSrc, 'buildBufferProps')}\n${grabFn(bioSrc, 'buildBackdrop')}\n${extra}
    return { buildEdgeWall, buildBufferProps, buildBackdrop };`,
 )(THREE_STUB, proceduralMeshStub, (c, o) => ({ c, o }), mergeGeosStub, WORLD_EDGE, edgeWallInsetM, edgeWallHM, WATER,
-  SLOPE, slopeDeg, EW.wallSlopeTier, buildSlopeBoundary, edgeWallDeepM,
+  SLOPE, slopeDeg, EW.wallSlopeTier, buildSlopeBoundary, edgeWallDeepM, EW.boundaryFillCrest, EW.boundaryJoinParts,
   classifyImg, terrainEnvCode, EW.planWallRuns, planWallKinds, EW.WALL_KINDS, wallParts, EW.wallVariant, EW.edgeSeed,
   over.planBufferProps || EW.planBufferProps, over.propParts || EW.propParts,
   over.planBackdrop || EW.planBackdrop, over.backdropParts || EW.backdropParts, EW.BACKDROP_KINDS,
@@ -632,10 +632,11 @@ console.log('\nⅥ 純表現層(伺服器對這一整套一無所知)');
   t('edgewall.js 全檔無 Math.random(A4)', !/Math\.random/.test(strip(ewSrc)));
   t('edgewall.js 零 THREE(這才是型錄與規劃器能離線驗的原因)', !/\bTHREE\b/.test(strip(ewSrc)));
   t("edgewall.js 只依賴亂數、幾何量尺與共用程序生成器",
-    (strip(ewSrc).match(/^import .*$/gm) || []).length === 6
+    (strip(ewSrc).match(/^import .*$/gm) || []).length === 7
     && /from '\.\/rng\.js'/.test(ewSrc) && /from '\.\/vehicles\.js'/.test(ewSrc)
     && /from '\.\/environmentParts\.js'/.test(ewSrc) && /from '\.\/edgeSlope\.js'/.test(ewSrc)
-    && /from '\.\/objectLayout\.js'/.test(ewSrc) && /from '\.\/seasonalEnvironment\.js'/.test(ewSrc));
+    && /from '\.\/objectLayout\.js'/.test(ewSrc) && /from '\.\/seasonalEnvironment\.js'/.test(ewSrc)
+    && /from '\.\/boundaryAppearance\.js'/.test(ewSrc));
 }
 
 // ============ Ⅶ 型錄與切分規則 ============

@@ -638,7 +638,7 @@ export function elongatedGeologyParams(len, depth, seed) {
 //    任何方向觀察均具備波峰波谷交替起伏。
 // 3. 四周邊界遵守地質邊緣高度 = 0（雙向 smooth01 落地包絡）。
 // 4. 支援 2 維延伸往緩衝區擴大（bufferDepth > 0），產出同源無縫分割的本體與緩衝填滿網格。
-export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0xffffff, bufferDepth = 0, pattern = null, color = null } = {}) {
+export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0xffffff, bufferDepth = 0, pattern = null, color = null, surface = null } = {}) {
   const s = GEOLOGY_TYPES[type];
   if (!s) throw new RangeError(`Unknown geology type: ${type}`);
   if (s.lithology === 'manufactured') throw new RangeError('Elongated ridge needs a natural terrain type');
@@ -646,6 +646,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     || len <= 0 || depth <= 0 || height <= 0)
     throw new RangeError('Elongated geology dimensions must be positive finite numbers');
   if (!Number.isSafeInteger(seed)) throw new TypeError('Geology seed must be a safe integer');
+  if (surface != null && typeof surface !== 'function') throw new TypeError('Invalid geology surface');
   const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
   const totalDepth = depth + bufD;
   const is2D = bufD > 0 || totalDepth >= 20 || Math.min(len, totalDepth) >= 20;
@@ -788,7 +789,10 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
       // 嚴格遵守地質邊緣高度 = 0（四邊外緣點一律落地）
       if (ix === 0 || ix === nx || iz === 0 || iz === nz) y = 0;
 
-      const yy = Math.min(height, y * height);
+      // Boundary fracture surfaces enter the same grid used by cover landing and both mesh halves.
+      const yy = surface ? surface(Math.min(height, y * height), -len / 2 + ix / nx * len, zPhys, height)
+        : Math.min(height, y * height);
+      if (!Number.isFinite(yy) || yy < 0 || yy > height) throw new RangeError('Geology surface exceeds its envelope');
       grid[top(ix, iz)] = yy;
       if (iz <= nzObs) peakY = Math.max(peakY, yy);
       else peakYBuf = Math.max(peakYBuf, yy);
@@ -869,11 +873,10 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
 
   const size = [len, Math.max(peakY, 1e-6), depth];
   // 脊頂高度取樣器(u, v ∈ [-1, 1])：覆蓋層（倒木等）落地用
-  const heightAt = (u, v) => {
-    if (!Number.isFinite(u) || !Number.isFinite(v)) return NaN;
-    const gxRaw = (u + 1) / 2 * nx, gzRaw = (v + 1) / 2 * nzObs;
+  const sampleGrid = (gxRaw, gzRaw) => {
+    if (!Number.isFinite(gxRaw) || !Number.isFinite(gzRaw)) return NaN;
     const gx = gxRaw <= 0 ? 0 : gxRaw >= nx ? nx : Math.min(nx - 1e-9, gxRaw);
-    const gz = Math.max(0, Math.min(nzObs - 1e-9, gzRaw));
+    const gz = Math.max(0, Math.min(nz - 1e-9, gzRaw));
     const iz = Math.floor(gz), fv = gz - iz;
     const ix = gxRaw <= 0 ? 0 : gxRaw >= nx ? nx - 1 : Math.floor(gx);
     const fu = gxRaw <= 0 ? 0 : gxRaw >= nx ? 1 : gx - ix;
@@ -881,6 +884,11 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     const c = grid[top(ix, iz + 1)], d = grid[top(ix + 1, iz + 1)];
     return a + (b - a) * fu + (c - a) * fv + (a - b - c + d) * fu * fv;
   };
+  const heightAt = (u, v) => Number.isFinite(u) && Number.isFinite(v)
+    ? sampleGrid((u + 1) / 2 * nx, Math.max(0, Math.min(nzObs - 1e-9, (v + 1) / 2 * nzObs))) : NaN;
+  const surfaceHeightAt = (x, z) => sampleGrid((x / len + .5) * nx,
+    z >= -depth / 2 || bufD === 0 ? (depth / 2 - z) / depth * nzObs
+      : nzObs + (-depth / 2 - z) / bufD * nzBuf);
 
   return {
     meshData: { vertices, faces, colors },
@@ -888,6 +896,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     params,
     undulation: { peaks, valleys, wavelengths, errors, gains, pattern: activePattern, is2D },
     heightAt,
+    surfaceHeightAt,
     ...(bufferMeshData ? { bufferMeshData, bufferSize } : {}),
   };
 }

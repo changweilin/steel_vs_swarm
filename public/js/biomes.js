@@ -66,7 +66,7 @@ import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed
 // 型錄、切分規則、落點規劃全在那一支(純資料、零 THREE、離線可驗);本檔只負責取樣地貌與建幾何。
 import {
   EDGE_WALL, EDGE_MOTION, WALL_KINDS, BACKDROP_KINDS, planWallRuns, planWallKinds, wallParts, wallVariant, wallSlopeTier, edgeSeed, partBox,
-  planBufferProps, propParts, planBackdrop, backdropParts, buildBoundaryBufferParts, buildBoundaryRunParts, BOUNDARY_BUFFER_LAYOUTS,
+  planBufferProps, propParts, planBackdrop, backdropParts, buildBoundaryBufferParts, buildBoundaryRunParts, BOUNDARY_BUFFER_LAYOUTS, boundaryFillCrest, boundaryJoinParts,
 } from './edgewall.js';
 import { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable } from './environmentParts.js';
 import { runtimeMeshDataGeometry } from './runtimePartModel.js';
@@ -9675,7 +9675,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
     if (!ends.has(key)) ends.set(key, []);
     ends.get(key).push(p);
   }
-  const crest = Math.min(...Object.values(WALL_KINDS).filter(d => d.bufferFill).map(d => d.depth)) / 2;
+  const crest = boundaryFillCrest();
   let prevKind = null, prevVariant = -1;
   for (const p of plans) {
     const { s, e, step, kind, tier } = p;
@@ -9695,7 +9695,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
       return { kind: other.kind, h: Math.max(WH, od.h), depth: od.depth, corner: other.e !== e };
     });
     const isContinuousGeology = !!(BOUNDARY_BUFFER_LAYOUTS[kind]?.continuousGeology);
-    const joined = (def.terrainFit && !isContinuousGeology) ? buildSlopeBoundary(kind, {
+    let joined = (def.terrainFit && !isContinuousGeology) ? buildSlopeBoundary(kind, {
       len: step, depth: def.depth, h: kh0, x, z, ry: e.fry, seed,
       heightAt: (px, pz) => terrain.heightAt(px, pz), waterY: s.water ? wy : null,
       season: terrain.season || 'summer', joins: segJoins, environment,
@@ -9713,15 +9713,26 @@ function buildEdgeWall({ group, terrain, blockers }) {
           len: step, depth: def.depth, bufferDepth: bufAvailable, h: kh0,
           seed, variant, season: terrain.season || 'summer', water: s.water,
           biome: s.biome, joins: segJoins, environment,
+          x, z, ry: e.fry, crest, floorY: s.lo - 1.5,
+          heightAt: (px, pz) => s.water && wy != null ? Math.max(wy, terrain.heightAt(px, pz)) : terrain.heightAt(px, pz),
+          bufferHeightAt: (px, pz) => {
+            const y = px >= terrain.minX && px <= terrain.maxX && pz >= terrain.minZ && pz <= terrain.maxZ
+              ? terrain.heightAt(px, pz) : terrain.bufferHeightAt?.(px, pz);
+            return s.water && wy != null ? Math.max(wy, y) : y;
+          },
         })
       : null;
-    const parts = (def.terrainFit && !isContinuousGeology) ? (joined?.parts || []) : (boundaryBatch?.parts || wallParts(kind, {
+    if (boundaryBatch?.terrainJoined) joined = boundaryBatch;
+    const parts = (def.terrainFit && !isContinuousGeology) ? (joined ? [...joined.parts, ...boundaryJoinParts(kind, {
+      len: step, depth: def.depth, h: kh0, joins: segJoins, x, z, ry: e.fry,
+      heightAt: (px, pz) => s.water && wy != null ? Math.max(wy, terrain.heightAt(px, pz)) : terrain.heightAt(px, pz),
+    })] : []) : (boundaryBatch?.parts || wallParts(kind, {
       len: half * 2, depth: def.depth, h: kh0, seed, variant, season: terrain.season || 'summer', environment,
     }));
     const kh = kh0; // 固定邊界包絡；本體間的可見空隙同樣禁止穿越。
     // 零件的落地基準:段內最高的地形,水域段改取水面(否則海堤/貨輪整艘沉在水面下)
-    const ground = Math.max(joined?.hi ?? s.hi, wy != null && s.water ? Math.max(s.hi, wy) : s.hi);
-    const y = Math.min(s.lo, joined?.lo ?? s.lo) - 1.5;
+    const ground = Math.max((isContinuousGeology ? s.hi : joined?.hi) ?? s.hi, wy != null && s.water ? Math.max(s.hi, wy) : s.hi);
+    const y = Math.min(s.lo, (isContinuousGeology ? s.lo : joined?.lo) ?? s.lo) - 1.5;
     const motion = parts.filter((p) => p.motion);
     segs.push({
       x, z, y, h: ground + kh - y, hw2: half, hd2,

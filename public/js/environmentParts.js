@@ -1,12 +1,13 @@
 import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
 import { seasonalSurfaceColors } from './seasonalSurface.js';
+import { applyBoundaryAppearance, boundaryTetrapodMesh, boundaryGeologySurface, boundaryRockAppearance } from './boundaryAppearance.js';
 // Shared, seeded environment construction. Metres are supplied by the host, never sampled.
 // Descriptors remain render-free so scene and boundary consumers can use the same model.
 import { mulberry32 } from './rng.js';
 import { createForestTree, forestEnvironment } from './forest.js';
 import { makeSceneVehicleParts } from './vehicleCatalog.js';
 import { partsAABB } from './vehicles.js';
-import { mat3FromEulerXYZ, mat3Multiply, eulerXYZFromMat3 } from './partTransform.js';
+import { mat3Apply, mat3FromEulerXYZ, mat3Multiply, eulerXYZFromMat3 } from './partTransform.js';
 import { geologyBackgroundObject, elongatedGeologyMesh } from './geology.js';
 import { generateVessel } from './vesselCatalog.js';
 import { loftMeshData, vesselHullSections } from './vesselGeometry.js';
@@ -583,7 +584,7 @@ export const ROCKERY_BASES = Object.freeze(['granite', 'sandstone', 'tor', 'moun
 // 起伏程度由長寬比推導的種子隨機範圍決定），不再逐段零星散置。
 // 支援 2 維延伸往緩衝區擴大（bufferDepth > 0），把緩衝區完全填滿。
 // 幾何與季節無關（四季共用同一網格），季節差異只在 tint 色調。零共享亂數、決定性。
-export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season = 'summer', bufferDepth = 0, environment = {} }) {
+export function boundaryGeologyField(kind, { len, depth: d, h, seed = 1, season = 'summer', bufferDepth = 0, environment = {} }) {
   let type = NARROW_GEOLOGY_BOUNDARY[kind];
   if (!type) throw new RangeError(`Not a narrow geology boundary: ${kind}`);
   if (kind === 'rockery') {
@@ -594,8 +595,15 @@ export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season
     throw new RangeError('Invalid narrow geology boundary dimensions or seed');
   const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
   const tint = rockTints[season] || rockTints.summer;
-  const ridge = elongatedGeologyMesh(type, seed >>> 0, { len, depth: d, height: h, tint, bufferDepth: bufD,
-    color: geologyColor(kind, environment.geology, null) });
+  return elongatedGeologyMesh(type, seed >>> 0, { len, depth: d, height: h, tint, bufferDepth: bufD,
+    color: geologyColor(kind, environment.geology, null), surface: boundaryGeologySurface(kind, len, d, bufD) });
+}
+
+export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season = 'summer', bufferDepth = 0, environment = {} }) {
+  const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
+  const ridge = boundaryGeologyField(kind, { len, depth: d, h, seed, season, bufferDepth: bufD, environment });
+  ridge.meshData = boundaryRockAppearance(ridge.meshData);
+  if (ridge.bufferMeshData) ridge.bufferMeshData = { ...boundaryRockAppearance(ridge.bufferMeshData), boundaryBuffer: true };
   const climate = seasonalEnvironment({ ...environment, season });
   ridge.meshData.colors = seasonalSurfaceColors(ridge.meshData, climate);
   if (ridge.bufferMeshData) ridge.bufferMeshData.colors = seasonalSurfaceColors(ridge.bufferMeshData, climate, [0, 0, -d / 2 - bufD / 2]);
@@ -674,16 +682,26 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
         const yaw = sample(podLocal, spec.yaw), armLength = r * sample(podLocal, spec.armLength);
         const tip = r * sample(podLocal, spec.tipRatio);
         const pod = `${pIdx}_${layer}_${side}`;
-        rows.push({ g: ['ico', r * .65], p: [px, y, z], c: stoneColor, role: 'breakwater-core', layer, pod });
+        const coreSize = Array(3).fill(r * 1.3);
+        rows.push({ g: ['mesh', boundaryTetrapodMesh('tetrapodCore', coreSize, stoneColor), coreSize],
+          p: [px, y, z], c: null, role: 'breakwater-core', layer, pod });
         // One upward leg and three downward legs: pairwise dot product is -1/3.
         for (let arm = 0; arm < 4; arm++) {
           const azimuth = yaw + (arm - 1) * Math.PI * 2 / 3;
           const dy = arm === 0 ? 1 : -1 / 3;
           const radial = Math.sqrt(1 - dy * dy);
           const dx = radial * Math.cos(azimuth), dz = radial * Math.sin(azimuth);
-          rows.push(cyl(tip, r * .65, armLength,
-            px + dx * armLength / 2, y + dy * armLength / 2, z + dz * armLength / 2,
-            stoneColor, 'breakwater-arm', { r: [Math.atan2(dz, dy), 0, -Math.asin(dx)], pod }));
+          const legSize = [r * 1.3, armLength, r * 1.3];
+          rows.push({ g: ['mesh', boundaryTetrapodMesh('tetrapodLeg', legSize, stoneColor, tip / (r * .65)), legSize],
+            p: [px + dx * armLength / 2, y + dy * armLength / 2, z + dz * armLength / 2],
+            c: null, role: 'breakwater-arm', r: [Math.atan2(dz, dy), 0, -Math.asin(dx)], pod });
+        }
+        const poseSeed = (seed ^ Math.imul(pIdx + 1, 0x27d4eb2f) ^ Math.imul(layer + 1, 0x85ebca6b) ^ side) >>> 0;
+        const pose = mat3FromEulerXYZ([Math.sin(poseSeed) * .85, 0, Math.cos(poseSeed) * .75]);
+        for(let j=firstPart;j<rows.length;j++) {
+          const part=rows[j], delta=mat3Apply(pose,part.p.map((v,k)=>v-[px,y,z][k]));
+          part.p=delta.map((v,k)=>v+[px,y,z][k]);
+          part.r=eulerXYZFromMat3(mat3Multiply(pose,mat3FromEulerXYZ(part.r)));
         }
         const bounds = partsAABB(rows.slice(firstPart));
         // End units meet the segment face so consecutive breakwater runs stay joined.
@@ -828,7 +846,7 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
       for (let j = first; j < rows.length; j++) rows[j].waterline = waterline;
     } else throw new RangeError(`Unknown linear environment: ${kind}`);
   }
-  return rows;
+  return applyBoundaryAppearance(rows);
 }
 
 export const NATURAL_CLIFF_KINDS = Object.freeze(new Set(['cliff', 'landslide', 'debris']));
@@ -887,11 +905,11 @@ export function citywallBarbicanParts({ len, depth: d, h, seed = 1, endIdx = 0, 
   // 樓身
   rows.push(box(towerW, towerH, towerD, bx, bodyH + towerH / 2, -d * 0.04, towerColor, 'barbican-tower'));
   // 歇山頂／廡殿頂大屋簷
-  rows.push(box(towerW * 1.22, h * 0.05, d * 0.88, bx, bodyH + towerH + h * 0.025, -d * 0.04, 0x3d4349, 'barbican-tower'));
+  rows.push(box(towerW * 1.22, h * 0.05, d * 0.88, bx, bodyH + towerH + h * 0.025, -d * 0.04, 0x3d4349, 'barbican-tower', { boundarySurface: 'hipRoof' }));
   // 屋脊
   rows.push(box(towerW * 0.82, h * 0.03, d * 0.22, bx, bodyH + towerH + h * 0.065, -d * 0.04, 0x2b3035, 'barbican-tower'));
 
-  return rows;
+  return applyBoundaryAppearance(rows);
 }
 
 /**
@@ -950,6 +968,6 @@ export function leveeGateParts({ len, depth: d, h, seed = 1, endIdx = 0, isEndpo
   rows.push(box(wingW, wingH, wingD, gx - pierOffset, wingH / 2, -d * 0.3, 0x6e7572, 'wing-wall'));
   rows.push(box(wingW, wingH, wingD, gx + pierOffset, wingH / 2, -d * 0.3, 0x6e7572, 'wing-wall'));
 
-  return rows;
+  return applyBoundaryAppearance(rows);
 }
 

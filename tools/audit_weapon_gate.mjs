@@ -1019,6 +1019,8 @@ sec('Ⅶ 光暈 ⇔ 傷害:沒有射程光暈的敵人 MUST NOT 掉血(2026-08-0
   // 行為直測:射程內掉血、射程外一律不掉(舊制到 1.25 × 射程都還在掉血)
   const sim = new BattleSim(fakeCfg());
   purge(sim);
+  // Random civilians can take the nearest fan bin before the range-test target.
+  sim.ents.clear();
   const fanCh = Object.keys(CHARACTERS).find((c) => heroWeapon(c, 'light', 1)?.fan);
   const wf = heroWeapon(fanCh, 'light', 1, true);
   const fh = sim.addHero('SWARM', 'p_fan', fanCh);
