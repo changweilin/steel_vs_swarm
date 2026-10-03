@@ -1,4 +1,7 @@
-// Event-driven presentation only; no geometry or authority dependencies.
+// Event-driven presentation shares the shipped rig clock without modifying authority state.
+import { stepAuthoredCombat } from './forge/combatAsset.js';
+import { stepShieldMaterial, SHIELD_PRESENTATION_EXPAND } from './vfx.js';
+
 export function stepUnitSpinners(nodes, dt) {
   if (!nodes || !Number.isFinite(dt) || dt <= 0) return;
   for (const node of nodes) {
@@ -12,7 +15,7 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
   if (!rig?.referenceMotion || !Number.isFinite(dt) || dt <= 0 || !Number.isFinite(now)) return;
   const motion = rig.referenceMotion;
   const kick = Math.max(rig._kickL || 0, rig._kickR || 0, rig._kickB || 0);
-  const cf = ent.castFx, duration = cf?.slot === 'atk' ? 1.35 : .95;
+  const cf = ent.castFx, duration = rig.combat?.clips[cf?.slot]?.duration ?? (cf?.slot === 'atk' ? 1.35 : .95);
   const age = cf ? (now - cf.t0) / duration : -1;
   const cast = age >= 0 && age < 1 ? Math.sin(Math.PI * age) ** 2 : 0;
   for (const [tracks, weight] of [[motion.fire, kick], [motion.charge, Math.max(0, rig._chg || 0)], [motion.cast, cast]]) {
@@ -24,12 +27,18 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
   const spinner = motion.fireSpin;
   if (spinner) spinner.node.rotation[spinner.axis] = (spinner.node.rotation[spinner.axis]
     + dt * spinner.rate * Math.max(kick, rig._fireAim || 0)) % (Math.PI * 2);
+  stepAuthoredCombat(rig, ent, now);
   const shield = rig.shield;
   if (!shield) return;
   const defending = ent.isSelf ? ent.visualDefense : ent.df && (ent.sp == null || ent.sp > 0);
-  const target = !ent.dead && !!defending;
+  const castShield = rig.combat && cf?.slot === 'def' && age >= 0 && age < 1;
+  const target = !ent.dead && (!!defending || castShield);
   shield.phase = Math.max(0, Math.min(1, shield.phase + (target ? 1 : -1) * dt / shield.duration));
+  if (ent.dead && rig.combat) shield.phase = 0;
+  shield.expand = ent.isSelf ? !!ent.visualShieldExpand : ent.df === 2;
+  if (shield.state) shield.state.expand = shield.expand;
   if (applyShield) poseReferenceShield(shield, shield.posture ?? 1);
+  if (shield.combat && shield.barrier.visible) stepShieldMaterial(shield.barrier.userData.mat, dt);
 }
 
 export function resetReferenceShieldPose(shield) {
@@ -56,7 +65,9 @@ export function poseReferenceShield(shield, posture = 1) {
   }
   const projection = Math.max(0, Math.min(1, (weight - .18) / .82));
   shield.barrier.visible = projection > 0;
-  shield.barrier.scale.setScalar(Math.max(.001, projection));
+  const scale = Math.max(.001, projection);
+  shield.barrier.scale.set(scale * ((shield.state?.expand ?? shield.expand) ? SHIELD_PRESENTATION_EXPAND : 1), scale, scale);
+  if (shield.combat) shield.barrier.position.fromArray(shield.combat.shield.center);
 }
 
 export function fireUnitMotion(rig, muzzle, now) {

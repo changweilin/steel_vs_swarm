@@ -1,0 +1,50 @@
+{
+  "asset": "t10",
+  "blender": "5.2.0 LTS",
+  "measurements": {
+    "triangles": 15224,
+    "meshes": 102,
+    "joints": 38,
+    "source": {
+      "contract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
+      "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
+      "image": "850fbee0f4ba80e09bb4d5d49a21ea562efe257f100f148ee2db6a3810f17843",
+      "combat": "5ca8bd633985f3b8a2313cac79395151e662c971f9df02373aa167c9b2d03c2c",
+      "intent": "a8ab7c1e77a956f0d8f07c68e7e25f4c08e2277441c1a555b0cec8d283691a83"
+    }
+  },
+  "clips": [
+    "idle",
+    "run",
+    "light",
+    "heavy",
+    "skill",
+    "ult",
+    "shield_deploy",
+    "shield_retract",
+    "def",
+    "atk"
+  ],
+  "renders": [],
+  "hashes": {
+    "runtime": "def37fecaa176d6074544527a984f0ffbf520287c92de06599bcfe9a2db21ad3",
+    "blend": "73a9047eee82a5064cf47e20a12aba12a0d4efbdbc9c06140c09684c75494fa1",
+    "glb": "1c821256603f0dff48c6740ce6925bf6830992db608912bef3fa0f2a92868b89"
+  },
+  "gates": {
+    "structure": "pass",
+    "resources": "pass",
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pass",
+    "destination": "pass",
+    "user_signoff": "pending_user_review",
+    "motion": "pass"
+  },
+  "reviewEvidence": {
+    "runtime": "../runtime-validation.json",
+    "source": "../source-validation.json",
+    "attachments": "../actions-3.png"
+  }
+}

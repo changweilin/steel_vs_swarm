@@ -1,21 +1,21 @@
 {
   "source": {
     "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-    "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+    "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
     "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
     "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
-    "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+    "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
     "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
   },
   "hashes": {
-    "runtime": "cc13002980a1ba8de304c8f07032a403f881f114342f34b3ac2d539ebf2c00db",
+    "runtime": "389d9f2a14117fb6defea71bc43e99b37653012fae3e7aa00d47dc53b2549d3b",
     "glb": "b09014737d47a7e1e3bb0b8afe017ebe51bbb3809d86e0657ab04ba93f6bc4b3"
   },
   "measurements": {
     "trianglesPerVisibleForm": 11812,
-    "effectTriangles": 0,
-    "effectMeshes": 0,
-    "retainedTriangles": 23624,
+    "effectTriangles": 1660,
+    "effectMeshes": 12,
+    "retainedTriangles": 25284,
     "meshesPerVisibleForm": 103,
     "pairs": {
       "pair": 132,
@@ -81,8 +81,8 @@
     "export_load": "pass",
     "registry": "pass",
     "controls": "pass",
-    "appearance": "pass",
-    "flight_belly": "pass",
+    "appearance": "pending_visual_review",
+    "flight_belly": "pending_visual_review",
     "user_signoff": "pending_user_review"
   }
 }

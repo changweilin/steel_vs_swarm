@@ -107,6 +107,11 @@ export class CharPreview {
     if (!this._ent || !this.unit?.userData.rig?.shield) return;
     this._ent.df = !!deployed;
     this._ent.sp = 1;
+    const combat = this.unit.userData.rig.combat;
+    if (combat) {
+      const shield = combat.shield, scale = this.unit.userData.rig.s || 1;
+      this.wantR = deployed ? Math.max(this.fitR, Math.hypot(shield.halfWidth, shield.halfHeight, shield.center[2]) * scale) : this.fitR;
+    }
   }
 
   setRigVisible(visible) {
@@ -432,7 +437,7 @@ export class CharPreview {
         A.spark = A.t + 0.12;
       }
       if (chg >= 1) {
-        gundamBeam(this.scene, this.effects, m, aim, 0xaef4ff, { ttl: 0.5, r: R * 0.035 });
+        gundamBeam(this.scene, this.effects, m, aim, hue, { ttl: 0.5, r: R * 0.035 });
         starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.35, 0xffffff);
         this.holder.position.z -= R * 0.2;                            // 極速彈的重後座
         this.holder.rotation.x -= 0.14;
@@ -444,7 +449,7 @@ export class CharPreview {
       // 0.25s 起持續 1 秒的穩定輸出:短壽命光束連續刷新 = 駐留光束
       if (A.t >= 0.25 && A.t <= 1.35 && A.t >= (A.tick || 0)) {
         if (!A.tick) { this._fireCue(true); this._followShell(m, aim, 1.1); }   // 首拍 = 擊發
-        gundamBeam(this.scene, this.effects, m, aim, hue, { ttl: 0.18, r: R * 0.04, rings: 2 });
+        gundamBeam(this.scene, this.effects, m, aim, hue, { ttl: 0.18, r: R * 0.04, rings: 2, def: w });
         starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.12, hue);
         this.holder.position.z -= R * 0.004;                          // 持續微反壓
         A.tick = A.t + 0.11;
@@ -457,7 +462,7 @@ export class CharPreview {
       if (A.fired === 0 && A.t < 0.45) {
         this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.45 * Math.PI);   // 蓄壓下蹲
       } else if (A.fired === 0) {
-        ionBreath(this.scene, this.effects, m, aim, 0x7fe8ff, { ttl: 0.35, r: R * 0.12 });
+        ionBreath(this.scene, this.effects, m, aim, hue, { ttl: 0.35, r: R * 0.12, def: w });
         shockRing(this.scene, this.effects, aim.x, 0, aim.z, R * 2.0, 0x7fe8ff);
         this.holder.position.z -= R * 0.1;
         this._fireCue(true);

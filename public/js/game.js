@@ -51,7 +51,9 @@ import { TEX_STREAM, finishTex, collectMatStreamTexs, collectTreeStreamTexs, mes
 import { DRS, drsComplexity, drsEffectiveMs, drsStepDown, drsHoldS, drsRecoverLoMs } from './taa.js';
 import { animWeights } from './animweights.js';
 import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst, explosionBurst, damageNumber, debrisBurst, makeHitShell, makeShieldMaterial, stepShieldMaterial, shieldHitStrength, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
-import { spawnCastFx } from './castfx.js';
+import { spawnCastFx, characterShieldTexture } from './castfx.js';
+import { characterCombatStyle } from './characterStyle.js';
+import { SHIELD_PRESENTATION_EXPAND } from './vfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
 import { onCtrlChange, viewMode, setViewMode, onViewModeChange } from './ctrlmode.js';
@@ -2679,9 +2681,9 @@ export class BattleClient {
     const right = new THREE.Vector3().crossVectors(dir, up).normalize();
     const half = (def.arc || 15) * Math.PI / 180;
     const plasma = def.type === 'plasma';
-    const col = plasma
+    const col = CHARACTERS[def.ch]?.visual?.hue ?? (plasma
       ? (this.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff)
-      : (this.side === 'SWARM' ? 0xffe08a : 0xbfe6ff);
+      : (this.side === 'SWARM' ? 0xffe08a : 0xbfe6ff));
     const blades = plasma ? 7 : 9;
     const wF = 1, rF = 1;
     this._muzzleBurst(muzzle, plasma, this.side);   // 電漿重武器槍口爆(明顯度)
@@ -2690,7 +2692,7 @@ export class BattleClient {
       const core = this._shotCols(this.side).hot;
       const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, rng * rF * 0.82));
       ionBreath(this.scene, this.effects, muzzle, clip.to, col,
-        { r: 2.2 * wF, ttl: 0.45, coil: 3, core });
+        { r: 2.2 * wF, ttl: 0.45, coil: 3, core, def });
       shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 2.6 * wF, core);
     }
     for (let i = 0; i < blades; i++) {
@@ -4087,22 +4089,21 @@ export class BattleClient {
     }
   }
 
-  // 英雄正面防守盾:整片呈大六角形的蜂巢拼接板(平面,面向正前方) + 護盾六角紋
-  // shader(vfx.js makeShieldMaterial 單一縫,與塔/主堡受擊殼同源;閒置只剩 fresnel
-  // 邊緣光 + 淡格線 + 大六角外框光,受擊閃亮 + 波紋)。
-  // 尺寸推導不手寫:R 取舊弧面弦寬一半(弦 = 2r·sin(arc/2)),板高 √3·R 恰與舊 h 相當;
-  // 板立於身前 z = 0.6r(舊弧面緣 0.34r、心 r 之間)。純表現層;減傷結算在
-  // sim._shieldDefFactor,護盾/裝甲分軌在 data.js shieldSplit。
-  _createFrontShieldMesh(r = 2.5, h = 4.0, arc = 140 * Math.PI / 180) {
+  // The fallback plane clears the body; authored rigs use their sampled pose envelope.
+  // Both views share makeShieldMaterial; shield settlement remains in sim._shieldDefFactor.
+  _createFrontShieldMesh(r = 2.5, h = 4.0, arc = 140 * Math.PI / 180, ch = this.ch) {
     const sg = new THREE.Group();
     const R = Math.max(0.8, r * Math.sin(arc / 2));
     const geo = new THREE.CircleGeometry(R, 6);
-    const mat = makeShieldMaterial(0x38bdf8, { planar: true, hexR: R });
+    const style = characterCombatStyle(ch);
+    const mat = makeShieldMaterial(style?.color ?? 0x38bdf8, { planar: true, hexR: R,
+      accent: style?.accent, pattern: characterShieldTexture(ch) });
     const m = new THREE.Mesh(geo, mat);
-    m.position.z = r * 0.6;
+    m.position.z = r * 1.12;
     m.userData.noOutline = true; m.userData.noPaint = true;
     sg.add(m);
     sg.userData.mat = mat;
+    sg.userData.character = ch;
     sg.userData.hit = (s = 1) => { mat.uniforms.uFlash.value = Math.max(mat.uniforms.uFlash.value, s); };
     sg.userData.noOutline = true;
     sg.userData.noPaint = true;
@@ -4144,7 +4145,7 @@ export class BattleClient {
       const bbT = new THREE.Box3();
       group.updateWorldMatrix(true, true);
       group.traverse((o) => {
-        if (!o.isMesh || !o.geometry || o.userData.teamRing) return;
+        if (!o.isMesh || !o.geometry || o.userData.teamRing || o.userData.presentationEffect) return;
         if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
         bbT.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
         bb.union(bbT);
@@ -4173,9 +4174,11 @@ export class BattleClient {
     if (hero) {
       const r = (ent.heroCol?.r || dims.dimR || 2.5) * 1.15;
       const h = ent.heroCol?.h || dims.dimH || 5.0;
-      const sm = this._createFrontShieldMesh(r, h);
-      sm.position.y = h * 0.5;
-      group.add(sm);
+      const sm = group.userData.rig?.combat?.guard || this._createFrontShieldMesh(r, h, undefined, e.ch);
+      if (!sm.userData.authoredCombat) {
+        sm.position.y = h * 0.5;
+        group.add(sm);
+      }
       ent.shieldMesh = sm;
     }
     // 極音速飛彈:偏航 + 俯仰同時套(_updateEnts 的姿態段)⇒ 歐拉序 MUST 是 'YXZ',
@@ -5452,7 +5455,8 @@ export class BattleClient {
         const dir3 = new THREE.Vector3(ev.dx, 0, -ev.dz).normalize();
         const arc = (ev.arc || 15) * Math.PI / 180;
         const up = new THREE.Vector3(0, 1, 0);
-        const pcol = ev.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff;
+        const shooter = this._heroEntByPid(ev.pid);
+        const pcol = CHARACTERS[shooter?.ch]?.visual?.hue ?? (ev.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff);
         const heavy = ev.slot !== 'light';   // 電漿重武器 = 明顯焰舌;散彈輕武器 = 細一號
         const bar = !!ev.bar;
         const wF = 1, kMax = 2;
@@ -5462,7 +5466,8 @@ export class BattleClient {
           const core = this._shotCols(ev.side).hot;
           const clip = this._clipBeam(from, from.clone().addScaledVector(dir3, (ev.r || 150) * 0.82));
           ionBreath(this.scene, this.effects, from, clip.to, pcol,
-            { r: 2.2 * wF, ttl: 0.45 * (bar ? 1.4 : 1), coil: bar ? 4 : 3, core });
+            { r: 2.2 * wF, ttl: 0.45 * (bar ? 1.4 : 1), coil: bar ? 4 : 3, core,
+              def: shooter ? this._heroDefOf(shooter.ch, 'heavy') : undefined });
         }
         for (let k = -kMax; k <= kMax; k++) {
           const dk = dir3.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / kMax));
@@ -8157,9 +8162,9 @@ export class BattleClient {
     const { col, hot } = this._shotCols(side);
     const r = lanceR(def);
     if (def.type === 'beam') {
-      const bcol = side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
+      const bcol = CHARACTERS[def.ch]?.visual?.hue ?? (side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff);
       gundamBeam(this.scene, this.effects, from, to, bcol,
-        { r, ttl: 0.5, rings: 4, core: hot });
+        { r, ttl: 0.5, rings: 4, core: hot, def });
       shockRing(this.scene, this.effects, from.x, from.y, from.z, r * 1.15, bcol);
       return;
     }
@@ -8556,7 +8561,7 @@ export class BattleClient {
   _takeProjectile(def, heavy, side = this.side, ch = this.ch) {
     const col = this._shotCols(side).col;
     const hue = CHARACTERS[ch]?.visual?.hue ?? 0xffd27a;
-    const key = `${def?.type || 'gun'}|${heavy ? 1 : 0}|${col}|${hue}`;
+    const key = `${def?.ch || ''}|${def?.slot || ''}|${def?.type || 'gun'}|${heavy ? 1 : 0}|${col}|${hue}`;
     const pool = this._projPool || (this._projPool = new Map());
     const free = pool.get(key);
     if (free && free.length) {
@@ -9100,13 +9105,13 @@ export class BattleClient {
   _updateShieldVisibility() {
     const hasShield = this.defending && (this.sp || 0) > 0 && !this.dead;
     const isExpanded = (this.shieldExpandUntil || 0) > (performance.now() / 1000);
-    const s = isExpanded ? 1.7 : 1.0;
+    const s = isExpanded ? SHIELD_PRESENTATION_EXPAND : 1.0;
     if (this._fpsShieldMesh) {
       this._fpsShieldMesh.visible = (this.viewMode === 'fpv' && hasShield);
       this._fpsShieldMesh.scale.set(s, 1.0, 1.0);
     }
     for (const ent of this.ents.values()) {
-      if (ent.isSelf && ent.shieldMesh) {
+      if (ent.isSelf && ent.shieldMesh && !ent.shieldMesh.userData.authoredCombat) {
         ent.shieldMesh.visible = (this.viewMode === 'tps' && hasShield);
         ent.shieldMesh.scale.set(s, 1.0, s);
       }
@@ -10541,11 +10546,28 @@ export class BattleClient {
     const lp = (() => { try { return lowPower(); } catch { return false; } })();
     for (const ent of this.mapBuildings?.values() || []) if (ent.bar) ent.bar.lookAt(camP);
     if (this._fpsShieldMesh) {
+      const shield = this._fpsShieldMesh;
+      if (shield.userData.character !== this.ch) {
+        const style = characterCombatStyle(this.ch);
+        if (style) {
+          const uniforms = shield.userData.mat.uniforms;
+          uniforms.uColor.value.setHex(style.color);
+          uniforms.uAccent.value.setHex(style.accent);
+          uniforms.uPattern.value = characterShieldTexture(this.ch);
+          uniforms.uHasPattern.value = 1;
+          shield.userData.character = this.ch;
+        }
+      }
+      shield.scale.x = (this.shieldExpandUntil || 0) > now ? SHIELD_PRESENTATION_EXPAND : 1;
       this._fpsShieldMesh.visible = (this.viewMode === 'fpv' && this.defending && (this.sp || 0) > 0 && !this.dead);
-      if (this._fpsShieldMesh.visible && this._fpsShieldMesh.userData.mat) stepShieldMaterial(this._fpsShieldMesh.userData.mat, dt);
+      if (shield.userData.mat) stepShieldMaterial(shield.userData.mat, dt);
     }
     for (const ent of this.ents.values()) {
       if (ent.isSelf) {
+        const defenseCast = ent.castFx?.slot === 'def'
+          && now >= ent.castFx.t0
+          && now - ent.castFx.t0 < (ent.mesh.userData.rig?.combat?.clips.def.duration ?? 0);
+        if (this._fpsShieldMesh && defenseCast) this._fpsShieldMesh.visible = this.viewMode === 'fpv' && !this.dead;
         if (this.viewMode === 'tps') {
           ent.mesh.visible = !ent.dead;
           const px = ent.mesh.position.x, pz = ent.mesh.position.z, pyaw = ent.mesh.rotation.y;
@@ -10553,17 +10575,18 @@ export class BattleClient {
           ent.mesh.rotation.y = (this.viewMode === 'tps' ? this.bodyYaw : this.yaw) + Math.PI;
           if (ent.bar) ent.bar.lookAt(this.camera.position);
           ent.visualDefense = this.defending && (this.sp || 0) > 0;
+          ent.visualShieldExpand = (this.shieldExpandUntil || 0) > now;
           stepCombatFx(ent, now, dt);
           stepLocomotion(ent, dt, now, px, pz, pyaw);
         } else {
           ent.mesh.visible = false;
           ent.mesh.position.copy(this.pos);
         }
-        if (ent.shieldMesh) {
+        if (ent.shieldMesh && !ent.shieldMesh.userData.authoredCombat) {
           ent.shieldMesh.visible = (this.viewMode === 'tps' && this.defending && (this.sp || 0) > 0 && !ent.dead);
           if (ent.shieldMesh.visible) {
             const isExpanded = (this.shieldExpandUntil || 0) > now;
-            const s = isExpanded ? 1.7 : 1.0;
+            const s = isExpanded ? SHIELD_PRESENTATION_EXPAND : 1.0;
             ent.shieldMesh.scale.set(s, 1.0, s);
             ent.shieldMesh.rotation.x = -this.pitch;
             if (ent.shieldMesh.userData.mat) stepShieldMaterial(ent.shieldMesh.userData.mat, dt);
@@ -10589,10 +10612,10 @@ export class BattleClient {
         }
         continue;
       }
-      if (ent.hero && ent.shieldMesh) {
+      if (ent.hero && ent.shieldMesh && !ent.shieldMesh.userData.authoredCombat) {
         ent.shieldMesh.visible = (!ent.dead && !!ent.df && (ent.sp == null || ent.sp > 0));
         if (ent.shieldMesh.visible) {
-          const s = ent.df === 2 ? 1.7 : 1.0;
+          const s = ent.df === 2 ? SHIELD_PRESENTATION_EXPAND : 1.0;
           ent.shieldMesh.scale.set(s, 1.0, s);
           ent.shieldMesh.rotation.x = -(ent.rx || 0);
           if (ent.shieldMesh.userData.mat) stepShieldMaterial(ent.shieldMesh.userData.mat, dt);

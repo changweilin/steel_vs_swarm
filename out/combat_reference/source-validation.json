@@ -1,0 +1,354 @@
+{
+  "m01": {
+    "blend": "328826f42c1e42297fc6072399e072424622c66649a89b1a9fbb07c783622624",
+    "bones": 32,
+    "effectParts": 53,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "m02": {
+    "blend": "a284b104ef6808c0bbc1ef392705eab5a9bf9d10fc40d44f3831c50eec7dde6c",
+    "bones": 37,
+    "effectParts": 46,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "m03": {
+    "blend": "79aeac49f5bf6d6c3f9b062607ed9bb8be1e27965c18b7c35168d27247228328",
+    "bones": 13,
+    "effectParts": 58,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "m04": {
+    "blend": "e410c7013f4c5bff9e76e0cfa95737666babe67f3edaf32e9ec6a9fa86137bf5",
+    "bones": 27,
+    "effectParts": 53,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "m05": {
+    "blend": "8f05fb03c206fcb6e1446df3d170cbacb52f90c8bc8c8f565d9c1dcf1d3e6594",
+    "bones": 65,
+    "effectParts": 48,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "m06": {
+    "blend": "094f729a0f8a79668e2417e902d511ad0dab94875b847ea34f63eaffd0878101",
+    "bones": 38,
+    "effectParts": 50,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "m07": {
+    "blend": "9af06eb51f56b5abcdbfe7578f045d95487c09d7aac8a8443d779dada094207c",
+    "bones": 88,
+    "effectParts": 88,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "m08": {
+    "blend": "c4e36ecce6be410323d6ea4ab6666bcbb0fd6eea760730c4cf384f25e73d0d7e",
+    "bones": 50,
+    "effectParts": 45,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s01": {
+    "blend": "ee2c0bbfb6e51a13daffe6f53128f3e8b817908e3d8064c9630da05b5a9d71e1",
+    "bones": 17,
+    "effectParts": 39,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s02": {
+    "blend": "fc2f33b390e833c76d4f4e7cab4371c464f7c414e97b530070ed862260fb5720",
+    "bones": 18,
+    "effectParts": 44,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s03": {
+    "blend": "b80e70d7ba6a141a04b1d3dfe7b1189e552118f4726f931c97f0e2bd085f2fda",
+    "bones": 50,
+    "effectParts": 54,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s04": {
+    "blend": "0f35cd62f79b78051fa18ecc45b8ebe9230ec90c020fe4bda8ab7ab2f472aa48",
+    "bones": 13,
+    "effectParts": 97,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s05": {
+    "blend": "6ed421ab5009e76ff1be649438f857ed909717d3da30f3556ef7e217422d6272",
+    "bones": 16,
+    "effectParts": 58,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s06": {
+    "blend": "74e67d48dfa1245fdc405a4869d8fd619fc59e228ce4109c8703dad42f9427a4",
+    "bones": 45,
+    "effectParts": 53,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s07": {
+    "blend": "ffec79e80c3417ae639a19eb26b732d9b659545e47977dbc6c5649b815825b74",
+    "bones": 119,
+    "effectParts": 98,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s08": {
+    "blend": "326d01672e97413ceb7e935bc7eca7bbc605e86869ef7a0ce0ef1182eda072c4",
+    "bones": 14,
+    "effectParts": 44,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s09": {
+    "blend": "da5a972a3c471f7510eb0291ead70316c5e4b9791b04f7807607867638589206",
+    "bones": 34,
+    "effectParts": 47,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s10": {
+    "blend": "79f20d44e614cf57349cb451593b4b53a97ead3d06a9ae4270721208a83a7148",
+    "bones": 58,
+    "effectParts": 52,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s11": {
+    "blend": "eadaaf462d1582155716f5efc05d74424e24d0159ca2ad1f1fe45995a0869f67",
+    "bones": 13,
+    "effectParts": 50,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "s12": {
+    "blend": "3346f3727db6ff4309961812f6748cbd0976259ed75dc6e69af2f942335d5ab5",
+    "bones": 16,
+    "effectParts": 52,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t01": {
+    "blend": "44871747228ba993638cc40bf709bd85d7b9a9cd1bf433f14cc4d250c6394b38",
+    "bones": 25,
+    "effectParts": 96,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t02": {
+    "blend": "42931da26066d73e3cf83c67a9e32927e0e9a6ff8f5022466074b4f62be2a24b",
+    "bones": 25,
+    "effectParts": 59,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t03": {
+    "blend": "7bcb5df71d78d8c0e688deeedb46b6d9034d312895703ec596ebe2901e1200fa",
+    "bones": 25,
+    "effectParts": 49,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t04": {
+    "blend": "c4297e9517e11d888a461968fed133db45de4bf0b9753548a62c6d123ef1ba6d",
+    "bones": 38,
+    "effectParts": 39,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t05": {
+    "blend": "1992ae83cf093a74f2225e39c8c59ee5627b1fea167e6670f7875f6503ae33bb",
+    "bones": 32,
+    "effectParts": 48,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t06": {
+    "blend": "8b5d353a0130fec3e3a4be77b9161c2d8747641a311c7016acfafed8184ba130",
+    "bones": 31,
+    "effectParts": 93,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t07": {
+    "blend": "2ff18d11df3ce23023ca7821c51744d9de0814f32fab3daeb7acf9b909eddd9c",
+    "bones": 26,
+    "effectParts": 50,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t08": {
+    "blend": "96327d550fc8f3285fa6b413e516835e8df5af01ed7a0e37db7f3a485021a917",
+    "bones": 51,
+    "effectParts": 65,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t09": {
+    "blend": "a6e5548cee9b6e3ff7112a9feb952680ee679dfebb4020801b59cf2379834bb8",
+    "bones": 14,
+    "effectParts": 51,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t10": {
+    "blend": "73a9047eee82a5064cf47e20a12aba12a0d4efbdbc9c06140c09684c75494fa1",
+    "bones": 28,
+    "effectParts": 42,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t11": {
+    "blend": "55b221dd1fc8f01a0cef2c545fd70d16b72f40e893f18e3b77dad53bc700ca12",
+    "bones": 101,
+    "effectParts": 47,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  },
+  "t12": {
+    "blend": "cdeff1f7fc15821965c3a2f0f58f574527ba5bedd60a29eed6e407067876b94d",
+    "bones": 26,
+    "effectParts": 55,
+    "actions": [
+      "light",
+      "heavy",
+      "def",
+      "atk"
+    ]
+  }
+}
