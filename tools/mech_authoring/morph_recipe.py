@@ -5,7 +5,7 @@ from pathlib import Path
 
 import bpy
 from mathutils import Quaternion, Vector
-from catalog import vents, ellipsoid, wing, spike, tails, animal_limb
+from catalog import vents, ellipsoid, wing, spike, tails, animal_limb, flight_panel, compact_emitters, waist_shell, weapon_grips
 
 
 def apply_form(a, form):
@@ -77,6 +77,10 @@ def create(base, spec):
                     super().pose(clip.removeprefix('flight_'), t)
             finally:
                 del self._pose_form
+            if clip not in ('to_flight','to_ground'):
+                tail_rig=self.spec['rig'] | self.spec['forms']['flight' if flight else 'ground']['rig']
+                for i,name in enumerate(tail_rig.get('tailSegs') or []):
+                    self.nodes[name].rotation_euler.z += (math.sin(t*math.tau-i*.45)-math.sin(-i*.45))*(.045 if clip=='run' else .018)
             if flight:
                 if clip == 'flight_idle':
                     self.nodes['tilt'].location.z += math.sin(t * math.tau) * self.spec['forms']['flight']['rig']['bob']
@@ -84,12 +88,21 @@ def create(base, spec):
                 for entry in rig.get('spin', []):
                     self.rotate(self.nodes[entry['node']],entry['axis'],t*entry['rate'])
                 for entry in rig.get('wings', []):
-                    self.rotate(self.nodes[entry['w']],'z',entry['sgn']*math.sin(t*math.tau*3)*.24)
-                    self.rotate(self.nodes[entry['outer']],'z',entry['sgn']*math.sin(t*math.tau*3-.6)*.32)
+                    phase=t*math.tau*(6 if rig.get('insect') else 3)
+                    self.rotate(self.nodes[entry['w']],'z',entry['sgn']*(entry.get('dihedral',0)+math.sin(phase)*.24))
+                    if entry.get('hand'):
+                        self.rotate(self.nodes[entry['outer']],'y',entry['sgn']*(entry.get('elbowSweep',0)+math.sin(phase-.6)*.14))
+                        self.rotate(self.nodes[entry['hand']],'y',entry['sgn']*(entry.get('wristSweep',0)+math.sin(phase-.9)*.10))
+                    else:
+                        self.rotate(self.nodes[entry['outer']],'z',entry['sgn']*math.sin(phase-.6)*.18)
+                        if rig.get('insect'):
+                            self.rotate(self.nodes[entry['w']],'y',entry['sgn']*math.cos(phase)*.45)
+                            self.rotate(self.nodes[entry['w']],'x',math.cos(phase)*.65)
             if clip in ('light', 'flight_light'):
                 spinner = self.spec['motion'].get('fireSpin')
                 if spinner:
                     self.rotate(self.nodes[spinner['node']], spinner['axis'], t * spinner['rate'] * math.sin(math.pi * t) ** 2)
+            self.aim_hands(math.sin(math.pi*t)**2 if clip.removeprefix('flight_') in ('light','heavy','skill','ult') else 0)
 
         def render(self, directory):
             evidence = super().render(directory)
@@ -123,8 +136,9 @@ def vampire(a):
     p = a.p
     positions = {name: at for name, _, at in a.spec['joints']}
     cavity=a.spec['cavity']
-    a.loft('Continuous armored belly keel', 'chest', cavity['sections'], 'shade', cavity['offset'])
-    a.loft('Tapered waist and pelvic shell', 'hips', [(-.28, .52, .42), (.05, .88, .65), (.58, .82, .70)], 'shade')
+    regional_hull(a,cavity,'Vampire', 'shade')
+    a.loft('Separate vampire pelvic shell', 'hips', [(-.28, .52, .42), (.05, .92, .65), (.24, .76, .57)], 'shade')
+    waist_shell(a)
     for i in range(3):
         a.plate('Overlapping angular abdominal armor', 'hips', [(-.37, .12), (.37, .12), (.27, -.16),
                 (0, -.31), (-.27, -.16)], .12, (0, .57 - i * .23, .38), 'armor')
@@ -161,6 +175,9 @@ def vampire(a):
                (.25, .50, .38)], 'armor', (side * .06, 0, 0))
         bands(a, 'shoulder_' + n, (side * .06, .12, .275), .58, .06)
         a.box('Rigid armored hand', 'wrist_' + n, (.29, .20, .32), (0, -.05, .06), 'shade', .025)
+        for x in [-.09,-.03,.03,.09]:
+            a.box('Closed vampire weapon grip digit','wrist_'+n,(.05,.13,.10),(x,-.19,.09),'armor',.01)
+        a.box('Opposed vampire grip thumb','wrist_'+n,(.07,.12,.13),(side*.15,-.07,.03),'armor',.01)
         a.loft('Pointed grounded armored boot', 'ankle_' + n, [(-.24, .32, .32), (.02, .39, .65),
                (.14, .32, .41)], 'armor', (0, 0, .15))
         a.box('Boot sole', 'ankle_' + n, (.38, .065, .76), (0, -.24, .14), 'dark', .015)
@@ -214,13 +231,34 @@ def vampire(a):
 def construct(a):
     if a.spec['id'] == 'm01':
         vampire(a)
+        weapon_grips(a)
     else:
         morpher(a)
+
+
+def regional_hull(a, cavity, label, material, scale=1):
+    sections=cavity['sections']
+    cuts=[sections[0][0], *cavity.get('regionCuts', []), sections[-1][0]]
+    def section_at(value):
+        lo,hi=next((lo,hi) for lo,hi in zip(sections,sections[1:]) if lo[0]<=value<=hi[0])
+        u=(value-lo[0])/(hi[0]-lo[0])
+        return [value]+[(lo[i]+(hi[i]-lo[i])*u)*scale for i in range(1,len(lo))]
+    labels=['pelvic croup','lumbar waist','thoracic cage'] if len(cuts)==4 else ['lumbar waist','thoracic cage']
+    for index,(lo,hi) in enumerate(zip(cuts,cuts[1:])):
+        part=[section_at(lo)]+[[s[0],*[v*scale for v in s[1:]]] for s in sections if lo<s[0]<hi]+[section_at(hi)]
+        name=label+' separate '+labels[index]
+        if cavity.get('profile')=='ellipse':
+            rounded_hull(a,name,cavity['owner'],part,cavity['offset'],material)
+        else:
+            a.loft(name,cavity['owner'],part,material,cavity['offset'],cavity['axis'])
 
 
 def armor_cavity(a):
     c = a.spec.get('cavity')
     if not c:
+        return
+    if c.get('regionCuts'):
+        regional_hull(a,c,'Shared sealed', 'shade')
         return
     if c.get('profile') == 'ellipse':
         rounded_hull(a, 'Shared sealed ventral hull', c['owner'], c['sections'], c['offset'], 'shade')
@@ -275,6 +313,10 @@ def limb_inventory(a):
             ellipsoid(a, 'Matte feline paw', owner, (.38, .22, .49), (0, -.06, .05), 'shade', 12, 6)
             for x in [-.11, 0, .11]:
                 a.box('Feline toe pad', owner, (.085, .12, .14), (x, -.08, .25), 'armor', .02)
+                if not fore:
+                    spike(a,'Shared feline owl grasping talon',owner,(x,-.11,.28),(x,-.20,.46),.032,'steel')
+            if not fore:
+                spike(a,'Opposable rear owl talon',owner,(0,-.10,-.08),(0,-.19,-.30),.035,'steel')
         else:
             a.loft('Tapered armored boot', owner, [(-.2, .38, .46), (.1, .28, .28)], 'armor', (0, 0, .05))
             if a.spec['id'] == 'm05':
@@ -295,10 +337,11 @@ def limb_inventory(a):
 
 def biped_body(a):
     if a.spec['id'] == 'm05':
-        a.loft('Narrow wolf abdomen', 'hips', [(-.32, .62, .42), (.2, .96, .54), (.63, .9, .57)], 'shade')
+        a.loft('Separate wolf pelvic girdle', 'hips', [(-.32, .62, .42), (.08, .98, .62), (.22, .72, .48)], 'shade')
         a.loft('Long canine rib armor', 'chest', [(0, .72, .5), (.85, 1.72, .78), (1.3, 1.68, .7)], 'shade')
     else:
         a.loft('Articulated pelvic shell', 'hips', [(-.3, .62, .48), (.25, .95, .56)], 'shade')
+    waist_shell(a)
     for s in [-1, 1]:
         a.plate('Split tapered pectoral armor', 'chest', [(s*.06, .38), (s*.67, .30), (s*.81, 1.05),
                 (s*.55, 1.34), (s*.08, 1.13)], .10, (0, 0, .56), 'armor')
@@ -310,27 +353,20 @@ def biped_body(a):
 
 
 def feathers(a):
-    p = a.p
-    owl = a.spec['id'] == 'm08'
-    for s, n in [(1, 'l'), (-1, 'r')]:
-        wing(a, 'Shared folded scapular wing', 'flap_'+n, [(0,.25), (s*1.82, .50 if owl else .25),
-             (s*1.7,-.72), (s*.12,-.82)], (0,0,0), 'armor', .085)
-        a.strut('Wing leading spar', 'flap_'+n, (0,.015,.25), (s*1.78,.015,.50 if owl else .25), .038, 'steel')
-        wing(a, 'Continuous primary feather root web', 'outer_'+n,
-             [(-s*.15,.24),(s*1.28,.24),(s*1.40,-.70),(-s*.15,-.50)],
-             (0,0,0), 'shade', .045)
-        for i in range(7):
-            length=1.28-i*.055
-            root=f'feather_{n}_{i}'
-            wing(a, 'Independent owl silent feather' if owl else 'Independent raptor blade feather', root,
-                 [(-s*.16,.14),(s*.18,.19),(s*(length*.8+.25),-1.45-i*.1),
-                  (s*(length*.8-.035),-1.65-i*.1)], (0,.028+i*.003,0), 'armor' if i%2 else 'shade', .038)
-            a.strut('Feather shaft inlay', root, (0,.027,0), (s*length*.8,.027,-1.50-i*.1), .009, 'cyan' if owl else 'brass')
-        for i in range(8):
-            x=s*(.05+i*.22)
-            wing(a, 'Overlapping secondary flight feather', 'flap_'+n,
-                 [(x-s*.08,-.06),(x+s*.24,.02),(x+s*.37,-1.10),(x+s*.04,-1.19)],
-                 (0,.045+i*.002,0), 'armor' if i%2 else 'shade', .035)
+    positions={name:at for name,_,at in a.spec['joints']}
+    for side,n in [(1,'l'),(-1,'r')]:
+        for parent,end,role in [('flap_'+n,positions['ulna_'+n],'humerus'),
+                                ('ulna_'+n,positions['outer_'+n],'ulna'),
+                                ('outer_'+n,(side*a.p['primaryLength'],0,-.38),'manus')]:
+            flight_panel(a,parent,side,end,role)
+            ellipsoid(a,'Exposed avian '+role+' hinge',parent,(.22,.18,.23),(0,.04,0),'steel',10,5)
+    if a.spec['id']=='m08':
+        for i in range(9):
+            angle=(i-4)*.11
+            x,z=math.sin(angle),-math.cos(angle)
+            wing(a,'Owl balancing tail rectrix','tail_4',
+                 [(-.08,0),(.08,0),(x*.88+.12,z*.88),(x*.98,z*.98),(x*.88-.12,z*.88)],
+                 (0,.02+i*.004,0),'armor',.028)
 
 
 def feline_head(a):
@@ -410,7 +446,7 @@ def atlas(a):
 
 def whale(a):
     c=a.spec['cavity']
-    rounded_hull(a,'Turquoise whale dorsal armor','spine',[(z,w*1.03,h*1.03) for z,w,h in c['sections']],(0,0,0),'armor')
+    regional_hull(a,c,'Elephant whale dorsal armor','armor',1.03)
     rounded_hull(a,'Shared neckless whale elephant head','head',
                  [(-.95,1.80,1.40),(-.48,2.25,1.64),(.25,2.18,1.57),(.88,1.45,1.12),(1.24,.64,.62)],
                  (0,0,0),'armor')
@@ -523,12 +559,16 @@ def beetle(a):
         a.loft('Shared heavy protective elytron','elytra_'+n,[(-1.55,.76,.33),(-1.1,1.25,.58),(.65,1.26,.62),(.94,.64,.40)],'armor',(s*.56,.14,0),'z')
         for i in range(3):
             a.strut('Geometric beetle totem','elytra_'+n,(s*(.25+i*.13),.47,-1.1),(s*(.25+i*.13),.52,.42-i*.12),.014,'cyan')
-        for pair in range(2):
-            root=f'membrane_{n}_{pair}'
+        for entry in a.spec['forms']['flight']['rig']['wings']:
+            if entry['sgn']!=s:
+                continue
+            root=entry['w'].removesuffix('_flap')
             for part,span,at in [(root+'_flap',1.3,(0,0,0)),(root+'_outer',1.6,(0,0,0))]:
-                wing(a,'Transparent insect propulsion membrane',part,[(0,.13),(s*span,.30),(s*(span+.15),-.26),(s*.15,-.51)],at,'membrane',.013)
+                wing(a,'Transparent insect propulsion membrane',part,
+                     [(0,0),(s*span,-.10),(s*(span+.08),-.24),(s*span,-.43),
+                      (s*span*.72,-.62),(s*span*.32,-.68),(s*.10,-.38)],at,'membrane',.013)
                 for i in range(3):
-                    a.strut('Insect membrane vein',part,(0,.01,.04),(s*span,.01,.24-i*.23),.014,'steel')
+                    a.strut('Insect membrane vein',part,(0,.01,-.04),(s*span,.01,-.12-i*.20),.014,'steel')
     for i in range(4):
         a.tube('Insect ventral abdominal segment','spine',.65-i*.05,.60-i*.05,.038,(0,-.5,-.25-i*.37),'steel',segments=20)
 
@@ -536,7 +576,7 @@ def beetle(a):
 def patagium(a):
     outline=a.p['membraneOutline']
     cuts=a.p['membraneCuts']
-    fold=a.p['membraneFoldY']
+    rows=a.p['membraneRows']
     def clip(poly,axis,bound,above):
         result=[]
         for start,end in zip(poly,poly[1:]+poly[:1]):
@@ -549,18 +589,22 @@ def patagium(a):
                 result.append([start[i]+(end[i]-start[i])*u for i in range(2)])
         return result
     for s,n in [(1,'l'),(-1,'r')]:
-        # Accordion cells preserve the membrane inventory while packing it behind the ground chest.
-        for row in ['upper','lower']:
-            poly=clip(outline,1,fold,row=='upper')
+        # Two-axis pleats keep each rigid cell within an elbow-length blade envelope.
+        for row,(bottom,top) in enumerate(zip(rows,rows[1:])):
+            poly=clip(clip(outline,1,bottom,True),1,top,False)
             for i,(lo,hi) in enumerate(zip(cuts,cuts[1:])):
                 points=clip(clip(poly,0,lo,True),0,hi,False)
-                node=('wing_'+n if row=='upper' else 'mem_lower_'+n) if i==0 else f'mem_{row}_{n}_{i}'
-                offset=0 if row=='upper' else fold
-                local=[(s*(x-lo),y-offset) for x,y in points]
+                if len(points)<3:
+                    continue
+                node=f'mem_cell_{n}_{row}_{i}'
+                local=[(s*(x-lo),y-bottom) for x,y in points]
                 a.plate('Shared flying squirrel patagium cell',node,local,.017,(0,0,0),'membrane')
                 for start,end in zip(local,local[1:]+local[:1]):
                     a.strut('Patagium tension edge',node,(*start,.01),(*end,.01),.012,'cyan')
         vents(a,'shoulder_'+n,(0,-.1,.29),.34,3,'brass')
+        a.strut('Elbow tonfa membrane housing','wing_'+n,(0,-.08,.06),(0,.92,.06),.075,'steel')
+        a.plate('Folded patagium fist blade','wing_'+n,
+                [(-.05,.55),(.13,.55),(.19,.99),(.04,1.18),(-.07,.95)],.065,(0,0,.075),'armor')
 
 
 def weapons(a):
@@ -580,6 +624,13 @@ def weapons(a):
         a.tube('Plasma staff open crown muzzle','heavy_recoil',.135,.085,.12,(0,0,2.18),'glow')
         a.box('Micro silent chest gun','gun_recoil',(.19,.22,.34),(0,0,.1),'shade',.02)
         a.tube('Micro silent chest barrel','gun_recoil',.075,.032,.76,(0,0,.55),'dark',segments=10)
+    elif id=='t11':
+        for owner in ['gun_recoil','heavy_recoil']:
+            a.box('Balanced shoulder combined weapon receiver',owner,(.52,.40,.68),(0,0,.14),'shade',.045)
+            for x in [-.16,.16]:
+                a.tube('Balanced shoulder machine gun barrel',owner,.065,.038,light_len-.22,(x,-.10,(light_len+.22)/2),'steel')
+            a.tube('Balanced shoulder recoilless cannon',owner,.105,.06,heavy_len-.28,(0,.13,(heavy_len+.28)/2),'steel')
+            a.box('Shoulder weapon service grip',owner,(.14,.18,.30),(0,-.24,-.10),'dark',.025)
     elif id=='m05':
         a.box('Back right folded three barrel receiver','gun_recoil',(.59,.40,.67),(0,0,.13),'shade',.07)
         for i in range(3):
@@ -598,6 +649,12 @@ def weapons(a):
             a.tube('Heavy sniper suppressor','heavy_recoil',.105,.043,.46,(s*.65,0,2.12),'dark')
             a.tube('Shoulder sniper sight','heavy_recoil',.095,.056,.45,(s*.65,.24,.17),'dark')
             a.disk('Muted blue sniper lens','heavy_recoil',.055,.02,(s*.65,.24,.40),'glow')
+    elif id=='s10':
+        a.box('Handheld raptor phase laser receiver','gun_recoil',(.29,.25,.46),(0,0,.13),'shade',.03)
+        a.tube('Handheld raptor phase laser barrel','gun_recoil',.065,.032,light_len-.20,(0,0,(light_len+.20)/2),'steel')
+        a.tube('Handheld raptor electromagnetic lance shaft','heavy_recoil',.085,.045,heavy_len+1.0,(0,0,(heavy_len-1.0)/2),'steel')
+        a.tube('Handheld raptor lance coil collar','heavy_recoil',.16,.11,.38,(0,0,heavy_len-.22),'armor')
+        spike(a,'Handheld raptor electromagnetic lance tip','heavy_recoil',(0,0,heavy_len-.10),(0,0,heavy_len+.43),.10,'brass')
     else:
         if id=='m07':
             a.disk('Dorsal central twin AA turret','heavy',.43,.23,(0,-.04,0),'armor','y',20)
@@ -617,6 +674,8 @@ def weapons(a):
         if id=='s10':
             spike(a,'Electromagnetic dorsal lance tip','heavy_recoil',(0,0,heavy_len-.16),(0,0,heavy_len+.43),.10,'brass')
     a.box('Articulated charge shutter','charge_hinge',(.32,.06,.28),(0,0,0),'armor',.018)
+    if id=='t11':
+        a.box('Articulated charge shutter','charge_hinge_r',(.32,.06,.28),(0,0,0),'armor',.018)
     for name in ['light_muzzle','heavy_muzzle']:
         a.disk('Weapon muzzle energy aperture',name,.025,.01,(0,0,0),'glow')
 
@@ -655,9 +714,8 @@ def morpher(a):
             for i in range(6):
                 a.box('Faint deterministic night digital camo','chest',(.18,.018,.12),(s*.72,.69,.28-i*.20),'shade',0)
     weapons(a)
-    for n in ['l','r']:
-        a.loft('Independent retractable shield emitter','emitter_'+n,[(0,.13,.14),(.46,.12,.11),(.57,.04,.04)],'shade')
-        a.box('Shield luminous emitter rail','emitter_'+n,(.027,.35,.02),(0,.26,.09),'cyan',.003)
+    weapon_grips(a)
+    compact_emitters(a)
     a.barrier('barrier',1.50 if a.spec['kind']=='biped' else 1.9,1.65 if a.spec['kind']=='biped' else 1.18)
     a.tube('Articulated skill charge annulus','cast_dish',.22,.15,.055,(0,0,0),'cyan')
 

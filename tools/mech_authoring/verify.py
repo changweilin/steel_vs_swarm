@@ -2,12 +2,16 @@
 import hashlib
 import json
 import math
+import sys
 from pathlib import Path
 
 import bpy
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0,str(HERE))
+from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose
 ROOT = HERE.parent.parent
 contract_file = HERE / 'assets.json'
 contract = json.loads(contract_file.read_text(encoding='utf8'))
@@ -25,7 +29,19 @@ def bounds(objects):
     return tuple(max(point[i] for point in points) - min(point[i] for point in points) for i in range(3))
 
 
-for id, spec in contract['assets'].items():
+def collision_tree(objects):
+    vertices,faces=[],[]
+    for obj in objects:
+        offset=len(vertices)
+        vertices.extend(obj.matrix_world @ v.co for v in obj.data.vertices)
+        faces.extend(tuple(offset+i for i in face.vertices) for face in obj.data.polygons)
+    assert vertices, 'Missing collision geometry'
+    return BVHTree.FromPolygons(vertices,faces)
+
+
+selected=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else list(contract['assets'])
+for id in selected:
+    spec=contract['assets'][id]
     blend = output / id / (id + '.blend')
     report_file = output / id / 'validation.json'
     report = json.loads(report_file.read_text(encoding='utf8'))
@@ -49,7 +65,7 @@ for id, spec in contract['assets'].items():
     meshes = [obj for obj in bpy.data.objects if obj.type == 'MESH']
     assert meshes and all(obj.parent and obj.data.materials for obj in meshes), id + ': orphan geometry'
     assert all(math.isfinite(v) for obj in meshes for vertex in obj.data.vertices for v in vertex.co), id + ': nonfinite geometry'
-    anatomy = {}
+    anatomy = {'articulation':verify_articulated_body(spec,meshes)}
     if id == 'm06':
         plates = [obj for obj in meshes if obj.name.startswith('Eight pentagonal launch backplates')]
         assert len(plates) == 8, 'm06: backplate count changed'
@@ -66,14 +82,27 @@ for id, spec in contract['assets'].items():
         sectors = {round(math.atan2(origins[name][2],origins[name][0]) / (math.pi/4)) % 8 for name in roots}
         assert len(sectors) == 8, 's07: tentacle origins do not cover eight radial directions'
         anatomy['radialTentacleSectors'] = len(sectors)
+        tentacle_meshes={root:[] for root in roots}
+        for obj in meshes:
+            if not obj.name.startswith(('Continuous flexible tentacle sheath','Ventral articulated sucker','Support tentacle contact pad')):
+                continue
+            owner=obj.parent
+            while owner and owner.name not in tentacle_meshes:
+                owner=owner.parent
+            assert owner, 's07: tentacle surface has no owning chain'
+            tentacle_meshes[owner.name].append(obj)
+        pads=[obj for obj in meshes if obj.name.startswith('Support tentacle contact pad')]
+        assert len(pads)==4, 's07: four support contacts missing'
     if id == 't12':
         assert bpy.data.objects['forehead_bore'].scale.x < .002, 't12: forehead bore exposed at rest'
         assert bpy.data.objects['heavy_muzzle'].parent.name == 'forehead_bore', 't12: forehead emission bypasses concealment'
         assert any(obj.name.startswith('Closed forehead cannon shutter') for obj in meshes), 't12: forehead shutter missing'
         assert not any(obj.name.startswith('Heavy weapon open bore') for obj in meshes), 't12: external forehead barrel retained'
     if id == 't02':
-        assert any(obj.name.startswith('Long rifle open muzzle brake') for obj in meshes), 't02: gun muzzle missing'
-        assert not any(obj.name.startswith('Long superconducting lance tip') for obj in meshes), 't02: sword tip retained'
+        assert any(obj.name.startswith('Heavy weapon open bore') for obj in meshes), 't02: electromagnetic bore missing'
+        assert any(obj.name.startswith('Hybrid lance cutting spearhead') for obj in meshes), 't02: melee spearhead missing'
+        assert not any(obj.name.startswith(('Rifle shoulder stock','Rifle pistol grip')) for obj in meshes), 't02: firearm-only grip retained'
+        assert bpy.data.objects['emitter_r'].parent.name=='heavy', 't02: shield does not emit from the lance'
     if id == 'm02':
         skull = bounds([obj for obj in meshes if obj.name.startswith('Massive tyrannosaur upper skull')])
         bore = bounds([obj for obj in meshes if obj.name.startswith('Heavy weapon open bore')])
@@ -86,13 +115,22 @@ for id, spec in contract['assets'].items():
         offsets = {name: Vector(pos) for name, _, pos in spec['joints']}
         assert offsets[wing['outer']].normalized().dot(offsets[wing['hand']].normalized()) < .85, id + ': wing elbow is straight'
         anatomy['bentWingElbow'] = True
-        for joint in [wing['w'], wing['outer'], wing['hand']]:
-            assert any(obj.parent.name == joint and obj.name.startswith('Continuous ') for obj in meshes), id + ': discontinuous wing surface'
-        for joint in [wing['outer'], wing['hand']]:
-            assert any(obj.parent.name == joint and obj.name.startswith('Overlapping wing hinge gore') for obj in meshes), id + ': wing fold exposes a hinge seam'
-        if spec['recipe'] != 'pterosaur':
+        if spec['recipe'] == 'pterosaur':
+            for joint in [wing['w'], wing['outer'], wing['hand']]:
+                assert any(obj.parent.name == joint and obj.name.startswith('Continuous ') for obj in meshes), id + ': discontinuous membrane'
+            for joint in [wing['outer'], wing['hand']]:
+                assert any(obj.parent.name == joint and obj.name.startswith('Overlapping wing hinge gore') for obj in meshes), id + ': membrane hinge seam'
+        else:
             feathers = [obj for obj in meshes if obj.parent.name == wing['hand'] and obj.name.startswith('Fanned primary feather')]
             assert len(feathers) >= 8, id + ': missing fanned primary feathers'
+            assert not any(obj.name.startswith(('Continuous humerus wing web','Continuous ulna wing web','Continuous manus wing web','Overlapping wing hinge gore')) for obj in meshes), id + ': obsolete wing boards retained'
+            if spec['recipe']=='eagle':
+                assert any(obj.name.startswith('Fanned avian rectrix') for obj in meshes), id + ': bird tail feathers missing'
+            side=wing['sgn']
+            manus=spec['parameters'].get('manusEnd',[spec['parameters']['primaryLength'],0,.08])
+            anatomy['feathersBehindBones']=verify_feather_planes(meshes,
+                [(wing['w'],offsets[wing['outer']],side),(wing['outer'],offsets[wing['hand']],side),
+                 (wing['hand'],(side*manus[0],manus[1],manus[2]),side)])
         anatomy['articulatedWings'] = 2
     assert bpy.context.scene.camera is not None, id + ': review camera missing'
     joints = [bpy.data.objects[name] for name, _, _ in spec['joints']]
@@ -100,7 +138,10 @@ for id, spec in contract['assets'].items():
     for clip in report['clips']:
         for joint in joints:
             for track in joint.animation_data.nla_tracks:
-                track.mute = track.name != clip
+                track.mute = True
+                if track.name == clip:
+                    joint.animation_data.action = track.strips[0].action
+                    joint.animation_data.action_slot = track.strips[0].action_slot
         for frame in [1, 8, 16, 24, 31]:
             bpy.context.scene.frame_set(frame)
             depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -108,6 +149,18 @@ for id, spec in contract['assets'].items():
             if id == 't05':
                 expected = .22 if clip == 'run' else 1.12
                 assert abs(bpy.data.objects['shoulder_l'].rotation_euler.z - expected) < 1e-4, 't05: editable clip loses wing posture'
+            if id=='t10' and clip=='shield_deploy' and frame==31:
+                forward=bpy.data.objects['barrier'].matrix_world.to_quaternion() @ Vector((0,-1,0))
+                assert forward.y<-.95, 't10: deployed shield does not face forward'
+            if id == 's07':
+                trees=[collision_tree(tentacle_meshes[root]) for root in roots]
+                for i,tree in enumerate(trees):
+                    assert all(not tree.overlap(other) for other in trees[i+1:]), 's07: tentacle collision in '+clip+' frame '+str(frame)
+                contacts=sorted([obj.matrix_world.translation for obj in pads],key=lambda p:math.atan2(p.y,p.x))
+                assert max(p.z for p in contacts)-min(p.z for p in contacts)<.14, 's07: unsupported lower tentacle'
+                center=bpy.data.objects['spine'].matrix_world.translation
+                cross=[(b.x-a.x)*(center.y-a.y)-(b.y-a.y)*(center.x-a.x) for a,b in zip(contacts,contacts[1:]+contacts[:1])]
+                assert all(v>0 for v in cross) or all(v<0 for v in cross), 's07: mantle lies outside support polygon'
             for joint in joints:
                 assert all(math.isfinite(v) for row in joint.matrix_world for v in row), id + ': nonfinite ' + clip
                 head = evaluated.matrix_world @ evaluated.pose.bones[joint.name].head
@@ -120,6 +173,8 @@ for id, spec in contract['assets'].items():
                     for other, index, sign in [('x', 0, 1), ('y', 2, 1), ('z', 1, -1)]:
                         if other != axis:
                             assert abs(joint.location[index] - origin['xyz'.index(other)] * sign) < 1e-5, id + ': displaced pivot'
+            if frame == 16:
+                verify_weapon_pose(spec,clip in ['light','heavy'])
             pose_samples += 1
     for joint in joints:
         for track in joint.animation_data.nla_tracks:
@@ -131,6 +186,9 @@ for id, spec in contract['assets'].items():
     pending.write_text(json.dumps(report, indent=2) + '\n', encoding='utf8')
     pending.replace(report_file)
 
+if '--' in sys.argv:
+    prior=output/'source-validation.json'
+    results=json.loads(prior.read_text()) | results if prior.exists() else results
 pending = output / 'source-validation.json.tmp'
 pending.write_text(json.dumps(results, indent=2) + '\n', encoding='utf8')
 pending.replace(output / 'source-validation.json')

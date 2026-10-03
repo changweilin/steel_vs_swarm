@@ -52,7 +52,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired chest emitter hinges project a decorative shield, independent of wing hinges; deployment and retraction in both forms"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -65,7 +65,12 @@
         "gunLength": 1.8,
         "wingSpan": 3.45,
         "wingFore": 1.25,
-        "wingAft": -1.65
+        "wingAft": -1.65,
+        "waist": {
+          "width": 0.72,
+          "depth": 0.52,
+          "height": 0.48
+        }
       },
       "materials": {
         "armor": {
@@ -134,11 +139,20 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
-            0.68,
+            0.4,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
+            0,
+            0.28,
             0
           ]
         ],
@@ -300,7 +314,7 @@
           "wrist_r",
           [
             0,
-            -0.1,
+            -0.23,
             0.16
           ]
         ],
@@ -336,8 +350,8 @@
           "wrist_l",
           [
             0,
-            -0.1,
-            0.1
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -369,20 +383,20 @@
         ],
         [
           "emitter_l",
-          "chest",
+          "heavy",
           [
-            0.76,
-            0.7,
-            0.44
+            0.27,
+            0,
+            0.2
           ]
         ],
         [
           "emitter_r",
-          "chest",
+          "gun",
           [
-            -0.76,
-            0.7,
-            0.44
+            -0.27,
+            0,
+            0.2
           ]
         ],
         [
@@ -413,7 +427,7 @@
         "legR": "hip_r",
         "armL": "shoulder_l",
         "armR": "shoulder_r",
-        "armBase": 0,
+        "armBase": 0.06,
         "sway": 0.045,
         "hop": false,
         "knuckle": false,
@@ -423,13 +437,13 @@
         "legChainR": [
           {
             "g": "knee_r",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_r",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -437,7 +451,7 @@
         "armChainR": [
           {
             "g": "elbow_r",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -451,13 +465,13 @@
         "legChainL": [
           {
             "g": "knee_l",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_l",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -465,7 +479,7 @@
         "armChainL": [
           {
             "g": "elbow_l",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -484,7 +498,8 @@
             ],
             "ref": "gun_spin",
             "muzzle": "light_muzzle",
-            "r": 0.075
+            "r": 0.075,
+            "aimJoint": "wrist_r"
           },
           "heavy": {
             "nodes": [
@@ -492,8 +507,39 @@
             ],
             "ref": "heavy",
             "muzzle": "heavy_muzzle",
-            "r": 0.13
+            "r": 0.13,
+            "aimJoint": "wrist_l"
           }
+        },
+        "legBase": -0.08,
+        "waist": "waist",
+        "heldWeapons": [
+          {
+            "node": "gun",
+            "hand": "wrist_r",
+            "staff": false
+          },
+          {
+            "node": "heavy",
+            "hand": "wrist_l",
+            "staff": false
+          }
+        ],
+        "gunR": {
+          "g": "wrist_r",
+          "rest": 0,
+          "aim": 0
+        },
+        "aimPose": {
+          "rShoulderX": -0.48,
+          "rElbowX": -1.09,
+          "lShoulderX": -0.48,
+          "lElbowX": -1.09
+        },
+        "gunL": {
+          "g": "wrist_l",
+          "rest": 0,
+          "aim": 0
         }
       },
       "motion": {
@@ -502,16 +548,30 @@
           "barrier": "barrier",
           "hinges": [
             {
-              "node": "emitter_l",
-              "axis": "z",
+              "node": "emitter_r",
+              "axis": "x",
               "rest": 0,
-              "deploy": -1.05
+              "deploy": 0.22
             },
             {
-              "node": "emitter_r",
-              "axis": "z",
+              "node": "emitter_l",
+              "axis": "x",
               "rest": 0,
-              "deploy": 1.05
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_r",
+              "axis": "x",
+              "radius": 0.14,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_l",
+              "axis": "x",
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -602,6 +662,62 @@
                 -0.2,
                 0
               ]
+            },
+            "shoulder_l": {
+              "rotation": [
+                0.06,
+                0,
+                0.1
+              ]
+            },
+            "elbow_l": {
+              "rotation": [
+                -0.3,
+                0,
+                0
+              ]
+            },
+            "knee_l": {
+              "rotation": [
+                0.16,
+                0,
+                0
+              ]
+            },
+            "ankle_l": {
+              "rotation": [
+                -0.08,
+                0,
+                0
+              ]
+            },
+            "shoulder_r": {
+              "rotation": [
+                0.06,
+                0,
+                -0.1
+              ]
+            },
+            "elbow_r": {
+              "rotation": [
+                -0.3,
+                0,
+                0
+              ]
+            },
+            "knee_r": {
+              "rotation": [
+                0.16,
+                0,
+                0
+              ]
+            },
+            "ankle_r": {
+              "rotation": [
+                -0.08,
+                0,
+                0
+              ]
             }
           },
           "rig": {}
@@ -675,7 +791,7 @@
             },
             "wrist_l": {
               "rotation": [
-                -1.39,
+                -2.9607963267948962,
                 0,
                 0
               ]
@@ -727,7 +843,7 @@
             },
             "wrist_r": {
               "rotation": [
-                -1.39,
+                -2.9607963267948962,
                 0,
                 0
               ]
@@ -742,7 +858,12 @@
             "leanF": 0.15,
             "gunR": null,
             "gunL": null,
-            "aimPose": null
+            "aimPose": {
+              "rShoulderX": -1.02,
+              "rElbowX": -2.12,
+              "lShoulderX": -1.02,
+              "lElbowX": -2.12
+            }
           }
         }
       },
@@ -807,14 +928,14 @@
         "axis": "y",
         "sections": [
           [
-            -0.88,
-            1.4,
-            0.76
+            -0.4,
+            0.74,
+            0.6
           ],
           [
-            -0.4,
-            1.8,
-            0.82
+            -0.12,
+            1.42,
+            0.76
           ],
           [
             1.42,
@@ -832,7 +953,10 @@
           0,
           0
         ],
-        "roots": []
+        "roots": [],
+        "regionCuts": [
+          -0.08
+        ]
       }
     },
     "s03": {
@@ -1032,12 +1156,21 @@
           ]
         ],
         [
-          "leg_HL",
+          "pelvis",
           "spine",
+          [
+            0,
+            0,
+            -1.3
+          ]
+        ],
+        [
+          "leg_HL",
+          "pelvis",
           [
             1.0555999999999999,
             0,
-            -1.3
+            0
           ]
         ],
         [
@@ -1069,11 +1202,11 @@
         ],
         [
           "leg_HR",
-          "spine",
+          "pelvis",
           [
             -1.0555999999999999,
             0,
-            -1.3
+            0
           ]
         ],
         [
@@ -1330,20 +1463,20 @@
         ],
         [
           "emitter_l",
-          "chest",
+          "spine",
           [
-            0.64,
+            0.23,
             0.28,
-            0.5
+            -0.38
           ]
         ],
         [
           "emitter_r",
-          "chest",
+          "spine",
           [
-            -0.64,
+            -0.23,
             0.28,
-            0.5
+            -0.38
           ]
         ],
         [
@@ -1440,7 +1573,7 @@
               "position": [
                 0.56,
                 -0.12,
-                -0.55
+                0.04999999999999993
               ],
               "rotation": [
                 1.371112441419795,
@@ -1466,7 +1599,7 @@
               "position": [
                 -0.56,
                 -0.12,
-                -0.55
+                0.04999999999999993
               ],
               "rotation": [
                 1.371112441419795,
@@ -1490,9 +1623,9 @@
             },
             "leg_HL": {
               "position": [
-                0.56,
+                0.46,
                 0,
-                -0.1
+                0.3999999999999999
               ],
               "rotation": [
                 -4.451786588637349,
@@ -1516,9 +1649,9 @@
             },
             "leg_HR": {
               "position": [
-                -0.56,
+                -0.46,
                 0,
-                -0.1
+                0.3999999999999999
               ],
               "rotation": [
                 -4.451786588637349,
@@ -1774,7 +1907,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "rig": {
@@ -1922,8 +2055,18 @@
           ],
           [
             -1.1,
-            2.8,
-            2.05
+            2.65,
+            1.95
+          ],
+          [
+            -0.55,
+            1.85,
+            1.48
+          ],
+          [
+            -0.05,
+            1.95,
+            1.55
           ],
           [
             0.6,
@@ -1952,7 +2095,11 @@
           "leg_HL",
           "leg_HR"
         ],
-        "profile": "ellipse"
+        "profile": "ellipse",
+        "regionCuts": [
+          -0.75,
+          0.1
+        ]
       },
       "motion": {
         "shield": {
@@ -1961,15 +2108,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -1.05
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 1.05
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -2042,7 +2203,10 @@
             0.35
           ]
         },
-        "legAnatomy": true
+        "legAnatomy": true,
+        "primaryLength": 1.1,
+        "featherCount": 9,
+        "featherScale": 0.92
       },
       "materials": {
         "armor": {
@@ -2142,12 +2306,30 @@
           ]
         ],
         [
+          "wing_l",
+          "chest",
+          [
+            0.25,
+            0.4,
+            0
+          ]
+        ],
+        [
+          "flap_l",
+          "wing_l",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
           "leg_FL",
           "chest",
           [
-            0.57,
-            -0.12,
-            0.3400000000000001
+            0.58,
+            -0.08,
+            0.4
           ]
         ],
         [
@@ -2178,12 +2360,30 @@
           ]
         ],
         [
+          "wing_r",
+          "chest",
+          [
+            -0.25,
+            0.4,
+            0
+          ]
+        ],
+        [
+          "flap_r",
+          "wing_r",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
           "leg_FR",
           "chest",
           [
-            -0.57,
-            -0.12,
-            0.3400000000000001
+            -0.58,
+            -0.08,
+            0.4
           ]
         ],
         [
@@ -2214,12 +2414,21 @@
           ]
         ],
         [
-          "leg_HL",
+          "pelvis",
           "spine",
+          [
+            0,
+            0,
+            -0.92
+          ]
+        ],
+        [
+          "leg_HL",
+          "pelvis",
           [
             0.57,
             0,
-            -0.92
+            0
           ]
         ],
         [
@@ -2251,11 +2460,11 @@
         ],
         [
           "leg_HR",
-          "spine",
+          "pelvis",
           [
             -0.57,
             0,
-            -0.92
+            0
           ]
         ],
         [
@@ -2349,192 +2558,48 @@
           ]
         ],
         [
-          "wing_l",
-          "chest",
-          [
-            0.25,
-            0.4,
-            0
-          ]
-        ],
-        [
-          "flap_l",
-          "wing_l",
-          [
-            0,
-            0,
-            0
-          ]
-        ],
-        [
-          "outer_l",
+          "ulna_l",
           "flap_l",
           [
-            1.75,
+            0.9,
             0,
-            -0.4
+            -0.34
           ]
         ],
         [
-          "feather_l_0",
           "outer_l",
+          "ulna_l",
           [
+            1.1,
             0,
-            0,
-            0
+            0.62
           ]
         ],
         [
-          "feather_l_1",
-          "outer_l",
-          [
-            0.18,
-            0,
-            -0.055
-          ]
-        ],
-        [
-          "feather_l_2",
-          "outer_l",
-          [
-            0.36,
-            0,
-            -0.11
-          ]
-        ],
-        [
-          "feather_l_3",
-          "outer_l",
-          [
-            0.54,
-            0,
-            -0.165
-          ]
-        ],
-        [
-          "feather_l_4",
-          "outer_l",
-          [
-            0.72,
-            0,
-            -0.22
-          ]
-        ],
-        [
-          "feather_l_5",
-          "outer_l",
-          [
-            0.8999999999999999,
-            0,
-            -0.275
-          ]
-        ],
-        [
-          "feather_l_6",
-          "outer_l",
-          [
-            1.08,
-            0,
-            -0.33
-          ]
-        ],
-        [
-          "wing_r",
-          "chest",
-          [
-            -0.25,
-            0.4,
-            0
-          ]
-        ],
-        [
-          "flap_r",
-          "wing_r",
-          [
-            0,
-            0,
-            0
-          ]
-        ],
-        [
-          "outer_r",
+          "ulna_r",
           "flap_r",
           [
-            -1.75,
+            -0.9,
             0,
-            -0.4
+            -0.34
           ]
         ],
         [
-          "feather_r_0",
           "outer_r",
+          "ulna_r",
           [
+            -1.1,
             0,
-            0,
-            0
-          ]
-        ],
-        [
-          "feather_r_1",
-          "outer_r",
-          [
-            -0.18,
-            0,
-            -0.055
-          ]
-        ],
-        [
-          "feather_r_2",
-          "outer_r",
-          [
-            -0.36,
-            0,
-            -0.11
-          ]
-        ],
-        [
-          "feather_r_3",
-          "outer_r",
-          [
-            -0.54,
-            0,
-            -0.165
-          ]
-        ],
-        [
-          "feather_r_4",
-          "outer_r",
-          [
-            -0.72,
-            0,
-            -0.22
-          ]
-        ],
-        [
-          "feather_r_5",
-          "outer_r",
-          [
-            -0.8999999999999999,
-            0,
-            -0.275
-          ]
-        ],
-        [
-          "feather_r_6",
-          "outer_r",
-          [
-            -1.08,
-            0,
-            -0.33
+            0.62
           ]
         ],
         [
           "gun",
-          "chest",
+          "toe_FR",
           [
-            -0.38,
-            0.3,
-            -0.22
+            0,
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -2557,11 +2622,11 @@
         ],
         [
           "heavy",
-          "chest",
+          "toe_FL",
           [
-            0.38,
-            0.33,
-            -0.28
+            0,
+            -0.18,
+            0.06
           ]
         ],
         [
@@ -2602,20 +2667,20 @@
         ],
         [
           "emitter_l",
-          "chest",
+          "spine",
           [
-            0.64,
+            0.23,
             0.28,
-            0.5
+            -0.38
           ]
         ],
         [
           "emitter_r",
-          "chest",
+          "spine",
           [
-            -0.64,
+            -0.23,
             0.28,
-            0.5
+            -0.38
           ]
         ],
         [
@@ -2738,206 +2803,43 @@
             },
             "wing_l": {
               "position": [
-                0.4,
-                0.32,
-                -0.2
+                0.48,
+                0.39,
+                -0.22
               ],
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
-              ]
-            },
-            "feather_l_0": {
-              "position": [
-                0.07,
-                0.02,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_1": {
-              "position": [
-                0.085,
-                0.027,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_2": {
-              "position": [
-                0.1,
-                0.034,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_3": {
-              "position": [
-                0.115,
-                0.041,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_4": {
-              "position": [
-                0.13,
-                0.048,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_5": {
-              "position": [
-                0.14500000000000002,
-                0.05500000000000001,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_6": {
-              "position": [
-                0.16,
-                0.062,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
+                1.61,
                 0
               ]
             },
             "wing_r": {
               "position": [
-                -0.4,
-                0.32,
-                -0.2
+                -0.48,
+                0.39,
+                -0.22
               ],
               "rotation": [
                 0,
-                -1.5707963267948966,
-                0
-              ]
-            },
-            "feather_r_0": {
-              "position": [
-                -0.07,
-                0.02,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_1": {
-              "position": [
-                -0.085,
-                0.027,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_2": {
-              "position": [
-                -0.1,
-                0.034,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_3": {
-              "position": [
-                -0.115,
-                0.041,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_4": {
-              "position": [
-                -0.13,
-                0.048,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_5": {
-              "position": [
-                -0.14500000000000002,
-                0.05500000000000001,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_6": {
-              "position": [
-                -0.16,
-                0.062,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
+                -1.61,
                 0
               ]
             },
             "leg_FL": {
+              "position": [
+                0.58,
+                -0.08,
+                0.4
+              ],
               "rotation": [
-                -0.5,
+                -0.42,
                 0,
-                0
+                0.06
               ]
             },
             "knee_FL": {
               "rotation": [
-                -0.7,
+                -0.4875933340888034,
                 0,
                 0
               ]
@@ -3003,15 +2905,20 @@
               ]
             },
             "leg_FR": {
+              "position": [
+                -0.58,
+                -0.08,
+                0.4
+              ],
               "rotation": [
-                -0.5,
+                -0.42,
                 0,
-                0
+                -0.06
               ]
             },
             "knee_FR": {
               "rotation": [
-                -0.7,
+                -0.4875933340888034,
                 0,
                 0
               ]
@@ -3078,25 +2985,67 @@
             },
             "outer_l": {
               "position": [
-                1.72,
-                0.05,
-                -0.4
+                1.1,
+                0.013,
+                0.62
               ],
               "rotation": [
                 0,
-                -3.141592653589793,
+                2.34,
                 0
               ]
             },
             "outer_r": {
               "position": [
-                -1.72,
-                0.05,
-                -0.4
+                -1.1,
+                0.063,
+                0.62
               ],
               "rotation": [
                 0,
-                3.141592653589793,
+                -2.34,
+                0
+              ]
+            },
+            "ulna_l": {
+              "rotation": [
+                0,
+                -2.71,
+                0
+              ]
+            },
+            "ulna_r": {
+              "rotation": [
+                0,
+                2.71,
+                0
+              ]
+            },
+            "ankle_FL": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "toe_FL": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "ankle_FR": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "toe_FR": {
+              "rotation": [
+                0,
+                0,
                 0
               ]
             }
@@ -3108,52 +3057,52 @@
           "transforms": {
             "leg_FL": {
               "position": [
-                0.2,
-                -0.06,
-                -0.65
+                0.58,
+                -0.08,
+                0.4
               ],
               "rotation": [
-                1.0121970114513341,
+                -0.42,
                 0,
-                0
+                0.06
               ]
             },
             "knee_FL": {
               "rotation": [
-                -1.9197903455401373,
+                -0.4875933340888034,
                 0,
                 0
               ]
             },
             "ankle_FL": {
               "rotation": [
-                -3.276721197869527,
+                0,
                 0,
                 0
               ]
             },
             "leg_FR": {
               "position": [
-                -0.2,
-                -0.06,
-                -0.65
+                -0.58,
+                -0.08,
+                0.4
               ],
               "rotation": [
-                1.0121970114513341,
+                -0.42,
                 0,
-                0
+                -0.06
               ]
             },
             "knee_FR": {
               "rotation": [
-                -1.9197903455401373,
+                -0.4875933340888034,
                 0,
                 0
               ]
             },
             "ankle_FR": {
               "rotation": [
-                -3.276721197869527,
+                0,
                 0,
                 0
               ]
@@ -3162,7 +3111,7 @@
               "position": [
                 0.47,
                 -0.12,
-                -0.62
+                0.30000000000000004
               ],
               "rotation": [
                 0.32,
@@ -3188,7 +3137,7 @@
               "position": [
                 -0.47,
                 -0.12,
-                -0.62
+                0.30000000000000004
               ],
               "rotation": [
                 0.32,
@@ -3212,14 +3161,14 @@
             },
             "toe_FL": {
               "rotation": [
-                4.18431453195833,
+                0,
                 0,
                 0
               ]
             },
             "toe_FR": {
               "rotation": [
-                4.18431453195833,
+                0,
                 0,
                 0
               ]
@@ -3252,15 +3201,27 @@
             "wings": [
               {
                 "w": "flap_l",
-                "outer": "outer_l",
-                "sgn": 1
+                "outer": "ulna_l",
+                "hand": "outer_l",
+                "sgn": 1,
+                "dihedral": 0.32,
+                "elbowSweep": -0.18,
+                "wristSweep": 0.26
               },
               {
                 "w": "flap_r",
-                "outer": "outer_r",
-                "sgn": -1
+                "outer": "ulna_r",
+                "hand": "outer_r",
+                "sgn": -1,
+                "dihedral": 0.32,
+                "elbowSweep": -0.18,
+                "wristSweep": 0.26
               }
-            ]
+            ],
+            "limb": {
+              "foreRole": "grasp",
+              "hind": "digitigrade"
+            }
           }
         }
       },
@@ -3314,9 +3275,13 @@
         "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
         "gateOwner": "../../tools/audit_reference_morph.mjs",
         "flightExposedRoots": [
+          "leg_FL",
+          "leg_FR",
           "leg_HL",
           "leg_HR"
-        ]
+        ],
+        "forelimbsBecomeWings": false,
+        "foreclawsCarryWeapons": true
       },
       "decisions": [
         "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design."
@@ -3350,7 +3315,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "rig": {
@@ -3373,7 +3338,9 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.08
+            "r": 0.08,
+            "aimJoint": "toe_FR",
+            "alwaysForward": true
           },
           "heavy": {
             "nodes": [
@@ -3381,7 +3348,9 @@
             ],
             "ref": "heavy",
             "muzzle": "heavy_muzzle",
-            "r": 0.12
+            "r": 0.12,
+            "aimJoint": "toe_FL",
+            "alwaysForward": true
           }
         },
         "limb": {
@@ -3392,20 +3361,20 @@
         "chFL": [
           {
             "g": "knee_FL",
-            "base": -0.7,
-            "k": -0.65,
+            "base": -0.4875933340888034,
+            "k": -0.065,
             "d": 0.15
           },
           {
             "g": "ankle_FL",
             "base": 0,
-            "k": 0.48,
+            "k": 0.048,
             "d": 0.55
           },
           {
             "g": "toe_FL",
             "base": 0,
-            "k": -0.22,
+            "k": -0.022000000000000002,
             "d": 0.72
           }
         ],
@@ -3413,20 +3382,20 @@
         "chFR": [
           {
             "g": "knee_FR",
-            "base": -0.7,
-            "k": -0.65,
+            "base": -0.4875933340888034,
+            "k": -0.065,
             "d": 0.15
           },
           {
             "g": "ankle_FR",
             "base": 0,
-            "k": 0.48,
+            "k": 0.048,
             "d": 0.55
           },
           {
             "g": "toe_FR",
             "base": 0,
-            "k": -0.22,
+            "k": -0.022000000000000002,
             "d": 0.72
           }
         ],
@@ -3481,14 +3450,32 @@
         ],
         "tailAmp": 0.07,
         "quadBase": {
-          "FL": -0.5,
-          "FR": -0.5,
+          "FL": -0.42,
+          "FR": -0.42,
           "HL": 0,
           "HR": 0
         },
         "gallop": 0,
         "tailBase": 0,
-        "tailStiffness": 0.12
+        "tailStiffness": 0.12,
+        "heldWeapons": [
+          {
+            "node": "gun",
+            "hand": "toe_FR",
+            "staff": false,
+            "forearmTip": "ankle_FR"
+          },
+          {
+            "node": "heavy",
+            "hand": "toe_FL",
+            "staff": true,
+            "forearmTip": "ankle_FL"
+          }
+        ],
+        "weap": {
+          "light": "R",
+          "heavy": "L"
+        }
       },
       "cavity": {
         "owner": "spine",
@@ -3501,13 +3488,23 @@
           ],
           [
             -1.3,
+            0.78,
+            0.72
+          ],
+          [
+            -0.9,
             0.75,
-            0.68
+            0.72
           ],
           [
             -0.6,
-            1.04,
-            0.98
+            0.51,
+            0.55
+          ],
+          [
+            -0.22,
+            0.55,
+            0.62
           ],
           [
             0.4,
@@ -3530,11 +3527,12 @@
           0,
           0
         ],
-        "roots": [
-          "leg_FL",
-          "leg_FR"
-        ],
-        "profile": "ellipse"
+        "roots": [],
+        "profile": "ellipse",
+        "regionCuts": [
+          -0.85,
+          -0.15
+        ]
       },
       "motion": {
         "shield": {
@@ -3543,15 +3541,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -1.05
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 1.05
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -3591,7 +3603,7 @@
         ]
       },
       "reviewFrame": {
-        "scale": 10,
+        "scale": 10.5,
         "target": [
           0,
           2.2,
@@ -3612,7 +3624,12 @@
       },
       "parameters": {
         "limb": 0.34,
-        "wingSpan": 3.3
+        "wingSpan": 3.3,
+        "waist": {
+          "width": 0.66,
+          "depth": 0.48,
+          "height": 0.48
+        }
       },
       "materials": {
         "armor": {
@@ -3690,11 +3707,20 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
-            0.63,
+            0.38,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
+            0,
+            0.25,
             0
           ]
         ],
@@ -3883,8 +3909,8 @@
           "wrist_r",
           [
             0,
-            -0.1,
-            0.13
+            -0.18,
+            0.06
           ]
         ],
         [
@@ -3924,21 +3950,12 @@
           ]
         ],
         [
-          "emitter_l",
-          "chest",
-          [
-            0.64,
-            0.28,
-            0.5
-          ]
-        ],
-        [
           "emitter_r",
-          "chest",
+          "heavy",
           [
-            -0.64,
-            0.28,
-            0.5
+            0.15,
+            0,
+            0.2
           ]
         ],
         [
@@ -3991,6 +4008,62 @@
                 0,
                 0,
                 0.98
+              ]
+            },
+            "shoulder_l": {
+              "rotation": [
+                0.06,
+                0,
+                0.1
+              ]
+            },
+            "elbow_l": {
+              "rotation": [
+                -0.3,
+                0,
+                0
+              ]
+            },
+            "knee_l": {
+              "rotation": [
+                0.16,
+                0,
+                0
+              ]
+            },
+            "ankle_l": {
+              "rotation": [
+                -0.08,
+                0,
+                0
+              ]
+            },
+            "shoulder_r": {
+              "rotation": [
+                0.06,
+                0,
+                -0.1
+              ]
+            },
+            "elbow_r": {
+              "rotation": [
+                -0.3,
+                0,
+                0
+              ]
+            },
+            "knee_r": {
+              "rotation": [
+                0.16,
+                0,
+                0
+              ]
+            },
+            "ankle_r": {
+              "rotation": [
+                -0.08,
+                0,
+                0
               ]
             }
           },
@@ -4046,7 +4119,7 @@
             },
             "wrist_l": {
               "rotation": [
-                0.75,
+                -0.8207963267948966,
                 0,
                 0
               ]
@@ -4098,7 +4171,7 @@
             },
             "wrist_r": {
               "rotation": [
-                0.75,
+                -0.8207963267948966,
                 0,
                 0
               ]
@@ -4131,7 +4204,10 @@
             "level": false,
             "gunR": null,
             "gunL": null,
-            "aimPose": null,
+            "aimPose": {
+              "rShoulderX": -0.48,
+              "rElbowX": -1.09
+            },
             "tailSegs": null,
             "pitchTop": 0.52
           }
@@ -4226,7 +4302,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "rig": {
@@ -4247,7 +4323,7 @@
         "legR": "hip_r",
         "armL": "shoulder_l",
         "armR": "shoulder_r",
-        "armBase": 0,
+        "armBase": 0.06,
         "sway": 0.045,
         "hop": false,
         "knuckle": false,
@@ -4257,13 +4333,13 @@
         "legChainR": [
           {
             "g": "knee_r",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_r",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -4271,7 +4347,7 @@
         "armChainR": [
           {
             "g": "elbow_r",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -4285,13 +4361,13 @@
         "legChainL": [
           {
             "g": "knee_l",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_l",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -4299,7 +4375,7 @@
         "armChainL": [
           {
             "g": "elbow_l",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -4325,8 +4401,27 @@
             ],
             "ref": "heavy",
             "muzzle": "heavy_muzzle",
-            "r": 0.12
+            "r": 0.12,
+            "aimJoint": "wrist_r"
           }
+        },
+        "legBase": -0.08,
+        "waist": "waist",
+        "heldWeapons": [
+          {
+            "node": "heavy",
+            "hand": "wrist_r",
+            "staff": true
+          }
+        ],
+        "gunR": {
+          "g": "wrist_r",
+          "rest": 0,
+          "aim": 0
+        },
+        "aimPose": {
+          "rShoulderX": -0.48,
+          "rElbowX": -1.09
         }
       },
       "cavity": {
@@ -4334,14 +4429,14 @@
         "axis": "y",
         "sections": [
           [
-            -0.95,
-            0.95,
-            0.9
+            -0.36,
+            0.76,
+            0.64
           ],
           [
-            -0.35,
-            1.6,
-            1.13
+            -0.08,
+            1.36,
+            0.96
           ],
           [
             0.45,
@@ -4364,7 +4459,10 @@
           0,
           -0.08
         ],
-        "roots": []
+        "roots": [],
+        "regionCuts": [
+          -0.08
+        ]
       },
       "motion": {
         "shield": {
@@ -4372,16 +4470,18 @@
           "barrier": "barrier",
           "hinges": [
             {
-              "node": "emitter_l",
-              "axis": "z",
+              "node": "emitter_r",
+              "axis": "x",
               "rest": 0,
-              "deploy": -1.05
-            },
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
             {
               "node": "emitter_r",
-              "axis": "z",
-              "rest": 0,
-              "deploy": 1.05
+              "axis": "x",
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -4486,12 +4586,43 @@
         "limb": 0.52,
         "wingSpan": 3.3,
         "helmet": {
-          "points": [[-0.6, 0], [0.6, 0], [0, 0.6]],
+          "points": [
+            [
+              -0.6,
+              0
+            ],
+            [
+              0.6,
+              0
+            ],
+            [
+              0,
+              0.6
+            ]
+          ],
           "depth": 0.7,
-          "position": [0, -0.03, 0.1],
-          "facePosition": [0, -0.16, 0.435],
-          "slitPosition": [0, -0.19, 0.463]
-        }
+          "position": [
+            0,
+            -0.03,
+            0.1
+          ],
+          "facePosition": [
+            0,
+            -0.16,
+            0.435
+          ],
+          "slitPosition": [
+            0,
+            -0.19,
+            0.463
+          ]
+        },
+        "waist": {
+          "width": 0.7,
+          "depth": 0.5,
+          "height": 0.48
+        },
+        "symmetricShoulderWeapons": true
       },
       "materials": {
         "armor": {
@@ -4564,11 +4695,20 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
-            0.63,
+            0.38,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
+            0,
+            0.25,
             0
           ]
         ],
@@ -4766,8 +4906,8 @@
           "wing_r",
           [
             0,
-            0.18,
-            0.1
+            0.28,
+            0.08
           ]
         ],
         [
@@ -4793,8 +4933,8 @@
           "wing_l",
           [
             0,
-            0.18,
-            0.1
+            0.28,
+            0.08
           ]
         ],
         [
@@ -4835,20 +4975,20 @@
         ],
         [
           "emitter_l",
-          "chest",
+          "rotor_hinge_l",
           [
-            0.64,
-            0.28,
-            0.5
+            0.5,
+            0,
+            0.06
           ]
         ],
         [
           "emitter_r",
-          "chest",
+          "rotor_hinge_r",
           [
-            -0.64,
-            0.28,
-            0.5
+            -0.5,
+            0,
+            0.06
           ]
         ],
         [
@@ -5435,6 +5575,15 @@
             0,
             0
           ]
+        ],
+        [
+          "charge_hinge_r",
+          "gun",
+          [
+            0,
+            0.23,
+            -0.22
+          ]
         ]
       ],
       "forms": {
@@ -5716,6 +5865,62 @@
                 -1.5707963267948966,
                 0
               ]
+            },
+            "shoulder_l": {
+              "rotation": [
+                0.06,
+                0,
+                0.1
+              ]
+            },
+            "elbow_l": {
+              "rotation": [
+                -0.3,
+                0,
+                0
+              ]
+            },
+            "knee_l": {
+              "rotation": [
+                0.16,
+                0,
+                0
+              ]
+            },
+            "ankle_l": {
+              "rotation": [
+                -0.08,
+                0,
+                0
+              ]
+            },
+            "shoulder_r": {
+              "rotation": [
+                0.06,
+                0,
+                -0.1
+              ]
+            },
+            "elbow_r": {
+              "rotation": [
+                -0.3,
+                0,
+                0
+              ]
+            },
+            "knee_r": {
+              "rotation": [
+                0.16,
+                0,
+                0
+              ]
+            },
+            "ankle_r": {
+              "rotation": [
+                -0.08,
+                0,
+                0
+              ]
             }
           },
           "rig": {}
@@ -5725,8 +5930,8 @@
           "transforms": {
             "hip_l": {
               "position": [
-                0.26,
-                1.74,
+                0.19,
+                1.78,
                 -0.1
               ],
               "rotation": [
@@ -5777,8 +5982,8 @@
             },
             "hip_r": {
               "position": [
-                -0.26,
-                1.74,
+                -0.19,
+                1.78,
                 -0.1
               ],
               "rotation": [
@@ -5877,113 +6082,113 @@
             "shield_cover_l_0": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_1": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_2": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_3": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_4": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_5": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_6": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_7": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_0": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_1": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_2": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_3": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_4": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_5": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_6": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_7": {
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_0_hinge": {
@@ -6101,225 +6306,225 @@
             "shield_cover_l_0_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_0_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_1_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_1_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_2_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_2_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_3_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_3_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_4_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_4_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_5_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_5_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_6_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_6_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_7_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_l_7_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_0_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_0_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_1_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_1_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_2_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_2_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_3_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_3_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_4_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_4_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_5_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_5_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_6_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_6_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_7_1": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             },
             "shield_cover_r_7_2": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
+                0,
+                3.141592653589793
               ]
             }
           },
@@ -6434,7 +6639,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "rig": {
@@ -6455,7 +6660,7 @@
         "legR": "hip_r",
         "armL": "shoulder_l",
         "armR": "shoulder_r",
-        "armBase": 0,
+        "armBase": 0.06,
         "sway": 0.045,
         "hop": false,
         "knuckle": false,
@@ -6465,13 +6670,13 @@
         "legChainR": [
           {
             "g": "knee_r",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_r",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -6479,7 +6684,7 @@
         "armChainR": [
           {
             "g": "elbow_r",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -6493,13 +6698,13 @@
         "legChainL": [
           {
             "g": "knee_l",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_l",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -6507,7 +6712,7 @@
         "armChainL": [
           {
             "g": "elbow_l",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -6525,7 +6730,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.08
+            "r": 0.08,
+            "alwaysForward": true
           },
           "heavy": {
             "nodes": [
@@ -6533,23 +6739,26 @@
             ],
             "ref": "heavy",
             "muzzle": "heavy_muzzle",
-            "r": 0.12
+            "r": 0.12,
+            "alwaysForward": true
           }
-        }
+        },
+        "legBase": -0.08,
+        "waist": "waist"
       },
       "cavity": {
         "owner": "chest",
         "axis": "y",
         "sections": [
           [
-            -0.95,
-            0.95,
-            0.9
+            -0.36,
+            0.76,
+            0.64
           ],
           [
-            -0.35,
-            1.6,
-            1.13
+            -0.08,
+            1.36,
+            0.96
           ],
           [
             0.45,
@@ -6575,6 +6784,9 @@
         "roots": [
           "hip_l",
           "hip_r"
+        ],
+        "regionCuts": [
+          -0.08
         ]
       },
       "motion": {
@@ -6586,13 +6798,13 @@
               "node": "emitter_l",
               "axis": "z",
               "rest": 0,
-              "deploy": -1.05
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
               "axis": "z",
               "rest": 0,
-              "deploy": 1.05
+              "deploy": 0.22
             }
           ],
           "pose": [
@@ -6661,6 +6873,20 @@
                 -0.9663248658180237
               ]
             }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "radius": 0.14,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "radius": 0.14,
+              "depth": 0.065
+            }
           ]
         },
         "fire": [
@@ -6677,11 +6903,25 @@
             "axis": "z",
             "rest": 0,
             "amplitude": -0.16
+          },
+          {
+            "node": "heavy_recoil",
+            "channel": "position",
+            "axis": "z",
+            "rest": 0,
+            "amplitude": -0.1
           }
         ],
         "charge": [
           {
             "node": "charge_hinge",
+            "channel": "rotation",
+            "axis": "x",
+            "rest": 0,
+            "amplitude": -1.15
+          },
+          {
+            "node": "charge_hinge_r",
             "channel": "rotation",
             "axis": "x",
             "rest": 0,
@@ -6757,7 +6997,6 @@
           1.998,
           2.77
         ],
-        "membraneFoldY": -0.75,
         "legAnatomy": true,
         "legWidths": {
           "hind": [
@@ -6765,6 +7004,24 @@
             0.72,
             0.45
           ]
+        },
+        "tailWidth": 0.37,
+        "tailTip": [
+          0,
+          -0.05,
+          -0.26
+        ],
+        "membraneRows": [
+          -2.21,
+          -1.395,
+          -0.58,
+          0.235,
+          1.05
+        ],
+        "waist": {
+          "width": 0.6,
+          "depth": 0.43,
+          "height": 0.48
         }
       },
       "materials": {
@@ -6838,11 +7095,20 @@
           ]
         ],
         [
-          "hunch",
+          "waist",
           "hips",
           [
             0,
-            0.63,
+            0.36,
+            0
+          ]
+        ],
+        [
+          "hunch",
+          "waist",
+          [
+            0,
+            0.27,
             0.12
           ]
         ],
@@ -7010,20 +7276,20 @@
         ],
         [
           "wing_l",
-          "chest",
+          "elbow_l",
           [
-            0.45,
-            0,
-            -0.01
+            0.28,
+            -0.05,
+            0.1
           ]
         ],
         [
           "wing_r",
-          "chest",
+          "elbow_r",
           [
-            -0.45,
-            0,
-            -0.01
+            -0.28,
+            -0.05,
+            0.1
           ]
         ],
         [
@@ -7100,20 +7366,20 @@
         ],
         [
           "emitter_l",
-          "chest",
+          "wing_l",
           [
-            0.64,
-            0.28,
-            0.5
+            0,
+            0.35,
+            0.14
           ]
         ],
         [
           "emitter_r",
-          "chest",
+          "wing_r",
           [
-            -0.64,
-            0.28,
-            0.5
+            0,
+            0.35,
+            0.14
           ]
         ],
         [
@@ -7126,17 +7392,71 @@
           ]
         ],
         [
-          "mem_lower_l",
+          "tail_mount",
+          "hips",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "tail_0",
+          "tail_mount",
+          [
+            0,
+            0.12,
+            -0.44
+          ]
+        ],
+        [
+          "tail_1",
+          "tail_0",
+          [
+            0,
+            -0.06,
+            -0.34
+          ]
+        ],
+        [
+          "tail_2",
+          "tail_1",
+          [
+            0,
+            -0.06,
+            -0.34
+          ]
+        ],
+        [
+          "tail_3",
+          "tail_2",
+          [
+            0,
+            -0.06,
+            -0.34
+          ]
+        ],
+        [
+          "tail_4",
+          "tail_3",
+          [
+            0,
+            -0.06,
+            -0.34
+          ]
+        ],
+        [
+          "mem_cell_l_0_0",
           "wing_l",
           [
             0,
-            -0.75,
+            -2.21,
             0
           ]
         ],
         [
-          "mem_upper_l_1",
-          "wing_l",
+          "mem_cell_l_0_1",
+          "mem_cell_l_0_0",
           [
             0.774,
             0,
@@ -7144,8 +7464,8 @@
           ]
         ],
         [
-          "mem_upper_l_2",
-          "mem_upper_l_1",
+          "mem_cell_l_0_2",
+          "mem_cell_l_0_1",
           [
             0.774,
             0,
@@ -7153,8 +7473,17 @@
           ]
         ],
         [
-          "mem_lower_l_1",
-          "mem_lower_l",
+          "mem_cell_l_1_0",
+          "mem_cell_l_0_0",
+          [
+            0,
+            0.815,
+            0
+          ]
+        ],
+        [
+          "mem_cell_l_1_1",
+          "mem_cell_l_1_0",
           [
             0.774,
             0,
@@ -7162,8 +7491,8 @@
           ]
         ],
         [
-          "mem_lower_l_2",
-          "mem_lower_l_1",
+          "mem_cell_l_1_2",
+          "mem_cell_l_1_1",
           [
             0.774,
             0,
@@ -7171,17 +7500,71 @@
           ]
         ],
         [
-          "mem_lower_r",
+          "mem_cell_l_2_0",
+          "mem_cell_l_1_0",
+          [
+            0,
+            0.8150000000000001,
+            0
+          ]
+        ],
+        [
+          "mem_cell_l_2_1",
+          "mem_cell_l_2_0",
+          [
+            0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_cell_l_2_2",
+          "mem_cell_l_2_1",
+          [
+            0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_cell_l_3_0",
+          "mem_cell_l_2_0",
+          [
+            0,
+            0.815,
+            0
+          ]
+        ],
+        [
+          "mem_cell_l_3_1",
+          "mem_cell_l_3_0",
+          [
+            0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_cell_l_3_2",
+          "mem_cell_l_3_1",
+          [
+            0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_cell_r_0_0",
           "wing_r",
           [
             0,
-            -0.75,
+            -2.21,
             0
           ]
         ],
         [
-          "mem_upper_r_1",
-          "wing_r",
+          "mem_cell_r_0_1",
+          "mem_cell_r_0_0",
           [
             -0.774,
             0,
@@ -7189,8 +7572,8 @@
           ]
         ],
         [
-          "mem_upper_r_2",
-          "mem_upper_r_1",
+          "mem_cell_r_0_2",
+          "mem_cell_r_0_1",
           [
             -0.774,
             0,
@@ -7198,8 +7581,17 @@
           ]
         ],
         [
-          "mem_lower_r_1",
-          "mem_lower_r",
+          "mem_cell_r_1_0",
+          "mem_cell_r_0_0",
+          [
+            0,
+            0.815,
+            0
+          ]
+        ],
+        [
+          "mem_cell_r_1_1",
+          "mem_cell_r_1_0",
           [
             -0.774,
             0,
@@ -7207,8 +7599,62 @@
           ]
         ],
         [
-          "mem_lower_r_2",
-          "mem_lower_r_1",
+          "mem_cell_r_1_2",
+          "mem_cell_r_1_1",
+          [
+            -0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_cell_r_2_0",
+          "mem_cell_r_1_0",
+          [
+            0,
+            0.8150000000000001,
+            0
+          ]
+        ],
+        [
+          "mem_cell_r_2_1",
+          "mem_cell_r_2_0",
+          [
+            -0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_cell_r_2_2",
+          "mem_cell_r_2_1",
+          [
+            -0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_cell_r_3_0",
+          "mem_cell_r_2_0",
+          [
+            0,
+            0.815,
+            0
+          ]
+        ],
+        [
+          "mem_cell_r_3_1",
+          "mem_cell_r_3_0",
+          [
+            -0.774,
+            0,
+            0
+          ]
+        ],
+        [
+          "mem_cell_r_3_2",
+          "mem_cell_r_3_1",
           [
             -0.774,
             0,
@@ -7246,26 +7692,26 @@
             },
             "wing_l": {
               "position": [
-                -0.35,
-                0.1,
-                -0.47
+                0.38,
+                -0.05,
+                0.1
               ],
               "rotation": [
+                3.141592653589793,
                 0,
-                0,
-                0
+                1.5707963267948966
               ]
             },
             "wing_r": {
               "position": [
-                0.35,
-                0.1,
-                -0.47
+                -0.38,
+                -0.05,
+                0.1
               ],
               "rotation": [
+                3.141592653589793,
                 0,
-                0,
-                0
+                -1.5707963267948966
               ]
             },
             "knee_l": {
@@ -7320,81 +7766,11 @@
                 0
               ]
             },
-            "mem_lower_l": {
-              "rotation": [
-                3.141592653589793,
-                0,
-                0
-              ]
-            },
-            "mem_upper_l_1": {
-              "rotation": [
-                0,
-                3.141592653589793,
-                0
-              ]
-            },
-            "mem_upper_l_2": {
-              "rotation": [
-                0,
-                3.141592653589793,
-                0
-              ]
-            },
-            "mem_lower_l_1": {
-              "rotation": [
-                0,
-                3.141592653589793,
-                0
-              ]
-            },
-            "mem_lower_l_2": {
-              "rotation": [
-                0,
-                3.141592653589793,
-                0
-              ]
-            },
-            "mem_lower_r": {
-              "rotation": [
-                3.141592653589793,
-                0,
-                0
-              ]
-            },
-            "mem_upper_r_1": {
-              "rotation": [
-                0,
-                -3.141592653589793,
-                0
-              ]
-            },
-            "mem_upper_r_2": {
-              "rotation": [
-                0,
-                -3.141592653589793,
-                0
-              ]
-            },
-            "mem_lower_r_1": {
-              "rotation": [
-                0,
-                -3.141592653589793,
-                0
-              ]
-            },
-            "mem_lower_r_2": {
-              "rotation": [
-                0,
-                -3.141592653589793,
-                0
-              ]
-            },
             "shoulder_l": {
               "rotation": [
                 -0.38,
                 0,
-                0.22
+                0.1
               ]
             },
             "elbow_l": {
@@ -7408,7 +7784,7 @@
               "rotation": [
                 -0.38,
                 0,
-                -0.22
+                -0.1
               ]
             },
             "elbow_r": {
@@ -7429,6 +7805,198 @@
               "rotation": [
                 -0.25,
                 0,
+                0
+              ]
+            },
+            "toe_l": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "toe_r": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            "mem_cell_l_0_0": {
+              "rotation": [
+                0,
+                0,
+                0
+              ],
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            "mem_cell_l_0_1": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_l_0_2": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_l_1_0": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "mem_cell_l_1_1": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_l_1_2": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_l_2_0": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "mem_cell_l_2_1": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_l_2_2": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_l_3_0": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "mem_cell_l_3_1": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_l_3_2": {
+              "rotation": [
+                0,
+                3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_r_0_0": {
+              "rotation": [
+                0,
+                0,
+                0
+              ],
+              "position": [
+                0,
+                0,
+                0
+              ]
+            },
+            "mem_cell_r_0_1": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_r_0_2": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_r_1_0": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "mem_cell_r_1_1": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_r_1_2": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_r_2_0": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "mem_cell_r_2_1": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_r_2_2": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_r_3_0": {
+              "rotation": [
+                3.141592653589793,
+                0,
+                0
+              ]
+            },
+            "mem_cell_r_3_1": {
+              "rotation": [
+                0,
+                -3.141592653589793,
+                0
+              ]
+            },
+            "mem_cell_r_3_2": {
+              "rotation": [
+                0,
+                -3.141592653589793,
                 0
               ]
             }
@@ -7556,23 +8124,33 @@
             },
             "head": {
               "rotation": [
-                0,
+                -1.5707963267948966,
                 0,
                 0
               ]
             },
             "wing_l": {
+              "position": [
+                -1.0563136339187622,
+                1.1259448528289795,
+                -0.00999973900616169
+              ],
               "rotation": [
                 0,
                 0,
-                0
+                -1.2999999523162842
               ]
             },
             "wing_r": {
+              "position": [
+                1.0563136339187622,
+                1.1259448528289795,
+                -0.00999973900616169
+              ],
               "rotation": [
                 0,
                 0,
-                0
+                1.2999999523162842
               ]
             },
             "toe_l": {
@@ -7588,6 +8166,13 @@
                 0,
                 0
               ]
+            },
+            "tail_mount": {
+              "rotation": [
+                -1.5707963267948966,
+                0,
+                0
+              ]
             }
           },
           "rig": {
@@ -7599,7 +8184,13 @@
             "gunR": null,
             "gunL": null,
             "aimPose": null,
-            "tailSegs": null
+            "tailSegs": [
+              "tail_0",
+              "tail_1",
+              "tail_2",
+              "tail_3",
+              "tail_4"
+            ]
           }
         }
       },
@@ -7686,7 +8277,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "rig": {
@@ -7804,7 +8395,16 @@
         "limb": {
           "foreRole": "grasp",
           "hind": "digitigrade"
-        }
+        },
+        "tailSegs": [
+          "tail_0",
+          "tail_1",
+          "tail_2",
+          "tail_3",
+          "tail_4"
+        ],
+        "tailAmp": 0.1,
+        "waist": "waist"
       },
       "cavity": null,
       "motion": {
@@ -7816,13 +8416,27 @@
               "node": "emitter_l",
               "axis": "z",
               "rest": 0,
-              "deploy": -1.05
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
               "axis": "z",
               "rest": 0,
-              "deploy": 1.05
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "z",
+              "radius": 0.14,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "z",
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -8568,11 +9182,11 @@
         ],
         [
           "membrane_l_0",
-          "spine",
+          "metathorax",
           [
-            0.35,
-            0.5,
-            -0.18
+            0.39,
+            0.39,
+            0
           ]
         ],
         [
@@ -8594,33 +9208,6 @@
           ]
         ],
         [
-          "membrane_l_1",
-          "spine",
-          [
-            0.35,
-            0.5,
-            -0.8300000000000001
-          ]
-        ],
-        [
-          "membrane_l_1_flap",
-          "membrane_l_1",
-          [
-            0,
-            0,
-            0
-          ]
-        ],
-        [
-          "membrane_l_1_outer",
-          "membrane_l_1_flap",
-          [
-            1.3,
-            0,
-            -0.1
-          ]
-        ],
-        [
           "elytra_r",
           "spine",
           [
@@ -8631,11 +9218,11 @@
         ],
         [
           "membrane_r_0",
-          "spine",
+          "metathorax",
           [
-            -0.35,
-            0.5,
-            -0.18
+            -0.39,
+            0.39,
+            0
           ]
         ],
         [
@@ -8650,33 +9237,6 @@
         [
           "membrane_r_0_outer",
           "membrane_r_0_flap",
-          [
-            -1.3,
-            0,
-            -0.1
-          ]
-        ],
-        [
-          "membrane_r_1",
-          "spine",
-          [
-            -0.35,
-            0.5,
-            -0.8300000000000001
-          ]
-        ],
-        [
-          "membrane_r_1_flap",
-          "membrane_r_1",
-          [
-            0,
-            0,
-            0
-          ]
-        ],
-        [
-          "membrane_r_1_outer",
-          "membrane_r_1_flap",
           [
             -1.3,
             0,
@@ -8757,20 +9317,20 @@
         ],
         [
           "emitter_l",
-          "chest",
+          "spine",
           [
-            0.64,
+            0.23,
             0.28,
-            0.5
+            -0.38
           ]
         ],
         [
           "emitter_r",
-          "chest",
+          "spine",
           [
-            -0.64,
+            -0.23,
             0.28,
-            0.5
+            -0.38
           ]
         ],
         [
@@ -8804,56 +9364,28 @@
             "membrane_l_0": {
               "rotation": [
                 0,
-                1.4,
-                -0.16
-              ]
-            },
-            "membrane_l_1": {
-              "rotation": [
-                0,
-                1.4,
-                -0.16
+                1.42,
+                0
               ]
             },
             "membrane_r_0": {
               "rotation": [
                 0,
-                -1.4,
-                0.16
-              ]
-            },
-            "membrane_r_1": {
-              "rotation": [
-                0,
-                -1.4,
-                0.16
+                -1.42,
+                0
               ]
             },
             "membrane_l_0_outer": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
-              ]
-            },
-            "membrane_l_1_outer": {
-              "rotation": [
-                0,
-                3.141592653589793,
+                -2.82,
                 0
               ]
             },
             "membrane_r_0_outer": {
               "rotation": [
                 0,
-                3.141592653589793,
-                0
-              ]
-            },
-            "membrane_r_1_outer": {
-              "rotation": [
-                0,
-                3.141592653589793,
+                2.82,
                 0
               ]
             }
@@ -9326,6 +9858,34 @@
                 0.9099299489950592,
                 0.5817298349390818
               ]
+            },
+            "membrane_l_0": {
+              "rotation": [
+                0,
+                0.08,
+                0
+              ]
+            },
+            "membrane_l_0_outer": {
+              "rotation": [
+                0,
+                0.14,
+                0
+              ]
+            },
+            "membrane_r_0": {
+              "rotation": [
+                0,
+                -0.08,
+                0
+              ]
+            },
+            "membrane_r_0_outer": {
+              "rotation": [
+                0,
+                -0.14,
+                0
+              ]
             }
           },
           "rig": {
@@ -9347,22 +9907,10 @@
                 "pair": 0
               },
               {
-                "w": "membrane_l_1_flap",
-                "outer": "membrane_l_1_outer",
-                "sgn": 1,
-                "pair": 1
-              },
-              {
                 "w": "membrane_r_0_flap",
                 "outer": "membrane_r_0_outer",
                 "sgn": -1,
                 "pair": 0
-              },
-              {
-                "w": "membrane_r_1_flap",
-                "outer": "membrane_r_1_outer",
-                "sgn": -1,
-                "pair": 1
               }
             ]
           }
@@ -9450,7 +9998,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "rig": {
@@ -9743,15 +10291,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -1.05
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 1.05
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -9824,7 +10386,10 @@
             0.44
           ]
         },
-        "legAnatomy": true
+        "legAnatomy": true,
+        "primaryLength": 1.25,
+        "featherCount": 9,
+        "featherScale": 1.05
       },
       "materials": {
         "armor": {
@@ -9924,8 +10489,35 @@
           ]
         ],
         [
-          "leg_FL",
+          "wing_l",
           "chest",
+          [
+            0.25,
+            0.4,
+            0
+          ]
+        ],
+        [
+          "flap_l",
+          "wing_l",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "forewing_link_l",
+          "flap_l",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "leg_FL",
+          "forewing_link_l",
           [
             0.57,
             -0.12,
@@ -9960,8 +10552,35 @@
           ]
         ],
         [
-          "leg_FR",
+          "wing_r",
           "chest",
+          [
+            -0.25,
+            0.4,
+            0
+          ]
+        ],
+        [
+          "flap_r",
+          "wing_r",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "forewing_link_r",
+          "flap_r",
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          "leg_FR",
+          "forewing_link_r",
           [
             -0.57,
             -0.12,
@@ -9996,12 +10615,21 @@
           ]
         ],
         [
-          "leg_HL",
+          "pelvis",
           "spine",
+          [
+            0,
+            0,
+            -0.92
+          ]
+        ],
+        [
+          "leg_HL",
+          "pelvis",
           [
             0.57,
             0,
-            -0.92
+            0
           ]
         ],
         [
@@ -10033,11 +10661,11 @@
         ],
         [
           "leg_HR",
-          "spine",
+          "pelvis",
           [
             -0.57,
             0,
-            -0.92
+            0
           ]
         ],
         [
@@ -10131,183 +10759,39 @@
           ]
         ],
         [
-          "wing_l",
-          "chest",
-          [
-            0.25,
-            0.4,
-            0
-          ]
-        ],
-        [
-          "flap_l",
-          "wing_l",
-          [
-            0,
-            0,
-            0
-          ]
-        ],
-        [
-          "outer_l",
+          "ulna_l",
           "flap_l",
           [
-            1.75,
+            0.9,
             0,
-            0.55
+            -0.34
           ]
         ],
         [
-          "feather_l_0",
           "outer_l",
+          "ulna_l",
           [
+            1.1,
             0,
-            0,
-            0
+            0.62
           ]
         ],
         [
-          "feather_l_1",
-          "outer_l",
-          [
-            0.18,
-            0,
-            -0.055
-          ]
-        ],
-        [
-          "feather_l_2",
-          "outer_l",
-          [
-            0.36,
-            0,
-            -0.11
-          ]
-        ],
-        [
-          "feather_l_3",
-          "outer_l",
-          [
-            0.54,
-            0,
-            -0.165
-          ]
-        ],
-        [
-          "feather_l_4",
-          "outer_l",
-          [
-            0.72,
-            0,
-            -0.22
-          ]
-        ],
-        [
-          "feather_l_5",
-          "outer_l",
-          [
-            0.8999999999999999,
-            0,
-            -0.275
-          ]
-        ],
-        [
-          "feather_l_6",
-          "outer_l",
-          [
-            1.08,
-            0,
-            -0.33
-          ]
-        ],
-        [
-          "wing_r",
-          "chest",
-          [
-            -0.25,
-            0.4,
-            0
-          ]
-        ],
-        [
-          "flap_r",
-          "wing_r",
-          [
-            0,
-            0,
-            0
-          ]
-        ],
-        [
-          "outer_r",
+          "ulna_r",
           "flap_r",
           [
-            -1.75,
+            -0.9,
             0,
-            0.55
+            -0.34
           ]
         ],
         [
-          "feather_r_0",
           "outer_r",
+          "ulna_r",
           [
+            -1.1,
             0,
-            0,
-            0
-          ]
-        ],
-        [
-          "feather_r_1",
-          "outer_r",
-          [
-            -0.18,
-            0,
-            -0.055
-          ]
-        ],
-        [
-          "feather_r_2",
-          "outer_r",
-          [
-            -0.36,
-            0,
-            -0.11
-          ]
-        ],
-        [
-          "feather_r_3",
-          "outer_r",
-          [
-            -0.54,
-            0,
-            -0.165
-          ]
-        ],
-        [
-          "feather_r_4",
-          "outer_r",
-          [
-            -0.72,
-            0,
-            -0.22
-          ]
-        ],
-        [
-          "feather_r_5",
-          "outer_r",
-          [
-            -0.8999999999999999,
-            0,
-            -0.275
-          ]
-        ],
-        [
-          "feather_r_6",
-          "outer_r",
-          [
-            -1.08,
-            0,
-            -0.33
+            0.62
           ]
         ],
         [
@@ -10384,20 +10868,20 @@
         ],
         [
           "emitter_l",
-          "chest",
+          "spine",
           [
-            0.64,
+            0.23,
             0.28,
-            0.5
+            -0.38
           ]
         ],
         [
           "emitter_r",
-          "chest",
+          "spine",
           [
-            -0.64,
+            -0.23,
             0.28,
-            0.5
+            -0.38
           ]
         ],
         [
@@ -10430,218 +10914,92 @@
             },
             "wing_l": {
               "position": [
-                0.4,
-                0.32,
-                -0.2
+                0.48,
+                0.39,
+                -0.22
               ],
               "rotation": [
                 0,
-                1.5707963267948966,
-                0
-              ]
-            },
-            "feather_l_0": {
-              "position": [
-                0.07,
-                0.02,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_1": {
-              "position": [
-                0.085,
-                0.027,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_2": {
-              "position": [
-                0.1,
-                0.034,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_3": {
-              "position": [
-                0.115,
-                0.041,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_4": {
-              "position": [
-                0.13,
-                0.048,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_5": {
-              "position": [
-                0.14500000000000002,
-                0.05500000000000001,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
-                0
-              ]
-            },
-            "feather_l_6": {
-              "position": [
-                0.16,
-                0.062,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                -1.05,
+                1.74,
                 0
               ]
             },
             "wing_r": {
               "position": [
-                -0.4,
-                0.32,
-                -0.2
+                -0.48,
+                0.39,
+                -0.22
               ],
               "rotation": [
                 0,
-                -1.5707963267948966,
-                0
-              ]
-            },
-            "feather_r_0": {
-              "position": [
-                -0.07,
-                0.02,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_1": {
-              "position": [
-                -0.085,
-                0.027,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_2": {
-              "position": [
-                -0.1,
-                0.034,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_3": {
-              "position": [
-                -0.115,
-                0.041,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_4": {
-              "position": [
-                -0.13,
-                0.048,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_5": {
-              "position": [
-                -0.14500000000000002,
-                0.05500000000000001,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
-                0
-              ]
-            },
-            "feather_r_6": {
-              "position": [
-                -0.16,
-                0.062,
-                -0.04
-              ],
-              "rotation": [
-                0,
-                1.05,
+                -1.74,
                 0
               ]
             },
             "outer_l": {
               "position": [
-                1.72,
-                0.05,
-                -0.4
+                1.1,
+                0.013,
+                0.62
               ],
               "rotation": [
                 0,
-                -3.141592653589793,
+                2.22,
                 0
               ]
             },
             "outer_r": {
               "position": [
-                -1.72,
-                0.05,
-                -0.4
+                -1.1,
+                0.063,
+                0.62
               ],
               "rotation": [
                 0,
-                3.141592653589793,
+                -2.22,
                 0
+              ]
+            },
+            "ulna_l": {
+              "rotation": [
+                0,
+                -2.85,
+                0
+              ]
+            },
+            "ulna_r": {
+              "rotation": [
+                0,
+                2.85,
+                0
+              ]
+            },
+            "forewing_link_l": {
+              "rotation": [
+                0,
+                -1.74,
+                0
+              ]
+            },
+            "leg_FL": {
+              "position": [
+                0.08999999999999997,
+                -0.51,
+                0.56
+              ]
+            },
+            "forewing_link_r": {
+              "rotation": [
+                0,
+                1.74,
+                0
+              ]
+            },
+            "leg_FR": {
+              "position": [
+                -0.08999999999999997,
+                -0.51,
+                0.56
               ]
             }
           },
@@ -10651,105 +11009,105 @@
           "kind": "aerial",
           "transforms": {
             "leg_FL": {
-              "rotation": [
-                1.137214842843135,
+              "position": [
+                0,
                 0,
                 0
               ],
-              "position": [
-                0.3,
-                -0.12,
-                -0.55
+              "rotation": [
+                0,
+                0,
+                1.5707963267948966
               ]
             },
             "knee_FL": {
               "rotation": [
-                -2.536383101257152,
+                0,
                 0,
                 0
               ]
             },
             "ankle_FL": {
               "rotation": [
-                -2.806122217578336,
+                0,
                 0,
                 0
               ]
             },
             "leg_FR": {
-              "rotation": [
-                1.137214842843135,
+              "position": [
+                0,
                 0,
                 0
               ],
-              "position": [
-                -0.3,
-                -0.12,
-                -0.55
+              "rotation": [
+                0,
+                0,
+                -1.5707963267948966
               ]
             },
             "knee_FR": {
               "rotation": [
-                -2.536383101257152,
+                0,
                 0,
                 0
               ]
             },
             "ankle_FR": {
               "rotation": [
-                -2.806122217578336,
+                0,
                 0,
                 0
               ]
             },
             "leg_HL": {
+              "position": [
+                0.43,
+                -0.25,
+                0.44000000000000006
+              ],
               "rotation": [
-                -3.997580406806115,
+                0.9,
                 0,
                 0
-              ],
-              "position": [
-                0.3,
-                0,
-                -0.15
               ]
             },
             "knee_HL": {
               "rotation": [
-                7.896007565954596,
+                1.6,
                 0,
                 0
               ]
             },
             "ankle_HL": {
               "rotation": [
-                -8.21437485631473,
+                -2.5,
                 0,
                 0
               ]
             },
             "leg_HR": {
+              "position": [
+                -0.43,
+                -0.25,
+                0.44000000000000006
+              ],
               "rotation": [
-                -3.997580406806115,
+                0.9,
                 0,
                 0
-              ],
-              "position": [
-                -0.3,
-                0,
-                -0.15
               ]
             },
             "knee_HR": {
               "rotation": [
-                7.896007565954596,
+                1.6,
                 0,
                 0
               ]
             },
             "ankle_HR": {
               "rotation": [
-                -8.21437485631473,
+                -2.5,
                 0,
                 0
               ]
@@ -10757,12 +11115,12 @@
             "tail_0": {
               "position": [
                 0,
-                -0.2,
-                -0.6
+                -0.08,
+                -1.15
               ],
               "rotation": [
                 0,
-                3.141592653589793,
+                0,
                 0
               ]
             },
@@ -10770,7 +11128,7 @@
               "position": [
                 0,
                 0,
-                -0.24
+                -0.2
               ],
               "rotation": [
                 0,
@@ -10782,7 +11140,7 @@
               "position": [
                 0,
                 0,
-                -0.24
+                -0.2
               ],
               "rotation": [
                 0,
@@ -10794,7 +11152,7 @@
               "position": [
                 0,
                 0,
-                -0.24
+                -0.2
               ],
               "rotation": [
                 0,
@@ -10806,7 +11164,7 @@
               "position": [
                 0,
                 0,
-                -0.24
+                -0.2
               ],
               "rotation": [
                 0,
@@ -10816,28 +11174,28 @@
             },
             "toe_FL": {
               "rotation": [
-                4.205290475992353,
+                0,
                 0,
                 0
               ]
             },
             "toe_FR": {
               "rotation": [
-                4.205290475992353,
+                0,
                 0,
                 0
               ]
             },
             "toe_HL": {
               "rotation": [
-                4.315947697166249,
+                0,
                 0,
                 0
               ]
             },
             "toe_HR": {
               "rotation": [
-                4.315947697166249,
+                0,
                 0,
                 0
               ]
@@ -10852,17 +11210,31 @@
             "gunR": null,
             "gunL": null,
             "aimPose": null,
-            "tailSegs": null,
+            "tailSegs": [
+              "tail_0",
+              "tail_1",
+              "tail_2",
+              "tail_3",
+              "tail_4"
+            ],
             "wings": [
               {
                 "w": "flap_l",
-                "outer": "outer_l",
-                "sgn": 1
+                "outer": "ulna_l",
+                "hand": "outer_l",
+                "sgn": 1,
+                "dihedral": 0.32,
+                "elbowSweep": -0.18,
+                "wristSweep": 0.26
               },
               {
                 "w": "flap_r",
-                "outer": "outer_r",
-                "sgn": -1
+                "outer": "ulna_r",
+                "hand": "outer_r",
+                "sgn": -1,
+                "dihedral": 0.32,
+                "elbowSweep": -0.18,
+                "wristSweep": 0.26
               }
             ]
           }
@@ -10917,7 +11289,15 @@
         ],
         "visual": "Compare original image plus fixed front, side, back, top and oblique views, and transform samples at 0, .25, .49, .5, .51, .75, 1",
         "gateOwner": "../../tools/audit_reference_morph.mjs",
-        "flightTailStowed": true
+        "flightTailStowed": false,
+        "flightTailExposed": true,
+        "flightExposedRoots": [
+          "leg_FL",
+          "leg_FR",
+          "leg_HL",
+          "leg_HR"
+        ],
+        "forelimbsBecomeWings": true
       },
       "decisions": [
         "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design."
@@ -10951,7 +11331,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Paired reversible shield emitter hinges, one phase clock across the rig swap"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "rig": {
@@ -11097,9 +11477,19 @@
             1.02
           ],
           [
-            -0.65,
-            1.85,
-            1.15
+            -0.85,
+            1.4,
+            1.02
+          ],
+          [
+            -0.48,
+            0.92,
+            0.8
+          ],
+          [
+            -0.12,
+            1.05,
+            0.85
           ],
           [
             0.65,
@@ -11122,11 +11512,10 @@
           0,
           0
         ],
-        "roots": [
-          "leg_FL",
-          "leg_FR",
-          "leg_HL",
-          "leg_HR"
+        "roots": [],
+        "regionCuts": [
+          -0.85,
+          -0.1
         ]
       },
       "motion": {
@@ -11136,15 +11525,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -1.05
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 1.05
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -11184,7 +11587,7 @@
         ]
       },
       "reviewFrame": {
-        "scale": 9.5,
+        "scale": 8.5,
         "target": [
           0,
           2.2,

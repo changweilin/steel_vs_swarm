@@ -87,14 +87,31 @@ try {
     const count = prefix => parts.filter(name => name.startsWith(prefix)).length;
     check(count('Rigid closing belly hatch') === 0, 'Detached ventral planes returned');
     if (id === 's10' || id === 'm08') {
-      check(count('Continuous primary feather root web') === 2
-        && count('Overlapping secondary flight feather') === 16, 'Disconnected primary/secondary wing surface');
+      check(count('Fanned primary feather') === spec.parameters.featherCount * 2
+        && count('Overlapping secondary feather') === 16 && count('Layered shoulder covert') === 10,
+        'Incomplete humeral/secondary/primary feather inventory');
+      check(count('Continuous primary feather root web') === 0
+        && count('Scapular wing root board') === 0, 'Obsolete interior feather wing boards retained');
+      for (const side of ['l', 'r']) {
+        const manus = morph.ag.getObjectByName('outer_' + side), ulna = morph.ag.getObjectByName('ulna_' + side);
+        check(manus.parent === ulna && ulna.parent === morph.ag.getObjectByName('flap_' + side),
+          'Bird wing must have humerus, ulna and manus');
+        const key = side === 'l' ? 'FL' : 'FR';
+        check(spec.acceptance.foreclawsCarryWeapons
+          ? morph.ag.getObjectByName('leg_' + key).parent.name === 'chest'
+          : morph.ag.getObjectByName('leg_' + key).parent.parent === ulna.parent,
+          'Flying forelimb lost its authored anatomical attachment');
+      }
       const chest = morph.gg.getObjectByName('chest');
       morph.gg.updateMatrixWorld(true);
       for (const side of ['l', 'r']) {
         const wing = morph.gg.getObjectByName('wing_' + side);
         wing.traverse(node => {
           if (!node.isMesh) return;
+          if (!node.userData.authoredParts?.some(part => /^(Fanned primary feather|Overlapping secondary feather|Layered shoulder covert)/.test(part))) return;
+          let owner = node.parent;
+          while (owner && owner !== wing && !owner.name.startsWith('leg_')) owner = owner.parent;
+          if (owner?.name.startsWith('leg_')) return;
           const positions = node.geometry.attributes.position;
           for (let i = 0; i < positions.count; i++) {
             const point = chest.worldToLocal(node.localToWorld(new THREE.Vector3().fromBufferAttribute(positions, i)));
@@ -110,10 +127,14 @@ try {
         && morph.gg.getObjectByName('heavy').parent.name === 'wrist_l', 'Anatomical weapon sides changed');
     }
     if (id === 'm07') check(count('Shared heavy protective elytron') === 2
-      && count('Transparent insect propulsion membrane') === 8 && count('Twin 35mm anti-aircraft open barrel') === 2, 'Beetle propulsion/AA inventory');
+      && count('Transparent insect propulsion membrane') === 4 && count('Twin 35mm anti-aircraft open barrel') === 2
+      && morph.air.wings.length === 2, 'Beetle must have one articulated hindwing pair beneath paired elytra');
     if (id === 'm08') check(count('Symmetric shoulder anti-materiel sniper receiver') === 2, 'Symmetric sniper pair');
     if (id === 'm05') check(count('Right triple electromagnetic barrel') === 3
-      && count('Shared flying squirrel patagium cell') === 12, 'Wolf weapon/patagium inventory');
+      && count('Shared flying squirrel patagium cell') >= 20 && count('Folded patagium fist blade') === 2
+      && morph.ground.tailSegs.length === 5
+      && ['l', 'r'].every(side => morph.gg.getObjectByName('wing_' + side).parent.name === 'elbow_' + side),
+      'Wolf must retain elbow-folded patagium, paired fist blades and a balanced tail');
     if (id === 't11') check(morph.gg.getObjectByName('gun').parent.name === 'wing_r'
       && morph.gg.getObjectByName('heavy').parent.name === 'wing_l', 'Weapons must stay on shoulder trays');
     if (id === 't11') {
@@ -132,6 +153,12 @@ try {
             check(tree === morph.gg ? hits.length > 0 : radius > .1 || hits.length === 0, 'Rotor shield does not close/open');
           }
           if (tree === morph.ag) {
+            const heights = covers.flatMap(mesh => {
+              const p = mesh.geometry.attributes.position, values = [];
+              for (let i = 0; i < p.count; i++) values.push(hinge.worldToLocal(mesh.localToWorld(new THREE.Vector3().fromBufferAttribute(p, i))).z);
+              return values;
+            });
+            check(Math.max(...heights) - Math.min(...heights) < .041, 'Flying rotor shield petals are not coplanar');
             const wing = tree.getObjectByName('wing_' + side);
             for (const name of ['shoulder_', 'elbow_', 'wrist_']) {
               const point = wing.worldToLocal(tree.getObjectByName(name + side).getWorldPosition(new THREE.Vector3()));
@@ -165,7 +192,7 @@ try {
         const g = morph.plan.g.pairs[i].n, a = morph.plan.a.pairs[i].n;
         const delta = Math.max(...g.matrixWorld.elements.map((v, j) => Math.abs(v - a.matrixWorld.elements[j])));
         maxSeamError = Math.max(maxSeamError, delta);
-        check(delta < 1e-5, `Rig-swap seam: ${g.name} ${delta}`);
+        check(delta < 1e-5, `Rig-swap seam: ${id}/${g.name} ${delta}; t=${t}, shield=${defending}, aim=${unit.userData.rig._fireAim}`);
         check(g.scale.toArray().every(v => Math.abs(v - 1) < 1e-7), `Rigid part scale changed: ${g.name}`);
       }
     };
@@ -174,6 +201,12 @@ try {
     ent.df = true;
     for (let i = 0; i < 50; i++) step();
     for (const t of [...samples, ...samples.toReversed()]) sample(t, true);
+    ent.df = false;
+    ent.fireFx = { t0: now, slot: 'heavy' };
+    for (let i = 0; i < 30; i++) step();
+    for (const t of [...samples, ...samples.toReversed()]) sample(t);
+    ent.fireFx = null;
+    for (let i = 0; i < 120; i++) step();
     check(morph.ground.shield.phase === morph.air.shield.phase, 'Shield clock restarted at swap');
     const formResults = [];
     for (const flight of [false, true]) {
@@ -210,6 +243,14 @@ try {
       if (!flight && id === 's10') check(rig.tailSegs.every(n => Math.abs(n.rotation.x) < .04), 'Raptor counterbalance tail droops');
       if (!flight && id === 'm05') check(morph.gg.getObjectByName('hunch').rotation.x > .3, 'Wolf attack stance lost during locomotion');
       check(rig.kind === (flight ? 'aerial' : spec.kind), 'Wrong locomotion rig');
+      if (id === 's10') {
+        const active = flight ? morph.ag : morph.gg;
+        for (const [slot,key] of [['light','FR'],['heavy','FL']]) {
+          check(rig.wpn[slot].ref.parent === active.getObjectByName('toe_' + key), 'Raptor weapon must remain hand held');
+          const arm = active.getObjectByName('leg_' + key);
+          check(arm.parent.name === 'chest', 'Raptor grasping arm moved away from the chest');
+        }
+      }
       if (flight && id === 't11') {
         check(unit.userData.spin.length === 2, 'Twin tilt rotors lost');
         const node = unit.userData.spin[0], before = node.rotation.z;

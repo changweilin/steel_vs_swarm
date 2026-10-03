@@ -1,0 +1,458 @@
+{
+  "s01": {
+    "sourceHashes": {
+      "runtime": "dfef2745e9491d4306391a5f28f8f4c2c34ddc2395ba5d164bfeb675160b8306",
+      "blend": "8e76f077e33142268610a0c847709134241b21de22dacb521773e0644685a35f",
+      "glb": "ae782457db6b04aed0a5556c5c47752e979627b4072ad231d339e98ac0b34a94"
+    },
+    "views": {
+      "reference.png": "e4050394f65898a617c5893b9ef6c3d38b7cc2a78328a529d873cbecd6c2f1e6",
+      "front.png": "97df32966c48cdc2b13612d7e82440cf6c8e0b12efd9d38e8ba1c97d027d4837",
+      "side.png": "cb56864fc33f2eb3c40c3332b885f742a5213300995772ec76365c2721a0d2d3",
+      "back.png": "3c9f8572ddf661132b71c22bffd6b27423329149bfcd9125cba8f5b90283a9be",
+      "top.png": "78d371a53e73a59533f8920366add89f04b447fe7c6c994cfd672e9cb4d91512",
+      "shield_deploy.png": "4250f49dcc187db045809becd9d99c58f1b9c2ea08d2f9ed75de3c6fbafd41d4",
+      "run.png": "0935e8f06b4f157acc3bf504cf2861e2c069e6aca42508d5007f77d154d48d1b"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t10": {
+    "sourceHashes": {
+      "runtime": "e5d030e856d575f951dac7f6ac49e6b14f5af841cfa20f251bc1dde36cc87548",
+      "blend": "234096c42c574511c1b202b32e8885fcd6dfdf97aa4d72b17916e5a54e7f1453",
+      "glb": "e9eff49a74203e8ff134062afbbc6d92b3e8f4ed1741eb143d03bca14b9856dc"
+    },
+    "views": {
+      "reference.png": "a251565c469527b174011a45808c9bdbb458d389b72b94caeeed8289de94171b",
+      "front.png": "7ac874f06d5193e37cf2a305600242b7e7c69c3f86ac8cc5f937dea2a2bd122a",
+      "side.png": "c49922b0ee93382fefa99d4d64d5e5db1da085f142927fb2515d653e32c232cc",
+      "back.png": "464a42fee4cfb3455d302fb979e9ebcf2185f18e356182c593b8d2da23642bad",
+      "top.png": "ce315c47c851c36e2627e8bc517b0df8282e2d9e5756e7f21b9c81f5274f0601",
+      "shield_deploy.png": "5ef5413f0cc1b968ae6165e99b2fe8732cd49d5b7b99121bc8f6a4f10570e375",
+      "run.png": "820a18f9580c7cc7e26fbbf425b0840e64e4e0c01386b8f0bb944b84711e9552"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s02": {
+    "sourceHashes": {
+      "runtime": "e06ca1f9fb0f76b046c6a04599d8ec4819509bd67dbe5fa332aef744f6a90779",
+      "blend": "ca8c1e33a36e42d882faf51c43340280b18e17a25f76250ed5ac1b5e2641842f",
+      "glb": "663f24b9cc948f7b7490d67c8b9f7675b9ab8030c6652f2bf48c81967104c6cc"
+    },
+    "views": {
+      "reference.png": "0aa3039bfb85269ba43a7ba3b6f70a92a805ec1fb06c77a6fa2aecab6cd65fca",
+      "front.png": "de6be782faf177eb88a26ef8fbb0aa5777b748041d4f094c1e74573cf64aad99",
+      "side.png": "582e5bc090a0f83b353bca90022b5af20c12311da30cdb688ba07720e7d4a0d5",
+      "back.png": "e6d84a7eadaad1fecffe82ff4bc0c7b047d9645538f7cfb039a400b8fce52eb2",
+      "top.png": "c2053aec7572c5dca3436a93622c2ed7a105dd8604d28dbd377dc52635497afc",
+      "shield_deploy.png": "30a972036d9ef7902a83b78a86968c6c62fc57cc8d36a72293bce1da6c8d983f",
+      "run.png": "addf4f22fe916155c9a411caa9c3621362e719f15c5da7bf15ed1abd796050e7"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s04": {
+    "sourceHashes": {
+      "runtime": "b81a749cdb6b304a450c6e22d40735b93a30b2637e47e7a195293eb5137bbd9a",
+      "blend": "553feb05deb7753c37f88e1c05c00bc336fb8ded017e7dd0cb503990d183dce8",
+      "glb": "86631fd653a0b185dcf41779fdbca23c643ca937466ec84493a520249af2289b"
+    },
+    "views": {
+      "reference.png": "a8392ec43b87cca851a6ffe8a42e1c8936559eb566e3e93519c67274cb6ed800",
+      "front.png": "c4f2af5b2b72b3a6d7f44480a8c74df2b6a26c011dfdaa454ec78dc89ee8a59c",
+      "side.png": "a9444fba27f2ba03bcfd6a28a4136edeb50e210d3ca173459a84e877d8b95881",
+      "back.png": "bb332f5e3f828e80fc7025f05d41db4ba1a824f0108ff31178122b4f1c46f7b4",
+      "top.png": "68b7980966848708287e4d4beb47953c47abadc3be0c2317ae61160a3229ca54",
+      "shield_deploy.png": "ffe9df5b2fb3749e990ec6688fc1828a6f3a04c4ae902b9008cab0a1e6269b13",
+      "run.png": "0ffc822047c0b56256c0597dab9e46d577aebb80f8b32476429c31ac541f706e"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s05": {
+    "sourceHashes": {
+      "runtime": "53b5bae18787041b7741c4456a2423b9fcd18333e520e37a5b00ae4620a1efc8",
+      "blend": "3ab2d636d45a9c6139d7c9c1be64673ad38494f593d6a22c3bc31fd2eacccc57",
+      "glb": "378c8c53eff27978f8b4b36206eef197a339dec75bef34363b9a5255f67ca684"
+    },
+    "views": {
+      "reference.png": "6c3244f8ecb19f4c4f6f3191bda01b8651062c8c5b4273ff075d123138419ed8",
+      "front.png": "7af7bae7a6b416a91eed75a21a147eaef964123ea033ba15e8c6ca80e36c2bf4",
+      "side.png": "e1314f5c983ea0a423a02e4091653e14a60ee6dab535902625bf3968b9783792",
+      "back.png": "098c795859c767ea159a9dab9cd77e8b30080d4abf514a33603b154b4a74a301",
+      "top.png": "ff1b3db6b5107e6f2eab75ffae30dee7c728c2d2172e4b081f0828b5c1954f29",
+      "shield_deploy.png": "2f643c8d3491d59464fd1e81328449d1419a58cbb733221f08dcaeb146d29535",
+      "run.png": "a8e905bf37788f53d7be3fdcaab9603bdf283035b8e6e6ef3864cff138641e5c"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s08": {
+    "sourceHashes": {
+      "runtime": "3d2c71f083c346a741eeb9ba472b5a4ff209c43d9e1d1929e5c0a6156dec160e",
+      "blend": "4c0cd0a5bb3fabc473988c1726e60aa537d35d64468433955043437c3c97a9d5",
+      "glb": "31bc308f259e47eb5fd984cf7481d96b1ca61adaee34fe18a216593e7cf0e15a"
+    },
+    "views": {
+      "reference.png": "6d3e4cad65e898d5d9ee3bd1bf244417a3f9da9eba2ac61862c1296cfd4d7e3c",
+      "front.png": "5283788ad0b8d8383c07ac96e5703a8dbbcc9f8e15b19da881326b5c78a7c95b",
+      "side.png": "e1e9c25ba585a903ef8d4a9bd9f9a3dc034d722d5c3b4bb33d7cc03d1a598631",
+      "back.png": "853514e816b7224f8d55f714845a6b8990ee12eb714ec4debec41739db7126b5",
+      "top.png": "c0073076c0a4990af73913a0ec2c140104e637f8d82a512db7fbb40b46a190c6",
+      "shield_deploy.png": "3543a37cfa9937c238537c8df929e959051f334625757bedbe64b0368af2e4db",
+      "run.png": "31d4ae8497d269912a44d0498213d6d8db052241952120b0b97de2bf4db91669"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s11": {
+    "sourceHashes": {
+      "runtime": "338902a3cd5831c46ab5a09bb4e621141ed7c26633c2af70f2190daac185635f",
+      "blend": "fe3adff89e6984417be064410c637b45a4d84bb2b746300748d07cc72264f621",
+      "glb": "509a934371e77a685ff0a6c01930989bc4fa33f69ae0c05a46f1c9c36478482c"
+    },
+    "views": {
+      "reference.png": "e8daa2fd6efb47887569968764bddb8e5c0d694f98cd8d7f9b72b3cf6834171b",
+      "front.png": "ab0e79f4355a13599204666a7503c76fa5c792eefc15f591015105b52fcbef1b",
+      "side.png": "c533c1fe8440c81f0c05c5ebbf12898030c72b0fd4a24c6345b6dd55bd2fc504",
+      "back.png": "437e9142e65610625012e182ece09a1e0bc1e1074e856c35dbe13eb1b05c92a3",
+      "top.png": "f109a3325342e18aee63472cfc9513d66b04342cfdb3e35ca07ee9690537e5ca",
+      "shield_deploy.png": "d13ad8276f944204cd615282ef4ecb7602358d76e562045f1eeb115b2750858f",
+      "run.png": "7837f4ae360c38773144dbb24ddff97a30a7381a67e6eae109ea0ed8d2c5d148"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s12": {
+    "sourceHashes": {
+      "runtime": "f903db0dd5ba838b990cfafe579f185a2964d68634805748dd5b4bee91e32368",
+      "blend": "07a2195b72b807ba3f8e35782f6f2f32a66332c0670c2adf60dac86a296218fd",
+      "glb": "e20f9bb3b06a634eb60cab498658ad02d48e79c0d565daae9599dc0772b77c61"
+    },
+    "views": {
+      "reference.png": "7627600f99bcea2851581d7e6837ab1894ab6d20a5b9a06bd51b113a61eb8d50",
+      "front.png": "1494e6495d8cff73d70d6056cbab9cb21c978f0ab9109804085b43ea30d50a64",
+      "side.png": "3445706da7dfa77878ed5f12f48a2cc514b08ebef546de65994958775b094f81",
+      "back.png": "f07f5ee63550783d0dc34d82835f2d4e8990187859d8861188f6083047acb668",
+      "top.png": "d11f39b0c9a279534871da98f7740510349152af6810d61b8366b3662a14a96a",
+      "shield_deploy.png": "0872b52f3109b4ba8898f7b14f08e033557ee7c739806f465e1db71e843d606d",
+      "run.png": "7b246d15d6c00b10f307f48429ed53a304407dc45b3ad1f2173f58fa7127490e"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t07": {
+    "sourceHashes": {
+      "runtime": "bdd9928d833ab6ee5f516ef6aa10eed07cf3af10349bb3349c359ad19d29218d",
+      "blend": "d8d8d3abd1539db477b2f61016becf4f18db875993849c44002ed9b84a36811e",
+      "glb": "d6846d141fd0e3313e5ff64c4756b11cb430c2705d38e59542c0fe8a075974d0"
+    },
+    "views": {
+      "reference.png": "b56d1a51e70ec00caf8e9c58236311d21631a502fe2c8a6c93c49b248ddd4d97",
+      "front.png": "9a16e106a5781dfae56b5c09d3a70b84e0cb6c2ffa2cb46caf2be5b14cacf02b",
+      "side.png": "2c72edae7d1f312f0d5b58f8151b61a0603be1e4766dd4bd247e31dffc9ce9cc",
+      "back.png": "0dc10578b2f9cfe786bf8a13f1bb0d75d9f09067d5f51cb4667c7559a67522bc",
+      "top.png": "7a4f0453f52448a03278cf5f678eaa57a50a19f592c6f6c1bd51ffd30b1d5ec2",
+      "shield_deploy.png": "40865741f195913970f68042c3c1135ce85a27b2b1238a64ba504982fda4e538",
+      "run.png": "2f62bfcde3b366bccaf20bce128332d4d81720e73be5cd6764d92a155c62c318"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t08": {
+    "sourceHashes": {
+      "runtime": "c3d7b009d7160838849dc6f72b08bc841b3c2ac81de6559d65ba7f8098276d19",
+      "blend": "ab1145b0bae971c87ba599b729be9cd97e73b7b45b8213546eecfa4a5d194457",
+      "glb": "96974d82882faafebdef2a7470b4f7c89f87756e5d73671e155af19ff64c127e"
+    },
+    "views": {
+      "reference.png": "9e3db5df81ba1b90d5b14ae92c9b03c10fd67b17d3860e310637bd09673f8e1c",
+      "front.png": "b1b6845995aedba3e316fd0b105a18fcdef8a7c41176b4c18410199318babb14",
+      "side.png": "691f32285b47a31906f98ce45a7ff191f290d4c2285e1e172d5b88383b8b5bc4",
+      "back.png": "e808d12a8f13c9f7ea172d3b8b5ee5430d7a400b28d4d7da735aaadbf89b4146",
+      "top.png": "20316b0f263a1778b682e0396b60558e68a441871ebf2456660d88fdedad5f09",
+      "shield_deploy.png": "eb94ce35bac85062f3b0dc7e9165f6d5a5b246e8fdaab857b03a2eaa1bc8dbec",
+      "run.png": "16aef8a47f97bfde7e0f19895d735be3ecd5ccb439a5b389a1d91c5e79041eae"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t09": {
+    "sourceHashes": {
+      "runtime": "a8c73be3009fbd4f6b95a80329d000d29f3a3f19e4e446a69808e78bbce5cf99",
+      "blend": "0348e78dc77bba0db311b222e54aedd2bc03c164266d55130ef5f29b82938378",
+      "glb": "2ad434fac7f12c96cfd77eadbd78976e58e77d86d61c3ff33272d07054ea52ff"
+    },
+    "views": {
+      "reference.png": "927dc324d2df787139d8374f632b7d84a48c55326d7bcd5f6900e69b8b7003ac",
+      "front.png": "07b7910b073c2ec5b7f866786f7e0a578e1e5099514eff8c88f236e6b2d05c49",
+      "side.png": "198b9d781d7607c78967c337527a234df13cbc7c83138cc3b6079f9720325434",
+      "back.png": "9c335a00cb0926275ad0abc77ab26b4916f041a21568e946c0db957787b7106f",
+      "top.png": "5c4e7be138b895962cbc82b15441e5f1915867c2ffd409c780962e110e45b8e8",
+      "shield_deploy.png": "d2dde2943767e469b4a249c81375d1c8c854ec58640a6cc00829b0df0d16e5a8",
+      "run.png": "b24d88ba560a11b082ab50235bb87d3ae8fa85f1ed9de13f647239954c6012f4"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "m03": {
+    "sourceHashes": {
+      "runtime": "a9d65015eab9ec5af9fcdd9806a0e1c55be9a19ccc3d6cf5b0b4c55bf5f992cb",
+      "blend": "2acc6023590abfaedebc1bad60f37c125f520073f964b03c4b2dc531d4a6b19b",
+      "glb": "38060c9b303fbb7a35b78a977dd62a7c6999dc1fe938d2a22b86f5774c18802f"
+    },
+    "views": {
+      "reference.png": "89c1ff81d928349ba0d5632098a7cf40588dcb2408ff3870dc39e9f3fc0ffd58",
+      "front.png": "0d3043d6469031558303f5cfc051754f09ead2bf6f8ce51672b042cbc4733724",
+      "side.png": "697cbfe784e054f10ce186a0318faf9ef21cf083d1222ea4c74dcc21451d2cb1",
+      "back.png": "da68829657322019a17e8c952c7224aaa8eb4c4c87eee005feb1dcd60e6ecb34",
+      "top.png": "e571bd08b721716728c78d6daa8e3afb7c91cc5993989e9d51c361ed5794e348",
+      "shield_deploy.png": "eb12b28da4b91f99099ffa751830084d7255432cebc1097f67b386c24a82bdee",
+      "run.png": "217fe63d3820f36e54612d67e6bd2ef4402c8e761a9ff0502a7ee8001a016cbf"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "m04": {
+    "sourceHashes": {
+      "runtime": "a9f8218807284a41d266605c116be432f924a5a2f26569a005cc34ace5bfa2ce",
+      "blend": "f33dfba8b5af48f61befe22ac8ea91b524f35f47a24a6f35fd50529bab0e2245",
+      "glb": "15a7b10deec21ca8a48d497957803dbb47da13cba4f0257bc9636aa61f3885b9"
+    },
+    "views": {
+      "reference.png": "341de86287fd1dea0f0c201973ca50d39ad2c828c772d3e040ba2fdd39460bdc",
+      "front.png": "3a3b7b271c89b2f4874dbbf4b82b4e9c080b57a34a8f44c617bc71908c1b3864",
+      "side.png": "fc5d60058b60794f34a09275a4a32642420317e9c7be4689a69cae50283a3e80",
+      "back.png": "7779aab01e4b664500f34cdc4a3c070978da66a74efdf60123fceb40ce4cdeb4",
+      "top.png": "3508188a1802d6d6c5601b7bc2cd9a6dbf435c26836e783e2be9dca0ac3b1491",
+      "shield_deploy.png": "48505709c05b38ca8fa30e2e4b255dcf3297bda836207058ebc0fb2a28529751",
+      "run.png": "a30b239c09e0062df8b5ecaafcbe4147094a105c8a43942ee4fcfe5b4c176199"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s06": {
+    "sourceHashes": {
+      "runtime": "5002e36974d10af9c64d5c4855f819baa2d5ef8c01041039473b76c1303fda96",
+      "blend": "b93f60993a97d2c7d94ca706e45bc4b8957ddbda40a67c4510131825823fe04a",
+      "glb": "5649c270c794a52ad5fb8e53054f7dd07f64bf6c530c92dcf2ac3729ba1e18ec"
+    },
+    "views": {
+      "reference.png": "e607c5bb7501be42e900e5113245f783085985a4c84c81b18fdb3e6e73ed6884",
+      "front.png": "1434a7bedc2e4b864e4a5ce09e009c81e64e7793836171b8e949436b161bad21",
+      "side.png": "72ffdaea7921d1c60a8a0dc8af868b0c7bdffc98836715b158df03edf3e8597d",
+      "back.png": "de0ae948afc2131a16d0e97893af929555cb69b408432b7e37d43369b3b109c7",
+      "top.png": "3fe6b2f58844729758a8ea08c0ccb08c8f76ca102ab77a5df62aaddaaa61c144",
+      "shield_deploy.png": "3c487bbbb563a97e4c8693284c5b8e41ada3bfc7514fc3ea048f0cc6185498e2",
+      "run.png": "803874ddbb4ffda6a132c1513c0c61eadac639bedca044b9265ff5cb3abccd65"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s07": {
+    "sourceHashes": {
+      "runtime": "d50c5067cbf7b64a0e6fe5631ad2a283f6b65a07496c3f32d895c374f9fbc2ef",
+      "blend": "434c9199d06058fc7caa193279f4513de2d202da14bd92bdc9a505fa10a040dd",
+      "glb": "58c9ebd65150f708e79c2659006cca27103867b4c8e1447d55920f05be8df02a"
+    },
+    "views": {
+      "reference.png": "f0fd2c94699c488ec1281557c21c23c6112b5724d93792e533e13b0b8efbe8a1",
+      "front.png": "8b2b0c4c7296a42f60a923f69141e715b3efbc2d7c7c6608042db22a5d2f2453",
+      "side.png": "8a7f6d9163ada83818d2bef5639c035302f39a6579a455c59e8609d21c86e6de",
+      "back.png": "42051f5d5ab4fd093a7124d703d63910259154549df948782348fcc1a95ec745",
+      "top.png": "2f8828b8a69131e9dc8202a23baadce361fb40985d9a749e7d5fe9247a92b63b",
+      "shield_deploy.png": "a08aaed732a606b9fae8b39789a3115798d97f9d244181bd6fbe35f3475a4e60",
+      "run.png": "5ba7f01e8dce9cf00b62f064365dec727cbaeeaa08f702fcfeeb5bb927324e2c"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s09": {
+    "sourceHashes": {
+      "runtime": "3ef355ac903007bf2f68441e96294dc64e30b411346350b7967a86fd6a85fd0a",
+      "blend": "a9205176312a66cbfdbbd6d15e287bd78db59417c8e76b4b349686d9f733e4d4",
+      "glb": "a657a215002578a505283aa40cfab276e89abb9b30c27742ea075b67fac29f13"
+    },
+    "views": {
+      "reference.png": "da2ac660df8dba28c1e8c065b37594077d6804c0a467f992e78c017c6fb06a5d",
+      "front.png": "99263e73a7088710c765123011ac8914912f4e7296671fe989038f688802b74b",
+      "side.png": "d42f09bb9cdeffbd2f4c9ab11c48040cdc86d47c42bc98975b77df72742fa251",
+      "back.png": "19c672bd5503cead46f8d212d33c10ba04acf043d76f79e62b65799d4acb2996",
+      "top.png": "f4dc491f18bc96e7597549cd3ef61e41eb3bed1e4684adb9b1309f4297a12f37",
+      "shield_deploy.png": "9fdf991aa7567621f2a669ec3d728bb261342f653f82c043b866f2d5cf883193",
+      "run.png": "08bb3fab8357e2a34977521408659cb1e5ec916f300580176a401f44c441953e"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t01": {
+    "sourceHashes": {
+      "runtime": "5e6f580d38e6528dd536d65a0fb4a9d5f7a4fee72be18ee65d0590322d870e01",
+      "blend": "55fe966f91d0c7ae23a84588945103d67a5620c1ef1015df499df33ad731054d",
+      "glb": "95aad0edaf1e30d1ed8a9e4372cd7d8e3f12f36fe6d6e6ec12b249d5d0ca8a24"
+    },
+    "views": {
+      "reference.png": "b77ebda46d9b5d7aaa1810af9568412b9dd9bdf84d89b60ae1c316e32d78cbb3",
+      "front.png": "ad674c4e4da7cc4fb3355a2e5b99fc75b902e6e815abba715f8adc19beee305c",
+      "side.png": "0f48ff6cb3d865caa11d58cc788405069f95bba297a35645251b002e38361336",
+      "back.png": "4652a7248546b8940014f3b7d3441817cd660a3a5a1943bb0b00c0a0ebdac751",
+      "top.png": "b66a8cc027a9705ab807d4c94e805a7b133ddead0c85795617fc5ffb620886a9",
+      "shield_deploy.png": "d9b2880b55ca903a98a2ec35ffb98c923335623b5f2943afc607c4dba7862bc4",
+      "run.png": "d17b3c6c44791080473c02c49664d953017038ea0123720d70ec1dbcc4efb9ca"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t02": {
+    "sourceHashes": {
+      "runtime": "937e229063cdfe02381da726744f24db5e3482a3ff0960a5fe7f0e7fdb85f039",
+      "blend": "1959ca8ac324c808fe59248826fd95e3eacb34bc48bc7db716fee9268868fbdc",
+      "glb": "941306d689ae7afc1274d991365ed3e9d0b7ceaea258b766f58314e78e221d0c"
+    },
+    "views": {
+      "reference.png": "0ee85b5001e63e8de5000693e76d3066420868420b28c3cc1e836d0e0a6bbca7",
+      "front.png": "baa7d47392021c2be0f2314180a0ea1cc8c3320cb68aaa0bbf57ed57e6cfde21",
+      "side.png": "3e0499eb9f337266a709fd8ab8c681224d598e579b26d767eb6083bd6a637acc",
+      "back.png": "3b084d81b0bd8fe31787dabaf1a520f84e4df8434c3e599c1cf0e7b30fd6c830",
+      "top.png": "1f6ed456d149d694e3cb9da58b8d202c27ac6ffb360153dea211005fe4f7e974",
+      "shield_deploy.png": "18ce117e811b52e7bebd8a0317a0eefe799e58fb42d318daa165af93b21cdac6",
+      "run.png": "268e7982cc6974a012ef26ec46d80f0e70812bba763387ee50b46179239e6e75"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t03": {
+    "sourceHashes": {
+      "runtime": "59d1bd6b87fb7bb53a18d9e489a109a15ace96cbab3589c16a046f9e5371134a",
+      "blend": "974b214ef256d807c6dc4ceac8e43de29e4e0598a069c2d148fb80eac231fa42",
+      "glb": "f481afcebe7bae5d3504ce8ae9891e45a3d8b95b9de600d15b498a41f3789c65"
+    },
+    "views": {
+      "reference.png": "6c4343d70af754208d39e9b7936b98c24f2dc66a6493a2485268c486e140e5db",
+      "front.png": "78e422fa5bc310398a9c5ba387c16f307e23a87471434361d89eb9737b4884b7",
+      "side.png": "0b1c1856d684cae285baeec3a1d98edbe711373650651f2adbf52850a9d484c8",
+      "back.png": "dae892e177012995a427e23fc606556d76c4781902783a921e60f496061bb081",
+      "top.png": "8ebd0fef24cc7b16f6477283ed1a9d502b264c74181c8ac6330e1c8d7aa00b60",
+      "shield_deploy.png": "c1258f5258a0a17097c8e999828f801ce8bba31dba687d1aaa94790c7208d011",
+      "run.png": "73d166d07f43c6b9d32d15f38595bf4e259dd292228c2c06efba7293719e92bd"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t04": {
+    "sourceHashes": {
+      "runtime": "6d7bef98409915be3a835be2f52e37a9b2fdfa00715777b2f802dc08e2c8baf5",
+      "blend": "dce5b3898a1390472283f9066102b954cbea0c4f320dfa887a65ada152a18606",
+      "glb": "559f61d98bebed5dfe193a3d6f0d65cf66f66d7d93515afe6192a25acb6e9b17"
+    },
+    "views": {
+      "reference.png": "abd1b8429b12c72bb6771188e20ca07fa98cd38db12f5d527a3fe9756a368ec2",
+      "front.png": "dfc445aa98e2f687e7b5d620355711ff96a8e67a4c5ada01f1c31fd18ead1c83",
+      "side.png": "81ee8cafaa5b26d3e7e0012812d232757781c3ee3333965989b1db7be6f89545",
+      "back.png": "62c1533f023f1e05723e88b71b921dcdbd9bc8a949ebf4dd7c25e07610583919",
+      "top.png": "8eeb5022a1246651d0e24b2e86fa2b2d51a3b0b6b05906ee13914472c7fd5c9f",
+      "shield_deploy.png": "6da78f837a9abc1407221fb8386f7fd268c7f92cd17e4c23a318f54e3978f404",
+      "run.png": "dd87d81efd0e06300f61fa98a7f57cd69cddda559838bd70dfd684a57e0d68ed"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t05": {
+    "sourceHashes": {
+      "runtime": "e5d735ddf1e4ec7b53bf50d07ba1828f7a1afed41e25c8c7c6787dbd1b3e85cb",
+      "blend": "27647cf7886b9669e0cb64c3e7d93cb1f2e0bf4d6c5c3bbca4e9627dbb7e25ce",
+      "glb": "706399e6a26575a9093cb2f6c9817b6e1087eb6aaa4f5a36da2135fc66a6e47c"
+    },
+    "views": {
+      "reference.png": "8fda30b21a1356403a90800439d0c4a58a00ec869619a8302c7bc443df9a1d47",
+      "front.png": "db8f8cad40eab0de5ee6fd68807dc289b7e0f15056e23c386c90010416e43db9",
+      "side.png": "94094385a934fd7bc817f7fab2057f7471c27e69ba0d5936c34719b755459d6c",
+      "back.png": "851aa1a17eb4191423a1af62fa021248b26ce61c56caca1521106d6c69bacc94",
+      "top.png": "a4e65710a6e6c1cc4f6b167b15bb09fd30284cbfe56731df1ce613e70b1aff3e",
+      "shield_deploy.png": "c3e8c936c0dece1f6b83d744d2d2ed2af5e56c1f33023a6240a788479451c457",
+      "run.png": "d8ed266efe37c0d286a4e53f5c6248edee11e1cbcfcf08def6fbbf15f99275db"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t12": {
+    "sourceHashes": {
+      "runtime": "1274fa7fc88f93b7b1b958d296f8f7618ed7c3a432b7471565f42cbc5d081700",
+      "blend": "2e93bd5937f69915ba8a6e73e54141429754210d4f5730cb3af317c4716df532",
+      "glb": "38f6902b1f1588d382f38320111a88b2e3d54f48a311ca747ab1363d73587a44"
+    },
+    "views": {
+      "reference.png": "3da85e26e7cd866688abac5017df1554ea41d1b3ab61a45d04d6123cf13720f0",
+      "front.png": "4ca9dd2c92a4ce24605e68f7c2c743749b16f5d5eca5ed36bcb14998770d3f13",
+      "side.png": "5d2dd394af35d0b896a5c6be8b6d1ad709373149cc5004c7e99dc78fe50e58da",
+      "back.png": "2f008aa125d0518ad1973a36a3d2391cc715939a1e20fcae60d9cdef5d63ffa2",
+      "top.png": "4f55d1fd543f3e1a734b21b2320d5369c8824e10a3cc1ade01d42f312ebb36b6",
+      "shield_deploy.png": "4687e28a15ccda2aad84ec4484ba762f4fd3396ae23002c4962f7507110f9cc5",
+      "run.png": "06b6872392703f9488754a80ac9be679333f75e5c5feb5cdb71969b2b9d23aef"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "m02": {
+    "sourceHashes": {
+      "runtime": "fd2ab316f1e5ba02e60536470c6fb0ea7a263507f75040d927d40e1884df573f",
+      "blend": "e4d3f6c23c94ddcd0b357bb37f4acd683c8f445d70eef64f8014da97e8291de7",
+      "glb": "234e68b03b26a0dac31d26bd9028adbbffd697ce656affabdfe5445843b23131"
+    },
+    "views": {
+      "reference.png": "6943a755dce7c3bc44a4c4a3ce9ff9ba4cbe959f5640d66d9763658230d1125e",
+      "front.png": "14f1d0deaba5ea8a8726017da3ba45fb44413151170dcab4d7f1012634d9974c",
+      "side.png": "9defe91d5761f22a8462ce06d64552936e65c7ab0fee5ea69fc1c2acd553a23b",
+      "back.png": "8c797fa31bd4be9c43bb3e833a45c33e8062b6c23789de18a8dec02c6b565fe5",
+      "top.png": "48045ceb50283b9bd2c385a872d0810204b1855054d0309bbcf02273a129a86d",
+      "shield_deploy.png": "35ad5c7a24803226472de01cefad92f80adff3ab8b60087a33d38a88ae03064a",
+      "run.png": "6108ad0a8d1e36d44aca0ef02229cc574259394e7c671bdddd2ed1d38a9e356b"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "m06": {
+    "sourceHashes": {
+      "runtime": "90ca166a5aed1ebf1e55c87a9c14a68bf147b421e57791b9695aaf03c6f7d7fc",
+      "blend": "a91c33e1da81776594a2338cab884c7fed6133118f21af425141a04588c2891a",
+      "glb": "83964c2e9b213fa6ec586dce1a008aeb3f2cb693ae16e02892afcc61219e6256"
+    },
+    "views": {
+      "reference.png": "c3894cffaea9819538f3d4fd0266a85ba28d6a800652e7d0015c34307f7d809e",
+      "front.png": "0515b11e57c284eb8653533c1973d6bfb7c8b90c3949532ef78e728044d84e67",
+      "side.png": "121af511373328c06440e561b2b531a041d663ebee32ceaa9a0111f51ecdfcfe",
+      "back.png": "0ea4740c12c552b30dcb448c1d616e691e86e53cdc67a9f1b0395ededdae4411",
+      "top.png": "5df46f74942849ef3c701144f0c7efaf9b9045abc5cd515632ae71f6eea0aa82",
+      "shield_deploy.png": "b83121bf4d84faa912ddc35479b0e506dbe3e5880911c7360a7811ecfcbd9608",
+      "run.png": "e0acafc719673628aa460320d47d327ac46c6978070cb31581875b9b770dddfb"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  }
+}

@@ -8,6 +8,8 @@ import bpy
 from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0,str(HERE))
+from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain
 contract = json.loads((HERE / 'morphers.json').read_text())
 output = (HERE / contract['authoring']['outputs']).resolve()
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -50,8 +52,32 @@ for id in ids:
         assert joint.parent.name == (parent or id), 'Lost parent: ' + name
         assert skeleton.pose.bones[name].constraints[0].target == joint
         assert set(spec['clips']).issubset({t.name for t in joint.animation_data.nla_tracks})
+    meshes=[obj for obj in bpy.data.objects if obj.type=='MESH']
+    anatomy={'articulation':verify_articulated_body(spec,meshes)}
+    if id in ['s10','m08']:
+        positions={name:pos for name,_,pos in spec['joints']}
+        segments=[]
+        for side,n in [(1,'l'),(-1,'r')]:
+            key='FL' if side==1 else 'FR'
+            if spec['acceptance'].get('foreclawsCarryWeapons'):
+                assert bpy.data.objects['leg_'+key].parent.name=='chest', 'Grasping foreclaw is detached from the chest'
+            else:
+                assert bpy.data.objects['leg_'+key].parent.parent.name=='flap_'+n, 'Flying forelimb is detached from its wing'
+            assert bpy.data.objects['outer_'+n].parent.name=='ulna_'+n
+            assert bpy.data.objects['ulna_'+n].parent.name=='flap_'+n
+            segments.extend([('flap_'+n,positions['ulna_'+n],side),('ulna_'+n,positions['outer_'+n],side),
+                             ('outer_'+n,(side*spec['parameters']['primaryLength'],0,-.38),side)])
+        anatomy['feathersBehindBones']=verify_feather_planes(meshes,segments)
+        assert not any(obj.name.startswith(('Scapular wing root board','Continuous primary feather root web')) for obj in meshes), 'Old bird wing boards retained'
+        assert any('tail' in obj.name and ('feather' in obj.name or 'rectrix' in obj.name) for obj in meshes), 'Bird tail feathers missing'
+        assert set(spec['acceptance']['flightExposedRoots'])=={'leg_FL','leg_FR','leg_HL','leg_HR'}, 'Animal limbs are buried in the hull'
+    if id=='m05':
+        assert all(bpy.data.objects['wing_'+n].parent.name=='elbow_'+n for n in ['l','r']), 'Patagium is not attached to the elbow'
+        assert len([obj for obj in meshes if obj.name.startswith('Folded patagium fist blade')])==2, 'Paired fist blades missing'
+        assert len(spec['rig']['tailSegs'])==5, 'Wolf tail missing'
     for clip in spec['clips']:
         activate_clip(spec, clip, 16)
+        verify_weapon_pose(spec,clip in ['light','heavy','flight_light','flight_heavy'])
         for name, _, _ in spec['joints']:
             joint = bpy.data.objects[name]
             assert all(math.isfinite(v) for row in joint.matrix_world for v in row), clip + ': nonfinite joint'
@@ -114,6 +140,29 @@ for id in ids:
                    for name in stance for i in range(4) for j in range(4)) < 1e-5, 'Wolf snaps at transform start'
         assert abs(bpy.data.objects['knee_l'].rotation_euler.x - spec['rig']['legChainL'][0]['base']) < 1e-5, 'Wolf lost its crouch'
     activate_clip(spec, 'to_flight', 31)
+    if id=='m05':
+        forward=bpy.data.objects['head'].matrix_world.to_quaternion() @ Vector((0,-1,0))
+        assert forward.y < -.99, 'Flying wolf head does not face forward'
+        activate_clip(spec,'to_flight',1)
+        for side in ['l','r']:
+            elbow=bpy.data.objects['elbow_'+side]
+            wing=bpy.data.objects['wing_'+side]
+            local=elbow.matrix_world.to_quaternion().inverted() @ wing.matrix_world.to_quaternion()
+            assert abs((local @ Vector((0,-1,0))).y)>.99, 'Elbow patagium did not turn outward by a quarter turn'
+        activate_clip(spec,'to_flight',31)
+    if id=='t11':
+        for side in ['l','r']:
+            hinge=bpy.data.objects['rotor_hinge_'+side]
+            inv=hinge.matrix_world.inverted()
+            covers=[obj for obj in meshes if obj.name.startswith('Solid retractable rotor shield petal') and hinge in ancestor_chain(obj)]
+            heights=[(inv @ obj.matrix_world @ v.co).y for obj in covers for v in obj.data.vertices]
+            assert max(heights)-min(heights)<.041, 'Flying rotor shield petals are not coplanar'
+    if spec['acceptance'].get('flightTailExposed'):
+        tip=bpy.data.objects['spine'].matrix_world.inverted() @ bpy.data.objects[spec['rig']['tailSegs'][-1]].matrix_world.translation
+        assert -tip.y < -1.7, 'Flight tail does not extend behind the body'
+    if id=='m05':
+        start,end=[bpy.data.objects[name].matrix_world.translation for name in ['tail_0','tail_4']]
+        assert (end-start).normalized().y>.9, 'Gliding wolf tail does not balance rearward'
     depsgraph = bpy.context.evaluated_depsgraph_get()
     envelopes, exposed, outside = {}, {}, []
     cavity = spec.get('cavity')
@@ -169,7 +218,7 @@ for id in ids:
     else:
         assert id == 'm05' and not spec['acceptance']['flightBellyClosed'], 'Unspecified closure exception'
         assert len([n for n, _, _ in spec['joints'] if n.startswith(('hip_', 'shoulder_'))]) == 4
-    result = {'blend': sha(blend), 'bones': len(skeleton.data.bones), 'clips': spec['clips'], 'validatedClips': len(spec['clips']),
+    result = {'blend': sha(blend), 'bones': len(skeleton.data.bones), 'clips': spec['clips'], 'validatedClips': len(spec['clips']), 'anatomy': anatomy,
               'foldedLimbBoundsInHullCoordinates': envelopes, 'limbVerticesOutsideHull': len(outside),
               'exposedLimbBoundsInHullCoordinates': exposed,
               'outsideExamples': outside[:4], 'editable_source': 'pass',

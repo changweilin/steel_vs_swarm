@@ -1,24 +1,24 @@
 {
   "source": {
-    "contract": "73f9c57aa6bd0decc2cc3dce80bc9312bc606a5787004a72341b17067470e534",
-    "builder": "19eb5bb693e24f02ef35c172a149887a3d347939c011ef2767971db22beb7b72",
-    "catalog": "59ee73c8f074d16220b0cb8eb413ffcc44c88cc7a4d252c30fb44e7843b2e188",
+    "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
+    "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+    "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
     "image": "eecb4a52ca28c7af638904becd0f96de3565c87ffd966536a83c75db8d8616f1",
-    "sharedContract": "68a3f9d04df4ed42bf39263613fef82e0e48580ab595407ba0f38b0d9c6ec9e4",
-    "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+    "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
   },
   "hashes": {
-    "runtime": "f8d86ae6cb6eb017e27b5337c5eb2a2ddc56604a4230e50a35301bbbf2ca55ac",
-    "glb": "6f7324b4214ef2fb777b9caad89e5fa7b5822887afb1ad1b07398dac625099d4"
+    "runtime": "3f26c3028981662d94deb6b783244810c33ef0bfd3fccfd6ef54d5d2e4620b9a",
+    "glb": "7a34c78d1522d7d193cdad9c25abedb9c0f965d5053b55ef032fc83dd0f1a573"
   },
   "measurements": {
-    "trianglesPerVisibleForm": 13544,
+    "trianglesPerVisibleForm": 13216,
     "effectTriangles": 0,
     "effectMeshes": 0,
-    "retainedTriangles": 27088,
-    "meshesPerVisibleForm": 112,
+    "retainedTriangles": 26432,
+    "meshesPerVisibleForm": 104,
     "pairs": {
-      "pair": 203,
+      "pair": 189,
       "soft": 0,
       "gOnly": 0,
       "aOnly": 0
@@ -81,8 +81,8 @@
     "export_load": "pass",
     "registry": "pass",
     "controls": "pass",
-    "appearance": "pending_visual_review",
-    "flight_belly": "pending_visual_review",
+    "appearance": "pass",
+    "flight_belly": "pass",
     "user_signoff": "pending_user_review"
   }
 }
