@@ -45,6 +45,7 @@ const AUDIT_SCRIPTS = [
   // ── 核心幾何量體、武器判定與戰鬥物理 ──
   'tools/audit_gpu_lifecycle.mjs',
   'tools/audit_object_joints.mjs',
+  'test/boundaryJoins.mjs',
   'tools/audit_npc_collide.mjs',
   'tools/audit_lance_hit.mjs',
   'tools/audit_building_damage.mjs',

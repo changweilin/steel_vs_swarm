@@ -116,8 +116,9 @@ for (const kind of Object.keys(SLOPE_BOUNDARIES)) {
   WALL_KINDS[kind].terrainFit = true;
   if (SLOPE_BOUNDARIES[kind].fillContact) WALL_KINDS[kind].fillContact = true;
   if (SLOPE_BOUNDARIES[kind].bufferFill) WALL_KINDS[kind].bufferFill = true;
-  if (!EXPANDED_BOUNDARIES[kind] && WALL_KINDS[kind].dom === 'land') WALL_KINDS[kind].slope = 'steep';
+  if (!EXPANDED_BOUNDARIES[kind] && WALL_KINDS[kind].dom === 'land' && kind !== 'rockery') WALL_KINDS[kind].slope = 'steep';
 }
+export const boundaryFillCrest = () => Math.min(...Object.values(WALL_KINDS).filter(d => d.bufferFill).map(d => d.depth)) / 2;
 
 
 // ---- 邊界物件分類 / 使用政策 -------------------------------------------------
@@ -640,6 +641,83 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
   return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season, environment });
 }
 
+const jointSmooth = value => {
+  const t = Math.max(0, Math.min(1, value));
+  return t * t * (3 - 2 * t);
+};
+
+function layoutTransition(kind, len, depth, u, v, joins, seed, buffer) {
+  let jitter = 1, keep = 1, along = u;
+  const own = BOUNDARY_BUFFER_LAYOUTS[kind];
+  for (const end of [0, 1]) {
+    const joint = joins?.[end];
+    if (!joint) continue;
+    const sign = end ? 1 : -1, other = BOUNDARY_BUFFER_LAYOUTS[joint.kind];
+    const span = Math.min(len / 2, Math.max(depth, joint.depth, own?.pitchX || depth, other?.pitchX || joint.depth));
+    const blend = jointSmooth(1 - (len / 2 - sign * u) / span);
+    if (joint.corner && buffer) along += sign * (depth / 2 - v) * blend;
+    if (joint.kind === kind) continue;
+    const ordered = other?.mode !== 'random' || other?.continuous;
+    if (ordered) jitter = Math.min(jitter, 1 - blend);
+    const ratio = Math.min(1, (own?.pitchX || depth) / (other?.pitchX || joint.depth));
+    keep = Math.min(keep, 1 - blend * (1 - ratio));
+  }
+  return { u: along, jitter, keep: ((seed >>> 8) & 65535) / 65536 < keep };
+}
+
+function fitsJoinedUnit(rows, len, depth, bufferDepth, joins, buffer) {
+  if (!joins) return true;
+  for (const part of rows) {
+    const b = partBox(part);
+    if (![b.x0,b.x1,b.z0,b.z1].every(Number.isFinite)) return false;
+    if (b.z1 > (buffer ? -depth / 2 : depth / 2) + .35
+      || b.z0 < -depth / 2 - (buffer ? bufferDepth : 0) - .35) return false;
+    for (const end of [0, 1]) {
+      const joint = joins[end], along = end ? b.x1 : -b.x0;
+      const limit = len / 2 + (buffer && joint?.corner ? depth / 2 - b.z1 : 0);
+      if (along > limit - (joint && buffer ? .2 : 0) + 1e-6) return false;
+    }
+  }
+  return true;
+}
+
+// Terminate structural runs at an abutment, and intact arrays at a light perimeter frame.
+// These occupy their own end envelope; no generic base or new collider is introduced.
+export function boundaryJoinParts(kind, { len, depth, h, joins, x = 0, z = 0, ry = 0, heightAt = null }) {
+  const layout = BOUNDARY_BUFFER_LAYOUTS[kind];
+  if (!layout || layout.continuousGeology || ['citywall','levee','tetrapod','wetpods'].includes(kind)
+    || layout.ruined || layout.type !== 'artificial' || !joins) return [];
+  const rows = [];
+  for (const end of [0, 1]) {
+    const joint = joins[end];
+    if (!joint || (joint.kind === kind && !joint.corner)) continue;
+    const sign = end ? 1 : -1, width = Math.min(1.2, len * .08), u = sign * (len / 2 - width / 2);
+    const add = (w, height, d, px, py, pz, role, color) => rows.push({
+      g: ['box',w,height,d], p: [px,py,pz], c: color, role, jointEnd: end,
+    });
+    if (layout.continuous) {
+      const height = Math.min(h, joint.h) * .85, thick = Math.min(depth * .95, joint.depth);
+      add(width, height, thick, u, height / 2, 0, 'boundary-abutment', 0x899393);
+    } else {
+      const height = Math.min(2.2, h * .25), post = Math.min(.35, width);
+      for (const side of [-1,1]) add(post,height,post,u,height/2,side*depth*.4,'boundary-frame',0x667477);
+      add(post,post,depth*.8,u,height-post/2,0,'boundary-frame',0x667477);
+    }
+  }
+  if (heightAt) {
+    const ca = Math.cos(ry), sa = Math.sin(ry);
+    for (const part of rows) {
+      const b = partBox(part), samples = [];
+      for (const u of [b.x0,b.x1]) for (const v of [b.z0,b.z1]) samples.push(heightAt(x+ca*u+sa*v,z-sa*u+ca*v));
+      if (!samples.every(Number.isFinite)) return [];
+      const low = Math.min(...samples), high = Math.max(...samples), extra = high - low + .4;
+      part.g[2] += extra;
+      part.p[1] += low - .4 + extra / 2;
+    }
+  }
+  return applyBoundaryAppearance(rows);
+}
+
 /**
  * 邊界障礙物與緩衝區物件的聯合批次生成器（唯一縫：同源管線、規格一致、排列連續、風格同批）。
  * 邊界本體（Row 0）坐落於碰撞盒內，緩衝區（Row 1..N）無縫銜接於其後。
@@ -648,10 +726,34 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
  */
 export function buildBoundaryRunParts(kind, {
   len, depth, bufferDepth = 0, h = 18, seed = 1, variant = 0, season = 'summer', water = false, biome = null, joins = null, environment = {},
+  x = 0, z = 0, ry = 0, heightAt = null, bufferHeightAt = heightAt, waterY = null, crest = null, floorY = null,
 }) {
   const layout = BOUNDARY_BUFFER_LAYOUTS[kind];
   const def = WALL_KINDS[kind];
   const targetH = Math.max(h, def?.h || 18);
+  if (heightAt != null && typeof heightAt !== 'function') throw new TypeError('Invalid boundary terrain sampler');
+  if (joins != null) {
+    if (!Array.isArray(joins) || joins.length !== 2) throw new TypeError('Boundary needs two end joins');
+    joins = joins.map(j => {
+      if (!j) return null;
+      const otherKind = typeof j === 'string' ? j : j.kind, other = WALL_KINDS[otherKind];
+      if (!other) throw new RangeError('Unknown boundary neighbour: ' + otherKind);
+      const otherH = j.h ?? other.h, otherDepth = j.depth ?? other.depth;
+      if (![otherH, otherDepth].every(v => Number.isFinite(v) && v > 0)) throw new RangeError('Invalid boundary neighbour envelope');
+      return { kind: otherKind, h: otherH, depth: otherDepth, corner: !!j.corner };
+    });
+  }
+  if (layout?.continuousGeology && (heightAt || joins)) {
+    const filledDepth = depth + Math.max(0, bufferDepth);
+    const joined = buildSlopeBoundary(kind, { len, depth, h: targetH, seed, season, x, z, ry, heightAt: heightAt || (() => 0), waterY, environment,
+      joins, fill: {
+        depth: filledDepth, crest: crest ?? boundaryFillCrest(), heightAt: bufferHeightAt || heightAt || (() => 0),
+        geology: true, floorY,
+        joins: (joins || [null, null]).map(j => j &&
+          (WALL_KINDS[j.kind].bufferFill || WALL_KINDS[j.kind].fillContact ? j : { ...j, terminal: true })),
+      } });
+    return joined ? { ...joined, terrainJoined: true } : { parts: [], bufferParts: [], terrainJoined: true };
+  }
   if (!layout) {
     if (NARROW_GEOLOGY_BOUNDARY[kind]) {
       const geoParts = narrowGeologyBoundary(kind, { len, depth, bufferDepth, h: targetH, seed, season, environment });
@@ -675,7 +777,7 @@ export function buildBoundaryRunParts(kind, {
   }
 
   const { mode, pitchX, pitchZ } = layout;
-  const parts = [];
+  const parts = boundaryJoinParts(kind, { len, depth, h: targetH, joins });
   const bufferParts = [];
 
   const { numCols, colStep, unitW, rowStep, unitD, maxBufferRows } =
@@ -798,16 +900,20 @@ export function buildBoundaryRunParts(kind, {
         if (u - nw / 2 < -len / 2 - 2 || u + nw / 2 > len / 2 + 2) continue;
         if (v - nd / 2 < -depth / 2 - bufferDepth - 2) continue;
 
+        const transition = layoutTransition(kind, len, depth, u, v, joins, ptSeed, true);
+        if (!transition.keep) continue;
         const modelParts = environmentParts(objKind, { size: normalSize, seed: ptSeed, season, environment });
-        for (const p of modelParts) {
+        const placed = modelParts.map(p => {
           const [px = 0, py = 0, pz = 0] = p.p || [];
-          bufferParts.push({
+          return {
             ...p,
-            p: [px + u, py, pz + v],
+            p: [px + transition.u, py, pz + v],
             boundaryBuffer: true,
+            ...(joins ? { boundaryUnit: ptSeed } : {}),
             role: p.role || 'boundary-buffer-fill',
-          });
-        }
+          };
+        });
+        if (fitsJoinedUnit(placed, len, depth, bufferDepth, joins, true)) bufferParts.push(...placed);
       }
     }
     return { parts, bufferParts: applyBoundaryAppearance(bufferParts) };
@@ -822,20 +928,22 @@ export function buildBoundaryRunParts(kind, {
         const baseU = -len / 2 + (c + 0.5) * colStep;
         const ptSeed = edgeSeed(Math.round((baseU + 500) * 8), Math.round((baseV + 500) * 8), (seed ^ Math.imul(r + 1, 0x1f1f) ^ Math.imul(c + 1, 0x9e37)) >>> 0);
         const rnd = mulberry32(ptSeed);
+        const transition = layoutTransition(kind, len, depth, baseU, baseV, joins, ptSeed, isBuffer);
+        if (!transition.keep) continue;
 
         // Row 0 微小間距誤差（±0.02 colStep）：單元最寬 objW = 0.95 colStep，
         // 相鄰中心最小距離 0.96 colStep > 0.95 → 構造保證不重疊；僅翻轉款適用。
         const jitU = isBuffer ? (rnd() - 0.5) * colStep * 0.45
           : (ROW0_FLIP_KINDS.has(kind) ? (rnd() - 0.5) * colStep * 0.04 : 0);
         const jitV = isBuffer ? (rnd() - 0.5) * rowStep * 0.35 : 0;
-        let u = baseU + jitU;
-        let v = baseV + jitV;
+        let u = transition.u + jitU * transition.jitter;
+        let v = baseV + jitV * transition.jitter;
 
         const objW = colStep * 0.95;
         const objD = (isBuffer ? rowStep : depth) * 0.92;
         const objH = targetH;
 
-        if (u - objW / 2 < -len / 2 - 2 || u + objW / 2 > len / 2 + 2) continue;
+        if (!joins && (u - objW / 2 < -len / 2 - 2 || u + objW / 2 > len / 2 + 2)) continue;
         if (isBuffer && (v - objD / 2 < -depth / 2 - bufferDepth - 2)) continue;
 
         const modelParts = generateBoundaryUnit(kind, {
@@ -846,12 +954,12 @@ export function buildBoundaryRunParts(kind, {
         // 全 360° 會讓件體突出碰撞柱；其餘款維持軸向對齊；緩衝區全 360 度隨機旋轉與傾覆）
         let yaw = 0;
         if (layout.randomYaw) {
-          if (isBuffer) yaw = rnd() * Math.PI * 2;
+          if (isBuffer) yaw = rnd() * Math.PI * 2 * transition.jitter;
           else if (ROW0_FLIP_KINDS.has(kind)) yaw = rnd() < 0.5 ? Math.PI : 0;
         }
         const cy = Math.cos(yaw), sy = Math.sin(yaw);
 
-        for (const p of modelParts) {
+        const placed = modelParts.map(p => {
           const [px = 0, py = 0, pz = 0] = p.p || [];
           const rx = yaw !== 0 ? (px * cy + pz * sy) : px;
           const rz = yaw !== 0 ? (-px * sy + pz * cy) : pz;
@@ -860,15 +968,13 @@ export function buildBoundaryRunParts(kind, {
             ...p,
             p: [rx + u, py, rz + v],
             ...(rRot ? { r: rRot } : {}),
+            ...(joins ? { boundaryUnit: ptSeed } : {}),
             ...(isBuffer ? { boundaryBuffer: true, role: p.role || 'boundary-buffer-fill' } : {}),
           };
-          if (isBuffer) {
-            delete outPart.motion;
-            bufferParts.push(outPart);
-          } else {
-            parts.push(outPart);
-          }
-        }
+          if (isBuffer) delete outPart.motion;
+          return outPart;
+        });
+        if (fitsJoinedUnit(placed, len, depth, bufferDepth, joins, isBuffer)) (isBuffer ? bufferParts : parts).push(...placed);
       }
     }
   } else {
@@ -884,32 +990,33 @@ export function buildBoundaryRunParts(kind, {
         if (u > len / 2 - colStep * 0.15) u -= (len - colStep * 0.3);
 
         const ptSeed = edgeSeed(Math.round((u + 500) * 8), Math.round((v + 500) * 8), (seed ^ Math.imul(r + 1, 0x1f1f) ^ Math.imul(c + 1, 0x9e37)) >>> 0);
+        const transition = layoutTransition(kind, len, depth, u, v, joins, ptSeed, isBuffer);
+        if (!transition.keep) continue;
+        u = transition.u;
 
-        if (u - unitW / 2 < -len / 2 - 2 || u + unitW / 2 > len / 2 + 2) continue;
+        if (!joins && (u - unitW / 2 < -len / 2 - 2 || u + unitW / 2 > len / 2 + 2)) continue;
         if (isBuffer && (v - unitD / 2 < -depth / 2 - bufferDepth - 2)) continue;
 
         const modelParts = generateBoundaryUnit(kind, {
           w: unitW, d: unitD, h: targetH, seed: ptSeed, season, water, layout, isBuffer, environment,
         });
 
-        for (const p of modelParts) {
+        const placed = modelParts.map(p => {
           const [px = 0, py = 0, pz = 0] = p.p || [];
           const outPart = {
             ...p,
             p: [px + u, py, pz + v],
+            ...(joins ? { boundaryUnit: ptSeed } : {}),
             ...(p.motion ? { motion: { ...p.motion,
               pivot: [p.motion.pivot[0] + u, p.motion.pivot[1], p.motion.pivot[2] + v],
               id: `${r}_${c}_${p.motion.id}`,
             } } : {}),
             ...(isBuffer ? { boundaryBuffer: true, role: p.role || 'boundary-buffer-fill' } : {}),
           };
-          if (isBuffer) {
-            delete outPart.motion;
-            bufferParts.push(outPart);
-          } else {
-            parts.push(outPart);
-          }
-        }
+          if (isBuffer) delete outPart.motion;
+          return outPart;
+        });
+        if (fitsJoinedUnit(placed, len, depth, bufferDepth, joins, isBuffer)) (isBuffer ? bufferParts : parts).push(...placed);
       }
     }
   }

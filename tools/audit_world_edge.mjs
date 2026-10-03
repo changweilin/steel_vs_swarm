@@ -236,14 +236,14 @@ if (BREAK_LAND) {
 // 而不是在稽核裡抄一份擺位公式)
 const mkWall = (extra = '', over = {}) => new Function(
   'THREE', 'runtimeMeshDataGeometry', 'envMat', 'mergeGeos', 'WORLD_EDGE', 'edgeWallInsetM', 'edgeWallHM', 'WATER',
-  'SLOPE', 'slopeDeg', 'wallSlopeTier', 'buildSlopeBoundary', 'edgeWallDeepM',
+  'SLOPE', 'slopeDeg', 'wallSlopeTier', 'buildSlopeBoundary', 'edgeWallDeepM', 'boundaryFillCrest', 'boundaryJoinParts',
   'classifyImg', 'terrainEnvCode', 'planWallRuns', 'planWallKinds', 'WALL_KINDS', 'wallParts', 'wallVariant', 'edgeSeed',
   'planBufferProps', 'propParts', 'planBackdrop', 'backdropParts', 'BACKDROP_KINDS',
   'EDGE_WALL', 'edgeBufferM', 'objHeightMax', 'lowPower', 'partBox', 'buildBoundaryBufferParts', 'buildBoundaryRunParts', 'BOUNDARY_BUFFER_LAYOUTS',
   `${HELPERS}\n${wallSrc}\n${grabFn(bioSrc, 'buildBufferProps')}\n${grabFn(bioSrc, 'buildBackdrop')}\n${extra}
    return { buildEdgeWall, buildBufferProps, buildBackdrop };`,
 )(THREE_STUB, proceduralMeshStub, (c, o) => ({ c, o }), mergeGeosStub, WORLD_EDGE, edgeWallInsetM, edgeWallHM, WATER,
-  SLOPE, slopeDeg, EW.wallSlopeTier, buildSlopeBoundary, edgeWallDeepM,
+  SLOPE, slopeDeg, EW.wallSlopeTier, buildSlopeBoundary, edgeWallDeepM, EW.boundaryFillCrest, EW.boundaryJoinParts,
   classifyImg, terrainEnvCode, EW.planWallRuns, planWallKinds, EW.WALL_KINDS, wallParts, EW.wallVariant, EW.edgeSeed,
   over.planBufferProps || EW.planBufferProps, over.propParts || EW.propParts,
   over.planBackdrop || EW.planBackdrop, over.backdropParts || EW.backdropParts, EW.BACKDROP_KINDS,

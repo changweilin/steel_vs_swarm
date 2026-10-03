@@ -91,7 +91,7 @@ function boxSurface(size, color, style) {
 }
 
 const masonry = new Set(['wall-course','barbican-wall','watchtower','buffer-wall']);
-const concrete = new Set(['gate-pier','wing-wall','buffer-levee','fallen-deck','deck-girder','deck-parapet']);
+const concrete = new Set(['gate-pier','wing-wall','buffer-levee','fallen-deck','deck-girder','deck-parapet','boundary-abutment']);
 const chamfer = new Set(['battlement','course-joint','gate-arch','gate-frame','gate-hoist','gate-bridge','gate-leaf','barbican-gate']);
 export function applyBoundaryAppearance(parts) {
   return parts.map(part => {
@@ -159,12 +159,16 @@ export function boundaryGeologySurface(kind, len, depth, bufferDepth) {
   };
 }
 
-export function boundaryRockAppearance(data) {
+export function boundaryRockTone(x, y) {
   const strata = BOUNDARY_SURFACES.strata;
+  const band = Math.floor(y / 1.8 + x * .035);
+  return strata[((band % strata.length) + strata.length) % strata.length];
+}
+
+export function boundaryRockAppearance(data) {
   const colors = data.vertices.flatMap((v,i) => {
     if (i % 3 !== 0) return [];
-    const y = data.vertices[i+1], band = Math.floor(y/1.8 + v*.035);
-    const tone = strata[((band % strata.length) + strata.length) % strata.length];
+    const tone = boundaryRockTone(v, data.vertices[i+1]);
     return data.colors.slice(i,i+3).map(n=>n*tone);
   });
   return faceted({ ...data, colors }, 28);

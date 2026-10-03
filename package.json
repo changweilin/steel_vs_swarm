@@ -42,6 +42,7 @@
     "audit:scenery": "node test/sceneryAppearance.mjs",
     "audit:boundary": "node test/boundaryAppearance.mjs",
     "shot:boundary": "node tools/boundary_authoring/review.mjs",
+    "shot:boundary-joins": "node tools/boundary_authoring/review.mjs --joins",
     "audit:scene-models": "node tools/audit_scene_models.mjs",
     "audit:scene-damage": "node tools/audit_scene_damage.mjs",
     "audit:building-damage": "node tools/audit_building_damage.mjs",

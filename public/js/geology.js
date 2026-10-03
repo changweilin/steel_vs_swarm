@@ -873,11 +873,10 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
 
   const size = [len, Math.max(peakY, 1e-6), depth];
   // 脊頂高度取樣器(u, v ∈ [-1, 1])：覆蓋層（倒木等）落地用
-  const heightAt = (u, v) => {
-    if (!Number.isFinite(u) || !Number.isFinite(v)) return NaN;
-    const gxRaw = (u + 1) / 2 * nx, gzRaw = (v + 1) / 2 * nzObs;
+  const sampleGrid = (gxRaw, gzRaw) => {
+    if (!Number.isFinite(gxRaw) || !Number.isFinite(gzRaw)) return NaN;
     const gx = gxRaw <= 0 ? 0 : gxRaw >= nx ? nx : Math.min(nx - 1e-9, gxRaw);
-    const gz = Math.max(0, Math.min(nzObs - 1e-9, gzRaw));
+    const gz = Math.max(0, Math.min(nz - 1e-9, gzRaw));
     const iz = Math.floor(gz), fv = gz - iz;
     const ix = gxRaw <= 0 ? 0 : gxRaw >= nx ? nx - 1 : Math.floor(gx);
     const fu = gxRaw <= 0 ? 0 : gxRaw >= nx ? 1 : gx - ix;
@@ -885,6 +884,11 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     const c = grid[top(ix, iz + 1)], d = grid[top(ix + 1, iz + 1)];
     return a + (b - a) * fu + (c - a) * fv + (a - b - c + d) * fu * fv;
   };
+  const heightAt = (u, v) => Number.isFinite(u) && Number.isFinite(v)
+    ? sampleGrid((u + 1) / 2 * nx, Math.max(0, Math.min(nzObs - 1e-9, (v + 1) / 2 * nzObs))) : NaN;
+  const surfaceHeightAt = (x, z) => sampleGrid((x / len + .5) * nx,
+    z >= -depth / 2 || bufD === 0 ? (depth / 2 - z) / depth * nzObs
+      : nzObs + (-depth / 2 - z) / bufD * nzBuf);
 
   return {
     meshData: { vertices, faces, colors },
@@ -892,6 +896,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     params,
     undulation: { peaks, valleys, wavelengths, errors, gains, pattern: activePattern, is2D },
     heightAt,
+    surfaceHeightAt,
     ...(bufferMeshData ? { bufferMeshData, bufferSize } : {}),
   };
 }

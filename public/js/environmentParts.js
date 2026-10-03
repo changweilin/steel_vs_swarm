@@ -584,7 +584,7 @@ export const ROCKERY_BASES = Object.freeze(['granite', 'sandstone', 'tor', 'moun
 // 起伏程度由長寬比推導的種子隨機範圍決定），不再逐段零星散置。
 // 支援 2 維延伸往緩衝區擴大（bufferDepth > 0），把緩衝區完全填滿。
 // 幾何與季節無關（四季共用同一網格），季節差異只在 tint 色調。零共享亂數、決定性。
-export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season = 'summer', bufferDepth = 0, environment = {} }) {
+export function boundaryGeologyField(kind, { len, depth: d, h, seed = 1, season = 'summer', bufferDepth = 0, environment = {} }) {
   let type = NARROW_GEOLOGY_BOUNDARY[kind];
   if (!type) throw new RangeError(`Not a narrow geology boundary: ${kind}`);
   if (kind === 'rockery') {
@@ -595,8 +595,13 @@ export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season
     throw new RangeError('Invalid narrow geology boundary dimensions or seed');
   const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
   const tint = rockTints[season] || rockTints.summer;
-  const ridge = elongatedGeologyMesh(type, seed >>> 0, { len, depth: d, height: h, tint, bufferDepth: bufD,
+  return elongatedGeologyMesh(type, seed >>> 0, { len, depth: d, height: h, tint, bufferDepth: bufD,
     color: geologyColor(kind, environment.geology, null), surface: boundaryGeologySurface(kind, len, d, bufD) });
+}
+
+export function narrowGeologyBoundary(kind, { len, depth: d, h, seed = 1, season = 'summer', bufferDepth = 0, environment = {} }) {
+  const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
+  const ridge = boundaryGeologyField(kind, { len, depth: d, h, seed, season, bufferDepth: bufD, environment });
   ridge.meshData = boundaryRockAppearance(ridge.meshData);
   if (ridge.bufferMeshData) ridge.bufferMeshData = { ...boundaryRockAppearance(ridge.bufferMeshData), boundaryBuffer: true };
   const climate = seasonalEnvironment({ ...environment, season });
