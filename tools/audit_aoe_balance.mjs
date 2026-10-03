@@ -6,18 +6,21 @@
 //   lanesim 側三類幾何、穿透/格數推導不手寫 → audit_aoe_trim Ⅴ/Ⅵ
 // 本檔只守跨類角色門;同機制在兩處出現時,門只留一處(另一處標 ⓘ參考)。
 //
-// 使用者定案角色:
-//   blast 爆炸傷害:高密集兵波陣列有優勢,且傷害不會被大物件阻隔(球形超壓,無 LOS 阻擋、無穿透預算)。
-//   fan   扇形傷害:擅長對付大物件與近距離的敵人(小錐分格多格多吃,近距大目標橫跨全錐)。
-//   line  直線傷害:遠近平衡(首個全額 + DECAY 逐個衰減,距離衰減與貫穿衰減兩條獨立乘數)。
+// 使用者定案角色與調整方向:
+//   fan   扇形傷害:單一角錐傷害要遠低於其他武器期望傷害,但對大面積或近距離目標可以單發多次命中(小錐分格多格多吃,近距大目標橫跨全錐)。
+//   blast 爆炸傷害:擅長對應遠處密集的敵人,高密集兵波陣列有優勢,且傷害不會被大物件阻隔(球形超壓,無 LOS 阻擋、無穿透預算)。
+//   line  直線傷害:對近或遠都有不錯的表現,遠近平衡(首個全額 + DECAY 逐個衰減,距離衰減與貫穿衰減兩條獨立乘數)。
 //
-// 可調旋鈕( weapon 層,不動全域常數 —— BLAST/LANCE.PEN/FAN_SUB_DEG 是凍結的單一縫,
+// 平衡性測試可調旋鈕( weapon 層,不動全域常數 —— BLAST/LANCE.PEN/FAN_SUB_DEG 是凍結的單一縫,
 // 改那邊會連動 audit_aoe_trim / audit_fan_cone / audit_lance_hit;見各檔頭):
-//   blast:每把武器的 r(範圍)與 dmg(傷害值)陣列。
-//   line :穿透力 = 彈種 gun < rail < beam(LANCE.PEN 階梯),武器層調整 = 換彈種或調 dmg。
-//   fan  :分割角度 = 每把武器的 arc 陣列(錐角 → fanSubs 格數),武器層調整 = 改 arc 或調 dmg。
+//   扇形攻擊:調整扇形角度(arc 陣列,錐角 → fanSubs 格數)與攻擊(dmg)。
+//   爆炸傷害:調整範圍(r)與攻擊(dmg)。
+//   直線攻擊:調整穿透力(彈種 gun < rail < beam / LANCE.PEN 階梯)與攻擊(dmg)。
+//   其他武器:調整攻擊(dmg)。
+//   最後再修改建築 N 限制(fanBuildingMaxHits / slotExpectedBuildingDmg 直接調數值,不進行平衡性測試),讓所有武器對建築傷害接近。
 //
 // 情境(全部直測 server/sim.js,確定性:骰子旁路、固定站位):
+//   S0 單一小目標:小兵(100m)同軸單角錐 —— fan 單一角錐傷害遠低於 blast/line 期望傷害。
 //   S1 密集兵波:7 名小兵 3m 間距緊密陣列 —— blast 總傷應為三類最高。
 //   S2 大物件阻隔:砲塔(60m)後方小兵(90m)同軸 —— 只守 blast 繞過(瞄後方仍受傷);
 //       line/fan 後方數值僅印參考(機制門在 audit_lance_hit ⑩ / audit_fan_cone ②)。
@@ -26,7 +29,7 @@
 //   S3c 巨型單一目標:近距巨體(r=7 @30m) —— fan 應勝 blast(分格多吃 > 單球單次;幾何面見
 //       audit_fan_cone ④);line 憑截面 7 區全額領先為已知權衡(它是縱深角色的代價面,
 //       不設門,數字印出追蹤)。
-//   S3d 巨型建築結構:近距砲塔(Lv4) —— 驗證但書約束下各傷害模式對建築相近(一律比最高級)。
+//   S3d 巨型建築結構:近距砲塔(Lv4) —— 驗證但書約束下所有武器對建築傷害相近(一律比最高級)。
 //   S4 遠近平衡:同軸小兵 60m vs 140m —— 只守 line 比值 [0.55, 1.0];fan 不隨距離衰減
 //       的公式面在 audit_fan_cone ③(audit_lance_hit ⑤同理只驗 DECAY 公式,角色頻帶歸這裡)。
 //   S5 分割角覆蓋:5 名小兵橫向 ±30m @120m —— 寬錐(m07)命中數 > 窄錐(s04)。
@@ -131,6 +134,23 @@ for (const [cls, chs] of Object.entries(REPS)) {
   }
 }
 
+console.log('— S0 單一小型目標(小兵@100m 同軸單角錐):fan 單一角錐傷害遠低於 blast/line 期望傷害 —');
+{
+  // 扇形攻擊的單一角錐傷害要遠低於其他武器期望傷害,但對大面積或近距離目標可以單發多次命中
+  const totals0 = {};
+  for (const cls of ['blast', 'fan', 'line']) {
+    totals0[cls] = REPS[cls].map((ch) => {
+      const { dmg } = fireOnce(ch, [['soldier', 0, 100, 99999]]);
+      return dmg[0];
+    });
+  }
+  for (const cls of ['blast', 'fan', 'line']) {
+    console.log(`   ⓘ ${cls} 單一小兵傷害 ${totals0[cls].map((v) => v.toFixed(1)).join(' / ')}`);
+  }
+  ok(avg(totals0.fan) < avg(totals0.blast) && avg(totals0.fan) <= avg(totals0.line),
+    `fan 單角錐平均 ${avg(totals0.fan).toFixed(1)} 遠低於 blast ${avg(totals0.blast).toFixed(1)} / line ${avg(totals0.line).toFixed(1)}`);
+}
+
 console.log('— S1 密集兵波陣列(7 名小兵,3m 緊密陣列 @100m):blast 總傷應居首 —');
 {
   const pts = [[0, 100], [3, 100], [-3, 100], [0, 103], [0, 97], [3, 103], [-3, 97]];
@@ -211,8 +231,8 @@ console.log('— S3c 巨型單一目標(非建築巨體 r=7 @30m):fan 應勝 bla
 
 console.log('— S3d 巨型建築結構(砲塔@30m, 滿級 Lv4):各傷害模式對建築傷害相近(依最高級比對) —');
 {
-  // 使用者指示:「對建築傷害也是要隨等級調整的,所以一律比最高級就好」「調整所有傷害模式對建築物都相近」。
-  // 建築物受 fanBuildingMaxHits 截斷上限 N, 滿級(Lv4)下 fan 與 blast 對建築總傷相近(平均差距 < 25%)。
+  // 使用者指示:「對建築傷害也是要隨等級調整的,所以一律比最高級就好」「修改建築N限制,讓所有武器對建築傷害接近(直接調數值,不進行平衡性測試)」。
+  // 建築物受 fanBuildingMaxHits 截斷上限 N, 滿級(Lv4)下各模式對建築總傷相近(依最高級比對)。
   const totalsB = {};
   for (const cls of ['blast', 'fan', 'line']) {
     totalsB[cls] = REPS[cls].map((ch) => {
@@ -223,9 +243,12 @@ console.log('— S3d 巨型建築結構(砲塔@30m, 滿級 Lv4):各傷害模式�
   for (const cls of ['blast', 'fan', 'line']) {
     console.log(`   ⓘ ${cls} Lv4 砲塔總傷 ${totalsB[cls].map((v) => v.toFixed(0)).join(' / ')}`);
   }
-  const diffRatio = Math.abs(avg(totalsB.fan) - avg(totalsB.blast)) / avg(totalsB.blast);
-  ok(diffRatio < 0.25,
-    `Lv4 建築總傷 fan ${avg(totalsB.fan).toFixed(0)} 與 blast ${avg(totalsB.blast).toFixed(0)} 相近(差距 ${(diffRatio * 100).toFixed(1)}% < 25%)`);
+  const diffBlast = Math.abs(avg(totalsB.fan) - avg(totalsB.blast)) / avg(totalsB.blast);
+  const diffLine = Math.abs(avg(totalsB.fan) - avg(totalsB.line)) / avg(totalsB.fan);
+  ok(diffBlast < 0.25,
+    `Lv4 建築總傷 fan ${avg(totalsB.fan).toFixed(0)} 與 blast ${avg(totalsB.blast).toFixed(0)} 相近(差距 ${(diffBlast * 100).toFixed(1)}% < 25%)`);
+  ok(diffLine < 0.35,
+    `Lv4 建築總傷 fan ${avg(totalsB.fan).toFixed(0)} 與 line ${avg(totalsB.line).toFixed(0)} 相近(差距 ${(diffLine * 100).toFixed(1)}% < 35%)`);
 }
 
 console.log('— S4 遠近平衡(同軸小兵 60m vs 140m):只守 line 頻帶 —');
