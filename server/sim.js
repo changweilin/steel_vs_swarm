@@ -2593,7 +2593,13 @@ export class BattleSim {
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
     const targetDistance = t.kind === 'mapbuilding'
       ? buildingDistance(t.boxes,h.x,h.z,this._absSightY(h,(h.y || 0)+LOS.EYE_M,h.x,h.z),t.roofs) : this._surfD3(d3,t);
-    if (targetDistance > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL) return;
+    const maxR = wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL;
+    if (targetDistance > maxR) {
+      const dy = (t.hero ? (t.y || 0) : 0) - (h.y || 0);
+      const hr = t.kind === 'mapbuilding' ? 0 : hitR(t);
+      const hDist = t.kind === 'mapbuilding' ? targetDistance : Math.hypot(h.x - t.x, h.z - t.z);
+      if (!(dy < 0 && inWeaponRange(maxR, hDist, 0, dy, hr))) return;
+    }
     // 迷霧內的目標不可命中:射手陣營看不見(非瞄準模式看不到)就打不到 —
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
     const pulse = this.visionUntil?.[h.side] > this.t;
@@ -2639,7 +2645,11 @@ export class BattleSim {
       if (b === h || b.dead) continue;
       if (t.hp <= 0 || (t.hero && t.dead)) return;
       const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
-      if (this._surfD3(d3, t) > def.range * this._altRange(b, t, def) * RANGE_TOL) continue;
+      const maxR = def.range * this._altRange(b, t, def) * RANGE_TOL;
+      if (this._surfD3(d3, t) > maxR) {
+        const dy = (t.hero ? (t.y || 0) : 0) - (b.y || 0);
+        if (!(dy < 0 && inWeaponRange(maxR, b.x - t.x, b.z - t.z, dy, hitR(t)))) continue;
+      }
       // 僚機自己的射線也吃障礙遮蔽(主機看得到不代表僚機那個角度打得到)
       if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), b, t)) continue;
       // pid/slot:客戶端解析僚機槍口錨(_entMuzzle 取離訊息座標最近那架)+ 開火動畫
@@ -2693,7 +2703,11 @@ export class BattleSim {
     const wp = this._heroWeapon(h, w);
     if (!wp) return false;
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (d3 > wp.def.range * this._altRange(h, t, wp.def)) return false;
+    const maxR = wp.def.range * this._altRange(h, t, wp.def);
+    if (d3 > maxR) {
+      const dy = (t.hero ? (t.y || 0) : 0) - (h.y || 0);
+      if (!(dy < 0 && inWeaponRange(maxR, h.x - t.x, h.z - t.z, dy, hitR(t)))) return false;
+    }
     // 電腦玩家不能透視:彈道被實體障礙擋住 = 不開火(與真人 heroHit 同一條 LOS 規則)
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return false;
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
@@ -2871,7 +2885,11 @@ export class BattleSim {
         const d3 = Math.hypot(tx, ty, tz);
         const hr = hitR(t);
         // 射程誠實界:3D 表面距離不超過有效射程(無 RANGE_TOL)
-        if (Math.max(0, d3 - hr) > wp.def.range * this._altRange(b, t, wp.def)) continue;
+        const maxR = wp.def.range * this._altRange(b, t, wp.def);
+        if (Math.max(0, d3 - hr) > maxR) {
+          const vdy = ty;
+          if (!(vdy < 0 && inWeaponRange(maxR, tx, tz, vdy, hr))) continue;
+        }
         // 3D 圓錐判定:夾角 <= 錐半角(fanConeHalf 量到近側表面;近距 <=8m 視為正中滿額)
         const dot = (tx * ux + ty * uy + tz * uz) / (d3 || 1);
         if (dot <= 0) continue;
@@ -6203,7 +6221,8 @@ export class BattleSim {
         if (by && by.hero && pid === by.pid) continue;   // 擊殺者本人拿全額,不重複領助攻
         const a = this.heroes.get(pid);
         if (!a || a.side === t.side) continue;
-        if (dist2d(a.x, a.z, t.x, t.z) > ECON.ASSIST.R_M) continue;   // 範圍限制:狙擊視野×1.25,全角色統一值
+        const effR = Math.max(ECON.ASSIST.R_M, weaponMaxHoriz(ECON.ASSIST.R_M, (t.hero ? (t.y || 0) : 0) - (a.y || 0)));
+        if (dist2d(a.x, a.z, t.x, t.z) > effR) continue;   // 範圍限制:狙擊視野×1.25,高空依錐形包絡展開
         // 戰鬥分數:助攻 +1(硬目標 ×5)。**與賞金脫鉤** —— 賞金 0 的目標(如砲塔)一樣算戰績,
         // 舊制的 `if (!bounty) break` 只該擋錢,擋到分數就是「拆塔的助攻不計分」。
         if (!t.neutral) a.kn = addBattleScore(a.kn, battleScoreGain(t.kind, !!t.hero, true));
