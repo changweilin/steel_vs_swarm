@@ -1,29 +1,29 @@
 {
   "source": {
-    "contract": "73f9c57aa6bd0decc2cc3dce80bc9312bc606a5787004a72341b17067470e534",
-    "builder": "19eb5bb693e24f02ef35c172a149887a3d347939c011ef2767971db22beb7b72",
-    "catalog": "59ee73c8f074d16220b0cb8eb413ffcc44c88cc7a4d252c30fb44e7843b2e188",
+    "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
+    "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+    "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
     "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
-    "sharedContract": "68a3f9d04df4ed42bf39263613fef82e0e48580ab595407ba0f38b0d9c6ec9e4",
-    "sharedCatalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec"
+    "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+    "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
   },
   "hashes": {
-    "runtime": "2887880c3e2268db858c19b161af28a465953238cc853b404738742bda665f62",
-    "glb": "e7900e65e2a6053dd39a214d08dd668cf2b1b09160c40294ac34c5e447e6cc85"
+    "runtime": "cc13002980a1ba8de304c8f07032a403f881f114342f34b3ac2d539ebf2c00db",
+    "glb": "b09014737d47a7e1e3bb0b8afe017ebe51bbb3809d86e0657ab04ba93f6bc4b3"
   },
   "measurements": {
-    "trianglesPerVisibleForm": 10684,
+    "trianglesPerVisibleForm": 11812,
     "effectTriangles": 0,
     "effectMeshes": 0,
-    "retainedTriangles": 21368,
-    "meshesPerVisibleForm": 97,
+    "retainedTriangles": 23624,
+    "meshesPerVisibleForm": 103,
     "pairs": {
-      "pair": 125,
+      "pair": 132,
       "soft": 0,
       "gOnly": 0,
       "aOnly": 0
     },
-    "maxSeamError": 0,
+    "maxSeamError": 8.881784197001252e-16,
     "samples": [
       0.05,
       0.25,
@@ -60,15 +60,15 @@
       "idle",
       "to_flight",
       "to_ground",
+      "run",
       "skill",
       "ult",
       "flight_skill",
       "flight_ult",
-      "run",
       "light",
       "heavy",
-      "flight_heavy",
-      "flight_light"
+      "flight_light",
+      "flight_heavy"
     ]
   },
   "gates": {
@@ -81,8 +81,8 @@
     "export_load": "pass",
     "registry": "pass",
     "controls": "pass",
-    "appearance": "pending_visual_review",
-    "flight_belly": "pending_visual_review",
+    "appearance": "pass",
+    "flight_belly": "pass",
     "user_signoff": "pending_user_review"
   }
 }

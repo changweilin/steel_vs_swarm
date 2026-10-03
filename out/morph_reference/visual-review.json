@@ -1,0 +1,204 @@
+{
+  "m01": {
+    "sourceHashes": {
+      "runtime": "cc13002980a1ba8de304c8f07032a403f881f114342f34b3ac2d539ebf2c00db",
+      "blend": "416f23a4f88d1b195178ffff348a7c915b0bb83ee9993485d1e23cdbb2db44a9",
+      "glb": "b09014737d47a7e1e3bb0b8afe017ebe51bbb3809d86e0657ab04ba93f6bc4b3"
+    },
+    "views": {
+      "reference.png": "4f7737b0f322b0a598f97d6666af9f34b56dd328c738ba134a210b258f833be5",
+      "front.png": "5e61ce23af5cecf06b529c9bea3b7c333284f8750ebfa13a153140b9fe65f17b",
+      "side.png": "0fe9d07b34520065ab6e03c6e95951311882041a9f0e33f029cfe49e04e3f7ba",
+      "back.png": "903afbba4c4cc50674bb9fe1ed6c5001f3b6fb2b16bc12d2c8a2de826a523722",
+      "top.png": "e858909cc3d2012bfd62384204db31ef2dfa939dd2e371576e4d974c625c923b",
+      "flight_reference.png": "cee86cdccc5340e49485cf669eb0d95de630d41b6346782f6cfa9fbe974e3671",
+      "flight_front.png": "f7b0b5645c305adf3aad2060c6ec7c37e75639ae4c584dba2d10263911b486d8",
+      "flight_side.png": "adf7ba58a4bd1044b97b0d71d2a7777d8e15a68e021fb0fa2eeff702c2598f29",
+      "flight_back.png": "e5f1bb18178e12fb00b1b251b7c99a7eec3f42c0e23eea8af90471d5158f21d8",
+      "flight_top.png": "444963851437cf9564080df7fb2b1227394c04f093e530830db1bcc5e0edb2af",
+      "transform_0.png": "8b7ed6ad17f8469c98dd10b26aa0ec9bcc35da973ea096b7a3acf1914177b210",
+      "transform_2.png": "08f344bc761c1b929521cca2bc8a82d16185173cd74f750367ca844173c84ef6",
+      "transform_4.png": "20a7fe8c9035672aa208557f74346d3d6a0477ad8e36a129ac22e153efbc0da9"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s03": {
+    "sourceHashes": {
+      "runtime": "7b16a15fc2096e0be099a61c1a559c141cd08bbd2ea26112fe9a84c43a85d19a",
+      "blend": "c69acbb828911613d4cb94adc4ce9c447861a69149d142c6d0a466fe5b750a7b",
+      "glb": "3ed38e9f671ed952c3d83796149849d8092c918b0832b119b040941e1cb7556c"
+    },
+    "views": {
+      "reference.png": "d168d176fdadb602cd7b63457c32f7e6d67fe49fdb9256acad6270ec34ed14de",
+      "front.png": "ddb117f410760fe75ea1175609a0b60839970970e0cb99b8ca98a2b9ddae8d24",
+      "side.png": "92a71e545f84c31d62c25f22ca0a2735fadec2b728b480fc65599aa245e7486f",
+      "back.png": "1447f8c3e538703769c9f8b0bbd752ca2e070d12777a7f5bfe11fcf6806e7169",
+      "top.png": "54a72ff45c7ec0ac338918769d3bde90ba98413bea1174f86ab2a0f70e4d25b2",
+      "flight_reference.png": "64fdd2020c06ebee12b6232cdd8cc4c5f81dde16a839f71512ae159d3312dbb7",
+      "flight_front.png": "cc75b2c26c29e029175014553f728ce6ae0de9d9bce60f7ab8ebce6b88e3a7ae",
+      "flight_side.png": "97b39194d1341c7157676c833bdfbe0d23cd6186c8610b42724406efd99f3a5f",
+      "flight_back.png": "bd6806f41cb394098c703cdb93ff07cbe8e8a23c6bf4a898b14661b79c999f03",
+      "flight_top.png": "0e4da4a555470a1ab97b46e0a2b00f4ade6a4ef2606aa0cd7a2cb127b1424dc4",
+      "transform_0.png": "c62a2af7c5595f054de9f85f3642a3cfb59b82d2d28c31186c2bcddad7865fe3",
+      "transform_2.png": "978a8b7f58487c0e0e047f85f2dd69563956d95053ed68e2812d47ff7867dd11",
+      "transform_4.png": "66b9b829891faab502c9c9dc4a134fe5f73b5a0e49c35a50f39da8462c6cd27b"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "s10": {
+    "sourceHashes": {
+      "runtime": "de97e6fdd88f25723d73d03147f8b64bb9faf7ca5c7edafa3d7aad385ae00936",
+      "blend": "6228c8e60ae33dc53ddb724e492f78cbbb404b00ec5bca606e9d59cf674fc6ac",
+      "glb": "672ad9c113d31c6c27230cdc5df71c636e51a43a26467a2342e094dca0195a9b"
+    },
+    "views": {
+      "reference.png": "1359ee7a1223442b7aa19b33655d3f2e2d9e8cfe1e429c176a349818a50bfd48",
+      "front.png": "ef322a9d660b6661ca61a18552f4d55df671a3ed612aa0020f2fd4b7e16c06b8",
+      "side.png": "65d87becc058cb1612854a1f0dbe3c0d43c416dd89cc7c64a5fdac5f6c6d01c9",
+      "back.png": "5601f1dcc3f858ddf1c9a378671233e258ff7307028fcf6e4ada6ff6fbdfe986",
+      "top.png": "d50d7eaeb7baa5b620db4a7ff0276c22f8900474a25da5fa44906c210fa06289",
+      "flight_reference.png": "50b8d699518333483dc7a22949c8488c9100cc0c43762004f41d4594806779d5",
+      "flight_front.png": "eb3a7db87aa8f356eb14015ba8451e016855e801718f7ce44b7b28b89d5d0f40",
+      "flight_side.png": "25577b697e65a75b972da80ef6faeaec83664f69fc6b069847883a771b0f66eb",
+      "flight_back.png": "38c34c962750045a21d789da25e42c8b508095053734fb3ee2ed3e40c52f960b",
+      "flight_top.png": "9ba78b14bf99535f210eef7edbc91e1cc2d3adbf28da08eb70a04e7fce0506a1",
+      "transform_0.png": "e2c3220abcf3a2ae68eed16136efcddb4f2b7f936589d8cd4fc514c796e84b7f",
+      "transform_2.png": "98217d6ca15df1c458c16440d81bd4da3ad5ecdec8267d419e7e555b19a5f30a",
+      "transform_4.png": "ca08357e08a6a4b7836451ed2528d3c0c0995f6ace3e2c526da669cc56940fe8",
+      "tail_diagnostic.png": "bb42360e8bf3692e6f509a6290c5a893e09ad87d6d67c6db60ec50a222f123fa"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t06": {
+    "sourceHashes": {
+      "runtime": "fe5dc9dba8854ed124e5542791d412061ddb639b928711a0c4f7fd5238acc5af",
+      "blend": "08921031afc4c96efec0cac7875a1f515387000a008028ddd5bb1a266fddca6e",
+      "glb": "7dadc1397eb2b7881e57d9d2d54dea1053a960382bb05acfe3773487564e6635"
+    },
+    "views": {
+      "reference.png": "666d29560d8e740a1d523da7fafaa4e370b3537565682c51e8327a621b80d6ce",
+      "front.png": "38313dc65908e4b62d6c6bdf8d519f34930919dc01fba6621d9214246e552462",
+      "side.png": "902e3c46a4646a6a38c61dbc70a60b3a4dac0071fdb42b2aefcae785ffece499",
+      "back.png": "b56573ada92846fd400e70e034cc68461ba03488a9f8d0eac1bcdc9b9705c6b1",
+      "top.png": "ad81309a7ce1bbd751c9c2829be0e70dfb2abbbcdfd63fa89c00dc1ff753655e",
+      "flight_reference.png": "de2bd639a132fff3362c2e76ae7a1bf2cb542d98f6887a9c4f6b77e859428832",
+      "flight_front.png": "24915aceaa42c9d6419f270b7dd53e3293864e3ff7cb1282330f281fac129fb2",
+      "flight_side.png": "ce2a05dc92a3736dad2493d729eb15cc8658897949c820974304aa22a0673669",
+      "flight_back.png": "d8646cb4c4da6bc5c4725fd1b9d6c72c9ed2798223b91e373624ccba17137bbc",
+      "flight_top.png": "5c208ff2823f1a76c7dfef3798d723a96af9ed9986d9e60f79b95481ca3930a1",
+      "transform_0.png": "ebe2053ea13129fb603b78d85efbec2a8e17b824a92f4a64a3b24b5ee758ac1c",
+      "transform_2.png": "1960559cc502de8dc06828eeea8fb31401cb91efc578210ffa850ad064be7029",
+      "transform_4.png": "077f07de7e06b28d347b1d510550d8dff8d98fd87985c9c90aabee9546e06b41"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "t11": {
+    "sourceHashes": {
+      "runtime": "5b6c4720c7a48bc36e3bfb0cea4bc8312885b0fb5437a96100223f234a469ae7",
+      "blend": "49fec55e4037bd0e75a034f4ff48c20ac45494f52941c24109ad4dd5e8c2b8ed",
+      "glb": "841f4dcde8df65732861982ac0a0d268444a07f8d7db3ea13deb7e853a3497ff"
+    },
+    "views": {
+      "reference.png": "a5d287cf2ba23cac46ca292f6d664bfdf8d22478609098dfadb18e4ff30ceb9e",
+      "front.png": "bf123b808f27e5c3349d2ae8e50ad8bb367ad432ee59274131bee8e6ea19b2d5",
+      "side.png": "ea34946e51a7f9aabac1b3f595720635fc890d1aef38025b138d33b623f68ce9",
+      "back.png": "b6b794b9b589eb5301cabf4d105ea519e1fcd28064c4cd1208ca2e1ff3ac0773",
+      "top.png": "cdb7dab346a7df6f37dce6b6c83f3bf81e64d517be8d633c9b25a148460afe56",
+      "flight_reference.png": "b3b2c2cdb5873080f2867b00ed5813b2591b8693017318c5e79650b30a349c24",
+      "flight_front.png": "1373a3e68dd461bbdc15444f0e7e0fbe907152810aac5d286bb3896d52af5446",
+      "flight_side.png": "3abbbf9073e8e5f7ce9d5573d7c8597ffcd188d02e6f9680ed89c4cfb4c88596",
+      "flight_back.png": "e7fdc26c57cdd466613cae929f2afbc48229afce50b38a65e7654ce430bca2cb",
+      "flight_top.png": "4f4b6c2a560d37b660942662e43bcf1ca362adb3f1c57cac91b0927b31e5ed8e",
+      "transform_0.png": "cd64db77909babe49a0bb2c2c902ce7736d2b45936624694d95183f728676c36",
+      "transform_2.png": "612f17cd70256e6eaba4caeef6a5cebe93b617c5add18fe1c590dab07e785c1c",
+      "transform_4.png": "498f358fbbc76080d00036cb47f1dc382b0533704bff127ffdaeeef8593d960e"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "m05": {
+    "sourceHashes": {
+      "runtime": "23da459f49377b98b69424e527a35c47722288e299a89d4aef368b0a281590a5",
+      "blend": "450e672c1d79ee5d51cb6aed641a176fabe83809a85816f8aca24d1795ca17eb",
+      "glb": "5b7620f5938e19ea784c0a6f9197385816fcb58659e2ddd3a6b4b9025ecd3da9"
+    },
+    "views": {
+      "reference.png": "9c3b272679f38f61e2d5eff8c0937d34b24219f2525802329912cd7dcd538646",
+      "front.png": "6f33464317a079aef99e2e3061600e79f3dafe8f14a6b2ffecf9b5767296eb1d",
+      "side.png": "950aef933f05bdcb120bb483d75db1e3f21b9b692d3ebcea316e75534d3be0e6",
+      "back.png": "48636b0bd3f84b2eb0800791b04f382afb155513ab076201a9a5aa406de31f82",
+      "top.png": "4f0becd0fc64345bffdb854ebdab1a528c58943f00c1f2a368d8f7538b6e9d7a",
+      "flight_reference.png": "d6eed0e72d856f8075a0b1936ef706fef5380d35a0b3b3d43cc1b6067da482ee",
+      "flight_front.png": "6f48d66d3c8b7e69e7be282aeec72c10e39619cfb34b4190dff43368a03d13b9",
+      "flight_side.png": "009e8c7583879c378e05accf1f24c2a45af61d2a7da335b8ea23c5d6e5054090",
+      "flight_back.png": "f0970604a846b379d62a11bc8257fa64a11dcdbd3e9f9f3d8897e8e206bc8e05",
+      "flight_top.png": "ca65c32c7f331fd035664cb26300b05657b6f4941cebea5aac8329667d54a017",
+      "transform_0.png": "c62d195978b890fa6d39f205dbf9419f33ffbb6f676c71a3546507beef78506f",
+      "transform_2.png": "897eb568be3732b2a5f5c0afd29eadf28d9a2fbdd45408a649e02c3193c92f18",
+      "transform_4.png": "7b304e45d326c20481d18d08083f81d4df9e47c8b574044026852a80e2308a52"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "m07": {
+    "sourceHashes": {
+      "runtime": "3f26c3028981662d94deb6b783244810c33ef0bfd3fccfd6ef54d5d2e4620b9a",
+      "blend": "824a6d39603bd159e92d21dd55e137b722e8020bd6d467e0bf3f796101a6b1ef",
+      "glb": "7a34c78d1522d7d193cdad9c25abedb9c0f965d5053b55ef032fc83dd0f1a573"
+    },
+    "views": {
+      "reference.png": "3a7fe0078300455feac5cb3998a23d6fe7ede8175d528f78843390e058ccc316",
+      "front.png": "bda5403c53cc8b3e98fd67cc9a2d3ab304d1cae0d0f29fc73f936b1534d7cdff",
+      "side.png": "3c6da97ad2711d35bfb60d05907c4e5abeb966d220936c0083171ddfde77440e",
+      "back.png": "31c51ae86c6563f6cf5624d30f705ef36fc53f3043a132c92a5759d7ce42dd82",
+      "top.png": "04e3bfb3eb41cf4f8ec93ad71870f0dc96f8c2b5c4b3f81bd6688d0c3c7b9edd",
+      "flight_reference.png": "c2eaaa09189b4cdf70ac4db02bd0307c01d24bb63628b9943a9a9d0de1115cf0",
+      "flight_front.png": "be522eceed780308c022f47587c3c169a64ff096650008fb3953131861b4e1c4",
+      "flight_side.png": "12c2ab6742cf8c58995f9ea7a2fd345572cc79991466d79096b5c1dc9f6c7ad5",
+      "flight_back.png": "6e917c0d8a9fce327813501d9ee84a4b6d1ce15f75a557ba5c1e21a48b74970f",
+      "flight_top.png": "e84d0c746dbfd0b9c8c6ad4e1d7c38384264660dd86b2516c573b1aba3ead7c2",
+      "transform_0.png": "392593b71a0ce75439c7aa24ef60b37b062c85b2b81f69fb5fbff217116c9507",
+      "transform_2.png": "469eba164deacfa6a64509fbb243f8b81e52ca259d744e33c9ebd449b6587bdb",
+      "transform_4.png": "077e7ae8e40b4d162b6c1433d50795e99b5fd800a3d0496e5a1538fce7d269aa"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  },
+  "m08": {
+    "sourceHashes": {
+      "runtime": "6fbb10e779423c78b3b3e230ccc6dbd88612388f2f1909b769abe9520c03bfda",
+      "blend": "22fc17d70a3eeeeb9a7222920844c68d4a1b94ee689d3ecc1c27cc2bcd1e324f",
+      "glb": "18a90324df358aab03a7af0f587c3d85025e33b3c7e3c305ece665b27208ef03"
+    },
+    "views": {
+      "reference.png": "53aff580258d514cd5a2741442b06f824e58057c4fde085c92f08db2f169844d",
+      "front.png": "9ebbd45fc7245e076b5b793e22c699f99876e4fbe7b9f0f6f2b886ac2dac74ed",
+      "side.png": "c642d231926b9a0ec2f54ca81ac29babc2c43b9e0fb168f48a233f0274c19fa5",
+      "back.png": "8e84eb769d524bba24af8801cbca657fbb8984b99ac509f1e1a769ebb3f27235",
+      "top.png": "539f1420e17ea14d4f5a4730458c40e95a4107f9978fa71dfb1c8c3c4a8b3cce",
+      "flight_reference.png": "b612cf706ef7731152e29a47031c56238080c7005b000cb626204aa9fcc01910",
+      "flight_front.png": "3d35ce713b08c60d5b6f88cf8fb249a9ececb294ed0f43ba2ca30419d90a4fca",
+      "flight_side.png": "c4a6635831ba27e205db2872463df62117e20e57aae512b91e29a820231a19a2",
+      "flight_back.png": "49fc3593396bd35d48cd6020185dfda047bccef41e1ea0a79afd4659c4a097d7",
+      "flight_top.png": "7a935b53bf78787ae665ec771348046848ee9946b3f846db7a54b922bb2cdca0",
+      "transform_0.png": "c0c0934e1f8a072345d184c0b87c17b32af02b94607b18bcf804a75d65934ce0",
+      "transform_2.png": "d715c397a51075998a360ba88298810c70f68c0efd6ec23cab9efb89a3db6360",
+      "transform_4.png": "787ad12a4c1831997ffdc5d82d421579fcd95f9b808a95edde13382baf484cfb",
+      "tail_diagnostic.png": "4e01460833a702d46840bc50d2d014746c7e760b7cffab54c4f63e1f50e09813"
+    },
+    "geometry": "pass",
+    "appearance": "pass",
+    "basis": "Prototype anatomy and motion; image guides initial exterior identity"
+  }
+}

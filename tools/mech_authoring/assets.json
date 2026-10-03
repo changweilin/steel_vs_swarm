@@ -86,7 +86,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred retractable dorsal emitters project a forward radar barrier without adding limbs"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -257,18 +257,18 @@
           "emitter_l",
           "tilt",
           [
-            -0.49,
-            0.39,
-            -0.15
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            0.49,
-            0.39,
-            -0.15
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -326,15 +326,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 0.85
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -0.85
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -417,7 +431,12 @@
         }
       ],
       "parameters": {
-        "chestWidth": 1.72
+        "chestWidth": 1.72,
+        "waist": {
+          "width": 0.66,
+          "depth": 0.5,
+          "height": 0.48
+        }
       },
       "materials": {
         "armor": {
@@ -468,11 +487,20 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
+            0.65,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
             0,
+            -0.65,
             0
           ]
         ],
@@ -595,11 +623,11 @@
         ],
         [
           "gun",
-          "elbow_r",
+          "wrist_r",
           [
             0,
-            -0.42,
-            0.29
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -676,34 +704,25 @@
         ],
         [
           "shield_mount",
-          "wrist_l",
+          "elbow_l",
           [
-            0,
-            -0.07,
-            0.16
+            0.24,
+            -0.08,
+            0
           ]
         ],
         [
           "shield_leaf_l",
           "shield_mount",
           [
-            -0.16,
             0,
-            0
-          ]
-        ],
-        [
-          "shield_leaf_r",
-          "shield_mount",
-          [
-            0.16,
             0,
             0
           ]
         ],
         [
           "barrier",
-          "shield_mount",
+          "wrist_l",
           [
             0,
             0,
@@ -723,23 +742,24 @@
         "bob": 0.055,
         "sway": 0.045,
         "top": 11,
-        "legBase": 0.02,
-        "armBase": 0.02,
+        "legBase": -0.08,
+        "armBase": 0.06,
         "gunArm": 1,
         "gunR": {
-          "g": "gun",
-          "rest": 0
+          "g": "wrist_r",
+          "rest": 0,
+          "aim": 0
         },
         "legChainL": [
           {
             "g": "knee_l",
-            "base": 0.04,
+            "base": 0.16,
             "k": 0.65,
             "d": 0.15
           },
           {
             "g": "ankle_l",
-            "base": 0,
+            "base": -0.08,
             "k": -0.3,
             "d": 0.55
           }
@@ -747,13 +767,13 @@
         "legChainR": [
           {
             "g": "knee_r",
-            "base": 0.04,
+            "base": 0.16,
             "k": 0.65,
             "d": 0.15
           },
           {
             "g": "ankle_r",
-            "base": 0,
+            "base": -0.08,
             "k": -0.3,
             "d": 0.55
           }
@@ -761,7 +781,7 @@
         "armChainL": [
           {
             "g": "elbow_l",
-            "base": -0.2,
+            "base": -0.3,
             "k": -0.5,
             "d": 0.3
           },
@@ -775,7 +795,7 @@
         "armChainR": [
           {
             "g": "elbow_r",
-            "base": -0.2,
+            "base": -0.3,
             "k": -0.5,
             "d": 0.3
           },
@@ -787,8 +807,8 @@
           }
         ],
         "aimPose": {
-          "rShoulderX": -0.32,
-          "rElbowX": -0.72
+          "rShoulderX": -0.48,
+          "rElbowX": -1.09
         },
         "weap": {
           "light": "R",
@@ -804,7 +824,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.085
+            "r": 0.085,
+            "aimJoint": "wrist_r"
           },
           "heavy": {
             "nodes": [
@@ -816,7 +837,15 @@
             "r": 0.14,
             "fwd": "z"
           }
-        }
+        },
+        "waist": "waist",
+        "heldWeapons": [
+          {
+            "node": "gun",
+            "hand": "wrist_r",
+            "staff": false
+          }
+        ]
       },
       "motion": {
         "shield": {
@@ -833,15 +862,9 @@
           "hinges": [
             {
               "node": "shield_leaf_l",
-              "axis": "y",
-              "rest": 1.4,
-              "deploy": 0
-            },
-            {
-              "node": "shield_leaf_r",
-              "axis": "y",
-              "rest": -1.4,
-              "deploy": 0
+              "axis": "x",
+              "rest": 0,
+              "deploy": 0.22
             }
           ]
         },
@@ -921,7 +944,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -1111,18 +1134,18 @@
           "emitter_l",
           "tilt",
           [
-            0.765,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.765,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -1182,15 +1205,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -1266,7 +1303,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -1411,18 +1448,18 @@
           "emitter_l",
           "tilt",
           [
-            0.3825,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.3825,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -1481,15 +1518,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -1565,7 +1616,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -1737,18 +1788,18 @@
           "emitter_l",
           "tilt",
           [
-            0.315,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.315,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -1806,15 +1857,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -1890,7 +1955,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -1899,7 +1964,8 @@
         "span": 4.5,
         "rotorRadius": 2,
         "gunLength": 1.5,
-        "emitterLength": 0.72
+        "emitterLength": 0.72,
+        "pairedWeaponSpacing": 0.86
       },
       "materials": {
         "armor": {
@@ -1981,7 +2047,7 @@
           "gun",
           "tilt",
           [
-            0.9,
+            0,
             -0.35,
             0.4
           ]
@@ -2044,18 +2110,18 @@
           "emitter_l",
           "tilt",
           [
-            0.855,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.855,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -2111,15 +2177,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -2195,7 +2275,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -2339,18 +2419,18 @@
           "emitter_l",
           "tilt",
           [
-            0.225,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.225,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -2409,15 +2489,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -2493,12 +2587,12 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
         "length": 4.7,
-        "width": 0.9,
+        "width": 1.5,
         "span": 6.8,
         "gunLength": 0.9,
         "emitterLength": 0.72
@@ -2565,8 +2659,8 @@
           "wing_r",
           "tilt",
           [
-            -0.45,
-            0.1,
+            -0.6,
+            0.04,
             -0.1
           ]
         ],
@@ -2583,8 +2677,8 @@
           "wing_l",
           "tilt",
           [
-            0.45,
-            0.1,
+            0.6,
+            0.04,
             -0.1
           ]
         ],
@@ -2664,18 +2758,18 @@
           "emitter_l",
           "tilt",
           [
-            0.405,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.405,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -2728,15 +2822,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -2788,7 +2896,7 @@
           1.3,
           0
         ],
-        "scale": 8.024
+        "scale": 10
       },
       "decisions": [
         "Visual dimensions are estimates from a single illustration, not measured CAD.",
@@ -2826,7 +2934,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -2960,27 +3068,27 @@
           "hind_hip_r",
           "tilt",
           [
-            -0.384,
-            -0.28,
-            -0.65
+            -0.35,
+            -0.2,
+            -0.63
           ]
         ],
         [
           "hind_knee_r",
           "hind_hip_r",
           [
-            -0.06,
-            -0.35,
-            0.2
+            -0.24,
+            -0.26,
+            -0.27
           ]
         ],
         [
           "hind_ankle_r",
           "hind_knee_r",
           [
-            0,
-            0.1,
-            -0.37
+            -0.08,
+            -0.1,
+            -0.36
           ]
         ],
         [
@@ -2988,35 +3096,35 @@
           "hind_ankle_r",
           [
             0,
-            -0.1,
-            -0.28
+            -0.03,
+            -0.24
           ]
         ],
         [
           "hind_hip_l",
           "tilt",
           [
-            0.384,
-            -0.28,
-            -0.65
+            0.35,
+            -0.2,
+            -0.63
           ]
         ],
         [
           "hind_knee_l",
           "hind_hip_l",
           [
-            0.06,
-            -0.35,
-            0.2
+            0.24,
+            -0.26,
+            -0.27
           ]
         ],
         [
           "hind_ankle_l",
           "hind_knee_l",
           [
-            0,
-            0.1,
-            -0.37
+            0.08,
+            -0.1,
+            -0.36
           ]
         ],
         [
@@ -3024,8 +3132,8 @@
           "hind_ankle_l",
           [
             0,
-            -0.1,
-            -0.28
+            -0.03,
+            -0.24
           ]
         ],
         [
@@ -3095,18 +3203,18 @@
           "emitter_l",
           "tilt",
           [
-            0.36000000000000004,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.36000000000000004,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -3199,15 +3307,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -3311,7 +3433,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -3328,7 +3450,24 @@
           -0.752
         ],
         "membraneWing": false,
-        "concealedOralCannon": true
+        "concealedOralCannon": true,
+        "tailWidth": 0.46,
+        "tailTip": [
+          -0.15,
+          0.25,
+          0.12
+        ],
+        "neckWidths": [
+          0.72,
+          0.65,
+          0.59,
+          0.53
+        ],
+        "skullSize": [
+          0.95,
+          0.59,
+          1.05
+        ]
       },
       "materials": {
         "armor": {
@@ -3380,12 +3519,21 @@
           ]
         ],
         [
-          "cervical_0",
+          "body_0",
           "tilt",
           [
             0,
-            0.1,
-            0.45
+            0,
+            0.38
+          ]
+        ],
+        [
+          "cervical_0",
+          "body_0",
+          [
+            0,
+            0.04,
+            0.4
           ]
         ],
         [
@@ -3393,8 +3541,8 @@
           "cervical_0",
           [
             0,
-            0.3,
-            0.35
+            0.07,
+            0.43
           ]
         ],
         [
@@ -3402,8 +3550,8 @@
           "cervical_1",
           [
             0,
-            0.4,
-            0.22
+            0.08,
+            0.4
           ]
         ],
         [
@@ -3411,8 +3559,8 @@
           "cervical_2",
           [
             0,
-            0.35,
-            -0.04
+            0.06,
+            0.35
           ]
         ],
         [
@@ -3420,17 +3568,26 @@
           "cervical_3",
           [
             0,
-            0.28,
-            0.12
+            0.035,
+            0.26
+          ]
+        ],
+        [
+          "body_1",
+          "body_0",
+          [
+            0,
+            -0.015,
+            -0.46
           ]
         ],
         [
           "wing_r",
-          "tilt",
+          "body_1",
           [
-            -0.425,
-            0.1,
-            -0.1
+            -0.46,
+            0.12,
+            0
           ]
         ],
         [
@@ -3444,11 +3601,11 @@
         ],
         [
           "wing_l",
-          "tilt",
+          "body_1",
           [
-            0.425,
-            0.1,
-            -0.1
+            0.46,
+            0.12,
+            0
           ]
         ],
         [
@@ -3461,12 +3618,48 @@
           ]
         ],
         [
-          "tail_0",
-          "tilt",
+          "body_2",
+          "body_1",
           [
             0,
-            -0.1,
-            -1.2
+            -0.015,
+            -0.46
+          ]
+        ],
+        [
+          "body_3",
+          "body_2",
+          [
+            0,
+            -0.015,
+            -0.46
+          ]
+        ],
+        [
+          "body_4",
+          "body_3",
+          [
+            0,
+            -0.015,
+            -0.46
+          ]
+        ],
+        [
+          "body_5",
+          "body_4",
+          [
+            0,
+            -0.015,
+            -0.46
+          ]
+        ],
+        [
+          "tail_0",
+          "body_5",
+          [
+            0,
+            -0.03,
+            -0.43
           ]
         ],
         [
@@ -3534,11 +3727,11 @@
         ],
         [
           "fore_hip_r",
-          "tilt",
+          "body_1",
           [
-            -0.408,
-            -0.28,
-            0.4
+            -0.42,
+            -0.29,
+            0.1
           ]
         ],
         [
@@ -3570,11 +3763,11 @@
         ],
         [
           "fore_hip_l",
-          "tilt",
+          "body_1",
           [
-            0.408,
-            -0.28,
-            0.4
+            0.42,
+            -0.29,
+            0.1
           ]
         ],
         [
@@ -3606,11 +3799,11 @@
         ],
         [
           "hind_hip_r",
-          "tilt",
+          "body_4",
           [
-            -0.408,
-            -0.28,
-            -0.7
+            -0.38,
+            -0.27,
+            -0.1
           ]
         ],
         [
@@ -3642,11 +3835,11 @@
         ],
         [
           "hind_hip_l",
-          "tilt",
+          "body_4",
           [
-            0.408,
-            -0.28,
-            -0.7
+            0.38,
+            -0.27,
+            -0.1
           ]
         ],
         [
@@ -3752,18 +3945,18 @@
           "emitter_l",
           "tilt",
           [
-            0.3825,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.3825,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -3879,7 +4072,39 @@
             ],
             "role": "hind"
           }
-        ]
+        ],
+        "bodySegments": [
+          "body_0",
+          "body_1",
+          "body_2",
+          "body_3",
+          "body_4",
+          "body_5"
+        ],
+        "axialWave": {
+          "chain": [
+            "cervical_3",
+            "cervical_2",
+            "cervical_1",
+            "cervical_0",
+            "body_0",
+            "body_1",
+            "body_2",
+            "body_3",
+            "body_4",
+            "body_5",
+            "tail_0",
+            "tail_1",
+            "tail_2",
+            "tail_3",
+            "tail_4",
+            "tail_5"
+          ],
+          "amplitude": 0.075,
+          "frequency": 0.75,
+          "delay": 0.4,
+          "turn": 0.11
+        }
       },
       "motion": {
         "shield": {
@@ -3888,15 +4113,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -3985,11 +4224,11 @@
         ]
       },
       "reviewFrame": {
-        "scale": 12.5,
+        "scale": 12.8,
         "target": [
           0,
-          1.3,
-          0
+          1.45,
+          -0.55
         ]
       },
       "decisions": [
@@ -4028,7 +4267,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -4036,7 +4275,9 @@
         "width": 1.7,
         "span": 8.3,
         "gunLength": 0.9,
-        "emitterLength": 0.72
+        "emitterLength": 0.72,
+        "tailFinOffset": 0.64,
+        "tailFinCant": 0.34
       },
       "materials": {
         "armor": {
@@ -4181,18 +4422,18 @@
           "emitter_l",
           "tilt",
           [
-            0.765,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.765,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -4256,15 +4497,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -4340,7 +4595,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -4484,18 +4739,18 @@
           "emitter_l",
           "tilt",
           [
-            0.54,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.54,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -4554,15 +4809,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -4639,7 +4908,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -4908,18 +5177,18 @@
           "emitter_l",
           "tilt",
           [
-            0.29250000000000004,
-            0.14,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "tilt",
           [
-            -0.29250000000000004,
-            0.14,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -4929,6 +5198,15 @@
             0,
             0,
             1.9449999999999998
+          ]
+        ],
+        [
+          "tail_0",
+          "tilt",
+          [
+            0,
+            0.04,
+            -1.3
           ]
         ]
       ],
@@ -5003,7 +5281,11 @@
             ],
             "role": "hind"
           }
-        ]
+        ],
+        "tailSegs": [
+          "tail_0"
+        ],
+        "tailAmp": 0.07
       },
       "motion": {
         "shield": {
@@ -5012,15 +5294,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "x",
-              "rest": 1.5707963267948966,
-              "deploy": 0.35
+              "axis": "y",
+              "rest": 0,
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -5125,7 +5421,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -5152,7 +5448,12 @@
           0,
           -0.23,
           0.04
-        ]
+        ],
+        "riderWaist": {
+          "width": 0.64,
+          "depth": 0.51,
+          "height": 0.45
+        }
       },
       "materials": {
         "armor": {
@@ -5204,6 +5505,15 @@
           ]
         ],
         [
+          "pelvis",
+          "spine",
+          [
+            0,
+            0,
+            -1.3
+          ]
+        ],
+        [
           "chest",
           "spine",
           [
@@ -5222,11 +5532,20 @@
           ]
         ],
         [
-          "hum_chest",
+          "hum_waist",
           "neck",
           [
             0,
-            1.05,
+            0.3,
+            0
+          ]
+        ],
+        [
+          "hum_chest",
+          "hum_waist",
+          [
+            0,
+            0.75,
             0
           ]
         ],
@@ -5376,11 +5695,11 @@
         ],
         [
           "leg_HL",
-          "spine",
+          "pelvis",
           [
             0.6234999999999999,
             -0.12,
-            -1.292
+            0.008000000000000007
           ]
         ],
         [
@@ -5412,11 +5731,11 @@
         ],
         [
           "leg_HR",
-          "spine",
+          "pelvis",
           [
             -0.6234999999999999,
             -0.12,
-            -1.292
+            0.008000000000000007
           ]
         ],
         [
@@ -5505,8 +5824,8 @@
           "wrist_r",
           [
             0,
-            -0.05,
-            0.35
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -5565,20 +5884,11 @@
         ],
         [
           "emitter_l",
-          "spine",
+          "elbow_l",
           [
-            0.6525,
-            0.6,
-            0.4
-          ]
-        ],
-        [
-          "emitter_r",
-          "spine",
-          [
-            -0.6525,
-            0.6,
-            0.4
+            0.3,
+            -0.06,
+            0
           ]
         ],
         [
@@ -5615,9 +5925,9 @@
         ],
         "armBase": [
           {
-            "shX": -0.3,
+            "shX": -0.48,
             "shZ": 0,
-            "elX": -0.7
+            "elX": -1.09
           },
           {
             "shX": -0.3,
@@ -5626,7 +5936,9 @@
           }
         ],
         "gunR": {
-          "g": "gun"
+          "g": "wrist_r",
+          "rest": 0,
+          "aim": 0
         },
         "spine": "spine",
         "chest": "chest",
@@ -5735,7 +6047,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.075
+            "r": 0.075,
+            "aimJoint": "wrist_r"
           },
           "heavy": {
             "nodes": [
@@ -5750,7 +6063,14 @@
         "limb": {
           "fore": "unguligrade",
           "hind": "unguligrade"
-        }
+        },
+        "heldWeapons": [
+          {
+            "node": "gun",
+            "hand": "wrist_r",
+            "staff": false
+          }
+        ]
       },
       "motion": {
         "shield": {
@@ -5759,15 +6079,17 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "x",
               "rest": 0,
-              "deploy": -0.95
-            },
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
             {
-              "node": "emitter_r",
-              "axis": "z",
-              "rest": 0,
-              "deploy": 0.95
+              "node": "emitter_l",
+              "axis": "x",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -5843,7 +6165,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -5933,468 +6255,468 @@
           "leg_FL",
           "spine",
           [
-            0.4879036790187178,
-            -0.2,
-            0.4879036790187178
+            0.5868986283848344,
+            -0.18,
+            0.5868986283848344
           ]
         ],
         [
           "leg_FL_0",
           "leg_FL",
           [
-            0.113782,
-            -0.015983,
-            0.116017
+            0.08720983634634084,
+            -0.21145243139648356,
+            0.08720983634634084
           ]
         ],
         [
           "leg_FL_1",
           "leg_FL_0",
           [
-            0.106919,
-            -0.025684,
-            0.122554
+            0.08720983634634091,
+            -0.20783442166959998,
+            0.08720983634634091
           ]
         ],
         [
           "leg_FL_2",
           "leg_FL_1",
           [
-            0.092571,
-            -0.044425,
-            0.134949
+            0.08720983634634084,
+            -0.2006603073653619,
+            0.08720983634634084
           ]
         ],
         [
           "leg_FL_3",
           "leg_FL_2",
           [
-            0.06959,
-            -0.070928,
-            0.151758
+            0.08720983634634084,
+            -0.19005283956855457,
+            0.08720983634634084
           ]
         ],
         [
           "leg_FL_4",
           "leg_FL_3",
           [
-            0.036505,
-            -0.103388,
-            0.17063
+            0.087209836346341,
+            -0.1761935149941276,
+            0.087209836346341
           ]
         ],
         [
           "leg_FL_5",
           "leg_FL_4",
           [
-            -0.00814,
-            -0.139593,
-            0.188127
+            0.08720983634634068,
+            -0.15931947052807938,
+            0.08720983634634068
           ]
         ],
         [
           "leg_FL_6",
           "leg_FL_5",
           [
-            -0.065296,
-            -0.177074,
-            0.199588
+            0.087209836346341,
+            -0.13971942574959395,
+            0.087209836346341
           ]
         ],
         [
           "leg_FL_7",
           "leg_FL_6",
           [
-            -0.134742,
-            -0.213279,
-            0.199109
+            0.08720983634634068,
+            -0.11772874285898971,
+            0.08720983634634068
           ]
         ],
         [
           "leg_FL_8",
           "leg_FL_7",
           [
-            -0.214263,
-            -0.245739,
-            0.179766
+            0.087209836346341,
+            -0.09372368853749391,
+            0.087209836346341
           ]
         ],
         [
           "leg_FL_9",
           "leg_FL_8",
           [
-            -0.298752,
-            -0.272242,
-            0.134227
+            0.087209836346341,
+            -0.06811499592000625,
+            0.087209836346341
           ]
         ],
         [
           "leg_FL_10",
           "leg_FL_9",
           [
-            -0.379398,
-            -0.290983,
-            0.055877
+            0.08720983634634068,
+            -0.04134083683728207,
+            0.08720983634634068
           ]
         ],
         [
           "leg_FL_11",
           "leg_FL_10",
           [
-            -0.44321,
-            -0.300684,
-            -0.059445
+            0.087209836346341,
+            -0.013859324574427179,
+            0.087209836346341
           ]
         ],
         [
           "leg_FR",
           "spine",
           [
-            -0.48790367901871773,
-            -0.2,
-            0.4879036790187178
+            -0.5868986283848344,
+            -0.18,
+            0.5868986283848344
           ]
         ],
         [
           "leg_FR_0",
           "leg_FR",
           [
-            -0.116017,
-            -0.015983,
-            0.113782
+            -0.08720983634634083,
+            -0.21145243139648356,
+            0.08720983634634084
           ]
         ],
         [
           "leg_FR_1",
           "leg_FR_0",
           [
-            -0.122554,
-            -0.025684,
-            0.106919
+            -0.0872098363463409,
+            -0.20783442166959998,
+            0.08720983634634091
           ]
         ],
         [
           "leg_FR_2",
           "leg_FR_1",
           [
-            -0.134949,
-            -0.044425,
-            0.092571
+            -0.08720983634634083,
+            -0.2006603073653619,
+            0.08720983634634084
           ]
         ],
         [
           "leg_FR_3",
           "leg_FR_2",
           [
-            -0.151758,
-            -0.070928,
-            0.06959
+            -0.08720983634634083,
+            -0.19005283956855457,
+            0.08720983634634084
           ]
         ],
         [
           "leg_FR_4",
           "leg_FR_3",
           [
-            -0.17063,
-            -0.103388,
-            0.036505
+            -0.08720983634634098,
+            -0.1761935149941276,
+            0.087209836346341
           ]
         ],
         [
           "leg_FR_5",
           "leg_FR_4",
           [
-            -0.188127,
-            -0.139593,
-            -0.00814
+            -0.08720983634634066,
+            -0.15931947052807938,
+            0.08720983634634068
           ]
         ],
         [
           "leg_FR_6",
           "leg_FR_5",
           [
-            -0.199588,
-            -0.177074,
-            -0.065296
+            -0.08720983634634098,
+            -0.13971942574959395,
+            0.087209836346341
           ]
         ],
         [
           "leg_FR_7",
           "leg_FR_6",
           [
-            -0.199109,
-            -0.213279,
-            -0.134742
+            -0.08720983634634066,
+            -0.11772874285898971,
+            0.08720983634634068
           ]
         ],
         [
           "leg_FR_8",
           "leg_FR_7",
           [
-            -0.179766,
-            -0.245739,
-            -0.214263
+            -0.08720983634634098,
+            -0.09372368853749391,
+            0.087209836346341
           ]
         ],
         [
           "leg_FR_9",
           "leg_FR_8",
           [
-            -0.134227,
-            -0.272242,
-            -0.298752
+            -0.08720983634634098,
+            -0.06811499592000625,
+            0.087209836346341
           ]
         ],
         [
           "leg_FR_10",
           "leg_FR_9",
           [
-            -0.055877,
-            -0.290983,
-            -0.379398
+            -0.08720983634634066,
+            -0.04134083683728207,
+            0.08720983634634068
           ]
         ],
         [
           "leg_FR_11",
           "leg_FR_10",
           [
-            0.059445,
-            -0.300684,
-            -0.44321
+            -0.08720983634634098,
+            -0.013859324574427179,
+            0.087209836346341
           ]
         ],
         [
           "leg_HL",
           "spine",
           [
-            0.4879036790187176,
-            -0.2,
-            -0.48790367901871784
+            0.5868986283848343,
+            -0.18,
+            -0.5868986283848345
           ]
         ],
         [
           "leg_HL_0",
           "leg_HL",
           [
-            0.116017,
-            -0.015983,
-            -0.113782
+            0.08720983634634082,
+            -0.21145243139648356,
+            -0.08720983634634086
           ]
         ],
         [
           "leg_HL_1",
           "leg_HL_0",
           [
-            0.122554,
-            -0.025684,
-            -0.106919
+            0.08720983634634089,
+            -0.20783442166959998,
+            -0.08720983634634093
           ]
         ],
         [
           "leg_HL_2",
           "leg_HL_1",
           [
-            0.134949,
-            -0.044425,
-            -0.092571
+            0.08720983634634082,
+            -0.2006603073653619,
+            -0.08720983634634086
           ]
         ],
         [
           "leg_HL_3",
           "leg_HL_2",
           [
-            0.151758,
-            -0.070928,
-            -0.06959
+            0.08720983634634082,
+            -0.19005283956855457,
+            -0.08720983634634086
           ]
         ],
         [
           "leg_HL_4",
           "leg_HL_3",
           [
-            0.17063,
-            -0.103388,
-            -0.036505
+            0.08720983634634097,
+            -0.1761935149941276,
+            -0.08720983634634101
           ]
         ],
         [
           "leg_HL_5",
           "leg_HL_4",
           [
-            0.188127,
-            -0.139593,
-            0.00814
+            0.08720983634634065,
+            -0.15931947052807938,
+            -0.08720983634634069
           ]
         ],
         [
           "leg_HL_6",
           "leg_HL_5",
           [
-            0.199588,
-            -0.177074,
-            0.065296
+            0.08720983634634097,
+            -0.13971942574959395,
+            -0.08720983634634101
           ]
         ],
         [
           "leg_HL_7",
           "leg_HL_6",
           [
-            0.199109,
-            -0.213279,
-            0.134742
+            0.08720983634634065,
+            -0.11772874285898971,
+            -0.08720983634634069
           ]
         ],
         [
           "leg_HL_8",
           "leg_HL_7",
           [
-            0.179766,
-            -0.245739,
-            0.214263
+            0.08720983634634097,
+            -0.09372368853749391,
+            -0.08720983634634101
           ]
         ],
         [
           "leg_HL_9",
           "leg_HL_8",
           [
-            0.134227,
-            -0.272242,
-            0.298752
+            0.08720983634634097,
+            -0.06811499592000625,
+            -0.08720983634634101
           ]
         ],
         [
           "leg_HL_10",
           "leg_HL_9",
           [
-            0.055877,
-            -0.290983,
-            0.379398
+            0.08720983634634065,
+            -0.04134083683728207,
+            -0.08720983634634069
           ]
         ],
         [
           "leg_HL_11",
           "leg_HL_10",
           [
-            -0.059445,
-            -0.300684,
-            0.44321
+            0.08720983634634097,
+            -0.013859324574427179,
+            -0.08720983634634101
           ]
         ],
         [
           "leg_HR",
           "spine",
           [
-            -0.48790367901871784,
-            -0.2,
-            -0.48790367901871773
+            -0.5868986283848344,
+            -0.18,
+            -0.5868986283848344
           ]
         ],
         [
           "leg_HR_0",
           "leg_HR",
           [
-            -0.113782,
-            -0.015983,
-            -0.116017
+            -0.08720983634634083,
+            -0.21145243139648356,
+            -0.08720983634634084
           ]
         ],
         [
           "leg_HR_1",
           "leg_HR_0",
           [
-            -0.106919,
-            -0.025684,
-            -0.122554
+            -0.0872098363463409,
+            -0.20783442166959998,
+            -0.08720983634634091
           ]
         ],
         [
           "leg_HR_2",
           "leg_HR_1",
           [
-            -0.092571,
-            -0.044425,
-            -0.134949
+            -0.08720983634634083,
+            -0.2006603073653619,
+            -0.08720983634634084
           ]
         ],
         [
           "leg_HR_3",
           "leg_HR_2",
           [
-            -0.06959,
-            -0.070928,
-            -0.151758
+            -0.08720983634634083,
+            -0.19005283956855457,
+            -0.08720983634634084
           ]
         ],
         [
           "leg_HR_4",
           "leg_HR_3",
           [
-            -0.036505,
-            -0.103388,
-            -0.17063
+            -0.08720983634634098,
+            -0.1761935149941276,
+            -0.087209836346341
           ]
         ],
         [
           "leg_HR_5",
           "leg_HR_4",
           [
-            0.00814,
-            -0.139593,
-            -0.188127
+            -0.08720983634634066,
+            -0.15931947052807938,
+            -0.08720983634634068
           ]
         ],
         [
           "leg_HR_6",
           "leg_HR_5",
           [
-            0.065296,
-            -0.177074,
-            -0.199588
+            -0.08720983634634098,
+            -0.13971942574959395,
+            -0.087209836346341
           ]
         ],
         [
           "leg_HR_7",
           "leg_HR_6",
           [
-            0.134742,
-            -0.213279,
-            -0.199109
+            -0.08720983634634066,
+            -0.11772874285898971,
+            -0.08720983634634068
           ]
         ],
         [
           "leg_HR_8",
           "leg_HR_7",
           [
-            0.214263,
-            -0.245739,
-            -0.179766
+            -0.08720983634634098,
+            -0.09372368853749391,
+            -0.087209836346341
           ]
         ],
         [
           "leg_HR_9",
           "leg_HR_8",
           [
-            0.298752,
-            -0.272242,
-            -0.134227
+            -0.08720983634634098,
+            -0.06811499592000625,
+            -0.087209836346341
           ]
         ],
         [
           "leg_HR_10",
           "leg_HR_9",
           [
-            0.379398,
-            -0.290983,
-            -0.055877
+            -0.08720983634634066,
+            -0.04134083683728207,
+            -0.08720983634634068
           ]
         ],
         [
           "leg_HR_11",
           "leg_HR_10",
           [
-            0.44321,
-            -0.300684,
-            0.059445
+            -0.08720983634634098,
+            -0.013859324574427179,
+            -0.087209836346341
           ]
         ],
         [
@@ -6410,468 +6732,468 @@
           "tent_0",
           "spine",
           [
-            0.69,
-            0.17,
-            0.0
+            0.91,
+            0.24,
+            0
           ]
         ],
         [
           "tent_0_0",
           "tent_0",
           [
-            0.149972,
-            -0.032258,
-            0.002916
+            0.23375185722184988,
+            0.2585862141282999,
+            0
           ]
         ],
         [
           "tent_0_1",
           "tent_0_0",
           [
-            0.149121,
-            0.241367,
-            0.020393
+            0.22636324524294626,
+            0.24942566857655563,
+            0
           ]
         ],
         [
           "tent_0_2",
           "tent_0_1",
           [
-            0.144034,
-            0.288873,
-            0.055039
+            0.21181956632569388,
+            0.23142909436615977,
+            0
           ]
         ],
         [
           "tent_0_3",
           "tent_0_2",
           [
-            0.128069,
-            0.30433,
-            0.105321
+            0.19058052847644902,
+            0.20523402911057498,
+            0
           ]
         ],
         [
           "tent_0_4",
           "tent_0_3",
           [
-            0.091921,
-            0.276252,
-            0.166723
+            0.16331747185626266,
+            0.17176844605583708,
+            0
           ]
         ],
         [
           "tent_0_5",
           "tent_0_4",
           [
-            0.025241,
-            0.202947,
-            0.229403
+            0.13089214853469855,
+            0.13221788016567948,
+            0
           ]
         ],
         [
           "tent_0_6",
           "tent_0_5",
           [
-            -0.079966,
-            0.093419,
-            0.275984
+            0.09432948355475324,
+            0.087983429954404,
+            0
           ]
         ],
         [
           "tent_0_7",
           "tent_0_6",
           [
-            -0.223685,
-            -0.034516,
-            0.280882
+            0.05478517829849139,
+            0.04063212287350382,
+            0
           ]
         ],
         [
           "tent_0_8",
           "tent_0_7",
           [
-            -0.390382,
-            -0.158437,
-            0.213326
+            0.013509180171620727,
+            -0.008158597417035285,
+            0
           ]
         ],
         [
           "tent_0_9",
           "tent_0_8",
           [
-            -0.541846,
-            -0.256741,
-            0.046515
+            -0.02819382671414239,
+            -0.0566602953266675,
+            0
           ]
         ],
         [
           "tent_0_10",
           "tent_0_9",
           [
-            -0.615212,
-            -0.313858,
-            -0.225797
+            -0.06900566101943006,
+            -0.10315477402677997,
+            0
           ]
         ],
         [
           "tent_0_11",
           "tent_0_10",
           [
-            -0.533267,
-            -0.323893,
-            -0.567727
+            -0.1076363102865332,
+            -0.1459949434299428,
+            0
           ]
         ],
         [
           "tent_1",
           "spine",
           [
-            4.2250314570583685e-17,
-            0.17,
-            0.69
+            5.572142936120457e-17,
+            0.24,
+            0.91
           ]
         ],
         [
           "tent_1_0",
           "tent_1",
           [
-            0.002552,
-            0.182372,
-            0.174981
+            1.4313173187074377e-17,
+            0.2585862141282999,
+            0.23375185722184988
           ]
         ],
         [
           "tent_1_1",
           "tent_1_0",
           [
-            0.017853,
-            0.484032,
-            0.174423
+            1.3860751186569074e-17,
+            0.24942566857655563,
+            0.22636324524294626
           ]
         ],
         [
           "tent_1_2",
           "tent_1_1",
           [
-            0.048303,
-            0.465481,
-            0.17108
+            1.2970207694877074e-17,
+            0.23142909436615977,
+            0.21181956632569388
           ]
         ],
         [
           "tent_1_3",
           "tent_1_2",
           [
-            0.093147,
-            0.392297,
-            0.160546
+            1.1669691708924715e-17,
+            0.20523402911057498,
+            0.19058052847644902
           ]
         ],
         [
           "tent_1_4",
           "tent_1_3",
           [
-            0.150135,
-            0.272741,
-            0.136458
+            1.0000310957680501e-17,
+            0.17176844605583708,
+            0.16331747185626266
           ]
         ],
         [
           "tent_1_5",
           "tent_1_4",
           [
-            0.214284,
-            0.124605,
-            0.091102
+            8.014832536826925e-18,
+            0.13221788016567948,
+            0.13089214853469855
           ]
         ],
         [
           "tent_1_6",
           "tent_1_5",
           [
-            0.276472,
-            -0.028859,
-            0.016734
+            5.776015005027572e-18,
+            0.087983429954404,
+            0.09432948355475324
           ]
         ],
         [
           "tent_1_7",
           "tent_1_6",
           [
-            0.322306,
-            -0.164353,
-            -0.092102
+            3.354624662198226e-18,
+            0.04063212287350382,
+            0.05478517829849139
           ]
         ],
         [
           "tent_1_8",
           "tent_1_7",
           [
-            0.331952,
-            -0.263898,
-            -0.235086
+            8.271987128140107e-19,
+            -0.008158597417035285,
+            0.013509180171620727
           ]
         ],
         [
           "tent_1_9",
           "tent_1_8",
           [
-            0.281941,
-            -0.318751,
-            -0.40174
+            -1.7263739820594808e-18,
+            -0.0566602953266675,
+            -0.02819382671414239
           ]
         ],
         [
           "tent_1_10",
           "tent_1_9",
           [
-            0.150023,
-            -0.33086,
-            -0.567105
+            -4.225378094524615e-18,
+            -0.10315477402677997,
+            -0.06900566101943006
           ]
         ],
         [
           "tent_1_11",
           "tent_1_10",
           [
-            -0.076228,
-            -0.311522,
-            -0.689467
+            -6.59082314322171e-18,
+            -0.1459949434299428,
+            -0.1076363102865332
           ]
         ],
         [
           "tent_2",
           "spine",
           [
-            -0.69,
-            0.17,
-            8.450062914116737e-17
+            -0.91,
+            0.24,
+            1.1144285872240914e-16
           ]
         ],
         [
           "tent_2_0",
           "tent_2",
           [
-            -0.141622,
-            0.199088,
-            -0.003541
+            -0.23375185722184988,
+            0.2585862141282999,
+            2.8626346374148755e-17
           ]
         ],
         [
           "tent_2_1",
           "tent_2_0",
           [
-            -0.140295,
-            0.25293,
-            -0.024745
+            -0.22636324524294626,
+            0.24942566857655563,
+            2.7721502373138148e-17
           ]
         ],
         [
           "tent_2_2",
           "tent_2_1",
           [
-            -0.13237,
-            0.188287,
-            -0.066534
+            -0.21181956632569388,
+            0.23142909436615977,
+            2.5940415389754148e-17
           ]
         ],
         [
           "tent_2_3",
           "tent_2_2",
           [
-            -0.107647,
-            0.097931,
-            -0.12585
+            -0.19058052847644902,
+            0.20523402911057498,
+            2.333938341784943e-17
           ]
         ],
         [
           "tent_2_4",
           "tent_2_3",
           [
-            -0.052498,
-            0.002067,
-            -0.193774
+            -0.16331747185626266,
+            0.17176844605583708,
+            2.0000621915361002e-17
           ]
         ],
         [
           "tent_2_5",
           "tent_2_4",
           [
-            0.046064,
-            -0.078644,
-            -0.251384
+            -0.13089214853469855,
+            0.13221788016567948,
+            1.602966507365385e-17
           ]
         ],
         [
           "tent_2_6",
           "tent_2_5",
           [
-            0.192247,
-            -0.128379,
-            -0.267138
+            -0.09432948355475324,
+            0.087983429954404,
+            1.1552030010055144e-17
           ]
         ],
         [
           "tent_2_7",
           "tent_2_6",
           [
-            0.369214,
-            -0.140102,
-            -0.199884
+            -0.05478517829849139,
+            0.04063212287350382,
+            6.709249324396452e-18
           ]
         ],
         [
           "tent_2_8",
           "tent_2_7",
           [
-            0.526309,
-            -0.11714,
-            -0.012879
+            -0.013509180171620727,
+            -0.008158597417035285,
+            1.6543974256280215e-18
           ]
         ],
         [
           "tent_2_9",
           "tent_2_8",
           [
-            0.575551,
-            -0.071973,
-            0.297893
+            0.02819382671414239,
+            -0.0566602953266675,
+            -3.4527479641189616e-18
           ]
         ],
         [
           "tent_2_10",
           "tent_2_9",
           [
-            0.4128,
-            -0.02258,
-            0.666557
+            0.06900566101943006,
+            -0.10315477402677997,
+            -8.45075618904923e-18
           ]
         ],
         [
           "tent_2_11",
           "tent_2_10",
           [
-            -0.023264,
-            0.012673,
-            0.933564
+            0.1076363102865332,
+            -0.1459949434299428,
+            -1.318164628644342e-17
           ]
         ],
         [
           "tent_3",
           "spine",
           [
-            -1.2675094371175104e-16,
-            0.17,
-            -0.69
+            -1.4633916112057394e-16,
+            0.24,
+            -0.91
           ]
         ],
         [
           "tent_3_0",
           "tent_3",
           [
-            -0.003588,
-            0.551764,
-            -0.166628
+            -3.759016560024361e-17,
+            0.2585862141282999,
+            -0.23375185722184988
           ]
         ],
         [
           "tent_3_1",
           "tent_3_0",
           [
-            -0.025081,
-            0.28269,
-            -0.16547
+            -3.640198617294891e-17,
+            0.24942566857655563,
+            -0.22636324524294626
           ]
         ],
         [
           "tent_3_2",
           "tent_3_1",
           [
-            -0.067602,
-            0.181461,
-            -0.158546
+            -3.406318422530309e-17,
+            0.23142909436615977,
+            -0.21181956632569388
           ]
         ],
         [
           "tent_3_3",
           "tent_3_2",
           [
-            -0.128846,
-            0.085208,
-            -0.136864
+            -3.064768644303209e-17,
+            0.20523402911057498,
+            -0.19058052847644902
           ]
         ],
         [
           "tent_3_4",
           "tent_3_3",
           [
-            -0.20204,
-            0.011047,
-            -0.088021
+            -2.6263452557998263e-17,
+            0.17176844605583708,
+            -0.16331747185626266
           ]
         ],
         [
           "tent_3_5",
           "tent_3_4",
           [
-            -0.272561,
-            -0.032045,
-            0.001109
+            -2.1049062872348733e-17,
+            0.13221788016567948,
+            -0.13089214853469855
           ]
         ],
         [
           "tent_3_6",
           "tent_3_5",
           [
-            -0.315088,
-            -0.045093,
-            0.138848
+            -1.5169337903669848e-17,
+            0.087983429954404,
+            -0.09432948355475324
           ]
         ],
         [
           "tent_3_7",
           "tent_3_6",
           [
-            -0.293769,
-            -0.038229,
-            0.31981
+            -8.810128608837694e-18,
+            0.04063212287350382,
+            -0.05478517829849139
           ]
         ],
         [
           "tent_3_8",
           "tent_3_7",
           [
-            -0.169048,
-            -0.027309,
-            0.513902
+            -2.1724418612545805e-18,
+            -0.008158597417035285,
+            -0.013509180171620727
           ]
         ],
         [
           "tent_3_9",
           "tent_3_8",
           [
-            0.085329,
-            -0.028968,
-            0.657995
+            4.53391313200706e-18,
+            -0.0566602953266675,
+            0.02819382671414239
           ]
         ],
         [
           "tent_3_10",
           "tent_3_9",
           [
-            0.454854,
-            -0.055491,
-            0.659405
+            1.1096956644125367e-17,
+            -0.10315477402677997,
+            0.06900566101943006
           ]
         ],
         [
           "tent_3_11",
           "tent_3_10",
           [
-            0.854277,
-            -0.110891,
-            0.422732
+            1.7309238849939638e-17,
+            -0.1459949434299428,
+            0.1076363102865332
           ]
         ],
         [
@@ -6941,18 +7263,18 @@
           "emitter_l",
           "spine",
           [
-            0.7424999999999999,
-            0.6,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "spine",
           [
-            -0.7424999999999999,
-            0.6,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -6990,7 +7312,7 @@
             "g": "leg_FL_0",
             "base": 0,
             "k": 0.09,
-            "d": 0.0
+            "d": 0
           },
           {
             "g": "leg_FL_1",
@@ -7065,7 +7387,7 @@
             "g": "leg_FR_0",
             "base": 0,
             "k": 0.09,
-            "d": 0.0
+            "d": 0
           },
           {
             "g": "leg_FR_1",
@@ -7140,7 +7462,7 @@
             "g": "leg_HL_0",
             "base": 0,
             "k": 0.09,
-            "d": 0.0
+            "d": 0
           },
           {
             "g": "leg_HL_1",
@@ -7215,7 +7537,7 @@
             "g": "leg_HR_0",
             "base": 0,
             "k": 0.09,
-            "d": 0.0
+            "d": 0
           },
           {
             "g": "leg_HR_1",
@@ -7293,7 +7615,7 @@
               "g": "tent_0",
               "base": 0,
               "k": 0.09,
-              "d": 0.0
+              "d": 0
             },
             {
               "g": "tent_0_0",
@@ -7367,7 +7689,7 @@
               "g": "tent_1",
               "base": 0,
               "k": 0.09,
-              "d": 0.0
+              "d": 0
             },
             {
               "g": "tent_1_0",
@@ -7441,7 +7763,7 @@
               "g": "tent_2",
               "base": 0,
               "k": 0.09,
-              "d": 0.0
+              "d": 0
             },
             {
               "g": "tent_2_0",
@@ -7515,7 +7837,7 @@
               "g": "tent_3",
               "base": 0,
               "k": 0.09,
-              "d": 0.0
+              "d": 0
             },
             {
               "g": "tent_3_0",
@@ -7619,12 +7941,12 @@
               "leg_FL_9",
               "leg_FL_10"
             ],
-            "phase": 0.0,
+            "phase": 0,
             "frequency": 0.57,
             "swing": [
-              0.022,
-              0.027,
-              0.018
+              0.009,
+              0.012,
+              0.009
             ]
           },
           {
@@ -7645,9 +7967,9 @@
             "phase": 1.13,
             "frequency": 0.6599999999999999,
             "swing": [
-              0.022,
-              0.027,
-              0.018
+              0.009,
+              0.012,
+              0.009
             ]
           },
           {
@@ -7668,9 +7990,9 @@
             "phase": 2.26,
             "frequency": 0.75,
             "swing": [
-              0.022,
-              0.027,
-              0.018
+              0.009,
+              0.012,
+              0.009
             ]
           },
           {
@@ -7691,9 +8013,9 @@
             "phase": 3.3899999999999997,
             "frequency": 0.84,
             "swing": [
-              0.022,
-              0.027,
-              0.018
+              0.009,
+              0.012,
+              0.009
             ]
           },
           {
@@ -7714,9 +8036,9 @@
             "phase": 4.52,
             "frequency": 0.9299999999999999,
             "swing": [
-              0.085,
-              0.075,
-              0.11
+              0.025,
+              0.025,
+              0.03
             ]
           },
           {
@@ -7737,9 +8059,9 @@
             "phase": 5.6499999999999995,
             "frequency": 1.02,
             "swing": [
-              0.085,
-              0.075,
-              0.11
+              0.025,
+              0.025,
+              0.03
             ]
           },
           {
@@ -7760,9 +8082,9 @@
             "phase": 6.779999999999999,
             "frequency": 1.1099999999999999,
             "swing": [
-              0.085,
-              0.075,
-              0.11
+              0.025,
+              0.025,
+              0.03
             ]
           },
           {
@@ -7783,9 +8105,9 @@
             "phase": 7.909999999999999,
             "frequency": 1.2,
             "swing": [
-              0.085,
-              0.075,
-              0.11
+              0.025,
+              0.025,
+              0.03
             ]
           }
         ]
@@ -7797,15 +8119,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -0.95
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 0.95
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -7882,7 +8218,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -7896,7 +8232,7 @@
         "legAnatomy": true,
         "legWidths": {
           "hind": [
-            2.0,
+            2,
             0.8,
             0.6
           ]
@@ -7906,7 +8242,12 @@
           0.1,
           0.24,
           -0.23
-        ]
+        ],
+        "waist": {
+          "width": 0.66,
+          "depth": 0.64,
+          "height": 0.48
+        }
       },
       "materials": {
         "armor": {
@@ -7958,11 +8299,20 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
-            0.75,
+            0.36,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
+            0,
+            0.39,
             0.48
           ]
         ],
@@ -8169,8 +8519,8 @@
           "wrist_r",
           [
             0,
-            0,
-            0.15
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -8229,20 +8579,11 @@
         ],
         [
           "emitter_l",
-          "hips",
+          "elbow_l",
           [
-            0.5175,
-            0.6,
-            0.4
-          ]
-        ],
-        [
-          "emitter_r",
-          "hips",
-          [
-            -0.5175,
-            0.6,
-            0.4
+            0.3,
+            -0.04,
+            0
           ]
         ],
         [
@@ -8349,12 +8690,13 @@
           }
         ],
         "gunR": {
-          "g": "gun",
-          "rest": 0
+          "g": "wrist_r",
+          "rest": 0,
+          "aim": 0
         },
         "aimPose": {
-          "rShoulderX": -0.3,
-          "rElbowX": -0.65
+          "rShoulderX": -0.48,
+          "rElbowX": -1.09
         },
         "tailSegs": [
           "tail_0",
@@ -8372,7 +8714,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.075
+            "r": 0.075,
+            "aimJoint": "wrist_r"
           },
           "heavy": {
             "nodes": [
@@ -8384,7 +8727,15 @@
           }
         },
         "hopLean": 0.4,
-        "leanF": 0.4
+        "leanF": 0.4,
+        "waist": "waist",
+        "heldWeapons": [
+          {
+            "node": "gun",
+            "hand": "wrist_r",
+            "staff": false
+          }
+        ]
       },
       "motion": {
         "shield": {
@@ -8393,15 +8744,17 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "x",
               "rest": 0,
-              "deploy": -0.95
-            },
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
             {
-              "node": "emitter_r",
-              "axis": "z",
-              "rest": 0,
-              "deploy": 0.95
+              "node": "emitter_l",
+              "axis": "x",
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -8439,7 +8792,7 @@
           2.7,
           -0.8
         ],
-        "scale": 8.0
+        "scale": 8
       },
       "decisions": [
         "Visual dimensions are estimates from a single illustration, not measured CAD.",
@@ -8478,7 +8831,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -8488,7 +8841,12 @@
         "shoulder": 1.65,
         "upperArm": 0.95,
         "foreArm": 0.85,
-        "gunLength": 0.9
+        "gunLength": 0.9,
+        "waist": {
+          "width": 0.98,
+          "depth": 0.64,
+          "height": 0.48
+        }
       },
       "materials": {
         "armor": {
@@ -8540,11 +8898,20 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
-            1.1,
+            0.62,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
+            0,
+            0.4800000000000001,
             0
           ]
         ],
@@ -8670,8 +9037,8 @@
           "wrist_l",
           [
             0,
-            0,
-            0.15
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -8697,8 +9064,8 @@
           "wrist_r",
           [
             0,
-            -0.1,
-            0.1
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -8729,21 +9096,12 @@
           ]
         ],
         [
-          "emitter_l",
-          "hips",
-          [
-            1.125,
-            0.6,
-            0.4
-          ]
-        ],
-        [
           "emitter_r",
-          "hips",
+          "heavy",
           [
-            -1.125,
-            0.6,
-            0.4
+            0.15,
+            0,
+            0.2
           ]
         ],
         [
@@ -8774,7 +9132,7 @@
         "legR": "hip_r",
         "armL": "shoulder_l",
         "armR": "shoulder_r",
-        "armBase": 0,
+        "armBase": 0.06,
         "sway": 0.06,
         "hop": false,
         "knuckle": false,
@@ -8784,13 +9142,13 @@
         "legChainR": [
           {
             "g": "knee_r",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_r",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -8798,7 +9156,7 @@
         "armChainR": [
           {
             "g": "elbow_r",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -8812,13 +9170,13 @@
         "legChainL": [
           {
             "g": "knee_l",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_l",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -8826,7 +9184,7 @@
         "armChainL": [
           {
             "g": "elbow_l",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -8844,7 +9202,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.075
+            "r": 0.075,
+            "aimJoint": "wrist_l"
           },
           "heavy": {
             "nodes": [
@@ -8852,14 +9211,39 @@
             ],
             "ref": "heavy",
             "muzzle": "heavy_muzzle",
-            "r": 0.13
+            "r": 0.13,
+            "aimJoint": "wrist_r"
           }
         },
         "aimPose": {
-          "rShoulderX": -0.32,
-          "rElbowX": -0.94,
-          "lShoulderX": -0.5,
-          "lElbowX": -1.02
+          "rShoulderX": -0.48,
+          "rElbowX": -1.09,
+          "lShoulderX": -0.48,
+          "lElbowX": -1.09
+        },
+        "legBase": -0.08,
+        "waist": "waist",
+        "heldWeapons": [
+          {
+            "node": "gun",
+            "hand": "wrist_l",
+            "staff": false
+          },
+          {
+            "node": "heavy",
+            "hand": "wrist_r",
+            "staff": false
+          }
+        ],
+        "gunL": {
+          "g": "wrist_l",
+          "rest": 0,
+          "aim": 0
+        },
+        "gunR": {
+          "g": "wrist_r",
+          "rest": 0,
+          "aim": 0
         }
       },
       "motion": {
@@ -8868,16 +9252,18 @@
           "barrier": "barrier",
           "hinges": [
             {
-              "node": "emitter_l",
-              "axis": "z",
+              "node": "emitter_r",
+              "axis": "x",
               "rest": 0,
-              "deploy": -0.95
-            },
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
             {
               "node": "emitter_r",
-              "axis": "z",
-              "rest": 0,
-              "deploy": 0.95
+              "axis": "x",
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -8948,12 +9334,12 @@
         {
           "id": "weapons",
           "route": "procedural",
-          "intent": "Independent light and heavy weapon pivots with emitted muzzle nodes and reversible charge mechanisms"
+          "intent": "Right-hand cold-weapon lance with a cutting spearhead, open electromagnetic bore and rear counterweight; no rifle stock or pistol grip"
         },
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -8963,7 +9349,14 @@
         "shoulder": 0.85,
         "upperArm": 0.95,
         "foreArm": 0.85,
-        "gunLength": 0.65
+        "gunLength": 0.65,
+        "waist": {
+          "width": 0.5,
+          "depth": 0.35,
+          "height": 0.48
+        },
+        "lanceShaftLength": 4.5,
+        "lanceHeadLength": 0.9
       },
       "materials": {
         "armor": {
@@ -9015,11 +9408,20 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
-            1.12,
+            0.58,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
+            0,
+            0.5400000000000001,
             0
           ]
         ],
@@ -9142,11 +9544,11 @@
         ],
         [
           "gun",
-          "hips",
+          "wrist_l",
           [
-            0.58,
-            -0.16,
-            0.06
+            0,
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -9172,8 +9574,8 @@
           "wrist_r",
           [
             0,
-            0,
-            0.1
+            -0.18,
+            0.06
           ]
         ],
         [
@@ -9191,7 +9593,7 @@
           [
             0,
             0,
-            6.8
+            2.36
           ]
         ],
         [
@@ -9204,21 +9606,12 @@
           ]
         ],
         [
-          "emitter_l",
-          "hips",
-          [
-            0.54,
-            0.6,
-            0.4
-          ]
-        ],
-        [
           "emitter_r",
-          "hips",
+          "heavy",
           [
-            -0.54,
-            0.6,
-            0.4
+            0.15,
+            0,
+            0.2
           ]
         ],
         [
@@ -9236,8 +9629,8 @@
         "top": 10,
         "stride": 2,
         "weap": {
-          "light": "R",
-          "heavy": "N"
+          "light": "L",
+          "heavy": "R"
         },
         "hvy": {
           "chest": 0.05
@@ -9249,7 +9642,7 @@
         "legR": "hip_r",
         "armL": "shoulder_l",
         "armR": "shoulder_r",
-        "armBase": 0,
+        "armBase": 0.06,
         "sway": 0.06,
         "hop": false,
         "knuckle": false,
@@ -9259,13 +9652,13 @@
         "legChainR": [
           {
             "g": "knee_r",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_r",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -9273,7 +9666,7 @@
         "armChainR": [
           {
             "g": "elbow_r",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -9287,13 +9680,13 @@
         "legChainL": [
           {
             "g": "knee_l",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_l",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -9301,7 +9694,7 @@
         "armChainL": [
           {
             "g": "elbow_l",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -9319,7 +9712,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.075
+            "r": 0.075,
+            "aimJoint": "wrist_l"
           },
           "heavy": {
             "nodes": [
@@ -9327,14 +9721,39 @@
             ],
             "ref": "heavy",
             "muzzle": "heavy_muzzle",
-            "r": 0.13
+            "r": 0.13,
+            "aimJoint": "wrist_r"
           }
         },
         "aimPose": {
-          "rShoulderX": -0.55,
-          "rElbowX": -0.85,
-          "lShoulderX": -0.55,
-          "lElbowX": -0.85
+          "rShoulderX": -0.48,
+          "rElbowX": -1.09,
+          "lShoulderX": -0.48,
+          "lElbowX": -1.09
+        },
+        "legBase": -0.08,
+        "waist": "waist",
+        "heldWeapons": [
+          {
+            "node": "gun",
+            "hand": "wrist_l",
+            "staff": false
+          },
+          {
+            "node": "heavy",
+            "hand": "wrist_r",
+            "staff": true
+          }
+        ],
+        "gunL": {
+          "g": "wrist_l",
+          "rest": 0,
+          "aim": 0
+        },
+        "gunR": {
+          "g": "wrist_r",
+          "rest": 0,
+          "aim": 0
         }
       },
       "motion": {
@@ -9343,16 +9762,18 @@
           "barrier": "barrier",
           "hinges": [
             {
-              "node": "emitter_l",
-              "axis": "z",
+              "node": "emitter_r",
+              "axis": "x",
               "rest": 0,
-              "deploy": -0.95
-            },
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
             {
               "node": "emitter_r",
-              "axis": "z",
-              "rest": 0,
-              "deploy": 0.95
+              "axis": "x",
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -9385,7 +9806,7 @@
         ]
       },
       "reviewFrame": {
-        "scale": 12.0,
+        "scale": 12,
         "target": [
           0,
           4,
@@ -9428,7 +9849,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -9438,7 +9859,12 @@
         "shoulder": 1.35,
         "upperArm": 1.5,
         "foreArm": 1.25,
-        "gunLength": 0.9
+        "gunLength": 0.9,
+        "waist": {
+          "width": 0.84,
+          "depth": 0.62,
+          "height": 0.48
+        }
       },
       "materials": {
         "armor": {
@@ -9490,11 +9916,20 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
-            0.65,
+            0.3,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
+            0,
+            0.35000000000000003,
             0.25
           ]
         ],
@@ -9620,8 +10055,8 @@
           "wrist_l",
           [
             0,
-            0,
-            0.15
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -9647,8 +10082,8 @@
           "wrist_r",
           [
             0,
-            0,
-            0.15
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -9680,20 +10115,11 @@
         ],
         [
           "emitter_l",
-          "hips",
+          "elbow_l",
           [
-            0.9,
-            0.6,
-            0.4
-          ]
-        ],
-        [
-          "emitter_r",
-          "hips",
-          [
-            -0.9,
-            0.6,
-            0.4
+            0.15,
+            -0.6,
+            0.57
           ]
         ],
         [
@@ -9794,7 +10220,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.075
+            "r": 0.075,
+            "aimJoint": "wrist_l"
           },
           "heavy": {
             "nodes": [
@@ -9802,10 +10229,40 @@
             ],
             "ref": "heavy",
             "muzzle": "heavy_muzzle",
-            "r": 0.13
+            "r": 0.13,
+            "aimJoint": "wrist_r"
           }
         },
-        "bound": 0.8
+        "bound": 0.8,
+        "waist": "waist",
+        "heldWeapons": [
+          {
+            "node": "gun",
+            "hand": "wrist_l",
+            "staff": false
+          },
+          {
+            "node": "heavy",
+            "hand": "wrist_r",
+            "staff": false
+          }
+        ],
+        "gunL": {
+          "g": "wrist_l",
+          "rest": 0,
+          "aim": 0
+        },
+        "aimPose": {
+          "lShoulderX": -0.48,
+          "lElbowX": -1.09,
+          "rShoulderX": -0.48,
+          "rElbowX": -1.09
+        },
+        "gunR": {
+          "g": "wrist_r",
+          "rest": 0,
+          "aim": 0
+        }
       },
       "motion": {
         "shield": {
@@ -9816,13 +10273,15 @@
               "node": "emitter_l",
               "axis": "z",
               "rest": 0,
-              "deploy": -0.95
-            },
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
             {
-              "node": "emitter_r",
+              "node": "emitter_l",
               "axis": "z",
-              "rest": 0,
-              "deploy": 0.95
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -9898,7 +10357,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -9974,6 +10433,15 @@
             0,
             1.45,
             0
+          ]
+        ],
+        [
+          "pelvis",
+          "spine",
+          [
+            0,
+            0,
+            -1.3
           ]
         ],
         [
@@ -10077,11 +10545,11 @@
         ],
         [
           "leg_HL",
-          "spine",
+          "pelvis",
           [
             0.3956,
             -0.12,
-            -1.2240000000000002
+            0.07599999999999985
           ]
         ],
         [
@@ -10113,11 +10581,11 @@
         ],
         [
           "leg_HR",
-          "spine",
+          "pelvis",
           [
             -0.3956,
             -0.12,
-            -1.2240000000000002
+            0.07599999999999985
           ]
         ],
         [
@@ -10277,18 +10745,18 @@
           "emitter_l",
           "spine",
           [
-            0.41400000000000003,
-            0.6,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "spine",
           [
-            -0.41400000000000003,
-            0.6,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -10443,15 +10911,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -0.95
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 0.95
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },
@@ -10489,7 +10971,7 @@
           1.2,
           0
         ],
-        "scale": 7.5
+        "scale": 9.5
       },
       "decisions": [
         "Visual dimensions are estimates from a single illustration, not measured CAD.",
@@ -10527,7 +11009,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -10553,7 +11035,12 @@
           0,
           -0.28
         ],
-        "featherScale": 0.72
+        "featherScale": 0.72,
+        "tailTip": [
+          0,
+          0,
+          -0.95
+        ]
       },
       "materials": {
         "armor": {
@@ -10600,7 +11087,7 @@
           null,
           [
             0,
-            3.0,
+            3,
             -0.1
           ]
         ],
@@ -10851,18 +11338,18 @@
           "emitter_l",
           "hips",
           [
-            0.5175,
-            0.6,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "hips",
           [
-            -0.5175,
-            0.6,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -10872,6 +11359,15 @@
             0,
             0.45,
             1.8
+          ]
+        ],
+        [
+          "tail_0",
+          "hips",
+          [
+            0,
+            0.47,
+            -0.5
           ]
         ]
       ],
@@ -11037,7 +11533,11 @@
               0.2
             ]
           }
-        ]
+        ],
+        "tailSegs": [
+          "tail_0"
+        ],
+        "tailStiffness": 3
       },
       "motion": {
         "shield": {
@@ -11046,15 +11546,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -0.95
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 0.95
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.14,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -11130,7 +11644,7 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
@@ -11140,7 +11654,12 @@
         "shoulder": 1.55,
         "upperArm": 0.95,
         "foreArm": 0.85,
-        "gunLength": 1.8
+        "gunLength": 1.8,
+        "waist": {
+          "width": 1.05,
+          "depth": 0.69,
+          "height": 0.48
+        }
       },
       "materials": {
         "armor": {
@@ -11192,11 +11711,20 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
-            1.1,
+            0.64,
+            0
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
+            0,
+            0.4600000000000001,
             0
           ]
         ],
@@ -11322,8 +11850,8 @@
           "wrist_r",
           [
             0,
-            0,
-            0.15
+            -0.23,
+            0.16
           ]
         ],
         [
@@ -11391,20 +11919,11 @@
         ],
         [
           "emitter_l",
-          "hips",
+          "elbow_l",
           [
-            1.1475,
-            0.6,
-            0.4
-          ]
-        ],
-        [
-          "emitter_r",
-          "hips",
-          [
-            -1.1475,
-            0.6,
-            0.4
+            0.3,
+            -0.04,
+            0
           ]
         ],
         [
@@ -11435,7 +11954,7 @@
         "legR": "hip_r",
         "armL": "shoulder_l",
         "armR": "shoulder_r",
-        "armBase": 0,
+        "armBase": 0.06,
         "sway": 0.06,
         "hop": false,
         "knuckle": false,
@@ -11445,13 +11964,13 @@
         "legChainR": [
           {
             "g": "knee_r",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_r",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -11459,7 +11978,7 @@
         "armChainR": [
           {
             "g": "elbow_r",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -11473,13 +11992,13 @@
         "legChainL": [
           {
             "g": "knee_l",
-            "base": 0,
+            "base": 0.16,
             "k": 0.56,
             "d": 0.15
           },
           {
             "g": "ankle_l",
-            "base": 0,
+            "base": -0.08,
             "k": -0.26,
             "d": 0.55
           }
@@ -11487,7 +12006,7 @@
         "armChainL": [
           {
             "g": "elbow_l",
-            "base": 0,
+            "base": -0.3,
             "k": 0.56,
             "d": 0.15
           },
@@ -11499,12 +12018,13 @@
           }
         ],
         "gunR": {
-          "g": "gun",
-          "rest": 0
+          "g": "wrist_r",
+          "rest": 0,
+          "aim": 0
         },
         "aimPose": {
-          "rShoulderX": -0.3,
-          "rElbowX": -0.65
+          "rShoulderX": -0.48,
+          "rElbowX": -1.09
         },
         "wpn": {
           "light": {
@@ -11513,7 +12033,8 @@
             ],
             "ref": "gun",
             "muzzle": "light_muzzle",
-            "r": 0.075
+            "r": 0.075,
+            "aimJoint": "wrist_r"
           },
           "heavy": {
             "nodes": [
@@ -11523,7 +12044,16 @@
             "muzzle": "heavy_muzzle",
             "r": 0.13
           }
-        }
+        },
+        "legBase": -0.08,
+        "waist": "waist",
+        "heldWeapons": [
+          {
+            "node": "gun",
+            "hand": "wrist_r",
+            "staff": false
+          }
+        ]
       },
       "motion": {
         "shield": {
@@ -11532,15 +12062,17 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "x",
               "rest": 0,
-              "deploy": -0.95
-            },
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
             {
-              "node": "emitter_r",
-              "axis": "z",
-              "rest": 0,
-              "deploy": 0.95
+              "node": "emitter_l",
+              "axis": "x",
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -11642,12 +12174,12 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
         "width": 1.85,
-        "length": 3.0,
+        "length": 3,
         "limb": 0.6,
         "shoulder": 0.75,
         "upperArm": 0.42,
@@ -11671,7 +12203,8 @@
           0,
           0.35,
           -0.4
-        ]
+        ],
+        "horizontalWaist": true
       },
       "materials": {
         "armor": {
@@ -11723,12 +12256,21 @@
           ]
         ],
         [
-          "chest",
+          "waist",
           "hips",
           [
             0,
-            0.42,
-            0.25
+            0.22,
+            0.04
+          ]
+        ],
+        [
+          "chest",
+          "waist",
+          [
+            0,
+            0.2,
+            0.21
           ]
         ],
         [
@@ -11763,7 +12305,7 @@
           "knee_r",
           [
             0,
-            -1.0,
+            -1,
             -0.6
           ]
         ],
@@ -11826,7 +12368,7 @@
           "knee_l",
           [
             0,
-            -1.0,
+            -1,
             -0.6
           ]
         ],
@@ -12014,18 +12556,18 @@
           "emitter_l",
           "hips",
           [
-            0.7200000000000001,
-            0.6,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "hips",
           [
-            -0.7200000000000001,
-            0.6,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -12164,7 +12706,8 @@
           "lShoulderX": 0,
           "lElbowX": 0
         },
-        "anatomicalArms": true
+        "anatomicalArms": true,
+        "waist": "waist"
       },
       "motion": {
         "shield": {
@@ -12173,15 +12716,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -0.95
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 0.95
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.14,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.14,
+              "depth": 0.065
             }
           ]
         },
@@ -12289,12 +12846,12 @@
         {
           "id": "shield",
           "route": "procedural",
-          "intent": "Inferred paired retractable armor emitters project a decorative forward radar barrier"
+          "intent": "Compact flush transducers mounted on the physical shield or melee implement, otherwise on the free elbow or both held weapons; wing and limb sweeps remain clear"
         }
       ],
       "parameters": {
         "width": 2.1,
-        "length": 5.0,
+        "length": 5,
         "limb": 0.5,
         "shoulder": 1,
         "gunLength": 0.9,
@@ -12372,6 +12929,15 @@
             0,
             2.05,
             0
+          ]
+        ],
+        [
+          "pelvis",
+          "spine",
+          [
+            0,
+            0,
+            -1.4
           ]
         ],
         [
@@ -12475,11 +13041,11 @@
         ],
         [
           "leg_HL",
-          "spine",
+          "pelvis",
           [
             0.903,
             -0.12,
-            -1.4960000000000002
+            -0.09600000000000031
           ]
         ],
         [
@@ -12511,11 +13077,11 @@
         ],
         [
           "leg_HR",
-          "spine",
+          "pelvis",
           [
             -0.903,
             -0.12,
-            -1.4960000000000002
+            -0.09600000000000031
           ]
         ],
         [
@@ -12675,18 +13241,18 @@
           "emitter_l",
           "spine",
           [
-            0.9450000000000001,
-            0.6,
-            0.4
+            0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
           "emitter_r",
           "spine",
           [
-            -0.9450000000000001,
-            0.6,
-            0.4
+            -0.23,
+            0.28,
+            -0.38
           ]
         ],
         [
@@ -12841,15 +13407,29 @@
           "hinges": [
             {
               "node": "emitter_l",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": -0.95
+              "deploy": 0.22
             },
             {
               "node": "emitter_r",
-              "axis": "z",
+              "axis": "y",
               "rest": 0,
-              "deploy": 0.95
+              "deploy": 0.22
+            }
+          ],
+          "mounts": [
+            {
+              "node": "emitter_l",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
+            },
+            {
+              "node": "emitter_r",
+              "axis": "y",
+              "radius": 0.12,
+              "depth": 0.065
             }
           ]
         },

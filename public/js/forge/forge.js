@@ -196,20 +196,29 @@ function weaponAimList(g, wpn) {
   for (const slot of ['light', 'heavy']) {
     const set = wpn[slot];
     if (!set?.ref) continue;
-    const raw = [...new Set([...(set.nodes || []), set.ref])];
+    const raw = set.aimJoint ? [set.aimJoint] : [...new Set([...(set.nodes || []), set.ref])];
     // 父子節點也各自入冊：父先校正、子再依更新後的父框架求解，最終每根發射軸都是正前。
     // 只校最上層會讓帶獨立俯仰的子槍管仍殘留偏角。
     const nodes = raw.filter((n) => n?.parent && n !== g).sort((a, b) => depth(a) - depth(b));
     for (const n of nodes) {
       let e = entries.get(n);
       if (!e) {
+        const forward = axis(set.fwd);
+        if (set.aimJoint) {
+          // A held weapon keeps its local mounting pose; the wrist carries the aiming correction.
+          const handQ = n.getWorldQuaternion(new THREE.Quaternion());
+          const weaponQ = set.ref.getWorldQuaternion(new THREE.Quaternion());
+          forward.applyQuaternion(weaponQ).applyQuaternion(handQ.invert());
+        }
         e = {
           g: n, ref: g, slots: [],
-          qf: new THREE.Quaternion().setFromUnitVectors(axis(set.fwd), Z),
+          qf: new THREE.Quaternion().setFromUnitVectors(forward, Z),
+          alwaysForward: !!set.alwaysForward,
           qa: new THREE.Quaternion(), qb: new THREE.Quaternion(), qc: new THREE.Quaternion(),
         };
         entries.set(n, e);
       }
+      e.alwaysForward ||= !!set.alwaysForward;
       if (!e.slots.includes(slot)) e.slots.push(slot);
     }
   }

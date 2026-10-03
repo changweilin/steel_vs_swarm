@@ -52,7 +52,7 @@ export function buildReferenceAsset(asset, spec) {
     moveSig: spec.moveSig, castSig: spec.castSig };
   // The quadruped driver requires a collection even when the reference has no tail.
   if (rig.kind === 'quad' && rig.tailSegs == null) rig.tailSegs = [];
-  for (const key of ['hips', 'chest', 'head', 'legL', 'legR', 'armL', 'armR', 'tilt',
+  for (const key of ['hips', 'waist', 'chest', 'head', 'legL', 'legR', 'armL', 'armR', 'tilt',
     'spine', 'neck', 'humChest', 'humNeck', 'legFL', 'legFR', 'legHL', 'legHR']) {
     if (typeof rig[key] === 'string') rig[key] = nodeOf(rig[key]);
   }
@@ -74,6 +74,7 @@ export function buildReferenceAsset(asset, spec) {
   if (rig.insectLegs) rig.insectLegs = rig.insectLegs.map(leg => ({ ...leg,
     root: nodeOf(leg.root), lift: nodeOf(leg.lift), chain: rig[leg.chain] }));
   if (rig.tentacleWaves) rig.tentacleWaves = rig.tentacleWaves.map(wave => ({ ...wave, chain: wave.chain.map(nodeOf) }));
+  if (rig.axialWave) rig.axialWave = { ...rig.axialWave, chain: rig.axialWave.chain.map(nodeOf) };
   if (rig.groundWings) rig.groundWings = rig.groundWings.map(wing => ({ ...wing,
     w: nodeOf(wing.w), outer: nodeOf(wing.outer), hand: nodeOf(wing.hand) }));
   if (rig.wings) rig.wings = rig.wings.map(wing => ({ ...wing, w: nodeOf(wing.w), outer: nodeOf(wing.outer),
@@ -88,11 +89,13 @@ export function buildReferenceAsset(asset, spec) {
     [wing.w,wing.outer,wing.hand].forEach((node,i) => { node.rotation.y = wing.sgn * wing.fold[i]; });
     wing.w.rotation.z = wing.sgn * -.30;
   }
+  if (!form) for (const held of rig.heldWeapons || []) nodeOf(held.node).rotation.x = held.pitch;
   const W = { muzzles: {}, wpn: {}, lightGlowM: [], heavyGlowM: [], heavyPivot: [] };
   for (const [slot, weapon] of Object.entries(asset.rig.wpn)) {
     const muzzle = nodeOf(weapon.muzzle);
     W.muzzles[slot] = { n: muzzle, r: weapon.r };
-    W.wpn[slot] = { nodes: weapon.nodes.map(nodeOf), ref: nodeOf(weapon.ref), muz: muzzle, fwd: weapon.fwd || 'z' };
+    W.wpn[slot] = { nodes: weapon.nodes.map(nodeOf), ref: nodeOf(weapon.ref), muz: muzzle, fwd: weapon.fwd || 'z',
+      ...(weapon.aimJoint ? { aimJoint: nodeOf(weapon.aimJoint) } : {}), alwaysForward: !!weapon.alwaysForward };
     muzzle.traverse(mesh => {
       if (mesh.isMesh && mesh.material.emissiveIntensity) W[`${slot}GlowM`].push(mesh);
     });

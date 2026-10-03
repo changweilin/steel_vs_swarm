@@ -6,7 +6,8 @@ import { serve } from './mech_prompt_review.mjs';
 
 const contracts = await Promise.all(['assets', 'morphers'].map(async name =>
   JSON.parse(await readFile(`tools/mech_authoring/${name}.json`, 'utf8'))));
-const bipeds = Object.values(Object.assign({}, ...contracts.map(c => c.assets))).filter(a => a.kind === 'biped');
+const bipeds = Object.values(Object.assign({}, ...contracts.map(c => c.assets))).filter(a => a.kind === 'biped'
+  && !a.rig.groundWings && !a.rig.tinyArms && !a.rig.knuckle);
 const option = process.argv.indexOf('--asset');
 const ids = option < 0 ? bipeds.map(a => a.id) : process.argv[option + 1].split(',');
 assert(ids.every(id => bipeds.some(a => a.id === id)), 'Unknown biped');
@@ -40,6 +41,10 @@ try {
         const unit = model.group, morph = unit.userData.morph;
         const tree = morph ? morph.gg : unit;
         const rig = morph ? morph.ground : unit.userData.rig;
+        const gripMounts = new Map((rig.heldWeapons || []).map(held => {
+          const node = tree.getObjectByName(held.node);
+          return [node, node.quaternion.clone()];
+        }));
         const ent = { id, mesh: unit, heroY: 0, df: false, sp: 1 };
         const dt = 1 / fps;
         let now = 0;
@@ -90,6 +95,15 @@ try {
             const forward = wrist.getWorldPosition(point()).sub(elbow.getWorldPosition(point())).normalize();
             firing[index].push(Math.atan2(forward.y, forward.z));
             check(forward.z > .6, `${id}: ${side} firing forearm points away from the target`);
+            for (const weapon of Object.values(rig.wpn)) {
+              if (weapon.aimJoint !== wrist) continue;
+              const barrel = point().set(0,0,1).applyQuaternion(weapon.ref.getWorldQuaternion(new THREE.Quaternion()));
+              check(barrel.dot(forward) > .9, `${id}: barrel diverges from the holding forearm`);
+              let mount = weapon.ref;
+              while (mount.parent && mount.parent !== wrist) mount = mount.parent;
+              check(mount.parent === wrist && gripMounts.has(mount), `${id}: weapon left its grasping hand`);
+              check(mount.quaternion.angleTo(gripMounts.get(mount)) < 1e-5, `${id}: gun mount changed inside the grip`);
+            }
           }
         }
         check(firing.every(a => range(a) < .08), `${id}: firing arms keep swinging`);

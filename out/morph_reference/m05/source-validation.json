@@ -1,6 +1,6 @@
 {
-  "blend": "2c83ef4053f3f151376a08502181094ebb6e06d09b563427b1183c4145e35093",
-  "bones": 44,
+  "blend": "450e672c1d79ee5d51cb6aed641a176fabe83809a85816f8aca24d1795ca17eb",
+  "bones": 65,
   "clips": [
     "idle",
     "run",
@@ -21,6 +21,12 @@
     "flight_shield_retract"
   ],
   "validatedClips": 17,
+  "anatomy": {
+    "articulation": {
+      "waist": "waist",
+      "heldWeapons": 0
+    }
+  },
   "foldedLimbBoundsInHullCoordinates": {},
   "limbVerticesOutsideHull": 0,
   "exposedLimbBoundsInHullCoordinates": {},

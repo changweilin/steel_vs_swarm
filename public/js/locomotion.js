@@ -91,6 +91,7 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   else if (rig.kind === 'quad') stepQuad(L, rig, dt, now, speed, yawRate);
   else if (rig.kind === 'morph') stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate);
   else stepVehicle(L, rig, dt, now, speed, vFwd, yawRate);
+  if (rig.kind === 'aerial' && rig.heldWeapons?.length && (rig._fireAim || 0) > 1e-4) poseBipedAim(rig, 0);
   // 施法動作 + 跳躍動作(post-pass):疊加在本幀步態之上的角度增量。
   // 只准動「上面各步態每幀都會重新賦值」的通道(rotation.x / 已賦值的 y、z、position.y),
   // 加法才不會跨幀累積;morph 的部件經 pose(m) 全軸 rotation.set 重設,全軸皆安全。
@@ -104,6 +105,8 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
         node.rotation.set(0,wing.sgn*(wing.fold[i]+(wing.run[i]-wing.fold[i])*L.wingSpread),0);
       });
       wing.w.rotation.z = wing.sgn * (-.30 + .58 * L.wingSpread);
+      wing.w.rotation.x = Math.sin(now * 7) * .045 * L.wingSpread;
+      wing.outer.rotation.x = Math.sin(now * 7 - .6) * .035 * L.wingSpread;
     }
   }
   if (rig.tentacleWaves) {
@@ -127,7 +130,11 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   }
   // 開火槍軸校正是最後的 post-pass：跑步扭腰、飛行壓坡、跳躍與變形姿態都已結算後，
   // 再把本次發射槽的每根槍軸鎖回機體 +z。否則任一個後續父骨驅動都會把槍口帶偏。
-  stepAimForward(rig);
+  if (morph?.act) {
+    // Both rigid trees must receive the same wrist correction while their matched poses overlap.
+    stepAimForward(morph.ground, rig);
+    stepAimForward(morph.air, rig);
+  } else stepAimForward(rig);
   // 動畫權重向量(⑥-3):「這台現在在做什麼」的唯一產生點。**只寫不讀** ——
   // 本行之上的每一段步態一格未動(audit_gait_anat 八段 MUST 逐字不變),
   // 而消費端(移動環境音/地點床/日後的自機 stem)從此只認 `ent.loco.w`。
@@ -204,16 +211,16 @@ function stepStab(rig) {
  * (`wpn.*.fwd`) 轉成「該軸對準機體 +z」的目標四元數。這裡只做父框架換算：
  * local = inverse(parentWorld) * unitWorld * forwardLocal。沒有 Three import，暫存四元數由鍛造端配好。
  */
-function stepAimForward(rig) {
-  const raise = clamp(rig._fireAim || 0, 0, 1);
-  if (raise <= 1e-4 || !rig.aimForward) return;
-  const slot = rig._aimSlot || 'light';
+function stepAimForward(rig, state = rig) {
+  const raise = clamp(state._fireAim || 0, 0, 1);
+  if (!rig.aimForward) return;
+  const slot = state._aimSlot || 'light';
   for (const a of rig.aimForward) {
-    if (!a.slots.includes(slot)) continue;
+    if (!a.alwaysForward && (raise <= 1e-4 || !a.slots.includes(slot))) continue;
     a.ref.getWorldQuaternion(a.qa);
     a.g.parent.getWorldQuaternion(a.qb);
     a.qc.copy(a.qb).invert().multiply(a.qa).multiply(a.qf);
-    a.g.quaternion.slerp(a.qc, raise);
+    a.g.quaternion.slerp(a.qc, a.alwaysForward ? 1 : raise);
   }
 }
 
@@ -589,6 +596,7 @@ function poseBipedAim(rig, idle) {
     const arm = rig[`arm${side}`], chain = rig[`armChain${side}`];
     arm.rotation.x += (shoulder - arm.rotation.x) * aimF;
     arm.rotation.y = (ap[`${side.toLowerCase()}ShoulderY`] || 0) * aimF;
+    if (rig.naturalArms) arm.rotation.z = (side === 'L' ? .10 : -.10) * (1 - aimF);
     if (chain?.[0]) chain[0].g.rotation.x += (ap[`${side.toLowerCase()}ElbowX`] - chain[0].g.rotation.x) * aimF;
   }
   return aimF;
@@ -982,6 +990,13 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
   if (rig.tailSegs) {
     const aT = clamp(Math.hypot(vFwd, vLat) / (rig.top || 30), 0, 1);
     whipTail(rig.tailSegs, L, dt, aT, idleOf(aT), now, yawRate, 0, null, rig.tailCurl || null);
+  }
+  if (rig.axialWave) {
+    const wave = rig.axialWave;
+    wave.chain.forEach((node, i) => {
+      node.rotation.y = wave.amplitude * Math.sin(now * Math.PI * 2 * wave.frequency - i * wave.delay)
+        - clamp(yawRate * wave.turn, -.12, .12);
+    });
   }
 }
 

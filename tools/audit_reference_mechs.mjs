@@ -285,14 +285,14 @@ try {
     await page.waitForTimeout(350);
     await captureReview(page, path.join(root, `${id}-bench.png`));
     await page.locator('#btnShieldDeploy').click();
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => window.__MECH_REVIEW.preview.unit.userData.rig.shield.phase === 1);
     assert.equal(await page.evaluate(() => window.__MECH_REVIEW.preview.unit.userData.rig.shield.phase), 1);
     await captureReview(page, path.join(root, `${id}-shield.png`));
     await page.locator('#btnRig').click();
     await page.waitForTimeout(100);
     await captureReview(page, path.join(root, `${id}-rig.png`));
     await page.locator('#btnShieldRetract').click();
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => window.__MECH_REVIEW.preview.unit.userData.rig.shield.phase === 0);
     assert.equal(await page.evaluate(() => window.__MECH_REVIEW.preview.unit.userData.rig.shield.phase), 0);
     for (const button of ['#btnActionLight', '#btnActionAttack', '#btnActionSkill', '#btnActionUlt']) {
       await page.locator(button).click();

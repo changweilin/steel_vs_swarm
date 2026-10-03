@@ -1,8 +1,8 @@
 {
   "identities": {
     "s01": {
-      "glb": "c6eda691719d601bd3f01354c34006f006eeb0f6d1ef096d8effb883d6dd6910",
-      "runtime": "b00ab01885b471b90e098293540ee264e86c1bfbd4b0346a13436f48fad50bed",
+      "glb": "ae782457db6b04aed0a5556c5c47752e979627b4072ad231d339e98ac0b34a94",
+      "runtime": "dfef2745e9491d4306391a5f28f8f4c2c34ddc2395ba5d164bfeb675160b8306",
       "clips": [
         "idle",
         "run",
@@ -15,8 +15,8 @@
       ]
     },
     "t10": {
-      "glb": "4f63ceba6b2e0b9988c9419ebd90e5847171fef74131eaa7bf2b52d15597d3d8",
-      "runtime": "6a5fc8421c454894497c9e45e7853f47be53f73cf76aac34d7225d2d40e308b3",
+      "glb": "e9eff49a74203e8ff134062afbbc6d92b3e8f4ed1741eb143d03bca14b9856dc",
+      "runtime": "e5d030e856d575f951dac7f6ac49e6b14f5af841cfa20f251bc1dde36cc87548",
       "clips": [
         "run",
         "idle",
@@ -29,8 +29,8 @@
       ]
     },
     "s02": {
-      "glb": "775fe135f8340dd55d954808e53527a1e36d29c355c9d644c9ab775795d91c60",
-      "runtime": "fd71fb02d3a7971e1b4e047b96d6d5ac5e73f011b6509f392e4bd7a198dbd26f",
+      "glb": "663f24b9cc948f7b7490d67c8b9f7675b9ab8030c6652f2bf48c81967104c6cc",
+      "runtime": "e06ca1f9fb0f76b046c6a04599d8ec4819509bd67dbe5fa332aef744f6a90779",
       "clips": [
         "idle",
         "run",
@@ -43,8 +43,8 @@
       ]
     },
     "s04": {
-      "glb": "68353999c6c505ebf4933a7ba45502a37977a2d50a01136224c7fb91fa1c9809",
-      "runtime": "215ab3d360bfcb761d7be6eef8ec19a7ffa6a8aab037b8f699cd17f51067d774",
+      "glb": "86631fd653a0b185dcf41779fdbca23c643ca937466ec84493a520249af2289b",
+      "runtime": "b81a749cdb6b304a450c6e22d40735b93a30b2637e47e7a195293eb5137bbd9a",
       "clips": [
         "idle",
         "run",
@@ -57,8 +57,8 @@
       ]
     },
     "s05": {
-      "glb": "f39926b14a7e16f3af81ab4000718bf69d2eb1f33b05d857e61f4d8ab423721f",
-      "runtime": "72719ca705ae3ae954b27d495572f64bdff1b297a516ee70f263377122ad8b0f",
+      "glb": "378c8c53eff27978f8b4b36206eef197a339dec75bef34363b9a5255f67ca684",
+      "runtime": "53b5bae18787041b7741c4456a2423b9fcd18333e520e37a5b00ae4620a1efc8",
       "clips": [
         "idle",
         "run",
@@ -71,8 +71,8 @@
       ]
     },
     "s08": {
-      "glb": "7f0f75824a2e37a970aafc8e90c31b31c329e875115d0b6a62db0675d111e0cd",
-      "runtime": "5145de7e47e176caf27eab14e2782e1cf61a4a38ccac8425648e67ffd92c2fe2",
+      "glb": "31bc308f259e47eb5fd984cf7481d96b1ca61adaee34fe18a216593e7cf0e15a",
+      "runtime": "3d2c71f083c346a741eeb9ba472b5a4ff209c43d9e1d1929e5c0a6156dec160e",
       "clips": [
         "idle",
         "run",
@@ -85,8 +85,8 @@
       ]
     },
     "s11": {
-      "glb": "63b72ffd47276614bf942510e2bb9373dd302a1c3d507c2e95dddb90ace0eea3",
-      "runtime": "4b9204619d6e7a887936eb7a493bcc75e73e2e3282a8dafce3120e5779609855",
+      "glb": "509a934371e77a685ff0a6c01930989bc4fa33f69ae0c05a46f1c9c36478482c",
+      "runtime": "338902a3cd5831c46ab5a09bb4e621141ed7c26633c2af70f2190daac185635f",
       "clips": [
         "idle",
         "run",
@@ -99,8 +99,8 @@
       ]
     },
     "s12": {
-      "glb": "04f60d6f70f1550132acf05d33be96c0893645a384d3092f4d1d64a3eead2b91",
-      "runtime": "6699a0fd8f0c36f3051c2f03afd43cb0e0397e1d9d3670a738f9779a08332462",
+      "glb": "e20f9bb3b06a634eb60cab498658ad02d48e79c0d565daae9599dc0772b77c61",
+      "runtime": "f903db0dd5ba838b990cfafe579f185a2964d68634805748dd5b4bee91e32368",
       "clips": [
         "idle",
         "run",
@@ -113,8 +113,8 @@
       ]
     },
     "t07": {
-      "glb": "8a28267753e0d23b031d3feb3989be1535396900d213b288ede085ddcf1d3613",
-      "runtime": "8eabeaad348814eacf9a7d2de6b2d54b47c7f8bdbb03bf4a6b6a9d3ba4e5fa9d",
+      "glb": "d6846d141fd0e3313e5ff64c4756b11cb430c2705d38e59542c0fe8a075974d0",
+      "runtime": "bdd9928d833ab6ee5f516ef6aa10eed07cf3af10349bb3349c359ad19d29218d",
       "clips": [
         "idle",
         "run",
@@ -127,8 +127,8 @@
       ]
     },
     "t08": {
-      "glb": "1c68cbb5c6d767ac4d79d6946b034c96be1ad95de45434c0facfbbe68422102b",
-      "runtime": "3b583e9b89e01ec5c0ccb752378fcd388d5b161414ea36fab1cb5de442fd1e46",
+      "glb": "96974d82882faafebdef2a7470b4f7c89f87756e5d73671e155af19ff64c127e",
+      "runtime": "c3d7b009d7160838849dc6f72b08bc841b3c2ac81de6559d65ba7f8098276d19",
       "clips": [
         "idle",
         "run",
@@ -141,8 +141,8 @@
       ]
     },
     "t09": {
-      "glb": "3ed0e1fc33fbbb34353f6abbd11e06a5afd2b25685b691ab6b7388919c0ac441",
-      "runtime": "4a092d99618e2b189f02224262cac4255bff8601bba448b0f1f339b1770e80e4",
+      "glb": "2ad434fac7f12c96cfd77eadbd78976e58e77d86d61c3ff33272d07054ea52ff",
+      "runtime": "a8c73be3009fbd4f6b95a80329d000d29f3a3f19e4e446a69808e78bbce5cf99",
       "clips": [
         "idle",
         "run",
@@ -155,8 +155,8 @@
       ]
     },
     "m03": {
-      "glb": "f6075f29de5fecf68eb664226832c143afb2093198d3eda7c7b3c3d31da8c84e",
-      "runtime": "e74bde475270cb9b5ace42a0f16210a57034c7b2c6a1eacf717655e60444042d",
+      "glb": "38060c9b303fbb7a35b78a977dd62a7c6999dc1fe938d2a22b86f5774c18802f",
+      "runtime": "a9d65015eab9ec5af9fcdd9806a0e1c55be9a19ccc3d6cf5b0b4c55bf5f992cb",
       "clips": [
         "idle",
         "run",
@@ -169,8 +169,8 @@
       ]
     },
     "m04": {
-      "glb": "c9d68d1d75576482161242a78f9a14b44f29a342c7a8c85eccec998415321fd5",
-      "runtime": "d21cf817e4a36cd62c5e16d7ff394a6ed8e51372776de760a968812b0de1dcfb",
+      "glb": "15a7b10deec21ca8a48d497957803dbb47da13cba4f0257bc9636aa61f3885b9",
+      "runtime": "a9f8218807284a41d266605c116be432f924a5a2f26569a005cc34ace5bfa2ce",
       "clips": [
         "idle",
         "run",
@@ -183,8 +183,8 @@
       ]
     },
     "s06": {
-      "glb": "72ba7973dd51fda2e986edaec7dad3a04e351e0e62f9d9f8bc7edcbc5c0ddb4e",
-      "runtime": "1995fe44a9f6095b9519112189ca626ddef33a784b0adbda7971e5acc8542b1d",
+      "glb": "5649c270c794a52ad5fb8e53054f7dd07f64bf6c530c92dcf2ac3729ba1e18ec",
+      "runtime": "5002e36974d10af9c64d5c4855f819baa2d5ef8c01041039473b76c1303fda96",
       "clips": [
         "idle",
         "shield_deploy",
@@ -197,8 +197,8 @@
       ]
     },
     "s07": {
-      "glb": "ef197549e01adfe8a2b3cc39b3ca2de2b3f028b25d47ad64a50eee27aa6f2f1f",
-      "runtime": "178ee45cd01d4795ae997944b1916cfaecb899c3b5c1aac6855c853e39969255",
+      "glb": "58c9ebd65150f708e79c2659006cca27103867b4c8e1447d55920f05be8df02a",
+      "runtime": "d50c5067cbf7b64a0e6fe5631ad2a283f6b65a07496c3f32d895c374f9fbc2ef",
       "clips": [
         "idle",
         "shield_deploy",
@@ -211,64 +211,64 @@
       ]
     },
     "s09": {
-      "glb": "315b1054f11becf54c3518c8353c975658882c35c7fbea8212a219403a40f9d1",
-      "runtime": "831e214ab71309a1bc3e84b2b5594efa1ffeb198a3290b5a7996c7245b1094dd",
+      "glb": "a657a215002578a505283aa40cfab276e89abb9b30c27742ea075b67fac29f13",
+      "runtime": "3ef355ac903007bf2f68441e96294dc64e30b411346350b7967a86fd6a85fd0a",
       "clips": [
         "idle",
         "run",
         "shield_deploy",
         "shield_retract",
-        "skill",
-        "ult",
+        "heavy",
         "light",
-        "heavy"
+        "skill",
+        "ult"
       ]
     },
     "t01": {
-      "glb": "5f1f23a2a8161ba93440a5fce68e9e1e972e5ece30373f409355ab2d3ff08584",
-      "runtime": "a6f13371708863976c262d3cf32f0e45637bfb1a238fea8b13d3c99fe993f191",
+      "glb": "95aad0edaf1e30d1ed8a9e4372cd7d8e3f12f36fe6d6e6ec12b249d5d0ca8a24",
+      "runtime": "5e6f580d38e6528dd536d65a0fb4a9d5f7a4fee72be18ee65d0590322d870e01",
       "clips": [
         "idle",
         "shield_deploy",
         "shield_retract",
+        "run",
         "skill",
         "ult",
-        "run",
         "light",
         "heavy"
       ]
     },
     "t02": {
-      "glb": "41968e1e76614bd8c933ff6075cf779988082b8cf8d103ce2d1ce8e72f86a9f9",
-      "runtime": "65c958162a2a2ce5963daa922c931de5529a580fdfb6e453a50766f1106a1f0f",
+      "glb": "941306d689ae7afc1274d991365ed3e9d0b7ceaea258b766f58314e78e221d0c",
+      "runtime": "937e229063cdfe02381da726744f24db5e3482a3ff0960a5fe7f0e7fdb85f039",
       "clips": [
         "idle",
         "shield_deploy",
         "shield_retract",
+        "run",
         "skill",
         "ult",
-        "run",
         "light",
         "heavy"
       ]
     },
     "t03": {
-      "glb": "224bc95dae4d3531d7ed1a9000e9529c0888a7a4e5c8e3db04bf218c3a228bbe",
-      "runtime": "c2d50810d01b940cb51804cd524797911f3401ca75b05f4e931a57d823de747b",
+      "glb": "f481afcebe7bae5d3504ce8ae9891e45a3d8b95b9de600d15b498a41f3789c65",
+      "runtime": "59d1bd6b87fb7bb53a18d9e489a109a15ace96cbab3589c16a046f9e5371134a",
       "clips": [
         "idle",
         "shield_deploy",
         "shield_retract",
+        "run",
         "skill",
         "ult",
-        "run",
         "light",
         "heavy"
       ]
     },
     "t04": {
-      "glb": "2fe287405740ba1294a27c1df5dd6114be232f1004a5e1a7b8ee3b3216950b1e",
-      "runtime": "c6159f2cec9f4caada119fcfa516fa331db9baead42d22a32011e91505a4dde9",
+      "glb": "559f61d98bebed5dfe193a3d6f0d65cf66f66d7d93515afe6192a25acb6e9b17",
+      "runtime": "6d7bef98409915be3a835be2f52e37a9b2fdfa00715777b2f802dc08e2c8baf5",
       "clips": [
         "idle",
         "shield_deploy",
@@ -281,8 +281,8 @@
       ]
     },
     "t05": {
-      "glb": "6f3406132ae8eee7d47bf77993f834fa24ed37d4244b45db7a8f420cb435df76",
-      "runtime": "493da7f74c1a6873e226dabc4478b4f111e38e5dfb20bd04ba810fc55fb850ec",
+      "glb": "706399e6a26575a9093cb2f6c9817b6e1087eb6aaa4f5a36da2135fc66a6e47c",
+      "runtime": "e5d735ddf1e4ec7b53bf50d07ba1828f7a1afed41e25c8c7c6787dbd1b3e85cb",
       "clips": [
         "idle",
         "run",
@@ -295,36 +295,36 @@
       ]
     },
     "t12": {
-      "glb": "3523ee7e4a5a242957f9d158e68ab86c37dc6a11aadb30e4e72b0dff0ac50eb6",
-      "runtime": "7e487210bd2ae98fee42741db6163c6a178f7872eb3d25efd8940d9567e4845c",
+      "glb": "38f6902b1f1588d382f38320111a88b2e3d54f48a311ca747ab1363d73587a44",
+      "runtime": "1274fa7fc88f93b7b1b958d296f8f7618ed7c3a432b7471565f42cbc5d081700",
       "clips": [
         "idle",
         "shield_deploy",
         "shield_retract",
+        "run",
         "skill",
         "ult",
         "heavy",
-        "run",
         "light"
       ]
     },
     "m02": {
-      "glb": "f368e6d6330fb56942da2beeb76324d16550e779f0676e7fb0d2608d80d9a29c",
-      "runtime": "d955d4458cdc48742183cafbbcf3e153c48d2ef1ce94c2f3bc2cbc640d7cffe8",
+      "glb": "234e68b03b26a0dac31d26bd9028adbbffd697ce656affabdfe5445843b23131",
+      "runtime": "fd2ab316f1e5ba02e60536470c6fb0ea7a263507f75040d927d40e1884df573f",
       "clips": [
         "idle",
         "shield_deploy",
         "shield_retract",
-        "skill",
-        "ult",
+        "run",
         "light",
         "heavy",
-        "run"
+        "skill",
+        "ult"
       ]
     },
     "m06": {
-      "glb": "f7ea646a14aae348f2a59b405d4bc2d3478fbb83eb5978b53c6e745e5b3e2be9",
-      "runtime": "849f48908744b845f11307ae02c43ac29b5882ab8034904c1c84ba7fb6b11c90",
+      "glb": "83964c2e9b213fa6ec586dce1a008aeb3f2cb693ae16e02892afcc61219e6256",
+      "runtime": "90ca166a5aed1ebf1e55c87a9c14a68bf147b421e57791b9695aaf03c6f7d7fc",
       "clips": [
         "idle",
         "shield_deploy",
@@ -340,7 +340,7 @@
   "metrics": {
     "s01": {
       "meshes": 38,
-      "triangles": 13992,
+      "triangles": 14192,
       "fps": [
         30,
         60,
@@ -363,8 +363,8 @@
       ]
     },
     "t10": {
-      "meshes": 86,
-      "triangles": 13464,
+      "meshes": 89,
+      "triangles": 13820,
       "fps": [
         30,
         60,
@@ -387,8 +387,8 @@
       ]
     },
     "s02": {
-      "meshes": 32,
-      "triangles": 9636,
+      "meshes": 30,
+      "triangles": 9748,
       "fps": [
         30,
         60,
@@ -411,8 +411,8 @@
       ]
     },
     "s04": {
-      "meshes": 29,
-      "triangles": 8684,
+      "meshes": 27,
+      "triangles": 8796,
       "fps": [
         30,
         60,
@@ -435,8 +435,8 @@
       ]
     },
     "s05": {
-      "meshes": 34,
-      "triangles": 8240,
+      "meshes": 32,
+      "triangles": 8352,
       "fps": [
         30,
         60,
@@ -459,8 +459,8 @@
       ]
     },
     "s08": {
-      "meshes": 30,
-      "triangles": 7828,
+      "meshes": 28,
+      "triangles": 8412,
       "fps": [
         30,
         60,
@@ -483,8 +483,8 @@
       ]
     },
     "s11": {
-      "meshes": 31,
-      "triangles": 8276,
+      "meshes": 29,
+      "triangles": 8388,
       "fps": [
         30,
         60,
@@ -507,8 +507,8 @@
       ]
     },
     "s12": {
-      "meshes": 37,
-      "triangles": 8804,
+      "meshes": 35,
+      "triangles": 8960,
       "fps": [
         30,
         60,
@@ -531,8 +531,8 @@
       ]
     },
     "t07": {
-      "meshes": 65,
-      "triangles": 10828,
+      "meshes": 63,
+      "triangles": 10984,
       "fps": [
         30,
         60,
@@ -555,8 +555,8 @@
       ]
     },
     "t08": {
-      "meshes": 119,
-      "triangles": 17212,
+      "meshes": 115,
+      "triangles": 16052,
       "fps": [
         30,
         60,
@@ -579,8 +579,8 @@
       ]
     },
     "t09": {
-      "meshes": 27,
-      "triangles": 8184,
+      "meshes": 25,
+      "triangles": 8296,
       "fps": [
         30,
         60,
@@ -603,8 +603,8 @@
       ]
     },
     "m03": {
-      "meshes": 27,
-      "triangles": 7620,
+      "meshes": 25,
+      "triangles": 7732,
       "fps": [
         30,
         60,
@@ -627,8 +627,8 @@
       ]
     },
     "m04": {
-      "meshes": 66,
-      "triangles": 12872,
+      "meshes": 65,
+      "triangles": 12968,
       "fps": [
         30,
         60,
@@ -651,8 +651,8 @@
       ]
     },
     "s06": {
-      "meshes": 109,
-      "triangles": 13900,
+      "meshes": 108,
+      "triangles": 13476,
       "fps": [
         30,
         60,
@@ -675,8 +675,8 @@
       ]
     },
     "s07": {
-      "meshes": 127,
-      "triangles": 21748,
+      "meshes": 125,
+      "triangles": 21860,
       "fps": [
         30,
         60,
@@ -700,7 +700,7 @@
     },
     "s09": {
       "meshes": 85,
-      "triangles": 12140,
+      "triangles": 12460,
       "fps": [
         30,
         60,
@@ -716,15 +716,15 @@
         "run",
         "shield_deploy",
         "shield_retract",
-        "skill",
-        "ult",
+        "heavy",
         "light",
-        "heavy"
+        "skill",
+        "ult"
       ]
     },
     "t01": {
-      "meshes": 77,
-      "triangles": 11608,
+      "meshes": 76,
+      "triangles": 11548,
       "fps": [
         30,
         60,
@@ -739,16 +739,16 @@
         "idle",
         "shield_deploy",
         "shield_retract",
+        "run",
         "skill",
         "ult",
-        "run",
         "light",
         "heavy"
       ]
     },
     "t02": {
       "meshes": 72,
-      "triangles": 12552,
+      "triangles": 13360,
       "fps": [
         30,
         60,
@@ -763,16 +763,16 @@
         "idle",
         "shield_deploy",
         "shield_retract",
+        "run",
         "skill",
         "ult",
-        "run",
         "light",
         "heavy"
       ]
     },
     "t03": {
-      "meshes": 71,
-      "triangles": 11340,
+      "meshes": 70,
+      "triangles": 11308,
       "fps": [
         30,
         60,
@@ -787,16 +787,16 @@
         "idle",
         "shield_deploy",
         "shield_retract",
+        "run",
         "skill",
         "ult",
-        "run",
         "light",
         "heavy"
       ]
     },
     "t04": {
-      "meshes": 91,
-      "triangles": 12852,
+      "meshes": 90,
+      "triangles": 12796,
       "fps": [
         30,
         60,
@@ -819,8 +819,8 @@
       ]
     },
     "t05": {
-      "meshes": 81,
-      "triangles": 13528,
+      "meshes": 79,
+      "triangles": 13480,
       "fps": [
         30,
         60,
@@ -844,7 +844,7 @@
     },
     "t12": {
       "meshes": 62,
-      "triangles": 10472,
+      "triangles": 10836,
       "fps": [
         30,
         60,
@@ -859,16 +859,16 @@
         "idle",
         "shield_deploy",
         "shield_retract",
+        "run",
         "skill",
         "ult",
         "heavy",
-        "run",
         "light"
       ]
     },
     "m02": {
-      "meshes": 85,
-      "triangles": 13184,
+      "meshes": 84,
+      "triangles": 13340,
       "fps": [
         30,
         60,
@@ -883,16 +883,16 @@
         "idle",
         "shield_deploy",
         "shield_retract",
-        "skill",
-        "ult",
+        "run",
         "light",
         "heavy",
-        "run"
+        "skill",
+        "ult"
       ]
     },
     "m06": {
-      "meshes": 89,
-      "triangles": 12940,
+      "meshes": 88,
+      "triangles": 13108,
       "fps": [
         30,
         60,
