@@ -17,7 +17,8 @@ for (let seed = 0; seed < 80; seed++) {
       }
       for (const arm of arms) {
         const axis = mat3Apply(mat3FromEulerXYZ(arm.r), [0, 1, 0]);
-        assert(axis.every((v, k) => Math.abs(arm.p[k] - v * arm.g[3] / 2 - core.p[k]) < 1e-9),
+        const length = arm.g[0] === 'mesh' ? arm.g[2][1] : arm.g[3];
+        assert(axis.every((v, k) => Math.abs(arm.p[k] - v * length / 2 - core.p[k]) < 1e-9),
           'all leg roots meet the core');
       }
     }

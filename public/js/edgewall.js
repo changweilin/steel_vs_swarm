@@ -5,6 +5,7 @@
 import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
 import { mulberry32 } from './rng.js';
 import { boundaryGrid } from './objectLayout.js';
+import { applyBoundaryAppearance } from './boundaryAppearance.js';
 import { partAABB, VEHICLE_SPEC } from './vehicles.js';
 import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, narrowGeologyBoundary, NARROW_GEOLOGY_BOUNDARY, storageTankParts, environmentAvailable, environmentSize, makeSceneVehicleParts, NATURAL_CLIFF_KINDS, citywallBarbicanParts, leveeGateParts } from './environmentParts.js';
 import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
@@ -809,7 +810,7 @@ export function buildBoundaryRunParts(kind, {
         }
       }
     }
-    return { parts, bufferParts };
+    return { parts, bufferParts: applyBoundaryAppearance(bufferParts) };
   }
 
   if (mode === 'random') {

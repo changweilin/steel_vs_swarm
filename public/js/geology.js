@@ -638,7 +638,7 @@ export function elongatedGeologyParams(len, depth, seed) {
 //    任何方向觀察均具備波峰波谷交替起伏。
 // 3. 四周邊界遵守地質邊緣高度 = 0（雙向 smooth01 落地包絡）。
 // 4. 支援 2 維延伸往緩衝區擴大（bufferDepth > 0），產出同源無縫分割的本體與緩衝填滿網格。
-export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0xffffff, bufferDepth = 0, pattern = null, color = null } = {}) {
+export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0xffffff, bufferDepth = 0, pattern = null, color = null, surface = null } = {}) {
   const s = GEOLOGY_TYPES[type];
   if (!s) throw new RangeError(`Unknown geology type: ${type}`);
   if (s.lithology === 'manufactured') throw new RangeError('Elongated ridge needs a natural terrain type');
@@ -646,6 +646,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     || len <= 0 || depth <= 0 || height <= 0)
     throw new RangeError('Elongated geology dimensions must be positive finite numbers');
   if (!Number.isSafeInteger(seed)) throw new TypeError('Geology seed must be a safe integer');
+  if (surface != null && typeof surface !== 'function') throw new TypeError('Invalid geology surface');
   const bufD = Math.max(0, Number.isFinite(bufferDepth) ? bufferDepth : 0);
   const totalDepth = depth + bufD;
   const is2D = bufD > 0 || totalDepth >= 20 || Math.min(len, totalDepth) >= 20;
@@ -788,7 +789,10 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
       // 嚴格遵守地質邊緣高度 = 0（四邊外緣點一律落地）
       if (ix === 0 || ix === nx || iz === 0 || iz === nz) y = 0;
 
-      const yy = Math.min(height, y * height);
+      // Boundary fracture surfaces enter the same grid used by cover landing and both mesh halves.
+      const yy = surface ? surface(Math.min(height, y * height), -len / 2 + ix / nx * len, zPhys, height)
+        : Math.min(height, y * height);
+      if (!Number.isFinite(yy) || yy < 0 || yy > height) throw new RangeError('Geology surface exceeds its envelope');
       grid[top(ix, iz)] = yy;
       if (iz <= nzObs) peakY = Math.max(peakY, yy);
       else peakYBuf = Math.max(peakYBuf, yy);

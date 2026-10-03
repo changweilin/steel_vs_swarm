@@ -1,5 +1,7 @@
 import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
 import { seasonalSurfaceColors } from './seasonalSurface.js';
+import { BOUNDARY_SURFACES } from './boundaryMeshData.js';
+import { boundarySectionAppearance } from './boundaryAppearance.js';
 // Continuous boundary cross-sections. Adjacent segments sample identical world coordinates;
 // segment seeds never change their end profiles. No Three.js or shared random stream.
 import { ROCK_SEASON_TINT, environmentParts, storageTankParts, leveeGateParts, citywallBarbicanParts, NATURAL_CLIFF_KINDS } from './environmentParts.js';
@@ -28,7 +30,7 @@ export const SLOPE_BOUNDARIES = Object.freeze({
   barricade: { fillContact: true, color: 0x85918c, section: [[-.5, 0], [-.5, .22], [-.2, .58], [-.16, 1], [.16, 1], [.2, .58], [.5, .22], [.5, 0]] },
   levee: { fillContact: true, color: 0x8c9587, section: [[-.5, 0], [-.16, .9], [.16, .9], [.5, 0]] },
   seawall: { fillContact: true, color: 0x899393, section: [[-.5, 0], [-.25, .85], [-.25, 1], [.38, 1], [.38, .85], [.5, 0]] },
-  cliff: { bufferFill: true, color: 0x8c897b, rock: true, section: [[-.5, 0], [-.42, .58], [-.25, .92], [.05, 1], [.35, .86], [.5, 0]] },
+  cliff: { bufferFill: true, color: 0x8c897b, rock: true, section: BOUNDARY_SURFACES.sections.cliff },
   landslide: { bufferFill: true, color: 0x9f8667, rock: true, section: [[-.5, 0], [-.25, .58], [0, .88], [.25, .64], [.5, 0]] },
   debris: { bufferFill: true, color: 0x89816d, rock: true, section: [[-.5, 0], [-.24, .52], [0, .82], [.26, .45], [.5, 0]] },
   ...EXPANDED_BOUNDARIES,
@@ -283,7 +285,7 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
   vertices.forEach((v, i) => { const a = i % 3; min[a] = Math.min(min[a], v); max[a] = Math.max(max[a], v); });
   const center = min.map((v, i) => (v + max[i]) / 2), size = max.map((v, i) => v - min[i]);
-  const meshData = { vertices: vertices.map((v, i) => v - center[i % 3]), faces, colors };
+  const meshData = boundarySectionAppearance(kind, { vertices: vertices.map((v, i) => v - center[i % 3]), faces, colors }, n);
   if (def.rock) meshData.colors = seasonalSurfaceColors(meshData, seasonalEnvironment({ ...environment, season }),
     [x + ca * center[0] + sa * center[2], center[1], z - sa * center[0] + ca * center[2]], ry);
   const parts = [{ g: ['mesh', meshData, size], p: center, c: null, role: 'terrain-joined-boundary' }];

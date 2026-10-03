@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../public/js/', import.meta.url));
-const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 · 建築 / 地質 / 植物 / 載具 / 船隻 / 產業設施 / 冰雪 / 能源與工程 / 邊界構造 / 平民 / 戰鬥單位立體視覺工作室</title>
+export const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生成器 · 建築 / 地質 / 植物 / 載具 / 船隻 / 產業設施 / 冰雪 / 能源與工程 / 邊界構造 / 平民 / 戰鬥單位立體視覺工作室</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body { margin: 0; background: #cdd9e2; color: #273649; font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; user-select: none; }
@@ -3991,7 +3991,8 @@ function meshGeometry(data) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices, 3));
   if (data.colors) g.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
   g.setIndex(data.faces);
-  g.computeVertexNormals();
+  if (data.normals) g.setAttribute('normal', new THREE.Float32BufferAttribute(data.normals, 3));
+  else g.computeVertexNormals();
   return g;
 }
 
