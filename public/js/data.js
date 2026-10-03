@@ -2307,15 +2307,37 @@ export const fanConeHalf = (def, d, hr) => fanArcHalf(def) + Math.atan2(Math.max
 // ---- 扇形小錐切割(2026-09-27 使用者需求)----
 // 錐按方位角切成 N 個小錐形區塊,每區塊只命中最近的一名敵人;量體橫跨多格的大目標
 // (近距離砲塔/主堡)會在多格各吃一次 ⇒ 單一敵人可受多次傷害。格數由錐角推導不手寫:
-// 小錐寬約 SUB_DEG(4°)—— 10° 錐切 5 格、26° 錐切 13 格。傷害不隨距離變化(去 fanFalloff),
+// 小錐寬約 SUB_DEG(2.4°)—— 10° 錐切 9 格、22° 錐切 19 格(小錐數控制在 9~19)。傷害不隨距離變化(去 fanFalloff),
 // 只剩偏心遞減 offAxisFalloff。伺服器 sim.heroPlasma、模型 lanesim、客戶端 _shotVictims
 // 三端 MUST 全吃 fanBinSpan 分格,各寫一份 = 同一發在三處掃到不同人。
-export const FAN_SUB_DEG = 4;
+export const FAN_SUB_DEG = 2.4;
 // ---- 單一小錐傷害乘數(2026-09-27 使用者需求「單一小扇形傷害調低」)----
 // 每一格命中固定 × 此值(大小目標、遠近一律)：壓的是「格」的單價，不是錐的總價 ——
 // 近距大目標照樣多格多吃，只是每格便宜一點。結算(sim.heroPlasma)與模型(lanesim)
 // MUST 同吃這一支；bot 輕扇形單體直射不經分格，不吃。
 export const FAN_SUB_F = 0.8;
+// ---- 扇形對建築物命中上限但書 ----
+// 使用者指示:「對建築傷害也是要隨等級調整的,所以一律比最高級就好」
+// 依最高級(Lv4)同槽位其他類型傷害期望值(輕武器 41.0、重武器 156.0)與最高級單發子錐傷害的比值決定上限 N，
+// 使扇形武器對建築物的命中上限固定，且傷害隨武器等級自然等比成長。
+export const slotExpectedBuildingDmg = (slot = 'heavy') => (slot === 'light' ? 41.0 : 156.0);
+
+export function fanBuildingMaxHits(def) {
+  if (!def) return 1;
+  if (def.buildingMaxHits != null) return def.buildingMaxHits;
+  const slot = def.slot || def.id || (def.type === 'plasma' || (def.dmg || 0) > 30 ? 'heavy' : 'light');
+  const expDmg = slotExpectedBuildingDmg(slot);
+  const nSubs = fanSubs(def);
+  const vsB = def.vs?.building ?? 1.0;
+  let subDmgLv4 = (def.dmg || 1) * FAN_SUB_F * vsB;
+  if (def.ch) {
+    const w4 = heroWeapon(def.ch, slot, 4, true);
+    if (w4) subDmgLv4 = w4.dmg * FAN_SUB_F * vsB;
+  }
+  return Math.max(1, Math.min(nSubs, Math.round(expDmg / Math.max(1, subDmgLv4))));
+}
+export const FAN_BUILDING_MAX_HITS = 2; // 向後相容別名預設值
+
 /**
  * 扇形小錐格數(推導 = 全寬 ÷ SUB_DEG,強制奇數):奇數格的中央格恆以錐軸為中心 ⇒
  * 軸上小目標只中一格(格界壓軸心會讓每一發軸上傷害系統性吃兩次,而且偶/奇格數行為不一)。
@@ -3502,6 +3524,7 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
   const kind = charKind(ch);
   const squad = kind === 'drone' ? SQUAD.DMG : 1;
   return {
+    ch, slot, lvl,
     id: slot, name: w.name, rw: w.rw, type: w.type, mv: w.mv,
     // counterDmgF:加成越多越廣泛 → 基礎傷害越低(推導不手寫;沒掛護盾軸的武器恆 ×1)
     // aoeTrimF:被「不得一次打到兩座塔」夾掉的範圍,照 areaValue 的價格還成火力(沒被夾過恆 ×1)
@@ -3802,10 +3825,10 @@ export const CHARACTERS = {
     side: 'SWARM', kind: 'drone', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
     visual: { hue: 0xd6d63a, body: 'box', form: 'fixed', wing: 'zero', paint: 'hinomaru' },  // 純黃素色;雙翼正反面各一枚紅日
     mods: { hp: 1.1, sp: 1.0, mp: 0.95, speed: 1.05, armor: 8 },
-    light: { name: '「連牙」九式近迫爆裂霰彈', rw: '高密度多重近戰霰彈莢・12 鉛徑鹿彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [16, 14, 12],
+    light: { name: '「連牙」九式近迫爆裂霰彈', rw: '高密度多重近戰霰彈莢・12 鉛徑鹿彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: 16,
       dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.75, air: 1.2, building: 0.4 } },
-    heavy: { name: '「紅蓮業火」聚能電漿噴湧口', rw: '高溫磁化電漿短程扇形投射器・熱核噴焰', type: 'plasma', arc: [13, 15, 17],
+    heavy: { name: '「紅蓮業火」聚能電漿噴湧口', rw: '高溫磁化電漿短程扇形投射器・熱核噴焰', type: 'plasma', arc: 13,
       dmg: [46, 75, 117], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
     def: { name: '金剛・修羅逆浪', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [42, 56, 74], r: 12,
@@ -3863,7 +3886,7 @@ export const CHARACTERS = {
     light: { name: '「公理」25mm 程控空爆砲', rw: '程控多用途破片空爆砲・智慧引信彈・初速 760m/s', type: 'gun', mv: 760,
       dmg: [20, 25, 31], rate: 6, mag: [24, 30, 36], reload: 2.3, range: 210, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.95, air: 1.6, building: 0.5 } },
-    heavy: { name: '「非歐撕裂」電漿防空網', rw: '高能磁約束電漿矩陣・拓撲扇形散布', type: 'plasma', arc: [20, 23, 26],
+    heavy: { name: '「非歐撕裂」電漿防空網', rw: '高能磁約束電漿矩陣・拓撲扇形散布', type: 'plasma', arc: 20,
       dmg: [50, 77, 113], mag: 3, reload: 7, range: 264, pen: 4,
       vs: { flesh: 0.9, armor: 0.85, air: 2.0, building: 0.4 } },
     def: { name: '公理・非歐折射', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35],
@@ -3896,7 +3919,7 @@ export const CHARACTERS = {
     side: 'SWARM', kind: 'robot', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」躍步防空機甲',
     visual: { hue: 0xd0602f, pod: 'rack', form: 'biped', creature: 'roo', paint: 'split', split: 'shade' },  // 鏽橙同色系:反蔭 —— 面朝上=背深、面朝下=腹淺
     mods: { hp: 1.05, sp: 1.15, mp: 1.0, speed: 1.05, armor: 18 },
-    light: { name: '「荒原之鷹」12號連發防空霰彈', rw: '雙管重型防空霰彈槍・高初速鎢合金箭彈・初速 420m/s', type: 'gun', mv: 420, fan: true, arc: [18, 16, 14],
+    light: { name: '「荒原之鷹」12號連發防空霰彈', rw: '雙管重型防空霰彈槍・高初速鎢合金箭彈・初速 420m/s', type: 'gun', mv: 420, fan: true, arc: 18,
       dmg: [34, 43, 53], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.3, armor: 0.4, air: 2.0, building: 0.3 } },
     heavy: { name: '「星辰之錐」雷導破空飛彈', rw: '多彈頭雷射駕束引導飛彈・Starstreak 衍生型・初速 300m/s', type: 'launcher', mv: 300, guide: 1,
@@ -3989,7 +4012,7 @@ export const CHARACTERS = {
     // 名冊內,紀律①)。反護盾的鏡像:榴彈的超壓是「大面積、慢」的能量,護盾場整個消化得掉;
     // 但盾一破,152mm 破片打在裝甲板上就不是護盾場能談的事了。
     // 它同時留著 vs.armor 1.3,依紀律③「加成越多含金量越低」⇒ vsHp 只給一小格,折減照吃。
-    heavy: { name: '「冰魄霜斧」重型電漿戰斧', rw: '高溫磁化冷焰電漿戰斧・重型扇形近戰揮砍', type: 'plasma', arc: [15, 17, 19],
+    heavy: { name: '「冰魄霜斧」重型電漿戰斧', rw: '高溫磁化冷焰電漿戰斧・重型扇形近戰揮砍', type: 'plasma', arc: 15,
       dmg: [60, 90, 126], mag: 3, reload: 7, range: 264, pen: 16,
       vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
     def: { name: '霜狼・北境重盾', fx: 'shield_bash', shieldBash: true, imp: 28, dmg: [65, 90, 120], r: 12,
@@ -4028,7 +4051,7 @@ export const CHARACTERS = {
     side: 'STEEL', kind: 'robot', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「爐膛」突擊機甲',
     visual: { hue: 0xe08a4a, pod: 'shield', form: 'biped', creature: 'gorilla', paint: 'minimal' },
     mods: { hp: 1.25, sp: 0.85, mp: 0.9, speed: 0.95, armor: 18 },
-    light: { name: '「碎骨」12號重型狂暴霰彈', rw: '高射速彈鼓霰彈槍・大口徑碎肉彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [17, 15, 13],
+    light: { name: '「碎骨」12號重型狂暴霰彈', rw: '高射速彈鼓霰彈槍・大口徑碎肉彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: 17,
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.6, air: 1.05, building: 0.5 } },
     heavy: { name: '「裂地泰坦」152mm 破障加農砲', rw: '大口徑重型破障榴彈加農砲・2A65 衍生・初速 650m/s', type: 'launcher', mv: 650,
@@ -4092,7 +4115,7 @@ export const CHARACTERS = {
     light: { name: '「疾風」191 特裝突擊步槍', rw: '新型高初速步槍・5.8mm 微聲穿甲彈・初速 930m/s', type: 'gun', mv: 930,
       dmg: [15, 18, 23], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
       vs: { flesh: 0.75, armor: 0.9, air: 1.0, building: 0.5 } },
-    heavy: { name: '「如意金箍」熔核焚天砲', rw: '高溫磁化電漿聚爆砲・多節長尾前捲破敵', type: 'plasma', arc: [10, 12, 14],
+    heavy: { name: '「如意金箍」熔核焚天砲', rw: '高溫磁化電漿聚爆砲・多節長尾前捲破敵', type: 'plasma', arc: 10,
       dmg: [60, 93, 144], mag: 3, reload: 7, range: 264, pen: 10,
       vs: { flesh: 0.8, armor: 1.4, air: 0.45, building: 0.8 } },
     def: { name: '騰雲・筋斗御風', fx: 'buff', target: 'self', defJump: 3, mul: { speed: [1.25, 1.35, 1.45] }, spRestore: [40, 60, 80],
@@ -4358,7 +4381,7 @@ export const CHARACTERS = {
     light: { name: '「界皇」雙聯 35mm 厄利孔高砲', rw: '雙聯裝防空機砲・35mm 高速破甲彈・初速 1100m/s', type: 'gun', mv: 1100,
       dmg: [18, 23, 28], rate: 6.5, mag: [32, 40, 48], reload: 2.6, range: 210, crit: 0.05,
       vs: { flesh: 0.7, armor: 1.0, air: 1.6, building: 0.5 } },
-    heavy: { name: '「焚天界域」扇面防衛電漿幕', rw: '近迫磁化電漿散射矩陣・扇形防空幕', type: 'plasma', arc: [22, 25, 28],
+    heavy: { name: '「焚天界域」扇面防衛電漿幕', rw: '近迫磁化電漿散射矩陣・扇形防空幕', type: 'plasma', arc: 22,
       dmg: [46, 73, 111], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 0.8, armor: 1.25, air: 2.2, building: 0.3 } },
     def: { name: '拒止・百戰心訣', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35], spRestore: [50, 75, 100],

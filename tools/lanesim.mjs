@@ -54,7 +54,8 @@
 import {
   CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, evadable, evadeExpF, LANCE, SQUAD, DECOY,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
-  dmgFalloff, blastFalloff, offAxisFalloff, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, blastFootprintR, aoeClass,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, fanBuildingMaxHits, FAN_BUILDING_MAX_HITS, blastFootprintR, aoeClass,
+  TARGET_CLASS,
   lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF,
   shieldSplit, heavyMpCost, upgradePrice, canUpgrade, battleScoreGain, addBattleScore, waveComp, waveMarchSpeed, hitR, lanceR,
   kamiHp, kamiSide, decoyHp, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd, hyperTrackR,
@@ -265,10 +266,22 @@ export function hits(shooter, aim, def, foes) {
       const [b0, b1] = fanBinSpan(def, phi, aw);          // 分格走單一縫
       const f = offAxisFalloff(half > 0 ? ang / half : 0) * FAN_SUB_F;   // 不隨距離衰減、每格單價(與 sim.heroPlasma 同式)
       for (let bi = b0; bi <= b1; bi++) {
-        if (!bins[bi] || d < bins[bi].d) bins[bi] = { ent: e, f, d };
+        if (!bins[bi] || d < bins[bi].d) bins[bi] = { ent: e, f, d, ang };
       }
     }
-    return bins.filter(Boolean).map(({ ent, f }) => ({ ent, f }));
+    const validBins = bins.filter(Boolean).sort((a, b) => a.ang - b.ang);
+    const bHitCount = new Map();
+    const hits = [];
+    for (const bin of validBins) {
+      if (TARGET_CLASS[bin.ent.kind] === 'building') {
+        const maxHits = fanBuildingMaxHits(def);
+        const c = bHitCount.get(bin.ent) || 0;
+        if (c >= maxHits) continue;
+        bHitCount.set(bin.ent, c + 1);
+      }
+      hits.push({ ent: bin.ent, f: bin.f });
+    }
+    return hits;
   }
   if (cls === 'line') {
     const R = lanceR(def), out = [];

@@ -27,6 +27,7 @@ import {
   mobMid, mobDmgF, rangeMid, rngDmgF,
   BLAST_BAND, blastCapR, blastFamily, trajClass,
   LANCE, lancePen, lancePenCost, lanceZones, lanceZonePen, FAN_SUB_DEG, FAN_SUB_F, fanSubs, waveComp,
+  TARGET_CLASS,
 } from '../public/js/data.js';
 import { LANE, laneBattle, hits, mech } from './lanesim.mjs';
 
@@ -280,7 +281,7 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
   const fanCh = Object.keys(CHARACTERS).find((c) => heroWeapon(c, 'heavy', 1, true)?.fan);
   const fanDef = heroWeapon(fanCh, 'heavy', 1, true);
   const off = 12;
-  const nearFoes = [{ kind: 'soldier', x: 20, y: 0, hp: 1 }, { kind: 'soldier', x: 20, y: off, hp: 1 }];
+  const nearFoes = [{ kind: 'soldier', x: 40, y: 0, hp: 1 }, { kind: 'soldier', x: 40, y: off, hp: 1 }];
   const farFoes = [{ kind: 'soldier', x: 100, y: 0, hp: 1 }, { kind: 'soldier', x: 100, y: off, hp: 1 }];
   const hn = hits(shooter, nearFoes[0], fanDef, nearFoes), hf = hits(shooter, farFoes[0], fanDef, farFoes);
   t(`fan:同一個橫向偏移 ${off}m —— 貼身掃不到、拉遠掃得到(錐寬隨距離張開)`,
@@ -291,7 +292,9 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
   const col = [{ kind: 'soldier', x: 60, y: 0, hp: 1 }, { kind: 'soldier', x: 100, y: 0, hp: 1 }];
   const hc = hits(shooter, col[0], fanDef, col);
   t('fan:同一小錐內只取最近一名', hc.length === 1 && hc[0].ent === col[0]);
-  const tw = [{ kind: 'tower', x: 30, y: 0, hp: 1800 }];
+  TARGET_R['creep:boss'] = 7;
+  TARGET_CLASS['boss'] = 'armor';
+  const tw = [{ kind: 'boss', x: 30, y: 0, hp: 1800 }];
   const ht = hits(shooter, tw[0], fanDef, tw);
   t(`fan:近距大目標橫跨全錐 → ${fanSubs(fanDef)} 格各取一次(單一敵人多次傷害)`,
     ht.length === fanSubs(fanDef) && ht.every((x) => x.ent === tw[0]));
@@ -339,12 +342,12 @@ console.log('\nⅥ 穿透預算 / 小錐格數:推導不手寫,單一縫');
   const waveCost = waveComp().reduce((s, k) => s + lancePenCost({ kind: k }), 0);
   t(`一波兵(3 步槍＋火箭＋榴彈＋坦克＋直升機)截面積和 ${waveCost.toFixed(2)}m²:gun 約 1.3 波、rail 約 2 波、beam 約 3 波`,
     waveCost < LANCE.PEN.gun && waveCost * 2 > LANCE.PEN.rail && waveCost * 3 > LANCE.PEN.beam);
-  t('FAN_SUB_DEG = 4(小錐寬約 4°)',
-    FAN_SUB_DEG === 4);
-  t('fanSubs 由錐角推導且恆為奇數:10°→5 格、15°→9 格、26°→13 格、缺省(15°)→9 格',
-    fanSubs({ arc: 10 }) === 5 && fanSubs({ arc: 15 }) === 9
-    && fanSubs({ arc: 26 }) === 13 && fanSubs({}) === 9
-    && [10, 13, 15, 20, 26].every((a) => fanSubs({ arc: a }) % 2 === 1));
+  t('FAN_SUB_DEG = 2.4(小錐寬約 2.4°,格數控制在 9~19)',
+    FAN_SUB_DEG === 2.4);
+  t('fanSubs 由錐角推導且恆為奇數:10°→9 格、15°→13 格、22°→19 格、缺省(15°)→13 格',
+    fanSubs({ arc: 10 }) === 9 && fanSubs({ arc: 15 }) === 13
+    && fanSubs({ arc: 22 }) === 19 && fanSubs({}) === 13
+    && [10, 13, 15, 17, 20, 22].every((a) => fanSubs({ arc: a }) % 2 === 1));
   t('FAN_SUB_F = 0.8(單一小錐單價;壓格不壓錐)',
     FAN_SUB_F === 0.8);
   t('LANCE.CORE_F = 0.5(內圈半徑 = R × 0.5,與 BLAST.CORE 同式)',
