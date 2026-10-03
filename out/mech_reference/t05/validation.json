@@ -2,13 +2,13 @@
   "asset": "t05",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 10156,
-    "meshes": 53,
-    "joints": 25,
+    "triangles": 13368,
+    "meshes": 79,
+    "joints": 31,
     "source": {
-      "contract": "68a3f9d04df4ed42bf39263613fef82e0e48580ab595407ba0f38b0d9c6ec9e4",
-      "builder": "19eb5bb693e24f02ef35c172a149887a3d347939c011ef2767971db22beb7b72",
-      "catalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec",
+      "contract": "28495a7e59b6cf7ad8116b91d20cd47420ae19429387d2519e3424cc9aa0d794",
+      "builder": "2eb8cef5dc9ec6fc288af95a89f7148963e04e136864d7d362154bf39931a322",
+      "catalog": "8d618333f5f946d8896e9a0b836ecc13c81c22dced4e01fd91881a7e443cf87d",
       "image": "d0dee31f053ea6bcf1dd33184159b5c7937f2f56ab551d65a83fc8b2de159fc0"
     }
   },
@@ -28,24 +28,34 @@
     "side.png",
     "back.png",
     "top.png",
+    "idle.png",
     "shield_deploy.png",
+    "shield_retract.png",
     "light.png",
     "heavy.png",
+    "skill.png",
+    "ult.png",
     "run.png"
   ],
   "hashes": {
-    "runtime": "2a3b90d63e394842176ee9af76c853db9ef3bd6286249c0cb78a3a114b61f45e",
-    "blend": "5712b7fefa9ae46ee595de0c2ebd5e934ddf4f294b1f1004688349c26dd53661",
-    "glb": "3725270a1237691673e6487dfc51aa32db7e6f345407d8a24f4ee89ee0fe7ba7"
+    "runtime": "493da7f74c1a6873e226dabc4478b4f111e38e5dfb20bd04ba810fc55fb850ec",
+    "blend": "8c730478dc8fd80fccdf8e88ca89d100c2496a8f4501f287fb3916b59680d983",
+    "glb": "6f3406132ae8eee7d47bf77993f834fa24ed37d4244b45db7a8f420cb435df76"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pending_visual_review",
-    "appearance": "pending_visual_review",
-    "export": "pending_independent_load",
-    "destination": "pending_browser_review",
+    "geometry": "pass",
+    "appearance": "pass",
+    "export": "pass",
+    "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass"
+  },
+  "editableSourceRecipe": {
+    "contract": "1370da6e24928fcc0af5d92cdcdd249a304a44f6b69f201f14cb33884af65fe6",
+    "builder": "2eb8cef5dc9ec6fc288af95a89f7148963e04e136864d7d362154bf39931a322",
+    "catalog": "8d618333f5f946d8896e9a0b836ecc13c81c22dced4e01fd91881a7e443cf87d",
+    "image": "d0dee31f053ea6bcf1dd33184159b5c7937f2f56ab551d65a83fc8b2de159fc0"
   }
 }

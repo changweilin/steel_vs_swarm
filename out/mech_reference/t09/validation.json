@@ -6,9 +6,9 @@
     "meshes": 25,
     "joints": 14,
     "source": {
-      "contract": "68a3f9d04df4ed42bf39263613fef82e0e48580ab595407ba0f38b0d9c6ec9e4",
-      "builder": "19eb5bb693e24f02ef35c172a149887a3d347939c011ef2767971db22beb7b72",
-      "catalog": "4999f8558b6a240740a94caad2eb9371795d775b22cbebf08cb4f9756f41abec",
+      "contract": "28495a7e59b6cf7ad8116b91d20cd47420ae19429387d2519e3424cc9aa0d794",
+      "builder": "2eb8cef5dc9ec6fc288af95a89f7148963e04e136864d7d362154bf39931a322",
+      "catalog": "8d618333f5f946d8896e9a0b836ecc13c81c22dced4e01fd91881a7e443cf87d",
       "image": "a4e45a5b8b16fc1dff850d2443a941ae8dd44c328e6c892ae7bd9bc13e25dc92"
     }
   },
@@ -22,20 +22,40 @@
     "shield_deploy",
     "shield_retract"
   ],
-  "renders": [],
+  "renders": [
+    "reference.png",
+    "front.png",
+    "side.png",
+    "back.png",
+    "top.png",
+    "idle.png",
+    "shield_deploy.png",
+    "shield_retract.png",
+    "light.png",
+    "heavy.png",
+    "skill.png",
+    "ult.png",
+    "run.png"
+  ],
   "hashes": {
-    "runtime": "c6a656ff07c30716ff34c7ca7bc7884c9523179fd3039cb1d3353f74efb17636",
-    "blend": "5ff020667abe7e03296067a336c2a262b5fa4687982fcad7a93c1d5be62dd2ad",
-    "glb": "43a13c9a13733df7d7bcbc498eaf01f3df7045c2504894559ae9d07ec6514b70"
+    "runtime": "4a092d99618e2b189f02224262cac4255bff8601bba448b0f1f339b1770e80e4",
+    "blend": "6da520d53267e453a6bbacc4b8fe8a462bfe0aefc39d10257dd2d251bf769975",
+    "glb": "3ed0e1fc33fbbb34353f6abbd11e06a5afd2b25685b691ab6b7388919c0ac441"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pending_visual_review",
-    "appearance": "pending_visual_review",
-    "export": "pending_independent_load",
-    "destination": "pending_browser_review",
+    "geometry": "pass",
+    "appearance": "pass",
+    "export": "pass",
+    "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass"
+  },
+  "editableSourceRecipe": {
+    "contract": "4b0638d1a90768d36e0ca2d5cab96e072dbaf8704307586fb54ad2cfe4072c8d",
+    "builder": "4cda5676c600b7d6a098c5a8fe07b03e8ea54c13551bde5fa55e0f4b1faca421",
+    "catalog": "7c4af2941d1f62cf9f9932987c316ddec353d4e8e2796d4ab21895a1a5ce8abb",
+    "image": "a4e45a5b8b16fc1dff850d2443a941ae8dd44c328e6c892ae7bd9bc13e25dc92"
   }
 }

@@ -62,6 +62,7 @@ class Asset:
         spec = copy.deepcopy(spec)
         self.spec = spec
         rig = spec['rig']
+        parents = {name: parent for name, parent, _ in spec['joints']}
         if spec['kind'] == 'biped':
             rig['naturalArms'] = True
             rig['aimWhileIdle'] = False
@@ -69,23 +70,35 @@ class Asset:
             aim = rig.setdefault('aimPose', {'rShoulderX': -.55, 'rElbowX': -.92})
             aim.setdefault('lShoulderX', aim['rShoulderX'])
             aim.setdefault('lElbowX', aim['rElbowX'])
-            for side in ['L', 'R']:
-                elbow = rig['armChain' + side][0]
-                elbow['base'] = min(elbow['base'], -.18)
-                elbow['k'] = -abs(elbow['k'])
-            parents = {name: parent for name, parent, _ in spec['joints']}
+            if not rig.get('anatomicalArms'):
+                for side in ['L', 'R']:
+                    elbow = rig['armChain' + side][0]
+                    elbow['base'] = min(elbow['base'], -.18)
+                    elbow['k'] = -abs(elbow['k'])
             for weapon in rig['wpn'].values():
                 name = weapon['nodes'][0]
                 parent = parents[name]
                 while parent:
-                    for side in ['L', 'R']:
+                    for side in ([] if rig.get('groundWings') else ['L', 'R']):
                         if parent == rig['arm' + side]:
                             rig.setdefault('gun' + side, {'g': name, 'rest': 0})
                     parent = parents[parent]
         for side in ['R', 'L']:
             if rig.get('gun' + side) and rig.get('aimPose'):
                 aim = rig['aimPose']
-                rig['gun' + side]['aim'] = -(aim[side.lower() + 'ShoulderX'] + aim[side.lower() + 'ElbowX'])
+                angle = aim[side.lower() + 'ShoulderX'] + aim[side.lower() + 'ElbowX']
+                if 'forms' not in spec:
+                    # Wing-root weapons inherit the shoulder only; wrist weapons inherit the elbow too.
+                    ancestors = set()
+                    parent = parents[rig['gun' + side]['g']]
+                    while parent:
+                        ancestors.add(parent)
+                        parent = parents[parent]
+                    angle = sum(aim[key] for node, key in
+                                [(rig['arm' + side], side.lower() + 'ShoulderX'),
+                                 (rig['armChain' + side][0]['g'], side.lower() + 'ElbowX')]
+                                if node in ancestors)
+                rig['gun' + side]['aim'] = -angle
         if rig.get('rider') and rig.get('gunR'):
             base = rig['armBase'][0]
             rig['gunR']['rest'] = rig['gunR']['aim'] = -(base['shX'] + base['elX'])
@@ -100,8 +113,13 @@ class Asset:
                 pairs = []
             self.p['legs'] = [{'root': root, 'deltas': [positions[j['g']] for j in chain],
                                'side': 1 if positions[root][0] > 0 else -1} for root, chain in pairs]
-            self.p['tentacles'] = [{'root': chain[0]['g'], 'deltas': [positions[j['g']] for j in chain[1:]]}
-                                   for chain in rig.get('tents', [])]
+            self.p['tentacles'] = []
+            for chain in rig.get('tents', []):
+                names = [j['g'] for j in chain[1:]]
+                tip = next((name for name,parent,_ in spec['joints'] if parent == chain[-1]['g']),None)
+                if tip:
+                    names.append(tip)
+                self.p['tentacles'].append({'root':chain[0]['g'],'deltas':[positions[name] for name in names]})
             self.p['tail'] = [positions[name] for name in rig.get('tailSegs', [])]
         if spec['id'] == 's01':
             self.p.update(rotorX=abs(positions['rotor_lf'][0]), rotorZ=abs(positions['rotor_lf'][2]))
@@ -357,13 +375,14 @@ class Asset:
         for z in [.08, .63, .84]:
             self.tube('Barrel retaining ring', 'gun_spin', .198, .158, .06, (0, 0, z), 'dark')
         self.disk('Rotary gun muzzle glow', 'light_muzzle', .043, .008, (0, 0, 0), 'glow')
-        self.loft('Single left shoulder VLS', 'launcher', [(-.37, .71, .67), (.66, .71, .67), (.93, .62, .63)], 'shade')
-        self.box('VLS side armor', 'launcher', (.77, .87, .07), (0, .29, .36), 'armor')
-        for x in [-.16, .16]:
-            for z in [-.21, 0, .21]:
-                self.tube('VLS launch cell', 'launcher', .112, .088, .45, (x, .76, z), 'dark', 'y', 12)
-                self.disk('VLS missile nose', 'launcher', .07, .06, (x, .79, z), 'steel', 'y')
-        self.box('Hinged launcher lid', 'launcher_lid', (.71, .045, .7), (0, .015, .32), 'dark')
+        for launcher, lid in [('launcher','launcher_lid'),('launcher_r','launcher_r_lid')]:
+            self.loft('Forward shoulder launcher rack',launcher,[(-.48,.73,.79),(.36,.73,.79),(.54,.67,.73)],'shade',axis='z')
+            self.box('Launcher dorsal armor',launcher,(.78,.09,.93),(0,.43,0),'armor')
+            for x in [-.16,.16]:
+                for y in [-.23,0,.23]:
+                    self.tube('Forward shoulder launch cell',launcher,.112,.088,.43,(x,y,.43),'dark','z',12)
+                    self.disk('Shoulder missile nose',launcher,.07,.035,(x,y,.48),'steel')
+            self.box('Hinged launcher lid',lid,(.71,.045,.93),(0,.015,.44),'dark')
         for side, name in [(-1, 'shield_leaf_l'), (1, 'shield_leaf_r')]:
             self.plate('Retractable shield emitter', name, [(-.1, .28), (.1, .24), (.1, -.26), (-.1, -.29)], .065, (side * .09, 0, 0), 'armor')
             self.box('Emitter luminous edge', name, (.035, .43, .018), (side * .1, 0, .05), 'glow', .004)
@@ -422,9 +441,45 @@ class Asset:
             node.location = xyz(at)
             node.rotation_euler = (0, 0, 0)
             node.scale = (1, 1, 1)
+        if 'forms' not in self.spec:
+            rig = self.spec['rig']
+            for side in ['L', 'R']:
+                for chain in ['legChain', 'armChain']:
+                    for joint in rig.get(chain + side, []):
+                        self.rotate(self.nodes[joint['g']], joint.get('axis', 'x'), joint['base'])
+                if rig.get('gun' + side):
+                    gun = rig['gun' + side]
+                    self.rotate(self.nodes[gun['g']], 'x', gun['rest'])
         for h in self.spec['motion']['shield']['hinges']:
             self.rotate(self.nodes[h['node']], h['axis'], h['rest'])
+        if 'forms' not in self.spec:
+            for group in ['fire','charge','cast']:
+                for track in self.spec['motion'][group]:
+                    if track['channel'] == 'scale':
+                        index = {'x':0,'y':2,'z':1}[track['axis']]
+                        self.nodes[track['node']].scale[index] = track['rest']
         self.nodes['barrier'].scale = (.001,) * 3
+        self.anatomy_pose('rest', 0)
+
+    def anatomy_pose(self, clip, t):
+        rig = self.spec['rig']
+        for w in rig.get('wings', []):
+            if not w.get('hand'):
+                continue
+            phase = math.sin(t * math.tau) if clip == 'run' else 0
+            self.rotate(self.nodes[w['w']], 'z', w['sgn'] * (w.get('dihedral',0) + phase*.3))
+            self.rotate(self.nodes[w['outer']], 'y', w['sgn'] * (w.get('elbowSweep',0) + math.sin(t*math.tau-.6)*.16 if clip=='run' else w.get('elbowSweep',0)))
+            self.rotate(self.nodes[w['hand']], 'y', w['sgn'] * (w.get('wristSweep',0) + math.sin(t*math.tau-.9)*.12 if clip=='run' else w.get('wristSweep',0)))
+        for w in rig.get('groundWings', []):
+            angles = w['run'] if clip == 'run' else w['fold']
+            for name, angle in zip([w['w'],w['outer'],w['hand']],angles):
+                self.nodes[name].rotation_euler = (0,0,0)
+                self.rotate(self.nodes[name],'y',w['sgn']*angle)
+            self.rotate(self.nodes[w['w']],'z',w['sgn']*(.28 if clip=='run' else -.30))
+        for wave in rig.get('tentacleWaves', []):
+            for i,name in enumerate(wave['chain']):
+                for axis, amplitude, offset in zip('xyz',wave['swing'],[0,1.2,2.4]):
+                    self.rotate(self.nodes[name],axis,amplitude*math.sin(t*math.tau*wave['frequency']+wave['phase']-i*.36+offset))
 
     @staticmethod
     def rotate(node, axis, value):
@@ -439,6 +494,13 @@ class Asset:
         rig = self.spec['rig']
         if hasattr(self, '_pose_form'):
             rig = rig | self.spec['forms'][self._pose_form]['rig']
+        if 'forms' not in self.spec:
+            for i, name in enumerate(rig.get('tailSegs', [])):
+                self.rotate(self.nodes[name], 'y', math.sin(t * math.tau - i * .45) * (.09 if clip == 'run' else .025))
+            for chain in rig.get('tents', []):
+                for i, joint in enumerate(chain):
+                    self.rotate(self.nodes[joint['g']], joint.get('axis', 'x'),
+                                joint['base'] + math.sin(t * math.tau - i * .4) * (.12 if clip == 'run' else .04))
         if rig.get('rider'):
             for shoulder, elbow, base in zip(rig['armSh'], rig['armEl'], rig['armBase']):
                 self.rotate(self.nodes[shoulder], 'x', base['shX'])
@@ -472,7 +534,14 @@ class Asset:
                     self.rotate(self.nodes['knee_' + side], 'x', rig['legChain' + side.upper()][0]['base'] + max(0, -angle) * .7)
                     arm_angle = math.sin(t * math.tau + (0 if side == 'l' else math.pi))
                     self.rotate(self.nodes['shoulder_' + side], 'x', rig.get('armBase', 0) - arm_angle * .34 * rig['armSwing'] / .75)
-                    self.rotate(self.nodes['elbow_' + side], 'x', rig['armChain' + side.upper()][0]['base'] - .28 - .08 * arm_angle)
+                    elbow = rig['armChain' + side.upper()][0]
+                    self.rotate(self.nodes[elbow['g']], elbow.get('axis','x'),
+                                elbow['base'] + elbow['k'] * arm_angle * .2 if rig.get('anatomicalArms')
+                                else elbow['base'] - .28 - .08 * arm_angle)
+                    if 'forms' not in self.spec:
+                        for joint in rig['legChain' + side.upper()][1:] + rig['armChain' + side.upper()][1:]:
+                            self.rotate(self.nodes[joint['g']], joint.get('axis', 'x'),
+                                        joint['base'] + joint['k'] * max(0, -angle) * .35)
                     if self.p.get('legAnatomy'):
                         for joint in rig['legChain' + side.upper()]:
                             self.rotate(self.nodes[joint['g']], joint.get('axis', 'x'),
@@ -506,7 +575,11 @@ class Asset:
                     self.rotate(self.nodes[name], 'y' if isinstance(entry, str) else entry['axis'], t * math.tau * 3)
                 for wing in self.spec['rig'].get('wings', []):
                     self.rotate(self.nodes[wing['w']], 'z', wing['sgn'] * math.sin(t * math.tau) * .3)
-                    self.rotate(self.nodes[wing['outer']], 'z', wing['sgn'] * math.sin(t * math.tau - .6) * .4)
+                    if wing.get('hand'):
+                        self.rotate(self.nodes[wing['outer']], 'y', wing['sgn'] * (.14 + math.sin(t * math.tau - .6) * .16))
+                        self.rotate(self.nodes[wing['hand']], 'y', wing['sgn'] * (.10 + math.sin(t * math.tau - .9) * .12))
+                    else:
+                        self.rotate(self.nodes[wing['outer']], 'z', wing['sgn'] * math.sin(t * math.tau - .6) * .4)
         elif clip in ('light', 'heavy', 'skill', 'ult'):
             group = 'fire' if clip == 'light' else 'charge' if clip == 'heavy' else 'cast'
             weight = math.sin(math.pi * u) ** 2
@@ -515,8 +588,15 @@ class Asset:
                 value = track['rest'] + track['amplitude'] * weight
                 if track['channel'] == 'rotation':
                     self.rotate(node, track['axis'], value)
+                elif track['channel'] == 'scale':
+                    index = {'x':0,'y':2,'z':1}[track['axis']]
+                    node.scale[index] = value
                 else:
-                    node.location = xyz([value if axis == track['axis'] else 0 for axis in 'xyz'])
+                    if 'forms' in self.spec:
+                        node.location = xyz([value if axis == track['axis'] else 0 for axis in 'xyz'])
+                    else:
+                        index, sign = {'x': (0, 1), 'y': (2, 1), 'z': (1, -1)}[track['axis']]
+                        node.location[index] = value * sign
             if rig.get('aimPose'):
                 aim = rig['aimPose']
                 for side in ['R', 'L']:
@@ -530,11 +610,12 @@ class Asset:
                     gun = rig.get('gun' + side)
                     if gun:
                         self.rotate(self.nodes[gun['g']], 'x', gun['rest'] + (gun['aim'] - gun['rest']) * weight)
-                if clip == 'skill':
+                if clip == 'skill' and 'forms' in self.spec:
                     self.rotate(self.nodes['shoulder_l'], 'x', -.6 * weight)
                     self.rotate(self.nodes['elbow_l'], 'x', -.85 * weight)
             elif self.spec['kind'] == 'aerial':
                 self.rotate(self.nodes['tilt'], 'x', -.13 * weight)
+        self.anatomy_pose(clip, t)
 
     def animations(self):
         clips = self.spec.get('clips', ['idle', 'run', 'light', 'heavy', 'skill', 'ult', 'shield_deploy', 'shield_retract'])
@@ -596,7 +677,9 @@ class Asset:
         for batch in batches.values():
             assert all(math.isfinite(v) for v in batch['positions'] + batch['normals'])
         output = RUNTIME / (self.spec['id'] + '.js')
-        output.write_text('// Generated by tools/mech_authoring/build.py; edit the owning contract or builder.\nexport default ' + json.dumps(data, separators=(',', ':')) + ';\n', encoding='utf8')
+        pending = output.with_suffix('.js.tmp')
+        pending.write_text('// Generated by tools/mech_authoring/build.py; edit the owning contract or builder.\nexport default ' + json.dumps(data, separators=(',', ':')) + ';\n', encoding='utf8')
+        pending.replace(output)
         self.batches = list(batches.values())
         return output, {'triangles': triangles, 'meshes': len(batches), 'joints': len(self.nodes), 'source': data['source']}
 
@@ -645,8 +728,8 @@ class Asset:
             camera.rotation_euler = (target - camera.location).to_track_quat('-Z', 'Y').to_euler()
             self.render_still(directory, name)
             evidence.append(name + '.png')
-        for clip in ['shield_deploy', 'light', 'heavy', 'run']:
-            self.pose(clip, 1 if clip == 'shield_deploy' else .5 if clip != 'run' else .17)
+        for clip in ['idle', 'shield_deploy', 'shield_retract', 'light', 'heavy', 'skill', 'ult', 'run']:
+            self.pose(clip, 1 if clip.startswith('shield_') else .5 if clip != 'run' else .17)
             camera.location = xyz(contract['review']['views']['reference'])
             camera.rotation_euler = (target - camera.location).to_track_quat('-Z', 'Y').to_euler()
             self.render_still(directory, clip)
@@ -688,9 +771,14 @@ for spec in contract['assets'].values():
     bpy.ops.wm.save_as_mainfile(filepath=str(blend))
     asset.export_selection()
     glb = EXPORT / (spec['id'] + '.glb')
-    bpy.ops.export_scene.gltf(filepath=str(glb), export_format='GLB', use_selection=True,
+    temporary_glb = glb.with_suffix('.export.glb')
+    # A constant running wing pose still differs from the folded default pose.
+    # glTF's object-track optimization otherwise drops that entire clip channel.
+    bpy.ops.export_scene.gltf(filepath=str(temporary_glb), export_format='GLB', use_selection=True,
                              export_animations=True, export_animation_mode='NLA_TRACKS',
+                             export_optimize_animation_keep_anim_object=bool(spec['rig'].get('groundWings')),
                              export_nla_strips_merged_animation_name='Animation', export_force_sampling=True)
+    temporary_glb.replace(glb)
     report = {'asset': spec['id'], 'blender': bpy.app.version_string, 'measurements': measured,
               'clips': clips, 'renders': views, 'hashes': {'runtime': digest(output), 'blend': digest(blend), 'glb': digest(glb)},
               'gates': {'structure': 'pass', 'resources': 'pass', 'geometry': 'pending_visual_review',
