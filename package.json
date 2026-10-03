@@ -65,7 +65,9 @@
     "author:mechs": "node tools/mech_authoring/build.mjs",
     "audit:reference-mechs": "node tools/audit_reference_mechs.mjs",
     "author:morphers": "node tools/mech_authoring/build.mjs --contract morphers.json",
-    "audit:reference-morph": "node tools/audit_reference_morph.mjs"
+    "audit:reference-morph": "node tools/audit_reference_morph.mjs",
+    "author:combat": "node tools/mech_authoring/build.mjs --combat --mcp --no-render && node tools/mech_authoring/build.mjs --contract morphers.json --combat --mcp --no-render",
+    "audit:combat-actions": "node tools/audit_combat_actions.mjs"
   },
 
   "dependencies": {

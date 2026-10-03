@@ -1,0 +1,61 @@
+{
+  "asset": "m05",
+  "blender": "5.2.0 LTS",
+  "measurements": {
+    "triangles": 17692,
+    "meshes": 143,
+    "joints": 75,
+    "source": {
+      "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
+      "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
+      "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
+      "combat": "5ca8bd633985f3b8a2313cac79395151e662c971f9df02373aa167c9b2d03c2c",
+      "intent": "a8ab7c1e77a956f0d8f07c68e7e25f4c08e2277441c1a555b0cec8d283691a83",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
+      "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
+    }
+  },
+  "clips": [
+    "idle",
+    "run",
+    "light",
+    "heavy",
+    "skill",
+    "ult",
+    "shield_deploy",
+    "shield_retract",
+    "to_flight",
+    "to_ground",
+    "flight_idle",
+    "flight_light",
+    "flight_heavy",
+    "flight_skill",
+    "flight_ult",
+    "flight_shield_deploy",
+    "flight_shield_retract",
+    "def",
+    "atk"
+  ],
+  "renders": [],
+  "hashes": {
+    "runtime": "1e7ee6959af68e9203c9c64a2e39adfde5850fdbe42d2620788eac13097c1d11",
+    "blend": "8f05fb03c206fcb6e1446df3d170cbacb52f90c8bc8c8f565d9c1dcf1d3e6594",
+    "glb": "0f4af1ddf0e21cf91bc1d4f62e64eee9210ed90211843a12c84d14d78d1db7ae"
+  },
+  "gates": {
+    "structure": "pass",
+    "resources": "pass",
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pass",
+    "destination": "pass",
+    "user_signoff": "pending_user_review",
+    "motion": "pass"
+  },
+  "reviewEvidence": {
+    "runtime": "../runtime-validation.json",
+    "source": "../source-validation.json",
+    "attachments": "../actions-4.png"
+  }
+}

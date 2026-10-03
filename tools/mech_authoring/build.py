@@ -19,6 +19,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--asset', default='all')
 parser.add_argument('--contract', default='assets.json')
 parser.add_argument('--no-render', action='store_true')
+parser.add_argument('--combat', action='store_true')
+parser.add_argument('--combat-data')
 parser.add_argument('--rebuild', action='store_true', help='Write isolated reproducibility evidence without replacing authored sources')
 args = parser.parse_args(ARGS)
 contract_path = HERE / args.contract
@@ -29,9 +31,15 @@ assert args.asset == 'all' or args.asset in contract['assets'], 'Unknown asset: 
 sys.path.insert(0, str(HERE))
 from catalog import construct
 adapter = importlib.import_module(contract['authoring']['adapter']) if 'adapter' in contract['authoring'] else None
+combat = importlib.reload(importlib.import_module('combat')) if args.combat else None
+combat_intent = json.loads(Path(args.combat_data).read_text(encoding='utf8')) if args.combat else None
 OUT = (HERE / contract['authoring']['outputs']).resolve()
 RUNTIME = (HERE / contract['authoring']['runtime']).resolve()
 EXPORT = (HERE / contract['authoring']['export']).resolve()
+if args.combat:
+    OUT = ROOT / 'out/combat_reference'
+    RUNTIME = ROOT / 'public/js/forge/combatAssets'
+    EXPORT = ROOT / 'public/assets/models/combat'
 if args.rebuild:
     OUT = OUT / '_rebuild'
     RUNTIME = OUT / 'runtime'
@@ -482,6 +490,8 @@ class Asset:
                         self.nodes[track['node']].scale[index] = track['rest']
         self.nodes['barrier'].scale = (.001,) * 3
         self.anatomy_pose('rest', 0)
+        if hasattr(self, 'combat'):
+            combat.reset(self)
 
     def anatomy_pose(self, clip, t):
         rig = self.spec['rig']
@@ -535,6 +545,8 @@ class Asset:
                 bpy.context.view_layer.update()
 
     def pose(self, clip, t):
+        if args.combat:
+            clip = {'def': 'skill', 'atk': 'ult'}.get(clip, clip)
         self.reset()
         motion = self.spec['motion']
         u = max(0, min(1, t))
@@ -665,9 +677,13 @@ class Asset:
                 self.rotate(self.nodes['tilt'], 'x', -.13 * weight)
         self.anatomy_pose(clip, t)
         self.aim_hands(math.sin(math.pi*u)**2 if clip in ('light','heavy','skill','ult') else 0)
+        if hasattr(self, 'combat'):
+            combat.pose(self, clip, t)
 
     def animations(self):
         clips = self.spec.get('clips', ['idle', 'run', 'light', 'heavy', 'skill', 'ult', 'shield_deploy', 'shield_retract'])
+        if args.combat:
+            clips = [*clips, 'def', 'atk']
         for clip in clips:
             for node in self.nodes.values():
                 node.animation_data_create()
@@ -717,6 +733,12 @@ class Asset:
                 'meshes': list(batches.values()), 'rig': self.spec['rig'], 'motion': self.spec['motion']}
         if 'forms' in self.spec:
             data['forms'] = self.spec['forms']
+        if args.combat:
+            data['combat'] = self.combat
+            data['meshes'] = [batch for batch in batches.values() if batch['parent'].startswith('fx_')]
+            data['joints'] = [joint for joint in self.spec['joints'] if joint[0].startswith('fx_')]
+            data['source']['combat'] = digest(HERE / 'combat.py')
+            data['source']['intent'] = digest(Path(args.combat_data))
         if 'inherit' in contract:
             data['source']['sharedContract'] = digest(HERE / contract['inherit'])
             data['source']['sharedCatalog'] = digest(HERE / 'catalog.py')
@@ -809,6 +831,8 @@ for spec in contract['assets'].values():
     else:
         asset.drone() if spec['kind'] == 'aerial' else asset.mech()
     asset.armature()
+    if args.combat:
+        combat.construct(asset, combat_intent[spec['id']], xyz)
     output, measured = asset.runtime()
     clips = asset.animations()
     blend = directory / (spec['id'] + '.blend')

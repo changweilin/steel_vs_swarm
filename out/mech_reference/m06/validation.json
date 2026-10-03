@@ -6,8 +6,8 @@
     "meshes": 86,
     "joints": 38,
     "source": {
-      "contract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
-      "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+      "contract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
       "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
       "image": "efd9cd117b8de16d594c02a88ed84b1b48f7a8da6db74d64ea6c6aa4b32d555c"
     }
@@ -38,7 +38,7 @@
     "run.png"
   ],
   "hashes": {
-    "runtime": "90ca166a5aed1ebf1e55c87a9c14a68bf147b421e57791b9695aaf03c6f7d7fc",
+    "runtime": "4001390d4ead38cf23257e02897237bae9c724e9a8def26c13732215ddaa4399",
     "blend": "a91c33e1da81776594a2338cab884c7fed6133118f21af425141a04588c2891a",
     "glb": "83964c2e9b213fa6ec586dce1a008aeb3f2cb693ae16e02892afcc61219e6256"
   },
@@ -52,5 +52,11 @@
     "user_signoff": "pending_user_review",
     "editable_source": "pass",
     "rebuild": "pass"
+  },
+  "editableSourceRecipe": {
+    "contract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+    "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+    "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
+    "image": "efd9cd117b8de16d594c02a88ed84b1b48f7a8da6db74d64ea6c6aa4b32d555c"
   }
 }

@@ -13,6 +13,7 @@ import { bodyBounce, cycleU, dutyOf, hipDrive, humanRunPose, limbProfile, limbFl
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 import { animWeights } from './animweights.js';
 import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion, poseReferenceShield, resetReferenceShieldPose } from './unitMotion.js';
+import { stepAuthoredCombat, clearMorphCombatShield } from './forge/combatAsset.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -127,7 +128,10 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
     const posture = (1 - morphEase(morph.m)) * shieldPosture;
     poseReferenceShield(morph.ground.shield, posture);
     poseReferenceShield(morph.air.shield, posture);
+    stepAuthoredCombat(morph.ground, ent, now);
+    stepAuthoredCombat(morph.air, ent, now);
   }
+  if (ent.hero && rig.combat) ent.shieldMesh = rig.shield.barrier;
   // 開火槍軸校正是最後的 post-pass：跑步扭腰、飛行壓坡、跳躍與變形姿態都已結算後，
   // 再把本次發射槽的每根槍軸鎖回機體 +z。否則任一個後續父骨驅動都會把槍口帶偏。
   if (morph?.act) {
@@ -135,6 +139,10 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
     stepAimForward(morph.ground, rig);
     stepAimForward(morph.air, rig);
   } else stepAimForward(rig);
+  if (morph) {
+    clearMorphCombatShield(morph.ground);
+    clearMorphCombatShield(morph.air);
+  }
   // 動畫權重向量(⑥-3):「這台現在在做什麼」的唯一產生點。**只寫不讀** ——
   // 本行之上的每一段步態一格未動(audit_gait_anat 八段 MUST 逐字不變),
   // 而消費端(移動環境音/地點床/日後的自機 stem)從此只認 `ent.loco.w`。
@@ -1569,7 +1577,7 @@ const ease01 = (p) => p * p * (3 - 2 * p);
 function stepCastPose(L, rig, ent, dt, now) {
   const cf = ent.castFx;
   if (!cf) return;
-  const dur = cf.slot === 'atk' ? 1.35 : 0.95;
+  const dur = rig.combat?.clips[cf.slot]?.duration ?? (cf.slot === 'atk' ? 1.35 : 0.95);
   const p = (now - cf.t0) / dur;
   if (p >= 1 || p < 0) { ent.castFx = null; return; }
   const sig = rig.castSig || CAST_DEF[rig.kind] || CAST_DEF.biped;

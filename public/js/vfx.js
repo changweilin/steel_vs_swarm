@@ -13,6 +13,7 @@ import { lowPower } from './mobile.js';
 import { UNITS, WEAPONS, BALLISTIC, shotFlightS } from './data.js';
 import { Pool } from './pool.js';
 import { registerStreamTex } from './tex.js';
+import { COMBAT_ASSETS } from './forge/combatAssets.js';
 
 // Decorative effects yield under load without suppressing projectiles or hit reports.
 const crowded = (effects) => effects.length >= (lowPower() ? 90 : 180);
@@ -330,8 +331,42 @@ export function starburst(scene, effects, x, y, z, r, color = 0xffe27a, delay = 
  * @param def 武器定義(heroWeapon 輸出或 {type})
  * @param opts.col 陣營曳光色(動能彈)  @param opts.hue 角色識別色(彈頭)  @param opts.heavy 重武器
  */
+function combatGeometry(asset, part, slot, radial, length = radial, origin = 0) {
+  return unitGeo(`combat/${asset.id}/${slot}/${part.material}/${radial}/${length}/${origin}`, () => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(part.positions.map((value, i) =>
+      i % 3 === 2 ? (value - origin) * length : value * radial), 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(part.normals, 3));
+    geo.setIndex(part.indices);
+    return geo;
+  });
+}
+
 export function projectileMesh(def, { col = 0xffd27a, hue = col, heavy = false, compact = false } = {}) {
   const ty = def?.type || 'gun';
+  const authored = COMBAT_ASSETS[def?.ch];
+  const slot = def?.slot || (heavy ? 'heavy' : 'light');
+  const parent = `fx_${slot}_${ty === 'missile' || ty === 'launcher' ? 'rocket' : 'bullet'}`;
+  const parts = authored?.meshes.filter(part => part.parent === parent);
+  if (parts?.length && ty !== 'beam' && ty !== 'plasma') {
+    const group = new THREE.Group();
+    const size = ty === 'missile' || ty === 'launcher' ? 1.4 : heavy ? 2.2 : 1.4;
+    const positions = parts.flatMap(part => part.positions.filter((_, i) => i % 3 === 2));
+    const scale = size / Math.max(.01, Math.max(...positions) - Math.min(...positions));
+    for (const part of parts) {
+      const geometry = combatGeometry(authored, part, slot, scale);
+      const desc = authored.materials[part.material];
+      const color = ty === 'gun' ? new THREE.Color(authored.combat.intent.color).lerp(new THREE.Color(desc.color), .35) : desc.color;
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color,
+        transparent: true, opacity: desc.opacity, blending: THREE.AdditiveBlending, depthWrite: false,
+        side: THREE.DoubleSide }));
+      mesh.userData.noOutline = true;
+      group.add(mesh);
+    }
+    group.userData.authoredProjectile = { ch: def.ch, slot };
+    group.userData.projectileFx = { heavy, phase: authored.combat.intent.variant, jets: [], authored: group.children };
+    return group;
+  }
   const jetFlame = (g, z, r) => {
     // 尾焰與氣流只建兩層共享單位錐:白熱內芯 + 陣營色外暈。逐幀只改 scale/opacity,
     // 不再沿航跡配置火花 sprite；飛彈群密集時 draw call 與垃圾量都有固定上限。
@@ -440,6 +475,7 @@ export function stepProjectileFx(projectile, age = 0, speed = 0) {
   const fx = projectile?.userData?.projectileFx;
   if (!fx) return;
   const thrust = 0.82 + Math.min(1, Math.max(0, speed) / 260) * 0.28;
+  for (const mesh of fx.authored || []) mesh.material.opacity = .65 + .2 * Math.sin(age * 37 + fx.phase);
   if (fx.wake) {
     const length = (fx.heavy ? 4 : 2.4) * thrust;
     const radius = (fx.heavy ? 0.14 : 0.075) * (1 + Math.sin(age * 25) * 0.08);
@@ -593,14 +629,51 @@ function axisCylinder(from, to, r, color, opacity) {
   return m;
 }
 
+/** Normalize authored energy shapes to the already clipped beam endpoints and presentation radius. */
+function combatDischarge(scene, effects, from, to, def, family, radius, ttl) {
+  const asset = COMBAT_ASSETS[def?.ch], slot = def?.slot || 'heavy';
+  const parts = asset?.meshes.filter(part => part.parent === `fx_${slot}_${family}`);
+  if (!parts?.length) return false;
+  const direction = to.clone().sub(from), distance = direction.length();
+  if (distance < .01) return false;
+  let low = Infinity, high = -Infinity, radial = 0;
+  for (const part of parts) for (let i = 0; i < part.positions.length; i += 3) {
+    radial = Math.max(radial, Math.hypot(part.positions[i], part.positions[i + 1]));
+    low = Math.min(low, part.positions[i + 2]); high = Math.max(high, part.positions[i + 2]);
+  }
+  const group = new THREE.Group(), alpha = [];
+  for (const part of parts) {
+    const desc = asset.materials[part.material];
+    const mesh = new THREE.Mesh(combatGeometry(asset, part, slot, 1 / Math.max(.01, radial), 1 / Math.max(.01, high - low), low),
+      energyMat(desc.color, desc.opacity));
+    mesh.userData.noOutline = true;
+    group.add(mesh); alpha.push(desc.opacity);
+  }
+  group.position.copy(from);
+  group.quaternion.setFromUnitVectors(_FWD, direction.divideScalar(distance));
+  group.scale.set(radius, radius, distance);
+  group.userData.authoredDischarge = { ch: def.ch, slot, family };
+  scene.add(group);
+  effects.push({ obj: group, ttl, fade(o, f) {
+    o.scale.x = o.scale.y = radius * (.3 + .7 * f);
+    for (let i = 0; i < o.children.length; i++) {
+      o.children[i].material.opacity = alpha[i] * f;
+      if (family === 'ion') o.children[i].rotation.z = (1 - f) * Math.PI * 2;
+    }
+  } });
+  starburst(scene, effects, to.x, to.y, to.z, radius * 1.6, asset.combat.intent.accent);
+  return true;
+}
+
 /**
  * 光束砲(鋼彈式 mega beam / beam rifle):
  *   熾白內芯 + 飽和外暈雙層圓柱(外暈收縮、內芯延遲熄滅)+ 槍口衝擊環 +
  *   沿軸「行進」的能量環(rings 個,由槍口衝向落點)+ 落點綻放。
  * r = 圓柱半徑(= 伺服器 LANCE.R 的貫穿半徑)⇒ **看到多粗就是打到多粗**,不是裝飾。
  */
-export function gundamBeam(scene, effects, from, to, color, { r = 3.6, ttl = 0.5, rings = 4, core = 0xffffff } = {}) {
+export function gundamBeam(scene, effects, from, to, color, { r = 3.6, ttl = 0.5, rings = 4, core = 0xffffff, def } = {}) {
   if (crowded(effects)) return;
+  if (combatDischarge(scene, effects, from, to, def, 'beam', r, ttl)) return;
   const dir = to.clone().sub(from);
   const len = dir.length();
   if (len < 0.01) return;
@@ -656,8 +729,9 @@ export function gundamBeam(scene, effects, from, to, color, { r = 3.6, ttl = 0.5
  *   噴口錐(近粗遠細的能量喉)+ coil 條螺旋纏繞的能量帶(繞射線旋進)+ 末端灼燒綻放。
  * 錐形外形(噴口最粗、末端收束)維持 —— 扇形傷害已改小錐分格且不隨距離衰減,外形只表範圍錐。
  */
-export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45, coil = 3, core = 0xffffff } = {}) {
+export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45, coil = 3, core = 0xffffff, def } = {}) {
   if (crowded(effects)) return;
+  if (combatDischarge(scene, effects, from, to, def, 'ion', r, ttl)) return;
   const dir = to.clone().sub(from);
   const len = dir.length();
   if (len < 0.01) return;
@@ -947,6 +1021,10 @@ const SHIELD_VERT = /* glsl */`
 const SHIELD_FRAG = /* glsl */`
   ${INK_INFO_DECL}
   uniform vec3 uColor;
+  uniform vec3 uAccent;
+  uniform sampler2D uPattern;
+  uniform float uHasPattern;
+  uniform float uPatternAspect;
   uniform float uTime;
   uniform float uFlash;   // 受擊 1 → 0 衰減
   uniform float uPlanar;  // 0 柱面鋪格(工事殼) / 1 平面鋪格(英雄正面盾)
@@ -992,7 +1070,12 @@ const SHIELD_FRAG = /* glsl */`
     float ripple = uFlash * smoothstep( 0.25, 0.0, abs( fract( vP.y * 0.04 + uTime * 1.6 ) - 0.5 ) - 0.2 );
     float glow = edge * ( 0.25 + uFlash * 1.4 ) + fres * 0.55 + ripple + rimGlow;
     float alpha = 0.05 + edge * 0.08 + fres * 0.22 + uFlash * ( 0.30 + edge * 0.45 ) + rim * ( 0.10 + uFlash * 0.35 );
-    gl_FragColor = vec4( uColor * ( 0.6 + glow * 1.8 ), alpha );
+    float glyph = 0.0;
+    if (uHasPattern > 0.5) {
+      vec2 motifUV = vec2(vP.x, vP.y * uPatternAspect) / (2.0 * uHexR) + 0.5;
+      glyph = texture2D(uPattern, motifUV).a;
+    }
+    gl_FragColor = vec4( uColor * ( 0.6 + glow * 1.8 ) + uAccent * glyph * (0.8 + uFlash), alpha + glyph * 0.3 );
     ${INK_INFO_NONE}   // 半透明加成殼不該畫輪廓線:寫哨兵 0(見 toon.js 的材質契約)
   }
 `;
@@ -1008,6 +1091,10 @@ export function makeShieldMaterial(color, opts = {}) {
     fragmentShader: SHIELD_FRAG,
     uniforms: {
       uColor: { value: new THREE.Color(color) },
+      uAccent: { value: new THREE.Color(opts.accent ?? color) },
+      uPattern: { value: opts.pattern || null },
+      uHasPattern: { value: opts.pattern ? 1 : 0 },
+      uPatternAspect: { value: opts.aspect || 1 },
       uTime: { value: Math.random() * 10 },
       uFlash: { value: 0 },
       uPlanar: { value: opts.planar ? 1 : 0 },   // 0 柱面鋪格(工事殼) / 1 平面鋪格(英雄正面盾)
@@ -1022,6 +1109,7 @@ export function makeShieldMaterial(color, opts = {}) {
 
 /** 護盾閃光強度映射:單次護盾損耗(點) → uFlash 峰值。擦傷小亮、重擊大亮(封頂 1.6)。 */
 export const SHIELD_FLASH_REF = 80;
+export const SHIELD_PRESENTATION_EXPAND = 1.7;
 export function shieldHitStrength(drop) {
   return Math.min(1.6, 0.35 + Math.max(0, drop || 0) / SHIELD_FLASH_REF);
 }

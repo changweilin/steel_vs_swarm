@@ -2,21 +2,21 @@
   "m01": {
     "source": {
       "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-      "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
       "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
       "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
-      "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
       "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
     },
     "hashes": {
-      "runtime": "cc13002980a1ba8de304c8f07032a403f881f114342f34b3ac2d539ebf2c00db",
+      "runtime": "389d9f2a14117fb6defea71bc43e99b37653012fae3e7aa00d47dc53b2549d3b",
       "glb": "b09014737d47a7e1e3bb0b8afe017ebe51bbb3809d86e0657ab04ba93f6bc4b3"
     },
     "measurements": {
       "trianglesPerVisibleForm": 11812,
-      "effectTriangles": 0,
-      "effectMeshes": 0,
-      "retainedTriangles": 23624,
+      "effectTriangles": 1660,
+      "effectMeshes": 12,
+      "retainedTriangles": 25284,
       "meshesPerVisibleForm": 103,
       "pairs": {
         "pair": 132,
@@ -82,29 +82,29 @@
       "export_load": "pass",
       "registry": "pass",
       "controls": "pass",
-      "appearance": "pass",
-      "flight_belly": "pass",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
       "user_signoff": "pending_user_review"
     }
   },
   "s03": {
     "source": {
       "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-      "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
       "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
       "image": "b335083d23ec7ec543f37bb9acf7da2657e0cf47773f5cd6101022dac7a28253",
-      "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
       "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
     },
     "hashes": {
-      "runtime": "7b16a15fc2096e0be099a61c1a559c141cd08bbd2ea26112fe9a84c43a85d19a",
+      "runtime": "28a75ae837f0de3dd88c90ac72919ed65c8d0aebcaeb3b47333076cd6ad4f518",
       "glb": "3ed38e9f671ed952c3d83796149849d8092c918b0832b119b040941e1cb7556c"
     },
     "measurements": {
       "trianglesPerVisibleForm": 16308,
-      "effectTriangles": 0,
-      "effectMeshes": 0,
-      "retainedTriangles": 32616,
+      "effectTriangles": 1596,
+      "effectMeshes": 12,
+      "retainedTriangles": 34212,
       "meshesPerVisibleForm": 91,
       "pairs": {
         "pair": 138,
@@ -170,29 +170,29 @@
       "export_load": "pass",
       "registry": "pass",
       "controls": "pass",
-      "appearance": "pass",
-      "flight_belly": "pass",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
       "user_signoff": "pending_user_review"
     }
   },
   "s10": {
     "source": {
       "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-      "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
       "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
       "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
-      "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
       "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
     },
     "hashes": {
-      "runtime": "de97e6fdd88f25723d73d03147f8b64bb9faf7ca5c7edafa3d7aad385ae00936",
+      "runtime": "e9c6cd1bbbde564006b7fa4043d4684ac2878c82ced71586a165b0aa1de7372d",
       "glb": "672ad9c113d31c6c27230cdc5df71c636e51a43a26467a2342e094dca0195a9b"
     },
     "measurements": {
       "trianglesPerVisibleForm": 17144,
-      "effectTriangles": 0,
-      "effectMeshes": 0,
-      "retainedTriangles": 34288,
+      "effectTriangles": 1680,
+      "effectMeshes": 12,
+      "retainedTriangles": 35968,
       "meshesPerVisibleForm": 109,
       "pairs": {
         "pair": 164,
@@ -258,29 +258,29 @@
       "export_load": "pass",
       "registry": "pass",
       "controls": "pass",
-      "appearance": "pass",
-      "flight_belly": "pass",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
       "user_signoff": "pending_user_review"
     }
   },
   "t06": {
     "source": {
       "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-      "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
       "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
       "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
-      "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
       "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
     },
     "hashes": {
-      "runtime": "fe5dc9dba8854ed124e5542791d412061ddb639b928711a0c4f7fd5238acc5af",
+      "runtime": "2f71f822910e7259cc4d390c798a9508390441fc9051f7c368f50426d69bce15",
       "glb": "7dadc1397eb2b7881e57d9d2d54dea1053a960382bb05acfe3773487564e6635"
     },
     "measurements": {
       "trianglesPerVisibleForm": 10876,
-      "effectTriangles": 3552,
-      "effectMeshes": 22,
-      "retainedTriangles": 25304,
+      "effectTriangles": 5128,
+      "effectMeshes": 34,
+      "retainedTriangles": 26880,
       "meshesPerVisibleForm": 72,
       "pairs": {
         "pair": 100,
@@ -346,29 +346,29 @@
       "export_load": "pass",
       "registry": "pass",
       "controls": "pass",
-      "appearance": "pass",
-      "flight_belly": "pass",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
       "user_signoff": "pending_user_review"
     }
   },
   "t11": {
     "source": {
       "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-      "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
       "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
       "image": "9ef67af27f03fc71f8b5dd0a1b1638344c354b3903adc0a97f3a3df37c854880",
-      "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
       "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
     },
     "hashes": {
-      "runtime": "5b6c4720c7a48bc36e3bfb0cea4bc8312885b0fb5437a96100223f234a469ae7",
+      "runtime": "c343dafe9089bdcd36eee8e63ec85f8433698f000ca1aed55836bd9f803d6be3",
       "glb": "841f4dcde8df65732861982ac0a0d268444a07f8d7db3ea13deb7e853a3497ff"
     },
     "measurements": {
       "trianglesPerVisibleForm": 13640,
-      "effectTriangles": 0,
-      "effectMeshes": 0,
-      "retainedTriangles": 27280,
+      "effectTriangles": 1572,
+      "effectMeshes": 12,
+      "retainedTriangles": 28852,
       "meshesPerVisibleForm": 135,
       "pairs": {
         "pair": 233,
@@ -434,29 +434,29 @@
       "export_load": "pass",
       "registry": "pass",
       "controls": "pass",
-      "appearance": "pass",
-      "flight_belly": "pass",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
       "user_signoff": "pending_user_review"
     }
   },
   "m05": {
     "source": {
       "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-      "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
       "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
       "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
-      "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
       "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
     },
     "hashes": {
-      "runtime": "23da459f49377b98b69424e527a35c47722288e299a89d4aef368b0a281590a5",
+      "runtime": "2983fb436f6f2e3b7e3bd62ad703fe74b28da0ef4b016f7c79fb1ee8fcdc9513",
       "glb": "5b7620f5938e19ea784c0a6f9197385816fcb58659e2ddd3a6b4b9025ecd3da9"
     },
     "measurements": {
       "trianglesPerVisibleForm": 15756,
-      "effectTriangles": 0,
-      "effectMeshes": 0,
-      "retainedTriangles": 31512,
+      "effectTriangles": 1524,
+      "effectMeshes": 12,
+      "retainedTriangles": 33036,
       "meshesPerVisibleForm": 127,
       "pairs": {
         "pair": 189,
@@ -522,29 +522,29 @@
       "export_load": "pass",
       "registry": "pass",
       "controls": "pass",
-      "appearance": "pass",
-      "flight_belly": "exposed_patagium_struts",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
       "user_signoff": "pending_user_review"
     }
   },
   "m07": {
     "source": {
       "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-      "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
       "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
       "image": "eecb4a52ca28c7af638904becd0f96de3565c87ffd966536a83c75db8d8616f1",
-      "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
       "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
     },
     "hashes": {
-      "runtime": "3f26c3028981662d94deb6b783244810c33ef0bfd3fccfd6ef54d5d2e4620b9a",
+      "runtime": "119bd31f5dc8175afa9122b580bad018b8429ea93734f419f24e394c183dce6b",
       "glb": "7a34c78d1522d7d193cdad9c25abedb9c0f965d5053b55ef032fc83dd0f1a573"
     },
     "measurements": {
       "trianglesPerVisibleForm": 13216,
-      "effectTriangles": 0,
-      "effectMeshes": 0,
-      "retainedTriangles": 26432,
+      "effectTriangles": 1468,
+      "effectMeshes": 12,
+      "retainedTriangles": 27900,
       "meshesPerVisibleForm": 104,
       "pairs": {
         "pair": 189,
@@ -610,29 +610,29 @@
       "export_load": "pass",
       "registry": "pass",
       "controls": "pass",
-      "appearance": "pass",
-      "flight_belly": "pass",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
       "user_signoff": "pending_user_review"
     }
   },
   "m08": {
     "source": {
       "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-      "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
+      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
       "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
       "image": "bf80c8b004668068ad3d1b4cbf779072aba0a7f68d2e3cc00fc68b1857be0e20",
-      "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
+      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
       "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
     },
     "hashes": {
-      "runtime": "6fbb10e779423c78b3b3e230ccc6dbd88612388f2f1909b769abe9520c03bfda",
+      "runtime": "138dccab15952461f44c9fc639b268ef00362cc32be54f565b13e6ddaf208675",
       "glb": "18a90324df358aab03a7af0f587c3d85025e33b3c7e3c305ece665b27208ef03"
     },
     "measurements": {
       "trianglesPerVisibleForm": 16612,
-      "effectTriangles": 0,
-      "effectMeshes": 0,
-      "retainedTriangles": 33224,
+      "effectTriangles": 1600,
+      "effectMeshes": 12,
+      "retainedTriangles": 34824,
       "meshesPerVisibleForm": 104,
       "pairs": {
         "pair": 151,
@@ -698,8 +698,8 @@
       "export_load": "pass",
       "registry": "pass",
       "controls": "pass",
-      "appearance": "pass",
-      "flight_belly": "pass",
+      "appearance": "pending_visual_review",
+      "flight_belly": "pending_visual_review",
       "user_signoff": "pending_user_review"
     }
   }

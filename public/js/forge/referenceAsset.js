@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mat, jetFlame, sph } from '../geo3d.js';
+import { attachCombatAsset } from './combatAsset.js';
 
 /** Blender batches static parts per joint/material; each unit owns its disposable GPU resources. */
 export function buildReferenceAsset(asset, spec) {
@@ -117,6 +118,11 @@ export function buildReferenceAsset(asset, spec) {
   for (const hinge of rig.shield.hinges) hinge.node.rotation[hinge.axis] = hinge.rest;
   rig.shield.barrier.visible = false;
   rig.shield.barrier.scale.setScalar(.001);
+  rig.combat = attachCombatAsset(group, nodes, asset.id, form);
+  if (rig.combat) {
+    rig.shield.barrier = rig.combat.guard;
+    rig.shield.combat = rig.combat;
+  }
   rig.referenceMotion = {
     fire: asset.motion.fire.map(bindTrack), charge: asset.motion.charge.map(bindTrack), cast: asset.motion.cast.map(bindTrack),
     fireSpin: asset.motion.fireSpin ? bindTrack(asset.motion.fireSpin) : null,

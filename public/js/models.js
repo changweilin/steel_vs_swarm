@@ -84,7 +84,7 @@ export function measureBox(obj) {
   obj.traverse((o) => {
     // 反轉外殼描邊(toon.outlinify)沿法線外推,量進來會讓整台機體矮 2×描邊寬 ——
     // 舊制描邊排在 fitToHeight **之後**所以碰不到;新版建模的鷹架自己收尾就描完了。
-    if (o.userData.isOutline || o.userData.teamRing) return;
+    if (o.userData.isOutline || o.userData.teamRing || o.userData.presentationEffect) return;
     if (o.isSkinnedMesh) {
       o.computeBoundingBox();
       tmp.copy(o.boundingBox).applyMatrix4(o.matrixWorld);
