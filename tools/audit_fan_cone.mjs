@@ -11,6 +11,7 @@ import { readSrc } from './audit_src.mjs';
 import { BattleSim } from '../server/sim.js';
 import {
   CHARACTERS, heroWeapon, fanSubs, offAxisFalloff, MAPGEO, LOS, hitR,
+  TARGET_R, TARGET_CLASS, fanBuildingMaxHits,
 } from '../public/js/data.js';
 
 let failed = false;
@@ -77,7 +78,7 @@ log('— 扇形小錐分格(sim.heroPlasma)—');
   assert(CHARACTERS.s04 && heroWeapon('s04', 'heavy', 1, true)?.fan,
     '測試素材:s04 重武器是扇形(紅蓮業火)');
   assert(ARC === 13, `測試前提:s04 Lv1 錐角 ${ARC}°(不是 13° 的話下面格數全錯)`);
-  assert(fanSubs({ arc: ARC }) === 7, `13° 錐切 ${fanSubs({ arc: ARC })} 格(SUB_DEG 4° 推導)`);
+  assert(fanSubs({ arc: ARC }) === 11, `13° 錐切 ${fanSubs({ arc: ARC })} 格(SUB_DEG 2.4° 推導)`);
 }
 
 // ---------- ② 同一小錐只取最近 ----------
@@ -105,20 +106,32 @@ log('— 扇形小錐分格(sim.heroPlasma)—');
     `同軸 60m 與 140m 傷害相等(${dNear.toFixed(1)} vs ${dFar.toFixed(1)},差 ${(Math.abs(dNear - dFar) / dNear * 100).toFixed(2)}%)`);
 }
 
-// ---------- ④ 大目標橫跨多格 → 多次傷害 ----------
+// ---------- ④ 大目標橫跨多格 → 多次傷害(非建築多格多吃、建築受但書截斷) ----------
 {
+  TARGET_R['creep:boss'] = 7;
+  TARGET_CLASS['boss'] = 'armor';
   const mk = (z, tag) => {
     const { sim } = fanShooter(tag);
-    const t = sim._add({ kind: 'tower', side: 'STEEL', x: 0, z, y: 0, hp: 999999, m: 999999 });
+    const t = sim._add({ kind: 'boss', side: 'STEEL', x: 0, z, y: 0, hp: 999999, m: 999999 });
     sim.heroPlasma(tag, 0, 1, 'heavy', null, 0);
     return 999999 - t.hp;
   };
   const dClose = mk(30, 'p_c3a'), dFar = mk(150, 'p_c3b');
-  // 30m:量體張角 13.1° ≈ 半錐 ⇒ 7 格全中;150m:張角 2.7° ⇒ 只中中央 3 格 ⇒ 7/3 倍
+  // 30m:量體張角 13.1° ≈ 半錐 ⇒ 11 格全中;150m:張角 2.7° ⇒ 只中中央 3 格 ⇒ 11/3 倍
   // (奇數格 + 中央格以軸為心 —— 小目標在軸上只中一格,見 data.js fanSubs/fanBinOf)。
   const ratio = dClose / dFar;
-  assert(dClose > 0 && dFar > 0 && Math.abs(ratio - 7 / 3) < 0.02,
-    `近距砲塔吃 7 格、遠距吃 3 格 ⇒ 總傷 ×${ratio.toFixed(3)}(期望 ${(7 / 3).toFixed(3)})`);
+  assert(dClose > 0 && dFar > 0 && Math.abs(ratio - 11 / 3) < 0.02,
+    `非建築大型目標(r=7)近距吃 11 格、遠距吃 3 格 ⇒ 總傷 ×${ratio.toFixed(3)}(期望 ${(11 / 3).toFixed(3)})`);
+
+  // 建築物但書: 即使量體跨 11 格, 也受 fanBuildingMaxHits 截斷(依最高級 Lv4 期望值推導)
+  const wpDef = heroWeapon('s04', 'heavy', 1, true);
+  const maxB = fanBuildingMaxHits(wpDef);
+  const { sim: simB } = fanShooter('p_c3bld');
+  const tb = simB._add({ kind: 'tower', side: 'STEEL', x: 0, z: 30, y: 0, hp: 999999, m: 999999 });
+  simB.heroPlasma('p_c3bld', 0, 1, 'heavy', null, 0);
+  const dmgB = 999999 - tb.hp;
+  assert(maxB === 1 && dmgB > 0 && dmgB < dClose * 0.15,
+    `建築物(砲塔@30m)受但書截斷上限 ${maxB} 發(傷害 ${dmgB.toFixed(1)} 遠低於無上限 11 格 ${dClose.toFixed(1)})`);
 }
 
 // ---------- ⑤ 偏心遞減保留(角度的,不是距離的) ----------

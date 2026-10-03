@@ -23,9 +23,10 @@
 //       line/fan 後方數值僅印參考(機制門在 audit_lance_hit ⑩ / audit_fan_cone ②)。
 //   S3 中型多目標:10 輛坦克橫列 —— fan 總傷應為三類最高(小錐分格多格多吃,
 //       line 逐區耗穿透力截斷、blast 足跡只罩中間幾輛)。
-//   S3c 巨型單一結構:近距砲塔 —— fan 應勝 blast(分格多吃 > 單球單次;幾何面見
+//   S3c 巨型單一目標:近距巨體(r=7 @30m) —— fan 應勝 blast(分格多吃 > 單球單次;幾何面見
 //       audit_fan_cone ④);line 憑截面 7 區全額領先為已知權衡(它是縱深角色的代價面,
 //       不設門,數字印出追蹤)。
+//   S3d 巨型建築結構:近距砲塔(Lv4) —— 驗證但書約束下各傷害模式對建築相近(一律比最高級)。
 //   S4 遠近平衡:同軸小兵 60m vs 140m —— 只守 line 比值 [0.55, 1.0];fan 不隨距離衰減
 //       的公式面在 audit_fan_cone ③(audit_lance_hit ⑤同理只驗 DECAY 公式,角色頻帶歸這裡)。
 //   S5 分割角覆蓋:5 名小兵橫向 ±30m @120m —— 寬錐(m07)命中數 > 窄錐(s04)。
@@ -82,23 +83,24 @@ function sandbox() {
 }
 
 /** 配好指定角色重武器的射手(站原點向 +z 開火)。 */
-function shooter(ch) {
+function shooter(ch, lvl = 1) {
   const sim = sandbox();
   const h = sim.addHero('SWARM', `p_${ch}`, ch);
   h.x = 0; h.z = 0; h.y = 0;
   h.aiming = true;
   h.mp = h.maxMp = 9999;
+  h.abil = { light: lvl, heavy: lvl };
   sim.t = 100;
   return { sim, h };
 }
 
 /** 開一發重武器,回傳每名目標的傷害(按傳入順序)。 */
-function fireOnce(ch, targets, blastAt = null) {
-  const { sim, h } = shooter(ch);
+function fireOnce(ch, targets, blastAt = null, lvl = 1) {
+  const { sim, h } = shooter(ch, lvl);
   const wp = sim._heroWeapon(h, 'heavy');
   const cls = aoeClass(wp.def);
-  const ents = targets.map(([kind, x, z, hp]) =>
-    sim._add({ kind, side: 'STEEL', x, z, y: 0, hp, m: hp }));
+  const ents = targets.map(([kind, x, z, hp, r]) =>
+    sim._add({ kind, side: 'STEEL', x, z, y: 0, hp, m: hp, ...(r ? { r } : {}) }));
   const hp0 = ents.map((e) => e.hp);
   if (cls === 'blast') {
     const [bx, bz] = blastAt || [ents[0].x, ents[0].z];
@@ -189,23 +191,41 @@ console.log('— S3 中型多目標(10 輛坦克橫列 ±18m @60m):fan 總傷應
     `fan 平均 ${avg(totals.fan).toFixed(0)} > line ${avg(totals.line).toFixed(0)} / blast ${avg(totals.blast).toFixed(0)}`);
 }
 
-console.log('— S3c 巨型單一結構(砲塔@30m):fan 應勝 blast;line 區段全中領先為已知權衡 —');
+console.log('— S3c 巨型單一目標(非建築巨體 r=7 @30m):fan 應勝 blast;line 區段全中領先為已知權衡 —');
 {
-  // 已知權衡:line 截面 7 區全額(單區單價 1.0)對單一巨體先天多吃,fan 小錐單價 0.8 居次、
-  // blast 單球單次居末。此處只守「分格多吃 > 單球單次」(fan > blast);line 領先不設門
-  // (它是 line 縱深角色的代價面,見 S2 塔後截斷),數字印出供追蹤。
+  // fan 的近距優勢體現在巨型目標:小錐分格全吃(r=7 橫跨全錐 11~19 格),單發累計傷顯著勝過單球單次 blast。
+  // (註:建築物受但書上限 N 截斷,見 S3d 與 audit_fan_cone ④)
   const totals = {};
   for (const cls of ['blast', 'fan', 'line']) {
     totals[cls] = REPS[cls].map((ch) => {
-      const { dmg } = fireOnce(ch, [['tower', 0, 30, 999999]]);
+      const { dmg } = fireOnce(ch, [['tank', 0, 30, 999999, 7]]);
       return dmg[0];
     });
   }
   for (const cls of ['blast', 'fan', 'line']) {
-    console.log(`   ⓘ ${cls} 近距砲塔總傷 ${totals[cls].map((v) => v.toFixed(0)).join(' / ')}`);
+    console.log(`   ⓘ ${cls} 近距巨體總傷 ${totals[cls].map((v) => v.toFixed(0)).join(' / ')}`);
   }
   ok(avg(totals.fan) > avg(totals.blast),
     `fan 平均 ${avg(totals.fan).toFixed(0)} > blast ${avg(totals.blast).toFixed(0)}(分格多吃 > 單球單次)`);
+}
+
+console.log('— S3d 巨型建築結構(砲塔@30m, 滿級 Lv4):各傷害模式對建築傷害相近(依最高級比對) —');
+{
+  // 使用者指示:「對建築傷害也是要隨等級調整的,所以一律比最高級就好」「調整所有傷害模式對建築物都相近」。
+  // 建築物受 fanBuildingMaxHits 截斷上限 N, 滿級(Lv4)下 fan 與 blast 對建築總傷相近(平均差距 < 25%)。
+  const totalsB = {};
+  for (const cls of ['blast', 'fan', 'line']) {
+    totalsB[cls] = REPS[cls].map((ch) => {
+      const { dmg } = fireOnce(ch, [['tower', 0, 30, 999999]], null, 4);
+      return dmg[0];
+    });
+  }
+  for (const cls of ['blast', 'fan', 'line']) {
+    console.log(`   ⓘ ${cls} Lv4 砲塔總傷 ${totalsB[cls].map((v) => v.toFixed(0)).join(' / ')}`);
+  }
+  const diffRatio = Math.abs(avg(totalsB.fan) - avg(totalsB.blast)) / avg(totalsB.blast);
+  ok(diffRatio < 0.25,
+    `Lv4 建築總傷 fan ${avg(totalsB.fan).toFixed(0)} 與 blast ${avg(totalsB.blast).toFixed(0)} 相近(差距 ${(diffRatio * 100).toFixed(1)}% < 25%)`);
 }
 
 console.log('— S4 遠近平衡(同軸小兵 60m vs 140m):只守 line 頻帶 —');

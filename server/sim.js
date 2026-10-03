@@ -17,7 +17,7 @@ import {
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   ATK_CARRIER, atkDelivered, atkParts, atkPartN, SELF_ATK, selfAtkBoost,
   ATK_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND, ATK_CAST_S,
-  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, fanBuildingMaxHits, FAN_BUILDING_MAX_HITS, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
   shieldDefKindFactor, balanceMul, upgradeCurveMul, RATE_DEF,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
@@ -2891,8 +2891,17 @@ export class BattleSim {
           if (!bins[bi] || d3 < bins[bi].d3) bins[bi] = { t, d3, ang };
         }
       }
-      for (const win of bins) {
-        if (!win) continue;
+      // 扇形對建築物命中上限但書: 最多只吃 FAN_BUILDING_MAX_HITS 發傷害
+      // 按偏離錐軸夾角 ang 升冪排序(優先取正對錐軸/偏心小者)
+      const validWins = bins.filter(Boolean).sort((a, b) => a.ang - b.ang);
+      const bHitCount = new Map();
+      for (const win of validWins) {
+        if (TARGET_CLASS[win.t.kind] === 'building') {
+          const maxHits = fanBuildingMaxHits(wp.def);
+          const c = bHitCount.get(win.t) || 0;
+          if (c >= maxHits) continue;
+          bHitCount.set(win.t, c + 1);
+        }
         // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額);不隨距離變化;
         // 每格再 ×FAN_SUB_F(單一小錐單價 —— 大目標多格多吃不變,只是每格便宜一點)
         const offF = offAxisFalloff(win.ang / arcHalf);
