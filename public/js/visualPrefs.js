@@ -1,6 +1,6 @@
 // Import-free presentation preferences shared by the game, previews and offline audits.
 // Presets commit atomically so every consumer sees the same art direction in one notification.
-// Renderer controls remain internal; player settings expose curated cel styles only.
+// Renderer controls remain internal; player settings expose curated styles only.
 
 const KEY = 'svs_visual';
 
@@ -12,8 +12,8 @@ const KEY = 'svs_visual';
  */
 export const VISUAL_KNOBS = {
   renderStyle: {
-    label: '渲染風格', def: 'cel',
-    choices: ['cel', 'realistic', 'impasto', 'inkwash', 'watercolor', 'oil'],
+    label: '渲染風格', def: 'messenger',
+    choices: ['cel', 'realistic', 'impasto', 'inkwash', 'watercolor', 'oil', 'messenger', 'sakura'],
     choiceLabels: {
       cel: '賽璐璐',
       realistic: '寫實',
@@ -21,8 +21,10 @@ export const VISUAL_KNOBS = {
       inkwash: '彩色水墨',
       watercolor: '水彩',
       oil: '油畫',
+      messenger: '信使手繪',
+      sakura: '櫻町動畫',
     },
-    hint: '切換全場與展示台的繪畫渲染風格：**賽璐璐**為預設硬邊色階與墨線；**寫實**為連續光影與微表面高光；**厚塗**為塊面筆觸與濃厚色彩過渡；**彩色水墨**為飛白濃淡墨韻與宣紙留白暈染；**水彩**為濕畫法邊緣積色、紙紋與柔化色塊；**油畫**為方向性厚重筆觸與畫布肌理。即時切換，不影響任何戰鬥判定。',
+    hint: '切換全場與展示台的繪畫渲染風格：**信使手繪**為預設低彩度色塊、紙感顆粒與石墨細線；**櫻町動畫**為冷紫陰影、暖白亮部與乾淨墨線；**賽璐璐**為硬邊色階與墨線；**寫實**為連續光影與微表面高光；**厚塗**為塊面筆觸與濃厚色彩過渡；**彩色水墨**為飛白濃淡墨韻與宣紙留白暈染；**水彩**為紙紋與柔化色塊；**油畫**為厚重筆觸與畫布肌理。即時切換，不影響任何戰鬥判定。',
   },
   // 兩根偏色拉桿的 `max` MUST 與 `toon.js TINT_MAX_A` 相同(稽核 Ⅱ 逐值比對)。
   // 上限 > 1 的理由住在 toon.js 那個常數旁邊:偏色只乘得到暗階的**直接光**那一項,
@@ -157,11 +159,11 @@ export const VISUAL_KNOBS = {
 };
 
 export const VISUAL_COPY = Object.freeze({
-  title: 'ACG 賽璐璐風格',
-  intro: '選一款喜歡的動畫風格，即時套用整個世界。',
+  title: '畫面與線條風格',
+  intro: '選一款喜歡的手繪或動畫風格，即時套用整個世界。',
   group: '畫面風格',
   recommended: '推薦',
-  reset: '↺ 回到經典動畫',
+  reset: '↺ 回到信使手繪',
   preview: '即時預覽',
   previewCurrent: '當前場景',
   previewEnvironment: '預覽情境',
@@ -171,43 +173,53 @@ const presetDefaults = Object.fromEntries(Object.entries(VISUAL_KNOBS).map(([k, 
 function preset(id, label, description, palette, values, surface, grade) {
   return Object.freeze({
     id, label, description, palette: Object.freeze(palette),
-    values: Object.freeze({ ...presetDefaults, air: 0.55, landInk: 0, ...values }),
-    surface: Object.freeze(surface),
+    values: Object.freeze({ ...presetDefaults, renderStyle: 'cel', air: 0.55, landInk: 0, ...values }),
+    surface: Object.freeze({ outlineColor: 0x0a0b12, ...surface }),
     grade: Object.freeze({ nightLift: 0.3, ...grade, shadow: Object.freeze(grade.shadow), high: Object.freeze(grade.high) }),
   });
 }
 
 // Grade and surface coefficients multiply the existing renderer's single-source baselines.
 export const VISUAL_PRESETS = Object.freeze([
+  preset('messenger', '信使手繪', '參考 Messenger：低彩度色塊、紙感顆粒與石墨細線，像畫在紙上的小世界。',
+    ['#65b9b3', '#b2ba9d', '#eee7cc'],
+    { renderStyle: 'messenger', ink: 0.82, inkBreak: 0.45, shadowMech: 1.5, shadowEnv: 1.5, weather: 0.55, air: 0.65 },
+    { cutWidth: 0.65, shadowValue: 1.12, rim: 0.45, outline: 0.58, outlineColor: 0x373f42 },
+    { shadow: [0.96, 1.07, 1.06], high: [1.08, 1.04, 0.92], saturation: 0.86, exposure: 1.3, lift: 1.15, contrast: 0.06 }),
+  preset('sakura', '櫻町動畫', '參考 Sakura Crossing：冷紫陰影、暖白亮部與乾淨細墨線，呈現日系動畫背景。',
+    ['#9abfe8', '#e8bccf', '#fff1d8'],
+    { renderStyle: 'sakura', ink: 0.7, inkBreak: 0.12, shadowMech: 1.7, shadowEnv: 1.8, weather: 0.5, air: 0.8, dof: 0 },
+    { cutWidth: 0.9, shadowValue: 1.16, rim: 0.6, outline: 0.48, outlineColor: 0x39324f },
+    { shadow: [1.06, 0.98, 1.16], high: [1.08, 1.03, 0.96], saturation: 1.08, exposure: 1.4, lift: 1.35, contrast: 0.08 }),
   preset('classic', '經典動畫', '俐落色塊與清晰輪廓，冒險與戰鬥都耐看。',
     ['#6a91cb', '#8ccdcc', '#f3d19b'],
-    { inkBreak: 0.35, weather: 0.8 },
-    { cutWidth: 0.8, shadowValue: 1, rim: 1, outline: 1 },
+    { ink: 0.78, inkBreak: 0.35, weather: 0.8 },
+    { cutWidth: 0.8, shadowValue: 1, rim: 1, outline: 0.7 },
     { shadow: [1, 1.04, 1.06], high: [1, 1, 1], saturation: 1.12, exposure: 1.25, lift: 1, contrast: 0.12 }),
   preset('sky', '晴空物語', '通透藍綠與明亮暖光，讓山海與城市更有層次。',
     ['#4894de', '#63c6b6', '#ffe1a3'],
-    { ink: 0.72, inkBreak: 0.3, shadowMech: 1.7, shadowEnv: 1.8, weather: 0.65, air: 0.9 },
-    { cutWidth: 1.1, shadowValue: 1.08, rim: 1.15, outline: 0.8 },
+    { ink: 0.52, inkBreak: 0.3, shadowMech: 1.7, shadowEnv: 1.8, weather: 0.65, air: 0.9 },
+    { cutWidth: 1.1, shadowValue: 1.08, rim: 1.15, outline: 0.45 },
     { shadow: [0.94, 1.12, 1.16], high: [1.04, 1.04, 0.96], saturation: 1.2, exposure: 1.45, lift: 1.1, contrast: 0.08 }),
   preset('soft', '柔光日常', '粉彩暖白與輕盈細線，柔和保留角色與景物細節。',
     ['#aaa4d4', '#e4b7c8', '#f4e4c4'],
-    { ink: 0.55, inkBreak: 0.2, weather: 0.5, air: 0.7 },
-    { cutWidth: 1.65, shadowValue: 1.18, rim: 0.65, outline: 0.65 },
+    { ink: 0.32, inkBreak: 0.2, weather: 0.5, air: 0.7 },
+    { cutWidth: 1.65, shadowValue: 1.18, rim: 0.65, outline: 0.28 },
     { shadow: [1.16, 1.06, 1.12], high: [1.06, 1.02, 1.08], saturation: 0.74, exposure: 1.6, lift: 1.6, contrast: -0.3 }),
   preset('bold', '熱血漫畫', '強烈明暗與鮮明墨線，機甲與交戰場面更有張力。',
     ['#455596', '#d96b61', '#ffd072'],
-    { ink: 1.3, inkBreak: 0.6, shadowMech: 2, shadowEnv: 1.7, weather: 0.9, air: 0.35 },
-    { cutWidth: 0.5, shadowValue: 0.9, rim: 1.2, outline: 1.15 },
+    { ink: 1.05, inkBreak: 0.6, shadowMech: 2, shadowEnv: 1.7, weather: 0.9, air: 0.35 },
+    { cutWidth: 0.5, shadowValue: 0.9, rim: 1.2, outline: 0.9 },
     { shadow: [1.04, 0.96, 1.08], high: [1.08, 1.02, 0.92], saturation: 1.28, exposure: 1.16, lift: 0.85, contrast: 0.45 }),
   preset('cinema', '黃昏電影', '琥珀亮部與青紫暗面，日夜都有電影般的冷暖層次。',
     ['#6779a4', '#c78797', '#f0bc79'],
-    { ink: 0.78, inkBreak: 0.4, shadowMech: 1.9, shadowEnv: 2, weather: 0.7, air: 0.8 },
-    { cutWidth: 0.95, shadowValue: 1.02, rim: 1.1, outline: 0.85 },
+    { ink: 0.48, inkBreak: 0.4, shadowMech: 1.9, shadowEnv: 2, weather: 0.7, air: 0.8 },
+    { cutWidth: 0.95, shadowValue: 1.02, rim: 1.1, outline: 0.4 },
     { shadow: [1.1, 1.02, 1.18], high: [1.18, 1.06, 0.84], saturation: 1, exposure: 1.3, lift: 1, contrast: 0.22 }),
   preset('neon', '霓虹夜色', '青藍陰影與洋紅亮色，雨夜、窗光與能量特效更耀眼。',
     ['#4883cf', '#52ced5', '#e285c8'],
-    { ink: 0.85, inkBreak: 0.25, shadowMech: 2.5, shadowEnv: 2.3, weather: 0.7, air: 0.65 },
-    { cutWidth: 0.7, shadowValue: 0.95, rim: 1.3, outline: 0.9 },
+    { ink: 0.62, inkBreak: 0.25, shadowMech: 2.5, shadowEnv: 2.3, weather: 0.7, air: 0.65 },
+    { cutWidth: 0.7, shadowValue: 0.95, rim: 1.3, outline: 0.5 },
     { shadow: [0.84, 1.1, 1.28], high: [1.16, 0.92, 1.2], saturation: 1.25, exposure: 1.25, lift: 0.8, contrast: 0.25 }),
 ]);
 export const DEFAULT_VISUAL_PRESET = VISUAL_PRESETS[0].id;

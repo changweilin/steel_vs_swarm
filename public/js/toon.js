@@ -596,8 +596,7 @@ const _foamC = { value: new THREE.Color(0.94, 0.97, 1) };
 // 形狀常數住 `INK_BREAK`(見「軟性物質」段下方)—— 那一份不進 syncVisualPrefs,可以晚一點宣告。
 const _inkBreakA = { value: 0 };
 const _landInkA = { value: 0 };
-// 繪畫渲染風格(賽璐璐 / 寫實 / 厚塗 / 彩色水墨 / 水彩 / 油畫)的共享 uniform 與編號映射。
-// 宣告排在 syncVisualPrefs 之前(模組載入即同步一次)。
+// Shared style indices and uniforms precede the initial preference sync to avoid a TDZ on import.
 export const RENDER_STYLES = {
   cel: 0,
   realistic: 1,
@@ -605,13 +604,16 @@ export const RENDER_STYLES = {
   inkwash: 3,
   watercolor: 4,
   oil: 5,
+  messenger: 6,
+  sakura: 7,
 };
-const OUTLINE_STYLE_SCALE = [1.0, 0.0, 0.35, 1.35, 0.22, 0.16];
+const OUTLINE_STYLE_SCALE = [1.0, 0.0, 0.35, 0.65, 0.22, 0.16, 1.0, 1.0];
 export function renderStyleIndex(style = visualPref('renderStyle')) {
   return RENDER_STYLES[style] ?? 0;
 }
 const _renderStyle = { value: 0 };
 const _outlineStyleScale = { value: 1 };
+export const outlineInkUniform = { value: new THREE.Color() };
 let _landTex = null;
 const _landField = { value: null };
 const _landAppearance = { value: null };
@@ -728,6 +730,7 @@ function syncVisualPrefs() {
   const styleIdx = renderStyleIndex(visualPref('renderStyle'));
   _renderStyle.value = styleIdx;
   _outlineStyleScale.value = (OUTLINE_STYLE_SCALE[styleIdx] ?? 1.0) * surface.outline;
+  outlineInkUniform.value.setHex(surface.outlineColor);
 }
 syncVisualPrefs();
 onVisualChange(syncVisualPrefs);
@@ -2143,8 +2146,8 @@ ${CEL_SEA_GLSL}
             #endif
             outgoingLight *= mix( uCelRampTint, vec3( 1.0 ), celFbW );
           }
-          // ---- 多風格繪畫著色(uRenderStyle: 0=賽璐璐, 1=寫實, 2=厚塗, 3=彩色水墨, 4=水彩, 5=油畫)----
-          // 預設 0(賽璐璐)走 uniform 分支早退 ⇒ 逐位元與既有材質完全相同。
+          // Material styles share lighting energy so night, shadow maps and emissions stay scene-driven.
+          // Cel skips the style finish so its existing material appearance stays unchanged.
           if ( uRenderStyle > 0.5 ) {
             vec3 styWN = normalize( inverseTransformDirection( normal, viewMatrix ) );
             vec3 styH = normalize( uCelLightDir + celV );
@@ -2164,7 +2167,18 @@ ${CEL_SEA_GLSL}
             // 由當下 outgoingLight 反推場景光照能量包絡(含日夜燈色與陰影遮罩)
             float styEnergy = styOutL / styAlbL;
 
-            if ( uRenderStyle < 1.5 ) {
+            if ( uRenderStyle > ${(RENDER_STYLES.sakura - 0.5).toFixed(1)} ) {
+              // Three painted masses: violet shade, neutral middle, warm paper highlight.
+              float styBand = step( -0.12, styNL ) * 0.55 + step( 0.55, styNL ) * 0.45;
+              vec3 styTint = mix( vec3( 0.93, 0.89, 1.08 ), vec3( 1.04, 1.02, 0.94 ), styBand );
+              outgoingLight *= styTint;
+            } else if ( uRenderStyle > ${(RENDER_STYLES.messenger - 0.5).toFixed(1)} ) {
+              // Object-anchored print variation avoids animated noise and preserves small markings.
+              float styPrint = celNoise( styP.xz * 1.8 + styP.xy * 0.7 ) - 0.5;
+              vec3 styMuted = mix( vec3( styOutL ), outgoingLight, 0.86 );
+              vec3 styPaper = mix( vec3( 0.93, 1.01, 1.0 ), vec3( 1.04, 1.02, 0.93 ), step( 0.12, styNL ) );
+              outgoingLight = styMuted * styPaper * ( 1.0 + styPrint * 0.035 );
+            } else if ( uRenderStyle < 1.5 ) {
               // ① 寫實(Realistic):撫平硬切色階，重建連續微表面漫反射、天光半球環境光、Fresnel 與 GGX 高光
               float stySmoothL = mix( 0.34, 1.16, smoothstep( -0.32, 0.88, styNL ) );
               vec3 styHemi = mix( vec3( 0.86, 0.82, 0.78 ), vec3( 1.06, 1.09, 1.15 ), styWN.y * 0.5 + 0.5 );
@@ -2788,47 +2802,33 @@ export function toonify(root) {
   return root;
 }
 
-// ---- 反轉外殼描邊(Inverted Hull)----
-// BackSide 黑殼沿頂點法線外推固定世界寬度;寬度在建立時除以該 mesh 的
-// 世界縮放,讓 fitToHeight 縮放過的模型描邊粗細一致(≈ 螢幕 2~3px)。
-const OUTLINE_COLOR = new THREE.Color(0x0a0b12);
-// 描邊的**螢幕最小半寬**(NDC;垂直方向 2 單位 = 整個畫面高)。
-// 舊制只沿法線外推固定的**世界**寬度 ⇒ 線粗與距離成反比:近的胖、遠的直接消失 ——
-// 一台機甲跑遠一點就從「漫畫角色」變回「沒有描邊的多邊形」。
-// 2026-08-03 改成「世界寬度」與「螢幕下限」取大者:
-//   ・近距離 uOW 勝出 ⇒ **逐位元同舊制**(所有 15 處呼叫端的寬度不必重調);
-//   ・遠距離下限勝出 ⇒ 線粗鎖在約 1.2px,不再消失。
-// 下限 MUST 由 `projectionMatrix[1][1]` 反推(= 1/tan(fov/2)):狙擊縮 FOV 時投影矩陣本來就變,
-// 手寫一個常數換算 = 一開鏡描邊全部變粗(而那正是最需要看清輪廓的時候)。
+// Inverted hulls share a screen-width band so close models cannot bury small details in ink.
+const OUTLINE_COLOR = outlineInkUniform.value;
+// NDC limits use the live projection: scope zoom must not inflate the line width.
 const OUTLINE_MIN_NDC = 0.0022;
+const OUTLINE_MAX_NDC = 0.0045;
 
 /**
- * @param w    描邊寬度,**已除以該 mesh 的世界縮放**(= 局部單位;呼叫端 `outlinify` 算)
- * @param invS `1 / 世界縮放` —— 與 `w` 吃**同一個** s。
- *
- * 兩個外推量都住在 `position` 那一側 ⇒ **兩個都 MUST 換成局部單位**(2026-08-10 使用者回報
- * 「主堡黑球」)。`uOW` 一開始就除過了,而螢幕下限 `oMinW` 是由**視距**(世界公尺)換算來的
- * 卻直接加在局部座標上 ⇒ 實得線寬 = 下限 × 世界縮放,而且 `oMinW ∝ 視距` ⇒ **離越遠脹越大、
- * 沒有上界**。這件事在低縮放的機體上只是「遠處的線略粗」(塔 1.39×、直升機 2.38× — 看不出來),
- * 但主堡的 `dome.glb` 建模單位極小,`fitToHeight(42m)` 之後世界縮放是 **795×**:200m 外那顆
- * 黑殼被推出 236m、450m 外推出 530m —— 就是使用者看到的「主堡上空異常過大的球面輪廓」,
- * 而它**擋不住任何射線也量不到**(位移只發生在頂點著色器,`Raycaster` 走的是 CPU 幾何 ⇒
- * 稽核與冒煙的數值全是對的,只有畫面不對)。
- * 折進 `uOMin` 而不另開 uniform:兩者恆一起出現,分成兩個遲早有人只傳其中一個。
+ * @param w Local width, already divided by the mesh's world scale.
+ * @param invS Reciprocal of that same scale; both screen limits must also use local units.
  */
 function outlineMaterial(w, invS) {
   const m = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR, side: THREE.BackSide });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uOW = { value: w };
     shader.uniforms.uOMin = { value: OUTLINE_MIN_NDC * invS };
+    shader.uniforms.uOMax = { value: OUTLINE_MAX_NDC * invS };
     shader.uniforms.uOScale = _outlineStyleScale;
-    shader.vertexShader = ('uniform float uOW;\nuniform float uOMin;\nuniform float uOScale;\n' + shader.vertexShader)
+    shader.uniforms.uOInk = outlineInkUniform;
+    shader.fragmentShader = ('uniform vec3 uOInk;\n' + shader.fragmentShader)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb = uOInk;');
+    shader.vertexShader = ('uniform float uOW;\nuniform float uOMin;\nuniform float uOMax;\nuniform float uOScale;\n' + shader.vertexShader)
       .replace('#include <begin_vertex>', `
-        // 視距:骨骼變形前的綁定姿勢即可(同一根骨頭上的頂點距離差異遠小於一個像素)
+        // Bind-pose depth is sufficient for subpixel limits and preserves the shared skinning path.
         float oDist = max( 0.05, -( modelViewMatrix * vec4( position, 1.0 ) ).z );
-        // uOMin(NDC ÷ 世界縮放)換回這個距離上的**局部**寬度;projectionMatrix[1][1] = 1/tan(fov/2)
         float oMinW = uOMin * oDist / max( 0.001, projectionMatrix[1][1] );
-        vec3 transformed = position + normal * ( max( uOW, oMinW ) * uOScale );`);
+        float oMaxW = uOMax * oDist / max( 0.001, projectionMatrix[1][1] );
+        vec3 transformed = position + normal * ( min( max( uOW, oMinW ), oMaxW ) * uOScale );`);
   };
   m.customProgramCacheKey = () => 'celOutline';
   return m;
