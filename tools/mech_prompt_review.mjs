@@ -1,5 +1,5 @@
 // ============ 機體立繪與 3D 比對審查工作台 (dev-only) ============
-// 比對各機體 2D 立繪 (PNG/JPG)、3D 即時模型 (Three.js / CharPreview)
+// 比對各機體 2D 立繪 (PNG 透明版)、3D 即時模型 (Three.js / CharPreview)
 // 與 docs/art_gen.md（§二／§三／§四）的規格，支援視覺判定 (通過/更正/重繪)、改善方向編輯與即時寫回 Markdown。
 // img 生圖英文模板唯一 settlement 點為 docs/art_gen_img_prompts.md，本台不承載生圖模板。
 //
@@ -177,7 +177,6 @@ export async function getAllMechsData() {
     for (const r of parsed.rows) {
       const id = r._id;
       const pngFile = mechAssetFiles.find(f => f.startsWith(`${id}_`) && f.endsWith('.png'));
-      const jpgFile = mechAssetFiles.find(f => f.startsWith(`${id}_`) && f.endsWith('.jpg'));
 
       // 解析代號與角色名 (例如 "瑪雅・柯爾曼<br>「輓歌」")
       const refCode = r['參考代號'] || r['參考代號（禁入Prompt）'] || '';
@@ -196,7 +195,6 @@ export async function getAllMechsData() {
         verdict: r['視覺判定'] || INITIAL_REVIEWS[id]?.verdict || '',
         improvement: r['改善方向'] || INITIAL_REVIEWS[id]?.improvement || '',
         imagePng: pngFile ? `/public/assets/mechs/${pngFile}` : null,
-        imageJpg: jpgFile ? `/public/assets/mechs/${jpgFile}` : null,
         side: id.startsWith('t') ? 'STEEL' : (id.startsWith('s') ? 'SWARM' : 'SPEC')
       });
     }
@@ -927,12 +925,8 @@ function renderHtmlPage(localThree = false) {
       <div class="subpanel-bar">
         <span class="subpanel-title">
           <span>🖼️ 2D Standee 遊戲立繪</span>
-          <span style="font-size:10px;color:var(--text-muted);" id="imgFormatLabel">PNG 透明版</span>
+          <span style="font-size:10px;color:var(--text-muted);">PNG 透明版</span>
         </span>
-        <div style="display:flex;gap:4px;">
-          <button class="btn-tool-sm active" id="btnImgPng">去背 PNG</button>
-          <button class="btn-tool-sm" id="btnImgJpg">色幕 JPG</button>
-        </div>
       </div>
       <div class="view-viewport" id="imgViewport">
         <img id="standeeImg" class="img-standee" src="" alt="立繪載入中">
@@ -1060,7 +1054,6 @@ let activeVerdict = 'all';
 let searchQuery = '';
 let preview3D = null;
 let preview3DError = '';
-let imgMode = 'png'; // 'png' or 'jpg'
 let autoSpin = true;
 let showGrid = true;
 
@@ -1153,7 +1146,7 @@ function renderRoster() {
     else if (m.verdict === '重繪') vClass = 'redraw';
 
     card.innerHTML = \`
-      <img class="card-thumb" src="\${m.imagePng || m.imageJpg || ''}" loading="lazy">
+      <img class="card-thumb" src="\${m.imagePng || ''}" loading="lazy">
       <div class="card-info">
         <div class="card-top">
           <span class="card-id">\${m.id.toUpperCase()}</span>
@@ -1211,11 +1204,7 @@ function selectMech(id) {
 function updateStandeeImage() {
   if (!currentMech) return;
   const img = document.getElementById('standeeImg');
-  const src = imgMode === 'png' ? currentMech.imagePng : currentMech.imageJpg;
-  img.src = src || '';
-  document.getElementById('imgFormatLabel').textContent = imgMode === 'png' ? 'PNG 去背版' : 'JPG 原始色幕版';
-  document.getElementById('btnImgPng').classList.toggle('active', imgMode === 'png');
-  document.getElementById('btnImgJpg').classList.toggle('active', imgMode === 'jpg');
+  img.src = currentMech.imagePng || '';
 }
 
 function update3DModel() {
@@ -1409,9 +1398,7 @@ document.getElementById('searchInput').oninput = (e) => {
   renderRoster();
 };
 
-// 2D 立繪按鈕
-document.getElementById('btnImgPng').onclick = () => { imgMode = 'png'; updateStandeeImage(); };
-document.getElementById('btnImgJpg').onclick = () => { imgMode = 'jpg'; updateStandeeImage(); };
+// 2D 立繪固定使用 PNG 透明版(色幕 JPG 已移至外部存檔,不再提供切換)。
 
 document.getElementById('btnBgGrid').onclick = () => {
   document.getElementById('imgViewport').style.background = '';
