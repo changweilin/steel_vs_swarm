@@ -20,11 +20,41 @@ export function mapPrepKey(cfg) {
   return `${lat},${lng},${rot},${size},${lanes}`;
 }
 
+// Persistent "evidence for this exact map is cached" marker. The evidence bytes live in geocache;
+// the marker only skips re-running the terrain/OSM pass. Keyed by map key + evidence VERSION, so
+// re-baked venues (new center/lanes) or a new evidence algorithm invalidate it automatically.
+const MARK_LS = 'svs_map_prepared';
+function markerId(key) { return `${MAP_EVIDENCE.VERSION}|${key}`; }
+function loadMarks() {
+  try { const a = JSON.parse(localStorage.getItem(MARK_LS) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; }
+}
+function hasMark(key) { return !!key && loadMarks().includes(markerId(key)); }
+function addMark(key) {
+  if (!key) return;
+  try {
+    const id = markerId(key), cur = loadMarks().filter((m) => m.startsWith(MAP_EVIDENCE.VERSION + '|'));
+    if (!cur.includes(id)) cur.push(id);
+    localStorage.setItem(MARK_LS, JSON.stringify(cur));
+  } catch { /* storage full/blocked: marker is an optimisation only */ }
+}
+
 export function isMapPrepared(cfg) {
   if (!cfg) return false;
   if (cfg.mapEvidence?.complete) return true;
   const k = mapPrepKey(cfg);
-  return k ? _prepCache.has(k) : false;
+  return k ? (_prepCache.has(k) || hasMark(k)) : false;
+}
+
+
+/** Cached or in-flight background pack for this map; null if none was started (or it failed). */
+export async function awaitPreparedPack(cfg) {
+  const key = mapPrepKey(cfg);
+  if (!key) return null;
+  let pack = _prepCache.get(key);
+  if (!pack && _inFlight.has(key)) {
+    try { pack = await _inFlight.get(key).promise; } catch { return null; }
+  }
+  return pack && !pack.failed ? pack : null;
 }
 
 // Explicit creation only. Venue browsing must not spend the public Overpass quota.
@@ -32,7 +62,7 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
   const key = mapPrepKey(cfg);
   if (key && _prepCache.has(key)) {
     const pack = _prepCache.get(key);
-    cfg.mapEvidence = { version: pack.version, checksum: pack.checksum, complete: pack.complete,
+    cfg.mapEvidence = pack.failed ? null : { version: pack.version, checksum: pack.checksum, complete: pack.complete,
       priorDigest: pack.priorDigest };
     await onProgress(MAP_EVIDENCE_COPY.analyzing);
     return pack;
@@ -42,7 +72,7 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
     task.listeners.add(onProgress);
     try {
       const pack = await task.promise;
-      cfg.mapEvidence = { version: pack.version, checksum: pack.checksum, complete: pack.complete,
+      cfg.mapEvidence = pack.failed ? null : { version: pack.version, checksum: pack.checksum, complete: pack.complete,
         priorDigest: pack.priorDigest };
       return pack;
     } finally {
@@ -71,12 +101,16 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
       const pack = await prepareMapEvidence(cfg, terrain, areas);
       cfg.mapEvidence = { version: pack.version, checksum: pack.checksum, complete: pack.complete,
         priorDigest: pack.priorDigest };
-      if (key && pack.complete) _prepCache.set(key, pack);
+      if (key) _prepCache.set(key, pack);
+      if (pack.complete) addMark(key);
       return pack;
     } catch (err) {
       console.warn('Map evidence preparation degraded:', err);
       cfg.mapEvidence = null;
-      return { version: MAP_EVIDENCE.VERSION, checksum: 0, complete: false, priorDigest: null };
+      const degraded = { version: MAP_EVIDENCE.VERSION, checksum: 0, complete: false, priorDigest: null, failed: true };
+      // Session-remember the failure: re-selecting an unchanged map must not refetch everything.
+      if (key) _prepCache.set(key, degraded);
+      return degraded;
     } finally {
       if (key) _inFlight.delete(key);
     }
