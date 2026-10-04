@@ -2,7 +2,7 @@
 
 > 本文件為 32 部機體立繪 Prompt 與視覺比對之**唯一 settlement 點**。
 >
-> **衝突優先順序（由高至低）**：**Codex Blender定案**（`tools/mech_authoring/assets.json`、`morphers.json` 之 components／decisions，以及 `out/combat_reference/intent.json` 武器 type／護盾紋路）＞ **3D視覺驗證**（`out/mech_reference/`、`out/morph_reference/`、`out/combat_reference/` 之 validation＋`docs/mech-reference-authoring.md`、`docs/morph-reference-authoring.md`、`docs/combat-animation-authoring.md`）＞ **2D視覺驗證**（比對台 `INITIAL_REVIEWS` 判定＋`public/assets/mechs/` 立繪）＞ **專案原有資訊**（舊表、`docs/characters.md` 敘事）。
+> **衝突優先順序（由高至低）**：**使用者prompt** ＞ **3D視覺驗證**（`out/mech_reference/`、`out/morph_reference/`、`out/combat_reference/` 之 validation＋`docs/mech-reference-authoring.md`、`docs/morph-reference-authoring.md`、`docs/combat-animation-authoring.md`）＞ **2D視覺驗證**（比對台 `INITIAL_REVIEWS` 判定＋`public/assets/mechs/` 立繪）＞ **專案原有資訊**（舊表、`docs/characters.md` 敘事）。
 >
 > **不重複原則**：傷害／射速／彈藥／護盾／判定數值唯一來源為 `public/js/data.js`，本文件只寫呈現不抄數值；文化紋路唯一來源為 `public/js/characterStyle.js`；指令見 `package.json`；審查公式見 `tools/audit_*.mjs` 表頭。招式名、機體名、角色名**禁入生圖 Prompt**，下表列出僅供紋路對照。
 >
