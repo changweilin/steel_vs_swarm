@@ -36,8 +36,8 @@ import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from './osmrela
 import { MAP_EVIDENCE, evidenceFrame, evidenceFrameKey } from './mapEvidence.js';
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
 import { encodeEvidenceRelay, decodeEvidenceRelay } from './mapEvidenceRelay.js';
-import { prepareMapCreation } from './mapPreparation.js';
-import { triggerBackgroundMapSetup, hideBackgroundMapSetup } from './mapSetupProgress.js';
+import { prepareMapCreation, awaitPreparedPack } from './mapPreparation.js';
+import { triggerBackgroundMapSetup, hideBackgroundMapSetup, startPresetWarmup } from './mapSetupProgress.js';
 import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
@@ -1437,14 +1437,9 @@ $('createRoomBtn')?.addEventListener('click', async () => {
   const isSuper = !!app.isSuperDeploy;
   cfg.super = isSuper;
 
-  try {
-    const evidence = await prepareMapCreation(cfg, label => { $('openRoomStatus').textContent = label; return buildYield(); });
-    if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
-  } catch (error) {
-    console.warn('Map preparation degraded:', error);
-    toast(MAP_EVIDENCE_COPY.partial);
-  }
-  if (app.phaseShown !== 'openroom' || app.favCfg !== cfg) return;
+  // 圖資由背景視窗繼續跑,不阻塞開房;開戰後由載入進度頁(mapEvidenceGate)等圖資再建立遊戲。
+  prepareMapCreation(cfg, () => {}).catch((error) => console.warn('Map preparation degraded:', error));
+  if (app.phaseShown !== 'openroom' || app.favCfg !== cfg) { $('createRoomBtn').disabled = !app.favCfg; return; }
 
   app.net?.send({
     t: 'createRoom',
@@ -2653,7 +2648,7 @@ async function mapEvidenceGate(cfg, terrain, areas, onWait, roomKey) {
   if (app.isHost) {
     let pack = null;
     try {
-      pack = await prepareMapEvidence(cfg, terrain, areas);
+      pack = await awaitPreparedPack(cfg) || await prepareMapEvidence(cfg, terrain, areas);
     } catch (err) {
       console.warn('Host map evidence preparation failed:', err);
     }
@@ -5697,5 +5692,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   }, 5000);
   // 所有初始 UI 與事件完成後才放行畫面，避免初始化期間閃出舊版 UI。
   document.documentElement.classList.add('app-ready');
+  setTimeout(() => {
+    try {
+      startPresetWarmup(VENUES.map((v) => ({ cfg: venueConfig(v, MAP_BUILD_TEAMSIZE), name: v.name })));
+    } catch (err) { console.warn('預設地圖預熱未啟動:', err); }
+  }, 3000);
   playPrologueIntro();
 });
