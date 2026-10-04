@@ -326,7 +326,7 @@ export async function parseNotesTables() {
     for (let i = headIdx + 1; i < lines.length; i++) {
       if (/^##?\s+/.test(lines[i]) && i > headIdx + 1 && !lines[i].startsWith('###')) break;
       if (/^###\s+/.test(lines[i]) && lines[i] !== lines[headIdx] && def.key !== 'global') break;
-      if (lines[i].includes('| 項目 |')) { headerIdx = i; break; }
+      if (/\|\s*項目\s*\|/.test(lines[i])) { headerIdx = i; break; }
     }
     if (headerIdx === -1) throw new Error(`未在 ${def.title} 找到注意事項表格`);
     const headers = lines[headerIdx].split('|').map(s => s.trim()).filter(Boolean);
@@ -1375,13 +1375,13 @@ document.querySelectorAll('.btn-verdict-choice').forEach(btn => {
   };
 });
 
-document.getElementById('btnSaveMd').onclick = saveCurrentMech;
+document.getElementById('btnSaveMd').onclick = saveWorkbench;
 
 // 鍵盤快捷鍵
 window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
-    saveCurrentMech();
+    saveWorkbench();
   }
 });
 
@@ -1489,6 +1489,9 @@ function switchPane(name) {
   document.getElementById('tabSpec').classList.toggle('active', name === 'spec');
   document.getElementById('tabNotes').classList.toggle('active', name === 'notes');
   document.getElementById('notesTableSel').style.display = name === 'notes' ? '' : 'none';
+  document.getElementById('btnSaveMd').textContent = name === 'notes'
+    ? '💾 儲存注意事項寫回 Markdown (Ctrl+S)'
+    : '💾 儲存寫回 Markdown (Ctrl+S)';
   if (name === 'notes') loadNotesTable(document.getElementById('notesTableSel').value);
 }
 async function loadNotesTable(key) {
@@ -1538,31 +1541,46 @@ function renderNotesRows(table) {
       g.appendChild(ta);
       card.appendChild(g);
     });
-    const btn = document.createElement('button');
-    btn.className = 'btn-save-md';
-    btn.textContent = '儲存此列';
-    btn.onclick = function() { saveNotesRow(table.key, row.item, card, btn); };
-    card.appendChild(btn);
     wrap.appendChild(card);
   });
 }
-async function saveNotesRow(tableKey, item, card, btn) {
-  const values = {};
-  const tas = card.querySelectorAll('textarea');
-  for (const ta of tas) values[ta.previousSibling.textContent] = ta.value;
-  btn.textContent = '儲存中...';
-  try {
-    const res = await fetch('/api/save-notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: tableKey, item: item, values: values })
-    });
-    const data = await res.json();
-    btn.textContent = data.ok ? '已儲存' : '失敗: ' + data.error;
-  } catch (err) {
-    btn.textContent = '網路錯誤: ' + err.message;
+async function saveAllNotesFromPane() {
+  const statusEl = document.getElementById('saveStatus');
+  const key = document.getElementById('notesTableSel').value;
+  const table = notesCache.find(t => t.key === key);
+  if (!table) {
+    statusEl.textContent = '❌ 無此表格: ' + key;
+    return;
   }
-  setTimeout(function() { btn.textContent = '儲存此列'; }, 2500);
+  const cards = document.querySelectorAll('#notesPane .notes-row-card');
+  if (!cards.length) {
+    statusEl.textContent = '❌ 注意事項尚未載入';
+    return;
+  }
+  statusEl.textContent = '儲存中...';
+  try {
+    for (let i = 0; i < cards.length && i < table.rows.length; i++) {
+      const values = {};
+      const tas = cards[i].querySelectorAll('textarea');
+      for (const ta of tas) values[(ta.previousElementSibling || ta.previousSibling).textContent] = ta.value;
+      const res = await fetch('/api/save-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table: key, item: table.rows[i].item, values: values })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || ('列 ' + table.rows[i].item + ' 寫回失敗'));
+    }
+    statusEl.textContent = '✅ 注意事項已寫回 Markdown！';
+    await loadNotesTable(key);
+    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+  } catch (err) {
+    statusEl.textContent = '❌ 儲存失敗: ' + err.message;
+  }
+}
+function saveWorkbench() {
+  if (activePane === 'notes') saveAllNotesFromPane();
+  else saveCurrentMech();
 }
 document.getElementById('tabSpec').onclick = function() { switchPane('spec'); };
 document.getElementById('tabNotes').onclick = function() { switchPane('notes'); };
