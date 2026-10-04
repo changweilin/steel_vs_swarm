@@ -338,7 +338,7 @@ export async function parseNotesTables() {
       for (let c = 0; c < headers.length; c++) rowObj[headers[c]] = cells[c] || '';
       rows.push({ item: rowObj['項目'] || '', values: rowObj, lineIdx: cur });
     }
-    out.push({ key: def.key, title: def.title, headers, rows, headerIdx });
+    out.push({ key: def.key, title: def.title, headers, rows, headerIdx, ids: (lines[headIdx].match(/[smt]\d{2}/gi) || []).map(s => s.toLowerCase()) });
   }
   return out;
 }
@@ -814,6 +814,18 @@ function renderHtmlPage(localThree = false) {
     resize: vertical;
   }
 
+  .model-preview-box {
+    background: rgba(10, 15, 25, 0.95);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 12px;
+    color: #e2e8f0;
+    line-height: 1.6;
+    max-height: 160px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
   .workbench-tabs {
     display: flex;
     align-items: center;
@@ -1015,11 +1027,23 @@ function renderHtmlPage(localThree = false) {
         <!-- 動態渲染欄位輸入框 -->
       </div>
 
-      <!-- img 生圖模板指引（全文見 docs/art_gen_img_prompts.md，本台不承載模板） -->
+      <!-- 3D建模指引（三段 prompt 皆取自 docs/art_gen.md；生圖模板全文見 docs/art_gen_img_prompts.md） -->
       <div class="form-section">
-        <div class="section-label">img 生圖模板指引</div>
+        <div class="section-label">3D建模指引</div>
         <div class="field-group">
-          <div class="field-title">生圖時以本頁規格欄位填入 docs/art_gen_img_prompts.md 對應模板佔位</div>
+          <div class="field-title">全機體 prompt（§二共用）</div>
+          <div class="model-preview-box" id="ppGlobal">--</div>
+        </div>
+        <div class="field-group">
+          <div class="field-title" id="ppCatTitle">對應分類 prompt</div>
+          <div class="model-preview-box" id="ppCategory">--</div>
+        </div>
+        <div class="field-group">
+          <div class="field-title">個別機體 prompt（§四）</div>
+          <div class="model-preview-box" id="ppMech">--</div>
+        </div>
+        <div class="field-group">
+          <div class="field-title">生圖時以規格欄位填入 docs/art_gen_img_prompts.md 對應模板佔位</div>
         </div>
       </div>
     </div>
@@ -1182,6 +1206,9 @@ function selectMech(id) {
 
   // 渲染動態表格欄位
   renderTableFields();
+
+  // 三段 prompt 預覽（全機體／對應分類／個別機體，皆取自 art_gen.md）
+  updatePromptPreview();
 }
 
 function updateStandeeImage() {
@@ -1258,6 +1285,46 @@ function renderTableFields() {
     group.appendChild(title);
     group.appendChild(input);
     container.appendChild(group);
+  }
+}
+
+async function ensureNotes() {
+  if (notesCache.length) return;
+  const res = await fetch('/api/notes');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  notesCache = await res.json();
+}
+
+function segText(rows) {
+  return rows.map(r => '【' + r.item + '】' + String(r.values['內容'] || '').split(/<br[^>]*>/gi).join('\\n')).join('\\n\\n');
+}
+
+// 三段 prompt 預覽：全機體（§二）＋對應分類（§三，標題含該機體編號者全取）＋個別機體（§四）
+async function updatePromptPreview() {
+  if (!currentMech) return;
+  const elG = document.getElementById('ppGlobal');
+  const elC = document.getElementById('ppCategory');
+  const elM = document.getElementById('ppMech');
+  const elT = document.getElementById('ppCatTitle');
+  try {
+    await ensureNotes();
+    const g = notesCache.find(t => t.key === 'global');
+    elG.textContent = g ? segText(g.rows) : '—';
+    const groups = notesCache.filter(t => t.key !== 'global' && (t.ids || []).includes(currentMech.id));
+    elT.textContent = groups.length ? '對應分類 prompt（' + groups.map(x => x.title).join('／') + '）' : '對應分類 prompt';
+    elC.textContent = groups.length ? groups.map(x => '[' + x.title + ']\\n' + segText(x.rows)).join('\\n\\n') : '—';
+    const ignore = ['機體編號', '參考代號', '參考代號（禁入Prompt）', '視覺判定', '改善方向', '_id', '_rawLineIdx', '_category'];
+    const parts = [];
+    for (const [k, v] of Object.entries(currentMech.fields)) {
+      if (ignore.includes(k)) continue;
+      parts.push('【' + k + '】' + String(v).split(/<br[^>]*>/gi).join('\\n'));
+    }
+    elM.textContent = parts.join('\\n\\n') || '—';
+  } catch (err) {
+    const msg = '載入失敗: ' + String((err && err.message) || err);
+    elG.textContent = msg;
+    elC.textContent = msg;
+    elM.textContent = msg;
   }
 }
 
@@ -1576,7 +1643,7 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
       if (pathname === '/api/notes') {
         try {
           const tables = await parseNotesTables();
-          const slim = tables.map(t => ({ key: t.key, title: t.title, headers: t.headers, rows: t.rows.map(r => ({ item: r.item, values: r.values })) }));
+          const slim = tables.map(t => ({ key: t.key, title: t.title, headers: t.headers, ids: t.ids, rows: t.rows.map(r => ({ item: r.item, values: r.values })) }));
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
           res.end(JSON.stringify(slim));
         } catch (e) {
