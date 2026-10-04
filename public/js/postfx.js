@@ -49,7 +49,7 @@ import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { visualPref, visualPreset, onVisualChange } from './visualPrefs.js';
 import { INK_UNPACK_GLSL } from './toon.js';
-import { renderStyleIndex } from './toon.js';
+import { renderStyleIndex, RENDER_STYLES, outlineInkUniform } from './toon.js';
 import { DOF, WIPE, combatReachM, wipeAt } from './data.js';
 import {
   TAA, taaJitterPx, taaProjectionOffset, taaBlendAlpha, taaSharpenWeight,
@@ -613,6 +613,7 @@ export class Pipeline {
         tColor: { value: null }, tDepth: { value: null }, tInfo: { value: null },
         uTexel: { value: new THREE.Vector2() },
         uNear: { value: 0.5 }, uFar: { value: 1000 }, uInk: { value: 1 }, uRenderStyle: { value: 0 },
+        uInkColor: outlineInkUniform,
         // 遠處淡出的兩個端點(公尺)。由 `_inkFadeM()` 每幀餵入 —— **MUST NOT** 在著色器裡
         // 拿 `uFar × 比例` 算(那就是錨回相機 far 平面,見 INK.FADE0 旁邊那一段)。
         uFade0: { value: 1e9 }, uFade1: { value: 2e9 },
@@ -622,6 +623,7 @@ export class Pipeline {
         uniform sampler2D tColor; uniform sampler2D tDepth;
         uniform vec2 uTexel; uniform float uNear; uniform float uFar; uniform float uInk;
         uniform float uRenderStyle;
+        uniform vec3 uInkColor;
         uniform float uFade0; uniform float uFade1;
         varying vec2 vUv;
         ${useInfo ? `uniform sampler2D tInfo;\n${INK_UNPACK_GLSL}` : ''}
@@ -741,7 +743,15 @@ export class Pipeline {
           if ( uRenderStyle > 0.5 ) {
             vec2 pPx = vUv / max( uTexel, vec2( 1e-5 ) );
             float pHash = fract( sin( dot( floor( pPx * 0.35 ), vec2( 127.1, 311.7 ) ) ) * 43758.5453 );
-            if ( uRenderStyle < 1.5 ) {
+            if ( uRenderStyle > ${(RENDER_STYLES.sakura - 0.5).toFixed(1)} ) {
+              // Keep contour colour related to the surface, with clean violet contact lines.
+              ink *= 0.9;
+              inkTarget = mix( uInkColor, base.rgb * 0.32, 0.22 );
+            } else if ( uRenderStyle > ${(RENDER_STYLES.messenger - 0.5).toFixed(1)} ) {
+              // Graphite pressure varies without adding a second edge pass.
+              ink *= mix( 0.7, 1.0, pHash );
+              inkTarget = mix( uInkColor, base.rgb * 0.36, 0.18 );
+            } else if ( uRenderStyle < 1.5 ) {
               // 寫實:抑制卡通黑線，僅保留凹角與折縫的自然環境光遮蔽(Contact Crease AO)
               ink *= ( e > 0.0 ) ? 0.34 : 0.06;
               inkTarget = base.rgb * 0.44;
@@ -947,11 +957,19 @@ export class Pipeline {
             if ( cls > 0.5 && cls < 1.5 ) lc = lutApplyLand( pre );` : ''}
             c = mix( c, lc, uLutA );
           }
-          // ---- 螢幕空間繪畫媒材濾鏡(uRenderStyle: 0=賽璐璐早退, 1=寫實, 2=厚塗, 3=彩色水墨, 4=水彩, 5=油畫)----
+          // Style finishes reuse this grade pass; no extra scene render or render target.
           if ( uRenderStyle > 0.5 ) {
             vec2 px = vUv / max( uTexel, vec2( 1e-5 ) );
             vec3 lumaW = vec3( 0.2126, 0.7152, 0.0722 );
-            if ( uRenderStyle < 1.5 ) {
+            if ( uRenderStyle > ${(RENDER_STYLES.messenger - 0.5).toFixed(1)} ) {
+              // Sakura uses the catalog grade; Messenger adds a quiet printed-paper finish.
+              if ( uRenderStyle < ${(RENDER_STYLES.sakura - 0.5).toFixed(1)} ) {
+                vec3 printColor = toSRGB( max( c, vec3( 0.0 ) ) );
+                float grain = styN2( px * 0.72 ) - 0.5;
+                vec3 printed = floor( printColor * 31.0 + 0.5 + grain * 0.35 ) / 31.0;
+                c = mix( c, toLinear( max( printed, vec3( 0.0 ) ) ), smoothstep( 0.015, 0.12, l ) * 0.55 );
+              }
+            } else if ( uRenderStyle < 1.5 ) {
               // ① 寫實:微反差銳化(Unsharp Micro-Contrast)+ 膠片S曲線色調映射
               vec2 r = uTexel * 1.25;
               vec3 avg = 0.25 * (
