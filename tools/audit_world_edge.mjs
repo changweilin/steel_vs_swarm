@@ -64,6 +64,7 @@ import {
 } from '../public/js/data.js';
 import * as EW from '../public/js/edgewall.js';
 import { buildSlopeBoundary } from '../public/js/edgeSlope.js';
+import { floatingIceClear } from '../public/js/environmentParts.js';
 
 const BREAK_FIT = process.argv.includes('--break-fit');
 const BREAK_RUN = process.argv.includes('--break-run');
@@ -239,15 +240,15 @@ const mkWall = (extra = '', over = {}) => new Function(
   'SLOPE', 'slopeDeg', 'wallSlopeTier', 'buildSlopeBoundary', 'edgeWallDeepM', 'boundaryFillCrest', 'boundaryJoinParts',
   'classifyImg', 'terrainEnvCode', 'planWallRuns', 'planWallKinds', 'WALL_KINDS', 'wallParts', 'wallVariant', 'edgeSeed',
   'planBufferProps', 'propParts', 'planBackdrop', 'backdropParts', 'BACKDROP_KINDS',
-  'EDGE_WALL', 'edgeBufferM', 'objHeightMax', 'lowPower', 'partBox', 'buildBoundaryBufferParts', 'buildBoundaryRunParts', 'BOUNDARY_BUFFER_LAYOUTS',
+  'EDGE_WALL', 'edgeBufferM', 'objHeightMax', 'lowPower', 'partBox', 'buildBoundaryBufferParts', 'buildBoundaryRunParts', 'BOUNDARY_BUFFER_LAYOUTS', 'floatingIceClear',
   `${HELPERS}\n${wallSrc}\n${grabFn(bioSrc, 'buildBufferProps')}\n${grabFn(bioSrc, 'buildBackdrop')}\n${extra}
    return { buildEdgeWall, buildBufferProps, buildBackdrop };`,
 )(THREE_STUB, proceduralMeshStub, (c, o) => ({ c, o }), mergeGeosStub, WORLD_EDGE, edgeWallInsetM, edgeWallHM, WATER,
   SLOPE, slopeDeg, EW.wallSlopeTier, buildSlopeBoundary, edgeWallDeepM, EW.boundaryFillCrest, EW.boundaryJoinParts,
-  classifyImg, terrainEnvCode, EW.planWallRuns, planWallKinds, EW.WALL_KINDS, wallParts, EW.wallVariant, EW.edgeSeed,
+  classifyImg, terrainEnvCode, EW.planWallRuns, over.planWallKinds || planWallKinds, EW.WALL_KINDS, wallParts, EW.wallVariant, EW.edgeSeed,
   over.planBufferProps || EW.planBufferProps, over.propParts || EW.propParts,
   over.planBackdrop || EW.planBackdrop, over.backdropParts || EW.backdropParts, EW.BACKDROP_KINDS,
-  EW.EDGE_WALL, edgeBufferM, objHeightMax, false, EW.partBox, EW.buildBoundaryBufferParts, EW.buildBoundaryRunParts, EW.BOUNDARY_BUFFER_LAYOUTS);
+  EW.EDGE_WALL, edgeBufferM, objHeightMax, false, EW.partBox, EW.buildBoundaryBufferParts, EW.buildBoundaryRunParts, EW.BOUNDARY_BUFFER_LAYOUTS, floatingIceClear);
 const B = mkWall();
 
 // 合成地形:起伏 + 一片水域 + **中等坡與陡崖各一段**(段身取樣的 lo/hi 要真的不同,平地驗不到
@@ -1058,6 +1059,26 @@ for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-snow-summer', '夏季出現覆雪,Ⅸ MUST 紅字(夏天無雪契約破壞)'],
   ['--break-snow-slope', '雪錐斜率失真外突,Ⅸ MUST 紅字(山頂雪錐外擴懸空)']]) {
   if (process.argv.includes(f)) console.log(`\n（${f}:${m}）`);
+}
+{
+  const iceBoundary = mkWall('', { planWallKinds: run => Array(run.i1-run.i0).fill('iceberg') });
+  const coldSea = { ...T, waterY: 0, objectEnvironment: { ice: true },
+    heightAt: () => -100, bufferHeightAt: () => -100 };
+  emitted.length = 0;
+  const deepBlocks = [];
+  iceBoundary.buildEdgeWall({ group, terrain: coldSea, blockers: deepBlocks });
+  const floating = emitted.slice();
+  t('Ice boundary bodies straddle the resolved sea level', floating.length > 0 && floating.every(b => b.y0 < 0 && b.y1 > 0));
+  emitted.length = 0;
+  const shallowBlocks = [];
+  iceBoundary.buildEdgeWall({ group, terrain: { ...coldSea, heightAt: () => -.05, bufferHeightAt: () => -.05 }, blockers: shallowBlocks });
+  t('Shallow boundary water omits ice without opening the authoritative ring', emitted.length === 0 && shallowBlocks.length === deepBlocks.length);
+  emitted.length = 0;
+  iceBoundary.buildEdgeWall({ group, terrain: { ...coldSea, waterY: NaN }, blockers: [] });
+  t('Unknown boundary sea level omits floating ice', emitted.length === 0);
+  emitted.length = 0;
+  iceBoundary.buildEdgeWall({ group, terrain: { ...coldSea, bufferHeightAt: () => NaN }, blockers: [] });
+  t('Unknown buffer depth omits outer ice only', emitted.length > 0 && emitted.length < floating.length);
 }
 console.log(`\n${fail === 0 ? '🎉' : '❌'} 世界邊界稽核:${pass} 通過 / ${fail} 失敗`);
 process.exit(fail === 0 ? 0 : 1);

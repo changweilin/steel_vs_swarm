@@ -3,6 +3,7 @@ import { mulberry32 } from './rng.js';
 import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
 import { selectAncientStone, ancientStoneGeometry, ancientStoneDistribution } from './ancientStone.js';
 import { generateHeritageSite } from './heritageSites.js';
+import { geologyMorphology, mountainProfile } from './geologyMorphology.js';
 // Stylized event snapshots. These meshes never settle terrain motion, heat or damage.
 export const PHENOMENA = {
   debris_flow: ['土石流', 'unconsolidated', 'debris-flow', [20,80], [4,20], [0,.01], [.12,.3], 0x80664e, '不穩定地質'],
@@ -289,6 +290,8 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
       throw new RangeError('Geology footprint must be finite');
     }
     if (s.maxHeightDiagonalRatio !== null) p.height = Math.min(p.height, diagonal * s.maxHeightDiagonalRatio);
+    const morphology = geologyMorphology(type, seed);
+    if (morphology) p.morphology = morphology;
   }
   if (Object.hasOwn(PHENOMENA,type)) {
     const eventRnd=mulberry32(seed ^ 0x45564e54);
@@ -304,6 +307,17 @@ export function generateGeology(type = 'auto', seed = 0, input = {}) {
 }
 
 function profile(type, x, z, p) {
+  const m = p.morphology;
+  if (!m) return rockProfile(type, x, z, p);
+  const rim = Math.max(0, 1 - x * x - z * z);
+  if (!rim) return 0;
+  const xx = (x - m.offsetX) / m.spanX, zz = (z - m.offsetZ) / m.spanZ;
+  const shape = mountainProfile(xx, zz, m) ?? rockProfile(type, xx, zz, p);
+  const t = Math.min(1, rim * 8);
+  return Math.min(1, Math.max(0, shape)) * t * t * (3 - 2 * t);
+}
+
+function rockProfile(type, x, z, p) {
   if(Object.hasOwn(PHENOMENA,type)) return phenomenaProfile(type,x,z,p);
   const r = Math.hypot(x, z), envelope = Math.max(0, 1 - r * r);
   const groove = .94 + .06 * Math.cos(x * 31 + z * 4 + p.erosion * 3);
@@ -315,8 +329,8 @@ function profile(type, x, z, p) {
   }
   if (type === 'granite_towers') {
     let peak = 0;
-    for (const [cx, cz, height] of [[-.42, .06, .77], [0, -.08, 1], [.42, .1, .68]]) {
-      peak = Math.max(peak, Math.max(0, 1 - Math.hypot((x - cx) * 3.3, (z - cz) * 3.8)) ** .45 * height);
+    for (const { x: cx, z: cz, height, radius } of p.morphology.peaks) {
+      peak = Math.max(peak, Math.max(0, 1 - Math.hypot(x - cx, z - cz) / radius) ** .65 * height);
     }
     return Math.max(envelope * .18, peak * groove);
   }
@@ -324,20 +338,20 @@ function profile(type, x, z, p) {
     Math.max(0, 1 - (x * x * 2.2 + z * z * 2.5)) ** .22) * groove;
   if (type === 'crater') return Math.exp(-(((r - .62) / .19) ** 2)) * Math.max(0, 1 - r ** 8);
   if (type === 'dune') return Math.max(0, 1 - Math.abs(z) ** 2) * Math.max(0, x < .25 ? (x + 1) / 1.25 : (1 - x) / .75);
-  if (type === 'cliff') return envelope * (x > -.05 ? .95 : .12);
+  if (type === 'cliff') return envelope * (x > (p.morphology?.bend ?? -.05) ? .95 : .12);
   if (type === 'sandstone') return Math.floor(envelope ** .3 * p.layers) / p.layers;
   if (type === 'basalt') return Math.max(0, 1 - Math.hypot(Math.round(x * 5) / 5, Math.round(z * 5) / 5)) ** .25;
-  if (type === 'fin') return envelope * Math.max(0, 1 - Math.abs(z + .06 * Math.sin(x * 9)) * 5) ** .4
+  if (type === 'fin') return envelope * Math.max(0, 1 - Math.abs(z + p.morphology.bend * Math.sin(x * p.morphology.fluteFrequency)) * 5) ** .4
     * (.7 + .3 * Math.abs(Math.cos(x * 8)));
-  if (type === 'spire') return Math.max(0, 1 - r) ** 1.5;
+  if (type === 'spire') return Math.max(0, 1 - r) ** (p.morphology.sharpness + .3);
   if (type === 'tor') {
     const block = Math.max(0, 1 - Math.max(Math.abs(x), Math.abs(z)));
-    const joints = .88 + .12 * Math.abs(Math.sin(x * 11 + Math.floor(block * 4) * 1.7));
-    return Math.ceil(block * 4) / 4 * joints;
+    const count = p.morphology.jointCount;
+    const joints = .88 + .12 * Math.abs(Math.sin(x * p.morphology.fluteFrequency + Math.floor(block * count) * 1.7));
+    return Math.ceil(block * count) / count * joints;
   }
-  if (type === 'marble') return envelope ** .6 * (.65 + .35 * Math.abs(Math.sin(x * 6) * Math.cos(z * 5)));
-  if (type === 'karst') return envelope * (1 - p.dissolution * .75 + p.dissolution * .75 * Math.abs(Math.sin(x * 8) * Math.cos(z * 7)) ** 3);
-  if (type === 'mountain') return envelope * (.3 + .7 * Math.abs(Math.sin(x * 5 + z * 3))) ** 1.4;
+  if (type === 'marble') return envelope ** .6 * (.65 + .35 * Math.abs(Math.sin(x * p.morphology.fluteFrequency) * Math.cos(z * 5 + p.morphology.phase)));
+  if (type === 'karst') return envelope * (1 - p.dissolution * .75 + p.dissolution * .75 * Math.abs(Math.sin(x * p.morphology.fluteFrequency) * Math.cos(z * 7 + p.morphology.phase)) ** 3);
   if (type === 'reef') return envelope * (.3 + .45 * Math.abs(Math.sin(x * 10) * Math.cos(z * 11)));
   if (type === 'river') return envelope * (.18 + .3 * Math.abs(z + .2 * Math.sin(x * 4)));
   if (type === 'island') return Math.max(0, envelope - .2) ** .45;
@@ -381,14 +395,14 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     const px = x * p.width / 2, pz = z * p.width * p.depthRatio / 2;
     const feature=Object.hasOwn(PHENOMENA,type)?phenomenaSurface(type,x,z,p):null;
     let wave2D = 1;
-    if (is2DGeo && base > 1e-4) {
+    if (is2DGeo && !p.morphology && base > 1e-4) {
       const u2d = eval2DUndulation(pattern2D, px, pz, kxGeo, kzGeo, phases2DGeo);
       wave2D = 0.65 + 0.35 * u2d;
     }
     const noise = (Math.sin(x * 7 + z * 3 + phases[0]) * .3
       + Math.sin(x * 13 - z * 9 + phases[1]) * .15
       + Math.cos(x * 23 + z * 17 + phases[2]) * .05)
-      * p.roughness * (1 - p.erosion * .5) * base * (feature==='water'?0:1);
+      * p.roughness * (1 - p.erosion * .5) * base * (feature==='water'?0:1) * (p.morphology ? .15 : 1);
     const y = Math.max(0, base * wave2D + noise) * p.height;
     const wx = px * c - pz * s, wz = px * s + pz * c;
     const baseY = input.heightAt ? input.heightAt(originX + wx, originZ + wz) : 0;
@@ -416,7 +430,11 @@ export function geologyBackgroundObject(type, seed = 0, input = {}) {
     const normal = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
     if (Math.hypot(...normal) < 1e-12) return;
     const up = normal[1] / Math.hypot(...normal), center = a.map((v, k) => (v + b[k] + c[k]) / 3);
-    const band = Math.floor((center[1] + center[0] * Math.tan(p.dip * Math.PI / 180)) / p.height * p.layers);
+    const family = p.morphology?.family;
+    const layerSlope = family === 'cuesta' ? p.morphology.dip * p.height / (p.width * p.morphology.spanX)
+      : family === 'mesa' || family === 'butte' ? 0 : Math.tan(p.dip * Math.PI / 180);
+    const layerX = family === 'cuesta' ? center[0] * Math.cos(p.strike) + center[2] * Math.sin(p.strike) : center[0];
+    const band = Math.floor((center[1] + layerX * layerSlope) / p.height * p.layers);
     let color = rgb(stoneColor ?? baseColor, .91 + (band % 2 ? .09 : 0));
     // Coherent patches span neighbouring triangles instead of confetti per face.
     const patchX = center[0] / p.width, patchZ = center[2] / p.width;
@@ -688,6 +706,8 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
   const rnd = mulberry32((seed ^ 0x52494447) >>> 0);
   const p = { roughness: s.roughness ? s.roughness[0] + rnd() * (s.roughness[1] - s.roughness[0]) : .1,
     erosion: .25 + rnd() * .75, layers: 4 + Math.floor(rnd() * 9), dissolution: rnd(), dip: 0 };
+  const morphology = geologyMorphology(type, seed);
+  if (morphology) p.morphology = morphology;
   if (Object.hasOwn(PHENOMENA, type)) Object.assign(p, { activity: .7,
     ventRadius: .12 + rnd() * .12, channelWidth: .12 + rnd() * .14, jetHeight: .3 + rnd() * .6 });
 
@@ -752,7 +772,9 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
         const alt = Math.cos(kzRow * zLocal + phases2D[0]);
         const jitt = Math.sin(1.618 * kzRow * zLocal + phases2D[1]) * 0.42
           + Math.cos(2.414 * kzRow * zLocal + phases2D[2]) * 0.22;
-        const stagX = avgW * (0.38 * alt + 0.22 * jitt) * edgeTaper;
+        // Erosional ridges bend coherently instead of following interference cells.
+        const shift = morphology ? .22 * Math.sin(v * 2.8 + morphology.phase) : 0.38 * alt + 0.22 * jitt;
+        const stagX = avgW * shift * edgeTaper;
         xEff = Math.max(0, Math.min(len - 1e-9, xx + stagX));
       }
 
@@ -769,13 +791,13 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
       const noise = (Math.sin(lu * 7 + v * 3 + phases[0]) * .3
         + Math.sin(lu * 13 - v * 9 + phases[1]) * .15
         + Math.cos((lu + v) * 17 + phases[2]) * .05)
-        * p.roughness * (1 - p.erosion * .5) * base * err;
+        * p.roughness * (1 - p.erosion * .5) * base * err * (morphology ? .15 : 1);
 
       const cross = Math.pow(Math.max(0, Math.cos(v * Math.PI / 2)), .5 * sharp);
       let crossMod = .72 + .28 * cross;
       let peakEff = crest;
 
-      if (is2D) {
+      if (is2D && !morphology) {
         const u2d = eval2DUndulation(activePattern, -len / 2 + xEff, zLocal, kx, kz, phases2D);
         const wave2D = clamp(0.5 + 0.5 * u2d, 0, 1);
         crossMod = (0.34 + 0.66 * wave2D) * (.70 + .30 * cross);
@@ -894,7 +916,8 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     meshData: { vertices, faces, colors },
     size,
     params,
-    undulation: { peaks, valleys, wavelengths, errors, gains, pattern: activePattern, is2D },
+    ...(morphology ? { morphology } : {}),
+    undulation: { peaks, valleys, wavelengths, errors, gains, pattern: morphology ? null : activePattern, is2D },
     heightAt,
     surfaceHeightAt,
     ...(bufferMeshData ? { bufferMeshData, bufferSize } : {}),

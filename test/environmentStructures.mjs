@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { environmentParts, linearEnvironmentParts } from '../public/js/environmentParts.js';
+import { ROOF_SEAT_SINK } from '../public/js/architectureRoofParts.js';
 import { partBox, WALL_KINDS } from '../public/js/edgewall.js';
 import { mat3Apply, mat3FromEulerXYZ } from '../public/js/partTransform.js';
 
@@ -50,7 +51,7 @@ for (let seed = 0; seed < 80; seed++) {
     const form = rows.find(p => p.role === 'building-body').architecture.roofForm;
     assert.equal(ends.length > 0, form !== 'flat', `${kind}: style determines roof`);
     for (const end of ends) {
-      assert(Math.abs(partBox(end).y0 - body.y1) < 1e-8, 'roof meets wall');
+      assert(Math.abs(partBox(end).y0 + ROOF_SEAT_SINK * end.s[1] - body.y1) < 1e-8, 'roof seats inside wall');
       const { vertices, faces } = end.g[1];
       let volume = 0;
       for (let i = 0; i < faces.length; i += 3) {

@@ -68,7 +68,7 @@ import {
   EDGE_WALL, EDGE_MOTION, WALL_KINDS, BACKDROP_KINDS, planWallRuns, planWallKinds, wallParts, wallVariant, wallSlopeTier, edgeSeed, partBox,
   planBufferProps, propParts, planBackdrop, backdropParts, buildBoundaryBufferParts, buildBoundaryRunParts, BOUNDARY_BUFFER_LAYOUTS, boundaryFillCrest, boundaryJoinParts,
 } from './edgewall.js';
-import { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable } from './environmentParts.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable, floatingIceClear } from './environmentParts.js';
 import { runtimeMeshDataGeometry } from './runtimePartModel.js';
 import { sceneryGeometry, sceneryBoxGeometry } from './sceneryGeometry.js';
 import { BATTLE_GEOLOGY, SYNTH_GEOLOGY, battleGeology, battleGeologySlope } from './geology.js';
@@ -4243,21 +4243,10 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
         environment: { ...terrain.objectEnvironment,
           latitude: terrain.center?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) } });
       if (water) {
-        if (!Number.isFinite(terrain.waterY) || !def.draft) continue;
-        const boxes = parts.map(partBox);
-        const bottom = Math.min(...boxes.map(b => b.y0));
+        if (!Number.isFinite(terrain.waterY) || !def.ice) continue;
         y = terrain.waterY - parts[0].waterline;
-        // Sample the complete footprint, including interior shoals. Unknown depth means omission.
-        let clear = true;
-        const nx = Math.ceil(size[0] / 2), nz = Math.ceil(size[2] / 2);
-        for (let ix = 0; ix <= nx && clear; ix++) for (let iz = 0; iz <= nz; iz++) {
-          const px = x + (ix / nx - .5) * size[0], pz = z + (iz / nz - .5) * size[2];
-          const bed = terrain.heightAt(px, pz);
-          if (!Number.isFinite(bed) || terrainEnvCode(terrain, px, pz) !== 1 || bed + .3 >= y + bottom) {
-            clear = false; break;
-          }
-        }
-        if (!clear) continue;
+        if (!parts.every(part => floatingIceClear(part, { x, z, waterY: terrain.waterY,
+          bedAt: (px, pz) => terrain.heightAt(px, pz), waterAt: (px, pz) => terrainEnvCode(terrain, px, pz) === 1 }))) continue;
       }
       // Scene gaps remain traversable: register the solid parts, not the boundary ring envelope.
       for (const part of parts) {
@@ -9744,13 +9733,18 @@ function buildEdgeWall({ group, terrain, blockers }) {
     // 邊界障礙物一律移除底座：本體直接由地面／水面長出，不另加通用底座
     // Joined vertices already carry terrain elevation. Collision retains its overlapping ring;
     // visual modules meet exactly at shared endpoints instead of overlapping stair steps.
-    const visualParts = parts.filter((p) => !p.motion).map(part =>
+    const icePart = p => ['sea-ice', 'glacial-ice'].includes(p.role);
+    const iceClear = (part, bedAt) => !icePart(part) || (s.water && floatingIceClear(part,
+      { x, z, yaw: e.fry, waterY: wy, bedAt }));
+    const visualParts = parts.filter(p => !p.motion && iceClear(p, (px, pz) => terrain.heightAt(px, pz))).map(part =>
       s.water && Number.isFinite(part.waterline)
-        ? { ...part, p: [part.p[0], part.p[1] - part.waterline, part.p[2]] } : part);
+        ? { ...part, p: [part.p[0], part.p[1] - part.waterline + (icePart(part) ? wy - ground : 0), part.p[2]] } : part);
     emitWallParts(batch, visualParts, x, joined ? 0 : ground, z, e.fry, 1);
     if (joined?.bufferParts) emitWallParts(batch, joined.bufferParts, x, 0, z, e.fry, 1);
     if (boundaryBatch?.bufferParts?.length && !joined?.bufferParts) {
-      const visualBufferParts = boundaryBatch.bufferParts.map(part =>
+      const visualBufferParts = boundaryBatch.bufferParts.filter(part => iceClear(part, (px, pz) =>
+        px >= terrain.minX && px <= terrain.maxX && pz >= terrain.minZ && pz <= terrain.maxZ
+          ? terrain.heightAt(px, pz) : terrain.bufferHeightAt?.(px, pz))).map(part =>
         s.water && Number.isFinite(part.waterline)
           ? { ...part, p: [part.p[0], part.p[1] - part.waterline, part.p[2]] } : part);
       const isGeoFill = isContinuousGeology || visualBufferParts.some(p => p.role === 'boundary-buffer-fill');

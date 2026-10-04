@@ -6,7 +6,7 @@ import { applyBoundaryAppearance, boundaryTetrapodMesh, boundaryGeologySurface, 
 import { mulberry32 } from './rng.js';
 import { createForestTree, forestEnvironment } from './forest.js';
 import { makeSceneVehicleParts } from './vehicleCatalog.js';
-import { partsAABB } from './vehicles.js';
+import { partAABB, partsAABB } from './vehicles.js';
 import { mat3Apply, mat3FromEulerXYZ, mat3Multiply, eulerXYZFromMat3 } from './partTransform.js';
 import { geologyBackgroundObject, elongatedGeologyMesh } from './geology.js';
 import { generateVessel } from './vesselCatalog.js';
@@ -18,6 +18,8 @@ import { architecturalFacadeParts } from './architectureFacadeParts.js';
 import { architecturalRoofParts } from './architectureRoofParts.js';
 import { functionalBuildingParts } from './functionalBuildingParts.js';
 import { sceneFurnitureParts } from './sceneFurnitureParts.js';
+import { fracturedIceData, industrialShellData, applyEnvironmentAppearance } from './sceneryAppearance.js';
+import { floatIceMesh } from './iceHydrostatics.js';
 import { optimalSolarTiltRad } from './data.js';
 
 export const ENVIRONMENT_OBJECTS = Object.freeze({
@@ -35,8 +37,8 @@ export const ENVIRONMENT_OBJECTS = Object.freeze({
   gianttree: { category: 'giant-tree', bio: ['green', 'wet'], size: [30, 65, 30] },
   fallentree: { category: 'deadwood', bio: ['green', 'wet'], size: [28, 7, 9] },
   car: { category: 'vehicle', bio: ['urban'], size: [4.8, 1.8, 2.2] },
-  icefloe: { category: 'sea-ice', bio: ['water'], size: [24, 2, 18], draft: .86 },
-  iceberg: { category: 'glacial-ice', bio: ['water'], size: [38, 36, 28], draft: .84 },
+  icefloe: { category: 'sea-ice', bio: ['water'], size: [24, 2, 18], ice: true },
+  iceberg: { category: 'glacial-ice', bio: ['water'], size: [38, 36, 28], ice: true },
   strandedship: { category: 'marine-vehicle', bio: ['wet'], size: [34, 16, 14] },
 });
 
@@ -48,8 +50,30 @@ export const ENVIRONMENT_PARAMETERS = Object.freeze({
   rock: { scale: [.6, 1] }, 'giant-tree': { scale: [.75, 1] },
   deadwood: { scale: [.65, 1] }, vehicle: { scale: [.9, 1] },
   'marine-vehicle': { scale: [.8, 1] },
-  'sea-ice': { scale: [.5, 1], sides: [8, 14], edge: [.78, 1], crown: [.94, 1] },
-  'glacial-ice': { scale: [.65, 1], sides: [7, 12], edge: [.65, 1], crown: [.55, 1] },
+  'sea-ice': {
+    scale: [.28, 1.25], aspect: [.6, 1.5], thickness: [.35, 1.5],
+    crown: [.94, 1], shoulderHeight: [.72, .88], keel: [.72, .95], taper: [.9, .99],
+    shapes: {
+      rounded: { sides: [12, 18], edge: [.94, 1], aspect: [1, 1.15] },
+      angular: { sides: [7, 10], edge: [.84, 1], aspect: [1, 1.35] },
+      elongated: { sides: [9, 14], edge: [.88, 1], aspect: [2, 3.4] },
+      notched: { sides: [12, 18], edge: [.91, 1], aspect: [1, 1.5], notch: [.28, .48] },
+      jagged: { sides: [12, 20], edge: [.6, 1], aspect: [1, 1.5] },
+      lobed: { sides: [14, 20], edge: [.92, 1], aspect: [1, 1.35], lobes: [2, 4], amplitude: [.13, .23] },
+    },
+  },
+  'glacial-ice': {
+    scale: [.25, 1.3], aspect: [.7, 1.6], height: [.55, 1.4], keel: [.85, 1], peakOffset: [-.12, .12],
+    shapes: {
+      tabular: { sides: [9, 16], edge: [.9, 1], aspect: [1, 1.5], height: [.18, .32], shoulder: [.72, .86], topWidth: [.9, .98], topDepth: [.9, .98], crown: [.95, 1], centerHeight: 1 },
+      dome: { sides: [12, 18], edge: [.9, 1], aspect: [1, 1.3], height: [.38, .62], shoulder: [.35, .5], topWidth: [.5, .7], topDepth: [.5, .7], crown: [.5, .7], centerHeight: 1 },
+      pinnacle: { sides: [7, 12], edge: [.84, 1], aspect: [1, 1.3], height: [.5, .78], shoulder: [.38, .52], topWidth: [.12, .25], topDepth: [.12, .25], crown: [.45, .65], centerHeight: 1 },
+      ridge: { sides: [10, 16], edge: [.86, 1], aspect: [1.8, 2.8], height: [.35, .55], shoulder: [.38, .55], topWidth: [.78, .92], topDepth: [.18, .32], crown: [.6, .85], centerHeight: 1 },
+      wedge: { sides: [8, 14], edge: [.86, 1], aspect: [1.1, 1.8], height: [.4, .62], shoulder: [.28, .42], topWidth: [.75, .9], topDepth: [.65, .85], crown: [.15, 1], centerHeight: .7, slope: true },
+      multipeak: { sides: [14, 20], edge: [.85, 1], aspect: [1, 1.5], height: [.45, .68], shoulder: [.3, .44], topWidth: [.65, .85], topDepth: [.65, .85], crown: [.2, 1], centerHeight: .65, peaks: [2, 4] },
+      fractured: { sides: [12, 20], edge: [.64, 1], aspect: [1, 1.6], height: [.4, .85], shoulder: [.42, .6], topWidth: [.65, .85], topDepth: [.65, .85], crown: [.3, 1], centerHeight: .85, notch: [.2, .4] },
+    },
+  },
 });
 export const ENVIRONMENT_CATEGORIES = Object.freeze(Object.fromEntries(
   Object.keys(ENVIRONMENT_PARAMETERS).map(category => [category,
@@ -84,13 +108,47 @@ export const ENVIRONMENT_STRUCTURE_PARAMETERS = Object.freeze({
 export function environmentSize(kind, seed) {
   const def = ENVIRONMENT_OBJECTS[kind];
   if (!def || !Number.isSafeInteger(seed)) throw new RangeError('Invalid environment kind or seed');
-  const [lo, hi] = ENVIRONMENT_PARAMETERS[def.category].scale;
-  const factor = lo + mulberry32((seed ^ 0x53495a45) >>> 0)() * (hi - lo);
-  return def.size.map(value => value * factor);
+  const spec = ENVIRONMENT_PARAMETERS[def.category], [lo, hi] = spec.scale;
+  const rnd = mulberry32((seed ^ 0x53495a45) >>> 0);
+  const factor = lo + rnd() * (hi - lo), size = def.size.map(value => value * factor);
+  if (!def.ice) return size;
+  const aspect = Math.sqrt(spec.aspect[0] + rnd() * (spec.aspect[1] - spec.aspect[0]));
+  const vertical = kind === 'icefloe' ? spec.thickness : spec.height;
+  const height = vertical[0] + rnd() * (vertical[1] - vertical[0]);
+  return [size[0] * aspect, size[1] * height, size[2] / aspect];
+}
+
+export function iceFloeParameters(seed) {
+  if (!Number.isSafeInteger(seed)) throw new RangeError('Invalid ice floe seed');
+  // Separate shape and size streams keep new samples outside the shared scatter sequence.
+  const rnd = mulberry32((seed ^ 0x464c4f45) >>> 0), spec = ENVIRONMENT_PARAMETERS['sea-ice'];
+  const sample = range => range[0] + rnd() * (range[1] - range[0]);
+  const shapes = Object.keys(spec.shapes), shape = shapes[Math.floor(rnd() * shapes.length)];
+  const profile = spec.shapes[shape];
+  return { shape, sides: Math.floor(sample([profile.sides[0], profile.sides[1] + 1])),
+    edge: profile.edge, aspect: sample(profile.aspect),
+    lobes: profile.lobes ? Math.floor(sample([profile.lobes[0], profile.lobes[1] + 1])) : 0,
+    amplitude: profile.amplitude ? sample(profile.amplitude) : 0,
+    notch: profile.notch ? sample(profile.notch) : 0, notchAngle: rnd() * Math.PI * 2,
+    keel: sample(spec.keel), taper: sample(spec.taper), shoulderHeight: sample(spec.shoulderHeight) };
+}
+
+export function icebergParameters(seed) {
+  if (!Number.isSafeInteger(seed)) throw new RangeError('Invalid iceberg seed');
+  const rnd = mulberry32((seed ^ 0x42455247) >>> 0), spec = ENVIRONMENT_PARAMETERS['glacial-ice'];
+  const shape = choose(rnd, Object.keys(spec.shapes)), profile = spec.shapes[shape];
+  return { shape, sides: integer(rnd, ...profile.sides), edge: profile.edge,
+    aspect: sample(rnd, profile.aspect), heightRatio: sample(rnd, profile.height),
+    keel: sample(rnd, spec.keel), shoulderHeight: sample(rnd, profile.shoulder),
+    topWidth: sample(rnd, profile.topWidth), topDepth: sample(rnd, profile.topDepth),
+    crown: profile.crown, centerHeight: profile.centerHeight,
+    peakX: sample(rnd, spec.peakOffset), peakZ: sample(rnd, spec.peakOffset), peakPhase: rnd() * Math.PI * 2,
+    peaks: profile.peaks ? integer(rnd, ...profile.peaks) : 0, slope: !!profile.slope,
+    notch: profile.notch ? sample(rnd, profile.notch) : 0 };
 }
 
 export function environmentAvailable(kind, input = {}) {
-  if (!ENVIRONMENT_OBJECTS[kind]?.draft) return true;
+  if (!ENVIRONMENT_OBJECTS[kind]?.ice) return true;
   if (typeof input.ice === 'boolean') return input.ice;
   const { temperature } = forestEnvironment(input.latitude, 0, input);
   return Number.isFinite(temperature) && temperature <= (kind === 'icefloe' ? 2 : 8);
@@ -98,29 +156,48 @@ export function environmentAvailable(kind, input = {}) {
 
 export function iceParts(kind, size, seed, { yaw = true } = {}) {
   const def = ENVIRONMENT_OBJECTS[kind], spec = ENVIRONMENT_PARAMETERS[def?.category];
-  if (!def?.draft || !Number.isSafeInteger(seed) || !Array.isArray(size)
+  if (!def?.ice || !Number.isSafeInteger(seed) || !Array.isArray(size)
     || size.length !== 3 || size.some(v => !Number.isFinite(v) || v <= 0)) {
     throw new RangeError('Invalid ice model inputs');
   }
   const rnd = mulberry32(seed >>> 0), sample = range => range[0] + rnd() * (range[1] - range[0]);
-  const n = Math.floor(sample([spec.sides[0], spec.sides[1] + 1]));
-  const [w, h, d] = size, phase = rnd() * Math.PI * 2;
+  const floe = kind === 'icefloe' ? iceFloeParameters(seed) : null;
+  const berg = kind === 'iceberg' ? icebergParameters(seed) : null, profile = floe || berg;
+  const n = profile.sides;
+  const [w, height, d] = size, h = height * (berg?.heightRatio ?? 1), phase = rnd() * Math.PI * 2;
   const outline = Array.from({ length: n }, (_, i) => {
     const angle = phase + (i + .2 * (rnd() - .5)) / n * Math.PI * 2;
-    const radius = sample(spec.edge);
-    return [Math.cos(angle) * w * .5 * radius, Math.sin(angle) * d * .5 * radius];
+    let radius = sample(profile.edge);
+    if (floe) {
+      radius *= 1 - floe.amplitude * (1 - Math.cos(floe.lobes * angle + phase));
+      radius *= 1 - floe.notch * Math.max(0, Math.cos(angle - floe.notchAngle)) ** 8;
+    } else if (berg.notch) {
+      radius *= 1 - berg.notch * Math.max(0, Math.cos(angle - berg.peakPhase)) ** 8;
+    }
+    // Ordered positive radii keep concave outlines star-shaped, so cap fans cannot cross.
+    return [Math.cos(angle) * w * .5 * radius, Math.sin(angle) * d * .5 * radius / profile.aspect];
   });
   const vertices = [], faces = [], colors = [];
-  const tabular = kind === 'icefloe' || rnd() < .4;
-  for (let ring = 0; ring < 3; ring++) for (const [x, z] of outline) {
-    const factor = ring === 0 ? .55 : ring === 1 ? 1 : tabular ? .94 : .52;
-    const y = ring === 0 ? 0 : ring === 1 ? h * def.draft
-      : h * (def.draft + (1 - def.draft) * sample(spec.crown));
-    vertices.push(x * factor, y, z * factor);
+  for (let ring = 0; ring < 3; ring++) for (const [i, [x, z]] of outline.entries()) {
+    const factor = ring === 0 ? profile.keel : ring === 1 ? 1 : floe?.taper ?? berg.topWidth;
+    const depthFactor = ring === 2 && berg ? berg.topDepth : factor;
+    const shoulder = profile.shoulderHeight;
+    let crown;
+    if (ring === 2 && berg) {
+      const angle = phase + i / n * Math.PI * 2;
+      const t = berg.peaks ? ((1 + Math.cos(berg.peaks * angle + berg.peakPhase)) / 2) ** 3
+        : berg.slope ? (1 + Math.cos(angle - berg.peakPhase)) / 2 : rnd();
+      crown = berg.crown[0] + t * (berg.crown[1] - berg.crown[0]);
+    }
+    const y = ring === 0 ? 0 : ring === 1 ? h * shoulder
+      : h * (shoulder + (1 - shoulder) * (berg ? crown : sample(spec.crown)));
+    vertices.push(x * factor, y, z * depthFactor);
     colors.push(...(ring === 0 ? [.25, .55, .66] : ring === 1 ? [.53, .77, .84] : [.85, .94, .97]));
   }
   // Center fans cap both ends; rings share indices, so no cracks or open undersides.
-  vertices.push(0, 0, 0, 0, h, 0);
+  // Peak offsets stay inside the upper ring, preserving the closed cap fan.
+  vertices.push(0, 0, 0, berg ? berg.peakX * w * .5 * berg.topWidth : 0,
+    h * (berg?.centerHeight ?? 1), berg ? berg.peakZ * d * .5 / berg.aspect * berg.topDepth : 0);
   colors.push(.25, .55, .66, .91, .97, 1);
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
@@ -130,17 +207,39 @@ export function iceParts(kind, size, seed, { yaw = true } = {}) {
       faces.push(a, e, b, b, e, c);
     }
   }
+  const floating = floatIceMesh(fracturedIceData({ vertices, faces, colors }));
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
-  vertices.forEach((value, i) => {
+  floating.vertices.forEach((value, i) => {
     min[i % 3] = Math.min(min[i % 3], value); max[i % 3] = Math.max(max[i % 3], value);
   });
   const center = min.map((value, i) => (value + max[i]) / 2);
   const dimensions = max.map((value, i) => value - min[i]);
-  const mesh = { vertices: vertices.map((value, i) => value - center[i % 3]), faces, colors };
-  // 整體朝向抽最後一枚(幾何與前版逐位元一致，只多轉向)；連續無縫的邊界連排由呼叫端關掉。
+  const mesh = { vertices: floating.vertices.map((value, i) => value - center[i % 3]),
+    faces: floating.faces, colors: floating.colors, baseVertexCount: floating.baseVertexCount };
+  // All shape and yaw samples remain local to this object.
   const spin = yaw ? rnd() * Math.PI * 2 : 0;
-  return [{ g: ['mesh', mesh, dimensions], p: center, c: null, r: [0, spin, 0],
+  return [{ g: ['mesh', mesh, dimensions], p: center, c: null, r: [0, spin, 0], waterline: floating.waterline,
     role: kind === 'icefloe' ? 'sea-ice' : 'glacial-ice' }];
+}
+
+export function floatingIceClear(part, { x = 0, z = 0, yaw = 0, waterY, bedAt, waterAt } = {}) {
+  if (!Number.isFinite(waterY) || !Number.isFinite(part.waterline) || typeof bedAt !== 'function') return false;
+  const bounds = partAABB(part), matrix = mat3FromEulerXYZ([0, yaw, 0]);
+  const keel = waterY - part.waterline + bounds.y0;
+  const clear = (lx, lz) => {
+    const [px, , pz] = mat3Apply(matrix, [lx, 0, lz]), wx = x + px, wz = z + pz;
+    const bed = bedAt(wx, wz);
+    return Number.isFinite(bed) && bed + .3 < keel && (!waterAt || waterAt(wx, wz));
+  };
+  if (!clear((bounds.x0 + bounds.x1) / 2, (bounds.z0 + bounds.z1) / 2)) return false;
+  const nx = Math.max(1, Math.ceil((bounds.x1 - bounds.x0) / 2));
+  const nz = Math.max(1, Math.ceil((bounds.z1 - bounds.z0) / 2));
+  // Full footprint sampling also catches interior shoals; missing depth omits ice.
+  for (let ix = 0; ix <= nx; ix++) for (let iz = 0; iz <= nz; iz++) {
+    if (!clear(bounds.x0 + (bounds.x1 - bounds.x0) * ix / nx,
+      bounds.z0 + (bounds.z1 - bounds.z0) * iz / nz)) return false;
+  }
+  return true;
 }
 
 export { makeSceneVehicleParts } from './vehicleCatalog.js';
@@ -168,6 +267,7 @@ function fit(rows, size) {
     p: [(p.p[0] - (b.x0 + b.x1) / 2) * scale, (p.p[1] - b.y0) * scale,
       (p.p[2] - (b.z0 + b.z1) / 2) * scale],
     s: (p.s || [1, 1, 1]).map(v => v * scale),
+    ...(Number.isFinite(p.waterline) ? { waterline: (p.waterline - b.y0) * scale } : {}),
     ...(p.motion ? { motion: { ...p.motion, pivot: [
       (p.motion.pivot[0] - (b.x0 + b.x1) / 2) * scale,
       (p.motion.pivot[1] - b.y0) * scale,
@@ -190,18 +290,7 @@ function roofWedge(w, rise, d, x, y, color) {
 // Existing vessel lofts cap their ends; these shells instead join inner and outer rims.
 function hollowShell(profile, thickness, x, y, z, color, role) {
   const height = profile.at(-1)[0], radius = Math.max(...profile.map(p => p[1]));
-  const outline = [...profile, ...[...profile].reverse().map(([level, r]) => [level, r - thickness])];
-  const vertices = [], faces = [], sides = 16;
-  for (const [level, r] of outline) for (let i = 0; i < sides; i++) {
-    const angle = i * Math.PI * 2 / sides;
-    vertices.push(r * Math.cos(angle), level - height / 2, r * Math.sin(angle));
-  }
-  for (let row = 0; row < outline.length; row++) for (let i = 0; i < sides; i++) {
-    const next = (row + 1) % outline.length, j = (i + 1) % sides;
-    const a = row * sides + i, b = next * sides + i, c = next * sides + j, d = row * sides + j;
-    faces.push(a, b, c, a, c, d);
-  }
-  return { g: ['mesh', { vertices, faces }, [radius * 2, height, radius * 2]],
+  return { g: ['mesh', industrialShellData(profile, thickness, 16, role !== 'stack-band'), [radius * 2, height, radius * 2]],
     p: [x, y + height / 2, z], c: color, role };
 }
 
@@ -475,7 +564,7 @@ export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size,
     || size.some(v => !Number.isFinite(v) || v <= 0)) throw new RangeError('Invalid environment dimensions or seed');
   const [w, h, d] = size, rnd = mulberry32(seed >>> 0);
   let rows;
-  if (ENVIRONMENT_OBJECTS[kind].draft) rows = iceParts(kind, size, seed, { yaw });
+  if (ENVIRONMENT_OBJECTS[kind].ice) rows = iceParts(kind, size, seed, { yaw });
   else if (kind === 'car') rows = makeSceneVehicleParts('sedan', { fit: { L: w, H: h, W: d }, paint: seed });
   else if (kind === 'gianttree' || kind === 'fallentree') {
     const tree = createForestTree(choose(rnd, ['redwood', 'sequoia']), seed, undefined, undefined, 1, season, environment);
@@ -490,10 +579,7 @@ export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size,
   else if (kind === 'strandedship') rows = ship(seed);
   else if (kind === 'skyfall') rows = layDown(building('skyscraper', h * .55, w, d * .8, rnd));
   else rows = building(kind, w, h, d, rnd);
-  const fitted = fit(rows, size);
-  if (!ENVIRONMENT_OBJECTS[kind].draft) return fitted;
-  const bounds = partsAABB(fitted), waterline = (bounds.y1 - bounds.y0) * ENVIRONMENT_OBJECTS[kind].draft;
-  return fitted.map(part => ({ ...part, waterline }));
+  return applyEnvironmentAppearance(fit(rows, size));
 }
 
 function aquacultureParts(kind, len, d, h, seed) {
@@ -567,9 +653,9 @@ export function storageTankParts({ w, h, d, seed = 1 }) {
   const radius = Math.min(w, d) * sample(rnd, spec.radiusRatio);
   const bodyH = h * sample(rnd, spec.heightRatio), roofH = h * sample(rnd, spec.roofRatio), baseH = h * .035;
   const color = choose(rnd, [0xb3bab6, 0xc0c7c3, 0xa5ada9]);
-  return [cyl(radius * 1.04, radius * 1.04, baseH, 0, baseH / 2, 0, 0x737c79, 'tank-foundation'),
+  return applyEnvironmentAppearance([cyl(radius * 1.04, radius * 1.04, baseH, 0, baseH / 2, 0, 0x737c79, 'tank-foundation'),
     cyl(radius, radius, bodyH, 0, baseH + bodyH / 2, 0, color, 'storage-tank'),
-    cyl(0, radius, roofH, 0, baseH + bodyH + roofH / 2, 0, 0x6e7c80, 'tank-roof')];
+    cyl(0, radius, roofH, 0, baseH + bodyH + roofH / 2, 0, 0x6e7c80, 'tank-roof')]);
 }
 
 export const NARROW_GEOLOGY_BOUNDARY = Object.freeze({
@@ -846,7 +932,7 @@ export function linearEnvironmentParts(kind, { len, depth: d, h, seed = 1, seaso
       for (let j = first; j < rows.length; j++) rows[j].waterline = waterline;
     } else throw new RangeError(`Unknown linear environment: ${kind}`);
   }
-  return applyBoundaryAppearance(rows);
+  return applyBoundaryAppearance(applyEnvironmentAppearance(rows));
 }
 
 export const NATURAL_CLIFF_KINDS = Object.freeze(new Set(['cliff', 'landslide', 'debris']));
