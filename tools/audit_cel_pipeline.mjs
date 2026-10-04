@@ -21,7 +21,8 @@
 //     ・field.js MUST 是加權平均(不是加總,加總會飽和成常數)且分母有下限。
 //   Ⅳ 描邊寬度(toon.js outlineMaterial)
 //     ・螢幕下限 MUST 由 `projectionMatrix[1][1]` 反推(手寫換算 = 狙擊一開鏡描邊全變粗);
-//     ・MUST 是 `max(世界寬, 螢幕下限)` ⇒ 近距離逐位元同舊制(15 處呼叫端不必重調);
+//     ・Clamp world width between screen limits before the style multiplier: near details stay legible,
+//       distant silhouettes remain visible, and disabling outlines still produces zero extrusion.
 //     ・**兩個外推量都 MUST 換成局部單位**(2026-08-10「主堡黑球」):它們一起加在
 //       `position` 上,而螢幕下限是由**視距**(世界公尺)換算來的 ⇒ 少除一次世界縮放,
 //       實得線寬就是「下限 × 世界縮放」,又因為它 ∝ 視距 ⇒ 離越遠脹越大、沒有上界。
@@ -74,7 +75,7 @@ import { readSrc } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { makeField, makeToneLadder } from '../public/js/field.js';
 import { INK_CTR, inkCtrM, combatReachM, DISSOLVE, dissolveOutAt } from '../public/js/data.js';
-import { VISUAL_KNOBS } from '../public/js/visualPrefs.js';
+import { VISUAL_KNOBS, VISUAL_PRESETS } from '../public/js/visualPrefs.js';
 
 const toon = readSrc('public', 'js', 'toon.js');
 const env = readSrc('public', 'js', 'environment.js');
@@ -273,27 +274,37 @@ console.log('\nⅣ 描邊寬度');
   const O = code(toon);
   ok(/projectionMatrix\[1\]\[1\]/.test(O),
     '螢幕下限由 projectionMatrix[1][1] 反推(手寫換算 = 狙擊一開鏡描邊全變粗)');
-  ok(/max\( uOW, oMinW \)/.test(O),
-    '取 max(世界寬, 螢幕下限)⇒ 近距離逐位元同舊制(15 處呼叫端不必重調)');
+  ok(/min\( max\( uOW, oMinW \), oMaxW \) \* uOScale/.test(O),
+    'Screen limits precede style scaling so thin styles and zero-width outlines remain valid');
   ok(/const OUTLINE_MIN_NDC = /.test(O), '螢幕最小半寬是具名常數');
+  ok(/const OUTLINE_MAX_NDC = /.test(O), 'Screen maximum is a named constant');
   // ---- 螢幕半寬與世界縮放無關(2026-08-10「主堡黑球」)----
   // 執行**原文**的兩條運算式:`uOMin` 的值 與 `outlinify` 餵給材質的 (w, invS)。
   // 世界縮放只准量一次 ⇒ 兩者 MUST 由同一個 s 推出來,否則其中一個會隨 fitToHeight 無聲脹大。
   const MIN_NDC = +/const OUTLINE_MIN_NDC = ([\d.]+);/.exec(O)[1];
+  const MAX_NDC = +/const OUTLINE_MAX_NDC = ([\d.]+);/.exec(O)[1];
+  ok(MAX_NDC > MIN_NDC && MAX_NDC < MIN_NDC * 3, 'Near outlines stay within a narrow screen-width band');
   const uOMinSrc = /shader\.uniforms\.uOMin = \{ value: ([^}]+?) \};/.exec(O)[1].trim();
+  const uOMaxSrc = /shader\.uniforms\.uOMax = \{ value: ([^}]+?) \};/.exec(O)[1].trim();
   const jobsSrc = /jobs\.push\(\[o, ([^,\]]+), ([^,\]]+)\]\);/.exec(O);
   ok(!!jobsSrc, 'outlinify 把 (寬度, 1/世界縮放) 一起餵給材質');
   ok(/const s = \(Math\.abs\(ws\.x\) \+ Math\.abs\(ws\.y\) \+ Math\.abs\(ws\.z\)\) \/ 3 \|\| 1;/.test(O)
     && [...O.matchAll(/getWorldScale\(_ws\)/g)].length === 1,
     '世界縮放只量一次(兩個外推量吃同一個 s)');
   const uOMinOf = new Function('OUTLINE_MIN_NDC', 'invS', `return ${BREAK_SCALE ? 'OUTLINE_MIN_NDC' : uOMinSrc};`);
+  const uOMaxOf = new Function('OUTLINE_MAX_NDC', 'invS', `return ${uOMaxSrc};`);
   const wOf = new Function('width', 's', `return ${jobsSrc[1]};`);
   const invSOf = new Function('width', 's', `return ${jobsSrc[2]};`);
-  // GLSL 那三行的等價實作(oMinW / transformed 的外推量;proj = 1/tan(fov/2))
-  const screenNdc = (width, s, oDist, proj) => {
+  const outline = grabFn(toon, 'outlineMaterial');
+  const extentSrc = /normal \* \( (.+) \);/.exec(outline)[1];
+  const limitSrc = [...outline.matchAll(/float (oM(?:in|ax)W) = ([^;]+);/g)];
+  const extentOf = new Function('uOW', 'uOMin', 'uOMax', 'oDist', 'proj', 'uOScale',
+    `${limitSrc.map(([, name, expr]) => `const ${name} = ${expr.replace('projectionMatrix[1][1]', 'proj').replaceAll('max(', 'Math.max(')};`).join('\n')}
+     return ${extentSrc.replaceAll('max(', 'Math.max(').replaceAll('min(', 'Math.min(')};`);
+  const screenNdc = (width, s, oDist, proj, styleScale = 1) => {
     const uOW = wOf(width, s), uOMin = uOMinOf(MIN_NDC, invSOf(width, s));
-    const oMinW = uOMin * oDist / Math.max(0.001, proj);
-    return Math.max(uOW, oMinW) * s * proj / oDist;   // 局部外推量 → 世界 → NDC 半寬
+    const uOMax = uOMaxOf(MAX_NDC, invSOf(width, s));
+    return extentOf(uOW, uOMin, uOMax, oDist, proj, styleScale) * s * proj / oDist;
   };
   const PROJ = { '一般 fov 68°': 1 / Math.tan(68 / 2 * Math.PI / 180), '狙擊 fov 35°': 1 / Math.tan(35 / 2 * Math.PI / 180) };
   // 現役世界縮放取樣面:步兵 0.66 / 塔 1.39 / 直升機 2.38 / **主堡 dome.glb 795**(實測)
@@ -301,7 +312,7 @@ console.log('\nⅣ 描邊寬度');
   for (const s of [0.66, 1, 1.39, 2.38, 795]) {
     for (const [pn, proj] of Object.entries(PROJ)) {
       for (let d = 5; d <= 900; d += 5) {
-        const want = Math.max(MIN_NDC, 0.1 * proj / d);   // 呼叫端最大固定寬 0.45m,取 0.1 當代表
+        const want = Math.min(MAX_NDC, Math.max(MIN_NDC, 0.1 * proj / d));
         const got = screenNdc(0.1, s, d, proj);
         const ratio = got / want;
         if (ratio > worst) { worst = ratio; worstAt = `s=${s} d=${d}m ${pn}`; }
@@ -313,9 +324,21 @@ console.log('\nⅣ 描邊寬度');
   ok(screenNdc(0.1, 795, 450, PROJ['一般 fov 68°']) >= MIN_NDC * 0.999
     && screenNdc(0.1, 0.66, 450, PROJ['一般 fov 68°']) >= MIN_NDC * 0.999,
     '遠距離仍守得住螢幕下限(線不會消失)');
-  // 近距離逐位元同舊制:世界寬勝出時外推量恰 = 呼叫端給的公尺數
-  ok(Math.abs(screenNdc(0.1, 795, 5, PROJ['一般 fov 68°']) - 0.1 * PROJ['一般 fov 68°'] / 5) < 1e-12,
-    '近距離世界寬勝出 ⇒ 逐位元同舊制');
+  const styleScales = JSON.parse(/const OUTLINE_STYLE_SCALE = (\[[^\]]+\]);/.exec(O)[1])
+    .flatMap(scale => VISUAL_PRESETS.map(p => scale * p.surface.outline));
+  let nearError = 0, farError = 0;
+  for (const scale of styleScales) {
+    for (const s of [0.66, 1, 795]) for (const proj of Object.values(PROJ)) {
+      nearError = Math.max(nearError, Math.abs(screenNdc(0.45, s, 0.05, proj, scale) - MAX_NDC * scale));
+      farError = Math.max(farError, Math.abs(screenNdc(0.05, s, 900, proj, scale) - MIN_NDC * scale));
+    }
+  }
+  ok(nearError < 1e-12, 'All preset/render styles cap near and scoped outlines across mesh scales');
+  ok(farError < 1e-12, 'All preset/render styles retain their distant floor, including disabled outlines');
+  const mid = (MIN_NDC + MAX_NDC) / 2;
+  const proj = PROJ['一般 fov 68°'];
+  ok(Math.abs(screenNdc(mid * 50 / proj, 1, 50, proj) - mid) < 1e-12,
+    'World width remains unchanged inside the screen-width band');
   ok(/shell\.bind\(o\.skeleton, o\.bindMatrix\)/.test(O), 'SkinnedMesh 的 bind 分支仍在(描邊跟著動畫走)');
   // 2026-08-14:副本的取法多了兩道 —— ①MUST 檢查是不是真的 BufferGeometry、②拿不到就退到
   //   `geometry.userData`(`Object3D.copy` 用 JSON 複製 userData ⇒ `mesh.clone()` 之後那一格
