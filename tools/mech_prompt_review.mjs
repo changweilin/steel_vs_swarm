@@ -1363,9 +1363,10 @@ window.__MECH_REVIEW = { get preview() { return preview3D; }, selectMech };
 }
 
 // ============ HTTP 伺服器 ============
-export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MODULE } = {}) {
+export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MODULE, pageFile = null, extraFiles = {} } = {}) {
   // An optional existing dependency copy keeps the review bench usable offline.
   const localModules = new Map();
+  for (const [url, file] of Object.entries(extraFiles)) localModules.set(url, path.resolve(file));
   if (threeModule) {
     localModules.set('/review-deps/three.module.js', path.resolve(threeModule));
     for (const module of ['loaders/GLTFLoader.js', 'utils/SkeletonUtils.js', 'utils/BufferGeometryUtils.js']) {
@@ -1424,7 +1425,7 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
       // 首頁
       if (pathname === '/' || pathname === '/index.html') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-        res.end(renderHtmlPage(localModules.size > 0));
+        res.end(pageFile ? await readFile(pageFile, 'utf8') : renderHtmlPage(!!threeModule));
         return;
       }
 

@@ -2,11 +2,12 @@
 import * as THREE from 'three';
 import { SIDES } from './data.js';
 import { bx, cyl, torus } from './geo3d.js';
-import { outlinify } from './toon.js';
+import { outlinify, disposeTree } from './toon.js';
 import { recoilMount, mechanism } from './unitRig.js';
 import { finishUnitSurfaces } from './unitSurfaces.js';
 import { tboxF, finF } from './forge/geo.js';
 import { FACTION_MODEL_STYLE } from './factionModelStyle.js';
+import { buildFactionAsset } from './forge/factionAsset.js';
 
 const TAU = Math.PI * 2;
 const HIVE = FACTION_MODEL_STYLE.SWARM, STEEL = FACTION_MODEL_STYLE.STEEL;
@@ -186,6 +187,11 @@ function buildBase(spec, side) {
 }
 
 export function buildBuildingUnit(kind, side) {
+  if (side === 'SWARM' || side === 'STEEL') {
+    const role = kind === `base:${side}` ? 'base' : kind;
+    const authored = ['base', 'tower'].includes(role) ? buildFactionAsset(role, side) : null;
+    if (authored) return finishUnitSurfaces(authored);
+  }
   if (kind === 'tower') return finishUnitSurfaces(buildTower(side), FACTION_MODEL_STYLE[side]);
   const spec = BUILDING_UNIT_MODELS[kind];
   return spec ? finishUnitSurfaces(buildBase(spec, side), spec) : null;
@@ -193,6 +199,12 @@ export function buildBuildingUnit(kind, side) {
 
 // The battery retains its separate scene tree for aiming, damage and teardown.
 export function buildBaseBattery(side, bodyHeight = 0) {
+  if (side === 'SWARM' || side === 'STEEL') {
+    const authored = buildFactionAsset('battery', side);
+    authored.position.y = bodyHeight * 0.58;
+    finishUnitSurfaces(authored); outlinify(authored);
+    return authored;
+  }
   const g = new THREE.Group(); g.position.y = bodyHeight * 0.58;
   const spec = BUILDING_UNIT_MODELS[`base:${side}`] || BUILDING_UNIT_MODELS['base:STEEL'];
   const swarm = side === 'SWARM', accent = accentOf(side);
@@ -237,6 +249,13 @@ export function buildBaseBattery(side, bodyHeight = 0) {
 
 /** Yaw root, pitch pivot and ordered +z muzzle anchors are the existing weapon API. */
 export function buildBuildingUnitTurret(side, { outline = true } = {}) {
+  if (side === 'SWARM' || side === 'STEEL') {
+    const authored = buildFactionAsset('turret', side), turret = authored.userData.turret;
+    turret.removeFromParent();
+    disposeTree(authored);
+    if (outline) outlinify(turret, 0.1);
+    return turret;
+  }
   const swarm = side === 'SWARM';
   const spec = BUILDING_UNIT_MODELS.tower.sides[swarm ? 'SWARM' : 'STEEL'];
   const accent = accentOf(side), yaw = new THREE.Group(), pitch = new THREE.Group();

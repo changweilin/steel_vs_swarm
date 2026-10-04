@@ -1,0 +1,451 @@
+{
+  "sources": {
+    "contract": "c3c26406813faa258e6b1f7ae2e14fa3639b5b354fb4d6a71b44bc1d3316b528",
+    "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
+    "catalog": "779f1659b1ddd8e2d7ab49dfb05186771a77f61f7acec0fef6e2d3501b791f3d",
+    "design": "8e3e1cabac6fb32197ea616b519b8e9bb9063415d9a9b2f3c7eb197cf5ad7dcc",
+    "palette": "d9943bedd746e31a1dfd88646804357967a8c265967a355937e44f1bd307e461"
+  },
+  "runtimeSources": {
+    "public/js/forge/referenceAsset.js": "4e9040723e254071f9d00754d325d336e24e9bc5ab7d01d0d5d7ecaaaf5921b3",
+    "public/js/forge/factionAsset.js": "0b1b7debf16bae0306a2710896b6aa46e36fbef9a4499a350551b151c93efdb8",
+    "public/js/forge/factionAssets.js": "1efff5d87156af3abdf2b3124b8fc4135a2ab92168205b70c5c1aab1c38d0e0b",
+    "public/js/npcModels.js": "1e0461566ffeee24d014c789d231966e35dd40c202744d8b8211805e7db67a70",
+    "public/js/buildingUnitModels.js": "4bde8d4a7af7b5f843fe49fe1928f9be98adac57749603d0e459213d53411339",
+    "public/js/unitRig.js": "a05e11b738b6b5724ad774eb1c352257822844785b52d66beb7e85e55cad69f4",
+    "public/js/unitMotion.js": "090138b1c36dd6f36b8f78f0d10448535809189535c4bfb99b4777a974987a66",
+    "tools/mech_authoring/faction_review.js": "b569f70429a54876014d578e3984d3987f7e16e5ba8496c452fcc6d23082c7e1",
+    "tools/mech_authoring/faction_review.html": "aa22f89d7af5d3c9829079b3e90f72b67532882dc81a9efa471f3818cfca5f72"
+  },
+  "identities": {
+    "swarm_soldier": {
+      "runtime": "d5f9eaafdad7e3bcd572f1de76360940f324bb30cfbe0003a466bda7a2d349d8",
+      "blend": "2dc31b9e02bbc61b1f00ee2ff23d1dbbd5db7ffc4dd1f27651ce072373bd0934",
+      "glb": "4e31ae3d74b051000d60c2a7de8116f1327ae972b29d8021f25fb097e57534e0",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "steel_soldier": {
+      "runtime": "e06659096ecbd8aee5388023f386abed3ee33fae0a5c70ce4a0b3f6dad6900b6",
+      "blend": "d473aa0426472419887ad12663aaef0b4ef79ab7a845e99642db85791b1e9bbc",
+      "glb": "658cd359da4d4daa47fd542e8a434617b7e12d72084b6d064db1a0afd6fb898c",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "swarm_rocketeer": {
+      "runtime": "9b8220da3744119f583e25427858b823e6148e7edcf25ef5d94ee7f519c32e9c",
+      "blend": "2ce11688b6fafc3c1da0e20654638f263c7959f1f9c49d02be63eee6cac94862",
+      "glb": "7d2ce6bb11fa316ce58d6f63947ed133a3e4d4acc672bc8506f0df2a60491642",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "steel_rocketeer": {
+      "runtime": "d5780f120130d1fb7f4fe6d48d5324f14eb22acd0a0a3994761f5adbddfd9373",
+      "blend": "5447581428e2c45d41873e2cc5a7ae5dcc7ccb616bc443d92e7cbfff30f56e9e",
+      "glb": "e1bf874af38fe018ec5342afa8b1124dc7621c63075ea6b6fe36c66117fd59a2",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "swarm_howitzer": {
+      "runtime": "85738e5ce6de4dc49ff5c90dbe3176c18093b511479c3439c8eb4b8d08e63c02",
+      "blend": "5f93860cb7b8c21fbb3647f86da895dd4ef41a2c412b11178ee03e1a28ff5ddc",
+      "glb": "7b63268d8bc79f2c3d2f14fed1f2ae7416fdb6590218d8b4c8b23875f457c254",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "steel_howitzer": {
+      "runtime": "985e31f35f812db78c80e069cc286ecd6bf1dbaa904228f4be293a05aa63e6e2",
+      "blend": "6850e4c62f8f50f5a01a333ec0f2e126b5fb13db643689e049c995aee9a2d32b",
+      "glb": "3d7fbde2a656f0af0ddde1343656d3a9d346abf5448dc8920f488393580208ad",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "swarm_apc": {
+      "runtime": "a1ec844eec3267f8f8d90bfc80f45064e3a9f7a76f5afe27d2f3c1613d81eec5",
+      "blend": "a8f3023530f98906446ac6fca1d2d00fb424c6c2eb5cd1bd8590be45e13730ff",
+      "glb": "687e5e1401f54e0924ffa2b33bff60c993e13762ffca36706c3ae13ae80760e1",
+      "clips": [
+        "aim",
+        "deploy",
+        "light",
+        "heavy",
+        "idle",
+        "run"
+      ]
+    },
+    "steel_apc": {
+      "runtime": "b8f10b51008ee8357b0d4193a19094112f70d4b0ecf33b8dcbec01cdae8b51ae",
+      "blend": "fbc2603c510e2fd927f4978be429f28837849775902e39a250edbdb146e71401",
+      "glb": "eb2777499e4c31d350c8e959417ca7256f45c6b5c51dd59edb3e499b08f3f48c",
+      "clips": [
+        "aim",
+        "deploy",
+        "light",
+        "heavy",
+        "idle",
+        "run"
+      ]
+    },
+    "swarm_tank": {
+      "runtime": "6fbd5a4b9fbf8382f99e74dbb5d3fec00969bdb17316e0b7340656d8da0a8b51",
+      "blend": "d2d395cdef0a72e95f0070e4313137a1e11dfb36feaf852e46f1313d05d448bc",
+      "glb": "216919e6992c7a5e8762beb5221ce9a52122f8e00ba9a6ce5af249131fd02eb9",
+      "clips": [
+        "aim",
+        "deploy",
+        "light",
+        "heavy",
+        "idle",
+        "run"
+      ]
+    },
+    "steel_tank": {
+      "runtime": "9b09d0d1fe9c008a0c56ce474d17213ac8d467e463ad71929f41535e2f1d8264",
+      "blend": "f53e11682d09227952e13f660bb6ef9185c37f25c0d8d24b4f4f91ee96224c85",
+      "glb": "3dff86b425ac83df0ff2f32597a365386a6fc9f8f2e6a97104d1c44e9e509aa1",
+      "clips": [
+        "aim",
+        "deploy",
+        "light",
+        "heavy",
+        "idle",
+        "run"
+      ]
+    },
+    "swarm_heli": {
+      "runtime": "91bcbe40a91e758d81912fcd5dc4f370162730536c6bf036d1e23d4807e0f0a5",
+      "blend": "cb088e065afa4d6e83e5d59c50cb31bc20640db41e73167b14a4bb80cb242bbc",
+      "glb": "b680876a5fa67139145ed31ede3a4f7d259c7dd2b0fdde71fcbe05b20f8f9511",
+      "clips": [
+        "light",
+        "heavy",
+        "idle",
+        "run",
+        "aim",
+        "deploy"
+      ]
+    },
+    "steel_heli": {
+      "runtime": "dc4435faa671a063ea98bbcafc06690e3cd3b1e1e6588f4b7e696ce4c8a81dfb",
+      "blend": "4f6aae9f57193d4f1cbb68638ca24931cf3508bc1b778d877768a8e6d01f3f80",
+      "glb": "f95affeaffda627a361354617b88403f7e96c69665e78a5df9eecbe7ba96e148",
+      "clips": [
+        "light",
+        "heavy",
+        "idle",
+        "run",
+        "aim",
+        "deploy"
+      ]
+    },
+    "swarm_bunker": {
+      "runtime": "6cecbe0d712ebedc8c3658ba052f806197c06ea1eb6744a7c921ba6211039f7d",
+      "blend": "4287765877b76c77e22c0a6ba02825fedf29e03fbcd636f5aeefb7c47d563f2b",
+      "glb": "a3dec10342704eea6433772eab558c3f0856dd432781ff418a43e391bb83ad63",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "steel_bunker": {
+      "runtime": "831214137a2a21230f5e7f6f535f7b002230090d676e69b2dc5c554a6084b8c5",
+      "blend": "8826f7cba716b4e1466c19ff7b57e2cc418cac3d7313e8793791bc49f0c7bc98",
+      "glb": "0f4b9a6670e6d5bbdb1be579257141975119a0c987dc91ff35bdb0fbab8e3ad0",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "swarm_tower": {
+      "runtime": "34398a001d4b73340f92f4b4450d60ea62133fb2d3e0a214beb92be830b21dda",
+      "blend": "a3204567d86c4cc302a09dee5d6b4a3e49f3fd61b92138e58b329ac1ce6b719a",
+      "glb": "ff5d7f931643b70711d8293f0d39d8e8ea1f6e9b6013760f20bfd6c66ebff272",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "steel_tower": {
+      "runtime": "fe9814bdb7fffbdb3c626d409976352fc8552b0c98c648f85ee994fc25bd0cc1",
+      "blend": "deb4dd04cfa1ae3f5e71f1ce89c3a6b909239125e6922f5507994a077b6cb0bf",
+      "glb": "9d4f80ff957d993b0e76d01f5c530aafc67dd83b6e6ab1949d20231c1337a4cc",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "swarm_base": {
+      "runtime": "6ee357afc1e39b03e7319b2486816825d69a38df686d158fea3877530c47c58c",
+      "blend": "0cb4e50667ca2b4b0489077de09f14f7be3c04cef6745da742df976e715a2061",
+      "glb": "af13bc74ef9ceee9815ae4e7110d5a9f02b50e23febd2fbcd236e416f1e33fdc",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "steel_base": {
+      "runtime": "8c1b7103afb7690046d451cff6a09f92f414120a90f9b231d806df9322aed085",
+      "blend": "4e960c0a4ab4c0982d3b403af39623a0b59ecef4725d0ec4c8b1be979ceec9a4",
+      "glb": "fa0317b29b16e2bf27d5e8bbb5cd05d3e27b35bb3b0229ab1c27513bfd20bc31",
+      "clips": [
+        "idle",
+        "run",
+        "aim",
+        "light",
+        "heavy",
+        "deploy"
+      ]
+    },
+    "swarm_turret": {
+      "runtime": "75fc29ad0dc2f40ba7d9cea67995aea2782385ba010f2039628984cab68e3e7c",
+      "blend": "1660e77ae978e56d3566668b8199222f91f357176d3702921c339bdf72896511",
+      "glb": "3cc2f0ad749f1554bf48294f19fc98d923bcc9e76f5f688c6104e0fe44b2b9ba",
+      "clips": [
+        "aim",
+        "deploy",
+        "light",
+        "heavy",
+        "idle",
+        "run"
+      ]
+    },
+    "steel_turret": {
+      "runtime": "cbab516f89b8ca873383efcdeaf4c5aea22b06df8b22e0adc9bd6cb31688aa12",
+      "blend": "49ad1125a554f4687e5af6aad3d106991e2f7f4b00ab572ef2f8b05b5c7b67be",
+      "glb": "64025534a52c5de81c912871e33264705bdd4572b6945ae2afa6214da1c88d93",
+      "clips": [
+        "aim",
+        "deploy",
+        "light",
+        "heavy",
+        "idle",
+        "run"
+      ]
+    },
+    "swarm_battery": {
+      "runtime": "b711c0b0f4cc959477e49ab9bb492bad5a00b8e88606bca22be6a6b60287ae1b",
+      "blend": "3a96e390e2115ac801f88bd016e94ad287415ff855893fe16315f620e88781d7",
+      "glb": "0d9f9dffd7efdc98b7e39e4b55e4ef85be2be98231926e0cb1dfcd624baba5de",
+      "clips": [
+        "aim",
+        "deploy",
+        "light",
+        "heavy",
+        "idle",
+        "run"
+      ]
+    },
+    "steel_battery": {
+      "runtime": "de47cf881a72fbf606d968185d334490f9d649dfb7a830f673d4cab40a57dfc9",
+      "blend": "dec22e17464c287d7c0d9d8693d7aa19a7922c20ddb432a3884657afba4caea2",
+      "glb": "4ecd57cc6df511fdb75c7c004dedd34464b067ed65a131e963e6cd977e3dbe66",
+      "clips": [
+        "aim",
+        "deploy",
+        "light",
+        "heavy",
+        "idle",
+        "run"
+      ]
+    }
+  },
+  "metrics": [
+    {
+      "id": "swarm_soldier",
+      "meshes": 51,
+      "triangles": 2736,
+      "joints": 20
+    },
+    {
+      "id": "steel_soldier",
+      "meshes": 54,
+      "triangles": 3528,
+      "joints": 20
+    },
+    {
+      "id": "swarm_rocketeer",
+      "meshes": 52,
+      "triangles": 3072,
+      "joints": 20
+    },
+    {
+      "id": "steel_rocketeer",
+      "meshes": 54,
+      "triangles": 3688,
+      "joints": 20
+    },
+    {
+      "id": "swarm_howitzer",
+      "meshes": 53,
+      "triangles": 3428,
+      "joints": 20
+    },
+    {
+      "id": "steel_howitzer",
+      "meshes": 54,
+      "triangles": 3644,
+      "joints": 20
+    },
+    {
+      "id": "swarm_apc",
+      "meshes": 34,
+      "triangles": 2352,
+      "joints": 15
+    },
+    {
+      "id": "steel_apc",
+      "meshes": 41,
+      "triangles": 2708,
+      "joints": 17
+    },
+    {
+      "id": "swarm_tank",
+      "meshes": 48,
+      "triangles": 4288,
+      "joints": 19
+    },
+    {
+      "id": "steel_tank",
+      "meshes": 61,
+      "triangles": 5108,
+      "joints": 23
+    },
+    {
+      "id": "swarm_heli",
+      "meshes": 28,
+      "triangles": 2540,
+      "joints": 15
+    },
+    {
+      "id": "steel_heli",
+      "meshes": 25,
+      "triangles": 2084,
+      "joints": 13
+    },
+    {
+      "id": "swarm_bunker",
+      "meshes": 11,
+      "triangles": 1180,
+      "joints": 4
+    },
+    {
+      "id": "steel_bunker",
+      "meshes": 10,
+      "triangles": 1252,
+      "joints": 4
+    },
+    {
+      "id": "swarm_tower",
+      "meshes": 52,
+      "triangles": 4304,
+      "joints": 31
+    },
+    {
+      "id": "steel_tower",
+      "meshes": 28,
+      "triangles": 2192,
+      "joints": 15
+    },
+    {
+      "id": "swarm_base",
+      "meshes": 32,
+      "triangles": 3248,
+      "joints": 4
+    },
+    {
+      "id": "steel_base",
+      "meshes": 34,
+      "triangles": 2760,
+      "joints": 4
+    },
+    {
+      "id": "swarm_turret",
+      "meshes": 40,
+      "triangles": 2984,
+      "joints": 28
+    },
+    {
+      "id": "steel_turret",
+      "meshes": 18,
+      "triangles": 1088,
+      "joints": 12
+    },
+    {
+      "id": "swarm_battery",
+      "meshes": 20,
+      "triangles": 1424,
+      "joints": 14
+    },
+    {
+      "id": "steel_battery",
+      "meshes": 22,
+      "triangles": 1264,
+      "joints": 14
+    }
+  ],
+  "gates": {
+    "provenance": "pass",
+    "export": "pass",
+    "runtime": "pass",
+    "deformation": "pass",
+    "teardown": "pass",
+    "visual": "pending_image_inspection",
+    "user_signoff": "pending_user_review"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "inherit": "assets.json",
+  "requirements": {
+    "registration": "public/js/npcModels.js:buildNpcModel; public/js/buildingUnitModels.js",
+    "scale": "public/js/models.js:fitToHeight; public/js/data.js:TARGET_H",
+    "motion": "public/js/locomotion.js; public/js/unitMotion.js",
+    "materials": "public/js/factionModelStyle.js",
+    "coordinates": "Y up, +Z forward; normalized visual estimates",
+    "scope": "Both faction NPC rosters, combat structures and their separate weapon assemblies"
+  },
+  "authoring": {
+    "builder": "build.py", "adapter": "faction_recipe", "factoryWorker": true,
+    "outputs": "../../out/faction_reference",
+    "runtime": "../../public/js/forge/factionAssets",
+    "registry": "../../public/js/forge/factionAssets.js", "registryExport": "FACTION_ASSETS",
+    "export": "../../public/assets/models/factions"
+  },
+  "review": {
+    "views": {"reference": [1, 0.6, 1.4], "front": [0, 0.2, 2], "side": [2, 0.2, 0], "back": [-1, 0.5, -1.4], "top": [0, 2, 0.01]},
+    "criteria": ["Faction identity survives monochrome rendering", "Open mechanisms, attached armor and readable weapon roles", "Finite idle, travel, aim and recoil poses", "All existing muzzle, suspension and damage contracts remain valid"],
+    "signoff": "pending_user_review"
+  },
+  "assets": {
+    "swarm_soldier": {"id":"swarm_soldier","side":"SWARM","role":"soldier","kind":"biped","height":3,"rig":{},"parameters":{"bulk":0.76,"stride":1.05}},
+    "steel_soldier": {"id":"steel_soldier","side":"STEEL","role":"soldier","kind":"biped","height":3,"rig":{},"parameters":{"bulk":1.18,"stride":0.8}},
+    "swarm_rocketeer": {"id":"swarm_rocketeer","side":"SWARM","role":"rocketeer","kind":"biped","height":3,"rig":{},"parameters":{"bulk":0.82,"stride":1}},
+    "steel_rocketeer": {"id":"steel_rocketeer","side":"STEEL","role":"rocketeer","kind":"biped","height":3,"rig":{},"parameters":{"bulk":1.24,"stride":0.76}},
+    "swarm_howitzer": {"id":"swarm_howitzer","side":"SWARM","role":"howitzer","kind":"biped","height":3,"rig":{},"parameters":{"bulk":0.86,"stride":0.96}},
+    "steel_howitzer": {"id":"steel_howitzer","side":"STEEL","role":"howitzer","kind":"biped","height":3,"rig":{},"parameters":{"bulk":1.3,"stride":0.72}},
+    "swarm_apc": {"id":"swarm_apc","side":"SWARM","role":"apc","kind":"wheeled","height":3.4,"rig":{},"parameters":{"width":2.8,"length":6.2,"wheelRadius":0.62,"axles":[-2.1,0,2.1]}},
+    "steel_apc": {"id":"steel_apc","side":"STEEL","role":"apc","kind":"wheeled","height":3.4,"rig":{},"parameters":{"width":3.4,"length":7.4,"wheelRadius":0.64,"axles":[-2.65,-0.88,0.88,2.65]}},
+    "swarm_tank": {"id":"swarm_tank","side":"SWARM","role":"tank","kind":"tracked","height":3.4,"rig":{},"parameters":{"width":3.3,"length":6.1,"wheelRadius":0.43,"axles":[-2.1,-1.05,0,1.05,2.1]}},
+    "steel_tank": {"id":"steel_tank","side":"STEEL","role":"tank","kind":"tracked","height":3.4,"rig":{},"parameters":{"width":4,"length":8,"wheelRadius":0.5,"axles":[-2.9,-1.93,-0.97,0,0.97,1.93,2.9]}},
+    "swarm_heli": {"id":"swarm_heli","side":"SWARM","role":"heli","kind":"aerial","height":3.4,"rig":{},"parameters":{"rotorRadius":1.15,"rotorX":2.5,"rotorZ":1.6}},
+    "steel_heli": {"id":"steel_heli","side":"STEEL","role":"heli","kind":"aerial","height":3.4,"rig":{},"parameters":{"rotorRadius":4.5,"tailLength":4.6}},
+    "swarm_bunker": {"id":"swarm_bunker","side":"SWARM","role":"bunker","kind":"static","height":8,"rig":{},"parameters":{}},
+    "steel_bunker": {"id":"steel_bunker","side":"STEEL","role":"bunker","kind":"static","height":8,"rig":{},"parameters":{}},
+    "swarm_tower": {"id":"swarm_tower","side":"SWARM","role":"tower","kind":"static","height":20,"rig":{},"parameters":{"seat":18.4}},
+    "steel_tower": {"id":"steel_tower","side":"STEEL","role":"tower","kind":"static","height":20,"rig":{},"parameters":{"seat":18.4}},
+    "swarm_base": {"id":"swarm_base","side":"SWARM","role":"base","kind":"static","height":32,"rig":{},"parameters":{}},
+    "steel_base": {"id":"steel_base","side":"STEEL","role":"base","kind":"static","height":34,"rig":{},"parameters":{}},
+    "swarm_turret": {"id":"swarm_turret","side":"SWARM","role":"turret","kind":"static","height":4,"rig":{},"parameters":{}},
+    "steel_turret": {"id":"steel_turret","side":"STEEL","role":"turret","kind":"static","height":4,"rig":{},"parameters":{}},
+    "swarm_battery": {"id":"swarm_battery","side":"SWARM","role":"battery","kind":"static","height":6,"rig":{},"parameters":{}},
+    "steel_battery": {"id":"steel_battery","side":"STEEL","role":"battery","kind":"static","height":6,"rig":{},"parameters":{}}
+  }
+}
