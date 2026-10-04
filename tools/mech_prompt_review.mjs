@@ -1252,7 +1252,7 @@ function renderTableFields() {
     input.value = val.replace(/<br\\s*\\/?>/gi, '\\n');
     input.dataset.key = key;
     input.oninput = (e) => {
-      currentMech.fields[key] = e.target.value.replace(/\n/g, '<br>');
+      currentMech.fields[key] = e.target.value.replace(/\\n/g, '<br>');
     };
 
     group.appendChild(title);
