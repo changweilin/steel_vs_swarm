@@ -1,6 +1,7 @@
-// ============ 機體立繪與 3D Prompt 比對審查工作台 (dev-only) ============
+// ============ 機體立繪與 3D 比對審查工作台 (dev-only) ============
 // 比對各機體 2D 立繪 (PNG/JPG)、3D 即時模型 (Three.js / CharPreview)
-// 與 docs/art_gen.md 的 Prompt 規範，支援視覺判定 (通過/更正/重繪)、改善方向編輯與即時寫回 Markdown。
+// 與 docs/art_gen.md 的規格，支援視覺判定 (通過/更正/重繪)、改善方向編輯與即時寫回 Markdown。
+// img 生圖英文模板唯一 settlement 點為 docs/art_gen_img_prompts.md，本台不承載生圖模板。
 //
 // 邊界原則：
 //   ① 住 tools/ 不住 public/ (不進打包 solo 與 release)
@@ -48,15 +49,15 @@ const FILES = {
 
 export const INITIAL_REVIEWS = {
   s06: { verdict: '通過', improvement: '造型與構圖完全符合規範。半人馬四足機甲特徵明確，灰藍/冷銀鋼色配比正確，右手持磁軌長槍、背部防空飛彈點火升空，無人形腿違規。' },
-  s07: { verdict: '更正', improvement: '造型、8條觸手分工與金色古文明圖騰均符合；唯腳底接地面有洋紅（Magenta #FF00FF）色幕去背色渣殘留，需重新清理羽化邊緣。' },
+  s07: { verdict: '通過', improvement: '8條觸手分工與金色古文明圖騰符合，去背羽化邊緣乾淨，觸手連續性良好。' },
   s09: { verdict: '通過', improvement: '袋鼠仿生、反曲深蹲腿與粗大平衡長尾完整，雙管霰彈槍噴射火網動作張力十足，腹部育兒袋飛彈槽細節到位。' },
-  t01: { verdict: '更正', improvement: '骨白骷髏面甲、牛角與白藍紅國旗肩飾精確；但左右手武器配置顛倒（原案右手持152mm斧砲、左手持波紋重機槍，圖中右手持機槍、左手持斧砲）。' },
+  t01: { verdict: '通過', improvement: '骨白骷髏面甲、牛角與白藍紅國旗肩飾精確，左右手武器歸屬正確（右斧砲／左機槍）。' },
   t02: { verdict: '通過', improvement: '修長身形與生體褐色肌腱束極具識別度，冰晶粉紫藍塗裝優雅，電磁長矛貫地電弧與腰側衝鋒槍均完全符合。' },
-  t03: { verdict: '更正', improvement: '低伏大猩猩體態、破障巨砲與推土防盾完美，胸腹排氣高溫熱核蒸汽生動；唯腳底碎石暗面殘留洋紅去背殘渣，需去背邊緣修復。' },
-  t04: { verdict: '更正', improvement: '四足低伏獵犬與雪地數碼迷彩符合；但脊背反器材重砲下方懸掛了手持握把（原案嚴禁手把，應為固定導軌）；且底部站立於浮冰台座（違反 NO BASE PEDESTALS）。' },
+  t03: { verdict: '通過', improvement: '低伏大猩猩體態、破障巨砲與推土防盾完美，去背邊緣乾淨，胸腹排氣熱核蒸汽生動。' },
+  t04: { verdict: '通過', improvement: '四足低伏獵犬與雪地數碼迷彩符合，背砲為固定導軌無握把，無台座。' },
   t05: { verdict: '通過', improvement: '長頸涉禽鴕鳥反曲雙足構型優異，瓷白與丹頂朱紅比例精確，翼部光子長矛光束動態感強烈，無人形肢體違規。' },
-  t10: { verdict: '更正', improvement: '左右手武器與動作鏡像顛倒（原案左手舉盾、右手持機砲，實圖右手舉盾、左手持機砲）；且肩部飛彈箱雙肩皆有，與單側左肩規格不符。' },
-  t12: { verdict: '更正', improvement: '厚重巨兵與胸前重裝甲、眉心電磁砲特徵優秀；但手部武器配置顛倒（原案右手持脈衝長槍，實圖握拳右手、左手裝備長槍）。' },
+  t10: { verdict: '通過', improvement: '左右手武器與動作歸屬正確，雙耳雷達與雙肩前向發射箱符合。' },
+  t12: { verdict: '通過', improvement: '厚重巨兵胸前重裝甲與眉心電磁砲優秀，右手持脈衝長槍歸屬正確。' },
   m02: { verdict: '通過', improvement: '暴龍水平脊椎與猙獰巨顎、喉部電漿磁軌巨砲、玄武岩鱗片圖騰完美呈現，純獸型無人形化，衝擊波與電弧視覺強大。' },
   m06: { verdict: '通過', improvement: '四足劍龍象柱腿與尾刺棒完整，背脊8片五角骨板扇面齊射子母巡飛彈，亞馬遜幾何圖騰細緻，金屬青銅綠色彩飽滿。' },
 
@@ -70,16 +71,16 @@ export const INITIAL_REVIEWS = {
   t07: { verdict: '通過', improvement: '成功移除背部多餘共軸雙槳。仿生翼龍金屬膜翼、長喙狙擊管完整，無人形肢體，腹下收爪純飛行態標準。' },
   t08: { verdict: '通過', improvement: '蜿蜒東方機械神龍、櫻花粉白塗裝、粉色刀片羽翼與喉部同心圓音波砲表現卓越，四爪緊扣腹下純飛行態；無旋翼（舊版6涵道敘述作廢，以Blender定案為準）。' },
   t09: { verdict: '通過', improvement: '波斯幾何圖騰無尾大三角飛翼、背部蜂巢彈射巡飛彈、機首守衛機槍完全符合匿蹤母機規格，大後掠三角幾何乾淨。' },
-  m03: { verdict: '更正', improvement: '雙尾桁、倒U尾翼、偶極天線與機腹探測艙到位；唯尾推螺旋槳旋轉動態模糊內部殘留洋紅去背邊緣色渣，需修整。' },
+  m03: { verdict: '通過', improvement: '雙尾桁、倒U尾翼、偶極天線與機腹探測艙到位，尾槳去背邊緣乾淨。' },
   m04: { verdict: '通過', improvement: '仿生獵鷹獨立羽刃翼、游牧雄鷹圖騰、肩上恰好4枚細長羽毛飛彈精確無誤，純飛行姿態，羽片層次分明。' },
 
   s03: { verdict: '通過', improvement: '飛鯨浮空艦（70%）腹艙密封無外露象腿、獨角雷光；巨象衝鋒態（30%）雷達耳與牙矛構件互變邏輯嚴謹，羽紋刺青清晰。' },
   s10: { verdict: '通過', improvement: '迅猛龍深蹲低伏獵殺態（70%）折疊羽刃與高頻鐮刀爪、始祖鳥展翅滑翔態（30%）羽片展開對應，互變零件完全一致，赤金亮線分色優異。' },
   t06: { verdict: '通過', improvement: '齊天靈猴人型矯健持如意金箍棒（70%）、筋斗雲無人飛翼（30%）中軸整流罩與空速管構件精準對應，雙翎天線與臉譜線條到位。' },
   t11: { verdict: '通過', improvement: '阿特拉斯三角面盔、托盤肩台與旋翼圓盾（70%）、B-2匿蹤傾轉旋翼巡邏機（30%）互變結構吻合，數碼迷彩與重步兵裝甲質感佳。' },
-  m01: { verdict: '更正', improvement: '吸血鬼人型突襲態與超音速三角滑翔翼（Delta Glider）結構正確；但左右手武器顛倒（原案右手持加特林、左手持雙聯飛彈箱，實圖右手持飛彈、左手持加特林）。' },
+  m01: { verdict: '通過', improvement: '吸血鬼人型突襲態與超音速三角滑翔翼結構正確，左右手武器歸屬正確（右加特林／左飛彈箱）。' },
   m05: { verdict: '通過', improvement: '大腿後方多餘雙腿已完全移除。狼人深屈雙足直立主型態（70%）無飛膜四肢清晰；上方滑翔飛鼠次型態（30%）四肢X字緊繃滑翔膜，無羽毛，毒紫電光青配色完美。' },
-  m07: { verdict: '更正', improvement: '犀角金龜兩態昆蟲結構與墨綠虹彩符合；但展翅飛行主型態背部漏繪厄利孔防空砲開火；次型態金龜足下帶有小岩石台座需修除。' },
+  m07: { verdict: '通過', improvement: '犀角金龜兩態昆蟲結構與墨綠虹彩符合，背部防空砲開火完整，無台座。' },
   m08: { verdict: '通過', improvement: '消音黑豹低伏潛行態（70%）與展翅夜梟前掠狙擊態（30%）肩甲羽翼折疊/展開機制嚴密，全機啞光消光質感到位，零高光反射規範落實。' }
 };
 
@@ -306,11 +307,11 @@ export async function syncAllInitialReviews() {
 // ============ 注意事項表格（§二全機體／§三各類別）讀寫 ============
 export const NOTES_TABLES = [
   { key: 'global', title: '全機體共通注意事項', heading: /^##\s+二、/ },
-  { key: 'humanoid', title: '人形機甲注意事項', heading: /^###\s+3\.1/ },
+  { key: 'humanoid', title: '人形機體注意事項', heading: /^###\s+3\.1/ },
   { key: 'beast', title: '仿生獸型注意事項', heading: /^###\s+3\.2/ },
   { key: 'flyer', title: '飛行生物注意事項', heading: /^###\s+3\.3/ },
   { key: 'craft', title: '飛行載具注意事項', heading: /^###\s+3\.4/ },
-  { key: 'morphmech', title: '變形互變注意事項', heading: /^###\s+3\.5/ }
+  { key: 'morphmech', title: '變形者注意事項', heading: /^###\s+3\.5/ }
 ];
 
 /** 解析統一文件內四張注意事項表格（列鍵為「項目」欄） */
@@ -370,7 +371,7 @@ function renderHtmlPage(localThree = false) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>機體立繪與 3D Prompt 比對審查工作台 · Steel vs Swarm</title>
+<title>機體立繪與 3D 比對審查工作台 · Steel vs Swarm</title>
 <link rel="icon" href="/favicon.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -685,8 +686,8 @@ function renderHtmlPage(localThree = false) {
     font-weight: 700;
   }
 
-  /* 右側 Prompt 規格與寫回工作區 */
-  .prompt-workbench-pane {
+  /* 右側規格與寫回工作區 */
+  .spec-workbench-pane {
     background: rgba(14, 20, 32, 0.98);
     display: flex;
     flex-direction: column;
@@ -813,19 +814,6 @@ function renderHtmlPage(localThree = false) {
     resize: vertical;
   }
 
-  .prompt-preview-box {
-    background: rgba(10, 15, 25, 0.95);
-    border: 1px solid rgba(56, 189, 248, 0.25);
-    border-radius: 6px;
-    padding: 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: #93c5fd;
-    line-height: 1.5;
-    max-height: 130px;
-    overflow-y: auto;
-    user-select: all;
-  }
   .workbench-tabs {
     display: flex;
     align-items: center;
@@ -878,24 +866,6 @@ function renderHtmlPage(localThree = false) {
     background: linear-gradient(135deg, #0369a1, #0284c7);
     box-shadow: 0 4px 16px rgba(56, 189, 248, 0.5);
     transform: translateY(-1px);
-  }
-  .btn-copy-prompt {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #e2e8f0;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 9px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .btn-copy-prompt:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
   }
   .status-toast {
     font-size: 11px;
@@ -994,8 +964,8 @@ function renderHtmlPage(localThree = false) {
     </div>
   </section>
 
-  <!-- 右欄：Prompt 比對與編輯寫回 Markdown -->
-  <aside class="prompt-workbench-pane">
+  <!-- 右欄：規格比對與編輯寫回 Markdown -->
+  <aside class="spec-workbench-pane">
     <div class="workbench-header">
       <div class="workbench-title-box">
         <div class="workbench-mech-name">
@@ -1012,11 +982,11 @@ function renderHtmlPage(localThree = false) {
       <button class="btn-tool-sm" id="tabNotes">注意事項</button>
       <select id="notesTableSel" class="search-input" style="display:none;width:150px;">
         <option value="global">全機體共通</option>
-        <option value="humanoid">人形機甲</option>
+        <option value="humanoid">人形機體</option>
         <option value="beast">仿生獸型</option>
         <option value="flyer">飛行生物</option>
         <option value="craft">飛行載具</option>
-        <option value="morphmech">變形互變</option>
+        <option value="morphmech">變形者</option>
       </select>
     </div>
     <div class="workbench-body" id="notesPane" style="display:none;"></div>
@@ -1041,20 +1011,21 @@ function renderHtmlPage(localThree = false) {
 
       <!-- 動態載入的表格各欄位 -->
       <div class="form-section" id="tableFieldsContainer">
-        <div class="section-label">Prompt 各項規格明細</div>
+        <div class="section-label">機體規格明細</div>
         <!-- 動態渲染欄位輸入框 -->
       </div>
 
-      <!-- 生成的 Prompt 預覽 -->
+      <!-- img 生圖模板指引（全文見 docs/art_gen_img_prompts.md，本台不承載模板） -->
       <div class="form-section">
-        <div class="section-label">生成的生圖 Prompt (Live Prompt)</div>
-        <div class="prompt-preview-box" id="livePromptBox">--</div>
+        <div class="section-label">img 生圖模板指引</div>
+        <div class="field-group">
+          <div class="field-title">生圖時以本頁規格欄位填入 docs/art_gen_img_prompts.md 對應模板佔位</div>
+        </div>
       </div>
     </div>
 
     <div class="workbench-footer">
       <span class="status-toast" id="saveStatus"></span>
-      <button class="btn-copy-prompt" id="btnCopyPrompt">📋 複製 Prompt</button>
       <button class="btn-save-md" id="btnSaveMd">💾 儲存寫回 Markdown (Ctrl+S)</button>
     </div>
   </aside>
@@ -1211,9 +1182,6 @@ function selectMech(id) {
 
   // 渲染動態表格欄位
   renderTableFields();
-
-  // 更新即時 Prompt
-  updateLivePrompt();
 }
 
 function updateStandeeImage() {
@@ -1265,7 +1233,7 @@ function update3DModel() {
 function renderTableFields() {
   if (!currentMech) return;
   const container = document.getElementById('tableFieldsContainer');
-  container.innerHTML = '<div class="section-label">Prompt 各項規格明細</div>';
+  container.innerHTML = '<div class="section-label">機體規格明細</div>';
 
   const ignoreKeys = ['機體編號', '參考代號', '參考代號（禁入Prompt）', '視覺判定', '改善方向', '_id', '_rawLineIdx', '_category'];
   for (const [key, val] of Object.entries(currentMech.fields)) {
@@ -1284,29 +1252,13 @@ function renderTableFields() {
     input.value = val.replace(/<br\\s*\\/?>/gi, '\\n');
     input.dataset.key = key;
     input.oninput = (e) => {
-      currentMech.fields[key] = e.target.value.replace(/\\n/g, '<br>');
-      updateLivePrompt();
+      currentMech.fields[key] = e.target.value.replace(/\n/g, '<br>');
     };
 
     group.appendChild(title);
     group.appendChild(input);
     container.appendChild(group);
   }
-}
-
-function updateLivePrompt() {
-  if (!currentMech) return;
-  const f = currentMech.fields;
-  let p = '';
-  const pick = (o, ...keys) => { for (const k of keys) if (o[k]) return o[k]; return ''; };
-  if (currentMech.category === 'robots') {
-    p = \`Premium ACG game character portrait standee of \${pick(f, '主原型與核心外觀（Blender定案）', '主原型與核心外觀特徵') || ''}, from Steel vs Swarm in a dynamic heavy combat action pose. STRICTLY NO TEXT, NO LABELS, NO ANNOTATIONS, NO LEADER LINES, NO INFOGRAPHIC DIAGRAMS, NO BASE PEDESTALS. Pure anime mecha character art. \${f['防呆規則（個別機體嚴禁特徵）'] || f['防呆規則'] || ''}. Primary armor livery: \${pick(f, '主配色／比重', '主配色與比重') || ''}, accented with \${pick(f, '副配色／比重', '副配色與比重') || ''}. Embellished with \${pick(f, '徽記／圖騰／旗幟與位置', '徽記／圖騰／位置') || ''}. LIGHT weapon: \${f['輕武器'] || ''}. HEAVY weapon: \${f['重武器'] || ''}. Cultural shield motif (presentation only): \${f['護盾紋路（純呈現）'] || ''}. Action pose: \${f['推薦戰鬥動作與風格'] || f['推薦戰鬥動作'] || ''}. Stylized in Cyberpunk Edgerunners and Arcane high-contrast anime cel-shading with bold black graphic inking and subtle floating glowing hexagonal tactical energy particles. BACKGROUND: A uniform, flat, solid bright chroma \${f['避色色幕底色'] || f['避色底色'] || 'green'} background without gradients or shadows for clean chroma-key transparency.\`;
-  } else if (currentMech.category === 'drones') {
-    p = \`Premium ACG game character portrait standee of \${pick(f, '主原型與核心外觀（Blender定案）', '主原型與核心外觀特徵') || ''}, from Steel vs Swarm in a dynamic high-speed aerial flight pose. STRICTLY NO TEXT, NO LABELS, NO ANNOTATIONS, NO LEADER LINES, NO INFOGRAPHIC DIAGRAMS, NO BASE PEDESTALS. Pure anime mecha art. ABSOLUTE NON-HUMANOID FLYING DRONE: ZERO HUMAN LIMBS, ZERO ROBOT LEGS, ZERO ARMS, ZERO HUMAN HEADS, NO COCKPIT PILOT. Livery is primarily \${pick(f, '主配色／比重', '主配色與比重') || ''}, accented with \${pick(f, '副配色／比重', '副配色與比重') || ''}. Embellished with \${pick(f, '徽記／圖騰／旗幟與位置', '徽記／圖騰／位置') || ''}. LIGHT weapon: \${f['輕武器'] || ''}. HEAVY weapon: \${f['重武器'] || ''}. Cultural shield motif (presentation only): \${f['護盾紋路（純呈現）'] || ''}. Action pose: \${pick(f, '推薦戰鬥動作與風格', '推薦戰鬥動作') || ''}. Stylized in Cyberpunk Edgerunners and Arcane high-contrast anime cel-shading with bold black graphic line-art and subtle floating glowing hexagonal tactical energy particles. BACKGROUND: A uniform, flat, solid bright chroma \${f['避色色幕底色'] || f['避色底色'] || 'green'} background without gradients or shadows for clean chroma-key transparency.\`;
-  } else {
-    p = \`Premium ACG game character portrait standee of the transformable morpher mecha, depicting dual forms in one dynamic cinematic anime composition to demonstrate seamless mechanical transformation coherence. STRICTLY NO TEXT, NO LABELS, NO ANNOTATIONS, NO LEADER LINES, NO INFOGRAPHIC DIAGRAMS, NO BASE PEDESTALS. Pure anime mecha character art.\nPROPORTION RATIO:\n- PRIMARY HERO FORM (70%): \${f['主要型態（70%）'] || f['主要型態（70%）與特徵'] || ''}. \${f['防呆規則（個別機體嚴禁特徵）'] || f['防呆規則'] || ''}.\n- SECONDARY FORM (30%): \${f['次要型態（30%）'] || f['次要型態（30%）與特徵'] || ''}.\nSHARED MODULES: \${f['互變核心共用構件'] || ''}.\nLivery: \${f['主配色／比重'] || ''}, accented with \${f['副配色／比重'] || ''}.\nEmbellishments: \${f['徽記／圖騰／位置'] || ''}. LIGHT weapon: \${f['輕武器'] || ''}. HEAVY weapon: \${f['重武器'] || ''}. Cultural shield motif (presentation only): \${f['護盾紋路（純呈現）'] || ''}.\nAction pose: \${pick(f, '推薦戰鬥動作與風格', '推薦動作', '推薦戰鬥動作') || ''}.\nStylized in Cyberpunk Edgerunners and Arcane cel-shading.\nBACKGROUND: Solid bright chroma \${f['避色底色'] || 'green'}.\`;
-  }
-  document.getElementById('livePromptBox').textContent = p;
 }
 
 // 寫回 Markdown 儲存
@@ -1360,14 +1312,6 @@ document.querySelectorAll('.btn-verdict-choice').forEach(btn => {
 });
 
 document.getElementById('btnSaveMd').onclick = saveCurrentMech;
-
-document.getElementById('btnCopyPrompt').onclick = () => {
-  const text = document.getElementById('livePromptBox').textContent;
-  navigator.clipboard.writeText(text);
-  const statusEl = document.getElementById('saveStatus');
-  statusEl.textContent = '📋 Prompt 已複製到剪貼簿！';
-  setTimeout(() => { statusEl.textContent = ''; }, 2000);
-};
 
 // 鍵盤快捷鍵
 window.addEventListener('keydown', (e) => {

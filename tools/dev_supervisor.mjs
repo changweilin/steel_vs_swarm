@@ -61,7 +61,7 @@ export const TOOLS = {
     port: MECH_PORT,
     script: path.join('tools', 'mech_prompt_review.mjs'),
     args: [],
-    hint: '機體立繪與 3D Prompt 比對審查：32 機體 2D 立繪對 3D 即時模型雙視圖比對，視覺判定寫回 docs/art_gen.md。',
+    hint: '機體立繪與 3D 比對審查：32 機體 2D 立繪對 3D 即時模型雙視圖比對，視覺判定寫回 docs/art_gen.md。',
   },
 };
 
