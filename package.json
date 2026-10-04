@@ -67,7 +67,10 @@
     "author:morphers": "node tools/mech_authoring/build.mjs --contract morphers.json",
     "audit:reference-morph": "node tools/audit_reference_morph.mjs",
     "author:combat": "node tools/mech_authoring/build.mjs --combat --mcp --no-render && node tools/mech_authoring/build.mjs --contract morphers.json --combat --mcp --no-render",
-    "audit:combat-actions": "node tools/audit_combat_actions.mjs"
+    "audit:combat-actions": "node tools/audit_combat_actions.mjs",
+    "author:factions": "node tools/mech_authoring/build.mjs --contract factions.json --mcp",
+    "audit:authored-factions": "node tools/audit_authored_factions.mjs",
+    "review:factions": "node tools/faction_review.mjs"
   },
 
   "dependencies": {

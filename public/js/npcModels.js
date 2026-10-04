@@ -8,6 +8,7 @@ import { finishUnitSurfaces } from './unitSurfaces.js';
 import { generateCivilian } from './civilianAppearance.js';
 import { sceneryGeometry } from './sceneryGeometry.js';
 import { FACTION_MODEL_STYLE } from './factionModelStyle.js';
+import { buildFactionAsset } from './forge/factionAsset.js';
 
 const TAU = Math.PI * 2;
 
@@ -1102,6 +1103,10 @@ export function supportsNpcModel(kind) {
  * 玩家 drone／robot／morph 刻意不在名冊中，也沒有任何通用 fallback 會吃到它們。
  */
 export function buildNpcModel(kind, side, { profile = 0, appearanceSeed = 0 } = {}) {
+  if ((side === 'SWARM' || side === 'STEEL') && kind !== 'civ') {
+    const authored = buildFactionAsset(kind.startsWith('creep:') ? kind.slice(6) : kind, side);
+    if (authored) return finishUnitSurfaces(authored);
+  }
   let model;
   switch (kind) {
     case 'creep:soldier': model = buildTrooper(side, 'soldier'); break;

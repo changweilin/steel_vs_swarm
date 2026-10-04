@@ -53,7 +53,7 @@ export function equipVehicleMotion(rig) {
     const span = front - rear, length = span * 2 + Math.PI * 2 * r;
     const count = Math.max(20, Math.min(56, Math.ceil(length / (r * 0.5))));
     const wheel = rig.wheels.find(w => Math.sign(w.m.parent.position.x) === side);
-    const width = (wheel?.m.geometry.parameters?.height || r * 0.7) * 0.9;
+    const width = (wheel?.width || wheel?.m.geometry?.parameters?.height || r * 0.7) * 0.9;
     const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(width, r * 0.09, length / count * 0.82),
       mat(0x252a2c, { metalness: 0.7 }), count);
     mesh.name = 'track-shoes';

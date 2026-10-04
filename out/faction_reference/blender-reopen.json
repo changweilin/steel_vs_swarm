@@ -1,0 +1,292 @@
+{
+  "blender": "5.2.0 LTS",
+  "assets": [
+    {
+      "asset": "swarm_soldier",
+      "blend": "2dc31b9e02bbc61b1f00ee2ff23d1dbbd5db7ffc4dd1f27651ce072373bd0934",
+      "bones": 20,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_soldier",
+      "blend": "d473aa0426472419887ad12663aaef0b4ef79ab7a845e99642db85791b1e9bbc",
+      "bones": 20,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_rocketeer",
+      "blend": "2ce11688b6fafc3c1da0e20654638f263c7959f1f9c49d02be63eee6cac94862",
+      "bones": 20,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_rocketeer",
+      "blend": "5447581428e2c45d41873e2cc5a7ae5dcc7ccb616bc443d92e7cbfff30f56e9e",
+      "bones": 20,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_howitzer",
+      "blend": "5f93860cb7b8c21fbb3647f86da895dd4ef41a2c412b11178ee03e1a28ff5ddc",
+      "bones": 20,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_howitzer",
+      "blend": "6850e4c62f8f50f5a01a333ec0f2e126b5fb13db643689e049c995aee9a2d32b",
+      "bones": 20,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_apc",
+      "blend": "a8f3023530f98906446ac6fca1d2d00fb424c6c2eb5cd1bd8590be45e13730ff",
+      "bones": 15,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_apc",
+      "blend": "fbc2603c510e2fd927f4978be429f28837849775902e39a250edbdb146e71401",
+      "bones": 17,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_tank",
+      "blend": "d2d395cdef0a72e95f0070e4313137a1e11dfb36feaf852e46f1313d05d448bc",
+      "bones": 19,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_tank",
+      "blend": "f53e11682d09227952e13f660bb6ef9185c37f25c0d8d24b4f4f91ee96224c85",
+      "bones": 23,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_heli",
+      "blend": "cb088e065afa4d6e83e5d59c50cb31bc20640db41e73167b14a4bb80cb242bbc",
+      "bones": 15,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_heli",
+      "blend": "4f6aae9f57193d4f1cbb68638ca24931cf3508bc1b778d877768a8e6d01f3f80",
+      "bones": 13,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_bunker",
+      "blend": "4287765877b76c77e22c0a6ba02825fedf29e03fbcd636f5aeefb7c47d563f2b",
+      "bones": 4,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_bunker",
+      "blend": "8826f7cba716b4e1466c19ff7b57e2cc418cac3d7313e8793791bc49f0c7bc98",
+      "bones": 4,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_tower",
+      "blend": "a3204567d86c4cc302a09dee5d6b4a3e49f3fd61b92138e58b329ac1ce6b719a",
+      "bones": 31,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_tower",
+      "blend": "deb4dd04cfa1ae3f5e71f1ce89c3a6b909239125e6922f5507994a077b6cb0bf",
+      "bones": 15,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_base",
+      "blend": "0cb4e50667ca2b4b0489077de09f14f7be3c04cef6745da742df976e715a2061",
+      "bones": 4,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_base",
+      "blend": "4e960c0a4ab4c0982d3b403af39623a0b59ecef4725d0ec4c8b1be979ceec9a4",
+      "bones": 4,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_turret",
+      "blend": "1660e77ae978e56d3566668b8199222f91f357176d3702921c339bdf72896511",
+      "bones": 28,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_turret",
+      "blend": "49ad1125a554f4687e5af6aad3d106991e2f7f4b00ab572ef2f8b05b5c7b67be",
+      "bones": 12,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "swarm_battery",
+      "blend": "3a96e390e2115ac801f88bd016e94ad287415ff855893fe16315f620e88781d7",
+      "bones": 14,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    },
+    {
+      "asset": "steel_battery",
+      "blend": "dec22e17464c287d7c0d9d8693d7aa19a7922c20ddb432a3884657afba4caea2",
+      "bones": 14,
+      "clips": [
+        "aim",
+        "deploy",
+        "heavy",
+        "idle",
+        "light",
+        "run"
+      ]
+    }
+  ],
+  "gate": "pass"
+}

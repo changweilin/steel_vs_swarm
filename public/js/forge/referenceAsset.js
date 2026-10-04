@@ -54,7 +54,7 @@ export function buildReferenceAsset(asset, spec) {
   // The quadruped driver requires a collection even when the reference has no tail.
   if (rig.kind === 'quad' && rig.tailSegs == null) rig.tailSegs = [];
   for (const key of ['hips', 'waist', 'chest', 'head', 'legL', 'legR', 'armL', 'armR', 'tilt',
-    'spine', 'neck', 'humChest', 'humNeck', 'legFL', 'legFR', 'legHL', 'legHR']) {
+    'spine', 'neck', 'humChest', 'humNeck', 'legFL', 'legFR', 'legHL', 'legHR', 'hull']) {
     if (typeof rig[key] === 'string') rig[key] = nodeOf(rig[key]);
   }
   if (rig.hips) rig.hipsY0 = rig.hips.position.y;
@@ -104,24 +104,26 @@ export function buildReferenceAsset(asset, spec) {
   rig.muzzles = W.muzzles;
   rig.wpn = W.wpn;
   const shield = asset.motion.shield;
-  rig.shield = { ...shield, phase: 0, barrier: nodeOf(shield.barrier), hinges: shield.hinges.map(bindTrack) };
-  if (shield.arm) {
-    rig.shield.arm = { ...shield.arm,
-      shoulder: nodeOf(shield.arm.shoulder), elbow: nodeOf(shield.arm.elbow), wrist: nodeOf(shield.arm.wrist) };
-  }
-  rig.shield.posture = spec.form === 'flight' ? 0 : 1;
-  rig.shield.pose = (shield.pose || []).map(track => ({
-    node: nodeOf(track.node),
-    rest: new THREE.Quaternion().setFromEuler(new THREE.Euler(...track.rest)),
-    deploy: new THREE.Quaternion().setFromEuler(new THREE.Euler(...track.rotation)),
-  }));
-  for (const hinge of rig.shield.hinges) hinge.node.rotation[hinge.axis] = hinge.rest;
-  rig.shield.barrier.visible = false;
-  rig.shield.barrier.scale.setScalar(.001);
-  rig.combat = attachCombatAsset(group, nodes, asset.id, form);
-  if (rig.combat) {
-    rig.shield.barrier = rig.combat.guard;
-    rig.shield.combat = rig.combat;
+  if (shield) {
+    rig.shield = { ...shield, phase: 0, barrier: nodeOf(shield.barrier), hinges: shield.hinges.map(bindTrack) };
+    if (shield.arm) {
+      rig.shield.arm = { ...shield.arm,
+        shoulder: nodeOf(shield.arm.shoulder), elbow: nodeOf(shield.arm.elbow), wrist: nodeOf(shield.arm.wrist) };
+    }
+    rig.shield.posture = spec.form === 'flight' ? 0 : 1;
+    rig.shield.pose = (shield.pose || []).map(track => ({
+      node: nodeOf(track.node),
+      rest: new THREE.Quaternion().setFromEuler(new THREE.Euler(...track.rest)),
+      deploy: new THREE.Quaternion().setFromEuler(new THREE.Euler(...track.rotation)),
+    }));
+    for (const hinge of rig.shield.hinges) hinge.node.rotation[hinge.axis] = hinge.rest;
+    rig.shield.barrier.visible = false;
+    rig.shield.barrier.scale.setScalar(.001);
+    rig.combat = attachCombatAsset(group, nodes, asset.id, form);
+    if (rig.combat) {
+      rig.shield.barrier = rig.combat.guard;
+      rig.shield.combat = rig.combat;
+    }
   }
   rig.referenceMotion = {
     fire: asset.motion.fire.map(bindTrack), charge: asset.motion.charge.map(bindTrack), cast: asset.motion.cast.map(bindTrack),
@@ -163,5 +165,5 @@ export function buildReferenceAsset(asset, spec) {
   joints.renderOrder = 20;
   group.add(joints);
   group.userData.rig = rig;
-  return { group, rig, joints: [joints], weapons: W, spin: group.userData.spin };
+  return { group, rig, joints: [joints], weapons: W, spin: group.userData.spin, nodes };
 }
