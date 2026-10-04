@@ -18,7 +18,7 @@
       "recipe": "vampire_delta",
       "height": 6.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_morphers.md#m01",
+        "prompt": "../../docs/art_gen.md#m01",
         "image": "../../public/assets/mechs/m01_raven.png",
         "view": "Dual-form illustration: oblique humanoid and oblique delta glider; hidden belly, rear and depths inferred. Anatomical weapon sides follow the prompt.",
         "rights": "../../LICENSE"
@@ -965,7 +965,7 @@
       "recipe": "elephant_whale",
       "height": 5.6,
       "inputs": {
-        "prompt": "../../docs/art_gen_morphers.md#s03",
+        "prompt": "../../docs/art_gen.md#s03",
         "image": "../../public/assets/mechs/s03_leviathan.png",
         "view": "Dual-form illustration; hidden surfaces and depth are inferred",
         "rights": "../../LICENSE"
@@ -2184,7 +2184,7 @@
       "recipe": "raptor_archaeopteryx",
       "height": 4.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_morphers.md#s10",
+        "prompt": "../../docs/art_gen.md#s10",
         "image": "../../public/assets/mechs/s10_feather_array.png",
         "view": "Dual-form illustration; hidden surfaces and depth are inferred",
         "rights": "../../LICENSE"
@@ -3617,7 +3617,7 @@
       "recipe": "monkey_cloud",
       "height": 6,
       "inputs": {
-        "prompt": "../../docs/art_gen_morphers.md#t06",
+        "prompt": "../../docs/art_gen.md#t06",
         "image": "../../public/assets/mechs/t06_qinggong.png",
         "view": "Dual-form illustration; hidden surfaces and depth are inferred",
         "rights": "../../LICENSE"
@@ -4577,7 +4577,7 @@
       "recipe": "atlas_tiltrotor",
       "height": 6,
       "inputs": {
-        "prompt": "../../docs/art_gen_morphers.md#t11",
+        "prompt": "../../docs/art_gen.md#t11",
         "image": "../../public/assets/mechs/t11_veteran.png",
         "view": "Dual-form illustration; hidden surfaces and depth are inferred",
         "rights": "../../LICENSE"
@@ -6953,7 +6953,7 @@
       "recipe": "wolf_patagium",
       "height": 6,
       "inputs": {
-        "prompt": "../../docs/art_gen_morphers.md#m05",
+        "prompt": "../../docs/art_gen.md#m05",
         "image": "../../public/assets/mechs/m05_stranglehold.png",
         "view": "Dual-form illustration; hidden surfaces and depth are inferred",
         "rights": "../../LICENSE"
@@ -8490,7 +8490,7 @@
       "recipe": "rhino_beetle",
       "height": 5,
       "inputs": {
-        "prompt": "../../docs/art_gen_morphers.md#m07",
+        "prompt": "../../docs/art_gen.md#m07",
         "image": "../../public/assets/mechs/m07_portcullis.png",
         "view": "Dual-form illustration; hidden surfaces and depth are inferred",
         "rights": "../../LICENSE"
@@ -10367,7 +10367,7 @@
       "recipe": "panther_owl",
       "height": 4.6,
       "inputs": {
-        "prompt": "../../docs/art_gen_morphers.md#m08",
+        "prompt": "../../docs/art_gen.md#m08",
         "image": "../../public/assets/mechs/m08_dead_number.png",
         "view": "Dual-form illustration; hidden surfaces and depth are inferred",
         "rights": "../../LICENSE"

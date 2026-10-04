@@ -1,6 +1,6 @@
 # ACG 機體立繪生圖指南 —— 全機體統一版（32部）
 
-> 本文件為 32 部機體立繪 Prompt 與視覺比對之**唯一 settlement 點**，由 `docs/art_gen_robots.md`、`docs/art_gen_drones.md`、`docs/art_gen_morphers.md` 三份合併而成。舊三份僅保留轉址存根，不再承載規格。
+> 本文件為 32 部機體立繪 Prompt 與視覺比對之**唯一 settlement 點**。
 >
 > **衝突優先順序（由高至低）**：**Codex Blender定案**（`tools/mech_authoring/assets.json`、`morphers.json` 之 components／decisions，以及 `out/combat_reference/intent.json` 武器 type／護盾紋路）＞ **3D視覺驗證**（`out/mech_reference/`、`out/morph_reference/`、`out/combat_reference/` 之 validation＋`docs/mech-reference-authoring.md`、`docs/morph-reference-authoring.md`、`docs/combat-animation-authoring.md`）＞ **2D視覺驗證**（比對台 `INITIAL_REVIEWS` 判定＋`public/assets/mechs/` 立繪）＞ **專案原有資訊**（舊表、`docs/characters.md` 敘事）。
 >

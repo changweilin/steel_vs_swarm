@@ -62,7 +62,7 @@
       "kind": "aerial",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#s01",
+        "prompt": "../../docs/art_gen.md#s01",
         "image": "../../public/assets/mechs/s01_dnipro_score.png",
         "view": "oblique action; rear and underside inferred",
         "rights": "../../LICENSE"
@@ -398,7 +398,7 @@
       "kind": "biped",
       "height": 6,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#t10",
+        "prompt": "../../docs/art_gen.md#t10",
         "image": "../../public/assets/mechs/t10_trajectory.png",
         "view": "oblique action; rear inferred; weapon sides corrected to prompt",
         "rights": "../../LICENSE"
@@ -920,7 +920,7 @@
       "recipe": "slab",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#s02",
+        "prompt": "../../docs/art_gen.md#s02",
         "image": "../../public/assets/mechs/s02_blacksmith.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -1279,7 +1279,7 @@
       "recipe": "zero",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#s04",
+        "prompt": "../../docs/art_gen.md#s04",
         "image": "../../public/assets/mechs/s04_shovel_zero.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -1592,7 +1592,7 @@
       "recipe": "fpv",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#s05",
+        "prompt": "../../docs/art_gen.md#s05",
         "image": "../../public/assets/mechs/s05_overclock.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -1931,7 +1931,7 @@
       "recipe": "medical",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#s08",
+        "prompt": "../../docs/art_gen.md#s08",
         "image": "../../public/assets/mechs/s08_candlestick.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -2251,7 +2251,7 @@
       "recipe": "glider",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#s11",
+        "prompt": "../../docs/art_gen.md#s11",
         "image": "../../public/assets/mechs/s11_clockwork.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -2563,7 +2563,7 @@
       "recipe": "canard",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#s12",
+        "prompt": "../../docs/art_gen.md#s12",
         "image": "../../public/assets/mechs/s12_star_chart.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -2910,7 +2910,7 @@
       "recipe": "pterosaur",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#t07",
+        "prompt": "../../docs/art_gen.md#t07",
         "image": "../../public/assets/mechs/t07_breath_hold.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -3409,7 +3409,7 @@
       "recipe": "dragon",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#t08",
+        "prompt": "../../docs/art_gen.md#t08",
         "image": "../../public/assets/mechs/t08_aria.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -4243,7 +4243,7 @@
       "recipe": "delta",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#t09",
+        "prompt": "../../docs/art_gen.md#t09",
         "image": "../../public/assets/mechs/t09_elegy.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -4571,7 +4571,7 @@
       "recipe": "twinboom",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#m03",
+        "prompt": "../../docs/art_gen.md#m03",
         "image": "../../public/assets/mechs/m03_lifeline.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -4884,7 +4884,7 @@
       "recipe": "eagle",
       "height": 3.4,
       "inputs": {
-        "prompt": "../../docs/art_gen_drones.md#m04",
+        "prompt": "../../docs/art_gen.md#m04",
         "image": "../../public/assets/mechs/m04_nameless.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -5397,7 +5397,7 @@
       "recipe": "centaur",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#s06",
+        "prompt": "../../docs/art_gen.md#s06",
         "image": "../../public/assets/mechs/s06_dirge.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -6141,7 +6141,7 @@
       "recipe": "octopod",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#s07",
+        "prompt": "../../docs/art_gen.md#s07",
         "image": "../../public/assets/mechs/s07_qed.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -8194,7 +8194,7 @@
       "recipe": "roo",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#s09",
+        "prompt": "../../docs/art_gen.md#s09",
         "image": "../../public/assets/mechs/s09_gamekeeper.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -8807,7 +8807,7 @@
       "recipe": "bastion",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#t01",
+        "prompt": "../../docs/art_gen.md#t01",
         "image": "../../public/assets/mechs/t01_winter_general.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -9315,7 +9315,7 @@
       "recipe": "seraph",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#t02",
+        "prompt": "../../docs/art_gen.md#t02",
         "image": "../../public/assets/mechs/t02_galatea_7.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -9825,7 +9825,7 @@
       "recipe": "gorilla",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#t03",
+        "prompt": "../../docs/art_gen.md#t03",
         "image": "../../public/assets/mechs/t03_firebox.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -10333,7 +10333,7 @@
       "recipe": "hound",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#t04",
+        "prompt": "../../docs/art_gen.md#t04",
         "image": "../../public/assets/mechs/t04_greyhound.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -10985,7 +10985,7 @@
       "recipe": "crane",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#t05",
+        "prompt": "../../docs/art_gen.md#t05",
         "image": "../../public/assets/mechs/t05_bionic_crane.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -11620,7 +11620,7 @@
       "recipe": "colossus",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#t12",
+        "prompt": "../../docs/art_gen.md#t12",
         "image": "../../public/assets/mechs/t12_colossus.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -12150,7 +12150,7 @@
       "recipe": "trex",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#m02",
+        "prompt": "../../docs/art_gen.md#m02",
         "image": "../../public/assets/mechs/m02_ballast.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
@@ -12822,7 +12822,7 @@
       "recipe": "stego",
       "height": 6.8,
       "inputs": {
-        "prompt": "../../docs/art_gen_robots.md#m06",
+        "prompt": "../../docs/art_gen.md#m06",
         "image": "../../public/assets/mechs/m06_downpour.png",
         "view": "Oblique action reference; concealed rear and underside inferred",
         "rights": "../../LICENSE"
