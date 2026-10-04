@@ -1,11 +1,11 @@
 // ============ 機體立繪與 3D Prompt 比對審查工作台 (dev-only) ============
 // 比對各機體 2D 立繪 (PNG/JPG)、3D 即時模型 (Three.js / CharPreview)
-// 與 docs/art_gen_*.md 的 Prompt 規範，支援視覺判定 (通過/更正/重繪)、改善方向編輯與即時寫回 Markdown。
+// 與 docs/art_gen.md 的 Prompt 規範，支援視覺判定 (通過/更正/重繪)、改善方向編輯與即時寫回 Markdown。
 //
 // 邊界原則：
 //   ① 住 tools/ 不住 public/ (不進打包 solo 與 release)
 //   ② 零 npm 依賴 (使用 node:http, node:fs/promises, node:path)
-//   ③ 單一真相縫：直接讀取與更新 docs/art_gen_robots.md, art_gen_drones.md, art_gen_morphers.md
+//   ③ 單一真相縫：直接讀取與更新 docs/art_gen.md（§四之三張規格總表，含 img 錯誤繪製列；§二全機體共通／§三體態分組注意事項另有編輯分頁）
 //
 // 跑法：
 //   node tools/mech_prompt_review.mjs            # 起 dev server (預設 :8625)
@@ -24,21 +24,25 @@ const ROOT = path.resolve(__dirname, '..');
 
 export const DEFAULT_PORT = 8625;
 
+const UNIFIED_FILE = path.join(ROOT, 'docs', 'art_gen.md');
 const FILES = {
   robots: {
     category: 'robots',
     title: '機甲篇（Robots）',
-    file: path.join(ROOT, 'docs', 'art_gen_robots.md')
+    file: UNIFIED_FILE,
+    section: '4.1'
   },
   drones: {
     category: 'drones',
     title: '無人機篇（Drones）',
-    file: path.join(ROOT, 'docs', 'art_gen_drones.md')
+    file: UNIFIED_FILE,
+    section: '4.2'
   },
   morphers: {
     category: 'morphers',
     title: '變形者篇（Morphers）',
-    file: path.join(ROOT, 'docs', 'art_gen_morphers.md')
+    file: UNIFIED_FILE,
+    section: '4.3'
   }
 };
 
@@ -64,7 +68,7 @@ export const INITIAL_REVIEWS = {
   s11: { verdict: '通過', improvement: '大展弦比修長滑翔翼、V型尾翼、精密鐘錶刻度與鈦白金屬質感極佳，手術刀般聚焦光柱精準，零肢體純長航機型。' },
   s12: { verdict: '通過', improvement: '鴨式三角主翼折疊鉸鏈、幾何星圖圖騰、中心星象砲光柱與菱形感測球機頭符合規範，穿雲動態優秀。' },
   t07: { verdict: '通過', improvement: '成功移除背部多餘共軸雙槳。仿生翼龍金屬膜翼、長喙狙擊管完整，無人形肢體，腹下收爪純飛行態標準。' },
-  t08: { verdict: '通過', improvement: '蜿蜒東方機械神龍、櫻花粉白塗裝、6涵道旋翼與喉部同心圓音波砲表現卓越，四爪緊扣腹下純飛行態。' },
+  t08: { verdict: '通過', improvement: '蜿蜒東方機械神龍、櫻花粉白塗裝、粉色刀片羽翼與喉部同心圓音波砲表現卓越，四爪緊扣腹下純飛行態；無旋翼（舊版6涵道敘述作廢，以Blender定案為準）。' },
   t09: { verdict: '通過', improvement: '波斯幾何圖騰無尾大三角飛翼、背部蜂巢彈射巡飛彈、機首守衛機槍完全符合匿蹤母機規格，大後掠三角幾何乾淨。' },
   m03: { verdict: '更正', improvement: '雙尾桁、倒U尾翼、偶極天線與機腹探測艙到位；唯尾推螺旋槳旋轉動態模糊內部殘留洋紅去背邊緣色渣，需修整。' },
   m04: { verdict: '通過', improvement: '仿生獵鷹獨立羽刃翼、游牧雄鷹圖騰、肩上恰好4枚細長羽毛飛彈精確無誤，純飛行姿態，羽片層次分明。' },
@@ -79,16 +83,34 @@ export const INITIAL_REVIEWS = {
   m08: { verdict: '通過', improvement: '消音黑豹低伏潛行態（70%）與展翅夜梟前掠狙擊態（30%）肩甲羽翼折疊/展開機制嚴密，全機啞光消光質感到位，零高光反射規範落實。' }
 };
 
-/** 解析單一 Markdown 檔案中的機體規格表格 */
+/** 掃描統一文件中的全部規格總表（§四：4.1 機甲／4.2 無人機／4.3 變形者） */
+function scanSpecTables(lines) {
+  const tables = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].includes('| 機體編號 |')) continue;
+    let categoryKey = null;
+    for (let h = i - 1; h >= Math.max(0, i - 6); h--) {
+      const head = lines[h];
+      if (/^###?\s+4\.1|機甲篇規格表/.test(head)) { categoryKey = 'robots'; break; }
+      if (/^###?\s+4\.2|無人機篇規格表/.test(head)) { categoryKey = 'drones'; break; }
+      if (/^###?\s+4\.3|變形者篇規格表/.test(head)) { categoryKey = 'morphers'; break; }
+    }
+    tables.push({ headerIdx: i, categoryKey });
+  }
+  return tables;
+}
+
+/** 解析統一文件內指定分類的機體規格表格 */
 export async function parseMarkdownFile(categoryKey) {
   const meta = FILES[categoryKey];
   const content = await readFile(meta.file, 'utf8');
   const lines = content.split(/\r?\n/);
 
-  const headerIdx = lines.findIndex(l => l.includes('| 機體編號 |'));
-  if (headerIdx === -1) {
-    throw new Error(`未在 ${meta.file} 找到機體規格表格`);
+  const table = scanSpecTables(lines).find(t => t.categoryKey === categoryKey);
+  if (!table) {
+    throw new Error(`未在 ${meta.file} 找到 ${meta.title} 規格表格`);
   }
+  const headerIdx = table.headerIdx;
 
   const rawHeaders = lines[headerIdx].split('|').map(s => s.trim()).filter(Boolean);
   const sepLine = lines[headerIdx + 1];
@@ -157,7 +179,7 @@ export async function getAllMechsData() {
       const jpgFile = mechAssetFiles.find(f => f.startsWith(`${id}_`) && f.endsWith('.jpg'));
 
       // 解析代號與角色名 (例如 "瑪雅・柯爾曼<br>「輓歌」")
-      const refCode = r['參考代號（禁入Prompt）'] || '';
+      const refCode = r['參考代號'] || r['參考代號（禁入Prompt）'] || '';
       const parts = refCode.split(/<br\s*\/?>|\n/i).map(s => s.trim().replace(/^「|」$/g, ''));
       const pilot = parts[0] || '';
       const nickname = parts[1] || parts[0] || '';
@@ -215,7 +237,7 @@ export async function updateMechInMarkdown(mechId, updates = {}) {
     lines[parsed.headerIdx] = '| ' + headers.join(' | ') + ' |';
     // 更新分隔線
     const seps = headers.map((h, i) => {
-      if (h === '機體編號' || h === '參考代號（禁入Prompt）' || h === '避色色幕底色' || h === '避色底色' || h === '視覺判定') {
+      if (h === '機體編號' || h === '參考代號' || h === '參考代號（禁入Prompt）' || h === '避色色幕底色' || h === '避色底色' || h === '視覺判定') {
         return ':---:';
       }
       return ':---';
@@ -279,6 +301,66 @@ export async function syncAllInitialReviews() {
       }
     }
   }
+}
+
+// ============ 注意事項表格（§二全機體／§三各類別）讀寫 ============
+export const NOTES_TABLES = [
+  { key: 'global', title: '全機體共通注意事項', heading: /^##\s+二、/ },
+  { key: 'humanoid', title: '人形機甲注意事項', heading: /^###\s+3\.1/ },
+  { key: 'beast', title: '仿生獸型注意事項', heading: /^###\s+3\.2/ },
+  { key: 'flyer', title: '飛行生物注意事項', heading: /^###\s+3\.3/ },
+  { key: 'craft', title: '飛行載具注意事項', heading: /^###\s+3\.4/ },
+  { key: 'morphmech', title: '變形互變注意事項', heading: /^###\s+3\.5/ }
+];
+
+/** 解析統一文件內四張注意事項表格（列鍵為「項目」欄） */
+export async function parseNotesTables() {
+  const content = await readFile(UNIFIED_FILE, 'utf8');
+  const lines = content.split(/\r?\n/);
+  const out = [];
+  for (const def of NOTES_TABLES) {
+    const headIdx = lines.findIndex(l => def.heading.test(l));
+    if (headIdx === -1) throw new Error(`未在統一文件找到 ${def.title}`);
+    let headerIdx = -1;
+    for (let i = headIdx + 1; i < lines.length; i++) {
+      if (/^##?\s+/.test(lines[i]) && i > headIdx + 1 && !lines[i].startsWith('###')) break;
+      if (/^###\s+/.test(lines[i]) && lines[i] !== lines[headIdx] && def.key !== 'global') break;
+      if (lines[i].includes('| 項目 |')) { headerIdx = i; break; }
+    }
+    if (headerIdx === -1) throw new Error(`未在 ${def.title} 找到注意事項表格`);
+    const headers = lines[headerIdx].split('|').map(s => s.trim()).filter(Boolean);
+    const rows = [];
+    for (let cur = headerIdx + 2; cur < lines.length && lines[cur].trim().startsWith('|'); cur++) {
+      const cells = lines[cur].split('|').map(s => s.trim());
+      if (cells.length >= 2 && cells[0] === '' && cells[cells.length - 1] === '') { cells.shift(); cells.pop(); }
+      const rowObj = {};
+      for (let c = 0; c < headers.length; c++) rowObj[headers[c]] = cells[c] || '';
+      rows.push({ item: rowObj['項目'] || '', values: rowObj, lineIdx: cur });
+    }
+    out.push({ key: def.key, title: def.title, headers, rows, headerIdx });
+  }
+  return out;
+}
+
+/** 更新注意事項表格單一列（values 以欄名為鍵；「項目」欄不可改） */
+export async function updateNotesRow(tableKey, item, values = {}) {
+  const def = NOTES_TABLES.find(t => t.key === tableKey);
+  if (!def) throw new Error(`未知注意事項表格 ${tableKey}`);
+  const content = await readFile(UNIFIED_FILE, 'utf8');
+  const lines = content.split(/\r?\n/);
+  const tables = await parseNotesTables();
+  const table = tables.find(t => t.key === tableKey);
+  const row = table.rows.find(r => r.item === item);
+  if (!row) throw new Error(`在 ${def.title} 找不到項目 ${item}`);
+  const merged = { ...row.values, ...values };
+  delete merged['項目'];
+  const newCells = table.headers.map(h => {
+    const raw = h === '項目' ? item : (merged[h] || '');
+    return String(raw).replace(/\|/g, '／').replace(/\r?\n/g, '<br>');
+  });
+  lines[row.lineIdx] = '| ' + newCells.join(' | ') + ' |';
+  await writeFile(UNIFIED_FILE, lines.join('\n'), 'utf8');
+  return { ok: true, file: UNIFIED_FILE, table: tableKey, item };
 }
 
 // ============ 前端 HTML / CSS / JS 模板 ============
@@ -744,6 +826,28 @@ function renderHtmlPage(localThree = false) {
     overflow-y: auto;
     user-select: all;
   }
+  .workbench-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--panel-border);
+    background: rgba(18, 26, 44, 0.8);
+  }
+  .notes-row-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .notes-item-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+  }
   .workbench-footer {
     padding: 12px 18px;
     border-top: 1px solid var(--panel-border);
@@ -903,6 +1007,19 @@ function renderHtmlPage(localThree = false) {
       </div>
     </div>
 
+    <div class="workbench-tabs">
+      <button class="btn-tool-sm active" id="tabSpec">機體規格</button>
+      <button class="btn-tool-sm" id="tabNotes">注意事項</button>
+      <select id="notesTableSel" class="search-input" style="display:none;width:150px;">
+        <option value="global">全機體共通</option>
+        <option value="humanoid">人形機甲</option>
+        <option value="beast">仿生獸型</option>
+        <option value="flyer">飛行生物</option>
+        <option value="craft">飛行載具</option>
+        <option value="morphmech">變形互變</option>
+      </select>
+    </div>
+    <div class="workbench-body" id="notesPane" style="display:none;"></div>
     <div class="workbench-body" id="workbenchForm">
       <!-- 審核判定按鈕組 -->
       <div class="form-section">
@@ -979,7 +1096,7 @@ async function fetchMechs() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     allMechs = Array.isArray(data) ? data : [];
-    if (!allMechs.length) throw new Error('後端回傳 0 筆(檢查 docs/art_gen_*.md 表格)');
+    if (!allMechs.length) throw new Error('後端回傳 0 筆(檢查 docs/art_gen.md §四規格總表)');
   } catch (err) {
     allMechs = [];
     console.error('機體清單載入失敗:', err);
@@ -1150,7 +1267,7 @@ function renderTableFields() {
   const container = document.getElementById('tableFieldsContainer');
   container.innerHTML = '<div class="section-label">Prompt 各項規格明細</div>';
 
-  const ignoreKeys = ['機體編號', '參考代號（禁入Prompt）', '視覺判定', '改善方向', '_id', '_rawLineIdx', '_category'];
+  const ignoreKeys = ['機體編號', '參考代號', '參考代號（禁入Prompt）', '視覺判定', '改善方向', '_id', '_rawLineIdx', '_category'];
   for (const [key, val] of Object.entries(currentMech.fields)) {
     if (ignoreKeys.includes(key)) continue;
 
@@ -1181,12 +1298,13 @@ function updateLivePrompt() {
   if (!currentMech) return;
   const f = currentMech.fields;
   let p = '';
+  const pick = (o, ...keys) => { for (const k of keys) if (o[k]) return o[k]; return ''; };
   if (currentMech.category === 'robots') {
-    p = \`Premium ACG game character portrait standee of \${f['主原型與核心外觀特徵'] || ''}, from Steel vs Swarm in a dynamic heavy combat action pose. STRICTLY NO TEXT, NO LABELS, NO ANNOTATIONS, NO LEADER LINES, NO INFOGRAPHIC DIAGRAMS, NO BASE PEDESTALS. Pure anime mecha character art. \${f['防呆規則（個別機體嚴禁特徵）'] || ''}. Primary armor livery: \${f['主配色與比重'] || ''}, accented with \${f['副配色與比重'] || ''}. Embellished with \${f['徽記／圖騰／旗幟與位置'] || ''}. Armed with \${f['武器特徵與裝備位置'] || ''}. Action pose: \${f['推薦戰鬥動作與風格'] || ''}. Stylized in Cyberpunk Edgerunners and Arcane high-contrast anime cel-shading with bold black graphic inking and subtle floating glowing hexagonal tactical energy particles. BACKGROUND: A uniform, flat, solid bright chroma \${f['避色色幕底色'] || 'green'} background without gradients or shadows for clean chroma-key transparency.\`;
+    p = \`Premium ACG game character portrait standee of \${pick(f, '主原型與核心外觀（Blender定案）', '主原型與核心外觀特徵') || ''}, from Steel vs Swarm in a dynamic heavy combat action pose. STRICTLY NO TEXT, NO LABELS, NO ANNOTATIONS, NO LEADER LINES, NO INFOGRAPHIC DIAGRAMS, NO BASE PEDESTALS. Pure anime mecha character art. \${f['防呆規則（個別機體嚴禁特徵）'] || f['防呆規則'] || ''}. Primary armor livery: \${pick(f, '主配色／比重', '主配色與比重') || ''}, accented with \${pick(f, '副配色／比重', '副配色與比重') || ''}. Embellished with \${pick(f, '徽記／圖騰／旗幟與位置', '徽記／圖騰／位置') || ''}. LIGHT weapon: \${f['輕武器'] || ''}. HEAVY weapon: \${f['重武器'] || ''}. Cultural shield motif (presentation only): \${f['護盾紋路（純呈現）'] || ''}. Action pose: \${f['推薦戰鬥動作與風格'] || f['推薦戰鬥動作'] || ''}. Stylized in Cyberpunk Edgerunners and Arcane high-contrast anime cel-shading with bold black graphic inking and subtle floating glowing hexagonal tactical energy particles. BACKGROUND: A uniform, flat, solid bright chroma \${f['避色色幕底色'] || f['避色底色'] || 'green'} background without gradients or shadows for clean chroma-key transparency.\`;
   } else if (currentMech.category === 'drones') {
-    p = \`Premium ACG game character portrait standee of \${f['主原型與核心外觀特徵'] || ''}, from Steel vs Swarm in a dynamic high-speed aerial flight pose. STRICTLY NO TEXT, NO LABELS, NO ANNOTATIONS, NO LEADER LINES, NO INFOGRAPHIC DIAGRAMS, NO BASE PEDESTALS. Pure anime mecha art. ABSOLUTE NON-HUMANOID FLYING DRONE: ZERO HUMAN LIMBS, ZERO ROBOT LEGS, ZERO ARMS, ZERO HUMAN HEADS, NO COCKPIT PILOT. Livery is primarily \${f['主配色與比重'] || ''}, accented with \${f['副配色與比重'] || ''}. Embellished with \${f['徽記／圖騰／旗幟與位置'] || ''}. Integrated weaponry: \${f['武器特徵與裝備位置'] || ''}. Action pose: \${f['推薦戰鬥動作與風格'] || ''}. Stylized in Cyberpunk Edgerunners and Arcane high-contrast anime cel-shading with bold black graphic line-art and subtle floating glowing hexagonal tactical energy particles. BACKGROUND: A uniform, flat, solid bright chroma \${f['避色色幕底色'] || 'green'} background without gradients or shadows for clean chroma-key transparency.\`;
+    p = \`Premium ACG game character portrait standee of \${pick(f, '主原型與核心外觀（Blender定案）', '主原型與核心外觀特徵') || ''}, from Steel vs Swarm in a dynamic high-speed aerial flight pose. STRICTLY NO TEXT, NO LABELS, NO ANNOTATIONS, NO LEADER LINES, NO INFOGRAPHIC DIAGRAMS, NO BASE PEDESTALS. Pure anime mecha art. ABSOLUTE NON-HUMANOID FLYING DRONE: ZERO HUMAN LIMBS, ZERO ROBOT LEGS, ZERO ARMS, ZERO HUMAN HEADS, NO COCKPIT PILOT. Livery is primarily \${pick(f, '主配色／比重', '主配色與比重') || ''}, accented with \${pick(f, '副配色／比重', '副配色與比重') || ''}. Embellished with \${pick(f, '徽記／圖騰／旗幟與位置', '徽記／圖騰／位置') || ''}. LIGHT weapon: \${f['輕武器'] || ''}. HEAVY weapon: \${f['重武器'] || ''}. Cultural shield motif (presentation only): \${f['護盾紋路（純呈現）'] || ''}. Action pose: \${pick(f, '推薦戰鬥動作與風格', '推薦戰鬥動作') || ''}. Stylized in Cyberpunk Edgerunners and Arcane high-contrast anime cel-shading with bold black graphic line-art and subtle floating glowing hexagonal tactical energy particles. BACKGROUND: A uniform, flat, solid bright chroma \${f['避色色幕底色'] || f['避色底色'] || 'green'} background without gradients or shadows for clean chroma-key transparency.\`;
   } else {
-    p = \`Premium ACG game character portrait standee of the transformable morpher mecha, depicting dual forms in one dynamic cinematic anime composition to demonstrate seamless mechanical transformation coherence. STRICTLY NO TEXT, NO LABELS, NO ANNOTATIONS, NO LEADER LINES, NO INFOGRAPHIC DIAGRAMS, NO BASE PEDESTALS. Pure anime mecha character art.\\nPROPORTION RATIO:\\n- PRIMARY HERO FORM (70%): \${f['主要型態（70%）與特徵'] || ''}. \${f['防呆規則（個別機體嚴禁特徵）'] || ''}.\\n- SECONDARY FORM (30%): \${f['次要型態（30%）與特徵'] || ''}.\\nSHARED MODULES: \${f['互變核心共用構件'] || ''}.\\nLivery: \${f['主配色／比重'] || ''}, accented with \${f['副配色／比重'] || ''}.\\nEmbellishments: \${f['徽記／圖騰／位置'] || ''}. Weaponry: \${f['武器特徵與裝備位置'] || ''}.\\nAction pose: \${f['推薦戰鬥動作與風格'] || ''}.\\nStylized in Cyberpunk Edgerunners and Arcane cel-shading.\\nBACKGROUND: Solid bright chroma \${f['避色底色'] || 'green'}.\`;
+    p = \`Premium ACG game character portrait standee of the transformable morpher mecha, depicting dual forms in one dynamic cinematic anime composition to demonstrate seamless mechanical transformation coherence. STRICTLY NO TEXT, NO LABELS, NO ANNOTATIONS, NO LEADER LINES, NO INFOGRAPHIC DIAGRAMS, NO BASE PEDESTALS. Pure anime mecha character art.\nPROPORTION RATIO:\n- PRIMARY HERO FORM (70%): \${f['主要型態（70%）'] || f['主要型態（70%）與特徵'] || ''}. \${f['防呆規則（個別機體嚴禁特徵）'] || f['防呆規則'] || ''}.\n- SECONDARY FORM (30%): \${f['次要型態（30%）'] || f['次要型態（30%）與特徵'] || ''}.\nSHARED MODULES: \${f['互變核心共用構件'] || ''}.\nLivery: \${f['主配色／比重'] || ''}, accented with \${f['副配色／比重'] || ''}.\nEmbellishments: \${f['徽記／圖騰／位置'] || ''}. LIGHT weapon: \${f['輕武器'] || ''}. HEAVY weapon: \${f['重武器'] || ''}. Cultural shield motif (presentation only): \${f['護盾紋路（純呈現）'] || ''}.\nAction pose: \${pick(f, '推薦戰鬥動作與風格', '推薦動作', '推薦戰鬥動作') || ''}.\nStylized in Cyberpunk Edgerunners and Arcane cel-shading.\nBACKGROUND: Solid bright chroma \${f['避色底色'] || 'green'}.\`;
   }
   document.getElementById('livePromptBox').textContent = p;
 }
@@ -1354,6 +1472,94 @@ document.getElementById('btn3dGrid').onclick = () => {
   document.getElementById('btn3dGrid').textContent = showGrid ? '隱藏地網' : '顯示地網';
 };
 
+let notesCache = [];
+let activePane = 'spec';
+function switchPane(name) {
+  activePane = name;
+  document.getElementById('workbenchForm').style.display = name === 'spec' ? '' : 'none';
+  document.getElementById('notesPane').style.display = name === 'notes' ? '' : 'none';
+  document.getElementById('tabSpec').classList.toggle('active', name === 'spec');
+  document.getElementById('tabNotes').classList.toggle('active', name === 'notes');
+  document.getElementById('notesTableSel').style.display = name === 'notes' ? '' : 'none';
+  if (name === 'notes') loadNotesTable(document.getElementById('notesTableSel').value);
+}
+async function loadNotesTable(key) {
+  const wrap = document.getElementById('notesPane');
+  wrap.innerHTML = '<div style="padding:12px;font-size:12px;color:#94a3b8;">載入中...</div>';
+  try {
+    const res = await fetch('/api/notes');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    notesCache = await res.json();
+  } catch (err) {
+    wrap.innerHTML = '<div style="padding:12px;font-size:12px;color:#f87171;">載入失敗: ' + String((err && err.message) || err) + '</div>';
+    return;
+  }
+  let table = null;
+  for (const t of notesCache) if (t.key === key) table = t;
+  if (!table) {
+    wrap.innerHTML = '<div style="padding:12px;font-size:12px;color:#f87171;">無此表格: ' + key + '</div>';
+    return;
+  }
+  renderNotesRows(table);
+}
+function renderNotesRows(table) {
+  const wrap = document.getElementById('notesPane');
+  wrap.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'section-label';
+  head.textContent = table.title + '（共' + table.rows.length + '列）';
+  wrap.appendChild(head);
+  table.rows.forEach(function(row) {
+    const card = document.createElement('div');
+    card.className = 'notes-row-card';
+    const title = document.createElement('div');
+    title.className = 'notes-item-title';
+    title.textContent = row.item;
+    card.appendChild(title);
+    table.headers.forEach(function(h) {
+      if (h === '項目') return;
+      const g = document.createElement('div');
+      g.className = 'field-group';
+      const lab = document.createElement('div');
+      lab.className = 'field-title';
+      lab.textContent = h;
+      const ta = document.createElement('textarea');
+      ta.className = 'field-textarea';
+      ta.value = (row.values[h] || '').replace(/<br\\s*\\/?>/gi, '\\n');
+      g.appendChild(lab);
+      g.appendChild(ta);
+      card.appendChild(g);
+    });
+    const btn = document.createElement('button');
+    btn.className = 'btn-save-md';
+    btn.textContent = '儲存此列';
+    btn.onclick = function() { saveNotesRow(table.key, row.item, card, btn); };
+    card.appendChild(btn);
+    wrap.appendChild(card);
+  });
+}
+async function saveNotesRow(tableKey, item, card, btn) {
+  const values = {};
+  const tas = card.querySelectorAll('textarea');
+  for (const ta of tas) values[ta.previousSibling.textContent] = ta.value;
+  btn.textContent = '儲存中...';
+  try {
+    const res = await fetch('/api/save-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: tableKey, item: item, values: values })
+    });
+    const data = await res.json();
+    btn.textContent = data.ok ? '已儲存' : '失敗: ' + data.error;
+  } catch (err) {
+    btn.textContent = '網路錯誤: ' + err.message;
+  }
+  setTimeout(function() { btn.textContent = '儲存此列'; }, 2500);
+}
+document.getElementById('tabSpec').onclick = function() { switchPane('spec'); };
+document.getElementById('tabNotes').onclick = function() { switchPane('notes'); };
+document.getElementById('notesTableSel').onchange = function(e) { loadNotesTable(e.target.value); };
+
 fetchMechs();
 initPreview3D().then(() => { if (currentMech) update3DModel(); });
 window.__MECH_REVIEW = { get preview() { return preview3D; }, selectMech };
@@ -1411,6 +1617,38 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
           try {
             const { id, updates } = JSON.parse(body);
             const result = await updateMechInMarkdown(id, updates);
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify(result));
+          } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
+          }
+        });
+        return;
+      }
+
+      // API: 注意事項表格讀取
+      if (pathname === '/api/notes') {
+        try {
+          const tables = await parseNotesTables();
+          const slim = tables.map(t => ({ key: t.key, title: t.title, headers: t.headers, rows: t.rows.map(r => ({ item: r.item, values: r.values })) }));
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+          res.end(JSON.stringify(slim));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
+        }
+        return;
+      }
+
+      // API: 注意事項表格寫回
+      if (pathname === '/api/save-notes' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', async () => {
+          try {
+            const { table, item, values } = JSON.parse(body);
+            const result = await updateNotesRow(table, item, values);
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
             res.end(JSON.stringify(result));
           } catch (e) {
