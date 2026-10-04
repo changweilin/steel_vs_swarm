@@ -5,6 +5,7 @@ import { partBox } from '../public/js/edgewall.js';
 const close = (a, b, message) => assert(Math.abs(a - b) < 1e-7, `${message}: ${a} != ${b}`);
 function shell(part) {
   const { vertices, faces } = part.g[1], points = [];
+  assert(faces.length / 3 <= 8192, 'bounded industrial shell topology');
   for (let i = 0; i < vertices.length; i += 3) points.push(vertices.slice(i, i + 3));
   const edges = new Map();
   let volume = 0;

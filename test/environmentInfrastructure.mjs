@@ -15,7 +15,7 @@ for (let seed = 0; seed < 80; seed++) {
     close(foot.y0, 0, 'foundation grounded');
     close(foot.y1, tank.y0, 'tank supported');
     close(tank.y1, roof.y0, 'roof supported');
-    close(rows[1].g[1], rows[2].g[2], 'roof matches tank radius');
+    close(rows[1].g[2][0] / 2, rows[2].g[2], 'roof matches tank radius');
     assert.equal(rows[2].g[1], 0, 'cone roof closes at apex');
   }
   for (const kind of ['barricade', 'levee', 'seawall']) {
@@ -43,8 +43,10 @@ for (let seed = 0; seed < 80; seed++) {
       for (const p of [...girders, ...rails]) {
         const center = mat3Apply(inverse, p.p.map((v, k) => (v - deck.p[k]) / deck.s[k]));
         const underside = p.role === 'deck-girder';
-        close(center[1] + (underside ? 1 : -1) * p.g[2] / 2,
-          (underside ? -1 : 1) * deck.g[2] / 2, 'deck assembly contact survives tilt and fit');
+        const memberH = p.g[0] === 'mesh' ? p.g[2][1] : p.g[2];
+        const deckH = deck.g[0] === 'mesh' ? deck.g[2][1] : deck.g[2];
+        close(center[1] + (underside ? 1 : -1) * memberH / 2,
+          (underside ? -1 : 1) * deckH / 2, 'deck assembly contact survives tilt and fit');
       }
     }
   }

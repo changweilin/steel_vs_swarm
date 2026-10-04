@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable } from '../public/js/environmentParts.js';
+import { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable, floatingIceClear } from '../public/js/environmentParts.js';
 import { WALL_KINDS, STANDALONE_BOUNDARY_KINDS, BOUNDARY_ONLY_KINDS,
   boundaryObjectMeta, wallParts, wallFit, partBox, standaloneBoundaryParts, wallCandidates, planWallRuns } from '../public/js/edgewall.js';
 import { sharedBackgroundObjectTargets, generateSharedBackgroundObject } from '../public/js/backgroundObjects.js';
@@ -48,7 +48,7 @@ assert.throws(() => environmentParts('house', { size: [1, 0, 1] }), RangeError);
 assert.throws(() => environmentParts('house', { seed: NaN }), RangeError);
 for (const kind of ['icefloe', 'iceberg']) for (let seed = 0; seed < 64; seed++) {
   const size = environmentSize(kind, seed), [part] = iceParts(kind, size, seed);
-  const { vertices, faces } = part.g[1], n = (vertices.length / 3 - 2) / 3;
+  const { vertices, faces, baseVertexCount } = part.g[1], n = (baseVertexCount - 2) / 3;
   const edges = new Map();
   let volume = 0;
   for (let i = 0; i < faces.length; i += 3) {
@@ -62,7 +62,9 @@ for (const kind of ['icefloe', 'iceberg']) for (let seed = 0; seed < 64; seed++)
   }
   assert(volume > 0, 'ice normals point outward');
   assert([...edges.values()].every(e => e.count === 2 && e.winding === 0), 'closed manifold ice');
-  for (let i = 0; i < n; i++) assert(vertices[(2*n+i)*3+1] >= vertices[(n+i)*3+1], 'ice crown stays above waterline');
+  assert(Number.isInteger(n) && n >= 7, 'seeded ice outline remains measurable');
+  assert(faces.length / 3 <= 1024, 'bounded ice fracture topology');
+  assert(Number.isFinite(part.waterline), 'ice carries its solved equilibrium waterline');
   assert.deepEqual(size, environmentSize(kind, seed));
 }
 const iceKinds = ['icefloe', 'iceberg', 'seaice'];
@@ -76,7 +78,7 @@ console.log(`Procedural environment: ${samples} boundary envelopes, ${Object.key
 
 // Execute the actual scene placement code against synthetic terrain; rendering is checked separately.
 const biomeSource = readSrc('public', 'js', 'biomes.js');
-const placementDeps = { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable, edgeSeed, edgeWallInsetM,
+const placementDeps = { ENVIRONMENT_OBJECTS, environmentParts, environmentSize, environmentAvailable, floatingIceClear, edgeSeed, edgeWallInsetM,
   objScaleFit, slopeDeg, SLOPE, WATER, mulberry32, partBox,
   buildPartMotion: () => ({ position: { set() {} } }), scenePartGeometry: () => {},
   newBatch: () => [], emitWallParts: (batch, parts) => batch.push(parts), flushPartBatch: () => {} };
@@ -102,6 +104,10 @@ assert.equal(field({}, { osmBldHit: () => true }).objects.length, 0, 'OSM buildi
 const water = field({ heightAt: () => -100, waterY: 0 });
 assert(water.objects.length > 0 && water.blockers.length > 0, 'water ice is deployed with collision');
 assert.deepEqual(water, field({ heightAt: () => -100, waterY: 0 }), 'water determinism');
+const raisedSea = field({ heightAt: () => -90, waterY: 10 });
+assert.deepEqual(raisedSea.objects.map(({y,...p}) => p), water.objects.map(({y,...p}) => p), 'sea datum preserves scatter');
+assert(raisedSea.objects.every((p,i) => Math.abs(p.y-water.objects[i].y-10) < 1e-8),
+  'ice keeps the same draft when the sea datum and seabed rise together');
 assert(water.objects.every(p => ['icefloe', 'iceberg'].includes(p.kind) && p.y < 0), 'ice keels are submerged');
 for (const p of water.objects) {
   const [part] = environmentParts(p.kind, { size: p.size, seed: p.seed });

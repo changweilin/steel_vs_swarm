@@ -6,7 +6,16 @@ import { ROOT, readSrc } from '../audit_src.mjs';
 
 const chromium = await chromiumOrNull();
 assert(chromium, 'Scenery review requires an existing Playwright runtime');
-const directory = path.join(ROOT, 'out/scenery_review');
+const environmentReview = process.argv.includes('--environment');
+const iceVariants = process.argv.includes('--ice-variants');
+const icebergVariants = process.argv.includes('--iceberg-variants');
+const geologyVariants = process.argv.includes('--geology-variants');
+const variants = iceVariants || icebergVariants || geologyVariants;
+const compare = process.argv.includes('--compare');
+assert(!compare || environmentReview, '--compare requires --environment');
+assert([iceVariants, icebergVariants, geologyVariants].filter(Boolean).length <= 1, 'Choose one variant family');
+assert(!variants || (!environmentReview && !compare), 'Variants are a separate review mode');
+const directory = path.join(ROOT, 'out/scenery_review', geologyVariants ? 'geology-variants' : icebergVariants ? 'iceberg-variants' : iceVariants ? 'ice-variants' : environmentReview ? 'environment' : '');
 await mkdir(directory, { recursive: true });
 const server = await serve();
 let browser;
@@ -25,10 +34,13 @@ try {
   await page.route('**/three@0.160.0/examples/jsm/**', async route => route.fulfill({
     contentType: 'text/javascript', body: await readFile(path.join(path.dirname(local),
       route.request().url().split('/examples/jsm/')[1].split('?')[0].replaceAll('/', '_')), 'utf8') }));
-  for (const file of ['review.html', 'review.js']) await page.route('**/tools/scenery_authoring/' + file,
+  for (const file of ['review.html', 'review.js']) await page.route('**/tools/scenery_authoring/' + file + '*',
     route => route.fulfill({ contentType: file.endsWith('.js') ? 'text/javascript' : 'text/html',
       body: readSrc('tools', 'scenery_authoring', file) }));
-  await page.goto(new URL('tools/scenery_authoring/review.html', server.url).href);
+  if (compare) await page.route('**/tools/scenery_authoring/environment-before.json', async route => route.fulfill({
+    contentType: 'application/json', body: await readFile(path.join(directory, '../environment-before.json'), 'utf8') }));
+  const query = geologyVariants ? '?geology-variants' : icebergVariants ? '?iceberg-variants' : iceVariants ? '?ice-variants' : environmentReview ? '?environment' + (compare ? '&compare' : '') : '';
+  await page.goto(new URL('tools/scenery_authoring/review.html' + query, server.url).href);
   await page.waitForFunction('window.__sceneryReview', null, { timeout: 60000 });
   const result = await page.evaluate(() => window.__sceneryReview);
   assert.ifError(result.error); assert.deepEqual(errors, []);
