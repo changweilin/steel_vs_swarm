@@ -22,7 +22,7 @@ import {
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
   aoeClass, trajClass, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
-  EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
+   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR, TARGET_H,
   HIGH_SUP, highSupF, highSupDodgeF, highSupMissP, unbalMissP,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, npcAaRangeF, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
@@ -2485,8 +2485,10 @@ export class BattleSim {
   }
 
   /** 受擊失衡戳記(2026-09-01 飛行機體跌落到穩住期間;持盾減輕失衡。
-   *  大跳躍滯空被攻擊同樣進入失衡(airUnit 判定:蓄力跳高過一般跳躍頂點的區間)。 */
+   *  大跳躍滯空被攻擊同樣進入失衡(airUnit 判定:蓄力跳高過一般跳躍頂點的區間)。
+   *  無人機低空飛行(離地低於砲塔高 TARGET_H.tower)不失衡:貼地突防不吃跌落懲罰。 */
   _stampUnbal(t, factor = 1) {
+    if (t && t.kind === 'drone' && (t.y || 0) < TARGET_H.tower) return;
     if (!this._isFlyingHero(t) && !airUnit(t.kind, t.y)) return;
     const f = t._unbalFactor ?? factor;
     t._unbalFactor = null;

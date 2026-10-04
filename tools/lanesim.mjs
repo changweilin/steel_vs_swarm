@@ -255,7 +255,7 @@ export function hits(shooter, aim, def, foes) {
     const bins = new Array(n).fill(null);   // 每格最近的一名(與 sim.heroPlasma 同式)
     for (const e of foes) {
       const dx = e.x - shooter.x, dy = e.y - shooter.y, d = Math.hypot(dx, dy);
-      if (d > def.range) continue;
+      if (d - hitR(e) > def.range) continue;   // 小錐與扇形本身同一道射程閘(量到近側表面;與選敵 inR 同式)
       const dot = dx * ux + dy * uy;
       if (dot <= 0) continue;
       const cross = dx * uy - dy * ux;

@@ -17,7 +17,7 @@ import {
   GLINT, glintDur, glintAlpha, glintDropR,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
+   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, TARGET_H, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossSegFill, bossSegFrac, bossSegN, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
@@ -9590,6 +9590,7 @@ export class BattleClient {
   /** 飛行機體是否處於受擊失衡狀態?(2026-09-01 使用者需求:跌落到穩住期間進入失衡,命中/暴擊減半,無法恢復動力) */
   _unbalanced(now) {
     if (!this._flying() || this.dead) return false;
+    if (this.isDrone && (this._altAG || 0) < TARGET_H.tower) return false;   // 無人機低空飛行(離地低於砲塔高)不失衡(與伺服器 _stampUnbal 同判)
     const t = now ?? (typeof performance !== 'undefined' ? performance.now() / 1000 : 0);
     return (this._airSink > 0) || (t < (this._liftLockUntil || 0)) || ((this.unbalLeft || 0) > 0);
   }
