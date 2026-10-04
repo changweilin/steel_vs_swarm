@@ -25,9 +25,9 @@ Premium ACG game character portrait standee of [PROTOTYPE + BLENDER SILHOUETTE D
 
 | Prompt 佔位 | `docs/art_gen.md` §四欄位 |
 | :--- | :--- |
-| PROTOTYPE + BLENDER SILHOUETTE DELTA | 主原型與核心外觀（Blender定案） |
+| PROTOTYPE + BLENDER SILHOUETTE DELTA | 主原型與核心外觀 |
 | NON-HUMANOID CONSTRAINT | 防呆規則 |
-| ANATOMY AND CHASSIS | 主原型與核心外觀（Blender定案）＋其他注意事項（含Blender更新）掛載行 |
+| ANATOMY AND CHASSIS | 主原型與核心外觀＋其他注意事項掛載行 |
 | PRIMARY / SECONDARY COLOR AND RATIO | 主配色／比重，副配色／比重 |
 | EMBLEM/FLAG/TATTOO | 徽記／圖騰／旗幟與位置 |
 | LIGHT / HEAVY WEAPON | 輕武器，重武器（含掛載位置與類型） |

@@ -1042,9 +1042,6 @@ function renderHtmlPage(localThree = false) {
           <div class="field-title">個別機體 prompt（§四）</div>
           <div class="model-preview-box" id="ppMech">--</div>
         </div>
-        <div class="field-group">
-          <div class="field-title">生圖時以規格欄位填入 docs/art_gen_img_prompts.md 對應模板佔位</div>
-        </div>
       </div>
     </div>
 
