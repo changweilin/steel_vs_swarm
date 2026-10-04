@@ -316,23 +316,11 @@ const BUILDERS = {
     }
   },
 
-  /** 淹水區:半透明水面 + 漣漪圈 + 露出水面的雜物 */
+  /** 淹水區:半透明水面 + 露出水面的雜物 */
   flood(g, r, rnd) {
     const water = mesh(g, brokenGroundGeometry(r, .1), 0x2e6f95, 0, .42, 0,
       { transparent: true, opacity: 0.72, emissive: new THREE.Color(0x0a2433), emissiveIntensity: 0.4 });
     water.userData.water = true;
-    for (let i = 0; i < 3; i++) {
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(r * (0.2 + i * 0.22), r * (0.24 + i * 0.22), 20),
-        new THREE.MeshBasicMaterial({ color: 0x9fd4e8, transparent: true, opacity: 0.35, side: THREE.DoubleSide }),
-      );
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.y = 0.46;
-      ring.name = 'water-ripple';
-      // Local-Y jitter would tilt the already horizontal ring out of the water.
-      ring.userData.sceneAssembly = true;
-      g.add(ring);
-    }
     for (let i = 0; i < 2 + rnd() * 3; i++) {   // 水面露頭的箱子/輪胎
       const a = rnd() * Math.PI * 2, d = r * rnd() * 0.7;
       if (rnd() < 0.5) mesh(g, box(0.8, 0.5, 0.8), 0x9c8658, Math.cos(a) * d, 0.5, Math.sin(a) * d).rotation.y = rnd() * 3;
