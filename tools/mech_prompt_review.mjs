@@ -1,6 +1,6 @@
 // ============ 機體立繪與 3D 比對審查工作台 (dev-only) ============
 // 比對各機體 2D 立繪 (PNG/JPG)、3D 即時模型 (Three.js / CharPreview)
-// 與 docs/art_gen.md 的規格，支援視覺判定 (通過/更正/重繪)、改善方向編輯與即時寫回 Markdown。
+// 與 docs/art_gen.md（§二／§三／§四）的規格，支援視覺判定 (通過/更正/重繪)、改善方向編輯與即時寫回 Markdown。
 // img 生圖英文模板唯一 settlement 點為 docs/art_gen_img_prompts.md，本台不承載生圖模板。
 //
 // 邊界原則：
