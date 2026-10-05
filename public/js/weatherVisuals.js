@@ -50,6 +50,7 @@ export function resolveWeatherVisuals(dyn = {}, out = {}) {
   water.crest = ramp(.3, 1, wind) * .65;
   water.cross = mix(.08, .3, wind);
   water.chop = ramp(.35, .95, wind);
+  water.whitecaps = ramp(.5, 1, wind) * .55;
 
   for (const [kind, strength] of Object.entries({ rain, snow, sand })) {
     const p = out[kind] ||= {};

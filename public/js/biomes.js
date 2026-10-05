@@ -28,7 +28,6 @@ import { TREE_SPECIES, createForestDefs, createForestTree, treePhenology, treeBe
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
 import { registerMapBuildings, detachMapBuilding } from './mapBuildingRender.js';
-import { lodSlot } from './lod.js';
 import { buildingNear } from './mapBuilding.js';
 import {
   ENV, solveTowerSites, siteCPs, mapArg, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
@@ -50,7 +49,7 @@ import {
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { seasonalEnvironment } from './seasonalEnvironment.js';
-import { makeFootprintIndex } from './ground.js';
+import { makeFootprintIndex, blockerFoot } from './ground.js';
 import { buildHabitatScene } from './habitatRender.js';
 import { createHabitatSampler, planHabitatCanopy } from './habitat.js';
 import { buildLandField } from './landfield.js';
@@ -88,13 +87,9 @@ import { sceneObjectMat } from './toon.js';
 import { buildOsmPolygonBuildings } from './osmBuilding.js';
 import { buildOsmAreaObjects } from './osmAreaObjects.js';
 // 鳥群 / 魚群 / 貓 / 狗 (2026-08-16 序 11 ⑥-2 / 2026-08-27 生態擴充; 零 THREE 的積分器)
-import {
-  FLOCK, FISH, CAT, DOG,
-  planFlockRoutes, planFishRoutes, planCatRoutes, planDogRoutes,
-  flockInit, flockStep, flockHeading, wingAngle, tailAngle, bounceOffset,
-  wildlifeInit, wildlifeStep, wildlifeHeading,
-  birdParts, fishParts, catParts, dogParts,
-} from './wildlife.js';
+import { SMALL_ANIMALS, planSmallAnimalRoutes, planFlockRoutes, planFishRoutes, planCatRoutes, planDogRoutes } from './wildlife.js';
+import { buildWildlifeBatches } from './wildlifeRender.js';
+import { AMBIENT_SURFACES } from './ambientMeshData.js';
 // 平整垂直牆面板 + 窗格貼齊(2026-08-13;零 import 的純模組,離線工具吃同一支 —— 面板的
 // 定義只有一份,見該檔檔頭)
 // 場址配置規則(2026-08-03 使用者定案三條:市區都市計畫 / 綠地樹冠羞避 / 裸露地地質排列)——
@@ -112,7 +107,7 @@ import { VENUE_TEXT } from './venueText.js';
 import { drawFlag, pickFlagIso, flagSeed, sideIsoRoster, isoOfFlagEmoji, FLAG_RATIO } from './flags.js';
 // 落花 / 落葉粒子的**規則層**(2026-08-16 ⑤-4;零 THREE、只 import rng.js —— 同 edgewall /
 // flags / wallpanel 的邊界)。本檔只負責「把最終的植被實例名冊翻成樹冠、建幾何、逐幀寫矩陣」。
-import { PETAL, petalSeason, petalTones, planPetalFields, stepPetal, petalRnd } from './petals.js';
+import { PETAL, petalSeason, petalTones, groupCrowns, planPetalFields, stepPetal, petalRnd } from './petals.js';
 // 葉片卡冠層的**排列規則層**(2026-08-16 ②-1;零 THREE、只 import rng.js —— 同上一條的邊界)。
 // 本檔只負責「把純資料的卡片名冊組成 BufferGeometry、畫遮罩、接進既有的那一行 InstancedMesh」。
 import { CARD, cardEnvelope, cardCount, planCards, cardRnd, leafSurfId } from './leafcard.js';
@@ -1289,259 +1284,43 @@ const DOGS_OFF = typeof location !== 'undefined' && /[?&]dogs=0/.test(location.s
 // ②InstancedMesh 與逐幀矩陣 ③夾制線與天花板由呼叫端**注入**(同 edgewall 的坡度門檻)。
 // **零共享 `rnd()` 消耗**(§2.3):錨點是讀既有結果、逐隻抖動走座標雜湊。
 // `birds = 0` 時不建曲線(零 mesh、零 dynamics 條目);預設密度由 visualPrefs 定案
-function buildFlocks(group, terrain, dynamics, { anchors, low }) {
-  const dens = visualPref('birds');
-  if (BIRDS_OFF || !(dens > 0)) return 0;
+function buildFlocks(group, terrain, dynamics, { anchors, low, blockers = [] }) {
   const inset = edgeWallInsetM();
-  const bounds = {
-    minX: terrain.minX + inset, maxX: terrain.maxX - inset,
-    minZ: terrain.minZ + inset, maxZ: terrain.maxZ - inset,
-  };
+  const bounds = { minX: terrain.minX + inset, maxX: terrain.maxX - inset,
+    minZ: terrain.minZ + inset, maxZ: terrain.maxZ - inset };
   const probe = (x, z) => terrain.heightAt(x, z);
-  const altMax = objHeightMax();
-
-  const birdRoutes = planFlockRoutes({ anchors, probe, bounds, altMax, low });
-  const fishDens = visualPref('fish');
-  const fishRoutes = (FISH_OFF || !(fishDens > 0) || terrain.waterY == null) ? []
-    : planFishRoutes({ anchors, probe, bounds, waterY: terrain.waterY, low });
-  const catDens = visualPref('cats');
-  const catRoutes = (CATS_OFF || !(catDens > 0)) ? []
-    : planCatRoutes({ anchors, probe, bounds, low });
-  const dogDens = visualPref('dogs');
-  const dogRoutes = (DOGS_OFF || !(dogDens > 0)) ? []
-    : planDogRoutes({ anchors, probe, bounds, low });
-
-  if (!birdRoutes.length && !fishRoutes.length && !catRoutes.length && !dogRoutes.length) return 0;
-
-  const geoOf = (rows) => {
-    const geos = [], cols = [];
-    for (const p of rows) {
-      const [t, a, b, c, sg] = p.g;
-      const geo = t === 'box' ? new THREE.BoxGeometry(a, b, c)
-        : t === 'cyl' ? new THREE.CylinderGeometry(a, b, c, sg || 6)
-          : t === 'cone' ? new THREE.ConeGeometry(a, b, sg || 6)
-            : new THREE.IcosahedronGeometry(a, 0);
-      const m = new THREE.Matrix4();
-      const [px = 0, py = 0, pz = 0] = p.p || [];
-      const [rx = 0, ry = 0, rz = 0] = p.r || [];
-      m.compose(new THREE.Vector3(px, py, pz),
-        new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)),
-        new THREE.Vector3(1, 1, 1));
-      geo.applyMatrix4(m);
-      geos.push(geo); cols.push(p.c);
-    }
-    return mergeGeos(geos, cols);
-  };
-
-  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), WQ = new THREE.Quaternion();
-  const P = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1);
-  const FWD = new THREE.Vector3(0, 0, 1), DIR = new THREE.Vector3(), AXZ = new THREE.Vector3(0, 0, 1), AY = new THREE.Vector3(0, 1, 0);
-  const H = [0, 0, 0];
-
-  // ① 鳥群
-  const birdPartsList = birdParts();
-  const birdBodyGeo = geoOf(birdPartsList.filter((p) => !p.wing));
-  const birdWingGeo = [1, -1].map((s) => geoOf(birdPartsList.filter((p) => p.wing === s)));
-  const birdFlocks = [];
-  let total = 0;
-
-  for (const route of birdRoutes) {
-    const st = flockInit(route);
-    const mk = (geo) => {
-      const n = Math.max(1, Math.round(st.count * Math.min(1.5, dens)));
-      const m = new THREE.InstancedMesh(geo, envMat(0xffffff, {
-        vertexColors: true, wash: 0.3, cool: 0.45, rim: 0,
-      }), n);
-      m.frustumCulled = false;
-      m.castShadow = false;
-      group.add(m);
-      return m;
-    };
-    birdFlocks.push({ st, body: mk(birdBodyGeo), wing: [mk(birdWingGeo[0]), mk(birdWingGeo[1])] });
-    total += st.count;
-  }
-
-  // ② 魚群
-  const fishPartsList = fishParts();
-  const fishBodyGeo = geoOf(fishPartsList.filter((p) => !p.tail));
-  const fishTailGeo = geoOf(fishPartsList.filter((p) => p.tail));
-  const fishFlocks = [];
-  for (const route of fishRoutes) {
-    const st = wildlifeInit(route, FISH);
-    const mk = (geo) => {
-      const n = Math.max(1, Math.round(st.count * Math.min(1.5, fishDens)));
-      const m = new THREE.InstancedMesh(geo, envMat(0xffffff, {
-        vertexColors: true, wash: 0.4, cool: 0.6, rim: 0,
-      }), n);
-      m.frustumCulled = false;
-      m.castShadow = false;
-      group.add(m);
-      return m;
-    };
-    fishFlocks.push({ st, body: mk(fishBodyGeo), tail: mk(fishTailGeo) });
-    total += st.count;
-  }
-
-  // ③ 貓咪
-  const catPartsList = catParts();
-  const catBodyGeo = geoOf(catPartsList.filter((p) => !p.tail));
-  const catTailGeo = geoOf(catPartsList.filter((p) => p.tail));
-  const catFlocks = [];
-  for (const route of catRoutes) {
-    const st = wildlifeInit(route, CAT);
-    const mk = (geo) => {
-      const n = Math.max(1, Math.round(st.count * Math.min(1.5, catDens)));
-      const m = new THREE.InstancedMesh(geo, envMat(0xffffff, {
-        vertexColors: true, wash: 0.25, cool: 0.35, rim: 0,
-      }), n);
-      m.frustumCulled = false;
-      m.castShadow = false;
-      group.add(m);
-      return m;
-    };
-    catFlocks.push({ st, body: mk(catBodyGeo), tail: mk(catTailGeo) });
-    total += st.count;
-  }
-
-  // ④ 狗狗
-  const dogPartsList = dogParts();
-  const dogBodyGeo = geoOf(dogPartsList.filter((p) => !p.tail));
-  const dogTailGeo = geoOf(dogPartsList.filter((p) => p.tail));
-  const dogFlocks = [];
-  for (const route of dogRoutes) {
-    const st = wildlifeInit(route, DOG);
-    const mk = (geo) => {
-      const n = Math.max(1, Math.round(st.count * Math.min(1.5, dogDens)));
-      const m = new THREE.InstancedMesh(geo, envMat(0xffffff, {
-        vertexColors: true, wash: 0.25, cool: 0.35, rim: 0,
-      }), n);
-      m.frustumCulled = false;
-      m.castShadow = false;
-      group.add(m);
-      return m;
-    };
-    dogFlocks.push({ st, body: mk(dogBodyGeo), tail: mk(dogTailGeo) });
-    total += st.count;
-  }
-
-  const write = (t) => {
-    // 渲染鳥群
-    for (const f of birdFlocks) {
-      const n = f.body.count;
-      for (let i = 0; i < n; i++) {
-        const j = (i % f.st.count) * 3;
-        P.set(f.st.pos[j], f.st.pos[j + 1], f.st.pos[j + 2]);
-        flockHeading(f.st, i % f.st.count, H);
-        DIR.set(H[0], H[1], H[2]);
-        if (DIR.lengthSq() > 1e-9) Q.setFromUnitVectors(FWD, DIR.normalize());
-        M.compose(P, Q, S);
-        f.body.setMatrixAt(i, M);
-        const a = wingAngle(f.st, i % f.st.count, t);
-        for (const s of [0, 1]) {
-          WQ.setFromAxisAngle(AXZ, s === 0 ? a : -a);
-          M.compose(P, WQ.premultiply(Q), S);
-          f.wing[s].setMatrixAt(i, M);
-        }
-      }
-      f.body.instanceMatrix.needsUpdate = true;
-      for (const w of f.wing) w.instanceMatrix.needsUpdate = true;
-    }
-
-    // 渲染魚群 (水平擺尾)
-    for (const f of fishFlocks) {
-      const n = f.body.count;
-      for (let i = 0; i < n; i++) {
-        const j = (i % f.st.count) * 3;
-        P.set(f.st.pos[j], f.st.pos[j + 1], f.st.pos[j + 2]);
-        wildlifeHeading(f.st, i % f.st.count, H, FISH);
-        DIR.set(H[0], H[1], H[2]);
-        if (DIR.lengthSq() > 1e-9) Q.setFromUnitVectors(FWD, DIR.normalize());
-        M.compose(P, Q, S);
-        f.body.setMatrixAt(i, M);
-        const a = tailAngle(f.st, i % f.st.count, t, FISH);
-        WQ.setFromAxisAngle(AY, a);
-        M.compose(P, WQ.premultiply(Q), S);
-        f.tail.setMatrixAt(i, M);
-      }
-      f.body.instanceMatrix.needsUpdate = true;
-      f.tail.instanceMatrix.needsUpdate = true;
-    }
-
-    // 渲染貓咪 (慢速優雅擺尾)
-    for (const f of catFlocks) {
-      const n = f.body.count;
-      for (let i = 0; i < n; i++) {
-        const j = (i % f.st.count) * 3;
-        P.set(f.st.pos[j], f.st.pos[j + 1], f.st.pos[j + 2]);
-        wildlifeHeading(f.st, i % f.st.count, H, CAT);
-        DIR.set(H[0], 0, H[2]);
-        if (DIR.lengthSq() > 1e-9) Q.setFromUnitVectors(FWD, DIR.normalize());
-        M.compose(P, Q, S);
-        f.body.setMatrixAt(i, M);
-        const a = tailAngle(f.st, i % f.st.count, t, CAT);
-        WQ.setFromAxisAngle(AY, a);
-        M.compose(P, WQ.premultiply(Q), S);
-        f.tail.setMatrixAt(i, M);
-      }
-      f.body.instanceMatrix.needsUpdate = true;
-      f.tail.instanceMatrix.needsUpdate = true;
-    }
-
-    // 渲染狗狗 (快速搖尾 + 輕快小跑彈跳)
-    for (const f of dogFlocks) {
-      const n = f.body.count;
-      for (let i = 0; i < n; i++) {
-        const j = (i % f.st.count) * 3;
-        const bY = bounceOffset(f.st, i % f.st.count, t, DOG);
-        P.set(f.st.pos[j], f.st.pos[j + 1] + bY, f.st.pos[j + 2]);
-        wildlifeHeading(f.st, i % f.st.count, H, DOG);
-        DIR.set(H[0], 0, H[2]);
-        if (DIR.lengthSq() > 1e-9) Q.setFromUnitVectors(FWD, DIR.normalize());
-        M.compose(P, Q, S);
-        f.body.setMatrixAt(i, M);
-        const a = tailAngle(f.st, i % f.st.count, t, DOG);
-        WQ.setFromAxisAngle(AY, a);
-        M.compose(P, WQ.premultiply(Q), S);
-        f.tail.setMatrixAt(i, M);
-      }
-      f.body.instanceMatrix.needsUpdate = true;
-      f.tail.instanceMatrix.needsUpdate = true;
-    }
-  };
-
-  write(0);   // 首幀就位(dynamics 還沒跑時不會整批疊在原點)
-  // Ambient tick decimation (presentation only): flocks are far-field backdrop by
-  // design (shore / grove / landmark anchors, never lanes/towers). Physics steps
-  // time-sliced round-robin with dt scaled up; render write stays every frame so
-  // wings/tails (pure f(t)) never freeze. Friction/spring stay frame-rate
-  // independent via frictionFPS/specSpringPS; no camera needed, no shared RNG.
-  let flockFrame = 0;
-  const flockDiv = low ? 4 : 2;
-  const allFlocks = [
-    ...birdFlocks.map((f) => ({ f, spec: null, bird: true })),
-    ...fishFlocks.map((f) => ({ f, spec: FISH })),
-    ...catFlocks.map((f) => ({ f, spec: CAT })),
-    ...dogFlocks.map((f) => ({ f, spec: DOG })),
+  const wetAt = (x, z) => terrainEnvCode(terrain, x, z) === 1 && !terrain.inDryBand?.(x, z);
+  const occupied = makeFootprintIndex(blockers.map(blockerFoot));
+  const validAt = (x, z) => terrainEnvCode(terrain, x, z) === 0
+    && !occupied.near({ x, z, r: .5 })
+    && (!Number.isFinite(terrain.waterY) || probe(x, z) > terrain.waterY || terrain.inDryBand?.(x, z));
+  const dens = visualPref('birds');
+  const fishDens = visualPref('fish'), catDens = visualPref('cats'), dogDens = visualPref('dogs');
+  const populations = [
+    { species: 'bird', density: BIRDS_OFF ? 0 : dens,
+      routes: BIRDS_OFF || !(dens > 0) ? [] : planFlockRoutes({ anchors, probe, bounds, altMax: objHeightMax(), low }) },
+    { species: 'fish', density: FISH_OFF ? 0 : fishDens,
+      routes: FISH_OFF || !(fishDens > 0) ? [] : planFishRoutes({ anchors, probe, bounds, waterY: terrain.waterY, wetAt, low }) },
+    { species: 'cat', density: CATS_OFF ? 0 : catDens,
+      routes: CATS_OFF || !(catDens > 0) ? [] : planCatRoutes({ anchors, probe, bounds, low }) },
+    { species: 'dog', density: DOGS_OFF ? 0 : dogDens,
+      routes: DOGS_OFF || !(dogDens > 0) ? [] : planDogRoutes({ anchors, probe, bounds, low }) },
   ];
-  dynamics.push((dt) => {
-    const t = celWindTime();   // 全場共用的風時鐘(雲 / 植被同一支)
-    flockFrame++;
-    const sdt = dt * flockDiv;
-    for (let i = 0; i < allFlocks.length; i++) {
-      if (!lodSlot(flockFrame, i, flockDiv)) continue;
-      const e = allFlocks[i];
-      if (e.bird) flockStep(e.f.st, t, sdt);
-      else wildlifeStep(e.f.st, t, sdt, e.spec);
-    }
-    write(t);
-  });
-  return total;
+  const smallDens = visualPref('wildlife');
+  for (const species of Object.keys(SMALL_ANIMALS)) populations.push({ species, density: smallDens,
+    routes: smallDens > 0 ? planSmallAnimalRoutes(species, { anchors, probe, bounds, validAt, low }) : [] });
+  const wildlife = buildWildlifeBatches(group, populations, { probe, bounds, waterY: terrain.waterY, validAt, wetAt, low });
+  if (wildlife.total) dynamics.push((dt) => wildlife.update(dt));
+  return wildlife.total;
 }
 
 const PETAL_OFF = typeof location !== 'undefined' && /[?&]petal=0/.test(location.search);
-let _petalGeo = null;
-/** 單位四邊形(整場唯一一份;A25 markShared ⇒ disposeTree 跳過) */
-const petalGeo = () => (_petalGeo ??= markShared(new THREE.PlaneGeometry(1, 1)));
+const _petalGeos = new Map();
+function petalGeo(mode) {
+  const key = mode === 'bloom' ? 'petal' : 'leaf';
+  if (!_petalGeos.has(key)) _petalGeos.set(key, markShared(runtimeMeshDataGeometry(AMBIENT_SURFACES[key])));
+  return _petalGeos.get(key);
+}
 
 /**
  * 落葉樹冠的量體(逐型算一次,零亂數):由 `key: 'foliage'` 的零件推導冠頂高與冠幅半徑。
@@ -1599,7 +1378,7 @@ function buildPetals(group, terrain, items, season, mode, dynamics, gseed) {
   const meshes = petalTones(ENV.seasons[season], mode).map((c, i) => {
     const n = parts.reduce((a, p) => a + (p.tone === i ? 1 : 0), 0);
     if (!n) return null;
-    const m = new THREE.InstancedMesh(petalGeo(), envMat(c, {
+    const m = new THREE.InstancedMesh(petalGeo(mode), envMat(c, {
       transparent: true, opacity: PETAL.OPACITY, depthWrite: false,
       side: THREE.DoubleSide, rim: 0, wash: 0, cool: 0,
     }), n);
@@ -1613,18 +1392,29 @@ function buildPetals(group, terrain, items, season, mode, dynamics, gseed) {
   const seq = [0, 0, 0];
   for (const p of parts) p.mi = seq[p.tone]++;
 
-  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), AX = new THREE.Vector3();
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), AX = new THREE.Vector3(), E = new THREE.Euler();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   let t = 0;
   const write = (dt, dyn) => {
     t += dt;
     for (const p of parts) {
       stepPetal(p, dt, t, dyn);
+      if (p.groundTime > 0 && !p.wasGrounded) {
+        // Sample the landing point once: the orbit can cross a slope or shoreline.
+        p.restY = terrain.heightAt(p.cx + p.ox, p.cz + p.oz);
+        p.restDry = terrainEnvCode(terrain, p.cx + p.ox, p.cz + p.oz) === 0;
+      }
+      p.wasGrounded = p.groundTime > 0;
+      const resting = p.wasGrounded || p.lifted;
+      const baseY = resting ? p.restY : p.y0;
+      const visible = Number.isFinite(baseY) && (!resting || p.restDry);
       // 位置一律是「場中心線 + 偏移」:環繞因此是構造保證,不靠任何係數調得剛好
-      P.set(p.cx + p.ox, p.y0 + p.oy, p.cz + p.oz);
+      P.set(p.cx + p.ox, visible ? baseY + p.oy : 0, p.cz + p.oz);
       AX.set(p.ax, p.ay, p.az);
-      Q.setFromAxisAngle(AX, p.ang);      // 逐粒隨機軸自轉(全部繞 Y = 一地的硬幣)
-      S.set(p.sz * PETAL.ASPECT, p.sz, p.sz);
+      Q.setFromAxisAngle(AX, p.ang);
+      if (p.groundTime > 0) Q.setFromEuler(E.set(-Math.PI / 2, 0, p.a));
+      const size = visible ? p.sz * (p.fade ?? 1) : 0;
+      S.set(size * PETAL.ASPECT, size, size);
       M.compose(P, Q, S);
       meshes[p.tone]?.setMatrixAt(p.mi, M);
     }
@@ -12562,12 +12352,16 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const birdsBuilt = buildFlocks(group, terrain, dynamics, {
     anchors: {
       shore: shoreRing(terrain),
-      groves: giantTrees ? greenSites.map(([x, z]) => ({ x, z, r: 26 })) : [],
+      groves: groupCrowns(Object.entries(items).filter(([type]) => TREE_SPECIES[type])
+        .flatMap(([, trees]) => trees.map(it => ({ x: it.x, z: it.z, r: 4, top: it.y }))), 4)
+        .map(g => ({ x: g.cx, z: g.cz, r: g.r }))
+        .concat(giantTrees ? greenSites.map(([x, z]) => ({ x, z, r: 26 })) : []),
       landmarks: landmarkG.map((l) => ({ x: l.x, z: l.z, r: l.r })),
       settlements: (typeof civics !== 'undefined' && civics) ? civics.map((c) => ({ x: c.x, z: c.z, r: 18 })) : [],
       streets: (typeof roadPolys !== 'undefined' && roadPolys?.length) ? roadPolys.slice(0, 8).map((rp) => ({ x: rp[0]?.[0]?.[0] || 0, z: rp[0]?.[0]?.[1] || 0, r: 20 })) : [],
     },
     low: lowPower(),
+    blockers,
   });
   const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics, osmData.crossings) : 0;
   const fallsBuilt = osmData?.falls?.length ? buildWaterfalls(group, osmData.falls, terrain, center, dynamics) : 0;

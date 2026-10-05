@@ -320,6 +320,91 @@ export function makeParticles(seed, { lowPower = false } = {}) {
   };
 }
 
+// Contact effects sample exposed world surfaces, independently of airborne precipitation.
+export function makeRainImpacts(terrain, seed, { lowPower = false, surface } = {}) {
+  const grid = lowPower ? 8 : 14, count = grid * grid, tile = 4;
+  const plane = new THREE.PlaneGeometry(1, 1), geometry = new THREE.InstancedBufferGeometry().copy(plane);
+  plane.dispose();
+  const origins = new Float32Array(count * 3), seeds = new Float32Array(count * 3);
+  const origin = new THREE.InstancedBufferAttribute(origins, 3).setUsage(THREE.DynamicDrawUsage);
+  const ranks = new THREE.InstancedBufferAttribute(seeds, 3).setUsage(THREE.DynamicDrawUsage);
+  geometry.setAttribute('aOrigin', origin); geometry.setAttribute('aSeed', ranks);
+  geometry.instanceCount = count;
+  const uniforms = { uTime: { value: 0 }, uStrength: { value: 0 }, uWind: { value: new THREE.Vector2() } };
+  const material = new THREE.ShaderMaterial({ uniforms, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    vertexShader: `
+      attribute vec3 aOrigin;
+      attribute vec3 aSeed;
+      uniform float uTime;
+      uniform float uStrength;
+      uniform vec2 uWind;
+      varying vec2 vUv;
+      varying float vAge;
+      varying float vFade;
+      varying float vWater;
+      void main() {
+        float age = fract(uTime * 1.65 + aSeed.x);
+        vec3 p = aOrigin;
+        float radius = mix(0.08, 0.55, age);
+        p.xz += position.xy * radius * 2.0;
+        // A water contact stays flat; exposed soil/roofs throw a short crown of spray.
+        p.y += (1.0 - aSeed.y) * (1.0 - age) * 0.2 * length(position.xy);
+        p.xz += uWind * age * (1.0 - aSeed.y) * 0.03;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+        vUv = uv; vAge = age; vWater = aSeed.y;
+        vFade = aSeed.z * uStrength * (1.0 - age);
+      }`,
+    fragmentShader: `
+      ${INK_INFO_DECL}
+      varying vec2 vUv;
+      varying float vAge;
+      varying float vFade;
+      varying float vWater;
+      void main() {
+        vec2 p = vUv * 2.0 - 1.0;
+        float r = length(p);
+        float ring = (1.0 - smoothstep(0.06, 0.13, abs(r - 0.78)));
+        float drops = pow(max(0.0, cos(atan(p.y, p.x) * 7.0)), 8.0);
+        float alpha = ring * mix(drops, 1.0, vWater) * vFade;
+        if (alpha < 0.004) discard;
+        gl_FragColor = vec4(0.64, 0.76, 0.79, alpha);
+        ${INK_INFO_NONE}
+      }`,
+  });
+  const obj = new THREE.Mesh(geometry, material); obj.name = 'weather-rain-contacts'; obj.frustumCulled = false;
+  obj.visible = false;
+  let cx = NaN, cz = NaN, sampleTime = 0;
+  return {
+    obj,
+    update(dt, camera, dyn, profile) {
+      const d = Number.isFinite(dt) ? Math.max(0, Math.min(.25, dt)) : 0;
+      uniforms.uTime.value += d;
+      sampleTime += d;
+      uniforms.uStrength.value += (profile.rain.strength * .75 - uniforms.uStrength.value) * (1 - Math.exp(-d * 4));
+      obj.visible = uniforms.uStrength.value > .003;
+      if (!obj.visible) return;
+      const dir = dyn.windDir || [1, 0]; uniforms.uWind.value.set(dir[0], dir[1]).multiplyScalar(profile.rain.drift);
+      const cellX = Math.floor(camera.position.x / tile), cellZ = Math.floor(camera.position.z / tile);
+      if (cellX === cx && cellZ === cz && sampleTime < .5) return;
+      cx = cellX; cz = cellZ; sampleTime = 0;
+      for (let i = 0; i < count; i++) {
+        const ix = cx + i % grid - grid / 2, iz = cz + Math.floor(i / grid) - grid / 2;
+        const rnd = mulberry32((seed ^ Math.imul(ix, 73856093) ^ Math.imul(iz, 19349663)) >>> 0);
+        const x = (ix + rnd()) * tile, z = (iz + rnd()) * tile;
+        const ground = terrain.heightAt(x, z), top = surface ? surface(x, z) : ground;
+        const valid = Number.isFinite(ground) && Number.isFinite(top)
+          && x >= terrain.minX && x <= terrain.maxX && z >= terrain.minZ && z <= terrain.maxZ;
+        const water = Number.isFinite(terrain.waterY) && terrain.waterY > Math.max(ground, top)
+          && !terrain.inDryBand?.(x, z);
+        origins.set([x, valid ? Math.max(ground, top, water ? terrain.waterY : -Infinity) + .03 : 0, z], i * 3);
+        seeds.set([rnd(), water ? 1 : 0, valid ? 1 : 0], i * 3);
+      }
+      origin.needsUpdate = ranks.needsUpdate = true;
+    },
+    dispose() { geometry.dispose(); material.dispose(); },
+  };
+}
+
 // Each authoritative strike gets a pooled slot, so simultaneous targets keep their own arcs.
 export function makeLightningSystem(seed) {
   const obj = new THREE.Group(); obj.name = 'weather-lightning';

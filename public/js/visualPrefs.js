@@ -149,6 +149,10 @@ export const VISUAL_KNOBS = {
     label: '狗狗', def: 1, min: 0, max: 1.5, step: 0.05, unit: '%',
     hint: '街道、人行道與綠地的狗狗活動密度。**純表現層**:小跑巡邏與搖尾。0% = 沒有狗。',
   },
+  wildlife: {
+    label: '小動物', def: 1, min: 0, max: 1.5, step: 0.05, unit: '%',
+    hint: '林緣的兔子、松鼠、蝴蝶，以及水岸的鴨子、青蛙、烏龜。0% = 關閉這些小動物。',
+  },
   worldTextLang: {
     label: '世界文字語言', def: 'local', choices: ['local', 'zh', 'en'],
     choiceLabels: { local: '當地', zh: '中文', en: '英文' },

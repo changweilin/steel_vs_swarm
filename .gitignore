@@ -82,3 +82,7 @@ tools/scenery_authoring/__pycache__/
 # Reproducible boundary authoring scenes and review captures.
 out/boundary_review/
 tools/boundary_authoring/__pycache__/
+
+# Reproducible ambient authoring scenes and visual captures.
+out/atmosphere_review/
+tools/ambient_authoring/__pycache__/

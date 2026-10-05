@@ -47,7 +47,7 @@ try {
       const building = new THREE.Mesh(new THREE.BoxGeometry(20, height, 20), envMat(0xa29d92));
       building.position.set(x, height / 2, z); scene.add(building);
     }
-    const pipeline = new Pipeline(renderer, scene, camera, { grade: false, fxaa: false });
+    const pipeline = new Pipeline(renderer, scene, camera, { grade: false, fxaa: false, taa: false });
     const captures = [], stats = [];
     const fogTerrain = { heightAt: () => 0, waterY: -5 };
     const setup = lowPower => {

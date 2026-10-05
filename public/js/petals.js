@@ -201,6 +201,7 @@ export function planPetalFields(crowns, opts, rnd) {
       const sr = Math.sqrt(Math.max(0, 1 - az * az));
       const px = f.cx + Math.cos(a0) * rad, pz = f.cz + Math.sin(a0) * rad;
       const gy = opts.groundAt(px, pz);
+      if (!Number.isFinite(gy) || !opts.dryAt(px, pz)) continue;
       const p = {
         cx: f.cx, cz: f.cz,          // 場的中心線(環繞的參考框;見檔頭「環繞取模」那一條)
         y0: gy,                      // 這一片自己腳下的地表高(逐粒取一次:軌道半徑遠小於地形起伏尺度)
@@ -217,6 +218,7 @@ export function planPetalFields(crowns, opts, rnd) {
       f.ps.push(p);
       parts.push(p);
     }
+    f.n = f.ps.length;
     prewarmField(f);
   }
   return { fields, parts };
@@ -260,15 +262,35 @@ export function prewarmField(f) {
  */
 export function stepPetal(p, dt, t, dyn) {
   const d = dt > PETAL.DT_MAX ? PETAL.DT_MAX : (dt > 0 ? dt : 0);
-  const wScale = dyn ? Math.max(0.4, Math.min(2.5, dyn.windAmp ?? 1.0)) : 1.0;
-  const windDir = dyn?.windDir ?? [1, 0];
+  const wScale = Number.isFinite(dyn?.windAmp) ? Math.max(0.4, Math.min(2.5, dyn.windAmp)) : 1.0;
+  const windDir = Array.isArray(dyn?.windDir) && dyn.windDir.length >= 2
+    && Number.isFinite(dyn.windDir[0]) && Number.isFinite(dyn.windDir[1]) ? dyn.windDir : [1, 0];
+  if (!Number.isFinite(t)) return;
+  if (p.groundTime > 0) {
+    p.groundTime = Math.max(0, p.groundTime - d);
+    p.fade = Math.min(1, p.groundTime / .35);
+    p.oy = .025;
+    if (wScale > 1.6 && !p.lifted) {
+      p.y = Math.min(p.h, .4 + wScale * .35);
+      p.groundTime = 0; p.lifted = true; p.fade = 1;
+    } else if (p.groundTime === 0) {
+      p.y = p.h; p.lifted = false;
+    } else return;
+  }
 
   p.y -= p.vy * d * (0.85 + wScale * 0.15);
-  while (p.y < 0) p.y += p.h;        // 落到地面 → 回到冠頂(場自己的高度帶)
+  if (p.y < 0) {
+    p.y = 0; p.groundTime = 1.2 + .8 * (1 + Math.sin(p.p1));
+    p.oy = .025; p.fade = 1;
+    return;
+  }
+  p.fade = Math.min(1, (p.h - p.y) / .35);
   p.a += p.w * d * wScale;
   p.ang += p.sp * d * wScale;
-  const s1 = Math.sin(t * PETAL.F_SLOW * wScale + p.p1);   // 慢波:這陣風
-  const s2 = Math.sin(t * PETAL.F_FAST * wScale + p.p2);   // 快顫:葉片自己在翻
+  p.slowPhase = (p.slowPhase || 0) + d * PETAL.F_SLOW * wScale;
+  p.fastPhase = (p.fastPhase || 0) + d * PETAL.F_FAST * wScale;
+  const s1 = Math.sin(p.slowPhase + p.p1);
+  const s2 = Math.sin(p.fastPhase + p.p2);
   const rad = p.r * (1 + PETAL.SWAY_SLOW * s1 + PETAL.SWAY_FAST * s2);
   p.ox = Math.cos(p.a) * rad;
   p.oz = Math.sin(p.a) * rad;

@@ -355,10 +355,10 @@ sec('Ⅶ 接線契約(biomes.js 原文)');
   ok(!/Math\.random\(/.test(blk), '落花區塊內零 Math.random(A4)');
 
   // A25 資源生命週期
-  ok(count(B, /markShared\(new THREE\.PlaneGeometry\(1, 1\)\)/g) === 1
-    && /_petalGeo \?\?= markShared\(/.test(B),
-    '單位四邊形整場只有一份且 markShared 註冊(共用幾何被 disposeTree 放掉 ⇒ 所有借用者變空白)');
-  ok(count(blk, /new THREE\.InstancedMesh\(petalGeo\(\)/g) === 1,
+  ok(/_petalGeos = new Map\(\)/.test(B)
+    && /markShared\(runtimeMeshDataGeometry\(AMBIENT_SURFACES\[key\]\)\)/.test(B),
+    'Authored leaf/petal silhouettes are cached per mode and registered as shared geometry');
+  ok(count(blk, /new THREE\.InstancedMesh\(petalGeo\(mode\)/g) === 1,
     '逐色調各一顆 InstancedMesh,幾何共用同一份(高頻件 MUST NOT 重配幾何)');
   ok(/userData\.noOutline = true/.test(blk), '不掛反轉外殼描邊(0.2m 的碎片會糊成一團黑)');
   ok(/depthWrite: false/.test(blk) && /transparent: true/.test(blk),

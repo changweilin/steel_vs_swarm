@@ -15,7 +15,7 @@ import {
 import { setCelSun, celWindTime, INK_INFO_DECL, INK_INFO_NONE, setWeatherDynamics } from './toon.js';
 import { mulberry32 } from './rng.js';
 import { resolveWeatherVisuals } from './weatherVisuals.js';
-import { makeClouds, makeFog, makeParticles, makeLightningSystem } from './weatherFx.js';
+import { makeClouds, makeFog, makeParticles, makeRainImpacts, makeLightningSystem } from './weatherFx.js';
 import { stepWeatherSurface } from './weatherState.js';
 import { makeScorchAtlas, setSurfaceWeather } from './weatherMaterial.js';
 import { makeWeatherDeposits } from './weatherDeposits.js';
@@ -319,6 +319,8 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
 
   const particles = makeParticles(seed, opts);
   scene.add(particles.obj);
+  const rainImpacts = makeRainImpacts(terrain, seed, opts);
+  scene.add(rainImpacts.obj);
 
   const lightning = makeLightningSystem(seed);
   scene.add(lightning.obj);
@@ -486,6 +488,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
 
       // 6. 粒子與雲群動態步進
       particles.update(dt, camera, curDyn, visuals);
+      rainImpacts.update(dt, camera, curDyn, visuals);
       fog.update(dt, camera, curDyn, visuals.fog, fogC);
 
       dome.position.copy(camera.position);
@@ -520,6 +523,8 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       }
       scene.remove(particles.obj);
       particles.dispose();
+      scene.remove(rainImpacts.obj);
+      rainImpacts.dispose();
       scene.remove(fog.obj);
       fog.dispose();
       scene.remove(lightning.obj);

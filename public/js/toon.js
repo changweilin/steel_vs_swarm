@@ -964,6 +964,7 @@ export const seaSegM = () => WIND.SEA_M / WIND.SEA_SEG;
 const _windT = { value: 0 };
 const _windPhase = { value: 0 }, _wavePhase = { value: 0 }, _gustPhase = { value: 0 };
 const _weatherVisuals = resolveWeatherVisuals();
+let _wildlifeActivity = 1;
 const _windDir = { value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]) };
 const _windK = {
   value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.WAVE_M),
@@ -979,7 +980,8 @@ const _weatherWind = {
   waveAmp: { value: 1.0 },
   waveSpeed: { value: 1.0 },
   shape: { value: new THREE.Vector4(_weatherVisuals.wind.lean, _weatherVisuals.wind.flutter, _weatherVisuals.wind.gust, _weatherVisuals.wind.gustSpeed) },
-  water: { value: new THREE.Vector3(_weatherVisuals.water.crest, _weatherVisuals.water.cross, _weatherVisuals.water.chop) },
+  water: { value: new THREE.Vector4(_weatherVisuals.water.crest, _weatherVisuals.water.cross,
+    _weatherVisuals.water.chop, _weatherVisuals.water.whitecaps) },
 };
 
 /**
@@ -992,8 +994,10 @@ export function setWeatherDynamics(dyn, visuals = null) {
   _weatherWind.waveAmp.value = dyn.waveAmp ?? 1.0;
   _weatherWind.waveSpeed.value = dyn.waveSpeed ?? 1.0;
   const profile = visuals || resolveWeatherVisuals(dyn, _weatherVisuals);
+  _wildlifeActivity = Math.max(.15, 1 - Math.max(profile.rain.strength, profile.snow.strength,
+    profile.sand.strength, profile.wind.strength * .8));
   _weatherWind.shape.value.set(profile.wind.lean, profile.wind.flutter, profile.wind.gust, profile.wind.gustSpeed);
-  _weatherWind.water.value.set(profile.water.crest, profile.water.cross, profile.water.chop);
+  _weatherWind.water.value.set(profile.water.crest, profile.water.cross, profile.water.chop, profile.water.whitecaps);
 
   if (dyn.windDir && Array.isArray(dyn.windDir) && dyn.windDir.length >= 2) {
     _windDir.value.set(dyn.windDir[0], dyn.windDir[1]);
@@ -1020,6 +1024,7 @@ export function getWeatherDynamics() {
     waveAmp: _weatherWind.waveAmp.value,
     waveSpeed: _weatherWind.waveSpeed.value,
     windDir: [_windDir.value.x, _windDir.value.y],
+    activity: _wildlifeActivity,
   };
 }
 // 玩家位移擾動的兩支共享 uniform(同 `_windT` 的 idiom:一份物件餵給所有軟性材質)。
@@ -1170,7 +1175,7 @@ const CEL_WIND_GLSL = `
         uniform float uWeatherWaveT;
         uniform float uWeatherGustT;
         uniform vec4 uWeatherWindShape;
-        uniform vec3 uWeatherWaterShape;
+        uniform vec4 uWeatherWaterShape;
         // 陣風包絡(單一實作,擺動與海浪同吃)。振幅乘上一層「波長長一個量級、走得慢一半」
         // 的行波 ⇒ 掃到的那一帶倒得深、其餘幾乎靜止 = 眼睛讀得出「一道浪推過去」。
         // 平均值恆為 1 ⇒ 這一層**不改變平均擺幅**,只重新分配;GUST_F = 0 恆回 1.0(舊制)。
@@ -2262,6 +2267,15 @@ ${CEL_SEA_GLSL}
           // alpha 推向 1 也正是「泡沫是不透明的、蓋住水底」。
           // 中性深度場(1×1 = 很深)⇒ celFoam 恆 0 ⇒ 這一段早退 ⇒ **逐位元同舊制**。
           float celF = celFoam( vCelWP.xz ) * vSeaFade * uFoamA;
+          #ifndef CEL_SWAMP_RIPPLE
+          if ( uWeatherWaterShape.w > 0.001 && uWeatherWaveAmp > 0.001 ) {
+            // Crest foam uses the same displaced surface as lighting and shoreline wash.
+            float crest = celSeaH( vCelWP.xz ) / max( 0.001, uSoftAmp * uWeatherWaveAmp );
+            float foamPatch = celNoise( vCelWP.xz / 5.0 - uWindDir * uWeatherWaveT * 0.4 );
+            float whitecap = smoothstep( 0.62, 0.95, crest ) * step( 0.48, foamPatch );
+            celF = max( celF, whitecap * uWeatherWaterShape.w * vSeaFade * uFoamA );
+          }
+          #endif
           if ( celF > 0.0 ) {
             gl_FragColor.rgb = mix( gl_FragColor.rgb, uFoamC, celF );
             gl_FragColor.a = mix( gl_FragColor.a, 1.0, celF );

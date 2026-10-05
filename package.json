@@ -63,6 +63,8 @@
     "audit:waves": "node tools/audit_water_edge.mjs && node tools/audit_wavefronts.mjs",
     "shot:weather": "node tools/shot_weather_surface.mjs",
     "shot:weather-fx": "node tools/shot_weather_fx.mjs",
+    "audit:ambient": "node test/ambientAppearance.mjs",
+    "shot:ambient": "node tools/ambient_authoring/shot.mjs",
     "shot:building-damage": "node tools/shot_building_damage.mjs",
     "story": "node tools/story_book.mjs",
     "preview:gen": "node tools/arch_preview.mjs",

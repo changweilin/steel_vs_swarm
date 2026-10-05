@@ -211,8 +211,10 @@ console.log('\n⑧ 距離 LOD(Tick 降頻 + 幾何 LOD)單一縫與純數學驗�
   ok(lodHash('ent_42') === lodHash('ent_42') && lodDue(0, 'ent_42', 1) === true
     && [0, 1, 2, 3].filter((f) => lodDue(f, 'ent_42', 4)).length === 1,
     'lodDue 以 FNV-1a 確定性雜湊均勻錯幀(stride=4 每 4 幀必命中 1 次)');
-  ok(lodSlot(5, 1, 4) === true && lodSlot(5, 2, 4) === false && /lodSlot\(flockFrame, i, flockDiv\)/.test(B),
-    'lodSlot 輪詢時間片純函式與 biomes.js 生態群落接線');
+  const wildlife = code(read('wildlifeRender.js'));
+  ok(lodSlot(5, 1, 4) === true && lodSlot(5, 2, 4) === false
+    && /lodSlot\(flockFrame, i, flockDiv\)/.test(wildlife) && /wildlife\.update\(dt\)/.test(B),
+    'lodSlot staggers wildlife integration through the existing biome update loop');
   ok(geoFarM(GEO.TRIM_M, 0) === 150 && geoFarM(GEO.TRIM_M, 1) === 300
     && geoTrimKeep(140 * 140, 0, false) === false && geoTrimKeep(130 * 130, 0, false) === true
     && geoOutlineKeep(280 * 280, 0, true) === true && geoOutlineKeep(310 * 310, 0, true) === false,
