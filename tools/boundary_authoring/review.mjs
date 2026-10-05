@@ -35,7 +35,11 @@ try {
     const fixtures=joinsOnly ? [['citywall+cliff','城牆／懸崖'],['levee+debris-corner','河堤／崩塌地轉角'],
       ['cliff+basaltspine-corner','懸崖／玄武岩轉角'],['solarfield+windland','太陽能板／風機陣列'],
       ['solarfield+iceberg','陣列／隨機冰山'],['tetrapod+cliff','消波塊／懸崖'],
-      ['solarfield+gianttree-corner','陣列／巨木轉角'],['seawall+reefchain','海堤／礁岩']] :
+      ['solarfield+gianttree-corner','陣列／巨木轉角'],['seawall+reefchain','海堤／礁岩'],
+      ['rollinghills+cliff','草丘／懸崖'],['landslide+basaltspine','山崩／玄武岩'],
+      ['giantforest+solarfield','林地／陣列'],['boulder+warehousebelt','巨岩／倉儲'],
+      ['rowhouse+ranch','民房／牧場'],['skyfall+giantforest','廢墟／林地'],
+      ['icefloe+seaice','浮冰／碎冰帶'],['floatsolar+reefchain-corner','浮動陣列／礁岩轉角']] :
       [['citywall','城牆'],['levee','河堤與閘門'],['seawall','海堤'],
       ['tetrapod','四腳消波塊'],['cliff','懸崖峭壁'],['landslide','山崩地'],
       ['barricade','混凝土路障'],['canalbank','運河護岸'],['citywall-slope','貼坡城牆']];
@@ -90,6 +94,7 @@ try {
         const faces=data.index?Array.from(data.index.array):Array.from({length:data.attributes.position.count},(_,i)=>i);
         triangles+=faces.length/3;
         parts.push({vertices:Array.from(data.attributes.position.array),faces,
+          normals:Array.from(data.attributes.normal.array),
           colors:data.attributes.color?Array.from(data.attributes.color.array):null,color:material.color.toArray()});
         data.dispose();
       }

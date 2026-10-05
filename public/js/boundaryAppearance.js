@@ -12,6 +12,14 @@ const append = (out, data) => {
   out.faces.push(...data.faces.map(i => i + offset));
 };
 const empty = () => ({ vertices: [], colors: [], faces: [] });
+
+export function boundaryBlend(value) {
+  const samples = BOUNDARY_SURFACES.transition;
+  const t = Math.max(0, Math.min(1, value)) * (samples.length - 1);
+  const i = Math.min(samples.length - 2, Math.floor(t));
+  return samples[i] + (samples[i + 1] - samples[i]) * (t - i);
+}
+
 function faceted(data, angle = 30) {
   const result = facetMeshData(data, angle);
   result.colors = data.faces.flatMap(i => data.colors.slice(i * 3, i * 3 + 3));

@@ -5,7 +5,7 @@
 import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
 import { mulberry32 } from './rng.js';
 import { boundaryGrid } from './objectLayout.js';
-import { applyBoundaryAppearance } from './boundaryAppearance.js';
+import { applyBoundaryAppearance, boundaryBlend } from './boundaryAppearance.js';
 import { partAABB, VEHICLE_SPEC } from './vehicles.js';
 import { ENVIRONMENT_OBJECTS, environmentParts, linearEnvironmentParts, narrowGeologyBoundary, NARROW_GEOLOGY_BOUNDARY, storageTankParts, environmentAvailable, environmentSize, makeSceneVehicleParts, NATURAL_CLIFF_KINDS, citywallBarbicanParts, leveeGateParts } from './environmentParts.js';
 import { SLOPE_BOUNDARIES, EXPANDED_BOUNDARIES, buildSlopeBoundary } from './edgeSlope.js';
@@ -641,28 +641,29 @@ function generateBoundaryUnit(kind, { w, d, h, seed, season, water, layout, isBu
   return linearEnvironmentParts(kind, { len: w, depth: d, h, seed, season, environment });
 }
 
-const jointSmooth = value => {
-  const t = Math.max(0, Math.min(1, value));
-  return t * t * (3 - 2 * t);
-};
-
 function layoutTransition(kind, len, depth, u, v, joins, seed, buffer) {
-  let jitter = 1, keep = 1, along = u;
+  let jitter = 1, keep = 1, scale = 1, along = u;
   const own = BOUNDARY_BUFFER_LAYOUTS[kind];
   for (const end of [0, 1]) {
     const joint = joins?.[end];
     if (!joint) continue;
     const sign = end ? 1 : -1, other = BOUNDARY_BUFFER_LAYOUTS[joint.kind];
     const span = Math.min(len / 2, Math.max(depth, joint.depth, own?.pitchX || depth, other?.pitchX || joint.depth));
-    const blend = jointSmooth(1 - (len / 2 - sign * u) / span);
+    const blend = boundaryBlend(1 - (len / 2 - sign * u) / span);
     if (joint.corner && buffer) along += sign * (depth / 2 - v) * blend;
     if (joint.kind === kind) continue;
     const ordered = other?.mode !== 'random' || other?.continuous;
-    if (ordered) jitter = Math.min(jitter, 1 - blend);
+    if (ordered && own?.type === 'artificial' && !own.ruined) jitter = Math.min(jitter, 1 - blend);
     const ratio = Math.min(1, (own?.pitchX || depth) / (other?.pitchX || joint.depth));
     keep = Math.min(keep, 1 - blend * (1 - ratio));
+    if (own?.type === 'natural' && other?.type === 'artificial') {
+      // A varied woodland margin avoids a wall of equally tall crowns beside an array.
+      scale = Math.min(scale, 1 - blend * .28);
+      keep = Math.min(keep, 1 - blend * .32);
+      along -= sign * span * blend * (.08 + .10 * Math.sin(v * .31 + seed % 17));
+    }
   }
-  return { u: along, jitter, keep: ((seed >>> 8) & 65535) / 65536 < keep };
+  return { u: along, jitter, scale, keep: ((seed >>> 8) & 65535) / 65536 < keep };
 }
 
 function fitsJoinedUnit(rows, len, depth, bufferDepth, joins, buffer) {
@@ -960,13 +961,15 @@ export function buildBoundaryRunParts(kind, {
         const cy = Math.cos(yaw), sy = Math.sin(yaw);
 
         const placed = modelParts.map(p => {
-          const [px = 0, py = 0, pz = 0] = p.p || [];
+          const [px, py, pz] = (p.p || [0, 0, 0]).map(n => n * transition.scale);
           const rx = yaw !== 0 ? (px * cy + pz * sy) : px;
           const rz = yaw !== 0 ? (-px * sy + pz * cy) : pz;
           const rRot = p.r ? [p.r[0], (p.r[1] || 0) + yaw, p.r[2]] : (yaw !== 0 ? [0, yaw, 0] : undefined);
           const outPart = {
             ...p,
             p: [rx + u, py, rz + v],
+            s: (p.s || [1, 1, 1]).map(n => n * transition.scale),
+            ...(Number.isFinite(p.waterline) ? { waterline: p.waterline * transition.scale } : {}),
             ...(rRot ? { r: rRot } : {}),
             ...(joins ? { boundaryUnit: ptSeed } : {}),
             ...(isBuffer ? { boundaryBuffer: true, role: p.role || 'boundary-buffer-fill' } : {}),

@@ -37,10 +37,15 @@ def material(rgb):
 
 for index, model in enumerate(models):
     vertices, faces, colors = [],[],[]
+    surface_colors, normals = [], []
     for part in model['parts']:
         offset = len(vertices)
         p = part['vertices']
         vertices += [(p[i],-p[i+2],p[i+1]) for i in range(0,len(p),3)]
+        if globals().get('PREVIEW_SURFACE_ATTRIBUTES', False):
+            c, n = part.get('colors'), part.get('normals')
+            surface_colors += [(*(c[i:i+3] if c else part['color']), 1) for i in range(0,len(p),3)]
+            normals += [(n[i],-n[i+2],n[i+1]) if n else (0,0,0) for i in range(0,len(p),3)]
         for i in range(0,len(part['faces']),3):
             triangle = part['faces'][i:i+3]
             faces.append(tuple(offset+j for j in triangle))
@@ -58,6 +63,24 @@ for index, model in enumerate(models):
     obj = bpy.data.objects.new(model['key'],mesh)
     scene.collection.objects.link(obj)
     obj.location = (index%columns*8,-(index//columns)*6,0)
+    if globals().get('PREVIEW_SURFACE_ATTRIBUTES', False):
+        for prop, value in [('type', 'FLOAT_COLOR'), ('domain', 'POINT')]:
+            values = [i.identifier for i in mesh.color_attributes.bl_rna.functions['new'].parameters[prop].enum_items]
+            if value not in values:
+                raise ValueError(f'Color attribute {prop}: {value} not in {values}')
+        attribute = mesh.color_attributes.new(name='ProductionColor', type='FLOAT_COLOR', domain='POINT')
+        attribute.data.foreach_set('color', [v for color in surface_colors for v in color])
+        mesh.polygons.foreach_set('use_smooth', [True]*len(mesh.polygons))
+        mesh.normals_split_custom_set_from_vertices(normals)
+        mat = material([1,1,1])
+        node = next(n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED')
+        color_node = next((n for n in mat.node_tree.nodes if n.type=='VERTEX_COLOR'), None)
+        if color_node is None:
+            color_node = mat.node_tree.nodes.new('ShaderNodeVertexColor')
+            color_node.layer_name = 'ProductionColor'
+            mat.node_tree.links.new(color_node.outputs[0], node.inputs[0])
+        mesh.materials.append(mat)
+        continue
     local_materials = {}
     for poly, rgb in zip(mesh.polygons,colors):
         mat = material(rgb)
@@ -102,7 +125,7 @@ for screen in bpy.data.screens:
     for area in screen.areas:
         if area.type=='VIEW_3D':
             space = area.spaces.active
-            enum_set(space.shading,'color_type','MATERIAL')
+            enum_set(space.shading,'color_type','VERTEX' if globals().get('PREVIEW_SURFACE_ATTRIBUTES', False) else 'MATERIAL')
             space.region_3d.view_location = target
             space.region_3d.view_rotation = camera.rotation_euler.to_quaternion()
             space.region_3d.view_distance = camera_data.ortho_scale+2

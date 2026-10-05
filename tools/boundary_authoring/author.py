@@ -98,8 +98,15 @@ for name, section in sections.items():
     faces += [tuple(reversed(range(n))),tuple(n+i for i in range(n))]
     mesh_object(name+' Section', vertices, faces).location=(3,-3,0)
 
+# Flat tangents at both ends keep neighbouring silhouettes and density ramps quiet.
+transition = [round((t := i / 64)**3 * (t * (6*t - 15) + 10), 9) for i in range(65)]
+vertices = [(i / 64, value, z) for z in (-.08, .08) for i, value in enumerate(transition)]
+faces = [(i, i+1, i+66, i+65) for i in range(64)]
+mesh_object('Ecotone Blend Profile', vertices, faces).location = (6,-3,0)
+
 payload = {'meshes':meshes, 'sections':sections,
     'relief':{'side':side,'period':11,'values':relief},
+    'transition': transition,
     'strata':[.88,.91,1,.98,.82,.86,.97,1]}
 text = '// Generated in Blender by tools/boundary_authoring/author.py. Game axes: X/Y/Z.\n'
 text += 'export const BOUNDARY_SURFACES = Object.freeze('+json.dumps(payload,separators=(',',':'))+');\n'

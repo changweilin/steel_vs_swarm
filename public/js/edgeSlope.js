@@ -1,7 +1,7 @@
 import { seasonalEnvironment, geologyColor } from './seasonalEnvironment.js';
 import { seasonalSurfaceColors } from './seasonalSurface.js';
 import { BOUNDARY_SURFACES } from './boundaryMeshData.js';
-import { boundarySectionAppearance, boundaryRockTone } from './boundaryAppearance.js';
+import { boundarySectionAppearance, boundaryRockTone, boundaryBlend } from './boundaryAppearance.js';
 // Continuous boundary cross-sections. Adjacent segments sample identical world coordinates;
 // segment seeds never change their end profiles. No Three.js or shared random stream.
 import { ROCK_SEASON_TINT, environmentParts, storageTankParts, leveeGateParts, citywallBarbicanParts, NATURAL_CLIFF_KINDS, boundaryGeologyField, NARROW_GEOLOGY_BOUNDARY } from './environmentParts.js';
@@ -69,7 +69,7 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
   const distances = [0, depth, fill.depth, fill.crest];
   for (let d = 2; d < fill.depth; d += 2) distances.push(d);
   const ds = [...new Set(distances)].sort((a, b) => a - b);
-  const smooth = t => t * t * (3 - 2 * t);
+  const smooth = boundaryBlend;
   const profile = (k, d) => {
     const section = SLOPE_BOUNDARIES[k].section;
     const peak = Math.max(...section.map(p => p[1]));
@@ -136,24 +136,21 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
   const climate = seasonalEnvironment({ ...environment, season });
   const rows = stations.map(u => ds.map(d => {
     const cell = surfaceAt(u, d, true);
-    if (!cell || climate.snow <= 0) return cell;
-    if (geology && joins[u < 0 ? 0 : 1] && Math.abs(u) >= len / 2 - 1e-6) {
-      // The shared end slope excludes either segment's seeded interior derivative.
-      const a = surfaceAt(u, d - .1), b = surfaceAt(u, d + .1);
-      if (!a || !b) return { ...cell, up: 0 };
-      const delta = b.p.map((v, i) => v - a.p[i]);
-      const length = Math.hypot(...delta);
-      return { ...cell, up: length > 0 ? Math.hypot(delta[0], delta[2]) / length : 0 };
-    }
-    // Probe the continuous surface, not this segment's triangulation. Otherwise
-    // identical roof points get different snow coverage on opposite sides of a seam.
+    if (!cell) return cell;
     const probes = [surfaceAt(u - .1, d), surfaceAt(u + .1, d), surfaceAt(u, d - .1), surfaceAt(u, d + .1)];
-    if (probes.some(p => !p)) return { ...cell, up: 0 };
-    const a = probes[1].p.map((v, i) => v - probes[0].p[i]);
+    if (probes.some(p => !p)) return { ...cell, up: 0, normal: [0, 1, 0] };
+    let a = probes[1].p.map((v, i) => v - probes[0].p[i]);
     const b = probes[3].p.map((v, i) => v - probes[2].p[i]);
+    const joint = joins[u < 0 ? 0 : 1];
+    if (joint && SLOPE_BOUNDARIES[joint.kind]?.bufferFill && Math.abs(u) >= len / 2 - 1e-6) {
+      // Both strips share the end tangent, including a corner's diagonal. Averaging
+      // across that tangent removes the lighting crease without moving the roof.
+      a = [1, 0, joint.corner ? (u < 0 ? -1 : 1) : 0];
+    }
     const normal = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
     const length = Math.hypot(...normal);
-    return { ...cell, up: length > 0 ? Math.abs(normal[1]) / length : 0 };
+    const unit = length > 0 ? normal.map(n => n / length * (normal[1] < 0 ? -1 : 1)) : [0, 1, 0];
+    return { ...cell, up: unit[1], normal: unit };
   }));
   if (!valid) return null;
   const parts = [], bufferParts = [];
@@ -168,6 +165,7 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
     if (!buffer && fill.floorY != null) for (let k = 1; k < vertices.length; k += 3)
       vertices[k] = Math.max(fill.floorY, vertices[k]);
     const colors = [...cells, ...cells].flatMap(c => c.color), faces = [];
+    const normals = cells.flatMap(c => c.normal).concat(cells.flatMap(() => [0, -1, 0]));
     for (let j = 0; j < n - 1; j++) {
       faces.push(j, j + n, j + n + 1, j, j + n + 1, j + 1);
       faces.push(j + bottom, j + n + 1 + bottom, j + n + bottom, j + bottom, j + 1 + bottom, j + n + 1 + bottom);
@@ -188,11 +186,17 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
         vertices.push(...vertices.slice(index * 3, index * 3 + 3));
         colors.push(...colors.slice(index * 3, index * 3 + 3));
       }
+      const pa = cells[a].p, pb = cells[b].p, pc = [pb[0], cells[b].bottom, pb[2]];
+      const ab = pb.map((v, k) => v - pa[k]), ac = pc.map((v, k) => v - pa[k]);
+      const sideNormal = [ab[1]*ac[2]-ab[2]*ac[1], ab[2]*ac[0]-ab[0]*ac[2], ab[0]*ac[1]-ab[1]*ac[0]];
+      const magnitude = Math.hypot(...sideNormal);
+      const unit = magnitude > 0 ? sideNormal.map(v => v / magnitude) : [0, -1, 0];
+      for (let k = 0; k < 6; k++) normals.push(...unit);
     }
     const min = [0,1,2].map(a => Math.min(...vertices.filter((_, k) => k % 3 === a)));
     const max = [0,1,2].map(a => Math.max(...vertices.filter((_, k) => k % 3 === a)));
     const center = min.map((v, a) => (v + max[a]) / 2), size = min.map((v, a) => max[a] - v);
-    const mesh = { vertices: vertices.map((v, k) => v - center[k % 3]), colors, faces, boundaryBuffer: buffer, surfaceVertexCount: cells.length, bottomVertexOffset: cells.length };
+    const mesh = { vertices: vertices.map((v, k) => v - center[k % 3]), colors, normals, faces, boundaryBuffer: buffer, surfaceVertexCount: cells.length, bottomVertexOffset: cells.length };
     if (def.rock) mesh.colors = seasonalSurfaceColors(mesh, climate,
       [x + ca * center[0] + sa * center[2], center[1], z - sa * center[0] + ca * center[2]], ry,
       cells.map(c => c.up));
