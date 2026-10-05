@@ -19,6 +19,26 @@ const CLIMATE = {
   alpine: { temperature: 3, moisture: .55, latitude: 45 },
 };
 
+// Broad coordinate bands choose game appearance, never measured lithology or climate.
+const GEOGRAPHIC_APPEARANCE = [
+  { bbox: [-48, 165, 48, 180], climate: 'temperate', geology: 'basalt' },
+  { bbox: [-12, 95, 46, 150], climate: null, geology: 'basalt' },
+  { bbox: [15, -18, 35, 65], climate: 'arid', geology: 'sandstone' },
+  { bbox: [-35, 110, -15, 145], climate: 'arid', geology: 'sandstone' },
+  { bbox: [20, -120, 38, -100], climate: 'arid', geology: 'sandstone' },
+  { bbox: [30, -12, 46, 45], climate: 'mediterranean', geology: 'limestone' },
+];
+
+export function geographicEnvironment(latitude, longitude) {
+  if (![latitude, longitude].every(Number.isFinite) || Math.abs(latitude) >= 85 || Math.abs(longitude) > 180) return null;
+  const lat = Math.abs(latitude);
+  const band = GEOGRAPHIC_APPEARANCE.find(({ bbox: [s, w, n, e] }) => latitude >= s && latitude <= n && longitude >= w && longitude <= e);
+  const climate = band?.climate || (lat < 23.5 ? 'tropical' : lat >= 55 ? 'boreal' : 'temperate');
+  const geology = band?.geology || (lat >= 50 ? 'granite' : climate === 'tropical' ? 'alluvium' : 'sandstone');
+  return { latitude, longitude, climate, geology, geologyInferred: true,
+    volcanic: geology === 'basalt' ? .8 : 0, fault: geology === 'basalt' ? .6 : .1 };
+}
+
 // Habitat uses the long-term baseline so visual dormancy never relocates trees.
 export function forestEnvironment(latitude, altitude, input = {}) {
   const climate = CLIMATE[input.climate] || {};

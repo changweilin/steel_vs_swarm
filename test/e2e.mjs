@@ -157,6 +157,14 @@ function fakeBattleConfig(L = 3) {
   };
 }
 
+
+/** Room integration uses a qualified preset; combat fixtures keep their deliberately oversized frame. */
+function roomBattleConfig(L = 3) {
+  const cfg = venueConfig(VENUES.find(v => v.id === 'berlin'), L === 1 ? 1 : L === 2 ? 3 : 5);
+  cfg.placeName = '測試戰區';
+  cfg.env = { season: 'summer', time: 'day', weather: 'clear' };
+  return cfg;
+}
 // ================= sim 直測(不經 WebSocket,確定性驗證新機制)=================
 log('— sim:角色系統(24 陣營角 + 8 傭兵 × 專屬武器/招式 × 三階;英雄 vs NPC 倍率)—');
 {
@@ -2187,10 +2195,10 @@ log('\n— 單機機制:瀏覽器內 RoomHub 迴路 —');
   const snapCount = () => inbox.filter((m) => m.t === 'snap').length;
 
   // 驗證與伺服器同標準(單機不是「免驗證」的旁路)
-  sess.recv({ t: 'createRoom', name: '單機指揮官', teamSize: 1, battleConfig: fakeBattleConfig(3) });
+  sess.recv({ t: 'createRoom', name: '單機指揮官', teamSize: 1, battleConfig: roomBattleConfig(3) });
   assert(/兵線/.test(last('error')?.msg || ''), '單機:兵線數不符同樣被拒絕(與伺服器同一支驗證)');
 
-  sess.recv({ t: 'createRoom', name: '單機指揮官', roomName: '離線演習', teamSize: 1, battleConfig: fakeBattleConfig(1) });
+  sess.recv({ t: 'createRoom', name: '單機指揮官', roomName: '離線演習', teamSize: 1, battleConfig: roomBattleConfig(1) });
   const sync = last('sync');
   assert(/^\d{4}$/.test(sync?.lobby?.pin || ''), `單機:開出房間(PIN ${sync?.lobby?.pin})`);
   assert(sync.lobby.urls.length === 0, '單機:不廣播任何加入網址(沒有伺服器可連)');
@@ -2229,7 +2237,7 @@ log('\n— 再戰重擲主堡陣營歸屬 —');
 {
   const hub = new RoomHub({ urls: () => [], log: () => {}, dropMs: 0 });
   const sess = hub.attach(() => {});
-  sess.recv({ t: 'createRoom', name: '再戰指揮官', roomName: '換邊測試', teamSize: 1, battleConfig: fakeBattleConfig(1) });
+  sess.recv({ t: 'createRoom', name: '再戰指揮官', roomName: '換邊測試', teamSize: 1, battleConfig: roomBattleConfig(1) });
   const room = [...hub.rooms.values()][0];
   sess.recv({ t: 'pickSide', side: 'SWARM' });
 
@@ -2272,7 +2280,7 @@ log('\n— 對局中無真人玩家逾時 —');
   const inbox = [];
   const sess = hub.attach((m) => inbox.push(m));
   const last = (t) => [...inbox].reverse().find((m) => m.t === t);
-  sess.recv({ t: 'createRoom', name: '獨守指揮官', roomName: '空城計', teamSize: 1, battleConfig: fakeBattleConfig(1) });
+  sess.recv({ t: 'createRoom', name: '獨守指揮官', roomName: '空城計', teamSize: 1, battleConfig: roomBattleConfig(1) });
   sess.recv({ t: 'pickSide', side: 'SWARM' });
   sess.recv({ t: 'setReady', ready: true });
   sess.recv({ t: 'startBattle' });
@@ -2315,7 +2323,7 @@ log('\n— 回連身分(reattach 沿用原座位鍵)—');
     const inbox = [];
     const hub = new RoomHub({ urls: () => [], log: () => {}, dropMs: 60 * 1000, noHumanMs: 400 });
     const sess = hub.attach((m) => inbox.push(m));
-    sess.recv({ t: 'createRoom', name: '回連者', roomName: '回連測試', teamSize: 1, battleConfig: fakeBattleConfig(1) });
+    sess.recv({ t: 'createRoom', name: '回連者', roomName: '回連測試', teamSize: 1, battleConfig: roomBattleConfig(1) });
     sess.recv({ t: 'pickSide', side: 'SWARM' });
     sess.recv({ t: 'setReady', ready: true });
     sess.recv({ t: 'startBattle' });
@@ -2367,13 +2375,18 @@ host.send({ t: 'createRoom', name: '蜂群女王', roomName: '沒有地圖', tea
 await host.wait((c) => c.msgs.find((m) => m.t === 'error' && /不完整/.test(m.msg)));
 assert(true, '缺 battleConfig 開房被拒絕');
 
-const wrongLanes = fakeBattleConfig(3);
+const wrongLanes = roomBattleConfig(3);
 host.send({ t: 'createRoom', name: '蜂群女王', roomName: '線數錯', teamSize: 1, battleConfig: wrongLanes });
 await host.wait((c) => c.msgs.find((m) => m.t === 'error' && /兵線/.test(m.msg)));
 assert(true, '兵線數與隊伍規模不符被拒絕(1v1 要 1 線)');
 
-const tooShort = fakeBattleConfig(1);
-tooShort.distM = tooShort.diagM * 0.5;
+const tooShort = roomBattleConfig(1);
+for (const side of ['SWARM', 'STEEL']) {
+  const base = tooShort.bases[side];
+  tooShort.bases[side] = [(base[0] + tooShort.center.lat) / 2, (base[1] + tooShort.center.lng) / 2];
+}
+// Keep the advertised distance high: authority must reject the actual short span.
+tooShort.distM = tooShort.diagM;
 host.send({ t: 'createRoom', name: '蜂群女王', roomName: '太近', teamSize: 1, battleConfig: tooShort });
 await host.wait((c) => c.msgs.find((m) => m.t === 'error' && /80%/.test(m.msg)));
 assert(true, '主堡距離未達對角線 80% 被拒絕');
@@ -2391,7 +2404,7 @@ assert(true, '主堡距離未達對角線 80% 被拒絕');
     c.ws.close();
     return out;
   };
-  const bogus = fakeBattleConfig(1);
+  const bogus = roomBattleConfig(1);
   bogus.defSide = 'FOO'; bogus.siege = true;
   const bc = await mkRoom('亂填防守方', bogus);
   assert(bc.defSide === null && bc.siege === false,
@@ -2403,7 +2416,7 @@ assert(true, '主堡距離未達對角線 80% 被拒絕');
 }
 
 log('— 建立房間(1v1,開房即帶地圖與環境)—');
-host.send({ t: 'createRoom', name: '蜂群女王', roomName: '測試戰區', isPublic: true, teamSize: 1, battleConfig: fakeBattleConfig(1) });
+host.send({ t: 'createRoom', name: '蜂群女王', roomName: '測試戰區', isPublic: true, teamSize: 1, battleConfig: roomBattleConfig(1) });
 await host.wait((c) => c.sync);
 const pin = host.sync.lobby.pin;
 assert(/^\d{4}$/.test(pin), `取得 PIN:${pin}`);
@@ -2674,7 +2687,7 @@ assert(host.sync.lobby.battleConfig.architectureSeed !== previousArchitectureSee
 
 log('— 5v5 房:同陣營多席 + 3 線 —');
 const h5 = await client('h5');
-h5.send({ t: 'createRoom', name: '五五開', roomName: '大戰場', isPublic: true, teamSize: 5, battleConfig: fakeBattleConfig(3) });
+h5.send({ t: 'createRoom', name: '五五開', roomName: '大戰場', isPublic: true, teamSize: 5, battleConfig: roomBattleConfig(3) });
 await h5.wait((c) => c.sync);
 const pin5 = h5.sync.lobby.pin;
 const g5 = await client('g5');
@@ -2704,7 +2717,7 @@ h5.ws.close(); g5.ws.close();
 
 log('— 電腦玩家(單人 + AI 對手)—');
 const hb = await client('hb');
-hb.send({ t: 'createRoom', name: '獨行俠', roomName: 'BOT房', isPublic: false, teamSize: 2, battleConfig: fakeBattleConfig(1) });
+hb.send({ t: 'createRoom', name: '獨行俠', roomName: 'BOT房', isPublic: false, teamSize: 2, battleConfig: roomBattleConfig(1) });
 await hb.wait((c) => c.sync);
 // 霧戰爭:觀戰者收無霧全局快照,用來驗證「敵方」bot 位置(hb 本身在自己視野外看不到對面 bot)
 const hbSpec = await client('hbSpec');
@@ -2757,7 +2770,7 @@ log('— 快速開始:完全相同配置直接開戰(含電腦敵人指名)—')
 const qrHost = await client('qrHost');
 qrHost.send({
   t: 'createRoom', name: '快開指揮官', roomName: '快速戰區', isPublic: false,
-  teamSize: 2, botDiff: 'medium', battleConfig: fakeBattleConfig(1),
+  teamSize: 2, botDiff: 'medium', battleConfig: roomBattleConfig(1),
 });
 await qrHost.wait((c) => c.sync?.lobby?.phase === 'room');
 qrHost.send({ t: 'pickSide', side: 'STEEL' });

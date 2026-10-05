@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+import { VENUES, venueConfig, venueAvailability, migrateFavCfg } from '../public/js/venues.js';
+import { MAPGEO, llToXZ } from '../public/js/data.js';
+import { mapGeometryAudit, mapGeometryMetrics } from '../public/js/mapRules.js';
+import { validMapSources } from '../public/js/mapSourceValidation.js';
+import { traceRoadEvidence, roadFingerprint, laneFingerprint, validRoadEvidence, validTerrainAssessment, makeTerrainAssessment } from '../public/js/roadEvidence.js';
+import { validateBattleConfig, RoomHub } from '../server/rooms.js';
+import { randomMapConfig } from '../public/js/mapgen.js';
+
+const cfg = venueConfig(VENUES.find(v => v.id === 'berlin'), 5);
+assert(mapGeometryAudit(cfg, 5).ok && validMapSources(cfg));
+assert.equal(validateBattleConfig(cfg, 5), null);
+assert.deepEqual(VENUES.filter(v => venueAvailability(v).available).map(v => v.id), ['berlin', 'roppongi', 'taipei101']);
+for (const id of ['madrid', 'seoul', 'taroko']) assert(venueConfig(VENUES.find(v => v.id === id), 5).synthetic);
+assert(!venueAvailability(VENUES.find(v => v.id === 'shibuya')).available);
+for (const n of [1, 2, 3, 4, 5]) assert.equal(validateBattleConfig(venueConfig(VENUES[0], n), n), null);
+const end = structuredClone(cfg); end.bases.STEEL = [...end.bases.SWARM];
+assert(validateBattleConfig(end, 5), 'inconsistent bases cannot pass by retaining advertised distances');
+const subset = structuredClone(cfg); subset.lanes[1][1][0] += .001;
+assert(validateBattleConfig(subset, 5), 'active lanes must equal their mother subset');
+const excessive = structuredClone(cfg); excessive.motherLanes = Array(128).fill(cfg.motherLanes[0]);
+assert(validateBattleConfig(excessive, 5), 'oversized mother arrays stop before pairwise occupancy work');
+const distantVertex = structuredClone(cfg); distantVertex.motherLanes[0][1] = [80, -170];
+assert(validateBattleConfig(distantVertex, 5), 'global-scale segments stop before allocating geographic occupancy grids');
+const receipt = structuredClone(cfg); receipt.roadSources[0].edgeIds[0]++;
+assert(!validMapSources(receipt), 'a modified source receipt is rejected');
+const stale = structuredClone(cfg); stale.roadSources[0].laneHash = '00000000';
+assert(!validMapSources(stale));
+const falseReal = randomMapConfig({ seed: 12345, teamSize: 5 });
+falseReal.gen = null; falseReal.synthetic = false; falseReal.roadMode = 'real';
+assert(!validMapSources(falseReal));
+const swapped = structuredClone(cfg); [swapped.bases.SWARM, swapped.bases.STEEL] = [swapped.bases.STEEL, swapped.bases.SWARM];
+swapped.lanes = swapped.lanes.map(l => [...l].reverse()); swapped.motherLanes = swapped.motherLanes.map(l => [...l].reverse());
+assert.deepEqual(mapGeometryMetrics(swapped).maxOverlap, mapGeometryMetrics(cfg).maxOverlap);
+assert.equal(validateBattleConfig(swapped, 5), null, 'side swaps retain the same rules and archived source paths');
+const steep = structuredClone(cfg); steep.roadTerrain = makeTerrainAssessment(steep, (x, z) => x * 10 + z * 10);
+assert(!validTerrainAssessment(steep) && !validMapSources(steep));
+const bogusTime = structuredClone(cfg); bogusTime.roadTerrain.times[0] = 0;
+assert(!validTerrainAssessment(bogusTime), 'travel time is recomputed from sampled relief');
+
+const A = [25, 121], B = [25.0001, 121.0001], C = [25.0002, 121.0002];
+const source = { provider: 'fixture', version: '1', fingerprint: '12345678' };
+const way = (id, points, highway = 'residential') => ({ id, tags: { highway }, geometry: points.map(([lat, lon]) => ({ lat, lon })) });
+const proof = traceRoadEvidence([A, C], [way(1, [A, B, C])], { source });
+assert(proof && validRoadEvidence(proof, [A, C]));
+assert.equal(traceRoadEvidence([A, C], [way(1, [A, B]), way(2, [[25.00015, 121.00015], C])], { source }), null, 'nearby disconnected edges do not prove a connected lane');
+assert.equal(traceRoadEvidence([A, C], [way(1, [A, B, C], 'footway')], { source }), null, 'walkways do not satisfy the driving profile');
+const bridge = way(1, [A, B, C]); bridge.tags.bridge = 'yes';
+const D = [25, 121.0001];
+assert.equal(traceRoadEvidence([D, B, C], [way(2, [D, B]), bridge], { source }), null, 'structure entry through a middle node is rejected');
+const old = { cfg: structuredClone(cfg), teamSize: 5 }; old.cfg.geoScaleVer = 0; old.cfg.venue = null;
+assert.deepEqual(migrateFavCfg(old).lanes, old.cfg.lanes, 'custom favorites are never rescaled off their roads');
+
+const hub = new RoomHub(), host = hub.attach(() => {});
+try {
+  const dishonest = structuredClone(cfg); dishonest.distM = 999999; dishonest.diagM = 1; dishonest.maxOverlap = 0;
+  host.recv({ t: 'createRoom', name: 'Host', teamSize: 5, battleConfig: dishonest });
+  const room = [...hub.rooms.values()][0]; assert(room);
+  assert.equal(room.battleConfig.distM, mapGeometryMetrics(room.battleConfig).distM);
+  assert.equal(room.battleConfig.maxOverlap, mapGeometryMetrics(room.battleConfig).maxOverlap);
+  assert.equal(validateBattleConfig(room.battleConfig, 5), null);
+} finally { hub.shutdown(); }
+console.log('PASS shared map rules: verified catalogue, derived metrics, immutable mother subsets, source receipts, connected road ownership, driving profile, portals, relief/travel replay, side swaps and authority settlement.');

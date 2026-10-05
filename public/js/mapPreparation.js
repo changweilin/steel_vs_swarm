@@ -5,6 +5,11 @@ import { projectAreaRecord, catalogAreas, subdivideLargeZones } from './osmAreas
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
 import { MAP_EVIDENCE } from './mapEvidence.js';
 import { MAP_EVIDENCE_COPY } from './help.js';
+import { mapSourceKey } from './mapLayerSources.js';
+import { isRandomMap } from './randomMapRules.js';
+import { randomMapSources } from './randomMapSources.js';
+import { makeTerrainAssessment, validTerrainAssessment, laneFingerprint } from './roadEvidence.js';
+import { MAP_RULE_TEXT } from './mapRulesContent.js';
 
 const _prepCache = new Map();
 const _inFlight = new Map();
@@ -17,7 +22,9 @@ export function mapPrepKey(cfg) {
   const rot = Math.round((c.rot || 0) * 1e4) / 1e4;
   const size = Math.round(cfg.sizeM || 0);
   const lanes = cfg.lanes?.length || 0;
-  return `${lat},${lng},${rot},${size},${lanes}`;
+  const sourceKey = mapSourceKey(cfg);
+  return `${lat},${lng},${rot},${size},${lanes}` + (sourceKey ? `|${sourceKey}` : '')
+    + '|' + JSON.stringify([(cfg.motherLanes || cfg.lanes || []).map(laneFingerprint), cfg.mapRuleVersion || 0]);
 }
 
 // Persistent "evidence for this exact map is cached" marker. The evidence bytes live in geocache;
@@ -62,6 +69,8 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
   const key = mapPrepKey(cfg);
   if (key && _prepCache.has(key)) {
     const pack = _prepCache.get(key);
+    if (pack.failed && cfg.roadMode === 'real') cfg.roadTerrain = null;
+    if (pack.roadTerrain) cfg.roadTerrain = structuredClone(pack.roadTerrain);
     cfg.mapEvidence = pack.failed ? null : { version: pack.version, checksum: pack.checksum, complete: pack.complete,
       priorDigest: pack.priorDigest };
     await onProgress(MAP_EVIDENCE_COPY.analyzing);
@@ -72,6 +81,8 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
     task.listeners.add(onProgress);
     try {
       const pack = await task.promise;
+      if (pack.failed && cfg.roadMode === 'real') cfg.roadTerrain = null;
+      if (pack.roadTerrain) cfg.roadTerrain = structuredClone(pack.roadTerrain);
       cfg.mapEvidence = pack.failed ? null : { version: pack.version, checksum: pack.checksum, complete: pack.complete,
         priorDigest: pack.priorDigest };
       return pack;
@@ -91,14 +102,21 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
     try {
       await notify(MAP_EVIDENCE_COPY.preparing);
       const [terrain, [features, roads]] = await Promise.all([
-        buildTerrain(cfg, (f, label) => notify(label), { sourceOnly: true }), warmOsm(battleBBox(cfg)),
+        buildTerrain(cfg, (f, label) => notify(label), { sourceOnly: true }),
+        isRandomMap(cfg) ? randomMapSources(cfg) : warmOsm(battleBBox(cfg)),
       ]);
+      if (cfg.roadMode === 'real') {
+        if (!terrain.sourceQuality?.elevationComplete) throw new Error(MAP_RULE_TEXT.terrain);
+        cfg.roadTerrain = makeTerrainAssessment(cfg, terrain.elevationAt);
+        if (!validTerrainAssessment(cfg)) throw new Error(MAP_RULE_TEXT.terrain);
+      }
       await notify(MAP_EVIDENCE_COPY.analyzing);
       const projected = features?.areas?.map(a => projectAreaRecord(a, llToWorld, cfg.center)).filter(Boolean) || [];
       const areas = features == null ? null : catalogAreas(subdivideLargeZones(catalogAreas(projected).areas, roads, {
         toWorld: (lat, lon) => llToWorld(lat, lon, cfg.center),
       })).areas;
       const pack = await prepareMapEvidence(cfg, terrain, areas);
+      if (cfg.roadTerrain) pack.roadTerrain = structuredClone(cfg.roadTerrain);
       cfg.mapEvidence = { version: pack.version, checksum: pack.checksum, complete: pack.complete,
         priorDigest: pack.priorDigest };
       if (key) _prepCache.set(key, pack);
@@ -106,6 +124,7 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
       return pack;
     } catch (err) {
       console.warn('Map evidence preparation degraded:', err);
+      if (cfg.roadMode === 'real') cfg.roadTerrain = null;
       cfg.mapEvidence = null;
       const degraded = { version: MAP_EVIDENCE.VERSION, checksum: 0, complete: false, priorDigest: null, failed: true };
       // Session-remember the failure: re-selecting an unchanged map must not refetch everything.

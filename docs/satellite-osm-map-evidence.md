@@ -3,6 +3,8 @@
 Map creation prepares a versioned observation field before saving a favorite or
 opening a room. Room prebuilding awaits the field before land-surface generation;
 the existing loaded handshake still gates battle entry.
+Geographic road eligibility additionally uses the shared
+[road qualification](verified-road-maps.md) verdict and frozen source/relief packets.
 
 ## Sources and support
 
@@ -12,13 +14,25 @@ the existing loaded handshake still gates battle entry.
 | Existing RGB imagery | Raw, unstylized pixels; transparent missing tiles excluded from analysis | Green/gray fractions, brightness, texture variation and directional contrast. |
 | Existing Terrarium elevation | Original metres, before amplification, grading and carving | Slope and local ridge/valley/rolling/steep descriptors. |
 | Existing OSM queries | Shared projected/catalogued polygons, priorities and holes | Semantic cover and footprint agreement; exact building footprints remain owned by the existing building pipeline. |
-| Geology and tree species | Unknown | No lithology or species is inferred from RGB or land-cover classes. |
+| Geology and tree species | Unknown observations | No lithology or species is inferred from RGB or land-cover classes. Mixed-map visual geology uses an explicitly inferred geographic appearance profile. |
 
 Custom geographic maps use available RGB, elevation and OSM observations. Numeric
 WorldCover crops are bundled for preset venues; there is no runtime WorldCover
-downloader for arbitrary user-selected locations. Synthetic maps use their own
-scene seed and conservative cover fallback when observations are unavailable. Sentinel multispectral indices and a learned classifier
-are outside this implementation.
+downloader for arbitrary user-selected locations. Random maps prepare generated
+RGB, elevation and semantic cover from their saved procedural recipe, without
+querying geographic providers or loading a WorldCover prior. See
+[procedural random maps](random-maps.md). Sentinel multispectral indices and a
+learned classifier are outside this implementation.
+
+Mixed maps keep the surface source's real OSM road mother and capture frame.
+Elevation samples map the same world coordinates into a second road-bearing region;
+climate, vegetation, cultural priors and visual geology come from a third region.
+All sources pass road-presence verification before selection. Only fully baked real
+three-road mothers qualify as surface sources; partially synthesized venue mothers
+are excluded. Source identities and coordinate frames persist with the configuration,
+separate preparation caches and replay across cloud, LAN and solo clients.
+Geographic geology profiles are game appearance classifications, not observed lithology;
+the observation field's geology channel remains unknown.
 
 WorldCover is a dated prior, not a current survey or a building detector. See the
 [official source](https://esa-worldcover.org/en/data-access) and

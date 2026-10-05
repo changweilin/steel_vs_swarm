@@ -101,11 +101,12 @@ export function habitatPatch(seed, x, z) {
 }
 
 /** Canopy spacing follows cover structure; botanical species remain owned by the climate-aware forest seam. */
-export function planHabitatCanopy({ bounds, seed = 0, sampleAt, maxPlants }) {
+export function planHabitatCanopy({ bounds, seed = 0, sampleAt, maxPlants, densityScale = 1 }) {
   const rows = [], urban = [], occupied = new Set();
   const { minX, maxX, minZ, maxZ } = bounds || {};
   if (![minX, maxX, minZ, maxZ].every(Number.isFinite) || maxX <= minX || maxZ <= minZ
-    || !Number.isInteger(maxPlants) || maxPlants < 0 || typeof sampleAt !== 'function') throw new TypeError('Invalid habitat canopy');
+    || !Number.isInteger(maxPlants) || maxPlants < 0 || typeof sampleAt !== 'function'
+    || !Number.isFinite(densityScale) || densityScale < 0 || densityScale > 1) throw new TypeError('Invalid habitat canopy');
   const cell = Math.max(HABITAT_SCENE.CANOPY_CELL_M, Math.sqrt((maxX - minX) * (maxZ - minZ) / HABITAT_SCENE.MAX_CELLS));
   for (let j = Math.floor(minZ / cell); j * cell < maxZ; j++) for (let i = Math.floor(minX / cell); i * cell < maxX; i++) {
     const localSeed = forestSeed(i * cell, j * cell, seed ^ 0x43414e), rnd = mulberry32(localSeed);
@@ -125,7 +126,7 @@ export function planHabitatCanopy({ bounds, seed = 0, sampleAt, maxPlants }) {
     occupied.add(key);
     if (habitat.key === 'built') { urban.push({ x, z, rank: rnd() }); continue; }
     const patch = habitatPatch(seed, x, z);
-    if (rnd() > habitat.canopy * (habitat.key === 'orchard' ? 1 : .2 + patch * 1.4)) continue;
+    if (rnd() > habitat.canopy * densityScale * (habitat.key === 'orchard' ? 1 : .2 + patch * 1.4)) continue;
     const shrub = habitat.key === 'scrub' || habitat.zone === 'bare' || habitat.key === 'alpine';
     rows.push({ x, z, seed: localSeed, shrub, leafType: habitat.leafType,
       scale: shrub ? .1 + rnd() * .13 : habitat.key === 'orchard' ? .45 + rnd() * .1 : .65 + rnd() * .7, rank: rnd() });

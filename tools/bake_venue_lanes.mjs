@@ -25,6 +25,9 @@ import { VENUE_LANES } from '../public/js/venueLanes.js';
 // 改鍵時必漏改其中一邊,而症狀是「烤了卻沒人讀得到」,沒有任何錯誤訊息)。
 import { VENUE_LANE_KEYS, venueLaneModes } from '../public/js/venues.js';
 import { readSrc, grabBlock } from './audit_src.mjs';
+import { mapGeometryAudit, laneOverlapRatioXZ, MAP_ROAD_PROFILE, MAP_RULE_VERSION } from '../public/js/mapRules.js';
+import { sideMFor, laneSubsetFor } from '../public/js/data.js';
+import { traceRoadEvidence, roadFingerprint } from '../public/js/roadEvidence.js';
 // 結構隧道資格閘(**執行 biomes.js 原文**的那一份,§2.1「離線工具的結構剖面」單一縫)。
 // 2026-08-04:舊制 buildGraph 直接看 `w.tags.tunnel` = 第二份實作,比引擎鬆 ——
 // `indoor=yes` 的 service 通道(車站地下街 / 停車場坡道)在引擎裡一律攤平成一般小路
@@ -159,8 +162,7 @@ const ANCHORS = ONLY.length
     ? Object.fromEntries(Object.entries(ANCHORS_ALL).filter(([k]) => FIXTURE_BY_VENUE.has(k)))
     : ANCHORS_ALL;
 
-const DRIVABLE = 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service'
-  + '|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link';
+const DRIVABLE = MAP_ROAD_PROFILE.source.slice(1, -1);
 const ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
@@ -250,7 +252,7 @@ async function osmApiRoads(lat, lng, radius) {
           const p = nodes.get(n[1]);
           if (p) geometry.push({ lat: p.lat, lon: p.lon });
         }
-        if (geometry.length >= 2) out.push({ type: 'way', tags, geometry });
+        if (geometry.length >= 2) out.push({ type: 'way', id: Number(attr(m[1], 'id')), tags, geometry });
       }
       log(`  osm-api 備援取得 ${out.length} 條車行道`);
       return out.length ? out : null;
@@ -328,7 +330,7 @@ function buildGraph(ways, origin, tunPrefRe) {
     for (let j = 0; j < edges.length; j += 2) neighbors.add(edges[j]);
     return neighbors.size >= 3;
   });
-  return { X, Z, LA, LN, adj, n: X.length, tunE, tunPrefE, brgE, portalN, component, componentCount, junction };
+  return { X, Z, LA, LN, adj, n: X.length, tunE, tunPrefE, brgE, portalN, component, componentCount, junction, ways };
 }
 
 class MinHeap {
@@ -472,22 +474,7 @@ function tunSpansOf(g, full, gpts, cc) {
   return out;
 }
 
-function overlapXZ(a, b, cell) {
-  const gridOf = (lane) => {
-    const s = new Set();
-    for (let i = 1; i < lane.length; i++) {
-      const [x1, z1] = lane[i - 1], [x2, z2] = lane[i];
-      const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / (cell / 2)));
-      for (let k = 0; k <= n; k++) s.add(`${Math.round((x1 + (x2 - x1) * k / n) / cell)},${Math.round((z1 + (z2 - z1) * k / n) / cell)}`);
-    }
-    return s;
-  };
-  const ga = gridOf(a), gb = gridOf(b);
-  if (!ga.size || !gb.size) return 1;
-  let sh = 0;
-  for (const c of ga) if (gb.has(c)) sh++;
-  return sh / Math.min(ga.size, gb.size);
-}
+function overlapXZ(a, b, cell) { return laneOverlapRatioXZ(a, b, cell); }
 
 // 側移目標檔位:與 mapSelect 的 OFFSET_FRACS 同一組(近→遠)
 const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62, 0.80];  // 最後一檔 0.80 讓側翼偏到更遠街道，有助 O 形分離
@@ -700,10 +687,8 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, 
     // 遊戲公尺語意下 ⇒ 換算後再判(× 1/REAL_SCALE;此處在 s 宣告前被呼叫,不能用 s,直接取 MAPGEO)。
     const gs = 1 / MAPGEO.REAL_SCALE;
     const gxz = xz.map(([x, z]) => [x * gs, z * gs]);
-    if (!laneUTurnAudit(gxz).ok) { why = 'uturn'; return null; }
     // 規則③(2026-07-29):相對 A→B 主軸的帶號偏航累積 MUST 落在 ±TURN_ACCUM_MAX_DEG 內
     // (順逆時針抵消;背對主軸走/繞圈在此淘汰)。與迴轉閘同一組遊戲公尺取樣語彙。
-    if (!laneTurnAccumAudit(gxz).ok) { why = 'turnAccum'; return null; }
     banPath(used, p, n, prog);                                // 過閘後才標記已用邊(下一條被 REUSE_PEN 重罰)
     let s = 0;
     for (const q of idx) s += lat(q);
@@ -723,7 +708,6 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, 
   let mo = 0;
   for (let i = 0; i < lanes.length; i++)
     for (let j = i + 1; j < lanes.length; j++) mo = Math.max(mo, overlapXZ(lanes[i].xz, lanes[j].xz, cell));
-  if (mo > MAPGEO.MAX_OVERLAP) return { fail: 'overlap', ov: mo };
 
   const s = 1 / MAPGEO.REAL_SCALE;
   // 兵線互不接觸/交叉硬門檻(全禁,含立體交叉;與 mapSelect / server / audit_lane_sep 同一支)。
@@ -737,13 +721,21 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, 
     const [la, ln] = wr6(i);
     return llToGame(la, ln, { lat: oW[0], lng: oW[1] });
   }));
-  if (!laneSeparationAudit(lanesWritten).ok) return { fail: 'touch' };
   let sinu = 0, tpk = 0;
   for (const l of lanes) { const t = laneTacticsXZ(l.xz.map(([x, z]) => [x * s, z * s])); sinu += t.sinuosity; tpk += t.turnsPerKm; }
   sinu /= L; tpk /= L;
   // 砲塔規則合規(規則 #4):跑與 runtime 同一換算的 towerLayoutAudit ⇒ 選址時就偏好「砲塔佈局合規」的方位
   const A = [g.LA[aIdx], g.LN[aIdx]], B = [g.LA[bIdx], g.LN[bIdx]];
   const cc = { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 };
+  const written = lanes.map(l => l.idx.map(wr6));
+  const writtenA = wr6(aIdx), writtenB = wr6(bIdx);
+  const frame = { center: { lat: (writtenA[0] + writtenB[0]) / 2, lng: (writtenA[1] + writtenB[1]) / 2, rot: 0 },
+    bases: { SWARM: writtenA, STEEL: writtenB }, lanes: written, laneCount: L,
+    laneIds: mapA ? [0] : laneSubsetFor(L), ...(mapA ? {} : { motherLanes: written }),
+    defSide: mapA || null, sizeM: sideMFor(mapA ? 1 : 3, mapA) };
+  const common = mapGeometryAudit(frame, 5);
+  if (!common.ok) return { fail: common.code };
+  mo = common.metrics.maxOverlap;
   const lanesGame = lanes.map((l) => l.idx.map((i) => llToGame(g.LA[i], g.LN[i], cc)));
   // 砲塔洞口規則(規則 #5):兵線穿隧道時,埋在洞內的砲塔 MUST 有 ≥TOWER_TUNNEL_OUT_F 射程涵蓋洞口外。
   // 隧道段取圖資 tunnel way 全長(上界;執行期只有地形蓋得住的段落才成洞)⇒ 選線期寧可保守。
@@ -769,7 +761,6 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, 
   // 規則(2026-09-02):L2/L3 路徑平衡閘 —— 左右長度誤差/外側比/重合度。
   // lanesGame 已以 cc 為中心換算好遊戲公尺,與 lanePathBalanceAudit 要求的輸入格式相同。
   // 閘放在 touch/overlap 之後(兩者先淘汰結構性違規)、return 之前。
-  if (L >= 2 && !lanePathBalanceAudit(lanesGame, L).ok) return { fail: 'balance' };
   return {
     bearing, aIdx, bIdx, lanes, brgLen, tunLen,
     maxOverlap: mo, sinuosity: sinu, turnsPerKm: tpk,
@@ -1005,9 +996,12 @@ for (const [id, v] of Object.entries(out)) {
     const A = [g.LA[b.aIdx], g.LN[b.aIdx]], B = [g.LA[b.bIdx], g.LN[b.bIdx]];
     const lanesLL = (dv ? dv.sub.map((i) => b.lanes[i]) : b.lanes).map((l) => l.idx.map((i) => [r6(g.LA[i]), r6(g.LN[i])]));
     const mo = dv ? dv.ov : b.maxOverlap;
+    const source = { provider: 'baked-osm-graph', version: 'road-profile-' + MAP_RULE_VERSION,
+      fingerprint: roadFingerprint(g.ways) };
+    const proofs = lanesLL.map(lane => traceRoadEvidence(lane, g.ways, { source }));
     js += `    ${K}: { bearing: ${b.bearing}, maxOverlap: ${+mo.toFixed(3)},\n`;
     js += `      bases: [[${r6(A[0])},${r6(A[1])}],[${r6(B[0])},${r6(B[1])}]],\n`;
-    js += `      lanes: [\n        ${lanesLL.map((l) => `[${l.map((p) => `[${p[0]},${p[1]}]`).join(',')}]`).join(',\n        ')}\n      ] },\n`;
+    js += `      lanes: [\n        ${lanesLL.map((l) => `[${l.map((p) => `[${p[0]},${p[1]}]`).join(',')}]`).join(',\n        ')}\n      ], roadSources: ${JSON.stringify(proofs.every(Boolean) ? proofs : null)} },\n`;
   }
   js += `  },\n`;
 }

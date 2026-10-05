@@ -103,6 +103,7 @@ export const laneCountFor = (teamSize, m) =>
  * 母體排序恆為 [上, 中, 下];合成弧 side +1/0/−1 與烘焙排序同義。
  */
 export const MOTHER_LANES = 3;
+export const MAX_MAP_WATER_WET = .5;
 /** 啟用子集(母體下標):L1 → [1]、L2 → [0, 2]、L3 → 全 */
 export const laneSubsetFor = (L) => (L <= 1 ? [1] : L === 2 ? [0, 2] : [0, 1, 2]);
 /** 地圖框架用兵線數:標準戰場恆取母體,劇情戰役跟兵線數 */
@@ -216,6 +217,16 @@ export const MAPGEO = {
   LANE_BALANCE_OV_MAX: 0.05,    // 任兩條兵線重合度上限(比例,如 0.05 = 5%)
   CANDIDATE_BEARINGS: 12,
   MAX_CANDIDATES: 4,
+  CUSTOM_SEARCH: {
+    CENTER_OFFSET_FRAC: 0.5,
+    MAX_SNAP_FRAC: 0.2,
+    REQUEST_TIMEOUT_MS: 8000,
+    SOURCE_TIMEOUT_MS: 30000,
+    REQUEST_GAP_MS: 130,
+    OFFLINE_FAILURE_LIMIT: 3,
+    W_DISTANCE: .10, W_SEPARATION: .25, W_BALANCE: .15, W_DETOUR: .15,
+    W_PROXIMITY: .15, W_TRAVEL: .15, W_GRADE: .05,
+  },
   // 路徑戰術指標(Diablo DRLG 思想:走廊要彎、要有轉角,拒絕一眼看穿的直線)——
   // 彎曲度 = 路長/兩端直線距;轉角 = 等距取樣後轉向 ≥ TURN_MIN_DEG 的取樣點
   // (轉角 = 伏擊點/掩體錨點/視線遮斷,伺服器障礙佈設與客戶端選路評分共用)。
@@ -337,16 +348,15 @@ export function battleRect(cfg) {
 }
 
 /**
- * 戰場**資料抓取範圍**(經緯度 AABB)= `battleRect` 四角的經緯外接框。
- * 高程磚 / 衛星影像 / Overpass 三條 fetch 與 geocache 鍵一律吃這一份 ⇒ 地圖主方位一旋轉,
- * 抓取範圍自動擴到覆蓋旋轉後的世界方框(最壞 45° 時邊長 ×√2)。
- * rot = 0 時與舊制同一個框(差異只有一次投影往返的浮點尾差,遠小於 geoKey 的 1e-5 度分度)。
+ * The capture is the geographic envelope of the settled world rectangle.
+ * Mixed elevation and source verification use another source center without moving the
+ * battle frame; ordinary imagery and OSM queries retain the battle's own center.
  */
-export function battleBBox(cfg) {
+export function battleBBox(cfg, sourceCenter = cfg.center) {
   const r = battleRect(cfg);
   let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
   for (const [x, z] of [[r.minX, r.minZ], [r.maxX, r.minZ], [r.minX, r.maxZ], [r.maxX, r.maxZ]]) {
-    const [la, ln] = xzToLL(x, z, cfg.center);
+    const [la, ln] = xzToLL(x, z, sourceCenter);
     if (la < minLat) minLat = la;
     if (la > maxLat) maxLat = la;
     if (ln < minLng) minLng = ln;

@@ -1,12 +1,7 @@
-// ============ 擴充地圖生成縫:混合地圖 / 隨機地圖 ============
-// 兩種建立模式(與「預設場地」「自訂選址」並列,輸出皆為標準 battleConfig):
-//   混合地圖:取 N 個地點(預設場地或任意經緯度)的圖資來源做加權混合 —
-//     地貌 mix 加權平均、氣候經緯度取加權質心(森林/地質/氣候消費端讀 center.lat
-//     即自動吃到混合值)、等高線起伏 = 真實高程 × 混合 ampF + 程序化起伏、
-//     圖資(OSM 道路/建物)於質心 bbox 現抓並經 osmrelay 中繼全房、兵線為確定性合成。
-//   隨機地圖:全部資訊由種子隨機生成 — 中心取現實錨點+抖動(保證不與任何現實地圖
-//     逐點相同)、mix/ampF/兵線方位/起伏全由種子推導;先驗統計(錨點池、amp 檔位)
-//     學自既有場地分佈,但輸出經抖動+程序化起伏,不可完全與現實地圖相同。
+// Mixed maps retain a real OSM battle frame and borrow elevation and regional appearance
+// from two independently verified road-bearing regions. No geographic centroid is sampled.
+// Random maps use independently seeded terrain, street/land-use and regional rules.
+// Their local frame never identifies a real region or triggers geographic providers.
 //
 // 單一真相縫:
 //   clampBiomeMix = 地貌比例唯一夾限(水域+沼澤 ≤ 50%,總和恆 1);UI、生成器、
@@ -15,13 +10,21 @@
 //     .claude.md B.5:地貌拼圖一律零共享亂數,免推移植被/建築序列)。
 //   sanitizeProcRelief = procRelief 欄位唯一淨化(振幅夾上限)。
 // 本檔零 three import、零 Node API:瀏覽器 / rooms.js(單機) / Node 稽核共用。
-import { MAPGEO, BIOMES, lanesFor, targetDistFor, sideMFor, MOTHER_LANES, laneSubsetFor } from './data.js';
+import { MAPGEO, BIOMES, lanesFor, targetDistFor, sideMFor, MOTHER_LANES, laneSubsetFor, xzToLL, llToXZ,
+  lanePathBalanceAudit, laneSeparationAudit, towerLayoutAudit, MAX_MAP_WATER_WET } from './data.js';
 import { mulberry32 } from './rng.js';
+import { MIXED_LAYERS, MIXED_SOURCE_VERSION, validMixedLayers } from './mapLayerSources.js';
+import { geographicEnvironment } from './seasonalEnvironment.js';
+import { MIXED_MAP_TEXT } from './mixedMapContent.js';
+import { RANDOM_MAP_VERSION, RANDOM_MAP_RANGES, randomMapLayers } from './randomMapRules.js';
+import { RANDOM_MAP_TEXT } from './randomMapContent.js';
+import { MAP_RULE_VERSION, mapGeometryAudit, settleMapMetrics } from './mapRules.js';
+import { syntheticLaneEvidence } from './roadEvidence.js';
 
 /** 地貌鍵(與 data.js BIOMES / venues.js mix 同鍵) */
 export const GEN_BIOMES = ['urban', 'green', 'bare', 'water', 'wet'];
 /** 水域+沼澤上限(使用者定案):可玩性 — 超過一半是水,地面單位無處落腳 */
-export const MAX_WATER_WET = 0.5;
+export const MAX_WATER_WET = MAX_MAP_WATER_WET;
 /** 程序化起伏振幅上限(m):波長 ≥150m 時坡度 <16° 平緩帶,不製造新擋坡 */
 export const PROC_RELIEF_MAX_M = 12;
 /** 程序化起伏基波長(m,遊戲世界) */
@@ -220,7 +223,7 @@ function genConfigShell({ A, B, lanes, mother, mix, ampF, name, venueId, mode, s
   const D = targetDistFor(MOTHER_LANES);
   const sizeM = sideMFor(MOTHER_LANES);
   const distGame = distMeters(A, B) / MAPGEO.REAL_SCALE;
-  return {
+  return settleMapMetrics({
     center: { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2, rot: 0 },
     bases: { SWARM: A, STEEL: B },
     lanes,
@@ -229,7 +232,8 @@ function genConfigShell({ A, B, lanes, mother, mix, ampF, name, venueId, mode, s
     motherLanes: (mother || lanes).map((l) => l.map((p) => [...p])),
     sizeM, diagM: sizeM * Math.SQRT2, distM: distGame,
     geoScaleVer: MAPGEO.GEO_SCALE_VER,
-    maxOverlap: 0.06,
+    mapRuleVersion: MAP_RULE_VERSION, roadMode: 'procedural',
+    roadSources: (mother || lanes).map(syntheticLaneEvidence),
     tactics: null,
     synthetic: true, precomputed: true,
     venue: { id: venueId, name, mix, country: null, base: null, variant: mode, ampF },
@@ -237,84 +241,88 @@ function genConfigShell({ A, B, lanes, mother, mix, ampF, name, venueId, mode, s
     gen: { mode, seed: seed >>> 0, sources: (sources || []).map((s) => ({ name: s.name || '', weight: s.weight || 0 })) },
     placeName: name,
     defSide: null,
+  });
+}
+
+/** Assemble verified source layers; absence of a real three-road mother fails closed. */
+export function mixedMapConfig(sources, opts = {}) {
+  if (!Array.isArray(sources) || sources.length !== MIXED_LAYERS.length) return null;
+  const list = MIXED_LAYERS.map(role => sources.find(s => s?.role === role));
+  if (list.some(s => !s?.frame?.center)) return null;
+  const layers = Object.fromEntries(list.map(s => [s.role, {
+    id: s.id, name: s.name || '', center: { ...s.frame.center }, roadCount: s.roadCount,
+  }]));
+  if (!validMixedLayers(layers)) return null;
+  const elevation = list[0], surface = list[1], regional = list[2];
+  const frame = surface.frame;
+  if (!Array.isArray(frame.motherLanes) || frame.motherLanes.length !== MOTHER_LANES
+    || frame.synthetic || surface.laneSource !== 'osm-baked') return null;
+  const teamSize = Math.max(1, Math.min(5, opts.teamSize | 0 || 1));
+  const L = lanesFor(teamSize);
+  const mix = opts.mixOverride ? clampBiomeMix(opts.mixOverride) : blendBiomeMix(list);
+  const seed = Number.isFinite(opts.seed) ? opts.seed >>> 0 : hashSeed(list.map(s => s.id).join('|'));
+  const mother = frame.motherLanes.map(lane => lane.map(p => [...p]));
+  const sub = laneSubsetFor(L);
+  const profile = geographicEnvironment(regional.frame.center.lat, regional.frame.center.lng);
+  if (!profile) return null;
+  const name = MIXED_MAP_TEXT.name(list.map(s => s.name));
+  return {
+    ...frame, center: { ...frame.center },
+    bases: { SWARM: [...frame.bases.SWARM], STEEL: [...frame.bases.STEEL] },
+    lanes: sub.map(i => mother[i]), motherLanes: mother, laneIds: [...sub], laneCount: L,
+    synthetic: false, procRelief: null, mapEvidence: null,
+    roadTerrain: null,
+    venue: { id: `mixed-${seed.toString(16)}-${list.map(s => s.id).join('-')}`, name, mix,
+      country: regional.country || null, base: null, variant: 'mixed', ampF: elevation.ampF ?? 1,
+      forest: profile },
+    gen: { mode: 'mixed', version: MIXED_SOURCE_VERSION, seed, layers, laneSource: 'osm-baked',
+      sources: list.map(s => ({ id: s.id, role: s.role, name: s.name || '', weight: 1 })) },
+    placeName: name,
   };
 }
 
-/**
- * 混合地圖生成(sources:[{name, ll:[lat,lng], mix, ampF?, relief?, weight?}]):
- * mix 加權混合(唯一夾限,水域+沼澤≤50%)、中心=加權質心(氣候經緯度自動混合)、
- * ampF 加權、兵線確定性合成(bearing 省略時由來源雜湊推導)。
- * opts:{ teamSize, bearing?, seed?, mixOverride?, procAmp? }
- */
-export function mixedMapConfig(sources, opts = {}) {
-  const list = (sources || []).filter((s) => Array.isArray(s?.ll)).map((s) => ({
-    name: s.name || '', ll: s.ll, mix: s.mix || null,
-    ampF: Number.isFinite(Number(s.ampF)) ? Number(s.ampF) : 1,
-    weight: Number(s.weight) > 0 ? Number(s.weight) : 1,
-  }));
-  if (!list.length) return null;
-  const teamSize = Math.max(1, Math.min(5, opts.teamSize | 0 || 1));
-  const L = lanesFor(teamSize);
-  const seed = (opts.seed != null && Number.isFinite(Number(opts.seed)))
-    ? Number(opts.seed) >>> 0
-    : hashSeed(list.map((s) => `${s.ll[0].toFixed(4)},${s.ll[1].toFixed(4)}:${s.weight}`).join('|'));
-  const center = centroidOf(list);
-  const D = targetDistFor(MOTHER_LANES);
-  const realD = D * MAPGEO.REAL_SCALE;
-  const rnd = mulberry32(seed);
-  const bearing = Number.isFinite(Number(opts.bearing)) ? Number(opts.bearing) : Math.floor(rnd() * 360);
-  const A = destPoint(center, bearing + 180, realD / 2);
-  const B = destPoint(center, bearing, realD / 2);
-  const mother = synthGenLanes(A, B, MOTHER_LANES, seed);
-  const lanes = laneSubsetFor(L).map((i) => mother[i]);
-  const mix = opts.mixOverride ? clampBiomeMix(opts.mixOverride) : blendBiomeMix(list);
-  const ampF = Math.max(0.3, Math.min(2, blendNum(list, 'ampF', 1)));
-  const names = list.map((s) => s.name).filter(Boolean).slice(0, 3).join('+') || '多地';
-  return genConfigShell({
-    A, B, lanes, mother, mix, ampF,
-    name: `混合地圖・${names}`,
-    venueId: `mixed-${(seed >>> 0).toString(16)}`,
-    mode: 'mixed', seed, sources: list,
-    procAmp: Number.isFinite(Number(opts.procAmp)) ? Number(opts.procAmp) : 6,
-  });
-}
-
-/**
- * 隨機地圖生成:全部資訊由種子推導。
- * 中心 = 錨點池(現實地圖分佈先驗,由呼叫端注入 VENUES 座標)+經緯度抖動 ⇒
- * 保證與任一現實地圖不同點;mix = 種子狄利克雷抽樣+夾限;兵線方位/ampF/起伏全隨機。
- * opts:{ teamSize, seed?, anchors:[{ll}], jitterDeg? }
- */
+/** Three independently seeded procedural layers; center is an inert local projection frame. */
 export function randomMapConfig(opts = {}) {
   const teamSize = Math.max(1, Math.min(5, opts.teamSize | 0 || 1));
-  const anchors = (opts.anchors || []).filter((a) => Array.isArray(a?.ll));
-  if (!anchors.length) return null;
   const seed = (opts.seed != null && Number.isFinite(Number(opts.seed)))
     ? Number(opts.seed) >>> 0 : (Math.random() * 4294967296) >>> 0;
+  const layers = randomMapLayers(seed, opts.ranges);
   const rnd = mulberry32(seed);
-  const anchor = anchors[Math.floor(rnd() * anchors.length)];
-  const jit = Number.isFinite(Number(opts.jitterDeg)) ? Number(opts.jitterDeg) : 0.05;
-  const center = [anchor.ll[0] + (rnd() * 2 - 1) * jit, anchor.ll[1] + (rnd() * 2 - 1) * jit];
-  // 狄利克雷(Exp(1))抽樣:學習現實場地「多種地貌各佔一定比例」的混合感,非抄襲任一場
-  const draws = GEN_BIOMES.map(() => -Math.log(1 - rnd()));
-  const sum = draws.reduce((s, v) => s + v, 0) || 1;
-  const mix = clampBiomeMix(Object.fromEntries(GEN_BIOMES.map((k, i) => [k, draws[i] / sum])));
-  const ampF = Math.round((0.4 + rnd() * 1.2) * 100) / 100;
+  const center = { lat: 0, lng: 0, rot: 0 };
+  const p = layers.surface;
+  const rest = 1 - p.urbanFraction - p.waterFraction - p.wetFraction;
+  const mix = clampBiomeMix({ urban: p.urbanFraction, water: p.waterFraction, wet: p.wetFraction,
+    bare: rest * p.bareFraction, green: rest * (1 - p.bareFraction) });
   const L = lanesFor(teamSize);
   const D = targetDistFor(MOTHER_LANES);
-  const realD = D * MAPGEO.REAL_SCALE;
-  const bearing = Math.floor(rnd() * 360);
-  const A = destPoint(center, bearing + 180, realD / 2);
-  const B = destPoint(center, bearing, realD / 2);
-  const mother = synthGenLanes(A, B, MOTHER_LANES, seed ^ 0x9E3779B9);
+  const angle = rnd() * Math.PI * 2;
+  const A = xzToLL(-Math.sin(angle) * D / 2, -Math.cos(angle) * D / 2, center);
+  const B = xzToLL(Math.sin(angle) * D / 2, Math.cos(angle) * D / 2, center);
+  let mother = null;
+  for (let attempt = 0; attempt < 32; attempt++) {
+    const candidate = synthGenLanes(A, B, MOTHER_LANES, (seed ^ 0x9E3779B9 ^ Math.imul(attempt, 0x85ebca6b)) >>> 0);
+    const ids = laneSubsetFor(L);
+    const frame = { center, bases: { SWARM: A, STEEL: B }, motherLanes: candidate,
+      lanes: ids.map(i => candidate[i]), laneIds: ids, laneCount: L, sizeM: sideMFor(MOTHER_LANES) };
+    if (mapGeometryAudit(frame, teamSize).ok) {
+      mother = candidate; break;
+    }
+  }
+  if (!mother) return null;
   const lanes = laneSubsetFor(L).map((i) => mother[i]);
-  return genConfigShell({
-    A, B, lanes, mother, mix, ampF,
-    name: `隨機地圖・${(seed >>> 0).toString(16).padStart(8, '0').slice(-6)}`,
+  const cfg = genConfigShell({
+    A, B, lanes, mother, mix, ampF: 0,
+    name: RANDOM_MAP_TEXT.name(seed),
     venueId: `random-${(seed >>> 0).toString(16)}`,
-    mode: 'random', seed, sources: [{ name: '隨機錨點', weight: 1 }],
-    procAmp: Math.round((4 + rnd() * 8) * 10) / 10,
+    mode: 'random', seed, sources: [], procAmp: 0,
   });
+  cfg.center = center;
+  cfg.gen = { mode: 'random', version: RANDOM_MAP_VERSION, seed, layers, sources: [] };
+  cfg.venue.forest = { ...layers.regional, geologyInferred: true,
+    rainfall: layers.regional.rainfallMm,
+    rainfallIntensity: layers.regional.rainfallMm / RANDOM_MAP_RANGES.regional.rainfallMm[1],
+    volcanic: ['basalt', 'volcanic'].includes(layers.regional.geology) ? .8 : 0 };
+  return mapGeometryAudit(cfg, teamSize).ok ? cfg : null;
 }
 
 /** 生成摘要一行(UI 狀態列 / 稽核共用同一份,不各寫一套) */

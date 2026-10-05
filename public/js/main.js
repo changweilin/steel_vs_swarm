@@ -26,10 +26,11 @@ import { protoOf } from './codex.js';
 import { avatarURL, portraitURL, artAvatarURL, artPortraitURL, isArtMode } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
+import { MAP_SELECT_TEXT, mapCandidateLabel, mapCandidateSource } from './mapSelectContent.js';
 import { buildTerrain, battleBBox } from './terrain.js';
 import {
   buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode, warmOsm,
-  commitOsmIn, osmInReady, resetOsmMisses, clearOsmIn, fetchGridRoads,
+  commitOsmIn, osmInReady, resetOsmMisses, clearOsmIn, fetchGridRoads, fetchOsmRoads,
 } from './biomes.js';
 import { roadGridRotDeg } from './roadgrid.js';
 import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from './osmrelay.js';
@@ -45,8 +46,17 @@ import { CharPreview } from './charPreview.js';
 import {
   createShowcaseFallbackTerrain, GAME_SHOWCASE_SITES, showcaseTerrainConfig,
 } from './showcase.js';
-import { VENUES, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
-import { GEN_BIOMES, MAX_WATER_WET, mixedMapConfig, randomMapConfig, describeGen, biomeName } from './mapgen.js';
+import { VENUES, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTip, venueBrief, venueConfig, venueAvailability, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
+import { MAP_RULE_TEXT } from './mapRulesContent.js';
+import { mapGeometryAudit } from './mapRules.js';
+import { validMapSources } from './mapSourceValidation.js';
+import { GEN_BIOMES, MAX_WATER_WET, randomMapConfig, describeGen, biomeName } from './mapgen.js';
+import { generateMixedMap } from './mixedMap.js';
+import { MIXED_LAYERS } from './mapLayerSources.js';
+import { MIXED_MAP_TEXT } from './mixedMapContent.js';
+import { isRandomMap, RANDOM_MAP_RANGES, randomRangeStep } from './randomMapRules.js';
+import { RANDOM_MAP_TEXT } from './randomMapContent.js';
+import { drawRandomMapPreview } from './randomMapPreview.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { talkOf, stageKey } from './storytalk.js';
 // 劇情畫面的標記唯一縫 —— 遊戲本體與本地故事書(tools/story_book)共用同一份,見 storyui.js 檔頭
@@ -631,7 +641,13 @@ async function enterMapBuilder(initialMode = 'preset') {
   show('mapbuilder');
   app.favCfg = null;
   setFavBtnDisabled(true);
+  $('mapSearchHint').textContent = MAP_SELECT_TEXT.setup;
+  $('mapCandidates').setAttribute('aria-label', MAP_SELECT_TEXT.ranked);
+  $('nextCandBtn').textContent = MAP_SELECT_TEXT.nextButton;
   if ($('nextCandBtn')) { $('nextCandBtn').style.display = 'none'; $('nextCandBtn').disabled = true; }
+  initMapGenUI();
+  syncMapGenModeRow();
+  if (initialMode === 'random') { $('mapStatus').textContent = RANDOM_MAP_TEXT.ready; return; }
 
   try {
     await ensureLeaflet();
@@ -639,8 +655,10 @@ async function enterMapBuilder(initialMode = 'preset') {
     $('mapStatus').textContent = '地圖元件載入失敗,檢查網路後重試。';
     return;
   }
+  if (app.mapGenMode === 'random' || app.phaseShown !== 'mapbuilder') return;
   if (!app.mapSel) {
     app.mapSel = new MapSelect('leafletMap', {
+      roads: bbox => fetchOsmRoads(bbox, { evidence: true }),
       status: (text, frac) => {
         $('mapStatus').textContent = text;
         $('mapProgressBar').style.width = `${Math.round(frac * 100)}%`;
@@ -653,22 +671,30 @@ async function enterMapBuilder(initialMode = 'preset') {
         if (cfg) {
           const candCount = app.mapSel?.candidates?.length || 0;
           const candIdx = app.mapSel?.chosen ? app.mapSel.candidates.indexOf(app.mapSel.chosen) : -1;
-          const candText = candCount > 1 && candIdx >= 0 ? ` [候選 ${candIdx + 1}/${candCount}] ` : '';
-          $('mapStatus').innerHTML =
-            `已選定${candText}:兩堡直線 <b>${(cfg.distM / 1000).toFixed(2)} km</b>(門檻 ${(cfg.diagM * 0.8 / 1000).toFixed(2)} km)` +
-            `・${cfg.laneCount} 條兵線,最大重合 <b>${(cfg.maxOverlap * 100).toFixed(0)}%</b>` +
-            (cfg.tactics ? `・彎折 <b>×${cfg.tactics.sinuosity.toFixed(2)}</b>・轉角 <b>${cfg.tactics.turnsPerKm.toFixed(1)}/km</b>` : '') +
-            `${cfg.synthetic ? '(含離線模擬路徑)' : ''}`;
+          const candidate = app.mapSel.chosen;
+          $('mapStatus').textContent = MAP_SELECT_TEXT.summary(candIdx + 1, candCount,
+            candidate.match.score * 100, candidate.match.distanceM, cfg, mapCandidateSource(candidate));
           triggerBackgroundMapSetup(cfg, cfg.placeName || '自訂戰區');
         }
       },
       candidates: (list, chosenIdx) => {
+        const results = $('mapCandidates');
+        results.replaceChildren();
+        results.hidden = !list.length;
+        for (const [index, candidate] of list.entries()) {
+          const item = document.createElement('button');
+          item.className = 'btn small' + (index === chosenIdx ? ' swarm-btn' : '');
+          item.textContent = mapCandidateLabel(candidate, index);
+          item.setAttribute('aria-pressed', String(index === chosenIdx));
+          item.onclick = () => app.mapSel.selectCandidate(index);
+          results.appendChild(item);
+        }
         const btn = $('nextCandBtn');
         if (!btn) return;
         if (list && list.length > 1 && chosenIdx >= 0) {
           btn.style.display = '';
           btn.disabled = false;
-          btn.textContent = `⟳ 建議其他候選 ${chosenIdx + 1}/${list.length}`;
+          btn.textContent = MAP_SELECT_TEXT.next(chosenIdx + 1, list.length);
         } else {
           btn.style.display = 'none';
           btn.disabled = true;
@@ -683,9 +709,9 @@ async function enterMapBuilder(initialMode = 'preset') {
   syncMapGenModeRow();
   syncVenueTips();
   $('mapStatus').textContent = app.mapGenMode === 'mixed'
-    ? '勾選兩處以上地點,按「生成混合地圖」。'
-    : app.mapGenMode === 'random' ? '按「生成隨機地圖」(種子空白即隨機)。'
-    : '選一個場地,或在地圖上點選主堡位置自動計算兵線。';
+    ? MIXED_MAP_TEXT.ready
+    : app.mapGenMode === 'random' ? RANDOM_MAP_TEXT.ready
+    : MAP_SELECT_TEXT.idle;
 }
 
 /** 人數/兵線/地圖規模摘要一行(開戰時刻用;MUST NOT 在製作地圖頁另寫一套)*/
@@ -703,11 +729,14 @@ function venueBtn(v, teamSize = app.teamSize) {
   const b = document.createElement('button');
   b.className = 'venue-btn' + (v.story ? ' story' : '');
   b.dataset.vid = v.id;
+  const availability = venueAvailability(v, teamSize);
+  b.disabled = !availability.available;
   const vdef = VARIANT_DEFS.find((d) => d.key === v.variant);
   b.innerHTML = `<span class="venue-name"><span class="venue-name-text">${v.country} ${esc(v.name)}</span></span>`
     + `<span class="venue-tags"><span class="venue-type t-${v.type}">${v.type}</span>`
     + (vdef ? `<span class="venue-var var-${v.variant}">${vdef.name}</span>` : '')
     + (v.story ? '<span class="venue-var story-tag">劇情</span>' : '')
+    + (!availability.available ? `<span class="venue-var">${esc(MAP_RULE_TEXT.pending)}</span>` : '')
     + '</span>';
   attachTip(b, venueTip(v, teamSize));
   return b;
@@ -800,8 +829,9 @@ function syncVenueTips() {
   }
 }
 
-/** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描;製作地圖一律建三線母體 */
+/** Preset selection requires the same source and geometry gates as room creation. */
 function selectVenue(v) {
+  if (!venueAvailability(v, MAP_BUILD_TEAMSIZE).available) { $('mapStatus').textContent = MAP_RULE_TEXT.unavailable; setFavBtnDisabled(true); return; }
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
   const cfg = venueConfig(v, MAP_BUILD_TEAMSIZE);
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
@@ -813,7 +843,7 @@ function selectVenue(v) {
   savePrefs({ lastVenueId: v.id });
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,加入最愛地圖後即可開房。` +
-    `(想用真實道路兵線,可改在地圖上手動點選錨點)` +
+    `<div>${esc(MAP_RULE_TEXT.sourceSummary(3, 3, cfg.laneCount, cfg.laneCount))}</div>` +
     `<div class="venue-desc">${esc(venueBrief(v, MAP_BUILD_TEAMSIZE))}</div>`;
   $('mapProgressBar').style.width = '100%';
   setFavBtnDisabled(false);
@@ -821,7 +851,7 @@ function selectVenue(v) {
 
 /* ================= 擴充建立模式:混合地圖 / 隨機地圖 ================= */
 // 兩模式皆輸出標準 battleConfig(走既有 showConfig 預覽 + 存入最愛 + 伺服器驗證管線)。
-// 混合:勾選地點等權混合,滑桿有值則覆蓋 mix(夾限走 mapgen 唯一縫);隨機:全由種子推導。
+// Mixed sources settle on explicit generation; every mode shares the favorite/preview pipeline.
 
 /** 建圖模式分段鈕同步(唯一出口) */
 function syncMapGenModeRow() {
@@ -829,18 +859,24 @@ function syncMapGenModeRow() {
     b.classList.toggle('on', b.dataset.gmode === app.mapGenMode);
   }
   const m = app.mapGenMode;
+  if (m !== 'mixed') cancelMixedGeneration();
   if ($('mixedPanel')) $('mixedPanel').style.display = m === 'mixed' ? '' : 'none';
   if ($('randomPanel')) $('randomPanel').style.display = m === 'random' ? '' : 'none';
   if ($('presetPanel')) $('presetPanel').style.display = m === 'preset' ? '' : 'none';
   if ($('resetSiteBtn')) $('resetSiteBtn').style.display = m === 'preset' ? '' : 'none';
   if ($('nextCandBtn') && m !== 'preset') $('nextCandBtn').style.display = 'none';
+  if ($('mapCandidates')) $('mapCandidates').hidden = m !== 'preset' || !app.mapSel?.candidates.length;
+  $('leafletMap').hidden = m === 'random';
+  $('randomMapPreview').hidden = m !== 'random';
+  $('mapRules').textContent = m === 'random' ? RANDOM_MAP_TEXT.rules : MAP_SELECT_TEXT.rules;
 }
 
 /** 生成結果走既有預覽+存檔管線(與 selectVenue 同出口) */
 function acceptGenCfg(cfg) {
   if (!cfg) { toast('生成失敗,請調整來源或種子後重試'); return; }
   warmModels();
-  app.mapSel?.showConfig(cfg);
+  if (isRandomMap(cfg)) drawRandomMapPreview($('randomMapPreview'), cfg);
+  else app.mapSel?.showConfig(cfg);
   app.venueSel = null;
   app.favCfg = cfg;
   triggerBackgroundMapSetup(cfg, cfg.placeName || '生成戰區');
@@ -850,28 +886,21 @@ function acceptGenCfg(cfg) {
   setFavBtnDisabled(false);
 }
 
-/** 混合來源勾選格(預設場地 18 張,等權) */
-function renderMixedSrcGrid() {
+/** Show each settled geographic layer rather than a centroid source pool. */
+function renderMixedSrcGrid(cfg = null) {
   const grid = $('mixedSrcGrid');
-  if (!grid || grid.children.length) return;
-  for (const v of PRESET_VENUES()) {
-    const lab = document.createElement('label');
-    lab.className = 'chk venue-btn';
-    lab.innerHTML = `<input type="checkbox" data-vid="${v.id}"> ${esc(v.country || '')} ${esc(v.name)} <span class="venue-type">${esc(v.type)}</span>`;
-    grid.appendChild(lab);
+  if (!grid) return;
+  grid.replaceChildren();
+  for (const role of MIXED_LAYERS) {
+    const row = document.createElement('div');
+    row.className = 'setup-info';
+    const source = cfg?.gen?.layers?.[role];
+    row.textContent = source ? MIXED_MAP_TEXT.source(MIXED_MAP_TEXT[role], source.name, source.roadCount) : MIXED_MAP_TEXT[role];
+    grid.appendChild(row);
   }
-  // 預設勾兩處不同主地形,首屏即有混合感
-  const boxes = [...grid.querySelectorAll('input[type="checkbox"]')];
-  if (boxes[0]) boxes[0].checked = true;
-  const other = boxes.find((b) => {
-    const v = VENUES.find((x) => x.id === b.dataset.vid);
-    const f = VENUES.find((x) => x.id === boxes[0].dataset.vid);
-    return v && f && (v.base || v.type) !== (f.base || f.type);
-  });
-  if (other) other.checked = true;
 }
 
-/** 地貌滑桿(全 0 = 依勾選地點自動混合) */
+/** Zeroed sliders retain the source-derived mix. */
 function renderMixedMixRows() {
   const wrap = $('mixedMixRows');
   if (!wrap || wrap.children.length) return;
@@ -913,27 +942,71 @@ function readMixedSliders() {
   return raw;
 }
 
-function mixedSourcesFromUI() {
-  return [...document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]:checked')]
-    .map((b) => VENUES.find((x) => x.id === b.dataset.vid))
-    .filter(Boolean)
-    .map((v) => ({ name: v.name, ll: v.ll, mix: v.mix, ampF: v.ampF ?? 1, weight: 1 }));
+let _mixedGeneration = null;
+function cancelMixedGeneration() {
+  _mixedGeneration?.abort();
+  _mixedGeneration = null;
+  for (const id of ['mixedGenBtn', 'mixedPick3Btn']) if ($(id)) $(id).disabled = false;
 }
 
-function genMixedFromUI() {
-  const sources = mixedSourcesFromUI();
-  if (!sources.length) { toast('請至少勾選一處混合來源'); return; }
-  acceptGenCfg(mixedMapConfig(sources, { teamSize: MAP_BUILD_TEAMSIZE, mixOverride: readMixedSliders() }));
+async function genMixedFromUI() {
+  cancelMixedGeneration();
+  const ctrl = _mixedGeneration = new AbortController();
+  app.favCfg = null;
+  app.mapSel?.reset();
+  renderMixedSrcGrid();
+  setFavBtnDisabled(true);
+  for (const id of ['mixedGenBtn', 'mixedPick3Btn']) $(id).disabled = true;
+  const current = () => _mixedGeneration === ctrl && !ctrl.signal.aborted && app.mapGenMode === 'mixed' && app.phaseShown === 'mapbuilder';
+  try {
+    const cfg = await generateMixedMap(VENUES, {
+      seed: (Math.random() * 4294967296) >>> 0, teamSize: MAP_BUILD_TEAMSIZE,
+      fetchRoads: fetchOsmRoads, signal: ctrl.signal, mixOverride: readMixedSliders(),
+      onProgress: (role, name) => {
+        if (current()) $('mapStatus').textContent = MIXED_MAP_TEXT.checking(MIXED_MAP_TEXT[role], name);
+      },
+    });
+    if (!current()) return;
+    if (!cfg) { $('mapStatus').textContent = MIXED_MAP_TEXT.noSources; return; }
+    acceptGenCfg(cfg);
+    renderMixedSrcGrid(cfg);
+  } catch (error) {
+    if (current()) {
+      console.error('Mixed map generation failed', error);
+      $('mapStatus').textContent = MIXED_MAP_TEXT.failed;
+    }
+  } finally {
+    if (_mixedGeneration === ctrl) cancelMixedGeneration();
+  }
+}
+
+function readRandomRanges() {
+  const ranges = {};
+  for (const [layer, entries] of Object.entries(RANDOM_MAP_RANGES)) {
+    ranges[layer] = {};
+    for (const key of Object.keys(entries)) ranges[layer][key] = ['min', 'max'].map(edge =>
+      document.querySelector(`#randomRanges input[data-layer="${layer}"][data-key="${key}"][data-edge="${edge}"]`).valueAsNumber);
+  }
+  return ranges;
 }
 
 function genRandomFromUI() {
+  app.favCfg = null;
+  setFavBtnDisabled(true);
+  $('randomMapPreview').replaceChildren();
+  $('randomHint').textContent = '';
   const raw = ($('randomSeedInput')?.value || '').trim();
   const seed = /^\d+$/.test(raw) ? Number(raw) >>> 0 : (Math.random() * 4294967296) >>> 0;
   if ($('randomSeedInput')) $('randomSeedInput').value = String(seed);
-  const cfg = randomMapConfig({ teamSize: MAP_BUILD_TEAMSIZE, seed, anchors: VENUES.map((v) => ({ ll: v.ll })) });
+  let cfg;
+  try { cfg = randomMapConfig({ teamSize: MAP_BUILD_TEAMSIZE, seed, ranges: readRandomRanges() }); }
+  catch {
+    $('mapStatus').textContent = RANDOM_MAP_TEXT.invalidRanges;
+    return;
+  }
   acceptGenCfg(cfg);
   if (cfg && $('randomHint')) {
-    $('randomHint').textContent = `中心 ${cfg.center.lat.toFixed(4)}, ${cfg.center.lng.toFixed(4)} ・ 種子 ${seed} ・ 同一種子跨端同一張圖`;
+    $('randomHint').textContent = RANDOM_MAP_TEXT.seed(seed);
   }
 }
 
@@ -944,6 +1017,7 @@ function initMapGenUI() {
   document.querySelectorAll('#mapGenModeRow .segb').forEach((b) => {
     b.onclick = () => {
       app.mapGenMode = b.dataset.gmode;
+      cancelMixedGeneration();
       app.favCfg = null;
       app.venueSel = null;
       app.mapSel?.reset();
@@ -951,27 +1025,51 @@ function initMapGenUI() {
       syncMapGenModeRow();
       syncVenueTips();
       $('mapStatus').textContent = app.mapGenMode === 'mixed'
-        ? '勾選兩處以上地點,按「生成混合地圖」。'
-        : app.mapGenMode === 'random' ? '按「生成隨機地圖」(種子空白即隨機)。'
-        : '選一個場地,或在地圖上點選蜂群主堡位置。';
+        ? MIXED_MAP_TEXT.ready
+        : app.mapGenMode === 'random' ? RANDOM_MAP_TEXT.ready
+        : MAP_SELECT_TEXT.idle;
+      if (app.mapGenMode !== 'random' && !app.mapSel) enterMapBuilder(app.mapGenMode);
     };
   });
   renderMixedSrcGrid();
+  $('mixedSetupHint').textContent = MIXED_MAP_TEXT.setup;
+  $('mixedMixHint').textContent = MIXED_MAP_TEXT.mixHint;
+  $('mixedPick3Btn').textContent = MIXED_MAP_TEXT.pick;
+  $('mixedClearBtn').textContent = MIXED_MAP_TEXT.clear;
+  $('randomSetupHint').textContent = RANDOM_MAP_TEXT.setup;
+  $('randomSeedInput').setAttribute('aria-label', RANDOM_MAP_TEXT.seedLabel);
+  const ranges = $('randomRanges');
+  ranges.replaceChildren();
+  for (const [layer, entries] of Object.entries(RANDOM_MAP_RANGES)) {
+    const section = document.createElement('details');
+    const title = document.createElement('summary');
+    title.textContent = `${RANDOM_MAP_TEXT.layerNames[layer]} · ${RANDOM_MAP_TEXT.rangeTitle}`;
+    section.appendChild(title);
+    for (const [key, [min, max]] of Object.entries(entries)) {
+      const row = document.createElement('label'); row.className = 'random-range-row';
+      const label = document.createElement('span'); label.textContent = RANDOM_MAP_TEXT.parameters[key]; row.appendChild(label);
+      for (const [i, edge] of ['min', 'max'].entries()) {
+        if (i) { const separator = document.createElement('span'); separator.textContent = '–'; row.appendChild(separator); }
+        const input = document.createElement('input'); input.type = 'number';
+        input.min = min; input.max = max; input.step = randomRangeStep(key); input.value = i ? max : min;
+        input.dataset.layer = layer; input.dataset.key = key; input.dataset.edge = edge;
+        input.setAttribute('aria-label', `${RANDOM_MAP_TEXT.parameters[key]} ${RANDOM_MAP_TEXT.rangeEdge[edge]}`);
+        row.appendChild(input);
+      }
+      section.appendChild(row);
+    }
+    ranges.appendChild(section);
+  }
   renderMixedMixRows();
   $('mixedGenBtn')?.addEventListener('click', genMixedFromUI);
   $('mixedSaveFavBtn')?.addEventListener('click', () => $('saveFavBtn')?.click());
-  $('mixedPick3Btn')?.addEventListener('click', () => {
-    const boxes = [...document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]')];
-    for (const b of boxes) b.checked = false;
-    for (let i = boxes.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [boxes[i], boxes[j]] = [boxes[j], boxes[i]];
-    }
-    boxes.slice(0, 3).forEach((b) => { b.checked = true; });
-    genMixedFromUI();
-  });
+  $('mixedPick3Btn')?.addEventListener('click', genMixedFromUI);
   $('mixedClearBtn')?.addEventListener('click', () => {
-    for (const b of document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]')) b.checked = false;
+    cancelMixedGeneration();
+    app.favCfg = null;
+    app.mapSel?.reset();
+    renderMixedSrcGrid();
+    $('mapStatus').textContent = MIXED_MAP_TEXT.ready;
   });
   $('randomGenBtn')?.addEventListener('click', genRandomFromUI);
   $('randomSaveFavBtn')?.addEventListener('click', () => $('saveFavBtn')?.click());
@@ -998,7 +1096,13 @@ function renderFavsOpenRoom() {
     b.onclick = () => {
       warmModels();   // 選定最愛地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
       app.teamSize = f.teamSize;
-      const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
+      const cfg = migrateFavCfg(f);
+      const audit = mapGeometryAudit(cfg, f.teamSize);
+      if (!audit.ok || !validMapSources(cfg)) {
+        app.favCfg = null; $('createRoomBtn').disabled = true;
+        $('openRoomStatus').textContent = audit.ok ? MAP_RULE_TEXT.roads : MAP_RULE_TEXT[audit.code];
+        return;
+      }
       savePrefs(app.isSuperDeploy ? { superTeamSize: f.teamSize } : { teamSize: f.teamSize });
       app.favCfg = cfg;
       triggerBackgroundMapSetup(cfg, f.name);
@@ -1028,6 +1132,7 @@ function renderFavsOpenRoom() {
 
 // ================= 開戰時刻與超級大戰(現場選人數 + 預設場地,或挑已存最愛;設定房名/公開性/環境後開房)=================
 function enterOpenRoom(opts = {}) {
+  app.mapSel?.reset();
   app.isSuperDeploy = !!opts.isSuper;
   show('openroom');
   app.favCfg = null;
@@ -1109,6 +1214,9 @@ function renderVenuesOpen() {
 
 /** 開戰時刻現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
 function selectVenueOpen(v) {
+  if (!venueAvailability(v, app.teamSize).available) {
+    app.favCfg = null; $('createRoomBtn').disabled = true; $('openRoomStatus').textContent = MAP_RULE_TEXT.unavailable; return;
+  }
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
   const cfg = venueConfig(v, app.teamSize);
   app.venueSelOpen = v;
@@ -1369,28 +1477,48 @@ async function resolveMapRot(cfg) {
   return cfg;
 }
 
-$('saveFavBtn')?.addEventListener('click', async () => {
-  const cfg = app.favCfg || app.mapSel?.buildConfig();
-  if (!cfg) return;
-  const prevStatus = $('mapStatus').innerHTML;   // 量測是短暫的過場,MUST 還原原本的選址摘要
+async function saveMapFavorite() {
+  const selected = app.favCfg, candidate = app.mapSel?.chosen;
+  const cfg = selected || app.mapSel?.buildConfig();
+  const current = () => app.phaseShown === 'mapbuilder' && app.favCfg === selected
+    && (selected || app.mapSel?.chosen === candidate);
+  if (!cfg || !current()) return;
+  const prevStatus = $('mapStatus').innerHTML;
+  let failedMessage = null;
   setFavBtnDisabled(true);
   app.mapSel?.resetPlaceNameStats?.();
   try {
     $('mapStatus').textContent = '取得地圖名稱(最久 5 秒)…';
-    await app.mapSel.fetchPlaceName(cfg);
+    if (!isRandomMap(cfg)) await app.mapSel?.fetchPlaceName(cfg);
+    if (!current()) return;
     if (cfg.center?.rot == null) $('mapStatus').textContent = '量測地圖主方位(對齊大馬路)…';
     await resolveMapRot(cfg);
-    const evidence = await prepareMapCreation(cfg, label => { $('mapStatus').textContent = label; return buildYield(); });
+    if (!current()) return;
+    const evidence = await prepareMapCreation(cfg, label => {
+      if (current()) $('mapStatus').textContent = label;
+      return buildYield();
+    });
+    if (!current()) return;
+    const audit = mapGeometryAudit(cfg, MAP_BUILD_TEAMSIZE);
+    if (!audit.ok || !validMapSources(cfg)) throw new Error(audit.ok ? MAP_RULE_TEXT.roads : MAP_RULE_TEXT[audit.code]);
     if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
-    if (app.mapSel.placeNameLastSkipped) {
+    if (!isRandomMap(cfg) && app.mapSel?.placeNameLastSkipped) {
       $('mapStatus').textContent = '地圖建立完成，補試地圖名稱(最久 5 秒)…';
       await app.mapSel.fetchPlaceName(cfg);
     }
   } catch (error) {
     console.error('Map creation failed:', error);
-    toast(MAP_EVIDENCE_COPY.failed);
+    failedMessage = error.message || MAP_EVIDENCE_COPY.failed;
+    if (current()) toast(failedMessage);
     return;
-  } finally { setFavBtnDisabled(false); $('mapStatus').innerHTML = prevStatus; }
+  } finally {
+    if (current()) {
+      setFavBtnDisabled(false);
+      if (failedMessage) $('mapStatus').textContent = failedMessage;
+      else $('mapStatus').innerHTML = prevStatus;
+    }
+  }
+  if (!current()) return;
   const name = prompt('地圖名稱:', cfg.placeName)?.trim();
   if (!name) return;
   saveFavorite(name, MAP_BUILD_TEAMSIZE, cfg);
@@ -1398,10 +1526,12 @@ $('saveFavBtn')?.addEventListener('click', async () => {
   const rotDeg = cfg.center.rot * 180 / Math.PI;
   toast(`⭐ 已加入最愛地圖:${name}(可到「開戰時刻」選用)`
     + (Math.abs(rotDeg) > 0.05 ? ` ・地圖主方位 ${rotDeg.toFixed(1)}°` : '')
-    + ` ・名稱查詢略過 ${app.mapSel.placeNameSkips || 0} 次`);
-});
+    + ` ・名稱查詢略過 ${app.mapSel?.placeNameSkips || 0} 次`);
+}
+$('saveFavBtn')?.addEventListener('click', saveMapFavorite);
 
 $('resetSiteBtn')?.addEventListener('click', () => {
+  cancelMixedGeneration();
   app.favCfg = null;
   app.mapSel?.reset();
   if ($('nextCandBtn')) {
@@ -1410,6 +1540,7 @@ $('resetSiteBtn')?.addEventListener('click', () => {
   }
 });
 $('backLobbyBtn')?.addEventListener('click', () => {
+  cancelMixedGeneration();
   app.favCfg = null;
   app.mapSel?.reset();
   if ($('nextCandBtn')) {
@@ -1419,10 +1550,10 @@ $('backLobbyBtn')?.addEventListener('click', () => {
   show('connect');
   refreshRooms();
 });
-$('goOpenRoomBtn')?.addEventListener('click', () => enterOpenRoom());
+$('goOpenRoomBtn')?.addEventListener('click', () => { cancelMixedGeneration(); enterOpenRoom(); });
 $('goMapBuilderBtn')?.addEventListener('click', () => enterMapBuilder());
 
-$('createRoomBtn')?.addEventListener('click', async () => {
+async function createSelectedRoom() {
   const cfg = app.favCfg;
   if (!cfg) return;
   if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
@@ -1437,10 +1568,18 @@ $('createRoomBtn')?.addEventListener('click', async () => {
   const isSuper = !!app.isSuperDeploy;
   cfg.super = isSuper;
 
-  // 圖資由背景視窗繼續跑,不阻塞開房;開戰後由載入進度頁(mapEvidenceGate)等圖資再建立遊戲。
-  prepareMapCreation(cfg, () => {}).catch((error) => console.warn('Map preparation degraded:', error));
-  if (app.phaseShown !== 'openroom' || app.favCfg !== cfg) { $('createRoomBtn').disabled = !app.favCfg; return; }
-
+  // Source qualification settles before sending the room recipe on any transport.
+  await prepareMapCreation(cfg, label => {
+    if (app.phaseShown === 'openroom' && app.favCfg === cfg) $('openRoomStatus').textContent = label;
+    return buildYield();
+  });
+  if (app.phaseShown !== 'openroom' || app.favCfg !== cfg) return;
+  const audit = mapGeometryAudit(cfg, app.teamSize);
+  if (!audit.ok || !validMapSources(cfg)) {
+    $('openRoomStatus').textContent = audit.ok ? MAP_RULE_TEXT.roads : MAP_RULE_TEXT[audit.code];
+    $('createRoomBtn').disabled = false;
+    return;
+  }
   app.net?.send({
     t: 'createRoom',
     name: myName(),
@@ -1453,7 +1592,8 @@ $('createRoomBtn')?.addEventListener('click', async () => {
     ctrl: ctrlPref(),
     battleConfig: cfg,
   });
-});
+}
+$('createRoomBtn')?.addEventListener('click', createSelectedRoom);
 $('backFromOpenRoomBtn')?.addEventListener('click', () => {
   app.favCfg = null;
   show('connect');
@@ -2587,7 +2727,7 @@ function prebuildKey(cfg) {
   // `defSide` MUST 進 key:劇情戰役的塔位是非對稱的(只有防守方有塔)⇒ 換邊就是換一個世界,
   // 漏掉它會讓房間階段預建好的地形被原樣沿用,而塔的淨空/墩座全長在錯的那一側。
   return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, cfg.defSide || null,
-    cfg.architectureSeed || 0, devOsmFixtureName(), MAP_EVIDENCE.VERSION, SVS_CACHE_VERSION]);
+    cfg.architectureSeed || 0, cfg.gen?.layers || null, devOsmFixtureName(), MAP_EVIDENCE.VERSION, SVS_CACHE_VERSION]);
 }
 
 /** 房間畫面的預載狀態列(#roomPreload 獨立於 roomMapInfo,renderRoom 的 sync 重繪不會覆寫進度) */
@@ -2719,6 +2859,7 @@ function onOsmRelay(m) {
  * ⇒ 一般到 await 那一刻早就清空了,不會多出一個一閃而過的狀態)。空字串 = 沒在等。
  */
 async function osmGate(cfg, onLabel = () => {}) {
+  if (isRandomMap(cfg)) return;
   const bbox = battleBBox(cfg);
   if (!app.isHost) {
     // 兩道不等的閘,少一道就是白等 20 秒:
@@ -2788,6 +2929,7 @@ function cancelOsmRetry() {
   _osmRetry = null;
 }
 function scheduleOsmRetry(cfg, key) {
+  if (isRandomMap(cfg)) { cancelOsmRetry(); return; }
   if (_osmRetry?.key === key) return;   // 同房已排程
   cancelOsmRetry();
   const st = { key, tries: 0, timer: null };
@@ -5698,7 +5840,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.documentElement.classList.add('app-ready');
   setTimeout(() => {
     try {
-      startPresetWarmup(VENUES.map((v) => ({ cfg: venueConfig(v, MAP_BUILD_TEAMSIZE), name: v.name })));
+      startPresetWarmup(VENUES.filter(v => venueAvailability(v).available).map((v) => ({ cfg: venueConfig(v, MAP_BUILD_TEAMSIZE), name: v.name })));
     } catch (err) { console.warn('預設地圖預熱未啟動:', err); }
   }, 3000);
   playPrologueIntro();

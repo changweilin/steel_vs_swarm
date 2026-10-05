@@ -18,8 +18,12 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ, xzToLL } from '../public/js/data.js';
+import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ, xzToLL, battleBBox } from '../public/js/data.js';
 import { procReliefAt, sanitizeProcRelief } from '../public/js/mapgen.js';
+import { mapSourceCenter } from '../public/js/mapLayerSources.js';
+import { MAP_ROAD_PROFILE } from '../public/js/mapRules.js';
+import { isRandomMap } from '../public/js/randomMapRules.js';
+import { randomMapSamplers } from '../public/js/randomMapSources.js';
 import { PED_PLAN, isPedestrianBridge, isPedestrianWay } from '../public/js/pedestrian.js';
 import { planBridgeDeck, structureLayer, bridgeConnections } from '../public/js/roadStructures.js';
 import { osmRoadQuery, OSM_ROAD_QUERY_VERSION } from '../public/js/osmQuery.js';
@@ -101,11 +105,8 @@ export const underpassPlan = evalBlock('const UND = {', 'underpassPlan',
   { ROAD_SEG, WATER, densify, tunnelCoverIntervals, TUN_COV_MIN });
 // 結構隧道資格 —— 與遊戲同一份原文(人行/室內 tunnel way 不進結構管線 ⇒ 不成洞;
 // 2026-07-29 澀谷側壁破口案)。判定與候選診斷 MUST 同吃這個閘,否則稽核比執行期多洞。
-export const strucTunnel = (() => {
-  const m = /const strucTunnel = \(tags\) =>[\s\S]*?;\n/.exec(bsrc);
-  if (!m) throw new Error('biomes.js 找不到 strucTunnel');
-  return new Function('isPedestrianWay', `${m[0]}return strucTunnel;`)(isPedestrianWay);
-})();
+import { structuralTunnel as strucTunnel } from '../public/js/roadSemantics.js';
+export { strucTunnel };
 export const roadWidth = (tags) => {
   const base = ROAD_W[tags.highway] || 4;
   const lanes = parseInt(tags.lanes, 10) || 0;
@@ -209,7 +210,12 @@ async function getBuf(url, tries = 4) {
 }
 
 /** terrarium 高程取樣器(lat,lng → 公尺);磚快取在 .scen_cache/tile_z_x_y.png */
-export async function elevSampler(bbox) {
+export async function elevSampler(bbox, cfg = null) {
+  if (isRandomMap(cfg)) {
+    const sample = randomMapSamplers(cfg);
+    return (lat, lng) => sample.elevationAt(...llToXZ(lat, lng, cfg.center));
+  }
+  if (cfg?.gen?.mode === 'mixed') bbox = battleBBox(cfg, mapSourceCenter(cfg, 'elevation'));
   const z = TERRAIN.ELEV_ZOOM;
   const tx0 = Math.floor(lon2tx(bbox.minLng, z)), tx1 = Math.floor(lon2tx(bbox.maxLng, z));
   const ty0 = Math.floor(lat2ty(bbox.maxLat, z)), ty1 = Math.floor(lat2ty(bbox.minLat, z));
@@ -251,6 +257,7 @@ export async function elevSampler(bbox) {
  */
 export function buildHeightField(cfg, bbox, sampleElev) {
   const N = TERRAIN.GRID_N, center = cfg.center;
+  const elevCenter = mapSourceCenter(cfg, 'elevation');
   const [minX, maxZs] = llToWorld(bbox.minLat, bbox.minLng, center);
   const [maxX, minZs] = llToWorld(bbox.maxLat, bbox.maxLng, center);
   const minZ = Math.min(minZs, maxZs), maxZ = Math.max(minZs, maxZs);
@@ -259,7 +266,9 @@ export function buildHeightField(cfg, bbox, sampleElev) {
     const lat = bbox.maxLat + (bbox.minLat - bbox.maxLat) * i / (N - 1);
     for (let j = 0; j < N; j++) {
       const lng = bbox.minLng + (bbox.maxLng - bbox.minLng) * j / (N - 1);
-      const h = sampleElev(lat, lng);
+      const [x, z] = llToWorld(lat, lng, center);
+      const [sourceLat, sourceLng] = cfg.gen?.mode === 'mixed' ? xzToLL(x, z, elevCenter) : [lat, lng];
+      const h = sampleElev(sourceLat, sourceLng);
       heights[i * N + j] = Number.isFinite(h) ? h : 0;
     }
   }
@@ -281,7 +290,8 @@ export function buildHeightField(cfg, bbox, sampleElev) {
       prev = p;
     }
   }
-  const amp = TERRAIN.AMP * (1 - Math.min(1, cfg.venue?.mix?.urban || 0) * TERRAIN.AMP_URBAN_F);
+  const amp = TERRAIN.AMP * (1 - Math.min(1, cfg.venue?.mix?.urban || 0) * TERRAIN.AMP_URBAN_F)
+    * ((cfg.gen?.mode === 'mixed' || isRandomMap(cfg)) && Number.isFinite(cfg.venue?.ampF) ? cfg.venue.ampF : 1);
   // 程序化起伏鏡射(terrain.js 同段;mapgen.js 唯一實作,此處只轉呼)
   const proc = sanitizeProcRelief(cfg.procRelief);
   if (segs.length) {
@@ -445,7 +455,7 @@ async function overpass(q) {
 // ⇒ 這裡看到的是超集,實務上等價(L1 bbox 只有 ~0.28 km²,執行期額度遠大於實際 way 數)。
 // 能「載著兵線走」的道路類別 = 烘焙兵線用的車行道(tools/bake_venue_lanes.mjs 的 DRIVABLE)。
 // 兵線是車行路線 ⇒ 人行地下道/人行空橋**不可能**是兵線本身走的那一條,只可能是它上/下方的結構。
-export const LANE_HW = /^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service)(_link)?$/;
+export const LANE_HW = MAP_ROAD_PROFILE;
 const OSM_API = 'https://api.openstreetmap.org/api/0.6/map';
 const DRIVE_HW = /^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|footway|pedestrian)$/;
 const RAIL_KIND = /^(rail|subway|light_rail|monorail|narrow_gauge|tram)$/;

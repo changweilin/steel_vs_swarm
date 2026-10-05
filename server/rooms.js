@@ -9,8 +9,7 @@ import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
 import {
   SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, resolveEnv,
-  BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit,
-  laneCountFor, mapArg, mapPlan,
+  BOT_DIFF, DEFAULT_BOT_DIFF,
 } from '../public/js/data.js';
 // Control-mode values (room-wide, host-finalized) live only in ctrlmode.js -- copying the
 // strings here would fork a second option table (a fourth mode would miss one copy). That file
@@ -25,19 +24,15 @@ import { sanitizeEvidenceRelay } from '../public/js/mapEvidenceRelay.js';
 import { sanitizeOsmRelay, osmRelayKey } from '../public/js/osmrelay.js';
 // Extended-map seams (zero Node API, shared with solo): mix-clamping truth lives in mapgen;
 // the validator reads results without rewriting formulas.
-import { MAX_WATER_WET, sanitizeProcRelief } from '../public/js/mapgen.js';
+import { sanitizeProcRelief } from '../public/js/mapgen.js';
+import { validMixedMap } from '../public/js/mapLayerSources.js';
+import { MIXED_MAP_TEXT } from '../public/js/mixedMapContent.js';
+import { validRandomMap } from '../public/js/randomMapRules.js';
+import { RANDOM_MAP_TEXT } from '../public/js/randomMapContent.js';
+import { mapGeometryAudit, settleMapMetrics } from '../public/js/mapRules.js';
+import { validMapSources } from '../public/js/mapSourceValidation.js';
+import { MAP_RULE_TEXT } from '../public/js/mapRulesContent.js';
 
-// Lanes (lat/lng) -> game meters (arbitrary origin; towerLayoutAudit uses relative distances only). Same conversion as mapSelect / baking.
-const EARTH_M = 6371000, SC_GAME = 1 / MAPGEO.REAL_SCALE;
-function lanesToGame(lanes) {
-  const o = lanes[0]?.[0];
-  if (!o) return null;
-  const cosO = Math.cos(o[0] * Math.PI / 180);
-  return lanes.map((lane) => lane.map(([lat, lng]) => [
-    (lng - o[1]) * Math.PI / 180 * EARTH_M * cosO * SC_GAME,
-    (lat - o[0]) * Math.PI / 180 * EARTH_M * SC_GAME,
-  ]));
-}
 
 function sanitizeName(s) {
   return String(s || '').replace(/[^\w一-鿿\- ]/g, '').trim().slice(0, 16) || '指揮官';
@@ -49,41 +44,14 @@ function genToken() {
 /** Pre-room battlefield-config validation: returns an error message or null (same bar across all three modes, solo included) */
 export function validateBattleConfig(cfg, teamSize) {
   if (!cfg || !cfg.bases || !cfg.center || !Array.isArray(cfg.lanes)) return '戰場設定不完整,請先建立/選擇地圖';
-  // Map kind (standard / story campaign) has one reading in `mapArg` -- shared with solveTowerSites,
-  // scale functions, and lane counts, so validation and generation can never disagree on a battle's kind.
-  // Geometry checks below consume client-submitted JSON; a malformed shape (map/number/array)
-  // throws TypeError deep inside -- so MUST return error strings, MUST NOT throw: a throw
-  // exits the whole server process = every room disconnects. The host sees one sentence, not a fleet-wide outage.
-  try {
-    const mapA = mapArg(cfg);
-  const plan = mapPlan(mapA);
-  const L = laneCountFor(teamSize, mapA);
-  if (cfg.lanes.length !== L) {
-    return plan.mode === 'story'
-      ? `劇情戰役恆為 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`
-      : `隊伍 ${teamSize}v${teamSize} 需要 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`;
-  }
-  if (!(cfg.distM >= cfg.diagM * 0.8)) {
-    return `主堡距離 ${Math.round(cfg.distM)}m 未達地圖對角線 80%(${Math.round(cfg.diagM * 0.8)}m)`;
-  }
-  // 規則 #4(權威把關):此兵線幾何佈出的砲塔會殘餘 >80% 重疊或疊塔 → 拒絕(自訂/預設同標準;客戶端掃描已預濾)
-  // 型態 MUST 傳下去:劇情戰役只有一側有塔,拿完整版的解來驗等於檢查
-  // 一批不會生成的塔,會把本來合法的地圖擋在門外(見 towerLayoutAudit)
-  const game = lanesToGame(cfg.lanes);
-  if (!game || !towerLayoutAudit(game, mapA).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
-  // 規則(權威把關):同一 L 內兵線互不接觸/交叉(任兩線中段最近距離須 ≥ 20m 真實;含立體交叉亦禁)
-  if (!laneSeparationAudit(game).ok) return '此地圖的兵線互相接觸或交叉(任兩線最近距離須 ≥ 20m),請改選其他推薦點或位置';
-  // 規則(權威把關):地貌水域+沼澤 ≤ 50%(混合/隨機地圖夾限;門檻住 mapgen.js MAX_WATER_WET)
-  if (cfg.venue && cfg.venue.mix) {
-    const m = cfg.venue.mix;
-    const ww = (Number(m.water) || 0) + (Number(m.wet) || 0);
-    if (!(ww <= MAX_WATER_WET + 1e-9)) return `此地圖水域+沼澤占比 ${(ww * 100).toFixed(0)}% 超過上限 50%,請重新生成`;
-  }
+  if (cfg.gen?.mode === 'mixed' && !validMixedMap(cfg)) return MIXED_MAP_TEXT.noRoadLanes;
+  if (cfg.gen?.mode === 'random' && !validRandomMap(cfg)) return RANDOM_MAP_TEXT.invalid;
+  const audit = mapGeometryAudit(cfg, teamSize);
+  if (!audit.ok) return MAP_RULE_TEXT[audit.code] || MAP_RULE_TEXT.shape;
+  if (!validMapSources(cfg)) return MAP_RULE_TEXT.roads;
   return null;
-  } catch {
-    return '戰場設定格式異常,請重新建立/選擇地圖';
-  }
 }
+
 
 /**
  * 地圖雙邊位置陣營隨機(2026-07-21):50% 機率對調兩主堡的陣營歸屬。同步反轉每條兵線的點序,
@@ -433,6 +401,7 @@ export class RoomHub {
           cfg.procRelief = sanitizeProcRelief(cfg.procRelief);
         }
         const err = validateBattleConfig(cfg, teamSize);
+        if (!err) settleMapMetrics(cfg);
         if (err) { send({ t: 'error', msg: err }); return; }
         cfg.env = resolveEnv(cfg.env || {});   // 隨機項在此定案,全房共用同一組環境
         cfg.architectureSeed = Math.floor(Math.random() * 4294967296); // 每局建築外觀種子，伺服器定案

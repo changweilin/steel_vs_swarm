@@ -53,6 +53,11 @@ import {
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { seasonalEnvironment } from './seasonalEnvironment.js';
+import { mapSourceCenter } from './mapLayerSources.js';
+import { isRandomMap } from './randomMapRules.js';
+import { randomMapSources } from './randomMapSources.js';
+import { RANDOM_MAP_TEXT } from './randomMapContent.js';
+import { structuralTunnel } from './roadSemantics.js';
 import { makeFootprintIndex, blockerFoot } from './ground.js';
 import { buildHabitatScene } from './habitatRender.js';
 import { createHabitatSampler, planHabitatCanopy } from './habitat.js';
@@ -511,7 +516,7 @@ function forestTypeAt(terrain, x, z, roll, leafType = 'unknown') {
   const altitude = terrain.elevationAt?.(x, z) ?? terrain.natureAt?.(x, z) ?? terrain.heightAt(x, z);
   const environment = { ...forestEnvironmentAt(terrain, x, z), leafType };
   if (!Number.isFinite(environment.slope)) return null;
-  return pickTreeType(terrain.center?.lat, altitude, roll, forestSeed(x, z), environment);
+  return pickTreeType((terrain.regionCenter || terrain.center)?.lat, altitude, roll, forestSeed(x, z), environment);
 }
 
 // 神木吃四季:綠色主導(g 為最大通道)的樹冠/苔蘚/地衣零件自動標記 'gleaf' → 季節疊色
@@ -696,7 +701,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       const mangrove = TREE_SPECIES[type].roots === 'pneumatophore';
       if ((!mangrove && (gy < 0.4 || environment.wet))
         || (mangrove && (!environment.wet || terrain.waterY == null || gy < terrain.waterY - .8))
-        || treeHabitatWeight(type, terrain.center?.lat, altitude, environment) <= 0) continue;
+        || treeHabitatWeight(type, (terrain.regionCenter || terrain.center)?.lat, altitude, environment) <= 0) continue;
       (items[type] ??= []).push({
         x: gx, y: gy, z: gz, s,
         ry: rnd() * Math.PI * 2,
@@ -3757,7 +3762,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, sites, basesW, road
       const slope = battleGeologySlope((px, pz) => terrain.heightAt(px, pz), x, z, probeR);
       if (slope == null) continue;
       const environment = { ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z), slope,
-        latitude: terrain.center?.lat,
+        latitude: (terrain.regionCenter || terrain.center)?.lat,
         altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z),
         formationSeed: beaconSeed(fx, fz) };
       // 先建再驗:淘汰只是丟棄未進場景的 Group,rnd 序全房一致
@@ -3818,7 +3823,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, sites, basesW, road
       if (placedM.some((p) => Math.hypot(x - p.x, z - p.z)
         < r + p.r + (p.f === fields.length ? ROCKFIELD.GAP_M : 70))) continue;
       decorateMegalith(g, meta.anchor, rnd, s, { ...terrain.objectEnvironment, season: terrain.season,
-        latitude: terrain.center?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) });
+        latitude: (terrain.regionCenter || terrain.center)?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) });
       // 岩色隨生成/風化各異(2026-07-29):整顆色相/彩度/明度偏移 = 同名岩兩顆不同礦源;
       // 逐塊再抖一點明度 = 塊面風化深淺。只動 rockMat 標記的材質(綠冠/木門/描邊不動);
       // envMat 每次呼叫都建新材質,就地調色不會污染他顆。traverse 順序 = 加入序,rnd 序確定
@@ -4056,7 +4061,7 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
       const water = code === 1;
       const bio = water ? 'water' : code === 2 ? 'wet' : classifyImg(terrain.sampleColor?.(x, z)) || 'bare';
       const kinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k => ENVIRONMENT_OBJECTS[k].bio.includes(bio)
-        && environmentAvailable(k, { latitude: terrain.center?.lat, ...terrain.objectEnvironment }));
+        && environmentAvailable(k, { latitude: (terrain.regionCenter || terrain.center)?.lat, ...terrain.objectEnvironment }));
       if (!kinds.length) continue;
       const kind = kinds[Math.floor(rnd() * kinds.length)], def = ENVIRONMENT_OBJECTS[kind];
       const sampledSize = environmentSize(kind, localSeed);
@@ -4079,7 +4084,7 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
       if (!water && (wet || y < .4 || Math.abs(slopeDeg(rise, radius * 2)) > SLOPE.EASE_DEG)) continue;
       const parts = environmentParts(kind, { size, seed: localSeed, season: terrain.season || 'summer',
         environment: { ...terrain.objectEnvironment,
-          latitude: terrain.center?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) } });
+          latitude: (terrain.regionCenter || terrain.center)?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) } });
       if (water) {
         if (!Number.isFinite(terrain.waterY) || !def.ice) continue;
         y = terrain.waterY - parts[0].waterline;
@@ -4313,9 +4318,9 @@ async function fetchOsmFeatures(bbox) {
  * 道路路網(獨立 Overpass 查詢):與建物/鐵路分開,避免道路查詢過重或逾時時
  * 連帶拖垮既有的建物/鐵路渲染。失敗回 null → buildBiomes 退回以兵線為主要道路。
  */
-async function fetchOsmRoads(bbox) {
+export async function fetchOsmRoads(bbox, { evidence = false } = {}) {
   const inj = osmInOf(bbox, 'roads');   // 路網中繼(理由同 fetchOsmFeatures)
-  if (inj !== undefined) return inj && structuredClone(inj);
+  if (inj !== undefined && (!evidence || inj?.every(road => Number.isSafeInteger(road.id)))) return inj && structuredClone(inj);
   // 路網快取:兵線橋/地下道/隧道的唯一 OSM 輸入 —— 首次完整成功即定案,
   // 之後每場真橋/隧道 way 集合恆定(dropLaneBridges/dedupe/carve 皆純幾何 → 整條管線可重現)。
   // 兩級查詢、各自額度(2026-07-17 巴黎道路消失案):單一 `out geom 300` 在密路網市區
@@ -4323,9 +4328,9 @@ async function fetchOsmRoads(bbox) {
   // 一樣被犧牲。車道級與小徑分開給額(隨 bbox 面積縮放),幹道永不被 footway/path 擠掉。
   // 額度放大後 payload ~700KB、Overpass 實測 ~10s(舊 10s abort 必掐死)→ timeout 同步放寬。
   const { nMain, nMinor } = osmRoadQuotas(bbox);
-  const ckey = geoKey('osmR', 1, bbox, `q${nMain}-${nMinor}`);
+  const ckey = geoKey('osmR', evidence ? 2 : 1, bbox, `q${nMain}-${nMinor}`);
   const cached = await geoGet(ckey);
-  if (cached?.length) return cached;
+  if (cached?.length && (!evidence || cached.every(road => Number.isSafeInteger(road.id)))) return cached;
   const q = osmRoadQuery(bbox);
   return overpassQuery(q, (data) => {
     const roads = osmRoadsFromElements(data.elements);
@@ -4450,8 +4455,7 @@ const TUN_GAP_CLOSE = 36, TUN_COV_MIN = 18;
 // 側壁挖成走得出去的破口(側壁閘「側向地表高差 >2.6m」的前提被自家開挖打破)。
 // 消費端 = carve 指派 way._tun 的入口(唯一結構開關;buildRoads/markGradeCorridors 皆以
 // way._tun[ri].intervals 判結構性)與 audit_lane_scenarios 場景判定 —— MUST NOT 另寫第二份。
-const strucTunnel = (tags) => !!tags?.tunnel && (tags.indoor == null || tags.indoor === 'no')
-  && !isPedestrianWay(tags);
+const strucTunnel = structuralTunnel;
 /**
  * 隧道覆蓋區間(單一縫,2026-07-22):carve 呼叫端 / buildRoads / markGradeCorridors 三個
  * 消費端 MUST 共用這一份分類,否則開挖、牆/天花、走廊的「洞口位置」互相對不上(舊版各自
@@ -9483,7 +9487,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
     // 先切 run + 配款；整圈款式定案後，再解相鄰端面與轉角。
     // 固定高度加上同次取樣的地形範圍，貼坡表面與權威盒一起建立。
     let prevKind = null;
-    for (const r of planWallRuns(row, { environment: { latitude: terrain.center?.lat, venue: terrain.venue, mix: terrain.mix, ...terrain.objectEnvironment } })) {
+    for (const r of planWallRuns(row, { environment: { latitude: (terrain.regionCenter || terrain.center)?.lat, venue: terrain.venue, mix: terrain.mix, ...terrain.objectEnvironment } })) {
       const kinds = planWallKinds(r, row, prevKind);
       for (let i = r.i0; i < r.i1; i++) {
         plans.push({ s: row[i], e, step, kind: kinds[i - r.i0], tier: r.tier });
@@ -9512,7 +9516,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
     // 盒心 = 內面往圖界方向退半個厚度 ⇒ 內緣恆落在夾制線上(不管這一款多厚)
     const x = e.ax ? s.x : s.x + e.sz * hd2;
     const z = e.ax ? s.z + e.sz * hd2 : s.z;
-    const environment = { ...terrain.objectEnvironment, latitude: terrain.center?.lat,
+    const environment = { ...terrain.objectEnvironment, latitude: (terrain.regionCenter || terrain.center)?.lat,
       altitude: terrain.elevationAt?.(x, z) ?? s.hi };
     const seed = edgeSeed(x, z);
     const variant = wallVariant(kind, seed, kind === prevKind ? prevVariant : -1);
@@ -9810,7 +9814,7 @@ function buildBufferProps({ group, terrain }) {
       return p.kind === 'islet' && wy != null ? Math.max(y, wy) - 0.6 : y;
     };
     emitWallParts(batch, propParts(p.kind, p.seed, { season: terrain.season || 'summer',
-      environment: { ...terrain.objectEnvironment, latitude: terrain.center?.lat,
+      environment: { ...terrain.objectEnvironment, latitude: (terrain.regionCenter || terrain.center)?.lat,
         altitude: terrain.elevationAt?.(p.x, p.z) ?? gy(p.x, p.z) } }), p.x, gy(p.x, p.z), p.z, p.ry, p.s, gy);
   }
   flushPartBatch(group, batch, { wash: 0.5, cool: 0.5 });
@@ -9847,7 +9851,7 @@ function buildBackdrop({ group, terrain, ctr }) {
       return wy != null && b.kind === 'sea' ? Math.max(y, wy) - 1 : y;
     };
     emitWallParts(batch, backdropParts(b.kind, { len: b.len, h, seed: b.seed, season,
-      environment: { ...terrain.objectEnvironment, latitude: terrain.center?.lat,
+      environment: { ...terrain.objectEnvironment, latitude: (terrain.regionCenter || terrain.center)?.lat,
         altitude: terrain.elevationAt?.(b.x, b.z) ?? gy(b.x, b.z) } }),
       b.x, gy(b.x, b.z), b.z, b.ry, 1, gy);
   }
@@ -10256,6 +10260,10 @@ function densifyUrban({ seeds, generic, blocked, terrain, rnd, inb, occ, roadFac
  */
 export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = prepareMapEvidence } = {}) {
   const center = cfg.center;
+  const regionCenter = mapSourceCenter(cfg, 'regional');
+  const regionLocation = { lat: regionCenter.lat, lng: regionCenter.lng, venue: cfg.venue, country: cfg.venue?.country,
+    region: isRandomMap(cfg) ? cfg.gen.layers.regional.culture : null };
+  terrain.regionCenter = regionCenter;
   const season = cfg.env?.season || 'summer';
   const night = cfg.env?.time === 'night';
   const mix = cfg.venue?.mix || null;
@@ -10263,7 +10271,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   terrain.venue = cfg.venue || null;
   terrain.mix = mix;
   terrain.forestEnv = cfg.env?.forest || cfg.venue?.forest || {};
-  terrain.objectEnvironment = { ...terrain.forestEnv, ...cfg.env };
+  terrain.objectEnvironment = { ...terrain.forestEnv, ...cfg.env, latitude: regionCenter.lat };
   const rnd = mulberry32(
     (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) ^ ((cfg.teamSize || 5) << 20),
   );
@@ -10297,11 +10305,12 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   // 順序是硬約束:①洞口開挖先於植被/神木/建物 → 引道上的地物不再「先種在原地表、開挖後漂浮」;
   // ②隧道敞開段與橋樑走廊先進 blocked → 建物/巨木/巨石等障礙不會生成在地下道/隧道內與橋下淨空。
   // 此區全程不耗共享 rnd(fetch/合併/開挖/走廊皆確定性)⇒ 佈局亂數序列與舊版一致。
-  await onProgress?.(0.03, '讀取 OSM 圖資(建物/鐵路/道路/瀑布)…');
+  await onProgress?.(0.03, isRandomMap(cfg) ? RANDOM_MAP_TEXT.features : '讀取 OSM 圖資(建物/鐵路/道路/瀑布)…');
   // OSM 抓取不再以影像成敗為前提(2026-07-22 倫敦橋數浮動案):舊版 `if (terrain.sampleColor)`
   // 讓 Esri 影像失敗連鎖放棄整組 Overpass → 道路/真橋整套換成兵線備援,圖資逐局忽有忽無。
   // 影像與路網是獨立服務,各自失敗各自降級;離線時 fetch 快速失敗,不拖載入。
-  let [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
+  let [osmData, osmRoads] = isRandomMap(cfg) ? randomMapSources(cfg)
+    : await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
   // OSM 查詢一旦成功，即使 areas 為空也代表「這個 bbox 沒有面域」；只在整個來源回 null
   // 時才走程序城市 fallback。投影與分類共用 osmAreas.js，後續建物／landfield 不再各猜一次。
   const osmSource = osmData !== null && osmData !== undefined;
@@ -10335,7 +10344,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   if (evidence) installMapEvidence(terrain, evidence);
   let architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
-    center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
+    center, venue: cfg.venue, country: cfg.venue?.country, location: regionLocation, terrainEnvCode,
     environmentAt: (x, z) => ({ ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z) }),
     pois: osmData?.pois || [],
     roads: osmRoads || [], rails: osmData?.rails || [],
@@ -10566,7 +10575,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
   architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
-    center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
+    center, venue: cfg.venue, country: cfg.venue?.country, location: regionLocation, terrainEnvCode,
     environmentAt: (x, z) => ({ ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z) }),
     pois: osmData?.pois || [],
     roads: roadInput || osmRoads || [], rails: osmData?.rails || [],
@@ -10984,7 +10993,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
       heightAt: (x, z) => terrain.heightAt(x, z),
       envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
       seed: sceneSeed,
-      location: { center, venue: cfg.venue, country: cfg.venue?.country },
+      location: regionLocation,
       environmentAt: (x, z) => ({ ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z) }),
       utilityPoints: (osmData.pois || []).filter(p => p.tags?.power === 'generator').map(p => {
         const [x, z] = llToWorld(p.lat, p.lng, center);
@@ -11079,6 +11088,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const canopy = planHabitatCanopy({
     bounds: { minX: terrain.minX + inb, maxX: terrain.maxX - inb, minZ: terrain.minZ + inb, maxZ: terrain.maxZ - inb },
     seed: sceneSeed, maxPlants: vegTarget, sampleAt: habitatSampleAt,
+    densityScale: isRandomMap(cfg) ? cfg.gen.layers.regional.vegetation : 1,
   });
   urbanPts.push(...canopy.urban.filter(([x, z]) => cfg.synthetic
     || evidenceDryBiome(terrain.evidenceAt?.(x, z)) === 'urban'));
@@ -11492,7 +11502,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   for (const type in items) {
     for (const item of items[type]) {
       item.environment = { ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, item.x, item.z),
-        latitude: center.lat, altitude: terrain.elevationAt?.(item.x, item.z) ?? item.y };
+        latitude: regionCenter.lat, altitude: terrain.elevationAt?.(item.x, item.z) ?? item.y };
     }
     const meshes = buildVegMeshes(type, items[type], season);
     for (const m of meshes) group.add(m);
@@ -12342,7 +12352,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     reservedFootprints,
     areas: osmData?.areas || [],
     surfaceField: landField,
-    environment: { ...terrain.objectEnvironment, latitude: center.lat },
+    environment: { ...terrain.objectEnvironment, latitude: regionCenter.lat },
   });
   // 落點與建物/地被淘汰全部定案後才追加：只增加物理，不反向推移既有世界佈局。
   const trunkColliders = registerTreeTrunkColliders(items, blockers);

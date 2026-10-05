@@ -4,6 +4,7 @@
 
 | Change area | Guards | Invariant |
 |---|---|---|
+| Geographic road sources, qualification and saved recipes | `test/mapRules`, `test/mapPreparation`, `test/mapSelection --browser`, `test/mixedMap`, `test/randomMap`, `audit_mother_lanes`, `audit_lane_navigation`, `audit_osm_relay`, `audit_map_evidence`, `audit_client_syntax` | Source paths remain connected and owned; source/relief packets replay immutably; all admission paths use shared geometry; scalar reports cannot override coordinates; pending maps cannot claim verified roads; cancellation cannot restore stale selections. |
 | Habitat canopy, surface materials and street detail | `audit_habitat`, `shot_habitat`, `audit_map_evidence`, `audit_siteplan`, `audit_forest`, `audit_gpu_lifecycle`, `audit_client_syntax` | OSM holes/priorities, deterministic replay, triangle draping, conservative missing-data fallback, bounded instance batches and GPU teardown remain valid. |
 | Mapped sports and functional building differentiation | `audit_facility_fusion`, `audit_habitat`, `audit_building_motion`, `audit_scene_models`, `audit_building_damage`, `audit_gpu_lifecycle`, `audit_client_syntax` | Semantic POIs retain exact owners; religion/source/material precedence, fitted cultural roofs, sports envelopes, texture UVs and equipment collision remain deterministic and bounded. |
 | Weather accumulation, lightning scars and fire extinction | `audit_weather_surface`, `shot_weather_surface`, `audit_weather_dynamics`, `audit_weather_visuals`, `audit_unit_damage`, `audit_gpu_lifecycle` | History survives rejoin; recovery clears unit scorch; precipitation and one game day permanently extinguish lightning fires; deposited geometry stays outside collision. |
@@ -65,6 +66,8 @@
 | Open tunnels | `audit_open_tunnel` | Tunnel geometry behavior stays stable. |
 | Underpass qualification | `audit_underpass` | Centerline and full-width seam behavior stays convergent. |
 | Map bearing and rotation | `audit_road_grid` | Rotation stays an isometry for balance. |
+| Mixed geographic source selection and regional appearance | `test/mixedMap`, `test/mapSelection --browser`, `audit_mother_lanes`, `audit_map_evidence`, `audit_habitat`, `audit_seasonal_environment`, `audit_road_grid`, `audit_client_syntax` | All three source captures contain roads; real OSM lane coordinates and the surface battle frame survive borrowing elevation and regional priors; source keys prevent stale preparation and room replay preserves the recipe. |
+| Procedural random map rules, ranges and providers | `test/randomMap`, `test/mapSelection --browser`, `audit_mother_lanes`, `audit_map_evidence`, `audit_habitat`, `audit_seasonal_environment`, `audit_road_grid`, `audit_client_syntax` | Independent bounded layers replay without geographic queries; generated RGB/height/semantic inputs agree, mother roads connect to one street network, virtual coordinates only choose appearance, rainfall units and canopy density stay deterministic. |
 | Road pruning and direction quantization | `audit_road_grid` | Corridors consume one quantized network. |
 | Footbridges, entrances, rail corridors | `audit_pedestrian_plan` | Attachments add no blockers and share no randomness. |
 | Road paint and structure joints | `audit_road_joint` | Joint invariants stay unchanged. |

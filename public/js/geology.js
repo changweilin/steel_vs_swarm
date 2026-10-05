@@ -195,7 +195,7 @@ export function geologyEnvironment(input = {}) {
     volcanic: number(input.volcanic, 0, 0, 1), exposure: number(input.exposure, .5, 0, 1),
     sediment: number(input.sediment, .4, 0, 1), dissolution: number(input.dissolution, .4, 0, 1),
     human: number(input.human, 0, 0, 1),
-    slope: number(input.slope, 0, 0, 90), rainfall: number(input.rainfall, 0, 0, 1),
+    slope: number(input.slope, 0, 0, 90), rainfall: number(input.rainfallIntensity ?? input.rainfall, 0, 0, 1),
     instability: number(input.instability, 0, 0, 1), geothermal: number(input.geothermal, 0, 0, 1),
     gasPressure: number(input.gasPressure, 0, 0, 1), springPressure: number(input.springPressure, 0, 0, 1),
     impact: number(input.impact, 0, 0, 1), activity: number(input.activity, .7, 0, 1) };
