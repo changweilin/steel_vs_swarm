@@ -618,6 +618,7 @@ let _landTex = null;
 const _landField = { value: null };
 const _landAppearance = { value: null };
 const _landRect = { value: new THREE.Vector4(0, 0, 1, 1) };
+const _landTexel = { value: new THREE.Vector2(1, 1) };
 
 /** 中性場(還沒載入戰場、或展示台/角色預覽):恆 0.5 ⇒ 乘數恆 1 */
 function neutralWField() {
@@ -647,11 +648,12 @@ export function setLandField(data, nx, nz, bounds, appearance = null) {
   _landField.value = t;
   const colors = new THREE.DataTexture(appearance || new Uint8Array([0, 0, 0, 0]),
     appearance ? nx : 1, appearance ? nz : 1, THREE.RGBAFormat);
-  colors.minFilter = colors.magFilter = THREE.LinearFilter;
+  colors.minFilter = colors.magFilter = THREE.NearestFilter;
   colors.colorSpace = THREE.SRGBColorSpace;
   colors.wrapS = colors.wrapT = THREE.ClampToEdgeWrapping;
   colors.needsUpdate = true;
   _landAppearance.value = colors;
+  _landTexel.value.set(1 / nx, 1 / nz);
   _landRect.value.set(bounds.minX, bounds.minZ,
     1 / Math.max(1e-6, bounds.maxX - bounds.minX), 1 / Math.max(1e-6, bounds.maxZ - bounds.minZ));
   old?.dispose();
@@ -1631,6 +1633,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uLandField = _landField;
     shader.uniforms.uLandAppearance = _landAppearance;
     shader.uniforms.uLandRect = _landRect;
+    shader.uniforms.uLandTexel = _landTexel;
     // 溶入:進度 + 該單位的世界原點(錨在單位自己身上 —— 拿純世界座標的話機體會從一張
     // 固定的網格裡「游」過去,與 ①-2 的斷筆錨點是同一條理由)
     shader.uniforms.uDis = mat.userData.celDisU || { value: 1 };
@@ -2021,23 +2024,8 @@ ${CEL_SEA_GLSL}
           vec2 lfUv = clamp( ( vCelWP.xz - uLandRect.xy ) * uLandRect.zw, 0.0, 1.0 );
           vec4 lf = texture2D( uLandField, lfUv );
           float z = floor( lf.r * 255.0 + 0.5 );
-          float v = floor( lf.g * 255.0 + 0.5 );
-          vec3 c = vec3( 0.44, 0.52, 0.36 );
-          if ( z < 0.5 ) c = v > 0.5 ? vec3( 0.16, 0.30, 0.39 ) : vec3( 0.25, 0.43, 0.48 );
-          else if ( z < 1.5 ) c = v > 0.5 ? vec3( 0.30, 0.43, 0.34 ) : vec3( 0.36, 0.46, 0.35 );
-          else if ( z < 2.5 ) {
-            c = v < 0.5 ? vec3( 0.42, 0.54, 0.31 ) : v < 1.5 ? vec3( 0.50, 0.59, 0.36 )
-              : v < 2.5 ? vec3( 0.35, 0.47, 0.28 ) : vec3( 0.53, 0.58, 0.29 );
-          } else if ( z < 3.5 ) {
-            c = v < 0.5 ? vec3( 0.48, 0.39, 0.29 ) : v < 1.5 ? vec3( 0.47, 0.45, 0.40 )
-              : v < 2.5 ? vec3( 0.64, 0.52, 0.34 ) : vec3( 0.45, 0.29, 0.20 );
-          } else if ( z < 4.5 ) {
-            c = v < 0.5 ? vec3( 0.42, 0.43, 0.42 ) : v < 1.5 ? vec3( 0.37, 0.49, 0.34 )
-              : v < 2.5 ? vec3( 0.34, 0.45, 0.31 ) : vec3( 0.55, 0.55, 0.52 );
-          } else if ( z < 5.5 ) c = v < 0.5 ? vec3( 0.47, 0.49, 0.48 ) : v < 1.5 ? vec3( 0.42, 0.43, 0.42 ) : vec3( 0.74, 0.78, 0.81 );
-          else c = v > 0.5 ? vec3( 0.29, 0.27, 0.26 ) : vec3( 0.39, 0.36, 0.34 );
           vec4 habitatColor = texture2D( uLandAppearance, lfUv );
-          c = mix( c, habitatColor.rgb, habitatColor.a );
+          vec3 c = celLandColor( lfUv, lf, habitatColor );
           float grain = ( lf.b - 0.5 ) * 0.16;
           diffuseColor.rgb = c * ( 1.0 + grain );
 
@@ -2497,6 +2485,50 @@ ${INK_PACK_GLSL}
         uniform sampler2D uLandField;
         uniform sampler2D uLandAppearance;
         uniform vec4 uLandRect;
+
+        uniform vec2 uLandTexel;
+        vec3 celLandPalette( vec4 lf ) {
+          float z = floor( lf.r * 255.0 + 0.5 );
+          float v = floor( lf.g * 255.0 + 0.5 );
+          vec3 c = vec3( 0.44, 0.52, 0.36 );
+          if ( z < 0.5 ) c = v > 0.5 ? vec3( 0.16, 0.30, 0.39 ) : vec3( 0.25, 0.43, 0.48 );
+          else if ( z < 1.5 ) c = v > 0.5 ? vec3( 0.30, 0.43, 0.34 ) : vec3( 0.36, 0.46, 0.35 );
+          else if ( z < 2.5 ) {
+            c = v < 0.5 ? vec3( 0.42, 0.54, 0.31 ) : v < 1.5 ? vec3( 0.50, 0.59, 0.36 )
+              : v < 2.5 ? vec3( 0.35, 0.47, 0.28 ) : vec3( 0.53, 0.58, 0.29 );
+          } else if ( z < 3.5 ) {
+            c = v < 0.5 ? vec3( 0.48, 0.39, 0.29 ) : v < 1.5 ? vec3( 0.47, 0.45, 0.40 )
+              : v < 2.5 ? vec3( 0.64, 0.52, 0.34 ) : vec3( 0.45, 0.29, 0.20 );
+          } else if ( z < 4.5 ) {
+            c = v < 0.5 ? vec3( 0.42, 0.43, 0.42 ) : v < 1.5 ? vec3( 0.37, 0.49, 0.34 )
+              : v < 2.5 ? vec3( 0.34, 0.45, 0.31 ) : vec3( 0.55, 0.55, 0.52 );
+          } else if ( z < 5.5 ) c = v < 0.5 ? vec3( 0.47, 0.49, 0.48 ) : v < 1.5 ? vec3( 0.42, 0.43, 0.42 ) : vec3( 0.74, 0.78, 0.81 );
+          else c = v > 0.5 ? vec3( 0.29, 0.27, 0.26 ) : vec3( 0.39, 0.36, 0.34 );
+          return c;
+        }
+        vec3 celLandSample( vec2 uv, vec4 center, vec3 fallback ) {
+          uv = clamp( uv, 0.0, 1.0 );
+          vec4 field = texture2D( uLandField, uv );
+          // Colour filtering must not move a waterline or soften a built footprint.
+          if ( field.r * 255.0 < 0.5 || abs( field.a - center.a ) > 0.5 ) return fallback;
+          vec4 appearance = texture2D( uLandAppearance, uv );
+          return mix( celLandPalette( field ), appearance.rgb, appearance.a );
+        }
+        vec3 celLandColor( vec2 uv, vec4 field, vec4 appearance ) {
+          vec3 base = mix( celLandPalette( field ), appearance.rgb, appearance.a );
+          if ( field.r * 255.0 < 0.5 || field.a > 0.5 ) return base;
+          // Decode nearest-filtered categories before mixing colours. World noise
+          // breaks the raster edge without consuming any scene-layout randomness.
+          vec2 grid = uv / uLandTexel - 0.5;
+          grid += vec2( celNoise( vCelWP.xz * 0.23 ), celNoise( vCelWP.zx * 0.23 + 19.7 ) ) * 0.5 - 0.25;
+          vec2 origin = ( floor( grid ) + 0.5 ) * uLandTexel;
+          vec2 weight = smoothstep( vec2( 0.0 ), vec2( 1.0 ), fract( grid ) );
+          return mix(
+            mix( celLandSample( origin, field, base ),
+                 celLandSample( origin + vec2( uLandTexel.x, 0.0 ), field, base ), weight.x ),
+            mix( celLandSample( origin + vec2( 0.0, uLandTexel.y ), field, base ),
+                 celLandSample( origin + uLandTexel, field, base ), weight.x ), weight.y );
+        }
         #endif
         #ifdef CEL_DIS
         uniform float uDis;

@@ -9,12 +9,12 @@ const crest = Math.min(...kinds.map(k => WALL_KINDS[k].depth)) / 2;
 const round = n => Math.round(n * 1e6) / 1e6;
 const terrains = [() => 4, (x, z) => 4 + x * .6 + z * .35,
   (x, z) => 4 + Math.sin(x * .13) * 5 + Math.cos(z * .11) * 3];
-function make(kind, fx, fz, ry, heightAt, joins) {
+function make(kind, fx, fz, ry, heightAt, joins, options = {}) {
   const def = WALL_KINDS[kind];
   const x = fx - Math.round(Math.sin(ry)) * def.depth / 2;
   const z = fz - Math.round(Math.cos(ry)) * def.depth / 2;
   const input = { len: 24, depth: def.depth, h: def.h, x, z, ry, heightAt,
-    fill: { depth: 62.5, crest, heightAt, joins } };
+    ...options, fill: { depth: 62.5, crest, heightAt, joins, geology: !!options.geology } };
   const result = buildSlopeBoundary(kind, input);
   return { result, input };
 }
@@ -25,11 +25,18 @@ function tops({ result, input }) {
     const mesh = p.g[1], rows = [];
     assert(mesh.vertices.every(Number.isFinite));
     assert(mesh.colors.every(Number.isFinite));
+    if (mesh.normals) {
+      assert.equal(mesh.normals.length, mesh.vertices.length);
+      for (let i = 0; i < mesh.normals.length; i += 3)
+        assert(Math.abs(Math.hypot(...mesh.normals.slice(i, i + 3)) - 1) < 1e-9);
+    }
     assert(mesh.faces.every(i => Number.isInteger(i) && i >= 0 && i < mesh.vertices.length / 3));
     for (let i = 0; i < mesh.surfaceVertexCount * 3; i += 3) {
       const [u, y, v] = mesh.vertices.slice(i, i + 3).map((n, a) => n + p.p[a]);
       rows.push([input.x + ca * u + sa * v, y, input.z - sa * u + ca * v,
-        ...mesh.colors.slice(i, i + 3)].map(round));
+        ...mesh.colors.slice(i, i + 3), ...(mesh.normals ?
+          [ca*mesh.normals[i]+sa*mesh.normals[i+2], mesh.normals[i+1],
+            -sa*mesh.normals[i]+ca*mesh.normals[i+2]] : [])].map(round));
     }
     // Every top vertex has a corresponding bottom at or below sampled ground.
     if (mesh.bottomVertexOffset) for (let i = 0; i < mesh.faces.length; i += 3) {
@@ -106,4 +113,12 @@ for (const kind of kinds) {
   assert.equal(buildSlopeBoundary(kind, { ...flat.input,
     fill: { ...flat.input.fill, heightAt: () => NaN } }), null);
 }
-console.log(`Boundary fill: ${seams} mixed/corner seams, continuous roofs, masonry contacts and invalid-sample omission passed.`);
+for (const season of ['summer', 'winter']) for (const ry of [0, Math.PI / 2]) {
+  const options = { season, geology: true, environment: { latitude: 65, altitude: 1800 } };
+  const ca = Math.round(Math.cos(ry)), sa = Math.round(Math.sin(ry));
+  const left = make('cliff', -12 * ca, 12 * sa, ry, terrains[2], [null, join('basaltspine')], { ...options, seed: 42 });
+  const right = make('basaltspine', 12 * ca, -12 * sa, ry, terrains[2], [join('cliff'), null], { ...options, seed: 983 });
+  const seam = item => unique(tops(item).filter(([x, , z]) => Math.abs(ca * x - sa * z) < 1e-5));
+  assert.deepEqual(seam(left), seam(right), season + ': differently seeded geology shares colours, snow and normals');
+}
+console.log(`Boundary fill: ${seams} mixed/corner seams, shared colours/normals/snow, continuous roofs, masonry contacts and invalid-sample omission passed.`);

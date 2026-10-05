@@ -18,6 +18,8 @@ Rock morphology belongs to `geologyMorphology.js`, with a separate seed stream a
 
 These are constrained visual interpretations of [glacial arêtes and horns](https://www.nps.gov/articles/nunataksareteshorns.htm), [exfoliation domes](https://www.nps.gov/places/000/geology-tour-formation-of-half-dome-stop-4.htm) and [sedimentary mesas and cuestas](https://home.nps.gov/meve/learn/nature/geology.htm), rather than surveyed terrain or an erosion simulation. The geology review exports the production meshes for Blender inspection and editable delivery.
 
+Mixed boundary silhouettes and woodland margins use the Blender-authored transition profile. Natural strips share world-space colours and end normals across straight joins and corners; woodland height and density ease toward artificial neighbours. The land shader decodes categorical texels before filtering colours, preserving waterlines and built footprints. The surface review exercises all land-zone pairs and texture replacement without changing the terrain or layout stream.
+
 The authoring and review tools live under `tools/scenery_authoring/`. Run `author.py` with Blender to reproduce the library and editable surface scene. The review command captures deployed models and exports them to the shared Blender studio through `preview.py`. Generated captures and `.blend` files live under ignored `out/scenery_review/`.
 
 Topology and civilian triangle budgets are checked by `test/sceneryAppearance.mjs`. Existing civilian, motion, hit, habitat, scene-model and GPU guards cover body fitting, animation, placement, batching and disposal.
