@@ -9954,7 +9954,7 @@ function buildBufferProps({ group, terrain }) {
   const wy = terrain.waterY;
   const plan = planBufferProps({
     minX: terrain.minX, maxX: terrain.maxX, minZ: terrain.minZ, maxZ: terrain.maxZ,
-    buffer: terrain.bufferM,   // 深度讀地形實際鋪的那一份(迷你地圖縮到 1/3;見 terrain.js ⑧)
+    buffer: terrain.bufferM,   // 深度讀地形實際鋪的那一份(見 terrain.js ⑧)
     step: EDGE_WALL.PROP_STEP_M * (lowPower ? 1.6 : 1),
     margin: edgeWallInsetM(),   // 讓開障礙環那一圈:布景的零件散得比落點遠,貼著圖界擺會伸進可玩區
     probe: (x, z) => {
@@ -11222,7 +11222,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const beaconsBuilt = placeBeacons({
     group, terrain, blocked, blockers, occ, osmBldHit,
     lanesW: cfg.lanes.map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
-    basesW, mapA: mapArg(cfg),   // 塔位錨點的型態(迷你只有前線那一組;劇情戰役只有防守方有塔)
+    basesW, mapA: mapArg(cfg),   // 塔位錨點的型態(劇情戰役只有防守方有塔)
   });
   // 主堡旗陣:純表現層、零共享 rnd ⇒ 排在這裡不推移後面的植被序列(§2.3)
   const baseFlags = placeBaseFlags({ group, terrain, blocked, basesW, nation });

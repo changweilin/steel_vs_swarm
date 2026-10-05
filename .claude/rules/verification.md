@@ -72,8 +72,7 @@
 | Walkability | `audit_traverse` | Lanes and structures stay traversable. |
 | Clearance heights | `audit_traverse` | Unit height derives without hand-written constants. |
 | Climb routes and cross sections | `audit_climb` | Both ends judge the same box identically. |
-| Mini map and tower layout | `audit_mini_map` | Mini geometry stays isolated from full battles. |
-| Lane baking keys and tower ranges | `audit_mini_map`, `audit_story_map` | Shared short-lane geometry stays identical. |
+| Lane baking keys and tower ranges | `audit_story_map` | Shared short-lane geometry stays identical. |
 | Venue menu descriptions | `audit_ui_layout` | Summaries derive from venue config and tactics. |
 | View lock | `audit_view_lock` | Lock behavior stays consistent across layouts. |
 | Spectator camera | `audit_spectator_cam` | Spectator behavior stays consistent across layouts. |

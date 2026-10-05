@@ -190,6 +190,10 @@ export const MAPGEO = {
   // 門檻 MUST < 180(≥180 = 允許完全背對主軸,語意破產);再調整前 MUST 重跑分布實測。
   // 結算縫 = laneTurnAccumAudit();bake 硬門檻、mapSelect 複驗共用同一支。
   TURN_ACCUM_MAX_DEG: 150,
+  // 左右路(外側兵線)的單次放寬:偏航累積可**單次**越過 150° 直到此值,
+  // 回落到 150° 以內後再度越過即淘汰(第二次回到 150° 限制)。中路不放寬。判定縫仍是
+  // laneTurnAccumAudit(pts, { side: true });哪條算外側由 laneIsSide 唯一決定。
+  TURN_ACCUM_SIDE_ONCE_DEG: 200,
   // 兵線互不接觸/交叉(規則,2026-07-20 定奪:全禁,含立體交叉)。同一 L 內任兩條兵線,排除
   // 兩座主堡的共享扇出段(沿 A→B 主軸進度落在 [SKIP,1−SKIP] 之外者豁免——三線由同一主堡扇出
   // 必於此帶收斂)後,中段最近距離 MUST ≥ LANE_MIN_SEP_M 且 2D 不得相交。橋/隧立體交叉亦禁:
@@ -445,22 +449,31 @@ export function laneUTurnAudit(pts) {
  * 任一時刻 |偏航| 超出門檻 = 出界淘汰;出堡/抵達接駁段(首尾取樣段)一樣受檢。
  * 恰好落在門檻上 MUST 算範圍**內**合法 ⇒ 門檻比較含微小浮點餘裕。
  * 回傳 { ok, maxAbsDeg, at }(at = 偏航峰值處沿線距離,無則 -1)。
+ * `side: true`(左右路):|偏航| 可**單次**連續越過 150° 至 TURN_ACCUM_SIDE_ONCE_DEG;
+ * 回落到 150° 內後再越過 = 第二次 ⇒ 淘汰。中路(預設)一律硬 150°。
  */
-export function laneTurnAccumAudit(pts) {
+export function laneTurnAccumAudit(pts, { side = false } = {}) {
   if (!pts || pts.length < 3) return { ok: true, maxAbsDeg: 0, at: -1 };
   const { heads } = laneHeads(pts);
   if (!heads.length) return { ok: true, maxAbsDeg: 0, at: -1 };
   const axis = Math.atan2(pts[pts.length - 1][1] - pts[0][1], pts[pts.length - 1][0] - pts[0][0]);
   const norm = (a) => (a > Math.PI ? a - Math.PI * 2 : (a < -Math.PI ? a + Math.PI * 2 : a));
+  const LIM = MAPGEO.TURN_ACCUM_MAX_DEG + 1e-9;
+  const ONCE = (side ? MAPGEO.TURN_ACCUM_SIDE_ONCE_DEG : MAPGEO.TURN_ACCUM_MAX_DEG) + 1e-9;
   let acc = norm(heads[0].head - axis);
   let maxAbs = Math.abs(acc) * 180 / Math.PI, atMax = heads[0].d;
+  let excursions = maxAbs > LIM ? 1 : 0, over = maxAbs > LIM;
   for (let j = 1; j < heads.length; j++) {
     acc += norm(heads[j].head - heads[j - 1].head);
     const a = Math.abs(acc) * 180 / Math.PI;
     if (a > maxAbs) { maxAbs = a; atMax = heads[j].d; }
+    if (a > LIM && !over) excursions++;
+    over = a > LIM;
   }
-  return { ok: maxAbs <= MAPGEO.TURN_ACCUM_MAX_DEG + 1e-9, maxAbsDeg: maxAbs, at: atMax };
+  return { ok: maxAbs <= ONCE && excursions <= (side ? 1 : 0), maxAbsDeg: maxAbs, at: atMax };
 }
+/** 兵線是否為左右路(外側):2 線皆是、3 線取上下;單線(中路)否。唯一判定,MUST NOT 另寫。 */
+export const laneIsSide = (i, count) => count === 2 || (count === 3 && i !== 1);
 
 /**
  * 兵線「橋/隧只能從出入口進出」稽核(生成期圖論,2026-07-28 使用者需求
