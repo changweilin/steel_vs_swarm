@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { AMBIENT_SURFACES } from './ambientMeshData.js';
+import { runtimeMeshDataGeometry } from './runtimePartModel.js';
 
 // Radial rings share their angular phase, keeping the surface closed after deformation.
 function ringsGeometry(rings, sides, point) {
@@ -18,12 +20,10 @@ function ringsGeometry(rings, sides, point) {
 }
 
 export function flameGeometry(radius, height) {
-  const profile = [0, .65, .9, .65, .48, .24, 0];
-  return ringsGeometry(profile.length, 9, (row, angle) => {
-    const t = row / (profile.length - 1), r = radius * profile[row] * (1 + .13 * Math.sin(angle * 3 + t * 5));
-    return [r * Math.cos(angle) + radius * .6 * t * t, height * (t - .5),
-      r * Math.sin(angle) + radius * .14 * Math.sin(t * Math.PI * 2)];
-  });
+  const geometry = runtimeMeshDataGeometry(AMBIENT_SURFACES.flame);
+  geometry.deleteAttribute('color');
+  geometry.scale(radius * 2, height, radius * 2);
+  return geometry;
 }
 
 export function smokeGeometry(radius) {

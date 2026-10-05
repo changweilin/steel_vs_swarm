@@ -47,6 +47,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
 const src = readSrc('public', 'js', 'wildlife.js');
 const bio = readSrc('public', 'js', 'biomes.js');
+const render = readSrc('public', 'js', 'wildlifeRender.js');
 
 // 壞版一律走「改常數 / 包一層」,MUST NOT 改斷言的期望值
 if (BK.spring) W.FLOCK.SPRING = 0.05;
@@ -108,8 +109,9 @@ console.log('Ⅰ 檔案邊界');
   ok(!/\bTHREE\b/.test(code), 'wildlife.js 零 THREE(這才是四項積分器能離線行為直測的原因)');
   ok(!/Math\.random/.test(code), '全檔零 `Math.random`(A4:確定性散布路徑)');
   const imps = (code.match(/^import .*$/gm) || []);
-  ok(imps.length === 2 && imps.some((l) => /rng\.js/.test(l)) && imps.some((l) => /data\.js/.test(l)),
-    `只 import rng.js(亂數唯一縫)+ data.js(阻尼唯一縫 frictionFPS)—— 現況 ${imps.length} 條`);
+  ok(imps.length === 3 && imps.some((l) => /rng\.js/.test(l)) && imps.some((l) => /data\.js/.test(l))
+    && imps.some((l) => /ambientMeshData\.js/.test(l)),
+    'Wildlife rules import only shared RNG, damping and render-free authored mesh data');
   ok(/frictionFPS\(/.test(code) && !/\*=\s*0\.9\d/.test(code),
     '摩擦走 `frictionFPS(k, dt)`,MUST NOT 寫 `v *= 0.99`(那是幀率相依的)');
   ok(!/Math\.min\(1,\s*dt\s*\*/.test(code) && (code.match(/Math\.exp/g) || []).length === 0,
@@ -244,6 +246,13 @@ console.log('\nⅥ 剪影下限(鳥在動漫背景裡是剪影)');
   const parts = W.birdParts();
   const box = (p) => {
     const [t, a, b, c] = p.g;
+    if (t === 'mesh') {
+      const [px = 0, py = 0, pz = 0] = p.p || [];
+      const axis = k => a.vertices.filter((_, i) => i % 3 === k);
+      return { x0: px + Math.min(...axis(0)), x1: px + Math.max(...axis(0)),
+        y0: py + Math.min(...axis(1)), y1: py + Math.max(...axis(1)),
+        z0: pz + Math.min(...axis(2)), z1: pz + Math.max(...axis(2)) };
+    }
     let hx, hy, hz;
     if (t === 'box') { hx = a / 2; hy = b / 2; hz = c / 2; } else if (t === 'cone') { hx = a; hy = b / 2; hz = a; } else { hx = hy = hz = a; }
     const [px = 0, py = 0, pz = 0] = p.p || [];
@@ -322,19 +331,20 @@ console.log('\nⅦ 幀率無關(摩擦走 frictionFPS 的直接推論)');
 console.log('\nⅧ 接線(biomes.js)');
 {
   ok(/function buildFlocks\(/.test(bio), '建構出口恰一支 `buildFlocks`');
-  ok(/dynamics\.push\(\(dt\) => \{[\s\S]{0,350}?flockStep/.test(bio),
+  ok(/dynamics\.push\(\(dt\) => wildlife\.update\(dt\)\)/.test(bio) && /wildlifeStep\(state\.st, t, state\.elapsed\)/.test(render),
     '逐幀更新推進**既有的** `dynamics` 桶(MUST NOT 在 game.js 另開第二條更新迴圈)');
-  ok(/const t = celWindTime\(\);/.test(bio),
+  ok(/t = celWindTime\(\)/.test(render),
     '時鐘吃 `celWindTime()`(雲 / 植被同一支;自己數 dt 的話暫停一次就與地面錯開)');
   const seg = /function buildFlocks\([\s\S]*?\n\}\n/.exec(bio)?.[0] || '';
-  ok(/frustumCulled = false/.test(seg),
+  ok(/frustumCulled = false/.test(render),
     '`frustumCulled = false`(整群橫跨全圖,包圍球恆過期 ⇒ 某些鏡頭角度整批消失)');
-  ok(/castShadow = false/.test(seg) && !/castShadow = true/.test(seg),
+  ok(/castShadow = false/.test(render) && !/castShadow = true/.test(render),
     '不投影(投影旗標只有 makeUnit 與 buildGroundCover 兩個縫,§2.1 F 時間流逝 ⑧)');
-  ok(/instanceMatrix\.needsUpdate = true/.test(seg),
+  ok(/instanceMatrix\.needsUpdate = true/.test(render),
     '每幀 `instanceMatrix.needsUpdate = true`(忘了就是鳥群凍結在出生位置,而每一支稽核全綠)');
-  ok(/const dens = visualPref\('birds'\);/.test(seg) && /if \(BIRDS_OFF \|\| !\(dens > 0\)\) return 0;/.test(seg),
-    '`birds = 0` 時不建曲線(零 mesh、零 dynamics 條目);預設密度由 visualPrefs 定案');
+  ok(/const dens = visualPref\('birds'\);/.test(seg) && /BIRDS_OFF \|\| !\(dens > 0\) \? \[\]/.test(seg)
+    && !/BIRDS_OFF[^\n]*return 0/.test(seg),
+    'Bird density only gates bird routes; fish and terrestrial animals retain independent controls');
   ok(/\[?\?&\]birds=0/.test(bio.replace(/\\/g, '')) || /birds=0/.test(bio),
     '`?birds=0` killswitch(同 ?petal=0 / ?gait=0 / ?morph=0 的 A/B 慣例)');
   ok(!/lanes|towerSites|basesW/.test(seg.replace(/\/\/.*$/gm, '')),

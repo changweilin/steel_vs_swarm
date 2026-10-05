@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { ROOT, readSrc } from './audit_src.mjs';
+import { ROOT, readSrc, grabFn } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { TEAM, xzToLL } from '../public/js/data.js';
 import { RoomHub } from '../server/rooms.js';
@@ -129,7 +129,12 @@ const main = readSrc('public/js/main.js'), biomes = readSrc('public/js/biomes.js
 const saving = main.slice(main.indexOf("$('saveFavBtn')?.addEventListener"), main.indexOf("$('resetSiteBtn')?.addEventListener"));
 assert(saving.indexOf('await prepareMapCreation') >= 0 && saving.indexOf('await prepareMapCreation') < saving.indexOf('saveFavorite('));
 const creation = main.slice(main.indexOf("$('createRoomBtn')?.addEventListener"), main.indexOf("$('backFromOpenRoomBtn')?.addEventListener"));
-assert(creation.indexOf('await prepareMapCreation') >= 0 && creation.indexOf('await prepareMapCreation') < creation.indexOf("t: 'createRoom'"));
+assert(creation.indexOf('prepareMapCreation(') >= 0 && creation.indexOf('prepareMapCreation(') < creation.indexOf("t: 'createRoom'"));
+// Room creation may overlap preparation; scene construction must still await the shared task.
+if (!creation.includes('await prepareMapCreation(')) {
+  const gate = grabFn(main, 'mapEvidenceGate');
+  assert(gate.includes('await awaitPreparedPack(cfg)') && gate.includes('await prepareMapEvidence(cfg, terrain, areas)'));
+}
 assert(biomes.indexOf('await prepareEvidence(') >= 0 && biomes.indexOf('await prepareEvidence(') < biomes.indexOf('let architectureAt = createArchitecturePlanner('));
 assert(readSrc('public/js/mapPreparation.js').includes('{ sourceOnly: true }'));
 for (const fn of ['startStoryChapter', 'quickRestartGame']) {

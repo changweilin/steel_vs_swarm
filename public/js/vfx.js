@@ -8,7 +8,8 @@
 // 特效物件全部走 game.js 的 effects 陣列({ obj, ttl, fade(o, f, dt) },
 // f = 剩餘壽命比例 1→0),不自帶迴圈。
 import * as THREE from 'three';
-import { toonMat, outlinify, markShared, disposeTree, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
+import { toonMat, outlinify, markShared, disposeTree, getWeatherDynamics, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
+import { flameGeometry } from './sceneDisasterGeometry.js';
 import { lowPower } from './mobile.js';
 import { UNITS, WEAPONS, BALLISTIC, shotFlightS } from './data.js';
 import { Pool } from './pool.js';
@@ -1341,7 +1342,7 @@ export function makeDamageFx({ r = 2, top = 3, h = 3, fire = true, surfaceCracks
   const flameBaseY = top * 0.28;
   for (let i = 0; i < 3; i++) {
     const fh = h * (0.28 + Math.random() * 0.18);
-    const f = new THREE.Mesh(new THREE.ConeGeometry(rr * (0.18 + Math.random() * 0.1), fh, 6),
+    const f = new THREE.Mesh(flameGeometry(rr * (0.18 + Math.random() * 0.1), fh),
       new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffa826 : 0xff5a1e, transparent: true, opacity: 0.85, depthWrite: false }));
     const a = Math.random() * Math.PI * 2, d = rr * Math.random() * 0.55;
     f.userData.h0 = fh;
@@ -1372,6 +1373,7 @@ export function makeDamageFx({ r = 2, top = 3, h = 3, fire = true, surfaceCracks
   }
 
   g.userData.stage = 1;
+  const localWind = new THREE.Vector3(), worldRotation = new THREE.Quaternion();
   g.userData.setStage = (s) => {
     g.userData.stage = s;
     const heavy = s >= 2;
@@ -1383,6 +1385,11 @@ export function makeDamageFx({ r = 2, top = 3, h = 3, fire = true, surfaceCracks
   };
 
   g.userData.update = (dt, now) => {
+    const wind = getWeatherDynamics(), direction = wind.windDir;
+    const drift = Math.max(0, Math.min(2, wind.windAmp)) * rr;
+    g.updateWorldMatrix(true, false);
+    localWind.set(direction[0], 0, direction[1]);
+    localWind.applyQuaternion(g.getWorldQuaternion(worldRotation).invert());
     const heavy = g.userData.stage >= 2;
     // 煙:濃黑(重傷)/ 淺灰(輕傷),循環上升淡出
     const smCol = !fire ? 0x968776 : heavy ? 0x2a2a2e : 0x6f757c;
@@ -1391,6 +1398,7 @@ export function makeDamageFx({ r = 2, top = 3, h = 3, fire = true, surfaceCracks
       sp.userData.ph = (sp.userData.ph + dt * 0.33) % 1;
       const p = sp.userData.ph;
       sp.position.set(sp.userData.jx * (0.4 + p), smokeBaseY + p * plumeH, sp.userData.jz * (0.4 + p));
+      sp.position.addScaledVector(localWind, drift * p * p);
       sp.scale.setScalar(rr * 0.5 + p * scEnd);
       sp.material.opacity = opMax * Math.sin(p * Math.PI);
       sp.material.color.setHex(smCol);
@@ -1400,11 +1408,14 @@ export function makeDamageFx({ r = 2, top = 3, h = 3, fire = true, surfaceCracks
       const k = 0.7 + 0.35 * Math.sin(now * 9 + f.userData.ph) + 0.12 * Math.sin(now * 23 + f.userData.ph * 2);
       f.scale.set(1, k, 1);
       f.position.y = f.userData.baseY + f.userData.h0 * k / 2;
+      f.rotation.z = -localWind.x * Math.min(.4, drift / rr * .2);
+      f.rotation.x = localWind.z * Math.min(.4, drift / rr * .2);
     }
     for (const em of embers) {
       em.userData.ph = (em.userData.ph + dt * em.userData.spd) % 1;
       const p = em.userData.ph;
       em.position.set(em.userData.jx * (0.3 + p), flameBaseY + p * plumeH * 0.9, em.userData.jz * (0.3 + p));
+      em.position.addScaledVector(localWind, drift * p);
       em.material.opacity = 0.9 * (1 - p);
     }
     for (const hc of hotCracks) hc.material.opacity = 0.55 + 0.35 * Math.sin(now * 6 + hc.position.y);

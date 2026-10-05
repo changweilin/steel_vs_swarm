@@ -19,6 +19,7 @@
 //  ⑤ **時鐘由呼叫端給**(`celWindTime()`): 與雲、植被共用同一個環境風時鐘。
 import { mulberry32 } from './rng.js';
 import { frictionFPS } from './data.js';
+import { WILDLIFE_MESHES } from './ambientMeshData.js';
 
 export const FLOCK = {
   // —— 六項核心參數 (鳥群) ——
@@ -118,6 +119,65 @@ export const DOG = {
 };
 
 export const FPS_REF = 60;
+const smallAnimal = (speed, offset, extra = {}) => ({ ...CAT, SPEED: speed, GROUND_OFFSET: offset,
+  MAX_ROUTES: 2, COUNTS: { grove: 3, settlement: 2, shore: 3 },
+  NOISE_AMP: [.28, 0, .28], NOISE_TS: [.05, .03, .07], ...extra });
+export const SMALL_ANIMALS = Object.freeze({
+  rabbit: smallAnimal(1.3, .10, { habitat: 'grove', BOUNCE_HZ: 2.4, BOUNCE_AMP: .055 }),
+  squirrel: smallAnimal(1.5, .09, { habitat: 'grove', TAIL_HZ: 1.8, BOUNCE_HZ: 3, BOUNCE_AMP: .025 }),
+  duck: smallAnimal(.8, .075, { habitat: 'shore', STRIDE_HZ: 2.1 }),
+  frog: smallAnimal(.45, .045, { habitat: 'shore', BOUNCE_HZ: 1.2, BOUNCE_AMP: .035 }),
+  turtle: smallAnimal(.22, .085, { habitat: 'shore', STRIDE_HZ: .8 }),
+  butterfly: smallAnimal(.9, 1.6, { habitat: 'grove', flying: true,
+    NOISE_AMP: [.6, .2, .6], WING_HZ: 7, WING_MAX: 1.05 }),
+});
+
+// Habitat evidence chooses routes; absent or invalid ground never invents a population.
+export function planSmallAnimalRoutes(species, { anchors = {}, probe, bounds, validAt, low = false }) {
+  const spec = SMALL_ANIMALS[species];
+  if (!spec || typeof probe !== 'function' || !bounds) return [];
+  const sites = spec.habitat === 'shore' ? (anchors.shore || []).filter((_, i) => i % 6 === 0)
+    .map(([x, z]) => ({ x, z, r: 4 })) : anchors.groves || [];
+  const out = [];
+  for (const site of sites) {
+    if (out.length >= spec.MAX_ROUTES) break;
+    if (![site.x, site.z].every(Number.isFinite)) continue;
+    const radius = Math.min(9, Math.max(3, (site.r || 5) * .35));
+    const seed = (flockSeed(site.x, site.z) ^ Math.imul(species.charCodeAt(0), 0x45d9f3b)) >>> 0;
+    const angle = mulberry32(seed)() * Math.PI * 2;
+    // A shore anchor can straddle water; search only its immediate dry surroundings.
+    const attempts = spec.habitat === 'shore' ? 9 : 1;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      const bearing = angle + (attempt - 1) / 8 * Math.PI * 2;
+      const cx = site.x + (attempt ? Math.cos(bearing) * radius * 2 : 0);
+      const cz = site.z + (attempt ? Math.sin(bearing) * radius * 2 : 0);
+      const poly = Array.from({ length: 20 }, (_, i) => {
+        const a = angle + i / 20 * Math.PI * 2;
+        return [cx + Math.cos(a) * radius, cz + Math.sin(a) * radius * .7];
+      });
+      const route = resample(poly, spec.CURVE_N, true);
+      if (!route) continue;
+      let valid = true;
+      for (let i = 0; i < spec.CURVE_N; i++) {
+        const x = route.pts[i * 3], z = route.pts[i * 3 + 2], height = probe(x, z);
+        if (!Number.isFinite(height) || x < bounds.minX || x > bounds.maxX || z < bounds.minZ || z > bounds.maxZ
+          || (validAt && !validAt(x, z))) { valid = false; break; }
+        route.pts[i * 3 + 1] = height + spec.GROUND_OFFSET;
+      }
+      if (!valid) continue;
+      out.push({ kind: spec.habitat, pts: route.pts, len: route.total, n: spec.CURVE_N,
+        count: low ? 2 : 3, seed, spec, species });
+      break;
+    }
+  }
+  return out;
+}
+
+export function animalParts(species) {
+  const parts = WILDLIFE_MESHES[species];
+  if (!parts) throw new RangeError('Unknown wildlife species: ' + species);
+  return parts;
+}
 export const springPS = () => FLOCK.SPRING * FPS_REF * FPS_REF;
 export const specSpringPS = (spec) => (spec?.SPRING || FLOCK.SPRING) * FPS_REF * FPS_REF;
 
@@ -187,7 +247,8 @@ export function planFlockRoutes({ anchors = {}, probe, bounds, altMax = Infinity
     const rnd = mulberry32(seed);
     const alt = Math.min(altMax, FLOCK.ALT_BAND[0] + rnd() * (FLOCK.ALT_BAND[1] - FLOCK.ALT_BAND[0]));
     for (let i = 0; i < FLOCK.CURVE_N; i++) {
-      const g = probe(r.pts[i * 3], r.pts[i * 3 + 2]) || 0;
+      const g = probe(r.pts[i * 3], r.pts[i * 3 + 2]);
+      if (!Number.isFinite(g)) return;
       r.pts[i * 3 + 1] = Math.min(ceilY, g + alt);
     }
     const base = FLOCK.COUNTS[kind] || 3;
@@ -235,9 +296,9 @@ export function planFlockRoutes({ anchors = {}, probe, bounds, altMax = Infinity
 /**
  * 規劃水下魚群迴游路徑。
  */
-export function planFishRoutes({ anchors = {}, probe, bounds, waterY = null, low = false }) {
+export function planFishRoutes({ anchors = {}, probe, bounds, waterY = null, wetAt, low = false }) {
   const out = [];
-  if (waterY == null) return out;
+  if (!Number.isFinite(waterY)) return out;
   const clampXZ = (x, z) => [
     Math.max(bounds.minX, Math.min(bounds.maxX, x)),
     Math.max(bounds.minZ, Math.min(bounds.maxZ, z)),
@@ -250,7 +311,8 @@ export function planFishRoutes({ anchors = {}, probe, bounds, waterY = null, low
     const rnd = mulberry32(seed);
     const dTarget = FISH.DEPTH_BAND[0] + rnd() * (FISH.DEPTH_BAND[1] - FISH.DEPTH_BAND[0]);
     for (let i = 0; i < FISH.CURVE_N; i++) {
-      const bedY = probe(r.pts[i * 3], r.pts[i * 3 + 2]) || (waterY - 4);
+      const bedY = probe(r.pts[i * 3], r.pts[i * 3 + 2]);
+      if (!Number.isFinite(bedY) || bedY > waterY - .4 || (wetAt && !wetAt(r.pts[i * 3], r.pts[i * 3 + 2]))) return;
       // 水中深度夾制: 保持在床底之上 0.15m 與水面下 0.25m 之間
       const y = Math.max(bedY + 0.15, Math.min(waterY - 0.25, waterY - dTarget));
       r.pts[i * 3 + 1] = y;
@@ -295,7 +357,8 @@ export function planCatRoutes({ anchors = {}, probe, bounds, low = false }) {
     if (!r) return;
     const seed = flockSeed(r.pts[0], r.pts[2]);
     for (let i = 0; i < CAT.CURVE_N; i++) {
-      const g = probe(r.pts[i * 3], r.pts[i * 3 + 2]) || 0;
+      const g = probe(r.pts[i * 3], r.pts[i * 3 + 2]);
+      if (!Number.isFinite(g)) return;
       r.pts[i * 3 + 1] = g + CAT.GROUND_OFFSET;
     }
     const base = CAT.COUNTS[kind] || 2;
@@ -340,7 +403,8 @@ export function planDogRoutes({ anchors = {}, probe, bounds, low = false }) {
     if (!r) return;
     const seed = flockSeed(r.pts[0], r.pts[2]);
     for (let i = 0; i < DOG.CURVE_N; i++) {
-      const g = probe(r.pts[i * 3], r.pts[i * 3 + 2]) || 0;
+      const g = probe(r.pts[i * 3], r.pts[i * 3 + 2]);
+      if (!Number.isFinite(g)) return;
       r.pts[i * 3 + 1] = g + DOG.GROUND_OFFSET;
     }
     const base = DOG.COUNTS[kind] || 2;
@@ -502,52 +566,7 @@ export function bounceOffset(st, i, t, spec = null) {
 
 // ============ 純資料零件描述子 ============
 
-export function birdParts() {
-  return [
-    { g: ['cone', 0.10, 0.46, 5], c: 0x2f3238, p: [0, 0, 0], r: [Math.PI / 2, 0, 0], key: 'body' },
-    { g: ['cone', 0.045, 0.16, 4], c: 0xd8a24a, p: [0, 0, 0.30], r: [Math.PI / 2, 0, 0], key: 'beak' },
-    { g: ['box', 0.05, 0.12, 0.20], c: 0x24272c, p: [0, 0.06, -0.26], r: [-0.55, 0, 0], key: 'tail' },
-    { g: ['box', 0.34, 0.02, 0.13], c: 0x3a3e45, p: [0.20, 0.02, 0.02], wing: 1, key: 'wingL' },
-    { g: ['box', 0.34, 0.02, 0.13], c: 0x3a3e45, p: [-0.20, 0.02, 0.02], wing: -1, key: 'wingR' },
-  ];
-}
-
-export function fishParts() {
-  return [
-    { g: ['box', 0.12, 0.18, 0.52], c: 0x48768e, p: [0, 0, 0], key: 'body' },
-    { g: ['cone', 0.10, 0.24, 5], c: 0x5b8fa8, p: [0, 0, 0.30], r: [Math.PI / 2, 0, 0], key: 'head' },
-    { g: ['box', 0.02, 0.12, 0.18], c: 0x3d667c, p: [0, 0.12, -0.04], r: [-0.4, 0, 0], key: 'dorsal' },
-    { g: ['box', 0.14, 0.02, 0.08], c: 0x4d7c95, p: [0.10, -0.03, 0.10], r: [0, 0.3, -0.3], key: 'pectoralL' },
-    { g: ['box', 0.14, 0.02, 0.08], c: 0x4d7c95, p: [-0.10, -0.03, 0.10], r: [0, -0.3, 0.3], key: 'pectoralR' },
-    { g: ['box', 0.02, 0.22, 0.22], c: 0x5d93ad, p: [0, 0.02, -0.36], tail: 1, key: 'tail' },
-  ];
-}
-
-export function catParts() {
-  return [
-    { g: ['box', 0.16, 0.18, 0.44], c: 0xd4a373, p: [0, 0, 0], key: 'body' },
-    { g: ['box', 0.15, 0.14, 0.15], c: 0xddb892, p: [0, 0.08, 0.24], key: 'head' },
-    { g: ['cone', 0.04, 0.08, 4], c: 0xbb8555, p: [0.05, 0.18, 0.24], r: [0, 0, -0.2], key: 'earL' },
-    { g: ['cone', 0.04, 0.08, 4], c: 0xbb8555, p: [-0.05, 0.18, 0.24], r: [0, 0, 0.2], key: 'earR' },
-    { g: ['box', 0.05, 0.16, 0.05], c: 0xcca070, p: [0.06, -0.10, 0.14], key: 'legFL' },
-    { g: ['box', 0.05, 0.16, 0.05], c: 0xcca070, p: [-0.06, -0.10, 0.14], key: 'legFR' },
-    { g: ['box', 0.05, 0.16, 0.05], c: 0xcca070, p: [0.06, -0.10, -0.14], key: 'legBL' },
-    { g: ['box', 0.05, 0.16, 0.05], c: 0xcca070, p: [-0.06, -0.10, -0.14], key: 'legBR' },
-    { g: ['box', 0.04, 0.26, 0.04], c: 0xb07d4f, p: [0, 0.12, -0.24], r: [0.75, 0, 0], tail: 1, key: 'tail' },
-  ];
-}
-
-export function dogParts() {
-  return [
-    { g: ['box', 0.22, 0.26, 0.58], c: 0x8d6e63, p: [0, 0, 0], key: 'body' },
-    { g: ['box', 0.18, 0.18, 0.18], c: 0xa1887f, p: [0, 0.15, 0.32], key: 'head' },
-    { g: ['box', 0.10, 0.09, 0.14], c: 0x5d4037, p: [0, 0.11, 0.44], key: 'muzzle' },
-    { g: ['box', 0.04, 0.12, 0.06], c: 0x4e342e, p: [0.10, 0.18, 0.28], r: [0.2, 0, 0.3], key: 'earL' },
-    { g: ['box', 0.04, 0.12, 0.06], c: 0x4e342e, p: [-0.10, 0.18, 0.28], r: [0.2, 0, -0.3], key: 'earR' },
-    { g: ['box', 0.06, 0.22, 0.06], c: 0x795548, p: [0.08, -0.14, 0.20], key: 'legFL' },
-    { g: ['box', 0.06, 0.22, 0.06], c: 0x795548, p: [-0.08, -0.14, 0.20], key: 'legFR' },
-    { g: ['box', 0.07, 0.22, 0.07], c: 0x795548, p: [0.08, -0.14, -0.20], key: 'legBL' },
-    { g: ['box', 0.07, 0.22, 0.07], c: 0x795548, p: [-0.08, -0.14, -0.20], key: 'legBR' },
-    { g: ['box', 0.05, 0.05, 0.28], c: 0x6d4c41, p: [0, 0.14, -0.34], r: [0.85, 0, 0], tail: 1, key: 'tail' },
-  ];
-}
+export const birdParts = () => animalParts('bird');
+export const fishParts = () => animalParts('fish');
+export const catParts = () => animalParts('cat');
+export const dogParts = () => animalParts('dog');

@@ -73,7 +73,7 @@ try {
       gl.uniform1f(loc('uWeatherWaveAmp'), frozen ? 0 : 1);
       gl.uniform1f(loc('uWeatherWaveT'), 2.5); gl.uniform1f(loc('uWindT'), 2.5);
       gl.uniform4fv(loc('uWeatherWindShape'), [.2,.1,.4,1]);
-      gl.uniform3fv(loc('uWeatherWaterShape'), [.3,.2,.6]);
+      gl.uniform4fv(loc('uWeatherWaterShape'), [.3,.2,.6,0]);
       const positions = new Float32Array(sourceCount * 4), shapes = new Float32Array(sourceCount * 4);
       if (hull) { positions.set([0,0,...hull]); shapes.set([20,6,4,1]); }
       gl.uniform4fv(loc('uSeaSources[0]'), positions); gl.uniform4fv(loc('uSeaSourceShape[0]'), shapes);

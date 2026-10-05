@@ -35,6 +35,7 @@ const OFFLINE_AUDIT_SCRIPTS = [
   // ── B. 環境裝飾與背景動態 (6 項) ──
   'tools/audit_ambient_motion.mjs',
   'tools/audit_wildlife.mjs',
+  'test/ambientAppearance.mjs',
   'tools/audit_aquatics.mjs',
   'tools/audit_daynight.mjs',
   'tools/audit_weather_dynamics.mjs',
