@@ -21,6 +21,8 @@ import { fileURLToPath } from 'node:url';
 import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ, xzToLL } from '../public/js/data.js';
 import { procReliefAt, sanitizeProcRelief } from '../public/js/mapgen.js';
 import { PED_PLAN, isPedestrianBridge, isPedestrianWay } from '../public/js/pedestrian.js';
+import { planBridgeDeck, structureLayer, bridgeConnections } from '../public/js/roadStructures.js';
+import { osmRoadQuery, OSM_ROAD_QUERY_VERSION } from '../public/js/osmQuery.js';
 export { captureWorldCover } from './worldcover_source.mjs';
 
 export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -116,8 +118,7 @@ export const strucHw = (tags) => isPedestrianWay(tags)
 
 /**
  * 橋面剖面工廠(**執行 biomes.js `deckAt` 的原文**;閉包變數由外面餵)。
- * 回傳 `(s, gx, gz) => 橋面高`,與遊戲內同一條 smoothstep 端點緩坡 + 水面下限。
- * @param hA/hB 橋 run 兩端的地表高  @param total run 弧長  @param heightAt 地形取樣
+ * The runtime closure consumes the shared grade-limited profile, including connected endpoint datums.
  */
 const DECK_SRC = (() => {
   const m = /const deckAt = \(s, gx, gz\) => \{[\s\S]*?\n      \};\n/.exec(bsrc);
@@ -125,9 +126,14 @@ const DECK_SRC = (() => {
   return m[0];
 })();
 const ROAD_LIFT = +/const ROAD_LIFT = ([\d.]+)/.exec(bsrc)[1];
-export function makeDeckAt(hA, hB, total, heightAt) {
-  return new Function('hA', 'hB', 'total', 'terrain', 'BRIDGE_RISE', 'ROAD_LIFT', 'WATER',
-    `${DECK_SRC}\nreturn deckAt;`)(hA, hB, total, { heightAt }, BRIDGE_RISE, ROAD_LIFT, WATER);
+export function makeDeckAt(points, heightAt, options = {}) {
+  const bridgePlan = planBridgeDeck(points, heightAt, {
+    rise: BRIDGE_RISE, grade: Math.tan(MAPGEO.MAX_ROAD_GRADE_DEG * Math.PI / 180),
+    lift: ROAD_LIFT, waterFloor: Math.max(WATER.LEVEL, WATER.LEVEL + WATER.SWAMP_BAND) + .9,
+    ...options,
+  });
+  if (!bridgePlan) return null;
+  return new Function('bridgePlan', `${DECK_SRC}\nreturn deckAt;`)(bridgePlan);
 }
 
 // ---- 走廊規則的執行期原文鏡射(切面樁與遊戲端 MUST 吃同一份)----
@@ -490,14 +496,10 @@ async function osmApi(bbox) {
  * Overpass 全掛(雲端 IP 常態)時退到官方 /map,見上方 OSM_API 註解。
  */
 export async function osmFor(id, bbox) {
-  const f = join(CACHE, `${id}_L1v2.json`);   // v2:加抓水道(橋跨水/跨陸判定)
+  const f = join(CACHE, `${id}_L1v2_roads${OSM_ROAD_QUERY_VERSION}.json`);
   if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'));
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
-  const km2 = bboxKm2(bbox);
-  const nMain = quotaOf(km2, 150, 150, 600), nMinor = quotaOf(km2, 1300, 400, 1600);
-  const els = await overpass(`[out:json][timeout:40];`
-    + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${bb});out geom ${nMain};`
-    + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom ${nMinor};`
+  const els = await overpass(osmRoadQuery(bbox)
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `way["waterway"~"^(river|stream|canal|drain|ditch)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`);
@@ -723,6 +725,7 @@ export function sampleAlong(cum, vals, s) {
 /** 結構清單(隧道 / 地下道 / 橋)+ 它們貢獻的航點 + 開挖走廊(carveTunnels 的輸入) */
 export function buildStructs(osm, center, hf) {
   const structs = [], marks = [], carveRuns = [];
+  const connected = bridgeConnections(osm?.roads || []);
   const clippedGeometries = (way) => {
     const out = [], inb = 4;
     let cur = [];
@@ -784,10 +787,12 @@ export function buildStructs(osm, center, hf) {
         if (sunk(pts[0]) || sunk(pts[pts.length - 1])) continue;
         const cum = arcOf(pts);
         const total = cum[cum.length - 1] || 1;
-        if (total < 24) continue;                       // 太短的「橋」是路面涵管,沒有橋面可走
-        const hA = hf.heightAt(pts[0][0], pts[0][1]);
-        const hB = hf.heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
-        const deckAt = makeDeckAt(hA, hB, total, hf.heightAt);
+        const deckAt = makeDeckAt(pts, hf.heightAt, {
+          rise: BRIDGE_RISE * Math.max(1, structureLayer(way.tags)),
+          startJoined: connected(way, way.geometry[0]), endJoined: connected(way, way.geometry.at(-1)),
+          joins: way.geometry.filter(p => connected(way, p)).map(p => llToWorld(p.lat, p.lon, center)),
+        });
+        if (!deckAt) continue;
         const st = { pts, cum, hw, floorAt: (s, x, z) => deckAt(s, x, z), kind: '橋' };
         structs.push(st);
         const mid = total / 2;

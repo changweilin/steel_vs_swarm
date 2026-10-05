@@ -4,7 +4,7 @@
 import { OSM_AREA_KEYS, buildAreaRecords } from './osmAreas.js';
 
 export const OSM_FEATURE_QUERY_VERSION = 9;
-export const OSM_ROAD_QUERY_VERSION = 1;
+export const OSM_ROAD_QUERY_VERSION = 2;
 export const OSM_QUERY_TIMEOUT_S = 15;
 
 const KM_PER_DEG = 111.32;
@@ -84,7 +84,7 @@ export function osmRoadQuery(bbox) {
   const { nMain, nMinor } = osmRoadQuotas(bbox);
   return `[out:json][timeout:${OSM_QUERY_TIMEOUT_S}];`
     + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${bb});out geom ${nMain};`
-    + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian|steps|cycleway|bridleway)$"](${bb});out geom ${nMinor};`;
+    + `way["highway"~"^((motorway|trunk|primary|secondary|tertiary)_link|unclassified|residential|living_street|service|track|path|footway|pedestrian|steps|cycleway|bridleway)$"](${bb});out geom ${nMinor};`;
 }
 
 /** Route raw Overpass response into AreaRecords and non-polygonal feature collections; retains raw element integrity. */

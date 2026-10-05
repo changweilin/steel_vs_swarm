@@ -1196,7 +1196,7 @@ export class BattleClient {
       const x = ax + dx * f, y = ay + dy * f, z = az + dz * f;
       const yLo = Math.min(py, y), yHi = Math.max(py, y);
       if (hasDecks) {
-        const d = t.deckY(x, z);                                 // 站立 margin 不吃:用實際橋面 ribbon
+        const d = t.deckY(x, z, 0, yLo, yHi + du);
         if (d != null && yLo <= d && yHi >= d - du) return (s - 0.5) / n * len;
       }
       if (hasTunnels) {
@@ -2799,7 +2799,7 @@ export class BattleClient {
     // onDeck = 真的站在高架橋面(deck ribbon 上,查 deckY 對得上站立面),不是任何「高於地表
     // 的站立面」—— 站障礙物頂(建物/神木/巨岩,2026-07-22 起可站)時 MUST NOT 吃橋面豁免,
     // 否則「基座低於腳下 3m」的鄰樓(含更高的樓)全部不推擠 = 從屋頂側向走進鄰棟破圖
-    const dkY = this.terrain.deckY?.(this.pos.x, this.pos.z, 3.0);
+    const dkY = this.terrain.deckY?.(this.pos.x, this.pos.z, 3.0, surfHere - .6, surfHere + .6);
     const onDeck = surfHere > this.terrain.heightAt(this.pos.x, this.pos.z) + 1.0
       && dkY != null && Math.abs(surfHere - dkY) < 0.6;
     this._surfHere = surfHere; this._onDeck = onDeck;   // 供 _cameraDeClip 共用(免重算)

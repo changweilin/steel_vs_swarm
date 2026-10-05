@@ -68,6 +68,7 @@
 | Road pruning and direction quantization | `audit_road_grid` | Corridors consume one quantized network. |
 | Footbridges, entrances, rail corridors | `audit_pedestrian_plan` | Attachments add no blockers and share no randomness. |
 | Road paint and structure joints | `audit_road_joint` | Joint invariants stay unchanged. |
+| Blender-authored road structures, bridge grades and platform access | `test/roadStructures`, `shot:roads`, `audit_road_joint`, `audit_layer_block`, `audit_slope_platform`, `audit_gpu_lifecycle`, `audit_client_syntax` | Layered standing, bidirectional slab blocking, branch openings, support clearance, rotated cut/fill access and sealed collision-fitting members share production sources. |
 | Roadbed leveling | `audit_road_bed` | Tunnel invariants stay unchanged. |
 | Walkability | `audit_traverse` | Lanes and structures stay traversable. |
 | Clearance heights | `audit_traverse` | Unit height derives without hand-written constants. |
