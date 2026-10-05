@@ -32,7 +32,7 @@
 import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
-  REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, fanSubs, fanBinSpan, armingOf, lobMinRange, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE,
+  REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, armingOf, lobMinRange, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, TARGET_H, MAPGEO, WEAPONS, UNITS,
   GAME, STRUCT_W, NPC_BLAST, npcBlastR, towerDps, BASE_DPS_MULT, BASE_MISSILE,
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
@@ -319,7 +319,7 @@ const THREE = { Vector3: V3 };
 const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
 const RANGE_GLOW = new Function(`return ${/const RANGE_GLOW = (\{[^}]*\});/.exec(G)[1]}`)();
 const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf, shotV0,
-  aoeClass, blastFalloff, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, inWeaponRange, weaponMaxHoriz, isSuperSide, isThirdSide,
+  aoeClass, blastFalloff, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, inWeaponRange, weaponMaxHoriz, isSuperSide, isThirdSide,
   bossScaleF, superScaleF };
 const M = (n) => pickMethod(n, G, env);
 // 牆 = 沿 +X 的一道垂直面(擋住 x ≥ w.x 且高度低於 w.top 的射線);回傳截斷距離
@@ -470,10 +470,14 @@ sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)')
     'sim.js MUST NOT 留下第二份手寫錐(heroPlasma 改吃 fanConeHalf)');
   ok((S.match(/fanConeHalf\(/g) || []).length === 1 && (G.match(/fanConeHalf\(/g) || []).length === 1,
     'fanConeHalf 在 sim.js / game.js 各恰一個消費端');
+  ok((S.match(/fanBinHitD\(/g) || []).length === 1 && (G.match(/fanBinHitD\(/g) || []).length === 1,
+    'fanBinHitD 在 sim.js / game.js 各恰一個消費端(每個小錐各自吃武器同一道射程)');
   {
     const LS = read(['tools', 'lanesim.mjs']);
-    ok(/fanConeHalf\(def, d, hitR\(e\)\)/.test(LS),
+    ok(/fanConeHalf\(def, d, (hitR\(e\)|hr)\)/.test(LS),
       '前線交戰模型(lanesim,bal ⑦ 的攻擊範圍計價)吃同一支 fanConeHalf');
+    ok(/fanBinHitD\(def, bi, d, phi, hr\)/.test(LS),
+      '前線交戰模型(lanesim)每格射程吃同一支 fanBinHitD');
   }
   ok(/this\._lobFc/.test(sv) && !/_lobLadder|_arcTrace|_lob45Vel/.test(sv),
     '拋物線吃每幀已定案的火控解 _lobFc,MUST NOT 在名冊裡重解一次彈道');

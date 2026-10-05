@@ -17,7 +17,7 @@ import {
   GLINT, glintDur, glintAlpha, glintDropR,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, TARGET_H, chaseCapS,
+   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, TARGET_H, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossSegFill, bossSegFrac, bossSegN, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
@@ -6714,11 +6714,16 @@ export class BattleClient {
           const ang = Math.acos(Math.min(1, Math.max(-1, dot)));
           if (ang > fanConeHalf(def, d3, hr)) continue;
         }
-        if (!this._inShotRange(e, def, from)) continue;
+        if (!this._inShotRange(e, def, from)) continue;   // 目標級快篩(含淨空;逐格只會更嚴)
         const phi = Math.atan2(tx * az - tz * ax, tx * ax + tz * az);
         const aw = Math.atan2(hr, Math.max(1, d2));
         const [b0, b1] = fanBinSpan(def, phi, aw);   // 分格走單一縫
+        const rng = this._effRange(def, e);
+        const surf = Math.max(0, from.distanceTo(this._entAimPoint(e)) - hr);
+        const surfH = Math.max(0, d2 - hr);
         for (let bi = b0; bi <= b1; bi++) {
+          const hitD = fanBinHitD(def, bi, d2, phi, hr);
+          if (hitD == null || surf + (hitD - surfH) > rng) continue;   // 每格各自吃同一道射程
           if (!bins[bi] || d3 < bins[bi].d3) bins[bi] = { e, d3 };
         }
       }

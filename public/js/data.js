@@ -2380,6 +2380,23 @@ export const fanBinOf = (def, phi) => {
 };
 /** 量體(方位角 phi ± 張角 aw)橫跨的格區間 [b0, b1];起訖單調 ⇒ b0恆 ≤ b1 */
 export const fanBinSpan = (def, phi, aw) => [fanBinOf(def, phi - aw), fanBinOf(def, phi + aw)];
+/** 第 bi 格楔面內、目標水平圓盤(中心水平距離 d2、方位 phi、半徑 hr)的最近表面距離;
+ * 無交集回傳 null。每個小錐各自吃武器同一道射程閘的幾何半:三端(sim.heroPlasma /
+ * lanesim.hits / game._shotVictims)以此值比各自的有效射程,MUST NOT 各自手寫楔-圓盤相交。
+ * 中央格回傳 max(0, d2 - hr) ⇒ 與舊制逐目標表面距離一致(舊行為不動);
+ * 偏心格回傳楔內最近交點(恆 ≥ 中央值)⇒ 射程邊緣的大目標只在中央格命中。 */
+export const fanBinHitD = (def, bi, d2, phi, hr) => {
+  if (!Number.isFinite(d2) || !Number.isFinite(phi)) return null;
+  const r = Math.max(0, hr || 0);
+  if (d2 <= 0) return 0;
+  const half = fanArcHalf(def), n = fanSubs(def), w = half * 2 / n;
+  const lo = -half + bi * w, hi = lo + w;
+  if (phi >= lo && phi <= hi) return Math.max(0, d2 - r);
+  const edge = phi < lo ? lo : hi;
+  const dl = phi - edge, lat = d2 * Math.sin(dl);
+  if (Math.abs(lat) > r) return null;
+  return Math.max(0, d2 * Math.cos(dl) - Math.sqrt(r * r - lat * lat));
+};
 
 // ================= 重武器範圍攻擊三分類 + 彈道五分類(2026-07-23 使用者定案)=================
 // 使用者規則:「重武器必屬於其中一種範圍攻擊」—— 沒有單體直擊的重武器。

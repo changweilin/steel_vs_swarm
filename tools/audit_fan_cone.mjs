@@ -149,6 +149,33 @@ log('— 扇形小錐分格(sim.heroPlasma)—');
     `偏心遞減仍在:錐緣傷害 ×${(de / dc).toFixed(3)}(期望 ${exp.toFixed(3)})`);
 }
 
+// ---------- ⑦ 每個小錐各自吃武器同一道射程 ----------
+{
+  const R = heroWeapon('s04', 'heavy', 1, true).range;
+  TARGET_R['creep:boss'] = 7;
+  TARGET_CLASS['boss'] = 'armor';
+  const dmgAt = (x, z, tag, kind = 'soldier') => {
+    const { sim } = fanShooter(tag);
+    const t = sim._add({ kind, side: 'STEEL', x, z, y: 0, hp: 999999, m: 999999 });
+    sim.heroPlasma(tag, 0, 1, 'heavy', null, 0);
+    return 999999 - t.hp;
+  };
+  const edgeXZ = (f) => {
+    const r = f * R, a = ARC * Math.PI / 180 * 0.9;   // 徑向等距:同一個徑向距離下比軸上/錐緣
+    return [r * Math.sin(a), r * Math.cos(a)];
+  };
+  const [ex0, ez0] = edgeXZ(0.99), [ex1, ez1] = edgeXZ(1.05);
+  assert(dmgAt(0, R * 0.99, 'p_c7a') > 0 && dmgAt(ex0, ez0, 'p_c7b') > 0,
+    '射程內小目標:軸上與錐緣格都命中(逐格不縮射程)');
+  assert(dmgAt(0, R * 1.05, 'p_c7c') === 0 && dmgAt(ex1, ez1, 'p_c7d') === 0,
+    '超射程小目標:軸上與錐緣格都不掉血');
+  // 大目標中心超射程、表面在內(R-1):中央格命中、邊緣格楔內增量超射程逐格剔除
+  const dClose = dmgAt(0, 30, 'p_c7e', 'boss');
+  const dEdge = dmgAt(0, R - 1 + 7, 'p_c7f', 'boss');
+  assert(dEdge > dClose * 0.15 && dEdge < dClose * 0.5,
+    `射程邊緣大目標(r=7,表面 R-1):只中中央格(${dEdge.toFixed(1)} 介於全錐 ${dClose.toFixed(1)} 的 15%~50%)`);
+}
+
 // ---------- ⑥ 單一縫 ----------
 {
   const src = readSrc('public', 'js', 'data.js')
@@ -157,6 +184,8 @@ log('— 扇形小錐分格(sim.heroPlasma)—');
     '原文:fanSubs 只有一處定義(格數推導只有這一個縫)');
   assert((src.match(/export const FAN_SUB_DEG\s*=/g) || []).length === 1,
     '原文:FAN_SUB_DEG 只有一處定義');
+  assert((src.match(/export const fanBinHitD\s*=/g) || []).length === 1,
+    '原文:fanBinHitD 只有一處定義(楔-圓盤相交只有這一個縫)');
 }
 
 log(failed ? '\n❌ 扇形小錐分格稽核未通過' : '\n✅ 扇形小錐分格稽核全數通過');

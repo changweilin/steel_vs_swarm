@@ -17,7 +17,7 @@ import {
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   ATK_CARRIER, atkDelivered, atkParts, atkPartN, SELF_ATK, selfAtkBoost,
   ATK_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND, ATK_CAST_S,
-  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, fanBuildingMaxHits, FAN_BUILDING_MAX_HITS, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, FAN_SUB_F, fanBuildingMaxHits, FAN_BUILDING_MAX_HITS, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
   shieldDefKindFactor, balanceMul, upgradeCurveMul, RATE_DEF,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
@@ -2845,8 +2845,9 @@ export class BattleSim {
   /**
    * 扇形範圍攻擊(aoeClass 'fan':shotgun / flamethrower / plasma)。
    * 客戶端回報 3D 射向(dx, dz, dy;已單位化),傷害判定全在伺服器:
-   * 錐按方位角切成 fanSubs 個小錐形區塊,每區塊只命中最近的一名敵人
-   * (量體橫跨多格的大目標在多格各吃一次);射程/迷霧/LOS/稜線閘門逐目標照舊。
+    * 錐按方位角切成 fanSubs 個小錐形區塊,每區塊只命中最近的一名敵人
+    * (量體橫跨多格的大目標在多格各吃一次);射程閘門每個小錐各自驗(與武器同一道),
+    * 迷霧/LOS/稜線閘門逐目標照舊。
    * 傷害不隨距離變化,只剩偏心傷害遞減 offAxisFalloff。
    */
   heroPlasma(pid, dx, dz, slot = 'heavy', o = null, dy = 0) {
@@ -2886,11 +2887,15 @@ export class BattleSim {
         const ty = tyTarget - byE;
         const d3 = Math.hypot(tx, ty, tz);
         const hr = hitR(t);
-        // 射程誠實界:3D 表面距離不超過有效射程(無 RANGE_TOL)
+        // 射程誠實界:3D 表面距離不超過有效射程(無 RANGE_TOL);每個小錐各自再驗一次
+        // (fanBinHitD 楔內增量 —— 與武器同一道閘,中央格增量為 0 即舊制)
         const maxR = wp.def.range * this._altRange(b, t, wp.def);
-        if (Math.max(0, d3 - hr) > maxR) {
+        const surfC = Math.max(0, d3 - hr);
+        let rescued = false;
+        if (surfC > maxR) {
           const vdy = ty;
           if (!(vdy < 0 && inWeaponRange(maxR, tx, tz, vdy, hr))) continue;
+          rescued = true;
         }
         // 3D 圓錐判定:夾角 <= 錐半角(fanConeHalf 量到近側表面;近距 <=8m 視為正中滿額)
         const dot = (tx * ux + ty * uy + tz * uz) / (d3 || 1);
@@ -2903,11 +2908,17 @@ export class BattleSim {
         // 也不穿山
         if (this._ridgeBlocked(bx, bz, this._absSightY(b, byE, bx, bz),
                                t.x, t.z, this._absSightY(t, this._tgtY(t), t.x, t.z), b, t)) continue;
-        // 小錐分格(fanBinSpan 單一縫):量體覆蓋到的格都登記(大目標橫跨多格 ⇒ 多格各取它一次)
+        // 小錐分格(fanBinSpan 單一縫):量體覆蓋到的格都登記(大目標橫跨多格 ⇒ 多格各取它一次);
+        // 每一格各自吃武器同一道射程(fanBinHitD 單一縫):楔內表面超射程的格不登記
         const phi = Math.atan2(tx * uz - tz * ux, tx * ux + tz * uz);
         const aw = Math.atan2(hr, Math.max(1, d2));
         const [b0, b1] = fanBinSpan(wp.def, phi, aw);
+        const surfH = Math.max(0, d2 - hr);
+        const maxH = rescued ? weaponMaxHoriz(maxR, ty) : 0;
         for (let bi = b0; bi <= b1; bi++) {
+          const hitD = fanBinHitD(wp.def, bi, d2, phi, hr);
+          if (hitD == null) continue;
+          if (rescued ? hitD > maxH : surfC + (hitD - surfH) > maxR) continue;
           if (!bins[bi] || d3 < bins[bi].d3) bins[bi] = { t, d3, ang };
         }
       }
