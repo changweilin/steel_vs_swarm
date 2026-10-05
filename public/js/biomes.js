@@ -36,6 +36,10 @@ import {
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { pruneRoads, quantizeRoads, GRID_HW } from './roadgrid.js';
+import { structureLayer, bridgeConnections, waysShareNode, planBridgeDeck, bridgeOpenings, bridgeOpeningAt, bridgeSupportClearance, platformApproaches, roundaboutIsland } from './roadStructures.js';
+import { roadStructureGeo, roadBarrierGeo, buildRoadStructureDetails } from './roadStructureRender.js';
+import { junctionBoundary, roadTransitionIndex } from './roadJunctions.js';
+import { planRoadSigns, guideSignKind } from './roadSigns.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { osmRelayKey } from './osmrelay.js';
 import {
@@ -56,9 +60,10 @@ import { buildLandField } from './landfield.js';
 import { prepareMapEvidence, installMapEvidence } from './mapEvidenceLoader.js';
 import { evidenceDryBiome } from './mapEvidence.js';
 import { MAP_EVIDENCE_COPY } from './help.js';
-import { setLandField } from './toon.js';
+import { setLandField, disposeTree } from './toon.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
+import { LANE_SIGN_RESERVE } from './laneGuidancePlan.js';
 import { MIP_ANISO, registerStreamTex } from './tex.js';
 import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed, mergeGeos } from './beacons.js';
 // 邊界牆型錄 / 緩衝空間布景 / 視線邊界背景(2026-08-11 使用者定案)——
@@ -3356,13 +3361,36 @@ function nearestDir(sites, x, z) {
 
 function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, pois, lowPower,
   corpus, rnd, used, roads, features, isBlocked, wallSigns = [], billboards = [], bldFaces = null,
-  entranceSigns = [] }) {
-  const sheet = new SignSheet(lowPower);
+  entranceSigns = [], roadRuns = [], areas = [], trafficPoints = [] }) {
+  const sheet = new SignSheet(lowPower, LANE_SIGN_RESERVE);
   const posts = [];
   // 語料庫招牌的落點:全部在這裡先算好(位置一律取自既有幾何 + 路網,零 `rnd()`)
-  const { roadSites, noticeSites, scenicSites } = planCorpusSites({
+  const { noticeSites, scenicSites } = planCorpusSites({
     terrain, center, roads, generic, features, isBlocked,
   });
+  const mapPoints = [...(pois || []), ...trafficPoints].map(p => {
+    const [x, z] = llToWorld(p.lat, p.lng ?? p.lon, center);
+    return { x, z, tags: p.tags };
+  });
+  const inbSigns = edgeWallInsetM();
+  const mappedSigns = planRoadSigns({ runs: roadRuns, points: mapPoints,
+    targets: [...mapPoints, ...areas.map(a => ({ ...a.centroid, tags: a.tags }))],
+    heightAt: terrain.heightAt,
+    free: (x, z, h, style) => {
+      const r = h * signAspect(style) / 2 + .2;
+      return x - r > terrain.minX + inbSigns && x + r < terrain.maxX - inbSigns
+        && z - r > terrain.minZ + inbSigns && z + r < terrain.maxZ - inbSigns
+        && !isBlocked(x, z) && !isBlocked(x - r, z) && !isBlocked(x + r, z)
+        && !isBlocked(x, z - r) && !isBlocked(x, z + r);
+    },
+  });
+  for (const st of mappedSigns) {
+    if (sheet.full) break;
+    if (sheet.add({ copy: st.copy, x: st.x, z: st.z, y: st.y + st.postHeight,
+      ry: st.ry, h: st.h, style: st.style, both: st.both })) {
+      posts.push({ x: st.x, y: st.y, z: st.z, h: st.postHeight, ry: st.ry, bracket: true });
+    }
+  }
   // ① 洞口匾額:位置/朝向/門洞寬高全在 portals 那一筆記錄裡(現成版位)。
   //    牌寬 = 高 × 4,MUST 收在門洞寬內 —— 比門洞寬的匾額會穿出洞口兩側的岩壁。
   for (const p of portals) {
@@ -3398,6 +3426,7 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
     const inb = edgeWallInsetM();
     if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
     const t = poi.tags || {};
+    if (guideSignKind(t) && !t.place && t.natural !== 'peak') continue;
     const junction = t.highway === 'motorway_junction';
     const base = resolveName(t) || (junction ? resolveRef(t) : null);
     if (!base) continue;
@@ -3463,15 +3492,7 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
     if (!copy) break;
     sheet.add({ copy, x: b.x, z: b.z, y: b.y + b.h / 2 + 0.6, ry: b.ry, h: b.h, style: 'billboard' });
   }
-  // ⑦ 道路路標:主要道路每 ~130m 一支,擺在**路肩外**(招牌絕不擋路),雙面
-  for (const st of roadSites) {
-    if (sheet.full) break;
-    const copy = copyOf('roadsign');
-    if (!copy) break;
-    if (sheet.add({ copy, x: st.x, z: st.z, y: st.y + SIGN_POST_H, ry: st.ry, h: 1.05, style: 'roadsign', both: true })) {
-      posts.push({ x: st.x, y: st.y, z: st.z });
-    }
-  }
+  // Road labels come from the attached way; corpus sampling can name a different street.
   // ⑧ 佈告欄:住宅棟的**臨路側**。「外側」搞反會把整組道具埋進牆裡 ⇒ 朝最近的路標擺,不猜
   for (const st of noticeSites) {
     if (sheet.full) break;
@@ -3491,7 +3512,20 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
     }
   }
 
-  const mesh = sheet.build();
+  const scenerySigns = sheet.items.slice();
+  let mesh = sheet.build();
+  // Cached terrain keeps one atlas; replacing tactical signs must release the previous GPU pages.
+  group.userData.setLaneSigns = items => {
+    sheet.items = []; sheet.area = 0; sheet.reserved = 0;
+    const accepted = [];
+    items.forEach((item, i) => { if (sheet.add(item)) accepted.push(i); });
+    for (const item of scenerySigns) sheet.add(item);
+    const next = sheet.build();
+    if (mesh) { group.remove(mesh); mesh.userData.signTex?.dispose(); disposeTree(mesh); }
+    mesh = next;
+    if (mesh) group.add(mesh);
+    return accepted;
+  };
   if (!mesh) return 0;
   group.add(mesh);
   // 標牌柱:與牌面分兩個 draw call(柱子沒有貼圖)。純視覺 —— **不進 blockers**(原則 4:
@@ -3500,7 +3534,7 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
     // 單位高柱 + 逐實例縮放:三種立牌的柱高不同(具名點位 5.2m、路標 2.4m、佈告欄/解說牌
     // 更矮),共用同一份幾何 ⇒ 仍是一個 draw call。柱高 MUST 由該塊牌自己的落點帶,
     // MUST NOT 統一成一個常數(牌面會浮在柱頂之上或陷進柱身裡)。
-    const pm = new THREE.InstancedMesh(cyl(0.09, 0.11, 1, 6),
+    const pm = new THREE.InstancedMesh(roadStructureGeo('sign_post', .18, 1, .18),
       envMat(0x8d9299, { wash: 0.3, cool: 0.45 }), posts.length);
     const M = new THREE.Matrix4(), P = new THREE.Vector3(), S = new THREE.Vector3();
     const Q = new THREE.Quaternion();
@@ -3514,6 +3548,20 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
     pm.instanceMatrix.needsUpdate = true;
     pm.frustumCulled = false;
     group.add(pm);
+    const braced = posts.filter(p => p.bracket);
+    if (braced.length) {
+      const braces = new THREE.InstancedMesh(roadStructureGeo('sign_bracket', .48, .08, .14),
+        envMat(0x727c83, { wash: .25, cool: .4 }), braced.length * 2);
+      braces.name = 'mapped-sign-brackets'; braces.frustumCulled = false;
+      braced.forEach((p, i) => {
+        Q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.ry);
+        for (let k = 0; k < 2; k++) {
+          P.set(p.x - Math.sin(p.ry) * .06, p.y + p.h + (k ? .25 : -.25), p.z - Math.cos(p.ry) * .06);
+          M.compose(P, Q, S.set(1, 1, 1)); braces.setMatrixAt(i * 2 + k, M);
+        }
+      });
+      braces.instanceMatrix.needsUpdate = true; group.add(braces);
+    }
   }
   return mesh.userData.signCount;
 }
@@ -4495,7 +4543,7 @@ function tunFloorAt(tw, s, total, sunk = true) {
  */
 function underpassPlan(raw, tags, heightAt, opt) {
   if (!raw || raw.length < 2) return null;
-  if (!UND_HW.test(tags?.highway || '')) return null;
+  if (!UND_HW.test(tags?.highway || '') && !(tags?.highway === 'service' && tags.tunnel === 'culvert')) return null;
   const arc = (p) => { const c = [0]; for (let i = 1; i < p.length; i++) c.push(c[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1])); return c; };
   // 結構半寬:呼叫端傳 strucHw(tags)(carve 迴圈的 hwWay;離線工具 venue_field 同一份)。
   // 預設 8 = PASS_W/2 的字面值 —— 本函式以「抽原文執行」被離線稽核/工具吃,拿不到模組常數。
@@ -5383,7 +5431,9 @@ function mergeGradeChains(roads) {
     // tunnel=avalanche_protector(明隧道實體結構,整段強制覆蓋)是兩種結構;chainWays 併鏈
     // 只保種子 way 的 tags,混併會讓落石棚被吸進山體隧道鏈(或反之)= 強制覆蓋旗標丟失。
     // 太魯閣「隧道→明隧道→隧道」相接序列拆成三段結構,共用節點端 c0<4 不立門洞,接縫無害。
-    out.push(...chainWays(ways, (a, b, dot) => dot >= 0.17 && (kind !== 'tunnel' || a.tags?.tunnel === b.tags?.tunnel), null, kind === 'bridge' ? BRIDGE_SNAP_M : 0));   // 倒鉤(平行孔折返)不併;橋端點鄰近聚類
+    out.push(...chainWays(ways, (a, b, dot) => dot >= 0.17
+      && structureLayer(a.tags) === structureLayer(b.tags)
+      && (kind !== 'tunnel' || a.tags?.tunnel === b.tags?.tunnel), null, kind === 'bridge' ? BRIDGE_SNAP_M : 0));
   }
   // 鏈排在前(2026-07-22 倫敦橋數浮動案):buildRoads 的 maxRuns 截斷依陣列序,舊版鏈排尾端
   // 使密路網市區的橋/隧道整批優先被犧牲(泰晤士河真橋忽有忽無)。立體結構是兵線與地標
@@ -5466,7 +5516,7 @@ function dedupeParallelBridges(roads, center) {
       if (x < minX) minX = x; if (x > maxX) maxX = x;
       if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
     }
-    brs.push({ i, pts, len, hw: bridgeHw(w.tags), ped: isPedestrianBridge(w.tags), minX, maxX, minZ, maxZ });
+    brs.push({ i, way: w, pts, len, hw: bridgeHw(w.tags), ped: isPedestrianBridge(w.tags), layer: structureLayer(w.tags), minX, maxX, minZ, maxZ });
   });
   brs.sort((a, b) => b.len - a.len);   // 長者優先保留(確定性:len 相同時維持插入序)
   const drop = new Set();
@@ -5477,6 +5527,8 @@ function dedupeParallelBridges(roads, center) {
       const B = brs[b];
       if (drop.has(B.i)) continue;
       if (A.ped !== B.ped) continue;   // 車行橋旁的人行天橋不是雙向分隔車道
+      if (A.layer !== B.layer) continue;
+      if (waysShareNode(A.way, B.way)) continue;
       const th = A.hw + B.hw;
       if (B.minX > A.maxX + th || B.maxX < A.minX - th || B.minZ > A.maxZ + th || B.maxZ < A.minZ - th) continue;
       if (overlapFrac(B.pts, A.pts, th) >= 0.6) drop.add(B.i);
@@ -5573,7 +5625,7 @@ function polylinesMeet(A, B, gap) {
 
 /**
  * ③橋交會去重(2026-07-28 使用者需求「十字路口都有橋交會時只留一座橋」;2026-07-29 定案含**鐵路高架**)。
- * 兩座橋**幾何相交/交會**時只留高優先者,低優先者**整條剔除**。
+ * Same-layer unconnected crossings retain one winner. Explicit layers and shared road nodes survive.
  *   優先度:兵線補橋(wetPieces,恆最高)> **鐵路高架**(RAIL_RANK)> 大馬路(roadWidth 大)> 小馬路(roadWidth 小)。
  *   ⇒ 鐵路×道路交會時**保留鐵路**(高架優先,使用者定案);鐵路×鐵路 → 長者保留;道路×道路 → 舊制。
  * 鐵路走 fetchOsmFeatures/buildRails(bridge=yes 或 monorail 才升高架),故 rails 另傳入、另回傳過濾集。
@@ -5597,7 +5649,7 @@ function dedupeCrossingBridges(roads, center, wetPieces = [], rails = []) {
     const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
     let len = 0;
     for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
-    brs.push({ i, arr, pts, rank, len, box: aabbOf(pts) });
+    brs.push({ i, arr, pts, rank, len, layer: structureLayer(w.tags), way: w, box: aabbOf(pts) });
   };
   roads.forEach((w, i) => {
     if (!w.tags?.bridge || w.tags.tunnel || !(w.geometry?.length >= 2)) return;
@@ -5630,6 +5682,9 @@ function dedupeCrossingBridges(roads, center, wetPieces = [], rails = []) {
     for (let b = a + 1; b < live.length; b++) {
       const B = live[b];
       if (isDrop(B)) continue;
+      if (A.layer !== B.layer) continue;
+      // Shared road nodes are connected branches, not competing crossings.
+      if (A.arr === 'road' && B.arr === 'road' && waysShareNode(A.way, B.way)) continue;
       const g = meetGap(A.arr === 'rail', B.arr === 'rail');
       if (gapFar(A.box, B.box, g)) continue;
       if (polylinesMeet(A.pts, B.pts, g)) doDrop(B);   // A 優先度 ≥ B ⇒ 剔除 B
@@ -5640,6 +5695,10 @@ function dedupeCrossingBridges(roads, center, wetPieces = [], rails = []) {
     rails: dropRail.size ? rails.filter((_, i) => !dropRail.has(i)) : rails,
   };
 }
+
+export { buildRoads, makeLevelCrossing, buildTowerPlatforms, buildBaseWaterPads,
+  buildWorldSigns,
+  underpassPlan, tunFloorAt, tunnelCoverIntervals, densify, BASE_PAD_R, BASE_PAD_T };
 
 /** 世界公尺 → 經緯度(`llToWorld` 逆運算;道路格網量化與兵線跨水補橋的偽 way 用)。
  *  實作住 `data.js xzToLL`(含地圖主方位的反向旋轉)—— 本檔 MUST NOT 復辟第二份公式。 */
@@ -6043,8 +6102,8 @@ function skirtWaterClips(run, terrain) {
 /**
  * 大面積水域自動高架橋(2026-07-15):非橋/非隧道道路的連續泡水段 ≥ WATER.SPAN_MIN_M
  * 即整段升級為高架橋 —— 機體無法下深水(game.js),道路通過大面積水域一定要有橋。
- * 泡水區間向兩岸乾地各外延 WATER.RAMP_M 當引道錨點(deckAt 的 24m 緩坡落在乾地上 = 斜坡出入口,
- * 不是階梯);太短的泡水段(淺灘/窄溝)不蓋橋,照舊涉水。回傳折線陣列,每條掛 .wet 旗標,
+ * WATER.RAMP_M extends wet spans onto dry approach anchors; the shared profile settles the ramp grade.
+ * 太短的泡水段(淺灘/窄溝)不蓋橋,照舊涉水。回傳折線陣列,每條掛 .wet 旗標,
  * 邊界頂點前後段共享 = 橋頭與地面路無縫銜接。buildRoads 與 markGradeCorridors 共用(MUST 同一份規則)。
  * inclSwamp(2026-07-24 使用者需求「兵線通過沼澤時也要造橋」):沼澤(terrainEnvCode 2)也算泡水 →
  *   兵線跨沼段一律升橋,機體不必踩進暗紫濁沼(否則電子失效/滯留,同水域)。**只兵線路徑傳 true**
@@ -6208,6 +6267,11 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = true) {
 }
 
 function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = [], inclSwamp = false, bores = []) {
+  const connectedBridge = bridgeConnections(roads);
+  const supportClear = bridgeSupportClearance(roads, p => llToWorld(p.lat, p.lon, center), tags =>
+    tags.bridge ? strucHw(tags) * 2 : roadWidth(tags));
+  const detailRuns = [];
+  let gradeRejected = 0;
   const inb = 4;
   // ---- 別條路的洞內斷面:貼地路段的路面/標線 MUST NOT 畫進去(2026-08-01 金龍隧道真圖資實測)----
   // `punchPortalHoles` 刪的是**地形**三角形與地被實例,路面緞帶是另一個 mesh、沒被刪:淺覆蓋處
@@ -6270,7 +6334,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   };
   // 沿折線的縱向實線:偏移 off、寬 w(雙黃線 = 兩次呼叫);hw2 = 路半寬(夾高取樣);
   // yBAt(i) = 該頂點的路面基準高(結構隧道用,回 null 走貼地)
-  const emitLine = (run, hw2, lift2, off, w, c, yBAt = null, dropSeg = null) => {
+  const emitLine = (run, hw2, lift2, off, w, c, yBAt = null, dropSeg = null, widthAt = null) => {
     const nP = run.length, k0 = mark.base;
     for (let i = 0; i < nP; i++) {
       const [x, z] = run[i];
@@ -6278,13 +6342,15 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       let dx = b2[0] - a[0], dz = b2[1] - a[1];
       const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
       const px = dz, pz = -dx;
+      const sectionHw = widthAt ? widthAt(x, z, hw2) : hw2;
+      const sectionOff = off * sectionHw / hw2;
       const yB = yBAt ? yBAt(i) : null;
       const hM = yB !== null ? -Infinity
-        : Math.max(terrain.heightAt(x + px * hw2, z + pz * hw2),
-                   terrain.heightAt(x - px * hw2, z - pz * hw2));
+        : Math.max(terrain.heightAt(x + px * sectionHw, z + pz * sectionHw),
+                   terrain.heightAt(x - px * sectionHw, z - pz * sectionHw));
       // 頂點序:大偏移在前(與路面quad同向繞行 → 面朝 +y,不會背面剔除消失)
-      putMark(x + px * (off + w / 2), z + pz * (off + w / 2), lift2, c, hM, yB);
-      putMark(x + px * (off - w / 2), z + pz * (off - w / 2), lift2, c, hM, yB);
+      putMark(x + px * (sectionOff + w / 2), z + pz * (sectionOff + w / 2), lift2, c, hM, yB);
+      putMark(x + px * (sectionOff - w / 2), z + pz * (sectionOff - w / 2), lift2, c, hM, yB);
     }
     for (let i = 0; i < nP - 1; i++) {
       if (dropSeg?.(i)) continue;                  // 落進別條路的洞內斷面:頂點留著、這一格不成面
@@ -6340,31 +6406,37 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     if (hwWay < 2 || bridge || tunnel) continue;
     const n = way.geometry.length;
     for (let i = 0; i < n; i++) {
-      const gpt = way.geometry[i], key = `${gpt.lat.toFixed(6)},${gpt.lon.toFixed(6)}`;
+      const gpt = way.geometry[i], key = `${structureLayer(way.tags)}:${gpt.lat.toFixed(6)},${gpt.lon.toFixed(6)}`;
       let rec = nodeArms.get(key);
       if (!rec) {
         const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
-        rec = { x, z, arms: 0, hw: 0, main: false, dirs: [], armHw: [] };
+        rec = { x, z, layer: structureLayer(way.tags), arms: 0, hw: 0, main: false, roundabout: false, dirs: [], armHw: [], armLength: [] };
         nodeArms.set(key, rec);
       }
       rec.hw = Math.max(rec.hw, hwWay);
       rec.main = rec.main || MAIN_HW.test(way.tags.highway);
+      rec.roundabout = rec.roundabout || way.tags.junction === 'roundabout';
       for (const j of [i - 1, i + 1]) {
         if (j < 0 || j >= n) continue;
         const [ax, az] = llToWorld(way.geometry[j].lat, way.geometry[j].lon, center);
-        const dl = Math.hypot(ax - rec.x, az - rec.z) || 1;
+        const dl = Math.hypot(ax - rec.x, az - rec.z);
+        if (dl < .01) continue;
         const dx = (ax - rec.x) / dl, dz = (az - rec.z) / dl;
         const same = rec.dirs.findIndex(([ux, uz]) => ux * dx + uz * dz > 0.92);
-        if (same >= 0) rec.armHw[same] = Math.max(rec.armHw[same], hwWay);
-        else { rec.dirs.push([dx, dz]); rec.armHw.push(hwWay); }
+        if (same >= 0) {
+          rec.armHw[same] = Math.max(rec.armHw[same], hwWay);
+          rec.armLength[same] = Math.min(rec.armLength[same], dl);
+        } else { rec.dirs.push([dx, dz]); rec.armHw.push(hwWay); rec.armLength.push(dl); }
       }
     }
   }
   for (const rec of nodeArms.values()) rec.arms = rec.dirs.length;
+  for (const rec of nodeArms.values()) rec.boundary = junctionBoundary(rec);
+  const widthAt = roadTransitionIndex(nodeArms.values(), flareHw);
   const junctionCuts = [...nodeArms.values()].filter((rec) => rec.arms >= 3);
   const JCELL = 32, junctionGrid = new Map();
   for (const rec of junctionCuts) {
-    const r = rec.hw + 0.8;
+    const r = Math.max(rec.hw, ...(rec.boundary?.reaches || [])) + 4.8;
     const i0 = Math.floor((rec.x - r) / JCELL), i1 = Math.floor((rec.x + r) / JCELL);
     const j0 = Math.floor((rec.z - r) / JCELL), j1 = Math.floor((rec.z + r) / JCELL);
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
@@ -6374,8 +6446,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   }
   const inJunctionMarkCut = (x, z, pad = 0.8) => {
     for (const rec of junctionGrid.get(`${Math.floor(x / JCELL)},${Math.floor(z / JCELL)}`) || []) {
-      const r = rec.hw + pad, dx = x - rec.x, dz = z - rec.z;
-      if (dx * dx + dz * dz < r * r) return true;
+      const dx = x - rec.x, dz = z - rec.z;
+      if (Math.hypot(dx, dz) < rec.hw + pad) return true;
+      for (let i = 0; i < rec.dirs.length; i++) {
+        const [ux, uz] = rec.dirs[i], along = dx * ux + dz * uz;
+        if (along >= 0 && along < (rec.boundary?.reaches[i] ?? rec.hw) + 4.8
+          && Math.abs(dx * uz - dz * ux) < rec.armHw[i] + pad) return true;
+      }
     }
     return false;
   };
@@ -6388,11 +6465,16 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   const maxRuns = Math.max(600, Math.min(2600, Math.round(km2R * 1800)));
   let built = 0;
   for (const way of roads) {
+    const wayWidthAt = (x, z, hw) => widthAt(x, z, hw, structureLayer(way.tags));
     const main = MAIN_HW.test(way.tags.highway);
-    const arterial = /^(motorway|trunk|primary)$/.test(way.tags.highway);   // 幹道:雙黃實線
+    const link = /_link$/.test(way.tags.highway);
+    const arterial = /^(motorway|trunk|primary)(_link)?$/.test(way.tags.highway);
     const ped = isPedestrianWay(way.tags);
     const bridge = ped ? isPedestrianBridge(way.tags) : !!way.tags.bridge;
     const tunnel = !!way.tags.tunnel;
+    const branchOpenings = bridge ? bridgeOpenings(roads, way, p => llToWorld(p.lat, p.lon, center)) : [];
+    const bridgeJunctions = bridge ? way.geometry.filter(p => connectedBridge(way, p))
+      .map(p => llToWorld(p.lat, p.lon, center)) : [];
     // 橋樑/地下道是「可站上去、可穿過去」的結構物(兵線可能就走在上面):
     // 路寬夾到 PASS_W 以上,NPC 與玩家並肩通過不互相卡住(跨水自動橋段在 piece 層再夾一次)。
     // 路寬:橋夾通行寬;隧道改在 run 層判定(結構性才夾 PASS_W,平坦市區「隧道」按一般街道寬)
@@ -6475,39 +6557,33 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 只收 bare/green(濕地/水面另有各自的定調規則,不在此列)。
       if ((biome === 'bare' || biome === 'green') && roadLaneN(way.tags) >= 2) biome = 'urban';
       const pedTheme = ped ? (brg ? 'footbridge' : way._ped?.theme || null) : null;
-      const b = bucketOf(biome, main, pedTheme);
+      const b = bucketOf(biome, main || link, pedTheme);
       const nP = run.length, vbase = b.base;
       const cum = [0];
       for (let i = 1; i < nP; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
       const total = cum[nP - 1];
-      // 高架橋橋面:兩端地面高的直線內插 + 端點 24m 緩坡爬升淨空 —— 橋面是水平的,
-      // 不跟著河谷/窪地起伏;地形突起處仍夾在地表之上(不鑽土)。24m 連續內插 = 出入口
-      // 是斜坡不是階梯。跨水橋另夾「水面 + 0.9m」下限:錨點萬一泡水,橋面也不沉入水中。
-      // 結構隧道/地下道 MUST 用開挖前錨點(way._tun 存檔):開挖後端點重算會與 carve 的 floors
-      // 小幅分家(路面/牆/門洞整體偏移)。橋/一般路照舊取當下地表。
-      // (此處的 hA/hB 只餵橋面 deckAt;隧道/地下道的路面一律走 tunFloorAt 單一縫。)
-      const hA = strc ? tw.hA : terrain.heightAt(run[0][0], run[0][1]);
-      const hB = strc ? tw.hB : terrain.heightAt(run[nP - 1][0], run[nP - 1][1]);
+      // Clipped map edges remain ground datums; only actual shared way endpoints join an elevated deck.
+      const joinedEnd = i => bridgeJunctions.some(p => Math.hypot(p[0] - run[i][0], p[1] - run[i][1]) < .01);
+      const bridgePlan = brg ? planBridgeDeck(run, terrain.heightAt, {
+        rise: BRIDGE_RISE * Math.max(1, structureLayer(way.tags)),
+        grade: Math.tan(MAPGEO.MAX_ROAD_GRADE_DEG * Math.PI / 180), lift: ROAD_LIFT,
+        waterFloor: Math.max(WATER.LEVEL, (terrain.waterY ?? WATER.LEVEL) + WATER.SWAMP_BAND) + .9,
+        startJoined: joinedEnd(0), endJoined: joinedEnd(nP - 1),
+        joins: bridgeJunctions,
+      }) : null;
+      if (brg && !bridgePlan) { gradeRejected++; continue; }
       const deckAt = (s, gx, gz) => {
-        // 端點緩坡改平滑 S 曲線(smoothstep):斜率在坡底與坡頂皆歸零 → 與地面、水平橋面 C1 連續,
-        // 出入口是「連續斜坡」而非硬折角(舊線性版在 s=24 有膝折 = 階梯感)。t=0 逐位元同舊版
-        // (坡底抬升 0 = 接地);total≥48 的橋跨中 t=1 峰值仍滿 BRIDGE_RISE(淨空同今日);total<48 的
-        // 短橋跨中峰值微幅上抬(淨空不減,安全)。geometry/橋墩/decks 碰撞取同一 deckAt 自動跟隨。
-        const t = Math.min(1, s / 24, (total - s) / 24);   // s∈[0,total] 故 t 已夾 [0,1]
-        const ramp = t * t * (3 - 2 * t);                  // smoothstep:兩端切線為 0,免三角函式
-        const yLine = hA + (hB - hA) * (s / (total || 1)) + BRIDGE_RISE * ramp;
-        // 水面下限給「全部橋 run」(2026-07-22;deckAt 只在 brg run 被呼叫):真 OSM 橋斷鏈/被邊界
-        // 裁切時端點可能落在河面上,hA/hB 取到水面高 → 舊版(僅 run.wet 有下限)剖面中段沉貼水面。
-        // 乾地高架此下限低於地表,max 無感。
-        const swampY = (terrain.waterY ?? WATER.LEVEL) + (WATER.SWAMP_BAND || 0.45);
-        const floor = Math.max(WATER.LEVEL, swampY) + 0.9;
-        return Math.max(yLine, terrain.heightAt(gx, gz) + ROAD_LIFT * ramp, floor);
+        return bridgePlan.at(s);
       };
       // 隧道/地下道路面(單一縫 tunFloorAt):山體隧道 = 兩端洞口地表高的平直內插(洞內在山體
       // 之下、洞口與地表齊平);地下道 = 同一條基準線再減 smoothstep 下沉剖面(兩端引道、中段平底)。
       const tFloorAt = (s) => tunFloorAt(tw, s, total);
       // 基準線(未下沉)= 該處的一般地表道路高:地下道引道的護欄頂與緣石帶要對齊它才「與一般道路對齊」
       const tBaseAt = (s) => tunFloorAt(tw, s, total, false);
+      detailRuns.push({ kind: strc ? (under ? 'underpass' : 'tunnel') : brg ? 'bridge' : 'road',
+        points: run, floors: cum.map(s => strc ? tFloorAt(s) + ROAD_LIFT : brg ? deckAt(s) : null),
+        hw, widths: run.map(([x, z]) => strc || brg ? hw : wayWidthAt(x, z, hw)),
+        tags: way.tags, way, junctions: bridgeJunctions });
       for (let i = 0; i < nP; i++) {
         const [x, z] = run[i];
         const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
@@ -6516,7 +6592,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         const px = dz, pz = -dx;                 // XZ 垂直向量
         // 截面 4 頂點:外緣暗(墨線)→ 內緣亮,漸層即手繪描邊筆觸。
         // 非橋:各自貼地但夾在截面最高點 −CLAMP 之上(橫坡不吞路);橋:水平橋面
-        const offs = [[hw, 1], [hw * 0.64, 0], [-hw * 0.64, 0], [-hw, 1]];
+        const sectionHw = strc || brg ? hw : wayWidthAt(x, z, hw);
+        const offs = [[sectionHw, 1], [sectionHw * 0.64, 0], [-sectionHw * 0.64, 0], [-sectionHw, 1]];
         const hs = offs.map(([off]) => terrain.heightAt(x + px * off, z + pz * off));
         const hMax = Math.max(...hs);
         for (let k = 0; k < 4; k++) {
@@ -6528,7 +6605,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           b.pos.push(vx, vy, vz);
           b.nrm.push(0, 1, 0);
           b.uv.push(vx / 9, vz / 9);             // 世界投影 UV:路面質感貼圖(鏡射重複無接縫)
-          if (ink) b.col.push(0.52, 0.52, 0.58);   // 邊墨帶微偏冷
+          if (ink && (strc || brg || !inJunctionMarkCut(vx, vz))) b.col.push(0.52, 0.52, 0.58);
           else b.col.push(1, 1, 1);
         }
       }
@@ -6943,6 +7020,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             rail.nrm.push(dz * side, 0, -dx * side, dz * side, 0, -dx * side);
           }
           for (let i = 0; i < nP - 1; i++) {
+            const mx = (run[i][0] + run[i + 1][0]) / 2, mz = (run[i][1] + run[i + 1][1]) / 2;
+            if (bridgeOpeningAt(branchOpenings, mx, mz, hw + 2)) continue;
             const k = k0 + i * 2;
             rail.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
           }
@@ -6995,7 +7074,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         for (let s = 12; s < total - 8 && piers.length < 120; s += 24) {
           const [ex, ez, ddx, ddz] = at(s);
           const y0 = terrain.heightAt(ex, ez), y1 = deckAt(s, ex, ez);
-          if (y1 - y0 > 1.4) {
+          if (y1 - y0 > 1.4 && supportClear(way, ex, ez, Math.min(1.4, hw * 0.35))) {
             piers.push({ x: ex, z: ez, y0: y0 - 0.5, y1, r: Math.min(1.4, hw * 0.35), ry: Math.atan2(ddx, ddz), w: hw * 1.7 });
           }
         }
@@ -7081,6 +7160,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // ≥8,標線一律鋪在真實車道寬上 ⇒ 車道數與路緣線位置與結構外那條路對齊,邊帶交給避車道 +
       // 銜接漸縮帶。MUST NOT 依「差額夠不夠寬」在 laneHw / hw 之間切換(見 carriageHw 註解)。
       const mHw = laneHw;
+      const paintWidthAt = strc || brg ? null : wayWidthAt;
       if (biome === 'urban' && mHw >= 2) {
         // 白虛線通用鋪法:偏移 off(0 = 中線)。off=0 逐位元同舊版中線(±0.28 = 0.56 寬)
         const dashLine = (off) => {
@@ -7092,28 +7172,32 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             for (const d of [s, s + 3.2]) {
               const [ex, ez, ddx, ddz] = at(d);
               const qx = ddz, qz = -ddx;
+              const paintHw = paintWidthAt ? paintWidthAt(ex, ez, mHw) : mHw;
+              const paintOff = off * paintHw / mHw;
               const yB = markBaseAt ? markBaseAt(d, ex, ez) : null;
               const hM = yB !== null ? -Infinity
-                : Math.max(terrain.heightAt(ex + qx * hw, ez + qz * hw),
-                           terrain.heightAt(ex - qx * hw, ez - qz * hw));
-              putMark(ex + qx * (off + 0.28), ez + qz * (off + 0.28), 0.58, MARK_W, hM, yB);
-              putMark(ex + qx * (off - 0.28), ez + qz * (off - 0.28), 0.58, MARK_W, hM, yB);
+                : Math.max(terrain.heightAt(ex + qx * paintHw, ez + qz * paintHw),
+                           terrain.heightAt(ex - qx * paintHw, ez - qz * paintHw));
+              putMark(ex + qx * (paintOff + 0.28), ez + qz * (paintOff + 0.28), 0.58, MARK_W, hM, yB);
+              putMark(ex + qx * (paintOff - 0.28), ez + qz * (paintOff - 0.28), 0.58, MARK_W, hM, yB);
             }
             mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
             mark.base += 4;
           }
         };
-        if (main) {
-          // 車道數由車道寬推導(單一縫 roadLaneN,不硬編各路):main 恆 ≥ 雙線道
-          const lanes = Math.max(2, Math.round(roadLaneN(way.tags)));
-          if (arterial) {                        // 幹道:雙黃實線分向
-            emitLine(run, mHw, 0.58, 0.33, 0.2, MARK_Y, markYB, dropMarkSeg);
-            emitLine(run, mHw, 0.58, -0.33, 0.2, MARK_Y, markYB, dropMarkSeg);
-          } else {                               // 次要道:單白虛線
+        if (main || link) {
+          const lanes = Math.max(link ? 1 : 2, Math.round(roadLaneN(way.tags)));
+          const oneWay = /^(yes|1|-1|true)$/.test(way.tags.oneway || '');
+          if (oneWay) {
+            for (let k = 1; k < lanes; k++) dashLine(mHw * (2 * k / lanes - 1));
+          } else if (arterial && lanes > 1) {
+            emitLine(run, mHw, 0.58, 0.33, 0.2, MARK_Y, markYB, dropMarkSeg, paintWidthAt);
+            emitLine(run, mHw, 0.58, -0.33, 0.2, MARK_Y, markYB, dropMarkSeg, paintWidthAt);
+          } else if (lanes > 1) {
             dashLine(0);
           }
           // 四線道以上:每向 nHalf 車道 → nHalf−1 條同向車道分隔白虛線(壓在路緣線內)
-          if (lanes >= 4) {
+          if (lanes >= 4 && !oneWay) {
             const nHalf = Math.round(lanes / 2);
             for (let k = 1; k < nHalf; k++) {
               const off = mHw * k / nHalf;
@@ -7121,8 +7205,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             }
           }
           // 路緣白邊線(車道外側,墨帶內)
-          emitLine(run, mHw, 0.56, mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg);
-          emitLine(run, mHw, 0.56, -mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg);
+          emitLine(run, mHw, 0.56, mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg, paintWidthAt);
+          emitLine(run, mHw, 0.56, -mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg, paintWidthAt);
         }
         // ---- 路燈:沿路等間距、左右交錯(燈臂朝路心)----
         // 隧道不立(洞內照明是天花燈;路燈桿會戳穿天花板與山體);橋不立(橋燈另有一套沿橋面
@@ -7200,7 +7284,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // ---- 路口:斑馬線 + 紅綠燈(市區、車行路口、彼此至少 70m)----
   const junctions = [];
   for (const rec of nodeArms.values()) {
-    if (rec.arms < 3 || junctions.length >= 30) continue;
+    if (rec.arms < 3 || rec.roundabout || junctions.length >= 30) continue;
     if (rec.x < terrain.minX + inb + 10 || rec.x > terrain.maxX - inb - 10
       || rec.z < terrain.minZ + inb + 10 || rec.z > terrain.maxZ - inb - 10) continue;
     const h = terrain.heightAt(rec.x, rec.z);
@@ -7209,12 +7293,12 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     if (classify(terrain.sampleColor?.(rec.x, rec.z), h, null, rnd) !== 'urban') continue;
     if (junctions.some((j) => Math.hypot(j.x - rec.x, j.z - rec.z) < 70)) continue;
     junctions.push(rec);
-    const arms2 = rec.dirs.slice(0, 4);            // 前置統計已合併相近方向，不在這裡再分家
+    const arms2 = rec.dirs;
     const hJ = terrain.heightAt(rec.x, rec.z);     // 路口中心高:白槓跟路面同一條夾高規則
     for (let ai = 0; ai < arms2.length; ai++) {
       const [dx, dz] = arms2[ai], armHw = rec.armHw[ai];
       const qx = dz, qz = -dx;
-      const d0 = rec.hw + 1.2;                     // 由最大臂定中央淨空，斑馬線不伸進路口填面
+      const d0 = (rec.boundary?.reaches[ai] ?? rec.hw) + 1.2;
       const zw = Math.max(0.75, armHw * 0.82);      // 各臂吃自己的寬，窄側路不被寬幹道橫向撐出路面
       // 白槓長軸沿行車方向(3.2m 深)、槓寬 0.5m / 間 0.5m,橫向重複鋪滿路寬
       for (let lo = -zw; lo + 0.5 <= zw + 0.01; lo += 1.0) {
@@ -7240,66 +7324,31 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     }
   }
 
-  // ---- 路口填面 + 寬度縮減(2026-07-24):道路是各自獨立緞帶,只靠共用 OSM 節點重疊 ——
-  // 路口內角的三角楔形露地、寬窄路對接的邊緣落差都無填補幾何。此處對車行節點補道路色面片
-  // (進路面桶 → 同色同材質,與緞帶內部重疊不可見,只補露地/落差)。純幾何零 rnd;classify 傳
-  // mix=null(同斑馬線迴圈)不消耗共享序列。橋/隧節點本就不入 nodeArms。繞行朝 +Y(依緞帶截面推導)。
+  // ---- 路口填面: fitted arm boundaries ----
+  // Width transitions already modify ribbons; only connected corner gaps need additional pavement.
   const fillLift = (vx, vz, hMax) => Math.max(terrain.heightAt(vx, vz), hMax - CLAMP) + ROAD_LIFT;
   // nodeArms 包含圖外 OSM 節點；補面須與道路本體共用邊界，否則路被截掉後留下浮空圓盤。
   const fillInBounds = (x, z, r = 0) => x - r >= terrain.minX + inb && x + r <= terrain.maxX - inb
     && z - r >= terrain.minZ + inb && z + r <= terrain.maxZ - inb;
   for (const rec of nodeArms.values()) {
     if (rec.hw < 2) continue;
-    let mode = 0;                                  // 3 = 路口圓面 / 2 = 寬度縮減梯形
-    if (rec.arms >= 3) mode = 3;
-    else if (rec.arms === 2 && rec.armHw.length === 2) {
-      const [d0, d1] = rec.dirs, [hw0, hw1] = rec.armHw;
-      // 兩臂近反向(直線穿過)且半寬差顯著 → 一條路收窄成另一條
-      if (Math.abs(hw0 - hw1) > 0.6 && d0[0] * d1[0] + d0[1] * d1[1] < -0.7) mode = 2;
-    }
-    if (!mode) continue;
+    const boundary = rec.boundary;
+    if (!boundary || !boundary.points.every(([x, z]) => fillInBounds(x, z))) continue;
     const biome = classify(terrain.sampleColor?.(rec.x, rec.z), terrain.heightAt(rec.x, rec.z), null, rnd);
     if (biome === 'water') continue;               // 河面節點(橋另建),不鋪路面
     const b = bucketOf(biome, rec.main);
-    if (mode === 3) {
-      if (!fillInBounds(rec.x, rec.z, rec.hw)) continue;
-      // 扇形圓面:半徑 = 節點最大臂半寬;中心 + N 段緣點,取樣最高地表夾高(坡地不浮不沉)
-      const R = rec.hw, N = 10;
-      let hMax = terrain.heightAt(rec.x, rec.z);
-      for (let k = 0; k < N; k++) {
-        const a = k / N * Math.PI * 2;
-        hMax = Math.max(hMax, terrain.heightAt(rec.x + Math.cos(a) * R, rec.z + Math.sin(a) * R));
-      }
-      const c0 = b.base;
-      b.pos.push(rec.x, fillLift(rec.x, rec.z, hMax), rec.z);
-      b.nrm.push(0, 1, 0); b.uv.push(rec.x / 9, rec.z / 9); b.col.push(1, 1, 1);
-      for (let k = 0; k <= N; k++) {
-        const a = k / N * Math.PI * 2;
-        const vx = rec.x + Math.cos(a) * R, vz = rec.z + Math.sin(a) * R;
-        b.pos.push(vx, fillLift(vx, vz, hMax), vz);
-        b.nrm.push(0, 1, 0); b.uv.push(vx / 9, vz / 9); b.col.push(1, 1, 1);
-      }
-      for (let k = 0; k < N; k++) b.idx.push(c0, c0 + 2 + k, c0 + 1 + k);   // (心, 緣k+1, 緣k) → 朝 +Y
-      b.base += N + 2;
-    } else {
-      // 縮減梯形:統一以 d0 為軸,前 T 截面寬 hw0、後 T 截面寬 hw1(d1≈−d0)
-      const [d0] = rec.dirs, [hw0, hw1] = rec.armHw;
-      const T = Math.min(6, Math.max(hw0, hw1) * 1.5);
-      const px = d0[1], pz = -d0[0];
-      const s0x = rec.x + d0[0] * T, s0z = rec.z + d0[1] * T;
-      const s1x = rec.x - d0[0] * T, s1z = rec.z - d0[1] * T;
-      const hMax = Math.max(terrain.heightAt(s0x, s0z), terrain.heightAt(s1x, s1z), terrain.heightAt(rec.x, rec.z));
-      const P = [[s0x + px * hw0, s0z + pz * hw0], [s0x - px * hw0, s0z - pz * hw0],
-                 [s1x + px * hw1, s1z + pz * hw1], [s1x - px * hw1, s1z - pz * hw1]];
-      if (!P.every(([x, z]) => fillInBounds(x, z))) continue;
-      const c0 = b.base;
-      for (const [vx, vz] of P) {
-        b.pos.push(vx, fillLift(vx, vz, hMax), vz);
-        b.nrm.push(0, 1, 0); b.uv.push(vx / 9, vz / 9); b.col.push(1, 1, 1);
-      }
-      b.idx.push(c0, c0 + 2, c0 + 1, c0 + 1, c0 + 2, c0 + 3);   // 反向繞行 → 朝 +Y
-      b.base += 4;
+    const points = boundary.points;
+    const hMax = Math.max(...points.map(([x, z]) => terrain.heightAt(x, z)));
+    if (!Number.isFinite(hMax)) continue;
+    const c0 = b.base;
+    for (const [vx, vz] of points) {
+      b.pos.push(vx, fillLift(vx, vz, hMax), vz);
+      b.nrm.push(0, 1, 0); b.uv.push(vx / 9, vz / 9); b.col.push(1, 1, 1);
     }
+    // Unequal acute arms can hide the node behind an edge; a center fan would overlap outside pavement.
+    const triangles = THREE.ShapeUtils.triangulateShape(points.map(([x, z]) => new THREE.Vector2(x, z)), []);
+    for (const [a, c, d] of triangles) b.idx.push(c0 + d, c0 + c, c0 + a);
+    b.base += points.length;
   }
 
   // ---- 立體結構的線工授權(⑨-3;2026-08-16 序 12b)----------------------------------
@@ -7375,10 +7424,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   }
   // ---- 高架橋欄杆(直立緞帶,雙面)----
   if (rail.idx.length) {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(rail.pos, 3));
-    geo.setAttribute('normal', new THREE.Float32BufferAttribute(rail.nrm, 3));
-    geo.setIndex(rail.idx);
+    const geo = roadBarrierGeo(rail);
     // 貢獻:計畫 §⑨ 寫的「欄杆立柱 → 中等」在本儲存庫沒有立柱 —— 欄杆是**一條連續緞帶**,
     // 「量太滿」的實際來源是緞帶上下兩條邊的二階差分(側視一座橋在 2.2m 內擠著欄杆上下緣、
     // 邊梁上下緣、底板緣共五條近乎平行的線)。節距軸吃的正是這件事:帶高 1.08m。
@@ -7467,7 +7513,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     // 貢獻:柱列是本專案唯一真正「重複到會變雜訊」的結構構件(計畫 §⑨ 的「格網」那一格)
     // ⇒ 節距軸直接吃 `TUN.COL_GAP`(現值 4.5m ≥ `INK_REPEAT_M` 3.6m ⇒ 推導值 1 = 舊制)。
     // 這一行今天是恆等式,但把柱距收緊到 3.6m 以下時它會自己讓步,MUST NOT 改寫成常數。
-    const btM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
+    const btM = new THREE.InstancedMesh(roadStructureGeo('gallery_column'),
       envMat(0x938e85, { wash: 0.4, cool: 0.45, contrib: inkRepeat(TUN.COL_GAP) }), galCols.length);
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
@@ -7505,7 +7551,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     group.add(cm);
   }
   if (beams.length) {
-    const bM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.7, 1.4),
+    const bM = new THREE.InstancedMesh(roadStructureGeo('crossbeam', 1, .7, 1.4),
       envMat(0x9a958c, { wash: 0.35, cool: 0.45 }), beams.length);
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
@@ -7543,13 +7589,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   }
   // ---- 高架橋橋墩:橋面到地面的立柱(InstancedMesh)+ 墩頂帽梁;2026-07-15 起登記碰撞柱(cols → blockers)----
   if (piers.length) {
-    const pM = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.18, 1, 8),
+    const pM = new THREE.InstancedMesh(roadStructureGeo('bridge_pier', 2.36, 1, 2.36),
       envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 }), piers.length);
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
     piers.forEach((p, i) => {
-      P.set(p.x, (p.y0 + p.y1) / 2, p.z);
-      S.set(p.r, p.y1 - p.y0, p.r);
+      P.set(p.x, (p.y0 + p.y1 - 1.2) / 2, p.z);
+      S.set(p.r, p.y1 - 1.2 - p.y0, p.r);
       M.compose(P, Q, S);
       pM.setMatrixAt(i, M);
     });
@@ -7560,7 +7606,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     // 墩頂帽梁:橋墩與橋面之間加寬的橫向承接梁,補足支撐結構感
     // 頂面 MUST 低於橋面:與路面共面時會依鏡頭角度蓋過柏油,看成一道橫跨車道的障礙。
     const capH = 0.8, capSink = 0.8;   // 水平帽梁下掛於橋腹;餘裕涵蓋坡段前緣與分段弦差
-    const capM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
+    const capM = new THREE.InstancedMesh(roadStructureGeo('pier_cap'),
       envMat(0x8f959a, { wash: 0.35, cool: 0.45 }), piers.length);
     piers.forEach((p, i) => {
       E.set(0, p.ry, 0); Q.setFromEuler(E);
@@ -7700,12 +7746,12 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     portalMat.makeRotationY(p.ry).setPosition(p.x, p.y - 0.4, p.z);
     // 門洞是「真的洞」(2026-07-15 隧道有實體內部後改版):額牆 = 兩側立柱 + 頂梁,中央開口
     // (寬 W−1.6、高 H2−1.2)直通隧道路面 —— MUST NOT 退回蓋住路面的黑色實心塞子。
-    addPortalGeo(portalWallGeos, new THREE.BoxGeometry(W + 3, 3.2, 1.2), 0, H2 + 0.4, 0);
+    addPortalGeo(portalWallGeos, roadStructureGeo('portal_lintel', W + 3, 3.2, 1.2), 0, H2 + 0.4, 0);
     for (const s of [1, -1]) {
-      addPortalGeo(portalWallGeos, new THREE.BoxGeometry(2.3, H2 - 1.2, 1.2), s * (W / 2 + 0.35), (H2 - 1.2) / 2, 0);
+      addPortalGeo(portalWallGeos, roadStructureGeo('portal_pillar', 2.3, H2 - 1.2, 1.2), s * (W / 2 + 0.35), (H2 - 1.2) / 2, 0);
     }
     for (const s of [1, -1]) {                             // 翼牆:向來路外八張開的擋土牆
-      addPortalGeo(portalWallGeos, new THREE.BoxGeometry(1.0, H2 - 0.8, 6), s * (W / 2 + 1.8), (H2 - 0.8) / 2 - 0.3, 2.4, s * 0.5);
+      addPortalGeo(portalWallGeos, roadStructureGeo('portal_wing', 1.0, H2 - 0.8, 6), s * (W / 2 + 1.8), (H2 - 0.8) / 2 - 0.3, 2.4, s * 0.5);
     }
     // 洞口暗面(2026-07-22;2026-07-23 退居備援;2026-07-27 收斂為「無打洞能力」才掛):嵌在開口內側、
     // 只朝外(FrontSide)遮住覆蓋轉換面的拉伸地形布幕。能打洞時土牆已不存在(collar 封邊)或本來就沒有土牆
@@ -7782,7 +7828,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // 柱頂 MUST 封在橋面「底緣」(y1 − 1.2,與 ceilingAt 的 deck 厚度一致)—— 封到橋面上表面的話,
   // 站在橋上的機體 myBot == 柱頂,_collide 的嚴格不等式不會跳過 → 過橋時每 24m 被隱形柱側推。
   for (const p of piers) cols.push({ x: p.x, z: p.z, y: p.y0, r: p.r + 0.25, h: Math.max(1, p.y1 - 1.2 - p.y0) });
-  return { built, decks, tunnels: tunnelSegs, cols, portals, signSpots };
+  buildRoadStructureDetails(group, detailRuns, terrain, decks, { roundaboutIsland, roadWidth });
+  return { built, decks, tunnels: tunnelSegs, cols, portals, signSpots, gradeRejected, roadRuns: detailRuns };
 }
 
 // ---- 兵線砲塔跨橋墩座(2026-07-24 使用者需求)----
@@ -7904,7 +7951,7 @@ function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
   const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
   const pierM = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
   for (const sp of slabs) {
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(sp.w, sp.t, sp.d), slabM);
+    const slab = new THREE.Mesh(roadStructureGeo('platform_slab', sp.w, sp.t, sp.d), slabM);
     slab.position.set(sp.cx, sp.cy, sp.cz);
     slab.rotation.y = sp.ry;
     group.add(slab);
@@ -7953,7 +8000,7 @@ export function makeDeckIndex(decks) {
   // 縱向溢出到「相鄰較高橋段」的端點 → 斜引道上回報的橋面高度被高估近一整段(~2.5m)→ 上橋台階
   // 超過 DECK_STEP → 爬到一半掉回地面、卡在橋下(=「無法走上去 / 破圖穿越」)。分離側向/縱向即修正。
   const LONG_TOL = 1.0;   // 縱向端點外容差:遠低於橋段長(ROAD_SEG 6m),不會夠到相鄰段端點
-  const query = (x, z, margin = 0) => {
+  const query = (x, z, margin = 0, minY = -Infinity, maxY = Infinity, nearestAbove = false) => {
     const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
     if (!arr) return null;
     let best = null;
@@ -7970,7 +8017,8 @@ export function makeDeckIndex(decks) {
       if (lat > d.hw + margin) continue;
       const t = tRaw < 0 ? 0 : tRaw > 1 ? 1 : tRaw;
       const y = d.y1 + (d.y2 - d.y1) * t;
-      if (best === null || y > best) best = y;
+      if (y < minY || y > maxY) continue;
+      if (best === null || (nearestAbove ? y < best : y > best)) best = y;
     }
     return best;
   };
@@ -8640,13 +8688,14 @@ function buildTowerPlatforms(group, lanesW, decks, terrain, cols, mapA, existing
         allPads.push({ x: tx, z: tz, y: dy });
         newCols.push({ x: tx, z: tz, y: dy, r: TOWER_BASE_R, h: TOWER_BASE_H });
         const padR = Math.min(TOWER_PAD_AXIS * 0.75, GAME.TOWER_SIDE_OFF - 5.5);
-        const slab = new THREE.Mesh(new THREE.BoxGeometry(padR * 2, TOWER_PAD_T, padR * 2), slabM);
+        const slab = new THREE.Mesh(roadStructureGeo('platform_slab', padR * 2, TOWER_PAD_T, padR * 2), slabM);
         slab.position.set(tx, dy - TOWER_PAD_SINK - TOWER_PAD_T / 2, tz);
         slab.rotation.y = Math.atan2(cp.nx, cp.nz);
         group.add(slab);
+        const ca = Math.cos(slab.rotation.y), sa = Math.sin(slab.rotation.y);
         newDecks.push({
-          x1: tx - padR, z1: tz, y1: dy,
-          x2: tx + padR, z2: tz, y2: dy, hw: padR,
+          x1: tx - ca * padR, z1: tz + sa * padR, y1: dy,
+          x2: tx + ca * padR, z2: tz - sa * padR, y2: dy, hw: padR,
         });
         platformsToCarve.push({
           cx: tx, cz: tz,
@@ -8744,7 +8793,7 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols, lanesW = []) {
 
   // 水域主堡板與墩柱
   for (const sp of plan.slabs) {
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(sp.size, BASE_PAD_T, sp.size), slabM);
+    const slab = new THREE.Mesh(roadStructureGeo('platform_slab', sp.size, BASE_PAD_T, sp.size), slabM);
     slab.position.set(sp.x, sp.y, sp.z);
     group.add(slab);
   }
@@ -8762,7 +8811,7 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols, lanesW = []) {
     if (terrainEnvCode(terrain, base.x, base.z) === 0) {
       const roadY = deckIdx(base.x, base.z) ?? (base.roadY ?? (terrain.heightAt(base.x, base.z) + ROAD_LIFT));
       allPads.push({ side: base.side, x: base.x, z: base.z, y: roadY });
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(BASE_PAD_R * 2, BASE_PAD_T, BASE_PAD_R * 2), slabM);
+      const slab = new THREE.Mesh(roadStructureGeo('platform_slab', BASE_PAD_R * 2, BASE_PAD_T, BASE_PAD_R * 2), slabM);
       slab.position.set(base.x, roadY - BASE_PAD_T / 2, base.z);
       group.add(slab);
       plan.newDecks.push({
@@ -9226,8 +9275,8 @@ function makeLevelCrossing(x, gy, z, rdx, rdz) {
     };
     const post = (sx, sz, face, armDir) => {
       pushGeo(new THREE.CylinderGeometry(0.16, 0.2, 4.2, 6), dark, M.makeTranslation(sx, 2.1, sz));
-      pushGeo(new THREE.BoxGeometry(0.7, 0.5, 0.7), 0x55595e, M.makeTranslation(sx, 0.25, sz));
-      pushGeo(new THREE.BoxGeometry(1.5, 0.5, 0.28), dark, M.makeTranslation(sx, 3.0, sz + face * 0.22));
+      pushGeo(roadStructureGeo('crossing_base', .7, .5, .7), 0x55595e, M.makeTranslation(sx, 0.25, sz));
+      pushGeo(roadStructureGeo('crossing_head', 1.5, .5, .28), dark, M.makeTranslation(sx, 3.0, sz + face * 0.22));
       for (const lx of [-0.45, 0.45]) {
         M.makeRotationY(face > 0 ? 0 : Math.PI).setPosition(sx + lx, 3.0, sz + face * 0.37);
         pushGeo(new THREE.CircleGeometry(0.2, 12), null, M);
@@ -10613,6 +10662,15 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     }
   }
   if (typeof terrain.carvePlatforms === 'function' && slopePlatformsToCarve.length) {
+    const accessLanes = towerLanes.map(lane => densify(lane, ROAD_SEG));
+    for (const p of slopePlatformsToCarve) {
+      if (p.padKind !== 'base') continue;
+      p.approaches = platformApproaches(p, accessLanes, terrain.heightAt, {
+        grade: Math.tan(MAPGEO.MAX_ROAD_GRADE_DEG * Math.PI / 180), lift: ROAD_LIFT,
+        hw: PASS_W / 2, overlap: Math.max(ROAD_SEG, terrain.gridM || ROAD_SEG) * 2,
+        dryAt: (x, z) => terrainEnvCode(terrain, x, z) === 0,
+      });
+    }
     terrain.carvePlatforms(slopePlatformsToCarve);
   }
 
@@ -12309,6 +12367,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     const laneRes = buildRoads(group, laneWetWays, terrain, center, mix, rnd, season, [], true, gradeCorridors);   // 兵線補橋含跨沼段
     roadRes.decks.push(...laneRes.decks);
     roadRes.cols.push(...laneRes.cols);
+    roadRes.gradeRejected += laneRes.gradeRejected;
   }
   // ---- 兵線砲塔跨橋墩座:與橋重疊的砲塔改蓋在橋面上(台面 + 往外擴張的橋墩)----
   // MUST 排在兩次 buildRoads 之後(真橋 + 兵線補橋的 decks 都併齊了才判「塔在不在橋上」),
@@ -12325,6 +12384,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   group.userData.towerPads = towerPads;   // 橋上／陸地砲塔落位高度(main.js → terrain.towerPadY → game.js)
   group.userData.basePads = basePads;     // 水域／陸地主堡落位高度(main.js → terrain.basePadY → game.js)
   group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)
+  group.userData.roadRuns = roadRes.roadRuns;
   group.userData.tunnels = roadRes.tunnels;   // 地下道路面 + 天花(main.js → terrain.tunnelAt/ceilingAt)
   group.userData.portals = roadRes.portals;   // 洞口門洞(稽核/冒煙測試用:數量與位置驗證)
   blockers.push(...roadRes.cols);         // 橋墩/門洞立柱:與建物同一條碰撞路徑(玩家不可穿)
@@ -12417,6 +12477,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     group, terrain, center,
     portals: roadRes.portals, signSpots: roadRes.signSpots, generic,
     pois: osmData?.pois, lowPower: lowPower(),
+    roadRuns: roadRes.roadRuns, areas: osmData?.areas || [],
+    trafficPoints: osmData?.crossings || [],
     // 語料庫招牌(直式招牌/屋頂看板/路標/佈告欄/解說牌)的字與落點
     corpus: vtext, rnd: signRnd, used: signUsed, wallSigns, billboards, bldFaces,
     entranceSigns: pedestrianEntrances.signSpots,
@@ -12468,6 +12530,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     // 離兵線多遠一律照建;`strucDrop` 逐把刀記帳(見上方註解),少一座橋查得出原因。
     strucWays: strucN(roadInput),
     strucDrop,
+    bridgeGradeRejected: roadRes.gradeRejected,
     roadBlocks: roadBlockN,
     boundary: boundaryN,
     climbs: climbs.length,   // 攀爬路線數(長梯/抓點/技術繩合計)

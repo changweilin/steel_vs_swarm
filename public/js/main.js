@@ -2947,6 +2947,8 @@ function startPrebuild(cfg) {
     });
     terrain.group.add(biomes);
     terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
+    terrain.setLaneSigns = biomes.userData.setLaneSigns;
+    terrain.roadRuns = biomes.userData.roadRuns;
     terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
     terrain.mapBuildings = biomes.userData.mapBuildings || new Map();
     // 給 dev-only 固定鏡位與 headless 量測讀取已定案結構；資料仍是 buildBiomes 的原始列，
@@ -3031,7 +3033,9 @@ function startPrebuild(cfg) {
       // open(地下道引道露天路塹)**刻意不濾**:捕捉讓單位站在精確的下沉剖面上(開挖後
       // 網格內插只是近似),入洞沿兩端斜坡、跨溝者依實際地形落入溝內(視覺上那裡就是一道溝)
       if (tn && curY < tn.ceil) return tn.floor;   // 在天花之下 = 洞內,站路面(而非上方山體)
-      const d = deckY(x, z, DECK_MARGIN);           // 站立查詢帶側向容差(貼緣不掉下)
+      // Select a reachable deck before taking the highest surface; stacked ramps keep their own layer.
+      const d = deckY(x, z, DECK_MARGIN, -Infinity,
+        Math.max(curY + DECK_STEP, h + DECK_UNDER + MAX_MECH_H - 1e-6));
       // 上橋:①已貼近橋面(DECK_STEP 內)②或橋面底緣貼地(引道段,機體鑽不過去 → 只能上去,免卡在橋腹下)
       let s = h;
       if (d != null && d > h && (curY >= d - DECK_STEP || (d - DECK_UNDER) - h < MAX_MECH_H)) s = d;
@@ -3075,7 +3079,7 @@ function startPrebuild(cfg) {
       const tn = tunnelAt(x, z);
       // open 段(地下道引道露天路塹)無天花:頭上是天空,MUST NOT 用 ceil 當隱形蓋
       if (tn && !tn.open && curY < tn.ceil) c = tn.ceil;           // 洞內天花板
-      const d = deckY(x, z);
+      const d = deckY(x, z, 0, curY + DECK_STEP + 1e-6, Infinity, true);
       if (d != null && curY < d - DECK_STEP) {                     // 橋下:橋面底緣(deck 厚 ~DECK_UNDER)
         const under = d - DECK_UNDER;
         // 只有「真能鑽過去的高架段」(底緣淨空 ≥ 最大機體)才擋頭;引道低架段不擋 → 交給 surfaceAt 上橋,免卡死

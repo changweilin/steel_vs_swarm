@@ -77,12 +77,13 @@ function loadBasePads() {
   const p1 = bioSrc.indexOf('export function makeTunnelIndex', p0);
   if (p0 < 0 || p1 <= p0) throw new Error('biomes.js 主堡承台切片標記找不到');
   const body = bioSrc.slice(p0, p1);
-  const fn = new Function('THREE', 'envMat', 'terrainEnvCode', 'makeDeckIndex', 'baseMarkingTex', 'GAME', 'WATER', 'TOWER_PAD_R', 'TOWER_PAD_T', 'TOWER_BASE_R', 'buildPlatformSlopeFeatures',
+  const fn = new Function('THREE', 'envMat', 'terrainEnvCode', 'makeDeckIndex', 'baseMarkingTex', 'GAME', 'WATER', 'TOWER_PAD_R', 'TOWER_PAD_T', 'TOWER_BASE_R', 'buildPlatformSlopeFeatures', 'roadStructureGeo',
     `${body}\nreturn { buildBaseWaterPads, BASE_PAD_R, BASE_PAD_T };`
   );
   return fn(mockThree(), () => ({}), () => 0, () => () => null, () => ({}),
     { HERO_HEAL_R: 12, HERO_SPAWN_OFF: 6, HERO_SPAWN_SIDE: 4 },
-    { SWAMP_BAND: 2.2, GRID_M: 8 }, 4.5, 1.0, 6.76, () => {}
+    { SWAMP_BAND: 2.2, GRID_M: 8 }, 4.5, 1.0, 6.76, () => {},
+    (_kind, w, h, d) => new (mockThree().BoxGeometry)(w, h, d)
   );
 }
 

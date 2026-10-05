@@ -74,7 +74,7 @@ export const CLIMB = {
 
 /**
  * 上下兩端的提示箭頭(2026-07-28 使用者需求「類似兵線但縮到適當大小」)。
- * 沿用兵線的「ㄑ 字形 chevron + 沿行進方向流動 + 脹縮」語彙(`game.js _initLanes`),
+ * Vertical chevrons flow toward each climb endpoint; roadside lane guidance is separate.
  * 但**尺寸縮到約 1/3**(桿長 5.5 → 1.9m)且**立在垂直面上** —— 兵線是貼地路標,攀爬是垂直通道,
  * 箭頭的行進方向本來就是上/下。底端一組**朝上**(這裡可以上去)、頂端一組**朝下**(這裡可以下來)。
  * 兩色分工:上行青綠、下行琥珀 —— MUST NOT 用兵線的三條線色(那組色是「往敵方主堡推」的語意)。

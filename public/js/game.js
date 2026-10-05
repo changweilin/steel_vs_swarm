@@ -24,7 +24,7 @@ import {
   SELF_F, selfCollider, COLLIDE_KINDS, PUSH_EPS, baseCollideR,
    CREEP_UPG, DISSOLVE, dissolveOutAt, ATK_CAST_S, fogSightMult, scopeRvminFog,
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
-  WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
+  WEATHER_DEBUFFS, windSpeedFactor, laneCssColor,
   FIRE_WEATHER, fireDotMul,
     SCENE_STRUCT, sceneIsPhysical, clampHeroSpawn, solveTowerSites, mapArg,
 } from './data.js';
@@ -61,6 +61,8 @@ import { lookPref } from './lookPrefs.js';
 import { movePref } from './movePrefs.js';
 import { visualPref } from './visualPrefs.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
+import { planLaneGuidance } from './laneGuidancePlan.js';
+import { buildLaneGuidance, laneGuidePlates } from './laneGuidance.js';
 import { Pool } from './pool.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
 
@@ -1196,7 +1198,7 @@ export class BattleClient {
       const x = ax + dx * f, y = ay + dy * f, z = az + dz * f;
       const yLo = Math.min(py, y), yHi = Math.max(py, y);
       if (hasDecks) {
-        const d = t.deckY(x, z);                                 // 站立 margin 不吃:用實際橋面 ribbon
+        const d = t.deckY(x, z, 0, yLo, yHi + du);
         if (d != null && yLo <= d && yHi >= d - du) return (s - 0.5) / n * len;
       }
       if (hasTunnels) {
@@ -1296,118 +1298,31 @@ export class BattleClient {
     return s;
   }
 
-  /**
-   * 兵線指引:沿每條兵線中心兩側各一條虛線緞帶(獨立幾何,不畫在道路上)——
-   * 虛段朝敵方主堡流動表方向。高度吃行進式表面剖面(橋上走橋面、隧道走路面)。
-   * 純表現層,不進碰撞/射線/描邊;顏色吃 data.js LANE_COLORS(中性引導色)。
-   */
+  // Roadside guidance consumes the same profile as NPC standing and the minimap.
   _initLanes() {
-    this.lanePts = this.cfg.lanes.map((lane) => lane.map(([lat, lng]) => {
+    this.lanePts = this.cfg.lanes.map(lane => lane.map(([lat, lng]) => {
       const [x, z] = llToWorld(lat, lng, this.center);
       return new THREE.Vector3(x, this.terrain.heightAt(x, z) + 2, z);
     }));
-    // 前進方向 = 朝敵方主堡(觀戰者沿用圖資方向)
-    const foe = this.side === 'SWARM' ? 'STEEL' : 'SWARM';
-    const fb = this.cfg.bases?.[this.side ? foe : 'STEEL'];
-    const foeW = fb ? llToWorld(fb[0], fb[1], this.center) : null;
-
-    this.laneSideLines = [];
-    // 兩側線共用虛線貼圖(白段實、空段透):u 沿線每 DASH_LEN 一循環,動 offset.x 前進。
-    // 一張貼圖全線共用 ⇒ 各線同速、同向(每線 +s 皆已反轉朝敵方主堡)。
-    {
-      const cv = document.createElement('canvas');
-      cv.width = 128; cv.height = 8;
-      const g2d = cv.getContext('2d');
-      g2d.clearRect(0, 0, 128, 8);
-      g2d.fillStyle = '#ffffff';
-      g2d.fillRect(0, 0, 64, 8);
-      const tex = new THREE.CanvasTexture(cv);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      this._laneDashTex = tex;
-      this._laneDashLen = 12;    // 一循環實體長(6 實 + 6 虛)
-      this._laneDashSpeed = 10;  // 前進速度(m/s)
-    }
-    this.lanePts.forEach((raw, li) => {
-      const pts = raw.map((p) => [p.x, p.z]);
-      if (foeW && Math.hypot(pts[0][0] - foeW[0], pts[0][1] - foeW[1])
-                < Math.hypot(pts[pts.length - 1][0] - foeW[0], pts[pts.length - 1][1] - foeW[1])) pts.reverse();
-      const n = pts.length;
-      if (n < 2) return;
-      const cum = [0];
-      for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-      const total = cum[n - 1];
-      const at = (s) => {                       // 沿線取樣:回傳 [x, z, dx, dz]
-        let i = 1;
-        while (i < n - 1 && cum[i] < s) i++;
-        const f = (s - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
-        let dx = pts[i][0] - pts[i - 1][0], dz = pts[i][1] - pts[i - 1][1];
-        const l = Math.hypot(dx, dz) || 1;
-        return [pts[i - 1][0] + dx * f, pts[i - 1][1] + dz * f, dx / l, dz / l];
-      };
-      // 兵線表面剖面(行進式取樣):像小兵一樣從線頭沿線走一遍,帶著「上一步的高度」問
-      // surfaceAt ⇒ 上橋段走橋面、穿隧道段走隧道路面。舊做法 _surf(x, z, Infinity) 會把
-      // 穿隧道的取樣放到上方山體、把從橋下經過的取樣吸上別條路的橋面。
-      const PROF_SEG = 4;
-      const prof = [];
-      let py = this.terrain.heightAt(pts[0][0], pts[0][1]);
-      for (let s = 0; s <= total; s += PROF_SEG) {
-        const [sx, sz] = at(s);
-        py = this._surf(sx, sz, py + 1.2);
-        prof.push(py);
-      }
-      const surfY = (s) => {
-        const f = Math.max(0, Math.min(prof.length - 1, s / PROF_SEG));
-        const i = Math.floor(f), j = Math.min(prof.length - 1, i + 1);
-        return prof[i] + (prof[j] - prof[i]) * (f - i);
-      };
-      const color = LANE_COLORS[(this.cfg.laneIds?.[li] ?? li) % LANE_COLORS.length];
-      // 兵線兩側獨立引導線(2026-09-06):不畫在道路上,沿兵線中心兩側各一條虛線緞帶。
-      // 偏移/寬/抬高全在此處常數,高度吃同一份 surfY 剖面(橋上走橋面、隧道走路面)。
-      // 虛實由共用 dash 貼圖表現,u = s / DASH_LEN,動 offset.x 朝 +s(敵方主堡)前進。
-      // 純表現層靜態幾何,不進碰撞/射線/描邊;顏色吃 LANE_COLORS(中性引導色)。
-      {
-        const SIDE_OFF = 7, SIDE_W = 0.9, SIDE_HOVER = 0.55, SIDE_STEP = 4;
-        const DASH_LEN = this._laneDashLen || 12;
-        const pos = [], uv = [], idx = [];
-        let base = 0;
-        for (const side of [1, -1]) {
-          let prev = -1;
-          for (let s = 0; s <= total; s += SIDE_STEP) {
-            const sc = Math.min(s, total);
-            const [cx, cz, dx, dz] = at(sc);
-            const nx = dz, nz = -dx;
-            const y = surfY(sc) + SIDE_HOVER;
-            pos.push(
-              cx + nx * (side * SIDE_OFF - SIDE_W / 2), y, cz + nz * (side * SIDE_OFF - SIDE_W / 2),
-              cx + nx * (side * SIDE_OFF + SIDE_W / 2), y, cz + nz * (side * SIDE_OFF + SIDE_W / 2),
-            );
-            const u = sc / DASH_LEN;
-            uv.push(u, 0, u, 1);
-            const k = base + (prev + 1) * 2;
-            if (prev >= 0) idx.push(k - 2, k - 1, k, k - 1, k + 1, k);
-            prev++;
-          }
-          base += (prev + 1) * 2;
-        }
-        const g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-        g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-        g.setIndex(idx);
-        g.computeVertexNormals();
-        const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({
-          color, map: this._laneDashTex, transparent: true, opacity: 0.9,
-          depthWrite: false, side: THREE.DoubleSide,
-        }));
-        mesh.frustumCulled = false;
-        mesh.renderOrder = 2;
-        mesh.userData.noOutline = true;
-        this.scene.add(mesh);
-        this.laneSideLines.push(mesh);
-      }
+    this._buildLaneSurf();
+    const baseSites = Object.entries(this.cfg.bases || {}).map(([side, point]) => ({
+      point: llToWorld(point[0], point[1], this.center), radius: baseCollideR(side),
+    }));
+    const plan = planLaneGuidance(this._laneSurf, {
+      laneIds: this.cfg.laneIds,
+      roadRuns: this.terrain.roadRuns,
+      surfaceAt: (x, z, y) => this._surf(x, z, y),
+      ceilingAt: (x, z, y) => this.terrain.ceilingAt?.(x, z, y),
+      contains: (x, z, r) => x - r > this.terrain.minX && x + r < this.terrain.maxX
+        && z - r > this.terrain.minZ && z + r < this.terrain.maxZ
+        && baseSites.every(b => Math.hypot(x - b.point[0], z - b.point[1]) > b.radius + r),
     });
-    this._buildLaneSurf();   // 兵線貼地剖面場(NPC 站位穩定種子 + 小地圖分級共用同一份)
+    const accepted = this.terrain.setLaneSigns?.(laneGuidePlates(plan)) || [];
+    plan.signs = plan.signs.filter((p, i) => accepted.includes(i));
+    this.laneGuidance = buildLaneGuidance(plan);
+    this.scene.add(this.laneGuidance);
   }
+
 
   /**
    * 兵線貼地剖面場(唯一縫,取代 NPC 站位的逐幀棘輪):對每條兵線「從線頭沿線行進式取樣」——
@@ -1470,17 +1385,6 @@ export class BattleClient {
     };
   }
 
-  /**
-   * 兵線兩側虛線前進:u 沿 +s 朝敵方主堡,offset.x 遞減 ⇒ 虛段朝 +s 移動。
-   * 共用一張貼圖一次推進,純表現層。
-   */
-  _updateLaneDashes(now) {
-    if (!this.laneSideLines?.length) return;
-    if (this._laneDashTex) {
-      const cyc = (now * (this._laneDashSpeed || 10) / (this._laneDashLen || 12)) % 1;
-      this._laneDashTex.offset.x = -cyc;
-    }
-  }
 
   // ---------------- FPV 座艙(武器/彈藥與 HUD,3D 賽璐璐)----------------
   // 2026-08-22 使用者定案:「第一人稱的駕駛艙除了武器/彈藥與HUD之外,其餘機體自身的物件從駕駛艙畫面移除」
@@ -2799,7 +2703,7 @@ export class BattleClient {
     // onDeck = 真的站在高架橋面(deck ribbon 上,查 deckY 對得上站立面),不是任何「高於地表
     // 的站立面」—— 站障礙物頂(建物/神木/巨岩,2026-07-22 起可站)時 MUST NOT 吃橋面豁免,
     // 否則「基座低於腳下 3m」的鄰樓(含更高的樓)全部不推擠 = 從屋頂側向走進鄰棟破圖
-    const dkY = this.terrain.deckY?.(this.pos.x, this.pos.z, 3.0);
+    const dkY = this.terrain.deckY?.(this.pos.x, this.pos.z, 3.0, surfHere - .6, surfHere + .6);
     const onDeck = surfHere > this.terrain.heightAt(this.pos.x, this.pos.z) + 1.0
       && dkY != null && Math.abs(surfHere - dkY) < 0.6;
     this._surfHere = surfHere; this._onDeck = onDeck;   // 供 _cameraDeClip 共用(免重算)
@@ -11416,7 +11320,7 @@ export class BattleClient {
     this._updateDecoyBombs(dt);       // 餌機投彈拋擲動畫(2026-07-22)
     this._updateArcGuide();           // 榴彈拋物線瞄準指示(2026-07-22)
     this._updateGuideLaser();         // 雷射導引武器的第一人稱導引雷射(2026-07-23)
-    this._updateLaneDashes(now);
+    this.laneGuidance?.userData.update(now);
     this._updateMines(now);
     this._updateLoot(dt, now);
     this._updateAirdrop(dt, now);
@@ -12183,6 +12087,7 @@ export class BattleClient {
     this._cullOcc = null; this._cullOut = null; this._culled = null;
     this._streamTexReg?.clear(); this._streamTexReg = null;
     this._texStreamStats = null;
+    if (this.laneGuidance) { this.scene.remove(this.laneGuidance); disposeTree(this.laneGuidance); this.laneGuidance = null; }
     this.renderer.dispose();
   }
 }

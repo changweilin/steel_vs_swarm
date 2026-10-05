@@ -1445,6 +1445,29 @@ export async function buildTerrain(cfg, onProgress, options) {
     if (!platforms?.length) return;
     const DXg = (maxX - minX) / (N - 1), DZg = (maxZ - minZ) / (N - 1);
     let touched = false;
+    for (const p of platforms) for (const run of p.approaches || []) {
+      const pad = run.hw + 3;
+      const xs = run.pts.map(v => v[0]), zs = run.pts.map(v => v[1]);
+      const j0 = Math.max(0, Math.floor((Math.min(...xs) - pad - minX) / DXg));
+      const j1 = Math.min(N - 1, Math.ceil((Math.max(...xs) + pad - minX) / DXg));
+      const i0 = Math.max(0, Math.floor((Math.min(...zs) - pad - minZ) / DZg));
+      const i1 = Math.min(N - 1, Math.ceil((Math.max(...zs) + pad - minZ) / DZg));
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+        const x = minX + DXg * j, z = minZ + DZg * i, k = i * N + j;
+        let distance = Infinity, floor = 0;
+        for (let s = 1; s < run.pts.length; s++) {
+          const a = run.pts[s - 1], b = run.pts[s], dx = b[0] - a[0], dz = b[1] - a[1];
+          const t = ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1);
+          if (t < 0 || t > 1) continue;
+          const d = Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
+          if (d < distance) { distance = d; floor = run.floors[s - 1] + (run.floors[s] - run.floors[s - 1]) * t; }
+        }
+        if (distance > pad || !Number.isFinite(floor)) continue;
+        const t = Math.max(0, Math.min(1, (distance - run.hw) / 3)), blend = t * t * (3 - 2 * t);
+        heights[k] = floor + (heights[k] - floor) * blend;
+        markCarved(k); touched = true;
+      }
+    }
     for (const p of platforms) {
       const { cx, cz, hw, hd, ry = 0, y } = p;
       const margin = p.margin ?? 0.35;
