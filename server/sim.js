@@ -6037,6 +6037,8 @@ export class BattleSim {
    */
   _botAirSink(t, dealt) {
     if (!t.hero || !isBotId(t.pid) || !(dealt > 0)) return;
+    // 掉高歸類於失衡效果:無人機低空飛行(離地低於砲塔高)不失衡 ⇒ 也不掉高(與 _stampUnbal 同判)
+    if (t.kind === 'drone' && (t.y || 0) < TARGET_H.tower) return;
     const flying = t.kind === 'drone' || (t.kind === 'morph' && (t.y || 0) > MORPH.GROUND_Y);
     if (!flying) return;
     t.y = Math.max(0, (t.y || 0) - airSinkM(dealt));

@@ -9540,9 +9540,12 @@ export class BattleClient {
    * 只記帳不直接改高度 —— 8Hz 快照一次入帳的傷害若直接扣 y,畫面上是瞬移;
    * 逐幀以「待落總量 / FLIGHT.SINK_S」的速率消化 ⇒ **總掉幅只由傷害決定**,SINK_S 只管節奏。
    * 飛行受擊下降時設定鎖定窗 FLIGHT.HIT_LOCK_S(此期間無法恢復飛行動力)。
+   * 掉高歸類於失衡效果:無人機低空飛行(離地低於砲塔高)不失衡 ⇒ 也不掉高、不鎖動力
+   * (與 _unbalanced / 伺服器 _stampUnbal + _botAirSink 同判)。
    */
   _airSinkHit(dmg, now) {
     if (!this._flying() || !(dmg > 0)) return;
+    if (this.isDrone && (this._altAG || 0) < TARGET_H.tower) return;
     this._airSink = (this._airSink || 0) + airSinkM(dmg);
     this._airSinkV = this._airSink / FLIGHT.SINK_S;
     const t = now ?? (typeof performance !== 'undefined' ? performance.now() / 1000 : 0);
@@ -9650,13 +9653,14 @@ export class BattleClient {
         if (this.vel.y < 0) this.vel.y = 0;
       }
       // 無人機不貼地(下限 +HOVER_M);變形者允許降到地表 → 觸地即變形回地面型。
-      // 上限兩道取嚴者:①離站立面 320m(既有的相對上限,防止在深谷上空一路飛出大氣層)
+      // 上限兩道取嚴者:①離站立面 3 個砲塔高(2026-10-06 使用者定案的飛行高度上限;
+      // 唯一縫 data.js FLIGHT.ALT_TOP_F,與爬升指數曲線的封頂同一個數,防止在深谷上空一路飛出大氣層)
       // ②**遊戲最高高度**(2026-08-08 使用者定案的絕對天花板,見 `_ceilY`)。
       // 兩者問的是不同的問題(「離腳下多高」vs「離海平面多高」)⇒ 刻意都留著;
       // 位置本就客戶端權威(同 FLIGHT 全族)⇒ 伺服器不再驗一次(A1 的另一半:
       // 真人那半住客戶端物理,bot 那半見 `_ceilY` 檔頭與稽核 Ⅴ)。
       this.pos.y = Math.max(hoverY,
-        Math.min(gy + 320, this._ceilY(), this.pos.y));
+        Math.min(gy + TARGET_H.tower * FLIGHT.ALT_TOP_F, this._ceilY(), this.pos.y));
       // 變形者下降觸地著陸變形(進入水域/沼澤可著陸於水底/沼底地表)
       if (this.isMorph && (this.vel.y <= 0) && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
       // FPV 側傾:橫移/轉向時機身壓坡度
@@ -9797,7 +9801,7 @@ export class BattleClient {
         // 側壁規則就此解除(實測就是這樣穿牆的)。
         this.pos.y = Math.min(this.pos.y, py0);
         const gy2 = this._surf(cx, cz, py0);
-        if (this._flying()) this.pos.y = Math.max(gy2 + hover, Math.min(gy2 + 320, this.pos.y));
+        if (this._flying()) this.pos.y = Math.max(gy2 + hover, Math.min(gy2 + TARGET_H.tower * FLIGHT.ALT_TOP_F, this.pos.y));
         else if (this.pos.y < gy2) { this.pos.y = gy2; this.vy = 0; }
       }
       // 陡坡完全擋死(逐軸滑行也走不動)才提示:沿等高線橫走仍通 = 不算撞坡,別洗頻道
