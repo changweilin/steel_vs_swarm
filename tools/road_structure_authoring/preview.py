@@ -9,6 +9,8 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'out/road_structure_review'
 models = json.loads((OUT / 'review.json').read_text(encoding='utf8'))['models']
+if globals().get('REVIEW_KEYS'):
+    models = [model for model in models if model['key'] in REVIEW_KEYS]
 scenes = {}
 materials = {}
 
@@ -29,18 +31,23 @@ def material(key, row):
         return materials[key]
     mat = bpy.data.materials.new('Road review material')
     mat.use_nodes = True
+    mat.use_backface_culling = row.get('side', 2) == 0
     mat.diffuse_color = (*row['color'], 1)
     nodes, links = mat.node_tree.nodes, mat.node_tree.links
     bsdf = next(n for n in nodes if n.type == 'BSDF_PRINCIPLED')
     socket(bsdf.inputs, 'Base Color').default_value = (*row['color'], 1)
     socket(bsdf.inputs, 'Roughness').default_value = .83
+    if row.get('emission'):
+        socket(bsdf.inputs, 'Emission Color').default_value = (*row['color'], 1)
+        socket(bsdf.inputs, 'Emission Strength').default_value = row['emission']
     if row.get('colors'):
         node = nodes.new('ShaderNodeVertexColor')
         node.layer_name = 'RoadColor'
         links.new(socket(node.outputs, 'Color'), socket(bsdf.inputs, 'Base Color'))
     if row.get('texture'):
         texture = nodes.new('ShaderNodeTexImage')
-        texture.image = bpy.data.images.load(str(OUT / 'textures' / (row['texture'] + '.png')), check_existing=True)
+        # Reused review paths must not borrow a previous scene's packed atlas.
+        texture.image = bpy.data.images.load(str(OUT / 'textures' / (row['texture'] + '.png')), check_existing=False)
         texture.image.pack()
         mix = nodes.new('ShaderNodeMixRGB')
         enum_set(mix, 'blend_type', 'MULTIPLY')
@@ -51,6 +58,11 @@ def material(key, row):
         links.new(socket(texture.outputs, 'Color'), socket(mix.inputs, 'Color1'))
         links.new(socket(mix.outputs, 'Color'), socket(bsdf.inputs, 'Base Color'))
         links.new(socket(texture.outputs, 'Alpha'), socket(bsdf.inputs, 'Alpha'))
+    if row.get('glow'):
+        glow = nodes.new('ShaderNodeVertexColor')
+        glow.layer_name = 'SignGlow'
+        links.new(socket(glow.outputs, 'Color'), socket(bsdf.inputs, 'Emission Strength'))
+        links.new(socket(mix.outputs, 'Color'), socket(bsdf.inputs, 'Emission Color'))
     materials[key] = mat
     return mat
 
@@ -62,8 +74,8 @@ def xyz(p):
 def assemble(scene, rows, label):
     groups = {}
     for row in rows:
-        key = (tuple(row['color']), bool(row.get('colors')), row.get('texture'))
-        group = groups.setdefault(key, {'vertices': [], 'faces': [], 'colors': [], 'uvs': [], 'row': row})
+        key = (tuple(row['color']), bool(row.get('colors')), row.get('texture'), row.get('side', 2), row.get('emission', 0), bool(row.get('glow')))
+        group = groups.setdefault(key, {'vertices': [], 'faces': [], 'colors': [], 'uvs': [], 'glow': [], 'row': row})
         base = len(group['vertices'])
         v, f = row['vertices'], row['faces']
         group['vertices'].extend(xyz(v[i:i + 3]) for i in range(0, len(v), 3))
@@ -74,6 +86,8 @@ def assemble(scene, rows, label):
                                    for i in range(0, len(colors), 3))
         if row.get('uvs'):
             group['uvs'].extend(tuple(row['uvs'][i:i + 2]) for i in range(0, len(row['uvs']), 2))
+        if row.get('glow'):
+            group['glow'].extend(row['glow'])
     objects = []
     for index, (key, row) in enumerate(groups.items()):
         data = bpy.data.meshes.new(f'{label} {index}')
@@ -82,6 +96,9 @@ def assemble(scene, rows, label):
         if row['colors']:
             attr = data.color_attributes.new(name='RoadColor', type='FLOAT_COLOR', domain='POINT')
             attr.data.foreach_set('color', [value for color in row['colors'] for value in color])
+        if row['glow']:
+            attr = data.color_attributes.new(name='SignGlow', type='FLOAT_COLOR', domain='POINT')
+            attr.data.foreach_set('color', [value for glow in row['glow'] for value in (glow, glow, glow, 1)])
         if row['uvs']:
             uv = data.uv_layers.new(name='RoadUV')
             uv.data.foreach_set('uv', [value for loop in data.loops for value in row['uvs'][loop.vertex_index]])
@@ -116,6 +133,7 @@ for model in models:
     scene['review_key'] = model['key']
     scene['production_geometry'] = True
     scene['sectioned_ground'] = model['sectioned']
+    scene['lane_guidance'] = bool(model.get('guidance'))
     objects = assemble(scene, model['parts'], model['key'])
     ground = assemble(scene, [model['ground']], 'Sectioned terrain' if model['sectioned'] else 'Terrain')
     world = bpy.data.worlds.new('Road review daylight')
@@ -123,9 +141,9 @@ for model in models:
     world.use_nodes = True
     bg = next(n for n in world.node_tree.nodes if n.type == 'BACKGROUND')
     socket(bg.inputs, 'Color').default_value = (.63, .71, .70, 1)
-    socket(bg.inputs, 'Strength').default_value = .6
+    socket(bg.inputs, 'Strength').default_value = .10 if model.get('night') else .6
     light = bpy.data.lights.new('Road review sun', type='SUN')
-    light.energy = 2.4
+    light.energy = .3 if model.get('night') else 2.4
     light.angle = math.radians(14)
     sun = bpy.data.objects.new(light.name, light)
     scene.collection.objects.link(sun)
@@ -149,7 +167,8 @@ for model in models:
     target = (lo + hi) / 2
     scene['focus'] = list(target)
     scene['span'] = max(hi.x - lo.x, hi.y - lo.y, 40)
-    camera(scene, 'Road Overview', target, Vector((-.25, -1.05, .72)), points, 1440 / 880)
+    camera(scene, 'Road Overview', target, Vector((0, -1, 0)) if model['key'] == 'traffic-sign-library'
+           else Vector((-.25, -1.05, .72)), points, 1440 / 880)
     # Keep a reusable close inspection camera for entrances and underside joints.
     detail = bpy.data.cameras.new('Road Detail')
     detail_obj = bpy.data.objects.new(detail.name, detail)
@@ -176,17 +195,18 @@ if globals().get('RENDER_REVIEWS', True):
         overview = scene.camera
         scene.render.filepath = str(OUT / (key + '-blender.png'))
         bpy.ops.render.render(write_still=True, scene=scene.name)
-        if scene.get('sectioned_ground'):
+        if scene.get('sectioned_ground') or scene.get('lane_guidance'):
             scene.camera = next(obj for obj in scene.objects if obj.type == 'CAMERA' and obj != overview)
             scene.render.filepath = str(OUT / (key + '-detail.png'))
             bpy.ops.render.render(write_still=True, scene=scene.name)
             scene.camera = overview
 
-bpy.context.window.scene = scenes['interchange']
+bpy.context.window.scene = scenes.get('interchange', next(iter(scenes.values())))
 for area in bpy.context.screen.areas:
     if area.type == 'VIEW_3D':
         region = area.spaces.active.region_3d
         enum_set(region, 'view_perspective', 'CAMERA')
-bpy.data.libraries.write(str(OUT / 'road-structures.blend'), set(scenes.values()), fake_user=True)
+blend_path = OUT / globals().get('BLEND_NAME', 'road-structures.blend')
+bpy.data.libraries.write(str(blend_path), set(scenes.values()), fake_user=True)
 print(json.dumps({'scenes': len(scenes), 'objects': {k: len(s.objects) for k, s in scenes.items()},
-                  'output': str(OUT / 'road-structures.blend')}))
+                  'output': str(blend_path)}))

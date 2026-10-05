@@ -146,4 +146,4 @@ for (const [name, member] of Object.entries(ROAD_STRUCTURE_MESHES)) {
   assert([...edges.values()].every(n => n === 2), `${name} is a sealed member`);
 }
 assert(readSrc('public', 'js', 'osmQuery.js').includes('(motorway|trunk|primary|secondary|tertiary)_link'));
-console.log(`PASS: ${profiles} grade profiles, terrain envelope, branch joints, three deck layers, bidirectional ballistics, rotated platform access, islands and 11 sealed Blender members.`);
+console.log(`PASS: ${profiles} grade profiles, terrain envelope, branch joints, three deck layers, bidirectional ballistics, rotated platform access, islands and ${Object.keys(ROAD_STRUCTURE_MESHES).length} sealed Blender members.`);

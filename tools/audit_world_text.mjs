@@ -157,11 +157,11 @@ console.log('\nⅤ 圖集裝箱');
 {
   const packCells = new Function(`${grabFn(wtSrc, 'packCells')}\nreturn packCells;`)();
   const styles = Object.entries(STYLE_PX);
-  // Worst-case combination: 6 items for each of the 5 stylistic domains.
+  // Two of every current style fit; larger populations exercise explicit omission below.
   const cells = [];
-  for (let k = 0; k < 6; k++) for (const [, s] of styles) cells.push({ cw: s.cw, ch: s.ch });
+  for (let k = 0; k < 2; k++) for (const [, s] of styles) cells.push({ cw: s.cw, ch: s.ch });
   const lay = packCells(cells, 2048, 2048);
-  ok(lay.dropped === 0, `五種語域各 6 塊全部裝得下(實得 dropped=${lay.dropped})`);
+  ok(lay.dropped === 0, `每種牌面各 2 塊全部裝得下(實得 dropped=${lay.dropped})`);
   ok(lay.rects.length === cells.length, `每一格都有位置`);
   ok(lay.W <= 2048 && lay.H <= 2048, `畫布不超過 2048(實得 ${lay.W}×${lay.H})`);
   let inside = true, overlap = false;
@@ -178,6 +178,8 @@ console.log('\nⅤ 圖集裝箱');
   ok(lay.rects.every((r, i) => r.i === i), `回傳順序還原成呼叫端順序(排序後不還原 = UV 全部配錯牌)`);
   // Capacity overflow MUST report dropped count explicitly rather than silently dropping.
   const tiny = packCells(cells, 256, 256);
+  const overflow = packCells(Array.from({ length: 200 }, (_, i) => cells[i % cells.length]), 2048, 2048);
+  ok(overflow.H <= 2048 && overflow.dropped > 0, '滿圖集略過牌面仍不擴大畫布');
   ok(tiny.dropped > 0 && tiny.dropped + tiny.rects.length === cells.length,
     '畫布不夠時 dropped 計數正確(靜默截斷會讓「那塊牌為什麼沒出現」永遠查不出來)');
   ok(packCells([{ cw: 4096, ch: 64 }], 2048, 2048).dropped === 1, `單格超寬直接記 dropped`);

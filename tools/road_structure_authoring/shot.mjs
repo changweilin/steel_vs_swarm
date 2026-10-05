@@ -23,6 +23,7 @@ const roadLift = +/const ROAD_LIFT = ([\d.]+)/.exec(readSrc('public', 'js', 'bio
 const platformSource = 'function carvePlatforms(platforms) ' + grabBlock(terrainSource, 'function carvePlatforms(')
   + '\nfunction sampleField(field,x,z) ' + grabBlock(terrainSource, 'function sampleField(');
 const game = readSrc('public', 'js', 'game.js');
+const laneProfileSource = grabMethod(game, '_buildLaneSurf');
 const collisionSource = ['_pushOutCircle', '_circleEnter', '_sweepBlockers', '_collide'].map(name => grabMethod(game, name)).join('\n');
 let browser;
 try {
@@ -51,7 +52,8 @@ try {
     await route.fulfill({ contentType: pathname.endsWith('.js') ? 'text/javascript' : 'application/octet-stream',
       body: await readFile(file) });
   });
-  await page.addInitScript(({ surface, constants, terrainSource, carvedSource, platformSource, collisionSource, cutWidth, protection, clear, rise, roadLift }) => {
+  await page.addInitScript(({ surface, constants, terrainSource, carvedSource, platformSource, collisionSource, laneProfileSource, cutWidth, protection, clear, rise, roadLift }) => {
+    window.__laneProfileSource = laneProfileSource;
     window.__roadSurfaceBlock = surface; window.__roadSurfaceConstants = constants;
     window.__bridgeRise = rise; window.__roadLift = roadLift;
     window.__roadCollisionSource = collisionSource;
@@ -60,7 +62,7 @@ try {
     window.__platformFixture = hf => new Function('N', 'minX', 'maxX', 'minZ', 'maxZ', 'heights', 'markCarved', 'syncHeights',
       platformSource + '\nreturn { carve: carvePlatforms, heightAt: (x,z)=>sampleField(heights,x,z) };')(
       hf.N, hf.minX, hf.maxX, hf.minZ, hf.maxZ, hf.heights, () => {}, () => {});
-  }, { surface, constants, terrainSource, carvedSource, platformSource, collisionSource, cutWidth, protection, clear: TUN.CLEAR, rise: BRIDGE_RISE, roadLift });
+  }, { surface, constants, terrainSource, carvedSource, platformSource, collisionSource, laneProfileSource, cutWidth, protection, clear: TUN.CLEAR, rise: BRIDGE_RISE, roadLift });
   await page.goto('http://road-review.local/tools/road_structure_authoring/review.html');
   await page.waitForFunction('window.__roadReview', null, { timeout: 60000 });
   const result = await page.evaluate(() => window.__roadReview);

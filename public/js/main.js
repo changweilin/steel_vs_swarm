@@ -2947,6 +2947,8 @@ function startPrebuild(cfg) {
     });
     terrain.group.add(biomes);
     terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
+    terrain.setLaneSigns = biomes.userData.setLaneSigns;
+    terrain.roadRuns = biomes.userData.roadRuns;
     terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
     terrain.mapBuildings = biomes.userData.mapBuildings || new Map();
     // 給 dev-only 固定鏡位與 headless 量測讀取已定案結構；資料仍是 buildBiomes 的原始列，

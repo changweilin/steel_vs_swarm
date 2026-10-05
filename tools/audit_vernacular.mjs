@@ -221,7 +221,8 @@ for (const [name, src] of [['biomes', bioSrc], ['ground', gndSrc]]) {
 // 五種語料庫語域 MUST 都在 worldtext 的樣式表裡(表與消費端分家 = 掛了卻沒有版面)
 for (const cls of Object.keys(SIGN_CLASSES)) {
   ok(new RegExp(`^  ${cls}: \\{ cw:`, 'm').test(wtSrc), `Ⅲ② worldtext 有 ${cls} 的版面規格`);
-  ok(new RegExp(`style: '${cls}'`).test(bioSrc), `Ⅲ② biomes 掛得出 ${cls}`);
+  ok(cls === 'roadsign' ? /planRoadSigns\(\{ runs: roadRuns/.test(bioSrc)
+    : new RegExp(`style: '${cls}'`).test(bioSrc), `Ⅲ② biomes 掛得出 ${cls}`);
 }
 // 挑字只有一條路:signCopy → sheet.add({ copy })
 ok((bioSrc.match(/signCopy\(/g) || []).length === 1, 'Ⅲ③ biomes 只有一處呼叫 signCopy(copyOf)');

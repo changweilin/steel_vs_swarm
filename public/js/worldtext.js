@@ -66,7 +66,26 @@ export const SIGN_STYLES = {
   roadsign: { cw: 384, ch: 120, bg: '#2f6b40', fg: '#ffffff', edge: '#ffffff', weight: '700', paint: 'road' },
   notice: { cw: 256, ch: 192, bg: '#f6f2e4', fg: '#4a4438', edge: '#4a4438', weight: '700', paint: 'notice' },
   scenic: { cw: 320, ch: 184, bg: '#efe6cf', fg: '#5a4630', edge: '#5a4630', weight: '700', paint: 'scenic' },
+  street: { cw: 512, ch: 128, bg: '#245f49', fg: '#ffffff', edge: '#ffffff', weight: '700', paint: 'direction' },
+  destination: { cw: 512, ch: 160, bg: '#245c86', fg: '#ffffff', edge: '#ffffff', weight: '700', paint: 'direction' },
+  tourist: { cw: 512, ch: 160, bg: '#754b2e', fg: '#ffffff', edge: '#ffffff', weight: '700', paint: 'direction' },
+  civic: { cw: 512, ch: 160, bg: '#235a87', fg: '#ffffff', edge: '#ffffff', weight: '700', paint: 'direction' },
+  lane: { cw: 512, ch: 128, bg: '#332344', fg: '#fff8e6', edge: '#ffbd50', weight: '700', paint: 'direction' },
+  speed: { cw: 192, ch: 192, bg: '#fffdf4', fg: '#202327', edge: '#ce302c', weight: '700', paint: 'traffic', shape: 'circle' },
+  stop: { cw: 192, ch: 192, bg: '#c52e29', fg: '#ffffff', edge: '#ffffff', weight: '700', paint: 'traffic', shape: 'octagon' },
+  yield: { cw: 192, ch: 192, bg: '#fffdf4', fg: '#202327', edge: '#ce302c', weight: '700', paint: 'traffic', shape: 'yield' },
+  warning: { cw: 192, ch: 192, bg: '#fffdf4', fg: '#202327', edge: '#ce302c', weight: '700', paint: 'traffic', shape: 'triangle' },
+  mandatory: { cw: 192, ch: 192, bg: '#236bb6', fg: '#ffffff', edge: '#ffffff', weight: '700', paint: 'traffic', shape: 'circle' },
+  oneway: { cw: 192, ch: 192, bg: '#236bb6', fg: '#ffffff', edge: '#ffffff', weight: '700', paint: 'traffic' },
+  prohibition: { cw: 192, ch: 192, bg: '#fffdf4', fg: '#202327', edge: '#ce302c', weight: '700', paint: 'traffic', shape: 'circle' },
 };
+
+export function signShape(shape) {
+  if (shape === 'triangle') return [[-1, -1], [1, -1], [0, 1]];
+  if (shape === 'yield') return [[-1, 1], [0, -1], [1, 1]];
+  const n = shape === 'octagon' ? 8 : 32, angle = shape === 'octagon' ? Math.PI / 8 : 0;
+  return Array.from({ length: n }, (_, i) => [Math.cos(i / n * Math.PI * 2 + angle), Math.sin(i / n * Math.PI * 2 + angle)]);
+}
 
 /**
  * 同一種語域的配色輪替(同一條街不會整排同色)。
@@ -117,7 +136,7 @@ let _probe = null;
 function probeCtx() {
   if (_probe) return _probe;
   const cv = document.createElement('canvas');
-  cv.width = cv.height = 8;
+  cv.width = cv.height = 72;
   const ctx = cv.getContext('2d');
   ctx.font = `48px ${FONT_STACK}`;
   _probe = ctx;
@@ -138,9 +157,27 @@ export function canRenderText(text) {
   for (const ch of text) {
     if (ch === ' ') continue;
     n++;
-    if (ctx.measureText(ch).width === tofu) miss++;
+    if (ctx.measureText(ch).width === tofu && missingGlyph(ctx, ch)) miss++;
   }
   return n > 0 && miss / n <= 0.2;
+}
+
+const glyphCache = new Map();
+let tofuMask = null;
+function missingGlyph(ctx, ch) {
+  if (glyphCache.has(ch)) return glyphCache.get(ch);
+  const mask = glyph => {
+    ctx.clearRect(0, 0, 72, 72); ctx.fillStyle = '#000';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(glyph, 4, 54);
+    const pixels = ctx.getImageData(0, 0, 72, 72).data;
+    return Uint8Array.from({ length: 72 * 72 }, (_, i) => pixels[i * 4 + 3]);
+  };
+  // CJK glyphs and a missing-glyph square often have the same advance; width alone rejects real names.
+  tofuMask ||= mask(PUA);
+  const pixels = mask(ch), missing = pixels.every((value, i) => value === tofuMask[i]);
+  if (glyphCache.size >= 1024) glyphCache.clear();
+  glyphCache.set(ch, missing);
+  return missing;
 }
 
 /**
@@ -156,7 +193,10 @@ function packCells(cells, maxW = ATLAS_MAX, maxH = ATLAS_MAX) {
   let shelfY = 0, shelfH = 0, x = 0, W = 0, dropped = 0;
   for (const c of order) {
     if (c.w > maxW || c.h > maxH) { dropped++; continue; }          // 單格就超出畫布
-    if (x + c.w > maxW) { shelfY += shelfH; x = 0; shelfH = 0; }    // 換一層貨架
+    if (x + c.w > maxW) {
+      if (shelfY + shelfH + c.h > maxH) { dropped++; continue; }
+      shelfY += shelfH; x = 0; shelfH = 0;
+    }
     if (!shelfH) shelfH = c.h;                                      // 貨架高 = 該層第一個(已排序 ⇒ 最高)
     if (shelfY + c.h > maxH) { dropped++; continue; }               // 畫布滿了
     rects.push({ i: c.i, x, y: shelfY, w: c.w, h: c.h });
@@ -172,7 +212,8 @@ function packCells(cells, maxW = ATLAS_MAX, maxH = ATLAS_MAX) {
  * 用法:`const sheet = new SignSheet(); sheet.add({...}); const mesh = sheet.build();`
  */
 export class SignSheet {
-  constructor(lowPower = false) {
+  constructor(lowPower = false, reserved = 0) {
+    this.reserved = reserved;
     this.scale = lowPower ? 0.5 : 1;      // 低功耗:atlas 解析度砍半(格數不變,字略糊)
     this.items = [];
     this.area = 0;                        // 已佔像素面積(額度以面積估,見 `full`)
@@ -183,8 +224,9 @@ export class SignSheet {
    * 混合長寬比之後「格數」不再等於「裝得下」⇒ 額度以**面積**估,再加一道格數硬上限。
    */
   get full() {
-    return this.items.length >= SIGN_MAX
-      || this.area >= ATLAS_MAX * ATLAS_MAX * FILL * this.scale * this.scale;
+    return this.items.length >= SIGN_MAX - this.reserved
+      || this.area >= ATLAS_MAX * ATLAS_MAX * FILL * this.scale * this.scale
+        - this.reserved * SIGN_STYLES.lane.cw * SIGN_STYLES.lane.ch * this.scale * this.scale;
   }
 
   /**
@@ -226,7 +268,7 @@ export class SignSheet {
     cv.width = lay.W;
     cv.height = lay.H;
     const ctx = cv.getContext('2d');
-    const pos = [], nrm = [], uv = [], idx = [], pages = [];
+    const pos = [], nrm = [], uv = [], idx = [], pages = [], glow = [];
     let drawn = 0;
 
     this.items.forEach((it, i) => {
@@ -249,6 +291,19 @@ export class SignSheet {
       const emit = (flip) => {
         const b = pos.length / 3;
         const s = flip ? -1 : 1;
+        const shape = SIGN_STYLES[it.style]?.shape;
+        if (shape) {
+          pos.push(it.x, it.y, it.z); nrm.push(sin * s, 0, cos * s);
+          uv.push((u0 + u1) / 2, (v0 + v1) / 2);
+          const outline = signShape(shape);
+          for (const [du, dv] of outline) {
+            pos.push(it.x + rx * w / 2 * du * s, it.y + it.h / 2 * dv, it.z + rz * w / 2 * du * s);
+            nrm.push(sin * s, 0, cos * s);
+            uv.push(u0 + (du + 1) / 2 * (u1 - u0), v0 + (dv + 1) / 2 * (v1 - v0));
+          }
+          for (let k = 0; k < outline.length; k++) idx.push(b, b + 1 + k, b + 1 + (k + 1) % outline.length);
+          return;
+        }
         for (const [du, dv] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
           pos.push(it.x + rx * (w / 2) * du * s, it.y + (it.h / 2) * dv, it.z + rz * (w / 2) * du * s);
           nrm.push(sin * s, 0, cos * s);
@@ -257,8 +312,10 @@ export class SignSheet {
         }
         idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
       };
+      const first = pos.length / 3;
       emit(false);
       if (it.both) emit(true);
+      for (let k = first; k < pos.length / 3; k++) glow.push(it.style === 'lane' ? .65 : 0);
     });
 
     const tex = new THREE.CanvasTexture(cv);
@@ -276,10 +333,12 @@ export class SignSheet {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    geo.setAttribute('signGlow', new THREE.Float32BufferAttribute(glow, 1));
     geo.setIndex(idx);
     // 牌面是**實心板**不是貼花:不透明 ⇒ 勾線 pass 的深度正確,而且線正好描出牌框(檔頭 ④)。
     // `rim: 0` —— 掠射角把牌面洗白會讓字直接消失(與貼地平面同一條)。
     const mesh = new THREE.Mesh(geo, envMat(0xffffff, { map: tex, rim: 0, wash: 0.15, cool: 0.3, bands: 'soft' }));
+    if (glow.some(v => v > 0)) applySignGlow(mesh.material, tex);
     mesh.frustumCulled = false;   // 牌子散布全圖,包圍球不可靠(同植被 InstancedMesh)
     mesh.userData.signCount = drawn;
     mesh.userData.signDropped = this.items.length - drawn;   // 裝不下的**明講**(檔頭 ⑤)
@@ -301,6 +360,26 @@ export class SignSheet {
     (PAINT[st.paint] || PAINT.plain)(ctx, r.w, r.h, it.copy, sk);
     ctx.restore();
   }
+}
+
+// Per-plate backlighting shares the text atlas and draw call with unlit civic signs.
+export function applySignGlow(material, texture) {
+  material.emissive = new THREE.Color(0xffffff);
+  material.emissiveMap = texture; material.emissiveIntensity = 1;
+  material.userData.signGlow = true;
+  const compile = material.onBeforeCompile, key = material.customProgramCacheKey.bind(material);
+  material.onBeforeCompile = function(shader, renderer) {
+    compile.call(this, shader, renderer);
+    shader.vertexShader = shader.vertexShader.replace('#include <common>',
+      '#include <common>\nattribute float signGlow; varying float vSignGlow;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSignGlow = signGlow;');
+    shader.fragmentShader = shader.fragmentShader.replace('#include <common>',
+      '#include <common>\nvarying float vSignGlow;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= vSignGlow;');
+  };
+  material.customProgramCacheKey = () => key() + ':signGlow';
+  material.needsUpdate = true;
+  return material;
 }
 
 /* ------------------------------- 版面(語域)------------------------------- */
@@ -344,11 +423,102 @@ function vertical(ctx, text, cx, y0, y1, maxW, color) {
 
 const rule = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
 
+function signArrow(ctx, x, y, size, direction, color) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.rotate(direction === 'left' ? -Math.PI / 2 : direction === 'right' ? Math.PI / 2 : 0);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (const [dx, dy] of [[0, -.5], [.36, -.1], [.12, -.1], [.12, .5], [-.12, .5], [-.12, -.1], [-.36, -.1]]) {
+    ctx.lineTo(dx * size, dy * size);
+  }
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+function trafficSymbol(ctx, w, h, copy, st) {
+  const symbol = copy.symbol;
+  if (symbol === 'speed' || symbol === 'stop') {
+    center(ctx, copy.t, w / 2, h * (copy.s ? .45 : .51), w * .73, h * .43, st.fg);
+    if (copy.s) center(ctx, copy.s, w / 2, h * .72, w * .6, h * .14, st.fg);
+    return;
+  }
+  if (symbol === 'yield') return;
+  if (symbol === 'no_entry') { rule(ctx, w * .2, h * .43, w * .6, h * .14, '#ffffff'); return; }
+  if (['oneway', 'keep_left', 'keep_right'].includes(symbol)) {
+    ctx.save(); ctx.translate(w / 2, h / 2);
+    if (symbol !== 'oneway') ctx.rotate(symbol === 'keep_left' ? -Math.PI / 4 : Math.PI / 4);
+    signArrow(ctx, 0, 0, h * .63, 'straight', st.fg); ctx.restore(); return;
+  }
+  if (symbol === 'roundabout') {
+    ctx.strokeStyle = st.fg; ctx.lineWidth = h * .055;
+    for (let k = 0; k < 3; k++) {
+      const a = k * Math.PI * 2 / 3;
+      ctx.beginPath(); ctx.arc(w / 2, h / 2, h * .23, a, a + 1.55); ctx.stroke();
+      ctx.save(); ctx.translate(w / 2 + Math.cos(a + 1.55) * h * .23, h / 2 + Math.sin(a + 1.55) * h * .23);
+      ctx.rotate(a + 1.55 + Math.PI); signArrow(ctx, 0, 0, h * .18, 'straight', st.fg); ctx.restore();
+    }
+    return;
+  }
+  ctx.strokeStyle = st.fg; ctx.fillStyle = st.fg; ctx.lineWidth = h * .045;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const path = points => { ctx.beginPath(); points.forEach(([x, y]) => ctx.lineTo(w * x, h * y)); ctx.stroke(); };
+  if (symbol === 'crossing') {
+    ctx.beginPath(); ctx.arc(w * .5, h * .45, h * .045, 0, Math.PI * 2); ctx.fill();
+    path([[.5, .51], [.46, .64], [.35, .75]]); path([[.46, .64], [.62, .76]]);
+    path([[.38, .57], [.5, .54], [.62, .59]]);
+    for (let i = 0; i < 4; i++) rule(ctx, w * (.28 + i * .12), h * .79, w * .075, h * .04);
+  } else if (symbol === 'narrowing') {
+    path([[.3, .8], [.3, .66], [.42, .52], [.42, .39]]);
+    path([[.7, .8], [.7, .66], [.58, .52], [.58, .39]]);
+  } else if (symbol === 'curve') path([[.45, .82], [.45, .68], [.61, .59], [.46, .48], [.46, .39]]);
+  else if (symbol === 'bump') {
+    ctx.beginPath(); ctx.moveTo(w * .25, h * .78); ctx.bezierCurveTo(w * .35, h * .78, w * .4, h * .56, w * .5, h * .56);
+    ctx.bezierCurveTo(w * .6, h * .56, w * .65, h * .78, w * .75, h * .78); ctx.stroke();
+  } else if (symbol === 'signals') {
+    rule(ctx, w * .43, h * .4, w * .14, h * .4, st.fg);
+    ['#d32d28', '#e4bb30', '#368d48'].forEach((c, i) => {
+      ctx.fillStyle = c; ctx.beginPath(); ctx.arc(w * .5, h * (.46 + i * .13), h * .042, 0, Math.PI * 2); ctx.fill();
+    });
+  } else if (symbol === 'rail_crossing') {
+    for (const x of [.4, .6]) path([[x, .4], [x, .8]]);
+    for (const y of [.5, .62, .74]) path([[.29, y], [.71, y]]);
+  } else if (symbol === 'no_overtaking') {
+    rule(ctx, w * .28, h * .33, w * .17, h * .35, '#ce302c');
+    rule(ctx, w * .55, h * .33, w * .17, h * .35, st.fg);
+  } else if (symbol === 'no_parking') {
+    center(ctx, 'P', w / 2, h / 2, w * .6, h * .55, st.fg);
+    ctx.strokeStyle = st.edge; ctx.lineWidth = h * .08; path([[.21, .79], [.79, .21]]);
+  }
+}
+
 /**
  * 逐語域的版面。**一個版面服務整類的全部語料**(skill §一.5)——
  * 新增一種招牌 = 加一列 `SIGN_STYLES` + 加一個版面,MUST NOT 每塊牌一個繪製函式。
  */
 const PAINT = {
+  direction(ctx, w, h, copy, st) {
+    ctx.fillStyle = st.bg; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = st.edge; ctx.lineWidth = 3; ctx.strokeRect(6, 6, w - 12, h - 12);
+    const left = copy.ref ? h * .65 : 14, right = copy.arrow ? h * .65 : 14;
+    const space = w - left - right, cx = left + space / 2;
+    center(ctx, copy.t, cx, h * (copy.s ? .36 : .5), space - 12, h * .4, st.fg);
+    if (copy.s) center(ctx, copy.s, cx, h * .74, space - 12, h * .21, st.fg, '600');
+    if (copy.ref) {
+      ctx.strokeRect(12, h * .23, left - 18, h * .54);
+      center(ctx, copy.ref, left / 2 + 3, h / 2, left - 24, h * .24, st.fg);
+    }
+    if (copy.arrow) signArrow(ctx, w - right / 2, h / 2, h * .58, copy.arrow, st.fg);
+  },
+  traffic(ctx, w, h, copy, st) {
+    ctx.fillStyle = copy.symbol === 'no_entry' ? st.edge : st.bg; ctx.fillRect(0, 0, w, h);
+    if (copy.symbol === 'oneway') {
+      ctx.strokeStyle = st.edge; ctx.lineWidth = 3; ctx.strokeRect(6, 6, w - 12, h - 12);
+      trafficSymbol(ctx, w, h, copy, st); return;
+    }
+    const outline = signShape(st.shape);
+    ctx.beginPath(); outline.forEach(([x, y]) => ctx.lineTo(w / 2 + x * w * .445, h / 2 - y * h * .445));
+    ctx.closePath(); ctx.strokeStyle = st.edge; ctx.lineWidth = h * .075; ctx.stroke();
+    trafficSymbol(ctx, w, h, copy, st);
+  },
   // 構件名牌:底板 + 邊框 + 一行字(洞口匾額 / 橋名牌 / 地名標牌 / 建物立面招牌)
   plain(ctx, w, h, copy, st) {
     ctx.fillStyle = st.bg;
