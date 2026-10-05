@@ -7,7 +7,7 @@
 // 完整 battleConfig(合成兵線),不需要 OSRM 掃描即可開房;
 // 想用真實道路兵線,仍可在地圖上手動點選錨點走掃描流程。
 // 「我的最愛」存整份 battleConfig(含兵線),選了即用、不必重新搜尋。
-import { MAPGEO, lanesFor, laneCountFor, mapPlan, targetDistFor, laneSeparationAudit, laneTacticsXZ, altTier, laneSubsetFor, geoLanesFor } from './data.js';
+import { MAPGEO, lanesFor, laneCountFor, mapPlan, targetDistFor, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneIsSide, laneTacticsXZ, altTier, laneSubsetFor, geoLanesFor } from './data.js';
 import { VENUE_LANES } from './venueLanes.js';
 import { VENUE_GRID } from './venueGrid.js';
 
@@ -233,8 +233,11 @@ function laneToGameXZ(lane, o) {
   ]);
 }
 
+/** 兵線分離 + 防蛇形:任一兵線迴轉或主軸偏航累積超標即不收(往下一階降級,不放寬門檻)。 */
 function bakedLanesSeparated(entry) {
-  return laneSeparationAudit(entry.lanes.map((l) => laneToGameXZ(l, entry.bases[0]))).ok;
+  const game = entry.lanes.map((l) => laneToGameXZ(l, entry.bases[0]));
+  return laneSeparationAudit(game).ok
+    && game.every((g, i) => laneUTurnAudit(g).ok && laneTurnAccumAudit(g, { side: laneIsSide(i, game.length) }).ok);
 }
 
 /**

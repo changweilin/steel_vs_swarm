@@ -820,7 +820,7 @@ export async function buildTerrain(cfg, onProgress, options) {
   //  高度時視野本來就遠得多,裙的外緣會露出來;那是世界曲面本身的界線,不是這一段的。
   //  另:`carveTunnels`/`gradeRoadBeds` 是**之後**才動 `heights` 的局部開挖,裙是靜態幾何
   //  ⇒ 若有道路一路挖到圖界,接縫會差一個開挖深度(現制的路在障礙環處就封死了)。
-  //  ⑧**全地圖同尺**:緩衝已是障礙的實體尺度，迷你／劇情地圖不得再縮到容不下障礙。
+  //  ⑧**全地圖同尺**:緩衝已是障礙的實體尺度，劇情地圖不得再縮到容不下障礙。
   //    對外仍只交出實際使用的 `bufferM`，消費端不得自算第二份。
   let bufferHeightAt = null, bufferM = 0;
   {

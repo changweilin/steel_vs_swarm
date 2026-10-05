@@ -11,7 +11,7 @@
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //     - 三線母體固定全開,與人數無關
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit, lanePathBalanceAudit, laneCssColor, MOTHER_LANES, laneSubsetFor } from './data.js';
+import { MAPGEO, battleRect, xzToLL, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, laneIsSide, towerLayoutAudit, laneSeparationAudit, lanePathBalanceAudit, laneCssColor, MOTHER_LANES, laneSubsetFor } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -35,6 +35,12 @@ function destPoint(origin, bearingDeg, d) {
   return [origin[0] + dLat, origin[1] + dLng];
 }
 function midPoint(a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
+/** 戰場方框四角(經緯度,含地圖主方位旋轉);預覽框 MUST 與 terrain/sim 同吃 `battleRect`。 */
+function battleFrameLL(cfg) {
+  const r = battleRect(cfg);
+  return [[r.minX, r.minZ], [r.maxX, r.minZ], [r.maxX, r.maxZ], [r.minX, r.maxZ]]
+    .map(([x, z]) => xzToLL(x, z, cfg.center));
+}
 
 // 砲塔規則合規(規則 #4):兵線(lat/lng)→ 遊戲公尺,跑 data.js 的唯一結算縫 towerLayoutAudit。
 // 只用相對距離 ⇒ 原點任取(這裡用兵線起點)。與烘焙 / 伺服器 validateBattleConfig / 稽核共用同一支。
@@ -301,13 +307,7 @@ export class MapSelect {
     cfg.lanes.forEach((lane, i) => {
       this._addLayer(L.polyline(lane, { color: laneCssColor(cfg.laneIds?.[i] ?? i), weight: 4, opacity: 0.85 }), 'fav');
     });
-    const half = cfg.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
-    const dLat = half / R_EARTH * 180 / Math.PI;
-    const dLng = half / (R_EARTH * Math.cos(cfg.center.lat * Math.PI / 180)) * 180 / Math.PI;
-    this._addLayer(L.rectangle([
-      [cfg.center.lat - dLat, cfg.center.lng - dLng],
-      [cfg.center.lat + dLat, cfg.center.lng + dLng],
-    ], { color: '#8899aa', weight: 2, dashArray: '8 6', fill: false }), 'fav');
+    this._addLayer(L.polygon(battleFrameLL(cfg), { color: '#8899aa', weight: 2, dashArray: '8 6', fill: false }), 'fav');
     this.map.fitBounds(L.latLngBounds([cfg.bases.SWARM, cfg.bases.STEEL]).pad(0.25), { animate: false });
   }
 
@@ -402,7 +402,7 @@ export class MapSelect {
       const maxUturn = Math.max(...gMother.map((lane) => laneUTurnAudit(lane).maxDeg));
       // 主軸偏航門檻(同 bake / MAPGEO.TURN_ACCUM_MAX_DEG):任一兵線相對 A→B 主軸的帶號
       // 偏航累積出範圍 → 淘汰此推薦點(規則 2026-07-29;判定縫 = laneTurnAccumAudit,不另比對門檻)。
-      const accumOK = gMother.every((lane) => laneTurnAccumAudit(lane).ok);
+      const accumOK = gMother.every((lane, i) => laneTurnAccumAudit(lane, { side: laneIsSide(i, gMother.length) }).ok);
       const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP
         && maxBt <= MAPGEO.MAX_BACKTRACK && maxUturn < MAPGEO.UTURN_MAX_DEG && accumOK;
       if (!ok) continue;
@@ -484,12 +484,8 @@ export class MapSelect {
       this._addLayer(L.polyline(lane, { color: laneCssColor(cand.laneIds?.[i] ?? i), weight: 4, opacity: 0.85 })
         .bindTooltip(`${names[i]} 兵線`), 'lanes');
     });
-    // 戰場邊界(以 AB 中點為中心的正方形)
-    const c = midPoint(this.anchor, cand.latlng);
-    const half = cand.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
-    const dLat = half / R_EARTH * 180 / Math.PI;
-    const dLng = half / (R_EARTH * Math.cos(c[0] * Math.PI / 180)) * 180 / Math.PI;
-    this._addLayer(L.rectangle([[c[0] - dLat, c[1] - dLng], [c[0] + dLat, c[1] + dLng]], {
+    // 戰場邊界 = `battleRect` 唯一縫(含兵線包絡外擴與放大),與地形/伺服器同一個方框
+    this._addLayer(L.polygon(battleFrameLL(this.buildConfig()), {
       color: '#8899aa', weight: 2, dashArray: '8 6', fill: false,
     }), 'lanes');
     this.map.fitBounds(L.latLngBounds([this.anchor, cand.latlng]).pad(0.25));

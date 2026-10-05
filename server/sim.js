@@ -1576,7 +1576,7 @@ export class BattleSim {
   }
 
   // ---------- 建置:主堡 + 每線每方 towerStages 個塔位 ×(左右各 1 座)----------
-  // 塔位階數 = 完整戰場 2(前線 + 後方)/ 迷你地圖 1(只有前線);由 solveTowerSites 定案。
+  // 塔位階數由 solveTowerSites 定案(劇情戰役只有防守方有塔)。
   _spawnStructures() {
     for (const side of ['SWARM', 'STEEL']) {
       const [x, z] = this.basePos[side];

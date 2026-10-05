@@ -2474,7 +2474,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   //    角點**不准抖**(那是與真地形的接縫,動了就開縫);外溢走的是圖內同一支 planSeamOverlays。
   let bufCells = 0;
   if (!surfaceField && terrain.bufferHeightAt) {
-    const B = terrain.bufferM;   // 深度讀地形實際鋪的那一份(迷你地圖縮到 1/3;見 terrain.js ⑧)
+    const B = terrain.bufferM;   // 深度讀地形實際鋪的那一份(見 terrain.js ⑧)
     const bcell = cell * BUF_CELL_F;
     const nOut = Math.max(1, Math.ceil(B / bcell));
     // 三角波鏡射(同 terrain.js 裙):在 [lo, hi] 的兩端恆等 ⇒ 接縫逐點同款

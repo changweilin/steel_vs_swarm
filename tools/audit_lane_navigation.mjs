@@ -6,7 +6,7 @@
 // Evaluates production logic from public/js/data.js (shared by bake_venue_lanes.mjs and mapSelect.js).
 // Includes negative verification: intentionally relaxed or degraded logic MUST fail corresponding audit assertions.
 // Usage: node tools/audit_lane_navigation.mjs
-import { MAPGEO, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit } from '../public/js/data.js';
+import { MAPGEO, laneUTurnAudit, laneTurnAccumAudit, laneIsSide, laneStructEntryAudit } from '../public/js/data.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond) => { if (cond) pass++; else { fail++; console.log('  ✗', name); } };
@@ -69,6 +69,17 @@ ok('中途反向繞行(單點皆低於規則②門檻)由本規則攔下',
   laneUTurnAudit(detour).ok && !laneTurnAccumAudit(detour).ok);
 ok('中途淺繞行(−120° 未過門檻)合法',
   laneTurnAccumAudit(byHeads([0, 0, 0, 0, 0, 0, -90, -120, -90, 0, 0, 0, 0, 0, 0])).ok);
+// Side lanes: one excursion above LIM up to the once-limit is legal; a second one or a peak beyond it is not.
+const loopTo = (peak) => byHeads([0, 0, 0, 0, 0, 0, -peak / 2, -peak, -peak / 2, 0, 0, 0, 0, 0, 0]);
+const twice = byHeads([0, 0, 0, 0, 0, 0, -90, -170, -90, 0, 0, 0, 0, 0, 0, 0, -90, -170, -90, 0, 0, 0, 0, 0, 0]);
+const peakOf = (p) => laneTurnAccumAudit(p).maxAbsDeg;
+ok('(前提)探針 loopTo(170) 峰值落在 150~200 之間', peakOf(loopTo(170)) > LIM && peakOf(loopTo(170)) <= MAPGEO.TURN_ACCUM_SIDE_ONCE_DEG);
+ok('中路單次超 150° 仍淘汰', !laneTurnAccumAudit(loopTo(170)).ok);
+ok('左右路單次超 150°(≤ 200°)放行', laneTurnAccumAudit(loopTo(170), { side: true }).ok);
+ok('左右路峰值超過 200° 淘汰', !laneTurnAccumAudit(loopTo(240), { side: true }).ok);
+ok('左右路第二次越過 150° 淘汰', !laneTurnAccumAudit(twice, { side: true }).ok);
+ok('laneIsSide:L1 中路否、L2 皆是、L3 上下是中否',
+  !laneIsSide(0, 1) && laneIsSide(0, 2) && laneIsSide(1, 2) && laneIsSide(0, 3) && !laneIsSide(1, 3) && laneIsSide(2, 3));
 // Complete loop: yaw does not wrap; a full 360 deg turn exceeds limits even if start and end align with chord.
 ok('繞圈(0→90→180→270→0)判出界', !laneTurnAccumAudit(byHeads([0, 90, 180, 270, 0])).ok);
 // Rule independence: -70 deg followed by +155 deg sharp turn -- peak yaw (~83 deg) passes Rule 3, caught by Rule 2.
