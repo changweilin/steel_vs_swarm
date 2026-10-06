@@ -20,6 +20,50 @@ function segmentsIntersect(p1, p2, p3, p4) {
     && ((d3 > 1e-5 && d4 < -1e-5) || (d3 < -1e-5 && d4 > 1e-5)));
 }
 
+// 長條判定單一縫：AABB 會把斜向長條誤判成方形，OBB 最小面積矩才量得出真長寬比。
+// 門檻與 planner 共用，推導與限高都吃同一份 aspect，不另寫手寫比值。
+export const STRIP_ASPECT = 2.5;
+const STRIP_MAX_H = 15;
+const STRIP_MAX_LEVELS = 4;
+
+export function stripAspect(poly = null, w = 0, d = 0) {
+  const outer = poly?.outer;
+  if (Array.isArray(outer) && outer.length >= 3) {
+    let bestArea = Infinity, bestAspect = 0;
+    for (let i = 0; i < outer.length; i++) {
+      const a = outer[i], b = outer[(i + 1) % outer.length];
+      const ex = b[0] - a[0], ez = b[1] - a[1];
+      const el = Math.hypot(ex, ez);
+      if (!(el > 1e-5)) continue;
+      const ux = ex / el, uz = ez / el, vx = -uz, vz = ux;
+      let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+      for (const p of outer) {
+        const u = p[0] * ux + p[1] * uz, v = p[0] * vx + p[1] * vz;
+        if (u < minU) minU = u;
+        if (u > maxU) maxU = u;
+        if (v < minV) minV = v;
+        if (v > maxV) maxV = v;
+      }
+      const wLen = maxU - minU, dLen = maxV - minV;
+      if (!(wLen > 0 && dLen > 0)) continue;
+      const area = wLen * dLen;
+      const aspect = Math.max(wLen, dLen) / Math.max(0.001, Math.min(wLen, dLen));
+      if (area < bestArea - 1e-6) { bestArea = area; bestAspect = aspect; }
+    }
+    if (bestAspect > 0) return bestAspect;
+    const xs = outer.map((p) => p[0]), zs = outer.map((p) => p[1]);
+    const aw = Math.max(...xs) - Math.min(...xs), ad = Math.max(...zs) - Math.min(...zs);
+    if (aw > 0 && ad > 0) return Math.max(aw, ad) / Math.max(0.001, Math.min(aw, ad));
+  }
+  if (w > 0 && d > 0) return Math.max(w, d) / Math.max(0.001, Math.min(w, d));
+  return 1;
+}
+
+function isStripFootprint(poly = null, w = 0, d = 0, context = {}) {
+  if (context?.elongated) return true;
+  return stripAspect(poly, w, d) > STRIP_ASPECT;
+}
+
 export function detectTransitPassageTags(tags = {}) {
   if (!tags) return null;
   const t = String(tags.tunnel || '').trim().toLowerCase();
@@ -224,29 +268,71 @@ export function inferBuildingFunction(building = {}, poly = null, context = {}) 
     };
   }
 
-  if (explicit && (!context.aquatic || explicit.category !== 'industrial')) return explicit;
+  const bld = String(tags.building || tags['building:part'] || '');
+  const points = poly?.outer || [];
+  const width = points.length ? Math.max(...points.map(p => p[0])) - Math.min(...points.map(p => p[0])) : (building.w || 10);
+  const depth = points.length ? Math.max(...points.map(p => p[1])) - Math.min(...points.map(p => p[1])) : (building.d || 10);
+  // 長條 footprint 一律走低樓層（賣場／商店街／連排透天），不把大樓橫擺成細長高板。
+  const strip = isStripFootprint(poly, width, depth, context);
+  const TALL_STRIP_TYPES = new Set(['skyscraper', 'office', 'apartment', 'hotel']);
+  const TALL_STRIP_KEYS = new Set(['commercial_skyscraper', 'commercial_office', 'residential_apartment']);
+  const tallExplicit = explicit && (TALL_STRIP_TYPES.has(explicit.type) || TALL_STRIP_KEYS.has(explicit.key));
+  if (explicit && (!context.aquatic || explicit.category !== 'industrial') && !(strip && tallExplicit)) return explicit;
   if (context.aquatic) {
     // 水域與沼澤禁止工廠類建築與高樓，一律轉為低層住宅
     return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
   }
-  const bld = String(tags.building || tags['building:part'] || '');
+  if (strip && !tallExplicit) {
+    // 天然長條的低樓層形制（車站／倉儲／廠房／農舍／宗教／文化）保留原用途，只降高樓。
+    const lowNaturally = explicit && ['transport', 'industrial', 'rural', 'religious', 'heritage'].includes(explicit.category);
+    if (lowNaturally) return explicit;
+  }
   // 校區／醫療園區等只有邊界標籤時，僅傳給未指定用途的屋身。
   // 宿舍、車庫、禮拜堂等已有自身形制的建物不繼承整個園區用途。
   if (!bld || bld === 'yes') {
     const parent = taggedBuildingFunction(context.parentTags);
     if (parent && INHERITABLE_BUILDING_FUNCTIONS.includes(parent.type)) {
-      return { ...parent, inherited: true };
+      if (!strip || !(TALL_STRIP_TYPES.has(parent.type))) return { ...parent, inherited: true };
     }
   }
   const shop = String(tags.shop || '');
   const amenity = String(tags.amenity || '');
   const landuse = String(tags.landuse || context.landuse || '');
-  const points = poly?.outer || [];
-  const width = points.length ? Math.max(...points.map(p => p[0])) - Math.min(...points.map(p => p[0])) : (building.w || 10);
-  const depth = points.length ? Math.max(...points.map(p => p[1])) - Math.min(...points.map(p => p[1])) : (building.d || 10);
   const area = width * depth;
   const levels = Number.parseFloat(tags['building:levels'] || tags.levels);
   const rawH = Number.parseFloat(tags.height);
+
+  if (strip) {
+    if (/mall|supermarket|department_store|market/.test(shop) || amenity === 'marketplace'
+      || /retail|commercial|market/.test(bld) || /commercial|retail/.test(landuse)) {
+      return { category: 'commercial', type: 'retail', key: 'commercial_retail' };
+    }
+    if (/warehouse|depot|storage/.test(bld)) {
+      return { category: 'industrial', type: 'warehouse', key: 'industrial_warehouse' };
+    }
+    if (/industrial|factory|manufacture|works|workshop/.test(bld) || /industrial/.test(landuse)) {
+      return { category: 'industrial', type: 'factory', key: 'industrial_factory' };
+    }
+    if (bld === 'greenhouse' || tags.greenhouse) {
+      return { category: 'rural', type: 'greenhouse', key: 'rural_greenhouse' };
+    }
+    if (/farm|barn|stable|farm_auxiliary|cowshed/.test(bld) || /farmland|farmyard|orchard|vineyard/.test(landuse)) {
+      return { category: 'rural', type: 'farmhouse', key: 'rural_farmhouse' };
+    }
+    // 賣場／商店街／連排透天三選一：只吃確定性雜湊，不消耗共享亂數。
+    const stripHash = architectureHash(
+      context.identity || building.sourceId || `${width},${depth}`, `${context.seed || 0}:strip_func`);
+    const prob = (stripHash >>> 0) / 4294967296;
+    const commercialStrip = context.urban || /commercial|retail/.test(landuse) || Boolean(shop);
+    if (commercialStrip) {
+      if (prob < 0.5) return { category: 'commercial', type: 'retail', key: 'commercial_retail' };
+      if (prob < 0.75) return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
+      return { category: 'residential', type: 'alley', key: 'residential_alley' };
+    }
+    if (prob < 0.4) return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
+    if (prob < 0.7) return { category: 'residential', type: 'alley', key: 'residential_alley' };
+    return { category: 'commercial', type: 'retail', key: 'commercial_retail' };
+  }
 
   // 1. 商業區 (Commercial)
   if (bld === 'skyscraper' || (levels >= 14) || (rawH >= 45) || (context.urban && area > 1400 && levels >= 8)) {
@@ -306,6 +392,30 @@ export function inferBuildingFunction(building = {}, poly = null, context = {}) 
     }
   }
 
+  // 5.5 低層通用分流：無特殊用途、明示樓層≤3（或無樓高標示）的非長條建物，
+  // 不再丟隨機池抽公寓／商辦／高樓。小面積一律透天；大面積在賣場／豪宅大透天
+  // （同為透天 key，足跡即豪宅尺度）二選一，只吃確定性雜湊。長條另走 strip 分支。
+  const LOWBIG_AREA = 300;
+  const hasSpecialUse = Boolean(shop || tags.office || amenity || tags.tourism || tags.power
+    || tags.healthcare || tags.leisure || tags.man_made || tags.railway || tags.public_transport
+    || tags.aeroway || tags.historic || tags.heritage || tags.religion || tags['building:use']);
+  const genericBld = !bld || bld === 'yes'
+    || /^(house|detached|semidetached_house|terrace|residential|bungalow|cabin|hut)$/.test(bld);
+  const lowFloors = (!Number.isFinite(levels) || levels <= 3) && (!Number.isFinite(rawH) || rawH <= 11);
+  if (!strip && !context.rural && lowFloors && genericBld && !hasSpecialUse) {
+    if (area < LOWBIG_AREA) {
+      return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
+    }
+    const bigHash = architectureHash(
+      context.identity || building.sourceId || `${width},${depth}`, `${context.seed || 0}:lowbig`);
+    const bigProb = (bigHash >>> 0) / 4294967296;
+    const commercialBig = context.urban || /commercial|retail/.test(landuse);
+    if (commercialBig ? bigProb < 0.6 : bigProb < 0.5) {
+      return { category: 'commercial', type: 'retail', key: 'commercial_retail' };
+    }
+    return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
+  }
+
   // 6. 無專屬標籤時：依環境尺度與確定性雜湊產生豐富多元分類
   const idHash = architectureHash(context.identity || building.sourceId || `${width},${depth}`, `${context.seed || 0}:bld_func`);
   const prob = (idHash >>> 0) / 4294967296;
@@ -345,18 +455,22 @@ export function inferBuildingFunction(building = {}, poly = null, context = {}) 
 export function sampleBuildingHeight(functionKey, seed, identity, area = {}, context = {}) {
   const tags = area.tags || {};
   const isAquatic = area.aquatic || context.aquatic;
+  const strip = isStripFootprint(context.poly || null, area.w || 0, area.d || 0, context);
+  const capLevels = (n) => (strip ? Math.min(n, STRIP_MAX_LEVELS) : n);
+  const capH = (h) => (strip ? Math.min(h, STRIP_MAX_H) : h);
   const rawH = Number.parseFloat(tags.height);
   if (Number.isFinite(rawH) && rawH > 2) {
     const rawLevels = Math.max(1, Math.round(rawH / 3.4));
-    const levels = isAquatic ? Math.min(rawLevels, 3) : rawLevels;
-    const height = isAquatic ? Math.min(rawH, levels * 3.2) : Math.min(120, rawH);
-    return { height, levels, floorH: height / levels };
+    const levels = isAquatic ? Math.min(rawLevels, 3) : capLevels(rawLevels);
+    const height = isAquatic ? Math.min(rawH, levels * 3.2) : Math.min(120, capH(rawH));
+    const capped = strip ? Math.min(height, levels * 3.8) : height;
+    return { height: capped, levels, floorH: capped / levels };
   }
   const rawL = Number.parseFloat(tags['building:levels']);
   if (Number.isFinite(rawL) && rawL > 0) {
     const floorH = 3.2;
-    const levels = isAquatic ? Math.min(Math.round(rawL), 3) : Math.round(rawL);
-    return { height: Math.min(120, Math.max(3.2, levels * floorH)), levels, floorH };
+    const levels = isAquatic ? Math.min(Math.round(rawL), 3) : capLevels(Math.round(rawL));
+    return { height: Math.min(120, capH(Math.max(3.2, levels * floorH))), levels, floorH };
   }
 
   const range = BUILDING_FUNCTION_RANGES[functionKey] || BUILDING_FUNCTION_RANGES.residential_townhouse;
@@ -364,11 +478,13 @@ export function sampleBuildingHeight(functionKey, seed, identity, area = {}, con
   const t = hash / 4294967296;
   let levels = Math.round(range.levels[0] + t * (range.levels[1] - range.levels[0]));
   if (isAquatic) levels = Math.min(levels, 3);
+  if (strip) levels = Math.min(levels, STRIP_MAX_LEVELS);
   const hashF = architectureHash(identity, `${seed}:h_floor`);
   const tf = hashF / 4294967296;
   const floorH = range.floorH[0] + tf * (range.floorH[1] - range.floorH[0]);
   const rawHeight = Math.max(range.minH, Math.min(range.maxH, levels * floorH));
-  const height = isAquatic ? Math.min(9.6, levels * floorH) : rawHeight;
+  const cappedRaw = strip ? Math.min(rawHeight, STRIP_MAX_H) : rawHeight;
+  const height = isAquatic ? Math.min(9.6, levels * floorH) : cappedRaw;
   return { height: Math.round(height * 10) / 10, levels, floorH: Math.round(floorH * 10) / 10 };
 }
 
@@ -523,7 +639,7 @@ export function createArchitecturePlanner({
     const points = poly?.outer || [];
     const width = points.length ? Math.max(...points.map(p => p[0])) - Math.min(...points.map(p => p[0])) : (building.w || 10);
     const depth = points.length ? Math.max(...points.map(p => p[1])) - Math.min(...points.map(p => p[1])) : (building.d || 10);
-    const elongated = Math.max(width, depth) / Math.max(0.001, Math.min(width, depth)) > 2.5;
+    const elongated = stripAspect(poly, width, depth) > STRIP_ASPECT;
 
     const waterY = terrain?.waterY ?? (typeof WATER !== 'undefined' ? WATER.LEVEL : 0.3);
     const swampY = waterY + (typeof WATER !== 'undefined' ? (WATER.SWAMP_BAND ?? 2.2) : 2.2);
