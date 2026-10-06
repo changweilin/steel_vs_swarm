@@ -17,7 +17,7 @@ import {
   GLINT, glintDur, glintAlpha, glintDropR,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, TARGET_H, chaseCapS,
+   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, FAN_RANGE_CENTER_F, fanBinRangeF, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, TARGET_H, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossSegFill, bossSegFrac, bossSegN, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
@@ -2592,9 +2592,10 @@ export class BattleClient {
     const wF = 1, rF = 1;
     this._muzzleBurst(muzzle, plasma, this.side);   // 電漿重武器槍口爆(明顯度)
     // 離子吐息主噴流(哥吉拉式;使用者指定參考):錐狀噴口 + 螺旋纏繞能量帶(只表範圍錐形)。
+    // 主噴流走中央格射程(×FAN_RANGE_CENTER_F),與 heroPlasma 逐格結算同界。
     if (plasma) {
       const core = this._shotCols(this.side).hot;
-      const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, rng * rF * 0.82));
+      const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, rng * rF * 0.82 * FAN_RANGE_CENTER_F));
       ionBreath(this.scene, this.effects, muzzle, clip.to, col,
         { r: 2.2 * wF, ttl: 0.45, coil: 3, core, def });
       shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 2.6 * wF, core);
@@ -2604,7 +2605,9 @@ export class BattleClient {
       const dk = dir.clone()
         .applyAxisAngle(up, half * f)
         .applyAxisAngle(right, half * 0.5 * (Math.random() * 2 - 1));   // 垂直散布 = 圓形彈著
-      const len = rng * rF * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
+      // 每條火舌走自己方位的逐格射程:中央 ×1.1、邊緣 ×1.0 線性(與 fanBinRangeF 同式),與結算同界
+      const binF = 1 + (FAN_RANGE_CENTER_F - 1) * (1 - Math.abs(f));
+      const len = rng * rF * binF * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
       const end = muzzle.clone().addScaledVector(dk, len);
       const clip = this._clipBeam(muzzle, end);   // 自機扇形彈舌同樣止於障礙面(彈著花打在牆上)
       beamLine(this.scene, this.effects, muzzle, clip.to, col, plasma ? { ttl: 0.24, w: 0.16 * wF } : { ttl: 0.12, w: 0.07 * wF });
@@ -6231,9 +6234,11 @@ export class BattleClient {
     const def = this._curWeapon().def;
     if (!def) return;
     // 索敵半徑取機制上限,再以**對這個目標**的有效射程誠實夾回(與射程光暈同一個數字 ——
-    // 鎖定目標刻意不亮射程光暈而改亮 lockGlow,兩者若不同界就會出現「鎖得到卻打不到」)。
+    // 鎖定目標刻意不亮射程光暈而改亮 lockGlow,兩者若不同界就會出現「鎖得到卻打不到」;
+    // 扇形取中央格最遠,與 _shotVictims 逐格射程同界)。
     const t0 = this._aimTarget(this._maxRange(def));
-    const t = t0 && this.pos.distanceTo(t0.mesh.position) - this._hitR(t0) <= this._effRange(def, t0) ? t0 : null;
+    const lockMul = aoeClass(def) === 'fan' ? FAN_RANGE_CENTER_F : 1;
+    const t = t0 && this.pos.distanceTo(t0.mesh.position) - this._hitR(t0) <= this._effRange(def, t0) * lockMul ? t0 : null;
     if (t) { this.net.send({ t: 'lock', id: t.id }); return; }
     // 在外彈頭的鎖定維持(射後不理):收鏡切回輕武器後,離架時已鎖定的目標超出輕武器射程,
     // 準星解從此報 miss;若放任不報,伺服器 LOCK.TTL 到期後著彈被當無鎖定丟棄 = 收鏡即丟追擊。
@@ -6714,7 +6719,7 @@ export class BattleClient {
           const ang = Math.acos(Math.min(1, Math.max(-1, dot)));
           if (ang > fanConeHalf(def, d3, hr)) continue;
         }
-        if (!this._inShotRange(e, def, from)) continue;   // 目標級快篩(含淨空;逐格只會更嚴)
+        if (!this._inShotRange(e, def, from)) continue;   // 目標級快篩(含淨空;中央格最遠,逐格只會更嚴)
         const phi = Math.atan2(tx * az - tz * ax, tx * ax + tz * az);
         const aw = Math.atan2(hr, Math.max(1, d2));
         const [b0, b1] = fanBinSpan(def, phi, aw);   // 分格走單一縫
@@ -6723,7 +6728,7 @@ export class BattleClient {
         const surfH = Math.max(0, d2 - hr);
         for (let bi = b0; bi <= b1; bi++) {
           const hitD = fanBinHitD(def, bi, d2, phi, hr);
-          if (hitD == null || surf + (hitD - surfH) > rng) continue;   // 每格各自吃同一道射程
+          if (hitD == null || surf + (hitD - surfH) > rng * fanBinRangeF(def, bi)) continue;   // 每格各自吃逐格球面射程
           if (!bins[bi] || d3 < bins[bi].d3) bins[bi] = { e, d3 };
         }
       }
@@ -6748,15 +6753,16 @@ export class BattleClient {
 
   /**
    * 逐目標「射程內 + 射線淨空」(扇形 / 貫穿的足跡共用):量到**近側表面**、比對逐目標有效射程
-   * `_effRange`(與伺服器誠實界同一把尺),線段淨空與
-   * `_reachable` 的 `hit:'clear'` 同一式(`_layerHitT` + `RANGE_GLOW.SURF_TOL_M`)。
+   * `_effRange`(與伺服器誠實界同一把尺),扇形取中央格最遠(×FAN_RANGE_CENTER_F,逐格只會更嚴),
+   * 線段淨空與 `_reachable` 的 `hit:'clear'` 同一式(`_layerHitT` + `RANGE_GLOW.SURF_TOL_M`)。
    */
   _inShotRange(ent, def, from) {
     const aim = this._entAimPoint(ent);
     const hr = this._hitR(ent);
     const rng = this._effRange(def, ent);
     const surf = Math.max(0, from.distanceTo(aim) - hr);
-    if (surf > rng) return false;
+    const lim = aoeClass(def) === 'fan' ? rng * FAN_RANGE_CENTER_F : rng;
+    if (surf > lim) return false;
     const cut = this._layerHitT(from.x, from.y, from.z, aim.x, aim.y, aim.z);
     return cut == null || cut >= surf - RANGE_GLOW.SURF_TOL_M;
   }

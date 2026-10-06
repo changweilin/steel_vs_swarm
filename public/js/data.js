@@ -2381,8 +2381,8 @@ export const fanBinOf = (def, phi) => {
 /** 量體(方位角 phi ± 張角 aw)橫跨的格區間 [b0, b1];起訖單調 ⇒ b0恆 ≤ b1 */
 export const fanBinSpan = (def, phi, aw) => [fanBinOf(def, phi - aw), fanBinOf(def, phi + aw)];
 /** 第 bi 格楔面內、目標水平圓盤(中心水平距離 d2、方位 phi、半徑 hr)的最近表面距離;
- * 無交集回傳 null。每個小錐各自吃武器同一道射程閘的幾何半:三端(sim.heroPlasma /
- * lanesim.hits / game._shotVictims)以此值比各自的有效射程,MUST NOT 各自手寫楔-圓盤相交。
+ * 無交集回傳 null。每個小錐各自吃武器射程閘的幾何半:三端(sim.heroPlasma /
+ * lanesim.hits / game._shotVictims)以此值比各自的逐格有效射程,MUST NOT 各自手寫楔-圓盤相交。
  * 中央格回傳 max(0, d2 - hr) ⇒ 與舊制逐目標表面距離一致(舊行為不動);
  * 偏心格回傳楔內最近交點(恆 ≥ 中央值)⇒ 射程邊緣的大目標只在中央格命中。 */
 export const fanBinHitD = (def, bi, d2, phi, hr) => {
@@ -2396,6 +2396,20 @@ export const fanBinHitD = (def, bi, d2, phi, hr) => {
   const dl = phi - edge, lat = d2 * Math.sin(dl);
   if (Math.abs(lat) > r) return null;
   return Math.max(0, d2 * Math.cos(dl) - Math.sqrt(r * r - lat * lat));
+};
+// ---- 扇形球面射程 + 逐格增程(2026-10-06 使用者需求)----
+// 全部扇形武器改球面射程:3D 表面距離 surfC 比逐格有效射程,不再走下段 60° 圓錐救援。
+// 中央小錐射程比最邊緣 +10%,由外而內線性增加:邊緣格 ×1.0、中央格 ×1.1。
+// 三端(sim.heroPlasma / lanesim.hits / game._shotVictims) MUST 全吃 fanBinRangeF,
+// MUST NOT 各自手寫格序換算(各寫一份 = 同一發在三處射程不同)。
+export const FAN_RANGE_CENTER_F = 1.1;
+/** 第 bi 格的射程倍率:邊緣 1.0 → 中央 FAN_RANGE_CENTER_F,線性(格序推導不手寫) */
+export const fanBinRangeF = (def, bi) => {
+  const n = fanSubs(def);
+  if (n <= 1) return FAN_RANGE_CENTER_F;
+  const c = (n - 1) / 2;
+  const frac = Math.min(1, Math.abs(bi - c) / c);   // 0 = 中央,1 = 最邊緣
+  return 1 + (FAN_RANGE_CENTER_F - 1) * (1 - frac);
 };
 
 // ================= 重武器範圍攻擊三分類 + 彈道五分類(2026-07-23 使用者定案)=================

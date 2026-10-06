@@ -32,7 +32,7 @@
 import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
-  REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, armingOf, lobMinRange, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE,
+  REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, FAN_RANGE_CENTER_F, fanBinRangeF, armingOf, lobMinRange, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, TARGET_H, MAPGEO, WEAPONS, UNITS,
   GAME, STRUCT_W, NPC_BLAST, npcBlastR, towerDps, BASE_DPS_MULT, BASE_MISSILE,
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
@@ -319,7 +319,7 @@ const THREE = { Vector3: V3 };
 const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
 const RANGE_GLOW = new Function(`return ${/const RANGE_GLOW = (\{[^}]*\});/.exec(G)[1]}`)();
 const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf, shotV0,
-  aoeClass, blastFalloff, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, inWeaponRange, weaponMaxHoriz, isSuperSide, isThirdSide,
+  aoeClass, blastFalloff, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, FAN_RANGE_CENTER_F, fanBinRangeF, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, LANCE, inWeaponRange, weaponMaxHoriz, isSuperSide, isThirdSide,
   bossScaleF, superScaleF };
 const M = (n) => pickMethod(n, G, env);
 // 牆 = 沿 +X 的一道垂直面(擋住 x ≥ w.x 且高度低於 w.top 的射線);回傳截斷距離
@@ -471,7 +471,9 @@ sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)')
   ok((S.match(/fanConeHalf\(/g) || []).length === 1 && (G.match(/fanConeHalf\(/g) || []).length === 1,
     'fanConeHalf 在 sim.js / game.js 各恰一個消費端');
   ok((S.match(/fanBinHitD\(/g) || []).length === 1 && (G.match(/fanBinHitD\(/g) || []).length === 1,
-    'fanBinHitD 在 sim.js / game.js 各恰一個消費端(每個小錐各自吃武器同一道射程)');
+    'fanBinHitD 在 sim.js / game.js 各恰一個消費端(每格楔-圓盤幾何半)');
+  ok((S.match(/fanBinRangeF\(/g) || []).length === 1 && (G.match(/fanBinRangeF\(/g) || []).length === 1,
+    'fanBinRangeF 在 sim.js / game.js 各恰一個消費端(每格球面射程倍率,中央 +20% 線性)');
   {
     const LS = read(['tools', 'lanesim.mjs']);
     ok(/fanConeHalf\(def, d, (hitR\(e\)|hr)\)/.test(LS),
@@ -1040,8 +1042,20 @@ sec('Ⅶ 光暈 ⇔ 傷害:沒有射程光暈的敵人 MUST NOT 掉血(2026-08-0
     return hurt;
   };
   ok(shoot(0.95), `射程內(0.95 × ${wf.range}m)的扇形目標照常掉血`);
-  for (const f of [1.05, 1.15, 1.24]) {
-    ok(!shoot(f), `${f.toFixed(2)} × 射程(光暈不亮)的扇形目標 MUST NOT 掉血(舊制 ≤1.25 全中)`);
+  // 2026-10-06 中央增程:軸上(中央格 ×1.1)1.05 照樣掉血,1.15/1.24 超出中央格才不掉;
+  // 錐緣格(×1.0)1.05 即不掉(逐格球面射程,與光暈同界)
+  ok(shoot(1.05), `中央格增程內(1.05 × ${wf.range}m)軸上目標照常掉血(中央 ×${FAN_RANGE_CENTER_F})`);
+  ok(!shoot(1.15) && !shoot(1.24), `1.15/1.24 × 射程(超出中央格 ${FAN_RANGE_CENTER_F})的軸上目標 MUST NOT 掉血`);
+  {
+    const half = (wf.arc || 15) * Math.PI / 180 * 0.9;
+    const r = wf.range * 1.05;
+    const te = sim._add({ kind: 'soldier', side: 'STEEL', x: fh.x + r * Math.sin(half), z: fh.z + r * Math.cos(half), y: 0, hp: 999999, maxHp: 999999 });
+    sim.t += 5;
+    fh.ammo.light = wf.mag; fh.reloadUntil.light = 0; fh.fireAt.light = -99;
+    const hpE0 = te.hp;
+    sim.heroPlasma('p_fan', 0, 1, 'light');
+    ok(te.hp === hpE0, `錐緣格 1.05 × 射程(邊緣 ×1.0)的目標 MUST NOT 掉血`);
+    sim.ents.delete(te.id);
   }
 }
 {
@@ -1210,8 +1224,8 @@ const FNF = heavyOf('fnf');   // 任一名射後不理角色(不寫死角色代�
   const tl = methodSrc('_tickLock', G);
   ok(/this\._effRange\(def, t0\)/.test(tl), '對照:①「只能射程內鎖定」仍由 _tickLock 的 _effRange 把關');
   const lockSrc = methodSrc('heroLock', S);
-  ok(/\.range \*(?: this\._altRange\([^)]+\) \*)? RANGE_TOL\) return;/.test(lockSrc) && /_losBlocked/.test(lockSrc) && /_visibleTo/.test(lockSrc),
-    '對照:伺服器 heroLock 複驗射程 / 迷霧 / LOS 三道(鎖定是唯一入口,豁免全掛在它身上)');
+  ok(/\.range \* this\._altRange\([^)]+\) \* RANGE_TOL(?: \* [^;]+)?\) return;/.test(lockSrc) && /_losBlocked/.test(lockSrc) && /_visibleTo/.test(lockSrc),
+    '對照:伺服器 heroLock 複驗射程 / 迷霧 / LOS 三道(鎖定是唯一入口,豁免全掛在它身上;扇形另 ×中央格倍率)');
 }
 {
   // 行為直測:真 BattleSim —— 有鎖定就追得到,沒鎖定照舊被落點閘門擋下
@@ -1714,13 +1728,14 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
       for (const s of [...sim.ents.values()]) sim.ents.delete(s.id);
       sim.heroes.clear();
       const h = mk();
-      // 目標:離機體 R+5(超程)、離槍口 R−5(射程內)
-      const t = sim._add({ kind: 'soldier', side: foe, x: 0, z: R + 5 - hitR({ kind: 'soldier' }), y: 0, hp: 999999, maxHp: 999999 });
+      // 目標:離機體 1.2R+5(超中央格射程)、離槍口 1.2R−5(中央格射程內)—— 球面 ×中央格倍率
+      const Rc = R * FAN_RANGE_CENTER_F;
+      const t = sim._add({ kind: 'soldier', side: foe, x: 0, z: Rc + 5 - hitR({ kind: 'soldier' }), y: 0, hp: 999999, maxHp: 999999 });
       const hp0 = t.hp;
       sim.heroPlasma('p_fan', 0, 1, 'heavy', withMuzzle ? [0, OFF, 0] : null);
       return t.hp < hp0;
     };
-    ok(shoot(true), '帶槍口:離槍口 R−5 的目標掉血(= 客戶端光暈亮的那一格)');
+    ok(shoot(true), '帶槍口:離槍口 1.2R−5 的目標掉血(= 客戶端光暈亮的那一格)');
     ok(!shoot(false), '對照:不帶槍口(bot / 舊版客戶端)退回機體中心 ⇒ 同一個目標超程不掉血');
   }
 
