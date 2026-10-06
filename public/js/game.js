@@ -2731,7 +2731,11 @@ export class BattleClient {
         // myBot 貼在頂面(surfaceAt mount 站上頂)不側推 —— 與橋墩「柱頂封底緣」同一課(biomes 2668);
         // ε 0.1 併吞原嚴格不等式的 myBot > top 分支
         if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
-        const maxR = (b.r || Math.max(b.hw2, b.hd2)) + myR;
+        // broad-phase 半徑 MUST 用**外接**(對角 hypot)非 max(內切):與 `_buildBlockGrid` 登記半徑
+        // 同一把尺。旋轉盒的牆角落在 max 之外、hypot 之內 —— 用 max 會誤判「太遠」而跳過,
+        // 倒退撞牆角直接穿進建物、之後每幀在盲區/可見區邊界來回抖動 = 卡在裡面出不來
+        // (前科見 `_cameraDeClip` 同一條註;`b.r` 可能是 0.8× 內切近似,一律以 hypot 為準)。
+        const maxR = (b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r) + myR;
         if (Math.abs(this.pos.x - b.x) > maxR || Math.abs(this.pos.z - b.z) > maxR) continue;
         if (b.hw2 != null) {
           // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
@@ -2781,7 +2785,8 @@ export class BattleClient {
     for (const b of this.terrain.blockers ? sweepBlockers : []) {
       if (onDeck && b.y < surfHere - 3) continue;
       if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
-      const maxR = (b.r || Math.max(b.hw2, b.hd2)) + myR;
+      // broad-phase 半徑與 push-out 同式(外接 hypot —— 見上;兩處 MUST NOT 只改一處)。
+      const maxR = (b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r) + myR;
       if (b.x < minX - maxR || b.x > maxX + maxR || b.z < minZ - maxR || b.z > maxZ + maxR) continue;
       let tEnter = null;
       // 終點在障礙「內」時的取捨(fwd = (P1−中心)·位移):近半(fwd<0)push-out 沿中心→P1 反向推 =
