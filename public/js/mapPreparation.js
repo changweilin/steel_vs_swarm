@@ -3,8 +3,9 @@ import { warmOsm } from './biomes.js';
 import { battleBBox } from './data.js';
 import { projectAreaRecord, catalogAreas, subdivideLargeZones } from './osmAreas.js';
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
-import { MAP_EVIDENCE } from './mapEvidence.js';
+import { MAP_EVIDENCE, validateEvidence } from './mapEvidence.js';
 import { MAP_EVIDENCE_COPY } from './help.js';
+import { geoGet, geoPut, geoKey } from './geocache.js';
 
 const _prepCache = new Map();
 const _inFlight = new Map();
@@ -20,9 +21,13 @@ export function mapPrepKey(cfg) {
   return `${lat},${lng},${rot},${size},${lanes}`;
 }
 
+function prepGeoKey(cfg, key) {
+  return geoKey('prep', MAP_EVIDENCE.VERSION, battleBBox(cfg), key);
+}
+
 // Persistent "evidence for this exact map is cached" marker. The evidence bytes live in geocache;
 // the marker only skips re-running the terrain/OSM pass. Keyed by map key + evidence VERSION, so
-// re-baked venues (new center/lanes) or a new evidence algorithm invalidate it automatically.
+// re-baked venues (new center/rot/size) or a new evidence algorithm invalidate it automatically.
 const MARK_LS = 'svs_map_prepared';
 function markerId(key) { return `${MAP_EVIDENCE.VERSION}|${key}`; }
 function loadMarks() {
@@ -36,6 +41,11 @@ function addMark(key) {
     if (!cur.includes(id)) cur.push(id);
     localStorage.setItem(MARK_LS, JSON.stringify(cur));
   } catch { /* storage full/blocked: marker is an optimisation only */ }
+}
+
+export function clearPrepCache() {
+  _prepCache.clear();
+  try { localStorage.removeItem(MARK_LS); } catch {}
 }
 
 export function isMapPrepared(cfg) {
@@ -53,6 +63,15 @@ export async function awaitPreparedPack(cfg) {
   let pack = _prepCache.get(key);
   if (!pack && _inFlight.has(key)) {
     try { pack = await _inFlight.get(key).promise; } catch { return null; }
+  }
+  if (!pack) {
+    try {
+      const cached = await geoGet(prepGeoKey(cfg, key));
+      if (cached && !cached.failed && validateEvidence(cached)) {
+        _prepCache.set(key, cached);
+        pack = cached;
+      }
+    } catch {}
   }
   return pack && !pack.failed ? pack : null;
 }
@@ -89,6 +108,20 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
 
   const promise = (async () => {
     try {
+      if (key) {
+        try {
+          const cached = await geoGet(prepGeoKey(cfg, key));
+          if (cached && !cached.failed && validateEvidence(cached)) {
+            _prepCache.set(key, cached);
+            addMark(key);
+            cfg.mapEvidence = { version: cached.version, checksum: cached.checksum, complete: cached.complete,
+              priorDigest: cached.priorDigest };
+            await notify(MAP_EVIDENCE_COPY.analyzing);
+            return cached;
+          }
+        } catch {}
+      }
+
       await notify(MAP_EVIDENCE_COPY.preparing);
       const [terrain, [features, roads]] = await Promise.all([
         buildTerrain(cfg, (f, label) => notify(label), { sourceOnly: true }), warmOsm(battleBBox(cfg)),
@@ -102,7 +135,10 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
       cfg.mapEvidence = { version: pack.version, checksum: pack.checksum, complete: pack.complete,
         priorDigest: pack.priorDigest };
       if (key) _prepCache.set(key, pack);
-      if (pack.complete) addMark(key);
+      if (key && !pack.failed) {
+        addMark(key);
+        await geoPut(prepGeoKey(cfg, key), pack);
+      }
       return pack;
     } catch (err) {
       console.warn('Map evidence preparation degraded:', err);
