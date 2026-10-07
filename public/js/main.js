@@ -3665,18 +3665,12 @@ function makeHud() {
         return `<div class="${cls}"><div class="sq-fill" style="width:${w}%"></div><span>${d.si + 1}號 ${label}</span></div>`;
       }).join('');
     },
-    // 異常狀態圖示列:每 8Hz 快照更新一次(game.js 統整後呼叫)
-    // list = [{ id, remS, stacks?, positive, label }]  依 remS 升序(game.js 已排好)
+    // Status icon strip: updated per 8Hz snapshot.
+    // list = [{ id, remS, stacks?, positive, label }] sorted by remS ascending.
     statusIcons: (() => {
-      // ── 唯一定義點:每種狀態的背景色 + SVG 圖形 ─────────────────────────────
-      // 設計原則:
-      //   ・每個圖形語義對應「被影響的能力值」:移速/HP/武器/視野/方向/命中/閃避
-      //   ・暈眩 (全行動中斷) 與 麻痺 (動力系統離線) 使用不同圖示與視覺語義
-      //   ・組合效果(中毒=DoT+減速、高地壓制=命中+閃避+移速、暈眩=動力+武器雙鎖)使用對應組合圖示
-      //   ・時鐘式進度表:外環與扇形順時鐘 360° 走滿一圈表示結束
+      // Visual semantics map to affected stat (speed, HP, weapons, sight, bearing, hit/evasion).
+      // Stun (full action lockout) and paralyze (locomotion offline) retain distinct iconography.
       const DEFS = {
-        // ── 負面:全行動封鎖 (行動+武器全鎖組合效果) ──────────────────────────
-        // stun 暈眩:頭部受創暈眩星環繞 → 意識中斷,禁移動+禁攻擊
         stun: { bg: '#2e1400', fg: '#ff9900',
           svg: '<ellipse cx="14" cy="14" rx="8.5" ry="4" fill="none" stroke="#ff9900" stroke-width="1.3" stroke-dasharray="3,2" transform="rotate(-22 14 14)" opacity="0.6"/>'
              + '<path d="M14 10.5 A3.5 3.5 0 0 1 17.5 14 A2.8 2.8 0 0 1 14.5 16.8 A2 2 0 0 1 12.5 14.8 A1.3 1.3 0 0 1 13.8 13.5" fill="none" stroke="#ff9900" stroke-width="1.6" stroke-linecap="round"/>'
@@ -3684,8 +3678,6 @@ function makeHud() {
              + '<polygon points="20.5,14 21.6,16 23.5,16.8 21.6,17.6 20.5,19.5 19.4,17.6 17.5,16.8 19.4,16" fill="#ff9900"/>'
              + '<polygon points="17.5,6.5 18.4,7.8 20,8.4 18.4,9 17.5,10.2 16.6,9 15,8.4 16.6,7.8" fill="#ff9900"/>' },
 
-        // ── 負面:動力離線 (移速×0,武器照常) ──────────────────────────────────
-        // paralyze 麻痺:高壓電弧劈裂履帶齒輪 → 動力系統離線,武器仍可運作
         paralyze: { bg: '#242200', fg: '#ffe600',
           svg: '<path d="M9.5 8 A6.8 6.8 0 0 0 7.2 14 A6.8 6.8 0 0 0 11.5 20.5" fill="none" stroke="#ffe600" stroke-width="2" stroke-linecap="round"/>'
              + '<path d="M18.5 20 A6.8 6.8 0 0 0 20.8 14 A6.8 6.8 0 0 0 16.5 7.5" fill="none" stroke="#ffe600" stroke-width="2" stroke-linecap="round"/>'
@@ -3697,8 +3689,6 @@ function makeHud() {
              + '<line x1="6.8" y1="5.8" x2="9" y2="8" stroke="#ffe600" stroke-width="1.4" stroke-linecap="round"/>'
              + '<line x1="18.5" y1="19.5" x2="21" y2="21.5" stroke="#ffe600" stroke-width="1.4" stroke-linecap="round"/>' },
 
-        // ── 負面:武器/招式離線 ────────────────────────────────────────────────
-        // emp 電磁干擾:火炮管線被電磁脈衝波截斷 → 武器系統離線,機體可移動
         emp: { bg: '#1d002b', fg: '#d044ff',
           svg: '<rect x="9.5" y="7" width="3" height="11" rx="1" fill="#d044ff"/>'
              + '<rect x="15.5" y="7" width="3" height="11" rx="1" fill="#d044ff"/>'
@@ -3708,8 +3698,6 @@ function makeHud() {
              + '<path d="M7 6.5 A13 13 0 0 1 21 6.5" fill="none" stroke="#d044ff" stroke-width="1.2" stroke-dasharray="2,2" opacity="0.5"/>'
              + '<line x1="5.5" y1="5.5" x2="22.5" y2="22.5" stroke="#d044ff" stroke-width="2.6" stroke-linecap="round"/>' },
 
-        // ── 負面:移速×35%（重減速,近凍結）────────────────────────────────────
-        // freeze 凍結:六角晶體雪花 → 冰封移速
         freeze: { bg: '#001b2a', fg: '#7fe8ff',
           svg: '<line x1="14" y1="5" x2="14" y2="23" stroke="#7fe8ff" stroke-width="1.8" stroke-linecap="round"/>'
              + '<line x1="6.2" y1="9.5" x2="21.8" y2="18.5" stroke="#7fe8ff" stroke-width="1.8" stroke-linecap="round"/>'
@@ -3722,8 +3710,6 @@ function makeHud() {
              + '<circle cx="6.2" cy="9.5" r="1.1" fill="#7fe8ff"/><circle cx="21.8" cy="18.5" r="1.1" fill="#7fe8ff"/>'
              + '<circle cx="6.2" cy="18.5" r="1.1" fill="#7fe8ff"/><circle cx="21.8" cy="9.5" r="1.1" fill="#7fe8ff"/>' },
 
-        // ── 負面:移速×60~70%（中等減速）────────────────────────────────────────
-        // slow 減速:速度指針低落+減速箭頭 → 引擎功率下降,移速遲滯
         slow: { bg: '#001333', fg: '#4da6ff',
           svg: '<path d="M7.5 17 A7.5 7.5 0 1 1 20.5 17" fill="none" stroke="#4da6ff" stroke-width="1.8" stroke-linecap="round"/>'
              + '<line x1="18.5" y1="12" x2="17" y2="12.8" stroke="#4da6ff" stroke-width="1.3" stroke-linecap="round"/>'
@@ -3734,23 +3720,17 @@ function makeHud() {
              + '<circle cx="14" cy="15" r="1.8" fill="#4da6ff"/>'
              + '<path d="M11 18.5 L14 21.5 L17 18.5" fill="none" stroke="#4da6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
 
-        // ── 負面:HP 持續損耗(灼燒 DoT)──────────────────────────────────────────
-        // burn 灼燒:多層熾熱烈焰 → 熱能高溫灼燒,純 HP DoT
         burn: { bg: '#2a0700', fg: '#ff4800',
           svg: '<path d="M14 4.5 Q10.5 8.5 11 13 Q9.2 11 8.5 14 Q7.5 18.5 13.5 22.8 Q14 23.2 14.5 22.8 Q20.5 18.5 19.5 14 Q18.8 11 17 13 Q17.5 8.5 14 4.5 Z" fill="#ff4800"/>'
              + '<path d="M14 11 Q12 14 12.4 16.5 Q11 15 10.5 17 Q10.2 19.5 14 21.5 Q17.8 19.5 17.5 17 Q17 15 15.6 16.5 Q16 14 14 11 Z" fill="#ffcc00"/>'
              + '<circle cx="14" cy="8" r="1" fill="#ffee66"/>' },
 
-        // ── 負面:裝甲撕裂/穿透失血 (純破口 DoT)───────────────────────────────
-        // bleed 流血:破裂裝甲鋼板+滴血 → 裝甲遭撕裂穿透,持續失血
         bleed: { bg: '#2a0006', fg: '#ff2233',
           svg: '<path d="M6 9 L15 17 M10 6 L20 15 M15 5 L22 11" stroke="#ff2233" stroke-width="2.2" stroke-linecap="round"/>'
              + '<path d="M11 15 Q8.8 18.5 11 21 Q13.2 21 13.2 18.5 Q13.2 15 11 15 Z" fill="#ff2233"/>'
              + '<path d="M17 16 Q15.2 18.5 17 20.5 Q18.8 20.5 18.8 18.5 Q18.8 16 17 16 Z" fill="#ff2233"/>'
              + '<circle cx="7.5" cy="18" r="1.1" fill="#ff2233"/>' },
 
-        // ── 負面:HP DoT + 移速70%（毒=組合效果）────────────────────────────────
-        // poison 中毒:生化毒素骷髏+減速尾跡 → 毒液侵蝕生命+腳步沉重遲滯(組合圖示)
         poison: { bg: '#061d02', fg: '#44ee22',
           svg: '<path d="M9 13.5 C9 8.5 10.5 5.8 14 5.8 C17.5 5.8 19 8.5 19 13.5 C19 15.2 17.8 15.8 16.8 15.8 C16.5 15.8 16.2 16.6 16.2 17.4 C16.2 18.5 15.5 19.2 14.5 19.2 H13.5 C12.5 19.2 11.8 18.5 11.8 17.4 C11.8 16.6 11.5 15.8 11.2 15.8 C10.2 15.8 9 15.2 9 13.5 Z" fill="#44ee22"/>'
              + '<ellipse cx="11.8" cy="11.8" rx="1.5" ry="1.9" fill="#061d02" transform="rotate(12 11.8 11.8)"/>'
@@ -3763,8 +3743,6 @@ function makeHud() {
              + '<circle cx="7.2" cy="18" r="0.9" fill="#44ee22" opacity="0.6"/>'
              + '<circle cx="20.8" cy="17.5" r="1" fill="#44ee22" opacity="0.6"/>' },
 
-        // ── 負面:視野+火控喪失 ───────────────────────────────────────────────
-        // blind 致盲:光學感測鏡頭過曝+對角阻斷 → 視野遮蔽,無法瞄準
         blind: { bg: '#1a1600', fg: '#ffe033',
           svg: '<path d="M5 14 Q14 6.8 23 14 Q14 21.2 5 14 Z" fill="none" stroke="#ffe033" stroke-width="1.8" stroke-linejoin="round"/>'
              + '<circle cx="14" cy="14" r="3.6" fill="none" stroke="#ffe033" stroke-width="1.4"/>'
@@ -3773,8 +3751,6 @@ function makeHud() {
              + '<line x1="5.5" y1="14" x2="8" y2="14" stroke="#ffe033" stroke-width="1.4" opacity="0.7"/>'
              + '<line x1="20" y1="14" x2="22.5" y2="14" stroke="#ffe033" stroke-width="1.4" opacity="0.7"/>' },
 
-        // ── 負面:移速折半+方向反轉 ──────────────────────────────────────────
-        // conf 混亂:反向導航羅盤箭頭 → 操縱訊號被反轉
         conf: { bg: '#001a18', fg: '#00e5b8',
           svg: '<path d="M7.5 11 A7.2 7.2 0 0 1 20 8.5" fill="none" stroke="#00e5b8" stroke-width="2" stroke-linecap="round"/>'
              + '<polygon points="20,5.8 23.5,9 19.5,11.5" fill="#00e5b8"/>'
@@ -3783,8 +3759,6 @@ function makeHud() {
              + '<polygon points="14,11.5 16.5,14 14,16.5 11.5,14" fill="#00e5b8" opacity="0.6"/>'
              + '<circle cx="14" cy="14" r="1.2" fill="#001a18"/>' },
 
-        // ── 負面:取消閃避 ─────────────────────────────────────────────────────
-        // mark 標記:狙擊鎖定框角+準星 → 閃避被鎖死,強制必中必暴
         mark: { bg: '#200800', fg: '#ff5500',
           svg: '<path d="M7 10 V7 H10 M18 7 H21 V10 M21 18 V21 H18 M10 21 H7 V18" fill="none" stroke="#ff5500" stroke-width="1.8" stroke-linecap="round"/>'
              + '<circle cx="14" cy="14" r="4.5" fill="none" stroke="#ff5500" stroke-width="1.5"/>'
@@ -3794,8 +3768,6 @@ function makeHud() {
              + '<line x1="20" y1="14" x2="23" y2="14" stroke="#ff5500" stroke-width="1.8"/>'
              + '<circle cx="14" cy="14" r="1.5" fill="#ff5500"/>' },
 
-        // ── 負面:命中率懲罰(射擊精度下降)────────────────────────────────────
-        // unbal 失衡:震盪破裂準星+後座發散 → 砲管劇震,命中率與暴擊率減半
         unbal: { bg: '#22000c', fg: '#ff2d60',
           svg: '<circle cx="14" cy="14" r="5" fill="none" stroke="#ff2d60" stroke-width="1.6"/>'
              + '<line x1="14" y1="6" x2="14" y2="9" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
@@ -3806,8 +3778,6 @@ function makeHud() {
              + '<path d="M6 9.5 A6.5 6.5 0 0 0 6 18.5" fill="none" stroke="#ff2d60" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>'
              + '<path d="M22 9.5 A6.5 6.5 0 0 1 22 18.5" fill="none" stroke="#ff2d60" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>' },
 
-        // ── 負面:命中+閃避雙懲罰(高地壓制組合)──────────────────────────────────
-        // hiSup 高地壓制:制高點俯衝重壓箭雨+壓制底座 → 命中與閃避雙懲罰(組合圖示)
         hiSup: { bg: '#141f00', fg: '#bbff00',
           svg: '<polygon points="6,6 22,6 19.5,9.5 8.5,9.5" fill="#bbff00"/>'
              + '<polygon points="14,21 11,15.5 13,15.5 13,10.5 15,10.5 15,15.5 17,15.5" fill="#bbff00"/>'
@@ -3815,39 +3785,29 @@ function makeHud() {
              + '<polygon points="18.8,18.5 16.5,14 18,14 18,10.5 19.5,10.5 19.5,14 21,14" fill="#bbff00" opacity="0.85"/>'
              + '<line x1="6.5" y1="22.5" x2="21.5" y2="22.5" stroke="#bbff00" stroke-width="2" stroke-linecap="round"/>' },
 
-        // ── 正面:隱身 ────────────────────────────────────────────────────────
-        // stealth 隱身:虛線光學迷彩菱形 → 形體模糊消散
         stealth: { bg: '#001622', fg: '#00e5ff',
           svg: '<polygon points="14,4.5 22.5,19 14,16 5.5,19" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-linejoin="round"/>'
              + '<polygon points="14,7.5 14,15 8,17" fill="#00e5ff" opacity="0.35"/>'
              + '<path d="M14 8.5 H18.5 M14 11 H19.8 M14 13.5 H17.5" stroke="#00e5ff" stroke-width="1.3" stroke-dasharray="1.6,1.4"/>'
              + '<circle cx="14" cy="11" r="1.5" fill="#00e5ff"/>' },
 
-        // ── 正面:無敵 ────────────────────────────────────────────────────────
-        // inv 無敵:金黃六角神聖護盾+防禦星芒 → 全傷害免疫
         inv: { bg: '#1e1600', fg: '#ffe566',
           svg: '<polygon points="14,3.5 22,8 22,20 14,24.5 6,20 6,8" fill="none" stroke="#ffe566" stroke-width="1.5" opacity="0.5"/>'
              + '<polygon points="14,5.5 16.2,11.2 22.2,11.2 17.4,14.8 19.2,20.5 14,17 8.8,20.5 10.6,14.8 5.8,11.2 11.8,11.2" fill="#ffe566"/>'
              + '<circle cx="14" cy="14" r="2.2" fill="#1e1600" opacity="0.6"/>' },
 
-        // ── 正面:招式增益(可多層)─────────────────────────────────────────────
-        // mod 招式增益:三重推進箭頭+能力梯級底座 → 招式能力值上升
         mod: { bg: '#001c0c', fg: '#00f080',
           svg: '<path d="M14 20 V8" stroke="#00f080" stroke-width="2.6" stroke-linecap="round"/>'
              + '<path d="M9 13.5 L14 7.5 L19 13.5" fill="none" stroke="#00f080" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
              + '<path d="M10.5 17.5 L14 13 L17.5 17.5" fill="none" stroke="#00f080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>'
              + '<rect x="7" y="21" width="14" height="2.2" rx="1.1" fill="#00f080"/>' },
 
-        // ── 正面詞綴:填彈速度 ─────────────────────────────────────────────────
-        // tempered 淬火軍械:雙聯彈匣+充能電弧 → 填彈加速
         tempered: { bg: '#190628', fg: '#c060ff',
           svg: '<rect x="8" y="5" width="12" height="15" rx="2" fill="none" stroke="#c060ff" stroke-width="1.8"/>'
              + '<rect x="11" y="3" width="6" height="3" rx="1" fill="#c060ff"/>'
              + '<line x1="8" y1="10" x2="20" y2="10" stroke="#c060ff" stroke-width="1.2" opacity="0.5"/>'
              + '<path d="M15 7.5 L11 13.5 H14 L13 18.5 L17 13.5 H14 Z" fill="#c060ff"/>' },
 
-        // ── 正面詞綴:受傷減免 ─────────────────────────────────────────────────
-        // hardened 複合裝甲:雙層重裝甲六角板+核心栓柱 → 承受傷害大幅減免
         hardened: { bg: '#041422', fg: '#50b0ff',
           svg: '<polygon points="14,4.5 22,9 22,19 14,23.5 6,19 6,9" fill="none" stroke="#50b0ff" stroke-width="1.8"/>'
              + '<polygon points="14,7.8 19,10.6 19,17.4 14,20.2 9,17.4 9,10.6" fill="#50b0ff" opacity="0.2"/>'
@@ -3855,14 +3815,10 @@ function makeHud() {
              + '<line x1="14" y1="8" x2="14" y2="12" stroke="#50b0ff" stroke-width="1.4"/>'
              + '<line x1="14" y1="16" x2="14" y2="20" stroke="#50b0ff" stroke-width="1.4"/>' },
 
-        // ── 正面詞綴:擊殺回血 ─────────────────────────────────────────────────
-        // vampiric 汲能核心:能量汲取心核+向心旋流 → 造成傷害/擊殺時回饋裝甲
         vampiric: { bg: '#22001c', fg: '#ff40b0',
           svg: '<path d="M14 20.5 Q5.5 13.5 5.5 9.5 A4.5 4.5 0 0 1 14 7.5 A4.5 4.5 0 0 1 22.5 9.5 Q22.5 13.5 14 20.5 Z" fill="#ff40b0"/>'
              + '<path d="M14 9 L14 16 M11.5 13.5 L14 16 L16.5 13.5" stroke="#22001c" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' },
 
-        // ── 正面詞綴:擊殺賞金 ─────────────────────────────────────────────────
-        // bounty 懸賞頻道:全息賞金硬幣+金幣信號 → 擊殺敵軍賞金翻倍
         bounty: { bg: '#1c1200', fg: '#ffcc00',
           svg: '<circle cx="14" cy="14" r="9.5" fill="#ffcc00" opacity="0.15" stroke="#ffcc00" stroke-width="1.8"/>'
              + '<circle cx="14" cy="14" r="6" fill="none" stroke="#ffcc00" stroke-width="1.3"/>'
@@ -3881,7 +3837,7 @@ function makeHud() {
         const stackBadge = (item.stacks != null && item.stacks > 1)
           ? `<span class="si-n">${item.stacks}</span>` : '';
 
-        // 時鐘式進度表: 順時鐘繞完一圈表示結束 (0% -> 100% 走滿 360 度)
+        // Clockwise dial completion represents expiration (0% -> 100% sweep over 360 deg).
         let maxS = item.maxS || durCache.get(item.id) || item.remS;
         if (item.remS > maxS) { maxS = item.remS; durCache.set(item.id, maxS); }
         else if (!durCache.has(item.id)) { durCache.set(item.id, maxS); }
