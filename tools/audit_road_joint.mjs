@@ -156,7 +156,7 @@ console.log('Ⅲ 標線消費端單一縫 + 橋隧同款風格(原文)');
   ok(/if \(strc \|\| brg\) biome = 'urban';/.test(src), 'Ⅲ 橋與隧道 MUST 同款定調柏油(工程結構物無土石路面)');
   ok(/if \(!strc && !brg && main && lamps\.length < 380\) \{/.test(src),
     'Ⅲ 地面路燈 MUST 仍排除橋與隧道(橋有橋燈、洞有天花燈)');
-  ok(/\} else if \(!brg && !strc && \(biome === 'green' \|\| biome === 'wet'\)/.test(src),
+  ok(/\} else if \(!brg && !strc && \(biome === 'green' \|\| biome === 'wet' \|\| wetRoadside\)/.test(src),
     'Ⅲ 行道樹 MUST 仍排除橋與隧道');
 }
 

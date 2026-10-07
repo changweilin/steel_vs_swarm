@@ -56,6 +56,22 @@ const cases = [
   { key: 'bend-junction', label: 'Right-angle connection · fitted inside corner', height: () => 8, roads: [
     way([[-85, 0], [0, 0], [0, 85]], { highway: 'secondary', lanes: '2' }),
   ] },
+  { key: 'green-junction', label: 'Paved junction · vegetation does not repaint the connection', height: () => 8,
+    continuousPavement: true, sampleColor: () => [75, 130, 60], roads: [
+      way([[-85, 0], [0, 0], [85, 0]], { lanes: '2' }),
+      way([[0, 0], [0, 75]], { lanes: '2' }),
+    ] },
+  { key: 'wet-network', label: 'Paved network · wet appearance does not split connected roads', height: () => 6,
+    continuousPavement: true, mix: { wet: 1 }, roads: [
+      way([[-85, 0], [0, 0]], { lanes: '2' }),
+      way([[0, 0], [85, 0]], { lanes: '2' }),
+      way([[0, 0], [0, 75]], { lanes: '2' }),
+    ] },
+  { key: 'link-junction', label: 'Connecting roads · junction retains the approach colour', height: () => 8,
+    continuousPavement: true, roads: [
+      way([[-85, 0], [0, 0], [85, 0]], { highway: 'primary_link', lanes: '2' }),
+      way([[0, 0], [0, 75]], { highway: 'primary_link', lanes: '2' }),
+    ] },
   { key: 'local-guide-signs', label: 'OSM labels · street, destination, attraction and civic signs', height: () => 8, roads: [
     way([[-120, 0], [120, 0]], { highway: 'secondary', lanes: '2', name: '明治通り', maxspeed: '40',
       destination: '新宿;原宿', 'destination:ref': '305' }),
@@ -153,7 +169,7 @@ try {
   for (const fixture of cases) {
     const root = new THREE.Group(), terrain = { minX: -350, maxX: 350, minZ: -350, maxZ: 350,
       worldW: 700, worldH: 700, heightAt: fixture.height, natureAt: fixture.height,
-      sampleColor: () => [110, 110, 110], envCodeAt: () => 0, waterY: null,
+      sampleColor: fixture.sampleColor || (() => [110, 110, 110]), envCodeAt: () => 0, waterY: null,
       punchPortalHoles: () => ({ rims: [], touched: [] }) };
     if (fixture.platform) {
       const N = 351, heights = new Float32Array(N * N);
@@ -191,8 +207,13 @@ try {
       for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) heights[i * N + j] = fixture.height(j * 2 - 350, i * 2 - 350);
       terrain.heightAt = window.__carveRoadFixture({ ...terrain, N, heights }, carveRuns);
     }
-    const result = fixture.roads.length ? buildRoads(root, fixture.roads, terrain, center, null, mulberry32(781), 'summer')
+    const result = fixture.roads.length ? buildRoads(root, fixture.roads, terrain, center, fixture.mix || null, mulberry32(781), 'summer')
       : { decks: [], tunnels: [], cols: [], gradeRejected: 0 };
+    if (fixture.continuousPavement) {
+      const surfaces = root.children.filter(node => node.isMesh && node.geometry.attributes.uv
+        && node.geometry.attributes.color && node.material.polygonOffsetFactor === -2);
+      if (surfaces.length !== 1) throw Error(`${fixture.key}: disconnected pavement materials (${surfaces.length})`);
+    }
     if (fixture.signs) {
       const pois = (fixture.targets || []).map(p => { const [lat, lon] = xzToLL(p.x, p.z, center); return { lat, lng: lon, tags: p.tags }; });
       buildWorldSigns({ group: root, terrain, center, portals: [], signSpots: [], generic: [], pois,

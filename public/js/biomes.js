@@ -4745,6 +4745,10 @@ function roadWidth(tags) {
 // 共用這一支,MUST NOT 各自手寫 /3.2)。roadWidth 已把圖資 lanes 值折進寬度,故此處不必
 // 再讀一次 tags.lanes。
 const roadLaneN = (tags) => roadWidth(tags) / 3.2;
+// Surrounding vegetation and wetland appearance cannot replace a multi-lane carriageway's pavement.
+function roadSurfaceBiome(biome, tags) {
+  return (biome === 'bare' || biome === 'green' || biome === 'wet') && roadLaneN(tags) >= 2 ? 'urban' : biome;
+}
 /**
  * 立體結構(橋/隧道/地下道)的通行半寬 —— **單一縫**:buildRoads 的路面/牆、markGradeCorridors
  * 的走廊、carveTunnels 的開挖剖面共用這一支。分家的後果是開挖寬度小於路面寬度 ⇒ 路面兩緣埋進土裡。
@@ -6428,11 +6432,12 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       let rec = nodeArms.get(key);
       if (!rec) {
         const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
-        rec = { x, z, layer: structureLayer(way.tags), arms: 0, hw: 0, main: false, roundabout: false, dirs: [], armHw: [], armLength: [] };
+        rec = { x, z, layer: structureLayer(way.tags), tags: way.tags, arms: 0, hw: 0, main: false, roundabout: false, dirs: [], armHw: [], armLength: [] };
         nodeArms.set(key, rec);
       }
+      if (hwWay > rec.hw) rec.tags = way.tags;
       rec.hw = Math.max(rec.hw, hwWay);
-      rec.main = rec.main || MAIN_HW.test(way.tags.highway);
+      rec.main = rec.main || MAIN_HW.test(way.tags.highway) || /_link$/.test(way.tags.highway);
       rec.roundabout = rec.roundabout || way.tags.junction === 'roundabout';
       for (const j of [i - 1, i + 1]) {
         if (j < 0 || j >= n) continue;
@@ -6569,11 +6574,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 橋面;跨河橋中點恆取到水色 ⇒ 舊版整座橋鋪成 roadColor('water') 的青灰、郊區橋鋪成泥土,
       // 與洞內柏油、與標線(只畫柏油)三種風格。定調柏油後橋面才與隧道/一般市區路同一套外觀。
       if (strc || brg) biome = 'urban';
-      // 雙線道以上鋪柏油(2026-08-11 使用者定案「就算是裸露地或綠地,只要是雙線道或以上也都
-      // 鋪設公路」):中點取樣落在路旁植被/裸岩色上時常見(林道遮蔭、路緣曝光偏移),但雙線道
-      // 以上本來就是鋪面公路而非產業道路/林道,MUST NOT 因為取樣點誤判而退回泥土/礫石。
-      // 只收 bare/green(濕地/水面另有各自的定調規則,不在此列)。
-      if ((biome === 'bare' || biome === 'green') && roadLaneN(way.tags) >= 2) biome = 'urban';
+      // Keep the existing roadside RNG path when only the carriageway material changes.
+      const wetRoadside = biome === 'wet';
+      biome = roadSurfaceBiome(biome, way.tags);
       const pedTheme = ped ? (brg ? 'footbridge' : way._ped?.theme || null) : null;
       const b = bucketOf(biome, main || link, pedTheme);
       const nP = run.length, vbase = b.base;
@@ -7226,6 +7229,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           emitLine(run, mHw, 0.56, mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg, paintWidthAt);
           emitLine(run, mHw, 0.56, -mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg, paintWidthAt);
         }
+      }
+      if (biome === 'urban' && mHw >= 2 && !wetRoadside) {
         // ---- 路燈:沿路等間距、左右交錯(燈臂朝路心)----
         // 隧道不立(洞內照明是天花燈;路燈桿會戳穿天花板與山體);橋不立(橋燈另有一套沿橋面
         // 邊緣的實例,見上方 brg 段 —— 地面路燈桿以 heightAt 落地,在高架橋上會從橋面下長出來)
@@ -7241,7 +7246,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             side = -side;
           }
         }
-      } else if (!brg && !strc && (biome === 'green' || biome === 'wet') && main && hw >= 2.4) {
+      } else if (!brg && !strc && (biome === 'green' || biome === 'wet' || wetRoadside) && main && hw >= 2.4) {
         // ---- 行道樹:郊區幹道兩側等間距(純視覺,不登記碰撞)----
         for (let s = 10 + rnd() * 8; s < total - 6 && roadTrees.length < 460; s += 26 + rnd() * 8) {
           const [ex, ez, ddx, ddz] = at(s);
@@ -7352,7 +7357,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     if (rec.hw < 2) continue;
     const boundary = rec.boundary;
     if (!boundary || !boundary.points.every(([x, z]) => fillInBounds(x, z))) continue;
-    const biome = classify(terrain.sampleColor?.(rec.x, rec.z), terrain.heightAt(rec.x, rec.z), null, rnd);
+    const biome = roadSurfaceBiome(classify(terrain.sampleColor?.(rec.x, rec.z), terrain.heightAt(rec.x, rec.z), null, rnd), rec.tags);
     if (biome === 'water') continue;               // 河面節點(橋另建),不鋪路面
     const b = bucketOf(biome, rec.main);
     const points = boundary.points;
