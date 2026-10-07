@@ -1,23 +1,23 @@
 import { BATTLE_GEOLOGY } from '../public/js/geology.js';
 // ============ 場址配置規則稽核(都市計畫 / 樹冠羞避 / 地質排列)============
-// 2026-08-03 使用者定案三條(市區沿街配置 + 公設 / 綠地樹冠羞避 / 裸露地地質排列)。
-// 三條全是**排列規則**,而排列規則壞掉的方式一律是無聲的:
-//   ① 少了建築線退縮或排距不變式 ⇒ 街牆參差、後棟壓進巷弄 —— 沒有任何錯誤訊息
-//   ② 少了冠緣間隙 ⇒ 神木樹冠糊成一團(遠看只是「森林比較密」)
-//   ③ 少了走向 ⇒ 巨石各轉各的(遠看只是「石頭比較多」)
-// 故本檔全部以 **執行 `siteplan.js` 的純區塊原文**(㋑)做行為直測 —— 抄一份公式進稽核,
-// 公式改了稽核照舊全綠。不需要網路、不需要瀏覽器、不需要 three(純區塊零 THREE)。
+// 2026-08-03 user settled three rules (urban street-edge layout plus public facilities / green crown shyness / exposed-land geology).
+// All three are layout rules, and layout failures are always silent:
+//   1 Missing build-to-line setback or spacing invariant leads to jagged street walls and rear blocks pressing into alleys, with no error message.
+//   2 Missing crown-gap leads to giant crowns blurring into one mass (reads from afar as just denser forest).
+//   3 Missing strike direction leads to boulders each rotated its own way (reads from afar as just more rocks).
+// So this file behavior-tests the pure block source of siteplan.js only: copying a formula into the audit
+// would stay green after the formula changes. No network, no browser, no three (pure blocks, zero THREE).
 //
-// 分段:
-//   Ⅰ 都市計畫 —— 常數不變式 / 建築線對齊 / 沿街節奏 / 路口留白 / 公設優先 / 零亂數
-//   Ⅱ 公設 —— foot 雙向貼齊零件實算 / 鋪面不掛碰撞 / 碰撞柱實算 / 三款輪替
-//   Ⅲ 樹冠羞避 —— 冠緣不相碰(核心不變式)/ 縮冠而非淘汰 / 下限 / 傾斜方向與有界 / 確定性
-//   Ⅳ 地質排列 —— 走向 ⟂ 傾向 / 平地回 null / 長軸同向 / 排間錯縫 / 由核心往外 / 體格遞減
-//   Ⅴ 消費端單一縫 —— biomes.js 的接線(一份實作一個呼叫點、零共享 rnd、朝向公式共用、
-//      AI 零件庫解析只有 build 時的 partGeo 一份且佈局數學只讀保險絲 p.g —— §8 修正 1)
-//   Ⅶ 建物來源信任階梯(2026-08-05 使用者回報「綠地/裸露地建築太多、不符真實圖資」)——
-//      每一條會生出建物的路都要有圖資背書:邊界樓過聚落場、備援街區只在查詢失敗時觸發、
-//      市區種子影像在手就走純影像判(手寫 mix 不得憑空生出市區)
+// Sections:
+//   I Urban plan: constant invariants / build-to-line alignment / street rhythm / intersection clearance / public-facility priority / zero randomness.
+//   II Public facilities: foot two-way flush against part geometry / paving carries no collision / collision posts derived / three-style rotation.
+//   III Crown shyness: crown edges never touch (core invariant) / shrink crowns instead of culling / lower bound / lean direction with bounds / determinism.
+//   IV Geology layout: strike perpendicular to dip / flat land returns null / long axes aligned / staggered joints / outward from core / shrinking size.
+//   V Consumer single seam: biomes.js wiring (one implementation one call site, zero shared rnd, shared facing formula,
+//      AI part-library resolution holds one partGeo at build time and layout math reads only guard p.g).
+//   VII Building-source trust ladder (2026-08-05 user report of too many buildings on green and bare land for real map data):
+//      every road that spawns buildings needs map-data backing: boundary blocks pass the settlement field, fallback blocks fire only on query failure,
+//      and a city seed image in hand takes the pure-image verdict (hand-written mix MUST NOT invent urban area from nothing).
 //
 // 反向驗證(原則 9):
 //   --break-line    進深上限撐破排距 ⇒ Ⅰ 的排距不變式與後棟淨距 MUST 紅字

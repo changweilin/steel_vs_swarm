@@ -14,7 +14,7 @@ export function buildHeritageSite(kind, parent, x, y, z, options = {}) {
   const model = generateHeritageSite(seed, {
     ...options, state,
     ...(fixed && !options.ruinType ? { selection: { ...ANCIENT_MONUMENTS[fixed], id: fixed, kind: 'monument', uniformScale: 1 } } : {}),
-    // 一般 ruins 可抽全部活動遺跡；舊特定款仍限制在相近組成語彙。
+    // Generic ruins may draw all activity ruins; legacy fixed models stay limited to similar composition vocabulary.
     ruinType: options.ruinType || (kind === 'ruins' ? 'auto' : LEGACY_HERITAGE[kind]),
   });
   const radius = options.radius ?? 10;

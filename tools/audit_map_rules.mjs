@@ -1,14 +1,14 @@
-// ============ 預設地圖規則稽核:砲塔/主堡射程重疊(規則 #4)============
-// 需求(2026-07-19 定奪,per-lane):
-//   前線敵我雙砲塔維持重疊 80%(爭中線,固有);
-//   後塔↔「己方主堡」「同兵線前塔」的射程重疊率 ≤ 80%(距離 ≥ SEP);任兩塔位不得物理疊塔(≥ STACK)。
-//   **相鄰兵線**(|Δli|=1)同陣營雙砲塔點(前/後皆算)射程重疊率 ≤ 80%(距離 ≥ SEP);非相鄰兵線只防疊塔。
-// 判定邏輯集中在 data.js 的 towerLayoutAudit()(自訂地圖掃描 / 伺服器驗證 / 烘焙共用同一支)。
-// 短兵線做不到 ≤80% 時 solveTowerSites 取重疊最小的合法位 ⇒ 殘餘 > 80% 會被列為「殘餘」(靠放大地圖/REAL_SCALE 消除)。
-// exit 1 僅在物理疊塔(真缺陷)。用法:node tools/audit_map_rules.mjs
+// ============ Default map rule audit: tower and base range overlap (rule 4) ============
+// Requirement (decided 2026-07-19, per lane):
+//   Front-line enemy towers keep 80 percent overlap (contesting midline, inherent);
+//   Rear tower to own base and to same-lane front tower overlap at most 80 percent (distance at least SEP); no two tower spots may physically stack (at least STACK).
+//   Adjacent lanes (lane delta 1) same-side tower pairs (front and rear both count) overlap at most 80 percent (distance at least SEP); non-adjacent lanes only guard stacking.
+// Adjudication lives in towerLayoutAudit() in data.js (shared by custom map scan, server validation, and bake).
+// When a short lane cannot reach 80 percent or less, solveTowerSites takes the legal spot with least overlap, and residual above 80 percent is listed as residual (cleared by enlarging the map or REAL_SCALE).
+// exit 1 only on physical stacking (true defect). Usage: node tools/audit_map_rules.mjs
 import { VENUE_LANES } from '../public/js/venueLanes.js';
-// 每個鍵是哪一種尺度 / 要驗哪些地圖型態:唯一縫在 venues.js(在這裡自己判字串前綴 =
-// 第二份實作,而症狀是「拿完整戰場的五階塔鏈去驗迷你那條短兵線」⇒ 整排假紅字)。
+// Which scale each key uses and which map kinds to verify: the single seam lives in venues.js (judging the string prefix here
+// would be a second implementation, with the symptom of validating the mini lane with a full-battlefield tower chain and a row of false reds).
 import { VENUE_LANE_KEYS, venueLaneModes } from '../public/js/venues.js';
 import { UNITS, GAME, MAPGEO, towerLayoutAudit } from '../public/js/data.js';
 
@@ -30,8 +30,8 @@ for (const [venue, byL] of Object.entries(VENUE_LANES)) {
     const A = entry.bases[0], B = entry.bases[1];
     const c = { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 };
     const lanes = entry.lanes.map((line) => line.map(([lat, lng]) => llToM(lat, lng, c)));
-    // 縮小尺度的那一條要同時撐得起迷你與劇情兩側 ⇒ 逐型態各驗一次、取最差的那一份報告
-    // (完整戰場恆為單一型態 ⇒ 逐位元同舊制)。
+    // The scaled-down entry must serve both mini and story sides, so verify each mode and report the worst one
+    // (a full battlefield is always a single mode, hence bit-identical to the old system).
     let a = null;
     for (const m of venueLaneModes(mapA)) {
       const r = towerLayoutAudit(lanes, m);

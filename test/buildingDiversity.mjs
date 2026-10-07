@@ -13,7 +13,7 @@ import {
   isRoundOrTower,
 } from '../public/js/architectureStyles.js';
 
-// 1. 基礎地形情境比例驗證（無文化區域指定時維持原分佈）
+// 1. Base terrain-context ratio check (original distribution when no cultural region is given)
 const contexts = { urban: { urban: true }, rural: { rural: true }, plain: {}, hillside: { slope: 24, urban: true } };
 for (const [profile, context] of Object.entries(contexts)) {
   const counts = {};
@@ -32,15 +32,15 @@ for (const [profile, context] of Object.entries(contexts)) {
 }
 assert.ok(Array.from({ length: 100 }, (_, i) => chooseArchitecture(1, i).id !== chooseArchitecture(2, i).id).filter(Boolean).length > 60);
 
-// 2. 世界文化區域判定與 60% 文化風格比例驗證
+// 2. World cultural-region detection and 60 percent style-affinity check
 assert.equal(detectCulturalRegion({ country: 'TW' }), 'east_asia');
 assert.equal(detectCulturalRegion({ country: 'JP' }), 'japan');
 assert.equal(detectCulturalRegion({ country: 'FR' }), 'europe_west');
 assert.equal(detectCulturalRegion({ country: 'US' }), 'americas');
 assert.equal(detectCulturalRegion({ country: 'EG' }), 'middle_east');
-assert.equal(detectCulturalRegion({ lat: 25.03, lon: 121.56 }), 'east_asia'); // 台北
-assert.equal(detectCulturalRegion({ lat: 48.85, lon: 2.29 }), 'europe_west'); // 巴黎
-assert.equal(detectCulturalRegion({ lat: 30.04, lon: 31.23 }), 'middle_east'); // 開羅
+assert.equal(detectCulturalRegion({ lat: 25.03, lon: 121.56 }), 'east_asia'); // Taipei
+assert.equal(detectCulturalRegion({ lat: 48.85, lon: 2.29 }), 'europe_west'); // Paris
+assert.equal(detectCulturalRegion({ lat: 30.04, lon: 31.23 }), 'middle_east'); // Cairo
 
 const culturalTestCases = [
   { region: 'east_asia', country: 'TW' },
@@ -65,7 +65,7 @@ for (const tc of culturalTestCases) {
   console.log(`文化圈 ${tc.region} 匹配比例: ${(ratio * 100).toFixed(1)}%`);
 }
 
-// 3. 地點與功能分類推導驗證
+// 3. Site-and-function classification derivation check
 const skyscraper = inferBuildingFunction({ tags: { building: 'commercial', 'building:levels': '20' } });
 assert.equal(skyscraper.key, 'commercial_skyscraper');
 
@@ -93,7 +93,7 @@ assert.equal(townhouse.key, 'residential_townhouse');
 const alley = inferBuildingFunction({ tags: { building: 'house' } }, null, { elongated: true, density: 25 });
 assert.equal(alley.key, 'residential_alley');
 
-// 低層通用分流（≤3F、無特殊用途）：小面積一律透天，大面積只出賣場／大透天，長條只出低層三款
+// Low-rise generic routing (3F or less, no special use): small footprints stay townhouse, large ones only mall/large townhouse, strips only the three low-rise kinds
 const smallPoly = { outer: [[0, 0], [8, 0], [8, 10], [0, 10]], holes: [] };
 const bigPoly = { outer: [[0, 0], [30, 0], [30, 20], [0, 20]], holes: [] };
 const stripPoly = { outer: [[0, 0], [60, 0], [60, 8], [0, 8]], holes: [] };
@@ -122,7 +122,7 @@ assert.equal(visitor.key, 'tourism_visitor');
 const cultural = inferBuildingFunction({ tags: { building: 'museum', tourism: 'museum' } });
 assert.equal(cultural.key, 'tourism_cultural');
 
-// 4. 樓層高度與層數隨機範圍驗證（先拉伸後渲染）
+// 4. Floor-height and storey random-range check (stretch first, render later)
 for (const [key, range] of Object.entries(BUILDING_FUNCTION_RANGES)) {
   for (let i = 0; i < 50; i++) {
     const h = sampleBuildingHeight(key, 999, `test_${key}_${i}`);
@@ -131,7 +131,7 @@ for (const [key, range] of Object.entries(BUILDING_FUNCTION_RANGES)) {
   }
 }
 
-// 5. 屋頂造型與外牆材質枚舉完整性
+// 5. Roof-form and facade-material registry completeness
 assert.ok(Object.keys(ROOF_FORMS).length >= 19);
 for (const style of Object.values(ARCHITECTURE_STYLES)) assert.ok(ROOF_FORMS[style.roofForm], style.roofForm);
 assert.ok(Object.keys(FACADE_TYPES).length >= 10);
@@ -139,7 +139,7 @@ for (const style of Object.values(ARCHITECTURE_STYLES)) {
   assert.ok(style.label && style.wall && style.roof, `${style.label} 基本屬性缺項`);
 }
 
-// 6. 外部零件規則與槽位完整性驗證（含擴充牆飾與空間容量保護）
+// 6. Exterior-part rules and slot completeness (with extended wall decor and volume-capacity guards)
 const expectedSlots = new Set(['rooftop', 'ground_front', 'side_ground', 'facade']);
 for (const [key, rule] of Object.entries(APPURTENANCE_RULES)) {
   assert.ok(expectedSlots.has(rule.slot), `${key} 槽位無效: ${rule.slot}`);
@@ -154,7 +154,7 @@ assert.ok(APPURTENANCE_RULES.rooftop_canopy.minArea >= 40 && APPURTENANCE_RULES.
 assert.ok(APPURTENANCE_RULES.roof_garden.minArea >= 60 && APPURTENANCE_RULES.roof_garden.minSpan >= 7, '空中花園需有面積與跨度限制');
 assert.ok(APPURTENANCE_RULES.gazebo.minArea >= 70 && APPURTENANCE_RULES.gazebo.minSpan >= 8, '涼亭需有面積與跨度限制');
 
-// 7. OSM 圖資幾何量測指標、自適應屋頂決議 (防止失真扭曲) 與屋頂零件相容矩陣
+// 7. OSM footprint metrics, adaptive-roof resolution (anti-distortion), and roof-part compatibility matrix
 const testPoly = { outer: [[0, 0], [20, 0], [20, 10], [0, 10]], holes: [] };
 const polyMetrics = calculateFootprintMetrics(testPoly);
 assert.equal(polyMetrics.width, 20);
@@ -165,7 +165,7 @@ assert.equal(polyMetrics.area, 200);
 assert.equal(polyMetrics.cx, 10);
 assert.equal(polyMetrics.cz, 5);
 
-// 驗證屋頂主軸方向性與旋轉包圍框 (computeOrientedRoofFrame)
+// Verify roof principal-axis orientation and rotated bounding frame (computeOrientedRoofFrame)
 const frameHoriz = computeOrientedRoofFrame(testPoly);
 assert.equal(frameHoriz.len, 20, '水平長方形長度');
 assert.equal(frameHoriz.span, 10, '水平長方形跨度');
@@ -177,7 +177,7 @@ assert.equal(frameVert.len, 25, '垂直長方形長度');
 assert.equal(frameVert.span, 10, '垂直長方形跨度');
 assert.ok(Math.abs(frameVert.angle - Math.PI / 2) < 1e-4, '垂直長方形主軸角度應為 PI/2');
 
-// 旋轉 30 度長方形驗證
+// Rotated 30-degree rectangle check
 const cos30 = Math.cos(Math.PI / 6), sin30 = Math.sin(Math.PI / 6);
 const rotPoly = { outer: testPoly.outer.map(([x, z]) => [x * cos30 - z * sin30, x * sin30 + z * cos30]), holes: [] };
 const frameRot = computeOrientedRoofFrame(rotPoly);
@@ -185,20 +185,20 @@ assert.ok(Math.abs(frameRot.len - 20) < 1e-3, '旋轉長方形長度不變');
 assert.ok(Math.abs(frameRot.span - 10) < 1e-3, '旋轉長方形跨度不變');
 assert.ok(Math.abs(frameRot.angle - Math.PI / 6) < 1e-3, '旋轉長方形主軸角度應與建物邊界同調 (30度)');
 
-// 凹多邊形（如 L 型）應回傳 null 保持平頂降級安全
+// Concave polygons (e.g. L-shape) return null to keep the safe flat-roof fallback
 const lPoly = { outer: [[0, 0], [20, 0], [20, 5], [5, 5], [5, 20], [0, 20]], holes: [] };
 assert.equal(computeOrientedRoofFrame(lPoly), null, '凹多邊形安全降級為平頂 (null)');
 
-// 驗證邊界留白與壓線保護演算法 (distanceToPolyBoundary & isSiteValid)
+// Verify boundary clearance and line-pressure guards (distanceToPolyBoundary and isSiteValid)
 assert.equal(distanceToPolyBoundary(10, 5, testPoly), 5.0, '矩形幾何中心淨距');
 assert.equal(distanceToPolyBoundary(2, 5, testPoly), 2.0, '靠邊緣點淨距');
 assert.equal(distanceToPolyBoundary(25, 5, testPoly), 0, '多邊形外點淨距為 0');
-// 構件半徑 1.5m + 留白 0.8m = 2.3m，於淨距 2.0m 處應被拒絕以防壓線
+// Part radius 1.5m + clearance 0.8m = 2.3m; a 2.0m-clearance site must be rejected to avoid line pressure
 assert.equal(isSiteValid(testPoly, 2, 5, 1.5, 0.8), false, '壓線危險區位應判定無效');
-// 於淨距 5.0m 處則有效
+// A 5.0m-clearance site stays valid
 assert.equal(isSiteValid(testPoly, 10, 5, 1.5, 0.8), true, '內部安全留白區位應判定有效');
 
-// 所有登錄屋頂均需明確定義零件相容性。
+// Every registered roof must declare explicit part compatibility.
 for (const id of Object.keys(ROOF_FORMS)) assert.ok(Object.hasOwn(ROOF_APPURTENANCE_COMPATIBILITY, id), `${id} 缺少屋頂零件相容性`);
 const allRooftopParts = [
   'water_tank', 'antenna', 'cellular_mast', 'solar_array',
@@ -209,7 +209,7 @@ for (const part of allRooftopParts) {
   assert.ok(ROOF_APPURTENANCE_COMPATIBILITY.flat.includes(part), `平頂應相容 ${part}`);
   assert.ok(ROOF_APPURTENANCE_COMPATIBILITY.stepped.includes(part), `階梯頂應相容 ${part}`);
 }
-// 驗證水平屋頂專屬零件（只能放在屋頂水平／平整處）：在所有非水平屋面上嚴禁放置
+// Horizontal-only roof parts (flat/horizontal placement only): strictly forbidden on any non-horizontal roof face
 const horizontalOnlyParts = ['water_tank', 'heli_hangar', 'roof_billboard', 'cellular_mast', 'pigeon_coop'];
 for (const form of Object.keys(ROOF_APPURTENANCE_COMPATIBILITY)) {
   if (form === 'flat' || form === 'stepped') {
@@ -223,48 +223,48 @@ for (const form of Object.keys(ROOF_APPURTENANCE_COMPATIBILITY)) {
   }
 }
 
-// 驗證自適應屋頂防扭曲決議 (resolveAdaptiveRoofForm)
-// (a) 高層摩天大樓 (height >= 35m) 降級至 stepped 或 flat
+// Verify adaptive-roof anti-distortion resolution (resolveAdaptiveRoofForm)
+// (a) Tall towers (height >= 35m) step down to stepped or flat
 assert.equal(resolveAdaptiveRoofForm('xieshan', polyMetrics, 42, 'commercial'), 'stepped');
 assert.equal(resolveAdaptiveRoofForm('wudian', polyMetrics, 50, 'commercial'), 'stepped');
 assert.equal(resolveAdaptiveRoofForm('dome', polyMetrics, 38, 'civic'), 'stepped');
 
-// (b) 巨型面積/跨度建築 (area >= 750 或 span >= 28) 避免單體大斜頂扭曲
+// (b) Giant area/span buildings (area >= 750 or span >= 28) avoid single large sloped-roof distortion
 const giantMetrics = { area: 850, span: 30, aspect: 1.2 };
 assert.equal(resolveAdaptiveRoofForm('wudian', giantMetrics, 12, 'commercial'), 'stepped');
 assert.equal(resolveAdaptiveRoofForm('wudian', { area: 850, span: 30, aspect: 2.5 }, 12, 'commercial'), 'flat');
 assert.equal(resolveAdaptiveRoofForm('shed', giantMetrics, 12, 'industrial'), 'sawtooth');
 
-// (c) 狹長型建物 (aspect > 2.6) 避免圓頂/廡殿/歇山/尖塔扭曲，改為沿長軸的雙坡/硬山
+// (c) Elongated buildings (aspect > 2.6) avoid dome/wudian/xieshan/spire distortion, switch to long-axis gable/yingshan
 const elongatedMetrics = { area: 120, span: 4.0, aspect: 3.2 };
 assert.equal(resolveAdaptiveRoofForm('dome', elongatedMetrics, 8, 'residential'), 'gable');
 assert.equal(resolveAdaptiveRoofForm('wudian', elongatedMetrics, 8, 'residential'), 'yingshan');
 assert.equal(resolveAdaptiveRoofForm('xieshan', elongatedMetrics, 8, 'residential'), 'yingshan');
 assert.equal(resolveAdaptiveRoofForm('spire', elongatedMetrics, 8, 'industrial'), 'sawtooth');
 
-// (d) 超微型建築 (span < 2.5 或 area < 15) 避免複雜歇山/重簷
+// (d) Tiny buildings (span < 2.5 or area < 15) avoid complex xieshan/multi-eave forms
 const tinyMetrics = { area: 12, span: 2.0, aspect: 1.1 };
 assert.equal(resolveAdaptiveRoofForm('xieshan', tinyMetrics, 6, 'residential'), 'shed');
 assert.equal(resolveAdaptiveRoofForm('tiered', tinyMetrics, 6, 'residential'), 'shed');
 
-// (e) 比例正常適中之建築保留原請求屋頂造型
+// (e) Well-proportioned buildings keep the requested roof form
 const normalMetrics = { area: 240, span: 12, aspect: 1.3 };
 assert.equal(resolveAdaptiveRoofForm('wudian', normalMetrics, 14, 'tourism'), 'wudian');
 assert.equal(resolveAdaptiveRoofForm('xieshan', normalMetrics, 14, 'tourism'), 'xieshan');
 assert.equal(resolveAdaptiveRoofForm('dome', normalMetrics, 14, 'tourism'), 'dome');
 
-// (f) 圓錐屋頂 (spire) 限制：僅限圓形建築或塔形建築，且圓錐底座覆蓋整座頂樓
-// 非圓形、非塔形之一般平地建物禁止使用圓錐屋頂，自動降級至雙坡/平頂/鋸齒
+// (f) Cone-roof (spire) restriction: round or tower buildings only, with the cone base covering the whole top floor
+// Ordinary non-round, non-tower flatland buildings must not use cone roofs; they step down to gable/flat/sawtooth
 assert.equal(resolveAdaptiveRoofForm('spire', normalMetrics, 14, 'residential'), 'gable', '一般長方形住宅不得使用圓錐頂，轉為雙坡');
 assert.equal(resolveAdaptiveRoofForm('spire', normalMetrics, 14, 'commercial'), 'flat', '一般長方形商業樓不得使用圓錐頂，轉為平頂');
 assert.equal(resolveAdaptiveRoofForm('spire', normalMetrics, 14, 'industrial'), 'sawtooth', '一般長方形工業廠房不得使用圓錐頂，轉為鋸齒');
 
-// 高瘦塔形建築 (height / span >= 2.0) 允許使用圓錐屋頂
+// Slender towers (height / span >= 2.0) may keep the cone roof
 const towerMetrics = { area: 36, span: 6, aspect: 1.0 };
 assert.equal(isRoundOrTower(towerMetrics, 18), true, '高瘦塔形建築判定為真 (height/span = 3.0)');
 assert.equal(resolveAdaptiveRoofForm('spire', towerMetrics, 18, 'residential'), 'spire', '塔形建築保留圓錐屋頂');
 
-// 圓形/正多邊形建築允許使用圓錐屋頂
+// Round/regular-polygon buildings may keep the cone roof
 const circleOuter = Array.from({ length: 16 }, (_, i) => {
   const a = (i * 2 * Math.PI) / 16;
   return [10 + 6 * Math.cos(a), 10 + 6 * Math.sin(a)];
@@ -274,7 +274,7 @@ const roundMetrics = calculateFootprintMetrics(roundPoly);
 assert.equal(isRoundOrTower(roundMetrics, 10), true, '正16邊形圓形建築判定為真');
 assert.equal(resolveAdaptiveRoofForm('spire', roundMetrics, 10, 'residential'), 'spire', '圓形建築保留圓錐屋頂');
 
-// 驗證圓錐屋頂構件幾何底面半徑完整覆蓋所有頂樓（含屋簷外角）
+// Cone-roof part geometry must fully cover the top floor including eave corners
 const { architecturalRoofParts } = await import('../public/js/architectureRoofParts.js');
 const squareTowerPoly = { outer: [[0, 0], [6, 0], [6, 6], [0, 6]], holes: [] };
 const spireParts = architecturalRoofParts(squareTowerPoly, 18, { roof: 0x444d5c }, 'spire', towerMetrics, 18);
@@ -288,7 +288,7 @@ const { eave } = roofDimensions(6, 18);
 const cornerDist = Math.hypot((6 + eave * 2) / 2, (6 + eave * 2) / 2);
 assert.ok(bottomR >= cornerDist, `圓錐底半徑 (${bottomR}) 必須完整覆蓋頂樓所有角落 (${cornerDist})`);
 
-// 8. 3D 幾何整合測試（若環境有 THREE_MODULE 與 THREE_BUFFER_UTILS 則執行）
+// 8. 3D geometry integration (runs only with THREE_MODULE and THREE_BUFFER_UTILS present)
 if (process.env.THREE_MODULE && process.env.THREE_BUFFER_UTILS) {
   const modules = {
     three: pathToFileURL(process.env.THREE_MODULE).href,

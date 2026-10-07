@@ -1,56 +1,56 @@
-// ============ 機體檔案(客戶端專用;與 lore.js 角色檔案格式對齊)============
-// 2026-08-04 使用者定案:「角色與機體的完整數據與文字說明的格式完全對齊,特別是機體原型的介紹,
-// 也包括不顯示與遊戲、用於文本生成、2D 生圖或 3D 建模使用的部分,都統一標準格式。」
+// ============ Mecha files (client-only; format-aligned with lore.js character files) ============
+// user decision (2026-08-04): "character and mecha full data plus prose share one aligned format, especially mecha proto writeups,
+// including non-display parts used for textgen, 2D art, or 3D modeling -- all in one standard format."
 //
-// **這一支只住機體的敘事與生成資料**,三條邊界:
-//   ① 平衡數值(hp/dmg/射程/mods)仍只住 `data.js`;外觀參數(hue/frame/creature/paint…)仍只住
-//      `data.js CHARACTERS[].visual`;運動性格仍只住 `models.js MOVE_SIG`/`CAST_SIG`。本檔 MUST NOT
-//      複製任何一份 —— 需要它們的地方一律由 `codex.js` 到那些縫去取(第二份數值 = 調了原處不會跟著動)。
-//   ② **格式(有哪些欄、叫什麼、必不必填)只住 `codex.js`**(`PROTO_LAYERS`/`GEN_FIELDS`),
-//      本檔只填內容。要加欄位先改 codex.js 的欄位表,再由 `tools/audit_codex.mjs` 逼所有 64 份檔案補齊。
-//   ③ 本檔**零 import**(同 `rng.js`/`ctrlmode.js`/`vernacular.js`):離線稽核與文本/生圖/建模管線
-//      要直接 import 真品,import 了 three/DOM 那些工具就只能各抄一份。
+// **This file holds mecha narrative + generation data only**, three boundaries:
+//   1. Balance numbers (hp/dmg/range/mods) still live only in `data.js`; appearance params (hue/frame/creature/paint...) still only in
+//      `data.js CHARACTERS[].visual`; motion character still only in `models.js MOVE_SIG`/`CAST_SIG`. This file MUST NOT
+//      copy any of them -- consumers fetch them via `codex.js` seams (a second copy of numbers = edits to the original never propagate).
+//   2. **Schema (which fields, names, required/optional) lives only in `codex.js`** (`PROTO_LAYERS`/`GEN_FIELDS`),
+//      this file fills content only. Add a field in the codex.js table first, then `tools/audit_codex.mjs` forces all 64 files to comply.
+//   3. This file has **zero imports** (like `rng.js`/`ctrlmode.js`/`vernacular.js`): offline audits and textgen/art/modeling pipelines
+//      must import the genuine article directly; importing three/DOM would force each tool to keep its own copy.
 //
-// ---- 原型層(proto)----
-// 舊制 `lore.js` 的 `proto` 是一條自由字串,由 `main.js` 用正規式切「現實原型:/機體原型:/體態原型:/
-// 仿生原型:」四個標籤 —— 那是**第二份格式定義**,而且沒有任何東西保證誰該有幾層:實測 8 台機體
-// 只有一層、變形者的兩個型態被擠在同一層裡(「始祖鳥 ↔ 迅猛龍」一句話講完),機甲的人形原型有時
-// 叫「機體原型」有時叫「體態原型」。改成結構化之後,**該有哪幾層由 `visual` 推導**(codex.js
-// `protoLayers()`):`frame` ← visual.proto、`bionic` ← visual.creature、`air`/`ground` ← visual.flight/ground,
-// `real` 恆有。漏一層是稽核紅字,而不是「那台機體的介紹剛好比較短」。
-// 每層 = `{ src, note }`:`src` 是原型出處的**名稱**(一個名詞,供生圖/建模直接當關鍵詞),
-// `note` 是「為什麼是它」的一句設計理由。MUST NOT 把兩者揉成一句(揉了就退回自由字串)。
+// ---- Proto layer (proto) ----
+// Legacy `lore.js` `proto` was one free string, split by `main.js` regex on four labels ("real-world proto:" / "mecha proto:" / "body proto:" /
+// "bionic proto:") -- that was a **second schema definition**, and nothing guaranteed how many layers anyone had: 8 mecha measured with
+// only one layer, morphers' two forms squeezed into one ("archaeopteryx <-> velociraptor" in one sentence), humanoid mecha protos called
+// "mecha proto" sometimes and "body proto" other times. After structuring, **layer count derives from `visual`** (codex.js
+// `protoLayers()`): `frame` <- visual.proto, `bionic` <- visual.creature, `air`/`ground` <- visual.flight/ground,
+// `real` always present. A missing layer is an audit error, not "that mech's writeup is just shorter".
+// Each layer = `{ src, note }`: `src` is the proto source **name** (one noun, usable as art/modeling keyword directly),
+// `note` is the one-sentence design reason ("why this one"). MUST NOT merge the two into one sentence (merging regresses to free string).
 //
-// ---- 生成段(gen)----
-// 不顯示在遊戲裡,供**文本生成 / 2D 生圖 / 3D 建模**三條外部管線使用。六個欄位與 `lore.js` 的
-// 角色 `gen` **同鍵同義**(codex.js `GEN_FIELDS` 單一縫),所以同一支工具讀角色與讀機體是同一段程式:
-//   sil   剪影 —— 一眼認得出來的輪廓(2D 構圖 / 3D 大形)
-//   mass  量體比例 —— 各部佔比與重心(**MUST NOT 寫全高公尺數**:那由 heroTargetH 推導,見 codex.js)
-//   mat   材質表面 —— 表面處理、磨損、透光
-//   parts 分件 —— 3D 建模的可分離量體(順序 = 由主到次)
-//   tag   生圖關鍵詞 —— 純名詞短語,無句子、無形容到底的長句(給 2D 模型吃的)
-//   note  生成注意 —— 這台最容易被畫錯/建錯的那一件事
-// `code` = 機體型號代碼(S-01…),供外部管線當穩定檔名;與 docs/characters.md 的編號同一套。
+// ---- Generation block (gen) ----
+// Never shown in-game; feeds three external pipelines: **textgen / 2D art / 3D modeling**. Six fields share
+// **same keys and meanings** as character `gen` in `lore.js` (codex.js `GEN_FIELDS` single seam), so one tool reads both with one code path:
+//   sil   silhouette -- recognizable outline at a glance (2D composition / 3D massing)
+//   mass  mass proportions -- part ratios and center of gravity (**MUST NOT write full height in meters**: derived from heroTargetH, see codex.js)
+//   mat   material/surface -- finish, wear, translucency
+//   parts split -- separable 3D-modeling volumes (ordered main to minor)
+//   tag   art keywords -- noun phrases only, no sentences, no over-qualified clauses (fed to 2D models)
+//   note  generation caution -- the one thing most likely to be drawn/modeled wrong on this unit
+// `code` = mech model code (S-01...), stable filename for external pipelines; same numbering as docs/characters.md.
 //
-// 鍵 = **駕駛員 id**(與 `LORE`/`MOVE_SIG`/`CAST_SIG` 同一套鍵)。機體換手時,本檔那一整格
-// 連同 `visual` 機體欄、`mods`、`MOVE_SIG`/`CAST_SIG` 一起搬(CLAUDE.md §2.1 角色機種);
-// 1:1(一台機體恰好一名駕駛)由 `audit_codex.mjs` 釘住。
+// Key = **pilot id** (same key set as `LORE`/`MOVE_SIG`/`CAST_SIG`). On reassignment, move this file's whole cell
+// together with `visual` mech fields, `mods`, `MOVE_SIG`/`CAST_SIG` (CLAUDE.md sec.2.1 pilot-mech mapping);
+// 1:1 (exactly one pilot per mech) is pinned by `audit_codex.mjs`.
 
-// ---- 2026-08-14 全面重寫(新版機體 3D 建模上線)----------------------------------
-// 使用者定案:「新版機體 3D 建模全面替換掉舊版,原先機體原型與細節說明等描述也基於新版
-// 重寫,舊版資訊全部清理。」⇒ 本檔 32 台的 `proto` 與 `gen` **整份重寫**,描述的對象
-// 從此是 `public/js/forge/mechs/<key>.js` 那一棵真的會被鍛造出來的零件樹,而不是舊版
-// `models.js` 的 hero 建構器(那七支已退役到 `tools/humanoid_forge/legacy/`,只在機體台看得到)。
+// ---- 2026-08-14 full rewrite (new mech 3D models online) ----------------------------------
+// user decision: "new mech 3D models fully replace the old ones; proto and detail writeups rewritten against the new
+// models, old info fully purged." => all 32 `proto` + `gen` blocks in this file **rewritten wholesale**; the described object
+// is henceforth the part tree actually forged from `public/js/forge/mechs/<key>.js`, not the legacy
+// `models.js` hero builder (those seven retired to `tools/humanoid_forge/legacy/`, visible only on the mech stage).
 //
-// 重寫時就地修掉四則**已知會誤導生圖與建模的舊敘述**(逐則的理由住各逐機檔的檔頭):
-//   s01 螫針是中繼天線不是砲管(武器改掛六隻腳)、旋翼整組退場改純膜翅飛行;
-//   s03 翼面從「相控陣翼板」改回**羽毛**,主體是迅猛龍;
-//   m01 升力從旋翼改成**三角滑翔翼**(地面型收成披風);
-//   m05 飛行型從噴射戰機改成**飛鼠滑翔**(升力面是飛膜)。
-// 這四則舊敘述在畫面上不會報錯 —— 它們只會讓下一輪的生圖/建模照著已經不存在的東西畫。
+// The rewrite also fixes four **known art/modeling-misleading legacy writeups** in place (per-item reasons live in each mech file header):
+//   s01 stinger is a relay antenna, not a gun barrel (weapons moved to six legs); rotors retired wholesale, pure membrane-wing flight;
+//   s03 wing surface changed back from "phased-array wing" to **feathers**, body is velociraptor;
+//   m01 lift changed from rotors to **delta hang-glider** (ground form folds into a cloak);
+//   m05 flight form changed from jet fighter to **flying-squirrel glide** (lift surface is the patagium).
+// These four legacy writeups never error on screen -- they only make the next art/modeling round draw things that no longer exist.
 
 export const MECHA = {
-  // ================= 蜂群同盟 =================
+  // ================= SWARM Alliance =================
   s01: {
     code: 'S-01',
     proto: {
@@ -287,7 +287,7 @@ export const MECHA = {
       note: '星象儀圓窗的視軸圓內 MUST 淨空(天線與格柵一律避開);細節密度才是這台機的樣子,乾淨的剪影是錯的。',
     },
   },
-  // ================= 鋼鐵協約 =================
+  // ================= STEEL Pact =================
   t01: {
     code: 'T-01',
     proto: {
@@ -544,7 +544,7 @@ export const MECHA = {
       note: '這台的拼字是「圓角」:任何一處出現硬稜線都不對;天線 MUST 一根一件而且不等長。',
     },
   },
-  // ================= 自由傭兵 =================
+  // ================= Free Mercenaries =================
   m01: {
     code: 'N-01',
     proto: {

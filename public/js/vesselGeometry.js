@@ -37,9 +37,9 @@ export function vesselHullSections(v, ring = vesselHullRing, fine = false, flat 
   return stations.map(([z,w,f,d]) => ({ z: L*z, ring: ring(B*w,F*f,D*d) }));
 }
 
-// 法線群組：共用頂點的面只在夾角容限內共用法線，超過即拆頂點。
-// 呼叫端傳index＋position陣列，拿回逐面獨立法線（仍帶順序index，合批相容）。
-// 預設 30°：圓頂相鄰環 11~26° 保持平滑，屋脊／簷口／柱頂底蓋回到脆直線。
+// Normal groups: shared vertices share normals only within angle tolerance, else split vertices.
+// Caller passes index + position arrays, gets per-face independent normals back (keeps ordered index, batch compatible).
+// Default 30deg: dome adjacent rings 11-26deg stay smooth, ridges/eaves/pillar caps return to crisp lines.
 export function facetMeshData(data, deg = 30) {
   const cos = Math.cos(deg * Math.PI / 180);
   const fCount = data.faces.length / 3, faceN = new Array(fCount);
@@ -69,7 +69,7 @@ export function facetMeshData(data, deg = 30) {
       const vi = data.faces[f * 3 + k];
       let nx = 0, ny = 1, nz = 0;
       if (faceN[f]) {
-        // deg <= 0 = 全平面：不分群，每面各自法線（拉伸圖元的光滑法線已失真，直接攤平）。
+        // deg <= 0 = fully flat: no grouping, per-face normals (stretched primitive smooth normals already distorted, flatten directly).
         const group = cos >= 1 ? [f] : (incident.get(vi) || []).filter((g) =>
           faceN[g][0] * faceN[f][0] + faceN[g][1] * faceN[f][1] + faceN[g][2] * faceN[f][2] >= cos);
         nx = 0; ny = 0; nz = 0;

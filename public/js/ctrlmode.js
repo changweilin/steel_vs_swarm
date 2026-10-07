@@ -1,4 +1,4 @@
-// ============ 操作方式(control scheme)— 輸入裝置的唯一真相縫 ============
+// ============ Control scheme -- single source of truth for input devices ============
 // 【單一真相縫】「現在該用哪一套操控」只准問這一支。mobile.js / game.js / main.js / help.js
 // **MUST NOT** 各自去看 `navigator.maxTouchPoints`、`matchMedia('(pointer: coarse)')` 或
 // localStorage 的覆寫旗標 —— 那就變成第二份裝置判定,加第三種輸入裝置時一定漏改。

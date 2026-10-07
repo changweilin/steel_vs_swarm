@@ -1,24 +1,30 @@
-// ============ 電腦玩家戰術(選敵優先度 / 撤退線 / 打帶跑)稽核(2026-08-02 使用者需求)============
-// 需求原文:「中高級電腦操作邏輯優化:被打時優先對『對自己傷害最高者、造成敵人最大總傷害、
-//            快要陣亡的目標』進行攻擊 / HP 低於 25% 才會回主堡,否則撤退到最近砲塔後方兵線
-//            等滿護盾即可」/「高級電腦操作邏輯優化:撿尾刀、打帶跑操作、扛半條護盾就後撤」。
-// 改 `data.js` 的 `BOT_DIFF.tactic/elite`、`BOT_TACTIC`/`botTargetPrio`/`botThreatDecay`/
-// `botSalvo`/`botExecW`/`botKiteF`、`sim.js` 的 `_dmgOut`/`_hurtLog` 威脅帳、
-// `bots.js` 的 `_pullWant`/`_enterPull`/`_resume`/`_pickRally`/`_rally`/`_pulling`/
-// `_threatOf`/`_prioritize`/`_acquire`/`_engage` 之後跑:`node tools/audit_bot_tactics.mjs`
+// ============ Bot tactics (target priority / retreat line / hit-and-run) audit (2026-08-02 user request) ============
+// Requirement source: "mid/high-tier bot operation optimization: when hit, prioritize whoever deals
+// the highest damage to self, deals the greatest total damage to enemies, or is about to die /
+// retreat to behind the nearest turret when HP is below 25% and wait for shields, otherwise hold the
+// line until shields refill" / "high-tier bot optimization: kill-stealing, hit-and-run, pulling back
+// after tanking half a shield".
+// Run after changing `data.js` `BOT_DIFF.tactic/elite`, `BOT_TACTIC`/`botTargetPrio`/`botThreatDecay`/
+// `botSalvo`/`botExecW`/`botKiteF`, `sim.js` `_dmgOut`/`_hurtLog` threat books, or `bots.js`
+// `_pullWant`/`_enterPull`/`_resume`/`_pickRally`/`_rally`/`_pulling`/`_threatOf`/`_prioritize`/
+// `_acquire`/`_engage`: `node tools/audit_bot_tactics.mjs`
 //
-// 這支盯的是「**看不出來但玩起來就是不對**」的那一批寫壞法:
-//   ① 威脅帳自己記一份:伺服器唯一知道「被誰打了多少」的地方是 `_hurtLog`,另開第二份
-//      必定與濺血/警戒那份分家(A1 家族)。
-//   ② 輸出帳只記一般結算那條路徑:護盾全擋的那些發全部漏帳 ⇒ 高護盾對手的輸出被系統性
-//      低估,而那正好是最該被集火的人 —— 純看程式碼完全正常,只是「AI 好像不太會挑人」。
-//   ③ 撤退遲滯帶寫沒了:進場/出場同一個門檻 ⇒ 退到塔後、護盾一滿就回去、血還是低又退,
-//      整條兵線只剩一台在原地來回跑,而畫面上只像「這台 bot 很猶豫」。
-//   ④ 難度分層寫成比對難度字串:第二份分級表,改 BOT_DIFF 不會跟著動。
-//   ⑤ 新手/低難度被順手「一起優化」:難度階梯整個塌掉(新手打得跟高難度一樣兇)。
+// This file watches the "plays wrong but nothing looks wrong" breakage family:
+//   1 Threat book kept separately: the server's only knowledge of "who dealt how much to me" is
+//     `_hurtLog`; a second book inevitably splits from the blood-splash/alert one (A1 family).
+//   2 Output book recording only the normal-settlement path: fully-shield-blocked shots all go
+//     unlogged ⇒ high-shield opponents are systematically underestimated — exactly the people who
+//     should be focused. Reads perfectly normally in code, just "the AI seems bad at picking targets".
+//   3 Retreat hysteresis band deleted: same threshold in and out ⇒ pulls back, shield refills, goes
+//     back in, still low, pulls again — the whole lane watches one bot pace back and forth, looking
+//     merely "hesitant" on screen.
+//   4 Difficulty tiers written as difficulty-string comparisons: a second tier table that will not
+//     follow BOT_DIFF changes.
+//   5 Rookies/low tiers "optimized" along the way: the whole difficulty ladder collapses (rookies
+//     fight as fiercely as high tiers).
 //
-// 手法:常數/曲線直接 import(data.js 是純模組)、原文單一縫走 `audit_src.mjs`、
-// 行為一律以**真的 BattleSim + 真的 BotBrain** 直測。
+// Method: constants/curves imported directly (data.js is a pure module), source via the `audit_src.mjs`
+// single seam, behavior always measured with a **genuine BattleSim + genuine BotBrain**.
 import { readSrc, grabMethod } from './audit_src.mjs';
 import {
   BOT_DIFF, BOT_DIFF_KEYS, BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
@@ -30,7 +36,7 @@ import { BotBrain } from '../server/bots.js';
 const botsSrc = readSrc('server', 'bots.js');
 const simSrc = readSrc('server', 'sim.js');
 
-// 「全檔只有 N 處」MUST 只數**執行原文**(與 audit_bot_vision 同一支剝法)
+// "Only N occurrences in the whole file" MUST count **executable source** only (same stripping as audit_bot_vision)
 const strip = (s) => s
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .split('\n').map((l) => l.replace(/(^|[^:'"`])\/\/.*$/, '$1')).join('\n');
@@ -43,7 +49,7 @@ const t = (n, ok, extra = '') => { ok ? (pass++, console.log(`  ✓ ${n}`)) : (f
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const sec = (s) => console.log(`\n■ ${s}`);
 
-// ---- 共用:真 BattleSim(與 audit_bot_vision 同一份合成戰場)----
+// ---- Shared: genuine BattleSim (same synthetic battlefield as audit_bot_vision) ----
 function fakeCfg() {
   const A = [25.0330, 121.5654], Dm = 1600, R = 6371000;
   const dLat = Dm * MAPGEO.REAL_SCALE / R * 180 / Math.PI;
@@ -58,7 +64,7 @@ function fakeCfg() {
     env: { season: 'summer', time: 'day', weather: 'clear' },
   };
 }
-/** 空戰場:清掉全部既有實體與野營(選敵不被小兵與塔干擾) */
+/** Empty battlefield: wipe all existing entities and camps (targeting undisturbed by creeps and towers) */
 function blank() {
   const sim = new BattleSim(fakeCfg());
   sim.camps = [];
@@ -70,14 +76,14 @@ const chOf = (side, kind) => Object.keys(CHARACTERS).find((c) =>
   (CHARACTERS[c].side === side || CHARACTERS[c].side === 'MERC') && heroKindOf(c, side) === kind);
 const CH_ROBOT = chOf('STEEL', 'robot');
 const CH_DRONE = chOf('SWARM', 'drone');
-/** 以 sim 座標放一個「相對 h 的朝向偏 bearing、距離 d」的點(視野錐內才選得到) */
+/** Place a point at bearing/distance d relative to h's facing, in sim coordinates (only selectable inside the vision cone) */
 const atBearing = (h, bearing, d) => [h.x - Math.sin(bearing + (h.ry || 0)) * d, h.z + Math.cos(bearing + (h.ry || 0)) * d];
 
 // ---------------------------------------------------------------------------------
 sec('Ⅰ 常數與曲線(data.js:分層旗標 + 三項權重 + 遲滯帶,推導不手寫)');
 // ---------------------------------------------------------------------------------
 {
-  // 難度分層:tactic 中/高、elite 只有高;且 MUST 單調(高難度不得比低難度笨)
+  // Difficulty tiers: tactic on mid/high, elite on high only; and MUST be monotone (higher tiers never dumber)
   t('新手/低難度沒有戰術旗標(舊制逐位元不變)',
     !BOT_DIFF.novice.tactic && !BOT_DIFF.novice.elite && !BOT_DIFF.low.tactic && !BOT_DIFF.low.elite);
   t('中難度有 tactic、沒有 elite(撿尾刀/打帶跑/半護盾後撤是高級專屬)',
@@ -92,7 +98,7 @@ sec('Ⅰ 常數與曲線(data.js:分層旗標 + 三項權重 + 遲滯帶,推導�
     return true;
   })());
 
-  // 選敵優先度:三項都 MUST 是「越大越優先」,且基準 = 1(什麼都不加 ⇒ 純加權距離)
+  // Target priority: all three MUST be "larger wins", with baseline = 1 (nothing added ⇒ pure weighted distance)
   t('什麼都不加 ⇒ 優先度 = 1(舊制的加權距離原封不動)', near(botTargetPrio({}), 1));
   for (const [k, w] of [['threat', 'W_THREAT'], ['output', 'W_OUTPUT'], ['exec', 'W_EXEC']]) {
     t(`${k} 項單調遞增且係數 = BOT_TACTIC.${w}(推導不手寫)`,
@@ -104,7 +110,7 @@ sec('Ⅰ 常數與曲線(data.js:分層旗標 + 三項權重 + 遲滯帶,推導�
   t('威脅權重 MUST 最重(「被打時優先」是需求原文的第一順位)',
     BOT_TACTIC.W_THREAT > BOT_TACTIC.W_OUTPUT && BOT_TACTIC.W_THREAT > BOT_TACTIC.W_EXEC);
 
-  // 威脅記憶:線性淡出,THREAT_S 後歸零
+  // Threat memory: linear fade, zero after THREAT_S
   t('威脅淡出:剛挨打 = 1、半程 = 0.5、逾時 = 0(線性)',
     near(botThreatDecay(0), 1) && near(botThreatDecay(BOT_TACTIC.THREAT_S / 2), 0.5)
     && near(botThreatDecay(BOT_TACTIC.THREAT_S), 0) && near(botThreatDecay(999), 0));
@@ -112,7 +118,7 @@ sec('Ⅰ 常數與曲線(data.js:分層旗標 + 三項權重 + 遲滯帶,推導�
   t('記憶秒數為正且短於一場交戰(不是整場的傷害排行)',
     BOT_TACTIC.THREAT_S > 0 && BOT_TACTIC.THREAT_S < 30);
 
-  // 收割窗
+  // Execute window
   const wd = { dmg: 40, rate: 2, vs: {} };
   t('收割窗傷害 = dmg × vsMult × rate × EXEC_S(推導不手寫)',
     near(botSalvo(wd, 'soldier'), 40 * 2 * BOT_TACTIC.EXEC_S));
@@ -123,7 +129,7 @@ sec('Ⅰ 常數與曲線(data.js:分層旗標 + 三項權重 + 遲滯帶,推導�
   t('滿血目標的權重為 0(不會無差別加分)', near(botExecW(1000, 1000, 0), 0));
   t('maxEhp 為 0(除以零)不噴 NaN', botExecW(0, 0, 0) === 0);
 
-  // 撤退線 + 遲滯帶
+  // Retreat line + hysteresis band
   t('回主堡門檻 = 25%(使用者定案)', near(BOT_TACTIC.BASE_HP, 0.25));
   t('回主堡門檻 MUST 低於脫離交戰門檻(否則「退到砲塔後方」這一段永遠不會發生)',
     BOT_TACTIC.BASE_HP < BOT_TACTIC.PULL_HP);
@@ -136,7 +142,7 @@ sec('Ⅰ 常數與曲線(data.js:分層旗標 + 三項權重 + 遲滯帶,推導�
   t('集結點退在砲塔後方(正距離,且短於塔距 ⇒ 不會退成第二次長征)',
     BOT_TACTIC.RALLY_BACK_M > 0 && BOT_TACTIC.RALLY_BACK_M < UNITS.tower.range);
 
-  // 打帶跑
+  // Hit-and-run
   t('打帶跑:可擊發貼上去、裝填中拉開(近 < 遠,且都在射程內)',
     botKiteF(true) < botKiteF(false) && botKiteF(false) < 1 && botKiteF(true) > 0);
   t('拉開的距離仍在射程內(退到射程外 = 這段時間完全打不到人)', botKiteF(false) <= 1);
@@ -152,7 +158,7 @@ sec('Ⅱ 單一縫(原文:威脅/輸出各只有一份帳,分層只認旗標)');
   t('威脅讀取只有一支(`_threatOf`)',
     count(botsCode, '_threatOf(') === 1 + count(botsCode, 'this._threatOf('));
   t('威脅淡出只經 `botThreatDecay`,MUST NOT 手寫 THREAT_S 的除法', (() => {
-    // 兩個讀帳點(選敵的 `_threatOf`、撤退的 `_recentDmg`)MUST 吃同一支淡出曲線
+    // Both book readers (targeting `_threatOf`, retreat `_recentDmg`) MUST share one fade curve
     const rd = strip(grabMethod(botsSrc, '_recentDmg'));
     return !/THREAT_S/.test(botsCode)
       && count(botsCode, 'botThreatDecay(') === 2
@@ -167,9 +173,10 @@ sec('Ⅱ 單一縫(原文:威脅/輸出各只有一份帳,分層只認旗標)');
     && /by\.dmgOut = /.test(strip(grabMethod(simSrc, '_dmgOut'))));
   t('**兩條結算路徑都記帳**(護盾全擋早退 + 一般結算;漏一條 = 高護盾對手被系統性低估)', (() => {
     const d = strip(grabMethod(simSrc, '_damage'));
-    // 護盾全擋那條是「記帳 → return」的早退區塊,MUST 在 return 之前就把 toShield 入帳。
-    // 守衛式在 2026-08-02 護盾分軌改制後由 `rem <= 0` 改名為 `toHp <= 0`(同語意:沒有任何
-    // 傷害進到裝甲層)—— 這裡認的是「早退前先記帳」這件事,不是變數叫什麼。
+    // The fully-blocked path is a "book then return" early exit; toShield MUST be booked before returning.
+    // The guard changed names in the 2026-08-02 shield-track migration from `rem <= 0` to `toHp <= 0`
+    // (same semantics: nothing reaches the armor layer) — what is recognized here is "book before the
+    // early return", not the variable name.
     const early = /toHp <= 0[\s\S]*?_dmgOut\(by, t, toShield\)[\s\S]*?return;/.test(d);
     return count(d, 'this._dmgOut(') === 2 && early;
   })(), `${count(strip(grabMethod(simSrc, '_damage')), 'this._dmgOut(')} 處`);
@@ -197,9 +204,9 @@ sec('Ⅱ 單一縫(原文:威脅/輸出各只有一份帳,分層只認旗標)');
     count(botsCode, '_pullWant(') === 1 + count(botsCode, 'this._pullWant(')
     && count(botsCode, 'this._enterPull(') === 1);
   t('「脫離交戰中」的判斷只有 `_pulling`(MUST NOT 逐處展開成 RETREAT || RALLY)', (() => {
-    // 狀態**派發**(if state === 'RALLY' → _rally)本來就要逐個列名;禁的是「兩個一起問」
-    // 那種語意 —— 散出去之後新增第三種脫離狀態就會有地方漏改。
-    const outside = botsCode.replace(strip(grabMethod(botsSrc, '_pulling')), '');   // 定義本身不算
+    // State **dispatch** (if state === 'RALLY' → _rally) legitimately names each case; what is banned
+    // is the "ask both at once" semantic — once spread out, a third withdrawn state would be missed somewhere.
+    const outside = botsCode.replace(strip(grabMethod(botsSrc, '_pulling')), '');   // the definition itself does not count
     const inline = /'(RETREAT|RALLY)'\s*\|\|/.test(outside) || /\|\|\s*this\.state === '(RETREAT|RALLY)'/.test(outside);
     return !inline
       && /this\._pulling\(\)/.test(strip(grabMethod(botsSrc, 'update')))
@@ -209,9 +216,10 @@ sec('Ⅱ 單一縫(原文:威脅/輸出各只有一份帳,分層只認旗標)');
     /towerSites/.test(strip(grabMethod(botsSrc, '_pickRally'))) && !/solveTowerSites/.test(botsCode));
   t('RALLY 的位置一樣走 `_moveToward` → `_move` 碰撞唯一縫',
     /this\._moveToward\(/.test(strip(grabMethod(botsSrc, '_rally'))));
-  // 2026-08-06 學習策略上線:旋鈕讀取縫升級為 `this.tac`(預設 = BOT_TACTIC,學習迴圈逐 brain
-  // 注入候選策略)⇒ 門檻仍整組住 BOT_TACTIC,但 bots.js MUST 經 this.tac 讀、MUST NOT 再
-  // 直接讀 `BOT_TACTIC.`(第二條讀取路 = 學習候選蓋不到的死角)。見 audit_bot_policy.mjs。
+  // Learning-policy rollout 2026-08-06: the knob read seam upgrades to `this.tac` (default =
+  // BOT_TACTIC, the learning loop injects candidate policies per brain) ⇒ thresholds still live in
+  // BOT_TACTIC as a group, but bots.js MUST read via this.tac and MUST NOT read `BOT_TACTIC.` directly
+  // again (a second read path = a dead corner learning candidates cannot cover). See audit_bot_policy.mjs.
   t('bots.js 不再手寫撤退門檻(整組搬進 BOT_TACTIC,經 this.tac 單一讀取縫)',
     !/RETREAT_HP|RESUME_HP\s*=/.test(botsCode) && /this\.tac = BOT_TACTIC;/.test(botsCode)
     && !/BOT_TACTIC\./.test(botsCode));
@@ -233,9 +241,10 @@ sec('Ⅲ 選敵優先度 行為直測(真 BattleSim + 真 BotBrain)');
 // ---------------------------------------------------------------------------------
 {
   /**
-   * 兩個**完全一樣**的敵人放在同一方位、同一距離,只有一項指標不同。
-   * 插入序刻意讓「該被選中的那個」排在後面 —— 平手時 `_acquire` 會選先插入的那個,
-   * 所以測得過就代表優先度真的把它拉贏了,而不是靠迭代順序矇到。
+   * Two **identical** enemies at the same bearing and distance, differing in only one metric.
+   * Insertion order deliberately puts "the one that should be picked" last — ties go to the first
+   * inserted in `_acquire`, so a pass proves priority genuinely outweighed it rather than riding
+   * iteration order.
    */
   const twin = (diffKey, tune) => {
     const sim = blank();
@@ -248,15 +257,15 @@ sec('Ⅲ 選敵優先度 行為直測(真 BattleSim + 真 BotBrain)');
       const [x, z] = atBearing(h, bearing, dist);
       return sim._add({ kind: 'soldier', side: 'SWARM', lane: 0, x, z, y: 0, hp: 1000 });
     };
-    const plain = mk(0.02, R);      // 先插入 = 平手時的贏家
-    const mark = mk(-0.02, R);      // 後插入 = 只有測項成立才選得到
+    const plain = mk(0.02, R);      // inserted first = tie winner
+    const mark = mk(-0.02, R);      // inserted later = only picked if the measured trait holds
     tune(sim, h, brain, mark, plain);
     sim._tickN++;
     return { got: brain._acquire(h), mark, plain, sim, h, brain };
   };
 
   {
-    // 攻擊者同時也會在 `_dmgOut` 記到輸出 ⇒ 就地歸零,這一項才真的只在量「威脅」
+    // The attacker also books output in `_dmgOut` ⇒ zero it on the spot, so this trait genuinely measures "threat" only
     const r = twin('medium', (sim, h, br, mark) => { sim._damage(h, 300, mark, 0); mark.dmgOut = 0; });
     t('①對自己傷害最高者:剛打過我的那個優先(平手時本來會選另一個)', r.got === r.mark);
   }
@@ -279,7 +288,7 @@ sec('Ⅲ 選敵優先度 行為直測(真 BattleSim + 真 BotBrain)');
     t('新手難度同樣不吃(難度階梯不得塌掉)', r.got === r.plain);
   }
 
-  // 威脅淡出:同一份帳,過了 THREAT_S 就不再左右選敵
+  // Threat fade: same book; past THREAT_S it no longer steers targeting
   {
     const r = twin('medium', (sim, h, br, mark) => { sim._damage(h, 300, mark, 0); mark.dmgOut = 0; });
     t('威脅帳真的記在受擊者身上(pid/id 對得起來)',
@@ -289,7 +298,7 @@ sec('Ⅲ 選敵優先度 行為直測(真 BattleSim + 真 BotBrain)');
     t('逾時之後威脅歸零 ⇒ 選敵退回加權距離(不會一直記恨)', r.brain._acquire(r.h) === r.plain);
   }
 
-  // 撿尾刀:高難度會為了收人頭跑遠一點,中難度不會
+  // Kill-stealing: high tier runs farther for a secured kill, mid tier does not
   {
     const execTest = (diffKey) => {
       const sim = blank();
@@ -304,7 +313,7 @@ sec('Ⅲ 選敵優先度 行為直測(真 BattleSim + 真 BotBrain)');
         const [x, z] = atBearing(h, bearing, dist);
         return sim._add({ kind: 'soldier', side: 'SWARM', lane: 0, x, z, y: 0, hp });
       };
-      // 近的:傷得更重但**還打不死**;遠的(1.5×):一個收割窗就打得完
+      // Near one: hurt worse but **not yet killable**; far one (1.5x): finishes inside one execute window
       const wounded = mk(0.02, R, salvo * 1.4);
       const finish = mk(-0.02, R * 1.5, salvo * 0.6);
       sim._tickN++;
@@ -318,7 +327,7 @@ sec('Ⅲ 選敵優先度 行為直測(真 BattleSim + 真 BotBrain)');
       mid.got === mid.wounded);
   }
 
-  // 塔/主堡刻意不進「總輸出」比較
+  // Towers/bases deliberately excluded from the "total output" comparison
   {
     const sim = blank();
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
@@ -330,7 +339,7 @@ sec('Ⅲ 選敵優先度 行為直測(真 BattleSim + 真 BotBrain)');
     const sol = sim._add({ kind: 'soldier', side: 'SWARM', lane: 0, x: sx, z: sz, y: 0, hp: 1000 });
     const [tx, tz] = atBearing(h, -0.02, R);
     const tow = sim._add({ kind: 'tower', side: 'SWARM', lane: 0, x: tx, z: tz, y: 0, hp: UNITS.tower.hp });
-    tow.dmgOut = 999999;   // 塔的累計輸出必然全場最高
+    tow.dmgOut = 999999;   // a tower's cumulative output is inevitably the highest on the field
     sim._tickN++;
     t('砲塔的累計輸出不列入比較(否則 bot 會一頭撞進塔的射程裡)', brain._acquire(h) === sol);
   }
@@ -348,8 +357,8 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     return br;
   };
   const hi = brainOf('high'), mid = brainOf('medium'), lo = brainOf('low');
-  const HIT = { lastHitAt: 100 };                          // 正在挨打(剛中彈)
-  const CALM = { lastHitAt: 100 - VITALS.OOC_S - 1 };      // 已脫戰(護盾正在回)
+  const HIT = { lastHitAt: 100 };                          // under fire (just hit)
+  const CALM = { lastHitAt: 100 - VITALS.OOC_S - 1 };      // disengaged (shields regenerating)
 
   t('裝甲 < 25% ⇒ 回主堡(唯一會離開兵線的情況)',
     hi._pullWant(HIT, 0.2, 1) === 'RETREAT' && mid._pullWant(HIT, 0.2, 1) === 'RETREAT');
@@ -361,7 +370,8 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
   t('中難度滿血不會因為護盾就撤(「扛半條護盾就後撤」是高級專屬)',
     mid._pullWant(HIT, 1, 0.45) === null);
   t('健康 ⇒ 不撤(兩個難度都是)', hi._pullWant(HIT, 1, 1) === null && mid._pullWant(HIT, 0.9, 0.9) === null);
-  // 沒有這道閘 = bot 在空曠兵線上為了一條回充中的護盾一路往回走(2026-08-02 實測:工事損血腰斬)
+  // Without this gate, bots walk miles back across open lane for a mid-regen shield (measured
+  // 2026-08-02: fortification damage halved)
   t('**脫戰後護盾低不算危險**:沒人在打就繼續推(護盾走到哪回到哪)',
     hi._pullWant(CALM, 1, 0.1) === null && hi._pullWant(CALM, 0.28, 0.1) === null
     && mid._pullWant(CALM, 0.28, 0.1) === null);
@@ -374,7 +384,8 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     hi._pullWant(HIT, 0.28, BOT_TACTIC.RALLY_SP) === null
     && hi._pullWant(HIT, 0.99, BOT_TACTIC.RALLY_SP) === null);
 
-  // ---- 「扛半條護盾」量的是**近期吃下的傷害**,而且工事刮傷不算(真 BattleSim 直測)----
+  // ---- "Tanked half a shield" measures **recently taken damage**, and fortification chip damage
+  // does not count (genuine BattleSim measurement) ----
   {
     const mk = () => {
       const sim = blank();
@@ -407,22 +418,22 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
       const { sim, h, br } = mk();
       const foe = sim.addHero('SWARM', 'p9', CH_DRONE);
       foe.x = 60; foe.z = 0; foe.y = 0;
-      for (let i = 0; i < 30; i++) { sim._damage(h, h.maxSp * 0.02, foe, 0); sim.t += 1; }   // 慢慢刮
+      for (let i = 0; i < 30; i++) { sim._damage(h, h.maxSp * 0.02, foe, 0); sim.t += 1; }   // slow chip
       t('慢慢被刮到護盾見底(每秒 2%)⇒ 不算「扛了半條」,不後撤',
         spF(h) < BOT_TACTIC.PULL_SP && br._pullWant(h, 1, spF(h)) === null,
         `sp ${spF(h).toFixed(2)} 近期 ${br._recentDmg(h).toFixed(0)}`);
     }
   }
 
-  // ---- 集結點:最近一座**存活**己方砲塔後方 ----
+  // ---- Rally point: behind the nearest **surviving** friendly turret ----
   {
-    const sim = new BattleSim(fakeCfg());          // 這一份要留著塔
+    const sim = new BattleSim(fakeCfg());          // this copy keeps the towers
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
     const brain = new BotBrain(sim, 'b1', 'STEEL', 0, 'high');
     const towers = [...sim.ents.values()].filter((e) => e.kind === 'tower' && e.side === 'STEEL');
     t('稽核戰場真的有己方砲塔(集結點的前提)', towers.length > 0, `${towers.length} 座`);
     const [bx, bz] = sim.basePos.STEEL;
-    // 站到最前線那座塔旁邊
+    // Standing next to the frontmost tower
     let front = towers[0];
     for (const e of towers) if (Math.hypot(e.x - bx, e.z - bz) > Math.hypot(front.x - bx, front.z - bz)) front = e;
     h.x = front.x; h.z = front.z; h.y = 0;
@@ -437,7 +448,7 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     t('集結進度是沿兵線的己方端距離(復出時 prog 從這裡接回,不是從 0 重走)',
       brain._rallyProg > 0 && brain._rallyProg < dTower + BOT_TACTIC.RALLY_BACK_M);
 
-    // 站到後方塔旁邊 → 選到的是後方那座(「最近」而不是「最前線」)
+    // Standing next to a rear tower → the rear one is picked ("nearest", not "frontmost")
     let rear = towers[0];
     for (const e of towers) if (Math.hypot(e.x - bx, e.z - bz) < Math.hypot(rear.x - bx, rear.z - bz)) rear = e;
     if (rear !== front) {
@@ -447,21 +458,22 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
       t('選的是**最近**那座塔(不是恆取最前線)', d2 < dRally, `${d2.toFixed(0)}m < ${dRally.toFixed(0)}m`);
     } else t('選的是**最近**那座塔(本戰場只有一排塔,跳過)', true);
 
-    // 塔全滅 → 退回主堡(降級不例外)
+    // All towers down → fall back to base (no exception for the downgrade)
     for (const e of towers) sim.ents.delete(e.id);
     brain._pickRally(h);
     t('己方砲塔全滅 ⇒ 集結點退回主堡(不會退到一個空塔位上)',
       brain._rallyAt === sim.basePos.STEEL || (near(brain._rallyAt[0], bx) && near(brain._rallyAt[1], bz)));
   }
 
-  // ---- 狀態機:進場 / 復出 / 不長征 ----
+  // ---- State machine: enter / resume / no long marches ----
   {
     const sim = new BattleSim(fakeCfg());
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
     const brain = new BotBrain(sim, 'b1', 'STEEL', 0, 'high');
     const dt = GAME.TICK_MS / 1000;
-    // `by` = 這一拍有人在打我。一律走**真的 `sim._damage`** —— 護盾水位、脫戰計時、威脅帳
-    // 三件事本來就是同一次傷害的產物,手動塞欄位會漏掉其中一份、測到假的通過。
+    // `by` = someone is hitting me this beat. Always travel the **genuine `sim._damage`** — shield
+    // level, disengage timing, and the threat book are all products of the same damage event; stuffing
+    // fields by hand drops one of the three and measures a false pass.
     const step = (n = 1, by = null) => {
       for (let i = 0; i < n; i++) { sim.t += dt; if (by) sim._damage(h, 1, by, 0); brain.update(dt); }
     };
@@ -471,7 +483,7 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     step(4);
     const foe = sim.addHero('SWARM', 'p9', CH_DRONE);
     foe.x = h.x + 60; foe.z = h.z; foe.y = 0;
-    sim._damage(h, h.maxSp * 0.7, foe, 0);      // 一波扛掉七成護盾
+    sim._damage(h, h.maxSp * 0.7, foe, 0);      // tanked 70% of shields in one wave
     for (let i = 0; i < 40 && brain.state !== 'RALLY'; i++) step(1, foe);
     t('一波扛掉半條護盾 ⇒ 進 RALLY(不是 RETREAT)', brain.state === 'RALLY', brain.state);
     t('進 RALLY 當下就定案集結點', brain._rallyAt != null);
@@ -480,7 +492,7 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     step(120, foe);
     const d1 = Math.hypot(h.x - brain._rallyAt[0], h.z - brain._rallyAt[1]);
     t('RALLY 真的往集結點移動', d1 < d0, `${d0.toFixed(0)}m → ${d1.toFixed(0)}m`);
-    h.sp = h.maxSp;                             // 護盾回滿
+    h.sp = h.maxSp;                             // shields back to full
     for (let i = 0; i < 40 && brain.state === 'RALLY'; i++) step();
     t('等滿護盾即復出(不必等裝甲)', brain.state !== 'RALLY' && !brain._pulling(), brain.state);
     t('復出的沿兵線進度接回集結點(**不是**從主堡 0 重走)', near(brain.prog, rallyProg, 200),
@@ -488,8 +500,9 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     t('復出後不會立刻又想撤(遲滯帶真的關得起來)',
       brain._pullWant(h, h.hp / h.maxHp, 1) === null);
 
-    // 裝甲掉破 25% ⇒ 從 RALLY 升級成 RETREAT(目的地換成主堡)。
-    // 先把稽核自己放的敵人撤掉:留著會把機體打死,`update` 一早退就不再走位,測到的是死人不動
+    // Armor breached below 25% ⇒ RALLY upgrades to RETREAT (destination swaps to base).
+    // Remove the audit's own planted enemy first: leaving it gets the mech killed, `update` early-outs
+    // stop moving, and what gets measured is a corpse standing still
     sim.ents.delete(foe.id); sim.heroes.delete(foe.pid); sim.squads.delete(foe.pid);
     h.hp = h.maxHp * 0.2; h.sp = 0;
     for (let i = 0; i < 40 && brain.state !== 'RETREAT'; i++) step();
@@ -502,12 +515,13 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
       brain._pullWant({ lastHitAt: sim.t }, 0.4, 0) === 'RETREAT' && brain.state === 'RETREAT');
     h.hp = h.maxHp; h.sp = h.maxSp;
     for (let i = 0; i < 40 && brain.state === 'RETREAT'; i++) step();
-    // 復出當拍就已經推了一步 ⇒ prog 不會剛好是 0,但 MUST 遠離集結進度(那才是「重新出發」)
+    // The resume beat already pushed one step ⇒ prog is never exactly 0, but MUST sit far from rally
+    // progress (that is what "starting over" means)
     t('補到 RESUME_HP 才復出,且 prog 從 0 重走(回堡 = 重新出發)',
       brain.state !== 'RETREAT' && brain.prog < rallyProg * 0.1, `${brain.state} prog=${brain.prog.toFixed(1)}`);
   }
 
-  // ---- RALLY 沿路照打(轉身跑掉不還手 = 送人頭)----
+  // ---- RALLY keeps shooting on the way out (running away silent = feeding kills) ----
   {
     const sim = blank();
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
@@ -521,7 +535,7 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     h.ammo.light = wd.mag; h.reloadUntil.light = 0; h.fireAt.light = -99;
     brain._aimAt = 0;
     const dtk = GAME.TICK_MS / 1000;
-    // ---- 還在挨打:邊退邊打(轉身不還手 = 送人頭)----
+    // ---- Still under fire: shoot while pulling back (silent retreat = feeding kills) ----
     h.lastHitAt = sim.t;
     const hp0 = foe.hp;
     const [x0, z0] = [h.x, h.z];
@@ -529,7 +543,8 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     t('還在挨打 ⇒ RALLY 途中照樣開火(打帶跑的宏觀版本)', foe.hp < hp0, `掉 ${(hp0 - foe.hp).toFixed(1)}`);
     t('還在挨打 ⇒ 真的往集結點退', Math.hypot(h.x - x0, h.z - z0) > 0);
     t('RALLY 途中視角看向目標(不是背對敵人跑)', brain._wantRy != null);
-    // ---- 已脫離接觸:停火停步等護盾(繼續開火 = 脫戰計時永遠被還擊重置,護盾回不來)----
+    // ---- Disengaged: hold fire and hold position for shields (keep shooting = return fire keeps
+    // resetting the disengage timer, shields never return) ----
     h.lastHitAt = sim.t - VITALS.OOC_S - 1;
     h.ammo.light = wd.mag; h.reloadUntil.light = 0; h.fireAt.light = -99;
     const hp1 = foe.hp;
@@ -549,7 +564,7 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
 sec('Ⅴ 打帶跑:裝填中拉開、可擊發貼上去(高難度)');
 // ---------------------------------------------------------------------------------
 {
-  /** 把敵人放在射程 0.7× 處跑一拍 `_engage`,回傳「靠近(+)/拉開(−)」的位移分量 */
+  /** Park the enemy at 0.7x range, run one `_engage` beat, return the closing (+)/opening (−) displacement component */
   const closeIn = (diffKey, reloading, kind = 'soldier') => {
     const sim = blank();
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
@@ -562,14 +577,15 @@ sec('Ⅴ 打帶跑:裝填中拉開、可擊發貼上去(高難度)');
     h.reloadUntil.light = reloading ? sim.t + 2 : 0;
     const d0 = Math.hypot(foe.x - h.x, foe.z - h.z);
     brain._engage(h, UNITS[h.kind], foe, GAME.TICK_MS / 1000);
-    return d0 - Math.hypot(foe.x - h.x, foe.z - h.z);   // >0 = 靠近
+    return d0 - Math.hypot(foe.x - h.x, foe.z - h.z);   // >0 = closing
   };
   t('高難度・可擊發:貼上去', closeIn('high', false) > 0, `${closeIn('high', false).toFixed(2)}m`);
   t('高難度・裝填中:拉開(這就是打帶跑)', closeIn('high', true) < 0, `${closeIn('high', true).toFixed(2)}m`);
   t('中難度:裝填中不拉開(打帶跑是高級專屬)', closeIn('medium', true) > 0);
   t('低/新手難度同樣不打帶跑(舊制的 0.6 距離環)',
     closeIn('low', true) > 0 && closeIn('novice', true) > 0);
-  // 建築維持舊制的 0.85 距離環 ⇒ 在 0.7× 射程處本來就會往後站,重點是**裝填與否不改變它**
+  // Buildings keep the legacy 0.85 distance ring ⇒ at 0.7x range they already stand off; the point is
+  // **reloading changes nothing about it**
   t('對建築不打帶跑(塔不會追,拉開只是白白少打幾秒:裝填與否位移一致)',
     near(closeIn('high', true, 'tower'), closeIn('high', false, 'tower'), 1e-6),
     `${closeIn('high', true, 'tower').toFixed(3)} vs ${closeIn('high', false, 'tower').toFixed(3)}`);
@@ -579,12 +595,13 @@ sec('Ⅴ 打帶跑:裝填中拉開、可擊發貼上去(高難度)');
 sec('Ⅵ 不回歸:護盾回復規則沒被動到 / 舊制難度逐位元不變');
 // ---------------------------------------------------------------------------------
 {
-  // OOC_S 是**讀**來當交戰判定(見 Ⅱ);禁的是「自己回盾」—— 回復速率整條只准住 sim
+  // OOC_S is **read** as the engagement test (see II); what is banned is "self-healing shields" —
+  // the whole regen rate lives in sim only
   t('護盾脫戰回復仍由 sim 結算(戰術層只讀交戰秒數,MUST NOT 自己給 bot 回盾)',
     VITALS.OOC_S > 0 && VITALS.SP_REGEN_PS > 0 && !/SP_REGEN_PS/.test(botsCode));
   t('bots.js MUST NOT 直接改 hp/sp(權威狀態只在 sim 結算)',
     !/h\.(hp|sp)\s*=[^=]/.test(botsCode));
-  // 低難度 bot 的一整段推線 MUST 與改制前逐位元相同 —— 這裡以「不吃任何戰術分支」代驗
+  // A low-tier bot's whole push MUST stay bit-identical to pre-migration — verified here by "takes no tactical branch"
   {
     const sim = blank();
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
@@ -610,7 +627,7 @@ sec('Ⅵ 不回歸:護盾回復規則沒被動到 / 舊制難度逐位元不變'
 sec('Ⅶ 防守姿態與攻防招式策略 行為直測(真 BattleSim + 真 BotBrain)');
 // ---------------------------------------------------------------------------------
 {
-  // ① 新手難度: 完全不使用防守姿態
+  // 1 Novice tier: never uses the defensive stance
   {
     const sim = blank();
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
@@ -622,7 +639,7 @@ sec('Ⅶ 防守姿態與攻防招式策略 行為直測(真 BattleSim + 真 BotB
     t('新手難度: 危急撤退亦不進入防守姿態', h.defending !== true);
   }
 
-  // ② 低難度: 僅在撤退回主堡且受擊時被動舉盾保命; 一般交戰裝填不舉盾
+  // 2 Low tier: passive shield-up only when retreating to base under fire; no shield-up while reloading in normal combat
   {
     const sim = blank();
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
@@ -633,7 +650,7 @@ sec('Ⅶ 防守姿態與攻防招式策略 行為直測(真 BattleSim + 真 BotB
     t('低難度: defend 旗標為 true', brain.diff.defend === true);
     t('低難度: 撤退回主堡受擊中進入防守姿態保命', h.defending === true);
 
-    // 一般交戰裝填中: 不舉盾(無 tactic 戰術旗標)
+    // Normal-combat reload: no shield-up (no tactic flag)
     brain.state = 'ENGAGE';
     h.reloadUntil.light = sim.t + 2;
     brain._opAt.defend = 0; brain._opNext = 0;
@@ -641,7 +658,7 @@ sec('Ⅶ 防守姿態與攻防招式策略 行為直測(真 BattleSim + 真 BotB
     t('低難度: 一般交戰換彈不具備戰術切盾意識', h.defending === false);
   }
 
-  // ③ 中難度: 戰術性防守(換彈切盾、撤退/集結持盾、磁力損耗釋放防守招式)
+  // 3 Mid tier: tactical defense (shield-up on reload, shield held on retreat/rally, defensive ability on magnet attrition)
   {
     const sim = blank();
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
@@ -654,17 +671,17 @@ sec('Ⅶ 防守姿態與攻防招式策略 行為直測(真 BattleSim + 真 BotB
     brain._updateDefending(h, null);
     t('中難度: 輕武器換彈空窗期戰術性切換防守姿態', h.defending === true);
 
-    // 磁力損耗過半: 觸發防守招式
+    // Magnet attrition past half: fire the defensive ability
     const hd = sim.addHero('SWARM', 'b2', CH_DRONE);
     const bd = new BotBrain(sim, 'b2', 'SWARM', 0, 'medium');
     hd.sp = 40; hd.maxSp = 200; hd.lastHitAt = sim.t; hd.abil.skill = 1; hd.mp = 999; hd.acd.skill = 0;
     bd._opAt.ability = 0; bd._opNext = 0;
-    bd._castSupport(hd, 1.0); // 即使 HP 滿血(frac=1.0)，磁力過半損耗仍觸發防守招式
+    bd._castSupport(hd, 1.0); // fires the defensive ability on past-half magnet attrition even at full HP (frac=1.0)
     t('中難度: 磁力損耗過半及時啟動防守招式充能/強化',
       (hd.acd.skill || 0) > sim.t || (hd.achg?.skill?.rechargeAt?.length || 0) > 0 || !!hd.cast);
   }
 
-  // ④ 高難度: 精英攻防一體(換彈切盾、裝填完成主動收盾、朝向威脅來源)
+  // 4 High tier: elite all-round offense-defense (shield-up on reload, active shield-down once loaded, facing the threat)
   {
     const sim = blank();
     const h = sim.addHero('STEEL', 'b1', CH_ROBOT);
@@ -679,7 +696,7 @@ sec('Ⅶ 防守姿態與攻防招式策略 行為直測(真 BattleSim + 真 BotB
     t('高難度: 換彈空窗進入防守姿態', h.defending === true);
     t('高難度: 持盾防守時自動轉向威脅警戒方向', brain._wantRy != null);
 
-    // 裝填完成且有目標已就緒: 主動解除防守姿態開火
+    // Reload complete with a target ready: actively drop the defensive stance to attack
     const foe = sim._add({ kind: 'soldier', side: 'SWARM', lane: 0, x: 0, z: 50, y: 0, hp: 100 });
     h.reloadUntil.light = 0;
     brain._aimAt = sim.t - 1;

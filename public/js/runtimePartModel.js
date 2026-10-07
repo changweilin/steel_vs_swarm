@@ -1,5 +1,5 @@
-// 零件台宣告式零件 → 遊戲執行期幾何的唯一轉接縫。
-// 每個通過物件合併成一顆 vertex-color mesh；碰撞與場景配置不得反讀此視覺幾何。
+// Single adapter seam from bench-declared parts to runtime game geometry.
+// Each approved object merges into one vertex-color mesh; collision and scene layout MUST NOT read back this visual geometry.
 import * as THREE from 'three';
 import { sceneObjectMat, toonMat } from './toon.js';
 import { sceneryBoxData } from './sceneryAppearance.js';
@@ -38,8 +38,8 @@ function partColor(part, palette) {
 }
 
 /**
- * 舊 model.json 沒有顏色頂點屬性時，依生成器寫入的零件/面順序補回顏色。
- * 面與零件皆由同一份 meshData 產生，這裡只做資料補全，不重建幾何。
+ * Backfills colors by generator-written part/face order when legacy model.json lacks color vertex attributes.
+ * Faces and parts come from the same meshData; this only completes data, never rebuilds geometry.
  */
 function deriveMeshColors(meshData, parts, palette) {
   const vertexCount = Math.floor((meshData?.vertices?.length || 0) / 3);
@@ -64,7 +64,7 @@ function deriveMeshColors(meshData, parts, palette) {
   return colors;
 }
 
-/** 建立已烘焙的 v6 meshData；預覽、零件台與遊戲端共用同一組頂點與面。 */
+/** Build baked v6 meshData; preview, bench, and game share the same vertices and faces. */
 export function runtimeMeshDataGeometry(meshData, parts = [], palette = null) {
   const vertices = meshData?.vertices;
   const faces = meshData?.faces;
@@ -110,7 +110,7 @@ function wedgeGeometry(dimensions) {
   return geo;
 }
 
-/** 建立單一零件幾何；未知型別直接拋錯，禁止靜默退回方盒。 */
+/** Build a single part geometry; unknown types throw loudly, never silently fall back to a box. */
 export function runtimePrimitiveGeometry(part) {
   if (!part || !TYPES.has(part.type)) throw new TypeError(`未知零件型別:${part?.type || 'null'}`);
   const sides = Math.max(3, Math.min(24, part.sides | 0 || 8));
@@ -185,10 +185,10 @@ export function resolvePalette(entry, options = {}) {
 }
 
 /**
- * 把異質 primitive 烤成一顆非索引幾何；顏色寫進逐頂點屬性，材質維持單一。
- * 支援透過 options.palette / options.paletteIndex / options.seed 動態套用配色清單。
- * @param {Array<object>} parts 零件台輸出的 parts 陣列
- * @param {object} [options] 配色與母體設定
+ * Bakes heterogeneous primitives into one non-indexed geometry; colors go into per-vertex attributes, material stays single.
+ * Supports dynamic palette lists via options.palette / options.paletteIndex / options.seed.
+ * @param {Array<object>} parts parts array from the bench
+ * @param {object} [options] palette and parent settings
  */
 export function mergeRuntimeParts(parts, options = {}) {
   if (!Array.isArray(parts) || !parts.length) throw new TypeError('執行期模型缺少 parts');
@@ -242,8 +242,8 @@ export function mergeRuntimeParts(parts, options = {}) {
   return merged;
 }
 
-// 僅快取不可變正式列；編輯中的預覽列每次重建，避免看到上一版零件。
-// 回傳獨立幾何，物件拆除不會釋放其他實體仍在使用的 buffer。
+// Cache only immutable approved rows; in-progress preview rows rebuild every time, so stale parts are never shown.
+// Returns independent geometry, so tearing down one object never frees buffers still used by others.
 const compiledModels = new Map();
 const COMPILED_MODEL_LIMIT = 32;
 function compiledGeometry(entry, palette, options) {
@@ -268,7 +268,7 @@ function compiledGeometry(entry, palette, options) {
   return geometry.clone();
 }
 
-/** 建立可複製的零件台物件；entry 必須是 resolved runtime roster 的正式列。 */
+/** Build a duplicable bench object; entry must be an approved row of the resolved runtime roster. */
 export function makeRuntimePartModel(entry, { environment = true, palette = null, paletteIndex = null, seed = null } = {}) {
   if (!entry?.parts?.length) throw new TypeError(`執行期目錄列缺少 parts:${entry?.key || 'unknown'}`);
   const resolvedPalette = palette || resolvePalette(entry, { paletteIndex, seed });

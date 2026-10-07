@@ -1,31 +1,38 @@
-// ============ 操作方式 / 觀戰選單稽核(2026-07-31 使用者需求)============
-// 用途:改 `public/js/ctrlmode.js`、`mobile.js` 的裝置判定/設定 UI、`game.js` 的
-// `_setPaused`/`_applyCtrlScheme`/觀戰指標鎖定,或 `main.js` 的 TOUCH_UI 消費端之後跑這一支。
-// 跑法:`node tools/audit_ctrl_mode.mjs [-v]`(純原文 + 真品直測,不需瀏覽器/外網)
+// ============ Control scheme / spectator-menu audit (2026-07-31 user request) ============
+// Purpose: run after changing `public/js/ctrlmode.js`, device detection/settings UI in `mobile.js`,
+// `game.js` `_setPaused`/`_applyCtrlScheme`/spectator pointer-lock, or `main.js` TOUCH_UI consumers.
+// Usage: `node tools/audit_ctrl_mode.mjs [-v]` (pure source + genuine direct tests, no browser/network)
 //
-// 這支要釘住的**六件事**(壞掉都不會報錯,只會「選項沒反應」或「觀戰卡在戰場出不去」):
-//   Ⅰ 單一真相縫:裝置判定(maxTouchPoints / pointer:coarse / 短邊)只有 ctrlmode.js 一份,
-//     mobile.js / game.js / main.js MUST NOT 各寫一份;ctrlmode.js MUST 可離線 import
-//     (不准 import three/DOM 模組,否則本稽核、單機版靜態載入與 rooms.js 都會炸)。
-//   Ⅱ 規則直測(真品;2026-07-31 使用者定案「操作方式應該由房主選擇」):預設 = 不限定、
-//     不限定吃裝置判定、**戰區定案蓋過我的預設**、**離開戰區退回我的預設**、
-//     **限定時目前操控不可變更**(= 使用者說的「遊戲中不可變更,除非不限定」)、
-//     不限定時在不在戰區都可切換、舊鍵 `svs_touchui` 遷移、`?ctrl=`/`?touch=` 逃生門。
-//   Ⅲ 消費端單一縫:`isTouchUI()` 只是轉呼 `usePad()`;操作方式的選項 DOM 只有 mobile.js 一份
-//     (戰區畫面 `renderCtrlModeRow` / 設定頁 `renderCtrlSettings`;index.html / main.js
-//     MUST NOT 另寫一組按鈕);main.js 的 TOUCH_UI MUST 是函式(快取成常數 ⇒ 說明停在舊版)。
-//   Ⅳ 戰鬥中切換:建/毀搖桿層只住 `game.js _applyCtrlScheme`,且訂閱在 dispose 解除
-//     (留著 = 下一局重建殭屍層);`_applyCtrlScheme` MUST NOT 自己判「能不能改」(那是 Ⅱ 的規則)。
-//   Ⅴ 戰場選單隨時叫得出(2026-08-01 使用者需求「遊戲中隨時都可以 esc」):ESC 的受理只有
-//     `_escMenu()` 一個出口(鍵盤 keydown / 指標解鎖 `_onPlc` / 觸控 ☰ 三個來源同縫),
-//     MUST NOT 綁 `side`/`dead`/`paused`/指標鎖定狀態的條件 —— 那些條件散出去就是
-//     「某個時刻按了沒反應」(前科:未鎖定指標的交戰玩家、重生後還沒點畫面時 ESC 全無效);
-//     `_setPaused` MUST NOT 有 `!this.side` 早退、觸控 HOME 對觀戰 MUST NOT 收掉。
-//   Ⅵ 房主定案(真品 RoomHub 直測):操作方式住 `room.config.ctrl`、開房吃房主預設、
-//     **只有房主改得動**、非法值靜默忽略、廣播與戰區列表都帶得出去 ——
-//     客戶端的 `_room` 只准由這份廣播寫入(先斬後奏 = 房主與隊友版型不同步)。
-// 原文一律經 `audit_src.mjs`(換行正規化 + 大括號配對抽方法):自己 readFileSync 的話,
-// CRLF 檢出的工作區會讓「逐行剝註解 / split('\n')」靜默失效(見該檔檔頭)。
+// Six things this file pins (breakage never errors, only "option does nothing" or "spectator stuck with
+// no way out of the match"):
+//   I Single source of truth: device verdicts (maxTouchPoints / pointer:coarse / short edge) exist only in
+//     ctrlmode.js; mobile.js / game.js / main.js MUST NOT each write one; ctrlmode.js MUST stay offline-
+//     importable (importing three/DOM modules would blow up this audit, solo static loading, and rooms.js).
+//   II Rule direct tests (genuine article; 2026-07-31 user decision "the host picks the control scheme"):
+//     default = unrestricted, unrestricted follows device verdicts, **room verdict overrides my default**,
+//     **leaving the room falls back to my default**, **a locked scheme cannot change the current controls**
+//     (= the user's "no changing mid-game unless unrestricted"), unrestricted switches anywhere in or out
+//     of rooms, legacy `svs_touchui` key migration, `?ctrl=`/`?touch=` escape hatches.
+//   III Consumer single seam: `isTouchUI()` merely forwards `usePad()`; the scheme option DOM exists only in
+//     mobile.js (`renderCtrlModeRow` for rooms / `renderCtrlSettings` for settings; index.html / main.js
+//     MUST NOT write a second button set); main.js TOUCH_UI MUST be a function (a cached constant ⇒
+//     descriptions freeze at the old build).
+//   IV Mid-combat switching: stick-layer build/destroy lives only in `game.js _applyCtrlScheme`, with the
+//     subscription released on dispose (kept = a zombie layer rebuilt next match); `_applyCtrlScheme` MUST
+//     NOT judge "may I switch" itself (that rule lives in II).
+//   V Match menu always reachable (2026-08-01 user request "ESC must work anytime in game"): ESC has exactly
+//     one exit, `_escMenu()` (keyboard keydown / pointer-unlock `_onPlc` / touch ☰, three sources one seam),
+//     MUST NOT bind `side`/`dead`/`paused`/pointer-lock conditions — scattered conditions become "pressed
+//     at some moment and nothing happens" (prior cases: fighting players with unlocked pointers, ESC fully
+//     dead after respawn before clicking the screen); `_setPaused` MUST NOT early-out on `!this.side`,
+//     touch HOME MUST NOT hide from spectators.
+//   VI Host verdict (genuine RoomHub direct test): the scheme lives in `room.config.ctrl`, creating a room
+//     takes the host default, **only the host may change it**, illegal values silently ignored, broadcasts
+//     and room lists both carry it — the client's `_room` may only be written by that broadcast
+//     (act-first = host and teammates on different layouts).
+// Source always via `audit_src.mjs` (newline normalization + brace-matched method extraction): a private
+// readFileSync lets "per-line comment stripping / split('\n')" silently fail on CRLF checkouts (see that
+// file's header).
 import { readSrc, grabMethod, grabFn } from './audit_src.mjs';
 
 const read = (...p) => readSrc(...p);
@@ -36,21 +43,23 @@ const mainSrc = read('public', 'js', 'main.js');
 let htmlSrc = read('public', 'index.html');
 let cssSrc = read('public', 'css', 'style.css');
 
-// 反向驗證(五支,全部服務 Ⅹ 段;把規則寫回改制前的壞版):
-//   --break-viewport 拿掉 viewport meta 的 `viewport-fit=cover` ⇒ Ⅹ① MUST 紅
-//   --break-textadj  拿掉根層的 text-size-adjust                ⇒ Ⅹ② MUST 紅
-//   --break-touchdev 頁面級硬化的選擇器改回 `body.touch-ui`     ⇒ Ⅹ③ MUST 紅、Ⅹ⑤ MUST 仍綠
-//   --break-touchact 拿掉 `#game { touch-action: none }` 那一條  ⇒ Ⅹ③ MUST 紅
-//   --break-meta-select 拿掉 PIN / 區網網址的選字窄豁免       ⇒ Ⅹ⑥ MUST 紅
-// 替換無效(原文已變)MUST 當場失敗 —— 不然 break 永遠是綠的(§5.4 ㋑ / tools/CLAUDE.md 紀律 2)。
-// ⚠ 樣式一律只綁**結構錨點**(屬性名 / 選擇器),MUST NOT 綁現值(綁死現值的 break 會在值被
-//    重算之後靜默變成 no-op,而紅字數量少一條看起來只像「這一輪順便修好了」)。
+// Reverse verification (five flags, all serving section X; rewrite rules back to the pre-migration broken form):
+//   --break-viewport  drop viewport meta `viewport-fit=cover` ⇒ X-1 MUST go red
+//   --break-textadj  drop root text-size-adjust                ⇒ X-2 MUST go red
+//   --break-touchdev page-hardening selectors back to `body.touch-ui` ⇒ X-3 MUST go red, X-5 MUST stay green
+//   --break-touchact  drop the `#game { touch-action: none }` rule ⇒ X-3 MUST go red
+//   --break-meta-select drop the PIN / LAN-URL select-text exemption ⇒ X-6 MUST go red
+// A no-op replacement (source already moved) MUST fail loudly — otherwise breaks stay green forever
+// (§5.4 ㋑ / tools/CLAUDE.md discipline 2).
+// ⚠ Patterns bind **structural anchors** only (attribute names / selectors), MUST NOT bind current values
+// (a value-bound break silently becomes a no-op after the value is recomputed, and one fewer red line just
+// reads as "fixed along the way this round").
 const BREAK_VIEWPORT = process.argv.includes('--break-viewport');
 const BREAK_TEXTADJ = process.argv.includes('--break-textadj');
 const BREAK_TOUCHDEV = process.argv.includes('--break-touchdev');
 const BREAK_TOUCHACT = process.argv.includes('--break-touchact');
 const BREAK_META_SELECT = process.argv.includes('--break-meta-select');
-/** 逐條字面替換;沒咬到就當場失敗(替換無效 = 壞版根本沒造出來) */
+/** Per-pattern literal replacement; a miss fails loudly (a no-op replacement = the broken version never built) */
 const patch = (flag, name, src, re, to) => {
   if (!flag) return src;
   if (!re.test(src)) {
@@ -77,15 +86,15 @@ const ok = (cond, msg) => {
   else { fail++; console.log(`  ✗ ${msg}`); }
 };
 const sec = (t) => console.log(`\n▍${t}`);
-/** 取出某個方法的原文(大括號配對;找不到回空字串 —— 由斷言自己報「沒這個方法」) */
+/** Extract a method's source (brace matching; empty string when missing — the assertion itself reports "no such method") */
 const body = (src, name) => { try { return grabMethod(src, name); } catch { return ''; } };
-/** 同上,但取**模組頂層**的具名函式(`export function …`);找不到同樣回空字串 */
+/** Same, but for **module-top-level** named functions (`export function …`); empty string when missing */
 const fnBody = (src, name) => { try { return grabFn(src, name); } catch { return ''; } };
-/** 剝掉註解(斷言只認**執行原文**;註解裡寫什麼都不算數) */
+/** Strip comments (assertions only recognize **executable source**; whatever comments say does not count) */
 const code = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 const count = (src, re) => (src.match(re) || []).length;
 
-// ── Ⅰ 單一真相縫 ────────────────────────────────────────────────
+// ── I Single source of truth ────────────────────────────────────────────────
 sec('Ⅰ 裝置判定 / 模組相依單一縫');
 const ctrlCode = code(ctrlSrc);
 ok(!/^\s*import\s/m.test(ctrlCode),
@@ -99,13 +108,14 @@ for (const [f, src] of [['mobile.js', mobileSrc], ['game.js', gameSrc], ['main.j
   ok(!/\(pointer:\s*coarse\)'\)\.matches/.test(c.replace(/mm\('\(pointer: coarse\)'\)/g, '')),
     `${f} MUST NOT 自己判 pointer:coarse 來決定操控版本`);
 }
-// 診斷面板照樣可以「顯示」原始值(那是給玩家看的),但結論一律回頭問 ctrlmode
+// The diagnostics panel may still "display" raw values (for players to see), but verdicts always ask
+// ctrlmode again
 ok(/isTouchUI\(\)\s*\{\s*return usePad\(\);\s*\}/.test(mobileSrc),
   'mobile.js `isTouchUI()` MUST 只是轉呼 `usePad()`(消費端不必改名,判定卻只有一份)');
 
-// ── Ⅱ 規則直測(import 真品)────────────────────────────────────
+// ── II Rule direct tests (import the genuine article) ────────────────────────────────────
 sec('Ⅱ 三選一規則直測(真品 ctrlmode.js)');
-/** 每次重新載入模組 = 一次乾淨的分頁;stub 掉瀏覽器全域 */
+/** Each fresh reload = one clean page; browser globals stubbed */
 async function fresh({ store = {}, search = '', touch = 0, coarse = false, hover = true, screen = { width: 1920, height: 1080 } } = {}) {
   global.window = {
     localStorage: {
@@ -116,10 +126,10 @@ async function fresh({ store = {}, search = '', touch = 0, coarse = false, hover
     matchMedia: (q) => ({ matches: q.includes('pointer: coarse') ? coarse : q.includes('any-hover') ? hover : false }),
     screen,
   };
-  // Node 22 的 navigator 是 getter-only ⇒ 用 defineProperty 覆寫(直接指派會 throw)
+  // Node 22's navigator is getter-only ⇒ override via defineProperty (direct assignment throws)
   Object.defineProperty(global, 'navigator', { value: { maxTouchPoints: touch }, configurable: true, writable: true });
   Object.defineProperty(global, 'location', { value: { search }, configurable: true, writable: true });
-  // cache-busting query:同一支模組要重載成全新狀態(_mode/_pick/_locked 是模組級變數)
+  // cache-busting query: reloading one module into fully fresh state (_mode/_pick/_locked are module-level)
   return import(`../public/js/ctrlmode.js?t=${Math.random()}`);
 }
 
@@ -193,7 +203,7 @@ async function fresh({ store = {}, search = '', touch = 0, coarse = false, hover
   ok(seen === 2, `變更才發事件、解除訂閱後不再收(收到 ${seen} 次,期望 2)`);
 }
 
-// ── Ⅲ 消費端單一縫 ──────────────────────────────────────────────
+// ── III Consumer single seam ──────────────────────────────────────────────
 sec('Ⅲ 設定 UI 與消費端單一縫');
 ok(/export function renderCtrlSettings\(/.test(mobileSrc) && /export function syncCtrlSettings\(/.test(mobileSrc),
   '設定頁的「目前操控」DOM 只有 `renderCtrlSettings` 一份(渲染)+ `syncCtrlSettings`(同步)');
@@ -234,7 +244,7 @@ ok(/^onCtrlChange\(\(\) => syncCtrlSettings\(\)\);$/m.test(mobileSrc),
   '操作方式 UI 的同步訂閱 MUST 住模組層(掛在 installTouchUI 裡 ⇒ 進房後選項不會即時變灰)');
 ok(/\.segb:disabled/.test(cssSrc),
   '停用態 MUST 有視覺區別(不然玩家只會覺得「按了沒反應」)');
-// 2026-07-31「按鍵風格統一」:分段按鈕的鈕面樣式只准有 `.seg`/`.segb` 一份。
+// 2026-07-31 "unified button style": segmented button faces allow exactly one `.seg`/`.segb` copy.
 ok(!/\.tset-segb?\b/.test(cssSrc),
   '舊的 `.tset-seg`/`.tset-segb` MUST 已改名為 `.seg`/`.segb`(留著 = 兩套分段按鈕樣式並存)');
 for (const dead of ['.pause-tab {', '.help-cat {', '.unit-side-btn {', '.diff-select']) {
@@ -249,7 +259,7 @@ ok(/onCtrlChange\(/.test(mainSrc) && /syncPauseHelp\(\)/.test(mainSrc),
 ok(/renderRoomCtrl\(\);/.test(mainSrc) && /renderBotDiff\(lb\);\s*\n\s*renderRoomCtrl\(\);/.test(mainSrc),
   '戰區畫面 MUST 與電腦難度並列渲染操作方式(同一種「整房一個、房主可改」的房間設定)');
 
-// ── Ⅳ 戰鬥中切換(不限定)────────────────────────────────────────
+// ── IV Mid-combat switching (unrestricted) ────────────────────────────────────────
 sec('Ⅳ 戰鬥中切換:搖桿層建/毀');
 const apply = body(gameSrc, '_applyCtrlScheme');
 ok(apply.length > 0, 'game.js 有 `_applyCtrlScheme`');
@@ -264,14 +274,14 @@ ok(/this\._offCtrl = onCtrlChange\(/.test(gameSrc), '戰場訂閱操作方式變
 ok(/this\._offCtrl\?\.\(\)/.test(body(gameSrc, 'dispose')),
   'dispose MUST 解除訂閱(留著 = 下一局重建一個殭屍搖桿層)');
 
-// ── Ⅴ 戰場選單隨時叫得出(ESC / HOME)────────────────────────────
+// ── V Match menu always reachable (ESC / HOME) ────────────────────────────
 sec('Ⅴ ESC 隨時可用 + 觀戰 HOME');
 const paused = body(gameSrc, '_setPaused');
 ok(paused.length > 0 && !/!this\.side/.test(paused),
   '`_setPaused` MUST NOT 有 `!this.side` 早退(觀戰者也要有離開戰場的出口)');
 ok(/if \(this\._gameOver\) return;/.test(paused), '`_setPaused` 仍在分出勝負後早退(結束頁獨佔)');
 
-// Ⅴ-a 單一出口:三個來源(鍵盤 / 指標解鎖 / 觸控 ☰)全走 `_escMenu`
+// V-a Single exit: three sources (keyboard / pointer-unlock / touch menu) all travel `_escMenu`
 const escBody = body(gameSrc, '_escMenu');
 ok(escBody.length > 0, 'game.js 有 ESC 的唯一出口 `_escMenu`');
 ok(/if \(this\._gameOver\) return;/.test(escBody),
@@ -300,9 +310,10 @@ ok(!/this\.side/.test(plcCode),
   '`_onPlc`(指標解鎖 → 戰場選單)MUST NOT 加 side 門檻,觀戰與交戰同一條路');
 ok(/this\._escMenu\(\);/.test(plcCode),
   '`_onPlc` 解鎖分支 MUST 走 `_escMenu`(順手蓋去彈跳戳記,擋掉瀏覽器補送的那顆 keydown)');
-// 陣亡倒數中按 ESC(2026-08-02 使用者需求「重生倒數計時也要可以按 ESC」):陣亡頁是
-// `pointer-events: none` ⇒ 玩家隨手點畫面就重新鎖上指標,那顆 ESC 的 keydown 會被瀏覽器吃掉,
-// 只剩解鎖這條路。`!this.dead` 門檻會把它一起擋掉 ⇒ 一律改用「我方主動解鎖」戳記。
+// ESC during the death countdown (2026-08-02 user request "respawn countdown must also take ESC"): the
+// death page is `pointer-events: none` ⇒ any casual screen click re-locks the pointer, and that ESC keydown
+// gets eaten by the browser — leaving only the unlock path. A `!this.dead` gate would block it too ⇒
+// always switch to the "we unlocked ourselves" stamp.
 ok(!/this\.dead/.test(plcCode),
   '`_onPlc` MUST NOT 用 `dead` 當門檻(陣亡倒數中真的按下的那顆 ESC 會被一起擋掉)');
 ok(/this\._plcSelf/.test(plcCode)
@@ -315,7 +326,7 @@ ok(/act === 'menu'\) \{ if \(down\) this\._escMenu\(\); return; \}/.test(cmd),
 ok(count(code(gameSrc), /this\._setPaused\(/g) === 2,
   '`_setPaused` 的呼叫端只剩兩處:`_escMenu` 切換 + `_onPlc` 重新鎖定時關選單');
 
-// Ⅴ-b 行為直測(真品原文;以 new Function 取回 `_escMenu` 本體)
+// V-b Behavior tests (genuine source; `_escMenu` body recovered via new Function)
 const escFn = new Function('ESC_GAP_S', `return ({${escBody}\n});`)(0.35)._escMenu;
 const mk = (o) => Object.assign({
   paused: false, shopOpen: false, _gameOver: false, dead: false, side: 'SWARM', _escAt: -1e9, log: [],
@@ -341,28 +352,29 @@ ok(setKind.length > 0 && !/data-act="menu"/.test(setKind),
   '觸控 HOME(戰場選單)MUST NOT 對觀戰收掉 —— 那是觀戰唯一的離場出口');
 ok(/\.gb-a, \.gb-aim, \[data-act="shop"\], \[data-act="lock"\]/.test(setKind),
   '其餘戰鬥鈕(A / R / ⊟ / 鎖定)仍對觀戰收起');
-// 版型稽核的 harness 是這一行的複製品,兩邊分家 = 量到不存在的版型
+// The layout audit's harness is a copy of this line; a split measures a layout that does not exist
 const tlAudit = read('tools', 'audit_touch_layout.mjs');
 ok(!/\[data-act="menu"\][^\n]*n\.hidden = spec/.test(tlAudit)
   && /\.gb-a, \.gb-aim, \[data-act="shop"\], \[data-act="lock"\]/.test(tlAudit),
   'audit_touch_layout 的 setKind 鏡射 MUST 與 mobile.js 逐字一致');
-// 說明文字:觀戰兩版都要提到選單出口(鍵鼠說 ESC、搖桿說 HOME)。
-// **取真品而不是正則刮原文**(2026-08-02):觀戰說明已改成由 `SPEC_CONTROLS` 逐列推導
-//(見 help.js;面板與選單共用同一份),原文裡不再有 `spectator: '…'` 那一行 ——
-// 繼續刮字串只會刮到空字串然後整批誤紅,而真正該驗的是「玩家最後讀到的那一份文字」。
+// Help text: both spectator builds must mention the menu exit (KBM says ESC, pad says HOME).
+// **Take the genuine article, never regex-scrape source** (2026-08-02): spectator help is now derived
+// row-by-row from `SPEC_CONTROLS` (see help.js; panel and menu share it) — the source no longer holds a
+// `spectator: '…'` line. Keep scraping strings and the batch false-reds on empty strings, while what truly
+// needs verifying is "the copy the player finally reads".
 const { CONTROLS_BY_KIND: HELP_KBM, TOUCH_CONTROLS: HELP_PAD } = await import('../public/js/help.js');
 const kbmSpec = HELP_KBM.spectator || '';
 const padSpec = HELP_PAD.spectator || '';
 ok(/ESC/.test(kbmSpec), '觀戰(鍵鼠版)操作提示 MUST 提到 ESC 戰場選單');
 ok(/HOME/.test(padSpec), '觀戰(搖桿版)操作提示 MUST 提到 HOME 戰場選單');
 
-// ── Ⅵ 房主定案(真品 RoomHub 直測)──────────────────────────────
+// ── VI Host verdict (genuine RoomHub direct test) ──────────────────────────────
 sec('Ⅵ 操作方式由房主選擇(真品 RoomHub)');
 const roomsSrc = read('server', 'rooms.js');
 ok(/from '\.\.\/public\/js\/ctrlmode\.js'/.test(roomsSrc),
   'rooms.js 的合法值 MUST 取自 ctrlmode.js(照抄一組字串 = 第二份選項表)');
-// 行為直測(開房 → 房主改 → 非房主改不動 → 非法值 → 廣播/列表)住 `npm test` 的
-// 「操作方式由房主選擇」段:那裡有現成的 fakeBattleConfig 與 RoomHub session harness。
+// Behavior tests (create room → host edits → non-host blocked → illegal values → broadcast/list) live in
+// `npm test`'s "control scheme picked by host" section: ready fakeBattleConfig and RoomHub session harness there.
 ok(/ctrl: CTRL_MODES\[m\.ctrl\] \? m\.ctrl : DEFAULT_CTRL_MODE/.test(roomsSrc),
   '開房 MUST 收下房主的預設、非法值退回 DEFAULT_CTRL_MODE');
 {
@@ -379,19 +391,20 @@ const e2eSrc = read('test', 'e2e.mjs');
 ok(/操作方式由房主選擇/.test(e2eSrc),
   'e2e MUST 有「操作方式由房主選擇」段(行為直測住那裡,本稽核只驗原文)');
 
-// ── Ⅶ 觀戰視角(滾輪縮放 / 四種視角循環)──────────────────────────
-// 2026-08-02 改制(使用者:「上帝視角加入下降操作」+「玩家視角可切換第一人稱 / 第三人稱跟隨 /
-// 第三人稱自由,運鏡時避免太晃」):相機本身的行為與平滑數學歸 `audit_spectator_cam.mjs`,
-// 這裡只留「觸控/鍵鼠鈕位與版型」這一面(本檔的職責)。
+// ── VII Spectator camera (wheel zoom / four-view cycle) ──────────────────────────
+// 2026-08-02 migration (user: "god view gains descend" + "player view switches first-person / third-person
+// follow / third-person free, keep camera moves steady"): camera behavior and smoothing math belong to
+// `audit_spectator_cam.mjs`; only the "touch/KBM buttons and layout" face stays here (this file's job).
 sec('Ⅶ 觀戰視角:滾輪縮放 + 四種視角循環');
 {
   const spec = body(gameSrc, '_updateSpectator');
   const specCode = code(spec);
   ok(spec.length > 0, '`_updateSpectator` 還在(觀戰視角的唯一結算點)');
-  // 純客戶端視角工具:與 VIEW_LOCK 同性質,MUST NOT 上行、MUST NOT 碰權威狀態(A1)
+  // Pure client-side camera tool: same nature as VIEW_LOCK — MUST NOT go uplink, MUST NOT touch
+  // authoritative state (A1)
   ok(!/this\.net|_cmd\(|\.send\(/.test(specCode),
     '觀戰視角 MUST NOT 送任何訊息(純客戶端視角工具,伺服器不參與)');
-  // 視點單一縫:玩家視角 MUST 與交戰 FPV 吃同一份 heroView + heroTargetH
+  // Viewpoint single seam: player view MUST share heroView + heroTargetH with combat FPV
   ok(/heroView\(/.test(specCode) && /heroTargetH\(/.test(specCode),
     '玩家視角的視點 MUST 走 heroView + heroTargetH 單一縫(手寫眼高 = 看到的與該玩家看到的分家)');
   ok(!/\b(?:1\.[0-9]|2\.[0-9])\s*[;,)]/.test(specCode.replace(/SPEC_CAM\.[A-Z_]+/g, '')),
@@ -421,8 +434,9 @@ sec('Ⅶ 觀戰視角:滾輪縮放 + 四種視角循環');
   ok(/滾輪/.test(kbmSpec) && /F /.test(kbmSpec),
     '觀戰(鍵鼠版)操作提示 MUST 提到滾輪縮放與 F 切換視角');
 
-  // ── 觸控:虛擬手把的視角切換(2026-08-02)────────────────────────
-  // A22 同功能只准一顆鈕 ⇒ 觀戰**借用**既有的招式/換機兩顆,MUST NOT 為觀戰另長新鈕。
+  // ── Touch: virtual-stick view switching (2026-08-02) ────────────────────────
+  // A22 allows one button per function ⇒ spectator **borrows** the existing ability/swap pair; MUST NOT
+  // grow a new spectator-only button.
   const cmd = code(body(gameSrc, '_cmd'));
   ok(/if \(!this\.side\) \{[\s\S]*?_specCycleView\(\)[\s\S]*?_specFollow\(/.test(cmd),
     '觸控觀戰 MUST 走 `_specCycleView` / `_specFollow` 同兩個縫(觸控層 MUST NOT 自己判模式)');
@@ -440,36 +454,41 @@ sec('Ⅶ 觀戰視角:滾輪縮放 + 四種視角循環');
     '觀戰(搖桿版)操作提示 MUST 提到兩顆借用鈕');
 }
 
-// ── Ⅷ 持握相關的兩個預設(2026-08-04 使用者需求)──────────────────────
-// 這兩條住這裡而不是 `audit_gyro` / `audit_touch_layout`:那兩支要 playwright,CI 沒裝就整支跳過
-// ⇒ 預設值被改回去也沒人紅。純原文的斷言可以進 CI,才擋得住無聲回退。
+// ── VIII Two grip-related defaults (2026-08-04 user request) ──────────────────────
+// These two live here rather than `audit_gyro` / `audit_touch_layout`: those need playwright, and a CI
+// without it skips them wholesale ⇒ silently reverted defaults with nobody red. Pure-source assertions run
+// in CI, which is what stops silent rollback.
 sec('Ⅷ 全螢幕方向鎖 / 陀螺儀預設值');
 const fullBody = code(fnBody(mobileSrc, 'toggleFullscreen'));
 ok(/gyro:\s*false\s*,/.test(code(mobileSrc)),
   '`TOUCH.gyro` 預設 MUST 為 false(使用者:「陀螺儀改成預設關閉」)');
 ok(fullBody !== '' && !/orientation\??\.lock/.test(fullBody),
   '`toggleFullscreen()` MUST NOT 鎖方向(使用者:「全螢幕時也可以旋轉手機切換直式/橫式」)');
-// 數**兩次**而不是「有出現」:退出全螢幕那條路本來就有一次 unlock ⇒ 只驗「有出現」的話,
-// 進場那條改回 lock() 也照樣綠(前科:反向驗證時三條斷言只紅了一條)。
+// Count **twice**, not "appears": the exit-fullscreen path already unlocks once ⇒ an "appears" check stays
+// green after the entry path regresses to lock() (prior case: only one of three assertions went red during
+// reverse verification).
 ok(count(fullBody, /orientation\?\.unlock\?\.\(\)/g) === 2,
   '進與出全螢幕 MUST 各 `unlock()` 一次 —— PWA manifest 與前一次留下的鎖都會延續,不解就等於預設鎖著');
-// 版型切換不歸 toggleFullscreen 管:轉向監聽是全螢幕內外共用的那一條路徑,拆掉就沒人換 class
+// Layout switching is not toggleFullscreen's business: the orientation listener is the shared path inside
+// and outside fullscreen; removing it leaves nobody swapping classes
 ok(/window\.addEventListener\('orientationchange', syncOrientation\)/.test(mobileSrc)
   && /screen\?\.orientation\?\.addEventListener\?\.\('change', syncOrientation\)/.test(mobileSrc),
   '轉向 MUST 由 `syncOrientation` 兩個監聽接手(全螢幕內轉手機才換得了直式/橫式版型)');
 
-// ── Ⅸ 視窗尺寸定案(旋轉 debounce;2026-08-16,`docs/anime_style_plan.md` ⑧-2)────────
-// 一次旋轉會連發好幾個尺寸,**只有最後一個是對的**。逐筆重配 render target = 頓一下,
-// 而且有機會停在中間那個錯的尺寸(畫面拉伸 / HUD 錯位,零錯誤訊息)。
-// 行為那一半(連發真的只回呼一次)住 `audit_touch_gesture` ⑨(要真的 setTimeout);
-// 這裡釘的是**只有一份等待時間**與**消費端沒有繞過它**——兩者都純原文,進得了 CI。
+// ── IX Window-size settle (rotation debounce; 2026-08-16, `docs/anime_style_plan.md` 8-2) ────────
+// One rotation fires several sizes in a burst, and **only the last is correct**. Re-fitting render targets
+// per event = one hitch, plus a chance of stopping on a wrong middle size (stretched frame / HUD offset,
+// zero error messages).
+// The behavior half (a burst really calls back once) lives in `audit_touch_gesture` 9 (needs a real
+// setTimeout); what is pinned here is **exactly one wait duration** with **no consumer bypassing it** —
+// both pure source, both CI-able.
 sec('Ⅸ 視窗尺寸定案(旋轉 debounce)');
 ok(/SETTLE_MS:\s*50\s*,/.test(mobileSrc) && /SETTLE_IOS_MS:\s*500\s*,/.test(mobileSrc),
   '等待時間 MUST 依裝置分兩檔(一般 50ms / iOS 500ms)且都住 `VIEWPORT`');
 ok(count(mobileSrc, /export function viewportSettleMs\(/g) === 1
   && /isIOS\(\) \? VIEWPORT\.SETTLE_IOS_MS : VIEWPORT\.SETTLE_MS/.test(mobileSrc),
   '「要等多久」只有 `viewportSettleMs()` 一份(消費端 MUST NOT 手寫毫秒數)');
-// iPadOS 13+ 預設送桌面版 UA ⇒ 只比對 iPad|iPhone|iPod 會把最會連發的那一類判成桌機
+// iPadOS 13+ ships desktop UA by default ⇒ matching only iPad|iPhone|iPod calls the burst-heaviest class desktops
 ok(/\/Mac\/\.test\(ua\) && \(navigator\.maxTouchPoints \|\| 0\) > 1/.test(mobileSrc),
   '`isIOS()` MUST 蓋住「iPadOS 偽裝成 Mac」那一格(Mac + 多點觸控)');
 ok(!/window\.dispatchEvent\(new Event\('resize'\)\)/.test(mobileSrc),
@@ -479,28 +498,30 @@ ok(!/window\.addEventListener\('resize', this\._onResize\)/.test(gameSrc)
   '`game.js` 的畫布/相機/HUD MUST 訂閱 `onViewportSettled`,MUST NOT 自己綁 window resize');
 ok(/this\._offResize\?\.\(\)/.test(gameSrc),
   'dispose MUST 解除訂閱(留著 = 下一局多一個殭屍消費端,同 Ⅳ 的搖桿層)');
-// `_applyRes()` 是像素比改變不是視窗改變 ⇒ 刻意直接呼叫,不該多等 50~500ms
+// `_applyRes()` is a pixel-ratio change, not a window change ⇒ deliberately called directly; no 50~500ms wait owed
 ok(/_applyRes\(\) \{[\s\S]{0,220}?this\._onResize\(\);/.test(gameSrc),
   '`_applyRes()` MUST 仍直接呼叫 `_onResize()`(自適應解析度降階不該排隊等 debounce)');
 
-// ── Ⅹ 頁面級觸控硬化 / viewport / 安全區(2026-08-16,`docs/anime_style_plan.md` ⑧-5)────────
-// 改制前這一整族**沒有任何一支稽核在守**(viewport meta / touch-action / safe-area 全 repo 零命中),
-// 而它們壞掉一律不報錯:捏合把整個戰場縮成一半、下拉刷新把對局重整掉、長按選字選到 HUD、
-// iOS 橫式自己放大字級把 HUD 帶推成另一個比例 —— 每一種都只表現成「手機上怪怪的」。
+// ── X Page-level touch hardening / viewport / safe area (2026-08-16, `docs/anime_style_plan.md` 8-5) ────────
+// Before the migration this whole family had **no audit guarding it** (viewport meta / touch-action /
+// safe-area: zero repo hits), while every breakage stays silent: pinch shrinking the whole battlefield by
+// half, pull-to-refresh wiping the match, long-press selecting into the HUD, iOS landscape upsizing text
+// and pushing the HUD band into another ratio — each reads only as "weird on phones".
 //
-// 這一段釘的是**「這台機器有沒有觸控硬體」與「這一房用不用搖桿」是兩個不同的問題**:
-// `body.touch-ui` = `ctrlmode.usePad()` = **房主可關的房間設定**(房主鎖「限定滑鼠鍵盤」時恆 false),
-// 把頁面級硬化掛在它下面 = 房主一鎖鍵鼠,真手機上那組保護整組消失。裝置那一半 MUST 走
-// `body.touch-dev`(判定唯一縫 `ctrlmode.touchCapable()`),版型那一半(--tl-* / .tl-* / 安全區)
-// MUST 留在 `body.touch-ui`。③ 與 ⑤ **兩欄同時對**才代表兩個旗標真的被拆開了。
+// This section pins that **"does this machine have touch hardware" and "does this room use sticks" are two
+// different questions**: `body.touch-ui` = `ctrlmode.usePad()` = a **host-switchable room setting** (always
+// false under a "KBM-only" host lock). Hanging page-level hardening under it means one host KBM lock wipes
+// the whole protection set on real phones. The device half MUST travel `body.touch-dev` (verdict single
+// seam `ctrlmode.touchCapable()`); the layout half (--tl-* / .tl-* / safe area) MUST stay on
+// `body.touch-ui`. Columns 3 and 5 **both green together** is what proves the two flags truly split.
 sec('Ⅹ 頁面級觸控硬化 / viewport / 安全區(⑧-5)');
 const cssCode = cssSrc.replace(/\/\*[\s\S]*?\*\//g, '');
-/** 逐 rule block 拆出「選擇器清單 + 宣告區」(巢狀 @media 的內層規則一樣吃得到) */
+/** Split each rule block into "selector list + declaration zone" (nested @media inner rules included) */
 const cssRules = [...cssCode.matchAll(/([^{}@]+)\{([^{}]*)\}/g)].map((m) => ({
   sels: m[1].split(',').map((s) => s.trim().replace(/\s+/g, ' ')).filter(Boolean),
   decl: m[2],
 }));
-/** 選擇器的**主體**(最後一個 compound)—— 「這條規則到底作用在誰身上」 */
+/** A selector's **subject** (last compound) — "who this rule actually acts on" */
 const subjectOf = (s) => s.split(/\s*[>+~]\s*|\s+/).filter(Boolean).pop() || '';
 const subjectsWhere = (re) => {
   const out = new Set();
@@ -508,24 +529,28 @@ const subjectsWhere = (re) => {
   return out;
 };
 
-// ① viewport-fit=cover:沒有它,`env(safe-area-inset-*)` 在挖孔/劉海機上恆回 0 ⇒ 下面 ⑤ 那四個
-//    變數全部是 0px,而 CSS 照樣算得出來、畫面照樣畫得出來,只有搖桿被瀏海吃掉。
+// 1 viewport-fit=cover: without it, `env(safe-area-inset-*)` always returns 0 on notched devices ⇒ the four
+// variables of item 5 below are all 0px, while CSS still computes, frames still draw — only the sticks get
+// eaten by the notch.
 ok(/<meta name="viewport"[^>]*viewport-fit=cover/.test(htmlSrc),
   'viewport meta MUST 含 `viewport-fit=cover`(挖孔螢幕的 safe-area-inset 才拿得到非零值)');
-// 縮放禁令是「戰場觸控要吃掉所有手勢」的另一半,與 ① 同一條 meta,一起釘住
+// The zoom ban is the other half of "touch must swallow every battlefield gesture"; same meta line as
+// item 1, pinned together
 ok(/<meta name="viewport"[^>]*user-scalable=no/.test(htmlSrc),
   'viewport meta MUST 含 `user-scalable=no`(雙擊放大會把準星與搖桿一起放大到畫面外)');
 
-// ② text-size-adjust:iOS 橫式會自動放大它認為太小的文字,而 HUD 下帶的 1/6 上限是
-//    `game.fitHudBand()` 量**自然高**反解 `--hud-k` 的 ⇒ 字被瀏覽器改大 = HUD 整條換一個比例。
-//    MUST 掛在根層(html / html, body),掛在 body.touch-* 之下就又綁回房間設定了。
+// 2 text-size-adjust: iOS landscape auto-enlarges text it deems too small, while the HUD lower band's 1/6
+// cap is `game.fitHudBand()` back-solving `--hud-k` from **natural height** ⇒ browser-resized text swaps the
+// whole HUD to another ratio. MUST hang on the root (html / html, body); under body.touch-* it re-binds to
+// room settings.
 const rootTextAdj = cssRules.some((r) => r.sels.some((s) => /^(html|body)$/.test(s))
   && /(^|\s|-)text-size-adjust:\s*100%/.test(r.decl));
 ok(rootTextAdj, '根層(html / body)MUST 宣告 `text-size-adjust: 100%`(iOS 橫式自動放大字級會扭掉 HUD 的 1/6)');
 ok(/-webkit-text-size-adjust:\s*100%/.test(cssCode),
   'MUST 一併帶 `-webkit-` 前綴(iOS Safari 只認前綴版)');
 
-// ③ 五條頁面級硬化 MUST 掛在**裝置** class 之下,且該 class 只由 `touchCapable()` 決定
+// 3 The five page-level hardenings MUST hang under the **device** class, whose class is decided only by
+// `touchCapable()`
 const devBlock = cssRules.find((r) => r.sels.length === 1 && r.sels[0] === 'body.touch-dev');
 const uiBlocks = cssRules.filter((r) => r.sels.some((s) => /^body\.touch-ui$/.test(s)));
 const HARDEN = [
@@ -545,7 +570,8 @@ ok(cssRules.some((r) => r.sels.includes('body.touch-dev #game') && /touch-action
   '`#game { touch-action: none }` MUST 掛在 `body.touch-dev` 之下(捏合/雙擊縮放要在真手機上恆被吃掉)');
 ok(!cssRules.some((r) => r.sels.includes('body.touch-ui #game') && /touch-action:\s*none/.test(r.decl)),
   '`body.touch-ui #game { touch-action: none }` MUST 已改綁裝置 class(留著 = 舊制那一份仍在)');
-// 判定唯一縫:掛載點只准轉呼 `touchCapable()`,MUST NOT 在 mobile.js 自己判裝置(Ⅰ 已守後半)
+// Verdict single seam: mount points may only forward `touchCapable()`; MUST NOT re-judge devices in
+// mobile.js (section I already guards the other half)
 ok(/classList\.toggle\('touch-dev',\s*touchCapable\(\)\)/.test(code(mobileSrc)),
   '`touch-dev` 的判定 MUST 只轉呼 `ctrlmode.touchCapable()`(裝置判定全 repo 只有一份)');
 ok(count(code(mobileSrc), /classList\.toggle\('touch-dev'/g) === 1
@@ -554,10 +580,11 @@ ok(count(code(mobileSrc), /classList\.toggle\('touch-dev'/g) === 1
 ok(!/classList\.toggle\('touch-dev',\s*(on|isTouchUI\(\)|usePad\(\))/.test(code(mobileSrc)),
   '`touch-dev` MUST NOT 吃 `isTouchUI()` / `usePad()`(那樣就只是 touch-ui 的第二個名字)');
 
-// ④ 捲動容器 MUST NOT 被 touch-action:none 蓋到 —— 大廳 `.screen` 與商店/設定/圖鑑十幾個
-//    `overflow-y: auto` 面板靠捲動;寫在根層或捲動容器上的症狀是「大廳滑不動」而不是報錯。
-//    判準是選擇器的**主體**(最後一個 compound):`body.touch-dev #game` 的主體是 `#game`,
-//    那是刻意的具名例外(戰場那一格本來就不該捲)。
+// 4 Scroll containers MUST NOT be covered by touch-action:none — lobby `.screen` and a dozen
+// `overflow-y: auto` shop/settings/codex panels scroll; written on the root or a scroll container the
+// symptom is "lobby does not scroll", never an error. The criterion is the selector's **subject** (last
+// compound): `body.touch-dev #game` subjects to `#game`, the deliberate named exception (the battlefield
+// cell was never meant to scroll).
 const taSubjects = subjectsWhere(/touch-action:\s*none/);
 const scrollSubjects = subjectsWhere(/overflow(-[xy])?:\s*(auto|scroll)/);
 const ROOTISH = /^(\*|html|body(\.[\w-]+)*)$/;
@@ -568,8 +595,9 @@ ok(taBad.length === 0,
 ok(cssRules.some((r) => r.sels.includes('.screen') && /overflow:\s*auto/.test(r.decl)),
   '`.screen` MUST 維持 `overflow: auto`(大廳每一頁都靠它捲)');
 
-// ⑤ 安全區與控件變數 MUST 留在 `body.touch-ui` —— 它們是**版型**:沒有搖桿層就沒有東西要內縮。
-//    這一欄是 ③ 的對照組:--break-touchdev 會讓 ③ 紅而 ⑤ MUST 仍綠,兩欄同時對才代表旗標拆開了。
+// 5 Safe-area and control variables MUST stay on `body.touch-ui` — they are **layout**: with no stick
+// layer nothing insets. This column is 3's control: --break-touchdev reds 3 while 5 MUST stay green; both
+// columns green together proves the split.
 const SAFE_VARS = ['--tl-sl', '--tl-sr', '--tl-sb', '--tl-st'];
 for (const v of SAFE_VARS) {
   ok(uiBlocks.some((r) => new RegExp(`\\${v}:\\s*env\\(safe-area-inset-`).test(r.decl)),
@@ -582,8 +610,9 @@ ok(uiBlocks.some((r) => /--tl-alpha:/.test(r.decl)) && uiBlocks.some((r) => /--t
 ok(!devBlock || !/--tl-/.test(devBlock.decl),
   '`body.touch-dev` MUST 只放頁面級硬化,一個 `--tl-*` 都不准放');
 
-// ⑥ 頁面級 `user-select:none` 不能讓觸控筆電房主無法把中繼資料交給隊友。只放行兩個
-//    唯讀值；放行 `.room-meta` 或整個房間頁會讓標題 / HUD 長按選字重新滲回來。
+// 6 Page-level `user-select:none` must not stop a touch-laptop host from handing relay metadata to
+// teammates. Only two read-only values pass; passing `.room-meta` or the whole room page lets
+// title/HUD long-press selection seep back in.
 const relaySelect = cssRules.find((r) => r.sels.includes('body.touch-dev #roomPin')
   && r.sels.includes('body.touch-dev #roomUrls'));
 ok(!!relaySelect && relaySelect.sels.length === 2,

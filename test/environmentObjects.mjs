@@ -26,13 +26,13 @@ for (const [kind, def] of Object.entries(WALL_KINDS)) {
   assert.equal(typeof boundaryObjectMeta(kind).category, 'string');
 }
 for (const [kind, def] of Object.entries(ENVIRONMENT_OBJECTS)) {
-  // 同名款優先：假山群已改走一般地質狹長單體，巨石仍由同名邊界款共用同一生成器。
+  // Prefer same-name match: rockery now routes to the generic narrow geology unit, boulder still shares one generator with its same-name boundary kind.
   const alias = STANDALONE_BOUNDARY_KINDS.find(key => key === kind)
     ?? STANDALONE_BOUNDARY_KINDS.find(key => WALL_KINDS[key].object === kind);
   assert(alias, `${kind}: missing reverse boundary consumer`);
   const options = { len: def.size[0], h: def.size[1], depth: def.size[2], seed: 42, variant: 0 };
   const rows = environmentParts(kind, { seed: 42 });
-  // 同一生成器、同參數、同輸出：wallParts 本体預設 yaw:false（連續除外），此處以 yaw:true 比對同源一致性。
+  // Same generator, same params, same output: wallParts body defaults to yaw:false (continuous excepted); compare with yaw:true for same-source consistency.
   assert.deepEqual(rows, wallParts(alias, { ...options, yaw: true }), `${kind}: one generator for both uses`);
   const entry = generateSharedBackgroundObject(`environment/${kind}`, 42);
   assert.equal(entry.parts.length, rows.length);

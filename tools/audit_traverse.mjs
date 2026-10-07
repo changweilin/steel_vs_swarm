@@ -1,27 +1,27 @@
 // ============ 兵線與結構「可通行」稽核(離線;泛洪連通性)============
-// 用途:回答**「一個機體真的走得過去嗎」**。既有的四十支稽核驗的都是**幾何契約**
-// (洞口涵蓋、剖面連續、走廊淨空、坡度曲線),沒有任何一支問過「從主堡出發,走得到
-// 對面主堡 / 每一座塔位 / 每一座洞的另一端嗎」。
+// Purpose: answer whether a mech can really walk there. The existing forty audits all check geometric contracts
+// (portal coverage, profile continuity, corridor clearance, grade curves); none asks whether starting from the home base one can reach
+// the far base, every tower slot, or the far end of every bore.
 //
-// 為什麼要有這支(2026-08-03):bot **沒有尋路** —— 正面頂著建物/工事就原地卡死,整條兵線
-// 停止推進,而「bot 站著不動」在畫面上非常像 AI 難度問題。現行唯一的偵測器是**間接**的
-// `繞行%`(`_skirtUntil` 生效的 tick 比,≈4.0%,SD≈0.2),要 24 場取樣才有訊號;單場工事損血
-// 在 433~10298 之間跳。本支改成**直接問連通性**,離線、零取樣變異、秒級。
+// Why this file exists (2026-08-03): bots have no pathfinding, so headbutting a building or work deadlocks the whole lane
+// while a frozen bot reads on screen like an AI difficulty issue. The only current detector is indirect:
+// skirt rate (tick share where skirtUntil applies, about 4.0 percent with SD about 0.2) needs 24 sampled matches for a signal, while
+// single-match work damage swings between 433 and 10298. This file asks connectivity directly: offline, zero sampling variance, seconds.
 //
-// 判定用的全部是**執行期的真品**,不是另抄一份:
-//   ・地形高度場   `venue_field.mjs buildHeightField`(terrain.js buildTerrain 高度管線的鏡射,
-//                  與 audit_lane_scenarios 同一份縫)
-//   ・結構路面     `biomes.js tunFloorAt` / `underpassPlan` / `deckAt` 的**原文**(venue_field 抽出)
-//   ・坡度閘       `data.js slopeDeg` / `slopeBlocked` / `SLOPE.STRUCT_M`(客戶端 `_slopeDegAlong`
-//                  的同一條規則:站立面與裸地形差超過 STRUCT_M = 人造鋪面,不吃坡度)
-//   ・實體推擠     **真的 `BattleSim.solidResolve`**(bots.js `_move` 的唯一縫)—— 塔/主堡/碉堡
-//                  的碰撞量體由它給,MUST NOT 在這裡自己算一份圓
-//   ・開挖後地形   `terrain.js carveTunnels` 的**原文**(venue_field `makeCarvedField`)——
-//                  引道路塹與地下道斜坡是**挖出來的**,拿天然地形走那一段會把通的路報成不通
+// Verdicts use only genuine runtime articles, never a recopied copy:
+//   terrain heightfield: venue_field.mjs buildHeightField (mirror of the terrain.js buildTerrain height pipeline,
+//                  same seam as audit_lane_scenarios).
+//   structure roadbed: genuine source of biomes.js tunFloorAt, underpassPlan and deckAt (extracted via venue_field).
+//   grade gate: data.js slopeDeg, slopeBlocked and SLOPE.STRUCT_M (the same rule as client slopeDegAlong:
+//                  standing surface above bare terrain by more than STRUCT_M means artificial paving, exempt from grade).
+//   body push: the real BattleSim.solidResolve (the single seam behind bots.js move), which supplies
+//                  tower, base and bunker volumes; MUST NOT compute a second circle here.
+//   carved terrain: genuine source of terrain.js carveTunnels (venue_field makeCarvedField):
+//                  approach cuttings and underpass ramps are dug out, so walking them on natural terrain reports passable roads as blocked.
 //
-// **淨空(V-D)刻意仍吃天然地形**:那一項問的是「這座山藏不藏得住頂板」,本來就該用未開挖的
-// 山來問(與 `tunnelWallProfile` 條件③吃 `natureAt` 同一條理由)。兩個高度場並存不是重複,
-// 是兩個不同的問題。
+// Clearance (V-D) deliberately still reads natural terrain: it asks whether the mountain hides the roof, which must be asked
+// against the undug mountain (same reason tunnelWallProfile condition 3 reads natureAt). Two heightfields coexist not as duplication
+// but as two different questions.
 //
 // 泛洪的兩個地雷(都踩過,寫在這裡免得再踩):
 //   ① visited 的鍵 MUST 是 **(格, 層別 sid, 高度桶)** —— 一格一個位元的話,每一段階梯、引道、

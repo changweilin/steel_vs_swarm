@@ -1,52 +1,52 @@
 // ============ 前線交戰模擬器(offline,純 Node,無依賴)============
-// 2026-08-02 使用者定案的模擬方式:
-//   「平衡性模擬器修改測試方式:須同時考量射程/速度/攻擊/範圍/兵波/砲塔等等,簡易模擬環境只有
-//     前線雙砲塔 + 兵波NPC(生成頻率同正式遊戲),模擬從雙方射程外開始接敵,有錢就升級,
-//     先擊毀敵方機體或一座砲塔者獲勝,模擬器在確保模擬準確度前提下測試時間越短越好。」
+// 2026-08-02 user-settled simulation method:
+//   Balance simulator must weigh range, speed, attack, area, waves, turrets and more at once; the minimal setup holds only
+//     frontline twin turrets plus wave NPCs (spawn cadence matches the live game), starts both sides out of range,
+//     upgrades whenever affordable, and wins by killing the enemy mech or one turret first; keep runtime as short as accuracy allows.
 //
-// 與既有模型的分工(**MUST NOT** 把兩者合併成一支):
-//   `tools/duel.mjs`  1v1 純武器對進戰 + 高度差掃描 —— 快速前置篩,量的是「兩把武器誰硬」。
-//                     刻意**沒有**兵波/砲塔/經濟/範圍,所以它對「攻擊範圍」這一軸完全無感。
-//   `tools/lanesim.mjs`(本檔)前線交戰 —— 量的是「這台機體在**真的兵線上**打不打得贏」:
-//                     射程 / 移速 / 火力 / **攻擊範圍** / 兵波 / 砲塔 / 經濟七軸同時作用。
-//                     這是「攻擊範圍」唯一會被計價的模型(bal ①④⑤ 全是單體模型,爆風半徑
-//                     在那裡從來沒有進過算式)⇒ 改 AoE 半徑 / AREA_WEAPONS / AOE_BUDGET
-//                     MUST 以本檔的 ⑦ 為準,MUST NOT 拿 ⑤ 的結果代替。
+// Split from existing models (MUST NOT merge the two into one):
+//   tools/duel.mjs: 1v1 pure-weapon duel plus height sweep, a fast pre-filter measuring which weapon is stronger.
+//                     Deliberately has no waves, turrets, economy or area, so it is blind to the area axis.
+//   tools/lanesim.mjs (this file) frontline battle: measures whether a chassis wins on a real lane:
+//                     range, move speed, firepower, area, waves, turrets and economy act together.
+//                     This is the only model that prices the area axis (bal sections 1, 4 and 5 are single-target models where
+//                     blast radius never enters the formula), so AoE radius, AREA_WEAPONS and AOE_BUDGET changes
+//                     defer to section 7 here, never to section 5 results.
 //
-// ---- 場景(全部由 data.js 推導,MUST NOT 手寫任何距離/秒數)----
-// 座標:x = 兵線軸(SWARM 在 −x、STEEL 在 +x),y = 橫向偏移。中線 x = 0。
-//   ・前線雙砲塔:各方塔位在 x = ∓SEP/2(SEP = tower.range × GAME.TOWER_SEP_F,= ② 的塔距
-//     不變式),每個塔位左右各一座塔於 y = ±GAME.TOWER_SIDE_OFF —— 「同塔位雙塔」與 ④ 同一組幾何。
-//   ・兵波:每 waveInterval() 秒自各方塔位推出一波 waveComp() 編制(**生成頻率同正式遊戲**),
-//     沿 x 前進;同波成員的縱深散布 = GAME.WAVE_COHESION_M、橫向散布 = ±LANE.LAT_M
-//     (橫向散布是「範圍武器一次掃到幾個」的關鍵 ⇒ MUST NOT 收成一維隊列,那會讓扇形/爆風
-//      在模型裡變成「一發全中」)。
-//   ・機體:雙方各一台,自「雙方最長有效射程 × START_F」的間距開始接敵(開場都打不到)。
-//   ・經濟:開場 ECON.START,擊殺照 ECON.BOUNTY 入帳,**有錢就升級**(貪心買最便宜的一階,
-//     與 game.js `_sweepPick` 同一條規則)。
-//   ・勝負:先擊毀「敵方機體」或「敵方任一座前線砲塔」者獲勝;逾時以戰果比分判(見 outcome())。
+// Scenes (all derived from data.js, MUST NOT hand-write any distance or second):
+// x is the lane axis (SWARM at minus x, STEEL at plus x); y is lateral offset. Midline x = 0.
+//   Frontline twin turrets: each side holds x = minus/plus SEP/2 (SEP = tower.range times GAME.TOWER_SEP_F, the tower-gap
+//     invariant of section 2), with one turret each side of the slot at y = plus/minus GAME.TOWER_SIDE_OFF, the same geometry as section 4.
+//   Waves: every waveInterval() seconds each side pushes one waveComp() formation (spawn cadence matches the live game)
+//     along x; depth spread inside a wave is GAME.WAVE_COHESION_M and lateral spread is plus/minus LANE.LAT_M
+//     (lateral spread decides how many targets an area weapon sweeps at once, so MUST NOT collapse to a 1D queue, which would turn
+//      fan and blast into always-full hits in the model).
+//   Mechs: one per side, starting at both sides longest effective range times START_F (nothing in range at start).
+//   Economy: starts at ECON.START, kills pay ECON.BOUNTY, and upgrades fire greedily on the cheapest tier,
+//     the same rule as game.js sweepPick.
+//   Win: first to kill the enemy mech or either frontline turret wins; timeouts fall back to battle-score verdict (see outcome()).
 //
-// ---- 攻擊範圍怎麼算(使用者「考量實質戰鬥角度」)----
-// 三類範圍攻擊各按自己的幾何在 2D 平面上選目標,分類縫仍是 data.js aoeClass():
-//   blast 圓形超壓:爆心 r × BLAST.EDGE 內全員,逐一吃 blastFalloff(量到命中量體最近點)。
-//   fan   錐形:按方位角切 fanSubs 個小錐,每格只取最近一名(大目標跨格多吃),
-//         不隨距離衰減、只剩偏心遞減 —— 與 sim.heroPlasma 同式(錐寬仍隨距離張開)。
-//   line  圓柱貫穿:半徑 lanceR + hitR 的圓柱內,截面分區(1 內圈 + 6 外扇區)跨幾區吃幾次,
-//         每區依序吃 LANCE.DECAY、各區穿透力耗盡處截斷 —— 與 sim._lanceHits 同式。
-// 偏心遞減走 offAxisFalloff(fan/line),與 sim.heroPlasma / _lanceHits 同一條曲線。
+// How area is priced (user asked for effective combat angle):
+// Three area-attack classes each pick targets on the 2D plane with their own geometry; the split seam stays data.js aoeClass():
+//   blast circular overpressure: everyone inside burst center r times BLAST.EDGE, each taking blastFalloff (nearest-point of hit volume).
+//   fan cone: sliced into fanSubs sub-cones by bearing, each cell takes only its nearest target (large targets spanning cells take multiple hits),
+//         no decay with distance, only off-axis falloff, same formula as sim.heroPlasma (cone width still opens with distance).
+//   line cylinder pierce: inside a cylinder of radius lanceR plus hitR, cross-section zones (1 inner plus 6 outer sectors) hit per zone crossed,
+//         each zone draining LANCE.DECAY in order and stopping where penetration runs out, same formula as sim lanceHits.
+// Off-axis falloff rides offAxisFalloff (fan and line), the same curve as sim.heroPlasma and lanceHits.
 //
-// ---- 長按攻擊(機種絕招)也在模型內(2026-08-02 使用者定案「只使用輕/重武器 + 長按攻擊」)----
-// 三招都是**可被擊落的載具**(飽和攻擊護衛機 / 集束轟炸機 / 極音速飛彈),而三者的傷害預算
-// (data.js SPECIAL)在設計上**逐位元等值** —— e2e「機種絕招三招同預算」已經釘死這一條。
-// 所以「把絕招加進模型」如果只是「CD 到就加一份預算的傷害」,三機種會拿到一模一樣的加成,
-// 量不到任何東西。真正的差別全在**投射過程**:
-//   ・飛過去要幾秒(kami 63m/s 撲擊 / decoy 62m/s 巡航 / hyper 45° 拋射 + 極音速俯衝);
-//   ・那幾秒裡敵方砲塔與小兵打不打得下來(HP 全由「一座砲塔打幾秒」反解,見 data.js);
-//   ・被打下來之後還剩多少(kami 原地半威力殉爆 / decoy 墜毀補投一顆 / hyper **完全否定**);
-//   ・預算怎麼切(kami 4 份均分、decoy 撞擊 + 6 顆逐顆個別瞄準、hyper 單一戰鬥部吃整份)。
-// 故本模型把載具當**真的實體**跑:進 foesOf ⇒ 敵方砲塔/小兵/機體都打得到它,擊落也有賞金。
-// MUST NOT 簡化成「一次性加一筆傷害」——那等於把上面四項全部抹平,ⓕ 那一段就永遠是三個相同的數字。
-// 守招/攻招仍不在模型內(使用者:先不考慮攻守招),TRACKS 也仍不含 def/atk。
+// Long-press attacks (chassis ultimates) are modeled too (2026-08-02 user decision: light and heavy weapons plus long-press only).
+// All three are shootable carriers (saturation escort, cluster bomber, hypersonic missile), and their damage budgets
+// (data.js SPECIAL) are bit-identical by design, already pinned by the e2e three-ultimates-equal-budget check.
+// So adding ultimates as cooldown cash-in damage would grant all three chassis the same bonus and measure nothing.
+// The real differences all sit in delivery:
+//   seconds to fly in (kami 63m per s dive, decoy 62m per s cruise, hyper 45-degree lob plus hypersonic dive);
+//   whether towers and troops can shoot it down in those seconds (HP values invert from seconds-per-turret, see data.js);
+//   what remains after interception (kami half-strength ground burst, decoy crash plus one makeup drop, hyper fully denied);
+//   how the budget splits (kami four equal shares, decoy impact plus 6 individually aimed submunitions, hyper single warhead takes all).
+// Hence the model runs carriers as real entities: they enter foesOf so towers, troops and mechs can hit them, and kills pay bounty.
+// MUST NOT simplify to one-shot bonus damage, which would flatten all four items above and freeze section f at three identical numbers.
+// Guard and assault ultimates stay out of the model (user: out of scope for now), and TRACKS still carries no def or atk.
 //
 // ---- 與 server/sim.js 的對齊 ----
 // 傷害鏈逐項對齊 sim.heroHit/_blast:dmgFalloff → vsMult → 爆擊期望 → 閃避期望 → shieldSplit

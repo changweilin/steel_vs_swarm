@@ -1,31 +1,32 @@
 // ============ 明隧道稽核(側向土牆體檢 + 柱列構件 + 兩端可穿透)============
-// 用途:隧道的「覆蓋」只在**中心線**上判定(`tunnelCoverIntervals`:地表 ≥ 路面 + CLEAR + ROOF_T),
-// 側向的土牆厚度沒人管 —— 山腰蜿蜒路 / 縫合蓋廊段 / 引道開挖擦邊處,單邊土牆可能只剩幾公尺
-// 甚至被挖穿,從外面看就是一片混凝土浮在山坡上、坡面與結構之間一道看穿到洞內的縫。
-// 這種地方現實中蓋的是**明隧道**(gallery / rock shed):深入地形的那一側跟隧道一樣是整面牆,
-// 展露出地形的那一側 = 落地矮牆 + **連續柱列**撐外露頂板,柱間透明可見**可穿透**
-// (2026-07-30 使用者定案柱列改制;判定住 `biomes.js tunnelWallProfile()` 單一縫)。
+// Purpose: tunnel cover is judged only on the centerline (tunnelCoverIntervals: surface at or above roadbed plus CLEAR plus ROOF_T),
+// while nobody watches lateral earth-wall thickness, so on winding mountainside roads, stitched gallery spans and cut edges near
+// approaches, one-sided walls can thin to a few meters or even punch through, reading from outside as concrete floating on a slope
+// with a see-through slit into the bore between slope and structure.
+// Reality builds a gallery (rock shed) there: the side buried in terrain stays a full wall like a tunnel,
+// while the exposed side becomes a landing dwarf wall plus a continuous column row carrying the exposed roof, transparent and
+// passable between columns (2026-07-30 user-settled column reform; pins the biomes.js tunnelWallProfile() single seam).
 //
-// 本稽核驗四層:
-//   Ⅰ 判定(真的執行 `tunnelWallProfile` 的原始碼文字):
-//     ① 深埋隧道(四面都是山)MUST 全程 open=false —— **舊行為不得回歸**(否則整張圖的隧道
-//        都會長出明隧道構件)
-//     ② 單邊土牆薄 → **只有那一側** open(使用者情境:山腰蜿蜒路)
-//     ③ 土牆被挖穿(側坡低於路面)→ open,且 gy < 路面 ⇒ 矮牆落地基準沉到地表之下
-//     ④ 縫合蓋廊段(兩側地表都落到**路面**以下)→ 兩側都 open;
-//        ④-b 覆蓋薄但地表仍高於路面(= 貫穿地形的隧道)→ 兩側都 MUST NOT open(金龍隧道實案)
-//     ⑤ 覆蓋段之外(cov=false)MUST NOT open(那裡的牆本來就收成零高)
-//     ⑥ 單點抖動 MUST 膨脹到鄰格(不留 6m 長的孤立開口)
-//     ⑦ 門檻邊界:地表 = 路面 MUST NOT open;低 1cm MUST open(頂板頂面已不是門檻)
-//     ⑧ 取樣 MUST 量到 WALL_MIN 整數點(最外圈的凹陷也要抓到 —— `d += SAMP` 的寫法會漏掉);
-//        落差掃描 MUST 量到 OUT_W 整數點、且 OUT_W 之外的落差 MUST NOT 觸發
-//     ⑨ gy 取前後一格窗口最小值(頂點間距 6m > 側向取樣距,單點值會讓矮牆底緣漏縫)
-//     ⑩ 法線 nx/nz:單位長、與切線正交、兩側互為相反 —— 矮牆 / 頂板 / 柱列共用這一份
-//     ⑫ 使用者定案(2026-08-01):明隧道 = 一側在地形內(牆)+ 一側在地形外(柱);
-//        **貫穿整個地形 = 兩側都在地形內 ⇒ 隧道,兩側都是牆**
-//     ⑬ 對開挖單調穩定:carve(只降不升)後重判 MUST 仍 open —— 判定在開挖前做一次、
-//        開挖後又做一次,翻面就是「挖了溝卻蓋回整面牆」
-//     ⑭ 落差掃描只認**天然**地形(`terrain.natureAt`):自家開挖的路塹不算「在地形之外」
+// This audit checks four layers:
+//   I Verdict (executes the genuine tunnelWallProfile source):
+//     1 Deep-buried tunnels (mountains on all sides) MUST stay open=false throughout; old behavior MUST NOT regress
+//        (else every tunnel on the map would sprout gallery parts).
+//     2 Thin one-sided earth wall opens only that side (user case: winding mountainside road).
+//     3 Punched-through wall (side slope below roadbed) opens, and gy below roadbed sinks the dwarf-wall footing under the surface.
+//     4 Stitched gallery span (both surface readings below roadbed) opens both sides;
+//        4b thin cover but surface still above roadbed (a bore through terrain) MUST NOT open either side (Jinlong tunnel case).
+//     5 Outside cover (cov=false) MUST NOT open (walls there already taper to zero height).
+//     6 Single-point jitter MUST dilate to neighbors (no lone 6m opening left behind).
+//     7 Threshold edge: surface equal to roadbed MUST NOT open; 1cm lower MUST open (roof top is no longer the gate).
+//     8 Sampling MUST reach integer WALL_MIN points (catch the outermost dip; a d-plus-SAMP stride would miss it);
+//        drop scans MUST reach integer OUT_W points, and drops beyond OUT_W MUST NOT trigger.
+//     9 gy takes the window minimum over neighbors (vertex spacing 6m exceeds lateral sample spacing; single values would leak the dwarf-wall base).
+//     10 Normals nx and nz: unit length, orthogonal to the tangent, opposite on the two sides; dwarf wall, roof and columns share this one copy.
+//     12 User decision (2026-08-01): gallery means one side inside terrain (wall) plus one side outside (columns);
+//        through-terrain means both sides inside, hence a tunnel with walls on both sides.
+//     13 Stable under carving monotonicity: re-verdict after carve (down-only) MUST still read open; verdict runs once before
+//        digging and once after, and a flip means a dug cutting got roofed back into a full wall.
+//     14 Drop scans accept only natural terrain (terrain.natureAt): our own approach cutting is not outside-terrain.
 //   Ⅱ 構件(執行 biomes.js 真正的發射器原文;three 走 CDN 沙箱無法真渲染):
 //     深埋隧道三個桶 MUST 逐點同舊制;開放側 = 矮牆(galBase → 路面+SILL)+ 連續柱列
 //     (落地 → 頂板頂面,間距 COL_GAP、A26 朝向同調)+ 外露頂板(hw+EAVE 簷口)+

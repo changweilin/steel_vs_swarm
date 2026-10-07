@@ -1,25 +1,25 @@
 import { groundModelDefinitions } from './ground_model_runtime.mjs';
 // ============ 軟性物質稽核(細勾線 + 隨風飄揚)============
-// 2026-08-04 使用者定案兩條:
-//   ①「不同類型物件有不同線條輪廓的粗細,例如雲朵、芒草、草原、花園、樹葉、旗幟這些
-//      軟性的物質的線條會細得多,其他堅硬的物體則依據設定的數值」
-//   ②「這些軟性物質加入隨風飄揚之類的重複性變化」
+// 2026-08-04 user settled two rules:
+//   1 Different object types carry different outline widths: soft things like clouds, miscanthus, grassland, gardens, leaves and flags
+//      draw much thinner lines, while hard objects follow their configured values.
+//   2 These soft things gain repeating wind-sway motion.
 //
-// 這一整批是**純表現層**(㋒):`npm run bal` 與 e2e 天然不會動,而回歸的特性一律是
-// 「沒有錯誤訊息,只是看起來不對」—— 五種靜默失效各對應本檔的一段:
-//   Ⅰ 參數表塌掉(軟性倍率被調回 1 = 這個功能整個消失,而畫面只是「線好像有點粗」)
-//   Ⅱ alpha 契約斷掉(材質端寫了、勾線 pass 沒讀 / 讀了卻乘錯位置 = 只變淡不變細)
-//   Ⅲ 擺動的錨點錯掉(逐零件各自從 0 起算 ⇒ 樹冠繞自己的中心剪切,疊接縫開開合合)
-//   Ⅳ 消費端漏標(那一叢草不會飄,而旁邊同款的會)
-//   Ⅴ 風的時鐘/雲的環繞算術(JS 的 % 對負數回負值 ⇒ 半邊的雲每一圈跳到另一側)
+// This whole batch is pure presentation: npm run bal and e2e never move by nature, while regressions always read as
+// no error message, just looks wrong, with five silent failures mapped to one section each:
+//   I Parameter table collapse (soft multiplier reset to 1 removes the feature while the picture only reads as slightly thick lines).
+//   II Alpha contract break (material side writes it but the outline pass never reads it, or reads it at the wrong multiply site, so lines only fade).
+//   III Wrong sway anchor (each part integrates from 0, so crowns shear about their own centers and stacked seams open and close).
+//   IV Consumer missing tag (one grass tuft never sways while its twin beside it does).
+//   V Wind clock and cloud orbit arithmetic (JS remainder stays negative for negatives, so half the clouds jump sides each orbit).
 //
-// 2026-08-13 使用者又定案兩條(同一個縫的延伸):
-//   ③「建立海浪 / 稻浪 / 草波 / 芒草波的動畫」
-//   ④「遊戲中加入國旗物件(國家比例為 地圖:駐軍國:敵對國 = 30:60:10),建立國旗飄揚的動畫」
-// 對應本檔新增的四段靜默失效:
-//   Ⅵ 海浪抄錯規則(相位取實例原點 ⇒ 整片海一起上下 = 潮汐;法線沒跟著改 ⇒ 頂點真的起伏了
-//     而賽璐璐的階梯完全不知道,水面仍是一整片死平的藍)
-//   Ⅶ 陣風包絡塌掉(GUST_F 回 0 = 整片等幅擺動 = 「波」這件事整個消失,而畫面只是「有在動」)
+// 2026-08-13 user settled two more rules (extensions of the same seam):
+//   3 Build wave animations for sea, rice, grass and miscanthus swells.
+//   4 Add national-flag objects to the game (map-to-garrison-to-hostile ratio 30:60:10) with flag flutter animation.
+// Four more silent failures map here:
+//   VI Sea copies the wrong rule (phase from instance origin moves the whole sea as one tide; normals left stale means vertices truly heave
+//     while the cel steps never notice, so the surface stays one dead flat blue).
+//   VII Gust envelope collapse (GUST_F back to 0 means uniform sway everywhere, so wave motion vanishes while the picture still moves).
 //   Ⅷ ground.js 的細節漏標(稻/草/芒草在 2026-08-04 那一輪整批沒標到:同一張圖上
 //     biomes.js 那半的芒草會飄、散在稻田河灘的這一半是硬的)
 //   Ⅸ 國旗的比例/名冊/決定性(名冊手寫 ⇒ 換陣營之後靜默過期;旗面合併成一個 mesh ⇒

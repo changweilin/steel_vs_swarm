@@ -1,6 +1,6 @@
-// ============ OSM 用地物件生成器 ============
-// 每種 generator 只有一列資料與一個幾何建構器；落點、holes、容量與同輪互撞皆由
-// osmAreas.js 的單一配置縫決定。此層只負責把已核准落點批次轉成 Three.js 幾何。
+// ============ OSM land-use object generator ============
+// Each generator holds one data row and one geometry builder; placement, holes, capacity and same-round collision are all
+// decided by the single config seam in osmAreas.js. This layer only batches approved placements into Three.js geometry.
 import * as THREE from 'three';
 import { mergeGeos } from './beacons.js';
 import { envMat } from './toon.js';
@@ -44,8 +44,8 @@ export function osmAreaGeometry(kind, seed, radius, functionType = null, context
 }
 
 function translateGeos(geos, x, y, z, ry, slopeFit = false, heightAt = null) {
-  // 地面式貼合：以 heightAt 有限差分推導坡度，轉入實例朝向局部系；
-  // rotateX(θ):+Z 端下沉 ⇒ pitch=-atan；rotateZ(φ):+X 端抬升 ⇒ roll=+atan
+  // Ground-fit: derive slope by finite differences of heightAt, feed into instance local frame;
+  // rotateX(theta): +Z end sinks => pitch=-atan; rotateZ(phi): +X end rises => roll=+atan
   let pitch = 0, roll = 0;
   if (slopeFit && typeof heightAt === 'function') {
     const e = 1.25;
@@ -69,7 +69,7 @@ function translateGeos(geos, x, y, z, ry, slopeFit = false, heightAt = null) {
   return ry;
 }
 
-/** 生成非建築用地物件；住宅／商業 district 只信任既有 OSM 子建物，不補虛構樓房。 */
+/** Generate non-building land-use objects; residential/commercial districts trust only existing OSM sub-buildings, never fill fictional blocks. */
 export function buildOsmAreaObjects(group, areas = [], options = {}) {
   const plan = planOsmAreaObjects(areas, options);
   const batches = new Map(), blockers = [], footprints = [], generatedByKind = {};

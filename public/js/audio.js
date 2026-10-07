@@ -1,4 +1,4 @@
-// ============ 戰場音效系統(唯一縫)============
+// ============ Battlefield audio system (single seam) ============
 // 純客戶端表現層 —— 伺服器/sim 不涉;bal/e2e 天然不受影響。
 //
 // 雙層架構(比照 models.js 的 MODEL_MANIFEST + 程序生成 fallback):

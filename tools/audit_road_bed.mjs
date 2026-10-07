@@ -1,15 +1,17 @@
-// ============ 道路路基整平稽核(gradeRoadBeds,2026-07-31)============
-// 用途:一般道路(非橋/非結構隧道/非步道)的乾地走廊 MUST 橫向整成切填平台 ——
-// 陡橫坡路段的路面緞帶「各自貼地 + 夾高」扛不住(一邊懸空、一邊連同格間鼓包埋進山壁),
-// 單位站的又是裸地形 heightAt,沒有平的路可以踩。
-// 本稽核以 terrain.js **執行原文**建合成高度場直測四條紀律 + biomes 呼叫端靜態規則:
-//   Ⅰ 橫坡切填:全深帶內壓到中心線路面高(上坡切、下坡填),帶外不動
-//   Ⅱ 填方上限:深谷(超過 fillMax×1.5)不填 —— 不築土壩;超限帶平滑漸退
-//   Ⅲ 水域紀律:原高 ≤ 水面 + SWAMP_BAND 的節點不動(岸線不得位移)
-//   Ⅳ 開挖足跡優先:carveTunnels 動過的節點 MUST NOT 被整平蓋回去
-//   Ⅴ 確定性:同輸入兩次執行逐位元同結果(零 rnd)
-//   Ⅵ 呼叫端(biomes):橋/步道/結構隧道 run 不整;排在 markGradeCorridors 之前
-// 跑法:node tools/audit_road_bed.mjs;退出碼 0 = 全綠
+// ============ Road bed leveling audit (gradeRoadBeds, 2026-07-31) ============
+// Purpose: dry corridors of ordinary roads (not bridges, not structural tunnels, not footpaths)
+// MUST be leveled laterally into cut-fill platforms --
+// ribbons on steep cross-slopes cannot survive by draping plus height clamping (one side floats,
+// the other side plus inter-cell bulges bury into the hillside),
+// and units stand on raw terrain heightAt with no flat road to stand on.
+// This audit drives four disciplines plus biomes caller rules directly from terrain.js executed source:
+//   1 Cross-slope cut-fill: press the full depth band to centerline road height (cut uphill, fill downhill), outside stays
+//   2 Fill cap: deep valleys (beyond fillMax x 1.5) are not filled -- no earth dams; over-limit bands feather out
+//   3 Water discipline: nodes at or below water level plus SWAMP_BAND stay put (shorelines MUST NOT move)
+//   4 Dig-footprint priority: nodes touched by carveTunnels MUST NOT be leveled back
+//   5 Determinism: same input twice gives bit-identical results (zero rnd)
+//   6 Caller (biomes): bridge, footpath, and structural tunnel runs are not leveled; runs before markGradeCorridors
+// Usage: node tools/audit_road_bed.mjs; exit code 0 means all green
 import { readSrc } from './audit_src.mjs';
 
 const tsrc = readSrc('public', 'js', 'terrain.js');
@@ -18,13 +20,13 @@ const bsrc = readSrc('public', 'js', 'biomes.js');
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
 
-// ---- 執行原文(CUT_W 起、punchPortalHoles 前 = carveTunnels + carveGalleryBands + gradeRoadBeds)----
+// ---- Executed source (from CUT_W up to before punchPortalHoles = carveTunnels + carveGalleryBands + gradeRoadBeds) ----
 const c0 = tsrc.indexOf('  const CUT_W = 2.5;');
 const cEnd = tsrc.indexOf('function punchPortalHoles');
 const c1 = tsrc.lastIndexOf('/**', cEnd);
 if (c0 < 0 || c1 <= c0) throw new Error('找不到 terrain 開挖/整平區塊');
 const BLOCK = tsrc.slice(c0, c1);
-const N = 33, MINX = -80, MAXX = 80, MINZ = -80, MAXZ = 80;   // 格距 5m
+const N = 33, MINX = -80, MAXX = 80, MINZ = -80, MAXZ = 80;   // 5m grid spacing
 const WATER = { LEVEL: 0, SWAMP_BAND: 1.2 };
 function mkTerr(hf) {
   const heights = new Float32Array(N * N);
@@ -40,7 +42,7 @@ function mkTerr(hf) {
 }
 const runPts = []; for (let x = -60; x <= 60; x += 6) runPts.push([x, 0]);
 
-// Ⅰ 橫坡切填:45° 橫坡(z 每公尺 +1),中心線 30 ⇒ 全深帶(hw + 半格)內 MUST 壓平到 30
+// 1 Cross-slope cut-fill: 45-degree cross-slope (z gains 1 per meter), centerline 30 means the full depth band MUST level to 30
 {
   const t = mkTerr((x, z) => 30 + z);
   t.gradeRoadBeds([{ pts: runPts, hw: 5 }]);
@@ -51,32 +53,32 @@ const runPts = []; for (let x = -60; x <= 60; x += 6) runPts.push([x, 0]);
   const mid = t.at(0, 10);
   ok(mid > 30 && mid < 40, 'Ⅰ taper 帶 MUST 介於路面高與原地表之間(smoothstep 斜壁,不留直角)');
 }
-// Ⅱ 填方上限:路旁深谷(深 fillMax×1.5 以上)MUST 不填 —— 峽谷邊不築土壩
+// 2 Fill cap: roadside deep valley (deeper than fillMax x 1.5) MUST NOT be filled -- no dam at the canyon edge
 {
-  const t = mkTerr((x, z) => (z < -4 ? 30 - 25 : 30));   // 谷深 25 > 12×1.5
+  const t = mkTerr((x, z) => (z < -4 ? 30 - 25 : 30));   // Valley depth 25 exceeds the cap
   t.gradeRoadBeds([{ pts: runPts, hw: 5 }]);
   ok(Math.abs(t.at(0, -10) - 5) < 1e-6, 'Ⅱ 深谷節點 MUST 不填(寧可維持現狀,不築水壩/土壩)');
-  const t2 = mkTerr((x, z) => (z < -4 ? 30 - 8 : 30));   // 谷深 8 < fillMax
+  const t2 = mkTerr((x, z) => (z < -4 ? 30 - 8 : 30));   // Valley depth 8 is under fillMax
   t2.gradeRoadBeds([{ pts: runPts, hw: 5 }]);
   ok(Math.abs(t2.at(0, -5) - 30) < 1e-6, 'Ⅱ 上限內的下坡側 MUST 填成路堤(帶內填到路面高)');
 }
-// Ⅲ 水域紀律:原高 ≤ 水面 + SWAMP_BAND MUST 不動。
-//   測資填差 MUST < fillMax(否則被填方上限擋掉,水域紀律拔了也測不紅 = 驗了等於沒驗)
+// 3 Water discipline: original height at or below water level plus SWAMP_BAND MUST stay put.
+//   Fixture fill gap MUST stay below fillMax (otherwise the fill cap hides it and removing water discipline still stays green, testing nothing)
 {
   const t = mkTerr((x, z) => (z < -4 ? WATER.LEVEL + 0.5 : WATER.LEVEL + 8));
   t.gradeRoadBeds([{ pts: runPts, hw: 5 }]);
   ok(Math.abs(t.at(0, -10) - (WATER.LEVEL + 0.5)) < 1e-6, 'Ⅲ 水域/沼澤節點 MUST 不動(岸線不得位移;跨水段本來就走橋)');
 }
-// Ⅳ 開挖足跡優先:carveTunnels 動過的節點 MUST NOT 被整平蓋回去
+// 4 Dig-footprint priority: nodes touched by carveTunnels MUST NOT be leveled back
 {
   const t = mkTerr(() => 30);
   t.carveTunnels([{ pts: [[-30, 0], [30, 0]], floors: [20, 20], hw: 8, covA: false, covB: false }], { clear: 8, hw: 9 });
   const dug = t.at(0, 0);
   ok(Math.abs(dug - 20) < 1e-6, 'Ⅳ 前置:開挖 MUST 已把走廊壓到隧道路面');
-  t.gradeRoadBeds([{ pts: runPts, hw: 5 }]);   // 路基目標 30(比洞低點高)
+  t.gradeRoadBeds([{ pts: runPts, hw: 5 }]);   // Bed target 30 (above the low point of the bore)
   ok(Math.abs(t.at(0, 0) - dug) < 1e-6, 'Ⅳ 開挖足跡 MUST 優先(整平不得把洞口路塹重新填起來)');
 }
-// Ⅴ 確定性:同輸入兩次 MUST 逐位元同結果
+// 5 Determinism: same input twice MUST give bit-identical results
 {
   const hf = (x, z) => 30 + Math.sin(x * 0.11) * 6 + z * 0.7;
   const a = mkTerr(hf), b = mkTerr(hf);
@@ -84,7 +86,7 @@ const runPts = []; for (let x = -60; x <= 60; x += 6) runPts.push([x, 0]);
   b.gradeRoadBeds([{ pts: runPts, hw: 5 }]);
   ok(a.heights.every((v, k) => v === b.heights[k]), 'Ⅴ 兩次執行 MUST 逐位元一致(零 rnd、floors 修改前整批取樣)');
 }
-// Ⅵ 呼叫端靜態規則(biomes.js)
+// 6 Caller static rules (biomes.js)
 {
   const g0 = bsrc.indexOf('if (terrain.gradeRoadBeds && roadInput?.length) {');
   ok(g0 > 0, 'Ⅵ 呼叫端 MUST 存在(roadInput 定案後整批收集)');

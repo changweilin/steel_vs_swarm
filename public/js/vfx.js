@@ -1,4 +1,4 @@
-// ============ 漫畫式戰鬥特效(2D Billboard in 3D)============
+// ============ Comic-style combat effects (2D Billboard in 3D) ============
 // 依 doc/drone_vs_robot_fps_dota_plan.html 美術參考區 + Phase 5:
 //   - 擊殺/拆塔:粗體斜角漫畫字卡(BOOM!! 星形底,彈跳縮放後淡出)
 //   - 命中火花:星爆 sprite,150ms 內放大淡出(非寫實、硬邊)

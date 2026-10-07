@@ -1,5 +1,5 @@
-// logo.png → logo_flat.png:整枚徽記(去背 + 銳利邊緣 + 蜂群純色 / 鋼鐵保留金屬光澤)。
-// 管線本體住 logo_lib.mjs;四區塊分檔見 split_logo.mjs。
+// logo.png to logo_flat.png: full emblem (matte cutout + crisp edges + swarm flat colors / steel keeps metallic sheen).
+// Pipeline core lives in logo_lib.mjs; four-quadrant split layout in split_logo.mjs.
 //   node tools/flatten_logo.mjs
 import { buildLogo, writeCropped } from './logo_lib.mjs';
 

@@ -15,18 +15,18 @@ function sectionMesh(section, length) {
   return mesh;
 }
 
-// 屋頂截面與附件落點共用的純數學描述；不依賴渲染、無 RNG。
-// 封頂沿牆唇邊（公尺）：牆體幾何較回報高度多出此值，封頂邊緣埋入牆內、
-// 立柱頂面較牆頂退此值 —— 同向上共面重疊歸零，碰撞與立面佈局維持原值。
+// Pure-math description shared by roof sections and attachment landing points; no rendering dependency, no RNG.
+// Cap lip along wall edge (metres): wall geometry exceeds the reported height by this much, cap edge buried in the wall,
+// post tops set back from the wall top by this much -- coplanar overlap in the same direction zeroes out, collision and facade layout keep original values.
 export const ROOF_RIM_LIP = 0.04;
-// 屋頂底面沉入量（公尺）：屋頂實體底面較牆頂低此值；高程公式對非平面屋頂同步扣除，
-// 落位 Foot 與面板間隙才會踩在真實面上。平板封頂本身不沉。
+// Roof base sink (metres): roof solid base sits this much below the wall top; elevation formulas deduct it for non-flat roofs,
+// so landing feet and panel gaps rest on the true surface. Flat caps themselves do not sink.
 export const ROOF_SEAT_SINK = 0.06;
-// 法線群組拆邊角（度）：夾角超過此值即拆頂點，圓頂／拱維持平滑、折邊脆直。
-// 單一縫：facetMeshData 的預設值與此恆同，測試由這裡取值不斷言魔數。
+// Normal-group split angle (deg): vertex splits above this angle keep domes/arches smooth and folds crisp.
+// Single seam: the facetMeshData default always equals this; tests read it from here instead of asserting a magic number.
 export const ROOF_FACET_DEG = 30;
-// 柱錐拆邊角（度）：8~12 段柱身維持圓潤（36° 以下），頂底蓋（90°）與 6 段以下
-// 桿件照樣拆開。屋頂要脆稜、柱體要圓潤，兩個閾值分開。
+// Post/cone split angle (deg): 8-12 segment shafts stay round (36 deg and below); top/bottom caps (90 deg) and
+// 6-or-fewer-segment rods still split. Roofs want crisp ridges, posts want roundness, so the two thresholds stay separate.
 export const CYL_FACET_DEG = 50;
 
 export function roofDimensions(span, height = 10) {
@@ -107,7 +107,7 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
     }
     else {
       section(profile);
-      // 非平面屋頂中垂直地面的端面（山牆面）同等建築牆面，由建築牆面延伸（內收 2cm 杜絕共面打架）
+      // Ground-vertical end faces of non-flat roofs (gable faces) count as building walls, extended by them (inset 2cm to avoid coplanar fights)
       const wallInset = 0.02;
       for (const side of [-1, 1]) {
         mesh(sectionMesh(profile, wallT), side * (len / 2 - wallT / 2 - wallInset), 0, 0, wallColor, 'architecture-wall');
@@ -145,7 +145,7 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
       mesh(sectionMesh(vProfile, wallT), side * (len / 2 - wallT / 2 - wallInset), 0, 0, wallColor, 'architecture-wall');
     }
   } else if (form === 'spire') {
-    // 圓錐屋頂完整覆蓋所有頂樓（含外伸簷角），以 L, S 外接圓為底半徑
+    // Conical roofs fully cover every top floor (including extended eave corners), using the L/S circumcircle as base radius
     const sides = Math.max(24, poly?.outer?.length >= 8 ? poly.outer.length : 24);
     const coneR = Math.hypot(L, S) / (2 * Math.cos(Math.PI / sides));
     add(['cyl', 0, coneR, rise * 2.2, sides], 0, rise * 1.1);
@@ -156,7 +156,7 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
     for (const side of [-1, 1]) {
       mesh(sectionMesh(shedProfile, wallT), side * (len / 2 - wallT / 2 - wallInset), 0, 0, wallColor, 'architecture-wall');
     }
-    // 單坡垂直後牆由建築牆面延伸（內收 2cm 杜絕與後牆端面共面打架）
+    // Single-slope vertical rear wall extends from the building wall (inset 2cm to avoid coplanar fights with the rear end face)
     add(['box', len - 0.04, rise * .85, wallT], 0, rise * .85 / 2, span / 2 - wallT / 2 - wallInset, wallColor, 'architecture-wall');
   } else if (form === 'mansard') {
     hip(L, S, span * .84 * L / S, span * .84, rise * .55);
@@ -179,7 +179,7 @@ export function architecturalRoofParts(poly, y, style, actualRoofForm = null, me
       hip(L * s, S * s, 0, 0, rise * .4, rise * i * .32);
     }
   } else if (form === 'stepped') {
-    // 足部較框線內收 2cm：層側面否則與牆端帽同平面（x=±len/2）打架；簷口幾無變化。
+    // Feet inset 2cm from the frame: otherwise tier sides sit coplanar with wall end caps (x=len/2) and fight; eaves barely change.
     for (let i = 0; i < 3; i++) add(['box', len * (1 - i * .22) - .04, rise * .28, span * (1 - i * .22) - .04], 0, rise * .28 * (.5 + i));
   } else {
     const n = form === 'sawtooth' ? Math.min(4, Math.max(2, Math.floor(span / 4))) : 1;

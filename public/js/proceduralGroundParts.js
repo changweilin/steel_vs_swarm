@@ -146,7 +146,7 @@ export function generateGroundPart(type, variant = 0, latDeg = 25.0) {
     else if (family === 'trellis') {
       for (let i = 0; i < 4; i++) rock((i / 3 - .5) * w * .8, top * .85, 0, w * .32, h * .4, d, color, 'leaf');
     } else if (family === 'solar') {
-      // 棚架式單一縫：棚頂斜率角，依緯度科學模型計算，全組（立柱/縱樑/面板/柵線）共用同一傾角
+      // Shed-style single seam: shed roof tilt angle, computed from latitude science model, shared by the whole set (posts/beams/panels/grilles)
       const optTilt = optimalSolarTiltRad(latDeg);
       const isNorth = latDeg >= 0;
       const SHED_TILT = (isNorth ? -1 : 1) * optTilt * 0.75;
@@ -160,7 +160,7 @@ export function generateGroundPart(type, variant = 0, latDeg = 25.0) {
       };
       const isElevated = (type === 'solar_carport' || type === 'solar_pasture' || type === 'solar_aquaculture' || h >= 2.0);
       if (isElevated) {
-        // 棚架式貼合：立柱高低腳撐起同一棚頂斜率，縱樑/面板/柵線全平行於棚面
+        // Shed-style fit: posts with high/low feet prop the same roof slope, beams/panels/grilles all parallel to shed plane
         shedLegs(top, SHED_TILT, 0x546e7a);
         add(new THREE.BoxGeometry(w * 0.96, 0.08, d * 0.92).rotateX(SHED_TILT).translate(0, top - 0.06, 0), 0x455a64);
         add(new THREE.BoxGeometry(w, 0.08, d).rotateX(SHED_TILT).translate(0, top, 0));
@@ -172,19 +172,19 @@ export function generateGroundPart(type, variant = 0, latDeg = 25.0) {
           : (variant % 3 === 1 ? 'carport' : variant % 3 === 2 ? 'pasture' : 'aquaculture');
 
         if (compositeKind === 'carport') {
-          // 底下停車場用途：停車格劃線與停放車輛剪影
+          // Underneath parking use: parking stall markings and parked vehicle silhouettes
           box(-w * 0.42, 0.015, 0, 0.08, 0.03, d * 0.85, 0xffffff);
           box(w * 0.42, 0.015, 0, 0.08, 0.03, d * 0.85, 0xffffff);
           box(0, h * 0.18, 0, w * 0.42, h * 0.28, d * 0.65, 0x2c3e50);
           box(0, h * 0.33, -d * 0.04, w * 0.38, h * 0.18, d * 0.36, 0x78909c);
         } else if (compositeKind === 'pasture') {
-          // 底下牧場用途：牧場圍欄與草捲、飼料槽
+          // Underneath ranch use: ranch fences with hay rolls, feed troughs
           box(0, h * 0.24, -d * 0.42, w * 0.92, 0.06, 0.06, 0x8d6e63);
           box(0, h * 0.12, -d * 0.42, w * 0.92, 0.06, 0.06, 0x8d6e63);
           box(-w * 0.18, h * 0.15, d * 0.12, w * 0.32, h * 0.26, d * 0.32, 0xc2a35a);
           box(w * 0.22, h * 0.10, d * 0.12, w * 0.30, h * 0.16, d * 0.22, 0x5d4037);
         } else {
-          // 底下魚塭用途：水面浮桶與水車增氧機
+          // Underneath fish-pond use: floating buoys and paddlewheel aerators
           box(0, 0.04, 0, w * 0.88, 0.06, d * 0.88, 0x29b6f6);
           stem(0, 0.08, 0, h * 0.22, 0.035, 0xffb300);
           box(0, h * 0.22, 0, w * 0.28, 0.03, d * 0.28, 0xffb300);
@@ -193,7 +193,7 @@ export function generateGroundPart(type, variant = 0, latDeg = 25.0) {
           box(0, 0.08, d * 0.25, w * 0.35, 0.08, 0.12, 0x0288d1);
         }
       } else {
-        // 直接建立：低矮貼地光電支架，立柱高低腳貼合面板斜率
+        // Build directly: low ground-hugging solar rack, posts with high/low feet fit panel slope
         shedLegs(top, GROUND_TILT);
         add(new THREE.BoxGeometry(w, 0.1, d).rotateX(GROUND_TILT).translate(0, top, 0));
         for (let i = 1; i < 5; i++) add(new THREE.BoxGeometry(0.012, 0.018, d * 0.9).rotateX(GROUND_TILT).translate((i / 5 - 0.5) * w, top + 0.09, 0), 0xb3c9cc);

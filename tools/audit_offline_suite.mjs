@@ -2,11 +2,12 @@
 /**
  * tools/audit_offline_suite.mjs
  *
- * 離線回歸驗證套件 (Offline Presentation & World Audit Suite)
- * 收錄視覺風格、環境裝飾、天候動態與世界觀圖鑑等 21 項非核心離線稽核。
- * 供本機美術與文案專項維護時隨時調用，不阻擋主線 CI。
+ * Offline regression suite (Offline Presentation and World Audit Suite)
+ * Collects 21 non-core offline audits for visual style, environment dressing, weather dynamics,
+ * and world codex text.
+ * For local art and copy maintenance on demand, never blocks the main CI.
  *
- * 用法:
+ * Usage:
  *   node tools/audit_offline_suite.mjs
  *   npm run audit:offline
  */
@@ -32,7 +33,7 @@ const OFFLINE_AUDIT_SCRIPTS = [
   'tools/audit_water_edge.mjs',
   'tools/audit_wavefronts.mjs',
 
-  // ── B. 環境裝飾與背景動態 (6 項) ──
+  // -- B. Environment dressing and background motion (6 items) --
   'tools/audit_ambient_motion.mjs',
   'tools/audit_wildlife.mjs',
   'test/ambientAppearance.mjs',
@@ -41,7 +42,7 @@ const OFFLINE_AUDIT_SCRIPTS = [
   'tools/audit_weather_dynamics.mjs',
   'tools/audit_weather_visuals.mjs',
 
-  // ── C. 世界觀文案、圖鑑與生成提示詞 (6 項) ──
+  // -- C. World codex copy, bestiary, and generation prompts (6 items) --
   'tools/audit_vernacular.mjs',
   'tools/audit_world_text.mjs',
   'tools/audit_vehicle_spec.mjs',

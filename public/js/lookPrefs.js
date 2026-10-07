@@ -1,7 +1,7 @@
-// ============ 視角方向偏好(水平/垂直反轉唯一真相縫)============
-// 所有視角輸入(滑鼠 / 數字九宮格 / 觸控拖曳 / 視角搖桿 / 陀螺儀 / 觀戰自由視角)
-// 一律經 `game.js _applyLook(dYaw, dPitch)` 套用,反轉只准住這裡。
-// 本檔零 import(同 rng.js / visualPrefs.js):離線稽核要能直接執行它驗預設值。
+// ============ View direction prefs (horizontal/vertical invert single source of truth)============
+// All view inputs (mouse / numpad grid / touch drag / view stick / gyro / spectator free view)
+// always go through `game.js _applyLook(dYaw, dPitch)`; inversion MUST live only here.
+// Zero imports in this file (same as rng.js / visualPrefs.js): offline audits must execute it directly to verify defaults.
 
 const KEY = 'svs_look';
 
@@ -27,46 +27,46 @@ function clampBool(v, def) {
 
 {
   let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { /* 私密模式 / 壞字串 */ }
+  try { raw = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { /* private mode / bad string */ }
   for (const k in LOOK_PREFS) {
     const v = raw && typeof raw === 'object' ? raw[k] : undefined;
     _vals[k] = v === undefined ? LOOK_PREFS[k].def : clampBool(v, LOOK_PREFS[k].def);
   }
 }
 
-/** 目前值 */
+/** Current value */
 export function lookPref(k) {
   return k in _vals ? _vals[k] : (LOOK_PREFS[k]?.def ?? false);
 }
 
-/** 整份目前值(回傳新物件,MUST NOT 就地改) */
+/** Whole current values (returns new object, MUST NOT mutate in place) */
 export function lookPrefs() {
   return { ..._vals };
 }
 
-/** 寫入一個開關(持久化 + 廣播)。回傳寫入後的值 */
+/** Write one switch (persist + broadcast). Returns the written value */
 export function setLookPref(k, v) {
   if (!(k in LOOK_PREFS)) return false;
   const nv = clampBool(v, LOOK_PREFS[k].def);
   if (nv === _vals[k]) return nv;
   _vals[k] = nv;
-  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* 私密模式忽略 */ }
+  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* ignore in private mode */ }
   _emit();
   return nv;
 }
 
-/** 全部回到預設(皆關 = 修正後的正向) */
+/** Reset all to defaults (all off = corrected forward) */
 export function resetLookPrefs() {
   let changed = false;
   for (const k in LOOK_PREFS) {
     if (_vals[k] !== LOOK_PREFS[k].def) { _vals[k] = LOOK_PREFS[k].def; changed = true; }
   }
   if (!changed) return;
-  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* 私密模式忽略 */ }
+  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* ignore in private mode */ }
   _emit();
 }
 
-/** 訂閱變更;回傳解訂閱函式 */
+/** Subscribe to changes; returns unsubscribe function */
 export function onLookPrefChange(fn) {
   _subs.add(fn);
   return () => _subs.delete(fn);
@@ -74,6 +74,6 @@ export function onLookPrefChange(fn) {
 
 function _emit() {
   for (const fn of [..._subs]) {
-    try { fn(_vals); } catch { /* 消費端自己的問題,不阻斷廣播 */ }
+    try { fn(_vals); } catch { /* consumer's own error, never blocks broadcast */ }
   }
 }

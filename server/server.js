@@ -35,10 +35,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.join(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const SERVER_DIR = __dirname;
-// 單機版在瀏覽器裡會 import 這三支(權威模擬 + 電腦玩家 + 房間中樞);server.js 自己**不**對外提供。
+// Solo build imports these three modules in-browser (authoritative sim + bots + room hub); server.js itself is NOT served.
 const BROWSER_SERVER_FILES = new Set(['sim.js', 'bots.js', 'rooms.js']);
 
-// 命令列參數:`--port 8620` 或 `--port=8620`(PowerShell 不吃 PORT=xxx 前綴)
+// CLI args:`--port 8620` or `--port=8620` (PowerShell does not accept PORT=xxx prefix)
 function argVal(...names) {
   const a = process.argv.slice(2);
   for (let i = 0; i < a.length; i++) {
@@ -53,28 +53,28 @@ const hasFlag = (...names) => process.argv.slice(2).some((a) => names.includes(a
 
 const PORT = argVal('--port', '-p') || process.env.PORT || 8620;
 const HOST = argVal('--host') || process.env.HOST || '0.0.0.0';
-// 連線機制:--cloud 雲端節點 / --lan 區網(含 Tailscale)。兩者都不給 = 區網(本機開發預設)。
-// `--lan` 明確指定區網(壓過環境變數;讓 `npm run lan` 在設了 SVS_CLOUD 的機器上仍是區網)
+// Connection mechanism:--cloud hosted node / --lan LAN (incl. Tailscale). Neither given = LAN (local dev default).
+// `--lan` forces LAN explicitly (overrides env; lets `npm run lan` stay LAN even when SVS_CLOUD is set)
 const CLOUD = !hasFlag('--lan') && (hasFlag('--cloud') || process.env.SVS_CLOUD === '1');
 const LINK_MODE = CLOUD ? 'cloud' : 'lan';
-// 固定 OSM 瀏覽器驗收的兩條 dev-only 輸入/輸出路由。一般部署(`--cloud` 或 production)
-// 不掛這兩條：fixture 只准從 loopback 取，截圖只准由同機的 audit 工具落盤。
+// Pinned OSM browser-acceptance dev-only input/output routes. Normal deployments (`--cloud` or production)
+// do not mount them: fixtures only from loopback, screenshots only from same-machine audit tooling.
 const DEV_BROWSER_IO = !CLOUD && process.env.NODE_ENV !== 'production';
 const OSM_FIXTURE_NAMES = /^[A-Za-z0-9][A-Za-z0-9_-]*$/u;
 const OSM_BROWSER_SHOT_ROOT = path.join(ROOT_DIR, 'tools', '.shots');
 const OSM_BROWSER_SHOT_DIR = path.join(OSM_BROWSER_SHOT_ROOT, 'osm_browser');
-// 雲端節點的房間上限:單一節點被開房洗滿會拖垮全部對局(每間房一支 8Hz tick)。區網不限。
+// Room cap on cloud nodes: one 8Hz tick per room, so a flood of rooms would drag down every game. LAN uncapped.
 const MAX_ROOMS = Number(argVal('--max-rooms') || process.env.SVS_MAX_ROOMS || (CLOUD ? 24 : 0)) || 0;
-// `--https`:用自簽憑證起 TLS。手機陀螺儀**必須**要這個 ——
-// 瀏覽器只在 secure context(https 或 localhost)才送 deviceorientation 事件,
-// 用 http://<區網 IP> 開的話感測器**靜默不作動**(沒有錯誤、沒有權限提示,就是不動)。
-// 雲端一律由平台/反向代理終止 TLS,不在這裡起(見 docs/deploy.md)。
+// `--https`: serve TLS with a self-signed cert. Phone gyro REQUIRES this --
+// browsers only emit deviceorientation in a secure context (https or localhost),
+// http://<LAN IP> leaves the sensor silently dead (no error, no permission prompt, just no motion).
+// Cloud always terminates TLS at the platform/reverse proxy, never here (see docs/deploy.md).
 const USE_HTTPS = hasFlag('--https', '--tls') && !CLOUD;
-const CERT_DIR = path.join(ROOT_DIR, '.certs');   // 已入 .gitignore(自簽私鑰 MUST NOT 進版控)
+const CERT_DIR = path.join(ROOT_DIR, '.certs');   // Listed in .gitignore (self-signed private key MUST NOT enter version control)
 const KEY_FILE = path.join(CERT_DIR, 'key.pem');
 const CRT_FILE = path.join(CERT_DIR, 'cert.pem');
-// 這張憑證簽過哪些名字。沒有這份紀錄就只能「每次開機都重簽」(隊友天天被要求重按一次憑證例外)
-// 或「有檔案就用」(= 現行 bug:後來才接上的網路那條路徑永遠蓋不到)。
+// Which names this cert was signed for. Without this record the only options are "re-sign on every boot" (teammates re-approve the exception daily)
+// or "reuse file if present" (= current bug: paths joining the network later are never covered).
 const SAN_FILE = path.join(CERT_DIR, 'san.json');
 
 const MIME = {
@@ -89,9 +89,9 @@ const MIME = {
 };
 
 /**
- * 本機所有非內部 IPv4,附上「這是哪一種網路」。
- * Tailscale 的位址落在 CGNAT 段 100.64.0.0/10(tailscale0 / utun 介面)—— 玩家連的是這一組,
- * 與家用區網 192.168.x 分開列出,不然一長串位址不知道該給隊友哪一個。
+ * All local non-internal IPv4s, tagged with which network each is.
+ * Tailscale addresses live in CGNAT 100.64.0.0/10 (tailscale0 / utun iface) -- players use these,
+ * listed separately from home LAN 192.168.x so a long address list still tells teammates which one to use.
  */
 function netAddrs() {
   const out = [];
@@ -108,7 +108,7 @@ function netAddrs() {
 }
 const lanIps = () => netAddrs().map((a) => a.ip);
 
-/** Tailscale MagicDNS 名稱(裝了 tailscale CLI 才拿得到;拿不到回 null,不影響用 IP 連) */
+/** Tailscale MagicDNS name (only if tailscale CLI is installed; null otherwise, IP connect unaffected) */
 function magicDnsName() {
   try {
     const j = JSON.parse(execFileSync('tailscale', ['status', '--json'], { stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 }).toString());
@@ -118,10 +118,10 @@ function magicDnsName() {
     return null;
   }
 }
-// MagicDNS 名字可能晚於伺服器才有(`tailscale up` 在後面才跑)⇒ 位址監看那段會補問一次,故不是 const
+// MagicDNS name may appear later than the server (`tailscale up` runs afterwards) => the address watcher re-asks once, hence not const
 let TS_NAME = CLOUD ? null : magicDnsName();
 
-/** 憑證 MUST 涵蓋的名字:localhost + 迴路 + 當下每一條路徑的 IPv4 + MagicDNS */
+/** Names the cert MUST cover: localhost + loopback + every current path IPv4 + MagicDNS */
 function sanNames() {
   return [
     'DNS:localhost', 'IP:127.0.0.1',
@@ -130,7 +130,7 @@ function sanNames() {
   ];
 }
 
-/** 現用憑證簽過的名字;讀不到/壞掉一律當成沒簽過(下一步就會重簽) */
+/** Names the active cert was signed for; unreadable/broken reads as unsigned (next step re-signs) */
 function certSan() {
   if (!fs.existsSync(KEY_FILE) || !fs.existsSync(CRT_FILE)) return [];
   try {
@@ -143,21 +143,21 @@ function certSan() {
 
 const readCertPair = () => ({ key: fs.readFileSync(KEY_FILE), cert: fs.readFileSync(CRT_FILE) });
 
-/** 現用憑證還蓋不到的名字(只有在缺 openssl 時才會非空;啟動訊息會據此提醒) */
+/** Names the active cert still does not cover (non-empty only without openssl; startup message reports it) */
 let certGaps = [];
 
 /**
- * 自簽憑證(`--https` 用):`.certs/{key,cert}.pem`,缺涵蓋就用系統 openssl 重簽一張 10 年期的。
- * SAN 帶上 localhost + 127.0.0.1 + 當下所有區網/Tailscale IP + MagicDNS 名 —— 隊友直接連才不會被判憑證主體不符
- * (仍會有「不安全連線」警告:自簽憑證沒有 CA 背書,點「繼續前往」即可,secure context 照樣成立)。
+ * Self-signed cert for `--https`:`.certs/{key,cert}.pem`, re-signed with system openssl for 10 years when coverage is missing.
+ * SAN covers localhost + 127.0.0.1 + all current LAN/Tailscale IPs + MagicDNS name -- teammates connect directly without cert-subject mismatch
+ * (an "unsafe connection" warning remains: self-signed has no CA backing, click through and secure context still holds).
  *
- * 【SAN 取聯集,而非「有檔案就用」也非「每次重簽」】位址是會來回的(WiFi 換網、Tailscale 重連、插拔網路線)。
- *   ・有檔案就用 ⇒ 之後才出現的位址永遠蓋不到,那條路徑靜靜連不上(這正是同時多路徑的頭號病灶)。
- *   ・每次重簽   ⇒ 憑證指紋天天變,隊友每天被要求重按一次憑證例外。
- *   取聯集則是「只在真的多出沒簽過的名字時才重簽」,且舊名字留著 —— 關掉 WiFi 再開回來不會又要重按。
+ * [SAN takes the union, never "reuse file" nor "re-sign every time"] Addresses come and go (WiFi swaps, Tailscale reconnects, cable replugs).
+ *   - reuse file => later-appearing addresses are never covered, that path silently fails to connect (the top multipath failure).
+ *   - re-sign every time => fingerprint changes daily, teammates must re-approve the exception daily.
+ *   Union means "re-sign only when a truly uncovered name appears", keeping old names -- toggling WiFi off/on does not force re-approval.
  *
- * 沒有 openssl:有舊憑證就沿用舊的(降級不例外,蓋不到的名字記進 certGaps),完全沒有才回 null 讓呼叫端退回 http。
- * **MUST NOT** 把生成的私鑰寫進版控(見 .gitignore)。
+ * Without openssl: reuse the old cert if any (degrade by omission, uncovered names recorded in certGaps), null only when none exists so the caller falls back to http.
+ * MUST NOT commit the generated private key (see .gitignore).
  */
 function ensureCert() {
   const have = new Set(certSan());
@@ -184,7 +184,7 @@ function ensureCert() {
   }
 }
 
-/** 靜態檔輸出(開發用:一律 no-cache,改了客戶端普通 F5 就拿得到新碼) */
+/** Static file serving (dev: always no-cache, so a plain F5 picks up client edits) */
 function sendFile(res, filePath) {
   fs.readFile(filePath, (err, data) => {
     if (err) { res.writeHead(404); res.end('404'); return; }
@@ -209,7 +209,7 @@ function sendJson(res, status, value) {
   res.end(JSON.stringify(value));
 }
 
-/** 有界讀取 dev 截圖 POST；超限後仍把 request drain 完才回覆，避免 socket 半開。 */
+/** Bounded read of dev screenshot POST; on overflow still drains the request before replying to avoid a half-open socket. */
 async function readBody(req, maxBytes) {
   const chunks = [];
   let total = 0, over = false;
@@ -223,8 +223,8 @@ async function readBody(req, maxBytes) {
 }
 
 /**
- * 固定 OSM fixture 輸入(dev-only)。解析走 tools/osm_fixture 的 production OSM parser；
- * 瀏覽器收到的仍是 relay input，後續必須回到 main.js 的 sanitize/fit/commit/buildBiomes。
+ * Pinned OSM fixture input (dev-only). Parsing goes through the production OSM parser in tools/osm_fixture;
+ * the browser still receives relay input, which must flow back through main.js sanitize/fit/commit/buildBiomes.
  */
 async function serveOsmFixture(req, res, urlPath) {
   if (!DEV_BROWSER_IO || req.method !== 'GET' || !loopbackReq(req)
@@ -234,7 +234,7 @@ async function serveOsmFixture(req, res, urlPath) {
   const m = /^\/__osm_fixture\/([A-Za-z0-9][A-Za-z0-9_-]*)$/u.exec(urlPath);
   if (!m || !OSM_FIXTURE_NAMES.test(m[1])) { res.writeHead(404); res.end('404'); return; }
   try {
-    // 延遲載入：正式對局不會把 fixture parser/fs 送進 server process。
+    // Lazy load: production games never pull the fixture parser/fs into the server process.
     const mod = await import('../tools/osm_fixture.mjs');
     const fixture = mod.loadOsmFixture(m[1], mod.DEFAULT_FIXTURE_DIR);
     const parsed = fixture && mod.fixtureOsm(fixture);
@@ -262,8 +262,8 @@ async function serveOsmFixture(req, res, urlPath) {
 }
 
 /**
- * 瀏覽器固定鏡位的 PNG 落盤(dev-only)。資料夾已在 .gitignore 的 tools/.shots/ 下，
- * 不把驗收產物帶入版控；sidecar JSON 留下當幀 renderer.info 與鏡位讀數。
+ * Browser fixed-view PNG drop (dev-only). Folder lives under tools/.shots/ already in .gitignore,
+ * so acceptance artifacts never enter version control; sidecar JSON keeps the frame renderer.info and camera readout.
  */
 async function serveOsmShot(req, res) {
   if (!DEV_BROWSER_IO || req.method !== 'POST' || !loopbackReq(req)
@@ -306,17 +306,17 @@ async function serveOsmShot(req, res) {
   }
 }
 
-// 開發工具的啟停(dev-only;設定頁那顆「▶ 啟動 / ⏹ 停止」)。
-// 這是一個**會開行程**的端點,所以三道閘缺一不可:①雲端節點連載都不載(下面那個 CLOUD 判斷排在
-// import 之前)②只回應 loopback(閘門住 `tools/dev_supervisor.mjs`,與 spawn 的邏輯同一支)
-// ③出貨版根本沒有 `tools/`(build_solo 只複製 public/** 與白名單三支)⇒ import 失敗就當作沒有這條路由。
-// 延遲載入:一般對局永遠不會走到這裡,那支連同它 import 的 data.js/codex.js 都不進記憶體。
+// Dev-tool start/stop (dev-only; the start/stop button on the settings page).
+// This endpoint SPAWNS a process, so all three gates are required: (1) cloud nodes never even load it (CLOUD check before
+// import) (2) loopback only (gate lives in `tools/dev_supervisor.mjs`, same logic as spawn)
+// (3) shipping builds have no `tools/` at all (build_solo only copies public/** plus three allowlisted files) => failed import means no such route.
+// Lazy load: normal games never reach here, so that module plus its data.js/codex.js imports stay out of memory.
 let _devSup = null;
 const devSup = () => (_devSup ||= import('../tools/dev_supervisor.mjs').catch(() => null));
 
 const handler = (req, res) => {
-  // 壞掉的 URL(裸 %、截斷的 UTF-8 序列)會讓 decodeURIComponent 拋 URIError ——
-  // 這裡不接住 = 整個 process 退出 = 全員斷線,而埠掃描器天天都在送這種東西。
+  // Broken URLs (bare %, truncated UTF-8 sequences) make decodeURIComponent throw URIError --
+  // uncaught here = whole process exits = everyone disconnects, while port scanners send such junk daily.
   let urlPath;
   try {
     urlPath = decodeURIComponent(req.url.split('?')[0]);
@@ -340,21 +340,21 @@ const handler = (req, res) => {
     return;
   }
 
-  // 健康檢查(雲端平台的 liveness/readiness probe;區網跑也無害)
+  // Health check (cloud liveness/readiness probe; harmless on LAN)
   if (urlPath === '/healthz') {
     const s = hub.stats();
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     res.end(JSON.stringify({ ok: true, mode: LINK_MODE, uptime: Math.round(process.uptime()), maxRooms: MAX_ROOMS, ...s }));
     return;
   }
-  // 根目錄 → 鏡射佈局的入口(見檔頭「URL 佈局」)。保留查詢字串,`?mode=solo` 之類的旗標才不會掉。
+  // Root -> mirrored-layout entry (see header "URL layout"). Keeps the query string so flags like `?mode=solo` survive.
   if (urlPath === '/' || urlPath === '/index.html') {
     const q = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
     res.writeHead(302, { Location: `/public/${q}` });
     res.end();
     return;
   }
-  // 單機版要用的三支伺服器模組(白名單;server.js 本身 MUST NOT 外流)
+  // Three server modules for the solo build (allowlist; server.js itself MUST NOT leak out)
   if (urlPath.startsWith('/server/')) {
     const name = urlPath.slice('/server/'.length);
     if (!BROWSER_SERVER_FILES.has(name)) { res.writeHead(404); res.end('404'); return; }
@@ -370,43 +370,43 @@ const handler = (req, res) => {
   res.writeHead(404); res.end('404');
 };
 
-// TLS 起不來(沒 openssl)就退回 http:伺服器照樣能跑,只是手機陀螺儀不會動(見 ensureCert 註解)
+// TLS failed to come up (no openssl) falls back to http: server still runs, only phone gyro stays dead (see ensureCert note)
 const tlsPair = USE_HTTPS ? ensureCert() : null;
 const SECURE = !!tlsPair;
 
-// ---------------- 單埠雙協定(同一個埠同時吃 http 與 https)----------------
-// 三條路徑的隊友拿到網址的方式不一樣:手機要 https 才有陀螺儀(secure context),
-// 桌機直接打 `192.168.1.5:8620` 被瀏覽器補成的卻是 http。分兩個埠 = 兩組網址要記且一定有人記錯,
-// 所以在這裡看連線的第一個位元組分流:0x16 = TLS handshake 的 ContentType.handshake,其餘一律當明文 HTTP。
-// 兩個 http.Server 都不 listen(),只接收 net 前置伺服器 emit 過來的 socket。
+// ---------------- Single-port dual-protocol (one port serves both http and https) ----------------
+// Teammates get URLs differently per path: phones need https for gyro (secure context),
+// desktops typing `192.168.1.5:8620` get http auto-completed by the browser. Two ports = two URL sets nobody remembers,
+// so branch on the first byte here: 0x16 = TLS handshake ContentType.handshake, everything else as plaintext HTTP.
+// Neither http.Server listens(); both receive sockets emitted from the net front server.
 const plainServer = http.createServer(handler);
 const httpsServer = SECURE ? https.createServer(tlsPair, handler) : null;
 
-// 連上卻一個位元組都不送的 socket 不留(埠掃描器 / 半開連線):否則每一條都吃住一個 fd 直到對端超時
+// Sockets that connect but send zero bytes are not kept (port scanners / half-open): each would otherwise hold an fd until peer timeout
 const PROBE_MS = 10 * 1000;
 function demux(sock) {
   const timer = setTimeout(() => sock.destroy(), PROBE_MS);
-  sock.once('error', () => {});   // 探測期的 RST MUST NOT 變成未處理事件把整支伺服器帶走
+  sock.once('error', () => {});   // RST during probing MUST NOT become an unhandled event taking down the server
   sock.once('close', () => clearTimeout(timer));
-  // 【MUST 全程停在 paused 模式】只准 `read(1)` + `unshift`,MUST NOT 用 `once('data')` + `resume()`:
-  // TLSSocket 是在 nextTick 才把 socket 已緩衝的位元組補餵給 TLS 引擎(node `_tls_wrap.js` initRead),
-  // 而 resume() 會在那之前就把 unshift 回去的位元組以 'data' 事件流掉 —— 沒有人接 = 握手第一段憑空消失,
-  // 表徵是「https 連得上但永遠不回應」(明文 http 那半反而正常,所以很容易誤判成憑證問題)。
+  // [MUST stay in paused mode throughout] Only `read(1)` + `unshift`, MUST NOT use `once('data')` + `resume()`:
+  // TLSSocket feeds already-buffered bytes to the TLS engine only on nextTick (node `_tls_wrap.js` initRead),
+  // while resume() would flush the unshifted bytes as 'data' before that -- nobody listens = first handshake fragment lost,
+  // symptom is "https connects but never responds" (plaintext http half still works, easily misread as a cert problem).
   const peek = () => {
     const head = sock.read(1);
     if (head === null) { sock.once('readable', peek); return; }
     clearTimeout(timer);
-    sock.unshift(head);           // 位元組原封不動還回串流,交給真正的伺服器自己解析
+    sock.unshift(head);           // Return the byte untouched to the stream for the real server to parse
     (head[0] === 0x16 ? httpsServer : plainServer).emit('connection', sock);
   };
   peek();
 }
-// 沒開 TLS 就沒有要分流的東西 —— 直接讓 http 伺服器自己 listen(與改制前逐位元相同的路徑)
+// Without TLS there is nothing to demux -- let the http server listen directly (bit-identical path to before the rework)
 const listener = SECURE ? net.createServer(demux) : plainServer;
 
-/** 房間中樞:雲端與區網共用同一支(單機版由瀏覽器另 new 一個實例) */
+/** Room hub: cloud and LAN share one (solo news a separate instance in-browser) */
 const hub = new RoomHub({
-  urls: () => (CLOUD ? [] : lanUrls()),   // 雲端不廣播節點內網位址(對玩家沒意義,且是資訊外洩)
+  urls: () => (CLOUD ? [] : lanUrls()),   // Cloud never broadcasts node LAN addresses (meaningless to players, and an info leak)
   log: (...a) => console.log(...a),
   maxRooms: MAX_ROOMS,
 });
@@ -419,23 +419,23 @@ function lanUrls() {
 }
 
 // ---------------- WebSocket ----------------
-// maxPayload 4MiB:最大合法訊息 = world 上傳(occ 12000 + cor/slabs 各 6000 + wet + hgt)。
-// 一般樹幹與固定擺件納入 occ 後，5v5 大圖可超過舊 4000 筆；維持 2MiB 會讓合法 world
-// 訊息在 WebSocket 層直接斷線。上限仍由 ws 在 JSON.parse 前攔截，避免無界輸入。
-// 2026-08-01 新增粗高程網格 hgt(稜線遮蔽,避免隔山打牛):實測 L3 約 55KB、理論上限 131KB
-// (LOS.HGT_MAX² × 2 字元)⇒ 整包合計上探 ~800KB,舊的 1MiB 只剩 1.3 倍餘裕。**超過就是 ws
-// 直接關連線** = 房主整份 world 靜默上傳失敗(LOS 遮蔽/走廊淨空/稜線全滅),提前留足餘裕。
-// ws 預設 100MiB —— 惡意巨型訊息會讓單執行緒 JSON.parse 阻塞全部房間,先在框架層封頂。
-// 2026-08-10 新增路網中繼 `t:'osm'`(房主的原始 Overpass 圖資):**實測**(`tools/measure_osm_relay.mjs`,
-// 5v5 密市區)barcelona 1051KB / paris 1068KB / manhattan 972KB ⇒ 4MiB 仍保留充分餘裕，
-// 不必壓縮也不必碰 perMessageDeflate；world 與 osm 是分開訊息，不會互相疊加。
-// 客戶端另有 `OSM_RELAY.MAX_BYTES`(1.8MB)自我封頂:超過就先丟 feats 再整份放棄 ——
-// 這一則若被 ws 以 1009 擋下,斷的是**房主的連線**,症狀看起來完全像伺服器壞掉。
-// **改任一上限 MUST 兩邊一起看**(這裡的 4MiB 與 osmrelay.js 的 MAX_BYTES)。
+// maxPayload 4MiB: largest legal message = world upload (occ 12000 + cor/slabs 6000 each + wet + hgt).
+// Trunks and fixed props in occ push large 5v5 maps past the old 4000 entries; keeping 2MiB would drop legal world
+// messages at the WebSocket layer. The cap is still enforced by ws before JSON.parse to bound input.
+// 2026-08-01 coarse height grid hgt added (ridge occlusion, anti-over-the-hill shots): measured L3 ~55KB, theory cap 131KB
+// (LOS.HGT_MAX squared x 2 chars) => total packet up to ~800KB, old 1MiB left only 1.3x headroom. Exceeding it closes the
+// connection at ws level = host world silently fails to upload (LOS / corridor / ridge all dead), so keep ample headroom.
+// ws default 100MiB -- a malicious giant message would block the single thread in JSON.parse for all rooms, cap at framework level first.
+// 2026-08-10 road relay `t:'osm'` added (host raw Overpass data): measured (tools/measure_osm_relay.mjs,
+// dense 5v5 downtown) barcelona 1051KB / paris 1068KB / manhattan 972KB => 4MiB still keeps ample headroom,
+// no compression or perMessageDeflate needed; world and osm are separate messages and never stack.
+// Client also self-caps with `OSM_RELAY.MAX_BYTES` (1.8MB): drops feats first, then abandons the whole relay --
+// if ws rejects this one with 1009, it is the HOST connection that drops, looking exactly like a dead server.
+// Changing either cap MUST review both sides together (4MiB here and MAX_BYTES in osmrelay.js).
 //
-// `noServer` + 兩個 http 伺服器各自轉交 upgrade:ws / wss 共用**同一個** WebSocketServer 實例。
-// MUST NOT 改成一邊一個實例 —— 心跳掃的是 `wss.clients`,分兩份就有一半的死連線不會被回收
-// (座位 connected 恆 true ⇒ RoomHub 的無真人收房永遠不啟動,見下方心跳註解)。
+// `noServer` + both http servers forwarding upgrade: ws / wss share ONE WebSocketServer instance.
+// MUST NOT split into one instance per side -- heartbeat sweeps `wss.clients`, split halves leave dead connections unreaped
+// (seat connected stays true => RoomHub abandoned-game reap never starts, see heartbeat note below).
 const wss = new WebSocketServer({ noServer: true, maxPayload: 4 << 20 });
 for (const s of [plainServer, httpsServer]) {
   if (!s) continue;
@@ -443,52 +443,52 @@ for (const s of [plainServer, httpsServer]) {
     try {
       wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
     } catch {
-      try { socket.destroy(); } catch { /* 忽略 */ }
+      try { socket.destroy(); } catch { /* ignore */ }
     }
   });
 }
 
-// 心跳:偵測「髒斷線」(手機收後台/分頁被殺/網路中斷 —— TCP 不送 FIN,'close' 永遠不觸發)。
-// 沒有心跳,死連線的座位 connected 恆為 true ⇒ RoomHub 的「對局無真人逾時收房」(noHumanMs)
-// 永遠不會啟動,首頁戰區列表就一直看得到進行中的無人 bot 對局。
-// 瀏覽器對 ping 自動回 pong(不用改客戶端);兩個週期沒回應就 terminate → 觸發 'close' → 座位進入斷線流程。
+// Heartbeat: detect dirty disconnects (phone backgrounded / tab killed / network cut -- TCP sends no FIN, 'close' never fires).
+// Without it, dead seats stay connected=true => RoomHub abandoned-game timeout (noHumanMs)
+// never starts, and the lobby keeps listing dead bot-vs-bot games.
+// Browsers auto-reply pong to ping (no client change); two missed cycles terminate -> 'close' -> seat enters disconnect flow.
 const HEARTBEAT_MS = 15 * 1000;
 wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
-  // 發送失敗(對端半開、訊息序列化異常)只丟這一則:不接住 = tick 廣播裡一拋,
-  // 整個 process 退出 = 全房斷線。
+  // Send failure (half-open peer, message serialize error) drops only this message: uncaught = one throw in tick broadcast,
+  // whole process exits = whole room disconnects.
   const sess = hub.attach((msg) => {
     if (ws.readyState !== 1) return;
-    try { ws.send(JSON.stringify(msg)); } catch { /* 丟棄,心跳會回收這條連線 */ }
+    try { ws.send(JSON.stringify(msg)); } catch { /* drop, heartbeat reaps this connection */ }
   });
-  // 單一客戶端的畸形/惡意訊息 MUST NOT 拖垮整台伺服器:接住、記一筆、丟棄(降級不例外)。
+  // One malformed/malicious client message MUST NOT take down the server: catch, log, drop (degrade by omission).
   ws.on('message', (raw) => {
-    ws.isAlive = true;   // 有訊息進來 = 連線活著(對局中 pos 回報比 pong 更即時)
+    ws.isAlive = true;   // Inbound message = connection alive (in-game pos reports beat pong)
     let m;
     try { m = JSON.parse(raw); } catch { return; }
     try { sess.recv(m); } catch (e) { console.log(`⚠ 客戶端訊息處理異常已攔截並丟棄:${String(e?.message || e)}`); }
   });
-  ws.on('error', () => {});   // 不接 = 'error' 事件變成未處理異常,整支伺服器被帶走
+  ws.on('error', () => {});   // Uncaught 'error' becomes an unhandled exception taking down the server
   ws.on('close', () => { try { sess.close(); } catch (e) { console.log(`⚠ 連線收尾異常已攔截:${String(e?.message || e)}`); } });
 });
 const hbTimer = setInterval(() => {
   for (const ws of wss.clients) {
     try {
-      if (ws.isAlive === false) { ws.terminate(); continue; }   // terminate 觸發 'close' → sess.close()
+      if (ws.isAlive === false) { ws.terminate(); continue; }   // terminate fires 'close' -> sess.close()
       ws.isAlive = false;
       ws.ping();
-    } catch { /* 半開 socket 的 ping/terminate 可能拋,下一輪心跳再收 */ }
+    } catch { /* ping/terminate on a half-open socket may throw, next heartbeat round reaps */ }
   }
 }, HEARTBEAT_MS);
 hbTimer.unref?.();
 wss.on('close', () => clearInterval(hbTimer));
 
-// ---------------- 介面熱插拔 ----------------
-// WiFi 連上 / 換網、`tailscale up`、插拔網路線常常晚於伺服器啟動。位址是 `netAddrs()` 現問現答所以
-// 網址清單本來就會跟著變,但**憑證不會** —— 新位址不在 SAN 裡,那條路徑的瀏覽器就直接擋在憑證主體不符。
-// 故位址集合一變就重簽並熱換 secure context(`setSecureContext` 只影響之後的握手,既有連線不受影響),
-// 不然「三條路同時通」實際上得重啟伺服器才成立。雲端不需要(位址固定且不廣播)。
+// ---------------- Interface hot-plug ----------------
+// WiFi join/swap, `tailscale up`, cable replugs often land after server start. Addresses come from `netAddrs()` on demand so
+// the URL list follows, but the CERT does not -- a new address outside SAN gets browsers blocked on cert-subject mismatch.
+// Hence re-sign and hot-swap the secure context on address-set change (`setSecureContext` affects only later handshakes, live connections unaffected),
+// otherwise "three paths at once" only holds after a server restart. Cloud skips this (fixed, unbroadcast addresses).
 const ADDR_WATCH_MS = 20 * 1000;
 const addrSig = () => netAddrs().map((a) => a.ip).sort().join(',');
 if (!CLOUD) {
@@ -497,7 +497,7 @@ if (!CLOUD) {
     const sig = addrSig();
     if (sig === lastSig) return;
     lastSig = sig;
-    // Tailscale 是後來才起來的話,這時候才問得到 MagicDNS 名(問過有值就不再問,CLI 呼叫不便宜)
+    // Tailscale started later means the MagicDNS name is only resolvable now (skip re-query once known, CLI calls are not cheap)
     if (!TS_NAME && netAddrs().some((a) => a.kind === 'tailscale')) TS_NAME = magicDnsName();
     console.log('  ⟳ 網路介面有變動,現在可用的網址:');
     for (const u of lanUrls()) console.log(`      ${u}`);
@@ -508,8 +508,8 @@ if (!CLOUD) {
   addrTimer.unref?.();
 }
 
-// 雲端平台(fly.io / Render / Railway…)關機時送 SIGTERM,寬限期內要收乾淨:
-// 停掉全部房間 tick,否則容器被硬殺前還在跑模擬,玩家看到的是「畫面凍住」而非明確斷線。
+// Cloud platforms (fly.io / Render / Railway...) send SIGTERM on shutdown, drain cleanly inside the grace window:
+// stop every room tick, otherwise the sim keeps running until the hard kill and players see a freeze instead of a clean disconnect.
 for (const sig of ['SIGTERM', 'SIGINT']) {
   process.on(sig, () => {
     console.log(`\n⏹ 收到 ${sig},停止全部戰局並關閉…`);
@@ -532,7 +532,7 @@ listener.listen(PORT, HOST, () => {
   } else {
     console.log(`  本機:  ${proto}://localhost:${PORT}`);
     const addrs = netAddrs();
-    // 有線 / WiFi / Tailscale 全部同時開著,附介面名讓房主知道哪個網址該給哪個隊友
+    // Wired / WiFi / Tailscale all live at once, with iface names so the host knows which URL goes to which teammate
     for (const a of addrs.filter((x) => x.kind === 'tailscale')) console.log(`  Tailscale:${proto}://${a.ip}:${PORT}   (${a.iface})`);
     if (TS_NAME) console.log(`  MagicDNS: ${proto}://${TS_NAME}:${PORT}`);
     for (const a of addrs.filter((x) => x.kind === 'lan')) console.log(`  區網:  ${proto}://${a.ip}:${PORT}   (${a.iface})`);
@@ -554,7 +554,7 @@ listener.listen(PORT, HOST, () => {
     console.log('  ⚠ --https 需要系統 openssl 來生自簽憑證,找不到 ⇒ 已退回 http。');
   }
   if (!SECURE && !CLOUD) {
-    // 手機陀螺儀最常見的「完全沒反應」就是這個:http://<區網 IP> 不是 secure context
+    // The most common "gyro does nothing" on phones is exactly this: http://<LAN IP> is not a secure context
     console.log('  ℹ 手機陀螺儀瞄準需要 secure context:請改用  npm run lan');
     console.log('     (自簽憑證會有一次「不安全連線」警告,點繼續前往即可;http 下感測器靜默不作動)');
   }

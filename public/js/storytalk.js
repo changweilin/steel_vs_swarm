@@ -1,29 +1,29 @@
-// ============ 劇情戰役:攻堅階段對話(客戶端專用內容模組)============
-// 比照 lore.js / story.js:此檔只住**內容**,伺服器不 import,不含任何平衡數值。
+// ============ Campaign siege-stage dialogue (client-only content module) ============
+// Mirrors lore.js / story.js: this file holds **content** only; server never imports it, no balance numbers.
 //
-// 【觸發】伺服器 `sim._siegeFell()` 在**敵方某一階建築被推平**時發 `{e:'siege', side, stage}`;
-//   客戶端只在 `ev.side !== 我方` 時取本檔的對白播出去(推掉自己的塔不演戲)。
-//   階段名冊是 `data.js SIEGE.STAGES`(front / mid / base)—— 本檔 MUST NOT 自帶第二份順序表。
-//   `base` 那一場在**主堡摧毀 = 戰鬥結束之後**,由結算畫面全屏播放(戰鬥中沒有暫停,
-//   把終場對白塞進即時戰鬥 = 玩家一邊讀一邊被打死;而前兩場刻意是無線電閒聊,不擋畫面)。
+// [Trigger] server `sim._siegeFell()` emits `{e:'siege', side, stage}` when **one enemy building tier falls**;
+//   client plays this file's lines only when `ev.side !== own side` (no scene for losing your own tower).
+//   Stage roster is `data.js SIEGE.STAGES` (front / mid / base) -- this file MUST NOT carry a second order table.
+//   The `base` scene plays fullscreen on the settlement screen **after base destroyed = battle over** (no pause mid-battle,
+//   stuffing the finale into live combat = player dies while reading; the first two scenes are radio chatter by design, non-blocking).
 //
-// 【選角規則(MUST 維持,由 tools/audit_story_talk.mjs 釘住)】
-//   ①**只准說話的人**:一場對白的發言者 MUST 全部出自該章該場的兩份名冊(story.js 的
-//     `heroes + mercs`,雙方合計)—— 沒上場的人不會在頻道裡出聲,而「多一個人講話」
-//     在畫面上只表現成一張沒道理的頭像。
-//   ②**雙方都要有人**:每一場 MUST 至少一名我方 + 一名敵方(這是「雙方角色對話」不是獨白)。
-//   ③**每人 4~5 句**(使用者定案的配額);同一章三場加起來 MUST 蓋滿雙方全部名冊
-//     —— 有人整章不開口 = 那一章的陣容有一半是啞的。
-//   ④ 兩個陣營視角**分開寫**:同一場戰役,推進方與挨打方講的不是同一種話。
+// [Casting rules (MUST hold, pinned by tools/audit_story_talk.mjs)]
+//   1. **Speakers only**: every speaker in a scene MUST come from that chapter/scene's two rosters (story.js
+//     `heroes + mercs`, both sides combined) -- anyone off-stage never speaks on the channel, and "one extra voice"
+//     renders as one unjustified portrait on screen.
+//   2. **Both sides present**: every scene MUST have at least one own + one foe speaker (bilateral dialogue, not monologue).
+//   3. **4-5 lines per speaker** (user decision quota); all three scenes of a chapter MUST cover both rosters fully
+//     -- anyone silent all chapter = half that chapter's cast is mute.
+//   4. Write the two faction perspectives **separately**: attacker and defender do not say the same things about one battle.
 //
-// 【關係鉤子】對白取材自 docs/characters.md §五「跨陣營關係網」與各角色 lore 的 bond,
-//   MUST NOT 在此檔另發明與角色檔案矛盾的過去(檔案是真相,對白是它的一次演出)。
+// [Relationship hooks] lines draw on docs/characters.md sec.5 cross-faction network and each character lore's bond,
+//   MUST NOT invent a past in this file that contradicts the character files (files are truth, dialogue is one performance of it).
 
 import { SIEGE } from './data.js';
 
-/** 一場對白:title = 演出標題、note = 戰況旁白(頭一行)、lines = [{ ch, t }] */
+/** One dialogue scene: title = scene title, note = battle narration (first line), lines = [{ ch, t }] */
 export const STORY_TALK = {
-  // ================= 第一章 ・ 台北 信義計畫區 =================
+  // ================= Chapter 1 - Taipei, Xinyi District =================
   // STEEL t06 陸小川 / t05 沈鶴鳴 / m01 渡鴉   ↔   SWARM s03 林翎 / s04 樫村蒼真 / m05 熄燈
   ch1: {
     STEEL: {
@@ -116,7 +116,7 @@ export const STORY_TALK = {
     },
   },
 
-  // ================= 第二章 ・ 東京 澀谷 =================
+  // ================= Chapter 2 - Tokyo, Shibuya =================
   // STEEL t08 韓雪 / t07 李正赫 / m02 磐石   ↔   SWARM s05 河瑟琪 / s10 卡佳 / m06 嘉年華
   ch2: {
     STEEL: {
@@ -211,7 +211,7 @@ export const STORY_TALK = {
     },
   },
 
-  // ================= 第三章 ・ 吉薩 =================
+  // ================= Chapter 3 - Giza =================
   // STEEL t09 達留什 / t10 蕾拉 / m03 雪線   ↔   SWARM s07 埃坦 / s12 埃米爾 / m07 界碑
   ch3: {
     STEEL: {
@@ -306,7 +306,7 @@ export const STORY_TALK = {
     },
   },
 
-  // ================= 第四章 ・ 黑森林 =================
+  // ================= Chapter 4 - Black Forest =================
   // STEEL t02 薇拉 / t11 老雪茄 / m04 霧行者   ↔   SWARM s11 哈特曼 / s09 獵場主 / m08 尾聲
   ch4: {
     STEEL: {
@@ -399,7 +399,7 @@ export const STORY_TALK = {
     },
   },
 
-  // ================= 第五章 ・ 曼哈頓 =================
+  // ================= Chapter 5 - Manhattan =================
   // STEEL t03 大鍋 / t12 螢火 / m05 熄燈   ↔   SWARM s06 悼歌 / s08 聖燭 / m01 渡鴉
   ch5: {
     STEEL: {
@@ -494,7 +494,7 @@ export const STORY_TALK = {
     },
   },
 
-  // ================= 終章 ・ 克里米亞 =================
+  // ================= Finale - Crimea =================
   // STEEL t01 冬將軍 / t04 灰雁 / m06 嘉年華 / m07 界碑 / m08 尾聲
   // SWARM s01 蜂后 / s02 鐵匠 / m02 磐石 / m03 雪線 / m04 霧行者
   ch6: {
@@ -619,10 +619,10 @@ export const STORY_TALK = {
   },
 };
 
-/** 取某章某陣營某階段的對白;缺內容回 null(原則 6 寧缺勿錯:沒有就不演,不拿別章頂替) */
+/** Fetch a chapter/side/stage dialogue; null when missing (degrade by omission: skip instead of substituting another chapter) */
 export function talkOf(chapterId, side, stage) {
   return STORY_TALK[chapterId]?.[side]?.[stage] || null;
 }
 
-/** 階段索引(0/1/2)→ 對白鍵;索引一律走 data.js SIEGE.STAGES,本檔不自帶第二份順序 */
+/** Stage index (0/1/2) -> dialogue key; indices always go through data.js SIEGE.STAGES, no second order table here */
 export const stageKey = (i) => SIEGE.STAGES[i] || null;

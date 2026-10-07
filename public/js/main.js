@@ -1,7 +1,7 @@
-// ============ 無人戰略:鋼鐵與蜂群 — 前端主控 ============
-// 畫面流程:connect(大廳)→ mapbuilder(建地圖:場地/選址,存入最愛)
-//          → openroom(開戰時刻:從最愛挑地圖 + 房名/公開性/環境 → 開房)
-//          → room(配對,每陣營 N 席)→ loading(地形+地貌建構)→ game → over
+// ============ Unmanned strategy: steel vs swarm - frontend main controller ============
+// Screen flow: connect(lobby) -> mapbuilder(build map: site/select, save to favorites)
+//          -> openroom(battle start: pick map from favorites + room name/visibility/env -> create room)
+//          -> room(matchmaking, N seats per side) -> loading(terrain+biome build) -> game -> over
 import { makeNet } from './net.js';
 import {
   LINK_MODES, LINK_MODE_KEYS, netMode, setNetMode, soloOnly,
@@ -49,7 +49,7 @@ import { VENUES, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTi
 import { GEN_BIOMES, MAX_WATER_WET, mixedMapConfig, randomMapConfig, describeGen, biomeName } from './mapgen.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { talkOf, stageKey } from './storytalk.js';
-// 劇情畫面的標記唯一縫 —— 遊戲本體與本地故事書(tools/story_book)共用同一份,見 storyui.js 檔頭
+// Story screen marker single seam - game body and local story book share one copy, see storyui.js header
 import {
   charAvatarHTML, heroChip, kindLabelOf, artModeTabsHTML,
   chapterCardHTML, briefHTML, overText, progressText,
@@ -57,7 +57,7 @@ import {
 import { attachArtSwipe } from './artSwipe.js';
 import { Dialogue } from './dialogue.js';
 import { playPrologueIntro, playChapterIntro } from './prologue.js';
-// `game.js`(600KB+toon/postfx/vfx 鏈)進戰才動態載入,首屏不解析(單航班,失敗回提示不炸頁)。
+// game.js (600KB+toon/postfx/vfx chain) loads dynamically only on battle entry, first screen skips parsing (single flight, failure shows hint without breaking page).
 let _BattleClient = null;
 function battleClientCtor() {
   if (!_BattleClient) _BattleClient = import('./game.js').then((m) => m.BattleClient);
@@ -90,124 +90,124 @@ import { geoClear } from './geocache.js';
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
 
-// ---- 快速模式偏好(localStorage svs_quickmode)----
-// 開啟後:房間階段不預建地形(startPrebuild 跳過),等進入 loading 才建。
-// 與 lowPower 同層級:只住 localStorage,不上行,不進快照。
+// ---- Quick mode preference (localStorage svs_quickmode) ----
+// When on: skip terrain prebuild in room phase (startPrebuild skipped), build on loading entry.
+// Same tier as lowPower: localStorage only, no uplink, no snapshot.
 const _QM_KEY = 'svs_quickmode';
 function quickMode() {
   try { return localStorage.getItem(_QM_KEY) === '1'; } catch { return false; }
 }
 function setQuickMode(on) {
-  try { on ? localStorage.setItem(_QM_KEY, '1') : localStorage.removeItem(_QM_KEY); } catch { /* 靜默 */ }
+  try { on ? localStorage.setItem(_QM_KEY, '1') : localStorage.removeItem(_QM_KEY); } catch { /* silent */ }
 }
 
 
 
 /**
- * 水沼粗網格烘烤(2026-07-19;房主載圖後上傳,供伺服器中立單位佈點/移動迴避)。
- * 逐格取 terrainEnvCode(0 乾 / 1 水 / 2 沼),sim 座標系(x = three x、z 北 = −three z);
- * 回傳 { minX, minZ, cell, cols, rows, data },data 為 cols×rows 個 '0'/'1'/'2' 字元(row-major)。
+ * Bake coarse water-marsh grid (2026-07-19; host uploads after map load, for server neutral-unit placement and avoidance).
+ * Sample terrainEnvCode per cell (0 dry / 1 water / 2 marsh), sim frame (x = three x, north z = minus three z);
+ * Return minX, minZ, cell, cols, rows, data, where data holds cols by rows chars of 0/1/2 in row-major order.
  */
 function bakeWetGrid(t) {
   const cell = WATER.GRID_M;
-  const minX = t.minX, minZ = -t.maxZ;   // sim z = −three z ⇒ three maxZ 對應 sim minZ
+  const minX = t.minX, minZ = -t.maxZ;   // sim z = minus three z, so three maxZ maps to sim minZ
   const cols = Math.max(1, Math.min(300, Math.ceil((t.maxX - t.minX) / cell)));
   const rows = Math.max(1, Math.min(300, Math.ceil((t.maxZ - t.minZ) / cell)));
   let data = '';
   for (let i = 0; i < rows; i++) {
-    const sz = minZ + (i + 0.5) * cell;              // sim z(格心)
+    const sz = minZ + (i + 0.5) * cell;              // sim z (cell center)
     for (let j = 0; j < cols; j++) {
       const sx = minX + (j + 0.5) * cell;            // sim x = three x
-      data += String(terrainEnvCode(t, sx, -sz));    // 取樣 three 座標 (sx, −sz)
+      data += String(terrainEnvCode(t, sx, -sz));    // sample three coords (sx, minus sz)
     }
   }
   return { minX: Math.round(minX * 10) / 10, minZ: Math.round(minZ * 10) / 10, cell, cols, rows, data };
 }
 
 /**
- * 粗高程網格烘烤(2026-08-01 使用者需求「直線攻擊與扇形攻擊要避免隔山打牛」;房主載圖後上傳)。
- * 伺服器是無地形高程的 2D 平面 —— 沒有這份網格,`heroPlasma`(扇形)與 bot 的直線貫穿就會
- * 穿山打到山背後的敵人,而客戶端的射程光暈(`hit:'clear'` 逐段淨空)早就說打不到。
+ * Bake coarse height grid (2026-08-01 user decision: line and fan attacks must not shoot through hills; host uploads after map load).
+ * Server is a flat 2D plane with no terrain height - without this grid, heroPlasma (fan) and bot straight pierce would
+ * hit enemies behind hills, while the client range halo (hit clear, cleared segment by segment) already says blocked.
  *
- * 座標系與 `bakeWetGrid` 完全相同(sim 座標:x = three x、z 北 = −three z),格心取樣;
- * 高程取**裸地形** `heightAt`(橋面/隧道天花是另一套 slabs,MUST NOT 混進來)。
- * 編碼走 `data.js hgtEnc` 這個唯一縫(相對 minH 量化成 2 個 ASCII 字元)。
+ * Same frame as bakeWetGrid (sim coords: x = three x, north z = minus three z), cell-center sampling;
+ * Height reads bare terrain heightAt (bridge decks and tunnel ceilings are a separate slabs set, MUST NOT mix in).
+ * Encoding follows the data.js hgtEnc single seam (relative to minH, quantized to 2 ASCII chars).
  */
 function bakeHeightGrid(t) {
   const spanX = t.maxX - t.minX, spanZ = t.maxZ - t.minZ;
   const cols = Math.max(1, Math.min(LOS.HGT_MAX, Math.ceil(spanX / LOS.HGT_M)));
   const rows = Math.max(1, Math.min(LOS.HGT_MAX, Math.ceil(spanZ / LOS.HGT_M)));
-  const cell = Math.max(LOS.HGT_M, Math.max(spanX / cols, spanZ / rows));   // 格數被上限夾住時放大格距,涵蓋範圍不縮
+  const cell = Math.max(LOS.HGT_M, Math.max(spanX / cols, spanZ / rows));   // Widen cell when count hits cap, keep coverage unshrunk
   const minX = t.minX, minZ = -t.maxZ;
   const minH = Math.floor(t.minH ?? 0);
   let data = '';
   for (let i = 0; i < rows; i++) {
-    const sz = minZ + (i + 0.5) * cell;              // sim z(格心)
+    const sz = minZ + (i + 0.5) * cell;              // sim z (cell center)
     for (let j = 0; j < cols; j++) {
       const sx = minX + (j + 0.5) * cell;            // sim x = three x
-      data += hgtEnc(t.heightAt(sx, -sz), minH);     // 取樣 three 座標 (sx, −sz)
+      data += hgtEnc(t.heightAt(sx, -sz), minH);     // sample three coords (sx, minus sz)
     }
   }
   return { minX: Math.round(minX * 10) / 10, minZ: Math.round(minZ * 10) / 10,
     cell: Math.round(cell * 100) / 100, cols, rows, minH, data };
 }
-const DECK_STEP = 2.2;   // 上橋台階(遊戲公尺):低於橋面這麼多以上 = 從橋下走過,不會被吸上橋
-const DECK_MARGIN = 3.0;  // 站立表面側向容差:走位/轉向/後座漂移貼近橋緣仍不掉下橋(上橋更穩);天花碰撞不吃此容差
-                          // 值大 = 站得住橋緣外一截(免掉橋),代價是可站到可見橋緣外 3m —— 取「不掉橋」優先
-const DECK_UNDER = 1.2;   // 橋面結構厚度(頂面→底緣);= biomes.js soffit/girder 底緣深
-const MAX_MECH_H = 4.8;   // 最大機體所需淨空(4.5m + 頭頂餘裕)。橋底緣離地低於此 = 鑽不過去 → 該上橋,
-                          // MUST NOT 讓機體卡在「上不了橋面(> DECK_STEP)又鑽不過橋腹」的死區(引道口卡住前科)
+const DECK_STEP = 2.2;   // Deck step (game meters): this far below deck = pass under, never snap up
+const DECK_MARGIN = 3.0;  // Standing-surface lateral tolerance: strafing/turning/recoil drift near edge still stays on deck (easier boarding); ceiling collision ignores it
+                          // Large value = can stand a bit past visible edge (no falling), cost is standing up to 3m past visible edge - prioritize no-fall
+const DECK_UNDER = 1.2;   // Deck structure depth (top to bottom edge); = biomes.js soffit/girder bottom depth
+const MAX_MECH_H = 4.8;   // Max mech clearance (4.5m + headroom). Deck bottom below this = cannot pass under, must board,
+                          // MUST NOT trap mechs in a dead zone above DECK_STEP yet below deck belly (ramp jam precedent)
 
 const app = {
   net: null,
   youId: null, isHost: false, token: null,
-  lobby: null,          // 伺服器同步的房間狀態
+  lobby: null,          // Server-synced room state
   mySide: null,
-  charTarget: null,     // 選角對象:null = 自己;bot id = 房主代選(setBotChar)
-  preview: null,        // CharPreview(機體展示台);previewCv 為其共用 canvas 節點
+  charTarget: null,     // Pick target: null = self; bot id = host picks for bot (setBotChar)
+  preview: null,        // CharPreview (mech showcase); previewCv is its shared canvas node
   previewCv: null,
-  stages: { char: null, unit: null },   // 角色卡 / NPC 卡各一台持久展示台(各自 WebGLRenderer,同框並存)
-  modalRole: null,      // 放大視窗當前展示的 role('char'|'unit'|null=關閉)
-  unitSide: null,       // NPC 圖鑑檢視陣營(可切換);unitKind = 目前選的單位;unitShown = 已載入的 kind:side
+  stages: { char: null, unit: null },   // One persistent showcase each for char / NPC cards (own WebGLRenderer, coexist in frame)
+  modalRole: null,      // Enlarged modal current role (char/unit/null=closed)
+  unitSide: null,       // NPC codex viewed side (switchable); unitKind = current unit; unitShown = loaded kind:side
   unitKind: null, unitShown: null,
-  pickSubject: null, pickSide: null, pickEditable: false, pickIsSelf: false,   // 選角上下文(供放大視窗角色格)
-  mapSel: null,         // MapSelect 實例(開房前的設定畫面)
+  pickSubject: null, pickSide: null, pickEditable: false, pickIsSelf: false,   // Pick context (for enlarged-modal role cells)
+  mapSel: null,         // MapSelect instance (pre-room setup screen)
   teamSize: TEAM.DEFAULT,
-  favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
-  story: null,          // 劇情戰役進行中:{ chapterId, side, foe, ch(主駕), allies[], enemies[], index, launched }
-  storySide: 'STEEL',   // 目前瀏覽的戰線陣營(協約 / 同盟)
-  storyPilot: null,     // 簡報中選定的出戰主駕
-  venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
-  mapGenMode: 'preset', // 建圖模式:preset(自訂地圖)|mixed(混合)|random(隨機)
-  dlg: null,            // Dialogue(劇情戰役對話演出層;與 battle 同生死)
+  favCfg: null,         // battleConfig taken directly from favorites
+  story: null,          // Ongoing story campaign: chapterId, side, foe, ch (pilot), allies, enemies, index, launched
+  storySide: 'STEEL',   // Currently browsed front side (pact / alliance)
+  storyPilot: null,     // Briefing-selected sortie pilot
+  venueSelOpen: null,   // Preset site picked at battle-start screen (mutually exclusive with favorites)
+  mapGenMode: 'preset', // Map-build mode: preset (custom map) | mixed (mixed) | random (random)
+  dlg: null,            // Dialogue (story-campaign dialogue layer; lives and dies with battle)
   battle: null,         // BattleClient
-  audio: null,          // GameAudio(app 層,跨戰局存活;BGM 大廳↔戰場切換)
+  audio: null,          // GameAudio (app layer, survives across matches; BGM switches lobby to battlefield)
   terrain: null,
   showcaseTerrains: null,
   showcaseTerrainsPromise: null,
-  pre: null,            // 地圖預建(startPrebuild):房間階段先建好的固定項目,enterLoading 消費後清空
+  pre: null,            // Map prebuild (startPrebuild): fixed items built early in room phase, consumed by enterLoading then cleared
   battleCfg: null,
   phaseShown: null,
   roomPoll: null,
-  artMode: 'char',    // 統一頭像/立繪顯示: 'char' 角色 / 'mech' 機體(全域共用,localStorage 持久)
+  artMode: 'char',    // Unified avatar/portrait display: char role / mech unit (global shared, localStorage persisted)
 };
 
-// ── 統一 角色/機體 顯示模式(全域單一縫)──
-// 所有頭像/立繪經 artAvatarURL/artPortraitURL 取圖,不再直呼 avatarURL/portraitURL;
-// 切換一處 = 集體切換全部掛載點(選角牆/詳情/簡歷/設定頁機體/放大視窗/HUD/對話)。
+// -- Unified role/mech display mode (global single seam) --
+// All avatars/portraits load via artAvatarURL/artPortraitURL, never call avatarURL/portraitURL directly;
+// One switch flips every mount point (pick wall/detail/bio/settings modal/HUD/dialogue).
 const ART_KEY = 'svs_artmode';
 function loadArtMode() {
   try { app.artMode = isArtMode(localStorage.getItem(ART_KEY)); } catch { app.artMode = 'char'; }
 }
 function setArtMode(mode, opts = {}) {
   app.artMode = isArtMode(mode);
-  try { localStorage.setItem(ART_KEY, app.artMode); } catch { /* 靜默 */ }
+  try { localStorage.setItem(ART_KEY, app.artMode); } catch { /* silent */ }
   document.body.dataset.art = app.artMode;
   if (app.dlg) app.dlg.artMode = app.artMode;
   if (opts.silent) return;
   refreshArtModeAll();
 }
-/** 集體重繪所有頭像/立繪掛載點(不碰選角狀態與預覽以外的權威值)。 */
+/** Repaint every avatar/portrait mount (leaves pick state and non-preview authority values alone). */
 function refreshArtModeAll() {
   const me = app.lobby?.clients?.find((c) => c.id === app.youId);
   if ($('charSection')?.style.display !== 'none' && me) renderCharPick(me);
@@ -218,7 +218,7 @@ function refreshArtModeAll() {
   refreshStoryArt();
   setSelfAv(app._lastSelfCh ?? null, true);
 }
-/** 劇情簡報頭像(無顯示頁籤):就地換圖,不重建簡報(保留主駕選擇與捲動位置)。 */
+/** Story briefing avatar (no display tab): swap image in place, keep briefing (preserve pilot pick and scroll). */
 function refreshStoryArt() {
   const body = $('storyBriefBody');
   if (!body || $('storyBrief')?.style.display === 'none') return;
@@ -231,7 +231,7 @@ function refreshStoryArt() {
     img.classList.toggle('av-mech', app.artMode === 'mech');
   }
 }
-/** 頭像/立繪左右滑:每次翻轉顯示角色/機體(全域集體切換,與顯示頁籤同一縫)。 */
+/** Avatar/portrait swipe: each swipe flips role/mech display (global switch, same seam as display tab). */
 function swipeArtMode() {
   setArtMode(app.artMode === 'mech' ? 'char' : 'mech');
   app.audio?.ui('click');
@@ -239,29 +239,29 @@ function swipeArtMode() {
 loadArtMode();
 if (typeof document !== 'undefined') document.body.dataset.art = app.artMode;
 
-// 觸控版版型(手機/平板):掛 body.touch-ui / .ori-portrait|.ori-landscape /
-// .touch-lefty(按鍵) / .touch-screen-lefty(HUD),
-// 並開始追蹤直式⇄橫式切換。CSS 全靠這幾個 class 分版型;戰場的觸控輸入層由 BattleClient 進場時才建。
+// Touch layout (phone/tablet): hang body.touch-ui / .ori-portrait|.ori-landscape /
+// .touch-lefty (buttons) / .touch-screen-lefty (HUD),
+// and start tracking portrait-landscape switches. CSS splits layouts by these classes; battlefield touch input is built on BattleClient entry.
 installTouchUI();
-// **MUST 是函式呼叫而非常數**:操作方式選「不限定」時,玩家在戰鬥中也能切換鍵鼠 ⇄ 搖桿
-// (見 ctrlmode.js),快取成 const 會讓說明/提示文字停在進場當下那一版。
+// MUST stay a function call, not a constant: with control mode any, players can switch mouse-keyboard to pad mid-battle
+// (see ctrlmode.js); caching as const would freeze help/tip text at entry-time version.
 const TOUCH_UI = () => isTouchUI();
 
-// 音效系統(app 層,單一實例):首次使用者手勢自動解鎖 + 啟動 BGM(見 audio.js)。
+// Audio system (app layer, single instance): first user gesture auto-unlocks + starts BGM (see audio.js).
 app.audio = new GameAudio();
 app.audio.setScene('menu');
-// UI 點按音(委派;同時是解鎖手勢的一環)。真實按鈕才響,避免整頁亂點刷音。
-// 觸控操控層的戰鬥鈕(射擊/瞄準/招式…)排除在外 —— 那些有自己的武器音效,再疊 UI 音會變成連發噪音。
+// UI click sound (delegated; also part of the unlock gesture). Only real buttons sound, so stray taps stay silent.
+// Combat buttons on the touch layer (fire/aim/skill) stay excluded - they have their own weapon sounds, layering UI clicks would turn into burst noise.
 document.addEventListener('pointerdown', (e) => {
   if (e.target.closest('.btn, button') && !e.target.closest('#touchLayer, [data-act]')) app.audio?.ui('click');
 }, true);
-// 觸控版讀取/開戰自動全螢幕的補位:非手勢路徑(開戰廣播/載入完成)調 requestFullscreen 會被拒,
-// 讀取與戰鬥畫面內的下一次觸控再試一次(enterFullscreenAuto 內已閘觸控版與現態,桌機零作用)。
+// Touch auto-fullscreen fallback for load/battle entry: non-gesture paths (room broadcast/load done) get requestFullscreen rejected,
+// so retry on the next touch inside load and battle screens (enterFullscreenAuto already gates on touch build and current state, no-op on desktop).
 document.addEventListener('pointerdown', () => {
   if (app.phaseShown === 'loading' || app.phaseShown === 'game') enterFullscreenAuto();
 }, true);
 
-// 還沒進戰區的畫面(這些畫面上沒有房主定案 ⇒ 操作方式退回「我的預設」)
+// Pre-battle screens (no host decision on these screens, so control scheme falls back to my default)
 const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story']);
 
 function show(screen) {
@@ -270,19 +270,19 @@ function show(screen) {
     if (el) el.style.display = s === screen ? '' : 'none';
   }
   app.phaseShown = screen;
-  // body 層常駐工具列(#quickTools)跨所有畫面共用；疊層與選址面板由 z-index 蓋住。
+  // Persistent body toolbar (quickTools) shared across screens; overlays and site panels cover via z-index.
   document.body.dataset.screen = screen;
-  if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // 離開房間:收放大視窗、兩台展示台停 rAF,不與戰場搶 GPU
-  // 操作方式:整房一致、由房主定案(套用在 onSync;規則住 ctrlmode.js)。
-  // 這裡只負責「回到大廳 ⇒ 解除戰區定案」,MUST NOT 在 UI 端另判一次能不能改(A21 同精神)。
+  if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // Leaving room: close enlarged modal, stop both showcase rAF loops, keep GPU clear for battle
+  // Control scheme: room-wide, decided by host (applied in onSync; rules live in ctrlmode.js).
+  // Here only clear the battle-zone decision on lobby return, MUST NOT re-judge edit rights in UI (same spirit as A21).
   if (LOBBY_SCREENS.has(screen)) setRoomCtrlMode(null);
   if (LOBBY_SCREENS.has(screen)) {
     app._autoPickedRoom = false;
     syncQuickRestartFab();
   }
-  // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
+  // Key visual: lobby/pick/create always return to blue-yellow opposition; room defers to renderRoom (converges on picks), battle defers to enterGame
   if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
-  // 致命錯誤計時:進新階段就重計,離開 loading/game 收窗(關閉鈕已收,這裡防殘留)
+  // Fatal-error clock: restart on each new phase, close window when leaving loading/game (close button already hid it, this guards leftovers)
   if (screen === 'loading') {
     hideFatal();
     fatal.loadT0 = Date.now();
@@ -310,10 +310,10 @@ function toast(msg, ms = 3200) {
   toast._t = setTimeout(() => el.classList.remove('on'), ms);
 }
 
-// ================= 致命錯誤(開啟失敗 / 一段時間無法遊戲)=================
-// 只在 loading / game 階段彈窗:原因寫入 #fatalReason,關閉或重啟(單人)。
-// 觸發:地形建構雙敗、戰鬥模組載入失敗、單機模擬核心載入失敗、
-//      載入逾時、對戰中快照停滯、連線中斷逾時。逾時閾值只住這一份。
+// ================= Fatal errors (launch failure / prolonged unplayable state)=================
+// Only pops in loading / game phases: reason goes to fatalReason, close or restart (solo).
+// Triggers: double terrain-build failure, battle-module load failure, solo sim-core load failure,
+//      load timeout, mid-match snapshot stall, disconnect timeout. Timeout thresholds live only here.
 const FATAL = { LOAD_MS: 90000, SNAP_MS: 20000, NET_MS: 30000 };
 const fatal = {
   shown: false,
@@ -325,8 +325,8 @@ const fatal = {
   lastFrame: performance.now(),
   disconnectedAt: 0,
 };
-// 頁面級幀心跳(與戰場迴圈獨立):戰場凍結但快照照收時,快照看門狗看不出來,這裡補一層。
-// 背景分頁 rAF 本來就停擺,看門狗屆時跳過此項(見 fatalWatchdog)。
+// Page-level frame heartbeat (independent of battle loop): when battle freezes but snapshots still arrive, the snapshot watchdog cannot tell, so add a layer here.
+// Background tabs already suspend rAF, so the watchdog skips this item then (see fatalWatchdog).
 const fatalFrame = () => { fatal.lastFrame = performance.now(); requestAnimationFrame(fatalFrame); };
 requestAnimationFrame(fatalFrame);
 function fatalArmed() { return app.phaseShown === 'loading' || app.phaseShown === 'game'; }
@@ -335,7 +335,7 @@ function showFatal(reason, force = false) {
   if (!force && !fatalArmed()) { toast(`⚠️ ${reason}`); return; }
   fatal.shown = true;
   $('fatalReason').textContent = reason;
-  // 重啟只在單人模式提供(連線對戰的重建由房主/伺服器定案,客戶端重發無意義)
+  // Restart offered in solo only (net-match recovery is decided by host/server, client re-send is pointless)
   $('fatalRestartBtn').style.display = netMode() === 'solo' ? '' : 'none';
   $('fatalOverlay').style.display = '';
 }
@@ -344,12 +344,12 @@ function hideFatal() {
   const el = $('fatalOverlay');
   if (el) el.style.display = 'none';
 }
-/** 關閉:收掉戰場回到大廳(不重整,保留連線機制與代號) */
+/** Close: fold battle back to lobby (no reload, keep link mechanism and callsign) */
 function fatalClose() {
   hideFatal();
-  try { app.net?.send({ t: 'leaveRoom' }); } catch { /* 斷線中即略過 */ }
+  try { app.net?.send({ t: 'leaveRoom' }); } catch { /* skip while offline */ }
   sessionStorage.removeItem('svs_token');
-  if (app.battle) { try { app.battle.dispose(); } catch { /* 忽略 */ } app.battle = null; }
+  if (app.battle) { try { app.battle.dispose(); } catch { /* ignore */ } app.battle = null; }
   app.dlg?.dispose(); app.dlg = null;
   app.terrain = null; app.pre = null; app.fieldMsg = null;
   app.story = null; app.super = null; app.quickRestart = null;
@@ -819,7 +819,7 @@ function selectVenue(v) {
   setFavBtnDisabled(false);
 }
 
-/* ================= 擴充建立模式:混合地圖 / 隨機地圖 ================= */
+/* ================= Extended creation modes: mixed maps / random maps ================= */
 // 兩模式皆輸出標準 battleConfig(走既有 showConfig 預覽 + 存入最愛 + 伺服器驗證管線)。
 // 混合:勾選地點等權混合,滑桿有值則覆蓋 mix(夾限走 mapgen 唯一縫);隨機:全由種子推導。
 
@@ -2124,7 +2124,7 @@ function ensureShowcaseTerrains() {
   return app.showcaseTerrainsPromise;
 }
 
-// ================= 放大獨立視窗(仿遊戲操作演出;含角色/NPC 選擇,可切換放大對象) =================
+// ================= Enlarged modal stage (in-game-style showcase; char/NPC pick, switchable subject) =================
 function stageTitleHTML(subject) {
   if (subject.type === 'char') {
     const c = CHARACTERS[subject.id];
@@ -2375,7 +2375,7 @@ $('modalUnitToggle').addEventListener('click', (e) => {
   renderModalPicks();
 });
 
-// ================= NPC / 攻擊建築圖鑑(選角牆下方獨立區塊;雙陣營 + 第三方,與角色卡同框並存) =================
+// ================= NPC / structure codex (standalone block below pick wall; both sides + third party, shares frame with char cards) =================
 const UNIT_ROSTER = ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'tower', 'base'];   // tank 2026-07-17 入列(波次追加坦克)
 const UNIT_SIDES = ['STEEL', 'SWARM', 'GUER', 'MILI'];   // 圖鑑可切陣營(2026-07-17 起含第三方)
 const toggleLabel = (side) => sideInfo(side).name;
@@ -2543,7 +2543,7 @@ function renderCharPick(me) {
   if (app.modalRole) { fillModalPanels(app.modalRole); renderModalPicks(); }   // 放大視窗開啟中 → 同步刷新
 }
 
-// ================= 地圖預建(固定項目提前)=================
+// ================= Map prebuild (fixed items early)=================
 // battleConfig 開房時已全部定案(伺服器 createRoom:resolveEnv 隨機定案 + 50% 主堡對調 + teamSize),
 // 因此「只依賴 cfg 的固定工程」(模型預載 → 地形 → 地貌 → 站立索引)在房間階段就先建;
 // 遊戲準備(loading)只剩等待預建 + 玩家/隨機項目(隨機背景圖、房主 world 上傳、loaded 握手)。
@@ -5372,7 +5372,7 @@ $('worldBtn')?.addEventListener('click', () => {
 $('worldCloseBtn')?.addEventListener('click', () => { $('worldOverlay').style.display = 'none'; });
 $('worldOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'worldOverlay') $('worldOverlay').style.display = 'none'; });
 
-// ================= 伺服器訊息 =================
+// ================= Server messages =================
 function onSync(m) {
   fatal.lastNetUp = Date.now();
   app.youId = m.youId;

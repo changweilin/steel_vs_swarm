@@ -1,4 +1,4 @@
-// ============ 城牆甕城與河堤閘門連接／端點延伸 測試 ============
+// ============ City-wall barbican and levee gate junction/endpoint extension tests ============
 import assert from 'node:assert/strict';
 import { wallParts, buildBoundaryRunParts, wallFit, WALL_KINDS } from '../public/js/edgewall.js';
 import { buildSlopeBoundary } from '../public/js/edgeSlope.js';
@@ -6,7 +6,7 @@ import { NATURAL_CLIFF_KINDS } from '../public/js/environmentParts.js';
 
 console.log('--- 測試城牆甕城與河堤閘門連接／端點延伸規則 ---');
 
-// 1. 自然岩體判定清單
+// 1. Natural rockmass membership list
 assert(NATURAL_CLIFF_KINDS.has('cliff'));
 assert(NATURAL_CLIFF_KINDS.has('landslide'));
 assert(NATURAL_CLIFF_KINDS.has('debris'));
@@ -15,7 +15,7 @@ assert(!NATURAL_CLIFF_KINDS.has('levee'));
 assert(!NATURAL_CLIFF_KINDS.has('barricade'));
 console.log('✓ 自然岩體集合宣告正確 (cliff, landslide, debris)');
 
-// 2. 城牆自身延伸：透過甕城連接
+// 2. City-wall self extension: joined through the barbican
 {
   const def = WALL_KINDS.citywall;
   const joinsSelf = [{ kind: 'citywall' }, { kind: 'citywall' }];
@@ -31,7 +31,7 @@ console.log('✓ 自然岩體集合宣告正確 (cliff, landslide, debris)');
   console.log('✓ 城牆自身持續延伸時透過甕城連接，構件完整且收納於邊界包絡內');
 }
 
-// 3. 河堤自身延伸：透過閘門連接
+// 3. Levee self extension: joined through the gate
 {
   const def = WALL_KINDS.levee;
   const joinsSelf = [{ kind: 'levee' }, { kind: 'levee' }];
@@ -47,7 +47,7 @@ console.log('✓ 自然岩體集合宣告正確 (cliff, landslide, debris)');
   console.log('✓ 河堤自身持續延伸時透過閘門連接，構件完整且收納於邊界包絡內');
 }
 
-// 4. 與懸崖峭壁/土石流/崩塌地相接：直接嵌合岩體，無甕城／閘門
+// 4. Abutting cliff/debris-flow/landslide ground: embed directly into rock, no barbican/gate
 for (const cliffKind of ['cliff', 'landslide', 'debris']) {
   const defWall = WALL_KINDS.citywall;
   const joinsCliffWall = [{ kind: cliffKind }, { kind: cliffKind }];
@@ -61,10 +61,10 @@ for (const cliffKind of ['cliff', 'landslide', 'debris']) {
 }
 console.log('✓ 城牆／河堤與自然岩體（cliff, landslide, debris）相接時直接嵌合岩體，不產生甕城或閘門');
 
-// 5. 與非自然岩體相接（端點）：建立甕城／閘門作為端點，且兩端向緩衝區繼續鋪設
+// 5. Abutting non-rock ground (endpoint): build a barbican/gate as the endpoint and keep paving both ends into the buffer
 {
   const def = WALL_KINDS.citywall;
-  // 端點接 barricade（非自然岩體）
+  // Endpoint abuts barricade (non-rock ground)
   const joinsBarricade = [{ kind: 'barricade' }, { kind: 'barricade' }];
   const runBatch = buildBoundaryRunParts('citywall', {
     len: 24, depth: def.depth, bufferDepth: 18, h: def.h,
@@ -74,7 +74,7 @@ console.log('✓ 城牆／河堤與自然岩體（cliff, landslide, debris）相
   assert(partsRoles.has('barbican-wall'), '端點應建立甕城');
   assert(partsRoles.has('barbican-tower'), '端點應建立甕城樓');
 
-  // 緩衝區鋪設
+  // Buffer paving
   const bufRoles = new Set(runBatch.bufferParts.map(p => p.role));
   assert(bufRoles.has('buffer-wall'), '城牆端點向緩衝區繼續鋪設 buffer-wall');
   assert(bufRoles.has('course-joint'), '城牆緩衝區鋪設包含 course-joint');
@@ -85,7 +85,7 @@ console.log('✓ 城牆／河堤與自然岩體（cliff, landslide, debris）相
 
 {
   const def = WALL_KINDS.levee;
-  // 端點接 warehousebelt（非自然岩體）
+  // Endpoint abuts warehousebelt (non-rock ground)
   const joinsWarehouse = [{ kind: 'warehousebelt' }, { kind: 'warehousebelt' }];
   const runBatch = buildBoundaryRunParts('levee', {
     len: 24, depth: def.depth, bufferDepth: 18, h: def.h,
@@ -95,7 +95,7 @@ console.log('✓ 城牆／河堤與自然岩體（cliff, landslide, debris）相
   assert(partsRoles.has('gate-pier'), '端點應建立閘墩');
   assert(partsRoles.has('gate-leaf'), '端點應建立防汛鋼閘板');
 
-  // 緩衝區鋪設
+  // Buffer paving
   const bufRoles = new Set(runBatch.bufferParts.map(p => p.role));
   assert(bufRoles.has('buffer-levee'), '河堤端點向緩衝區繼續鋪設 buffer-levee');
   assert(bufRoles.has('wing-wall'), '河堤緩衝區鋪設包含 wing-wall');
@@ -103,7 +103,7 @@ console.log('✓ 城牆／河堤與自然岩體（cliff, landslide, debris）相
   console.log('✓ 河堤與非自然岩體相接時建立閘門作為端點，並向緩衝區繼續鋪設 buffer-levee');
 }
 
-// 6. 斜坡邊界地形貼合（buildSlopeBoundary）高程對齊與收納驗證
+// 6. Slope-boundary terrain conformance (buildSlopeBoundary) elevation alignment and envelope check
 {
   const def = WALL_KINDS.citywall;
   const slopeWall = buildSlopeBoundary('citywall', {
@@ -118,7 +118,7 @@ console.log('✓ 城牆／河堤與自然岩體（cliff, landslide, debris）相
     assert(Number.isFinite(p.p[0]));
     assert(Number.isFinite(p.p[1]));
     assert(Number.isFinite(p.p[2]));
-    // 檢查 y 高程在合理地形範圍 (35 ± 4) 加上牆高 (14) 內
+    // Keep y elevation within the plausible terrain band (35 +/- 4) plus wall height (14)
     assert(p.p[1] >= 30 && p.p[1] <= 60, `城牆零件 y=${p.p[1]} 應在地形高度附近`);
   }
   console.log('✓ buildSlopeBoundary 城牆甕城零件高程正確貼合地形高程');
@@ -138,7 +138,7 @@ console.log('✓ 城牆／河堤與自然岩體（cliff, landslide, debris）相
     assert(Number.isFinite(p.p[0]));
     assert(Number.isFinite(p.p[1]));
     assert(Number.isFinite(p.p[2]));
-    // 檢查 y 高程在合理地形範圍 (18 ± 3) 加上堤防高度 (8) 內
+    // Keep y elevation within the plausible terrain band (18 +/- 3) plus levee height (8)
     assert(p.p[1] >= 14 && p.p[1] <= 35, `河堤零件 y=${p.p[1]} 應在地形高度附近`);
   }
   console.log('✓ buildSlopeBoundary 河堤閘門零件高程正確貼合地形高程');
