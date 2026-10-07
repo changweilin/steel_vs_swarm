@@ -37,3 +37,8 @@
 | Random boulder yaw | Geology-aligned orientation from cells |
 | 2D art-review bench and audits (`codex_review`/`audit_codex`/`ai3d` gen2d-prompt-slots/final art) | Codex format truth stays in `public/js/codex.js`; review flow retired, artifacts archived under `D:\data\steel_vs_swarm_ai3d` |
 | 3D parts bench (`parts`, port 8622) | Mech-modeling truth stays in `public/js/forge/`; bench retired |
+| Story-geometry guard (`audit_story_map`, pruned 50dfb7d1) | Siege lock and dialogue stay under `audit_story_talk`; lane-geometry derivation is unguarded |
+| Carrier origin/delivery guard (`audit_ult_carrier`, pruned 50dfb7d1) | Self-type/support compensation stays under `audit_self_ult`, carrier HP under `audit_flight_power`; origin/slot-pacing/delivery gating is unguarded |
+| Pedestrian-plan guard (`audit_pedestrian_plan`, pruned 50dfb7d1) | Footbridge width assertions live on in `audit_road_joint`, entrance blockers in `audit_npc_collide`/`audit_underpass`; dedicated plan guard gone |
+| Solo-boot guard (`audit_solo_boot`, pruned 50dfb7d1) | Browser-runnable core and mode handling stay under `audit_net_modes`; dedicated solo-boot guard gone |
+| OSM-catalog guard (`audit_osm_catalog`, pruned 50dfb7d1) | Relay/fixture coverage stays under `audit_osm_relay`, `audit_osm_fixtures`; catalog guard gone |
