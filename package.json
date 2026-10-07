@@ -81,7 +81,8 @@
     "audit:combat-actions": "node tools/audit_combat_actions.mjs",
     "author:factions": "node tools/mech_authoring/build.mjs --contract factions.json --mcp",
     "audit:authored-factions": "node tools/audit_authored_factions.mjs",
-    "review:factions": "node tools/faction_review.mjs"
+    "review:factions": "node tools/faction_review.mjs",
+    "audit:discipline": "node tools/audit_comment_discipline.mjs"
   },
 
   "dependencies": {

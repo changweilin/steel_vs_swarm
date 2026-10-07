@@ -2,8 +2,9 @@
 /**
  * tools/audit_suite.mjs
  *
- * 全域回歸驗證套件 (Full CI Offline Audit Suite Runner)
- * 統一本地開發與 CI 流程之守門機制，確保 PR 前逐項執行完整離線稽核陣列與平衡驗證。
+ * Global regression suite (Full CI Offline Audit Suite Runner)
+ * Gatekeeper unifying local development and CI flow, ensuring the full offline audit array
+ * and balance checks run item by item before a PR.
  */
 
 import { spawnSync, spawn } from 'node:child_process';
@@ -16,12 +17,13 @@ const __dirname = dirname(__filename);
 const rootDir = resolve(__dirname, '..');
 
 const AUDIT_SCRIPTS = [
-  // ── 核心模擬、連線機制與語法守門 ──
+  // -- Core simulation, connection mechanism, and syntax gate --
   'tools/audit_net_modes.mjs',
   'tools/audit_client_syntax.mjs',
+  'tools/audit_comment_discipline.mjs',
   'tools/audit_weather_surface.mjs',
 
-  // ── 核心地圖規則、兵線拓撲與通行阻擋 ──
+  // -- Core map rules, lane topology, and movement blocking --
   'tools/audit_map_rules.mjs',
   'tools/audit_map_evidence.mjs',
   'tools/audit_habitat.mjs',
@@ -45,7 +47,7 @@ const AUDIT_SCRIPTS = [
   'tools/audit_geology.mjs',
   'tools/audit_zone_cut.mjs',
 
-  // ── 核心幾何量體、武器判定與戰鬥物理 ──
+  // -- Core geometry volumes, weapon adjudication, and combat physics --
   'tools/audit_gpu_lifecycle.mjs',
   'tools/audit_object_joints.mjs',
   'test/boundaryJoins.mjs',
@@ -64,20 +66,20 @@ const AUDIT_SCRIPTS = [
   'tools/audit_flight_power.mjs',
   'tools/audit_slope_move.mjs',
 
-  // ── 核心控制、相機視角與局內經濟 ──
+  // -- Core controls, camera views, and in-match economy --
   'tools/audit_view_lock.mjs',
   'tools/audit_ctrl_mode.mjs',
   'tools/audit_spectator_cam.mjs',
   'tools/audit_minimap_view.mjs',
   'tools/audit_shop_auto.mjs',
 
-  // ── 核心 Bot AI 戰術狀態機 ──
+  // -- Core bot AI tactical state machine --
   'tools/audit_bot_vision.mjs',
   'tools/audit_bot_role.mjs',
   'tools/audit_bot_policy.mjs',
   'tools/audit_bot_tactics.mjs',
 
-  // ── 輔助表現層演算法 (CI 保留類別 D) ──
+  // -- Auxiliary presentation-layer algorithms (CI keeps category D) --
   'tools/audit_anim_weights.mjs',
   'tools/audit_audio_layers.mjs',
   'tools/audit_damp_fps.mjs',
@@ -99,7 +101,7 @@ const failures = [];
 
 const t0 = Date.now();
 
-// 語法閘快敗:它是白畫面守門,先同步跑,紅了後面不必浪費 CPU。
+// Syntax gate fails fast: it guards against white screens, so run it synchronously first; if it is red the rest need not waste CPU.
 const GATE = 'tools/audit_client_syntax.mjs';
 {
   const gate = spawnSync('node', [resolve(rootDir, GATE)], { cwd: rootDir, encoding: 'utf-8', env: process.env });
