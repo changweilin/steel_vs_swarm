@@ -7,12 +7,13 @@ import { MIXED_LAYERS, MIXED_MIN_REGION_M } from './mapLayerSources.js';
 import { venueAvailability } from './venues.js';
 import { MAP_ROAD_PROFILE } from './mapRules.js';
 
-// A venue's synthetic flag also covers partially synthesized mothers; inspect the raw bake.
+// Surface frames retain their admitted road policy and source-bound mother.
 export function mixedRoadFrame(venue) {
   if (!venueAvailability(venue).available) return null;
+  const cfg = venueConfig(venue, TEAM.MAX);
+  if (cfg.roadMode === 'natural-hybrid') return cfg;
   const raw = VENUE_LANES[venue?.id]?.[MOTHER_LANES];
   if (!raw?.lanes || raw.lanes.length !== MOTHER_LANES) return null;
-  const cfg = venueConfig(venue, TEAM.MAX);
   if (JSON.stringify(cfg.motherLanes) !== JSON.stringify(raw.lanes)) return null;
   const game = cfg.motherLanes.map(lane => lane.map(p => llToXZ(...p, cfg.center)));
   if (!lanePathBalanceAudit(game, MOTHER_LANES).ok || !laneSeparationAudit(game).ok || !towerLayoutAudit(game).ok) return null;
@@ -78,9 +79,12 @@ export async function generateMixedMap(venues, { seed, teamSize = TEAM.MAX, fetc
       if (signal?.aborted) return null;
       const roadCount = checked.get(checkKey);
       if (!roadCount) continue;
-      chosen = { role, id: venue.id, name: venue.name, ll: venue.ll, mix: venue.mix,
+      const candidate = { role, id: venue.id, name: venue.name, ll: venue.ll, mix: venue.mix,
         ampF: venue.ampF ?? 1, country: venue.country, weight: 1, frame, roadCount,
-        laneSource: role === 'surface' ? 'osm-baked' : null };
+        laneSource: role === 'surface' ? (frame.roadMode === 'natural-hybrid' ? 'natural-hybrid' : 'osm-baked') : null };
+      // A borrowed palette may change the leading biome; keep searching before settling a hybrid.
+      if (role === 'regional' && !mixedMapConfig([...sources, candidate], { seed, teamSize, mixOverride })) continue;
+      chosen = candidate;
       break;
     }
     if (!chosen) return null;

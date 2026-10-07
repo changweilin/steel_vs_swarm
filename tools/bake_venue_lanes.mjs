@@ -15,7 +15,7 @@
 // → 用 overlapCellM(L) 驗重合率 ≤ MAX_OVERLAP、繞路 ≤ 2.2×、兩堡距離 ≥ 對角線 80%。
 // 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
 // #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
-import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { MAPGEO, battleBBox, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit, lanePathBalanceAudit }
   from '../public/js/data.js';
@@ -23,7 +23,7 @@ import { MAPGEO, battleBBox, realDistFor, targetDistFor, overlapCellM, laneTacti
 import { VENUE_LANES } from '../public/js/venueLanes.js';
 // 表的鍵只有 venues.js 一份(消費端與產生端同吃 —— 在這裡照抄一個字串前綴,
 // 改鍵時必漏改其中一邊,而症狀是「烤了卻沒人讀得到」,沒有任何錯誤訊息)。
-import { VENUE_LANE_KEYS, venueLaneModes } from '../public/js/venues.js';
+import { VENUE_LANE_KEYS, venueLaneModes, VENUES } from '../public/js/venues.js';
 import { readSrc, grabBlock } from './audit_src.mjs';
 import { mapGeometryAudit, laneOverlapRatioXZ, MAP_ROAD_PROFILE, MAP_RULE_VERSION } from '../public/js/mapRules.js';
 import { sideMFor, laneSubsetFor } from '../public/js/data.js';
@@ -34,7 +34,11 @@ import { traceRoadEvidence, roadFingerprint } from '../public/js/roadEvidence.js
 //(`strucTunnel`,2026-07-29 澀谷側壁破口案),卻照樣被 `PREFER_TUNNEL` 當成「這條路線
 // 走得到隧道」而拿去加分,也照樣被規則「橋/隧只能從出入口進出」當成結構去擋。
 // 選線期與執行期對隧道的定義分家,症狀是「烤出來的兵線號稱走地下道,開圖是一條平街」。
-import { strucTunnel } from './venue_field.mjs';
+import { buildGraph, dijkstra } from './road_graph.mjs';
+import { loadElevationFixture, fixtureElevationSampler, osmFixtureFiles, readOsmCapture } from './osm_fixture.mjs';
+import { makeTerrainAssessment, validTerrainAssessment } from '../public/js/roadEvidence.js';
+import { xzToLL } from '../public/js/data.js';
+import { VENUE_GRID } from '../public/js/venueGrid.js';
 
 // 兵線 lat/lng → 遊戲公尺(中心相對;與 audit_map_rules / runtime 同一換算 ⇒ 烘焙期的規則判定與最終稽核一致)
 const SC_GAME = 1 / MAPGEO.REAL_SCALE, EARTH_M = 6371000;
@@ -138,18 +142,20 @@ const ANCHORS_ALL = {
   // 憑地名下錨會落在崖壁上「120m 內無道路節點」);首錨 = 最東那段明隧道中點,往西烤。
   taroko: [[24.1712, 121.5547], [24.1712, 121.5560]],
   kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // 右京區街廓 / 嵐山
+  rotterdam: [[51.909, 4.486], [51.913869, 4.4813346], [51.9130457, 4.4842288], [51.9115783, 4.4914119]],
 };
 
 // 固定 fixture 模式：將版本化 raw road response 送進與正式 Overpass 相同的建圖／選線閘，
 // 完全離線且不得在 fixture 缺件時靜默改抓網路。fixture 的 venue.id 是唯一對應縫，
 // 因此 `berlin.json`、`london_water.json` 等檔名可以獨立於遊戲場地 id。
 const FIXTURE_DIR = process.env.OSM_FIXTURE_DIR || process.env.FIXTURE_DIR || '';
+for (const venue of VENUES) if (!ANCHORS_ALL[venue.id]) ANCHORS_ALL[venue.id] = [venue.ll];
 const FIXTURE_BY_VENUE = new Map();
 if (FIXTURE_DIR) {
   const fixtureRoot = resolve(FIXTURE_DIR);
   if (!existsSync(fixtureRoot)) throw new Error(`OSM fixture 目錄不存在：${fixtureRoot}`);
-  for (const file of readdirSync(fixtureRoot).filter((name) => name.endsWith('.json')).sort()) {
-    const fixture = JSON.parse(readFileSync(join(fixtureRoot, file), 'utf8'));
+  for (const file of osmFixtureFiles(fixtureRoot).sort()) {
+    const fixture = readOsmCapture(join(fixtureRoot, file)).data;
     const id = fixture.venue?.id || fixture.name;
     if (fixture.team !== 5 || !id) continue;
     if (FIXTURE_BY_VENUE.has(id)) throw new Error(`OSM fixture venue.id 重複：${id}`);
@@ -262,139 +268,13 @@ async function osmApiRoads(lat, lng, radius) {
 }
 
 // ---- 數值索引路網圖 ----
-function buildGraph(ways, origin, tunPrefRe) {
-  const idx = new Map();          // "lat,lng" -> i
-  const X = [], Z = [], LA = [], LN = [], adj = [];
-  const tunE = new Set();         // 隧道邊 "u:v"(雙向都記):規則 #5 選線判定用
-  const tunPrefE = new Set();     // PREFER_TUNNEL 偏好專用:只收目標隧道的邊,tunE 本體不動
-  const brgE = new Set();         // 橋樑邊(同上):PREFER_BRIDGE 場地的選線偏好用
-  const portalN = new Set();      // 橋/隧 way 的端點節點 = 出入口(portal):規則「只能從出入口進出」
-  const cosO = Math.cos(origin[0] * d2r);
-  const nid = (la, ln) => {
-    const k = `${la.toFixed(6)},${ln.toFixed(6)}`;
-    let i = idx.get(k);
-    if (i === undefined) {
-      i = X.length;
-      idx.set(k, i);
-      X.push((ln - origin[1]) * d2r * R * cosO);
-      Z.push((la - origin[0]) * d2r * R);
-      LA.push(la); LN.push(ln); adj.push([]);
-    }
-    return i;
-  };
-  for (const w of ways) {
-    if (!w.geometry) continue;
-    const tun = strucTunnel(w.tags);          // 資格閘與引擎同一份(見檔頭 import 註解)
-    const brg = !!w.tags?.bridge && !w.tags?.tunnel;
-    for (let i = 1; i < w.geometry.length; i++) {
-      const a = w.geometry[i - 1], b = w.geometry[i];
-      const u = nid(a.lat, a.lon), v = nid(b.lat, b.lon);
-      if (u === v) continue;
-      const len = Math.hypot(X[u] - X[v], Z[u] - Z[v]);
-      adj[u].push(v, len);        // 扁平化:[v0,len0, v1,len1, …]
-      adj[v].push(u, len);
-      if (tun) {
-        tunE.add(`${u}:${v}`); tunE.add(`${v}:${u}`);
-        if (!tunPrefRe || tunPrefRe.test(w.tags?.name || '')) {
-          tunPrefE.add(`${u}:${v}`); tunPrefE.add(`${v}:${u}`);
-        }
-      }
-      if (brg) { brgE.add(`${u}:${v}`); brgE.add(`${v}:${u}`); }
-    }
-    // 結構 way 的頭尾幾何節點 = 出入口(portal):真實匝道/洞口只接在結構兩端,
-    // way 中間節點若被兵線側切上/下橋 = 「從側邊出入」(規則禁止,見 laneStructEntryAudit)。
-    if (tun || brg) {
-      const g0 = w.geometry[0], gN = w.geometry[w.geometry.length - 1];
-      portalN.add(nid(g0.lat, g0.lon));
-      portalN.add(nid(gN.lat, gN.lon));
-    }
-  }
-  // 連通 component 只作 fixture target 候選的穩定優先序；不改 Dijkstra 或任何路線閘。
-  // adjacency 的插入順序來自版本化 raw response，component id 只比較相等性，故不受 id 編號影響。
-  const component = new Int32Array(X.length).fill(-1);
-  let componentCount = 0;
-  for (let s = 0; s < X.length; s++) {
-    if (component[s] >= 0) continue;
-    const q = [s]; component[s] = componentCount;
-    for (let h = 0; h < q.length; h++) {
-      const u = q[h], a = adj[u];
-      for (let j = 0; j < a.length; j += 2) {
-        const v = a[j];
-        if (component[v] < 0) { component[v] = componentCount; q.push(v); }
-      }
-    }
-    componentCount++;
-  }
-  const junction = adj.map((edges) => {
-    const neighbors = new Set();
-    for (let j = 0; j < edges.length; j += 2) neighbors.add(edges[j]);
-    return neighbors.size >= 3;
-  });
-  return { X, Z, LA, LN, adj, n: X.length, tunE, tunPrefE, brgE, portalN, component, componentCount, junction, ways };
-}
 
-class MinHeap {
-  constructor(cap) { this.k = new Float64Array(cap); this.v = new Int32Array(cap); this.n = 0; }
-  push(k, v) {
-    if (this.n === this.k.length) { const K = new Float64Array(this.n * 2), V = new Int32Array(this.n * 2); K.set(this.k); V.set(this.v); this.k = K; this.v = V; }
-    let i = this.n++;
-    this.k[i] = k; this.v[i] = v;
-    while (i > 0) { const p = (i - 1) >> 1; if (this.k[p] <= this.k[i]) break; this._sw(p, i); i = p; }
-  }
-  pop() {
-    const rk = this.k[0], rv = this.v[0];
-    this.n--;
-    if (this.n) {
-      this.k[0] = this.k[this.n]; this.v[0] = this.v[this.n];
-      let i = 0;
-      for (;;) {
-        const l = 2 * i + 1, r = l + 1;
-        let s = i;
-        if (l < this.n && this.k[l] < this.k[s]) s = l;
-        if (r < this.n && this.k[r] < this.k[s]) s = r;
-        if (s === i) break;
-        this._sw(s, i); i = s;
-      }
-    }
-    return [rk, rv];
-  }
-  _sw(a, b) { const k = this.k[a], v = this.v[a]; this.k[a] = this.k[b]; this.v[a] = this.v[b]; this.k[b] = k; this.v[b] = v; }
-}
 
 // 已被前一條兵線用掉的邊:重罰而非硬禁。
 // 硬禁(邊不相交)會逼第三條繞路超過 2.2× 上限而全滅;重罰讓它「盡量不重用」,
 // 真正的硬門檻交給重合率(那才是規則本身)。
-const REUSE_PEN = 20;  // 已用邊重罰倍數(提升後讓第二條路線強力迴避第一條,有助形成 O 形對)
 
 /** Dijkstra;used = Set of (u*n+v) 已用邊;wMul(u,v) 側翼偏好乘數 */
-function dijkstra(g, src, dst, used, wMul) {
-  const { adj, n } = g;
-  const dist = new Float64Array(n).fill(Infinity);
-  const prev = new Int32Array(n).fill(-1);
-  const done = new Uint8Array(n);
-  dist[src] = 0;
-  const h = new MinHeap(1024);
-  h.push(0, src);
-  while (h.n) {
-    const [d, u] = h.pop();
-    if (done[u]) continue;
-    done[u] = 1;
-    if (u === dst) break;
-    const a = adj[u];
-    for (let i = 0; i < a.length; i += 2) {
-      const v = a[i];
-      if (done[v]) continue;
-      let w = a[i + 1] * (wMul ? wMul(u, v) : 1);
-      if (used.has(u * n + v)) w *= REUSE_PEN;
-      const nd = d + w;
-      if (nd < dist[v]) { dist[v] = nd; prev[v] = u; h.push(nd, v); }
-    }
-  }
-  if (!done[dst]) return null;
-  const path = [dst];
-  while (path[0] !== src) { const p = prev[path[0]]; if (p < 0) return null; path.unshift(p); }
-  return path;
-}
 
 const pathLen = (g, p) => { let s = 0; for (let i = 1; i < p.length; i++) s += Math.hypot(g.X[p[i]] - g.X[p[i - 1]], g.Z[p[i]] - g.Z[p[i - 1]]); return s; };
 const banPath = (b, p, n, prog) => {
@@ -733,8 +613,14 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, 
     bases: { SWARM: writtenA, STEEL: writtenB }, lanes: written, laneCount: L,
     laneIds: mapA ? [0] : laneSubsetFor(L), ...(mapA ? {} : { motherLanes: written }),
     defSide: mapA || null, sizeM: sideMFor(mapA ? 1 : 3, mapA) };
+  frame.center.rot = g.rotation || 0;
   const common = mapGeometryAudit(frame, 5);
   if (!common.ok) return { fail: common.code };
+  if (!mapA && FIXTURE_DIR) {
+    if (!g.elevationAt) return { fail: 'missingElevation' };
+    frame.roadTerrain = makeTerrainAssessment(frame, (x, z) => g.elevationAt(...xzToLL(x, z, frame.center)));
+    if (!validTerrainAssessment(frame)) return { fail: 'terrain' };
+  }
   mo = common.metrics.maxOverlap;
   const lanesGame = lanes.map((l) => l.idx.map((i) => llToGame(g.LA[i], g.LN[i], cc)));
   // 砲塔洞口規則(規則 #5):兵線穿隧道時,埋在洞內的砲塔 MUST 有 ≥TOWER_TUNNEL_OUT_F 射程涵蓋洞口外。
@@ -803,6 +689,14 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
     const ways = await roadsFor(id, anchor, RAD);
     if (!ways || ways.length < 20) { log(`  ways=${ways ? ways.length : 'ERR'} → skip`); continue; }
     const g = buildGraph(ways, anchor, PREFER_TUNNEL_WAY[id]);
+    g.rotation = (VENUE_GRID[id] || 0) * Math.PI / 180;
+    if (fixture) {
+      try {
+        const at = fixtureElevationSampler(loadElevationFixture(fixture.name, join(resolve(FIXTURE_DIR), 'elevation')));
+        g.elevationAt = (lat, lng) => lat < fixture.bbox.minLat || lat > fixture.bbox.maxLat
+          || lng < fixture.bbox.minLng || lng > fixture.bbox.maxLng ? null : at(lat, lng);
+      } catch { /* Full-road admission remains pending without the captured relief. */ }
+    }
     log(`  ways=${ways.length} nodes=${g.n}`);
     // 錨點 → 最近道路節點(120m 內)
     let aIdx = -1, ad = 120;
@@ -1011,8 +905,13 @@ if (ONLY.length || FIXTURE_DIR) {
   let current = readSrc('public', 'js', 'venueLanes.js');
   for (const id of Object.keys(out)) {
     const marker = `\n  ${id}: `;
-    const oldBlock = grabBlock(current, marker);
     const newBlock = grabBlock(js, marker);
+    if (!current.includes(marker)) {
+      const end = current.lastIndexOf('};');
+      current = current.slice(0, end) + `  ${id}: ${newBlock},\n` + current.slice(end);
+      continue;
+    }
+    const oldBlock = grabBlock(current, marker);
     const start = current.indexOf('{', current.indexOf(marker));
     current = current.slice(0, start) + newBlock + current.slice(start + oldBlock.length);
   }

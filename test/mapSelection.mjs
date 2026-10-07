@@ -198,8 +198,9 @@ if (process.argv.includes('--browser')) {
     import { MapSelect } from './mapSelect.js';
     import { MAP_SELECT_TEXT, mapCandidateLabel, mapCandidateSource } from './mapSelectContent.js';
     import { MAPGEO, TEAM, llToXZ, xzToLL, targetDistFor, MOTHER_LANES } from './data.js';
-    import { VENUES, synthLane, venueAvailability, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTip } from './venues.js';
+    import { VENUES, synthLane, venueAvailability, venueConfig, venueBrief, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTip } from './venues.js';
     import { MAP_RULE_TEXT } from './mapRulesContent.js';
+    import { roadSourceSummary } from './roadEvidence.js';
     import { GEN_BIOMES, MAX_WATER_WET, describeGen, biomeName, randomMapConfig } from './mapgen.js';
     import { generateMixedMap } from './mixedMap.js';
     import { MIXED_LAYERS } from './mapLayerSources.js';
@@ -218,6 +219,7 @@ if (process.argv.includes('--browser')) {
     const triggerBackgroundMapSetup = () => {};
     const syncVenueTips = () => {};
     const warmModels = () => {};
+    const savePrefs = () => {};
     const toast = () => {};
     const esc = s => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;');
     ${grabFn(readSrc('test', 'mapRoadFixtures.mjs'), 'mockSearchRoads')}
@@ -233,6 +235,7 @@ if (process.argv.includes('--browser')) {
     ${grabFn(main, 'venueBtn')}
     ${grabFn(main, 'renderVenueGroups')}
     ${grabFn(main, 'renderVenues')}
+    ${grabFn(main, 'selectVenue')}
     const layer = () => ({ bindTooltip() { return this; }, addTo() { return this; }, on() { return this; } });
     window.L = { circleMarker: layer, polyline: layer, polygon: layer, tileLayer: layer,
       map: () => ({ setView() { return this; }, on() {}, removeLayer() {}, fitBounds() {}, invalidateSize() {} }),
@@ -284,9 +287,13 @@ if (process.argv.includes('--browser')) {
       await page.goto('http://map-review.local/', { waitUntil: 'domcontentloaded' });
       await page.waitForFunction(() => window.mapReviewReady);
       assert(await page.evaluate(() => window.mapReviewRandomFirst), 'first-use random mode generates without loading Leaflet or a geographic selector');
-      assert.equal(await page.locator('#venueGrid [data-vid="madrid"]').isDisabled(), true);
+      assert.equal(await page.locator('#venueGrid [data-vid="taroko"]').isDisabled(), true);
       assert.equal(await page.locator('#venueGrid [data-vid="berlin"]').isDisabled(), false);
-      assert.match(await page.locator('#venueGrid [data-vid="madrid"]').textContent(), /待驗證/);
+      assert.match(await page.locator('#venueGrid [data-vid="taroko"]').textContent(), /待驗證/);
+      assert.equal(await page.locator('#venueGrid [data-vid="madrid"]').isDisabled(), false);
+      assert.equal(await page.locator('#venueGrid [data-vid="rotterdam"]').isDisabled(), false);
+      assert.equal(await page.locator('#venueGrid [data-vid="phoenix"]').isDisabled(), false);
+      assert.match(await page.locator('#venueGrid [data-vid="phoenix"]').textContent(), /一實兩生成/);
       if (viewport.width < 600) {
         await page.evaluate(() => document.body.classList.add('touch-ui', 'ori-portrait'));
       }
@@ -305,6 +312,14 @@ if (process.argv.includes('--browser')) {
       await page.evaluate(() => document.querySelector('#mapCandidates').scrollIntoView());
       const shotArg = process.argv.indexOf('--screenshot');
       if (shotArg >= 0 && viewport.width > 600) await page.screenshot({ path: process.argv[shotArg + 1] });
+      await page.locator('#venueGrid [data-vid="rotterdam"]').click();
+      assert.equal(await page.evaluate(() => window.mapReview.favCfg.venue.id), 'rotterdam');
+      assert.equal(await page.evaluate(() => window.mapReview.favCfg.roadMode), 'real');
+      assert.match(await page.locator('#mapStatus').textContent(), /母體 3\/3 條道路已驗證/);
+      await page.locator('#venueGrid [data-vid="phoenix"]').click();
+      assert.equal(await page.evaluate(() => window.mapReview.favCfg.roadMode), 'natural-hybrid');
+      assert.match(await page.locator('#mapStatus').textContent(), /母體 1\/3 條道路已驗證/);
+      if (shotArg >= 0 && viewport.width > 600) await page.screenshot({ path: process.argv[shotArg + 1].replace('.png', '-hybrid.png') });
       await page.evaluate(() => window.mapReview.mapSel.reset());
       assert.equal(await items.count(), 0);
       assert.equal(await page.locator('#mapCandidates').isVisible(), false);

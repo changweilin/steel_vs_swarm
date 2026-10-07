@@ -48,6 +48,7 @@ import {
 } from './showcase.js';
 import { VENUES, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTip, venueBrief, venueConfig, venueAvailability, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { MAP_RULE_TEXT } from './mapRulesContent.js';
+import { roadSourceSummary } from './roadEvidence.js';
 import { mapGeometryAudit } from './mapRules.js';
 import { validMapSources } from './mapSourceValidation.js';
 import { GEN_BIOMES, MAX_WATER_WET, randomMapConfig, describeGen, biomeName } from './mapgen.js';
@@ -736,6 +737,7 @@ function venueBtn(v, teamSize = app.teamSize) {
     + `<span class="venue-tags"><span class="venue-type t-${v.type}">${v.type}</span>`
     + (vdef ? `<span class="venue-var var-${v.variant}">${vdef.name}</span>` : '')
     + (v.story ? '<span class="venue-var story-tag">劇情</span>' : '')
+    + (availability.available && availability.cfg.roadMode === 'natural-hybrid' ? `<span class="venue-var">${esc(MAP_RULE_TEXT.hybrid)}</span>` : '')
     + (!availability.available ? `<span class="venue-var">${esc(MAP_RULE_TEXT.pending)}</span>` : '')
     + '</span>';
   attachTip(b, venueTip(v, teamSize));
@@ -834,6 +836,7 @@ function selectVenue(v) {
   if (!venueAvailability(v, MAP_BUILD_TEAMSIZE).available) { $('mapStatus').textContent = MAP_RULE_TEXT.unavailable; setFavBtnDisabled(true); return; }
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
   const cfg = venueConfig(v, MAP_BUILD_TEAMSIZE);
+  const provenance = roadSourceSummary(cfg);
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
   app.venueSel = v;
   app.favCfg = cfg;
@@ -843,7 +846,7 @@ function selectVenue(v) {
   savePrefs({ lastVenueId: v.id });
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,加入最愛地圖後即可開房。` +
-    `<div>${esc(MAP_RULE_TEXT.sourceSummary(3, 3, cfg.laneCount, cfg.laneCount))}</div>` +
+    `<div>${esc(MAP_RULE_TEXT.sourceSummary(provenance.real, provenance.total, provenance.active, provenance.count))}</div>` +
     `<div class="venue-desc">${esc(venueBrief(v, MAP_BUILD_TEAMSIZE))}</div>`;
   $('mapProgressBar').style.width = '100%';
   setFavBtnDisabled(false);
@@ -882,6 +885,10 @@ function acceptGenCfg(cfg) {
   triggerBackgroundMapSetup(cfg, cfg.placeName || '生成戰區');
   $('mapStatus').innerHTML =
     `📍 <b>${esc(cfg.placeName)}</b>:${esc(describeGen(cfg))} — 加入最愛地圖後即可開房。`;
+  if (!isRandomMap(cfg)) {
+    const s = roadSourceSummary(cfg);
+    $('mapStatus').innerHTML += `<div>${esc(MAP_RULE_TEXT.sourceSummary(s.real, s.total, s.active, s.count))}</div>`;
+  }
   $('mapProgressBar').style.width = '100%';
   setFavBtnDisabled(false);
 }

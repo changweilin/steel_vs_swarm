@@ -36,7 +36,7 @@ import { groundModelDefinitions } from './ground_model_runtime.mjs';
 //           --break-wave(海浪相位改取實例原點)/ --break-gust(陣風包絡拿掉)
 //           --break-cloth(旗面速率退回全員同步)/ --break-treephase(逐株相位退回逐零件原點)。
 //           六者 MUST 各自讓對應欄紅字,否則等於沒驗到(原則 9)。
-import { readSrc } from './audit_src.mjs';
+import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 // 載具型錄唯一縫(零 import ⇒ Node 端直接載得動真品;⑧ 段的 CIVIC_PARTS 沙箱要注入)
 import { makeVehicle, makeRecess } from '../public/js/vehicles.js';
 import { CHARACTERS } from '../public/js/data.js';
@@ -68,6 +68,8 @@ const BREAK_GRAZE = process.argv.includes('--break-graze');
 const BREAK_CLOTH = process.argv.includes('--break-cloth');
 /** 反向驗證:逐株樹基相位退回逐零件原點(= 同一株各擺各的舊制)⇒ Ⅲ + Ⅶ MUST 紅字 */
 const BREAK_TREEPHASE = process.argv.includes('--break-treephase');
+const BREAK_WIND_CLOCK = process.argv.includes('--break-wind-clock');
+const BREAK_CLOUD_WRAP = process.argv.includes('--break-cloud-wrap');
 
 let toon = readSrc('public', 'js', 'toon.js');
 let post = readSrc('public', 'js', 'postfx.js');
@@ -109,6 +111,11 @@ if (BREAK_TREEPHASE) {
 const biomes = readSrc('public', 'js', 'biomes.js');
 const site = readSrc('public', 'js', 'siteplan.js');
 const envSrc = readSrc('public', 'js', 'environment.js');
+let fxSrc = readSrc('public', 'js', 'weatherFx.js');
+if (BREAK_CLOUD_WRAP) {
+  fxSrc = bend(fxSrc, /\(\(item\.z \+ travelZ \* item\.speed \+ wrap \/ 2\) % wrap \+ wrap\) % wrap - wrap \/ 2/,
+    '(item.z + travelZ * item.speed + wrap / 2) % wrap - wrap / 2', '--break-cloud-wrap');
+}
 const game = readSrc('public', 'js', 'game.js');
 const terr = readSrc('public', 'js', 'terrain.js');
 const ground = readSrc('public', 'js', 'ground.js');
@@ -198,8 +205,10 @@ if (BREAK_INK) INK_SOFT_A = 1;
   // 勾線資訊緩衝的 INK_INFO_*),寫死整行等於「以後有人多 import 一個名字就紅字」,
   // 而這一條要釘的是「風向與時鐘來自 toon.js 那一份」。
   const envToonImp = /import \{([^}]*)\} from '\.\/toon\.js'/.exec(envSrc)?.[1] || '';
-  ok(['setCelSun', 'WIND', 'celWindTime'].every((n) => new RegExp(`\\b${n}\\b`).test(envToonImp)),
-    'environment.js 的雲吃 toon.js 那一份 WIND 與同一支時鐘');
+  const cloudWindImport = /import \{[^}]*\bWIND\b[^}]*\} from '\.\/toon\.js'/.test(fxSrc);
+  ok(['setCelSun', 'celWindTime'].every((n) => new RegExp(`\\b${n}\\b`).test(envToonImp))
+    && cloudWindImport && /makeClouds/.test(envSrc),
+    'Environment and cloud effects share the toon wind parameters and clock');
   ok(WIND.WAVE_M > 5 && WIND.BEAT > 1 && WIND.CLOUD_MPS > 0,
     `風的形狀參數合理(波長 ${WIND.WAVE_M}m、諧波比 ${WIND.BEAT}、雲速 ${WIND.CLOUD_MPS}m/s)`);
   ok(Math.abs(WIND.BEAT - Math.round(WIND.BEAT)) > 0.05,
@@ -285,7 +294,8 @@ console.log('\nⅢ 擺動的不變式(toon.js 頂點原文)');
   ok(/swLx \* swLx/.test(S) && /swLy \* swLy/.test(S)
     && /vec3 swUrow = vec3\( 0\.0, 1\.0, 0\.0 \) \* swM/.test(S),
     '精確逆映射(逐分量除 Lx²/Ly²):轉置在冠盤這類非等比縮放下把傾角污染放大,下沉偏離世界垂直 30°');
-  ok(/sin\( uWindT \* swRate \+ swPhase \)/.test(S) && count(S, /sin\(/g) === 2,
+  ok(/sin\( uWeatherWindT \* swRate \+ swPhase \)/.test(S)
+    && /sin\( uWeatherWindT \* swRate \* swBeat \+ swFastPhase \)/.test(S) && count(S, /sin\(/g) === 2,
     '兩個不可通約的正弦相加 = 週期性(使用者要的「重複性變化」)但看不出重複點');
   ok(/#ifdef CEL_SWAY_H[\s\S]*?swPiece = fract[\s\S]*?swRate \*= mix\( 0\.88, 1\.12, swPiece \);[\s\S]*?swPhase \+= swPiece \* 6\.2831853;[\s\S]*?#endif/.test(S),
     '旗面 rate / phase 逐件由已定案落點雜湊,零共享 rnd(全員同速 = 機械連桿)');
@@ -394,41 +404,63 @@ console.log('\nⅣ 消費端覆蓋(使用者點名的六種軟性物質)');
 // ---------------------------------------------------------------- Ⅴ
 console.log('\nⅤ 風的時鐘與雲(執行原文)');
 {
-  const wt = { value: 0 };
-  const step = new Function('_windT',
-    `${block(toon, 'export function stepCelWind(').replace('export ', '')}\nreturn stepCelWind;`)(wt);
-  step(0.016); step(0.016);
-  ok(Math.abs(wt.value - 0.032) < 1e-9, '時鐘逐幀累加');
+  const wt = { value: 0 }, windPhase = { value: 0 }, wavePhase = { value: 0 }, gustPhase = { value: 0 };
+  const rates = { freq: { value: 1 }, waveSpeed: { value: 1 }, shape: { value: { w: 1 } } };
+  let stepSource = grabFn(toon, 'stepCelWind');
+  if (BREAK_WIND_CLOCK) stepSource = bend(stepSource, /d \* _weatherWind\.freq\.value/,
+    '_windT.value * _weatherWind.freq.value', '--break-wind-clock');
+  const step = new Function('_windT', '_windPhase', '_wavePhase', '_gustPhase', '_weatherWind',
+    `${stepSource}\nreturn stepCelWind;`)(wt, windPhase, wavePhase, gustPhase, rates);
+  step(.016); step(.016);
+  ok(Math.abs(wt.value - .032) < 1e-9, 'The shared clock accumulates frame time');
   step(9);
-  ok(Math.abs(wt.value - 0.282) < 1e-9,
-    '單幀 dt 夾在 0.25(分頁切回來那一幀 dt 是好幾秒,不夾的話整片林子會抽一下)');
-  step(-5); step(NaN); step(undefined);
-  ok(Math.abs(wt.value - 0.282) < 1e-9, '負值 / NaN / undefined 一律不推進(時鐘不得倒退)');
-  ok(!/%/.test(code(block(toon, 'export function stepCelWind('))),
-    '時鐘刻意不取模:各 kind 的頻率不可通約,取模會在週期邊界跳一下');
+  ok(Math.abs(wt.value - .282) < 1e-9, 'Returning to the tab clamps every phase to a 0.25-second step');
+  for (const invalid of [-5, NaN, undefined, null, '0.1', {}, Infinity, -Infinity]) step(invalid);
+  ok(Math.abs(wt.value - .282) < 1e-9, 'Negative and non-finite time cannot advance the shared clock');
+  ok([windPhase, wavePhase, gustPhase].every(p => Math.abs(p.value - .282) < 1e-9),
+    'Wind, wave and gust phases share the same finite clamped time step');
+  rates.freq.value = 2; rates.waveSpeed.value = 0; rates.shape.value.w = .4;
+  step(.1);
+  ok(Math.abs(windPhase.value - .482) < 1e-9 && Math.abs(wavePhase.value - .282) < 1e-9
+    && Math.abs(gustPhase.value - .322) < 1e-9,
+    'Changing weather integrates new phase rates while frozen waves retain their phase');
+  ok(!/%/.test(code(stepSource)), 'Integrated phases never wrap onto a different waveform');
   ok(count(code(game), /stepCelWind\(dt\)/g) === 1
     && code(game).indexOf('stepCelWind(dt)') < code(game).indexOf('this.envFx?.update(dt'),
-    'game.js 每幀推一次,且排在 envFx.update 之前(雲讀的是同一支時鐘,晚一步就跟草差一幀)');
+    'Game wind advances exactly once before the environment reads it');
   ok(count(code(envSrc), /celWindTime\(\)/g) === 1,
-    '雲不自己數 dt(自己數的話暫停一次就與地面錯開)');
+    'Battle clouds consume the shared clock without creating a second one');
 
-  // 雲的環繞算術:JS 的 % 對負數回負值 —— 直接取模會讓半邊的雲每一圈跳到另一側
-  const line = /const a = \(\(d\.along \+ WIND\.CLOUD_MPS \* (?:windAmp \* )?t \+ WRAP \* 0\.5\) % WRAP \+ WRAP\) % WRAP - WRAP \* 0\.5;/.exec(code(envSrc));
-  ok(!!line, '雲的環繞取模先加半個 WRAP 再減(且對負數補一次 + WRAP)');
-  const wrapAt = new Function('d', 't', 'WIND', 'WRAP', 'windAmp = 1', `${line[0]}\nreturn a;`);
-  const WRAP = 1000, V = { CLOUD_MPS: 2 };
-  let inRange = true, maxJump = 0, prev = null;
-  for (let t = 0; t <= WRAP / V.CLOUD_MPS; t += 1) {
-    const a = wrapAt({ along: -480 }, t, V, WRAP);
-    if (a < -WRAP / 2 - 1e-9 || a > WRAP / 2 + 1e-9) inRange = false;
-    if (prev !== null) maxJump = Math.max(maxJump, Math.min(Math.abs(a - prev), WRAP - Math.abs(a - prev)));
-    prev = a;
+  // Execute the shipped step closure; color and opacity fixtures isolate advection from WebGL.
+  const cloudStep = grabBlock(grabFn(fxSrc, 'makeClouds'), '\n    step(');
+  const vector = () => ({ x: 0, y: 0, z: 0, set(x, y, z) { Object.assign(this, { x, y, z }); } });
+  const color = { copy() { return this; }, lerp() { return this; } };
+  const sprite = { position: vector(), scale: vector(), material: { opacity: 1, color } };
+  const item = { sprite, type: 'cumulus', phase: 0, rank: .5, speed: 1, x: -480, z: -470, y: 0, size: 5 };
+  const WRAP = 1000;
+  const cloud = new Function('items', 'tint', 'newWhite', 'dark', 'span', 'wrap', 'WIND', 'THREE',
+    `let travelX = 0, travelZ = 0; return { step(t, dt, sky, dyn, profile) ${cloudStep} };`)(
+    [item], color, color, color, WRAP / 3.2, WRAP, WIND, { MathUtils: { smoothstep: () => 1 } });
+  const profile = { cumulus: 1, darkness: 0, scale: 1, altitude: .1 };
+  cloud.step(0, 10, color, { windDir: [1, 0], windAmp: 1 }, profile);
+  const initial = sprite.position.x;
+  cloud.step(0, 0, color, { windDir: [1, 0], windAmp: 9 }, profile);
+  ok(sprite.position.x === initial, 'A wind-strength change cannot retroactively move accumulated cloud travel');
+  cloud.step(0, WRAP / WIND.CLOUD_MPS, color, { windDir: [1, 0], windAmp: 1 }, profile);
+  ok(Math.abs(sprite.position.x - initial) < 1e-7, 'One full advection wrap returns to the same position');
+  let inRange = true, maxJump = 0;
+  for (let i = 0; i < 1000; i++) {
+    const previous = { ...sprite.position };
+    cloud.step(0, 1, color, { windDir: [-.6, -.8], windAmp: 3 }, profile);
+    for (const axis of ['x', 'z']) {
+      const p = sprite.position[axis], distance = Math.abs(p - previous[axis]);
+      inRange &&= p >= -WRAP / 2 && p <= WRAP / 2;
+      maxJump = Math.max(maxJump, Math.min(distance, WRAP - distance));
+    }
   }
-  ok(inRange, '起點在負半邊的雲,整個週期都留在 [−WRAP/2, WRAP/2] 內(負數取模的坑)');
-  ok(Math.abs(maxJump - V.CLOUD_MPS) < 1e-9, `逐步位移恆 = 雲速 × dt(無跳點;實測 ${maxJump}）`);
-  const period = WRAP / V.CLOUD_MPS;
-  ok(Math.abs(wrapAt({ along: 120 }, 0, V, WRAP) - wrapAt({ along: 120 }, period, V, WRAP)) < 1e-9,
-    `一個週期後逐位元回到起點(= 使用者要的「重複性變化」;實測週期 ${period}s)`);
+  ok(inRange, 'Cloud wrapping keeps both negative-direction axes inside the shared extent');
+  ok(Math.abs(maxJump - WIND.CLOUD_MPS * 3 * .8) < 1e-6,
+    'Wrapped cloud travel retains the expected wind velocity without jumps or stalled animation');
 }
 
 // ---------------------------------------------------------------- Ⅵ
@@ -475,12 +507,9 @@ console.log('\nⅥ 海浪(表面波;toon.js + terrain.js 原文)');
   ok(T.indexOf('objectNormal = normalize( normalize( seaNw )') >= 0
     && T.indexOf('objectNormal = normalize( normalize( seaNw )') < iSea,
     '法線那一段排在位移那一段之前(= three 的原生順序,不是我們自己排的)');
-  // 2026-08-16:呼叫點由 6 變 8 —— 水面倒影塊(CEL_REFL)與岸邊泡沫(celFoam)各多一處,
-  // 而它們**正是 MUST 吃同一支**的兩個新消費端(自己再寫一次相位 = 泡沫的沖刷與浪峰差
-  // 半個波長、倒影塊與水面各起各的伏)。**「恰一份實作」那一條才是不變式**;呼叫點數只是
-  // 「有沒有人偷偷抄第二份」的哨兵,新增消費端時 MUST 連同理由一起改。
-  ok(count(T, /float celSeaH\( vec2/g) === 1 && count(T, /celSeaH\(/g) === 8,
-    '浪高恰一份實作(定義 1 + 中央差分 4 + 水面位移 1 + 倒影塊 1 + 泡沫相位 1);兩份公式 = 光影的浪與幾何的浪差半個波長');
+  // Normals, surface displacement, reflections, foam and whitecaps share the same height function.
+  ok(count(T, /float celSeaH\( vec2/g) === 1 && count(T, /celSeaH\(/g) === 9,
+    'Wave height has one definition and eight consumers, including whitecap crest sampling');
   // ---- 淡出:兩張水面共用材質,粗網格那一張 MUST 顯式歸零 ----
   ok(/wgeo\.setAttribute\('seaFade', new THREE\.BufferAttribute\(new Float32Array\(wp\.length \/ 3\), 1\)\)/.test(code(terr)),
     '外環水面顯式補 seaFade = 0(靠「缺屬性讀成 0」是未宣告的預設值,沒有斷言守得住)');
@@ -512,7 +541,7 @@ console.log('\nⅦ 陣風包絡(「波」的本錢在振幅也要跟著跑)');
     `包絡頻率 ${WIND.GUST_S} 與草的基頻不可通約(整數比 = 鎖相 = 看得出重複點)`);
   ok(count(T, /float celGust\( vec2/g) === 1, '包絡恰一份實作(擺動與海浪同吃)');
   // 深度是模板插值(`${WIND.GUST_F.toFixed(3)}`)⇒ 釘的是**那個常數的名字**不是它今天的值
-  ok(/return 1\.0 \+ \$\{WIND\.GUST_F[^}]*\} \* sin\(/.test(T),
+  ok(/return 1\.0 \+ \$\{WIND\.GUST_F[^}]*\} \* uWeatherWindShape\.z \* sin\( uWeatherGustT/.test(T),
     '包絡形如 1 + F·sin ⇒ **平均值恆為 1**:這一層只重新分配擺幅,不改變平均值(也就不是偷偷調大)');
   ok(/swOsc \*= celGust\( swTXZ \);/.test(T),
     '植被的包絡吃**同一株的樹基**(逐零件原點 ⇒ 同一株各段強弱不一 = 那株被拉長)');
@@ -856,6 +885,7 @@ console.log('\nⅪ 墨線斷筆(序 4 ①-2)+ 掠射抑制項恰一項(①-4)');
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);
 const BREAKS = [BREAK_INK && '--break-ink', BREAK_ANCHOR && '--break-anchor',
   BREAK_WAVE && '--break-wave', BREAK_GUST && '--break-gust',
+  BREAK_WIND_CLOCK && '--break-wind-clock', BREAK_CLOUD_WRAP && '--break-cloud-wrap',
   BREAK_CHAR && '--break-char', BREAK_CHARR && '--break-charR',
   BREAK_CHARSLOT && '--break-charslot', BREAK_FOAM && '--break-foam', BREAK_FOAM_SHAPE && '--break-foam-shape',
   BREAK_INKBREAK && '--break-inkbreak', BREAK_INKANCHOR && '--break-inkanchor',

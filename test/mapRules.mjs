@@ -1,18 +1,61 @@
 import assert from 'node:assert/strict';
 import { VENUES, venueConfig, venueAvailability, migrateFavCfg } from '../public/js/venues.js';
 import { MAPGEO, llToXZ } from '../public/js/data.js';
-import { mapGeometryAudit, mapGeometryMetrics } from '../public/js/mapRules.js';
+import { mapGeometryAudit, mapGeometryMetrics, naturalRoadBiome } from '../public/js/mapRules.js';
 import { validMapSources } from '../public/js/mapSourceValidation.js';
-import { traceRoadEvidence, roadFingerprint, laneFingerprint, validRoadEvidence, validTerrainAssessment, makeTerrainAssessment } from '../public/js/roadEvidence.js';
+import { traceRoadEvidence, roadFingerprint, laneFingerprint, validRoadEvidence, validTerrainAssessment, makeTerrainAssessment, roadSourceSummary } from '../public/js/roadEvidence.js';
 import { validateBattleConfig, RoomHub } from '../server/rooms.js';
 import { randomMapConfig } from '../public/js/mapgen.js';
+import { VENUE_ROAD_EVIDENCE } from '../public/js/venueRoadEvidence.js';
 
 const cfg = venueConfig(VENUES.find(v => v.id === 'berlin'), 5);
 assert(mapGeometryAudit(cfg, 5).ok && validMapSources(cfg));
 assert.equal(validateBattleConfig(cfg, 5), null);
-assert.deepEqual(VENUES.filter(v => venueAvailability(v).available).map(v => v.id), ['berlin', 'roppongi', 'taipei101']);
-for (const id of ['madrid', 'seoul', 'taroko']) assert(venueConfig(VENUES.find(v => v.id === id), 5).synthetic);
-assert(!venueAvailability(VENUES.find(v => v.id === 'shibuya')).available);
+assert.equal(VENUES.filter(v => !v.story && venueAvailability(v).available).length, 16);
+for (const id of ['berlin', 'madrid', 'seoul', 'neworleans', 'rotterdam', 'roppongi', 'kyoto', 'taipei101', 'shibuya']) {
+  const v = VENUES.find(v => v.id === id);
+  assert(venueAvailability(v).available);
+  assert.equal(roadSourceSummary(venueConfig(v, 5)).real, 3);
+  for (const n of [1, 2, 3, 4, 5]) assert.equal(validateBattleConfig(venueConfig(v, n), n), null, id);
+}
+for (const id of ['taroko', 'todra']) assert(!venueAvailability(VENUES.find(v => v.id === id)).available);
+assert.equal(naturalRoadBiome({ green: .4, wet: .4, urban: .2 }), 'green');
+assert.equal(naturalRoadBiome({ bare: .75, urban: .25 }), 'bare');
+assert.equal(naturalRoadBiome({ green: .3, bare: .3, urban: .4 }), null);
+for (const id of ['matamata', 'interlaken', 'mekong', 'bergen', 'phoenix', 'cappadocia', 'uluru', 'dubai', 'walvisbay']) {
+  const v = VENUES.find(v => v.id === id), mother = venueConfig(v, 5);
+  for (const n of [1, 2, 3, 4, 5]) {
+    const c = venueConfig(v, n);
+    assert.equal(validateBattleConfig(c, n), null, id);
+    assert.equal(c.roadMode, 'natural-hybrid');
+    assert.deepEqual(c.motherLanes, mother.motherLanes);
+    assert.deepEqual(c.roadSources.map(p => p.kind), ['synthetic', 'osm-baked', 'synthetic']);
+    assert.equal(roadSourceSummary(c).real, 1);
+  }
+  const city = structuredClone(mother); city.venue.mix = { urban: 1 };
+  assert(!validMapSources(city), 'urban palettes cannot use the natural exception');
+  const altered = structuredClone(mother); altered.motherLanes[0][1][0] += .001;
+  assert(!validMapSources(altered), 'generated flanks remain bound to the admitted recipe');
+  const noRoad = structuredClone(mother); noRoad.roadSources[1] = noRoad.roadSources[0];
+  assert(!validMapSources(noRoad), 'one real middle road remains mandatory');
+  const steep = structuredClone(mother); steep.roadTerrain = makeTerrainAssessment(steep, (x, z) => 10 * x + 10 * z);
+  assert(!validMapSources(steep), 'relaxing road count does not relax flank grades');
+  const swap = structuredClone(mother);
+  [swap.bases.SWARM, swap.bases.STEEL] = [swap.bases.STEEL, swap.bases.SWARM];
+  swap.lanes = swap.lanes.map(l => [...l].reverse()); swap.motherLanes = swap.motherLanes.map(l => [...l].reverse());
+  assert.equal(validateBattleConfig(swap, 5), null, 'natural recipes survive faction swaps');
+}
+const oldNatural = venueConfig(VENUES.find(v => v.id === 'phoenix'), 5); oldNatural.roadMode = 'real';
+assert.equal(migrateFavCfg({ cfg: oldNatural, teamSize: 5 }).roadMode, 'natural-hybrid');
+const oldProofs = VENUE_ROAD_EVIDENCE.phoenix;
+try {
+  VENUE_ROAD_EVIDENCE.phoenix = { 3: VENUE_ROAD_EVIDENCE.berlin[3] };
+  assert.equal(venueConfig(VENUES.find(v => v.id === 'phoenix'), 5).roadMode, 'natural-hybrid',
+    'an incompatible full-road receipt cannot hide a qualified natural recipe');
+} finally {
+  if (oldProofs) VENUE_ROAD_EVIDENCE.phoenix = oldProofs;
+  else delete VENUE_ROAD_EVIDENCE.phoenix;
+}
 for (const n of [1, 2, 3, 4, 5]) assert.equal(validateBattleConfig(venueConfig(VENUES[0], n), n), null);
 const end = structuredClone(cfg); end.bases.STEEL = [...end.bases.SWARM];
 assert(validateBattleConfig(end, 5), 'inconsistent bases cannot pass by retaining advertised distances');

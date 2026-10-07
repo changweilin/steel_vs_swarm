@@ -1,8 +1,9 @@
 import { VENUE_LANES } from './venueLanes.js';
 import { VENUE_ROAD_EVIDENCE } from './venueRoadEvidence.js';
+import { VENUE_NATURAL_LANES } from './venueNaturalLanes.js';
 import { validRoadEvidence, laneFingerprint, validTerrainAssessment } from './roadEvidence.js';
 import { validRandomMap } from './randomMapRules.js';
-import { MAP_RULE_VERSION } from './mapRules.js';
+import { MAP_RULE_VERSION, naturalRoadBiome } from './mapRules.js';
 
 /** Checks source replay consistency; service receipts and checksums are not authenticity signatures. */
 export function validMapSources(cfg) {
@@ -15,6 +16,17 @@ export function validMapSources(cfg) {
     if (cfg.roadMode === 'story-baked' && ['SWARM', 'STEEL'].includes(cfg.defSide)) {
       const raw = VENUE_LANES[cfg.venue?.id]?.m1?.lanes;
       return raw?.length === 1 && lanes.length === 1 && laneFingerprint(raw[0]) === laneFingerprint(lanes[0]);
+    }
+    if (cfg.roadMode === 'natural-hybrid') {
+      const id = cfg.gen?.mode === 'mixed' ? cfg.gen.layers?.surface?.id : cfg.venue?.id;
+      const raw = VENUE_NATURAL_LANES[id];
+      return !!raw && ['green', 'bare'].includes(raw.biome) && !!naturalRoadBiome(cfg.venue?.mix)
+        && (!cfg.gen || cfg.gen.mode === 'mixed')
+        && cfg.synthetic === true && lanes.length === 3 && validTerrainAssessment(cfg)
+        && lanes.every((lane, i) => laneFingerprint(lane) === laneFingerprint(raw.lanes[i]))
+        && JSON.stringify(sources) === JSON.stringify(raw.roadSources)
+        && sources.every((proof, i) => validRoadEvidence(proof, lanes[i])
+          && proof.kind === (i === 1 ? 'osm-baked' : 'synthetic'));
     }
     if (cfg.roadMode !== 'real' || cfg.synthetic !== false) return false;
     if (!validTerrainAssessment(cfg)) return false;

@@ -10,6 +10,7 @@ import { isRandomMap } from './randomMapRules.js';
 import { randomMapSources } from './randomMapSources.js';
 import { makeTerrainAssessment, validTerrainAssessment, laneFingerprint } from './roadEvidence.js';
 import { MAP_RULE_TEXT } from './mapRulesContent.js';
+import { requiresRoadTerrain } from './mapRules.js';
 
 const _prepCache = new Map();
 const _inFlight = new Map();
@@ -24,7 +25,7 @@ export function mapPrepKey(cfg) {
   const lanes = cfg.lanes?.length || 0;
   const sourceKey = mapSourceKey(cfg);
   return `${lat},${lng},${rot},${size},${lanes}` + (sourceKey ? `|${sourceKey}` : '')
-    + '|' + JSON.stringify([(cfg.motherLanes || cfg.lanes || []).map(laneFingerprint), cfg.mapRuleVersion || 0]);
+    + '|' + JSON.stringify([(cfg.motherLanes || cfg.lanes || []).map(laneFingerprint), cfg.mapRuleVersion || 0, cfg.roadMode]);
 }
 
 // Persistent "evidence for this exact map is cached" marker. The evidence bytes live in geocache;
@@ -69,7 +70,7 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
   const key = mapPrepKey(cfg);
   if (key && _prepCache.has(key)) {
     const pack = _prepCache.get(key);
-    if (pack.failed && cfg.roadMode === 'real') cfg.roadTerrain = null;
+    if (pack.failed && requiresRoadTerrain(cfg)) cfg.roadTerrain = null;
     if (pack.roadTerrain) cfg.roadTerrain = structuredClone(pack.roadTerrain);
     cfg.mapEvidence = pack.failed ? null : { version: pack.version, checksum: pack.checksum, complete: pack.complete,
       priorDigest: pack.priorDigest };
@@ -81,7 +82,7 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
     task.listeners.add(onProgress);
     try {
       const pack = await task.promise;
-      if (pack.failed && cfg.roadMode === 'real') cfg.roadTerrain = null;
+      if (pack.failed && requiresRoadTerrain(cfg)) cfg.roadTerrain = null;
       if (pack.roadTerrain) cfg.roadTerrain = structuredClone(pack.roadTerrain);
       cfg.mapEvidence = pack.failed ? null : { version: pack.version, checksum: pack.checksum, complete: pack.complete,
         priorDigest: pack.priorDigest };
@@ -105,7 +106,7 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
         buildTerrain(cfg, (f, label) => notify(label), { sourceOnly: true }),
         isRandomMap(cfg) ? randomMapSources(cfg) : warmOsm(battleBBox(cfg)),
       ]);
-      if (cfg.roadMode === 'real') {
+      if (requiresRoadTerrain(cfg)) {
         if (!terrain.sourceQuality?.elevationComplete) throw new Error(MAP_RULE_TEXT.terrain);
         cfg.roadTerrain = makeTerrainAssessment(cfg, terrain.elevationAt);
         if (!validTerrainAssessment(cfg)) throw new Error(MAP_RULE_TEXT.terrain);
@@ -124,7 +125,7 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
       return pack;
     } catch (err) {
       console.warn('Map evidence preparation degraded:', err);
-      if (cfg.roadMode === 'real') cfg.roadTerrain = null;
+      if (requiresRoadTerrain(cfg)) cfg.roadTerrain = null;
       cfg.mapEvidence = null;
       const degraded = { version: MAP_EVIDENCE.VERSION, checksum: 0, complete: false, priorDigest: null, failed: true };
       // Session-remember the failure: re-selecting an unchanged map must not refetch everything.

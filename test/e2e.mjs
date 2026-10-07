@@ -2340,8 +2340,9 @@ log('\n— 回連身分(reattach 沿用原座位鍵)—');
     sess.close();
     const sess2 = hub.attach(() => {});
     sess2.recv({ t: 'reattach', token });
-    sess2.recv({ t: 'pos', x: 777, y: 0, z: 888, ry: 0 });
-    assert(hero.x === 777 && hero.z === 888, '回連後 pos 回報操控原英雄(座位鍵 = 原 clientId,非新連線的)');
+    // Keep identity verification inside the qualified frame and above unrelated ground collisions.
+    sess2.recv({ t: 'pos', x: 1, y: HI_ALT, z: 2, ry: 0 });
+    assert(hero.x === 1 && hero.z === 2 && hero.y === HI_ALT, '回連後 pos 回報操控原英雄(座位鍵 = 原 clientId,非新連線的)');
     sess2.recv({ t: 'backToRoom' });
     assert(room.phase === 'room', '回連後房主權限仍在(backToRoom 生效)');
     hub.shutdown();

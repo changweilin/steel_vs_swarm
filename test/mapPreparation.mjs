@@ -10,7 +10,7 @@ import { projectAreaRecord, catalogAreas, subdivideLargeZones } from '../public/
 import { MAP_EVIDENCE } from '../public/js/mapEvidence.js';
 import { MAP_EVIDENCE_COPY } from '../public/js/help.js';
 import { MAP_RULE_TEXT } from '../public/js/mapRulesContent.js';
-import { mapGeometryAudit } from '../public/js/mapRules.js';
+import { mapGeometryAudit, requiresRoadTerrain } from '../public/js/mapRules.js';
 
 const source = readSrc('public', 'js', 'mapPreparation.js').replace(/^import .*\n/gm, '').replace(/^export /gm, '');
 const cfg = () => venueConfig(VENUES.find(v => v.id === 'berlin'), 5);
@@ -20,7 +20,7 @@ function harness(buildTerrain) {
   const deps = { buildTerrain, warmOsm: async () => [null, []], battleBBox,
     projectAreaRecord, catalogAreas, subdivideLargeZones, llToWorld: () => [0, 0],
     prepareMapEvidence: async () => { evidenceCalls++; return { version: MAP_EVIDENCE.VERSION, checksum: 1, complete: true }; },
-    MAP_EVIDENCE, MAP_EVIDENCE_COPY, MAP_RULE_TEXT, mapSourceKey, isRandomMap,
+    MAP_EVIDENCE, MAP_EVIDENCE_COPY, MAP_RULE_TEXT, mapSourceKey, isRandomMap, requiresRoadTerrain,
     randomMapSources: () => { throw new Error('Unexpected procedural source'); },
     laneFingerprint, makeTerrainAssessment, validTerrainAssessment,
     localStorage: { getItem: () => null, setItem: () => {} }, console: { warn() {} } };
@@ -75,6 +75,17 @@ for (const terrain of [
   assert((await h.prepareMapCreation(c)).failed);
   assert.equal(c.roadTerrain, null);
   assert.equal(h.evidenceCalls(), 0, 'incomplete or excessive relief stops before map observations');
+}
+
+{
+  const h = harness(async () => { throw new Error('Missing natural relief'); });
+  const natural = () => venueConfig(VENUES.find(v => v.id === 'phoenix'), 5);
+  for (const c of [natural(), natural()]) {
+    assert(validMapSources(c));
+    assert((await h.prepareMapCreation(c)).failed);
+    assert.equal(c.roadTerrain, null);
+    assert(!validMapSources(c), 'the relaxed road count still clears stale terrain on cached failure');
+  }
 }
 
 const main = readSrc('public', 'js', 'main.js');

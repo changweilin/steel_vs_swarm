@@ -1,4 +1,5 @@
 import { MAPGEO, llToXZ } from './data.js';
+import { naturalRoadBiome } from './mapRules.js';
 
 export const MIXED_LAYERS = ['elevation', 'surface', 'regional'];
 export const MIXED_SOURCE_VERSION = 1;
@@ -42,5 +43,7 @@ export function validMixedLayers(layers) {
 
 export function validMixedMap(cfg) {
   return cfg?.gen?.version === MIXED_SOURCE_VERSION && validMixedLayers(cfg.gen.layers)
-    && cfg.gen.laneSource === 'osm-baked' && cfg.synthetic === false && cfg.procRelief == null;
+    && cfg.procRelief == null && (cfg.gen.laneSource === 'osm-baked' && cfg.synthetic === false
+      || cfg.gen.laneSource === 'natural-hybrid' && cfg.roadMode === 'natural-hybrid'
+        && cfg.synthetic === true && !!naturalRoadBiome(cfg.venue?.mix));
 }

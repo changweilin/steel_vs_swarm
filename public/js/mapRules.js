@@ -9,6 +9,16 @@ const validPoint = p => Array.isArray(p) && p.length === 2 && p.every(Number.isF
   && Math.abs(p[0]) < 85 && Math.abs(p[1]) <= 180;
 const validLane = l => Array.isArray(l) && l.length >= 2 && l.length <= 12000 && l.every(validPoint);
 
+/** Preserve the catalogue's leading natural biome, including ties with water/wet variants. */
+export function naturalRoadBiome(mix) {
+  if (!mix || !Object.values(mix).every(v => Number.isFinite(v) && v >= 0)) return null;
+  const largest = Math.max(0, ...Object.values(mix));
+  for (const key of ['green', 'bare']) if (mix[key] > 0 && mix[key] >= largest) return key;
+  return null;
+}
+
+export const requiresRoadTerrain = cfg => ['real', 'natural-hybrid'].includes(cfg?.roadMode);
+
 /** Reject unbounded sampling before source-independent room geometry allocates occupancy grids. */
 function withinOccupancyBudget(lanes, cell) {
   if (!(cell > 0)) return false;
@@ -86,7 +96,11 @@ export function mapGeometryAudit(cfg, teamSize = cfg?.teamSize || 5) {
     if (metrics.maxOverlap > MAPGEO.MAX_OVERLAP + 1e-9) return fail('overlap');
     if (metrics.lengths.some(length => length / metrics.distM > MAP_RULE_LIMITS.DETOUR)) return fail('detour');
     if (!metrics.balance.ok) return fail('balance');
-    if (metrics.game.some((lane, i) => laneBacktrackFrac(lane) > MAPGEO.MAX_BACKTRACK
+    // A faction swap must not move the navigation sample grid along the same geographic path.
+    const [a, b] = [cfg.bases.SWARM, cfg.bases.STEEL];
+    const forward = a[0] > b[0] || (a[0] === b[0] && a[1] > b[1]);
+    const navigation = forward ? metrics.game : metrics.game.map(lane => [...lane].reverse());
+    if (navigation.some((lane, i) => laneBacktrackFrac(lane) > MAPGEO.MAX_BACKTRACK
       || !laneUTurnAudit(lane).ok || !laneTurnAccumAudit(lane, { side: laneIsSide(i, mother.length) }).ok)) return fail('navigation');
     if (!laneSeparationAudit(metrics.game).ok) return fail('separation');
     if (!towerLayoutAudit(metrics.game, arg).ok) return fail('towers');

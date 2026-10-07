@@ -18,7 +18,7 @@ import { geographicEnvironment } from './seasonalEnvironment.js';
 import { MIXED_MAP_TEXT } from './mixedMapContent.js';
 import { RANDOM_MAP_VERSION, RANDOM_MAP_RANGES, randomMapLayers } from './randomMapRules.js';
 import { RANDOM_MAP_TEXT } from './randomMapContent.js';
-import { MAP_RULE_VERSION, mapGeometryAudit, settleMapMetrics } from './mapRules.js';
+import { MAP_RULE_VERSION, mapGeometryAudit, settleMapMetrics, naturalRoadBiome } from './mapRules.js';
 import { syntheticLaneEvidence } from './roadEvidence.js';
 
 /** 地貌鍵(與 data.js BIOMES / venues.js mix 同鍵) */
@@ -244,7 +244,7 @@ function genConfigShell({ A, B, lanes, mother, mix, ampF, name, venueId, mode, s
   });
 }
 
-/** Assemble verified source layers; absence of a real three-road mother fails closed. */
+/** Borrow source layers without changing their admitted full-road or natural-hybrid mother. */
 export function mixedMapConfig(sources, opts = {}) {
   if (!Array.isArray(sources) || sources.length !== MIXED_LAYERS.length) return null;
   const list = MIXED_LAYERS.map(role => sources.find(s => s?.role === role));
@@ -255,11 +255,13 @@ export function mixedMapConfig(sources, opts = {}) {
   if (!validMixedLayers(layers)) return null;
   const elevation = list[0], surface = list[1], regional = list[2];
   const frame = surface.frame;
+  const hybrid = frame.roadMode === 'natural-hybrid';
   if (!Array.isArray(frame.motherLanes) || frame.motherLanes.length !== MOTHER_LANES
-    || frame.synthetic || surface.laneSource !== 'osm-baked') return null;
+    || frame.synthetic !== hybrid || surface.laneSource !== (hybrid ? 'natural-hybrid' : 'osm-baked')) return null;
   const teamSize = Math.max(1, Math.min(5, opts.teamSize | 0 || 1));
   const L = lanesFor(teamSize);
   const mix = opts.mixOverride ? clampBiomeMix(opts.mixOverride) : blendBiomeMix(list);
+  if (hybrid && !naturalRoadBiome(mix)) return null;
   const seed = Number.isFinite(opts.seed) ? opts.seed >>> 0 : hashSeed(list.map(s => s.id).join('|'));
   const mother = frame.motherLanes.map(lane => lane.map(p => [...p]));
   const sub = laneSubsetFor(L);
@@ -270,12 +272,12 @@ export function mixedMapConfig(sources, opts = {}) {
     ...frame, center: { ...frame.center },
     bases: { SWARM: [...frame.bases.SWARM], STEEL: [...frame.bases.STEEL] },
     lanes: sub.map(i => mother[i]), motherLanes: mother, laneIds: [...sub], laneCount: L,
-    synthetic: false, procRelief: null, mapEvidence: null,
+    synthetic: hybrid, procRelief: null, mapEvidence: null,
     roadTerrain: null,
     venue: { id: `mixed-${seed.toString(16)}-${list.map(s => s.id).join('-')}`, name, mix,
       country: regional.country || null, base: null, variant: 'mixed', ampF: elevation.ampF ?? 1,
       forest: profile },
-    gen: { mode: 'mixed', version: MIXED_SOURCE_VERSION, seed, layers, laneSource: 'osm-baked',
+    gen: { mode: 'mixed', version: MIXED_SOURCE_VERSION, seed, layers, laneSource: hybrid ? 'natural-hybrid' : 'osm-baked',
       sources: list.map(s => ({ id: s.id, role: s.role, name: s.name || '', weight: 1 })) },
     placeName: name,
   };

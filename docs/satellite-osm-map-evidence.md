@@ -24,12 +24,13 @@ querying geographic providers or loading a WorldCover prior. See
 [procedural random maps](random-maps.md). Sentinel multispectral indices and a
 learned classifier are outside this implementation.
 
-Mixed maps keep the surface source's real OSM road mother and capture frame.
+Mixed maps keep the surface source's admitted road mother and capture frame.
 Elevation samples map the same world coordinates into a second road-bearing region;
 climate, vegetation, cultural priors and visual geology come from a third region.
-All sources pass road-presence verification before selection. Only fully baked real
-three-road mothers qualify as surface sources; partially synthesized venue mothers
-are excluded. Source identities and coordinate frames persist with the configuration,
+All sources pass road-presence verification before selection. Surface mothers have
+three verified roads, or a verified middle road with two recipe-bound generated
+flanks while the final palette remains green/bare-leading. Borrowed elevation must
+qualify every lane under the shared rules. Source identities and coordinate frames persist with the configuration,
 separate preparation caches and replay across cloud, LAN and solo clients.
 Geographic geology profiles are game appearance classifications, not observed lithology;
 the observation field's geology channel remains unknown.

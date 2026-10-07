@@ -28,6 +28,8 @@ const AUDIT_SCRIPTS = [
   'test/randomMap.mjs',
   'test/mapRules.mjs',
   'test/mapPreparation.mjs',
+  'test/venueRoadSources.mjs',
+  'test/mapCatalogue.mjs',
   'tools/audit_map_evidence.mjs',
   'tools/audit_habitat.mjs',
   'tools/audit_facility_fusion.mjs',

@@ -383,7 +383,10 @@ export class RoomHub {
           return;
         }
         const teamSize = Math.max(TEAM.MIN, Math.min(TEAM.MAX, Math.round(m.teamSize) || TEAM.DEFAULT));
-        const cfg = m.battleConfig;
+        // Solo clients share memory with the hub; normalization and side swaps need a detached recipe.
+        let cfg;
+        try { cfg = structuredClone(m.battleConfig); }
+        catch { send({ t: 'error', msg: MAP_RULE_TEXT.shape }); return; }
         // ---- 地圖型態旗標的正規化:**MUST 排在驗證之前** ----
         // battleConfig 整包由客戶端送上來,原樣塞進 sim 等於讓對方決定「什麼算真」(A1 家族)。
         // 而且順序不能反:`defSide: 'FOO'` 這種值在驗證那一側被當成一般對戰、在正規化之後
