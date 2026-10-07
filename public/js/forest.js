@@ -22,6 +22,11 @@ function rangeWeight(value, [a, b, c, d]) {
 export function treeHabitatWeight(type, latitude, altitude, input = {}) {
   const spec = TREE_SPECIES[type];
   if (!spec) return 0;
+  const forms = input.plantForms;
+  if (forms === 'tree' && ['shrub', 'rosette', 'fern', 'herb', 'pitcher', 'ribbon', 'cactus', 'snag', 'lightning', 'fallen'].includes(spec.form)) return 0;
+  if (forms === 'shrub' && spec.form !== 'shrub') return 0;
+  if (forms === 'xeric' && !['shrub', 'rosette', 'cactus', 'dragon', 'ribbon'].includes(spec.form)) return 0;
+  if (forms === 'oasis' && !['palm', 'weeping', 'open', 'umbrella'].includes(spec.form)) return 0;
   // Explicit OSM leaf structure narrows visual forms; climate still determines eligible species.
   if (input.leafType === 'needleleaved' && spec.form !== 'spire') return 0;
   if (input.leafType === 'broadleaved' && spec.form === 'spire') return 0;
@@ -31,6 +36,8 @@ export function treeHabitatWeight(type, latitude, altitude, input = {}) {
   if (spec.roots === 'pneumatophore' && !env.wet) return 0;
   let weight = rangeWeight(Math.min(90, Math.abs(latitude)), spec.lat) * rangeWeight(altitude, spec.altitude);
   for (const [key, range] of Object.entries(spec.habitat)) {
+    // Root-zone water can sustain an oasis despite low regional rainfall.
+    if (key === 'rainfall' && input.plantForms === 'oasis' && input.waterAvailability === true) continue;
     if (Number.isFinite(env[key])) weight *= rangeWeight(env[key], range);
   }
   return weight;

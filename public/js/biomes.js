@@ -60,7 +60,8 @@ import { RANDOM_MAP_TEXT } from './randomMapContent.js';
 import { structuralTunnel } from './roadSemantics.js';
 import { makeFootprintIndex, blockerFoot } from './ground.js';
 import { buildHabitatScene } from './habitatRender.js';
-import { createHabitatSampler, planHabitatCanopy } from './habitat.js';
+import { createHabitatSampler, planHabitatCanopy, habitatPlant } from './habitat.js';
+import { HABITAT_SCENE } from './habitatCatalog.js';
 import { buildLandField } from './landfield.js';
 import { prepareMapEvidence, installMapEvidence } from './mapEvidenceLoader.js';
 import { evidenceDryBiome } from './mapEvidence.js';
@@ -147,7 +148,7 @@ import {
 } from './pedestrian.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
-const MAX_VEG = 7000;            // 植被實例上限
+const MAX_VEG = HABITAT_SCENE.CANOPY_LIMIT;
 const MAX_BUILDINGS = 240;       // 種子建物上限:OSM 圖資 / 程序街區(特殊地標另計 ≤ 60)
 const MAX_INFILL = 1200;         // 補間建物上限(立面 InstancedMesh 仍是常數級 10 個)
 // 市區補間參數:每個種子沿自身朝向鋪一塊 cols×rows 的街廓網格。
@@ -1013,7 +1014,7 @@ function surfIdGeo(geo, attr, treeAttr, owned = false) {
 // Bake every branch into tree-local space before wind deformation. Shared vertex height
 // gives wood and leaves identical displacement at their joints, even on tilted branches.
 function forestRenderDef(type, item, season) {
-  const tree = createForestTree(type, forestSeed(item.x, item.z),
+  const tree = createForestTree(type, item.modelSeed ?? forestSeed(item.x, item.z),
     (rt, rb, h, n, sections) => new THREE.CylinderGeometry(rt, rb, h, n, sections), ico, item.s ?? 1, season, item.environment);
   const buckets = { wood: [], leaf: [], flower: [], fruit: [] };
   let cards = false;
@@ -1092,7 +1093,22 @@ export function buildVegMeshes(type, items, season, generated = null) {
     });
   }
   if (GIANT_DEFS[type] && !generated) {
-    return items.flatMap(item => buildVegMeshes(type, [{ ...item, dj: 0 }], season, forestRenderDef(type, item, season)));
+    const groups = new Map(), meshes = [];
+    for (const item of items) {
+      if (item.modelSeed === undefined) {
+        meshes.push(...buildVegMeshes(type, [{ ...item, dj: 0 }], season, forestRenderDef(type, item, season)));
+        continue;
+      }
+      const key = item.modelSeed + '/' + JSON.stringify(treePhenology(type, { ...item.environment, season }));
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ ...item, dj: 0 });
+    }
+    // Dense stands reuse botanical skeletons; subdivision fits the tallest survivor in each batch.
+    for (const rows of groups.values()) {
+      const exemplar = { ...rows[0], s: Math.max(...rows.map(row => row.s)) };
+      meshes.push(...buildVegMeshes(type, rows, season, forestRenderDef(type, exemplar, season)));
+    }
+    return meshes;
   }
   const def = generated || VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
   const span = generated ? generated.h : vegSpan(def);
@@ -1365,7 +1381,7 @@ function buildPetals(group, terrain, items, season, mode, dynamics, gseed) {
       if (spec) {
         const state = treePhenology(type, { ...it.environment, season });
         if (mode === 'bloom' ? !spec.flower?.seasons.includes(season) || state.growth <= 0 : state.litter <= .1) continue;
-        const tree = createForestTree(type, forestSeed(it.x, it.z), undefined, undefined, 1, season, it.environment);
+        const tree = createForestTree(type, it.modelSeed ?? forestSeed(it.x, it.z), undefined, undefined, 1, season, it.environment);
         const leaves = tree.parts.filter(p => p.role === 'leaf' && !p.hidden);
         if (!leaves.length) continue;
         const radius = Math.max(...leaves.map(p => Math.hypot(p.px || 0, p.pz || 0) + (p.g.parameters.radius || 0)));
@@ -10691,12 +10707,12 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   ];
 
   // ---- 散佈植被 ----
-  const areaKm2 = terrain.worldW * terrain.worldH / 1e6;
-  const vegTarget = Math.max(800, Math.min(MAX_VEG, Math.round(areaKm2 * 560)));   // 密度加高(仍全 instanced)
+  const vegTarget = MAX_VEG;
   const items = {};   // type -> [{x,y,z,s,ry}]
   const urbanPts = [];
   let placed = 0;
-  const put = (type, x, z, s, plantRnd = rnd, leafType = 'unknown') => {
+  let vegetationColliders = 0;
+  const put = (type, x, z, s, plantRnd = rnd, leafType = 'unknown', community = null) => {
     let actualS = s * (VEG_SCALE[type] || 1);
     // 拒絕前仍固定抽完姿態亂數，地圖上的後續物件不因道路淘汰而漂移。
     const item = {
@@ -10706,21 +10722,26 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
       dj: plantRnd(),
     };
     const environment = forestEnvironmentAt(terrain, x, z);
-    if (!Number.isFinite(environment.slope)) return;
+    if (!Number.isFinite(item.y) || !Number.isFinite(environment.slope)) return;
     const procedural = TRUNK_TYPES.has(type) || type === 'succulent' || type === 'shrub';
     let tree = null;
     if (procedural) {
-      type = forestTypeAt(terrain, x, z, mulberry32(forestSeed(x, z, 0x504c414e))(), leafType);
+      const plant = community ? habitatPlant(community) : null;
+      if (community && !plant) return;
+      type = plant?.type ?? forestTypeAt(terrain, x, z, mulberry32(forestSeed(x, z, 0x504c414e))(), leafType);
       if (!type) return;
       const spec = TREE_SPECIES[type];
-      tree = createForestTree(type, forestSeed(x, z));
-      actualS *= Math.min(1, 9 / spec.h);
+      if (plant) item.modelSeed = plant.modelSeed;
+      tree = plant?.tree ?? createForestTree(type, forestSeed(x, z));
+      actualS = plant?.s ?? actualS * Math.min(1, 9 / spec.h);
       item.s = actualS;
       if (environment.wet && (spec.roots !== 'pneumatophore' || terrain.waterY == null || item.y < terrain.waterY - .8)) return;
       item.y = sinkBaseY(terrain, x, z, tree.footprint * actualS);
       if (spec.steep) { item.tx = 0; item.tz = 0; }
     } else if (environment.slope >= FOREST_STEEP_DEG) return;
     const foot = { x, z, r: (tree ? tree.footprint : VEG_FOOT_R[type] ?? 1) * actualS };
+    if (community) { item.age = community.age; item.footR = foot.r; item.communityEnvironment = community.environment; }
+    if (community && !habitatSampleAt.contains(foot)) return;
     // 優先序:兵線/塔位/主堡淨空(blocked)高於植被 ⇒ 足印圓盤掃 areaFree(單格驗擋不住大樹);
     // 地被級平面植栽走 areaFreeLane,可鋪進塔堡圈當草原/沙漠背景
     if (VEG_FLAT.has(type)) {
@@ -10730,6 +10751,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     // 背景實體互斥:植被避開已登記的大型背景與圖資建物占位(抽樣之後淘汰,序列不漂移)。
     if (occ && !occ.free(x, z, foot.r, 1)) return;
     if (osmBldHit(x, z, foot.r)) return;
+    if (community && tree && vegetationColliders + tree.stems.length > vegetationColliderBudget) return;
     items[type] ??= [];
     items[type].push(item);
     if (tree) occ?.add(x, z, foot.r);
@@ -10738,6 +10760,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
       blockers.push({ x: xf.pos[0], z: xf.pos[2], y: item.y, r: stem.r * actualS,
         h: stem.h * actualS, cl: 'tree' });
     }
+    if (community && tree) vegetationColliders += tree.stems.length;
     vegFootIndex.add(foot);
     placed++;
   };
@@ -10751,6 +10774,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   terrain.season = season;
   const edgeSegs = buildEdgeWall({ group, terrain, blockers });
   const habitatSampleAt = createHabitatSampler({ areas: osmData?.areas || [], evidenceAt: terrain.evidenceAt,
+    environmentAt: (x, z) => ({ ...forestEnvironmentAt(terrain, x, z), latitude: regionCenter.lat,
+      altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) }),
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     zoneAt: (x, z, area, observation) => area?.zone || evidenceDryBiome(observation)
       || classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null),
@@ -11085,6 +11110,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const baseFlags = placeBaseFlags({ group, terrain, blocked, basesW, nation });
 
   await onProgress?.(0.08, '鋪設植被地貌…');
+  // Keep capacity for later structures; every accepted solid plant must retain all trunk colliders.
+  const vegetationColliderBudget = Math.floor(Math.max(0, LOS.MAX_OCC - blockers.length) * HABITAT_SCENE.CANOPY_COLLIDER_F);
   const canopy = planHabitatCanopy({
     bounds: { minX: terrain.minX + inb, maxX: terrain.maxX - inb, minZ: terrain.minZ + inb, maxZ: terrain.maxZ - inb },
     seed: sceneSeed, maxPlants: vegTarget, sampleAt: habitatSampleAt,
@@ -11095,7 +11122,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   for (let i = 0; i < canopy.rows.length; i++) {
     if ((i & 255) === 0) await onProgress?.(0.08 + i / Math.max(1, canopy.rows.length) * .27, '鋪設植被地貌…');
     const row = canopy.rows[i];
-    put(row.shrub ? 'shrub' : 'broadleaf', row.x, row.z, row.scale, mulberry32(row.seed), row.leafType);
+    put(row.shrub ? 'shrub' : 'broadleaf', row.x, row.z, row.scale, mulberry32(row.seed), row.leafType, row);
   }
   // ---- 圖資建物(OSM 已於開頭抓取;植被網格延後到建物定案之後才建:
   // 先拔掉落在建物腳印內的植被(見下),樹才不會穿屋頂)----
@@ -11502,7 +11529,9 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   for (const type in items) {
     for (const item of items[type]) {
       item.environment = { ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, item.x, item.z),
+        ...item.communityEnvironment,
         latitude: regionCenter.lat, altitude: terrain.elevationAt?.(item.x, item.z) ?? item.y };
+      if (item.modelSeed !== undefined) item.environment.altitude = Math.round(item.environment.altitude / HABITAT_SCENE.PHENOLOGY_ALTITUDE_M) * HABITAT_SCENE.PHENOLOGY_ALTITUDE_M;
     }
     const meshes = buildVegMeshes(type, items[type], season);
     for (const m of meshes) group.add(m);
@@ -12323,11 +12352,11 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     });
   }
   for (const type in items) {
-    if (GIANT_DEFS[type]) continue;   // 神木幹已在 blockers；樹上附著物不占地面
     const rr = VEG_FOOT_R[type] ?? 1;
     for (const it of items[type]) {
+      if (GIANT_DEFS[type] && it.modelSeed === undefined) continue;
       if (Math.abs(it.y - terrain.heightAt(it.x, it.z)) <= 4) {
-        reservedFootprints.push({ x: it.x, z: it.z, r: rr * it.s });
+        reservedFootprints.push({ x: it.x, z: it.z, r: it.footR ?? rr * it.s });
       }
     }
   }
@@ -12353,6 +12382,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     areas: osmData?.areas || [],
     surfaceField: landField,
     environment: { ...terrain.objectEnvironment, latitude: regionCenter.lat },
+    environmentAt: (x, z) => forestEnvironmentAt(terrain, x, z),
   });
   // 落點與建物/地被淘汰全部定案後才追加：只增加物理，不反向推移既有世界佈局。
   const trunkColliders = registerTreeTrunkColliders(items, blockers);
@@ -12516,6 +12546,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   group.userData.bandDryAt = ground.bandDryAt;
   group.userData.stats = {
     veg: placed,
+    canopyCandidates: canopy.rows.length,
+    canopyColliders: vegetationColliders,
     giantTrees,
     trunkColliders,
     megaliths: megalithsBuilt,

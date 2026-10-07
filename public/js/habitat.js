@@ -1,5 +1,6 @@
-import { HABITATS, HABITAT_SCENE, HABITAT_FILL } from './habitatCatalog.js';
-import { forestSeed } from './forest.js';
+import { HABITATS, HABITAT_SCENE, HABITAT_FILL, HABITAT_COMMUNITIES } from './habitatCatalog.js';
+import { forestSeed, pickTreeType, createForestTree, TREE_SPECIES, TREE_VARIANTS } from './forest.js';
+import { seasonalEnvironment } from './seasonalEnvironment.js';
 import { mulberry32 } from './rng.js';
 import { procReliefAt } from './mapgen.js';
 import { areaSurfaceRows, pointInProjectedArea, projectedAreaContainsDisk, projectedAreaIntersectsDisk, classifyArea } from './osmAreas.js';
@@ -10,14 +11,14 @@ const fallback = { green: 'meadow', urban: 'built', bare: 'exposed', alpine: 'al
 const vegetation = { 10: 'woodland', 20: 'scrub', 30: 'meadow', 40: 'cropland', 95: 'woodland', 100: 'meadow' };
 
 /** Resolved geometry/OSM zones outrank observations, including water and slope gates. */
-export function habitatAt(sample, zone, tags = {}, depth = null) {
+export function habitatAt(sample, zone, tags = {}, depth = null, environment = {}) {
   let key = fallback[zone];
   if (zone === 'water' && Number.isFinite(depth) && depth >= 0 && depth <= HABITAT_SCENE.SHALLOW_DEPTH_M) key = 'shallows';
   if (!key) return null;
   const observed = !!sample?.confidence;
   if (observed && zone === 'green') key = vegetation[sample.code] || key;
   if (zone === 'green') {
-    if (tags.natural === 'wood' || tags.landuse === 'forest') key = 'woodland';
+    if (tags.natural === 'wood' || tags.natural === 'oasis' || tags.landuse === 'forest') key = 'woodland';
     else if (tags.natural === 'scrub' || tags.natural === 'heath') key = 'scrub';
     else if (tags.landuse === 'farmland' || tags.landuse === 'plant_nursery') key = 'cropland';
     else if (tags.landuse === 'orchard') key = 'orchard';
@@ -43,14 +44,29 @@ export function habitatAt(sample, zone, tags = {}, depth = null) {
   const color = spec.color.map((c, i) => clamp(Math.round(c * (1 + light) + (i === 1 ? green * 8 : 0)), 0, 255));
   const density = spec.density * (observed ? 1 : .65) * (.72 + green * .35)
     * (sample?.landform === 5 ? .4 : 1);
-  return { key, zone, color, density, texture, coherence: rgb ? sample.coherence / 255 : 0,
+  // The neutral season reuses regional cooling without relocating plants in winter or rain.
+  const env = seasonalEnvironment({ ...environment, season: 'spring', weather: 'clear' });
+  const dry = env.moisture < .32 || (Number.isFinite(env.rainfall) && env.rainfall < 400);
+  const waterSupply = env.salinity < .05 && (tags.natural === 'oasis' || environment.waterAvailability === true);
+  let community = key === 'woodland' ? dry ? 'drywood' : 'forest' : key === 'scrub' ? 'shrubland' : 'grassland';
+  if (['orchard', 'cropland', 'pasture'].includes(key)) community = 'managed';
+  else if (zone === 'alpine' || env.temperature < -2) community = 'tundra';
+  else if (dry && waterSupply && ['woodland', 'scrub'].includes(key)) community = 'oasis';
+  else if (dry && ['exposed', 'sand', 'scrub'].includes(key) && env.temperature > 10) community = 'desert';
+  else if (key === 'meadow' && env.temperature > 20 && dry) community = 'savanna';
+  const structure = HABITAT_COMMUNITIES[community];
+  const moisture = community === 'oasis' ? Math.max(.8, env.moisture) : env.moisture;
+  const productivity = clamp(.35 + moisture, .35, 1) * (sample?.landform === 5 ? .6 : 1);
+  return { key, zone, color, density: density * structure.ground * productivity, texture, coherence: rgb ? sample.coherence / 255 : 0,
     height: spec.height, canopy: spec.canopy * (observed ? 1 : .65), plant: spec.plant, stone: spec.stone, observed,
+    community, structure, environment: { ...environment, moisture,
+      waterAvailability: waterSupply, habitatTemperature: env.temperature },
     leafType: ['broadleaved', 'needleleaved', 'mixed'].includes(tags.leaf_type) ? tags.leaf_type : 'unknown',
     landform: sample?.landform || 0, geology: 'unknown' };
 }
 
 /** Exact semantic masks retain holes; the same priority ordering serves canopy and ground detail. */
-export function createHabitatSampler({ areas = [], evidenceAt, zoneAt, envCodeAt, depthAt }) {
+export function createHabitatSampler({ areas = [], evidenceAt, zoneAt, envCodeAt, depthAt, environmentAt }) {
   const grid = new Map(), cell = 64;
   const rows = areaSurfaceRows(areas).filter(r => r.zone && r.outer?.length >= 3)
     .sort((a, b) => b.priority - a.priority || String(a.sourceId).localeCompare(String(b.sourceId)));
@@ -73,7 +89,13 @@ export function createHabitatSampler({ areas = [], evidenceAt, zoneAt, envCodeAt
     const area = grid.get(`${Math.floor(x / cell)},${Math.floor(z / cell)}`)?.find(r => pointInProjectedArea(x, z, r));
     const observation = evidenceAt?.(x, z);
     const zone = ec === 1 ? 'water' : ec === 2 ? 'wet' : zoneAt(x, z, area, observation);
-    const habitat = habitatAt(observation, zone, area?.tags, depthAt?.(x, z));
+    const environment = environmentAt?.(x, z) || {};
+    const dry = environment.climate === 'arid' || environment.moisture < .32
+      || (Number.isFinite(environment.rainfall) && environment.rainfall < 400);
+    const waterAvailability = dry && ec === 0 && [16, 32].some(d =>
+      [[d, 0], [-d, 0], [0, d], [0, -d]].some(([dx, dz]) => envCodeAt(x + dx, z + dz) === 1));
+    const habitat = habitatAt(observation, zone, area?.tags, depthAt?.(x, z),
+      { ...environment, waterAvailability: environment.waterAvailability === true || waterAvailability });
     return habitat && { ...habitat, ry: area?.ry || 0, landuse: area?.landuse || 'unknown' };
   };
   sampleAt.contains = ({ x, z, r }) => {
@@ -98,6 +120,20 @@ export function createHabitatSampler({ areas = [], evidenceAt, zoneAt, envCodeAt
 export function habitatPatch(seed, x, z) {
   return clamp(.5 + procReliefAt(seed ^ 0x484142, x * HABITAT_SCENE.PATCH_WAVE_F,
     z * HABITAT_SCENE.PATCH_WAVE_F), 0, 1);
+}
+
+/** One botanical skeleton owns dense-stand rendering, dimensions and trunk collision. */
+export function habitatPlant(row) {
+  if (!row || ![row.height, row.seed, row.speciesRoll, row.patchSeed].every(Number.isFinite) || row.height <= 0) return null;
+  const environment = row.environment || {};
+  const type = pickTreeType(environment.latitude, environment.altitude, row.speciesRoll, row.patchSeed,
+    { ...environment, temperature: environment.habitatTemperature,
+      leafType: row.leafType, plantForms: row.forms });
+  if (!type) return null;
+  const modelSeed = forestSeed(row.seed % TREE_VARIANTS, 0, 0x4d4f5250);
+  const tree = createForestTree(type, modelSeed);
+  const s = Math.min(row.height, TREE_SPECIES[type].h) / tree.h;
+  return { type, modelSeed, tree, s };
 }
 
 /** Canopy spacing follows cover structure; botanical species remain owned by the climate-aware forest seam. */
@@ -125,10 +161,19 @@ export function planHabitatCanopy({ bounds, seed = 0, sampleAt, maxPlants, densi
     if (occupied.has(key)) continue;
     occupied.add(key);
     if (habitat.key === 'built') { urban.push({ x, z, rank: rnd() }); continue; }
-    const patch = habitatPatch(seed, x, z);
-    if (rnd() > habitat.canopy * densityScale * (habitat.key === 'orchard' ? 1 : .2 + patch * 1.4)) continue;
+    const patch = habitatPatch(seed, x, z), structure = habitat.structure || HABITAT_COMMUNITIES.forest;
+    const clustering = habitat.key === 'orchard' ? 1 : .45 + patch * 1.1;
+    if (rnd() > habitat.canopy * structure.woody * densityScale * clustering) continue;
     const shrub = habitat.key === 'scrub' || habitat.zone === 'bare' || habitat.key === 'alpine';
+    const recruit = rnd() < structure.recruits * (1.4 - patch);
+    const age = habitat.key === 'orchard' ? 'mature' : recruit ? 'juvenile' : rnd() < .12 ? 'old' : 'mature';
+    const height = (structure.height[0] + rnd() * (structure.height[1] - structure.height[0]))
+      * (age === 'juvenile' ? .25 + rnd() * .3 : age === 'old' ? 1.15 : 1);
+    const patchSeed = forestSeed(Math.floor(x / HABITAT_SCENE.COMMUNITY_CELL_M),
+      Math.floor(z / HABITAT_SCENE.COMMUNITY_CELL_M), seed ^ 0x53504543);
+    const speciesRoll = rnd() < structure.dominance ? mulberry32(patchSeed)() : rnd();
     rows.push({ x, z, seed: localSeed, shrub, leafType: habitat.leafType,
+      height, age, speciesRoll, patchSeed, forms: structure.forms, environment: habitat.environment,
       scale: shrub ? .1 + rnd() * .13 : habitat.key === 'orchard' ? .45 + rnd() * .1 : .65 + rnd() * .7, rank: rnd() });
   }
   rows.sort((a, b) => a.rank - b.rank || a.seed - b.seed);
@@ -172,16 +217,31 @@ export function planHabitatDetails({ bounds, seed = 0, sampleAt, heightAt, fits,
           }
           const radiusScale = kind === 'scrub' ? .8 : kind === 'stone' ? .5 : .6;
           const room = Math.min(x - sx, sx + slot - x, z - sz, sz + slot - z) - HABITAT_SCENE.DETAIL_GAP_M / 2;
-          const size = Math.min(1.2 + rnd() * .6, room / radiusScale), r = radiusScale * size;
+          const carpet = kind === 'grass' || kind === 'understory';
+          const size = Math.min(carpet ? 16 : 1.2 + rnd() * .6, room / radiusScale), r = radiusScale * size;
           if (!(size >= .7) || x - r < minX || x + r > maxX || z - r < minZ || z + r > maxZ
             || !fits({ x, z, r }, habitat.zone)) continue;
           if ([[0, 0], [-r, -r], [r, -r], [r, r], [-r, r]]
             .some(([dx, dz]) => sampleAt(x + dx, z + dz)?.key !== habitat.key)) continue;
           const y = heightAt(x, z);
           if (!Number.isFinite(y)) continue;
-          const h = kind === 'stone' ? .12 + rnd() * .28 : kind === 'planter' ? .9 : habitat.height * size;
+          const h = kind === 'stone' ? .12 + rnd() * .28 : kind === 'planter' ? .9
+            : habitat.height * (carpet ? .7 + rnd() * .6 : size);
+          let groundX = 0, groundZ = 0;
+          if (carpet) {
+            groundX = (heightAt(x + r, z) - heightAt(x - r, z)) / (2 * r);
+            groundZ = (heightAt(x, z + r) - heightAt(x, z - r)) / (2 * r);
+            if (![groundX, groundZ].every(Number.isFinite) || [[-r, -r], [r, -r], [r, r], [-r, r]]
+              .some(([dx, dz]) => {
+                const ground = heightAt(x + dx, z + dz);
+                return !Number.isFinite(ground) || Math.abs(ground - y - groundX * dx - groundZ * dz) > h * .35;
+              })) continue;
+          }
           const ry = rnd() * Math.PI * 2;
           available.push({ kind, x, y, z, r, height: h, size, ry: kind === 'crop' ? habitat.ry || 0 : ry,
+            groundX, groundZ, environment: habitat.environment,
+            coverSize: carpet ? size <= 2 ? 2 : size <= 6 ? 6 : 16 : 0,
+            cover: clamp(habitat.density * (.65 + patch * .5), .04, 1),
             variant: Math.floor(rnd() * HABITAT_SCENE.VARIANTS), seed: localSeed, habitat: habitat.key,
             color: habitat.color, rank: rnd(), target: Math.min(fill[1], fill[0] + Math.floor(patch * (fill[1] - fill[0] + 1))) });
           break;

@@ -1,7 +1,7 @@
 // Guards: replay from shared evidence, OSM priority/holes, cover-specific canopy,
 // coverage-first infill, envelope spacing, spatial budgets, invalid probes and triangle-exact street draping.
 import assert from 'node:assert/strict';
-import { habitatAt, createHabitatSampler, habitatPatch, planHabitatCanopy,
+import { habitatAt, createHabitatSampler, habitatPatch, planHabitatCanopy, habitatPlant,
   planHabitatDetails, planHabitatStreets, planHabitatFurniture, drapeHabitatPanel } from '../public/js/habitat.js';
 import { buildLandField } from '../public/js/landfield.js';
 import { HABITATS, HABITAT_FILL, HABITAT_SCENE } from '../public/js/habitatCatalog.js';
@@ -37,6 +37,20 @@ assert.equal(habitatAt(evidence(10), 'green', { 'plant:source': 'wind' }).canopy
 assert.equal(habitatAt(evidence(10), 'green').geology, 'unknown');
 assert.equal(habitatAt(evidence(10), 'green', { landuse: 'meadow' }).key, 'meadow');
 assert.equal(habitatAt(null, 'green').observed, false);
+const humid = { latitude: 25, altitude: 100, climate: 'tropical', moisture: .8, rainfall: 1800 };
+const arid = { latitude: 25, altitude: 100, climate: 'arid', moisture: .15, rainfall: 180 };
+assert.equal(habitatAt(evidence(10), 'green', {}, null, humid).community, 'forest');
+assert.equal(habitatAt(evidence(10), 'green', {}, null, arid).community, 'drywood');
+assert.equal(habitatAt(evidence(20), 'green', {}, null, arid).community, 'desert');
+assert.equal(habitatAt(evidence(30), 'green', {}, null, arid).community, 'savanna');
+assert.equal(habitatAt(evidence(10), 'green', {}, null, { ...humid, altitude: 5500 }).community, 'tundra');
+assert.equal(habitatAt(evidence(10), 'green', { natural: 'oasis' }, null, arid).community, 'oasis');
+assert.equal(habitatAt(evidence(60), 'bare', {}, null, arid).community, 'desert');
+assert.equal(habitatAt(evidence(10), 'green', {}, null, { ...arid, waterAvailability: true, salinity: .5 }).community, 'drywood',
+  'Saline water cannot create a freshwater oasis');
+assert.equal(habitatAt(evidence(30), 'green', { meadow: 'pasture' }, null, arid).canopy, 0);
+assert.equal(habitatAt(evidence(30), 'green', {}, null, { ...humid, season: 'winter' }).community, 'grassland');
+assert.equal(classifyArea({ natural: 'oasis' }).surface, 'green');
 assert.deepEqual(habitatAt({ code: 50, confidence: 1, sources: 1 }, 'urban').color,
   habitatAt(null, 'urban').color, 'Absent RGB must not darken a dated prior');
 
@@ -127,6 +141,42 @@ assert.equal(treeHabitatWeight('holmOak', 45, 500, { leafType: 'needleleaved' })
 const bounds = { minX: -400, maxX: 400, minZ: -300, maxZ: 300 };
 const woodland = habitatAt(evidence(10), 'green'), meadow = habitatAt(evidence(30), 'green');
 const canopyArgs = { bounds, seed: 91, maxPlants: 10000, sampleAt: () => woodland };
+const ecoPlan = input => planHabitatCanopy({ ...canopyArgs,
+  sampleAt: () => habitatAt(evidence(10), 'green', {}, null, input) }).rows;
+const humidPlants = ecoPlan(humid), dryPlants = ecoPlan(arid);
+assert(humidPlants.length > dryPlants.length * 1.5, 'Water availability increases woody stocking');
+assert(humidPlants.length / ((bounds.maxX - bounds.minX) * (bounds.maxZ - bounds.minZ)) > .015,
+  'Uncapped woodland sustains dense stands rather than isolated trees');
+assert.deepEqual(new Set(humidPlants.map(row => row.age)), new Set(['juvenile', 'mature', 'old']));
+const ageMean = age => { const rows = humidPlants.filter(row => row.age === age); return rows.reduce((s, r) => s + r.height, 0) / rows.length; };
+assert(ageMean('juvenile') < ageMean('mature') * .6 && ageMean('old') > ageMean('mature'));
+const patchRows = new Map();
+for (const row of humidPlants) {
+  const rolls = patchRows.get(row.patchSeed) || []; rolls.push(row.speciesRoll); patchRows.set(row.patchSeed, rolls);
+  const plant = habitatPlant(row);
+  if (!plant) continue;
+  assert.deepEqual(plant, habitatPlant(row));
+  assert(!['shrub', 'herb', 'rosette', 'cactus', 'fallen', 'snag'].includes(TREE_SPECIES[plant.type].form));
+  assert(Math.abs(plant.tree.h * plant.s - Math.min(row.height, TREE_SPECIES[plant.type].h)) < 1e-8);
+  assert(plant.tree.stems.every(stem => (Math.hypot(stem.x, stem.z) + stem.r) * plant.s <= plant.tree.footprint * plant.s + 1e-9));
+}
+assert([...patchRows.values()].some(rolls => rolls.length > 30 && new Set(rolls).size < rolls.length * .5),
+  'Local dominant taxa are shared within a stand rather than resampled independently');
+assert.equal(habitatPlant({ ...humidPlants[0], height: NaN }), null);
+assert.equal(habitatPlant({ ...humidPlants[0], environment: { ...humid, altitude: 9000 } }), null);
+for (const forms of ['shrub', 'xeric', 'tree', 'oasis']) {
+  const rows = treeDistribution(25, 100, .5, { ...arid, plantForms: forms, moisture: forms === 'oasis' ? .9 : .2 });
+  assert(rows.length);
+  if (forms === 'shrub') assert(rows.every(row => TREE_SPECIES[row.type].form === 'shrub'));
+  if (forms === 'xeric') assert(rows.every(row => ['shrub', 'rosette', 'cactus', 'dragon', 'ribbon'].includes(TREE_SPECIES[row.type].form)));
+}
+const oasisSpecies = treeDistribution(25, 100, .5, { ...arid, moisture: .9, plantForms: 'oasis', waterAvailability: true });
+assert(oasisSpecies.some(row => TREE_SPECIES[row.type].form === 'palm'), 'Root-zone water supports oasis palms despite low regional rainfall');
+const riparian = createHabitatSampler({ evidenceAt: () => evidence(10), zoneAt: () => 'green',
+  envCodeAt: x => x >= 15 && x <= 17 ? 1 : 0, environmentAt: () => arid });
+assert.equal(riparian(0, 0).community, 'oasis', 'Nearby settled water supports a dry-climate oasis');
+assert.equal(riparian(150, 0).community, 'drywood', 'Dry woodland away from water never invents an oasis');
+assert.equal(riparian(16, 0), null, 'A dry-land oasis cannot occupy settled water');
 const nativeRandom = Math.random;
 Math.random = () => { throw new Error('Habitat consumed nondeterministic randomness'); };
 try {
@@ -146,6 +196,8 @@ try {
   assert.deepEqual(low.rows, detail.rows.slice(0, 400));
   assert(low.rows.some(r => r.x < -200) && low.rows.some(r => r.x > 200), 'Budget must cover both ends');
   assert(detail.rows.every(r => Math.abs(r.x) > 25 && Number.isFinite(r.y)));
+  assert(detail.rows.filter(r => r.coverSize).every(r => Math.abs(r.groundX - .02) < 1e-9 && Math.abs(r.groundZ - .01) < 1e-9),
+    'Surface patches follow the fitted terrain plane without tilting blade height');
   assert.equal(planHabitatDetails({ ...detailArgs, heightAt: () => NaN }).rows.length, 0);
   assert.equal(planHabitatDetails({ ...detailArgs, fits: () => false }).rows.length, 0);
   assert.notDeepEqual(detail.rows, planHabitatDetails({ ...detailArgs, seed: 124 }).rows);
@@ -177,6 +229,8 @@ for (const [key, [minimum, maximum]] of Object.entries(HABITAT_FILL)) {
   assert(crowded.rows.length < plan.rows.length && crowded.rows.every(row => row.x - row.r >= 60));
 }
 const retryArgs = { bounds: fillBounds, seed: 73, sampleAt: () => meadow, heightAt: () => 4 };
+const curved = planHabitatDetails({ ...retryArgs, fits: () => true, heightAt: (x, z) => x * x + z * z });
+assert(curved.rows.every(row => !row.coverSize), 'Non-planar ground omits broad patches instead of floating their roots');
 const firstAttempts = planHabitatDetails({ ...retryArgs, fits: () => true }).rows;
 const retried = planHabitatDetails({ ...retryArgs, fits: foot => !firstAttempts.some(row => row.x === foot.x && row.z === foot.z) });
 assert.equal(retried.rows.filter(row => row.round === 0).length, 320, 'Rejected positions retry within their free cell');
