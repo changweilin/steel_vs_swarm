@@ -136,12 +136,16 @@ function installWeatherField(bounds, center) {
   setWeatherField(bakeFieldTexture(makeField(seed, span), bounds, WEATHER_TEX_N), WEATHER_TEX_N, bounds);
 }
 
-function loadImage(url) {
+function loadImage(url, timeoutMs = 0) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`載入失敗:${url}`));
+    const timer = timeoutMs ? setTimeout(() => {
+      img.onload = img.onerror = null; img.src = '';
+      reject(new Error('Satellite tile timed out'));
+    }, timeoutMs) : null;
+    img.onload = () => { clearTimeout(timer); resolve(img); };
+    img.onerror = () => { clearTimeout(timer); reject(new Error(`載入失敗:${url}`)); };
     img.src = url;
   });
 }
@@ -260,6 +264,48 @@ async function fetchImagery(bbox, onProgress) {
   );
   // complete:零缺磚才算完整拼接 —— 快取只准定案完整影像(缺磚底色會讓水色分類永久帶洞)
   return { canvas, z, tx0, ty0, complete: fails === 0 };
+}
+
+/** Bounded raw high-resolution tiles for road observations; never sample the stylized canvas. */
+export function roadImagerySampler(center, bbox) {
+  const zoom = 18, tiles = new Map(), maxTiles = 48;
+  const loadTile = (tx, ty) => {
+    const key = `${tx},${ty}`;
+    if (tiles.has(key)) return tiles.get(key);
+    if (tiles.size >= maxTiles) return Promise.resolve(null);
+    const job = (async () => {
+      const cacheKey = geoKey('roadImg', 1, bbox, `${zoom}/${ty}/${tx}`);
+      const cached = await geoGet(cacheKey);
+      if (cached?.pixels?.length === 256 * 256 * 4) return cached.pixels;
+      const image = await loadImage(IMAGERY(zoom, tx, ty), 8000);
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0, 256, 256);
+      const pixels = ctx.getImageData(0, 0, 256, 256).data;
+      await geoPut(cacheKey, { pixels });
+      return pixels;
+    })().catch(() => null);
+    tiles.set(key, job); return job;
+  };
+  return async (x, z) => {
+    const [lat, lng] = xzToLL(x, z, center);
+    if (lat < bbox.minLat || lat > bbox.maxLat || lng < bbox.minLng || lng > bbox.maxLng) return null;
+    const pixelM = 2 * Math.PI * 6378137 * Math.cos(lat * Math.PI / 180) / (256 * 2 ** zoom);
+    const tx = lon2tx(lng, zoom), ty = lat2ty(lat, zoom), radius = 28 / (pixelM * 256);
+    const rows = [];
+    for (let j = Math.floor(ty - radius); j <= Math.floor(ty + radius); j++) {
+      for (let i = Math.floor(tx - radius); i <= Math.floor(tx + radius); i++) rows.push([i, j]);
+    }
+    const loaded = await Promise.all(rows.map(async ([i, j]) => [`${i},${j}`, await loadTile(i, j)]));
+    const data = new Map(loaded);
+    if (loaded.some(([, pixels]) => !pixels)) return null;
+    return { pixelM, sampleColor: (sx, sz) => {
+      const [slat, slng] = xzToLL(sx, sz, center), px = lon2tx(slng, zoom) * 256, py = lat2ty(slat, zoom) * 256;
+      const i = Math.floor(px / 256), j = Math.floor(py / 256), pixels = data.get(`${i},${j}`);
+      if (!pixels) return null;
+      const k = (Math.floor(py - j * 256) * 256 + Math.floor(px - i * 256)) * 4;
+      return pixels[k + 3] ? [pixels[k], pixels[k + 1], pixels[k + 2]] : null;
+    } };
+  };
 }
 
 // ---- 衛星影像賽璐璐化(botw_plan Task 2.1):寬筆刷低通 + 色階量化 + 飽和提升 ----
@@ -401,8 +447,9 @@ export async function buildTerrain(cfg, onProgress, options) {
   const N = GRID_N;
   const sourceQuality = { imageryComplete: generated ? true : !!imagery?.complete,
     elevationComplete: elevationComplete && !usedFallback, synthetic: !!generated };
+  const roadImageryAt = generated ? null : roadImagerySampler(center, bbox);
   // Creation/restart preparation must not allocate scene meshes or replace live shader fields.
-  if (options?.sourceOnly) return { center, bbox, sampleColor, sourceQuality,
+  if (options?.sourceOnly) return { center, bbox, sampleColor, sourceQuality, roadImageryAt,
     elevationAt: (x, z) => sampleField(rawElev, x, z) };
   // rawElev = 上方定案的 N×N 原始高程(i:z 方向北→南 = maxLat→minLat;快取命中或現抓皆同一組網格點)
   const heights = new Float32Array(rawElev);
@@ -1514,5 +1561,5 @@ export async function buildTerrain(cfg, onProgress, options) {
   // `gridM` = 高程網格的格距(公尺)。對外只有一個用途:**貼地地被層要拿地形法線**
   // (ground.js 的 landN)—— 中央差分的取樣距 MUST 是這一格,取更小是在同一個雙線性面內
   // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
-  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, sourceQuality, get waterY() { return waterY; }, set waterY(v) { waterY = v; }, isMarine, baseWaterY, updateTide, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
+  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, sourceQuality, roadImageryAt, get waterY() { return waterY; }, set waterY(v) { waterY = v; }, isMarine, baseWaterY, updateTide, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
 }

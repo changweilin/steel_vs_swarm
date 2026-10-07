@@ -27,6 +27,7 @@ import { randomMapSamplers } from '../public/js/randomMapSources.js';
 import { PED_PLAN, isPedestrianBridge, isPedestrianWay } from '../public/js/pedestrian.js';
 import { planBridgeDeck, structureLayer, bridgeConnections } from '../public/js/roadStructures.js';
 import { osmRoadQuery, OSM_ROAD_QUERY_VERSION } from '../public/js/osmQuery.js';
+import { ROAD_LANE_M, taggedRoadLanes, observedRoadWidth } from '../public/js/roadLaneEvidence.js';
 export { captureWorldCover } from './worldcover_source.mjs';
 
 export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -107,11 +108,8 @@ export const underpassPlan = evalBlock('const UND = {', 'underpassPlan',
 // 2026-07-29 澀谷側壁破口案)。判定與候選診斷 MUST 同吃這個閘,否則稽核比執行期多洞。
 import { structuralTunnel as strucTunnel } from '../public/js/roadSemantics.js';
 export { strucTunnel };
-export const roadWidth = (tags) => {
-  const base = ROAD_W[tags.highway] || 4;
-  const lanes = parseInt(tags.lanes, 10) || 0;
-  return lanes ? Math.max(base, lanes * 3.2) : base;
-};
+export const roadWidth = new Function('ROAD_W', 'ROAD_LANE_M', 'taggedRoadLanes', 'observedRoadWidth',
+  `${grabFunctionSource('roadWidth')}\nreturn roadWidth;`)(ROAD_W, ROAD_LANE_M, taggedRoadLanes, observedRoadWidth);
 /** 結構通行半寬：人行天橋只夾到單機體淨寬；車行結構維持 PASS_W。 */
 export const strucHw = (tags) => isPedestrianWay(tags)
   ? Math.max(roadWidth(tags) / 2, PED_PLAN.FOOTBRIDGE_MIN_W_M / 2)

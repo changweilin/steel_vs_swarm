@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { readSrc, grabFn } from '../tools/audit_src.mjs';
 import { roadWidth } from '../tools/venue_field.mjs';
 import { junctionBoundary } from '../public/js/roadJunctions.js';
+import { ROAD_LANE_M } from '../public/js/roadLaneEvidence.js';
 
 const src = readSrc('public', 'js', 'biomes.js');
-const roadSurfaceBiome = new Function('roadWidth', `${src.match(/^const roadLaneN = .+;$/m)[0]}
-  ${grabFn(src, 'roadSurfaceBiome')} return roadSurfaceBiome;`)(roadWidth);
+const roadSurfaceBiome = new Function('roadWidth', 'ROAD_LANE_M', `${src.match(/^const roadLaneN = .+;$/m)[0]}
+  ${grabFn(src, 'roadSurfaceBiome')} return roadSurfaceBiome;`)(roadWidth, ROAD_LANE_M);
 for (const biome of ['urban', 'bare', 'green', 'wet']) {
   assert.equal(roadSurfaceBiome(biome, { highway: 'primary', lanes: '2' }), 'urban',
     'surrounding appearance cannot split a paved road');
@@ -23,6 +24,7 @@ function run(x, z, mode = 3, dirs = [[1, 0], [0, 1], [-1, 0]], biome = 'urban') 
   const rec = { x, z, hw: 5, tags: { highway: 'primary', lanes: '2' }, main: true, arms: mode, dirs, armHw: dirs.map((_, i) => i ? 2 : 5) };
   rec.boundary = junctionBoundary(rec);
   fill({ terrain, inb: 40, CLAMP: 2, ROAD_LIFT: .1,
+    roadHeightAt: terrain.heightAt,
     nodeArms: new Map([[0, rec]]),
     THREE: { Vector2: class { constructor(x, y) { this.x = x; this.y = y; } },
       ShapeUtils: { triangulateShape: () => [[0, 1, 2]] } },

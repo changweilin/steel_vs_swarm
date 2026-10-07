@@ -13,7 +13,7 @@
 const DB_NAME = 'svs_geo';
 const STORE = 'kv';
 // Retained entries per category: satellite images reach ~16MB each; elevation/OSM are KB-MB scale
-const KEEP = { elev: 32, img: 16, osmF: 32, osmR: 32, evidence: 24, prep: 32 };
+const KEEP = { elev: 32, img: 16, roadImg: 96, osmF: 32, osmR: 32, evidence: 24, prep: 32 };
 
 let _dbP = null;
 function db() {

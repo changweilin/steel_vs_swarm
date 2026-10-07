@@ -27,13 +27,14 @@ import { avatarURL, portraitURL, artAvatarURL, artPortraitURL, isArtMode } from 
 
 import { MapSelect } from './mapSelect.js';
 import { MAP_SELECT_TEXT, mapCandidateLabel, mapCandidateSource } from './mapSelectContent.js';
-import { buildTerrain, battleBBox } from './terrain.js';
+import { buildTerrain, battleBBox, roadImagerySampler } from './terrain.js';
 import {
   buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode, warmOsm,
   commitOsmIn, osmInReady, resetOsmMisses, clearOsmIn, fetchGridRoads, fetchOsmRoads,
 } from './biomes.js';
 import { roadGridRotDeg } from './roadgrid.js';
 import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from './osmrelay.js';
+import { inferSatelliteRoadLanes } from './roadLaneEvidence.js';
 import { MAP_EVIDENCE, evidenceFrame, evidenceFrameKey } from './mapEvidence.js';
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
 import { encodeEvidenceRelay, decodeEvidenceRelay } from './mapEvidenceRelay.js';
@@ -2902,6 +2903,9 @@ async function osmGate(cfg, onLabel = () => {}) {
   } else {
     onLabel('取得道路圖資(全房共用一份)…');
     try { [feats, roads] = await warmOsm(bbox); } catch { /* 缺席照走備援 */ }
+    if (roads?.length) {
+      roads = await inferSatelliteRoadLanes(roads, p => llToXZ(p.lat, p.lon, cfg.center), roadImagerySampler(cfg.center, bbox));
+    }
     const relayInput = { bbox, roads: roads?.length ? roads : null };
     // features=null 代表查詢失敗；不得把空陣列送成「成功但零面域」，否則全房會停用 fallback。
     if (feats !== null && feats !== undefined) {
