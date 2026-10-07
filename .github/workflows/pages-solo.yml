@@ -1,6 +1,6 @@
 # ============ 單機特化版 → GitHub Pages ============
 # 三種遊戲機制中的「個人單機版本」產線:GitHub Actions 把儲存庫複製成靜態站台
-# (`tools/build_solo.mjs`,純檔案複製,無 bundler、無轉譯 —— 見 /CLAUDE.md §1「無 build step」),
+# (`tools/build_solo.mjs`, file-copy only, no bundler/transpile — see root `AGENTS.md` §2),
 # 部署後任何人開網址就能玩:權威模擬 `server/sim.js` 直接跑在瀏覽器裡,不需要任何伺服器。
 #
 # 首次啟用:儲存庫 Settings → Pages → Source 選「GitHub Actions」。
