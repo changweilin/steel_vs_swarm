@@ -37,7 +37,7 @@ import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from './osmrela
 import { MAP_EVIDENCE, evidenceFrame, evidenceFrameKey } from './mapEvidence.js';
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
 import { encodeEvidenceRelay, decodeEvidenceRelay } from './mapEvidenceRelay.js';
-import { prepareMapCreation, awaitPreparedPack } from './mapPreparation.js';
+import { prepareMapCreation, awaitPreparedPack, clearPrepCache } from './mapPreparation.js';
 import { triggerBackgroundMapSetup, hideBackgroundMapSetup, startPresetWarmup } from './mapSetupProgress.js';
 import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
@@ -4579,6 +4579,7 @@ async function clearGameCache() {
   app.quickRestart = null;
   try { clearOsmIn(); } catch { /* 忽略 */ }
   try { resetOsmMisses(); } catch { /* 忽略 */ }
+  try { clearPrepCache(); } catch { /* 忽略 */ }
   await geoClear();
   if (app.phaseShown === 'room') renderPreloadStatus();
   toast('🗑 遊戲暫存已清除,下次開戰將重新載入');

@@ -4,13 +4,15 @@
 //   ① 錐按方位角切成 fanSubs 個小錐形區塊,每區塊只命中最近的一名敵人;
 //   ② 量體橫跨多格的大目標在多格各吃一次(單一敵人多次傷害);
 //   ③ 傷害不隨距離變化(只剩偏心遞減 offAxisFalloff)。
+// 2026-10-06 使用者需求:全部扇形改球面射程;中央小錐射程比最邊緣 +10%(由外而內線性,
+//   fanBinRangeF 單一縫:邊緣 ×1.0 → 中央 ×FAN_RANGE_CENTER_F)。
 //
 // 用法:node tools/audit_fan_cone.mjs
 
 import { readSrc } from './audit_src.mjs';
 import { BattleSim } from '../server/sim.js';
 import {
-  CHARACTERS, heroWeapon, fanSubs, offAxisFalloff, MAPGEO, LOS, hitR,
+  CHARACTERS, heroWeapon, fanSubs, fanBinRangeF, FAN_RANGE_CENTER_F, offAxisFalloff, MAPGEO, LOS, hitR,
   TARGET_R, TARGET_CLASS, fanBuildingMaxHits,
 } from '../public/js/data.js';
 
@@ -149,6 +151,44 @@ log('— 扇形小錐分格(sim.heroPlasma)—');
     `偏心遞減仍在:錐緣傷害 ×${(de / dc).toFixed(3)}(期望 ${exp.toFixed(3)})`);
 }
 
+// ---------- ⑦ 每個小錐各自吃逐格球面射程(2026-10-06:中央 +10% 由外而內線性) ----------
+{
+  const R = heroWeapon('s04', 'heavy', 1, true).range;
+  TARGET_R['creep:boss'] = 7;
+  TARGET_CLASS['boss'] = 'armor';
+  const dmgAt = (x, z, tag, kind = 'soldier') => {
+    const { sim } = fanShooter(tag);
+    const t = sim._add({ kind, side: 'STEEL', x, z, y: 0, hp: 999999, m: 999999 });
+    sim.heroPlasma(tag, 0, 1, 'heavy', null, 0);
+    return 999999 - t.hp;
+  };
+  const edgeXZ = (f) => {
+    const r = f * R, a = ARC * Math.PI / 180 * 0.9;   // 徑向等距:同一個徑向距離下比軸上/錐緣
+    return [r * Math.sin(a), r * Math.cos(a)];
+  };
+  const [ex0, ez0] = edgeXZ(0.99), [ex1, ez1] = edgeXZ(1.05);
+  assert(dmgAt(0, R * 0.99, 'p_c7a') > 0 && dmgAt(ex0, ez0, 'p_c7b') > 0,
+    '射程內小目標:軸上與錐緣格都命中');
+  assert(dmgAt(ex1, ez1, 'p_c7d') === 0,
+    '超射程小目標:錐緣格(×1.0)不掉血');
+  assert(dmgAt(0, R * 1.05, 'p_c7c') > 0,
+    '中央增程:軸上 1.05R 照樣命中(中央格 ×1.1)');
+  assert(dmgAt(0, R * 1.15, 'p_c7c2') === 0,
+    '中央增程有頂:軸上 1.15R 超出中央格射程不掉血');
+  // 逐格倍率由外而內線性:邊緣 1.0、中央 1.1(格序推導,fanBinRangeF 單一縫)
+  const n = fanSubs({ arc: ARC }), c = (n - 1) / 2;
+  assert(FAN_RANGE_CENTER_F === 1.1
+    && fanBinRangeF({ arc: ARC }, 0) === 1 && fanBinRangeF({ arc: ARC }, n - 1) === 1
+    && Math.abs(fanBinRangeF({ arc: ARC }, c) - 1.1) < 1e-9
+    && Math.abs(fanBinRangeF({ arc: ARC }, c - 1) - (1 + 0.1 * (1 - 1 / c))) < 1e-9,
+    `逐格倍率線性:邊緣 1.0 → 中央 1.1(${n} 格,中央格 ${c})`);
+  // 大目標中心超射程、表面在內(R-1):中央格命中、邊緣格楔內增量超該格射程逐格剔除
+  const dClose = dmgAt(0, 30, 'p_c7e', 'boss');
+  const dEdge = dmgAt(0, R - 1 + 7, 'p_c7f', 'boss');
+  assert(dEdge > dClose * 0.15 && dEdge < dClose * 0.5,
+    `射程邊緣大目標(r=7,表面 R-1):只中中央格(${dEdge.toFixed(1)} 介於全錐 ${dClose.toFixed(1)} 的 15%~50%)`);
+}
+
 // ---------- ⑥ 單一縫 ----------
 {
   const src = readSrc('public', 'js', 'data.js')
@@ -157,6 +197,12 @@ log('— 扇形小錐分格(sim.heroPlasma)—');
     '原文:fanSubs 只有一處定義(格數推導只有這一個縫)');
   assert((src.match(/export const FAN_SUB_DEG\s*=/g) || []).length === 1,
     '原文:FAN_SUB_DEG 只有一處定義');
+  assert((src.match(/export const fanBinHitD\s*=/g) || []).length === 1,
+    '原文:fanBinHitD 只有一處定義(楔-圓盤相交只有這一個縫)');
+  assert((src.match(/export const fanBinRangeF\s*=/g) || []).length === 1,
+    '原文:fanBinRangeF 只有一處定義(逐格射程倍率只有這一個縫)');
+  assert((src.match(/export const FAN_RANGE_CENTER_F\s*=/g) || []).length === 1,
+    '原文:FAN_RANGE_CENTER_F 只有一處定義');
 }
 
 log(failed ? '\n❌ 扇形小錐分格稽核未通過' : '\n✅ 扇形小錐分格稽核全數通過');

@@ -12,6 +12,7 @@
 //      「剛好」變成看人品)、巨砲時代的彈夾旁路殘留在 _gateFire/_tryFire(重武器又能免費開火)。
 //      伺服器那半由 `npm test`(sim 直測)把關;這裡驗**推導與客戶端消費端**。
 //   ②**受擊掉高**:掉的公尺數 ∝ 傷害,校準錨 = 打完「平均護盾+裝甲」掉 SINK_TOWERS 個砲塔高。
+//      掉高歸類於失衡效果(2026-10-06):無人機低空飛行(離地 < 一個砲塔高)不失衡 ⇒ 也不掉高、不鎖動力。
 //      無聲寫壞法:在 game.js 手寫公尺數/係數(校準錨一改就分家)、把掉幅做成「速度」
 //      (同一份傷害分幾發打完就掉不一樣多)、忘了在陣亡/換座機/觸地清帳(舊帳把新機體往下拉)。
 //   ③**爬升動力**:只有往上飛消耗,滿動力全速爬升撐 DRAIN_S 秒,上限/回速全機共用固定值
@@ -19,7 +20,8 @@
 //      無聲寫壞法:耗速手寫(改 DRAIN_S 無效)、按機體區分上限/回速(改一隻漏一隻)、
 //      跳躍/變形耗能手寫固定點數(改 LIFT_MAX 就分家)、動力見底改「減速」而不是「爬不上去」
 //      (玩家分不出來,且會與坡度阻擋 slopeBlocked 的語意分家)、把水平分量一起砍掉。
-//      高度越高同速爬升越耗動力:連續曲線 liftAltF(起點 = 1、天花板 = ALT_TOP_F = 4),
+//      高度越高同速爬升越耗動力:指數曲線 liftAltF(起點 = 1,每多一個塔高翻倍,
+//      至 ALT_TOP_F = 3 個塔高封頂 = 8 倍),
 //      起點 = 有海面取海平面、否則取全圖地形最低點;下降回充吃同一條(高處回得多,2/3 比例處處成立)。
 //      無聲寫壞法:分段階梯(高一公尺突然貴一截)、起點寫死 0(沿海地圖的海平面被當成高空加價)、
 //      天花板無效時爆成 NaN、消費端各寫一份係數、爬升吃曲線而下降不吃(同一高度上下一趟憑空蒸發動力)。
@@ -371,44 +373,52 @@ console.log('■ Ⅳ 爬升動力:推導(滿動力全速爬升撐 DRAIN_S 秒;�
     /export const liftDescentPS[\s\S]{0,140}?liftDrainPS\(\)[\s\S]{0,40}?FLIGHT\.DESCENT_RECHARGE_F/.test(dataSrc));
   t('全速下降回充 = 全速爬升耗速 × 2/3',
     near(liftDescentPS() / liftDrainPS(), FLIGHT.DESCENT_RECHARGE_F, 1e-9));
-  // ---- 高度爬升曲線(2026-09-30 使用者需求:高度越高,爬升相同高度需要更多動力)----
-  // 起點 = 有海面取海平面、否則取全圖地形最低點;天花板 = 4 倍。
+  // ---- 高度爬升曲線(2026-09-30 使用者需求:高度越高,爬升相同高度需要更多動力;
+  //      2026-10-06 改制為指數:以一個砲塔高為單位,每多一個塔高耗速翻倍,至 3 個塔高封頂 = 8 倍)----
+  // 起點 = 有海面取海平面、否則取全圖地形最低點;封頂高度 = 起點 + ALT_TOP_F 個塔高。
   t('高度曲線由 FLIGHT.ALT_TOP_F 推導(MUST NOT 手寫倍率)',
-    /export const liftAltF[\s\S]{0,500}?FLIGHT\.ALT_TOP_F/.test(dataSrc));
-  t('ALT_TOP_F = 4(天花板耗速 = 起點 4 倍)', FLIGHT.ALT_TOP_F === 4);
+    /export const liftAltF[\s\S]{0,600}?FLIGHT\.ALT_TOP_F/.test(dataSrc)
+    && /Math\.pow\(2,/.test(dataSrc));
+  t('ALT_TOP_F = 3(指數封頂高度,塔高倍數;封頂耗速 = 2^3 = 8 倍)', FLIGHT.ALT_TOP_F === 3);
+  t('封頂耗速 = 2^ALT_TOP_F(推導不手寫)',
+    near(liftAltF(10 + 3 * TARGET_H.tower, 10, 200), Math.pow(2, FLIGHT.ALT_TOP_F), 1e-9));
+  t('每多一個塔高翻倍(指數的定義)',
+    near(liftAltF(10 + TARGET_H.tower, 10, 200), 2, 1e-9)
+    && near(liftAltF(10 + 2 * TARGET_H.tower, 10, 200), 4, 1e-9));
   t('起點錨點:liftAltF(起點以下) = 1(既有 DRAIN_S 節奏在起點不動)',
     liftAltF(10, 10, 200) === 1 && liftAltF(-50, 10, 200) === 1);
-  t('天花板錨點:liftAltF(ceil, base, ceil) = ALT_TOP_F',
-    near(liftAltF(200, 10, 200), FLIGHT.ALT_TOP_F, 1e-9), `${liftAltF(200, 10, 200)}`);
-  t('區間無效時降級回 1(天花板 ≤ 起點/非有限/起點缺失)',
-    liftAltF(100, 200, 200) === 1 && liftAltF(100, 10, Infinity) === 1
-    && liftAltF(100, 10, NaN) === 1 && liftAltF(100, null, 200) === 1);
-  t('超界夾邊:高過天花板 = 封頂(連續不爆)',
-    near(liftAltF(500, 10, 200), FLIGHT.ALT_TOP_F, 1e-9));
+  t('起點缺失降級回 1(原則 6)',
+    liftAltF(100, null, 200) === 1 && liftAltF(100, NaN, 200) === 1
+    && liftAltF(100, undefined, Infinity) === 1);
+  t('超界夾邊:3 個塔高以上 = 封頂 8 倍(連續不爆)',
+    near(liftAltF(500, 10, 200), 8, 1e-9)
+    && near(liftAltF(10 + 10 * TARGET_H.tower, 10, 200), 8, 1e-9));
   t('單調非遞減:越高越貴(千點取樣)', (() => {
+    const H = TARGET_H.tower;
     let prev = 1;
     for (let i = 1; i <= 1000; i++) {
-      const v = liftAltF(10 + i / 1000 * 190, 10, 200);
+      const v = liftAltF(10 + i / 1000 * 3 * H, 10, 200);
       if (!(v >= prev)) return false;
       prev = v;
     }
-    return prev === FLIGHT.ALT_TOP_F;
+    return prev === 8;
   })());
   t('連續無階梯:千點最大鄰差 < 0.05(階梯式曲線在此現形)', (() => {
+    const H = TARGET_H.tower;
     let worst = 0, prev = liftAltF(10, 10, 200);
     for (let i = 1; i <= 1000; i++) {
-      const v = liftAltF(10 + i / 1000 * 190, 10, 200);
+      const v = liftAltF(10 + i / 1000 * 3 * H, 10, 200);
       worst = Math.max(worst, Math.abs(v - prev));
       prev = v;
     }
     return worst < 0.05;
   })());
-  t('只認相對高度:起點平移,同相對高度耗速相同(海平面起算與最低點起算是同一條曲線)',
+  t('只認塔高單位:起點平移,同相對高度耗速相同(海平面起算與最低點起算是同一條曲線)',
     near(liftAltF(60, 10, 210), liftAltF(160, 110, 310), 1e-9));
   t('liftAltF 在 game.js 只有 _stepLift 一個消費端(爬升扣 + 下降回充兩處,單一縫)',
     count(code, 'liftAltF(') === 2 && count(grab('_stepLift'), 'liftAltF(') === 2);
-  t('game.js MUST NOT 手寫高度倍率(倍率只准住 data.js)',
-    !/ALT_TOP_F/.test(code));
+  t('game.js MUST NOT 手寫塔高倍數(上限只准吃 FLIGHT.ALT_TOP_F;飛行夾制兩處)',
+    count(code, 'FLIGHT.ALT_TOP_F') === 2 && !/TARGET_H\.tower \* [0-9]/.test(code));
   // 起點規則:有海面吃海面,否則吃地形最低點,取不到回 null(執行 _liftBaseY 原文)
   {
     const baseOf = (terrain) =>
@@ -478,9 +488,9 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
 console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬不上去 / 掉幅只由傷害決定)');
 // ---------------------------------------------------------------------------
 {
-  const proto = new Function('FLIGHT', 'airSinkM', 'liftMax', 'liftRegen', 'liftDrainPS', 'liftDescentPS', 'liftAltF', 'UNITS', 'fluidFactor',
+  const proto = new Function('FLIGHT', 'airSinkM', 'liftMax', 'liftRegen', 'liftDrainPS', 'liftDescentPS', 'liftAltF', 'UNITS', 'fluidFactor', 'TARGET_H',
     `return ({ ${grab('_unbalanced')}, ${grab('_stepLift')}, ${grab('_airSinkHit')}, ${grab('_liftMax')} });`)(
-    FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, UNITS, fluidFactor);
+    FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, UNITS, fluidFactor, TARGET_H);
   const u = { vspeed: UNITS.drone.vspeed, mpRegen: UNITS.drone.mpRegen };
   const mk = (over = {}) => Object.assign(Object.create(null), proto, {
     maxMp: UNITS.drone.mp, _mpAuth: true, heroKind: 'drone', upg: { ch: 0 }, hud: { feed: () => {} },
@@ -570,6 +580,21 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     c._airSinkHit(300);
     t('地面機體不掉高(規則只作用於飛行機體)', c._airSink === 0);
   }
+  // ⑤' 低空免失衡(2026-10-06 使用者需求:掉高歸類於失衡效果,低空無人機不掉高、不鎖動力)
+  {
+    const low = mk({ isDrone: true, _altAG: TARGET_H.tower - 1 });
+    low._airSinkHit(300, 1.0);
+    t('低空無人機被擊中不掉高(掉高是失衡效果)', low._airSink === 0);
+    t('低空無人機被擊中不鎖動力', !(1.0 < (low._liftLockUntil || 0)));
+    t('低空無人機不受擊失衡(_unbalanced 同判)', low._unbalanced(1.0) === false);
+    const high = mk({ isDrone: true, _altAG: TARGET_H.tower + 50 });
+    high._airSinkHit(300, 1.0);
+    t('高空無人機被擊中照常掉高', high._airSink > 0 && near(high._airSink, airSinkM(300), 1e-6));
+    t('高空無人機受擊進入失衡', high._unbalanced(1.0) === true);
+    const edge = mk({ isDrone: true, _altAG: TARGET_H.tower });
+    edge._airSinkHit(300, 1.0);
+    t('恰一個塔高不再豁免(邊界與伺服器 _stampUnbal 同判)', edge._airSink > 0);
+  }
   // ⑥ 受擊掉高動力回復鎖定(2026-09-01 使用者需求:飛行時被擊中而下降時,會有一段時間無法恢復飛行動力)
   {
     const c = mk({ lift: 0 });
@@ -616,48 +641,54 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     cUnbal._stepLift(dt, 1.05, fullDown, u);
     t('受擊失衡/受傷鎖定期間下降不回充(非正常操作)', cUnbal.lift === 0);
   }
-  // ⑧ 高度越高同速爬升越耗動力(執行 game.js 原文;2026-09-30 使用者需求)
+  // ⑧ 高度越高同速爬升越耗動力(指數制;2026-10-06 使用者需求:每多一個塔高翻倍,3 個塔高封頂 8 倍)
   {
-    const drain1s = (y, ceil) => {
-      const c = mk({ pos: { y }, _ceilY: () => ceil });
+    const H = TARGET_H.tower, dt = 0.5;
+    const drainRate = (y) => {
+      const c = mk({ pos: { y } });
       const before = c.lift ?? c._liftMax();
-      c._stepLift(1, 0, { x: 0, y: u.vspeed, z: 0 }, u);
-      return before - c.lift;
+      c._stepLift(dt, 0, { x: 0, y: u.vspeed, z: 0 }, u);
+      return (before - c.lift) / dt;
     };
-    const dLo = drain1s(0, 200), dMid = drain1s(100, 200), dHi = drain1s(200, 200);
-    t('同速爬升:高處比低處耗動力多(連續曲線,非階梯)',
+    const dLo = drainRate(0), dMid = drainRate(H), dHi = drainRate(3 * H);
+    t('同速爬升:高處比低處耗動力多(指數,非階梯)',
       dHi > dMid && dMid > dLo, `${dLo.toFixed(2)} / ${dMid.toFixed(2)} / ${dHi.toFixed(2)}`);
-    t('天花板耗速 = 起點耗速 × ALT_TOP_F',
-      near(dHi / dLo, FLIGHT.ALT_TOP_F, 1e-9), `${(dHi / dLo).toFixed(3)} vs ${FLIGHT.ALT_TOP_F}`);
+    t('每多一個塔高翻倍',
+      near(dMid / dLo, 2, 1e-9) && near(drainRate(2 * H) / dLo, 4, 1e-9),
+      `${(dMid / dLo).toFixed(3)} / ${(drainRate(2 * H) / dLo).toFixed(3)}`);
+    t('3 個塔高封頂 = 8 倍',
+      near(dHi / dLo, 8, 1e-9), `${(dHi / dLo).toFixed(3)} vs 8`);
+    t('封頂以上維持 8 倍(平台連續,山區稜線飛得過去)',
+      near(drainRate(10 * H) / dLo, 8, 1e-9));
     t('起點耗速 = 既有 liftDrainPS(高度錨點不動,DRAIN_S 節奏不變)',
       near(dLo, liftDrainPS(), 1e-9));
     // 起點規則的行為版:同一個相對高度,海平面起算與最低點起算耗速相同
-    const drainBase = (y, base, ceil) => {
-      const c = mk({ pos: { y }, _liftBaseY: () => base, _ceilY: () => ceil });
+    const drainBase = (y, base) => {
+      const c = mk({ pos: { y }, _liftBaseY: () => base });
       const before = c.lift ?? c._liftMax();
-      c._stepLift(1, 0, { x: 0, y: u.vspeed, z: 0 }, u);
-      return before - c.lift;
+      c._stepLift(dt, 0, { x: 0, y: u.vspeed, z: 0 }, u);
+      return (before - c.lift) / dt;
     };
-    t('起點以下與起點同價(夾邊連續)', near(drainBase(-20, 10, 210), drainBase(10, 10, 210), 1e-12));
+    t('起點以下與起點同價(夾邊連續)', near(drainBase(-20, 10), drainBase(10, 10), 1e-12));
     t('相對高度相同 ⇒ 耗速相同(海平面/最低點起算同一條)',
-      near(drainBase(60, 10, 210), drainBase(160, 110, 310), 1e-9));
+      near(drainBase(60, 10), drainBase(160, 110), 1e-9));
     // 下降回充吃同一條曲線:同一下降率,高處回得比低處多,且「回/耗 = 2/3」在任何高度都成立
-    const recharge1s = (y, ceil) => {
-      const c = mk({ lift: 0, pos: { y }, _ceilY: () => ceil });
-      c._stepLift(1, 0, { x: 0, y: -u.vspeed, z: 0 }, u);
-      return c.lift;
+    const rechargeRate = (y) => {
+      const c = mk({ lift: 0, pos: { y } });
+      c._stepLift(dt, 0, { x: 0, y: -u.vspeed, z: 0 }, u);
+      return c.lift / dt;
     };
-    const hover1s = (y, ceil) => {
-      const c = mk({ lift: 0, pos: { y }, _ceilY: () => ceil });
-      c._stepLift(1, 0, { x: 0, y: 0, z: 0 }, u);
-      return c.lift;
+    const hoverRate = (y) => {
+      const c = mk({ lift: 0, pos: { y } });
+      c._stepLift(dt, 0, { x: 0, y: 0, z: 0 }, u);
+      return c.lift / dt;
     };
-    const rLo = recharge1s(0, 200), rHi = recharge1s(200, 200);
+    const rLo = rechargeRate(0), rHi = rechargeRate(3 * H);
     t('同速下降:高處比低處回充多(與爬升同一條曲線)',
       rHi > rLo, `${rLo.toFixed(2)} vs ${rHi.toFixed(2)}`);
-    for (const [y, tag] of [[0, '起點'], [200, '天花板']]) {
-      const extra = recharge1s(y, 200) - hover1s(y, 200);   // 該高度的位能回充(扣除懸停基線)
-      const drain = drain1s(y, 200);                        // 同高度的爬升耗速
+    for (const [y, tag] of [[0, '起點'], [H, '一個塔高'], [3 * H, '封頂']]) {
+      const extra = rechargeRate(y) - hoverRate(y);   // 該高度的位能回充(扣除懸停基線)
+      const drain = drainRate(y);                        // 同高度的爬升耗速
       t(`${tag}:下降位能回充 = 爬升耗速 × 2/3(同曲線 ⇒ 比例處處成立)`,
         near(extra / drain, FLIGHT.DESCENT_RECHARGE_F, 1e-9),
         `${extra.toFixed(2)} / ${drain.toFixed(2)}`);

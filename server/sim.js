@@ -17,7 +17,7 @@ import {
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   ATK_CARRIER, atkDelivered, atkParts, atkPartN, SELF_ATK, selfAtkBoost,
   ATK_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND, ATK_CAST_S,
-  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, fanBuildingMaxHits, FAN_BUILDING_MAX_HITS, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, FAN_SUB_F, FAN_RANGE_CENTER_F, fanBinRangeF, fanBuildingMaxHits, FAN_BUILDING_MAX_HITS, battleRect, llToXZ, solveTowerSites, shieldSplit, SHIELD_DEFENSE,
   shieldDefKindFactor, balanceMul, upgradeCurveMul, RATE_DEF,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
@@ -2095,7 +2095,9 @@ export class BattleSim {
     if (!wp) return;
     const ty = t.hero || t.kind === 'heli' || t.decoy ? (t.y || 0) : 0;
     // 量到近側表面(_surfD3):鎖定光暈的語意 = 「準星壓在表面上且打得到」,與 heroHit 閘門同一把尺
-    if (this._surfD3(Math.hypot(t.x - h.x, t.z - h.z, ty - (h.y || 0)), t) > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL) return;
+    // 扇形取中央格最遠(球面 ×FAN_RANGE_CENTER_F),與 heroPlasma 逐格射程同界
+    const lockMul = aoeClass(wp.def) === 'fan' ? FAN_RANGE_CENTER_F : 1;
+    if (this._surfD3(Math.hypot(t.x - h.x, t.z - h.z, ty - (h.y || 0)), t) > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL * lockMul) return;
     // 迷霧內的目標不可鎖定(與 heroHit 同一條規則:看不見 = 沒有火控解)
     const pulse = this.visionUntil?.[h.side] > this.t;
     if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
@@ -2845,8 +2847,9 @@ export class BattleSim {
   /**
    * 扇形範圍攻擊(aoeClass 'fan':shotgun / flamethrower / plasma)。
    * 客戶端回報 3D 射向(dx, dz, dy;已單位化),傷害判定全在伺服器:
-   * 錐按方位角切成 fanSubs 個小錐形區塊,每區塊只命中最近的一名敵人
-   * (量體橫跨多格的大目標在多格各吃一次);射程/迷霧/LOS/稜線閘門逐目標照舊。
+    * 錐按方位角切成 fanSubs 個小錐形區塊,每區塊只命中最近的一名敵人
+    * (量體橫跨多格的大目標在多格各吃一次);射程閘門每個小錐各自驗(與武器同一道),
+    * 迷霧/LOS/稜線閘門逐目標照舊。
    * 傷害不隨距離變化,只剩偏心傷害遞減 offAxisFalloff。
    */
   heroPlasma(pid, dx, dz, slot = 'heavy', o = null, dy = 0) {
@@ -2886,12 +2889,11 @@ export class BattleSim {
         const ty = tyTarget - byE;
         const d3 = Math.hypot(tx, ty, tz);
         const hr = hitR(t);
-        // 射程誠實界:3D 表面距離不超過有效射程(無 RANGE_TOL)
+        // 射程誠實界:球面(3D 表面距離比逐格有效射程,無 RANGE_TOL);每個小錐各自再驗一次
+        // (fanBinHitD 楔內增量 + fanBinRangeF 逐格倍率 —— 中央格增量為 0、倍率 1.1 即最遠)
         const maxR = wp.def.range * this._altRange(b, t, wp.def);
-        if (Math.max(0, d3 - hr) > maxR) {
-          const vdy = ty;
-          if (!(vdy < 0 && inWeaponRange(maxR, tx, tz, vdy, hr))) continue;
-        }
+        const surfC = Math.max(0, d3 - hr);
+        if (surfC > maxR * FAN_RANGE_CENTER_F) continue;
         // 3D 圓錐判定:夾角 <= 錐半角(fanConeHalf 量到近側表面;近距 <=8m 視為正中滿額)
         const dot = (tx * ux + ty * uy + tz * uz) / (d3 || 1);
         if (dot <= 0) continue;
@@ -2903,11 +2905,16 @@ export class BattleSim {
         // 也不穿山
         if (this._ridgeBlocked(bx, bz, this._absSightY(b, byE, bx, bz),
                                t.x, t.z, this._absSightY(t, this._tgtY(t), t.x, t.z), b, t)) continue;
-        // 小錐分格(fanBinSpan 單一縫):量體覆蓋到的格都登記(大目標橫跨多格 ⇒ 多格各取它一次)
+        // 小錐分格(fanBinSpan 單一縫):量體覆蓋到的格都登記(大目標橫跨多格 ⇒ 多格各取它一次);
+        // 每一格各自吃逐格球面射程(fanBinHitD 幾何半 + fanBinRangeF 倍率):楔內表面超該格射程的不登記
         const phi = Math.atan2(tx * uz - tz * ux, tx * ux + tz * uz);
         const aw = Math.atan2(hr, Math.max(1, d2));
         const [b0, b1] = fanBinSpan(wp.def, phi, aw);
+        const surfH = Math.max(0, d2 - hr);
         for (let bi = b0; bi <= b1; bi++) {
+          const hitD = fanBinHitD(wp.def, bi, d2, phi, hr);
+          if (hitD == null) continue;
+          if (surfC + (hitD - surfH) > maxR * fanBinRangeF(wp.def, bi)) continue;
           if (!bins[bi] || d3 < bins[bi].d3) bins[bi] = { t, d3, ang };
         }
       }
@@ -6037,6 +6044,8 @@ export class BattleSim {
    */
   _botAirSink(t, dealt) {
     if (!t.hero || !isBotId(t.pid) || !(dealt > 0)) return;
+    // 掉高歸類於失衡效果:無人機低空飛行(離地低於砲塔高)不失衡 ⇒ 也不掉高(與 _stampUnbal 同判)
+    if (t.kind === 'drone' && (t.y || 0) < TARGET_H.tower) return;
     const flying = t.kind === 'drone' || (t.kind === 'morph' && (t.y || 0) > MORPH.GROUND_Y);
     if (!flying) return;
     t.y = Math.max(0, (t.y || 0) - airSinkM(dealt));

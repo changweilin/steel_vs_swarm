@@ -54,7 +54,7 @@
 import {
   CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, evadable, evadeExpF, LANCE, SQUAD, DECOY,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
-  dmgFalloff, blastFalloff, offAxisFalloff, fanConeHalf, fanSubs, fanBinSpan, FAN_SUB_F, fanBuildingMaxHits, FAN_BUILDING_MAX_HITS, blastFootprintR, aoeClass,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, FAN_SUB_F, FAN_RANGE_CENTER_F, fanBinRangeF, fanBuildingMaxHits, FAN_BUILDING_MAX_HITS, blastFootprintR, aoeClass,
   TARGET_CLASS,
   lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF,
   shieldSplit, heavyMpCost, upgradePrice, canUpgrade, battleScoreGain, addBattleScore, waveComp, waveMarchSpeed, hitR, lanceR,
@@ -255,17 +255,20 @@ export function hits(shooter, aim, def, foes) {
     const bins = new Array(n).fill(null);   // 每格最近的一名(與 sim.heroPlasma 同式)
     for (const e of foes) {
       const dx = e.x - shooter.x, dy = e.y - shooter.y, d = Math.hypot(dx, dy);
-      if (d - hitR(e) > def.range) continue;   // 小錐與扇形本身同一道射程閘(量到近側表面;與選敵 inR 同式)
+      const hr = hitR(e);
+      if (d - hr > def.range * FAN_RANGE_CENTER_F) continue;   // 目標級快篩(中央格最遠);逐格只會更嚴
       const dot = dx * ux + dy * uy;
       if (dot <= 0) continue;
       const cross = dx * uy - dy * ux;
       const ang = Math.abs(Math.atan2(cross, dot));
-      if (ang > fanConeHalf(def, d, hitR(e))) continue;
+      if (ang > fanConeHalf(def, d, hr)) continue;
       const phi = Math.atan2(cross, dot);
-      const aw = Math.atan2(hitR(e), Math.max(1, d));     // 量體張角:橫跨多格的大目標多格各取一次
+      const aw = Math.atan2(hr, Math.max(1, d));     // 量體張角:橫跨多格的大目標多格各取一次
       const [b0, b1] = fanBinSpan(def, phi, aw);          // 分格走單一縫
       const f = offAxisFalloff(half > 0 ? ang / half : 0) * FAN_SUB_F;   // 不隨距離衰減、每格單價(與 sim.heroPlasma 同式)
       for (let bi = b0; bi <= b1; bi++) {
+        const hitD = fanBinHitD(def, bi, d, phi, hr);
+        if (hitD == null || hitD > def.range * fanBinRangeF(def, bi)) continue;   // 每格各自吃逐格球面射程
         if (!bins[bi] || d < bins[bi].d) bins[bi] = { ent: e, f, d, ang };
       }
     }
@@ -325,7 +328,8 @@ export function hits(shooter, aim, def, foes) {
 function dpsAt(S, T, d) {
   let v = 0;
   for (const s of S.slots) {
-    if (d > s.def.range) continue;
+    const lim = aoeClass(s.def) === 'fan' ? s.def.range * FAN_RANGE_CENTER_F : s.def.range;
+    if (d > lim) continue;
     const cyc = s.def.mag / (s.def.rate || 3) + s.def.reload;
     const fall = s.def.fan ? FAN_SUB_F : dmgFalloff(s.def, d);   // 範圍扇形:單格單價、不隨距離衰減(與 sim.heroPlasma 同式)
     v += s.def.dmg * vsMult(s.def, T.kind) * fall * critF(s.def)

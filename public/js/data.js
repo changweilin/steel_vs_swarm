@@ -899,10 +899,12 @@ export const airUnit = (kind, y) => AIR.KINDS.has(kind) && (y || 0) > airUnitY(k
 // ---- 機甲蓄力跳躍(2026-07-16;kind:'robot' 限定 —— morph 的長按 Space 已被變形彈射佔用)----
 // 長按 Space 蓄力 → 放開彈射高跳,騰空吃低重力係數 GRAV_F(月面/太空漫步的滯空感);
 // 蓄力不足 = 普通小跳。純客戶端物理(位置本就客戶端回報);y 判定規則不變 ——
-// 滿蓄頂點 ≈ V²/(2×AIR.GRAV×GRAV_F) ≈ 27m < GAME.AA_MIN_ALT(40),單靠蓄力跳不進 SAM 空域;
+// 滿蓄頂點 ≈ V²/(2×AIR.GRAV×GRAV_F) ≈ 13m < GAME.AA_MIN_ALT(40),單靠蓄力跳不進 SAM 空域;
 // 疊加跳躍增益(leap)越過 40m 時照吃塔 SAM(刻意風險)。
+// (2026-10-06 使用者需求「高度與時間減半」:GRAV_F 0.45 → 0.9 ⇒ 頂點 27m → 13m、
+// 滯空 4.4s → 2.2s 同時減半,初速 V 不動;蓄滿秒數 CHARGE_S 0.9 → 0.45 亦減半。)
 export const CJUMP = {
-  CHARGE_S: 0.9,     // 蓄滿秒數
+  CHARGE_S: 0.45,    // 蓄滿秒數
   MIN: 0.35,         // 低於此蓄力比例 = 普通小跳
   V: 24,             // 滿蓄力垂直初速(m/s;實際 = V × 蓄力比例)
   FWD_F: 1.0,        // 前向彈射初速 = 機體移速 × 此比 × 蓄力比例(最大距離 ∝ 機體速度;2026-07-20 使用者需求)
@@ -910,10 +912,11 @@ export const CJUMP = {
   // 唯一縫,兩個消費端同吃 ⇒ 整段蓄力跳的水平速度一致加倍,MUST NOT 只改其中一處:
   //   ①起跳的前向彈射初速(_chargeJump 的 fwd)—— 不然只有滑行變快、彈射距離沒變;
   //   ②騰空期間(_lowG)的操縱移速 —— 不然只有起跳那一瞬變快、空中推杆仍是地面速度。
-  // 只作用於水平:垂直初速 V / 低重力 GRAV_F 不動 ⇒ 滯空時間不變、跳躍高度不變
-  // (滿蓄頂點仍 < GAME.AA_MIN_ALT,不會靠蓄力跳自己飛進 SAM 空域),變的只有跳得多遠/多快。
+  // 只作用於水平:垂直初速 V / 低重力 GRAV_F 不動 ⇒ 跳得一樣高、滯空一樣久
+  // (滿蓄頂點仍 < GAME.AA_MIN_ALT,不會靠蓄力跳自己飛進 SAM 空域 — 2026-10-06 起頂點 13m),
+  // 變的只有跳得多遠/多快。
   AIR_SPD_F: 2.0,
-  GRAV_F: 0.45,      // 蓄力跳騰空重力係數(< 1 = 太空漫步)
+  GRAV_F: 0.9,       // 蓄力跳騰空重力係數(2026-10-06:0.45 → 0.9,高度與滯空同時減半)
   CROUCH_M: 1.1,     // 蓄力下蹲幅度(公尺;FPV 鏡頭同步下沉)
   // 起跳耗動力 = 上限 × FLIGHT.CJUMP_F × 蓄力比例(推導不手寫;MUST NOT 另寫固定點數)
 };
@@ -954,11 +957,13 @@ export const FLIGHT = {
   // 正常操作下降高度時回充電力比例(2026-09-11 使用者需求:正常操作下降高度時,會回充2/3的電力):
   // 正常操作下降時每秒回充電力 = liftDrainPS × DESCENT_RECHARGE_F × 下降率(全速下降回充全速爬升耗速的 2/3,推導不手寫)
   DESCENT_RECHARGE_F: 2 / 3,
-  // 高度爬升曲線(2026-09-30 使用者需求:高度越高,爬升相同高度需要更多動力):
-  // 全速爬升耗速 × liftAltF(高度, 起點, 天花板);起點(有海面 = 海平面,否則 = 全圖地形最低點)= 1
-  // (既有的 DRAIN_S 節奏錨點在起點不動),線性升到天花板 = ALT_TOP_F。連續單調、無階梯;
+  // 高度爬升曲線(2026-09-30 使用者需求:高度越高,爬升相同高度需要更多動力;
+  // 2026-10-06 改制為指數:以一個砲塔高為單位,每多一個塔高耗速翻倍。起點(有海面 = 海平面,
+  // 否則 = 全圖地形最低點)= 1(既有的 DRAIN_S 節奏錨點在起點不動),之後按 2^h 指數上升,
+  // 至 ALT_TOP_F 個塔高封頂(= 2^ALT_TOP_F 倍;3 塔高 = 8 倍)。連續單調、無階梯;
   // 下降回充吃同一條(高處爬升貴、同高下降回得多,2/3 比例處處成立)。
-  ALT_TOP_F: 4,
+  // 封頂之後的高空(至世界天花板)維持封頂耗速 ⇒ 山區稜線照樣飛得過去,只是全程最貴。
+  ALT_TOP_F: 3,
   // 無人機離地下限(=貼地懸停高):飛行中不貼地的下限、以及**重生落地高**共用同一個值(2026-08-03
   // 使用者定案「重生時應該貼地起飛,靠滿動力自己爬升,而不是一出生就懸在半空」)——
   // 重生 MUST NOT 直接把高度設到巡航高度(那樣動力滿格就沒有意義),而是落在這個離地下限,
@@ -979,18 +984,21 @@ export const liftDrainPS = () => liftMax() / FLIGHT.DRAIN_S;
 export const liftDescentPS = () => liftDrainPS() * FLIGHT.DESCENT_RECHARGE_F;
 /**
  * 高度爬升動力係數(**唯一縫**;`game.js _stepLift` 唯一消費端,爬升扣 + 下降回充兩處)。
+ * 指數制(2026-10-06):以一個砲塔高為單位,每多一個塔高耗速翻倍 = 2^h,
+ * h = (y − baseY) / TARGET_H.tower;至 ALT_TOP_F 個塔高封頂(2^ALT_TOP_F 倍)。
  * @param y     絕對飛行高度(公尺;`game.js pos.y`)
  * @param baseY 曲線起點絕對高程:有海面 = 海平面,否則 = 全圖地形最低點(`game.js _liftBaseY`)
- * @param ceilY 世界天花板絕對高程(`worldCeilY`/`_ceilY` 同一值;取不到或無限 = 不設限)
- * @returns ≥1 的連續乘數:起點以下 = 1,天花板 = `FLIGHT.ALT_TOP_F`,之間線性內插;
- *          起點缺失或區間無效(天花板 ≤ 起點/非有限)降級回 1(原則 6)。
+ * @param ceilY 保留相容(功率封頂改以塔高為單位,不再以世界天花板歸一化;呼叫端照舊傳入)
+ * @returns ≥1 的連續乘數:起點以下 = 1,起點 + ALT_TOP_F 個塔高及以上 = 2^ALT_TOP_F;
+ *          起點缺失降級回 1(原則 6)。
  */
 export const liftAltF = (y, baseY, ceilY) => {
   if (baseY == null) return 1;
-  const c = Number(ceilY), b = Number(baseY);
-  if (!Number.isFinite(c) || !Number.isFinite(b) || c <= b) return 1;
-  const t = Math.min(1, Math.max(0, ((Number(y) || 0) - b) / (c - b)));
-  return 1 + (FLIGHT.ALT_TOP_F - 1) * t;
+  const b = Number(baseY);
+  if (!Number.isFinite(b)) return 1;
+  const h = (((Number(y) || 0) - b)) / TARGET_H.tower;
+  if (!Number.isFinite(h) || h <= 0) return 1;
+  return Math.pow(2, Math.min(h, FLIGHT.ALT_TOP_F));
 };
 /** 失衡失準機率:若射手失衡,命中率減半(失準機率相應增加) */
 export const unbalMissP = (missP, unbalanced) =>
@@ -2382,6 +2390,37 @@ export const fanBinOf = (def, phi) => {
 };
 /** 量體(方位角 phi ± 張角 aw)橫跨的格區間 [b0, b1];起訖單調 ⇒ b0恆 ≤ b1 */
 export const fanBinSpan = (def, phi, aw) => [fanBinOf(def, phi - aw), fanBinOf(def, phi + aw)];
+/** 第 bi 格楔面內、目標水平圓盤(中心水平距離 d2、方位 phi、半徑 hr)的最近表面距離;
+ * 無交集回傳 null。每個小錐各自吃武器射程閘的幾何半:三端(sim.heroPlasma /
+ * lanesim.hits / game._shotVictims)以此值比各自的逐格有效射程,MUST NOT 各自手寫楔-圓盤相交。
+ * 中央格回傳 max(0, d2 - hr) ⇒ 與舊制逐目標表面距離一致(舊行為不動);
+ * 偏心格回傳楔內最近交點(恆 ≥ 中央值)⇒ 射程邊緣的大目標只在中央格命中。 */
+export const fanBinHitD = (def, bi, d2, phi, hr) => {
+  if (!Number.isFinite(d2) || !Number.isFinite(phi)) return null;
+  const r = Math.max(0, hr || 0);
+  if (d2 <= 0) return 0;
+  const half = fanArcHalf(def), n = fanSubs(def), w = half * 2 / n;
+  const lo = -half + bi * w, hi = lo + w;
+  if (phi >= lo && phi <= hi) return Math.max(0, d2 - r);
+  const edge = phi < lo ? lo : hi;
+  const dl = phi - edge, lat = d2 * Math.sin(dl);
+  if (Math.abs(lat) > r) return null;
+  return Math.max(0, d2 * Math.cos(dl) - Math.sqrt(r * r - lat * lat));
+};
+// ---- 扇形球面射程 + 逐格增程(2026-10-06 使用者需求)----
+// 全部扇形武器改球面射程:3D 表面距離 surfC 比逐格有效射程,不再走下段 60° 圓錐救援。
+// 中央小錐射程比最邊緣 +10%,由外而內線性增加:邊緣格 ×1.0、中央格 ×1.1。
+// 三端(sim.heroPlasma / lanesim.hits / game._shotVictims) MUST 全吃 fanBinRangeF,
+// MUST NOT 各自手寫格序換算(各寫一份 = 同一發在三處射程不同)。
+export const FAN_RANGE_CENTER_F = 1.1;
+/** 第 bi 格的射程倍率:邊緣 1.0 → 中央 FAN_RANGE_CENTER_F,線性(格序推導不手寫) */
+export const fanBinRangeF = (def, bi) => {
+  const n = fanSubs(def);
+  if (n <= 1) return FAN_RANGE_CENTER_F;
+  const c = (n - 1) / 2;
+  const frac = Math.min(1, Math.abs(bi - c) / c);   // 0 = 中央,1 = 最邊緣
+  return 1 + (FAN_RANGE_CENTER_F - 1) * (1 - frac);
+};
 
 // ================= 重武器範圍攻擊三分類 + 彈道五分類(2026-07-23 使用者定案)=================
 // 使用者規則:「重武器必屬於其中一種範圍攻擊」—— 沒有單體直擊的重武器。

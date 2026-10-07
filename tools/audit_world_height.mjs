@@ -281,8 +281,8 @@ console.log('\nⅤ 單一縫:天花板只有一份、消費端數得出來');
     count(gameCode, /worldCeilY\(/g) === 1);
   t('消費端恰五處(飛行夾制 / 上帝視角天花板 / 觀戰起始高度 / 爬升耗速 / 下降回充)',
     count(gameCode, /this\._ceilY\(\)/g) === 5, `${count(gameCode, /this\._ceilY\(\)/g)} 處`);
-  t('飛行夾制吃 `_ceilY`,且既有的離地相對上限仍在(兩者取嚴者)',
-    /Math\.min\(gy \+ 320, this\._ceilY\(\), this\.pos\.y\)/.test(gameCode));
+  t('飛行夾制吃 `_ceilY`,且離地相對上限 = 3 個砲塔高(唯一縫 FLIGHT.ALT_TOP_F,兩者取嚴者)',
+    /Math\.min\(gy \+ TARGET_H\.tower \* FLIGHT\.ALT_TOP_F, this\._ceilY\(\), this\.pos\.y\)/.test(gameCode));
   t('上帝視角有天花板夾制(且不低於地板)',
     /const ceil = this\._ceilY\(\);/.test(gameCode) && /this\.pos\.y = Math\.max\(floor, ceil\)/.test(gameCode));
   t('平均海拔只在 terrain.js 算一次並回傳',

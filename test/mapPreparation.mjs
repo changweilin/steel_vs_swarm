@@ -15,7 +15,7 @@ import { mapGeometryAudit, requiresRoadTerrain } from '../public/js/mapRules.js'
 const source = readSrc('public', 'js', 'mapPreparation.js').replace(/^import .*\n/gm, '').replace(/^export /gm, '');
 const cfg = () => venueConfig(VENUES.find(v => v.id === 'berlin'), 5);
 
-function harness(buildTerrain) {
+function harness(buildTerrain, persistentCache = new Map()) {
   let evidenceCalls = 0;
   const deps = { buildTerrain, warmOsm: async () => [null, []], battleBBox,
     projectAreaRecord, catalogAreas, subdivideLargeZones, llToWorld: () => [0, 0],
@@ -23,6 +23,10 @@ function harness(buildTerrain) {
     MAP_EVIDENCE, MAP_EVIDENCE_COPY, MAP_RULE_TEXT, mapSourceKey, isRandomMap, requiresRoadTerrain,
     randomMapSources: () => { throw new Error('Unexpected procedural source'); },
     laneFingerprint, makeTerrainAssessment, validTerrainAssessment,
+    geoKey: (...parts) => JSON.stringify(parts),
+    geoGet: async key => structuredClone(persistentCache.get(key)),
+    geoPut: async (key, pack) => { persistentCache.set(key, structuredClone(pack)); },
+    validateEvidence: pack => pack.complete === true,
     localStorage: { getItem: () => null, setItem: () => {} }, console: { warn() {} } };
   const result = new Function(...Object.keys(deps), source + '\nreturn { prepareMapCreation, awaitPreparedPack, mapPrepKey };')(...Object.values(deps));
   return { ...result, evidenceCalls: () => evidenceCalls };
@@ -65,6 +69,20 @@ function harness(buildTerrain) {
   assert.equal(h.evidenceCalls(), 1);
   const altered = cfg(); altered.motherLanes[0][1][0] += .001;
   assert.notEqual(h.mapPrepKey(cached), h.mapPrepKey(altered), 'changed lanes invalidate their preparation key');
+}
+
+{
+  const cache = new Map();
+  const first = harness(async () => ({ sourceQuality: { elevationComplete: true }, elevationAt: () => 12 }), cache);
+  await first.prepareMapCreation(cfg());
+  const reloaded = harness(async () => { throw new Error('Cached relief must avoid a rebuild'); }, cache);
+  const c = cfg(); c.roadTerrain = null;
+  assert((await reloaded.prepareMapCreation(c)).complete);
+  assert(validTerrainAssessment(c), 'persistent cache restores verified relief after reload');
+  assert.equal(reloaded.evidenceCalls(), 0);
+  for (const pack of cache.values()) delete pack.roadTerrain;
+  const incomplete = harness(async () => { throw new Error('Relief unavailable'); }, cache);
+  assert((await incomplete.prepareMapCreation(cfg())).failed, 'cached observations cannot bypass missing relief');
 }
 
 for (const terrain of [

@@ -93,6 +93,23 @@ assert.equal(townhouse.key, 'residential_townhouse');
 const alley = inferBuildingFunction({ tags: { building: 'house' } }, null, { elongated: true, density: 25 });
 assert.equal(alley.key, 'residential_alley');
 
+// 低層通用分流（≤3F、無特殊用途）：小面積一律透天，大面積只出賣場／大透天，長條只出低層三款
+const smallPoly = { outer: [[0, 0], [8, 0], [8, 10], [0, 10]], holes: [] };
+const bigPoly = { outer: [[0, 0], [30, 0], [30, 20], [0, 20]], holes: [] };
+const stripPoly = { outer: [[0, 0], [60, 0], [60, 8], [0, 8]], holes: [] };
+for (let i = 0; i < 50; i++) {
+  const small = inferBuildingFunction({ tags: { building: 'house', 'building:levels': '2' } },
+    smallPoly, { seed: 7, identity: `small${i}`, urban: true });
+  assert.equal(small.key, 'residential_townhouse', `低層小透天只能是透天:${small.key}`);
+  const big = inferBuildingFunction({ tags: { building: 'yes' } },
+    bigPoly, { seed: 7, identity: `big${i}`, urban: true });
+  assert.ok(['commercial_retail', 'residential_townhouse'].includes(big.key), `低層大面積只能是賣場/大透天:${big.key}`);
+  const stripLow = inferBuildingFunction({ tags: { building: 'house', 'building:levels': '2' } },
+    stripPoly, { seed: 7, identity: `strip${i}`, urban: true });
+  assert.ok(['commercial_retail', 'residential_townhouse', 'residential_alley'].includes(stripLow.key),
+    `低層長條只能是賣場/商店街/連排透天:${stripLow.key}`);
+}
+
 const farm = inferBuildingFunction({ tags: { building: 'farm' } }, null, { rural: true });
 assert.equal(farm.key, 'rural_farmhouse');
 

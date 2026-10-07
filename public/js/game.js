@@ -17,7 +17,7 @@ import {
   GLINT, glintDur, glintAlpha, glintDropR,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, worldCeilY, edgeWallInsetM, SHIELD_DEFENSE,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, TARGET_H, chaseCapS,
+   aoeClass, trajClass, fanConeHalf, fanSubs, fanBinSpan, fanBinHitD, FAN_RANGE_CENTER_F, fanBinRangeF, lanceR, lancePen, lancePenCost, lanceZones, lanceZonePen, lanceRehitF, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, TARGET_H, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossSegFill, bossSegFrac, bossSegN, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
@@ -2592,9 +2592,10 @@ export class BattleClient {
     const wF = 1, rF = 1;
     this._muzzleBurst(muzzle, plasma, this.side);   // 電漿重武器槍口爆(明顯度)
     // 離子吐息主噴流(哥吉拉式;使用者指定參考):錐狀噴口 + 螺旋纏繞能量帶(只表範圍錐形)。
+    // 主噴流走中央格射程(×FAN_RANGE_CENTER_F),與 heroPlasma 逐格結算同界。
     if (plasma) {
       const core = this._shotCols(this.side).hot;
-      const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, rng * rF * 0.82));
+      const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, rng * rF * 0.82 * FAN_RANGE_CENTER_F));
       ionBreath(this.scene, this.effects, muzzle, clip.to, col,
         { r: 2.2 * wF, ttl: 0.45, coil: 3, core, def });
       shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 2.6 * wF, core);
@@ -2604,7 +2605,9 @@ export class BattleClient {
       const dk = dir.clone()
         .applyAxisAngle(up, half * f)
         .applyAxisAngle(right, half * 0.5 * (Math.random() * 2 - 1));   // 垂直散布 = 圓形彈著
-      const len = rng * rF * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
+      // 每條火舌走自己方位的逐格射程:中央 ×1.1、邊緣 ×1.0 線性(與 fanBinRangeF 同式),與結算同界
+      const binF = 1 + (FAN_RANGE_CENTER_F - 1) * (1 - Math.abs(f));
+      const len = rng * rF * binF * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
       const end = muzzle.clone().addScaledVector(dk, len);
       const clip = this._clipBeam(muzzle, end);   // 自機扇形彈舌同樣止於障礙面(彈著花打在牆上)
       beamLine(this.scene, this.effects, muzzle, clip.to, col, plasma ? { ttl: 0.24, w: 0.16 * wF } : { ttl: 0.12, w: 0.07 * wF });
@@ -2728,7 +2731,11 @@ export class BattleClient {
         // myBot 貼在頂面(surfaceAt mount 站上頂)不側推 —— 與橋墩「柱頂封底緣」同一課(biomes 2668);
         // ε 0.1 併吞原嚴格不等式的 myBot > top 分支
         if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
-        const maxR = (b.r || Math.max(b.hw2, b.hd2)) + myR;
+        // broad-phase 半徑 MUST 用**外接**(對角 hypot)非 max(內切):與 `_buildBlockGrid` 登記半徑
+        // 同一把尺。旋轉盒的牆角落在 max 之外、hypot 之內 —— 用 max 會誤判「太遠」而跳過,
+        // 倒退撞牆角直接穿進建物、之後每幀在盲區/可見區邊界來回抖動 = 卡在裡面出不來
+        // (前科見 `_cameraDeClip` 同一條註;`b.r` 可能是 0.8× 內切近似,一律以 hypot 為準)。
+        const maxR = (b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r) + myR;
         if (Math.abs(this.pos.x - b.x) > maxR || Math.abs(this.pos.z - b.z) > maxR) continue;
         if (b.hw2 != null) {
           // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
@@ -2778,7 +2785,8 @@ export class BattleClient {
     for (const b of this.terrain.blockers ? sweepBlockers : []) {
       if (onDeck && b.y < surfHere - 3) continue;
       if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
-      const maxR = (b.r || Math.max(b.hw2, b.hd2)) + myR;
+      // broad-phase 半徑與 push-out 同式(外接 hypot —— 見上;兩處 MUST NOT 只改一處)。
+      const maxR = (b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r) + myR;
       if (b.x < minX - maxR || b.x > maxX + maxR || b.z < minZ - maxR || b.z > maxZ + maxR) continue;
       let tEnter = null;
       // 終點在障礙「內」時的取捨(fwd = (P1−中心)·位移):近半(fwd<0)push-out 沿中心→P1 反向推 =
@@ -6231,9 +6239,11 @@ export class BattleClient {
     const def = this._curWeapon().def;
     if (!def) return;
     // 索敵半徑取機制上限,再以**對這個目標**的有效射程誠實夾回(與射程光暈同一個數字 ——
-    // 鎖定目標刻意不亮射程光暈而改亮 lockGlow,兩者若不同界就會出現「鎖得到卻打不到」)。
+    // 鎖定目標刻意不亮射程光暈而改亮 lockGlow,兩者若不同界就會出現「鎖得到卻打不到」;
+    // 扇形取中央格最遠,與 _shotVictims 逐格射程同界)。
     const t0 = this._aimTarget(this._maxRange(def));
-    const t = t0 && this.pos.distanceTo(t0.mesh.position) - this._hitR(t0) <= this._effRange(def, t0) ? t0 : null;
+    const lockMul = aoeClass(def) === 'fan' ? FAN_RANGE_CENTER_F : 1;
+    const t = t0 && this.pos.distanceTo(t0.mesh.position) - this._hitR(t0) <= this._effRange(def, t0) * lockMul ? t0 : null;
     if (t) { this.net.send({ t: 'lock', id: t.id }); return; }
     // 在外彈頭的鎖定維持(射後不理):收鏡切回輕武器後,離架時已鎖定的目標超出輕武器射程,
     // 準星解從此報 miss;若放任不報,伺服器 LOCK.TTL 到期後著彈被當無鎖定丟棄 = 收鏡即丟追擊。
@@ -6714,11 +6724,16 @@ export class BattleClient {
           const ang = Math.acos(Math.min(1, Math.max(-1, dot)));
           if (ang > fanConeHalf(def, d3, hr)) continue;
         }
-        if (!this._inShotRange(e, def, from)) continue;
+        if (!this._inShotRange(e, def, from)) continue;   // 目標級快篩(含淨空;中央格最遠,逐格只會更嚴)
         const phi = Math.atan2(tx * az - tz * ax, tx * ax + tz * az);
         const aw = Math.atan2(hr, Math.max(1, d2));
         const [b0, b1] = fanBinSpan(def, phi, aw);   // 分格走單一縫
+        const rng = this._effRange(def, e);
+        const surf = Math.max(0, from.distanceTo(this._entAimPoint(e)) - hr);
+        const surfH = Math.max(0, d2 - hr);
         for (let bi = b0; bi <= b1; bi++) {
+          const hitD = fanBinHitD(def, bi, d2, phi, hr);
+          if (hitD == null || surf + (hitD - surfH) > rng * fanBinRangeF(def, bi)) continue;   // 每格各自吃逐格球面射程
           if (!bins[bi] || d3 < bins[bi].d3) bins[bi] = { e, d3 };
         }
       }
@@ -6743,15 +6758,16 @@ export class BattleClient {
 
   /**
    * 逐目標「射程內 + 射線淨空」(扇形 / 貫穿的足跡共用):量到**近側表面**、比對逐目標有效射程
-   * `_effRange`(與伺服器誠實界同一把尺),線段淨空與
-   * `_reachable` 的 `hit:'clear'` 同一式(`_layerHitT` + `RANGE_GLOW.SURF_TOL_M`)。
+   * `_effRange`(與伺服器誠實界同一把尺),扇形取中央格最遠(×FAN_RANGE_CENTER_F,逐格只會更嚴),
+   * 線段淨空與 `_reachable` 的 `hit:'clear'` 同一式(`_layerHitT` + `RANGE_GLOW.SURF_TOL_M`)。
    */
   _inShotRange(ent, def, from) {
     const aim = this._entAimPoint(ent);
     const hr = this._hitR(ent);
     const rng = this._effRange(def, ent);
     const surf = Math.max(0, from.distanceTo(aim) - hr);
-    if (surf > rng) return false;
+    const lim = aoeClass(def) === 'fan' ? rng * FAN_RANGE_CENTER_F : rng;
+    if (surf > lim) return false;
     const cut = this._layerHitT(from.x, from.y, from.z, aim.x, aim.y, aim.z);
     return cut == null || cut >= surf - RANGE_GLOW.SURF_TOL_M;
   }
@@ -9540,9 +9556,12 @@ export class BattleClient {
    * 只記帳不直接改高度 —— 8Hz 快照一次入帳的傷害若直接扣 y,畫面上是瞬移;
    * 逐幀以「待落總量 / FLIGHT.SINK_S」的速率消化 ⇒ **總掉幅只由傷害決定**,SINK_S 只管節奏。
    * 飛行受擊下降時設定鎖定窗 FLIGHT.HIT_LOCK_S(此期間無法恢復飛行動力)。
+   * 掉高歸類於失衡效果:無人機低空飛行(離地低於砲塔高)不失衡 ⇒ 也不掉高、不鎖動力
+   * (與 _unbalanced / 伺服器 _stampUnbal + _botAirSink 同判)。
    */
   _airSinkHit(dmg, now) {
     if (!this._flying() || !(dmg > 0)) return;
+    if (this.isDrone && (this._altAG || 0) < TARGET_H.tower) return;
     this._airSink = (this._airSink || 0) + airSinkM(dmg);
     this._airSinkV = this._airSink / FLIGHT.SINK_S;
     const t = now ?? (typeof performance !== 'undefined' ? performance.now() / 1000 : 0);
@@ -9650,13 +9669,14 @@ export class BattleClient {
         if (this.vel.y < 0) this.vel.y = 0;
       }
       // 無人機不貼地(下限 +HOVER_M);變形者允許降到地表 → 觸地即變形回地面型。
-      // 上限兩道取嚴者:①離站立面 320m(既有的相對上限,防止在深谷上空一路飛出大氣層)
+      // 上限兩道取嚴者:①離站立面 3 個砲塔高(2026-10-06 使用者定案的飛行高度上限;
+      // 唯一縫 data.js FLIGHT.ALT_TOP_F,與爬升指數曲線的封頂同一個數,防止在深谷上空一路飛出大氣層)
       // ②**遊戲最高高度**(2026-08-08 使用者定案的絕對天花板,見 `_ceilY`)。
       // 兩者問的是不同的問題(「離腳下多高」vs「離海平面多高」)⇒ 刻意都留著;
       // 位置本就客戶端權威(同 FLIGHT 全族)⇒ 伺服器不再驗一次(A1 的另一半:
       // 真人那半住客戶端物理,bot 那半見 `_ceilY` 檔頭與稽核 Ⅴ)。
       this.pos.y = Math.max(hoverY,
-        Math.min(gy + 320, this._ceilY(), this.pos.y));
+        Math.min(gy + TARGET_H.tower * FLIGHT.ALT_TOP_F, this._ceilY(), this.pos.y));
       // 變形者下降觸地著陸變形(進入水域/沼澤可著陸於水底/沼底地表)
       if (this.isMorph && (this.vel.y <= 0) && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
       // FPV 側傾:橫移/轉向時機身壓坡度
@@ -9797,7 +9817,7 @@ export class BattleClient {
         // 側壁規則就此解除(實測就是這樣穿牆的)。
         this.pos.y = Math.min(this.pos.y, py0);
         const gy2 = this._surf(cx, cz, py0);
-        if (this._flying()) this.pos.y = Math.max(gy2 + hover, Math.min(gy2 + 320, this.pos.y));
+        if (this._flying()) this.pos.y = Math.max(gy2 + hover, Math.min(gy2 + TARGET_H.tower * FLIGHT.ALT_TOP_F, this.pos.y));
         else if (this.pos.y < gy2) { this.pos.y = gy2; this.vy = 0; }
       }
       // 陡坡完全擋死(逐軸滑行也走不動)才提示:沿等高線橫走仍通 = 不算撞坡,別洗頻道
