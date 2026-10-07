@@ -1,7 +1,7 @@
 # Procedural Building Wall Decorations
 
-> SSOT: `public/js/wallDecorationCatalog.js` (motif registry) and
-> `public/js/wallDecorations.js` (selection and placement). Appearance-only;
+> SSOT: `public/js/wallDecorations.js` (motif registry, selection and placement;
+> the former `wallDecorationCatalog.js` was inlined here). Appearance-only;
 > verification: `node test/wallDecorations.mjs`, `node tools/audit_siteplan.mjs`.
 
 ## Constraints (why, not what)
