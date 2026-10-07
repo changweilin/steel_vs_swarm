@@ -55,6 +55,8 @@
     "shot:icebergs": "node tools/scenery_authoring/shot.mjs --iceberg-variants",
     "shot:geology": "node tools/scenery_authoring/shot.mjs --geology-variants",
     "audit:scenery": "node test/sceneryAppearance.mjs",
+    "audit:natural": "node test/naturalAppearance.mjs",
+    "shot:natural": "node tools/scenery_authoring/shot.mjs --natural-variants",
     "audit:ice": "node test/iceHydrostatics.mjs",
     "audit:geology-shapes": "node test/geologyMorphology.mjs",
     "audit:boundary": "node test/boundaryAppearance.mjs",

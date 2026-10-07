@@ -30,11 +30,12 @@ function detailGeometry(kind, variant, coverSize = 0) {
       const height = .44 + ((i + variant) % 3) * .08;
       parts.push({ g: ['cyl', .025, .04, height, 5], p: [x, height / 2, z], c: 0x715e42 });
       parts.push({ g: ['crown', .30], p: [x, height + .10, z], s: [1, .75, 1], c: [0x78834d, 0x687747, 0x8b8c53][i] });
+      parts[parts.length - 1].naturalSeed = variant * 7717 ^ Math.imul(i + 1, 0x9e3779b9);
     }
     return compileSceneParts(parts);
   }
   if (kind === 'stone') {
-    const geo = sceneryGeometry('stone', [1, 1, 1]);
+    const geo = sceneryGeometry('stone', [1, 1, 1], variant * 7717);
     geo.translate(0, .5, 0);
     return geo;
   }

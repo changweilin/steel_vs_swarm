@@ -956,7 +956,7 @@ function leafRowGeo(type, part, pi) {
   // **MUST 讀保險絲 `part.g` 的 parameters**(不是 partGeo 的解析結果):包絡與 `giantCrownR`
   // 吃同一組參數,畫出來的冠幅才不可能大過佈局用的那一份(leafcard.js 檔頭 ③④)
   const env = cardEnvelope(part.g?.parameters);
-  const cards = env ? planCards(env, cardRnd(type, pi)) : [];
+  const cards = env ? planCards(env, part.naturalSeed === undefined ? cardRnd(type, pi) : mulberry32(part.naturalSeed)) : [];
   if (!cards.length) { if (type !== null) _cardGeo.set(ck, null); return null; }
   const n = cards.length;
   const pos = new Float32Array(n * 12), nor = new Float32Array(n * 12);
@@ -1024,7 +1024,7 @@ function forestRenderDef(type, item, season) {
     const radius = part.g.parameters?.radius;
     if (isLeaf && radius && !part.noCard) {
       part.g.dispose();
-      part.g = sceneryGeometry('crown', [radius * 2, radius * 2, radius * 2]);
+      part.g = sceneryGeometry('crown', [radius * 2, radius * 2, radius * 2], part.naturalSeed);
       part.g.parameters = { radius };
       part.g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(part.g.attributes.position.count * 2), 2));
     }
@@ -1198,10 +1198,8 @@ export function buildVegMeshes(type, items, season, generated = null) {
       // (葉團層層異色、板根塊塊異調),不再整株同一支 tint。
       // 葉/冠零件(key)振幅放大 = 明度連色相一起動;岩塊(j)次之;
       // 結構件(幹/枝/根)只小幅動明度 + 極淡暖冷偏,保住樹種手調色版
-      const k = i * 197 + pi * 3121 + 1;
-      const j1 = ((k * 2654435761) >>> 0) % 100 / 100;
-      const j2 = ((k * 1597334677) >>> 0) % 100 / 100;
-      const j3 = ((k * 3812015801) >>> 0) % 100 / 100;
+      const tintRnd = mulberry32(forestSeed(it.x, it.z, Math.imul(pi + 1, 3121)));
+      const j1 = tintRnd(), j2 = tintRnd(), j3 = tintRnd();
       // 區域色相家族(2026-08-05;sakura-crossing):同一片林地共用一份「暖黃 ↔ 冷藍綠」
       // 偏向(這片林子偏黃、那片偏藍綠),逐簇只在家族之上再抖 —— 逐簇全隨機的每通道
       // 雜訊沒有族群感,只讀成顆粒。位置雜湊(格寬 ~110m ≈ 一個群落),零共享 rnd 消耗。

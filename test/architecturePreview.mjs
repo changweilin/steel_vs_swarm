@@ -1146,6 +1146,7 @@ import { mulberry32 } from '/public/js/rng.js';
 import { forestCatalog, sampleForestCatalog } from '/public/js/forestCatalog.js';
 import { FOREST_FORMS } from '/public/js/forestSpecies.js';
 import { TREE_SPECIES, createForestTree, treeHabitatWeight, treeSections, treeBend } from '/public/js/forest.js';
+import { sceneryGeometry } from '/public/js/sceneryGeometry.js';
 // 車輛生成模組
 import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, vehicleCandidates, VEHICLE_CONSISTS, CONSIST_PREFIX, RIM_NAMES } from '/public/js/vehicleCatalog.js';
 import { makeProceduralVehicle } from '/public/js/vehicleModels.js';
@@ -2567,7 +2568,12 @@ for (const [id, field, label] of [['plant-region', 'regions', '全部區域'], [
 refreshPlantCatalog();
 
 const cylGeoFactory = (rt, rb, h, n, sec) => new THREE.CylinderGeometry(rt, rb, h, Math.max(5, n || 6), Math.max(1, sec || 1));
-const icoGeoFactory = (radius) => new THREE.IcosahedronGeometry(Math.max(0.1, radius), 1);
+const icoGeoFactory = (radius, seed) => {
+  if (seed === undefined) return new THREE.IcosahedronGeometry(Math.max(0.1, radius), 1);
+  const geometry = sceneryGeometry('crown', [radius * 2, radius * 2, radius * 2], seed);
+  geometry.parameters = { radius };
+  return geometry;
+};
 
 function createSceneTreeObject(type, seed, season = 'summer', posX = 0, posZ = 0) {
   const rows = environmentParts(type, { seed, season, environment: getPlantEnvironment() });

@@ -1,14 +1,44 @@
 import { SCENERY_MESHES } from './sceneryMeshData.js';
 import { facetMeshData } from './vesselGeometry.js';
+import { mulberry32 } from './rng.js';
+
+const naturalSurfaces = new Set(['crown', 'stone', 'mushroomCap']);
+
+export function naturalPartColor(color, seed) {
+  const rnd = mulberry32(seed ^ 0x54494e54), light = .82 + rnd() * .32;
+  const warmth = (rnd() - .5) * .08;
+  return [16, 8, 0].reduce((hex, shift, axis) => hex | Math.min(255,
+    Math.round((color >>> shift & 255) * light * (1 + warmth * (1 - axis)))) << shift, 0);
+}
+
+// Deform welded source vertices before normals split. The original vertical and
+// circular envelopes remain valid for branch joints, snow, scatter and collisions.
+function naturalSurface(source, seed) {
+  const rnd = mulberry32(seed ^ 0x534b494e), angle = rnd() * Math.PI * 2;
+  const phases = [rnd(), rnd(), rnd()].map(v => v * Math.PI * 2);
+  const strength = .10 + rnd() * .10, c = Math.cos(angle), s = Math.sin(angle);
+  const vertices = source.vertices.slice();
+  for (let i = 0; i < vertices.length; i += 3) {
+    const [x, y, z] = vertices.slice(i, i + 3), theta = Math.atan2(z, x);
+    const wave = .5 + .25 * Math.sin(theta * 2 + y * 3 + phases[0])
+      + .15 * Math.cos(theta * 3 - y * 4 + phases[1]) + .10 * Math.sin(y * 7 + phases[2]);
+    const radius = 1 - strength * wave;
+    vertices[i] = (x * c - z * s) * radius;
+    vertices[i + 2] = (x * s + z * c) * radius;
+  }
+  return facetMeshData({ vertices, faces: source.faces });
+}
 
 // CPU data only: each renderer still owns and disposes its BufferGeometry.
 const surfaces = new Map();
-export function sceneryMeshData(name, dimensions) {
+export function sceneryMeshData(name, dimensions, seed) {
   const source = SCENERY_MESHES[name];
   if (!source || !Array.isArray(dimensions) || dimensions.length !== 3
     || dimensions.some(n => !Number.isFinite(n) || n <= 0)) throw new RangeError('Invalid scenery surface');
   if (!surfaces.has(name)) surfaces.set(name, facetMeshData(source));
-  const data = surfaces.get(name), normals = [];
+  if (seed !== undefined && !Number.isSafeInteger(seed)) throw new TypeError('Scenery seed must be a safe integer');
+  const data = seed !== undefined && naturalSurfaces.has(name) ? naturalSurface(source, seed) : surfaces.get(name);
+  const normals = [];
   for (let i = 0; i < data.normals.length; i += 3) {
     const n = data.normals.slice(i, i + 3).map((v, axis) => v / dimensions[axis]);
     const length = Math.hypot(...n);

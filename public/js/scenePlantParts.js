@@ -1,5 +1,5 @@
 import { mulberry32 } from './rng.js';
-import { sceneryMeshData } from './sceneryAppearance.js';
+import { sceneryMeshData, naturalPartColor } from './sceneryAppearance.js';
 
 export const LEGACY_PLANT_SPECIES = Object.freeze({
   bamboo: 'forestBamboo', broadleaf: 'holmOak', birch: 'forestBirch',
@@ -58,8 +58,9 @@ export function groundPlantParts(kind, seed = 0) {
       parts.push(cylinder(stem * .7, stem, h, [x, h / 2, z], 0xd9c8ab));
       const color = kind === 'redcap' ? 0xb53d2f : kind === 'browncap' ? 0x78523a : 0xb88e54;
       const capSize = [radius * 2, radius * .52, radius * 2];
-      parts.push({ g: ['mesh', sceneryMeshData('mushroomCap', capSize), capSize],
-        p: [x, h + radius * .22, z], c: color });
+      const capSeed = (seed ^ Math.imul(i + 1, 0x9e3779b9)) >>> 0;
+      parts.push({ g: ['mesh', sceneryMeshData('mushroomCap', capSize, capSeed), capSize],
+        p: [x, h + radius * .22, z], c: naturalPartColor(color, capSeed) });
       parts.push({ g: ['lathe', [[0, 0], [radius * .9, .015], [0, .05]], 14],
         p: [x, h - .05, z], c: 0xcdbb93 });
       if (kind === 'redcap') for (let j = 0; j < 9; j++) {
