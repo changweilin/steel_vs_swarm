@@ -11,7 +11,7 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, b
   bloodScreenUv, bloodDirFromUv,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
   botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG, FLY_Y,
-  WEATHER_DEBUFFS, windSpeedFactor, altTier } from '../public/js/data.js';
+  WEATHER_DEBUFFS, windSpeedFactor, weatherFlightSlowFactor, weatherGroundSlowFactor, altTier } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // Drone cruise altitude (AGL; at/above AA_MIN_ALT eats air-defense missiles -- bots fly at deliberate risk)
@@ -222,11 +222,17 @@ export class BotBrain {
     // 高地壓制折速(2026-08-12;見 data.js HIGH_SUP ⑤):真人那一半住客戶端 `game._mobility`,
     // bot 的「客戶端」就是這裡 —— 兩端同一支 `highSupSpeedF`,伺服器不對真人再折一次。
     const sup = highSupSpeedF(this.sim._supF(h));
-    let spd = heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h) * sup;
+    const fly = this._fly(h);
+    let spd = heroMobility(h.kind, CHARACTERS[h.ch]?.mods, fly) * this._ccF(h) * sup;
     if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) spd *= BOSS.ENRAGE_SPD_F;
-    if ((dx !== 0 || dz !== 0) && this.sim?.curWeatherDyn && this.sim.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
-      const wDir = this.sim.curWeatherDyn.windDirServer || this.sim.curWeatherDyn.windDir;
-      spd *= windSpeedFactor(dx, dz, wDir, this.sim.curWeatherDyn.wind);
+    if (fly) {
+      if ((dx !== 0 || dz !== 0) && this.sim?.curWeatherDyn && this.sim.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
+        const wDir = this.sim.curWeatherDyn.windDirServer || this.sim.curWeatherDyn.windDir;
+        spd *= windSpeedFactor(dx, dz, wDir, this.sim.curWeatherDyn.wind);
+      }
+      if (this.sim?.curWeatherDyn) spd *= weatherFlightSlowFactor(this.sim.curWeatherDyn);
+    } else {
+      if (this.sim?.weatherSurface) spd *= weatherGroundSlowFactor(this.sim.weatherSurface);
     }
     return spd;
   }

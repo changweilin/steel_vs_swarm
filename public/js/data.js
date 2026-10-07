@@ -962,8 +962,10 @@ export const FLIGHT = {
   HOVER_M: 2.5,
 };
 /** 受擊掉高(公尺):該次傷害造成的下降量 —— 推導不手寫 */
-export const airSinkM = (dmg) =>
-  Math.max(0, dmg || 0) / SQUAD.DRONE_AVG_HP * FLIGHT.SINK_TOWERS * TARGET_H.tower;
+export const airSinkWindFactor = (wind = 0) =>
+  1.0 + (wind > 75 ? 0.25 * Math.min(1.0, (wind - 75) / 25) : 0);
+export const airSinkM = (dmg, wind = 0) =>
+  Math.max(0, dmg || 0) / SQUAD.DRONE_AVG_HP * FLIGHT.SINK_TOWERS * TARGET_H.tower * airSinkWindFactor(wind);
 /** 爬升動力上限(全機體共用固定值 FLIGHT.LIFT_MAX;參數保留僅為相容,MUST NOT 再按機體區分) */
 export const liftMax = () => FLIGHT.LIFT_MAX;
 /** 爬升動力回復(每秒固定值 FLIGHT.REGEN_PS;參數保留僅為相容) */
@@ -7283,7 +7285,7 @@ export function resolveWeatherDynamics(weatherVec, prevDyn = null, dt = 0) {
   };
 }
 
-// 動態天氣 Debuff 參數與單一真相縫 (強風移速、大雪 CD、沙暴攻速、大雨攻擊力、打雷閃電傷害)
+// 動態天氣 Debuff 參數與單一真相縫 (強風移速、大雪 CD、沙暴攻速、大雨攻擊力、打雷閃電傷害、衝擊波、視野命中)
 export const WEATHER_DEBUFFS = {
   THRESHOLD: 75,       // 各屬性觸發門檻 75%
   MAX_CHANGE: 0.125,   // 最大變化幅度 12.5%
@@ -7295,7 +7297,14 @@ export const WEATHER_DEBUFFS = {
     PROB_MIN: 0.35,    // 最低觸發機率
     PROB_MAX: 0.90,    // 最高觸發機率
     MAX_TARGETS: 3,    // 單次閃電最大打擊目標數
+    SHOCK_R: 18,       // 閃電衝擊波半徑 (公尺)
+    SHOCK_DMG: 18,     // 閃電衝擊波最大微量傷害 (爆心處最高, 隨距離衰減)
+    SHOCK_IMP: 14,     // 閃電衝擊波位移推力 (衝量)
   },
+  SURFACE_SLOW_MAX: 0.25,    // 積水/積雪/土丘降低地面移動速度與跳躍高度上限 (25%)
+  AIR_PRECIP_SLOW_MAX: 0.10,  // 雨量/雪量/砂量降低飛行速度上限 (10%)
+  WIND_SINK_MAX: 0.25,        // 強風失衡高度損失增加上限 (25%)
+  ACCURACY_DROP_MAX: 0.20,    // 迷霧與夜晚命中率下降上限 (20%)
 };
 
 /**
@@ -7349,6 +7358,66 @@ export function windSpeedFactor(moveX, moveZ, windDir, wind) {
   const intensity = Math.max(0, Math.min(1.0, (wind - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD)));
   return 1.0 + WEATHER_DEBUFFS.MAX_CHANGE * intensity * cosTheta;
 }
+
+/** 飛行單位受雨量/雪量/砂量直接影響的速度倍率 (最多降低 10%) */
+export function weatherFlightSlowFactor(dyn = {}) {
+  const rainInt = dyn.rainSlow ?? (dyn.rainIntensity ?? (dyn.effectiveRain ?? (dyn.rain > WEATHER_DEBUFFS.THRESHOLD ? (dyn.rain - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
+  const snowInt = dyn.snowSlow ?? (dyn.snowIntensity ?? (dyn.effectiveSnow ?? (dyn.snow > WEATHER_DEBUFFS.THRESHOLD ? (dyn.snow - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
+  const sandInt = dyn.sandSlow ?? (dyn.sandIntensity ?? (dyn.effectiveSand ?? (dyn.sand > WEATHER_DEBUFFS.THRESHOLD ? (dyn.sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
+  const intensity = Math.min(1.0, Math.max(0, Math.max(rainInt, snowInt, sandInt)));
+  return 1.0 - WEATHER_DEBUFFS.AIR_PRECIP_SLOW_MAX * intensity;
+}
+
+/**
+ * 強風環境下飛行機體失衡高度門檻:
+ * 平時維持 1 個砲塔高 (TARGET_H.tower)；
+ * 最強風 (wind = 100) 時門檻降至 0.5 塔高 (TARGET_H.tower * 0.5)，使機體更容易失衡。
+ */
+export function unbalAltThreshold(wind = 0) {
+  const intensity = wind > WEATHER_DEBUFFS.THRESHOLD
+    ? (wind - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD)
+    : 0;
+  return TARGET_H.tower * (1.0 - 0.5 * Math.min(1.0, Math.max(0, intensity)));
+}
+
+export const WEATHER_ACCURACY = {
+  MAX_PENALTY: 0.20, // 迷霧與夜晚最多下降 20% 命中率
+};
+
+/**
+ * 迷霧與夜晚對命中率的負面影響 (0 ~ 0.20):
+ * - 迷霧: effectiveFog (0~1) 線性推導, 最濃霧 (effectiveFog=1) 達 20%
+ * - 夜晚: 依日落/日出與午夜深度, 結合月相與月球仰角 (朔日或無月之午夜達 20%)
+ * - 兩者疊加, 最多下降 20% (MAX_PENALTY)
+ */
+export function weatherAccuracyPenalty(fog = 0, hour = 12, sched = null, lunarDayOpt = null) {
+  const effectiveFog = typeof fog === 'object' ? (fog.effectiveFog ?? 0) : Number(fog) || 0;
+  const fogPen = WEATHER_ACCURACY.MAX_PENALTY * Math.max(0, Math.min(1.0, effectiveFog));
+
+  const rH = sched?.riseH ?? DAYCLOCK.RISE_H;
+  const sH = sched?.setH ?? DAYCLOCK.SET_H;
+  const sun = sunDirAt(hour, rH, sH);
+
+  let nightPen = 0;
+  if (sun.y <= 0) {
+    const sunDepression = Math.min(1.0, Math.max(0, -sun.y) / 0.7);
+    const lDay = lunarDayOpt != null ? lunarDayOpt : (sched?.lunarDay ?? 15);
+    const moon = lunarMoonDirAt(hour, lDay, rH, sH);
+    const lunarAngle = ((lDay - 1) / 29.53059) * (Math.PI * 2);
+    const moonPhaseIllum = (1 - Math.cos(lunarAngle)) / 2;
+    const moonLight = moon.y > 0 ? Math.min(1.0, moon.y / 0.5) * moonPhaseIllum : 0;
+    const nightDarkness = Math.max(0, sunDepression * (1.0 - moonLight));
+    nightPen = WEATHER_ACCURACY.MAX_PENALTY * nightDarkness;
+  }
+
+  return Math.min(WEATHER_ACCURACY.MAX_PENALTY, fogPen + nightPen);
+}
+
+/** 依天氣/時間懲罰調整未命中機率 (命中率下降 penalty，即 missP' = 1 - (1 - missP) * (1 - penalty)) */
+export const weatherMissP = (missP, penalty = 0) =>
+  1 - (1 - (missP || 0)) * (1 - Math.max(0, Math.min(WEATHER_ACCURACY.MAX_PENALTY, penalty || 0)));
+
+export { weatherSurfaceCoverMax, weatherGroundSlowFactor, weatherJumpHeightFactor, weatherJumpVelocityFactor } from './weatherState.js';
 
 /**
  * 依季節、開場時段、開場天氣、經過秒數與種子確定性計算當前天氣。
