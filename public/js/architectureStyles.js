@@ -1,7 +1,7 @@
 // ============ 建築文化風格、功能分區、立面材質與屋頂幾何型錄 ============
 // 文化／年代是視覺語彙，不改寫圖資的實際用途；比例皆為相對權重。
 // 依座標位置所屬國家與文化圈加權，符合在地文化者占 60% (CULTURAL_AFFINITY_RATIO)。
-import { WALL_DECORATION_RULES } from './wallDecorations.js';
+import { WALL_DECORATION_RULES, architectureHash } from './wallDecorations.js';
 import { REGIONAL_STYLES, REGIONAL_CULTURES } from './regionalArchitecture.js';
 
 /** 屋頂外觀分類；所有風格與附件共用此登錄。 */
@@ -465,6 +465,46 @@ export function glassFacadeRule(functionInfo = null) {
 
 /** 混排窗的極低機率（全棟同窗為預設；checker 兩種棋盤交錯、honeycomb 三種蜂巢交錯）。 */
 export const WINDOW_PATTERN_PROB = Object.freeze({ checker: 0.03, honeycomb: 0.01 });
+
+export const EXTERIOR_SCHEMES = Object.freeze({
+  plain: { weight: 5, entrance: 'flush' },
+  eaves: { weight: 15, entrance: 'canopy' },
+  balconies: { weight: 18, entrance: 'canopy' },
+  bay_windows: { weight: 16, entrance: 'portal' },
+  recessed_windows: { weight: 18, entrance: 'recess' },
+  niches: { weight: 12, entrance: 'recess' },
+  pilasters: { weight: 8, entrance: 'portal' },
+  layered: { weight: 8, entrance: 'canopy' },
+});
+
+/** pre: key identifies a building or enclosing community across clients.
+ * post: one facade/entrance vocabulary; no shared layout RNG is consumed. */
+export function resolveExteriorScheme(style = {}, key = '') {
+  if (style.exterior) return style.exterior;
+  const identity = style.exteriorKey ?? key;
+  const roll = tag => architectureHash(identity, `exterior:${tag}`) / 4294967296;
+  let pick = roll('kind') * Object.values(EXTERIOR_SCHEMES).reduce((sum, row) => sum + row.weight, 0);
+  let kind = 'plain';
+  for (const [id, row] of Object.entries(EXTERIOR_SCHEMES)) {
+    pick -= row.weight;
+    if (pick < 0) { kind = id; break; }
+  }
+  return { kind, entrance: EXTERIOR_SCHEMES[kind].entrance,
+    depth: 0.35 + roll('depth') * 0.4, period: roll('period') < 0.7 ? 1 : 2,
+    ornament: ['relief', 'tile', 'hanging'][Math.floor(roll('ornament') * 3)] };
+}
+
+/** pre: poly and edge use world X/Z; post: +Z faces outside solid walls, including courtyards. */
+export function getEdgeFrame(edge, poly) {
+  const len = edge.hw2 != null ? edge.hw2 * 2 : (edge.len || 0);
+  const ry = edge.ry ?? (edge.nx != null && edge.nz != null ? Math.atan2(-edge.nx, edge.nz) : 0);
+  const nx = -Math.sin(ry), nz = Math.cos(ry);
+  const isInside = poly && pointInRing(edge.x + nx * 0.25, edge.z + nz * 0.25, poly.outer) &&
+    !(poly.holes || []).some(h => pointInRing(edge.x + nx * 0.25, edge.z + nz * 0.25, h));
+  const uSign = isInside ? -1 : 1;
+  const outNx = nx * uSign, outNz = nz * uSign;
+  return { outNx, outNz, rotY: Math.atan2(outNx, outNz), len, uSign };
+}
 
 /** 同棟同窗雜湊（FNV-1a）：只吃 buildingKey，不消耗共享 rnd()，跨幀跨端同值。 */
 function windowHash(text) {

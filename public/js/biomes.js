@@ -71,8 +71,11 @@ import { RANDOM_MAP_TEXT } from './randomMapContent.js';
 import { structuralTunnel } from './roadSemantics.js';
 import { makeFootprintIndex, blockerFoot } from './ground.js';
 import { buildHabitatScene } from './habitatRender.js';
-import { createHabitatSampler, planHabitatCanopy, habitatPlant } from './habitat.js';
+import { createHabitatSampler, planHabitatCanopy, habitatPlant, habitatAt } from './habitat.js';
 import { HABITAT_SCENE } from './habitatCatalog.js';
+import { isWalkway, walkwaySurface } from './walkway.js';
+import { WALKWAY_SURFACES } from './walkwayCatalog.js';
+import { walkwayMaterial } from './walkwayRender.js';
 import { buildLandField } from './landfield.js';
 import { prepareMapEvidence, installMapEvidence } from './mapEvidenceLoader.js';
 import { evidenceDryBiome } from './mapEvidence.js';
@@ -4327,13 +4330,13 @@ export function clearOsmIn() {
 
 
 /** Overpass 圖資(逾時就放棄 → 程序生成備援):建物 + 鐵路/捷運 + 瀑布 */
-async function fetchOsmFeatures(bbox) {
+async function fetchOsmFeatures(bbox, { retryMissing = false } = {}) {
   // 路網中繼:本輪已定案(伺服器轉來的房主那一份,或本客戶端親自查過的結果)⇒ 直接用,
   // 不查網路也不查快取。深拷貝理由同 geocache(下游 buildRails/harvestOsm 就地變異)。
   // **刻意不寫進 geocache**:中繼的來源是房主 = 不可信輸入,持久化它會污染這台機器之後
   // 每一場(含它自己當房主的那一場),而快取的紀律正是「只准存自己完整抓到的東西」。
   const inj = osmInOf(bbox, 'feats');
-  if (inj !== undefined) return inj && structuredClone(inj);
+  if (inj !== undefined && !(retryMissing && inj === null)) return inj && structuredClone(inj);
   // Overpass 回應快取(geocache.js):同 bbox 首次完整成功即定案(remark = 伺服器截斷/逾時,不入庫)。
   // 之後每場建物/鐵路輸入位元級一致 —— 圖資不再隨鏡像輪替/限流逐局忽有忽無。
   // 鍵含查詢額度:額度常數改版自然失效重抓。
@@ -4361,9 +4364,10 @@ async function fetchOsmFeatures(bbox) {
  * 道路路網(獨立 Overpass 查詢):與建物/鐵路分開,避免道路查詢過重或逾時時
  * 連帶拖垮既有的建物/鐵路渲染。失敗回 null → buildBiomes 退回以兵線為主要道路。
  */
-export async function fetchOsmRoads(bbox, { evidence = false } = {}) {
+export async function fetchOsmRoads(bbox, { evidence = false, retryMissing = false } = {}) {
   const inj = osmInOf(bbox, 'roads');   // 路網中繼(理由同 fetchOsmFeatures)
-  if (inj !== undefined && (!evidence || inj?.every(road => Number.isSafeInteger(road.id)))) return inj && structuredClone(inj);
+  if (inj !== undefined && !(retryMissing && inj === null)
+    && (!evidence || inj?.every(road => Number.isSafeInteger(road.id)))) return inj && structuredClone(inj);
   // 路網快取:兵線橋/地下道/隧道的唯一 OSM 輸入 —— 首次完整成功即定案,
   // 之後每場真橋/隧道 way 集合恆定(dropLaneBridges/dedupe/carve 皆純幾何 → 整條管線可重現)。
   // 兩級查詢、各自額度(2026-07-17 巴黎道路消失案):單一 `out geom 300` 在密路網市區
@@ -4418,8 +4422,9 @@ export async function fetchGridRoads(bbox) {
  * 命中 geocache 即回(零網路);成功結果由 fetcher 自身定案入庫 → 之後的
  * buildBiomes(重建預建或下一場)直接命中快取。回傳 [features|null, roads|null]。
  */
-export function warmOsm(bbox) {
-  return Promise.all([fetchOsmFeatures(bbox), fetchOsmRoads(bbox)]);
+/** invariant: retryMissing bypasses failed slots without changing accepted room inputs. */
+export function warmOsm(bbox, options = {}) {
+  return Promise.all([fetchOsmFeatures(bbox, options), fetchOsmRoads(bbox, options)]);
 }
 
 // ---- 道路(圖資 way):有寬度的賽璐璐路面,主/次分級 + 依地貌變色 ----
@@ -6352,18 +6357,12 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     return false;
   };
   const buckets = new Map();   // `${biome}|${main}|${步行主題}` -> { color, pos, nrm, col, uv, idx, base }
-  const PED_SURFACE = {
-    footbridge: { color: 0x59636a, tex: 'asphalt' },
-    oldstreet: { color: 0x84684e, tex: 'gravel' },
-    cycleway: { color: 0x416b63, tex: 'asphalt' },
-    promenade: { color: 0x7b786e, tex: 'gravel' },
-  };
-  const bucketOf = (biome, main, theme = null) => {
-    const key = `${biome}|${main ? 1 : 0}|${theme || ''}`;
+  const bucketOf = (biome, main, theme = null, surface = null) => {
+    const key = `${biome}|${main ? 1 : 0}|${theme || ''}|${surface?.key || ''}`;
     let b = buckets.get(key);
     if (!b) {
-      const ped = PED_SURFACE[theme];
-      b = { color: ped?.color ?? roadColor(biome, main), tex: ped?.tex || ROAD_TEX_OF[biome] || 'asphalt',
+      const ped = surface ? WALKWAY_SURFACES[surface.key] : null;
+      b = { color: ped?.color ?? roadColor(biome, main), tex: ped?.tex || ROAD_TEX_OF[biome] || 'asphalt', surface,
             pos: [], nrm: [], col: [], uv: [], idx: [], base: 0 };
       buckets.set(key, b);
     }
@@ -6660,7 +6659,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       const wetRoadside = biome === 'wet';
       biome = roadSurfaceBiome(biome, way.tags);
       const pedTheme = ped ? (brg ? 'footbridge' : way._ped?.theme || null) : null;
-      const b = bucketOf(biome, main || link, pedTheme);
+      let walkSurface = isWalkway(way.tags) ? walkwaySurface(way.tags,
+        habitatAt(terrain.evidenceAt?.(mid[0], mid[1]), biome), forestSeed(raw[0][0], raw[0][1], 0x57414c4b), null, pedTheme) : null;
+      if (walkSurface?.source === 'inferred-appearance' && (brg || strc)) walkSurface = { key: 'asphalt', source: 'structure-datum' };
+      const b = bucketOf(biome, main || link, pedTheme, walkSurface);
       const nP = run.length, vbase = b.base;
       const cum = [0];
       for (let i = 1; i < nP; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
@@ -6707,7 +6709,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
               : Math.max(hs[k], hMax - CLAMP) + ROAD_LIFT;
           b.pos.push(vx, vy, vz);
           b.nrm.push(0, 1, 0);
-          b.uv.push(vx / 9, vz / 9);             // 世界投影 UV:路面質感貼圖(鏡射重複無接縫)
+          if (walkSurface) {
+            const repeat = WALKWAY_SURFACES[walkSurface.key].repeat;
+            b.uv.push(cum[i] / repeat, off / repeat);
+          } else b.uv.push(vx / 9, vz / 9);             // 世界投影 UV:路面質感貼圖(鏡射重複無接縫)
           if (ink && (strc || brg || !inJunctionMarkCut(vx, vz))) b.col.push(0.52, 0.52, 0.58);
           else b.col.push(1, 1, 1);
         }
@@ -7502,14 +7507,17 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2));
     geo.setIndex(b.idx);
     // polygonOffset:把路面往鏡頭拉,恆蓋過地被拼貼(橫坡路塹段夾到 hMax−0.7 時與地被同高不 z-fight)
-    const m = new THREE.Mesh(geo, envMat(b.color, {
-      map: roadTex(b.tex), vertexColors: true, wash: 0.55, cool: 0.5, rim: 0,
+    const options = {
+      vertexColors: true, wash: 0.55, cool: 0.5, rim: 0,
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
-    }));
+    };
+    const m = new THREE.Mesh(geo, b.surface ? walkwayMaterial(b.color, b.surface.key, options)
+      : envMat(b.color, { ...options, map: roadTex(b.tex) }));
     m.frustumCulled = false;
     m.renderOrder = 1;
     m.userData.noOutline = true;
     m.userData.roadSurface = true;
+    if (b.surface) m.userData.walkwaySurface = b.surface;
     group.add(m);
   }
   // ---- 標線 Mesh(黃/白頂點色,單一 draw call)----
@@ -10710,13 +10718,14 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     if (way.tags?.bridge || way.tags?.tunnel) continue;
     const pts = (way.geometry || []).map((p) => llToWorld(p.lat, p.lon, center));
     const hd = roadWidth(way.tags) / 2 + 1.5;
+    const appearanceSeed = pts.length ? forestSeed(pts[0][0], pts[0][1], sceneSeed ^ 0x57414c4b) : 0;
     for (let i = 1; i < pts.length; i++) {
       const [x0, z0] = pts[i - 1], [x1, z1] = pts[i];
       const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
       if (len < 1e-3) continue;
       const hw = len / 2;
       roadFeet.push({ x: (x0 + x1) / 2, z: (z0 + z1) / 2, hw, hd,
-                      ry: Math.atan2(dz, dx), r: Math.hypot(hw, hd) });
+                      ry: Math.atan2(dz, dx), r: Math.hypot(hw, hd), tags: way.tags, appearanceSeed });
     }
   }
   const roadFootIndex = makeFootprintIndex(roadFeet);
@@ -12482,9 +12491,16 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     isBlocked: (x, z) => blocked.has(cellKey(x, z)),
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     blockers, season, seed: gseed, roadClear: roadClearAt, inset: inb, low: lowPower(),
+    procedural: isRandomMap(cfg),
     roadSegments: roadFeet.map(f => {
       const dx = Math.cos(f.ry) * f.hw, dz = Math.sin(f.ry) * f.hw;
-      return { a: [f.x - dx, f.z - dz], b: [f.x + dx, f.z + dz], hw: f.hd };
+      return { a: [f.x - dx, f.z - dz], b: [f.x + dx, f.z + dz], hw: f.hd, tags: f.tags, appearanceSeed: f.appearanceSeed };
+    }),
+    realScale: MAPGEO.REAL_SCALE,
+    shoreLines: [...(osmData?.waters || []), ...(osmData?.boundaries || []).filter(w => w.tags?.natural === 'coastline')]
+      .map(w => ({ tags: w.tags, points: (w.geometry || []).map(p => llToWorld(p.lat, p.lon ?? p.lng, center)) })),
+    walkwayPoints: (osmData?.pois || []).map(p => {
+      const [x, z] = llToWorld(p.lat, p.lng ?? p.lon, center); return { x, z, tags: p.tags };
     }),
     reservedFootprints,
     areas: osmData?.areas || [],
@@ -12666,7 +12682,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     ground: ground.patches,
     groundDetails: ground.details,
     habitatScene: { recipe: ground.recipe, habitats: ground.habitats, models: ground.models,
-      furniture: ground.furniture, filledCells: ground.filledCells },
+      furniture: ground.furniture, filledCells: ground.filledCells, shoreline: ground.shoreline },
     groundAligned: ground.aligned,   // 沿路對齊件數(拼圖 + 物件;整齊度 reg 稽核用)
     groundBuffer: ground.bufCells,   // 緩衝空間的底毯格數(2026-08-12;0 = 那一圈沒鋪成)
     petals: petalsBuilt,             // 落花 / 落葉粒子數(0 = 夏冬、沒有落葉樹、或 ?petal=0)

@@ -584,6 +584,7 @@ export function chooseArchitecture(seed, identity, context = {}) {
     } : {}),
     ...functionalArchitecture(funcInfo, { ...context, region }, architectureHash(identity, `${seed}:function`)),
     id, profile, region, slope: context.slope || 0,
+    exteriorKey: `${seed}|${context.communityKey ?? context.building?.sourceId ?? identity}`,
     variant: architectureHash(identity, `${seed}:variant`) % 3,
     functionInfo: funcInfo,
     targetHeight: heightInfo.height,
@@ -671,6 +672,7 @@ export function createArchitecturePlanner({
     const ctx = {
       slope, urban, rural, courtyard: !!poly?.holes?.length, elongated,
       density, landuse: use, parentTags: parent?.tags, building: semanticBuilding, poly, region, location: loc,
+      communityKey: building.communityKey ?? parent?.sourceId,
       seed, identity, aquatic, transitPassage, transitIndex,
       climate: environment.climate || venue?.climate,
       geology: environment.geology || venue?.geology,

@@ -24,7 +24,7 @@ function facadeGeometry(kind, seed, size, color, context = {}) {
     return {x:(a[0]+b[0])/2,z:(a[1]+b[1])/2,y:0,h,hw2:Math.hypot(dx,dz)/2,hd2:.06,ry:Math.atan2(dz,dx)};
   });
   return compileSceneParts([{g:['box',w,h,d],p:[0,h/2,0],c:color},
-    ...architecturalFacadeParts(edges,style,.1),...functionalBuildingParts(edges,0,h,style).parts]);
+    ...architecturalFacadeParts(edges,style,.1,[],{ outer: points, holes: [] }),...functionalBuildingParts(edges,0,h,style).parts]);
 }
 
 function masonryGeometry(size, color) {

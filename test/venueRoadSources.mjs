@@ -10,6 +10,11 @@ import { VENUE_GRID } from '../public/js/venueGrid.js';
 import { traceRoadEvidence, roadFingerprint, makeTerrainAssessment, validTerrainAssessment } from '../public/js/roadEvidence.js';
 
 const captures = new Map();
+// Saved relief grids can replay even when their archived PNG source bytes are damaged.
+const elevationDirectory = join(ROOT, 'test', 'fixtures', 'venue_roads', 'elevation');
+for (const name of osmFixtureFiles(elevationDirectory)) {
+  assert(loadElevationFixture(name.replace(/\.json$/, ''), elevationDirectory), name + ': archived relief integrity');
+}
 for (const directory of ['osm', 'venue_roads'].map(n => join(ROOT, 'test', 'fixtures', n))) {
   for (const name of osmFixtureFiles(directory)) {
     const { data, sha256 } = readOsmCapture(join(directory, name));

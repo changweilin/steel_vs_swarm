@@ -34,6 +34,7 @@ const AUDIT_SCRIPTS = [
   'test/mapCatalogue.mjs',
   'tools/audit_map_evidence.mjs',
   'tools/audit_habitat.mjs',
+  'test/shoreline.mjs',
   'tools/audit_facility_fusion.mjs',
   'tools/audit_lane_sep.mjs',
   'tools/audit_lane_navigation.mjs',
