@@ -84,6 +84,230 @@ export const INITIAL_REVIEWS = {
   m08: { verdict: '通過', improvement: '消音黑豹低伏潛行態（70%）與展翅夜梟前掠狙擊態（30%）肩甲羽翼折疊/展開機制嚴密，全機啞光消光質感到位，零高光反射規範落實。' }
 };
 
+export const INITIAL_TRAITS = {
+  // ================= SWARM 陣營 (無人機篇 / 變形者) =================
+  s01: {
+    element: '音波／電磁',
+    personality: '沉著冷靜、節拍器般精準、外柔內剛、理性護短',
+    likes: '巴哈無伴奏、亡弟懷錶、舊燕尾指揮外套',
+    combatStyle: '遠戰・敏攻指揮（多機同步協同集火、雷導火箭齊射、復調護盾共振擴張）'
+  },
+  s02: {
+    element: '火／熱核',
+    personality: '寡言粗獷、固執護短、愛罵劣質電容、鐵漢柔情',
+    likes: '自己燉的紅菜湯、三花貓、油漬工作圍裙',
+    combatStyle: '中近戰・守護與治療（持重盾衝撞、前線重裝壓制、全軍裝甲奈米回火修復）'
+  },
+  s03: {
+    element: '雷／電磁',
+    personality: '執著嚴謹、富觀察力、對仿生與古生物結構極度熱愛',
+    likes: '珍珠奶茶、電子琴、始祖鳥化石翻模羽印、深夜逛零件庫存網站',
+    combatStyle: '中近戰・敏攻變形（迅猛龍低伏突襲與始祖鳥高空滑翔雙態變換、靈巧穿刺）'
+  },
+  s04: {
+    element: '電漿／風',
+    personality: '豪邁好鬥、反射神經極快、日常生活少根筋、重義氣',
+    likes: '保養槍械、釣魚雜誌、溫泉紀念T恤',
+    combatStyle: '近戰・狂戰士（單翼機高機動衝角突防、超近距離電漿破甲、狂暴突進）'
+  },
+  s05: {
+    element: '電磁／物理',
+    personality: '嗆辣自信、愛立Flag、超高APM手速怪、毒舌護短',
+    likes: '能量飲料成箱喝、辣炒年糕、直播機甲擊殺集錦、電競舊隊服',
+    combatStyle: '中近戰・敏捷突擊（極速FPV鏤空競速走位、高機動狗鬥、蜂群齊射獵殺）'
+  },
+  s06: {
+    element: '電磁／光',
+    personality: '疏離清冷、極端可靠、溫柔悲憫（擊落飛彈後在日誌畫橫線紀念）',
+    likes: '黑膠爵士(Coltrane)、手沖咖啡、空白布徽章',
+    combatStyle: '遠戰・攻守兼備（半人馬重裝四足遠距磁軌狙擊、超音速防空飛彈、不墜穹頂攔截）'
+  },
+  s07: {
+    element: '電漿／空間幾何',
+    personality: '理智嚴謹、冷面笑匠、壓力越大冷笑話越多、清醒透徹',
+    likes: '西洋棋(讓子也贏)、鷹嘴豆泥做法之爭、白板數學證明',
+    combatStyle: '中近戰・守敏防空（多觸手持盾衝撞偏折、非歐電漿扇形防空網、奇點破片彈幕）'
+  },
+  s08: {
+    element: '光／生化治療',
+    personality: '柔緩慈悲、修女般寧靜溫柔；但觸碰醫療機則化身冷靜冷血狙擊手',
+    likes: '縫紉補飛行服、蜂蜜酒、祖母燭台照片、白綠修女披風雨衣',
+    combatStyle: '遠戰・治療支援（遠距精準奈米注彈治療、懸浮修道院結界、全隊生命甘霖普降）'
+  },
+  s09: {
+    element: '物理／重力牽引',
+    personality: '紳士風度、優雅幽默、冷酷精準射手、講究儀表',
+    likes: '雙管獵槍收藏、伯爵茶、牧牛犬「威靈頓」、油布長外套',
+    combatStyle: '中近戰・敏捷獵殺（袋鼠反曲腿大跳躍遷、近距防空霰彈火網、引力拘束強行牽引）'
+  },
+  s10: {
+    element: '光子／電磁',
+    personality: '內向孤僻、線上話癆線下沉默、高專注沉浸、情感封閉',
+    likes: '電子徽章、深夜匿名網路圍棋、oversize 連帽衫',
+    combatStyle: '近戰・敏捷狂暴（始祖鳥滑翔高速切入轉迅猛龍低伏、高頻鐮爪狂暴撕裂斬切）'
+  },
+  s11: {
+    element: '光子／物理',
+    personality: '清瘦謙遜、完美主義、對粗糙機械結構深惡痛絕',
+    likes: '機械錶修復、黑麥麵包配奶油、傍晚散步、口袋錶鏈',
+    combatStyle: '超遠戰・攻敏狙擊（極致精準手術刀光束、長航時滑翔翼高空定點穿核點殺）'
+  },
+  s12: {
+    element: '光子／宇宙光電',
+    personality: '溫和健談、思鄉深沉、博學天文、走路無聲',
+    likes: '韃靼磚茶加奶加鹽、老收音機修理、背北半球全部星座',
+    combatStyle: '遠戰・攻守導引（高空三角鴨翼測距、大威力光電引導轟炸、星移斗轉規避）'
+  },
+
+  // ================= STEEL 陣營 (機甲篇 / 變形者) =================
+  t01: {
+    element: '冰／霜凍',
+    personality: '鐵血嚴厲、極度重視士兵護甲與伙食、痛失獨子而不露聲色',
+    likes: '黑咖啡不加糖、下盲棋、冬泳、獨子追授勳章',
+    combatStyle: '近戰・重守與狂戰突進（持霜狼重盾強勢衝撞、近戰扇形冷焰冰斧劈砍、雪崩重砲齊射震暈）'
+  },
+  t02: {
+    element: '電磁／靈能神經',
+    personality: '寡言清冷、說話如合成音、情感障礙但純粹乾淨',
+    likes: '檸檬味硬糖、看僚機整備、條令手冊夾彩色糖紙',
+    combatStyle: '中近戰・敏捷極限輸出（神經同步超頻靈動大跳、免裝填超弦同步爆發、電磁穿甲長矛光速穿透）'
+  },
+  t03: {
+    element: '火／熔岩',
+    personality: '豪邁粗野、重情重義、嗓門震天、大口吃肉記恩記仇',
+    likes: '戰地料理(機甲排氣燉湯)、走調手風琴、防彈圍裙',
+    combatStyle: '近戰・守攻兼備（巨猿體態持推土防盾衝撞擊退、近距彈鼓霰彈狂暴壓制、八卦火海強大牽引吞噬）'
+  },
+  t04: {
+    element: '物理／匿蹤',
+    personality: '極端冷靜、專業獨行、帶刺嘲諷、只信自己義肢與駕駛艙',
+    likes: '黑市爵士黑膠、每日義臂保養、無名舊徽章',
+    combatStyle: '遠戰・敏攻伏擊（四足低伏機械獵犬、光學迷彩誘餌干擾、架設重裝狙擊要塞連續穿透）'
+  },
+  t05: {
+    element: '光子／電磁',
+    personality: '嚴謹剛毅、完美主義總工程師、外冷內熱、執著結構安全',
+    likes: '結構力學論文、太極步態研究、廠裡橘貓、磨損廠徽',
+    combatStyle: '中遠戰・敏守分身（長頸涉禽反曲長腿高機動跳躍、翼載光子長矛穿刺、備用化身分身協同火擊）'
+  },
+  t06: {
+    element: '火／電漿',
+    personality: '靈動機靈、操作天賦異稟、私下嘴碎怕教官、思鄉想家',
+    likes: '機甲模擬器省冠軍、麻辣火鍋、畫逃跑機甲漫畫',
+    combatStyle: '中近戰・敏捷攻堅（靈猴-筋斗雲雙態高速突防、如意金箍棒電漿前捲範圍爆發、靈巧七十二變位移）'
+  },
+  t07: {
+    element: '物理／風',
+    personality: '沉默寡言、極簡動作不浪費一毫米、情感極深沉內斂',
+    likes: '擦拭槍管冥想、精確計算薪餉匯率、妹妹的泛黃合照',
+    combatStyle: '遠戰・敏捷狙擊（仿生翼龍高空盤旋滑翔、長喙栓動破甲重狙定點穿透、斂翼潛行無聲索命）'
+  },
+  t08: {
+    element: '音波／諧振',
+    personality: '舞台笑容標準優雅、頻譜感官敏銳超常、內心沈靜話少',
+    likes: '老歌與爵士、親手繡的防護手套、值勤日誌五線譜塗鴉',
+    combatStyle: '中遠戰・攻守破盾（機械神龍身段、破盾諧振音波砲強效瓦解護盾、音律波紋全頻干擾）'
+  },
+  t09: {
+    element: '火／物理',
+    personality: '悲憫疲憊、詩人學者氣質、清醒超脫、夜寫悼亡詩',
+    likes: '魯米詩集、藏紅花茶、修老鋼筆、學生來信',
+    combatStyle: '遠戰・攻守母機（波斯匿蹤無尾大三角飛翼、隱蔽帷幕防衛、後方引導巡飛彈集群飽和覆蓋轟炸）'
+  },
+  t10: {
+    element: '電磁／物理',
+    personality: '外冷內韌、數學般精確嚴謹、頭巾內縫禁詩',
+    likes: '數論研究、石榴、深夜波斯語詩歌探討',
+    combatStyle: '中遠戰・守護防空（幾何全息雷達屏障擴張、雙肩六聯垂直防空攔截、天穹聖所全隊傷害減免）'
+  },
+  t11: {
+    element: '物理／震盪',
+    personality: '樂天風趣、話癆老兵、重情重義、重視生存法則',
+    likes: '騷沙舞、蘭姆酒、多米諾骨牌、耐彈舊軍服',
+    combatStyle: '中近戰・重裝守攻（阿特拉斯重步兵外骨骼變形匿蹤傾轉巡邏機、鐵壁不屈抗線、無後座力加農陣地拔除）'
+  },
+  t12: {
+    element: '電磁／訊號',
+    personality: '安靜守序、觀察力敏銳過剩、堅持人道悲憫（「那也是一個人」）',
+    likes: '匿名圍棋「firefly_bel」、戰地野花壓花、明斯克老電車照片',
+    combatStyle: '中遠戰・守護電戰（超重型裝甲抗傷、測向天線陣同調護生受擊回充、全域神經共振靜默壓制）'
+  },
+
+  // ================= SPEC / MERC 陣營 (變形者 / 巨獸) =================
+  m01: {
+    element: '暗／血液／熱能',
+    personality: '冷酷嚴準、秒數精算職業傭兵、對時間與合約偏執',
+    likes: '收藏合約範本、黑咖啡配菸、退役拆彈剪',
+    combatStyle: '中近戰・狂戰士（三角滑翔超音速突襲、血月之庇衝撞受擊回充、夜鴉血宴超頻解限狂暴吸血）'
+  },
+  m02: {
+    element: '土／岩漿／磁軌',
+    personality: '沉穩如山、說話前深思三秒、體型與沉默本身即是嚇阻',
+    likes: '土耳其紅茶、擦拭護甲、記錄「沒弄丟之物」的破筆記本',
+    combatStyle: '中近戰・極限重守（暴龍巨獸體態、金湯地幔護盾擴張、磐石誓約為全隊提供極限承傷減免、喉部磁軌巨砲重擊）'
+  },
+  m03: {
+    element: '冰／霜',
+    personality: '精明精算、一手搶修一手記帳、商隊首領氣魄',
+    likes: '記帳皮面小冊、多糖咖啡、收集各國舊硬幣',
+    combatStyle: '遠戰・敏捷支援（雙尾桁高空長航時偵蒐、精準雷導空投打擊、極光護甲與快速戰地搶修）'
+  },
+  m04: {
+    element: '風／物理',
+    personality: '游牧獵手般神秘、隱匿行蹤、對氣流與航跡洞察入微',
+    likes: '避免固定模式以防追蹤、祖傳獵鷹皮手套',
+    combatStyle: '遠戰・敏捷狙擊（仿生獵鷹高空滑翔俯衝、20mm 鷹眼穿甲反器材重砲超視距精準點名、羽毛飛彈多點齊射）'
+  },
+  m05: {
+    element: '毒／雷電',
+    personality: '善變莫測、千面間諜、行事詭異、無人能認出兩次',
+    likes: '收集老式鎖、研究違約條款、調甜烈酒、每清一筆債換眉環',
+    combatStyle: '近戰・敏捷狂戰（滑翔飛鼠高速近身轉狼人暴起、噬魂電磁機砲近距瘋狂絞殺、毒霧遁影）'
+  },
+  m06: {
+    element: '物理／爆破',
+    personality: '熱情奔放、張揚狂野、里約嘉年華派對靈魂',
+    likes: '放克音樂開到最大聲、顛球足球、一季換一次螢光塗裝',
+    combatStyle: '中近戰・攻守召喚（四足劍龍象柱腿抗線、背部骨板扇面齊射子母巡飛彈、號令武裝直升機編隊凌空巡遊集火）'
+  },
+  m07: {
+    element: '電漿／物理',
+    personality: '頑強堅韌、合約至上、原則分明、死裡逃生的傲骨',
+    likes: '家鄉仙人掌盆栽、研讀合約漏洞補償條款、親自替鞘翅上油',
+    combatStyle: '近戰・重裝攻守（犀角金龜兩態昆蟲重甲抗線、扇面高溫電漿幕防空、破軍突刺強襲攻堅）'
+  },
+  m08: {
+    element: '冰／匿蹤暗影',
+    personality: '極度從容、說話極慢、優雅致命、來去無蹤',
+    likes: '讀氣象風向與聲音傳播、隨身降噪耳機、尋找「安靜」該是什麼樣子',
+    combatStyle: '遠戰・敏捷暗殺（黑豹地面無聲潛入切換夜梟展翅高空狙擊、絕對零度冰川重狙一擊必殺）'
+  }
+};
+
+/** 解析特性字串 (Markdown 表格值) 為結構化物件 */
+export function parseTraits(str = '', fallback = {}) {
+  if (!str) return { ...fallback };
+  const getField = (prefix, fallbackKey) => {
+    const m = str.match(new RegExp(`${prefix}[：:]([^<\\n]+)`));
+    return m ? m[1].trim() : (fallback[fallbackKey] || '');
+  };
+  return {
+    element: getField('元素', 'element'),
+    personality: getField('性格', 'personality'),
+    likes: getField('喜好', 'likes'),
+    combatStyle: getField('戰鬥風格', 'combatStyle')
+  };
+}
+
+/** 格式化結構化特性為 Markdown 儲存字串 */
+export function formatTraits(traits = {}) {
+  const elem = traits.element || '—';
+  const pers = traits.personality || '—';
+  const likes = traits.likes || '—';
+  const style = traits.combatStyle || '—';
+  return `元素：${elem}<br>性格：${pers}<br>喜好：${likes}<br>戰鬥風格：${style}`;
+}
+
 /** 掃描統一文件中的全部規格總表（§四：4.1 機甲／4.2 無人機／4.3 變形者） */
 function scanSpecTables(lines) {
   const tables = [];
@@ -118,6 +342,7 @@ export async function parseMarkdownFile(categoryKey) {
 
   const hasVerdict = rawHeaders.includes('視覺判定');
   const hasImprovement = rawHeaders.includes('改善方向');
+  const hasTraits = rawHeaders.includes('機體特性');
 
   const rows = [];
   let cur = headerIdx + 2;
@@ -148,6 +373,9 @@ export async function parseMarkdownFile(categoryKey) {
     if (!hasImprovement && INITIAL_REVIEWS[id]) {
       rowObj['改善方向'] = INITIAL_REVIEWS[id].improvement;
     }
+    if (!hasTraits && INITIAL_TRAITS[id]) {
+      rowObj['機體特性'] = formatTraits(INITIAL_TRAITS[id]);
+    }
 
     rows.push(rowObj);
     cur++;
@@ -161,6 +389,7 @@ export async function parseMarkdownFile(categoryKey) {
     headers: rawHeaders,
     hasVerdict,
     hasImprovement,
+    hasTraits,
     rows,
     lines
   };
@@ -184,6 +413,10 @@ export async function getAllMechsData() {
       const pilot = parts[0] || '';
       const nickname = parts[1] || parts[0] || '';
 
+      const rawTraits = r['機體特性'] || '';
+      const fallbackTraits = INITIAL_TRAITS[id] || {};
+      const traits = parseTraits(rawTraits, fallbackTraits);
+
       list.push({
         id,
         category: cat,
@@ -194,6 +427,7 @@ export async function getAllMechsData() {
         fields: r,
         verdict: r['視覺判定'] || INITIAL_REVIEWS[id]?.verdict || '',
         improvement: r['改善方向'] || INITIAL_REVIEWS[id]?.improvement || '',
+        traits,
         imagePng: pngFile ? `/public/assets/mechs/${pngFile}` : null,
         side: id.startsWith('t') ? 'STEEL' : (id.startsWith('s') ? 'SWARM' : 'SPEC')
       });
@@ -221,8 +455,12 @@ export async function updateMechInMarkdown(mechId, updates = {}) {
   const lines = [...parsed.lines];
   let headers = [...parsed.headers];
 
-  // 確保標頭有「視覺判定」與「改善方向」
+  // 確保標頭有「機體特性」、「視覺判定」與「改善方向」
   let needHeaderUpdate = false;
+  if (!headers.includes('機體特性')) {
+    headers.push('機體特性');
+    needHeaderUpdate = true;
+  }
   if (!headers.includes('視覺判定')) {
     headers.push('視覺判定');
     needHeaderUpdate = true;
@@ -267,6 +505,11 @@ export async function updateMechInMarkdown(mechId, updates = {}) {
       Object.assign(rowObj, updates);
       if (updates.verdict) rowObj['視覺判定'] = updates.verdict;
       if (updates.improvement !== undefined) rowObj['改善方向'] = updates.improvement;
+      if (updates.traits) {
+        rowObj['機體特性'] = formatTraits(updates.traits);
+      } else if (updates['機體特性']) {
+        rowObj['機體特性'] = updates['機體特性'];
+      }
     } else {
       // 補齊舊表格缺的初審欄位
       if (!rowObj['視覺判定']) {
@@ -274,6 +517,9 @@ export async function updateMechInMarkdown(mechId, updates = {}) {
       }
       if (!rowObj['改善方向']) {
         rowObj['改善方向'] = INITIAL_REVIEWS[rowId]?.improvement || '';
+      }
+      if (!rowObj['機體特性'] && INITIAL_TRAITS[rowId]) {
+        rowObj['機體特性'] = formatTraits(INITIAL_TRAITS[rowId]);
       }
     }
 
@@ -295,9 +541,11 @@ export async function syncAllInitialReviews() {
   for (const cat of ['robots', 'drones', 'morphers']) {
     const parsed = await parseMarkdownFile(cat);
     for (const r of parsed.rows) {
-      if (INITIAL_REVIEWS[r._id]) {
-        await updateMechInMarkdown(r._id, INITIAL_REVIEWS[r._id]);
+      const updates = { ...(INITIAL_REVIEWS[r._id] || {}) };
+      if (INITIAL_TRAITS[r._id]) {
+        updates.traits = INITIAL_TRAITS[r._id];
       }
+      await updateMechInMarkdown(r._id, updates);
     }
   }
 }
@@ -486,9 +734,12 @@ function renderHtmlPage(localThree = false) {
 
   /* 主區域三分欄 */
   main.app-workspace {
-    flex: 1;
+    flex: 1 1 0;
+    min-height: 0;
+    height: calc(100vh - 52px);
     display: grid;
     grid-template-columns: 240px 1fr 480px;
+    grid-template-rows: 100%;
     overflow: hidden;
   }
 
@@ -690,6 +941,8 @@ function renderHtmlPage(localThree = false) {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    height: 100%;
+    min-height: 0;
   }
   .workbench-header {
     padding: 14px 18px;
@@ -698,6 +951,7 @@ function renderHtmlPage(localThree = false) {
     align-items: center;
     justify-content: space-between;
     background: rgba(18, 26, 44, 0.8);
+    flex-shrink: 0;
   }
   .workbench-title-box {
     display: flex;
@@ -717,7 +971,8 @@ function renderHtmlPage(localThree = false) {
     color: var(--text-muted);
   }
   .workbench-body {
-    flex: 1;
+    flex: 1 1 0;
+    min-height: 0;
     overflow-y: auto;
     padding: 18px;
     display: flex;
@@ -831,6 +1086,7 @@ function renderHtmlPage(localThree = false) {
     padding: 8px 18px;
     border-bottom: 1px solid var(--panel-border);
     background: rgba(18, 26, 44, 0.8);
+    flex-shrink: 0;
   }
   .notes-row-card {
     background: rgba(255, 255, 255, 0.02);
@@ -849,11 +1105,15 @@ function renderHtmlPage(localThree = false) {
   .workbench-footer {
     padding: 12px 18px;
     border-top: 1px solid var(--panel-border);
-    background: rgba(18, 26, 44, 0.95);
+    background: rgba(18, 26, 44, 0.98);
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
   }
   .btn-save-md {
     flex: 1;
@@ -881,6 +1141,79 @@ function renderHtmlPage(localThree = false) {
     font-size: 11px;
     color: var(--accent-emerald);
     font-weight: 700;
+  }
+
+  /* 機體特性區塊樣式 */
+  .traits-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .trait-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .trait-pill.elem {
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+  }
+  .trait-pill.style {
+    background: rgba(244, 63, 94, 0.15);
+    border: 1px solid rgba(244, 63, 94, 0.4);
+    color: #fb7185;
+  }
+  .trait-pill.pers {
+    background: rgba(168, 85, 247, 0.15);
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    color: #c084fc;
+  }
+  .trait-pill.likes {
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    color: #fbbf24;
+  }
+  .trait-quick-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .btn-tag-chip {
+    padding: 2px 7px;
+    font-size: 10px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-tag-chip:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+  }
+  .btn-tag-chip.active {
+    background: rgba(56, 189, 248, 0.3);
+    border-color: #38bdf8;
+    color: #fff;
+  }
+  .card-trait-line {
+    font-size: 10px;
+    color: #38bdf8;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.85;
   }
 </style>
 </head>
@@ -981,6 +1314,10 @@ function renderHtmlPage(localThree = false) {
         </div>
         <div class="workbench-mech-sub" id="wbMechSub">規格對齊與 Markdown 寫回</div>
       </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="status-toast" id="saveStatusHeader"></span>
+        <button class="btn-save-md" id="btnSaveMdHeader" style="flex:none;padding:7px 14px;font-size:12px;">💾 儲存寫回 Markdown (Ctrl+S)</button>
+      </div>
     </div>
 
     <div class="workbench-tabs">
@@ -1012,6 +1349,66 @@ function renderHtmlPage(localThree = false) {
         <div class="section-label">改善方向與視覺分析筆記</div>
         <div class="field-group">
           <textarea id="fieldImprovement" class="field-textarea" placeholder="輸入視覺審核發現的差異、改進建議或瑕疵說明..."></textarea>
+        </div>
+      </div>
+
+      <!-- 機體特性 (元素、性格、喜好、戰鬥風格) -->
+      <div class="form-section" id="sectionMechTraits">
+        <div class="section-label">⚡ 機體特性 (MECH CHARACTERISTICS)</div>
+
+        <div class="traits-badge-row" id="traitsSummaryRow">
+          <!-- 動態渲染速覽 Tag 膠囊 -->
+        </div>
+
+        <div class="field-group">
+          <div class="field-title">🌀 元素 (Element)</div>
+          <input type="text" id="traitElement" class="field-input" placeholder="例如: 冰、雷/電磁、火/電漿、物理、光子、生化/毒、風、音波/諧振...">
+          <div class="trait-quick-tags" id="tagsElement">
+            <button type="button" class="btn-tag-chip" data-target="traitElement" data-val="物理">物理</button>
+            <button type="button" class="btn-tag-chip" data-target="traitElement" data-val="電磁">電磁</button>
+            <button type="button" class="btn-tag-chip" data-target="traitElement" data-val="火／電漿">火／電漿</button>
+            <button type="button" class="btn-tag-chip" data-target="traitElement" data-val="冰／霜凍">冰／霜凍</button>
+            <button type="button" class="btn-tag-chip" data-target="traitElement" data-val="光子／雷射">光子／雷射</button>
+            <button type="button" class="btn-tag-chip" data-target="traitElement" data-val="風／氣動">風／氣動</button>
+            <button type="button" class="btn-tag-chip" data-target="traitElement" data-val="音波／諧振">音波／諧振</button>
+            <button type="button" class="btn-tag-chip" data-target="traitElement" data-val="毒／生化">毒／生化</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-title">⚔️ 戰鬥風格 (Combat Style: 近/中/遠戰、攻/守/敏/治療/狂戰士等)</div>
+          <input type="text" id="traitCombatStyle" class="field-input" placeholder="例如: 近戰・狂戰士、中距離・攻守兼備、遠戰・敏捷狙擊、遠戰・治療支援...">
+          <div class="trait-quick-tags" id="tagsCombatStyleRange">
+            <span style="font-size:10px;color:#64748b;align-self:center;margin-right:2px;">距離:</span>
+            <button type="button" class="btn-tag-chip" data-action="appendRange" data-val="近戰">近戰</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRange" data-val="中近戰">中近戰</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRange" data-val="中距離">中距離</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRange" data-val="中遠戰">中遠戰</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRange" data-val="遠戰">遠戰</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRange" data-val="超遠戰">超遠戰</button>
+          </div>
+          <div class="trait-quick-tags" id="tagsCombatStyleRole">
+            <span style="font-size:10px;color:#64748b;align-self:center;margin-right:2px;">風格:</span>
+            <button type="button" class="btn-tag-chip" data-action="appendRole" data-val="攻">攻</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRole" data-val="守">守</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRole" data-val="敏">敏</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRole" data-val="治療">治療</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRole" data-val="狂戰士">狂戰士</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRole" data-val="召喚">召喚</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRole" data-val="電戰">電戰</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRole" data-val="狙擊">狙擊</button>
+            <button type="button" class="btn-tag-chip" data-action="appendRole" data-val="暗殺">暗殺</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-title">🧠 性格 (Personality)</div>
+          <textarea id="traitPersonality" class="field-textarea" style="min-height:48px;" placeholder="輸入駕駛員與機體性格特徵..."></textarea>
+        </div>
+
+        <div class="field-group">
+          <div class="field-title">☕ 喜好 (Preferences / Likes)</div>
+          <textarea id="traitLikes" class="field-textarea" style="min-height:48px;" placeholder="輸入駕駛員個人喜好、習慣、個人物品..."></textarea>
         </div>
       </div>
 
@@ -1117,7 +1514,11 @@ function filterMechs() {
       const matchId = m.id.toLowerCase().includes(q);
       const matchName = (m.pilot || '').toLowerCase().includes(q);
       const matchNick = (m.nickname || '').toLowerCase().includes(q);
-      if (!matchId && !matchName && !matchNick) return false;
+      const matchTraits = (m.traits?.element || '').toLowerCase().includes(q)
+        || (m.traits?.personality || '').toLowerCase().includes(q)
+        || (m.traits?.likes || '').toLowerCase().includes(q)
+        || (m.traits?.combatStyle || '').toLowerCase().includes(q);
+      if (!matchId && !matchName && !matchNick && !matchTraits) return false;
     }
     return true;
   });
@@ -1138,12 +1539,19 @@ function renderRoster() {
   filtered.forEach(m => {
     const card = document.createElement('div');
     card.className = 'mech-card-item' + (currentMech && currentMech.id === m.id ? ' active' : '');
+    card.dataset.id = m.id;
     card.onclick = () => selectMech(m.id);
 
     let vClass = 'none';
     if (m.verdict === '通過') vClass = 'pass';
     else if (m.verdict === '更正') vClass = 'fix';
     else if (m.verdict === '重繪') vClass = 'redraw';
+
+    const elemStr = m.traits?.element ? '⚡ ' + m.traits.element.split('／')[0] : '';
+    const styleStr = m.traits?.combatStyle ? '🎯 ' + m.traits.combatStyle.split('（')[0] : '';
+    const traitLine = (elemStr || styleStr)
+      ? '<div class="card-trait-line">' + elemStr + (elemStr && styleStr ? ' · ' : '') + styleStr + '</div>'
+      : '';
 
     card.innerHTML = \`
       <img class="card-thumb" src="\${m.imagePng || ''}" loading="lazy">
@@ -1154,6 +1562,7 @@ function renderRoster() {
         </div>
         <div class="card-name">\${m.nickname || m.pilot || m.id}</div>
         <div class="card-sub">\${m.pilot}</div>
+        \${traitLine}
       </div>
     \`;
     container.appendChild(card);
@@ -1187,6 +1596,9 @@ function selectMech(id) {
 
   // 改善方向
   document.getElementById('fieldImprovement').value = m.improvement || '';
+
+  // 更新機體特性
+  updateTraitsView();
 
   // 更新 2D 立繪
   updateStandeeImage();
@@ -1248,7 +1660,7 @@ function renderTableFields() {
   const container = document.getElementById('tableFieldsContainer');
   container.innerHTML = '<div class="section-label">機體規格明細</div>';
 
-  const ignoreKeys = ['機體編號', '參考代號', '參考代號（禁入Prompt）', '視覺判定', '改善方向', '_id', '_rawLineIdx', '_category'];
+  const ignoreKeys = ['機體編號', '參考代號', '參考代號（禁入Prompt）', '視覺判定', '改善方向', '機體特性', '_id', '_rawLineIdx', '_category'];
   for (const [key, val] of Object.entries(currentMech.fields)) {
     if (ignoreKeys.includes(key)) continue;
 
@@ -1299,8 +1711,11 @@ async function updatePromptPreview() {
     const groups = notesCache.filter(t => t.key !== 'global' && (t.ids || []).includes(currentMech.id));
     elT.textContent = groups.length ? '對應分類 prompt（' + groups.map(x => x.title).join('／') + '）' : '對應分類 prompt';
     elC.textContent = groups.length ? groups.map(x => '[' + x.title + ']\\n' + segText(x.rows)).join('\\n\\n') : '—';
-    const ignore = ['機體編號', '參考代號', '參考代號（禁入Prompt）', '視覺判定', '改善方向', '_id', '_rawLineIdx', '_category'];
+    const ignore = ['機體編號', '參考代號', '參考代號（禁入Prompt）', '視覺判定', '改善方向', '機體特性', '_id', '_rawLineIdx', '_category'];
     const parts = [];
+    if (currentMech.traits) {
+      parts.push('【機體特性】\\n元素：' + (currentMech.traits.element || '—') + '\\n性格：' + (currentMech.traits.personality || '—') + '\\n喜好：' + (currentMech.traits.likes || '—') + '\\n戰鬥風格：' + (currentMech.traits.combatStyle || '—'));
+    }
     for (const [k, v] of Object.entries(currentMech.fields)) {
       if (ignore.includes(k)) continue;
       parts.push('【' + k + '】' + String(v).split(/<br[^>]*>/gi).join('\\n'));
@@ -1314,15 +1729,74 @@ async function updatePromptPreview() {
   }
 }
 
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function updateTraitsView() {
+  if (!currentMech) return;
+  if (!currentMech.traits) {
+    currentMech.traits = { element: '', combatStyle: '', personality: '', likes: '' };
+  }
+  const t = currentMech.traits;
+  document.getElementById('traitElement').value = t.element || '';
+  document.getElementById('traitCombatStyle').value = t.combatStyle || '';
+  document.getElementById('traitPersonality').value = t.personality || '';
+  document.getElementById('traitLikes').value = t.likes || '';
+  renderTraitsSummary();
+}
+
+function renderTraitsSummary() {
+  const container = document.getElementById('traitsSummaryRow');
+  if (!container || !currentMech) return;
+  const t = currentMech.traits || {};
+  container.innerHTML = \`
+    <span class="trait-pill elem">🌀 元素: \${escapeHtml(t.element || '未設定')}</span>
+    <span class="trait-pill style">⚔️ 風格: \${escapeHtml(t.combatStyle || '未設定')}</span>
+    <span class="trait-pill pers">🧠 性格: \${escapeHtml((t.personality || '未設定').slice(0, 18))}\${t.personality?.length > 18 ? '...' : ''}</span>
+    <span class="trait-pill likes">☕ 喜好: \${escapeHtml((t.likes || '未設定').slice(0, 18))}\${t.likes?.length > 18 ? '...' : ''}</span>
+  \`;
+}
+
+function updateRosterCardTraits(id) {
+  const card = document.querySelector(\`.mech-card-item[data-id="\${id}"]\`);
+  if (!card || !currentMech) return;
+  let line = card.querySelector('.card-trait-line');
+  if (!line) {
+    line = document.createElement('div');
+    line.className = 'card-trait-line';
+    card.querySelector('.card-info')?.appendChild(line);
+  }
+  const elemStr = currentMech.traits?.element ? '⚡ ' + currentMech.traits.element.split('／')[0] : '';
+  const styleStr = currentMech.traits?.combatStyle ? '🎯 ' + currentMech.traits.combatStyle.split('（')[0] : '';
+  line.textContent = \`\${elemStr} \${elemStr && styleStr ? '· ' : ''}\${styleStr}\`;
+}
+
+function formatTraits(traits = {}) {
+  const elem = traits.element || '—';
+  const pers = traits.personality || '—';
+  const likes = traits.likes || '—';
+  const style = traits.combatStyle || '—';
+  return '元素：' + elem + '<br>性格：' + pers + '<br>喜好：' + likes + '<br>戰鬥風格：' + style;
+}
+
+function setSaveStatus(msg) {
+  const s1 = document.getElementById('saveStatus');
+  const s2 = document.getElementById('saveStatusHeader');
+  if (s1) s1.textContent = msg;
+  if (s2) s2.textContent = msg;
+}
+
 // 寫回 Markdown 儲存
 async function saveCurrentMech() {
   if (!currentMech) return;
-  const statusEl = document.getElementById('saveStatus');
-  statusEl.textContent = '儲存中...';
+  setSaveStatus('儲存中...');
 
   const updates = {
     verdict: currentMech.verdict,
     improvement: document.getElementById('fieldImprovement').value,
+    traits: currentMech.traits,
+    '機體特性': formatTraits(currentMech.traits),
     ...currentMech.fields
   };
 
@@ -1339,17 +1813,100 @@ async function saveCurrentMech() {
     if (data.ok) {
       currentMech.verdict = updates.verdict;
       currentMech.improvement = updates.improvement;
-      statusEl.textContent = '✅ 已成功寫回 Markdown！';
+      setSaveStatus('✅ 已成功寫回 Markdown！');
       updateStats();
       renderRoster();
-      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+      setTimeout(() => { setSaveStatus(''); }, 3000);
     } else {
-      statusEl.textContent = '❌ 儲存失敗: ' + data.error;
+      setSaveStatus('❌ 儲存失敗: ' + data.error);
     }
   } catch (err) {
-    statusEl.textContent = '❌ 網路錯誤: ' + err.message;
+    setSaveStatus('❌ 網路錯誤: ' + err.message);
   }
 }
+
+// 特性欄位與快速標籤事件綁定
+document.getElementById('traitElement').oninput = (e) => {
+  if (!currentMech) return;
+  currentMech.traits = currentMech.traits || {};
+  currentMech.traits.element = e.target.value;
+  renderTraitsSummary();
+  updateRosterCardTraits(currentMech.id);
+};
+document.getElementById('traitCombatStyle').oninput = (e) => {
+  if (!currentMech) return;
+  currentMech.traits = currentMech.traits || {};
+  currentMech.traits.combatStyle = e.target.value;
+  renderTraitsSummary();
+  updateRosterCardTraits(currentMech.id);
+};
+document.getElementById('traitPersonality').oninput = (e) => {
+  if (!currentMech) return;
+  currentMech.traits = currentMech.traits || {};
+  currentMech.traits.personality = e.target.value;
+  renderTraitsSummary();
+};
+document.getElementById('traitLikes').oninput = (e) => {
+  if (!currentMech) return;
+  currentMech.traits = currentMech.traits || {};
+  currentMech.traits.likes = e.target.value;
+  renderTraitsSummary();
+};
+
+document.querySelectorAll('#tagsElement .btn-tag-chip').forEach(btn => {
+  btn.onclick = () => {
+    if (!currentMech) return;
+    currentMech.traits = currentMech.traits || {};
+    const val = btn.dataset.val;
+    const input = document.getElementById('traitElement');
+    input.value = val;
+    currentMech.traits.element = val;
+    renderTraitsSummary();
+    updateRosterCardTraits(currentMech.id);
+  };
+});
+
+document.querySelectorAll('#tagsCombatStyleRange .btn-tag-chip').forEach(btn => {
+  btn.onclick = () => {
+    if (!currentMech) return;
+    currentMech.traits = currentMech.traits || {};
+    const range = btn.dataset.val;
+    const input = document.getElementById('traitCombatStyle');
+    let cur = input.value.trim();
+    if (cur.includes('・')) {
+      const parts = cur.split('・');
+      input.value = range + '・' + parts.slice(1).join('・');
+    } else if (cur) {
+      input.value = range + '・' + cur;
+    } else {
+      input.value = range;
+    }
+    currentMech.traits.combatStyle = input.value;
+    renderTraitsSummary();
+    updateRosterCardTraits(currentMech.id);
+  };
+});
+
+document.querySelectorAll('#tagsCombatStyleRole .btn-tag-chip').forEach(btn => {
+  btn.onclick = () => {
+    if (!currentMech) return;
+    currentMech.traits = currentMech.traits || {};
+    const role = btn.dataset.val;
+    const input = document.getElementById('traitCombatStyle');
+    let cur = input.value.trim();
+    if (cur.includes('・')) {
+      const parts = cur.split('・');
+      input.value = parts[0] + '・' + role;
+    } else if (cur) {
+      input.value = cur + '・' + role;
+    } else {
+      input.value = role;
+    }
+    currentMech.traits.combatStyle = input.value;
+    renderTraitsSummary();
+    updateRosterCardTraits(currentMech.id);
+  };
+});
 
 // 事件綁定
 document.querySelectorAll('.btn-verdict-choice').forEach(btn => {
@@ -1365,6 +1922,8 @@ document.querySelectorAll('.btn-verdict-choice').forEach(btn => {
 });
 
 document.getElementById('btnSaveMd').onclick = saveWorkbench;
+const btnSaveHeader = document.getElementById('btnSaveMdHeader');
+if (btnSaveHeader) btnSaveHeader.onclick = saveWorkbench;
 
 // 鍵盤快捷鍵
 window.addEventListener('keydown', (e) => {
@@ -1476,9 +2035,13 @@ function switchPane(name) {
   document.getElementById('tabSpec').classList.toggle('active', name === 'spec');
   document.getElementById('tabNotes').classList.toggle('active', name === 'notes');
   document.getElementById('notesTableSel').style.display = name === 'notes' ? '' : 'none';
-  document.getElementById('btnSaveMd').textContent = name === 'notes'
+  const btnText = name === 'notes'
     ? '💾 儲存注意事項寫回 Markdown (Ctrl+S)'
     : '💾 儲存寫回 Markdown (Ctrl+S)';
+  const b1 = document.getElementById('btnSaveMd');
+  const b2 = document.getElementById('btnSaveMdHeader');
+  if (b1) b1.textContent = btnText;
+  if (b2) b2.textContent = btnText;
   if (name === 'notes') loadNotesTable(document.getElementById('notesTableSel').value);
 }
 async function loadNotesTable(key) {
@@ -1532,19 +2095,18 @@ function renderNotesRows(table) {
   });
 }
 async function saveAllNotesFromPane() {
-  const statusEl = document.getElementById('saveStatus');
   const key = document.getElementById('notesTableSel').value;
   const table = notesCache.find(t => t.key === key);
   if (!table) {
-    statusEl.textContent = '❌ 無此表格: ' + key;
+    setSaveStatus('❌ 無此表格: ' + key);
     return;
   }
   const cards = document.querySelectorAll('#notesPane .notes-row-card');
   if (!cards.length) {
-    statusEl.textContent = '❌ 注意事項尚未載入';
+    setSaveStatus('❌ 注意事項尚未載入');
     return;
   }
-  statusEl.textContent = '儲存中...';
+  setSaveStatus('儲存中...');
   try {
     for (let i = 0; i < cards.length && i < table.rows.length; i++) {
       const values = {};
@@ -1558,11 +2120,11 @@ async function saveAllNotesFromPane() {
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || ('列 ' + table.rows[i].item + ' 寫回失敗'));
     }
-    statusEl.textContent = '✅ 注意事項已寫回 Markdown！';
+    setSaveStatus('✅ 注意事項已寫回 Markdown！');
     await loadNotesTable(key);
-    setTimeout(function() { statusEl.textContent = ''; }, 3000);
+    setTimeout(function() { setSaveStatus(''); }, 3000);
   } catch (err) {
-    statusEl.textContent = '❌ 儲存失敗: ' + err.message;
+    setSaveStatus('❌ 儲存失敗: ' + err.message);
   }
 }
 function saveWorkbench() {
