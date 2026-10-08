@@ -30,7 +30,7 @@ import { MAP_SELECT_TEXT, mapCandidateLabel, mapCandidateSource } from './mapSel
 import { buildTerrain, battleBBox, roadImagerySampler } from './terrain.js';
 import {
   buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode, warmOsm,
-  commitOsmIn, osmInReady, resetOsmMisses, clearOsmIn, fetchGridRoads, fetchOsmRoads,
+  commitOsmIn, osmInOf, osmInReady, resetOsmMisses, clearOsmIn, fetchGridRoads, fetchOsmRoads,
 } from './biomes.js';
 import { roadGridRotDeg } from './roadgrid.js';
 import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from './osmrelay.js';
@@ -2948,10 +2948,13 @@ function scheduleOsmRetry(cfg, key) {
   const attempt = async () => {
     if (_osmRetry !== st) return;   // 已被換房/取消
     st.tries++;
+    const bbox = battleBBox(cfg);
+    const missingFeats = osmInOf(bbox, 'feats') == null;
+    const missingRoads = osmInOf(bbox, 'roads') == null;
     let feats = null, roads = null;
-    try { [feats, roads] = await warmOsm(battleBBox(cfg)); } catch { /* 缺席照走備援 */ }
+    try { [feats, roads] = await warmOsm(bbox, { retryMissing: true }); } catch { /* 缺席照走備援 */ }
     if (_osmRetry !== st) return;
-    if ((feats !== null && feats !== undefined) || (roads !== null && roads !== undefined)) {
+    if ((missingFeats && feats != null) || (missingRoads && roads?.length)) {
       _osmRetry = null;
       // 中繼閘把「查過且沒有」記成 null:補抓成功後 MUST 把那些格退回未定案,
       // 否則第一輪的失敗會把自己永久鎖死,這一整段重試等於沒做(拿到資料的格刻意不動 ——

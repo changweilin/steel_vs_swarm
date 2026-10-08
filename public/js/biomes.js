@@ -4327,13 +4327,13 @@ export function clearOsmIn() {
 
 
 /** Overpass 圖資(逾時就放棄 → 程序生成備援):建物 + 鐵路/捷運 + 瀑布 */
-async function fetchOsmFeatures(bbox) {
+async function fetchOsmFeatures(bbox, { retryMissing = false } = {}) {
   // 路網中繼:本輪已定案(伺服器轉來的房主那一份,或本客戶端親自查過的結果)⇒ 直接用,
   // 不查網路也不查快取。深拷貝理由同 geocache(下游 buildRails/harvestOsm 就地變異)。
   // **刻意不寫進 geocache**:中繼的來源是房主 = 不可信輸入,持久化它會污染這台機器之後
   // 每一場(含它自己當房主的那一場),而快取的紀律正是「只准存自己完整抓到的東西」。
   const inj = osmInOf(bbox, 'feats');
-  if (inj !== undefined) return inj && structuredClone(inj);
+  if (inj !== undefined && !(retryMissing && inj === null)) return inj && structuredClone(inj);
   // Overpass 回應快取(geocache.js):同 bbox 首次完整成功即定案(remark = 伺服器截斷/逾時,不入庫)。
   // 之後每場建物/鐵路輸入位元級一致 —— 圖資不再隨鏡像輪替/限流逐局忽有忽無。
   // 鍵含查詢額度:額度常數改版自然失效重抓。
@@ -4361,9 +4361,10 @@ async function fetchOsmFeatures(bbox) {
  * 道路路網(獨立 Overpass 查詢):與建物/鐵路分開,避免道路查詢過重或逾時時
  * 連帶拖垮既有的建物/鐵路渲染。失敗回 null → buildBiomes 退回以兵線為主要道路。
  */
-export async function fetchOsmRoads(bbox, { evidence = false } = {}) {
+export async function fetchOsmRoads(bbox, { evidence = false, retryMissing = false } = {}) {
   const inj = osmInOf(bbox, 'roads');   // 路網中繼(理由同 fetchOsmFeatures)
-  if (inj !== undefined && (!evidence || inj?.every(road => Number.isSafeInteger(road.id)))) return inj && structuredClone(inj);
+  if (inj !== undefined && !(retryMissing && inj === null)
+    && (!evidence || inj?.every(road => Number.isSafeInteger(road.id)))) return inj && structuredClone(inj);
   // 路網快取:兵線橋/地下道/隧道的唯一 OSM 輸入 —— 首次完整成功即定案,
   // 之後每場真橋/隧道 way 集合恆定(dropLaneBridges/dedupe/carve 皆純幾何 → 整條管線可重現)。
   // 兩級查詢、各自額度(2026-07-17 巴黎道路消失案):單一 `out geom 300` 在密路網市區
@@ -4418,8 +4419,9 @@ export async function fetchGridRoads(bbox) {
  * 命中 geocache 即回(零網路);成功結果由 fetcher 自身定案入庫 → 之後的
  * buildBiomes(重建預建或下一場)直接命中快取。回傳 [features|null, roads|null]。
  */
-export function warmOsm(bbox) {
-  return Promise.all([fetchOsmFeatures(bbox), fetchOsmRoads(bbox)]);
+/** invariant: retryMissing bypasses failed slots without changing accepted room inputs. */
+export function warmOsm(bbox, options = {}) {
+  return Promise.all([fetchOsmFeatures(bbox, options), fetchOsmRoads(bbox, options)]);
 }
 
 // ---- 道路(圖資 way):有寬度的賽璐璐路面,主/次分級 + 依地貌變色 ----
