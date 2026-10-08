@@ -11,7 +11,7 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, b
   bloodScreenUv, bloodDirFromUv,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
   botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG, FLY_Y,
-  WEATHER_DEBUFFS, windSpeedFactor, altTier } from '../public/js/data.js';
+  WEATHER_DEBUFFS, windSpeedFactor, weatherFlightSlowFactor, weatherGroundSlowFactor, altTier } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // Drone cruise altitude (AGL; at/above AA_MIN_ALT eats air-defense missiles -- bots fly at deliberate risk)
@@ -192,6 +192,7 @@ export class BotBrain {
    *  _speed and _push position convergence share this seam -- no second slow factor inside update. */
   _ccF(h) {
     const t = this.sim.t;
+    if ((h.freezeUntil || 0) > t) return 0;
     if ((h.stunUntil || 0) > t) return 0;
     let f = 1;
     if ((h.slowUntil || 0) > t) f *= h.slowF ?? 0.6;
@@ -222,11 +223,17 @@ export class BotBrain {
     // High-ground suppression slow (2026-08-12; see data.js HIGH_SUP (5)): the human half lives in client game._mobility,
     // the bot client lives here -- both ends share `highSupSpeedF`, server never slows humans twice.
     const sup = highSupSpeedF(this.sim._supF(h));
+    const fly = this._fly(h);
     let spd = heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h) * sup;
     if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) spd *= BOSS.ENRAGE_SPD_F;
-    if ((dx !== 0 || dz !== 0) && this.sim?.curWeatherDyn && this.sim.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
-      const wDir = this.sim.curWeatherDyn.windDirServer || this.sim.curWeatherDyn.windDir;
-      spd *= windSpeedFactor(dx, dz, wDir, this.sim.curWeatherDyn.wind);
+    if (fly) {
+      if ((dx !== 0 || dz !== 0) && this.sim?.curWeatherDyn && this.sim.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
+        const wDir = this.sim.curWeatherDyn.windDirServer || this.sim.curWeatherDyn.windDir;
+        spd *= windSpeedFactor(dx, dz, wDir, this.sim.curWeatherDyn.wind);
+      }
+      if (this.sim?.curWeatherDyn) spd *= weatherFlightSlowFactor(this.sim.curWeatherDyn);
+    } else {
+      if (this.sim?.weatherSurface) spd *= weatherGroundSlowFactor(this.sim.weatherSurface);
     }
     return spd;
   }
@@ -337,6 +344,7 @@ export class BotBrain {
     const sim = this.sim;
     const h = sim.heroes.get(this.pid);
     if (!h || sim.over) return;
+    if ((h.freezeUntil || 0) > sim.t) return;
     if (h.dead) { this.state = 'PUSH'; this.prog = 0; return; }
     this._resolveRole(h);
 

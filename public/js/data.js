@@ -968,8 +968,10 @@ export const FLIGHT = {
   HOVER_M: 2.5,
 };
 /** 受擊掉高(公尺):該次傷害造成的下降量 —— 推導不手寫 */
-export const airSinkM = (dmg) =>
-  Math.max(0, dmg || 0) / SQUAD.DRONE_AVG_HP * FLIGHT.SINK_TOWERS * TARGET_H.tower;
+export const airSinkWindFactor = (wind = 0) =>
+  1.0 + (wind > 75 ? 0.25 * Math.min(1.0, (wind - 75) / 25) : 0);
+export const airSinkM = (dmg, wind = 0) =>
+  Math.max(0, dmg || 0) / SQUAD.DRONE_AVG_HP * FLIGHT.SINK_TOWERS * TARGET_H.tower * airSinkWindFactor(wind);
 /** 爬升動力上限(全機體共用固定值 FLIGHT.LIFT_MAX;參數保留僅為相容,MUST NOT 再按機體區分) */
 export const liftMax = () => FLIGHT.LIFT_MAX;
 /** 爬升動力回復(每秒固定值 FLIGHT.REGEN_PS;參數保留僅為相容) */
@@ -7289,19 +7291,26 @@ export function resolveWeatherDynamics(weatherVec, prevDyn = null, dt = 0) {
   };
 }
 
-// 動態天氣 Debuff 參數與單一真相縫 (強風移速、大雪 CD、沙暴攻速、大雨攻擊力、打雷閃電傷害)
+// 動態天氣 Debuff 參數與單一真相縫 (強風移速、大雪 CD、沙暴攻速、大雨攻擊力、打雷閃電傷害、衝擊波、視野命中)
 export const WEATHER_DEBUFFS = {
   THRESHOLD: 75,       // 各屬性觸發門檻 75%
   MAX_CHANGE: 0.125,   // 最大變化幅度 12.5%
   LIGHTNING: {
     BASE_DMG: 75,      // 閃電基礎傷害
-    PEN: 15,           // 穿甲值
-    INTERVAL_MIN: 2.0, // 打雷 100% 時判定頻率 (每 2 秒一次)
-    INTERVAL_MAX: 8.0, // 打雷 75% 剛觸發時判定頻率 (每 8 秒一次)
-    PROB_MIN: 0.35,    // 最低觸發機率
-    PROB_MAX: 0.90,    // 最高觸發機率
-    MAX_TARGETS: 3,    // 單次閃電最大打擊目標數
+    PEN: 15,           // Armor penetration
+    INTERVAL_MIN: 2.0, // Check interval at thunder 100% (every 2s)
+    INTERVAL_MAX: 8.0, // Check interval at thunder 75% threshold (every 8s)
+    PROB_MIN: 0.35,    // Min trigger probability
+    PROB_MAX: 0.90,    // Max trigger probability
+    MAX_TARGETS: 3,    // Max lightning targets per strike
+    SHOCK_R: 18,       // Shockwave radius (m)
+    SHOCK_DMG: 18,     // Max shockwave minor damage (attenuates with distance)
+    SHOCK_IMP: 14,     // Shockwave displacement impulse
   },
+  SURFACE_SLOW_MAX: 0.25,    // Surface slow/jump penalty cap (25%)
+  AIR_PRECIP_SLOW_MAX: 0.10,  // Airborne flight speed penalty cap (10%)
+  WIND_SINK_MAX: 0.25,        // Wind unbalance altitude loss increase cap (25%)
+  ACCURACY_DROP_MAX: 0.20,    // Fog/night accuracy penalty cap (20%)
 };
 
 /**
@@ -7355,6 +7364,78 @@ export function windSpeedFactor(moveX, moveZ, windDir, wind) {
   const intensity = Math.max(0, Math.min(1.0, (wind - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD)));
   return 1.0 + WEATHER_DEBUFFS.MAX_CHANGE * intensity * cosTheta;
 }
+
+/** Airborne unit speed multiplier affected by rain/snow (up to -10%) */
+export function weatherFlightSlowFactor(dyn = {}) {
+  const rainInt = dyn.rainSlow ?? (dyn.rainIntensity ?? (dyn.effectiveRain ?? (dyn.rain > WEATHER_DEBUFFS.THRESHOLD ? (dyn.rain - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
+  const snowInt = dyn.snowSlow ?? (dyn.snowIntensity ?? (dyn.effectiveSnow ?? (dyn.snow > WEATHER_DEBUFFS.THRESHOLD ? (dyn.snow - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
+  const intensity = Math.min(1.0, Math.max(0, Math.max(rainInt, snowInt)));
+  return 1.0 - WEATHER_DEBUFFS.AIR_PRECIP_SLOW_MAX * intensity;
+}
+
+/**
+ * Wind-induced unbalance height threshold:
+ * Baseline: 1 tower height (TARGET_H.tower);
+ * At max wind (wind=100), drops to 0.5 tower height, making mechs easier to destabilize.
+ */
+export function unbalAltThreshold(wind = 0) {
+  const intensity = wind > WEATHER_DEBUFFS.THRESHOLD
+    ? (wind - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD)
+    : 0;
+  return TARGET_H.tower * (1.0 - 0.5 * Math.min(1.0, Math.max(0, intensity)));
+}
+
+export const WEATHER_ACCURACY = {
+  MAX_PENALTY: 0.20, // Max 20% accuracy reduction from fog and night
+};
+
+/**
+ * Fog and night accuracy penalty (0 ~ 0.20):
+ * - Fog: linear scale from effectiveFog (0~1), up to 20% at full fog.
+ * - Night: sunset/sunrise and midnight depth, combined with lunar phase and moon altitude.
+ * - Sum capped at MAX_PENALTY (20%).
+ */
+export function weatherAccuracyPenalty(fog = 0, hour = 12, sched = null, lunarDayOpt = null) {
+  const effectiveFog = typeof fog === 'object' ? (fog.effectiveFog ?? 0) : Number(fog) || 0;
+  const fogPen = WEATHER_ACCURACY.MAX_PENALTY * Math.max(0, Math.min(1.0, effectiveFog));
+
+  const rH = sched?.riseH ?? DAYCLOCK.RISE_H;
+  const sH = sched?.setH ?? DAYCLOCK.SET_H;
+  const sun = sunDirAt(hour, rH, sH);
+
+  let nightPen = 0;
+  if (sun.y <= 0) {
+    const sunDepression = Math.min(1.0, Math.max(0, -sun.y) / 0.7);
+    const lDay = lunarDayOpt != null ? lunarDayOpt : (sched?.lunarDay ?? 15);
+    const moon = lunarMoonDirAt(hour, lDay, rH, sH);
+    const lunarAngle = ((lDay - 1) / 29.53059) * (Math.PI * 2);
+    const moonPhaseIllum = (1 - Math.cos(lunarAngle)) / 2;
+    const moonLight = moon.y > 0 ? Math.min(1.0, moon.y / 0.5) * moonPhaseIllum : 0;
+    const nightDarkness = Math.max(0, sunDepression * (1.0 - moonLight));
+    nightPen = WEATHER_ACCURACY.MAX_PENALTY * nightDarkness;
+  }
+
+  return Math.min(WEATHER_ACCURACY.MAX_PENALTY, fogPen + nightPen);
+}
+
+/** Adjusted miss probability under weather/time accuracy penalty */
+export const weatherMissP = (missP, penalty = 0) =>
+  1 - (1 - (missP || 0)) * (1 - Math.max(0, Math.min(WEATHER_ACCURACY.MAX_PENALTY, penalty || 0)));
+
+/** Airborne unit attack rate multiplier affected by airborne sand (up to -25%) */
+export function weatherFlightAttackRateFactor(dyn = {}) {
+  const sandInt = dyn.sandSlow ?? (dyn.sandIntensity ?? (dyn.effectiveSand ?? (dyn.sand > WEATHER_DEBUFFS.THRESHOLD ? (dyn.sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
+  const intensity = Math.min(1.0, Math.max(0, sandInt));
+  return 1.0 - 0.25 * intensity;
+}
+
+export const WEATHER_FREEZE = {
+  DUR_S: 2.0,            // Freeze duration in seconds
+  COOLDOWN_S: 30.0,      // Trigger cooldown per entity in seconds
+  DMG_REDUCTION: 0.75,   // Damage reduction during freeze (-75%)
+};
+
+export { weatherSurfaceCover, weatherSurfaceCoverMax, weatherGroundSlowFactor, weatherJumpHeightFactor, weatherJumpVelocityFactor, weatherGroundAttackRateFactor } from './weatherState.js';
 
 /**
  * 依季節、開場時段、開場天氣、經過秒數與種子確定性計算當前天氣。
