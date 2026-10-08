@@ -7,9 +7,10 @@
 import * as THREE from 'three';
 import { wallDecorationParts, WALL_DECORATION_RULES, WALL_DECORATION_LIMIT } from './wallDecorations.js';
 import { architecturePartGeometry } from './architecturePartGeometry.js';
+import { architecturalEntranceParts, architecturalBalconyParts } from './architectureFacadeParts.js';
 import { architectureHash } from './buildingDiversity.js';
 import { roofDimensions, sectionRoofProfile, sectionRoofHeight, ROOF_SEAT_SINK } from './architectureRoofParts.js';
-import { paintGeometry, pointInRing, attachmentSite } from './osmBuilding.js';
+import { paintGeometry, attachmentSite } from './osmBuilding.js';
 import { optimalSolarTiltRad, mapRot } from './data.js';
 import {
   ROOF_APPURTENANCE_COMPATIBILITY,
@@ -18,9 +19,12 @@ import {
   isSiteValid,
   computeOrientedRoofFrame,
   resolveWindowScheme,
+  resolveExteriorScheme,
+  getEdgeFrame,
 } from './architectureStyles.js';
 
 export { distanceToSegment, distanceToPolyBoundary, isSiteValid };
+export { getEdgeFrame };
 
 // 牆面渲染（含窗戶）與外掛零件不可重疊：以外牆局部座標 (u 沿牆，y 離地）
 // 重建與 architecturalFacadeParts 同格的窗玻璃佔位（同 scheme、同層高層數、
@@ -423,25 +427,6 @@ export function getRoofPlacementSites(poly, metrics) {
   return { corners, edges, center };
 }
 
-/** 依外向法線計算牆面幾何局部坐標系 (保證 local +Z 指向戶外、角度與世界坐標同調) */
-export function getEdgeFrame(edge, poly) {
-  const len = edge.hw2 != null ? edge.hw2 * 2 : (edge.len || 0);
-  const ry = edge.ry ?? (edge.nx != null && edge.nz != null ? Math.atan2(-edge.nx, edge.nz) : 0);
-  const nx = -Math.sin(ry);
-  const nz = Math.cos(ry);
-  const testDist = 0.25;
-  const isInside = pointInRing(edge.x + nx * testDist, edge.z + nz * testDist, poly.outer) &&
-    !(poly.holes || []).some(h => pointInRing(edge.x + nx * testDist, edge.z + nz * testDist, h));
-  const outNx = isInside ? -nx : nx;
-  const outNz = isInside ? -nz : nz;
-  const rotY = Math.atan2(outNx, outNz);
-  // 立面格 (edge.ry) 與外掛框 (rotY) 的 u 方向：翻面牆差一面鏡（純旋轉保不住雙手系）。
-  // uSign = +1 同向（外掛 u ＝ 立面 u）；-1 鏡射（外掛 u ＝ -立面 u）。
-  // 立面窗格佔位一律以立面 u 計算，進入外掛比較／放置前 MUST 乘 uSign。
-  const uSign = isInside ? -1 : 1;
-  return { outNx, outNz, rotY, len, uSign };
-}
-
 /** 依屋頂造型計算指定 (x, z) 點的實際屋頂面高度，杜絕屋頂構件漂浮或埋入 */
 export function getRoofElevation(x, z, poly, roofForm = 'flat', metrics = null, topY = 0, height = 10) {
   if (!roofForm || roofForm === 'flat' || !poly?.outer?.length) return topY;
@@ -593,6 +578,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
   const contemporary = !architecture.proceduralOnly || architecture.era !== 'historic';
   const idBase = `${architecture.id || 'bld'}|${edges[0]?.sourceId || edges[0]?.x}|${poly.outer.length}`;
   const variant = architecture.variant || 0;
+  const exterior = resolveExteriorScheme(architecture, idBase);
+  const finishKey = architecture.exteriorKey ?? idBase;
 
   // 計算屋頂指標與候選放置區位
   const metrics = precomputedMetrics || calculateRoofMetrics(poly);
@@ -729,7 +716,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       }
 
       // 門扇款式：全部件恆落在門洞矩形內（不壓窗不壓飾）。
-      const finish = doorFinish(idBase, cat);
+      const finish = doorFinish(finishKey, cat);
       const trimCol = architecture.trim || 0x6e5d50;
       const addDoorBox = (bw, bh, dx, dy, dd, color, dzc) => {
         const g = new THREE.BoxGeometry(bw, bh, dd);
@@ -741,6 +728,8 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       const [doorWX, doorWZ] = frameXZ(frontEdge, frame.rotY, doorOffset, wallThickness / 2 + 0.04);
       const doorGy = groundYAt(doorWX, doorWZ);
       const slabZ = wallThickness / 2 + 0.04;
+      geos.push(...architecturalEntranceParts({ ...frontEdge, y: doorGy, ry: -frame.rotY },
+        doorOffset, doorW, doorH, { ...architecture, exterior }, wallThickness).map(architecturePartGeometry));
       if (finish.style === 'double') {
         // 雙開：兩扇＋中縫＋雙把手
         for (const side of [-1, 1]) {
@@ -775,37 +764,6 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
         mat.translate(doorOffset, 0.025, wallThickness / 2 + 0.38);
         mat.rotateY(frame.rotY); mat.translate(frontEdge.x, doorGy, frontEdge.z);
         geos.push(paintGeometry(mat, [0x655443, 0x425c51, 0x804c42][architectureHash(idBase, 'mat_color') % 3], variant));
-      }
-
-      // 門楣橫板
-      const lintel = new THREE.BoxGeometry(doorW + 0.3, 0.22, 0.12);
-      lintel.translate(doorOffset, doorH + 0.11, wallThickness / 2 + 0.06);
-      lintel.rotateY(frame.rotY);
-      lintel.translate(frontEdge.x, doorGy, frontEdge.z);
-      geos.push(paintGeometry(lintel, architecture.trim || 0x6e5d50, variant));
-
-      // 遮雨棚 (Canopy / Awning) - 需正門長度足夠包容門框與兩側餘裕，且嚴格受限於邊界
-      const hasCanopy = (architectureHash(idBase, 'canopy') % 100) < 75;
-      const maxCanopyW = Math.min(doorW + 1.2, (frontLen / 2 - Math.abs(doorOffset)) * 2 - 0.4);
-      if (hasCanopy && maxCanopyW >= doorW + 0.3) {
-        const canopyW = maxCanopyW;
-        const canopyD = 1.5;
-        const canopy = new THREE.BoxGeometry(canopyW, 0.12, canopyD);
-        const awningStyle = architectureHash(idBase, 'awning_style') % 3;
-        if (awningStyle === 1) canopy.rotateX(0.16);
-        canopy.translate(doorOffset, doorH + 0.35, wallThickness / 2 + canopyD / 2);
-        canopy.rotateY(frame.rotY);
-        canopy.translate(frontEdge.x, doorGy, frontEdge.z);
-        const canopyColor = contemporary ? (cat === 'commercial' ? 0x2a3b4c : 0xb04132) : architecture.trim;
-        geos.push(paintGeometry(canopy, canopyColor, variant));
-        if (awningStyle === 2) {
-          for (let strip = 0; strip < 7; strip++) {
-            const stripe = new THREE.BoxGeometry(canopyW / 7 * 0.48, 0.025, canopyD);
-            stripe.translate(doorOffset + (strip - 3) * canopyW / 7, doorH + 0.423, wallThickness / 2 + canopyD / 2);
-            stripe.rotateY(frame.rotY); stripe.translate(frontEdge.x, doorGy, frontEdge.z);
-            geos.push(paintGeometry(stripe, 0xe6d6b3, variant));
-          }
-        }
       }
 
       // 迎賓盆栽 (Planter Pots) - 需正門兩側有足夠餘裕 (>= doorW + 1.8)
@@ -859,7 +817,9 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
       sDoor.rotateY(sFrame.rotY);
       const [sdWX, sdWZ] = frameXZ(sideEdge, sFrame.rotY, sOffset, wallThickness / 2 + 0.03);
       sDoor.translate(sideEdge.x, groundYAt(sdWX, sdWZ), sideEdge.z);
-      geos.push(paintGeometry(sDoor, doorFinish(idBase, cat).color, variant));
+      geos.push(paintGeometry(sDoor, doorFinish(finishKey, cat).color, variant));
+      geos.push(...architecturalEntranceParts({ ...sideEdge, y: groundYAt(sdWX, sdWZ), ry: -sFrame.rotY },
+        sOffset, sDoorW, sDoorH, { ...architecture, exterior }, wallThickness).map(architecturePartGeometry));
       const sHandle = new THREE.BoxGeometry(0.05, 0.2, 0.05);
       sHandle.translate(sOffset + sDoorW / 2 - 0.18, Math.min(1.0, sDoorH * 0.5), wallThickness / 2 + 0.08);
       sHandle.rotateY(sFrame.rotY);
@@ -995,7 +955,7 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
     }
 
     // 陽台 (Balconies) & 曬衣架 (Drying Racks) - 住宅類；壓窗即該開間跳過
-    if (contemporary && cat === 'residential' && floors >= 2 && len >= 7.5) {
+    if (exterior.kind === 'balconies' && contemporary && cat === 'residential' && floors >= 2 && len >= 7.5) {
       const bays = Math.max(1, Math.floor(len / 4.5));
       for (let f = 1; f < floors; f++) {
         const fy = f * floorH;
@@ -1004,24 +964,14 @@ export function generateBuildingAppurtenances(poly, edges = [], baseY, topY, arc
           const balW = Math.min(2.8, (len / bays) * 0.7);
 
           if (balconyCount >= APPURTENANCE_RULES.balconies.maxCount ||
-            architectureHash(edgeSeed, `${f}:${b}:balcony`) % 100 >= 70) continue;
+            (f + b) % exterior.period !== 0) continue;
           // 陽台體 (底板至曬衣桿 fy-0.1 ~ fy+1.7）壓窗即跳過。
           if (rectsOverlap(u, fy + 0.8, balW, 1.8, glassRects)) continue;
           balconyCount++;
-          const balconyStyle = architectureHash(edgeSeed, `${f}:${b}:balcony_style`) % 3;
-          // 陽台底板
-          const bSlab = new THREE.BoxGeometry(balW, 0.12, 1.2);
-          bSlab.translate(u, fy, wallThickness / 2 + 0.6);
-          bSlab.rotateY(frame.rotY);
-          bSlab.translate(edge.x, baseY, edge.z);
-          geos.push(paintGeometry(bSlab, architecture.trim || 0x616161, variant));
-
-          // 陽台欄杆
-          const bRail = new THREE.BoxGeometry(balW, balconyStyle === 1 ? 0.09 : 0.8, 0.06);
-          bRail.translate(u, fy + 0.4, wallThickness / 2 + 1.2);
-          bRail.rotateY(frame.rotY);
-          bRail.translate(edge.x, baseY, edge.z);
-          geos.push(paintGeometry(bRail, balconyStyle === 2 ? 0x77989f : 0x424242, variant));
+          const balconyStyle = architectureHash(finishKey, 'balcony_style') % 3;
+          geos.push(...architecturalBalconyParts({ ...edge, y: baseY, ry: -frame.rotY },
+            u, fy, balW, 1.2, architecture, wallThickness, balconyStyle === 1 ? 0.09 : 0.8,
+            balconyStyle === 2 ? 0x77989f : 0x424242).map(architecturePartGeometry));
           if (balconyStyle === 1) for (let bar = 0; bar < 5; bar++) {
             addDetail(0.045, 0.8, 0.045, u + (bar - 2) * balW / 5, fy + 0.4, 1.2, 0x424242);
           }

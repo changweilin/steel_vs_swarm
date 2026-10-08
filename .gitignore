@@ -89,3 +89,6 @@ tools/ambient_authoring/__pycache__/
 
 out/road_structure_review/
 tools/road_structure_authoring/__pycache__/
+
+out/facade_review/
+tools/facade_authoring/__pycache__/
