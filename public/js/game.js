@@ -9748,7 +9748,7 @@ export class BattleClient {
       }
       const surfSlowF = weatherGroundSlowFactor(this.weatherSurface || this.envFx?.getWeatherSurface?.());
       this.pos.addScaledVector(move, this._mobility(false) * boost * this._zoneSlow() * slowK * this._terrainSlowF()
-        * slopeF * this._recoilMoveF(false) * this._ccMoveF() * this._modF('speed') * windMul * airK * surfSlowF * dt);
+        * slopeF * this._recoilMoveF(false) * this._ccMoveF() * this._modF('speed') * windMul * surfSlowF * airK * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       // 蓄力跳騰空(_lowG):水平近乎無阻力滑行(太空漫步的慣性);觸地恢復地面摩擦

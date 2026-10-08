@@ -224,7 +224,7 @@ export class BotBrain {
     // bot 的「客戶端」就是這裡 —— 兩端同一支 `highSupSpeedF`,伺服器不對真人再折一次。
     const sup = highSupSpeedF(this.sim._supF(h));
     const fly = this._fly(h);
-    let spd = heroMobility(h.kind, CHARACTERS[h.ch]?.mods, fly) * this._ccF(h) * sup;
+    let spd = heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h) * sup;
     if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) spd *= BOSS.ENRAGE_SPD_F;
     if (fly) {
       if ((dx !== 0 || dz !== 0) && this.sim?.curWeatherDyn && this.sim.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
