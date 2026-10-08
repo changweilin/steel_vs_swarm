@@ -130,7 +130,7 @@ assert(reverse.every(s => s.ry === Math.PI / 2), 'reverse one-way faces incoming
 const routed = parseOsmFeatureElements(['stop', 'give_way', 'crossing', 'traffic_signals'].map((highway, i) =>
   ({ type: 'node', lat: 25, lon: 121 + i / 10000, tags: { highway } })));
 assert.equal(routed.pois.length, 4);
-assert.equal(OSM_FEATURE_QUERY_VERSION, 12);
+assert.equal(OSM_FEATURE_QUERY_VERSION, 13);
 const query = osmFeatureQuery({ minLat: 24, maxLat: 25, minLng: 120, maxLng: 121 });
 for (const tag of ['traffic_sign', 'give_way', 'traffic_signals', 'viewpoint', 'police', 'post_office']) assert(query.includes(tag));
 for (const clause of query.split(';').filter(clause => /^node\["(?:amenity|tourism|traffic_sign|highway|traffic_calming|office)"/.test(clause))) {
