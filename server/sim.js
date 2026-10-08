@@ -2315,20 +2315,79 @@ export class BattleSim {
     t.empUntil = Math.max(t.empUntil || 0, this.t + def.emp);
   }
 
-  /** Weapon elemental status buildup (single seam). Triggers abnormal status when threshold (100) is reached. */
+  /** Weapon elemental status buildup & probability (single seam). */
   _applyHitElem(attacker, def, target) {
     if (!def?.elem || !target || target.hp <= 0) return;
     if (target.kind === 'tower' || target.kind === 'base') return;
     if (target.hero && (target.dead || target.invUntil > this.t)) return;
     if (target.hero && this._buffVal(target, 'ccImm') > 0) return;
 
+    const elem = def.elem;
+
+    // 感電: 機率制 (不走量表)
+    if (elem === 'shock') {
+      const prob = def.elemProb ?? (def.id === 'heavy' ? 0.35 : (def.rate > 5 ? 0.12 : 0.22));
+      if (Math.random() < prob) {
+        target.empUntil = Math.max(target.empUntil || 0, this.t + (def.empDur || 1.2));
+        this.events.push({ e: 'emp_hit', pid: target.pid, x: target.x, z: target.z, elem: 'shock' });
+      }
+      return;
+    }
+
+    // Impact / shockwave: probabilistic trigger + stacking stagger
+    if (elem === 'impact' || elem === 'shockwave') {
+      const prob = def.elemProb ?? (def.id === 'heavy' ? 0.60 : (def.rate > 5 ? 0.28 : 0.45));
+      if (Math.random() < prob) {
+        target._staggerStacks = Math.min(3, (target._staggerStacks || 0) + 1);
+        const addDur = 0.25;
+        target.stunUntil = Math.min(this.t + 1.2, Math.max(target.stunUntil || 0, this.t) + addDur);
+        target.staggerStacks = target._staggerStacks;
+        this.events.push({ e: 'stagger', pid: target.pid, x: target.x, z: target.z, elem, stacks: target._staggerStacks });
+      }
+      return;
+    }
+
+    // Buildup elements: poison, sonic, fire, frost
     target._elemBuildup ||= {};
     target._elemLastHit ||= {};
-    const elem = def.elem;
     const inc = def.elemBuildup || (def.id === 'heavy' ? 40 : (def.rate > 5 ? 12 : 25));
     target._elemBuildup[elem] = (target._elemBuildup[elem] || 0) + inc;
     target._elemLastHit[elem] = this.t;
 
+    // Poison: faster buildup (threshold 50) + stacking poison
+    if (elem === 'poison') {
+      if (target._elemBuildup[elem] >= 50) {
+        target._elemBuildup[elem] = 0;
+        target._psnStacks = Math.min(5, (target._psnStacks || 0) + 1);
+        const dpsPerStack = Math.max(6, Math.round((def.dmg || 50) * 0.15));
+        target.bleed = {
+          dps: dpsPerStack * target._psnStacks,
+          until: this.t + 3.0,
+          pen: 10,
+          pid: attacker?.pid,
+          attacker,
+        };
+        target.slowUntil = Math.max(target.slowUntil || 0, this.t + 2.0);
+        target.slowF = Math.max(0.5, 1.0 - 0.08 * target._psnStacks);
+        this.events.push({ e: 'poison_hit', pid: target.pid, x: target.x, z: target.z, elem: 'poison', stacks: target._psnStacks });
+      }
+      return;
+    }
+
+    // Sonic: faster buildup (threshold 50) + stacking confusion
+    if (elem === 'sonic') {
+      if (target._elemBuildup[elem] >= 50) {
+        target._elemBuildup[elem] = 0;
+        target._sonicStacks = Math.min(4, (target._sonicStacks || 0) + 1);
+        const durPerStack = 0.8;
+        target.confUntil = Math.min(this.t + 3.5, Math.max(target.confUntil || 0, this.t) + durPerStack);
+        target.confStacks = target._sonicStacks;
+        this.events.push({ e: 'confuse_hit', pid: target.pid, x: target.x, z: target.z, elem: 'sonic', stacks: target._sonicStacks });
+      }
+      return;
+    }
+
+    // Fire / frost (threshold 100)
     if (target._elemBuildup[elem] >= 100) {
       target._elemBuildup[elem] = 0;
       if (elem === 'fire') {
@@ -2339,21 +2398,6 @@ export class BattleSim {
         target.slowUntil = Math.max(target.slowUntil || 0, this.t + 2.5);
         target.slowF = 0.45;
         this.events.push({ e: 'freeze', pid: target.pid, x: target.x, z: target.z, elem: 'frost' });
-      } else if (elem === 'shock') {
-        target.empUntil = Math.max(target.empUntil || 0, this.t + 1.2);
-        this.events.push({ e: 'emp_hit', pid: target.pid, x: target.x, z: target.z, elem: 'shock' });
-      } else if (elem === 'poison') {
-        const dps = Math.round((def.dmg || 50) * 0.3);
-        target.bleed = { dps: Math.max(12, dps), until: this.t + 3.0, pen: 10, pid: attacker?.pid, attacker };
-        target.slowUntil = Math.max(target.slowUntil || 0, this.t + 2.0);
-        target.slowF = 0.7;
-        this.events.push({ e: 'poison_hit', pid: target.pid, x: target.x, z: target.z, elem: 'poison' });
-      } else if (elem === 'impact' || elem === 'shockwave') {
-        target.stunUntil = Math.max(target.stunUntil || 0, this.t + 0.6);
-        this.events.push({ e: 'stagger', pid: target.pid, x: target.x, z: target.z, elem });
-      } else if (elem === 'sonic') {
-        target.confUntil = Math.max(target.confUntil || 0, this.t + 1.5);
-        this.events.push({ e: 'confuse_hit', pid: target.pid, x: target.x, z: target.z, elem: 'sonic' });
       }
     }
   }
@@ -2362,21 +2406,31 @@ export class BattleSim {
   _tickElemBuildup(dt) {
     const decay = 20 * dt;
     for (const h of this.heroes.values()) {
-      if (!h._elemBuildup) continue;
-      for (const elem in h._elemBuildup) {
-        if (this.t - (h._elemLastHit?.[elem] || 0) > 2.5) {
-          h._elemBuildup[elem] = Math.max(0, h._elemBuildup[elem] - decay);
-          if (h._elemBuildup[elem] <= 0) delete h._elemBuildup[elem];
+      if (h._elemBuildup) {
+        for (const elem in h._elemBuildup) {
+          if (this.t - (h._elemLastHit?.[elem] || 0) > 2.5) {
+            h._elemBuildup[elem] = Math.max(0, h._elemBuildup[elem] - decay);
+            if (h._elemBuildup[elem] <= 0) delete h._elemBuildup[elem];
+          }
         }
       }
+      if (h._psnStacks && (!h.bleed || h.bleed.until <= this.t)) h._psnStacks = 0;
+      if (h._sonicStacks && (h.confUntil || 0) <= this.t) h._sonicStacks = 0;
+      if (h._staggerStacks && (h.stunUntil || 0) <= this.t) h._staggerStacks = 0;
     }
     for (const e of this.ents.values()) {
-      if (!e._elemBuildup || e.hero) continue;
-      for (const elem in e._elemBuildup) {
-        if (this.t - (e._elemLastHit?.[elem] || 0) > 2.5) {
-          e._elemBuildup[elem] = Math.max(0, e._elemBuildup[elem] - decay);
-          if (e._elemBuildup[elem] <= 0) delete e._elemBuildup[elem];
+      if (!e.hero) {
+        if (e._elemBuildup) {
+          for (const elem in e._elemBuildup) {
+            if (this.t - (e._elemLastHit?.[elem] || 0) > 2.5) {
+              e._elemBuildup[elem] = Math.max(0, e._elemBuildup[elem] - decay);
+              if (e._elemBuildup[elem] <= 0) delete e._elemBuildup[elem];
+            }
+          }
         }
+        if (e._psnStacks && (!e.bleed || e.bleed.until <= this.t)) e._psnStacks = 0;
+        if (e._sonicStacks && (e.confUntil || 0) <= this.t) e._sonicStacks = 0;
+        if (e._staggerStacks && (e.stunUntil || 0) <= this.t) e._staggerStacks = 0;
       }
     }
   }
@@ -2397,7 +2451,6 @@ export class BattleSim {
       }
     }
     if (key === 'dmg' && h.sq?.boss && (h.sq.bossSeg || 0) >= 3) m *= BOSS.ENRAGE_DMG_F;
-    if (key === 'dmg') m *= (this.curWeatherDyn?.rainAtkMul ?? 1);
     return m;
   }
 
@@ -4722,9 +4775,8 @@ export class BattleSim {
             c.ry = Math.atan2(-(target.x - c.x), target.z - c.z);
             if (c.cd === 0) {
               const sandMul = this._sandAttackRateMul(c);
-              const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
               c.cd = 1 / ((wp.def.rate || 3) * sandMul);
-              const dmg = this._rollCrit(c, wp.def, this._heroDmg(h, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul, target);
+              const dmg = this._rollCrit(c, wp.def, this._heroDmg(h, wp.def, target.kind) * dmgFalloff(wp.def, d), target);
               this._damage(target, dmg, c, wp.def.pen, 0, wp.def, { origin: [c.x, c.z] });
               this.events.push({
                 e: 'shot', id: c.id, kind: c.kind,
@@ -5068,9 +5120,8 @@ export class BattleSim {
           dec.ry = Math.atan2(-(target.x - dec.x), target.z - dec.z);
           if (dec.cd === 0) {
             const sandMul = this._sandAttackRateMul(dec);
-            const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
             dec.cd = 1 / ((dec.rate || wp.def.rate || 3) * sandMul);
-            const dmg = this._heroDmg(owner, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul * this._holoDecoyDmgF();
+            const dmg = this._heroDmg(owner, wp.def, target.kind) * dmgFalloff(wp.def, d) * this._holoDecoyDmgF();
             this._damage(target, dmg, dec, wp.def.pen, 0, wp.def, { origin: [dec.x, dec.z] });
             this.events.push({
               e: 'shot', id: dec.id, kind: dec.kind,
@@ -5246,11 +5297,10 @@ export class BattleSim {
         if (d <= s.range) {
           if (s.cd === 0) {
             const sandMul = this._sandAttackRateMul(s);
-            const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
             s.cd = 1 / ((s.rate || 0.8) * sandMul);
-            const wd = s.wid ? WEAPONS[s.wid] : null;
+            const wd = s.wid ? WEAPONS[s.wid] : (s.dmg ? { dmg: s.dmg, pen: 0 } : null);
             // 直射衰減與英雄同一支 dmgFalloff(無 type 的武器恆為 1 ⇒ 其餘召喚逐位元不動;beam 類召喚此前全額,現與英雄光束同衰減)
-            this._damage(target, s.dmg * rainMul * (wd ? dmgFalloff(wd, d) : 1), s, wd?.pen || 0, 0, wd);
+            this._damage(target, s.dmg * (wd ? dmgFalloff(wd, d) : 1), s, wd?.pen || 0, 0, wd);
             this.events.push({
               e: 'shot', id: s.id, kind: s.kind, wid: s.wid,
               from: [s.x, s.z], to: [target.x, target.z],
@@ -5777,8 +5827,7 @@ export class BattleSim {
           x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
         continue;
       }
-      const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
-      const base = npcDmg != null ? npcDmg * (t.hero ? 1 : (h.cu || 1)) * rainMul : this._heroDmg(h, def, t.kind);
+      const base = npcDmg != null ? npcDmg * (t.hero ? 1 : (h.cu || 1)) : this._heroDmg(h, def, t.kind);
       // 閃避補償(2026-08-12 使用者定案「維持 DPS 提高傷害,閃避率不動」):被閃掉的那一份還給
       // 沒被閃掉的這一發 ⇒ 期望傷害 = base × (1−p) × 1/(1−p) ≡ base。分母 MUST 是**這個目標自己的**
       // p(逐目標,與上面那一顆骰同一個值)—— 閃不掉的小兵/建築/重甲 p = 0 ⇒ 係數恆 1 ⇒ 逐位元同舊制。
@@ -6006,6 +6055,9 @@ export class BattleSim {
     // 夾在地板、不呼叫 _kill」—— 自己寫一份的話「不呼叫 _kill」很容易漏,而漏掉的症狀是塔照樣
     // 被拆掉、階段照樣推進,鎖血等於沒有發生。
     floorHp = Math.max(floorHp, this.siegeHpFloor(t));
+    if (wd && !this._inReflect && !this._inEntangle && this.curWeatherDyn?.rainAtkMul != null) {
+      dmg *= this.curWeatherDyn.rainAtkMul;
+    }
     dmg *= this._allyBotDmgF(t, by);               // 我方電腦玩家對 BOSS ×10% / 對建築 ×25%
     if (t.sq?.boss && (t.sq.bossSeg || 0) >= 3 && (!by || !by.hero)) {
       dmg *= BOSS.ENRAGE_NPC_DMG_F;                // 狂暴模式:受到兵波NPC/砲塔/主堡的傷害減少至25%
@@ -6898,7 +6950,6 @@ export class BattleSim {
         // 開火路徑只剩 `_tickBaseGuns` 一條(合併卻留著本體那一支 = 又變回兩把)。
         if (e.cd === 0 && !u.guns && !((e.empUntil || 0) > this.t)) {
           const sandMul = this._sandAttackRateMul(e);
-          const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
           e.cd = 1 / (u.rate * sandMul);
           // 塔/主堡是制式火砲:沒有 `wid` ⇒ 舊制 wd 為 undefined = 既不可閃也不爆風。
           // 2026-08-13 使用者「**所有爆炸傷害武器都套用**」⇒ 它們也是爆炸彈頭,改吃 `STRUCT_W`
@@ -6924,7 +6975,7 @@ export class BattleSim {
             // 陣營小兵強化:傷害吃 e.cu(生成時定案;塔/主堡/第三方無此欄 ⇒ ×1),但
             // **只對非玩家目標**(2026-08-11 使用者改制:打玩家機體一律原始傷害)。
             // 高度差不改基礎傷害(見 §3;閃避/射程仍吃高度差)
-            this._damage(target, u.dmg * (target.hero ? 1 : (e.cu || 1)) * rainMul, e, wd?.pen || 0, 0, wd);
+            this._damage(target, u.dmg * (target.hero ? 1 : (e.cu || 1)), e, wd?.pen || 0, 0, wd);
           }
           // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
@@ -7647,7 +7698,6 @@ export class BattleSim {
       const target = this._acquireTarget(e, gu);
       if (!target) continue;
       const sandMul = this._sandAttackRateMul(e);
-      const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
       e.gunCd[i] = 1 / (g.rate * sandMul);
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
       const mx = e.x + off, mz = e.z, my = BASE_MISSILE.LAUNCH_Y;

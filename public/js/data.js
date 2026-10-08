@@ -2961,12 +2961,13 @@ export const WATER = {
 // 涵蓋五大維度:受到傷害 / 水下移動速度 / 飛行動力回速 / 電力回充速度 / 護盾脫戰回復速度。
 // (舊制退場:WATER_FREEZE_S 凍結冷卻/換彈、SWAMP_DRAIN_* 沼澤扣血、SWAMP_SLOW_MIN 移動探底已全數退場)。
 export const TERRAIN_FX = {
-  WATER_FACTOR: 1 / 2,   // 水域異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/2)
-  SWAMP_FACTOR: 1 / 4,   // 沼澤異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/4)
-  FROZEN_FACTOR: 1 / 8,  // 凍結異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/8)
+  WATER_FACTOR: 1 / 2,   // 水域異常狀態倍率(受到傷害/移動速度/跳躍高度/飛行動力/電力/護盾恢復皆為 1/2)
+  SWAMP_FACTOR: 1 / 4,   // 沼澤異常狀態倍率(受到傷害/移動速度/跳躍高度/飛行動力/電力/護盾恢復皆為 1/4)
+  FROZEN_FACTOR: 1 / 8,  // 凍結異常狀態倍率(受到傷害/移動速度/跳躍高度/飛行動力/電力/護盾恢復皆為 1/8)
   FROZEN_DOT: 40,        // 凍結異常狀態扣血速度 (HP+SP/s，持續扣血直到死亡)
   WATER_DMG_TAKEN: 1 / 2, SWAMP_DMG_TAKEN: 1 / 4,
   WATER_SLOW: 1 / 2, SWAMP_SLOW: 1 / 4,
+  WATER_JUMP: 1 / 2, SWAMP_JUMP: 1 / 4,
   WATER_LIFT_REGEN: 1 / 2, SWAMP_LIFT_REGEN: 1 / 4,
   WATER_MP_REGEN: 1 / 2, SWAMP_MP_REGEN: 1 / 4,
   WATER_SP_REGEN: 1 / 2, SWAMP_SP_REGEN: 1 / 4,
@@ -2980,6 +2981,35 @@ export const fluidFactor = (wet) => (
   wet === 2 ? TERRAIN_FX.SWAMP_FACTOR :
   1
 );
+
+/** Terrain fluid jump height multiplier (water 1/2, swamp 1/4, frozen 1/8; depth-scaled for shallow) */
+export function terrainJumpHeightFactor(env) {
+  if (!env) return 1;
+  if (typeof env === 'string') {
+    if (env === 'swamp') return TERRAIN_FX.SWAMP_JUMP;
+    if (env === 'shallow_swamp') return 1 - (1 - TERRAIN_FX.SWAMP_JUMP) * 0.5;
+    if (env === 'water') return TERRAIN_FX.WATER_JUMP;
+    if (env === 'shallow_water') return 1 - (1 - TERRAIN_FX.WATER_JUMP) * 0.5;
+    return 1;
+  }
+  if (typeof env === 'number') {
+    if (env === 1) return TERRAIN_FX.WATER_JUMP;
+    if (env === 2) return TERRAIN_FX.SWAMP_JUMP;
+    if (env === 3) return TERRAIN_FX.FROZEN_FACTOR;
+    return 1;
+  }
+  if (env.ground === 0) return 1;
+  if (env.code > 0) return fluidFactor(env.code);
+  if (env.frozen) return 1;
+  if (env.ground === 2) {
+    return Math.max(TERRAIN_FX.SWAMP_JUMP, 1 - (1 - TERRAIN_FX.SWAMP_JUMP) * Math.min(1, (env.depth || 0) / WATER.SWAMP_BAND));
+  }
+  return Math.max(TERRAIN_FX.WATER_JUMP, 1 - (1 - TERRAIN_FX.WATER_JUMP) * Math.min(1, (env.depth || 0) / WATER.FULL_D));
+}
+
+export function terrainJumpVelocityFactor(env) {
+  return Math.sqrt(terrainJumpHeightFactor(env));
+}
 
 /**
  * 地形異常狀態觸發(2026-07-23 / 2026-08-22 整合重構;唯一縫 —— 客戶端 _envAt 與水下帷幕共用同一把尺)。
@@ -6260,7 +6290,7 @@ export const HAZARDS = {
   factoryfire:  { name: '工廠大火',   biome: 'urban', r: 14,  dot: 45, maxY: 40 },
   sinkhole:     { name: '路面塌陷',   biome: 'urban', r: 7,   block: true },
   pothole:      { name: '坑洞',       biome: 'urban', r: 4,   slow: 0.55 },
-  flood:        { name: '淹水區',     biome: 'wet',   r: 20,  slow: 0.45 },
+  flood:        { name: '淹水區',     biome: 'wet',   r: 20,  slow: 0.5 },
   landslide:    { name: '坍方土石流', biome: 'bare',  r: 13,  block: true },
   rockfall:     { name: '落石',       biome: 'bare',  r: 6.5, block: true, hp: 300, salvage: 0.65 },
   fallentree:   { name: '倒木',       biome: 'green', r: 7,   block: true, hp: 130, salvage: 0.5 },
@@ -7323,8 +7353,9 @@ export const WEATHER_DEBUFFS = {
     SHOCK_DMG: 18,     // Max shockwave minor damage (attenuates with distance)
     SHOCK_IMP: 14,     // Shockwave displacement impulse
   },
-  SURFACE_SLOW_MAX: 0.25,    // Surface slow/jump penalty cap (25%)
-  AIR_PRECIP_SLOW_MAX: 0.10,  // Airborne flight speed penalty cap (10%)
+  SURFACE_SLOW_MAX: 0.125,    // Surface slow/jump penalty cap (12.5%, was 25%)
+  AIR_PRECIP_SLOW_MAX: 0.0,   // Airborne flight speed penalty canceled (was 10%)
+  AIR_LIFT_SLOW_MAX: 0.125,   // Airborne flight lift penalty cap (12.5%)
   WIND_SINK_MAX: 0.25,        // Wind unbalance altitude loss increase cap (25%)
   ACCURACY_DROP_MAX: 0.20,    // Fog/night accuracy penalty cap (20%)
 };
@@ -7381,12 +7412,18 @@ export function windSpeedFactor(moveX, moveZ, windDir, wind) {
   return 1.0 + WEATHER_DEBUFFS.MAX_CHANGE * intensity * cosTheta;
 }
 
-/** Airborne unit speed multiplier affected by rain/snow (up to -10%) */
+/** Airborne unit speed multiplier affected by rain/snow (canceled: returns 1.0) */
 export function weatherFlightSlowFactor(dyn = {}) {
+  return 1.0;
+}
+
+/** Airborne unit climb/flight lift multiplier affected by rain/snow/sand (up to -12.5%) */
+export function weatherFlightLiftFactor(dyn = {}) {
   const rainInt = dyn.rainSlow ?? (dyn.rainIntensity ?? (dyn.effectiveRain ?? (dyn.rain > WEATHER_DEBUFFS.THRESHOLD ? (dyn.rain - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
   const snowInt = dyn.snowSlow ?? (dyn.snowIntensity ?? (dyn.effectiveSnow ?? (dyn.snow > WEATHER_DEBUFFS.THRESHOLD ? (dyn.snow - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
-  const intensity = Math.min(1.0, Math.max(0, Math.max(rainInt, snowInt)));
-  return 1.0 - WEATHER_DEBUFFS.AIR_PRECIP_SLOW_MAX * intensity;
+  const sandInt = dyn.sandSlow ?? (dyn.sandIntensity ?? (dyn.effectiveSand ?? (dyn.sand > WEATHER_DEBUFFS.THRESHOLD ? (dyn.sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
+  const intensity = Math.min(1.0, Math.max(0, Math.max(rainInt, snowInt, sandInt)));
+  return 1.0 - WEATHER_DEBUFFS.AIR_LIFT_SLOW_MAX * intensity;
 }
 
 /**
@@ -7438,11 +7475,11 @@ export function weatherAccuracyPenalty(fog = 0, hour = 12, sched = null, lunarDa
 export const weatherMissP = (missP, penalty = 0) =>
   1 - (1 - (missP || 0)) * (1 - Math.max(0, Math.min(WEATHER_ACCURACY.MAX_PENALTY, penalty || 0)));
 
-/** Airborne unit attack rate multiplier affected by airborne sand (up to -25%) */
+/** Airborne unit attack rate multiplier affected by airborne sand (up to -12.5%, aligned with ground) */
 export function weatherFlightAttackRateFactor(dyn = {}) {
   const sandInt = dyn.sandSlow ?? (dyn.sandIntensity ?? (dyn.effectiveSand ?? (dyn.sand > WEATHER_DEBUFFS.THRESHOLD ? (dyn.sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
   const intensity = Math.min(1.0, Math.max(0, sandInt));
-  return 1.0 - 0.25 * intensity;
+  return 1.0 - WEATHER_DEBUFFS.MAX_CHANGE * intensity;
 }
 
 export const WEATHER_FREEZE = {

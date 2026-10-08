@@ -25,8 +25,9 @@ import {
    CREEP_UPG, DISSOLVE, dissolveOutAt, ATK_CAST_S, fogSightMult, scopeRvminFog,
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
   WEATHER_DEBUFFS, windSpeedFactor, laneCssColor,
-  weatherFlightSlowFactor, weatherGroundSlowFactor, weatherJumpVelocityFactor, unbalAltThreshold,
+  weatherFlightSlowFactor, weatherFlightLiftFactor, weatherGroundSlowFactor, weatherJumpVelocityFactor, unbalAltThreshold,
   weatherFlightAttackRateFactor, weatherGroundAttackRateFactor, WEATHER_FREEZE,
+  terrainJumpHeightFactor, terrainJumpVelocityFactor,
   FIRE_WEATHER, fireDotMul,
     SCENE_STRUCT, sceneIsPhysical, clampHeroSpawn, solveTowerSites, mapArg,
 } from './data.js';
@@ -4697,10 +4698,30 @@ export class BattleClient {
           this._floodWarnAt = now;
           this.hud.feed?.('🌊 淹水區:機甲涉水速度大減!');
         }
-        return f.slow;
+        return Math.min(WATER.SLOW, f.slow ?? WATER.SLOW);
       }
     }
     return 1;
+  }
+
+  /** Terrain fluid and flood zone multiplier on initial jump velocity */
+  _terrainJumpVelocityF() {
+    if (this._flying() || this._env?.air) return 1;
+    for (const f of this.floods) {
+      if (Math.hypot(this.pos.x - f.x, this.pos.z - f.z) <= f.r) {
+        return Math.sqrt(WATER.SLOW); // Flood zone treated as water/shallow water
+      }
+    }
+    const e = this._env;
+    if (!e || e.ground === 0) return 1;
+    if (e.code > 0) return Math.sqrt(fluidFactor(e.code));
+    if (isWeatherFrozen()) return 1;
+    if (e.ground === 2) {
+      const hF = Math.min(1, 1 - (1 - TERRAIN_FX.SWAMP_SLOW) * Math.min(1, e.depth / WATER.SWAMP_BAND));
+      return Math.sqrt(hF);
+    }
+    const hF = Math.min(WATER.SLOW, 1 - (1 - WATER.SLOW_MIN) * Math.min(1, e.depth / WATER.FULL_D));
+    return Math.sqrt(hF);
   }
 
   /**
@@ -7480,7 +7501,7 @@ export class BattleClient {
   /** 地面型 → 飛行型:蓄力彈射(初速 ∝ 蓄力比例),FOV 拉廣;變形中段附無敵幀請求 */
   _morphLaunch(gy) {
     this.flight = true;
-    this.vel.y = MORPH.JUMP_V * this.charge;
+    this.vel.y = MORPH.JUMP_V * this.charge * (this._jumpMul ? this._jumpMul() : 1);
     this.vy = 0;
     this.pos.y = gy + 1.0;   // 抬離地表,避免下一幀立即觸發觸地變形
     this.charge = 0;
@@ -7508,11 +7529,17 @@ export class BattleClient {
     return weatherJumpVelocityFactor(this.weatherSurface || this.envFx?.getWeatherSurface?.());
   }
 
+  _jumpMul() {
+    const wVel = this._weatherJumpMul ? this._weatherJumpMul() : 1;
+    const tVel = this._terrainJumpVelocityF ? this._terrainJumpVelocityF() : 1;
+    return wVel * tVel;
+  }
+
   // ---------------- 機甲蓄力跳躍(2026-07-16;robot 限定,常數住 data.js CJUMP)----------------
   /** 垂直彈射 ∝ 蓄力 + 沿視線水平推進(距離 ∝ 機體速度);騰空低重力 = 太空漫步;起跳離地即請求無敵幀 */
   _chargeJump() {
     const k = this.charge;
-    this.vy = CJUMP.V * k * this._modF('jump') * (this._weatherJumpMul ? this._weatherJumpMul() : 1);
+    this.vy = CJUMP.V * k * this._modF('jump') * (this._jumpMul ? this._jumpMul() : 1);
     this._lowG = true;
     const look = this.camera.getWorldDirection(new THREE.Vector3());
     look.y = 0;
@@ -9586,10 +9613,12 @@ export class BattleClient {
       if (!this._unbalanced(now)) {
         const wet = this._env?.code || 0;
         const descF = target.y < 0 ? Math.min(1, -target.y / dnV) : 0;
+        const dyn = this.env?.getWeatherDynamics?.();
+        const liftWeatherFactor = dyn ? weatherFlightLiftFactor(dyn) : 1;
         // 下降回充吃同一條高度曲線:高處爬升貴、同高下降回得也多 ⇒ 2/3 比例在任何高度都成立
         const descRecharge = liftDescentPS() * liftAltF(this.pos.y, this._liftBaseY(), this._ceilY()) * descF;
         this.lift = Math.min(lMax, this.lift
-          + (liftRegen() + descRecharge) * fluidFactor(wet) * dt);
+          + (liftRegen() + descRecharge) * fluidFactor(wet) * liftWeatherFactor * dt);
       }
     }
   }
@@ -9686,7 +9715,7 @@ export class BattleClient {
         }
         this._spaceWas = this.keys.Space;
       }
-      if (this.keys.Space) target.y += u.vspeed * ccF * tSlow;
+      if (this.keys.Space) target.y += u.vspeed * ccF * tSlow * (dyn ? weatherFlightLiftFactor(dyn) : 1);
       if (this.keys.KeyC || this.keys.ControlLeft) target.y -= (u.vdown ?? u.vspeed) * ccF * tSlow;
       // 爬升動力(2026-07-30 使用者需求;唯一縫 data.js FLIGHT):**往上飛才耗動力** ——
       // 耗速/回充 ∝ (爬升率/下降率) × 高度曲線(起點全速爬升 = liftDrainPS × 1 ⇒ 起點滿動力恰好撐 FLIGHT.DRAIN_S 秒),
@@ -9792,7 +9821,7 @@ export class BattleClient {
             this._morphLaunch(gy);
           } else if (onGround) {
             if (k >= MORPH.JUMP_MIN) this.hud.feed?.(`🪫 動力不足(變形起飛需 ${cost} 動力)`);
-            this.vy = u.jump * this._modF('jump') * (this._weatherJumpMul ? this._weatherJumpMul() : 1); this.charge = 0;
+            this.vy = u.jump * this._modF('jump') * (this._jumpMul ? this._jumpMul() : 1); this.charge = 0;
           } else this.charge = 0;
         }
       } else if (onGround && this.keys.Space) {
@@ -9808,9 +9837,9 @@ export class BattleClient {
           if (!free) { this.lift = Math.max(0, curLift - cost); this.net?.send({ t: 'jump', k }); }
           this._chargeJump();
         } else if (onGround && k >= CJUMP.MIN) {
-          this.vy = u.jump * this._modF('jump') * (this._weatherJumpMul ? this._weatherJumpMul() : 1);
+          this.vy = u.jump * this._modF('jump') * (this._jumpMul ? this._jumpMul() : 1);
           this.hud.feed?.(`🪫 動力不足(蓄力跳躍需 ${cost} 動力)`);
-        } else if (onGround) this.vy = u.jump * this._modF('jump') * (this._weatherJumpMul ? this._weatherJumpMul() : 1);
+        } else if (onGround) this.vy = u.jump * this._modF('jump') * (this._jumpMul ? this._jumpMul() : 1);
         this.charge = 0;
       }
       // 地面機體動力回充(爬升 target.y = 0 ⇒ _stepLift 只做回充,不扣動力)
