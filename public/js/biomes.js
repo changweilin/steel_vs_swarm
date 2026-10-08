@@ -12491,11 +12491,14 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     isBlocked: (x, z) => blocked.has(cellKey(x, z)),
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     blockers, season, seed: gseed, roadClear: roadClearAt, inset: inb, low: lowPower(),
+    procedural: isRandomMap(cfg),
     roadSegments: roadFeet.map(f => {
       const dx = Math.cos(f.ry) * f.hw, dz = Math.sin(f.ry) * f.hw;
       return { a: [f.x - dx, f.z - dz], b: [f.x + dx, f.z + dz], hw: f.hd, tags: f.tags, appearanceSeed: f.appearanceSeed };
     }),
     realScale: MAPGEO.REAL_SCALE,
+    shoreLines: [...(osmData?.waters || []), ...(osmData?.boundaries || []).filter(w => w.tags?.natural === 'coastline')]
+      .map(w => ({ tags: w.tags, points: (w.geometry || []).map(p => llToWorld(p.lat, p.lon ?? p.lng, center)) })),
     walkwayPoints: (osmData?.pois || []).map(p => {
       const [x, z] = llToWorld(p.lat, p.lng ?? p.lon, center); return { x, z, tags: p.tags };
     }),
@@ -12679,7 +12682,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     ground: ground.patches,
     groundDetails: ground.details,
     habitatScene: { recipe: ground.recipe, habitats: ground.habitats, models: ground.models,
-      furniture: ground.furniture, filledCells: ground.filledCells },
+      furniture: ground.furniture, filledCells: ground.filledCells, shoreline: ground.shoreline },
     groundAligned: ground.aligned,   // 沿路對齊件數(拼圖 + 物件;整齊度 reg 稽核用)
     groundBuffer: ground.bufCells,   // 緩衝空間的底毯格數(2026-08-12;0 = 那一圈沒鋪成)
     petals: petalsBuilt,             // 落花 / 落葉粒子數(0 = 夏冬、沒有落葉樹、或 ?petal=0)

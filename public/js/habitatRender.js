@@ -10,6 +10,9 @@ import { sceneFurnitureParts } from './sceneFurnitureParts.js';
 import { sceneryGeometry } from './sceneryGeometry.js';
 import { buildWalkwaySurfaces, walkwayGeometry } from './walkwayRender.js';
 import { WALKWAY_MESHES } from './walkwayMeshData.js';
+import { createShoreClassifier, planShoreAnchors, planShoreFacilities } from './shoreline.js';
+import { SHORELINE } from './shorelineCatalog.js';
+import { buildShoreFacilities } from './shorelineRender.js';
 
 function detailGeometry(kind, variant, coverSize = 0) {
   if (coverSize) {
@@ -55,8 +58,8 @@ function detailGeometry(kind, variant, coverSize = 0) {
 
 /** Ground material belongs to terrain triangles; these batches fill free slots with bounded surface detail. */
 export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, blockers = [], reservedFootprints = [],
-  roadSegments = [], walkwayPoints = [], realScale = .5, areas = [], roadClear, envCodeAt, isBlocked, inset = 0,
-  low = false, season = 'summer', environment = {}, environmentAt }) {
+  roadSegments = [], walkwayPoints = [], shoreLines = [], realScale = .5, areas = [], roadClear, envCodeAt, isBlocked, inset = 0,
+  low = false, procedural = false, season = 'summer', environment = {}, environmentAt }) {
   const occupied = makeFootprintIndex([...blockers.map(blockerFoot), ...reservedFootprints]);
   const bounds = { minX: terrain.minX + inset, maxX: terrain.maxX - inset,
     minZ: terrain.minZ + inset, maxZ: terrain.maxZ - inset };
@@ -88,6 +91,15 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
     seed, fits, sampleAt, heightAt: terrain.heightAt });
   for (const foot of allFurniture) occupied.add(foot);
   const furniture = allFurniture.slice(0, low ? HABITAT_SCENE.LOW_FURNITURE_LIMIT : HABITAT_SCENE.FURNITURE_LIMIT);
+  const classifyShore = createShoreClassifier({ areas, lines: shoreLines, bounds, evidenceAt: terrain.evidenceAt });
+  const shoreAnchors = planShoreAnchors({ bounds, heightAt: terrain.heightAt,
+    waterY: terrain.baseWaterY ?? terrain.waterY, lines: shoreLines, classifyAt: classifyShore });
+  // Reserve the full plan before presentation budgets; a low-power client must not move later infill.
+  const allShore = planShoreFacilities({ anchors: shoreAnchors, points: walkwayPoints, areas, bounds,
+    heightAt: terrain.heightAt, evidenceAt: terrain.evidenceAt, seed, procedural, reserve: foot => occupied.add(foot),
+    fits: foot => !occupied.near(foot, SHORELINE.GAP_M) && !isBlocked(foot.x, foot.z)
+      && !roadClear(foot.x, foot.z, foot) && sampleAt.contains(foot) });
+  const shore = buildShoreFacilities(group, allShore.slice(0, low ? SHORELINE.LOW_LIMIT : SHORELINE.LIMIT));
   const plan = planHabitatDetails({ bounds, seed, sampleAt, heightAt: terrain.heightAt, fits,
     maxDetails: low ? HABITAT_SCENE.LOW_DETAIL_LIMIT : HABITAT_SCENE.DETAIL_LIMIT });
   const env = seasonalEnvironment({ ...environment, season });
@@ -152,6 +164,8 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
   return { patches: panels.length, details: plan.rows.length, aligned: panels.length, bufCells: 0,
     bandDryAt: null, habitats: plan.counts, furniture: furniture.length,
     filledCells: plan.rows.filter(row => row.round === 0).length,
-    models: buckets.size + furnitureKinds.size, walkway: { ...walkway, pathAnchors: pathEdges.length },
+    models: buckets.size + furnitureKinds.size + shore.batches, walkway: { ...walkway, pathAnchors: pathEdges.length },
+    shoreline: { ...shore, anchors: shoreAnchors.length,
+      types: Object.fromEntries([...new Set(shoreAnchors.map(a => a.type))].map(type => [type, shoreAnchors.filter(a => a.type === type).length])) },
     recipe: 'evidence-habitat-v2' };
 }

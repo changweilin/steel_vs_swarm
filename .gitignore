@@ -95,3 +95,6 @@ tools/facade_authoring/__pycache__/
 
 out/walkway_review/
 tools/walkway_authoring/__pycache__/
+
+out/shoreline_review/
+tools/shoreline_authoring/__pycache__/
