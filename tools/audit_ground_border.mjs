@@ -1,27 +1,36 @@
-// 地貌界線拼圖(2026-08-11 使用者需求)稽核 —— node tools/audit_ground_border.mjs
-// 使用者定案:「不同類型大面積地貌區塊之間的邊界,透過設計 16 個方向的直線/轉彎/岔路的
-// 拼圖可以組合拼接,作為地貌類型的分界(拼圖概念類似卡卡頌),地貌界線拼圖可以採用
-// 步道小徑/林道/碎石土徑/田埂/水溝/小溪/圍籬/灌木矮牆/沙灘/岩塊/紅樹林等自然或人工
-// 分界線作為專屬拼貼圖案,不同類型的分界線可接力連結」。
-// 系統形狀(ground.js):
-//   BORDER_KINDS(11 種分界線型錄)+ BORDER_STYLES(coarse 無序對)+ BORDER_SUB_RULES
-//   (地表級覆寫)+ borderKindOf(解析唯一縫)+ planBorderPuzzle(純函式規劃:邊界邊 →
-//   角點圖成鏈 → 16 方向貪婪量化,切點恆錨定共享角點 → tile/岔路)。
-// 本稽核「執行 ground.js 真正的原文」(全部 export 零依賴,抽原文 eval):
-//   Ⅰ 型錄與種類解析(11 種名冊 / 樣式表值域 / 對稱 / 水界貼水 / sub 覆寫與市區豁免)
-//   Ⅱ 拼圖拓撲(直線交界單鏈全覆蓋 / 變體不成界 / 崖不成界 / 孤島閉環 / 岔路三臂共點
-//      / 鏈內接力切點 / 邊覆蓋恰一次 / 決定性)
-//   Ⅲ 16 方向量化(抖動角點:弦方位落格 ≤ 半格 11.25° / drift ≤ 上限 / 直段壓縮 /
-//      轉彎 = bin 改變 / 相鄰 tile 端點逐位元共用)
-//   Ⅳ 對照組(反向驗證內建):ⓐ bin 摺疊 ⓑ 拿掉 drift 上限 ⓒ 拿掉接力切分
-//   Ⅴ 靜態接線(單一縫 / 舊遮蔽物不回歸 / 純函式零 rnd / lift 與 renderOrder 圖層紀律)
-//   Ⅵ 分界線帶內強制乾地(2026-08-13 使用者「確保水域/沼澤在分界線的區塊內不會觸發異常
-//     狀態」)—— 底毯的換手在**畫出來的那條線**上,而 terrainEnvCode 量的是真實地形,兩者
-//     最多差半個帶寬(最寬 9m):你站在沙灘的圖案上,伺服器算的卻是泡在水裡。遮罩由
-//     ground.js `bandDryAt` 產出、biomes.terrainEnvCode 消費、main.js 在 buildBiomes
-//     **之後**裝上 —— 裝早了就是「界線改分區、分區又改界線」的循環,而症狀是同一張圖每次
-//     建出來都不一樣(每一格都還是「照規則」選的,沒有任何既有斷言看得見)。
-// 2026-08-13 另一項:同地貌之間「顏色劇烈變化」也畫線(Ⅰ⑥;窄門 = CARPET_DE.LINE)。
+// Terrain border puzzle audit (2026-08-11 user request) -- node tools/audit_ground_border.mjs
+// User decision: borders between large terrain blocks use 16-direction straight/turn/fork
+// puzzle pieces as type boundaries (Carcassonne-like); border pieces use trail/forest road/
+// gravel path/field ridge/ditch/stream/fence/hedgerow/beach/rocks/mangrove and other natural
+// or artificial divider patterns; different divider kinds can relay-link.
+// System shape (ground.js):
+//   BORDER_KINDS (11-kind divider catalog) + BORDER_STYLES (coarse unordered pairs)
+//   + BORDER_SUB_RULES (surface-level override) + borderKindOf (single-seam resolver)
+//   + planBorderPuzzle (pure-function plan: boundary edges -> corner graph chains
+//   -> 16-direction greedy quantization, cut points pinned to shared corners -> tile/fork).
+// This audit executes the true ground.js source (all exports dependency-free, eval extracted):
+//   I catalog and kind resolution (11-kind roster / style value range / symmetry /
+//     water-adjacent kinds / sub override and urban exemption)
+//   II puzzle topology (straight border single-chain cover / variant not a border /
+//     cliff not a border / island loop / fork three arms sharing one point /
+//     in-chain relay cut point / each edge covered once / determinism)
+//   III 16-direction quantization (jittered corners: chord bearing bin error <= half bin
+//     11.25 deg / drift <= limit / straight compression / turn = bin change /
+//     adjacent tile endpoints bit-identical)
+//   IV control group (built-in reverse verification): (a) bin folding (b) drift cap
+//     removed (c) relay splitting removed
+//   V static wiring (single seam / old props not regressing / pure function zero rnd /
+//     lift and renderOrder layer discipline)
+//   VI forced dry land inside divider band (2026-08-13 user decision: water/marsh inside the
+//     divider band must not trigger abnormal states) -- carpet handoff sits on the drawn line
+//     while terrainEnvCode measures true terrain, differing by at most half a band width
+//     (widest 9m): standing on the beach pattern while the server thinks you are in water.
+//     Mask produced by ground.js bandDryAt, consumed by biomes.terrainEnvCode, installed by
+//     main.js after buildBiomes -- installing early creates a border-changes-zone /
+//     zone-changes-border cycle, symptom is a different map every build (each cell still
+//     follows the rule, so no existing assertion can see it).
+// 2026-08-13 follow-up: same-zone pairs with sharp color jumps also draw lines (I-6;
+// narrow gate = CARPET_DE.LINE).
 'use strict';
 import { readSrc } from './audit_src.mjs';
 
@@ -29,8 +38,8 @@ let fail = 0;
 const bad = (m) => { console.log('  ✗', m); fail++; };
 const ok = (m) => console.log('  ✓', m);
 
-// 反向驗證:`--break-de` 把同地貌色距門檻推到 +∞(= 退回 2026-08-11 的「同地貌恆不畫線」)
-// ⇒ Ⅰ⑥ 的「顏色劇烈變化處有線」與「跨門檻相鄰對 > 0」MUST 紅字
+// Reverse verification: --break-de pushes the same-zone color-distance gate to Infinity
+// (= back to the 2026-08-11 no-lines-inside-same-zone rule) => I-6 must go red
 const BREAK_DE = process.argv.includes('--break-de');
 const src0 = readSrc('public', 'js', 'ground.js') + '\n' + readSrc('public', 'js', 'groundCatalog.js').replaceAll('export const ', 'const ');
 const src = BREAK_DE
@@ -41,7 +50,7 @@ if (BREAK_DE && src === src0) {
   process.exit(1);
 }
 
-// ===== 抽原文(零依賴 → eval 執行真品)=====
+// ===== Extract source (dependency-free -> eval the real thing) =====
 const dirsM = src.match(/export const BORDER_DIRS = .*$/m);
 const kindsM = src.match(/export const BORDER_KINDS = \{[\s\S]*?\n\};/);
 const stylesM = src.match(/export const BORDER_STYLES = \{[\s\S]*?\n\};/);
@@ -53,7 +62,7 @@ const cutM = src.match(/export const BORDER_CUT = .*$/m);
 const bandM = src.match(/export const BORDER_BAND = .*$/m);
 const cutFnM = src.match(/export function borderCutAlpha\(d, w\) \{[\s\S]*?\n\}/);
 const upM = src.match(/export function sweepUpY\(tx, tz, nx, nz\) \{.*\}/);
-// 2026-08-13 追加:同地貌之間「顏色劇烈變化」也畫線 ⇒ borderKindOf 多吃三份資料
+// 2026-08-13 addition: same-zone sharp color jumps also draw lines => borderKindOf takes three more inputs
 const brickM = src.match(/const BRICK_C = \[[\s\S]*?\];/);
 const hexOfM = src.match(/const hexOf = .*$/m);
 const meanM = src.match(/const meanHex = \([\s\S]*?\n\};/);
@@ -96,17 +105,17 @@ const { BORDER_DIRS, BORDER_KINDS, BORDER_STYLES, BORDER_SUB_RULES, BORDER_CUT, 
         borderKindOf, borderCutAlpha, sweepUpY, borderCornerArc, planBorderPuzzle,
         SUB_COL, colDist, CARPET_DE, BORDER_SAME_ZONE } = build(planM[0]);
 const truthCarpet = new Function(src.match(/const CARPET = \{[\s\S]*?\n\};/)[0] + '\nreturn CARPET;')();
-// 畫筆名冊(逐頂層方法名抽,不 eval 整包 canvas 程式碼)
+// Painter roster (extract top-level method names only, do not eval the canvas code)
 const paintersM = src.match(/const BORDER_PAINTERS = \{[\s\S]*?\n\};/);
 const PAINTERS = paintersM ? [...paintersM[0].matchAll(/\n  (\w+)\(g, S, rnd\)/g)].map((m) => m[1]) : [];
 
-// ===== 工具 =====
+// ===== Helpers =====
 const grid = (gnx, gnz, fn) => {
   const keys = new Array(gnx * gnz).fill(null);
   for (let j = 0; j < gnz; j++) for (let i = 0; i < gnx; i++) keys[j * gnx + i] = fn(i, j);
   return keys;
 };
-// 稽核用 coarse 分區替身(吃整支 key 'sub#v')
+// Audit coarse-zone stand-in (takes a full key 'sub#v')
 const SUBZ = {
   turf: 'green', meadow: 'green', arrowbamboo: 'green', flowerfield: 'green',
   wild: 'bare', sand: 'bare', gravel: 'bare',
@@ -125,17 +134,19 @@ const angDiff = (a, b) => {
 
 console.log('== Ⅰ 型錄與種類解析(執行原文)==');
 {
-  // ① 11 種名冊 = 使用者原句逐項(不多不少)
-  // 2026-08-13 追加泥灘(使用者「水域與沼澤的分界使用專屬的泥地過渡帶」);紅樹林沒有被撤掉,
-  // 它退到 BORDER_SUB_RULES 的蓮花池↔水域那一格
+  // 1. 11-kind roster = one item per user sentence, no more no less
+  // 2026-08-13 added mudflat (user decision: dedicated mud transition between water and marsh);
+  // mangrove was not removed, it stepped back to the lotus-pond vs water cell of BORDER_SUB_RULES
+  // (it now lives in that one grid cell)
   const WANT = ['trail', 'forestroad', 'gravelpath', 'fieldridge', 'ditch', 'stream',
                 'fence', 'hedgerow', 'beach', 'mudflat', 'rocks', 'mangrove'];
   const got = Object.keys(BORDER_KINDS);
   (got.length === WANT.length && WANT.every((k) => got.includes(k)))
     ? ok(`BORDER_KINDS = 使用者定案的 ${WANT.length} 種分界線(步道小徑…紅樹林),不多不少`)
     : bad(`BORDER_KINDS 鍵集 ${JSON.stringify(got)} ≠ 定案 ${WANT.length} 種`);
-  // 過渡型(兩側是不同性質的東西)MUST 標 wet 且 MUST 是貼水種類 —— 該標而沒標、或標了卻把
-  // 圖案畫成對稱,症狀都是「分界線的兩側看起來是同一種區域」(使用者 2026-08-13 回報)
+  // Transition kinds (two sides are different things) MUST be flagged wet and MUST be
+  // water-adjacent kinds -- missing the flag, or flagged but drawn symmetric, both read as
+  // both sides of the divider looking like the same zone (user report 2026-08-13)
   {
     const WET = ['beach', 'mangrove', 'mudflat'];
     const gotW = Object.entries(BORDER_KINDS).filter(([, d]) => d.flat?.wet).map(([k]) => k).sort();
@@ -150,19 +161,22 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
       && (!k.flat || (k.flat.w > 0 && k.flat.tex)) && (!k.ridge || (k.ridge.w > 0 && k.ridge.h > 0)))
     ? ok('每種都有 flat(w/tex)或 ridge(w/h)幾何定義')
     : bad('BORDER_KINDS 有型錄列缺幾何定義');
-  // 2026-08-11 使用者定案「分界線可以粗一點、上面的圖畫可以更細緻」⇒ **每一種都要有貼地帶**:
-  // 貼地帶才是界線本體(看得出圖案 / 蓋住 13m 格網被拉直時跳過的那段真實界線 / 兩側地貌在它
-  // 底下換手)。純立體脊只有一根細桿 = 使用者說的「意義不明的線條」
+  // 2026-08-11 user decision: dividers can be thicker with finer art on top =>
+  // every kind MUST have a ground band: the band is the border itself (readable pattern /
+  // covers the true border skipped when the 13m grid is straightened / both terrains hand
+  // off under it). A pure 3D spine is one thin rod = what the user called a meaningless line
   const noFlat = Object.entries(BORDER_KINDS).filter(([, d]) => !d.flat).map(([k]) => k);
   noFlat.length === 0
     ? ok('每一種分界線都有貼地帶(純立體脊不成界;脊只是加在帶上的擺件)')
     : bad(`缺貼地帶的種類:${noFlat.join(' ')}`);
-  // 帶寬 MUST 蓋得住量化位移半徑之外還讀得出圖案:下限錨在「兩台機體並肩」= SOLDIER_H×2
+  // Band width MUST cover the quantization drift radius and still read as a pattern:
+  // lower bound pinned to two mechs shoulder to shoulder = SOLDIER_H x 2
   const thin = Object.entries(BORDER_KINDS).filter(([, d]) => d.flat.w < 3);
   thin.length === 0 ? ok('每一種貼地帶寬 ≥ 3m(遠看仍讀得出是一條有圖案的界線)')
     : bad(`帶太窄:${thin.map(([k, d]) => `${k} ${d.flat.w}`).join(' ')}`);
-  // 畫筆鍵是**有消費端的欄位**:borderTex 取 BORDER_KINDS[kind].flat.tex 去查 BORDER_PAINTERS,
-  // MUST NOT 退回「拿種類名當畫筆鍵」(那讓 tex 變成改了也不會有人報錯的裝飾欄位)
+  // The painter key is a field with a consumer: borderTex looks up BORDER_PAINTERS via
+  // BORDER_KINDS[kind].flat.tex; MUST NOT fall back to the kind name (that would leave tex
+  // as decoration no one reports when changed)
   const noTex = Object.entries(BORDER_KINDS).filter(([, d]) => !PAINTERS.includes(d.flat.tex)).map(([k]) => k);
   (PAINTERS.length >= Object.keys(BORDER_KINDS).length && noTex.length === 0)
     ? ok(`每一種的 flat.tex 都在 BORDER_PAINTERS 名冊內(${PAINTERS.length} 支畫筆)`)
@@ -173,7 +187,7 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
   BORDER_DIRS === 16 ? ok('BORDER_DIRS = 16(與道路 16 方向量化同語彙)')
     : bad(`BORDER_DIRS = ${BORDER_DIRS} ≠ 16`);
 
-  // ② 樣式表值域 + 「同地貌不畫線」+ 跨地貌全覆蓋
+  // 2. Style table range + no-lines-inside-same-zone + full cross-zone coverage
   const ZS = ['alpine', 'bare', 'green', 'urban', 'water', 'wet'];
   Object.entries(BORDER_STYLES).every(([k, v]) => {
     const [a, b] = k.split('|');
@@ -183,7 +197,8 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
   ZS.every((z) => !BORDER_STYLES[`${z}|${z}`])
     ? ok('表內無任何同地貌列(2026-08-11 定案:兩側相同地貌不需要分界線)')
     : bad('BORDER_STYLES 殘留同地貌列');
-  // 跨地貌：14 組水陸與陸陸對全數有專屬分界線；water|wet (水域↔沼澤) 均為水面不畫陸地界線
+  // Cross-zone: all 14 land-water and land-land pairs get a dedicated divider; water|wet
+  // (water vs marsh) is continuous fluid water with no land divider
   const REP0 = { green: 'turf', bare: 'wild', urban: 'concrete', wet: 'marsh', water: 'watertile', alpine: 'plateau' };
   const miss = [];
   for (let a = 0; a < ZS.length; a++) for (let b = a + 1; b < ZS.length; b++) {
@@ -197,7 +212,7 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
   miss.length === 0 ? ok('14 個跨地貌對全數解得出分界線，水沼交界為純水面無陸地界線(無遺漏)')
     : bad(`跨地貌對異常:${miss.join(' ')}`);
 
-  // ③ 對稱:交換兩側回傳相同(全分區對 × 代表地表)
+  // 3. Symmetry: swapping sides returns the same (all zone pairs x representative surface)
   const REP = { green: 'turf', bare: 'wild', urban: 'concrete', wet: 'marsh', water: 'watertile', alpine: 'plateau' };
   let sym = true;
   for (const za of ZS) for (const zb of ZS) {
@@ -205,7 +220,7 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
   }
   sym ? ok('borderKindOf 對稱(交換兩側回傳相同)') : bad('borderKindOf 不對稱');
 
-  // ④ 水界一律貼水種類(aq):沙灘/岩塊/紅樹林
+  // 4. Water borders always resolve to water-adjacent kinds (aq): beach/rocks/mangrove
   let aqOk = true;
   for (const z of ZS) {
     const k = borderKindOf(REP[z], 'watertile', z, 'water');
@@ -214,7 +229,8 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
   aqOk ? ok('凡含水域的交界解出的種類全帶 aq(圍籬不會站進水裡)')
     : bad('水界解出非貼水種類');
 
-  // ⑤ sub 覆寫:竹林→林道、花田→田埂、沙→沙灘;市區界豁免(人工界優先)
+  // 5. sub override: bamboo -> forest road, flower field -> field ridge, sand -> beach;
+  // urban borders exempt (artificial borders win)
   borderKindOf('arrowbamboo', 'wild', 'green', 'bare') === 'forestroad'
     ? ok('竹林↔荒野 → 林道(sub 覆寫)') : bad('arrowbamboo 覆寫失效');
   borderKindOf('flowerfield', 'wild', 'green', 'bare') === 'fieldridge'
@@ -227,33 +243,36 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
     ? ok('沙地↔草皮(旱界)→ 碎石土徑(vs 名單把沙灘閘在水界)') : bad('sand vs 名單失守');
   BORDER_SUB_RULES.every((r) => BORDER_KINDS[r.kind] && Array.isArray(r.vs) && !r.vs.includes('urban'))
     ? ok('BORDER_SUB_RULES 值域合法且一律不含市區') : bad('BORDER_SUB_RULES 越界');
-  // `vs` 不得含該 sub 自己的地貌 —— 同地貌不畫線,列進去是永遠不命中的死設定
+  // vs MUST NOT contain that sub own zone -- same-zone draws no line, listing it is a
+  // permanently dead setting that never matches
   const SUBZ0 = Object.fromEntries(Object.entries(truthCarpet).flatMap(([z, l]) => l.map((s) => [s, z])));
   BORDER_SUB_RULES.every((r) => !r.vs.includes(SUBZ0[r.sub]))
     ? ok('BORDER_SUB_RULES 的 vs 一律不含自身地貌(無死設定)')
     : bad(`vs 含自身地貌:${BORDER_SUB_RULES.filter((r) => r.vs.includes(SUBZ0[r.sub])).map((r) => r.sub).join(' ')}`);
 
-  // ⑥ 同地貌:只有「顏色劇烈變化」那一道窄門(2026-08-13 使用者「顏色劇烈變化處也使用
-  //    對應地貌的分界線覆蓋」)。08-11 擋掉的是「逐款畫線」,不是這一條 —— 兩者的分水嶺
-  //    就是 CARPET_DE.LINE,所以下面**兩個方向都要有牙**:小色差恆 null、大色差恆有線。
+  // 6. Same zone: only the sharp-color-jump narrow gate (2026-08-13 user decision:
+  // sharp color jumps also get that zone divider). 08-11 blocked per-subtype lines, not
+  // this -- the watershed is CARPET_DE.LINE, so both directions need teeth below:
   (borderKindOf('turf', 'meadow', 'green', 'green') === null            // 94 < 100
     && borderKindOf('arrowbamboo', 'turf', 'green', 'green') === null   // 30
     && borderKindOf('turf', 'bushfield', 'green', 'green') === null)    // 55
     ? ok('同地貌 + 色距 < CARPET_DE.LINE → null(逐款畫線 = 大片綠地被切成網狀,仍擋著)')
     : bad('同地貌小色差仍解出分界線(密集網狀的成因)');
   (borderKindOf('wild', 'sand', 'bare', 'bare') === 'gravelpath'        // 195
-    && borderKindOf('icefield', 'steppe', 'alpine', 'alpine') === 'rocks'   // 253(雪線)
+    && borderKindOf('icefield', 'steppe', 'alpine', 'alpine') === 'rocks'   // 253 (snowline)
     && borderKindOf('brick', 'pavement', 'urban', 'urban') === 'hedgerow')  // 137
     ? ok('同地貌 + 色距 ≥ CARPET_DE.LINE → 該地貌的專屬界線(BORDER_SAME_ZONE)')
     : bad('顏色劇烈變化處沒有畫線(使用者 2026-08-13 定案)');
-  // 對稱 + 同款恆 null + 沒有代表色(特徵拼圖)恆 null + 水域沒有同地貌界(深淺水本是同一片水)
+  // Symmetry + same-subtype always null + no-representative-color (feature patch) always
+  // null + water has no same-zone border (shallow and deep are one water body)
   (borderKindOf('sand', 'wild', 'bare', 'bare') === borderKindOf('wild', 'sand', 'bare', 'bare')
     && borderKindOf('sand', 'sand', 'bare', 'bare') === null
     && borderKindOf('court', 'plaza', 'urban', 'urban') === null
     && borderKindOf('watertile', 'deepwater', 'water', 'water') === null)
     ? ok('同地貌分支:對稱 / 同款 null / 非底毯款 null / 水域無同地貌界')
     : bad('同地貌分支的四條邊界情形有破口');
-  // 門檻不是空的也不是全開:排序後的清單裡**真的有**跨過門檻的相鄰對,而且是少數
+  // The gate is neither empty nor wide open: the sorted roster really contains a few
+  // adjacent pairs crossing the gate, and only a few
   {
     const carpetOrderM = src.match(/export function carpetOrder\([\s\S]*?\n\}/);
     const CO = new Function(`${brickM[0]}\n${hexOfM[0]}\n${meanM[0]}
@@ -282,10 +301,11 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
 console.log('== Ⅱ 拼圖拓撲(planBorderPuzzle 執行原文;恆等角點)==');
 {
   const N = 8;
-  // driftMax 鏡射發射端比率(cell × 0.6;恆等角點 1 單位 = 1 格)——
-  // 90° 轉角的內點垂距 0.707 > 0.6 ⇒ 轉角不會被併進直段
+  // driftMax mirrors the emitter ratio (cell x 0.6; identity corners: 1 unit = 1 cell) --
+  // a 90-degree corner inner-point normal distance 0.707 > 0.6, so corners never merge into straights
   const opt = { coarseOf, driftMax: 0.6 };
-  // ① 直線交界:左半草皮、右半荒野 → 單鏈、單 tile(共線全併)、全覆蓋
+  // 1. Straight border: grass left, wild right -> single chain, single tile (collinear
+  // merged), full cover
   const keys = grid(N, N, (i) => i < 4 ? 'turf#0' : 'wild#0');
   const plan = planBorderPuzzle(keys, N, N, opt);
   plan.chains.length === 1 ? ok('直線交界成單一鏈') : bad(`直線交界鏈數 ${plan.chains.length} ≠ 1`);
@@ -298,11 +318,11 @@ console.log('== Ⅱ 拼圖拓撲(planBorderPuzzle 執行原文;恆等角點)==')
     : bad(`直線 tile bin/kind/drift 錯誤 ${JSON.stringify(ts[0])}`);
   plan.forks.length === 0 ? ok('直線交界無岔路') : bad('直線交界誤判岔路');
 
-  // ② 同地表異變體:花紋連續,不成界
+  // 2. Same surface different variant: pattern is continuous, not a border
   allTiles(planBorderPuzzle(grid(N, N, (i) => i < 4 ? 'turf#0' : 'turf#1'), N, N, opt)).length === 0
     ? ok('同地表異變體不成界(變體只是換款花紋)') : bad('異變體誤生分界');
 
-  // ③ 崖 '!' / 未鋪 null 不成界
+  // 3. Cliff '!' / unpaved null form no border
   const kCliff = grid(N, N, (i) => i < 3 ? 'turf#0' : i === 3 ? '!' : 'wild#0');
   allTiles(planBorderPuzzle(kCliff, N, N, opt)).length === 0
     ? ok("崖('!')隔開的兩地表不成界(交由外溢淡出)") : bad('崖界誤生分界');
@@ -310,7 +330,7 @@ console.log('== Ⅱ 拼圖拓撲(planBorderPuzzle 執行原文;恆等角點)==')
   allTiles(planBorderPuzzle(kNull, N, N, opt)).length === 0
     ? ok('未鋪(null)隔開的兩地表不成界') : bad('未鋪界誤生分界');
 
-  // ④ 孤島 2×2:閉環、四片、四轉彎、端點閉合
+  // 4. 2x2 island: closed loop, four pieces, four turns, endpoints closed
   const kIsle = grid(N, N, (i, j) => (i >= 3 && i <= 4 && j >= 3 && j <= 4) ? 'wild#0' : 'turf#0');
   const pIsle = planBorderPuzzle(kIsle, N, N, opt);
   const isle = pIsle.chains[0];
@@ -322,7 +342,8 @@ console.log('== Ⅱ 拼圖拓撲(planBorderPuzzle 執行原文;恆等角點)==')
     return t.x1 === nx.x0 && t.z1 === nx.z0;
   }) ? ok('閉環相鄰拼圖端點逐位元共用(含尾接頭)') : bad('閉環端點開縫');
 
-  // ⑤ 岔路:左草皮、右上荒野、右下市區 → (4,4) 度數 3,三臂三種分界線共點接力
+  // 5. Fork: grass left, wild top-right, urban bottom-right -> (4,4) degree 3, three
+  // arms of three divider kinds relay at one point
   const kT = grid(N, N, (i, j) => i < 4 ? 'turf#0' : j < 4 ? 'wild#0' : 'concrete#0');
   const pT = planBorderPuzzle(kT, N, N, opt);
   (pT.forks.length === 1 && pT.forks[0].x === 4 && pT.forks[0].z === 4 && pT.forks[0].arms.length === 3)
@@ -336,7 +357,8 @@ console.log('== Ⅱ 拼圖拓撲(planBorderPuzzle 執行原文;恆等角點)==')
     ? ok('三條鏈各有一端逐位元落在岔路節點上(拼接零開縫)')
     : bad('鏈端未錨定岔路節點');
 
-  // ⑥ 鏈內接力:注入 kindOf(B|C 無界)→ 一條鏈上兩種分界線,切點恰在 (4,4)
+  // 6. In-chain relay: inject kindOf (B|C borderless) -> two divider kinds on one
+  // chain, cut point exactly at (4,4)
   const kindOf2 = (a, b) => {
     const pair = [a, b].sort().join('|');
     return { 'turf|wild': 'trail', 'concrete|turf': 'fence', 'concrete|wild': null }[pair] || null;
@@ -351,11 +373,12 @@ console.log('== Ⅱ 拼圖拓撲(planBorderPuzzle 執行原文;恆等角點)==')
     ? ok('同一條鏈上步道→圍籬接力,切點 (4,4) 雙方逐位元共用(接力連結)')
     : bad(`鏈內接力切分錯誤 ${JSON.stringify(rT)}`);
 
-  // ⑦ 邊覆蓋恰一次(雜湊四地貌格網):鏈節點序展開的邊集 = 獨立重算的邊界邊集
+  // 7. Each edge covered exactly once (hashed four-zone grid): chain node order expanded
+  // edge set = independently recomputed boundary edge set
   const POOL = ['turf#0', 'wild#0', 'concrete#0', 'marsh#0', '!', null];
   const kR = grid(12, 12, (i, j) => POOL[((i * 7 + j * 13 + ((i * j) % 5)) % 11) % POOL.length]);
   const pRnd = planBorderPuzzle(kR, 12, 12, opt);
-  const NKW = 14;                        // 節點鍵步幅 = gnx + 2(鏡射原文)
+  const NKW = 14;                        // Node key stride = gnx + 2 (mirrors source)
   const walked = new Set();
   let dup = false;
   for (const c of pRnd.chains) {
@@ -383,13 +406,14 @@ console.log('== Ⅱ 拼圖拓撲(planBorderPuzzle 執行原文;恆等角點)==')
     ? ok(`雜湊格網:每條邊界邊被恰一條鏈走過恰一次(${walked.size} 邊,與獨立重算全等)`)
     : bad(`邊覆蓋不符:walked=${walked.size} expect=${expect.size} dup=${dup}`);
 
-  // ⑧ 決定性:同輸入重呼位元相同
+  // 8. Determinism: same input re-called is bit-identical
   JSON.stringify(planBorderPuzzle(kR, 12, 12, opt)) === JSON.stringify(planBorderPuzzle(kR, 12, 12, opt))
     ? ok('同輸入重呼結果位元相同(§2.3 跨客戶端一致)') : bad('重呼結果不一致');
 }
 
 console.log('== Ⅲ 16 方向量化(抖動角點)==');
-// 抖動角點替身(語意同 ground.js cornerAt:純 (i,j) 函數、幅度 <0.5 格拓撲不翻面)
+// Jittered-corner stand-in (same semantics as ground.js cornerAt: pure (i,j) function,
+// amplitude < 0.5 cell keeps topology from flipping)
 const jitXZ = (ci, cj) => [
   ci + 0.4 * Math.sin(ci * 12.9898 + cj * 78.233),
   cj + 0.4 * Math.cos(ci * 26.651 + cj * 43.71),
@@ -397,7 +421,7 @@ const jitXZ = (ci, cj) => [
 const DRIFT = 0.6;
 {
   const N = 24;
-  const keys = grid(N, N, (i, j) => i + j < N ? 'turf#0' : 'wild#0');   // 45° 階梯交界
+  const keys = grid(N, N, (i, j) => i + j < N ? 'turf#0' : 'wild#0');   // 45-degree staircase border
   const plan = planBorderPuzzle(keys, N, N, { coarseOf, cornerXZ: jitXZ, driftMax: DRIFT });
   const ts = allTiles(plan);
   const nEdges = plan.chains.reduce((s, c) => s + c.ns.length - 1, 0);
@@ -426,8 +450,9 @@ const DRIFT = 0.6;
 }
 
 console.log('== Ⅵ 接頭拼圖(轉彎/岔路是完整畫出來的一片,不是把直段對接)==');
-// 半寬取型錄真值;**取樣框也要用真實尺度**(執行期 cell ≈ 13m)—— 拿格單位當公尺會讓
-// 每一條帶都比格子還寬,轉彎全數退圓帽,圓弧那一段等於沒驗到
+// Half-width takes catalog true values; the sampling frame MUST also use real scale
+// (cell is about 13m at runtime) -- using cell units as meters makes every band wider than
+// a cell, all turns degrade to round caps, and the arc section goes unverified
 const HW = Object.fromEntries(Object.entries(BORDER_KINDS).map(([k, d]) =>
   [k, Math.max(d.flat ? d.flat.w / 2 : 0, d.ridge ? d.ridge.w / 2 : 0)]));
 const CELL_M = 13;
@@ -435,12 +460,12 @@ const jitM = (ci, cj) => { const [x, z] = jitXZ(ci, cj); return [x * CELL_M, z *
 const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf: (k) => HW[k] ?? 1 };
 {
   const N = 24;
-  // 45° 階梯交界(轉彎多)+ 三分區交點鏈(岔路)
+  // 45-degree staircase border (many turns) + three-zone meeting chain (fork)
   const keys = grid(N, N, (i, j) => i + j < N ? 'turf#0' : 'wild#0');
   const plan = planBorderPuzzle(keys, N, N, OPT_J);
   const ts = allTiles(plan);
 
-  // ① 每個轉彎都有一片接頭拼圖(bin 改變 ⇒ 必有 corner)
+  // 1. Every turn gets one joint piece (bin change implies a corner)
   let turns = 0, withCor = 0;
   for (const c of plan.chains) {
     for (let t = 0; t < c.tiles.length; t++) {
@@ -456,7 +481,8 @@ const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf:
     : bad(`轉彎拼圖缺漏:${withCor}/${turns}`);
   plan.corners.length > 0 ? ok(`轉彎拼圖 ${plan.corners.length} 片`) : bad('沒有任何轉彎拼圖');
 
-  // ② 直段一律自接頭退縮 ⇒ 接頭那段空間專屬接頭拼圖(這就是「不直接黏接」的結構保證)
+  // 2. Straight segments always pull back from joints => the joint span belongs to the
+  // joint piece alone (this is the structural guarantee of no direct butt-joining)
   const cornerEnds = [];
   for (const c of plan.chains) for (const tl of c.tiles) {
     if (tl.c0) cornerEnds.push([tl, 0]);
@@ -469,7 +495,8 @@ const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf:
     ? ok('退縮量合計 ≤ 直段長 80%(不會把整片吃掉)') : bad('退縮量過大,直段被吃光');
   ts.every((tl) => tl.len > 0) ? ok('每片直段退縮後仍有正長度') : bad('有直段退縮後長度 ≤ 0');
 
-  // ③ 切點錨定:接頭的兩個切點 = 兩側直段退縮後的端點(逐位元)⇒ 零開縫、零重疊
+  // 3. Cut-point anchoring: the two cut points of a joint = the pulled-back endpoints of
+  // both straight segments (bit-identical) => zero gap, zero overlap
   let anch = true;
   for (const c of plan.chains) for (const tl of c.tiles) {
     for (const [cor, ex, ez] of [[tl.c0, tl.ax, tl.az], [tl.c1, tl.bx, tl.bz]]) {
@@ -483,7 +510,8 @@ const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf:
   anch ? ok('接頭切點與直段退縮端點逐位元重合(端點錨定推廣到轉彎)')
        : bad('接頭切點與直段端點對不上 ⇒ 開縫或重疊');
 
-  // ④ 圓弧接頭:真的與兩臂相切(切點在圓上、切線方向 = 臂向)⇒ 圖案彎過去而非折過去
+  // 4. Arc joints: truly tangent to both arms (cut points on the circle, tangent = arm
+  // direction) => the pattern bends around instead of folding
   const arcs = plan.corners.filter((c) => c.geo.mode === 'arc');
   let tang = true, radOk = true;
   for (const c of arcs) {
@@ -491,17 +519,17 @@ const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf:
     for (const [P, arm] of [[g.Pa, c.a], [g.Pb, c.b]]) {
       const rx = P[0] - g.cx, rz = P[1] - g.cz;
       if (Math.abs(Math.hypot(rx, rz) - g.R) > 1e-6) radOk = false;
-      // 切線 ⊥ 半徑 ⇒ 臂向與半徑的內積必須是 0
+      // Tangent is perpendicular to radius => arm direction dot radius MUST be 0
       if (Math.abs((rx * arm.dx + rz * arm.dz) / g.R) > 1e-6) tang = false;
     }
-    if (!(g.R > c.hw * 1.1 - 1e-9)) radOk = false;      // 內緣不翻面
+    if (!(g.R > c.hw * 1.1 - 1e-9)) radOk = false;      // Inner edge does not flip
   }
   (arcs.length && radOk) ? ok(`圓弧接頭 ${arcs.length} 片:切點在圓上且 R > 1.1·半寬(內緣不翻面)`)
     : bad(arcs.length ? '圓弧半徑/切點不合' : '沒有任何圓弧接頭');
   tang ? ok('圓弧在兩個切點都與臂向相切(圖案順著彎過去)') : bad('圓弧與臂不相切 ⇒ 轉角會折斷');
 
-  // ⑤ 圓弧 / 圓帽的分流判準:兩者都以「實際用的退縮長 L」對上「圓弧所需的 Lneed」
-  //    圓弧 ⇒ L ≥ Lneed(放得下);圓帽 ⇒ L < Lneed(真的容不下,不是偷懶的預設)
+  // 5. Arc vs cap routing: both compare the actual pull-back L against the arc-needed Lneed
+  //    arc means L >= Lneed (fits); cap means L < Lneed (truly too tight, not a lazy default)
   const caps = plan.corners.filter((c) => c.geo.mode === 'cap');
   const Lneed = (c) => {
     const psi = Math.acos(Math.max(-1, Math.min(1, c.a.dx * c.b.dx + c.a.dz * c.b.dz)));
@@ -514,7 +542,7 @@ const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf:
     ? ok('圓弧接頭全數確實放得下(分流判準兩個方向都咬得住)')
     : bad('有圓弧接頭其實放不下(內緣會翻面)');
 
-  // ⑥ 純接力(同方向格換款)不生轉彎拼圖、也不退縮
+  // 6. Pure relay (same-direction cell, kind change) grows no turn piece and pulls back nothing
   const kindOf2 = (a, b) => {
     const pair = [a, b].sort().join('|');
     return { 'turf|wild': 'trail', 'concrete|turf': 'fence', 'concrete|wild': null }[pair] || null;
@@ -531,7 +559,8 @@ const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf:
     : bad(straightRelay.length ? '直線接力處誤生轉彎拼圖/誤退縮' : '本布局沒有直線接力可驗');
   relay.every((tl) => tl.ax != null && tl.bx != null) ? ok('退縮端點欄位齊備') : bad('缺退縮端點');
 
-  // ⑦ 岔路:逐臂等距斷面 + 逆時針排序 + 全臂退縮(逐臂楔形才拼得起來)
+  // 7. Fork: equal-spaced cross-sections per arm + CCW order + all arms pulled back
+  // (per-arm wedges only fit together this way)
   const pF = planBorderPuzzle(kT, 8, 8, { ...OPT_J, cornerXZ: (a, b) => [a, b] });
   const fk = pF.forks[0];
   (fk && fk.arms.length === 3 && fk.L > 0)
@@ -553,7 +582,7 @@ const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf:
       : bad(`岔路臂退縮不一致 ${JSON.stringify(armEnds)} vs L=${fk?.L}`);
   }
 
-  // ⑧ borderCornerArc 直測:退縮長回傳一致、直線退化、決定性
+  // 8. borderCornerArc direct test: pull-back length consistent, straight degenerate, deterministic
   const st = borderCornerArc(0, 0, 1, 0, -1, 0, 5, 1);
   (st.mode === 'straight' && st.L === 0) ? ok('borderCornerArc:兩臂反向(直線)退化為不生接頭')
     : bad('直線情形未退化');
@@ -568,22 +597,25 @@ const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf:
 
 console.log('== Ⅶ 掃掠繞向 / 兩側地貌切線 / 拼圖迴避(2026-08-11 使用者回報三項)==');
 {
-  // ---- ① 繞向:sweepUpY 是唯一縫,且它真的等於「三角形幾何法線的 y 分量」 ----
-  // 這條在畫面上壞掉的樣子是「整段帶死黑」,而所有既有斷言(頂點/α/UV/貼圖)照樣全綠 ⇒
-  // 稽核只能從**幾何定義**下手:拿獨立算的叉積對答案。
+  // ---- 1. Winding: sweepUpY is the single seam, and it truly equals the triangle
+  // geometric normal Y component ----
+  // On screen this failure reads as a whole dead-black band, while every existing assertion
+  // (vertex/alpha/UV/texture) stays green => the audit can only attack the geometric definition:
+  // check against an independently computed cross product.
   let upOk = true;
   for (const [tx, tz] of [[1, 0], [0, 1], [-1, 0], [0.6, -0.8], [-0.3, -0.95]]) {
     for (const sgn of [1, -1]) {
-      const nx = -tz * sgn, nz = tx * sgn;                       // 斷面橫向(左法線 / 右法線)
-      // 三角形 A=(0,0)、B=A+t、C=A+n:幾何法線 y = uz*vx − ux*vz
+      const nx = -tz * sgn, nz = tx * sgn;                       // Cross-section lateral (left / right normal)
+      // Triangle A=(0,0), B=A+t, C=A+n: geometric normal y = uz*vx - ux*vz
       const ref = tz * nx - tx * nz;
       if (Math.sign(sweepUpY(tx, tz, nx, nz)) !== Math.sign(ref)) upOk = false;
     }
   }
   upOk ? ok('sweepUpY = 「先切向後橫向」繞向的幾何法線 y 分量(與獨立叉積逐例同號)')
     : bad('sweepUpY 與幾何叉積不符');
-  // 直段的斷面橫向恆取 n = (−dz, dx)/l ⇒ upY = −l < 0 恆為負:**每一片直段都要翻**。
-  // 這就是 2026-08-11 實測「flat 帶 100% 背面朝上 = 全部死黑」的成因,寫成斷言釘住
+  // Straight segments always take cross-section n = (-dz, dx)/l => upY = -l < 0 always
+  // negative: every straight piece MUST flip. This is why the 2026-08-11 field test showed
+  // flat bands 100% back-facing = all dead black; pinned here as an assertion
   sweepUpY(1, 0, 0, 1) < 0 && sweepUpY(0, 1, -1, 0) < 0
     ? ok('linePath 的斷面取向恆為負 ⇒ 直段一律需要翻繞向(舊制沒翻 = 全部死黑)')
     : bad('linePath 取向假設漂移,請同步 sweepFlat 的 flipOf');
@@ -598,7 +630,8 @@ console.log('== Ⅶ 掃掠繞向 / 兩側地貌切線 / 拼圖迴避(2026-08-11 
     && /const cap = \(a2, b2, c2\) => \(flip \? b\.idx\.push\(a2, c2, b2\) : b\.idx\.push\(a2, b2, c2\)\);/.test(src))
     ? ok('掃掠三角形(帶面 / 脊側面 / 脊端封口)全數依 flip 送繞向')
     : bad('有掃掠面沒吃 flip ⇒ 該面會被 three 反轉法線 = 死黑');
-  // 扇形件(圓帽 / 岔路楔形)沿遞增角展開 ⇒ 俯視是逆向,繞向恆倒過來
+  // Fan pieces (round cap / fork wedge) expand along increasing angle => top-down they wind
+  // backward, so winding is always inverted
   (/if \(s\) b\.idx\.push\(b\.base, b\.base \+ s \+ 1, b\.base \+ s\);/.test(src)
     && /b\.idx\.push\(b\.base, b\.base \+ 2 \+ s, b\.base \+ 1 \+ s\);/.test(src))
     ? ok('圓帽與岔路楔形的扇形繞向已倒轉(正面朝上)')
@@ -607,7 +640,7 @@ console.log('== Ⅶ 掃掠繞向 / 兩側地貌切線 / 拼圖迴避(2026-08-11 
     ? bad('材質註解仍宣稱「繞向不定靠雙面保險」—— DoubleSide 只保證看得見,不保證亮度')
     : ok('不再以 DoubleSide 當繞向的替代品(它只讓背面看得見,法線照樣被反轉)');
 
-  // ---- ② 兩側地貌以分界線為界 ----
+  // ---- 2. Both terrains bounded by the divider line ----
   const W = BORDER_CUT.W;
   (borderCutAlpha(-W, W) === 0 && borderCutAlpha(W, W) === 1 && borderCutAlpha(0, W) === 0.5)
     ? ok(`borderCutAlpha 端點恆定(±${W / 2}m 外恆 0/1、線上恰 0.5)⇒ 與不透明底毯水密`)
@@ -615,12 +648,14 @@ console.log('== Ⅶ 掃掠繞向 / 兩側地貌切線 / 拼圖迴避(2026-08-11 
   let mono = true;
   for (let d = -W; d <= W; d += W / 16) if (borderCutAlpha(d, W) < borderCutAlpha(d - W / 16, W)) mono = false;
   mono ? ok('borderCutAlpha 單調遞增(換手只發生一次,不會來回跳)') : bad('borderCutAlpha 非單調');
-  // 換手帶 MUST 收在**最窄**那一種的帶寬之內 —— 否則換手處露在圖案之外就是看得見的滲透
+  // The handoff band MUST fit inside the narrowest band width -- otherwise the handoff
+  // shows outside the pattern as visible bleed
   const minHW = Math.min(...Object.values(BORDER_KINDS).map((d) => d.flat.w / 2));
   (W / 2 + BORDER_CUT.JIT / 2 <= minHW + 1e-9)
     ? ok(`換手半寬 ${(W / 2 + BORDER_CUT.JIT / 2).toFixed(2)}m ≤ 最窄帶半寬 ${minHW.toFixed(2)}m(換手恆藏在圖案底下)`)
     : bad(`換手帶比最窄的分界線還寬(${(W / 2 + BORDER_CUT.JIT / 2).toFixed(2)} > ${minHW.toFixed(2)})⇒ 滲透露在帶外`);
-  // planSeamOverlays:有線的組合 ⇒ 帶 cut 且**不出**中間過渡脊帶(橫跨界線的第三種地表)
+  // planSeamOverlays: pairs that draw a line get cut and emit NO middle transition ridge
+  // (a third terrain straddling the border)
   const seamM = src.match(/export function planSeamOverlays\(keys, gnx, gnz, opts = \{\}\) \{[\s\S]*?\n\}/);
   const seamFn = seamM ? new Function(
     src.match(/export const SEAM_STYLES = \{[\s\S]*?\n\};/)[0].replace('export ', '') + '\n' +
@@ -651,15 +686,17 @@ console.log('== Ⅶ 掃掠繞向 / 兩側地貌切線 / 拼圖迴避(2026-08-11 
       ? ok('hardOf 恆 false ⇒ 逐位元同未注入(舊制不受影響)') : bad('hardOf=false 與未注入不等價');
   }
 
-  // ---- ③ 田/停車場/球場/3D 物件不得橫跨分界線 ----
+  // ---- 3. Fields / parking / courts / 3D objects MUST NOT straddle dividers ----
   (/const bdCross = \(x, z, r\) => \{[\s\S]{0,300}?bdSegD\(sg, x, z\) < r \+ sg\.hw \+ BORDER_BAND\.PAD/.test(src))
     ? ok('bdCross:足跡半徑 + 帶半寬 + PAD 淨距(迴避的是帶,不是中心線)')
     : bad('bdCross 未把帶寬與淨距算進去');
-  // 拒絕 MUST 排在首個 rnd() 之前(與 roadClear 同位)—— 否則散布序列被拒絕與否改寫
+  // Rejection MUST come before the first rnd() call (same rank as roadClear) -- otherwise
+  // the scatter sequence gets rewritten depending on accept/reject
   const tpM = src.match(/const tryPatch = \(x, z, sub, variant, r, rot, depth\) => \{[\s\S]*?\n  \};/);
   if (!tpM) bad('抽不到 tryPatch 原文');
   else {
-    // 剝掉行註解再找 —— 註解裡寫著「排在首個 rnd() 之前」的那個 `rnd()` 會讓這條斷言誤判
+    // Strip line comments first -- the comment saying before the first rnd() call itself
+    // contains that token and would trip this assertion
     const body = tpM[0].replace(/\/\/[^\r\n]*/g, '');
     const iBd = body.indexOf('bdCross('), iRnd = body.indexOf('rnd()');
     (iBd > 0 && iBd < iRnd)
@@ -669,21 +706,24 @@ console.log('== Ⅶ 掃掠繞向 / 兩側地貌切線 / 拼圖迴避(2026-08-11 
   /if \(bdCross\(px, pz, dr\) \|\| roadClear\?\./.test(src)
     ? ok('addDetail 用完整幾何足跡迴避分界線與道路')
     : bad('3D 細節未迴避分界線');
-  // 讓路的方向:界線是結構、拼圖是點綴 ⇒ onRegular 降級為保險絲(註解與斷言一起釘住)
-  src.includes('onRegular 自 2026-08-11 起是**保險絲**')
+  // Yield direction: the line is structure, puzzle pieces are decoration => onRegular
+  // stepped down to a fuse (comment and assertion pinned together)
+  src.includes('onRegular is a fuse since 2026-08-11')
     ? ok('onRegular 降級為保險絲(主力改成 tryPatch 先迴避;讓路方向已反轉)')
     : bad('讓路方向的定案沒有留在原文裡');
-  // 規劃 MUST 只有一份:發射端吃的是上面就規劃好的 bdPlan
+  // Planning MUST exist exactly once: the emitter consumes the already-planned bdPlan
   ((src.match(/planBorderPuzzle\(keys, gnx, gnz, \{/g) || []).length === 1 && src.includes('const plan = bdPlan;'))
     ? ok('planBorderPuzzle 全檔只呼叫一次,底毯切線 / 拼圖迴避 / 幾何發射同吃一份(單一縫)')
     : bad('planBorderPuzzle 被呼叫多次 ⇒ 切線與畫出來的線可能不是同一條');
-  // 規劃 + 索引區塊零共享 rnd(§2.3):它排在特徵散布之前,吃一枚就把整張圖的佈局推移
-  const planBlk = src.match(/==== 地貌界線拼圖:規劃 \+ 空間索引[\s\S]*?\n  \/\/ 異類交界/);
-  const planCode = planBlk ? planBlk[0].replace(/\/\/[^\r\n]*/g, '') : '';   // 剝行註解(理由同 tryPatch)
+  // Planning + index block takes zero shared rnd (2.3): it runs before feature scatter,
+  // consuming one would shift the whole map layout
+  const planBlk = src.match(/==== Terrain border puzzle: planning \+ spatial index[\s\S]*?\n  \/\/ Hetero-boundary spillover/);
+  const planCode = planBlk ? planBlk[0].replace(/\/\/[^\r\n]*/g, '') : '';   // Strip line comments (same reason as tryPatch)
   (planBlk && !/\brnd\(/.test(planCode) && !planCode.includes('Math.random'))
     ? ok('規劃 + 空間索引區塊零共享 rnd()(提前呼叫不推移任何散布,§2.3)')
     : bad(planBlk ? '規劃區塊消耗了共享 rnd()' : '找不到規劃區塊(標題漂移,請同步稽核)');
-  // 帶緣有機起伏:吃**世界座標**才會在共用端點上同值(吃沿線參數 = 接頭處開叉)
+  // Band-edge organic wobble: MUST take world coords so shared endpoints agree (taking
+  // along-line parameters forks the seam at joints)
   (/const eN = \(x, z, s\) => 1 \+ BORDER_BAND\.EDGE_A/.test(src)
     && /vnoise\(x \* BORDER_BAND\.EDGE_W, z \* BORDER_BAND\.EDGE_W, seed \^ s\)/.test(src))
     ? ok('帶緣起伏吃世界座標的 vnoise(相鄰 tile 與接頭共用端點同值,邊緣不開叉)')
@@ -692,11 +732,13 @@ console.log('== Ⅶ 掃掠繞向 / 兩側地貌切線 / 拼圖迴避(2026-08-11 
     && (src.match(/eN\(cx, cz, 0x1F17\)/g) || []).length === 2)
     ? ok('直段與岔路楔形取同一組起伏種子(楔形與直段接得上)')
     : bad('岔路楔形未與直段共用帶緣起伏 ⇒ 路口處帶寬對不上');
-  // 讓路取樣半徑 MUST 是**起伏後的最外緣**,畫出來的邊才恆在驗過的走廊裡
+  // Yield sampling radius MUST be the wobbled outer edge, so the drawn edge always stays
+  // inside the verified corridor
   (/d\.flat\.w \/ 2 \* \(1 \+ BORDER_BAND\.EDGE_A\)/.test(src))
     ? ok('hwOfKind 取起伏後的最外緣(讓路取樣與迴避半徑蓋得住真的畫出來的邊)')
     : bad('hwOfKind 仍取標稱半寬 ⇒ 起伏出去的帶緣沒被驗到');
-  // 貼圖節距 MUST 隨帶寬推導(固定 9m 會把窄帶橫向拉扁成「意義不明的線條」)
+  // Texture pitch MUST derive from band width (a fixed 9m stretches narrow bands into
+  // unreadable lines)
   (/const bTexL = \(kd\) => Math\.max\(BORDER_BAND\.TEX_MIN, kd\.w \* BORDER_BAND\.TEX_F\)/.test(src)
     && !/BTEXL/.test(src))
     ? ok('貼圖一輪世界長由帶寬推導(bTexL),固定 BTEXL 已退場')
@@ -708,7 +750,7 @@ console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
   const N = 24;
   const keys = grid(N, N, (i, j) => i + j < N ? 'turf#0' : 'wild#0');
   const opt = { coarseOf, cornerXZ: jitXZ, driftMax: DRIFT };
-  // ⓐ bin 摺疊成 4 方向 → Ⅲ 的落格檢查必須有牙
+  // (a) bin folded to 4 directions -> section III binning check MUST have teeth
   const binBad = planM[0].replace('const STEP = (Math.PI * 2) / BORDER_DIRS;', 'const STEP = (Math.PI * 2) / 4;');
   if (binBad === planM[0]) bad('對照組 ⓐ 替換點失配(原文已漂移,請同步稽核)');
   else {
@@ -717,7 +759,7 @@ console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
       ? ok('對照組ⓐ:4 方向壞版本確實違反 16 方向落格(Ⅲ 檢查有牙)')
       : bad('對照組ⓐ:壞版本未呈現預期缺陷(Ⅲ 驗不到東西)');
   }
-  // ⓑ 拿掉貪婪延伸的 drift 上限 → 誠實重算的 drift 必須爆表
+  // (b) greedy-extension drift cap removed -> honestly recomputed drift MUST blow past
   const driftBad = planM[0].replace('if (d > driftMax) { fit = false; break; }', 'if (false) { fit = false; break; }');
   if (driftBad === planM[0]) bad('對照組 ⓑ 替換點失配(原文已漂移,請同步稽核)');
   else {
@@ -726,7 +768,8 @@ console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
       ? ok('對照組ⓑ:無上限壞版本的 tile drift 超限(誠實重算與 Ⅲ 檢查有牙)')
       : bad('對照組ⓑ:壞版本未呈現預期缺陷(Ⅲ 驗不到東西)');
   }
-  // ⓓ 拿掉直段退縮(接頭端 tr=0)→ Ⅵ-② / Ⅵ-③ 的「不直接黏接」保證必須有牙
+  // (d) straight pull-back removed (joint end tr=0) -> VI-2 / VI-3 no-butt-join guarantee
+  // MUST have teeth
   const noTrim = planM[0].replace(/A\.tl\[A\.e \? 'tr1' : 'tr0'\] = g\.L;/, "A.tl[A.e ? 'tr1' : 'tr0'] = 0;");
   if (noTrim === planM[0]) bad('對照組 ⓓ 替換點失配(原文已漂移,請同步稽核)');
   else {
@@ -746,7 +789,7 @@ console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
       ? ok('對照組ⓓ:不退縮的壞版本讓直段頂到節點、切點對不上(Ⅵ-②③ 有牙)')
       : bad('對照組ⓓ:壞版本未呈現預期缺陷(Ⅵ-②③ 驗不到東西)');
   }
-  // ⓔ 圓弧接頭退化成直線(等同把兩段直帶對接)→ Ⅵ-① 必須有牙
+  // (e) arc joint degraded to straight (two straight bands butt-joined) -> VI-1 MUST have teeth
   const noArc = arcM[0].replace('if (phi < 1e-4) return', 'if (true) return');
   if (noArc === arcM[0]) bad('對照組 ⓔ 替換點失配(原文已漂移,請同步稽核)');
   else {
@@ -755,7 +798,7 @@ console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
       ? ok('對照組ⓔ:轉彎不生接頭拼圖的壞版本 corners 全空(Ⅵ-① 有牙)')
       : bad('對照組ⓔ:壞版本仍生出接頭(Ⅵ-① 驗不到東西)');
   }
-  // ⓒ 拿掉接力切分(整鏈一種)→ Ⅱ-⑥ 的鏈內接力必須有牙
+  // (c) relay splitting removed (one kind per chain) -> II-6 in-chain relay MUST have teeth
   const relayBad = planM[0].replace(
     "if (e === ch.kinds.length || ch.kinds[e] !== ch.kinds[s0]) { segs.push([s0, e, ch.kinds[s0]]); s0 = e; }",
     "if (e === ch.kinds.length) { segs.push([s0, e, ch.kinds[s0]]); s0 = e; }");
@@ -772,8 +815,10 @@ console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
       ? ok('對照組ⓒ:整鏈單一種類的壞版本切點消失(Ⅱ-⑥ 接力檢查有牙)')
       : bad('對照組ⓒ:壞版本未呈現預期缺陷(Ⅱ-⑥ 驗不到東西)');
   }
-  // ⓕ 繞向不翻(退回舊制的無條件繞向)→ Ⅶ① 的原文斷言必須紅
-  //   sweepFlat 住 buildGroundCover 裡(要 THREE),離線只驗得到原文 ⇒ 對照組也對原文動刀
+  // (f) winding never flipped (back to the old unconditional winding) -> VII-1 source
+  // assertion MUST go red
+  //   sweepFlat lives in buildGroundCover (needs THREE); offline only the source is visible
+  //   => the control group also cuts the source
   const noFlip = src.replace(
     /if \(flip\) b\.idx\.push\(p0 \+ k, p0 \+ k \+ 1, q0 \+ k, p0 \+ k \+ 1, q0 \+ k \+ 1, q0 \+ k\);\r?\n\s*else /,
     '');
@@ -783,7 +828,8 @@ console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
       ? ok('對照組ⓕ:拿掉繞向翻轉的壞版本被 Ⅶ① 抓到(死黑那條有牙)')
       : bad('對照組ⓕ:壞版本未呈現預期缺陷(Ⅶ① 驗不到東西)');
   }
-  // ⓖ 切線不抑制中間過渡脊帶 → Ⅶ② 的「橫跨界線的第三種地表」檢查必須紅(**執行原文**)
+  // (g) cut line does not suppress the middle transition ridge -> VII-2 third-terrain check
+  // MUST go red (executes source)
   const seamSrc = src.match(/export function planSeamOverlays\(keys, gnx, gnz, opts = \{\}\) \{[\s\S]*?\n\}/);
   const seamBuild = (text) => new Function(
     src.match(/export const SEAM_STYLES = \{[\s\S]*?\n\};/)[0].replace('export ', '') + '\n' +
@@ -800,7 +846,8 @@ console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
       ? ok('對照組ⓖ:不抑制脊帶的壞版本又冒出橫跨界線的第三種地表(Ⅶ② 有牙)')
       : bad('對照組ⓖ:壞版本未呈現預期缺陷(Ⅶ② 驗不到東西)');
   }
-  // ⓗ 切線 α 不夾端點 → Ⅶ② 的水密檢查必須紅(**執行原文**)
+  // (h) cut alpha not clamped at endpoints -> VII-2 watertight check MUST go red
+  // (executes source)
   const cutBad = cutFnM[0].replace('d <= -w / 2 ? 0 : d >= w / 2 ? 1 : ', '');
   if (cutBad === cutFnM[0]) bad('對照組 ⓗ 替換點失配(原文已漂移,請同步稽核)');
   else {
@@ -822,7 +869,7 @@ console.log('== Ⅴ 靜態接線(單一縫 / 舊制不回歸 / 圖層紀律)==')
   (!/const PROB = \{ hedge/.test(src) && !src.includes('pickKind') && !src.includes('stonewall'))
     ? ok('舊邊界遮蔽物(逐格邊擲骰 hedge/fence/stonewall/dike)已退場,不得回歸')
     : bad('舊遮蔽物殘留(pickKind/PROB/stonewall)');
-  // 「直接黏接」的兩個舊作法 MUST NOT 回歸
+  // The two old butt-join tricks MUST NOT regress
   (!/if \(j0\) \{ ax -= ux \* w2/.test(src) && !src.includes('emitRidgeT'))
     ? ok('舊制「脊端外延半寬互搭」已退場(轉彎改由掃掠圓弧的完整拼圖表達)')
     : bad('脊端外延的黏接手法殘留');
@@ -838,12 +885,14 @@ console.log('== Ⅴ 靜態接線(單一縫 / 舊制不回歸 / 圖層紀律)==')
   src.includes('zoneOf: (i, j) => zoneGrid[j * gnx + i]')
     ? ok('地貌取 zoneGrid(格子自己的分區),不由款式反查(steppe/scree 兩屬會誤判高地)')
     : bad('未傳 zoneOf ⇒ 高地內部會長出假的跨地貌界線');
-  // 讓路判定:直段與接頭 MUST 同一支(接頭只驗節點 = 分界線會橫過馬路)
+  // Yield check: straights and joints MUST share one routine (joints checking only the
+  // node point leaves the swept arc unverified = dividers crossing roads)
   (/const tileRuns = \(tl, aq, hw\)/.test(src) && /const cornerOk = \(cor, aq\)/.test(src)
     && /const forkOkAt = \(fk\)/.test(src) && src.includes('for (const a of fk.arms)'))
     ? ok('轉彎沿弧取樣、岔路逐臂取樣:讓路判定與直段共用 ptOk/segOk(單一縫)')
     : bad('接頭未做逐點讓路判定 ⇒ 分界線會壓過道路走廊');
-  // 讓路 MUST 逐段:整片一個布林的話,900m 直線交界上任何一處停車場會讓整條線消失
+  // Yield MUST be per-segment: one boolean per piece means one parking lot erases a 900m
+  // straight border
   (src.includes('for (const [r0, r1] of nf.runs)') && !/const okA = ch\.tiles\.map/.test(src))
     ? ok('讓路逐段切分(runs),不是整片全有或全無')
     : bad('讓路仍是整片判定 ⇒ 長交界會被單一障礙整條抹除');
@@ -857,12 +906,13 @@ console.log('== Ⅴ 靜態接線(單一縫 / 舊制不回歸 / 圖層紀律)==')
     && !/rnd\(/.test(kindOfM[0]))
     ? ok('planBorderPuzzle / borderKindOf 原文零 rnd / 零 Math.random / 零 THREE(純函式,A4)')
     : bad('規劃/解析摻入 rnd / Math.random / THREE');
-  // 發射端零共享 rnd(§2.3):佈局與外觀差異一律由 seed + 節點索引雜湊決定
-  const emitM = src.match(/==== 地貌界線拼圖發射[\s\S]*?\n  \}\n\n  \/\/ ---- 特徵色塊 Mesh/);
+  // Emitter takes zero shared rnd (2.3): layout vs appearance differences all derive from
+  // seed + node-index hash
+  const emitM = src.match(/==== Terrain border puzzle emission[\s\S]*?\n  \}\n\n  \/\/ ---- Feature color-block Mesh/);
   emitM && !/\brnd\(/.test(emitM[0])
     ? ok('發射端零共享 rnd() 消耗(佈局不推移其他散布,§2.3)')
     : bad(emitM ? '發射端消耗了共享 rnd()' : '找不到發射端區塊(標題漂移,請同步稽核)');
-  // lift 帶與 renderOrder 圖層紀律
+  // lift band and renderOrder layer discipline
   const liftM = src.match(/bLift = \(kind\) => ([0-9.]+) \+ bKinds\.indexOf\(kind\) \* ([0-9.]+)/);
   const nK = Object.keys(BORDER_KINDS).length;
   (liftM && +liftM[1] > 0.124 && +liftM[1] + (nK - 1) * +liftM[2] < 0.135 - 1e-9)
@@ -877,11 +927,12 @@ console.log('== Ⅴ 靜態接線(單一縫 / 舊制不回歸 / 圖層紀律)==')
     : bad('subCoarse 分區表出現多份實作');
 }
 
-// ===== Ⅵ 分界線帶內不觸發地形異常狀態(2026-08-13 使用者定案)=====
-// 「確保水域/沼澤在分界線的區塊內不會觸發異常狀態」。這一段驗的是**接線的方向**:遮罩由
-// ground.js 產出、biomes.terrainEnvCode 消費、main.js 在 buildBiomes **之後**裝上。
-// 裝早了就是「界線改分區、分區又改界線」的循環相依,而症狀是同一張圖每次建出來都不一樣 ——
-// 這件事沒有任何既有斷言看得見(每一格都還是「照規則」選的)。
+// ===== VI divider band forces dry terrain (2026-08-13 user decision) =====
+// Keep water/marsh inside divider bands from triggering abnormal states. This section checks
+// wiring direction: the mask is produced by ground.js, consumed by biomes.terrainEnvCode,
+// installed by main.js after buildBiomes. Installing early is a border-changes-zone /
+// zone-changes-border cycle, symptom is a different map every build -- and no existing
+// assertion can see it (each cell still follows the rule).
 console.log('\n== Ⅵ 分界線帶內強制乾地(水域/沼澤不觸發異常狀態)==');
 {
   const bio = readSrc('public', 'js', 'biomes.js');
@@ -889,20 +940,24 @@ console.log('\n== Ⅵ 分界線帶內強制乾地(水域/沼澤不觸發異常�
   const dryM = src.match(/export function makeBandMask\(grid, sc, hwMax\) \{[\s\S]*?\n\}/);
   dryM ? ok('ground.js 有 makeBandMask(規則唯一縫)') : bad('ground.js 找不到 makeBandMask');
   if (dryM) {
-    // 純幾何:只問「離中心線的垂距 ≤ 該種類的帶半寬」,零 rnd / 零 THREE / 不吃 terrain 高程
+    // Pure geometry: only asks whether distance to a center line is within that kind band
+    // half-width; zero rnd / zero THREE / no terrain height
     (!/\brnd\(/.test(dryM[0]) && !dryM[0].includes('Math.random') && !dryM[0].includes('THREE')
       && !dryM[0].includes('heightAt'))
       ? ok('makeBandMask 是 (x,z) 的純函式:零 rnd / 零 THREE / 不看高程(§2.3)')
       : bad('makeBandMask 摻入 rnd / THREE / 高程查詢');
-    // 半寬 MUST 取索引裡那一段自己的 hw(= hwOfKind,含帶緣起伏)—— 寫死一個數字就是
-    // 「窄的那幾種多蓋一圈、寬的那一種蓋不滿」,而畫面上只是偶爾還會凍結一下
+    // Half-width MUST take that indexed segment own hw (= hwOfKind, incl. edge wobble) --
+    // hard-coding one number over-covers narrow kinds and under-covers the wide one, while on
+    // screen it only freezes occasionally
     /<= sg\.hw\) return true;/.test(dryM[0])
       ? ok('遮罩半徑取該段自己的帶半寬 sg.hw(hwOfKind ⇒ 恰好蓋住畫出來的圖案)')
       : bad('遮罩半徑不是逐段帶半寬(寫死數字 = 與真正畫出來的帶脫鉤)');
-    // 掃描格數由半寬推導(只掃自己那一格 ⇒ 最寬的沙灘帶在格界附近查不到自己那一段)
+    // Scan grid count derives from half-width (scanning only the home cell misses the
+    // widest beach band near grid borders)
     /const n = Math\.max\(1, Math\.ceil\(hwMax \/ sc\)\);/.test(dryM[0])
       ? ok('掃描格數由最寬帶半寬推導,不手寫') : bad('makeBandMask 的掃描範圍寫死');
-    // **住模組層**:寫成 buildGroundCover 的內層閉包會把整個建構作用域一起留住(A25)
+    // Lives at module level: writing it as an inner closure of buildGroundCover would pin
+    // the whole build scope (A25)
     /const bandDryAt = makeBandMask\(bdGrid, BSC, BD_HW_MAX\);/.test(src)
       ? ok('遮罩由模組層工廠產出(閉包只留索引,不留整個建構作用域;A25)')
       : bad('遮罩是建構函式的內層閉包 ⇒ 底毯 buckets / 細節清單會跟著活到戰鬥結束');
@@ -914,13 +969,13 @@ console.log('\n== Ⅵ 分界線帶內強制乾地(水域/沼澤不觸發異常�
   /terrain\.inBorderBand = null;/.test(bio)
     ? ok('buildBiomes 開頭清空 terrain.inBorderBand(再戰回房重建同一個 terrain 不沿用舊遮罩)')
     : bad('buildBiomes 未清空遮罩 ⇒ 重建時界線會反過來推分區(循環相依)');
-  // 清空 MUST 排在 buildGroundCover 之前(否則清的是這一輪剛裝上的那一份)
+  // Clearing MUST run before buildGroundCover (otherwise it clears this round just-installed copy)
   (bio.indexOf('terrain.inBorderBand = null;') < bio.indexOf('buildGroundCover(group, terrain'))
     ? ok('清空排在 buildGroundCover 之前') : bad('清空排在建圖之後 ⇒ 等於沒清');
   /if \(terrain\.inBorderBand\?\.\(x, z\)\) return 0;/.test(bio)
     ? ok('terrainEnvCode 消費遮罩(客戶端 _envAt / bakeWetGrid / 沼澤面同吃這一支)')
     : bad('terrainEnvCode 未消費遮罩 ⇒ 帶上照樣涉水凍結/陷沼扣血');
-  // 安裝點恰一處,且 MUST 在 buildBiomes 之後、bakeWetGrid 之前
+  // Exactly one install point, and it MUST sit after buildBiomes and before bakeWetGrid
   (mainSrc.match(/terrain\.inBorderBand = /g) || []).length === 1
     ? ok('安裝點恰一處(main.js)') : bad('terrain.inBorderBand 有多個安裝點或缺席');
   {
@@ -931,7 +986,7 @@ console.log('\n== Ⅵ 分界線帶內強制乾地(水域/沼澤不觸發異常�
       ? ok('安裝排在 buildBiomes 之後、bakeWetGrid 之前(兩個消費端同吃同一份規則)')
       : bad('安裝點順序錯:MUST 在 buildBiomes 之後、水沼網格烘烤之前');
   }
-  // ground.js MUST NOT 自己讀這面遮罩(讀了就是循環相依,而且是靜默的)
+  // ground.js MUST NOT read this mask itself (reading it is a silent circular dependency)
   !src.includes('inBorderBand')
     ? ok('ground.js 不讀 terrain.inBorderBand(遮罩只出不進)')
     : bad('ground.js 讀了 inBorderBand ⇒ 分區與界線互相決定');

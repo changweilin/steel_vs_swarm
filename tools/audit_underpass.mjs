@@ -1,18 +1,18 @@
 // ============ 地下道(平地下穿)稽核 ============
-// 用途:隧道與地下道是**兩種東西** ——
-//   隧道   道路平坦、鑽進突起的地形:深度來自山。舊引擎唯一做得出來的那種。
-//   地下道 地形平坦、路面一端往下、穿過去後另一端再上來:深度來自挖。
-// 舊制的隧道路面是「兩端洞口地表高的直線內插」⇒ 平地上下沉量恆 0、永遠藏不住天花板
-// ⇒ 圖資明明是地下道,遊戲裡只有一條平街(2026-07-28 之前的已知缺口)。
-// 改制只換**路面剖面**(`underpassPlan` + `tunFloorAt`),牆/天花/橫樑/照明/門洞/打洞/走廊/
-// 伺服器 slab 一律沿用隧道那一整套 —— 本稽核就是驗這兩件事:剖面對不對、沿用有沒有斷。
-// 2026-07-29 引道改制(「隧道方法」):出入口只在道路頭尾兩端 ——
-//   ① 引道開挖收窄成垂直路塹(run.cut → carveTunnels 過渡帶 hw+CUT_W;山體隧道維持 hw+7):
-//      平地上 hw+7 緩斜壁是一圈走得下去的碗 = 從地下道**側面**挖出入口,MUST NOT 回歸;
-//   ② 引道登記 open 物理段(tunnelSegs open:true):只服務 surfaceAt 站立捕捉(站精確下沉
-//      剖面)與 _updatePlayer 隧道側壁閘(溝底不能爬牆側出);slab 上傳 / _slabHitT 彈道 /
-//      ceilingAt 天花 / lev 回報 MUST 濾 !open —— 露天路塹頭上是天空,漏濾 = 伺服器把露天溝
-//      當洞內(側牆全擋 LOS、爆風隔絕)= 兩端分家靜默丟包(A18/A30 一族)。
+// Purpose: tunnels and underpasses are two different things:
+//   Tunnel: flat road boring into raised terrain, with depth coming from the mountain. The only kind the old engine could build.
+//   Underpass: flat terrain with the roadbed dipping at one end and rising at the other, with depth coming from digging.
+// The old tunnel roadbed interpolated straight between portal ground heights, so sink on flat land stayed 0 and the ceiling never hid,
+// meaning map data calling for an underpass produced only a flat street in game (known gap before 2026-07-28).
+// The reform swaps only the roadbed profile (underpassPlan plus tunFloorAt); walls, ceilings, beams, lighting, portals, holes, corridors
+// and server slabs all reuse the tunnel stack, so this audit checks two things: the profile is right and the reuse never breaks.
+// 2026-07-29 approach reform (tunnel method): portals only at the two road ends:
+//   1 Approach digging narrows to vertical cuttings (run.cut into the carveTunnels hw-plus-CUT_W band; mountain tunnels keep hw-plus-7):
+//      an hw-plus-7 gentle bowl on flat land is a walk-down bowl all around, meaning side-dug portals from the underpass flank, MUST NOT regress.
+//   2 Approaches register open physics segments (tunnelSegs open true): they serve only surfaceAt standing capture (stand on the exact sunken
+//      profile) and the updatePlayer tunnel side-wall gate (trench bottom cannot climb out sideways); slab upload, slabHitT ballistics,
+//      ceilingAt ceiling and lev reports MUST filter out open: open cutting sky is sky, and a missed filter makes the server treat an open trench
+//      as inside the bore (side walls block all LOS and blast is sealed), splitting both ends into silent drops (A18 and A30 family).
 //
 //   Ⅰ 剖面與規劃(真的執行 `biomes.js` 的 underpassPlan / tunFloorAt 原文)
 //     ① 平坦地形:舊制(直線剖面)覆蓋區間 MUST 為空(= 缺口本身);新制 MUST 建得出洞段

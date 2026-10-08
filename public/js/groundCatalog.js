@@ -61,10 +61,10 @@ export const DEFS = {
   track:        { shape: 'rect', uv: 'fit', aspect: 0.5, edge: 'ink', slope: 0.08, reg: 0.9, fam: 'rectUrban' },
   marsh:        { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.25, reg: 0, green: true, fam: 'wetFam', aq: 1 },
   lotus:        { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.15, reg: 0, fam: 'wetFam', aq: 1 },
-  // — 水域專屬底毯(aq:灘線/水面高度淘汰放行,頂點高夾到水面上;terrainEnvCode===1 專用)—
+  // -- Water-only carpet (aq: shoreline/water-height culling pass, vertex height clamped to water surface; terrainEnvCode===1 only) --
   watertile:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 1.0, reg: 0, aq: 1 },
   deepwater:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 1.0, reg: 0, aq: 1 },
-  // — 綠地擴充:竹林/枯朽森林/伐木業/棚架農業 —
+  // -- Green expansion: bamboo / dead forest / logging / trellis farming --
   arrowbamboo:  { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.50, reg: 0, green: true, fam: 'blobGreen' },
   deadwood:     { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, reg: 0, fam: 'deadFam' },
   fallenlogs:   { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.45, reg: 0, green: true, fam: 'deadFam' },
@@ -73,18 +73,18 @@ export const DEFS = {
   rottencabin:  { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.25, reg: 0.3, green: true, fam: 'ruinFam' },
   vineyard:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.18, reg: 0.85, green: true, fam: 'rectFarm', seasonal: 1 },
   greenhouse:   { shape: 'rect', uv: 'fit', aspect: 0.6, edge: 'ink', slope: 0.10, reg: 0.9, fam: 'rectFarm', seasonal: 1 },
-  // — 裸露地擴充:遺跡/死林/乾草原/廢耕/產業 —
+  // -- Exposed-land expansion: ruins / dead forest / dry grassland / abandoned farms / industry --
   deadforest:   { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, reg: 0, fam: 'deadFam' },
   slabruin:     { shape: 'blob', uvS: 1 / 10, edge: 'fade', slope: 0.45, reg: 0.15, fam: 'ruinFam' },
   steppe:       { shape: 'blob', uvS: 1 / 16, edge: 'fade', slope: 0.50, reg: 0, green: true, fam: 'alpFam' },
   abandonedfarm:{ shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.16, reg: 0.55, fam: 'rectFarm', seasonal: 1 },
   saltpan:      { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.06, reg: 0.85, fam: 'panFam' },
   quarry:       { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.45, reg: 0.5, fam: 'digFam' },
-  // — 高地(相對高程分區;冬季裸露地也混入冰原)—
+  // -- Highlands (relative-elevation zones; winter exposed land also mixes in icefields) --
   plateau:      { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.60, reg: 0, fam: 'alpFam' },
   icefield:     { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.40, reg: 0, fam: 'alpFam' },
   scree:        { shape: 'blob', uvS: 1 / 11, edge: 'fade', slope: 0.80, reg: 0, fam: 'alpFam' },
-  // — 市區擴充:工業/服務/休憩設施 —
+  // -- Urban expansion: industrial / service / recreation facilities --
   construction: { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.20, reg: 0.7, fam: 'digFam' },
   gasstation:   { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.08, reg: 0.95, fam: 'rectUrban' },
   park:         { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.30, reg: 0.15, green: true, fam: 'blobGreen' },
@@ -94,7 +94,7 @@ export const DEFS = {
   cemetery:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.18, reg: 0.85, green: true },
   solarfarm:    { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.12, reg: 0.9, fam: 'solarFam' },
   helipad:      { shape: 'rect', uv: 'fit', aspect: 1.0, edge: 'ink', slope: 0.06, reg: 0.6 },
-  // — 濕地擴充 —
+  // -- Wetland expansion --
   fishpond:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.06, reg: 0.8, fam: 'panFam', seasonal: 1 },
 };
 export const ZONES = {
@@ -103,8 +103,8 @@ export const ZONES = {
           'veggiefield', 'pasture', 'flowerfield', 'fallenlogs', 'greenhouse', 'lumberyard'],
   bare:  ['slabruin', 'quarry', 'abandonedfarm', 'crackedearth', 'gravel', 'abandonedfarm',
           'solarfarm', 'containeryard', 'saltpan'],
-  // 2026-08-13 使用者「紅磚地和水泥地大幅調降使用率」:brick 退出特徵層(它在底毯清單裡
-  // 仍留一格 ⇒ 磚地沒有絕跡,只是不再是隨處可見的鋪面)
+  // User decision 2026-08-13 to sharply lower red-brick and concrete usage: brick leaves the feature layer (it keeps
+  // one carpet-list slot, so brick ground is not extinct, just no longer an everywhere pavement)
   urban: ['helipad', 'park', 'parking', 'plaza', 'court',
           'construction', 'track', 'gasstation', 'cemetery', 'scrapyard'],
   wet:   ['fishpond', 'lotus', 'marsh', 'fishpond'],
@@ -115,16 +115,16 @@ export const CARPET = {
           'arrowbamboo', 'meadow', 'deadwood', 'turf', 'fallenlogs'],
   bare:  ['wild', 'gravel', 'steppe', 'crackedearth', 'sand', 'redsoil', 'wild',
           'deadforest', 'mud', 'scree'],
-  // 2026-08-13 使用者「紅磚地和水泥地大幅調降使用率」:舊制 concrete×2 + brick×1 = 7 格裡的
-  // 3 格,而 concrete 與 brick 又剛好是端點 ⇒ **實測佔市區底毯 36%**(端點加成見 CARPET_SEL)。
-  // 各留一格(21 格裡的 2 格)⇒ 實測降到 11%,讓出來的份額給人行道鋪面與草坪/公園
-  // (市區的開闊地實際上多半是這些)。**權重 MUST 用格數表達** —— 顏色路徑排序之後「排在
-  // 清單哪個位置」已經由代表色決定,MUST NOT 再想靠挪位置調用量
+  // User decision 2026-08-13 to sharply lower red-brick and concrete usage: old mix of concrete x2 + brick x1 was
+  // 3 of 7 slots, and concrete and brick are endpoints, so measured urban-carpet share was 36 percent (endpoint bonus, see CARPET_SEL).
+  // Keeping one slot each (2 of 21 slots) drops the measured share to 11 percent; freed share goes to sidewalk paving and lawns/parks
+  // (which is what urban open ground mostly is). Weights MUST be expressed in slot counts -- after the color-path sort,
+  // list position is decided by representative color, so MUST NOT try to tune volume by shuffling positions
   urban: ['pavement', 'pavement', 'pavement', 'pavement', 'pavement', 'pavement',
           'pavement', 'pavement', 'pavement', 'pavement', 'pavement', 'pavement',
           'lawn', 'lawn', 'lawn', 'lawn', 'park', 'park', 'park', 'concrete', 'brick'],
   wet:   ['marsh', 'marsh', 'lotus'],
-  water: ['watertile'],   // 水域專屬(深水格由 cellKeyAt 依水深改配 deepwater,不走雜訊輪替)
+  water: ['watertile'],   // Water-only (deep cells remap to deepwater by depth in cellKeyAt, never via noise rotation)
   alpine: ['plateau', 'scree', 'icefield', 'steppe', 'plateau'],
 };
 export const FAMS = {

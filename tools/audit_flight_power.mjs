@@ -1,36 +1,47 @@
-// ============ 飛行動力學(爬升動力 + 受擊掉高)+ 機種絕招載具 HP 校準 稽核 ============
-// 用途:改 `data.js` 的 `FLIGHT`/`airSinkM`/`liftMax`/`liftRegen`/`liftDrainPS`/`HYPER`/`towerDps`/
-//      `kamiHp`/`hyperHp`/`decoyHp`/`kamiSide`,或 `game.js` 的 `_stepLift`/`_airSinkHit`/
-//      `_updatePlayer` 飛行段/`_fireHoldAbility`/`_tryFire` 之後跑。跑法:`node tools/audit_flight_power.mjs`
+// ============ Flight dynamics (climb power + hit-induced sink) + chassis-ult vehicle HP calibration audit ============
+// Purpose: run after changing `data.js` `FLIGHT`/`airSinkM`/`liftMax`/`liftRegen`/`liftDrainPS`/`HYPER`/
+// `towerDps`/`kamiHp`/`hyperHp`/`decoyHp`/`kamiSide`, or `game.js` `_stepLift`/`_airSinkHit`/ the
+// `_updatePlayer` flight section / `_fireHoldAbility` / `_tryFire`. Usage: `node tools/audit_flight_power.mjs`
 //
-// 三條規則共用一支稽核,因為破法都一樣**無聲**:
-//   ①**機種絕招的載具 HP 一律由「前線一組塔位打幾秒」反解**(2026-08-01 使用者定調的三句話,
-//      2026-08-02 由 bal ⑦f 把尺從「一座孤塔」換成前線真正的火力 = 同塔位雙塔):
-//      飽和攻擊 4 架、剛好擊落 2 架;極音速飛彈剛好打不爆(它飛越整條前線 ⇒ 另計一波兵);
-//      集束轟炸機剛好投得完 5+1 顆。
-//      無聲寫壞法:任一個 HP 手寫(改砲塔數值就整組漂掉)、載具帶 armor/護盾(EHP 隨主機角色浮動,
-//      「剛好」變成看人品)、巨砲時代的彈夾旁路殘留在 _gateFire/_tryFire(重武器又能免費開火)。
-//      伺服器那半由 `npm test`(sim 直測)把關;這裡驗**推導與客戶端消費端**。
-//   ②**受擊掉高**:掉的公尺數 ∝ 傷害,校準錨 = 打完「平均護盾+裝甲」掉 SINK_TOWERS 個砲塔高。
-//      掉高歸類於失衡效果(2026-10-06):無人機低空飛行(離地 < 一個砲塔高)不失衡 ⇒ 也不掉高、不鎖動力。
-//      無聲寫壞法:在 game.js 手寫公尺數/係數(校準錨一改就分家)、把掉幅做成「速度」
-//      (同一份傷害分幾發打完就掉不一樣多)、忘了在陣亡/換座機/觸地清帳(舊帳把新機體往下拉)。
-//   ③**爬升動力**:只有往上飛消耗,滿動力全速爬升撐 DRAIN_S 秒,上限/回速全機共用固定值
-//      (LIFT_MAX = 100、REGEN_PS = 10);大跳躍滿蓄耗 60%、變形滿蓄耗 40%(皆 × 蓄力比例)。
-//      無聲寫壞法:耗速手寫(改 DRAIN_S 無效)、按機體區分上限/回速(改一隻漏一隻)、
-//      跳躍/變形耗能手寫固定點數(改 LIFT_MAX 就分家)、動力見底改「減速」而不是「爬不上去」
-//      (玩家分不出來,且會與坡度阻擋 slopeBlocked 的語意分家)、把水平分量一起砍掉。
-//      高度越高同速爬升越耗動力:指數曲線 liftAltF(起點 = 1,每多一個塔高翻倍,
-//      至 ALT_TOP_F = 3 個塔高封頂 = 8 倍),
-//      起點 = 有海面取海平面、否則取全圖地形最低點;下降回充吃同一條(高處回得多,2/3 比例處處成立)。
-//      無聲寫壞法:分段階梯(高一公尺突然貴一截)、起點寫死 0(沿海地圖的海平面被當成高空加價)、
-//      天花板無效時爆成 NaN、消費端各寫一份係數、爬升吃曲線而下降不吃(同一高度上下一趟憑空蒸發動力)。
+// Three rules share one audit because they all break **silently**:
+//   1 **Chassis-ult vehicle HP is always reverse-solved from "how many seconds one frontline tower position
+//     shoots"** (the three sentences set by the user 2026-08-01, with bal 7f swapping the yardstick on
+//     2026-08-02 from "one lone tower" to the front line's real firepower = twin towers per position):
+//     saturation strike 4 frames, exactly 2 shot down; hypersonic missile exactly unsurvivable (it overflies
+//     the whole front line ⇒ plus one creep wave counted separately); cluster bomber exactly delivers 5+1.
+//     Silent breakage: any hand-written HP (tower retune drifts the whole set), vehicles carrying armor /
+//     shields (EHP floats with the host chassis, so "exactly" becomes luck of the draw), cannon-era magazine
+//     bypass remnants in _gateFire/_tryFire (heavy weapons firing free again). The server half is guarded by
+//     `npm test` (direct sim tests); here verify **derivation and client consumers**.
+//   2 **Hit-induced sink**: meters lost ∝ damage, calibration anchor = draining "mean shields+armor" drops
+//     SINK_TOWERS tower-heights. Sinking counts as an unbalance effect (2026-10-06): drones flying low
+//     (below one tower height AGL) do not unbalance ⇒ no sink, no power lock either.
+//     Silent breakage: hand-written meters/coefficients in game.js (anchor retune splits them), sink amount
+//     as a "rate" (same damage split across shots sinks differently), forgetting to clear books on
+//     death/chassis-swap/touchdown (old books drag the new chassis down).
+//   3 **Climb power**: consumed only flying upward; full power at full climb lasts DRAIN_S seconds;
+//     cap/regen fixed fleet-wide (LIFT_MAX = 100, REGEN_PS = 10); full-charge super-jump costs 60%,
+//     full-charge morph 40% (both x charge fraction).
+//     Silent breakage: hand-written drain rate (DRAIN_S retune does nothing), per-chassis cap/regen (fix
+//     one, miss one), jump/morph costs as fixed points (LIFT_MAX retune splits them), empty power as
+//     "slow down" instead of "cannot climb" (players cannot tell, and it splits from slope-block
+//     semantics), cutting the horizontal component too.
+//     Higher altitude costs more power for the same climb rate: exponential curve liftAltF (base = 1,
+//     doubling per tower height, capped at ALT_TOP_F = 3 tower heights = 8x); base = sea level when a sea
+//     exists, else the map's lowest terrain; descent recharge rides the same curve (more back from higher
+//     up, the 2/3 ratio holding everywhere).
+//     Silent breakage: stepped ladders (one meter higher suddenly costs a notch), base hard-coded 0
+//     (coastal maps price sea level as altitude), NaN when the ceiling is void, per-consumer coefficient
+//     copies, climb riding the curve while descent does not (a round trip at one altitude evaporates power
+//     from nothing).
 //
-// 手法比照 `audit_cc_flash.mjs`:公式直接 import(data.js 是純模組),game.js 的方法**抽執行原文**
-// 評估(three 走 CDN,Node 端 import 不了整支;抄一份公式到稽核裡就永遠會通過)。
-// 原文一律經 `audit_src.mjs readSrc()`(換行正規化):本檔逐行剝註解 + 「全檔只有 N 處」計數,
-// 而 `//.*$` 在 CRLF 檢出的工作區靜默失效 ⇒ 註解裡的名字會被算進單一縫計數(同一份程式碼
-// LF 全綠、Windows 紅字)。MUST NOT 退回自己 `readFileSync`(§5 通則 ㋑)。
+// Method follows `audit_cc_flash.mjs`: formulas imported directly (data.js is a pure module), game.js
+// methods evaluated by **extracting executable source** (three.js rides the CDN, Node cannot import the
+// whole file; a recopied formula in the audit would pass forever). Source always passes through
+// `audit_src.mjs readSrc()` (newline normalization): this file strips per-line comments + "only N
+// occurrences" counting, while `//.*$` silently fails on CRLF checkouts ⇒ names inside comments get
+// counted into single-seam counts (same code green on LF, red on Windows). MUST NOT fall back to a
+// private `readFileSync` (section-5 general rule ㋑).
 import { readSrc } from './audit_src.mjs';
 import {
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, liftDescentPS, liftAltF, unbalMissP,
@@ -53,7 +64,7 @@ const mainSrc = readSrc('public', 'js', 'main.js');
 const css = readSrc('public', 'css', 'style.css');
 const html = readSrc('public', 'index.html');
 
-/** 抽出 class 方法的原文(含大括號區塊);與 audit_cc_flash.mjs 同一手法 */
+/** Extract a class method's source (with brace block); same technique as audit_cc_flash.mjs */
 const grab = (name, s = src) => {
   const i = s.indexOf(`\n  ${name}(`);
   if (i < 0) throw new Error(`找不到 ${name}`);
@@ -66,7 +77,7 @@ const grab = (name, s = src) => {
   return s.slice(i, j);
 };
 
-/** 「全檔只有 N 處」的計數 MUST 只數執行原文 —— 註解與 import 清單也提得到同一個名字 */
+/** "Only N occurrences in the whole file" counts MUST scan executable source only — comments and import lists mention the same names */
 const strip = (s, cut) => {
   const noCom = s
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -96,7 +107,7 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
   t('towerKillHp(sec) = 這段時間的傷害量(「剛好被打爆」)',
     Math.abs(towerKillHp(3) - towerDps() * 3) <= 0.5);
 
-  // —— 飽和攻擊:4 架、一座砲塔剛好擊落 SHOT_DOWN 架 ——
+  // — Saturation strike: 4 frames, one tower shoots down exactly SHOT_DOWN —
   t('KAMI.N = 4 且 SHOT_DOWN = 2 ⇒ 成功自爆 2 架(使用者定調)',
     SQUAD.KAMI.N === 4 && SQUAD.KAMI.SHOT_DOWN === 2);
   t('舊 KAMI.HP_F(主機血量比例)已退場(HP 改由砲塔火力反解)',
@@ -113,8 +124,9 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     const ss = Array.from({ length: SQUAD.KAMI.N }, (_, i) => kamiSide(i));
     t('kamiSide 均勻散開、對稱、涵蓋 [−1, 1]',
       ss[0] === -1 && ss[ss.length - 1] === 1 && near(ss.reduce((a2, b2) => a2 + b2, 0), 0), ss.join(', '));
-    // 2026-08-06 使用者定案「拿掉常駐模組,攻擊時再出現」⇒ 客戶端貼身站位那一個消費端整組退場
-    // (`ESCORT`/`escortSlot`/`_buildDroneEscorts`/`_updateEscorts`),kamiSide 只剩伺服器一個消費端。
+    // 2026-08-06 user decision "drop the persistent module, appear only when attacking" ⇒ the client
+    // close-escort consumer retires as a group (`ESCORT`/`escortSlot`/`_buildDroneEscorts`/`_updateEscorts`);
+    // kamiSide keeps only the server consumer.
     t('kamiSide 只剩伺服器生成側偏移一個消費端,MUST NOT 復辟 `const s = i === 0 ? -1 : 1`',
       /const s = kamiSide\(i\);/.test(simCode)
       && !/const s = i === 0 \? -1 : 1/.test(simCode) && !/const s = i === 0 \? -1 : 1/.test(code));
@@ -122,9 +134,10 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
       !/escort|ESCORT/i.test(code) && !/ESCORT|escortSlot|escortDrift|escortLag/.test(dataSrc.replace(/\/\/.*$/gm, '')));
   }
 
-  // —— 極音速飛彈:45° 拋物線爬升 + 撐得住最長一次飛行 ——
-  // 2026-08-02 使用者定案彈道:「前半段拋物線飛向高空,初始角度 45 度,後半段再以極快速度
-  // 向下螺旋飛向目標」⇒ 頂點高不再是常數,而是「發射角 × 交戰距離」的推導值。
+  // — Hypersonic missile: 45° parabolic climb + surviving the single longest flight —
+  // 2026-08-02 user-set trajectory: "first half parabolas skyward at a 45° initial angle, second half
+  // spirals down at extreme speed onto the target" ⇒ apex height is no longer a constant but the derived
+  // "launch angle × engagement distance".
   t('hyperApex / hyperRange / hyperFlightS 全由已縮好的量推導(MUST NOT 手寫遊戲公尺)',
     /export const hyperApex = \(d = hyperRange\(\)\) => d \* Math\.tan\(hyperLaunchRad\(\)\) \/ 2;/.test(dataSrc)
     && /export const hyperRange = \(\) => UNITS\.tower\.range \* HYPER\.RANGE_F;/.test(dataSrc)
@@ -135,9 +148,11 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     near(hyperFlightS(hyperMaxArcM()),
       hyperClimbS(hyperMaxArcM()) + hyperApex(hyperMaxArcM()) / (HYPER.CLIMB_SPD * HYPER.DIVE_F))
     && !/Math\.hypot\(hyperApex\(\), hyperTrackR\(\)\)/.test(dataSrc));
-  // 2026-08-07 使用者定案「大招改為從最近的砲塔或主堡召喚」:最長那一發多了一段**代表發射腿**,
-  // 而飛彈全程在高空飛越整條前線(它吃的是 overflyDps)⇒ 那一段是真的多挨打,曝險窗 MUST 跟著長。
-  // 另兩種形式刻意不動:它們的曝險窗量的是「進入敵方前線塔位射程 → 抵達」,發射點往後退不改變它。
+  // 2026-08-07 user decision "ults now summon from the nearest tower or base": the longest shot gains an
+  // extra **representative launch leg**, while the missile overflies the whole front line at altitude (it
+  // eats overflyDps) ⇒ that leg is genuinely more exposure, so the exposure window MUST grow with it.
+  // The other two forms deliberately stay: their windows measure "frontline tower-position range entry →
+  // arrival", which a shifted-back launch point does not change.
   t('最長航程 = 代表發射腿 + 遞送距離(工事召喚多飛的那一段真的進了曝險窗)',
     hyperMaxArcM() === ultLaunchLegM() + hyperRange()
     && hyperFlightS(hyperMaxArcM()) > hyperFlightS(hyperRange())
@@ -165,10 +180,12 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
   t('螺旋基底取固定水平法向,MUST NOT 由彈道軸現算(垂直落下時軸的水平分量 → 0 = 沒有螺旋)',
     /m\.uz \* c \+ m\.ux \* s/.test(simCode) && !/px = -az \/ Math\.hypot/.test(simSrc));
 
-  // —— 終端追擊有射程(2026-08-05 使用者定案)——
-  // 「前 2/3 飛往發射時目標的初始地點;後 1/3 只有目標仍在砲塔射程 1/2 內才螺旋追擊,
-  //   否則保持原軌跡」。破法全無聲:判定半徑手寫(改砲塔射程就分家)、爬升段偷讀即時位置
-  //   (頂點被拉走 = 拋物線不成立)、逐 tick 重判(最後零點幾秒彈道整條折斷)。
+  // — Terminal pursuit has a range (2026-08-05 user decision) —
+  // "First 2/3 flies to the target's launch-time position; the last 1/3 spirals onto it only while the
+  // target stays within half a tower range, else holds the original track". Every breakage is silent:
+  // hand-written verdict radius (tower retune splits it), climb phase peeking at live position (apex
+  // dragged away = parabola void), per-tick re-verdicts (trajectory snaps in the last fractions of a
+  // second).
   t('終端追擊半徑推導不手寫 = 砲塔射程 × TRACK_R_F',
     /export const hyperTrackR = \(\) => UNITS\.tower\.range \* HYPER\.TRACK_R_F;/.test(dataSrc)
     && near(hyperTrackR(), UNITS.tower.range * HYPER.TRACK_R_F)
@@ -196,7 +213,8 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     /v\.kind !== 'hyper' \|\| v\.chase/.test(laneCode)
     && /v\.chase = v\.tgt\.hp > 0 && Math\.hypot\(v\.tgt\.x - v\.tx, v\.tgt\.y - v\.ty\) <= hyperTrackR\(\);/.test(laneCode)
     && count(laneCode, 'hyperTrackR()') === 1);
-  // 客戶端只插值伺服器回報的位置(`b.chase` 是射後不理**彈體**的追擊燃料旗標,與這一招無關)
+  // Client only interpolates server-reported positions (`b.chase` is the fire-and-forget **shell's**
+  // pursuit-fuel flag, unrelated to this move)
   t('客戶端不參與追擊判定(彈道與命中全在伺服器)',
     !/hyperTrackR/.test(code) && !/m\.chase|hyperChase/.test(code));
   t('爬升頂點高過直射鎖定天花板(是「高空」不是抬個頭)', hyperApex() > GAME.GUN_CEIL_M);
@@ -207,7 +225,8 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     && hyperHp() > (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS(hyperMaxArcM()));
   t('「剛好」不是「綽綽有餘」:餘裕 < 一發塔砲',
     hyperHp() - (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS(hyperMaxArcM()) < towerDps());
-  // —— 火力 / 範圍改制(2026-08-06 使用者定案:2.5 架自爆無人機的傷害 / 砲塔射程 2/5 的爆風)——
+  // — Firepower / area migration (2026-08-06 user decision: 2.5 kamikaze-drone damage / tower-range
+  // 2/5 blast) —
   t('戰鬥部 = 2.5 架自爆無人機的傷害(逐等級都成立)',
     [{ light: 1, heavy: 1 }, { light: 4, heavy: 1 }, { light: 4, heavy: 4 }].every((ab2) =>
       Math.abs(hyperBlast(ab2).dmg - kamiBlast(ab2).dmg * HYPER.KAMI_EQ) <= 2),
@@ -223,14 +242,14 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     && near(hyperBlast({ light: 1, heavy: 1 }).r, HYPER.BLAST_R) && HYPER.BLAST_R_F === undefined,
     `${hyperBlast({ light: 1, heavy: 1 }).r.toFixed(1)}m`);
 
-  // —— 集束炸彈:撐到投完 DROP_N 顆 ——
+  // — Cluster bomb: survive to deliver all DROP_N —
   t('BOMB_MAX = 6 且 DROP_N + 墜毀補投 1 顆 = BOMB_MAX(使用者定調的 5+1)',
     DECOY.BOMB_MAX === 6 && DECOY.DROP_N + 1 === DECOY.BOMB_MAX);
   t('舊 DECOY.HP_F(主機血量比例)已退場', DECOY.HP_F === undefined);
   t('decoyExposureS = 接近時間 + (DROP_N − 0.5) 個投彈間隔(半個間隔的餘量也是推導,不手寫秒數)',
     near(decoyExposureS(),
       Math.max(0, UNITS.tower.range - DECOY.BOMB_R) / DECOY.SPEED + (DECOY.DROP_N - 0.5) * DECOY.BOMB_GAP));
-  // 行為直測:曝險窗內剛好投得出第 DROP_N 顆、且撐不到第 DROP_N+1 顆
+  // Behavior test: the DROP_N-th bomb just fits inside the exposure window, the (DROP_N+1)-th never does
   {
     const live = decoyHp() / (towerDps() * TOWER_SITE_N);
     const approach = Math.max(0, UNITS.tower.range - DECOY.BOMB_R) / DECOY.SPEED;
@@ -238,14 +257,14 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     t('前線一組塔位火力下剛好投出 DROP_N 顆 + 墜毀補投 1 顆 = BOMB_MAX',
       dropped === DECOY.DROP_N && dropped + 1 === DECOY.BOMB_MAX, `實得 ${dropped} + 1`);
   }
-  // 行為直測:前線一組塔位在曝險窗內剛好擊落 SHOT_DOWN 架
+  // Behavior test: one frontline tower position shoots down exactly SHOT_DOWN frames inside the window
   {
     const downed = Math.floor(kamiExposureS() / (kamiHp() / (towerDps() * TOWER_SITE_N)) + 1e-9);
     t('前線一組塔位在曝險窗內剛好擊落 SHOT_DOWN 架、其餘成功自爆',
       downed === SQUAD.KAMI.SHOT_DOWN, `實得 ${downed} 架`);
   }
   t('decoyHp = frontKillHp(曝險窗)', decoyHp() === frontKillHp(decoyExposureS()));
-  // —— 校準基準:前線一組塔位(2026-08-02 由 bal ⑦f 定案)——
+  // — Calibration basis: one frontline tower position (set by bal 7f on 2026-08-02) —
   t('前線基準 = 同塔位雙塔,且 front* 由 tower* 推導(MUST NOT 各寫一份 dps)',
     TOWER_SITE_N === 2
     && /export const frontSurviveHp = \(sec\) => towerSurviveHp\(sec \* TOWER_SITE_N\);/.test(dataSrc)
@@ -255,7 +274,8 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     && /export const waveDps = \(\) => waveComp\(\)\.reduce\(/.test(dataSrc));
   t('三個 HP 全部走同一把前線的尺(MUST NOT 有人還留在單塔基準)',
     !/= towerKillHp\(kamiExposureS|= towerSurviveHp\(hyperFlightS|= towerKillHp\(decoyExposureS/.test(dataSrc));
-  // —— 爆風半徑的面積計價:總覆蓋面積與「切成幾顆」無關(2026-08-06 火力改制**不動**這一條)——
+  // — Blast-radius area pricing: total covered area is independent of "how many pieces" (the 2026-08-06
+  // firepower migration deliberately leaves this line alone) —
   {
     const A = (d) => d.n * Math.PI * (blastFootprintR(d.r) ** 2);
     const ab = { light: 1, heavy: 1 };
@@ -297,11 +317,12 @@ console.log('■ Ⅱ 巨砲 + 機種絕招整組退場:射擊路徑無旁路、�
     /st\.ammo--;\s*\n\s*if \(mpc > 0\) this\.mp = Math\.max\(0, this\.mp - mpc\);/.test(fire));
   t('_tryFire:未按開火鍵就不擊發(舊巨砲的窗內自動擊發已移除)',
     /if \(!this\.firing\) return;/.test(fire));
-  // ---- 機種絕招的客戶端入口(2026-08-06 第二階段:長按右鍵改成招式手勢)整組退場 ----
-  // 舊制三支 _launchKamikaze / _launchDecoy / _launchHyper 是「機種分派表」的三個葉子;
-  // 機種絕招退場之後分派表本身也沒有東西可派 ⇒ A22 那條縫改由 data.js `abilHoldSlot` 表達
-  // **模式**分流(一般 = 小招 / 狙擊 = 大招)。留一支在原文裡就是一顆按了沒反應的鈕
-  //(伺服器連對應的訊息都不再受理),而畫面上只表現成「這台機體的長按壞了」。
+  // ---- Chassis-ult client entry (2026-08-06 phase two: hold-right becomes the ability gesture) retired wholesale ----
+  // The legacy _launchKamikaze / _launchDecoy / _launchHyper trio were the three leaves of a "chassis
+  // dispatch table"; with chassis ults retired the table has nothing left to dispatch ⇒ the A22 seam is now
+  // expressed by the data.js `abilHoldSlot` **mode** split (normal = light / aimed = heavy). One survivor left
+  // in source is a button that does nothing when pressed (the server no longer honors the message), showing
+  // on screen only as "this chassis's hold is broken".
   for (const m of ['_launchKamikaze', '_launchDecoy', '_launchHyper']) {
     t(`game.${m} 已整組退場(MUST NOT 復辟)`, !new RegExp(`\\n  ${m}\\(`).test(code));
   }
@@ -373,9 +394,10 @@ console.log('■ Ⅳ 爬升動力:推導(滿動力全速爬升撐 DRAIN_S 秒;�
     /export const liftDescentPS[\s\S]{0,140}?liftDrainPS\(\)[\s\S]{0,40}?FLIGHT\.DESCENT_RECHARGE_F/.test(dataSrc));
   t('全速下降回充 = 全速爬升耗速 × 2/3',
     near(liftDescentPS() / liftDrainPS(), FLIGHT.DESCENT_RECHARGE_F, 1e-9));
-  // ---- 高度爬升曲線(2026-09-30 使用者需求:高度越高,爬升相同高度需要更多動力;
-  //      2026-10-06 改制為指數:以一個砲塔高為單位,每多一個塔高耗速翻倍,至 3 個塔高封頂 = 8 倍)----
-  // 起點 = 有海面取海平面、否則取全圖地形最低點;封頂高度 = 起點 + ALT_TOP_F 個塔高。
+  // ---- Altitude climb curve (2026-09-30 user request: higher altitude costs more power for the same
+  //      climb; 2026-10-06 migrated to exponential: one tower height per unit, doubling per tower height,
+  //      capped at 3 tower heights = 8x) ----
+  // Base = sea level when a sea exists, else the map's lowest terrain; cap height = base + ALT_TOP_F tower heights.
   t('高度曲線由 FLIGHT.ALT_TOP_F 推導(MUST NOT 手寫倍率)',
     /export const liftAltF[\s\S]{0,600}?FLIGHT\.ALT_TOP_F/.test(dataSrc)
     && /Math\.pow\(2,/.test(dataSrc));
@@ -419,7 +441,8 @@ console.log('■ Ⅳ 爬升動力:推導(滿動力全速爬升撐 DRAIN_S 秒;�
     count(code, 'liftAltF(') === 2 && count(grab('_stepLift'), 'liftAltF(') === 2);
   t('game.js MUST NOT 手寫塔高倍數(上限只准吃 FLIGHT.ALT_TOP_F;飛行夾制兩處)',
     count(code, 'FLIGHT.ALT_TOP_F') === 2 && !/TARGET_H\.tower \* [0-9]/.test(code));
-  // 起點規則:有海面吃海面,否則吃地形最低點,取不到回 null(執行 _liftBaseY 原文)
+  // Base rule: sea level when a sea exists, else lowest terrain; missing data returns null ( executes
+  // the _liftBaseY source)
   {
     const baseOf = (terrain) =>
       new Function(`return { ${grab('_liftBaseY').trim()} };`)()._liftBaseY.call({ terrain });
@@ -438,8 +461,9 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
     && /liftDrainPS\(/.test(grab('_stepLift')) && /liftRegen\(/.test(grab('_stepLift')) && /liftDescentPS\(/.test(grab('_stepLift')));
   t('airSinkM 在客戶端的唯一消費端 = _airSinkHit',
     count(code, 'airSinkM(') === 1 && /airSinkM\(/.test(grab('_airSinkHit')));
-  // bot 沒有客戶端 ⇒ 伺服器補同一條規則(同一支 airSinkM);兩條扣血路徑(護盾全擋的早退 + 一般路徑)
-  // MUST 都掛到,漏掉早退那條 = 「還有護盾時打不掉高度」。
+  // Bots have no client ⇒ the server covers the same rule (the same airSinkM); both damage paths (the
+  // fully-blocked early exit + the normal path) MUST hook in — missing the early-exit path reads as
+  // "shields up means altitude never drops".
   t('airSinkM 在伺服器的唯一消費端 = _botAirSink(bot 那一半)',
     count(simCode, 'airSinkM(') === 1 && /airSinkM\(/.test(grab('_botAirSink', simSrc)));
   t('_damage 的兩條扣血路徑都呼叫 _botAirSink(含護盾全擋的早退)',
@@ -447,7 +471,8 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
   t('_botAirSink 只作用於 bot 的飛行機體(真人由客戶端物理結算,套兩次會打架)',
     /isBotId\(t\.pid\)/.test(grab('_botAirSink', simSrc))
     && /kind === 'drone'/.test(grab('_botAirSink', simSrc)));
-  // 電力上限的權威旗標:唯一寫入點 = 快照解析(收到 e.mm 那一行旁邊)。
+  // Authoritative flag for the power cap: single write site = snapshot parsing (beside the line
+  // receiving e.mm).
   t('_mpAuth 只在收到快照的 e.mm 時寫 true(建構子那一次 false 不算)',
     count(code, 'this._mpAuth = true') === 1
     && /this\.maxMp = e\.mm \?\? this\.maxMp;[\s\S]{0,120}?this\._mpAuth = true/.test(code)
@@ -498,7 +523,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     pos: { y: 0 }, _liftBaseY: () => 0, _ceilY: () => Infinity, ...over,
   });
 
-  // ① 全速爬升:滿動力恰好撐 DRAIN_S 秒
+  // 1 Full-rate climb: full power lasts exactly DRAIN_S seconds
   {
     const c = mk();
     const dt = 1 / 60;
@@ -511,7 +536,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     }
     t(`全速爬升 ${FLIGHT.DRAIN_S}s 耗盡滿動力(實測 ${s.toFixed(2)}s)`, Math.abs(s - FLIGHT.DRAIN_S) <= 2 * dt);
   }
-  // ② 半速爬升:撐兩倍時間(耗速 ∝ 爬升率)
+  // 2 Half-rate climb: lasts twice as long (drain ∝ climb rate)
   {
     const c = mk();
     const dt = 1 / 60;
@@ -525,7 +550,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     t(`半速爬升撐兩倍時間(實測 ${s.toFixed(2)}s ≈ ${FLIGHT.DRAIN_S * 2}s)`,
       Math.abs(s - FLIGHT.DRAIN_S * 2) <= 4 * dt);
   }
-  // ③ 動力見底:上升分量歸零(爬不上去),水平與下降完全不受影響
+  // 3 Power empty: upward component zeroes (cannot climb), horizontal and descent fully unaffected
   {
     const c = mk({ lift: 0 });
     const up = { x: 7, y: u.vspeed, z: -3 };
@@ -538,7 +563,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     t('動力見底:下降不受影響', down.y === -u.vspeed);
     t('不爬升即回充(下降/懸停都回)', c2.lift > 0);
   }
-  // ④ 回充上限固定(全機相同,不吃充能軌)
+  // 4 Recharge cap fixed (identical fleet-wide, no charge track)
   {
     const c = mk({ lift: 0 });
     const hover = { x: 0, y: 0, z: 0 };
@@ -548,14 +573,14 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
       near(FLIGHT.LIFT_MAX / liftRegen(), FLIGHT.DRAIN_S * 2, 1e-9),
       `${(FLIGHT.LIFT_MAX / liftRegen()).toFixed(1)}s`);
   }
-  // ④' 開場第一幀:lift = null 即補滿統一上限(固定值,不吃電力快照)
+  // 4' First frame at boot: lift = null tops up to the unified cap (fixed value, no power snapshot)
   {
     const boot = mk({ lift: null });
     boot._stepLift(1 / 60, 0, { x: 0, y: 0, z: 0 }, u);
     t('開場第一幀補滿(開場動力條 = 滿格)', near(boot.lift, FLIGHT.LIFT_MAX, 1e-9), `${boot.lift}`);
     t('全機上限相同:變形者不再打折', near(mk({})._liftMax(), FLIGHT.LIFT_MAX, 1e-9));
   }
-  // ⑤ 掉高:總掉幅只由傷害決定(分幾次打完/幀率都不影響)
+  // 5 Sink: total drop decided by damage alone (shot count / frame rate change nothing)
   {
     const sink = (hits, dt) => {
       const c = mk();
@@ -580,7 +605,8 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     c._airSinkHit(300);
     t('地面機體不掉高(規則只作用於飛行機體)', c._airSink === 0);
   }
-  // ⑤' 低空免失衡(2026-10-06 使用者需求:掉高歸類於失衡效果,低空無人機不掉高、不鎖動力)
+  // 5' Low-altitude unbalance exemption (2026-10-06 user request: sinking counts as an unbalance
+  // effect; low drones neither sink nor lock power)
   {
     const low = mk({ isDrone: true, _altAG: TARGET_H.tower - 1 });
     low._airSinkHit(300, 1.0);
@@ -595,7 +621,8 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     edge._airSinkHit(300, 1.0);
     t('恰一個塔高不再豁免(邊界與伺服器 _stampUnbal 同判)', edge._airSink > 0);
   }
-  // ⑥ 受擊掉高動力回復鎖定(2026-09-01 使用者需求:飛行時被擊中而下降時,會有一段時間無法恢復飛行動力)
+  // 6 Power-regen lock after hit-induced sink (2026-09-01 user request: a window with no power regen
+  // while descending after a mid-flight hit)
   {
     const c = mk({ lift: 0 });
     c._airSinkHit(100, 1.0);
@@ -605,10 +632,10 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     c._stepLift(0.1, 1.0 + FLIGHT.HIT_LOCK_S + 0.1, { x: 0, y: 0, z: 0 }, u);
     t('鎖定期結束後恢復回充', c.lift > 0);
   }
-  // ⑦ 正常操作下降高度回充 2/3 電力 (2026-09-11 使用者需求)
+  // 7 Normal-operation descent recharges 2/3 power (2026-09-11 user request)
   {
     const dt = 1 / 60;
-    // 全速下降時每秒回充電力 = liftRegen + liftDescentPS
+    // Full-rate descent recharges per second = liftRegen + liftDescentPS
     const cFull = mk({ lift: 0 });
     const fullDown = { x: 0, y: -u.vspeed, z: 0 };
     cFull._stepLift(dt, 0, fullDown, u);
@@ -616,7 +643,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     t('正常操作全速下降:回充量 = (liftRegen + liftDescentPS) * dt',
       near(cFull.lift, expectedFull, 1e-6), `${cFull.lift} vs ${expectedFull}`);
 
-    // 半速下降時每秒位能回充電力折半
+    // Half-rate descent: potential-energy recharge halves per second
     const cHalf = mk({ lift: 0 });
     const halfDown = { x: 0, y: -u.vspeed * 0.5, z: 0 };
     cHalf._stepLift(dt, 0, halfDown, u);
@@ -624,24 +651,25 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     t('正常操作半速下降:位能回充量折半(正比於下降率)',
       near(cHalf.lift, expectedHalf, 1e-6), `${cHalf.lift} vs ${expectedHalf}`);
 
-    // 下降回充比懸停快
+    // Descent recharges faster than hover
     const cHover = mk({ lift: 0 });
     cHover._stepLift(dt, 0, { x: 0, y: 0, z: 0 }, u);
     t('下降回充速度大於純懸停(位能回充加成)', cFull.lift > cHover.lift * 2);
 
-    // 下降回充位能增量恰好為全速爬升耗電的 2/3
+    // Descent's potential-energy increment is exactly 2/3 of full-rate climb drain
     const descContribution = cFull.lift - cHover.lift;
     const climbDrainPerDt = liftDrainPS() * dt;
     t('下降每公尺回充之動力 = 爬升該公尺耗電之 2/3 (DESCENT_RECHARGE_F)',
       near(descContribution / climbDrainPerDt, FLIGHT.DESCENT_RECHARGE_F, 1e-6));
 
-    // 受擊失衡期間正常操作下降亦不回充(非正常操作窗口)
+    // No recharge on normal-operation descent during hit-unbalance (outside the normal-operation window)
     const cUnbal = mk({ lift: 0 });
     cUnbal._airSinkHit(100, 1.0);
     cUnbal._stepLift(dt, 1.05, fullDown, u);
     t('受擊失衡/受傷鎖定期間下降不回充(非正常操作)', cUnbal.lift === 0);
   }
-  // ⑧ 高度越高同速爬升越耗動力(指數制;2026-10-06 使用者需求:每多一個塔高翻倍,3 個塔高封頂 8 倍)
+  // 8 Same-rate climb costs more power higher up (exponential; 2026-10-06 user request: doubling per
+  // tower height, capped 8x at 3 tower heights)
   {
     const H = TARGET_H.tower, dt = 0.5;
     const drainRate = (y) => {
@@ -662,7 +690,8 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
       near(drainRate(10 * H) / dLo, 8, 1e-9));
     t('起點耗速 = 既有 liftDrainPS(高度錨點不動,DRAIN_S 節奏不變)',
       near(dLo, liftDrainPS(), 1e-9));
-    // 起點規則的行為版:同一個相對高度,海平面起算與最低點起算耗速相同
+    // Behavior version of the base rule: same relative height costs the same whether counted from sea
+    // level or the lowest point
     const drainBase = (y, base) => {
       const c = mk({ pos: { y }, _liftBaseY: () => base });
       const before = c.lift ?? c._liftMax();
@@ -672,7 +701,8 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     t('起點以下與起點同價(夾邊連續)', near(drainBase(-20, 10), drainBase(10, 10), 1e-12));
     t('相對高度相同 ⇒ 耗速相同(海平面/最低點起算同一條)',
       near(drainBase(60, 10), drainBase(160, 110), 1e-9));
-    // 下降回充吃同一條曲線:同一下降率,高處回得比低處多,且「回/耗 = 2/3」在任何高度都成立
+    // Descent recharge rides the same curve: same descent rate returns more from higher up, and the
+    // "returned/spent = 2/3" ratio holds at every altitude
     const rechargeRate = (y) => {
       const c = mk({ lift: 0, pos: { y } });
       c._stepLift(dt, 0, { x: 0, y: -u.vspeed, z: 0 }, u);
@@ -687,14 +717,14 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     t('同速下降:高處比低處回充多(與爬升同一條曲線)',
       rHi > rLo, `${rLo.toFixed(2)} vs ${rHi.toFixed(2)}`);
     for (const [y, tag] of [[0, '起點'], [H, '一個塔高'], [3 * H, '封頂']]) {
-      const extra = rechargeRate(y) - hoverRate(y);   // 該高度的位能回充(扣除懸停基線)
-      const drain = drainRate(y);                        // 同高度的爬升耗速
+      const extra = rechargeRate(y) - hoverRate(y);   // potential-energy recharge at this height (minus hover baseline)
+      const drain = drainRate(y);                        // climb drain at the same height
       t(`${tag}:下降位能回充 = 爬升耗速 × 2/3(同曲線 ⇒ 比例處處成立)`,
         near(extra / drain, FLIGHT.DESCENT_RECHARGE_F, 1e-9),
         `${extra.toFixed(2)} / ${drain.toFixed(2)}`);
     }
   }
-  // ⑨ 變形者升降速率:上升 = 無人機 × 2/3、下降 = 無人機 × 3/2(推導不手寫)
+  // 9 Morph climb/sink rates: up = drone x 2/3, down = drone x 3/2 (derived, never hand-written)
   {
     t('MORPH.UP_F = 2/3、DOWN_F = 3/2', MORPH.UP_F === 2 / 3 && MORPH.DOWN_F === 3 / 2);
     t('變形者 vspeed 由無人機 vspeed 推導(MUST NOT 手寫公尺數)',
@@ -713,7 +743,8 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
       && /target\.y -= \(u\.vdown \?\? u\.vspeed\)/.test(code)
       && /-target\.y \/ dnV/.test(grab('_stepLift'))
       && /target\.y \/ upV/.test(grab('_stepLift')));
-    // 行為:變形者全速爬升同樣撐 DRAIN_S 秒(耗速按自家速率歸一化),全速下降回充比照 2/3
+    // Behavior: morphs at full climb likewise last DRAIN_S seconds (drain normalized to their own rate);
+    // full descent recharge follows the same 2/3
     const um = { vspeed: UNITS.morph.vspeed, vdown: UNITS.morph.vdown };
     const cm = mk();
     {

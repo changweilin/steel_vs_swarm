@@ -2,8 +2,9 @@
 
 > SSOT: `public/js/groundCatalog.js` (venue purpose, landscape, surface classes, size
 > and environment limits), `groundPartCatalog.js`, `proceduralGround.js`,
-> `proceduralGroundParts.js`, `groundVenues.js`, `groundMarkings.js`,
-> `groundLandscapes.js`, `groundVisitorSites.js`. No external model downloads, no
+> `proceduralGroundParts.js`, `groundMarkings.js` (the former `groundVenues.js`,
+> `groundLandscapes.js` and `groundVisitorSites.js` were consolidated into the
+> catalogs). No external model downloads, no
 > generation service, no new npm dependencies.
 > Verification: `node test/proceduralGround.mjs`, `node tools/audit_ground_tile.mjs`,
 > `audit_ground_enclave.mjs`, `audit_ground_border.mjs`, `audit_ground_qc.mjs`,

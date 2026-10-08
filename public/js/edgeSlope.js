@@ -115,8 +115,8 @@ function buildFilledBoundary(kind, { len, depth, h, x, z, ry, heightAt, season, 
     const roof = (.9 + crestWave * .09) * (1 - rearBlend)
       + bufferRoof(wx, wz) * rearBlend;
     const y = d >= fill.crest ? Math.max(ground - .4, crest + height * roof) : d === 0 ? front - .4 : top;
-    // 自然岩類 terminal 端（fill joins 缺席）整斷面收谷：本體＋後方緩衝屋頂一起落地；
-    // 相接端（joins 存在）不動故連續性不變；lo/hi 照地形取樣不動，不碰碰撞。
+    // Natural rock terminal end (fill joins absent) collapses whole section to valley: body + rear buffer roof land together;
+    // Joined end (joins present) stays put so continuity is unchanged; lo/hi sample terrain as-is, no collision touch.
     const taperLen = Math.min(len / 2, depth);
     const termEnv = def.rock !== true ? 1 : Math.min(
       !joins[0] || joins[0].terminal ? smooth(Math.max(0, Math.min(1, (u + len / 2) / taperLen))) : 1,
@@ -273,8 +273,8 @@ export function buildSlopeBoundary(kind, { len, depth, h, x, z, ry = 0, heightAt
   const jList = joins || fill?.joins;
   const capStart = !jList?.[0] || jList[0].kind !== kind;
   const capEnd = !jList?.[1] || jList[1].kind !== kind;
-  // 自然岩類封蓋端收谷：同款相接處不斷（端環完全一致），封蓋端才以包絡落地；
-  // 人造牆堤維持俐落端面。只動 rise（地形 base 與 lo/hi 包絡不動，不碰碰撞）。
+  // Natural rock cap end collapses to valley: same-model joints stay unbroken (end rings fully identical), only the cap end lands by envelope;
+  // Man-made wall embankments keep crisp end faces. Only rise moves (terrain base and lo/hi envelopes stay, no collision touch).
   const sstep = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
   const taperLen = Math.min(len / 2, depth);
   const vertices = [], colors = [], faces = [], n = def.section.length;

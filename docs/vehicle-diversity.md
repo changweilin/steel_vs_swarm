@@ -1,12 +1,12 @@
 # Ground-Vehicle Classification and Look Generation
 
-> SSOT: `public/js/vehicleCatalog.js` (128 prototypes, 23 consists), `vehicleParts.js`,
-> `vehicleIndustry.js`, `vehicleEquipment.js`, `vehicleConsists.js`, `vehicleVariants.js`,
-> `vehicleEveryday.js`, `vehicleIndividualBodies.js`. All background presentation:
+> SSOT: `public/js/vehicleCatalog.js` (128 prototypes, 23 consists; consolidated home
+> of the former parts/industry/equipment/consists/variants/everyday fragments),
+> `vehicleIndividualBodies.js`. All background presentation:
 > nominal sizes are art envelopes, never engineering specs or combat numbers.
 > Verification: `node test/vehicleDiversity.mjs`, `node test/vehicleAttachments.mjs`,
 > `node test/vehicleVariants.mjs`, `node test/vehicleEveryday.mjs`,
-> `tools/audit_vehicle_spec.mjs`, `tools/audit_background_objects.mjs`,
+> `tools/audit_vehicle_spec.mjs`,
 > `tools/audit_gpu_lifecycle.mjs`, `tools/audit_client_syntax.mjs`.
 
 ## Constraints (why, not what)

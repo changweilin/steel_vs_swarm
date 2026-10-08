@@ -1,5 +1,5 @@
-# ============ 回歸驗證(離線稽核 + 平衡不變式 + 端對端)============
-# 對應 /CLAUDE.md §5「改了什麼 → MUST 跑什麼」裡**不需要瀏覽器**的那幾條。
+# ============ Regression (offline audits + balance invariants + e2e) ============
+# Change-to-guard mapping lives in `.claude/rules/verification.md`; commands live in `package.json`.
 # 需要 Playwright 的版型/陀螺儀/觸控量測不在這裡跑(那些腳本找不到 playwright 時會自己跳過)。
 name: 回歸驗證
 
@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      # 唯一的 npm 依賴是 ws(見 /CLAUDE.md A2:MUST NOT 新增任何 npm 依賴)
+      # Single websocket dependency only (see root `AGENTS.md` §2).
       - run: npm ci
 
       - name: 三種連線機制稽核
@@ -35,7 +35,7 @@ jobs:
       - name: 平衡不變式
         run: npm run bal
 
-      # `npm test` 只是 WS client,**不會自己啟動伺服器**(見 /CLAUDE.md §5 測試標準流程)
+      # `npm test` is a WS client only and does not boot the server (see `package.json`).
       - name: 端對端(先起伺服器再測)
         timeout-minutes: 3
         run: |

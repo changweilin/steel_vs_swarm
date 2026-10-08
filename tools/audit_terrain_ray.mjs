@@ -1,22 +1,22 @@
-// ============ 地形解析射線稽核(rayTerrain)============
-// 用途:`terrain.js` 的 `rayTerrain` 取代了「把 terrain.mesh 丟進 three raycaster」的做法
-// (73,728 個三角形逐面線性掃描 ⇒ 每顆子彈每幀 ~1ms,手機 3~6 倍,正是開火掉幀的主因)。
-// 取代品 MUST 是**等價**而非近似 —— 本稽核以「暴力掃完全部三角形」當基準,逐條比對:
-//   ① 命中/未命中一致  ② 命中距離 t 誤差 < 1e-3 m  ③ 命中點 y 與 heightAt 一致(同一組三角形)
-//   ④ 打洞(punchPortalHoles 刪掉的洞口三角形)後,穿洞射線 MUST 不再被擋
-//   ⑤ 射點在圖外 / 射線平行軸 / far 太短 等邊界情形
-// 另附成本量測(格行進 vs 逐面掃描)。
+// ============ Analytic terrain ray audit (rayTerrain) ============
+// Purpose: rayTerrain in terrain.js replaces throwing terrain.mesh into the three raycaster,
+// which scanned 73,728 triangles linearly per bullet per frame at about 1ms, 3 to 6 times worse on phones, the main fire-drop cause.
+// The replacement MUST be equivalent not approximate -- this audit uses brute-force scan of all triangles as baseline and compares:
+//   1: hit and miss agree; 2: hit distance t error below 1e-3 m; 3: hit y agrees with heightAt on the same triangle set
+//   4: after punching portal holes, rays through holes MUST no longer be blocked
+//   5: boundary cases such as origin outside the map, axis-parallel rays, and too-short far
+// Plus a cost measurement of grid marching versus per-face scan.
 //
-// 為什麼用「抽原文」而不是 import:`terrain.js` 的 three 走 CDN importmap,Node 端解析不了;
-// 本稽核抽出的是 rayTerrain 那一整段**真正的程式碼文字**(另抄一份公式就永遠會通過)。
-// 跑法:`node tools/audit_terrain_ray.mjs`
+// Why extract source instead of importing: three in terrain.js goes through a CDN importmap that Node cannot resolve;
+// this audit extracts the whole genuine rayTerrain code text, since a copied formula would always pass.
+// Run via node tools/audit_terrain_ray.mjs
 import { readSrc } from './audit_src.mjs';
 
-// 讀原文一律走 `readSrc`(§5 通則 ㋑;換行正規化成 LF):git 存 LF,但 autocrlf 下 Windows 工作區是
-// CRLF。下方跨行切片標記(B1 的 `\n   * …`、H1 的 `\n  }`)一律以 `\n` 書寫,不正規化就只在 Linux 綠。
+// Always read source through readSrc (section 5 rule b, newlines normalized to LF): git stores LF but a Windows checkout with autocrlf uses
+// CRLF. Multi-line slice markers below (B1 marker with newline plus star lines, H1 marker with newline plus brace) are written with newline escapes; without normalization they stay green on Linux only.
 const src = readSrc('public', 'js', 'terrain.js');
 
-// ---- 抽出 rayTerrain 區塊(含 triDead / markTriDead / triHit)----
+// ---- Extract rayTerrain block (includes triDead, markTriDead and triHit) ----
 const B0 = src.indexOf('  // ---- 地形射線(解析版');
 const B1 = src.indexOf('  /**\n   * 地下道洞口開挖');
 if (B0 < 0 || B1 < 0 || B1 <= B0) throw new Error('找不到 rayTerrain 區塊(terrain.js 結構已變?)');
@@ -24,7 +24,7 @@ const BLOCK = src.slice(B0, B1);
 for (const need of ['function rayTerrain(', 'function markTriDead(', 'function triHit(']) {
   if (!BLOCK.includes(need)) throw new Error(`抽出的區塊缺少 ${need}`);
 }
-// heightAt 也一併抽(驗命中點高度同源)——2026-08-01 起內插住 sampleField(heightAt / natureAt 共用)
+// Extract heightAt as well to verify hit height shares the same source -- since 2026-08-01 interpolation lives in sampleField shared by heightAt and natureAt
 const H0 = src.indexOf('  function sampleField(field, x, z) {');
 const H1 = src.indexOf('\n', src.indexOf('  const heightAt = (x, z) => sampleField', H0)) + 1;
 const HBLOCK = src.slice(H0, H1);
@@ -32,14 +32,14 @@ const HBLOCK = src.slice(H0, H1);
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
 
-// ---- 測試用地形(與真實網格同構:N=193 高度場)----
+// ---- Test terrain (isomorphic with the real grid: N=193 height field) ----
 const N = 193;
 const SPAN = 2400;
 const minX = -SPAN / 2, maxX = SPAN / 2, minZ = -SPAN / 2, maxZ = SPAN / 2;
 const heights = new Float32Array(N * N);
 for (let i = 0; i < N; i++) {
   for (let j = 0; j < N; j++) {
-    // 起伏 + 高頻細節:確保有山脊/鞍點(近似會在這裡露餡)
+    // Swells plus high-frequency detail: keeps ridges and saddles where approximations would leak
     heights[i * N + j] = 40 * Math.sin(i * 0.09) * Math.cos(j * 0.077)
       + 11 * Math.sin(i * 0.41 + j * 0.29) + 3 * Math.cos(j * 1.3);
   }
@@ -49,11 +49,11 @@ const mk = new Function('N', 'heights', 'minX', 'maxX', 'minZ', 'maxZ',
   `${HBLOCK}\n${BLOCK}\nreturn { rayTerrain, markTriDead, heightAt };`);
 const T = mk(N, heights, minX, maxX, minZ, maxZ);
 
-// ---- 基準:暴力掃完全部三角形(即 three Mesh.raycast 的語意)----
+// ---- Baseline: brute-force scan of all triangles (the semantics of three Mesh.raycast) ----
 const DX = (maxX - minX) / (N - 1), DZ = (maxZ - minZ) / (N - 1);
 const VX = (k) => minX + (k % N) * DX;
 const VZ = (k) => minZ + (((k / N) | 0)) * DZ;
-const dead = new Set();   // 'i,j,u' 被打洞刪除的三角形
+const dead = new Set();   // Triangles removed by hole punching, keyed by i,j,u
 function bruteTri(o, d, far, k0, k1, k2) {
   const ax = VX(k0), ay = heights[k0], az = VZ(k0);
   const e1 = [VX(k1) - ax, heights[k1] - ay, VZ(k1) - az];
@@ -83,7 +83,7 @@ function brute(o, d, far) {
   return best;
 }
 
-// ---- 亂數射線集(確定性種子)----
+// ---- Random ray set with a deterministic seed ----
 let seed = 20260727;
 const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
 function norm(v) { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; }
@@ -91,7 +91,7 @@ function norm(v) { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1
 console.log('== 地形解析射線稽核(rayTerrain vs 暴力逐面掃描)==');
 console.log(`網格 ${N}×${N} = ${(N - 1) * (N - 1) * 2} 三角形\n`);
 
-// ① / ② / ③ 一般射線:命中一致 + 距離一致 + 高度同源
+// Cases 1-3, general rays: hit agreement plus distance agreement plus shared height source
 {
   let miss = 0, worst = 0, worstY = 0;
   const CASES = 220;
@@ -114,9 +114,9 @@ console.log(`網格 ${N}×${N} = ${(N - 1) * (N - 1) * 2} 三角形\n`);
   console.log(`  ① 命中一致 ${CASES - miss}/${CASES}  ② Δt ≤ ${worst.toExponential(2)}m  ③ Δy ≤ ${worstY.toExponential(2)}m`);
 }
 
-// ④ 打洞:被刪的三角形不再擋彈
+// Case 4, hole punching: removed triangles no longer block shots
 {
-  // 找一條會命中的射線,把命中格的兩個三角形都刪掉 → MUST 穿過去(或命中更遠處)
+  // Take a ray that hits, delete both triangles of the hit cell, then it MUST pass through or hit farther away
   const o = [-300, 90, -220];
   const d = norm([0.82, -0.34, 0.46]);
   const before = T.rayTerrain(o[0], o[1], o[2], d[0], d[1], d[2], 1200);
@@ -134,7 +134,7 @@ console.log(`網格 ${N}×${N} = ${(N - 1) * (N - 1) * 2} 三角形\n`);
   console.log(`  ④ 打洞前 t=${before.t.toFixed(2)}m → 打洞後 ${after ? `t=${after.t.toFixed(2)}m` : '穿出'}(基準 ${bAfter >= 0 ? bAfter.toFixed(2) : '穿出'})`);
 }
 
-// ⑤ 邊界情形
+// Case 5, boundary conditions
 {
   const d = norm([1, -0.3, 0]);
   ok(T.rayTerrain(minX - 5000, 400, 0, 1, 0, 0, 100) === null, '⑤a 圖外且 far 不足 → null');
@@ -147,7 +147,7 @@ console.log(`網格 ${N}×${N} = ${(N - 1) * (N - 1) * 2} 三角形\n`);
   ok((bi >= 0) === !!inbound, '⑤e 射點在圖外、射線進圖 → 與基準一致');
 }
 
-// ---- 成本量測 ----
+// ---- Cost measurement ----
 {
   const rays = [];
   for (let n = 0; n < 120; n++) {
@@ -160,8 +160,8 @@ console.log(`網格 ${N}×${N} = ${(N - 1) * (N - 1) * 2} 三角形\n`);
   const t1 = process.hrtime.bigint();
   for (const [o, d, f] of rays.slice(0, 30)) brute(o, d, f);
   const ms2 = Number(process.hrtime.bigint() - t1) / 1e6 * (rays.length / 30);
-  // 註:此處的暴力基準是可讀性優先的參考實作(陣列配置多),比 three 的 Mesh.raycast 慢一截;
-  // three 實測約 1.1 ms/條(桌機 x86 Node,73,728 三角形)。加速倍率以該數字看仍是兩位數以上。
+  // Note: the brute-force baseline here favors readability with many array allocations, so it runs slower than three Mesh.raycast;
+  // measured three cost is about 1.1 ms per ray on desktop x86 Node with 73,728 triangles, leaving a double-digit speedup even against that number.
   console.log(`\n  成本:解析行進 ${(ms1 / rays.length).toFixed(4)} ms/條 vs 暴力基準 ${(ms2 / rays.length).toFixed(4)} ms/條`
     + `(three Mesh.raycast 實測約 1.1 ms/條)`);
 }

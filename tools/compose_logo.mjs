@@ -1,14 +1,14 @@
-// 四區塊 → logo_flat.png:把 split_logo.mjs 切出來的四塊依 manifest 座標拼回整枚徽記。
+// Four quadrants to logo_flat.png: reassemble the four tiles cut by split_logo.mjs at manifest coordinates into the full emblem.
 //
-//   node tools/split_logo.mjs      # 切:logo.png → 四塊 PNG + logo_parts.json(座標)
-//   (單獨修改任何一塊 PNG,例如重畫蜂群三角)
-//   node tools/compose_logo.mjs    # 合:四塊 PNG + logo_parts.json → logo_flat.png
+//   node tools/split_logo.mjs      # cut: logo.png to four PNGs plus logo_parts.json (coordinates)
+//   (edit any single tile alone, for example repainting the swarm triangle)
+//   node tools/compose_logo.mjs    # join: four PNGs plus logo_parts.json to logo_flat.png
 //
-// 規則(改圖時 MUST 遵守,否則拼回去會錯位):
-// - 每塊 PNG 的**畫布尺寸 w×h 不可變**,透明邊不要裁掉 —— 對齊完全靠畫布左上角。
-// - 要移動某塊的位置,改 logo_parts.json 的 x/y(原圖 512² 座標系),不要平移圖內容。
-// - 換掉某塊(重畫/換風格)也不需重跑 split;直接覆蓋該 PNG 再 compose 即可。
-// - compose 不會回頭讀 logo.png;四塊 PNG 就是唯一真相。
+// Rules (MUST hold when editing art, else reassembly misaligns):
+// - Each tile canvas size w by h is immutable, keep transparent margins -- alignment relies solely on canvas top-left.
+// - To move a tile, edit x/y in logo_parts.json (source 512 square coordinate frame), never shift pixels inside the art.
+// - Replacing a tile (repaint or restyle) needs no split rerun; overwrite that PNG then compose.
+// - compose never reads logo.png back; the four PNGs are the sole source of truth.
 import { readFileSync } from 'node:fs';
 import { decodePNG, encodePNG, OUT_DIR } from './logo_lib.mjs';
 
@@ -24,7 +24,7 @@ for (const p of man.parts) {
     throw new Error(`${p.file}:畫布尺寸 ${img.w}x${img.h} ≠ manifest 的 ${p.w}x${p.h}。`
       + '修圖 MUST 維持畫布尺寸;要移動請改 logo_parts.json 的 x/y。');
   }
-  // src-over 合成(四塊本來不重疊,但照樣走標準合成,日後重疊也不會爆)
+  // src-over composite (tiles are disjoint today, but standard blending stays safe if they ever overlap)
   for (let y = 0; y < img.h; y++) for (let x = 0; x < img.w; x++) {
     const cx = x + p.x, cy = y + p.y;
     if (cx < 0 || cy < 0 || cx >= w || cy >= h) continue;
@@ -40,7 +40,7 @@ for (const p of man.parts) {
   }
 }
 
-// 自動裁切到不透明邊界(與 flatten_logo.mjs 同一套,輸出可直接替換 logo_flat.png)
+// Auto-crop to opaque bounds (same routine as flatten_logo.mjs, output directly replaces logo_flat.png)
 let minX = w, minY = h, maxX = -1, maxY = -1;
 for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
   if (canvas[(y * w + x) * 4 + 3] < 8) continue;

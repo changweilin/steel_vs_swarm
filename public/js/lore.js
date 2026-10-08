@@ -1,31 +1,31 @@
-// ============ 角色檔案(客戶端專用;與 mecha.js 機體檔案格式對齊)============
-// data.js 只住平衡數值;所有角色敘事文字(國籍/年齡/職務/外貌/生平/台詞)住這裡,伺服器不 import 本檔。
-// **格式(有哪些段、哪些欄、必不必填)只住 `codex.js`**(`SECTIONS`/`CODEX_FIELDS`/`GEN_FIELDS`),
-// 本檔只填內容;要加欄位先改 codex.js 的欄位表,再由 `tools/audit_codex.mjs` 逼 32 份檔案補齊。
+// ============ Character files (client-only; format-aligned with mecha.js mech files) ============
+// data.js holds balance numbers only; all character prose (nationality/age/role/look/bio/quotes) lives here; server never imports this file.
+// **Schema (which sections, fields, required/optional) lives only in `codex.js`** (`SECTIONS`/`CODEX_FIELDS`/`GEN_FIELDS`),
+// this file fills content only; add a field in the codex.js table first, then `tools/audit_codex.mjs` forces all 32 files to comply.
 //
-// ---- 四段 ----
-//   識別  ← data.js CHARACTERS(姓名/呼號/陣營/機種/機體名)—— 本檔 MUST NOT 複製
-//   簡介  nat / age / sex / role / look / quote(側欄與跳出視窗)
-//   詳閱  bio / hobby / expertise / bond(只在立繪跳出視窗展開)
-//   生成  art + gen(**不顯示在遊戲裡**,供文本生成 / 2D 生圖 / 3D 建模三條外部管線使用)
+// ---- Four blocks ----
+//   Identity <- data.js CHARACTERS (name/callsign/faction/unit/mech name) -- this file MUST NOT duplicate it
+//   Brief    nat / age / sex / role / look / quote (sidebar and popup)
+//   Detail   bio / hobby / expertise / bond (expanded only in portrait popup)
+//   Gen      art + gen (**never shown in-game**, feeds textgen / 2D art / 3D modeling pipelines)
 //
-// `art` 為程序生成立繪的外觀提示(膚色/髮色/髮型/眼色);後續改用手繪立繪時,把檔名登記進
-// portraits.js 的 PORTRAIT_MANIFEST 即可覆蓋。髮型 style:'long'(長髮/髮辮) 'short'(短髮)
-// 'bun'(束髮/包頭) 'curl'(捲髮) 'crop'(平頭) 'hood'(兜帽/頭巾) 'bald'(稀疏/後梳)。
+// `art` is the procedural-portrait appearance hint (skin/hair/hairstyle/eyes); when switching to hand-drawn portraits, register
+// the filename in portraits.js PORTRAIT_MANIFEST to override. Hairstyle style:'long' (long hair/braid) 'short' (short hair)
+// 'bun' (tied/bun) 'curl' (curly) 'crop' (buzz) 'hood' (hood/scarf) 'bald' (thinning/slicked).
 //
-// `gen` 六欄與 `mecha.js` 的機體 `gen` **同鍵同義**(codex.js `GEN_FIELDS` 單一縫)⇒ 同一支外部工具
-// 讀角色與讀機體是同一段程式。MUST NOT 只在其中一邊加欄位(加了就不是同一個格式,稽核會紅字):
-//   sil 體態剪影 · mass 身高體格 · mat 膚髮衣料質感 · parts 服裝配件分件 ·
-//   tag 立繪關鍵詞(名詞短語,MUST NOT 寫成句子)· note 這一位最容易被畫錯的那一件事
+// `gen` six fields share **same keys and meanings** as mech `gen` in `mecha.js` (codex.js `GEN_FIELDS` single seam) => one external tool
+// reads characters and mecha with one code path. MUST NOT add a field on only one side (then it is no longer one format, audit goes red):
+//   sil body silhouette - mass height/build - mat skin-hair-fabric texture - parts costume/gear splits -
+//   tag portrait keywords (noun phrases, MUST NOT be sentences) - note the one thing most likely to be drawn wrong on this character
 //
-// **機體的原型介紹已移到 `mecha.js`**(2026-08-04):舊制那條 `proto` 自由字串由 main.js 用正規式
-// 切四個標籤 = 第二份格式定義,而且沒有任何東西保證誰該有幾層。改成結構化原型層之後,
-// 「該有哪幾層」由 `visual` 推導(codex.js `protoLayers()`),漏一層是稽核紅字。
-// expertise = 專長(區別於 role 的職務頭銜,寫具體技藝);bond = 與機體的關係(人機羈絆,非規格)。
-// 劇情設定完整版見 docs/characters.md;格式規格見 docs/codex_format.md。
+// **Mech proto writeups have moved to `mecha.js`** (2026-08-04): the legacy `proto` free string split by main.js regex into
+// four labels = a second schema definition, and nothing guaranteed how many layers anyone had. After structured proto layers,
+// "how many layers" derives from `visual` (codex.js `protoLayers()`), a missing layer is an audit error.
+// expertise = specialty (concrete craft, distinct from role title); bond = relationship with the mech (pilot-mech bond, not spec).
+// Full setting canon: docs/characters.md; format spec: docs/codex_format.md.
 
 export const LORE = {
-  // ================= 蜂群陣營 =================
+  // ================= SWARM faction =================
   s01: {
     nat: '烏克蘭', age: 29, sex: '女', role: '「第聶伯蜂巢」中隊指揮官',
     look: '亞麻色戰術髮辮,眼下有常年熬夜的淡青。指揮時嗓音穩得像節拍器。',
@@ -243,7 +243,7 @@ export const LORE = {
     art: { skin: '#c99a6e', hair: '#2a201a', style: 'curl', eye: '#3a2b20' },
   },
 
-  // ================= 鋼鐵陣營 =================
+  // ================= STEEL faction =================
   t01: {
     nat: '俄羅斯', age: 57, sex: '男', role: '協約機甲軍團總指揮・上將',
     look: '雪原一樣的白髮平頭,勳表掛滿左胸,卻從不掛獨子的追授勳章。',
@@ -461,7 +461,7 @@ export const LORE = {
     art: { skin: '#f2dcc4', hair: '#a98a5e', style: 'long', eye: '#7f9bb0' },
   },
 
-  // ================= 中立傭兵 =================
+  // ================= Neutral mercenaries =================
   m01: {
     nat: '塞爾維亞', age: 33, sex: '男', role: '自由接案突襲機師(變形者)',
     look: '鴉黑短髮、鼻樑歪過一次沒接好,笑起來像在算你身上還有多少現金。',

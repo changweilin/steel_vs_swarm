@@ -1,8 +1,8 @@
 import { evidenceDryBiome, evidenceLandVariant } from './mapEvidence.js';
 import { habitatAt, habitatPatch } from './habitat.js';
-// ============ 線工切面 → 七分區地貌場(執行期唯一組裝點)============
-// R=分區索引、G=有幾何理由的外觀段、B=決定性連續場、A=道路/建成遮罩。
-// 這裡只產純資料；DataTexture 與 shader 生命週期由 toon.js 管。
+// ============ Zonecut lines -> seven-zone landform field (runtime sole assembly point)============
+// R=zone index, G=appearance segment with geometric reason, B=deterministic continuous field, A=road/built mask.
+// This module emits pure data only; DataTexture and shader lifetimes are owned by toon.js.
 import { SLOPE } from './data.js';
 import { rasterLines, corridorKeepOut, floodFaces, assignWallTexels, mergeSmall, faceSamples } from './zonecut.js';
 import { areaSurfaceRows, classifyArea } from './osmAreas.js';
@@ -60,7 +60,7 @@ const median = (a) => {
 };
 const yieldFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
-/** 建立一次性地貌場。所有圖資陣列都必須是 osmrelay 淨化後、全房共用的那一份。 */
+/** Build a one-shot landform field. All map arrays MUST be the osmrelay-purified, room-shared copy. */
 export async function buildLandField({ terrain, center, roads = [], rails = [], waters = [], covers = [], areas = [],
   boundaries = [], gradeCorridors = [], classifyPureAt, envCodeAt, projectAt, seed = 0, onProgress }) {
   const spanX = terrain.worldW, spanZ = terrain.worldH;
@@ -70,7 +70,7 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
   const zOf = (j) => terrain.minZ + (j + 0.5) * mpt;
   const ti = (x) => (x - terrain.minX) / mpt;
   const tj = (z) => (z - terrain.minZ) / mpt;
-  // 呼叫端注入 A42 唯一投影縫；本模組不得維護第二份經緯度公式。
+  // Caller injects the A42 sole projection seam; this module MUST NOT keep a second lat/lon formula.
   const proj = (p) => projectAt(p.lat, p.lon ?? p.lng, center);
   const waySegs = (list, hwOf) => {
     const out = [];
@@ -92,8 +92,8 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
     const a = w.geometry[0], b = w.geometry[w.geometry.length - 1];
     return Math.abs(a.lat - b.lat) + Math.abs((a.lon ?? a.lng) - (b.lon ?? b.lng)) < 1e-6;
   });
-  // 用地／自然／水域與休閒區域的唯一來源是 osmAreas 的 worldPolygons；每個 hole 都保留，
-  // 不再維護 covers 的第二份分類。areaSurfaceRows 只讀既有投影結果，避免 landfield 重算投影。
+  // Sole source for land-use/nature/water/recreation zones is osmAreas worldPolygons; keep every hole,
+  // never maintain a second covers classification. areaSurfaceRows reads existing projection results to avoid recomputing projection in landfield.
   const areaRows = areaSurfaceRows(areas);
   const areaPolys = areaRows
     .map((r) => ({ zone: r.zone || coverZone(r.tags), tags: r.tags, sourceId: r.sourceId,

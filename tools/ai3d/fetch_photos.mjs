@@ -1,45 +1,45 @@
 #!/usr/bin/env node
 /**
- * 照片庫抓取器(docs/ai3d_runbook.md §0.3;Track B 靜態零件的照片來源)
+ * Photo-library fetcher (docs/ai3d_runbook.md section 0.3; photo source for Track B static parts).
  *
- * 「照片數據庫」= 下方 PHOTO_CATALOG(逐物件族 × 逐零件的查詢型錄)+ photo_manifest.json
- * (帳本)+ photos/(檔案,**勿入版控** —— 照片只是離線輸入,入庫的只有零件 GLB)。
+ * Photo database means PHOTO_CATALOG below (query catalog per object family by part) plus photo_manifest.json
+ * (ledger) plus photos/ (files, keep out of version control -- photos are offline inputs, only part GLBs enter the repo).
  *
- * 四條紀律:
- *   ① **授權硬閘,不是建議**:查詢寫死 `license=cc0`,而且逐張複驗回傳欄位
- *      (Openverse `license` ∈ {cc0, pdm};Commons LicenseShortName 含 CC0 / Public domain)。
- *      **CC-BY 也拒收** —— 烤進 repo 的石頭沒有地方放署名,而授權違規沒有任何錯誤訊息。
- *   ② **可續跑補缺**:每個零件有目標張數(want),重跑只補不足的部分,已有的照片
- *      與帳本原樣保留(同 gen2d.mjs ① 的續跑語意)。
- *   ③ **記帳**:每一張都寫進 photo_manifest.json({source_url, license, creator,
- *      retrieved_at, …}),skill photo-to-prop-forge §1 規定的欄位一項不少。
- *   ④ **降級不例外**(原則 6):單一 API 掛掉/單張下載失敗只記 fail 繼續,
- *      MUST NOT 中止整批;Openverse 沒料改問 Wikimedia Commons。
+ * Four disciplines:
+ *   1 License hard gate, not advice: queries hard-code license=CC0, and every image rechecks the returned field
+ *      (Openverse license in cc0, pdm; Commons LicenseShortName containing CC0 or Public domain).
+ *      CC-BY is also rejected -- baked-in stones have nowhere to carry attribution, and license violations produce no error message.
+ *   2 Resumable gap-filling: each part has a target count (want); reruns only fill the shortfall, keeping
+ *      existing photos and ledger untouched (same resume semantics as gen2d.mjs rule 1).
+ *   3 Ledger: every image enters photo_manifest.json (source_url, license, creator,
+ *      retrieved_at, and more), all fields required by skill photo-to-prop-forge section 1.
+ *   4 Degrade without exception (principle 6): one dead API or one failed download only records fail and continues,
+ *      MUST NOT abort the whole batch; when Openverse has nothing, ask Wikimedia Commons.
  *
- * 選片標準(2026-08-09 使用者定案:「挑選的照片盡可能乾淨,只有目標物件無其他物件,
- * 且光源充足」;一張好照片勝過三張拼湊的):
- *   ㋐ 這裡能過濾的:授權(CC0/PD)、短邊 ≥1024(API 有回尺寸才驗,沒回的照收並在帳本
- *      標 `size_unknown`)。**查詢用字是唯一能在下載之前影響「乾淨/單一主體」的旋鈕**
- *      ⇒ 一律具名單一主體(`glacial erratic` 而不是 `rocks`),MUST NOT 寫場景詞。
- *   ㋑ 這裡過濾不了的:「畫面裡有幾個東西」「光夠不夠」——那要看**去背之後的 matte**
- *      才量得到 ⇒ 住 `screen_mattes.py` 的 ④多主體 / ⑤光源不足(門檻拿已出貨來源校準,
- *      零誤殺),統計分不開的一帶進該支的觀察名單 sheet 交給人眼。
- *   ⇒ **這兩支是同一道閘的兩半**:改了任一邊的標準,另一邊要跟著看。
+ * Selection bar (2026-08-09 user decision: pick photos as clean as possible, only the target object with no other objects,
+ * and plenty of light; one good photo beats three stitched ones):
+ *   A What can be filtered here: license (CC0/PD), short edge at least 1024 (checked only when the API returns a size,
+ *      otherwise accepted and marked size_unknown in the ledger). Query wording is the only knob before download that affects clean single-subject framing,
+ *      so always name one single subject (glacial erratic rather than rocks), MUST NOT write scene words.
+ *   B What cannot be filtered here: how many things are in frame and whether light suffices -- that is only measurable
+ *      from the post-matte statistics, so it lives in screen_mattes.py rules 4 multi-subject and 5 poor light (thresholds calibrated
+ *      on shipped sources, zero false kills), with ambiguous statistics sent to that tool observation sheet for human eyes.
+ *   So these two tools are two halves of one gate: changing either side bar means reviewing the other side.
  *
- * ⚠ 沙箱跑不動(CLAUDE.md ㋓):api.openverse.org / commons.wikimedia.org 走不出代理
- *    ⇒ 本工具在真機(3060 那台)或 GitHub Actions 上跑。
+ * Sandbox warning (CLAUDE.md note): api.openverse.org and commons.wikimedia.org cannot leave the proxy,
+ *    so run this tool on a real machine (the 3060 box) or GitHub Actions.
  *
- * 用法:
- *   node tools/ai3d/fetch_photos.mjs --plan               只印工作清單與缺額(不打 API;
- *                                                        計的是「可用」張數 —— 選片閘
- *                                                        screen_mattes.py 淘汰的不算)
- *   node tools/ai3d/fetch_photos.mjs --family rock        只抓某一族(rock|tree|landmark|building)
- *   node tools/ai3d/fetch_photos.mjs --part rock/facet    只抓某一個零件
- *   node tools/ai3d/fetch_photos.mjs --limit 10           本輪最多下載幾張
- *   node tools/ai3d/fetch_photos.mjs --review             列出已抓照片供人工挑選(路徑 + 尺寸 + 來源)
- *   node tools/ai3d/fetch_photos.mjs --home <資料家>      語料不在本 checkout 底下時(帳本與 photos/ 同住那裡)
- *   node tools/ai3d/fetch_photos.mjs --inbox             印出「自己放圖的地方」在哪、格式怎麼寫(順便建好資料夾)
- *   node tools/ai3d/fetch_photos.mjs --adopt             把 inbox 裡的圖收編成正式語料(授權硬閘照跑)
+ * Usage:
+ *   node tools/ai3d/fetch_photos.mjs --plan               only prints work list and shortfall (no API calls;
+ *                                                        counts usable images -- rejects from the selection gate
+ *                                                        screen_mattes.py do not count)
+ *   node tools/ai3d/fetch_photos.mjs --family rock        fetch one family only (rock|tree|landmark|building)
+ *   node tools/ai3d/fetch_photos.mjs --part rock/facet    fetch one part only
+ *   node tools/ai3d/fetch_photos.mjs --limit 10           download at most this many this round
+ *   node tools/ai3d/fetch_photos.mjs --review             list fetched photos for human picking (path plus size plus source)
+ *   node tools/ai3d/fetch_photos.mjs --home <data-home>    when the corpus lives outside this checkout (ledger and photos/ live there)
+ *   node tools/ai3d/fetch_photos.mjs --inbox             prints where self-supplied images go and what format to use (also creates folders)
+ *   node tools/ai3d/fetch_photos.mjs --adopt             adopt inbox images into the formal corpus (license hard gate still applies)
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';

@@ -1,5 +1,5 @@
 # ============ 雲端節點容器(規劃未來上雲端)============
-# 無 build step、無轉譯 —— 直接把原始碼複製進去跑(見 /CLAUDE.md §1)。
+# No build step, no transpile — ship sources directly (see root `AGENTS.md` §2).
 # 唯一的 npm 依賴是 ws;`npm ci --omit=dev` 之後 node_modules 只有它。
 FROM node:22-alpine
 

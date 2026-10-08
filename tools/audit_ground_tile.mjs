@@ -1,86 +1,109 @@
-// 地貌拼圖的顏色與花紋(2026-08-12 使用者需求)稽核 —— node tools/audit_ground_tile.mjs
+// Terrain patch color and pattern audit (2026-08-12 user request) -- node tools/audit_ground_tile.mjs
 //
-// 使用者原話(同一則的前兩項):
-//   ①「地貌拼圖有時候綠突然變紅又突然變灰,如果是同一類型(市區/綠地/裸露地/水域/濕地),
-//      盡可能不要短距離快速變化地貌拼圖顏色」
-//   ②「同顏色的地貌拼圖上面可以繪製多個不同的紋路/圖案/點綴/裝飾等細節,同顏色的相鄰拼圖的
-//      紋路/圖案/點綴/裝飾等細節盡可能是不同的」
-//   ③「邊界延伸不可進入的緩衝空間也要貼地貌拼圖」
+// User words (first two items of the same message):
+//   1. Patches sometimes flip green-red-gray suddenly; within one type (urban/green/bare/
+//      water/wet), avoid fast short-range color jumps as much as possible
+//   2. Same-color patches can carry different patterns/motifs/sprinkles; adjacent same-color
+//      patches should differ whenever possible
+//   3. The off-limits buffer ring past the border must also get terrain patches
 //
-// 病灶(①):選款是「低頻雜訊 t → 清單索引」的**逐格**取值。清單有 10~12 款、款與款之間的
-// 顏色跨度很大(綠地清單裡 turf 綠 / flowerfield 紅 / deadwood 灰),而 t 的梯度在雜訊場的
-// 陡處可以在十幾公尺內橫掃好幾個索引 ⇒ 沿著那條帶走過去就是綠→紅→灰。每一格自己都「照規則」
-// 選的,舊有的每一條斷言(水密/外溢/界線)也照樣全綠 —— 這正是本稽核存在的理由。
+// Lesion (1): picking is per-cell low-frequency-noise t -> roster index. Rosters hold 10-12
+// kinds with wide color spans (green roster: turf green / flowerfield red / deadwood gray),
+// and t gradients can sweep several indices within a dozen meters on steep noise slopes =>
+// walking that band reads green-red-gray. Each cell follows the rule, and every old assertion
+// (watertight/spillover/border) stays green -- which is why this audit exists.
 //
-// 三個縫,逐條釘死:
-//   Ⅰ 選款區塊 `carpetLotAt` —— 抖動格點的最近點分割(jittered-Voronoi)。抖動 MUST < 半格
-//     (否則最近的 lot 中心會落在 3×3 候選之外 = 分割破洞);純函式、決定性;
-//     **換款間距**由內建對照組量:同一份場、取值點改回格心(= 舊制)的連續同款長度 vs
-//     lot 版本 —— 這一條是「顏色不會短距離快速變化」唯一可量的東西。
-//   Ⅱ 逐格花紋 `planCarpetVariants` —— 硬條件「共邊的同款鄰格恆不同變體」、軟條件「連對角
-//     也盡量不同」、異款不受約束、決定性、零 rnd。對照組 = 舊制低頻雜訊變體。
-//   Ⅲ 靜態規則(執行原文)—— 底色不隨變體漂移(baseFill)、選款走 lot 中心、keys 兩段組裝、
-//     同款異變體不發外溢、緩衝空間底毯(鏡射 / 粗格 / bufferHeightAt / 同一批 buckets /
-//     零 rnd)、貼地面發射只有 emitFace 一份實作(且圖內已不再經過它)。
-//   Ⅳ **認養地形三角形**(2026-08-13 使用者定案 A;「陸域地貌拼圖改成直接對地形渲染」的那一半)
-//     —— 舊制底毯自己切 3×3、頂點取 heightAt ⇒ 頂點在地形上而**頂點之間是直的**,跨過地形
-//     折角的弦沉下去就是「斜坡破圖」。新制把「畫什麼」與「畫在哪些三角形上」分家:規劃格
-//     照舊(含抖動),發射改成逐地形四邊形認養主人格 ⇒ 皮的三角形 === 地形的三角形。
-//     這一段量幾何規則(inQuad 的分割恰一個主人、主人恆在 3×3 內、invBil 四角恆等與共用邊
-//     同值)與接線(索引序與 terrain.js 逐字同向、灘線閘仍整格判、圖內不再套貼合抬升、
-//     地形頂點數推導不手寫)。
-//   Ⅴ **農牧地表的四季設計**(2026-08-13 使用者「田除了田也加入菜園/牧場/魚塭與果園等農牧區,
-//     包含原本的田在內依四季不同而對應設計」)—— 舊制季節只有 `SEASON_TINT` 一個乘色濾鏡。
-//     抽畫筆原文餵一個會記錄繪圖呼叫的假 2D context,四季兩兩 MUST 畫出不同的東西且
-//     **不只是換底色**(只差底色 = 那條濾鏡又回來了);另驗名冊對齊(吃 season 的畫筆 ⇔ 標
-//     `seasonal` 的 DEFS,漏標 = 調兩次色)、季節只進快取鍵(draw call 不變)、牧場註冊齊全。
+// Three seams, pinned one by one:
+//   I Picking block carpetLotAt -- jittered-grid nearest-point split (jittered-Voronoi).
+//     Jitter MUST stay under half a cell (else the nearest lot center falls outside the 3x3
+//     candidates = split hole); pure function, deterministic; swap spacing is measured by a
+//     built-in control: same field with sampling back at cell centers (= old rule) vs lot
+//     version -- the only measurable proxy for no fast short-range color jumps.
+//   II Per-cell pattern planCarpetVariants -- hard rule: edge-adjacent same-kind neighbors
+//     always differ; soft rule: diagonals differ too; other kinds unconstrained;
+//     deterministic, zero rnd. Control = old low-frequency-noise variant.
+//   III Static rules (execute source) -- base color does not drift with variant (baseFill),
+//     picking uses lot centers, keys assembled in two passes, same-kind different-variant
+//     emits no spillover, buffer-ring carpet (mirror / coarse cells / bufferHeightAt / same
+//     buckets / zero rnd), ground-face emission has only the emitFace implementation
+//     (and in-map no longer routes through it).
+//   IV Adopt-terrain-triangles (2026-08-13 user decision A; the half that renders land patches
+//     directly onto terrain) -- old carpet cut its own 3x3 with heightAt vertices: vertices
+//     sit on terrain but edges between them are straight, so chords crossing terrain creases
+//     sink = slope breakage. New rule separates what to draw from which triangles to draw on:
+//     planning grid unchanged (incl. jitter), emission adopts one owner quad per terrain quad
+//     => skin triangles equal terrain triangles. This section measures geometry rules (inQuad
+//     split has exactly one owner, owners stay inside 3x3, invBil corner identity and shared
+//     edge agreement) and wiring (index order matches terrain.js literally, beach gate still
+//     whole-cell, in-map no longer takes drape lift, terrain vertex count derived not written).
+//   V Four-season farm surfaces (2026-08-13 user request: fields plus veggie plots, pasture,
+//     fish ponds, orchards, all season-aware) -- old seasons were one SEASON_TINT multiply
+//     filter. Feed painter sources into a recording fake 2D context: all four seasons MUST
+//     draw different things and not just the base color (base-color-only = that filter again);
+//     also roster alignment (painters taking season match DEFS flagged seasonal, missing flag
+//     = double tinting), season only enters the cache key (draw calls unchanged), pasture
+//     registration complete.
 //
-//   Ⅵ **選款清單的顏色路徑**(2026-08-13 使用者再次回報「同一類型盡可能不要短距離快速變化
-//     子類別」)—— Ⅰ 的區塊只解決了換款的**頻率**,幅度一格未動:清單的索引相鄰若不是顏色
-//     相鄰(綠地那一份是 meadow 土黃 → deadwood 灰 → turf 綠),t 再平滑顏色照樣在跳。
-//     新制把代表色收成一張表(SUB_COL,畫筆與排序同吃)、清單排成一條顏色路徑(carpetOrder)。
-//     這一段驗名冊涵蓋(雙向)、畫筆真的吃這張表、排序保留重數與同款成段、瓶頸步距不變差,
-//     以及兩個消費端(carpetLists 冬季覆寫之後 / enclave 樣式)都排到了。
-//   Ⅶ **同顏色拼圖上的多種點綴**(使用者「草地的小花,沙地的小石頭,水域的游魚,以此類推」)
-//     —— 逐款底毯地表 MUST 撒得出兩種以上的點綴(舊制沙地只有小石頭、沼澤只有蘆葦、深水
-//     一片全空);游魚 MUST 進 AQ_DET 且 MUST 沉在水面下(貼在面上 = 浮在水上的魚)。
+//   VI Picking-roster color path (2026-08-13 user follow-up: same type should not jump
+//     sub-kinds at short range) -- block I fixed swap frequency only, amplitude untouched:
+//     if roster index adjacency is not color adjacency (green roster: meadow tan, deadwood
+//     gray, turf green), colors still jump no matter how smooth t is. New rule collects
+//     representative colors into one table (SUB_COL, shared by painters and sorter) and sorts
+//     rosters into color paths (carpetOrder). This section checks roster coverage (both
+//     directions), painters really eat the table, sorting keeps multiplicity and same-kind
+//     runs, bottleneck step never worsens, and both consumers (post-winter-override
+//     carpetLists / enclave styles) are sorted.
+//   VII Many sprinkles on same-color patches (user: flowers on grass, pebbles on sand, fish
+//     in water, and so on) -- every carpet surface MUST scatter at least two sprinkle kinds
+//     (old sand had only pebbles, marsh only reeds, deep water empty); fish MUST enter AQ_DET
+//     and MUST sink below the surface (on-surface = floating fish).
 //
-// 反向驗證:`--break-lot`   取值點改回格心 ⇒ Ⅰ 紅(換款間距垮回舊制)
-//           `--break-var`   花紋改回低頻雜訊 ⇒ Ⅱ 紅(共邊同款同變體)
-//           `--break-order` 清單維持原序 ⇒ Ⅵ 紅(索引相鄰不再是顏色相鄰)
-//           `--break-adopt` 認養退回對角線拆三角形 ⇒ Ⅳ 紅(凹四邊形與鄰格重疊認養)
-// 讀原文走 `audit_src.mjs` 單一縫(CRLF 工作區逐行剝註解會靜默失效)。
+// Reverse verification: --break-lot restores cell-center sampling => I goes red (spacing
+//   collapses to the old rule); --break-var restores low-frequency-noise variants => II goes
+//   red (edge-adjacent same-kind shares one variant); --break-order keeps roster order =>
+//   VI goes red (index adjacency is no longer color adjacency); --break-adopt restores
+//   diagonal-split triangles => IV goes red (concave quads double-claimed with neighbors)
+// Source text goes through the audit_src.mjs single seam (CRLF workspaces: per-line comment
+// stripping silently breaks).
 //
-// ---- 接縫紀律:共面的兩片是**硬幣拋**不是圖層(2026-08-16 併入,`docs/anime_style_plan.md` ④-4;
-//      純註解,零斷言改動)----
-// Ⅳ 那一段(認養地形三角形)把圖內三層(底毯 / 外溢 / 脊帶)做成與地形**刻意共面**的皮 ——
-// 那是 2026-08-13 使用者定案的解法,也是這一族陷阱的正中央。完整的規則是:
+// ---- Seam discipline: two coplanar sheets are a COIN TOSS, not layers (merged 2026-08-16,
+//      plan doc 4-4; comments only, zero assertion changes) ----
+// Section IV (adopt-terrain-triangles) makes three in-map layers (carpet / spillover / ridge
+// band) deliberately coplanar with terrain -- that is the 2026-08-13 user-decided fix, and the
+// exact center of this trap family. The full rule:
 //
-//  ㋐ **兩片同高共面的面,渲染器隨鏡頭位置任意贏一片**(逐幀、逐機位都可能換人)。它不是
-//     「圖層」,是一枚每幀重拋的硬幣。判讀法只有一條,而且它是**反直覺**的:
+//  (a) Two coplanar sheets at the same height: the renderer lets either win depending on
+//     camera position (may flip per frame and per camera). It is not layers, it is a coin
+//     re-tossed every frame. Only one reading rule, and it is counter-intuitive:
 //
-//       > **改了材質而畫面逐像素完全相同,永遠不是「這個材質改動很細微」——
-//       > 那一面根本沒有被畫。**
+//       > A material change with a pixel-identical frame never means a subtle change --
+//       > that face was never drawn at all.
 //
-//     參考專案實測過三次:屋頂平板與它蓋住的量體同高(材質連續加深三次,三張截圖逐位元相同)、
-//     暖簾掛在正立面線 + 0.06 而門楣板的面也落在那裡、選單列與蓋住它的面板共面(五顆鈕看不見三顆)。
-//     本專案的對應處方**不是**「再加一點高度」而是兩條:
-//       ・**lift 階梯**(`ground.js`:底毯 `CLIFT` 0.070 < 外溢 [0.100, 0.107] < 不規律 fade
-//         [0.110, 0.124] < 規律 ink [0.135, 0.172] < 道路 0.18)—— 每一層都有自己的一格,
-//         而那個間距是被 `SAG` 的上限吃掉的(`SAG.ROAD` 0.10 < 路面 0.18 − 底毯 0.07 的餘裕);
-//       ・**`polygonOffset`** —— 給「本來就該同高」的那幾件(`biomes.js` 的路面 −2 / 橋面 −3 /
-//         明隧道頂板 −1 / `UND.COPE` 緣石帶 −1):抬不動的地方就把它往鏡頭拉。
-//     ⇒ **加第六層地被、或讓任何新的貼地件與地形同高之前,MUST 先問它拿到階梯上的哪一格**;
-//     兩件擠進同一格的症狀是「某個角度看得到、換個角度不見了」,而本支的每一條斷言照樣全綠
-//     (它量的是**規劃**:選款 / 變體 / 認養歸屬,不是「畫出來之後誰贏」)。
-//  ㋑ **共面是這一段刻意選的,所以它的保證 MUST 由「同一份三角形」給,不是由高度差給。**
-//     Ⅳ 釘的「索引序與 `terrain.js` 的 `(a,c,b)(b,c,d)` 逐字同向」正是這件事:同一組頂點 +
-//     同一個繞向 ⇒ 兩片在數值上是同一個平面、深度值逐位元相同 ⇒ **z-fight 不是被壓下去、
-//     是不存在**。反過來說,任何「順手把認養那一層抬 1 cm」的修法都會**再造一次破圖**
-//     (那正是 `audit_ground_drape` 量的另一半:抬過頭 = 草皮蓋過馬路)。
-//  ㋒ **驗收面不在這一支。**「誰贏了那枚硬幣」只有像素比得出來 ⇒ `tools/shot_scene.mjs` 的
-//     定場照 A/B(㋓)是唯一的判決面,而它的檔頭寫著同一條判讀法。本支守的是**上游**:
-//     認養歸屬恰一個主人、共用邊逐位元同值、圖內不再套 `drapeSag`。
+//     Reference project measured it three times: a roof slab coplanar with the mass it covers
+//     (material darkened three times, three screenshots bit-identical), a shutter hanging on
+//     the facade line plus 0.06 where the lintel face also lands, a menu bar coplanar with its
+//     cover panel (three of five buttons invisible). This project prescription is NOT more
+//     height but two rules:
+//       - Lift staircase (ground.js: carpet CLIFT 0.070 < spillover 0.100-0.107 < irregular
+//         fade 0.110-0.124 < regular ink 0.135-0.172 < road 0.18) -- every layer owns one step,
+//         and that spacing is eaten by the SAG cap (SAG.ROAD 0.10 < road 0.18 minus carpet
+//         0.07 headroom);
+//       - polygonOffset -- for things that MUST be coplanar (biomes.js road -2 / bridge -3 /
+//         tunnel roof -1 / UND.COPE curb -1): where lifting is impossible, pull toward camera.
+//     => Before adding a sixth ground layer, or making any new decal coplanar with terrain,
+//     MUST ask which staircase step it owns; two things squeezed into one step read as visible
+//     from one angle and gone from another, while every assertion in this file stays green
+//     (it measures planning: picking / variant / adoption, not who won the draw).
+//  (b) Coplanarity is deliberate here, so its guarantee MUST come from the same triangles,
+//     not from height gaps. Section IV pins index order literally matching terrain.js
+//     (a,c,b)(b,c,d): same vertices + same winding => both sheets are numerically one plane
+//     with bit-identical depth => z-fighting is not suppressed, it does not exist. Conversely,
+//     any handy lift-1cm fix on the adopted layer re-creates breakage (that is the other half
+//     audit_ground_drape measures: over-lift = grass over road).
+//  (c) The verdict surface is not this file. Only pixels can tell who won the toss, so the
+//     staged shots A/B of tools/shot_scene.mjs are the sole judge, and its header states the
+//     same reading rule. This file guards the upstream: exactly one adoption owner, shared
+//     edges bit-identical, in-map no longer takes drapeSag.
 'use strict';
 import { DEFS, SURFACES } from '../public/js/groundCatalog.js';
 import { GROUND_PARTS } from '../public/js/groundPartCatalog.js';
@@ -103,13 +126,15 @@ const grab = (re, name) => {
   if (!m) { console.log(`x ground.js 原文抽取失敗:${name}`); process.exit(1); }
   return m[0].replace('export ', '');
 };
-// 四支皆零依賴純函式/純資料 ⇒ 抽原文直接執行真品(抄一份公式進稽核 = 驗自己抄對沒有)
+// All four are dependency-free pure functions/data => extract source and run the real thing
+// (copying a formula into the audit only verifies the copy)
 const VNOISE = grab(/function vnoise\(x, z, seed\) \{[\s\S]*?\n\}/, 'vnoise');
 const LOT_CFG = grab(/export const CARPET_LOT = .*$/m, 'CARPET_LOT');
 const SEL_CFG = grab(/export const CARPET_SEL = .*$/m, 'CARPET_SEL');
 const LOT_FN = grab(/export function carpetLotAt\([\s\S]*?\n\}/, 'carpetLotAt');
 const VAR_FN = grab(/export function planCarpetVariants\([\s\S]*?\n\}/, 'planCarpetVariants');
-// 顏色路徑排序那一族(2026-08-13):代表色表 + 色距 + 排序,四支同樣零依賴 ⇒ 執行真品
+// The color-path sorting family (2026-08-13): representative table + distance + sort;
+// same four dependency-free => run the real thing
 const BRICK = grab(/const BRICK_C = \[[\s\S]*?\];/, 'BRICK_C');
 const HEXOF = grab(/const hexOf = .*$/m, 'hexOf');
 const MEANH = grab(/const meanHex = \([\s\S]*?\n\};/, 'meanHex');
@@ -132,7 +157,8 @@ console.log('== Ⅰ 選款區塊(顏色的最小尺度)==');
     CARPET_LOT.JIT < 0.5 - 1e-9);
   t(`區塊間距 ${CARPET_LOT.CELLS} 格(以底毯格數計 ⇒ 改 cell 自己跟著走,不手寫公尺數)`,
     Number.isInteger(CARPET_LOT.CELLS) && CARPET_LOT.CELLS >= 3);
-  // 3×3 候選夠不夠:與 7×7 暴力搜尋逐格比對(這是 JIT < 0.5 的行為證明,不是重述那個常數)
+  // Is the 3x3 candidate set enough: compare cell-by-cell against 7x7 brute force (this is
+  // the behavioral proof of JIT < 0.5, not a restatement of the constant)
   const S = CARPET_LOT.CELLS, JIT = CARPET_LOT.JIT, SEED = 0xC0FFEE | 0;
   const site = (li, lj) => [
     (li + 0.5 + (vnoise(li, lj, (SEED ^ 0x1F3A) | 0) - 0.5) * 2 * JIT) * S,
@@ -159,12 +185,15 @@ console.log('== Ⅰ 選款區塊(顏色的最小尺度)==');
   t('純函式:carpetLotAt / planCarpetVariants 原文零 rnd / 零 Math.random / 零 THREE(§2.3、A4)',
     !/\brnd\s*\(|Math\.random|THREE/.test(LOT_FN) && !/\brnd\s*\(|Math\.random|THREE/.test(VAR_FN));
 
-  // ---- 換款間距:兩組對照 ----
-  //   ㋐ 現行公式 + 取值點改回格心 —— 量的是「lot 這一層自己有沒有在做事」;
-  //   ㋑ **凍結的出貨基準**(2026-08-12 那一版:格心取值 + W 0.006 + SPAN 2.2)—— 量的是
-  //      「使用者這一輪回報的東西改善了多少」。㋑ 的兩個數字 MUST 手寫並標明是歷史值:
-  //      跟著 CARPET_SEL 走的話,調完頻率之後這一條就是拿新制跟新制比,恆綠(2026-08-13
-  //      實測:㋐ 的短段比例自己就掉到 4%,舊的「≤ 對照組 1/4」當場失去牙齒)。
+  // ---- Swap spacing: two controls ----
+  //   (a) Current formula with sampling back at cell centers -- measures whether the lot
+  //   layer itself does anything;
+  //   (b) Frozen ship baseline (2026-08-12 build: cell-center sampling + W 0.006 + SPAN 2.2)
+  //      -- measures how much this round improved the user-reported issue. The two numbers of
+  //      (b) MUST be hand-written and labeled historical: following CARPET_SEL would compare
+  //      new against new after a frequency tune and stay green forever (2026-08-13 measurement:
+  //      the short-run share of (a) alone dropped to 4%, so the old quarter-of-control gate
+  //      lost its teeth on the spot).
   const LEGACY = { W: 0.006, SPAN: 2.2 };
   const CELL = 13, LIST = CARPET.bare.length;
   const pickAt = (wx, wz, cfg = CARPET_SEL) => {
@@ -193,17 +222,20 @@ console.log('== Ⅰ 選款區塊(顏色的最小尺度)==');
   const q = (a, p) => a[Math.min(a.length - 1, Math.floor(a.length * p))];
   const lot = runs(!BREAK_LOT), cellC = runs(false), legacy = runs(false, LEGACY);
   const lotP50 = q(lot, 0.5) * CELL, cellP50 = q(cellC, 0.5) * CELL, legP50 = q(legacy, 0.5) * CELL;
-  // 「短距離快速變化」= **短**的那一截有多常見(平均值看不出來:舊制的分布是雙峰的 ——
-  // 大片穩定區 + 雜訊場陡處那幾條「每一格都換一款」的帶,而使用者看到的正是後者)
+  // Short-range flicker = how common the SHORT runs are (means hide it: the old distribution
+  // is bimodal -- large stable areas plus steep-noise bands swapping every cell, and the user
+  // sees the latter)
   const shortShare = (a) => a.filter((v) => v * CELL < CELL * 2).length / a.length;
   const lotR = shortShare(lot), cellR = shortShare(cellC), legR = shortShare(legacy);
-  // 下界錨在區塊間距:同一個 lot 內恆為同一款 ⇒ 一段同款至少要有一個 lot 那麼寬
+  // Lower bound pinned to block spacing: one lot always yields one kind => a same-kind run
+  // is at least one lot wide
   const floorM = CARPET_LOT.CELLS * CELL * 0.8;
   t(`同款連續長度中位數 ${lotP50.toFixed(0)}m ≥ 一個區塊 ${floorM.toFixed(0)}m`
     + `(同公式取格心 ${cellP50.toFixed(0)}m / 2026-08-12 出貨基準 ${legP50.toFixed(0)}m)`,
     lotP50 >= floorM, `（每 ${lotP50.toFixed(0)}m 才換一次顏色）`);
-  // 短段比例只跟**出貨基準**比:同公式取格心那一組印出來當參考,但它已經吃了新的低頻場
-  // ⇒ 它自己就很低,拿它當門檻等於拿新制跟新制比(有牙的是上面那條中位數)
+  // Short-run share compares ONLY against the ship baseline: the same-formula cell-center
+  // group prints as reference, but it already eats the new low-frequency field => it is low on
+  // its own, so gating on it compares new against new (the median line above has the teeth)
   t(`「走不到兩格就換色」${(lotR * 100).toFixed(1)}% ≤ 2026-08-12 出貨基準 ${(legR * 100).toFixed(0)}% 的`
     + `四分之一(同公式取格心 ${(cellR * 100).toFixed(1)}%)`,
     lotR <= legR / 4, `（這一條就是使用者說的「短距離快速變化」）`);
@@ -213,7 +245,8 @@ console.log('== Ⅰ 選款區塊(顏色的最小尺度)==');
 console.log('\n== Ⅱ 逐格花紋(同顏色的相鄰拼圖畫不同的圖案)==');
 {
   const V = 3, SEED = 0x5EED | 0;
-  // 舊制對照組:變體 = 低頻雜訊(波長遠大於格距)⇒ 大片同變體
+  // Old-rule control: variant = low-frequency noise (wavelength far above cell pitch) =>
+  // large same-variant sheets
   const oldVar = (subs, gnx, gnz) => {
     const out = new Array(gnx * gnz).fill(0);
     for (let j = 0; j < gnz; j++) {
@@ -224,7 +257,8 @@ console.log('\n== Ⅱ 逐格花紋(同顏色的相鄰拼圖畫不同的圖案)==
     return out;
   };
   const plan = BREAK_VAR ? oldVar : (s, a, b) => planCarpetVariants(s, a, b, { seed: SEED, variants: V });
-  // 格網:大片同款 + 異款區塊 + '!' 崖 + null 未鋪(三種非款值都要走到)
+  // Grid: large same-kind area + other-kind block + '!' cliff + null unpaved (all three
+  // non-kind values exercised)
   const N = 40;
   const subs = new Array(N * N).fill(null);
   for (let j = 0; j < N; j++) {
@@ -242,7 +276,7 @@ console.log('\n== Ⅱ 逐格花紋(同顏色的相鄰拼圖畫不同的圖案)==
         for (const [di, dj, edge] of [[1, 0, 1], [0, 1, 1], [1, 1, 0], [-1, 1, 0]]) {
           const ni = i + di, nj = j + dj;
           if (ni < 0 || nj < 0 || ni >= N || nj >= N) continue;
-          if (subs[nj * N + ni] !== s) continue;               // 約束只在同款之間成立
+          if (subs[nj * N + ni] !== s) continue;               // Constraint binds only same-kind pairs
           const same = v[nj * N + ni] === v[j * N + i];
           if (edge) { edgeN++; if (same) edgeSame++; } else { diagN++; if (same) diagSame++; }
         }
@@ -251,12 +285,13 @@ console.log('\n== Ⅱ 逐格花紋(同顏色的相鄰拼圖畫不同的圖案)==
     return { edgeSame, edgeN, diagSame, diagN };
   };
   const out = plan(subs, N, N);
-  const A = stat(out), C = stat(oldVar(subs, N, N));   // C = 舊制對照組(低頻雜訊變體)
+  const A = stat(out), C = stat(oldVar(subs, N, N));   // C = old-rule control (low-frequency-noise variants)
   t(`共邊的同款鄰格**恆**不同變體(${A.edgeN} 對;硬條件)`, A.edgeN > 0 && A.edgeSame === 0,
     `（${A.edgeSame} 對同變體 = 兩張一樣的貼圖貼在一起）`);
-  // 對角只共用一個角點,而 3 變體 × 8 鄰在數學上做不到全異(一個 2×2 方塊裡四格兩兩相鄰,
-  // 要全異得要 4 色 = 每款多一個 mesh)—— 使用者原話也是「**盡可能**」。有牙的門檻錨在對照組:
-  // 舊制那一版的對角同變體率接近 1.0,新制 MUST 掉到一半以下
+  // Diagonals share only one corner, and 3 variants x 8 neighbors cannot all differ (four
+  // cells of a 2x2 block are pairwise adjacent, so full difference needs 4 colors = one more
+  // mesh per kind) -- the user words say best effort too. The toothed gate pins to the control:
+  // the old build diagonal same-variant rate is near 1.0, the new rule MUST drop below half
   t(`對角的同款鄰格「盡可能」不同:同變體率 ${(A.diagSame / A.diagN).toFixed(2)}(舊制對照組 ` +
     `${(C.diagSame / C.diagN).toFixed(2)})`,
     A.diagN > 0 && A.diagSame / A.diagN < 0.55 && A.diagSame / A.diagN < C.diagSame / C.diagN * 0.7,
@@ -268,7 +303,8 @@ console.log('\n== Ⅱ 逐格花紋(同顏色的相鄰拼圖畫不同的圖案)==
   t('決定性(同一份輸入跑兩次逐位元相同)',
     JSON.stringify(planCarpetVariants(subs, N, N, { seed: SEED, variants: V })) === JSON.stringify(
       planCarpetVariants(subs, N, N, { seed: SEED, variants: V })));
-  // 異款不受約束:兩款交界處,雙方各自挑各自的(不會因為隔壁是別款就綁手綁腳)
+  // Other kinds unconstrained: at a two-kind border each side picks its own (neighbors of
+  // another kind never tie hands)
   const border = [];
   for (let j = 0; j < N; j++) border.push(out[j * N + 23], out[j * N + 24]);
   t('異款之間不設限(交界兩側各挑各的:異款本來就是兩張不同的貼圖)', new Set(border).size >= 2);
@@ -278,14 +314,14 @@ console.log('\n== Ⅱ 逐格花紋(同顏色的相鄰拼圖畫不同的圖案)==
 console.log('\n== Ⅲ 靜態規則(執行原文)==');
 {
   const strip = (s) => s.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  // ① 底色不隨變體漂移(「**同顏色的**相鄰拼圖」這句話本身的要求)
+  // 1. Base color does not drift with variant (demanded by the words same-colored neighbors)
   const bf = grab(/function baseFill\(hex, rnd\) \{[\s\S]*?\n\}/, 'baseFill');
   t('baseFill 不把底色抖開(同種地表的全部變體共用同一個底色 ⇒ 逐格換變體 ≠ 逐格換顏色)',
     !/rnd\(\)\s*-\s*0\.5/.test(bf) && /return `rgb\(\$\{hex >> 16 & 255\}/.test(bf));
   t('仍照抽三枚亂數(每一支畫筆後續的筆觸序列逐位元同舊制 —— 改的只有底色那一格)',
     /for \(let k = 0; k < 3; k\+\+\) rnd\(\);/.test(bf));
   t('舊的 vary(逐變體抖底色)已無殘留', !/\bvary\(/.test(strip(src)));
-  // ② 選款取 lot 中心、變體整張一次挑
+  // 2. Picking uses lot centers; variants picked once per whole sheet
   const subFn = grab(/const cellSubAt = \(i, j, zn\) => \{[\s\S]*?\n  \};/, 'cellSubAt');
   t('cellSubAt 的取值點 = 選款區塊中心(carpetLotAt 單一縫;場的公式一格未動)',
     /const \[, , li, lj\] = carpetLotAt\(i, j, seed\);/.test(subFn)
@@ -301,12 +337,12 @@ console.log('\n== Ⅲ 靜態規則(執行原文)==');
   t('enclave 換裝仍接在選款上(唯一真相 ENCLAVE_STYLES;水深仍逐格看)',
     /encRt\.get\(encGrid\[j \* gnx \+ i\]\)\?\.style\.carpet \|\| carpetLists\[zn\]/.test(subFn)
     && /'deepwater' : 'watertile'/.test(subFn));
-  // ③ 同款異變體不發外溢(不然整張圖多兩層半透明底毯)
+  // 3. Same-kind different-variant emits no spillover (else two extra translucent carpets)
   const seamFn = grab(/export function planSeamOverlays\(keys, gnx, gnz, opts = \{\}\) \{[\s\S]*?\n\}/, 'planSeamOverlays');
   t('planSeamOverlays:同款異變體不發外溢(共用底色 ⇒ 沒有要 cross-fade 的東西)',
     /if \(subOf\(kn\) === subOf\(k0\)\) continue;/.test(seamFn));
-  // ④ 緩衝空間底毯
-  const bufSeg = src.slice(src.indexOf('// ==== 緩衝空間的底毯'), src.indexOf('// ==== 地貌界線拼圖:規劃'));
+  // 4. Buffer-ring carpet
+  const bufSeg = src.slice(src.indexOf('// ==== Buffer-ring carpet'), src.indexOf('// ==== Terrain border puzzle: planning'));
   t('surfaceField 路徑停用緩衝底毯；相容路徑只在拿得到 bufferHeightAt 時才鋪',
     bufSeg.length > 400 && /if \(!surfaceField && terrain\.bufferHeightAt\) \{/.test(bufSeg));
   t('高度走 terrain.bufferHeightAt(裙的外推高度唯一縫;拿 heightAt 會被夾回圖界)',
@@ -322,13 +358,14 @@ console.log('\n== Ⅲ 靜態規則(執行原文)==');
     !/\brnd\s*\(/.test(bufSeg) && !/Math\.random/.test(bufSeg));
   t('界線拼圖 / 特徵拼圖 / 3D 細節都不進緩衝空間(那些要吃共享 rnd 序列與空間索引)',
     !/tryPatch|addDetail|planBorderPuzzle|scatterDetails/.test(bufSeg));
-  // 粗格 + 硬邊 = 一床方塊拼被(2026-08-12 實拍):角點抖動 + 交界外溢缺一不可,
-  // 而外溢 MUST 走圖內那一支規劃器(單一縫)
+  // Coarse cells + hard edges read as a quilt (2026-08-12 field photo): corner jitter plus
+  // border spillover are both required, and spillover MUST use the in-map planner (single seam)
   t('角點抖動,但圖界那兩條線上的角點不動(那是與真地形的接縫,動了就開縫)',
     /\(i === nOut \|\| i === inX\) \? 0 :/.test(bufSeg) && /\(j === nOut \|\| j === inZ\) \? 0 :/.test(bufSeg));
   t('交界外溢走圖內同一支 planSeamOverlays(單一縫;少了它粗格之間就是硬邊直角)',
     /for \(const ov of planSeamOverlays\(bkeys, bnx, bnz,/.test(bufSeg));
-  // ⑤ 貼地面發射只有一份實作,而且**圖內不再經過它**(2026-08-13 起圖內走認養,見 Ⅳ)
+  // 5. Ground-face emission has exactly one implementation, and in-map no longer routes
+  // through it (in-map adopted terrain since 2026-08-13, see IV)
   t('貼地 3×3 面只有 emitFace 一份實作 + face9 一份排列,且只剩緩衝空間在呼叫',
     (src.match(/const emitFace = /g) || []).length === 1
     && (src.match(/const face9 = /g) || []).length === 1
@@ -339,18 +376,20 @@ console.log('\n== Ⅲ 靜態規則(執行原文)==');
     && /G\.map\(\(\[px, pz\]\) => hAt\(px, pz\)\)/.test(src));
 }
 
-// ==== Ⅳ 認養地形三角形(2026-08-13 使用者定案「A 認養地形三角形」)====
-// 舊制底毯自己切 3×3,頂點取 heightAt ⇒ 頂點在地形上而頂點之間是直的;地形是逐格三角化的
-// 高度場 ⇒ 跨過折角的弦沉在地形下(斜坡破圖)。新制:皮的三角形 === 地形的三角形。
-// 這一段量兩種東西 ——
-//   ㋐**幾何規則**(抽 inQuad / invBil 原文直接跑):認養分割 MUST 是「每個點恰一個主人」
-//     (缺一個 = 那塊地形直接露出來、多一個 = 兩張皮互疊 z-fighting),而且主人恆在 3×3 內;
-//     反雙線性在四角恆等 ⇒ 相鄰格共用的地形頂點兩邊算出同一個 α,外溢不開縫。
-//   ㋑**接線**(執行原文):索引序與 terrain.js 的三角化逐字同向、灘線閘仍整格判、圖內不再
-//     套貼合抬升、地形頂點數推導不手寫。
-// 反向驗證 `--break-adopt`:認養判定退回「拿對角線把四邊形拆成兩個三角形」——
-// 抖動後的四邊形可以是凹的,對角線會跑到多邊形外 ⇒「無重疊」那一條 MUST 紅字(實測 13 個探針
-// 被兩格同時認養 = 兩張皮互疊)。
+// ==== IV Adopt-terrain-triangles (2026-08-13 user decision: A adopt-terrain-triangles) ====
+// Old carpet cut its own 3x3 with heightAt vertices: vertices sit on terrain but edges between
+// them are straight; terrain is a per-cell triangulated height field, so chords crossing a
+// crease sink under it (slope breakage). New rule: skin triangles equal terrain triangles.
+// This section measures two things --
+//   (a) Geometry rules (run extracted inQuad / invBil sources): adoption MUST give each point
+//     exactly one owner (zero owners = bare terrain showing; two = two skins z-fighting), and
+//     owners always stay inside 3x3; inverse-bilinear is identity at corners => shared terrain
+//     vertices compute the same alpha on both sides, spillover never gaps.
+//   (b) Wiring (execute source): index order literally matches terrain.js triangulation, beach
+//     gate still whole-cell, in-map no longer takes drape lift, terrain vertex count derived.
+// Reverse verification --break-adopt: adoption falls back to diagonal-split triangles -- a
+// jittered quad can be concave with its diagonal outside the polygon => the no-overlap line
+// MUST go red (measured: 13 probes double-claimed = two skins stacked).
 console.log('\n== Ⅳ 認養地形三角形 ==');
 {
   const strip = (s) => s.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -360,13 +399,15 @@ console.log('\n== Ⅳ 認養地形三角形 ==');
   t('inQuad / invBil 原文零 rnd / 零 Math.random / 零 THREE(§2.3、A4)',
     !/\brnd\s*\(|Math\.random|THREE/.test(IN_Q + INV_B));
 
-  // 合成一張抖動角點格(振幅 = ground.js clampD 的 0.45 上界),用**真品** inQuad 認養
+  // Build one jittered-corner grid (amplitude = ground.js clampD upper bound 0.45) and adopt
+  // with the genuine inQuad
   const JIT = 0.45, SEED = 0x5EED | 0;
   const corn = (i, j) => [
     i + (vnoise(i, j, (SEED ^ 0x9E37) | 0) - 0.5) * 2 * JIT,
     j + (vnoise(i, j, (SEED ^ 0x85EB) | 0) - 0.5) * 2 * JIT];
   const quad = (i, j) => [corn(i, j), corn(i + 1, j), corn(i + 1, j + 1), corn(i, j + 1)];
-  // 對照組:拿對角線拆兩個三角形(凹四邊形會漏/重)—— --break-adopt 換上它
+  // Control: split into two triangles along a diagonal (concave quads leak/overlap) --
+  // --break-adopt swaps this in
   const triSide = (A, B, C, px, pz) => (B[0] - A[0]) * (pz - A[1]) - (B[1] - A[1]) * (px - A[0]);
   const inTri = (A, B, C, px, pz) => {
     const s = Math.sign(triSide(A, B, C, px, pz)), u = Math.sign(triSide(B, C, A, px, pz)),
@@ -376,11 +417,11 @@ console.log('\n== Ⅳ 認養地形三角形 ==');
   const OWN = BREAK_ADOPT
     ? (Q, px, pz) => inTri(Q[0], Q[1], Q[2], px, pz) || inTri(Q[0], Q[2], Q[3], px, pz)
     : GEO.inQuad;
-  const LO = 4, HI = 20, STEP = 0.137;          // 探針步距刻意取無理數狀:避開恰落在格線上
+  const LO = 4, HI = 20, STEP = 0.137;          // Probe step deliberately irrational-like: avoids landing on grid lines
   let none = 0, dup = 0, far = 0, probes = 0, concave = 0;
   for (let i = LO; i < HI; i++) {
     for (let j = LO; j < HI; j++) {
-      const Q = quad(i, j);                      // 凹不凹:對角線 P0P2 是否落在多邊形外
+      const Q = quad(i, j);                      // Concave or not: does diagonal P0P2 fall outside the polygon
       const mid = [(Q[0][0] + Q[2][0]) / 2, (Q[0][1] + Q[2][1]) / 2];
       if (!GEO.inQuad(Q, mid[0], mid[1])) concave++;
     }
@@ -392,7 +433,8 @@ console.log('\n== Ⅳ 認養地形三角形 ==');
       for (let i = LO; i < HI; i++) for (let j = LO; j < HI; j++) if (OWN(quad(i, j), px, pz)) owners.push([i, j]);
       if (!owners.length) { none++; continue; }
       if (owners.length > 1) dup++;
-      // 主人恆在名義格的 3×3 內(ground.js 的候選範圍就是這個;抖動 < 0.45 的行為證明)
+      // Owners always stay inside the nominal 3x3 (that is ground.js scan range; behavioral
+      // proof for jitter < 0.45)
       if (owners.some(([i, j]) => Math.abs(i - Math.floor(px)) > 1 || Math.abs(j - Math.floor(pz)) > 1)) far++;
     }
   }
@@ -402,7 +444,7 @@ console.log('\n== Ⅳ 認養地形三角形 ==');
   t('認養分割無重疊:沒有點被兩格同時認養(半開邊)', dup === 0, `（${dup} 個重複 ⇒ 兩張皮互疊 z-fighting）`);
   t('主人恆落在名義格的 3×3 候選內(ground.js 只掃 3×3 的行為證明)', far === 0, `（${far} 個落在候選之外）`);
 
-  // 反雙線性:四角恆等 + 共用邊上兩格算出同一個 α(外溢淡出不開縫)
+  // Inverse-bilinear: corner identity + both cells agree on shared edges (spillover never gaps)
   let cornErr = 0, seamErr = 0;
   const A4 = [[0, 0], [1, 0], [1, 1], [0, 1]];
   for (let i = LO; i < HI; i++) {
@@ -414,14 +456,14 @@ console.log('\n== Ⅳ 認養地形三角形 ==');
       });
     }
   }
-  const alphaOf = (i, j) => 0.5 + 0.5 * vnoise(i * 3.1, j * 3.1, SEED);   // 任一份角點 α 場
+  const alphaOf = (i, j) => 0.5 + 0.5 * vnoise(i * 3.1, j * 3.1, SEED);   // Any corner alpha field
   const bil = (Q, aa, px, pz) => {
     const [u, v] = GEO.invBil(Q, px, pz);
     return (1 - u) * (1 - v) * aa[0] + u * (1 - v) * aa[1] + u * v * aa[2] + (1 - u) * v * aa[3];
   };
   for (let i = LO; i < HI - 1; i++) {
     for (let j = LO; j < HI - 1; j++) {
-      // (i,j) 的右邊 P1P2 === (i+1,j) 的左邊 P0P3(共用兩顆角點)
+      // Right edge P1P2 of (i,j) equals left edge P0P3 of (i+1,j) (two shared corners)
       const QL = quad(i, j), QR = quad(i + 1, j);
       const aL = [alphaOf(i, j), alphaOf(i + 1, j), alphaOf(i + 1, j + 1), alphaOf(i, j + 1)];
       const aR = [alphaOf(i + 1, j), alphaOf(i + 2, j), alphaOf(i + 2, j + 1), alphaOf(i + 1, j + 1)];
@@ -434,9 +476,9 @@ console.log('\n== Ⅳ 認養地形三角形 ==');
   t('反雙線性在四角恆等(α 端點 0/1 不漂 ⇒ 與不透明底毯仍水密)', cornErr === 0, `（${cornErr} 個角偏差）`);
   t('共用邊上兩格算出同一個 α(相鄰外溢共用的那顆地形頂點不開縫)', seamErr === 0, `（${seamErr} 個取樣分歧）`);
 
-  // ---- 接線(執行原文)----
+  // ---- Wiring (execute source) ----
   const emitSeg = src.slice(src.indexOf('const emitCell = (bmap, key, ti, tj, alphas, st, cut) => {'),
-                            src.indexOf('// ==== 多層次地貌:整張 coarse'));
+                            src.indexOf('// ==== Multi-level terrain: full-map coarse'));
   const adoptSeg = src.slice(src.indexOf('const cellQuads = new Array(gnx * gnz);'),
                              src.indexOf('const emitCell = (bmap, key, ti, tj, alphas, st, cut) => {'));
   const tsrc = readSrc('public', 'js', 'terrain.js');
@@ -465,23 +507,26 @@ console.log('\n== Ⅳ 認養地形三角形 ==');
   if (BREAK_ADOPT) console.log('  （--break-adopt:認養退回對角線拆三角形 ⇒「無重疊」那一條 MUST 紅字）');
 }
 
-// ==== Ⅴ 農牧地表的四季設計(2026-08-13 使用者需求)====
-// 使用者原話:「田除了田也加入菜園/牧場/魚塭與果園等農牧區,**包含原本的田在內依四季不同
-// 而對應設計**」。舊制的季節只有 `SEASON_TINT` 一個乘色濾鏡 —— 那是把整張圖調黃,不是
-// 「秋天的水田長什麼樣」。這一段量三件事:
-//   ㋐**真的畫了不同的東西**:同一支畫筆跑四季,用一個會記錄每一次繪圖呼叫的假 2D context
-//     收下指令流,四季兩兩 MUST 不同。只調底色也會讓指令流不同,所以另外要求**不只底色不同**
-//     (去掉第一個 fillStyle 之後仍有差異)—— 否則這一條就退化成在驗那個乘色濾鏡。
-//   ㋑**名冊對齊**:畫筆吃 season 的那一批 ⇔ DEFS 標 `seasonal` 的那一批。少標一個就是
-//     **調兩次色**(畫筆已經畫成金黃,再乘一層 0xffd9a8 = 褪色的舊照片),而畫面上只是
-//     「秋天的田看起來髒髒的」,沒有任何斷言看得出來。
-//   ㋒**draw call 不變**:季節只進 groundTex 的快取鍵,bucket 鍵仍是 `sub#variant`。
+// ==== V Four-season farm surfaces (2026-08-13 user request) ====
+// User words: fields plus veggie plots, pasture, fish ponds, orchards and other farm areas, all
+// season-aware including the original fields. Old seasons were one SEASON_TINT multiply filter
+// (tints the whole map yellow) -- not what an autumn paddy looks like. This section measures
+// three things:
+//   (a) Really draws different things: run one painter through four seasons into a recording
+//     fake 2D context; every pair MUST differ, and not by base color alone (base-color-only
+//     would re-verify that multiply filter: drop the first fillStyle and MUST still differ).
+//   (b) Roster alignment: painters taking season match DEFS flagged seasonal. One missing flag
+//     double-tints (painter already gold, times one more 0xffd9a8 = faded photo), while on screen
+//     autumn fields just look dirty, invisible to every assertion.
+//   (c) Draw calls unchanged: season only enters the groundTex cache key, bucket keys stay
+//     sub#variant.
 console.log('\n== Ⅴ 農牧地表四季設計 ==');
 {
   const strip = (s) => s.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
   const painterSeason = Object.keys(SURFACES).filter(k => SURFACES[k].landscape === 'cultivated' || k === 'fishpond');
   t('季節材質由程序生成器處理，全部場所停用第二次季節乘色', Object.values(DEFS).every(d => d.seasonal));
-  // 假 2D context:把「設了什麼色、畫了什麼」收成一條指令流(不畫像素也量得到差異)
+  // Fake 2D context: record set-colors and draw calls into a command stream (differences
+  // measurable without painting pixels)
   const recCtx = () => {
     const log = [];
     const h = { beginPath: 0, closePath: 0, fill: 0, stroke: 0, save: 0, restore: 0 };
@@ -508,7 +553,8 @@ console.log('\n== Ⅴ 農牧地表四季設計 ==');
       for (let b2 = a + 1; b2 < 4; b2++) {
         const ja = JSON.stringify(runs[a]), jb = JSON.stringify(runs[b2]);
         if (ja === jb) { sameAny++; bad(`${k}:${SEASONS[a]} 與 ${SEASONS[b2]} 畫出完全一樣的東西`); }
-        // 只換底色 = 這一條退化成乘色濾鏡:把第一個 fillStyle 拿掉之後 MUST 仍有差
+        // Base-color-only = this line degrades to the multiply filter: drop the first fillStyle
+        // and MUST still differ
         else if (JSON.stringify(runs[a].slice(1)) === JSON.stringify(runs[b2].slice(1))) {
           tintOnly++; bad(`${k}:${SEASONS[a]} 與 ${SEASONS[b2]} 只差一個底色(那就是舊的乘色濾鏡)`);
         }
@@ -524,11 +570,13 @@ console.log('\n== Ⅴ 農牧地表四季設計 ==');
 
 console.log('\n== Ⅵ 選款清單的顏色路徑(換款的「幅度」那一半)==');
 {
-  // 病灶:CARPET_LOT 只讓換款**沒那麼頻繁**,跳的幅度一格未動 —— 清單的索引相鄰若不是顏色
-  // 相鄰(綠地那一份的 meadow 土黃 → deadwood 灰 → turf 綠),t 再平滑顏色照樣在跳。
-  // ① 代表色名冊 MUST **恰好**涵蓋會出現在底毯上的款(雙向比對;多寫一款 = 沒有消費端的
-  //    裝飾欄位,少寫一款 = 那一款排序時被整份清單原地退回,而畫面上只是「這一區還在跳」)
-  const want = new Set(['deepwater']);   // 深水不在任何清單裡(cellSubAt 依水深直接指派),仍是底毯款
+  // Lesion: CARPET_LOT only makes swaps less frequent, amplitude untouched -- if roster
+  // index adjacency is not color adjacency (green roster: meadow tan, deadwood gray, turf
+  // green), colors still jump no matter how smooth t is.
+  // 1. Representative roster MUST cover exactly the kinds reaching carpet (both directions;
+  //    one extra = decoration with no consumer; one missing = that kind falls back to roster
+  //    order at sort time, reading on screen as this area still jumps)
+  const want = new Set(['deepwater']);   // Deep water is in no roster (cellSubAt assigns by depth), still a carpet kind
   for (const zn in CARPET) for (const s of CARPET[zn]) want.add(s);
   for (const k in ENCST) for (const s of ENCST[k].carpet || []) want.add(s);
   const have = new Set(Object.keys(SUB_COL));
@@ -536,13 +584,15 @@ console.log('\n== Ⅵ 選款清單的顏色路徑(換款的「幅度」那一半
   const extra = [...have].filter((s) => !want.has(s));
   t(`SUB_COL 恰涵蓋底毯款(CARPET ∪ ENCLAVE_STYLES[].carpet;${want.size} 款)`,
     miss.length === 0 && extra.length === 0, `（缺:${miss.join(',')} 多:${extra.join(',')}）`);
-  // ② 畫筆真的吃這張表(否則排序用的是一份與畫面無關的色票)
+  // 2. Painters really eat this table (else sorting uses swatches unrelated to the frame)
   t('程序畫筆使用 SUB_COL 作為底色', /paintGround\([^;]+SUB_COL\[sub\]/.test(src));
   t('brick 代表色仍由色票推導', /brick: meanHex\(BRICK_C\)/.test(src));
-  // ③ 排序本身:純函式、保留重數、同款相鄰、瓶頸步距不比原序差
+  // 3. Sorting itself: pure function, keeps multiplicity, same-kind runs, bottleneck step
+  // never worse than roster order
   t('carpetOrder 原文零 rnd / 零 Math.random / 零 THREE(§2.3、A4)',
     !/\brnd\s*\(|Math\.random|THREE/.test(ORDER));
-  // 重數指紋 MUST 與鍵序無關(排完插入序本來就變了,直接 JSON.stringify 物件永遠不相等)
+  // Multiplicity fingerprint MUST NOT depend on key order (insertion order changes after
+  // sorting; direct object stringify never compares equal)
   const cnt = (l) => JSON.stringify(Object.entries(
     l.reduce((m2, s) => (m2[s] = (m2[s] || 0) + 1, m2), {})).sort());
   const maxStep = (l) => {
@@ -555,8 +605,8 @@ console.log('\n== Ⅵ 選款清單的顏色路徑(換款的「幅度」那一半
   let weightBad = 0, adjBad = 0, worse = 0, improved = 0;
   for (const k in lists) {
     const a = lists[k], b = BREAK_ORDER ? a.slice() : carpetOrder(a);
-    if (cnt(a) !== cnt(b)) weightBad++;   // 重數 = 權重,不得變
-    for (const s of new Set(b)) {                                          // 同款 MUST 連成一段
+    if (cnt(a) !== cnt(b)) weightBad++;   // Multiplicity = weight, MUST NOT change
+    for (const s of new Set(b)) {                                          // Same kind MUST form one run
       const f = b.indexOf(s), l = b.lastIndexOf(s);
       if (l - f + 1 !== b.filter((q) => q === s).length) adjBad++;
     }
@@ -568,16 +618,18 @@ console.log('\n== Ⅵ 選款清單的顏色路徑(換款的「幅度」那一半
   t('同款排在一起(權重成為漸層上的一段平台,不是散在清單各處)', adjBad === 0);
   t('沒有任何一份清單的最大相鄰色距被排壞', worse === 0);
   t(`實際改善的清單數 ${improved}/${Object.keys(lists).length}(0 = 排序沒有在做事)`, improved > 0);
-  // ④ 兩個消費端都排到了(冬季覆寫之後、enclave 樣式也要;少一條就是「有些地方還在跳色」)
+  // 4. Both consumers sorted (post-winter-override, and enclave styles; missing one leaves
+  // some area still jumping)
   t('carpetLists 在冬季覆寫之後才排序(冬季那兩份是新組的清單)',
     src.indexOf('for (const zn in carpetLists) carpetLists[zn] = carpetOrder(carpetLists[zn]);')
       > src.indexOf("carpetLists.alpine = ['icefield'"));
   t('enclave 樣式的底毯清單也排序,且不就地改寫模組級常數',
     /carpet: carpetOrder\(st\.carpet\)/.test(src) && /const style = st\.carpet \? \{ \.\.\.st,/.test(src));
-  // ⑤ 紅磚地與水泥地的**實得**佔比(2026-08-13 使用者「大幅調降使用率」)。
-  // 這一條 MUST 量實得而不是數格數:選款是「雜訊 → 清單索引」,而雜訊的邊際分布不是均勻的
-  // ⇒ 逐槽位的實得佔比與宣告權重不一樣(見 CARPET_SEL 檔頭)。舊制 concrete 又剛好排在
-  // 首尾兩個被加成的槽位上 —— 只數格數的話會算出 3/7,實得是 40%。
+  // 5. Realized share of brick and concrete (2026-08-13 user decision: cut usage sharply).
+  // This line MUST measure realized share, not roster cells: picking is noise -> roster index,
+  // and the noise marginal is not uniform => per-slot realized share differs from declared
+  // weight (see CARPET_SEL header). Old concrete sat exactly on the two boosted end slots --
+  // counting cells gives 3/7, realized is 40 percent.
   {
     const CELL = 13, SEED = 0x5A17C0 | 0;
     const share = (list, want) => {
@@ -593,10 +645,11 @@ console.log('\n== Ⅵ 選款清單的顏色路徑(換款的「幅度」那一半
       }
       return hit / tot;
     };
-    // 凍結的出貨基準 = 2026-08-12 的市區底毯清單(**不排序**,那時還沒有 carpetOrder)
+    // Frozen ship baseline = 2026-08-12 urban carpet roster (unsorted; carpetOrder did not
+    // exist yet)
     const LEGACY_URBAN = ['concrete', 'pavement', 'lawn', 'brick', 'concrete', 'park', 'pavement'];
     const now = share(CARPET.urban, ['brick', 'concrete']);
-    const was = share(LEGACY_URBAN.slice(), ['brick', 'concrete']);   // slice ⇒ 不被就地排序
+    const was = share(LEGACY_URBAN.slice(), ['brick', 'concrete']);   // slice => sort never mutates in place
     t(`紅磚地 + 水泥地實得佔市區底毯 ${(now * 100).toFixed(0)}% ≤ 出貨基準 ${(was * 100).toFixed(0)}% 的一半`,
       now <= was / 2, '（使用者 2026-08-13「大幅調降使用率」）');
     (CARPET.urban.filter((s) => s === 'brick').length === 1
@@ -617,13 +670,15 @@ console.log('\n== Ⅶ 同顏色拼圖上的多種點綴(2026-08-13「草地的�
   t('三款都登記了 TILT 與 REG(漏了的那一款會恆直立且恆隨機朝向,不會報錯)',
     NEW.every((n) => new RegExp(`${n}: [\\d.]+`).test(src.match(/const TILT = \{[\s\S]*?\n\};/)[0])
       && new RegExp(`${n}: [\\d.]+`).test(src.match(/const REG = \{[\s\S]*?\n\};/)[0])));
-  // 游魚:MUST 進 AQ_DET(免岸線淘汰)且 MUST 沉在水面下(貼在面上 = 浮在水上的魚)
+  // Fish: MUST enter AQ_DET (skip shoreline culling) and MUST sink below the surface
+  // (on-surface = floating fish)
   t("fish 進 AQ_DET(水生細節,免吃岸線高度淘汰)", /AQ_DET = new Set\(\['reed', 'lotuspad', 'fish'\]\)/.test(src));
   t('fish 走 DIVE(沉在水面下)且水深不足就不擺(§4 寧缺勿錯)',
     /const DIVE = \{ fish: [\d.]+ \};/.test(src)
     && /if \(wy == null \|\| terrain\.heightAt\(px, pz\) > wy - dive - [\d.]+\) return;/.test(src)
     && /y = wy - dive;/.test(src));
-  // 每一款底毯 MUST 有至少兩種點綴(「同顏色的拼圖上面可以繪製**多個不同**的細節」)
+  // Every carpet kind MUST scatter at least two sprinkle kinds (several different details
+  // on same-color patches)
   const carpetSubs = new Set();
   for (const zn in CARPET) for (const s of CARPET[zn]) carpetSubs.add(s);
   const thin = [];

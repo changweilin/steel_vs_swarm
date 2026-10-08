@@ -17,14 +17,15 @@
 ## 1. Documentation Discipline
 
 - **Language**: docs and code comments are English. In-game UI strings and narrative dialogue stay Traditional Chinese and live in their content modules only.
-- **Disclosure**: Tier-1 holds principles only. Definitions live in `.claude/rules/`; per-assertion formulas live in `tools/audit_*.mjs` headers; commands live in `package.json`. MUST NOT duplicate them here.
-- **Signal**: state the non-obvious "why" (constraint, failure mode, invariant). MUST NOT restate what the code plainly shows, and MUST NOT log completed history, dates, or transitional notes.
+- **Disclosure**: Tier-1 holds principles only. Definitions live in `.claude/rules/`; per-assertion formulas live in `tools/audit_*.mjs` headers; commands live in `package.json`. MUST NOT duplicate them here. Read order lives in `CLAUDE.md`.
+- **Signal**: state the non-obvious "why" (constraint, failure mode, invariant). MUST NOT restate what the code plainly shows, and MUST NOT log completed history, dates, or transitional notes. Chesterton's Fence applies: MUST NOT remove an intentional design without recording its reason first.
+- **Contracts**: interface comments follow Design by Contract (pre/post/invariant); full annotation standard lives in `.claude/rules/contracts.md`. Inline comments cover only non-obvious domain logic, hardware workarounds, and safety invariants.
 
-## 1. Technical Boundaries
+## 2. Technical Boundaries
 
 - Runtime: Node.js with a single websocket dependency. MUST NOT add dependencies.
 - No build step, no bundler, no framework, no TypeScript.
 
-## 2. Behavioral Boundaries
+## 3. Behavioral Boundaries
 
 - **Fairness**: bots MUST NOT perceive or move beyond human limits; buildings take no multipliers; shield and armor handling stays single-track; fire-rate and budget adjustments move together without touching authority state.

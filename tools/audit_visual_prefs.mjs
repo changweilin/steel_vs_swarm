@@ -1,15 +1,15 @@
 // ============ 畫面表現旋鈕 / 陰影偏色 / 風化場 / 零件抖動 / 景深模糊 稽核(離線)============
-// 涵蓋 docs/visual_upgrade_plan.md 的 P1-B(陰影偏色搬進 ramp)、P2-A(風化屬性場)、
-// P2-B(零件級細節抖動延伸到障礙與地標),以及把三者接上使用者的那一層(visualPrefs.js
-// + 設定頁拉桿 + 樣品畫面)。
+// Covers P1-B of docs/visual_upgrade_plan.md (shadow tint moved into ramp), P2-A (weathering attribute field),
+// P2-B (part-level detail jitter extended to obstacles and landmarks), plus the user-facing layer for all three (visualPrefs.js
+// plus settings-page sliders plus sample views).
 //
-// 這一批的共同風險是**靜默**:
-//   ・偏色寫成亮度不中性的乘數 ⇒ 悄悄繞過 A14/#INC-106 的「暗階 ≥ 102」,深色件在暗面塌黑;
-//   ・預設值不等於舊制 ⇒ 「加了個設定」變成「偷偷改了所有人的畫面」;
-//   ・風化場的乘數在拉桿 0 時不等於 1 ⇒ 關掉也回不去;
-//   ・抖動把演出半徑頂出權威碰撞柱 ⇒ 看得見卻打不到(原則 4 / A30 家族);
-//   ・樣品自己畫一套「看起來差不多」的色 ⇒ 調好了進戰場不是那樣。
-// 以上全部沒有錯誤訊息,只有「怪怪的」。故逐條在此釘死。
+// The shared risk across this batch is silence:
+//   tint written as a luminance-shifting multiplier quietly bypasses the dark-step floor of 102 from A14 and INC-106, so dark parts crush in shadow;
+//   defaults differing from the old behavior turn adding a setting into secretly restyling every player picture;
+//   a weathering multiplier not equal to 1 at slider 0 means off never returns;
+//   jitter pushing the visual radius outside authoritative collision posts reads as visible but unhittable (principle 4, A30 family);
+//   samples painting their own lookalike colors means tuned values do not match the battlefield.
+// None of the above raises an error message, only looks odd. Each is pinned here.
 //
 // 讀原文一律走 `audit_src.mjs`(㋑ CRLF 陷阱);純函式一律**執行真品原文**再驗行為,
 // MUST NOT 在本檔重寫一份公式。

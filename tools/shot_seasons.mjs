@@ -1,7 +1,7 @@
-// 神木四季稽核(2026-07-24)—— 驗每種神木都有春/夏/秋/冬版本(樹冠隨季疊色、樹幹不動)。
-// 從 /js/biomes.js 抽 GIANT_DEFS + SEASON_GIANT_TINT,套用與 seasonColor 相同的 'gleaf' 自動標記
-// (綠色主導 = 樹冠 → 疊 tint;紅褐樹幹不動),每種樹一列 × 四季四欄(front 正視)。
-// 前置:伺服器 8620 執行中;Playwright 借 mapping_elf。用法:node tools/shot_seasons.mjs [--out DIR]
+// Giant-tree four-season audit (2026-07-24) -- checks every giant has spring/summer/autumn/winter variants (crowns tinted per season, trunks untouched).
+// Extracts GIANT_DEFS plus SEASON_GIANT_TINT from /js/biomes.js, applying the same gleaf auto-tag as seasonColor
+// (green-dominant means crown, so tint overlays; reddish-brown trunks stay), one row per species by four season columns (front view).
+// Prerequisite: server 8620 running; Playwright borrows mapping_elf. Usage: node tools/shot_seasons.mjs [--out DIR]
 import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,12 +25,12 @@ const report = await page.evaluate(async () => {
   const GIANT_DEFS = new Function('createForestDefs', 'cyl', 'cone', 'ico', 'Math',
     src.match(/const GIANT_DEFS = \{[^\n]*\};/)[0].replace('const GIANT_DEFS =', 'return'))(createForestDefs, cyl, cone, ico, Math);
   for (const def of Object.values(GIANT_DEFS)) def.parts = def.variants[0];
-  // 抽 SEASON_GIANT_TINT(避免手抄漂移)
+  // Extract SEASON_GIANT_TINT (avoids hand-copy drift)
   const tm = src.match(/const SEASON_GIANT_TINT = (\{[^}]*\});/);
   const TINT = new Function('return ' + tm[1])();
   const mulHex = (a, b) => ((((a >> 16 & 255) * (b >> 16 & 255) / 255) | 0) << 16)
     | ((((a >> 8 & 255) * (b >> 8 & 255) / 255) | 0) << 8) | (((a & 255) * (b & 255) / 255) | 0);
-  // 與 biomes.js 相同的自動標記規則:綠主導 = 樹冠(gleaf)
+  // Same auto-tag rule as biomes.js: green-dominant means crown (gleaf)
   const isLeaf = (c) => { const r = c >> 16 & 255, g = c >> 8 & 255, b = c & 255; return g > r && g >= b; };
   const partColor = (p, season) => (p.c != null && isLeaf(p.c)) ? mulHex(p.c, TINT[season]) : (p.c ?? 0x777777);
 

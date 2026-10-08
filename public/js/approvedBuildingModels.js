@@ -1,4 +1,4 @@
-// 已通過零件台的建築型錄；選款、正規化與執行期批次只在此一份。
+// Approved building catalog from the parts bench; selection, normalization, and runtime batching live only here.
 import * as THREE from 'three';
 import { BUILDING_PARTS } from './runtimeParts.js';
 import { generateBackgroundObject, BACKGROUND_VARIANTS_PER_TARGET } from './backgroundObjects.js';
@@ -37,7 +37,7 @@ const isCuboidAssembly = (entry) => {
     && entry.parts.slice(0, count).every((part) => part?.type === 'box');
 };
 
-/** 解析組成後才選款；不讓非法尺寸、分離主體或空底模型進入隨機池。 */
+/** Select the model only after parsing its composition; keeps illegal sizes, detached bodies, and hollow-base models out of the random pool. */
 export function analyzeApprovedBuilding(entry) {
   if (assemblyCache.has(entry.key)) return assemblyCache.get(entry.key);
   const reject = reason => {
@@ -77,7 +77,7 @@ export function analyzeApprovedBuilding(entry) {
   const bounds = boxes.reduce((box, next) => box.union(next), new THREE.Box3());
   const size = bounds.getSize(new THREE.Vector3());
   const baseY = bounds.min.y + Math.min(0.5, size.y * 0.1);
-  // 完整方形底層才可替代矩形外牆；凹翼／塔腳仍保留為固定形狀模型。
+  // Only a complete square base may substitute for rectangular outer walls; recessed wings / tower feet stay as fixed-shape models.
   const rectangular = entry.parts.slice(0, count).some((part, i) => part.type === 'box'
     && !(part.rotation || []).some(r => Math.abs(r) > 1e-5)
     && main[i].min.y <= baseY && main[i].max.y > baseY
@@ -95,7 +95,7 @@ const profileOf = (entry) => {
   if (isCuboidAssembly(entry)) {
     return { hw: 0.5, hd: 0.5, hy: 0.5, slabs: [[-0.5, 0.5, 0.5, 0.5, 1]] };
   }
-  // 非方盒構築先以自然樓高正規化，保留原始長寬高比，實例階段只能等比例縮放。
+  // Non-cuboid builds normalize by natural floor height first, preserving aspect ratio; instancing may only scale uniformly.
   const h = Math.max(size[1], 0.001);
   const hw = size[0] / h * 0.5;
   const hd = size[2] / h * 0.5;
@@ -103,8 +103,8 @@ const profileOf = (entry) => {
 };
 
 /**
- * 足跡與高度先過尺度防線，再依文化語彙與變形代價加權選款，零共享亂數消耗。
- * 回傳的 prof 只描述「正規化後完整包絡」，供既有碰撞盒與招牌縫共用。
+ * Footprint and height pass the scale gate first, then cultural vocabulary and deformation cost weight the pick, with zero shared-RNG consumption.
+ * The returned prof only describes the normalized full envelope, shared by the existing collision-box and sign seams.
  */
 export function fitApprovedBuilding(building, architecture = null, seed = 0, options = { rectangular: true }) {
   if (!BUILDING_PARTS.length) return null;
@@ -128,8 +128,8 @@ export function fitApprovedBuilding(building, architecture = null, seed = 0, opt
       const stretch = Math.exp(Math.abs(Math.log(target / aspect)));
       const heightRatio = Math.max(building.h || 10, 0.001) / Math.max(size[1], 0.001);
       const heightStretch = Math.exp(Math.abs(Math.log(heightRatio)));
-      // 方盒各軸縮放差 ≤35%；固定造型 ≤15%，自然樓高範圍仍限 1.8x。
-      // 杜絕將 4~10m 低矮建築暴力拉伸成 50~100m 摩天大樓導致門窗被縱向拉成細長條
+      // Cuboid per-axis scale spread at most 35 percent; fixed shapes at most 15 percent, natural floor-height range still capped at 1.8x.
+      // Blocks stretching a 4-10m low block into a 50-100m tower, which would pull doors and windows into thin vertical strips
       const limit = isCuboidAssembly(entry) ? 1.35 : 1.15;
       const scales = [(rot ? building.d : building.w) / size[0], heightRatio,
         (rot ? building.w : building.d) / size[2]];
@@ -156,7 +156,7 @@ export function fitApprovedBuilding(building, architecture = null, seed = 0, opt
   };
 }
 
-/** 固定模型整棟替換，不疊在程序牆面與屋頂上。 */
+/** Fixed models replace the whole building; never layered over procedural walls and roofs. */
 export function fitApprovedPolygon(poly, height, architecture, seed = 0) {
   const frame = computeOrientedRoofFrame(poly);
   if (!frame) return null;
@@ -177,7 +177,7 @@ export function fitApprovedPolygon(poly, height, architecture, seed = 0) {
   const { min, max, size } = fit.entry.bounds;
   const sx = width / size[0], sy = height / size[1], sz = depth / size[2];
   const ca = Math.cos(angle), sa = Math.sin(angle);
-  // 碰撞與可站立頂面由同一份方盒組成資料推導，退台上方不留下隱形牆。
+  // Collision and standable top faces derive from the same cuboid composition data, so no invisible wall remains above setbacks.
   geo.userData.buildingVolumes = mainParts.map(part => {
     const scale = part.scale || [1, 1, 1];
     const x = (part.position[0] - (min[0] + max[0]) / 2) * sx;
@@ -192,7 +192,7 @@ export function fitApprovedPolygon(poly, height, architecture, seed = 0) {
   return geo;
 }
 
-/** 把模型正規化成 X/Z 中心、Y=0 落地；非方盒模型只按自然樓高正規化以保留比例。 */
+/** Normalize the model to X/Z-centered, Y=0 grounded; non-cuboid models normalize by natural floor height only to preserve proportions. */
 export function approvedBuildingGeometry(entry, paletteIndex = null) {
   const cacheKey = paletteIndex != null ? `${entry.key}_pal${paletteIndex}` : entry.key;
   if (geometryCache.has(cacheKey)) return geometryCache.get(cacheKey);
@@ -217,7 +217,7 @@ export function approvedBuildingMaterial() {
   return sharedMaterial;
 }
 
-/** 每款一顆 InstancedMesh（若具備多套 palettes 則依座標雜湊隨機分組批次渲染）；同款跨立面來源先合併 rows 再呼叫。 */
+/** One InstancedMesh per model (with multiple palettes, batch by coordinate-hash groups); merge rows across facade sources of the same model before calling. */
 export function makeApprovedBuildingBatch(entry, rows) {
   if (!entry || !Array.isArray(rows) || !rows.length) throw new TypeError('建築批次缺少 entry/rows');
   const numPalettes = Math.max(1, entry.palettes?.length || 0);

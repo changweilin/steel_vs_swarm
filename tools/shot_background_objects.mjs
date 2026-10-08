@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * 背景物件多槽組裝三視角：葉冠、建築窗帶、小客車與重型車各取原始目標 + 決定性變體。
- * 用法：node tools/shot_background_objects.mjs [--out tools/.shots/background-object-slots.png]
+ * Background-object multi-slot assembly from three views: leaf crowns, building window bands, light and heavy cars,
+ * each sampled as raw target plus deterministic variant.
+ * Usage: node tools/shot_background_objects.mjs [--out tools/.shots/background-object-slots.png]
  */
 import fs from 'node:fs';
 import path from 'node:path';

@@ -1,22 +1,22 @@
-// 無伺服器・加速 / 平行對局模擬器 —— 直接驅動 BattleSim + BotBrain 跑完整場對戰,
-// 不經 WebSocket、不受 8Hz wall-clock 限制(有多快 CPU 就跑多快),用於平衡驗證與回歸壓測。
+// Serverless accelerated/parallel match simulator: drives BattleSim + BotBrain directly for full matches,
+// no WebSocket, no 8Hz wall-clock limit (runs as fast as CPU allows); for balance validation and regression stress.
 //
-// 用法(PowerShell 下用 --port 之外,一律 node 直跑):
-//   node test/simrun.mjs                         # 預設:20 場 5v5 高難度對決
-//   node test/simrun.mjs --matches 200 --team 3  # 200 場 3v3
-//   node test/simrun.mjs --swarm novice --steel high   # 不對稱難度(檢視難度強度)
-//   node test/simrun.mjs --matches 400 --workers 8      # 8 條 worker 平行跑
-//   node test/simrun.mjs --cap 900 --dt 0.1             # 場長上限 900s、步長 0.1s
+// Usage (under PowerShell, except for --port, always run with node directly):
+//   node test/simrun.mjs                         # default: 20 5v5 high-difficulty matches
+//   node test/simrun.mjs --matches 200 --team 3  # 200 3v3 matches
+//   node test/simrun.mjs --swarm novice --steel high   # asymmetric difficulty (inspect difficulty strength)
+//   node test/simrun.mjs --matches 400 --workers 8      # 8 workers in parallel
+//   node test/simrun.mjs --cap 900 --dt 0.1             # match cap 900s, step 0.1s
 //
-// 離開碼:0 = 全部正常結束(有勝負或達上限);1 = 有場次拋例外。
+// Exit code: 0 = all matches ended normally (decided or capped); 1 = a match threw.
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { BattleSim } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
 import { MAPGEO, lanesFor, BOT_DIFF } from '../public/js/data.js';
 
-// ---- 合成戰場(台北 101 附近;兩堡 1600×L,與 e2e 同錨點,留防空安全邊界)----
-// 匯出給 tools/bot_learn.mjs / audit_bot_policy.mjs 共用(合成戰場只有這一份,MUST NOT 各抄一份)
+// ---- Synthetic battlefield (near Taipei 101; forts 1600xL apart, same anchor as e2e, keeps AA safety margin) ----
+// Exported for tools/bot_learn.mjs / audit_bot_policy.mjs sharing (single synthetic battlefield copy, MUST NOT duplicate)
 export function buildConfig(L) {
   const A = [25.0330, 121.5654];
   const D = 1600 * L, R = 6371000;
@@ -45,7 +45,7 @@ export function buildConfig(L) {
   };
 }
 
-/** 跑完一場 bot vs bot,回傳結果。純模擬,無 wall-clock 等待。 */
+/** Run one bot-vs-bot match and return the result. Pure simulation, no wall-clock wait. */
 function runMatch({ team, diffSwarm, diffSteel, dt, cap }) {
   const L = lanesFor(team);
   const sim = new BattleSim(buildConfig(L));
@@ -54,8 +54,8 @@ function runMatch({ team, diffSwarm, diffSteel, dt, cap }) {
   for (const side of ['SWARM', 'STEEL']) {
     const diff = side === 'SWARM' ? diffSwarm : diffSteel;
     for (let i = 0; i < team; i++) {
-      const pid = 'b' + (++idx);   // isBotId 需以 'b' 開頭
-      sim.addHero(side, pid);      // 未指定角色 → 同陣營 + 傭兵隨機
+      const pid = 'b' + (++idx);   // isBotId must start with 'b'
+      sim.addHero(side, pid);      // no character specified, random from same side + mercenaries
       brains.push(new BotBrain(sim, pid, side, idx - 1, diff));
     }
   }
@@ -106,12 +106,12 @@ function parseArgs(argv) {
   return a;
 }
 
-// 入口守衛:本檔被其他工具 import(取 buildConfig)時 MUST NOT 執行主流程/誤認別人的 worker。
-// worker 分支認 `workerData.simrun` 標記(別的工具也會開 worker,workerData 形狀不同)。
+// Entry guard: when other tools import this file (for buildConfig), MUST NOT run the main flow or claim foreign workers.
+// Worker branch matches on the workerData.simrun flag (other tools also spawn workers with different workerData shapes).
 const isEntry = isMainThread && process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (!isMainThread && workerData?.simrun) {
-  // worker:跑指派的區間,回傳結果陣列
+  // worker: run the assigned range, return the result array
   const { opts, from, to } = workerData;
   parentPort.postMessage(runBatch(opts, from, to));
 } else if (isEntry) {

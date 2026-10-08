@@ -14,7 +14,7 @@ import {
 console.log('=== 驗證地質 2D 隨機起伏與邊界緩衝區擴大延伸 ===\n');
 
 // -----------------------------------------------------------------------------
-// 1. 2D 起伏模式清單與 eval2DUndulation 基礎特性 (決定性、有界性)
+// 1. 2D undulation pattern list and eval2DUndulation basics (determinism, boundedness)
 // -----------------------------------------------------------------------------
 console.log('1. 驗證 2D 起伏模式清單與 eval2DUndulation 基礎特性...');
 assert(Array.isArray(GEOLOGY_2D_PATTERNS), 'GEOLOGY_2D_PATTERNS 必須為陣列');
@@ -43,7 +43,7 @@ for (const pattern of GEOLOGY_2D_PATTERNS) {
 console.log('   ✓ 4 種 2D 起伏模式均具備嚴格位元決定性與數值有界性');
 
 // -----------------------------------------------------------------------------
-// 2. 驗證全方向視角皆有波峰與波谷 (Any direction exhibits peaks and valleys)
+// 2. Every azimuth must show peaks and valleys (Any direction exhibits peaks and valleys)
 // -----------------------------------------------------------------------------
 console.log('2. 驗證各 2D 模式在全方位角（0° ~ 180°）皆具備波峰與波谷...');
 const angles = [
@@ -99,12 +99,12 @@ for (const pattern of GEOLOGY_2D_PATTERNS) {
 console.log('   ✓ 全部模式在各方位角切片均有充分波峰與波谷（無起伏死角）');
 
 // -----------------------------------------------------------------------------
-// 3. 2D 尺度門檻判定與邊緣高度 landing envelope (h_edge === 0)
+// 3. 2D scale threshold and edge-height landing envelope (h_edge === 0)
 // -----------------------------------------------------------------------------
 console.log('3. 驗證大尺度 2D 起伏觸發與外圍四邊邊緣高度嚴格為 0...');
 const largeMeshRes = elongatedGeologyMesh('cliff', 101, {
   len: 80,
-  depth: 30, // depth >= 20 觸發 2D 起伏
+  depth: 30, // depth >= 20 triggers 2D undulation
   height: 15,
 });
 
@@ -112,7 +112,7 @@ assert(largeMeshRes && largeMeshRes.meshData, '應成功產生 elongatedGeologyM
 const { vertices } = largeMeshRes.meshData;
 assert(vertices && vertices.length > 0, '應包含頂點座標');
 
-// 檢查四邊最外緣頂點 (x = ±len/2 或 z = ±depth/2) 的高度 y 必須為 0
+// Perimeter vertices on all four outer edges (x = +/-len/2 or z = +/-depth/2) must have height y = 0
 const halfL = 40;
 const halfD = 15;
 const eps = 1e-4;
@@ -154,7 +154,7 @@ console.log(
 );
 
 // -----------------------------------------------------------------------------
-// 4. 連續地質往緩衝區 2 維擴大延伸 (Continuous Geology Buffer Expansion)
+// 4. Continuous geology expands 2D into the buffer (Continuous Geology Buffer Expansion)
 // -----------------------------------------------------------------------------
 console.log('4. 驗證連續邊界地質區域朝緩衝區 2D 延伸填滿...');
 const continuousTypes = [
@@ -184,7 +184,7 @@ for (const kind of continuousTypes) {
   const pBuffer = res.bufferMeshData.vertices;
   const cBuffer = res.bufferMeshData.colors;
 
-  // 障礙區與緩衝區接縫處為 z = -depth / 2 = -8
+  // Obstacle/buffer seam sits at z = -depth / 2 = -8
   const seamZ = -depth / 2;
   const pzCenter = -depth / 2 - bufferDepth / 2;
   const seamObstacleMap = new Map();
@@ -222,7 +222,7 @@ for (const kind of continuousTypes) {
     `${kind}: 接縫處頂點數量必須一致 (障礙=${seamObstacleMap.size}, 緩衝=${seamBufferMap.size})`
   );
 
-  // 驗證接縫處高度與顏色嚴格無縫銜接
+  // Seam heights and colors must join strictly seamlessly
   for (const [key, obsVal] of seamObstacleMap.entries()) {
     const bufVal = seamBufferMap.get(key);
     assert(bufVal, `${kind}: 緩衝區接縫處缺少 x=${key} 之對應頂點`);
@@ -238,7 +238,7 @@ for (const kind of continuousTypes) {
     );
   }
 
-  // 驗證緩衝延伸網格的最外側外緣落地 (z = -(depth/2 + bufferDepth) 與 x = ±len/2)
+  // Outer buffer fringe must land (z = -(depth/2 + bufferDepth) and x = +/-len/2)
   const outerBufferZ = -(depth / 2 + bufferDepth);
   let outerLandingCount = 0;
   let seamNonZeroCount = 0;
@@ -271,7 +271,7 @@ for (const kind of continuousTypes) {
     `${kind}: 接縫處應保持地形連續起伏高度 (不可出現內部落地裙擺阻斷)`
   );
 
-  // 驗證頭尾兩端波谷數值契約：valleys[0] === 0 與 valleys[bumps] === 0
+  // End valley value contract: valleys[0] === 0 and valleys[bumps] === 0
   assert.equal(res.undulation.valleys[0], 0, `${kind}: 頭端波谷 (valleys[0]) 必須嚴格為 0m`);
   assert.equal(
     res.undulation.valleys[res.params.bumps],
@@ -279,10 +279,10 @@ for (const kind of continuousTypes) {
     `${kind}: 尾端波谷 (valleys[bumps]) 必須嚴格為 0m`
   );
 
-  // 驗證 2D 空間起伏啟用狀態：延伸至緩衝區時 2 個維度都必須加入隨機起伏
+  // 2D undulation enablement: both dimensions must add random relief when extending into the buffer
   assert.equal(res.undulation.is2D, true, `${kind}: 往緩衝區延伸時 is2D 必須啟用`);
 
-  // 驗證脊頂取樣器在頭尾兩端 (u = ±1) 嚴格為 0m
+  // Ridge sampler must read exactly 0m at both head/tail ends (u = +/-1)
   for (const v of [-1, -0.5, 0, 0.5, 1]) {
     assert.equal(
       res.heightAt(-1, v),
@@ -299,7 +299,7 @@ for (const kind of continuousTypes) {
 console.log(`   ✓ 全部 ${continuousTypes.length} 款連續地質皆能向緩衝區無縫 2D 延伸，且頭尾兩端波谷嚴格為 0m、外圍落地、接縫平滑`);
 
 // -----------------------------------------------------------------------------
-// 4.1 驗證 2D 起伏不同排波峰隨機交錯（破除直角棋盤排布）
+// 4.1 Peaks stagger randomly across 2D rows (breaks the right-angle checkerboard)
 // -----------------------------------------------------------------------------
 console.log('4.1 驗證 2D 起伏不同排波峰隨機交錯（非整齊棋盤排布）...');
 for (const kind of continuousTypes) {
@@ -310,7 +310,7 @@ for (const kind of continuousTypes) {
     bufferDepth: 35,
   });
 
-  // 收集緩衝區網格中各 z 排的頂點
+  // Collect buffer-mesh vertices per z row
   const verts = mesh.bufferMeshData.vertices;
   const rows = new Map();
   for (let i = 0; i < verts.length; i += 3) {
@@ -320,7 +320,7 @@ for (const kind of continuousTypes) {
     rows.get(zKey).push({ x, y });
   }
 
-  // 找出有顯著起伏的高峰排
+  // Find relief rows with significant peaks
   const reliefRows = Array.from(rows.entries())
     .map(([z, pts]) => ({
       z: Number(z),
@@ -330,7 +330,7 @@ for (const kind of continuousTypes) {
 
   assert(reliefRows.length >= 3, `${kind}: 應有足夠深度排數進行起伏交錯檢驗 (實得 ${reliefRows.length})`);
 
-  // 驗證相鄰排波峰位置存在橫向位移（交錯），絕非所有排波峰鎖定在同一 x 座標（棋盤格）
+  // Adjacent-row peaks must shift laterally (staggered); they must never lock to one x (checkerboard)
   let staggeredShifts = 0;
   for (let r = 0; r < reliefRows.length - 1; r++) {
     const dx = Math.abs(reliefRows[r].peak.x - reliefRows[r + 1].peak.x);
@@ -346,11 +346,11 @@ console.log('   ✓ 全部連續地質在 2D 緩衝延伸中各排波峰皆自�
 
 
 // -----------------------------------------------------------------------------
-// 5. 邊界管線整合 (narrowGeologyBoundary 與 buildBoundaryRunParts)
+// 5. Boundary pipeline integration (narrowGeologyBoundary and buildBoundaryRunParts)
 // -----------------------------------------------------------------------------
 console.log('5. 驗證邊界管線整合產出 bufferParts...');
 
-// 5.1 narrowGeologyBoundary 產出驗證
+// 5.1 narrowGeologyBoundary output check
 const narrowRows = narrowGeologyBoundary('cliff', {
   len: 60,
   depth: 16,
@@ -365,7 +365,7 @@ const bufPart0 = narrowRows.bufferParts[0];
 assert.equal(bufPart0.role, 'boundary-buffer-fill');
 assert.equal(bufPart0.boundaryBuffer, true);
 
-// 5.2 buildBoundaryRunParts 收集驗證
+// 5.2 buildBoundaryRunParts collection check
 for (const kind of continuousTypes) {
   const layout = BOUNDARY_BUFFER_LAYOUTS[kind];
   assert(layout, `BOUNDARY_BUFFER_LAYOUTS 必須包含 ${kind}`);

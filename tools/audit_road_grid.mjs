@@ -1,50 +1,65 @@
-// ============ 地圖主方位 + 道路拓撲剪枝 + 16 方向量化 稽核 ============
-// 用途:改 `data.js` 的 `mapRot`/`rotXZ`/`llToXZ`/`xzToLL`/`battleRect`/`battleBBox`、
-// `roadgrid.js` 任一項、`terrain.js` 的投影或高程/影像取樣、`sim.js llToMeters`、
-// `biomes.js` 的量化接線與 `worldToLL`、`ground.js` 的 gridA、`venues.js` 的 center.rot 之後跑。
+// ============ Map cardinal orientation + road-topology pruning + 16-direction quantization audit ============
+// Purpose: run after changing `data.js` `mapRot`/`rotXZ`/`llToXZ`/`xzToLL`/`battleRect`/`battleBBox`,
+// any `roadgrid.js` item, `terrain.js` projection or elevation/imagery sampling, `sim.js llToMeters`,
+// `biomes.js` quantization wiring and `worldToLL`, `ground.js` gridA, or `venues.js` center.rot.
 //
-// 使用者定案(2026-08-10)原句:「處理圖資時先找出地圖上下左右對準哪一個方向時,可以對齊
-// 最多的大馬路組成正交網格,接著將所有道路量化成 16 個方向,同時盡可能避免讓道路變成鋸齒,
-// 這樣道路拼圖可以透過這 16 個方向簡化並無縫準確貼合對齊,建築也更容易對齊排列。」
+// User decision (2026-08-10), verbatim: "when processing map data, first find which cardinal alignment
+// of the map aligns the most arterials into an orthogonal grid, then quantize all roads into 16
+// directions while keeping them from turning jagged, so road tiles simplify along these 16 directions
+// and join seamlessly and exactly, and buildings align more easily."
 //
-// 這件事分成兩半,壞掉的方式完全不同,所以本稽核也分兩半:
+// Two halves with completely different failure modes, so the audit splits in two:
 //
-// 【上半:旋轉】旋轉住在**投影**裡,而投影是兩端共用的權威座標框。四個會靜默壞掉的地方:
-//   ① **兩端反號**:客戶端框 z = 南、伺服器框 z = 北(A30 的 z 鏡射)。鏡射會把 R(θ) 共軛成
-//      R(−θ) ⇒ `sim.llToMeters` MUST 只是 `llToXZ` 的 z 反號。在 sim 那邊「照抄一份旋轉」是
-//      最自然的寫法,也是最致命的:兩端世界差 2θ,而畫面上只表現成「塔的位置跟畫面對不上」
-//      「打得到卻沒傷害」—— 沒有任何錯誤訊息,而且 rot=0 的場地一切正常(所以本機測不出來)。
-//   ② **第二份投影公式**:專案裡曾經有三份等距圓柱公式(terrain / sim / biomes.worldToLL)。
-//      加旋轉時漏改任何一份,那一份的消費端就活在沒轉過的世界裡(衛星底圖與道路錯開、
-//      兵線補橋接不上、影像 UV 整片轉了 −θ)。所以本稽核逐份驗「轉呼」而不是「算得對」。
-//   ③ **世界方框跟著旋轉縮水**:方框是「旋轉後兵線包絡」的外接框,兵線一被轉到與某軸平行,
-//      那一軸就塌掉(實測 barcelona 5v5 轉 45° ⇒ 面積剩 66%)。MAP_EXPAND 是等比放大救不了,
-//      而它存在的理由正是「第三方野營要有側翼合法區」⇒ 面積掉三分之一 = 那個機制無聲失效。
-//      故 `battleRect` 逐軸取「旋轉後」與「rot=0」的較寬者,而抓取範圍 `battleBBox` 跟著長大。
-//   ④ **不是等距同構**:旋轉如果滲進任何一個「先算距離再轉」的地方,兵線長度/塔位/兵線分離
-//      就會隨 rot 漂 —— 那會讓一整套烘焙好的兵線規則(#4/#5/分離/U-turn)全部失效。
+// [Top half: rotation] Rotation lives in the **projection**, and the projection is the authoritative
+// coordinate frame shared by both ends. Four silently-breaking spots:
+//   1 **Opposite signs at the two ends**: client frame z = south, server frame z = north (A30 z-mirror).
+//     Mirroring conjugates R(θ) into R(−θ) ⇒ `sim.llToMeters` MUST be just `llToXZ` with z negated.
+//     "Copying a rotation over" on the sim side is the most natural way to write it and the most lethal:
+//     the two worlds differ by 2θ, showing on screen only as "tower positions disagree with the picture"
+//     / "hits deal no damage" — no error message whatsoever, and rot=0 venues behave perfectly (so local
+//     testing never sees it).
+//   2 **A second projection formula**: the project once held three equidistant-cylindrical formulas
+//     (terrain / sim / biomes.worldToLL). Missing any one when adding rotation strands that formula's
+//     consumers in an unrotated world (satellite base map offset from roads, lane patch-bridges
+//     unjoined, imagery UV rotated by −θ as a sheet). So this audit verifies "delegates" per copy,
+//     not "computes correctly".
+//   3 **World frame shrinking with rotation**: the frame circumscribes the "rotated lane envelope"; once
+//     a lane rotates parallel to some axis, that axis collapses (measured: barcelona 5v5 rotated 45° ⇒
+//     66% area left). MAP_EXPAND is a uniform upscale and cannot rescue it, while its whole reason to
+//     exist is "third-party camps need legal flanking zones" ⇒ losing a third of the area silently kills
+//     that mechanism. So `battleRect` takes the wider of "rotated" vs "rot=0" per axis, and the fetch
+//     window `battleBBox` grows along.
+//   4 **Not an isometric isomorphism**: if rotation leaks into any "measure distance first, then rotate"
+//     spot, lane lengths / tower sites / lane separation drift with rot — invalidating a whole set of
+//     baked lane rules (#4/#5/separation/U-turn).
 //
-// 【下半:量化】三件事必須同時成立,少一件都是可見的破圖:
-//   ⓐ **真的落格**:量化後的段方位離 16 格的誤差要顯著小於量化前。最容易的寫壞法是「事後把
-//      短方向段併進鄰段」—— 那會把 DDA 排好的階梯併回單一方向,長度重解隨即退化成「兩錨點
-//      之間拉直」,結果整條路的方位是**原本的**方位。稽核看得到:誤差沒下降。
-//   ⓑ **路不准走掉**:量化的代價沿路累積,一條卡在格界(11.25°)的長直路硬吸到鄰格,尾端會
-//      甩出數百公尺(實測合成 1.5km 路 = 518m),那條路就此離開衛星底圖、離開已整平的路基、
-//      離開自己那條兵線。硬上限 `MAX_DRIFT_M` 是本檔唯一的硬邊界。
-//   ⓒ **路口不准裂開**:路口是**共用節點**。逐 way 各轉各的,兩條路在路口就會裂一條縫。
-//      量化 MUST 是「解出新的節點位置」,而共用節點在輸出端 MUST 拿到**逐位元相同**的經緯度。
-//   另外兩條:量化 MUST 是純函式(§2.3 —— 同一份 geocache 在不同客戶端算出不同路網 =
-//   跨客戶端場景分家),而且 MUST NOT 作用在**兵線**上(兵線是伺服器也在吃的權威幾何)。
+// [Bottom half: quantization] Three things must hold together; any missing one is visible map breakage:
+//   a **Actually snapped**: post-quantization segment bearings must err significantly less from the 16
+//     grid than before. The easiest way to write it broken is "merge short runs into neighbors after the
+//     fact" — that folds the DDA-laid staircase back into one direction, length re-solving immediately
+//     degenerates to "straight line between two anchors", and the whole road's bearing is the **original**
+//     bearing. The audit sees it: error never drops.
+//   b **Roads must not wander**: quantization cost accumulates along the road; a long straight road stuck
+//     on a grid boundary (11.25°) snapped hard to the neighbor throws its tail hundreds of meters off
+//     (measured: synthetic 1.5km road = 518m), leaving the satellite base map, the graded roadbed, and
+//     its own lane behind. The hard cap `MAX_DRIFT_M` is this file's only hard boundary.
+//   c **Junctions must not crack**: a junction is a **shared node**. Rotating each way on its own cracks
+//     a gap at the junction. Quantization MUST "solve new node positions", and shared nodes MUST receive
+//     **bit-identical** lon/lat on the output side.
+//   Plus two: quantization MUST be a pure function (§2.3 — one geocache computing different networks on
+//   different clients = cross-client scene split), and MUST NOT apply to **lanes** (lanes are authoritative
+//   geometry the server also consumes).
 //
-// 反向驗證(三支皆已實測會咬住 Ⅵ;門檻在套旗標**之前**由預設常數定案,MUST NOT 跟著旗標動):
-//   --break-drift  位移上限放到 1e9   ⇒ Ⅵ「路不會走掉」(實測 90.6m)+「落格」MUST 紅
-//   --break-dense  量化前不細分       ⇒ Ⅵ「逐條路落格」MUST 紅(斜街整條 10.25° 沒被量化)
-//   --break-relax  節點鬆弛關掉       ⇒ Ⅵ「逐條路落格」MUST 紅(路口不動 ⇒ 長度重解整批退化)
-//   --break-prune  關掉剪枝候選寬度   ⇒ Ⅵ-b「小閉環真的有剪」MUST 紅
-//   --break-loop-area 小環面積門檻歸零 ⇒ Ⅵ-b「小閉環真的有剪」MUST 紅
-//   --break-near-close 關掉死端近接閉合 ⇒ Ⅵ-b「近接死路視為閉環」MUST 紅
-//   --break-rotbox 烘焙抓取範圍吃帶 rot 的 cfg ⇒ Ⅸ「冪等」MUST 紅(重烤會把角度越推越偏)
-//   --break-rotover 執行期量測不讓過已有的 rot ⇒ Ⅸ「不覆蓋烘焙值」MUST 紅
+// Reverse verification (all three verified to bite section VI; thresholds are fixed from default constants
+// **before** flags apply, MUST NOT move with flags):
+//   --break-drift  drift cap to 1e9        ⇒ VI "roads never wander" (measured 90.6m) + "snapping" MUST go red
+//   --break-dense  no pre-quantization split ⇒ VI "every road snaps" MUST go red (diagonal street whole 10.25° unquantized)
+//   --break-relax  node relaxation off      ⇒ VI "every road snaps" MUST go red (junctions frozen ⇒ length re-solve degenerates wholesale)
+//   --break-prune  pruning candidate width off ⇒ VI-b "small loops really pruned" MUST go red
+//   --break-loop-area small-loop area threshold to zero ⇒ VI-b "small loops really pruned" MUST go red
+//   --break-near-close dead-end near-closure off ⇒ VI-b "near dead ends count as loops" MUST go red
+//   --break-rotbox baked fetch window eats rot-bearing cfg ⇒ IX "idempotent" MUST go red (re-baking pushes the angle ever further)
+//   --break-rotover runtime measurement never overrides existing rot ⇒ IX "never overwrite baked values" MUST go red
 import { readSrc, grabFn } from './audit_src.mjs';
 import {
   MAPGEO, ROUTE_EDGE_MARGIN_M, mapRot, rotXZ, llToXZ, xzToLL, battleRect, battleBBox,
@@ -60,13 +75,13 @@ import { VENUE_LANES } from '../public/js/venueLanes.js';
 import { VENUE_GRID } from '../public/js/venueGrid.js';
 
 const argv = process.argv;
-// 期望值 MUST NOT 隨 --break-* 一起變(那樣 break 永遠是綠的,見 CLAUDE.md §5.4 ㋑)——
-// 全部門檻在套用 break 旗標**之前**由預設常數定案。
+// Expected values MUST NOT move with --break-* (that would keep every break green, see CLAUDE.md §5.4 ㋑) —
+// all thresholds are fixed from default constants **before** break flags apply.
 const BASE = { ...ROAD_GRID };
 const BASE_PRUNE = { ...ROAD_PRUNE };
 const BASE_MIN_STRAIGHT = BASE.MAX_DRIFT_M * BASE.DDA_F / Math.sin(Math.PI / BASE.DIRS);
-const WAY_P50_MAX = 1.5;     // 逐條路的角度誤差中位數上限(度)
-const NET_MEAN_MAX = 0.6;    // 全網長度加權平均角度誤差上限(度)
+const WAY_P50_MAX = 1.5;     // per-road angle-error median cap (degrees)
+const NET_MEAN_MAX = 0.6;    // network length-weighted mean angle-error cap (degrees)
 
 if (argv.includes('--break-drift')) ROAD_GRID.MAX_DRIFT_M = 1e9;
 if (argv.includes('--break-dense')) ROAD_GRID.DENSIFY_F = 0.02;
@@ -99,7 +114,7 @@ sec('Ⅰ 地圖主方位 = 投影的一部分(旋轉是等距同構)');
 {
   const c0 = { lat: 41.3874, lng: 2.1686 };
   t('rot 缺席 ⇒ mapRot = 0(降級不例外)', mapRot(c0) === 0 && mapRot(undefined) === 0 && mapRot({ rot: NaN }) === 0);
-  // rotXZ 在 0 是**恆等式**(不是「約等於」):這是 rot=0 逐位元同舊制的全部理由
+  // rotXZ at 0 is an **identity** (not "approximately"): the entire reason rot=0 stays bit-identical to legacy
   let ident = true;
   for (const v of [0, 1, -1, 1234.5678, -9e7, 1e-12]) {
     const [x, z] = rotXZ(v, v * 0.37, 0);
@@ -107,7 +122,7 @@ sec('Ⅰ 地圖主方位 = 投影的一部分(旋轉是等距同構)');
   }
   t('rotXZ(·, 0) 是恆等式(rot=0 逐位元同舊制的來源)', ident);
 
-  // 保距 + 保角:任兩點的距離、任三點的夾角一律不隨 rot 改變
+  // Distance + angle preservation: any two points' distance and any three points' angle never change with rot
   const P = [[41.3820, 2.1600], [41.3910, 2.1750], [41.3860, 2.1810]];
   let iso = true, ang = true;
   const base = P.map(([a, b]) => llToXZ(a, b, c0));
@@ -123,7 +138,7 @@ sec('Ⅰ 地圖主方位 = 投影的一部分(旋轉是等距同構)');
   t('保距:任兩點距離不隨 rot 改變(旋轉是等距同構)', iso);
   t('保角:任三點夾角不隨 rot 改變', ang);
 
-  // 往返
+  // Round trip
   let rt = true;
   for (const rot of ROTS) {
     const c = { ...c0, rot };
@@ -154,7 +169,7 @@ sec('Ⅱ 兩端同一個世界:伺服器框 = 客戶端框的 z 鏡射(A30)');
       if (x !== sx || z !== -sz) mirror = false;
     }
   }
-  // 這一條是本改動最容易靜默壞掉的地方:在 sim 那邊「照抄一份旋轉」會讓兩端差 2θ
+  // This line is where the change breaks most silently: "copying a rotation over" on the sim side splits the two ends by 2θ
   t('sim.llToMeters(p) 逐位元 === llToXZ(p) 的 z 反號(**逐 rot**,不是只有 rot=0)', mirror);
   const llm = grab(simSrc, /export function llToMeters[\s\S]*?\n}/);
   t('sim.llToMeters 是薄殼:轉呼 llToXZ 後只做 z 反號',
@@ -164,7 +179,7 @@ sec('Ⅱ 兩端同一個世界:伺服器框 = 客戶端框的 z 鏡射(A30)');
   t('sim.js 全檔無 REAL_SCALE(投影唯一縫 = data.js llToXZ)',
     !strip(simSrc).split('\n').some((l) => /MAPGEO\.REAL_SCALE/.test(l)));
 
-  // 第二份投影公式的原文閘:三個舊實作一律 MUST 是轉呼
+  // Source gate for the second projection formula: all three legacy implementations MUST delegate
   const llw = grab(terrSrc, /export function llToWorld[\s\S]*?\n}/);
   t('terrain.llToWorld 轉呼 data.js llToXZ(不再自帶公式)',
     /return llToXZ\(lat, lng, center\);/.test(llw) && !/R_EARTH|WORLD_S/.test(llw));
@@ -187,7 +202,7 @@ sec('Ⅲ 世界方框:旋轉只准讓它長大,而且抓取範圍要跟著蓋住
       const base = { lat: cfg.center.lat, lng: cfg.center.lng };
       const r0 = battleRect({ ...cfg, center: base });
       const A0 = (r0.maxX - r0.minX) * (r0.maxZ - r0.minZ);
-      // rot=0 時 battleRect 與「不帶 rot 欄位」逐位元相同
+      // At rot=0 battleRect is bit-identical to "no rot field at all"
       const rz = battleRect({ ...cfg, center: { ...base, rot: 0 } });
       if (rz.minX !== r0.minX || rz.maxX !== r0.maxX || rz.minZ !== r0.minZ || rz.maxZ !== r0.maxZ) exact0 = false;
       for (const rot of ROTS) {
@@ -197,7 +212,8 @@ sec('Ⅲ 世界方框:旋轉只准讓它長大,而且抓取範圍要跟著蓋住
         if (A < A0 * (1 - 1e-9)) floorOk = false;
         worstGrow = Math.max(worstGrow, A / A0);
         worstShrink = Math.min(worstShrink, A / A0);
-        // battleBBox MUST 蓋住 battleRect 四角(否則高程/影像/Overpass 抓不到旋轉後多出來的那一塊)
+        // battleBBox MUST cover the four battleRect corners (otherwise elevation/imagery/Overpass
+        // miss the rotated extra patch)
         const bb = battleBBox({ ...cfg, center: c });
         for (const [x, z] of [[r.minX, r.minZ], [r.maxX, r.minZ], [r.minX, r.maxZ], [r.maxX, r.maxZ]]) {
           const [la, ln] = xzToLL(x, z, c);
@@ -209,7 +225,7 @@ sec('Ⅲ 世界方框:旋轉只准讓它長大,而且抓取範圍要跟著蓋住
   t('rot=0 的 battleRect 與「沒有 rot 欄位」逐位元相同(中性)', exact0);
   t(`旋轉後方框面積只增不減(全 27 場地 × 3 人數 × 6 角度;實得 ${worstShrink.toFixed(3)}~${worstGrow.toFixed(2)}×)`, floorOk);
   t('battleBBox 恆蓋住 battleRect 四角(抓取範圍跟著旋轉長大)', coverOk);
-  // 世界方框的邊距語意不變:兵線頂點離方框邊 ≥ ROUTE_EDGE_MARGIN_M
+  // World-frame margin semantics unchanged: lane vertices stay ≥ ROUTE_EDGE_MARGIN_M from frame edges
   let marginOk = true;
   for (const v of VENUES.slice(0, 8)) {
     const cfg = venueConfig(v, 3);
@@ -260,7 +276,7 @@ sec('Ⅴ 16 方向量化:推導不手寫');
   t('DIRS = 16(使用者定案的方向數)', ROAD_GRID.DIRS === 16);
   t('dirAngle 均分整圈,半格 = 180/16 度', near(dirAngle(1), Math.PI * 2 / 16) && near(halfBin() * 180 / Math.PI, 11.25));
   t('格網錨在 0(世界已被主方位轉過 ⇒ MUST NOT 再有第二個角度偏移量)', dirAngle(0) === 0);
-  // 兩個推導值:定義式裡不得出現公尺字面值
+  // Two derived values: no meter literals allowed in the definitions
   const dsrc = grab(rgSrc, /export const densifyM[\s\S]*?;\n/);
   const msrc = grab(rgSrc, /export const minStraightM[\s\S]*?;\n/);
   t('densifyM 由 MAX_DRIFT_M / DENSIFY_F / 半格推導(MUST NOT 手寫間距)',
@@ -269,7 +285,8 @@ sec('Ⅴ 16 方向量化:推導不手寫');
     /MAX_DRIFT_M/.test(msrc) && /DDA_F/.test(msrc) && /halfBin\(\)/.test(msrc));
   t('DDA 換格門檻 < 硬上限(留給細分步與長度重解的餘裕;頂著上限 = 長度重解一律退化)',
     ROAD_GRID.DDA_F > 0 && ROAD_GRID.DDA_F < 1);
-  // 「事後把短方向段併進鄰段」是這一族唯一致命的寫法:它會把階梯併回單一方向 ⇒ 整段沒被量化
+  // "Merging short runs into neighbors after the fact" is this family's only lethal pattern: it folds the
+  // staircase back into one direction ⇒ the whole stretch goes unquantized
   t('roadgrid.js 沒有事後併段(MUST NOT 復辟 MIN_RUN_M 那一套)',
     !/MIN_RUN|併入較長的鄰段/.test(strip(rgSrc)));
   t('roadgrid.js 零 import(離線稽核吃得到真品的唯一理由)', !/^import\s/m.test(rgSrc));
@@ -281,7 +298,8 @@ sec('Ⅴ 16 方向量化:推導不手寫');
 sec('Ⅵ 量化的三個不變式:真的落格 / 路不走掉 / 路口不裂');
 // ---------------------------------------------------------------------------------
 {
-  // 合成路網:①主格網(帶路口共用節點 + 節點雜訊)②斜街 ③圓弧 ④剛好壓在格界的長直路
+  // Synthetic network: 1 master grid (with shared junction nodes + node noise) 2 diagonal street
+  // 3 arc 4 long straight road exactly on a grid boundary
   const center = { lat: 25.033, lng: 121.565 };
   let s = 20260810;
   const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
@@ -308,8 +326,9 @@ sec('Ⅵ 量化的三個不變式:真的落格 / 路不走掉 / 路口不裂');
   };
   const MAIN = /^(motorway|trunk|primary|secondary|tertiary)$/;
 
-  // 長度加權平均角度誤差:段數加權(p50/p90)會被密路網的細碎段數淹掉 —— 一整條沒被量化的
-  // 長路在那上面看不出來,而那正是本改動最想抓的那個病(見檔頭 ⓐ)
+  // Length-weighted mean angle error: segment-count weighting (p50/p90) drowns in dense-network fragments —
+  // a whole unquantized long road is invisible on it, yet that is exactly the disease this change hunts
+  // (see header a)
   const meanErr = (ws, toXZ) => {
     let sum = 0, tot = 0;
     for (const g of waySegs(ws, toXZ)) {
@@ -341,17 +360,18 @@ sec('Ⅵ 量化的三個不變式:真的落格 / 路不走掉 / 路口不裂');
     const mAfter = meanErr(out, toXZ);
     worstMean = Math.max(worstMean, mAfter);
     gain = Math.min(gain, meanErr(ways, toXZ) / Math.max(1e-9, mAfter));
-    // 逐條路:「所有道路」是使用者的原話 ⇒ 每一條都要被量化,不是整體統計好看就算
+    // Per road: "every road" is the user's verbatim ⇒ each one must be quantized; a pretty global
+    // statistic alone does not count
     out.forEach((w, i) => {
       const e = dirErrorDeg([w], toXZ);
       if (e.p50 > worstWayP50) { worstWayP50 = e.p50; worstWayId = `${ways[i].tags.highway}#${i}(格網傾角 ${gd}°)`; }
     });
 
-    // 形狀:way 數 / 順序 / tags 一律不變
+    // Shape: way count / order / tags all unchanged
     if (out.length !== ways.length) shapeOk = false;
     out.forEach((w, i) => { if (w.tags !== ways[i].tags) shapeOk = false; });
 
-    // 路口不裂:量化前共用的節點,量化後 MUST 仍逐位元共用
+    // Junctions never crack: nodes shared before quantization MUST stay bit-shared after
     const key = (p) => `${p.lat},${p.lon}`;
     const grp = (ws) => {
       const m = new Map();
@@ -368,17 +388,18 @@ sec('Ⅵ 量化的三個不變式:真的落格 / 路不走掉 / 路口不裂');
       const ways0 = new Set(v);
       if (ways0.size < 2) continue;
       shared++;
-      // 該節點量化後的位置:在每一條用到它的 way 上找,MUST 只有一個座標
+      // The node's post-quantization position: look it up on every way using it — MUST be a single coordinate
       const i0 = ways.findIndex((w) => w.geometry.some((p) => key(p) === k));
       const pi = ways[i0].geometry.findIndex((p) => key(p) === k);
-      // 量化後同一個 index 位置未必對得上(有細分),改以「新圖中仍存在被 ≥2 條 way 共用的節點數」比對
+      // Same index positions may not line up after quantization (subdivision added); compare instead by
+      // "nodes in the new graph still shared by >= 2 ways"
       void pi;
     }
     let sharedA = 0;
     for (const [, v] of ga) if (new Set(v).size >= 2) sharedA++;
     if (sharedA < shared) joinOk = false;
 
-    // 去鋸齒:平均直段長 ≥ 推導下界
+    // De-jagging: mean straight-run length >= derived lower bound
     let turnN = 0, totL = 0;
     for (const w of out) {
       const g = w.geometry.map(toXZ);
@@ -396,7 +417,7 @@ sec('Ⅵ 量化的三個不變式:真的落格 / 路不走掉 / 路口不裂');
     const straight = totL / (turnN + 1);
     worstStraight = Math.min(worstStraight, straight);
 
-    // 確定性:同輸入跑兩次逐位元相同
+    // Determinism: same input twice is bit-identical
     const o2 = quantizeRoads(ways, toXZ, toLL);
     out.forEach((w, i) => w.geometry.forEach((p, k2) => {
       const q = o2[i].geometry[k2];
@@ -435,19 +456,20 @@ sec('Ⅵ-b 路網預整理:小閉環 / 近接死端 / 窄冗餘優先 / 不斷�
     W('短突枝', 2.2, A, [-12, 0]),
     W('寬突枝', 8, B, [52, 0]),
     W('長小路', 2.2, C, [40, 160]),
-    // 直線支路即使被 OSM tag 邊界切段也不是閉環，兩段都必須保留。
+    // Straight stubs stay non-loops even when an OSM tag boundary segments them; both pieces must be kept.
     W('切段突枝甲', 2.2, B, [55, 10]), W('切段突枝乙', 2.2, [55, 10], [68, 23]),
     W('步橋', 2.2, D, [-8, 40], { bridge: 'yes' }),
-    // 兩端都有三個去向、但沒有替代路徑：只看度數會誤剪成兩座不相通的小樹。
+    // Three exits on both ends but no alternative path: degree-only reading would mis-prune it into two
+    // disconnected saplings.
     W('必要窄連線', 2.2, [100, 0], [120, 0]),
     W('E北', 8, [100, 0], [100, 20]), W('E南', 8, [100, 0], [100, -20]),
     W('F北', 8, [120, 0], [120, 20]), W('F南', 8, [120, 0], [120, -20]),
-    // 面積 6400m² 的大環即使有替代路徑也不剪。
+    // A 6400m² loop keeps even with an alternative path: never prune past the area gate.
     W('長窄糾纏邊甲', 2.2, [300, 0], [380, 0]),
     W('長窄糾纏邊乙', 2.2, [380, 0], [460, 0]),
     W('長迴路左', 8, [300, 0], [380, 80]), W('長迴路右', 8, [380, 80], [460, 0]),
     W('長迴路左尾', 8, [300, 0], [100, 0]), W('長迴路右尾', 8, [460, 0], [660, 0]),
-    // 面積 1200m² 的小環底邊被 tag 切成兩段；必須整條原子移除。
+    // A 1200m² loop whose base edge is tag-split in two; remove atomically as one piece.
     W('小環底甲', 2.2, [700, 0], [740, 0]), W('小環底乙', 2.2, [740, 0], [780, 0]),
     W('小環左', 8, [700, 0], [700, 15]), W('小環頂', 8, [700, 15], [780, 15]),
     W('小環右', 8, [780, 15], [780, 0]),
@@ -487,7 +509,8 @@ sec('Ⅵ-b 路網預整理:小閉環 / 近接死端 / 窄冗餘優先 / 不斷�
       .reduce((sum, w) => sum + Math.hypot(w.geometry[1].lon - w.geometry[0].lon, w.geometry[1].lat - w.geometry[0].lat), 0)
       * BASE_PRUNE.MAX_DROP_F + 1e-6);
 
-  // 核心四路口必須仍在同一分量；這比「way 數還很多」更直接證明沒有剪斷主網。
+  // The four core junctions must stay in one component; more direct proof of an uncut trunk network
+  // than "plenty of ways left".
   const graph = new Map();
   const key = (p) => `${p.lat},${p.lon}`;
   for (const w of out) {
@@ -505,12 +528,12 @@ sec('Ⅵ-b 路網預整理:小閉環 / 近接死端 / 窄冗餘優先 / 不斷�
   }
   t('主網不斷線:四個核心路口剪後仍互相可達', [A, B, C, D].every((p) => seen.has(key(P(...p)))));
 
-  // 候選全序不依輸入 way 順序；中繼 payload 重排不應改變保留集合。
+  // Candidate total order never follows input way order; relay-payload reordering must not change the kept set.
   const reversed = pruneRoads(ways.slice().reverse(), toXZ, widthOf);
   const canon = (ws) => ws.map((w) => `${w.tags.name}:${w.geometry.map(key).join('>')}`).sort().join('|');
   t('決定性:輸入 way 重排後保留幾何集合不變', canon(out) === canon(reversed));
 
-  // 重生中心附近仍只能剪小環；額外總額不得吃掉半個分量。
+  // Near the respawn focus only small loops still prune; the extra allowance must not eat half a component.
   const focusWays = [
     W('外框南', 8, [0, 0], [30, 0]), W('外框東', 8, [30, 0], [30, 30]),
     W('外框北', 8, [30, 30], [0, 30]), W('外框西', 8, [0, 30], [0, 0]),
@@ -530,7 +553,7 @@ sec('Ⅵ-b 路網預整理:小閉環 / 近接死端 / 窄冗餘優先 / 不斷�
   const focusReversed = pruneRoads(focusWays.slice().reverse(), toXZ, widthOf, null, [[30, 0]]);
   t('重生圈優先仍具決定性:輸入 way 重排不改變保留集合', canon(focusOut) === canon(focusReversed));
 
-  // 同分量額度只夠剪一條：先比寬，再比替代路徑繞行比。
+  // One component's allowance prunes only one edge: compare width first, then alternative-path detour ratio.
   const widthWays = [
     W('窄候選', 2.2, [0, 0], [100, 0]),
     W('窄左', 8, [0, 0], [0, 10]), W('窄頂', 8, [0, 10], [100, 10]), W('窄右', 8, [100, 10], [100, 0]),
@@ -553,8 +576,9 @@ sec('Ⅵ-b 路網預整理:小閉環 / 近接死端 / 窄冗餘優先 / 不斷�
   const redundantNames = new Set(pruneRoads(redundantWays, toXZ, widthOf).map((w) => w.tags.name));
   t('冗餘度優先:同寬同額度下先剪替代路徑繞行比較低者',
     !redundantNames.has('高冗餘候選') && redundantNames.has('低冗餘候選'));
-  // OSM 常有畫面上相交、資料卻未共用 node 的步道；面分析圖必須切真交點，否則最亂的
-  // 那批線在拓撲圖上全是「支梢」，面積指標永遠看不到。
+  // OSM often shows visually crossing footpaths that share no node in data; the face-analysis graph must
+  // cut true intersections, otherwise the messiest batch reads as all "twigs" on the topology graph and
+  // the area metric never sees them.
   const crossingStats = {};
   const crossingWays = [
     W('打結支梢', 2.2, [-10, 0], [100, 0]),
@@ -572,8 +596,9 @@ sec('Ⅵ-b 路網預整理:小閉環 / 近接死端 / 窄冗餘優先 / 不斷�
     stats.loopBefore.small > stats.loopAfter.small
     && stats.loopAfter.thresholdM2 === BASE_PRUNE.MAX_LOOP_AREA_M2);
 
-  // 死端與另一條道路只差短縫時，在分析圖虛擬閉合；不改輸出座標、不畫補線。
-  // 近接案例的完整面積仍低於門檻；遠距與大面積案例須照舊保留。
+  // A dead end landing a short gap from another road virtually closes in the analysis graph; output
+  // coordinates unchanged, no filler drawn. Near cases still sit below the area gate in full; far and
+  // large-area cases stay kept as before.
   const nearStats = {};
   const nearWays = [
     W('近接死路候選', 2.2, [0, 0], [40, 4]),
@@ -651,8 +676,9 @@ sec('Ⅶ 接線:唯一縫、排在所有消費端之前、不碰兵線');
   const iQ = bio.indexOf('quantizeRoads(');
   const iFetch = bio.indexOf('fetchOsmRoads(terrain.bbox)');
   t('剪枝排在量化之前(不讓已淘汰亂路參與節點鬆弛)', iP > iFetch && iP < iQ);
-  // needle 一律從**取得圖資之後**找起 —— 這幾支的函式**定義**都排在檔案前段,
-  // 從頭找會找到定義而不是呼叫點(那樣這條斷言恆綠 = 沒驗到)
+  // Needles always search **after map-data fetch** — these functions are **defined** in the file's first
+  // stretch, so searching from the top finds definitions instead of call sites (and the assertion would
+  // stay green without verifying anything)
   for (const [name, needle] of [
     ['mergeGradeChains 呼叫點', 'mergeGradeChains(osmRoads)'],
     ['dedupeCrossingBridges 呼叫點', 'dedupeCrossingBridges(osmRoads || []'],
@@ -679,7 +705,7 @@ sec('Ⅶ 接線:唯一縫、排在所有消費端之前、不碰兵線');
     /gridAngle\(segs\)/.test(strip(grndSrc)) && !/\* 4;[\s\S]{0,200}gsx \+=/.test(strip(grndSrc)));
   t('venues.js 的 center.rot 由 VENUE_GRID 推導(度 → 弧度),缺席 = 0',
     /rot: \(VENUE_GRID\[venue\.id\] \|\| 0\) \* Math\.PI \/ 180/.test(strip(venSrc)));
-  // `center.rot` 只准在 mapRot 的定義式那一行出現(那一行剛好有兩處:`?.` 與一般存取)
+  // `center.rot` may only appear on mapRot's definition line (which happens to hold two: `?.` and plain access)
   const rotHits = strip(dataSrc).split('\n').filter((l) => /center\??\.rot/.test(l));
   t('data.js 的 center.rot 只出現在 mapRot 的定義式(唯一讀取縫)',
     rotHits.length === 1 && /mapRot/.test(rotHits[0]), rotHits.join(' | '));
@@ -708,13 +734,14 @@ sec('Ⅷ 烘焙表:值域、來源、降級');
 // =================================================================================
 sec('Ⅸ 主方位的兩條產線(離線烘焙 / 自訂地圖執行期量一次)');
 // ---------------------------------------------------------------------------------
-// θ 是**座標框**,不是地貌細節:它一旦兩台不一樣,所有單位的位置都差一個旋轉。
-// 因此規則不是「不准在執行期算」,而是「MUST 在 battleConfig 定案**之前**凍結成常數」——
-// 預設場地取離線烘焙表,自訂地圖只准在**存入最愛那一次**由房主量一次寫死(A42 ③)。
-// 兩條產線 MUST 共用同一個推導,否則同一個地點會因為「你是點選的還是選預設的」轉不同角度。
+// θ is a **coordinate frame**, not terrain detail: the moment two clients disagree, every unit's position
+// differs by a rotation. So the rule is not "never compute at runtime" but "MUST freeze into a constant
+// **before** battleConfig finalizes" — stock venues take the offline bake table, custom maps are measured
+// exactly once by the host **when saving the favorite** (A42 ③). Both pipelines MUST share one derivation,
+// or the same place rotates differently depending on "clicked vs picked stock".
 {
-  // 原文已經過 readSrc 正規化(換行一律 \n)⇒ 這裡用 \n 樣式是安全的;
-  // 替換無效一律當場失敗,免得旗標變成無聲 no-op = break 永遠是綠的(§5.4 ㋑)。
+  // Source already readSrc-normalized (newlines always \n) ⇒ \n patterns are safe here; a no-op
+  // replacement fails loudly on the spot, so flags never become silent no-ops (§5.4 ㋑).
   const patch = (src, re, rep, why) => {
     const out = src.replace(re, rep);
     if (out === src) { console.error(`❌ --break 替換無效(${why});稽核本身已失效,先修這裡`); process.exit(2); }
@@ -741,9 +768,10 @@ sec('Ⅸ 主方位的兩條產線(離線烘焙 / 自訂地圖執行期量一次)
     && /way\["highway"~"\$\{GRID_HW\.source\}"\]/.test(bake) && /way\["highway"~"\$\{GRID_HW\.source\}"\]/.test(bio)
     && !/motorway\|trunk\|primary/.test(bake.replace(/GRID_HW/g, '')));
 
-  // 烘焙 MUST 冪等:`venueConfig` 會把**上一輪**的 rot 寫進 center,而旋轉只讓 battleBBox 長大
-  // ⇒ 不剝掉 rot 的話第二輪在大得多的區域上取樣,角度自己漂走(實測 shibuya 14.53° → 19.49°,
-  // 而三個檔案都沒改、其餘斷言照樣全綠)。這一條同時是行為證明與原文閘。
+  // Baking MUST be idempotent: `venueConfig` writes the **previous round's** rot into center, while rotation
+  // only grows battleBBox ⇒ without stripping rot, round two samples a much larger region and the angle
+  // drifts on its own (measured shibuya 14.53° → 19.49°, with all three files untouched and remaining
+  // assertions green). This line is behavior proof and source gate at once.
   const bcn = VENUES.find((v) => v.id === 'roppongi');
   const cfgR = venueConfig(bcn, 1);
   const cfg0 = { ...cfgR, center: { lat: cfgR.center.lat, lng: cfgR.center.lng } };
@@ -755,7 +783,7 @@ sec('Ⅸ 主方位的兩條產線(離線烘焙 / 自訂地圖執行期量一次)
     /const cfg = \{ \.\.\.cfg0, center: \{ lat: cfg0\.center\.lat, lng: cfg0\.center\.lng \} \};/.test(bake)
     && /const bb = battleBBox\(cfg\);/.test(bake));
 
-  // 執行期那一半:只准在「存入最愛」那一次量,MUST NOT 滲進建圖期
+  // The runtime half: measure only on the "save favorite" beat, MUST NOT seep into map building
   const resolve = strip(grabFn(mainSrc, 'resolveMapRot'));
   t('執行期量測只住 resolveMapRot(fetchGridRoads / roadGridRotDeg 在 main.js 只出現在這一支)',
     (main.match(/fetchGridRoads\(/g) || []).length === 1 && (main.match(/roadGridRotDeg\(/g) || []).length === 1

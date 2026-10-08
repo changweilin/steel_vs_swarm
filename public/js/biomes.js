@@ -2,30 +2,37 @@ import { TOWER_BUILDINGS, buildTowerBuilding, towerSides } from './towerBuilding
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TREE_SPECIES, createForestDefs, createForestTree, treePhenology, treeBend, treeHabitatWeight, pickTreeType, forestSeed, FOREST_STEEP_DEG } from './forest.js';
 // ============ 地貌系統:五類地被 + 圖資建物 + 兵線淨空 ============
-// 依衛星影像逐點分類五種地貌,鋪設對應的 3D 地物:
-//   綠地   — 竹林(大小不一的群落)/ 闊葉林 / 針葉林(高海拔)
-//            + 神木群落:全球實存 >65m 巨樹樹種,同種群聚、株高各異(GIANT_DEFS),
-//              樹身掛鳥巢/樹屋/附生植物/垂藤(GIANT_DECO)
-//   裸露地 — 芒草 / 箭竹 / 灌木 / 多肉植物
-//            + 巨岩地標:世界名岩取材(烏魯魯/大霸尖山/獅子岩…,MEGALITHS)
-//              與特徵基因合成岩(synthMegalith);岩上有電塔/石屋/疊石/鳥巢/斷崖樹
-//   市區   — 依 OSM 圖資設置建物(住宅/商辦/醫院/學校/車站/寺廟/教堂/清真寺/
-//            博物館/電塔/工廠/城堡/燈塔/佛塔/體育場),離線時退回程序生成街區;
-//            一般建物分七款立面樣式(店面/陽台/帷幕/絲帶窗…)× 擴充色盤
-//   水體   — 不鋪地物(水面由 terrain.js 處理)
-//   濕地   — 紅樹林 / 蘆葦(僅低海拔成立)
-// 預設場地的 mix(venues.js)會對分類加權,做出「單一 80% / 混合」的場地感。
-// 兵線走廊保持淨空(寬度 > 4 台機甲並行),主堡與防禦塔周圍同樣清場。
-// 植被全部用 InstancedMesh(低多邊形 + 分層樹冠),整張圖數十個 draw call。
-// 亂數以戰場中心為種子:同一房間所有玩家看到同一片森林。
+// Classify five land covers per satellite-image pixel, place matching 3D props:
+//   green — bamboo (varied-size groves) / broadleaf / conifer (high altitude)
+//            + giant-tree groves: real-world >65m species, same-species clusters
+//              with varied heights (GIANT_DEFS); trunks carry nests/treehouses/
+//              epiphytes/hanging vines (GIANT_DECO)
+//   bare  — silvergrass / arrow bamboo / shrubs / succulents
+//            + megalith landmarks: real-world rocks (Uluru/Dabajianshan/Lion Rock...,
+//              MEGALITHS) plus feature-gene synth rock (synthMegalith); rocks carry
+//              power towers/stone huts/cairns/nests/cliff trees
+//   urban — OSM-driven buildings (residential/office/hospital/school/station/temple/
+//            church/mosque/museum/power tower/factory/castle/lighthouse/pagoda/stadium),
+//            falls back to procedural blocks offline; generic buildings use seven facade
+//            styles (shopfront/balcony/curtain/ribbon windows...) x extended palette
+//   water — no props (water surface owned by terrain.js)
+//   wetland — mangroves / reeds (valid only at low altitude)
+// Preset venue mix (venues.js) weights the classification for "single 80% / mixed" feel.
+// Lane corridors stay clear (width > 4 mechs abreast); same clearing around main base
+// and defense towers.
+// All vegetation uses InstancedMesh (low-poly + layered crowns), tens of draw calls per map.
+// RNG seeded by battlefield center: all players in a room see the same forest.
 //
-// 超尺度原則(2026-07-09;2026-07-10 佔地對齊現實比例):士兵顯示高 3.2m ≈ 真人 ×1.8,
-// 建物高度與佔地同乘 ×1.8 → 建物:士兵比例與現實一致;神木/巨岩跟著等比放大(×1.35)。
-// 立面用程序生成窗格貼圖(賽璐璐「畫上去的窗」)取代單色塊;
-// 建物同時輸出碰撞柱(group.userData.blockers)— 限制玩家行動但不封鎖,
-// 兵線走廊由淨空網格保證暢通(佔地放大後改用半對角掃走廊),無人機永遠可以飛越屋頂。
-// 立體掩體三本柱(2026-07-10):建物 26~170m,神木 / 巨岩隨等比放大可達 ~220m,
-// 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
+// Overscale rule (2026-07-09; 2026-07-10 footprint aligned to real scale): soldier
+// display height 3.2m ~= real human x1.8; building height and footprint scale by the same
+// x1.8 so building:soldier ratio matches reality; giant trees/megaliths scale along (x1.35).
+// Facades use procedural window textures (cel-style "painted windows") instead of flat blocks;
+// buildings also emit collider posts (group.userData.blockers) — constrain but never seal
+// player movement; lane corridors stay passable via the clearance grid (half-diagonal sweep
+// after footprint upscale); drones can always fly over rooftops.
+// Three cover pillars (2026-07-10): buildings 26~170m, giants/megaliths up to ~220m with
+// proportional scaling; all three register collider posts as obstacles/cover; giants and
+// megaliths claim spots before generic vegetation, small/ground plants auto-avoid them.
 import * as THREE from 'three';
 import { registerMapBuildings, detachMapBuilding } from './mapBuildingRender.js';
 import { buildingNear } from './mapBuilding.js';
@@ -73,8 +80,10 @@ import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
 import { LANE_SIGN_RESERVE } from './laneGuidancePlan.js';
 import { MIP_ANISO, registerStreamTex } from './tex.js';
 import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed, mergeGeos } from './beacons.js';
-// 邊界牆型錄 / 緩衝空間布景 / 視線邊界背景(2026-08-11 使用者定案)——
-// 型錄、切分規則、落點規劃全在那一支(純資料、零 THREE、離線可驗);本檔只負責取樣地貌與建幾何。
+// Boundary wall catalog / buffer-space dressing / sight-boundary backdrop —
+// user decision (2026-08-11): catalog, split rules, and placement planning all live in
+// that module (pure data, zero THREE, offline-verifiable); this file only samples biomes
+// and builds geometry.
 import {
   EDGE_WALL, EDGE_MOTION, WALL_KINDS, BACKDROP_KINDS, planWallRuns, planWallKinds, wallParts, wallVariant, wallSlopeTier, edgeSeed, partBox,
   planBufferProps, propParts, planBackdrop, backdropParts, buildBoundaryBufferParts, buildBoundaryRunParts, BOUNDARY_BUFFER_LAYOUTS, boundaryFillCrest, boundaryJoinParts,
@@ -84,7 +93,7 @@ import { runtimeMeshDataGeometry } from './runtimePartModel.js';
 import { sceneryGeometry, sceneryBoxGeometry } from './sceneryGeometry.js';
 import { BATTLE_GEOLOGY, SYNTH_GEOLOGY, battleGeology, battleGeologySlope } from './geology.js';
 import { buildSlopeBoundary } from './edgeSlope.js';
-// 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
+// v5/v6 buildings via the part bench: style selection plus one runtime-modeling seam per style.
 import { makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { makeProceduralVehicle } from './vehicleModels.js';
 import { selectRoadCar } from './vehicleCatalog.js';
@@ -98,40 +107,45 @@ import { createArchitecturePlanner } from './buildingDiversity.js';
 import { sceneObjectMat } from './toon.js';
 import { buildOsmPolygonBuildings } from './osmBuilding.js';
 import { buildOsmAreaObjects } from './osmAreaObjects.js';
-// 鳥群 / 魚群 / 貓 / 狗 (2026-08-16 序 11 ⑥-2 / 2026-08-27 生態擴充; 零 THREE 的積分器)
+// Birds / fish / cats / dogs (2026-08-16 seq 11 ⑥-2 / 2026-08-27 ecology expansion; THREE-free integrator)
 import { SMALL_ANIMALS, planSmallAnimalRoutes, planFlockRoutes, planFishRoutes, planCatRoutes, planDogRoutes } from './wildlife.js';
 import { buildWildlifeBatches } from './wildlifeRender.js';
 import { AMBIENT_SURFACES } from './ambientMeshData.js';
-// 平整垂直牆面板 + 窗格貼齊(2026-08-13;零 import 的純模組,離線工具吃同一支 —— 面板的
-// 定義只有一份,見該檔檔頭)
-// 場址配置規則(2026-08-03 使用者定案三條:市區都市計畫 / 綠地樹冠羞避 / 裸露地地質排列)——
-// 規則本體全在 siteplan.js(純幾何、零 THREE、離線可驗),本檔只負責「餵地形/淨空、收成果」。
+// Flat vertical wall panels + flush window grids (2026-08-13; zero-import pure module,
+// offline tools consume the same one — single definition, see that file header)
+// Site-layout rules — user decision (2026-08-03), three rules: urban city plan / green
+// crown shyness / bare-land geology ordering — rules live in siteplan.js (pure geometry,
+// zero THREE, offline-verifiable); this file only feeds terrain/clearance and takes results.
 import {
   CIVIC_KINDS, CIVIC_TREES, roadFaceRy, planBlocks, buildCivic, civicColliders,
   planShyGrove, ROCKFIELD, strikeRad, planRockField, plotSeed, frac,
 } from './siteplan.js';
-// 低功耗旗標的**唯一真相**仍是 mobile.js(localStorage svs_lowpower);世界文字的 atlas
-// 解析度跟著它降,MUST NOT 在此另讀一次 localStorage(第二份預設值遲早分家)。
+// Single source of truth for the low-power flag stays mobile.js (localStorage svs_lowpower);
+// world-text atlas resolution follows it; MUST NOT read localStorage again here (a second
+// default copy would diverge sooner or later).
 import { lowPower } from './mobile.js';
 import { planClimbRoutes, buildClimbMeshes, MAX_BODY_R } from './climb.js';
 import { harvestOsm, mergeCorpus, localeOf, signCopy } from './vernacular.js';
 import { VENUE_TEXT } from './venueText.js';
 import { drawFlag, pickFlagIso, flagSeed, sideIsoRoster, isoOfFlagEmoji, FLAG_RATIO } from './flags.js';
-// 落花 / 落葉粒子的**規則層**(2026-08-16 ⑤-4;零 THREE、只 import rng.js —— 同 edgewall /
-// flags / wallpanel 的邊界)。本檔只負責「把最終的植被實例名冊翻成樹冠、建幾何、逐幀寫矩陣」。
+// Falling-petal/leaf particle **rule layer** (2026-08-16 ⑤-4; zero THREE, only import rng.js — same
+// boundary as edgewall / flags / wallpanel). This file only turns the final vegetation instance roster
+// into crowns, builds geometry, and writes matrices per frame.
 import { PETAL, petalSeason, petalTones, groupCrowns, planPetalFields, stepPetal, petalRnd } from './petals.js';
-// 葉片卡冠層的**排列規則層**(2026-08-16 ②-1;零 THREE、只 import rng.js —— 同上一條的邊界)。
-// 本檔只負責「把純資料的卡片名冊組成 BufferGeometry、畫遮罩、接進既有的那一行 InstancedMesh」。
+// Leaf-card canopy **layout rule layer** (2026-08-16 ②-1; zero THREE, only import rng.js — same boundary
+// as above). This file only assembles the pure-data card roster into BufferGeometry, draws masks,
+// and plugs into the existing InstancedMesh row.
 import { CARD, cardEnvelope, cardCount, planCards, cardRnd, leafSurfId } from './leafcard.js';
-// `REFL` / `seaSoft` = 水面倒影塊(⑤-3)的形狀常數與海浪參數:**MUST NOT 在本檔手寫**
-// (同 `SEA_M`/`SEA_SEG` 的紀律 —— 消費端手寫 = 改了 toon.js 那邊只動到一半)。
-// `SURF_ID` / `inkRepeat` / `INK_CONTRIB_NONE` = 立體結構的線工授權(2026-08-16 序 12b;S3/S4)。
-// 貢獻一律**推導**(`inkRepeat` 的節距軸 / `inkCtrM` 的尺寸軸),唯一容許手寫的是具名否決值。
-// `toonPlain` = **賽璐璐學派的第三個入口**(2026-08-16 序 12;§0-b):不掛 rim / gInfo,
-// 但**掛學派**。本檔這四處(GLB 植被的不透明樹幹 / 洞頂 / 潮間帶 / 水簾)以前是裸的
-// `new THREE.MeshToonMaterial` ⇒ 換學派時它們會留在舊制,而畫面上只表現成「同一棵樹
-// 葉子是硬切的、樹幹還是三階 ramp」,沒有任何錯誤訊息。一個場景 MUST 只有一套量化
-// (`audit_cel_pipeline` Ⅺ⑧ 的凍結名冊守著:名冊非空 ⇒ `celSchool` 的 def MUST NOT 是 'b')。
+// `REFL` / `seaSoft` = water-reflection block (⑤-3) shape constants and wave params: **MUST NOT hand-write here**
+// (same discipline as `SEA_M`/`SEA_SEG` — hand-writing at a consumer means editing toon.js only half-applies).
+// `SURF_ID` / `inkRepeat` / `INK_CONTRIB_NONE` = linework license for solid structures (2026-08-16 seq 12b; S3/S4).
+// Contributions are always **derived** (pitch axis of `inkRepeat` / size axis of `inkCtrM`); only a named veto value may be hand-written.
+// `toonPlain` = **third entry of the cel school** (2026-08-16 seq 12; §0-b): no rim / gInfo,
+// but **carries the school**. These four spots in this file (opaque trunks of GLB vegetation /
+// cave ceiling / intertidal zone / water curtain) used to be bare
+// `new THREE.MeshToonMaterial`, so a school switch would leave them on the old regime with no error,
+// showing only as same tree with hard-cut leaves but a three-step ramp trunk. One scene MUST use a single quantization set
+// (guarded by the frozen roster of `audit_cel_pipeline` Ⅺ⑧: roster non-empty implies `celSchool` def MUST NOT be 'b').
 import {
   WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime, celWindAmount, celWindHeading, celWaveAmount,
   isWeatherFrozen, getWeatherDynamics,
@@ -148,61 +162,69 @@ import {
   isPedestrianWay, isPedestrianBridge, planPedestrianNetwork,
 } from './pedestrian.js';
 
-const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
-const MAX_VEG = HABITAT_SCENE.CANOPY_LIMIT;
-const MAX_BUILDINGS = 240;       // 種子建物上限:OSM 圖資 / 程序街區(特殊地標另計 ≤ 60)
-const MAX_INFILL = 1200;         // 補間建物上限(立面 InstancedMesh 仍是常數級 10 個)
-// 市區補間參數:每個種子沿自身朝向鋪一塊 cols×rows 的街廓網格。
-// pitch 36m ≈ 最大佔地(32m)+ 巷弄 ⇒ 大型商辦間僅 4m(< 機甲碰撞直徑 4.6~7.7m)不可穿越
-// = 實心掩體;住宅(10~22m)間 14~26m 成街道 = 巷戰路徑。兵線走廊(半寬 17m)恆淨空。
+const CELL = 10;                 // clearance grid (m); corridor full width ~34m > 4x3.5m mechs
+const MAX_VEG = HABITAT_SCENE.CANOPY_LIMIT; // vegetation instance cap
+const MAX_BUILDINGS = 240;       // seed building cap: OSM data / procedural blocks (special landmarks extra, up to 60)
+const MAX_INFILL = 1200;         // infill building cap (facade InstancedMesh stays at constant ~10)
+// Urban infill params: each seed lays a cols x rows block grid along its own heading.
+// pitch 36m ~= max footprint (32m) + alley, so large offices end up 4m apart (< mech collision
+// diameter 4.6~7.7m), i.e. impassable solid cover; houses (10~22m) leave 14~26m streets = alley-combat
+// paths. Lane corridors (half-width 17m) stay clear unconditionally.
 const INFILL = { maxSeeds: 160, pitch: 36, cols: [3, 6], rows: [3, 6], skip: 0.18, gap: 2 };
-// 尺度倍率(2026-07-10 改制:步兵 = 真人 1.8m,見 models.js SOLDIER_H)。
-// 2026-07-12 佔地改制:建物公稱佔地加大到真實市街量體(住宅 10~22m、商辦 16~32m)——
-// 建物佔地:士兵比例對齊現實;神木/巨岩以 giant/mega = 1.35 跟隨佔地等比放大,
-// 與建物維持視覺等比(高度公稱值不動,仍是真實公尺)。lm 同步放大:地標量體對齊真實公共建築。
-// `bldCap` = 建物高度上限:2026-08-08 使用者定案「所有物件的最高高度限定 N 倍砲塔高度」之後
-// 它不再是本檔自己的一個數字,而是 `data.js objHeightMax()` 那個全世界共用的上限
-//(舊制手寫 170 = 六倍多的砲塔高,遠高過飛行天花板到地表的餘裕)。MUST NOT 改回字面值。
+// Scale factors (2026-07-10 reform: infantry = real human 1.8m, see models.js SOLDIER_H).
+// 2026-07-12 footprint reform: nominal building footprints upsized to real street massing
+// (houses 10~22m, offices 16~32m) — building-footprint:soldier ratio aligned to reality;
+// giants/megaliths follow footprint scaling with giant/mega = 1.35 to keep visual parity
+// with buildings (nominal heights unchanged, still real meters). lm scales along: landmark
+// massing aligned to real public buildings.
+// `bldCap` = building height cap: after user decision (2026-08-08) that all objects cap height
+// at N times turret height, it is no longer a local number but the shared world-wide cap from
+// `data.js objHeightMax()` (old hand-written 170 = 6x-plus turret height, far above the flight
+// ceiling-to-ground margin). MUST NOT revert to a literal.
 const OVER = { bldH: 1.0, bldXZ: 1.0, bldCap: objHeightMax(), lm: 1.5, giant: 1.35, mega: 1.35 };
-// 植被放大倍率(喬木最誇張,地被小幅)。
-// 注意:此表作用在很小的公稱幾何上(針葉樹公稱僅 ~8.7m),放大後的「絕對高度」本就接近真實,
-// 故改制不動它 —— 步兵縮到 1.8m 後,樹木相對步兵的比例自動回歸現實。
+// Vegetation upscale factors (trees most exaggerated, ground cover slight).
+// Note: this table applies to tiny nominal geometry (nominal conifer only ~8.7m), so the upscaled
+// absolute heights were already near-real; the reform leaves it untouched — after infantry shrank
+// to 1.8m, tree-to-infantry proportions fall back to reality on their own.
 const VEG_SCALE = {
   bamboo: 1.5, broadleaf: 1.45, birch: 1.4, conifer: 1.5, deadtree: 1.35, mangrove: 1.3,
   conifer2: 1.5, conifer3: 1.45, conifer4: 1.5,
   shrub: 1.2, silvergrass: 1.15, arrowbamboo: 1.2, succulent: 1.15, reed: 1.1,
   sapling: 1.2, redcap: 1.15, browncap: 1.1, parasol: 1.2, toadstool: 1.1,
 };
-// 植被可見外廓半徑係數(×最終實例 s)：建物、道路、外部場地共用，MUST NOT 各抄一份。
+// Visible vegetation outline radius factor (x final instance s): shared by buildings, roads, and
+// external venues; MUST NOT copy per consumer.
 const VEG_FOOT_R = {
   bamboo: 2.2, broadleaf: 3.2, birch: 2.6, conifer: 2.2, deadtree: 2.4, mangrove: 2.8,
   conifer2: 2.4, conifer3: 1.4, conifer4: 3.0,
   shrub: 1.2, silvergrass: 0.9, arrowbamboo: 1.0, succulent: 0.8, reed: 0.8,
   sapling: 1.0, redcap: 0.6, browncap: 0.6, parasol: 0.5, toadstool: 0.5,
 };
-// 地被級平面植栽(無木質幹/冠):塔堡 1/4 圈內可保留為草原/沙漠背景;名冊之外一律視為實體淨空
+// Ground-level flat plantings (no woody trunk/crown): may stay as grassland/desert backdrop inside
+// the tower-base quarter ring; anything off-roster counts as solid clearance.
 const VEG_FLAT = new Set(['silvergrass', 'arrowbamboo', 'succulent', 'reed', 'redcap', 'browncap', 'parasol', 'toadstool']);
-// Overpass 鏡像輪替(2026-07-22 倫敦橋數浮動案):主站限流(429/504)是圖資逐局忽有忽無的
-// 主因之一 —— 限流回應是即時的,換鏡像重試幾乎不吃載入時間預算;逾時(abort)才放棄。
-// 與 tools/bake_venue_lanes.mjs 同一組鏡像。
+// Overpass mirror rotation (2026-07-22 London bridge-count fluctuation): primary rate limits (429/504)
+// are one reason map data flickers per match — limit responses are instant, so retrying another mirror
+// costs almost no load-time budget; only abort on timeout.
+// Same mirror set as tools/bake_venue_lanes.mjs.
 const OVERPASS_URLS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 
-// ---- 決定性亂數(mulberry32):全房間共享同一片地貌;唯一縫住 rng.js(見該檔檔頭)----
+// ---- Deterministic RNG (mulberry32): whole room shares one landform; sole seam is rng.js (see its header) ----
 
-// ---- 淨空網格 ----
-// 主堡淨空半徑:`buildClearance` 登記的那一圈,與 `placeMegaliths` 的名岩退避距同吃這一份
-// (兩處各寫一個 70 = 改了其中一個,名岩的退避距悄悄以另一個基準計算,而畫面上只表現成
-//  「這張圖的巨岩離主堡近了一點」)。
+// ---- Clearance grid ----
+// Main-base clearance radius: the ring registered by `buildClearance` shares one source with the
+// famous-rock standoff in `placeMegaliths` (two hand-written 70s means editing one silently re-bases
+// the other, showing only as rocks sitting a bit closer to base on some maps).
 const BASE_CLEAR_R = 70;
-// 砲塔淨空半徑:1/4 射程推導(UNITS.tower.range 一動自己跟著走;推導值 MUST NOT 手寫)
+// Turret clearance radius: derived as 1/4 range (follows UNITS.tower.range; derived value MUST NOT be hand-written)
 const TOWER_CLEAR_R = UNITS.tower.range / 4;
 function cellKey(x, z) { return `${Math.round(x / CELL)},${Math.round(z / CELL)}`; }
 
-// 大型地物 footprint 淨空:巨岩/神木群半徑可達數十公尺,逐格掃整個圓盤
+// Large-feature footprint clearance: megalith/giant-grove radii reach tens of meters, sweep the whole disc cell by cell
 function areaFreeCore(blocked, ignore, x, z, r) {
   const n = Math.ceil(r / CELL);
   const cx = Math.round(x / CELL), cz = Math.round(z / CELL);
@@ -217,8 +239,8 @@ function areaFreeCore(blocked, ignore, x, z, r) {
 function areaFree(blocked, x, z, r) {
   return areaFreeCore(blocked, null, x, z, r);
 }
-// 走廊淨空(平面背景用):與 areaFree 同一掃描,但塔堡 1/4 圈的格子視為可放 ——
-// 公設鋪面/地被小植栽可以鋪進圈內,實體物件(樹/建物/岩/地標)不行
+// Corridor clearance (flat backdrops): same sweep as areaFree, but tower-base quarter-ring cells count as free —
+// civic paving/ground-cover sprouts may enter the ring; solid objects (trees/buildings/rocks/landmarks) may not
 function areaFreeLane(blocked, towerBase, x, z, r) {
   return areaFreeCore(blocked, towerBase, x, z, r);
 }
@@ -234,8 +256,8 @@ function blockArea(blocked, x, z, r) {
 
 function buildClearance(cfg, center) {
   const blocked = new Set();
-  const towerBase = new Set();   // 塔堡 1/4 圈格:平面背景可放行、實體物件禁行(與 blocked 同一次登記)
-  const rings = [];              // 同一圈的圓盤視圖:精確多邊形(圖資建物)走真幾何相交,不吃格子
+  const towerBase = new Set();   // tower-base quarter-ring cells: flat backdrops pass, solid objects blocked (registered with blocked in one pass)
+  const rings = [];              // disc views of the same rings: precise polygons (map buildings) use true geometry intersection, not grid cells
   const blockPoint = (x, z, r = CELL, ring = null) => {
     const n = Math.ceil(r / CELL);
     const cx = Math.round(x / CELL), cz = Math.round(z / CELL);
@@ -256,16 +278,17 @@ function buildClearance(cfg, center) {
       const seg = Math.hypot(x2 - x1, z2 - z1);
       const n = Math.max(1, Math.ceil(seg / 5));
       for (let k = 0; k <= n; k++) {
-        blockPoint(x1 + (x2 - x1) * k / n, z1 + (z2 - z1) * k / n, 17);   // 走廊半寬 17m(建物佔地放大後仍不侵走廊)
+        blockPoint(x1 + (x2 - x1) * k / n, z1 + (z2 - z1) * k / n, 17);   // corridor half-width 17m (still clears corridors after building footprint upscale)
       }
     }
   }
-  // 防禦塔位置周圍清場:與 sim._spawnStructures 共用 solveTowerSites()(前線塔位是解出來的,
-  // MUST NOT 用 TOWER_FRACS 自己重算 —— 那會清錯位置、讓建物長在塔上)
-  // 名冊走 `siteCPs`:劇情戰役只有防守方有塔,直接讀 st[side] 會拿到 undefined(見該支註)
+  // Clear around defense-tower spots: shares solveTowerSites() with sim._spawnStructures (front-line
+  // spots are solved, MUST NOT recompute via TOWER_FRACS — that clears wrong spots and grows buildings on towers)
+  // Roster goes through `siteCPs`: story battles give towers to defenders only, so reading st[side] directly
+  // yields undefined (see that module note)
   for (const sites of solveTowerSites(lanesW, mapArg(cfg))) {
     for (const st of sites) {
-      // 砲塔 1/4 射程圈淨空:圈內不與背景實體物件重疊(平面背景另由 areaFreeLane 放行)
+      // Turret quarter-range ring clearance: no overlap with solid backdrop objects inside (flat backdrops separately pass via areaFreeLane)
       for (const p of siteCPs(st)) {
         blockPoint(p.x, p.z, TOWER_CLEAR_R, towerBase);
         rings.push({ x: p.x, z: p.z, r: TOWER_CLEAR_R });
@@ -280,7 +303,7 @@ function buildClearance(cfg, center) {
   return { blocked, towerBase, rings };
 }
 
-// ---- 地貌分類(影像顏色 + 高程 + 場地 mix 加權)----
+// ---- Land-cover classification (image color + elevation + venue mix weighting) ----
 function weightedPick(mix, rnd) {
   let sum = 0;
   for (const k in mix) sum += mix[k];
@@ -289,170 +312,172 @@ function weightedPick(mix, rnd) {
   return null;
 }
 
-// 純影像判(零亂數;2026-08-05 抽成單一縫):classify 的第一層 + urbanPts 收集的信任閘同吃。
-// 抄第二份色彩門檻 = 兩份規則遲早分家(症狀是「植被說這裡是市區、種子閘說不是」)。
-// 注意「低飽和灰 → urban」對裸岩/陰影/道路是**系統性誤判** —— 這正是建物種子 MUST NOT
-// 只信這一支、還要過「圖資查詢失敗才當備援」那道閘的原因(見 urbanPts 收集處)。
+// Pure image verdict (zero RNG; extracted into a single seam 2026-08-05): first layer of classify plus the
+// trust gate for urbanPts collection consume it together. Copying a second color threshold means two rules
+// diverge sooner or later (symptom: vegetation says urban here, seed gate says not).
+// Note low-saturation gray to urban is a **systematic misfire** on bare rock/shadow/roads — which is why
+// building seeds MUST NOT trust only this branch and must also pass the map-query-fails-first fallback gate
+// (see urbanPts collection).
 function classifyImg(rgb) {
   if (!rgb) return null;
   const [r, g, b] = rgb;
   if (b > r + 14 && b > g + 6) return 'water';
   if (g > r + 10 && g > b + 12) return 'green';
   const sat = Math.max(r, g, b) - Math.min(r, g, b);
-  if (sat < 24) return 'urban';              // 低飽和灰 → 人工地貌
-  return r > b + 12 ? 'bare' : 'green';      // 棕黃 → 裸露地
+  if (sat < 24) return 'urban';              // low-saturation gray means artificial cover
+  return r > b + 12 ? 'bare' : 'green';      // brown-yellow means bare land
 }
 
 function classify(rgb, h, mix, rnd) {
   let c = classifyImg(rgb);
-  if (mix && rnd() < 0.55) c = weightedPick(mix, rnd) || c;   // 場地類型加權
-  if (!c) c = h > 400 ? 'bare' : 'green';                     // 無影像時粗略猜
-  if (c === 'wet' && h > 8) c = 'green';                      // 濕地只在低海拔
+  if (mix && rnd() < 0.55) c = weightedPick(mix, rnd) || c;   // venue-type weighting
+  if (!c) c = h > 400 ? 'bare' : 'green';                     // rough guess without imagery
+  if (c === 'wet' && h > 8) c = 'green';                      // wetlands only at low altitude
   return c;
 }
 
-// ---- 植被幾何(低多邊形;key='foliage'/'conifer'/'grass' 依季節換色)----
+// ---- Vegetation geometry (low-poly; key='foliage'/'conifer'/'grass' recolors by season) ----
 const cyl = (r1, r2, h, n = 5) => new THREE.CylinderGeometry(r1, r2, h, n);
 const cone = (r, h, n = 5) => new THREE.ConeGeometry(r, h, n);
 const ico = (r) => new THREE.IcosahedronGeometry(r, 0);
 
-// 每型多零件 = 分層樹冠/主幹/枝節,擺脫「一根柱 + 一顆球」的扁平輪廓;
-// 每個 part 一個 InstancedMesh(draw call),整批仍是常數級
+// Multi-part per type = layered crown / trunk / branches, avoids flat pole-plus-ball silhouette;
+// one InstancedMesh per part (draw call), whole batch stays constant count
 const VEG_DEFS = {
   bamboo:      { parts: [{ g: cyl(0.10, 0.14, 6.5), y: 3.25, c: 0x8fae4e },
                          { g: cone(1.1, 2.4), y: 7.4, key: 'foliage' },
                          { g: cone(0.8, 1.6), y: 5.6, key: 'foliage', sy: 0.9 }] },
-  // 闊葉喬木:**不對稱寬展冠**(2026-08-06 使用者質疑「新舊物件結構這麼像」後重寫骨架)——
-  // 舊制是「兩顆同軸疊球」,而 birch/shrub/conifer2 也都是同一個骨架 ⇒ `lib:` 換的只有每一團的
-  // 表面起伏,換再多不同樹種的照片,這幾型看起來還是同一棵樹。闊葉的識別特徵是冠幅大於半個
-  // 樹高、主冠偏心、側簇各自朝不同方位散開。
-  broadleaf:   { parts: [{ g: cyl(0.22, 0.40, 3.8), y: 1.9, c: 0x6b4a2f },   // 主幹頂埋進主冠底 0.37m(冠底 3.43,舊 3.2 頂只靠細芯柱搭接)
-                         { g: cyl(0.10, 0.14, 2.2, 5), y: 3.6, c: 0x5f452c },   // 主分枝
-                         { g: cyl(0.09, 0.13, 2.0, 5), y: 4.1, px: 0.85, rz: -0.62, c: 0x5f452c },   // 斜出側枝(外端朝上)
-                         { g: cyl(0.09, 0.13, 1.8, 5), y: 3.9, pz: -0.8, rx: -0.58, c: 0x5f452c },   // 斜出側枝(外端朝上;rz 符號 = −sign(px)、rx 符號 = sign(pz),反了枝根會懸空)
-                         { g: ico(2.7), y: 5.1, px: 0.35, key: 'foliage', sy: 0.62 },   // 主冠偏心壓扁
+  // Broadleaf: asymmetric wide crown (skeleton rewritten after user decision 2026-08-06 that old/new parts looked alike)--
+  // old form was two coaxial stacked spheres, and birch/shrub/conifer2 shared that same skeleton, so lib: swaps only changed
+  // surface relief and these types still read as one tree. Broadleaf ID is crown width over half tree
+  // height, off-center main crown, side clusters spread to different bearings.
+  broadleaf:   { parts: [{ g: cyl(0.22, 0.40, 3.8), y: 1.9, c: 0x6b4a2f },   // trunk top buried 0.37m into crown base (base 3.43, old 3.2 top joined only by thin core)
+                         { g: cyl(0.10, 0.14, 2.2, 5), y: 3.6, c: 0x5f452c },   // main branch
+                         { g: cyl(0.09, 0.13, 2.0, 5), y: 4.1, px: 0.85, rz: -0.62, c: 0x5f452c },   // oblique side branch (tip up)
+                         { g: cyl(0.09, 0.13, 1.8, 5), y: 3.9, pz: -0.8, rx: -0.58, c: 0x5f452c },   // oblique side branch (tip up; rz sign = -sign(px), rx sign = sign(pz), flipped root floats)
+                         { g: ico(2.7), y: 5.1, px: 0.35, key: 'foliage', sy: 0.62 },   // off-center flattened main crown
                          { g: ico(1.7), y: 5.9, px: -1.5, pz: 0.5, key: 'foliage', sy: 0.66 },
                          { g: ico(1.7), y: 5.4, px: 1.7, pz: -0.9, key: 'foliage', sy: 0.6 },
                          { g: ico(1.2), y: 6.5, px: -0.3, pz: -0.6, key: 'foliage', sy: 0.7 }],
-                 // 整樹節點(2026-08-08 §5z-o);規則同 conifer2 那一段。冠形維持 ico 圓潤葉團
-                 // (使用者 2026-08-08 定案:寧可從 shrub 挖額度也不換成八面體的稜角冠)。
+                  // Whole-tree node (2026-08-08 Sec 5z-o); same rule as conifer2 block. Crown stays ico rounded foliage mass
+                  // (user decision 2026-08-08: take budget from shrub rather than switch to octahedron angular crown).
                  whole: [{ g: cyl(2.22, 2.22, 6.99), y: 3.425, c: 0x6b4a2f, lib: 'tree/bl_wood_a' },
                          { g: cyl(3.06, 3.06, 6.99), y: 3.425, key: 'foliage', lib: 'tree/bl_crown_a' }] },
-  // 白樺:**細高窄冠、葉簇沿幹上段縱向錯落**(與 broadleaf 的寬展冠成對比)——
-  // 先鋒樹種的樹型:幹細直、冠幅窄、葉簇一路散到頂,不是頂著兩顆球。
+  // Birch: slim tall narrow crown, leaf clusters staggered along upper trunk (contrast to broadleaf wide crown)--
+  // pioneer form: thin straight trunk, narrow crown, clusters run to the top, not two balls on top.
   birch:       { parts: [{ g: cyl(0.16, 0.22, 4.6), y: 2.3, c: 0xe8e4dc },
-                         { g: cyl(0.07, 0.10, 1.6, 4), y: 5.0, px: 0.5, rz: -0.85, c: 0xd8d2c6 },   // 細枝(外端朝上)
+                         { g: cyl(0.07, 0.10, 1.6, 4), y: 5.0, px: 0.5, rz: -0.85, c: 0xd8d2c6 },   // thin twig (tip up)
                          { g: cyl(0.07, 0.10, 1.5, 4), y: 5.8, px: -0.45, rz: 0.85, c: 0xd8d2c6 },
-                         { g: ico(1.2), y: 5.2, px: 0.75, key: 'foliage', sy: 1.15, lib: 'tree/vleaf_a12' },   // 縱向拉長的窄簇
+                         { g: ico(1.2), y: 5.2, px: 0.75, key: 'foliage', sy: 1.15, lib: 'tree/vleaf_a12' },   // narrow cluster stretched vertically
                          { g: ico(1.2), y: 6.2, px: -0.7, key: 'foliage', sy: 1.1, lib: 'tree/vleaf_a12' },
                          { g: ico(1.2), y: 7.1, pz: 0.55, key: 'foliage', sy: 1.05 },
                          { g: ico(1.2), y: 7.9, key: 'foliage', sy: 0.95 }] },
-  // 枯立木(2026-08-07 §5u):**整樹節點** —— `whole:` 是**一列以上**的陣列(2026-08-08 改;
-  // 枯幹單色不換季不是軟性 ⇒ 它恰好只需要一列,見 buildVegMeshes 的說明),載到 ⇒ 只畫那幾顆節點
-  // (T2 實拍漂白刺果松枯幹;缺枝/補接痕當砍伐或雷擊損毀 —— 使用者定案「自然的樹木
-  // 本來就不完美」),載不到 ⇒ **逐位元**退回 parts 三件式(比任何 fuse 近似都乾淨)。
-  // 佈局數學(vegSpan/散布)仍只讀 parts(partGeo 紀律);whole.g 只當入庫包絡與世界尺度。
+  // Snag (2026-08-07 Sec 5u): whole-tree node -- whole: is an array of one or more rows (changed 2026-08-08;
+  // single-color dead trunk needs no seasonal swap, so it needs exactly one row, see buildVegMeshes note); when loaded draw only those nodes
+  // (T2 photo of bleached bristlecone snag; missing branches read as logging or lightning damage -- user decision: natural trees
+  // are imperfect as-is); when missing, fall back bit-exact to 3-piece parts (cleaner than any fuse approximation).
+  // Layout math (vegSpan/scatter) still reads parts only (partGeo discipline); whole.g is only intake envelope and world scale.
   deadtree:    { parts: [{ g: cyl(0.14, 0.30, 4.4), y: 2.2, c: 0x6a5a48 },
                          { g: cyl(0.06, 0.1, 2.2, 5), y: 4.6, c: 0x5c4e40 },
                          { g: cyl(0.05, 0.08, 1.6, 4), y: 3.6, c: 0x5c4e40 }],
                  whole: [{ g: ico(3.2), y: 3.05, c: 0x9a8b74, lib: 'tree/snag_a' }] },
   conifer:     { parts: [{ g: cyl(0.20, 0.32, 2.0), y: 1.0, c: 0x5d4027 },
-                         { g: cyl(0.08, 0.20, 6.3), y: 5.15, c: 0x5d4027 },   // 主幹通頂(2.0→8.3,三層塔冠全串起,頂埋進頂錐)
-                         { g: cone(2.3, 3.4, 7), y: 3.2, key: 'conifer' },      // 三層塔狀樹冠
+                         { g: cyl(0.08, 0.20, 6.3), y: 5.15, c: 0x5d4027 },   // trunk through top (2.0 to 8.3, strings all three tower layers, tip buried in top cone)
+                         { g: cone(2.3, 3.4, 7), y: 3.2, key: 'conifer' },      // three-layer tower crown
                          { g: cone(1.8, 3.0, 7), y: 5.4, key: 'conifer' },
                          { g: cone(1.2, 2.6, 7), y: 7.4, key: 'conifer' }],
-                 // 整樹節點(2026-08-09):與 conifer2 同一支星盤生成器,只換樹種參數
-                 // (`STAR_SPECIES.fir`:5 角 / 谷底 0.55 / 凹面 1.7)。三種針葉在此之前
-                 // **一顆庫節點都沒有** —— 那三組樹種參數自 §5z-r 寫出來就沒上過畫面。
+                  // Whole-tree node (2026-08-09): same star-disc generator as conifer2, only species params differ
+                  // (STAR_SPECIES.fir: 5 lobes / valley 0.55 / concavity 1.7). Before this, all three conifers had
+                  // zero library nodes -- those three param sets never reached the screen since Sec 5z-r was written.
                  whole: [{ g: cyl(0.33, 0.33, 8.30), y: 4.133, c: 0x5d4027, lib: 'tree/cf1_wood_a' },
                          { g: cyl(2.23, 2.23, 8.30), y: 4.133, key: 'conifer', lib: 'tree/cf1_crown_a' }] },
-  // 針葉林幾何多樣化(2026-07-12):三角錐塔之外再添三款輪廓,同林異形
-  conifer2:    { parts: [{ g: cyl(0.18, 0.3, 2.4), y: 1.2, c: 0x54402a },       // 老雲杉:不規則簇疊冠
-                         { g: cyl(0.06, 0.18, 6.0), y: 5.4, c: 0x54402a },   // 主幹通頂(2.4→8.4,疊層葉簇全串起,頂埋進頂梢錐)
-                         { g: ico(2.0), y: 3.2, key: 'conifer', sy: 0.5 },   // 老雲杉:下層枝盤外伸、上層急收
+  // Conifer geometry variety (2026-07-12): three more silhouettes past the triangle tower, same forest reads varied
+  conifer2:    { parts: [{ g: cyl(0.18, 0.3, 2.4), y: 1.2, c: 0x54402a },       // old spruce: irregular stacked-cluster crown
+                         { g: cyl(0.06, 0.18, 6.0), y: 5.4, c: 0x54402a },   // trunk through top (2.4 to 8.4, strings stacked clusters, tip buried in top cone)
+                         { g: ico(2.0), y: 3.2, key: 'conifer', sy: 0.5 },   // old spruce: lower branch discs spread, upper gathers fast
                          { g: ico(1.6), y: 4.15, px: 0.62, pz: 0.3, key: 'conifer', sy: 0.46 },
                          { g: ico(1.6), y: 4.9, px: -0.58, pz: -0.35, key: 'conifer', sy: 0.44 },
                          { g: ico(1.4), y: 5.7, px: 0.4, key: 'conifer', sy: 0.42 },
                          { g: ico(1.4), y: 6.45, px: -0.34, pz: 0.28, key: 'conifer', sy: 0.4 },
                          { g: ico(0.9), y: 7.15, key: 'conifer', sy: 0.6 },
-                         { g: cone(0.5, 1.9, 5), y: 8.0, key: 'conifer' }],   // 突出頂梢
-                 // 整樹節點(2026-08-08 §5z-o):簡單幾何版一株樹 = **木質 + 葉冠兩顆節點**
-                 // (為什麼不能併成一顆:見 buildVegMeshes)。兩顆是 normalize_parts `--group`
-                 // **共用同一個變換**烤出來的 ⇒ 相對位置烤進頂點,兩列因此共用同一組 `y`
-                 // (= 聯集半跨,讓樹底落在 0),少一個可以寫錯的地方。
-                 // 逐部件 `lib:` 同輪退場 —— whole 載到時 parts 整組不畫,那幾列永遠不會再被
-                 // 解析,留著只會讓預算帳多算一份(而且對照台會把它們列成孤兒)。
-                 // 冠形 = **疊層星盤**(使用者 2026-08-08 手稿,§5z-r):上視各角邊長內凹、
-                 // 側視每層下緣內凹、層間平面錯開疊加、越上層角越短但頂角越尖、頂部不露幹、
-                 // **不需要樹枝**。一層 = 2 × 角數 × arc 面(6 角 × arc 2 × 8 層 = 192)。
-                 // ⚠ **葉冠的包絡與整株同高不是筆誤**:星盤把「尖端」還給了葉冠 —— 最上層星盤
-                 // 自己的頂點就是樹尖(而且是綠的),舊制那根**木質**頂梢(`--spire`)同輪退場
-                 // ⇒ 葉冠節點的頂 = 整株的頂。envelope 若沿用舊的 7.41,intake 的縱向契約會紅
-                 // 在「葉冠比包絡高」上,而那正是這一輪要的形狀。木質那一列反而縮到樹尖之下。
+                         { g: cone(0.5, 1.9, 5), y: 8.0, key: 'conifer' }],   // protruding top spike
+                  // Whole-tree node (2026-08-08 Sec 5z-o): simple-geometry tree = wood + crown two nodes
+                  // (why not merged into one: see buildVegMeshes). Both come from one normalize_parts --group transform bake
+                  // sharing one baked transform, so relative offsets live in vertices and both rows share one y set
+                  // (= union half-span, tree base lands on 0), one fewer place to miswrite.
+                  // Per-part lib: retires the same round -- when whole loads, parts group is skipped, those rows are never
+                  // parsed again, keeping them would double-count the budget (and the console lists them as orphans).
+                  // Crown = stacked star discs (user sketch 2026-08-08, Sec 5z-r): top view concave edge per lobe,
+                  // side view concave lower edge per layer, layers stacked with rotated planes, shorter lobes but sharper tip higher up, no bare trunk at top,
+                  // no branches needed. One layer = 2 x lobe count x arc faces (6 lobes x arc 2 x 8 layers = 192).
+                  // NOTE crown envelope as tall as whole tree is intentional: the star disc returns the tip to the crown -- the topmost disc
+                  // vertex is the tree tip (and it is green); the old wood tip spike (--spire) retires the same round
+                  // so crown node top = whole tree top. Keeping envelope at old 7.41 would fail the intake vertical contract
+                  // on crown-taller-than-envelope, which is exactly the shape this round wants. The wood row instead stops below the tip.
                  whole: [{ g: cyl(0.24, 0.24, 8.68), y: 4.251, c: 0x54402a, lib: 'tree/cf2_wood_a' },
                          { g: cyl(1.92, 1.92, 8.52), y: 4.251, key: 'conifer', lib: 'tree/cf2_crown_a' }] },
-  conifer3:    { parts: [{ g: cyl(0.14, 0.22, 1.2), y: 0.6, c: 0x5d4027 },      // 柱狀絲柏:細長紡錘
-                         { g: cyl(0.08, 0.14, 7.8), y: 5.1, c: 0x5d4027 },   // 主幹通頂(1.2→9.0,紡錘冠全串起,頂埋進頂錐)
+  conifer3:    { parts: [{ g: cyl(0.14, 0.22, 1.2), y: 0.6, c: 0x5d4027 },      // columnar cypress: slender spindle
+                         { g: cyl(0.08, 0.14, 7.8), y: 5.1, c: 0x5d4027 },   // trunk through top (1.2 to 9.0, strings spindle crown, tip buried in top cone)
                          { g: cone(1.1, 7.6, 6), y: 4.9, key: 'conifer' },
                          { g: cyl(0.9, 1.3, 2.2, 6), y: 2.2, key: 'conifer' },
                          { g: cone(0.5, 2.0, 5), y: 8.6, key: 'conifer' }],
-                 // `STAR_SPECIES.cypress`:8 角 / 谷底 0.70 / 凹面 2.4 —— 角多而淺、輪廓最直,
-                 // 配上這一型自己的細高包絡(r 1.30 × 全高 9.60)才是「柱狀」那個身分
+                  // STAR_SPECIES.cypress: 8 lobes / valley 0.70 / concavity 2.4 -- many shallow lobes, straightest outline,
+                  // paired with this type own tall thin envelope (r 1.30 x full height 9.60) to read as columnar
                  whole: [{ g: cyl(0.15, 0.15, 9.16), y: 4.560, c: 0x5d4027, lib: 'tree/cf3_wood_a' },
                          { g: cyl(1.26, 1.26, 9.16), y: 4.560, key: 'conifer', lib: 'tree/cf3_crown_a' }] },
-  conifer4:    { parts: [{ g: cyl(0.12, 0.36, 8.2), y: 4.1, c: 0x66492e },      // 雪松:平展層枝盤
+  conifer4:    { parts: [{ g: cyl(0.12, 0.36, 8.2), y: 4.1, c: 0x66492e },      // cedar: flat spreading tiered branch discs
                          { g: cyl(2.6, 3.1, 0.9, 8), y: 3.0, key: 'conifer' },
                          { g: cyl(2.0, 2.5, 0.85, 8), y: 4.6, key: 'conifer' },
                          { g: cyl(1.4, 1.9, 0.8, 8), y: 6.1, key: 'conifer' },
                          { g: cyl(0.7, 1.2, 0.75, 7), y: 7.4, key: 'conifer' },
                          { g: cone(0.5, 1.3, 6), y: 8.0, key: 'conifer' }],
-                 // `STAR_SPECIES.cedar`:4 角 / 谷底 0.45 / 凹面 1.4 —— 角少而深、層盤最平展,
-                 // 包絡最寬(r 3.10)⇒ 與絲柏在同一片林子裡一眼分得出來
+                  // STAR_SPECIES.cedar: 4 lobes / valley 0.45 / concavity 1.4 -- few deep lobes, flattest tiered discs,
+                  // widest envelope (r 3.10) so it reads apart from cypress in the same stand
                  whole: [{ g: cyl(0.33, 0.33, 8.25), y: 4.109, c: 0x66492e, lib: 'tree/cf4_wood_a' },
                          { g: cyl(3.00, 3.00, 8.25), y: 4.109, key: 'conifer', lib: 'tree/cf4_crown_a' }] },
-  // sf(軟性覆寫;2026-08-04):芒花穗/箭竹葉/蘆葦有固定色 ⇒ 沒有 key,但它們正是使用者
-  // 點名的「芒草」。細勾線與擺動由 `vegSoftKind` 讀這一欄,MUST NOT 另開一張名單。
+  // sf (soft override; 2026-08-04): silvergrass plume / bamboo leaf / reed have fixed colors, so no key, but they are exactly the
+  // user-named silvergrass. Fine hook lines and sway read this field via vegSoftKind, MUST NOT open a second list.
   silvergrass: { parts: [{ g: cone(0.85, 1.5), y: 0.75, key: 'grass' },
-                         { g: cone(0.4, 1.4, 5), y: 1.5, c: 0xd8cfa8, sf: 'grass' }] },   // 抽穗的芒花
+                         { g: cone(0.4, 1.4, 5), y: 1.5, c: 0xd8cfa8, sf: 'grass' }] },   // heading silvergrass plume
   arrowbamboo: { parts: [{ g: cone(0.9, 2.3), y: 1.15, c: 0x5c7a3a, sf: 'grass' },
                          { g: cone(0.5, 1.5), y: 2.2, c: 0x6b8a44, sf: 'grass' }] },
-  // 灌木:**叢生多幹、寬大於高**(舊制是縮小版的樹:兩顆同軸疊球)——灌木的識別特徵正好是
-  // 「沒有主幹、幾叢從地面各自長開」,故三團並排、高度互不相同。只有最大那一團接零件庫:
-  // 灌木 1909 個 instance 是全族最貴的一列(見 tri_budget families.veg),其餘兩團留保險絲
-  // —— 它們本來就被主團擋住大半。
+  // Shrub: multi-stem clump, wider than tall (old form was a scaled-down tree: two coaxial stacked spheres) -- shrub ID is exactly
+  // no main trunk, several clumps spread from the ground, so three masses side by side at different heights. Only the largest links the part library:
+  // shrub at 1909 instances is the costliest row in the family (see tri_budget families.veg), the other two keep fuse links
+  // -- they are mostly hidden behind the main mass anyway.
   shrub:       { parts: [{ g: ico(0.9), y: 0.55, px: 0.3, key: 'foliage', sy: 0.85, lib: 'tree/bush_a09' },
                          { g: ico(0.62), y: 0.42, px: -0.72, pz: 0.3, key: 'foliage', sy: 0.8 },
                          { g: ico(0.5), y: 0.36, px: -0.15, pz: -0.7, key: 'foliage', sy: 0.75 }] },
   succulent:   { parts: [{ g: cyl(0.5, 0.7, 0.9, 6), y: 0.45, c: 0x7a9c74 },
                          { g: cyl(0.28, 0.4, 0.7, 6), y: 1.1, c: 0x8cae82 }] },
   mangrove:    { parts: [{ g: cyl(0.25, 0.5, 1.8), y: 0.9, c: 0x54412e },
-                         { g: cyl(0.08, 0.12, 1.4, 4), y: 0.6, c: 0x4a3826 },   // 支柱根
-                         { g: cyl(0.08, 0.12, 1.3, 4), y: 0.55, px: 0.3, pz: -0.2, rz: 0.42, c: 0x4a3826 },   // 支柱根(多方位;上端 MUST 咬進幹面)
+                         { g: cyl(0.08, 0.12, 1.4, 4), y: 0.6, c: 0x4a3826 },   // prop root
+                         { g: cyl(0.08, 0.12, 1.3, 4), y: 0.55, px: 0.3, pz: -0.2, rz: 0.42, c: 0x4a3826 },   // prop root (multi-direction; top MUST bite into trunk face)
                          { g: cyl(0.08, 0.12, 1.2, 4), y: 0.5, px: -0.28, pz: 0.22, rz: -0.4, c: 0x4a3826 },
-                         { g: ico(2.0), y: 2.5, px: 0.4, key: 'foliage', sy: 0.42, lib: 'tree/vleaf_a20' },   // 低平寬冠(潮間帶樹型)
+                         { g: ico(2.0), y: 2.5, px: 0.4, key: 'foliage', sy: 0.42, lib: 'tree/vleaf_a20' },   // low flat wide crown (intertidal tree form)
                          { g: ico(1.4), y: 3.0, px: -0.9, pz: 0.5, key: 'foliage', sy: 0.4 }] },
   reed:        { parts: [{ g: cone(0.35, 1.9, 4), y: 0.95, c: 0xa9b06a, sf: 'grass' }] },
-  // ---- 神木林床層(森林分層最底層):樹苗 + 各式香菇 ----
-  // 分層邏輯:神木冠層 → 中小型同科喬木(sub-canopy,沿用 conifer*/broadleaf/birch)
-  // → 樹苗/灌木叢(shrub)/各式香菇(林床)。香菇無 key(不吃季節葉色):固定菌色,
-  // 蕈柄淺、蕈傘各異即「各品種」;蕈傘用壓扁 ico(低多邊形半球)貼合日漫 toon 風。
+  // ---- Giant-tree forest floor (lowest forest layer): saplings + assorted mushrooms ----
+  // Layering: giant canopy -> small/mid same-family trees (sub-canopy, reuses conifer*/broadleaf/birch)
+  // -> saplings / shrubs (shrub) / assorted mushrooms (floor). Mushrooms have no key (no seasonal tint): fixed fungus colors,
+  // pale stems with varied caps read as varieties; caps use squashed ico (low-poly hemispheres) for anime toon look.
   sapling:     { parts: [{ g: cyl(0.05, 0.09, 1.6, 5), y: 0.8, c: 0x6b4a2f },
-                         { g: cyl(0.04, 0.06, 0.9, 4), y: 1.5, c: 0x5f452c },      // 細分枝
+                         { g: cyl(0.04, 0.06, 0.9, 4), y: 1.5, c: 0x5f452c },      // thin sub-branch
                          { g: ico(0.55), y: 1.65, key: 'foliage', sy: 0.9 },
-                         { g: ico(0.36), y: 2.05, key: 'foliage', sy: 0.85 }] },   // 疊層幼冠
-  redcap:      { parts: [{ g: cyl(0.16, 0.24, 1.1, 7), y: 0.55, c: 0xf2ece0 },     // 乳白蕈柄
-                         { g: cyl(0.82, 0.5, 0.14, 10), y: 1.02, c: 0xf5ecd8 },    // 傘底菌褶承盤
-                         { g: ico(0.95), y: 1.28, sy: 0.52, c: 0xc0392b },         // 半球紅傘(毒鵝膏式)
-                         { g: ico(0.14), y: 1.55, pz: 0.42, c: 0xfbf6ea },         // 白斑
+                         { g: ico(0.36), y: 2.05, key: 'foliage', sy: 0.85 }] },   // stacked juvenile crown
+  redcap:      { parts: [{ g: cyl(0.16, 0.24, 1.1, 7), y: 0.55, c: 0xf2ece0 },     // milky stem
+                         { g: cyl(0.82, 0.5, 0.14, 10), y: 1.02, c: 0xf5ecd8 },    // gill support disc under cap
+                         { g: ico(0.95), y: 1.28, sy: 0.52, c: 0xc0392b },         // hemispheric red cap (amanita style)
+                         { g: ico(0.14), y: 1.55, pz: 0.42, c: 0xfbf6ea },         // white spot
                          { g: ico(0.13), y: 1.6, px: 0.38, pz: -0.2, c: 0xfbf6ea },
                          { g: ico(0.12), y: 1.52, px: -0.44, c: 0xfbf6ea }] },
-  browncap:    { parts: [{ g: cyl(0.2, 0.3, 0.8, 7), y: 0.4, c: 0xd9c3a0 },        // 矮胖蕈柄
-                         { g: cyl(0.9, 0.58, 0.1, 10), y: 0.86, c: 0xe4d6b8 },     // 菌褶
-                         { g: ico(1.05), y: 1.0, sy: 0.4, c: 0x7a4a2c }] },        // 扁圓褐傘(牛肝菌/香菇感)
-  parasol:     { parts: [{ g: cyl(0.08, 0.12, 1.7, 6), y: 0.85, c: 0xe8dcc4 },    // 細長蕈柄
-                         { g: cone(0.62, 0.55, 9), y: 1.9, c: 0xb79063 },          // 錐形陽傘
-                         { g: ico(0.24), y: 2.12, sy: 0.7, c: 0xa07c4e }] },       // 傘心凸頂
-  toadstool:   { parts: [{ g: cyl(0.06, 0.09, 0.55, 5), y: 0.28, c: 0xe4d2b0 },   // 蜜環菌叢:一叢高低錯落小菇
+  browncap:    { parts: [{ g: cyl(0.2, 0.3, 0.8, 7), y: 0.4, c: 0xd9c3a0 },        // short stout stem
+                         { g: cyl(0.9, 0.58, 0.1, 10), y: 0.86, c: 0xe4d6b8 },     // gills
+                         { g: ico(1.05), y: 1.0, sy: 0.4, c: 0x7a4a2c }] },        // flat-round brown cap (bolete/shiitake feel)
+  parasol:     { parts: [{ g: cyl(0.08, 0.12, 1.7, 6), y: 0.85, c: 0xe8dcc4 },    // slender stem
+                         { g: cone(0.62, 0.55, 9), y: 1.9, c: 0xb79063 },          // conical parasol
+                         { g: ico(0.24), y: 2.12, sy: 0.7, c: 0xa07c4e }] },       // raised cap center
+  toadstool:   { parts: [{ g: cyl(0.06, 0.09, 0.55, 5), y: 0.28, c: 0xe4d2b0 },   // honey-fungus cluster: staggered small mushrooms
                          { g: ico(0.26), y: 0.62, sy: 0.6, c: 0xd9a441 },
                          { g: cyl(0.05, 0.08, 0.42, 5), y: 0.21, px: 0.42, pz: 0.18, c: 0xe4d2b0 },
                          { g: ico(0.2), y: 0.48, px: 0.42, pz: 0.18, sy: 0.6, c: 0xd7a94f },
@@ -460,8 +485,8 @@ const VEG_DEFS = {
                          { g: ico(0.18), y: 0.42, px: -0.36, pz: 0.24, sy: 0.6, c: 0xcf9a3a },
                          { g: cyl(0.04, 0.06, 0.3, 5), y: 0.15, px: 0.1, pz: -0.4, c: 0xe4d2b0 },
                          { g: ico(0.15), y: 0.36, px: 0.1, pz: -0.4, sy: 0.6, c: 0xdcae52 }] },
-  // 邊界巨岩簇(裸露地邊界帶專用;InstancedMesh 管線,公稱 ~5m × s 1.4~3.4 → 7~17m)
-  // j:2 = 細節抖動振幅加倍(xform.js dj):每簇岩塊大小/稜線各異,不再同一張剪影
+  // Boundary megalith cluster (bare-land boundary band only; InstancedMesh path, nominal about 5m x s 1.4-3.4 = 7-17m)
+  // j:2 = detail jitter amplitude doubled (xform.js dj): each cluster varies in block size/ridge, no shared silhouette
   borderrock:  { parts: [{ g: ico(2.4), y: 1.4, j: 2, c: 0x8f8878 },
                          { g: ico(1.7), y: 0.9, px: 2.2, sy: 0.75, j: 2, c: 0x7d786c },
                          { g: ico(1.3), y: 0.7, px: -1.9, pz: 1.1, sy: 0.7, j: 2, c: 0x968e7c },
@@ -473,7 +498,7 @@ const TRUNK_TYPES = new Set([
   'conifer2', 'conifer3', 'conifer4', 'sapling',
 ]);
 
-/** 一般樹幹碰撞吃 VEG_DEFS 的木質首件與 vegPartXform，同畫面實例共用同一把變換尺。 */
+/** Generic trunk collision uses the wood first-part of VEG_DEFS with vegPartXform; co-visible instances share one transform scale. */
 function registerTreeTrunkColliders(items, blockers) {
   const box = new THREE.Box3(), size = new THREE.Vector3(), center = new THREE.Vector3();
   const mat = new THREE.Matrix4(), pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
@@ -521,45 +546,45 @@ function forestTypeAt(terrain, x, z, roll, leafType = 'unknown') {
   return pickTreeType((terrain.regionCenter || terrain.center)?.lat, altitude, roll, forestSeed(x, z), environment);
 }
 
-// 神木吃四季:綠色主導(g 為最大通道)的樹冠/苔蘚/地衣零件自動標記 'gleaf' → 季節疊色
-// (保留樹種色相與冠層層次);紅褐樹幹/板根/剝皮絲帶(R 主導)不動。>65m 巨樹皆常綠,
-// 故用常綠專屬 tint(SEASON_GIANT_TINT,非闊葉橘紅),見 seasonColor。單一縫、免逐零件手標。
+// Giants take four seasons: green-dominant (g largest channel) crown/moss/lichen parts auto-tag gleaf for seasonal tint
+// (keeps species hue and canopy layering); red-brown trunk/buttress/peel ribbons (R dominant) stay fixed. Giants over 65m stay evergreen,
+// so use evergreen-only tint (SEASON_GIANT_TINT, not broadleaf orange-red), see seasonColor. Single seam, no per-part hand tags.
 for (const def of Object.values(GIANT_DEFS)) for (const p of def.parts) {
   const c = p.c; if (c == null) continue;
   const r = c >> 16 & 255, g = c >> 8 & 255, b = c & 255;
   if (g > r && g >= b) p.key = 'gleaf';
 }
 
-// ---- 巨木表面特徵(鳥巢/山蘇/蟻窩/蜂窩/樹屋/垂藤):與植被同管線 InstancedMesh ----
-// 放置時把「樹幹半徑 + 掛載高度」烤進實例座標(item.x/y/z),零件只做小幅局部偏移;
-// item.s ≈ 1 與樹齡脫鉤 → 特徵在任何體格的巨木上世界尺寸恆定。
+// ---- Giant surface features (nests/ferns/ant nests/beehives/treehouses/hanging vines): same InstancedMesh path as vegetation ----
+// Placement bakes trunk radius + mount height into instance coords (item.x/y/z); parts only add small local offsets;
+// item.s near 1 stays decoupled from tree age, so features keep constant world size on any giant bulk.
 //
-// 支撐枝單一縫 bough():近水平側枝(faceOut,local +x = 徑向外),根粗梢細 + 梢端雙叉上揚
-// + 葉簇(key:'foliage' 吃季節色)。巢/蕨/窩/蜂巢/藤枝皆疊在同一份枝相上,payload 各自加掛;
-// 改枝的粗細/分叉/葉量只需動這裡一處。梢端雙叉靠 rz=π/2+δ(上揚)× rx=±φ(左右分)splay。
+// Support branch single seam bough(): near-horizontal side branch (faceOut, local +x = radial out), thick root tapering to tip + forked upturned tip
+// + leaf cluster (key foliage takes seasonal color). Nests/ferns/nests/hives/vines all stack on the same branch phase, payloads attach separately;
+// branch thickness/fork/leaf edits only need this one place. Tip fork uses rz=pi/2+d (up) by rx=+-phi (side) splay.
 const bough = () => [
-  { g: cyl(0.28, 0.13, 2.8, 6), y: 0, px: 0.65, rz: Math.PI / 2, c: 0x5a4632 },                                    // 主枝(根粗梢細)
-  { g: cyl(0.12, 0.05, 1.5, 5), y: 0.2, px: 1.55, pz: 0.12, rx: 0.8, rz: Math.PI / 2 + 0.35, c: 0x5a4632 },        // 梢上叉(+z 上揚)
-  { g: cyl(0.12, 0.05, 1.4, 5), y: 0.2, px: 1.55, pz: -0.12, rx: -0.85, rz: Math.PI / 2 + 0.3, c: 0x5a4632 },      // 梢下叉(−z 上揚)
-  { g: cyl(0.09, 0.04, 1.1, 4), y: 0.32, px: 2.05, rz: Math.PI / 2 + 0.22, c: 0x5a4632 },                          // 中央續枝
-  { g: ico(0.75), y: 0.7, px: 2.5, pz: 0.42, sy: 0.8, key: 'foliage', c: 0x4f7a3c },                               // 梢端葉簇(季節色)
+  { g: cyl(0.28, 0.13, 2.8, 6), y: 0, px: 0.65, rz: Math.PI / 2, c: 0x5a4632 },                                    // main branch (thick root, thin tip)
+  { g: cyl(0.12, 0.05, 1.5, 5), y: 0.2, px: 1.55, pz: 0.12, rx: 0.8, rz: Math.PI / 2 + 0.35, c: 0x5a4632 },        // tip upper fork (+z up)
+  { g: cyl(0.12, 0.05, 1.4, 5), y: 0.2, px: 1.55, pz: -0.12, rx: -0.85, rz: Math.PI / 2 + 0.3, c: 0x5a4632 },      // tip lower fork (-z up)
+  { g: cyl(0.09, 0.04, 1.1, 4), y: 0.32, px: 2.05, rz: Math.PI / 2 + 0.22, c: 0x5a4632 },                          // central continuation
+  { g: ico(0.75), y: 0.7, px: 2.5, pz: 0.42, sy: 0.8, key: 'foliage', c: 0x4f7a3c },                               // tip leaf cluster (seasonal)
   { g: ico(0.66), y: 0.62, px: 2.5, pz: -0.42, sy: 0.8, key: 'foliage', c: 0x4f7a3c },
   { g: ico(0.6), y: 0.95, px: 2.75, sy: 0.8, key: 'foliage', c: 0x4f7a3c },
 ];
 const GIANT_DECO = {
-  // 鳥巢生在枝梢叉口(px≈1.25),不貼主幹;巢杯/蛋/鳥疊在 bough 上。
+  // Nest sits at branch tip fork (px near 1.25), not against trunk; cup/eggs/bird stack on bough.
   gnest:     { parts: [...bough(),
                        { g: new THREE.TorusGeometry(0.85, 0.3, 5, 8), y: 0.2, px: 1.25, rx: Math.PI / 2, c: 0x6a5138 },
                        { g: ico(0.2), y: 0.3, px: 1.45, c: 0xf2ead6 },
                        { g: ico(0.2), y: 0.3, px: 1.08, pz: 0.18, c: 0xf6efdc },
-                       { g: cone(0.28, 0.75, 4), y: 0.66, px: 1.05, pz: -0.32, c: 0x4a586a }] },      // 停棲的鳥
-  // 山蘇(鳥巢蕨):枝上腐植土墊(根系聚積腐植)+ 蓮座長葉。funnel 正解 = 葉「底聚頂展」:
-  // 每片葉底端聚於共同基點 B=(1.2,0.35,0),沿葉軸 d 外展上翹(中心 = B + (h/2)·d,故不中間交叉)。
-  // 方位角 a → tz=-cos·k, tx=sin·k;葉軸 d=(-sin tz, cos tz·cos tx, cos tz·sin tx),k 控展開角。
+                       { g: cone(0.28, 0.75, 4), y: 0.66, px: 1.05, pz: -0.32, c: 0x4a586a }] },      // perched bird
+  // Bird-nest fern: humus pad on branch (roots gather humus) + rosette fronds. Funnel rule = fronds gather at base, spread at top:
+  // each frond base meets at shared base B=(1.2,0.35,0), spreads up along frond axis d (center = B + (h/2) x d, so no mid crossing).
+  // bearing a gives tz=-cos x k, tx=sin x k; frond axis d=(-sin tz, cos tz x cos tx, cos tz x sin tx), k controls spread.
   epiphyte:  { parts: [...bough(),
-                       { g: ico(0.62), y: 0.12, px: 1.2, sy: 0.42, c: 0x4a3b28 },                                  // 腐植土墊
+                       { g: ico(0.62), y: 0.12, px: 1.2, sy: 0.42, c: 0x4a3b28 },                                  // humus pad
                        { g: ico(0.46), y: 0.16, px: 0.86, sy: 0.42, c: 0x40331f },
-                       { g: ico(0.42), y: 0.4, px: 1.2, sy: 0.5, key: 'foliage', c: 0x4f7a3c },                    // 蓮座心(葉基叢)
+                       { g: ico(0.42), y: 0.4, px: 1.2, sy: 0.5, key: 'foliage', c: 0x4f7a3c },                    // rosette heart (frond base cluster)
                        ...Array.from({ length: 11 }, (_, i) => {
                          const a = i / 11 * Math.PI * 2, k = 0.72, h = 1.55 - (i % 3) * 0.12;
                          const tz = -Math.cos(a) * k, tx = Math.sin(a) * k;
@@ -567,59 +592,59 @@ const GIANT_DECO = {
                          return { g: cone(0.13, h, 4), px: 1.2 + dx * h / 2, y: 0.35 + dy * h / 2, pz: dz * h / 2,
                                   rx: tx, rz: tz, key: 'foliage', c: [0x4f7a3c, 0x5c8a46, 0x567a40][i % 3] };
                        })] },
-  // 蟻窩:褐色紙質蟻碳窩裹住枝身中段
+  // Ant nest: brown papery arboreal nest wraps mid branch
   antnest:   { parts: [...bough(),
                        { g: ico(0.62), y: 0.05, px: 0.95, sy: 1.15, c: 0x4a3524 },
                        { g: ico(0.4), y: 0.1, px: 1.35, sy: 1.1, c: 0x53402c },
                        { g: ico(0.34), y: -0.05, px: 0.7, sy: 1.05, c: 0x40301f }] },
-  // 蜂窩:垂吊於枝下(y<0),頂錐接枝、巢體垂墜;底部露出六角蜂巢面(comb,朝下)。
-  // comb = 六角柱蜂窩排列:中央 1 + 環 6,環距 = 兩倍邊心距(≈0.26)恰好貼合成網格。
+  // Beehive: hangs below branch (y<0), top cone joins branch, body droops; hex comb face (comb, facing down) exposed at base.
+  // comb = hex-cell pack: center 1 + ring 6, ring pitch = twice apothem (about 0.26) to tile the grid exactly.
   beehive:   { parts: [...bough(),
-                       { g: cone(0.5, 0.7, 7), y: -0.35, px: 1.35, c: 0xb99860 },                                  // 頂錐(接枝)
-                       { g: ico(0.56), y: -0.92, px: 1.35, sy: 1.15, c: 0xc7a56b },                                // 巢體(紙質外殼)
-                       { g: cyl(0.58, 0.5, 0.28, 7), y: -1.52, px: 1.35, c: 0xbf9c63 },                            // 巢底承盤
+                       { g: cone(0.5, 0.7, 7), y: -0.35, px: 1.35, c: 0xb99860 },                                  // top cone (joins branch)
+                       { g: ico(0.56), y: -0.92, px: 1.35, sy: 1.15, c: 0xc7a56b },                                // body (papery shell)
+                       { g: cyl(0.58, 0.5, 0.28, 7), y: -1.52, px: 1.35, c: 0xbf9c63 },                            // base support disc
                        ...Array.from({ length: 7 }, (_, i) => {
                          const a = (i - 1) / 6 * Math.PI * 2, r = i === 0 ? 0 : 0.26;
                          return { g: cyl(0.145, 0.145, 0.2, 6), y: -1.72,
                                   px: 1.35 + Math.cos(a) * r, pz: Math.sin(a) * r,
                                   c: i % 2 ? 0xd9b869 : 0xcdaa5c };
                        }),
-                       { g: ico(0.07), y: -1.2, px: 1.35, pz: 0.56, c: 0x2a2018 }] },                              // 巢口
-  // 一般葉枝:只有 bough(豐富枝相);vinebranch 再垂掛攀藤
+                       { g: ico(0.07), y: -1.2, px: 1.35, pz: 0.56, c: 0x2a2018 }] },                              // hive mouth
+  // Plain leafy branch: bough only (rich branch phase); vinebranch adds hanging climbers
   branch:    { parts: bough() },
   vinebranch:{ parts: [...bough(),
-                       { g: cyl(0.05, 0.09, 3.2, 4), y: -1.5, px: 1.7, pz: 0.1, c: 0x567a40 },                     // 垂藤
+                       { g: cyl(0.05, 0.09, 3.2, 4), y: -1.5, px: 1.7, pz: 0.1, c: 0x567a40 },                     // hanging vine
                        { g: cyl(0.04, 0.07, 2.4, 4), y: -0.85, px: 2.2, pz: -0.06, c: 0x5c8a46 },
-                       { g: ico(0.28), y: -2.9, px: 1.7, pz: 0.1, sy: 0.7, key: 'foliage', c: 0x4f7a3c },          // 藤端葉
+                       { g: ico(0.28), y: -2.9, px: 1.7, pz: 0.1, sy: 0.7, key: 'foliage', c: 0x4f7a3c },          // vine tip leaf
                        { g: ico(0.22), y: -1.85, px: 2.2, pz: -0.06, sy: 0.7, key: 'foliage', c: 0x5c8a46 }] },
-  treehouse: { parts: [{ g: new THREE.BoxGeometry(3.6, 0.4, 3.6), y: 0, c: 0x7a5a3c },       // 平台
-                       { g: new THREE.BoxGeometry(2.2, 1.9, 2.0), y: 1.15, c: 0x8a6a48 },    // 小屋
-                       { g: cone(2.0, 1.4, 4), y: 2.8, c: 0x6e4a38 },                        // 屋頂
-                       { g: new THREE.BoxGeometry(0.9, 1.2, 0.12), y: 1.0, pz: 1.05, c: 0x3e3226 },   // 門
-                       { g: new THREE.BoxGeometry(0.5, 4.5, 0.14), y: -2.4, pz: 1.5, c: 0x6a4e34 },   // 垂降木梯
-                       { g: cyl(0.14, 0.6, 1.4, 4), y: -0.9, px: 1.2, c: 0x6a4e34 },         // 斜撐
+  treehouse: { parts: [{ g: new THREE.BoxGeometry(3.6, 0.4, 3.6), y: 0, c: 0x7a5a3c },       // platform
+                       { g: new THREE.BoxGeometry(2.2, 1.9, 2.0), y: 1.15, c: 0x8a6a48 },    // hut
+                       { g: cone(2.0, 1.4, 4), y: 2.8, c: 0x6e4a38 },                        // roof
+                       { g: new THREE.BoxGeometry(0.9, 1.2, 0.12), y: 1.0, pz: 1.05, c: 0x3e3226 },   // door
+                       { g: new THREE.BoxGeometry(0.5, 4.5, 0.14), y: -2.4, pz: 1.5, c: 0x6a4e34 },   // drop ladder
+                       { g: cyl(0.14, 0.6, 1.4, 4), y: -0.9, px: 1.2, c: 0x6a4e34 },         // diagonal brace
                        { g: cyl(0.14, 0.6, 1.4, 4), y: -0.9, px: -1.2, c: 0x6a4e34 }] },
-  vine:      { parts: [{ g: cyl(0.07, 0.14, 7, 4), y: -3.5, c: 0x567a40 },                   // 主幹垂掛藤蔓
+  vine:      { parts: [{ g: cyl(0.07, 0.14, 7, 4), y: -3.5, c: 0x567a40 },                   // trunk-hung vine
                        { g: ico(0.4), y: -7, sy: 0.6, c: 0x4f7a3c },
                        { g: ico(0.3), y: -4.6, px: 0.3, sy: 0.6, c: 0x5c8a46 }] },
 };
 
-// 針葉神木(配針葉幼樹)vs 闊葉神木(euc/meranti/dinizia,配闊葉幼樹):林下同科喬木分流
+// Conifer giants (with conifer saplings) vs broadleaf giants (euc/meranti/dinizia, with broadleaf saplings): sub-canopy same-family split
 const CONIFER_GIANTS = new Set(['redwood', 'sequoia', 'dougfir', 'sitka', 'taiwania', 'klinki', 'alerce']);
 
-/** 綠地神木群落:同一樹種成群、株高各異;樹幹登記碰撞柱(障礙 + 隱蔽) */
+/** Green-space giant grove: same species clustered, varied heights; trunks register collider posts (obstacle + cover) */
 /**
- * 神木的**冠幅半徑**(體格 1.0 時;m)—— 由零件表推導,MUST NOT 逐樹種手寫。
+ * Giant crown radius (at bulk 1.0; m) -- derived from the part table, MUST NOT hand-write per species.
  *
- * 樹冠羞避量的是「冠緣到冠緣」,而冠幅只有零件表知道:取樹高 35% 以上(各樹種冠層約自
- * 40% 樹高起,留一點餘裕)所有零件的最遠水平點。手寫一欄 `cr` 的話,改了任何一個冠簇的
- * `px/pz` 或半徑,間隙規則就與看得見的樹冠分家 —— 而畫面上只表現成「有些樹冠還是黏在一起」。
- * three 的 `parameters` 是各 Geometry 建構時存下的原始參數(r160 恆有)。
+ * Crown shyness measures edge-to-edge, and only the part table knows crown width: take the farthest horizontal point of
+ * all parts above 35 percent of tree height (each canopy starts near 40 percent, with a little margin). Hand-writing a cr field means any crown cluster
+ * px/pz or radius edit splits the gap rule from the visible crown -- on screen that only shows as some crowns still sticking together.
+ * three parameters are the raw params stored at each Geometry construction (always present at r160).
  *
- * AI 零件庫(`p.lib`)在這裡**刻意不解析**(MUST NOT 改吃 partGeo / 掃庫幾何頂點):
- * 冠幅是佈局數學(縮冠量/傾斜方向/後續佔位全吃它),庫幾何隨載入成敗而異,讀它 =
- * 佈局跨客戶端逐位元分家(§2.3)。保險絲 `p.g` 的包絡 ≥ GLB 實體(intake 契約)⇒
- * 以它計冠幅恆保守 —— 冠層零件換 GLB 不需要動這一支,這正是 canopy GLB 的解鎖條件。
+ * AI part library (p.lib) is deliberately not resolved here (MUST NOT switch to partGeo / scan library vertex data):
+ * crown width is layout math (shrink amount / lean direction / later occupancy all read it), library geometry varies with load success, reading it =
+ * layout splits bit-exact across clients (Sec 2.3). Fuse p.g envelope covers GLB body (intake contract), so
+ * counting crown width from it stays conservative -- canopy parts can swap GLB without touching this branch, which is the canopy GLB unlock condition.
  */
 function giantCrownR(def) {
   if (def._cr != null) return def._cr;
@@ -6550,17 +6575,18 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       const under = strc && !!tw.sink;   // 地下道(平地下穿)= 下沉剖面 + 兩端引道
       // 結構隧道/地下道 MUST 吃 way._tun 存下的那一份折線:地下道的折線含兩端**引道延伸段**
       // (圖資的 tunnel way 只畫覆蓋段,引道是我們接出去的),重算 densify(raw) 會少掉引道。
-      let pieces = strc ? [tw.pts] : bridge ? [densify(raw, ROAD_SEG)]
+      const pieces = strc ? [tw.pts] : bridge ? [densify(raw, ROAD_SEG)]
         : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
+      let renderPieces = pieces;
       // Water-crossing decks retain the grading planner's original path and datum.
       if (!strc && !bridge && !pieces.some(piece => piece.wet === true)) {
         const curved = splitWaterPieces(densify(curvePath(raw, structureLayer(way.tags)), ROAD_SEG), terrain, inclSwamp);
         if (curved.length === pieces.length && !curved.some(piece => piece.wet === true)) {
           curved.forEach((piece, i) => layoutRuns.set(piece, pieces[i]));
-          pieces = curved;
+          renderPieces = curved;
         }
       }
-      for (const run of pieces) {
+      for (const run of renderPieces) {
       if (run.length < 2) continue;
       // 通過水域或沼澤的道路與鐵道一率都以高架橋處理
       const brg = bridge || run.wet === true;

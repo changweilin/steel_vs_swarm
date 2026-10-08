@@ -1,21 +1,21 @@
-// ============ 零件 × 實例 變換數學(純函式,零依賴)============
-// 植被/神木是「宣告式零件表 + 每株實例變換」組裝的:零件自帶 px/pz(距軸心偏移)、
-// y(高度)、rx/rz(枝幹傾角)、sy(縱向壓縮);實例自帶 x/y/z(落點)、s(體格)、
-// ry(朝向)、tx/tz(每株站姿微傾斜)、dj(細節種子,見下)。
+// ============ Part x instance transform math (pure functions, zero dependencies) ============
+// Vegetation / sacred trees assemble from declarative part tables + per-plant instance transforms: parts carry px/pz (offset from axis),
+// y (height), rx/rz (branch tilt), sy (vertical squash); instances carry x/y/z (landing point), s (build),
+// ry (facing), tx/tz (per-plant stance micro-tilt), dj (detail seed, see below).
 //
-// 單一縫(§2.1):渲染端 biomes.js `buildVegMeshes` 與離線稽核 tools/audit_object_joints.mjs
-// **共用這一支**,零件接合的正確性才驗得到真品。
+// Single seam (section 2.1): render-side buildVegMeshes in biomes.js and offline audit tools/audit_object_joints.mjs
+// share this same file, so part-joint correctness is checked against the real thing.
 //
-// 契約:實例的朝向與微傾斜 MUST 當「剛體」整株套用 —— 先把零件擺到植株局部座標,
-// 再整株旋轉。**MUST NOT** 把 ry/tx/tz 併進零件自己的歐拉角:
-//   ① three 的 Euler 'XYZ' = Rx·Ry·Rz,把 ry 夾在中間 ⇒ 任何 rx ≠ 0 的零件
-//      (枝梢雙叉、垂掛松蘿、蜂窩)方向會隨植株朝向被攪亂,而位移只吃水平旋轉
-//      ⇒ 枝叉指到別的地方,接合處開縫。
-//   ② 微傾斜若逐零件「繞自身中心」轉,零件中心不動 ⇒ 不是整株傾斜,而是
-//      樹幹分段互相剪切錯位(接合面出現階差)。
-// 接合完成度必須與 ry/tx/tz 無關,這是本檔存在的唯一理由。
+// Contract: instance facing and micro-tilt MUST apply as one rigid whole-plant transform -- place parts in plant-local space first,
+// then rotate the whole plant. MUST NOT fold ry/tx/tz into each part's own Euler angles:
+//   1. three Euler XYZ = Rx * Ry * Rz, which sandwiches ry in the middle, so any part with rx non-zero
+//      (branch forks, hanging lichen, hives) gets its direction scrambled by plant facing, while offsets only take horizontal rotation
+//      -- forks point elsewhere and joints split open.
+//   2. If micro-tilt rotates each part around its own center, part centers stay put, so the result is not whole-plant tilt but
+//      trunk segments shearing past each other (steps appear on joint faces).
+// Joint completeness MUST be independent of ry/tx/tz; that is the only reason this file exists.
 
-/** three 的 Euler order 'XYZ'(R = Rx·Ry·Rz)→ 四元數 [x,y,z,w] */
+/** three Euler order XYZ (R = Rx * Ry * Rz) -> quaternion [x,y,z,w] */
 export function quatFromEuler(x, y, z) {
   const c1 = Math.cos(x / 2), c2 = Math.cos(y / 2), c3 = Math.cos(z / 2);
   const s1 = Math.sin(x / 2), s2 = Math.sin(y / 2), s3 = Math.sin(z / 2);
@@ -27,7 +27,7 @@ export function quatFromEuler(x, y, z) {
   ];
 }
 
-/** 四元數相乘(a 後乘 b:等效旋轉矩陣 Ra·Rb) */
+/** Quaternion multiply (a post-multiplied by b: equivalent rotation matrix Ra * Rb) */
 export function quatMul(a, b) {
   const [ax, ay, az, aw] = a, [bx, by, bz, bw] = b;
   return [
@@ -38,7 +38,7 @@ export function quatMul(a, b) {
   ];
 }
 
-/** 四元數旋轉向量 */
+/** Rotate a vector by a quaternion */
 export function quatApply(q, v) {
   const [x, y, z, w] = q, [vx, vy, vz] = v;
   const tx = 2 * (y * vz - z * vy), ty = 2 * (z * vx - x * vz), tz = 2 * (x * vy - y * vx);
@@ -49,20 +49,20 @@ export function quatApply(q, v) {
   ];
 }
 
-// ---- 細節抖動(2026-07-29「自然物件別太對稱、太整齊」)----
-// dj = 每株細節種子(0~1,佈點時抽定;undefined/0 = 不抖,輸出與舊制逐位元一致)。
-// 只動兩個**不影響接合**的自由度:
-//   ① jr:水平半徑**只增不減**(縮放錨定零件中心,y 與 px/pz 偏移、縱向尺寸皆不動)——
-//      增肥只會把零件埋得更深,MUST NOT 改成雙向抖(縮小會拉開「名義上剛好貼合」的
-//      接合:桉樹貼幹葉簇/苔蘚簇一縮就 FLOAT,audit_object_joints 紅過)。
-//      樹冠/葉簇(有 key)+0~18%、結構件(幹/枝)+0~8%(演出半徑仍收在權威
-//      碰撞柱的餘裕內,原則 4);零件可帶 j 倍率(如 borderrock 岩塊 j:2)放大振幅。
-//   ② spin:繞零件**自身擠出軸**自轉(後乘四元數 = 局部軸,端點不動)——
-//      疊錐的面稜逐層錯開、ico 簇換剪影,同型兩株不再同一張剪影。
-//      **只給軸心零件(px/pz = 0)**:偏移件(貼幹葉簇/苔簇)的貼合靠特定朝向的
-//      頂點,自轉會把「剛好貼上」轉開(euc 貼幹簇 FLOAT 過,稽核紅字為證)。
-// MUST NOT 抖 y / px / pz / 縱向縮放(會拉開疊接縫);抖動只由(零件識別, dj)決定,
-// 與 ry/tx/tz 無關(A27 接合完成度不變式)。整數雜湊(不走 Math.sin)= 跨引擎逐位元一致。
+// ---- Detail jitter (user decision 2026-07-29: natural objects should not look too symmetric or tidy) ----
+// dj = per-plant detail seed (0-1, drawn at placement; undefined/0 = no jitter, bit-identical to the old scheme).
+// Only two joint-safe degrees of freedom move:
+//   1. jr: horizontal radius grows only, never shrinks (scale anchored at part center; y and px/pz offsets plus vertical size untouched) --
+//      fattening only buries parts deeper; MUST NOT become two-way jitter (shrinking pulls apart nominally flush joints:
+//      eucalyptus trunk clusters / moss clusters FLOAT once shrunk, caught red by audit_object_joints).
+//      Crowns / leaf clusters (with key) +0-18 percent, structural parts (trunk/branch) +0-8 percent (visual radius still inside the
+//      authoritative collision-column margin, principle 4); parts may carry a j multiplier (e.g. borderrock with j:2) to widen amplitude.
+//   2. spin: rotation about the part's own extrusion axis (post-multiplied quaternion = local axis, endpoints fixed) --
+//      stacked-cone edges stagger per layer and ico clusters change silhouette, so two plants of the same type no longer share one silhouette.
+//      Axial parts only (px/pz = 0): offset parts (trunk-hugging clusters / moss) mate through specifically oriented
+//      vertices, and spin would rotate an exact fit open (proven by euc trunk-cluster FLOAT failures in audit).
+// MUST NOT jitter y / px / pz / vertical scale (pulls stacked seams apart); jitter depends only on (part identity, dj),
+// independent of ry/tx/tz (A27 joint-completeness invariant). Integer hashing (no Math.sin) = bit-identical across engines.
 function hash01(i, j) {
   let h = (Math.imul(i | 0, 0x9E3779B1) ^ Math.imul(j | 0, 0x85EBCA77)) | 0;
   h = Math.imul(h ^ (h >>> 15), 0xC2B2AE3D);
@@ -71,52 +71,52 @@ function hash01(i, j) {
 }
 
 /**
- * 零件識別(量化的擺位鍵):同株各零件不同、同零件跨實例相同 ⇒ 差異全部來自 dj。
- * **單一縫**:植被的宣告式零件表(`vegPartXform`)與障礙/地標的程序生成子樹
- * (`hazards.js` / `biomes.js` 的 Object3D 子節點)同吃這一支 —— 兩邊各算一次鍵的話,
- * 「同一顆物件的同一個零件」在兩條路徑上會抖出不同的值,而畫面上完全看不出來。
+ * Part identity (quantized placement key): distinct per part within one plant, identical for the same part across instances, so all variance comes from dj.
+ * Single seam: declarative vegetation tables (vegPartXform) and procedural obstacle/landmark subtrees
+ * (Object3D child nodes in hazards.js / biomes.js) share this same branch -- computing keys twice,
+ * the same part of the same object would jitter differently per path with no visible cause.
  */
 export function partId(y, px, pz) {
   return Math.round((y || 0) * 8) * 131 + Math.round((px || 0) * 8) * 373 + Math.round((pz || 0) * 8) * 769;
 }
 
 /**
- * 細節抖動的兩個自由度(見檔頭「細節抖動」段的完整理由)。
- * @param pid   partId 的輸出
- * @param dj    實例細節種子(0~1;0/undefined = 不抖,輸出逐位元同舊制)
- * @param amp   半徑增幅上界(只增不減)
- * @param axial 這個零件是否**軸心件**(px = pz = 0);只有軸心件准自轉
- * @returns { jr 水平半徑倍率 ≥ 1, spin 繞自身擠出軸的自轉弧度 }
+ * The two detail-jitter degrees of freedom (full rationale in the file-header detail-jitter section).
+ * @param pid   partId output
+ * @param dj    instance detail seed (0-1; 0/undefined = no jitter, bit-identical to the old scheme)
+ * @param amp   radius growth upper bound (grow-only)
+ * @param axial whether this part is axial (px = pz = 0); only axial parts may spin
+ * @returns { jr horizontal radius multiplier >= 1, spin self-rotation radians about the extrusion axis }
  */
 export function partJitter(pid, dj, amp, axial) {
   if (!dj) return { jr: 1, spin: 0 };
   const di = (dj * 8191) | 0;
   return {
-    jr: 1 + hash01(pid, di) * amp,                                    // 只增不減(見檔頭)
-    spin: axial ? (hash01(pid ^ 0x5bd1e99, di) - 0.5) * Math.PI * 2 : 0,   // 僅軸心零件(見檔頭)
+    jr: 1 + hash01(pid, di) * amp,                                    // Grow-only (see file header)
+    spin: axial ? (hash01(pid ^ 0x5bd1e99, di) - 0.5) * Math.PI * 2 : 0,   // Axial parts only (see file header)
   };
 }
 
 /**
- * 零件 × 實例 → 世界變換。
+ * Part x instance -> world transform.
  * @param part { g, y, px, pz, rx, rz, sy, key?, j? }
  * @param it   { x, y, z, s, ry, tx, tz, dj? }
  * @returns { pos:[x,y,z], quat:[x,y,z,w], scl:[x,y,z] }
  */
 export function vegPartXform(part, it) {
   const s = it.s ?? 1;
-  // 實例剛體旋轉:朝向 ry 外層、站姿微傾斜內層(繞植株腳底)
+  // Instance rigid rotation: facing ry outside, stance micro-tilt inside (about the plant base)
   const qi = quatMul(quatFromEuler(0, it.ry || 0, 0), quatFromEuler(it.tx || 0, 0, it.tz || 0));
   const off = quatApply(qi, [(part.px || 0) * s, (part.y || 0) * s, (part.pz || 0) * s]);
-  // 零件識別 = 量化的擺位鍵(同株各零件不同、同零件跨實例同鍵 → 差異全來自 dj);
-  // 抖動的兩個自由度與規則住 partJitter(障礙/地標的程序生成子樹同吃那一支)
+  // Part identity = quantized placement key (distinct per part in one plant, same across instances, so variance comes only from dj);
+  // both jitter degrees of freedom and their rules live in partJitter (shared by procedural obstacle/landmark subtrees)
   const { jr, spin } = partJitter(
     partId(part.y, part.px, part.pz), it.dj,
     (part.key ? 0.18 : 0.08) * (part.j || 1),
     !(part.px || part.pz),
   );
   let quat = quatMul(qi, quatFromEuler(part.rx || 0, part.ry || 0, part.rz || 0));
-  if (spin) quat = quatMul(quat, quatFromEuler(0, spin, 0));   // 後乘 = 繞自身軸,端點不動
+  if (spin) quat = quatMul(quat, quatFromEuler(0, spin, 0));   // Post-multiply = about own axis, endpoints fixed
   return {
     pos: [it.x + off[0], it.y + off[1], it.z + off[2]],
     quat,

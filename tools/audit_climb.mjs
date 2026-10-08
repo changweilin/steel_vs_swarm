@@ -1,37 +1,42 @@
-// 攀爬路線(長梯 / 攀岩抓點 / 垂降技術繩)+ 有向盒遮蔽稽核 —— 離線直測。
+// Climb routes (ladders / rock holds / rappel ropes) + oriented-box occlusion audit — offline direct tests.
 //
-// 起因(2026-07-28 使用者需求):「隨機挑選(約 3 成)建築/巨石/神木,對應加入連同地面與頂端的
-// 長梯/攀岩抓點/垂降技術繩,供地面單位爬上爬下,地面端梯子需放在無障礙的那一側,可到頂端立足射擊,
-// 建築/巨石/神木同樣需考慮物理碰撞,所有方向皆可抵擋射擊」。
+// Origin (2026-07-28 user request): "randomly pick (~30%) buildings/boulders/sacred trees and add ladders /
+// rock holds / rappel ropes spanning ground to top for ground units to climb, ground-end ladders on the
+// obstacle-free side, able to stand on top and shoot; buildings/boulders/trees equally need physical
+// collision modeled, blocking shots from every direction".
 //
-// 四段:
-//   Ⅰ 路線規劃直測(執行 `climb.js` 真正的原文):抽樣率 / 確定性 / 固定枚數亂數 /
-//     高度窗口 / 三種設施對應 / 頂端與 blockerTopAt 同源 / **地面端落在無障礙那一側** /
-//     四面皆阻 → 不掛 / 水域 / 陡坡 / 圖界 / 攀爬軸在碰撞體外 / 登頂落腳點在輪廓內
-//   Ⅱ 抓握索引(makeClimbIndex)邊界
-//   Ⅲ **有向盒遮蔽兩端同判**:客戶端 `game.js _blockerHitT` 與伺服器 `sim.js _losBlocked` 對同一個盒
-//     同一條線段 MUST 給同一個答案(牆角 / 細長樓側面 / 正面),含 sim 座標鏡射(z 反號 ⇒ ry 反號)
-//   Ⅳ 靜態規則(單一縫 / A21 / A25 / 純客戶端)
-//   Ⅴ 上下兩端提示箭頭:尺寸相對兵線 chevron 縮小、朝向(底端朝上 / 頂端朝下)、
-//     擺位基底正交且右手(A26)、動畫掛在既有的 dynamics 桶
-//   Ⅵ 相鄰結構相接:七成機率 / 設施架在較高者 / 下端落腳在較低者的屋頂 /
-//     四條硬約束(相鄰距離・高差・抓握距離・第三者擋道)/ A→B 與 B→A 只留一條
+// Four sections:
+//   I Route-planning direct tests (executing `climb.js` genuine source): sampling rate / determinism /
+//     fixed-draw randomness / height window / three facility mappings / top ends sharing blockerTopAt /
+//     **ground ends on the obstacle-free side** / all-sides-blocked → skip / water / steep slopes / map
+//     bounds / climb axis outside the collider / summit footholds inside the outline
+//   II Grip index (makeClimbIndex) bounds
+//   III **Oriented-box occlusion judged identically at both ends**: client `game.js _blockerHitT` and server
+//     `sim.js _losBlocked` MUST give one answer for one box and one segment (corners / long-building flanks
+//     / head-on), including the sim coordinate mirror (z negated ⇒ ry negated)
+//   IV Static rules (single seam / A21 / A25 / pure client)
+//   V Tip arrows at both ends: scaled down from lane chevrons, orientation (bottom points up / top points
+//     down), orthogonal right-handed placement bases (A26), animation on the existing dynamics bucket
+//   VI Adjacent-structure links: 70% odds / facility on the taller one / lower end footing on the lower
+//     roof / four hard constraints (gap distance · height delta · grip distance · third-party blockage) /
+//     A→B and B→A keep only one
 //
-// 為什麼用「抽原文」而不是 import:`climb.js` 與 `game.js` 的 three 走 CDN importmap,Node 端解析不了;
-// 抽出來評估的仍是**真正的程式碼文字**(另抄一份公式就永遠會通過)。
-// 跑法:`node tools/audit_climb.mjs`   退出碼:0 = 全綠;1 = 有紅字
+// Why "extract source" instead of import: `climb.js` and `game.js` three.js ride the CDN importmap, Node
+// cannot resolve them; what gets evaluated is still the **actual program text** (a recopied formula would
+// pass forever).
+// Usage: `node tools/audit_climb.mjs`   Exit code: 0 = all green; 1 = red present
 //
-// **改完 MUST 做反向驗證**:把 planClimbRoutes 的淨空檢查拿掉(clearance 恆 Infinity)、
-// 把抽樣改成「淘汰後才抽」、把 `_blockerHitT` 寫回純圓柱,稽核 MUST 在對應條目紅字。
-// (前兩者的對照組已內建於 Ⅰ-⑧ / Ⅰ-③,第三者內建於 Ⅲ。)
+// Reverse-verify after any change: drop the planClimbRoutes clearance check (clearance always Infinity),
+// switch sampling to cull-first-then-draw, write blockerHitT back to pure cylinders; the audit MUST
+// go red on the matching items. (The first two controls ship inside I-8 and I-3, the third inside III.)
 
 import { BattleSim } from '../server/sim.js';
 import { SOLDIER_H, HERO_SIZE, MAPGEO, SLOPE, slopeDeg, slopeBlocked } from '../public/js/data.js';
 import { readSrc as read } from './audit_src.mjs';
 
-// 讀原文一律走 `readSrc`(§5 通則 ㋑):git 存 LF,但 autocrlf 下 Windows 工作區是 CRLF。全檔的跨行
-// 切片標記(DRAW、pickMethod 的 `\n  }\n`、箭頭區塊的 `\n}\n`、_stepClimb 的正則)一律以 `\n` 書寫,
-// 不正規化就只在 Linux 綠。
+// Source text always goes through readSrc (section-5 general rule): git stores LF but autocrlf Windows checkouts are CRLF. All multi-line
+// slice markers (DRAW, pickMethod newline-brace markers, arrow-block markers, stepClimb regexes) are written with newline,
+// and skip normalization stays green on Linux only.
 const climbSrc = read('public', 'js', 'climb.js');
 const gameSrc = read('public', 'js', 'game.js');
 const mainSrc = read('public', 'js', 'main.js');
@@ -44,7 +49,7 @@ const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); }
 const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
 
 // ---------------------------------------------------------------------------
-// climb.js 的「純幾何段」原文 → 可執行模組(THREE 之前的整段:常數 + 四支函式)
+// Genuine pure-geometry section of climb.js goes to an executable module (whole pre-THREE span: constants plus four functions)
 // ---------------------------------------------------------------------------
 const MAX_BODY_R = SOLDIER_H * Math.max(...Object.values(HERO_SIZE).map((s) => s.mul[1])) * 0.317;
 function loadCore(mutate = (s) => s) {
@@ -61,7 +66,7 @@ const C = loadCore();
 const { CLIMB, CLIMB_KIND, surfacePoint, attachFaces, climbCandidate, planClimbRoutes, makeClimbIndex } = C;
 const { siteSlopeDeg, slopeRamp, climbShare, highFaceShare, facilityEndY } = C;
 
-// mulberry32(與 biomes.js 同款;稽核要的是確定性,不是同一個 seed)
+// mulberry32 (same family as biomes.js; the audit needs determinism, not the same seed)
 const mulberry32 = (seed) => {
   let a = seed >>> 0;
   return () => {
@@ -91,17 +96,17 @@ const plan = (blockers, opt = {}) => planClimbRoutes({
 
 console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
 
-// ① 抽樣率約三成
+// 1 Sampling rate near thirty percent
 {
   const list = [];
   for (let i = 0; i < 400; i++) list.push(bld((i % 20) * 200 - 2000, Math.floor(i / 20) * 200 - 2000, 24, 18, 30));
-  const r = plan(list).filter((q) => !q.link);   // 抽樣率只算地面路線(相鄰相接是額外的)
+  const r = plan(list).filter((q) => !q.link);   // rate counts ground routes only (adjacent links are extra)
   const share = r.length / list.length;
   ok(share > 0.24 && share < 0.36, `① 抽樣率 ≈ CLIMB.SHARE(實測 ${(share * 100).toFixed(1)}%,期望 30±6pp)`);
   ok(list.every(climbCandidate), '① 400 棟皆為合格候選(高度窗口內、bld 旗標)');
 }
 
-// ② 確定性:同 seed 逐項相同、不同 seed 會不同(A4)
+// 2 Determinism: same seed repeats item by item, different seeds diverge (A4)
 {
   const list = [];
   for (let i = 0; i < 200; i++) list.push(bld((i % 20) * 200 - 2000, Math.floor(i / 20) * 200 - 2000, 24, 18, 30));
@@ -111,8 +116,8 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   ok(key(a) !== key(c), '② 不同 seed → 佈局不同(不是常數輸出)');
 }
 
-// ③ 抽樣紀律:每個候選固定消耗 2 枚亂數、淘汰檢查排在抽樣之後(§2.3)
-//    ⇒ 把中間幾棟改成「太矮」(不合格)後,**其餘**被抽中的集合 MUST 完全不變。
+// 3 Sampling discipline: each candidate consumes exactly 2 random draws, and the cull check runs after the draw (section 2.3)
+//    After retagging a few middle blocks as too short (ineligible), the remaining sampled set MUST stay identical.
 //    對照組:抽樣改成「淘汰後才抽」(先 continue 再 rnd)⇒ 序列位移,集合必然改變。
 {
   const mk = () => {

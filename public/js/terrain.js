@@ -1,4 +1,4 @@
-// ============ 即時 3D 地形(改自 mapping_elf terrainViewer.js)============
+// ============ Realtime 3D terrain (adapted from mapping_elf terrainViewer.js)============
 // 依戰場設定(bbox)即時抓取高程資料建立地形網格,疊上衛星影像貼圖。
 //  - 高程主來源:AWS Terrain Tiles(terrarium PNG,免金鑰、CORS 開放)
 //  - 高程備援:open-meteo elevation API(mapping_elf 原本的來源,批次 100 點)

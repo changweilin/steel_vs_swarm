@@ -23,7 +23,7 @@ export const kindLabelOf = (kind) => kind === 'drone' ? '無人機' : kind === '
  * Avatar with unit kind corner badge.
  * Single seam across all avatar placements (lobby roster, modal roster, pilot chip, card label, storybook).
  * Unit kind routes strictly via `charKind(id)` (mixed compositions decouple faction from unit kind).
- * @param {string} mode 'char' 角色立繪頭像 / 'mech' 機體頭像(獨立頭部裁切圖檔)
+ * @param {string} mode 'char' character portrait avatar / 'mech' mecha avatar (standalone head crop file)
  */
 export function charAvatarHTML(id, cls = 'char-av', mode = 'char') {
   const kind = charKind(id);
@@ -32,7 +32,7 @@ export function charAvatarHTML(id, cls = 'char-av', mode = 'char') {
     + `<span class="av-kind" aria-label="${esc(kindLabelOf(kind))}">${kindIconHTML(kind)}</span></span>`;
 }
 
-/** Unified 角色/機體 switching tabs (single HTML seam; state lives with callers).
+/** Unified character/mecha switching tabs (single HTML seam; state lives with callers).
  * @param {string} mode current mode; @param {string} attr dataset attr for delegation (default `data-arttab`) */
 export function artModeTabsHTML(mode = 'char', attr = 'data-arttab') {
   const m = isArtMode(mode);

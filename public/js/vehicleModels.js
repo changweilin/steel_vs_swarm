@@ -3,7 +3,7 @@ import { vehicleBackgroundObject, CONSIST_PREFIX, vehicleConsistBackgroundObject
 import { makeRuntimePartModel } from './runtimePartModel.js';
 import { SignSheet, signAspect } from './worldtext.js';
 
-/** 使用正式零件編譯器與文字圖集；呼叫端保有碰撞盒與選址權。 */
+/** Use the official part compiler and text atlas; caller keeps collision boxes and siting rights. */
 export function makeProceduralVehicle(key, seed = 0, options = {}) {
   if (options.fit) for (const axis of ['L','W','H']) {
     if (!Number.isFinite(options.fit[axis]) || options.fit[axis] <= 0) throw new RangeError('車輛 fit 必須是正有限尺寸');
@@ -29,7 +29,7 @@ export function makeProceduralVehicle(key, seed = 0, options = {}) {
       group.add(lettering);
     }
   }
-  // 按實際幾何包絡 fit；配件不可穿出宿主既有碰撞盒。
+  // Fit to actual geometric envelope; accessories MUST NOT poke outside the host collision box.
   const {min,max,size} = entry.bounds;
   const origin = new THREE.Group();
   group.position.set(-(min[0]+max[0])/2,-min[1],-(min[2]+max[2])/2);

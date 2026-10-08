@@ -17,11 +17,11 @@ const { generateGroundPart } = await import('../public/js/proceduralGroundParts.
 const { generateBuildingAppurtenances, calculateRoofMetrics } = await import('../public/js/buildingAppurtenances.js');
 
 // ==========================================
-// 1. 停車場：車格標線（汽車＋機車）與車輛停放測試
+// 1. Parking lot: stall markings (car + motorcycle) and vehicle placement
 // ==========================================
 console.log('--- 測試 1：停車場標線與車輛生成 ---');
 
-// 1.1 驗證 GROUND_PARTS 具備 car 與 motorcycle，且幾何正常
+// 1.1 GROUND_PARTS must provide car and motorcycle with valid geometry
 for (const type of ['car', 'motorcycle']) {
   assert.ok(GROUND_PARTS[type], `GROUND_PARTS 必須定義 ${type}`);
   for (let v = 0; v < 3; v++) {
@@ -36,7 +36,7 @@ for (const type of ['car', 'motorcycle']) {
   }
 }
 
-// 1.2 驗證停車場貼圖畫設汽車格與機車格標線
+// 1.2 Parking texture must paint car and motorcycle stall markings
 function makeContext() {
   const lines = [], rects = [];
   return {
@@ -61,7 +61,7 @@ const carLines = pCtx.lines.filter(l => l.y1 <= 0.35 && l.y2 <= 0.35);
 assert.ok(carLines.length >= 8, `停車場上排必須劃設至少 8 條汽車格標線，實得 ${carLines.length}`);
 console.log('✅ 停車場標線已成功包含汽車格與機車格');
 
-// 1.3 驗證停車場格線數量視場域面積大小而定
+// 1.3 Stall line count scales with site area
 const smallCtx = makeContext();
 paintGround(smallCtx.ctx, 256, 'parking', 42, surfaceEnvironment(), null, 18, 14);
 const smallLines = smallCtx.lines;
@@ -74,7 +74,7 @@ assert.ok(largeLines.length > smallLines.length * 1.8,
   `大面積停車場格線數 (${largeLines.length}) 應大幅多於小面積停車場 (${smallLines.length})`);
 console.log(`✅ 停車場格線動態依面積調整：小場域 (18m×14m) 畫出 ${smallLines.length} 條線，大場域 (60m×36m 4排) 畫出 ${largeLines.length} 條線`);
 
-// 1.4 驗證隨機停放比率在 50% ~ 100% 之間
+// 1.4 Random occupancy stays within 50-100 percent
 for (let seed = 1; seed <= 50; seed++) {
   const occRate = 0.5 + ((seed * 16807) % 2147483647) / 2147483647 * 0.5;
   assert.ok(occRate >= 0.50 && occRate <= 1.00, `停放比率 ${occRate} 必須在 50%~100% 範圍內`);
@@ -83,11 +83,11 @@ console.log('✅ 車輛隨機停放比例符合 50%~100% 規格');
 
 
 // ==========================================
-// 2. 太陽能板：大面積鋪設（≥60%）與整齊排列測試
+// 2. Solar panels: large-area coverage (at least 60 percent) with tidy alignment
 // ==========================================
 console.log('--- 測試 2：太陽能板大面積鋪設 (≥60%) 與整齊排列 ---');
 
-// 2.1 地面光電場 (solarfarm)
+// 2.1 Ground solar farm (solarfarm)
 const sfRows = GROUND_ATTACHMENTS.solarfarm.rows.solarpanel;
 const [stepX, stepZ, cap, skip] = sfRows;
 const panelArea = GROUND_PARTS.solarpanel[1] * GROUND_PARTS.solarpanel[3]; // 2.5 * 1.5 = 3.75 m²
@@ -97,7 +97,7 @@ assert.ok(densityInGrid >= 0.75, `太陽能板在列陣網格中的密度應 >= 
 assert.equal(skip, 0, '平整處太陽能板不應隨機缺株 (skip === 0)');
 console.log(`✅ 地面光電場排距密度達 ${(densityInGrid * 100).toFixed(1)}% (≥60%)，無隨機傾斜無缺株`);
 
-// 2.2 建築平屋頂太陽能板陣列鋪設
+// 2.2 Flat-roof solar array layout
 const testPolys = [
   { outer: [[-6, -5], [6, -5], [6, 5], [-6, 5]], holes: [] },
   { outer: [[-10, -8], [10, -8], [10, 8], [-10, 8]], holes: [] },
@@ -115,8 +115,8 @@ for (const poly of testPolys) {
   const edges = [
     { hw2: (metrics.maxX - metrics.minX) / 2, len: metrics.maxX - metrics.minX, nx: 0, nz: -1, x: metrics.cx, z: metrics.minZ, sourceId: 101 },
   ];
-  // 設置 id 使得 architectureHash(idBase, 'solar') % 100 < 45 (觸發 hasSolar)
-  // 尋找能觸發 hasSolar 的 id
+  // Pick an id so architectureHash(idBase, 'solar') % 100 < 45 triggers hasSolar
+  // Search for an id that triggers hasSolar
   let archId = 'test_bld_0';
   for (let k = 0; k < 100; k++) {
     const candidate = `bld_${k}`;
@@ -145,21 +145,21 @@ console.log('✅ 屋頂太陽能板覆蓋率成功符合 20%~80% 規範，且呈
 
 
 // ==========================================
-// 3. 球場與操場：固定長寬比與陣列化排列測試
+// 3. Courts and tracks: fixed aspect ratio with arrayed layout
 // ==========================================
 console.log('--- 測試 3：球場與操場固定長寬比與陣列排列 ---');
 
-// 3.1 驗證長寬比嚴格鎖定 (locked: true)
+// 3.1 Aspect ratio stays strictly locked (locked: true)
 assert.equal(SURFACES.court.locked, true, '籃球場長寬比必須鎖定');
 assert.equal(SURFACES.court.aspect, 15 / 28, '籃球場長寬比必須為 15 / 28');
 assert.equal(SURFACES.track.locked, true, '操場跑道長寬比必須鎖定');
 assert.equal(SURFACES.track.aspect, TRACK_DEPTH / TRACK_WIDTH, '操場跑道長寬比必須為 TRACK_DEPTH / TRACK_WIDTH');
 
-// 3.2 驗證球場陣列繪製 (paintCourtArray)
+// 3.2 Court array painting (paintCourtArray)
 const arrayCtx = makeContext();
 paintCourtArray(arrayCtx.ctx, 2, 2);
 const boundaryRects = arrayCtx.rects.filter(r => r.w > 0 && r.h > 0);
-// 3.3 驗證 paintGround 在球場超大面積時自動採用陣列式排列
+// 3.3 paintGround switches to arrayed layout for oversized courts
 const stdCourtCtx = makeContext();
 paintGround(stdCourtCtx.ctx, 256, 'court', 42, surfaceEnvironment(), null, 28, 15);
 const largeCourtCtx = makeContext();

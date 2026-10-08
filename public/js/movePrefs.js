@@ -1,7 +1,7 @@
-// ============ 移動操作偏好(水平移動鎖定唯一真相縫)============
-// 飛行機體的前後(W/S)預設沿「視線方向」飛 —— 抬頭爬升、低頭俯衝。
-// 開啟水平鎖定後,前後左右只在水平面移動,不改變上下方向(上下改由 Space/C 控制)。
-// 本檔零 import(同 lookPrefs.js / rng.js / visualPrefs.js):離線稽核要能直接執行它驗預設值。
+// ============ Move operation prefs (level-move lock single source of truth)============
+// Flying frames move forward/back (W/S) along gaze by default -- look up to climb, look down to dive.
+// With level lock on, forward/back/left/right move only on the horizontal plane, never changing altitude (altitude via Space/C).
+// Zero imports in this file (same as lookPrefs.js / rng.js / visualPrefs.js): offline audits must execute it directly to verify defaults.
 
 const KEY = 'svs_move';
 
@@ -23,46 +23,46 @@ function clampBool(v, def) {
 
 {
   let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { /* 私密模式 / 壞字串 */ }
+  try { raw = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { /* private mode / bad string */ }
   for (const k in MOVE_PREFS) {
     const v = raw && typeof raw === 'object' ? raw[k] : undefined;
     _vals[k] = v === undefined ? MOVE_PREFS[k].def : clampBool(v, MOVE_PREFS[k].def);
   }
 }
 
-/** 目前值 */
+/** Current value */
 export function movePref(k) {
   return k in _vals ? _vals[k] : (MOVE_PREFS[k]?.def ?? false);
 }
 
-/** 整份目前值(回傳新物件,MUST NOT 就地改) */
+/** Whole current values (returns new object, MUST NOT mutate in place) */
 export function movePrefs() {
   return { ..._vals };
 }
 
-/** 寫入一個開關(持久化 + 廣播)。回傳寫入後的值 */
+/** Write one switch (persist + broadcast). Returns the written value */
 export function setMovePref(k, v) {
   if (!(k in MOVE_PREFS)) return false;
   const nv = clampBool(v, MOVE_PREFS[k].def);
   if (nv === _vals[k]) return nv;
   _vals[k] = nv;
-  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* 私密模式忽略 */ }
+  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* ignore in private mode */ }
   _emit();
   return nv;
 }
 
-/** 全部回到預設 */
+/** Reset all to defaults */
 export function resetMovePrefs() {
   let changed = false;
   for (const k in MOVE_PREFS) {
     if (_vals[k] !== MOVE_PREFS[k].def) { _vals[k] = MOVE_PREFS[k].def; changed = true; }
   }
   if (!changed) return;
-  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* 私密模式忽略 */ }
+  try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* ignore in private mode */ }
   _emit();
 }
 
-/** 訂閱變更;回傳解訂閱函式 */
+/** Subscribe to changes; returns unsubscribe function */
 export function onMovePrefChange(fn) {
   _subs.add(fn);
   return () => _subs.delete(fn);
@@ -70,6 +70,6 @@ export function onMovePrefChange(fn) {
 
 function _emit() {
   for (const fn of [..._subs]) {
-    try { fn(_vals); } catch { /* 消費端自己的問題,不阻斷廣播 */ }
+    try { fn(_vals); } catch { /* consumer's own error, never blocks broadcast */ }
   }
 }

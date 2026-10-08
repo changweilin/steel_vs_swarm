@@ -1,7 +1,7 @@
-// ============ 無人戰略:鋼鐵與蜂群 — 前端主控 ============
-// 畫面流程:connect(大廳)→ mapbuilder(建地圖:場地/選址,存入最愛)
-//          → openroom(開戰時刻:從最愛挑地圖 + 房名/公開性/環境 → 開房)
-//          → room(配對,每陣營 N 席)→ loading(地形+地貌建構)→ game → over
+// ============ Unmanned strategy: steel vs swarm - frontend main controller ============
+// Screen flow: connect(lobby) -> mapbuilder(build map: site/select, save to favorites)
+//          -> openroom(battle start: pick map from favorites + room name/visibility/env -> create room)
+//          -> room(matchmaking, N seats per side) -> loading(terrain+biome build) -> game -> over
 import { makeNet } from './net.js';
 import {
   LINK_MODES, LINK_MODE_KEYS, netMode, setNetMode, soloOnly,
@@ -61,7 +61,7 @@ import { RANDOM_MAP_TEXT } from './randomMapContent.js';
 import { drawRandomMapPreview } from './randomMapPreview.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { talkOf, stageKey } from './storytalk.js';
-// 劇情畫面的標記唯一縫 —— 遊戲本體與本地故事書(tools/story_book)共用同一份,見 storyui.js 檔頭
+// Story screen marker single seam - game body and local story book share one copy, see storyui.js header
 import {
   charAvatarHTML, heroChip, kindLabelOf, artModeTabsHTML,
   chapterCardHTML, briefHTML, overText, progressText,
@@ -69,7 +69,7 @@ import {
 import { attachArtSwipe } from './artSwipe.js';
 import { Dialogue } from './dialogue.js';
 import { playPrologueIntro, playChapterIntro } from './prologue.js';
-// `game.js`(600KB+toon/postfx/vfx 鏈)進戰才動態載入,首屏不解析(單航班,失敗回提示不炸頁)。
+// game.js (600KB+toon/postfx/vfx chain) loads dynamically only on battle entry, first screen skips parsing (single flight, failure shows hint without breaking page).
 let _BattleClient = null;
 function battleClientCtor() {
   if (!_BattleClient) _BattleClient = import('./game.js').then((m) => m.BattleClient);
@@ -102,124 +102,124 @@ import { geoClear } from './geocache.js';
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
 
-// ---- 快速模式偏好(localStorage svs_quickmode)----
-// 開啟後:房間階段不預建地形(startPrebuild 跳過),等進入 loading 才建。
-// 與 lowPower 同層級:只住 localStorage,不上行,不進快照。
+// ---- Quick mode preference (localStorage svs_quickmode) ----
+// When on: skip terrain prebuild in room phase (startPrebuild skipped), build on loading entry.
+// Same tier as lowPower: localStorage only, no uplink, no snapshot.
 const _QM_KEY = 'svs_quickmode';
 function quickMode() {
   try { return localStorage.getItem(_QM_KEY) === '1'; } catch { return false; }
 }
 function setQuickMode(on) {
-  try { on ? localStorage.setItem(_QM_KEY, '1') : localStorage.removeItem(_QM_KEY); } catch { /* 靜默 */ }
+  try { on ? localStorage.setItem(_QM_KEY, '1') : localStorage.removeItem(_QM_KEY); } catch { /* silent */ }
 }
 
 
 
 /**
- * 水沼粗網格烘烤(2026-07-19;房主載圖後上傳,供伺服器中立單位佈點/移動迴避)。
- * 逐格取 terrainEnvCode(0 乾 / 1 水 / 2 沼),sim 座標系(x = three x、z 北 = −three z);
- * 回傳 { minX, minZ, cell, cols, rows, data },data 為 cols×rows 個 '0'/'1'/'2' 字元(row-major)。
+ * Bake coarse water-marsh grid (2026-07-19; host uploads after map load, for server neutral-unit placement and avoidance).
+ * Sample terrainEnvCode per cell (0 dry / 1 water / 2 marsh), sim frame (x = three x, north z = minus three z);
+ * Return minX, minZ, cell, cols, rows, data, where data holds cols by rows chars of 0/1/2 in row-major order.
  */
 function bakeWetGrid(t) {
   const cell = WATER.GRID_M;
-  const minX = t.minX, minZ = -t.maxZ;   // sim z = −three z ⇒ three maxZ 對應 sim minZ
+  const minX = t.minX, minZ = -t.maxZ;   // sim z = minus three z, so three maxZ maps to sim minZ
   const cols = Math.max(1, Math.min(300, Math.ceil((t.maxX - t.minX) / cell)));
   const rows = Math.max(1, Math.min(300, Math.ceil((t.maxZ - t.minZ) / cell)));
   let data = '';
   for (let i = 0; i < rows; i++) {
-    const sz = minZ + (i + 0.5) * cell;              // sim z(格心)
+    const sz = minZ + (i + 0.5) * cell;              // sim z (cell center)
     for (let j = 0; j < cols; j++) {
       const sx = minX + (j + 0.5) * cell;            // sim x = three x
-      data += String(terrainEnvCode(t, sx, -sz));    // 取樣 three 座標 (sx, −sz)
+      data += String(terrainEnvCode(t, sx, -sz));    // sample three coords (sx, minus sz)
     }
   }
   return { minX: Math.round(minX * 10) / 10, minZ: Math.round(minZ * 10) / 10, cell, cols, rows, data };
 }
 
 /**
- * 粗高程網格烘烤(2026-08-01 使用者需求「直線攻擊與扇形攻擊要避免隔山打牛」;房主載圖後上傳)。
- * 伺服器是無地形高程的 2D 平面 —— 沒有這份網格,`heroPlasma`(扇形)與 bot 的直線貫穿就會
- * 穿山打到山背後的敵人,而客戶端的射程光暈(`hit:'clear'` 逐段淨空)早就說打不到。
+ * Bake coarse height grid (2026-08-01 user decision: line and fan attacks must not shoot through hills; host uploads after map load).
+ * Server is a flat 2D plane with no terrain height - without this grid, heroPlasma (fan) and bot straight pierce would
+ * hit enemies behind hills, while the client range halo (hit clear, cleared segment by segment) already says blocked.
  *
- * 座標系與 `bakeWetGrid` 完全相同(sim 座標:x = three x、z 北 = −three z),格心取樣;
- * 高程取**裸地形** `heightAt`(橋面/隧道天花是另一套 slabs,MUST NOT 混進來)。
- * 編碼走 `data.js hgtEnc` 這個唯一縫(相對 minH 量化成 2 個 ASCII 字元)。
+ * Same frame as bakeWetGrid (sim coords: x = three x, north z = minus three z), cell-center sampling;
+ * Height reads bare terrain heightAt (bridge decks and tunnel ceilings are a separate slabs set, MUST NOT mix in).
+ * Encoding follows the data.js hgtEnc single seam (relative to minH, quantized to 2 ASCII chars).
  */
 function bakeHeightGrid(t) {
   const spanX = t.maxX - t.minX, spanZ = t.maxZ - t.minZ;
   const cols = Math.max(1, Math.min(LOS.HGT_MAX, Math.ceil(spanX / LOS.HGT_M)));
   const rows = Math.max(1, Math.min(LOS.HGT_MAX, Math.ceil(spanZ / LOS.HGT_M)));
-  const cell = Math.max(LOS.HGT_M, Math.max(spanX / cols, spanZ / rows));   // 格數被上限夾住時放大格距,涵蓋範圍不縮
+  const cell = Math.max(LOS.HGT_M, Math.max(spanX / cols, spanZ / rows));   // Widen cell when count hits cap, keep coverage unshrunk
   const minX = t.minX, minZ = -t.maxZ;
   const minH = Math.floor(t.minH ?? 0);
   let data = '';
   for (let i = 0; i < rows; i++) {
-    const sz = minZ + (i + 0.5) * cell;              // sim z(格心)
+    const sz = minZ + (i + 0.5) * cell;              // sim z (cell center)
     for (let j = 0; j < cols; j++) {
       const sx = minX + (j + 0.5) * cell;            // sim x = three x
-      data += hgtEnc(t.heightAt(sx, -sz), minH);     // 取樣 three 座標 (sx, −sz)
+      data += hgtEnc(t.heightAt(sx, -sz), minH);     // sample three coords (sx, minus sz)
     }
   }
   return { minX: Math.round(minX * 10) / 10, minZ: Math.round(minZ * 10) / 10,
     cell: Math.round(cell * 100) / 100, cols, rows, minH, data };
 }
-const DECK_STEP = 2.2;   // 上橋台階(遊戲公尺):低於橋面這麼多以上 = 從橋下走過,不會被吸上橋
-const DECK_MARGIN = 3.0;  // 站立表面側向容差:走位/轉向/後座漂移貼近橋緣仍不掉下橋(上橋更穩);天花碰撞不吃此容差
-                          // 值大 = 站得住橋緣外一截(免掉橋),代價是可站到可見橋緣外 3m —— 取「不掉橋」優先
-const DECK_UNDER = 1.2;   // 橋面結構厚度(頂面→底緣);= biomes.js soffit/girder 底緣深
-const MAX_MECH_H = 4.8;   // 最大機體所需淨空(4.5m + 頭頂餘裕)。橋底緣離地低於此 = 鑽不過去 → 該上橋,
-                          // MUST NOT 讓機體卡在「上不了橋面(> DECK_STEP)又鑽不過橋腹」的死區(引道口卡住前科)
+const DECK_STEP = 2.2;   // Deck step (game meters): this far below deck = pass under, never snap up
+const DECK_MARGIN = 3.0;  // Standing-surface lateral tolerance: strafing/turning/recoil drift near edge still stays on deck (easier boarding); ceiling collision ignores it
+                          // Large value = can stand a bit past visible edge (no falling), cost is standing up to 3m past visible edge - prioritize no-fall
+const DECK_UNDER = 1.2;   // Deck structure depth (top to bottom edge); = biomes.js soffit/girder bottom depth
+const MAX_MECH_H = 4.8;   // Max mech clearance (4.5m + headroom). Deck bottom below this = cannot pass under, must board,
+                          // MUST NOT trap mechs in a dead zone above DECK_STEP yet below deck belly (ramp jam precedent)
 
 const app = {
   net: null,
   youId: null, isHost: false, token: null,
-  lobby: null,          // 伺服器同步的房間狀態
+  lobby: null,          // Server-synced room state
   mySide: null,
-  charTarget: null,     // 選角對象:null = 自己;bot id = 房主代選(setBotChar)
-  preview: null,        // CharPreview(機體展示台);previewCv 為其共用 canvas 節點
+  charTarget: null,     // Pick target: null = self; bot id = host picks for bot (setBotChar)
+  preview: null,        // CharPreview (mech showcase); previewCv is its shared canvas node
   previewCv: null,
-  stages: { char: null, unit: null },   // 角色卡 / NPC 卡各一台持久展示台(各自 WebGLRenderer,同框並存)
-  modalRole: null,      // 放大視窗當前展示的 role('char'|'unit'|null=關閉)
-  unitSide: null,       // NPC 圖鑑檢視陣營(可切換);unitKind = 目前選的單位;unitShown = 已載入的 kind:side
+  stages: { char: null, unit: null },   // One persistent showcase each for char / NPC cards (own WebGLRenderer, coexist in frame)
+  modalRole: null,      // Enlarged modal current role (char/unit/null=closed)
+  unitSide: null,       // NPC codex viewed side (switchable); unitKind = current unit; unitShown = loaded kind:side
   unitKind: null, unitShown: null,
-  pickSubject: null, pickSide: null, pickEditable: false, pickIsSelf: false,   // 選角上下文(供放大視窗角色格)
-  mapSel: null,         // MapSelect 實例(開房前的設定畫面)
+  pickSubject: null, pickSide: null, pickEditable: false, pickIsSelf: false,   // Pick context (for enlarged-modal role cells)
+  mapSel: null,         // MapSelect instance (pre-room setup screen)
   teamSize: TEAM.DEFAULT,
-  favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
-  story: null,          // 劇情戰役進行中:{ chapterId, side, foe, ch(主駕), allies[], enemies[], index, launched }
-  storySide: 'STEEL',   // 目前瀏覽的戰線陣營(協約 / 同盟)
-  storyPilot: null,     // 簡報中選定的出戰主駕
-  venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
-  mapGenMode: 'preset', // 建圖模式:preset(自訂地圖)|mixed(混合)|random(隨機)
-  dlg: null,            // Dialogue(劇情戰役對話演出層;與 battle 同生死)
+  favCfg: null,         // battleConfig taken directly from favorites
+  story: null,          // Ongoing story campaign: chapterId, side, foe, ch (pilot), allies, enemies, index, launched
+  storySide: 'STEEL',   // Currently browsed front side (pact / alliance)
+  storyPilot: null,     // Briefing-selected sortie pilot
+  venueSelOpen: null,   // Preset site picked at battle-start screen (mutually exclusive with favorites)
+  mapGenMode: 'preset', // Map-build mode: preset (custom map) | mixed (mixed) | random (random)
+  dlg: null,            // Dialogue (story-campaign dialogue layer; lives and dies with battle)
   battle: null,         // BattleClient
-  audio: null,          // GameAudio(app 層,跨戰局存活;BGM 大廳↔戰場切換)
+  audio: null,          // GameAudio (app layer, survives across matches; BGM switches lobby to battlefield)
   terrain: null,
   showcaseTerrains: null,
   showcaseTerrainsPromise: null,
-  pre: null,            // 地圖預建(startPrebuild):房間階段先建好的固定項目,enterLoading 消費後清空
+  pre: null,            // Map prebuild (startPrebuild): fixed items built early in room phase, consumed by enterLoading then cleared
   battleCfg: null,
   phaseShown: null,
   roomPoll: null,
-  artMode: 'char',    // 統一頭像/立繪顯示: 'char' 角色 / 'mech' 機體(全域共用,localStorage 持久)
+  artMode: 'char',    // Unified avatar/portrait display: char role / mech unit (global shared, localStorage persisted)
 };
 
-// ── 統一 角色/機體 顯示模式(全域單一縫)──
-// 所有頭像/立繪經 artAvatarURL/artPortraitURL 取圖,不再直呼 avatarURL/portraitURL;
-// 切換一處 = 集體切換全部掛載點(選角牆/詳情/簡歷/設定頁機體/放大視窗/HUD/對話)。
+// -- Unified role/mech display mode (global single seam) --
+// All avatars/portraits load via artAvatarURL/artPortraitURL, never call avatarURL/portraitURL directly;
+// One switch flips every mount point (pick wall/detail/bio/settings modal/HUD/dialogue).
 const ART_KEY = 'svs_artmode';
 function loadArtMode() {
   try { app.artMode = isArtMode(localStorage.getItem(ART_KEY)); } catch { app.artMode = 'char'; }
 }
 function setArtMode(mode, opts = {}) {
   app.artMode = isArtMode(mode);
-  try { localStorage.setItem(ART_KEY, app.artMode); } catch { /* 靜默 */ }
+  try { localStorage.setItem(ART_KEY, app.artMode); } catch { /* silent */ }
   document.body.dataset.art = app.artMode;
   if (app.dlg) app.dlg.artMode = app.artMode;
   if (opts.silent) return;
   refreshArtModeAll();
 }
-/** 集體重繪所有頭像/立繪掛載點(不碰選角狀態與預覽以外的權威值)。 */
+/** Repaint every avatar/portrait mount (leaves pick state and non-preview authority values alone). */
 function refreshArtModeAll() {
   const me = app.lobby?.clients?.find((c) => c.id === app.youId);
   if ($('charSection')?.style.display !== 'none' && me) renderCharPick(me);
@@ -230,7 +230,7 @@ function refreshArtModeAll() {
   refreshStoryArt();
   setSelfAv(app._lastSelfCh ?? null, true);
 }
-/** 劇情簡報頭像(無顯示頁籤):就地換圖,不重建簡報(保留主駕選擇與捲動位置)。 */
+/** Story briefing avatar (no display tab): swap image in place, keep briefing (preserve pilot pick and scroll). */
 function refreshStoryArt() {
   const body = $('storyBriefBody');
   if (!body || $('storyBrief')?.style.display === 'none') return;
@@ -243,7 +243,7 @@ function refreshStoryArt() {
     img.classList.toggle('av-mech', app.artMode === 'mech');
   }
 }
-/** 頭像/立繪左右滑:每次翻轉顯示角色/機體(全域集體切換,與顯示頁籤同一縫)。 */
+/** Avatar/portrait swipe: each swipe flips role/mech display (global switch, same seam as display tab). */
 function swipeArtMode() {
   setArtMode(app.artMode === 'mech' ? 'char' : 'mech');
   app.audio?.ui('click');
@@ -251,29 +251,29 @@ function swipeArtMode() {
 loadArtMode();
 if (typeof document !== 'undefined') document.body.dataset.art = app.artMode;
 
-// 觸控版版型(手機/平板):掛 body.touch-ui / .ori-portrait|.ori-landscape /
-// .touch-lefty(按鍵) / .touch-screen-lefty(HUD),
-// 並開始追蹤直式⇄橫式切換。CSS 全靠這幾個 class 分版型;戰場的觸控輸入層由 BattleClient 進場時才建。
+// Touch layout (phone/tablet): hang body.touch-ui / .ori-portrait|.ori-landscape /
+// .touch-lefty (buttons) / .touch-screen-lefty (HUD),
+// and start tracking portrait-landscape switches. CSS splits layouts by these classes; battlefield touch input is built on BattleClient entry.
 installTouchUI();
-// **MUST 是函式呼叫而非常數**:操作方式選「不限定」時,玩家在戰鬥中也能切換鍵鼠 ⇄ 搖桿
-// (見 ctrlmode.js),快取成 const 會讓說明/提示文字停在進場當下那一版。
+// MUST stay a function call, not a constant: with control mode any, players can switch mouse-keyboard to pad mid-battle
+// (see ctrlmode.js); caching as const would freeze help/tip text at entry-time version.
 const TOUCH_UI = () => isTouchUI();
 
-// 音效系統(app 層,單一實例):首次使用者手勢自動解鎖 + 啟動 BGM(見 audio.js)。
+// Audio system (app layer, single instance): first user gesture auto-unlocks + starts BGM (see audio.js).
 app.audio = new GameAudio();
 app.audio.setScene('menu');
-// UI 點按音(委派;同時是解鎖手勢的一環)。真實按鈕才響,避免整頁亂點刷音。
-// 觸控操控層的戰鬥鈕(射擊/瞄準/招式…)排除在外 —— 那些有自己的武器音效,再疊 UI 音會變成連發噪音。
+// UI click sound (delegated; also part of the unlock gesture). Only real buttons sound, so stray taps stay silent.
+// Combat buttons on the touch layer (fire/aim/skill) stay excluded - they have their own weapon sounds, layering UI clicks would turn into burst noise.
 document.addEventListener('pointerdown', (e) => {
   if (e.target.closest('.btn, button') && !e.target.closest('#touchLayer, [data-act]')) app.audio?.ui('click');
 }, true);
-// 觸控版讀取/開戰自動全螢幕的補位:非手勢路徑(開戰廣播/載入完成)調 requestFullscreen 會被拒,
-// 讀取與戰鬥畫面內的下一次觸控再試一次(enterFullscreenAuto 內已閘觸控版與現態,桌機零作用)。
+// Touch auto-fullscreen fallback for load/battle entry: non-gesture paths (room broadcast/load done) get requestFullscreen rejected,
+// so retry on the next touch inside load and battle screens (enterFullscreenAuto already gates on touch build and current state, no-op on desktop).
 document.addEventListener('pointerdown', () => {
   if (app.phaseShown === 'loading' || app.phaseShown === 'game') enterFullscreenAuto();
 }, true);
 
-// 還沒進戰區的畫面(這些畫面上沒有房主定案 ⇒ 操作方式退回「我的預設」)
+// Pre-battle screens (no host decision on these screens, so control scheme falls back to my default)
 const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story']);
 
 function show(screen) {
@@ -282,19 +282,19 @@ function show(screen) {
     if (el) el.style.display = s === screen ? '' : 'none';
   }
   app.phaseShown = screen;
-  // body 層常駐工具列(#quickTools)跨所有畫面共用；疊層與選址面板由 z-index 蓋住。
+  // Persistent body toolbar (quickTools) shared across screens; overlays and site panels cover via z-index.
   document.body.dataset.screen = screen;
-  if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // 離開房間:收放大視窗、兩台展示台停 rAF,不與戰場搶 GPU
-  // 操作方式:整房一致、由房主定案(套用在 onSync;規則住 ctrlmode.js)。
-  // 這裡只負責「回到大廳 ⇒ 解除戰區定案」,MUST NOT 在 UI 端另判一次能不能改(A21 同精神)。
+  if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // Leaving room: close enlarged modal, stop both showcase rAF loops, keep GPU clear for battle
+  // Control scheme: room-wide, decided by host (applied in onSync; rules live in ctrlmode.js).
+  // Here only clear the battle-zone decision on lobby return, MUST NOT re-judge edit rights in UI (same spirit as A21).
   if (LOBBY_SCREENS.has(screen)) setRoomCtrlMode(null);
   if (LOBBY_SCREENS.has(screen)) {
     app._autoPickedRoom = false;
     syncQuickRestartFab();
   }
-  // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
+  // Key visual: lobby/pick/create always return to blue-yellow opposition; room defers to renderRoom (converges on picks), battle defers to enterGame
   if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
-  // 致命錯誤計時:進新階段就重計,離開 loading/game 收窗(關閉鈕已收,這裡防殘留)
+  // Fatal-error clock: restart on each new phase, close window when leaving loading/game (close button already hid it, this guards leftovers)
   if (screen === 'loading') {
     hideFatal();
     fatal.loadT0 = Date.now();
@@ -322,10 +322,10 @@ function toast(msg, ms = 3200) {
   toast._t = setTimeout(() => el.classList.remove('on'), ms);
 }
 
-// ================= 致命錯誤(開啟失敗 / 一段時間無法遊戲)=================
-// 只在 loading / game 階段彈窗:原因寫入 #fatalReason,關閉或重啟(單人)。
-// 觸發:地形建構雙敗、戰鬥模組載入失敗、單機模擬核心載入失敗、
-//      載入逾時、對戰中快照停滯、連線中斷逾時。逾時閾值只住這一份。
+// ================= Fatal errors (launch failure / prolonged unplayable state)=================
+// Only pops in loading / game phases: reason goes to fatalReason, close or restart (solo).
+// Triggers: double terrain-build failure, battle-module load failure, solo sim-core load failure,
+//      load timeout, mid-match snapshot stall, disconnect timeout. Timeout thresholds live only here.
 const FATAL = { LOAD_MS: 90000, SNAP_MS: 20000, NET_MS: 30000 };
 const fatal = {
   shown: false,
@@ -337,8 +337,8 @@ const fatal = {
   lastFrame: performance.now(),
   disconnectedAt: 0,
 };
-// 頁面級幀心跳(與戰場迴圈獨立):戰場凍結但快照照收時,快照看門狗看不出來,這裡補一層。
-// 背景分頁 rAF 本來就停擺,看門狗屆時跳過此項(見 fatalWatchdog)。
+// Page-level frame heartbeat (independent of battle loop): when battle freezes but snapshots still arrive, the snapshot watchdog cannot tell, so add a layer here.
+// Background tabs already suspend rAF, so the watchdog skips this item then (see fatalWatchdog).
 const fatalFrame = () => { fatal.lastFrame = performance.now(); requestAnimationFrame(fatalFrame); };
 requestAnimationFrame(fatalFrame);
 function fatalArmed() { return app.phaseShown === 'loading' || app.phaseShown === 'game'; }
@@ -347,7 +347,7 @@ function showFatal(reason, force = false) {
   if (!force && !fatalArmed()) { toast(`⚠️ ${reason}`); return; }
   fatal.shown = true;
   $('fatalReason').textContent = reason;
-  // 重啟只在單人模式提供(連線對戰的重建由房主/伺服器定案,客戶端重發無意義)
+  // Restart offered in solo only (net-match recovery is decided by host/server, client re-send is pointless)
   $('fatalRestartBtn').style.display = netMode() === 'solo' ? '' : 'none';
   $('fatalOverlay').style.display = '';
 }
@@ -356,12 +356,12 @@ function hideFatal() {
   const el = $('fatalOverlay');
   if (el) el.style.display = 'none';
 }
-/** 關閉:收掉戰場回到大廳(不重整,保留連線機制與代號) */
+/** Close: fold battle back to lobby (no reload, keep link mechanism and callsign) */
 function fatalClose() {
   hideFatal();
-  try { app.net?.send({ t: 'leaveRoom' }); } catch { /* 斷線中即略過 */ }
+  try { app.net?.send({ t: 'leaveRoom' }); } catch { /* skip while offline */ }
   sessionStorage.removeItem('svs_token');
-  if (app.battle) { try { app.battle.dispose(); } catch { /* 忽略 */ } app.battle = null; }
+  if (app.battle) { try { app.battle.dispose(); } catch { /* ignore */ } app.battle = null; }
   app.dlg?.dispose(); app.dlg = null;
   app.terrain = null; app.pre = null; app.fieldMsg = null;
   app.story = null; app.super = null; app.quickRestart = null;
@@ -853,7 +853,7 @@ function selectVenue(v) {
   setFavBtnDisabled(false);
 }
 
-/* ================= 擴充建立模式:混合地圖 / 隨機地圖 ================= */
+/* ================= Extended creation modes: mixed maps / random maps ================= */
 // 兩模式皆輸出標準 battleConfig(走既有 showConfig 預覽 + 存入最愛 + 伺服器驗證管線)。
 // Mixed sources settle on explicit generation; every mode shares the favorite/preview pipeline.
 
@@ -2272,7 +2272,7 @@ function ensureShowcaseTerrains() {
   return app.showcaseTerrainsPromise;
 }
 
-// ================= 放大獨立視窗(仿遊戲操作演出;含角色/NPC 選擇,可切換放大對象) =================
+// ================= Enlarged modal stage (in-game-style showcase; char/NPC pick, switchable subject) =================
 function stageTitleHTML(subject) {
   if (subject.type === 'char') {
     const c = CHARACTERS[subject.id];
@@ -2523,7 +2523,7 @@ $('modalUnitToggle').addEventListener('click', (e) => {
   renderModalPicks();
 });
 
-// ================= NPC / 攻擊建築圖鑑(選角牆下方獨立區塊;雙陣營 + 第三方,與角色卡同框並存) =================
+// ================= NPC / structure codex (standalone block below pick wall; both sides + third party, shares frame with char cards) =================
 const UNIT_ROSTER = ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'tower', 'base'];   // tank 2026-07-17 入列(波次追加坦克)
 const UNIT_SIDES = ['STEEL', 'SWARM', 'GUER', 'MILI'];   // 圖鑑可切陣營(2026-07-17 起含第三方)
 const toggleLabel = (side) => sideInfo(side).name;
@@ -2691,7 +2691,7 @@ function renderCharPick(me) {
   if (app.modalRole) { fillModalPanels(app.modalRole); renderModalPicks(); }   // 放大視窗開啟中 → 同步刷新
 }
 
-// ================= 地圖預建(固定項目提前)=================
+// ================= Map prebuild (fixed items early)=================
 // battleConfig 開房時已全部定案(伺服器 createRoom:resolveEnv 隨機定案 + 50% 主堡對調 + teamSize),
 // 因此「只依賴 cfg 的固定工程」(模型預載 → 地形 → 地貌 → 站立索引)在房間階段就先建;
 // 遊戲準備(loading)只剩等待預建 + 玩家/隨機項目(隨機背景圖、房主 world 上傳、loaded 握手)。
@@ -3818,117 +3818,100 @@ function makeHud() {
         return `<div class="${cls}"><div class="sq-fill" style="width:${w}%"></div><span>${d.si + 1}號 ${label}</span></div>`;
       }).join('');
     },
-    // 異常狀態圖示列:每 8Hz 快照更新一次(game.js 統整後呼叫)
-    // list = [{ id, remS, stacks?, positive, label }]  依 remS 升序(game.js 已排好)
+    // Status icon strip: updated per 8Hz snapshot.
+    // list = [{ id, remS, stacks?, positive, label }] sorted by remS ascending.
     statusIcons: (() => {
-      // ── 唯一定義點:每種狀態的背景色 + SVG 圖形 ─────────────────────────────
-      // 設計原則:
-      //   ・每個圖形語義對應「被影響的能力值」:移速/HP/武器/視野/方向/命中/閃避
-      //   ・暈眩 (全行動中斷) 與 麻痺 (動力系統離線) 使用不同圖示與視覺語義
-      //   ・組合效果(中毒=DoT+減速、高地壓制=命中+閃避+移速、暈眩=動力+武器雙鎖)使用對應組合圖示
-      //   ・時鐘式進度表:外環與扇形順時鐘 360° 走滿一圈表示結束
+      // Visual semantics map to affected stat (speed, HP, weapons, sight, bearing, hit/evasion).
+      // Stun (full action lockout) and paralyze (locomotion offline) retain distinct iconography.
       const DEFS = {
-        // ── 負面:全行動封鎖 (行動+武器全鎖組合效果) ──────────────────────────
-        // stun 暈眩:頭部受創暈眩星環繞 → 意識中斷,禁移動+禁攻擊
         stun: { bg: '#2e1400', fg: '#ff9900',
-          svg: '<ellipse cx="14" cy="14" rx="7.5" ry="3.8" fill="none" stroke="#ff9900" stroke-width="1.2" stroke-dasharray="2.2,2" transform="rotate(-20 14 14)" opacity="0.6"/>'
-             + '<path d="M14 11.5 A2.8 2.8 0 0 1 16.5 14 A2.4 2.4 0 0 1 14 16.2 A2 2 0 0 1 12 14.2" fill="none" stroke="#ff9900" stroke-width="1.3" stroke-linecap="round"/>'
-             + '<path d="M14 4.5 L14.9 6.2 L16.6 6.6 L14.9 7 L14 8.7 L13.1 7 L11.4 6.6 L13.1 6.2 Z" fill="#ff9900"/>'
-             + '<path d="M8.5 16 L9.3 17.5 L10.8 18 L9.3 18.5 L8.5 20 L7.7 18.5 L6.2 18 L7.7 17.5 Z" fill="#ff9900"/>'
-             + '<path d="M19.5 15 L20.3 16.5 L21.8 17 L20.3 17.5 L19.5 19 L18.7 17.5 L17.2 17 L18.7 16.5 Z" fill="#ff9900"/>' },
+          svg: '<ellipse cx="14" cy="14" rx="8.5" ry="4" fill="none" stroke="#ff9900" stroke-width="1.3" stroke-dasharray="3,2" transform="rotate(-22 14 14)" opacity="0.6"/>'
+             + '<path d="M14 10.5 A3.5 3.5 0 0 1 17.5 14 A2.8 2.8 0 0 1 14.5 16.8 A2 2 0 0 1 12.5 14.8 A1.3 1.3 0 0 1 13.8 13.5" fill="none" stroke="#ff9900" stroke-width="1.6" stroke-linecap="round"/>'
+             + '<polygon points="7,8 8.2,10.2 10.5,11 8.2,11.8 7,14 5.8,11.8 3.5,11 5.8,10.2" fill="#ff9900"/>'
+             + '<polygon points="20.5,14 21.6,16 23.5,16.8 21.6,17.6 20.5,19.5 19.4,17.6 17.5,16.8 19.4,16" fill="#ff9900"/>'
+             + '<polygon points="17.5,6.5 18.4,7.8 20,8.4 18.4,9 17.5,10.2 16.6,9 15,8.4 16.6,7.8" fill="#ff9900"/>' },
 
-        // ── 負面:動力離線 (移速×0,武器照常) ──────────────────────────────────
-        // paralyze 麻痺:高壓電弧劈裂履帶齒輪 → 動力系統離線,武器仍可運作
         paralyze: { bg: '#242200', fg: '#ffe600',
-          svg: '<circle cx="14" cy="14" r="7" fill="none" stroke="#ffe600" stroke-width="1.3" stroke-dasharray="2.4,2.4" opacity="0.45"/>'
-             + '<circle cx="14" cy="14" r="2.2" fill="#ffe600" opacity="0.4"/>'
-             + '<path d="M15.5 5 L10.5 13.5 H14.5 L12.5 23 L18.5 12.5 H14 Z" fill="#ffe600"/>'
-             + '<line x1="7.5" y1="8" x2="9.5" y2="10" stroke="#ffe600" stroke-width="1.3" stroke-linecap="round"/>'
-             + '<line x1="18.5" y1="18" x2="20.5" y2="20" stroke="#ffe600" stroke-width="1.3" stroke-linecap="round"/>' },
+          svg: '<path d="M9.5 8 A6.8 6.8 0 0 0 7.2 14 A6.8 6.8 0 0 0 11.5 20.5" fill="none" stroke="#ffe600" stroke-width="2" stroke-linecap="round"/>'
+             + '<path d="M18.5 20 A6.8 6.8 0 0 0 20.8 14 A6.8 6.8 0 0 0 16.5 7.5" fill="none" stroke="#ffe600" stroke-width="2" stroke-linecap="round"/>'
+             + '<line x1="5.5" y1="10" x2="8" y2="11.2" stroke="#ffe600" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="5.2" y1="15.8" x2="7.8" y2="15.2" stroke="#ffe600" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="22.5" y1="12.2" x2="20" y2="12.8" stroke="#ffe600" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="22.8" y1="8" x2="20.2" y2="8.8" stroke="#ffe600" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<path d="M15.5 4.5 L10.5 13 H15 L12.5 23.5 L18.5 12 H14 Z" fill="#ffe600"/>'
+             + '<line x1="6.8" y1="5.8" x2="9" y2="8" stroke="#ffe600" stroke-width="1.4" stroke-linecap="round"/>'
+             + '<line x1="18.5" y1="19.5" x2="21" y2="21.5" stroke="#ffe600" stroke-width="1.4" stroke-linecap="round"/>' },
 
-        // ── 負面:武器/招式離線 ────────────────────────────────────────────────
-        // emp 電磁干擾:火炮管線被電磁脈衝波截斷 → 武器系統離線,機體可移動
         emp: { bg: '#1d002b', fg: '#d044ff',
-          svg: '<rect x="9" y="8" width="4" height="12" rx="1" fill="none" stroke="#d044ff" stroke-width="1.4" transform="rotate(30 11 14)"/>'
-             + '<path d="M6 14 A8 8 0 0 1 22 14" fill="none" stroke="#d044ff" stroke-width="1.3" stroke-dasharray="2,2" opacity="0.6"/>'
-             + '<path d="M8 17 A6 6 0 0 1 20 17" fill="none" stroke="#d044ff" stroke-width="1.3" stroke-dasharray="2,1.5" opacity="0.4"/>'
-             + '<line x1="7" y1="7" x2="21" y2="21" stroke="#d044ff" stroke-width="2.2" stroke-linecap="round"/>' },
+          svg: '<rect x="9.5" y="7" width="3" height="11" rx="1" fill="#d044ff"/>'
+             + '<rect x="15.5" y="7" width="3" height="11" rx="1" fill="#d044ff"/>'
+             + '<line x1="8.5" y1="7" x2="19.5" y2="7" stroke="#d044ff" stroke-width="1.6" stroke-linecap="round"/>'
+             + '<path d="M8 17 H20 V20 Q20 22 14 22 Q8 22 8 20 Z" fill="#d044ff"/>'
+             + '<path d="M5.5 11 A10 10 0 0 1 22.5 11" fill="none" stroke="#d044ff" stroke-width="1.4" stroke-dasharray="2.2,2" opacity="0.8"/>'
+             + '<path d="M7 6.5 A13 13 0 0 1 21 6.5" fill="none" stroke="#d044ff" stroke-width="1.2" stroke-dasharray="2,2" opacity="0.5"/>'
+             + '<line x1="5.5" y1="5.5" x2="22.5" y2="22.5" stroke="#d044ff" stroke-width="2.6" stroke-linecap="round"/>' },
 
-        // ── 負面:移速×35%（重減速,近凍結）────────────────────────────────────
-        // freeze 凍結:六角晶體雪花 → 冰封移速
         freeze: { bg: '#001b2a', fg: '#7fe8ff',
           svg: '<line x1="14" y1="5" x2="14" y2="23" stroke="#7fe8ff" stroke-width="1.8" stroke-linecap="round"/>'
              + '<line x1="6.2" y1="9.5" x2="21.8" y2="18.5" stroke="#7fe8ff" stroke-width="1.8" stroke-linecap="round"/>'
              + '<line x1="6.2" y1="18.5" x2="21.8" y2="9.5" stroke="#7fe8ff" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<polygon points="14,8 15.5,9.5 14,11 12.5,9.5" fill="#7fe8ff"/>'
-             + '<polygon points="14,20 15.5,18.5 14,17 12.5,18.5" fill="#7fe8ff"/>'
              + '<polygon points="14,11.5 16.2,12.8 16.2,15.2 14,16.5 11.8,15.2 11.8,12.8" fill="#001b2a" stroke="#7fe8ff" stroke-width="1.2"/>'
+             + '<path d="M11.5 8 L14 6.5 L16.5 8 M11.5 20 L14 21.5 L16.5 20" fill="none" stroke="#7fe8ff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
+             + '<path d="M7.5 12.2 L7.8 10.3 L10.1 10.8 M19.9 17.2 L20.2 15.3 L17.9 15.8" fill="none" stroke="#7fe8ff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
+             + '<path d="M7.5 15.8 L7.8 17.7 L10.1 17.2 M19.9 10.8 L20.2 12.7 L17.9 12.2" fill="none" stroke="#7fe8ff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
              + '<circle cx="14" cy="5" r="1.1" fill="#7fe8ff"/><circle cx="14" cy="23" r="1.1" fill="#7fe8ff"/>'
              + '<circle cx="6.2" cy="9.5" r="1.1" fill="#7fe8ff"/><circle cx="21.8" cy="18.5" r="1.1" fill="#7fe8ff"/>'
              + '<circle cx="6.2" cy="18.5" r="1.1" fill="#7fe8ff"/><circle cx="21.8" cy="9.5" r="1.1" fill="#7fe8ff"/>' },
 
-        // ── 負面:移速×60~70%（中等減速）────────────────────────────────────────
-        // slow 減速:速度指針低落+減速箭頭 → 引擎功率下降,移速遲滯
         slow: { bg: '#001333', fg: '#4da6ff',
-          svg: '<path d="M7 16 A7.5 7.5 0 1 1 21 16" fill="none" stroke="#4da6ff" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<line x1="14" y1="6" x2="14" y2="7.8" stroke="#4da6ff" stroke-width="1.4"/>'
-             + '<line x1="8.5" y1="11" x2="10" y2="12" stroke="#4da6ff" stroke-width="1.4"/>'
-             + '<line x1="19.5" y1="11" x2="18" y2="12" stroke="#4da6ff" stroke-width="1.4"/>'
-             + '<line x1="14" y1="16" x2="9.8" y2="12.5" stroke="#4da6ff" stroke-width="2" stroke-linecap="round"/>'
-             + '<circle cx="14" cy="16" r="1.7" fill="#4da6ff"/>'
-             + '<path d="M11 19.5 L14 22.5 L17 19.5" fill="none" stroke="#4da6ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' },
+          svg: '<path d="M7.5 17 A7.5 7.5 0 1 1 20.5 17" fill="none" stroke="#4da6ff" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="18.5" y1="12" x2="17" y2="12.8" stroke="#4da6ff" stroke-width="1.3" stroke-linecap="round"/>'
+             + '<line x1="14" y1="6.5" x2="14" y2="8.3" stroke="#4da6ff" stroke-width="1.3" stroke-linecap="round"/>'
+             + '<line x1="9.5" y1="12" x2="11" y2="12.8" stroke="#4da6ff" stroke-width="1.3" stroke-linecap="round"/>'
+             + '<path d="M7.5 17 A7.5 7.5 0 0 1 9.5 12" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>'
+             + '<line x1="14" y1="15" x2="9.8" y2="11.5" stroke="#4da6ff" stroke-width="2" stroke-linecap="round"/>'
+             + '<circle cx="14" cy="15" r="1.8" fill="#4da6ff"/>'
+             + '<path d="M11 18.5 L14 21.5 L17 18.5" fill="none" stroke="#4da6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
 
-        // ── 負面:HP 持續損耗(灼燒 DoT)──────────────────────────────────────────
-        // burn 灼燒:多層熾熱烈焰 → 熱能高溫灼燒,純 HP DoT
         burn: { bg: '#2a0700', fg: '#ff4800',
-          svg: '<path d="M14 4.5 Q10.5 9 11 13.5 Q9 11 8.5 14.5 Q8 19.5 14 23.5 Q20 19.5 19.5 14.5 Q19 11 17 13.5 Q17.5 9 14 4.5 Z" fill="#ff4800"/>'
-             + '<path d="M14 11 Q11.5 14 12 17 Q14 21.5 16 17 Q16.5 14 14 11 Z" fill="#ffcc00"/>'
-             + '<circle cx="9.5" cy="8.5" r="0.8" fill="#ffaa00"/>'
-             + '<circle cx="18" cy="8" r="0.8" fill="#ffaa00"/>' },
+          svg: '<path d="M14 4.5 Q10.5 8.5 11 13 Q9.2 11 8.5 14 Q7.5 18.5 13.5 22.8 Q14 23.2 14.5 22.8 Q20.5 18.5 19.5 14 Q18.8 11 17 13 Q17.5 8.5 14 4.5 Z" fill="#ff4800"/>'
+             + '<path d="M14 11 Q12 14 12.4 16.5 Q11 15 10.5 17 Q10.2 19.5 14 21.5 Q17.8 19.5 17.5 17 Q17 15 15.6 16.5 Q16 14 14 11 Z" fill="#ffcc00"/>'
+             + '<circle cx="14" cy="8" r="1" fill="#ffee66"/>' },
 
-        // ── 負面:裝甲撕裂/穿透失血 (純破口 DoT)───────────────────────────────
-        // bleed 流血:破裂裝甲鋼板+滴血 → 裝甲遭撕裂穿透,持續失血
         bleed: { bg: '#2a0006', fg: '#ff2233',
-          svg: '<path d="M6 7 L12 6 L9 12 Z" fill="#ff2233" opacity="0.5"/>'
-             + '<path d="M22 7 L16 6 L19 12 Z" fill="#ff2233" opacity="0.5"/>'
-             + '<path d="M7 6 L13 12.5 L10 15.5 L17 20.5" fill="none" stroke="#ff2233" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
-             + '<path d="M13 14.5 Q11.5 17 13 18.5 Q14.5 17 13 14.5 Z" fill="#ff2233"/>'
-             + '<path d="M17 16.5 Q15.8 19 17 20.5 Q18.2 19 17 16.5 Z" fill="#ff2233"/>'
-             + '<path d="M9 17.5 Q8 19.5 9 20.5 Q10 19.5 9 17.5 Z" fill="#ff2233"/>' },
+          svg: '<path d="M6 9 L15 17 M10 6 L20 15 M15 5 L22 11" stroke="#ff2233" stroke-width="2.2" stroke-linecap="round"/>'
+             + '<path d="M11 15 Q8.8 18.5 11 21 Q13.2 21 13.2 18.5 Q13.2 15 11 15 Z" fill="#ff2233"/>'
+             + '<path d="M17 16 Q15.2 18.5 17 20.5 Q18.8 20.5 18.8 18.5 Q18.8 16 17 16 Z" fill="#ff2233"/>'
+             + '<circle cx="7.5" cy="18" r="1.1" fill="#ff2233"/>' },
 
-        // ── 負面:HP DoT + 移速70%（毒=組合效果）────────────────────────────────
-        // poison 中毒:生化毒素骷髏+減速尾跡 → 毒液侵蝕生命+腳步沉重遲滯(組合圖示)
         poison: { bg: '#061d02', fg: '#44ee22',
-          svg: '<ellipse cx="11.5" cy="9.5" rx="5.2" ry="4.8" fill="#44ee22"/>'
-             + '<rect x="9.2" y="13" width="4.6" height="3.8" rx="0.8" fill="#44ee22"/>'
-             + '<circle cx="9.8" cy="9" r="1.3" fill="#061d02"/>'
-             + '<circle cx="13.2" cy="9" r="1.3" fill="#061d02"/>'
-             + '<line x1="10.7" y1="14.5" x2="10.7" y2="16.8" stroke="#061d02" stroke-width="0.9"/>'
-             + '<line x1="12.3" y1="14.5" x2="12.3" y2="16.8" stroke="#061d02" stroke-width="0.9"/>'
-             + '<path d="M17.5 11.5 L21.5 15.5 M17.5 15.5 L21.5 19.5 M17.5 19.5 L21.5 23.5" stroke="#44ee22" stroke-width="1.6" stroke-linecap="round"/>'
-             + '<path d="M14.5 20.5 L17.5 23.5 L20.5 20.5" fill="none" stroke="#44ee22" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' },
+          svg: '<path d="M9 13.5 C9 8.5 10.5 5.8 14 5.8 C17.5 5.8 19 8.5 19 13.5 C19 15.2 17.8 15.8 16.8 15.8 C16.5 15.8 16.2 16.6 16.2 17.4 C16.2 18.5 15.5 19.2 14.5 19.2 H13.5 C12.5 19.2 11.8 18.5 11.8 17.4 C11.8 16.6 11.5 15.8 11.2 15.8 C10.2 15.8 9 15.2 9 13.5 Z" fill="#44ee22"/>'
+             + '<ellipse cx="11.8" cy="11.8" rx="1.5" ry="1.9" fill="#061d02" transform="rotate(12 11.8 11.8)"/>'
+             + '<ellipse cx="16.2" cy="11.8" rx="1.5" ry="1.9" fill="#061d02" transform="rotate(-12 16.2 11.8)"/>'
+             + '<polygon points="14,13.8 13.2,15.1 14.8,15.1" fill="#061d02"/>'
+             + '<line x1="13.1" y1="17.2" x2="13.1" y2="19" stroke="#061d02" stroke-width="1"/>'
+             + '<line x1="14.9" y1="17.2" x2="14.9" y2="19" stroke="#061d02" stroke-width="1"/>'
+             + '<circle cx="6.8" cy="8.2" r="1.3" fill="#44ee22" opacity="0.8"/>'
+             + '<circle cx="21.2" cy="8.8" r="1.4" fill="#44ee22" opacity="0.8"/>'
+             + '<circle cx="7.2" cy="18" r="0.9" fill="#44ee22" opacity="0.6"/>'
+             + '<circle cx="20.8" cy="17.5" r="1" fill="#44ee22" opacity="0.6"/>' },
 
-        // ── 負面:視野+火控喪失 ───────────────────────────────────────────────
-        // blind 致盲:光學感測鏡頭過曝+對角阻斷 → 視野遮蔽,無法瞄準
         blind: { bg: '#1a1600', fg: '#ffe033',
-          svg: '<path d="M5 14 Q9.5 8 14 8 Q18.5 8 23 14 Q18.5 20 14 20 Q9.5 20 5 14 Z" fill="none" stroke="#ffe033" stroke-width="1.8"/>'
-             + '<circle cx="14" cy="14" r="3.2" fill="#ffe033"/>'
-             + '<circle cx="14" cy="14" r="1.4" fill="#1a1600"/>'
-             + '<line x1="5.5" y1="5.5" x2="22.5" y2="22.5" stroke="#ffe033" stroke-width="2.4" stroke-linecap="round"/>'
-             + '<line x1="14" y1="5" x2="14" y2="7" stroke="#ffe033" stroke-width="1.4"/>'
-             + '<line x1="14" y1="21" x2="14" y2="23" stroke="#ffe033" stroke-width="1.4"/>' },
+          svg: '<path d="M5 14 Q14 6.8 23 14 Q14 21.2 5 14 Z" fill="none" stroke="#ffe033" stroke-width="1.8" stroke-linejoin="round"/>'
+             + '<circle cx="14" cy="14" r="3.6" fill="none" stroke="#ffe033" stroke-width="1.4"/>'
+             + '<circle cx="14" cy="14" r="1.5" fill="#ffe033"/>'
+             + '<line x1="5.5" y1="5.5" x2="22.5" y2="22.5" stroke="#ffe033" stroke-width="2.5" stroke-linecap="round"/>'
+             + '<line x1="5.5" y1="14" x2="8" y2="14" stroke="#ffe033" stroke-width="1.4" opacity="0.7"/>'
+             + '<line x1="20" y1="14" x2="22.5" y2="14" stroke="#ffe033" stroke-width="1.4" opacity="0.7"/>' },
 
-        // ── 負面:移速折半+方向反轉 ──────────────────────────────────────────
-        // conf 混亂:反向導航羅盤箭頭 → 操縱訊號被反轉
         conf: { bg: '#001a18', fg: '#00e5b8',
-          svg: '<path d="M7 10 A7.5 7.5 0 0 1 20 8" fill="none" stroke="#00e5b8" stroke-width="2" stroke-linecap="round"/>'
-             + '<polygon points="20,8 24,7 22,12" fill="#00e5b8"/>'
-             + '<path d="M21 18 A7.5 7.5 0 0 1 8 20" fill="none" stroke="#00e5b8" stroke-width="2" stroke-linecap="round"/>'
-             + '<polygon points="8,20 4,21 6,16" fill="#00e5b8"/>'
-             + '<circle cx="14" cy="14" r="2" fill="#00e5b8" opacity="0.6"/>' },
+          svg: '<path d="M7.5 11 A7.2 7.2 0 0 1 20 8.5" fill="none" stroke="#00e5b8" stroke-width="2" stroke-linecap="round"/>'
+             + '<polygon points="20,5.8 23.5,9 19.5,11.5" fill="#00e5b8"/>'
+             + '<path d="M20.5 17 A7.2 7.2 0 0 1 8 19.5" fill="none" stroke="#00e5b8" stroke-width="2" stroke-linecap="round"/>'
+             + '<polygon points="8,22.2 4.5,19 8.5,16.5" fill="#00e5b8"/>'
+             + '<polygon points="14,11.5 16.5,14 14,16.5 11.5,14" fill="#00e5b8" opacity="0.6"/>'
+             + '<circle cx="14" cy="14" r="1.2" fill="#001a18"/>' },
 
-        // ── 負面:取消閃避 ─────────────────────────────────────────────────────
-        // mark 標記:狙擊鎖定框角+準星 → 閃避被鎖死,強制必中必暴
         mark: { bg: '#200800', fg: '#ff5500',
           svg: '<path d="M7 10 V7 H10 M18 7 H21 V10 M21 18 V21 H18 M10 21 H7 V18" fill="none" stroke="#ff5500" stroke-width="1.8" stroke-linecap="round"/>'
              + '<circle cx="14" cy="14" r="4.5" fill="none" stroke="#ff5500" stroke-width="1.5"/>'
@@ -3938,59 +3921,46 @@ function makeHud() {
              + '<line x1="20" y1="14" x2="23" y2="14" stroke="#ff5500" stroke-width="1.8"/>'
              + '<circle cx="14" cy="14" r="1.5" fill="#ff5500"/>' },
 
-        // ── 負面:命中率懲罰(射擊精度下降)────────────────────────────────────
-        // unbal 失衡:震盪破裂準星+後座發散 → 砲管劇震,命中率與暴擊率減半
         unbal: { bg: '#22000c', fg: '#ff2d60',
-          svg: '<path d="M8 12 A6 6 0 0 1 18 8" fill="none" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<path d="M10 20 A6 6 0 0 0 20 16" fill="none" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<path d="M12 9 L9.5 6.5 M9.5 6.5 L12.5 6.5" fill="none" stroke="#ff2d60" stroke-width="1.5" stroke-linecap="round"/>'
-             + '<path d="M16 19 L18.5 21.5 M18.5 21.5 L15.5 21.5" fill="none" stroke="#ff2d60" stroke-width="1.5" stroke-linecap="round"/>'
-             + '<line x1="6.5" y1="15" x2="11.5" y2="13" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<line x1="16.5" y1="15" x2="21.5" y2="13" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<line x1="13" y1="7.5" x2="15" y2="20.5" stroke="#ff2d60" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2,2"/>' },
+          svg: '<circle cx="14" cy="14" r="5" fill="none" stroke="#ff2d60" stroke-width="1.6"/>'
+             + '<line x1="14" y1="6" x2="14" y2="9" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="14" y1="19" x2="14" y2="22" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="6" y1="14" x2="9" y2="14" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="19" y1="14" x2="22" y2="14" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<path d="M12.5 8 L15.5 13 L12.5 15 L15.5 20" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
+             + '<path d="M6 9.5 A6.5 6.5 0 0 0 6 18.5" fill="none" stroke="#ff2d60" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>'
+             + '<path d="M22 9.5 A6.5 6.5 0 0 1 22 18.5" fill="none" stroke="#ff2d60" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>' },
 
-        // ── 負面:命中+閃避雙懲罰(高地壓制組合)──────────────────────────────────
-        // hiSup 高地壓制:制高點俯衝重壓箭雨+壓制底座 → 命中與閃避雙懲罰(組合圖示)
         hiSup: { bg: '#141f00', fg: '#bbff00',
-          svg: '<polygon points="8,5 20,5 18,8 10,8" fill="#bbff00"/>'
-             + '<path d="M10 9 L10 15 M14 9 L14 17 M18 9 L18 15" stroke="#bbff00" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<polygon points="10,17 7.5,13.5 12.5,13.5" fill="#bbff00"/>'
-             + '<polygon points="14,19 11.5,15.5 16.5,15.5" fill="#bbff00"/>'
-             + '<polygon points="18,17 15.5,13.5 20.5,13.5" fill="#bbff00"/>'
-             + '<line x1="6" y1="22" x2="22" y2="22" stroke="#bbff00" stroke-width="2" stroke-linecap="round"/>' },
+          svg: '<polygon points="6,6 22,6 19.5,9.5 8.5,9.5" fill="#bbff00"/>'
+             + '<polygon points="14,21 11,15.5 13,15.5 13,10.5 15,10.5 15,15.5 17,15.5" fill="#bbff00"/>'
+             + '<polygon points="9.2,18.5 7,14 8.5,14 8.5,10.5 10,10.5 10,14 11.5,14" fill="#bbff00" opacity="0.85"/>'
+             + '<polygon points="18.8,18.5 16.5,14 18,14 18,10.5 19.5,10.5 19.5,14 21,14" fill="#bbff00" opacity="0.85"/>'
+             + '<line x1="6.5" y1="22.5" x2="21.5" y2="22.5" stroke="#bbff00" stroke-width="2" stroke-linecap="round"/>' },
 
-        // ── 正面:隱身 ────────────────────────────────────────────────────────
-        // stealth 隱身:虛線光學迷彩菱形 → 形體模糊消散
         stealth: { bg: '#001622', fg: '#00e5ff',
-          svg: '<polygon points="14,4.5 22.5,14 14,23.5 5.5,14" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-dasharray="3,2.2"/>'
-             + '<polygon points="14,9 18.5,14 14,19 9.5,14" fill="#00e5ff" opacity="0.25"/>'
-             + '<circle cx="14" cy="14" r="1.8" fill="#00e5ff" opacity="0.7"/>' },
+          svg: '<polygon points="14,4.5 22.5,19 14,16 5.5,19" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-linejoin="round"/>'
+             + '<polygon points="14,7.5 14,15 8,17" fill="#00e5ff" opacity="0.35"/>'
+             + '<path d="M14 8.5 H18.5 M14 11 H19.8 M14 13.5 H17.5" stroke="#00e5ff" stroke-width="1.3" stroke-dasharray="1.6,1.4"/>'
+             + '<circle cx="14" cy="11" r="1.5" fill="#00e5ff"/>' },
 
-        // ── 正面:無敵 ────────────────────────────────────────────────────────
-        // inv 無敵:金黃六角神聖護盾+防禦星芒 → 全傷害免疫
         inv: { bg: '#1e1600', fg: '#ffe566',
           svg: '<polygon points="14,3.5 22,8 22,20 14,24.5 6,20 6,8" fill="none" stroke="#ffe566" stroke-width="1.5" opacity="0.5"/>'
              + '<polygon points="14,5.5 16.2,11.2 22.2,11.2 17.4,14.8 19.2,20.5 14,17 8.8,20.5 10.6,14.8 5.8,11.2 11.8,11.2" fill="#ffe566"/>'
              + '<circle cx="14" cy="14" r="2.2" fill="#1e1600" opacity="0.6"/>' },
 
-        // ── 正面:招式增益(可多層)─────────────────────────────────────────────
-        // mod 招式增益:三重推進箭頭+能力梯級底座 → 招式能力值上升
         mod: { bg: '#001c0c', fg: '#00f080',
           svg: '<path d="M14 20 V8" stroke="#00f080" stroke-width="2.6" stroke-linecap="round"/>'
              + '<path d="M9 13.5 L14 7.5 L19 13.5" fill="none" stroke="#00f080" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
              + '<path d="M10.5 17.5 L14 13 L17.5 17.5" fill="none" stroke="#00f080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>'
              + '<rect x="7" y="21" width="14" height="2.2" rx="1.1" fill="#00f080"/>' },
 
-        // ── 正面詞綴:填彈速度 ─────────────────────────────────────────────────
-        // tempered 淬火軍械:雙聯彈匣+充能電弧 → 填彈加速
         tempered: { bg: '#190628', fg: '#c060ff',
           svg: '<rect x="8" y="5" width="12" height="15" rx="2" fill="none" stroke="#c060ff" stroke-width="1.8"/>'
              + '<rect x="11" y="3" width="6" height="3" rx="1" fill="#c060ff"/>'
              + '<line x1="8" y1="10" x2="20" y2="10" stroke="#c060ff" stroke-width="1.2" opacity="0.5"/>'
              + '<path d="M15 7.5 L11 13.5 H14 L13 18.5 L17 13.5 H14 Z" fill="#c060ff"/>' },
 
-        // ── 正面詞綴:受傷減免 ─────────────────────────────────────────────────
-        // hardened 複合裝甲:雙層重裝甲六角板+核心栓柱 → 承受傷害大幅減免
         hardened: { bg: '#041422', fg: '#50b0ff',
           svg: '<polygon points="14,4.5 22,9 22,19 14,23.5 6,19 6,9" fill="none" stroke="#50b0ff" stroke-width="1.8"/>'
              + '<polygon points="14,7.8 19,10.6 19,17.4 14,20.2 9,17.4 9,10.6" fill="#50b0ff" opacity="0.2"/>'
@@ -3998,20 +3968,16 @@ function makeHud() {
              + '<line x1="14" y1="8" x2="14" y2="12" stroke="#50b0ff" stroke-width="1.4"/>'
              + '<line x1="14" y1="16" x2="14" y2="20" stroke="#50b0ff" stroke-width="1.4"/>' },
 
-        // ── 正面詞綴:擊殺回血 ─────────────────────────────────────────────────
-        // vampiric 汲能核心:能量汲取心核+向心旋流 → 造成傷害/擊殺時回饋裝甲
         vampiric: { bg: '#22001c', fg: '#ff40b0',
           svg: '<path d="M14 20.5 Q5.5 13.5 5.5 9.5 A4.5 4.5 0 0 1 14 7.5 A4.5 4.5 0 0 1 22.5 9.5 Q22.5 13.5 14 20.5 Z" fill="#ff40b0"/>'
              + '<path d="M14 9 L14 16 M11.5 13.5 L14 16 L16.5 13.5" stroke="#22001c" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' },
 
-        // ── 正面詞綴:擊殺賞金 ─────────────────────────────────────────────────
-        // bounty 懸賞頻道:全息賞金硬幣+金幣信號 → 擊殺敵軍賞金翻倍
         bounty: { bg: '#1c1200', fg: '#ffcc00',
           svg: '<circle cx="14" cy="14" r="9.5" fill="#ffcc00" opacity="0.15" stroke="#ffcc00" stroke-width="1.8"/>'
-             + '<circle cx="14" cy="14" r="5.2" fill="none" stroke="#ffcc00" stroke-width="1.4"/>'
+             + '<circle cx="14" cy="14" r="6" fill="none" stroke="#ffcc00" stroke-width="1.3"/>'
              + '<line x1="14" y1="4.5" x2="14" y2="7" stroke="#ffcc00" stroke-width="1.8"/>'
              + '<line x1="14" y1="21" x2="14" y2="23.5" stroke="#ffcc00" stroke-width="1.8"/>'
-             + '<text x="14" y="17.2" text-anchor="middle" font-size="7.5" font-weight="900" fill="#ffcc00" font-family="monospace">¥</text>' },
+             + '<text x="14" y="17.6" text-anchor="middle" font-size="9" font-weight="900" fill="#ffcc00" font-family="-apple-system, BlinkMacSystemFont, monospace">$</text>' },
       };
       const el = $('statusIcons');
       const durCache = new Map();
@@ -4024,7 +3990,7 @@ function makeHud() {
         const stackBadge = (item.stacks != null && item.stacks > 1)
           ? `<span class="si-n">${item.stacks}</span>` : '';
 
-        // 時鐘式進度表: 順時鐘繞完一圈表示結束 (0% -> 100% 走滿 360 度)
+        // Clockwise dial completion represents expiration (0% -> 100% sweep over 360 deg).
         let maxS = item.maxS || durCache.get(item.id) || item.remS;
         if (item.remS > maxS) { maxS = item.remS; durCache.set(item.id, maxS); }
         else if (!durCache.has(item.id)) { durCache.set(item.id, maxS); }
@@ -5525,7 +5491,7 @@ $('worldBtn')?.addEventListener('click', () => {
 $('worldCloseBtn')?.addEventListener('click', () => { $('worldOverlay').style.display = 'none'; });
 $('worldOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'worldOverlay') $('worldOverlay').style.display = 'none'; });
 
-// ================= 伺服器訊息 =================
+// ================= Server messages =================
 function onSync(m) {
   fatal.lastNetUp = Date.now();
   app.youId = m.youId;

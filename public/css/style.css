@@ -1,11 +1,11 @@
-/* ============ 無人戰略:鋼鐵與蜂群 — 戰術終端 UI ============
-   設計語彙(日系機甲作戰終端 / MAGI 風格 × logo 藍黃對抗):
-   - 底色:近黑基板 + 細掃描線 + 網格,面板一律硬邊(切角 clip-path),無圓角
-   - 陣營色:蜂群 = 警戒黃 #ffc247(SWARM)/ 鋼鐵 = 冷光藍 #5fd0f2(STEEL)
-   - 標題橫幔:填滿陣營色、字反白為黑(反相色條)= 終端機標籤
-   - 字體:Noto Serif TC 900(明朝體,大字/警告)+ 等寬(代號/數值)+ Noto Sans TC(內文)
-   - 危險/斜紋:黃黑警戒條紋只用在「不可逆的關鍵動作」與警報
-   注意:所有 selector 皆為 JS 既有掛點,MUST NOT 刪名;只換視覺。 */
+/* ============ Drone Tactics: Steel vs. Swarm -- tactical terminal UI ============
+   Design language (JP mecha-combat terminal / MAGI style x logo blue-yellow clash):
+   - Base: near-black substrate + fine scanlines + grid; all panels hard-edged (notched clip-path), no rounding
+   - Faction colors: SWARM = alert yellow #ffc247 / STEEL = cold blue #5fd0f2
+   - Title banners: filled faction color, black-on-color text (inverted bars) = terminal labels
+   - Type: Noto Serif TC 900 (serif, headlines/warnings) + monospace (codes/numbers) + Noto Sans TC (body)
+   - Danger/hazard: yellow-black stripes reserved for "irreversible critical actions" and alarms
+   Note: every selector is an existing JS mount point; MUST NOT delete names, visuals only. */
 :root {
   --bg0: #05070a;
   --bg1: #0a0f15;
@@ -21,13 +21,13 @@
   --steel: #5fd0f2;
   --steel-hot: #a5e6fb;
   --steel-dark: #16495f;
-  /* 主視覺色軌(全站單色件的唯一的縫):選角前 = 左藍(鋼鐵 railS)× 右黃(蜂群 railW)對抗,
-     方位對齊 logo 與標題橫幔。自己的角色一經 highlight,body[data-side] 把兩條軌一起收束成
-     該陣營單色(含戰鬥 HUD)。漸層件(底圖光暈 / 進度條 / HP 條 / 陣營識別色塊)不吃這組變數。 */
+  /* Hero rail colors (single seam for all site-wide monochrome parts): pre-pick = left blue (STEEL railS) x right yellow (SWARM railW) clash,
+     oriented to logo and title banners. Once your own character is highlighted, body[data-side] collapses both rails into
+     that faction's monochrome (incl. battle HUD). Gradient parts (backdrop glow / progress / HP / faction chips) ignore these vars. */
   --railS: var(--steel); --railS-hot: var(--steel-hot); --railS-dark: var(--steel-dark); --railS-rgb: 95, 208, 242;
   --railW: var(--swarm); --railW-hot: var(--swarm-hot); --railW-dark: var(--swarm-dark); --railW-rgb: 255, 194, 71;
   --danger: #ff4436;
-  /* 電馭叛客 × MAGI 衝突色(在藍黃對抗的接縫上注入洋紅/青/琥珀，打破單調) */
+  /* Cyberpunk x MAGI clash colors (magenta/cyan/amber injected on the blue-yellow seam to break monotony) */
   --neon-pink: #ff2e88; --neon-pink-rgb: 255, 46, 136;
   --neon-cyan: #18e9ff; --neon-cyan-rgb: 24, 233, 255;
   --magi-amber: #ff8a1e;
@@ -35,13 +35,13 @@
   --serif: 'Noto Serif TC', 'Noto Sans TC', serif;
   --mono: 'Consolas', 'SF Mono', ui-monospace, monospace;
   --radius: 0px;
-  /* 切角:右上 + 左下(終端面板的招牌斜角) */
+  /* Notch: top-right + bottom-left (the signature bevel of terminal panels) */
   --notch: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
   --notch-sm: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
   --hazard: repeating-linear-gradient(45deg, rgba(255, 194, 71, 0.9) 0 8px, rgba(10, 8, 2, 0.9) 8px 16px);
 }
 
-/* 陣營收束:角色 highlight 後(main.js 寫入 body[data-side]),兩條色軌同時指向該陣營色 */
+/* Faction collapse: after character highlight (main.js writes body[data-side]), both rails point at that faction's color */
 body[data-side="SWARM"] {
   --railS: var(--swarm); --railS-hot: var(--swarm-hot); --railS-dark: var(--swarm-dark); --railS-rgb: 255, 194, 71;
 }
@@ -50,30 +50,30 @@ body[data-side="STEEL"] {
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-/* `text-size-adjust: 100%` = 「字級由 CSS 說了算」(2026-08-16,`docs/anime_style_plan.md` ⑧-5)。
-   iOS 橫式會自動放大它認為太小的文字,而 HUD 下帶的 1/6 上限是 `game.fitHudBand()` 量**自然高**
-   反解出 `--hud-k` 的(見 COCKPIT ⑦)⇒ 字被瀏覽器放大 = 量到的自然高變了 = HUD 在 iPhone 橫握時
-   整條縮成另一個比例,而且沒有任何錯誤訊息。既有的 `body.touch-ui input, select { font-size: 16px }`
-   只擋住「聚焦時整頁放大」,擋不到這一條。MUST 掛在根層(裝置級,不是版型級)。 */
+/* `text-size-adjust: 100%` = "font size is CSS's call" (2026-08-16, `docs/anime_style_plan.md` 8-5).
+   iOS landscape auto-enlarges text it deems too small, while the HUD bottom band's 1/6 cap is solved from the **natural height**
+   measured by `game.fitHudBand()` into `--hud-k` (see COCKPIT 7) => browser-enlarged text = changed measured height = HUD
+   shrinking to another ratio in iPhone landscape with zero error messages. The existing `body.touch-ui input, select { font-size: 16px }`
+   only blocks "whole-page zoom on focus", not this path. MUST hang at root level (device-level, not layout-level). */
 html, body { height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-/* 模組初始化完成前不繪製任何畫面，避免先看到 index.html 的舊版初始狀態，再切到新 UI。 */
+/* Paint nothing before module init completes, avoiding a flash of index.html's stale initial state before the new UI swaps in. */
 html:not(.app-ready) .screen { visibility: hidden; }
-/* 底圖 = 鋼鐵藍(左上)× 蜂群黃(右下)沿斜線正面對撞,接縫爆出洋紅火花(電馭叛客衝突感)。
-   純漸層 ⇒ 選角後不變;方位對齊 logo 與標題橫幔。 */
+/* Backdrop = STEEL blue (top-left) x SWARM yellow (bottom-right) colliding head-on along a diagonal, seam bursting magenta sparks (cyberpunk clash).
+   Pure gradients => unchanged after picking; orientation matches logo and title banners. */
 body {
   background:
-    /* 藍側光暈(左上角) */
+    /* Blue-side glow (top-left) */
     radial-gradient(58% 70% at 8% 6%, rgba(95, 208, 242, 0.20) 0%, transparent 62%),
-    /* 黃側光暈(右下角) */
+    /* Yellow-side glow (bottom-right) */
     radial-gradient(58% 70% at 92% 94%, rgba(255, 194, 71, 0.20) 0%, transparent 62%),
-    /* 對撞縫:洋紅火線 + 青/黃鑲邊(斜切整個畫面) */
+    /* Clash seam: magenta fireline + cyan/yellow edging (diagonal cut across the whole view) */
     linear-gradient(122deg, transparent calc(50% - 2.5px), rgba(24, 233, 255, 0.35) calc(50% - 2.5px),
       rgba(255, 46, 136, 0.72) 50%, rgba(255, 194, 71, 0.35) calc(50% + 2.5px), transparent calc(50% + 2.5px)),
-    /* 藍楔形(縫的左上半) */
+    /* Blue wedge (upper-left half of the seam) */
     linear-gradient(122deg, rgba(95, 208, 242, 0.14) 0%, rgba(95, 208, 242, 0.03) 44%, transparent 50%),
-    /* 黃楔形(縫的右下半) */
+    /* Yellow wedge (lower-right half of the seam) */
     linear-gradient(122deg, transparent 50%, rgba(255, 194, 71, 0.03) 56%, rgba(255, 194, 71, 0.14) 100%),
-    /* 終端網格 */
+    /* Terminal grid */
     linear-gradient(rgba(122, 158, 178, 0.05) 1px, transparent 1px) 0 0 / 100% 34px,
     linear-gradient(90deg, rgba(122, 158, 178, 0.05) 1px, transparent 1px) 0 0 / 34px 100%,
     #05070a;
@@ -81,7 +81,7 @@ body {
   font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
   overflow: hidden;
 }
-/* 對撞縫的斜向故障掃描條(靜態貼層,替斜縫補上電馭叛客的斷訊質感;不吃事件、壓在面板之下) */
+/* Diagonal glitch scan strips over the clash seam (static decal, adds cyberpunk drop-out texture; no events, under panels) */
 body::before {
   content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
@@ -95,21 +95,21 @@ body::before {
   padding: 3vh 16px 24px; gap: 16px;
 }
 
-/* CRT:水平掃描線 + 暗角(不吃事件) */
+/* CRT: horizontal scanlines + vignette (no events) */
 .scanlines {
   pointer-events: none; position: fixed; inset: 0; z-index: 2;
   background:
     repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.30) 0 1px, transparent 1px 3px),
     radial-gradient(120% 90% at 50% 50%, transparent 48%, rgba(0, 0, 0, 0.72) 100%);
 }
-/* 螢幕邊角的定位角標(終端取景框) */
+/* Corner registration marks (terminal viewfinder frame) */
 .scanlines::before, .scanlines::after {
   content: ''; position: absolute; width: 26px; height: 26px;
 }
 .scanlines::before { left: 10px; top: 10px; border-left: 2px solid var(--railS); border-top: 2px solid var(--railS); }
 .scanlines::after { right: 10px; bottom: 10px; border-right: 2px solid var(--railW); border-bottom: 2px solid var(--railW); }
 
-/* 全站共用:選取脈動(硬邊光暈,不用柔和呼吸) */
+/* Site-wide shared: selection pulse (hard-edged halo, no soft breathing) */
 @keyframes selGlowSwarm {
   0%, 100% { box-shadow: inset 0 0 0 1px var(--railW), 0 0 0 rgba(var(--railW-rgb), 0); }
   50% { box-shadow: inset 0 0 0 1px var(--railW), 0 0 14px rgba(var(--railW-rgb), 0.55); }
@@ -121,7 +121,7 @@ body::before {
 @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.15; } }
 @keyframes hazardRun { to { background-position: 64px 0; } }
 
-/* ---------- 系統列(裝飾:終端機頂條) ---------- */
+/* ---------- System bar (decorative: terminal top strip) ---------- */
 .sysbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 4; pointer-events: none;
   display: flex; justify-content: space-between; align-items: center;
@@ -132,11 +132,11 @@ body::before {
 .sysbar b { color: var(--railS); font-weight: 700; }
 .sysbar i { font-style: normal; color: var(--railW); animation: blink 1.4s step-end infinite; }
 
-/* ---------- 標題 ---------- */
+/* ---------- Title ---------- */
 .logo-container { display: flex; justify-content: center; align-items: center; margin-bottom: 6px; }
-/* 原版 logo 的去背 + 三色平塗版(assets/logo_flat.png,由 logo.png 離線壓制:亮度轉 alpha、
-   色相歸到 steel/swarm/white 三色)。真去背 ⇒ MUST NOT 用 mix-blend-mode 補救 ——
-   .masthead 自成 stacking context,screen 混不到頁面底色,只會留下一塊黑方框。 */
+/* Keyed-out logo + three-color flat edition (assets/logo_flat.png, baked offline from logo.png: luminance to alpha,
+   hues snapped to steel/swarm/white). Truly keyed => MUST NOT rescue via mix-blend-mode --
+   .masthead is its own stacking context, screen never reaches the page backdrop, leaving a black box. */
 .game-logo {
   width: min(520px, 88vw); height: auto;
   animation: pulse-logo 4s ease-in-out infinite alternate;
@@ -160,7 +160,7 @@ body::before {
   font-size: clamp(44px, 8.4vw, 88px); line-height: 1; letter-spacing: 14px;
   display: flex; align-items: center; justify-content: center;
 }
-/* 陣營色 = 反相色塊(終端標籤),而非柔光文字;色塊外緣鑲對比色電光邊 = 電馭叛客衝突 */
+/* Faction colors = inverted blocks (terminal labels), not glowing text; contrasting neon rim on block edges = cyberpunk clash */
 .t-steel {
   position: relative; color: #04080b; background: var(--steel); padding: 0 16px 6px;
   clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
@@ -175,14 +175,14 @@ body::before {
   text-shadow: none;
   animation: glitchW 5.5s steps(1) infinite;
 }
-/* 中央 × = 對撞點:洋紅危險字 + 脈動光暈,而非低調紅點 */
+/* Center x = impact point: magenta danger glyph + pulsing halo, not a low-key red dot */
 .t-vs {
   color: var(--neon-pink); font-family: var(--mono); font-weight: 900;
   font-size: 0.42em; margin: 0 6px; letter-spacing: 0;
   text-shadow: 0 0 14px rgba(var(--neon-pink-rgb), 0.9), 0 0 4px rgba(255, 255, 255, 0.8);
   animation: vsPulse 1.1s steps(2) infinite;
 }
-/* 招牌 RGB 分離故障:偶發水平跳動 + 對比色殘影 */
+/* Signature RGB-split glitch: occasional horizontal jump + contrasting afterimages */
 @keyframes glitchS {
   0%, 92%, 100% { transform: translate(0, 0); }
   93% { transform: translate(-3px, 1px); box-shadow: -6px 0 0 rgba(var(--neon-cyan-rgb), 1), 5px 0 0 rgba(var(--neon-pink-rgb), 0.85); }
@@ -215,7 +215,7 @@ body::before {
 .room-meta { color: var(--dim); margin-top: 8px; font-size: 12px; font-family: var(--mono); letter-spacing: 1px; }
 .room-meta b { color: var(--railW); font-family: var(--mono); font-size: 16px; letter-spacing: 6px; }
 
-/* ---------- 面板 / 按鈕 ---------- */
+/* ---------- Panels / buttons ---------- */
 .panel {
   position: relative;
   background: rgba(8, 12, 17, 0.94);
@@ -224,21 +224,21 @@ body::before {
   padding: 22px; width: min(560px, 94vw);
   display: flex; flex-direction: column; gap: 12px; z-index: 3;
 }
-/* 雙緣對抗色軌:左藍(鋼鐵 railS)× 右黃(蜂群 railW) + 內細框 —— 選角前左右平衡,
-   角色 highlight 後 body[data-side] 把兩軌收束成該陣營單色(見 :root 色軌註解) */
+/* Dual-edge clash rails: left blue (STEEL railS) x right yellow (SWARM railW) + inner hairline -- balanced pre-pick,
+   body[data-side] collapses both rails into that faction's monochrome after character highlight (see :root rail note) */
 .panel::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   border-left: 3px solid var(--railS);
   border-right: 3px solid var(--railW);
   box-shadow: inset 0 0 0 4px rgba(122, 158, 178, 0.06);
 }
-/* 反相色條標題:填滿 + 黑字 */
+/* Inverted title bar: filled + black text */
 .panel-head {
   font-family: var(--serif); font-weight: 900;
   letter-spacing: 5px; font-size: 14px; color: #06090d;
   padding: 6px 12px; margin: -4px -4px 4px;
-  /* 對抗色條:左半鋼鐵藍 × 右半蜂群黃(硬邊接縫)+ 右側終端刻度落在蜂群側 ——
-     選角前左右平衡,標籤文字靠左落在鋼鐵側;body[data-side] 收束後整條為單一陣營色 */
+  /* Clash bar: left-half STEEL blue x right-half SWARM yellow (hard seam) + terminal ticks landing on the SWARM side --
+     balanced pre-pick, label text sits left on the STEEL side; body[data-side] collapses the whole bar to one faction color */
   background:
     repeating-linear-gradient(90deg, rgba(5, 7, 10, 0.30) 0 3px, transparent 3px 10px) right center / 26% 100% no-repeat,
     linear-gradient(90deg, var(--railS) 0 50%, var(--railW) 50% 100%);
@@ -273,7 +273,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .btn.big { padding: 14px 24px; font-size: 16px; letter-spacing: 5px; }
 .btn.small { padding: 6px 14px; font-size: 12px; letter-spacing: 2px; }
 .btn.on { border-color: var(--ok); color: var(--ok); animation: selGlowOk 1.8s ease-in-out infinite; }
-/* 陣營按鈕:hover 反相填滿 = 終端機「選中」語彙 */
+/* Faction buttons: :hover fills inverted = the terminal "selected" idiom */
 .swarm-btn { border-color: var(--railW); color: var(--railW); box-shadow: inset 3px 0 0 var(--railW); }
 .swarm-btn:hover:not(:disabled) { background: var(--railW); color: #0d0900; border-color: var(--railW-hot); }
 .steel-btn { border-color: var(--railS); color: var(--railS); box-shadow: inset 3px 0 0 var(--railS); }
@@ -287,8 +287,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .divider::before, .divider::after {
   content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent);
 }
-/* 連線機制三選一(雲端 / 區網 Tailscale / 單機):三顆恆同列。
-   窄屏只收窄欄寬 + 降一階字級,**MUST NOT** 改成直排(見 /CLAUDE.md A20)。 */
+/* Three link modes to choose from (cloud / LAN Tailscale / solo): three buttons always in one row.
+   Narrow screens only shrink column width + drop one type step; **MUST NOT** switch to vertical (see /CLAUDE.md A20). */
 .link-modes { gap: 8px; }
 .link-btn { flex: 1 1 0; min-width: 0; padding: 9px 6px; font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
 .link-cloud input { flex: 1 1 0; min-width: 0; font-size: 12px; }
@@ -303,7 +303,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .pin-join .row { margin-top: 8px; }
 .foot-note { color: #4d5c66; font-size: 10px; letter-spacing: 2px; z-index: 3; text-align: center; font-family: var(--mono); }
 
-/* ---------- 關於我(首頁最下方)---------- */
+/* ---------- About me (bottom of home) ---------- */
 .about-me { text-align: center; z-index: 3; margin-top: 4px; }
 .about-name {
   font-family: var(--serif); font-weight: 700; font-size: 14px; letter-spacing: 4px;
@@ -321,7 +321,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .about-links a:hover { color: var(--railW); }
 .about-links svg { width: 14px; height: 14px; }
 
-/* ---------- 房間列表 ---------- */
+/* ---------- Room list ---------- */
 .room-list { display: flex; flex-direction: column; gap: 6px; max-height: 32vh; overflow: auto; }
 .room-empty { color: var(--dim); text-align: center; padding: 14px; font-size: 13px; font-family: var(--mono); letter-spacing: 2px; }
 .room-row {
@@ -346,7 +346,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .tag.open { color: var(--ok); border-color: rgba(169, 221, 107, 0.5); }
 .tag.dim { color: var(--dim); }
 
-/* ---------- 陣營卡 ---------- */
+/* ---------- Faction cards ---------- */
 .side-cards { display: flex; gap: 18px; align-items: stretch; z-index: 3; flex-wrap: wrap; justify-content: center; }
 .side-vs {
   align-self: center; font-family: var(--serif); font-size: 30px; font-weight: 900; color: var(--danger);
@@ -361,7 +361,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   transition: background 0.12s, border-color 0.12s; user-select: none;
   display: flex; flex-direction: column; gap: 8px;
 }
-/* 頂端 6px 陣營色軌 */
+/* 6px faction rail across the top */
 .side-card::before {
   content: ''; position: absolute; left: 0; right: 0; top: 0; height: 6px; pointer-events: none;
 }
@@ -394,7 +394,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   animation: superClashPulse 4s ease-in-out infinite alternate;
 }
 
-/* 確保所有文字、軍徽與席位內容置於最前層 (字放最前面) */
+/* Keep all text, crests, and seat content on the topmost layer (type foremost) */
 .side-card.super > *:not(.super-geom-bg):not(.super-lightning-container),
 .side-card.super .side-emblem,
 .side-card.super .side-name,
@@ -408,7 +408,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.9);
 }
 
-/* 幾何撕裂細線背景 (動態碎裂向量，無固定平行斜率) */
+/* Torn-geometry hairline backdrop (animated shatter vectors, no fixed parallel slope) */
 .super-geom-bg {
   position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; opacity: 0.8;
 }
@@ -441,7 +441,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   animation: shardDrift1 5.5s ease-in-out infinite alternate-reverse;
 }
 
-/* 中央動態雷電線 (忽快忽慢、隨機角度放電折線) */
+/* Central animated lightning (erratic, random-angle discharge polyline) */
 .super-lightning-container {
   position: absolute; top: 0; bottom: 0; left: 0; right: 0;
   pointer-events: none; z-index: 2; overflow: hidden;
@@ -492,7 +492,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .side-card.steel.taken { background: rgba(95, 208, 242, 0.09); }
 .side-card.super.taken { border-color: rgba(180, 225, 255, 0.65); }
 .side-card.mine { box-shadow: inset 0 0 0 2px var(--ok); }
-/* 陣營軍旗:inline SVG 以 currentColor 上色 → 由 .side-card.swarm/.steel 決定陣營色 */
+/* Faction crests: inline SVG tinted via currentColor -> color decided by .side-card.swarm/.steel */
 .side-emblem { display: flex; justify-content: center; padding: 4px 0 2px; }
 .side-emblem .crest { width: 104px; height: 104px; display: block; }
 .side-card.swarm .side-emblem { color: var(--swarm); }
@@ -513,7 +513,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   color: #ffd54a;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 14px rgba(0, 0, 0, 0.9), 0 0 18px rgba(255, 213, 74, 0.35);
 }
-/* 超級卡內文:動畫雷電 + 幾何碎線底上,灰字对比不足 → 換暖金/米白系實色(與超級金主題同系) */
+/* Super card body: over animated lightning + geometric-shard backdrop, gray text loses contrast -> warm gold/off-white solids (same family as the super gold theme) */
 .side-card.super .side-en { color: #ffe6ad; }
 .side-card.super .side-hero { color: #ece4d2; }
 .side-card.super .slot {
@@ -524,11 +524,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .side-card.super .slot .slot-empty-label,
 .side-card.super .slot .slot-x { color: #cfc6ae; }
 .side-card.super .slot-char.dim { color: #cfc6ae; }
-/* 超級大戰兩側壓縮卡:9px 灰字壓在窄欄會糊 → 提亮一階(不動字級與版式) */
+/* Super-battle side squeeze cards: 9px gray text blurs in narrow columns -> brighten one step (type size and layout untouched) */
 .side-cards.super-battle .side-card.steel .side-hero,
 .side-cards.super-battle .side-card.swarm .side-hero { color: #c9d6de; }
 
-/* 超級大戰:中央超級戰士、兩側雙陣營各壓縮一半(總寬度跟開戰時刻一致) */
+/* Super battle: central super warrior, both factions squeezed to half on the flanks (total width matches deploy time) */
 .side-cards.super-battle {
   max-width: min(730px, 94vw);
   width: 100%;
@@ -712,7 +712,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .room-actions { z-index: 3; flex-wrap: wrap; justify-content: center; }
 
 
-/* ---------- 戰場選址 ---------- */
+/* ---------- Battlefield siting ---------- */
 #leafletMap { position: absolute; inset: 0; z-index: 1; background: var(--bg0); filter: saturate(0.65) contrast(1.1); }
 .map-panel {
   position: absolute; top: 14px; left: 14px; z-index: 1000;
@@ -741,13 +741,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 #randomMapPreview { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg0); }
 #randomMapPreview[hidden], #leafletMap[hidden] { display: none; }
 #randomMapPreview canvas { max-width: 100%; max-height: 100%; width: auto; height: 100%; }
-/* 選定場地後的路線/地形說明(venueBrief 攤平成一行,窄屏自己折行;A20:MUST NOT 改成直排) */
+/* Post-pick route/terrain note (venueBrief flattened to one line, wraps on its own on narrow screens; A20: MUST NOT switch to vertical) */
 .venue-desc { margin-top: 4px; font-size: 11px; line-height: 1.6; color: var(--dim); word-break: break-word; }
 .pbar {
   height: 8px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden;
 }
 .pbar.tall { height: 16px; }
-/* 進度條 = 分段格柵(終端機讀取條) */
+/* Progress bar = segmented grid (terminal loading bar) */
 .pbar-fill {
   height: 100%; width: 0%;
   background:
@@ -764,7 +764,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 }
 .leaflet-control-zoom a { background: #0a0f15 !important; color: var(--railS) !important; border-color: var(--line) !important; }
 
-/* ---------- 載入 ---------- */
+/* ---------- Loading ---------- */
 .load-box { width: min(620px, 94vw); }
 .load-place {
   font-family: var(--serif); font-size: 26px; font-weight: 900; color: var(--railW); letter-spacing: 6px;
@@ -773,19 +773,19 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .load-label { font-size: 13px; min-height: 20px; font-family: var(--mono); color: var(--railS); letter-spacing: 1px; }
 .load-label::before { content: '> '; color: var(--railW); }
 
-/* ---------- 戰鬥 HUD ---------- */
+/* ---------- Battle HUD ---------- */
 #game { background: #000; }
 #gameCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
 
-/* ---------- 劇情 BOSS 頂部血條 ---------- */
+/* ---------- Story BOSS top HP bar ---------- */
 .boss-bar-wrap {
   position: absolute;
-  /* 下移讓位:hud-top(主堡條 + 波次)維持全亮,BOSS 條貼在其下方置中,
-     不再蓋住任何資訊;窄寬度讓兩側主堡條露出來。 */
+  /* Yielded downward: hud-top (base bars + wave) stays fully lit, BOSS bar centers just below it,
+     no longer covering any readout; narrow width leaves both base bars exposed on the flanks. */
   top: 54px;
   left: 50%;
   transform: translateX(-50%);
-  /* 窄版置中:兩側各留主堡條空間,不再 88vw 滿版橫掃。 */
+  /* Narrow centered build: room left on both sides for the base bars, no longer an 88vw full-width sweep. */
   width: min(46vw, 72vmin);
   z-index: 10;
   pointer-events: none;
@@ -802,11 +802,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 body.has-boss-bar .hud-top {
   opacity: 1;
 }
-/* BOSS 條已下移讓位,戰報再往下閃一格,不被 BOSS 條蓋住。 */
+/* BOSS bar already yields below, so the kill feed dodges one more row down to stay uncovered. */
 body.has-boss-bar .kill-feed {
   top: 116px;
 }
-/* 血條中柱(標題 + 條體);兩端頭像:左 = SWARM、BOSS 在 SWARM 時站左,右 = STEEL */
+/* HP bar middle column (title + track); end avatars: left = SWARM (a SWARM BOSS stands left), right = STEEL */
 .boss-bar-mid {
   flex: 1;
   display: flex;
@@ -814,9 +814,9 @@ body.has-boss-bar .kill-feed {
   gap: 4px;
   min-width: 0;
 }
-/* -- 陣營頭像框:蜂群琥珀切角 / 鋼鐵冷藍鍍邊 / 傭兵金色雙線(與對話頭像同一組 data-fac) --
-   邊長只吃螢幕佔比:下限 vh 保直式手機可辨、上限 vw 管超寬螢幕(1080p ≈ 91px,
-   不再被 68px 釘住;直式手機維持 ≈ 44px)。 */
+/* -- Faction avatar frames: SWARM amber chamfer / STEEL cold-blue plating / MERC gold double-line (same data-fac set as dialogue avatars) --
+   Edge length scales only with screen share: vh floor keeps portrait phones legible, vw cap restrains ultrawide
+   (1080p ~= 91px, no longer pinned at 68px; portrait phones hold ~= 44px). */
 .boss-av {
   width: clamp(5.2vh, 8.4vmin, 5.4vw);
   height: clamp(5.2vh, 8.4vmin, 5.4vw);
@@ -838,12 +838,12 @@ body.has-boss-bar .kill-feed {
   border: 4px double #b9a06a;
   border-radius: 6px;
 }
-/* BOSS 名牌跟著陣營染色(傭兵不當 BOSS,默認紅) */
+/* BOSS nameplate tints with faction (mercs never boss, default red) */
 .boss-bar-wrap[data-fac="SWARM"] .boss-badge { background: var(--swarm); color: #0d0900; }
 .boss-bar-wrap[data-fac="SWARM"] .boss-name { text-shadow: 0 0 10px rgba(255, 179, 0, 0.65); }
 .boss-bar-wrap[data-fac="STEEL"] .boss-badge { background: var(--steel); color: #04080b; }
 .boss-bar-wrap[data-fac="STEEL"] .boss-name { text-shadow: 0 0 10px rgba(79, 195, 247, 0.65); }
-/* -- 扣血:條體震動 + 血條過曝 + 頭像受擊閃;補血:條體綠光脈衝(白殘影本來就有 0.5s 拖尾) -- */
+/* -- Damage taken: track shake + bar overexposure + avatar hit flash; heal: green pulse on track (white ghost already trails 0.5s) -- */
 .boss-bar-wrap.boss-dmg .boss-bar-track { animation: bossShake 0.32s steps(5); }
 .boss-bar-wrap.boss-dmg .boss-seg { filter: brightness(1.9) saturate(1.4); }
 .boss-bar-wrap.boss-dmg .boss-av { animation: bossAvHit 0.32s steps(4); }
@@ -917,8 +917,8 @@ body.has-boss-bar .kill-feed {
   position: relative;
   height: clamp(1.45vh, 1.95vmin, 1.4vw);
   background: rgba(6, 9, 14, 0.88);
-  /* 常見進度條:2px 實線外框,顏色逐段走(黑>藍>銀>金,JS 逐幀設 borderColor);
-     四段填充同軌上下重疊(SP 護盾條絕對定位貼頂),DOM 順序即疊放順序 */
+  /* Plain progress bar: 2px solid outer frame, color stepped per segment (black > blue > silver > gold, JS sets borderColor per frame);
+     four segment fills overlap on one track (SP shield bar absolutely pinned to top), DOM order = paint order */
   border: 2px solid #0b0e12;
   border-radius: 1px;
   overflow: hidden;
@@ -931,7 +931,7 @@ body.has-boss-bar .kill-feed {
   background: rgba(255, 255, 255, 0.45);
   transition: width 0.5s ease-out;
 }
-/* 段填充:常見進度條 = 純色無漸層;段色由 JS 設(淺白→鮮豔),這裡只留幾何 */
+/* Segment fill: plain progress bar = flat colors, no gradients; segment color set by JS (pale white -> vivid), geometry only here */
 .boss-seg {
   position: absolute;
   top: 0; left: 0; bottom: 0;
@@ -961,7 +961,7 @@ body.touch-ui.ori-portrait .boss-bar-wrap {
   width: min(92vw, 90vmin);
   gap: 6px;
 }
-/* 直式 hud-top 是上下堆疊的高條,BOSS 條貼其下方;機體資訊/小地圖/戰報同步下移,不被蓋住。 */
+/* Portrait hud-top is a tall stacked bar, so the BOSS bar docks just below it; mech info / minimap / kill feed shift down together, never covered. */
 body.touch-ui.ori-portrait.has-boss-bar .hud-self {
   top: calc(178px + var(--tl-st));
 }
@@ -993,7 +993,7 @@ body.touch-ui .boss-name {
 .base-bar.swarm .base-label { color: #0d0900; background: var(--swarm); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 .base-bar.steel .base-label { color: #04080b; background: var(--steel); clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%); }
 .bbar { flex: 1; height: clamp(1.2vh, 1.67vmin, 1.2vw); background: rgba(4, 7, 11, 0.85); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
-/* 條的刻度只是細分隔線(1px),不是粗條紋 —— 條紋會吃掉疊在上面的數值文字 */
+/* Bar ticks are thin 1px dividers, not coarse stripes -- stripes would eat the value text stacked on top */
 .bbar-fill { height: 100%; transition: width 0.3s steps(12); }
 .bbar-fill.swarm { background: repeating-linear-gradient(90deg, var(--swarm) 0 9px, rgba(5, 7, 10, 0.5) 9px 10px); }
 .bbar-fill.steel {
@@ -1028,7 +1028,7 @@ body.touch-ui .boss-name {
 }
 .crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); clip-path: polygon(0 0, 100% 0, 100% 34%, 0 34%, 0 66%, 100% 66%, 100% 100%, 0 100%); }
 .crosshair::after { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-50%); clip-path: polygon(0 0, 0 100%, 34% 100%, 34% 0, 66% 0, 66% 100%, 100% 100%, 100% 0); }
-/* 狙擊模式(瞄準)準星加粗放大 1.5x,讓遠距離目標仍清楚可辨 */
+/* Scope-mode (aiming) crosshair grows 1.5x bolder so distant targets stay readable */
 body.aiming .crosshair { width: 39px; height: 39px; }
 body.aiming .crosshair::before { width: 2px; }
 body.aiming .crosshair::after { height: 2px; }
@@ -1039,21 +1039,21 @@ body.aiming .crosshair::after { height: 2px; }
 .hitmark.on { animation: hitPop 0.2s steps(4); }
 @keyframes hitPop { 0% { opacity: 1; transform: rotate(45deg) scale(0.6); } 100% { opacity: 0; transform: rotate(45deg) scale(1.6); } }
 
-/* 水下/沼澤視野變色:視線低於水面 → 藍(越深越黑)、沼澤 → 混濁紫。z 6 = 「世界的顏色」層,
-   壓在狙擊遮罩(7)/受傷・火場暈影(8)/HUD(10)之下;顏色與 opacity 逐幀由 game.js 推,
-   MUST NOT 加 transition(每幀依深度即時插值,CSS 過渡會鈍化)。 */
+/* Underwater/swamp vision tint: view below waterline -> blue (deeper = darker), swamp -> murky purple. z 6 = "world color" layer,
+   under scope mask (7) / hurt + fire vignette (8) / HUD (10); color and opacity pushed per frame by game.js,
+   MUST NOT add transition (per-frame depth interpolation would go dull under a CSS transition). */
 .water-veil {
   position: absolute; inset: 0; z-index: 6; pointer-events: none; opacity: 0;
 }
 
-/* 受傷暈影:被擊瞬間全屏邊緣紅光閃爍(在準星/HUD 之下,只染畫面周邊不擋中央視線) */
+/* Hurt vignette: fullscreen edge red flash on hit (below crosshair/HUD, tints only the rim so the center view stays clear) */
 .hurt-vig {
   position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
   background: radial-gradient(ellipse at center, transparent 42%, rgba(190, 20, 24, 0.55) 100%);
 }
-/* 火場滯留視野霧化:opacity 由 game.js 依滯留時間推(0~1)。越濃越嚴重 —— 邊緣全黑、中央漸模糊
-   (backdrop-filter blur 由 main.js 依濃度即時設,離場移除以省合成層)。z 8 同 hurt-vig(HUD 之下,不擋 HUD);
-   transition 只放 opacity(blur 每幀由 JS 驅動,勿與 CSS transition 相爭)。 */
+/* Fire-linger vision fog: opacity pushed by game.js from linger time (0-1). Denser = worse -- rim goes full black, center blurs
+   (backdrop-filter blur set live by main.js from density, removed on exit to save a compositing layer). z 8 same as hurt-vig (below HUD, never covers readouts);
+   transition on opacity only (JS-driven per-frame blur MUST NOT fight a CSS transition). */
 .env-fog {
   position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
   transition: opacity 0.35s ease-out;
@@ -1062,11 +1062,11 @@ body.aiming .crosshair::after { height: 2px; }
 }
 .hurt-vig.on { animation: hurtFlash 0.5s ease-out; }
 @keyframes hurtFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
-/* 天氣濃霧遮罩:opacity 由 game.js 每幀依 effectiveFog 推(0~1)。霧白色 radial —— 中央較透
-   (視野內)、邊緣濃(視野外),讓「看不到」讀成「被霧擋住」而不是敵機憑空消失。漸層形狀由
-   main.js 每幀按密度重建(洞徑隨視野倍率、狙擊模式錨定鏡圈),這裡的 background 只是首幀回退。
-   狙擊模式下鏡圈已等比縮小,罩子照樣蓋在圈內。z 8 同 env-fog(HUD 之下,不擋讀數);DOM 排在 env-fog
-   之後 ⇒ 火場煙塵與天氣濃霧可疊加。transition 只放 opacity(每幀由 JS 驅動的值不加過渡相爭)。 */
+/* Weather fog mask: opacity pushed per frame by game.js from effectiveFog (0-1). Fog-white radial -- thinner at center
+   (inside view), denser at rim (outside view), so "can't see" reads as "blocked by fog" rather than enemies popping out of existence. Gradient shape
+   rebuilt per frame by main.js from density (hole radius follows view multiplier, anchored to the scope ring in scope mode); background here is first-frame fallback only.
+   Scope mode shrinks the ring proportionally and the mask still covers inside it. z 8 same as env-fog (below HUD, never covers readouts); placed after
+   env-fog in DOM => fire smoke and weather fog can stack. Transition on opacity only (JS-driven per-frame values get no competing transition). */
 .weather-fog {
   position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
   transition: opacity 0.5s ease-out;
@@ -1074,25 +1074,25 @@ body.aiming .crosshair::after { height: 2px; }
     rgba(200, 208, 215, 0.06) 0%, rgba(200, 208, 215, 0.30) 55%, rgba(205, 212, 218, 0.90) 100%);
 }
 
-/* 受擊濺血:座艙玻璃上的半透明血漬。z 8 同 hurt-vig/env-fog(HUD 之下不擋讀數),DOM 排在
-   env-fog 之後 ⇒ 同層時疊在暈影之上 = 血在玻璃上、霧在玻璃外。opacity 由 game.js 每幀依
-   data.js bloodAlpha() 推,MUST NOT 加 transition/animation(與逐幀曲線相爭,峰值被鈍化)。
-   血滴以多層 radial-gradient 疊在同一張 background(逐滴建 DOM 會讓節點數 = 血滴數);
-   位置與圖樣在建立時烤死,MUST NOT 每幀重算 —— 血漬噴上去就該黏在玻璃上不跟著鏡頭滑。 */
+/* Hit blood spray: translucent stains on the canopy glass. z 8 same as hurt-vig/env-fog (below HUD, never covers readouts), placed after
+   env-fog in DOM => paints above the vignette in the same layer = blood on the glass, fog outside it. Opacity pushed per frame by game.js from
+   data.js bloodAlpha(); MUST NOT add transition/animation (fights the per-frame curve and dulls the peak).
+   Drops stack as multiple radial-gradients on one background (per-drop DOM nodes would make node count = drop count);
+   positions and patterns baked at creation, MUST NOT recompute per frame -- sprayed stains stick to the glass, never slide with the camera. */
 .blood-vig { position: absolute; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
-/* 舉盾受擊螢光閃光:護盾接住那一發時,原血滴位置噴的青藍閃光(短閃快退,時序住 data.js GLINT)。
-   與 .blood-splat 同一條契約:同層(z 8)、同畫布(26vmin,滴形沿用血同一組)、opacity 由
-   game.js 每幀推、MUST NOT 加 transition/animation、位置圖樣建立時烤死不跟鏡頭滑。
-   差別只有顏色與外光暈:螢光往外發光(drop-shadow 青藍),血漬往內壓暗。 */
+/* Shield-block glint flash: cyan-blue flash at the blood position when the shield catches a hit (short flash, fast decay; timing lives in data.js GLINT).
+   Same contract as .blood-splat: same layer (z 8), same canvas (26vmin, drops reuse the blood set), opacity pushed
+   per frame by game.js, MUST NOT add transition/animation, positions baked at creation and never slide with the camera.
+   Only color and outer glow differ: glint glows outward (cyan drop-shadow), blood presses inward dark. */
 .glint-vig { position: absolute; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
-/* 畫布 30vmin = 2 ×(SPREAD 7.5 + GLINT.DROP_MAX 7.0)+ 餘裕:小於這個值,最外圈的閃光會被切掉。 */
+/* Canvas 30vmin = 2 x (SPREAD 7.5 + GLINT.DROP_MAX 7.0) + margin: below this the outermost glints get clipped. */
 .glint-flash {
   position: absolute; opacity: 0;
   width: 30vmin; height: 30vmin; transform: translate(-50%, -50%);
   background-repeat: no-repeat;
   filter: blur(0.18vmin) drop-shadow(0 0 0.8vmin rgba(110, 255, 200, 0.8));
 }
-/* 畫布 26vmin = 2 ×(SPREAD 7.5 + DROP_MAX 4.6)+ 餘裕:小於這個值,最外圈的血滴會被切掉。 */
+/* Canvas 26vmin = 2 x (SPREAD 7.5 + DROP_MAX 4.6) + margin: below this the outermost drops get clipped. */
 .blood-splat {
   position: absolute; opacity: 0;
   width: 26vmin; height: 26vmin; transform: translate(-50%, -50%);
@@ -1100,18 +1100,18 @@ body.aiming .crosshair::after { height: 2px; }
   filter: blur(0.22vmin) drop-shadow(0 0 0.5vmin rgba(60, 0, 0, 0.5));
 }
 
-/* 異常狀態致盲白幕:閃光彈(電磁)/纏擾致盲/電擊麻痺上身瞬間全屏過曝,之後漸淡回清晰。
-   opacity 由 game.js 每幀依 data.js ccFlashAlpha() 推(全白段 → smoothstep 淡出)⇒
-   MUST NOT 加 transition/animation(CSS 過渡會與逐幀曲線相爭,峰值被鈍化成「白得很慢」)。
-   z 9:蓋過受傷/火場暈影(8)與狙擊遮罩(7)—— 被閃到的是機體光學,連周邊暈影一起洗白;
-   但壓在 HUD(10)之下,血量/彈藥仍讀得到(比照 death-alert 的 z 9 理由)。 */
+/* Status blinding white veil: flash (EM) / blind / paralyze overexposes fullscreen on application, then fades back to clear.
+   opacity pushed per frame by game.js from data.js ccFlashAlpha() (full-white hold -> smoothstep fade-out) =>
+   MUST NOT add transition/animation (a CSS transition would fight the per-frame curve and dull the peak into a "slow white").
+   z 9: above hurt/fire vignettes (8) and scope mask (7) -- the blinded unit is the mech optics, so rim vignettes wash out with it;
+   but below HUD (10), HP/ammo stay readable (same z-9 rationale as death-alert). */
 .cc-flash {
   position: absolute; inset: 0; z-index: 9; pointer-events: none; opacity: 0; background: #fff;
 }
 
-/* 狙擊模式(瞄準)可視遮罩:中央正圓可見、外圈全黑不可見。radial-gradient 用 circle + vmin →
-   不隨螢幕長寬比變成橢圓,恆為正圓。z 7:壓在 HUD(10)、hurt/env 暈影(8)之下 ——
-   不擋 HUD、周邊受傷/火場暈影仍疊其上,只黑掉 3D 周邊視野。body.aiming 時由 main.js 切顯示。 */
+/* Scope-mode (aiming) visibility mask: center circle visible, outer ring blacked out. radial-gradient with circle + vmin =>
+   stays a true circle on any aspect ratio, never squashes into an ellipse. z 7: below HUD (10) and hurt/env vignettes (8) --
+   never covers HUD, rim hurt/fire vignettes still paint over it, only the 3D rim view goes black. Shown by main.js while body.aiming. */
 .scope-vig {
   position: absolute; inset: 0; z-index: 7; pointer-events: none; display: none;
   background: radial-gradient(circle at 50% 50%,
@@ -1123,24 +1123,24 @@ body.aiming .crosshair::after { height: 2px; }
 }
 body.aiming .scope-vig { display: block; }
 
-/* 陣亡殉爆白閃:高潮/觸地瞬間全屏過曝,0.4s 淡出(重觸發同 hurt/hitmark 手法)。z 29:蓋過 HUD(10)
-   與倒數頁(20),但壓在商店(30)之下 —— 陣亡購物時不被白閃打斷 */
+/* Death detonation white flash: fullscreen overexposure at climax/ground-impact instant, 0.4s fade-out (retriggered like the hurt/hitmark path). z 29: above HUD (10)
+   and countdown page (20), but below shop (30) -- shopping while dead never gets interrupted by the white flash */
 .death-flash { position: absolute; inset: 0; z-index: 29; pointer-events: none; opacity: 0; background: #fff; }
 .death-flash.on { animation: deathWhiteout 0.4s ease-out; }
 @keyframes deathWhiteout { 0% { opacity: 0; } 10% { opacity: 0.92; } 100% { opacity: 0; } }
-/* 陣亡殉爆紅警邊框:過場期間常亮脈動(inset box-shadow 打紅框,不擋中央;z 9 在 HUD 之下,HUD 仍可讀) */
+/* Death detonation red alert rim: steady pulse through the transition (inset box-shadow red frame, center stays clear; z 9 below HUD, HUD stays readable) */
 .death-alert { position: absolute; inset: 0; z-index: 9; pointer-events: none; opacity: 0;
   box-shadow: inset 0 0 120px 24px rgba(220, 30, 30, 0.55); }
 .death-alert.on { animation: deathPulse 0.7s ease-in-out infinite; }
 @keyframes deathPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.9; } }
 
-/* HUD 下帶。**高度上限 = 畫面高的 1/6**(2026-08-15 使用者定案);比例由 game.js 的
-   `fitHudBand()` 量一次自然高後寫進 `--hud-k`(唯一縫,理由見那支的檔頭:CSS 沒辦法把長度
-   除成無單位的縮放比)。這裡只負責把那個比例**套上去**:
-     ・`transform: scale` 而不是改逐列尺寸 —— 十列資料各有自己的字級/邊距,逐列改 vh 是十份規則;
-     ・原點 `0 100%` = 畫面左下角(`bottom:0` 的錨點),縮放後仍貼齊下緣;
-     ・`width` 先除以比例再縮回來,橫向才仍然滿版(否則小地圖會離開右緣)。
-   量測面是 `getBoundingClientRect()`,它回的是**變換後**的盒 ⇒ 稽核量到的就是玩家看到的。 */
+/* HUD bottom band. **Height cap = 1/6 of viewport height** (user decision (2026-08-15)); the ratio is measured once by game.js
+   `fitHudBand()` from natural height into `--hud-k` (sole seam, rationale in that file's header: CSS cannot divide a length
+   into a unitless scale). This block only **applies** that ratio:
+      - `transform: scale` instead of per-row sizes -- ten data rows each own type/padding, per-row vh would be ten rule sets;
+      - origin `0 100%` = viewport bottom-left (the `bottom:0` anchor), still flush with the bottom edge after scaling;
+      - `width` pre-divided by the ratio then scaled back, so the row still spans full width (else the minimap leaves the right edge).
+   The measure face is `getBoundingClientRect()`, which returns the **post-transform** box => audits measure what the player sees. */
 .hud-bottom {
   position: absolute; bottom: 0; left: 0; z-index: 10; pointer-events: none;
   width: calc(100% / var(--hud-k, 1));
@@ -1154,8 +1154,8 @@ body.aiming .scope-vig { display: block; }
   min-width: clamp(24vh, 34vmin, 30vw); max-width: clamp(28vh, 37vmin, 32vw);
 }
 .hud-self > * { grid-column: 2; min-width: 0; }
-/* 自機頭像:資訊列左邊那格,縱跨整個資訊欄(行數隨 liftBox/觀戰收合浮動,span 取足);
-   框色沿用 BOSS 頭像同一組 data-fac(蜂群切角 / 鋼鐵鍍邊 / 傭兵雙線)。 */
+/* Own avatar: left cell of the info column, spanning the full info column (row span floats with liftBox/spectate collapse, span takes all);
+   frame reuses the BOSS avatar data-fac set (SWARM chamfer / STEEL plating / MERC double-line). */
 .self-av {
   grid-column: 1; grid-row: 1 / span 20; align-self: start;
   width: clamp(9vh, 14vmin, 8vw); aspect-ratio: 1 / 1;
@@ -1168,7 +1168,7 @@ body.aiming .scope-vig { display: block; }
 }
 body[data-side="SWARM"] .hud-side { color: #0d0900; background: var(--swarm); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
-/* 條類一律硬邊 + 內部格柵(高與字級隨遊戲畫面 vmin 流體縮放,上下限保可讀不爆版) */
+/* All bars hard-edged + inner grid (height and type scale fluidly with gameplay vmin, caps keep them legible without overflow) */
 .hpbar { position: relative; height: clamp(1.45vh, 1.95vmin, 1.4vw); background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .hpbar-fill {
   height: 100%;
@@ -1184,14 +1184,14 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .burst-box > span { position: relative; z-index: 1; }
 .burst-cd { color: var(--danger); margin-left: 6px; letter-spacing: 1px; }
 .burst-cd.ready { color: var(--ok); }
-/* 區塊式 CD/填彈進度條:fill 寬 = 剩餘比例(滿 = 剛用掉,歸零 = 就緒),半透明罩在區塊底,文字浮於其上 */
+/* Block CD/reload progress: fill width = remaining fraction (full = just spent, zero = ready), translucent wash under the block, text floats above */
 .burst-fill {
   position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
   background: rgba(255, 68, 54, 0.22); border-right: 1px solid rgba(255, 68, 54, 0.65);
   pointer-events: none; transition: width 0.15s linear;
 }
 
-/* 武器 / 彈藥 / 金錢 HUD */
+/* Weapon / ammo / money HUD */
 .wpn-box {
   position: relative; overflow: hidden;
   display: flex; justify-content: space-between; align-items: center;
@@ -1212,22 +1212,22 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .money-box { font-size: clamp(1.2vh, 1.55vmin, 1.1vw); color: var(--railW); font-family: var(--mono); letter-spacing: 1px; }
 .shop-hint { color: var(--dim); font-size: clamp(1.1vh, 1.4vmin, 1vw); margin-left: 8px; }
 
-/* 觀戰的角色數據面板(2026-08-02):**與交戰共用同一塊 .hud-self** —— 沒跟人時只留標題(上帝視角
-   本來就沒有「誰的數據」可顯示),跟上某位玩家才整塊攤開,並在最下方補一列八軌商店升級。
-   收起靠 CSS 而不是逐節點 hidden:欄位增減時不必再回頭補一份顯隱清單。 */
-/* 觀戰版型:沒跟人時角色數據整塊收起,只留標題 —— **觀戰操作說明是例外**(它正是要填這塊空版位)*/
+/* Spectator character data panel (2026-08-02): **shares the same .hud-self block as combat** -- with no follow target only the title stays (god-view
+   has no "whose data" to show), following a player unfolds the whole block plus one eight-track shop-upgrade row at the bottom.
+   Collapse via CSS, not per-node hidden: adding/removing fields never needs a second show/hide list. */
+/* Spectate layout: with no follow target the whole data block collapses, title only -- **the spectator help is the exception** (it exists to fill that empty slot) */
 body.spectating:not(.spec-follow) .hud-self > :not(.hud-side):not(.spec-help) { display: none; }
-/* 觀戰操作說明(2026-08-02 使用者需求「觀戰時加入觀戰操作說明」):常駐左下,文字由
-   main.js renderSpecHelp 灌(唯一真相 = help.js SPEC_CONTROLS)。**MUST 有高度上限** ——
-   跟上玩家時這塊與完整數據面板同時在版位上,沒有 max-height 就會把血條推出畫面外。 */
+/* Spectator help (user decision (2026-08-02) "show spectator controls while spectating"): docked bottom-left, text injected by
+   main.js renderSpecHelp (sole source = help.js SPEC_CONTROLS). **MUST keep a height cap** --
+   while following a player this block shares the slot with the full data panel, and without max-height it pushes the HP bar off-screen. */
 .spec-help { display: none; }
 body.spectating .spec-help {
   display: block; max-height: 46vh; overflow-y: auto;
   font-family: var(--mono); font-size: 10px; line-height: 1.5; letter-spacing: 0;
   border-left: 2px solid var(--line); padding: 2px 0 2px 6px; margin: 3px 0;
 }
-/* 跟上某位玩家 ⇒ 完整數據面板回到同一塊版位上,說明跟著收窄(沒跟人時那些欄位是收起的,
-   整張表攤開也不會擠到誰)。上限一定要留 —— 觀戰時指標多半是鎖定的,捲不動 */
+/* Following a player => the full data panel returns to the same slot and the help narrows with it (with no follow target those fields are collapsed,
+   so the unfolded table never squeezes anyone out). Always keep the cap -- spectator pointers are usually locked, so no scrolling */
 body.spectating.spec-follow .spec-help { max-height: 24vh; }
 .spec-help-h { color: var(--railW); letter-spacing: 3px; margin-bottom: 2px; }
 .spec-help-h::before { content: '// '; opacity: 0.7; }
@@ -1246,8 +1246,8 @@ body.spectating.spec-follow .spec-upg { display: flex; }
 .su-item.su-max { border-color: var(--ok); }
 .su-item.su-max b { color: var(--ok); }
 
-/* 主堡軍械庫 */
-.shop-overlay { pointer-events: auto; z-index: 30; }   /* 疊在死亡畫面上:陣亡等待重生也能購買 */
+/* Base armory */
+.shop-overlay { pointer-events: auto; z-index: 30; }   /* Above the death veil: shopping stays available while awaiting respawn */
 .shop-box { text-align: left; max-width: min(560px, 94vw); max-height: 86vh; overflow-y: auto; }
 .shop-money { float: right; color: #06090d; background: var(--railW); padding: 0 8px; font-family: var(--mono); letter-spacing: 1px; }
 .shop-items { display: flex; flex-direction: column; gap: 5px; }
@@ -1263,20 +1263,20 @@ body.spectating.spec-follow .spec-upg { display: flex; }
 .shop-item.off { opacity: 0.45; }
 .shop-info { font-size: 13px; }
 .shop-item-note { color: var(--dim); font-size: 10px; font-family: var(--mono); }
-/* 掃貨 / 預約(2026-08-02 使用者需求)。`.shop-item` 是 space-between ⇒ 預約鈕與價格鈕
-   一起被推到右側;`.shop-info` 吃 auto 讓兩顆鈕貼齊右緣不隨文字長短跳動。 */
+/* Sweep / reserve (user decision (2026-08-02)). `.shop-item` is space-between => the reserve button gets pushed right with the price button;
+   `.shop-info` takes auto so both buttons hug the right edge instead of jumping with text length. */
 .shop-tools { display: flex; align-items: center; gap: 8px; margin: 8px 0 2px; }
 .shop-item > .shop-info { margin-right: auto; }
 .shop-res { min-width: 76px; font-family: var(--mono); letter-spacing: 1px; }
 .shop-res.on { color: #06090d; background: var(--railW); border-color: var(--railW); }
-/* HUD 收斂(2026-07-16):只留機體數據 + 小地圖;操作說明移駐 ESC 戰場選單 */
+/* HUD convergence (2026-07-16): mech data + minimap only; control hints live in the ESC battle menu */
 .pause-help {
   color: var(--dim); font-size: 11px; line-height: 1.9; font-family: var(--mono); letter-spacing: 1px;
   text-align: left; border-left: 2px solid var(--line); padding-left: 10px;
 }
 #minimap {
-  /* 顯示尺寸只吃螢幕佔比:下限 vh 保直式手機可辨、上限 vw 管超寬螢幕
-     (1080p ≈ 259px,1440p ≈ 346px,不再被 210px 釘住;繪製解析度仍是 220,CSS 縮放) */
+  /* Display size scales only with screen share: vh floor keeps portrait phones legible, vw cap restrains ultrawide
+     (1080p ~= 259px, 1440p ~= 346px, no longer pinned at 210px; render resolution stays 220, CSS scales) */
   width: clamp(14vh, 24vmin, 20vw); height: clamp(14vh, 24vmin, 20vw);
   border: 1px solid var(--railS); border-radius: 0;
   background: rgba(4, 7, 10, 0.92); pointer-events: none;
@@ -1284,7 +1284,7 @@ body.spectating.spec-follow .spec-upg { display: flex; }
   box-shadow: 0 0 22px rgba(0, 0, 0, 0.6);
 }
 
-/* ---------- 疊層 ---------- */
+/* ---------- Overlays ---------- */
 .overlay {
   position: absolute; inset: 0; z-index: 20;
   display: flex; align-items: center; justify-content: center;
@@ -1298,10 +1298,10 @@ body.spectating.spec-follow .spec-upg { display: flex; }
   padding: 34px 42px; text-align: center; display: flex; flex-direction: column; gap: 14px;
   max-width: min(640px, 92vw);
 }
-/* 疊層右上角關閉鍵:所有可關閉的 .overlay-box 共用一顆 ✕(手機上「那顆返回鈕在哪」很不直覺)。
-   MUST 疊在 box 的框內、不吃內距 —— 內容區有自己的捲動,放進流內會被捲走。
-   **位置 MUST 避開 clip-path 的斜切角**:`--notch` 從右上角斜切 14px,舊值 top 6 / right 8 讓 ✕
-   的右上角正好落在切線上 → 鈕被削掉一角、看起來像沒有關閉鍵。故內縮到 top 10 / right 12。 */
+/* Overlay top-right close key: every dismissible .overlay-box shares one X (the in-flow back button reads poorly on phones).
+   MUST sit inside the box frame, outside padding -- content scrolls on its own, an in-flow key scrolls away with it.
+   **Position MUST clear the clip-path chamfer**: `--notch` cuts 14px off the top-right corner, and the old top 6 / right 8
+   landed the X's corner exactly on the cut => the button lost a corner and looked like no close key at all. Hence inset to top 10 / right 12. */
 .ov-close {
   position: absolute; top: 10px; right: 12px; z-index: 3;
   cursor: pointer; font: inherit; font-family: var(--mono); font-size: 15px; line-height: 1;
@@ -1313,20 +1313,20 @@ body.spectating.spec-follow .spec-upg { display: flex; }
 }
 .ov-close:hover { color: var(--text); border-color: var(--railW); }
 .ov-close:active { background: rgba(var(--railW-rgb), 0.28); color: #05070a; }
-/* 觸控版放大到可靠的觸控目標(44×44) */
+/* Touch build scales to a reliable touch target (44x44) */
 body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; right: 10px; }
-/* **✕ 的落點 MUST 由內容讓出來**(玩家回報「彈出視窗的資訊被關閉鍵遮住」)——
-   ✕ 是 position:absolute,不佔流內空間,所以標題列/色條/浮右的金錢統計都會鑽到它底下。
-   凡是掛了 .ov-close 的框都掛 `.has-close`,由這裡統一預留上緣;
-   `.story-brief-box` 刻意**不掛** —— 它第一件是全幅過場立繪,留白會破圖,而 ✕ 只壓到裝飾角標。 */
+/* **The X's landing MUST be yielded by content** (players reported "popup info hidden under the close key") --
+   the X is position:absolute, occupying no flow space, so title bars / color strips / floating money stats all slide under it.
+   Every frame carrying .ov-close also carries `.has-close`, which reserves the top edge in one place here;
+   `.story-brief-box` deliberately **skips it** -- its first element is a full-bleed cinematic still, a gap would break the art, and the X only pins a decorative corner. */
 .overlay-box.has-close { padding-top: 52px; }
-/* 觸控版的對應值住「疊層在手機上的可讀性」那一段 —— 那裡有 padding 簡寫會把這條蓋回去 */
+/* Touch counterpart lives in the "overlay readability on phones" section -- its padding shorthand would override this line */
 
 .overlay-box::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   box-shadow: inset 0 0 0 4px rgba(122, 158, 178, 0.07);
 }
-/* 陣亡 = 紅色警報:黃黑斜紋條 + 明朝體大字 */
+/* Death = red alert: yellow-black hazard strip + serif headline */
 .dead-box { border-color: var(--danger); }
 .dead-box::after {
   content: ''; position: absolute; left: 0; right: 0; top: 0; height: 8px;
@@ -1340,7 +1340,7 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 }
 .dead-sub { color: var(--dim); font-family: var(--mono); letter-spacing: 2px; }
 #deadTimer { font-family: var(--mono); font-size: 26px; color: #fff; }
-/* 陣亡頁(2026-07-17):不全屏變暗 —— 砲塔視窗以 box-shadow 打洞式聚光,倒數卡浮在上方 */
+/* Death page (2026-07-17): no fullscreen dim -- the turret window spotlights via box-shadow cutout, countdown card floats above */
 .dead-overlay { background: transparent; pointer-events: none; flex-direction: column; gap: 18px; }
 .dead-overlay .dead-panel { position: relative; z-index: 2; padding: 16px 30px; }
 .dead-cam {
@@ -1370,7 +1370,7 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 .toast::after { content: none; }
 .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ---------- 致命錯誤(開啟失敗 / 卡住):蓋過戰場疊層,原因為唯一動態文案 ---------- */
+/* ---------- Fatal error (open failure / stuck): above battle overlays, reason is the only dynamic copy ---------- */
 .fatal-overlay { position: fixed; z-index: 200; }
 .fatal-box { border-color: var(--danger); }
 .fatal-title {
@@ -1378,10 +1378,10 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 }
 .fatal-reason { color: var(--text); font-size: 14px; line-height: 1.8; word-break: break-word; }
 
-/* ---------- 觸控版常駐工具列(總聲音 / 視角 / 全螢幕) ----------
-   位置固定右上角,退避掉頂部 .sysbar 的裝飾文字與 .scanlines 的兩個 L 形邊角。
-   z-index 刻意落在 .hud-top(10)之上、.overlay(20)/.map-panel(1000)之下:疊層或選址面板蓋住
-   時 MUST 讓那些畫面內容贏,而不是浮在它們的關閉鍵 / 地圖控件上面搶點擊。 */
+/* ---------- Touch persistent toolbar (master sound / view / fullscreen) ----------
+   Fixed top-right, yielding to the top .sysbar ornament text and the two .scanlines L-corners.
+   z-index deliberately above .hud-top (10) but below .overlay (20) / .map-panel (1000): when an overlay or siting panel covers,
+   that content MUST win instead of floating under its close key / map controls stealing clicks. */
 .quick-tools {
   position: fixed;
   top: calc(30px + env(safe-area-inset-top, 0px));
@@ -1406,12 +1406,12 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 .quick-sound-slash { display: none; }
 .quick-tool.off .quick-sound-wave { display: none; }
 .quick-tool.off .quick-sound-slash { display: block; }
-/* 全螢幕移到 body 層工具列,左側系統列保留空列以維持 L/ZL/HOME 對齊。 */
+/* Fullscreen moved to the body-level toolbar; the left system strip keeps an empty row so L/ZL/HOME stay aligned. */
 body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: none; }
 
-/* ---------- 手機 / 窄視窗(非觸控裝置也吃這段;觸控版另有 body.touch-ui.ori-* 特化)----------
-   陣營卡 MUST 維持左右並排(STEEL 左 / SWARM 右 = 主視覺方位),窄屏只收窄不換向 ——
-   換成上下堆疊會讓「左藍右黃」的對抗語意消失,也和桌機的操作位置對不上。 */
+/* ---------- Phone / narrow viewport (also applies to non-touch; touch has separate body.touch-ui.ori-* specializations) ----------
+   Faction cards MUST stay side-by-side (STEEL left / SWARM right = the signature orientation); narrow screens only narrow, never re-stack --
+   stacking vertically would erase the "blue left, yellow right" confrontation read and mismatch desktop control positions. */
 @media (max-width: 760px) {
   .side-cards { flex-wrap: nowrap; gap: 8px; }
   .side-card { flex: 1 1 0; width: auto; min-width: 0; padding: 14px 10px 12px; }
@@ -1425,7 +1425,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   .title { flex-direction: column; letter-spacing: 8px; }
 }
 
-/* ---------- 開房前設定畫面 ---------- */
+/* ---------- Pre-deploy setup screens ---------- */
 .setup-panel { max-height: calc(100vh - 28px); overflow-y: auto; }
 .setup-sec { display: flex; flex-direction: column; gap: 6px; }
 .setup-label { font-size: 11px; color: var(--railS); letter-spacing: 3px; font-family: var(--mono); }
@@ -1434,7 +1434,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .ts-row { gap: 5px; flex-wrap: wrap; }
 .ts-btn { padding: 6px 14px; font-family: var(--mono); font-size: 12px; letter-spacing: 1px; }
 .ts-btn.on { border-color: var(--railW); color: var(--railW); animation: selGlowSwarm 1.8s ease-in-out infinite; }
-/* 預設地圖清單:三個一列對齊並排(3×6 分組 + 劇情分類);分組標題佔滿一列 */
+/* Preset venue list: three per row in aligned columns (3x6 groups + story section); group headers span the full row */
 .venue-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; max-height: 220px; overflow-y: auto; }
 .venue-group-head {
   grid-column: 1 / -1; font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
@@ -1449,10 +1449,10 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   min-width: 0; min-height: 44px;
   transition: background 0.12s, border-color 0.12s;
 }
-/* 地名獨佔一行、不換行:建圖面板僅 ~430px 寬、三欄每欄 ~130px,
-   長地名(如奧卡萬戈)溢出時掛 .marquee 跑馬燈捲動展示全文,短名靜止.
-   鈕本體用 block(不用 column flex):flex 子項 overflow 非 visible 時自動最小高度歸零,
-   會被壓縮裁掉底部,這正是上一版底部被擋住的原因 */
+/* Venue name owns its line, no wrap: the builder panel is only ~430px wide, three columns ~130px each,
+   long names (e.g. Okavango) overflow into a .marquee marquee scroll for full text, short names stay still.
+   Button body uses block (not column flex): a flex child with non-visible overflow zeroes its auto min-height,
+   which compresses and clips the bottom -- exactly why the previous build hid the bottom row */
 .venue-name {
   display: block; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--text, var(--fg));
   white-space: nowrap; overflow: hidden; line-height: 1.6; margin-bottom: 3px;
@@ -1479,7 +1479,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 }
 .venue-var.story-tag { color: var(--dim); }
 
-/* 混合水域 / 混合沼澤:使用對應顏色 */
+/* Mixed water / mixed swamp: matching colors */
 .venue-var.var-water {
   color: #6cc3e8;
   border-color: rgba(108, 195, 232, 0.45);
@@ -1492,7 +1492,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   box-shadow: 0 0 6px rgba(147, 51, 234, 0.3);
 }
 
-/* 另外 4 種:未用過的 Rose/Coral 色系，依混和/起伏程度漸變 */
+/* Other 4: unused Rose/Coral family, graded by mix/relief level */
 .venue-var.var-plain {
   color: #ffccd5;
   border-color: rgba(255, 204, 213, 0.35);
@@ -1536,24 +1536,24 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 }
 .env-sel:focus { outline: none; border-color: var(--railW); }
 
-/* 房間設定(電腦難度 / 操作方式):兩組都是「整房一個、房主可改」,故收在同一塊分頁裡輪流顯示 ——
-   兩列同時攤開會把陣營卡推出首屏(見 A20 的直式並排原則)。選項本體一律走 `.seg`/`.segb`。 */
+/* Room settings (bot difficulty / control scheme): both are "one per room, host edits", so they share one tabbed block shown in turn --
+   unfolding both rows at once would push the faction cards off first paint (see the A20 portrait side-by-side rule). Option bodies always ride `.seg`/`.segb`. */
 .room-cfg { margin: 6px auto 0; max-width: 640px; width: 100%; min-width: 0; text-align: left; }
 .room-cfg-tabs { justify-content: center; margin-bottom: 5px; }
 .room-cfg-page[hidden] { display: none; }
-/* 選項本體 MUST **置中對齊頁籤**(2026-08-02 使用者定案「電腦難度/操作方式的選項要在頁籤正下方」):
-   頁籤那一列是置中的,選項若靠左(flex 預設 flex-start)就會歪在 640px 版位的左緣 ——
-   看起來像兩塊無關的東西,而不是「這組頁籤展開的內容」。內層的 `.set-row` 是操作方式那一頁
-   包住 seg 的容器 ⇒ 兩層都要置中,只改外層等於沒改(整列仍靠左貼齊)。 */
+/* Option bodies MUST be **centered under the tabs** (user decision (2026-08-02) "bot-difficulty / control-scheme options sit directly under their tabs"):
+   the tab row is centered, so left-aligned options (flex default flex-start) would skew to the left edge of the 640px slot --
+   reading as two unrelated blocks instead of "this tab group's expanded content". The inner `.set-row` wraps the control-scheme page's
+   seg container => both layers center together; centering only the outer layer changes nothing (the row still hugs left). */
 .room-cfg-page { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
 .room-cfg-page > .set-row { justify-content: center; flex-wrap: wrap; }
 
-/* 大廳動作:生成地圖三項一列,遊戲模式三項下一列(桌機與橫式皆同列) */
+/* Lobby actions: three map-gen items in one row, three game-mode items in the next (same row on desktop and landscape) */
 .lobby-actions { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 8px; width: 100%; }
 .lobby-actions .btn.big {
   flex: 1 1 0; min-width: 0; padding: 12px 4px; letter-spacing: 1px; white-space: nowrap;
 }
-/* 劇情入口鈕:藍—洋紅—黃三色漸層(對撞主題),置於「開戰時刻」右側 */
+/* Story entry button: blue-magenta-yellow tri-gradient (clash theme), docked right of "Deploy" */
 .story-btn {
   margin-top: 0;
   border-color: var(--line-strong);
@@ -1561,7 +1561,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   box-shadow: inset 3px 0 0 var(--steel), inset -3px 0 0 var(--swarm);
 }
 .story-btn:hover:not(:disabled) { background: linear-gradient(120deg, rgba(95, 208, 242, 0.32), rgba(255, 46, 136, 0.30) 52%, rgba(255, 194, 71, 0.32)); color: var(--text); border-color: #fff; }
-/* 超級入口鈕:金色主題(第三方超級戰士識別色),置於「劇情戰役」右側 */
+/* Super entry button: gold theme (third-party super-warrior identity), docked right of "Story Campaign" */
 .super-btn {
   margin-top: 0;
   border-color: #ffd54a;
@@ -1588,7 +1588,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 }
 .chapter-card.locked { opacity: 0.4; cursor: not-allowed; }
 .chapter-card.cleared { border-left-color: var(--ok); }
-/* MAGI 式編號:等寬數字框住的作戰序號 */
+/* MAGI-style numbering: operation serial in a monospace box */
 .chapter-num {
   flex: none; width: 44px; height: 40px; display: flex; align-items: center; justify-content: center;
   font-family: var(--serif); font-weight: 900; font-size: 20px; color: var(--railS); letter-spacing: 1px;
@@ -1606,7 +1606,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .chapter-state.go { color: var(--railS); }
 .story-progress { font-size: 12px; font-family: var(--mono); color: var(--ok); letter-spacing: 1px; }
 
-/* 簡報跳窗:圖文並茂過場(上半全幅立繪疊字 + 下半主角 / 敘事 / 任務目標) */
+/* Briefing popup: illustrated cinematic (full-bleed still with overlaid type on top + hero / narrative / objective below) */
 .story-brief-box {
   max-width: min(720px, 94vw); text-align: left;
   padding: 0; gap: 0; overflow: hidden auto; max-height: 92vh;
@@ -1615,7 +1615,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .story-brief-box > .row { padding: 12px 22px 20px; margin: 0; }
 .story-brief-body { display: flex; flex-direction: column; gap: 0; }
 
-/* ── 全幅過場立繪 ── */
+/* ── Full-bleed cinematic still ── */
 .sb-cine {
   position: relative; width: 100%; aspect-ratio: 3 / 2; overflow: hidden;
   background: linear-gradient(122deg, #0a1720, #06090d 52%, #1a1405);
@@ -1625,15 +1625,15 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 42%;
   display: block; filter: saturate(1.06) contrast(1.05);
 }
-.sb-cine-img.sb-cine-fail { display: none; }   /* 讀圖失敗:退回漸層底 + 疊字仍在 */
-/* 底部漸暗 + 左藍 / 右黃側染(疊字可讀、呼應對抗色) */
+.sb-cine-img.sb-cine-fail { display: none; }   /* Image load failure: fall back to gradient base + overlaid type stays */
+/* Bottom scrim + left-blue / right-yellow side wash (type stays readable, echoes faction colors) */
 .sb-cine-scrim {
   position: absolute; inset: 0; pointer-events: none;
   background:
     linear-gradient(0deg, rgba(4, 7, 11, 0.95) 0%, rgba(4, 7, 11, 0.5) 27%, transparent 54%),
     linear-gradient(90deg, rgba(24, 233, 255, 0.12), transparent 32%, transparent 68%, rgba(255, 194, 71, 0.12));
 }
-/* 四角取景角標(上藍下黃) */
+/* Viewfinder corner marks (blue top, yellow bottom) */
 .sb-cine-corners i { position: absolute; width: 20px; height: 20px; pointer-events: none; }
 .sb-cine-corners i:nth-child(1) { left: 10px; top: 10px; border-left: 2px solid var(--railS); border-top: 2px solid var(--railS); }
 .sb-cine-corners i:nth-child(2) { right: 10px; top: 10px; border-right: 2px solid var(--railS); border-top: 2px solid var(--railS); }
@@ -1665,7 +1665,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   background: rgba(68, 215, 182, 0.25); border-color: #fff; transform: translateY(-1px);
 }
 
-/* ── 主角卡列 ── */
+/* ── Hero card row ── */
 .sb-hero-row { display: flex; align-items: center; gap: 14px; padding: 16px 22px 2px; }
 .sb-portrait { flex: none; width: 76px; height: 76px; border: 1px solid var(--line); border-left: 3px solid var(--railS); background: rgba(4, 7, 11, 0.9); }
 .sb-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1682,7 +1682,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 }
 .sb-obj::before { content: '◎ 任務目標:'; color: var(--railW); }
 
-/* ── 雙陣營戰線切換(協約 / 同盟)── */
+/* ── Dual-faction front switch (Pact / Alliance) ── */
 .story-side-toggle { display: flex; gap: 8px; }
 .ss-btn {
   flex: 1; cursor: pointer; font: inherit; font-weight: 700; letter-spacing: 3px; font-size: 14px;
@@ -1701,9 +1701,9 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 }
 .world-btn:hover:not(:disabled) { background: var(--neon-pink); color: #12000a; border-color: var(--neon-pink); }
 
-/* ── 世界觀・序章(長篇閱讀)── */
+/* ── Worldview prologue (long-form reading) ── */
 .world-box { max-width: min(680px, 94vw); text-align: left; max-height: 90vh; }
-/* 閱讀 / 動畫頁籤：左右等比例分割，各佔一半 */
+/* Read / animation tabs: equal split, half each */
 .world-tabs { display: flex; gap: 8px; }
 .world-tabs .world-tab { flex: 1 1 0; min-width: 0; }
 .world-body { overflow-y: auto; max-height: 64vh; padding-right: 8px; }
@@ -1713,7 +1713,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   text-indent: 0; letter-spacing: 1px; border-left: 3px solid var(--railW); padding-left: 12px;
 }
 
-/* 序章頁籤：動畫面板 */
+/* Prologue tabs: animation panel */
 .world-anim-panel { overflow-y: auto; max-height: 64vh; padding-right: 6px; }
 .world-anim-hero { margin-bottom: 14px; }
 .world-anim-poster-wrap {
@@ -1826,7 +1826,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   text-overflow: ellipsis;
 }
 
-/* ── 簡報:長篇敘事(多段落)+ 雙方陣容小卡 ── */
+/* ── Briefing: long-form narrative (multi-paragraph) + bilateral roster mini-cards ── */
 .sb-prose { padding: 16px 26px 6px; }
 .sb-prose .sb-intro { padding: 0; margin: 0 0 1em; line-height: 2.0; text-indent: 2em; }
 .sb-roster { padding: 6px 24px 6px; display: flex; flex-direction: column; gap: 7px; }
@@ -1850,21 +1850,21 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .sb-chip.merc { border-left: 3px solid var(--neon-pink); }
 .sb-chip.enemy { cursor: default; min-width: 158px; border-left: 3px solid var(--foe, var(--swarm)); }
 .sb-chip.enemy .sb-chip-txt b { color: var(--foe, var(--swarm)); }
-/* 立繪底緣依視角上色(協約藍 / 同盟黃)*/
+/* Still bottom edge tints with viewer side (Pact blue / Alliance yellow) */
 .sb-cine-STEEL { border-bottom-color: var(--steel); }
 .sb-cine-SWARM { border-bottom-color: var(--swarm); }
 
-/* 戰場選單(暫停)*/
+/* Battle menu (pause) */
 .pause-title { font-family: var(--serif); font-size: 30px; font-weight: 900; letter-spacing: 10px; color: var(--railS); }
 
-/* ── 戰場選單分頁(選單 / 設定 / 說明)── */
-/* 鈕面樣式全部來自 `.segb`,這裡只留排列 */
+/* ── Battle menu tabs (menu / settings / help) ── */
+/* Button faces all come from `.segb`, only layout stays here */
 .pause-tabs { justify-content: center; gap: 6px; }
 .pause-page { display: flex; flex-direction: column; gap: 14px; }
 .pause-page[hidden] { display: none; }
 .pause-back { align-self: center; }
 
-/* ── 設定:子分頁 + 各類開關(switch)+ 音量滑桿 ── */
+/* ── Settings: sub-tabs + switch/slider rows ── */
 .set-tabs { justify-content: center; gap: 5px; margin-bottom: 2px; flex-wrap: wrap; }
 .set-list {
   display: flex; flex-direction: column; gap: 14px; text-align: left; min-width: min(540px, 88vw);
@@ -1883,7 +1883,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .set-slider { flex: 1; accent-color: var(--railS); cursor: pointer; }
 .set-val { font-family: var(--mono); font-size: 11px; color: var(--dim); min-width: 42px; text-align: right; }
 .set-hint { font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 1px; }
-/* 開發工具的完整輸出:只在使用者展開時插入,避免背景工作每輪重畫一大段文字。 */
+/* Dev-tool full output: inserted only when the user expands it, so background jobs never repaint a wall of text per tick. */
 .dev-tool-output {
   flex: 1 0 100%; max-height: 220px; margin: 0; overflow: auto; padding: 8px;
   box-sizing: border-box; white-space: pre-wrap; word-break: break-word;
@@ -1902,8 +1902,8 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .switch[aria-checked="true"] { background: rgba(var(--railS-rgb), 0.26); border-color: var(--railS); }
 .switch[aria-checked="true"] > span { left: 26px; background: var(--railS); }
 
-/* ── 說明:類別分頁 + 內文清單 ── */
-/* 鈕面樣式全部來自 `.segb`,這裡只留排列 */
+/* ── Help: category tabs + body list ── */
+/* Button faces all come from `.segb`, only layout stays here */
 .help-cats { justify-content: center; gap: 5px; }
 .help-body {
   text-align: left; max-height: 46vh; overflow-y: auto; padding-right: 6px;
@@ -1912,7 +1912,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .help-item-h { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; color: var(--railS); }
 .help-item-p { font-size: 12px; line-height: 1.85; color: var(--text); border-left: 2px solid var(--line); padding-left: 10px; margin-top: 3px; }
 
-/* ---------- 房間 N 席位 ---------- */
+/* ---------- Room N seats ---------- */
 .room-map-info { font-size: 12px; color: var(--ok); margin-top: 4px; font-family: var(--mono); letter-spacing: 1px; }
 .side-slots { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .slot {
@@ -1920,7 +1920,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   font-size: 12px; padding: 5px 10px; border: 1px solid rgba(122, 158, 178, 0.18); border-radius: 0;
   color: var(--dim); background: rgba(4, 7, 11, 0.6);
 }
-/* 填滿槽位:整格可點(選取檢視該玩家角色) */
+/* Filled slot: whole cell clickable (inspect that player's pick) */
 .slot.filled { border-color: var(--line-strong); color: var(--fg); font-weight: 700; cursor: pointer; }
 .slot.filled:hover { background: rgba(122, 158, 178, 0.14); }
 .slot.filled.sel { box-shadow: inset 0 0 0 2px var(--railS); background: rgba(var(--railS-rgb), 0.12); }
@@ -1931,7 +1931,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .slot-ready { flex: 0 0 auto; }
 .slot-x { flex: 0 0 auto; margin-left: 2px; color: var(--dim); cursor: pointer; font-weight: 400; }
 .slot-x:hover { color: var(--danger); }
-/* 空位:入座 / 加電腦玩家 左右並排均分(槽位總寬不變) */
+/* Empty slot: sit / add-bot side by side, evenly split (slot total width unchanged) */
 .slot.empty { flex-direction: row; align-items: stretch; gap: 4px; padding: 5px; border-style: dashed; }
 .slot-btn {
   flex: 1 1 0; min-width: 0; box-sizing: border-box; font: inherit; font-size: 11px; padding: 5px 4px;
@@ -1943,10 +1943,10 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .slot-empty-label { color: var(--dim); font-size: 12px; text-align: center; width: 100%; font-family: var(--mono); letter-spacing: 2px; }
 .btn.tiny { padding: 2px 8px; font-size: 11px; margin-left: 8px; }
 
-/* ===== 角色系統(選角 / 雙層 HP / 電力 / 招式)===== */
-/* 選角區(房間階段,入座後出現) */
-/* z-index 3:MUST 高於 .scanlines(2)—— 否則掃描線會蓋在頭像/立繪/3D 展示台上,
-   看起來就是「模糊的橫線」。選角區的圖必須完全清晰,不吃任何疊層。 */
+/* ===== Character system (draft / dual HP / power / kits) ===== */
+/* Draft zone (room stage, appears after seating) */
+/* z-index 3: MUST sit above .scanlines (2) -- otherwise scanlines paint over avatars/stills/stage,
+   reading as "blurry horizontal lines". Draft art stays fully crisp under no overlay. */
 .char-section {
   position: relative; z-index: 3;
   width: min(1060px, 96vw); margin: 10px auto 0; text-align: left;
@@ -1955,7 +1955,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   clip-path: var(--notch);
   padding: 10px 14px 12px;
 }
-/* 左:頭像牆(可捲動);右:選定角色的完整簡歷 + 數值 */
+/* Left: avatar wall (scrolls); right: full resume + stats of the selected character */
 .char-pick { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr); gap: 12px; margin-top: 8px; }
 @media (max-width: 900px) { .char-pick { grid-template-columns: 1fr; } }
 .char-grid {
@@ -1973,7 +1973,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .char-btn:hover { border-color: var(--railW); background: rgba(var(--railW-rgb), 0.1); }
 .char-btn.on { border-color: var(--ok); color: var(--ok); animation: selGlowOk 1.8s ease-in-out infinite; }
 
-/* 陣營代表色標記:藍(鋼鐵)/黃(蜂群)/米白(傭兵)兼具美感與科技感 */
+/* Faction identity markers: blue (STEEL) / yellow (SWARM) / off-white (MERC), techy and legible */
 .char-btn.side-steel {
   border-top: 2px solid #5fd0f2;
   background: linear-gradient(180deg, rgba(95, 208, 242, 0.12) 0%, rgba(12, 18, 25, 0.92) 42%);
@@ -2005,7 +2005,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 }
 .char-btn.side-merc .char-av { border-color: rgba(240, 238, 233, 0.45); }
 
-/* 陣營代表色膠囊標籤 */
+/* Faction identity capsule tags */
 .char-side-pill {
   font-size: 9px;
   font-weight: 700;
@@ -2033,7 +2033,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   border: 1px solid rgba(240, 238, 233, 0.45);
 }
 
-/* 超級大戰選角陣營分頁標籤 */
+/* Super-battle draft faction tab labels */
 .char-side-tabs {
   display: flex;
   justify-content: center;
@@ -2063,27 +2063,27 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   background: rgba(240, 238, 233, 0.18);
 }
 
-/* 統一 角色/機體 切換頁籤(房間選角 + 設定頁機體 + 放大視窗 + 簡歷共用同一組標記) */
+/* Unified char/mech switch tabs (room draft + settings mech tab + enlarged modal + resume share one marker set) */
 .char-art-tabs, .mecha-arttabs, .modal-arttabs { align-items: center; }
 .art-tabs-label { font-size: 11px; color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
 .art-tab.on { color: var(--ok); border-color: var(--ok); }
-/* 頭像牆 / 立繪左右滑動區:橫向滑動手勢區,直向捲動不受影響 */
+/* Avatar wall / still swipe zones: horizontal swipe gesture areas, vertical scroll unaffected */
 .char-grid, .cd-portrait, .bio-portrait, .sb-chips { touch-action: pan-y; }
 [data-artswipe] { cursor: ew-resize; }
 
 .char-btn.merc { border-style: dashed; }
 .char-av { width: 56px; height: 56px; border-radius: 0; border: 1px solid var(--line); display: block; clip-path: var(--notch-sm); object-fit: cover; }
-/* 機體頭像:獨立頭部/座艙裁切圖檔(assets/mech_avatars),方形原樣呈現 */
+/* Mech avatars: standalone head/cockpit crop files (assets/mech_avatars), square as-is */
 .char-av.av-mech, .sb-chip-av.av-mech, .dlg-av.av-mech, .self-av.av-mech, .boss-av.av-mech {
   object-fit: cover; object-position: center;
 }
-/* 機體立繪:全幅原圖等比容納,深色底襯邊(與角色透明立繪同框並存) */
+/* Mech stills: full art fit-contained, dark matte backing (coexists in-frame with transparent character stills) */
 .cd-portrait img.art-mech, .bio-portrait img.art-mech, .dlg-art.art-mech {
   object-fit: contain; background: #0a0f16;
 }
-/* 頭像 + 機種角標(2026-08-02 使用者定案「設計無人機/機甲/變形者的圖示,標示在頭像旁邊」)。
-   標記由 main.js `charAvatarHTML()` 單一縫產生;圖示吃 `currentColor` ⇒ 選取態(.char-btn.on)
-   自動跟著翻色,MUST NOT 在這裡寫死 fill。角標壓在頭像右下角(不遮臉),自帶底色保證可讀。 */
+/* Avatar + unit corner badge (user decision (2026-08-02) "design drone/mech/morph icons, pinned beside the avatar").
+   Badges come from the single main.js `charAvatarHTML()` seam; icons eat `currentColor` => selected state (.char-btn.on)
+   re-tints automatically, MUST NOT hardcode fill here. Badge pins to the avatar's bottom-right (never covers the face) with its own backing for legibility. */
 .av-wrap { position: relative; display: inline-block; flex: none; line-height: 0; }
 .av-kind {
   position: absolute; right: -2px; bottom: -2px; display: block; padding: 2px;
@@ -2098,20 +2098,20 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .char-name { font-size: 10px; color: var(--dim); font-family: var(--mono); }
 .char-info { margin-top: 8px; font-size: 11px; color: var(--dim); line-height: 1.7; border-left: 2px solid var(--railS-dark); padding-left: 8px; }
 
-/* 角色詳細資訊(展示台 + 立繪 + 簡歷 + 三階數值) */
+/* Character detail (stage + still + resume + three-tier stats) */
 .char-detail {
   background: rgba(4, 7, 11, 0.75); border: 1px solid var(--line); border-radius: 0;
   padding: 10px; max-height: 460px; overflow-y: auto; position: relative;
 }
 .cd-empty { text-align: center; color: var(--dim); font-size: 13px; line-height: 2.2; padding: 40px 10px; font-family: var(--mono); }
 .cd-empty span { font-size: 10px; }
-/* 展示台下方:立繪 + 簡歷雙欄 */
+/* Below the stage: still + resume two-column */
 .cd-lower { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; margin-top: 10px; }
-/* 左欄(頭像 + 小展示台)捲動時固定 */
+/* Left column (avatar + mini stage) pins while scrolling */
 .cd-art { align-self: start; position: sticky; top: 0; z-index: 1; }
-/* 窄屏塌成單欄:**MUST 同時解除 .cd-art 的 sticky**,且此段 MUST 排在上面那條 sticky 之後 ——
-   媒體查詢不加特異度,寫在前面會被後面的 .cd-art 蓋回去。單欄時左欄在簡歷「上方」而非「旁邊」,
-   sticky 會讓不透明的頭像/展示台黏在捲動容器頂端、直接蓋掉下面的詳細說明(玩家回報「說明被擋住」)。 */
+/* Narrow screens collapse to one column: **MUST release .cd-art sticky at the same time**, and this rule MUST sort after the sticky rule above --
+   media queries add no specificity, so an earlier rule loses to the later .cd-art. Single-column puts the left column **above** the resume, not beside it,
+   where sticky would glue the opaque avatar/stage to the scroll container top and cover the detail below (players reported "details blocked"). */
 @media (max-width: 640px) {
   .cd-lower { grid-template-columns: 1fr; }
   .cd-art { position: static; }
@@ -2123,13 +2123,13 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 }
 .cd-portrait img:hover { box-shadow: 0 0 0 2px var(--railS); }
 
-/* 機體展示台(charPreview.js;canvas 節點跨掛載點/放大視窗搬移)。背景**完全不透明**
-   (radial 兩端都是 opaque hex),否則 sticky 疊在簡歷上時,底下文字會透出來干擾觀看。 */
+/* Mech stage (charPreview.js; canvas node moves across mount points / enlarged modal). Background **fully opaque**
+   (both radial stops are opaque hex), otherwise sticky would let resume text bleed through over the stage. */
 .cd-stage {
   position: relative; border: 1px solid var(--line); border-radius: 0; overflow: hidden;
   background: radial-gradient(circle at 50% 58%, #0d1a22, #05070a 72%);
 }
-/* 小:塞進頭像下方的左欄(150px),讓出簡歷空間;放大改走獨立視窗(.stage-modal) */
+/* Compact: tucks under the left-column avatar (150px), freeing resume space; enlarged goes to a standalone modal (.stage-modal) */
 .cd-stage.small { height: 150px; margin-top: 8px; }
 .cd-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
 .cd-canvas.grabbing { cursor: grabbing; }
@@ -2137,7 +2137,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; text-align: center; pointer-events: none;
   font-family: var(--mono); font-size: 9.5px; color: var(--dim); padding: 2px 0; background: rgba(4, 7, 11, 0.8);
 }
-.cd-stage.small .cd-stage-hint { display: none; }   /* 小圖沒空間放提示 */
+.cd-stage.small .cd-stage-hint { display: none; }   /* Compact has no room for the hint */
 .cd-stage-tr { position: absolute; right: 8px; top: 8px; z-index: 1; display: flex; gap: 4px; }
 .cd-morph-btn, .cd-size-btn {
   font-family: var(--mono); font-size: 10px; color: var(--railS); background: rgba(6, 10, 15, 0.95);
@@ -2146,7 +2146,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .cd-morph-btn { position: absolute; left: 8px; top: 8px; z-index: 1; }
 .cd-morph-btn:hover, .cd-size-btn:hover { background: var(--railS); color: #04080b; border-color: var(--railS); }
 .cd-stage.small .cd-morph-btn, .cd-stage.small .cd-size-btn { font-size: 9px; padding: 2px 5px; }
-/* 跑步演示三態切換(靜止/慢速/正常;2026-07-17 取代雙擊移動徽章 + 慢速鈕) */
+/* Run-demo three-state toggle (idle / slow / normal; 2026-07-17 replaces double-click move badge + slow button) */
 .cd-run { position: absolute; left: 8px; bottom: 20px; z-index: 1; display: flex; gap: 3px; }
 .cd-run-btn {
   font-family: var(--mono); font-size: 10px; color: var(--dim); background: rgba(4, 7, 11, 0.85);
@@ -2167,7 +2167,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .cd-name { font-family: var(--serif); font-size: 18px; font-weight: 900; color: var(--fg); letter-spacing: 3px; }
 .cd-machine { font-family: var(--mono); font-size: 11px; color: var(--railW); margin-top: 2px; letter-spacing: 1px; }
 .cd-meta { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 3px; }
-/* 機體設計原型(現實中的載具/技術出處) */
+/* Mech design proto (real-world vehicle/tech source) */
 .cd-proto {
   font-size: 11px; color: #b9c8d2; line-height: 1.6; margin-top: 5px;
   border-left: 2px solid var(--railS); padding-left: 7px;
@@ -2176,8 +2176,8 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   display: inline-block; margin-right: 5px; font-family: var(--mono); font-size: 9px;
   color: #04080b; background: var(--railS); border-radius: 0; padding: 0 5px; letter-spacing: 1px;
 }
-/* 原型名稱(codex.js 的 `src`)—— 分隔靠這一格的顏色與留白,不靠標點:
-   名稱本身就含「」與 ——(`「壁壘」過裝甲型`),拿標點當框會套成兩層引號。 */
+/* Proto name (codex.js `src`) -- separation rides on this cell's color and whitespace, not punctuation:
+   names already contain "" and -- (e.g. `"Bulwark" over-armored type`), so punctuating as a frame would nest quotes two deep. */
 .cd-proto b { color: #e2ecf3; font-weight: 700; margin-right: 6px; }
 .cd-quote {
   margin: 7px 0; padding: 5px 9px; font-family: var(--serif); font-size: 12.5px; font-weight: 700; color: var(--railW);
@@ -2195,7 +2195,7 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
   vertical-align: 1px;
 }
 
-/* ---------- 角色簡歷跳出視窗(點頭像預覽;唯讀,不影響選角)---------- */
+/* ---------- Character resume popup (avatar preview tap; read-only, never affects draft) ---------- */
 .bio-modal {
   position: fixed; inset: 0; z-index: 40;
   display: flex; align-items: center; justify-content: center;
@@ -2205,10 +2205,10 @@ body.touch-ui .tl-sys-l [data-act="full"] { visibility: hidden; pointer-events: 
 .bio-modal-box {
   position: relative; width: min(1040px, 96vw); max-height: 94vh; overflow-y: auto;
   background: rgba(6, 10, 15, 0.98); border: 1px solid var(--line); clip-path: var(--notch);
-  /* 上緣讓出 .bio-modal-close 的落點(見 .ov-close 註解:✕ 是 absolute,不讓內容就會被壓住)*/
+  /* Top edge yields the .bio-modal-close landing (see .ov-close note: the X is absolute, content that never yields gets pinned under it) */
   padding: 42px 22px 20px;
 }
-/* 立繪欄要夠寬才看得到全身照(來源圖近正方形構圖,頭到腳全入鏡);窄欄只會擠成一條窄長條 */
+/* Still column must be wide enough for the full-body shot (source art is near-square, head to feet all in frame); a narrow column squeezes it into a thin strip */
 .bio-modal-body { display: grid; grid-template-columns: minmax(280px, 420px) minmax(0, 1fr); gap: 20px; }
 @media (max-width: 760px) { .bio-modal-body { grid-template-columns: 1fr; } }
 .bio-modal-close {
@@ -2228,8 +2228,8 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .cd-stat i b { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--steel) 0 4px, rgba(5, 7, 10, 0.6) 4px 6px); }
 .cd-stat em { font-style: normal; color: var(--fg); text-align: right; }
 .cd-note { grid-column: 1 / -1; font-family: var(--mono); font-size: 10px; color: var(--railW); margin-top: 3px; }
-/* 角色六角能力圖(2026-08-04):形狀由 data.js heroHexStats 給,這裡只管配色與版位。
-   陣營色走 --railW ⇒ 同一張圖在蜂群/鋼鐵兩側自動換色,MUST NOT 在 JS 端硬寫色碼。 */
+/* Character hex ability chart (2026-08-04): shape comes from data.js heroHexStats, only palette and placement live here.
+   Faction color rides --railW => the same chart re-tints on SWARM/STEEL sides automatically, MUST NOT hardcode color codes on the JS side. */
 .cd-hexbox { margin: 8px 0; }
 .cd-hex { margin: 2px 0 6px; }
 .cd-hex svg { display: block; width: 100%; max-width: 320px; margin: 0 auto; height: auto; overflow: visible; }
@@ -2256,13 +2256,13 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .cd-fx { font-family: var(--mono); font-size: 9px; color: #04080b; background: var(--railS); border-radius: 0; padding: 1px 6px; letter-spacing: 1px; }
 .cd-desc { font-size: 11px; color: var(--dim); margin-top: 2px; }
 .cd-nums { font-family: var(--mono); font-size: 10px; color: #b9c9d2; margin-top: 2px; }
-/* 純自身型大招的補償增額（2026-08-06；data.js SELF_ULT）：數值本身照舊，
-   括號裡標出其中有多少是機種絕招退場折算回來的 —— 不標的話，玩家只看得到一個
-   變大的數字，不知道那是補償 */
+/* Self-only ult compensation uplift (2026-08-06; data.js SELF_ULT): base values unchanged,
+   the parens show how much of it is converted back from retired unit-type ults -- without the mark, players only see a bigger
+   number with no idea it is compensation */
 .cd-boost { color: #7fd6a8; margin-left: 3px; }
 .cd-foot { margin-top: 6px; font-family: var(--mono); font-size: 10px; color: var(--dim); opacity: 0.75; }
 
-/* ---------- 展示台放大獨立視窗(仿遊戲操作;只留基本數值 + 武器/招式)---------- */
+/* ---------- Enlarged standalone stage modal (mirrors in-game handling; base stats + weapons/kits only) ---------- */
 .stage-modal {
   position: fixed; inset: 0; z-index: 42;
   display: flex; align-items: center; justify-content: center;

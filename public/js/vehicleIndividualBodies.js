@@ -1,4 +1,4 @@
-// 每款獨立零件表；不得引用另一車款或套用 sedan / van / motor 組件。
+// Per-model independent parts table; MUST NOT reference another model or reuse sedan / van / motor assemblies.
 export const INDIVIDUAL_BODIES = {
   cityBike: {
     wheels: [

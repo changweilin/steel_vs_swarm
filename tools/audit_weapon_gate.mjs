@@ -1,34 +1,34 @@
 // ============ 武器命中閘門稽核(射程容差 / 爆風量體 / 射程光暈可命中判定)============
-// 用途:使用者 2026-07-30 回報「榴彈類武器常常出現射程光暈卻沒命中對方」的離線防線,
-//       以及「不同類型武器各自的判定問題」的逐彈道覆蓋。
+// Purpose: offline guard for the 2026-07-30 report where grenade-class weapons often show
+//       in-range glow yet score no hit, plus per-trajectory coverage of each weapon type.
 //
-// 一句話定義本稽核守的規則:**光暈亮 = 打得到,而「打得到」與伺服器實際結算同源**。
-// 拆成四條 MUST:
-//   ① 射程閘門的網路寬容只有**一個**值(data.js RANGE_TOL);sim.js MUST NOT 逐處手寫倍率。
-//   ② 兩端閘門同界:客戶端彈道能飛到的最遠處,伺服器 MUST 收得下(否則 = 靜默丟包)。
-//   ③ 爆風量到目標命中量體的**最近點**(水平 hitR + 垂直帶),不是量中心。
-//   ④ 射程光暈的判據依 `data.js reachRule()` 逐彈道分派,五類全覆蓋;消費端只有一份實作,
-//      且拋物線可行性與 `_lobAim` 的火控解吃**同一份**逐級降裝藥階梯(_lobLadder)。
-//   ⑤ 2026-08-03 使用者定案:光暈亮的是**這一發真的會傷到的單位**(準星目標打得到 ⇒ 名冊 =
-//      該次結算的傷害足跡)。足跡的分類只走 `aoeClass(def)` 一份、幾何逐類鏡射伺服器
-//      (`_blast` / `heroPlasma` / `_lanceHits`);爆風那一支**刻意不吃 LOS 也不吃射程**(A11)。
+// One-line rule: glow lit means hittable, and hittable shares one source with server settlement.
+// Four MUSTs (plus one user decision below):
+//   1 Range-gate network tolerance has only one value (data.js RANGE_TOL); sim.js MUST NOT hand-write multipliers per site.
+//   2 Both ends share the same gate bound: the farthest client ballistics can fly, the server MUST accept (else silent drop).
+//   3 Blast volume measures to the nearest point of the target hit volume (horizontal hitR plus vertical band), not the center.
+//   4 Range-glow verdict dispatches per trajectory via data.js reachRule(), all five classes covered; consumers hold one implementation,
+//      and lob feasibility shares the same stepwise reduced-charge ladder (lobLadder) with the lobAim fire-control solution.
+//   5 2026-08-03 user decision: lit glow means the units this shot will actually damage (reticle target hittable means roster equals
+//      this settlement damage footprint). Footprint classification goes only through aoeClass(def), geometry mirrors the server per class
+//      (blast path, heroPlasma path, lanceHits path); the blast branch deliberately ignores LOS and range (A11).
 //
-// 三種前科(本稽核逐條釘住):
-//   Ⅰ **光暈只量距離**:距離在射程內就亮 —— 榴彈的彈道被稜線擋住、直擊武器的視線被建物擋住
-//     都照亮不誤。伺服器那邊 heroHit/_lanceHits/heroPlasma 全有 `_losBlocked` 複驗、榴彈落點
-//     則根本沒飛到目標 ⇒ 「光暈亮著卻沒命中」。
-//   Ⅱ **閘門容差逐處手寫**:heroBurst 曾獨自寫 1.15,其餘閘門是 1.25 且另乘 `_altRange`。
-//     高地上合法的榴彈落點落在 (1.15, altRangeMax × RANGE_TOL] 這段窗口 = 驗證後靜默丟棄:
-//     玩家看到砲彈在敵人身上炸開、傷害卻是 0(A30 靜默丟包家族)。
-//   Ⅲ **爆風量到中心**:半徑 20m 的主堡被榴彈直擊牆面,爆心離中心就是 20m ⇒ r=16 的榴彈
-//     只結算到約五成超壓、r≤11 的直接歸零。與 2026-07-28 `_lanceHits` 的 R + hitR(t)、
-//     2026-07-29 `_surfD3` 同一條病灶(「打不到建築」)的爆風版。
+// Three priors pinned here one by one:
+//   I Glow measured distance only: lit whenever in range, even when a ridge blocks the lobbed path
+//     or a building blocks direct-fire sight. Server heroHit, lanceHits and heroPlasma all recheck losBlocked
+//     while the grenade landing point never reached the target, hence lit glow with no hit.
+//   II Per-site hand-written gate tolerance: heroBurst once hard-coded 1.15 while other gates use 1.25 times altRange.
+//     Legal high-ground lob landings inside (1.15, altRangeMax times RANGE_TOL] were silently dropped after validation:
+//     the player sees the shell burst on the enemy for 0 damage (A30 silent-drop family).
+//   III Blast measured to center: a 20m-radius base hit on the wall puts the blast center 20m from the middle, so an r=16
+//     round settles at about half overpressure and r<=11 rounds zero out. Same lesion as the 2026-07-28 lanceHits R plus hitR(t)
+//     and 2026-07-29 surfD3 blast variant of the cannot-hit-buildings defect.
 //
-// 為什麼用「抽原文」而不是 import:`game.js` 的 three 走 CDN importmap,Node 端解析不了;
-// 抽出來評估的仍是**真正的程式碼文字**(另抄一份公式就永遠會通過)。伺服器側則直接跑
-// 真的 `BattleSim`。每一段可執行斷言都自帶反向對照:把判定改回壞版,對應條目 MUST 立刻紅字。
-// 跑法:`node tools/audit_weapon_gate.mjs`
-// 退出碼:0 = 全綠;1 = 有紅字
+// Why extract source text instead of import: game.js three rides the CDN importmap, Node cannot resolve it;
+// the extracted text under test is still the real program text (a recopied formula would always pass). The server side runs
+// the real BattleSim. Each executable assertion ships its own reverse control: restoring the bad verdict MUST turn red at once.
+// Run: node tools/audit_weapon_gate.mjs
+// Exit code: 0 means all green; 1 means red present
 import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
@@ -43,8 +43,8 @@ import {
 import { BattleSim } from '../server/sim.js';
 import { readSrc } from './audit_src.mjs';
 
-// 讀原文一律走 `readSrc`(§5 通則 ㋑;換行正規化成 LF)——
-// 工作副本在 Windows 上是 CRLF,方法尾端的 `\n  }` 比對會整組失手
+// Source text always goes through readSrc (section-5 general rule; newlines normalized to LF):
+// a Windows checkout is CRLF, so a trailing method-close match fails as a group without it
 const read = (p) => readSrc(...p);
 const G = read(['public', 'js', 'game.js']);
 const S = read(['server', 'sim.js']);
@@ -54,7 +54,7 @@ let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
 const sec = (t) => console.log(`\n${t}`);
 
-/** 挑一名重武器彈道類別為 traj 的角色(不寫死角色代號:資料改了稽核仍成立)。side 可限定陣營。 */
+/** Pick a heavy-weapon character whose trajectory class is traj (no hard-coded id: the audit survives data changes). Side can limit faction. */
 function heavyOf(traj, side = null) {
   for (const id of Object.keys(CHARACTERS)) {
     if (side && CHARACTERS[id].side !== side && CHARACTERS[id].side !== 'MERC') continue;
@@ -64,7 +64,7 @@ function heavyOf(traj, side = null) {
   throw new Error(`資料中找不到 trajClass=${traj} 的重武器`);
 }
 
-/** 抽 class 方法原文(2 空格縮排 → 首個 `\n  }` 收尾) */
+/** Extract a class-method source (2-space indent, ends at the first method-close line) */
 function methodSrc(name, src) {
   const p0 = src.indexOf(`\n  ${name}(`);
   if (p0 < 0) throw new Error(`找不到方法 ${name}`);
@@ -72,7 +72,7 @@ function methodSrc(name, src) {
   if (p1 < 0) throw new Error(`${name} 收尾解析失敗`);
   return src.slice(p0 + 1, p1 + 4);
 }
-/** 抽方法並在指定環境下實體化成可呼叫函式(env 的鍵become 該函式可見的自由變數) */
+/** Extract a method and instantiate it as a callable under the given env (env keys become the free variables visible to it) */
 function pickMethod(name, src, env = {}) {
   const body = methodSrc(name, src).replace(/^\s*/, '');
   const keys = Object.keys(env);
@@ -95,15 +95,15 @@ ok(Math.abs(altRangeMax('skill') - (1 + ALTITUDE.RANGE)) < 1e-12,
   'altRangeMax("skill") = 1 + ALTITUDE.RANGE(小招全額優勢)');
 ok(/export const altRangeMax = /.test(D),
   'altRangeMax 原文由 ALTITUDE.RANGE 推導(MUST NOT 寫死 1.25)');
-// sim.js 的每一道射程閘門都 MUST 吃 RANGE_TOL,且不得再出現「射程 × 手寫倍率」
+// Every range gate in sim.js MUST consume RANGE_TOL, with no remaining hand-written range-times-factor
 {
   const gates = S.match(/\.range \* [^;\n]*/g) || [];
   const magic = gates.filter((g) => /\*\s*1\.\d/.test(g));
   ok(magic.length === 0, `sim.js 射程閘門無手寫倍率魔數(殘留 ${magic.length} 處:${magic.slice(0, 2).join(' | ')})`);
   const tolGates = gates.filter((g) => g.includes('RANGE_TOL'));
   ok(tolGates.length >= 6, `客戶端已自行夾過射程的回報路徑吃 RANGE_TOL 單一縫(${tolGates.length} 處)`);
-  // 誠實界的那幾條(伺服器自己選目標)MUST NOT 混進 RANGE_TOL —— 沒有客戶端閘門可以寬容,
-  // 寬容就是白送射程。逐條釘住:botFire / heroPlasma / heroLance 逐目標 / NPC 主迴圈。
+  // Honest paths where the server picks its own targets MUST NOT mix in RANGE_TOL: there is no client gate to forgive,
+  // and forgiveness is free range. Pinned one by one: botFire, heroPlasma, heroLance per-target, NPC main loop.
   const honest = gates.filter((g) => /this\._altRange\(/.test(g) && !g.includes('RANGE_TOL'));
   ok(honest.length >= 4,
     `伺服器自己選目標的射程閘門吃誠實界(不乘 RANGE_TOL;${honest.length} 處)`);

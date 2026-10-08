@@ -29,6 +29,9 @@ import {
   weaponMaxHoriz, inWeaponRange,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT, FLY_Y, PUSH_EPS, baseCollideR,
   weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor, fogSightMult,
+  weatherFlightSlowFactor, weatherGroundSlowFactor, unbalAltThreshold, weatherAccuracyPenalty, weatherMissP,
+  weatherFlightAttackRateFactor, weatherGroundAttackRateFactor, weatherSurfaceCover, WEATHER_FREEZE,
+  clockHour, computeSolarSchedule,
   FIRE_WEATHER, fireDotMul,
   SCENE_STRUCT, sceneIsPhysical, sceneIsVehicle, sceneIsEV, sceneHpFor, sceneArmorFor, sceneFireTtl, sceneVehicleFireTtl,
   wrapPi, bloodScreenUv, botFovHalf, botFovVerticalHalf,
@@ -76,7 +79,7 @@ export function llToMeters(lat, lng, center) {
 }
 
 function dist2d(ax, az, bx, bz) { return Math.hypot(ax - bx, az - bz); }
-/** 點 (px,pz) 是否落在 slab ribbon 中心線 [s0,s1]→[s2,s3] 的半寬 hw 內(#1 橋面/隧道天花 LOS)*/
+/** Whether point (px,pz) falls inside slab ribbon half-width hw about center line [s0,s1]->[s2,s3] (#1 deck/tunnel ceiling LOS)*/
 function ptOnRibbon(px, pz, s) {
   const ex = s[2] - s[0], ez = s[3] - s[1], L2 = ex * ex + ez * ez || 1;
   let t = ((px - s[0]) * ex + (pz - s[1]) * ez) / L2;
@@ -86,54 +89,56 @@ function ptOnRibbon(px, pz, s) {
 }
 
 /**
- * 隧道側牆判定:洞內端 (ix,iz) → 洞外端 (ox,oz) 的線段,在隧道 ribbon 局部矩形
- * [0,L]×[−hw,hw](L=軸長、hw=半寬)中,是「先由側牆(|d|=hw)離開」還是「先由洞口
- * (s=0 / s=L)離開」。Liang–Barsky:洞內端在框內,比較沿軸 / 垂距兩維各自離框的 τ,
- * 較小者即實際離開的那條邊。伺服器無地形高程,以此 2D 幾何近似「山體擋線」。
- * 回傳離開分類(2026-07-30 明隧道柱列改制):
- *   0 沿軸出洞口(隧道兵線正常對射,放行)
- *   1 由實牆側穿出(穿山體岩盤/深埋側牆,擋)
- *   2 由明隧道開放側穿出(柱間透明可見可穿透,放行)—— s[6] gal 位元遮罩,
- *     bit1(值 1)= 垂距 + 側、bit2(值 2)= − 側;側別在 z 鏡射上傳下不換手
- *     (偏移向量與軸向的 z 分量同時反號,叉積符號不變;audit_open_tunnel Ⅳ 直測)。
+ * Tunnel side-wall classification: segment from inner end (ix,iz) to outer end (ox,oz),
+ * tested in the tunnel ribbon local rect [0,L]x[-hw,hw] (L=axis length, hw=half width):
+ * did it leave via the side wall (|d|=hw) first or via a portal (s=0 / s=L) first.
+ * Liang-Barsky: inner end is inside the box, so compare the exit tau along the axis
+ * vs lateral dimension; the smaller tau is the actual exit edge. Server has no terrain
+ * height, so this 2D geometry stands in for mountain LOS blocking.
+ * Return exit class (2026-07-30 open-tunnel pillar reform):
+ *   0 exits along axis via portal (tunnel lane fires normally, allow)
+ *   1 exits through a solid wall side (through rock / buried side wall, block)
+ *   2 exits via the open side of an open tunnel (see-through between pillars, allow) -- s[6] gal bit mask,
+ *     bit1 (value 1) = lateral + side, bit2 (value 2) = - side; side does not flip under z mirror
+ *     (offset and axis z components both negate, cross-product sign unchanged; audit_open_tunnel IV direct test).
  */
 function tunnelSideExit(ix, iz, ox, oz, s) {
   const x1 = s[0], z1 = s[1], hw = s[4];
   const ux = s[2] - x1, uz = s[3] - z1;
   const L = Math.hypot(ux, uz) || 1;
-  const nx = ux / L, nz = uz / L;                    // 軸向單位向量
-  const spI = (ix - x1) * nx + (iz - z1) * nz;       // 洞內端:沿軸座標
-  const dpI = -(ix - x1) * nz + (iz - z1) * nx;      // 洞內端:垂距
+  const nx = ux / L, nz = uz / L;                    // axial unit vector
+  const spI = (ix - x1) * nx + (iz - z1) * nz;       // inner end: along-axis coordinate
+  const dpI = -(ix - x1) * nz + (iz - z1) * nx;      // inner end: lateral offset
   const ds = ((ox - x1) * nx + (oz - z1) * nz) - spI;
   const dd = (-(ox - x1) * nz + (oz - z1) * nx) - dpI;
-  const tS = ds > 0 ? (L - spI) / ds : ds < 0 ? -spI / ds : Infinity;          // 離洞口(s=0/L)之 τ
-  const tD = dd > 0 ? (hw - dpI) / dd : dd < 0 ? (-hw - dpI) / dd : Infinity;   // 離側牆(|d|=hw)之 τ
-  if (!(tD < tS)) return 0;                          // 洞口先離開(或未離框)→ 沿軸出洞口
-  return ((s[6] | 0) & (dd > 0 ? 1 : 2)) ? 2 : 1;    // 該側開放(gal)→ 柱間穿出;否則穿岩體
+  const tS = ds > 0 ? (L - spI) / ds : ds < 0 ? -spI / ds : Infinity;          // tau to portal (s=0/L)
+  const tD = dd > 0 ? (hw - dpI) / dd : dd < 0 ? (-hw - dpI) / dd : Infinity;   // tau to side wall (|d|=hw)
+  if (!(tD < tS)) return 0;                          // portal exits first (or never leaves box) -> along-axis portal exit
+  return ((s[6] | 0) & (dd > 0 ? 1 : 2)) ? 2 : 1;    // side open (gal) -> pass between pillars; else through rock
 }
 
-// ---------- 實體碰撞幾何(2026-08-02;bot 移動用,與客戶端 `game.js _collide`/`_sweepBlockers` 同式)----------
-// 使用者定案:「電腦玩家的碰撞法則一律跟正常玩家一樣,移動與攻擊都不可穿牆穿越各種物理碰撞的物件」。
-// solid 沿用 occ 的形狀 `[x, z, r, top, hw2, hd2, cs, sn, base?]`:
-//   ・`hw2 > 0` = 有向盒(建物/地標;cs=cos(ry)、sn=−sin(ry),收料時算好,見 setWorld),否則圓柱(r);
-//   ・`top`/`base` = 垂直帶(base 缺省 0 —— 上傳碰撞柱一律由地面起算,與 `_losBlocked` 的 [0,h] 近似同語意)。
-// 兩支幾何函式是客戶端那兩段的**逐行鏡射**:同一顆盒/圓在兩端 MUST 判同一件事,
-// 否則就是「真人撞得到、電腦穿得過」(碰撞版的 A30 兩端分家)。
-const COL_SKIN = 0.3;   // 掃掠夾在進入面之後再退一截,免貼面(與客戶端 _sweepBlockers 同值)
+// ---------- Entity collision geometry (2026-08-02; for bot movement, line-by-line mirror of client game.js _collide / _sweepBlockers) ----------
+// User decision (2026-08-02): bot collision rules always match normal players; move and attack MUST NOT pass through physical blockers.
+// solid reuses the occ shape [x, z, r, top, hw2, hd2, cs, sn, base?]:
+//   hw2 > 0 = oriented box (building/landmark; cs=cos(ry), sn=-sin(ry), baked at ingest, see setWorld), else cylinder (r);
+//   top/base = vertical band (base defaults to 0 -- upload collision pillars always start at ground, same semantics as the [0,h] approximation in _losBlocked).
+// The two geometry functions mirror the client pair line by line: the same box/circle MUST decide the same thing on both ends,
+// otherwise humans collide while bots pass through (the collision-side variant of an A30 split).
+const COL_SKIN = 0.3;   // sweep clamps past the entry face then backs off, avoiding face sticking (same value as client _sweepBlockers)
 
-/** push-out:機體圓盤(半徑 myR)與 solid 重疊時,沿最小穿透軸推出的位移;不重疊回 null
- *  推出點落在外緣 + PUSH_EPS(見 data.js:貼邊靜止 + 掃掠起點判定合起來會穿牆)。 */
+/** push-out: displacement pushing body disc (radius myR) out along the least-penetration axis when overlapping a solid; null when clear
+ *  Resting point lands outside the edge + PUSH_EPS (edge rest + sweep origin checks would otherwise tunnel through walls; see data.js). */
 function solidPush(o, x, z, myR) {
   if (o[4] > 0) {
     const cs = o[6], sn = o[7];
     const rx = x - o[0], rz = z - o[1];
-    const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world→local(繞 −ry)
-    const ex = o[4] + myR, ez = o[5] + myR;                  // Minkowski 近似:盒面外擴機體半徑
+    const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world to local (about -ry)
+    const ex = o[4] + myR, ez = o[5] + myR;                  // Minkowski approx: expand box faces by body radius
     if (Math.abs(lx) >= ex || Math.abs(lz) >= ez) return null;
     const px = ex - Math.abs(lx), pz = ez - Math.abs(lz);
     let dlx = 0, dlz = 0;
     if (px < pz) dlx = lx < 0 ? -(px + PUSH_EPS) : px + PUSH_EPS; else dlz = lz < 0 ? -(pz + PUSH_EPS) : pz + PUSH_EPS;
-    return [dlx * cs - dlz * sn, dlx * sn + dlz * cs];       // local→world(繞 +ry)
+    return [dlx * cs - dlz * sn, dlx * sn + dlz * cs];       // local to world (about +ry)
   }
   const dx = x - o[0], dz = z - o[1];
   const d = Math.hypot(dx, dz);
@@ -142,10 +147,10 @@ function solidPush(o, x, z, myR) {
   return [dx / d * (min - d + PUSH_EPS), dz / d * (min - d + PUSH_EPS)];
 }
 
-/** 掃掠:位移 (ax,az)→(bx,bz) 是否**單幀橫越** solid;回傳進入參數 t ∈ (0,1],否則 null。
- *  終點落在 solid 內的「近半」(fwd < 0)交給 push-out 沿牆滑(手感不變),遠半才夾在進入面。
- *  `fwd === 0`(終點剛好落在通過中心的平面上)歸**遠半** —— 那一刀的最小穿透軸推出符號由
- *  `lx < 0 ? …` 決定,正中央等機率推向另一側 = 直接穿過去。客戶端 `_sweepBlockers` 同判。 */
+/** Sweep: whether displacement (ax,az)->(bx,bz) crosses a solid within one frame; returns entry param t in (0,1], else null.
+ *  An endpoint landing in the near half (fwd < 0) of a solid defers to push-out wall sliding (feel unchanged); only the far half clamps at the entry face.
+ *  fwd === 0 (endpoint exactly on the center plane) counts as far half -- that cut pushes out along the least-penetration axis whose sign follows
+ *  the lx < 0 test, so dead-center would push to either side with equal odds = pass straight through. Client _sweepBlockers uses the same rule. */
 function solidEnter(o, ax, az, bx, bz, myR) {
   const dx = bx - ax, dz = bz - az;
   const fwd = (bx - o[0]) * dx + (bz - o[1]) * dz;
@@ -153,7 +158,7 @@ function solidEnter(o, ax, az, bx, bz, myR) {
     const cs = o[6], sn = o[7];
     const ex = o[4] + myR, ez = o[5] + myR;
     const a0x = (ax - o[0]) * cs + (az - o[1]) * sn, a0z = -(ax - o[0]) * sn + (az - o[1]) * cs;
-    if (Math.abs(a0x) < ex && Math.abs(a0z) < ez) return null;   // 起點已在盒內 → push-out 脫出
+    if (Math.abs(a0x) < ex && Math.abs(a0z) < ez) return null;   // origin already inside box -> let push-out resolve
     const b1x = (bx - o[0]) * cs + (bz - o[1]) * sn, b1z = -(bx - o[0]) * sn + (bz - o[1]) * cs;
     if (Math.abs(b1x) < ex && Math.abs(b1z) < ez && fwd < 0) return null;
     const ux = dx * cs + dz * sn, uz = -dx * sn + dz * cs;
@@ -169,7 +174,7 @@ function solidEnter(o, ax, az, bx, bz, myR) {
   }
   const R = o[2] + myR;
   const ox = ax - o[0], oz = az - o[1];
-  if (ox * ox + oz * oz <= R * R) return null;                   // 起點已在圓內 → push-out 脫出
+  if (ox * ox + oz * oz <= R * R) return null;                   // origin already inside circle -> let push-out resolve
   const e1x = bx - o[0], e1z = bz - o[1];
   if (e1x * e1x + e1z * e1z <= R * R && fwd < 0) return null;
   const len2 = dx * dx + dz * dz;
@@ -184,65 +189,65 @@ function solidEnter(o, ax, az, bx, bz, myR) {
 
 export class BattleSim {
   /**
-   * battleConfig(由房主客戶端在選址後送上來):
+   * battleConfig (sent up by the host client after site selection):
    * { center:{lat,lng}, bases:{SWARM:[lat,lng], STEEL:[lat,lng]},
-   *   lanes:[[ [lat,lng],... ] ×3], sizeM, diagM, distM }
+   *   lanes:[[ [lat,lng],... ] x3], sizeM, diagM, distM }
    */
   constructor(config, world = null) {
     this.config = config;
     this.center = config.center;
-    this.t = 0;                       // 經過秒數
+    this.t = 0;                       // elapsed seconds
     this.wave = 0;
     this.nextWaveAt = GAME.FIRST_WAVE_DELAY_S;
-    this.airdrops = [];               // 空投物資(時間驅動;非兵線空曠處先到先得)
+    this.airdrops = [];               // airdrop supplies (time-driven; first come first served on open ground off lanes)
     this.nextAirdropAt = AIRDROP.INTERVAL_S;
-    this.civRespawns = [];            // 平民陣亡重生佇列 [{cs, spy, at}](_tickCivilians 到期補位)
+    this.civRespawns = [];            // civilian death respawn queue [{cs, spy, at}] (refilled on expiry by _tickCivilians)
     this.ents = new Map();            // id -> entity
-    this.heroes = new Map();          // pid(玩家連線 id;電腦玩家為 'b1' 之類字串)-> 目前主視野機體
-    this.squads = new Map();          // pid -> { bodies:[ent], act, lock, lockAt, ps }(機甲小隊只有 1 架)
-    this.missiles = [];               // 防空飛彈(伺服器權威 3D 追蹤)
-    // 飛彈記錄池:伏擊 / 主堡兩處 push 逐發一個物件 + 失鎖/命中 splice 丟棄。
-    // 兩處欄位集不同(amb 只伏擊有),歸還時清掉揮發欄位,下發 Object.assign 覆寫 ——
-    // 存活陣列的順序與 splice 語義不動(保序 ⇒ 確定性/快照順序不變),只省配置。
+    this.heroes = new Map();          // pid (connection id; bots use string ids like b1) -> current main-view body
+    this.squads = new Map();          // pid -> { bodies:[ent], act, lock, lockAt, ps } (mech squads hold exactly 1 body)
+    this.missiles = [];               // AA missiles (server-authoritative 3D tracking)
+    // Missile record pool: ambush and core each push one object per shot; drops on lock-loss or hit use splice.
+    // Field sets differ per site (only ambush has amb); volatile fields are cleared on release and overwritten on dispatch.
+    // Live-array order and splice semantics stay untouched (ordering kept, so determinism and snapshot order hold); only allocation is saved.
     this._missilePool = new Pool(() => ({}), { max: 24,
       reset: (m) => { m.lost = undefined; m.vx = undefined; m.vy = undefined; m.vz = undefined; m.amb = undefined; } });
-    this.events = [];                 // 快照間累積的事件
-    this.sacredTrees = [];            // 黑森林神木防線
-    this.darkMoons = [];              // 暗月引爆巨石
-    this.cubicSlabs = [];             // 幾何神碑立方石板
-    this.fogs = [];                   // 荒原天幕戰術迷霧
-    this.autonomousSummons = [];      // 自律召喚戰鬥部隊
+    this.events = [];                 // events accumulated between snapshots
+    this.sacredTrees = [];            // black-forest sacred-tree line
+    this.darkMoons = [];              // dark-moon detonation boulders
+    this.cubicSlabs = [];             // geometric-stele cube slabs
+    this.fogs = [];                   // wasteland-canopy tactical fog
+    this.autonomousSummons = [];      // autonomous summoned combat units
     this.over = false;
     this.winner = null;
     this.stats = { SWARM: { kills: 0, deaths: 0, creepKills: 0, assists: 0 }, STEEL: { kills: 0, deaths: 0, creepKills: 0, assists: 0 } };
-    // 超級大戰才多記第三方戰績(一般對戰不加這一欄 ⇒ 快照逐位元同舊制)
+    // Super battle alone records third-side stats (regular battles omit this column, so snapshots stay bit-identical to the old format)
     if (!!config.super) this.stats.SUPER = { kills: 0, deaths: 0, creepKills: 0, assists: 0 };
-    this._tickN = 0;                   // 快照霧戰爭:同一 tick 內多次呼叫共用同一份事件/飛彈/物資
+    this._tickN = 0;                   // snapshot fog: multiple calls in one tick share one event/missile/supply view
     this._frameTickN = -1;
-    // 陣營小兵強化等級(2026-07-30):**同陣營全玩家共用、不同兵線分開** ⇒ [side][laneIdx]。
-    // 權威只有這一份(_creepMul 是唯一讀取縫);客戶端商店讀快照的 cu 欄(唯讀顯示),
-    // 購買一律走 buy(pid, 'creep', lane)。長度於下方 this.lanes 定案後補齊。
+    // Faction creep upgrade level (2026-07-30): shared by all players of one side, split per lane, so [side][laneIdx].
+    // This is the sole authority (_creepMul is the only read seam); the client shop reads the read-only cu snapshot column for display,
+    // and purchases always go through buy(pid, creep, lane). Length is padded once this.lanes is final below.
     this.creepUpg = { SWARM: [], STEEL: [] };
-    this._cuVer = 0;   // 快照靜態欄版本:cu 變動才重送(客戶端 `if (m.cu)` 累積,缺席沿用上一份)
-    this._sgVer = 0;   // 同上,sg 欄(劇情戰役攻堅階段)
-    // 攻堅順序(劇情戰役專用;見 data.js SIEGE)。旗標由開房的 battleConfig 帶進來,
-    // 一般對戰恆 false ⇒ 下面兩張表全空、`siegeLocked()` 恆 false = 逐位元同舊制。
+    this._cuVer = 0;   // snapshot static-column version: cu is resent only on change (client accumulates on m.cu, reuses last copy when absent)
+    this._sgVer = 0;   // same as above, sg column (story siege-assault stage)
+    // Assault order (story mode only; see data.js SIEGE). Flag arrives via the room battleConfig,
+    // regular battles always have false, so the two tables below stay empty and siegeLocked() stays false = bit-identical to old format.
     this.siege = !!config.siege;
-    // 超級大戰(單人第三方;見 data.js SUPER_UPG)。旗標由開房的 battleConfig 帶進來,
-    // 一般對戰恆 false ⇒ 超級分支全不執行 = 逐位元同舊制。
+    // Super battle (solo third side; see data.js SUPER_UPG). Flag arrives via the room battleConfig,
+    // regular battles always have false, so the super branches never run = bit-identical to old format.
     this.super = !!config.super;
-    // 劇情戰役(見 data.js STORY_MAP):防守方 = NPC BOSS 那一邊;一般對戰恆 null。
-    // 地圖型態只有 `mapArg` 一份解讀 —— 塔位 / 尺度 / 兵線數與客戶端建圖吃的是同一個入口。
+    // Story mode (see data.js STORY_MAP): defenders = the NPC BOSS side; regular battles always have null.
+    // Map shape has a single interpretation in mapArg -- tower spots, scale, and lane count share one entry with client map building.
     this.defSide = config.defSide || null;
     this.mapArg = mapArg(config);
-    this.teamSize = config.teamSize || 0;          // BOSS 席次分配要知道敵方總人數(見 addHero)
-    this.bossHold = new Map();                     // pid → { x, z, r } 活動範圍(bots._move 唯一消費端)
-    this._bossSlot = { SWARM: 0, STEEL: 0 };       // 已指派的 BOSS 席次(= addHero 的到場序)
-    this._siegeLeft = { SWARM: [], STEEL: [] };   // [階段] = 該方該階仍存活的建築數(_spawnStructures 填)
-    this._siegeOpen = { SWARM: 0, STEEL: 0 };     // 該方目前打得動的最高階段(siegeOpenStage 推導)
-    // 區域 BOSS 關卡(見 data.js SIEGE.TALK_S):[階段] = 該階仍存活的 BOSS 小隊數 / 對白解禁時刻。
-    // 兩張表都在 addHero 點名(建構期還沒有英雄);沒有 BOSS 的階段恆 0 ⇒ 那一階不受本閘影響,
-    // 一般對戰(無 defSide ⇒ 一名 BOSS 都沒有)整套恆為中性 = 逐位元同舊制。
+    this.teamSize = config.teamSize || 0;          // BOSS seat assignment needs enemy headcount (see addHero)
+    this.bossHold = new Map();                     // pid -> { x, z, r } activity bounds (sole consumer: bots._move)
+    this._bossSlot = { SWARM: 0, STEEL: 0 };       // assigned BOSS seats (= arrival order in addHero)
+    this._siegeLeft = { SWARM: [], STEEL: [] };   // [stage] = surviving buildings of that side/stage (filled by _spawnStructures)
+    this._siegeOpen = { SWARM: 0, STEEL: 0 };     // highest stage that side can damage now (derived by siegeOpenStage)
+    // Zone BOSS stages (see data.js SIEGE.TALK_S): [stage] = surviving BOSS squads of that stage / dialogue unlock time.
+    // Both tables are named in addHero (no heroes exist during construction); stages without a BOSS stay 0, so that stage ignores this gate,
+    // and regular battles (no defSide, hence zero BOSS units) keep the whole set neutral = bit-identical to old format.
     this._bossLeft = { SWARM: [], STEEL: [] };
     this._talkUntil = { SWARM: [], STEEL: [] };
     for (const s of ['SWARM', 'STEEL']) {
@@ -250,7 +255,7 @@ export class BattleSim {
       this._talkUntil[s] = new Array(SIEGE.STAGES.length).fill(0);
     }
 
-    // 兵線折線轉公尺;lane[laneIdx] 方向:SWARM 主堡 → STEEL 主堡
+    // Lane polylines to meters; lane[laneIdx] direction: SWARM core -> STEEL core
     this.lanes = config.lanes.map((line) =>
       line.map(([lat, lng]) => llToMeters(lat, lng, this.center)));
     for (const s of ['SWARM', 'STEEL']) this.creepUpg[s] = new Array(this.lanes.length).fill(0);
@@ -258,11 +263,11 @@ export class BattleSim {
       SWARM: llToMeters(config.bases.SWARM[0], config.bases.SWARM[1], this.center),
       STEEL: llToMeters(config.bases.STEEL[0], config.bases.STEEL[1], this.center),
     };
-    // 地形涵蓋範圍(與 terrain.js buildTerrain 同一份 battleRect 幾何)內縮空氣牆 40m:
-    // 中立物(地雷/障礙/防空/中繼站)散布的越界防線 —— 兵線蜿蜒出對稱方框的路段,
-    // 地形邊緣離兵線只有 ROUTE_EDGE_MARGIN_M(160),HAZ_LANE_MAX(300)側偏會落到地形外懸空。
+    // Terrain coverage (same battleRect geometry as terrain.js buildTerrain) shrunk by a 40m air wall:
+    // out-of-bounds guard for scattered neutrals (mines/obstacles/AA/relays) -- winding lanes leave the symmetric box in places,
+    // terrain edge sits only ROUTE_EDGE_MARGIN_M (160) from lanes, so HAZ_LANE_MAX (300) lateral offsets would float outside terrain.
     {
-      // 世界方框只有 `data.js battleRect` 一份(客戶端框);伺服器框 z 鏡射 ⇒ z 上下界互換取負
+      // World box has a single source in data.js battleRect (client box); server box is z-mirrored, so z bounds swap and negate
       const r = battleRect(config);
       this.bounds = {
         minX: r.minX + 40, maxX: r.maxX - 40,
@@ -270,22 +275,24 @@ export class BattleSim {
       };
     }
 
-    // 水沼粗網格(2026-07-19):主機載圖時烘烤上傳 → 中立單位(平民/第三方)佈點與行動迴避。
-    // MUST 在 _seedField/_seedCamps/_seedCivilians 之前吃進(初次佈點就避開水沼);
-    // 未提供(e2e/headless 或房主尚未上傳)→ _wetGrid 為空,_wetAt 恆 0,佈點行為與舊版一致。
+    // Water/marsh coarse grid (2026-07-19): host bakes it at map load and uploads it -> neutral (civilian/third-side) placement and movement avoid it.
+    // MUST be ingested before _seedField/_seedCamps/_seedCivilians (first placement already avoids water/marsh);
+    // when absent (e2e/headless or host not uploaded yet) _wetGrid stays empty, _wetAt stays 0, placement matches the old behavior.
     if (world) this._ingestWorldWet(world);
     this._spawnStructures();
-    this._prefillLanes();     // 開場預置兵線(MUST 在 _spawnStructures 之後:要用解出的第一座砲塔位置)
+    this._prefillLanes();     // pre-seed lanes at start (MUST run after _spawnStructures: needs the solved first-tower position)
     this._seedField();
     this._seedCamps();
     this._seedCivilians();
 
-    // 動態天氣初始化 (2026-09-04): 與客戶端環境同種子、同緯度、同時段演化
+    // Dynamic weather init (2026-09-04): same seed, latitude, and time evolution as the client environment
     const env = config.env || {};
     this.startSeason = env.season || 'summer';
     this.startTime = env.time || 'day';
     this.startWeather = env.weather || 'clear';
     this.latDeg = this.center?.lat ?? 25.0;
+    this.lunarDay = env.lunarDay ?? 15;
+    this.sched = computeSolarSchedule(this.startSeason, this.latDeg, 0, this.lunarDay);
     this.weatherSeed = Math.round((this.center?.lat ?? 0) * 1e4) * 31 + Math.round((this.center?.lng ?? 0) * 1e4);
     this.curWeatherVec = weatherVectorAt(this.startSeason, this.startTime, this.startWeather, 0, this.weatherSeed, this.latDeg);
     this.curWeatherDyn = resolveWeatherDynamics(this.curWeatherVec);
@@ -294,34 +301,34 @@ export class BattleSim {
     this.weatherScars = [];
   }
 
-  // ---------- 世界障礙(2026-07-15:LOS 遮蔽 + 立體交通走廊淨空)----------
+  // ---------- World obstacles (2026-07-15: LOS blocking + 3D traffic-corridor clearance) ----------
   /**
-   * 房主客戶端上傳的世界資料(server.js 驗證來源後轉入;sim 座標 z=北):
-   *   occ:[[x,z,r,h]…] 建物/神木/巨岩/橋墩碰撞柱 → 視線/彈道遮蔽(塔/NPC/命中驗證不可透視);
-   *   cor:[[x1,z1,x2,z2,hw,tun]…] 隧道(tun=1,全段)/橋樑走廊 → 清除走廊內第三方障礙與地雷
-   *       (地下道/隧道內只會有道路物件;橋下淨空可通行)。
-   * 未上傳(e2e/無瀏覽器headless對局)→ _losGrid 不存在,LOS 遮蔽停用,行為與舊版一致。
-   * 數值/數量皆夾上限:上傳資料只能「減少」可打擊目標,不會放大任何傷害。
+   * World data uploaded by the host client (forwarded after server.js validates the source; sim coords z=north):
+   *   occ:[[x,z,r,h]...] building/tree/rock/pier collision pillars -> sight and shell blocking (towers/NPC/hit checks cannot see through);
+   *   cor:[[x1,z1,x2,z2,hw,tun]...] tunnel (tun=1, whole span) / bridge corridors -> clear third-side obstacles and mines inside corridors
+   *       (underpasses/tunnels hold road objects only; under-bridge clearance stays passable).
+   * When absent (e2e/browserless headless games) _losGrid does not exist, LOS blocking stays off, behavior matches the old version.
+   * Values and counts are clamped: uploaded data can only remove hittable targets, never amplify damage.
    */
   setWorld(w) {
-    if (!w || this._worldSet) return;   // 房主一份,只收一次
+    if (!w || this._worldSet) return;   // one copy from host only, accept once
     this._worldSet = true;
-    if (!this._wetGrid) this._ingestWorldWet(w);   // 構造時未收到(房主晚傳)→ 這裡補收(初次佈點已過,僅供重生/移動迴避)
+    if (!this._wetGrid) this._ingestWorldWet(w);   // missed at construction (late host upload) -> catch up here (first placement already done, only respawns/movement use it)
     const occ = [];
     for (const o of Array.isArray(w.occ) ? w.occ.slice(0, LOS.MAX_OCC) : []) {
       if (!Array.isArray(o) || o.length < 4) continue;
       const [x, z, r, h] = o.slice(0, 4).map(Number);
       if (![x, z, r, h].every(Number.isFinite)) continue;
       const e = [x, z, Math.min(60, Math.max(0.5, r)), Math.min(300, Math.max(1, h))];
-      // 有向盒(建物)多帶 hw2/hd2/ry:圓仍是 broad-phase(r = 外接半對角),命中改逐盒判 ——
-      // MUST 與客戶端 `game.js _blockerHitT` 是**同一個**幾何體,否則客戶端算命中、伺服器算被擋,
-      // 傷害會靜默蒸發(2026-07-28「打不到建築」同一族病灶)。缺欄位 = 舊格式圓柱,行為不變。
+      // Oriented boxes (buildings) carry hw2/hd2/ry: circles stay the broad-phase (r = bounding half-diagonal), hits test per box --
+      // MUST be the same solid as client game.js _blockerHitT, else client counts a hit while server counts blocked,
+      // and damage silently evaporates (same family as the 2026-07-28 cannot-hit-buildings issue). Missing fields = legacy cylinder, behavior unchanged.
       if (o.length >= 7) {
         const [hw2, hd2, ry] = o.slice(4, 7).map(Number);
         if ([hw2, hd2, ry].every(Number.isFinite) && hw2 > 0 && hd2 > 0) {
-          // cos/sin 在收料時算好存進來:_losBlocked 是 8Hz × 逐目標 × 逐格的熱路徑,
-          // 每次重算三角函數等於白燒 tick 預算(與「MUST NOT 加回 per-call Set」同一條紀律)
-          e.push(Math.min(60, hw2), Math.min(60, hd2), Math.cos(ry), -Math.sin(ry));   // sn 存 −sin(與客戶端同一個 local 軸慣例)
+          // cos/sin are baked at ingest: _losBlocked is an 8Hz x per-target x per-cell hot path,
+          // recomputing trig there would burn tick budget (same discipline as MUST NOT add back per-call Set)
+          e.push(Math.min(60, hw2), Math.min(60, hd2), Math.cos(ry), -Math.sin(ry));   // sn stores -sin (same local-axis convention as client)
         }
       }
       occ.push(e);
@@ -329,8 +336,8 @@ export class BattleSim {
         e.buildingKey = o[7]; e.baseY = o[8];
       }
     }
-    // 碉堡淨空:清掉與野營重疊(BLD_CLEAR_R 內)的遮蔽柱 —— 客戶端已移除這些重疊建物,
-    // 伺服器 LOS 同步不再當它們擋線(setWorld 契約:上傳資料只能「減少」遮蔽,合規)。
+    // Bunker clearance: drop blocker pillars overlapping camps (within BLD_CLEAR_R) -- client already removed those buildings,
+    // so server LOS stops treating them as blockers (setWorld contract: uploads may only remove blocking, compliant).
     const buildingGroups = new Map();
     for (const o of occ) if (o.buildingKey) {
       if (!buildingGroups.has(o.buildingKey)) buildingGroups.set(o.buildingKey,[]);
@@ -2146,7 +2153,7 @@ export class BattleSim {
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
     if ((h.phaseUntil || 0) > now) return false;                   // 相位狀態下無法開火
     if (h.cast || (h.castLockUntil || 0) > now) return false;      // 招式施展前搖期間鎖定武器開火
-    const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+    const sandMul = this._sandAttackRateMul(h);
     const rateMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_RATE_F : 1) * sandMul;
     const defRateMul = (h.defending && (h.sp || 0) > 0) ? 0.5 : 1;
     if (now - (h.fireAt[id] || 0) < 1 / (def.rate * rateMul * defRateMul * (lenient ? 1.5 : 1))) return false;
@@ -2486,11 +2493,33 @@ export class BattleSim {
     return e.kind === 'drone' || (e.kind === 'morph' && (e.y || 0) > MORPH.GROUND_Y) || (e.y || 0) >= GAME.AA_MIN_ALT;
   }
 
+  /** 實體是否為空中單位 (飛行機體、大跳滯空、直升機或 TARGET_CLASS 为 air) */
+  _isAirEnt(e) {
+    if (!e) return false;
+    if (this._isFlyingHero(e)) return true;
+    if (e.hero && airUnit(e.kind, e.y)) return true;
+    if (e.kind === 'heli' || TARGET_CLASS[e.kind] === 'air' || (e.y || 0) > 0) return true;
+    return false;
+  }
+
+  /** Dune/sand attack rate multiplier: airborne units scale by airborne sand (up to -25%), ground units by dune cover (up to -25%) */
+  _sandAttackRateMul(e) {
+    if (this._isAirEnt(e)) {
+      return this.curWeatherDyn ? weatherFlightAttackRateFactor(this.curWeatherDyn) : 1;
+    }
+    return weatherGroundAttackRateFactor(this.weatherSurface);
+  }
+
+  _unbalAltThreshold() {
+    return unbalAltThreshold(this.curWeatherDyn?.wind ?? 0);
+  }
+
   /** 受擊失衡戳記(2026-09-01 飛行機體跌落到穩住期間;持盾減輕失衡。
    *  大跳躍滯空被攻擊同樣進入失衡(airUnit 判定:蓄力跳高過一般跳躍頂點的區間)。
-   *  無人機低空飛行(離地低於砲塔高 TARGET_H.tower)不失衡:貼地突防不吃跌落懲罰。 */
+   *  Drones flying low (below _unbalAltThreshold) do not destabilize: low-altitude runs bypass stall penalty.
+   *  In strong wind, threshold drops to 0.5 tower height, increasing unbalance vulnerability. */
   _stampUnbal(t, factor = 1) {
-    if (t && t.kind === 'drone' && (t.y || 0) < TARGET_H.tower) return;
+    if (t && t.kind === 'drone' && (t.y || 0) < this._unbalAltThreshold()) return;
     if (!this._isFlyingHero(t) && !airUnit(t.kind, t.y)) return;
     const f = t._unbalFactor ?? factor;
     t._unbalFactor = null;
@@ -2503,14 +2532,21 @@ export class BattleSim {
     return !!(e && (e.unbalUntil || 0) > this.t);
   }
 
+  _weatherAccuracyPenalty() {
+    const dyn = this.curWeatherDyn;
+    const h = clockHour(this.startTime, this.t, this.sched?.startH);
+    return weatherAccuracyPenalty(dyn?.effectiveFog ?? 0, h, this.sched);
+  }
+
   /**
-   * 這一發打不中的機率 = 目標閃避 ⊕ **射手**被高地壓制而失準 ⊕ 射手受擊失衡(獨立事件,見 data.highSupMissP, unbalMissP)。
+   * Miss probability = target evasion + shooter suppressed + shooter unbalanced + weather/night miss (independent events).
    * 伺服器只擲一顆骰 ⇒ 兩條路徑(`_dodges` 與 `_blast`)MUST 都經這一支;
    * 而閃避補償 `evadeCompF` 的分母 MUST 仍只吃 `_dodgeP`(壓制不在「維持 DPS」那個帳裡,A45 ⑦)。
    */
   _missP(t, shooter) {
     const p = highSupMissP(this._dodgeP(t, shooter), this._supF(shooter));
-    return unbalMissP(p, this._isUnbalanced(shooter));
+    const unbalP = unbalMissP(p, this._isUnbalanced(shooter));
+    return weatherMissP(unbalP, this._weatherAccuracyPenalty());
   }
 
   /** 擲骰。`p > 0` 的短路 MUST 留著:不合格的目標**不消耗亂數**(與拆成 _dodgeP 之前逐位元同流) */
@@ -4611,7 +4647,7 @@ export class BattleSim {
           if (d <= wp.def.range) {
             c.ry = Math.atan2(-(target.x - c.x), target.z - c.z);
             if (c.cd === 0) {
-              const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+              const sandMul = this._sandAttackRateMul(c);
               const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
               c.cd = 1 / ((wp.def.rate || 3) * sandMul);
               const dmg = this._rollCrit(c, wp.def, this._heroDmg(h, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul, target);
@@ -4627,8 +4663,10 @@ export class BattleSim {
           }
           // 接敵:推進到射程 85% 處
           const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
-          const windMul = this.curWeatherDyn ? windSpeedFactor(target.x - c.x, target.z - c.z, wDir, this.curWeatherDyn.wind) : 1;
-          const moveD = Math.min((h.speed || 21) * windMul * dt, d - wp.def.range * 0.85);
+          const isFlying = this._isFlyingHero(h);
+          const windMul = (isFlying && this.curWeatherDyn) ? windSpeedFactor(target.x - c.x, target.z - c.z, wDir, this.curWeatherDyn.wind) : 1;
+          const weatherSpeedMul = isFlying ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1) : weatherGroundSlowFactor(this.weatherSurface);
+          const moveD = Math.min((h.speed || 21) * windMul * weatherSpeedMul * dt, d - wp.def.range * 0.85);
           if (moveD > 0) {
             this._placeSolid(c, c.x + ((target.x - c.x) / d) * moveD, c.z + ((target.z - c.z) / d) * moveD);
             c.ry = Math.atan2(-(target.x - c.x), target.z - c.z);
@@ -4641,8 +4679,10 @@ export class BattleSim {
         const od = dist2d(c.x, c.z, targetX, targetZ);
         if (od > 6) {
           const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
-          const windMul = this.curWeatherDyn ? windSpeedFactor(targetX - c.x, targetZ - c.z, wDir, this.curWeatherDyn.wind) : 1;
-          const moveD = Math.min((h.speed || 21) * windMul * dt, od - 4);
+          const isFlying = this._isFlyingHero(h);
+          const windMul = (isFlying && this.curWeatherDyn) ? windSpeedFactor(targetX - c.x, targetZ - c.z, wDir, this.curWeatherDyn.wind) : 1;
+          const weatherSpeedMul = isFlying ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1) : weatherGroundSlowFactor(this.weatherSurface);
+          const moveD = Math.min((h.speed || 21) * windMul * weatherSpeedMul * dt, od - 4);
           if (moveD > 0) {
             this._placeSolid(c, c.x + ((targetX - c.x) / od) * moveD, c.z + ((targetZ - c.z) / od) * moveD);
           }
@@ -4935,7 +4975,7 @@ export class BattleSim {
         if (d <= (dec.range || wp.def.range)) {
           dec.ry = Math.atan2(-(target.x - dec.x), target.z - dec.z);
           if (dec.cd === 0) {
-            const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+            const sandMul = this._sandAttackRateMul(dec);
             const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
             dec.cd = 1 / ((dec.rate || wp.def.rate || 3) * sandMul);
             const dmg = this._heroDmg(owner, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul * this._holoDecoyDmgF();
@@ -5113,7 +5153,7 @@ export class BattleSim {
         const d = dist2d(s.x, s.z, target.x, target.z);
         if (d <= s.range) {
           if (s.cd === 0) {
-            const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+            const sandMul = this._sandAttackRateMul(s);
             const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
             s.cd = 1 / ((s.rate || 0.8) * sandMul);
             const wd = s.wid ? WEAPONS[s.wid] : null;
@@ -5129,8 +5169,10 @@ export class BattleSim {
         } else {
           // 向目標移動
           const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
-          const windMul = this.curWeatherDyn ? windSpeedFactor(target.x - s.x, target.z - s.z, wDir, this.curWeatherDyn.wind) : 1;
-          const moveD = Math.min(s.speed * windMul * dt, d - s.range * 0.85);
+          const isAir = TARGET_CLASS[s.kind] === 'air' || (s.y || 0) > 0;
+          const windMul = (isAir && this.curWeatherDyn) ? windSpeedFactor(target.x - s.x, target.z - s.z, wDir, this.curWeatherDyn.wind) : 1;
+          const weatherSpeedMul = isAir ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1) : weatherGroundSlowFactor(this.weatherSurface);
+          const moveD = Math.min(s.speed * windMul * weatherSpeedMul * dt, d - s.range * 0.85);
           if (moveD > 0) {
             this._placeSolid(s, s.x + ((target.x - s.x) / d) * moveD, s.z + ((target.z - s.z) / d) * moveD);
           }
@@ -5142,8 +5184,10 @@ export class BattleSim {
         const od = dist2d(s.x, s.z, targetX, targetZ);
         if (od > 6) {
           const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
-          const windMul = this.curWeatherDyn ? windSpeedFactor(targetX - s.x, targetZ - s.z, wDir, this.curWeatherDyn.wind) : 1;
-          const moveD = Math.min(s.speed * windMul * dt, od - 4);
+          const isAir = TARGET_CLASS[s.kind] === 'air' || (s.y || 0) > 0;
+          const windMul = (isAir && this.curWeatherDyn) ? windSpeedFactor(targetX - s.x, targetZ - s.z, wDir, this.curWeatherDyn.wind) : 1;
+          const weatherSpeedMul = isAir ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1) : weatherGroundSlowFactor(this.weatherSurface);
+          const moveD = Math.min(s.speed * windMul * weatherSpeedMul * dt, od - 4);
           this._placeSolid(s, s.x + ((targetX - s.x) / od) * moveD, s.z + ((targetZ - s.z) / od) * moveD);
         }
       }
@@ -5873,6 +5917,10 @@ export class BattleSim {
     if (t.sq?.boss && (t.sq.bossSeg || 0) >= 3 && (!by || !by.hero)) {
       dmg *= BOSS.ENRAGE_NPC_DMG_F;                // 狂暴模式:受到兵波NPC/砲塔/主堡的傷害減少至25%
     }
+    // Weather freeze: 75% damage reduction during freeze
+    if ((t.freezeUntil || 0) > this.t) {
+      dmg *= (1.0 - WEATHER_FREEZE.DMG_REDUCTION);
+    }
     if (t.gar) return;                             // 駐守碉堡中的第三方步槍兵:碉堡保護,免傷
     if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
     if (t.hero && (t.phaseUntil || 0) > this.t) return; // 相位穿梭(超維步):完全無敵
@@ -6044,11 +6092,11 @@ export class BattleSim {
    */
   _botAirSink(t, dealt) {
     if (!t.hero || !isBotId(t.pid) || !(dealt > 0)) return;
-    // 掉高歸類於失衡效果:無人機低空飛行(離地低於砲塔高)不失衡 ⇒ 也不掉高(與 _stampUnbal 同判)
-    if (t.kind === 'drone' && (t.y || 0) < TARGET_H.tower) return;
+    // 掉高歸類於失衡效果:無人機低空飛行(離地低於門檻)不失衡 ⇒ 也不掉高(與 _stampUnbal 同判)
+    if (t.kind === 'drone' && (t.y || 0) < this._unbalAltThreshold()) return;
     const flying = t.kind === 'drone' || (t.kind === 'morph' && (t.y || 0) > MORPH.GROUND_Y);
     if (!flying) return;
-    t.y = Math.max(0, (t.y || 0) - airSinkM(dealt));
+    t.y = Math.max(0, (t.y || 0) - airSinkM(dealt, this.curWeatherDyn?.wind ?? 0));
   }
 
   /**
@@ -6429,6 +6477,38 @@ export class BattleSim {
     const dyn = this.curWeatherDyn;
     this.weatherSurface = stepWeatherSurface(this.weatherSurface, dyn, dt);
     for (const entity of this.ents.values()) clearLightningScorch(entity, this.t);
+
+    // Snow/snowfall causes probabilistic freezing for ground/air units (up to 2s every 30s)
+    const effSnow = dyn?.effectiveSnow ?? 0;
+    const snowCover = weatherSurfaceCover(this.weatherSurface?.snow);
+    if (effSnow > 0 || snowCover > 0) {
+      const stepIdx = Math.floor(this.t); // Test once per second
+      if (this._lastSnowFreezeStep !== stepIdx) {
+        this._lastSnowFreezeStep = stepIdx;
+        let seed = ((this.weatherSeed ^ (stepIdx * 0x85ebca6b)) >>> 0);
+        for (const e of this.ents.values()) {
+          if (e.dead || e.inv || e.hp <= 0) continue;
+          if (e.kind === 'mapbuilding' || e.isTree || e.isMoon || e.isSlab) continue;
+          if (this.t - (e._lastFreezeAt || -WEATHER_FREEZE.COOLDOWN_S) < WEATHER_FREEZE.COOLDOWN_S) continue;
+
+          const isAir = this._isAirEnt(e);
+          const prob = isAir ? effSnow * 0.05 : snowCover * 0.05; // 5% baseline x snow intensity/cover per second
+          if (prob <= 0) continue;
+
+          seed = ((seed + 0x6D2B79F5) | 0);
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          const roll = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+
+          if (roll < prob) {
+            e.freezeUntil = this.t + WEATHER_FREEZE.DUR_S;
+            e._lastFreezeAt = this.t;
+            this.events.push({ e: 'freeze', id: e.id, pid: e.pid, x: e.x, z: e.z });
+          }
+        }
+      }
+    }
+
     if (!dyn || dyn.effectiveThunder <= 0) {
       this._lightningTimer = 0;
       return;
@@ -6474,6 +6554,7 @@ export class BattleSim {
             const targetRoll = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
             const idx = Math.floor(targetRoll * candidates.length);
             const target = candidates.splice(idx, 1)[0];
+            this.strikes = strikes;
             this._damage(target, cfg.BASE_DMG, null, cfg.PEN);
             if (target.neutral && !UNITS[target.kind]) {
               const ground = this._hgtAt(target.x, target.z);
@@ -6482,12 +6563,47 @@ export class BattleSim {
               target.lightningScorch = { hp: target.hp, states: lightningStatus(target, this.t) };
             }
             strikes.push({ id: target.id, x: target.x, y: (target.y || 0) + hitH(target), z: target.z, kind: target.kind });
+            this._lightningShockwave(target.x, target.z, target.id);
           }
           if (strikes.length > 0) {
             this.events.push({ e: 'lightning_strike', pts: strikes });
           }
         }
         this._strikeWeatherSurface(mulberry32((this.weatherSeed ^ stepIdx ^ 0x57ea7) >>> 0));
+      }
+    }
+  }
+
+  _lightningShockwave(sx, sz, directTargetId = null) {
+    const cfg = WEATHER_DEBUFFS.LIGHTNING;
+    const r = cfg.SHOCK_R || 18;
+    const maxDmg = cfg.SHOCK_DMG || 18;
+    const maxImp = cfg.SHOCK_IMP || 14;
+
+    for (const e of this.ents.values()) {
+      if (e.dead || e.inv || (e.hp <= 0 && (e.sp || 0) <= 0)) continue;
+      // Direct hit scorches without knockback and avoids double damage from shockwave
+      if (directTargetId != null && e.id === directTargetId) continue;
+      const d = Math.hypot(e.x - sx, e.z - sz);
+      if (d > r) continue;
+
+      const frac = 1.0 - d / r; // Attenuates with distance
+      const dmg = maxDmg * frac;
+      this._damage(e, dmg, null, 0);
+
+      // Shockwave displacement impulse
+      const dist = Math.max(0.1, d);
+      const nx = (e.x - sx) / dist;
+      const nz = (e.z - sz) / dist;
+      const imp = maxImp * frac;
+
+      if (e.hero && !isBotId(e.pid)) {
+        this.events.push({ e: 'cc', k: 'shockwave', x: sx, z: sz, tpid: e.pid, imp });
+      } else {
+        const pushDist = imp * 0.35;
+        const [px, pz] = this.solidResolve ? this.solidResolve(e, e.x, e.z, e.x + nx * pushDist, e.z + nz * pushDist, (e.y || 0) > 5) : [e.x + nx * pushDist, e.z + nz * pushDist];
+        e.x = px;
+        e.z = pz;
       }
     }
   }
@@ -6516,6 +6632,7 @@ export class BattleSim {
     const r = WEATHER_SURFACE.strikeR;
     this._markWeatherScorch(x, y, z);
     this.events.push({ e: 'lightning_strike', pts: [{ x, y, z, absolute: true }] });
+    this._lightningShockwave(x, z, null);
     if (object || lightningFireWet(this.curWeatherDyn) || (this._fires?.length || 0) >= 40) return;
     const ring = [[x-r,z],[x+r,z],[x,z-r],[x,z+r]];
     if (ring.some(([sx,sz]) => sx < b.minX || sx > b.maxX || sz < b.minZ || sz > b.maxZ || this._wetAt(sx,sz) || this._slabLevAt(sx,sz))) return;
@@ -6686,7 +6803,7 @@ export class BattleSim {
         // `u.guns`(主堡)在這裡**不開火**:2026-08-13 起它的兩把武器已合併成一把,
         // 開火路徑只剩 `_tickBaseGuns` 一條(合併卻留著本體那一支 = 又變回兩把)。
         if (e.cd === 0 && !u.guns && !((e.empUntil || 0) > this.t)) {
-          const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+          const sandMul = this._sandAttackRateMul(e);
           const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
           e.cd = 1 / (u.rate * sandMul);
           // 塔/主堡是制式火砲:沒有 `wid` ⇒ 舊制 wd 為 undefined = 既不可閃也不爆風。
@@ -6774,6 +6891,7 @@ export class BattleSim {
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
     b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.blindUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
+    b.freezeUntil = 0; b._lastFreezeAt = -WEATHER_FREEZE.COOLDOWN_S;
     b.supUntil = 0; b.supF = 0;   // 高地壓制:重生一律清乾淨(同上列控場狀態)
     if (soloWipe) {
       b.mp = b.maxMp;
@@ -7433,7 +7551,7 @@ export class BattleSim {
       if (e.gunCd[i] > 0) continue;
       const target = this._acquireTarget(e, gu);
       if (!target) continue;
-      const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+      const sandMul = this._sandAttackRateMul(e);
       const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
       e.gunCd[i] = 1 / (g.rate * sandMul);
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
@@ -7599,7 +7717,8 @@ export class BattleSim {
       if ((e.confUntil || 0) > this.t) sf *= -0.5;
     }
     let windMul = 1;
-    if (this.curWeatherDyn && this.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
+    const isAir = TARGET_CLASS[e.kind] === 'air' || e.kind === 'heli';
+    if (isAir && this.curWeatherDyn && this.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
       const d0 = e.side === 'SWARM' ? (e.prog ?? 0) : total - (e.prog ?? 0);
       let i = 1;
       while (cum[i] < d0 && i < cum.length - 1) i++;
@@ -7608,7 +7727,10 @@ export class BattleSim {
       const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
       windMul = windSpeedFactor(ldx * dirSign, ldz * dirSign, wDir, this.curWeatherDyn.wind);
     }
-    if (!hold && sf !== 0) e.prog = Math.max(0, (e.prog ?? 0) + u.speed * sf * windMul * dt);
+    const weatherSpeedMul = isAir
+      ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1)
+      : weatherGroundSlowFactor(this.weatherSurface);
+    if (!hold && sf !== 0) e.prog = Math.max(0, (e.prog ?? 0) + u.speed * sf * windMul * weatherSpeedMul * dt);
     const d = e.side === 'SWARM' ? e.prog : total - e.prog;
     const [x, z] = pointAt(pts, cum, Math.max(0, Math.min(total, d)));
     // 平滑靠攏路徑(保留生成時的隊形抖動,不瞬移)
@@ -7755,6 +7877,7 @@ export class BattleSim {
       if (this._supF(e) > 0) { o.hs = Math.round((e.supUntil - this.t) * 100) / 100; o.hsf = Math.round(e.supF * 100) / 100; }
       if ((e.markUntil || 0) > this.t) o.mk = Math.round((e.markUntil - this.t) * 10) / 10;
       if ((e.unbalUntil || 0) > this.t) o.ub = Math.round((e.unbalUntil - this.t) * 10) / 10;
+      if ((e.freezeUntil || 0) > this.t) o.fz = Math.round((e.freezeUntil - this.t) * 10) / 10;
       if (e.bleed && e.bleed.until > this.t) o.bl = Math.round((e.bleed.until - this.t) * 10) / 10;
       if ((e.invUntil || 0) > this.t) o.iv = Math.round((e.invUntil - this.t) * 10) / 10;   // 無敵幀
       if (e.cast && (e.cast.start + e.cast.dur > this.t)) o.cst = Math.round((e.cast.start + e.cast.dur - this.t) * 10) / 10;
@@ -7774,6 +7897,7 @@ export class BattleSim {
       if (this._supF(e) > 0) { o.hs = Math.round((e.supUntil - this.t) * 100) / 100; o.hsf = Math.round(e.supF * 100) / 100; }
       if ((e.markUntil || 0) > this.t) o.mk = Math.round((e.markUntil - this.t) * 10) / 10;
       if ((e.unbalUntil || 0) > this.t) o.ub = Math.round((e.unbalUntil - this.t) * 10) / 10;
+      if ((e.freezeUntil || 0) > this.t) o.fz = Math.round((e.freezeUntil - this.t) * 10) / 10;
       if (e.bleed && e.bleed.until > this.t) o.bl = Math.round((e.bleed.until - this.t) * 10) / 10;
     }
     return o;

@@ -1,12 +1,12 @@
-// ============ 斜坡平台開挖、擋土牆與支撐柱稽核 (執行 biomes.js 與 terrain.js 原文) ============
-// 起因：在斜坡地形上，主堡與砲塔的基座平台會有一部分被地形埋住穿模，另一部分懸空。
-// 修法：
-//   1. 地形開挖 (carvePlatforms)：將平台 OBB 範圍內高於台底的地形下切整平，避免掩埋。
-//   2. 擋土牆 (Retaining Walls)：在開挖切坡處（原地形高於台面）沿邊緣立擋土牆並上壓頂。
-//   3. 支撐柱 (Support Pillars)：在懸空部位（台底距地面 > 0.5m）追加基礎支撐柱與碰撞柱。
+// ============ Slope platform cut, retaining walls and support pillars audit (executes biomes.js and terrain.js source) ============
+// Cause: on sloped terrain, base and turret foundation platforms are partly buried by terrain and partly left floating.
+// Fix:
+//   1. Terrain cut (carvePlatforms): lower terrain above the platform base inside the platform OBB to a flat level to avoid burial.
+//   2. Retaining Walls: stand walls along the cut edge where original terrain sits above the deck, plus cap on top.
+//   3. Support Pillars: add foundation pillars plus collision posts under floating spans where the gap exceeds 0.5m.
 //
-// 跑法：node tools/audit_slope_platform.mjs
-// 反向驗證：node tools/audit_slope_platform.mjs --break-wall
+// Run via node tools/audit_slope_platform.mjs
+// Reverse check via node tools/audit_slope_platform.mjs --break-wall
 import { readSrc } from './audit_src.mjs';
 
 const bioSrc = readSrc('public', 'js', 'biomes.js');
@@ -55,7 +55,7 @@ function mockThree() {
   };
 }
 
-// 抽取 buildPlatformSlopeFeatures 原文
+// Extract genuine buildPlatformSlopeFeatures source text
 function loadSlopeFeatures(mutate = (s) => s) {
   const p0 = bioSrc.indexOf('function retainingWallTex()');
   const p1 = bioSrc.indexOf('// 陸地砲塔基座與標線', p0);
@@ -71,7 +71,7 @@ function loadSlopeFeatures(mutate = (s) => s) {
   return fn(mockThree(), () => ({}), 6.76, 0.72, new Map());
 }
 
-// 抽取 buildBaseWaterPads 原文
+// Extract genuine buildBaseWaterPads source text
 function loadBasePads() {
   const p0 = bioSrc.indexOf('const BASE_PAD_R =');
   const p1 = bioSrc.indexOf('export function makeTunnelIndex', p0);
@@ -87,7 +87,7 @@ function loadBasePads() {
   );
 }
 
-// 抽取 carvePlatforms 原文邏輯驗證
+// Extract carvePlatforms source text for logic verification
 function loadCarvePlatforms() {
   const p0 = terrainSrc.indexOf('function carvePlatforms(platforms) {');
   const p1 = terrainSrc.indexOf('await onProgress?.(1', p0);
@@ -106,7 +106,7 @@ console.log('Ⅰ 地形切方開挖稽核 (carvePlatforms)');
 {
   const N = 10;
   const minX = -45, maxX = 45, minZ = -45, maxZ = 45;
-  // 構造一個朝 +x 傾斜的斜坡: y = 10 + x * 0.2
+  // Build a slope tilting toward +x: y = 10 + x * 0.2
   const heights = new Float32Array(N * N);
   const DXg = (maxX - minX) / (N - 1), DZg = (maxZ - minZ) / (N - 1);
   for (let i = 0; i < N; i++) {
@@ -120,16 +120,16 @@ console.log('Ⅰ 地形切方開挖稽核 (carvePlatforms)');
   const factory = loadCarvePlatforms();
   const { carvePlatforms } = factory(N, minX, maxX, minZ, maxZ, heights, () => { syncCount++; });
 
-  // 在 (0, 0) 放置一個 10x10 平台，高度 dy = 10 (落坐在兵線高度，切方整平至 10.0)
-  // +x 側 (x > 0) 原地形高達 10 ~ 19，應該被開挖至 10.0
-  // -x 側遠處 (x < -10) 應該完全保持不變
+  // Place one 10x10 platform at (0, 0) with height dy = 10, seated at lane height and cut flat to 10.0
+  // +x side (x > 0) original terrain runs 10 to 19 and must be cut to 10.0
+  // Far -x side (x < -10) must stay fully unchanged
   const origFarLeft = heights[5 * N + 0]; // x = -45
   carvePlatforms([{
     cx: 0, cz: 0, hw: 5, hd: 5, ry: 0, y: 10, margin: 0.8, padT: 1.0,
   }]);
 
   ok(syncCount === 1, `有開挖到地形節點時觸發 syncHeights: ${syncCount}`);
-  // 檢查中心點與右側開挖
+  // Check center point and right-side cut
   const kCenter = 5 * N + 5; // x = 5
   ok(heights[kCenter] <= 9.75001, `平台開挖底面沉降至 9.75m (消除與 10.0m 承台共面 Z-fighting): ${heights[kCenter]}`);
   ok(heights[5 * N + 0] === origFarLeft, `平台範圍外遠處地形保持不變: ${heights[5 * N + 0]}`);
@@ -141,9 +141,9 @@ console.log('Ⅱ 擋土牆生成稽核 (buildPlatformSlopeFeatures - Retaining W
   const group = { children: [], add(m) { this.children.push(m); } };
   const cols = [];
 
-  // 模擬斜坡地形: x 軸方向斜坡，平台中心 (0, 0), dy = 10, padT = 1.0
-  // +x 側 (x > 0) 原地形高 = 14 (高於 dy = 10，屬於挖方切坡)
-  // -x 側 (x < 0) 原地形高 = 6 (低於 dy = 10，屬於懸空)
+  // Simulate sloped terrain along x, platform center (0, 0), dy = 10, padT = 1.0
+  // +x side (x > 0) original height 14 sits above dy = 10, so it is a cut slope
+  // -x side (x < 0) original height 6 sits below dy = 10, so it floats
   const terrain = {
     natureAt: (x, z) => 10 + x * 0.5,
     heightAt: (x, z) => 10 + x * 0.5,
@@ -154,34 +154,34 @@ console.log('Ⅱ 擋土牆生成稽核 (buildPlatformSlopeFeatures - Retaining W
     cx: 0, cz: 0, hw: 6, hd: 6, ry: 0, dy: 10, padT: 1.0, padKind: 'tower',
   });
 
-  // 擋土牆應該在 +x 側邊緣生成，而 -x 側不應生成擋土牆
+  // Retaining walls must appear on the +x edge only, never on the -x side
   const wallBoxes = group.children.filter((c) => c.geometry?.type === 'BoxGeometry');
   ok(wallBoxes.length > 0, `切坡側成功建立擋土牆區段: ${wallBoxes.length}`);
 
-  // 檢查所有擋土牆區段均位於高地側 (x > 0)
+  // Check every wall segment sits on the high-ground side (x > 0)
   const allOnHighSide = wallBoxes.every((c) => c.position.x > 0);
   ok(allOnHighSide, '擋土牆僅在地形高於平台之切方側生成');
 
-  // 檢查擋土牆頂面高過切坡開挖地形
+  // Check wall tops rise above the cut-slope terrain
   const caps = wallBoxes.filter((c) => c.geometry.h === 0.25);
   ok(caps.length > 0, `擋土牆頂部具備壓頂防護 (Coping Cap): ${caps.length}`);
   const maxCapY = Math.max(...caps.map((c) => c.position.y));
   ok(maxCapY > 10 + 1.2, `擋土牆壓頂高過平台面至少 1.2m: ${maxCapY.toFixed(2)}m`);
 
-  // 檢查牆底深入地表與台底（消滅懸空與漏底縫隙）
+  // Check wall bases sink into ground and deck base, closing float and bottom gaps
   const wallBodies = wallBoxes.filter((c) => c.geometry.h > 0.25);
   const allEmbedded = wallBodies.every((c) => c.position.y - c.geometry.h * 0.5 < 9.0);
   ok(allEmbedded, '擋土牆底部深入地表與台底，消滅懸空與漏底縫隙');
 
-  // 檢查擋土牆本體具備斜坡開挖仰斜率 (Sloped Batter)
+  // Check wall bodies carry a sloped batter for the cut
   const slopedWalls = wallBodies.filter((c) => c.geometry?.leanX > 0);
   ok(slopedWalls.length > 0, `擋土牆本體具備斜坡開挖仰斜率 (Sloped Batter): ${slopedWalls.length}`);
 
-  // 檢查切坡相鄰邊轉角柱 (Corner Pillars) 閉合
+  // Check corner pillars close the gaps between adjacent cut edges
   const cornerPosts = wallBodies.filter((c) => Math.abs(c.geometry.w - c.geometry.d) < 1e-4);
   ok(cornerPosts.length > 0, `切坡轉角處建立轉角柱閉合四角空隙: ${cornerPosts.length}`);
 
-  // 檢查碰撞柱是否有登記
+  // Check that collision posts are registered
   ok(cols.some((c) => c.x > 0 && c.h > 1.0), '擋土牆在切坡側登記阻擋碰撞體');
 }
 
@@ -191,7 +191,7 @@ console.log('Ⅲ 支撐柱生成稽核 (buildPlatformSlopeFeatures - Support Pie
   const group = { children: [], add(m) { this.children.push(m); } };
   const cols = [];
 
-  // +x 側平整或切坡，-x 側深谷懸空 (heightAt = 5, botY = 9 -> gap = 4.0m)
+  // +x side stays flat or cut, -x side floats over a deep gap (heightAt = 5, botY = 9, gap = 4.0m)
   const terrain = {
     natureAt: (x, z) => (x < -1 ? 5 : 9.5),
     heightAt: (x, z) => (x < -1 ? 5 : 9.5),
@@ -205,11 +205,11 @@ console.log('Ⅲ 支撐柱生成稽核 (buildPlatformSlopeFeatures - Support Pie
   const piers = group.children.filter((c) => c.geometry?.type === 'CylinderGeometry');
   ok(piers.length > 0, `懸空部位成功生成立體圓柱墩座: ${piers.length}`);
 
-  // 檢查柱體底部深入地面
+  // Check pillar bases sink into the ground
   const deepEnough = piers.every((p) => p.position.y - p.geometry.h * 0.5 < 5.0);
   ok(deepEnough, '支撐柱底部深入地面 0.6m 確保無漏底破綻');
 
-  // 檢查 cols 是否有對應支撐柱碰撞
+  // Check cols carries matching pillar collision
   const pierCols = cols.filter((c) => c.r > 1.0);
   ok(pierCols.length === piers.length, `支撐柱全數納入物理碰撞柱 (cols): ${pierCols.length}/${piers.length}`);
 }
@@ -220,7 +220,7 @@ console.log('Ⅳ 平地環境防劣化稽核 (Zero overhead on flat terrain)');
   const group = { children: [], add(m) { this.children.push(m); } };
   const cols = [];
 
-  // 完全平坦地面 (height = 9.0, dy = 10, padT = 1.0 -> botY = 9.0, gap = 0)
+  // Fully flat ground (height = 9.0, dy = 10, padT = 1.0, botY = 9.0, gap = 0)
   const flatTerrain = {
     natureAt: () => 9.0,
     heightAt: () => 9.0,
