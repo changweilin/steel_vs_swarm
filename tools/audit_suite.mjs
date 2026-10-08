@@ -46,6 +46,7 @@ const AUDIT_SCRIPTS = [
   'test/roadStructures.mjs',
   'test/roadNetworkAppearance.mjs',
   'test/roadJunctionBounds.mjs',
+  'test/roadFurniture.mjs',
   'tools/audit_road_bed.mjs',
   'tools/audit_slope_platform.mjs',
   'tools/audit_world_height.mjs',

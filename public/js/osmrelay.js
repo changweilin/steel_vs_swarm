@@ -42,7 +42,8 @@ export const OSM_RELAY = {
   MAX_RAIL: 80,          // 鐵路 way(額度 60)
   MAX_FALL: 40,          // 瀑布(額度 20)
   MAX_XING: 60,          // 平交道(額度 40)
-  MAX_POI: 480,          // Bounded named, utility and functional POIs share the room snapshot.
+  MAX_POI: 880,          // Bounded named, utility, roadside and functional POIs share the room snapshot.
+  MAX_ROAD_FURNITURE: 200,
   MAX_ENTRANCE: 120,     // 捷運／車站入口(80 + public_transport 補查 40)
   MAX_COVER: 900,        // landuse / natural / leisure 面(線工切面 + 面標籤)
   MAX_AREA: 1800,        // closed way / multipolygon 面域；超額由來源 ID 決定性保留前段
@@ -206,16 +207,18 @@ function pointFeaturesOf(f, budget, prebuilt = null) {
   const ra = prebuilt?.ra || waysOf(f.rails, OSM_RELAY.MAX_RAIL, 'railway', budget);
   const wa = prebuilt?.wa || waysOf(f.waters, OSM_RELAY.MAX_WATERWAY, 'waterway', budget);
   const bd = prebuilt?.bd || waysOf(f.boundaries, OSM_RELAY.MAX_BOUNDARY, null, budget);
+  const rf = waysOf(f.roadFurniture, OSM_RELAY.MAX_ROAD_FURNITURE, null, budget);
   const out = {
     rails: ra.out,
     waters: wa.out,
     boundaries: bd.out,
+    roadFurniture: rf.out,
     falls: nodesOf(f.falls, OSM_RELAY.MAX_FALL),
     crossings: nodesOf(f.crossings, OSM_RELAY.MAX_XING),
     pois: nodesOf(f.pois, OSM_RELAY.MAX_POI),
     entrances: nodesOf(f.entrances, OSM_RELAY.MAX_ENTRANCE),
   };
-  return { out, drop: ra.drop + wa.drop + bd.drop };
+  return { out, drop: ra.drop + wa.drop + bd.drop + rf.drop };
 }
 
 function featureHasData(f) {
@@ -308,6 +311,7 @@ export function sanitizeOsmRelay(m) {
         covers: cv.out,
         waters: pointFeatures?.waters || [],
         boundaries: pointFeatures?.boundaries || [],
+        roadFurniture: pointFeatures?.roadFurniture || [],
       };
     }
   } else if (hasLegacy) {

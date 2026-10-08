@@ -316,7 +316,7 @@ export function planHabitatFurniture({ panels = [], seed = 0, fits, heightAt, sa
   }
   for (const panel of [...cells.values()].sort((a, b) => a.seed - b.seed || a.x - b.x || a.z - b.z)) {
     const localSeed = forestSeed(panel.x, panel.z, seed ^ 0x535452), rnd = mulberry32(localSeed);
-    const kind = ['streetlamp', 'bench', 'planter'][Math.floor(rnd() * 3)], r = kind === 'planter' ? 1.1 : 1.5;
+    const kind = ['bench', 'planter'][Math.floor(rnd() * 2)], r = kind === 'planter' ? 1.1 : 1.5;
     const offset = (panel.side || 1) * .7;
     const x = panel.x - Math.sin(panel.ry) * offset, z = panel.z + Math.cos(panel.ry) * offset;
     if (!fits({ x, z, r }, 'urban') || [[-r, -r], [r, -r], [r, r], [-r, r]]
@@ -331,7 +331,7 @@ export function planHabitatFurniture({ panels = [], seed = 0, fits, heightAt, sa
 }
 
 /** Clip into the shipped a,c,b / b,c,d terrain faces so no panel chord can cut through a slope. */
-export function drapeHabitatPanel(panel, terrain) {
+export function drapeHabitatPanel(panel, terrain, lift = HABITAT_SCENE.STREET_LIFT_M) {
   const n = Math.round(terrain.worldW / terrain.gridM);
   if (!(n > 0) || !Number.isFinite(n) || !Number.isFinite(terrain.worldH) || terrain.worldH <= 0) return [];
   const dx = terrain.worldW / n, dz = terrain.worldH / n;
@@ -364,7 +364,7 @@ export function drapeHabitatPanel(panel, terrain) {
         const tri = [polygon[0], polygon[k], polygon[k + 1]];
         const area = (tri[1][0] - tri[0][0]) * (tri[2][1] - tri[0][1]) - (tri[1][1] - tri[0][1]) * (tri[2][0] - tri[0][0]);
         if (Math.abs(area) < 1e-8) continue;
-        const points = tri.map(([x, z]) => [x, terrain.heightAt(x, z) + HABITAT_SCENE.STREET_LIFT_M, z]);
+        const points = tri.map(([x, z]) => [x, terrain.heightAt(x, z) + lift, z]);
         if (points.every(p => p.every(Number.isFinite))) vertices.push(...points.flat());
       }
     }
