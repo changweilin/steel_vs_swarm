@@ -45,7 +45,10 @@ import { llToWorld } from './terrain.js';
 import { pruneRoads, quantizeRoads, GRID_HW } from './roadgrid.js';
 import { structureLayer, bridgeConnections, waysShareNode, planBridgeDeck, bridgeOpenings, bridgeOpeningAt, bridgeSupportClearance, platformApproaches, roundaboutIsland } from './roadStructures.js';
 import { roadStructureGeo, roadBarrierGeo, buildRoadStructureDetails } from './roadStructureRender.js';
-import { junctionBoundary, roadTransitionIndex } from './roadJunctions.js';
+import { junctionBoundary, roadTransitionIndex, junctionMarkings, crossingMarkings, islandNoseMarkings,
+  JUNCTION_PAINT_REACH } from './roadJunctions.js';
+import { planRoadFurniture } from './roadFurniturePlan.js';
+import { buildRoadFurniture } from './roadFurnitureRender.js';
 import { planRoadSigns, guideSignKind } from './roadSigns.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { osmRelayKey } from './osmrelay.js';
@@ -6291,7 +6294,7 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = true) {
   return corridors;
 }
 
-function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = [], inclSwamp = false, bores = []) {
+function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = [], inclSwamp = false, bores = [], furnitureData = {}) {
   const connectedBridge = bridgeConnections(roads);
   const supportClear = bridgeSupportClearance(roads, p => llToWorld(p.lat, p.lon, center), tags =>
     tags.bridge ? strucHw(tags) * 2 : roadWidth(tags));
@@ -6435,7 +6438,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       let rec = nodeArms.get(key);
       if (!rec) {
         const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
-        rec = { x, z, layer: structureLayer(way.tags), arms: 0, hw: 0, main: false, roundabout: false, dirs: [], armHw: [], armLength: [] };
+        rec = { x, z, layer: structureLayer(way.tags), arms: 0, hw: 0, main: false, roundabout: false,
+          dirs: [], armHw: [], armLength: [], armTags: [], armIncoming: [], armSources: [] };
         nodeArms.set(key, rec);
       }
       rec.hw = Math.max(rec.hw, hwWay);
@@ -6447,21 +6451,42 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         const dl = Math.hypot(ax - rec.x, az - rec.z);
         if (dl < .01) continue;
         const dx = (ax - rec.x) / dl, dz = (az - rec.z) / dl;
+        const one = /^(yes|1|-1|true)$/.test(way.tags.oneway || '');
+        const incoming = !one || (way.tags.oneway === '-1' ? j > i : j < i);
         const same = rec.dirs.findIndex(([ux, uz]) => ux * dx + uz * dz > 0.92);
         if (same >= 0) {
           rec.armHw[same] = Math.max(rec.armHw[same], hwWay);
           rec.armLength[same] = Math.min(rec.armLength[same], dl);
-        } else { rec.dirs.push([dx, dz]); rec.armHw.push(hwWay); rec.armLength.push(dl); }
+          rec.armIncoming[same] ||= incoming;
+          rec.armSources[same].push({ way, i, step: j > i ? 1 : -1 });
+        } else { rec.dirs.push([dx, dz]); rec.armHw.push(hwWay); rec.armLength.push(dl);
+          rec.armTags.push(way.tags); rec.armIncoming.push(incoming);
+          rec.armSources.push([{ way, i, step: j > i ? 1 : -1 }]); }
       }
     }
   }
   for (const rec of nodeArms.values()) rec.arms = rec.dirs.length;
+  for (const rec of nodeArms.values()) {
+    if (rec.arms < 3) continue;
+    rec.armPaintLength = rec.armSources.map((sources, ai) => Math.min(...sources.map(({ way, i, step }) => {
+    const [dx, dz] = rec.dirs[ai]; let reach = 0;
+    for (let k = i + step; k >= 0 && k < way.geometry.length; k += step) {
+      const pt = way.geometry[k], [x, z] = llToWorld(pt.lat, pt.lon, center), len = Math.hypot(x - rec.x, z - rec.z);
+      if (len < .01) continue;
+      if (((x - rec.x) * dx + (z - rec.z) * dz) / len < .98) break;
+      reach = len;
+      const other = nodeArms.get(`${rec.layer}:${pt.lat.toFixed(6)},${pt.lon.toFixed(6)}`);
+      if (other?.arms >= 3 || reach >= 80) break;
+    }
+    return reach;
+    })));
+  }
   for (const rec of nodeArms.values()) rec.boundary = junctionBoundary(rec);
   const widthAt = roadTransitionIndex(nodeArms.values(), flareHw);
   const junctionCuts = [...nodeArms.values()].filter((rec) => rec.arms >= 3);
   const JCELL = 32, junctionGrid = new Map();
   for (const rec of junctionCuts) {
-    const r = Math.max(rec.hw, ...(rec.boundary?.reaches || [])) + 4.8;
+    const r = Math.max(rec.hw, ...(rec.boundary?.reaches || [])) + JUNCTION_PAINT_REACH;
     const i0 = Math.floor((rec.x - r) / JCELL), i1 = Math.floor((rec.x + r) / JCELL);
     const j0 = Math.floor((rec.z - r) / JCELL), j1 = Math.floor((rec.z + r) / JCELL);
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
@@ -6475,13 +6500,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       if (Math.hypot(dx, dz) < rec.hw + pad) return true;
       for (let i = 0; i < rec.dirs.length; i++) {
         const [ux, uz] = rec.dirs[i], along = dx * ux + dz * uz;
-        if (along >= 0 && along < (rec.boundary?.reaches[i] ?? rec.hw) + 4.8
+        if (along >= 0 && along < (rec.boundary?.reaches[i] ?? rec.hw) + JUNCTION_PAINT_REACH
           && Math.abs(dx * uz - dz * ux) < rec.armHw[i] + pad) return true;
       }
     }
     return false;
   };
-  const lights = [], lamps = [], roadTrees = [], marketLamps = [];   // 3D 附屬件實例
+  const lamps = [], roadTrees = [], marketLamps = [];   // 3D 附屬件實例
   // 建路段數上限隨地圖真實面積縮放(2026-07-17):固定 600 是第二層截斷 —— 查詢額度
   // 提高後照樣只畫前 600 段。計數單位是拆段後的 run(≈ way × 1.2~1.5,邊界裁切/跨水拆段),
   // 密度基準對齊 fetchOsmRoads 額度(~1450 way/km²)再給拆段裕度;附屬件(路燈/紅綠燈/
@@ -7306,7 +7331,39 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     if (built >= maxRuns) break;
   }
 
-  // ---- 路口:斑馬線 + 紅綠燈(市區、車行路口、彼此至少 70m)----
+  // Legacy candidate streams retain their RNG cost so evidence-driven furniture cannot shift later scatter.
+  const furniturePoints = (furnitureData.pois || []).map(p => {
+    const [x, z] = llToWorld(p.lat, p.lng ?? p.lon, center); return { x, z, tags: p.tags };
+  });
+  const furniture = planRoadFurniture({ runs: detailRuns, points: furniturePoints,
+    features: (furnitureData.roadFurniture || []).map(f => ({ tags: f.tags,
+      points: f.geometry.map(p => llToWorld(p.lat, p.lon ?? p.lng, center)) })),
+    junctions: [...nodeArms.values()], heightAt: terrain.heightAt, evidenceAt: terrain.evidenceAt,
+    evidenceCellM: terrain.evidence ? Math.max((terrain.evidence.frame.bounds.maxX - terrain.evidence.frame.bounds.minX)
+      / terrain.evidence.frame.cols, (terrain.evidence.frame.bounds.maxZ - terrain.evidence.frame.bounds.minZ)
+      / terrain.evidence.frame.rows) : Infinity,
+    drivingSide: furnitureData.drivingSide,
+    free: (x, z, r) => x - r > terrain.minX + inb && x + r < terrain.maxX - inb
+      && z - r > terrain.minZ + inb && z + r < terrain.maxZ - inb
+      && terrainEnvCode(terrain, x, z) === 0 && !inTunBore(x, terrain.heightAt(x, z), z),
+  });
+  const putPaint = (points, hMax) => {
+    if (!points.every(([x, z]) => x > terrain.minX + inb && x < terrain.maxX - inb
+      && z > terrain.minZ + inb && z < terrain.maxZ - inb && Number.isFinite(terrain.heightAt(x, z)))) return;
+    const k = mark.base;
+    for (const [x, z] of points) putMark(x, z, .58, MARK_W, hMax);
+    mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); mark.base += 4;
+  };
+  for (const c of furniture.crossings) {
+    if ([...nodeArms.values()].some(j => j.arms >= 3 && Math.hypot(j.x - c.x, j.z - c.z)
+      < (j.boundary?.radius ?? j.hw) + JUNCTION_PAINT_REACH)) continue;
+    for (const m of crossingMarkings(c)) putPaint(m.points, terrain.heightAt(c.x, c.z));
+  }
+  for (const island of furniture.islands) for (const m of islandNoseMarkings(island)) {
+    if (m.points.some(([x, z]) => terrainEnvCode(terrain, x, z) !== 0 || inJunctionMarkCut(x, z))) continue;
+    putPaint(m.points, Math.max(...m.points.map(([x, z]) => terrain.heightAt(x, z))));
+  }
+  // ---- 路口:斑馬線 + 紅綠燈 ----
   const junctions = [];
   for (const rec of nodeArms.values()) {
     if (rec.arms < 3 || rec.roundabout || junctions.length >= 30) continue;
@@ -7318,34 +7375,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     if (classify(terrain.sampleColor?.(rec.x, rec.z), h, null, rnd) !== 'urban') continue;
     if (junctions.some((j) => Math.hypot(j.x - rec.x, j.z - rec.z) < 70)) continue;
     junctions.push(rec);
-    const arms2 = rec.dirs;
-    const hJ = terrain.heightAt(rec.x, rec.z);     // 路口中心高:白槓跟路面同一條夾高規則
-    for (let ai = 0; ai < arms2.length; ai++) {
-      const [dx, dz] = arms2[ai], armHw = rec.armHw[ai];
-      const qx = dz, qz = -dx;
-      const d0 = (rec.boundary?.reaches[ai] ?? rec.hw) + 1.2;
-      const zw = Math.max(0.75, armHw * 0.82);      // 各臂吃自己的寬，窄側路不被寬幹道橫向撐出路面
-      // 白槓長軸沿行車方向(3.2m 深)、槓寬 0.5m / 間 0.5m,橫向重複鋪滿路寬
-      for (let lo = -zw; lo + 0.5 <= zw + 0.01; lo += 1.0) {
-        const kb = mark.base;
-        for (const dd of [d0, d0 + 3.2]) {
-          const cx2 = rec.x + dx * dd, cz2 = rec.z + dz * dd;
-          // 頂點序同 emitLine(大偏移在前)→ 面朝 +y
-          putMark(cx2 + qx * (lo + 0.5), cz2 + qz * (lo + 0.5), 0.58, MARK_W, hJ);
-          putMark(cx2 + qx * lo, cz2 + qz * lo, 0.58, MARK_W, hJ);
-        }
-        mark.idx.push(kb, kb + 1, kb + 2, kb + 1, kb + 3, kb + 2);
-        mark.base += 4;
-      }
-    }
-    // 紅綠燈:取前兩臂的右側轉角各立一支,燈頭朝路口
-    for (const [dx, dz] of arms2.slice(0, 2)) {
-      const qx = dz, qz = -dx;
-      const lx = rec.x + dx * (rec.hw + 1.6) + qx * (rec.hw + 1.0);
-      const lz = rec.z + dz * (rec.hw + 1.6) + qz * (rec.hw + 1.0);
-      const ly = terrain.heightAt(lx, lz);
-      if (ly < 0.4) continue;
-      lights.push({ x: lx, y: ly, z: lz, ry: Math.atan2(qz, -qx) });   // 燈臂 +x 伸回路面上方
+    const controlled = furniturePoints.some(p => Math.hypot(p.x - rec.x, p.z - rec.z) < 3
+      && p.tags?.highway === 'traffic_signals');
+    for (const m of junctionMarkings(rec, { controlled, drivingSide: furnitureData.drivingSide,
+      islands: furniture.islands, crossings: furniture.crossings })) {
+      putPaint(m.points, terrain.heightAt(rec.x, rec.z));
     }
   }
 
@@ -7841,20 +7875,21 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         0.5, 3, p.ry + s * 0.5, 'tunnel_portal_wing'));
     }
   }
-  // ---- 3D 附屬件:路燈 / 紅綠燈 / 行道樹(全 InstancedMesh)----
-  for (const [kind, items, height] of [['streetlamp', lamps, 5.4], ['marketlamp', marketLamps, 3.2], ['signal', lights, 5.6]]) {
+  // Mapped vegetation and lamps use instances; Blender signal members share material batches.
+  for (const [kind, items, height] of [['streetlamp', furniture.lamps, 5.4]]) {
     if (!items.length) continue;
     roadPropMeshes(group, furnitureSceneBatches(kind, height), items);
   }
-  if (roadTrees.length) roadPropMeshes(group, [{
+  if (furniture.trees.length) roadPropMeshes(group, [{
     g: forestSceneGeometry('holmOak', 0x524f4144, [3.2, 5.7, 3.2], season), y: 0, c: 0xffffff,
-  }], roadTrees);
+  }], furniture.trees);
+  buildRoadFurniture(group, furniture, terrain, ROAD_LIFT);
   // 橋墩 → 碰撞柱:機體不能穿過橋墩(視覺已存在,補上物理;柱距 24m,通行綽綽有餘)。
   // 柱頂 MUST 封在橋面「底緣」(y1 − 1.2,與 ceilingAt 的 deck 厚度一致)—— 封到橋面上表面的話,
   // 站在橋上的機體 myBot == 柱頂,_collide 的嚴格不等式不會跳過 → 過橋時每 24m 被隱形柱側推。
   for (const p of piers) cols.push({ x: p.x, z: p.z, y: p.y0, r: p.r + 0.25, h: Math.max(1, p.y1 - 1.2 - p.y0) });
   buildRoadStructureDetails(group, detailRuns, terrain, decks, { roundaboutIsland, roadWidth });
-  return { built, decks, tunnels: tunnelSegs, cols, portals, signSpots, gradeRejected, roadRuns: detailRuns };
+  return { built, decks, tunnels: tunnelSegs, cols, portals, signSpots, gradeRejected, roadRuns: detailRuns, furniture };
 }
 
 // ---- 兵線砲塔跨橋墩座(2026-07-24 使用者需求)----
@@ -12379,7 +12414,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const coverMeshes = group.children.slice(gcStart);
   buildSwampSurface(group, terrain);   // 沼澤水平面(暗紫濁沼盤;視線沒入 → _updateWaterVeil 帷幕)
   // 通過水域或沼澤的道路一律升橋處理 (inclSwamp = true)
-  const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season, coverMeshes, true, gradeCorridors);
+  const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season, coverMeshes, true, gradeCorridors,
+    { pois: osmData?.pois || [], roadFurniture: osmData?.roadFurniture || [] });
   const pedestrianEntrances = buildPedestrianEntrances(group, terrain, pedestrianPlan.entrances);
   blockers.push(...pedestrianEntrances.cols);   // 地下道／捷運入口建築：玩家、NPC、彈道共用同一 blockers 縫
   // ---- 兵線跨水補橋(2026-07-22 確定性改制,幾何定案於前段 laneWetWays):每個兵線泡水段

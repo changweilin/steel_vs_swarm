@@ -318,7 +318,7 @@ console.log('Ⅴ 權威幾何不變(通行寬唯一縫仍是 strucHw)');
   // 建置端 MUST **拿不到**兵線 —— 這比「原文裡沒有距離判定」更硬:簽章裡沒有那個參數,
   // 就結構性地不可能長出「離兵線多遠就不建」的閘。
   //(注意 `lanes` 在 buildRoads 裡是**車道數**、`laneHw` 是塗裝車道半寬,都與兵線無關。)
-  ok(/^function buildRoads\(group, roads, terrain, center, mix, rnd, season, covers = \[\], inclSwamp = false, bores = \[\]\) \{/
+  ok(/^function buildRoads\(group, roads, terrain, center, mix, rnd, season, covers = \[\], inclSwamp = false, bores = \[\], furnitureData = \{\}\) \{/
     .test(build), 'buildRoads 的簽章沒有兵線參數(結構性地不可能依兵線距離篩選)');
   ok(!/\bcfg\b/.test(build), 'buildRoads 全段拿不到 cfg(兵線/主堡/塔位一概不可見)');
   ok(/for \(const way of roads\) \{/.test(build), '逐 way 跑完整份 roadInput(不是只挑兵線附近的)');
@@ -379,7 +379,9 @@ console.log('\nⅧ 路口／槽化標線裁切');
     && /s \+ HSTEP <= total - HATCH_END_PAD/.test(build),
   '槽化線 MUST 留結構端距，條帶寬度不得伸出橋隧端面');
   const junction = slice('  // ---- 路口:斑馬線', '\n  // ---- 路口填面', '斑馬線段');
-  ok(/armHw = rec\.armHw\[ai\]/.test(junction) && /armHw \* 0\.82/.test(junction),
+  const planner = readSrc('public', 'js', 'roadJunctions.js');
+  ok(/junctionMarkings\(rec,/.test(junction) && /armHw = rec\.armHw\[ai\]/.test(planner)
+    && /hw: armHw/.test(planner) && /c\.hw \* \.82/.test(planner),
     '斑馬線橫寬 MUST 吃各自支路寬，窄支路不得被最大幹道寬撐出路面');
 }
 

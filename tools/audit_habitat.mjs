@@ -117,7 +117,7 @@ assert.equal(planOsmAreaObjects([taggedArea('farm', { power: 'plant', 'plant:sou
   { ...areaArgs, utilityPoints: [pointWind] }).placed.length, 1, 'Point turbines replace synthetic wind-farm scatter');
 assert.equal(planOsmAreaObjects([buildingArea], { ...areaArgs, utilityPoints: [{ ...pointWind, x: 0, z: 0 }] }).placed.length, 0);
 assert.equal(areaLayoutAngle(solarArea), areaLayoutAngle({ worldPolygons: solarArea.worldPolygons.map(p => ({ ...p, outer: p.outer.toReversed() })) }));
-assert.equal(OSM_FEATURE_QUERY_VERSION, 10);
+assert.equal(OSM_FEATURE_QUERY_VERSION, 11);
 assert(osmFeatureQuery({ minLat: 24, maxLat: 25, minLng: 120, maxLng: 121 }).includes('["generator:source"="wind"]'));
 assert.equal(parseOsmFeatureElements([{ type: 'node', lat: 24.5, lon: 120.5, tags: pointWind.tags }]).pois.length, 1);
 const needleTrees = treeDistribution(45, 500, .5, { leafType: 'needleleaved' });
@@ -201,6 +201,7 @@ assert.deepEqual(street, planHabitatStreets(streetArgs));
 const furnitureArgs = { panels: street, seed: 42, fits: () => true, heightAt: () => 4, sampleAt: streetArgs.sampleAt };
 const furniture = planHabitatFurniture(furnitureArgs);
 assert(furniture.length > 0);
+assert(furniture.every(row => row.kind !== 'streetlamp'), 'Unmapped lighting must stay unknown');
 assert.deepEqual(furniture, planHabitatFurniture({ ...furnitureArgs, panels: street.toReversed() }));
 assert.deepEqual(planHabitatFurniture({ ...furnitureArgs, maxObjects: 2 }), furniture.slice(0, 2));
 assert.equal(planHabitatFurniture({ ...furnitureArgs, heightAt: () => NaN }).length, 0);

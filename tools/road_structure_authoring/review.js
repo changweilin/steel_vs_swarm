@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { buildRoads, makeDeckIndex, makeTunnelIndex, makeLevelCrossing, buildBaseWaterPads,
   underpassPlan, tunFloorAt, tunnelCoverIntervals, densify, BASE_PAD_R, BASE_PAD_T } from '../../public/js/biomes.js';
-import { xzToLL, llToXZ, MAPGEO, selfCollider, PUSH_EPS } from '../../public/js/data.js';
+import { xzToLL, llToXZ, MAPGEO, TERRAIN, selfCollider, PUSH_EPS } from '../../public/js/data.js';
 import { mulberry32 } from '../../public/js/rng.js';
 import { disposeTree } from '../../public/js/toon.js';
 import { structureLayer, platformApproaches } from '../../public/js/roadStructures.js';
@@ -20,6 +20,20 @@ const models = [], report = [], images = [], textures = {};
 const straight = Array.from({ length: 25 }, (_, i) => [i * 12 - 144, 0]);
 const ring = Array.from({ length: 33 }, (_, i) => [Math.cos(i / 32 * Math.PI * 2) * 39, Math.sin(i / 32 * Math.PI * 2) * 39]);
 const cases = [
+  { key: 'evidence-crossroads', label: 'Mapped islands, refuge gap, crossings and approach-facing controls', height: () => 8,
+    roads: [way([[-85,0],[0,0],[85,0]], { lanes: '4', name: '中山北路', maxspeed: '50' }),
+      way([[0,-75],[0,0],[0,75]], { highway: 'secondary', lanes: '2', name: '長安東路' })], signs: true,
+    targets: [{ x: 0, z: 0, tags: { highway: 'traffic_signals' } },
+      { x: 45, z: 0, tags: { highway: 'crossing', 'crossing:island': 'yes' } },
+      ...[-55,-28,28,55].flatMap((x, i) => [{ x, z: i % 2 ? 9 : -9, tags: { highway: 'street_lamp' } },
+        { x, z: i % 2 ? -12 : 12, tags: { natural: 'tree' } }])],
+    furniture: [-1,1].map(side => ({ tags: { 'area:highway': 'traffic_island' },
+      points: [[18*side,-.8],[68*side,-.8],[68*side,.8],[18*side,.8],[18*side,-.8]] })) },
+  { key: 'median-fusion', label: 'Opposing OSM carriageways and resolved RGB vegetation support', height: () => 8,
+    roads: [way([[-85,-28],[85,-28]], { oneway: 'yes', name: '中央大道' }),
+      way([[85,28],[-85,28]], { oneway: 'yes', name: '中央大道' })], signs: true,
+    evidence: { sources: 3, confidence: 2, greenFraction: .8 }, evidenceCellM: 40,
+    furniture: [{ tags: { natural: 'tree_row' }, points: [[-65,0],[65,0]] }] },
   { key: 'lane-guidance', label: 'Lane route and ordinary side road · fixed roadside furniture', height: () => 8,
     roads: [way([[-80, 0], [80, 0]], { name: '中山北路' }), way([[0, 0], [0, 45]], { highway: 'residential' })],
     signs: true, guidance: [[-80, 0], [80, 0]] },
@@ -155,6 +169,7 @@ try {
       worldW: 700, worldH: 700, heightAt: fixture.height, natureAt: fixture.height,
       sampleColor: () => [110, 110, 110], envCodeAt: () => 0, waterY: null,
       punchPortalHoles: () => ({ rims: [], touched: [] }) };
+    terrain.gridM = terrain.worldW / (TERRAIN.GRID_N - 1);
     if (fixture.platform) {
       const N = 351, heights = new Float32Array(N * N);
       for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) heights[i * N + j] = fixture.height(j * 2 - 350, i * 2 - 350);
@@ -191,10 +206,28 @@ try {
       for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) heights[i * N + j] = fixture.height(j * 2 - 350, i * 2 - 350);
       terrain.heightAt = window.__carveRoadFixture({ ...terrain, N, heights }, carveRuns);
     }
-    const result = fixture.roads.length ? buildRoads(root, fixture.roads, terrain, center, null, mulberry32(781), 'summer')
+    if (fixture.evidence) {
+      terrain.evidenceAt = () => fixture.evidence;
+      terrain.evidence = { frame: { bounds: { minX: -100, maxX: 100, minZ: -100, maxZ: 100 },
+        cols: 200 / fixture.evidenceCellM, rows: 200 / fixture.evidenceCellM } };
+    }
+    const pois = (fixture.targets || []).map(p => { const [lat, lon] = xzToLL(p.x, p.z, center); return { lat, lng: lon, tags: p.tags }; });
+    const roadFurniture = (fixture.furniture || []).map(f => ({ tags: f.tags, geometry: f.points.map(([x, z]) => {
+      const [lat, lon] = xzToLL(x, z, center); return { lat, lon };
+    }) }));
+    const result = fixture.roads.length ? buildRoads(root, fixture.roads, terrain, center, null, mulberry32(781), 'summer',
+      [], false, [], { pois, roadFurniture })
       : { decks: [], tunnels: [], cols: [], gradeRejected: 0 };
+    const islandSurfaces = root.children.filter(m => m.userData.roadIslandSurface);
+    if (result.furniture?.islands.length && !islandSurfaces.length) throw Error(`${fixture.key}: planned islands were not rendered`);
+    for (const mesh of islandSurfaces) {
+      const p = mesh.geometry.attributes.position, normals = mesh.geometry.attributes.normal;
+      for (let i = 0; i < p.count; i++) {
+        const expected = terrain.heightAt(p.getX(i), p.getZ(i)) + window.__roadLift + .16;
+        if (Math.abs(p.getY(i) - expected) > 1e-4 || normals.getY(i) < 0) throw Error(`${fixture.key}: island surface left its terrain datum`);
+      }
+    }
     if (fixture.signs) {
-      const pois = (fixture.targets || []).map(p => { const [lat, lon] = xzToLL(p.x, p.z, center); return { lat, lng: lon, tags: p.tags }; });
       buildWorldSigns({ group: root, terrain, center, portals: [], signSpots: [], generic: [], pois,
         lowPower: false, corpus: null, rnd: () => { throw Error('Mapped signs cannot consume RNG'); }, used: new Set(),
         roads: fixture.roads, roadRuns: result.roadRuns, isBlocked: () => false, features: [] });
@@ -279,6 +312,7 @@ try {
     const covered = result.tunnels.find(t => !t.open);
     const detailSign = guidance?.signs.find(p => p.arrow !== 'straight') || guidance?.signs.find(p => Math.abs(p.dx) > .9);
     models.push({ key: fixture.key, label: fixture.label, parts, ground: groundPart, sectioned: !!fixture.bore, night: !!fixture.night,
+      furniture: result.furniture || null,
       guidance: guidance ? { signs: guidance.signs.length, markers: guidance.markers.length } : null,
       inspection: covered ? { x: covered.x1, z: covered.z1, y: covered.fy1,
         dx: covered.x2 - covered.x1, dz: covered.z2 - covered.z1 } : detailSign ?
@@ -309,6 +343,7 @@ try {
     card.append(image, label); document.getElementById('grid').append(card);
     report.push({ key: fixture.key, steps, maxStep, decks: result.decks.length, tunnels: result.tunnels.length,
       colliders: result.cols.length, guidance: guidance ? { signs: guidance.signs.length, markers: guidance.markers.length } : null,
+      furniture: result.furniture ? Object.fromEntries(['islands','lamps','trees','signals'].map(k => [k, result.furniture[k].length])) : null,
       triangles: parts.reduce((n, p) => n + p.faces.length / 3, 0) });
     disposeTree(root); ground.geometry.dispose(); ground.material.dispose();
   }

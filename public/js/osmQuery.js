@@ -3,7 +3,7 @@
 // Runtime, fixture extractors, and payload validation tools all source from here to prevent divergent query filters.
 import { OSM_AREA_KEYS, buildAreaRecords } from './osmAreas.js';
 
-export const OSM_FEATURE_QUERY_VERSION = 10;
+export const OSM_FEATURE_QUERY_VERSION = 11;
 export const OSM_ROAD_QUERY_VERSION = 2;
 export const OSM_QUERY_TIMEOUT_S = 15;
 
@@ -64,6 +64,10 @@ export function osmFeatureQuery(bbox) {
     + `node["traffic_sign"](${bb});out body 160;`
     + `node["highway"~"^(stop|give_way|crossing|mini_roundabout|traffic_signals)$"](${bb});out body 120;`
     + `node["traffic_calming"](${bb});out body 80;`
+    + `node["highway"="street_lamp"](${bb});out body 200;`
+    + `node["natural"="tree"](${bb});out body 200;`
+    + `way["area:highway"="traffic_island"](${bb});out body geom 120;`
+    + `way["natural"="tree_row"](${bb});out body geom 80;`
     + `node["office"="government"](${bb});out body 80;`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`
@@ -94,10 +98,12 @@ export function osmRoadQuery(bbox) {
 /** Route raw Overpass response into AreaRecords and non-polygonal feature collections; retains raw element integrity. */
 export function parseOsmFeatureElements(elements = []) {
   const areaElements = [], rails = [], falls = [], crossings = [], pois = [], entrances = [];
-  const waters = [], boundaries = [], areaKeys = new Set(OSM_AREA_KEYS);
+  const waters = [], boundaries = [], roadFurniture = [], areaKeys = new Set(OSM_AREA_KEYS);
   for (const el of Array.isArray(elements) ? elements : []) {
     const tags = el?.tags || {};
-    if (el?.type === 'relation' && (tags.type === 'multipolygon' || Array.isArray(el.members))) {
+    if (el?.type === 'way' && el.geometry && (tags['area:highway'] === 'traffic_island' || tags.natural === 'tree_row')) {
+      roadFurniture.push({ tags, geometry: el.geometry });
+    } else if (el?.type === 'relation' && (tags.type === 'multipolygon' || Array.isArray(el.members))) {
       // Retain relation member ways in areaElements; buildAreaRecords chains outer/inner rings by source ID.
       areaElements.push(el);
     } else if (el?.type === 'way' && el.geometry && Object.keys(tags).some((k) => areaKeys.has(k))) {
@@ -124,7 +130,7 @@ export function parseOsmFeatureElements(elements = []) {
     } else if (el?.type === 'node' && (/^(subway_entrance|station_entrance)$/.test(tags.railway || '')
       || (tags.entrance && /^(station|subway)$/.test(tags.public_transport || '')))) {
       entrances.push({ lat: el.lat, lng: el.lon, tags });
-    } else if (el?.type === 'node' && (tags.place || tags.natural === 'peak'
+    } else if (el?.type === 'node' && (tags.place || ['peak', 'tree'].includes(tags.natural) || tags.highway === 'street_lamp'
       || tags.traffic_sign || tags.traffic_calming || /^(stop|give_way|crossing|mini_roundabout|traffic_signals)$/.test(tags.highway || '')
       || tags.highway === 'motorway_junction' || tags.railway || tags.amenity
       || ['museum', 'gallery', 'attraction', 'viewpoint', 'zoo', 'theme_park', 'information'].includes(tags.tourism) || tags.office === 'government' || tags.power === 'tower'
@@ -134,7 +140,7 @@ export function parseOsmFeatureElements(elements = []) {
     }
   }
   const built = buildAreaRecords(areaElements);
-  const pointFeatures = { rails, waters, boundaries, falls, crossings, pois, entrances };
+  const pointFeatures = { rails, waters, boundaries, falls, crossings, pois, entrances, roadFurniture };
   return {
     areas: built.areas, areaInvalid: built.invalid, areaCapacity: built.capacity, areaGaps: built.gaps,
     pointFeatures,

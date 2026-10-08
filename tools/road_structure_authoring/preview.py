@@ -134,6 +134,8 @@ for model in models:
     scene['production_geometry'] = True
     scene['sectioned_ground'] = model['sectioned']
     scene['lane_guidance'] = bool(model.get('guidance'))
+    if model.get('furniture'):
+        scene['road_furniture_evidence'] = json.dumps(model['furniture'], separators=(',', ':'))
     objects = assemble(scene, model['parts'], model['key'])
     ground = assemble(scene, [model['ground']], 'Sectioned terrain' if model['sectioned'] else 'Terrain')
     world = bpy.data.worlds.new('Road review daylight')

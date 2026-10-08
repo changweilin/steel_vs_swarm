@@ -64,7 +64,7 @@
     "shot:weather": "node tools/shot_weather_surface.mjs",
     "shot:weather-fx": "node tools/shot_weather_fx.mjs",
     "audit:ambient": "node test/ambientAppearance.mjs",
-    "audit:roads": "node test/roadStructures.mjs && node test/roadNetworkAppearance.mjs && node test/roadJunctionBounds.mjs && node test/laneGuidance.mjs",
+    "audit:roads": "node test/roadStructures.mjs && node test/roadNetworkAppearance.mjs && node test/roadJunctionBounds.mjs && node test/roadFurniture.mjs && node test/laneGuidance.mjs",
     "shot:roads": "node tools/road_structure_authoring/shot.mjs",
     "shot:ambient": "node tools/ambient_authoring/shot.mjs",
     "shot:building-damage": "node tools/shot_building_damage.mjs",

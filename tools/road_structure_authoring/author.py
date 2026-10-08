@@ -75,6 +75,12 @@ prism('lane_panel', octagon(.045))
 prism('lane_hood', [(-.5, -.5), (.5, -.5), (.5, .2), (.43, .5), (-.43, .5), (-.5, .2)])
 prism('lane_delineator', [(-.5, -.5), (.5, -.5), (.5, .36), (.28, .5), (-.28, .5), (-.5, .36)])
 prism('lane_arrow', [(-.5, -.18), (.06, -.18), (.06, -.5), (.5, 0), (.06, .5), (.06, .18), (-.5, .18)])
+prism('median_kerb', [(-.5, -.5), (.5, -.5), (.5, .30), (.30, .5), (-.30, .5), (-.5, .30)])
+prism('signal_head', octagon(.08))
+prism('signal_lens', [(math.cos(i * math.tau / 16) * .5, math.sin(i * math.tau / 16) * .5) for i in range(16)])
+# The lower half stays open, unlike a solid box that hides the illuminated lens.
+prism('signal_hood', [(-.5, -.5), (-.5, .30), (-.30, .5), (.30, .5), (.5, .30), (.5, -.5),
+                      (.38, -.5), (.38, .25), (.25, .37), (-.25, .37), (-.38, .25), (-.38, -.5)])
 # The corner profile is baked with the members so Blender and the runtime share the same curve.
 corner = [[(1 - t) ** 2, t ** 2] for t in [i / 8 for i in range(9)]]
 profile = mesh('junction_corner', [[-.5, 0, -.5]] + [[x - .5, 0, z - .5] for x, z in corner],
