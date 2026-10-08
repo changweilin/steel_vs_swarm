@@ -3,3 +3,5 @@
 
 # Test fixtures and captures must preserve LF line endings across platforms
 test/fixtures/** text eol=lf
+*.gz binary
+*.png binary

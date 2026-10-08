@@ -385,6 +385,7 @@ export function fixtureOsm(fixture) {
     falls: features.pointFeatures.falls,
     pois: features.pointFeatures.pois,
     entrances: features.pointFeatures.entrances,
+    roadFurniture: features.pointFeatures.roadFurniture,
     features,
   };
 }
