@@ -1,8 +1,9 @@
-// ============ 預設地圖規則稽核:兵線互不接觸/交叉 ============
-// 需求(2026-07-20 定奪):同一 L 內任兩條兵線,排除兩座主堡的共享扇出段後,
-//   中段最近距離 MUST ≥ LANE_MIN_SEP_M(共節點/貼近皆 = 接觸)、2D 不得相交(含橋/隧立體交叉,全禁)。
-// 判定集中在 data.js 的 laneSeparationAudit()(烘焙硬門檻 / mapSelect / server 複驗 / 本稽核共用同一支)。
-// exit 1 = 任一 venue×L 違規(接觸或交叉)。用法:node tools/audit_lane_sep.mjs
+// ============ Default map rule audit: lanes MUST NOT touch or cross ============
+// Requirement (decided 2026-07-20): for any two lanes within the same L, after excluding the shared
+// fan-out near the two main bases,
+//   mid-section nearest distance MUST be at least LANE_MIN_SEP_M (shared nodes or near-touch count as contact), and 2D MUST NOT intersect (including bridge and tunnel grade separation, all banned).
+// Adjudication lives in laneSeparationAudit() in data.js (shared by the bake hard gate, mapSelect, server recheck, and this audit).
+// exit 1 means any venue x L violates (touch or cross). Usage: node tools/audit_lane_sep.mjs
 import { VENUE_LANES } from '../public/js/venueLanes.js';
 import { MAPGEO, laneSeparationAudit } from '../public/js/data.js';
 
@@ -18,7 +19,7 @@ const rows = [];
 for (const [venue, byL] of Object.entries(VENUE_LANES)) {
   for (const [L, entry] of Object.entries(byL)) {
     if (!entry?.lanes || !entry.bases) continue;
-    if (entry.lanes.length < 2) continue;               // L1 無鄰線,免驗
+    if (entry.lanes.length < 2) continue;               // L1 has no neighbor lane, skip
     multi++;
     const o = entry.bases[0];
     const game = entry.lanes.map((line) => line.map(([lat, lng]) => llToGame(lat, lng, o)));

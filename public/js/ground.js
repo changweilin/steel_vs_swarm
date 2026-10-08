@@ -1,4 +1,5 @@
-// 程序生成地表部署：分類／參數與幾何生成分離，沿用地形貼合、道路避讓和碰撞登記。
+// Procedural ground placement: taxonomy/params separated from geometry gen; reuses terrain
+// drape, road avoidance, and collision registration.
 import * as THREE from 'three';
 import { mulberry32 } from './rng.js';
 import { DEFS, ZONES, CARPET, FAMS, SIZE, SURFACES } from './groundCatalog.js';
@@ -10,42 +11,57 @@ import { envMat, surfGroup } from './toon.js';
 import { gridAngle } from './roadgrid.js';
 import { registerStreamTex } from './tex.js';
 
-const MAX_DETAIL = 19000;  // 3D 細節實例總上限(特徵層 + 底毯撒佈;全 InstancedMesh,draw call 不變;
-                           // 2026-07-12 15000→19000:綠地雜草/花帶密集散佈需要更多實例配額)
-const FEAT_DETAIL = 12000; // 特徵層細節配額;剩餘留給底毯,空地才不會光禿
-const VARIANTS = 6;        // 每種地表的貼圖變體數(變體貼圖惰性生成,只有實際用到才建;
-                           // 2026-07-12 4→6:視野內同款不重複需要更多款式輪替)
-const CARPET_VARIANTS = 3; // 底毯的變體數(逐格互異,planCarpetVariants):同款每多一個變體就多
-                           // 一個 mesh(每 `sub#variant` 一批),而本渲染器是 draw call 瓶頸;
-                           // **3 是共邊全異的下界**(共邊鄰最多兩格已定案 ⇒ 恆挑得到第三個)
-const BUF_CELL_F = 3;      // 緩衝空間底毯的格距倍率(× cell):那一圈離可玩區 40m 以上、最遠
-                           // 455m,細節看不到 —— 原尺寸鋪滿要多兩倍半的格子(純 overdraw)
-const RSCALE = 1.3;        // 特徵 patch 半徑全域放大
-const VIS_R = 300;         // 反重複半徑 = 英雄最大視野(UNITS.drone.sight)
-const SEP_F = 0.85;        // **自然類**拼圖間距係數(圓近似):d ≥ (r1+r2)×0.85,僅容邊緣小比例交疊(fade 邊互融,刻意)
-const INK_SEP_F = 1.06;    // 廣相搜尋半徑用的保守係數(舊制的規律↔規律圓近似係數;精判已改真實足跡,見 footNear)
-// ==== 功能性區塊 / 3D 物件的「不可互相重疊」(2026-08-11 使用者定案)====
-// 「田/停車場/球場這類功能性區塊與 3D 物件等等也不可互相重疊」。三件事分開量:
-//   ① 功能性區塊(edge:'ink' 的田/停車場/球場/廣場/太陽能場…)對**任何**拼圖零重疊 ——
-//      判定改吃**真實足跡**(rect = 有向盒、blob = 手繪輪廓的外接圓),MUST NOT 退回等面積
-//      圓近似:等面積圓在長軸上短 16%、短軸上長 20% ⇒ 一塊球場的角疊進停車場而圓判定
-//      說「沒事」,而畫面上那是兩塊互相切穿的整齊區塊。
-//   ② 3D 物件彼此不穿模:足跡半徑**量零件實幾何**(detailR,同 beacons 的 foot 紀律)× 實例縮放。
-//   ③ 3D 物件不得站進**不屬於它的**功能性區塊(停車場裡不會長出隔壁草地的蘆葦)。
-// 自然類↔自然類(fade↔fade)刻意維持 SEP_F 的邊緣互融:那是 2026-07-12 的反重複手段,
-// 而且它們不是「功能性區塊」——兩叢草的輪廓互相咬進去正是自然的樣子。
-export const PATCH_GAP = 1.0;     // 功能性區塊的淨距(m)。MUST < 陣列間隙 ARR_GAP(1.6)與家族延伸間隙(1.2),
-                           // 否則沿街連續格陣與農田拼布會被自己的規則拆散
-export const DET_GAP = 0.0;       // 3D 物件之間:足跡相切即可(0 = 不重疊;再加淨距會把密植草叢打稀）
+const MAX_DETAIL = 19000;  // Total 3D detail instance cap (feature + carpet scatter; all
+                           // InstancedMesh so draw calls flat; 2026-07-12 15000 to 19000: green
+                           // weed/flower-band dense scatter needed quota)
+const FEAT_DETAIL = 12000; // Feature-layer detail quota; rest stays with carpet so open ground never bares
+const VARIANTS = 6;        // Texture variants per surface (lazily built on use only;
+                           // 2026-07-12 4 to 6: in-view same-kind dedup needs more rotation)
+const CARPET_VARIANTS = 3; // Carpet variant count (per-cell distinct, planCarpetVariants): each extra
+                           // same-kind variant costs one mesh per sub#variant batch, and this renderer
+                           // is draw-call bound; 3 is the lower bound for all-different shared edges
+                           // (at most two decided shared-edge neighbors, so a third is always pickable)
+const BUF_CELL_F = 3;      // Buffer-ring carpet cell multiple (x cell): that ring sits 40m+ from playable,
+                           // out to 455m, details invisible -- full-res would cost 2.5x cells of overdraw
+const RSCALE = 1.3;        // Global feature patch radius multiplier
+const VIS_R = 300;         // Anti-repeat radius = hero max sight (UNITS.drone.sight)
+const SEP_F = 0.85;        // Natural-kind puzzle spacing factor (circle approx): d >= (r1+r2)x0.85,
+                           // only small edge overlap allowed (fade edges melt, deliberate)
+const INK_SEP_F = 1.06;    // Broad-phase conservative factor (legacy regular-vs-regular circle factor;
+                           // precise test now uses true footprints, see footNear)
+// ==== Functional blocks / 3D objects MUST NOT overlap (2026-08-11 user decision) ====
+// Fields, parking lots, courts and other functional blocks MUST NOT overlap 3D objects either.
+// Three things measured separately:
+//   1. Functional blocks (edge ink fields/parking/courts/plazas/solar and more) take zero
+//      overlap against ANY puzzle -- judged on true footprints (rect = oriented box, blob =
+//      hand-drawn outline bounding circle); MUST NOT fall back to equal-area circle approx:
+//      equal-area circles run 16 percent short on the long axis and 20 percent long on the
+//      short axis, so a court corner slides into parking while the circle test says fine,
+//      and on screen that is two neat blocks cutting through each other.
+//   2. 3D objects MUST NOT interpenetrate: footprint radius measures real part geometry
+//      (detailR, same foot discipline as beacons) times instance scale.
+//   3. 3D objects MUST NOT stand inside functional blocks they do not belong to (no reeds of
+//      the next meadow growing inside a parking lot).
+// Natural-vs-natural (fade vs fade) deliberately keeps SEP_F edge blending: that is the
+// 2026-07-12 anti-repeat device, and they are not functional blocks -- two grass outlines
+// biting into each other is exactly what nature looks like.
+export const PATCH_GAP = 1.0;     // Functional-block clearance (m). MUST stay below array gap
+                           // ARR_GAP (1.6) and family-extension gap (1.2), else street arrays and
+                           // farm quilts break themselves apart
+export const DET_GAP = 0.0;       // Between 3D objects: footprint tangent is enough (0 = no overlap;
+                           // more clearance would thin dense grass)
 
-// 三支都 export:離線稽核 MUST 執行原文(自己抄一份幾何公式去驗 = 驗自己抄對沒有)
-// 點到有向盒的最近距離(0 = 落在盒內);ry 的軸向與 emitRect 同調(局部 x 軸 = (cos, sin))
+// All three exported: offline audits MUST run the source text (copying a geometry formula
+// into the audit only verifies the copy)
+// Closest distance from point to oriented box (0 = inside); ry axis convention matches emitRect
+// (local x axis = (cos, sin))
 export function obbDist(px, pz, o) {
   const ca = Math.cos(o.ry), sa = Math.sin(o.ry), dx = px - o.x, dz = pz - o.z;
   const lx = dx * ca + dz * sa, lz = -dx * sa + dz * ca;
   return Math.hypot(Math.max(0, Math.abs(lx) - o.hw), Math.max(0, Math.abs(lz) - o.hd));
 }
-// 兩個有向盒是否靠得比 gap 近(SAT 四軸;分離軸上的間距 ≥ gap 就不算近)
+// Whether two oriented boxes come closer than gap (SAT on four axes; separated on an axis
+// by >= gap counts as not close)
 export function obbNear(a, b, gap) {
   const dx = b.x - a.x, dz = b.z - a.z;
   const axes = [[Math.cos(a.ry), Math.sin(a.ry)], [-Math.sin(a.ry), Math.cos(a.ry)],
@@ -57,7 +73,8 @@ export function obbNear(a, b, gap) {
   }
   return true;
 }
-// 足跡唯一縫:{ x, z, r }(圓)或 { x, z, hw, hd, ry, r }(有向盒,r = 外接半徑供廣相用)
+// Footprint single seam: circle x, z, r or oriented box x, z, hw, hd, ry, r (r = bounding
+// radius for broad phase)
 export function footNear(a, b, gap) {
   if (!a.hd && !b.hd) return Math.hypot(a.x - b.x, a.z - b.z) < a.r + b.r + gap;
   if (a.hd && b.hd) return obbNear(a, b, gap);
@@ -65,7 +82,8 @@ export function footNear(a, b, gap) {
   return obbDist(c.x, c.z, o) < c.r + gap;
 }
 
-// 場景足跡的共用空間索引：道路、建物、植被、場地全部用 footNear 的同一份真實量體。
+// Shared spatial index for scene footprints: roads, buildings, vegetation, fields all use
+// the same true volumes through footNear.
 export function makeFootprintIndex(feet = [], cell = 64) {
   const grid = new Map();
   const add = (foot) => {
@@ -100,7 +118,8 @@ export function makeFootprintIndex(feet = [], cell = 64) {
   };
 }
 
-// blockers 的盒／圓欄位轉成共用足跡格式；盒體 MUST 保留旋轉，不得退回外接圓。
+// Convert blocker box/circle fields to the shared footprint format; boxes MUST keep their
+// rotation, never fall back to bounding circles.
 export function blockerFoot(b) {
   if (b.hw2 != null && b.hd2 != null) {
     return { x: b.x, z: b.z, hw: b.hw2, hd: b.hd2, ry: b.ry || 0,
@@ -111,7 +130,8 @@ export function blockerFoot(b) {
 
 
 
-// 低頻值雜訊:subtype / 變體分區(鄰近 patch 同類同變體 → 連片延伸不斷紋)
+// Low-frequency value noise: subtype/variant zoning (nearby patches share kind+variant,
+// so runs extend without breaking texture)
 function vnoise(x, z, seed) {
   const h = (i, j) => {
     let n = ((i * 374761393 + j * 668265263) ^ seed) | 0;
@@ -125,9 +145,10 @@ function vnoise(x, z, seed) {
        + (h(xi, zi + 1) * (1 - fx) + h(xi + 1, zi + 1) * fx) * fz;
 }
 
-// ---- 程序生成地表筆刷貼圖(固定種子;「地表#變體」為鍵快取共用)----
+// ---- Procedural ground brush textures (fixed seeds; cached by surface#variant key) ----
 // Climate buckets share textures; brush seeds remain independent of environment.
-// 畫筆種子仍只由 `sub#variant` 導 ⇒ 同一塊田的壟溝/缺株位置四季不動,只有作物換了(§四季設計 ③)
+// Brush seeds still derive only from sub#variant, so furrow/gap positions of one field stay
+// fixed across seasons while only the crop changes (four-season design item 3)
 function groundTex(sub, variant, fit, season, environment, seed, cache) {
   const key = `${sub}#${variant}`;
   const ck = `${key}@${season}/${fit}/${environment.snow}/${environment.growth}/${environment.wetness}/${environment.autumn}/${environment.geology}`;
@@ -148,14 +169,14 @@ function groundTex(sub, variant, fit, season, environment, seed, cache) {
   paintGround(cv.getContext('2d'), S, sub, seed ^ hs, environment, SUB_COL[sub], pW, pD);
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
-  // 鏡射重複:筆刷特徵跨磚無接縫(fit 型單張鋪滿,不重複)
+  // Mirrored repeat: brush features cross tiles seamlessly (fit singles cover once, no repeat)
   t.wrapS = t.wrapT = fit ? THREE.ClampToEdgeWrapping : THREE.MirroredRepeatWrapping;
   registerStreamTex(t);
   cache.set(ck, t);
   return t;
 }
 
-// 手繪筆刷小色塊(painterly blob;photoreal 噪點禁用)
+// Hand-drawn brush blob (painterly blob; photoreal noise banned)
 function brushBlob(g, x, y, r, rnd) {
   g.beginPath();
   for (let a = 0; a <= 10; a++) {
@@ -167,40 +188,49 @@ function brushBlob(g, x, y, r, rnd) {
   g.closePath();
   g.fill();
 }
-// 底色(hex → css rgb):**同種地表的全部變體共用同一個底色**(2026-08-12 使用者定案
-// 「同顏色的地貌拼圖上面可以繪製多個不同的紋路/圖案/點綴/裝飾等細節」)—— 變體之間
-// 只換花紋、不換顏色。舊制(vary)每個變體把底色抖 ±10/255,而底毯自從逐格挑變體
-// (planCarpetVariants)之後,那個抖動就是**逐格換顏色** = 使用者回報的另一半「短距離
-// 快速變化」;而且「**同顏色的**相鄰拼圖」這句話本身就要求變體同色。
-// 仍照抽三枚亂數 ⇒ 每一支畫筆後續的筆觸序列逐位元同舊制(改的只有底色那一格)。
+// Base color (hex to css rgb): all variants of one surface share one base (2026-08-12 user
+// decision: same-color terrain patches can carry different patterns/motifs/sprinkles) --
+// variants swap only the print, never the color. The old vary shook the base by +-10/255 per
+// variant, and since carpet picks variants per cell (planCarpetVariants), that shake became a
+// per-cell color swap = half of the reported short-range flicker; the words same-colored
+// neighbors alone demand same-color variants.
+// Still draws three randoms, so every later brush stroke stays bit-identical to the old rule
+// (only the base cell changed).
 function baseFill(hex, rnd) {
   for (let k = 0; k < 3; k++) rnd();
   return `rgb(${hex >> 16 & 255},${hex >> 8 & 255},${hex & 255})`;
 }
 
-// ==== 農牧地表的四季設計(2026-08-13 使用者需求)====
-// 使用者原話:「田除了田也加入菜園/牧場/魚塭與果園等農牧區,**包含原本的田在內依四季不同
-// 而對應設計**」。舊制的季節只有 `SEASON_TINT` 一個乘色濾鏡 —— 那是把整張圖調黃,不是
-// 「秋天的水田長什麼樣」(秋天的水田是割過的稻茬與金黃穗浪,不是綠稻加濾鏡)。三條:
+// ==== Four-season farm surfaces (2026-08-13 user request) ====
+// User words: fields plus veggie plots, pasture, fish ponds, orchards and more, all season-aware
+// including the original fields. Old seasons were one SEASON_TINT multiply filter (tints the
+// whole map yellow) -- not what an autumn paddy looks like (cut stubble and golden ear waves,
+// not green rice under a filter). Three rules:
 //  1. Seasonal paint and quantized local climate share cached textures.
-//  ②有四季設計的地表 MUST 標 `seasonal` 並**跳過 `SEASON_TINT`** —— 不跳就是調兩次色
-//    (畫筆已經畫成金黃,再乘一層 0xffd9a8 就成了褪色的舊照片)。
-//  ③畫筆吃的是自己那一支 `mulberry32`(不是共享 `rnd`)⇒ 季節分支要抽幾枚都不推移佈局(§2.3)。
+//  2. Season-aware surfaces MUST be flagged seasonal and skip SEASON_TINT -- skipping nothing
+//    tints twice (brush already gold, times one more 0xffd9a8 = faded photo).
+//  3. Brushes eat their own mulberry32, not the shared rnd, so seasonal branches draw as many
+//    as they want without shifting layout (2.3).
 
-// ==== 底毯地表的代表色(2026-08-13 使用者需求「同一類型不要短距離快速變化子類別」)====
-// 底色本來只寫在各 PAINTERS 的第一行 `baseFill(0x…)` 裡 —— 那等於「畫得出來才知道它是什麼
-// 顏色」。而使用者這一輪的兩件事都要在**畫之前**就知道顏色:
-//   ①底毯選款清單要照顏色排序(索引相鄰 = 顏色相鄰),雜訊掃過去才是漸層而不是綠→紅→灰;
-//   ②顏色劇烈變化處要補畫分界線(borderKindOf 的同地貌分支)。
-// ⇒ 代表色收成**一張表**,畫筆與這兩個消費端同吃(MUST NOT 在排序/界線那邊另抄一份色表:
-//    改一支畫筆的底色而排序還照舊 = 清單順序悄悄不再是漸層,而畫面上只是「又開始跳色了」)。
+// ==== Carpet representative colors (2026-08-13 user request: no fast short-range jumps
+// inside one type) ====
+// Base colors used to live only in each painter first line baseFill(0x..) -- paint-first-ask-later.
+// This round needs colors BEFORE painting for two consumers:
+//   1. Carpet picking rosters sort by color (index adjacency = color adjacency), so noise sweeps
+//      a gradient instead of green-red-gray;
+//   2. Sharp color jumps get a divider line (borderKindOf same-zone branch).
+// => Collect representative colors into ONE table shared by painters and both consumers (MUST NOT
+//    copy a second table at the sort/border side: changing one painter base while sorting stays
+//    old silently un-gradients the roster, reading on screen as jumping again).
 //
-// 三條:
-//  ①名冊 MUST **恰好**涵蓋「會出現在底毯上的款」(CARPET ∪ ENCLAVE_STYLES[].carpet 的聯集,
-//    稽核逐款雙向比對)—— 特徵拼圖(球場/加油站/工地)不進底毯格網,沒有排序也沒有界線可言;
-//  ②該款的畫筆 MUST 真的吃這張表(稽核抽原文驗 `baseFill(SUB_COL.<款>` 逐款到位);
-//  ③**磚瓦地是具名例外**:它的底是磚縫砂漿、讀出來的顏色是那五塊磚 ⇒ 代表色由磚色**推導**
-//    (BRICK_C 的平均),MUST NOT 手寫第二個數字。
+// Three rules:
+//  1. Roster MUST cover exactly the kinds reaching carpet (CARPET union ENCLAVE_STYLES carpet,
+//    audit checks both directions) -- feature patches (courts/gas stations/sites) never enter the
+//    carpet grid, so no sort and no border applies to them;
+//  2. That kind painter MUST really eat this table (audit greps baseFill(SUB_COL.kind) per kind);
+//  3. Brick land is the named exception: its base is mortar, the read color is those five bricks
+//    => representative derives from brick colors (mean of BRICK_C), MUST NOT hand-write a second
+//    number.
 const BRICK_C = ['#b06a4a', '#a35f3f', '#bd7855', '#9d5a3e', '#b57050'];
 const hexOf = (css) => parseInt(css.slice(1), 16);
 const meanHex = (list) => {
@@ -210,42 +240,46 @@ const meanHex = (list) => {
   return ((Math.round(r / n) << 16) | (Math.round(g / n) << 8) | Math.round(b / n));
 };
 export const SUB_COL = {
-  // 綠地
+  // green
   turf: 0x7db159, lawn: 0x6fae5a, meadow: 0xb3a468, bushfield: 0x6f9a4c, flowerfield: 0x78a854,
   arrowbamboo: 0x8ba757, deadwood: 0x9c9070, fallenlogs: 0x7c8a55, park: 0x74a85c,
-  // 裸露地
+  // bare
   wild: 0x8d835f, gravel: 0x9a9384, sand: 0xdcc28f, mud: 0x6d5940, crackedearth: 0xb08d5f,
   redsoil: 0xa05f42, deadforest: 0x6b655c, steppe: 0xbca95e,
-  // 市區
+  // urban
   concrete: 0xa2a49e, pavement: 0x98948b, brick: meanHex(BRICK_C),
-  // 濕地 / 水域
+  // wet / water
   marsh: 0x5d5647, lotus: 0x41616b, watertile: 0x2f6f96, deepwater: 0x1c4560,
-  // 高地
+  // highland
   plateau: 0xa08c6a, icefield: 0xd8e8ee, scree: 0x8f8c84,
 };
-// 感知色距(redmean 近似;值域 0~765)。純函式、零查表、零依賴 —— 純 RGB 歐氏距離會把
-// 「深綠 vs 深藍」判得比「草綠 vs 土黃」還近,而使用者說的「突兀」量的正是人眼的那把尺。
+// Perceived color distance (redmean approx; range 0-765). Pure function, zero tables, zero deps --
+// plain RGB Euclidean calls deep-green vs deep-blue closer than grass-green vs soil-yellow, while
+// the abruptness the user means is measured by the human eye.
 export function colDist(h1, h2) {
   const r1 = h1 >> 16 & 255, g1 = h1 >> 8 & 255, b1 = h1 & 255;
   const r2 = h2 >> 16 & 255, g2 = h2 >> 8 & 255, b2 = h2 & 255;
   const rm = (r1 + r2) / 2, dr = r1 - r2, dg = g1 - g2, db = b1 - b2;
   return Math.sqrt((2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db);
 }
-// 底毯選款清單的顏色排序(純函式;零 rnd / 零 Math.random,§2.3)。
-// 病灶:`cellSubAt` 是「低頻雜訊 t → 清單索引」,而清單本身**不是**色階 —— 綠地那一份的
-// 索引 8→9→10 是 meadow(土黃)→ deadwood(灰)→ turf(綠)。t 平滑地走過去,顏色卻在跳。
-// 選款區塊(CARPET_LOT)只能讓它**跳得沒那麼頻繁**,跳的幅度一格未動。
-// 新制:排成一條顏色路徑 ⇒ 索引相鄰 = 顏色相鄰,雜訊掃過清單就是一條漸層帶。
-//   ①**重複項 = 權重**,排序 MUST 保留重數並讓同款相鄰(權重變成漸層上的一段平台);
-//   ②路徑起點取離色彩重心最遠的那一款 —— 從中間起步的話會往兩邊各走一半,接回來就是一個
-//     大跳(貪婪最近鄰的經典壞法);
-//   ③同距並列取清單原序(決定性,跨客戶端逐位元一致)。
+// Carpet picking roster sorted into a color path (pure function; zero rnd / zero Math.random, 2.3).
+// Lesion: cellSubAt maps low-frequency noise t to roster index, but the roster itself is no color
+// ramp -- the green roster slots 8-9-10 run meadow (tan) to deadwood (gray) to turf (green). Smooth t
+// walks across while colors jump. Picking blocks (CARPET_LOT) only make jumps less frequent;
+// amplitude untouched.
+// New rule: sort into a color path => index adjacency = color adjacency, noise sweeping the roster
+// walks a gradient band.
+//   1. Duplicates = weight; sorting MUST keep multiplicity with same kinds adjacent (weight becomes
+//      a plateau on the gradient);
+//   2. Path starts from the kind farthest from the color centroid -- starting mid-way walks half
+//      each way and rejoins with a big jump (greedy-nearest-neighbor classic failure);
+//   3. Same-distance ties take roster order (deterministic, bit-identical across clients).
 export function carpetOrder(list, colOf = (s) => SUB_COL[s]) {
   const uniq = [];
   for (const s of list) if (!uniq.includes(s)) uniq.push(s);
-  // 只有「一款」或「有款查不到代表色」才原序退回。**兩款也要排** —— 那不是為了排序,是為了
-  // 把同款收成一段(['lotus','marsh','lotus'] 這種清單裡的 lotus 被 marsh 從中間切開,
-  // 走過去就是 荷塘→沼澤→荷塘 的來回跳)
+  // Fall back to roster order only for one kind or kinds missing representative colors. Two
+  // kinds still sort -- not for ordering but to gather same kinds into one run (a roster like
+  // lotus, marsh, lotus splits lotus across marsh and walks pond-marsh-pond back and forth)
   if (uniq.length <= 1 || uniq.some((s) => colOf(s) == null)) return list.slice();
   let cr = 0, cg = 0, cb = 0;
   for (const s of uniq) { const h = colOf(s); cr += h >> 16 & 255; cg += h >> 8 & 255; cb += h & 255; }
@@ -270,39 +304,44 @@ export function carpetOrder(list, colOf = (s) => SUB_COL[s]) {
 
 
 
-// ---- 地表定義 ----
-// shape:blob=不規則色塊 / rect=田塊、場地;uv:'fit'=單張鋪滿(否則世界投影 tile)
-// edge:'fade'=外圈 alpha 淡出融入地形(自然類)/ 'ink'=硬邊墨線(人造類)
-// slope:允許的高差/半徑比;rim:外圈隆起(田埂);fam:延伸擺放家族
-// reg:整齊規律程度(0..1)= 放置時沿最近道路方向整齊擺放的機率(orient());
-//     其餘機率、或附近無路 → 隨機朝向。人造耕地/場地高,自然色塊 0 恆隨機
+// ---- Surface definitions ----
+// shape: blob = irregular patch / rect = field, court; uv: fit = single-sheet cover
+// (else world-projected tile)
+// edge: fade = outer alpha melts into terrain (natural) / ink = hard ink line (artificial)
+// slope: allowed height/radius ratio; rim: outer raised ring (field bund); fam: extension family
+// reg: tidiness 0..1 = probability of aligning to the nearest road at placement (orient());
+//   rest, or no road nearby, goes random. Farmed/court surfaces high, natural blobs always 0
 
-// 分區切片(值雜訊挑選;重複項 = 權重,首尾 = 稀有)
-// 特徵層分區切片(值雜訊挑選;重複項 = 權重,首尾 = 稀有):
-// 只放「場所」型地物 — 有立體細節或明確邊界;純地面型全數改由底毯負責
-// 跨地貌形式差異(2026-07-12):太陽能板/貨櫃「市區零星件、裸露地大面積陣列」——
-// solarfarm/containeryard 場所 patch 移到裸露地(荒地光電場/內陸貨櫃堆場),
-// 市區改由 scatterDetails 在水泥地/停車場撒零星單件(見 concrete 分支)
+// Zone slices (value-noise pick; duplicates = weight, ends = rare)
+// Feature-layer zone slices (value-noise pick; duplicates = weight, ends = rare):
+// Only place-like features go here -- things with 3D detail or hard borders; pure ground kinds
+// are all carpet duty now
+// Cross-zone form split (2026-07-12): solar panels/containers read as sparse urban pieces but
+// large bare-land arrays -- solarfarm/containeryard place patches moved to bare land (wasteland
+// solar fields / inland container yards); urban instead scatters sparse singles on concrete /
+// parking via scatterDetails (see concrete branch)
 
-// 底毯分區切片:全為 tile 型(世界投影 UV)地面,大片連續鋪滿全部陸地
+// Carpet zone slices: all tile-type (world-projected UV) ground, laid in big continuous land sheets
 
-// 延伸擺放家族:同族 patch 相互毗鄰延伸(農田拼布 / 運動園區 / 綠地群落 /
-// 伐木跡地群 / 聚落遺跡 / 高地帶 / 鹽田魚塭 / 工地採石 / 堆置場)
+// Extension families: same-family patches extend adjacently (farm quilts / sports parks / green
+// clusters / logged scars / ruin clusters / highland bands / salt-fishpond pans / quarry sites /
+// stockpile yards)
 
-// 田埂適用名冊:**推導不手寫** —— 農田拼布(rectFarm)+ 池區(panFam,魚塭/鹽田的土堤是
-// 同一件事)。手寫一份名冊會在新增地表時靜默過期(牧場 pasture 只要進了 rectFarm 就自動有埂)。
+// Bund-eligible roster: derived not written -- farm quilts (rectFarm) + pan areas (panFam, fishpond
+// and salt-pan berms are the same thing). A hand-written roster silently expires when surfaces are
+// added (pasture entering rectFarm automatically gains bunds).
 const BUND_SUBS = new Set([...FAMS.rectFarm, ...FAMS.panFam]);
-// 尺寸 [基準半徑, 變幅](rect 半寬;court/track 接近真實場地)
+// Size [base radius, spread] (rect half-width; court/track near true field size)
 
-// 綠色系季節色偏(材質 color 乘上貼圖)
+// Green seasonal tint (material color multiplied over texture)
 const SEASON_TINT = { spring: 0xeaffe0, summer: 0xffffff, autumn: 0xffd9a8, winter: 0xdfe8ea };
 
 // Seeded geometry prototypes; placements select a variant without consuming scene RNG.
 const DETAIL_VARIANTS = createGroundParts();
 const DETAIL_DEFS = Object.fromEntries(Object.entries(DETAIL_VARIANTS).map(([key, variants]) => [key, variants.flat()]));
 
-// 每型別的最大隨機傾角(rad;繞 x/z 各自抽):自然件歪斜、人造件近直立,
-// 加上既有的隨機朝向 ry / 尺寸抖動 → 同型實例不再複製貼上
+// Max random tilt per kind (rad; drawn per x/z axis): natural pieces lean, artificial pieces
+// near-upright; plus existing random yaw ry and size jitter, same-kind instances stop copy-pasting
 const TILT = {
   tuft: 0.22, rice: 0.16, reed: 0.2, bush: 0.1, sapling: 0.09, flower: 0.16, lotuspad: 0.05,
   bamboo: 0.13, snag: 0.18, charsnag: 0.18, log: 0.07, stump: 0.06, logpile: 0.05, plank: 0.08,
@@ -314,9 +353,10 @@ const TILT = {
   fish: 0.12, shell: 0.5, mushroom: 0.14,
 };
 
-// 每型 3D 物件的整齊規律程度(0..1)= 隨機朝向路徑改為「沿最近道路方向擺放」的
-// 機率(addDetail 經 orient() 擲骰;rows()/固定 ry 呼叫端已對齊 patch 軸,不經此表)。
-// 人造直線件(貨櫃/太陽能板/看板/長凳/墓碑/拱棚)高;自然件與旋轉對稱件 0 恆隨機。
+// Per-kind 3D object tidiness 0..1 = probability that the random-yaw path becomes align to
+// the nearest road (addDetail rolls via orient(); rows()/fixed-ry callers already aligned to the
+// patch axis and skip this table). Artificial straight pieces (containers/panels/signs/benches/
+// graves/sheds) high; natural and radially symmetric kinds always 0.
 const REG = {
   tuft: 0, rice: 0, reed: 0, bush: 0, pebble: 0, hay: 0.3, sapling: 0, flower: 0, lotuspad: 0,
   bamboo: 0, snag: 0, charsnag: 0, log: 0.15, stump: 0, logpile: 0.6, plank: 0.4, cabin: 0.7,
@@ -328,17 +368,20 @@ const REG = {
   fish: 0, shell: 0, mushroom: 0,
 };
 
-// 基底為矩形的人造件：只要呼叫端未指定列陣角度，就恆走道路／街廓格網朝向。
+// Rectangular-base artificial pieces: whenever the caller leaves array angle unset, always
+// follow road/block grid orientation.
 const RECT_BASE_DETAILS = new Set([
   'logpile', 'plank', 'cabin', 'vinerow', 'ghouse', 'pipe', 'barrier', 'canopy', 'pump',
   'container', 'carwreck', 'car', 'motorcycle', 'solarpanel', 'bench', 'headstone', 'crate', 'billboard', 'planter', 'hoop',
   'picnictable', 'tent', 'litterbin',
 ]);
 
-// 地面式貼合名冊：列陣/線性鋪面件跟地形起伏傾斜（車輛/貨櫃/傢俱等重力直立件不在此列，維持直立內嵌）
+// Ground-conforming roster: arrayed/linear pavers tilt with terrain (gravity-upright pieces like
+// vehicles/containers/furniture excluded, stay upright and embedded)
 const SLOPE_FIT_DETAILS = new Set(['solarpanel', 'vinerow', 'ghouse', 'pipe', 'barrier']);
 
-// 只收具有可讀實體量體的固定擺件；草、招牌薄片與可跨越小物不製造隱形牆。
+// Only fixed set-pieces with readable solid volume; grass, sign flakes and step-over small
+// things build no invisible walls.
 const PHYSICAL_DETAILS = new Set([
   'log', 'stump', 'logpile', 'cabin', 'ghouse', 'slab', 'pipe', 'barrier',
   'canopy', 'container', 'carwreck', 'car', 'motorcycle', 'boulder', 'crate',
@@ -369,14 +412,16 @@ function detailCollider(type, it) {
   };
 }
 
-// 3D 物件的水平足跡半徑(scale=1):**量零件實幾何**,MUST NOT 手寫 —— 零件表一改
-// (換模型/加零件)手寫值就靜默過期,而畫面上的症狀是「兩台貨櫃長在一起」
+// Horizontal footprint radius of 3D objects (scale=1): measure real part geometry, MUST NOT
+// hand-write -- once the part table changes (model swap / new part) a written value silently
+// expires, and on screen that reads as two containers grown together
 const _detR = new Map();
 /**
- * 一款細節的公稱高度(擺動權重的分母;A39 ⑤「span 推導不手寫」)。
- * 與 `biomes.js vegSpan` 同一條紀律:改零件表(加高花穗、換 sy)擺幅自己跟著走 ——
- * 手寫一個數字的話,加高之後梢端的權重停在 1 以下,那一款就整批擺不動而沒有任何錯誤訊息。
- * 幾何的落地平移已烤進 boundingBox(見 DETAIL_DEFS 檔頭),故直接取 max.y × sy。
+ * Nominal height of one detail kind (sway-weight denominator; A39 item 5: span derived not written).
+ * Same discipline as biomes.js vegSpan: changing the part table (taller plume, new sy) moves sway
+ * along -- a written number would freeze tip weights below 1 after a height change, so that kind
+ * stops swaying with zero error message.
+ * Ground offset is baked into boundingBox (see DETAIL_DEFS header), so take max.y times sy.
  */
 const _detSpan = new Map();
 function detailSpan(type) {
@@ -387,7 +432,7 @@ function detailSpan(type) {
     if (!p.geo.boundingBox) p.geo.computeBoundingBox();
     s = Math.max(s, p.geo.boundingBox.max.y * (p.sy ?? 1));
   }
-  s = Math.max(0.3, s);   // 分母 MUST NOT 為零(同 vegSpan 的下限)
+  s = Math.max(0.3, s);   // Denominator MUST NOT be zero (same floor as vegSpan)
   _detSpan.set(type, s);
   return s;
 }
@@ -412,19 +457,21 @@ function bucketOf(buckets, key) {
   return b;
 }
 
-// ==== 貼地地被層的「地形法線」(2026-08-13 使用者定案「地形變化受 LUT 與勾線作用」)====
-// 一切貼地拼圖的 `normal` 都是 **(0,1,0)** —— 它是一張鋪在地形上的皮,受光刻意不隨坡面走。
-// 那個謊在勾線資訊緩衝上要付兩次錢:①拼圖底下的稜線與路塹一條線都畫不出來(法線是常數);
-// ②拼圖鋪到盡頭接上裸地形時,常數法線撞上真法線 ⇒ 沿著拼圖的外緣畫出一條**假的**折邊線。
-// 故另存一份 `aLandN` 只餵 gInfo(受光一行未動,見 toon.js 的 CEL_LAND_N)。
+// ==== Ground-layer terrain normals (2026-08-13 user decision: terrain change follows LUT and ink) ====
+// Every ground patch normal is (0,1,0) -- a skin draped over terrain, lighting deliberately
+// ignores slope. That lie costs twice in the ink info buffer: 1. ridges and road cuts under the
+// patch draw no line (normals are constant); 2. where the patch ends onto bare terrain, constant
+// normals hit true normals, drawing a FALSE crease along the patch rim. So store aLandN feeding
+// only gInfo (lighting untouched, see CEL_LAND_N in toon.js).
 //
-// 三條:
-//   ①**取樣距 = 地形高程網格的格距**(`terrain.gridM`)。取更小是在同一個雙線性面內取樣
-//     ⇒ 法線在格內是常數、差分退化成逐格階梯,折邊線又長回成格線;取更大則把稜線抹平。
-//   ②**只吃 (x,z) 的純函式** ⇒ 相鄰拼圖在共用邊上取到**逐位元相同**的法線(拼圖之間天生
-//     沒有折邊,seam 因此不是「壓下去」而是根本不存在)。
-//   ③高度取樣走呼叫端給的 `hAt`:圖內 `terrain.heightAt`、緩衝空間 `terrain.bufferHeightAt`
-//     (拿錯那一支 = 界外整圈法線被夾回圖界的值)。
+// Three rules:
+//   1. Sample step = terrain height-grid pitch (terrain.gridM). Sampling finer stays inside one
+//      bilinear face, so normals go constant per cell, differences degrade to per-cell steps, and
+//      crease lines grow back into grid lines; sampling coarser smooths ridges away.
+//   2. Pure function of (x,z) only => adjacent patches sharing an edge read bit-identical normals
+//      (no crease exists between patches, so seam is absent rather than pressed down).
+//   3. Height sampling uses the caller hAt: in-map terrain.heightAt, buffer ring
+//      terrain.bufferHeightAt (wrong branch clamps the whole outer ring to in-map values).
 function landNrmAt(hAt, x, z, d) {
   const s = d > 0 ? d : 1;
   const nx = (hAt(x - s, z) - hAt(x + s, z)) / (2 * s);
@@ -432,64 +479,75 @@ function landNrmAt(hAt, x, z, d) {
   const l = Math.hypot(nx, 1, nz) || 1;
   return [nx / l, 1 / l, nz / l];
 }
-/** 與 `b.nrm.push(0, 1, 0)` 成對出現的那一行(稽核逐檔比對兩者的數量) */
+/** The line paired with b.nrm.push(0, 1, 0) (audits compare the two counts per file) */
 function pushLandN(b, hAt, x, z, d) {
   const n = landNrmAt(hAt, x, z, d);
   b.lnrm.push(n[0], n[1], n[2]);
 }
-// ==== 貼合抬升:斜坡破圖(2026-08-13 使用者回報「斜坡時地貌拼圖很容易破圖」)====
-// 地被是一層皮:頂點取 `heightAt` ⇒ **頂點恆在地形上**,而頂點與頂點之間是**直的**。
-// 地形不是 —— 它是逐格三角化的高度場,兩片三角面相接處有折角。一條跨過折角的皮邊(弦)
-// 因此沉在地形之下,沉多少 = 折角 × 弦長 ÷ 4。皮的邊長是半個 cell(6.5m)、地形格距 8.5m
-// ⇒ 幾乎每一條皮邊都跨過折角,而底毯的抬升只有 `CLIFT = 0.07m`。
-// 2026-08-13 taroko 實測(`audit_ground_drape`):**22% 的三角形被地形戳穿**,
-// p90 0.057m / p99 0.446m。平地看不到(折角 = 0),坡越陡越碎越明顯 —— 正是「斜坡時」。
+// ==== Drape lift: slope breakage (2026-08-13 user report: terrain patches break on slopes) ====
+// Ground cover is a skin: vertices take heightAt, so vertices always sit on terrain while edges
+// between them run straight. Terrain is not -- it is a per-cell triangulated height field with a
+// crease where two triangles meet. A skin edge (chord) crossing the crease sinks below terrain by
+// crease times chord length over 4. Skin edges run half a cell (6.5m), terrain pitch is 8.5m, so
+// almost every skin edge crosses a crease, while carpet lift is only CLIFT = 0.07m.
+// 2026-08-13 taroko measurement (audit_ground_drape): 22 percent of triangles pierced by terrain,
+// p90 0.057m / p99 0.446m. Flat land shows nothing (crease = 0); steeper slopes break more --
+// exactly the reported on-slopes symptom.
 //
-// ⚠ **消費端自同日縮到三個**(使用者定案「A 認養地形三角形」):圖內底毯 / 外溢 / 脊帶已改
-// 成直接吃地形自己的三角形(emitCell 檔頭)⇒ 那三層的弦虧損**在結構上就是 0**,MUST NOT
-// 再對它們套這一支(再抬 = 浮在地形上,就是下面 ④ 講的另一半破圖)。剩下的三個消費端是
-// **特徵拼圖 / 界線拼圖 / 緩衝空間底毯**:前兩者是任意旋轉的獨立面(鋪到地形格上邊緣會變
-// 鋸齒,而它們本來就有坡度閘),後者站在裙上、根本沒有高程網格可以認養。
+// Consumers shrank to three on the same day (user decision A adopt-terrain-triangles): in-map
+// carpet / spillover / ridge band now eat terrain own triangles (see emitCell header), so chord
+// loss for those three layers is structurally 0; MUST NOT lift them again (re-lift = floating
+// above terrain, the other half of breakage in item 4 below). Remaining consumers are feature
+// patches / border puzzles / buffer-ring carpet: the first two are freely rotated standalone
+// faces (snapping to terrain grid serrates edges, and they already carry slope gates), the last
+// stands on the skirt with no height grid to adopt.
 //
-// 修法 = **逐頂點把弦虧損補回去**:抬升量 = 該點往八方的「中點高 − 兩端平均」最大值。
-// 四條:
-//   ①**MUST 是 (x,z) 的純函式**(同 landNrmAt)—— 相鄰面在共用頂點上取到逐位元同值,
-//     否則抬升本身就把皮撕開;
-//   ②**平面恆 0**(折角 = 0 ⇒ 虧損 = 0)⇒ 平地與緩坡**逐位元同舊制**,這一層只在真的
-//     有折角的地方生效;
-//   ③**兩端對稱**:邊 (v,n) 的中點虧損在 v 與 n 兩邊算出來是同一個數 ⇒ 兩端都抬了它,
-//     弦在中點恰好回到地形上(不是「差不多」);
-//   ④**MUST 夾上限**:抬過頭就不是貼合而是**浮在地形上**(懸空的地被同樣是破圖)。
-//     上限分三種:道路走廊內 `ROAD` < 路面 lift 0.18 − 底毯 0.07 的餘裕(抬到比路面高
-//     = 草皮蓋過馬路);圖內 `MAX`;緩衝空間 `BUF` 放寬(格距 ×BUF_CELL_F、離玩家 400m 以上,
-//     那裡沒有別的東西要疊,而不放寬就是 30m 級的破口)。
+// Fix = push chord loss back per vertex: lift = max over eight directions of mid height minus
+// end-point mean.
+// Four rules:
+//   1. MUST be a pure function of (x,z) (same as landNrmAt) -- adjacent faces sharing a vertex
+//      read bit-identical values, else lifting itself tears the skin;
+//   2. Flat stays 0 (crease = 0 gives loss = 0), so flat and gentle slopes stay bit-identical to
+//      the old rule; this layer only acts where a real crease exists;
+//   3. End-symmetric: midpoint loss of edge (v,n) computes the same from both ends, so lifting
+//      both ends lands the chord midpoint exactly back on terrain (not approximately);
+//   4. MUST clamp: over-lift stops being drape and becomes floating above terrain (hovering
+//      cover breaks too). Three caps: ROAD inside road corridors < road lift 0.18 minus carpet
+//      0.07 headroom (lifting above road = grass over tarmac); in-map MAX; buffer BUF relaxed
+//      (pitch times BUF_CELL_F, 400m+ from player, nothing else stacks there, and unrelaxed means
+//      30m-class holes).
 const SAG = {
-  MAX: 0.6,    // 圖內抬升上限(m)
-  ROAD: 0.10,  // 道路走廊內(路面 lift 0.18 − 底毯 CLIFT 0.07 = 0.11 的餘裕)
-  BUF: 6,      // 緩衝空間(格距 ×BUF_CELL_F,實測未修正時 p99 10.8m / max 37.6m)
+  MAX: 0.6,    // In-map lift cap (m)
+  ROAD: 0.10,  // Inside road corridors (road lift 0.18 minus carpet CLIFT 0.07 = 0.11 headroom)
+  BUF: 6,      // Buffer ring (pitch times BUF_CELL_F; uncorrected p99 10.8m / max 37.6m)
 };
-//   ⑥**尺寸 MUST 是「這一層自己的弦長」**(2026-08-13 使用者回報「分界線如果是土路/潮間帶/
-//     海灘不要凸起…田埂之類的也不要凸太多」的**根因**):抬升量 ∝ 弦長²,而舊制三個消費端
-//     一律吃底毯的 `cell/2`(6.5m)。界線拼圖的環距只有 2m 上下、田埂的取樣間距 3m ——
-//     拿 6.5m 的虧損去抬 2m 的弦,抬的是**十倍於自己需要**的量,直接頂到 `MAX` 0.6m。
-//     這在底毯也吃 sag 的年代只是「整條 lift 階梯平移」(檔頭「同一份場餵給每一層」的理由);
-//     自從底毯/外溢/脊帶改成**認養地形三角形**(sag ≡ 0)之後,那個理由就沒了 —— 界線與
-//     田埂變成浮在**恰好貼著地形**的底毯上方半公尺的一條台,正是使用者看到的「凸起」。
-//     故 `drapeSag` 收一個選用的 `r`,呼叫端 MUST 傳自己的弦長;不傳 = 底毯尺度(特徵拼圖
-//     的 7×6 網格恰是那個量級,維持舊制)。
-// ⑤**多尺度**:一條弦的虧損 ∝ 弦長 × 折角,而地被不是只有一種弦長 —— 底毯是半個 cell
-//   (6.5m)、界線拼圖的環距只有 2m 上下。只量最長的那一尺,近處的小凸起就漏掉了
-//   (2026-08-13 實測:單尺度把底毯的破圖從 22.0% 壓到 3.8%,而界線拼圖 29.6% → 29.5%
-//   **一格未動**)。故三個尺度取最大值:大尺度給底毯、小尺度給窄帶,同一份場照樣單調。
-// `?sag=0`:整層關掉,給定場照與 `audit_ground_drape --break-sag` 做前後對照 ——
-// 同 `toon.js` 的 `?curve=0`(那一層也是「只有前後兩張擺在一起才看得出來」)。
+//   6. Size MUST be this layer own chord length (2026-08-13 user report: dirt roads, tidal
+//     flats, beaches MUST NOT bulge, field bunds neither -- the root cause): lift scales with
+//     chord length squared, while the old rule fed all three consumers carpet cell/2 (6.5m).
+//     Border puzzle ring spacing is about 2m, bund sample spacing 3m -- feeding 6.5m of loss
+//     into a 2m chord lifts ten times what it needs, pinning straight to MAX 0.6m. Back when
+//     carpet also ate sag this only shifted the whole lift staircase (the header reason of one
+//     field feeding every layer); since carpet/spillover/ridge adopted terrain triangles
+//     (sag identically 0), that reason is gone -- borders and bunds float half a meter above
+//     exactly-draped carpet as a rim, which is the reported bulge. So drapeSag takes an optional
+//     r, and callers MUST pass their own chord length; omitted = carpet scale (the 7x6 feature
+//     grid sits at that size, keeping the old rule).
+// 5. Multi-scale: one chord loss scales with chord length times crease, and cover has more
+//   than one chord length -- carpet runs half a cell (6.5m), border rings only about 2m.
+//   Measuring only the longest scale misses near small bumps (2026-08-13 measurement: single
+//   scale pressed carpet breakage 22.0 percent to 3.8, while border puzzles moved 29.6 to 29.5,
+//   untouched). So take the max of three scales: large serves carpet, small serves narrow bands,
+//   one field still monotone.
+// Turning the whole layer off with sag=0 gives staged-shot and audit_ground_drape --break-sag
+// before/after pairs -- same as toon.js curve=0 (only side-by-side frames show that layer).
 const SAG_OFF = typeof location !== 'undefined' && /[?&]sag=0/.test(location.search);
 const SAG_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1],
   [0.70711, 0.70711], [0.70711, -0.70711], [-0.70711, 0.70711], [-0.70711, -0.70711]];
-// 尺度與方向數的取捨(2026-08-13 實測,taroko):最大尺度**要八方**(皮的三角化對角線在
-// 那一尺上),小尺度只取四軸就夠 —— 逐頂點 48 次取樣 → 32 次,`buildBiomes` 1331 → 1252ms,
-// 而三層破圖率一格未動(3.8% / 2.8% / 0.0%)。整條加起來的代價是 963 → 1252ms(+30%),
-// 全部落在建構期(§建構期讓步的 buildYield 會讓出畫面),執行期一格未動。
+// Scale vs direction-count tradeoff (2026-08-13 taroko measurement): the largest scale needs
+// eight directions (skin triangulation diagonals live there), small scales manage with four axes
+// -- per-vertex samples drop 48 to 32, buildBiomes 1331 to 1252ms, while three-layer breakage
+// stays put (3.8 / 2.8 / 0.0 percent). The whole added cost lands at build time (buildYield yields
+// frames), zero at runtime.
 const SAG_SCALES = [[1, 8], [0.45, 4], [0.2, 4]];
 function groundSagAt(hAt, x, z, r) {
   if (!(r > 0)) return 0;
@@ -499,7 +557,8 @@ function groundSagAt(hAt, x, z, r) {
     const rr = r * f;
     for (let k = 0; k < nd; k++) {
       const [dx, dz] = SAG_DIRS[k];
-      // 中點高 − 兩端平均 = 這條弦在中點沉下去多少(平面恆 0 ⇒ 平地逐位元同舊制)
+      // Mid height minus end mean = how far this chord sinks at mid (flat stays 0, so flat
+      // stays bit-identical to the old rule)
       const d = hAt(x + dx * rr * 0.5, z + dz * rr * 0.5)
         - (h0 + hAt(x + dx * rr, z + dz * rr)) * 0.5;
       if (d > s) s = d;
@@ -507,18 +566,21 @@ function groundSagAt(hAt, x, z, r) {
   }
   return s;
 }
-/** 幾何附上 `aLandN`(缺席 ⇒ 材質端退回自己的法線,原則 6) */
+/** Geometry carries aLandN (absent => material falls back to its own normal, principle 6) */
 function setLandN(geo, b) {
   if (b.lnrm?.length === b.pos.length) geo.setAttribute('aLandN', new THREE.Float32BufferAttribute(b.lnrm, 3));
 }
 
-// 不規則色塊。edge:'fade' 外圈 alpha=0 淡入地形;'ink' 外圈墨線頂點色(手繪描邊)
-// 手繪輪廓的半徑抖動範圍(×r):**外緣最遠到 (MIN+JIT)·r,不是 r** —— 迴避半徑
-// (tryPatch 的 bdCross)與這裡同源,拿 r 去算會讓 14% 的外緣壓上分界線帶
+// Irregular patches. edge fade: outer alpha 0 melts into terrain; ink: outer ink vertex color
+// (hand-drawn outline)
+// Hand-drawn outline radius jitter range (times r): outer edge reaches (MIN+JIT) times r, not r --
+// the avoid radius (tryPatch bdCross) shares this source, and using r lets 14 percent of outer
+// edges press onto divider bands
 const BLOB_R = { MIN: 0.72, JIT: 0.42 };
 function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd, sag) {
   const n = 12;
-  // 每塊 UV 隨機旋轉:同款貼圖不同朝向(視野內同款已不重複,無需跨塊花紋連續)
+  // Per-patch random UV rotation: same-kind textures face different ways (in-view same-kind
+  // already deduped, no cross-patch print continuity needed)
   const ua = rnd() * Math.PI * 2, cu = Math.cos(ua), su = Math.sin(ua);
   const push = (vx, vz, cr, cg, cb, ca) => {
     b.pos.push(vx, terrain.heightAt(vx, vz) + lift + sag(vx, vz), vz);
@@ -527,11 +589,11 @@ function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd, sag) {
     b.uv.push((vx * cu - vz * su) * uvS, (vx * su + vz * cu) * uvS);
     b.col.push(cr * pt[0], cg * pt[1], cb * pt[2], ca);
   };
-  const ph = rnd() * Math.PI * 2;               // 輪廓隨機起始相位:同半徑 blob 形狀互異
+  const ph = rnd() * Math.PI * 2;               // Random outline start phase: same-radius blobs differ
   const angs = [], rads = [];
   for (let i = 0; i < n; i++) {
-    angs.push(ph - i / n * Math.PI * 2);        // 角度遞減 → 三角形面朝 +y
-    rads.push(r * (BLOB_R.MIN + rnd() * BLOB_R.JIT));   // 邊界抖動 = 手繪輪廓
+    angs.push(ph - i / n * Math.PI * 2);        // Decreasing angle faces triangles +y
+    rads.push(r * (BLOB_R.MIN + rnd() * BLOB_R.JIT));   // Boundary jitter = hand-drawn outline
   }
   const eC = edge === 'fade' ? [1, 1, 1, 0] : [0.55, 0.56, 0.62, 1];
   const mR = edge === 'fade' ? 0.66 : 0.6;
@@ -546,33 +608,38 @@ function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd, sag) {
   b.base += 2 * n + 1;
 }
 
-// ==== 農田田埂(2026-08-13 使用者定案「修對齊 + 組合夠大片才加田埂」)====
-// 使用者原話:「地貌拼圖部分區塊沒有接得很好,例如田與田之間沒有整齊對準,**沒對準也可以
-// 但要使用田埂隔開**」。兩件事分開修 —— 對齊那半住家族延伸(鄰塊尺寸依毗鄰軸反解),
-// 這裡是田埂。
-// 田埂**跨在足跡邊界上**(只往外長 `HW`):兩塊正鄰位的田相距 `FARM_GAP = 2 × HW` ⇒ 兩條埂
-// 在小路中線背靠背接上 = 一條連續的埂;錯開的兩塊就讀成「田埂在這裡轉個折」,而真實的
-// 梯田/水田本來就長這樣。往外那半仍在 `PATCH_GAP`(1.0)與帶緣 `BORDER_BAND.PAD`(1.6)之內
-// ⇒ 不疊置與不橫跨分界線那兩道閘一格未動。
-// **斷面三環**(往外量):
-//   R0 = 足跡邊,dy = `def.rim ?? 0` —— **與田塊自己的外圈同高**,不開縫也不互戳;
-//   R1 = 埂頂外緣,dy = max(rim, RISE);
-//   R2 = R1 的正下方,dy = 0。
-// 兩條帶:R0→R1 是埂頂、**R1→R2 是外側垂直面** —— 少了垂直面,掠射角就看穿一片浮空的
-// 土色薄片(同 A44 ③「演出 ⊆ 碰撞盒」那一族的道理:看得見的東西要有厚度)。
-// 「夠大片才加」= `BUND.MIN_N`:一塊孤田圍一圈埂讀起來像花壇,連成一片的拼布才是農地。
+// ==== Farm bunds (2026-08-13 user decision: fix alignment + only bund large-enough clusters) ====
+// User words: terrain patches sometimes join badly, e.g. fields not aligned; misalignment is
+// acceptable if bunds separate them. Two fixes split -- alignment lives in family extension
+// (neighbor sizes solved back from the shared axis); this is the bund half.
+// Bunds straddle the footprint border (grow only outward by HW): two face-adjacent fields stand
+// FARM_GAP = 2 x HW apart, so two bunds meet back to back on the path centerline as one continuous
+// ridge; offset pairs read as the bund turning a corner, which is what terraces/paddies do. The
+// outward half stays inside PATCH_GAP (1.0) and band-edge BORDER_BAND.PAD (1.6), so the no-overlap
+// and no-border-crossing gates do not move.
+// Three rings outward:
+//   R0 = footprint edge, dy = def.rim ?? 0 -- level with the field own rim, no gap no stab;
+//   R1 = bund crest outer edge, dy = max(rim, RISE);
+//   R2 = straight below R1, dy = 0.
+// Two bands: R0 to R1 is the crest, R1 to R2 is the outer vertical face -- without the vertical
+// face, grazing angles see through a floating soil flake (same family as A44 item 3: visible
+// things need thickness).
+// Large-enough-only = BUND.MIN_N: one lone field ringed reads as a flower bed; only a joined
+// quilt reads as farmland.
 export const BUND = {
-  HW: 0.6,      // 半寬(m):只往外長。FARM_GAP = 2×HW 是**推導**不是巧合(見上)
-  // 埂高(m);田塊自己有 rim 時取較高者 ⇒ 埂恆蓋得住 rim,不會兩條脊打架。
-  // 2026-08-13 使用者「田埂之類的也不要凸太多」:0.30 → 0.18(真實水田埂就是腳踝高;
-  // 另一半的「凸」是貼合抬升拿錯弦長,見 SAG 檔頭 ⑥ 與上面 emitBund 的呼叫端)
+  HW: 0.6,      // Half width (m): grows outward only. FARM_GAP = 2xHW is derived, not coincidence (see above)
+  // Crest height (m); fields with their own rim take the taller, so bunds always cover rims and
+  // no two ridges fight.
+  // 2026-08-13 user report: bunds should not bulge much: 0.30 to 0.18 (true paddy bunds are
+  // ankle-high; the other half of bulge was drape lift with the wrong chord length, see SAG
+  // header item 6 and the emitBund callers above)
   RISE: 0.18,
-  MIN_N: 3,     // 「組合夠大片」的門檻(同一叢集內的農田塊數)
-  SEG_M: 3,     // 沿埂的取樣間距(m):要跟得上地形起伏,又不必比田塊自己的 7×6 網格細
-  UVS: 1 / 6,   // 埂頂的世界投影 UV 尺度 ⇒ 相鄰兩塊的夯土紋路連續延伸
+  MIN_N: 3,     // Large-enough threshold (farm patches inside one cluster)
+  SEG_M: 3,     // Sample spacing along bunds (m): tracks terrain without going finer than the field own 7x6 grid
+  UVS: 1 / 6,   // Crest world-projected UV scale, so rammed-earth print runs continuously across neighbors
 };
-export const FARM_GAP = BUND.HW * 2;   // 家族延伸的田間小路寬(兩條埂恰好在中線接上)
-// 矩形環:同一組參數只差半跨 ⇒ 逐 index 對應(內外環的角落互相對到角落)
+export const FARM_GAP = BUND.HW * 2;   // Farm path width from family extension (two bunds meet exactly on centerline)
+// Rect ring: same params differing only in half-span map index to index (inner/outer corners meet)
 function bundRing(a, c, ns, nd) {
   const p = [];
   for (let i = 0; i < ns; i++) p.push([-a + 2 * a * i / ns, -c]);
@@ -589,51 +656,55 @@ function emitBund(b, terrain, x, z, r, rot, def, lift, sag) {
   const ca = Math.cos(rot), sa = Math.sin(rot);
   const world = ([lx, lz]) => [x + lx * ca - lz * sa, z + lx * sa + lz * ca];
   const L = IN.length;
-  // 外環的累積周長:垂直面的 u 走弧長(拿頂投影會把 0.3m 高的面拉成一條抹開的條紋)
+  // Outer-ring cumulative arc length: vertical faces use arc-length u (top projection would
+  // stretch a 0.3m face into a smeared stripe)
   const arc = new Array(L + 1).fill(0);
   for (let k = 0; k < L; k++) {
     const [ax, az] = OUT[k], [bx, bz] = OUT[(k + 1) % L];
     arc[k + 1] = arc[k] + Math.hypot(bx - ax, bz - az);
   }
   const base0 = b.base;
-  // 四圈頂點:0 埂內緣 / 1 埂頂外緣 / 2 垂直面上緣(與 1 同位,只換 UV 與法線)/ 3 裙底。
-  // 2 之所以要另存一圈:埂頂走世界投影 UV、垂直面走弧長 UV,共用頂點就是把 0.3m 高的面
-  // 拉成一條抹開的條紋。帶 = 0→1(埂頂)與 2→3(外側垂直面)。
+  // Four vertex rings: 0 bund inner edge / 1 crest outer edge / 2 vertical-face top edge (same
+  // position as 1, different UV and normals) / 3 skirt base. Ring 2 exists because crests use
+  // world-projected UV while vertical faces use arc-length UV; sharing vertices would stretch a
+  // 0.3m face into a smeared stripe. Bands = 0 to 1 (crest) and 2 to 3 (outer vertical face).
   const RINGS = [[IN, rim, 0], [OUT, crest, 0], [OUT, crest, 1], [OUT, 0, 1]];
   RINGS.forEach(([P, dy, wall]) => {
     for (let k = 0; k < L; k++) {
       const [wx, wz] = world(P[k]);
       b.pos.push(wx, terrain.heightAt(wx, wz) + lift + dy + sag(wx, wz), wz);
-      if (wall) {                                       // 外側垂直面:法線朝外(折邊才畫得出線)
+      if (wall) {                                       // Outer vertical face: normals point out (creases draw lines)
         const [ox, oz] = world(OUT[k]), [ix, iz] = world(IN[k]);
         const nl = Math.hypot(ox - ix, oz - iz) || 1;
         b.nrm.push((ox - ix) / nl, 0, (oz - iz) / nl);
-        b.lnrm.push((ox - ix) / nl, 0, (oz - iz) / nl);   // 勾線資訊緩衝吃**真的**面法線 ⇒ 埂頂折邊出線
+        b.lnrm.push((ox - ix) / nl, 0, (oz - iz) / nl);   // Ink buffer eats true face normals, so crest creases draw
         b.uv.push(arc[k] * BUND.UVS, dy > 0 ? 0 : 1);
       } else {
-        // 埂頂與其他貼地層同規:受光走 (0,1,0)(不隨坡面翻),勾線那一份給真地形法線 ——
-        // 少了後者,埂底下的稜線畫不出來、而埂與田的交界會冒出一條假線(landNrmAt 檔頭)
+        // Crests follow the same rule as other ground layers: lighting uses (0,1,0) without slope
+        // tilt, while the ink copy gets true terrain normals -- without the latter, ridges under
+        // the bund draw nothing and the bund-field seam grows a false line (see landNrmAt header)
         b.nrm.push(0, 1, 0);
         pushLandN(b, terrain.heightAt, wx, wz, terrain.gridM);
         b.uv.push(wx * BUND.UVS, wz * BUND.UVS);
       }
-      // 埂頂暖土、內緣略帶田色(與田塊外圈銜接)、裙底壓暗
+      // Warm crest soil, inner edge tinted with field color (meets the field rim), skirt base darkened
       const s = P === IN ? 0.88 : wall && dy === 0 ? 0.72 : 1;
       b.col.push(0.78 * s, 0.66 * s, 0.5 * s, 1);
     }
   });
-  for (const A of [base0, base0 + 2 * L]) {             // 0→1 埂頂、2→3 垂直面
+  for (const A of [base0, base0 + 2 * L]) {             // 0 to 1 crest, 2 to 3 vertical face
     const B = A + L;
     for (let k = 0; k < L; k++) {
       const k2 = (k + 1) % L;
-      // 繞向同 emitRect 的 (a, f, e) 慣例:(p0, p0+沿環, p0+往外/往下)⇒ 埂頂朝 +y、面朝外
+      // Same winding convention as emitRect (a, f, e): (p0, p0+along-ring, p0+outward/down) gives
+      // crest facing +y and faces pointing out
       b.idx.push(A + k, A + k2, B + k, A + k2, B + k2, B + k);
     }
   }
   b.base += 4 * L;
 }
 
-// 矩形田塊/場地:6×7 網格貼地;rim = 外圈隆起田埂(暖土頂點色),否則外圈墨線
+// Rect fields/courts: 6x7 draped grid; rim = raised outer bund (warm soil vertex color), else outer ink line
 function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd, sag) {
   const w = r * 2, d = r * 2 * (def.aspect || 0.7);
   const step = Math.min(2, terrain.gridM || 2);
@@ -654,7 +725,7 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd, sa
       pushLandN(b, terrain.heightAt, vx, vz, terrain.gridM);
       if (def.uv === 'fit') {
         const u = i / (nx - 1), v = j / (nz - 1);
-        b.uv.push(flipU ? 1 - u : u, flipV ? 1 - v : v);   // 隨機雙軸鏡射:同變體場地四款朝向
+        b.uv.push(flipU ? 1 - u : u, flipV ? 1 - v : v);   // Random dual-axis mirror: four orientations per court variant
       } else b.uv.push(vx * def.uvS, vz * def.uvS);
       b.col.push(cr * pt[0], cg * pt[1], cb * pt[2], 1);
     }
@@ -669,54 +740,66 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd, sa
   void rnd;
 }
 
-// ==== 底毯選款區塊:同一種地貌裡「顏色」的最小尺度(2026-08-12 使用者需求)====
-// 「地貌拼圖有時候綠突然變紅又突然變灰,如果是同一類型(市區/綠地/裸露地/水域/濕地),
-//   盡可能不要短距離快速變化地貌拼圖顏色」。
-// 病灶:選款是「低頻雜訊 t → 清單索引」的**逐格**取值,而一份清單有 10~12 款、t 的梯度在
-// 雜訊場的陡處可以在十幾公尺內橫掃好幾個索引 ⇒ 沿著那條帶走過去就是 turf→flowerfield→
-// deadwood(綠→紅→灰)。每一格自己都「照規則」選的,沒有任何既有斷言看得出問題。
-// 新制:選款的**取值點**改成區塊(lot)—— 抖動格點的最近點分割(jittered-Voronoi / Worley),
-// 同一個 lot 內的格子一律拿 lot 中心那一個 t ⇒ 同一種地貌裡的顏色至少走過一個 lot 才會換。
-// 四條:
-//   ①**純函式**(座標雜湊,零 rnd / 零 Math.random,§2.3)⇒ 跨客戶端逐位元一致、插在
-//     建構流程任何位置都不推移植被佈局;
-//   ②**只作用在分區之內** —— 分區(green/bare/urban/wet/water/alpine)仍逐格由影像/坡度/
-//     envCode 定,lot 只決定「這一格在它自己的分區清單裡挑哪一款」⇒ 真實的地貌界線一格
-//     都沒有被推移(界線拼圖與外溢吃的是同一份 zoneGrid);
-//   ③**抖動 MUST < 0.5 格距**:超過的話最近的 lot 中心可能落在 3×3 候選之外,分割會出現
-//     「兩格中間各自認不同 lot」的破洞,而畫面上只表現成偶爾一格顏色跳掉;
-//   ④間距以底毯格數計 ⇒ 改 cell(隨圖幅推導)時自己跟著走,MUST NOT 手寫公尺數。
-// 2026-08-13 使用者再次回報「同一類型盡可能不要短距離快速變化子類別」⇒ 這一輪三管齊下,
-// 三件事各修病灶的一半,MUST NOT 只做其中一件:
-//   ㋐ 換款的**頻率**:lot 6 → 9 格(78m → 117m)+ 選款場的波長加倍(CARPET_SEL);
-//   ㋑ 換款的**幅度**:清單改成顏色路徑(carpetOrder)⇒ 索引相鄰 = 顏色相鄰;
-//   ㋒ 剩下那幾個結構上避不掉的大跳(色距 > CARPET_DE.LINE,例如雪線 icefield↔steppe 253)
-//      改成「畫一條對應地貌的分界線」(borderKindOf 的同地貌分支)—— 界線覆蓋上去,
-//      那個跳就從「突兀」變成「這裡本來就是兩片不一樣的地」。
+// ==== Carpet picking blocks: minimum color scale inside one zone (2026-08-12 user request) ====
+// User words: patches sometimes flip green-red-gray suddenly; within one type (urban/green/bare/
+//   water/wet), avoid fast short-range color jumps as much as possible.
+// Lesion: picking maps low-frequency noise t to roster index per cell, while one roster holds
+// 10-12 kinds with t gradients sweeping several indices within a dozen meters on steep noise
+// slopes, so walking that band reads turf to flowerfield to deadwood (green-red-gray). Every cell
+// follows the rule, and no existing assertion can see the problem.
+// New rule: move the sampling point to blocks (lots) -- jittered-grid nearest-point split
+// (jittered-Voronoi / Worley); every cell in one lot takes t at the lot center, so colors inside
+// one zone change at most once per lot.
+// Four rules:
+//   1. Pure function (coordinate hash, zero rnd / zero Math.random, 2.3): bit-identical across
+//      clients, and placed anywhere in the build flow it never shifts vegetation layout;
+//   2. Acts only inside its zone -- zones (green/bare/urban/wet/water/alpine) still resolve per
+//      cell from imagery/slope/envCode; a lot only picks which kind inside that cell own roster,
+//      so true terrain borders do not move by one cell (border puzzles and spillover eat the same
+//      zoneGrid);
+//   3. Jitter MUST stay under 0.5 pitch: beyond that the nearest lot center can fall outside the
+//      3x3 candidates, opening holes where two middle cells claim different lots, reading on
+//      screen as an occasional single-cell color jump;
+//   4. Spacing counts in carpet cells, so retuning cell (derived per map size) carries it along;
+//      MUST NOT hand-write meters.
+// 2026-08-13 user follow-up (same type should not jump sub-kinds at short range) gets three
+// coordinated fixes, each curing half the lesion; MUST NOT ship only one:
+//   (a) Swap frequency: lots 6 to 9 cells (78m to 117m) plus doubled picking-field wavelength
+//   (CARPET_SEL);
+//   (b) Swap amplitude: rosters become color paths (carpetOrder), so index adjacency = color
+//   adjacency;
+//   (c) Remaining structurally unavoidable jumps (distance over CARPET_DE.LINE, e.g. snowline
+//      icefield vs steppe 253) draw that zone own divider (borderKindOf same-zone branch) --
+//      once covered, the jump reads as two genuinely different grounds meeting.
 export const CARPET_LOT = { CELLS: 9, JIT: 0.42 };
-// 選款場的取樣(唯一縫;`cellSubAt` 與稽核的對照組同吃 —— 手抄一份頻率進稽核,調完頻率
-// 那一段就在量一個已經不存在的舊制)。W/QC_W = 波數(1/m);SPAN/QC_A = 值域與準晶體項權重。
-// 兩項的尺度算法不同(vnoise 是單位格距的值雜訊 ⇒ 特徵尺度 = 1/W;準晶體是平面波和 ⇒
-// 波長 = 2π/QC_W):W 0.006 → 0.0032 是 167m → 313m,QC_W 0.035 → 0.018 是 180m → 349m。
-// **兩者 MUST 同步放大** —— 只放大其中一個,另一個就成了新的最短換款尺度,而畫面上看起來
-// 完全沒改善。
-// SPAN 2.2 → 1.4 是**這一輪不得不動的一格**:`vnoise` 的邊際分布是鐘形(實測 p05 0.148 /
-// p95 0.851,不是均勻),×2.2 的有效取樣窗只有 [0.273, 0.727] ⇒ **三成的取樣被夾在兩端**,
-// 首尾兩個槽位各拿到 ~20% 而中間每一格只有 4~5%(實測 8 顆種子 × 90000 格)。清單改成顏色
-// 路徑之後,「首尾」就是**顏色的兩個極端** —— 也就是說每一種地貌的畫面會被它自己最極端的
-// 兩個顏色佔掉四成,那正是使用者說的「突兀」的另一半;而「紅磚地大幅調降」在舊制下根本
-// 做不到(brick 是市區清單裡色相最遠的一款 ⇒ 恆落在端點 ⇒ 恆拿 20%,寫幾格權重都沒用)。
-// 1.4 是實測**逐槽位佔比最接近宣告權重**的值(清單長 10:7.6~11.9% vs 宣告 10%;長 15:
-// 4.1~8.6% vs 6.7%;2.2 是 6.2~22.5%,1.0 又倒過來變成中間 16.8% / 兩端 2.1%)。
+// Picking-field sampling (single seam; cellSubAt and the audit control eat the same -- hand-copy
+// one frequency into the audit and that section measures a dead old rule after a retune).
+// W/QC_W = wave numbers (1/m); SPAN/QC_A = range and quasi-crystal term weight. The two terms
+// scale differently (vnoise is unit-pitch value noise, so feature scale = 1/W; quasi-crystal is a
+// plane-wave sum, so wavelength = 2 pi / QC_W): W 0.006 to 0.0032 means 167m to 313m, QC_W 0.035
+// to 0.018 means 180m to 349m. Both MUST grow together -- growing only one leaves the other as
+// the new shortest swap scale while the screen looks unimproved.
+// SPAN 2.2 to 1.4 is the one box this round MUST move: vnoise marginals are bell-shaped (measured
+// p05 0.148 / p95 0.851, not uniform), so times 2.2 the effective window is only 0.273 to 0.727,
+// trapping 30 percent of samples at the ends, with each end slot taking about 20 percent and each
+// middle cell only 4-5 percent (8 seeds x 90000 cells). Once rosters become color paths, the ends
+// are the two color extremes -- meaning 40 percent of every zone frame would be its own most
+// extreme colors, half of the reported abruptness; and cutting brick usage hard is impossible under
+// the old rule (brick is the farthest hue on the urban roster, so it always lands on an end, always
+// takes 20 percent, no weight count helps). 1.4 is the measured value whose per-slot shares track
+// declared weights closest (length 10: 7.6-11.9 vs declared 10 percent; length 15: 4.1-8.6 vs 6.7;
+// 2.2 gives 6.2-22.5, 1.0 flips to middle 16.8 / ends 2.1).
 export const CARPET_SEL = { W: 0.0032, SPAN: 1.4, QC_W: 0.018, QC_A: 0.30 };
-// 「顏色劇烈變化」的門檻(redmean 色距;2026-08-13 使用者「顏色劇烈變化處也使用對應地貌的
-// 分界線覆蓋」)。實測(carpetOrder 排序後的清單內相鄰步距):p50 49 / p90 134 / max 253
-// ⇒ 100 恰好只圈住**結構上避不掉的那幾個大跳**:雪線 icefield↔steppe 253、龜裂地↔泥灘 157、
-// 磚地↔人行道 137、水泥↔公園 127、枯林↔礫石 134、草坪↔人行道 114、沙↔乾草原 103。
-// 門檻再低就會把整片綠地切成網狀(2026-08-11「同地貌不畫線」那條定案的病灶),再高就只剩
-// 雪線一種。**同地貌的線只由色距觸發**,地表級覆寫(BORDER_SUB_RULES)仍只作用在跨地貌。
+// Sharp-color-jump gate (redmean distance; 2026-08-13 user decision: sharp jumps get that zone
+// own divider). Measured on sorted-roster adjacent steps: p50 49 / p90 134 / max 253, so 100
+// catches exactly the structurally unavoidable jumps: snowline icefield vs steppe 253, cracked
+// earth vs mud 157, brick vs pavement 137, concrete vs park 127, deadwood vs gravel 134,
+// lawn vs pavement 114, sand vs steppe 103. Lower cuts green fields into nets (the 2026-08-11
+// no-lines-inside-same-zone lesion), higher leaves only the snowline. Same-zone lines trigger on
+// color distance only; surface-level overrides (BORDER_SUB_RULES) still act cross-zone only.
 export const CARPET_DE = { LINE: 100 };
-// 回傳 [li, lj, ci, cj]:lot 索引 + lot 中心(**格索引空間**,呼叫端自行換算成世界座標取樣)
+// Returns [li, lj, ci, cj]: lot index + lot center (cell-index space; callers convert to world
+// coords for sampling)
 export function carpetLotAt(i, j, seed, cells = CARPET_LOT.CELLS, jit = CARPET_LOT.JIT) {
   const S = Math.max(1, cells);
   const gi = Math.floor(i / S), gj = Math.floor(j / S);
@@ -724,7 +807,7 @@ export function carpetLotAt(i, j, seed, cells = CARPET_LOT.CELLS, jit = CARPET_L
   for (let oj = -1; oj <= 1; oj++) {
     for (let oi = -1; oi <= 1; oi++) {
       const li = gi + oi, lj = gj + oj;
-      // vnoise 取整數座標 = 純雜湊(雙線性的 fx/fz 皆為 0),不另寫第二支雜湊
+      // vnoise on integer coords = pure hash (bilinear fx/fz are 0), no second hash needed
       const ci = (li + 0.5 + (vnoise(li, lj, (seed ^ 0x1F3A) | 0) - 0.5) * 2 * jit) * S;
       const cj = (lj + 0.5 + (vnoise(li, lj, (seed ^ 0x77C1) | 0) - 0.5) * 2 * jit) * S;
       const dx = ci - (i + 0.5), dz = cj - (j + 0.5);
@@ -735,19 +818,22 @@ export function carpetLotAt(i, j, seed, cells = CARPET_LOT.CELLS, jit = CARPET_L
   return best;
 }
 
-// ==== 底毯花紋:同顏色的相鄰拼圖畫不同的圖案(2026-08-12 使用者需求)====
-// 「同顏色的地貌拼圖上面可以繪製多個不同的紋路/圖案/點綴/裝飾等細節,同顏色的相鄰拼圖的
-//   紋路/圖案/點綴/裝飾等細節盡可能是不同的」。
-// 舊制變體是低頻雜訊(波長 ~400m)⇒ 一整片草皮從頭到尾同一張貼圖,反重複全靠鏡射平鋪與
-// wash 撐;新制逐格挑,**硬條件 = 共邊的同款鄰格恆不同變體**(掃描序已定案的左/上兩格),
-// 軟條件 = 連對角也盡量不同(3 變體 × 8 鄰在數學上做不到全異 —— 一個 2×2 方塊裡四格兩兩
-// 相鄰,要全異得要 4 色;使用者原話也是「盡可能」)。
-// 三條刻意設計:
-//   ①**純函式**(掃描序貪婪,零 rnd,§2.3)—— 決定性 = 跨客戶端一致;
-//   ②約束只在**同一款**之間成立(異款本來就是兩張不同的貼圖,不必再換變體);
-//   ③**同款異變體不發交界外溢**(見 planSeamOverlays):變體共用底色(baseFill),交界只換
-//     花紋、沒有顏色要 cross-fade;而底毯逐格換變體之後,為它發外溢等於在整張圖上再鋪
-//     兩層半透明底毯(每格約 2 張),那是純粹的 overdraw。
+// ==== Carpet print: same-color neighbors draw different prints (2026-08-12 user request) ====
+// User words: same-color patches can carry different prints/motifs/sprinkles, and same-color
+//   neighbors should differ whenever possible.
+// Old variants were low-frequency noise (wavelength about 400m), so whole meadows wore one texture
+// with only mirrored tiling and wash against repeat; the new rule picks per cell with a hard rule
+// of edge-adjacent same-kind neighbors always differing (scan order: decided left/upper two cells)
+// and a soft rule of diagonals differing too (3 variants x 8 neighbors cannot all differ -- four
+// cells of a 2x2 block are pairwise adjacent and need 4 colors; the user words say best effort).
+// Three deliberate designs:
+//   1. Pure function (scan-order greedy, zero rnd, 2.3) -- determinism = agreement across clients;
+//   2. Constraints bind only within one kind (other kinds are already different textures, no need
+//      for another variant);
+//   3. Same-kind different-variant emits no border spillover (see planSeamOverlays): variants share
+//      the base (baseFill), borders swap prints with no color to cross-fade; and since carpet swaps
+//      variants per cell, emitting spillover for it paves two more translucent carpets over the map
+//      (about 2 per cell) of pure overdraw.
 export function planCarpetVariants(subs, gnx, gnz, { seed = 0, variants = 3 } = {}) {
   const out = new Array(gnx * gnz).fill(0);
   const at = (i, j) => (i < 0 || j < 0 || i >= gnx || j >= gnz) ? null : subs[j * gnx + i];
@@ -756,19 +842,19 @@ export function planCarpetVariants(subs, gnx, gnz, { seed = 0, variants = 3 } = 
     for (let i = 0; i < gnx; i++) {
       const s = subs[j * gnx + i];
       if (s == null || s === '!') continue;
-      const hard = [], soft = [];                       // 已定案的鄰格:共邊(硬)/ 對角(軟)
+      const hard = [], soft = [];                       // Decided neighbors: shared-edge (hard) / diagonal (soft)
       const look = (di, dj, arr) => {
         if (at(i + di, j + dj) === s) arr.push(out[(j + dj) * gnx + i + di]);
       };
       look(-1, 0, hard); look(0, -1, hard);
       look(-1, -1, soft); look(1, -1, soft);
-      const v0 = ((vnoise(i, j, (seed ^ 0x3C7B) | 0) * V) | 0) % V;   // 起手偏好逐格雜湊 ⇒ 不排成條紋
+      const v0 = ((vnoise(i, j, (seed ^ 0x3C7B) | 0) * V) | 0) % V;   // Start from per-cell hash, so picks never stripe
       let best = -1, ok = -1;
       for (let k = 0; k < V; k++) {
         const v = (v0 + k) % V;
         if (hard.includes(v)) continue;
-        if (ok < 0) ok = v;                             // 過得了硬條件的第一個(保底)
-        if (!soft.includes(v)) { best = v; break; }     // 連對角都不同 = 最佳
+        if (ok < 0) ok = v;                             // First hard-passing pick (fallback)
+        if (!soft.includes(v)) { best = v; break; }     // Diagonal-different too = best
       }
       out[j * gnx + i] = best >= 0 ? best : (ok >= 0 ? ok : v0);
     }
@@ -776,86 +862,99 @@ export function planCarpetVariants(subs, gnx, gnz, { seed = 0, variants = 3 } = 
   return out;
 }
 
-// ==== 異類交界外溢配置(2026-07-29 邊界鋸齒改制;唯一縫,稽核執行原文)====
-// 舊制 = 整格單向外溢:kA<kB 的一側把整張 cell 貼進「四鄰」鄰格(共享邊 α=1 → 對邊 0)。
-// 兩個結構性病灶就是使用者回報的「不同類型地貌邊界的不自然鋸齒」:
-//   ①交界輪廓被量化在 13m 級 cell 邊上,斜向邊界變成 90° 階梯狀鋸齒(角點抖動只能
-//     讓每段扭一下,消不掉階梯本身);②對角鄰格之間沒有任何淡出,階梯每個轉角都留
-//     一個硬缺口,鋸齒感被進一步強化(同格互疊的兩張外溢還會共面深度互吃)。
-// 新制 = 角點隸屬度雙線性淡出(dual-grid / marching-squares 語彙):
-//   角點對某 key 的權重 = 圍著該角點的四格中屬於該 key 的比例,分母只算「有毯格」
-//   (崖 '!' / 未鋪 null 不計 ⇒ 底毯淡出到崖面/圖界時交界角點權重收斂到 1,與不透明
-//   底毯無縫銜接);每格對每個「異類鄰 key」(含對角鄰)各發一張 α=角點權重的外溢格。
-//   兩側對稱互溢 ⇒ 交界中線恰為 50/50 混色;雙線性 0.5 等值線把 90° 階梯削成平滑
-//   斜線,對角權重把階梯轉角的缺口補齊;孤立單格(影像分類雜訊斑點)角點權重達
-//   0.75,自動被鄰區軟化吞掉。
-// 純函式(零 rnd / 零 Math.random,§2.3;不碰 THREE):輸入 keys 格網,輸出
-// [{ i, j, key, alphas, st }];alphas 對應 emitCell 四角 [P0(i,j), P1(i+1,j), P2(i+1,j+1), P3(i,j+1)]。
+// ==== Cross-zone spillover config (2026-07-29 border-aliasing rework; single seam, audits run source) ====
+// Old rule = whole-cell one-way spillover: the kA<kB side pastes the whole cell into four-neighbors
+// (shared edge alpha 1 to far edge 0). Its two structural lesions are the reported unnatural
+// jagged borders between terrain types:
+//   1. Border outlines quantized onto 13m cell edges turn diagonal borders into 90-degree stair jags
+//      (corner jitter only twists each run, never removes the stairs); 2. diagonal neighbors get no
+//      fade at all, so every stair corner keeps a hard notch, sharpening the jags (two spillovers
+//      stacked in one cell also eat each other in depth).
+// New rule = corner-membership bilinear fade (dual-grid / marching-squares vocabulary): a corner
+// weight for some key = share of the four cells around that corner holding that key, denominator
+// counting only carpeted cells (cliff ! and unpaved null excluded, so carpet fading to cliffs/map
+// edges converges corner weights to 1 and meets opaque carpet seamlessly); each cell emits one
+// alpha=corner-weight spillover cell per other-kind neighbor key (incl. diagonals). Symmetric spill
+// from both sides puts the border midline exactly at 50/50 mix; the bilinear 0.5 contour shaves 90
+// degree stairs into smooth diagonals, diagonal weights fill stair-corner notches; lone single
+// cells (imagery classification speckle) reach corner weight 0.75 and get softly swallowed.
+// Pure function (zero rnd / zero Math.random, 2.3; no THREE): takes the keys grid, returns
+// [{ i, j, key, alphas, st }]; alphas match emitCell corners [P0(i,j), P1(i+1,j), P2(i+1,j+1),
+// P3(i,j+1)].
 //
-// —— 逐組合交界樣式(2026-07-29 追加,使用者定案「真實世界的邊界通常不是用融合的,
-//    不同類型地貌有各自多元的邊界,有的明確、有的有各種中間過渡樣態」)——
-// 樣式以 coarse 分區「無序對」查表(SEAM_STYLES;查無 → SEAM_SOFT 柔和淡出),四種樣態:
-//   sharp  明確邊界(人工):過渡壓窄 ×sharp、擾動壓低 —— 市區對任何地貌是路緣/牆基的
-//          直線切換,不是漸層(市區↔市區換鋪面切線最直);遮蔽物層的矮牆/圍籬同組把關。
-//   soft   柔和淡出(預設):同分區異款(草皮↔花田)與其餘組合,維持雙線性 + 碎形擾動。
-//   dither 斑塊過渡:雪線/高地界不是漸層也不是直線,是「殘雪/岩屑斑塊」—— 過渡帶把 α
-//          往準晶體場的 0/1 斑塊推(端點錨定,見 seamAlpha)。
-//   mid    中間過渡樣態:交界脊帶(4·w自·w鄰,恰在 50/50 混色線達峰)疊第三種地表 ——
-//          綠地↔裸露地夾乾草原帶(steppe)、綠地/水↔濕地夾蘆葦帶(marsh)、裸露地↔濕地
-//          夾泥灘帶(mud);以低頻值雜訊「間歇」出現(midP 蓋率,峰寬 ~65m)—— 真實
-//          過渡帶本來就時有時無,整條都鑲滿反而假。
-// 三個水密不變式(稽核 Ⅴ):①脊帶用「兩 key 權重乘積」不是單邊 w(1−w) —— 三分區交點
-// 兩側才會算出同值;②間歇閘 gateAt 吃「角點座標」不是格索引 —— 逐格閘門會在格邊切出
-// 新的硬縫;③樣式端點恆定(α=0→0、1→1,見 seamAlpha)—— 交界帶盡頭與不透明底毯無縫。
+// Per-pair border styles (added 2026-07-29, user decision: real borders are usually not blends;
+// different terrain pairs own diverse borders, some crisp, some with middle transitions) --
+// styles look up coarse-zone unordered pairs (SEAM_STYLES; miss goes SEAM_SOFT gentle fade), four modes:
+//   sharp  Crisp artificial border: transition pinched by sharp, noise pressed down -- urban vs any
+//          zone switches at curb/wall-foot straight lines, not gradients (urban-vs-urban paving cuts
+//          straightest); the low-wall/fence cover layer gates the same group.
+//   soft   Gentle fade (default): same-zone different-kind (turf vs flower field) and the rest keep
+//          bilinear + fractal noise.
+//   dither Patchy transition: snowline/highland borders are neither gradients nor straight lines but
+//          remnant-snow/scree patches -- the band pushes alpha toward quasi-crystal 0/1 patches
+//          (endpoints pinned, see seamAlpha).
+//   mid    Middle transition: a border ridge band (4 times own times neighbor weight, peaking exactly
+//          on the 50/50 mix line) lays a third surface -- green-vs-bare sandwiches steppe, green or
+//          water vs wet sandwiches marsh, bare-vs-wet sandwiches mud; intermittent by low-frequency
+//          value noise (midP coverage, peak width about 65m) -- real transition bands come and go,
+//          paving the whole line reads fake.
+// Three watertight invariants (audit V): 1. ridge bands use the two-key weight product, not one-sided
+// w(1-w) -- only then both sides of a three-zone meeting compute the same; 2. intermittence gate
+// gateAt eats corner coords, not cell indices -- per-cell gates cut new hard seams at cell edges;
+// 3. style endpoints pinned (alpha 0 to 0, 1 to 1, see seamAlpha) -- band ends meet opaque carpet.
 export const SEAM_STYLES = {
-  // — 明確(人工)邊界 —
+  // -- Crisp (artificial) borders --
   'green|urban':  { sharp: 3.2, noise: 0.12 },
   'bare|urban':   { sharp: 3.2, noise: 0.12 },
   'urban|wet':    { sharp: 3.2, noise: 0.12 },
   'alpine|urban': { sharp: 3.2, noise: 0.12 },
   'urban|urban':  { sharp: 3.6, noise: 0.06 },
-  'urban|water':  { sharp: 3.2, noise: 0.10 },   // 碼頭/堤岸:硬岸線
-  // — 生態過渡帶(ecotone):寬淡出 + 高擾動 + 間歇中間樣態 —
+  'urban|water':  { sharp: 3.2, noise: 0.10 },   // Docks/embankments: hard shoreline
+  // -- Ecotone bands: wide fade + heavy noise + intermittent middle mode --
   'bare|green':   { noise: 0.5,  mid: 'steppe', midP: 0.55 },
   'green|wet':    { noise: 0.45, mid: 'marsh',  midP: 0.7 },
   'bare|wet':     { noise: 0.45, mid: 'mud',    midP: 0.6 },
-  'green|water':  { noise: 0.45, mid: 'marsh',  midP: 0.45 },   // 自然岸零星蘆葦緣(泡沫另住 buildWaterEdges)
+  'green|water':  { noise: 0.45, mid: 'marsh',  midP: 0.45 },   // Natural banks with sparse reed fringe (foam lives in buildWaterEdges)
   'water|wet':    { noise: 0.45, mid: 'marsh',  midP: 0.6 },
-  // — 雪線/高地界:斑塊狀 —
+  // -- Snowline/highland borders: patchy --
   'alpine|bare':  { dither: 1 },
   'alpine|green': { dither: 1 },
 };
-export const SEAM_SOFT = { noise: 0.4 };   // 預設:柔和淡出(同分區異款與其餘組合)
+export const SEAM_SOFT = { noise: 0.4 };   // Default: gentle fade (same-zone kinds plus the rest)
 
-// 交界頂點 α 塑形(純函式;emitCell 對外溢層逐頂點呼叫,稽核直測):
-// q = 準晶體場值 ∈[-1,1]。端點恆定:a=0→0、a=1→1(所有樣式)⇒ 與不透明底毯水密。
+// Border-vertex alpha shaping (pure function; emitCell calls per spillover vertex, audits test directly):
+// q = quasi-crystal field in [-1,1]. Endpoints pinned: a=0 to 0, a=1 to 1 (all styles), so opaque
+// carpet stays watertight.
 export function seamAlpha(a, q, st) {
   if (a <= 0) return 0;
   if (a >= 1) return 1;
   const s = st || SEAM_SOFT;
   if (s.sharp) a = Math.min(1, Math.max(0, (a - 0.5) * s.sharp + 0.5));
-  const band = a * (1 - a) * 4;                 // 過渡帶包絡:端點歸零
+  const band = a * (1 - a) * 4;                 // Transition envelope: zero at endpoints
   if (band <= 0) return a;
-  if (s.dither) {                               // 斑塊:帶內把 α 推向場的 0/1 斑塊、兩端錨定
+  if (s.dither) {                               // Patchy: push alpha inside the band toward field 0/1 patches, ends pinned
     const f = Math.min(1, Math.max(0, (a + q * 0.5 - 0.5) * 3 + 0.5));
     return a * (1 - band) + f * band;
   }
   return Math.min(1, Math.max(0, a + q * (s.noise ?? 0.4) * band));
 }
 
-// hardOf(k0, kn, i, j, ni, nj) → 這一對「畫得出分界線」嗎(呼叫端注入,規則仍只有 borderKindOf
-// 一份)。true ⇒ ①外溢改走 borderCutAlpha 的切線(overlay 帶 `cut`,見 emitCell)②中間過渡
-// 樣態脊帶**不出**:那是一條橫跨界線的第三種地表,恰好就是使用者說的「沒有正確分隔兩側地貌」。
+// hardOf(k0, kn, i, j, ni, nj): does this pair draw a divider (injected by caller; the rule
+// still lives only in borderKindOf). True means 1. spillover switches to the borderCutAlpha cut
+// line (overlay carries cut, see emitCell) and 2. the middle-transition ridge band stays out:
+// that third terrain straddling the border is exactly half of the reported borders-not-separating
+// failure.
 export function planSeamOverlays(keys, gnx, gnz, opts = {}) {
   const { coarseOf = null, seed = 0, variants = 6, hardOf = null } = opts;
   const keyAt = (i, j) => (i < 0 || j < 0 || i >= gnx || j >= gnz) ? null : keys[j * gnx + i];
-  const solid = (k) => k != null && k !== '!';          // 有毯格才算隸屬度分母/外溢來源
-  // 同款異變體不發外溢(2026-08-12):變體之間共用底色(baseFill)⇒ 交界只換花紋、沒有
-  // 顏色要 cross-fade;而底毯自從逐格挑變體(planCarpetVariants)之後,為它發外溢就是在
-  // 整張圖上再鋪兩層半透明底毯(每格約 2 張)。隸屬度分母不受影響(solid 照算)。
+  const solid = (k) => k != null && k !== '!';          // Only carpeted cells count for membership denominators/spillover sources
+  // Same-kind different-variant emits no spillover (2026-08-12): variants share the base
+  // (baseFill), so borders swap prints with no color to cross-fade; and since carpet picks variants
+  // per cell (planCarpetVariants), emitting spillover for it paves two more translucent carpets
+  // over the map (about 2 per cell). Membership denominators unaffected (solid still counts).
   const subOf = (k) => { const p = k.indexOf('#'); return p < 0 ? k : k.slice(0, p); };
   const zoneOf = (k) => (coarseOf && k != null && k !== '!') ? coarseOf(k) : null;
-  const styleOf = (za, zb) => {                         // 分區無序對 → 樣式(查無/分區未知 → 柔和)
+  const styleOf = (za, zb) => {                         // Zone unordered pair to style (miss/unknown zone goes gentle)
     if (!za || !zb) return SEAM_SOFT;
     return SEAM_STYLES[za < zb ? `${za}|${zb}` : `${zb}|${za}`] || SEAM_SOFT;
   };
@@ -864,17 +963,18 @@ export function planSeamOverlays(keys, gnx, gnz, opts = {}) {
     n = Math.imul(n ^ (n >>> 13), 1274126177);
     return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
   };
-  const vn01 = (x, z, s) => {                           // 平滑值雜訊(雙線性;間歇閘用,純函數)
+  const vn01 = (x, z, s) => {                           // Smooth value noise (bilinear; for the intermittence gate, pure)}
     const xi = Math.floor(x), zi = Math.floor(z);
     let fx = x - xi, fz = z - zi;
     fx = fx * fx * (3 - 2 * fx); fz = fz * fz * (3 - 2 * fz);
     return (hash01(xi, zi, s) * (1 - fx) + hash01(xi + 1, zi, s) * fx) * (1 - fz)
          + (hash01(xi, zi + 1, s) * (1 - fx) + hash01(xi + 1, zi + 1, s) * fx) * fz;
   };
-  // 中間樣態間歇閘:吃「角點座標」(逐角純函數 → 相鄰脊帶格共用角同值,水密);
-  // 波長 5 格 ≈ 65m,midP = 期望蓋率,0.18 軟肩讓帶頭帶尾漸收不硬切
+  // Middle-mode intermittence gate: eats corner coords (per-corner pure function, so adjacent
+  // ridge cells sharing a corner agree, watertight); wavelength 5 cells is about 65m, midP is the
+  // expected coverage, and the 0.18 soft shoulder tapers band heads/tails instead of hard cuts
   const gateAt = (ci, cj, p) => Math.min(1, Math.max(0, (p - vn01(ci / 5, cj / 5, 0x51AB)) / 0.18));
-  const cornerW = (k, ci, cj) => {                      // 角點 (ci,cj) 由 (ci-1..ci, cj-1..cj) 四格圍繞
+  const cornerW = (k, ci, cj) => {                      // Corner (ci,cj) is ringed by the four cells (ci-1..ci, cj-1..cj)
     let n = 0, valid = 0;
     for (const [oi, oj] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) {
       const kk = keyAt(ci + oi, cj + oj);
@@ -882,8 +982,8 @@ export function planSeamOverlays(keys, gnx, gnz, opts = {}) {
     }
     return valid ? n / valid : 0;
   };
-  const midVar = (sub) => {                             // 脊帶變體:每圖每樣態固定一款 —— 帶與帶之間
-    let h = seed | 0;                                   // 沒有 crossfade,逐格/逐區換款會在帶峰上切出換款縫
+  const midVar = (sub) => {                             // Ridge-band variant: one fixed kind per map per mode -- without
+    let h = seed | 0;                                   // crossfade, per-cell/per-zone swaps cut swap seams on band peaks
     for (let c = 0; c < sub.length; c++) h = (Math.imul(h, 31) + sub.charCodeAt(c)) | 0;
     h = Math.imul(h ^ (h >>> 13), 1274126177);
     return ((h ^ (h >>> 16)) >>> 0) % variants;
@@ -892,9 +992,9 @@ export function planSeamOverlays(keys, gnx, gnz, opts = {}) {
   for (let j = 0; j < gnz; j++) {
     for (let i = 0; i < gnx; i++) {
       const k0 = keyAt(i, j);
-      if (k0 == null) continue;                        // 未鋪格(水色灰帶/岸線)維持留空,不收外溢
+      if (k0 == null) continue;                        // Unpaved cells (water-gray bands/shorelines) stay empty, collect no spillover
       const z0 = zoneOf(k0);
-      const seen = new Set(), seenMid = new Set();     // '!' 崖格可收外溢(淡出融入崖面)但不外溢
+      const seen = new Set(), seenMid = new Set();     // Cliff cells collect spillover (fade into cliffs) but emit none
       const cs = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]];
       for (let oj = -1; oj <= 1; oj++) {
         for (let oi = -1; oi <= 1; oi++) {
@@ -902,17 +1002,20 @@ export function planSeamOverlays(keys, gnx, gnz, opts = {}) {
           const kn = keyAt(i + oi, j + oj);
           if (!solid(kn) || kn === k0 || seen.has(kn)) continue;
           seen.add(kn);
-          if (subOf(kn) === subOf(k0)) continue;       // 只換花紋不換底色 ⇒ 沒有要 cross-fade 的東西
+          if (subOf(kn) === subOf(k0)) continue;       // Print-only swap over a shared base has nothing to cross-fade
           const st = styleOf(z0, zoneOf(kn));
           const hard = hardOf ? !!hardOf(k0, kn, i, j, i + oi, j + oj) : false;
           const alphas = [cornerW(kn, i, j), cornerW(kn, i + 1, j),
                           cornerW(kn, i + 1, j + 1), cornerW(kn, i, j + 1)];
-          // cut = 鄰格方向(格索引差,只取方向)⇒ 消費端據此判「分界線的哪一側是鄰格的地盤」。
-          // 取方向而不是取鄰格中心點:拉直後的弦可能從格子中間穿過,拿點去比會讓整格翻面。
+          // cut = neighbor-cell direction (cell-index delta, direction only): consumers use it to
+          // tell which side of the divider belongs to the neighbor. Direction, not the neighbor
+          // center: a straightened chord can cross mid-cell, and comparing points would flip whole
+          // cells.
           if (alphas[0] || alphas[1] || alphas[2] || alphas[3]) {
             out.push({ i, j, key: kn, alphas, st, cut: hard ? { di: oi, dj: oj } : null });
           }
-          // 中間過渡樣態:兩 key 權重乘積的脊帶(50/50 混色線達峰 → 蓋住殘縫),間歇出現
+          // Middle transition: ridge band from the two-key weight product (peaks on the 50/50 mix
+          // line to cover leftover seams), intermittent
           if (st.mid && z0 && !hard && !seenMid.has(st.mid)) {
             const bandAl = [0, 0, 0, 0];
             let mx = 0;
@@ -934,29 +1037,37 @@ export function planSeamOverlays(keys, gnx, gnz, opts = {}) {
   return out;
 }
 
-// ==== 多層次地貌:大區域中的小區域組合風格(2026-07-29 使用者需求)====
-// 「大區域中的小區域的樣貌風格不同」:同一種 coarse 分區,包在誰裡面就長成誰的樣子 ——
-//   市區內的小綠地 = 公園/私人庭園、小水域 = 公園埤塘/滯洪池、小裸露地 = 待建工地;
-//   綠地內的小市區 = 農村市集/村落、小水域 = 天然湖泊/堰塞湖;裸露地內的小綠地 = 綠洲、
-//   小市區 = 小鎮 …… 逐「內@外」組合查表(ENCLAVE_STYLES),查無 = 維持原分區清單。
-// planEnclaves = 包裹判定唯一縫(純函式:零 rnd / 零 Math.random / 零 THREE,§2.3;
-// 稽核 tools/audit_ground_enclave.mjs 執行原文):對 coarse 分區格網做 4-鄰連通元件,
-// 面積 ∈ [MIN_CELLS, MAX_CELLS] 且實心鄰格邊界的單一外側分區佔比 ≥ OUTER_MIN 的元件
-// = 被包裹的小區域(enclave),整個元件標上 `${內}@${外}` 樣式鍵。三條刻意設計:
-//   ①崖 '!' / 未鋪 null 不算邊界分母 —— 被崖圈住 ≠ 被誰包住(全崖邊界 = 不標);
-//   ②超過 MAX_CELLS 的元件照樣走訪完(標 seen)只是不標 —— 大區域維持本色、不重複掃描;
-//   ③外側分區不夠單一(< OUTER_MIN)不標 —— 交界犬牙的凸出部不是「被包住」;
-//   ④觸圖界不標 —— 貼著地圖邊的區域延伸到圖外、範圍不明,不算被包住(§4 寧缺勿錯;
-//     同時堵住「甜甜圈區域被自己包著的洞反標」:環外緣若在圖界上就直接淘汰)。
-// 消費端全在 buildGroundCover(樣式表 = 唯一真相,MUST NOT 在消費端硬編第二份組合表):
-//   底毯 cellKeyAt 換 carpet 清單、特徵層主散佈與沿街陣列換 feats 池、tryPatch 分區
-//   把關對 enclave 格內的樣式地表放行(僅限格內,不外漏)、watertile 細節依 det 換
-//   水生點綴(埤塘荷葉/天然湖蘆葦岸/荒漠湧泉)。純表現層:不動碰撞/raycast/伺服器。
+// ==== Multi-level terrain: small-in-large area styles (2026-07-29 user request) ====
+// Small areas inside large ones wear the host look: same coarse zone reads differently by host --
+//   small green inside urban = parks/gardens, small water = park ponds/detention ponds, small bare =
+//   construction sites; small urban inside green = farm markets/hamlets, small water = natural
+//   lakes/landslide lakes; small green inside bare = oases, small urban = towns ... looked up per
+//   inner@outer pair (ENCLAVE_STYLES); miss keeps the home zone roster.
+// planEnclaves = the single enclosure seam (pure function: zero rnd / zero Math.random / zero
+// THREE, 2.3; audit tools/audit_ground_enclave.mjs runs the source): 4-neighbor connected
+// components over the coarse zone grid; components with area within MIN_CELLS..MAX_CELLS whose
+// solid-neighbor border share of one outer zone reaches OUTER_MIN count as enclosed small areas,
+// and the whole component is tagged inner@outer. Three deliberate designs:
+//   1. Cliff ! and unpaved null do not count in border denominators -- ringed by cliffs is not
+//      enclosed by anyone (all-cliff border = untagged);
+//   2. Components over MAX_CELLS are still fully walked (marked seen) but untagged -- large areas
+//      keep their look with no rescan;
+//   3. Insufficiently single outer zone (< OUTER_MIN) untagged -- border-serration lobes are not
+//      enclosure;
+//   4. Map-edge-touching untagged -- edge zones run off-map with unknown extent, so not enclosed
+//      (section 4: omit rather than err; also blocks donut holes self-tagging: a ring whose outer
+//      edge touches the map border is dropped directly).
+// All consumers live in buildGroundCover (style table = single truth; MUST NOT hard-code a second
+// combo table at consumers): carpet cellKeyAt swaps carpet rosters, feature main scatter and street
+// arrays swap feat pools, tryPatch zone gates admit style surfaces only inside enclave cells (never
+// leaking out), watertile details swap aquatic sprinkles by det (pond lotus / natural-lake reed
+// banks / desert springs). Presentation only: no collision/raycast/server changes.
 export const ENCLAVE = { MAX_CELLS: 160, MIN_CELLS: 2, OUTER_MIN: 0.6 };
-// carpet = 底毯清單(重複項 = 權重;subs MUST ∈ CARPET/ZONES 聯集,coarse 歸屬才查得到)
-// feats  = 特徵拼圖池(subs MUST ∈ DEFS 且有 SIZE);det = 水域點綴樣態(watertile 分支)
+// carpet = carpet roster (duplicates = weight; subs MUST sit in the CARPET/ZONES union so coarse
+// lookup finds them)
+// feats = feature puzzle pool (subs MUST sit in DEFS with SIZE); det = water sprinkle mode (watertile branch)
 export const ENCLAVE_STYLES = {
-  // — 市區內的小片異類 —
+  // -- Small other-kind pockets inside urban --
   'green@urban': { name: '公園/私人庭園',
     carpet: ['park', 'lawn', 'park', 'flowerfield', 'turf', 'lawn'],
     feats:  ['park', 'flowerfield', 'park', 'veggiefield'] },
@@ -967,10 +1078,11 @@ export const ENCLAVE_STYLES = {
     carpet: ['lotus', 'marsh', 'lotus'],
     feats:  ['lotus', 'park'] },
   'water@urban': { name: '公園埤塘/滯洪池', det: 'pond' },
-  // — 綠地內 —
+  // -- Inside green --
   'urban@green': { name: '農村市集/村落',
-    // brick 由 2/4 稀釋到 1/9(小鎮/農村的 enclave 正是市區底毯最集中的地方 —— 實測 kyoto
-    // 這一格沒稀釋時,紅磚仍佔全圖底毯 21%,而 CARPET.urban 那邊早就降到 7%)
+    // brick diluted 2/4 to 1/9 (town/hamlet enclaves concentrate urban carpet most -- kyoto
+    // measurement: undiluted, brick still took 21 percent of map carpet while CARPET.urban had
+    // long dropped to 7 percent)
     carpet: ['pavement', 'lawn', 'pavement', 'pavement', 'lawn', 'pavement', 'pavement', 'lawn', 'brick'],
     feats:  ['plaza', 'veggiefield', 'greenhouse', 'gasstation'] },
   'bare@green':  { name: '廢耕地/伐採跡地',
@@ -980,7 +1092,7 @@ export const ENCLAVE_STYLES = {
   'wet@green':   { name: '天然湖沼',
     carpet: ['marsh', 'lotus', 'marsh'],
     feats:  ['marsh', 'lotus'] },
-  // — 裸露地內 —
+  // -- Inside bare --
   'green@bare':  { name: '綠洲',
     carpet: ['turf', 'bushfield', 'flowerfield', 'turf'],
     feats:  ['orchard', 'bushfield', 'flowerfield'] },
@@ -992,14 +1104,14 @@ export const ENCLAVE_STYLES = {
   'wet@bare':    { name: '鹽沼窪地',
     carpet: ['marsh', 'marsh'],
     feats:  ['saltpan', 'marsh'] },
-  // — 濕地內 —
+  // -- Inside wet --
   'green@wet':   { name: '沙洲草澤島',
     carpet: ['meadow', 'turf', 'bushfield'],
     feats:  ['bushfield', 'flowerfield'] },
   'urban@wet':   { name: '漁村埠頭',
     carpet: ['pavement', 'pavement', 'pavement', 'pavement', 'lawn', 'pavement', 'pavement', 'brick'],
     feats:  ['fishpond', 'plaza'] },
-  // — 高地相關(alpine 由相對高程觸發,孤峰/山中草甸天然形成 enclave)—
+  // -- Highland-related (alpine triggers on relative height; lone peaks/meadow enclaves form naturally) --
   'green@alpine': { name: '高山草甸',
     carpet: ['steppe', 'meadow', 'steppe', 'turf'],
     feats:  ['steppe', 'flowerfield'] },
@@ -1020,7 +1132,8 @@ export function planEnclaves(zones, gnx, gnz, opts = {}) {
       seen[idx0] = 1;
       const zn = zones[idx0];
       if (!solid(zn)) continue;
-      // 4-鄰連通元件(BFS);邊界計數 = 元件周長上每段「實心異類鄰格」各記一票(周長加權)
+      // 4-neighbor connected component (BFS); border counts = one vote per solid other-kind
+      // edge segment on the component perimeter (perimeter-weighted)
       const comp = [idx0];
       const border = Object.create(null);
       let nb = 0, edge = false;
@@ -1039,95 +1152,117 @@ export function planEnclaves(zones, gnx, gnz, opts = {}) {
       if (edge || comp.length < minCells || comp.length > maxCells || !nb) continue;
       let outer = null, bestN = 0;
       for (const z in border) if (border[z] > bestN) { bestN = border[z]; outer = z; }
-      if (bestN < nb * outerMin) continue;   // 外側不夠單一 = 交界犬牙,不是被包住
+      if (bestN < nb * outerMin) continue;   // Outer not single enough = serration lobe, not enclosure
       const key = `${zn}@${outer}`;
-      if (!styles[key]) continue;            // 查無組合 = 維持原分區樣貌
+      if (!styles[key]) continue;            // Unknown combo = keep home zone look
       for (const idx of comp) out[idx] = key;
     }
   }
   return out;
 }
 
-// ==== 地貌界線拼圖(2026-08-11 使用者需求)====
-// 「不同類型大面積地貌區塊之間的邊界,透過設計 16 個方向的直線/轉彎/岔路的拼圖組合拼接,
-//   作為地貌類型的分界(拼圖概念類似卡卡頌);地貌界線拼圖採用步道小徑/林道/碎石土徑/
-//   田埂/水溝/小溪/圍籬/灌木矮牆/沙灘/岩塊/紅樹林等自然或人工分界線作為專屬拼貼圖案,
-//   不同類型的分界線可接力連結。」
-// 分層(單一縫 = 本區塊;稽核 tools/audit_ground_border.mjs 執行原文,對照組內建):
-//   型錄 BORDER_KINDS —— 11 種分界線(flat 貼地紋理帶 / ridge 立體梯形脊,或兩者兼有);
-//   樣式 BORDER_STYLES(coarse 分區無序對 → 種類;查無 = 不擺,寧缺勿錯)+
-//        BORDER_SUB_RULES(地表級覆寫:竹林/枯木 → 林道、花田 → 田埂、沙 → 沙灘);
-//        解析只有 borderKindOf 一份,消費端 MUST NOT 另寫第二份對照表;
-//   規劃 planBorderPuzzle —— 純函式(零 rnd / 零 Math.random / 零 THREE,§2.3):
-//     ① 底毯 keys 格網上「地表(sub)不同」的相鄰實心格之間收邊界邊(同地表異變體花紋
-//        本就連續,不成界;'!' 崖與 null 未鋪不成界),逐邊解析種類(null 的邊不收);
-//     ② 邊接共享角點成圖,度數 ≠2 的角點 = 鏈端點/岔路(fork),圖遍歷成鏈(含閉環);
-//     ③ 16 方向量化(BORDER_DIRS):鏈內貪婪合併直段 —— 被略過角點到弦的垂距 ≤ driftMax
-//        才併入;切點恆取自原始共享角點(端點錨定 ⇒ 鏈間/岔路拼接零開縫;拼接優先於
-//        「弦角恰為格心」—— 弦方位與 bin 中心的誤差由 round 保證 ≤ 半格 11.25°);
-//     ④ tile 輸出 { x0,z0,x1,z1, bin, kind, turn, drift }:相鄰 tile bin 改變 = 轉彎;
-//        種類逐邊解析、同鏈內隨鄰區改變 = 接力(切點雙方共用);度數 ≥3 的角點進 forks
-//        (岔路拼圖,多種分界線在此交會接力)。
-// 發射(buildGroundCover 內的消費端)只負責畫;純表現層:無碰撞、不描邊、不進 raycast
-// (原則 4;空地照常通行)。
-export const BORDER_DIRS = 16;   // 拼圖方向數(22.5° 一格;與道路 16 方向量化同語彙)
-// flat = 貼地紋理帶(w 寬 m、tex 畫筆鍵 → BORDER_PAINTERS)/ ridge = 梯形脊(w 底寬/wt 頂寬/
-// h 高/jit 頂高抖動比/color,'foliage' = 季節葉色);aq = 貼水種類(允許落在水線下,頂點夾
-// 到水面上)。
-// **每一種 MUST 有 flat**(2026-08-11 使用者定案「分界線可以粗一點、上面的圖畫可以更細緻」):
-// 貼地帶才是「界線」本體 —— 它同時扛三件事 ①看得出這是一條有圖案的界線(純立體脊只有一根
-// 細桿,遠看就是「意義不明的線條」)②蓋住底毯 13m 格網被拉直時跳過的那段真實界線
-// (§ planBorderPuzzle 的 driftMax)③兩側地貌的切線(borderCut)恰在它底下換手。
-// 立體脊自此是**加在帶上的擺件**(田埂的土埂、圍籬的木樁、樹籬、岩塊),不再單獨成界。
+// ==== Terrain border puzzle (2026-08-11 user request) ====
+// Borders between large terrain blocks use 16-direction straight/turn/fork pieces joined as type
+//   boundaries (Carcassonne-like); border puzzles use trail/forest-road/gravel-path/field-ridge/
+//   ditch/stream/fence/hedgerow/beach/rocks/mangrove natural or artificial dividers as dedicated
+//   prints, and different divider kinds can relay-link.
+// Layers (single seam = this block; audit tools/audit_ground_border.mjs runs the source with
+// built-in controls):
+//   Catalog BORDER_KINDS -- 11 divider kinds (flat ground texture band / ridge solid trapezoid
+//   spine, or both);
+//   Styles BORDER_STYLES (coarse-zone unordered pair to kind; miss = skip, omit rather than err) +
+//        BORDER_SUB_RULES (surface-level override: bamboo/deadwood to forest road, flower field
+//        to field ridge, sand to beach); resolution lives only in borderKindOf, consumers MUST NOT
+//        write a second table;
+//   Plan planBorderPuzzle -- pure function (zero rnd / zero Math.random / zero THREE, 2.3):
+//     1. Collect boundary edges between adjacent solid cells differing in surface (sub) on the
+//        carpet keys grid (same-surface different-variant prints are already continuous, not a
+//        border; cliff ! and unpaved null form none), resolving kind per edge (kind-less edges
+//        dropped);
+//     2. Edges join at shared corners into a graph; corners of degree != 2 are chain ends/forks,
+//        graph walked into chains (incl. loops);
+//     3. 16-direction quantization (BORDER_DIRS): greedily merge straights inside chains -- skipped
+//        corners join only if their distance to the chord stays within driftMax; cut points always
+//        come from original shared corners (endpoint anchoring gives zero-gap chain/fork joins;
+//        joining outranks chord-angles-hitting-cell-centers -- chord bearing vs bin center error is
+//        bounded by round to half a bin, 11.25 deg);
+//     4. Tiles emit x0,z0,x1,z1, bin, kind, turn, drift: a bin change between neighbors = a turn;
+//        kinds resolve per edge and relay as neighbors change inside one chain (cut points shared);
+//        corners of degree >= 3 enter forks (fork puzzles where divider kinds meet and relay).
+// Emission (consumers inside buildGroundCover) only draws; presentation-only: no collision, no
+// outline, no raycast (principle 4; open ground stays walkable).
+export const BORDER_DIRS = 16;   // Puzzle direction count (22.5 deg per bin; same vocabulary as road 16-dir)
+// flat = ground texture band (w width in m, tex painter key to BORDER_PAINTERS) / ridge =
+// trapezoid spine (w base width / wt top width / h height / jit top-height jitter ratio / color,
+// foliage = seasonal leaf color); aq = water-adjacent kind (may sit below the waterline with
+// vertices clamped above water).
+// Every kind MUST carry flat (2026-08-11 user decision: dividers can be thicker with finer art):
+// the ground band is the border itself -- it does three jobs at once: 1. reads as a patterned
+// border (a pure spine is one thin rod, reading from afar as a meaningless line) 2. covers the
+// true border skipped when the 13m carpet grid is straightened (driftMax in planBorderPuzzle)
+// 3. both terrains hand off under it (borderCut switches exactly below).
+// Solid spines are now ornaments on bands (field-ridge soil, fence posts, hedges, rocks), never
+// borders alone.
 //
-// **`form` = 這個東西在現實裡是連續的還是離散的**(2026-08-13 使用者「柵欄要看起來像木柵欄
-// 而不是單調土牆」+「土路/潮間帶/海灘不要凸起…以此類推」)。舊制只有一種脊 = 沿中心線掃出來
-// 的**連續梯形柱**,那對田埂與樹籬是對的(它們本來就是連續的土堤/樹牆),對圍籬/岩塊/紅樹林
-// 就是把「一排木樁」「幾顆落石」「一叢支柱根」畫成一道齊高的實心牆 —— 顏色再土一點就是使用者
-// 說的「單調土牆」。三種:
-//   (無)  連續梯形柱(田埂、樹籬)—— 逐位元同舊制;
-//   posts 樁 + 橫桿(木柵欄):樁**恆落在兩端**(n = round(len/pitch),i/n)⇒ 相鄰片與轉角
-//         共用端樁,接縫處不會擠成兩根;桿在樁與樁之間、`rail.y` 是佔全高的比例;
-//   clumps 離散團塊(岩塊、紅樹林支柱根叢):pitch 一顆,尺寸/高度/橫向偏移吃 ehash 抖動。
-// 離散件一律**低於**舊制的連續脊 —— 使用者要的是「看得出是什麼」而不是「擋在那裡」。
+// form = whether the thing is continuous or discrete in reality (2026-08-13 user reports: fences
+// should read as wooden fences not plain dirt walls; dirt roads, tidal flats, beaches should not
+// bulge, and so on). The old rule had one spine = a continuous trapezoid swept along the center
+// line, right for field ridges and hedges (they are continuous banks/walls), but fences, rocks and
+// mangroves became uniform solid walls out of post rows, fallen rocks and prop-root clusters --
+// paint them earthier and they read as plain dirt walls. Three forms:
+//   (none) Continuous trapezoid (field ridges, hedges) -- bit-identical to the old rule;
+//   posts  Posts + rails (wooden fence): posts always land on both ends (n = round(len/pitch),
+//          i/n), so neighbors and corners share end posts with no doubled posts at seams; rails run
+//          between posts, and rail.y is the share of full height;
+//   clumps Discrete clumps (rocks, mangrove prop-root clusters): one per pitch, size/height/lateral
+//          offset jittered by ehash.
+// Discrete pieces always sit LOWER than the old continuous spine -- the user asked to tell what it
+// is, not to be blocked by it.
 export const BORDER_KINDS = {
   trail:      { name: '步道小徑', flat: { w: 4.2, tex: 'trail' } },
   forestroad: { name: '林道',     flat: { w: 6.0, tex: 'forestroad' } },
   gravelpath: { name: '碎石土徑', flat: { w: 5.0, tex: 'gravelpath' } },
   fieldridge: { name: '田埂',     flat: { w: 4.2, tex: 'fieldpath' },
-                // 0.32 → 0.18:與 BUND.RISE 同一個決定(「田埂之類的也不要凸太多」)
+                // 0.32 to 0.18: same decision as BUND.RISE (bunds should not bulge much)
                 ridge: { w: 0.85, wt: 0.5, h: 0.18, jit: 0.18, color: 0x87704a } },
   ditch:      { name: '水溝',     flat: { w: 4.2, tex: 'ditch' } },
   stream:     { name: '小溪',     flat: { w: 5.4, tex: 'stream' } },
-  // 木柵欄:2.4m 一根樁(真實牧場圍籬的柱距),樁 0.14 見方、兩道橫桿在 40%/76% 高。
-  // 色改成曬過的木頭(0x6b5138 深土色正是「土牆」讀感的一半)
+  // Wooden fence: posts every 2.4m (true pasture fence spacing), 0.14 posts with two rails
+  // at 40 and 76 percent height. Color shifted to sun-dried wood (the deep-soil 0x6b5138 tone is
+  // half of the dirt-wall read)
   fence:      { name: '圍籬',     flat: { w: 4.2, tex: 'fenceline' },
                 ridge: { form: 'posts', w: 0.14, wt: 0.14, h: 1.15, jit: 0.10, color: 0x9c7a4c,
                          pitch: 2.4, pw: 0.14, rail: { y: [0.40, 0.76], h: 0.18, t: 0.07 } } },
   hedgerow:   { name: '灌木矮牆', flat: { w: 4.4, tex: 'hedgebank' },
                 ridge: { w: 1.15, wt: 0.72, h: 1.4, jit: 0.55, color: 'foliage' } },
   beach:      { name: '沙灘',     flat: { w: 9.0, tex: 'beach', wet: 1 }, aq: 1 },
-  // 泥灘過渡帶(2026-08-13 使用者「水域與沼澤的分界使用專屬的泥地過渡帶」)——
-  // 水域↔沼澤自此走這一款,紅樹林退到蓮花池那一格(見 BORDER_SUB_RULES)
+  // Mudflat transition (2026-08-13 user decision: dedicated mud transition between water and
+  // marsh) -- water-vs-marsh goes here from now on; mangrove stepped back to the lotus cell (see
+  // BORDER_SUB_RULES)
   mudflat:    { name: '泥灘',     flat: { w: 8.0, tex: 'mudflat', wet: 1 }, aq: 1 },
-  // 岩塊:一道 0.7m 高的灰牆 → 3m 一顆的落石(高度只剩 0.42,細節回到 rubble 畫筆上)
+  // Rocks: a 0.7m gray wall becomes one fallen rock per 3m (height down to 0.42; detail back
+  // on the rubble painter)
   rocks:      { name: '岩塊',     flat: { w: 5.2, tex: 'rubble' },
                 ridge: { form: 'clumps', w: 1.3, wt: 0.7, h: 0.42, jit: 0.6, color: 0x8f8c83,
                          pitch: 3.0, lat: 0.55 }, aq: 1 },
-  // 紅樹林(潮間帶):1.15m 的連續綠牆 → 3.4m 一叢的支柱根,泥灘那一半全交給畫筆
+  // Mangrove (tidal zone): a 1.15m continuous green wall becomes prop-root clusters per 3.4m;
+  // the mudflat half is fully the painter job
   mangrove:   { name: '紅樹林',   flat: { w: 7.0, tex: 'mangrove', wet: 1 },
                 ridge: { form: 'clumps', w: 1.6, wt: 1.35, h: 0.5, jit: 0.5, color: 0x3f6b3f,
                          pitch: 3.4, lat: 0.6 }, aq: 1 },
 };
-// 地貌(coarse 分區)無序對 → 種類。**不同地貌之間一律有分界線**(2026-08-11 使用者定案
-// 「兩側若是相同地貌,則不需要分界線」)—— 同一片綠地裡換底毯款式(草皮↔芒草原↔灌木叢)
-// 那是同一種地貌的花紋變化,不是界;逐款畫線會把大片綠地切成密集網狀。
-// **2026-08-13 追加一條窄門**(使用者「顏色劇烈變化處也使用對應地貌的分界線覆蓋」):同地貌
-// 之間色距 ≥ `CARPET_DE.LINE` 的那幾對改走 `BORDER_SAME_ZONE`。這**不是**推翻上面那條定案 ——
-// 08-11 擋掉的是「逐款畫線」(綠地那一份清單裡任兩款都畫 = 網狀),這一條只圈住排序之後仍
-// 避不掉的大跳(現役 7 對,見 CARPET_DE 檔頭的實測清單)。
-// 跨地貌對樣式表：水域↔沼澤為連續流體水面（無陸地分界線）；水陸交界一律走對應水陸樣式
-// （沙灘/沿岸岩石/泥灘/溪流/溝渠），潮間帶與浪花泡沫另住 buildWaterEdges / celFoam。
+// Zone (coarse) unordered pair to kind. Different zones always get a divider (2026-08-11 user
+// decision: same zone on both sides needs no divider) -- swapping carpet kinds inside one green
+// field (turf vs miscanthus vs bushes) is print variation inside one zone, not a border; per-kind
+// lines would cut large greens into dense nets.
+// 2026-08-13 adds one narrow gate (user decision: sharp color jumps get that zone own divider):
+// same-zone pairs at distance >= CARPET_DE.LINE go BORDER_SAME_ZONE. This does NOT overturn the
+// rule above -- 08-11 blocked per-kind lines (any two green-roster kinds drawing = net); this gate
+// only catches the sorted-roster unavoidable jumps (7 live pairs, see measured roster in the
+// CARPET_DE header).
+// Cross-zone style table: water-vs-marsh is continuous fluid water (no land divider); land-water
+// meets always take the matching water-land style (beach / shore rocks / mudflat / stream /
+// ditch); tidal foam lives in buildWaterEdges / celFoam.
 export const BORDER_STYLES = {
   'bare|green': 'gravelpath', 'green|urban': 'hedgerow',  'green|wet': 'stream',
   'green|water': 'beach',     'alpine|green': 'trail',
@@ -1136,13 +1271,14 @@ export const BORDER_STYLES = {
   'alpine|urban': 'fence',                                'alpine|wet': 'rocks',
   'alpine|water': 'rocks',
 };
-// 地表級覆寫(某些底毯款式自帶專屬分界):sub 命中且「對側」地貌 ∈ vs 才作用
-// (市區界不覆寫 = 人工界優先)。`vs` **MUST NOT 含該 sub 自己的地貌** —— 同地貌不畫線,
-// 列進去只是永遠不會命中的死設定。表序即優先序,兩側同時命中取先命中列。
+// Surface-level override (some carpet kinds bring their own divider): a sub hits only when the
+// far-side zone sits in vs (urban borders never overridden = artificial borders win). vs MUST NOT
+// contain that sub own zone -- same-zone draws no line, so listing it is a permanently dead
+// setting. Table order is priority; both sides hitting takes the first hit.
 export const BORDER_SUB_RULES = [
-  // 紅樹林(潮間帶): 蓮花池(熱帶濕地)臨陸地(綠地/裸地)那一側走紅樹林
+  // Mangrove (tidal zone): lotus ponds (tropical wetlands) facing land (green/bare) go mangrove
   { sub: 'lotus',       kind: 'mangrove',   vs: ['green', 'bare'] },
-  // 沙地(陸地)臨水域/沼澤走沙灘
+  // Sandy land facing water/marsh goes beach
   { sub: 'sand',        kind: 'beach',      vs: ['water', 'wet'] },
   { sub: 'flowerfield', kind: 'fieldridge', vs: ['bare'] },
   { sub: 'arrowbamboo', kind: 'forestroad', vs: ['bare', 'alpine'] },
@@ -1150,22 +1286,24 @@ export const BORDER_SUB_RULES = [
   { sub: 'fallenlogs',  kind: 'forestroad', vs: ['bare', 'alpine'] },
   { sub: 'deadforest',  kind: 'forestroad', vs: ['green', 'alpine'] },
 ];
-// 同地貌內「顏色劇烈變化」時用的分界線(2026-08-13 使用者「顏色劇烈變化處也使用**對應地貌**
-// 的分界線覆蓋」)—— 一地貌一種,取那片地貌裡最不突兀的一款自然界:綠地 = 踏出來的步道、
-// 裸露地 = 碎石土徑、市區 = 行道樹籬(市區的大跳恆是鋪面↔綠地那一對)、濕地 = 水溝、
-// 高地 = 岩塊(雪線)。**水域沒有** —— 深淺水本來就是同一片水,查無 = 不擺(§4 寧缺勿錯)。
+// Dividers for sharp color jumps inside one zone (2026-08-13 user decision: sharp jumps get that
+// zone own divider) -- one kind per zone, the least abrupt natural border in that zone: green =
+// walked trail, bare = gravel path, urban = street hedge (urban jumps are always paving-vs-green),
+// wet = ditch, highland = rocks (snowline). Water has none -- shallow and deep are one water body,
+// miss means skip (section 4: omit rather than err).
 export const BORDER_SAME_ZONE = {
   green: 'trail', bare: 'gravelpath', urban: 'hedgerow', wet: 'ditch', alpine: 'rocks',
 };
-// 分界線種類解析唯一縫(對稱:交換兩側回傳相同;查無 → null = 不擺)。
-// 同地貌**只走色距那一道窄門**(BORDER_SAME_ZONE),地表級覆寫(BORDER_SUB_RULES)仍
-// 一律擋在跨地貌那一側 ⇒ 該表的 `vs` MUST NOT 含該 sub 自己的地貌(那仍是死設定)。
+// Divider-kind single seam (symmetric: swapping sides returns the same; miss to null = skip).
+// Same-zone goes only through the color-distance narrow gate (BORDER_SAME_ZONE); surface-level
+// overrides (BORDER_SUB_RULES) stay gated on the cross-zone side, so their vs MUST NOT contain
+// that sub own zone (still a dead setting).
 export function borderKindOf(subA, subB, za, zb) {
   if (!za || !zb) return null;
   if (za === zb) {
     if (subA === subB) return null;
     const ca = SUB_COL[subA], cb = SUB_COL[subB];
-    if (ca == null || cb == null) return null;   // 沒有代表色 = 不是底毯款 ⇒ 不畫
+    if (ca == null || cb == null) return null;   // No representative color = not a carpet kind, so no line
     return colDist(ca, cb) >= CARPET_DE.LINE ? (BORDER_SAME_ZONE[za] || null) : null;
   }
   for (const r of BORDER_SUB_RULES) {
@@ -1174,11 +1312,14 @@ export function borderKindOf(subA, subB, za, zb) {
   }
   return BORDER_STYLES[za < zb ? `${za}|${zb}` : `${zb}|${za}`] || null;
 }
-// 離散脊件(木樁/橫桿/岩塊/根叢)的盒子面表。局部框 (t, up, n) 恆右手(t × up = n),
-// 每一列 = [局部外法線, 四角 (i,j,k) 自外側看的逆時針序];i 沿 t、j 沿 up(−1 底 / +1 頂)、
-// k 沿 n。四點序是由右手三元組推出來的,**MUST NOT 憑感覺重排** —— 排錯的那一面法線朝內,
-// three 把它畫成死黑,而每一條離線斷言照樣全綠(同 sweepUpY 檔頭那一族)。
-// 六面各自四頂點(不共用)⇒ 折邊真的出得了線,盒子讀起來才是有稜角的木頭/石頭。
+// Box face table for discrete spine pieces (posts/rails/rocks/root clusters). Local frame (t, up,
+// n) always right-handed (t cross up = n); each row = [local outward normal, four corners (i,j,k)
+// CCW seen from outside]; i along t, j along up (-1 base / +1 top), k along n. The four-point order
+// derives from the right-handed triple and MUST NOT be reordered by feel -- the wrong face points
+// inward, three.js paints it dead black, and every offline assertion stays green (same family as
+// the sweepUpY header).
+// Six faces with four vertices each (unshared), so creases really draw lines and boxes read as
+// edged wood/stone.
 const BOX_FACES = [
   [[1, 0, 0], [[1, -1, -1], [1, 1, -1], [1, 1, 1], [1, -1, 1]]],
   [[-1, 0, 0], [[-1, -1, -1], [-1, -1, 1], [-1, 1, 1], [-1, 1, -1]]],
@@ -1187,27 +1328,31 @@ const BOX_FACES = [
   [[0, 0, 1], [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]],
   [[0, 0, -1], [[-1, -1, -1], [-1, 1, -1], [1, 1, -1], [1, -1, -1]]],
 ];
-// 轉彎接頭的解(純函式;規劃器與稽核同吃)——「完整畫出來的轉彎拼圖」的幾何定義。
-// 兩臂單位方向 a、b 皆**背離節點**;Lmax = 允許的最大退縮長;hw = 帶半寬。
-// 圓角(arc):與兩臂相切的圓弧,半徑 R = L·tan(ψ/2)(ψ = 兩臂夾角)⇒ 切點恰在退縮後的
-//   直段端點上、切線方向恰等於臂向 ⇒ 圖案彎過轉角而不是在轉角對接。
-// 圓帽(cap):彎太急(R 容不下帶寬,內緣會翻面)時退圓帽接頭 —— 半徑 hw 的圓盤,
-//   等同標準的 round line join;仍是完整畫出來的一片,不是把兩段直帶疊在一起。
-// 回傳含 `L`(實際要退縮多少)—— 呼叫端 MUST 用它設退縮量,直段端點才會與接頭切點重合。
+// Corner-joint solution (pure function; planner and audits share it) -- the geometric definition
+// of a fully drawn turn puzzle. Both arm unit directions a, b point AWAY from the node; Lmax = max
+// allowed pull-back; hw = band half-width.
+// Fillet (arc): circle tangent to both arms with radius R = L tan(psi/2) (psi = arm angle), so cut
+//   points land exactly on pulled-back straight endpoints with tangent exactly along the arms -- the
+//   print bends around the corner instead of butt-joining at it.
+// Cap: pulls back to a round cap when too tight for the band (R cannot fit the width, inner edge
+//   would flip) -- a disk of radius hw, the standard round line join; still one fully drawn piece,
+//   not two straight bands stacked.
+// Returns L (how far to pull back) -- callers MUST use it for pull-back so straight endpoints meet
+// joint cut points.
 export function borderCornerArc(px, pz, ax, az, bx, bz, Lmax, hw) {
-  const psi = Math.acos(Math.max(-1, Math.min(1, ax * bx + az * bz)));   // 兩臂夾角
-  const phi = Math.PI - psi;                                            // 路徑偏轉角
+  const psi = Math.acos(Math.max(-1, Math.min(1, ax * bx + az * bz)));   // Arm angle
+  const phi = Math.PI - psi;                                            // Path deflection angle
   const at = (L) => ({ Pa: [px + ax * L, pz + az * L], Pb: [px + bx * L, pz + bz * L] });
   if (phi < 1e-4) return { mode: 'straight', L: 0, phi, len: 0, ...at(0) };
   const tan = Math.tan(psi / 2);
-  const Lneed = hw * 1.1 / Math.max(tan, 1e-6);      // R ≥ 1.1·hw 才容得下帶寬(內緣不翻面)
+  const Lneed = hw * 1.1 / Math.max(tan, 1e-6);      // R >= 1.1 hw fits the band (inner edge keeps facing out)
   if (!(Lneed <= Lmax)) {
     const L = Math.min(Lmax, hw);
     return { mode: 'cap', L, phi, cx: px, cz: pz, r: hw, len: hw * phi, ...at(L) };
   }
   const L = Lmax, R = L * tan;
   const sx = ax + bx, sz = az + bz, sl = Math.hypot(sx, sz) || 1;
-  const d = L / Math.cos(psi / 2);                   // 圓心沿角平分線的距離
+  const d = L / Math.cos(psi / 2);                   // Center distance along the angle bisector
   const cx = px + sx / sl * d, cz = pz + sz / sl * d;
   const g = at(L);
   const a0 = Math.atan2(g.Pa[1] - cz, g.Pa[0] - cx);
@@ -1217,48 +1362,62 @@ export function borderCornerArc(px, pz, ax, az, bx, bz, Lmax, hw) {
   return { mode: 'arc', L, phi, cx, cz, R, a0, sweep, len: Math.abs(sweep) * R, ...g };
 }
 
-// ---- 兩側地貌以分界線為界(2026-08-11 使用者需求)----
-// 「很多地方分界線沒有正確分隔兩側地貌,有一側地貌滲透過去另一側」的成因是**兩條不同的線**:
-// 底毯交界的原始解析度是 13m 抖動格網,舊制外溢(planSeamOverlays 的角點隸屬度)把兩側各往
-// 對面推一整格 ⇒ 混色帶寬 ~26m;而分界線是格邊鏈**拉直後的弦**(driftMax 內偏離)。兩者
-// 從來沒有對齊過,畫面上就是「線在這裡、地貌卻換在那裡」。
-// 新制:凡**畫得出分界線**的組合(borderKindOf ≠ null),外溢 α 改由頂點到**畫出來的那條線**
-// 的帶號距離決定 ⇒ 換手處恰在線上、且恆落在帶寬之內被圖案蓋住;查不到線才退回舊制淡出。
-// 同地貌換款(草皮↔芒草原)本來就沒有線,維持柔和淡出不受影響。
-// 純函式:d = 帶號距離(正 = 落在鄰格那一側),端點恆定 0/1 ⇒ 與不透明底毯水密。
-// 換手帶寬 m / 有機擾動振幅 m / 找線半徑(×cell)。
-// **不變式**:W/2 + JIT/2 ≤ 最窄那一種的帶半寬 —— 換手若寬過圖案,滲透就露在帶外面了。
+// ---- Both terrains bounded by the divider line (2026-08-11 user request) ----
+// Why dividers failed to separate terrains with one side bleeding over: two different lines never
+// aligned. Carpet borders resolve on a 13m jittered grid, while the old spillover (corner
+// membership in planSeamOverlays) pushed each side one full cell into the other, for a mix band
+// about 26m wide; dividers are grid-edge chains pulled straight into chords (drifting within
+// driftMax). On screen that reads as the line here but the terrain swap over there.
+// New rule: every pair that draws a divider (borderKindOf != null) takes spillover alpha from the
+// signed distance of each vertex to the DRAWN line, so handoff sits exactly on the line and always
+// under the band width beneath the print; pairs with no line fall back to the old fade. Same-zone
+// kind swaps (turf vs miscanthus) never had a line and keep gentle fades.
+// Pure function: d = signed distance (positive = neighbor-cell side), endpoints pinned 0/1, so
+// opaque carpet stays watertight.
+// Handoff width in m / organic noise amplitude in m / line-search radius (times cell).
+// Invariant: W/2 + JIT/2 stays within the narrowest band half-width -- a wider handoff than the
+// print leaks bleed outside the band.
 export const BORDER_CUT = { W: 2.8, JIT: 1.2, R_F: 1.7 };
-// 帶本身的量測與外觀旋鈕(單一縫;讓路取樣、迴避半徑、貼圖節距一律由這裡推導,MUST NOT 手寫)
-//   EDGE_A/EDGE_W = 帶緣有機起伏的振幅比與波數(1/m)——「分界線本身是直的,線的兩側邊緣
-//     可以不用筆直」(2026-08-11 使用者):中心線仍是 16 方向的弦,只有兩緣沿世界座標起伏
-//     (純函式 vnoise ⇒ 相鄰 tile 與接頭在共用端點上取到同值,邊緣連續不開叉)。
-//   PAD  = 特徵拼圖 / 3D 細節與帶緣之間的淨距(田/停車場/球場不得橫跨,也不得貼著壓上來)。
-//   TEX_F/TEX_MIN = 貼圖一輪的世界長 = max(TEX_MIN, w × TEX_F):寬帶配長節距,圖案才不會
-//     被橫向拉扁成「意義不明的線條」。
-//   RUN_MIN_CELL = 一段接力至少要走過幾個底毯格 —— 種類是逐邊解析的,而底毯款式本身就是
-//     13m 格網上挑的:短於這個長度的「換款」是格網雜訊而不是地貌變化,MUST 併回鄰居。
-//     **3 是實測的上界**:拉到 5 會把只在小片花田邊上出現的田埂整種併掉(11 種裡有一種
-//     永遠不出現,而 shot_borders 只會安靜地說「實見地貌級的解」);2 以下逐格抖動就回來了。
+// Band measurement and look knobs (single seam; yield sampling, avoid radius, texture pitch all
+// derive here, MUST NOT hand-write)
+//   EDGE_A/EDGE_W = band-edge organic wobble amplitude ratio and wave number (1/m) -- the divider
+//     itself stays straight while its two edges may wander (2026-08-11 user words): centerlines
+//     stay 16-direction chords, only edges wobble in world coords (pure vnoise, so neighboring
+//     tiles and joints sharing an endpoint agree and edges never fork).
+//   PAD = clearance between feature puzzles / 3D details and band edges (fields/parking/courts
+//     MUST NOT straddle, nor press right up).
+//   TEX_F/TEX_MIN = one texture repeat in world length = max(TEX_MIN, w times TEX_F): wide bands
+//     get long repeats, else prints stretch sideways into unreadable lines.
+//   RUN_MIN_CELL = how many carpet cells one relay run must span at minimum -- kinds resolve
+//     per edge, but carpet kinds are picked on a 13m grid: a shorter swap is grid noise, not a zone
+//     change, and MUST merge back into a neighbor. 3 is the measured upper bound: 5 would merge away
+//     the field-ridge kind that only borders small flower plots (one of 11 kinds never appearing,
+//     with shot_borders quietly reporting seen zone-level answers); below 2 the per-cell jitter
+//     returns.
 export const BORDER_BAND = { EDGE_A: 0.26, EDGE_W: 0.2, PAD: 1.6, TEX_F: 1.5, TEX_MIN: 7, RUN_MIN_CELL: 3 };
 export function borderCutAlpha(d, w) {
   return d <= -w / 2 ? 0 : d >= w / 2 ? 1 : 0.5 + d / w;
 }
-// 掃掠繞向唯一縫(純函式):斷面掃掠出來的三角形**幾何法線的 y 分量**正負。
-// t = 中心線切向、n = 斷面橫向(f 遞增方向);flat 以「先切向後橫向」的繞向送出 ⇒ 本函式
-// 回傳 > 0 才是正面朝上(ridge 的斷面順序是鏡像的,判準取反,見 sweepRidge)。
-// **這件事會完全無聲地壞掉**:繞向反了在 DoubleSide 底下不會破圖,three 只是把法線反轉 ⇒
-// 整段帶變成「從地底下打光」的死黑,而頂點數/位置/α/UV/貼圖每一條離線斷言照樣全綠。
-// 2026-08-11 實測:linePath 恆為負(每一片直段都死黑)、arcPath 隨 sweep 正負翻面(轉彎
-// 忽明忽暗)= 使用者回報的「好幾個分界線顏色不連續」。
+// Sweep-winding single seam (pure function): sign of the geometric normal y of triangles swept
+// from cross-sections. t = centerline tangent, n = cross-section lateral (f increasing); flat emits
+// with tangent-then-lateral winding, so only > 0 faces up here (ridge cross-section order is mirrored,
+// so its test flips, see sweepRidge).
+// This breaks fully silently: flipped winding under DoubleSide shows no hole, three.js just flips
+// normals, so whole bands turn into lit-from-underground dead black while vertex counts, positions,
+// alpha, UV and texture assertions all stay green. 2026-08-11 field test: linePath always negative
+// (every straight dead black), arcPath flipping with sweep sign (turns flickering) = the reported
+// several dividers with discontinuous colors.
 export function sweepUpY(tx, tz, nx, nz) { return tz * nx - tx * nz; }
 
-// 分界線帶的「強制乾地」查詢工廠(2026-08-13 使用者「確保水域/沼澤在分界線的區塊內不會
-// 觸發異常狀態」;規則本體與接線紀律見 buildGroundCover 內的呼叫點註解)。
-// **住模組層是刻意的**:回傳的函式要掛在 terrain 上活到戰鬥結束,寫成 buildGroundCover 的
-// 內層閉包會把那一整個作用域的 context(底毯 buckets / 細節清單 / landCells…)一起留住。
-// grid = 中心線段的空間索引(`${ci},${cj}` → 段陣列,段自帶自己的帶半寬 hw)、
-// sc = 索引格邊長、hwMax = 型錄裡最寬的一種半寬(掃描格數由它推導,不手寫)。
+// Forced-dry lookup factory for divider bands (2026-08-13 user decision: water/marsh inside
+// divider bands MUST NOT trigger abnormal states; rule body and wiring discipline live at the
+// buildGroundCover call-site comments).
+// Module level is deliberate: the returned function hangs on terrain until battle end, and an inner
+// buildGroundCover closure would pin that whole scope context (carpet buckets / detail rosters /
+// landCells and more) with it.
+// grid = centerline-segment spatial index (ci,cj key to segment arrays, each carrying its own band
+// half-width hw); sc = index cell edge; hwMax = widest catalog half-width (scan count derives from
+// it, never hand-written).
 export function makeBandMask(grid, sc, hwMax) {
   const n = Math.max(1, Math.ceil(hwMax / sc));
   return (x, z) => {
@@ -1280,27 +1439,29 @@ export function makeBandMask(grid, sc, hwMax) {
 }
 
 export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
-  // zoneOf(i,j) = 該格**真正的地貌**(呼叫端已算好的 zoneGrid)。MUST 優先於用款式反查
-  // (coarseOf):`steppe`/`scree` 同時在裸露地與高地的底毯清單裡,反查恆取先出現的那個
-  // ⇒ 高地格會被判成裸露地,於是高地內部憑空長出一片「跨地貌」的界線網。
+  // zoneOf(i,j) = that cell true zone (caller-computed zoneGrid). MUST win over reverse lookup
+  // by kind (coarseOf): steppe/scree sit in both bare and highland carpet rosters, and reverse
+  // lookup always takes the first, so highland cells would read as bare and grow a fake cross-zone
+  // border net inside highland.
   const { zoneOf = null, coarseOf = null, cornerXZ = (ci, cj) => [ci, cj], driftMax = 1,
           kindOf = borderKindOf, halfWidthOf = () => 1, jointF = 2.2, forkF = 1, runMinM = 0 } = opts;
   const solid = (k) => k != null && k !== '!';
   const subOf = (k) => { const p = k.indexOf('#'); return p < 0 ? k : k.slice(0, p); };
   const keyAt = (i, j) => (i < 0 || j < 0 || i >= gnx || j >= gnz) ? null : keys[j * gnx + i];
-  // ① 邊界邊:兩實心格、地表不同、種類解得出來;邊 = 兩共享角點(角點格網 (gnx+1)×(gnz+1))
-  const NKW = gnx + 2;                                  // 節點鍵步幅(角點 ci ∈ 0..gnx)
+  // 1. Boundary edges: two solid cells, different surfaces, kind resolvable; an edge = two shared
+  // corners (corner grid (gnx+1) x (gnz+1))
+  const NKW = gnx + 2;                                  // Node key stride (corner ci in 0..gnx)
   const zoneAt = (i, j) => {
     if (zoneOf) return zoneOf(i, j) ?? null;
     const k = keyAt(i, j);
     return (coarseOf && solid(k)) ? coarseOf(k) : null;
   };
-  const edges = [];                                     // { a, b: 節點鍵, kind, used }
-  const adj = new Map();                                // 節點鍵 → [edges 索引](插入序 = 決定性)
+  const edges = [];                                     // { a, b: node key, kind, used }
+  const adj = new Map();                                // node key -> [edge indices] (insertion order = deterministic)
   const addEdge = (ci0, cj0, ci1, cj1, k0, k1, z0, z1) => {
     const s0 = subOf(k0), s1 = subOf(k1);
-    if (s0 === s1) return;                              // 同地表異變體:花紋連續,不成界
-    const kind = kindOf(s0, s1, z0, z1);                // 同地貌 → borderKindOf 恆回 null
+    if (s0 === s1) return;                              // Same-surface variants: motif continues, no border
+    const kind = kindOf(s0, s1, z0, z1);                // Same zone -> borderKindOf always returns null
     if (!kind) return;
     const e = { a: cj0 * NKW + ci0, b: cj1 * NKW + ci1, kind, used: false };
     const ei = edges.length;
@@ -1317,11 +1478,11 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
       if (!solid(k0)) continue;
       const z0 = zoneAt(i, j);
       const kR = keyAt(i + 1, j), kD = keyAt(i, j + 1);
-      if (solid(kR)) addEdge(i + 1, j, i + 1, j + 1, k0, kR, z0, zoneAt(i + 1, j));   // 與右鄰共享的豎邊
-      if (solid(kD)) addEdge(i, j + 1, i + 1, j + 1, k0, kD, z0, zoneAt(i, j + 1));   // 與下鄰共享的橫邊
+      if (solid(kR)) addEdge(i + 1, j, i + 1, j + 1, k0, kR, z0, zoneAt(i + 1, j));   // Vertical edge shared with the right neighbor
+      if (solid(kD)) addEdge(i, j + 1, i + 1, j + 1, k0, kD, z0, zoneAt(i, j + 1));   // Horizontal edge shared with the lower neighbor
     }
   }
-  // ② 角點圖遍歷成鏈:先從度數 ≠2 的節點(端點/岔路)起走,剩下的是閉環
+  // 2. Walk the corner graph into chains: start from degree != 2 nodes (ends/forks), loops left over
   const deg = (n) => (adj.get(n) || []).length;
   const walk = (ei0, n0) => {
     const pts = [n0], kinds = [];
@@ -1331,9 +1492,9 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
       const m = e.a === n ? e.b : e.a;
       pts.push(m);
       kinds.push(e.kind);
-      if (deg(m) !== 2) break;                          // 端點(1)/岔路(≥3):鏈到此為止
+      if (deg(m) !== 2) break;                          // End (1) / fork (3+): chain stops here
       const ni = adj.get(m).find((k) => !edges[k].used);
-      if (ni == null) break;                            // 閉環走回起點
+      if (ni == null) break;                            // Loop walked back to start
       e = edges[ni]; n = m;
     }
     return { pts, kinds };
@@ -1344,7 +1505,7 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
     for (const ei of l) if (!edges[ei].used) raw.push(walk(ei, n));
   }
   for (let ei = 0; ei < edges.length; ei++) if (!edges[ei].used) raw.push(walk(ei, edges[ei].a));
-  // ③④ 16 方向量化 + 接力切分 → tile
+  // 3-4. 16-direction quantization + relay splitting into tiles
   const STEP = (Math.PI * 2) / BORDER_DIRS;
   const binOf = (dx, dz) => ((Math.round(Math.atan2(dz, dx) / STEP) % BORDER_DIRS) + BORDER_DIRS) % BORDER_DIRS;
   const posOf = (n) => cornerXZ(n % NKW, (n / NKW) | 0);
@@ -1352,12 +1513,13 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
   for (const ch of raw) {
     const P = ch.pts.map(posOf);
     const closed = ch.pts.length > 2 && ch.pts[0] === ch.pts[ch.pts.length - 1];
-    // ---- 接力是「換一段」不是「每格換一次」:短 run 併回鄰居 ----
-    // 種類逐邊解析,而底毯款式是 13m 格網上挑的 ⇒ 沿著界線走,款式會在區界附近來回抖動,
-    // 解出來的種類就跟著碎成「碎石土徑 / 林道 / 碎石土徑」的雜訊(2026-08-11 實拍每 ~20m
-    // 換一次色)= 使用者回報的「分界線顏色不連續」的另一半。併法與 edgewall 的 run 併法
-    // 同紀律(A44 ⑦):短的讓給**較長**的鄰居、併完同款再併、逐輪取最短者 ⇒ 決定性且收斂。
-    // runMinM = 0(預設)逐位元同未併。
+    // ---- Relay swaps whole runs, not per cell: short runs merge back into neighbors ----
+    // Kinds resolve per edge while carpet kinds are picked on a 13m grid, so walking the border
+    // jitters kinds back and forth near zone(cors) borders, fragmenting resolved kinds into gravel /
+    // forest-road / gravel noise (2026-08-11 photos swapped color about every 20m) = half of the
+    // reported divider color discontinuity. Merging follows the edgewall run discipline (A44 item 7):
+    // short yields to the LONGER neighbor, re-merge same kinds, shortest-first per round, so
+    // deterministic and convergent. runMinM = 0 (default) is bit-identical to unmerged.
     if (runMinM > 0 && ch.kinds.length > 1) {
       const eLen = [];
       for (let e = 0; e < ch.kinds.length; e++) {
@@ -1386,7 +1548,7 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
         runs = mkRuns();
       }
     }
-    // 先依種類切段(接力切點與岔路切點一樣是共享角點),段內再做方向量化
+    // Split by kind first (relay cuts are shared corners like fork cuts), quantize direction inside runs
     const segs = [];
     let s0 = 0;
     for (let e = 1; e <= ch.kinds.length; e++) {
@@ -1397,7 +1559,7 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
       let i0 = e0;
       while (i0 < e1) {
         let i1 = i0 + 1;
-        while (i1 < e1) {                               // 貪婪延伸:略過角點的垂距全 ≤ driftMax 才併
+        while (i1 < e1) {                               // Greedy extend: merge only while every skipped corner stays within driftMax
           const [ax, az] = P[i0], [bx, bz] = P[i1 + 1];
           const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz) || 1;
           let fit = true;
@@ -1410,7 +1572,7 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
         }
         const [ax, az] = P[i0], [bx, bz] = P[i1];
         const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz) || 1;
-        let drift = 0;                                  // 誠實重算(貪婪檢查壞掉時稽核仍量得到)
+        let drift = 0;                                  // Honestly recomputed (audits still measure it if the greedy check breaks)
         for (let k = i0 + 1; k < i1; k++) {
           const d = Math.abs((P[k][0] - ax) * dz - (P[k][1] - az) * dx) / L;
           if (d > drift) drift = d;
@@ -1424,18 +1586,20 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
       const tl = tiles[t];
       const prev = tiles[t - 1] || (closed ? tiles[tiles.length - 1] : null);
       const next = tiles[t + 1] || (closed ? tiles[0] : null);
-      tl.turn = !!(prev && prev !== tl && prev.bin !== tl.bin);   // 轉彎拼圖:與前一片方向格不同
-      tl.j0 = !!prev; tl.j1 = !!next;                             // 端點是否接續(接力/同段續接)
+      tl.turn = !!(prev && prev !== tl && prev.bin !== tl.bin);   // Turn piece: bin differs from previous
+      tl.j0 = !!prev; tl.j1 = !!next;                             // Whether endpoints join (relay / same-run continuation)
     }
     chains.push({ closed, ns: ch.pts, tiles });
   }
-  // ---- ⑤ 接頭:轉彎與岔路一律「完整畫出來的拼圖片」,MUST NOT 把直段對接 ----
-  // 作法只有一條:直段自接頭處**退縮**(tr0/tr1),讓出來的空間專屬接頭拼圖 ⇒ 沒有重疊、
-  // 沒有共面互吃、也沒有「兩段疊在一起假裝轉彎」。退縮量由接頭自己解(borderCornerArc 回
-  // 傳的 L),兩側同值 ⇒ 直段端點與接頭切點逐位元重合(端點錨定的推廣)。
-  // 一個節點只被一個接頭處理(tile 的每一端恰屬於一個節點)⇒ tr0/tr1 不會被寫兩次。
+  // ---- 5. Joints: turns and forks are always fully drawn pieces, MUST NOT butt-join straights ----
+  // Only one way: straights pull back (tr0/tr1) from joints, freeing space owned by joint pieces, so
+  // no overlap, no coplanar eating, no two-pieces-stacked-pretending-a-turn. Pull-back amounts are
+  // solved by joints themselves (borderCornerArc returns L), equal on both sides, so straight
+  // endpoints meet joint cut points bit-identically (endpoint anchoring generalized).
+  // One node is handled by exactly one joint (each tile end belongs to exactly one node), so tr0/tr1
+  // are never written twice.
   const hwOf = (k) => halfWidthOf(k) || 1;
-  const arms = new Map();                        // 節點 → 入射臂(方向恆「背離節點」)
+  const arms = new Map();                        // Node to incoming arms (directions always point away from node)
   for (const ch of chains) {
     for (const tl of ch.tiles) {
       const dx = tl.x1 - tl.x0, dz = tl.z1 - tl.z0, l = Math.hypot(dx, dz) || 1;
@@ -1452,7 +1616,7 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
     const [x, z] = posOf(n);
     if (l.length === 2) {
       const [A, B] = l;
-      if (A.tl.bin === B.tl.bin) continue;       // 同方向格(純接力換款)= 直線,不需轉彎拼圖
+      if (A.tl.bin === B.tl.bin) continue;       // Same-direction cells (pure relay kind swap) = straight, no turn piece needed
       const hw = Math.max(hwOf(A.kind), hwOf(B.kind));
       const g = borderCornerArc(x, z, A.dx, A.dz, B.dx, B.dz,
         Math.min(jointF * hw, A.len * 0.4, B.len * 0.4), hw);
@@ -1465,25 +1629,26 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
       corners.push(cor);
       A.tl[A.e ? 'c1' : 'c0'] = cor; B.tl[B.e ? 'c1' : 'c0'] = cor;
     } else if (l.length >= 3) {
-      // 岔路:共用一個退縮長 ⇒ 逐臂斷面等距,接頭多邊形規整。
-      // 係數與轉彎**分開**(forkF 而不是 jointF):轉彎的 L 決定圓弧半徑要大一點才順,
-      // 交叉口的 L 卻是「路口有多大」—— 取 ~一個帶半寬,路口才是帶寬見方的一塊;
-      // 沿用 jointF 會把逐臂楔形拉成星芒(2026-08-11 實拍踩過)。
+      // Fork: one shared pull-back length, so per-arm cross-sections stay equal and the joint
+      // polygon stays regular. Coefficients stay SEPARATE from turns (forkF, not jointF): turn L
+      // sets arc radius and wants room to sweep, while fork L is mouth size -- about one band
+      // half-width makes the mouth one band square; reusing jointF stretches per-arm wedges into
+      // starbursts (stepped on in 2026-08-11 photos).
       let hw = 0, lim = Infinity;
       for (const a of l) { hw = Math.max(hw, hwOf(a.kind)); lim = Math.min(lim, a.len * 0.4); }
       const L = Math.min(forkF * hw, lim);
       const list = l.map((a) => {
         a.tl[a.e ? 'tr1' : 'tr0'] = L;
-        a.tl[a.e ? 'f1' : 'f0'] = true;      // 這一端接的是岔路(≠ 鏈內有下一片)⇒ 端點不得淡出
+        a.tl[a.e ? 'f1' : 'f0'] = true;      // This end meets a fork (not another in-chain piece), so endpoints MUST NOT fade
         return { dx: a.dx, dz: a.dz, kind: a.kind, hw: hwOf(a.kind) };
       });
-      list.sort((p, q) => Math.atan2(p.dz, p.dx) - Math.atan2(q.dz, q.dx));   // 逆時針排序
+      list.sort((p, q) => Math.atan2(p.dz, p.dx) - Math.atan2(q.dz, q.dx));   // CCW order
       const ks = [];
       for (const a of list) if (!ks.includes(a.kind)) ks.push(a.kind);
       forks.push({ type: 'fork', n, x, z, L, hw, arms: list, kinds: ks });
     }
   }
-  // 退縮後的端點(發射端只讀這一組;未退縮處與原端點逐位元相同)
+  // Pulled-back endpoints (emitters read only this set; unpulled ends are bit-identical to raw ends)
   for (const ch of chains) {
     for (const tl of ch.tiles) {
       tl.tr0 = tl.tr0 || 0; tl.tr1 = tl.tr1 || 0;
@@ -1496,16 +1661,18 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
   return { chains, corners, forks };
 }
 
-// ---- 地貌界線拼圖:貼地帶畫筆(透明底 + 沿 x 圖案;鏡射重複 = 跨 tile 無縫)----
-// **畫筆契約**:圖案 MUST 鋪滿整個 v 值域(= 整個貼圖高度)—— 帶的柔邊由**頂點 α**
-// 負責(sweepFlat 兩緣 α0、中線 α1)。只在貼圖中央畫一小條的話,實得寬度遠小於型錄
-// 宣告的 `w`,再被頂點 α 淡一次就整條糊掉;而畫布只有瀏覽器裡才畫得出來 ⇒ **沒有任何
-// 離線稽核量得到這件事**,只有 tools/shot_borders.mjs 的實拍看得見(2026-08-11 踩過)。
-// 橫向位置一律經 bandY 表達,MUST NOT 在畫筆裡手寫 S * 0.xx 的 y 偏移。
-const bandY = (S, f) => S / 2 + f * S * 0.46;      // f ∈ [-1,1] 橫過帶的位置 → 畫布 y
-// 沿 x 手繪帶:重疊色塊 = 有機邊緣(photoreal 噪點禁用,同 PAINTERS 語彙)
+// ---- Border puzzle ground-band painters (transparent base + along-x print; mirrored repeat =
+// seamless across tiles) ----
+// Painter contract: prints MUST fill the whole v range (= full texture height) -- band soft edges
+// belong to vertex alpha (sweepFlat edges alpha 0, centerline alpha 1). Painting one thin strip in
+// the middle makes the realized width far below the catalog w, and a second vertex-alpha fade melts
+// the whole line; canvases only paint in browsers, so NO offline audit can measure this, only the
+// tools/shot_borders.mjs field photos caught it (stepped on 2026-08-11).
+// Lateral positions always go through bandY; MUST NOT hand-write S times 0.xx y offsets in painters.
+const bandY = (S, f) => S / 2 + f * S * 0.46;      // f in [-1,1] across the band to canvas y
+// Hand band along x: overlapping blobs = organic edges (photoreal noise banned, same PAINTERS vocabulary)
 function bandBlob(g, S, rnd, f, color, alpha = 1) {
-  const h = S * 0.92 * f;                          // f = 佔滿帶寬的比例
+  const h = S * 0.92 * f;                          // f = share of band width filled
   g.fillStyle = color;
   for (let x = -12; x < S + 12; x += 9) {
     g.globalAlpha = alpha * (0.7 + rnd() * 0.3);
@@ -1513,7 +1680,8 @@ function bandBlob(g, S, rnd, f, color, alpha = 1) {
   }
   g.globalAlpha = 1;
 }
-// 兩緣草撇(多數畫筆共用):貼在帶的兩側邊緣,把「筆直的幾何邊」咬碎成有機邊
+// Grass strokes on both edges (shared by most painters): pasted on band rims to chew straight
+// geometric edges into organic ones
 function bandFringe(g, S, rnd, color, n = 34, len = 6) {
   g.strokeStyle = color; g.lineWidth = 2; g.lineCap = 'round';
   for (let i = 0; i < n; i++) {
@@ -1524,39 +1692,41 @@ function bandFringe(g, S, rnd, color, n = 34, len = 6) {
   }
   g.lineCap = 'butt';
 }
-// **v 契約(2026-08-13 使用者:「海灘的左右兩邊都是水域,但作為分界線的話應該是兩邊不同
-// 類型的區域才對」)**:多數分界線是**對稱**的(小徑/林道/碎石徑/田埂/水溝/小溪/圍籬/樹籬/
-// 岩塊 —— 兩側同性質,一條路的兩邊本來就一樣),畫筆愛怎麼畫都行。
-// 但**過渡型**的三種(沙灘 / 泥灘 / 紅樹林)兩側是不同的東西:一邊是水、一邊是陸。畫成對稱的
-// 就是「海灘的左右兩邊都是水」—— 浪花跑到陸側去了。這三種在型錄標 `flat.wet: 1`,
-// 發射端據此把 v 軸轉正(見 wetFlipAt),契約是:
-//     **f = +1(v = 1)恆為水側,f = −1(v = 0)恆為陸側**。
-// 標了 `wet` 的畫筆 MUST 把水的元素(浪花/潮溝/積水)畫在 f > 0 那半,陸的元素(乾沙/貝殼/
-// 草/樹冠)畫在 f < 0 那半;沒標的畫筆 MUST NOT 依賴 f 的正負(方向不保證)。
+// v contract (2026-08-13 user report: both sides of a beach cannot be water; as a divider it
+// should split two different zone types): most dividers are SYMMETRIC (trail / forest road / gravel
+// path / field ridge / ditch / stream / fence / hedge / rocks -- same nature both sides, both sides
+// of a road were always alike), so painters may paint freely.
+// But the THREE transition kinds (beach / mudflat / mangrove) split different things: water on one
+// side, land on the other. Painting them symmetric puts water on both sides of the beach -- surf
+// runs onto the land side. Those three flag flat.wet = 1 in the catalog, and emitters use it to
+// orient the v axis (see wetFlipAt). Contract: f = +1 (v = 1) is always the water side, f = -1
+// (v = 0) always the land side. Painters flagged wet MUST paint water elements (surf / tidal
+// channels / ponding) on the f > 0 half and land elements (dry sand / shells / grass / canopy) on
+// the f < 0 half; unflagged painters MUST NOT depend on the sign of f (direction unguaranteed).
 const BORDER_PAINTERS = {
-  trail(g, S, rnd) {                                   // 步道小徑:土色踏面 + 踏石 + 車轍水窪 + 兩緣草撇
+  trail(g, S, rnd) {                                   // Foot trail: trodden tread + step stones + ruts + edge grass
     bandBlob(g, S, rnd, 1, 'rgb(150,124,90)');
-    bandBlob(g, S, rnd, 0.44, 'rgb(133,108,76)', 0.75);   // 踏實的中央踏道(比兩側深)
+    bandBlob(g, S, rnd, 0.44, 'rgb(133,108,76)', 0.75);   // Trodden center tread (darker than sides)
     g.fillStyle = 'rgb(126,102,72)';
     for (let x = 8; x < S; x += 26 + (rnd() * 10 | 0)) {
       g.beginPath();
       g.ellipse(x, bandY(S, (rnd() - 0.5) * 0.7), 9 + rnd() * 5, 7 + rnd() * 4, rnd(), 0, 7); g.fill();
       g.fillStyle = rnd() < 0.5 ? 'rgb(166,140,104)' : 'rgb(126,102,72)';
     }
-    g.fillStyle = 'rgba(96,84,64,0.5)';                // 淺水窪(踏面低窪處)
+    g.fillStyle = 'rgba(96,84,64,0.5)';                // Shallow puddles (tread hollows)
     for (let i = 0; i < 5; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 0.5), 5 + rnd() * 7, rnd);
-    g.fillStyle = 'rgba(188,166,128,0.8)';             // 乾燥浮土斑
+    g.fillStyle = 'rgba(188,166,128,0.8)';             // Dry loose-soil specks
     for (let i = 0; i < 22; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.6), 1.2 + rnd() * 2, 0, 7); g.fill(); }
     bandFringe(g, S, rnd, 'rgba(74,110,52,0.7)', 40, 7);
   },
-  forestroad(g, S, rnd) {                              // 林道:雙輪轍 + 中央草帶 + 落葉點
+  forestroad(g, S, rnd) {                              // Forest road: twin ruts + center grass + leaf litter
     bandBlob(g, S, rnd, 1, 'rgb(122,100,72)', 0.92);
     g.fillStyle = 'rgba(88,70,50,0.85)';
-    for (const f of [-0.5, 0.5]) {                     // 輪轍:一左一右
+    for (const f of [-0.5, 0.5]) {                     // Wheel ruts: left and right
       for (let x = -8; x < S + 8; x += 10) brushBlob(g, x, bandY(S, f + (rnd() - 0.5) * 0.06), 13 + rnd() * 4, rnd);
     }
     g.strokeStyle = 'rgba(96,128,66,0.8)'; g.lineWidth = 2;
-    for (let i = 0; i < 24; i++) {                     // 中央草帶
+    for (let i = 0; i < 24; i++) {                     // Center grass strip
       const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 0.22);
       g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 4, y - 6); g.stroke();
     }
@@ -1564,14 +1734,14 @@ const BORDER_PAINTERS = {
     for (let i = 0; i < 16; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 2.2, 0, 7); g.fill(); }
     bandFringe(g, S, rnd, 'rgba(84,116,58,0.65)', 30, 8);
   },
-  gravelpath(g, S, rnd) {                              // 碎石土徑:灰土帶 + 深淺碎石斑 + 級配粗細分層
+  gravelpath(g, S, rnd) {                              // Gravel dirt road: gray soil band + graded stone layers
     bandBlob(g, S, rnd, 1, 'rgb(160,148,128)');
-    bandBlob(g, S, rnd, 0.5, 'rgb(178,168,148)', 0.6);    // 中央被輾亮的細級配
-    for (let i = 0; i < 190; i++) {                       // 細粒:滿版
+    bandBlob(g, S, rnd, 0.5, 'rgb(178,168,148)', 0.6);    // Rolled-bright fine grade at center
+    for (let i = 0; i < 190; i++) {                       // Fine grains: full cover
       g.fillStyle = rnd() < 0.5 ? 'rgba(120,112,98,0.9)' : 'rgba(196,188,170,0.9)';
       g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 1.2 + rnd() * 1.8, 0, 7); g.fill();
     }
-    for (let i = 0; i < 26; i++) {                        // 粗粒:多角形碎石(有稜有角才讀得出「碎石」)
+    for (let i = 0; i < 26; i++) {                        // Coarse grains: angular stones (edges read as gravel)
       const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.7), r = 2.6 + rnd() * 3.4;
       g.fillStyle = rnd() < 0.5 ? 'rgb(146,138,124)' : 'rgb(206,198,182)';
       g.beginPath();
@@ -1581,13 +1751,14 @@ const BORDER_PAINTERS = {
       }
       g.closePath(); g.fill();
     }
-    // 從碎石縫裡長出來的雜草(2026-08-13 使用者「土路有碎石雜草」):bandFringe 只長在兩緣,
-    // 而土路的草是**長在路面上**的 —— 少了它,不凸起的碎石帶就只剩一條灰色的紋理
+    // Weeds growing out of gravel seams (2026-08-13 user report: dirt roads carry gravel weeds):
+    // bandFringe only grows on rims, while dirt-road grass grows ON the road -- without it, a flat
+    // gravel band is just a gray texture line
     for (let i = 0; i < 26; i++) {
       const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.75);
       g.strokeStyle = rnd() < 0.5 ? 'rgba(112,134,72,0.85)' : 'rgba(146,152,88,0.8)';
       g.lineWidth = 1.3;
-      for (let k = 0; k < 3; k++) {                        // 一叢三葉
+      for (let k = 0; k < 3; k++) {                        // Three blades per tuft
         g.beginPath(); g.moveTo(x, y);
         g.quadraticCurveTo(x + (rnd() - 0.5) * 4, y - 4, x + (rnd() - 0.5) * 8, y - 6 - rnd() * 4);
         g.stroke();
@@ -1595,28 +1766,28 @@ const BORDER_PAINTERS = {
     }
     bandFringe(g, S, rnd, 'rgba(122,132,86,0.55)', 22, 5);
   },
-  fieldpath(g, S, rnd) {                               // 田埂:夯土埂道 + 兩側田水映邊 + 稻梗屑 + 草冠
+  fieldpath(g, S, rnd) {                               // Field ridge: rammed-earth path + wet field reflections + straw bits + grass crown
     bandBlob(g, S, rnd, 1, 'rgb(146,124,88)');
-    bandBlob(g, S, rnd, 0.36, 'rgb(122,102,72)', 0.85);   // 中央踏實的埂頂
-    g.fillStyle = 'rgba(108,120,96,0.55)';                // 兩側田水/濕土映邊
+    bandBlob(g, S, rnd, 0.36, 'rgb(122,102,72)', 0.85);   // Trodden crest at center
+    g.fillStyle = 'rgba(108,120,96,0.55)';                // Field-water / wet-soil reflections on both sides
     for (const f of [-0.86, 0.86]) {
       for (let x = -8; x < S + 8; x += 11) brushBlob(g, x, bandY(S, f + (rnd() - 0.5) * 0.12), 9 + rnd() * 5, rnd);
     }
-    g.strokeStyle = 'rgba(186,164,112,0.85)'; g.lineWidth = 1.5;   // 稻梗屑
+    g.strokeStyle = 'rgba(186,164,112,0.85)'; g.lineWidth = 1.5;   // Straw bits
     for (let i = 0; i < 26; i++) {
       const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.2), a = rnd() * Math.PI;
       g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 7, y + Math.sin(a) * 4); g.stroke();
     }
     bandFringe(g, S, rnd, 'rgba(96,128,60,0.8)', 46, 8);
   },
-  ditch(g, S, rnd) {                                   // 水溝:混凝土溝緣直線 + 深色水面 + 藻斑水光
+  ditch(g, S, rnd) {                                   // Ditch: concrete rims + dark water + algae glints
     const y = (f) => bandY(S, f);
-    g.fillStyle = 'rgb(70,84,88)';                     // 溝內水面(中央 60%)
+    g.fillStyle = 'rgb(70,84,88)';                     // Ditch water (center 60 percent)
     g.fillRect(0, y(-0.3), S, y(0.3) - y(-0.3));
-    g.fillStyle = 'rgb(178,180,176)';                  // 兩側混凝土溝緣
+    g.fillStyle = 'rgb(178,180,176)';                  // Concrete rims on both sides
     g.fillRect(0, y(-0.98), S, y(-0.3) - y(-0.98));
     g.fillRect(0, y(0.3), S, y(0.98) - y(0.3));
-    g.fillStyle = 'rgba(140,142,138,0.7)';             // 溝緣暗邊(收邊)
+    g.fillStyle = 'rgba(140,142,138,0.7)';             // Dark rim hems (edge finish)
     g.fillRect(0, y(-0.36), S, 3); g.fillRect(0, y(0.33), S, 3);
     g.fillStyle = 'rgba(96,120,96,0.6)';
     for (let i = 0; i < 18; i++) brushBlob(g, rnd() * S, y((rnd() - 0.5) * 0.5), 4 + rnd() * 5, rnd);
@@ -1625,40 +1796,40 @@ const BORDER_PAINTERS = {
       const x = rnd() * S, yy = y((rnd() - 0.5) * 0.45);
       g.beginPath(); g.moveTo(x, yy); g.lineTo(x + 8 + rnd() * 8, yy); g.stroke();
     }
-    g.fillStyle = 'rgba(150,148,142,0.6)';             // 溝緣接縫(預鑄溝蓋的節)
+    g.fillStyle = 'rgba(150,148,142,0.6)';             // Rim joints (precast cover segments)
     for (let x = 6; x < S; x += 30 + (rnd() * 12 | 0)) { g.fillRect(x, y(-0.98), 2, y(-0.3) - y(-0.98)); g.fillRect(x, y(0.3), 2, y(0.98) - y(0.3)); }
     bandFringe(g, S, rnd, 'rgba(92,124,64,0.7)', 26, 6);
   },
-  fenceline(g, S, rnd) {                               // 圍籬腳:踩踏出來的土帶 + 樁腳陰影 + 高雜草
+  fenceline(g, S, rnd) {                               // Fence foot: trodden dirt strip + post shadows + tall weeds
     bandBlob(g, S, rnd, 1, 'rgb(138,132,96)');
-    bandBlob(g, S, rnd, 0.34, 'rgb(120,110,80)', 0.8);    // 沿籬走出來的細徑
-    g.fillStyle = 'rgba(74,66,48,0.5)';                   // 樁腳落影(規律間距 = 人工界)
+    bandBlob(g, S, rnd, 0.34, 'rgb(120,110,80)', 0.8);    // Narrow path worn along the fence
+    g.fillStyle = 'rgba(74,66,48,0.5)';                   // Post-foot shadows (regular spacing = artificial border)
     for (let x = 10; x < S + 10; x += 32) brushBlob(g, x, bandY(S, 0.02), 5 + rnd() * 2, rnd);
     g.fillStyle = 'rgba(158,150,112,0.7)';
     for (let i = 0; i < 30; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.8), 1.3 + rnd() * 2, 0, 7); g.fill(); }
     bandFringe(g, S, rnd, 'rgba(112,134,66,0.85)', 52, 10);
   },
-  hedgebank(g, S, rnd) {                               // 樹籬腳:落葉腐土 + 苔痕 + 枯枝(樹籬本體是立體脊)
+  hedgebank(g, S, rnd) {                               // Hedge foot: leaf litter + moss + dead twigs (hedge body is a solid spine)
     bandBlob(g, S, rnd, 1, 'rgb(104,94,68)');
-    g.fillStyle = 'rgba(70,64,48,0.6)';                   // 樹籬落下的濃蔭(壓在中線)
+    g.fillStyle = 'rgba(70,64,48,0.6)';                   // Dense hedge shade pressed on centerline
     for (let x = -8; x < S + 8; x += 10) brushBlob(g, x, bandY(S, (rnd() - 0.5) * 0.2), 13 + rnd() * 5, rnd);
-    for (let i = 0; i < 46; i++) {                        // 落葉
+    for (let i = 0; i < 46; i++) {                        // Fallen leaves
       g.fillStyle = rnd() < 0.5 ? 'rgba(146,116,62,0.85)' : 'rgba(112,92,54,0.85)';
       const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.8);
       g.beginPath(); g.ellipse(x, y, 3.4 + rnd() * 2.4, 1.8 + rnd() * 1.2, rnd() * 3, 0, 7); g.fill();
     }
-    g.fillStyle = 'rgba(96,132,74,0.55)';                 // 苔痕
+    g.fillStyle = 'rgba(96,132,74,0.55)';                 // Moss stains
     for (let i = 0; i < 14; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.5), 5 + rnd() * 6, rnd);
     g.strokeStyle = 'rgba(84,70,50,0.85)'; g.lineWidth = 1.6;
-    for (let i = 0; i < 14; i++) {                        // 枯枝
+    for (let i = 0; i < 14; i++) {                        // Dead twigs
       const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.4), a = rnd() * Math.PI;
       g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 12, y + Math.sin(a) * 6); g.stroke();
     }
     bandFringe(g, S, rnd, 'rgba(88,124,58,0.8)', 40, 9);
   },
-  rubble(g, S, rnd) {                                  // 岩塊帶:崩落的多角岩屑 + 地衣 + 石縫暗線
+  rubble(g, S, rnd) {                                  // Rock band: fallen angular scree + lichen + crack lines
     bandBlob(g, S, rnd, 1, 'rgb(150,146,138)');
-    for (let i = 0; i < 60; i++) {                        // 多角岩塊(大小分層,不是均勻噪點)
+    for (let i = 0; i < 60; i++) {                        // Angular rocks (graded sizes, not uniform noise)
       const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.9), r = 3 + rnd() * rnd() * 12;
       const c = 120 + (rnd() * 70 | 0);
       g.fillStyle = `rgb(${c},${c - 3},${c - 10})`;
@@ -1668,37 +1839,38 @@ const BORDER_PAINTERS = {
         a ? g.lineTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr) : g.moveTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr);
       }
       g.closePath(); g.fill();
-      g.strokeStyle = 'rgba(78,76,72,0.5)'; g.lineWidth = 1.2; g.stroke();   // 石縫暗線
+      g.strokeStyle = 'rgba(78,76,72,0.5)'; g.lineWidth = 1.2; g.stroke();   // Crack dark lines
     }
-    g.fillStyle = 'rgba(154,168,118,0.45)';               // 地衣
+    g.fillStyle = 'rgba(154,168,118,0.45)';               // Lichen
     for (let i = 0; i < 18; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.7), 3.5 + rnd() * 4, rnd);
   },
-  stream(g, S, rnd) {                                  // 小溪:藍綠水帶 + 白水光 + 兩岸溪石
+  stream(g, S, rnd) {                                  // Stream: teal water band + white glints + bank stones
     bandBlob(g, S, rnd, 1, 'rgb(88,138,148)');
-    bandBlob(g, S, rnd, 0.5, 'rgb(70,120,134)', 0.8);  // 深槽
+    bandBlob(g, S, rnd, 0.5, 'rgb(70,120,134)', 0.8);  // Deep channel
     g.strokeStyle = 'rgba(226,240,242,0.75)'; g.lineWidth = 1.6; g.lineCap = 'round';
     for (let i = 0; i < 18; i++) {
       const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 0.9);
       g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 6, y - 2, x + 12 + rnd() * 6, y); g.stroke();
     }
     g.fillStyle = 'rgb(140,138,126)';
-    for (let i = 0; i < 18; i++) {                     // 兩岸溪石
+    for (let i = 0; i < 18; i++) {                     // Bank stones on both sides
       const y = bandY(S, (rnd() < 0.5 ? -1 : 1) * (0.66 + rnd() * 0.3));
       g.beginPath(); g.ellipse(rnd() * S, y, 4.5 + rnd() * 3, 3.5 + rnd() * 2.5, rnd(), 0, 7); g.fill();
       g.fillStyle = rnd() < 0.5 ? 'rgb(158,154,142)' : 'rgb(126,124,114)';
     }
-    g.fillStyle = 'rgba(214,236,238,0.45)';            // 石頭下游的白沫尾
+    g.fillStyle = 'rgba(214,236,238,0.45)';            // White foam tails below stones
     for (let i = 0; i < 10; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 0.8), 4 + rnd() * 5, rnd);
     bandFringe(g, S, rnd, 'rgba(88,126,66,0.8)', 34, 9);
   },
-  // ⚠ 以下三支標了 `wet`(見上面的 v 契約):**f > 0 是水、f < 0 是陸**,MUST NOT 畫成對稱
-  beach(g, S, rnd) {                                   // 沙灘:陸側乾沙 → 潮線 → 水側濕沙 + 浪花
+  // The three painters below flag wet (see the v contract above): f > 0 is water, f < 0 is
+  // land; MUST NOT paint symmetric
+  beach(g, S, rnd) {                                   // Beach: dry sand land-side to tide line to wet sand + surf water-side
     bandBlob(g, S, rnd, 1, 'rgb(216,198,158)');
-    g.save(); g.beginPath();                              // 濕沙只鋪水側(f > 0.05)
+    g.save(); g.beginPath();                              // Wet sand only on the water side (f > 0.05)
     g.rect(0, bandY(S, 0.05), S, S); g.clip();
     bandBlob(g, S, rnd, 1, 'rgb(186,168,132)', 0.75);
     g.restore();
-    g.strokeStyle = 'rgba(168,150,116,0.7)'; g.lineWidth = 2.2;   // 潮線:沖刷到最遠的那幾道
+    g.strokeStyle = 'rgba(168,150,116,0.7)'; g.lineWidth = 2.2;   // Tide lines: farthest wash reaches
     for (const f of [-0.1, 0.14]) {
       g.beginPath();
       for (let x = -8; x <= S + 8; x += 12) {
@@ -1707,26 +1879,26 @@ const BORDER_PAINTERS = {
       }
       g.stroke();
     }
-    for (let i = 0; i < 44; i++) {                        // 貝殼/卵石:堆在潮線與陸側
+    for (let i = 0; i < 44; i++) {                        // Shells/pebbles piled at tide line and land side
       g.fillStyle = rnd() < 0.6 ? 'rgba(240,232,214,0.9)' : 'rgba(150,140,120,0.9)';
       g.beginPath(); g.arc(rnd() * S, bandY(S, -0.95 + rnd() * 1.1), 1.2 + rnd() * 1.8, 0, 7); g.fill();
     }
-    g.strokeStyle = 'rgba(150,152,102,0.75)'; g.lineWidth = 1.5;  // 陸側:沙丘草
+    g.strokeStyle = 'rgba(150,152,102,0.75)'; g.lineWidth = 1.5;  // Land side: dune grass
     for (let i = 0; i < 22; i++) {
       const x = rnd() * S, y = bandY(S, -1 + rnd() * 0.28);
       g.beginPath(); g.moveTo(x, y);
       g.quadraticCurveTo(x + (rnd() - 0.5) * 5, y + 4, x + (rnd() - 0.5) * 9, y + 8 + rnd() * 4);
       g.stroke();
     }
-    // 浪花(2026-08-13 使用者「海灘有浪花」)—— **只在水側**。畫成對稱的話兩邊都讀成水,
-    // 而分界線的兩側本來就該是不同類型的區域(使用者同日第二輪回報)
+    // Surf (2026-08-13 user report: beaches need surf) -- water side ONLY. Symmetric surf reads
+    // as water on both sides, while divider sides MUST be different zone types (same-day follow-up)
     for (const [f, a] of [[0.42, 0.7], [0.8, 0.9]]) {
       g.fillStyle = `rgba(252,252,250,${a})`;
-      for (let x = -6; x < S + 6; x += 7) {               // 沫線本體:一顆顆氣泡連成扇貝邊
+      for (let x = -6; x < S + 6; x += 7) {               // Foam-line body: bubbles chained into scallops
         const y = bandY(S, f + (rnd() - 0.5) * 0.13);
         g.beginPath(); g.arc(x + rnd() * 5, y, 2 + rnd() * 3.4, 0, 7); g.fill();
       }
-      g.strokeStyle = `rgba(206,228,234,${a * 0.7})`; g.lineWidth = 1.4;   // 沫線後緣的濕沙暗邊
+      g.strokeStyle = `rgba(206,228,234,${a * 0.7})`; g.lineWidth = 1.4;   // Dark wet-sand hem behind the foam
       g.beginPath();
       for (let x = -6; x <= S + 6; x += 10) {
         const y = bandY(S, f - 0.1 + (rnd() - 0.5) * 0.1);
@@ -1734,60 +1906,61 @@ const BORDER_PAINTERS = {
       }
       g.stroke();
     }
-    g.fillStyle = 'rgba(255,255,255,0.5)';                // 餘沫:只散在水側
+    g.fillStyle = 'rgba(255,255,255,0.5)';                // Leftover foam: scattered water-side only
     for (let i = 0; i < 46; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, 0.2 + rnd() * 0.8), 0.8 + rnd() * 1.4, 0, 7); g.fill(); }
   },
-  mudflat(g, S, rnd) {                                 // 泥灘過渡帶(水域↔沼澤):陸側鹽生草 → 泥灘 → 水側潮溝積水
+  mudflat(g, S, rnd) {                                 // Mudflat transition (water vs marsh): salt grass land-side to mud to tidal pools water-side
     bandBlob(g, S, rnd, 1, 'rgb(122,110,88)');
-    g.save(); g.beginPath();                              // 水側:泡水的深色濕泥
+    g.save(); g.beginPath();                              // Water side: soaked dark wet mud
     g.rect(0, bandY(S, 0.1), S, S); g.clip();
     bandBlob(g, S, rnd, 1, 'rgb(92,86,72)', 0.8);
     g.restore();
-    g.fillStyle = 'rgba(70,92,96,0.55)';                  // 潮溝:退潮留下的積水蜿蜒帶(水側)
+    g.fillStyle = 'rgba(70,92,96,0.55)';                  // Tidal channels: winding leftover pools at ebb (water side)
     for (let i = 0; i < 10; i++) {
       const y0 = bandY(S, 0.15 + rnd() * 0.8);
       g.beginPath(); g.moveTo(-8, y0);
       for (let x = 0; x <= S + 8; x += 18) g.quadraticCurveTo(x + 6, y0 + (rnd() - 0.5) * 9, x + 18, y0 + (rnd() - 0.5) * 5);
       g.lineWidth = 3 + rnd() * 5; g.strokeStyle = 'rgba(70,92,96,0.5)'; g.stroke();
     }
-    g.fillStyle = 'rgba(150,140,116,0.6)';                // 乾裂泥龜背(陸側)
+    g.fillStyle = 'rgba(150,140,116,0.6)';                // Cracked mud polygons (land side)
     for (let i = 0; i < 26; i++) brushBlob(g, rnd() * S, bandY(S, -1 + rnd() * 1.0), 4 + rnd() * 7, rnd);
     g.strokeStyle = 'rgba(96,84,64,0.5)'; g.lineWidth = 1;
-    for (let i = 0; i < 30; i++) {                        // 泥裂縫
+    for (let i = 0; i < 30; i++) {                        // Mud cracks
       const x = rnd() * S, y = bandY(S, -1 + rnd() * 0.9), a = rnd() * Math.PI;
       g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 9, y + Math.sin(a) * 6); g.stroke();
     }
-    g.fillStyle = 'rgba(140,132,104,0.85)';               // 貝殼/蟹洞
+    g.fillStyle = 'rgba(140,132,104,0.85)';               // Shells / crab holes
     for (let i = 0; i < 34; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 1 + rnd() * 1.6, 0, 7); g.fill(); }
     g.strokeStyle = 'rgba(118,138,84,0.8)'; g.lineWidth = 1.6; g.lineCap = 'round';
-    for (let i = 0; i < 34; i++) {                        // 陸側:鹽生草叢(沼澤那一邊)
+    for (let i = 0; i < 34; i++) {                        // Land side: salt-grass tufts (the marsh side)
       const x = rnd() * S, y = bandY(S, -1 + rnd() * 0.35);
       g.beginPath(); g.moveTo(x, y + 5); g.lineTo(x + (rnd() - 0.5) * 4, y - 4 - rnd() * 6); g.stroke();
     }
     g.lineCap = 'butt';
   },
-  mangrove(g, S, rnd) {                                // 紅樹林:陸側樹冠 → 支柱根 → 水側潮溝
+  mangrove(g, S, rnd) {                                // Mangrove: canopy land-side to prop roots to tidal channels water-side
     bandBlob(g, S, rnd, 1, 'rgb(112,98,76)');
     g.save(); g.beginPath();
-    g.rect(0, bandY(S, 0.15), S, S); g.clip();            // 水側:泡水的深泥
+    g.rect(0, bandY(S, 0.15), S, S); g.clip();            // Water side: soaked deep mud
     bandBlob(g, S, rnd, 1, 'rgb(84,80,68)', 0.75);
     g.restore();
-    g.fillStyle = 'rgba(63,107,63,0.8)';                  // 陸側:密實樹冠
+    g.fillStyle = 'rgba(63,107,63,0.8)';                  // Land side: dense canopy
     for (let i = 0; i < 20; i++) brushBlob(g, rnd() * S, bandY(S, -1 + rnd() * 0.85), 7 + rnd() * 9, rnd);
     g.fillStyle = 'rgba(96,140,80,0.7)';
     for (let i = 0; i < 14; i++) brushBlob(g, rnd() * S, bandY(S, -1 + rnd() * 0.7), 4 + rnd() * 6, rnd);
     g.strokeStyle = 'rgba(84,66,48,0.9)'; g.lineWidth = 2; g.lineCap = 'round';
-    for (let i = 0; i < 40; i++) {                        // 支柱根:自樹冠往水側伸出去
+    for (let i = 0; i < 40; i++) {                        // Prop roots: reaching from canopy toward water
       const x = rnd() * S, y = bandY(S, -0.35 + rnd() * 1.1);
       g.beginPath(); g.moveTo(x, y + 5 + rnd() * 4); g.lineTo(x + (rnd() - 0.5) * 4, y - 5 - rnd() * 5); g.stroke();
     }
     g.lineCap = 'butt';
-    g.fillStyle = 'rgba(58,74,62,0.5)';                   // 潮溝積水:只在水側
+    g.fillStyle = 'rgba(58,74,62,0.5)';                   // Channel pools: water side only
     for (let i = 0; i < 12; i++) brushBlob(g, rnd() * S, bandY(S, 0.25 + rnd() * 0.75), 6 + rnd() * 8, rnd);
   },
 };
-// 畫筆鍵取自型錄的 `flat.tex`(單一縫;快取仍以種類為鍵)—— MUST NOT 退回「拿種類名直接
-// 當畫筆鍵」:那讓 `tex` 變成沒有消費端的裝飾欄位,改名時不會有任何地方報錯
+// Painter keys come from the catalog flat.tex (single seam; cache still keyed by kind) -- MUST NOT
+// fall back to kind names directly: that leaves tex as decoration with no consumer, silently stale
+// on renames
 const _bdTexCache = new Map();
 function borderTex(kind) {
   let t = _bdTexCache.get(kind);
@@ -1807,20 +1980,23 @@ function borderTex(kind) {
 }
 
 /**
- * 鋪設地被覆蓋層。加進 biomes group,回傳統計 { patches, details }。
- * @param group     biomes 的 THREE.Group
- * @param terrain   buildTerrain() 回傳物
- * @param opts.isBlocked  (x,z)=>bool 兵線/塔/主堡淨空
- * @param opts.classifyAt (x,z)=>'green'|'bare'|'urban'|'wet'|'water'(classifyPureAt 缺席時的備援)
- * @param opts.classifyPureAt 純圖資分類(無場地 mix 改寫);底毯與特徵層一律用它,
- *                            拼圖類型才與衛星影像相符(球場限市區/水田限綠地/碎石限裸露地)
- * @param opts.blockers   建物碰撞柱(patch 避開建物)
- * @param opts.season / opts.seed / opts.rnd  決定性環境參數
- * @param opts.roadDirAt  (x,z)=>最近道路方位角(rad,atLocal 平面角)或 null(附近無路);
- *                        整齊件沿路擺放用,可缺席 = 全部隨機朝向(行為同舊版)
- * @param opts.roadClear  (x,z,foot?)=>足跡是否碰到道路走廊(bool);特徵拼圖避開路面免 3D 件戳穿,
- *                        可缺席 = 不遮罩(行為同舊版)。查詢不吃 rnd(拒絕在首個 rnd() 前 = 序列不變)
- * @param opts.reservedFootprints  其他獨立場地／植被足跡；與 blockers 合併後供拼圖及細節共用
+ * Lay ground cover. Adds into the biomes group; returns stats { patches, details }.
+ * @param group     biomes THREE.Group
+ * @param terrain   buildTerrain() product
+ * @param opts.isBlocked  (x,z)=>bool troop-line / tower / keep clearance
+ * @param opts.classifyAt (x,z)=>green/bare/urban/wet/water fallback when classifyPureAt absent
+ * @param opts.classifyPureAt pure imagery classification (no field-mix rewrite); carpet and feature
+ *                            layers always use it, so puzzle kinds match satellite imagery (courts only
+ *                            urban / paddies only green / gravel only bare)
+ * @param opts.blockers   building collision posts (patches avoid buildings)
+ * @param opts.season / opts.seed / opts.rnd  deterministic environment params
+ * @param opts.roadDirAt  (x,z)=>nearest road bearing (rad, atLocal plane angle) or null (no road
+ *                        nearby); tidy pieces align to roads; absent = all random (legacy behavior)
+ * @param opts.roadClear  (x,z,foot?)=>whether a footprint touches road corridors (bool); feature
+ *                        puzzles avoid tarmac so no 3D piece pierces it; absent = no mask (legacy).
+ *                        Lookup takes no rnd (rejection before the first rnd() call keeps sequences)
+ * @param opts.reservedFootprints  other standalone field/vegetation footprints; merged with blockers
+ *                        for puzzles and details
  */
 export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys, reservedFootprints = [], surfaceField = null, environment = {} }) {
   const environmentAt = (x, z) => surfaceEnvironment({ ...environment, season,
@@ -1840,31 +2016,36 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   };
   const generatedSurfaces = [];
   const inb = edgeWallInsetM();
-  const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
-  const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
-  const AQ_DET = new Set(['reed', 'lotuspad', 'fish']);   // 水生細節:免吃岸線高度淘汰、貼水面擺放
-  // 沉在水面下多少(m);2026-08-13 游魚。**這是 AQ_DET 的子集而不是第二張名冊** ——
-  // 蘆葦/荷葉貼在水面上、魚在水面下,兩者共用同一道岸線豁免。水深不足(池底離水面比這個
-  // 數字還淺)就不擺:魚半個身子插在泥裡比沒有魚還糟(§4 寧缺勿錯)
+  const classifyPure = classifyPureAt || classifyAt;   // For carpet: un-rewritten zones
+  const envAt = envCodeAt || (() => 0);                // Water/marsh classification single seam (biomes.terrainEnvCode; absent = all dry)
+  const AQ_DET = new Set(['reed', 'lotuspad', 'fish']);   // Aquatic details: skip shoreline height culling, sit on water
+  // Submersion depth in m; 2026-08-13 fish. This is a SUBSET of AQ_DET, not a second roster --
+  // reeds/lotus sit on the surface while fish hang below, sharing one shoreline exemption. Too
+  // shallow (bottom closer to surface than this number) means skip: a half-buried fish reads worse
+  // than no fish (section 4: omit rather than err)
   const DIVE = { fish: 0.5 };
   const buckets = new Map();   // Surface/variant plus local climate state.
   const occupied = makeFootprintIndex([...blockers.map(blockerFoot), ...reservedFootprints]);
   const det = {};
   for (const t in DETAIL_DEFS) det[t] = [];
   let detCount = 0;
-  let detCap = FEAT_DETAIL;   // 特徵層先用配額,底毯撒佈前放寬到 MAX_DETAIL
-  // ==== 都市規劃格網方位(2026-07-29 使用者需求「球場/操場/停車場/太陽能板這類單獨
-  // 完整的區塊看起來沒有規劃 —— 盡可能跟道路一致的都市規劃」)====
-  // 舊病灶:roadDirAt 只在 46m 內有答案,更遠的規律結構退回完全隨機朝向;即使近路
-  // 還有 reg 擲骰(court 0.9 ⇒ 10% 隨機)—— 路邊一塊斜著擺的停車場就是「沒規劃」感。
-  // 新制:規律結構(edge:'ink')朝向**恆對齊**,三段退避 —— 近路(46m)取最近路向 →
-  // 離路擴大半徑(GRID_FAR)找同街區幹道 → 全圖格網主方位 gridA(道路線段長度加權的
-  // mod 90° 圓平均;地籍格網對 90° 旋轉對稱 ⇒ 取 4 倍角圓平均,垂直街道不互相抵銷)。
-  // 無圖資(roadPolys 空)→ gridA=null,退回隨機(離線備援行為不變)。零 rnd 純幾何。
+  let detCap = FEAT_DETAIL;   // Feature layer spends quota first; relaxed to MAX_DETAIL before carpet scatter
+  // ==== Urban-plan grid orientation (2026-07-29 user request: courts/fields/parking/solar blocks
+  // should read as planned -- aligned to roads wherever possible) ====
+  // Old lesion: roadDirAt only answers within 46m, farther regular structures fell back to fully
+  // random yaw; even near roads a reg roll remained (court 0.9 leaves 10 percent random) -- one
+  // skewed parking lot by the road reads as unplanned.
+  // New rule: regular structures (edge ink) ALWAYS align, in three fallbacks -- near-road (46m)
+  // nearest road bearing, then wider radius (GRID_FAR) for same-block arterials, then map-wide grid
+  // bearing gridA (road-length-weighted mod-90 circular mean; cadastral grids are symmetric under 90
+  // degree rotation, so averaging at 4x angles keeps perpendicular streets from canceling). No map
+  // data (empty roadPolys) gives gridA=null and falls back to random (offline fallback unchanged).
+  // Zero rnd, pure geometry.
   const GRID_FAR_R2 = 220 * 220;
-  // 主方位公式只有 `roadgrid.gridAngle` 一份(2026-08-10 收口):場地主方位的離線烘焙吃的是
-  // 同一支,差別只在取樣面 —— 那邊只收大馬路(要的是「地籍格網對準哪」),這裡收全部道路
-  // (要的是「這一帶的擺件該朝哪」)。逐位元同舊制。
+  // The bearing formula lives only in roadgrid.gridAngle (closed 2026-08-10): offline-baked field
+  // bearings eat the same branch, differing only in sample surface -- that side takes only highways
+  // (asking where the cadastral grid points) while this side takes all roads (asking where local
+  // set-pieces should face). Bit-identical to the old rule.
   let gridA = null;
   if (roadPolys?.length) {
     const segs = [];
@@ -1873,16 +2054,18 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
     gridA = gridAngle(segs);
   }
-  // 整齊度 → 沿路對齊:reg = 該型拼圖/物件沿最近道路方向擺放的機率,其餘機率
-  // (或附近無路)隨機朝向;ink 規律結構不擲骰,恆走三段退避對齊(見上)。
-  // 亂數紀律(§2.3):兩分支都固定先抽兩枚再決策 —— 對齊與否不改變 rnd 消耗序列;
-  // roadDirAt / gridA 本身不吃 rnd。回傳 atLocal 平面角。
-  let aligned = 0;   // 沿路對齊次數(拼圖 + 物件;冒煙稽核用)
-  let bStat = { planned: 0, drawn: 0, forks: 0, forksDrawn: 0 };   // 界線拼圖:規劃 vs 實畫
+  // Tidiness to road alignment: reg = probability that this puzzle/object kind aligns to the
+  // nearest road; the rest (or no road nearby) goes random; ink regular structures never roll and
+  // always take the three-fallback alignment (above).
+  // Randomness discipline (2.3): both branches always draw two first, then decide -- aligning or not
+  // never changes rnd consumption; roadDirAt / gridA themselves take no rnd. Returns atLocal plane
+  // angle.
+  let aligned = 0;   // Aligned-to-road count (puzzles + objects; for smoke audits)
+  let bStat = { planned: 0, drawn: 0, forks: 0, forksDrawn: 0 };   // Border puzzles: planned vs drawn
   const orient = (x, z, reg, halfTurn, ink = false) => {
-    const ra = rnd() * (halfTurn ? Math.PI : Math.PI * 2);   // 隨機朝向候選(固定枚數)
-    const roll = rnd();                                       // 對齊擲骰(固定枚數)
-    if (ink) {                                                // 都市規劃件:恆對齊道路格網
+    const ra = rnd() * (halfTurn ? Math.PI : Math.PI * 2);   // Random yaw candidate (fixed count)
+    const roll = rnd();                                       // Alignment roll (fixed count)
+    if (ink) {                                                // Planned pieces: always align to the road grid
       const a = (roadDirAt ? (roadDirAt(x, z) ?? roadDirAt(x, z, GRID_FAR_R2)) : null) ?? gridA;
       if (a == null) return ra;
       aligned++;
@@ -1894,15 +2077,17 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     aligned++;
     return a;
   };
-  // ry:null = 依 REG[type] 整齊度擲骰(沿路對齊或隨機朝向);
-  // 傳入固定角 = 對齊列陣(藤架/太陽能板/貨櫃與貼圖行列同向),不經整齊度擲骰
+  // ry null = roll tidiness via REG[type] (align to road or random yaw); a fixed angle means an
+  // aligned array (trellis/solar/containers run with the print rows), skipping the tidiness roll
   const addDetail = (type, px, pz, s, tintHex = null, sy = 1, ry = null) => {
-    // 3D 擺件同樣不得站在分界線上(使用者:「還有各種 3D 物件都不應該橫跨分界線」)——
-    // 界線本身該長什麼(踏石/樁/樹籬/岩塊)由 BORDER_KINDS 的 ridge 出,不是讓地被的
-    // 雜草稻苗貨櫃長到界線上。與既有早退同位 ⇒ 不消耗 rnd
+    // 3D set-pieces MUST NOT stand on dividers either (user: all kinds of 3D objects should not
+    // straddle dividers) -- what the line itself grows (step stones / posts / hedges / rocks) comes
+    // from BORDER_KINDS ridges, not from ground weeds, seedlings and containers standing on the line.
+    // Same rank as existing early-outs, so no rnd consumed
     if (detCount >= detCap || isBlocked(px, pz)) return;
-    // 互不重疊 + 不站進別人的功能性區塊(足跡量零件實幾何 × 本實例縮放);
-    // 與既有早退同位 ⇒ 不消耗 rnd(s 由呼叫端先抽好,序列不變)
+    // No overlap plus never inside someone else functional block (footprints measure real part
+    // geometry times this instance scale); same rank as existing early-outs, so no rnd consumed
+    // (s is drawn by callers first, sequences unchanged)
     const dr = detailR(type) * s;
     if (bdCross(px, pz, dr) || roadClear?.(px, pz, { x: px, z: pz, r: dr })) return;
     if (px - dr < terrain.minX + inb || px + dr > terrain.maxX - inb
@@ -1915,17 +2100,17 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     if (!detFree(px, pz, dr)) return;
     let y = terrain.heightAt(px, pz);
     if (y < 0.4) {
-      if (!AQ_DET.has(type)) return;                   // 水生細節(蘆葦/荷葉/魚)放行
+      if (!AQ_DET.has(type)) return;                   // Aquatic details (reeds/lotus/fish) pass
       if (terrain.waterY != null) y = Math.max(y, terrain.waterY);
     }
     const dive = DIVE[type];
-    if (dive) {                                        // 沉在水面下:水不夠深就不擺(見 DIVE)
+    if (dive) {                                        // Hangs below the surface: skip when too shallow (see DIVE)
       const wy = terrain.waterY;
       if (wy == null || terrain.heightAt(px, pz) > wy - dive - 0.2) return;
       y = wy - dive;
     }
-    const tl = TILT[type] || 0;   // 隨機傾角:每實例姿態互異
-    // atLocal 平面角 → three.js rotation.y 取負(同 rows 的 ry=-rot 慣例)
+    const tl = TILT[type] || 0;   // Random tilt: every instance poses differently
+    // atLocal plane angle to three.js rotation.y takes the negative (same ry=-rot convention as rows)
     const variant = groundSeed(px, pz, seed) % DETAIL_VARIANTS[type].length;
     // Rigid objects remain upright and embed their foot ring into rising terrain.
     if (!AQ_DET.has(type) && !dive) {
@@ -1939,8 +2124,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       y = low;
     }
     const finalRy = ry ?? -orient(px, pz, REG[type] || 0, false, RECT_BASE_DETAILS.has(type));
-    // 地面式貼合：列陣/線性件 tx/tz 吃地形梯度（與實例朝向同一局部系），其餘件維持隨機傾角；
-    // 貼合件仍照舊抽掉 2 枚 rnd（值棄用），共享序列零位移
+    // Ground-conforming: arrayed/linear pieces take terrain gradients into tx/tz (same local frame as
+    // instance yaw), the rest keep random tilt; conforming pieces still discard 2 rnd draws as before,
+    // zero shared-sequence shift
     let ptx = (rnd() - 0.5) * 2 * (RECT_BASE_DETAILS.has(type) ? 0 : tl);
     let ptz = (rnd() - 0.5) * 2 * (RECT_BASE_DETAILS.has(type) ? 0 : tl);
     if (SLOPE_FIT_DETAILS.has(type)) {
@@ -1954,15 +2140,16 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         const glx = c * gx - s * gz, glz = s * gx + c * gz;
         const clamp = (v) => Math.max(-0.45, Math.min(0.45, v));
         if (type === 'solarpanel') {
-          // 斜坡/起伏地面：順著地勢高程鋪設 (y = low/heightAt)，但太陽能板角度面向角度保持不變（依緯度向黃道面科學傾斜）
+          // Sloped/rolling ground: lay along terrain height (y = low/heightAt), but panel facing keeps
+          // its science tilt (latitude-toward-ecliptic); +z faces south
           const latDeg = terrain?.center?.lat ?? 25.0;
           const sciTilt = optimalSolarTiltRad(latDeg);
-          const targetWorldAz = (latDeg >= 0 ? 0 : Math.PI); // +z 為南
+          const targetWorldAz = (latDeg >= 0 ? 0 : Math.PI); // +z is south
           const relAz = targetWorldAz - finalRy;
           ptx = sciTilt * Math.cos(relAz);
           ptz = sciTilt * Math.sin(relAz);
         } else {
-          // 其餘線性/列陣件起伏地形：沿著地形斜坡鋪設
+          // Other linear/arrayed pieces on rolling terrain: laid along terrain slope
           ptx = clamp(-Math.atan(glz));
           ptz = clamp(Math.atan(glx));
         }
@@ -1976,10 +2163,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const area = terrain.worldW * terrain.worldH / 1e6;
   const target = Math.max(140, Math.min(1800, Math.round(area * 420)));
   let placed = 0;
-  let arraysN = 0;   // 沿街規律陣列落塊數(冒煙稽核用;patches 含此數)
+  let arraysN = 0;   // Street-aligned array block count (for smoke audits; patches includes it)
 
-  // ---- 高地/季節分區:量測全場高程「起伏」(絕對海拔無意義,高原城市會誤判),
-  // 相對高處改鋪高原/岩屑/冰原 ----
+  // ---- Highland/season zones: measure map-wide height RELIEF (absolute altitude is meaningless;
+  // a plateau city would misjudge); relatively high ground switches to plateau/scree/icefield ----
   let hMin = Infinity, hMax = -Infinity, snowAvailable = false;
   for (let j = 0; j <= 20; j++) {
     for (let i = 0; i <= 20; i++) {
@@ -1990,7 +2177,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
   }
   const relief = hMax - hMin;
-  const alpineH = relief > 40 ? hMin + relief * 0.62 : Infinity;   // 平坦地圖不出現高地地貌
+  const alpineH = relief > 40 ? hMin + relief * 0.62 : Infinity;   // Flat maps grow no highland kinds
   const zoneLists = { ...ZONES };
   const carpetLists = { ...CARPET };
   if (snowAvailable) {                  // Snow requires cold and available moisture.
@@ -1999,18 +2186,20 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     carpetLists.bare = ['icefield', ...CARPET.bare, 'icefield'];
     carpetLists.alpine = ['icefield', 'plateau', 'icefield', 'scree', 'icefield'];
   }
-  // 底毯清單排成顏色路徑(carpetOrder;2026-08-13 使用者「同一類型盡可能不要短距離快速變化
-  // 子類別」)—— 選款是「低頻雜訊 t → 清單索引」,索引相鄰若不是顏色相鄰,t 再平滑顏色照樣跳。
-  // MUST 排在冬季覆寫**之後**(冬季那兩份是新組的清單,不排就沒被排到)、且 enclave 的清單
-  // 也 MUST 排(encRt 建表處),兩條清單來源少一條就是「有些地方還在跳色」。
+  // Carpet rosters sorted into color paths (carpetOrder; 2026-08-13 user request: same type should
+  // not jump sub-kinds at short range) -- picking maps low-frequency noise t to roster index, and if
+  // index adjacency is not color adjacency, colors jump no matter how smooth t is. MUST sort AFTER the
+  // winter override (winter rosters are newly built lists, unsorted means missed), and enclave rosters
+  // MUST sort too (at encRt build); missing either roster source leaves some area still jumping.
   for (const zn in carpetLists) carpetLists[zn] = carpetOrder(carpetLists[zn]);
-  // coarse 分區查詢(sub → zone):交界樣式(planSeamOverlays)與邊界遮蔽物共用同一份(單一縫)
+  // coarse zone lookup (sub to zone): shared by border styles (planSeamOverlays) and border covers
+  // (single seam)
   const subCoarse = new Map();
   for (const zn in carpetLists) for (const s of carpetLists[zn]) if (!subCoarse.has(s)) subCoarse.set(s, zn);
   subCoarse.set('watertile', 'water'); subCoarse.set('deepwater', 'water');
   const coarseOfKey = (key) => subCoarse.get(key.slice(0, key.indexOf('#'))) || 'green';
-  // 每地表允許出現的分區(特徵 + 底毯清單聯集):tryPatch 一律據此把關,
-  // 家族延伸(鹽田→魚塭、農田拼布)跨進異分區/越過圖資邊界時直接擋下
+  // Zones each surface may appear in (feature + carpet roster union): tryPatch always gates on this,
+  // family extensions (salt pan to fish pond, farmland patchwork) crossing into foreign zones or past map-data edges are blocked outright
   const subZones = new Map();
   for (const lists of [zoneLists, carpetLists]) {
     for (const zn in lists) {
@@ -2023,8 +2212,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   }
   const zoneAt = (x, z) => {
     if (surfaceField) return surfaceField.sample(x, z);
-    // 水/沼優先走 envCode(與伺服器遮罩/涉水判定同一規則 = WYSIWYG):
-    // 水域回 'water'(無特徵 patch 清單 ⇒ 任何場所拼圖不得落水),沼澤回 'wet'(啟用濕地特徵)
+    // Water/marsh go through envCode first (same rule as server mask and wading check = WYSIWYG):
+    // water returns water (no feature patch roster, so no venue puzzle may land in water); marsh returns wet (enables wetland features)
     const ec = envAt(x, z);
     if (ec === 1) return 'water';
     if (ec === 2) return 'wet';
@@ -2033,41 +2222,41 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     return zn;
   };
 
-  // ==== 底毯層:抖動網格無縫鋪滿全部陸地 ====
-  // 角點位置只由「格點索引雜湊」決定 → 相鄰 cell 引用同一角點,拼面天生水密;
-  // 抖動幅度 ±0.45 格(不足半格,拓撲不翻面)讓交界呈手繪碎形而非直線格線。
+  // ==== Carpet layer: jittered grid tiles all land seamlessly ====
+  // Corner positions derive from grid-index hash alone, so adjacent cells share the same corner and faces are watertight by construction;
+  // jitter of +-0.45 cell (under half a cell, so topology never flips) renders borders as hand-drawn fractals instead of straight grid lines.
   const carpetBuckets = new Map(), spillBuckets = new Map(), bandBuckets = new Map();
-  const CLIFT = 0.07, SLIFT = 0.10;                     // 底毯 0.070 < 外溢 [0.100,0.107] < 不規律 fade[.110,.124] < 規律 ink[.135,.172] < 道路 0.18
+  const CLIFT = 0.07, SLIFT = 0.10;                     // carpet 0.070 < spillover [0.100,0.107] < irregular fade [.110,.124] < regular ink [.135,.172] < road 0.18
   const cell = Math.max(13, Math.max(terrain.worldW, terrain.worldH) / 232);
-  // 貼合抬升(見檔頭 SAG):同一支場、但**每一層傳自己的弦長**(檔頭 ⑥)—— 界線拼圖的環距
-  // 2m 上下、田埂 3m,拿底毯的 6.5m 去抬就是抬十倍(∝ 弦長²)⇒ 頂到 MAX 0.6m 浮成一條台。
-  // 圖內底毯 / 外溢 / 脊帶**不在消費端之列**(2026-08-13 起直接吃地形三角形,虧損恆 0)。
-  // 上限依所在位置分流,而三個分支全是 (x,z) 的純函式 ⇒ 同一點恆同值,抬升本身不會撕開皮。
+  // Drape lift (see file header SAG): one field, but each layer passes its own chord length (header item 6) -- border-puzzle ring spacing is
+  // around 2m and field ridges 3m, so lifting with the carpet 6.5m chord over-lifts tenfold (proportional to chord squared) and tops out at MAX 0.6m as a floating platform.
+  // In-map carpet / spillover / ridge are no longer consumers (since 2026-08-13 they eat terrain triangles directly, loss is always 0).
+  // Caps split by location, and all three branches are pure functions of (x,z), so one point always yields one value and lifting itself never tears the skin.
   const inMap = (x, z) => x >= terrain.minX && x <= terrain.maxX && z >= terrain.minZ && z <= terrain.maxZ;
   const drapeSag = (hAt, x, z, r) => {
     if (SAG_OFF) return 0;
     const inb = inMap(x, z);
     const s = groundSagAt(hAt, x, z, r ?? (inb ? cell : cell * BUF_CELL_F) / 2);
     if (!inb) return Math.min(s, SAG.BUF);
-    // 道路走廊內夾得更緊:路基已被 gradeRoadBeds 整平 ⇒ 那裡本來就幾乎沒有折角,
-    // 而抬過 0.11 就會把草皮推到路面之上(§lift 階梯)
+    // Road corridors clamp tighter: the roadbed was already graded flat by gradeRoadBeds, so there is almost no crease left there,
+    // while lifting past 0.11 would push turf above the road surface (section lift ladder)
     return Math.min(s, roadClear?.(x, z) ? SAG.ROAD : SAG.MAX);
   };
-  // 外溢每 key 微升差(0~0.007,合計仍 < fade 下限 0.110):異 key 外溢在同一格互疊時
-  // 避免共面深度互吃(舊制後畫的整張被深度測試丟棄 = 交界轉角硬缺口);繪序(renderOrder)
-  // 依同一雜湊 ⇒ 低者先畫、高者後蓋,混色連續且跨客戶端決定性(§2.3,不吃 rnd)
+  // Spillover uses a tiny per-key lift delta (0-0.007, still under the fade floor 0.110): when foreign-key spillovers overlap in one cell this
+  // avoids coplanar depth fighting (old rule dropped the later full sheet in depth test = hard gap at border corners); draw order (renderOrder)
+  // follows the same hash, so lower draws first and higher covers, keeping blends continuous and deterministic across clients (2.3, no rnd)
   const seamLift = (key) => {
     let h = 0;
     for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
     return ((h >>> 3) % 8) * 0.001;
   };
-  // 過渡帶手繪碎形擾動波數(世界波長 ≈ 1.6 cell:小於交界帶寬、大於頂點間距)
+  // Hand-drawn fractal ripple wavenumber for transition bands (world wavelength about 1.6 cells: narrower than the border band, wider than vertex spacing)
   const SEAM_QC_W = (2 * Math.PI) / (cell * 1.6);
   const gnx = Math.ceil(terrain.worldW / cell), gnz = Math.ceil(terrain.worldH / cell);
-  // ==== 準晶體場(quasicrystal;不規律拼貼的非週期骨架;底毯角點/選格/細節共用縫)====
-  // 5 向平面波和(方向 kπ/5 → 十重對稱 = 各向同性、非週期)。純函數:同 seed 同座標 ⇒ 同值,
-  // 全房間/跨客戶端一致(§2.3);相位由 seed 導 → 每圖不同、同房相同。零 rnd / 零 Math.random(A4)。
-  // 以波數 w 縮放同一支餵三尺度:角點去格化(粗)、底毯選格群聚(中)、細節 blue-noise(細)。
+  // ==== Quasicrystal field (quasicrystal; aperiodic backbone of irregular patchwork; shared seam for carpet corners, picking, details) ====
+  // Sum of 5 directional plane waves (directions k pi/5 give tenfold symmetry = isotropic, aperiodic). Pure function: same seed and coords give same value,
+  // consistent across the room and clients (2.3); phases derive from seed, so each map differs while one room agrees. Zero rnd / zero Math.random (A4).
+  // One field scaled by wavenumber w feeds three scales: corner de-gridding (coarse), carpet picking clusters (mid), detail blue-noise (fine).
   const QC_N = 5;
   const QC_DIR = [];
   for (let k = 0; k < QC_N; k++) QC_DIR.push([Math.cos(k * Math.PI / QC_N), Math.sin(k * Math.PI / QC_N)]);
@@ -2076,13 +2265,13 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     n = Math.imul(n ^ (n >>> 15), 0x2C1B3C6D);
     return ((n ^ (n >>> 13)) >>> 0) / 4294967296 * Math.PI * 2;
   });
-  // 場值 ∈[-1,1] 嚴格(N 道 cos /N)→ 角點位移可精確編列 ±0.45 預算
+  // Field value strictly in [-1,1] (N cosines over N), so corner offsets budget exactly +-0.45
   const qcVal = (x, z, w) => {
     let s = 0;
     for (let k = 0; k < QC_N; k++) s += Math.cos(w * (QC_DIR[k][0] * x + QC_DIR[k][1] * z) + QC_PH[k]);
     return s / QC_N;
   };
-  // ∇場單位向量(指向最近波峰);近平坦回 [0,0]
+  // Unit gradient vector of the field (points at nearest crest); near-flat returns [0,0]
   const qcGrad = (x, z, w) => {
     let gx = 0, gz = 0;
     for (let k = 0; k < QC_N; k++) {
@@ -2092,19 +2281,19 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const m = Math.hypot(gx, gz);
     return m < 1e-6 ? [0, 0] : [gx / m, gz / m];
   };
-  // 細節 blue-noise 微推:白噪落點沿最近峰偏置 0.7m(<¼ 波長 → 去叢聚不硬吸);純函數,不吃 rnd
+  // Detail blue-noise nudge: white-noise drops shift 0.7m toward the nearest crest (under quarter wavelength, so declumping never hard-snaps); pure function, no rnd
   const DET_QC_W = (2 * Math.PI) / 2.6;
   const qcNudge = (px, pz) => { const [gx, gz] = qcGrad(px, pz, DET_QC_W); return [px + gx * 0.7, pz + gz * 0.7]; };
-  const QC_SEL_W = CARPET_SEL.QC_W;   // 底毯 subtype 群聚調變波數(唯一縫,見 CARPET_SEL)
+  const QC_SEL_W = CARPET_SEL.QC_W;   // Carpet subtype cluster modulation wavenumber (single seam, see CARPET_SEL)
 
-  const cornH = (i, j, s) => {                          // 手繪顆粒(疊在準晶體場上加碎形細節)
+  const cornH = (i, j, s) => {                          // Hand-drawn grain (fractal detail stacked on the quasicrystal field)
     let n = ((i * 374761393 + j * 668265263) ^ (seed ^ s)) | 0;
     n = Math.imul(n ^ (n >>> 13), 1274126177);
     return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
   };
-  // 角點位移 = 準晶體場(主 ±0.34)+ cornH 顆粒(次 ±0.10),輸入格點索引 (i,j) → 天生 (i,j) 純函數
-  // ⇒ 相鄰 cell 共用角索引 ⇒ 同位移 ⇒ 水密。dz 取座標偏移的第二組準晶體樣本解耦。合計振幅 0.44<0.45,
-  // clampD 再保險 ⇒ 相鄰角最壞相向 0.88<1.0,拓撲不翻面。快取(i,j)→[x,z]:省重算 + 共用角位元相同保證。
+  // Corner offset = quasicrystal field (major +-0.34) + cornH grain (minor +-0.10); grid-index (i,j) input is natively a pure function of (i,j),
+  // so adjacent cells sharing a corner index get the same offset, hence watertight. dz decouples via a second offset quasicrystal sample. Total amplitude 0.44 < 0.45,
+  // clampD as insurance, so worst-case opposing corners stay 0.88 < 1.0 and topology never flips. Cache (i,j) -> [x,z]: saves recompute and guarantees bit-identical shared corners.
   const QC_CORN_W = 1.75, QC_CORN_A = 0.34, QC_CORN_G = 0.20;
   const clampD = (d) => (d < -0.45 ? -0.45 : d > 0.45 ? 0.45 : d);
   const _cornCache = new Map();
@@ -2120,18 +2309,18 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     _cornCache.set(ck, c);
     return c;
   };
-  // 低頻水彩 wash(連續函數 → 跨 cell 無階差;botw_plan Task 2.1 的反重複手段)
+  // Low-frequency watercolor wash (continuous function, so no steps across cells; anti-repetition measure from botw_plan Task 2.1)
   const wash = (x, z) => 0.88 + (vnoise(x * 0.011, z * 0.011, seed ^ 0x5A5A) - 0.5) * 0.34;
-  // cell 分區:5 點多數決(抹平衛星像素雜訊的逐格跳動)+ 坡度規則
-  //   懸崖(>0.75)→ '!' 不鋪(頂投影 UV 在近垂直面會拉絲,露地形岩面較自然,
-  //                  鄰格外溢淡出補縫);中坡(>0.28)→ 強制 bare(山坡不會是停車場)
-  //   低窪綠地(水面 +2.2m 內)→ wet(河岸蘆葦帶)
-  // 底毯 coarse 分區(cellKeyAt 的分區半段;純函數零 rnd):'water' / '!' / null(不鋪)/ zone。
-  // 先整張算成 zoneGrid 再交 planEnclaves 判小區域包裹,cellKeyAt 吃預算好的 zn 選 sub。
+  // Cell zoning: 5-point majority vote (smooths per-cell flicker from satellite pixel noise) + slope rules
+  //   cliff (>0.75) -> '!' unpaved (top-projected UV streaks on near-vertical faces, so exposed rock reads more natural,
+  //                  neighbor spillover fades to seal the seam); mid slope (>0.28) -> forced bare (hillsides are never parking lots)
+  //   low green near water (within +2.2m of water surface) -> wet (riparian reed belt)
+  // Carpet coarse zoning (zoning half of cellKeyAt; pure function, zero rnd): 'water' / '!' / null (unpaved) / zone.
+  // Whole map is zoned into zoneGrid first, then planEnclaves judges small-area wrapping; cellKeyAt picks sub from the budgeted zn.
   const cellZoneAt = (i, j) => {
     const cx = terrain.minX + (i + 0.5) * cell, cz = terrain.minZ + (j + 0.5) * cell;
-    // 水/沼專屬拼圖(2026-07-22,envCode 與伺服器遮罩同一規則 = WYSIWYG):
-    // 水域(1)必鋪水拼圖(免坡度/灘線淘汰 —— 水面是平的,易辨識優先)。
+    // Water/marsh-only puzzles (2026-07-22, same rule as envCode and server mask = WYSIWYG):
+    // water (1) always gets a water puzzle (no slope or shoreline culling -- flat water reads best when recognizable).
     const ec = envAt(cx, cz);
     if (ec === 1) return 'water';
     const hC = terrain.heightAt(cx, cz);
@@ -2145,69 +2334,69 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       votes[zn0] = (votes[zn0] || 0) + 1;
     }
     let zn = Object.keys(votes).reduce((a, b) => (votes[b] > votes[a] ? b : a));
-    if (zn === 'water') zn = slope > 0.28 ? 'bare' : 'green'; // 乾地不再露衛星；在面層級安全降級。
+    if (zn === 'water') zn = slope > 0.28 ? 'bare' : 'green'; // Dry land never exposes satellite imagery; safe downgrade at surface level.
     if (slope > 0.28 && zn !== 'wet') zn = 'bare';
-    // 沼澤(2)一律鋪濕地拼圖(取代舊「green 且 hC<2.2 且 minH<0.5」私規則 —— 與 envCode 統一)
+    // Marsh (2) always gets a wetland puzzle (replaces the old private green-and-low rule -- unified with envCode)
     if (ec === 2) zn = 'wet';
     if ((zn === 'green' || zn === 'bare') && hC > alpineH) zn = 'alpine';
     return zn;
   };
-  // 選款(顏色)的半段:zn = zoneGrid 預算分區 → 地表款名 / '!' / null。
-  // **變體(花紋)不在這裡挑** —— 整張 subGrid 算完之後交 planCarpetVariants 逐格挑,
-  // 才做得到「同顏色的相鄰拼圖花紋不同」(逐格獨立挑一定挑得出相鄰同款)。
+  // Picking (color) half: zn = budgeted zone from zoneGrid -> surface name / '!' / null.
+  // Variants (motifs) are NOT picked here -- planCarpetVariants picks per cell after the whole subGrid is done,
+  // which is the only way adjacent same-color puzzles get different motifs (independent per-cell picking would collide).
   const cellSubAt = (i, j, zn) => {
     if (zn == null || zn === 'cliff') return zn;
     const cx = terrain.minX + (i + 0.5) * cell, cz = terrain.minZ + (j + 0.5) * cell;
-    if (zn === 'water') {                               // 依水深配淺/深款(水深是物理量,逐格看)
+    if (zn === 'water') {                               // Match shallow/deep to depth (depth is physical, read per cell)
       const wy = terrain.waterY;
       return wy != null && terrain.heightAt(cx, cz) < wy - 2.5 ? 'deepwater' : 'watertile';
     }
-    // 多層次組合風格:被包在異類大區域裡的小區域換 enclave 專屬 carpet(唯一真相 ENCLAVE_STYLES)
+    // Multi-level combo style: small areas wrapped inside a foreign large area switch to the enclave-only carpet (single source of truth ENCLAVE_STYLES)
     const available = encRt.get(encGrid[j * gnx + i])?.style.carpet || carpetLists[zn];
     if (!available) return null;
     const env = environmentAt(cx, cz);
     const list = available.filter(sub => surfaceAllowed(sub, env));
     if (!list.length) return null;
-    // 取值點 = **選款區塊(lot)中心**而不是格心(carpetLotAt 單一縫,2026-08-12 使用者需求):
-    // 同一個 lot 內恆為同一款 ⇒ 同一種地貌裡的顏色至少走過一個 lot(~6 格)才會換。
-    // 場的公式一格未動(同一支 vnoise + 同一個準晶體項),換的只有「在哪裡取樣」。
+    // Sample point = picking-block (lot) center, not cell center (carpetLotAt single seam, 2026-08-12 user decision):
+    // one lot always yields one pick, so colors inside one terrain hold for at least one lot (about 6 cells) before changing.
+    // The field formula is untouched (same vnoise plus same quasicrystal term); only the sample location changes.
     const [, , li, lj] = carpetLotAt(i, j, seed);
     const lx = terrain.minX + li * cell, lz = terrain.minZ + lj * cell;
     let t = (vnoise(lx * CARPET_SEL.W, lz * CARPET_SEL.W, seed) - 0.5) * CARPET_SEL.SPAN + 0.5;
-    if (zn !== 'urban') t += qcVal(lx, lz, QC_SEL_W) * CARPET_SEL.QC_A;   // 不規律 zone 疊準晶體 → 群聚邊界非週期
+    if (zn !== 'urban') t += qcVal(lx, lz, QC_SEL_W) * CARPET_SEL.QC_A;   // Irregular zones stack quasicrystal, so cluster borders stay aperiodic
     t = Math.min(0.999, Math.max(0, t));
     return list[(t * list.length) | 0];
   };
-  // cell 幾何:3×3 貼地網格(邊中點 = 共用角點的中點 → 相鄰 cell 完全同點,水密;
-  // ~半格取樣讓 cell 貼合地形起伏,丘頂不再戳穿底毯),頂點色 = wash
-  // cut = { di, dj }(鄰格方向)⇒ 這一張外溢的 α 不取角點雙線性,改由 bdCutAt 以
-  // 「到畫出來的分界線的帶號距離」決定(兩側地貌以線為界);查不到線才退回舊制淡出。
-  // 貼地 3×3 面的發射核心。**2026-08-13 起只服務緩衝空間**(圖內底毯 / 外溢 / 脊帶改由
-  // emitCell 認養地形三角形,見該處檔頭):界外站的是 terrain.js 那一圈裙,沒有高程網格
-  // 可以認養 ⇒ 那半仍是「鋪一層皮」,照樣要 drapeSag 把弦虧損補回去(上限 SAG.BUF)。
-  //   G  = 9 個 [x, z](3×3 排列,列沿 z、行沿 x)
-  //   hAt = 取高度的函式 —— 緩衝空間走 terrain.bufferHeightAt(裙的外推高度唯一縫;
-  //         拿 heightAt 會被夾回圖界,整圈底毯貼在錯誤的高度上)
+  // Cell geometry: 3x3 ground-hugging grid (edge midpoints = midpoints of shared corners, so adjacent cells share every point, watertight;
+  // near-half-cell sampling lets cells follow terrain relief, so hilltops no longer poke through carpet); vertex color = wash
+  // cut = (di, dj) neighbor direction: this spillover sheet takes alpha from bdCutAt by band-signed distance to the drawn line
+  // (both terrains split at the line); only falls back to the old fade when no line is found.
+  // Emission core for ground-hugging 3x3 faces. Since 2026-08-13 it serves only the buffer ring (in-map carpet / spillover / ridge
+  // moved to emitCell adopting terrain triangles, see that header): outside the map stands the terrain.js skirt ring with no height grid
+  // to adopt, so that half stays a draped skin and still needs drapeSag to compensate chord loss (cap SAG.BUF).
+  //   G  = nine [x, z] points (3x3 layout, rows along z, columns along x)
+  //   hAt = height function -- the buffer ring uses terrain.bufferHeightAt (sole seam for skirt extrapolated height;
+  //         heightAt would clamp back to the map edge and paste the whole ring at the wrong height)
   const emitFace = (bmap, key, G, hAt, alphas, st, cut) => {
     const sub = key.slice(0, key.indexOf('#'));
-    const aq = !!DEFS[sub].aq;                          // 水生拼圖:免灘線淘汰、頂點夾到水面上(可見)
+    const aq = !!DEFS[sub].aq;                          // Aquatic puzzle: skips shoreline culling, vertices clamp above water (visible)
     let hs = G.map(([px, pz]) => hAt(px, pz));
-    if (!aq && Math.min(...hs) < 0.45) return null;     // 岸際留空 = 灘線,不鋪下水
+    if (!aq && Math.min(...hs) < 0.45) return null;     // Shore gap stays open = beach line, never pave underwater
     if (aq && terrain.waterY != null) hs = hs.map((hh) => Math.max(hh, terrain.waterY + 0.05));
     const [aA, aB, aC, aD] = alphas || [1, 1, 1, 1];
     const AL = [aA, (aA + aB) / 2, aB,
                 (aD + aA) / 2, (aA + aB + aC + aD) / 4, (aB + aC) / 2,
                 aD, (aC + aD) / 2, aC];
     const uvS = DEFS[sub].uvS || 1 / 12;
-    // 中間樣態脊帶(st.band)固定壓在其他外溢之上(0.108 仍 < fade 下限 0.110)—— 它是
-    // 「疊在兩側淡出上的第三種地表」;一般外溢走每 key 微升差
+    // Mid-state ridge band (st.band) always presses above other spillovers (0.108 still under the fade floor 0.110) -- it is
+    // a third surface laid over both side fades; ordinary spillover uses the per-key micro lift instead
     const lift = alphas ? (st?.band ? SLIFT + 0.008 : SLIFT + seamLift(key)) : CLIFT;
     const b = climateBucket(bmap, key, G[4][0], G[4][1]);
     G.forEach(([px, pz], k) => {
       const w = wash(px, pz);
       let a = AL[k];
-      // 切線優先且**逐頂點無條件覆寫**(不看角點權重):線可能自格子中間穿過,拿角點權重
-      // 當閘門會讓「該換手卻權重為 0」的那半格留在原本的地貌上 = 滲透照樣發生
+      // Cut lines win and overwrite unconditionally per vertex (corner weights ignored): the line can cross mid-cell, and gating on corner
+      // weights would leave the half-cell that should flip but weighs 0 on the old terrain = the leak persists
       const cutA = cut ? bdCutAt(px, pz, cut.di, cut.dj) : null;
       if (cutA != null) a = cutA;
       else if (alphas && a > 0 && a < 1) {
@@ -2338,7 +2527,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   };
   const emitCell = (bmap, key, ti, tj, alphas, st, cut) => {
     const sub = key.slice(0, key.indexOf('#'));
-    const aq = !!DEFS[sub].aq;                          // 水生拼圖:免灘線淘汰、頂點夾到水面上(可見)
+    const aq = !!DEFS[sub].aq;                          // Aquatic puzzle: skips shoreline culling, vertices clamp above water (visible)
     const Q = quadOf(ti, tj);
     const G = face9(Q[0], Q[1], Q[2], Q[3]);
     // ② 灘線閘:仍以整格九點判(landCells 與共享 rnd 序列逐位元同舊制)
@@ -2346,8 +2535,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const quads = cellQuads[tj * gnx + ti];
     if (!quads) return null;
     const uvS = DEFS[sub].uvS || 1 / 12;
-    // 中間樣態脊帶(st.band)固定壓在其他外溢之上(0.108 仍 < fade 下限 0.110)—— 它是
-    // 「疊在兩側淡出上的第三種地表」;一般外溢走每 key 微升差
+    // Mid-state ridge band (st.band) always presses above other spillovers (0.108 still under the fade floor 0.110) -- it is
+    // a third surface laid over both side fades; ordinary spillover uses the per-key micro lift instead
     const lift = alphas ? (st?.band ? SLIFT + 0.008 : SLIFT + seamLift(key)) : CLIFT;
     const wy = aq && terrain.waterY != null ? terrain.waterY + 0.05 : null;
     const b = climateBucket(bmap, key, G[4][0], G[4][1]);
@@ -2366,7 +2555,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
             const [u, v] = invBil(Q, px, pz);
             al = (1 - u) * (1 - v) * alphas[0] + u * (1 - v) * alphas[1]
                + u * v * alphas[2] + (1 - u) * v * alphas[3];
-            // 交界頂點 α 塑形(seamAlpha 純函式,樣式 = 逐分區組合查表):明確邊界壓窄、
+        // Boundary-vertex alpha shaping (seamAlpha pure function, style = per-zone-combo lookup): crisp borders pinch narrow,
             // 柔和淡出疊碎形擾動、雪線推成斑塊。端點 α=0/1 恆定 ⇒ 與不透明底毯/淡出盡頭
             // 仍水密;純函數(世界座標+seed)⇒ 相鄰外溢格共用頂點同值不開縫(§2.3 零 rnd)
             if (al > 0 && al < 1) al = seamAlpha(al, qcVal(px, pz, SEAM_QC_W), st);
@@ -2413,7 +2602,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
     return G[4];
   };
-  // ==== 多層次地貌:整張 coarse 分區格網 → 小區域包裹判定(planEnclaves 唯一縫)====
+  // ==== Multi-level terrain: full-map coarse zoning grid -> enclave wrap check (planEnclaves single seam) ====
   // encGrid[cell] = `${內}@${外}` 樣式鍵或 null;encRt = 樣式執行期物件(set = 該樣式
   // 允許的全部地表 —— tryPatch 放行閘,僅對 enclave 格生效,不讓樣式地表外漏到一般分區)
   const zoneGrid = new Array(gnx * gnz).fill(null);
@@ -2456,7 +2645,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       landCells.push([mid[0], mid[1], key]);
     }
   }
-  // ==== 緩衝空間的底毯(2026-08-12 使用者需求「邊界延伸不可進入的緩衝空間也要貼地貌拼圖」)====
+  // ==== Buffer-ring carpet (2026-08-12 user decision: buffer ring past the border also gets terrain patches) ====
   // 緩衝空間 = terrain.js 那一圈外緣裙(深度 terrain.bufferM,見該檔 ⑧);舊制它只有地形材質(影像鏡射
   // 平鋪 / 屬性場色階)⇒ 站在邊界往外看是「圖內鋪著拼圖、過了圖界突然變回一張照片」的硬界。
   // 五條:
@@ -2521,13 +2710,13 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
                terrain.bufferHeightAt, ov.alphas, ov.st, null);
     }
   }
-  // ==== 地貌界線拼圖:規劃 + 空間索引(2026-08-11)====
-  // 規劃 MUST 排在**底毯之後、外溢與特徵拼圖之前** —— 三個消費端全吃這一份(單一縫):
-  //   ①外溢切線 bdCutAt(兩側地貌恰以線為界)
-  //   ②特徵拼圖與 3D 細節的迴避 bdCross(田/停車場/球場/擺件不得橫跨分界線)
-  //   ③幾何發射(下方「地貌界線拼圖發射」區塊)
-  // planBorderPuzzle 是純函式(零 rnd)⇒ 提前呼叫不動共享 rnd 序列(§2.3);tryPatch 的
-  // bdCross 拒絕與 roadClear 同位,排在首個 rnd() 之前 ⇒ 散布序列的紀律不變。
+  // ==== Terrain border puzzle: planning + spatial index (2026-08-11) ====
+  // Planning MUST run after carpet but before spillover and feature puzzles -- all three consumers eat this one copy (single seam):
+  //   (1) spillover cut line bdCutAt (both terrain sides split exactly at the line)
+  //   (2) feature-puzzle and 3D-detail avoidance bdCross (fields, lots, courts, props MUST NOT straddle the line)
+  //   (3) geometry emission (the Terrain border puzzle emission block below)
+  // planBorderPuzzle is a pure function (zero rnd), so calling it early never shifts the shared rnd sequence (2.3); tryPatch
+  // bdCross rejection shares position with roadClear, ranked before the first rnd() call, so the scatter-sequence discipline holds.
   const coarseOf = (key) => (key && key !== '!') ? coarseOfKey(key) : null;
   const bdSubOf = (k) => { const p = k.indexOf('#'); return p < 0 ? k : k.slice(0, p); };
   // 半寬取型錄真值;flat 再乘上帶緣起伏的最外緣 ⇒ 讓路取樣與迴避半徑恆蓋得住真的畫出來的邊
@@ -2630,7 +2819,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
                           BORDER_CUT.W);
   };
 
-  // 異類交界(含對角)外溢:角點隸屬度雙線性淡出 —— 配置全住 planSeamOverlays
+  // Hetero-boundary spillover (incl. diagonal): corner-membership bilinear fade -- layout lives in planSeamOverlays
   // (純函式,稽核執行原文;舊制單向整格外溢的鋸齒病灶見該函式檔頭),此處只發幾何。
   // 兩側對稱互溢 + 對角補角 ⇒ 交界中線 = 50/50 混色的平滑等值線,90° 階梯縫消失。
   // 交界樣式逐分區組合查表(明確/柔和/斑塊/中間過渡帶,SEAM_STYLES);中間樣態脊帶
@@ -3183,7 +3372,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
   }
 
-  // ==== 地貌界線拼圖發射(2026-08-11 使用者需求;取代 2026-07-24 邊界遮蔽物)====
+  // ==== Terrain border puzzle emission (2026-08-11 user decision; replaces 2026-07-24 border props) ====
   // 配置全住 planBorderPuzzle(純函式單一縫:16 方向直線/轉彎/岔路、種類解析 borderKindOf、
   // 接力切點共用、'!'/null 不成界),這裡只發幾何:
   //   flat 種類 = 貼地紋理帶(透明;lift 帶 [0.126, 0.134] 介於不規律 fade 上限 0.124 與
@@ -3240,9 +3429,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 讓路判定唯一縫:道路走廊 / 兵線淨空 / 規律結構拼圖 / 不下水。
     // **直段與接頭吃同一支** —— 接頭只驗節點那一個點的話,轉彎圓弧掃過的那一塊完全沒驗到,
     // 分界線就會橫過馬路(道路的圖層本來就在分界線之上,但那只保證被蓋住,不保證不該畫)。
-    // onRegular 自 2026-08-11 起是**保險絲**而不是主力:tryPatch 的 bdCross 已讓規律結構
-    // 一開始就不落在界線上(讓路的方向反過來了 —— 界線是結構,拼圖是點綴),留著只為
-    // 擋住家族延伸之類的漏網。
+    // onRegular is a fuse since 2026-08-11, not the main path: tryPatch bdCross already keeps regular structures
+    // off the line from the start (yield direction is reversed -- the line is structure, puzzle pieces are decoration), kept only to
+    // catch leaks such as family extensions.
     const ptOk = (px, pz, aq) => !isBlocked(px, pz) && !(roadClear && roadClear(px, pz))
       && !onRegular(px, pz)
       && (aq || terrain.heightAt(px, pz) > (wy != null ? wy + 0.15 : 0.45));
@@ -3545,7 +3734,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           Math.max(1, Math.round(g.L / 2)), cor.n, g.L);
       }
     };
-    // 接頭端的累計弧長(節點+種類為鍵):岔路拼圖據此接上該臂的圖案相位,不會在交會處跳格
+    // Accumulated arc length at joint ends (keyed by node + kind): fork puzzles align each arm pattern phase to it, so motifs never jump at crossings
     const uAt = new Map();
     const uKey = (n, kind) => `${n}|${kind}`;
     for (const ch of plan.chains) {
@@ -3620,9 +3809,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         }
       }
     }
-    // ---- 岔路拼圖:逐臂楔形在中心交會,各自帶自己的圖案(接力);MUST NOT 用墊片蓋縫 ----
-    // 多邊形(逆時針)= [B0,A0,B1,A1,…],Bi/Ai = 第 i 臂斷面的兩緣;臂與臂之間以中點切開,
-    // 每一楔形進自己那一種的桶 ⇒ 三種分界線交會處是三片真的拼圖,不是一張蓋板。
+    // ---- Fork puzzle: per-arm wedges meet at the center, each carrying its own motif (relay); MUST NOT cap the seam with a pad ----
+    // Polygon (CCW) = [B0,A0,B1,A1,...], Bi/Ai = the two edges of arm i cross-section; arms split at midpoints,
+    // each wedge goes into its own kind bucket, so a three-divider crossing is three real puzzle pieces, not one cover plate.
     for (const fk of plan.forks) {
       if (!forkOk.get(fk.n)) continue;     // 讓路判定與直段同一支(逐臂取樣,不是只驗中心點)
       bStat.forksDrawn++;
@@ -3722,7 +3911,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
   }
 
-  // ---- 特徵色塊 Mesh(每「地表×變體」一個 draw call)----
+  // ---- Feature color-block Mesh (one draw call per surface-by-variant) ----
   for (const [key, b] of buckets) {
     if (!b.idx.length) continue;
     const [sub, v] = b.surfaceKey.split('#');

@@ -21,14 +21,12 @@
 | Codex hexagon chart | `audit_hex_stats` | Chart bands derive from weapon output. |
 | Upgrade steps and battle score | `audit_shop_auto` | Step prices and score gates advance together. |
 | Shop sweep and reservation | `audit_shop_auto` | Purchase order behavior stays unchanged. |
-| Story map and boss setup | `audit_story_map`, `audit_story_talk` | Story geometry stays isolated from standard battles. |
-| Siege lock and boss dialogue | `audit_story_talk`, `audit_story_map` | Lock floors and dialogue triggers stay on their single seams. |
+| Story map and boss setup | `audit_story_talk` | Story geometry stays isolated from standard battles. |
+| Siege lock and boss dialogue | `audit_story_talk` | Lock floors and dialogue triggers stay on their single seams. |
 | Story interface and local storybook | `audit_story_talk`, `audit_ui_layout` | Story marks stay complete across both consumers. |
 | Lane engagement model | `audit_aoe_trim` | Lane model self-checks stay consistent. |
-| Self-type compensation gesture | `audit_self_ult`, `audit_ult_carrier` | Self-type group keeps positive delivery. |
-| Escort fleet behavior | `audit_self_ult`, `audit_ult_carrier` | Escorts exist only as server entities during attacks. |
-| Carrier origin and slot pacing | `audit_ult_carrier` | Carriers launch from named points under slot pacing. |
-| Ultimate delivery | `audit_ult_carrier` | Delivery guards stay closed until conditions hold. |
+| Self-type compensation gesture | `audit_self_ult` | Self-type group keeps positive delivery. |
+| Escort fleet behavior | `audit_self_ult` | Escorts exist only as server entities during attacks. |
 | Carrier forms and ballistics | `audit_flight_power` | All carrier forms keep bounded effective ratios. |
 | Carrier health and blast pricing | `audit_flight_power` | Carrier durability derives from turret output. |
 | Flight dynamics | `audit_flight_power` | Falling-hit height behavior stays unchanged. |
@@ -60,20 +58,18 @@
 | Building mass and window bands | `audit_siteplan` | Mass and band behavior stays reproducible. |
 | Planarization, sealing, wall panels | `audit_siteplan` | Panel grids stay integral inside window bands. |
 | Collision profile, fit, signs, glazing | `audit_siteplan` | Ground passage width stays unchanged. |
-| Codex format | — (已退場；`audit_codex` 隨 2D 生圖對照台退役，格式真相仍住 `public/js/codex.js`) | Format layers and pose alignment stay stable. |
+| Codex format | — (retired; `audit_codex` retired with the 2D art-review bench, format truth stays in `public/js/codex.js`) | Format layers and pose alignment stay stable. |
 | Coating block and tunnel roof | `audit_layer_block` | Geometry stays unchanged across coating work. |
 | Open tunnels | `audit_open_tunnel` | Tunnel geometry behavior stays stable. |
 | Underpass qualification | `audit_underpass` | Centerline and full-width seam behavior stays convergent. |
 | Map bearing and rotation | `audit_road_grid` | Rotation stays an isometry for balance. |
 | Road pruning and direction quantization | `audit_road_grid` | Corridors consume one quantized network. |
-| Footbridges, entrances, rail corridors | `audit_pedestrian_plan` | Attachments add no blockers and share no randomness. |
 | Road paint and structure joints | `audit_road_joint` | Joint invariants stay unchanged. |
 | Blender-authored road structures, bridge grades and platform access | `test/roadStructures`, `shot:roads`, `audit_road_joint`, `audit_layer_block`, `audit_slope_platform`, `audit_gpu_lifecycle`, `audit_client_syntax` | Layered standing, bidirectional slab blocking, branch openings, support clearance, rotated cut/fill access and sealed collision-fitting members share production sources. |
 | Roadbed leveling | `audit_road_bed` | Tunnel invariants stay unchanged. |
 | Walkability | `audit_traverse` | Lanes and structures stay traversable. |
 | Clearance heights | `audit_traverse` | Unit height derives without hand-written constants. |
 | Climb routes and cross sections | `audit_climb` | Both ends judge the same box identically. |
-| Lane baking keys and tower ranges | `audit_story_map` | Shared short-lane geometry stays identical. |
 | Venue menu descriptions | `audit_ui_layout` | Summaries derive from venue config and tactics. |
 | View lock | `audit_view_lock` | Lock behavior stays consistent across layouts. |
 | Spectator camera | `audit_spectator_cam` | Spectator behavior stays consistent across layouts. |

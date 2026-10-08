@@ -1,12 +1,12 @@
-// ============ 馬路橫切水域「貼邊繞行」稽核(離線直測,執行 biomes.js 原文)============
-// 使用者需求(2026-07-28):「馬路從水域/沼澤橫切時不需要建橋,貼著邊界繞過去即可,橫跨對岸時才需要建橋。」
-//   判定法(使用者定案「垂向雙側取樣 + 誤差」,2026-07-28 複審修斜交):泡水頂點沿道路垂直方向兩側量到乾地距 lo/hi ——
-//   貼邊橫切 = **不對稱**(一側近岸 lo<SKIRT_NEAR、另一側開放水域 hi≥SKIRT_OPEN)⇒ 推頂點到近岸繞行;
-//   橫跨對岸 = **對稱或兩側皆近**(lo≈hi 恆非貼邊 ⇒ 含斜交穿越)⇒ 建橋不繞。
-// 抽 biomes.js 的 skirtWaterClips + isWaterPt **原文**執行,合成地形(heightAt)驗證邏輯。
-// 跑法:node tools/audit_water_skirt.mjs   退出碼:0 = 全綠;1 = 紅字
-// **改完 MUST 反向驗證**(內建對照組):①skirtWaterClips 改 no-op ⇒「貼邊繞行」段紅字 ②去掉「另一側開放」條件
-//   (回到舊版單看近岸)⇒「斜交穿越」段紅字(斜交被誤判成貼邊繞掉整座橋 = 複審抓到的回歸)。
+// ============ Road crossing water skirt audit (offline direct test, executes biomes.js source) ============
+// User requirement (2026-07-28): roads crossing water or swamp need no bridge when they can skirt the edge; only a crossing to the far bank needs a bridge.
+//   Rule (user decision of vertical two-side sampling plus tolerance, slanted-crossing fix reviewed 2026-07-28): for a soaked vertex measure dry-land distance lo and hi on both sides along the road normal --
+//   edge skimming means asymmetry (near-bank side lo below SKIRT_NEAR, open-water side hi at or above SKIRT_OPEN), so push the vertex to the near bank;
+//   far-bank crossing means symmetry or both sides near (lo near hi is never edge skimming, including slanted crossings), so build a bridge without skirting.
+// Executes skirtWaterClips plus isWaterPt from biomes.js verbatim, verifying logic on synthetic terrain (heightAt).
+// Usage: node tools/audit_water_skirt.mjs   exit code: 0 means all green, 1 means red
+// After edits MUST reverse-verify (built-in control): 1 turning skirtWaterClips into a no-op turns the edge-skim section red; 2 dropping the other-side-open condition
+//   (back to the old near-bank-only check) turns the slanted-crossing section red (a slanted crossing misjudged as edge skimming drops the whole bridge, the reviewed regression).
 import { WATER } from '../public/js/data.js';
 import { readSrc } from './audit_src.mjs';
 
@@ -24,7 +24,7 @@ function loadCore(mutate = (s) => s) {
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
 
-// 合成地形:water 述詞 → heightAt(水域 −1、乾地 5;isWaterPt 只看 heightAt < WATER.LEVEL+0.05)
+// Synthetic terrain: water predicate maps to heightAt (water -1, dry land 5; isWaterPt only checks heightAt below WATER.LEVEL plus 0.05)
 const terr = (isWater) => ({ heightAt: (x, z) => (isWater(x, z) ? -1 : 5) });
 const lineRun = (x0, z0, x1, z1, step = 6) => {
   const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(2, Math.round(L / step)), r = [];
@@ -37,8 +37,8 @@ const { skirtWaterClips, isWaterPt } = loadCore();
 
 console.log('Ⅰ 直角穿越(河)→ 建橋不繞');
 {
-  const t = terr((x) => Math.abs(x) < 20);      // 南北向水帶(|x|<20,40m 寬),沿 z 無限長
-  const run = lineRun(-80, 0, 80, 0);           // 道路東西向直角穿越
+  const t = terr((x) => Math.abs(x) < 20);      // North-south water band (20m half width, 40m wide), endless along z
+  const run = lineRun(-80, 0, 80, 0);           // Road runs east-west at a right angle
   const before = wetCount(run, t, isWaterPt);
   skirtWaterClips(run, t);
   ok(before >= 6 && wetCount(run, t, isWaterPt) === before, `直角穿越:泡水頂點不變(${before} 全留)`);
@@ -46,8 +46,8 @@ console.log('Ⅰ 直角穿越(河)→ 建橋不繞');
 
 console.log('Ⅱ 斜交穿越 45°(40m 河)→ 建橋不繞(複審回歸案)');
 {
-  const t = terr((x) => Math.abs(x) < 20);      // 同一條 40m 寬水帶
-  const run = lineRun(-70, -70, 70, 70);        // 道路 45° 斜交穿越(兩岸垂向對稱 ≈28m,舊版誤判貼邊)
+  const t = terr((x) => Math.abs(x) < 20);      // Same 40m-wide water band
+  const run = lineRun(-70, -70, 70, 70);        // Road crosses at 45 degrees (both banks symmetric near 28m, the old build misjudged it as edge skimming)
   const before = wetCount(run, t, isWaterPt);
   skirtWaterClips(run, t);
   ok(before >= 6 && wetCount(run, t, isWaterPt) === before, `斜交穿越:泡水頂點不變(${before} 全留;不被繞掉整座橋)`);
@@ -55,8 +55,8 @@ console.log('Ⅱ 斜交穿越 45°(40m 河)→ 建橋不繞(複審回歸案)');
 
 console.log('Ⅲ 貼邊橫切(湖岸)→ 內部頂點推到乾地繞行');
 {
-  const t = terr((x, z) => z > -10);            // 北半面湖(z>-10 水),岸線 z=-10(近岸側 10m,開放側 Inf)
-  const run = lineRun(0, 0, 90, 0);             // 道路貼岸走在水裡(z=0)
+  const t = terr((x, z) => z > -10);            // North half lake (water where z above -10), shoreline at z equal -10 (near bank 10m, open side infinite)
+  const run = lineRun(0, 0, 90, 0);             // Road hugs the bank inside water (z equal 0)
   const before = wetCount(run, t, isWaterPt);
   skirtWaterClips(run, t);
   const afterInner = run.slice(1, -1).filter(([x, z]) => isWaterPt(t, x, z)).length;
@@ -67,7 +67,7 @@ console.log('Ⅲ 貼邊橫切(湖岸)→ 內部頂點推到乾地繞行');
 
 console.log('Ⅳ 一側中距岸(lo ≥ SKIRT_NEAR)→ 判橫跨,建橋不繞');
 {
-  const t = terr((x, z) => z > -40);            // 近岸側 40m(≥ SKIRT_NEAR 30)、另一側無限深水
+  const t = terr((x, z) => z > -40);            // Near bank 40m (at or above SKIRT_NEAR 30), other side endless deep water
   const run = lineRun(0, 0, 60, 0);
   const before = wetCount(run, t, isWaterPt);
   skirtWaterClips(run, t);

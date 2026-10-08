@@ -1,19 +1,19 @@
-// ============ 離線工具共用:場地高度場 / 圖資 / 結構剖面(Node 端唯一縫)============
-// 用途:讓**不需要瀏覽器**的稽核也能拿到「與執行期同形」的地形與結構 —— 高程網格、
-// OSM 路網、隧道/地下道路面剖面、橋面剖面。原本這一整套住在 `audit_lane_scenarios.mjs`
-// 裡面,2026-08-03 抽成本檔:`audit_traverse.mjs`(兵線可通行)與淨空檢查都要同一份。
+// ============ Shared offline tooling: venue heightfield / map data / structure profiles (sole Node seam) ============
+// Purpose: let browser-free audits use runtime-shaped terrain and structures -- elevation grids,
+// OSM road networks, tunnel and underpass floor profiles, bridge deck profiles. This whole set once lived inside audit_lane_scenarios.mjs
+// and was extracted into this file on 2026-08-03: audit_traverse.mjs (lane traversability) and clearance checks need the same copy.
 //
-// **為什麼是抽原文而不是 import**:`terrain.js` / `biomes.js` 的 three 走 CDN importmap,
-// Node 端載不進來(A2 也不准把 three 寫進 package.json)。抄一份公式進工具則永遠會通過 ——
-// 公式改了工具照舊全綠。故:
-//   ① 換算/高度管線是 `terrain.js buildTerrain` 的**逐字鏡射**(純幾何,無 three);
-//   ② 結構判定與剖面(tunnelCoverIntervals / tunFloorAt / underpassPlan / tunnelWallProfile /
-//      deckAt)一律用 `new Function` **執行 biomes.js 的原文**,常數也從原文解析 ——
-//      改了 biomes.js,這裡跟著改,不會分家。
-// 消費端 MUST 走這一支,MUST NOT 自己再抄一份高度管線或結構剖面(第三份必定漂)。
+// Why source-text execution instead of import: terrain.js and biomes.js load three through a CDN importmap,
+// which Node cannot load (and A2 forbids adding three to package.json). Copying formulas into tools would always pass --
+// once the formula changes the tool would stay green. So:
+//   1 conversion and height pipeline is a verbatim mirror of terrain.js buildTerrain (pure geometry, no three);
+//   2 structure decisions and profiles (tunnelCoverIntervals / tunFloorAt / underpassPlan / tunnelWallProfile /
+//      deckAt) always execute biomes.js source text through new Function, with constants parsed from that source --
+//      change biomes.js and this follows, so the two cannot diverge.
+// Consumers MUST use this file, MUST NOT copy a second height pipeline or structure profile (a third copy is guaranteed to drift).
 //
-// 網路:第一次跑會抓 terrarium 高程磚與 OSM 圖資,結果寫進 `tools/.scen_cache/`
-// (之後純離線可重跑)。快取檔名沿用舊版 ⇒ 既有快取直接續用。
+// Network: first run fetches terrarium elevation tiles and OSM data, cached under tools/.scen_cache/
+// (later reruns are fully offline). Cache names keep the legacy scheme so existing caches carry over.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';

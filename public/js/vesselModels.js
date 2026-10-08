@@ -23,11 +23,11 @@ export function buildShipWakeGroup() {
     side: THREE.DoubleSide,
   });
 
-  // 1. 船尾開展 V 型尾浪 (Kelvin Wake - Expanding V-Shape Wings)
-  // 由船尾 z = -5.8 (寬 3.2m) 展開至 z = -24.0 (寬 10.5m)
+  // 1. Stern-spreading V wake (Kelvin Wake - Expanding V-Shape Wings)
+  // Spreads from stern z = -5.8 (width 3.2m) to z = -24.0 (width 10.5m)
   const wakeGeo = new THREE.BufferGeometry();
   const wakeVertices = new Float32Array([
-    // 左翼展開面
+    // Left spreading wing
     -1.6, -0.05, -5.8,
     -5.2, -0.05, -24.0,
      0.0, -0.05, -5.8,
@@ -36,7 +36,7 @@ export function buildShipWakeGroup() {
     -5.2, -0.05, -24.0,
      0.0, -0.05, -24.0,
 
-    // 右翼展開面
+    // Right spreading wing
      0.0, -0.05, -5.8,
      5.2, -0.05, -24.0,
      1.6, -0.05, -5.8,
@@ -50,22 +50,22 @@ export function buildShipWakeGroup() {
   const vWake = new THREE.Mesh(wakeGeo, foamMat);
   g.add(vWake);
 
-  // 2. 螺旋槳中心高密度白沫浪湧帶 (Propeller Wash Strip)
+  // 2. Dense propeller-wash foam strip on centerline (Propeller Wash Strip)
   const washGeo = new THREE.PlaneGeometry(2.4, 12.0);
   washGeo.rotateX(-Math.PI / 2);
-  washGeo.translate(0, -0.03, -12.0); // 從 z = -6.0 延伸至 -18.0
+  washGeo.translate(0, -0.03, -12.0); // Extends from z = -6.0 to -18.0
   const washMesh = new THREE.Mesh(washGeo, washMat);
   g.add(washMesh);
 
-  // 3. 船首劈波浪花 (Bow Spray Flairs)
+  // 3. Bow wave spray flares (Bow Spray Flairs)
   const bowGeo = new THREE.BufferGeometry();
   const bowVertices = new Float32Array([
-    // 左舷破浪
+    // Port bow wave
     -0.2, -0.02,  6.8,
     -2.2, -0.02,  3.5,
     -0.8, -0.02,  3.5,
 
-    // 右舷破浪
+    // Starboard bow wave
      0.2, -0.02,  6.8,
      0.8, -0.02,  3.5,
      2.2, -0.02,  3.5,

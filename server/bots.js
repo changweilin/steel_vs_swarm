@@ -15,7 +15,7 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, b
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // Drone cruise altitude (AGL; at/above AA_MIN_ALT eats air-defense missiles -- bots fly at deliberate risk)
-// FLY_Y(飛行判定線)住 data.js 唯一縫,與 `sim.heroPos` 的真人驗證同吃(見該處註)。
+// FLY_Y (flight threshold) lives in the data.js single seam, shared with human verification in sim.heroPos (see note there).
 const LANE_JITTER_M = 24;                   // Lateral lane spread (peak-to-peak): bots on one lane never stack
 // Push lookahead: once vision runs through the view cone, "looking at the lane target point"
 // means looking sideways (the body stands beside the target point at +-LANE_JITTER_M/2, so that
@@ -32,50 +32,50 @@ const STUCK = { F: 0.35, S: 0.6, SKIRT_S: 1.6, SKIRT_M: 28 };
 // -- keeping a copy on either side would let role-order edits silently desync from the baseline.
 
 export class BotBrain {
-  /** sim: BattleSim;pid: 'b1' 之類字串;laneIdx: 指派兵線;diffKey: 難度(新手/低/中/高) */
+  /** sim: BattleSim; pid: 'b1'-style string; laneIdx: assigned lane; diffKey: difficulty (novice/low/mid/high) */
   constructor(sim, pid, side, laneIdx, diffKey) {
     this.sim = sim;
     this.pid = pid;
     this.side = side;
     this.diff = botDiffOf(diffKey);   // { aimErr, heavy, ability, gap, react }
-    // 戰術旋鈕表的**唯一讀取縫**:預設 = 全域 BOT_TACTIC(含 botPolicy.js 學習成果)。
-    // 離線學習迴圈(tools/bot_learn.mjs)逐 brain 注入候選策略時只換這一個參照 ——
-    // bots.js 其餘各處 MUST 經 this.tac 取旋鈕,MUST NOT 再直接讀 BOT_TACTIC.*。
+    // Single read seam for the tactic knob table: default = global BOT_TACTIC (incl. botPolicy.js learned results).
+    // Offline learning loop (tools/bot_learn.mjs) swaps only this reference when injecting candidate policies per brain --
+    // every other site in bots.js MUST read knobs via this.tac, MUST NOT read BOT_TACTIC.* directly.
     this.tac = BOT_TACTIC;
-    // 機體定位(2026-08-08「依機體技能等數值為電腦玩家分類,並設計不同策略」)——
-    // 解析點只有 `_resolveRole` 一處,且只在有 `tactic` 旗標的難度下發生(A33:新手/低難度
-    // 逐位元維持舊制)。這裡不能先解析:角色由 sim.addHero 指派、而學習迴圈是在 **構造之後**
-    // 才注入基準策略(`b.tac = candTac`),在構造函式裡定案會被那一行整份蓋掉。
-    this._role = null;      // 定位鍵('raider'|'zoner'|'siege'|'support');null = 無定位(同基準)
-    this._roleCh = null;    // 已解析過的角色(換角色才重解)
-    this._tacBase = null;   // 定位覆寫的基準表(= 解析當下的 this.tac,含學習成果)
+    // Body role (2026-08-08 "classify bots by kit stats and design per-role tactics") --
+    // single resolve point `_resolveRole`, only on difficulties with the `tactic` flag (A33: novice/low stay bit-identical).
+    // Cannot resolve here: role is assigned by sim.addHero, while the learning loop injects the baseline
+    // policy AFTER construction (`b.tac = candTac`), finalizing in the ctor would be wholly overwritten by that line.
+    this._role = null;      // Role key ('raider'|'zoner'|'siege'|'support'); null = unroled (baseline)
+    this._roleCh = null;    // Already-resolved character (re-resolve only on swap)
+    this._tacBase = null;   // Baseline table for role overrides (= this.tac at resolve time, incl. learned results)
     this.lane = laneIdx % sim.lanes.length;
     this.state = 'PUSH';
-    // ---- 操作節奏(見 _op)----
-    this._opAt = {};    // 各類操作的下次可用時戳(sim.t)
-    this._opNext = 0;   // 全域手速閘:下次可以做「任何」操作的時戳
-    this._tid = 0;      // 目前咬住的目標 id(兩次掃描之間保持不變 —— 人不會每幀重選目標)
-    this._aimAt = 0;    // 反應時間:換目標後準星拉到位、可以開火的時戳
-    this.prog = 0;                          // 沿兵線進度(公尺,從己方端起算)
+    // ---- Op cadence (see _op) ----
+    this._opAt = {};    // Next usable timestamp per op kind (sim.t)
+    this._opNext = 0;   // Global APM gate: timestamp when ANY op may run next
+    this._tid = 0;      // Currently held target id (sticky between scans -- humans do not reselect every frame)
+    this._aimAt = 0;    // Reaction time: timestamp when the sight settles on a new target and firing may start
+    this.prog = 0;                          // Progress along lane (m, from own end)
     this.alt = CRUISE_ALT.min + Math.random() * (CRUISE_ALT.max - CRUISE_ALT.min);
     this.jitter = [(Math.random() - 0.5) * LANE_JITTER_M, (Math.random() - 0.5) * LANE_JITTER_M];
     this._cum = cumLen(sim.lanes[this.lane]);
-    this._wantRy = null;   // 這一拍想看的方向(h.ry 由 _turn 逐步逼近,見 _face)
-    this._wantRx = 0;      // 這一拍想看的俯仰角(h.rx 由 _turn 逐步逼近)
-    this._stuckT = 0;      // 撞牆累積秒數
-    this._skirtUntil = 0;  // 繞行到期時刻
-    this._skirtSide = 1;   // 繞行側(每次卡住輪替)
-    this._rallyAt = null;  // 集結點世界座標(RALLY 進場時定案,見 _pickRally)
-    this._rallyProg = 0;   // 集結點的沿兵線進度(復出時 prog 從這裡接回,不是從主堡重走)
+    this._wantRy = null;   // Heading wanted this beat (h.ry eases toward it via _turn, see _face)
+    this._wantRx = 0;      // Pitch wanted this beat (h.rx eases toward it via _turn)
+    this._stuckT = 0;      // Wall-contact accumulation (s)
+    this._skirtUntil = 0;  // Skirt expiry time
+    this._skirtSide = 1;   // Skirt side (alternates per stuck event)
+    this._rallyAt = null;  // Rally world point (finalized on RALLY entry, see _pickRally)
+    this._rallyProg = 0;   // Lane progress of rally point (resume rejoins prog here, not from base)
   }
 
-  /** 目前角色輕武器實戰數值(英雄倍率 + 現階級) */
+  /** Current light-weapon combat stats for this character (hero multiplier + current tier) */
   _gun(h) { return heroWeapon(h.ch, 'light', h.abil.light, true); }
 
-  /** 目前角色重武器實戰數值(英雄倍率 + 現階級) */
+  /** Current heavy-weapon combat stats for this character (hero multiplier + current tier) */
   _heavy(h) { return heroWeapon(h.ch, 'heavy', h.abil.heavy, true); }
 
-  /** 重武器現在能否擊發(彈夾/裝填/電力與難度旗標共用 sim 的結算欄位) */
+  /** Whether the heavy can fire now (mag/reload/power plus difficulty flags share the sim settlement fields) */
   _heavyReady(h, hv = this._heavy(h)) {
     if (!this.diff.heavy || !hv) return false;
     this.sim._refillIfDone(h, 'heavy', hv);
@@ -85,13 +85,13 @@ export class BotBrain {
     return !reload && (ammo == null || ammo > 0 || overdrive) && (h.mp || 0) >= heavyMpCost(hv);
   }
 
-  /** 選敵所用的有效武器:狙擊只在重武器真的可用時擴大攻擊射程,否則仍以輕武器開火 */
+  /** Effective weapon for target selection: scoped range extends only while the heavy is truly usable, else light still fires */
   _targetGun(h) {
     const hv = h.aiming ? this._heavy(h) : null;
     return hv && this._heavyReady(h, hv) ? hv : this._gun(h);
   }
 
-  /** 靜止狀態判定(集結等盾 / 回堡補血 / 據點站崗) */
+  /** Stationary check (rallying for shield / recalling for heals / holding a post) */
   _isStationary(h) {
     if (this.state === 'RALLY' && !this._inFight(h)) return true;
     if (this.state === 'RETREAT' && Math.hypot(h.x - this._home()[0], h.z - this._home()[1]) < 30) return true;
@@ -100,12 +100,12 @@ export class BotBrain {
   }
 
   /**
-   * 狙擊模式是偵察姿態,不只是一發重武器的前置動作:
-   *   ①停下等盾或靜止時保持開鏡,用狙擊視野搜索兵線周遭;
-   *   ②重武器可用時提前開鏡,讓下一次掃描能看到重武器射程內的敵人;
-   *   ③受擊且未看到敵人時(中/高難度戰術反應):開鏡進行狙擊鏡反應式搜索;
-   *   ④離開停滯且重武器不可用、亦無受擊警戒時收鏡,避免用空彈夾持續佔用遠距視野。
-   * 轉換仍吃 `weapon` 操作閘,所以開鏡不會繞過 bot 的手速限制。
+   * Scoped mode is a recon posture, not just a heavy-shot windup:
+   *   (1) hold scope while halted for shield or stationary, sweeping the lane area with scoped vision;
+   *   (2) scope early once the heavy is usable, so the next scan sees heavy-range enemies;
+   *   (3) on hit without seeing the enemy (mid/high tactic response): reactive scoped search;
+   *   (4) unscope once moving again with heavy unusable and no hit alert, so an empty mag does not hog long-range vision.
+   * Switching still costs the `weapon` op gate, so scoping never bypasses bot APM limits.
    */
   _updateAiming(h) {
     const hv = this._heavy(h);
@@ -116,14 +116,14 @@ export class BotBrain {
   }
 
   /**
-   * 防守姿態切換(F 鍵 / heroDefend):
-   * 磁力大於 0 且未在詠唱中方可進入防守姿態(正面 120° 護盾減免 75% 直擊傷害與 50% 爆炸傷害)。
-   * 分級策略:
-   *   - novice(新手): defend 為 false,完全不防守;
-   *   - low(低): 僅在危急撤退回主堡(RETREAT)且受擊時被動持盾保命;
-   *   - medium(中): 撤退/集結受擊持盾、交戰中輕武器換彈空窗切盾、受重傷爆發或導彈鎖定時持盾;
-   *   - high(高/elite): 換彈切盾微操、打帶跑拉開時持盾、且轉向對準威脅來源;換彈完成準備開火時主動收盾。
-   * 轉換切換吃 defend 操作閘(手速限制)。
+   * Guard stance toggle (F key / heroDefend):
+   * needs charge above 0 and no cast in progress (frontal 120-degree shield cuts 75% direct and 50% blast damage).
+   * Tiered policy:
+   *   - novice: defend false, never guards;
+   *   - low: only turtles with shield while critically retreating to base (RETREAT) under fire;
+   *   - medium: shields on retreat/rally under fire, across light reload gaps, and on heavy burst or missile lock;
+   *   - high (elite): reload-shield micro, shields while kiting out, and faces the threat; drops shield to fire once reloaded and on aim.
+   * Toggling costs the defend op gate (APM limit).
    */
   _updateDefending(h, target) {
     if (!this.diff.defend || h.dead || (h.sp || 0) <= 0 || h.cast) {
@@ -133,34 +133,34 @@ export class BotBrain {
 
     let want = false;
     if (!this.diff.tactic) {
-      // 低難度: 僅在危急撤退回主堡途中挨打時被動舉盾保命
+      // Low: only turtles with shield while critically retreating to base under fire
       want = this.state === 'RETREAT' && this._inFight(h);
     } else {
-      // 中難度 & 高難度: 戰術防守
-      // ① 脫離交戰(撤退或集結)途中挨打: 持盾保護殘餘磁力與裝甲
+      // Mid and high: tactical guard
+      // (1) hit while disengaging (retreat or rally): shield the remaining charge and armor
       if (this._pulling() && this._inFight(h)) {
         want = true;
       }
-      // ② 交戰中輕武器裝填空窗且重武器未就緒: 趁無法開火時舉盾減傷 75%
+      // (2) light reload gap in a fight with heavy not ready: shield the 75% while unable to fire
       else if (this.state === 'ENGAGE' && (h.reloadUntil?.light || 0) > this.sim.t && !this._heavyReady(h)) {
         want = true;
       }
-      // ③ 承受大量傷害或被防空/反裝甲飛彈鎖定: 舉盾吸收重火力
+      // (3) heavy damage taken or AA/AT missile lock: absorb the heavy fire
       else if (this._inFight(h) && (this._recentDmg(h) >= (h.maxSp || 0) * 0.35 || this.sim.missiles.some((m) => m.tpid === this.pid))) {
         want = true;
       }
-      // ④ 專業玩家飛行操作考量: 飛行中受擊交戰時舉盾減輕掉高與失衡 (爆炸減至 1/2, 正面減至 1/4)
+      // (4) skilled-flight handling: shield while hit in flight to soften altitude loss and upset (blast to 1/2, frontal to 1/4)
       else if (this._fly(h) && this._inFight(h)) {
         want = true;
       }
 
-      // 高難度(elite)微操: 裝填完成且目標已在準星範圍準備射擊時，主動放下護盾開火
+      // High (elite) micro: drop the shield to fire once reloaded with the target already in the sight picture
       if (this.diff.elite && target && (h.reloadUntil?.light || 0) <= this.sim.t && this.sim.t >= this._aimAt) {
         want = false;
       }
     }
 
-    // 舉盾時面向威脅目標或警戒方向
+    // Face the threat target or alert direction while shielded
     if (want || h.defending) {
       if (target) this._face(h, target.x, target.z);
       else if (h._alert) this._face(h, h._alert.x, h._alert.z);
@@ -171,7 +171,7 @@ export class BotBrain {
     }
   }
 
-  /** 靜止時狙擊搜索水平偏移角(rad;兵線方向 30/45/60 度角展開視野方向;expand 為展開倍率) */
+  /** Stationary scoped-search yaw offset (rad; lane heading fanned 30/45/60 deg; expand scales the fan) */
   _scopeSearchAngle(h, expand = 1) {
     const rad = botScopeSearchRad(this.diff, expand);
     if (!rad || !h.aiming || !this._isStationary(h)) return 0;
@@ -179,7 +179,7 @@ export class BotBrain {
     return Math.sin(this.sim.t * freq + this.lane) * rad;
   }
 
-  /** 靜止時狙擊搜索垂直俯仰偏移角(rad;兵線方向 15/20/25 度角立體展開視野方向;expand 為展開倍率) */
+  /** Stationary scoped-search pitch offset (rad; lane heading fanned 15/20/25 deg vertically; expand scales the fan) */
   _scopeSearchPitch(h, expand = 1) {
     const rad = botScopeSearchPitchRad(this.diff, expand);
     if (!rad || !h.aiming || !this._isStationary(h)) return 0;
@@ -187,9 +187,9 @@ export class BotBrain {
     return Math.sin(this.sim.t * freq * 2 + this.lane) * rad;
   }
 
-  /** 控場折速係數(招式追加)鏡像:真人玩家由客戶端自鎖,bot 的「客戶端」就是這裡 ——
-   *  麻痺 = 0(原地,武器照常)、緩速 ×slowF、混亂 ×0.5(bot 沒有操縱可反轉,折半近似)。
-   *  _speed 與 _push 的位置收斂共用這一縫 —— 不得在 update 各處另寫折速。 */
+  /** CC slow-factor mirror (kit-appended): humans self-lock on the client, the bot client lives here --
+   *  paralyze = 0 (planted, weapons live), slow x slowF, confuse x 0.5 (no input to invert, halving approximates).
+   *  _speed and _push position convergence share this seam -- no second slow factor inside update. */
   _ccF(h) {
     const t = this.sim.t;
     if ((h.freezeUntil || 0) > t) return 0;
@@ -200,15 +200,15 @@ export class BotBrain {
     return f;
   }
 
-  /** 目前是否為飛行型態(**唯一縫**:地速 / 碰撞量體同判;無人機恆飛、變形者僅飛行型態)。
-   *  與客戶端 `game.js _flying()` 同語意 —— 碰撞量體的 fly 旗標兩端 MUST 是同一件事。 */
+  /** Whether this body counts as flying (single seam: ground speed / collider share it; drones always, morphs only in flight).
+   *  Same semantics as client game.js _flying() -- the collider fly flag MUST agree on both ends. */
   _fly(h) { return h.kind === 'drone' || (h.kind === 'morph' && (h.y || 0) > FLY_Y); }
 
-  /** 無人機交戰高度決策:鎖定目標上方一層(altTier)搶 +射程/+閃避。
-   *  只在有 `tactic` 旗標的難度啟用(新手/低難度維持舊制固定高度,逐位元同舊制);
-   *  讀的是鎖定目標的快照高度(瞄準/引信同一份 `t.y`,非透視)—— 未鎖定 = 維持巡航。
-   *  夾在既有包絡內,不開新暴露面:下限 = 既有交戰低空(武器好瞄),上限 = 巡航上限
-   *  (既有 SAM 風險;高過 AA_MIN_ALT 照樣吃防空飛彈,見 CRUISE_ALT)。 */
+  /** Drone fight-altitude choice: one layer above the locked target (altTier) for +range/+dodge.
+   *  Only on difficulties with the `tactic` flag (novice/low keep the old fixed altitude, bit-identical);
+   *  reads the locked target snapshot height (same `t.y` as aim/fuze, no omniscience) -- unlocked = hold cruise.
+   *  Clamped inside the existing envelope, no new exposure: floor = existing low fight alt (guns track well), ceiling = cruise max
+   *  (existing SAM risk; above AA_MIN_ALT still eats air-defense missiles, see CRUISE_ALT). */
   _wantAlt(h, target) {
     const floor = Math.max(GAME.AA_MIN_ALT * 0.6, this.alt * 0.6);
     if (this.state !== 'ENGAGE' || !this.diff.tactic) return this.state === 'ENGAGE' ? floor : this.alt;
@@ -216,12 +216,12 @@ export class BotBrain {
     return Math.min(CRUISE_ALT.max, Math.max(floor, ty + altTier()));
   }
 
-  /** 地速:變形者飛行型態用飛行巡航速度(變形趕路才有意義)× 控場折速。
-   *  取速一律經 `heroMobility`(A32「電腦玩家 MUST NOT 比真人多看/多走」的同一條):
-   *  那支才含角色 `mods.speed` 與移速壓縮,直接讀 `UNITS[kind].speed` = bot 跑的是機種基準速。 */
+  /** Ground speed: morphs in flight use cruise speed (morphing only pays off en route) x CC factor.
+   *  Always via `heroMobility` (same A32 bar "bots MUST NOT see/move beyond humans"):
+   *  only it carries role `mods.speed` and speed compression, raw `UNITS[kind].speed` would run bots at chassis baseline. */
   _speed(h, dx = 0, dz = 0) {
-    // 高地壓制折速(2026-08-12;見 data.js HIGH_SUP ⑤):真人那一半住客戶端 `game._mobility`,
-    // bot 的「客戶端」就是這裡 —— 兩端同一支 `highSupSpeedF`,伺服器不對真人再折一次。
+    // High-ground suppression slow (2026-08-12; see data.js HIGH_SUP (5)): the human half lives in client game._mobility,
+    // the bot client lives here -- both ends share `highSupSpeedF`, server never slows humans twice.
     const sup = highSupSpeedF(this.sim._supF(h));
     const fly = this._fly(h);
     let spd = heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h) * sup;
@@ -238,17 +238,17 @@ export class BotBrain {
     return spd;
   }
 
-  /** 這架機體的水平半視角(弧度);推導不手寫,見 data.js botFovHalf */
+  /** Horizontal half-FOV of this body (rad); derived, never hand-written, see data.js botFovHalf */
   _fovHalf(h) { return botFovHalf(h.kind); }
 
-  /** 世界點相對機體**朝向**的水平方位(rad;0 = 正前方、± = 左右)。視野錐與受擊警戒共用 */
+  /** Horizontal bearing of a world point off body HEADING (rad; 0 = ahead, +- = sides). Shared by view cone and hit alerts */
   _bearing(h, tx, tz) { return wrapPi(Math.atan2(-(tx - h.x), tz - h.z) - (h.ry || 0)); }
 
   /**
-   * 位置寫入的**唯一縫**:先經 `sim.solidResolve`(客戶端 `_collide` 的伺服器鏡像)夾在
-   * 實體障礙之外,再寫回機體 —— bots.js MUST NOT 有第二處直接指派 `h.x`/`h.z`
-   * (2026-08-02 使用者定案「移動與攻擊都不可穿牆穿越各種物理碰撞的物件」)。
-   * 回傳「實際位移 ÷ 期望位移」(0~1)供撞牆繞行判斷。
+   * The single seam for position writes: clamp outside solid bodies via sim.solidResolve (server mirror of client _collide) first,
+   * then write back -- bots.js MUST NOT assign h.x/h.z directly anywhere else
+   * (2026-08-02 user decision "move and attacks never cross walls/any physical collider").
+   * Returns actual-over-desired displacement (0~1) for wall-skirt decisions.
    */
   _move(h, nx, nz) {
     if ((h.rootedUntil || 0) > this.sim.t) return 0;
@@ -261,11 +261,11 @@ export class BotBrain {
   }
 
   /**
-   * NPC BOSS 的活動範圍(使用者:「限制移動區域在主堡/砲塔周圍」)。
-   * 夾的是**想去的那個點**,不是夾結果 —— 夾完才交給 `solidResolve`,碰撞仍是唯一權威
-   * (先解碰撞再硬拉回圓內的話,那一拉會把機體推進牆裡)。非 BOSS 恆原值回傳。
-   * 圓心/半徑住 `sim.bossHold`(伺服器定案,見 sim._bossAnchor);bots.js MUST NOT 自己算。
-   * 第 4 階段狂暴模式解除範圍限制,持續向前進攻。
+   * NPC BOSS bounds (user: "confine movement around base/towers").
+   * Clamps the INTENDED point, not the result -- clamp first, then solidResolve keeps collision authoritative
+   * (hard-pulling back inside the circle after solving would push the body into walls). Non-BOSS passes through.
+   * Center/radius live in sim.bossHold (server decided, see sim._bossAnchor); bots.js MUST NOT compute them.
+   * Stage-4 enrage lifts the leash and keeps pushing forward.
    */
   _zoneClamp(nx, nz) {
     const sq = this.sim.squads?.get(this.pid);
@@ -276,13 +276,13 @@ export class BotBrain {
     return d <= z.r ? [nx, nz] : [z.x + dx / d * z.r, z.z + dz / d * z.r];
   }
 
-  /** 這一台該回哪裡(撤退 / 推線的落腳點):BOSS 回自己的據點,其餘回主堡 */
+  /** Where this unit falls back to (retreat / push origin): BOSS returns to its post, others to base */
   _home() {
     const z = this.sim.bossHold?.get(this.pid);
     return z ? [z.x, z.z] : this.sim.basePos[this.side];
   }
 
-  /** 撞牆繞行:卡住期間把目標點往側向挪一段(垂直於前進方向),讓 push-out 有機會把機體滑出牆角 */
+  /** Wall skirt: while stuck, offset the target sideways (off the travel dir) so push-out can slide the body out of the corner */
   _skirt(h, tx, tz) {
     if (this.sim.t >= this._skirtUntil) return [tx, tz];
     const dx = tx - h.x, dz = tz - h.z;
@@ -291,7 +291,7 @@ export class BotBrain {
     return [tx - dz / d * s, tz + dx / d * s];
   }
 
-  /** 撞牆記帳:`f` = _move 回報的達成率。連續推不動 STUCK.S 秒 → 換一側繞行 */
+  /** Stuck accounting: `f` = _move completion ratio. Stalled STUCK.S seconds straight -> skirt from the other side */
   _stuck(f, dt) {
     if (f < STUCK.F) this._stuckT += dt; else this._stuckT = 0;
     if (this._stuckT < STUCK.S || this.sim.t < this._skirtUntil) return;
@@ -301,11 +301,11 @@ export class BotBrain {
   }
 
   /**
-   * 操作節流(**唯一縫**;2026-07-27):難度決定「每項操作切換的時間間隔」——
-   *   ①全域手速閘 `diff.gap`:一次只能做一件事,任兩次操作之間 ≥ gap(最高難度 0.15s ≈ 400 APM);
-   *   ②該類操作自身的切換間隔 `botOpGap(diff, kind)` = gap × BOT_OPS[kind]。
-   * 回傳 true = 這一拍可以做這項操作,並就地記時戳 ⇒ 呼叫端 MUST 在「真的要執行」時才問。
-   * 持續開火不走這裡(扳機是按住的,不是每發重按一次;射速由 sim 的武器 rate 把關)。
+   * Op throttle (single seam; 2026-07-27): difficulty sets the per-op switch interval --
+   *   1) global APM gate diff.gap: one thing at a time, any two ops spaced by at least gap (top difficulty 0.15s, about 400 APM);
+   *   2) per-kind switch interval botOpGap(diff, kind) = gap x BOT_OPS[kind].
+   * Returning true means this beat may run that op, timestamped in place, so callers MUST ask only when really executing.
+   * Sustained fire bypasses this (trigger is held, not re-pressed per shot; rate is gated by the sim weapon rate).
    */
   _op(kind) {
     const t = this.sim.t;
@@ -315,27 +315,27 @@ export class BotBrain {
     return true;
   }
 
-  /** 開火(含反應時間 + 難度瞄準誤差:擲骰射偏則本發落空,不造成傷害)。難度越低 aimErr 越大。 */
+  /** Fire (with reaction time + difficulty aim error: a failed roll misses and deals no damage). Lower difficulty means larger aimErr. */
   _fire(tid, slot) {
-    if (this.sim.t < this._aimAt) return false;   // 換目標後準星還沒拉上去(反應時間)
+    if (this.sim.t < this._aimAt) return false;   // sight still settling after target switch (reaction time)
     if (Math.random() < this.diff.aimErr) return false;
     return this.sim.botFire(this.pid, tid, slot);
   }
 
   /**
-   * 目標維持/切換:掃描選敵是一項操作(`scan`),兩次掃描之間**咬住同一個目標**;
-   * 目標失效(死亡/脫離/匿蹤)才立即放掉。換到新目標 → 加一段反應時間(`diff.react`)才開得了火。
+   * Target hold/switch: scanning for enemies is one op (scan), and the same target is held between scans;
+   * a dead/lost/stealthed target is dropped at once. Switching to a new target adds a reaction delay (diff.react) before firing.
    */
   _target(h) {
     let t = this._tid ? this.sim.ents.get(this._tid) : null;
     if (t && (t.hp <= 0 || t.side === h.side || t.neutral || t.gar
       || (t.hero && (t.dead || (t.stealthUntil || 0) > this.sim.t)))) { t = null; this._tid = 0; }
     if (t && Math.hypot(h.x - t.x, h.z - t.z) > this._targetGun(h).range * 1.15) { t = null; this._tid = 0; }
-    if (!this._op('scan')) return t;                  // 手速/掃描間隔未到:維持現有目標
+    if (!this._op('scan')) return t;                  // APM/scan interval not reached: keep current target
     const nt = this._acquire(h);
     if ((nt ? nt.id : 0) !== this._tid) {
       this._tid = nt ? nt.id : 0;
-      if (nt) this._aimAt = this.sim.t + this.diff.react;   // 新目標:反應時間 + 拉準星
+      if (nt) this._aimAt = this.sim.t + this.diff.react;   // new target: reaction time + sight settle
     }
     return nt;
   }
@@ -351,9 +351,9 @@ export class BotBrain {
     const u = UNITS[h.kind];
     const frac = h.hp / h.maxHp;
     const spF = h.maxSp > 0 ? (h.sp || 0) / h.maxSp : 1;
-    // 撤退/回頭是「下決心」型的操作(不是看到血條就瞬間轉身)⇒ 吃 state 間隔,難度越低越晚察覺。
-    // ENGAGE/PUSH 不另外收費:它只是「眼前有沒有目標」的結果,目標本身已由 scan + react 節流過。
-    // **MUST 維持短路**:`_op` 一旦回 true 就吃掉一格全域手速,無條件問等於每拍都在付錢。
+    // Retreat/turn is a commit-type op (not an instant turn on sight of the health bar), so it pays the state interval; lower difficulty notices later.
+    // ENGAGE/PUSH cost nothing extra: they only report whether a target is in front, and targets are already throttled by scan + react.
+    // MUST keep short-circuit: a successful _op consumes one global-APM slot, so asking unconditionally pays every beat.
     const want = this._pullWant(h, frac, spF);
     if (want && this.state !== want && this._op('state')) this._enterPull(h, want);
     else if (this.state === 'RETREAT' && frac >= this.tac.RESUME_HP && this._op('state')) this._resume(0);
@@ -364,36 +364,36 @@ export class BotBrain {
     if (!this._pulling()) this.state = target ? 'ENGAGE' : 'PUSH';
     this._updateDefending(h, target);
 
-    // 經濟:依 BUY_ORDER 逐項升級(階梯單價 + 戰鬥分數門檻,一律由 sim.buy 複驗)。
-    // 前置篩選走 `canUpgrade` 同一支(2026-08-11):升級多了戰鬥分數這道閘 ⇒ 光看錢會在
-    // 「錢夠但分數不夠」時每一輪都吃掉一格手速去問一輪必被拒的採購。
-    // 開商店也是一項操作 ⇒ 巡店間隔隨難度拉長(高難度 ≈ 4s,同 2026-07-27 前的節奏)
-    // NPC BOSS 不使用升級系統(權威閘門在 `sim.buy`;這裡只是別白白吃掉一格手速去問必被拒的採購)
+    // Economy: upgrade track by track per BUY_ORDER (step price + combat-score gate, always rechecked by sim.buy).
+    // Pre-filtering uses the same canUpgrade helper (2026-08-11): upgrades gained a combat-score gate, so checking money alone
+    // would spend one APM slot per round asking for purchases that must be refused when money suffices but score does not.
+    // Opening the shop is also an op, so the shop-check interval grows with lower difficulty (high difficulty about 4s, the pre-2026-07-27 rhythm)
+    // NPC BOSS units skip the upgrade system (authority gate in sim.buy; this only avoids wasting an APM slot on doomed purchases)
     const canBuy = !sim.isBoss(h) && Object.entries(ECON.UPGRADES)
       .some(([k, u]) => canUpgrade(u, h.upg[k] || 0, h.money, h.kn));
     if ((canBuy || (!sim.isBoss(h) && h.money >= CREEP_UPG.PRICE)) && this._op('buy')) {
       let bought = false;
-      // 採購順序隨定位換(攻堅先買重武器與護甲、支援先買招式與充能…);無定位 = 舊制順序
+      // Buy order rotates with role (assault buys heavy and armor first, support buys skills and charge...); unroled = legacy order
       for (const item of botBuyOrder(this._role)) {
-        // 不使用招式的難度(新手/低):不買招式面向,把錢留給武器/防禦強化
+        // Difficulties that never cast (novice/low): skip skill tracks, save money for weapon and defense upgrades
         if (!this.diff.ability && (item === 'def' || item === 'atk')) continue;
         if (sim.buy(this.pid, item) === null) { bought = true; break; }
       }
-      // 八軌全滿後的去化:把錢投進**自己這條兵線**的陣營小兵強化(門檻/價格/上限由 sim.buy 把關)。
-      // 沒有這一段的話,滿裝 bot 的錢只會無限囤積,人類玩家單方面享有強化兵線。
+      // Sink after all eight tracks fill: invest in this lane faction-creep upgrades (gates/price/caps enforced by sim.buy).
+      // Without this, maxed bots would hoard money forever while humans alone enjoy reinforced lanes.
       if (!bought) sim.buy(this.pid, 'creep', this.lane);
     }
 
-    // 自保/輔助類招式:低血時放治療/護盾,撤退時也用
+    // Self/assist skills: heal or shield at low HP, also used while retreating
     this._castSupport(h, frac);
 
     if (this.state === 'RETREAT') this._moveToward(h, u, this._home(), dt);
     else if (this.state === 'RALLY') this._rally(h, u, target, dt);
     else if (this.state === 'ENGAGE') this._engage(h, u, target, dt);
-    else if (sim.bossHold?.has(this.pid) && !(h.sq?.bossSeg >= 3)) this._hold(h, u, dt);   // NPC BOSS:不推線,守著據點 (狂暴後持續推進)
+    else if (sim.bossHold?.has(this.pid) && !(h.sq?.bossSeg >= 3)) this._hold(h, u, dt);   // NPC BOSS: holds the post, no pushing (keeps pushing once enraged)
     else this._push(h, u, dt);
 
-    // 視角:狀態機先寫下「想看哪裡」,防守姿態鎖定威脅目標,受擊警戒可以搶走,最後統一以角速度上限轉一步。
+    // View: the state machine first writes where it wants to look, guard stance locks the threat target, hit alerts can steal it, then one yaw-limited turn applies.
     if (h.defending) {
       if (target) this._face(h, target.x, target.z, target.y);
       else if (h._alert) this._face(h, h._alert.x, h._alert.z, h._alert.y);
@@ -401,14 +401,14 @@ export class BotBrain {
     this._alertLook(h);
     this._turn(h, dt);
 
-    // 高度:無人機巡航;交戰時按目標高度搶高一層(見 _wantAlt),垂直速率與真人同上限
+    // Altitude: drones cruise; in a fight grab one level above the target (see _wantAlt), with the same vertical rate cap as humans
     if (h.kind === 'drone') {
       const want = this._wantAlt(h, target);
-      const vsp = u?.vspeed || 0;   // UNITS.vspeed = 真人 Space 全速爬升率(game._updatePlayer 同一支)
+      const vsp = u?.vspeed || 0;   // UNITS.vspeed = human Space full climb rate (same helper as game._updatePlayer)
       const y0 = h.y || 0, dy = want - y0;
       h.y = Math.abs(dy) <= vsp * dt ? want : y0 + Math.sign(dy) * vsp * dt;
     } else if (h.kind === 'morph') {
-      // 變形者:推線時飛行型態趕路,交戰/撤退回堡時落地變形(y=0 才吃地雷、脫離防空)
+      // Morph: fly form hurries along while pushing, lands to morph when fighting or retreating to base (y=0 takes mines and leaves AA)
       const want = this.state === 'PUSH' ? this.alt : 0;
       h.y = (h.y || 0) + (want - (h.y || 0)) * Math.min(1, dt * 1.5);
       if (want === 0 && h.y < 1.5) h.y = 0;
@@ -418,88 +418,88 @@ export class BotBrain {
   }
 
   /**
-   * 機體定位解析(**唯一縫**;每個角色只做一次)。定位怎麼算住 `data.js botRoleOf`,
-   * 策略怎麼疊住 `botRoleTactic` —— bots.js MUST NOT 比對定位鍵寫任何 `if (role === …)`
-   * 行為分支(那就是第二套決策系統,而且會與難度分層打架)。
+   * Body role resolution (single seam; resolved once per character). Role math lives in data.js botRoleOf,
+   * tactic layering lives in botRoleTactic -- bots.js MUST NOT branch on role keys with any role-equals check
+   * (that would be a second decision system, and it would fight difficulty layering).
    *
-   * 三條:①**只在 `diff.tactic` 之下解析** ⇒ 新手/低難度的 `this.tac` 恆是注入/全域那一份,
-   * 結構性地逐位元同舊制(A33);②**基準只記一次**(`_tacBase`):不記的話每次重解都會把
-   * 上一輪覆寫過的表再乘一次乘數 —— 換角色幾次之後距離環就飄到夾制邊界上,而且完全無聲;
-   * ③換角色(換座機/重生抽到別台)才重解,同一台不重複算。
+   * Three rules: 1) resolve only under diff.tactic, so novice/low keep the injected/global table in this.tac,
+   * structurally bit-identical to the old system (A33); 2) remember the baseline once (_tacBase): without it each
+   * re-resolve would multiply the already-overridden table again -- range rings drift onto clamp edges after a few swaps, silently;
+   * 3) re-resolve only on character change (new frame or respawn draw), never twice for the same frame.
    */
   _resolveRole(h) {
     if (!this.diff.tactic || h.ch === this._roleCh) return;
     this._roleCh = h.ch;
-    if (this._tacBase == null) this._tacBase = this.tac;   // 學習迴圈注入的那一份 = 基準
+    if (this._tacBase == null) this._tacBase = this.tac;   // the injected learning-loop table = baseline
     this._role = botRoleOf(h.ch);
     this.tac = botRoleTactic(this._tacBase, this._role);
   }
 
-  /** 沿指派兵線往敵方端推進(SWARM 端是折線起點) */
+  /** Advance along the assigned lane toward the enemy end (SWARM side starts at the polyline head) */
   _push(h, u, dt) {
     const pts = this.sim.lanes[this.lane];
     const total = this._cum[this._cum.length - 1];
     const fwd = this.side === 'SWARM' ? 1 : -1;
     const d = this.side === 'SWARM' ? this.prog : total - this.prog;
     const [x, z] = pointAt(pts, this._cum, d);
-    // 朝向取**前進方向**(沿兵線前瞻),不是腳下那個目標點 —— 見 PUSH_LOOK_M
+    // Heading takes the forward direction (lookahead along the lane), not the foot target point -- see PUSH_LOOK_M
     const [lx, lz] = pointAt(pts, this._cum, Math.max(0, Math.min(total, d + fwd * PUSH_LOOK_M)));
     this.prog = Math.min(total, this.prog + this._speed(h, lx - x, lz - z) * 0.85 * dt);
     this._face(h, lx, lz);
-    // 位置收斂同乘控場係數:prog 凍結(麻痺)時機體不得再以指數速率滑回線上目標點
+    // Position converges with the same control-loss factor: while prog is frozen (paralyzed) the body MUST NOT keep sliding back to the lane target exponentially
     const cf = this._ccF(h);
-    const [gx, gz] = this._skirt(h, x + this.jitter[0], z + this.jitter[1]);   // 撞牆繞行的側向偏移
+    const [gx, gz] = this._skirt(h, x + this.jitter[0], z + this.jitter[1]);   // lateral offset while skirting a wall
     const k = Math.min(1, dt * 2.2 * cf);
-    // 障礙迴避整組交給 `_move`(碰撞唯一縫)—— 舊制只在這裡繞開 hazBlockers,建物/神木/巨岩
-    // 照穿不誤,而交戰/撤退兩段連那個都沒有。MUST NOT 在此另寫第二份推擠。
+    // Obstacle avoidance is delegated as a set to _move (the single collision seam) -- the old build only skirted hazBlockers here while
+    // buildings/trees/rocks passed through, and ENGAGE/RETREAT had not even that. MUST NOT write a second push-out here.
     this._stuck(this._move(h, h.x + (gx - h.x) * k, h.z + (gz - h.z) * k), dt);
-    // 掉隊修正:被擊退/重生後 prog 對不上實際位置時,吸附回最近進度
+    // Straggler fix: after knockback or respawn, when prog no longer matches position, snap back to nearest progress
     if (Math.hypot(h.x - x, h.z - z) > 90) this.prog = Math.max(0, this.prog - this._speed(h) * dt * 4);
   }
 
   /**
-   * NPC BOSS 的「推線」= 守著據點(取代 `_push`)。BOSS 不沿兵線推進 —— `prog` 若照樣累加,
-   * 機體會被 `_zoneClamp` 釘在圓緣上而目標點一路跑到敵方主堡,`_stuck` 於是誤判撞牆、
-   * 整場都在左右繞行。回到據點中心 + 面向兵線的敵方端(來敵的方向),就是「站崗」。
+   * NPC BOSS pushing = holding the post (replaces _push). BOSS units never advance along lanes -- if prog kept accumulating,
+   * the body would pin on the zone edge via _zoneClamp while its target runs to the enemy core, so _stuck would misread wall contact
+   * and skirt sideways all game. Returning to the post center + facing the enemy end of the lane (where attackers come from) is the guard post.
    */
   _hold(h, u, dt) {
     this._moveToward(h, u, this._home(), dt);
     this._faceLaneFwd(h);
   }
 
-  /** 目前是否處於「脫離交戰」狀態(回堡 or 退到砲塔後方)—— 兩者共用的判斷,MUST NOT 逐處展開 */
+  /** Whether currently disengaged (returning to base or back behind a tower) -- shared check for both, MUST NOT inline per site */
   _pulling() { return this.state === 'RETREAT' || this.state === 'RALLY'; }
 
   /**
-   * 撤退線(2026-08-02 使用者定案)。回傳這一拍**應該**待在哪個脫離狀態(null = 不必脫離):
-   *   裝甲 < BASE_HP                     → 'RETREAT'(回主堡補血;唯一會離開兵線的情況)
-   *   裝甲 < PULL_HP 且護盾扛掉一半      → 'RALLY' (退到最近砲塔後方等護盾)
-   *   高難度:護盾扛掉一半(不看裝甲)   → 'RALLY' (「扛半條護盾就後撤」)
+   * Retreat line (2026-08-02 user decision). Returns which disengage state this beat should hold (null = hold position):
+   *   armor below BASE_HP                    -> RETREAT (return to core for heals; the only case that leaves the lane)
+   *   armor below PULL_HP and shield lost half -> RALLY (fall behind the nearest tower and wait for shield)
+   *   high difficulty: shield lost half (any armor) -> RALLY (fall back once half the shield is absorbed)
    *
-   * 三道閘缺一不可,每一道都對應一個實測到的壞掉方式:
-   * ①**進場看 PULL_SP、出場看 RALLY_SP** 的遲滯帶 —— 裝甲離開主堡不會自己回,若進場只看
-   *   裝甲,「退到塔後 → 護盾滿 → 回去 → 血還是低 → 又退」會在門檻上無限抖動。
-   * ②**RETREAT 不被 RALLY 搶走** —— 回主堡是長途行程,裝甲只有主堡補得回來(sim 的
-   *   HERO_HEAL_R 內才回血);半路被護盾規則叫去集結點 = 整趟白跑,還帶著一管殘血回前線。
-   * ③**「扛掉半條護盾」量的是這一波真的吃下多少傷害,不是「護盾現在剛好低於一半」** ——
-   *   兩者聽起來一樣,實測差了一倍的攻堅產出。兵線上的小兵零星刮擦會讓護盾長時間掛在半條
-   *   以下(護盾要脫戰 `VITALS.OOC_S` 秒才開始回),照「當下水位」判 ⇒ bot 幾乎一直在撤退:
-   *   2026-08-02 實測 RALLY 吃掉 37% 的場次時間、工事損血腰斬、擊殺 −41%。改量近期傷害後,
-   *   一波英雄集火照樣觸發(6 秒內半條護盾),而小兵刮擦不會。近期傷害吃 `_threatOf` 那份帳
-   *   (`_hurtLog` 唯一縫,MUST NOT 另開第二份記帳);「還在挨打」吃 `VITALS.OOC_S`
-   *   (= 護盾還沒開始回復的那段),MUST NOT 另立第二個交戰判定。
+   * All three gates are required, each maps to one measured failure mode:
+   * 1) enter on PULL_SP, exit on RALLY_SP hysteresis band -- armor never self-heals outside base, so entering on
+   *   armor alone oscillates on the threshold (fall to tower, shield fills, return, HP still low, fall again).
+   * 2) RETREAT is never stolen by RALLY -- the base trip is long and armor only heals inside HERO_HEAL_R;
+   *   diverting to the rally point midway wastes the trip and returns a crippled body to the front.
+   * 3) half-shield-lost measures damage actually absorbed this wave, not whether the shield happens to sit below half now --
+   *   they sound alike but measured a 2x assault-output gap. Chip damage from lane creeps parks shields below half for a long
+   *   time (shields only regen after VITALS.OOC_S seconds out of combat), so level-based checks retreat almost always:
+   *   2026-08-02 measurement had RALLY eat 37 percent of game time, halved fort damage, and cut kills by 41 percent. Measuring
+   *   recent damage still triggers on a real hero burst (half a shield in 6s) but not on creep chip. Recent damage reads the
+   *   _threatOf ledger (single _hurtLog seam, MUST NOT open a second ledger); still-in-fight reads VITALS.OOC_S
+   *   (= the window before shields start regen), MUST NOT invent a second engage check.
    *
-   * 中難度那條刻意**不吃** ③:它的危險訊號是「裝甲只剩三成」,慢慢被磨掉半條護盾一樣該撤。
-   * 沒有 tactic 旗標的難度(新手/低)只剩舊制那一條(門檻 PULL_HP、目的地主堡)⇒ 逐位元不變。
+   * Mid difficulty deliberately skips rule 3: its danger signal is armor down to 30 percent, and slowly grinding half a shield still warrants retreat.
+   * Difficulties without the tactic flag (novice/low) keep only the legacy rule (PULL_HP threshold, destination base), bit-identical.
    */
   _pullWant(h, frac, spF) {
     if (h.sq?.boss) {
-      if ((h.sq.bossSeg || 0) >= 3) return null;             // 狂暴模式:持續進攻不撤退
+      if ((h.sq.bossSeg || 0) >= 3) return null;             // enraged mode: keep attacking, never retreat
       if (frac < this.tac.BASE_HP) return 'RETREAT';
       if (this.state === 'RETREAT') return 'RETREAT';
       if (spF >= this.tac.PULL_SP) return null;
-      if (!this._inFight(h)) return null;                   // 已脫戰:護盾正在回,沒有危險
-      // BOSS 護盾快被打破才回防 (交戰中護盾剩餘低於 15% 觸發回防據點中心等盾回復)
+      if (!this._inFight(h)) return null;                   // already out of combat: shield regen has no danger
+      // BOSS falls back only when its shield is about to break (below 15 percent in combat, wait at post center for regen)
       if (spF <= 0.15) return 'RALLY';
       return null;
     }
@@ -507,25 +507,25 @@ export class BotBrain {
     if (frac < this.tac.BASE_HP) return 'RETREAT';
     if (this.state === 'RETREAT') return 'RETREAT';
     if (spF >= this.tac.PULL_SP) return null;
-    if (!this._inFight(h)) return null;                                   // 已脫戰:護盾正在回,沒有危險
-    if (frac < this.tac.PULL_HP) return 'RALLY';                        // 中/高:裝甲也見底
-    if (spF <= 0.20) return 'RALLY';                                      // 戰術電腦玩家:交戰中護盾快被打破(≤20%)主動回防等盾
+    if (!this._inFight(h)) return null;                                   // already out of combat: shield regen has no danger
+    if (frac < this.tac.PULL_HP) return 'RALLY';                        // mid/high: armor also bottomed out
+    if (spF <= 0.20) return 'RALLY';                                      // tactical bots: shield about to break in combat (at or below 20 percent), fall back and wait
     if (this.diff.elite && this._recentDmg(h) >= this.tac.PULL_SP * (h.maxSp || 0)) return 'RALLY';
     return null;
   }
 
-  /** 還在挨打嗎(**唯一縫**:撤退判定與集結行為同吃)。定義直接借 sim 的脫戰秒數 ——
-   *  「護盾還沒開始回復」與「還在戰鬥中」本來就是同一件事,MUST NOT 另立第二個交戰判定。 */
+  /** Still taking fire (single seam: retreat checks and rally behavior share it). Borrows the sim out-of-combat seconds directly --
+   *  shield-not-yet-regenerating and still-in-combat are the same thing by definition, MUST NOT invent a second engage check. */
   _inFight(h) { return this.sim.t - (h.lastHitAt ?? -99) < VITALS.OOC_S; }
 
   /**
-   * 最近 `THREAT_S` 秒內**被活的敵人**打掉多少(線性淡出)。與選敵的威脅值同一份帳、同一支
-   * 淡出曲線 —— MUST NOT 為撤退另記一份。
+   * Damage taken from live enemies in the last THREAT_S seconds (linear fade). Shares one ledger and one fade curve
+   * with target threat values -- MUST NOT keep a separate ledger for retreat.
    *
-   * **塔/主堡的刮傷不算**(與 `_prioritize` 排除工事總輸出同一條理由):拆塔本來就是站在塔的
-   * 射程裡挨打,把那份算進「扛了半條護盾」⇒ bot 每次攻堅到一半就自己退掉,攻堅產出直接腰斬
-   * (2026-08-02 實測)。工事打不死你的時候該退的訊號是**裝甲**(PULL_HP / BASE_HP 那兩條),
-   * 不是護盾。
+   * Tower and core chip damage does not count (same reason _prioritize excludes fort output): sieging means standing
+   * in tower range taking hits, so counting that toward half-shield-lost would retreat every assault halfway and halve
+   * assault output directly (measured 2026-08-02). When forts cannot kill, the retreat signal is armor (the PULL_HP and BASE_HP rules),
+   * not shield.
    */
   _recentDmg(h) {
     let s = 0;
@@ -536,20 +536,20 @@ export class BotBrain {
     return s;
   }
 
-  /** 進入脫離狀態;集結點在**進場當下**定案(退到一半塔被拆了不重算 —— 那會讓機體在半路掉頭) */
+  /** Enter a disengage state; the rally point is fixed on entry (no recompute when a tower falls midway -- that would U-turn the body) */
   _enterPull(h, want) {
     this.state = want;
     if (want === 'RALLY') this._pickRally(h);
   }
 
-  /** 復出:回到推線,沿兵線進度從 `prog` 接回(回堡的那條從 0 重走,集結的接回**當下位置**) */
+  /** Resume: back to pushing, rejoining lane progress from prog (base returns restart at 0, rally rejoins at the current position) */
   _resume(prog) { this.state = 'PUSH'; this.prog = prog; }
 
   /**
-   * 機體目前位置投影回兵線的「己方端進度」(公尺)。
-   * 集結復出 MUST 吃這個而不是集結點的進度:脫離接觸往往在退到砲塔之前就成立(停火 5 秒就
-   * 脫戰),此時把 prog 設回砲塔後方 = `_push` 會先把機體**往回**拉到砲塔才開始推,白丟一整段
-   * 兵線。`prog` 本身在 ENGAGE/RALLY 期間是凍結的(只有 `_push` 會推進),不能直接沿用。
+   * Current position projected back onto the lane as own-end progress (meters).
+   * Rally resume MUST use this instead of the rally-point progress: disengages often complete before reaching the tower (5s without fire
+   * already exits combat), so resetting prog behind the tower would drag the body backward to the tower in _push first, wasting a whole
+   * lane segment. prog itself freezes during ENGAGE and RALLY (only _push advances it), so it cannot be reused directly.
    */
   _progAt(h) {
     const pts = this.sim.lanes[this.lane];
@@ -566,26 +566,26 @@ export class BotBrain {
       if (d < bestD) { bestD = d; bestAt = cum[i - 1] + (cum[i] - cum[i - 1]) * s; }
     }
     const total = cum[cum.length - 1];
-    return this.side === 'SWARM' ? bestAt : total - bestAt;   // 一律換算回「己方端起算」
+    return this.side === 'SWARM' ? bestAt : total - bestAt;   // always convert back to own-end origin
   }
 
   /**
-   * 集結點 = **最近一座己方存活砲塔後方**的兵線點(使用者定案「撤退到最近砲塔後方兵線」)。
-   * 塔位一律吃 `sim.towerSites`(與開場預置兵線同一份解,MUST NOT 再解一次);但 towerSites 是
-   * 開局定案的**位置表**,不知道塔死了沒 ⇒ 逐塔位確認還有活著的己方塔,否則等於退進一個空位、
-   * 正好落在敵方推進的路線上。一座都不剩就退回主堡(原則 6 降級不例外)。
+   * Rally point = the lane point behind the nearest surviving friendly tower (user decision: fall back behind the nearest tower line).
+   * Tower spots always come from sim.towerSites (same solution as the pre-seeded lanes, MUST NOT solve again); but towerSites is a
+   * fixed-at-start position table with no death info, so confirm a live friendly tower per spot, else the retreat lands on an empty spot
+   * right in the enemy push path. With zero towers left, fall back to base (principle 6 degrades without exception).
    */
   _pickRally(h) {
     const sim = this.sim;
-    // NPC BOSS 的集結點恆是自己的據點:兵線上的「砲塔後方」多半在活動範圍之外,
-    // 退過去只會被 `_zoneClamp` 夾在圓緣、卻永遠到不了目標點(= 一路貼著邊緣滑)。
+    // NPC BOSS rally point is always its own post: the lane tower-behind spot usually lies outside the activity zone,
+    // retreating there only wedges on the _zoneClamp circle edge and never arrives (= sliding along the edge forever).
     if (sim.bossHold?.has(this.pid)) { this._rallyProg = this.prog; this._rallyAt = this._home(); return; }
     const total = this._cum[this._cum.length - 1];
     let bestD = Infinity, bestFrac = null;
     for (const st of sim.towerSites?.[this.lane] || []) {
       const p = st[this.side];
       if (!p) continue;
-      // 同一個塔位左右各一座(GAME.TOWER_SIDE_OFF),取涵蓋兩座的半徑判存活
+      // One tower spot holds one tower per side (GAME.TOWER_SIDE_OFF); survival is judged with a radius covering both
       let alive = false;
       for (const e of sim.ents.values()) {
         if (e.kind !== 'tower' || e.side !== this.side || e.hp <= 0) continue;
@@ -596,11 +596,11 @@ export class BotBrain {
       if (d < bestD) { bestD = d; bestFrac = st.frac; }
     }
     if (bestFrac == null) { this._rallyProg = 0; this._rallyAt = sim.basePos[this.side]; return; }
-    // frac 自**己方端**起算(與 solveTowerSites / this.prog 同框)⇒ 減去 RALLY_BACK_M 就是塔後方
+    // frac counts from the own end (same frame as solveTowerSites and this.prog), so minus RALLY_BACK_M lands behind the tower
     this._setRally(Math.max(0, total * bestFrac - this.tac.RALLY_BACK_M));
   }
 
-  /** 集結點寫入的唯一縫:己方端進度 → 世界座標(兩種集結點共用同一條換算) */
+  /** Single seam writing the rally point: own-end progress -> world coords (both rally-point kinds share one conversion) */
   _setRally(prog) {
     const total = this._cum[this._cum.length - 1];
     this._rallyProg = prog;
@@ -608,21 +608,21 @@ export class BotBrain {
   }
 
   /**
-   * 集結撤退:**還在挨打就邊退邊打、脫離接觸就停下來等護盾**。
+   * Rally retreat: keep firing while falling back under contact, hold still for shields once contact breaks.
    *
-   * 兩半各自對應一個實測到的壞掉方式:
-   *   ①退的時候不還手 = 轉身送人頭 ⇒ 還在接觸時照樣開火(這就是「打帶跑」的宏觀版本)。
-   *   ②脫離接觸之後還繼續開火 = **護盾永遠回不來**:護盾要脫戰 `VITALS.OOC_S` 秒才開始回,
-   *     而開火會引來還擊、把脫戰計時一直重置 ⇒ bot 卡在 RALLY 直到裝甲見底才回主堡
-   *     (2026-08-02 實測:RALLY 吃掉 36% 的場次時間,而「等滿護盾」那個出場條件幾乎從沒
-   *     成立過)。停火停步 = 真人退到安全處按住不動等盾的那個動作。
+   * Each half maps to one measured failure mode:
+   *   1) retreating without returning fire = turning to feed, so keep firing while in contact (the macro version of shoot-and-scoot).
+   *   2) firing after breaking contact = shields never return: shields only regen after VITALS.OOC_S seconds out of combat,
+   *     while firing draws return fire and keeps resetting the out-of-combat clock, so bots sit in RALLY until armor bottoms out and only then return
+   *     (measured 2026-08-02: RALLY ate 36 percent of game time, while the wait-for-full-shield exit almost never
+   *     fired). Stop firing and stop moving = the human act of sitting still in safety waiting for shields.
    *
-   * 位置一樣走 `_moveToward` 的碰撞唯一縫;`_face` 只寫意圖(不動 h.ry)⇒ 排在移動之後
-   * 就能把視角搶回目標身上。
+   * Position still uses the _moveToward collision seam; _face only writes intent (never moves h.ry), so running after movement
+   * hands the view back to the target.
    */
   _rally(h, u, t, dt) {
-    if (!this._inFight(h)) {                       // 已脫離接觸:原地停火等護盾回滿
-      if (t) this._face(h, t.x, t.z);              // 但眼睛還是盯著人(免得被繞後)
+    if (!this._inFight(h)) {                       // contact broken: hold still and stop firing until shields refill
+      if (t) this._face(h, t.x, t.z);              // but eyes stay on the enemy (no free flanking)
       else this._faceLaneFwd(h);
       return;
     }
@@ -631,9 +631,9 @@ export class BotBrain {
     this._faceLaneFwd(h);
   }
 
-  /** 面向兵線的敵方端(集結等護盾時的預設朝向)——背對戰場等於白白讓人繞後,
-   *  而 `_acquire` 只認前方視野錐,轉錯邊 = 對來襲的敵人整批失明。
-   *  靜止時若開鏡,則在兵線方向展開 3D 角度(水平 ±30/45/60°、垂直 ±15/20/25°)進行狙擊搜索。 */
+  /** Face the enemy end of the lane (default heading while rallying for shields) -- waiting with back to the field invites flanking,
+   *  and _acquire only sees the forward view cone, so facing away blinds the bot to whole incoming waves.
+   *  While stationary and scoped, fan a 3D search about the lane direction (horizontal +-30/45/60 deg, vertical +-15/20/25 deg). */
   _faceLaneFwd(h) {
     const total = this._cum[this._cum.length - 1];
     const fwd = this.side === 'SWARM' ? 1 : -1;
@@ -653,7 +653,7 @@ export class BotBrain {
     this._face(h, h.x - Math.sin(targetRy) * dist, h.z + Math.cos(targetRy) * dist, targetY);
   }
 
-  /** 招式可用性(解鎖 + CD + MP)——實際結算仍由 sim.heroCast 把關 */
+  /** Skill readiness (unlock + CD + MP) -- actual settlement still gated by sim.heroCast */
   _ready(h, slot) {
     if (h.cast || (h.castLockUntil || 0) > this.sim.t) return null;
     const lvl = h.abil[slot];
@@ -662,26 +662,26 @@ export class BotBrain {
     return (A && h.mp >= A.mp) ? A : null;
   }
 
-  /** 輔助/自保招式(不需目標點):治療、護盾、增益、匿蹤撤退 */
+  /** Assist/self skills (no target point): heal, shield, buff, stealth retreat */
   _castSupport(h, frac) {
-    if (!this.diff.ability) return;   // 低/新手難度:不使用招式
+    if (!this.diff.ability) return;   // low/novice difficulty: never casts
     for (const slot of ['def', 'atk']) {
       const A = this._ready(h, slot);
       if (!A) continue;
-      const hurt = frac < this.tac.CAST_HURT;   // 血線走旋鈕(支援型放得早、攻堅型撐得久)
-      const lowSp = (h.maxSp > 0) && ((h.sp || 0) / h.maxSp < 0.5) && this._inFight(h); // 磁力損耗過半及時補防
+      const hurt = frac < this.tac.CAST_HURT;   // HP line follows the knob (support casts early, assault holds longer)
+      const lowSp = (h.maxSp > 0) && ((h.sp || 0) / h.maxSp < 0.5) && this._inFight(h); // top up defense once magnetic wear passes half
       const fullChg = this.diff.elite && (A.charges > 1) && this._inFight(h) && (this.sim._readyCharges(h, slot) >= A.charges);
       const isDefFx = A.fx === 'heal' || !!A.spRestore || !!A.shieldDefBoost || !!A.shieldExpand
         || !!A.spRegenHit || A.fx === 'reflect' || A.fx === 'phaseshift' || A.fx === 'fog' || A.fx === 'cube';
       if ((isDefFx && (hurt || lowSp || fullChg))
         || (A.fx === 'buff' && A.mul?.dmgTaken && (hurt || lowSp || fullChg))
         || (A.fx === 'stealth' && this._pulling())) {
-        if (this._op('ability')) this.sim.heroCast(this.pid, slot);   // 按 Q/E 是一項操作
+        if (this._op('ability')) this.sim.heroCast(this.pid, slot);   // pressing Q/E is one op
       }
     }
   }
 
-  /** 交戰:保持在射程 60~85% 的距離環,邊打邊橫移 */
+  /** Engage: hold the 60-85 percent range ring, firing while strafing */
   _engage(h, u, t, dt) {
     const gun = this._targetGun(h);
     const dx = t.x - h.x, dz = t.z - h.z;
@@ -693,32 +693,32 @@ export class BotBrain {
     const kite = this.diff.elite && !struct
       ? botKiteF(!((h.reloadUntil?.light || 0) > this.sim.t), this.tac) : this.tac.KEEP_F;
     const keep = gun.range * (struct ? this.tac.KEEP_STRUCT : kite);
-    const radial = (d - keep) / Math.max(1, d);          // >0 靠近、<0 拉開
+    const radial = (d - keep) / Math.max(1, d);          // positive = close in, negative = pull out
     const strafe = Math.sin(this.sim.t * 0.9 + this.lane * 2) * 0.6;
     const dirX = dx / d * radial + (-dz / d) * strafe;
     const dirZ = dz / d * radial + (dx / d) * strafe;
-    const spd = this._speed(h, dirX, dirZ);              // 控場(麻痺/緩速/混亂)與天氣風向折算後的地速
+    const spd = this._speed(h, dirX, dirZ);              // ground speed after control-loss (stun/slow/confuse) and weather wind
     const vx = dirX * spd;
     const vz = dirZ * spd;
-    this._move(h, h.x + vx * dt, h.z + vz * dt);   // 走位同吃碰撞唯一縫(交戰中一樣不能穿牆)
+    this._move(h, h.x + vx * dt, h.z + vz * dt);   // strafing uses the same collision seam (no wall-passing in combat either)
     this._face(h, t.x, t.z);
     this._fire(t.id, 'light');
 
-    // 重武器(CD 由 sim 的 mag/reload 把關):建築或成群敵人時出手。新手難度不使用重武器。
+    // Heavy weapons (CD gated by sim mag/reload): fired at structures or packed enemies. Novice never uses heavies.
     const hv = this._heavy(h);
     const packed = [...this.sim.ents.values()].filter((e2) =>
       e2.side !== h.side && !e2.neutral && Math.hypot(e2.x - t.x, e2.z - t.z) <= (hv.r || 10) * 1.5).length;
-    // 切瞄準模式 + 打一發重武器 = 一項操作(`weapon`):難度越低,輕/重武器切換越遲鈍。
-    // 裝填中/空夾就別付這格手速(打不出來的按鍵不該排擠掃描與招式;比照招式的 _ready 先驗再花)
+    // Switching aim mode + firing one heavy = one weapon op: lower difficulty switches light/heavy ever more sluggishly.
+    // Do not pay that APM slot while reloading or on an empty mag (keys that cannot fire MUST NOT crowd out scan and skills; pre-check like _ready for skills)
     const hvReady = this._heavyReady(h, hv);
     if (this.diff.heavy && (packed >= 3 || t.kind === 'tower' || t.kind === 'base' || t.hero)
       && hvReady && this.sim.t >= this._aimAt && this._op('weapon')) {
-      if (!h.aiming) this.sim.heroAim(this.pid, true);   // 重武器需瞄準模式,bot 開火前直接切換(無真人輸入)
+      if (!h.aiming) this.sim.heroAim(this.pid, true);   // heavies need scoped mode; bots switch directly before firing (no human input)
       if (hv.type === 'launcher' || hv.type === 'missile') {
-        // 對空引爆高度:目標是飛行機體(英雄/直升機)就在其高度炸(火箭筒對空)
+        // Airburst height: detonate at the target height for flying bodies (heroes/helis) so launchers work AA
         const ty = t.hero || t.kind === 'heli' ? (t.y || 0) : 0;
-        // 彈道被大型障礙擋住 = 不發射(真人的火箭由客戶端彈道擋牆、落點回報在牆前;
-        // bot 沒有客戶端彈道,這裡補上與 botFire 同一條 LOS 規則,否則火箭穿建物直接命中)
+        // Do not fire when a large blocker covers the arc (human rockets are stopped by client ballistics and report short;
+        // bots have no client ballistics, so apply the same LOS rule as botFire here, else rockets pass through buildings)
         if (Math.random() >= this.diff.aimErr
           && !this.sim._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this.sim._tgtY(t), h, t)) {
           this.sim.heroBurst(this.pid, t.x, t.z, ty);
@@ -730,8 +730,8 @@ export class BotBrain {
       } else this._fire(t.id, 'heavy');
     }
 
-    // 攻擊型招式:對準目標丟(strike/emp/summon;範圍/MP/CD 由 sim 把關)。低/新手難度不使用招式。
-    // 每次施放吃一格 `ability` 間隔 —— 真人不可能同一瞬間把 Q 跟 E 一起按下去。
+    // Attack skills: aimed at the target (strike/emp/summon; range/MP/CD enforced by sim). Low/novice never casts.
+    // Each cast pays one ability interval -- a human cannot press Q and E in the same instant.
     if (this.diff.ability) for (const slot of ['def', 'atk']) {
       const A = this._ready(h, slot);
       if (!A) continue;

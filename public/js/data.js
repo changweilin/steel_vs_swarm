@@ -1,23 +1,23 @@
-// ============ 無人戰略:鋼鐵與蜂群 — 共用遊戲常數 ============
-// 伺服器(server/sim.js)與前端(game.js)共用同一份數值,
-// 模式沿用 ai_tycoon:server 直接 import '../public/js/data.js'。
-import { BOT_POLICY } from './botPolicy.js';   // 電腦玩家學習策略(工具產出;見檔尾 BOT_LEARN 區塊)
+// ============ Steel vs Swarm — shared game constants ============
+// Shared by server (server/sim.js) and client (game.js),
+// pattern follows ai_tycoon: server directly imports '../public/js/data.js'.
+import { BOT_POLICY } from './botPolicy.js';   // bot learning policy (tool-generated; see BOT_LEARN block at file end)
 import { balanceMul, upgradeCurveMul } from './balancePrefs.js';
 import { mulberry32 } from './rng.js';
 
 export { balanceMul, upgradeCurveMul };
 
-// ---- 陣營 ----
+// ---- Factions ----
 export const SIDES = {
   SWARM: {
     id: 'SWARM',
     name: '蜂群兵團',
     en: 'THE SWARM',
-    // hero = 該陣營的**主力機種**(也是 heroKindOf 查不到角色時的退路);
-    // 2026-08-02 混編改制後陣營不再只有單一機種,角色機種一律以 CHARACTERS[ch].kind 為準。
+    // hero = faction main unit type (fallback when heroKindOf misses a character);
+    // after 2026-08-02 mixed-formation reform factions are no longer single-type; character type always follows CHARACTERS[ch].kind.
     hero: 'drone',
     heroName: '獵蜂無人機',
-    color: '#ffb300',      // 琥珀警示黃
+    color: '#ffb300',      // amber warning yellow
     colorDim: '#8a6a10',
     desc: '以無人機為主力(7 無人機 / 3 機甲 / 2 變形機甲)。速度快、機動高、血量薄;垂直機動掌握制空權。',
   },
@@ -27,254 +27,256 @@ export const SIDES = {
     en: 'STEEL LEGION',
     hero: 'robot',
     heroName: '執法者機甲',
-    color: '#4fc3f7',      // 鋼鐵冷藍
+    color: '#4fc3f7',      // steel cold blue
     colorDim: '#1a5c78',
     desc: '以重型機甲為主力(7 機甲 / 3 無人機 / 2 變形機甲)。裝甲厚、火力猛、抗打擊;地面推進碾碎一切。',
   },
 };
 export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 
-// ---- 隊伍規模 ----
-// 每陣營 N 人(1~5),總人數 2N;啟用兵線 L = ⌈N/2⌉(1v1=1 線 … 5v5=3 線);
-// 地圖框架恆為三線母體(2026-09-25 同一張圖):真實世界邊長固定 0.18 + 0.06×3 km,
-// 人數只決定啟用子集(L1=[中]、L2=[上,下])。不再有大/中/小尺寸選項。
+// ---- Team size ----
+// N players per faction (1-5), total 2N; active lanes L = ceil(N/2) (1v1=1 lane ... 5v5=3 lanes);
+// map frame is always the 3-lane mother (2026-09-25 single map): real-world side fixed at 0.18 + 0.06x3 km,
+// player count only selects the active subset (L1=[mid], L2=[top,bottom]). No large/medium/small size options.
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
 
-// ============ 單一戰場規格(迷你地圖已退場)============
-// 地圖只剩一種:1v1 / 2v2 (L=1) 對齊緊湊戰場尺度,兵線每陣營各 1 座前線砲塔 + 主堡(各陣營一對);
-// 2/3 兵線地圖(L=2, L=3)等比放大,砲塔數同樣為每線各陣營一對。
-// 迷你地圖(舊 `MINI` / `cfg.mini`)與標準戰場在幾何上已逐位元相同(塔階、尺度皆為 1)⇒ 整組退場:
-// 開關 UI、手機門檻、`cfg.mini` 管線一併移除;舊存檔的 mini:true 一律視為標準戰場。
-// 唯一例外是劇情戰役(非對稱塔位 + 專用 m1 烘焙線,見 STORY_MAP)。
-/** 戰場每側塔位數:每條兵線各陣營各 1 座砲塔(各陣營一對) */
+// ============ Single battlefield spec (mini map retired) ============
+// Only one map left: 1v1 / 2v2 (L=1) aligns with compact battlefield scale, one forward turret per faction per lane + main base (one pair per faction);
+// 2/3-lane maps (L=2, L=3) scale proportionally, turret count stays one pair per faction per lane.
+// Mini map (old `MINI` / `cfg.mini`) is bit-identical to standard battlefield in geometry (stages and scale both 1), so the whole set retires:
+// switch UI, mobile gate, and `cfg.mini` pipeline removed together; old saves with mini:true always count as standard battlefield.
+// Only exception is story campaign (asymmetric tower sites + dedicated m1 baked lane, see STORY_MAP).
+/** Tower sites per side: 1 turret per faction per lane (one pair per faction) */
 export const FULL_STAGES = 1;
 
-// ============ 劇情戰役地圖(2026-08-13 使用者定案)============
-// 劇情戰役一律單兵線(L=1),敵方兩階塔 + 主堡 / 我方前線即主堡(零塔)。
-// 塔鏈需求:攻方 0 + 守方 2 + 1 = 3 SEP,與標準 1 兵線地圖(1+1+1 = 3 SEP)同尺度。
+// ============ Story campaign map (user decision 2026-08-13) ============
+// Story campaign is always single-lane (L=1), foe holds two-stage towers + base / our frontline is the base (zero towers).
+// Lane-chain need: attacker 0 + defender 2 + 1 = 3 SEP, same scale as standard 1-lane map (1+1+1 = 3 SEP).
 export const STORY_MAP = {
-  LANES: 1,                  // 一律單兵線(使用者指定)
-  ATK_STAGES: 0,             // 我方前線就是主堡 ⇒ 攻方零座塔
-  DEF_STAGES: 2,             // 敵方:前線砲塔 + 中段砲塔(+ 主堡 = SIEGE 的三階)
-  // ---- 開場預置兵線 ----
-  // 對稱戰場的預置上限是兩側取較小者。劇情戰役守方(BOSS 方)填到自己那座前線砲塔、攻方仍吃較小值。
-  // ---- 我方電腦玩家的傷害折減 ----
+  LANES: 1,                  // always single lane (user decision)
+  ATK_STAGES: 0,             // our frontline is the base, so attacker has zero towers
+  DEF_STAGES: 2,             // foe: forward turret + middle turret (+ base = three SIEGE stages)
+  // ---- Opening preset lanes ----
+  // Symmetric battlefield preset cap is the smaller of both sides. Story defender (BOSS side) fills its own forward turret, attacker still takes the smaller value.
+  // ---- Damage reduction for allied bots ----
   ALLY_BOT_BOSS_F: 0.10,
   ALLY_BOT_BLD_F: 0.25,
 };
 /**
- * 我方電腦玩家對劇情戰役目標的傷害倍率(**唯一縫**)。`kind`:'boss' / 'building' / 其他。
- * 一般對戰與真人玩家一律不經過這一支 ⇒ 沒有第二條路徑會讀到這兩個數字。
+ * Damage factor of allied bots vs story-campaign targets (single seam). `kind`:'boss' / 'building' / other.
+ * Normal battles and human players never pass through here, so no second path reads these two numbers.
  */
 export const allyBotDmgF = (kind) =>
   (kind === 'boss' ? STORY_MAP.ALLY_BOT_BOSS_F : kind === 'building' ? STORY_MAP.ALLY_BOT_BLD_F : 1);
 
 /**
- * 地圖型態(尺度 / 塔位 / 兵線數 / 緩衝共用的**唯一入口**)。參數 `m` 二態:
- *   falsy(含舊 mini 旗標真值 —— 地圖只剩一種,真值一律視為標準戰場)
- *     → 'full'  標準戰場
- *   'SWARM' / 'STEEL' → 'story' 劇情戰役,**值本身就是防守方(BOSS 方)**
- * 省略 ⇒ 'full' ⇒ 一切推導逐位元同舊制。
+ * Map type (shared single entry for scale / tower sites / lane count / padding). Param `m` has two forms:
+ *   falsy (including old mini flag truthy value -- only one map left, truthy always counts as standard battlefield)
+ *     -> 'full'  standard battlefield
+ *   'SWARM' / 'STEEL' -> 'story' story campaign, **the value itself is the defender (BOSS side)**
+ * Omitted implies 'full', so every derivation stays bit-identical to the old scheme.
  */
 export const mapPlan = (m) => (m === 'SWARM' || m === 'STEEL'
   ? { mode: 'story', def: m, atkStages: STORY_MAP.ATK_STAGES, defStages: STORY_MAP.DEF_STAGES }
   : { mode: 'full', def: null, atkStages: FULL_STAGES, defStages: FULL_STAGES });
 /**
- * battleConfig → 地圖型態參數(`mapPlan` 的實參)。**所有消費端 MUST 走這一支**。
- * `cfg.mini` 已退場不再解讀 —— 舊存檔帶著 mini:true 照樣落到標準戰場(幾何逐位元相同)。
+ * battleConfig -> map-type param (actual arg of `mapPlan`). **All consumers MUST go through here**.
+ * `cfg.mini` is retired and no longer read -- old saves carrying mini:true still land on standard battlefield (geometry bit-identical).
  */
 export const mapArg = (cfg) => (cfg && cfg.defSide) || false;
-/** 這一場防守方每側幾階砲塔(對稱地圖 = 兩側都是這個數) */
+/** Defender stages per side in this match (symmetric map = same count on both sides) */
 export const towerStages = (m) => mapPlan(m).defStages;
-/** 兵線長度需求(單位 = 敵我塔距 SEP):每側 stages 座塔各一個 SEP,加上中線那半個 ×2 */
+/** Lane length need (unit = foe tower gap SEP): each side contributes one SEP per stage tower, plus the middle half x2 */
 export const laneChainF = (stages) => 2 * stages + 1;
-/** 這一場的兵線長度需求(非對稱地圖用):攻方 + 守方各自的塔,加上中間那一段 */
+/** Lane length need for this match (asymmetric maps): attacker + defender towers plus the middle segment */
 export const laneChainOf = (m) => { const p = mapPlan(m); return p.atkStages + p.defStages + 1; };
-/** 這一場的地圖尺度倍率(邊長 / 兩堡距離共用同一個);標準 = 3/3 = 1 ⇒ 逐位元同舊制 */
+/** Map scale factor for this match (side length / base distance share one); standard = 3/3 = 1, so bit-identical to old scheme */
 export const mapScaleF = (m) => laneChainOf(m) / laneChainOf(false);
-/** 這一場幾條兵線(劇情戰役恆單線,不看人數) */
+/** Lane count for this match (story campaign always single lane, ignores player count) */
 export const laneCountFor = (teamSize, m) =>
   (mapPlan(m).mode === 'story' ? STORY_MAP.LANES : lanesFor(teamSize));
 /**
- * 三線母體(2026-09-25 使用者定案「1~3 條兵線用同一張圖」):
- * 標準戰場的地圖框架(兩堡/尺寸/兵線母體)恆為 3 線,兵線數只決定啟用子集 ——
- * L1 = 中路、L2 = 左右兩路、L3 = 全開。劇情戰役不進母體(專用 m1 單線)。
- * 母體排序恆為 [上, 中, 下];合成弧 side +1/0/−1 與烘焙排序同義。
+ * Three-lane mother (user decision 2026-09-25, quote 1-3 lanes share one map):
+ * standard battlefield frame (bases/size/lane mother) is always 3 lanes, lane count only selects the active subset --
+ * L1 = mid, L2 = left+right, L3 = all open. Story campaign never enters the mother (dedicated m1 single lane).
+ * Mother order is always [top, mid, bottom]; composite-arc side +1/0/-1 matches bake order.
  */
 export const MOTHER_LANES = 3;
-/** 啟用子集(母體下標):L1 → [1]、L2 → [0, 2]、L3 → 全 */
+/** Active subset (mother indexes): L1 -> [1], L2 -> [0, 2], L3 -> all */
 export const laneSubsetFor = (L) => (L <= 1 ? [1] : L === 2 ? [0, 2] : [0, 1, 2]);
-/** 地圖框架用兵線數:標準戰場恆取母體,劇情戰役跟兵線數 */
+/** Frame lane count: standard battlefield always takes the mother, story campaign follows lane count */
 export const geoLanesFor = (teamSize, m) =>
   (mapPlan(m).mode === 'story' ? laneCountFor(teamSize, m) : MOTHER_LANES);
 /**
- * 一個塔位上**實際會生成砲塔**的控制點(帶 side)。劇情戰役我方無塔 ⇒ 只有防守方那一個。
- * 「繞著塔位做事」的消費端(biomes 淨空 / beacons 錨點 / 橋上墩座 / sim 生成 / 佈局稽核)
- * MUST 全走這一支,MUST NOT 直接讀 `site.SWARM` / `site.STEEL` —— 直接讀的那一份會在
- * 劇情戰役拿到 undefined:好一點的當場炸,壞一點的(展開成 `p.x`)靜默生出 NaN 座標。
+ * Control points on one tower site that **actually spawn a turret** (with side). Story attacker has no towers, so only the defender one remains.
+ * Consumers built around tower sites (biome clearing / beacon anchors / bridge pier seats / sim spawn / layout audit)
+ * MUST all go through here and MUST NOT read `site.SWARM` / `site.STEEL` directly -- a direct read
+ * yields undefined in story campaign: at best it explodes on the spot, at worst spreading into `p.x` silently births NaN coords.
  */
 export const siteCPs = (site) => (site
   ? ['SWARM', 'STEEL'].filter((s) => site[s]).map((s) => ({ side: s, ...site[s] }))
   : []);
-// 地圖「真實世界」邊長 (m)。第二參數 = 地圖型態(見 mapPlan);省略 ⇒ 倍率 1 ⇒ 逐位元同舊制
-// (IEEE754:5/5 === 1、x * 1 === x)
+// Map real-world side length (m). Second param = map type (see mapPlan); omitted implies factor 1, so bit-identical to old scheme
+// (IEEE754:5/5 === 1, x * 1 === x)
 export const realSideMFor = (L, m) =>
   (MAPGEO.REAL_SIDE_BASE_KM + MAPGEO.REAL_SIDE_PER_LANE_KM * L) * 1000 * mapScaleF(m);
-// 地圖「遊戲世界」邊長 (m) = 真實 ÷ REAL_SCALE;兩堡目標距離 = 邊長 × 0.85 × √2
+// Map game-world side length (m) = real / REAL_SCALE; two-base target distance = side x 0.85 x sqrt(2)
 export const sideMFor = (L, m) => realSideMFor(L, m) / MAPGEO.REAL_SCALE;
 export const targetDistFor = (L, m) => sideMFor(L, m) * MAPGEO.BASE_DIST_FRAC * Math.SQRT2;
-// 兩堡「真實世界」距離 (m)
+// Two-base real-world distance (m)
 export const realDistFor = (L, m) => targetDistFor(L, m) * MAPGEO.REAL_SCALE;
-/** 重合率判定網格邊長 (m,真實世界):與兩堡真實距離等比,見 MAPGEO.OVERLAP_CELL_FRAC */
+/** Overlap-rate grid cell side (m, real world): scales with two-base real distance, see MAPGEO.OVERLAP_CELL_FRAC */
 export const overlapCellM = (L, m) =>
   Math.max(MAPGEO.OVERLAP_CELL_MIN_M, realDistFor(L, m) * MAPGEO.OVERLAP_CELL_FRAC);
 
-// ---- 地圖幾何(緊湊節奏)----
+// ---- Map geometry (compact pacing) ----
 export const MAPGEO = {
-  // 主堡距離目標 ≈ 0.85 × 地圖對角線(> 題目要求的 80%)
+  // Main-base separation target approx 0.85 x map diagonal (> required 80%)
   BASE_DIST_FRAC: 0.85,
   MIN_DIST_FRAC: 0.80,
-  // 地圖真實世界邊長 = BASE + PER_LANE × L (km)。標準戰場框架恆取母體 L=3
-  // (見 geoLanesFor ⇒ 0.36km),與人數無關;人數只決定啟用子集(見 laneSubsetFor)。
+  // Real-world map side = BASE + PER_LANE x L (km). Standard frame always takes mother L=3
+  // (see geoLanesFor => 0.36km), independent of player count; count only selects active subset (see laneSubsetFor).
   REAL_SIDE_BASE_KM: 0.18,
   REAL_SIDE_PER_LANE_KM: 0.06,
-  // 真實↔遊戲世界比例尺:真實地理距離 = 遊戲距離 × REAL_SCALE。
-  // 改制 2026-07-10(三):REAL_SCALE 0.5 —— 遊戲世界 = 真實世界 ×2(遊戲空間放大兩倍)。
+  // Real<->game scale: real geo distance = game distance x REAL_SCALE.
+  // Reform 2026-07-10 (Wed): REAL_SCALE 0.5 -- game world = real world x2 (game space doubled).
   REAL_SCALE: 0.5,
-  // 尺度版本:改動比例尺 / 尺寸模型時 +1,用於偵測過期的「我的最愛」並重算(見 venues.js)
-  // ver8:地圖邊長等比縮減為 0.18 + 0.06×L(km),兵線砲塔縮減為各陣營一對(FULL_STAGES=1),邊界緩衝減半
+  // Scale version: +1 when scale / size model changes, used to detect stale favorites and recompute (see venues.js)
+  // ver8: map side scaled down to 0.18 + 0.06xL (km), lane turrets cut to one pair per faction (FULL_STAGES=1), edge buffer halved
   GEO_SCALE_VER: 8,
-  // 地圖外擴倍率(2026-07-17):battleBBox 繞中心等比放大,**兵線/主堡/塔位一律不動**。
-  // 目的:第三方野營的佈營硬約束(離每座砲塔 ≥ 射程×CLEAR_F=388m)在真實地圖尺寸
-  //   (L1 兩堡遊戲距離 ≈962m)下,舊 5% pad 幾乎無側翼合法區 → L1 完全不生成野營。
-  //   放大側翼淨空(不動兵線 ⇒ 不需重烤 venueLanes、不需 +GEO_SCALE_VER:battleBBox 為
-  //   執行期由 config 推導,「我的最愛」存的是 lanes/sizeM/bases 而非 bbox,不受影響)。
+  // Map expand factor (2026-07-17): battleBBox scales uniformly about center, lanes/bases/tower sites never move.
+  // Why: third-party camp siting hard constraint (stay >= range x CLEAR_F=388m from every turret) leaves
+  //   almost no legal flank area under real map size (L1 two-base game distance approx 962m) with old 5% pad, so L1 spawns no camps.
+  //   Expands flank clearance without moving lanes, so no venueLanes rebake and no +GEO_SCALE_VER: battleBBox is
+  //   derived from config at runtime, favorites store lanes/sizeM/bases rather than bbox and are unaffected.
   MAP_EXPAND: 1.33,
-  // 兵線選路坡度上限:真實道路沿線坡度超過此角度即淘汰(僅作用於真實 OSRM 路線)。
-  // 16° ≈ 29% grade,會濾掉「陡但仍存在」的山路。
+  // Lane routing grade cap: real-road candidates steeper than this along the route are dropped (real OSRM routes only).
+  // 16 deg approx 29% grade, filters out steep-but-existing mountain roads.
   MAX_ROAD_GRADE_DEG: 16,
-  // 三條兵線側向偏移(佔兩堡距離比例)
+  // Lateral offset of the three lanes (fraction of two-base distance)
   LANE_OFFSET_FRAC: 0.30,
-  // 路徑重合判定格與允許重合率(1 - 80% 不重合)。**規則本身不變**:任兩條兵線重合率 < MAX_OVERLAP。
-  // 判定網格是「量測解析度」,MUST 隨地圖尺度等比縮放(舊制 120m 是照 L3 兩堡真實距離 1082m 校準的)。
+  // Overlap grid cell and allowed overlap rate (1 - 80% disjoint). Rule itself never changes: any two lanes overlap < MAX_OVERLAP.
+  // The grid is measurement resolution and MUST scale with map size (old 120m was calibrated to L3 two-base real distance 1082m).
   //
-  // FRAC 的下限公式(2026-07-10 實測導出):三條兵線必然共用「含 A 的格」與「含 B 的格」,
-  // 而每條線約佔 N = 1.2/FRAC 格 ⇒ 重合率下限 = 2/N = 2×FRAC/1.2,**與地圖大小無關**。
-  //   FRAC 0.111(照舊制等比)→ 下限 0.185,離門檻 0.20 僅 0.015 餘裕 → 六大城市只有 3 個
-  //                             能湊出三條真實道路兵線,且兩個正好卡在 0.200。
-  //   FRAC 0.060            → 下限 0.100,六城市 6/6 通過(現值)。
-  // 0.06 另有物理意義:L3 格寬 43m 真實 = 346 遊戲公尺 > 英雄武器射程上限(~300),
-  // 即「不同格 = 互相打不到 = 真的是不同兵線」。調小 MAX_OVERLAP 或調大 FRAC 前 MUST 重跑 bake2/3。
+  // FRAC floor formula (derived 2026-07-10 from measurements): three lanes always share the cell holding A and the cell holding B,
+  // while each lane spans about N = 1.2/FRAC cells => overlap floor = 2/N = 2xFRAC/1.2, independent of map size.
+  //   FRAC 0.111 (old-ratio scaling) => floor 0.185, only 0.015 margin to the 0.20 gate, so only 3 of 6 cities
+  //                             could form three real-road lanes, with two stuck exactly at 0.200.
+  //   FRAC 0.060            => floor 0.100, 6/6 cities pass (current value).
+  // 0.06 has a second physical meaning: L3 cell width 43m real = 346 game meters > hero weapon range ceiling (about 300),
+  // i.e. different cells means out of range of each other means truly different lanes. MUST rebake bake2/3 before lowering MAX_OVERLAP or raising FRAC.
   OVERLAP_CELL_FRAC: 0.06,         // L1/L2/L3 → 29/36/43m
   OVERLAP_CELL_MIN_M: 24,
   MAX_OVERLAP: 0.20,
-  // 兵線「往主堡折返」上限:沿 A→B 主軸投影,累加所有進度倒退的段長 ÷ 兩堡直線距離。
-  // > 此值 = 路線繞回頭路折返主堡過多(側翼 via-point 偶會把路徑吸回起點),生成階段淘汰。
-  // 與 MAX_OVERLAP 同性質(生成時硬門檻,伺服器不複驗;見 laneBacktrackFrac)。
+  // Lane backtrack-toward-base cap: project onto the A->B axis, sum every regressing segment length / two-base straight distance.
+  // Above this = route doubles back toward its base too much (flank via-points sometimes pull the path back to the start), dropped at generation.
+  // Same nature as MAX_OVERLAP (hard gate at generation, server does not recheck; see laneBacktrackFrac).
   MAX_BACKTRACK: 0.20,
-  // 兵線「接近 180° 迴轉」上限(度,2026-07-28 使用者需求):沿主軸重取樣後,任一處局部
-  // 航向反轉 ≥ 此角度 = 掉頭迴轉 → 生成期硬門檻淘汰(側翼 via / REUSE 重罰偶會逼出「上橋
-  // 再折回」式掉頭)。與 laneTacticsXZ 同一組取樣語彙(TACTICS.SEG_M 步長,避免 OSRM 密集
-  // 頂點鋸齒誤判)。結算縫 = laneUTurnAudit();bake 硬門檻、mapSelect 複驗共用同一支。
+  // Lane near-180-degree U-turn cap (deg, user decision 2026-07-28): after resampling along the main axis, any local
+  // heading reversal >= this angle counts as a U-turn and is dropped by the generation hard gate (flank via / REUSE heavy penalty
+  // sometimes forces an over-the-bridge-then-back shape). Shares the sampling vocabulary with laneTacticsXZ (TACTICS.SEG_M step,
+  // avoids dense-OSRM-vertex aliasing). Settlement seam = laneUTurnAudit(); bake gate and mapSelect recheck share it.
   UTURN_MAX_DEG: 150,
-  // 兵線「主軸偏航累積」範圍(度,2026-07-29 使用者需求「轉彎角度累積不可超過範圍之外,
-  // 順逆時針轉向可抵消」;同日改制:量測基準由「出發航向」改為「A→B 主軸」,門檻收緊至
-  // 150):以「首段航向 − 主軸」的帶號夾角為初值,沿線帶號轉向角逐段累加(左轉正/右轉負
-  // 互相抵消,**不回捲**:繞整圈累積過 360° 而非歸零),任一時刻 |偏航| MUST ≤ 此值 ——
-  // 語意:全程航向偏離主堡連線方向不得超過 150°(距完全反向 180° 留 30° 餘裕),出堡/
-  // 抵達的接駁段一樣受檢;繞圈因不回捲必然出界。與 UTURN_MAX_DEG 互相獨立(單點大掉頭
-  // vs 累積偏航,兩者皆有對方攔不到的案型)。
-  // 150 的校準(2026-07-29 拿 venueLanes 95 條真實道路兵線實測,相對主軸量測):偏航峰值
-  // P50≈126°、P75≈148°,150 保留約 3/4 既有真實路線(23/95 條超標、18/54 venue×L 需重烤)。
-  // 門檻 MUST < 180(≥180 = 允許完全背對主軸,語意破產);再調整前 MUST 重跑分布實測。
-  // 結算縫 = laneTurnAccumAudit();bake 硬門檻、mapSelect 複驗共用同一支。
+  // Lane accumulated off-axis yaw range (deg, user decision 2026-07-29: accumulated turn angle MUST stay within range,
+  // clockwise and counter-clockwise cancel; same-day reform: datum changed from departure heading to the A->B axis, gate tightened to
+  // 150): seeds with the signed angle of first-segment heading minus axis, then accumulates signed turn angles segment by segment
+  // (left positive / right negative cancel each other, no wrapping: a full loop accumulates past 360 rather than resetting to zero),
+  // and yaw magnitude MUST stay within this value at all times --
+  // semantics: heading MUST NOT deviate from the base-to-base direction by more than 150 deg (30 deg margin short of full 180 reversal);
+  // exit/arrival feeder segments are checked alike, and loops always fail because there is no wrapping. Independent of UTURN_MAX_DEG
+  // (single sharp U-turn vs accumulated yaw; each catches cases the other misses).
+  // Calibration of 150 (measured 2026-07-29 over 95 real-road lanes in venueLanes, relative to axis): yaw peak
+  // P50 approx 126 deg, P75 approx 148 deg, so 150 keeps about 3/4 of existing real routes (23/95 lanes over, 18/54 venue-x-L need rebake).
+  // Gate MUST stay < 180 (at or above 180 would allow facing exactly away from the axis and void the semantics); MUST rerun the distribution
+  // measurement before adjusting again. Settlement seam = laneTurnAccumAudit(); bake gate and mapSelect recheck share it.
   TURN_ACCUM_MAX_DEG: 150,
-  // 左右路(外側兵線)的單次放寬:偏航累積可**單次**越過 150° 直到此值,
-  // 回落到 150° 以內後再度越過即淘汰(第二次回到 150° 限制)。中路不放寬。判定縫仍是
-  // laneTurnAccumAudit(pts, { side: true });哪條算外側由 laneIsSide 唯一決定。
+  // One-time relaxation for outer side lanes: accumulated yaw may cross 150 deg once up to this value,
+  // and crossing again after falling back inside 150 deg fails (second crossing returns to the 150 limit). Mid lane gets no relaxation.
+  // Settlement seam is still laneTurnAccumAudit(pts, with side true); laneIsSide alone decides which lane counts as outer.
   TURN_ACCUM_SIDE_ONCE_DEG: 200,
-  // 兵線互不接觸/交叉(規則,2026-07-20 定奪:全禁,含立體交叉)。同一 L 內任兩條兵線,排除
-  // 兩座主堡的共享扇出段(沿 A→B 主軸進度落在 [SKIP,1−SKIP] 之外者豁免——三線由同一主堡扇出
-  // 必於此帶收斂)後,中段最近距離 MUST ≥ LANE_MIN_SEP_M 且 2D 不得相交。橋/隧立體交叉亦禁:
-  // 伺服器/烘焙無高程,一律保守把「2D 相交」視為接觸(全禁)。結算縫 = laneSeparationAudit(),
-  // bake 硬門檻、mapSelect / server validateBattleConfig 複驗、audit_lane_sep 稽核共用同一支。
-  // LANE_MIN_SEP_M 為**遊戲公尺**(與 towerLayoutAudit 同框);40 遊戲公尺 = 20m 真實世界(REAL_SCALE 0.5)。
-  // SKIP 校準:synthLane 中段最近間距 ~114 遊戲公尺(> 40 甚多)⇒ 降級一定合規。
+  // Lanes MUST NOT touch or cross (rule, decided 2026-07-20: fully banned, incl. grade separation). For any two lanes under the same L,
+  // after excluding the shared fan-out near both bases (progress along the A->B axis outside [SKIP,1-SKIP] is exempt, since three lanes
+  // fanning from one base necessarily converge there), mid-section nearest distance MUST be >= LANE_MIN_SEP_M with no 2D crossing.
+  // Bridge/tunnel crossings are banned too: server and bake have no elevation, so every 2D crossing conservatively counts as contact
+  // (fully banned). Settlement seam = laneSeparationAudit(), shared by the bake hard gate, mapSelect / server validateBattleConfig
+  // recheck, and the audit_lane_sep audit. LANE_MIN_SEP_M is in game meters (same frame as towerLayoutAudit);
+  // 40 game meters = 20m real world (REAL_SCALE 0.5). SKIP calibration: synthLane mid-section nearest gap is about 114 game meters
+  // (far above 40), so the fallback always passes.
   LANE_MIN_SEP_M: 40,
   LANE_SEP_SKIP_FRAC: 0.15,
-  // 兵線路徑平衡稽核(lanePathBalanceAudit,2026-09-02 使用者需求):
-  //   兵線=2 時:左右長度誤差 ≤ 10%、兩線重合度 ≤ 5%。
-  //   兵線=3 時:左右長度誤差 ≤ 10%、外側長度 ≤ 中間 × 1.50、三線兩兩重合度 ≤ 5%。
-  //   「不超過中間的50%」= 外側比中間長不超過50%,即外側最多為中間的1.50倍
-  //   (三條兵線均由同一對主堡出發,外側因繞路可能比中間略長,門檻預留餘裕)。
-  // 重合度 LANE_BALANCE_OV_MAX(5%)比選線硬門檻 MAX_OVERLAP(20%)更嚴:
-  //   這是事後稽核標準,確保已烘焙的預設兵線路線有效分離。
-  // 結算縫 = lanePathBalanceAudit();bake 後稽核共用同一支。
-  LANE_BALANCE_LEN_TOL: 0.10,   // 左右兩條長度誤差上限(比例,如 0.10 = 10%)
-  LANE_BALANCE_OUTER_MAX: 1.50, // L3:外側長度不超過中間長度的倍數(如 1.50 = 最多長50%)
-  LANE_BALANCE_OV_MAX: 0.05,    // 任兩條兵線重合度上限(比例,如 0.05 = 5%)
+  // Lane path balance audit (lanePathBalanceAudit, user decision 2026-09-02):
+  //   2 lanes: left/right length mismatch within 10%, pairwise overlap within 5%.
+  //   3 lanes: left/right length mismatch within 10%, outer length within mid x 1.50, pairwise overlap within 5% for all pairs.
+  //   Longer than mid by at most 50 percent means outer is at most 1.50x mid
+  //   (all three lanes leave the same base pair, so outer detours may run slightly longer; the gate keeps margin for that).
+  // Overlap LANE_BALANCE_OV_MAX (5%) is stricter than the routing gate MAX_OVERLAP (20%):
+  //   this is a post-hoc audit bar so baked default lanes stay well separated.
+  // Settlement seam = lanePathBalanceAudit(); shared by the post-bake audit.
+  LANE_BALANCE_LEN_TOL: 0.10,   // Left/right length mismatch cap (ratio, e.g. 0.10 = 10%)
+  LANE_BALANCE_OUTER_MAX: 1.50, // L3: outer length cap as a multiple of mid length (e.g. 1.50 = at most 50% longer)
+  LANE_BALANCE_OV_MAX: 0.05,    // Pairwise lane overlap cap (ratio, e.g. 0.05 = 5%)
   CANDIDATE_BEARINGS: 12,
   MAX_CANDIDATES: 4,
-  // 路徑戰術指標(Diablo DRLG 思想:走廊要彎、要有轉角,拒絕一眼看穿的直線)——
-  // 彎曲度 = 路長/兩端直線距;轉角 = 等距取樣後轉向 ≥ TURN_MIN_DEG 的取樣點
-  // (轉角 = 伏擊點/掩體錨點/視線遮斷,伺服器障礙佈設與客戶端選路評分共用)。
+  // Path tactics metrics (Diablo DRLG idea: corridors should bend and offer corners, never a see-through straight line) --
+  // Sinuosity = path length / endpoint straight distance; corners = equidistant samples turning by >= TURN_MIN_DEG
+  // (corners double as ambush points / cover anchors / sight blockers, shared by server obstacle placement and client route scoring).
   TACTICS: {
-    SEG_M: 60,             // 轉角偵測等距取樣段長(重取樣,避免 OSRM 密集頂點灌水)
-    TURN_MIN_DEG: 28,      // 視為戰術轉角的最小轉向角
-    MIN_SINUOSITY: 1.12,   // 彎曲度低於此 = 太直,評分重扣(soft gate,仍可選)
-    SINUOSITY_CAP: 1.9,    // 過度繞路不再加分(單程太久拖慢節奏)
-    TURNS_PER_KM_CAP: 3,   // 轉角密度加分上限
-    W_SINU: 0.45, W_TURN: 0.35, W_SEP: 0.20,   // 綜合評分權重:彎曲/轉角/兵線分離
+    SEG_M: 60,             // Corner detection resample step (resampled to stop dense OSRM vertices inflating the count)
+    TURN_MIN_DEG: 28,      // Minimum turn angle counting as a tactical corner
+    MIN_SINUOSITY: 1.12,   // Below this sinuosity = too straight, heavy score penalty (soft gate, still selectable)
+    SINUOSITY_CAP: 1.9,    // Excess detours score no extra (one-way trip would take too long and drag pacing)
+    TURNS_PER_KM_CAP: 3,   // Corner-density bonus cap
+    W_SINU: 0.45, W_TURN: 0.35, W_SEP: 0.20,   // Combined score weights: bend / corners / lane separation
   },
 };
 
-// ---- 兵線識別色(唯一縫:3D 箭頭 + 獨立兩側線 + 小地圖 + 選圖共用)----
-// MUST 避開陣營代表色:SWARM 琥珀 #ffb300 / STEEL 冷藍 #4fc3f7 /
-// GUER 叢林綠 #7ed957 / MILI 鏽橙 #e0714f ⇒ 選白 + 紫系(中性引導色)。
-// 道路渲染一律不動(路面底色/寬度/標線維持原樣),兵線線條為獨立幾何。
+// ---- Lane identity colors (single seam: 3D arrows + standalone side lines + minimap + map select) ----
+// MUST avoid faction colors: SWARM amber #ffb300 / STEEL cold blue #4fc3f7 /
+// GUER jungle green #7ed957 / MILI rust orange #e0714f, so white + violet family (neutral guide colors).
+// Road rendering never changes (surface color / width / markings stay as-is); lane lines are separate geometry.
 export const LANE_COLORS = [0xf2f2f2, 0xb388ff, 0x7c4dff];
-/** 兵線色(hex) → 標線桶頂點色 [r,g,b](0~1)。推導不手寫。 */
+/** Lane color (hex) to marker-bucket vertex color [r,g,b] (0-1). Derived, never hand-written. */
 export const laneMarkColor = (li) => {
   const h = LANE_COLORS[((li % LANE_COLORS.length) + LANE_COLORS.length) % LANE_COLORS.length];
   return [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
 };
-/** 兵線色(hex) → 2D 地圖 CSS 色('#rrggbb')。推導不手寫。 */
+/** Lane color (hex) to 2D map CSS color ('#rrggbb'). Derived, never hand-written. */
 export const laneCssColor = (li) => {
   const h = LANE_COLORS[((li % LANE_COLORS.length) + LANE_COLORS.length) % LANE_COLORS.length];
   return `#${h.toString(16).padStart(6, '0')}`;
 };
 
-// ---- 戰場涵蓋範圍(地形 bbox)----
-// 兵線/主堡與地圖邊界(空氣牆)之間的保證淨空(遊戲公尺)。真實道路兵線會蜿蜒到
-// 對稱方框之外,若只給百分比 pad,最外側兵線頂點會貼著內縮 40m 的空氣牆(玩家沿線飛就撞牆)。
+// ---- Battlefield coverage (terrain bbox) ----
+// Guaranteed clearance between lanes/bases and the map edge (air wall), in game meters. Real-road lanes can wind
+// outside the symmetric box; with a percentage-only pad the outermost lane vertices would hug the 40m-inset air wall (flying the lane hits the wall).
 export const ROUTE_EDGE_MARGIN_M = 160;
 
-// ============ 地圖主方位(2026-08-10 使用者定案)============
-// 使用者原句:「處理圖資時先找出地圖上下左右對準哪一個方向時,可以對齊最多的大馬路
-// 組成正交網格」。⇒ 旋轉是**投影的一部分**:經緯度 → 世界公尺的最後一步整份轉
-// `center.rot` 弧度,地形/兵線/主堡/圖資/建物/中立物全部一起轉。
+// ============ Map principal bearing (user decision 2026-08-10) ============
+// User quote: when processing map data, first find which cardinal alignment lines up the most arterial roads
+// into an orthogonal grid. Hence rotation is part of the projection: the final step of lat/lng to world meters rotates
+// everything by center.rot radians -- terrain / lanes / bases / map data / buildings / neutrals all rotate together.
 //
-// 為什麼可以這樣做而不動任何戰鬥判定:旋轉是**等距同構** —— 距離、夾角、面積、
-// 兵線分離、砲塔佈局、重合率一律逐位元不變(它們全是旋轉不變量),變的只有「北在哪」。
-// 角度來源 = `venueGrid.js` 的離線烘焙(大馬路長度加權的 mod 90° 主方位取負);
-// 拿不到(自訂地圖 / 舊的最愛 / 離線)→ 0 = 不旋轉 = 逐位元同舊制(原則 6 降級不例外)。
+// Why this leaves every combat ruling untouched: rotation is an isometry -- distance, angle, area,
+// lane separation, turret layout, and overlap rate stay bit-identical (all rotation-invariant); only north moves.
+// Angle source = offline bake in venueGrid.js (arterial-length-weighted mod-90-degree bearing, negated);
+// unavailable (custom map / old favorite / offline) => 0 = no rotation = bit-identical to the old scheme (principle 6 degrade-by-omission).
 //
-// ⚠ **兩端旋轉方向相反,這是本縫唯一會靜默壞掉的地方**:客戶端框 z = 南、伺服器框
-//   z = 北(A30「sim 座標 z 鏡射」)。z 鏡射把 R(θ) 共軛成 R(−θ) ⇒ `sim.llToMeters`
-//   MUST 是本檔 `llToXZ` 的 **z 反號**,MUST NOT 在 sim 自己再寫一次旋轉 —— 寫成同號的話
-//   兩端世界差 2θ,而畫面上只表現成「打得到卻沒傷害 / 塔的位置跟畫面對不上」(A30 家族)。
+// WARNING: the two ends rotate in opposite directions; this seam's only silent-failure spot: client frame z = south, server frame
+//   z = north (A30 sim z-mirror). The z mirror conjugates R(theta) into R(-theta), so sim.llToMeters
+//   MUST be the z-negated twin of this file's llToXZ, and MUST NOT reimplement rotation in sim -- same sign on both ends
+//   diverges the two worlds by 2theta while the screen only shows hits with no damage / towers misaligned with the view (A30 family).
 const R_EARTH_M = 6371000;
-/** 地圖主方位(rad)。全專案唯一讀取縫;缺席一律 0。 */
+/** Map principal bearing (rad). Project-wide single read seam; missing value always reads 0. */
 export const mapRot = (center) => (Number.isFinite(center?.rot) ? center.rot : 0);
-/** 平面旋轉。a = 0 是**恆等式**(x*1−z*0 === x、x*0+z*1 === z,IEEE754 逐位元)。 */
+/** Planar rotation. a = 0 is the identity (x*1-z*0 === x, x*0+z*1 === z, bit-identical under IEEE754). */
 export function rotXZ(x, z, a) {
   const c = Math.cos(a), s = Math.sin(a);
   return [x * c - z * s, x * s + z * c];
 }
 /**
- * 經緯度 → 世界公尺(**客戶端框**:x 東、z 南)。
- * 全專案唯一的經緯度投影實作:`terrain.llToWorld` 與 `sim.llToMeters`(z 反號)MUST 轉呼這一支。
+ * Lat/lng to world meters (client frame: x east, z south).
+ * Project-wide single lat/lng projection: terrain.llToWorld and sim.llToMeters (z-negated) MUST delegate here.
  */
 export function llToXZ(lat, lng, center) {
   const s = 1 / MAPGEO.REAL_SCALE;
@@ -282,7 +284,7 @@ export function llToXZ(lat, lng, center) {
   const zN = (lat - center.lat) * Math.PI / 180 * R_EARTH_M * s;
   return rotXZ(x, -zN, mapRot(center));
 }
-/** 世界公尺(客戶端框)→ 經緯度,`llToXZ` 的逆運算。回 `[lat, lng]`。 */
+/** World meters (client frame) to lat/lng, the inverse of llToXZ. Returns [lat, lng]. */
 export function xzToLL(x, z, center) {
   const [ux, uz] = rotXZ(x, z, -mapRot(center));
   return [
@@ -292,24 +294,24 @@ export function xzToLL(x, z, center) {
 }
 
 /**
- * 戰場**世界方框**(遊戲公尺,客戶端框):路線包絡外擴 ∪ 對稱方框,再繞中心放大 MAP_EXPAND。
- * 幾何真相只有一份:客戶端地形(terrain.js buildTerrain 的 minX/maxX/minZ/maxZ)與伺服器
- * 中立物散布(sim.js 障礙/防空/中繼站的越界判定,z 反號)共用 —— 伺服器沒有地形網格,
- * 但用同一個方框就能保證中立物不落在地形外(HAZ_LANE_MAX 300 > 邊距 160)。
+ * Battlefield world rect (game meters, client frame): padded route envelope union symmetric box, then scaled about center by MAP_EXPAND.
+ * Single geometric truth shared by client terrain (terrain.js buildTerrain minX/maxX/minZ/maxZ) and server
+ * neutral scatter (sim.js obstacle/AA/relay out-of-bounds check, z-negated) -- the server has no terrain mesh,
+ * but the same rect keeps neutrals inside the terrain (HAZ_LANE_MAX 300 > margin 160).
  *
- * 這一份**恆為世界軸對齊**(地形網格/邊界障礙環/小地圖都是軸對齊的)。
+ * This rect stays world-axis-aligned at all times (terrain mesh / boundary obstacle ring / minimap are all axis-aligned).
  *
- * ⚠ **旋轉只准讓方框長大,MUST NOT 讓它縮小**:包絡是「旋轉後的兵線」的外接框,而兵線一旦
- *   被轉到與某一軸平行,那一軸的包絡就會塌掉(實測 barcelona 5v5 轉 45° ⇒ 面積剩 66%)。
- *   MAP_EXPAND 是等比放大,救不了扁掉的那一軸 —— 而它存在的理由正是「第三方野營要有側翼
- *   合法區(離每座砲塔 ≥ 388m)」,面積掉三分之一就是那個機制無聲失效。
- *   故逐軸取「旋轉後包絡」與「rot=0 包絡」的較寬者。rot=0 時兩者同一組數,補正恆為 0(逐位元)。
+ * WARNING: rotation may only grow the rect and MUST NOT shrink it: the envelope is the bounding box of the rotated lanes, and once a
+ *   lane rotates parallel to one axis that axis envelope collapses (measured barcelona 5v5 rotated 45 deg => 66% area left).
+ *   MAP_EXPAND scales uniformly and cannot rescue the collapsed axis -- yet its whole reason is third-party camps needing flank
+ *   legal area (stay >= 388m from every turret), so losing a third of the area silently disables that mechanism.
+ *   Hence take the wider of the rotated envelope and the rot=0 envelope per axis. At rot=0 both are the same numbers, so the fixup is 0 (bit-identical).
  */
 export function battleRect(cfg) {
   const c = cfg.center;
   const envAt = (rot) => {
     const cr = { lat: c.lat, lng: c.lng, rot };
-    // 1) 路線包絡(主堡 + 全兵線頂點),外擴 ROUTE_EDGE_MARGIN_M(本來就是遊戲公尺)
+    // 1) Route envelope (bases + all lane vertices), padded by ROUTE_EDGE_MARGIN_M (already game meters)
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (const [la, ln] of [cfg.bases.SWARM, cfg.bases.STEEL, ...cfg.lanes.flat()]) {
       const [x, z] = llToXZ(la, ln, cr);
@@ -320,27 +322,27 @@ export function battleRect(cfg) {
     }
     minX -= ROUTE_EDGE_MARGIN_M; maxX += ROUTE_EDGE_MARGIN_M;
     minZ -= ROUTE_EDGE_MARGIN_M; maxZ += ROUTE_EDGE_MARGIN_M;
-    // 2) 與對稱方框(原點 ± 半邊長;llToXZ(center) 恆為 [0,0])取聯集,兵線很短也維持基本尺寸
+    // 2) Union with the symmetric box (origin +- half side; llToXZ(center) is always [0,0]) so short lanes keep a base size
     const half = cfg.sizeM / 2;
     minX = Math.min(minX, -half); maxX = Math.max(maxX, half);
     minZ = Math.min(minZ, -half); maxZ = Math.max(maxZ, half);
-    // 3) 繞方框中心等比放大 MAP_EXPAND(兵線不動;為第三方野營留側翼合法區)
+    // 3) Scale uniformly about the rect center by MAP_EXPAND (lanes never move; reserves flank legal area for third-party camps)
     const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
     const hx = (maxX - minX) / 2 * MAPGEO.MAP_EXPAND, hz = (maxZ - minZ) / 2 * MAPGEO.MAP_EXPAND;
     return { minX: cx - hx, maxX: cx + hx, minZ: cz - hz, maxZ: cz + hz };
   };
   const r = envAt(mapRot(c));
-  const b = envAt(0);   // 尺寸地板(= 舊制的方框大小)
+  const b = envAt(0);   // Size floor (= old-scheme rect size)
   const dx = Math.max(0, ((b.maxX - b.minX) - (r.maxX - r.minX)) / 2);
   const dz = Math.max(0, ((b.maxZ - b.minZ) - (r.maxZ - r.minZ)) / 2);
   return { minX: r.minX - dx, maxX: r.maxX + dx, minZ: r.minZ - dz, maxZ: r.maxZ + dz };
 }
 
 /**
- * 戰場**資料抓取範圍**(經緯度 AABB)= `battleRect` 四角的經緯外接框。
- * 高程磚 / 衛星影像 / Overpass 三條 fetch 與 geocache 鍵一律吃這一份 ⇒ 地圖主方位一旋轉,
- * 抓取範圍自動擴到覆蓋旋轉後的世界方框(最壞 45° 時邊長 ×√2)。
- * rot = 0 時與舊制同一個框(差異只有一次投影往返的浮點尾差,遠小於 geoKey 的 1e-5 度分度)。
+ * Battlefield data-fetch extent (lat/lng AABB) = lat/lng bounding box of the four battleRect corners.
+ * Elevation tiles / satellite imagery / Overpass fetches and the geocache key all consume this one copy, so rotating the map bearing
+ * automatically widens the fetch extent to cover the rotated world rect (worst case 45 deg multiplies side by sqrt-2).
+ * At rot = 0 it is the same box as the old scheme (difference is one projection round-trip float epsilon, far below the geoKey 1e-5 degree quantum).
  */
 export function battleBBox(cfg) {
   const r = battleRect(cfg);
@@ -356,8 +358,8 @@ export function battleBBox(cfg) {
 }
 
 /**
- * 折線戰術幾何(公尺平面 [x,z] 陣列):彎曲度 + 轉角沿線距離清單。
- * 客戶端選路評分(mapSelect)與伺服器障礙佈設(sim._laneTurns)共用同一份判定。
+ * Polyline tactics geometry (meter-plane [x,z] array): sinuosity + along-track corner distance list.
+ * Client route scoring (mapSelect) and server obstacle placement (sim._laneTurns) share this one ruling.
  */
 export function laneTacticsXZ(pts) {
   const T = MAPGEO.TACTICS;
@@ -375,11 +377,12 @@ export function laneTacticsXZ(pts) {
 }
 
 /**
- * 等距重取樣航向序列(TACTICS.SEG_M 步長)—— laneTacticsXZ / laneUTurnAudit /
- * laneTurnAccumAudit 三個消費端共用的唯一實作。**MUST 走重取樣**:OSRM/圖資的密集折線,
- * 相鄰微段夾角是量測雜訊而非宏觀航向,逐頂點量會誤判(規則 2026-07-28 同一組取樣語彙)。
- * 回傳 { total, heads:[{ d, head }] }:heads[j] = 第 j 個取樣段(沿線 [d, d+SEG_M])的
- * 航向(rad);d = 段起點沿線距離。尾端不足一步的殘段不取樣(刻意,與舊制逐位元一致)。
+ * Equidistant resampled heading series (TACTICS.SEG_M step) -- single implementation shared by the three
+ * consumers laneTacticsXZ / laneUTurnAudit / laneTurnAccumAudit. MUST resample: dense OSRM/map polylines carry
+ * measurement noise between adjacent micro-segments rather than macro heading, so per-vertex measurement misfires
+ * (rule 2026-07-28 uses one shared sampling vocabulary). Returns total plus heads:[d, head]: heads[j] is the heading
+ * (rad) of the j-th sample segment (along-track [d, d+SEG_M]); d = along-track distance of the segment start.
+ * A short trailing remainder is deliberately not sampled (keeps bit-identity with the old scheme).
  */
 function laneHeads(pts) {
   const seg = MAPGEO.TACTICS.SEG_M;
@@ -401,9 +404,9 @@ function laneHeads(pts) {
 }
 
 /**
- * 兵線「往主堡折返」比例:沿兩堡連線(A=pts[0]→B=末點)主軸投影,累加所有「進度倒退」
- * 的段長,除以兩堡直線距離。單調向前的路線 → 0;繞回頭路折返主堡越多 → 越大。
- * pts:[[x,z], …] 同一尺度即可(比例無單位);用於 MAPGEO.MAX_BACKTRACK 生成門檻。
+ * Lane backtrack-toward-base ratio: project onto the two-base axis (A=pts[0] to B=last point), sum every regressing
+ * segment length, divide by the two-base straight distance. A monotone forward route gives 0; more doubling back gives larger values.
+ * pts:[[x,z], ...] any single scale works (ratio is unitless); feeds the MAPGEO.MAX_BACKTRACK generation gate.
  */
 export function laneBacktrackFrac(pts) {
   if (!pts || pts.length < 3) return 0;
@@ -411,20 +414,20 @@ export function laneBacktrackFrac(pts) {
   const vx = b[0] - a[0], vz = b[1] - a[1];
   const straight = Math.hypot(vx, vz) || 1;
   const ux = vx / straight, uz = vz / straight;
-  let back = 0, prev = 0;                                   // prev = 上一點沿主軸的進度(公尺)
+  let back = 0, prev = 0;                                   // prev = progress of previous point along axis (meters)
   for (let i = 1; i < pts.length; i++) {
     const s = (pts[i][0] - a[0]) * ux + (pts[i][1] - a[1]) * uz;
-    if (s < prev) back += prev - s;                         // 沿主軸倒退 = 往主堡折返
+    if (s < prev) back += prev - s;                         // Regression along axis = doubling back toward base
     prev = s;
   }
   return back / straight;
 }
 
 /**
- * 兵線「接近 180° 迴轉」偵測(公尺平面 [x,z] 陣列,2026-07-28 使用者需求「不可接近 180 度迴轉」)。
- * 沿折線以 TACTICS.SEG_M 等距重取樣(laneHeads),取相鄰兩段航向的反轉角(0~180°)最大值;
- * ≥ MAPGEO.UTURN_MAX_DEG = 掉頭迴轉。pts 同一尺度即可(角度無單位)。
- * 回傳 { ok, maxDeg, at }(at = 迴轉處沿線距離,無則 -1)。
+ * Lane near-180-degree U-turn check (meter-plane [x,z] array, user decision 2026-07-28: no near-180-degree U-turns).
+ * Resamples equidistantly along the polyline with TACTICS.SEG_M (laneHeads) and takes the largest reversal angle (0-180 deg)
+ * between adjacent segments; >= MAPGEO.UTURN_MAX_DEG counts as a U-turn. pts any single scale works (angles are unitless).
+ * Returns ok, maxDeg, at (at = along-track distance at the turn, -1 when none).
  */
 export function laneUTurnAudit(pts) {
   if (!pts || pts.length < 3) return { ok: true, maxDeg: 0, at: -1 };
@@ -432,7 +435,7 @@ export function laneUTurnAudit(pts) {
   let maxDeg = 0, atMax = -1;
   for (let j = 1; j < heads.length; j++) {
     let dh = Math.abs(heads[j].head - heads[j - 1].head);
-    if (dh > Math.PI) dh = Math.PI * 2 - dh;                 // 取 0~π 的較小夾角
+    if (dh > Math.PI) dh = Math.PI * 2 - dh;                 // Take the smaller 0-to-pi angle
     const deg = dh * 180 / Math.PI;
     if (deg > maxDeg) { maxDeg = deg; atMax = heads[j].d; }
   }
@@ -440,17 +443,17 @@ export function laneUTurnAudit(pts) {
 }
 
 /**
- * 兵線「主軸偏航累積」稽核(公尺平面 [x,z] 陣列,2026-07-29 使用者需求
- * 「轉彎的角度累積起來不可超過範圍之外,順逆時針轉向可抵消」;量測基準 = A→B 主軸,
- * 範圍 = ±MAPGEO.TURN_ACCUM_MAX_DEG,校準依據見該常數註解)。
- * 主軸 = pts[0] → 末點方位。以「首取樣段航向 − 主軸」的帶號夾角為初值,沿
- * TACTICS.SEG_M 等距重取樣序列(laneHeads)逐段累加帶號轉角(正規化到 (−π, π];
- * 左轉正/右轉負,順逆時針互相抵消,**不回捲** —— 繞整圈累積過 360° 而非歸零)。
- * 任一時刻 |偏航| 超出門檻 = 出界淘汰;出堡/抵達接駁段(首尾取樣段)一樣受檢。
- * 恰好落在門檻上 MUST 算範圍**內**合法 ⇒ 門檻比較含微小浮點餘裕。
- * 回傳 { ok, maxAbsDeg, at }(at = 偏航峰值處沿線距離,無則 -1)。
- * `side: true`(左右路):|偏航| 可**單次**連續越過 150° 至 TURN_ACCUM_SIDE_ONCE_DEG;
- * 回落到 150° 內後再越過 = 第二次 ⇒ 淘汰。中路(預設)一律硬 150°。
+ * Lane accumulated off-axis yaw audit (meter-plane [x,z] array, user decision 2026-07-29:
+ * accumulated turn angle MUST stay within range, with clockwise/counter-clockwise canceling; datum = A->B axis,
+ * range = +-MAPGEO.TURN_ACCUM_MAX_DEG, calibration rationale at that constant).
+ * Axis = pts[0] to last-point bearing. Seeds with the signed angle of first-sample heading minus axis, then accumulates
+ * signed turn angles along the TACTICS.SEG_M resampled series (laneHeads), normalized to (-pi, pi];
+ * left positive / right negative cancel, with no wrapping -- a full loop accumulates past 360 rather than resetting.
+ * Any instant with yaw magnitude beyond the gate fails; exit/arrival feeder segments (first/last samples) are checked alike.
+ * Landing exactly on the gate MUST count as inside, so the gate comparison keeps a tiny float epsilon.
+ * Returns ok, maxAbsDeg, at (at = along-track distance at the yaw peak, -1 when none).
+ * side true (side lanes): yaw magnitude may cross 150 deg once continuously up to TURN_ACCUM_SIDE_ONCE_DEG;
+ * crossing again after falling back inside 150 deg counts as a second excursion and fails. Mid lane (default) always hard 150 deg.
  */
 export function laneTurnAccumAudit(pts, { side = false } = {}) {
   if (!pts || pts.length < 3) return { ok: true, maxAbsDeg: 0, at: -1 };
@@ -472,44 +475,45 @@ export function laneTurnAccumAudit(pts, { side = false } = {}) {
   }
   return { ok: maxAbs <= ONCE && excursions <= (side ? 1 : 0), maxAbsDeg: maxAbs, at: atMax };
 }
-/** 兵線是否為左右路(外側):2 線皆是、3 線取上下;單線(中路)否。唯一判定,MUST NOT 另寫。 */
+/** Whether a lane is an outer side lane: both lanes count when 2, top/bottom when 3; single (mid) lane never. Single ruling, MUST NOT duplicate. */
 export const laneIsSide = (i, count) => count === 2 || (count === 3 && i !== 1);
 
 /**
- * 兵線「橋/隧只能從出入口進出」稽核(生成期圖論,2026-07-28 使用者需求
- * 「一旦進入高架橋/隧道/地下道,只能從出入口進出,不可從側邊出入」)。
- * 輸入為沿兵線**節點路徑**的兩組布林(bake 由 OSM 圖建立、與節點索引對齊):
- *   struc[k] = 第 k 段(節點 k−1 → k)是否為橋/隧結構邊(k = 1..m;struc[0] 佔位不用);
- *   portal[i] = 節點 i 是否為某結構 way 的端點(= 真實匝道/洞口,唯一合法出入口)。
- * 規則:任一結構連續段的**進入 / 離開節點 MUST 是 portal**(或兵線兩端主堡 = 天然出入口),
- *   不得由結構 way 中間節點側切上/下橋。地下道在圖資上即 tunnel way,與隧道同一組結構旗標。
- * **只有離線 bake 的 OSM 圖有逐邊結構旗標**;mapSelect 走 OSRM 真實道路路徑,拓樸上本就
- *   只能從匝道/洞口進出,天然守此規則(故不在 mapSelect 複驗)。
- * 回傳 { ok, at }(at = 首個違規節點索引,無則 −1)。
+ * Lane bridge/tunnel portal-only entry audit (generation-time graph check, user decision 2026-07-28:
+ * once on an elevated bridge / tunnel / underpass, enter and exit only via portals, never from the side).
+ * Input is two boolean arrays along the lane node path (built by bake from the OSM graph, aligned to node indexes):
+ *   struc[k] = whether segment k (node k-1 to k) is a bridge/tunnel structure edge (k = 1..m; struc[0] is an unused placeholder);
+ *   portal[i] = whether node i is an endpoint of some structure way (= real ramp / opening, the only legal entry/exit).
+ * Rule: the entry / exit node of every structure run MUST be a portal (or a lane-end base = natural portal);
+ *   side-cutting onto/off the bridge from a middle node of a structure way is banned. Underpasses are tunnel ways in map
+ *   data and share the tunnel structure flag. Only the offline-baked OSM graph carries per-edge structure flags;
+ *   mapSelect follows real OSRM road paths whose topology can only enter/exit at ramps/openings anyway,
+ *   so it satisfies this rule naturally (hence no mapSelect recheck). Returns ok, at (at = first bad node index, -1 when none).
  */
 export function laneStructEntryAudit(struc, portal) {
-  const m = struc.length - 1;                                // 節點 0..m;段 k 連 節點 k−1→k
+  const m = struc.length - 1;                                // Nodes 0..m; segment k links nodes k-1 to k
   for (let k = 1; k <= m; k++) {
     if (!struc[k]) continue;
     const prevS = k > 1 && struc[k - 1];
     const nextS = k < m && struc[k + 1];
-    // 進入結構段(前一段非結構)⇒ 進入節點 full[k−1] MUST 是 portal(k−1 = 0 = 兵線起點,豁免)
+    // Entering a structure run (previous segment not structure) => entry node MUST be a portal (k-1 = 0 = lane start is exempt)
     if (!prevS && k - 1 > 0 && !portal[k - 1]) return { ok: false, at: k - 1 };
-    // 離開結構段(後一段非結構)⇒ 離開節點 full[k] MUST 是 portal(k = m = 兵線終點,豁免)
+    // Leaving a structure run (next segment not structure) => exit node MUST be a portal (k = m = lane end is exempt)
     if (!nextS && k < m && !portal[k]) return { ok: false, at: k };
   }
   return { ok: true, at: -1 };
 }
 
 /**
- * 兵線互不接觸/交叉稽核(規則,2026-07-20:全禁,含立體交叉)。
- * lanes:[[ [x,z],… ],…] 遊戲公尺(與 towerLayoutAudit 同框;A=lanes[0][0]、B=lanes[0] 末點)。
- *   ① 最近距離(接觸):排除兩座主堡的共享扇出段(進度 t∈[SKIP,1−SKIP] 之外豁免——
- *      三線由同一主堡收斂到共享端點不可避免地貼近),中段最近距離 MUST ≥ MAPGEO.LANE_MIN_SEP_M。
- *   ② 交叉:**全線不套豁免**(端點接觸不算,由 segX 端點守衛排除)。收斂到共享堡是「接觸」可容許,
- *      但兩線「換邊」= 交叉,即使在近堡處也是真交叉,MUST 0。橋/隧立體交叉亦禁(無高程,保守視為接觸)。
- * 回傳 { ok, minGap, crosses }。單/零兵線恆 ok(L1 無鄰線)。
- * 折線最近距離取「雙向 vertex→segment」最小值即精確(不相交時最近點必落在某端點對段上)。
+ * Lane no-touch/no-crossing audit (rule, 2026-07-20: fully banned, incl. grade separation).
+ * lanes:[[[x,z],...],...] in game meters (same frame as towerLayoutAudit; A=lanes[0][0], B=last point of lanes[0]).
+ *   1) Nearest gap (contact): excludes the shared fan-out near both bases (progress t outside [SKIP,1-SKIP] exempt, since
+ *      three lanes converging on shared endpoints unavoidably run close); mid-section nearest gap MUST be >= MAPGEO.LANE_MIN_SEP_M.
+ *   2) Crossing: no exemption along the whole line (endpoint touches excluded by the segX endpoint guard). Converging on a shared
+ *      base is tolerable contact, but two lanes swapping sides is a crossing, a true crossing even near a base, so it MUST be 0.
+ *      Bridge/tunnel crossings are banned too (no elevation, conservatively treated as contact).
+ * Returns ok, minGap, crosses. Zero/one lane is always ok (L1 has no neighbor).
+ * Polyline nearest distance via the bidirectional vertex-to-segment minimum is exact (when disjoint, the nearest point always lands on some endpoint-vs-segment pair).
  */
 export function laneSeparationAudit(lanes) {
   if (!lanes || lanes.length < 2) return { ok: true, minGap: Infinity, crosses: 0 };
@@ -524,7 +528,7 @@ export function laneSeparationAudit(lanes) {
     let t = ((px - ax) * ex + (py - ay) * ey) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
     return Math.hypot(px - (ax + ex * t), py - (ay + ey * t));
   };
-  const segX = (a, b, c, d) => {          // 兩段真相交回交點,否則 null(端點接觸不算)
+  const segX = (a, b, c, d) => {          // True segment crossing returns the point, else null (endpoint touch excluded)
     const r1 = b[0] - a[0], r2 = b[1] - a[1], s1 = d[0] - c[0], s2 = d[1] - c[1];
     const den = r1 * s2 - r2 * s1; if (!den) return null;
     const t = ((c[0] - a[0]) * s2 - (c[1] - a[1]) * s1) / den;
@@ -539,7 +543,7 @@ export function laneSeparationAudit(lanes) {
         for (const v of vs) {
           if (!mid(prog(v))) continue;
           for (let s = 1; s < segs.length; s++) {
-            if (!mid(prog(segs[s - 1])) && !mid(prog(segs[s]))) continue;   // 兩端點皆在豁免帶 → 跳過
+            if (!mid(prog(segs[s - 1])) && !mid(prog(segs[s]))) continue;   // Both endpoints in exempt band, skip
             const d = ptSeg(v[0], v[1], segs[s - 1][0], segs[s - 1][1], segs[s][0], segs[s][1]);
             if (d < minGap) minGap = d;
           }
@@ -548,7 +552,7 @@ export function laneSeparationAudit(lanes) {
       scan(P, Q); scan(Q, P);
       for (let a = 1; a < P.length; a++) {
         for (let b = 1; b < Q.length; b++) {
-          if (segX(P[a - 1], P[a], Q[b - 1], Q[b])) crosses++;   // 交叉不套豁免帶(近堡換邊亦禁)
+          if (segX(P[a - 1], P[a], Q[b - 1], Q[b])) crosses++;   // Crossings take no exempt band (near-base side swaps banned too)
         }
       }
     }
@@ -558,42 +562,42 @@ export function laneSeparationAudit(lanes) {
 
 
 /**
- * 兵線路徑平衡稽核（L2/L3 專屬，2026-09-02 使用者需求）。
- * lanes：[[x,z],…][] 遊戲公尺，依側向排序 [左/上, (中), 右/下]（與 laneSeparationAudit 同框）。
- * L：兵線數（2 或 3）。
+ * Lane path balance audit (L2/L3 only, user decision 2026-09-02).
+ * lanes:[[x,z],...][] in game meters, ordered laterally [left/top, (mid), right/bottom] (same frame as laneSeparationAudit).
+ * L: lane count (2 or 3).
  *
- * 規則：
- *   L2：① 左右兩條長度誤差 ≤ LANE_BALANCE_LEN_TOL（10%）
- *        ② 兩條路線中段重合度 ≤ LANE_BALANCE_OV_MAX（5%）
- *   L3：① 左右兩條長度誤差 ≤ LANE_BALANCE_LEN_TOL（10%）
- *        ② 外側長度 ≤ 中間長度 × LANE_BALANCE_OUTER_MAX（1.50）
- *        ③ 三條路線兩兩中段重合度 ≤ LANE_BALANCE_OV_MAX（5%）
+ * Rules:
+ *   L2: 1) left/right length mismatch within LANE_BALANCE_LEN_TOL (10%)
+ *       2) mid-section pairwise overlap within LANE_BALANCE_OV_MAX (5%)
+ *   L3: 1) left/right length mismatch within LANE_BALANCE_LEN_TOL (10%)
+ *       2) outer length within mid length x LANE_BALANCE_OUTER_MAX (1.50)
+ *       3) mid-section pairwise overlap within LANE_BALANCE_OV_MAX (5%) for every pair
  *
- * 重合度計算豁免帶：排除沿 A→B 主軸進度落在 [0, LANE_SEP_SKIP_FRAC] 與
- * [1−LANE_SEP_SKIP_FRAC, 1] 的格子（與 laneSeparationAudit 同語意）。
- * O 形兵線在兩端主堡扇出帶必然共用路段，只量中段才能正確判斷側向分離程度。
+ * Overlap exempt band: drops cells whose A->B axis progress falls in [0, LANE_SEP_SKIP_FRAC] or
+ * [1-LANE_SEP_SKIP_FRAC, 1] (same semantics as laneSeparationAudit).
+ * O-shaped lanes necessarily share road near both base fan-outs, so only the mid section measures lateral separation correctly.
  *
- * 注意：路徑長度取遊戲公尺折線長（比例計算與 REAL_SCALE 無關）；
- * 重合度網格 cell 依 targetDistFor(L) × OVERLAP_CELL_FRAC 推導（遊戲公尺語意）。
+ * Note: path length is the game-meter polyline length (ratio math ignores REAL_SCALE);
+ * overlap grid cell derives from targetDistFor(L) x OVERLAP_CELL_FRAC (game-meter semantics).
  *
- * 回傳 { ok, lenErr, outerRatio, maxOverlap, violations }。
- *   lenErr      = |外側最長 − 外側最短| / max(外側兩者)（0~1）
- *   outerRatio  = 外側最長 / 中間長度（L3 才有；null = L2）
- *   maxOverlap  = 任兩條兵線中段重合度最大值（豁免帶排除後）
- *   violations  = 違規描述陣列（空 = 全通過）
+ * Returns ok, lenErr, outerRatio, maxOverlap, violations.
+ *   lenErr      = |longer outer minus shorter outer| / max(outer pair) (0-1)
+ *   outerRatio  = longest outer / mid length (L3 only; null = L2)
+ *   maxOverlap  = largest mid-section pairwise lane overlap (after exempt-band removal)
+ *   violations  = violation description array (empty = all pass)
  */
 export function lanePathBalanceAudit(lanes, L) {
   if (!lanes || lanes.length < 2 || L < 2) return { ok: true, lenErr: 0, outerRatio: null, maxOverlap: 0, violations: [] };
-  // 折線長(遊戲公尺)
+  // Polyline length (game meters)
   const polyLen = (pts) => { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return s; };
-  // A→B 主軸(取 lanes[0] 首尾作為基準;所有兵線共用同一對主堡)
+  // A->B axis (lanes[0] endpoints as datum; all lanes share the same base pair)
   const A = lanes[0][0], B = lanes[0][lanes[0].length - 1];
   const straight = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
   const ux = (B[0] - A[0]) / straight, uz = (B[1] - A[1]) / straight;
   const prog = (x, z) => ((x - A[0]) * ux + (z - A[1]) * uz) / straight;
   const SK = MAPGEO.LANE_SEP_SKIP_FRAC;
-  // 重合度網格(遊戲公尺)。僅計入沿 A→B 主軸進度落在 [SK, 1−SK] 內的中段格子，排除兩端主堡扇出帶。
-  // O 形兵線必然在兩端主堡附近共用扇出路段(數學不可避免)，只測中段才能正確量測側向分離程度。
+  // Overlap grid (game meters). Counts only mid-section cells whose A->B axis progress falls in [SK, 1-SK], excluding both base fan-outs.
+  // O-shaped lanes necessarily share fan-out road near both bases (mathematically unavoidable); mid-section-only measurement captures lateral separation.
   const cell = Math.max(
     MAPGEO.OVERLAP_CELL_MIN_M / MAPGEO.REAL_SCALE,
     targetDistFor(L, false) * MAPGEO.OVERLAP_CELL_FRAC,
@@ -603,14 +607,14 @@ export function lanePathBalanceAudit(lanes, L) {
     for (let i = 1; i < lane.length; i++) {
       const [x1, z1] = lane[i - 1], [x2, z2] = lane[i];
       const t1 = prog(x1, z1), t2 = prog(x2, z2);
-      if (t1 < SK && t2 < SK) continue;          // 兩端點皆在起端扇出帶 → 整段跳過
-      if (t1 > 1 - SK && t2 > 1 - SK) continue;  // 兩端點皆在終端扇出帶 → 整段跳過
+      if (t1 < SK && t2 < SK) continue;          // Both endpoints in start fan-out, skip whole segment
+      if (t1 > 1 - SK && t2 > 1 - SK) continue;  // Both endpoints in end fan-out, skip whole segment
       const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / (cell / 2)));
       for (let k = 0; k <= n; k++) {
         const f = k / n;
         const x = x1 + (x2 - x1) * f, z = z1 + (z2 - z1) * f;
         const t = prog(x, z);
-        if (t < SK || t > 1 - SK) continue;      // 插值點在豁免帶 → 跳過
+        if (t < SK || t > 1 - SK) continue;      // Interpolated point in exempt band, skip
         s.add(`${Math.round(x / cell)},${Math.round(z / cell)}`);
       }
     }
@@ -627,14 +631,14 @@ export function lanePathBalanceAudit(lanes, L) {
   const violations = [];
   const lens = lanes.map(polyLen);
 
-  // 規則①:左右兩條長度誤差(lanes[0] vs lanes[L-1])
+  // Rule 1: left/right length mismatch (lanes[0] vs lanes[L-1])
   const outerLen0 = lens[0], outerLen1 = lens[L - 1];
   const maxOuter = Math.max(outerLen0, outerLen1), minOuter = Math.min(outerLen0, outerLen1);
   const lenErr = maxOuter > 0 ? (maxOuter - minOuter) / maxOuter : 0;
   if (lenErr > MAPGEO.LANE_BALANCE_LEN_TOL + 1e-9)
     violations.push(`左右長度誤差 ${(lenErr * 100).toFixed(1)}% > ${(MAPGEO.LANE_BALANCE_LEN_TOL * 100).toFixed(0)}%`);
 
-  // 規則②(L3):外側最長 ≤ 中間長度 × LANE_BALANCE_OUTER_MAX
+  // Rule 2 (L3): longest outer within mid length x LANE_BALANCE_OUTER_MAX
   let outerRatio = null;
   if (L === 3) {
     const midLen = lens[1];
@@ -643,7 +647,7 @@ export function lanePathBalanceAudit(lanes, L) {
       violations.push(`外側最長 ${outerRatio.toFixed(2)}x 中間 > ${MAPGEO.LANE_BALANCE_OUTER_MAX.toFixed(2)}x`);
   }
 
-  // 規則③:任兩條路線中段重合度 ≤ LANE_BALANCE_OV_MAX(兩端扇出帶已豁免)
+  // Rule 3: mid-section pairwise overlap within LANE_BALANCE_OV_MAX (end fan-outs already exempt)
   let maxOverlap = 0;
   for (let i = 0; i < lanes.length; i++) {
     for (let j = i + 1; j < lanes.length; j++) {
@@ -657,7 +661,7 @@ export function lanePathBalanceAudit(lanes, L) {
   return { ok: violations.length === 0, lenErr, outerRatio, maxOverlap, violations };
 }
 
-/** 0~1 路徑戰術評分:太直重扣、過度繞路不加分、兵線越分離越好 */
+/** 0-1 path tactics score: heavy penalty when too straight, no bonus for excess detours, wider lane separation scores higher */
 export function tacticalScore(sinuosity, turnsPerKm, maxOverlap) {
   const T = MAPGEO.TACTICS;
   let sSinu = Math.max(0, Math.min(1, (sinuosity - 1) / (T.SINUOSITY_CAP - 1)));
@@ -667,45 +671,47 @@ export function tacticalScore(sinuosity, turnsPerKm, maxOverlap) {
   return T.W_SINU * sSinu + T.W_TURN * sTurn + T.W_SEP * sSep;
 }
 
-// ---- 目標類型(武器克制查表:單位種類 → 類別)----
-// howitzer 2026-07-17 改制:榴彈兵是「手持榴彈槍的步兵」(flesh),不再是牽引砲車(armor)。
+// ---- Target types (weapon counter lookup: unit kind to class) ----
+// howitzer reform 2026-07-17: grenadiers are grenade-launcher infantry (flesh), no longer towed guns (armor).
 export const TARGET_CLASS = {
   mapbuilding: 'building',
   soldier: 'flesh', apc: 'armor', tank: 'armor', rocketeer: 'flesh', howitzer: 'flesh', heli: 'air',
   robot: 'armor', drone: 'air', morph: 'armor', decoy: 'air', tower: 'building', base: 'building',
-  kami: 'air', hyper: 'air',   // 機種絕招的可擊落載具(飽和攻擊護衛機 / 極音速飛彈)—— 對空武器該吃得到加成
-  bunker: 'building',   // 第三方碉堡(見 THIRD)
-  civilian: 'flesh',    // 平民/間諜(非戰鬥人員;永不被 NPC 鎖定,見 CIVILIAN)
-  // 中立可擊毀物(防空陣地 / 障礙物)吃反建築加成:攻城武器開路特別快
+  kami: 'air', hyper: 'air',   // Shootable craft of chassis ultimates (saturation escorts / hypersonic missiles) -- AA weapons should get the bonus
+  bunker: 'building',   // Third-party bunker (see THIRD)
+  civilian: 'flesh',    // Civilians/spies (non-combatants; never targeted by NPCs, see CIVILIAN)
+  // Neutral destructibles (AA sites / obstacles) take anti-building bonus: siege weapons clear paths much faster
   aasite: 'building', construction: 'building', wreck: 'building',
   rockfall: 'building', fallentree: 'building',
 };
 export const CLASS_NAME = { flesh: '肉體', armor: '裝甲', air: '飛行', building: '建築' };
 
-// ---- NPC 熱兵器(小兵/塔用;vs = 對目標類型加成,pen = 破甲值)----
-// 英雄武器改住 CHARACTERS(每名角色專屬輕/重武器);bomb = 無人機自帶重型炸彈
-// (F 鍵自殺攻擊機引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
-// bomb.dmg 為階級陣列(2026-07-18 起):傷害吃無人機輕武器階級(lw 面向 → abil.light 1~4),
-// 由 sim._bombDef() 以 tierVal 解析(Lv4 外推)。Lv1 = 原值 240(不變),升階才增威(自殺攻擊隨武器等級成長)。
-// ---- 全際「reach」比例尺(2026-07-19 規則 #4)----
-// 使用者定案:地圖/尺寸不動,改「全單位射程 / 視野 / 移速」統一減半 ⇒ 相對塔射程縮半,
-// 兵線塞得下兩個 ≤80% 重疊的塔環(塔射程 310→155 ⇒ SEP 372→186 < 兵線 906~1442)。
-// **只縮「reach / 感知 / 移動 / 制空高度門檻」**;不動實體尺寸(SOLDIER_H)、AoE/障礙半徑、地圖佈局距離、比率(HEROIC/RANGE_SIGHT_F)。
-// 套用縫:heroWeapon/heroAbility(英雄武器招式射程)+ 下方 UNITS/WEAPONS/GAME/ALTITUDE/EVASION 統一縮放塊。
-// **可一鍵還原**:改回 1 即回到原尺度(記得同步 e2e #INC-104 高度常數)。移速減半 ⇒ 對戰時長約 ×2(節奏刻意拉長)。
+// ---- NPC firearms (minions/towers; vs = per-target-type bonus, pen = armor-piercing value) ----
+// Hero weapons now live in CHARACTERS (per-character light/heavy weapons); bomb = drone-carried heavy bomb
+// (F-key suicide striker detonation or high-speed impact detonation, mount lost together with it, drone respawns with no cooldown).
+// bomb.dmg is a tier array (since 2026-07-18): damage follows the drone light-weapon tier (lw aspect to abil.light 1-4),
+// resolved by sim._bombDef() via tierVal (Lv4 extrapolated). Lv1 = original 240 (unchanged); higher tiers hit harder (suicide damage grows with weapon tier).
+// ---- Global reach scale (2026-07-19 rule #4) ----
+// User decision: keep map/sizes fixed, halve all unit range / vision / move speed instead, so turret-relative reach halves too,
+// and a lane fits two tower rings overlapping at most 80% (tower range 310 to 155, so SEP 372 to 186 < lane 906-1442).
+// Shrinks only reach / perception / movement / air-superiority height gates; never touches body size (SOLDIER_H), AoE/obstacle radii,
+// map layout distances, or ratios (HEROIC/RANGE_SIGHT_F).
+// Application seam: heroWeapon/heroAbility (hero weapon/skill ranges) plus the unified scale block over UNITS/WEAPONS/GAME/ALTITUDE/EVASION below.
+// One-switch revert: setting it back to 1 restores the old scale (remember to sync the e2e #INC-104 height constants). Halved move speed
+// roughly doubles match length (deliberately slower pacing).
 export const COMBAT_SCALE = 0.5;
 
 export const WEAPONS = {
   rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 220, mag: 48, reload: 2.2, pen: 0,  vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
-  // rocket vs.air 1.2(2026-07-17 火箭筒對空化):肩射火箭筒是合格的防空武器,
-  // 火箭兵優先鎖定空中目標(vs 進 _acquireTarget 的目標偏好;NPC 傷害本身不吃 vs)。
-  // npcAa: NPC 飛彈仰射射程加成觸發旗標(sim._tgBlockedD 消費;npcAaRangeF)。
+  // rocket vs.air 1.2 (2026-07-17 shoulder-launcher AA role): the shoulder rocket is a competent AA weapon,
+  // and rocketeers prefer air targets (vs feeds _acquireTarget preference; NPC damage itself ignores vs).
+  // npcAa: flag enabling the NPC missile upward-fire range bonus (consumed by sim._tgBlockedD; npcAaRangeF).
   rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, pen: 10, npcAa: true, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 1.2, building: 1.3 } },
-  // bomb 只留「彈體規格」(半徑/破甲/vs);**傷害刻意不住這裡** —— 飽和攻擊與另兩招
-  // (集束炸彈/極音速飛彈)共用機種絕招傷害預算,由 kamiBlast()/selfBoomBlast() 推導(見 SPECIAL)。
+  // bomb keeps only the shell spec (radius/pen/vs); damage deliberately does not live here -- saturation strike shares
+  // one chassis-ultimate damage budget with the other two (cluster bombs / hypersonic missiles), derived by kamiBlast()/selfBoomBlast() (see SPECIAL).
   bomb:   { name: '重型炸彈',   r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
   siege:  { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, pen: 14, npcAa: true, needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
-  // 自律召喚部隊專屬武裝
+  // Exclusive armament for autonomous summoned units
   wingman_beam:     { name: '「哀歌」自律微型光束標槍', dmg: 26, rate: 0.8, range: 170, mag: 20, reload: 2.0, pen: 8,  type: 'beam', vs: { flesh: 1.2, armor: 0.8, air: 1.4, building: 0.5 } },
   rover_autocannon: { name: '「狂歡節」雙聯破片速射砲', dmg: 28, rate: 0.7, range: 140, mag: 24, reload: 2.2, pen: 6,  mv: 850, vs: { flesh: 1.3, armor: 1.0, air: 0.9, building: 0.6 } },
   squad_rocket:     { name: '「賦格」雷導集束微型火箭', dmg: 35, rate: 0.9, range: 180, mag: 4,  reload: 2.5, pen: 10, mv: 720, guide: 1, vs: { flesh: 1.0, armor: 1.4, air: 0.8, building: 1.2 } },
@@ -715,25 +721,25 @@ export const WEAPONS = {
 };
 export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 
-// ---- 戰鬥核心公式(FPS × DOTA)----
-// HEROIC:玩家(英雄)持有的武器 vs NPC 同型武器 → 射程 +20%、威力 +50%。
-// VITALS:雙層 HP — 第一層護盾(非戰鬥 OOC_S 秒後自然回復,不吃護甲減免)、
-//         第二層裝甲 HP(脫戰以磁力 1/4 自然回復,回主堡/治療招式加速,吃護甲值減免)。
-// 護甲減免(DOTA 曲線):實效護甲 a = max(0, 護甲 − 破甲),減免 = a / (a + AR_K)。
-// 爆擊(FPS):武器 crit 機率 × critX 倍率(未定義用 CRIT_X),僅直擊武器,AoE 不爆。
+// ---- Core combat formulas (FPS x DOTA) ----
+// HEROIC: hero-held weapon vs the same NPC weapon gets +20% range and +50% damage.
+// VITALS: two HP layers -- outer shield (regenerates after OOC_S seconds out of combat, ignores armor) and
+//         inner armored HP (slow magnetic regen out of combat at 1/4 rate, faster at base / via healing skills, reduced by armor).
+// Armor reduction (DOTA curve): effective armor a = max(0, armor minus pen), reduction = a / (a + AR_K).
+// Crit (FPS): weapon crit chance x critX multiplier (falls back to CRIT_X), direct-hit weapons only, AoE never crits.
 export const HEROIC = { range: 1.2, dmg: 1.5 };
-// ---- 高度差空戰修正(2026-07-25 使用者需求;取代舊「無人機制空 ±傷害/射程」)----
-// 判定「雙方視線點的絕對高程差」dh —— 地形 / 跳躍 / 飛行造成的高差**全部**計入(英雄由客戶端回報
-// 絕對視線高程 ay;塔/主堡取砲位視線高 LOS.TOWER_EYE_M;小兵取離地小視線高)。
-// **沒有高度差(|dh| ≤ 1 個砲塔高)= 無任何加成** ⇒ 同高對射與 npm run bal 的靜態 1v1 完全不受影響。
-// 效果**全部落在「較高的一方」**(高地換視野與機動,不換爆發):
-//   +射程 / +閃避率;但「攻擊時」爆率/爆傷↓、「受到攻擊時」爆率/爆傷↑。
-// 強度係數 s 隨 |dh| 由「1 個砲塔高」線性升到「3 個砲塔高(TIERS)」封頂;砲塔高 = TARGET_H.tower(推導不手寫)。
-// 封頂效果:+10% 閃避、攻擊爆率 ×0.90、攻擊爆傷加成 ×0.90、受擊爆率 ×1.2、受擊爆傷加成 +10%。
-// 爆擊只作用於直擊武器(heroHit/heroLance _rollCrit);招式不吃高度差、也不吃爆擊(AoE 不爆)。
-// **閃避例外**(2026-08-11 使用者定案「所有攻擊招式也加入閃避機制」):招式與一切爆風的傷害
-// 走 sim._blast,由該處逐目標擲 `_dodges` —— 範圍見 `evadable()` 這個唯一縫。
-// 2026-09-10 使用者需求：拋物線類武器維持原狀，其餘武器改回舊版（球形範圍 + 高度差射程加成）。
+// ---- Height-difference air-combat modifier (user decision 2026-07-25; replaces the old drone-superiority damage/range swing) ----
+// Judges dh, the absolute elevation gap between both sight points -- every source counts (hero reports absolute sight
+// height ay from the client; towers/bases use gun sight height LOS.TOWER_EYE_M; minions use a small above-ground sight height).
+// No height gap (dh within one tower height) means no bonus at all, so same-height trades and the static npm run bal 1v1 are untouched.
+// All effects land on the higher side (high ground buys vision and mobility, not burst):
+//   +range / +dodge, but lower crit rate/crit damage while attacking and higher crit rate/crit damage taken while defending.
+// Strength s ramps linearly with dh from one tower height to the three-tower-height (TIERS) cap; tower height = TARGET_H.tower (derived, never hand-written).
+// Capped effects: +10% dodge, attacking crit rate x0.90, attacking crit-damage bonus x0.90, crit rate taken x1.2, crit-damage-bonus taken +10%.
+// Crits apply to direct-hit weapons only (heroHit/heroLance _rollCrit); skills ignore height gaps and never crit (AoE never crits).
+// Dodge exception (user decision 2026-08-11: all offensive skills join the dodge system): skill and blast damage
+// go through sim._blast, which rolls dodges per target there -- scope lives at the single evadable() seam.
+// User decision 2026-09-10: arcing weapons stay as-is; all others revert to the old form (spherical range + height-gap range bonus).
 export const ALTITUDE = {
   TIERS: 3,             // |dh| 達「3 個砲塔高」時效果封頂(門檻在 1 個砲塔高)
   RANGE: 0.30,          // 較高方 +射程(封頂)—— 球形射程下提供高度差射程優勢

@@ -1,10 +1,10 @@
-// ============ 機體結構探針(dev-only;headless)============
-// 「截圖上看不到那顆零件」有兩種原因:①它沒被建出來 ②它被建在畫面外/被遮住。
-// 只看圖分不出來 —— 本支直接問場景:網格數、包圍盒、rig 通道齊不齊。
+// ============ Mech structure probe (dev-only; headless) ============
+// An invisible part on screenshots has two causes: 1 it was never built, 2 it was built off-screen or occluded.
+// Pictures alone cannot tell them apart -- this tool asks the scene directly: mesh count, bounds, and rig channel completeness.
 //
 //   node tools/humanoid_forge/probe_mech.mjs --port 8636 [--id t06@flight] [--all]
 //
-// 前提:dev server 已在該埠跑著(node tools/humanoid_forge.mjs --port 8636)。
+// Prerequisite: dev server already running on that port (node tools/humanoid_forge.mjs --port 8636).
 import { createRequire } from 'node:module';
 
 const req = createRequire(import.meta.url);

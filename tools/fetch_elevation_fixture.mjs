@@ -1,7 +1,7 @@
-// ============ 真實高程 fixture 捕獲 CLI =============
-// 人工更新專用：下載 AWS Terrain Tiles，保留原始 PNG 與其 SHA-256，再烘成
-// runtime 同形的 193×193 raw world-z-x 網格。任何網路／PNG／契約失敗都退出 2；
-// 不得用 open-meteo、平地或程序噪聲補洞。
+// ============ Real-elevation fixture capture CLI =============
+// Manual refresh only: downloads AWS Terrain Tiles, keeps raw PNGs with SHA-256, then bakes
+// a 193x193 raw world-z-x grid matching runtime shape. Any network, PNG or contract failure exits 2;
+// never fill gaps with open-meteo, flat ground or procedural noise.
 import { resolve } from 'node:path';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { battleBBox, battleRect } from '../public/js/data.js';

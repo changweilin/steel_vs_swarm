@@ -66,14 +66,14 @@ export function validateBattleConfig(cfg, teamSize) {
   if (!(cfg.distM >= cfg.diagM * 0.8)) {
     return `主堡距離 ${Math.round(cfg.distM)}m 未達地圖對角線 80%(${Math.round(cfg.diagM * 0.8)}m)`;
   }
-  // 規則 #4(權威把關):此兵線幾何佈出的砲塔會殘餘 >80% 重疊或疊塔 → 拒絕(自訂/預設同標準;客戶端掃描已預濾)
-  // 型態 MUST 傳下去:劇情戰役只有一側有塔,拿完整版的解來驗等於檢查
-  // 一批不會生成的塔,會把本來合法的地圖擋在門外(見 towerLayoutAudit)
+  // Rule #4 (authoritative gate): tower layout from this lane geometry would leave >80% overlap or stacked towers -> reject (same bar for custom/preset; client scan pre-filters)
+  // Pass the kind through: story mode builds towers on one side only, so validating against the full solution checks
+  // towers that will never spawn and would block otherwise legal maps (see towerLayoutAudit)
   const game = lanesToGame(cfg.lanes);
   if (!game || !towerLayoutAudit(game, mapA).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
-  // 規則(權威把關):同一 L 內兵線互不接觸/交叉(任兩線中段最近距離須 ≥ 20m 真實;含立體交叉亦禁)
+  // Rule (authoritative gate): lanes within one L never touch/cross (closest mid-segment distance >= 20m real; 3D crossings also banned)
   if (!laneSeparationAudit(game).ok) return '此地圖的兵線互相接觸或交叉(任兩線最近距離須 ≥ 20m),請改選其他推薦點或位置';
-  // 規則(權威把關):地貌水域+沼澤 ≤ 50%(混合/隨機地圖夾限;門檻住 mapgen.js MAX_WATER_WET)
+  // Rule (authoritative gate): terrain water+marsh <= 50% (mixed/random map clamp; threshold lives in mapgen.js MAX_WATER_WET)
   if (cfg.venue && cfg.venue.mix) {
     const m = cfg.venue.mix;
     const ww = (Number(m.water) || 0) + (Number(m.wet) || 0);
@@ -86,48 +86,48 @@ export function validateBattleConfig(cfg, teamSize) {
 }
 
 /**
- * 地圖雙邊位置陣營隨機(2026-07-21):50% 機率對調兩主堡的陣營歸屬。同步反轉每條兵線的點序,
- * 維持 sim 約定「lane[0]≈bases.SWARM 主堡端」;反轉+換標只變點序不動幾何 → 兵線分離/塔位稽核不受影響。
- * 伺服器定案、隨 battleConfig 廣播全房 → 地形/出生/小地圖全客戶端一致。
+ * Randomize which side holds which base position (2026-07-21): 50% chance to swap the two bases side assignment. Reverse every lane point order
+ * to keep the sim invariant "lane[0] ~= bases.SWARM base end"; reversal + relabel changes order only, geometry untouched -> lane separation/tower audit unaffected.
+ * Server decides, broadcast with battleConfig to the whole room -> terrain/spawns/minimap agree on every client.
  *
- * **每一場都要重擲**(2026-08-01 使用者回報「再戰不換邊」):擲點有兩個 —— 開房 + 再戰回房。
- * 只在開房擲的舊制等於「一間房定終身」,同一間房連打十場都從同一端開場,機制形同不存在。
- * 擲點 MUST 留在**房間階段**(createRoom / backToRoom),MUST NOT 移到 startBattle:客戶端的
- * 地形預建是在房間階段依 cfg 的 bases/lanes 起跑的(main.js prebuildKey 兩者都進 key),
- * 開戰當下才換 cfg = 整份預建作廢,載入畫面得從頭重建地形。
- * 對調只有這一支實作 —— 兩個擲點各抄一次,改規則必漏改其中一邊(稽核 audit_net_modes.mjs)。
+ * Re-roll EVERY game (2026-08-01 user decision "rematch never swaps sides"): two roll points -- createRoom + rematch backToRoom.
+ * Rolling only at creation equals "one room, one side for life", ten straight games from the same end, mechanism effectively dead.
+ * Rolls MUST stay in the ROOM phase (createRoom / backToRoom), MUST NOT move to startBattle: client terrain
+ * prebuild starts in room phase from cfg bases/lanes (both enter main.js prebuildKey),
+ * swapping cfg at launch invalidates the whole prebuild and the loading screen rebuilds terrain from scratch.
+ * Only this function implements the swap -- copying it at both roll points means a rule change will miss one side (audit audit_net_modes.mjs).
  */
 function rollSideSwap(cfg) {
-  if (!cfg || Math.random() >= 0.5) return;      // 另外五成:維持原歸屬
+  if (!cfg || Math.random() >= 0.5) return;      // Other half: keep original assignment
   const t = cfg.bases.SWARM; cfg.bases.SWARM = cfg.bases.STEEL; cfg.bases.STEEL = t;
   cfg.lanes = cfg.lanes.map((l) => l.slice().reverse());
-  // 母體同反轉(laneIds 是母體下標,不動仍指同一條線)
+  // Mother reversed together (laneIds are mother indices, still point at the same lanes unmoved)
   if (Array.isArray(cfg.motherLanes)) cfg.motherLanes = cfg.motherLanes.map((l) => l.slice().reverse());
 }
 
 /**
  * room = {
  *   pin, id, hostId, phase: 'room'|'loading'|'game'|'over',
- *   config: { roomName, isPublic, teamSize, botDiff, ctrl },  // 每陣營 teamSize 席(1~5);
- *                                              // ctrl = 操作方式(整房一致,房主可隨時改)
+ *   config: { roomName, isPublic, teamSize, botDiff, ctrl },  // teamSize seats per side (1~5);
+ *                                              // ctrl = control scheme (room-wide, host may change anytime)
  *   clients: Map<clientId, {send, name, side:'SWARM'|'STEEL'|null, mode:'player'|'spectator',
  *                           ready, loaded, connected, token}>,
- *   bots: Map<botId('b1'...), {name, side}>,   // 電腦玩家(房主增減,佔正式席位)
- *   battleConfig,          // 開房時就鎖定(地圖在開房前建立/選好)
- *   osm,                   // 路網中繼:{ key, bbox, areas, pointFeatures, roads } —— 房主抓到的原始 OSM 圖資,
- *                          // 轉給全房 ⇒ 整房逐位元同一份世界(逐格單調,見 t:'osm')
+ *   bots: Map<botId('b1'...), {name, side}>,   // Bots (host adds/removes, occupy real seats)
+ *   battleConfig,          // Locked at creation (map built/selected before opening)
+ *   osm,                   // Road relay:{ key, bbox, areas, pointFeatures, roads } -- host-fetched raw OSM data,
+ *                          // relayed room-wide => whole room shares one bit-identical world (monotone per cell, see t:'osm')
  *   battle: BattleSim|null, botBrains: BotBrain[], tickTimer,
  * }
  */
 export class RoomHub {
   /**
    * @param {object} opts
-   *   urls()      → 加入網址清單(區網/Tailscale 用;雲端與單機回空陣列)
-   *   log(msg)    → 記錄(伺服器給 console.log;單機給 no-op)
-   *   maxRooms    → 房間數上限(0 = 不限)。雲端公開節點 MUST 設,免單一節點被開房洗掉
-   *   dropMs      → 對局中斷線保留座位的毫秒數(單機可設 0:自己就是唯一玩家)
-   *   noHumanMs   → 對局中「全部真人(玩家+觀戰)都斷線/離開」持續這麼久 → 直接結束該場遊戲並清房
-   *                 (bot 對打沒人看是純空轉;座位 token 隨房失效,晚歸的回連會收到「座位已失效」)
+   *   urls()      -> join URL list (LAN/Tailscale; cloud and solo return empty)
+   *   log(msg)    -> logging (server passes console.log; solo passes no-op)
+   *   maxRooms    -> room cap (0 = unlimited). Public cloud nodes MUST set it, else one node gets room-flooded
+   *   dropMs      -> ms to hold an in-game seat across disconnects (solo may use 0: self is the only player)
+   *   noHumanMs   -> in-game "all humans (players+spectators) gone" for this long -> end the game and drop the room
+   *                 (bot-vs-bot with nobody watching is pure idle; seat tokens die with the room, late reattach gets "seat expired")
    */
   constructor(opts = {}) {
     this.rooms = new Map();
@@ -139,7 +139,7 @@ export class RoomHub {
     this._nextClientId = 1;
   }
 
-  // ---------------- 統計(雲端健康檢查用)----------------
+  // ---------------- Stats (cloud health check) ----------------
   stats() {
     let players = 0, battles = 0;
     for (const r of this.rooms.values()) {
@@ -149,7 +149,7 @@ export class RoomHub {
     return { rooms: this.rooms.size, players, battles };
   }
 
-  // ---------------- 房間工具 ----------------
+  // ---------------- Room helpers ----------------
   _genPin() {
     let pin;
     do { pin = String(Math.floor(1000 + Math.random() * 9000)); } while (this.rooms.has(pin));
@@ -169,12 +169,12 @@ export class RoomHub {
     const h = room.clients.get(room.hostId);
     return h ? h.name : '—';
   }
-  /** 某陣營已佔席位數(真人 + 電腦) */
+  /** Occupied seats on a side (humans + bots) */
   _sideCount(room, side) {
     return [...room.clients.values()].filter((c) => c.side === side).length
       + [...room.bots.values()].filter((b) => b.side === side).length;
   }
-  /** 在指定陣營補一名電腦玩家(已滿則不動作) */
+  /** Fill one bot on the given side (no-op when full) */
   _addBotToSide(room, side) {
     if (this._sideCount(room, side) >= room.config.teamSize) return false;
     const id = 'b' + (++room.nextBotId);
@@ -184,7 +184,7 @@ export class RoomHub {
     return true;
   }
 
-  /** 大廳列表(公開房直接給 PIN 一鍵加入;私人房要輸入 PIN) */
+  /** Lobby list (public rooms hand out PIN for one-click join; private rooms require typing PIN) */
   roomListPayload() {
     const out = [];
     for (const room of this.rooms.values()) {
@@ -201,16 +201,16 @@ export class RoomHub {
             .concat([...room.bots.values()].filter((b) => b.side === 'SWARM').map((b) => `🤖${b.name}`)),
           STEEL: players.filter((c) => c.side === 'STEEL').map((c) => c.name)
             .concat([...room.bots.values()].filter((b) => b.side === 'STEEL').map((b) => `🤖${b.name}`)),
-          // 超級席只在超級房出現(一般房不帶此鍵 ⇒ 列表逐位元同舊制)
+          // SUPER seat appears only in super rooms (normal rooms omit the key => list stays bit-identical to old)
           ...(room.battleConfig?.super
             ? { SUPER: players.filter((c) => c.side === 'SUPER').map((c) => c.name) } : {}),
         },
         host: this._hostNameOf(room),
-        // 操作方式:限定時要在**加入之前**看得到(手機玩家不該進了限定鍵鼠的房才發現沒搖桿)
+        // Control scheme: must be visible BEFORE joining (phone players should not enter a KB-only room before learning there is no stick)
         ctrl: room.config.ctrl || DEFAULT_CTRL_MODE,
         place: room.battleConfig?.placeName || null,
         env: room.battleConfig?.env || null,
-        // 超級大戰:單人第三方模式(加入前看得到,非超級房不帶 SUPER 席 ⇒ 列表逐位元同舊制)
+        // Super battle: solo third-party mode (visible before joining, non-super rooms omit SUPER seat => list stays bit-identical to old)
         super: !!room.battleConfig?.super,
       };
       if (isPublic) e.pin = room.pin;
@@ -221,9 +221,9 @@ export class RoomHub {
   }
 
   /**
-   * 房間已中繼到的 OSM 圖資(晚到的入房者 / 重連者補送用;沒有就回 null)。
-   * 逐格可能只有一半(房主的第一輪只抓到路網,建物那格等它 90 秒後的補抓)——
-   * 收件端的 `commitOsmIn` 是單調的,補上來的那一格會自己觸發一次重建。
+   * OSM data already relayed to this room (resend for late joiners / reconnects; null when none).
+   * Cells may arrive halved (host first round fetched roads only, building cell follows 90s later) --
+   * the receiver `commitOsmIn` is monotone, the late cell triggers its own rebuild.
    */
   osmPayload(room) {
     const o = room.osm;
@@ -233,7 +233,7 @@ export class RoomHub {
     } : null;
   }
 
-  /** 廣播房間(大廳/配對)狀態 */
+  /** Broadcast room (lobby/matchmaking) state */
   broadcast(room) {
     const lobby = {
       pin: room.pin, phase: room.phase, urls: this.urls(), config: room.config,
@@ -250,7 +250,7 @@ export class RoomHub {
     for (const [id, c] of room.clients) {
       try {
         c.send({ t: 'sync', youId: id, token: c.token, isHost: id === room.hostId, lobby });
-      } catch { /* 單一死連線不擋全房廣播,心跳/斷線流程會回收它 */ }
+      } catch { /* one dead connection does not block room broadcast, heartbeat/disconnect flow reaps it */ }
     }
   }
 
@@ -258,8 +258,8 @@ export class RoomHub {
     room.clients.delete(clientId);
     if (room.clients.size === 0) {
       this.stopBattle(room);
-      // PIN 可能已被回收再發(無真人逾時清房後 _genPin 會重用)—— 只刪仍指向本房的登記,
-      // 免得晚到的 dropMs 清位計時器把別人的新房從 PIN 表上踢掉
+      // PIN may have been recycled (abandoned-room reap frees _genPin for reuse) -- only delete the registration still pointing at this room,
+      // so a late dropMs seat-clear timer does not kick someone else's new room off the PIN table
       if (this.rooms.get(room.pin) === room) {
         this.rooms.delete(room.pin);
         this.log(`🧹 房間 ${room.pin} 已清除`);
@@ -269,58 +269,58 @@ export class RoomHub {
     if (room.hostId === clientId) {
       room.hostId = [...room.clients.keys()][0];
       const h = room.clients.get(room.hostId);
-      try { h.send({ t: 'info', msg: '👑 原房主離線,你成為新房主' }); } catch { /* 新房主連線已死就跳過,座位照樣移交 */ }
+      try { h.send({ t: 'info', msg: '👑 原房主離線,你成為新房主' }); } catch { /* skip when the new host connection is dead, seat handoff still stands */ }
     }
     this.broadcast(room);
   }
 
-  // ---------------- 戰鬥生命週期 ----------------
+  // ---------------- Battle lifecycle ----------------
   startBattle(room) {
     if (room.battle || !room.battleConfig) return;
     try {
-    // world 於構造時傳入 → 水沼粗網格在初次佈點前就緒(中立單位一開始就避開水沼);LOS/走廊淨空仍走下方 setWorld。
+    // world passed at construction -> water/marsh coarse grid ready before first placement (neutrals avoid water from the start); LOS/corridor clearing still goes through setWorld below.
     room.battle = new BattleSim(room.battleConfig, room.world || null);
-    // 世界障礙(房主載圖時上傳,存房間一份 → rematch 直接沿用):
-    // MUST 在 fieldPayload 廣播之前套用 —— 走廊淨空會清掉隧道/橋下的第三方障礙與地雷。
+    // World obstacles (uploaded when host loads the map, kept per room -> rematch reuses):
+    // MUST apply before fieldPayload broadcast -- corridor clearing removes third-party obstacles and mines under tunnels/bridges.
     if (room.world) room.battle.setWorld(room.world);
-    // 角色指派:玩家已選的優先;沒選(默認隨機)由 addHero 抽同陣營未用角色
+    // Role assignment: pre-picked players first; unpicked (default random) drawn by addHero from unused same-side roles
     for (const [id, c] of room.clients) {
       if (c.mode === 'player' && c.side) {
         const h = room.battle.addHero(c.side, id, c.ch);
-        c.ch = h.ch;   // 回寫實際角色(隨機結果),lobby 廣播給全員看
+        c.ch = h.ch;   // Write back actual role (random result), lobby broadcasts it to everyone
       }
     }
-    // 電腦玩家:伺服器端 AI 操控英雄,兵線輪流指派(NPC 路線 = 房間兵線)
+    // Bots: server-side AI drives heroes, lanes assigned round-robin (NPC routes = room lanes)
     room.botBrains = [...room.bots.entries()].map(([bid, b], i) => {
       const h = room.battle.addHero(b.side, bid, b.ch);
       b.ch = h.ch;
       return new BotBrain(room.battle, bid, b.side, i, room.config.botDiff);
     });
     room.phase = 'game';
-    // 危險區靜態資料(地雷位置等)只發一次;快照不帶,雙方都要「用眼睛掃雷」
+    // Hazard statics (mine positions etc) sent once; snapshots omit them, both sides must sweep mines by sight
     const field = room.battle.fieldPayload();
-    for (const c of room.clients.values()) { try { c.send(field); } catch { /* 單一死連線不擋開戰 */ } }
+    for (const c of room.clients.values()) { try { c.send(field); } catch { /* one dead connection does not block battle start */ } }
     } catch (e) {
-      // 開戰資料異常(畸形地圖之類):這一房退回房間階段等重開,伺服器與其他房不受影響。
-      // 不接住 = 整個 process 退出 = 全部房間全員斷線。
+      // Broken launch data (malformed map etc): this room falls back to room phase for a retry, server and other rooms unaffected.
+      // Uncaught = whole process exits = every room disconnects.
       this.log(`⚠ 房間 ${room.pin} 開戰失敗已攔截:${String(e?.message || e)}`);
-      try { this.stopBattle(room); } catch { /* 忽略 */ }
+        try { this.stopBattle(room); } catch { /* ignore */ }
       room.battle = null; room.phase = 'room';
       const host = room.clients.get(room.hostId);
-      try { host?.send({ t: 'error', msg: '開戰失敗:戰場資料異常,請重選地圖再開' }); } catch { /* 忽略 */ }
-      try { this.broadcast(room); } catch { /* 忽略 */ }
+      try { host?.send({ t: 'error', msg: '開戰失敗:戰場資料異常,請重選地圖再開' }); } catch { /* ignore */ }
+        try { this.broadcast(room); } catch { /* ignore */ }
       return;
     }
     let last = Date.now();
-    room.noHumanAt = 0;   // 對局中無真人計時(見下方檢查)
-    room.tickFails = 0;   // 連續 tick 異常計數(見下方 catch:偶發撐著,連爆才收房)
+    room.noHumanAt = 0;   // In-game no-human timer (see check below)
+    room.tickFails = 0;   // Consecutive tick failure count (see catch below: tolerate sporadic, reap on streak)
     room.tickTimer = setInterval(() => {
       try {
       const now = Date.now();
       const dt = Math.min(0.5, (now - last) / 1000);
       last = now;
-      // 無真人玩家逾時:全部真人(玩家+觀戰)都斷線/離開超過 noHumanMs → 直接結束該場遊戲。
-      // 斷線座位靠 dropMs 保留等回連;但整房都沒真人時 bot 對打是純空轉,一分鐘沒人回來就收掉。
+      // No-human timeout: all humans (players+spectators) gone longer than noHumanMs -> end the game outright.
+      // Dropped seats wait on dropMs for reattach; but a room with zero humans is pure idle bot-vs-bot, reap after one minute with nobody back.
       if (this.noHumanMs > 0) {
         const anyHuman = [...room.clients.values()].some((c) => c.connected !== false);
         if (anyHuman) room.noHumanAt = 0;
@@ -329,13 +329,13 @@ export class RoomHub {
       }
       for (const brain of room.botBrains) brain.update(dt);
       room.battle.tick(dt);
-      // 霧戰爭:各陣營依己方視野收到不同過濾後的快照;觀戰者收無霧全局快照。
-      // 快照惰性產生(2026-08-05 手機單機效能):只算「在場收件者」需要的那幾份 ——
-      // 單機恆只有一個真人,固定算三份 = 每 tick 把 2/3 的序列化與敵方視野過濾直接丟掉。
-      // 內容逐位元不變;同 tick 首份快照沖洗 events 的共用語意(sim._frame)不受影響。
+      // Fog of war: each side gets a differently filtered snapshot from its own vision; spectators get the clear global snapshot.
+      // Snapshots built lazily (2026-08-05 phone-solo perf): only compute the slices with live recipients --
+      // solo always has one human, fixed three slices = drop 2/3 of serialization and enemy-vision filtering per tick.
+      // Content stays bit-identical; shared first-snapshot-flushes-events semantics (sim._frame) unaffected.
       const snaps = {};
       for (const c of room.clients.values()) {
-        // 超級方收自己視野的霧戰爭快照(與雙陣營同規則);未定/非法 side 照舊收無霧份
+        // SUPER side gets its own fogged snapshot (same rule as both factions); unset/illegal side keeps the clear one
         const k = c.side === 'SWARM' || c.side === 'STEEL' || c.side === 'SUPER' ? c.side : 'all';
         c.send(snaps[k] ??= room.battle.snapshotFor(k === 'all' ? null : k));
       }
@@ -344,16 +344,16 @@ export class RoomHub {
         this.stopBattle(room, /*keepPhase*/ true);
         this.broadcast(room);
       }
-      room.tickFails = 0;   // 這一 tick 全程無異常:連爆計數歸零
+      room.tickFails = 0;   // This tick ran clean: streak counter resets
       } catch (e) {
-        // tick 內任何未預期異常(模擬邊界、快照序列化、廣播)只收這一房:偶發撐著等下一 tick,
-        // 連爆 5 次才退回房間階段。舊制不接住 = 整個 process 退出 = 全部房間全員斷線。
+        // Any unexpected tick failure (sim edge, snapshot serialize, broadcast) only takes this room: ride out sporadic ticks,
+        // retreat to room phase only after 5 straight. Old uncaught behavior = whole process exits = every room disconnects.
         room.tickFails = (room.tickFails || 0) + 1;
         this.log(`⚠ 房間 ${room.pin} tick 異常已攔截:${String(e?.message || e)}`);
         if (room.tickFails <= 5) return;
-        try { this.stopBattle(room); } catch { /* 忽略 */ }
+      try { this.stopBattle(room); } catch { /* ignore */ }
         room.battle = null; room.phase = 'room'; room.tickFails = 0;
-        try { this.broadcast(room); } catch { /* 忽略 */ }
+      try { this.broadcast(room); } catch { /* ignore */ }
       }
     }, GAME.TICK_MS);
     this.broadcast(room);
@@ -366,8 +366,8 @@ export class RoomHub {
     if (!keepPhase) room.battle = null;
   }
 
-  /** 對局中無真人玩家逾時:直接結束該場遊戲並清房。
-      清空座位讓 dropMs 到期的清位計時器自然 no-op;token 隨房失效,晚歸的回連會收到「座位已失效」。 */
+  /** Abandoned in-game with no humans: end the game and drop the room outright.
+      Clearing seats lets the expired dropMs clear-timer no-op naturally; tokens die with the room, late reattach gets "seat expired". */
   _endAbandoned(room) {
     this.stopBattle(room);
     if (this.rooms.get(room.pin) === room) this.rooms.delete(room.pin);
@@ -375,71 +375,71 @@ export class RoomHub {
     this.log(`⏱ 房間 ${room.pin} 對局中無真人玩家逾 ${Math.round(this.noHumanMs / 1000)} 秒,已結束對局並清除`);
   }
 
-  /** 雙方玩家都載入完地形 → 開戰(單人測試:一個玩家也可開) */
+  /** All players loaded terrain -> launch (solo test: one player may launch) */
   maybeLaunch(room) {
     if (room.phase !== 'loading') return;
     const players = [...room.clients.values()].filter((c) => c.mode === 'player' && c.side);
     if (players.length > 0 && players.every((c) => c.loaded)) this.startBattle(room);
   }
 
-  /** 全部房間停 tick(單機切走 / 伺服器關機):MUST 呼叫,否則 setInterval 留著空轉 */
+  /** Stop ticks in every room (solo backgrounded / server shutdown): MUST call, else setInterval idles forever */
   shutdown() {
     for (const room of this.rooms.values()) this.stopBattle(room);
     this.rooms.clear();
   }
 
-  // ---------------- 連線 session ----------------
+  // ---------------- Connection session ----------------
   /**
-   * 接上一條連線。`send(msg)` = 把訊息送給該客戶端(WS 傳輸就 JSON.stringify;單機直接呼叫 handler)。
-   * 回傳 { id, recv(msg), close() } —— 傳輸層只需轉接這兩個入口。
+   * Attach one connection. `send(msg)` = deliver to that client (WS transport does JSON.stringify; solo calls the handler directly).
+   * Returns { id, recv(msg), close() } -- transport only forwards these two entries.
    */
   attach(send) {
     const hub = this;
     const clientId = this._nextClientId++;
     let room = null;
     let client = null;
-    // 本 session 在房內的**座位鍵**:座位在 room.clients 的鍵、英雄在 sim.heroes 的 pid、hostId 的比對對象
-    // 全都是「建立座位那條 session」的 clientId。reattach 認回舊座位後 MUST 沿用原鍵 ——
-    // 用新連線的 clientId 會讓 pos/開火全被 sim 靜默丟棄(查無英雄)、房主權限失效、
-    // leaveRoom/清位刪錯鍵(座位永遠留著 → 殭屍房間,首頁一直看得到無人 bot 對局)。
+    // This session seat key in the room: seat key in room.clients, hero pid in sim.heroes, hostId compare target
+    // are all the creating session clientId. Reattach MUST keep the old key after reclaiming the seat --
+    // using the new connection clientId makes sim silently drop all pos/fire (hero lookup misses), breaks host rights,
+    // and deletes the wrong key on leave/clear (seat never freed -> zombie rooms, lobby keeps listing empty bot games).
     let myId = clientId;
 
     const recv = (m) => {
       if (!m || typeof m.t !== 'string') return;
 
-      // ---- 大廳 ----
+      // ---- Lobby ----
       if (m.t === 'createRoom') {
-        // 地圖在開房前就要建立/選擇好:createRoom 必須帶合法 battleConfig
+        // Map must be built/selected before opening: createRoom must carry a legal battleConfig
         if (hub.maxRooms && hub.rooms.size >= hub.maxRooms) {
           send({ t: 'error', msg: `本節點戰區已達上限(${hub.maxRooms} 間),請稍後再試或加入現有戰區` });
           return;
         }
         const teamSize = Math.max(TEAM.MIN, Math.min(TEAM.MAX, Math.round(m.teamSize) || TEAM.DEFAULT));
         const cfg = m.battleConfig;
-        // ---- 地圖型態旗標的正規化:**MUST 排在驗證之前** ----
-        // battleConfig 整包由客戶端送上來,原樣塞進 sim 等於讓對方決定「什麼算真」(A1 家族)。
-        // 而且順序不能反:`defSide: 'FOO'` 這種值在驗證那一側被當成一般對戰、在正規化之後
-        // 被清成 null —— 若正規化排在驗證之後,兩側對「這場是不是劇情戰役」的看法就會分家。
-        // 劇情戰役(BOSS 方 side;一般對戰恆 null)是**唯一**一格旗標,見 data.js STORY_MAP。
-        // (cfg 可能整包缺席 —— 那由 validateBattleConfig 回「戰場設定不完整」,這裡先不碰)
+        // ---- Map-kind flag normalization: MUST run BEFORE validation ----
+        // battleConfig arrives whole from the client, stuffing it into sim as-is lets the peer decide truth (A1 family).
+        // Order cannot flip: `defSide: 'FOO'` reads as a normal battle on the validation side, then is cleared to
+        // null after normalization -- normalizing after validation would split both sides on "is this a story battle".
+        // Story mode (BOSS side; always null for normal battles) is the ONLY flag, see data.js STORY_MAP.
+        // (cfg may be wholly absent -- validateBattleConfig reports "incomplete", untouched here)
         if (cfg && typeof cfg === 'object') {
           cfg.defSide = (cfg.defSide === 'SWARM' || cfg.defSide === 'STEEL') ? cfg.defSide : null;
-          // 超級大戰(單人第三方)正規化成布林;與劇情戰役互斥(劇情有固定劇本陣容)。
-          // 驗證之前正規化,理由同 defSide(見上)。舊 `cfg.mini` 已退場,不再解讀。
+          // Super battle (solo third party) normalized to boolean; mutually exclusive with story (story has a fixed scripted roster).
+          // Normalize before validation, same reason as defSide (above). Legacy `cfg.mini` retired, no longer read.
           cfg.super = !!cfg.super && !cfg.defSide;
-          // 擴充地圖模式正規化:只有 mixed/random 兩種是合法值,其餘一律 null(舊存檔無此欄);
-          // 程序化起伏只留淨化後的 {seed,amp}(振幅上限住 mapgen,防自訂封包灌爆地形)。
+          // Extended-map mode normalization: only mixed/random are legal, everything else null (old saves lack the field);
+          // procedural relief keeps only sanitized {seed,amp} (amplitude capped in mapgen, blocks custom packets blowing up terrain).
           cfg.gen = (cfg.gen?.mode === 'mixed' || cfg.gen?.mode === 'random') ? cfg.gen : null;
           cfg.procRelief = sanitizeProcRelief(cfg.procRelief);
         }
         const err = validateBattleConfig(cfg, teamSize);
         if (err) { send({ t: 'error', msg: err }); return; }
-        cfg.env = resolveEnv(cfg.env || {});   // 隨機項在此定案,全房共用同一組環境
-        cfg.architectureSeed = Math.floor(Math.random() * 4294967296); // 每局建築外觀種子，伺服器定案
-        // 攻堅順序(前線塔 → 中段塔 → 主堡)**是劇情戰役的推導不是第二格旗標**:兩格各送一份
-        // 就會出現「照順序鎖血但沒有 BOSS」或反過來的半套狀態,而每一條既有斷言照樣全綠。
+        cfg.env = resolveEnv(cfg.env || {});   // Random picks finalized here, whole room shares one environment
+        cfg.architectureSeed = Math.floor(Math.random() * 4294967296); // Per-game building look seed, server decides
+        // Siege order (front tower -> mid tower -> base) IS a story-mode derivation, not a second flag: sending one each
+        // would produce half-states like "locked by order but no BOSS" or the reverse, while every existing assertion stays green.
         cfg.siege = !!cfg.defSide;
-        rollSideSwap(cfg);                     // 主堡陣營歸屬 50% 對調(再戰時於 backToRoom 重擲)
+        rollSideSwap(cfg);                     // 50% base side swap (re-rolled at backToRoom on rematch)
         cfg.teamSize = teamSize;
         const pin = hub._genPin();
         client = { send, name: sanitizeName(m.name), side: null, mode: 'player', ready: false, loaded: false, connected: true, token: genToken() };
@@ -449,7 +449,7 @@ export class RoomHub {
             roomName: sanitizeName(m.roomName) || `${client.name} 的戰區`,
             isPublic: m.isPublic !== false, teamSize,
             botDiff: BOT_DIFF[m.botDiff] ? m.botDiff : DEFAULT_BOT_DIFF,
-            // 操作方式:開房時取房主的預設,之後由房主經 setRoomConfig 變更(整房一致)
+            // Control scheme: host default at creation, host changes it later via setRoomConfig (room-wide)
             ctrl: CTRL_MODES[m.ctrl] ? m.ctrl : DEFAULT_CTRL_MODE,
           },
           clients: new Map([[myId, client]]),
@@ -478,13 +478,13 @@ export class RoomHub {
         room = r;
         room.clients.set(myId, client);
         hub.broadcast(room);
-        // 路網中繼:房主早就上傳完了 ⇒ 晚到的人立刻補一份(**所有階段**都要,房間階段
-        // 才是主要情境 —— 客戶端一收到 sync 就開始預建,這一則決定它建的是哪一張圖)。
-        // MUST NOT 塞進 `sync`:那則會重播多次,幾百 KB 乘上去不可接受(§7.4-1)。
+        // Road relay: host uploaded long ago => late joiners get a copy at once (needed in EVERY phase, room phase
+        // is the main case -- client prebuilds on first sync, this message decides WHICH map it builds).
+        // MUST NOT stuff into `sync`: that one replays many times, hundreds of KB each is unacceptable (7.4-1).
         const relay = hub.osmPayload(room);
         if (relay) send(relay);
         if (room.mapEvidence) send(room.mapEvidence);
-        // 加入中途對局:立即補送階段與戰場設定(含危險區)
+        // Mid-game join: immediately resend phase and battlefield config (incl. hazards)
         if (room.phase === 'game' || room.phase === 'loading') {
           send({ t: 'battleConfig', config: room.battleConfig });
           if (room.battle) send(room.battle.fieldPayload());
@@ -492,14 +492,14 @@ export class RoomHub {
         return;
       }
       if (m.t === 'reattach') {
-        // 斷線重連:用 token 認回原座位
+        // Reattach: reclaim the old seat by token
         for (const r of hub.rooms.values()) {
           for (const [id, c] of r.clients) {
             if (c.token === m.token) {
               c.send = send; c.connected = true;
-              room = r; client = c; myId = id;   // 認回原座位鍵(英雄 pid / hostId / 清位全靠它)
+              room = r; client = c; myId = id;   // Reclaimed seat key (hero pid / hostId / clearing all key on it)
               hub.broadcast(room);
-              const relay = hub.osmPayload(room);   // 重連後可能整份預建要重來 → 圖資照樣要跟上
+              const relay = hub.osmPayload(room);   // Reconnect may need a full prebuild redo -> map data must follow
               if (relay) send(relay);
               if (room.mapEvidence) send(room.mapEvidence);
               if (room.battleConfig && (room.phase === 'loading' || room.phase === 'game')) {
@@ -510,16 +510,16 @@ export class RoomHub {
             }
           }
         }
-        // code:'reattach' → 客戶端據此清掉過期憑證(免每次開頁都吃一次錯誤),不影響其他錯誤處理
+        // code:'reattach' -> client clears the expired credential on this (no error on every page open), other error handling unaffected
         send({ t: 'error', code: 'reattach', msg: '重連失敗:座位已失效,請重新加入' });
         return;
       }
 
       if (!room || !client) return;
 
-      // ---- 房間配對 ----
+      // ---- Room matchmaking ----
       if (m.t === 'pickSide') {
-        // 超級大戰房才可選 SUPER(第三方固定 1 席);其餘房間維持雙陣營
+        // Only super rooms may pick SUPER (fixed 1 third-party seat); other rooms stay two-sided
         const side = m.side === 'SWARM' || m.side === 'STEEL' || (m.side === 'SUPER' && room.battleConfig?.super)
           ? m.side : null;
         if (client.mode !== 'player') { send({ t: 'error', msg: '觀戰者不能選陣營' }); return; }
@@ -530,12 +530,12 @@ export class RoomHub {
         }
         client.side = side;
         client.ready = false;
-        client.ch = null;   // 換陣營:角色重選(角色綁陣營)
+        client.ch = null;   // Side switch: re-pick role (roles bind to sides)
         hub.broadcast(room);
         return;
       }
       if (m.t === 'pickChar') {
-        // 開戰前選角(不選 = 開戰時隨機);角色必須屬於自己的陣營,傭兵雙陣營皆可;超級方可選任意角色
+        // Pre-battle role pick (unpicked = random at launch); role must belong to own side, MERC fits both; SUPER may pick any
         if (room.phase !== 'room' || client.mode !== 'player') return;
         if (m.ch == null) { client.ch = null; hub.broadcast(room); return; }
         const c = CHARACTERS[m.ch];
@@ -546,7 +546,7 @@ export class RoomHub {
       }
       if (m.t === 'setReady') { client.ready = !!m.ready; hub.broadcast(room); return; }
       if (m.t === 'addBot') {
-        // 電腦玩家:房主在房間階段補位(單人練習 / 湊隊)
+        // Bots: host fills seats in room phase (solo practice / team fill)
         if (myId !== room.hostId) { send({ t: 'error', msg: '只有房主能增減電腦玩家' }); return; }
         if (room.phase !== 'room') return;
         const side = m.side === 'SWARM' || m.side === 'STEEL' ? m.side : null;
@@ -556,7 +556,7 @@ export class RoomHub {
         return;
       }
       if (m.t === 'setBotChar') {
-        // 房主替電腦玩家指定角色(null = 開戰時隨機,與真人 pickChar 同語意)
+        // Host assigns a bot role (null = random at launch, same semantics as human pickChar)
         if (myId !== room.hostId) { send({ t: 'error', msg: '只有房主能設定電腦玩家' }); return; }
         if (room.phase !== 'room') return;
         const bot = room.bots.get(String(m.id));
@@ -578,22 +578,22 @@ export class RoomHub {
         if (m.roomName !== undefined) room.config.roomName = sanitizeName(m.roomName);
         if (m.isPublic !== undefined) room.config.isPublic = !!m.isPublic;
         if (m.botDiff !== undefined && BOT_DIFF[m.botDiff]) room.config.botDiff = m.botDiff;
-        // 操作方式整房一致 ⇒ 只有房主改得動(非房主的訊息在本 if 就被擋掉),
-        // 非法值一律靜默忽略(降級不例外);廣播出去才是客戶端的生效值。
+        // Control scheme is room-wide => only the host can change it (non-host messages blocked by this if),
+        // illegal values silently ignored (degrade by omission); the broadcast value is what clients honor.
         if (m.ctrl !== undefined && CTRL_MODES[m.ctrl]) room.config.ctrl = m.ctrl;
         hub.broadcast(room);
         return;
       }
       if (m.t === 'startBattle') {
-        // 房主開戰(地圖開房時已鎖定):至少 1 位已選陣營並準備
+        // Host launches (map locked at creation): at least 1 sided-and-ready player
         if (myId !== room.hostId) { send({ t: 'error', msg: '只有房主能開戰' }); return; }
         if (room.phase !== 'room') return;
         const players = [...room.clients.values()].filter((c) => c.mode === 'player' && c.side);
         if (players.length === 0) { send({ t: 'error', msg: '請先選擇陣營' }); return; }
         if (!players.every((c) => c.ready)) { send({ t: 'error', msg: '還有指揮官未按「準備完成」' }); return; }
-        // 人數不足一律補電腦玩家到滿編(取消單人練習模式)
+        // Short roster always filled with bots to full (solo-practice mode retired)
         for (const side of ['SWARM', 'STEEL']) {
-          while (hub._addBotToSide(room, side)) { /* 補到滿編為止 */ }
+          while (hub._addBotToSide(room, side)) { /* fill to full */ }
         }
         room.phase = 'loading';
         for (const c of room.clients.values()) { c.loaded = false; c.send({ t: 'battleConfig', config: room.battleConfig }); }
@@ -602,11 +602,11 @@ export class RoomHub {
       }
       if (m.t === 'loaded') { client.loaded = true; hub.broadcast(room); hub.maybeLaunch(room); return; }
       if (m.t === 'world') {
-        // 房主上傳世界障礙(建物/神木/巨岩碰撞柱)+ 立體交通走廊(sim 座標)。
-        // 通常先於開戰抵達(存房間,startBattle 套用);房主是觀戰者時可能晚到 → 直接套用進行中的 sim
-        // (LOS 即時生效;走廊內障礙從快照消失,客戶端自動收掉)。非房主來源一律丟棄。
+        // Host uploads world obstacles (building/sacred-tree/rock collision posts) + 3D traffic corridors (sim coords).
+        // Normally arrives before launch (stored per room, applied at startBattle); a spectator host may arrive late -> apply to the live sim directly
+        // (LOS takes effect at once; in-corridor obstacles drop from snapshots, clients auto-withdraw). Non-host sources always dropped.
         if (myId === room.hostId && m.occ) {
-          room.world = { occ: m.occ, cor: m.cor, roofs: m.roofs, wet: m.wet, slabs: m.slabs, hgt: m.hgt };   // wet:水沼粗網格;slabs:橋面/隧道天花薄板(LOS);hgt:粗高程網格(稜線遮蔽,避免隔山打牛)
+          room.world = { occ: m.occ, cor: m.cor, roofs: m.roofs, wet: m.wet, slabs: m.slabs, hgt: m.hgt };   // wet: water/marsh coarse grid; slabs: bridge/tunnel-ceiling slabs (LOS); hgt: coarse height grid (ridge occlusion)
           if (room.battle) room.battle.setWorld(room.world);
         }
         return;
@@ -620,27 +620,27 @@ export class RoomHub {
         return;
       }
       if (m.t === 'osm') {
-        // ---- 路網中繼(2026-08-10 使用者定案「圖資儲存在開房者,再由開房者透過 server 傳給入房者」)----
-        // 房主上傳它抓到的原始 Overpass 圖資 → 存房間一份 → 轉給其他人。修的是**既有**的
-        // 跨客戶端分家:今天每台各自抓,A 抓到而 B 被限流時兩人的橋隧/建物/碰撞柱全不一樣。
-        // 三條紀律:
-        //  ① **不可信輸入**:房主送什麼都要過 `sanitizeOsmRelay`(形狀 + 筆數上限),
-        //     而且存進房間的 MUST 是它回傳的**新物件** —— 單機模式的 hub 跑在同一個分頁裡,
-        //     直接存 `m.roads` 會與客戶端共用參照,而下游是就地變異那些陣列的。
-        //  ② **單調**:已定案的格 MUST NOT 被覆蓋。路網可以從無到有(房主 90 秒後重試成功),
-        //     但**換掉**已經發出去的那一份,等於同一間房裡有人用 v1、有人用 v2。
-        //  ③ **MUST NOT 碰 `room.battleConfig`**:座標框(含地圖主方位 θ)在開房當下就凍結,
-        //     中繼只搬路網。選角途中把整房的世界轉一次,比抓不到圖資嚴重得多(A42 ③)。
-        // 房間清掉時整份隨 room 物件回收(雲端 `--max-rooms` × 單房上限 = 記憶體上界)。
+        // ---- Road relay (2026-08-10 user decision "map data lives with the host, relayed to joiners via server") ----
+        // Host uploads its fetched raw Overpass data -> stored per room -> relayed to others. Fixes the EXISTING
+        // cross-client split: today each client fetches alone, when A succeeds and B gets throttled their bridges/tunnels/buildings/colliders all differ.
+        // Three rules:
+        //  (1) Untrusted input: everything from the host passes `sanitizeOsmRelay` (shape + count caps),
+        //     and the room MUST store the NEW object it returns -- solo hubs run in the same tab,
+        //     storing `m.roads` directly would share refs with the client while downstream mutates those arrays in place.
+        //  (2) Monotone: finalized cells MUST NOT be overwritten. Roads may go from absent to present (host retry succeeds after 90s),
+        //     but REPLACING an already-sent slice means one room runs v1 and another v2.
+        //  (3) MUST NOT touch `room.battleConfig`: the frame (incl. map bearing theta) freezes at creation,
+        //     the relay moves roads only. Rotating the whole room world mid-draft is far worse than missing map data (A42 (3)).
+        // Whole relay is reclaimed with the room object (cloud `--max-rooms` x per-room cap = memory bound).
         if (myId !== room.hostId) return;
         const clean = sanitizeOsmRelay(m);
         if (!clean) return;
         const key = osmRelayKey(clean.bbox);
         if (!room.osm) room.osm = { key, bbox: clean.bbox, areas: null, pointFeatures: null, roads: null, drop: 0 };
-        if (room.osm.key !== key) return;      // 換圖了才會不同鍵 —— 那份中繼不屬於這一房
+        if (room.osm.key !== key) return;      // Keys differ only on map switch -- that relay does not belong to this room
         const add = { t: 'osm', bbox: room.osm.bbox, drop: clean.drop || 0 };
         let changed = false;
-        // null = 尚未收到該格；[]／{} = 已成功查詢但沒有該類型，兩者必須區分。
+        // null = cell not yet received; []/{} = queried fine but that kind absent, the two MUST stay distinct.
         if (room.osm.areas === null && clean.featureReady !== false && Array.isArray(clean.areas)) {
           add.areas = room.osm.areas = clean.areas; changed = true;
         }
@@ -649,12 +649,12 @@ export class RoomHub {
         }
         if (room.osm.roads === null && Array.isArray(clean.roads)) { add.roads = room.osm.roads = clean.roads; changed = true; }
         room.osm.drop = Math.max(room.osm.drop || 0, clean.drop || 0);
-        if (!changed) return;  // 沒有新的格 ⇒ 不轉播(免得入房者白重建一次)
+        if (!changed) return;  // No new cells => no relay (saves joiners a wasted rebuild)
         for (const [id, c] of room.clients) if (id !== myId) c.send(add);
         return;
       }
 
-      // ---- 戰鬥中 ----
+      // ---- In battle ----
       const b = room.battle;
       if (!b) {
         if (m.t === 'leaveRoom') { hub.leaveRoom(client, room, myId); room = null; client = null; }
@@ -665,47 +665,47 @@ export class RoomHub {
       if (m.t === 'defend' && client.side) { b.heroDefend(myId, m.on); return; }
       if (m.t === 'hit' && client.side) { b.heroHit(myId, m.id, m.w); return; }
       if (m.t === 'hitMissile' && client.side) { b.hitMissile(myId, m.id, m.w); return; }
-      if (m.t === 'burst' && client.side) { b.heroBurst(myId, m.x, m.z, m.y, m.lev); return; }   // y = 對空引爆高度 / lev = 爆點結構層(sim 夾範圍)
-      if (m.t === 'plasma' && client.side) { b.heroPlasma(myId, m.dx, m.dz, m.slot, m.o, m.dy); return; }   // o=[x,z,y] 槍口 / dy=3D射向
-      if (m.t === 'lance' && client.side) { b.heroLance(myId, m.o, m.d, m.len); return; }   // 直線貫穿(beam/rail/gun 重武器):o=[x,z,y] 槍口 / d=[dx,dz,dy] 射向 / len=射線長
-      // 機種絕招的三條訊息(kami / decoy / hyper)2026-08-06 整組退場,MUST NOT 復辟:
-      // 長按右鍵改成招式手勢(一般 = 守招 / 狙擊 = 攻招)⇒ 一律走下面的 't: cast' 單一縫,
-      // 三種載具只剩「攻招遞送」這一個身分(sim._launchAtkCarrier)。
+      if (m.t === 'burst' && client.side) { b.heroBurst(myId, m.x, m.z, m.y, m.lev); return; }   // y = air-burst height / lev = burst structure layer (sim clamps range)
+      if (m.t === 'plasma' && client.side) { b.heroPlasma(myId, m.dx, m.dz, m.slot, m.o, m.dy); return; }   // o=[x,z,y] muzzle / dy=3D aim
+      if (m.t === 'lance' && client.side) { b.heroLance(myId, m.o, m.d, m.len); return; }   // Line pierce (beam/rail/gun heavy):o=[x,z,y] muzzle / d=[dx,dz,dy] dir / len=ray length
+      // Three mech-ult messages (kami / decoy / hyper) retired as a set on 2026-08-06, MUST NOT return:
+      // long right-press is now an ability gesture (normal = guard / scoped = assault) => everything goes through 't: cast' below,
+      // the three carriers keep only the "assault delivery" identity (sim._launchAtkCarrier).
       if (m.t === 'swap' && client.side) { b.heroSwap(myId, m.i); return; }
       if (m.t === 'lock' && client.side) { b.heroLock(myId, m.id); return; }
-      if (m.t === 'civ' && client.side) { b.civInteract(myId, m.id, m.act); return; }   // 平民互動:跟隨/驅趕
+      if (m.t === 'civ' && client.side) { b.civInteract(myId, m.id, m.act); return; }   // Civilian interact: follow/disperse
       if (m.t === 'cast' && client.side) { b.heroCast(myId, m.slot, m.x, m.z); return; }
-      if (m.t === 'iframe' && client.side) { b.heroIframe(myId); return; }   // 蓄力跳/變形中段無敵幀(CD 由 sim 把關,與跳躍電力脫鉤)
-      if (m.t === 'jump' && client.side) { b.heroJump(myId, m.k, m.morph); return; }   // 大跳躍/變形起飛電力結算(權威扣電)
+      if (m.t === 'iframe' && client.side) { b.heroIframe(myId); return; }   // Charged-jump/morph mid iframes (CD gated by sim, decoupled from jump power)
+      if (m.t === 'jump' && client.side) { b.heroJump(myId, m.k, m.morph); return; }   // Big-jump/morph liftoff power settlement (authoritative drain)
       if (m.t === 'reload' && client.side) { b.heroReload(myId, m.w); return; }
       if (m.t === 'buy' && client.side) {
-        const err = b.buy(myId, m.item, m.lane);   // lane 只有 item==='creep'(陣營小兵強化)會用到
+        const err = b.buy(myId, m.item, m.lane);   // lane used only for item==='creep' (faction creep upgrade)
         if (err) send({ t: 'error', msg: err });
         return;
       }
       if (m.t === 'tracer') {
         if (client.side && m.slot) b.heroFireRecord?.(myId, m.slot);
-        // 純視覺:轉播給其他客戶端畫彈道;pid 供接收端驅動射手機體的開火動畫(比照 heavyCharge,伺服器附上,不信任客戶端)
-        // mv:拋物線武器的實際初速(火控解的裝藥號數;純視覺轉播,讓對方畫出與射手同一條弧)
+        // Visual only: relay to other clients for tracer rendering; pid drives the shooter firing anim on receivers (like heavyCharge, server attaches, never trust client)
+        // mv: actual muzzle velocity of lobbed weapons (charge step from fire control; visual relay so peers draw the same arc as the shooter)
         for (const [id, c] of room.clients) if (id !== myId) c.send({ t: 'tracer', pid: myId, from: m.from, to: m.to, side: client.side, slot: m.slot, hit: m.hit, mv: m.mv });
         return;
       }
       if (m.t === 'heavyCharge' && client.side) {
-        // 純視覺:即時轉播 rail 重武器蓄力狀態(third-person 掛點動畫),不進 sim 快照(不等 8Hz)
+        // Visual only: live relay of rail heavy charge state (third-person mount anim), never enters sim snapshots (no 8Hz wait)
         for (const [id, c] of room.clients) if (id !== myId) c.send({ t: 'heavyCharge', pid: myId, on: !!m.on });
         return;
       }
       if (m.t === 'heavyFire' && client.side) {
-        // 純視覺:即時轉播重武器擊發瞬間(third-person 掛點動畫)
+        // Visual only: live relay of heavy fire instant (third-person mount anim)
         for (const [id, c] of room.clients) if (id !== myId) c.send({ t: 'heavyFire', pid: myId });
         return;
       }
       if (m.t === 'backToRoom' && myId === room.hostId) {
-        // 回到房間再戰:地圖屬於房間(開房前選定),保留 battleConfig
+        // Back to room for rematch: map belongs to the room (picked before creation), battleConfig kept
         hub.stopBattle(room);
         room.battle = null; room.phase = 'room';
-        // 但主堡的陣營歸屬**重擲**:下一場有五成機率換邊(見 rollSideSwap)。
-        // 廣播出去的 sync 帶著新 cfg → 客戶端在房間階段重跑預建(prebuildKey 吃 bases/lanes)。
+        // But base side assignment RE-ROLLS: next game swaps ends at 50% (see rollSideSwap).
+        // The broadcast sync carries the new cfg -> clients re-run prebuild in room phase (prebuildKey covers bases/lanes).
         rollSideSwap(room.battleConfig);
         room.battleConfig.architectureSeed = ((room.battleConfig.architectureSeed || 0) + 1) >>> 0;
         for (const c of room.clients.values()) { c.ready = false; c.loaded = false; }
@@ -717,16 +717,16 @@ export class RoomHub {
 
     const close = () => {
       if (!room || !client) return;
-      // 座位已被更新的連線用 reattach 認走(本 session 是殭屍舊 socket,close 晚到)→ MUST NOT 動座位:
-      // 標成斷線會讓「無真人逾時」把還有真人在玩的對局收掉。send 是否還指向本 session = 座位歸屬的唯一判準。
+      // Seat reclaimed by a newer connection via reattach (this session is a stale socket, late close) -> MUST NOT touch the seat:
+      // marking it offline would reap a game that still has live humans. Whether send still points at this session is the only ownership test.
       if (client.send !== send) return;
       client.connected = false;
-      // 對局中保留座位等重連;房間階段直接離座
+      // Hold the seat in-game for reattach; room phase leaves the seat at once
       if (room.phase === 'room' || hub.dropMs <= 0) {
         hub.leaveRoom(client, room, myId);
       } else {
         hub.broadcast(room);
-        // 一段時間沒回來就清位
+        // Clear the seat after a while with nobody back
         const c0 = client, r0 = room, id0 = myId;
         setTimeout(() => {
           if (c0.connected === false && r0.clients.get(id0) === c0) {

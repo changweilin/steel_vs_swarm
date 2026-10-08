@@ -1,4 +1,4 @@
-// THREE_MODULE 指向遊戲相同版本的 three.module.js；不新增 npm 依賴。
+// THREE_MODULE points to the same three.module.js version as the game; no new npm dependency.
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { pathToFileURL } from 'node:url';
@@ -46,7 +46,7 @@ target.children.forEach((mesh, variant) => {
 });
 assert.throws(() => build({ key: 'bad' }, [{ x: NaN, variant: 0 }]), /變換無效/);
 
-// 逐款建物都走正式建構器；多配色批次必須能被直接子節點淨空邏輯找到。
+// Every building model goes through the production builder; multi-color batches must stay discoverable by direct-child clear logic.
 const buildingTarget = new THREE.Group();
 const buildingRows = rows.slice(0, 100).map(row => ({ x: row.x, y: 5, z: -row.x, ry: 0.7, w: 8, h: 10, d: 6 }));
 await deploySceneBatches(BUILDING_PARTS.map(entry => ({ entry, rows: buildingRows })), buildingTarget, makeApprovedBuildingBatch);
@@ -73,7 +73,7 @@ first.geometry.attributes.position.array[0] = 999999;
 first.geometry.dispose();
 const third = makeRuntimePartModel(entry);
 assert.deepEqual(second.geometry.attributes.position.array, third.geometry.attributes.position.array);
-// 可編輯物件不能因同一個 entry 參考而看見舊模型。
+// Editable objects must not observe a stale model through a shared entry reference.
 const mutable = { key: 'edit', parts: [{ type: 'box', dimensions: [1, 1, 1], color: 0xffffff }] };
 const before = makeRuntimePartModel(mutable);
 mutable.parts[0].dimensions[0] = 3;

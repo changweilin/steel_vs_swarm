@@ -1,4 +1,4 @@
-// ============ 機體鍛造(特徵 → 多面體零件樹;遊戲本體與機體台同吃這一份)============
+// ============ Mech forge (features -> polyhedral part tree; game body and mech bench share this same file) ============
 // 研究來源:AniCompanion(three-vrm)的 VRM 人形角色技術 —— 「任何模型即插即用、動作可
 // 重定向」建立在**所有角色共用同一組標準化人形特徵**(VRM 1.0 必要骨)之上。本原型把同一
 // 思路移植到機體制:HUMANOID 特徵表(拓撲固定、比例逐機可調)+ 逐機「特徵 → 零件」轉換。

@@ -1,33 +1,33 @@
 // ============ 賽璐璐管線稽核(ramp 家族 / 天空穹頂 / 地形色階梯 / 描邊寬度)============
-// 用途:這一批全是**純表現層**改動 —— `npm run bal` 與 e2e 天然不會動(㋒),所以完全沒有
-// 既有防線。畫面回歸的特性是「沒有錯誤訊息,只是變醜」,而「變醜」在文字測試裡是隱形的,
-// 故一律以**原始碼文字 + 純函式直測**釘住那些一改就整片走樣的不變量。
+// Purpose: this batch is all pure-presentation changes, so npm run bal and e2e never move by nature, leaving no
+// existing guard. Visual regressions fail silently with no error message, just uglier output, and uglier is invisible
+// to text tests, so every whole-scene invariant is pinned by source text plus pure-function checks.
 //
-// 四段:
-//   Ⅰ ramp 家族(toon.js RAMPS / toonGradient(bands))
-//     ・3 階 MUST **逐位元** [102,182,255] —— 改了整個場景重新上色;
-//     ・每一組的暗階 MUST ≥ 102(A14 / #INC-106:低於此深色件疊 cool 會塌成全黑);
-//     ・ramp 的 DataTexture MUST 只在 toon.js 建構(散出去 = 同一個場景兩套明暗規則)。
-//   Ⅱ 天空穹頂(environment.js skyStops / makeSkyDome / makeClouds)
-//     ・**MUST NOT 開第四張色表**:停點只由 TIMES/SEASONS/WEATHERS 推導 ⇒ skyStops 內
-//       出現任何十六進位色值就是違規(否則某些季節 × 天氣組合裡天空與霧色會對不上);
-//     ・兩道封頂(不得亮過今天的天色 / 雨霧天不得亮過霧遠端色)以**真品原文**直測;
-//     ・雲量與 light 反比、霧天零雲、散布走 mulberry32(§2.3,MUST NOT Math.random)。
-//   Ⅲ 地形(terrain.js / field.js)
-//     ・兩條路徑都走 envMat + rim:0(貼地平面掠射角 rim 全開會整片洗白);
-//     ・色階由**相對亮度**設計:亮度嚴格遞增、**階差嚴格遞減**(暗端分得開、亮端不過曝);
-//     ・**單一色階佔比 ≤ 35%**:直接跑 field.js 真品掃 27 場地 × 三種隊制 —— 這是「88% 的
-//       坡面同一個顏色」那個病灶唯一量得到的地方,固定門檻實測最壞 51.3%,故門檻取分位數;
-//     ・field.js MUST 是加權平均(不是加總,加總會飽和成常數)且分母有下限。
-//   Ⅳ 描邊寬度(toon.js outlineMaterial)
-//     ・螢幕下限 MUST 由 `projectionMatrix[1][1]` 反推(手寫換算 = 狙擊一開鏡描邊全變粗);
-//     ・Clamp world width between screen limits before the style multiplier: near details stay legible,
+// Four sections:
+//   I ramp family (toon.js RAMPS and toonGradient(bands))
+//     3-step MUST match [102,182,255] bit-identically, or the whole scene re-tints;
+//     every set dark step MUST stay at or above 102 (A14 and INC-106: below this, dark parts stacking cool collapse to black);
+//     the ramp DataTexture MUST be built only inside toon.js (a second builder means two shading rules for one scene).
+//   II Sky dome (environment.js skyStops, makeSkyDome and makeClouds)
+//     MUST NOT open a fourth color table: stops derive only from TIMES, SEASONS and WEATHERS, so any hex color inside
+//       skyStops is a violation (else sky and fog colors disagree under some season-weather combos);
+//     both ceiling caps (never brighter than today sky, rainy fog never brighter than far fog) tested against genuine source;
+//     cloud amount runs inverse to light, fog days have zero clouds, scatter rides mulberry32 (section 2.3, MUST NOT use Math.random).
+//   III Terrain (terrain.js and field.js)
+//     both paths ride envMat plus rim 0 (grazing rim on ground planes would wash the whole field white);
+//     steps designed by relative luminance: strictly rising luminance with strictly shrinking gaps (dark end stays separable, bright end never blows out);
+//     one single step holds at most 35 percent: measured by sweeping 27 venues times three team sizes through real field.js, the only place
+//       the 88-percent-slope-one-color lesion is measurable; the fixed gate takes a quantile since the worst observed is 51.3 percent;
+//     field.js MUST be a weighted mean (not a sum, which would saturate into a constant) with a floored denominator.
+//   IV Outline width (toon.js outlineMaterial)
+//     the screen lower bound MUST invert projectionMatrix[1][1] (a hand-written conversion thickens every outline under sniper zoom);
+//     Clamp world width between screen limits before the style multiplier: near details stay legible,
 //       distant silhouettes remain visible, and disabling outlines still produces zero extrusion.
-//     ・**兩個外推量都 MUST 換成局部單位**(2026-08-10「主堡黑球」):它們一起加在
-//       `position` 上,而螢幕下限是由**視距**(世界公尺)換算來的 ⇒ 少除一次世界縮放,
-//       實得線寬就是「下限 × 世界縮放」,又因為它 ∝ 視距 ⇒ 離越遠脹越大、沒有上界。
-//       主堡的 dome.glb 世界縮放 795× ⇒ 450m 外的黑殼被推出 530m。**執行原文的兩條
-//       運算式**(uOMin 的值 + outlinify 的 jobs.push)還原整條 GLSL,量的是**螢幕半寬**
+//     both extrapolated terms MUST convert to local units (2026-08-10 black-sphere on the base): both add onto
+//       position while the screen lower bound converts from view distance in world meters, so one missing world-scale division
+//       makes the measured width equal lower bound times world scale, and since it scales with view distance it grows without bound;
+//       the base dome.glb world scale of 795 times pushes a black shell 530m out at 450m. The two genuine-source
+//       expressions (uOMin value plus outlinify jobs.push) reconstruct the whole GLSL and measure screen half-width.
 //       —— 這是唯一與世界縮放無關的量,而它也正是這個常數宣稱要鎖住的東西。
 //       反向驗證 `--break-scale`(退回不除世界縮放)。
 //     ・SkinnedMesh 的 bind 分支與 `userData.outlineGeo` 平滑法線分支 MUST 留著。

@@ -59,7 +59,7 @@ console.log('① taa.js 單一縫與純數學不變量(Halton 抖動 / 權重 / 
   ok(DRS.MIN === 0.7 && DRS.STEP === 0.1 && DRS.MAX_DOWN_STEP === 0.2 && DRS.HI_MS === 20 && DRS.LO_MS === 17.2,
     'DRS 常數表齊備(下限 0.7、常規步幅 0.1、重載加速步幅 0.2)');
 
-  // Halton(2,3) 8 相位覆蓋四個象限且均值趨近 0(無次像素偏移偏差)
+  // Halton(2,3) 8 phases cover all four quadrants with mean near 0 (no sub-pixel shift bias)
   let sumX = 0, sumY = 0, qPP = 0, qPN = 0, qNP = 0, qNN = 0;
   for (let i = 0; i < TAA.SAMPLES; i++) {
     const [jx, jy] = taaJitterPx(i, 1.0);
@@ -76,7 +76,7 @@ console.log('① taa.js 單一縫與純數學不變量(Halton 抖動 / 權重 / 
   ok(halton(1, 2) === 0.5 && Math.abs(halton(1, 3) - 1 / 3) < 1e-12,
     'halton(index, base) 基數反轉精確(1/2 與 1/3)');
 
-  // DRS 降階時自動放大次像素取樣跨度、加深歷史累積並補償銳化
+  // Lower DRS resolution widens the sub-pixel sampling span, deepens history, and compensates sharpening
   const [jFullX, jFullY] = taaJitterPx(0, 1.0), [jLowX, jLowY] = taaJitterPx(0, DRS.MIN);
   ok(Math.hypot(jLowX, jLowY) > Math.hypot(jFullX, jFullY),
     'DRS 降解析度時自動拉大次像素抖動跨度以提升超解析重建覆蓋率');

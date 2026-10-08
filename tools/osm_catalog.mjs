@@ -1,6 +1,6 @@
-// ============ OSM 面域型錄報表 CLI ============
-// 與執行期共用 osmAreas.js 的建構、投影、分類與 gap 產生器；本工具不查網路。
-// 用法：node tools/osm_catalog.mjs --scene-cache <file> [--json <path>]
+// ============ OSM area catalog report CLI ============
+// Shares construction, projection, classification and gap generation with runtime osmAreas.js; this tool makes no network calls.
+// Usage: node tools/osm_catalog.mjs --scene-cache <file> [--json <path>]
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildAreaRecords, catalogAreas, mergeAreaGaps, projectAreaRecord } from '../public/js/osmAreas.js';

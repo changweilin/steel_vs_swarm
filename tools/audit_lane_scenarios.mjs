@@ -1,50 +1,60 @@
-// ============ 1v1 兵線立體場景稽核(離線;找測試用預設場地)============
-// 用途:回答「哪一個預設場地的 **1v1(L1)兵線**上,真的走得到某種立體交通場景」——
-// 供手動測試八種情境各挑一張預設地圖:
-//   ① 隧道(山體):道路平坦,鑽進突起的地形 —— 深度來自山
-//   ② 地下道(平地下穿):地形平坦,路面一端往下、另一端上來 —— 深度來自挖
-//      (2026-07-28 起引擎會生成:`biomes.js underpassPlan` 把平坦 tunnel way 改吃下沉剖面)
-//   ③ 陸上高架橋(兵線走在**純陸域**橋面上)  ④ 明隧道(側向土牆藏不住結構那一側)
-//   ⑤ 平交道(兵線與地面鐵軌平面交會)        ⑥ 穿越高架橋底部(兵線從橋下鑽過)
-//   ⑦ 穿越地下道上方(兵線從洞頂走過)
-//   ⑧ 其中一側有超過一座砲塔高的地形(altTier() = TARGET_H.tower,高度差加成的觸發門檻;
-//      **只算一般道路段** —— 橋面/隧道/引道一律扣掉:洞裡量到的側向高差是「地下道/隧道的深度」,
-//      不是可以佔領的戰術高地)
-//   ⑨ 水上高架橋(兵線走在橋面上,但橋跨的是水域)
+// ============ 1v1 lane 3D-scenario audit (offline; finds test stock venues) ============
+// Purpose: answer "on which stock venue's **1v1 (L1) lane** can you actually walk some 3D traffic
+// scenario" — one stock map per manual-test scenario, eight scenarios:
+//   1 Tunnel (mountain): flat road boring into raised terrain — depth comes from the mountain
+//   2 Underpass (flat-land dive): flat terrain, roadbed dipping at one end and back up at the other —
+//     depth comes from digging
+//     (engine generates these since 2026-07-28: `biomes.js underpassPlan` puts flat tunnel ways on a
+//     sunken profile)
+//   3 Land viaduct (lane on a **pure-land** deck)  4 Gallery (the side whose side fill cannot hide the structure)
+//   5 Level crossing (lane meets surface rails at grade)  6 Under-bridge pass (lane threads beneath a bridge)
+//   7 Over-tunnel crossing (lane walks over a bore)
+//   8 Terrain taller than one turret on one side (altTier() = TARGET_H.tower, the height-bonus trigger;
+//     **general road sections only** — decks/tunnels/approaches all excluded: lateral relief measured
+//     inside a bore is the "underpass/tunnel depth", not occupiable tactical high ground)
+//   9 Water viaduct (lane on the deck, but the bridge spans water)
 //
-// ③ 與 ⑨ 是**兩種場景**(2026-08-02 使用者定案):橋下是陸地 ⇒ 橋墩之間可穿行、掉下去照樣打;
-// 橋下是水域 ⇒ 橋面是唯一通路、掉下去進水。判定縫只有 `spansWater()` 一支(圖資水道相交 ∪
-// 橋下地表沉在水/沼面下),兩者共用 —— MUST NOT 由場地名稱或 mix 的 water 比例臆測。
-// (2026-08-02 前 ⑨ 只是「跨水橋」附帶診斷、不列場景 ⇒ 沒有任何預設地圖被標記;改制後與 ③ 同級。)
+// 3 and 9 are **two scenarios** (2026-08-02 user decision): land below ⇒ piers passable, falling in still
+// fights; water below ⇒ the deck is the only road, falling in means in the water. One verdict seam only:
+// `spansWater()` (map-data waterway crossing ∪ below-deck terrain sunk under water/marsh), shared by both —
+// MUST NOT be guessed from venue names or mix water ratios.
+// (Before 2026-08-02, 9 was just a "cross-water bridge" side diagnostic, unlisted ⇒ no stock venue tagged;
+// since the migration it ranks with 3.)
 //
-// 一個附帶診斷(不是場景,但選場地時要看):
-//   落空地下道 圖資掛 tunnel、地形也平坦,但 underpassPlan 放棄(人行道 / 引道空間不足 /
-//            要挖到 SINK_MAX 以上 / 走廊碰水)⇒ 仍當一般道路,列出來供評估
+// One side diagnostic (not a scenario, but needed when picking venues):
+//   Missed underpass: map data tags tunnel and terrain is flat, but underpassPlan gives up (footway /
+//     no approach room / deeper than SINK_MAX / corridor hits water) ⇒ still a normal road, listed for
+//     evaluation
 //
-// 資料來源與執行期完全同源:
-//   - 兵線/主堡/bbox:`venues.js venueConfig(v, 1)` + `data.js battleBBox`(teamSize=1 ⇒ L=1)
-//   - 路網/鐵路/平交道:Overpass,查詢字串與 `biomes.js fetchOsmRoads/fetchOsmFeatures` 同一份;
-//     Overpass 的公共鏡像對雲端 IP 幾乎一律拒絕 ⇒ 全掛時退到 OSM 官方 API 的 /map(見 OSM_API)
-//   - 高程:AWS terrarium 磚(= `terrain.js` 主來源),再走同一條「3×3 平滑 → 兵線外 AMP 放大
-//     → 塔位乾地帶抬升」管線,故本工具的 heightAt 與遊戲內地形同形。
-//   - 隧道覆蓋/地下道規劃/明隧道判定:**直接執行 `biomes.js` 的函式原文**(tunnelCoverIntervals /
-//     tunFloorAt / underpassPlan / tunnelWallProfile;抽原文的理由同 audit_open_tunnel.mjs ——
-//     biomes.js 的 three 走 CDN importmap,Node 端 import 不了,另抄一份公式則永遠會通過)。
+// Data sources fully share origin with runtime:
+//   - Lanes/bases/bbox: `venues.js venueConfig(v, 1)` + `data.js battleBBox` (teamSize=1 ⇒ L=1)
+//   - Road/rail/crossing network: Overpass, same query strings as `biomes.js fetchOsmRoads/fetchOsmFeatures`;
+//     Overpass public mirrors almost always refuse cloud IPs ⇒ on total failure fall back to the OSM
+//     official API /map (see OSM_API)
+//   - Elevation: AWS terrarium tiles (= `terrain.js` primary source), then the same "3×3 smoothing →
+//     off-lane AMP boost → tower-site dry-land lift" pipeline, so this tool's heightAt matches in-game
+//     terrain shape.
+//   - Tunnel cover/underpass planning/gallery verdict: **execute `biomes.js` function sources directly**
+//     (tunnelCoverIntervals / tunFloorAt / underpassPlan / tunnelWallProfile; same source-extraction
+//     rationale as audit_open_tunnel.mjs — biomes.js three.js rides the CDN importmap, Node cannot import
+//     it, and a recopied formula would pass forever).
 //
-// 網路:第一次跑會抓圖資 + terrarium 高程,結果寫進 `tools/.scen_cache/`(之後純離線可重跑)。
-// 用法:node tools/audit_lane_scenarios.mjs [--only=jinlong,london] [--json=out.json]
-//      node tools/audit_lane_scenarios.mjs --probe='25.09,121.54,自強隧道;40.78,-73.97,中央公園'  ← 找新場地用
-// 退出碼:0 = 八種場景各至少有一個場地;1 = 有場景無場地(需要新增測試場地)
+// Network: first run fetches map + terrarium elevation, results land in `tools/.scen_cache/` (pure offline
+// re-runs after).
+// Usage: node tools/audit_lane_scenarios.mjs [--only=jinlong,london] [--json=out.json]
+//      node tools/audit_lane_scenarios.mjs --probe='25.09,121.54,Ziqiang Tunnel;40.78,-73.97,Central Park'  ← for finding new venues
+// Exit code: 0 = every one of the eight scenarios has a venue; 1 = some scenario has none (needs a new test venue)
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { VENUES, venueConfig, SCEN_LABEL } from '../public/js/venues.js';
-// MAPGEO 只有 `probePoint` 用得到(探測 bbox 的邊長換算)。2026-08-03 抽出 venue_field.mjs
-// 時把 import 清單縮成「主掃描路徑用得到的」,連帶把它刪掉 ⇒ **探測模式自那天起整支炸掉**
-// (ReferenceError: MAPGEO is not defined),而 workflow 的探測步驟是 continue-on-error、
-// 主掃描又碰不到這條分支 ⇒ 沒有任何紅字。找新場地的工具就是這一支,它壞掉的症狀是
-// 「② 地下道一直找不到第二張圖」而不是「有個錯誤訊息」。
+// MAPGEO is only needed by `probePoint` (probe-bbox edge conversion). When venue_field.mjs was extracted
+// on 2026-08-03, the import list shrank to "what the main scan path uses" and dropped it ⇒ **probe mode has
+// been fully broken since that day** (ReferenceError: MAPGEO is not defined), while the workflow's probe step
+// is continue-on-error and the main scan never touches that branch ⇒ not a single red. This file IS the
+// venue-finding tool; its breakage symptom is "scenario 2 never finds a second map", not an error message.
 import { MAPGEO, WATER, GAME, UNITS, TARGET_H, altTier, battleBBox, sideMFor, solveTowerSites } from '../public/js/data.js';
-// 高度場 / 圖資 / 結構剖面的 Node 端唯一縫(audit_traverse 與淨空檢查共用同一份)
+// The Node-side single seam for heightfield / map data / structure profiles (shared with audit_traverse
+// and the clearance check)
 import {
   ROOT, CACHE, llToWorld, distToSegs, R_EARTH, d2r, WORLD_S,
   TUN, UND, PASS_W, ROAD_SEG, tunnelCoverIntervals, tunnelWallProfile, densify, underpassPlan,
@@ -58,17 +68,18 @@ const ARG = Object.fromEntries(process.argv.slice(2).map((s) => {
 }));
 const ONLY = (ARG.only || '').split(',').filter(Boolean);
 
-// ---- 場景判定門檻(遊戲公尺)----
-const ON_MIN = 24;        // 「兵線走在結構上」的最短同向重疊長度
-const ALIGN = 0.6;        // 同向判定 |cos|
-const XING_R = 20;        // 平交道節點離兵線的容許距離(≈ 10 真實公尺)
-// 側向高地掃描距離(遊戲公尺):高度差加成作用在「交戰中的兩造」⇒ 尺規取交戰距離而非貼身距離。
-// 300 ≈ 英雄重武器射程上限,也就是「站在那片高地上真的打得到兵線」的最遠處。--side= 可覆寫。
+// ---- Scenario verdict thresholds (game meters) ----
+const ON_MIN = 24;        // shortest co-directional overlap for "lane runs on the structure"
+const ALIGN = 0.6;        // co-direction verdict |cos|
+const XING_R = 20;        // crossing-node-to-lane tolerance (≈ 10 real meters)
+// Lateral-highland scan range (game meters): height bonuses apply to "the two sides in combat" ⇒
+// measured in engagement distance, not point-blank. 300 ≈ the hero heavy-weapon range cap — the farthest
+// "standing on that highland can actually hit the lane". Overridable via --side=.
 const SIDE_MAX = +(ARG.side || 300);
 const SIDE_STEP = 10;
-const SIDE_RUN_MIN = 60;  // 高地要連續涵蓋這麼長的兵線才算「一側有高地」
+const SIDE_RUN_MIN = 60;  // highland must continuously cover this much lane to count as "highland on one side"
 
-/** 兵線與 way 的同向重疊區間(兵線弧長 [s0,s1] 陣列) */
+/** Co-directional overlap runs of lane vs way (lane arc-length [s0,s1] array) */
 function overlapRuns(laneD, laneCum, wayPts, hw) {
   const runs = [];
   let cur = null;
@@ -86,12 +97,14 @@ function overlapRuns(laneD, laneCum, wayPts, hw) {
 }
 
 /**
- * 橋跨的是水域還是陸域 —— ③ 陸上高架橋 / ⑨ 水上高架橋 的**唯一分流縫**
- * (2026-07-28 起 ③ 要純陸域;2026-08-02 起水域那半升格成 ⑨,兩者共用這一支)。
- *   ① 與圖資水道相交,或 ② 橋下地表沉在水/沼面之下 —— 兩者任一即判水域。
- * 第二條是為了抓沒被畫成 waterway 的湖/潟湖/海灣(遊戲端的 splitWaterPieces 也是看高程與水色)。
- * scanVenue(兵線判定)與 probePoint(找錨點)MUST 同吃這一支,分兩份必然出現
- * 「探測說是陸橋、掃描說是水橋」這種只在特定場地現形的分歧。
+ * Whether a bridge spans water or land — the **single split seam** for scenario 3 land viaducts /
+ * scenario 9 water viaducts (scenario 3 must be pure land since 2026-07-28; the water half promoted to
+ * 9 on 2026-08-02, both sharing this function).
+ *   1 Intersects a map-data waterway, or 2 below-deck terrain sunk under water/marsh — either means water.
+ * The second catches lakes/lagoons/bays never drawn as waterways (the game-side splitWaterPieces also
+ * reads elevation and water color). scanVenue (lane verdict) and probePoint (anchor hunting) MUST share
+ * this function; two copies inevitably produce "probe says land bridge, scan says water bridge" splits
+ * visible only on specific venues.
  */
 const WET_Y = WATER.LEVEL + WATER.SWAMP_BAND;
 function makeSpansWater(waterWays, heightAt) {
@@ -120,8 +133,9 @@ async function scanVenue(v) {
   const center = cfg.center;
   const laneW = cfg.lanes[0].map(([lat, lng]) => llToWorld(lat, lng, center));
   const laneD = densify(laneW, ROAD_SEG), laneCum = arcOf(laneD);
-  // 兵線頂點就是 OSM 路網節點(venueLanes.js 烘焙時取自真實道路)⇒ 「兵線是否**走在**這條 way 上」
-  // 用共用節點判定最紮實:純看 2D 距離會把「正下方的人行地下道 / 正上方的空橋」誤判成同一條路。
+  // Lane vertices ARE OSM network nodes (baked from real roads by venueLanes.js) ⇒ "does the lane
+  // **run on** this way" is most solidly judged by shared nodes: pure 2D distance would misread "the
+  // pedestrian underpass below / the empty bridge above" as the same road.
   const k6 = (lat, lng) => `${lat.toFixed(6)},${lng.toFixed(6)}`;
   const laneKeys = new Set(cfg.lanes[0].map(([lat, lng]) => k6(lat, lng)));
   const sharesNode = (way) => way.geometry.some((p) => laneKeys.has(k6(p.lat, p.lon)));
@@ -131,14 +145,15 @@ async function scanVenue(v) {
   res.osm = { src: osm.src || 'overpass', roads: osm.roads.length, rails: osm.rails.length,
     waters: (osm.waters || []).length, crossings: osm.crossings.length };
 
-  // 兵線上「踩在立體結構上」的弧長區間(橋面 / 隧道含引道):⑧ 的側翼高地要扣掉這些段,
-  // 使用者要的是**一般道路**上的高地對峙,不是站在橋上或洞裡比高度。
+  // Arc-length intervals where the lane "stands on 3D structure" (decks / tunnels incl. approaches):
+  // scenario 8's flank highlands exclude these stretches — the user wants high-ground standoffs on
+  // **ordinary roads**, not height comparisons from a deck or inside a bore.
   const structArcs = [];
 
   const spansWater = makeSpansWater(
     (osm.waters || []).map((w) => w.geometry.map((p) => llToWorld(p.lat, p.lon, center))), heightAt);
 
-  // ---- ①③⑤⑥ 結構 way(隧道/橋)----
+  // ---- 1/3/5/6 structure ways (tunnels/bridges) ----
   for (const way of osm.roads) {
     const isTun = strucTunnel(way.tags), isBrg = !!way.tags.bridge && !way.tags.tunnel;
     if (!isTun && !isBrg) continue;
@@ -151,14 +166,14 @@ async function scanVenue(v) {
 
     const canCarry = LANE_HW.test(way.tags.highway || '') && sharesNode(way);
     if (isBrg) {
-      if (onLen >= ON_MIN && canCarry) {           // 兵線走在橋面上(車行橋 + 共用節點)
+      if (onLen >= ON_MIN && canCarry) {           // lane on the deck (drivable bridge + shared node)
         structArcs.push(...runs);
-        // ③ 陸上高架橋 = 純陸域上方;⑨ 水上高架橋 = 跨水域。同一支 spansWater 分流,兩者同級。
+        // 3 land viaduct = above pure land; 9 water viaduct = spanning water. One spansWater split, both peers.
         const wet = spansWater(wpts);
         const key = wet ? 'waterBridge' : 'bridge';
         const cur = res.hits[key];
         if (!cur || onLen > cur.len) res.hits[key] = { name, len: Math.round(onLen), ...(wet ? { wet } : {}) };
-      } else {                                     // ⑥ 兵線從橋下鑽過(純幾何交叉)
+      } else {                                     // 6 lane threads beneath the bridge (pure geometric crossing)
         for (let i = 1; i < laneD.length && !res.hits.underBridge; i++) {
           for (let j = 1; j < wpts.length; j++) {
             if (segCross(laneD[i - 1], laneD[i], wpts[j - 1], wpts[j])) { res.hits.underBridge = { name }; break; }
@@ -167,12 +182,12 @@ async function scanVenue(v) {
       }
       continue;
     }
-    // 隧道/地下道:先問「執行期真的成洞嗎」(山體藏得住 → 隧道;平地 → 試挖地下道)
+    // Tunnel/underpass: first ask "does runtime really bore here" (mountain hides it → tunnel; flat land → try digging an underpass)
     const tr = tunnelRunOf(way, center, heightAt, hf);
     if (!tr || !tr.intervals.length) {
-      // 圖資是地下道,山體藏不住、underpassPlan 也放棄(人行道 / 引道空間不足 / 太深 / 碰水)
-      // ⇒ buildRoads 當一般道路。列出來供評估,不記成 hits(標記代表「遊戲裡真的走得到」,
-      // 這裡走得到的是一條普通街道)。
+      // Map data says underpass but the mountain cannot hide it and underpassPlan also gives up (footway /
+      // no approach room / too deep / water) ⇒ buildRoads treats it as a normal road. Listed for evaluation,
+      // never recorded as hits (a hit means "really walkable in game"; what walks here is an ordinary street).
       if (onLen >= ON_MIN && canCarry) {
         const cur = res.flatTunnel;
         if (!cur || onLen > cur.len) res.flatTunnel = { name, len: Math.round(onLen) };
@@ -184,7 +199,7 @@ async function scanVenue(v) {
     const covIdx = new Set();
     for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) covIdx.add(i);
     if (onLen >= ON_MIN && canCarry) {
-      // ①/② 洞段:重疊段要真的落在覆蓋區間內(否則只是走在引道上)
+      // 1/2 bore sections: the overlap must truly fall inside cover intervals (otherwise it is just the approach)
       let covLen = 0;
       for (let i = 1; i < laneD.length; i++) {
         const mid = [(laneD[i][0] + laneD[i - 1][0]) / 2, (laneD[i][1] + laneD[i - 1][1]) / 2];
@@ -197,12 +212,12 @@ async function scanVenue(v) {
         if (covIdx.has(k)) covLen += laneCum[i] - laneCum[i - 1];
       }
       if (covLen >= ON_MIN) {
-        // 山體隧道 = ①、地下道 = ②(深度來自山還是來自挖,是兩種場景)
+        // Mountain tunnel = 1, underpass = 2 (depth from mountain vs depth from digging are two scenarios)
         const key = tr.under ? 'underpass' : 'tunnel';
         const cur = res.hits[key];
         if (!cur || covLen > cur.len) res.hits[key] = { name, len: Math.round(covLen) };
-        // ④ 明隧道:同一條隧道的側向土牆體檢(biomes.js 唯一結算縫)。
-        // 地下道不在此列 —— 它的頂是沒被開挖的原地表,buildRoads 一律把 open 歸零(見 A29)。
+        // 4 Gallery: side-fill check of the same tunnel (biomes.js single settlement seam).
+        // Underpasses excluded — their roof is unexcavated native ground; buildRoads always zeroes open (see A29).
         const cov = tr.pts.map((_, i) => covIdx.has(i));
         for (const side of [1, -1]) {
           if (tr.under) break;
@@ -215,9 +230,10 @@ async function scanVenue(v) {
         }
       }
     } else if (!sharesNode(way)) {
-      // ⑦ 穿越地下道上方:兵線不在這條隧道上(不共節點)且**橫越**它的覆蓋段 = 從洞頂走過去。
-      // 只認「橫越」:平行並行的另一個孔(例如同一座山的人行孔)在高度場上與兵線同層,
-      // 不是「上下分層」的測試場景 —— 那條規則放進來會讓 jinlong 的人行孔誤判成 ⑦。
+      // 7 Over-tunnel crossing: the lane is not on this tunnel (no shared node) and **crosses** its cover
+      // section = walking over the bore. Only "crossing" counts: a parallel second bore (e.g. the same
+      // mountain's footway bore) sits on the same heightfield level as the lane — not an "upper/lower
+      // split" test scenario. Letting that rule in would misread jinlong's footway bore as 7.
       for (let i = 1; i < laneD.length && !res.hits.overTunnel; i++) {
         for (let j = 1; j < tr.pts.length; j++) {
           if (!segCross(laneD[i - 1], laneD[i], tr.pts[j - 1], tr.pts[j])) continue;
@@ -227,16 +243,17 @@ async function scanVenue(v) {
     }
   }
 
-  // ---- ① 的候選診斷:bbox 內「執行期真的成洞」的車行隧道 + 它的**深度**----
-  // 「地表高 − 路面高」在高度場上同時是「上方有多少土」與「路面沉在地表之下多深」——
-  // 語意上是**深度**(2026-07-28 使用者指正):地下道的關鍵尺寸是路面下沉多少,不是頂上多厚。
-  // 使用者要的 ① 是「地下道感」= 短、**淺**(路面只沉十來公尺就出來)、周邊地形平坦;
-  // 金龍隧道那種深覆蓋是「山體隧道」。深度取覆蓋段的中位數。
+  // ---- Scenario-1 candidate diagnostics: in-bbox "runtime really bores" drivable tunnels + their **depth** ----
+  // "Ground height − roadbed height" on the heightfield is both "how much earth sits above" and "how deep
+  // the roadbed sinks below grade" — semantically a **depth** (2026-07-28 user correction): an underpass's
+  // key dimension is how far the roadbed sinks, not how thick the top is. The user wants scenario 1 as
+  // "underpass feel" = short, **shallow** (roadbed surfaces after a dozen meters), flat surroundings; a
+  // deep Jinlong-style cover is a "mountain tunnel". Depth takes the cover section's median.
   for (const w of osm.roads) {
     if (!strucTunnel(w.tags) || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
     const tr = tunnelRunOf(w, center, heightAt, hf);
     if (!tr || !tr.intervals.length) continue;
-    if (tr.under) {                       // 地下道走 ② 的候選清單(深度來自挖,不是山)
+    if (tr.under) {                       // underpasses go to scenario 2's candidate list (depth from digging, not mountains)
       const covLen2 = tr.intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0);
       const d2 = Math.round(Math.min(...tr.pts.map((p) => ptPoly(p, laneD))));
       const c2 = { name: w.tags.name || w.tags.highway, len: Math.round(covLen2), depth: Math.round(tr.sink), d: d2 };
@@ -253,13 +270,15 @@ async function scanVenue(v) {
     const d = Math.round(Math.min(...tr.pts.map((p) => ptPoly(p, laneD))));
     const cand = { name: w.tags.name || w.tags.highway, len: Math.round(covLen),
                    depth: Math.round(th[th.length >> 1]), d };
-    // 首選「最淺」的那條(路面沉得越少越像地下道);同深度取離兵線近的
+    // Prefer the "shallowest" (the less the roadbed sinks, the more underpass-like); ties go to nearer the lane
     if (!res.tunnelCand || cand.depth < res.tunnelCand.depth
         || (cand.depth === res.tunnelCand.depth && d < res.tunnelCand.d)) res.tunnelCand = cand;
   }
 
-  // ---- ③/⑨ 的候選診斷:bbox 內的車行高架橋(兵線沒走到也列出來),陸域/水域分開記 ----
-  // 用途:某個場景缺場地時,靠這份清單判斷「哪個場地換個錨點重烤兵線就能踩上橋面」。
+  // ---- 3/9 candidate diagnostics: in-bbox drivable viaducts (listed even where the lane never
+  // walks them), land/water recorded separately ----
+  // Purpose: when a scenario lacks a venue, this list judges "which venue could step onto a deck by
+  // re-baking the lane from a new anchor".
   for (const w of osm.roads) {
     if (!w.tags.bridge || w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
     const wpts = w.geometry.map((p) => llToWorld(p.lat, p.lon, center));
@@ -274,9 +293,10 @@ async function scanVenue(v) {
     }
   }
 
-  // ---- ⑦ 的候選診斷:bbox 內有沒有「任一車行道從覆蓋段隧道上方跨過」----
-  // ⑦ 要的是**兵線**從洞頂走過,可遇不可求;這裡順手回報「這張地圖上存不存在這種交叉、
-  // 離兵線多遠」,好判斷「換個錨點/方位角重烤兵線」有沒有機會把 ⑦ 湊出來(離兵線越近越有機會)。
+  // ---- 7 candidate diagnostics: does any drivable road cross above a cover-section tunnel in-bbox ----
+  // 7 wants the **lane** over the bore — rare by luck; opportunistically report "does this map hold such
+  // a crossing at all, and how far from the lane", to judge whether "re-baking the lane from a new
+  // anchor/heading" could ever assemble 7 (closer to the lane = better odds).
   {
     const tunRuns = [];
     for (const w of osm.roads) {
@@ -305,11 +325,12 @@ async function scanVenue(v) {
     }
   }
 
-  // ---- ⑧ 側翼高地(altTier() = 一座砲塔高 = 高度差加成門檻)----
-  // 2026-07-28 使用者需求:**扣掉隧道/地下道/高架橋段**。理由是語意:在地下道裡側面地形之所以
-  // 「比兵線高」,只是因為**路面沉得深**(那個高度差就是地下道的深度),不是可以佔領的戰術高地;
-  // 站在橋面上比更沒有意義。要的是「一般道路的兵線,單側地形高過一座砲塔」。
-  // structArcs = 兵線踩在立體結構上的弧長區間(含引道)。
+  // ---- 8 Flank highlands (altTier() = one turret height = height-bonus gate) ----
+  // 2026-07-28 user request: **exclude tunnel/underpass/viaduct sections**. The semantics: lateral terrain
+  // "higher than the lane" inside an underpass only means the **roadbed sank deep** (that relief IS the
+  // underpass depth), not occupiable tactical high ground; comparing from a deck is even more meaningless.
+  // Wanted: "ordinary-road lane with terrain above one turret on one side".
+  // structArcs = arc-length intervals where the lane stands on 3D structure (incl. approaches).
   {
     const T = altTier();
     const onStruct = (sArc) => structArcs.some(([a, b]) => sArc >= a - ROAD_SEG && sArc <= b + ROAD_SEG);
@@ -332,7 +353,7 @@ async function scanVenue(v) {
     gain.forEach((g, si) => {
       let s0 = null;
       for (let i = 0; i < g.length; i++) {
-        if (onStruct(laneCum[i])) { s0 = null; continue; }   // 結構段整段跳過(含引道)
+        if (onStruct(laneCum[i])) { s0 = null; continue; }   // structure sections skipped whole (incl. approaches)
         peak = Math.max(peak, g[i]);
         if (g[i] >= T) {
           if (s0 === null) s0 = laneCum[i];
@@ -347,7 +368,7 @@ async function scanVenue(v) {
     res.peakSide = Number.isFinite(peak) ? Math.round(peak) : null;
   }
 
-  // ---- ④ 平交道(圖資 railway=level_crossing 節點落在兵線上)----
+  // ---- 4 Level crossings (map-data railway=level_crossing nodes landing on the lane) ----
   for (const c of osm.crossings) {
     const p = llToWorld(c.lat, c.lng, center);
     const d = ptPoly(p, laneD);
@@ -360,17 +381,20 @@ async function scanVenue(v) {
 }
 
 /**
- * 探測模式(--probe=lat,lng[,名稱]):不需要 baked 兵線,只問「這個點周邊一張 L1 地圖裡,
- * 有沒有執行期真的成洞的車行隧道、覆蓋多長多厚」。用來替 ①(地下道感 = 短、覆蓋薄)找新場地。
- * 2026-08-02 起同時回報**車行高架橋**(陸域 ③ / 水域 ⑨ 分流走 makeSpansWater 同一縫)——
- * 三種使用者指定的場景(② 地下道 / ③ 陸上高架橋 / ⑨ 水上高架橋)因此一次探測就選得完錨點,
- * 不必為了找橋另跑一輪「先烤兵線再掃描」(烤一次兵線是分鐘級的 Overpass 往返)。
- * ④ 明隧道候選也在此體檢:對每條成洞山體隧道跑 `tunnelWallProfile`(與執行期同一縫)兩側,
- * 報 open 點數 × ROAD_SEG = 明隧道段長 —— 判定與兵線無關(只吃地形與隧道軸),探測即可定案。
- * bbox 與 L1 同尺寸(`--probe-r=N` 可放大 N 倍廣域掃,找到後再精確定錨);
- * 每條成洞隧道/明隧道段都回報**經緯度中點** —— L1 bbox 半徑僅 ~266 真實公尺,
- * 憑地名記憶下錨必偏,拿中點座標當錨點才擺得準。
- * heightAt 用「東西向穿過該點的假兵線」餵 AMP(探測只需大略地形)。
+ * Probe mode (--probe=lat,lng[,name]): no baked lane needed, only asks "within one L1 map around this
+ * point, is there a runtime-really-boring drivable tunnel, how long and how thick". Used to find new venues
+ * for scenario 1 (underpass feel = short, thin cover).
+ * Since 2026-08-02 also reports **drivable viaducts** (land 3 / water 9 split through the same makeSpansWater
+ * seam) — the three user-picked scenarios (2 underpass / 3 land viaduct / 9 water viaduct) get their anchors
+ * from one probe, no extra "bake the lane then scan" round for bridges (one lane bake is minutes of Overpass
+ * round-trips).
+ * 4 gallery candidates get checked here too: run `tunnelWallProfile` (same seam as runtime) on both sides of
+ * every boring mountain tunnel and report open-point count × ROAD_SEG = gallery length — the verdict is
+ * lane-independent (terrain + tunnel axis only), so probing settles it.
+ * bbox matches L1 size (`--probe-r=N` widens the sweep N-fold; pin precisely after a hit);
+ * every boring tunnel/gallery section reports its **lon/lat midpoint** — L1 bboxes span only ~266 real
+ * meters, so anchoring from place-name memory always drifts; midpoint coordinates place the anchor true.
+ * heightAt feeds AMP with an "east-west dummy lane through the point" (probes need only rough terrain).
  */
 async function probePoint(lat, lng, label) {
   const half = sideMFor(1) / 2 * MAPGEO.REAL_SCALE * MAPGEO.MAP_EXPAND * (+ARG['probe-r'] || 1);
@@ -384,7 +408,7 @@ async function probePoint(lat, lng, label) {
   const { heightAt } = hf;
   const osm = await osmFor(`probe_${lat.toFixed(4)}_${lng.toFixed(4)}`, bbox);
   if (!osm) return console.log(`${label}:取不到路網`);
-  // 世界座標 → 經緯度(llToWorld 的逆換算;錨點擺位要用)
+  // World coords → lon/lat (inverse of llToWorld; needed to place anchors)
   const w2ll = ([x, z]) => `${(lat - z / (R_EARTH * WORLD_S) * 180 / Math.PI).toFixed(5)},${(lng + x / (R_EARTH * Math.cos(d2r(lat)) * WORLD_S) * 180 / Math.PI).toFixed(5)}`;
   const found = [];
   for (const w of osm.roads) {
@@ -397,7 +421,7 @@ async function probePoint(lat, lng, label) {
     const covList = [];
     for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) covList.push(i);
     const covMid = tr.pts[covList[covList.length >> 1]];
-    // ④ 明隧道體檢:同 scanVenue 的判定縫(tunnelWallProfile),取兩側 open 點數較大者
+    // 4 gallery check: same verdict seam as scanVenue (tunnelWallProfile), taking the larger open-point side
     let gal = 0, galSide = 0, galMid = null;
     if (!tr.under) {
       const cov = tr.pts.map((_, i) => covList.includes(i));
@@ -412,8 +436,9 @@ async function probePoint(lat, lng, label) {
       depth: Math.round(th[th.length >> 1]), gal, galSide,
       at: covMid ? w2ll(covMid) : '', galAt: galMid ? w2ll(galMid) : '' });
   }
-  // ③/⑨ 車行高架橋:陸域/水域走 makeSpansWater(與 scanVenue 同一縫)。回報中點座標當錨點,
-  // 長度取全橋(> ON_MIN 才列 —— 短於這個長度的橋,兵線就算踩上去也判不成場景)。
+  // 3/9 drivable viaducts: land/water via makeSpansWater (same seam as scanVenue). Midpoint coordinates
+  // reported as anchors; length takes the whole bridge (> ON_MIN listed — a shorter bridge never qualifies
+  // as a scenario even stepped on).
   const spansWater = makeSpansWater(
     (osm.waters || []).map((w) => w.geometry.map((p) => llToWorld(p.lat, p.lon, cfg.center))), heightAt);
   const bridges = [];
@@ -449,14 +474,16 @@ if (ARG.probe) {
   process.exit(0);
 }
 
-// ---- 主流程 ----
-// 隧道與地下道是**兩種東西**,判定與分類一律分開(2026-07-28 使用者指示):
-//   隧道   道路平坦,鑽進突起的地形 —— 深度來自「山」。
-//   地下道 地形平坦,路面一端往下、另一端再上來 —— 深度來自「挖」。
-//          2026-07-28 起引擎會生成:直線剖面藏不住天花板時改吃 `underpassPlan` 的下沉剖面
-//          (兩端接引道、中段平底),覆蓋判定與後續構件一律沿用隧道那一套。
-//          放棄的情形(人行道 / 引道空間不足 / 要挖到 SINK_MAX 以上 / 走廊碰水)仍當一般道路,
-//          在報告裡列成「落空地下道」。
+// ---- Main flow ----
+// Tunnels and underpasses are **two different things**; verdicts and classification always split
+// (2026-07-28 user instruction):
+//   Tunnel     flat road boring into raised terrain — depth comes from the "mountain".
+//   Underpass  flat terrain, roadbed dipping at one end and back up at the other — depth comes from "digging".
+//          Since 2026-07-28 the engine generates them: when the straight profile cannot hide the ceiling,
+//          `underpassPlan`'s sunken profile takes over (approaches at both ends, flat bottom mid-section),
+//          with cover verdicts and downstream components all reusing the tunnel set.
+//          Give-up cases (footway / no approach room / deeper than SINK_MAX / corridor hits water) stay
+//          ordinary roads, listed in the report as "missed underpasses".
 const SCEN = [
   ['tunnel', '① 隧道(山體)'],
   ['underpass', '② 地下道(平地下穿)'],
@@ -468,17 +495,20 @@ const SCEN = [
   ['highGround', '⑧ 一側高於一座砲塔'],
   ['waterBridge', '⑨ 水上高架橋'],
 ];
-// 引擎尚未生成的場景:報告但不計入「缺場地」(換地圖解不了,要改引擎)。
-// 2026-07-28:`underpass` 已隨 underpassPlan 落地 ⇒ 此表清空(留著結構,下一個缺口照樣掛得上)。
+// Scenarios the engine does not generate yet: reported but excluded from "missing venues" (no map swap
+// fixes them; the engine must change).
+// 2026-07-28: `underpass` landed with underpassPlan ⇒ this table is empty (structure kept; the next gap
+// hangs here the same way).
 const KNOWN_GAP = new Map();
-{ // 場景代號 MUST 與 venues.js 的 SCEN_LABEL 同集合(標記與判定分家 = 標了卻沒人驗)
+{ // Scenario codes MUST match the venues.js SCEN_LABEL set (labels split from verdicts = tagged but never verified)
   const a = SCEN.map(([k]) => k).sort().join(','), b = Object.keys(SCEN_LABEL).sort().join(',');
   if (a !== b) throw new Error(`場景代號與 venues.js SCEN_LABEL 不一致:\n  稽核 ${a}\n  標記 ${b}`);
 }
 
-// 整支時間預算(分鐘;0 = 不限)。Overpass 公共節點排隊時單一場地可能等上一分鐘,
-// 22 個場地跑成一小時的 CI job 誰也看不到中途進度 ⇒ 超時就把剩下的場地標成「未掃」,
-// 先把已完成的印出來。快取(.scen_cache)保留 ⇒ 下一次接著跑就會補完。
+// Whole-run time budget (minutes; 0 = unlimited). Overpass public nodes queue — one venue can wait a
+// minute; 22 venues make an hour-long CI job with no progress in between ⇒ past deadline the remaining
+// venues mark "unscanned" and finished ones print first. Cache (.scen_cache) persists ⇒ the next run
+// resumes.
 const MAX_MS = (+(ARG['max-min'] || 0)) * 60000;
 const T_START = Date.now();
 
@@ -518,7 +548,7 @@ let missing = 0;
 const pick = {};
 for (const [k, label] of SCEN) {
   const hit = results.filter((r) => r.hits[k]);
-  if (KNOWN_GAP.has(k)) {                       // 已知缺口:列候選,不計入缺場地
+  if (KNOWN_GAP.has(k)) {                       // known gaps: list candidates, never count as missing venues
     const cand = results.filter((r) => r.flatTunnel)
       .map((r) => `${r.id}(${r.flatTunnel.name} ${r.flatTunnel.len}m)`);
     console.log(`  ${label}:⚠️ ${KNOWN_GAP.get(k)}`);
@@ -528,7 +558,8 @@ for (const [k, label] of SCEN) {
   if (!hit.length) {
     missing++;
     console.log(`  ${label}:❌ 沒有任何預設場地 —— 需新增測試場地`);
-    // 沒場地時把候選一起印出來:離兵線多遠、規劃有沒有落空,決定要不要重烤兵線 / 換錨點
+    // With no venue, print candidates too: distance to lane, whether planning missed — decides lane
+    // re-bake vs anchor swap
     if (k === 'underpass') {
       const cand = results.filter((r) => r.underCand).map((r) => `${r.id}(${r.underCand.name} ${r.underCand.len}m 離兵線 ${r.underCand.d}m)`);
       const lost = results.filter((r) => r.flatTunnel).map((r) => `${r.id}(${r.flatTunnel.name})`);
@@ -542,7 +573,8 @@ for (const [k, label] of SCEN) {
     }
     continue;
   }
-  // 首選 = 該場景「量」最大的場地(隧道/橋取長度、高地取連續長度、平交道取最近)
+  // Top pick = the venue with the most "amount" of that scenario (tunnels/bridges by length, highlands by
+  // continuous length, crossings by nearest)
   const score = (r) => {
     const h = r.hits[k];
     return k === 'crossing' ? -h.d : (h.len ?? h.pts ?? 1);
@@ -551,10 +583,11 @@ for (const [k, label] of SCEN) {
   pick[k] = hit[0].id;
   console.log(`  ${label}:${hit[0].id}(${hit[0].name})　其他:${hit.slice(1).map((r) => r.id).join('、') || '—'}`);
 }
-// ---- venues.js 的 scen / relief 標記 MUST 對得上實測(標記是給玩家看的提示,不能是臆測)----
-// relief(側翼峰值)與 scen 同一條規則:2026-08-02 起場地選單會用它推導「起伏」分級
-// (venues.js reliefTier),手寫或忘了更新都會讓玩家在選單看到與地圖不符的地形說明。
-// 只在「整批掃描且該場地確實取得圖資」時比對:--only= 或 Overpass 掛掉時無從判定漏標。
+// ---- venues.js scen / relief tags MUST match surveys (tags are player-facing hints, never guesses) ----
+// relief (flank peaks) follows the same rule as scen: since 2026-08-02 the venue menu derives its
+// "relief" tier from it (venues.js reliefTier); hand-writing or forgetting updates shows players menu
+// terrain blurbs that disagree with the map. Compare only on "full scan with map data actually fetched":
+// --only= or a dead Overpass leaves missing tags undecidable.
 let tagBad = 0;
 if (!ONLY.length && !skipped) {
   console.log('\nvenues.js scen / relief 標記複驗:');
@@ -575,7 +608,7 @@ if (!ONLY.length && !skipped) {
   if (!tagBad) console.log('  ✓ 全數相符');
 }
 if (ARG.json) writeFileSync(ARG.json, JSON.stringify({ results, pick }, null, 2));
-const NEED = SCEN.length - KNOWN_GAP.size;   // 已知缺口不列入分母(換地圖解不了)
+const NEED = SCEN.length - KNOWN_GAP.size;   // known gaps excluded from the denominator (no map swap fixes them)
 console.log(`\n總結:${NEED - missing}/${NEED} 種場景有預設場地(另 ${KNOWN_GAP.size} 種為引擎已知缺口)、標記不符 ${tagBad}`
   + `${skipped ? `、未掃 ${skipped} 個場地(時間預算)` : ''}`);
 process.exit(missing || tagBad || skipped ? 1 : 0);

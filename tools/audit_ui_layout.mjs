@@ -1,15 +1,15 @@
 // ============ 選單版型稽核(大廳 / 房間 / 選角 / 疊層,直式手機)============
-// 用途:改 `index.html` 的選單骨架、`style.css` 的 `body.touch-ui.ori-portrait` 段,
-// 或 `main.js` 的按鈕字串後,驗證「桌機左右並排的區塊/按鍵,手機直式也左右並排」這條原則,
-// 以及選角詳細說明不再被頭像/展示台蓋住。
+// Purpose: after changing menu skeleton in index.html, the body.touch-ui.ori-portrait block in style.css,
+// or button strings in main.js, verify the rule that blocks and buttons side-by-side on desktop stay side-by-side in portrait,
+// and that character detail text is no longer covered by portrait or stage.
 //
-// 為什麼要有這支:手機版的選單缺陷同樣是**幾何**問題 ——
-//   ① 三顆入口鈕改直排 ⇒ 第三顆「劇情戰役」被推到摺線以下,玩家回報「沒看到劇情模式的按鍵」;
-//   ② `.cd-art` 的 sticky 在單欄版型下會把不透明的頭像黏在容器頂端、蓋掉詳細說明。
-// 兩者在桌機瀏覽器上都看不出來,肉眼也量不準,故一律用量框斷言。
+// Why this audit exists: mobile menu defects are geometry problems too --
+//   1: three entry buttons stacked vertically pushes the third story-mode button below the fold, reported as a missing story button;
+//   2: sticky cd-art in single-column layout pins the opaque portrait at the container top and covers the detail text.
+// Both are invisible on desktop and unmeasurable by eye, so all checks use box assertions.
 //
-// 不需要 three.js —— 只載 DOM/CSS(3D 模組在沙箱/CI 常因 CDN 被擋而載不到),
-// 選角面板改以代表性骨架灌進去量。跑法:`node tools/audit_ui_layout.mjs [-v]`
+// No three.js needed -- loads DOM and CSS only, since 3D modules are often blocked by CDN in sandbox and CI,
+// and the character panel is measured through a representative skeleton. Run via node tools/audit_ui_layout.mjs with optional -v.
 import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
 import { readSrc } from './audit_src.mjs';
 

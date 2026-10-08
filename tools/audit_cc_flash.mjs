@@ -1,21 +1,21 @@
-// ============ 異常狀態致盲白幕 + 蓄力跳水平移速 稽核 ============
-// 用途:改 `data.js` 的 `CC_FLASH`/`ccFlashAlpha()`/`CJUMP.AIR_SPD_F`,或 `game.js` 的
-// `_ccFeed`/`_blindFlash`/`_updateCcFlash`/`_clearCcFlash`/`_chargeJump`/`_updatePlayer` 移動段後跑。
+// ============ Crowd-control blinding flash plus charged-jump horizontal speed audit ============
+// Purpose: run after changing CC_FLASH, ccFlashAlpha, or CJUMP.AIR_SPD_F in data.js, or the
+// ccFeed, blindFlash, updateCcFlash, clearCcFlash, chargeJump, or updatePlayer movement block in game.js.
 //
-// 為什麼兩件事合在一支:它們是同一種形狀的縫 —— **data.js 一個常數 → game.js 多個消費端**,
-// 而「只改了其中一個消費端」在遊戲裡都看不出來:
-//   ① 白幕:峰值/曲線在 data.js,觸發在 `_ccFeed` 上升沿、衰減在 `_updateCcFlash`。
-//      漏掉任一端 = 「只白一幀」或「白著不淡」,肉眼以為是掉幀。
-//   ② 蓄力跳水平移速:`CJUMP.AIR_SPD_F` 有兩個消費端(起跳彈射初速 + 騰空操縱移速)。
-//      只改一處 = 「彈得遠但空中推杆很慢」或「起跳沒變快只是滑得久」,量不出來只感覺怪。
-// 另驗兩條反模式:白幕 MUST NOT 掛 CSS transition/animation(與逐幀曲線相爭 ⇒ 峰值被鈍化);
-// 蓄力跳的**垂直**項(CJUMP.V / GRAV_F)MUST NOT 吃水平倍率(否則跳躍高度/滯空一起變,
-// 滿蓄頂點會撞上 GAME.AA_MIN_ALT 的設計前提)。
+// Why both live in one audit: they share one seam shape -- one constant in data.js feeds several consumers in game.js,
+// and updating only one consumer is invisible in play:
+//   1: white flash with peak and curve in data.js, triggered on the rising edge of ccFeed and decayed in updateCcFlash.
+//      Missing either end shows one white frame or a flash that never fades, easily mistaken for dropped frames.
+//   2: charged-jump horizontal speed CJUMP.AIR_SPD_F has two consumers, launch velocity plus airborne steering speed.
+//      Changing only one feels wrong without a measurable cause, either far launch with slow air control or no faster launch with longer glide.
+// Two anti-patterns are also checked: the flash MUST NOT use CSS transition or animation, which fights the per-frame curve and dulls the peak;
+// the vertical terms CJUMP.V and GRAV_F of the charged jump MUST NOT take the horizontal multiplier, or jump height and hang time change together
+// and the fully charged apex breaks the GAME.AA_MIN_ALT design premise.
 //
-// 手法比照 `audit_minimap_view.mjs`:曲線直接 import(data.js 是純模組),
-// game.js 的方法**抽執行原文**評估(three 走 CDN、Node 端 import 不了整支;抄一份公式就永遠會通過)。
-// 跑法:`node tools/audit_cc_flash.mjs`
-// 讀原文與抽方法走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
+// Method follows audit_minimap_view: curves are imported directly since data.js is a pure module,
+// while game.js methods are evaluated from extracted genuine source, because three loads via CDN that Node cannot import and a copied formula would always pass.
+// Run via node tools/audit_cc_flash.mjs
+// Source reading and method extraction go through the audit_src single seam, including newline normalization, since per-line comment stripping silently fails on CRLF checkouts.
 import { readSrc, grabMethod } from './audit_src.mjs';
 import { CC_FLASH, ccFlashAlpha, ccFlashDur, CJUMP } from '../public/js/data.js';
 
@@ -24,11 +24,11 @@ const mainSrc = readSrc('public', 'js', 'main.js');
 const css = readSrc('public', 'css', 'style.css');
 const html = readSrc('public', 'index.html');
 
-/** 抽出 class 方法的原文(含大括號區塊);與 audit_minimap_view.mjs 同一手法 */
+/** Extract genuine class method source including its brace block; same technique as audit_minimap_view */
 const grab = (name) => grabMethod(src, name);
 
-// 「全檔只有 N 處」這類計數 MUST 只數**執行原文** —— 註解與 import 清單也提得到同一個名字,
-// 連著數會把「說明寫得詳細」誤判成「縫破了」。故先剝掉區塊/行註解與檔頭 import 段再數。
+// Counts of the whole file has N places form MUST count executed source only -- comments and import lists mention the same names,
+// counting them together mistakes detailed docs for a broken seam. So strip block and line comments plus the header import block before counting.
 const code = src
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .split('\n').map((l) => l.replace(/(^|[^:'"`])\/\/.*$/, '$1')).join('\n')
@@ -48,7 +48,7 @@ console.log('■ Ⅰ 白幕曲線(data.js CC_FLASH / ccFlashAlpha:全白段 → 
   t('全白段:剛觸發即峰值', near(ccFlashAlpha(D, 0.8), 0.8), `${ccFlashAlpha(D, 0.8)}`);
   t('全白段:剩餘 = FADE_S 仍為峰值(HOLD 段邊界)', near(ccFlashAlpha(CC_FLASH.FADE_S, 0.8), 0.8));
   t('全白段長度實測 = HOLD_S', near(
-    (() => {   // 由 D 往下掃,找出最後一個仍為峰值的時點
+    (() => {   // Scan downward from D to find the last point still at peak
       let last = D;
       for (let i = 0; i <= 2000; i++) { const x = D - i * D / 2000; if (near(ccFlashAlpha(x, 1), 1, 1e-12)) last = x; else break; }
       return D - last;
@@ -98,10 +98,10 @@ console.log('■ Ⅲ 白幕單一縫(觸發 / 衰減 / 清除只各一處)');
     /_stunOn[\s\S]*?'stun'\)/.test(feed) && /_confOn[\s\S]*?'conf'\)/.test(feed) && /_empOn[\s\S]*?'emp'\)/.test(feed));
   t('物理系狀態 MUST NOT 帶致盲參數', ['_slowOn', '_bleedOn', '_markOn', '_invOn'].every((k) => {
     const line = feed.split('\n').find((l) => l.includes(k)) || '';
-    return !/,\s*'\w+'\)/.test(line.replace(/'[^']*[!!][^']*'/, "''"));   // 播報字串本身不算參數
+    return !/,\s*'\w+'\)/.test(line.replace(/'[^']*[!!][^']*'/, "''"));   // Announcement strings do not count as parameters
   }));
-  // 觸發/衰減兩端 MUST 都接上:漏了衰減 = 白幕定格不淡(玩家以為畫面壞了),
-  // 漏了觸發 = 整個系統靜默失效 —— 兩者在單測裡都看不出來,只能驗「呼叫點確實在幀迴圈/上升沿裡」。
+  // Both trigger and decay ends MUST be wired: missing decay freezes the flash opaque, looking like a broken frame,
+  // while missing trigger disables the whole system silently -- neither shows in unit tests, so verify call sites sit in the frame loop and on the rising edge.
   t('_updateCcFlash 掛在主渲染幀(與玩家視角模式無關)',
     /this\._updatePlayer\(dt, now\);[\s\S]{0,180}?this\._updateCcFlash\(dt\);/.test(code)
     && count(code, 'this._updateCcFlash(dt)') === 1);
@@ -139,16 +139,16 @@ console.log('■ Ⅳ 白幕行為直測(執行 game.js 原文:更亮者勝 / 逐
     t('強度 0 / 未進表的狀態不觸發(peak undefined 無效果)', near(c._ccFlashPeak, CC_FLASH.PEAK.stun));
   }
   {
-    // 峰值直接給定(MUST NOT 拿 PEAK 表的值當測資:表一調就變成兩個都比得過/比不過的空轉斷言)
+    // Give peak values directly: MUST NOT use PEAK table entries as test inputs, or tuning the table turns the check into a vacuous assertion
     const [c] = mk();
     c._blindFlash(1);
-    c._updateCcFlash(CC_FLASH.HOLD_S + CC_FLASH.FADE_S * 0.5);    // 淡到一半(alpha = 0.5)
+    c._updateCcFlash(CC_FLASH.HOLD_S + CC_FLASH.FADE_S * 0.5);    // Faded to half, alpha 0.5
     const half = ccFlashAlpha(c._ccFlashLeft, c._ccFlashPeak);
     const leftHalf = c._ccFlashLeft;
-    c._blindFlash(half * 0.5);                                    // 明顯更暗的新狀態
+    c._blindFlash(half * 0.5);                                    // Clearly dimmer new state
     t('較暗的新狀態 MUST NOT 打斷正在淡出的亮白幕',
       near(c._ccFlashPeak, 1) && near(c._ccFlashLeft, leftHalf), `half=${half.toFixed(3)}`);
-    c._blindFlash(Math.min(1, half * 1.5));                       // 比當下更亮 → 重新來一次
+    c._blindFlash(Math.min(1, half * 1.5));                       // Brighter than current, so restart once
     t('更亮的新狀態重置白幕(當下更亮者勝)',
       near(c._ccFlashLeft, ccFlashDur()) && near(c._ccFlashPeak, Math.min(1, half * 1.5)), `half=${half.toFixed(3)}`);
   }
@@ -171,7 +171,7 @@ console.log('■ Ⅳ 白幕行為直測(執行 game.js 原文:更亮者勝 / 逐
     t('清除:剩餘/峰值歸零並推一次 0(陣亡/換座機不留白幕)',
       c._ccFlashLeft === 0 && c._ccFlashPeak === 0 && pushed.at(-1) === 0);
   }
-  t('陣亡與換座機都清白幕', count(code, '_clearCcFlash()') >= 3);   // 定義 1 + 陣亡 1 + 換座機 1
+  t('陣亡與換座機都清白幕', count(code, '_clearCcFlash()') >= 3);   // One definition plus one death path plus one seat-change path
 }
 
 // ---------------------------------------------------------------------------
@@ -179,7 +179,7 @@ console.log('■ Ⅴ 蓄力跳水平移速(CJUMP.AIR_SPD_F 兩個消費端同吃
 // ---------------------------------------------------------------------------
 {
   t('AIR_SPD_F = 2(水平移速 +100%)', near(CJUMP.AIR_SPD_F, 2), `${CJUMP.AIR_SPD_F}`);
-  // ① 起跳彈射初速:抽 _chargeJump 原文執行,量水平/垂直兩軸
+  // First consumer, launch velocity: execute genuine _chargeJump source and measure horizontal and vertical axes
   const THREE = {
     Vector3: class {
       constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
@@ -188,7 +188,7 @@ console.log('■ Ⅴ 蓄力跳水平移速(CJUMP.AIR_SPD_F 兩個消費端同吃
     },
   };
   const proto = new Function('THREE', 'CJUMP', 'shockRing', `return ({ ${grab('_chargeJump')} });`)(THREE, CJUMP, () => {});
-  // 移速取自 `_mobility`(2026-08-04 移速壓縮起的唯一取速處;見 audit_speed_comp.mjs)
+  // Move speed comes from _mobility, the single speed source since the 2026-08-04 compression; see audit_speed_comp
   const u = { speed: 20 };
   const run = (charge) => {
     const c = Object.assign(Object.create(null), proto, {
@@ -208,7 +208,7 @@ console.log('■ Ⅴ 蓄力跳水平移速(CJUMP.AIR_SPD_F 兩個消費端同吃
   t('水平初速 ∝ 蓄力比例', near(Math.hypot(run(0.5).vel.x, run(0.5).vel.z),
     u.speed * CJUMP.FWD_F * CJUMP.AIR_SPD_F * 0.5));
   t('起跳即進低重力(_lowG)', full._lowG === true);
-  // ② 騰空操縱移速:_updatePlayer 移動段(整支太大,驗原文的乘法鏈)
+  // Second consumer, airborne steering speed in the _updatePlayer movement block: too large to execute, so verify the multiplier chain in source
   const move = /const airK = this\._lowG \? CJUMP\.AIR_SPD_F : 1;/.test(code);
   const applied = /this\.pos\.addScaledVector\(move,[\s\S]{0,260}?\* airK \* dt\)/.test(code);
   t('騰空操縱移速乘 airK = _lowG ? AIR_SPD_F : 1', move && applied, `宣告 ${move} / 套用 ${applied}`);

@@ -1,6 +1,6 @@
 // ============ Art Swipe (horizontal toggles mode / vertical steps selection) ============
 // Zero-dependency swipe detector shared by all avatar walls and portrait views.
-// Touch + mouse drag. Callers bind horizontal (onPrev/onNext) to 角色/機體 display
+// Touch + mouse drag. Callers bind horizontal (onPrev/onNext) to char/mech display
 // toggle and vertical (onUp/onDown) to prev/next stepping.
 // Post-swipe click suppression: a drag starting on a button MUST NOT also fire
 // that button's click and undo the swipe. No pointer capture is used — capture
@@ -31,7 +31,7 @@ function ensureDocGuard() {
 
 /**
  * Attach four-direction swipe.
- * Horizontal: right = onPrev, left = onNext (avatar walls bind 角色/機體 toggle).
+ * Horizontal: right = onPrev, left = onNext (avatar walls bind char/mech toggle).
  * Vertical: up = onUp, down = onDown (bind prev/next stepping).
  * @param {HTMLElement} el swipe surface
  * @param {object} opt `{ onPrev, onNext, onUp, onDown }`
@@ -62,7 +62,7 @@ export function attachArtSwipe(el, opt = {}) {
     if (tracking) return;
     const p = e.touches?.[0] || e;
     if (p.clientX == null || p.clientY == null) return;
-    suppressUntil = 0; lastSwipeAt = 0; // 新手勢開始:只吞上一次滑動的尾隨 click,不擋這次的點選
+    suppressUntil = 0; lastSwipeAt = 0; // New gesture starts: swallow only the trailing click of the last swipe, never block this tap
     sx = p.clientX; sy = p.clientY; tracking = true; pid = e.pointerId ?? 't';
   };
   const up = (e) => {
@@ -81,8 +81,8 @@ export function attachArtSwipe(el, opt = {}) {
     if (e && pid !== null && e.pointerId !== undefined && e.pointerId !== pid) return;
     tracking = false; pid = null;
   };
-  // 拖曳後的 click(滑鼠必有,觸控視瀏覽器而定)會點中起始那顆按鈕而抵銷滑動:
-  // 捕獲期吞掉即可,不影響一般的點選(未滑動時 suppressUntil 已過期)。
+  // Trailing click after drag (always on mouse, browser-dependent on touch) would hit the start button and cancel the swipe:
+// swallow it in capture phase, normal taps unaffected (suppressUntil already expired when no swipe).
   const clickCap = (e) => {
     if (performance.now() < suppressUntil) { e.preventDefault(); e.stopPropagation(); }
   };
@@ -90,8 +90,8 @@ export function attachArtSwipe(el, opt = {}) {
   el.addEventListener('pointerup', up);
   el.addEventListener('pointercancel', cancel);
   el.addEventListener('click', clickCap, true);
-  // PointerEvent 存在的瀏覽器另外掛 touch 會同一次滑動打兩次 fire:
-  // 舊 throttle 會連帶吃掉 350ms 內的合法連滑,改為只留一組事件源。
+  // Browsers with PointerEvent double-fire the same swipe if touch is also bound:
+// old throttle would also eat legit chained swipes within 350ms, keep only one event source.
   const hasPointer = typeof PointerEvent !== 'undefined'
     || (typeof window !== 'undefined' && 'onpointerdown' in window);
   if (!hasPointer) {

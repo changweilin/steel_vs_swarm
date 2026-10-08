@@ -45,7 +45,7 @@ export class Net {
     this.ws.onopen = () => {
       this.connected = true;
       this._fails = 0;
-      clearTimeout(this._toastT);   // 短暫抖動內恢復:前面排隊的斷線通知作廢
+      clearTimeout(this._toastT);   // Recovered within brief jitter: queued disconnect notice is void
       if (this._everOpen) {
         this.h.reconnect?.();     // Reconnection: client emits reattach to reclaim player slot
       } else {
@@ -68,7 +68,7 @@ export class Net {
       if (this._dead) return;
       // 1009 = Message exceeds frame size limit (typically world/map payload upload).
       const msg = e?.code === 1009 ? '上傳資料超過上限被斷線,重連中…(反覆發生請重整後重試)' : '與伺服器斷線,重連中…';
-      // 短暫抖動不彈錯:4 秒內重連成功就當沒事,免得正常等待被錯誤洗版;背景分頁全程靜默(回可見後看門狗接手)
+      // No error popup on brief jitter: success within 4s counts as no-op to avoid spamming normal waits; background tabs stay silent (watchdog takes over on visible)
       clearTimeout(this._toastT);
       this._toastT = setTimeout(() => {
         if (this._dead || this.connected) return;

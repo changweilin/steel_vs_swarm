@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<!-- 手機:禁縮放/雙擊放大(戰場觸控要吃掉所有手勢)+ 挖孔螢幕安全區(CSS env(safe-area-inset-*)) -->
+<!-- Mobile: no pinch/double-tap zoom (battle touch consumes all gestures) + notch safe area (CSS env(safe-area-inset-*)) -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<!-- Leaflet 只在建圖頁按需載入(main.js ensureLeaflet),首屏不付 200KB+ 阻塞 -->
+<!-- Leaflet loads on demand on the map-builder page only (main.js ensureLeaflet); first paint avoids 200KB+ blocking -->
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">
 {
@@ -25,7 +25,7 @@
 </head>
 <body data-side="SPEC">
 
-<!-- ========= 序章開場動畫 (初次啟動或手動重播) ========= -->
+<!-- ========= Prologue intro cinematic (first launch or manual replay) ========= -->
 <div id="prologueIntro" class="prologue-screen" style="display:none">
   <div class="prologue-stage" id="prologueStage">
     <div class="prologue-scenes" id="prologueScenes"></div>
@@ -64,7 +64,7 @@
   </div>
 </div>
 
-<!-- ========= 大廳 ========= -->
+<!-- ========= Lobby ========= -->
 <div id="connect" class="screen center-screen">
   <div class="scanlines"></div>
   <div class="sysbar"><span><b>TACTICAL NET</b> // NODE 8620</span><span>戰術終端 <i>●</i> ONLINE</span></div>
@@ -94,27 +94,27 @@
       <button id="superBtn" class="btn big super-btn">⚡ 超級大戰</button>
     </div>
 
-    <!-- 連線機制:雲端 / 區網 Tailscale / 單機。
-         鈕面文字只由 netmode.js 的 LINK_MODES 提供,main.js 進場時灌入;
-         HTML 只保留結構與掛點,避免靜態文案與動態 UI 分成兩份。 -->
+    <!-- Link modes: cloud / LAN Tailscale / solo.
+         Button labels come only from netmode.js LINK_MODES, injected by main.js on entry;
+         HTML keeps structure and mount points only, so static copy and dynamic UI never split in two. -->
     <div class="divider">─── 連線機制 ───</div>
     <div class="row link-modes" id="linkModes">
       <button id="link_cloud" class="btn link-btn"></button>
       <button id="link_lan" class="btn link-btn"></button>
       <button id="link_solo" class="btn link-btn"></button>
     </div>
-    <!-- 各機制的說明已改成該顆鈕自己的懸浮提示(main.js renderLinkModes → attachTip),
-         MUST NOT 再放一行常駐文字 —— 三顆鈕下面掛一段長敘述會把「加入現有戰區」推出首屏。 -->
+    <!-- Each mode's description is now that button's own tooltip (main.js renderLinkModes -> attachTip),
+         MUST NOT add another persistent line -- a long paragraph under three buttons would push "join battle zone" off first paint. -->
     <div class="row link-cloud" id="cloudRow" style="display:none">
       <input id="cloudUrl" placeholder="wss://節點網址" autocomplete="off" spellcheck="false">
       <button id="cloudApplyBtn" class="btn">↯ 連線</button>
     </div>
 
-    <!-- 操作方式(限定滑鼠鍵盤 / 限定搖桿 / 不限定)已改由**房主在戰區畫面決定**、整房一致
-         (2026-07-31 使用者定案;規則住 js/ctrlmode.js、選項掛在 #roomCtrlMount)。
-         個人的「目前操控」切換併入設定頁(#lobbyMenuCtrlMount / #pauseCtrlMount)。 -->
+    <!-- Control scheme (keyboard-mouse only / pad only / unrestricted) is now decided **by the host on the room screen**, room-wide
+         (user decision (2026-07-31); rules live in js/ctrlmode.js, options mount at #roomCtrlMount).
+         Personal "current controls" switching merged into the settings pages (#lobbyMenuCtrlMount / #pauseCtrlMount). -->
 
-    <!-- 加入現有戰區:單機模式沒有遠端戰區可加入,main.js 會整區收起 -->
+    <!-- Join battle zone: solo mode has no remote zones to join; main.js collapses the whole section -->
     <div id="joinArea">
       <div class="divider">─── 加入現有戰區 ───</div>
       <div class="join-mode">
@@ -131,10 +131,10 @@
         </div>
       </details>
     </div>
-    <!-- 手機操控設定與自我診斷:觸控裝置才顯示(main.js 依 touchCapable() 決定) -->
+    <!-- Touch controls setup and self-diagnostics: shown on touch devices only (main.js decides via touchCapable()) -->
     <button id="touchSetupBtn" class="btn" style="display:none">📱 手機操控</button>
 
-    <!-- 開場即可打開設定 / 說明(內容與戰場暫停選單同一份,經共用函式渲染,MUST NOT 各寫一份)-->
+    <!-- Settings / help openable from launch (same content as battle pause menu, rendered via shared functions, MUST NOT fork a copy) -->
     <div class="divider">─── 設定與說明 ───</div>
     <div class="row lobby-sys">
       <button id="lobbySettingsBtn" class="btn">⚙ 設定</button>
@@ -143,7 +143,7 @@
   </div>
   <footer class="foot-note">2D 地圖 / 3D 地形引擎:mapping_elf ・ 房間系統:ai_tycoon ・ 3D 模型:Quaternius (CC0)</footer>
 
-  <!-- 本機伺服器首頁懸浮快速開始按鍵與清除預載按鈕 -->
+  <!-- Local-server home floating quick-start button and preload-clear button -->
   <div id="quickRestartFabGroup" class="quick-restart-fab-group" style="display:none">
     <button id="quickRestartFab" class="quick-restart-fab" type="button" title="快速開始" aria-label="快速開始">
       <span class="qr-icon">⚡</span>
@@ -183,7 +183,7 @@
   </div>
 </div>
 
-<!-- ========= 建立地圖(場地 / 選址,建好後存入最愛;三線母體固定,與人數無關)========= -->
+<!-- ========= Map builder (venue / siting; saves to favorites when done; three-lane parent fixed regardless of player count) ========= -->
 <div id="mapbuilder" class="screen" style="display:none">
   <div class="map-panel setup-panel">
     <div class="panel-head">▍建立地圖 — 建好後加入最愛地圖,開戰時刻時再選用</div>
@@ -247,7 +247,7 @@
   <div id="leafletMap"></div>
 </div>
 
-<!-- ========= 開戰時刻(從已存地圖挑一個,設定房名/公開性/環境後開房)========= -->
+<!-- ========= Deploy (pick a saved map, set room name / visibility / environment, then open) ========= -->
 <div id="openroom" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
   <div class="sysbar"><span id="openRoomSysLeft"><b>DEPLOY</b> // 戰區生成</span><span>MAP × TEAM × ENV <i>●</i></span></div>
@@ -295,7 +295,7 @@
   </div>
 </div>
 
-<!-- ========= 劇情戰役(雙陣營雙故事線:選陣營 → 選章 → 圖文簡報 + 選主駕 → 出戰)========= -->
+<!-- ========= Campaign (two factions, two storylines: pick faction -> chapter -> illustrated briefing + pilot pick -> deploy) ========= -->
 <div id="story" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
   <div class="sysbar"><span><b>CAMPAIGN</b> // 雙陣營戰線</span><span>STEEL ⇄ SWARM <i>●</i></span></div>
@@ -316,7 +316,7 @@
   </div>
 </div>
 
-<!-- 世界觀・序章(長篇敘事閱讀與動畫切換)-->
+<!-- Worldview prologue (long-form reading with animation switch) -->
 <div id="worldOverlay" class="overlay" style="display:none">
   <div class="overlay-box world-box has-close">
     <button class="ov-close" type="button" aria-label="關閉" data-ovclose="worldCloseBtn">✕</button>
@@ -396,7 +396,7 @@
   </div>
 </div>
 
-<!-- 劇情簡報(選定章節後跳出:圖文並茂長篇 + 選主駕;出擊 = 自動部署開戰)-->
+<!-- Story briefing (pops after chapter pick: illustrated long-form + pilot pick; deploy = auto-deploys the battle) -->
 <div id="storyBrief" class="overlay" style="display:none">
   <div class="overlay-box story-brief-box">
     <button class="ov-close" type="button" aria-label="關閉" data-ovclose="storyBriefCloseBtn">✕</button>
@@ -410,7 +410,7 @@
 </div>
 
 
-<!-- ========= 房間(陣營配對,每陣營 N 席)========= -->
+<!-- ========= Room (faction match-up, N seats per faction) ========= -->
 <div id="room" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
   <div class="sysbar"><span><b>BRIEFING</b> // 陣營配對</span><span>STEEL × SWARM <i>●</i></span></div>
@@ -419,10 +419,10 @@
     <div class="room-meta">PIN <b id="roomPin">----</b> ・ 區網 <span id="roomUrls"></span></div>
     <div class="room-map-info" id="roomMapInfo"></div>
     <div class="room-map-info" id="roomPreload"></div>
-    <!-- 房間設定(整房一致;房主可改、其他人唯讀):電腦難度 / 操作方式**分頁切換**,
-         一次只攤開一組(2026-07-31 使用者定案)。選項 DOM 一律由共用渲染注入 ——
-         電腦難度走 main.js renderBotDiff()、操作方式走 mobile.js renderCtrlModeRow(),
-         兩者共用 `.seg`/`.segb` 分段按鈕樣式,MUST NOT 在這裡另寫一組。 -->
+    <!-- Room settings (room-wide; host edits, others read-only): bot difficulty / control scheme switch by **tab**,
+         only one group expanded at a time (user decision (2026-07-31)). Option DOM always injected by shared renderers --
+         bot difficulty via main.js renderBotDiff(), control scheme via mobile.js renderCtrlModeRow(),
+         both share `.seg`/`.segb` segmented-button styles; MUST NOT author a second set here. -->
     <div class="room-cfg" id="roomCfg">
       <span class="seg seg-sm room-cfg-tabs" id="roomCfgTabs">
         <button class="segb on" type="button" data-cfg="diff">▣ 電腦難度</button>
@@ -433,10 +433,10 @@
     </div>
   </header>
 
-  <!-- 卡序 = 主視覺方位:STEEL 左(藍)/ SWARM 右(黃),與 logo、標題橫幔、底圖對抗場一致 -->
+  <!-- Card order = hero visual orientation: STEEL left (blue) / SWARM right (yellow), matching logo, title banners, and backdrop clash -->
   <div class="side-cards" id="sideCards">
     <div class="side-card steel" id="sideSTEEL">
-      <!-- 陣營軍旗:齒輪環 + 機甲三角(取自 logo 的鋼鐵徽記,平塗硬邊重繪) -->
+      <!-- Faction banner: gear ring + mecha triangle (from the logo's STEEL crest, flat hard-edge redraw) -->
       <div class="side-emblem">
         <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="鋼鐵軍團">
           <path d="M8 26 H142 V34 H8 Z" fill="currentColor"/>
@@ -454,7 +454,7 @@
     </div>
     <div class="side-vs" id="steelVs">VS</div>
     <div class="side-card super" id="sideSUPER" hidden>
-      <!-- 動態融合撕裂交錯的幾何細線背景 (無固定斜率，非平行破裂碎塊) -->
+      <!-- Animated fused-tear interlaced geometric hairlines (no fixed slope, non-parallel shards) -->
       <div class="super-geom-bg" aria-hidden="true">
         <svg class="super-geom-svg" viewBox="0 0 300 400" preserveAspectRatio="none">
           <g class="geom-layer geom-steel">
@@ -473,7 +473,7 @@
           </g>
         </svg>
       </div>
-      <!-- 中央動態雷電線 (布朗運動隨機游走折線) -->
+      <!-- Central animated lightning (Brownian random-walk polyline) -->
       <div class="super-lightning-container" aria-hidden="true">
         <svg class="super-lightning-svg" viewBox="0 0 100 400" preserveAspectRatio="none">
           <defs>
@@ -522,7 +522,7 @@
     </div>
     <div class="side-vs super-vs" id="superVs" hidden>VS</div>
     <div class="side-card swarm" id="sideSWARM">
-      <!-- 陣營軍旗:倒三角 + 展翼 + 蜂巢(取自 logo 的蜂群徽記,平塗硬邊重繪) -->
+      <!-- Faction banner: inverted triangle + spread wings + hive (from the logo's SWARM crest, flat hard-edge redraw) -->
       <div class="side-emblem">
         <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="蜂群兵團">
           <path d="M8 26 H142 V34 H8 Z" fill="currentColor"/>
@@ -543,13 +543,13 @@
       <div class="side-slots"></div>
     </div>
   </div>
-  <!-- 準備/開戰/離開:置於軍團(陣營)選擇正下方 -->
+  <!-- Ready / deploy / leave: placed directly under the legion (faction) pick -->
   <div class="row room-actions">
     <button id="readyBtn" class="btn big" disabled>◆ 準備</button>
     <button id="startBattleBtn" class="btn big steel-btn" disabled>▶▶ 開戰</button>
     <button id="leaveRoomBtn" class="btn">離開</button>
   </div>
-  <!-- 選角(入座後出現;不選 = 開戰隨機) -->
+  <!-- Character pick (appears after seating; no pick = random at deploy) -->
   <div class="char-section" id="charSection" style="display:none">
     <div class="panel-head" id="charSectionHead">▍選擇角色</div>
     <div class="row seg seg-sm char-side-tabs" id="charSideTabs" style="display:none; justify-content:center; margin-bottom:8px">
@@ -562,7 +562,7 @@
       <div class="char-detail" id="charDetail"></div>
     </div>
     <div class="char-info" id="charInfo"></div>
-    <!-- NPC / 攻擊建築圖鑑(現役單位,雙陣營外觀;左選項右展示台+數據,與角色卡同框並存) -->
+    <!-- NPC / attack-building codex (active units, both-faction looks; options left, stage + stats right, coexists with character cards) -->
     <div class="unit-section" id="unitSection">
       <div class="unit-head">
         <span class="unit-head-title">▍NPC / 攻擊建築圖鑑</span>
@@ -575,11 +575,11 @@
     </div>
   </div>
   <div class="spec-list" id="specList"></div>
-  <!-- 常駐說明已改懸浮提示(文字唯一真相 = help.js UI_TIPS.room,同時進說明分頁「介面」類) -->
+  <!-- Persistent notes moved to tooltips (single source of text = help.js UI_TIPS.room, also under help tab "interface") -->
   <p class="room-hint"><span id="roomHint"></span><button class="tip-dot" type="button" aria-label="說明" data-tipkey="room">ⓘ</button></p>
 </div>
 
-<!-- ========= 載入 ========= -->
+<!-- ========= Loading ========= -->
 <div id="loading" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
   <div class="sysbar"><span><b>SYNC</b> // 地形高程 + 影像</span><span>STAND BY <i>●</i></span></div>
@@ -592,15 +592,15 @@
   </div>
 </div>
 
-<!-- ========= 戰鬥 ========= -->
+<!-- ========= Battle ========= -->
 <div id="game" class="screen" style="display:none">
   <canvas id="gameCanvas"></canvas>
-  <!-- 招式立繪演出層(cutin.js 掛節點;純 2D,不進 3D 場景) -->
+  <!-- Ability cut-in layer (cutin.js mount; pure 2D, never enters the 3D scene) -->
   <div id="cutinLayer" class="cutin-layer"></div>
-  <!-- 劇情戰役對話層(dialogue.js 掛節點:攻堅進度條 + 下緣無線電對話條) -->
+  <!-- Campaign dialogue layer (dialogue.js mount: siege progress bar + bottom radio ticker) -->
   <div id="dialogueLayer" class="dlg-layer"></div>
 
-  <!-- 劇情戰役 BOSS 頂部血條 -->
+  <!-- Campaign BOSS top HP bar -->
   <div id="bossBarWrap" class="boss-bar-wrap" style="display: none;">
     <img id="bossAvL" class="boss-av" src="" alt="" draggable="false" style="display: none;">
     <div class="boss-bar-mid">
@@ -617,7 +617,7 @@
     </div>
     <div class="boss-bar-track" id="bossBarTrack">
       <div id="bossSpBar" class="boss-sp-bar"></div>
-      <!-- 上層覆蓋下層:四段同軌疊放、早段在上;下段只有上段扣掉的部分才露出來(DOM 由底到頂) -->
+      <!-- Upper layers cover lower: four segments share one track, earlier segments on top; a lower segment shows only where the upper is depleted (DOM bottom-to-top) -->
       <div id="bossGhost3" class="boss-ghost"></div><div id="bossSeg3" class="boss-seg"></div>
       <div id="bossGhost2" class="boss-ghost"></div><div id="bossSeg2" class="boss-seg"></div>
       <div id="bossGhost1" class="boss-ghost"></div><div id="bossSeg1" class="boss-seg"></div>
@@ -644,81 +644,81 @@
 
   <div id="killFeed" class="kill-feed"></div>
 
-  <!-- 水下/沼澤視野變色:視線沒入水面下 → 藍(越深越黑)、沼澤 → 混濁紫(game.js 每幀推色與濃度)-->
+  <!-- Underwater/swamp vision tint: view below waterline -> blue (deeper = darker), swamp -> murky purple (game.js pushes color and density per frame) -->
   <div id="waterVeil" class="water-veil"></div>
 
-  <!-- 受傷效果:被擊瞬間全屏紅色暈影閃爍(game.js 偵測自機 HP/護盾下降時觸發)-->
+  <!-- Hurt effect: fullscreen red vignette flash on hit (game.js triggers when own HP/shield drops) -->
   <div id="hurtVig" class="hurt-vig"></div>
 
-  <!-- 火場滯留:視野漸霧化的煙塵暈影(game.js 每幀依火場滯留時間推 opacity 0~1)-->
+  <!-- Fire linger: vision-fogging smoke vignette (game.js pushes opacity 0-1 per frame by linger time) -->
   <div id="envFog" class="env-fog"></div>
 
-  <!-- 天氣濃霧:視野外霧白遮罩(game.js 每幀依 effectiveFog 推 opacity 0~1;狙擊鏡圈等比縮)-->
+  <!-- Weather fog: off-view white mask (game.js pushes opacity 0-1 per frame by effectiveFog; scope ring scales proportionally) -->
   <div id="weatherFog" class="weather-fog"></div>
 
-  <!-- 受擊濺血:半透明紅色血漬,位置由攻擊者方位決定、血滴大小隨傷害(main.js hud.blood 建/收節點)-->
+  <!-- Hit blood: translucent red stains, positioned by attacker bearing, drop size by damage (main.js hud.blood creates/removes nodes) -->
   <div id="bloodVig" class="blood-vig"></div>
 
-  <!-- 舉盾受擊螢光閃光:護盾接住時原血滴位置改噴青藍閃光(短閃快退;main.js hud.glint 建/收節點)-->
+  <!-- Shield-block glint: cyan-blue flash at the blood position when the shield catches a hit (short flash, fast decay; main.js hud.glint creates/removes nodes) -->
   <div id="glintVig" class="glint-vig"></div>
 
-  <!-- 異常狀態致盲:閃光彈(電磁)/致盲/麻痺上身瞬間全屏過曝變白,之後漸淡(game.js 每幀推 opacity)-->
+  <!-- Status blind: flash (EM) / blind / paralyze whites out the fullscreen on application, then fades (game.js pushes opacity per frame) -->
   <div id="ccFlash" class="cc-flash"></div>
 
-  <!-- 陣亡殉爆過場:全屏白閃(高潮/觸地瞬間) + 紅警邊框(過場期間常亮脈動);由 hud.deathCine 開關 -->
+  <!-- Death cine transition: fullscreen white flash (climax/ground-impact instant) + red alert border (steady pulse during transition); toggled by hud.deathCine -->
   <div id="deathFlash" class="death-flash"></div>
   <div id="deathAlert" class="death-alert"></div>
 
-  <!-- 狙擊模式(瞄準)可視遮罩:中央正圓可見、外圈全黑不可見(body.aiming 時顯示) -->
+  <!-- Sniper (aim) visibility mask: center circle visible, outer ring blacked out (shown while body.aiming) -->
   <div id="scopeVig" class="scope-vig"></div>
 
   <div class="crosshair"><div id="hitmark" class="hitmark"></div></div>
-  <!-- 被敵方準星鎖定:紅色脈動警示(sim 廣播 lock 事件時亮起) -->
+  <!-- Enemy crosshair lock-on: red pulsing warning (lights on sim broadcast lock event) -->
   <div id="lockWarn" class="lock-warn">⚠ 你已被鎖定</div>
-  <!-- 平民互動提示:靠近平民時顯示其陣營 + 操作鍵(game.js 每幀推狀態) -->
+  <!-- Civilian prompt: shows faction + action key near civilians (game.js pushes state per frame) -->
   <div id="civPrompt" class="civ-prompt"></div>
 
   <div class="hud-bottom">
     <div class="hud-self">
-      <!-- 自機頭像:資訊列左邊那格(桌機限定,觸控版由 CSS 收起);圖源 avatarURL,與 BOSS 頭像同一縫 -->
+      <!-- Own avatar: left cell of the info column (desktop only, collapsed by CSS on touch); source avatarURL, same seam as BOSS avatars -->
       <img id="selfAv" class="self-av" src="" alt="" draggable="false" style="display: none;">
       <div class="hud-side" id="hudSideName"></div>
-      <!-- 觀戰限定:常駐的觀戰操作說明(內容由 main.js renderSpecHelp 灌,
-           文字唯一真相 = help.js SPEC_CONTROLS;非觀戰時清空 + CSS 收起) -->
+      <!-- Spectate-only: persistent spectator controls help (content injected by main.js renderSpecHelp,
+           single source of text = help.js SPEC_CONTROLS; cleared + CSS-collapsed when not spectating) -->
       <div class="spec-help" id="specHelp"></div>
       <div class="squad-row" id="squadRow"></div>
-      <!-- 異常狀態圖示列:依剩餘時間排列,由 main.js hud.statusIcons 更新 -->
+      <!-- Status icon strip: ordered by remaining time, updated by main.js hud.statusIcons -->
       <div id="statusIcons" class="status-icons"></div>
       <div class="spbar"><div id="spBar" class="spbar-fill"></div><span id="spText" class="sp-text"></span></div>
       <div class="hpbar"><div id="hpBar" class="hpbar-fill"></div><span id="hpText" class="hp-text"></span></div>
       <div class="mpbar"><div id="mpBar" class="mpbar-fill"></div><span id="mpText" class="mp-text"></span></div>
-      <!-- 爬升動力(飛行機體專屬:無人機 / 飛行型態的變形者):往上飛才消耗,見 data.js FLIGHT -->
+      <!-- Climb power (fliers only: drones / flight-form morphers): drains only while ascending, see data.js FLIGHT -->
       <div id="liftBox" class="liftbar hidden"><div id="liftBar" class="liftbar-fill"></div><span id="liftText" class="lift-text"></span></div>
-      <!-- 這一整塊(角色數據)是**純顯示**:觸控版的動作全在虛擬搖桿上(見 #touchLayer),
-           搖桿 MUST NOT 蓋住這裡。招式名稱/冷卻仍以此為唯一渲染來源,再由 main.js 鏡射到搖桿鈕面。 -->
+      <!-- This whole block (character stats) is **display-only**: touch actions all live on the virtual sticks (see #touchLayer),
+           sticks MUST NOT cover this. Ability names/cooldowns still render only here, then main.js mirrors them onto stick buttons. -->
       <div class="wpn-box"><div class="wpn-fill" id="wpnFill"></div><span id="wpnName"></span><span id="wpnAmmo" class="wpn-ammo"></span></div>
       <div class="burst-box"><div class="burst-fill" id="burstFill"></div><span id="burstName">重武器</span> <span id="burstCd" class="burst-cd">就緒</span></div>
       <div class="ab-row">
         <div class="ab-box" id="abDef"><div class="ab-fill" id="abDefFill"></div><span class="ab-key">Q</span><span class="ab-name" id="abDefName">—</span><span class="ab-cd" id="abDefCd"></span></div>
         <div class="ab-box" id="abAtk"><div class="ab-fill" id="abAtkFill"></div><span class="ab-key">E</span><span class="ab-name" id="abAtkName">—</span><span class="ab-cd" id="abAtkCd"></span></div>
-        <!-- 空白鍵機動能力:無人機=完美迴避 / 機甲=蓄力跳躍 / 變形機甲=升空變形(CD 顯示) -->
+        <!-- Spacebar mobility: drone = perfect dodge / mecha = charged jump / morpher = liftoff transform (shows CD) -->
         <div class="ab-box" id="abMobil"><div class="ab-fill" id="abMobilFill"></div><span class="ab-key">␣</span><span class="ab-name" id="abMobilName">—</span><span class="ab-cd" id="abMobilCd"></span></div>
       </div>
       <div class="money-box">$ <span id="moneyText">0</span> ・ 分 <span id="knText">0</span> <span class="shop-hint" id="shopHint">B 升級</span></div>
-      <!-- 觀戰限定:跟隨中那位玩家的八軌商店升級(內容由 main.js renderSpecUpg 灌,
-           軌名/上限的唯一真相 = data.js ECON.UPGRADES;非觀戰時恆為空字串 + CSS 收起) -->
+      <!-- Spectate-only: followed player's eight-track shop upgrades (content injected by main.js renderSpecUpg,
+           single source of track names/caps = data.js ECON.UPGRADES; always empty string + CSS-collapsed when not spectating) -->
       <div class="spec-upg" id="specUpg"></div>
     </div>
     <canvas id="minimap" width="220" height="220"></canvas>
   </div>
 
-  <!-- 主堡軍械庫(B) -->
+  <!-- Base armory (B) -->
   <div id="shopOverlay" class="overlay shop-overlay" style="display:none">
     <div class="overlay-box shop-box has-close">
       <button class="ov-close" type="button" aria-label="關閉" data-ovclose="shopCloseBtn">✕</button>
       <div class="panel-head">▍升級工坊 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="shop">ⓘ</button> <span id="shopMoney" class="shop-money"></span></div>
-      <!-- 掃貨 / 預約(2026-08-02 使用者需求):掃貨 = 現在買得起的一次買到底(判定住 game.js
-           `_sweepPick`,這裡只負責畫);預約 = 逐列的 ☆ 鈕,由 main.js renderShop 掛上。 -->
+      <!-- Sweep / reserve (user decision (2026-08-02)): sweep = buy everything affordable in one go (picked in game.js
+           `_sweepPick`, this only draws); reserve = per-row star button, wired by main.js renderShop. -->
       <div class="shop-tools">
         <button id="shopSweepBtn" class="btn small" type="button">🛒 掃貨</button>
         <button class="tip-dot" type="button" aria-label="說明" data-tipkey="shopAuto">ⓘ</button>
@@ -728,7 +728,7 @@
     </div>
   </div>
 
-  <!-- 死亡:重生倒數 + 最前線砲塔視角小視窗(不再跳出離開遊戲的詢問) -->
+  <!-- Death: respawn countdown + frontline-turret mini view (no more leave-game prompt) -->
   <div id="deadOverlay" class="overlay dead-overlay" style="display:none">
     <div class="overlay-box dead-box dead-panel">
       <div class="dead-title">座機被擊毀</div>
@@ -737,7 +737,7 @@
     <div id="deadCam" class="dead-cam"><span class="dead-cam-cap">最前線砲塔視角</span></div>
   </div>
 
-  <!-- 戰場選單(ESC / 切走視窗:指標解鎖時跳出)-->
+  <!-- Battle menu (ESC / window blur: pops when pointer unlocks) -->
   <div id="pauseOverlay" class="overlay" style="display:none">
     <div class="overlay-box pause-box has-close">
       <button class="ov-close" type="button" aria-label="關閉" data-ovclose="resumeBtn">✕</button>
@@ -748,7 +748,7 @@
         <button class="segb pause-tab" type="button" data-page="help">說明</button>
       </div>
 
-      <!-- 分頁:選單(繼續 / 離開 + 操作提示)-->
+      <!-- Tabs: menu (resume / leave + control hints) -->
       <div class="pause-page" data-page="menu">
         <div class="pause-help" id="pauseHelp"></div>
         <div class="row" style="justify-content:center">
@@ -757,7 +757,7 @@
         </div>
       </div>
 
-      <!-- 分頁:設定(音訊 / 操控 / 畫面 / 平衡性 / 機體 / 開發)-->
+      <!-- Tabs: settings (audio / controls / visuals / balance / mecha / dev) -->
       <div class="pause-page" data-page="settings" hidden>
         <div class="set-tabs seg seg-sm" id="pauseSetTabs">
           <button class="segb set-tab on" type="button" data-setpage="audio">音訊</button>
@@ -769,7 +769,7 @@
         </div>
 
         <div class="set-list">
-          <!-- 子分頁:音訊 (音效 / 音樂雙聲道 + 低功耗模式) -->
+          <!-- Sub-tab: audio (sfx / music dual channel + low-power mode) -->
           <div class="set-panel" data-setpage="audio">
             <div class="set-row">
               <span class="set-label">音效</span>
@@ -796,7 +796,7 @@
             </div>
           </div>
 
-          <!-- 子分頁:操控 (操作方式 + 觸控操控) -->
+          <!-- Sub-tab: controls (control scheme + touch controls) -->
           <div class="set-panel" data-setpage="ctrl" hidden>
             <div id="pauseCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
             <div class="set-sub touch-only">▎觸控操控</div>
@@ -809,19 +809,19 @@
             <div id="pauseVisualMount" class="vset"></div>
           </div>
 
-          <!-- 子分頁:平衡性 (全玩家升級曲線起終點 + 基礎數值倍率) -->
+          <!-- Sub-tab: balance (all-player upgrade curve endpoints + base stat multipliers) -->
           <div class="set-panel" data-setpage="balance" hidden>
             <div class="set-sub">▎平衡性調整 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="balance">ⓘ</button></div>
             <div id="pauseBalanceMount" class="bset"></div>
           </div>
 
-          <!-- 子分頁:機體 (雙方陣營機體資訊瀏覽;唯讀,不影響選角;內容與房間選角同一份數值) -->
+          <!-- Sub-tab: mecha (both-faction mech browser; read-only, does not affect picks; same numbers as room picks) -->
           <div class="set-panel" data-setpage="mecha" hidden>
             <div class="set-sub">▎機體資訊 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="mecha">ⓘ</button></div>
             <div id="pauseMechaMount" class="mecha-browse"></div>
           </div>
 
-          <!-- 子分頁:開發工具 (本機開發工具啟停) -->
+          <!-- Sub-tab: dev tools (local dev tools toggle) -->
           <div class="set-panel" data-setpage="dev" hidden>
             <div id="pauseDevMount" style="display:flex;flex-direction:column;gap:12px"></div>
           </div>
@@ -829,7 +829,7 @@
         <div class="row" style="justify-content:center"><button class="btn small pause-back" type="button" data-page="menu">◀ 返回選單</button></div>
       </div>
 
-      <!-- 分頁:說明(依類別分頁的完整遊戲說明)-->
+      <!-- Tabs: help (full game manual by category) -->
       <div class="pause-page" data-page="help" hidden>
         <div class="help-cats seg seg-sm" id="helpCats"></div>
         <div class="help-body" id="helpBody"></div>
@@ -838,12 +838,12 @@
     </div>
   </div>
 
-  <!-- 結束 -->
+  <!-- Game over -->
   <div id="overOverlay" class="overlay" style="display:none">
     <div class="overlay-box">
       <div class="over-title" id="overTitle"></div>
       <div class="over-sub" id="overSub"></div>
-      <!-- 劇情戰役:主堡那一階的對白(戰鬥已結束 ⇒ 這裡才播得完,也才重讀得到) -->
+      <!-- Campaign: base-tier dialogue (battle already over => only here it can finish playing and be re-read) -->
       <div id="overTalk"></div>
       <div class="over-stats" id="overStats"></div>
       <div class="row" style="justify-content:center">
@@ -854,29 +854,29 @@
   </div>
 </div>
 
-<!-- ===== 觸控操控層 = 虛擬搖桿(手機/平板;桌機 hidden)=====
-     **MUST 留在 body 層**(position:fixed)—— 放在 #game 內就只有戰鬥畫面看得到,
-     大廳的「手機操控」面板就沒辦法讓玩家先試搖桿/驗陀螺儀(前科:玩家回報「沒看到虛擬搖桿」)。
-     事件全由 js/mobile.js TouchControls 綁定,動作一律經 data-act → BattleClient._cmd()。
-     #tlLook 壓在最底層吃「拖曳視角」;控件在其上,自行 stopPropagation。
-     **四分區版型(A / M / L / R)**:A = 機體資訊(.hud-self)、M = 小地圖(#minimap)、
-     L / R = 左右手控件,內部再照實體手把(Switch / PS5 / Xbox)排位 ——
-     **左上移動搖桿、左下十字鍵、右上 ABXY、右下視角搖桿**,肩鍵與系統鍵貼各區內側直條。
-     橫式 = 左右兩直欄(A 上 / L 下、M 上 / R 下),直式 = 上緣資訊帶(A 左 / M 右)+ 下緣操控帶(L 左 / R 右);
-     兩者的中央一律留給 3D 戰場,**MUST NOT** 把任何控件放進中央。
-     **MUST NOT** 蓋住 .hud-self(角色數據)與 #minimap(小地圖)—— 版型量測有此斷言。
-     直式/橫式版型差異全在 css/style.css(body.ori-portrait / .ori-landscape),此處只有一份骨架。 -->
+<!-- ===== Touch layer = virtual sticks (phone/tablet; hidden on desktop) =====
+     **MUST stay at body level** (position:fixed) -- inside #game it shows in battle only,
+     and the lobby "touch controls" panel could not let players test sticks / verify gyro early (history: players reported "no virtual sticks").
+     All events bound by js/mobile.js TouchControls; actions always go via data-act -> BattleClient._cmd().
+     #tlLook sits at the very bottom eating "drag-look"; controls above it stopPropagation themselves.
+     **Four-zone layout (A / M / L / R)**: A = mech info (.hud-self), M = minimap (#minimap),
+     L / R = left/right-hand controls, internally ordered like physical pads (Switch / PS5 / Xbox) --
+     **top-left move stick, bottom-left dpad, top-right ABXY, bottom-right look stick**, shoulders + system keys on each zone's inner strip.
+     Landscape = two vertical columns (A over L, M over R); portrait = top info band (A left / M right) + bottom control band (L left / R right);
+     both keep the center clear for the 3D battle; **MUST NOT** put any control in the center.
+     **MUST NOT** cover .hud-self (character stats) or #minimap -- asserted by layout audit.
+     Portrait/landscape differences all live in css/style.css (body.ori-portrait / .ori-landscape); only one skeleton here. -->
 <div id="touchLayer" class="touch-layer" hidden>
   <div id="tlLook" class="tl-look"></div>
 
-  <!-- ===== L 區(左手)===== 依實體手把(Switch / PS5 / Xbox)排位:**左上類比搖桿、左下十字鍵**。
-       類比搖桿 = 移動(輕推慢走、推到底衝刺);十字鍵四向是「按鍵」不是移動 ——
-       上 ⊟ 商店 / 下 陀螺儀開關 / 右 小地圖範圍(周遭 ⇄ 全部,等同鍵盤 M),
-       左 = **施放招式**(2026-08-01 從 ZR 搬來,原本是保留未用的版位;扳機位改給視野鎖定)。
-        2026-08-06 起長按 = 招式手勢(一般模式守招 / 狙擊模式攻招),機種絕招整組退場。
-       這顆與「長按 R」是同一個派發縫(game.js `_fireHoldAbility`),只是不必長按;
-       冷卻秒數由 main.js `padMirror('special')` 鏡射進鈕面的 .gb-cd,與舊 ZR 同源。
-       陀螺儀開關**只住這裡**(2026-07-27 起)—— 兩顆同功能的鈕就是兩處要同步的狀態。 -->
+  <!-- ===== L zone (left hand) ===== ordered like physical pads (Switch / PS5 / Xbox): **top-left analog stick, bottom-left dpad**.
+       Analog stick = move (gentle push walks, full push sprints); dpad directions are "buttons", not movement --
+       up shop / down gyro toggle / right minimap range (nearby ⇄ all, same as keyboard M),
+       left = **cast ability** (moved from ZR on 2026-08-01; trigger slot reassigned to view lock).
+       Since 2026-08-06 hold = ability gesture (normal-mode defense / scope-mode offense); per-unit ultimates retired wholesale.
+       This shares one dispatch seam with "hold R" (game.js `_fireHoldAbility`), just without holding;
+       cooldown seconds mirrored by main.js `padMirror('special')` into the button .gb-cd, same source as old ZR.
+       Gyro toggle lives **only here** (since 2026-07-27) -- two buttons for one function means two states to sync. -->
   <div id="tlStick" class="tl-stick tl-stick-move" aria-label="移動搖桿">
     <span class="tl-st-ring"></span>
     <span class="tl-st-knob" id="tlStickKnob"></span>
@@ -888,9 +888,9 @@
     <button class="tl-dp-b dir-lf dp-cd" type="button" data-act="special" aria-label="施放招式"><span class="gb-f">招式</span><span class="gb-cd"></span></button>
   </div>
 
-  <!-- ===== R 區(右手)===== **右上 ABXY 菱形、右下視角類比搖桿**。
-       ABXY 走 Switch 方位(X 上 / Y 左 / A 右 / B 下):A 射擊 ・ B 跳躍(機動)・ X 防守 ・ Y 招式;
-       招式名稱與冷卻由 main.js 一併鏡射進 .gb-cd。視角搖桿與「空處拖曳」並存,兩者都走 _applyLook。 -->
+  <!-- ===== R zone (right hand) ===== **top-right ABXY diamond, bottom-right look analog stick**.
+       ABXY follows Switch layout (X top / Y left / A right / B bottom): A fire - B jump (mobility) - X guard - Y ability;
+       ability names + cooldowns mirrored by main.js into .gb-cd. Look stick coexists with "empty-drag"; both go through _applyLook. -->
   <div class="tl-gp">
     <button class="tl-gb gb-x" type="button" data-act="def"><i class="gb-k">X</i><span class="gb-f">防守</span><span class="gb-cd"></span></button>
     <button class="tl-gb gb-y" type="button" data-act="atk"><i class="gb-k">Y</i><span class="gb-f">招式</span><span class="gb-cd"></span></button>
@@ -902,24 +902,24 @@
     <span class="tl-st-knob" id="tlRStickKnob"></span>
   </div>
 
-  <!-- ===== 肩鍵 + 系統鍵:各自貼在該區的**內側直條**(橫式)/ 操控帶上緣(直式)=====
-       實體手把的肩鍵在握把頂端,但手機橫握時那個位置正好是 A 機體資訊 / M 小地圖 ——
-       故改排在四分區各自的內側,仍屬 L / R 區,且不吃搖桿與十字鍵的拇指停位。
+  <!-- ===== Shoulders + system keys: each on its zone's **inner strip** (landscape) / control-band top edge (portrait) =====
+       Physical pads put shoulders atop the grips, but in landscape phone hold that spot is exactly A mech info / M minimap --
+       so they move to each of the four zones' inner side, still owned by L / R, clear of stick/dpad thumb stops.
 
-       **兩條直條 MUST 逐列左右對應(2026-07-27)**:由上往下第 1 列 = L / R(肩鍵)、
-       第 2 列 = ZL / ZR(扳機),與實體手把「L 在上、ZL 在下」的相對位置一致;
-       第 3、4 列才是各自的系統鍵。兩條**列數相同(4)**且用 CSS grid 指定 `grid-row`,
-       所以 ZL(僅飛行機種)/ ⇄ 換機(僅無人機)隱藏時**列不會塌陷**,對應關係恆成立。
-       欄位順序 MUST NOT 隨機種改動 —— 換機種就找不到鍵了。
-          L 條:① L 填彈 ② ZL 下降(飛行機種)③ HOME 戰場選單 ④ 保留空列
-         R 條:① R 狙擊(短按切換、長按施放招式)② ZR 鎖定(按住)③ ⇄ 換機(無人機)④ 左手
+       **Both strips MUST mirror row-by-row (2026-07-27)**: top-down row 1 = L / R (shoulders),
+       row 2 = ZL / ZR (triggers), matching the physical "L above, ZL below" layout;
+       rows 3-4 are each side's system keys. Both strips have **the same 4 rows** with CSS grid `grid-row`,
+       so hiding ZL (fliers only) / swap-mech (drones only) never **collapses rows** and the mapping holds.
+       Slot order MUST NOT shift per unit -- players would lose the keys on every swap.
+          L strip: 1 L reload, 2 ZL descend (fliers), 3 HOME battle menu, 4 reserved empty row
+          R strip: 1 R scope (tap toggles, hold casts ability), 2 ZR lock (hold), 3 swap mech (drones), 4 lefty
 
-       **ZR = 視野鎖定(2026-08-01 使用者需求,原為招式鈕)**:按住 → 視野收斂到鎖定的敵人,
-       放開即恢復自由視角。虛擬搖桿的追瞄本來就比滑鼠吃力,這是扳機位最值得放的**按住型**動作;
-       2026-08-02 改制:**按一次輪替到前方視野內的下一個敵人**(狙擊模式以狙擊鏡圈為取景),
-       後座力刻意**不**抵銷(見 data.js VIEW_LOCK 與 game.js `_tickViewLock`)。
-       原本住這裡的招式鈕搬到十字鍵左(連冷卻鈕面一起),長按 R 那條路不變 ——
-       兩者仍共用同一個派發縫(game.js `_fireHoldAbility`),招式沒有少一條路。 -->
+       **ZR = view lock (user decision (2026-08-01), formerly the ability button)**: hold -> view converges on the locked foe,
+       release restores free look. Stick aim tracks worse than a mouse, so the trigger slot best holds this **hold-type** action;
+       2026-08-02 rework: **one tap cycles to the next foe ahead in view** (scope ring frames the view in scope mode),
+       recoil deliberately **not** cancelled (see data.js VIEW_LOCK and game.js `_tickViewLock`).
+       The old ability button moved to dpad-left (with its cooldown face), the hold-R path unchanged --
+       both still share one dispatch seam (game.js `_fireHoldAbility`); no ability path lost. -->
   <div class="tl-sys tl-sys-l">
     <button class="tl-sysb" type="button" data-act="reload">L 填彈</button>
     <button class="tl-sysb" type="button" data-act="dive" hidden>ZL 降</button>
@@ -933,17 +933,17 @@
     <button class="tl-sysb" type="button" data-act="lefty">左手</button>
   </div>
 
-  <!-- 平民互動的「跟隨 / 驅趕」不在此層:觸控版直接把 #civPrompt 的按鍵提示換成兩顆鈕
-       (見 main.js hud.civPrompt)—— 提示就在視線落點上更好按,也不必再排一組控件。 -->
+  <!-- Civilian "follow / shoo" not on this layer: touch renders #civPrompt key hints directly as two buttons
+       (see main.js hud.civPrompt) -- prompt sits at the gaze point so it is easier to tap, no extra control group needed. -->
 
-  <!-- 直式持握提示(視野角度 MUST NOT 隨版型改 —— 直式水平視野本來就窄,建議橫握;點擊消失) -->
+  <!-- Portrait hold hint (FOV MUST NOT change with layout -- portrait horizontal FOV is inherently narrow, landscape hold advised; tap to dismiss) -->
   <div class="tl-rotate" id="tlRotate">▤ 建議橫向持握 —— 直式水平視野較窄(全機種視角一律 68°)</div>
 </div>
 
-<!-- ========= 手機操控面板(大廳;診斷 + 設定 + 搖桿試玩)=========
-     存在理由:虛擬搖桿與陀螺儀原本只在戰鬥中才摸得到,玩家無法在進場前確認「到底有沒有生效」。
-     這裡把判定結果逐項攤開(secure context / 觸控硬體 / 指標種類 / 螢幕),
-     並可直接開陀螺儀看即時讀值、按「試玩搖桿」用真的 TouchControls 操作一遍。 -->
+<!-- ========= Touch controls panel (lobby; diagnostics + settings + stick trial) ==========
+     Why it exists: sticks and gyro were only touchable in battle, so players could not confirm they work before deploying.
+     Each check listed here (secure context / touch hardware / pointer kind / screen),
+     plus live gyro readings and a stick trial driving the real TouchControls. -->
 <div id="touchOverlay" class="overlay" style="display:none">
   <div class="overlay-box touch-box has-close">
     <button class="ov-close" type="button" aria-label="關閉" data-ovclose="touchCloseBtn">✕</button>
@@ -958,10 +958,10 @@
   </div>
 </div>
 
-<!-- ========= 大廳:設定 / 說明疊層(開場即可開;內容與戰場暫停選單同一份)=========
-     設定的音效/音樂/低功耗開關以 `lset` 前綴鏡射暫停頁的 `set` 前綴,經 main.js 的
-     bindSettingsControls / syncAudioSwitches 共用同一份邏輯(單一真相 = app.audio / lowPower);
-     觸控設定與說明分頁一律走共用 renderTouchSettings / mountHelp,MUST NOT 各寫一份。 -->
+<!-- ========= Lobby: settings / help overlay (openable from launch; same content as battle pause menu) =========
+     Audio/music/low-power switches mirror the pause page `set` prefix with an `lset` prefix, via shared main.js
+     bindSettingsControls / syncAudioSwitches logic (single source = app.audio / lowPower);
+     touch settings and help tabs always go through shared renderTouchSettings / mountHelp; MUST NOT fork copies. -->
 <div id="lobbyMenu" class="overlay" style="display:none">
   <div class="overlay-box pause-box has-close">
     <button class="ov-close" type="button" aria-label="關閉" data-ovclose="lobbyMenuCloseBtn">✕</button>
@@ -971,7 +971,7 @@
       <button class="segb pause-tab" type="button" data-page="help">說明</button>
     </div>
 
-    <!-- 分頁:設定 -->
+    <!-- Tabs: settings -->
     <div class="pause-page" data-page="settings">
       <div class="set-tabs seg seg-sm" id="lobbySetTabs">
         <button class="segb set-tab on" type="button" data-setpage="audio">音訊</button>
@@ -982,7 +982,7 @@
         <button class="segb set-tab" type="button" data-setpage="dev" hidden>開發</button>
       </div>
       <div class="set-list">
-        <!-- 子分頁:音訊 -->
+        <!-- Sub-tab: audio -->
         <div class="set-panel" data-setpage="audio">
           <div class="set-row">
             <span class="set-label">音效</span>
@@ -1009,39 +1009,39 @@
           </div>
         </div>
 
-        <!-- 子分頁:操控 (操作方式 + 觸控操控) -->
+        <!-- Sub-tab: controls (control scheme + touch controls) -->
         <div class="set-panel" data-setpage="ctrl" hidden>
           <div id="lobbyMenuCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
           <div class="set-sub touch-only">▎觸控操控</div>
           <div class="touch-only" id="lobbyMenuTouchMount" style="flex-direction:column;gap:12px"></div>
         </div>
 
-        <!-- 子分頁:畫面 -->
+        <!-- Sub-tab: visuals -->
         <div class="set-panel" data-setpage="visual" hidden>
           <div class="set-sub">▎畫面表現 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="visual">ⓘ</button></div>
           <div id="lobbyVisualMount" class="vset"></div>
         </div>
 
-        <!-- 子分頁:平衡性 -->
+        <!-- Sub-tab: balance -->
         <div class="set-panel" data-setpage="balance" hidden>
           <div class="set-sub">▎平衡性調整 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="balance">ⓘ</button></div>
           <div id="lobbyBalanceMount" class="bset"></div>
         </div>
 
-        <!-- 子分頁:機體 (雙方陣營機體資訊瀏覽;唯讀,不影響選角) -->
+          <!-- Sub-tab: mecha (both-faction mech browser; read-only, does not affect picks) -->
         <div class="set-panel" data-setpage="mecha" hidden>
           <div class="set-sub">▎機體資訊 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="mecha">ⓘ</button></div>
           <div id="lobbyMechaMount" class="mecha-browse"></div>
         </div>
 
-        <!-- 子分頁:開發工具 -->
+        <!-- Sub-tab: dev tools -->
         <div class="set-panel" data-setpage="dev" hidden>
           <div id="lobbyDevMount" style="display:flex;flex-direction:column;gap:12px"></div>
         </div>
       </div>
     </div>
 
-    <!-- 分頁:說明 -->
+    <!-- Tabs: help -->
     <div class="pause-page" data-page="help" hidden>
       <div class="help-cats seg seg-sm" id="lobbyHelpCats"></div>
       <div class="help-body" id="lobbyHelpBody"></div>
@@ -1053,7 +1053,7 @@
   </div>
 </div>
 
-<!-- 搖桿試玩讀值(試玩模式時浮在觸控層上方;顯示軸值/視角/按鍵,直接看得出有沒有反應) -->
+<!-- Stick trial readout (floats above touch layer in trial mode; shows axes/look/buttons so response is directly visible) -->
 <div id="touchTest" class="touch-test" hidden>
   <div class="tt-read" id="ttRead"></div>
   <button id="ttDone" class="btn small">✓ 完成試玩</button>
@@ -1061,7 +1061,7 @@
 
 <div id="toast" class="toast"></div>
 
-<!-- 地圖設立與背景預處理懸浮小視窗 -->
+<!-- Map setup and background pre-processing floating mini window -->
 <div id="bgMapProgress" class="bg-map-progress-panel" style="display:none">
   <div class="bg-map-progress-header">
     <div class="bg-map-progress-title">
@@ -1082,7 +1082,7 @@
   </div>
 </div>
 
-<!-- 致命錯誤(開啟失敗 / 一段時間無法遊戲):顯示原因,關閉或重啟(單人) -->
+<!-- Fatal error (failed to open / stuck too long): shows reason, close or restart (solo) -->
 <div id="fatalOverlay" class="overlay fatal-overlay" style="display:none">
   <div class="overlay-box fatal-box">
     <div class="fatal-title" id="fatalTitle">無法繼續遊戲</div>
@@ -1094,10 +1094,10 @@
   </div>
 </div>
 
-<!-- 觸控裝置常駐工具列:總聲音 / 視角 / 全螢幕。MUST 留在 body 層(position:fixed),
-     跨越所有 `.screen` 並與 #touchLayer 分開,避免滿版視角層吃掉按鈕事件。
-     顯示與行為沿用既有縫:音效由 GameAudio、視角由 ctrlmode.js / game.js、全螢幕由
-     mobile.js toggleFullscreen() 處理；桌機不顯示這組觸控工具列。 -->
+<!-- Touch-device persistent toolbar: master sound / view / fullscreen. MUST stay at body level (position:fixed),
+     spanning all `.screen`s and separate from #touchLayer, so the fullscreen look layer never eats button events.
+     Display and behavior reuse existing seams: audio via GameAudio, view via ctrlmode.js / game.js, fullscreen via
+     mobile.js toggleFullscreen(); hidden on desktop. -->
 <div id="quickTools" class="quick-tools">
   <button id="quickSoundToggle" class="quick-tool" type="button" aria-label="開啟全部聲音" aria-pressed="false">
     <svg class="quick-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -1119,7 +1119,7 @@
   </button>
 </div>
 
-<!-- 角色簡歷跳出視窗(點頭像預覽,不影響選角)-->
+<!-- Character bio popup (avatar preview tap, does not affect picks) -->
 <div id="charBioModal" class="bio-modal" hidden>
   <div class="bio-modal-box">
     <button class="bio-modal-close" id="charBioModalClose">✕</button>
@@ -1127,7 +1127,7 @@
   </div>
 </div>
 
-<!-- 機體展示台放大獨立視窗(仿遊戲操作演出;只留基本數值 + 武器/招式)-->
+<!-- Mech stage enlarged modal (mirrors in-game handling demo; basic stats + weapons/abilities only) -->
 <div id="charStageModal" class="stage-modal" hidden>
   <div class="stage-modal-box">
     <button class="bio-modal-close" id="charStageModalClose">✕</button>

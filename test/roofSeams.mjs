@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
-// 屋頂接縫回歸：同向共面重疊（z-fighting 色斑）與法線污染（cel 色帶）歸零。
-// 手法都是「最終合批幾何量測」，不斷言實作細節，只釘結果。
+// Roof seam regression: same-orientation coplanar overlap (z-fighting mottling) and normal pollution (cel banding) must be zero.
+// Method is final-merged geometry measurement only; assert results, never implementation details.
 const modules = {
   three: new URL('../out/forest_review/three.module.js', import.meta.url).href,
   'three/addons/utils/BufferGeometryUtils.js': new URL('../out/forest_review/utils_BufferGeometryUtils.js', import.meta.url).href,
@@ -80,7 +80,7 @@ for (const form of ['flat', 'gable', 'mansard', 'stepped', 'tiered', 'dome', 'sh
     const name = m.userData.osmBuildingRoofBatch ? 'roofs' : m.userData.osmBuildingDetailBatch ? 'details' : 'walls';
     bags.push({ name, all: trisOf(m.geometry) });
   }
-  // 牆頂封頂帶：不同批次的同向（朝上）三角形不得共面重疊。
+  // Wall-top cap strip: same-orientation (up-facing) triangles across batches must not overlap coplanar.
   const ups = [];
   for (const b of bags) for (const t of b.all) {
     if (t.fn[1] > 0.999 && Math.abs(t.v[0][1] - 19) < 0.3) ups.push({ ...t, bag: b.name });
@@ -96,7 +96,7 @@ for (const form of ['flat', 'gable', 'mansard', 'stepped', 'tiered', 'dome', 'sh
   group.traverse(m => m.geometry?.dispose());
 }
 
-// 屋頂網格法線污染：同三角形三頂點法線夾角不得超過群組閾值（圓頂自身環差 27° 內放行）。
+// Roof mesh normal pollution: the three vertex normals of one triangle must stay within the group threshold (dome ring variance within 27deg is allowed).
 for (const form of ['gable', 'mansard', 'stepped', 'tiered', 'wudian', 'xieshan', 'dome', 'vault', 'shed',
     'sawtooth', 'butterfly', 'gambrel', 'crowstep', 'steep_gable', 'curved_ridge', 'yingshan', 'xuanshan']) {
   const geos = architecturalRoof(rect(20, 10), 19, style, form, null, 9);
@@ -117,9 +117,9 @@ for (const form of ['gable', 'mansard', 'stepped', 'tiered', 'wudian', 'xieshan'
   }
 }
 
-// 全方向跨批次共面（含窗戶立面）：同平面（1mm）不同批次的面內重疊面積歸零。
-// 反向法線（上下蓋配對）本就不互見，鍵值天然分開；深度分層飾件差 3cm 起跳，不會同鍵。
-// 朝下面（地平面底面）略過：可玩視角永遠在地面之上，底面只進陰影圖且其後無接收者。
+// All-orientation cross-batch coplanar check (window facades included): in-plane overlap at the same plane (1mm) across batches is zero.
+// Opposite normals (paired top/bottom caps) are never mutually visible so keys separate naturally; depth-layered trims differ by 3cm or more, never sharing a key.
+// Down faces (ground-plane underside) are skipped: the playable view stays above ground, and undersides only enter the shadow map with no receiver behind them.
 function planeBasis(fn) {
   const ax = Math.abs(fn[0]) >= Math.abs(fn[1]) && Math.abs(fn[0]) >= Math.abs(fn[2]) ? 0
     : Math.abs(fn[1]) >= Math.abs(fn[2]) ? 1 : 2;
@@ -161,7 +161,7 @@ for (const [styleId, form, h] of [['alpine', 'gable', 9], ['deco', 'stepped', 12
 
 console.log('PASS: no coplanar seams in any orientation, windows included');
 
-// 坡地貼地：正門底部＝落點地形高（不埋入坡面；高腳／擋土戶取 max 維持原值）。
+// Slope grounding: main-door bottom matches the landing terrain height (never buried in the slope; stilt/retaining households take max as before).
 {
   const slopeTerrain = { heightAt: (x) => 10 + x * 0.2, minX: -100, maxX: 100, minZ: -100, maxZ: 100 };
   const group = new THREE.Group();

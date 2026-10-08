@@ -1,4 +1,4 @@
-// ============ 程序化移動骨架動畫(doc/mobility_plan.html 執行)============
+// ============ Procedural locomotion rig animation (implements doc/mobility_plan.html)============
 // 原則:所有動作由「實際位移」驅動,不用固定速率的關鍵幀循環 —
 //  雙足(Task 2.1):步頻與地面位移嚴格耦合(腳不滑地)、重心側移到支撐腿、
 //                   速度前傾(anticipation)、手臂反相擺動(overlapping action)

@@ -1,6 +1,6 @@
-// 固定 OSM fixture 瀏覽器驗收名冊(v1)。
-// 鏡位只描述「由哪個 runtime 錨點往哪裡看」與偏移；實際世界座標、地面高度與 yaw
-// 一律由瀏覽器現場的 battleConfig/terrain 推導，避免手寫座標跟兵線或地圖旋轉分家。
+// Fixed OSM fixture browser acceptance roster (v1).
+// Camera slots only describe which runtime anchor looks where plus offsets; world coordinates, ground height and yaw
+// always derive from the live browser battleConfig and terrain, so hand-written coordinates cannot drift from lanes or map rotation.
 
 export const OSM_BROWSER_MANIFEST = Object.freeze({
   version: 1,

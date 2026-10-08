@@ -1,10 +1,10 @@
 import { generateCivilian } from './civilianAppearance.js';
-// ============ 戰鬥客戶端:第一人稱 無人機 vs 機甲 + DOTA 兵線 ============
-// 伺服器權威(HP/傷害/波次),客戶端負責:
-//  - 3D 渲染(地形 + 單位 + 特效)
-//  - 第一人稱操控(蜂群=飛行無人機、鋼鐵=地面機甲)
-//  - 射擊 raycast 命中回報、範圍技落點回報
-//  - 2D 戰術地圖(minimap,繼承 mapping_elf 的 2D 地圖概念)
+// ============ Combat client: first-person drones vs mechs + DOTA lanes ============
+// Server-authoritative (HP/damage/waves); client owns:
+//  - 3D rendering (terrain + units + effects)
+//  - First-person controls (swarm = flying drone, steel = ground mech)
+//  - Shooting raycast hit reports, AoE landing reports
+//  - 2D tactical map (minimap, inherits 2D map concept from mapping_elf)
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, upgradeScore, canUpgrade, HAZARDS, FIELD, AFFIXES,
@@ -66,18 +66,18 @@ import { CLIMB, CLIMB_LABEL } from './climb.js';
 import { planLaneGuidance } from './laneGuidancePlan.js';
 import { buildLaneGuidance, laneGuidePlates } from './laneGuidance.js';
 import { Pool } from './pool.js';
-// audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
+// audio is created by the app layer (main.js) and passed via opts.audio (BGM must survive across matches); consumed here only.
 
-// 所有火場類型(模組級常數；MUST NOT 在 _spawnEnt / 每幀熱路徑中重複構造)
+// All fire-field kinds (module-level constant; MUST NOT rebuild in _spawnEnt or per-frame hot path)
 const FIRE_KINDS_C = new Set(['fire', 'forestfire', 'grassfire', 'factoryfire']);
 
 const KIND_KEY = {
   soldier: 'creep:soldier', apc: 'creep:apc', tank: 'creep:tank',
   rocketeer: 'creep:rocketeer', howitzer: 'creep:howitzer', heli: 'creep:heli',
   tower: 'tower', drone: 'hero:drone', robot: 'hero:robot', morph: 'hero:morph', decoy: 'decoy',
-  bunker: 'bunker',   // 第三方碉堡(GUER/MILI)
-  kami: 'hero:drone', // 護衛自殺機:渲染成該角色的無人機(_spawnUnit 縮小 SIZE_F)
-  hyper: 'hyper',     // 極音速飛彈(機甲長按招式的彈體;位置/朝向全由伺服器回報)
+  bunker: 'bunker',   // third-party bunker (GUER/MILI)
+  kami: 'hero:drone', // escort kamikaze: rendered as that character drone (_spawnUnit scaled by SIZE_F)
+  hyper: 'hyper',     // hypersonic missile (mech hold-ability projectile; position/orientation fully server-reported)
   drone_wingman: 'summon:drone_wingman',
   assault_rover: 'summon:assault_rover',
   decoy_beacon: 'summon:drone_wingman',
@@ -87,96 +87,96 @@ const KIND_KEY = {
   carnival_heli: 'summon:carnival_heli',
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
-// 彈道積分的最大取樣點數(步長 ≤0.03s 且 ≈3m/點)。繪製緩衝(_ensureArcGuide)與
-// 不繪製的可命中判定(_arcTrace draw=false)MUST 共用同一個上限,否則兩者會在長弧上分家。
-// 384 = 涵蓋 11.5 秒飛行(2026-08-02 45° 對地拋投改制):45° 解的初速被反解到只剩 41~46m/s,
-// 步長被 0.03s 上限綁住 ⇒ 走完滿射程要 200~250 點,再算上往低處打的長弧(俯角 −100m 約 268 點)
-// 舊上限 264 會在彈頭落地**之前**用光緩衝 —— 積分沒走到瞄準點 ⇒ minD 永遠收不進 LOB_TOL,
-// 症狀是「打山谷底下的敵人光暈永遠不亮、虛線斷在半空」。
+// Max samples for ballistic integration (step <=0.03s and about 3m per point). Draw buffer (_ensureArcGuide) and
+// undrawn hittability check (_arcTrace draw=false) MUST share one cap, else they diverge on long arcs.
+// 384 = covers 11.5s flight (2026-08-02 45-degree ground-lob rework): 45-degree solution back-solves v0 to only 41-46m/s,
+// step pinned by 0.03s cap means full range needs 200-250 points, plus downhill long arcs (pitch -100m about 268 points).
+// Old cap 264 exhausted the buffer before impact -- integration never reached aim point, so minD never closed into LOB_TOL;
+// symptom was range glow never lit on valley-floor targets with the dashed line breaking off mid-air.
 const ARC_MAXP = 384;
-// 射程光暈的線段淨空寬容(公尺)。2026-08-03 改制後「貴的判定」只剩準星那一發(每幀至多一次
-// `_reachable`),逐敵人評估退化成純幾何掃描 ⇒ 舊的分幀預算 / TTL 快取(ARC_PER_FRAME /
-// RAY_PER_FRAME / TTL_S)整組退場,MUST NOT 復辟(那是「每個敵人各跑一次彈道積分」時代的節流)。
+// Range-glow segment clearance tolerance (m). After 2026-08-03 rework the only costly check left is the reticle shot
+// (at most one _reachable per frame); per-enemy evaluation degraded to pure geometry scan, so the old frame budgets / TTL
+// cache (ARC_PER_FRAME / RAY_PER_FRAME / TTL_S) retired as a group, MUST NOT revive (that throttled the era when each enemy ran its own integration).
 const RANGE_GLOW = { SURF_TOL_M: 0.5 };
-// 第三人稱視線遮擋(純表現層):低頻檢查避免每幀對全場 Mesh 做 raycast;
-// 只淡化射線實際穿過的不透明件;透明度快進慢出 + 離開視線後短暫保留,
-// 掠過邊緣時停在半透明而不二元閃爍。
+// Third-person sight occlusion (presentation only): low-rate check avoids per-frame raycast against all Meshes;
+// only fades opaque parts the ray actually pierces; fast fade-in plus slow fade-out with short hold after leaving sight,
+// so grazing edges rest at translucent instead of binary flicker.
 const TPS_OCCLUSION = {
   OPACITY_F: 0.24,
   UPDATE_S: 0.05,
   RELEASE_S: 0.25,
-  FADE_IN_K: 10,    // 淡入(進透明)速率 1/s:中件即淡,畫面不被擋
-  FADE_OUT_K: 2.5,  // 淡出(恢復)速率 1/s:慢出 + 保留窗,掠邊不閃
+  FADE_IN_K: 10,    // fade-in (toward transparent) rate 1/s: fade on touch so view is never blocked
+  FADE_OUT_K: 2.5,  // fade-out (recover) rate 1/s: slow release + hold window, no flicker on grazing edges
 };
-// 集束炸彈的投擲軌跡(純表現層;使用者需求「炸彈投擲軌跡同榴彈」)。
-// GRAV_F:比自由落體略重的墜落感(投擲解與逐幀積分 MUST 吃同一個值,否則畫出來的落點會偏)。
-// T:飛行時間 = 水平距離 / SPD,夾在 [MIN, MAX] ⇒ 近的快速甩出、遠的高拋,弧高隨距離自然變化。
+// Cluster-bomb throw arc (presentation only; user asked bomb throw arcs match grenades).
+// GRAV_F: heavier-than-freefall feel (throw solver and per-frame integration MUST use the same value, else drawn landing drifts).
+// T: flight time = horizontal distance / SPD, clamped to [MIN, MAX], so near throws snap out fast and far throws lob high, arc height varying naturally with distance.
 const DECOY_BOMB_GRAV_F = 1.6;
 const DECOY_BOMB_T = { MIN: 0.7, MAX: 2.2, SPD: 45 };
-// ESC(戰場選單)的去彈跳窗,秒。指標**鎖定中**按 ESC 時瀏覽器先解除鎖定(→ `_onPlc` 開選單),
-// 少數瀏覽器**還會**把同一顆 ESC 的 keydown 補送給頁面 ⇒ 不擋就是「開了又立刻自己關」。
-// 同一顆 ESC 只准生效一次;人手按不出這麼快的第二下(選單開/關本來就要看一眼才按)。
+// ESC (battle menu) debounce window, seconds. While pointer is locked, pressing ESC makes the browser unlock first (which opens the menu via _onPlc),
+// and a few browsers still deliver that same ESC keydown to the page, so without a guard the menu opens then instantly closes itself.
+// One physical ESC press counts once; no human taps twice that fast (menu open/close needs a glance between presses).
 const ESC_GAP_S = 0.35;
-// 商店預約的重送等待窗,秒(見 `_tickReserve`)。MUST > 一次網路往返 + 一份 8Hz 快照(125ms)——
-// 短於這個窗就會在權威值回來之前對同一階重複下單;長到幾秒也沒關係(它只是被拒時的救濟閥,
-// 正常流程一律由「權威等級前進」解鎖下一階,不靠逾時)。
+// Shop reservation resend window, seconds (see _tickReserve). MUST exceed one round trip plus one 8Hz snapshot (125ms) --
+// shorter would reorder the same tier before the authoritative value returns; longer (seconds) is harmless (it is only a relief valve on rejection,
+// the normal path always unlocks the next tier via authoritative level advance, never via timeout).
 const RESERVE_RESEND_S = 2;
-// 預約名單裡「陣營小兵強化」那幾列的鍵字首(後面接兵線索引;`creep:0`)。八軌的鍵就是 ECON.UPGRADES
-// 的鍵,兩者同住一個 Set ⇒ 需要一個不可能與八軌撞名的字首。**格式只有這一份**:
-// 產生走 `_creepResKey`、反解走 `_resCreepLane`,商店 UI 一律拿 `_shopState().creepKey(lane)`
-// 當不透明字串傳回來,MUST NOT 在 main.js 自己拼(拼錯不會報錯,只會「★ 亮著卻永遠不成交」)。
+// Key prefix for faction creep-upgrade rows in the reservation list (lane index appended, creep:0). The eight-track keys are ECON.UPGRADES
+// keys living in the same Set, so they need a prefix that can never collide with the eight tracks. Single canonical format:
+// creation via _creepResKey, parsing via _resCreepLane; shop UI always takes the opaque string from _shopState().creepKey(lane)
+// and MUST NOT build it inside main.js (a typo never errors, it just leaves the star lit but never completes).
 const RES_CREEP = 'creep:';
-// 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
-// 體型改綁角色護甲後,碰撞跟著等比走 —— 巨大機甲既難閃也難躲。
-// **半徑不手寫**:一律走 data.js hitR(貫穿判定的水平量體與碰撞量體 MUST 是同一把尺 ——
-// 各寫一份就會「撞得到卻打不到」);高度沿用 heroTargetH ×1.08(頭頂餘裕)。
+// Hero collision cylinder: radius scales with body height. Factors preserve the old feel (robot 6m to r 2.6, drone 3m to r 2.4);
+// once size binds to character armor, collision follows proportionally -- huge mechs are hard to dodge and hard to hide.
+// Radius is never hand-written: always via data.js hitR (penetration horizontal bulk and collision bulk MUST use one ruler --
+// separate copies cause hittable-but-untouchable mismatches); height follows heroTargetH x1.08 (headroom).
 const heroCollider = (kind, ch, sv = 0) => ({
   r: hitR({ hero: true, kind, ch, sv }),
   h: heroTargetH(kind, ch) * superScaleF(sv) * 1.08,
 });
-// 自機碰撞/視點的身高比例:2026-08-02 起住 data.js(伺服器的 bot 碰撞吃同一份 —— 見 selfCollider)
-// FPV 視點 = 該機體「駕駛艙/頭艙」在自身幾何上的實際位置(2026-07-12):
-//   e = 佔機體實高的比例(舊制全機種一律 0.567 = 人形胸腔,套到水平體軸的獸型就成了「從肚子看出去」)
-//   f = 沿正面方向(-z)前移的比例 —— 水平體軸的獸首遠在身前,人形機甲的頭則幾乎在正上方。
-// 鍵 = visual.proto / visual.creature / visual.ground(變形者地面體態);查無 → DEF。
+// Own-collision / eye height ratios: homed in data.js since 2026-08-02 (server bot collision eats the same copy -- see selfCollider)
+// FPV eye = actual cockpit/head position on that body geometry (2026-07-12):
+//   e = fraction of body height (old regime used 0.567 for all = humanoid chest, which put horizontal-axis beasts on belly view)
+//   f = forward (-z) offset fraction -- horizontal-axis beast heads sit far ahead, humanoid mech heads sit nearly overhead.
+// Keys = visual.proto / visual.creature / visual.ground (morph ground form); miss falls back to DEF.
 const VIEW_SHAPE = {
-  // 人形機甲(艙在胸腔上緣~頸根)
+  // Humanoid mech (cockpit at chest top to neck root)
   bastion: { e: 0.72, f: 0.10 }, seraph: { e: 0.76, f: 0.08 },
   aegis: { e: 0.70, f: 0.10 }, colossus: { e: 0.80, f: 0.06 },
-  // 頭部艙(直立體態):視點就在顱腔內
+  // Head cockpit (upright form): eye sits inside the cranium
   gorilla: { e: 0.82, f: 0.18 }, roo: { e: 0.86, f: 0.14 }, cthulhu: { e: 0.74, f: 0.16 },
-  // 頸部艙(水平體態):視點在頸根,頭顱在前下方 → 前移量小(頭本身佔前方視野)
+  // Neck cockpit (horizontal form): eye at neck root, head below-ahead, so forward shift stays small (head itself fills front view)
   hound: { e: 0.74, f: 0.12 }, trex: { e: 0.80, f: 0.10 }, ostrich: { e: 0.84, f: 0.12 },
   stego: { e: 0.62, f: 0.14 }, centaur: { e: 0.88, f: 0.08 },
-  // 變形者地面體態(人形 = 頭部艙 / 獸型 = 頸部艙)
+  // Morph ground forms (humanoid = head cockpit / beast = neck cockpit)
   vampire: { e: 0.80, f: 0.08 }, monkey: { e: 0.76, f: 0.16 },
   wolf: { e: 0.78, f: 0.12 }, atlas: { e: 0.74, f: 0.16 },
   elephant: { e: 0.74, f: 0.12 }, raptor: { e: 0.78, f: 0.10 },
   beetle: { e: 0.66, f: 0.14 }, panther: { e: 0.72, f: 0.12 },
 };
 const VIEW_DEF = { e: SELF_F.eye, f: 0.10 };
-// 輕武器掛點(2026-07-12):武器長在機體哪裡由機體構造決定 ——
-//   hand 手持 / tentacle 觸手持械 / mouth 嘴砲(龍·暴龍·電漿口)/ back 背載砲塔(無手仿生體)
-//   / body 機身固定(旋翼無人機吊艙)/ wing 機翼固定(戰機硬點)/ claw 爪掛槍莢
+// Light-weapon mounts (2026-07-12): body plan decides where the weapon lives --
+//   hand / tentacle / mouth (dragon, trex, plasma mouth) / back turret (handless bio)
+//   / body fixed (rotor-drone pod) / wing fixed (jet hardpoint) / claw gun pod
 const GUN_MOUNT = {
-  // 人形機甲 + 有手的仿生體(2026-07-17:trex 輕武器移到手上、gorilla 改扛肩 = back 錨)
+  // Humanoid mechs + handed bios (2026-07-17: trex light weapon moved to hand, gorilla shoulder-carry = back anchor)
   bastion: 'hand', seraph: 'hand', aegis: 'hand', colossus: 'hand',
   gorilla: 'back', roo: 'hand', centaur: 'hand', cthulhu: 'tentacle',
-  // 無手仿生體:嘴砲 or 背載 or 翼藏(ostrich 2026-07-17 輕武器藏左翼)
+  // Handless bios: mouth cannon or dorsal or wing-hidden (ostrich 2026-07-17 light weapon hidden in left wing)
   trex: 'hand', hound: 'back', ostrich: 'wing', stego: 'back',
-  // 變形者地面體態(2026-07-17:raptor 雙手托槍、monkey 如意棒砲扛肩 = back 錨)
+  // Morph ground forms (2026-07-17: raptor two-hand grip, monkey staff-cannon shoulder-carry = back anchor)
   wolf: 'hand', vampire: 'hand', monkey: 'back', atlas: 'hand',
   raptor: 'hand', elephant: 'mouth', beetle: 'mouth', panther: 'back',
-  // 擬態無人機 / 擬態飛行體態
+  // Mimic drones / mimic flight forms
   bee: 'mouth', eagle: 'mouth', dragon: 'mouth', ptero: 'claw',
   levi: 'mouth', archo: 'mouth', owl: 'mouth',
-  // 機械飛行體態
+  // Mechanical flight forms
   heli: 'body', tilt: 'body', jet: 'wing', uav: 'wing',
 };
-// 掛點錨(2026-08-15 起是**唯一**一份):x = 右側掛點(wing/claw 鏡射成對)、s = 口徑倍率。
-// 舊制由座艙 builder 逐機提供一份、查不到才退到這裡;那些 builder 隨舊版建模一併退場後,
-// 錨只剩這一張表 —— 它給的只是**起點**,真正定案的是 `_mountCockpitWeapon` 的四條取景夾制
-// (徑向推出準星錐 / 壓在頂緣線下 / 對準消失點 / 二分取合規最大尺寸)。
+// Mount anchors (single copy since 2026-08-15): x = right-side mount (wing/claw mirrored as pair), s = caliber scale.
+// Old regime had one copy per cockpit builder with fallback here; those builders retired with the old modeling,
+// so only this table remains -- it gives just the start point, and _mountCockpitWeapon four framing clamps decide the final
+// (radial push out of reticle cone / press under top-edge line / aim at vanishing point / bisect to largest compliant size).
 const DEF_ANCHOR = {
   hand: { x: 0.5, y: -0.4, z: -1.0, s: 1.12 },
   tentacle: { x: 0.52, y: -0.5, z: -0.95, s: 1.2 },
@@ -186,164 +186,164 @@ const DEF_ANCHOR = {
   wing: { x: 0.9, y: -0.22, z: -1.0, s: 1.0 },
   claw: { x: 0.42, y: -0.72, z: -1.05, s: 0.9 },
 };
-// 重武器掛點(2026-07-22 FPV 武裝同源):FPV 重武器模型的掛點(輕武器沿用 GUN_MOUNT)。
-// 手持機種(rig.weap 'L'/'R'/'B')優先走 hand 不查此表;查無 → 沿用該機體輕武器掛點。
-// 對齊第三人稱建模位置:aegis 雙肩 VLS/colossus 眉心砲/stego 背鰭/elephant 背載加農/monkey 尾砲 = back,
-// trex 口腔無後座砲/dragon 口腔飛彈巢/beetle 顎下電漿陣 = mouth,eagle/ostrich 翼掛 = wing。
+// Heavy-weapon mounts (2026-07-22 FPV armament same-source): FPV heavy model mounts (lights follow GUN_MOUNT).
+// Handheld rigs (rig.weap L/R/B) prefer hand and skip this table; miss falls back to that body light mount.
+// Aligned to third-person model spots: aegis twin-shoulder VLS / colossus brow cannon / stego dorsal fin / elephant dorsal cannon / monkey tail cannon = back,
+// trex oral recoilless / dragon oral missile nest / beetle submaxillary plasma array = mouth, eagle/ostrich wing mounts = wing.
 const HEAVY_MOUNT = {
   aegis: 'back', colossus: 'back', trex: 'mouth', stego: 'back', hound: 'back',
   gorilla: 'back', ostrich: 'wing', cthulhu: 'tentacle',
   elephant: 'back', monkey: 'back', panther: 'back', beetle: 'mouth',
   bee: 'body', eagle: 'wing', dragon: 'mouth', ptero: 'claw',
 };
-/** gunMount 的鍵解析(morph 地面/飛行體態、drone 擬態獸;與 gunMount 內部同一條規則) */
+/** Key resolution for gunMount (morph ground/flight forms, drone mimic beasts; same rule as inside gunMount) */
 function mountKey(vis, kind, air) {
   if (kind === 'morph') return air ? vis.flight : vis.ground;
   if (kind === 'drone') return vis.form === 'avian' ? vis.creature : null;
   return vis.proto || vis.creature;
 }
-// rig.wpn.fwd(武器在自身/參考框的前向軸)→ FPV 前向(-z)的修正旋轉
+// Correction rotation from rig.wpn.fwd (weapon forward axis in own/reference frame) to FPV forward (-z)
 const WPN_FWD_ROT = {
   z: [0, Math.PI, 0], '-z': [0, 0, 0],
   y: [-Math.PI / 2, 0, 0], '-y': [Math.PI / 2, 0, 0],
   x: [0, Math.PI / 2, 0], '-x': [0, -Math.PI / 2, 0],
 };
-// 座艙武器目標長度(公尺,依掛點;× 錨點口徑倍率 s)—— 第三人稱武裝縮放進座艙的定尺基準
+// Cockpit weapon target length (m, by mount; times anchor caliber scale s) -- sizing datum for scaling third-person armament into the cockpit
 const COCK_WLEN = { hand: 1.25, tentacle: 1.05, mouth: 1.1, back: 1.25, body: 0.9, wing: 0.85, claw: 0.85 };
 /**
- * FPV 取景規則(2026-07-24 使用者需求的**唯一真相**;稽核 = tools/audit_cockpit.mjs):
- * ⓪ **畫面九宮格的中央那一格 MUST 淨空**(2026-08-15 使用者;`GRID_NDC`)—— 執行期的夾制只認這一條,
- *    落在格內的件**平移**出去(水平 or 下沉,MUST NOT 往上)。①是它的推論(格涵蓋錐),留著當見證人。
- * ① 視野不可妨礙視線 → 準星錐 SIGHT_DEG 半角內 MUST 淨空(座艙任何件的投影都不得侵入)
- * ② 各件頂緣 MUST ≤ TOP_NDC = HUD 下帶上緣 → 準星 的 **2/3 處**(不得高過此線靠近準星)
- * ③ 面積不可太大 → 座艙總遮擋 ≤ AREA_MAX、武裝 ≤ WPN_AREA_MAX;
- *    且**與武器/招式無關的裝置**每件面積 MUST ≤ 該座艙最大單一武器件(DEV_AREA;稽核硬性)
- * ④ 透視圖法、消失點在準星 → 武裝一律朝**視軸上 VP_Z 公尺處**(= 準星方向)收斂,
- *    近端寬、遠端窄的楔形剪影把視線導向準星;等同真實武器的校靶匯聚(boresight harmonisation)。
- * 幾何換算(fov 68 全機種,A8):畫面半高張角 34° → tan34 = 0.6745;
- * 深度 z 處的畫面半高 = 0.6745|z|、半寬 = 半高 × aspect。NDC 邊界 ±1。
+ * FPV framing rules (2026-07-24 user demand, single source of truth; audit = tools/audit_cockpit.mjs):
+ * 0 Center cell of the 3x3 screen grid MUST stay clear (2026-08-15 user; GRID_NDC) -- runtime clamps honor only this,
+ *    parts inside the cell shift out sideways or down (MUST NOT move up). Rule 1 follows from it (cell covers cone), kept as witness.
+ * 1 View must not block sight -- inside SIGHT_DEG reticle-cone half-angle MUST stay clear (no cockpit part projection may intrude)
+ * 2 Each part top edge MUST stay at or below TOP_NDC = two-thirds from HUD lower-band top edge to reticle (never rise past this line toward reticle)
+ * 3 Area must stay small -- total cockpit occlusion <= AREA_MAX, armament <= WPN_AREA_MAX;
+ *    and each device unrelated to weapons/abilities MUST stay <= that cockpit largest single weapon part (DEV_AREA; audit hard rule)
+ * 4 Perspective with vanishing point at reticle -- armament always converges toward VP_Z meters on the sight axis (= reticle direction),
+ *    wide-near narrow-far wedge silhouette leading the eye to the reticle; same as real boresight harmonisation.
+ * Geometry (fov 68 all bodies, A8): half-height half-angle 34 deg gives tan34 = 0.6745;
+ * screen half-height at depth z = 0.6745|z|, half-width = half-height times aspect. NDC bounds +-1.
  */
-// HUD 下帶佔畫面高比例。**2026-08-15 使用者定案「HUD 最多畫面高度的 1/6」** ⇒ 這個數字是
-// 天花板不是實測值:CSS(`--hud-h`,style.css .hud-bottom)與本常數 MUST 是**同一個** 1/6,
-// 因為它同時決定「HUD 佔多高」與「座艙件的頂緣壓到哪」(TOP_NDC 由它推導)。
-// 分家的症狀是座艙件的頂緣線落在 HUD 帶的中間或上方 —— 畫面上只表現成「有東西被 HUD 蓋住」。
+// HUD lower band share of screen height. 2026-08-15 user locked HUD to at most 1/6 of screen height, so this number is
+// a ceiling not a measurement: CSS (--hud-h, style.css .hud-bottom) and this constant MUST be the same 1/6,
+// because it decides both HUD height and where cockpit part top edges press (TOP_NDC derives from it).
+// A split shows as a cockpit top-edge line landing mid-HUD or above -- on screen it just looks like HUD covering something.
 const HUD_BOTTOM_F = 1 / 6;
-const HUD_TOP_NDC = -1 + 2 * HUD_BOTTOM_F;       // HUD 下帶上緣 NDC y(= −2/3)
+const HUD_TOP_NDC = -1 + 2 * HUD_BOTTOM_F;       // HUD lower-band top edge NDC y (= -2/3)
 export const COCKPIT = {
-  // **畫面九宮格的中央那一格 MUST 淨空**(2026-08-15 使用者:「畫面九宮格的中間不可放物件,
-  // 裡面的東西調整位置」)。這是**最外層的硬規則**,而且它**涵蓋**下面那個 11° 準星錐:
-  // 中央格邊界上離視軸最近的點是邊中點 (0, 1/3),角度 atan(1/3 × TAN_V) = 12.7° > 11°
-  // ⇒ 錐整個包在格子裡。兩條都留著是刻意的 —— 錐是「瞄準用的最小淨空」(與焰球外推同一條界),
-  // 格是「畫面構圖」,同一件事的兩把尺;夾制只認格(較嚴的那一把),錐由稽核當見證人。
-  // 「調整位置」是**平移**不是縮小:落在格內的件沿最短方向推出去(水平 or 下沉,MUST NOT 往上 ——
-  // 上方是天空與遠處敵機),推不動才輪到縮。
+  // Center cell of the 3x3 screen grid MUST stay clear (2026-08-15 user: nothing in the middle cell,
+  // move what is inside). Outermost hard rule, and it covers the 11-degree reticle cone below:
+  // the closest point on the center-cell border to the sight axis is the edge midpoint (0, 1/3), angle atan(1/3 x TAN_V) = 12.7 deg > 11 deg
+  // so the cone sits fully inside the cell. Both stay on purpose -- cone is the minimum aiming clearance (same bound as flare push-out),
+  // cell is picture composition; two rulers for one thing, clamps honor the stricter cell, audit keeps the cone as witness.
+  // Reposition means translate not shrink: parts inside move along the shortest exit (sideways or down, MUST NOT move up --
+  // sky and distant aircraft live above), shrink only when push cannot clear.
   GRID_NDC: 1 / 3,
-  // 「fov 已經回到常態了沒有」的容差(度)。`_updatePlayer` 的拉近/拉遠在差距 < 0.05 時停手
-  // ⇒ 這個數 MUST > 0.05,否則座艙永遠不會再出現。
+  // Tolerance (deg) for whether fov has returned to normal. _updatePlayer zoom in/out stops when gap < 0.05
+  // so this MUST exceed 0.05, else the cockpit never comes back.
   FOV_EPS: 0.1,
-  SIGHT_DEG: 11,        // 準星錐半角(= 中央 1/3 視野,與焰球外推同一條界)。硬規則:錐內零遮擋
-  AREA_MAX: 0.21,       // 座艙總遮擋上限(畫面比例)—— 至少 79% 畫面全清(最忙座艙 = 旋翼/進氣口/獸耳)
-  WPN_AREA_MAX: 0.12,   // 武裝(gunGroup:手臂/砲座/武器本體)遮擋上限 —— 輕重同時可見 + 持槍手臂
-  // 頂緣天花板:HUD 上緣 → 準星 的 2/3 處(= HUD_TOP_NDC/3 ≈ −0.222)。件的頂緣不得高過此線 ⇒
-  // 準星周圍上方 1/3 恆淨空、所有座艙元素壓在畫面下段。武器與結構共用同一條線(**MUST NOT** 分家)。
+  SIGHT_DEG: 11,        // reticle-cone half-angle (= central 1/3 view, same bound as flare push-out). Hard rule: zero occlusion inside cone
+  AREA_MAX: 0.21,       // total cockpit occlusion cap (screen share) -- at least 79 percent stays fully clear (busiest cockpit = rotor/intake/beast ears)
+  WPN_AREA_MAX: 0.12,   // armament (gunGroup: arms/mounts/bodies) occlusion cap -- light plus heavy visible together with gun arms
+  // Top-edge ceiling: two-thirds from HUD top edge to reticle (= HUD_TOP_NDC/3 about -0.222). No part top edge may rise past this line, so
+  // the third above the reticle stays clear and all cockpit elements press into the lower screen. Weapons and structure share one line (MUST NOT split).
   TOP_NDC: HUD_TOP_NDC / 3,
-  // **單一物件面積上限(2026-08-15 使用者定案:「單一物件面積不可超過全畫面的 5%」)**。
-  // 這是使用者可見的**硬天花板**,座艙裡**任何**一件(武器本體 / 持械機構 / 機體剪影 / 艙框)
-  // 都不得越過;稽核量的是**實渲染**遮擋(tools/audit_cockpit.mjs,逐件單獨 render 讀回 alpha)。
-  // 下面兩個是**執行期的夾制旋鈕**,兩者都 **MUST < PART_AREA_MAX** —— 夾的是 NDC **包圍盒**,
-  // 而盒面積恆 ≥ 實渲染面積 ⇒ 夾住盒就構造性地夾住了那 5%,反過來不成立。
-  // 旋鈕比天花板緊是刻意的(使用者同一句話的前半:「不可過於佔據使用者視野」);
-  // 要放寬 MUST 逐格往 PART_AREA_MAX 靠,MUST NOT 直接把旋鈕設成 0.05。
+  // Single-part area cap (2026-08-15 user locked: no single part may exceed 5 percent of screen).
+  // This is the user-visible hard ceiling; every cockpit piece (weapon body / grip mechanism / body silhouette / frame)
+  // must stay under it; audit measures real rendered occlusion (tools/audit_cockpit.mjs, per-part solo render reading back alpha).
+  // The two below are runtime clamp knobs, both MUST stay below PART_AREA_MAX -- they clamp the NDC bounding box,
+  // and box area is always >= rendered area, so clamping the box constructively clamps the 5 percent, not vice versa.
+  // Knobs tighter than the ceiling is deliberate (first half of the same user line: must not dominate the view);
+  // to relax, walk the grid toward PART_AREA_MAX, MUST NOT set knobs straight to 0.05.
   PART_AREA_MAX: 0.05,
-  // 2026-08-14 新版建模:同一個包圍盒**填得更滿**(舊版武器是幾根管子,新版是幾十顆零件)⇒
-  // 同樣的盒上限換算出的實際遮擋變大(實測 s04 11.5%→12.1%、m05 11.6%→12.0%,均越過 WPN_AREA_MAX)。
-  // 盒上限因此下修一級把實際遮擋壓回預算內;WPN_AREA_MAX 那條**使用者可見的**規則一格未動。
-  WPN_BOX_MAX: 0.048,   // 單件武裝的 NDC 包圍盒佔畫面比例上限(輕/重各一件 ⇒ 合計 ≈ WPN_AREA_MAX)
-  DEV_AREA_MAX: 0.042,  // 與武器/招式無關的裝置每件面積上限 —— **< WPN_BOX_MAX**(裝置恆比武器小)
-  VP_Z: 25,             // 消失點距離(公尺):視軸上的匯聚點,螢幕上就是準星
-  VP_TOL_DEG: 12,       // 武器軸線與「武器 → 消失點」的容許夾角
-  TAN_V: 0.674443,      // tan(fov/2) @ fov 68
+  // 2026-08-14 new modeling: the same box is packed fuller (old weapons were a few tubes, new ones dozens of parts), so
+  // the same box cap converts to larger real occlusion (measured s04 11.5 to 12.1 percent, m05 11.6 to 12.0 percent, both over WPN_AREA_MAX).
+  // Box cap therefore stepped down one notch to press real occlusion back in budget; the user-visible WPN_AREA_MAX rule did not move.
+  WPN_BOX_MAX: 0.048,   // NDC box screen share cap per armament part (one light plus one heavy adds to about WPN_AREA_MAX)
+  DEV_AREA_MAX: 0.042,  // per-device cap for non-weapon/ability gear -- always below WPN_BOX_MAX (devices stay smaller than weapons)
+  VP_Z: 25,             // vanishing-point distance (m): convergence point on sight axis, on screen it is the reticle
+  VP_TOL_DEG: 12,       // allowed angle between weapon axis and weapon-to-vanishing-point line
+  TAN_V: 0.674443,      // tan(fov/2) at fov 68
 };
 /**
- * 座艙機體剪影的取件參數(2026-08-15;唯一縫,見 `_cockBody` 檔頭)。
- * 全部是「機體全高」的比例或「畫面比例」—— MUST NOT 出現絕對公尺數(機體高度逐角色不同)。
+ * Cockpit body-silhouette part-pick params (2026-08-15; single seam, see _cockBody header).
+ * All are fractions of body height or screen share -- MUST NOT use absolute meters (body height differs per character).
  */
 const COCK_BODY = {
-  // 取樣點自眼位沿視軸**後退**(×全高)。地面型的真眼位坐在胸腔/顱腔裡(肩甲量體中心 z ≈ 0);
-  // 飛行型的眼位在**機鼻**(`VIEW_FLY_F`,整架機體都在身後)⇒ 不退遠一點的話前方一件都沒有,
-  // 而症狀是「這幾台的座艙是空的」(既有斷言全綠,因為空座艙每一條規則都過)。
+  // Sample point recedes from eye along sight axis (times full height). Ground-form true eyes sit in chest/cranium (pauldron bulk center z about 0);
+  // flight-form eyes sit at the nose (VIEW_FLY_F, whole body behind), so without receding there is nothing ahead,
+  // and the symptom is empty cockpits on those frames (existing asserts all green, because an empty cockpit passes every rule).
   BACK_F: 0.22,
   BACK_F_AIR: 0.62,
-  R_F: 0.90,      // 取樣半徑(×全高):再遠的零件在座艙裡只剩幾個像素
-  D: 1.15,        // 重投影球面半徑(公尺):等比縮放到近場,**投影逐像素不變**
-  ZNEAR: 0.75,    // 重投影後**近面**的最小深度(公尺;相機近裁面 0.5)
-  K_MAX: 5,       // 放大倍率上限:再大就不是「看到自己的零件」而是把一塊板子糊在鏡頭上
-  FRONT_F: 0.16,  // 量體中心的前向分量下限(×距離):方向太橫的件,重投影方向本身是雜訊
-  N: 8,           // 最多幾件(draw call 與辨識度的取捨)
-  BUDGET: 0.15,   // 結構件的 NDC 盒面積**總和**上限(座艙總量 AREA_MAX 扣掉武裝與艙框的餘裕)
-  MIN_F: 3e-4,    // 太小的件不收:讀不出是什麼,只是雜訊
+  R_F: 0.90,      // sample radius (times full height): farther parts are only pixels in the cockpit
+  D: 1.15,        // reprojection sphere radius (m): uniform scale to near field, projection stays pixel-identical
+  ZNEAR: 0.75,    // min depth after reprojection (m; camera near plane 0.5)
+  K_MAX: 5,       // magnification cap: beyond this it is a plate pasted on the lens, not own parts in view
+  FRONT_F: 0.16,  // bulk-center forward-component floor (times distance): too-sideways parts have noisy reprojected direction
+  N: 8,           // max parts (draw-call vs recognizability tradeoff)
+  BUDGET: 0.15,   // NDC box area sum cap for structure (AREA_MAX total minus armament and frame headroom)
+  MIN_F: 3e-4,    // skip tiny parts: unreadable, just noise
 };
-/** 深度 |z| 處、NDC 半徑 1 對應的世界半高(公尺):座艙件的貼邊/淨空換算唯一縫 */
+/** World half-height (m) for NDC radius 1 at depth |z|: single seam for cockpit part edge/clearance math */
 const ndcH = (z) => Math.abs(z) * COCKPIT.TAN_V;
 /**
- * 描邊殼的世界外推量(公尺;`outlinify(g, 0.012)` 沿法線展開 + 餘裕)——
- * **唯一縫**,頂緣與面積兩種夾制同吃。殼在頂點著色器展開、不進幾何 ⇒ 任何以包圍盒為準的
- * 夾制都 MUST 自己補上這一段,否則夾住的是「沒有描邊的那一版」。
+ * Outline-shell world push-out (m; outlinify(g, 0.012) expands along normals plus margin) --
+ * single seam shared by top-edge and area clamps. Shell expands in the vertex shader, never in geometry, so any
+ * box-based clamp MUST add this span itself, else it clamps the no-outline version.
  */
 const INK_W = 0.016;
 /**
- * 動畫姿勢的取樣數(自轉繞一圈 / 擺動走一週期)—— 夾制的包絡精度。
- * 12 是「槳葉最寬的那個角度不會被跳過」的下界:三葉槳每 120° 一個週期,12 個取樣 = 每 30°
- * 一格,最壞漏掉的橫向跨距是 cos(15°) = 96.6%,剩下的 3.4% 由描邊外推 `INK_W` 吃掉。
+ * Animation-pose sample count (one spin round / one sway cycle) -- clamp envelope precision.
+ * 12 is the lower bound that never skips the widest paddle angle: three-blade prop repeats every 120 deg, 12 samples = one bin per 30 deg,
+ * worst missed lateral span is cos(15 deg) = 96.6 percent, remaining 3.4 percent eaten by outline push-out INK_W.
  */
 const ANIM_N = 12;
 /**
- * 武裝動畫的搜尋上界(唯一縫;實際生效值由 `_solveGunPose` 反解,見那一支檔頭)。
- * PULL_MAX = 後座回彈 0.11 + 填彈整管後拉 0.4(beam/rail 那一支最大)—— 兩者可以同時發生。
- * 仰角的上界直接取 `BALLISTIC.LOB_SUP_MAX`(那本來就是「只夾視覺」的那個數)。
+ * Armament-animation search bound (single seam; effective value back-solved by _solveGunPose, see that header).
+ * PULL_MAX = recoil springback 0.11 + reload full-tube pull 0.4 (beam/rail branch largest) -- both can coincide.
+ * Elevation bound takes BALLISTIC.LOB_SUP_MAX directly (that number is the vision-only clamp).
  */
 const GUN_POSE = { PULL_MAX: 0.51, DROP_MAX: 0.5, PULL_N: 4 };
 /**
- * `?cockanim=0` —— 關掉「夾制量動畫包絡」這一整件事,退回 2026-08-15 之前的行為
- * (只量靜止那一幀、武裝繞**鏡頭**抬到 `LOB_SUP_MAX`)。稽核的反向驗證入口
- * (`audit_cockpit --break-anim`),與 `?sag=0`/`?morph=0`/`?gait=0` 同一個慣例。
+ * ?cockanim=0 -- turns off the whole clamp-measures-animation-envelope behavior, back to pre-2026-08-15
+ * (measure only the rest frame, armament raised around the camera to LOB_SUP_MAX). Reverse-check entry for audit
+ * (audit_cockpit --break-anim), same convention as ?sag=0 / ?morph=0 / ?gait=0.
  */
 const COCK_ANIM = typeof location === 'undefined'
   || new URLSearchParams(location.search).get('cockanim') !== '0';
 /**
- * `?selfbed=1` —— 把**自機**納入移動環境床(踏地/引擎兩類)。
- * 現制(與 2026-07 以來一致)明確 `continue` 掉 `ent.isSelf` ⇒ 玩家聽不到自己的機體,
- * 而 ⑦-2 講的「走進水裡會踏空一拍」在語意上就是**自己的**腳步。納入是玩家第一次聽到
- * 自己的機體 = **可聽的行為改變**,屬使用者裁決題(見 `docs/_pending/lane-motion.md` 待裁決 ②)
- * ⇒ 照專案慣例做成旋鈕、**預設 = 不生效**(逐位元同舊制)。與 `?amb=0`/`?cockanim=0` 同慣例。
+ * ?selfbed=1 -- includes self in the movement ground bed (footstep/engine kinds).
+ * Current regime (same since 2026-07) explicitly skips ent.isSelf, so players never hear their own body,
+ * while 7-2 line about stepping hollow over water semantically means own footsteps. Inclusion is the first time players hear
+ * their own body = audible behavior change, a user-ruling topic (see docs pending lane-motion.md ruling 2)
+ * so per project convention it is a knob defaulting to off (bit-identical to old regime). Same convention as ?amb=0 / ?cockanim=0.
  */
 const SELF_BED = typeof location !== 'undefined'
   && new URLSearchParams(location.search).get('selfbed') === '1';
 /**
- * `?tread=0` —— 關掉「機體走過去把腳邊的草撥開」(⑤-1;縫 = `toon.js` 的 `CHAR`/`setCelChar`)。
- * 關掉時 `_charSlots()` 回**空陣列** ⇒ `setCelChar` 把全槽的 `spd` 顯式寫 0 ⇒ 頂點著色器那一段
- * 逐槽 `continue` 早退(「早退不加」而不是「加一個 0」:`x + 0.0` 對 `-0.0` 不是恆等)
- * ⇒ 逐位元同舊制。這同時是 `audit_soft_stroke --break-char` 的對照組入口,
- * 與 `?sag=0`/`?morph=0`/`?gait=0`/`?cockanim=0` 同一個慣例。
+ * ?tread=0 -- turns off bodies brushing grass aside at their feet (5-1; seam = CHAR / setCelChar in toon.js).
+ * When off, _charSlots returns an empty array, so setCelChar writes spd 0 into every slot, and that vertex-shader span
+ * early-outs per slot with continue (early-out adds nothing instead of adding 0: x + 0.0 is not identity for -0.0),
+ * hence bit-identical to old regime. Also the control entry for audit_soft_stroke --break-char,
+ * same convention as ?sag=0 / ?morph=0 / ?gait=0 / ?cockanim=0.
  */
 const TREAD = typeof location === 'undefined'
   || new URLSearchParams(location.search).get('tread') !== '0';
 const _ZERO3 = new THREE.Vector3();
 /**
- * 座艙件的**螢幕佔比**(NDC 外接盒面積 / 全畫面)—— 唯一縫,結構件與武器本體同吃。
+ * Cockpit part screen share (NDC bounding-box area / full screen) -- single seam shared by structure and weapon bodies.
  *
- * MUST 投影**八個角**取外接盒,MUST NOT 拿「橫向跨距 ÷ 最近深度的畫面寬」當近似:
- * 那個近似只有在量體是一片正對鏡頭的薄板時才成立。座艙件幾乎都是**離軸而且很深**的
- * (一把斜掛在右下角、深度將近一公尺的槍)—— 它的螢幕外接盒是「遠端的最小 NDC」到
- * 「近端的最大 NDC」,而近似取的是同一個橫向跨距投在近端,**少算了一倍**
- * (實測 s03 手持槍:近似 12.3% × 21.8%,實渲染 25.3% × 35.8%)。
- * 症狀是夾制以為自己夾在 3.6%,而使用者那條「單一物件 ≤ 5%」量到 5.2%。
+ * MUST project all eight corners for the bounding box, MUST NOT use span-divided-by-near-plane screen width as approximation:
+ * that approximation only holds for a thin plate facing the camera. Cockpit parts are almost all off-axis and deep
+ * (a gun slung at lower right, nearly a meter deep) -- its screen box runs from far-end min NDC to
+ * near-end max NDC, while the approximation projects the same lateral span at the near end, undercounting by half
+ * (measured s03 handgun: approximation 12.3 pct x 21.8 pct, real render 25.3 pct x 35.8 pct).
+ * Symptom is the clamp believing 3.6 percent while the user rule single part <= 5 percent measures 5.2 percent.
  *
- * 橫縱各外推一個描邊殼(見 INK_W)。深度一律夾在 0.05 之上(近裁面之內的東西畫不出來,
- * 但分母趨近 0 會讓佔比爆掉)。
+ * Pad one outline shell per axis (see INK_W). Depth always clamped above 0.05 (things inside the near plane do not draw,
+ * but a near-zero denominator blows the share up).
  */
 const ndcBox = (lo, hi) => {
-  const ASPECT = 16 / 9;                        // 取景基準(不隨視窗漂;與稽核的量測面同值)
+  const ASPECT = 16 / 9;                        // framing datum (never drifts with window; same value as audit plane)
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   for (const z of [Math.max(0.05, Math.abs(hi.z)), Math.max(0.05, Math.abs(lo.z))]) {
     const hh = ndcH(z), hw = hh * ASPECT;
@@ -357,46 +357,46 @@ const ndcFrac = (lo, hi) => {
   return ((b.x1 - b.x0) / 2) * ((b.y1 - b.y0) / 2);
 };
 /**
- * 中央九宮格的推出量(唯一縫;三個消費端:結構件夾制 / 持械機構驗收 / 武器本體取景)。
+ * Center-cell push-out (single seam; three consumers: structure clamp / grip-mechanism acceptance / weapon framing).
  *
- * 回傳把這一件推出中央格所需的**最短位移**(世界公尺,只有 x 或 y 其中一項非零);
- * 已經在格外回 null。方向只考慮**水平**與**下沉** —— 往上推是把座艙件送進天空與遠處敵機
- * 之間,而頂緣線(`TOP_NDC`)本來就禁止那件事。
+ * Returns the shortest shift (world meters, only x or y nonzero) that pushes this part out of the center cell;
+ * null when already outside. Directions consider horizontal and down only -- pushing up wedges the part between sky and distant aircraft,
+ * which the top-edge line (TOP_NDC) already forbids.
  *
- * 位移在**世界空間**算(NDC 差 × 該深度的畫面半高):件是剛體,平移的是世界座標,
- * 直接對 NDC 動手要嘛得逐深度分開推(件會被拉歪),要嘛得迭代猜。取哪個深度是關鍵 ——
- * MUST 取**近面**(`min |z|`):同一段世界位移在近端換算出的 NDC 位移最大,拿遠端算會推不夠。
+ * Displacement is computed in world space (NDC delta times screen half-height at that depth): parts are rigid bodies, translation edits world coords,
+ * editing NDC directly would either push per depth (shearing the part) or iterate guesses. Depth choice is critical --
+ * MUST take the near face (min |z|): the same world shift converts to the largest NDC shift at the near end, far-end math under-pushes.
  */
 const mid9Push = (lo, hi) => {
   const b = ndcBox(lo, hi);
   const G = COCKPIT.GRID_NDC;
-  if (b.x0 >= G || b.x1 <= -G || b.y0 >= G || b.y1 <= -G) return null;   // 已在格外
+  if (b.x0 >= G || b.x1 <= -G || b.y0 >= G || b.y1 <= -G) return null;   // already outside cell
   const zn = Math.max(0.05, Math.min(Math.abs(lo.z), Math.abs(hi.z)));
   const hh = ndcH(zn), hw = hh * (16 / 9);
-  const right = (G - b.x0) * hw;        // 往右推到左緣貼齊 +1/3
-  const left = (b.x1 + G) * hw;         // 往左推到右緣貼齊 −1/3
-  const down = (b.y1 + G) * hh;         // 下沉到頂緣貼齊 −1/3
+  const right = (G - b.x0) * hw;        // push right until left edge meets +1/3
+  const left = (b.x1 + G) * hw;         // push left until right edge meets -1/3
+  const down = (b.y1 + G) * hh;         // sink until top edge meets -1/3
   const m = Math.min(right, left, down);
-  const EPS = 0.01;                     // 貼齊會被浮點與描邊殼吃回去 ⇒ 多推一點點
+  const EPS = 0.01;                     // flush fit gets eaten by float and outline shell, so push a hair more
   if (m === down) return { x: 0, y: -(down + EPS) };
   return { x: (m === right ? right + EPS : -(left + EPS)), y: 0 };
 };
 export { HUD_BOTTOM_F };
-const HUD_FIT_S = 0.5;                           // HUD 貼合重量測的節流間隔(秒)
+const HUD_FIT_S = 0.5;                           // throttle interval (s) for HUD-fit remeasurement
 /**
- * HUD 下帶貼合(2026-08-15 使用者:「HUD 最多畫面高度的 1/6」)——
- * 唯一縫,兩個呼叫端(`_onResize` 與 tick 的節流)MUST 全走這一支。
+ * HUD lower-band fit (2026-08-15 user: HUD at most 1/6 of screen height) --
+ * single seam, both callers (_onResize and tick throttle) MUST route here.
  *
- * 為什麼 MUST 有這一支、而不是把 CSS 的尺寸全改成 vh:HUD 下帶的高是**內容撐出來的**
- * (十列資料 + 小地圖,逐列各自有自己的字級與邊距),CSS 沒有辦法把「長度」除成一個無單位的
- * 縮放比 ⇒ 「不超過畫面 1/6」這件事在純 CSS 裡表達不出來,只能逐列改成 vh 再逐列人工對帳,
- * 而漏掉任何一列的症狀是「在小視窗上 HUD 吃掉三分之一畫面」。這裡量一次自然高、算一個比例,
- * 交給 CSS 的 `--hud-k` 去縮 —— **一個數字管全部**。
+ * Why this helper must exist instead of sizing all CSS in vh: band height is content-driven
+ * (ten data rows plus minimap, each with its own font size and margins), and CSS cannot divide a length into a unitless
+ * scale factor, so at-most-1/6-of-screen is inexpressible in pure CSS without converting every row to vh and hand-reconciling,
+ * and missing any row shows as HUD eating a third of the screen on small windows. Measure natural height once here, compute one ratio,
+ * hand it to CSS --hud-k -- one number governs all.
  *
- * 三條:①量之前 MUST 先把 `--hud-k` 還原成 1(量的是**自然高**,不是上一輪縮過的結果,
- * 否則會逐次收縮成一條線);②觸控版的 `.hud-bottom` 是**定位框**不是資料帶(inset:0),
- * 縮它等於把整個觸控 HUD 縮小 ⇒ CSS 那側以 `body.touch-ui` 讓這個變數失效;
- * ③比例只准縮不准放(`min(1, …)`)—— 內容少的時候放大它就不是「上限」而是「填滿」。
+ * Three rules: 1 restore --hud-k to 1 before measuring (measure natural height, not the last shrunk result,
+ * else it shrinks into a line over rounds); 2 touch .hud-bottom is a positioning frame not a data band (inset:0),
+ * shrinking it shrinks the whole touch HUD, so the CSS side disables this variable under body.touch-ui;
+ * 3 ratio may only shrink never grow (min(1, ...)) -- growing sparse content turns a cap into fill.
  */
 export function fitHudBand() {
   const el = document.querySelector('.hud-bottom');
@@ -406,10 +406,10 @@ export function fitHudBand() {
   const cap = (el.parentElement?.clientHeight || window.innerHeight) * HUD_BOTTOM_F;
   el.style.setProperty('--hud-k', nat > cap && nat > 0 ? String(cap / nat) : '1');
 }
-// 重武器 third-person 掛點動畫(2026-07-13;2026-07-15 移居 locomotion.js stepCombatFx):
-// ent.heavyFx / ent.fireFx 事件驅動的蓄力/擊發/後座/射姿動畫全數住 stepCombatFx ——
-// 戰場(這裡)與選角展示台(charPreview)共用同一條,MUST NOT 在 game.js 另寫一份。
-/** 該機體(該型態)的輕武器掛點。電漿是口噴武器:無手仿生體的背載一律改嘴砲 */
+// Heavy-weapon third-person mount animation (2026-07-13; moved to locomotion.js stepCombatFx on 2026-07-15):
+// charge/fire/recoil/stance animation driven by ent.heavyFx / ent.fireFx events all lives in stepCombatFx --
+// battlefield (here) and picker stage (charPreview) share one copy, MUST NOT write a second copy in game.js.
+/** Light-weapon mount for this body (this form). Plasma is a mouth weapon: dorsal mounts on handless bios always become mouth */
 function gunMount(vis, kind, air, wtype) {
   let m;
   if (kind === 'morph') m = GUN_MOUNT[air ? vis.flight : vis.ground] || (air ? 'body' : 'hand');
@@ -417,12 +417,12 @@ function gunMount(vis, kind, air, wtype) {
     m = vis.form === 'avian' ? (GUN_MOUNT[vis.creature] || 'mouth')
       : vis.form === 'fixed' ? 'wing' : 'body';
   } else m = GUN_MOUNT[vis.proto || vis.creature] || 'hand';
-  if (wtype === 'plasma' && m === 'back') m = 'mouth';   // 電漿:從口中噴出,不是背上發射
+  if (wtype === 'plasma' && m === 'back') m = 'mouth';   // plasma vents from the mouth, never from the back
   return m;
 }
-// 飛行型態:機體軸線水平,視點 = 機鼻(高度取機體中心 0,只沿正面前移)
+// Flight form: body axis horizontal, eye at the nose (height takes body center 0, shifted forward only)
 const VIEW_FLY_F = { avian: 0.42, fixed: 0.55, rotor: 0.25, morph: 0.45 };
-/** 該角色機體的 FPV 視點比例(依形狀,不是依機種)。flying = 飛行型態 */
+/** FPV eye ratio for this character body (by shape, not by class). flying = flight form */
 const heroView = (kind, ch, flying) => {
   const vis = (ch && CHARACTERS[ch]?.visual) || {};
   if (flying) {
@@ -432,25 +432,25 @@ const heroView = (kind, ch, flying) => {
   return VIEW_SHAPE[vis.proto || vis.creature || vis.ground] || VIEW_DEF;
 };
 
-// ---- 每幀熱路徑的共用暫存(彈道/準星每幀跑數十次,一次一顆 new 就是 GC 抖動的來源)----
-// 唯一紀律:**只准在同一個同步區塊內用完即丟**,MUST NOT 存進 bullets/effects 等跨幀結構。
-const _ZERO2 = new THREE.Vector2(0, 0);        // 準星 NDC(恆為畫面中心)
-const _NO_HITS = [];                           // 空命中列表(免得每次 raycast 都配一個)
+// ---- Shared scratch for per-frame hot paths (ballistics/reticle run dozens of times per frame; one new per call is GC jitter) ----
+// Single discipline: use-and-drop inside the same sync block only, MUST NOT store into cross-frame bullets/effects structures.
+const _ZERO2 = new THREE.Vector2(0, 0);        // reticle NDC (always screen center)
+const _NO_HITS = [];                           // empty hit list (avoids allocating per raycast)
 const _TMP_A = new THREE.Vector3();
 const _TMP_B = new THREE.Vector3();
 const _TMP_C = new THREE.Vector3();
-const _TMP_D = new THREE.Vector3();            // 命中點暫存(_updateBullets/_updateVisShells:當幀消費,不跨幀)
-const _TMP_E = new THREE.Vector3();            // 第二命中暫存(氣旋/拖尾方向解;同上)
-const _TMP_F = new THREE.Vector3();            // 氣旋正交軸暫存(_spinCyclone 專用;呼叫期間 D/E/F 皆視為已借出)
-const _FWD_Z = new THREE.Vector3(0, 0, 1);     // 彈體幾何朝向(+z);對準航向的固定基準軸
-const _UP_Y = new THREE.Vector3(0, 1, 0);      // 垂直軸(+y);圓柱/法線對齊的固定基準軸
-const _shotColCache = new Map();               // 陣營曳光色快取(免每發 new THREE.Color 解析字串)
+const _TMP_D = new THREE.Vector3();            // hit-point scratch (_updateBullets/_updateVisShells: consumed this frame, never across frames)
+const _TMP_E = new THREE.Vector3();            // second-hit scratch (cyclone/trail direction solve; same rule)
+const _TMP_F = new THREE.Vector3();            // cyclone orthogonal-axis scratch (_spinCyclone private; D/E/F count as borrowed during the call)
+const _FWD_Z = new THREE.Vector3(0, 0, 1);     // projectile geometry faces +z; fixed datum axis for heading alignment
+const _UP_Y = new THREE.Vector3(0, 1, 0);      // vertical axis +y; fixed datum for cylinder/normal alignment
+const _shotColCache = new Map();               // faction tracer color cache (avoids new THREE.Color string parse per shot)
 
-// ---- 池化特效的共用 fade(無閉包:參數全在 obj.userData,同一支函式服務全池)----
-// 逐發閉包 (`fade: (o,f) => {...}`) 本身就是每發一次的配置;池化 sprite/曳光若還配閉包,
-// 池等於白建。改由 userData 帶參 + 共用函式,acquire 只寫值不配函式。
+// ---- Shared fade for pooled effects (no closures: params all in obj.userData, one function serves all pools) ----
+// Per-shot closures (fade: (o,f) => ...) are themselves per-shot allocations; pooled sprites/tracers with closures
+// make the pool pointless. Carry params in userData plus a shared function, so acquire writes values without allocating functions.
 function _tracerFade(o, f) { o.material.opacity = 0.9 * f; }
-// 等速漂移 sprite(煙/火拖尾/觸地煙/殉爆火煙柱):userData { vel(等速,含上升), base, grow, op, delay? }
+// Constant-drift sprite (smoke/fire trail/touchdown smoke/burst fire-smoke column): userData { vel (steady, with rise), base, grow, op, delay? }
 function _spriteDriftFade(o, f, dt) {
   const u = o.userData;
   const p = 1 - f;
@@ -462,7 +462,7 @@ function _spriteDriftFade(o, f, dt) {
   o.scale.setScalar(u.base + p * u.grow);
   o.material.opacity = u.op * f;
 }
-// 重力餘燼:userData { vel(逐幀下墜), op } ;尺寸固定(base,acquire 時寫死)
+// Gravity ember: userData { vel (falls per frame), op }; fixed size (base frozen at acquire)
 function _spriteGravFade(o, f, dt) {
   const u = o.userData;
   u.vel.y -= 6 * dt;
@@ -471,27 +471,27 @@ function _spriteGravFade(o, f, dt) {
 }
 
 /**
- * 射線只認**實體網格**(**唯一縫**;兩個消費端:準星解析 `_resolveAim` 與彈道 `_updateBullets`)。
+ * Rays only accept solid meshes (single seam; two consumers: reticle resolve _resolveAim and ballistics _updateBullets).
  *
- * 兩處都是 `intersectObjects(cand, true)` —— **遞迴**進整棵 `ent.mesh`,而掛在機體底下的
- * 不只有機體:範圍光暈(`_updateRangeGlows`)與鎖定光暈(`vfx.lockGlow`)是 `ent.mesh` 的
- * **子 Sprite**,而 three 的 `Sprite.raycast` 會測那片面向相機的四邊形。光暈直徑 =
- * 「機體高 / 寬取大 ×1.15」⇒ 直升機那顆實測 **11.7m**(機體 `hitR` 只有 3m):
- *   ・準星:離機身 6m 就判定「命中該機」,對空彈射模式接著把瞄準點搬到機體幾何中心
- *     ⇒ 榴彈落點環偏離準星 **9.4°**(濾掉光暈後剩 3m / 4.6° = 真的打到旋翼盤)。
- *     而且會自鎖 —— 光暈亮著是因為該單位在這一發的傷害足跡內,它黏住準星又讓它留在足跡內。
- *   ・彈道:砲彈掠過亮著光暈的單位時會在**離機體 6m 的空中**引爆。
- * 兩個症狀都沒有錯誤訊息,而且只在單位亮燈時出現(= 交戰中)。
+ * Both call intersectObjects(cand, true) -- recursing into the whole ent.mesh tree, but a body carries more
+ * than its body: range glow (_updateRangeGlows) and lock glow (vfx.lockGlow) are child Sprites of ent.mesh,
+ * and three Sprite.raycast tests that camera-facing quad. Glow diameter =
+ * larger of body height/width times 1.15, so that heli glow measured 11.7m (body hitR only 3m):
+ *   - reticle: counts as hitting that unit 6m off the hull, then air-burst aiming moves the aim point to the body geometric center,
+ *     so the grenade landing ring sits 9.4 deg off the reticle (3m / 4.6 deg after filtering glows = truly hitting the rotor disk).
+ *     It also self-locks -- the glow is lit because the unit sits inside this shot damage footprint, and sticking to the reticle keeps it inside.
+ *   - ballistics: shells passing a glow-lit unit detonate 6m off the hull in mid-air.
+ * Both symptoms log nothing and appear only when units light up (= in combat).
  *
- * 判據取「是不是 Mesh」而不是「是不是 Sprite」:本專案的可命中量體一律是 Mesh / SkinnedMesh /
- * InstancedMesh,Sprite / Line / Points 從來只是表現層疊加件(原則 4)——
- * 用排除法才不會在下次有人往 `ent.mesh` 底下掛新的招牌時靜默復發。
+ * Criterion is is-Mesh not is-Sprite: every hittable bulk in this project is Mesh / SkinnedMesh /
+ * InstancedMesh, while Sprite / Line / Points are always presentation overlays (principle 4) --
+ * exclusion keeps the next wall sign hung under ent.mesh from silently regressing.
  */
 const raySolid = (o) => o.isMesh === true;
 
-// ---- 敵方標示:走進視野的敵人頭上掛「對方陣營主視覺」的下指箭頭(spotted marker)----
-// 主視覺 = 陣營識別色 + 徽記幾何(STEEL 鋼鐵三角 / SWARM 蜂群倒三角,同 logo 語彙)。
-// 迷霧是伺服器過濾的:快照裡出現 = 已進入視野,所以「有 mesh 就該有標示」。
+// ---- Enemy marks: enemies entering view get a down-arrow in their faction main visual (spotted marker) ----
+// Main visual = faction identity color + emblem geometry (STEEL upright triangle / SWARM inverted triangle, same logo language).
+// Fog is server-filtered: appearing in the snapshot means already in view, so any mesh deserves its mark.
 const _markTex = new Map();
 function factionMarkTex(side) {
   if (_markTex.has(side)) return _markTex.get(side);
@@ -499,8 +499,8 @@ function factionMarkTex(side) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = S;
   const g = cv.getContext('2d');
-  const col = sideInfo(side).color;                // 第三方(GUER/MILI)也有識別色
-  const tri = (cx, cy, r, up) => {                 // 陣營徽記:鋼鐵正三角 / 蜂群倒三角
+  const col = sideInfo(side).color;                // third parties (GUER/MILI) have identity colors too
+  const tri = (cx, cy, r, up) => {                 // faction emblem: steel upright / swarm inverted triangle
     g.beginPath();
     for (let k = 0; k < 3; k++) {
       const a = (up ? -Math.PI / 2 : Math.PI / 2) + k * Math.PI * 2 / 3;
@@ -509,7 +509,7 @@ function factionMarkTex(side) {
     }
     g.closePath();
   };
-  const diamond = (cx, cy, r) => {                 // 第三方徽記:菱形(與雙陣營三角分家)
+  const diamond = (cx, cy, r) => {                 // third-party emblem: diamond (split from dual-faction triangles)
     g.beginPath();
     g.moveTo(cx, cy - r); g.lineTo(cx + r * 0.72, cy); g.lineTo(cx, cy + r); g.lineTo(cx - r * 0.72, cy);
     g.closePath();
@@ -518,24 +518,24 @@ function factionMarkTex(side) {
   g.strokeStyle = 'rgba(10,14,18,0.9)';
   g.fillStyle = col;
   g.lineWidth = 7;
-  g.beginPath();                                   // 下指箭頭本體(V 形楔子)
+  g.beginPath();                                   // down-arrow body (V wedge)
   g.moveTo(20, 46); g.lineTo(64, 108); g.lineTo(108, 46);
   g.lineTo(86, 46); g.lineTo(64, 76); g.lineTo(42, 46);
   g.closePath();
   g.stroke(); g.fill();
-  if (SIDES[side]) tri(64, 26, 22, side === 'STEEL');   // 徽記懸在箭頭上方
+  if (SIDES[side]) tri(64, 26, 22, side === 'STEEL');   // emblem floats above the arrow
   else diamond(64, 26, 24);
   g.stroke(); g.fill();
-  g.strokeStyle = 'rgba(255,255,255,0.85)';        // 內描白邊:暗底/亮底都讀得出來
+  g.strokeStyle = 'rgba(255,255,255,0.85)';        // inner white rim: legible on dark and bright ground
   g.lineWidth = 2;
   g.stroke();
   const t = finishTex(new THREE.CanvasTexture(cv), { srgb: true, stream: false });
   _markTex.set(side, t);
   return t;
 }
-// ---- 友方標示:同陣營單位頭上的小型圓徽(與敵方下指箭頭分形)----
-// 敵我雙軌:敵 = 下指箭頭(注意),友 = 圓環徽(安心);顏色同吃陣營識別色,
-// 形狀分家後混戰中只看輪廓就能敵我辨識,不必先讀顏色。
+// ---- Ally marks: small round emblem over same-faction units (split shape from enemy down-arrow) ----
+// Enemy/friend two tracks: enemy = down-arrow (alert), friend = ring emblem (safe); colors share faction identity,
+// and split shapes let silhouettes alone tell friend from foe in a melee without reading color first.
 const _allyTex = new Map();
 function allyMarkTex(side) {
   if (_allyTex.has(side)) return _allyTex.get(side);
@@ -548,19 +548,19 @@ function allyMarkTex(side) {
   g.strokeStyle = 'rgba(10,14,18,0.9)';
   g.fillStyle = col;
   g.lineWidth = 8;
-  g.beginPath();                                   // 外圓環
+  g.beginPath();                                   // outer ring
   g.arc(64, 62, 34, 0, Math.PI * 2);
   g.stroke(); g.fill();
-  g.strokeStyle = 'rgba(255,255,255,0.9)';         // 內圈白環:友軍一律有白邊
+  g.strokeStyle = 'rgba(255,255,255,0.9)';         // inner white ring: every friend carries a white rim
   g.lineWidth = 4;
   g.beginPath();
   g.arc(64, 62, 26, 0, Math.PI * 2);
   g.stroke();
-  g.fillStyle = 'rgba(10,14,18,0.85)';             // 徽記底盤
+  g.fillStyle = 'rgba(10,14,18,0.85)';             // emblem base plate
   g.beginPath();
   g.arc(64, 62, 18, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = col;                               // 中央陣營徽記(鋼鐵正三角 / 蜂群倒三角 / 第三方菱形)
+  g.fillStyle = col;                               // center faction emblem (steel upright / swarm inverted / third-party diamond)
   g.strokeStyle = 'rgba(10,14,18,0.9)';
   g.lineWidth = 3;
   g.beginPath();
@@ -580,69 +580,69 @@ function allyMarkTex(side) {
   _allyTex.set(side, t);
   return t;
 }
-// 副視窗(PiP):無人機僚機視角 / 變形者集束轟炸機視角
-// 靠左上:右下角是 minimap、右上角是 kill-feed(兩者都是 DOM,永遠疊在 WebGL 畫布上方)
+// Sub-window (PiP): drone wingman view / morph cluster-bomber view
+// Top-left: minimap sits bottom-right, kill-feed top-right (both DOM, always above the WebGL canvas)
 const PIP = { W_FRAC: 0.17, MAX_W: 250, ASPECT: 0.62, PAD: 12, TOP: 58, GAP: 8, FOV: 78 };
 
-// 小地圖「周遭」模式(KeyM / 觸控十字鍵右切換)的顯示窗尺寸。純顯示層常數,不是平衡數值 ⇒ 住這裡不進 data.js。
-// 半徑取「自機視野 × 瞄準加成 × PAD」:**瞄準加成恆計入**,否則一進狙擊模式地圖就跟著縮放,
-// 看地圖的人會暈;固定成最大可視範圍,切不切瞄準都是同一個尺度。
+// Minimap vicinity mode (KeyM / touch d-pad right switches) window size. Pure display constant, not a balance number, so it lives here not in data.js.
+// Radius takes own sight x aim bonus x PAD: aim bonus is always included, else entering scope mode would rescale the map under the reader
+// and cause motion sickness; fixed at max visible range so scoped and unscoped share one scale.
 const MM_NEAR = {
-  PAD: 1.15,     // 視野外再留一圈餘裕(邊緣剛進視野的目標不會貼在框線上)
-  MIN_R: 140,    // 半徑下限(公尺):視野極短的機種也不至於縮到看不出方位
-  SPEC_R: 420,   // 觀戰自由視角無座機 ⇒ 沒有 sight 可取,用固定半徑
+  PAD: 1.15,     // margin ring outside sight (targets just entering sight never hug the frame)
+  MIN_R: 140,    // floor radius (m): short-sight bodies still show bearings
+  SPEC_R: 420,   // free-spectate camera has no own body, hence no sight to take, so use a fixed radius
 };
 
-// 觀戰視角:常數與純數學一律住 `data.js SPEC_CAM`(稽核 `audit_spectator_cam.mjs` 直測真品),
-// game.js 只是消費端 —— MUST NOT 在此另開第二份係數表(見該檔頭註解)。
-// 玩家視角的偏航吃伺服器權威 `ry`;**快照沒有俯仰** ⇒ 俯仰保留觀戰者自控(降級,不例外)。
+// Spectate view: constants and pure math all live in data.js SPEC_CAM (audit audit_spectator_cam.mjs tests the originals),
+// game.js is only a consumer -- MUST NOT open a second coefficient table here (see that file header).
+// Player-view yaw eats server-authoritative ry; snapshots carry no pitch, so pitch stays with the spectator (degraded, no exception).
 
-// ---- 表現層資源上限(純效能保險,不是平衡數值 ⇒ 住這裡不進 data.js)----
-// 一次扇形擊發就吐 20~30 個特效物件;連發 + 多人同框時 `effects` 會長到數百,
-// 每幀逐個 fade 就是純 CPU 負擔。超量砍最舊(它們本來就快淡出,肉眼幾乎無感)。
+// ---- Presentation resource caps (pure perf insurance, not balance numbers, so they live here not in data.js) ----
+// One fan volley spits 20-30 effect objects; sustained fire plus many players on screen grows effects into the hundreds,
+// and per-frame fade over each is pure CPU load. Over cap drops the oldest (they were nearly faded out, visually negligible).
 const FX_MAX = 260;
-// 同型彈體的池深:同時在空中的同型彈遠少於此,超量代表換過武器 → 真的釋放
+// Same-type projectile pool depth: same-type shells aloft at once stay far below this; overflow means weapons changed, so really release
 const PROJ_POOL_MAX = 24;
-// ---- 高頻物件池深(純效能保險,不是平衡數值 ⇒ 住這裡不進 data.js)----
-// 子彈/曳光/粒子 sprite 每發/每中/每幀都在配置,池深按「同框在空上限」取整:
-// 曳光(輕武器 rate 8 + 他人/bot 齊射)、火/煙 sprite(爆炸餘燼 + 拖尾 + 墜機煙)、
-// 彈體記錄(含自機 bullets + 他人 _visShells + 拋擲 _decoyBombs 共用一種記錄)。
-// 超量歸還直接丟棄並走原 dispose 路徑(只慢一發,不漏)。
+// ---- Hot-object pool depths (pure perf insurance, not balance numbers, so they live here not in data.js) ----
+// Bullet/tracer/particle sprites allocate per shot/hit/frame, so depth rounds up the on-screen aloft ceiling:
+// tracers (light rate 8 plus others/bot volleys), fire/smoke sprites (blast embers plus trails plus crash smoke),
+// projectile records (own bullets plus others _visShells plus thrown _decoyBombs share one record kind).
+// Over-cap returns drop directly and take the original dispose path (one slow shot, no leak).
 const TRACER_POOL_MAX = 48;
 const SPRITE_POOL_MAX = 96;
 const BULLET_REC_MAX = 64;
 const FX_SHELL_MAX = 128;
-// 觸控裝置的像素比上限:手機 DPR 常見 2.5~3.5,照單全收等於算 6~12 倍於邏輯解析度的像素,
-// 行動 GPU 是**填充率**瓶頸 ⇒ 高功耗模式一樣掉幀。1.5 已看不出鋸齒差(還有 FXAA 級的 DPR 抗鋸齒)。
+// Touch-device pixel-ratio cap: phone DPR is often 2.5-3.5, accepting it raw means 6-12x logical-resolution pixels,
+// and mobile GPUs are fill-rate bound, so even high-power mode drops frames. 1.5 shows no visible aliasing gap (plus DPR-level AA at FXAA grade).
 const TOUCH_DPR_MAX = 1.5;
-// 自適應解析度(**全平台**;2026-08-12 起桌機一併啟用):`_dpr()` 是畫質**天花板**
-//(低功耗 1 / 觸控 1.5 / 桌機 2,稽核鎖定),調節器只在天花板以下浮動 —— 幀時撐不住就降
-// 算圖解析度換幀率,有餘裕就升回滿檔。
-// 手機 GPU 效能跨度極大(同一份場景在旗艦與中階機差 3 倍),固定像素比注定兩頭不討好:
-// 訂高了弱機掉幀、訂低了強機白白犧牲畫質;讓量測到的幀時自己決定,才同時兼顧速度與畫質。
+// Adaptive resolution (all platforms; desktop enabled too since 2026-08-12): _dpr is the quality ceiling
+// (low-power 1 / touch 1.5 / desktop 2, audit-locked), and the governor floats only below the ceiling -- it lowers
+// render resolution for frame rate when frame time cannot hold, and climbs back to full when headroom returns.
+// Phone GPU spread is huge (same scene differs 3x between flagship and mid tier), so a fixed pixel ratio pleases neither end:
+// high strands weak devices, low wastes strong displays; letting measured frame time decide serves both speed and quality.
 //
-// **為什麼桌機也要**(舊制刻意只開觸控,2026-08-12 改):桌機的跨度一樣大 —— 4K 螢幕的
-// `_dpr()` 天花板是 2 ⇒ 每幀 4 倍於邏輯解析度的像素,而內顯與獨顯差一個量級。舊制在那裡
-// 的行為是「就這樣掉幀」,而畫面上沒有任何東西告訴玩家可以換畫質;調節器把那件事變成
-// 自動的。桌機恆能撐滿檔時 `_resScale` 一路停在 1 ⇒ **逐位元同舊制**(升階分支在
-// `_resScale < 1` 就早退,一次 `setPixelRatio` 都不會打)。
+// Why desktop too (old regime touched touch-only on purpose, changed 2026-08-12): desktop spread is just as wide -- 4K screens
+// hit a _dpr ceiling of 2, meaning 4x logical-resolution pixels per frame, while iGPU vs dGPU differ by an order of magnitude. Old behavior there
+// was to just drop frames, with nothing on screen telling players to switch quality; the governor makes that automatic.
+// When desktop holds full rate, _resScale parks at 1, so bit-identical to the old regime (the upscale branch
+// early-outs at _resScale < 1 without firing a single setPixelRatio).
 const RES_GOV = {
   ...DRS,
-  MIN: DRS.MIN,        // 縮放下限(乘在 _dpr() 天花板上):再糊就影響瞄準辨識,寧可掉幀
-  STEP: DRS.STEP,      // 每次調整基礎一階(drawing buffer 重配有成本,小步走 + 冷卻防震盪)
-  HI_MS: DRS.HI_MS,    // 平均幀時 > 20ms(< 50fps)⇒ 降階
-  LO_MS: DRS.LO_MS,    // 平均幀時 < 17.2ms(60Hz vsync 滿速)⇒ 有餘裕,升一階
-  HOLD_S: DRS.HOLD_S,  // 任兩次調整的基礎最小間隔(也給 EMA 重新收斂的時間)
-  COOL_S: DRS.COOL_S,  // 升階基礎冷卻(降階只吃 HOLD_S:掉幀要快救,畫質可以慢慢還)
-  FAIL_S: DRS.FAIL_S,  // 升階後這麼久內又被打回 ⇒ 判定「上不去」,升階冷卻翻倍
-  COOL_MAX: DRS.COOL_MAX, // 升階冷卻上限(避免在能力邊界永久震盪,也不至於永不再試)
-  SPIKE_MS: DRS.SPIKE_MS, // 單幀尖峰(GC / 資源載入 / 分頁切回)不入帳,只看穩態
-  EMA: DRS.EMA,        // 指數移動平均權重(時間常數約 10 幀)
-  // **震盪熄火**:方向反轉這麼多次就永久停手,停在當下那一階。指數退避拉長的是「多久
-  // 再試一次」,它救不了「這台機器的能力剛好卡在兩階之間」—— 那種機器上升降會一直交替,
-  // 而每一次調整都要重配 drawing buffer(整條後製鏈的 RT 跟著重建)。與其永遠付那個成本,
-  // 不如認賠停在一階。⚠ 熄火 MUST NOT 順手把 `_resScale` 拉回 1:那等於把玩家丟回撐不住
-  // 的那一階,而且下一輪又會降下來 —— 熄火要的是「停在現在這裡」。
+  MIN: DRS.MIN,        // scale floor (times the _dpr ceiling): blurrier would hurt aim readability, better to drop frames
+  STEP: DRS.STEP,      // one base step per adjust (drawing-buffer realloc has cost, walk small with cooldown against oscillation)
+  HI_MS: DRS.HI_MS,    // avg frame time above 20ms (below 50fps) means step down
+  LO_MS: DRS.LO_MS,    // avg frame time below 17.2ms (60Hz vsync full speed) means headroom, step up
+  HOLD_S: DRS.HOLD_S,  // min gap between any two adjusts (also gives the EMA time to reconverge)
+  COOL_S: DRS.COOL_S,  // upscale base cooldown (downscale eats only HOLD_S: rescue drops fast, quality returns slowly)
+  FAIL_S: DRS.FAIL_S,  // knocked back this soon after upscaling means it cannot hold, so double the upscale cooldown
+  COOL_MAX: DRS.COOL_MAX, // upscale cooldown cap (avoids endless oscillation at the capability edge without giving up forever)
+  SPIKE_MS: DRS.SPIKE_MS, // single-frame spikes (GC / asset load / tab return) never count, steady state only
+  EMA: DRS.EMA,        // exponential moving average weight (about 10 frames time constant)
+  // Oscillation cutout: this many direction flips stops the governor permanently at the current step. Exponential backoff stretches how long
+  // before the next try, but it cannot save machines whose capability sits between two steps -- those would alternate up/down forever,
+  // and every adjust reallocs the drawing buffer (the whole post chain RTs rebuild with it). Better to concede and park on one step.
+  // CUTOUT MUST NOT pull _resScale back to 1 on the way out: that throws the player back to the step that cannot hold,
+  // and the next round steps down again -- cutout means stay right here.
   FLIP_MAX: DRS.FLIP_MAX,
 };
 
@@ -650,8 +650,8 @@ const _GLOBAL_UNIT_DIM_CACHE = new Map();
 
 export class BattleClient {
   /**
-   * opts: { canvas, minimapCanvas, cfg, side(可 null=觀戰), youId, net, terrain, hud }
-   * youId:自己的連線 id;快照裡英雄帶 pid,用來認出自己的座機(同陣營可多人)。
+   * opts: { canvas, minimapCanvas, cfg, side (may be null = spectate), youId, net, terrain, hud }
+   * youId: own connection id; heroes in snapshots carry pid, used to recognize own frame (same faction may hold many players).
    * hud: { self, aiming, bases, wave, feed, dead, over, cooldown, hitmark }
    */
   constructor(opts) {
@@ -663,126 +663,126 @@ export class BattleClient {
     this._viewOcclusionSkip = new Set();
     this._viewFades = new Map();
     this._viewOcclusionNext = 0;
-    this._dissolveGhosts = [];        // 純渲染殘影;MUST NOT 留在 ents / 鎖定 / 動畫消費端
+    this._dissolveGhosts = [];        // render-only ghosts; MUST NOT stay in ents / lock / animation consumers
     this.effects = [];
     this.keys = {};
     this.yaw = 0; this.pitch = -0.1;
-    this.bodyYaw = 0;                 // TPS 機體朝向; yaw 保留給相機/準星
+    this.bodyYaw = 0;                 // TPS body heading; yaw stays with camera/reticle
     this.vel = new THREE.Vector3();
     this.pos = new THREE.Vector3();
     this.hp = 0; this.maxHp = 1;
     this.dead = false;
-    this._deathSeq = null;   // 陣亡過場狀態機:null=未播(哨兵);物件=播放中。gate 皆 truthiness、teardown 皆 = null
+    this._deathSeq = null;   // death-transition state machine: null = not played (sentinel); object = playing. Gates read truthiness, teardown writes null
     this.lastPosSend = 0;
     this.mixers = new Set();
     this.spinners = new Set();
-    this.hitShells = new Set();      // 塔/主堡受擊回饋殼(hex shader,受擊閃亮;不是護盾層,工事無 sp)
+    this.hitShells = new Set();      // tower/keep hit-feedback shell (hex shader, flashes on hit; not a shield layer, works have no sp)
     this.disposed = false;
     this._snapQueue = null;
-    this._spawnPend = new Map();   // 開場分幀建模:id -> 最新快照 raw(首包 ~200 隻不同一幀全建)
-    // 物理:後座力(視角踢)、鏡頭震動(trauma)、FPV 側傾
+    this._spawnPend = new Map();   // staggered opening modeling: id to latest snapshot raw (first burst of about 200 kinds never builds in one frame)
+    // Physics: recoil (view kick), camera shake (trauma), FPV roll
     this.recoil = { p: 0, y: 0 };
     this.trauma = 0;
     this.roll = 0;
     this.weaponKick = 0;
-    this._flashHeavy = false;       // 上一發是否重武器(槍口焰放大)
-    // 後座力機制(見 data.js RECOIL):連射回穩 + 高後座重武器開火前穩定 + 開火中位移懲罰
-    this._burstN = {};              // slot -> 連射計數(達 profile.burst 後強制回穩)
-    this._settleUntil = {};         // slot -> 回穩解除時間戳(此間不能擊發)
-    this._steadyAt = 0;             // 高後座重武器:開始「停穩」的時間戳(0 = 尚未穩定)
-    this._recoilMoveF0 = 1;         // 當前這一輪後座的移速係數(← data.js recoilMoveF;1 = 不受影響)
-    // 視野鎖定(觸控 ZR 按住;見 data.js VIEW_LOCK 與 _tickViewLock)—— 純客戶端視角輔助
-    this._vlockHold = false;        // 鈕是否按著(按住型,與 firing 同層)
-    this._vlockId = null;           // 目前鎖住的 ent id(null = 沒鎖到;放開即清)
-    this._vlockPrev = null;         // 輪替錨點:上一個鎖過的 ent id,**跨放開保留**(見 _tickViewLock ③)
-    this._vlockNext = false;        // 這次按下還沒輪替過(按一次 = 切下一個)
-    this._vlockAt = 0;              // 上次索敵時刻(節流;0 = 下一幀立刻重找)
-    this._vlockUi = false;          // 鈕面亮燈(body class)目前狀態
-    this._scopeFog = 0;             // 火場霧化濃度 0~1(狙擊鏡縮圈;與 hud.envFog 同一個值)
-    this._weatherFogD = 0;          // 天氣濃霧密度 0~1(視野等比縮 + 濃霧遮罩;與 hud.weatherFog 同一個值)
-    this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
-    this._visShells = [];            // 他人重武器視覺彈體(2026-07-22 彈藥同源;純表現層)
-    this._decoyBombs = [];           // 集束炸彈的「拋擲彈體」動畫(榴彈拋物線,落地才引爆演出,依類型上色)
-    this._initFxPools();             // 高頻物件池(曳光/sprite/彈體記錄/特效殼;預先分配,見 pool.js)
-    this._wdefCache = new Map();     // 他人武器 def 快取(ch:slot → heroWeapon Lv1)
-    this.lootMeshes = new Map();     // 戰場物資(快照 lt 同步)
-    this.airdropMeshes = new Map();  // 空投物資補給箱(快照 ad 同步)
-    this.mineMeshes = new Map();     // 地雷微凸起(field 訊息一次同步)
-    this.flamers = new Set();        // 火場(火舌閃爍動畫)
-    this.damaged = new Set();        // 受損機體/建築(冒煙/裂痕/失火,逐幀動畫)
-    this.floods = [];                // 淹水區(機甲減速判定)
-    this.fires = [];                 // 火場(滯留視野霧化判定;傷害由伺服器結算)
-    this._fireDwell = 0;             // 火場滯留累計秒(離開後較快消散 → 視野漸清)
-    this._swampDwell = 0;            // 沼澤滯留累計秒(越陷越深 → 移動漸慢至 1/8;離開即歸零)
-    this._env = { code: 0, depth: 0, ground: 0, air: false }; // 領機當幀環境(每幀 _envAt 更新;見該函式)
+    this._flashHeavy = false;       // whether the last shot was heavy (bigger muzzle flash)
+    // Recoil regime (see data.js RECOIL): burst re-settle plus pre-fire steady for high-recoil heavies plus displacement penalty while firing
+    this._burstN = {};              // slot to burst count (forced re-settle once profile.burst reached)
+    this._settleUntil = {};         // slot to settle-release timestamp (cannot fire while pending)
+    this._steadyAt = 0;             // high-recoil heavy: timestamp when steadying started (0 = not steady yet)
+    this._recoilMoveF0 = 1;         // move-speed factor for this recoil round (from data.js recoilMoveF; 1 = unaffected)
+    // View lock (touch ZR hold; see data.js VIEW_LOCK and _tickViewLock) -- pure client view assist
+    this._vlockHold = false;        // whether the button is held (hold-type, same layer as firing)
+    this._vlockId = null;           // currently locked ent id (null = no lock; cleared on release)
+    this._vlockPrev = null;         // cycle anchor: last locked ent id, kept across releases (see _tickViewLock 3)
+    this._vlockNext = false;        // this press has not cycled yet (one press = next target)
+    this._vlockAt = 0;              // last seek time (throttle; 0 = research next frame)
+    this._vlockUi = false;          // button lit state (body class) right now
+    this._scopeFog = 0;             // fire-field fog density 0-1 (scope constriction; same value as hud.envFog)
+    this._weatherFogD = 0;          // weather dense-fog density 0-1 (sight scales down plus fog mask; same value as hud.weatherFog)
+    this.samMeshes = new Map();      // AA missiles (server-authoritative, snapshot sm sync)
+    this._visShells = [];            // others heavy visual shells (2026-07-22 ammo same-source; presentation only)
+    this._decoyBombs = [];           // cluster-bomb thrown-body animation (grenade parabola, detonation show only on landing, tinted by type)
+    this._initFxPools();             // hot-object pools (tracer/sprite/projectile-record/effect-shell; preallocated, see pool.js)
+    this._wdefCache = new Map();     // others weapon-def cache (ch:slot to heroWeapon Lv1)
+    this.lootMeshes = new Map();     // battlefield loot (snapshot lt sync)
+    this.airdropMeshes = new Map();  // airdrop supply crates (snapshot ad sync)
+    this.mineMeshes = new Map();     // mines as small bumps (one-shot field-message sync)
+    this.flamers = new Set();        // fire fields (tongue-flicker animation)
+    this.damaged = new Set();        // damaged bodies/buildings (smoke/cracks/burning, per-frame animation)
+    this.floods = [];                // flooded zones (mech slowdown check)
+    this.fires = [];                 // fire fields (dwell view-fog check; damage settles on the server)
+    this._fireDwell = 0;             // fire dwell seconds (clears faster after leaving, so vision clears gradually)
+    this._swampDwell = 0;            // swamp dwell seconds (sinks deeper over time, movement down to 1/8; zeroed on exit)
+    this._env = { code: 0, depth: 0, ground: 0, air: false }; // leader current-frame environment (updated per frame by _envAt; see that function)
     this._mineCheckAt = 0;
     this._floodWarnAt = 0;
-    this._slopeWarnAt = 0;           // 陡坡擋下的提示節流(8s;沿等高線滑得動就不算撞坡)
+    this._slopeWarnAt = 0;           // steep-slope block hint throttle (8s; sliding along contours does not count as a slope hit)
     this.cutin = new CutIn(document.getElementById('cutinLayer'));
 
-    // 機體種類綁角色(2026-08-02 起每名角色都自帶 kind,不隨陣營);未選角/觀戰退回陣營主力機種
-    // (超級方無 SIDES 主力機種,退回機甲 —— 開戰快照會把真實角色帶回來)
+    // Body kind binds to character (since 2026-08-02 every character carries its own kind, never by faction); no pick / spectate falls back to faction main
+    // (super sides have no SIDES main, so fall back to mech -- the opening snapshot brings the true character back)
     this.heroKind = this.side ? (CHARACTERS[this.ch]?.kind || SIDES[this.side]?.hero || 'robot') : null;
     this.isDrone = this.heroKind === 'drone';
-    this.isMorph = this.heroKind === 'morph';   // 變形機甲(飛行 ↔ 地面雙型態)
-    this.flight = false;                        // morph:目前是否飛行型態
-    this.charge = 0;                            // morph:蓄力跳進度 0~1(按住 Space)
-    // 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT):爬升動力條 + 受擊掉高
-    this.lift = null;                           // 目前爬升動力(null = 首幀補滿到統一上限)
-    this._airSink = 0;                          // 受擊掉高:待落公尺數(逐幀以 _airSinkV 消化)
-    this._airSinkV = 0;                         // 待落公尺數的下降速率(= 待落總量 / FLIGHT.SINK_S)
-    this._liftLockUntil = 0;                    // 受擊掉高動力回復鎖定截止時刻(FLIGHT.HIT_LOCK_S)
-    this.unbalLeft = 0;                         // 受擊失衡異常狀態剩餘秒(伺服器快照同步)
+    this.isMorph = this.heroKind === 'morph';   // morph mech (flight and ground dual forms)
+    this.flight = false;                        // morph: whether currently in flight form
+    this.charge = 0;                            // morph: charged-jump progress 0-1 (hold Space)
+    // Flight dynamics (2026-07-30; single seam data.js FLIGHT): climb power bar plus hit-induced altitude loss
+    this.lift = null;                           // current climb power (null = refill to unified cap on first frame)
+    this._airSink = 0;                          // hit-induced sink: pending meters (digested per frame at _airSinkV)
+    this._airSinkV = 0;                         // descent rate for the pending meters (= pending total / FLIGHT.SINK_S)
+    this._liftLockUntil = 0;                    // power-recovery lockout deadline after hits (FLIGHT.HIT_LOCK_S)
+    this.unbalLeft = 0;                         // hit-imbalance debuff seconds left (server snapshot sync)
 
-    // 角色(專屬機體 + 輕/重武器 + 守招/攻招);開房廣播帶 ch,快照亦會同步
-    this.abil = { light: 1, heavy: 1, def: 1, atk: 1 };   // 招式開場即 Lv1 可用(2026-07-20)
-    this.wdef = {};                   // slot -> 解析後武器數值(含英雄倍率與階級)
-    this.wstate = {};                 // slot -> { ammo, reloadEnd }(本地 HUD;伺服器另行把關)
+    // Character (dedicated body plus light/heavy weapons plus guard/attack abilities); lobby broadcast carries ch, snapshots also sync it
+    this.abil = { light: 1, heavy: 1, def: 1, atk: 1 };   // abilities start at Lv1 usable (2026-07-20)
+    this.wdef = {};                   // slot to resolved weapon numbers (with hero multipliers and tiers)
+    this.wstate = {};                 // slot to { ammo, reloadEnd } (local HUD; server enforces separately)
     this.lastFireAt = { light: 0, heavy: 0 };
-    this.bullets = [];                // 彈道學子彈(初速 mv + 重力,射程上限)
+    this.bullets = [];                // ballistic shells (muzzle velocity mv plus gravity, capped range)
     this._setChar(this.ch || null);
     this.money = 0;
-    this.upg = { lw: 0, hw: 0, def: 0, atk: 0, hp: 0, ar: 0, sp: 0, ch: 0 };   // 八軌升級(快照 o.up 回寫)
-    this._reserve = new Set();        // 商店預約名單(錢一夠自動下單;純客戶端排程,見 _tickReserve)
-    // 超級大戰自動購買預設勾選:超級升級一進戰場就掛上預約(玩家可手動摘下,摘下後不再自動加回)
+    this.upg = { lw: 0, hw: 0, def: 0, atk: 0, hp: 0, ar: 0, sp: 0, ch: 0 };   // eight-track upgrades (snapshot o.up writes back)
+    this._reserve = new Set();        // shop reservation list (auto-orders once money suffices; pure client schedule, see _tickReserve)
+    // Super-battle auto-buy defaults checked: super upgrade reserves itself on entering the battle (players may uncheck, and it never re-adds itself)
     if (isSuperSide(this.side)) this._reserve.add('super');
-    this._resSent = {};               // 預約已下單的階(item → {lvl, t}):擋住權威回覆前的重複下單
-    this.sp = 0; this.maxSp = 1;      // 護盾(雙層 HP 第一層,脫戰自然回復)
-    this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
-    this._mpAuth = false;             // maxMp 是否已收到伺服器權威值(電力資源用;爬升動力為固定上限,不吃此閘)
-    this.kn = 0;                      // 戰鬥分數(八軌升級的第二道門檻;伺服器權威,只增不減)
-    this.cds = [0, 0];                // [守招, 攻招] 冷卻(伺服器倒數)
-    this.chg = [[1, 1, 0], [1, 1, 0]]; // [[守招可用, 守招上限, 下次冷卻], [攻招可用, 攻招上限, 下次冷卻]]
-    this.castLeft = 0;                // 招式前搖剩餘秒數(快照同步)
-    this._castingUntil = 0;           // 本地樂觀前搖結束時戳
-    this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
-    this.blindLeft = 0;               // 閃光彈致盲剩餘秒數(伺服器權威視野狀態)
+    this._resSent = {};               // reservation tiers already ordered (item to lvl, t): blocks repeat orders before authority replies
+    this.sp = 0; this.maxSp = 1;      // shield (first layer of dual HP, regens out of combat)
+    this.mp = 0; this.maxMp = 1;      // power (ability resource)
+    this._mpAuth = false;             // whether maxMp has received the server authoritative value (for power; climb power is a fixed cap, never gated here)
+    this.kn = 0;                      // combat score (second gate for eight-track upgrades; server-authoritative, only grows)
+    this.cds = [0, 0];                // [guard, attack] cooldowns (server counts down)
+    this.chg = [[1, 1, 0], [1, 1, 0]]; // [[guard ready, guard cap, next cooldown], [attack ready, attack cap, next cooldown]]
+    this.castLeft = 0;                // ability windup seconds left (snapshot sync)
+    this._castingUntil = 0;           // local optimistic windup end stamp
+    this.empLeft = 0;                 // EMP-paralysis seconds left (weapons/abilities offline)
+    this.blindLeft = 0;               // flashbang-blind seconds left (server-authoritative vision state)
     this.stealthLeft = 0;
-    this._buffsLeft = [];             // 詞綴強化 [[id, remS], …](AFFIXES 剩餘秒;由快照 bf 欄推入)
-    // 異常狀態致盲白幕(純表現層;常數/曲線住 data.js CC_FLASH):狀態上身瞬間全白 → 漸淡
-    this._ccFlashLeft = 0;            // 白幕剩餘秒數(由 ccFlashDur() 倒數)
-    this._ccFlashPeak = 0;            // 本次白幕的峰值不透明度(= 該狀態的致盲強度)
-    // 受擊濺血提示(純表現層;常數/曲線住 data.js BLOOD):伺服器 hurt 事件 → 依方位噴在座艙玻璃上
-    this._blood = [];                 // [{ id, u, v, drops, left }](最舊的先退場,上限 BLOOD.MAX)
-    this._bloodSeq = 0;               // 血斑/閃光序號(HUD 端據此建立/回收 DOM,MUST 唯一遞增)
-    this._bloodOn = false;            // 上一幀是否還有血斑(歸零那幀仍推一次空陣列後才早退)
-    // 舉盾受擊螢光閃光(純表現層;常數/曲線住 data.js GLINT):護盾接住那一發時,血滴位置改噴閃光
-    this._glints = [];                // [{ id, u, v, drops, left }](與血同形,上限 GLINT.MAX)
-    this._glintOn = false;            // 上一幀是否還有閃光(歸零那幀仍推一次空陣列後才早退)
+    this._buffsLeft = [];             // affix buffs [[id, remS], ...] (AFFIXES seconds left; pushed from snapshot bf field)
+    // Debuff white flash (presentation only; constants/curves live in data.js CC_FLASH): full white on apply, then fades
+    this._ccFlashLeft = 0;            // white-screen seconds left (counts down from ccFlashDur)
+    this._ccFlashPeak = 0;            // peak opacity of this flash (= blinding strength of that state)
+    // Hit blood splash hint (presentation only; constants/curves live in data.js BLOOD): server hurt events spray by bearing onto the cockpit glass
+    this._blood = [];                 // [{ id, u, v, drops, left }] (oldest retires first, capped at BLOOD.MAX)
+    this._bloodSeq = 0;               // blood/flash serial (HUD builds/recycles DOM from it, MUST grow monotonically)
+    this._bloodOn = false;            // whether blood remained last frame (still push one empty array on the zeroing frame before early-out)
+    // Block-spark flash on shield catch (presentation only; constants/curves live in data.js GLINT): blood slots spray sparks when the shield takes the hit
+    this._glints = [];                // [{ id, u, v, drops, left }] (same shape as blood, capped at GLINT.MAX)
+    this._glintOn = false;            // whether sparks remained last frame (still push one empty array on the zeroing frame before early-out)
     this.shopOpen = false;
-    this.paused = false;              // 戰場選單開啟中(凍結輸入)
-    this._everLocked = false;         // 曾經取得過指標鎖定(未鎖定過不跳暫停選單)
-    this._plcSelf = false;            // 下一次指標解鎖是「我方主動」(陣亡過場),`_onPlc` 略過一次
-    this._gameOver = false;           // 已分出勝負(over overlay 顯示中,不跳暫停選單)
-    this._crashSent = false;          // 撞擊引爆去重
-    this.aiming = false;              // 右鍵短按切換瞄準(拉近視角、切換重武器);長按 = 機種專屬招
-    this._aimViewRestore = null;      // 狙擊期間暫存原本視角,退出後恢復
-    this.defending = false;           // 防守姿態(正面生成機體大小低透明度護盾)
-    this._lastWheelAimAt = 0;         // 滾輪切換狙擊鏡防抖節流戳記
-    this._rmbDownAt = 0;              // 右鍵按下時刻(0 = 未按);達門檻 → 出招,短按放開 → 切換模式(見 _tickHoldAbility / _rmbUp)
-    this._rmbAbilityFired = false;    // 本次按住右鍵是否已觸發專屬招(觸發後放開不再切換模式 → 切換/出招互不衝突)
+    this.paused = false;              // battle menu open (inputs frozen)
+    this._everLocked = false;         // pointer lock was once acquired (never-locked sessions never pop the pause menu)
+    this._plcSelf = false;            // next pointer-unlock is self-initiated (death transition), so _onPlc skips once
+    this._gameOver = false;           // outcome decided (over overlay showing, never pop the pause menu)
+    this._crashSent = false;          // crash-detonation dedupe
+    this.aiming = false;              // RMB short-press toggles aim (zoom view, switch to heavy); hold = class special
+    this._aimViewRestore = null;      // stashes the prior view during scope, restored on exit
+    this.defending = false;           // guard stance (spawns low-opacity shield of body size ahead)
+    this._lastWheelAimAt = 0;         // wheel scope-toggle debounce stamp
+    this._rmbDownAt = 0;              // RMB press time (0 = not pressed); past threshold fires the ability, quick release toggles mode (see _tickHoldAbility / _rmbUp)
+    this._rmbAbilityFired = false;    // whether this RMB hold already fired the special (release after firing never toggles mode, so toggle and fire never conflict)
 
-    this.viewMode = viewMode();       // 視角模式('fpv' 第一人稱 / 'tps' 第三人稱,單一真相在 ctrlmode.js)
+    this.viewMode = viewMode();       // view mode (fpv first-person / tps third-person, single truth in ctrlmode.js)
     this._offView = onViewModeChange((vm) => this._onViewModeChange(vm));
 
     this._initScene();
@@ -792,34 +792,34 @@ export class BattleClient {
     this._buildCockpit();
     if (this.cockpit && this.viewMode === 'tps') this.cockpit.visible = false;
 
-    // 出生點:己方主堡朝敵方主堡方向外推 GAME.HERO_SPAWN_OFF(避免卡在主堡模型裡),面向敵方
+    // Spawn: push from own keep toward the enemy keep by GAME.HERO_SPAWN_OFF (avoids spawning inside the keep model), facing the enemy
     this._spawnAt();
     if (!this.side) {
       const [cx, cz] = llToWorld(this.center.lat, this.center.lng, this.center);
-      // 觀戰:高空俯瞰。起始高度同樣收在**遊戲最高高度**之下 —— `_updateSpectator` 每幀都會
-      // 夾,不夾這一行只是讓第一幀先跳一下(而不是「觀戰起點比天花板還高」這種真的漏洞)。
+      // Spectate: high overlook. Start height likewise tucks under the game ceiling -- _updateSpectator clamps every frame,
+      // so skipping the clamp here only lets the first frame jump (instead of a real bug like a spectate start above the ceiling).
       this.pos.set(cx, Math.min(this.terrain.heightAt(cx, cz) + 400, this._ceilY()), cz);
       this.pitch = -0.9;
-      this._specFov = this.camera.fov;   // 滾輪縮放的當前視野角(四種視角共用)
-      this._specPid = null;              // 玩家視角跟隨中的 pid(null = 上帝視角)
-      this._specHid = null;              // 為了不從自己鼻子裡往外看而暫時藏起的機體(只有第一人稱會藏)
-      this._specView = SPEC_CAM.VIEWS[0];        // 目前視角(唯一寫入點 = _specSetView)
-      this._specAnchor = new THREE.Vector3();    // 跟隨錨點(平滑後的目標位置;避免 8Hz 快照抖動直接進相機)
-      this._specAnchorOk = false;                // 錨點是否已有效(換人/首次跟隨 → 直接貼上,不拉長鏡頭)
-      this._specYaw = 0;                         // 平滑後的跟隨偏航(第一人稱視線 / 第三人稱機背方位共用)
+      this._specFov = this.camera.fov;   // current view angle for wheel zoom (shared across the four views)
+      this._specPid = null;              // followed pid in player view (null = god view)
+      this._specHid = null;              // body hidden to avoid looking out of its own nose (only first-person hides)
+      this._specView = SPEC_CAM.VIEWS[0];        // current view (single write point = _specSetView)
+      this._specAnchor = new THREE.Vector3();    // follow anchor (smoothed target position; keeps 8Hz snapshot jitter out of the camera)
+      this._specAnchorOk = false;                // whether the anchor is valid (switching target / first follow snaps instead of panning)
+      this._specYaw = 0;                         // smoothed follow yaw (shared by first-person gaze and third-person behind-body bearing)
     }
 
     this.clock = new THREE.Clock();
-    // 開戰揭幕效果已依需求取消(避免開場全黑/擋住視線)。
+    // Opening reveal effect cancelled per requirement (avoids opening blackout / blocked view).
     this._raf = requestAnimationFrame(() => this._loop());
   }
 
-  /** 設定/更新角色與武器解析(升階時重算;伺服器已重置彈藥 → 本地同步滿彈夾) */
+  /** Set / refresh character and resolved weapons (recompute on tier-up; server already reset ammo, so local refills full mag) */
   _setChar(ch, refill = false) {
     if (ch && CHARACTERS[ch]) {
       const changed = ch !== this.ch;
       this.ch = ch;
-      // 角色由快照晚到(隨機指派):機體種類與座艙跟著角色重建
+      // Character arrives late from snapshots (random assignment): body kind and cockpit rebuild with the character
       if (changed && this.side) {
         this.heroKind = CHARACTERS[ch].kind || SIDES[this.side]?.hero || 'robot';
         this.isDrone = this.heroKind === 'drone';
@@ -842,7 +842,7 @@ export class BattleClient {
     }
   }
 
-  /** 視角模式即時切換(fpv 第一人稱 ⇄ tps 第三人稱) */
+  /** Live view-mode switch (fpv first-person vs tps third-person) */
   _onViewModeChange(vm) {
     if (this.aiming && vm === 'tps') {
       this._aimViewRestore ||= 'tps';
@@ -861,33 +861,33 @@ export class BattleClient {
     }
   }
 
-  // ---------------- 場景 ----------------
+  // ---------------- Scene ----------------
   _initScene() {
-    // antialias(MSAA)在行動 GPU 上是**頻寬**成本:tile 記憶體不夠時整個 render pass 會退化,
-    // 而手機本來就有 ≥1.5 的像素比在做超取樣 ⇒ 觸控裝置一律關掉,肉眼差異極小、幀率差異很大。
-    // stencil/depth:本專案沒有模板測試需求,關掉可省一份 tile 附件。
-    // 後製管線的三個開關(V-A 定場鏡頭組要能逐層隔離):?ink=0 / ?grade=0 / ?fxaa=0 各關一層、
-    // ?post=0 整支關掉。MUST 在建 renderer 之前解析 —— MSAA 的開關要跟著它走(見下一段)。
+    // antialias (MSAA) is bandwidth cost on mobile GPUs: small tile memory degrades the whole render pass,
+    // while phones already supersample at pixel ratio 1.5 or more, so touch devices turn it off -- tiny visual gap, large frame-rate gap.
+    // stencil/depth: this project has no stencil-test need, so dropping it saves one tile attachment.
+    // Three switches for the post pipeline (V-A fixed-camera set must isolate layer by layer): ?ink=0 / ?grade=0 / ?fxaa=0 each turn off one layer,
+    // ?post=0 turns the whole chain off. MUST parse before building the renderer -- the MSAA switch follows it (see next paragraph).
     const q = new URLSearchParams(location.search);
     const off = (k) => q.get(k) === '0';
-    // MSAA **對 pass 畫出來的線一點用都沒有**(勾線不是幾何邊)⇒ 管線上線後改由 FXAA 負責抗鋸齒:
-    // 桌機省下 MSAA 的解析頻寬、觸控裝置第一次有抗鋸齒。只有 `?post=0`(退回舊的直接 render)
-    // 才把 MSAA 開回來,且仍維持舊制「觸控一律關」。
+    // MSAA does nothing for lines drawn by passes (outlines are not geometry edges), so FXAA owns AA once the pipeline is up:
+    // desktop saves MSAA resolve bandwidth, touch devices get AA for the first time. Only ?post=0 (legacy direct render)
+    // turns MSAA back on, still keeping the old touch-always-off rule.
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: off('post') && !isTouchUI(),
       stencil: false,
       powerPreference: 'high-performance',
     });
-    this.renderer.setPixelRatio(this._dpr());   // 低功耗模式(svs_lowpower)夾到 1
+    this.renderer.setPixelRatio(this._dpr());   // low-power mode (svs_lowpower) clamps to 1
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
-    // 自適應解析度調節器:**全平台**(2026-08-12;桌機恆撐得住時一次都不會調 ⇒ 行為不變)
+    // Adaptive-resolution governor: all platforms (2026-08-12; when desktop always holds full rate it never steps, so behavior is unchanged)
     this._resScale = 1;
     this._resGov = { ema: (RES_GOV.HI_MS + RES_GOV.LO_MS) / 2, last: 0, raiseAt: -1e9, cool: RES_GOV.COOL_S, dir: 0, flips: 0, off: false };
     this.scene = new THREE.Scene();
     const span = Math.max(this.terrain.worldW, this.terrain.worldH);
-    // FPV 一律 UNITS[kind].fov = 68(2026-07-12 起全機種相同):同距離目標的視覺大小雙陣營必須一致,
-    // 廣角會把 NPC 畫小 —— 機體差異只表現在座艙造型與視點位置(heroView),不表現在 FOV。
+    // FPV is always UNITS kind fov = 68 (same for all bodies since 2026-07-12): same-distance targets must read the same size for both factions,
+    // wide angle would shrink NPCs -- body differences show only in cockpit styling and eye position (heroView), never in FOV.
     const fov = this.heroKind ? UNITS[this.heroKind].fov : 68;
     this.baseFov = fov;
     this.camera = new THREE.PerspectiveCamera(fov, this.canvas.clientWidth / this.canvas.clientHeight, 0.5, span * 2);
@@ -895,13 +895,13 @@ export class BattleClient {
     this._fpsShieldMesh.rotation.y = Math.PI;
     this._fpsShieldMesh.position.set(0, -0.2, 0);
     this.camera.add(this._fpsShieldMesh);
-    // 副視窗共用相機(僚機 / 餌機視角;每幀重設位置後重複使用)
+    // PiP shares the camera (wingman / decoy view; repositioned and reused every frame)
     this.pipCam = new THREE.PerspectiveCamera(PIP.FOV, 1 / PIP.ASPECT, 0.5, span * 2);
 
-    // 季節/日夜/天氣(開房時定案,全房一致)+ 日夜循環的太陽/月亮投影。
-    // 陰影圖的開關住這裡(renderer 是本檔的)、範圍與解析度住 data.js SHADOW ——
-    // environment.js 只負責「把那盞燈擺對地方」。`?shadow=0` 與其他 pass 同一組開關,
-    // 定場鏡頭組要拍前後對照時用得到。
+    // Season/day-night/weather (locked at room creation, same for the whole room) plus sun/moon projection for the day-night cycle.
+    // Shadow-map toggles live here (renderer is this file), extent and resolution live in data.js SHADOW --
+    // environment.js only hangs that light in the right place. ?shadow=0 shares the pass switch group,
+    // used when the fixed-camera set shoots before/after comparisons.
     const lowGpu = lowPower() || isTouchUI();
     const shadowOn = visualPref('shadow') === 'on' && !off('shadow');
     this.renderer.shadowMap.enabled = shadowOn;
@@ -909,10 +909,10 @@ export class BattleClient {
     this.renderer.shadowMap.autoUpdate = shadowOn;
     this.envFx = applyEnvironment(this.scene, this.terrain, this.cfg.env,
       { shadow: shadowOn, lowPower: lowGpu, surface: (x, z) => this._surf(x, z, Infinity) });
-    this._simT = 0;      // 伺服器權威經過秒數(快照 `time`);日夜時鐘的唯一來源
+    this._simT = 0;      // server-authoritative elapsed seconds (snapshot time); sole source for the day-night clock
 
     this.scene.add(this.terrain.group);
-    // 地形本體是連續地表,不是應被淡化的場景物件;其餘可見地物不以描邊旗標代替遮擋資格。
+    // Terrain body is continuous ground, not a scene object to fade; other visible props never substitute the outline flag for occlusion eligibility.
     const terrainSurface = this.terrain.group.children.find((o) => o.isMesh && o.receiveShadow);
     if (terrainSurface) this._viewOcclusionSkip.add(terrainSurface);
     this._registerViewOccluders(this.terrain.group);
@@ -924,14 +924,14 @@ export class BattleClient {
       this.camera.updateProjectionMatrix();
       fitHudBand();
     };
-    // **MUST 走 `onViewportSettled` 的 debounce,MUST NOT 自己綁 window resize**:
-    // 一次旋轉會連發好幾個尺寸(iOS 尤其),逐筆重配 render target 是頓一下 + 有機會
-    // 停在中間那個錯的尺寸(見 mobile.js VIEWPORT)。`_applyRes()` 仍直接呼叫 `_onResize`
-    // —— 那是像素比改變不是視窗改變,沒有連發問題,也不該多等 50~500ms。
+    // MUST go through the onViewportSettled debounce, MUST NOT bind window resize directly:
+    // one rotation fires several sizes (iOS especially), and reallocating render targets per event is one hitch plus a chance
+    // to park on a wrong middle size (see mobile.js VIEWPORT). _applyRes still calls _onResize directly
+    // -- that is a pixel-ratio change not a window change, no burst problem, and should not wait another 50-500ms.
     this._offResize = onViewportSettled(this._onResize);
 
-    // 賽璐璐後製管線(勾線 → 景深 → 調色 → TAA → FXAA);開關見上方 `off()`。
-    // 低功耗/觸控走 8bit RT(半浮點在 tile GPU 上是頻寬成本,與關 MSAA 同一個瓶頸)。
+    // Cel post pipeline (outline, depth of field, grade, TAA, FXAA); switches see off above.
+    // Low-power/touch take 8-bit RT (half-float is bandwidth cost on tile GPUs, same bottleneck as disabling MSAA).
     this.pipeline = off('post') ? null : new Pipeline(this.renderer, this.scene, this.camera, {
       ink: !off('ink'), dof: !off('dof'), grade: !off('grade'), taa: !off('taa'), fxaa: !off('fxaa'),
       lowPower: lowPower() || isTouchUI(),

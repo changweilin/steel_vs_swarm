@@ -1,16 +1,16 @@
-// ============ 舊版英雄機體建模(2026-08-14 退役;只留在機體台對照)============
-// 使用者定案:「新版機體 3D 建模全面替換掉舊版……只保留舊建模在機體台」。
-// 這七支曾經是 `public/js/models.js` 的 hero 分支;新版建模(`public/js/forge/`)上線後
-// 遊戲**不再呼叫任何一支**,整組搬到 tools/ ⇒ 出貨包(build:solo 只複製 public/**)
-// 從此不帶舊建模,而機體台仍能把新舊兩版擺在一起看。
+// ============ Legacy hero mech modeling (retired 2026-08-14; kept only for forge-stage comparison) ============
+// User decision: new 3D mech modeling fully replaces the legacy set, keeping legacy builds only on the forge stage.
+// These seven files were once the hero branch of public/js/models.js; after the new modeling (public/js/forge/) shipped,
+// the game calls none of them, and the whole set moved to tools/, so the shipped bundle (build:solo copies only public/)
+// no longer carries legacy modeling, while the forge stage can still show both generations side by side.
 //
-// 三條紀律:
-//   ① 本檔是**凍結的對照組**:MUST NOT 再加功能、MUST NOT 被 public/js 底下任何檔案 import。
-//      要改機體外觀一律改 `public/js/forge/mechs/<key>.js`。
-//   ② 幾何積木一律取自 `public/js/geo3d.js`(全專案唯一縫)—— 搬家不是抄一份的理由。
-//   ③ rig 契約與 locomotion 相容性照舊(舊制的變形者是**單樹 + rig.pose(m)**,吃
-//      `stepMorph`;新版是兩棵樹,吃 `morphSwap`)—— 兩條路在 locomotion.js 並存,
-//      這正是舊建模在台上還動得起來的原因。
+// Three disciplines:
+//   1 This file is a frozen control: MUST NOT gain features, MUST NOT be imported by any file under public/js.
+//      Mech appearance changes always go to public/js/forge/mechs/<key>.js.
+//   2 Geometry bricks always come from public/js/geo3d.js (the single project-wide seam) -- relocation is no reason to copy.
+//   3 rig contract and locomotion compatibility stay as before (legacy morphers are single-tree plus rig.pose(m), consuming
+//      stepMorph; the new generation is two trees, consuming morphSwap) -- both paths coexist in locomotion.js,
+//      which is why legacy builds still move on stage.
 import * as THREE from 'three';
 import { SIDES, CHARACTERS, MORPH_HUMANOID, SOLDIER_H, heroTargetH } from '/public/js/data.js';
 import { outlinify } from '/public/js/toon.js';

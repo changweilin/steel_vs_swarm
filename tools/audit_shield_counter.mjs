@@ -1,31 +1,37 @@
-// ============ 建築加乘移除 + 護盾/裝甲分軌剋制 稽核 ============
-// 用途:改 `data.js` 的 `BUILDING_VS_CAP` 夾制段 / `shieldSplit()` / `shieldRoleName()`,
-// 或 `sim._damage()`、`sim._heroDmg()`、`tools/duel.mjs` 的 apply()、`tools/balance.mjs` 的
-// 對建築 DPS、`game._hitFeedback`/`_lanceFeedback` 的估算之後跑。
-// 跑法:`node tools/audit_shield_counter.mjs`
+// ============ Building-bonus removal + shield/armor split-track counter audit ============
+// Purpose: run after changing `data.js` `BUILDING_VS_CAP` clamp section / `shieldSplit()` /
+// `shieldRoleName()`, or `sim._damage()` / `sim._heroDmg()`, `tools/duel.mjs` apply(),
+// `tools/balance.mjs` building DPS, or `game._hitFeedback`/`_lanceFeedback` estimates.
+// Usage: `node tools/audit_shield_counter.mjs`
 //
-// 為什麼要這一支 —— 兩件改動各有一個「壞掉但不會報錯」的形狀:
+// Why this file exists — each of the two changes has a "breaks silently" shape:
 //
-// ① **建築加乘移除**(2026-08-02 使用者定案「移除對建築物加乘的武器」)。
-//    加成有兩層:各武器的 `vs.building`(0.3~2.2)+ launcher 專屬的 `GRENADE.BUILDING_MUL`(×1.4)。
-//    ②整組刪;①改成**只留懲罰**(夾到 ≤ `BUILDING_VS_CAP`)。這裡最容易壞的不是刪錯,而是
-//    **夾制的名冊漏一張表** —— 招式(skill/ult)、`WEAPONS`、`DECOY`/`HYPER` 各自有 vs 表,
-//    漏掉哪一張,那條路徑就還留著舊的攻城加成,而遊戲裡只會表現成「這招拆塔特別快」,
-//    沒有任何錯誤訊息。故此處逐張表掃過去,而不是相信夾制迴圈寫對了。
-//    另驗 `grenadeBuildingMul` 在**全儲存庫執行原文**中已無殘留(留一處消費端 = 加乘沒真的移除)。
+// 1 **Building-bonus removal** (2026-08-02 user decision "remove anti-building bonus weapons").
+//    Two bonus layers: per-weapon `vs.building` (0.3~2.2) + launcher-only `GRENADE.BUILDING_MUL` (x1.4).
+//    The second is deleted wholesale; the first keeps **only penalties** (clamped to <=
+//    `BUILDING_VS_CAP`). The easiest breakage is not a wrong deletion but a **clamp roster missing
+//    one table** — abilities (skill/ult), `WEAPONS`, `DECOY`/`HYPER` each carry vs tables, and a missed
+//    table keeps the old siege bonus on that path, showing in game only as "this move shreds towers",
+//    with no error message. So every table is swept here instead of trusting the clamp loop's roster.
+//    Also verifies `grenadeBuildingMul` has no remnant in the **whole repo's executable source**
+//    (one surviving consumer = the bonus was never really removed).
 //
-// ② **護盾/裝甲分軌剋制**(使用者需求「加入擅長打護盾但主 HP 傷害較弱、會穿透護盾造成低比例
-//    HP 傷害但總傷害較低等各類型武器」)。三個旋鈕 vsSp/vsHp/spPierce 的結算住 `shieldSplit`,
-//    而**同一份拆分邏輯有四個消費端**(伺服器結算 / 客戶端 HUD 估算 / 對進戰模型 / 平衡模型)。
-//    任一端自己手寫一次 `Math.min(sp, dmg)`,症狀是「HUD 數字與實際掉血對不上」或
-//    「bal 說平衡但打起來不是」—— 兩者都極難從畫面反推。故此處驗**單一縫**:
-//    伺服器/客戶端/兩支模型都 MUST 呼叫 shieldSplit,且 sim.js 全檔沒有第二處手寫的護盾扣減。
+// 2 **Shield/armor split-track counters** (user request: weapons "good vs shields but weak vs main HP,
+//    low-rate shield-piercing HP damage with lower total, and similar specialist types"). The three
+//    knobs vsSp/vsHp/spPierce settle in `shieldSplit`, while **the same split logic has four consumers**
+//    (server settlement / client HUD estimate / duel model / balance model). Any end hand-writing
+//    `Math.min(sp, dmg)` once shows as "HUD numbers disagree with actual damage" or "bal says balanced
+//    but it plays otherwise" — both nearly impossible to trace back from the screen. So this verifies
+//    the **single seam**: server/client/both models MUST all call shieldSplit, and sim.js holds no
+//    second hand-written shield deduction.
 //
-// 另驗一條數學不變量:**溢出按預算折回**。把打穿護盾後的溢出直接倒進裝甲層,會讓 vsSp 高的武器
-// 在殘盾目標上白賺一次反護盾加成(打空盾那一發傷害暴衝),而且只在「盾剛好見底」那一發出現
-// ⇒ 對局裡看起來就是隨機爆發傷害。這條用行為直測釘死,不看原文。
+// One more math invariant: **overflow folds back by budget**. Dumping post-breakthrough overflow
+// straight into the armor layer lets high-vsSp weapons earn a free anti-shield bonus on depleted-shield
+// targets (damage spikes on the exact shot the shield empties), occurring only on that "shield just
+// emptied" shot ⇒ in-match it reads as random burst damage. Pinned here by behavior test, not source.
 //
-// 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
+// Source reading goes through the `audit_src.mjs` single seam (newline normalization included —
+// naive per-line comment stripping silently fails on CRLF checkouts).
 import { readSrc } from './audit_src.mjs';
 import * as DATA from '../public/js/data.js';
 import { BUILDING_VS_CAP, shieldSplit, shieldRoleName, CHARACTERS, WEAPONS, DECOY, HYPER,
@@ -34,7 +40,7 @@ import { BUILDING_VS_CAP, shieldSplit, shieldRoleName, CHARACTERS, WEAPONS, DECO
   aoeTrimF, mobDmgF, rngDmgF } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 
-// 合成戰場設定(同 test/e2e.mjs / audit_lance_hit.mjs 的 fakeBattleConfig;單線、台北 101 附近)
+// Synthetic battlefield config (same fakeBattleConfig as test/e2e.mjs / audit_lance_hit.mjs; single lane, near Taipei 101)
 function fakeBattleConfig(L = 1) {
   const A = [25.0330, 121.5654];
   const D = 1600 * L, R = 6371000;
@@ -60,7 +66,7 @@ const t = (n, ok, extra = '') => { ok ? (pass++, console.log(`  ✓ ${n}`)) : (f
 const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const count = (s, needle) => s.split(needle).length - 1;
 
-/** 剝掉區塊/行註解 —— 「全檔只有 N 處」MUST 只數執行原文(註解提到同一個名字不算縫破了) */
+/** Strip block/line comments — "only N occurrences in the whole file" MUST count executable source (a name mentioned in comments is not a seam breach) */
 const strip = (s) => s
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .split('\n').map((l) => l.replace(/(^|[^:'"`])\/\/.*$/, '$1')).join('\n');
@@ -77,7 +83,7 @@ console.log('■ Ⅰ 建築加乘移除(加乘全刪、懲罰保留;夾制是推
 {
   t('BUILDING_VS_CAP === 1(建築剋制上限 = 無加乘)', BUILDING_VS_CAP === 1, `${BUILDING_VS_CAP}`);
 
-  // 逐張 vs 表掃過去 —— 不相信夾制迴圈的名冊寫全了
+  // Sweep every vs table — never trust the clamp loop's roster to be complete
   const tables = [
     ...Object.entries(WEAPONS).map(([k, w]) => [`WEAPONS.${k}`, w]),
     ['DECOY', DECOY], ['HYPER', HYPER],
@@ -88,11 +94,13 @@ console.log('■ Ⅰ 建築加乘移除(加乘全刪、懲罰保留;夾制是推
   t(`所有 vs 表對建築無加乘(掃 ${tables.length} 張)`, over.length === 0,
     over.map(([n, w]) => `${n}=${w.vs.building}`).join(' '));
 
-  // 懲罰保留:若連 <1 都被抹平,那是「移除整個建築剋制」不是「移除加乘」
+  // Penalties stay: if even <1 were flattened, that would be "removing the whole building-counter
+  // relationship", not "removing the bonus"
   const under = tables.filter(([, w]) => w?.vs?.building < 1);
   t(`懲罰保留(${under.length} 張表仍 < 1:防空/反甲特化拆建築照樣吃虧)`, under.length > 0);
 
-  // 解析後的實戰值同樣夾住(heroWeapon/heroAbility 是同一個 vs 參照 ⇒ 夾在源頭即全鏈生效)
+  // Resolved live values are clamped the same way (heroWeapon/heroAbility share the vs reference ⇒
+  // clamping at the source covers the whole chain)
   const solved = [];
   for (const id of Object.keys(CHARACTERS)) {
     for (const s of ['light', 'heavy']) { const w = heroWeapon(id, s, 3, true); if (w?.vs?.building > 1) solved.push(`${id}.${s}`); }
@@ -100,13 +108,14 @@ console.log('■ Ⅰ 建築加乘移除(加乘全刪、懲罰保留;夾制是推
   }
   t('heroWeapon/heroAbility 解析後仍無加乘(夾在源頭即全鏈生效)', solved.length === 0, solved.join(' '));
 
-  // 夾制 MUST 是推導的一段迴圈,不是逐武器手改(1 宣告 + 夾制段的比較與指派各 1
-  // + 對建築 DPS 收斂那一段拿它當上夾 1 = 4 處;多出來的任何一處都要能說出它是哪一段推導)
+  // The clamp MUST be one derived loop, not per-weapon hand edits (1 declaration + compare and
+  // assign in the clamp section + 1 upper clamp in the building-DPS convergence section = 4 sites;
+  // any extra site must be explainable as its own derivation)
   t('夾制在 data.js 只有唯一一段推導迴圈',
     count(dataSrc, 'BUILDING_VS_CAP') === 4 && /w\.vs\.building > BUILDING_VS_CAP\) w\.vs\.building = BUILDING_VS_CAP;/.test(dataSrc),
     `${count(dataSrc, 'BUILDING_VS_CAP')} 處`);
 
-  // launcher 對建築 ×1.4 整組退場(留一處消費端 = 加乘沒真的移除)
+  // Launcher x1.4 vs buildings retired as a group (one surviving consumer = the bonus never really left)
   t('GRENADE.BUILDING_MUL / grenadeBuildingMul 已無匯出', !('grenadeBuildingMul' in DATA) && !('GRENADE' in DATA));
   for (const [name, s] of [['data.js', dataSrc], ['sim.js', simSrc], ['duel.mjs', duelSrc], ['balance.mjs', balSrc], ['game.js', gameSrc]])
     t(`${name} 執行原文無 grenadeBuildingMul 殘留`, !/grenadeBuildingMul|BUILDING_MUL/.test(s));
@@ -120,22 +129,25 @@ console.log('\n■ Ⅱ 分軌拆分單一縫(shieldSplit;四個消費端 MUST �
 // ---------------------------------------------------------------------------
 {
   t('shieldSplit 只在 data.js 有一份實作', count(dataSrc, 'export function shieldSplit') === 1);
-  // 旋鈕只准在 data.js 內被讀:結算(shieldSplit)、標籤(shieldRoleName)、解析轉呼(heroWeapon/
-  // heroAbility)。消費端一旦自己讀 wd.vsSp 去乘,就是第二份拆分邏輯 —— 那正是 HUD 與實際掉血
-  // 對不上、bal 說平衡但打起來不是的來源。
-  // 「原樣轉交」是允許的(重建 def 時把三欄一起抄過去);**讀進來自己算**才是破縫。
-  // 故先剝掉 `vsSp: X.vsSp` 這種轉交,剩下還提到旋鈕就是消費端在自己乘。
+  // Knobs may only be read inside data.js: settlement (shieldSplit), labels (shieldRoleName), and
+  // resolution passthrough (heroWeapon/heroAbility). Once a consumer reads wd.vsSp to multiply by
+  // itself, that is a second split logic — the source of "HUD disagrees with actual damage" and
+  // "bal says balanced but it plays otherwise".
+  // "Forwarding as-is" is allowed (copying all three columns when rebuilding a def); **reading them
+  // in to compute locally** is the seam breach. So strip `vsSp: X.vsSp`-style forwarding first; any
+  // knob mention left means a consumer is multiplying on its own.
   const fwd = /\b(?:vsSp|vsHp|spPierce): [A-Za-z_$][\w$]*\.(?:vsSp|vsHp|spPierce)\b/g;
   const knob = /\bvsSp\b|\bvsHp\b|\bspPierce\b/;
   for (const [name, s] of [['sim.js', simSrc], ['duel.mjs', duelSrc], ['balance.mjs', balSrc], ['game.js', gameSrc]])
     t(`${name} 不自己讀旋鈕運算(一律經 shieldSplit;原樣轉交不算)`, !knob.test(s.replace(fwd, '')));
-  // 重建 def 的地方 MUST 把三欄一起抄 —— 漏抄 = 招式版與武器版對同一個護盾軸有兩種行為
+  // Rebuilt defs MUST copy all three knobs together — a missed column means ability and weapon
+  // versions behave two ways against the same shield axis
   t('sim.js 重建招式 def 時帶齊三個旋鈕',
     /vs: A\.vs, pen: A\.pen,\s*vsSp: A\.vsSp, vsHp: A\.vsHp, spPierce: A\.spPierce/.test(simSrc));
   t('data.js 的結算讀取點只有 shieldSplit 一處',
     count(dataSrc, 'const sMul = wd?.vsSp') === 1);
 
-  // 伺服器:護盾扣減只准出現在 _damage,且經 shieldSplit
+  // Server: shield deduction may only appear in _damage, via shieldSplit
   t('sim.js import shieldSplit', /shieldSplit/.test(simSrc.split('\n').slice(0, 40).join('\n')));
   t('sim._damage 英雄分支經 shieldSplit 拆分',
     /const \{ toSp: toShield, toHp \} = shieldSplit\(wd, dmg, t\.sp \|\| 0\);/.test(simSrc));
@@ -145,13 +157,13 @@ console.log('\n■ Ⅱ 分軌拆分單一縫(shieldSplit;四個消費端 MUST �
     !/Math\.min\(t\.sp/.test(simSrc) && count(simSrc, 'shieldSplit(') === 2,
     `shieldSplit 呼叫 ${count(simSrc, 'shieldSplit(')} 次`);
 
-  // _damage 的 wd 參數:凡「有武器 def 在手」的傷害路徑 MUST 傳進去
+  // The wd parameter of _damage: every damage path holding a weapon def MUST pass it in
   const dmgCalls = simSrc.split('\n').filter((l) => /this\._damage\(/.test(l));
   const withDef = dmgCalls.filter((l) => /(wp\.def|, def\)|, wd\))\s*\);?$/.test(l.trim()) || /0, (wp\.def|def|wd)\)/.test(l));
   t(`_damage 的武器路徑都帶 def(${withDef.length}/${dmgCalls.length} 條;其餘為環境/地雷/SAM)`,
     withDef.length >= 7, withDef.length + ' 條');
 
-  // 客戶端估算與兩支離線模型
+  // Client estimates and the two offline models
   t('game.js HUD 估算吃 shieldSplit(兩處回饋:直擊 + 貫穿)', count(gameSrc, 'shieldSplit(def,') === 2,
     `${count(gameSrc, 'shieldSplit(def,')} 處`);
   t('game.js 估算的護盾水位取自快照 ent.sp(MUST NOT 自算)', count(gameSrc, "shieldSplit(def, raw, ent.sp || 0)") === 2);
@@ -166,49 +178,51 @@ console.log('\n■ Ⅱ 分軌拆分單一縫(shieldSplit;四個消費端 MUST �
 console.log('\n■ Ⅲ shieldSplit 行為(中性還原 / 預算守恆 / 三型 / 退化方向)');
 // ---------------------------------------------------------------------------
 {
-  // 中性 = 逐位元舊制:這一條保證「沒標旗標的 28 名角色」完全不受本次改動影響
+  // Neutral = bit-identical to the old scheme: this guarantees the "28 unflagged characters" are
+  // completely unaffected by this change
   for (const [dmg, sp] of [[100, 250], [100, 100], [100, 40], [100, 0], [0, 100]]) {
     const r = shieldSplit({}, dmg, sp), old = Math.min(sp, dmg);
     t(`中性 dmg${dmg}/盾${sp} 逐位元同舊制`, near(r.toSp, old) && near(r.toHp, dmg - old), `${r.toSp}/${r.toHp}`);
   }
   t('未帶 def(環境傷害)= 中性', near(shieldSplit(null, 100, 40).toSp, 40) && near(shieldSplit(undefined, 100, 40).toHp, 60));
 
-  // 反護盾:護盾多掉、裝甲少掉
+  // Anti-shield: more shield damage, less armor damage
   const anti = { vsSp: 2, vsHp: 0.5 };
   t('反護盾滿盾:護盾吃 dmg × vsSp、裝甲 0',
     near(shieldSplit(anti, 100, 1000).toSp, 200) && near(shieldSplit(anti, 100, 1000).toHp, 0));
-  // 預算守恆(核心不變量):盾只吃得下 sp/vsSp 的預算,剩下的才進裝甲
+  // Budget conservation (core invariant): the shield only absorbs sp/vsSp of budget; the rest enters armor
   const a2 = shieldSplit(anti, 100, 100);
   t('溢出按預算折回:盾 100 只消耗 50 點預算 ⇒ 裝甲 = 50 × vsHp',
     near(a2.toSp, 100) && near(a2.toHp, 25), `${a2.toSp}/${a2.toHp}`);
   t('MUST NOT 把溢出的護盾傷害直接倒進裝甲(那會是 (200−100)×0.5 = 50)', !near(a2.toHp, 50));
 
-  // 穿盾:滿盾也一定見血,且見血量與護盾水位無關
+  // Shield-piercing: full shields still bleed, and the bleed is independent of shield level
   const pc = { spPierce: 0.5, vsHp: 0.8 };
   t('穿盾滿盾仍見血 = dmg × spPierce × vsHp', near(shieldSplit(pc, 100, 99999).toHp, 40));
-  // 保底不是等額:護盾越薄,溢出的預算也會加進來 ⇒ 見血量只保證有下限、且隨護盾變薄單調不減
+  // The floor is not a flat amount: thinner shields also add overflow budget ⇒ bleed only guarantees
+  // a lower bound and is non-decreasing as shields thin
   const pcSeq = [99999, 60, 40, 20, 0].map((sp) => shieldSplit(pc, 100, sp).toHp);
   t('穿盾見血量恆 ≥ dmg × spPierce × vsHp(護盾再厚也有保底)', pcSeq.every((v) => v >= 40 - 1e-9), pcSeq.join(','));
   t('護盾越薄見血越多(單調不減)', pcSeq.every((v, i) => i === 0 || v >= pcSeq[i - 1]), pcSeq.join(','));
   t('spPierce=1 = 完全無視護盾(盾一點都不掉)',
     near(shieldSplit({ spPierce: 1 }, 100, 500).toSp, 0) && near(shieldSplit({ spPierce: 1 }, 100, 500).toHp, 100));
 
-  // 反裝甲:鏡像
+  // Anti-armor: mirror image
   const aa = { vsSp: 0.5, vsHp: 1.5 };
   t('反裝甲:同一發在護盾上只刮一半', near(shieldSplit(aa, 100, 500).toSp, 50));
   t('反裝甲:無護盾目標吃滿 vsHp', near(shieldSplit(aa, 100, 0).toHp, 150));
 
-  // 退化方向一律朝「盾有效」(原則 6)
+  // Degradation always favors "shield works" (principle 6)
   const bk = shieldSplit({ vsSp: 0 }, 100, 500);
   t('vsSp=0 = 護盾全擋(MUST NOT 退化成無視護盾穿過去)', near(bk.toSp, 0) && near(bk.toHp, 0));
 
-  // 單調性:vsSp 越高護盾掉越多、vsHp 越高裝甲掉越多
+  // Monotonicity: higher vsSp ⇒ more shield damage; higher vsHp ⇒ more armor damage
   const spSeq = [0.5, 1, 1.5, 2].map((v) => shieldSplit({ vsSp: v }, 100, 500).toSp);
   t('vsSp 單調遞增 → 護盾傷害單調遞增', spSeq.every((v, i) => i === 0 || v > spSeq[i - 1]), spSeq.join(','));
   const hpSeq = [0.5, 1, 1.5, 2].map((v) => shieldSplit({ vsHp: v }, 100, 0).toHp);
   t('vsHp 單調遞增 → 裝甲傷害單調遞增', hpSeq.every((v, i) => i === 0 || v > hpSeq[i - 1]), hpSeq.join(','));
 
-  // 標籤由旋鈕推導
+  // Labels derive from knobs
   t('標籤推導:中性無標籤 / 反護盾 / 穿盾 / 反裝甲',
     shieldRoleName({}) === '' && shieldRoleName({ vsSp: 1.7, vsHp: 0.7 }) === '反護盾'
     && shieldRoleName({ spPierce: 0.4 }) === '穿盾' && shieldRoleName({ vsSp: 0.7, vsHp: 1.2 }) === '反裝甲');
@@ -221,8 +235,9 @@ console.log('\n■ Ⅳ 真 BattleSim 直測(伺服器結算與 shieldSplit 對�
 {
   const sim = new BattleSim(fakeBattleConfig(1));
   const h = sim.addHero('SWARM', 'pa', 't01');
-  // 傷害刻意取「中性打不穿護盾」的量(< maxSp):兩發都把盾打光的話,削盾差異會被上限吃掉,
-  // 這一段就永遠測不出反護盾生效與否(fixture 的假陰性,不是程式碼對)。
+  // Damage deliberately sized so neutral cannot pierce the shield (< maxSp): if both shots emptied
+  // the shield, the cap would eat the strip difference and this section could never tell whether
+  // anti-shield works (a fixture false negative, not a code pass).
   const DMG = Math.floor(h.maxSp * 0.6);
   const shot = (wd) => {
     h.sp = h.maxSp; h.hp = h.maxHp; h.lastHitAt = -999;
@@ -234,7 +249,8 @@ console.log('\n■ Ⅳ 真 BattleSim 直測(伺服器結算與 shieldSplit 對�
   t(`中性武器打不穿的盾,穿盾武器仍見血 ${p.hp.toFixed(1)}`, near(n.hp, 0) && p.hp > 0);
   t('護盾層不吃護甲減免(反護盾也一樣)', near(a.sp, Math.min(h.maxSp, DMG * 1.7)));
 
-  // NPC(無護盾層)一樣吃 vsHp —— 「主 HP 傷害弱」只對英雄成立的話,那是隱形的第二套規則
+  // NPCs (no shield layer) still take vsHp — if "weak main-HP damage" held only for heroes, that
+  // would be an invisible second rule set
   const npc = () => sim._add({ kind: 'soldier', side: 'STEEL', x: 40, z: 0, hp: UNITS.soldier.hp });
   const n1 = npc(); sim._damage(n1, 100, null, 0, 0, null);
   const n2 = npc(); sim._damage(n2, 100, null, 0, 0, { vsHp: 0.5 });
@@ -250,7 +266,7 @@ console.log('\n■ Ⅳ 真 BattleSim 直測(伺服器結算與 shieldSplit 對�
 console.log('\n■ Ⅴ 配置紀律(2026-08-02 使用者定案的三條;全部是推導,不是「當初調的時候記得」)');
 // ---------------------------------------------------------------------------
 {
-  // 掛了護盾軸旗標的武器名冊(逐一反查三條紀律)
+  // Roster of weapons carrying shield-axis flags (reverse-check all three disciplines against it)
   const flagged = [];
   for (const [id, c] of Object.entries(CHARACTERS))
     for (const s of ['light', 'heavy', 'skill', 'ult']) {
@@ -260,7 +276,7 @@ console.log('\n■ Ⅴ 配置紀律(2026-08-02 使用者定案的三條;全部�
   t(`共 ${flagged.length} 把武器掛了護盾軸(其餘逐位元不受本次改動影響)`, flagged.length > 0,
     flagged.map(([k]) => k).join(' '));
 
-  // ── 紀律①:穿盾 / 反裝甲只准掛在原本吃建築加成的武器上 ──
+  // — Discipline 1: piercing / anti-armor may only sit on formerly siege-bonused weapons —
   const roster = new Set(EX_SIEGE_WEAPONS);
   t('EX_SIEGE_WEAPONS 名冊逐一指得到真的武器', EX_SIEGE_WEAPONS.every((k) => {
     const [id, s] = k.split('.');
@@ -270,25 +286,27 @@ console.log('\n■ Ⅴ 配置紀律(2026-08-02 使用者定案的三條;全部�
   const offRoster = siegeOnly.filter(([k]) => !roster.has(k));
   t(`穿盾 / 反裝甲(${siegeOnly.length} 把)全在 EX_SIEGE_WEAPONS 名冊內`, offRoster.length === 0,
     offRoster.map(([k]) => k).join(' '));
-  // 反護盾走的是另一條路(剝加成 + 壓基礎傷害),刻意**不**受名冊限制 —— 釘住這個豁免,
-  // 免得日後有人「順手」把它也塞進名冊,反護盾就再也掛不到非攻城武器上了
+  // Anti-shield travels a different road (strip bonuses + compress base damage) and is deliberately
+  // **not** roster-limited — pin this exemption so nobody "helpfully" stuffs it into the roster later,
+  // which would bar anti-shield from non-siege weapons for good
   const antiSh = flagged.filter(([, w]) => (w.vsSp ?? 1) > 1);
   t(`反護盾(${antiSh.length} 把)不受名冊限制(走剝加成 + 壓傷害那條路)`,
     antiSh.some(([k]) => !roster.has(k)), antiSh.map(([k]) => k).join(' '));
 
-  // ── 紀律②:反護盾武器不得再有其他單位加成 ──
+  // — Discipline 2: anti-shield weapons must carry no other unit bonus —
   const withBonus = antiSh.filter(([, w]) => Object.values(w.vs || {}).some((v) => v > 1));
   t('反護盾武器的 vs 表無任何 > 1 的加成', withBonus.length === 0,
     withBonus.map(([k, w]) => `${k}=${JSON.stringify(w.vs)}`).join(' '));
   t('反護盾武器仍保留 < 1 的懲罰(拿掉的是加成,不是整個剋制關係)',
     antiSh.every(([, w]) => Object.values(w.vs || {}).some((v) => v < 1)));
-  // 夾制 MUST 排在 CLASS_SYM 之後 —— 那一段會把 armor/air 欄整組等比放大,排前面等於沒夾
+  // The clamp MUST sit after CLASS_SYM — that section scales armor/air columns wholesale, so an
+  // earlier clamp would be pushed back over 1
   t('夾制排在 CLASS_SYM 對稱化之後(排前面會被等比放大重新推過 1)',
     dataSrc.indexOf('CLASS_SYM.SWARM_ARMOR_F = ') < dataSrc.indexOf('const VS_DEFS = ['));
   t('兩道夾制共用同一份 VS_DEFS 名冊(建築 + 反護盾各掃一次 = 遲早漏一張表)',
     count(dataSrc, 'const VS_DEFS = [') === 1 && count(dataSrc, 'for (const w of VS_DEFS)') === 1);
 
-  // ── 紀律③:加成越多、越廣泛 ⇒ 基礎傷害越低 ──
+  // — Discipline 3: broader and more general bonuses ⇒ lower base damage —
   t('廣泛加成的單價高於挑目標的加成(BROAD > NARROW)', COUNTER_BUDGET.BROAD > COUNTER_BUDGET.NARROW,
     `${COUNTER_BUDGET.BROAD} vs ${COUNTER_BUDGET.NARROW}`);
   t('沒掛護盾軸 ⇒ 負載 0、折減 ×1(其餘 28 名角色逐位元不變)', (() => {
@@ -305,15 +323,17 @@ console.log('\n■ Ⅴ 配置紀律(2026-08-02 使用者定案的三條;全部�
     const seq = [0, 0.2, 0.5, 1, 2].map((L) => 1 / (1 + COUNTER_BUDGET.K * L));
     return seq[0] === 1 && seq.every((v, i) => v > 0 && v <= 1 && (i === 0 || v < seq[i - 1]));
   })());
-  // 同樣的數字,掛在護盾軸比掛在類別剋制貴 —— 這就是「廣泛性加成」的定價
+  // Same numbers cost more on the shield axis than on category counters — that is the "broad-bonus" price tag
   const broadW = { vsSp: 1.5, vs: {} }, narrowW = { vsSp: 1.0001, vs: { armor: 1.5 } };
   t('同樣 +0.5:掛護盾軸的折減重於掛類別剋制', counterDmgF(broadW) < counterDmgF(narrowW),
     `${counterDmgF(broadW).toFixed(3)} vs ${counterDmgF(narrowW).toFixed(3)}`);
-  // 掛旗標的武器實際傷害 MUST 低於未折減值(折減真的接上了 heroWeapon,不是只定義了函式)。
-  // **比對 MUST 走完整的預算鏈**:2026-08-02 起 heroWeapon 的 dmg 還乘上另外三個推導係數 ——
-  // aoeTrimF(攻擊範圍收斂的回補)、mobDmgF(機動預算)、rngDmgF(射程預算)。只比 counterDmgF
-  // 一項會在那三項非 1 的武器上假紅字(改制當下 s03/t01/t08/m01 四把),而真正要釘的是
-  // 「counterDmgF 有沒有接上」⇒ 拿全鏈乘積比對,並另外單獨驗 counterDmgF < 1。
+  // Flagged weapons' actual damage MUST sit below the unreduced value (the reduction really hooks
+  // into heroWeapon, not just a defined-but-unwired function).
+  // **Comparison MUST travel the full budget chain**: since 2026-08-02 heroWeapon's dmg also multiplies
+  // three more derived factors — aoeTrimF (range-convergence rebate), mobDmgF (mobility budget),
+  // rngDmgF (range budget). Comparing counterDmgF alone false-reds on weapons where those three are
+  // not 1 (s03/t01/t08/m01 at migration time); what needs pinning is "is counterDmgF wired in" ⇒
+  // compare the whole-chain product, and separately verify counterDmgF < 1.
   for (const [k, w] of flagged) {
     const [id, s] = k.split('.');
     if (s !== 'light' && s !== 'heavy') continue;
@@ -322,7 +342,8 @@ console.log('\n■ Ⅴ 配置紀律(2026-08-02 使用者定案的三條;全部�
     t(`${k} 基礎傷害吃到折減 ×${f.toFixed(3)}(全鏈 ×${chain.toFixed(3)};${(w.dmg?.[0] ?? w.dmg).toFixed?.(0) ?? w.dmg[0]} → ${solved.dmg.toFixed(1)})`,
       f < 1 && near(solved.dmg, (Array.isArray(w.dmg) ? w.dmg[0] : w.dmg) * chain, 1e-6));
   }
-  // 廣泛型(反護盾/穿盾)MUST 比只掛 vsHp 的反裝甲吃更重的折減 —— 使用者原話的「基礎傷害會偏低」
+  // Broad types (anti-shield/piercing) MUST discount harder than pure-anti-armor vsHp builds — the
+  // user's "base damage runs lower" in the original wording
   const broadF = flagged.filter(([, w]) => (w.vsSp ?? 1) > 1 || (w.spPierce || 0) > 0).map(([, w]) => counterDmgF(w));
   const narrowF = flagged.filter(([, w]) => (w.vsSp ?? 1) <= 1 && !(w.spPierce > 0)).map(([, w]) => counterDmgF(w));
   t('反護盾/穿盾的折減重於反裝甲(廣泛性加成 ⇒ 基礎傷害更低)',
@@ -333,19 +354,22 @@ console.log('\n■ Ⅴ 配置紀律(2026-08-02 使用者定案的三條;全部�
 // ---------------------------------------------------------------------------
 console.log('\n■ Ⅵ 對建築 DPS 收斂(2026-08-04 使用者定案「重武器之間與輕武器之間對建築的 DPS 不要落差太大」)');
 // ---------------------------------------------------------------------------
-// 這一段最容易「壞掉但不會報錯」的兩個形狀:
-//  ① 只做壓縮不回填水位 ⇒ 全體拆塔一起變慢(bal ④ 會紅,但要跑完整支才知道);
-//  ② `vs.building` 被改成逐武器手寫 ⇒ 32 角一動就漂移(A34 ① 的老病)。
-// 故此處驗:離散度真的收斂了(與「中性 vs.building」的離散度對照)、水位鎖在滿級拆塔 DPS 上、
-// 且寫入點只有推導迴圈那一處。
+// This section's two easiest "breaks silently" shapes:
+//  1 Compress without refilling the level ⇒ every siege DPS slows together (bal 4 goes red, but only
+//    after running the whole file);
+//  2 `vs.building` rewritten per weapon by hand ⇒ drifts the moment any of the 32 characters moves
+//    (the old A34-1 disease).
+// So verify: spread really converged (against the "neutral vs.building" spread control), the level is
+// pinned to full-tier siege DPS, and there is exactly one derived write site.
 {
   const { BUILD_DPS, buildDps, ECON } = DATA;
-  const SPREAD_RAIL = { light: 2.0, heavy: 3.2 };   // 守門欄杆(防退化;現況 light 1.71× / heavy 2.92×)
+  const SPREAD_RAIL = { light: 2.0, heavy: 3.2 };   // guard rail against regression (current light 1.71x / heavy 2.92x)
   t('BUILD_DPS.K ∈ (0, 1](0 = 逐位元同舊制、1 = 完全拉平)', BUILD_DPS.K > 0 && BUILD_DPS.K <= 1);
   t('水位回填有迭代上限(夾在 CAP 的那些補不滿 ⇒ 迴圈 MUST 有界)', BUILD_DPS.LEVEL_ITERS >= 1);
   t('buildDps 只有一份實作(收斂迴圈與本稽核同吃)', count(dataSrc, 'export function buildDps') === 1);
-  // 2026-08-04:彈匣週期改由 data.js `weaponDps`/`weaponCycleS` 單一縫供應(舊制是兩份手抄的
-  // `const cycle = …`,第三個消費端(圖鑑六角圖的火力軸)一來就會變成三份)。同式 = 同一支函式。
+  // Since 2026-08-04 the magazine cycle comes from the data.js `weaponDps`/`weaponCycleS` single seam
+  // (the old scheme hand-copied `const cycle = …` twice; a third consumer — the codex hexagon's firepower
+  // axis — would have made it three copies). Same formula = same function.
   t('buildDps 與 balance.mjs 的 slotDps 同式(同吃 weaponDps,且走 shieldSplit)',
     /export const weaponCycleS = \(w\) => w\.mag \/ \(w\.rate \|\| RATE_DEF\) \+ w\.reload;/.test(dataSrc)
     && /weaponDps\(w, shieldSplit\(w, w\.dmg, 0\)\.toHp \* vsMult\(w, 'tower'\)/.test(dataSrc)
@@ -357,9 +381,9 @@ console.log('\n■ Ⅵ 對建築 DPS 收斂(2026-08-04 使用者定案「重武�
   for (const slot of ['light', 'heavy']) {
     const chs = Object.keys(CHARACTERS).filter((ch) => CHARACTERS[ch][slot]);
     const now = chs.map((ch) => buildDps(ch, slot));
-    // 對照組:vs.building 全部中性(=1)—— 也就是「完全不用這一軸調整」的離散度。
-    // 收斂的定義就是「用了這一軸之後,離散度 MUST 比不用時更小」;只釘一個絕對倍率的話,
-    // 有可能是武器階梯本來就整齊,量不到這一段有沒有真的在做事。
+    // Control: neutral vs.building (=1) for all — i.e. the spread "without spending this axis at all".
+    // Convergence is defined as "spending this axis makes spread strictly smaller"; pinning only an
+    // absolute ratio could pass on already-even weapon ladders without proving this section does anything.
     const flat = chs.map((ch) => buildDps(ch, slot) / (CHARACTERS[ch][slot].vs?.building ?? 1));
     const sp = (v) => Math.max(...v) / Math.min(...v);
     t(`${slot}:對建築 DPS 離散度 ${sp(now).toFixed(2)}× ≤ 守門線 ${SPREAD_RAIL[slot]}×`,
@@ -372,8 +396,9 @@ console.log('\n■ Ⅵ 對建築 DPS 收斂(2026-08-04 使用者定案「重武�
         return v > 0 && v <= BUILDING_VS_CAP + 1e-9;
       }));
   }
-  // 水位:滿級逐角色(輕 + 重)拆塔 DPS —— bal ④ 量的就是這個。收斂 MUST 只改離散度不改水位,
-  // 故它 MUST 落在中性對照的水位附近(±2%);差太多就是回填那一段沒接上或被夾死。
+  // Level: full-tier per-character (light + heavy) siege DPS — exactly what bal 4 measures. Convergence
+  // MUST move only the spread, never the level, so it MUST land near the neutral control's level
+  // (±2%); much lower means the refill never hooked up or got clamped dead.
   const TOPL = 1 + ECON.UPGRADES.lw.max, TOPH = 1 + ECON.UPGRADES.hw.max;
   const chs = Object.keys(CHARACTERS);
   const push = (ch) => buildDps(ch, 'light', TOPL) + buildDps(ch, 'heavy', TOPH);

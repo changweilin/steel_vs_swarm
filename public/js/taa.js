@@ -21,12 +21,12 @@ export const TAA = Object.freeze({
 });
 
 export const DRS = Object.freeze({
-  MIN: 0.7,             // Minimum dynamic render scale (乘在 _dpr() 天花板上)
+  MIN: 0.7,             // Minimum dynamic render scale (multiplied on the _dpr() ceiling)
   MAX: 1.0,             // Native render scale ceiling
   STEP: 0.1,            // Baseline resolution step quantum
   MAX_DOWN_STEP: 0.2,   // Accelerated down-step under severe complexity + frame drop
   HI_MS: 20,            // Down-scale trigger (< 50 fps)
-  LO_MS: 17.2,          // Up-scale recovery threshold (60Hz vsync 滿速有餘裕)
+  LO_MS: 17.2,          // Up-scale recovery threshold (60Hz vsync full speed with headroom)
   EMA: 0.1,             // Frame-time exponential moving average weight
   HOLD_S: 0.8,          // Baseline hold duration before stepping
   FAST_HOLD_S: 0.45,    // Shortened hold duration when complexity & frame time spike

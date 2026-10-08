@@ -93,14 +93,14 @@ group.traverse(object => {
   assert.equal(object.geometry.attributes.color.count, object.geometry.attributes.position.count);
   object.geometry.dispose();
 });
-// 1. 爬藤多塊連續拼接 (Seamless Connection) 與完全不重複 (Non-repeating Pattern) 測試
+// 1. Multi-block seamless vine connection with fully non-repeating patterns
 const vineMotif = generateSeamlessVinePattern({
   seed: 'seamless_vine_test', slot: 0, site: { x: 0, y: 0 },
   w: 6, h: 4, kind: 'ivy', rule: WALL_DECORATIONS.ivy, scope: 'field',
   cols: 3, rows: 2, budget: 120,
 });
 assert(vineMotif.length >= 24, 'Multi-block vine motif generated adequate primitives');
-// 驗證各塊幾何圖案不重複
+// Verify each block carries a distinct geometric pattern
 const blockFingerprints = new Map();
 for (const p of vineMotif) {
   const bk = p.block || 'default';
@@ -112,14 +112,14 @@ const fpStrings = [...blockFingerprints.values()].map(arr => arr.join('|'));
 const uniqueFpStrings = new Set(fpStrings);
 assert.equal(uniqueFpStrings.size, blockFingerprints.size, 'All vine blocks have completely non-repeating patterns');
 
-// 2. 限定低樓層建築使用，陽台/雨遮/冷氣廣泛規律使用項目除外
+// 2. Restricted to low-rise buildings; balconies/canopies/AC units stay exempt as regular fixtures
 assert.equal(LOW_RISE_LIMIT, 24);
 assert.deepEqual(wallDecorationParts({ seed: 'highrise', width: 12, height: 28, category: 'commercial' }), [],
   'High-rise buildings strictly omit wall decorations');
 assert.ok(wallDecorationParts({ seed: 'lowrise:0', width: 12, height: 20, category: 'commercial' }).length > 0,
   'Low-rise buildings allow wall decorations');
 
-// 3. 高樓層建築規律配件保留驗證 (陽台與冷氣室外機在全樓層正常配置)
+// 3. High-rise regular fixture retention (balconies and outdoor AC units across all floors)
 const tallPoly = { outer: [[-12,-8],[12,-8],[12,8],[-12,8]], holes: [] };
 const tallEdges = [[0,-8,12,0],[12,0,8,Math.PI/2],[0,8,12,0],[-12,0,8,Math.PI/2]].map(([x,z,hw2,ry]) => ({
   x, z, hw2, ry, sourceId: 'tall-fixture'
@@ -127,13 +127,13 @@ const tallEdges = [[0,-8,12,0],[12,0,8,Math.PI/2],[0,8,12,0],[-12,0,8,Math.PI/2]
 const tallStyle = { id: 'tall-test', variant: 0, roofForm: 'flat', trim: 0x69757d,
   functionInfo: { category: 'residential' } };
 const tallGeos = generateBuildingAppurtenances(tallPoly, tallEdges, 0, 36, tallStyle);
-// 牆飾全面歸零
+// Wall decor fully omitted on towers
 assert.equal(tallGeos.filter(g => g.userData.wallDecoration).length, 0, 'No wall decorations on 36m tower');
-// 陽台與冷氣室外機在 36m 高樓維持正常配置
+// Balconies and outdoor AC units persist on the 36m tower
 assert.ok(tallGeos.length > 20, 'Regular fixtures (balconies, AC units, drying racks) persist on high-rise');
 for (const g of tallGeos) g.dispose();
 
-// 4. 非平面屋頂垂直端面同等建築牆面，由建築牆面延伸驗證
+// 4. Non-flat roof vertical faces count as building walls, extended from the wall finish
 for (const form of ['gable', 'shed', 'steep_gable', 'gambrel', 'crowstep']) {
   const rParts = architecturalRoofParts({ outer: [[-10,-6],[10,-6],[10,6],[-10,6]], holes: [] },
     12, { roof: 0x223344, wall: 0x887766, variant: 0 }, form);

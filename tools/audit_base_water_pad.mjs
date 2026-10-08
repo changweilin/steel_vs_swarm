@@ -1,10 +1,10 @@
-// ============ 水域／沼澤主堡大型承台稽核（執行 biomes.js 原文）============
-// 起因：主堡落在水域或沼澤時，裸地形會讓主堡、重生點與治癒光環泡在水中。
-// 修法：以 HERO_HEAL_R 推導承台半徑，視覺板／decks 站立面／支撐柱同一次規劃；
-//       basePadY 再讓主堡本體與治癒光環共用台面高度。乾地主堡不得生成承台。
+// ============ Water and swamp main-base platform audit (executes biomes.js source) ============
+// Cause: when a main base lands on water or swamp, raw terrain leaves the base, spawn point, and heal aura soaking.
+// Fix: derive the platform radius from HERO_HEAL_R, planning visual slab, decks standing surface, and posts in one pass;
+//       basePadY then shares one platform height between the base body and the heal aura. Dry-land bases MUST NOT spawn a platform.
 //
-// 跑法：node tools/audit_base_water_pad.mjs
-// 反向：node tools/audit_base_water_pad.mjs --break-wet
+// Usage: node tools/audit_base_water_pad.mjs
+// Reverse: node tools/audit_base_water_pad.mjs --break-wet
 import { GAME, WATER } from '../public/js/data.js';
 import { readSrc } from './audit_src.mjs';
 

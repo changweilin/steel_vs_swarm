@@ -288,7 +288,7 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
     hn.length === 1 && hf.length === 2);
   t('fan:不隨距離衰減 —— 同軸近/遠吃到同樣的 f(偏心遞減 × 單格單價)',
     near(hn[0].f, hf.find((x) => x.ent === farFoes[0]).f) && near(hn[0].f, FAN_SUB_F));
-  // 小錐分格:同一格內只取最近(後方同線的不再順帶);大目標橫跨多格則多格各取一次。
+  // Sub-cone cells: take only the nearest target per cell (collinear targets behind are not swept); a large target spanning cells hits once per cell.
   const col = [{ kind: 'soldier', x: 60, y: 0, hp: 1 }, { kind: 'soldier', x: 100, y: 0, hp: 1 }];
   const hc = hits(shooter, col[0], fanDef, col);
   t('fan:同一小錐內只取最近一名', hc.length === 1 && hc[0].ent === col[0]);
@@ -305,8 +305,8 @@ console.log('\nⅤ 前線交戰模型(lanesim):場景全由 data.js 推導,三�
   const hl = hits(shooter, row[0], lineDef, row);
   t('line:一線貫穿多名,且後續目標逐一衰減(LANCE.DECAY)',
     hl.length === 3 && hl[0].f > hl[1].f && hl[1].f > hl[2].f);
-  // 分區穿透截斷:beam 內圈 45 / 外圈單格 15,小兵(1.13) + 砲塔(153.9)見底 ⇒
-  // 塔本身 7 區全中、塔後同區目標截斷。
+  // Zoned penetration cutoff: beam inner ring 45 / outer single cell 15; soldier plus tower drain the budget,
+  // so the tower itself takes all 7 zones while targets behind it in the same zone are cut off.
   const col2 = [{ kind: 'soldier', x: 30, y: 0, hp: 1 }, { kind: 'tower', x: 60, y: 0, hp: 1800 },
     { kind: 'soldier', x: 90, y: 0, hp: 1 }];
   const hp2 = hits(shooter, col2[0], lineDef, col2);

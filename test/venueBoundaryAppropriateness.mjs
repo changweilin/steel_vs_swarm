@@ -14,7 +14,7 @@ for (const venueId of NATURE_VENUES) {
   assert(venue, `Venue ${venueId} must exist in VENUES`);
   const env = { venue, mix: venue.mix };
 
-  // 1. 驗證自然場地的候選清單不得包含任何建築、工廠、市區設施
+  // 1. Natural venues: candidate list must exclude all buildings, factories, and urban facilities
   for (const biome of ['bare', 'green', 'water', 'wet']) {
     for (const tier of ['flat', 'mid', 'steep']) {
       const candidates = wallCandidates(biome, biome === 'water', tier, env);
@@ -28,14 +28,14 @@ for (const venueId of NATURE_VENUES) {
     }
   }
 
-  // 2. 模擬自然場地邊界四緣 planWallRuns，驗證定案款式中建築與工廠總數為 0
+  // 2. Simulate planWallRuns around four natural-venue edges; settled kinds must contain zero buildings/factories
   const len = 30;
   const simulatedEdges = [
-    // 裸岩段
+    // Bare-rock stretch
     Array.from({ length: 10 }, (_, i) => ({ x: -300 + i * len, z: -300, len, biome: 'bare', water: false, tier: 'steep' })),
-    // 綠地段
+    // Green stretch
     Array.from({ length: 10 }, (_, i) => ({ x: -300 + i * len, z: 300, len, biome: 'green', water: false, tier: 'flat' })),
-    // 水域段
+    // Water stretch
     Array.from({ length: 10 }, (_, i) => ({ x: -300, z: -300 + i * len, len, biome: 'water', water: true, tier: 'flat' })),
   ];
 
@@ -52,7 +52,7 @@ for (const venueId of NATURE_VENUES) {
   console.log(`  ✓ 自然場地 ${venue.name} (${venueId}): 邊界 0 建築、0 工廠、100% 自然地貌`);
 }
 
-// 3. 驗證市區場地 (taipei101) 邊界可正常配置市區建築
+// 3. Urban venue (taipei101) boundary must still allocate urban buildings
 const taipei = VENUES.find((v) => v.id === 'taipei101');
 const taipeiEnv = { venue: taipei, mix: taipei.mix };
 const urbanCandidates = wallCandidates('urban', false, 'flat', taipeiEnv);
@@ -60,14 +60,14 @@ assert(urbanCandidates.some((k) => ['residential', 'highrise', 'industry'].inclu
   '市區場地應具備市區建築或設施');
 console.log('  ✓ 市區場地 (taipei101): 市區邊界正確配發市區建築');
 
-// 4. 驗證工業區專屬環境
+// 4. Industrial-only environment
 const industrialEnv = { zone: 'industrial', industrial: true, mix: { urban: 0.8 } };
 const indCandidates = wallCandidates('urban', false, 'flat', industrialEnv);
 assert(indCandidates.some((k) => BOUNDARY_OBJECT_CATEGORIES[k] === 'industry'), '工業區應具備工業設施');
 assert(!indCandidates.some((k) => BOUNDARY_OBJECT_CATEGORIES[k] === 'residential'), '工業區應排除一般民宅建築');
 console.log('  ✓ 工業區專屬環境: 優先配發工廠與工業構造，排除民宅聚落');
 
-// 5. 驗證綠地 (green) 全坡度均優先配置巨木林／森林／神木等植物物件
+// 5. Green biomes at all grades prioritize giant-tree/forest/sacred-tree plant objects
 const PLANT_CATEGORIES = new Set(['giant-tree', 'deadwood']);
 const PLANT_KINDS = new Set(['giantforest', 'densegiants', 'foresthills', 'gianttree', 'fallentree']);
 
@@ -79,8 +79,8 @@ for (const tier of ['flat', 'mid', 'steep']) {
 }
 console.log('  ✓ 綠地地貌 (平坦／中等／陡坡): 巨木林／神木林／森林山丘等植物物件比例均過半 (≥ 50%~70%)');
 
-// 6. 驗證所有地貌 (green, bare, water, wet, urban) 之物件適配性
-// 裸露地 (bare): 不得出現巨木／神木／民房，純天然岩體與採掘／能源為核心
+// 6. Object fitness across all biomes (green, bare, water, wet, urban)
+// Bare ground: no giant/sacred trees or houses; pure natural rock with extraction/energy as the core
 for (const tier of ['flat', 'mid', 'steep']) {
   const barePool = wallCandidates('bare', false, tier);
   assert(!barePool.some((k) => PLANT_KINDS.has(k) || BOUNDARY_OBJECT_CATEGORIES[k] === 'giant-tree'),
@@ -90,7 +90,7 @@ for (const tier of ['flat', 'mid', 'steep']) {
 }
 console.log('  ✓ 裸露地地貌: 0 植物樹木、純岩體與採礦／能源／防禦設施');
 
-// 水域 (water): 必須 100% 為水域／海岸／浮冰／船舶，不得出現任何陸地障礙物
+// Water: must be 100 percent water/coast/floe/vessel, no land obstacles
 for (const tier of ['flat', 'mid', 'steep']) {
   const waterPool = wallCandidates('water', true, tier);
   assert(waterPool.length > 0 && waterPool.every((k) => WALL_KINDS[k].dom === 'water'),
@@ -98,7 +98,7 @@ for (const tier of ['flat', 'mid', 'steep']) {
 }
 console.log('  ✓ 水域地貌: 100% 海堤／消波塊／浮冰／貨輪／礁岩，嚴禁陸域物件漏入');
 
-// 市區 (urban): 必須為城鎮建築、高樓、交通、工業設施，不得出現巨木林或天然巨石
+// Urban: town buildings, towers, traffic, and industry only; no giant forests or raw boulders
 for (const tier of ['flat', 'mid', 'steep']) {
   const urbanPool = wallCandidates('urban', false, tier);
   assert(!urbanPool.some((k) => PLANT_KINDS.has(k) || BOUNDARY_OBJECT_CATEGORIES[k] === 'giant-tree'),
@@ -108,14 +108,14 @@ for (const tier of ['flat', 'mid', 'steep']) {
 }
 console.log('  ✓ 市區地貌: 100% 民房／高樓／工業／交通／城垣設施，無天然巨木巨石');
 
-// 濕地 (wet): 必須包含濕地棚架、擱淺船、消波塊、運河、河堤與濕地林木
+// Wetland: must include racks, stranded ships, wave blocks, canals, levees, and wetland trees
 const wetFlat = wallCandidates('wet', false, 'flat');
 assert(wetFlat.some((k) => ['oysterracks', 'strandedship', 'wetpods', 'canalbank', 'levee'].includes(k)),
   '濕地平地應具備濕地專屬構造 (蚵棚／擱淺船／消波塊／運河／河堤)');
 assert(wetFlat.some((k) => PLANT_KINDS.has(k)), '濕地應具備濕地巨木林木');
 console.log('  ✓ 濕地地貌: 具備專屬蚵棚／擱淺船／消波塊／運河及水生林木');
 
-// 7. 驗證自然森林場地實際邊界規劃 (planWallRuns) 必然生成森林／巨木相關物件
+// 7. Real boundary planning (planWallRuns) on natural forest venues must yield forest/giant-tree objects
 for (const venueId of ['aokigahara', 'blackforest', 'yangmingshan']) {
   const venue = VENUES.find((v) => v.id === venueId);
   const env = { venue, mix: venue.mix };

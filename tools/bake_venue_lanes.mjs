@@ -1,45 +1,45 @@
-// ============ 預設場地兵線離線預算 ============
-// 用法:node tools/bake_venue_lanes.mjs   (ONLY=taipei101,seoul 可只跑指定場地)
-// 固定 fixture 有界診斷:OSM_FIXTURE_DIR=test/fixtures/osm ONLY=taipei101 node tools/bake_venue_lanes.mjs
-// target component 行為證據:node tools/bake_venue_lanes.mjs --self-test-target-components
+// ============ Default venue lane offline budget ============
+// Usage: node tools/bake_venue_lanes.mjs   (ONLY=taipei101,seoul runs only listed venues)
+// Pinned fixture bounded diagnosis: OSM_FIXTURE_DIR=test/fixtures/osm ONLY=taipei101 node tools/bake_venue_lanes.mjs
+// target component behavior evidence: node tools/bake_venue_lanes.mjs --self-test-target-components
 // --out <path> stages a generated module without replacing the runtime table.
-// fixture 模式預設只列報告；FIXTURE_WRITE=1 仍會硬驗 center/bbox。真的移動場地時須另設
-// FIXTURE_RECAPTURE=1，寫入後立即用 fetch_osm_fixture.mjs --update 重抓同名 raw fixture。
-// 產出 public/js/venueLanes.js。改 ANCHORS 或 MAPGEO 的尺寸/重合率常數後 MUST 重跑。
-// 逐場地烤兩份:完整戰場的三線母體(鍵 3)+ **縮小尺度的單兵線 m1**(劇情戰役專用 ——
-// 見 venues.js venueLaneKey)。L1(母體中路)/L2(母體左右兩路)寫檔時由母體派生,不獨立烤
-// (2026-09-25 同一張圖)。m1 的砲塔規則一次驗劇情兩側
-// (守方在 SWARM / 守方在 STEEL),因為守方是哪一邊逐章不同、還會被
-// rollSideSwap 再擲一次。改 STORY_MAP.DEF_STAGES 後 MUST 重跑。
-// Overpass 真實道路路網 → 建圖 → 每條兵線 = 一條「邊不相交」的最短路徑(全程踩在現實道路上)
-// → 用 overlapCellM(L) 驗重合率 ≤ MAX_OVERLAP、繞路 ≤ 2.2×、兩堡距離 ≥ 對角線 80%。
-// 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
-// #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
+// Fixture mode only lists a report by default; FIXTURE_WRITE=1 still hard-checks center and bbox. Moving a venue for real needs extra setup
+// FIXTURE_RECAPTURE=1, right after writing recapture the same-named raw fixture with fetch_osm_fixture.mjs --update.
+// Output is public/js/venueLanes.js. After changing ANCHORS or MAPGEO size and overlap constants MUST rerun.
+// Per venue bake two sets: full-battlefield three-lane parent (key 3) plus reduced-scale single lane m1 (story-campaign only,
+// see venues.js venueLaneKey). L1 (parent middle) and L2 (parent left and right) derive from the parent at write time, never baked alone
+// (2026-09-25 same map). Turret rules for m1 check both story sides in one pass
+// (defender on SWARM / defender on STEEL), because which side defends varies per chapter and gets
+// rerolled once more by rollSideSwap. After changing STORY_MAP.DEF_STAGES MUST rerun.
+// Overpass real road network to graph to each lane as one edge-disjoint shortest path (fully on real roads)
+// then overlapCellM(L) checks overlap at or below MAX_OVERLAP, detour at or below 2.2x, base distance at or above 80 percent of diagonal.
+// Bearing selection also prefers turret rules: rule 5 in-tunnel turrets with at least 20 percent range covering outside the portal (towerTunnelAudit) outranks
+// rule 4 range-overlap residual (towerLayoutAudit) -- a turret buried in rock can only duel along the tunnel corridor, a functional defect.
 import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { MAPGEO, battleBBox, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit, lanePathBalanceAudit }
   from '../public/js/data.js';
-// 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
+// Existing lanes: with ONLY= partial rebake, venues not rebaked must be written back unchanged (see keep below)
 import { VENUE_LANES } from '../public/js/venueLanes.js';
-// 表的鍵只有 venues.js 一份(消費端與產生端同吃 —— 在這裡照抄一個字串前綴,
-// 改鍵時必漏改其中一邊,而症狀是「烤了卻沒人讀得到」,沒有任何錯誤訊息)。
+// Table keys live only in venues.js (producer and consumer share it -- copying one string prefix here
+// means a key rename will miss one side, with the symptom that baked lanes have no reader and no error message).
 import { VENUE_LANE_KEYS, venueLaneModes } from '../public/js/venues.js';
 import { readSrc, grabBlock } from './audit_src.mjs';
-// 結構隧道資格閘(**執行 biomes.js 原文**的那一份,§2.1「離線工具的結構剖面」單一縫)。
-// 2026-08-04:舊制 buildGraph 直接看 `w.tags.tunnel` = 第二份實作,比引擎鬆 ——
-// `indoor=yes` 的 service 通道(車站地下街 / 停車場坡道)在引擎裡一律攤平成一般小路
-//(`strucTunnel`,2026-07-29 澀谷側壁破口案),卻照樣被 `PREFER_TUNNEL` 當成「這條路線
-// 走得到隧道」而拿去加分,也照樣被規則「橋/隧只能從出入口進出」當成結構去擋。
-// 選線期與執行期對隧道的定義分家,症狀是「烤出來的兵線號稱走地下道,開圖是一條平街」。
+// Structural-tunnel qualification gate (the copy that executes biomes.js source text, section 2.1 single seam for offline tool structure profiles).
+// 2026-08-04: legacy buildGraph read w.tags.tunnel directly, a second implementation looser than the engine --
+// indoor=yes service passages (station underground malls / parking ramps) always flatten to ordinary paths in the engine
+// (strucTunnel, 2026-07-29 Shibuya side-wall breach case), yet PREFER_TUNNEL still scored them as routes
+// reaching a tunnel, and the bridge-or-tunnel only via portals rule still blocked them as structures.
+// Selection-time and run-time tunnel definitions diverged, with the symptom that baked lanes claimed an underpass while the map showed a flat street.
 import { strucTunnel } from './venue_field.mjs';
 
-// 兵線 lat/lng → 遊戲公尺(中心相對;與 audit_map_rules / runtime 同一換算 ⇒ 烘焙期的規則判定與最終稽核一致)
+// Lane lat/lng to game meters (center-relative; same conversion as audit_map_rules and runtime, so bake-time rule checks match the final audit)
 const SC_GAME = 1 / MAPGEO.REAL_SCALE, EARTH_M = 6371000;
 const llToGame = (lat, lng, c) => [
   (lng - c.lng) * Math.PI / 180 * EARTH_M * Math.cos(c.lat * Math.PI / 180) * SC_GAME,
   (lat - c.lat) * Math.PI / 180 * EARTH_M * SC_GAME,
 ];
-// 寫出精度(六位小數 ≈ 0.1m):規則硬門檻與寫檔 MUST 用同一個捨入(見 tryBearing 分離閘)
+// Write precision (six decimals about 0.1m): rule hard gates and file output MUST share one rounding (see tryBearing separation gate)
 const r6 = (v) => +v.toFixed(6);
 
 const CACHE = new URL('./.osm_cache/', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -60,86 +60,86 @@ const ANCHORS_ALL = {
   manhattan: [[40.7549, -73.9840]],
   paris: [[48.8584, 2.2945]],
   seoul: [[37.4979, 127.0276]],
-  // 自然場地:錨點移到鄰近有路網的聚落(地貌 mix 不變,仍是森林/沙漠/濕地的視覺)
-  yangmingshan: [[25.1180, 121.5300], [25.1370, 121.5450]],   // 天母(陽明山南麓住宅網格)
-  aokigahara: [[35.4972, 138.7546], [35.4986, 138.6866]],     // 河口湖町
+  // Natural venues: anchors moved to nearby settled road grids (biome mix unchanged, still forest/desert/wetland look)
+  yangmingshan: [[25.1180, 121.5300], [25.1370, 121.5450]],   // Tianmu (residential grid at Yangmingshan south foot)
+  aokigahara: [[35.4972, 138.7546], [35.4986, 138.6866]],     // Kawaguchiko town
   blackforest: [[48.4670, 8.4115], [48.5480, 8.3700]],        // Freudenstadt / Baiersbronn
-  yosemite: [[37.6690, -119.7990], [37.7485, -119.5878]],     // El Portal / 優勝美地村
+  yosemite: [[37.6690, -119.7990], [37.7485, -119.5878]],     // El Portal / Yosemite Village
   giza: [[29.9870, 31.1420], [29.9773, 31.1325]],             // Nazlet El-Semman
-  uluru: [[-25.2406, 130.9889]],                              // Yulara 度假村
-  phoenix: [[33.4950, -112.1700]],                            // 西鳳凰城 Maryvale 索諾拉沙漠格柵(全 L 過稽核)
-  hehuanshan: [[23.9650, 120.9670], [24.0577, 121.1614]],     // 埔里鎮 / 清境農場
-  venice: [[45.4850, 12.2350], [45.4408, 12.3155]],           // Mestre(本島無車道)
-  iguazu: [[-25.5990, -54.5735]],                             // Puerto Iguazú
-  tamsui: [[25.1680, 121.4450], [25.1720, 121.4400]],         // 淡水市區
+  uluru: [[-25.2406, 130.9889]],                              // Yulara resort
+  phoenix: [[33.4950, -112.1700]],                            // West Phoenix Maryvale Sonoran desert grid (all L pass audit)
+  hehuanshan: [[23.9650, 120.9670], [24.0577, 121.1614]],     // Puli town / Qingjing Farm
+  venice: [[45.4850, 12.2350], [45.4408, 12.3155]],           // Mestre (main island has no car lanes)
+  iguazu: [[-25.5990, -54.5735]],                             // Puerto Iguazu
+  tamsui: [[25.1680, 121.4450], [25.1720, 121.4400]],         // Tamsui urban area
   okavango: [[-19.9833, 23.4167]],                            // Maun
   rio: [[-22.9700, -43.1850], [-22.9519, -43.2105]],
-  // 金龍隧道西南口外(金龍路)/ 東北口外(金湖路)。L1 兩堡僅 ~481 真實公尺、隧道 ~195m:
-  // 錨點 MUST 貼隧道軸且距洞口 ~130m,B 才不會被吸進隧道內部或繞上別的街廓
+  // Outside Jinlong tunnel SW portal (Jinlong Rd) and NE portal (Jinhu Rd). L1 bases only about 481 real meters apart, tunnel about 195m:
+  // anchors MUST hug the tunnel axis about 130m from each portal, else B gets sucked inside the tunnel or detours onto other blocks
   jinlong: [[25.0838, 121.5846], [25.0873, 121.5895]],
-  // ② 純陸域高架橋的候選(**尚未定案**,故 venues.js 暫不收):Park Avenue 高架繞中央車站,
-  // 底下全是街道。三輪實測(夾方位角 / 放開方位角 / PREFER_BRIDGE 偏好)兵線最近只到高架旁 4m,
-  // 沒真的踩上橋面 —— 曼哈頓格柵的等長替代路線太多,且高架與地面 Park Ave 是分離的 way。
+  // 2 Pure-land viaduct candidate (not yet finalized, so venues.js excludes it): Park Avenue viaduct around Grand Central,
+  // streets underneath throughout. Three survey rounds (clamped bearings / free bearings / PREFER_BRIDGE bias) got lanes only within 4m beside the viaduct,
+  // never truly on the deck -- Manhattan grid offers too many equal-length ground alternatives, and the viaduct and ground Park Ave are separate ways.
   parkave: [[40.75005, -73.97940], [40.75500, -73.97530]],
-  barcelona: [[41.3925, 2.1620], [41.3850, 2.1700]],          // 巴塞隆納 Eixample 格柵(臨地中海)
-  // 劇情終章場地(2026-08-04)。納希莫夫廣場 / 烏沙科夫廣場 —— 兩座廣場都在市中心
-  // 半島的脊線上,之間隔著 ~450 真實公尺的密街廓 ⇒ L1~L3 都排得出互不接觸的三條真實道路。
-  crimea: [[44.6172, 33.5243], [44.6137, 33.5218]],           // 塞瓦斯托波爾市中心
-  // 倫敦東郊 Ilford/Seven Kings:正式 fixture bake 選出的完整 L1/L2/L3/m1 錨點。
-  // 一般市區路網,不掛 PREFER_BRIDGE 也不限制方位扇區。
+  barcelona: [[41.3925, 2.1620], [41.3850, 2.1700]],          // Barcelona Eixample grid (near Mediterranean)
+  // Story final venue (2026-08-04). Nakhimov Square / Ushakov Square -- both squares sit on the downtown
+  // peninsula ridge, separated by about 450 real meters of dense blocks, so L1-L3 can each place three mutually untouched real roads.
+  crimea: [[44.6172, 33.5243], [44.6137, 33.5218]],           // Sevastopol downtown
+  // London east suburb Ilford and Seven Kings: full L1/L2/L3/m1 anchors selected by the official fixture bake.
+  // Ordinary urban grid, no PREFER_BRIDGE and no bearing-sector clamp.
   london: [[51.560302, 0.084931]],
-  // 柏林 Prenzlauer Berg:候選報告首個完整 L1/L2/L3/m1 錨點。
-  // 一般市區路網,不掛 PREFER_BRIDGE 也不限制方位扇區。
+  // Berlin Prenzlauer Berg: first full L1/L2/L3/m1 anchor in candidate reports.
+  // Ordinary urban grid, no PREFER_BRIDGE and no bearing-sector clamp.
   berlin: [[52.538038, 13.415268]],
-  // 地下道(②):馬德里 卡斯提亞大道一帶。地形全平 ⇒ 深度只能來自「挖」,正是 underpassPlan
-  // 的適用面;PREFER_TUNNEL 讓選線踩上 tunnel way。
-  // **錨點改用 María de Molina**(探測覆蓋 234m @40.43784,-3.68745):首輪的 Joaquín Costa
-  // 探測報 165m,但**執行期**只建得出 29m 覆蓋段(< 場景門檻 ON_MIN 之後所剩無幾),
-  // 兵線最近只到洞旁 1m 就繞回地面 —— 探測長度是圖資 way 全長,不是遊戲裡真的挖出來的洞。
-  // 挑地下道場地一律以「執行期覆蓋長度」為準,MUST NOT 拿圖資長度當數據。
-  // 2026-08-04 探測(r=3)把這一帶的覆蓋段中點量清楚了:María de Molina **277m**
-  // @40.43785,-3.68759(舊註記的 234m 是同一條,量到的段落略短)、Joaquín Costa 212m
-  // @40.44491,-3.68517。錨點改成夾住 277m 那一段的兩端(各退開 ~250m):兩堡 481m 剛好
-  // 把整段納進來、兩頭各留 ~100m 露天。舊錨點(-3.68925 / -3.68560)只涵蓋到洞的一半
-  // ⇒ 兵線從洞頂跨過去,實測中的是 ⑦ 穿越地下道上方而不是 ②。
+  // Underpass (2): Madrid Castilla Avenue area. Terrain fully flat, so depth can only come from digging, exactly the
+  // underpassPlan use case; PREFER_TUNNEL lets selection step onto a tunnel way.
+  // Anchors switched to Maria de Molina (probe coverage 234m at 40.43784,-3.68745): first-round Joaquin Costa
+  // probe reported 165m, but runtime only builds a 29m covered segment (nearly nothing left past scene gate ON_MIN),
+  // and lanes passed within 1m of the portal before returning to the surface -- probe length is the full map-data way length, not the hole actually dug in game.
+  // Underpass venues always judge by runtime coverage length, MUST NOT use map-data length as data.
+  // 2026-08-04 probe (r=3) measured cover-segment midpoints here: Maria de Molina 277m
+  // at 40.43785,-3.68759 (old 234m note is the same stretch, measured slightly shorter), Joaquin Costa 212m
+  // at 40.44491,-3.68517. Anchors now bracket both ends of the 277m stretch (backed off about 250m each): two bases 481m apart just
+  // enclose the whole stretch with about 100m open sky at each end. Old anchors (-3.68925 / -3.68560) covered only half the hole
+  // so lanes crossed over the roof, and the measurement was case 7 crossing above an underpass rather than case 2.
   madrid: [[40.43785, -3.69007], [40.43785, -3.68511], [40.44491, -3.68517]],
-  // 水上高架橋(⑨):芝加哥河兩岸。實測 North Lower Michigan Avenue 水橋 201m
-  // @41.88884,-87.62436(跨圖資水道)。河面僅數十公尺寬、南北向幹道一律以可通車的開合橋跨河
-  // ⇒ 兩堡分踞兩岸時兵線必然踩上橋面；本場地專門保留作水上高架橋對照。
+  // Water viaduct (9): both banks of the Chicago River. Measured North Lower Michigan Avenue water bridge 201m
+  // at 41.88884,-87.62436 (crossing map-data water). The river is only tens of meters wide, and every north-south arterial crosses on a movable traffic bridge
+  // so bases on opposite banks force lanes onto the deck; this venue is kept as the water-viaduct control.
   chicago: [[41.88770, -87.62436], [41.89000, -87.62436]],
-  // 市民大道:**2026-08-04 從 ② 地下道候選改成 ③ 陸上高架橋**。
-  // 舊制錨點是為了追一群圖資地下道(L1 bbox 內 8 條 tunnel way)而擺的,配 PREFER_TUNNEL;
-  // 但 2026-07-30 全量掃描早已實測「兵線走到的那條 60m service 隧道 underpassPlan 規劃放棄、
-  // 仍是平街」⇒ ② 在這張圖上不成立(docs/lane_scenarios.md 已記),偏好卻沒跟著撤。
-  // 後果是實測到的:L1 兵線被 PREFER_TUNNEL 拉到 25.0495~25.0526(錨點以北 280~620m)、
-  // **場景 0 種**,而這張圖真正有的東西 —— 市民大道高架道路 —— 在兵線 226m 外。
-  // 新錨點取 2026-08-04 探測回報的陸橋覆蓋段中點(`--probe=25.047,121.518 --probe-r=3`):
-  //   市民大道高架道路 1526m @25.04974,121.51228 / 1269m @25.04979,121.51243
-  //   市民大道高架道路 560m @25.05018,121.50993(西段)
-  // 兩錨沿高架軸(東西向)排開、BEARING_SECTORS 夾在橋軸上,選線改由 PREFER_BRIDGE 主導。
+  // Civic Boulevard: on 2026-08-04 switched from 2 underpass candidate to 3 land viaduct.
+  // Legacy anchors chased a cluster of map-data tunnels (8 tunnel ways inside the L1 bbox) with PREFER_TUNNEL;
+  // but the 2026-07-30 full sweep had already measured that the 60m service tunnel the lane stepped on was dropped by underpassPlan and
+  // stayed a flat street, so case 2 never held on this map (recorded in docs/lane_scenarios.md), yet the bias was never withdrawn.
+  // The measured consequence: the L1 lane was dragged by PREFER_TUNNEL to 25.0495-25.0526 (280-620m north of the anchors),
+  // with 0 scene kinds, while what this map really has -- the Civic Boulevard viaduct -- sat 226m from the lane.
+  // New anchors take the overpass cover-segment midpoints from the 2026-08-04 probe (--probe=25.047,121.518 --probe-r=3):
+  //   Civic Boulevard viaduct 1526m at 25.04974,121.51228 / 1269m at 25.04979,121.51243
+  //   Civic Boulevard viaduct 560m at 25.05018,121.50993 (west stretch)
+  // Both anchors line up along the viaduct axis (east-west) with BEARING_SECTORS clamped on the bridge axis, and selection is now led by PREFER_BRIDGE.
   civicblvd: [[25.05018, 121.50993], [25.04974, 121.51228]],
-  // ② 地下道的第二張圖候選(2026-08-04 探測選定):東京・六本木。
-  // 同一次探測回報這一帶有 **7 條**引擎真的挖得出來的車行地下道,是掃過最密的一區:
-  //   乃木坂トンネル 覆蓋 547m @35.66675,139.72644
-  //   環状三号線     覆蓋 265m @35.66163,139.72851
-  //   環状三号線     覆蓋 107m @35.66387,139.72581
-  // 三個中點直接當候選錨點,**不夾方位角** —— 這一帶的地下道軸向不一(乃木坂東西向、
-  // 環状三号線南北向),夾錯反而把唯一走得通的方位排除掉(parkave 的前例)。
-  // 尺度提醒:L1 兩堡只有 ~481 真實公尺,而乃木坂トンネル 覆蓋 547m **比整條兵線還長**
-  // ⇒ 選它會把兩座主堡一起塞進洞裡(規則 #5 洞內砲塔必然違規)。265m/107m 那兩段才是
-  // 「洞在中段、兩頭露天」的尺度,選線排序會自己挑(tunLen 相同才比 tunBad)。
+  // Second map for case 2 underpasses (picked by the 2026-08-04 probe): Tokyo Roppongi.
+  // The same probe round reported 7 drivable underpasses the engine can really dig here, the densest surveyed area:
+  //   Nogizaka tunnel cover 547m at 35.66675,139.72644
+  //   Kanjo Route 3 cover 265m at 35.66163,139.72851
+  //   Kanjo Route 3 cover 107m at 35.66387,139.72581
+  // The three midpoints serve directly as candidate anchors with no bearing clamp -- underpass axes here disagree (Nogizaka east-west,
+  // Kanjo Route 3 north-south), and a wrong clamp would exclude the only workable bearing (the parkave precedent).
+  // Scale warning: L1 bases are only about 481 real meters apart, while the Nogizaka tunnel cover at 547m is longer than the whole lane
+  // so picking it stuffs both main bases into the hole (rule 5 in-tunnel turrets always violate). Only the 265m and 107m stretches have
+  // the mid-hole with open sky at both ends shape, and the ranking picks by itself (tunBad only breaks tunLen ties).
   roppongi: [[35.66163, 139.72851], [35.66387, 139.72581], [35.66675, 139.72644]],
-  // ④ 明隧道的測試場地(2026-07-29 廣域探測選定):太魯閣峽谷 燕子口—錐麓段,台8線上
-  // 三段短隧道幾乎整條是明隧道(探測 open 72m/54m/96m,中點 121.5547/121.5537/121.5509),
-  // 彼此相距 ~400m,一條 L1 兵線可連穿多座。錨點 MUST 取探測回報的**路上座標**(峽谷路窄,
-  // 憑地名下錨會落在崖壁上「120m 內無道路節點」);首錨 = 最東那段明隧道中點,往西烤。
+  // Open-cut tunnel test ground (picked by the 2026-07-29 wide probe): Taroko Gorge Yanzikou to Zhuilu stretch on Highway 8,
+  // three short tunnels almost entirely open-cut (probe open 72m/54m/96m, midpoints 121.5547/121.5537/121.5509),
+  // spaced about 400m apart so one L1 lane can thread several. Anchors MUST use the probe-reported on-road coordinates (gorge roads are narrow,
+  // naming-based anchors land on cliffs with no road node within 120m); first anchor is the easternmost open-cut midpoint, baking westward.
   taroko: [[24.1712, 121.5547], [24.1712, 121.5560]],
-  kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // 右京區街廓 / 嵐山
+  kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // Ukyo street grid / Arashiyama
 };
 
-// 固定 fixture 模式：將版本化 raw road response 送進與正式 Overpass 相同的建圖／選線閘，
-// 完全離線且不得在 fixture 缺件時靜默改抓網路。fixture 的 venue.id 是唯一對應縫，
-// 因此 `berlin.json`、`london_water.json` 等檔名可以獨立於遊戲場地 id。
+// Pinned fixture mode: feed versioned raw road responses through the same graph and selection gates as live Overpass,
+// fully offline with no silent network fallback when a fixture piece is missing. Fixture venue.id is the sole join key,
+// so file names like berlin.json and london_water.json can stay independent of game venue ids.
 const FIXTURE_DIR = process.env.OSM_FIXTURE_DIR || process.env.FIXTURE_DIR || '';
 const FIXTURE_BY_VENUE = new Map();
 if (FIXTURE_DIR) {
@@ -174,9 +174,9 @@ async function overpassRoads(id, lat, lng, radius) {
   for (let a = 0; a < 6; a++) {
     const url = ENDPOINTS[a % ENDPOINTS.length];
     try {
-      // Content-Type 必須明講:Node fetch 對字串 body 預設 text/plain,
-      // Overpass 會把 "data=" 前綴當成查詢語法 → 406 Not Acceptable
-      // signal:Node 的 fetch 沒有預設逾時,半死的連線會把整支烘焙掛住
+      // Content-Type must be explicit: Node fetch defaults string bodies to text/plain,
+      // and Overpass reads the data= prefix as query syntax, returning 406 Not Acceptable
+      // signal: Node fetch has no default timeout, so a half-dead connection would hang the whole bake
       const resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -190,9 +190,9 @@ async function overpassRoads(id, lat, lng, radius) {
       return els;
     } catch (e) { log('  overpass err', e.message); await sleep(3000 * (a + 1)); }
   }
-  // 備援:OSM 官方 API 的 /map(2026-07-28)。Overpass 的公共鏡像對雲端 IP(CI runner /
-  // 開發沙箱)常態拒絕,沒有備援就烤不出新場地。/map 走另一套基礎設施、回傳該 bbox 的原始
-  // node/way,篩出 DRIVABLE 車行道後與 Overpass 回應同形(tags + geometry)。
+  // Fallback: official OSM API map (2026-07-28). Public Overpass mirrors routinely reject cloud IPs (CI runners and
+  // dev sandboxes), so without a fallback no new venue can bake. map uses separate infrastructure and returns raw
+  // node and way data for the bbox, filtered to DRIVABLE carriageways with the same shape as an Overpass reply (tags plus geometry).
   const els = await osmApiRoads(lat, lng, radius);
   if (els) { writeFileSync(f, JSON.stringify(els)); return els; }
   return null;

@@ -7,7 +7,7 @@ assert.deepEqual(Object.keys(INDIVIDUAL_BODIES).sort(),individualKeys.sort(),'�
 const shapes=new Set();
 for(const key of individualKeys) {
   const model=INDIVIDUAL_BODIES[key];
-  // 忽略名稱與顏色，防止只改名稱／配色冒充專屬幾何。
+  // Ignore names and colors to prevent passing a rename/recolor off as dedicated geometry.
   shapes.add(JSON.stringify({wheels:model.wheels,boxes:model.boxes.map(p=>p.slice(1,7)),beams:model.beams.map(p=>p.slice(1,4)),cylinders:model.cylinders.map(p=>p.slice(1,6))}));
   const entry=vehicleBackgroundObject(key,42);
   assert.ok(!entry.parts.some(p=>['cab','van_body','body','floor','frame'].includes(p.name)),`${key} 不可退回共用車身`);

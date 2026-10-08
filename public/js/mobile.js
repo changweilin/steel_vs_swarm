@@ -1,17 +1,17 @@
-// ============ 手機 / 平板:觸控 + 陀螺儀操控與直式/橫式版型(客戶端專用)============
-// 定位:**輸入轉接層**,不是第二套操控。本檔只把觸控與陀螺儀轉成「既有的輸入狀態」:
-//   移動 → BattleClient._moveAxis() 讀的 this.touch.axis(與鍵盤 WASD 共用同一個推導縫)
-//   視角 → BattleClient._applyLook(dYaw, dPitch)(與滑鼠 mousemove 共用同一個套用縫)
-//   動作 → BattleClient._cmd(act, down)(與鍵盤/滑鼠共用同一個派發縫)
-// 因此本檔 MUST NOT 直接改 yaw/pitch/keys/firing,也 MUST NOT 自行結算任何權威狀態
-// (伺服器權威見 /CLAUDE.md §1);新增按鈕只准新增 act 名稱,不准在此另寫一份操作邏輯。
+// ============ Phone / tablet: touch + gyro controls and portrait/landscape layout (client-only) ============
+// Role: input adapter layer, not a second control scheme. This file only converts touch and gyro into the existing input state:
+//   Move -> this.touch.axis read by BattleClient._moveAxis (shares the same derivation seam as keyboard WASD)
+//   Look -> BattleClient._applyLook(dYaw, dPitch) (shares the same apply seam as mouse mousemove)
+//   Actions -> BattleClient._cmd(act, down) (shares the same dispatch seam as keyboard/mouse)
+// Hence this file MUST NOT write yaw/pitch/keys/firing directly, and MUST NOT settle any authoritative state
+// (server authority, see /CLAUDE.md section 1); new buttons may only add act names, never a second copy of control logic here.
 //
-// 版型:body 上掛四個 class 供 CSS 特化 —— `touch-ui`(觸控版)、`ori-portrait`/`ori-landscape`
-// (直式/橫式)、`touch-lefty`(左手模式,左右鏡像),以及**與版型正交**的 `touch-dev`
-// (這台機器有觸控硬體;頁面級觸控硬化綁它,見 installTouchUI())。
-// 版型細節全在 css/style.css,本檔只掛 class。
-// 視野角度 MUST NOT 因直/橫式而改(全機種 fov 68,見 /CLAUDE.md A8):直式只是水平視野較窄,
-// 故直式首次進場提示「建議橫向持握」,而不是偷偷改 FOV。
+// Layout: four classes on body for CSS specialization -- touch-ui (touch build), ori-portrait / ori-landscape
+// (portrait / landscape), touch-lefty (left-hand mode, mirrored), plus touch-dev orthogonal to layout
+// (this machine has touch hardware; page-level touch hardening binds to it, see installTouchUI).
+// Layout details live in css/style.css; this file only sets classes.
+// View angle MUST NOT change with portrait/landscape (fov 68 on all machines, see /CLAUDE.md A8): portrait just has narrower horizontal view,
+// so first portrait entry prompts to hold landscape instead of silently changing FOV.
 import * as THREE from 'three';
 import {
   CTRL_MODES, CTRL_MODE_KEYS, CTRL_SCHEMES, CTRL_SCHEME_KEYS, ctrlMode, ctrlPref, setCtrlPref,
@@ -22,23 +22,23 @@ import { tipHTML } from './tip.js';
 import { LOOK_PREFS, lookPref, setLookPref, onLookPrefChange } from './lookPrefs.js';
 import { MOVE_PREFS, movePref, setMovePref, onMovePrefChange } from './movePrefs.js';
 
-/* ---------------- 裝置判定 ---------------- */
-// 判定本身住 `ctrlmode.js`(操作方式唯一真相縫):本檔只轉呼,MUST NOT 在這裡再寫一份
-// `maxTouchPoints` / `pointer: coarse` 的判斷(見 ctrlmode.js 檔頭)。
+/* ---------------- Device detection ---------------- */
+// Detection itself lives in ctrlmode.js (single source of truth for control scheme): this file only forwards calls,
+// MUST NOT duplicate the maxTouchPoints / pointer-coarse checks here (see ctrlmode.js header).
 
 const SETTINGS_KEY = 'svs_touch';
 
 export { touchCapable };
 
 /**
- * 是否採用虛擬搖桿版 UI(= 操作方式解析後的結果)。
- * 房主替整房選「限定滑鼠鍵盤 / 限定搖桿 / 不限定」,不限定時吃裝置判定 —— 全部住 ctrlmode.js。
+ * Whether to use the virtual-joystick UI (= resolved control-scheme result).
+ * Room owner picks mouse-keyboard-only / pad-only / unrestricted for the whole room; unrestricted falls back to device detection -- all in ctrlmode.js.
  */
 export function isTouchUI() { return usePad(); }
 
 /**
- * 觸控/陀螺儀自我診斷:判定用到的每一項原始值 + 結論。
- * 大廳「手機操控」面板逐項顯示 —— 「沒反應」時要能一眼看出卡在哪一關,MUST NOT 只給一個布林。
+ * Touch/gyro self-diagnostics: every raw value used by detection plus the conclusion.
+ * Lobby phone-controls panel lists each item -- when input feels dead, the stuck stage is visible at a glance; MUST NOT collapse to a single boolean.
  */
 export function touchDiagnostics() {
   const mm = (q) => { try { return window.matchMedia(q).matches; } catch { return null; } };
@@ -47,7 +47,7 @@ export function touchDiagnostics() {
       note: `${location.protocol}//${location.host}` },
     { k: '方向感測 API', v: !!window.DeviceOrientationEvent, ok: !!window.DeviceOrientationEvent,
       note: typeof window.DeviceOrientationEvent?.requestPermission === 'function' ? '需要授權(iOS)' : '免授權' },
-    // 角速度是「方向感測缺磁力計 ⇒ 水平轉不動」時的替代路徑,診斷 MUST 分開列(兩者可以一好一壞)
+    // Angular velocity is the fallback path when orientation sensing lacks a magnetometer and yaw stalls; diagnostics MUST list it separately (either can fail independently)
     { k: '角速度 API(無磁力計時的備援)', v: !!window.DeviceMotionEvent, ok: !!window.DeviceMotionEvent,
       note: typeof window.DeviceMotionEvent?.requestPermission === 'function' ? '需要授權(iOS)' : '免授權' },
     { k: '觸控硬體', v: `maxTouchPoints=${navigator.maxTouchPoints || 0}`, ok: touchCapable() },
@@ -66,62 +66,62 @@ export function touchDiagnostics() {
   ];
 }
 
-/* ---------------- 設定(持久化;陀螺儀/靈敏度/左右慣用手)---------------- */
+/* ---------------- Settings (persisted; gyro / sensitivity / handedness) ---------------- */
 
-// 靈敏度基準:touch 每像素轉多少弧度、gyro 1:1(1.0 = 手機轉幾度視角就轉幾度)。
-// 這兩個係數是觸控手感的唯一真相,MUST NOT 在別處再乘一次。
+// Sensitivity basis: touch radians per pixel, gyro 1:1 (1.0 = view turns as many degrees as the phone turns).
+// These two factors are the single source of truth for touch feel; MUST NOT multiply again elsewhere.
 export const LOOK = {
-  TOUCH_RAD_PX: 0.0034,   // 拖曳視角:rad/px(比滑鼠 0.0023 大 —— 手指行程短)
-  GYRO_BASE: 1.0,         // 陀螺儀增益基準(1 = 物理 1:1)
-  GYRO_DEAD: 0.00035,     // 陀螺儀死區(rad/event):濾掉手持微顫
-  GYRO_JUMP: 0.5,         // 單次事件超過此弧度視為姿態跳變(轉螢幕/失準)→ 重設基準不套用
-  GYRO_WD_MS: 1600,       // 看門狗:一條感測路徑等這麼久還沒有有效資料就換下一條
-  GYRO_DT_MAX: 0.1,       // devicemotion 單筆積分上限(秒):事件延遲時不讓準星暴衝
-  GYRO_YAW_DEAD: 0.012,   // 「水平軸死了」判定:俯仰已轉這麼多(rad)…
-  GYRO_YAW_PROOF: 0.18,   // …但水平累計仍不到 GYRO_YAW_DEAD ⇒ 無磁力計 → 改走 devicemotion
-  SPRINT_MAG: 0.92,       // 移動搖桿推到此比例以上 = 衝刺(等同 Shift)
-  STICK_DEAD: 0.16,       // 類比搖桿死區(比例;兩支共用)
-  LOOK_RAD_S: 2.5,        // 視角搖桿推到底的轉速(rad/s ≈ 143°/s,比照主機手把)
-  LOOK_CURVE: 1.7,        // 視角搖桿的響應曲線指數(>1 = 小推更細膩、推到底才全速)
-  // 空處「雙擊後按住 / 拖曳 = 射擊」的手勢門檻(見 TouchControls._bindLook)。
-  // 這是給「不想把拇指移到 A 鈕」的玩家的第二條開火路徑,判定 MUST 嚴到不會誤觸:
-  // 單指拖曳轉視角(最常做的事)絕不可以變成開火,故一定要先有一次**完整的輕點**。
+  TOUCH_RAD_PX: 0.0034,   // Drag-look gain: rad/px (larger than mouse 0.0023 -- finger travel is short)
+  GYRO_BASE: 1.0,         // Gyro gain basis (1 = physical 1:1)
+  GYRO_DEAD: 0.00035,     // Gyro dead zone (rad/event): filters hand tremor
+  GYRO_JUMP: 0.5,         // Single event beyond this arc counts as pose jump (rotation / loss of fix) -> reset basis, do not apply
+  GYRO_WD_MS: 1600,       // Watchdog: switch to next sensor path after waiting this long with no valid data
+  GYRO_DT_MAX: 0.1,       // Per-sample devicemotion integration cap (s): keeps delayed events from flinging the crosshair
+  GYRO_YAW_DEAD: 0.012,   // Yaw-axis-dead test: pitch has already turned this much (rad)...
+  GYRO_YAW_PROOF: 0.18,   // ...but yaw total still below GYRO_YAW_DEAD means no magnetometer -> fall back to devicemotion
+  SPRINT_MAG: 0.92,       // Move stick past this fraction = sprint (same as Shift)
+  STICK_DEAD: 0.16,       // Analog stick dead zone (fraction; shared by both sticks)
+  LOOK_RAD_S: 2.5,        // Look-stick full-deflection turn rate (rad/s, about 143 deg/s, console-pad parity)
+  LOOK_CURVE: 1.7,        // Look-stick response exponent (>1 = finer near center, full speed only at full deflection)
+  // Gesture thresholds for empty-area double-tap-hold / drag = fire (see TouchControls._bindLook).
+  // Second fire path for players who keep thumbs off the A button; detection MUST stay strict enough to avoid misfires:
+  // single-finger drag turns the view (the most common act) and MUST NEVER become fire, so one complete tap is required first.
   //
-  // **「什麼算一次點擊」全站只有這一組門檻**(2026-08-16):空處手勢的輕點與點擊型鈕
-  // (`_bindButtons` 的非按住型 act)同吃 TAP_MS + TAP_SLOP_PX。MUST NOT 為按鈕另訂第二組數字 ——
-  // 兩份定義會漂,而症狀是「同樣的手指動作在鈕上算點擊、在空處不算」。
-  TAP_MS: 260,            // 一次「輕點」的上限時長(超過就是按住,不算點)
-  TAP_SLOP_PX: 16,        // 一次「輕點」允許的位移(超過就是拖曳,不算點)
-  TAP_GAP_MS: 300,        // 兩點之間的最大間隔(超過就不是雙擊)
-  TAP_FIRE_MS: 130,       // 第二點按住多久開始射擊(**長按**路徑;純雙擊放開不開火)
-  TAP_FIRE_PX: 8,         // 第二點拖多遠開始射擊(**拖曳**路徑;比 SLOP 小,一動就認)
+  // Single site-wide definition of what counts as a tap (user decision 2026-08-16): empty-area taps and click-type buttons
+  // (non-hold act in _bindButtons) share TAP_MS + TAP_SLOP_PX. MUST NOT define a second set for buttons --
+  // two definitions drift, and the symptom is the same finger tap counting on a button but not on empty area.
+  TAP_MS: 260,            // Max duration of one tap (longer counts as hold, not a tap)
+  TAP_SLOP_PX: 16,        // Max travel of one tap (farther counts as drag, not a tap)
+  TAP_GAP_MS: 300,        // Max gap between two taps (longer is not a double tap)
+  TAP_FIRE_MS: 130,       // How long the second touch must hold before firing (hold path; clean double-tap release does not fire)
+  TAP_FIRE_PX: 8,         // How far the second touch must drag before firing (drag path; smaller than SLOP, fires on first motion)
 };
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, Number.isFinite(+v) ? +v : a));
 
 /**
- * 指標捕捉(拖出元件外仍收得到 move/up)。**MUST 包 try** ——
- * setPointerCapture 在「該 pointerId 已不是作用中指標」時會 throw,
- * 裸呼叫會把後面的狀態機(送出 _cmd、preventDefault)整段中斷:
- * 症狀是按住鈕只收到放開、收不到按下。捕捉失敗最多只是拖出元件外會斷,不該連按都按不了。
+ * Pointer capture (still receives move/up after dragging outside the element). MUST wrap in try --
+ * setPointerCapture throws when that pointerId is no longer an active pointer,
+ * and a bare call aborts the state machine after it (dispatching _cmd, preventDefault):
+ * symptom is press-and-hold reporting only release with no press. Failed capture should at most drop outside drags, never break presses.
  */
 function capture(el, id) {
-  try { el.setPointerCapture?.(id); } catch { /* 該指標已失效 → 不捕捉,事件照走 */ }
+  try { el.setPointerCapture?.(id); } catch { /* Pointer already dead -> skip capture, events still flow */ }
 }
 
-/** 感測來源:auto 自動(方向感測優先,失效自動改角速度)/ orient 只用方向感測 / motion 只用角速度 */
+/** Sensor source: auto (orientation first, auto-fallback to angular velocity) / orient (orientation only) / motion (angular velocity only) */
 export const GYRO_SRC = ['auto', 'orient', 'motion'];
 export const GYRO_SRC_LABEL = { auto: '自動', orient: '方向', motion: '角速度' };
 
 export const TOUCH = {
-  gyro: false,        // 陀螺儀輔助瞄準(**預設關閉**;戰場以十字鍵下的「陀螺」鈕一鍵收放)
-  gyroSrc: 'auto',    // 感測來源:auto 自動 / orient 方向感測 / motion 角速度(見 Gyro)
-  gyroSens: 1.0,      // 陀螺儀靈敏度倍率(0.4~2.5)
-  gyroInvert: false,  // 陀螺儀垂直反轉
-  lookSens: 1.0,      // 拖曳視角靈敏度倍率(0.4~2.5)
-  lefty: false,       // 慣用手鏡像旗標(相容既有 svs_touch 設定鍵)
-  screenLefty: false, // 畫面慣用手鏡像旗標(舊版 lefty 會在載入時遷移)
-  haptic: true,       // 觸覺回饋(navigator.vibrate,不支援即無感)
+  gyro: false,        // Gyro-assisted aim (default off; toggled by the gyro button under the battle d-pad)
+  gyroSrc: 'auto',    // Sensor source: auto / orient / motion (see Gyro)
+  gyroSens: 1.0,      // Gyro sensitivity multiplier (0.4-2.5)
+  gyroInvert: false,  // Gyro vertical invert
+  lookSens: 1.0,      // Drag-look sensitivity multiplier (0.4-2.5)
+  lefty: false,       // Handedness mirror flag (keeps the existing svs_touch settings key working)
+  screenLefty: false, // Screen handedness mirror flag (legacy lefty migrates into it on load)
+  haptic: true,       // Haptics via navigator.vibrate (no-op where unsupported)
 };
 
 export const HAND_KEYS = ['right', 'left'];

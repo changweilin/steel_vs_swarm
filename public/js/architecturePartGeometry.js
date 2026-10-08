@@ -3,8 +3,8 @@ import { runtimeMeshDataGeometry } from './runtimePartModel.js';
 import { facetMeshData } from './vesselGeometry.js';
 import { CYL_FACET_DEG } from './architectureRoofParts.js';
 
-// 柱體頂底蓋與側面在 three 原生幾何中共用圈頂點，平均後簷口整圈色帶；
-// 拆成法線群組（仍帶順序 index，合批相容），方盒本已逐面拆點故略過。
+// Cylinder caps share ring vertices with sides in three native geometry, averaged eaves form a full-ring color band;
+// split into normal groups (keeps ordered index, batch compatible); boxes already split per-face so skipped.
 export function facetCylinderGeometry(geometry, deg = CYL_FACET_DEG) {
   const position = geometry.attributes.position, uv = geometry.attributes.uv, index = geometry.index;
   const srcFaces = [...index.array];
@@ -23,8 +23,8 @@ export function facetCylinderGeometry(geometry, deg = CYL_FACET_DEG) {
   return out;
 }
 
-// 非均勻縮放會把光滑法線場拉壞（塗鴉泡泡／菱形葉的橢圓化），逐面攤平；
-// 均勻縮放保持圓潤（水塔／柱盤），只拆頂底蓋。
+// Non-uniform scale distorts the smooth normal field (graffiti bubble / rhombus leaf ellipticization), flatten per-face;
+// Uniform scale keeps roundness (water tower / column plate), split caps only.
 const uniformScale = (s) => !s || (s[0] === s[1] && s[1] === s[2]);
 
 // Rendering adapter only; placement and shape decisions live in the pure generators.

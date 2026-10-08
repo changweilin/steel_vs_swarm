@@ -48,7 +48,7 @@ assert.equal(inferBuildingFunction({ tags: { building: 'dormitory' } }, null, { 
 assert.equal(inferBuildingFunction({ tags: { amenity: 'clinic' } }, null, { parentTags: { amenity: 'school' } }).type, 'clinic');
 assert.equal(nativeFunctionalKind({ tourism: 'museum', building: 'church' }), 'museum');
 
-// 執行正式點位路由，避免點位与精確輪廓各維護一套語意。
+// Exercise the production point routing to avoid maintaining separate semantics for points and precise outlines.
 const biome = readFileSync(new URL('../public/js/biomes.js', import.meta.url), 'utf8');
 const source = biome.slice(biome.indexOf('export const CULTURAL_RELIC_LANDMARKS'), biome.indexOf('function buildingHeight(')).replace(/export\s+/g, '');
 const route = new Function('nativeFunctionalKind', 'BUILDING_FUNCTIONS', 'taggedBuildingFunction', 'heritageStateOf', `${source}; return matchedBuildingType;`)(nativeFunctionalKind, BUILDING_FUNCTIONS, taggedBuildingFunction, heritageStateOf);

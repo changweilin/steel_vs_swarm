@@ -58,7 +58,7 @@ export function mechAvatarURL(id) {
   return MECH_AVATAR_MANIFEST[id] || MECH_PORTRAIT_MANIFEST[id] || avatarURL(id);
 }
 
-/** Art display modes (unified 角色/機體 tabs share these labels). */
+/** Art display modes (unified char/mech tabs share these labels). */
 export const ART_MODES = [['char', '角色'], ['mech', '機體']];
 export const isArtMode = (m) => m === 'mech' ? 'mech' : 'char';
 

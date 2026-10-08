@@ -1,4 +1,4 @@
-// 本機視覺驗收：僅測試伺服器，正式遊戲不包含此路由。
+// Local visual acceptance only: test server route, excluded from the shipped game.
 import http from 'node:http';
 import { GEOLOGY_ENVIRONMENT_CONTROLS, GEOGRAPHIC_CONTROLS } from './architecturePreviewContent.mjs';
 import { readFile } from 'node:fs/promises';
@@ -11,7 +11,7 @@ export const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生
   *, *::before, *::after { box-sizing: border-box; }
   body { margin: 0; background: #cdd9e2; color: #273649; font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; user-select: none; }
 
-  /* 頂部全寬頁籤導航列 */
+  /* Full-width top tab navigation bar */
   .top-nav-bar {
     position: fixed; top: 0; left: 0; right: 0; height: 50px; z-index: 50;
     display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
@@ -40,7 +40,7 @@ export const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生
     transition: all 0.15s;
   }
   .btn-nav-action:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
-  /* 頂部環境模擬控制列 */
+  /* Top environment-simulation control bar */
   .env-sim-bar {
     display: flex; align-items: center; gap: 8px; background: rgba(15, 23, 42, 0.7);
     padding: 3px 10px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.14);
@@ -108,7 +108,7 @@ export const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生
   .btn-collapse-toggle { position: absolute; top: 8px; right: 10px; background: rgba(255, 255, 255, 0.9); color: #334155; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 12px; line-height: 1.4; cursor: pointer; transition: all 0.15s; }
   .btn-collapse-toggle:hover { background: #e2e8f0; border-color: #94a3b8; }
   .header-info-row { padding-right: 40px; }
-  /* 整個控制大區塊收合：標題、分類選項、參數列、狀態列全部隱藏，只保留隨機生成按鈕與展開按鈕 */
+  /* Collapsible control block: hide title, category options, param rows, and status rows, keeping only the generate and expand buttons */
   header.params-collapsed #cat-title,
   header.params-collapsed #cat-desc,
   header.params-collapsed .nav-bar { display: none; }
@@ -141,7 +141,7 @@ export const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生
   .badge-label .cat { color: #2563eb; font-weight: 700; margin-right: 3px; }
   .badge-label .height { color: #059669; font-weight: 700; margin-left: 3px; }
 
-  /* 懸停詳細檢驗面板 */
+  /* Hover detail inspector panel */
   .inspector-card { position: absolute; z-index: 40; width: 340px; background: rgba(15, 23, 42, 0.92); color: #e2e8f0; padding: 14px 16px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); border: 1px solid rgba(59, 130, 246, 0.4); backdrop-filter: blur(10px); pointer-events: none; transition: opacity 0.1s ease, transform 0.1s ease; font-size: 12px; line-height: 1.4; }
   .inspector-card h3 { margin: 0 0 6px; font-size: 15px; color: #60a5fa; display: flex; align-items: center; justify-content: space-between; }
   .inspector-card .sub { font-size: 11px; color: #94a3b8; margin-bottom: 10px; }
@@ -157,7 +157,7 @@ export const page = `<!doctype html><meta charset="utf-8"><title>建模隨機生
   .part-pill { background: rgba(37, 99, 235, 0.25); border: 1px solid rgba(96, 165, 250, 0.4); color: #bfdbfe; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
   .inspector-hint { margin-top: 8px; font-size: 10px; color: #f59e0b; background: rgba(245, 158, 11, 0.12); padding: 4px 8px; border-radius: 4px; text-align: center; }
 
-  /* 類別篩選模態視窗 */
+  /* Category filter modal */
   .filter-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
   .filter-modal-card { background: #ffffff; width: 100%; max-width: 1060px; max-height: 88vh; border-radius: 14px; box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35); display: flex; flex-direction: column; overflow: hidden; }
   .filter-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
@@ -1136,26 +1136,26 @@ import { inferBuildingFunction, sampleBuildingHeight, architectureHash } from '/
 import { sceneObjectMat } from '/public/js/toon.js';
 import { Pipeline } from '/public/js/postfx.js';
 
-// 地質生成模組
+// Geology generation module
 import { GEOLOGY_TYPES, GEOLOGY_SURFACES, geologyBackgroundObject, generateGeology, geologyDistribution } from '/public/js/geology.js';
 import { ANCIENT_REGIONS, ANCIENT_RUINS, RUIN_ACTIVITIES, ancientStoneDistribution } from '/public/js/ancientStone.js';
 import { runtimeMeshDataGeometry } from '/public/js/runtimePartModel.js';
 import { mulberry32 } from '/public/js/rng.js';
 
-// 植物生成模組
+// Plant generation module
 import { forestCatalog, sampleForestCatalog } from '/public/js/forestCatalog.js';
 import { FOREST_FORMS } from '/public/js/forestSpecies.js';
 import { TREE_SPECIES, createForestTree, treeHabitatWeight, treeSections, treeBend } from '/public/js/forest.js';
-// 車輛生成模組
+// Vehicle generation module
 import { VEHICLE_AXES, VEHICLE_PROFILES, VEHICLE_PART_NAMES, vehicleCandidates, VEHICLE_CONSISTS, CONSIST_PREFIX, RIM_NAMES } from '/public/js/vehicleCatalog.js';
 import { makeProceduralVehicle } from '/public/js/vehicleModels.js';
 
-// 船隻生成模組
+// Vessel generation module
 import { VESSEL_AXES, VESSEL_TYPES, VESSEL_MATERIALS, generateVessel, VESSEL_EQUIPMENT } from '/public/js/vesselCatalog.js';
 import { buildGeneratedVesselMesh } from '/public/js/vesselModels.js';
 import { disposeTree, envMat } from '/public/js/toon.js';
 
-// 平民與戰鬥單位生成模組
+// Civilian and combat-unit generation module
 import { generateCivilian } from '/public/js/civilianAppearance.js';
 import { CIVILIAN_OCCUPATIONS } from '/public/js/civilianContent.js';
 import { CIVILIANS, hitH } from '/public/js/data.js';
@@ -1165,19 +1165,19 @@ import { buildBuildingUnit } from '/public/js/buildingUnitModels.js';
 import { birdParts, fishParts, catParts, dogParts } from '/public/js/wildlife.js';
 import { compileSceneParts } from '/public/js/scenePropModels.js';
 
-// 環境物件與邊界生成模組
+// Environment-object and boundary generation module
 import { environmentParts } from '/public/js/environmentParts.js';
 import { WALL_KINDS, wallParts, buildBoundaryRunParts, BOUNDARY_OBJECT_CATEGORIES } from '/public/js/edgewall.js';
 import { boundaryGrid } from '/public/js/objectLayout.js';
 import { edgeWallHM } from '/public/js/data.js';
 import { SLOPE_BOUNDARIES, buildSlopeBoundary } from '/public/js/edgeSlope.js';
 
-// 環境模擬系統 (四季 × 日夜 × 多元天氣)
+// Environment simulation (seasons x day-night x weather variety)
 import { applyEnvironment } from '/public/js/environment.js';
 import { clockHour, clockLabel, DAYCLOCK } from '/public/js/data.js';
 
 
-// ---- Three.js 核心場景初始化 ----
+// ---- Three.js core scene setup ----
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(devicePixelRatio);
@@ -1187,7 +1187,7 @@ document.body.append(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xcdd9e2);
 
-// 環境模擬狀態 (四季 × 日夜太陽軌道 × 多元天氣粒子與閃電)
+// Environment simulation state (seasons x day-night sun path x weather particles and lightning)
 const currentEnv = {
   season: 'summer',
   time: 'day',
@@ -1300,7 +1300,7 @@ window.addEventListener('wheel', (e) => {
   updateCamera(); render();
 }, { passive: true });
 
-// 底板與各類別群組
+// Floor slab and per-category groups
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(3200, 3200), new THREE.MeshLambertMaterial({ color: 0xbed0bd }));
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -0.05;
@@ -1415,7 +1415,7 @@ async function buildGeographicScene() {
 const labelContainer = document.querySelector('#labels');
 const inspectorCard = document.querySelector('#inspector-card');
 
-// 懸停高亮指示框
+// Hover highlight frame
 const highlightMesh = new THREE.Mesh(
   new THREE.RingGeometry(1, 1.4, 32),
   new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
@@ -1425,7 +1425,7 @@ highlightMesh.position.y = 0.2;
 highlightMesh.visible = false;
 scene.add(highlightMesh);
 
-// ---- 建築分類維度定義集 ----
+// ---- Building classification dimension set ----
 const FUNCTION_DIM = [
   { key: 'commercial_skyscraper', label: '商業摩天樓', kind: 'commercial', w: 24, d: 22, defaultStyle: 'modern', tags: { building: 'skyscraper' } },
   { key: 'commercial_office',     label: '商辦大樓',   kind: 'commercial', w: 22, d: 18, defaultStyle: 'deco', tags: { building: 'office' } },
@@ -1526,7 +1526,7 @@ function handleClick(e) {
   render();
 }
 
-// ---- 零件預估與統計輔助函式 ----
+// ---- Part estimate and statistics helpers ----
 function estimateAppurtenances(poly, arch, heightInfo, seed) {
   const parts = [];
   const metrics = calculateFootprintMetrics(poly);
@@ -1551,7 +1551,7 @@ function estimateAppurtenances(poly, arch, heightInfo, seed) {
   return parts;
 }
 
-// ---- 清除與重設 ----
+// ---- Clear and reset ----
 function clearScene() {
   geographicPreview.clear(); floor.visible = true;
   document.querySelector('#btn-geographic-export').disabled = true;
@@ -1607,7 +1607,7 @@ function clearScene() {
   inspectorCard.style.display = 'none';
 }
 
-// ---- 隨機道路與十字路口系統 ----
+// ---- Random road and intersection system ----
 function buildRoadGrid(cols, rows, startX, startZ, stepX, stepZ) {
   roadGroup.clear();
   if (!document.querySelector('#chk-roads').checked) return;
@@ -1684,7 +1684,7 @@ function buildRoadGrid(cols, rows, startX, startZ, stepX, stepZ) {
   }
 }
 
-// ---- 建構建築實例與中繼資料 ----
+// ---- Build building instances with metadata ----
 function spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, regionId, seed, variantIdx = 0, customPoly = null, maxW = 26, maxD = 22 }) {
   const fItem = funcItem || FUNCTION_DIM[0];
   const sItem = styleItem || (ARCHITECTURE_STYLES[fItem.defaultStyle] ? { key: fItem.defaultStyle, label: ARCHITECTURE_STYLES[fItem.defaultStyle].label, style: ARCHITECTURE_STYLES[fItem.defaultStyle] } : STYLE_DIM[0]);
@@ -1800,8 +1800,8 @@ function spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, 
   const labelObj = { element: badge, point: meta.position };
   labels.push(labelObj);
 
-  // 與其他頁籤一致：邊界排列時經共用 withObjectLayout 包裝（含緩衝區＋透明牆包絡）；
-  // 場景散布時原樣返回。hitMesh 由包裝內統一移除，避免殘留不可見拾取代理。
+  // Same as other tabs: boundary runs go through the shared withObjectLayout wrapper (buffer + transparent-wall envelope);
+  // Scene scatter returns as-is. hitMesh is removed centrally inside the wrapper to avoid leftover invisible pick proxies.
   const wrapped = withObjectLayout({ model: bldMesh, meta, hitMesh }, 'arch');
   return {
     model: wrapped.model,
@@ -1813,7 +1813,7 @@ function spawnBuilding({ x, z, w, d, funcItem, styleItem, roofForm, facadeType, 
   };
 }
 
-// 兩階段量測後重定位：模型幾何已按舊格位烘焙，僅平移根節點並同步中繼資料與標籤。
+// Relocate after two-phase measurement: model geometry is baked at old cells, so only shift the root and sync metadata/labels.
 function moveArchInstance(res, newX, newZ) {
   const dx = newX - res.meta.posX, dz = newZ - res.meta.posZ;
   if (dx === 0 && dz === 0) return;
@@ -1853,9 +1853,9 @@ function getCyclicItems(items, count, offset) {
   return { items: result, range: rangeStr };
 }
 
-// ---- 1. 建築雙維度/單維度分類陣列模式 (Matrix Mode) ----
+// ---- 1. Building two/single-dimension classification array (Matrix Mode) ----
 
-// 共享全域自適應相機取景與網格種子運算
+// Shared global adaptive camera framing and grid-seed math
 let activeCamDist = 120;
 let activeCamTarget = new THREE.Vector3(0, 8, 0);
 
@@ -1872,7 +1872,7 @@ function getGridSeed(baseSeed, seedMode, col, row, cols, rows, idx) {
   if (seedMode === 'fixed' || seedMode === 'shared_batch') {
     return baseSeed;
   }
-  // 獨立種子：各物件擁有各自獨立的相異隨機種子
+  // Independent seeds: each object owns a distinct random seed
   return (baseSeed + (col * 179 + row * 383) + idx * 71) % 999999 || 1001;
 }
 
@@ -1903,7 +1903,7 @@ function buildMatrixMode({ advance = false } = {}) {
   const sampleCountB = Math.min(activeItemsB ? activeItemsB.length : 1, Math.max(1, parseInt(document.querySelector('#sample-rows-arch')?.value, 10) || 5));
 
   if (advance) {
-    // 維度分頁照常推進；基底種子換碼由生成按鈕依種子規則統一處理（與其他頁籤一致）。
+    // Dimension paging advances as usual; base-seed rotation is handled centrally by the generate buttons per seed rule (same as other tabs).
     dimCycleOffsets[dimKeyA] = (dimCycleOffsets[dimKeyA] + sampleCountA) % activeItemsA.length;
     if (dimKeyB && activeItemsB) {
       dimCycleOffsets[dimKeyB] = (dimCycleOffsets[dimKeyB] + sampleCountB) % activeItemsB.length;
@@ -1933,7 +1933,7 @@ function buildMatrixMode({ advance = false } = {}) {
     document.querySelector('#nav-status').textContent = '單維度循環展示：【' + dimA.name + ' (' + cycleA.range + ')】（共 ' + itemsA.length + ' 棟' + boundaryNote + '）';
   }
 
-  // 第一階段：依既有 52×48 格位生成，量測最大包絡（含邊界排列的本體＋緩衝＋透明牆）。
+  // Phase 1: generate at the existing 52x48 cells, measure the max envelope (body + buffer + transparent wall for boundary runs).
   const baseStepX = 52, baseStepZ = 48;
   const provisionalX = -(cols - 1) * baseStepX / 2;
   const provisionalZ = -(rows - 1) * baseStepZ / 2;
@@ -1985,7 +1985,7 @@ function buildMatrixMode({ advance = false } = {}) {
     }
   }
 
-  // 第二階段：以最大包絡配置步距（場景散布維持既有 52×48；邊界排列放大避免重疊）。
+  // Phase 2: space by the max envelope (scene scatter keeps 52x48; boundary runs widen to avoid overlap).
   const stepX = Math.max(baseStepX, Math.ceil(maxObjW * 1.35 + 8));
   const stepZ = Math.max(baseStepZ, Math.ceil(maxObjD * 1.35 + 8));
   const startX = -(cols - 1) * stepX / 2;
@@ -2007,7 +2007,7 @@ function buildMatrixMode({ advance = false } = {}) {
   render();
 }
 
-// ---- 2. 建築展開 16 組隨機變體模式 (Variants Mode) ----
+// ---- 2. Building 16-variant expansion (Variants Mode) ----
 function buildVariantsMode(meta) {
   clearScene();
   currentMode = 'variants';
@@ -2084,7 +2084,7 @@ function buildVariantsMode(meta) {
   render();
 }
 
-// ---- 3. 建築全類別隨機混搭模式 ----
+// ---- 3. Building full-category random mix ----
 function buildFullRandomMode() {
   clearScene();
   currentMode = 'random';
@@ -2164,7 +2164,7 @@ function buildFullRandomMode() {
   render();
 }
 
-// ---- 建築單體細節檢驗模式 (Single Mode，與其他頁籤同規則) ----
+// ---- Building single-object detail inspection (Single Mode, same rules as other tabs) ----
 function buildArchSingleMode() {
   clearScene();
   currentMode = 'single';
@@ -2203,7 +2203,7 @@ function buildArchSingleMode() {
   render();
 }
 
-// 建築頁籤統一分派：變體檢視中維持變體，否則依展示模式選擇陣列／單體。
+// Building-tab dispatch: stay in variant view when active, else pick array/single by view mode.
 function buildArchMode({ advance = false } = {}) {
   if (currentMode === 'variants' && variantTargetMeta) {
     buildVariantsMode(variantTargetMeta);
@@ -2215,7 +2215,7 @@ function buildArchMode({ advance = false } = {}) {
 }
 
 // ==========================================
-// 地質生成邏輯 (Geology Generation Mode)
+// Geology generation logic (Geology Generation Mode)
 // ==========================================
 let geologyInitialized = false;
 function initGeologyOptions() {
@@ -2515,7 +2515,7 @@ function buildGeologyMode() {
 }
 
 // ==========================================
-// 植物生成邏輯 (Plants & Forest Generation Mode)
+// Plant generation logic (Plants and Forest Generation Mode)
 // ==========================================
 const PLANT_NAMES = {
   ...Object.fromEntries(Object.entries(TREE_SPECIES).map(([type, spec]) => [type, spec.name])),
@@ -2663,7 +2663,7 @@ function createPlantObject(type, seed, scale = 1, season = 'summer', posX = 0, p
     group.add(partMesh);
   }
 
-  // 射線偵測代理盒
+  // Raycast proxy box
   const hitH = Math.max(4, tree.h);
   const hitR = Math.max(2, tree.footprint);
   const hitGeo = new THREE.CylinderGeometry(hitR * 0.9, hitR, hitH, 8);
@@ -2737,7 +2737,7 @@ function buildPlantMode() {
     const cols = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-cols-plant')?.value, 10) || 4));
     const rows = Math.max(1, Math.min(20, parseInt(document.querySelector('#sample-rows-plant')?.value, 10) || 4));
 
-    // 第一階段：生成所有林木物件，量測最大冠幅與高度 (以最大的為主)
+    // Phase 1: generate all tree objects, measure max crown and height (largest wins)
     const items = [];
     let maxObjW = 8, maxObjD = 8, maxObjH = 10;
     for (let r = 0; r < rows; r++) {
@@ -2759,7 +2759,7 @@ function buildPlantMode() {
       }
     }
 
-    // 第二階段：以最大林木尺寸自適應配置陣列間距
+    // Phase 2: space the array adaptively from the largest tree size
     const stepX = Math.max(16, Math.ceil(maxObjW * 1.3 + 6));
     const stepZ = Math.max(16, Math.ceil(maxObjD * 1.3 + 6));
     const startX = -(cols - 1) * stepX / 2;
@@ -2875,7 +2875,7 @@ document.querySelectorAll('.cat-tab-btn').forEach((btn) => {
 document.querySelector('#btn-nav-reset-cam')?.addEventListener('click', resetCameraFocus);
 document.querySelector('#btn-reset-cam')?.addEventListener('click', resetCameraFocus);
 
-// 地質控制器事件
+// Geology controller events
 document.querySelector('#btn-geo-generate')?.addEventListener('click', () => {
   const mode = document.querySelector('#select-seed-mode-geo')?.value;
   if (mode === 'shared_batch') {
@@ -2902,7 +2902,7 @@ document.querySelector('#btn-geo-random-seed')?.addEventListener('click', () => 
   });
 });
 
-// 植物控制器事件
+// Plant controller events
 document.querySelector('#btn-plant-generate')?.addEventListener('click', () => {
   const mode = document.querySelector('#select-seed-mode-plant')?.value;
   if (mode === 'shared_batch') {
@@ -2929,7 +2929,7 @@ document.querySelector('#btn-plant-random-seed')?.addEventListener('click', () =
   });
 });
 
-// 建築 UI 控制事件
+// Building UI control events
 const dimLabels = document.querySelectorAll('.dim-cb-label');
 dimLabels.forEach((label) => {
   const cb = label.querySelector('input');
@@ -2965,7 +2965,7 @@ document.querySelector('#btn-arch-generate').addEventListener('click', () => {
   btn.textContent = '⏳';
   setTimeout(() => {
     try {
-      // 與其他頁籤一致：僅「陣列種子」模式在重新生成時換基底種子。
+      // Same as other tabs: only array-seed mode rotates the base seed on regenerate.
       const mode = document.querySelector('#select-seed-mode-arch')?.value;
       if (mode === 'shared_batch') {
         document.querySelector('#input-arch-seed').value = Math.floor(Math.random() * 90000) + 1000;
@@ -3030,8 +3030,8 @@ document.querySelector('#chk-labels').addEventListener('change', () => {
 
 document.querySelector('#btn-reset-cam')?.addEventListener('click', resetCameraFocus);
 
-// 控制大區塊展開/收縮：整個區塊（含標題、分類選項、參數列、狀態列）一起收合，
-// 收縮時只保留隨機生成按鈕與展開按鈕
+// Control-block expand/collapse: the whole block (title, category options, param rows, status rows) collapses together,
+// collapsed state keeps only the generate and expand buttons
 function setupParamsCollapse() {
   const header = document.querySelector('header');
   if (!header) return;
@@ -3057,7 +3057,7 @@ function setupParamsCollapse() {
   syncLabels();
 }
 
-// 篩選池功能
+// Filter-pool feature
 function setupFilterModal() {
   const grid = document.querySelector('#filter-grid');
   const stat = document.querySelector('#filter-stat');
@@ -3186,7 +3186,7 @@ document.querySelector('#btn-full-random')?.addEventListener('click', () => {
 
 
 // ==========================================
-// 車輛生成器邏輯
+// Vehicle generator logic
 // ==========================================
 let vehicleInitialized = false;
 function initVehicleOptions() {
@@ -3357,7 +3357,7 @@ function buildVehicleMode() {
     clearScene();
     floor.visible = true;
 
-    // 第一階段：生成所有車輛實例，量測最大長度與寬度 (以最大的為主)
+    // Phase 1: generate all vehicle instances, measure max length and width (largest wins)
     const items = [];
     let maxObjW = 2.4, maxObjD = 5.0, maxObjH = 2.0;
     for (let r = 0; r < rows; r++) {
@@ -3390,7 +3390,7 @@ function buildVehicleMode() {
       }
     }
 
-    // 第二階段：以最大車輛尺寸為基準配置網格步距
+    // Phase 2: lay out the grid from the largest vehicle size
     const stepX = Math.max(10, Math.ceil(maxObjW * 1.8 + 6));
     const stepZ = Math.max(14, Math.ceil(maxObjD * 1.25 + 8));
     const startX = -(cols - 1) * stepX / 2;
@@ -3596,7 +3596,7 @@ function buildVesselMode() {
     waterMesh.visible = showWater;
     floor.visible = !showWater;
 
-    // 第一階段：生成所有船隻實例，量測最大艦長與船寬 (以最大的為主)
+    // Phase 1: generate all vessel instances, measure max hull length and beam (largest wins)
     const items = [];
     let maxObjW = 8, maxObjD = 35, maxObjH = 15;
     for (let r = 0; r < rows; r++) {
@@ -3607,7 +3607,7 @@ function buildVesselMode() {
         const curOptions = { ...options, id: curType };
         let res = createVesselInstance(curSeed, curOptions, 0, 0);
         if (!res) {
-          // 若複合條件無完全符合者，放寬為單純依類型生成，確保物件正常陳列
+          // Relax to type-only generation when no compound match fits, so objects still display
           res = createVesselInstance(curSeed, { id: curType }, 0, 0);
         }
         res = withObjectLayout(res, 'vessel');
@@ -3621,7 +3621,7 @@ function buildVesselMode() {
       }
     }
 
-    // 第二階段：以最大艦長與船寬配置網格步距
+    // Phase 2: space the grid from the largest hull length and beam
     const stepX = Math.max(25, Math.ceil(maxObjW * 2.2 + 12));
     const stepZ = Math.max(35, Math.ceil(maxObjD * 1.35 + 16));
     const startX = -(cols - 1) * stepX / 2;
@@ -3653,11 +3653,11 @@ function buildVesselMode() {
 }
 
 // ==========================================
-// 場景建物與產業設施 (Industry Mode)
+// Scene buildings and industry facilities (Industry Mode)
 // ==========================================
-// 收容 environmentCatalog 10 種人造物：住宅 1、高樓 2、工業 3、採掘 2、農牧 2。
-// 生成器與遊戲共用 environmentParts 單一入口；此處僅套用與各頁籤一致的
-// 種子規則 (getGridSeed)、陣列/單體/目錄展示與兩階段量測佈局。
+// Holds 10 environmentCatalog artifacts: housing 1, towers 2, industry 3, extraction 2, farming 2.
+// Generators share the single environmentParts entry with the game; here only the per-tab conventions apply:
+// seed rule (getGridSeed), array/single/catalog display, and two-phase measurement layout.
 const INDUSTRY_KINDS = ['house', 'skyscraper', 'skyfall', 'factory', 'powerplant', 'incinerator', 'mine', 'oilfield', 'greenhouse', 'ranch'];
 const INDUSTRY_LABELS = {
   house: '住家', skyscraper: '摩天樓', skyfall: '倒塌高樓',
@@ -3744,7 +3744,7 @@ function buildIndustryMode() {
     waterMesh.visible = false;
     floor.visible = true;
 
-    // 第一階段：生成所有設施實例，量測最大長寬高 (以最大的為主)
+    // Phase 1: generate all facility instances, measure max footprint (largest wins)
     const items = [];
     let maxObjW = 10, maxObjD = 10, maxObjH = 8;
     for (let idx = 0; idx < count; idx++) {
@@ -3764,7 +3764,7 @@ function buildIndustryMode() {
       items.push({ c, r, idx, curKind, curSeed, model, bounds, size, partRows, curBb });
     }
 
-    // 第二階段：依據最大物件尺寸配置間距
+    // Phase 2: space from the largest object size
     const stepX = Math.max(20, Math.ceil(maxObjW * 1.35 + 8));
     const stepZ = Math.max(20, Math.ceil(maxObjD * 1.35 + 8));
     const startX = -(cols - 1) * stepX / 2;
@@ -3812,10 +3812,10 @@ function buildIndustryMode() {
 }
 
 // ==========================================
-// 浮冰與冰山 (Ice Mode)
+// Floating ice and icebergs (Ice Mode)
 // ==========================================
-// 收容 environmentCatalog 海冰/冰川冰 2 款，生成器經 environmentParts 直通 iceParts；
-// 水線偏移由 assembleEnvironmentParts 統一處理，水面顯示規則與船隻頁籤一致。
+// Holds 2 environmentCatalog sea/glacier ice kinds, routed via environmentParts straight to iceParts;
+// Waterline offset is unified in assembleEnvironmentParts; water display matches the vessel tab.
 function createIceInstance(kind, seed, posX = 0, posZ = 0) {
   const season = document.querySelector('#sim-season')?.value || 'summer';
   const bb = boundaryLayoutOf('ice') === 'boundary';
@@ -3889,7 +3889,7 @@ function buildIceMode() {
     waterMesh.visible = showWater;
     floor.visible = !showWater;
 
-    // 第一階段：生成所有冰體實例，量測最大長寬高 (以最大的為主)
+    // Phase 1: generate all ice instances, measure max footprint (largest wins)
     const items = [];
     let maxObjW = 10, maxObjD = 10, maxObjH = 8;
     for (let idx = 0; idx < count; idx++) {
@@ -3909,7 +3909,7 @@ function buildIceMode() {
       items.push({ c, r, idx, curKind, curSeed, model, bounds, size, partRows, curBb });
     }
 
-    // 第二階段：依據最大物件尺寸配置間距
+    // Phase 2: space from the largest object size
     const stepX = Math.max(20, Math.ceil(maxObjW * 1.35 + 8));
     const stepZ = Math.max(20, Math.ceil(maxObjD * 1.35 + 8));
     const startX = -(cols - 1) * stepX / 2;
@@ -4023,7 +4023,7 @@ function assembleEnvironmentParts(rows, water = false) {
   return group;
 }
 
-// 邊界列組裝單一入口：單體與陣列共用同一段長、同一坡度取樣與同一端面規則。
+// Single boundary-row assembly entry: single and array share segment length, slope sampling, and end-face rules.
 function boundaryRows(kind, def, mode, seed) {
   const season = document.querySelector('#sim-season').value;
   const environment = previewBoundaryEnvironment(seed);
@@ -4038,10 +4038,10 @@ function boundaryRows(kind, def, mode, seed) {
   ).map((p) => ({ ...p, p: [p.p[0] + x, p.p[1], p.p[2]] })));
 }
 
-// 獨立物件 ↔ 邊界物件共用隨機生成管線：同一個生成器，只差放置與排列。
-// 場景散布走 environmentParts（各頁籤既有路徑）；邊界沿邊排列走 buildBoundaryRunParts
-//（遊戲 buildEdgeWall 同一入口，含緩衝區填實，種子規則與陣列／單體／目錄展示不變）。
-// 透明牆（權威碰撞環）遊戲內本就連續封閉，此處僅以透明包絡盒視覺化提醒，不新增遊戲邏輯。
+// Standalone and boundary objects share one procedural pipeline: same generator, only placement and layout differ.
+// Scene scatter uses environmentParts (existing per-tab path); boundary runs use buildBoundaryRunParts
+// (same entry as the game buildEdgeWall, with buffer fill; seed rules and array/single/catalog display unchanged).
+// Transparent walls (authoritative collision ring) are already continuous in game; here they are only visualized as envelopes, adding no game logic.
 const PREVIEW_BOUNDARY_SEG_LEN = 30;
 const PREVIEW_BOUNDARY_BUFFER_DEPTH = 32;
 function previewBoundaryEnvironment(seed) {
@@ -4081,9 +4081,9 @@ function withObjectLayout(result, prefix) {
   parent?.add(root);
   const center = bounds.getCenter(new THREE.Vector3()).sub(root.position);
   source.position.set(-center.x, 0, -center.z);
-  // 車輛／船隻邊界沿邊排列：每件確定性 360° 隨機朝向，透明牆內(Row 0)與緩衝區(Row ≥ 1)一體適用。
-  // 雜湊形狀同 edgewall.edgeSeed（此處內聯，不新增 import 依賴）；其餘分類維持軸向對齊。
-  // 遊戲本體 Row 0 仍只做 180° 翻轉（演出 ⊆ 碰撞柱，見 audit_world_edge Ⅲ），此處透明牆僅為視覺包絡。
+  // Vehicle/vessel boundary runs: deterministic 360deg yaw per piece, applied both inside the transparent wall (Row 0) and in the buffer (Row >= 1).
+  // Hash shape matches edgewall.edgeSeed (inlined here, no new import); other categories stay axis-aligned.
+  // Game body Row 0 still uses only 180deg flips (visuals inside collision posts, see audit_world_edge III); the transparent wall here is only a visual envelope.
   const scatterYaw = prefix === 'veh' || prefix === 'vessel';
   const yawSeed = (result.meta?.seed | 0) || 0;
   for (let row = 0; row <= grid.maxBufferRows; row++) {
@@ -4224,7 +4224,7 @@ function buildEnvironmentMode() {
     waterMesh.visible = isWaterMode;
     floor.visible = !isWaterMode;
 
-    // 第一階段：計算陣列中所有邊界物件規格尺寸，找出最大長寬高 (以最大的為主)
+    // Phase 1: measure every boundary object spec in the array, take the max footprint (largest wins)
     const items = [];
     let maxObjW = 10, maxObjD = 10, maxObjH = 8;
     for (let r = 0; r < rows; r++) {
@@ -4258,7 +4258,7 @@ function buildEnvironmentMode() {
       }
     }
 
-    // 第二階段：依據最大物件尺寸配置間距
+    // Phase 2: space from the largest object size
     const stepX = Math.max(20, Math.ceil(maxObjW * 1.35 + 8));
     const stepZ = Math.max(20, Math.ceil(maxObjD * 1.35 + 8));
     const startX = -(cols - 1) * stepX / 2;
@@ -4311,10 +4311,10 @@ function buildEnvironmentMode() {
 }
 
 // ==========================================
-// 平民紙娃娃 (Civilian Mode)
+// Civilian paper dolls (Civilian Mode)
 // ==========================================
-// 外觀與建模走遊戲同一條管線:generateCivilian(種子重播) + buildNpcModel('civ');
-// 此處只做陣列 / 單體 / 目錄陳列與兩階段量測佈局,不另寫外觀邏輯。
+// Appearance and modeling share the game pipeline: generateCivilian (seed replay) + buildNpcModel for civ;
+// This tab only handles array/single/catalog display with two-phase measurement layout, no separate appearance logic.
 let civInitialized = false;
 function initCivilianOptions() {
   if (civInitialized) return;
@@ -4461,7 +4461,7 @@ function buildCivilianMode() {
 }
 
 // ==========================================
-// 戰鬥單位與陣營軍武程序建模 (Unit Mode)
+// Combat units and faction hardware procedural modeling (Unit Mode)
 // ==========================================
 const UNIT_KINDS = [
   'creep:soldier', 'creep:apc', 'creep:tank', 'creep:rocketeer', 'creep:howitzer', 'creep:heli', 'bunker',
@@ -4634,7 +4634,7 @@ function buildUnitMode() {
   render();
 }
 
-// 統一陣列規模、種子模式、種子碼與排列方式監聽
+// Unified array size, seed mode, seed code, and layout listeners
 ['geo', 'plant', 'veh', 'vessel', 'env', 'industry', 'ice', 'arch', 'civ', 'unit'].forEach((prefix) => {
   ['cols', 'rows'].forEach((dim) => {
     document.querySelector('#sample-' + dim + '-' + prefix)?.addEventListener('change', () => {
@@ -4652,7 +4652,7 @@ function buildUnitMode() {
   });
 });
 
-// 車輛事件
+// Vehicle events
 document.querySelector('#btn-veh-generate')?.addEventListener('click', () => {
   const mode = document.querySelector('#select-seed-mode-veh')?.value;
   if (mode === 'shared_batch') {
@@ -4674,7 +4674,7 @@ document.querySelector('#btn-veh-random-seed')?.addEventListener('click', () => 
   document.querySelector(id)?.addEventListener('change', buildVehicleMode);
 });
 
-// 船隻事件
+// Vessel events
 document.querySelector('#btn-vessel-generate')?.addEventListener('click', () => {
   const mode = document.querySelector('#select-seed-mode-vessel')?.value;
   if (mode === 'shared_batch') {
@@ -4702,7 +4702,7 @@ document.querySelector('#chk-vessel-water')?.addEventListener('change', () => {
   render();
 });
 
-// 環境事件
+// Environment events
 document.querySelector('#btn-env-generate')?.addEventListener('click', () => {
   const mode = document.querySelector('#select-seed-mode-env')?.value;
   if (mode === 'shared_batch') {
@@ -4722,7 +4722,7 @@ document.querySelector('#env-mode')?.addEventListener('change', () => {
   document.querySelector(id)?.addEventListener('change', buildEnvironmentMode);
 });
 
-// 產業事件
+// Industry events
 document.querySelector('#btn-industry-generate')?.addEventListener('click', () => {
   const mode = document.querySelector('#select-seed-mode-industry')?.value;
   if (mode === 'shared_batch') {
@@ -4738,7 +4738,7 @@ document.querySelector('#btn-industry-random-seed')?.addEventListener('click', (
   document.querySelector(id)?.addEventListener('change', buildIndustryMode);
 });
 
-// 冰雪事件
+// Ice events
 document.querySelector('#btn-ice-generate')?.addEventListener('click', () => {
   const mode = document.querySelector('#select-seed-mode-ice')?.value;
   if (mode === 'shared_batch') {
@@ -4760,7 +4760,7 @@ document.querySelector('#chk-ice-water')?.addEventListener('change', () => {
   render();
 });
 
-// 平民事件
+// Civilian events
 document.querySelector('#btn-civ-generate')?.addEventListener('click', () => {
   const mode = document.querySelector('#select-seed-mode-civ')?.value;
   if (mode === 'shared_batch') {
@@ -4776,7 +4776,7 @@ document.querySelector('#btn-civ-random-seed')?.addEventListener('click', () => 
   document.querySelector(id)?.addEventListener('change', buildCivilianMode);
 });
 
-// 戰鬥單位事件
+// Combat-unit events
 document.querySelector('#btn-unit-generate')?.addEventListener('click', () => {
   const mode = document.querySelector('#select-seed-mode-unit')?.value;
   if (mode === 'shared_batch') {
@@ -4793,7 +4793,7 @@ document.querySelector('#btn-unit-random-seed')?.addEventListener('click', () =>
 });
 
 // ==========================================
-// 頂部環境模擬控制列事件 (四季 × 日夜 × 多元天氣)
+// Top environment-simulation control events (seasons x day-night x weather variety)
 // ==========================================
 function rebuildActiveTab() {
   if (currentTab === 'arch') buildArchMode({ advance: false });
@@ -4851,7 +4851,7 @@ document.querySelector('#sim-speed')?.addEventListener('change', (e) => {
   currentEnv.speed = parseFloat(e.target.value) || 5;
 });
 
-// ---- 飄浮標籤投影更新與渲染循環 ----
+// ---- Floating-label projection and render loop ----
 function updateLabels() {
   if (!document.querySelector('#chk-labels').checked) return;
   const halfW = innerWidth / 2, halfH = innerHeight / 2;
@@ -4891,7 +4891,7 @@ window.addEventListener('resize', () => {
   render();
 });
 
-// 初次建構與環境初始化
+// Initial build and environment setup
 try {
   setupFilterModal();
   setupParamsCollapse();
@@ -4906,7 +4906,7 @@ try {
   console.error('初次建構失敗:', err);
 }
 
-// 實時動態渲染循環 (雲漂移、天氣粒子、閃電打雷強光與連續日夜流逝)
+// Live render loop (cloud drift, weather particles, lightning flashes, and continuous day-night flow)
 let lastAnimTime = performance.now();
 function animate(now) {
   requestAnimationFrame(animate);

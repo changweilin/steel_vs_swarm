@@ -1,21 +1,21 @@
 // ============ 紙娃娃系統 稽核(離線;不需瀏覽器/網路)============
-// 用途:改 `tools/humanoid_forge/` 的 doll.js / shapes.js / mark.js / dollapply.js /
-// dolledit.js / specstore.mjs,或 forge.js 的收尾(finishUnit)之後跑。
+// Purpose: run after changing tools/humanoid_forge doll.js, shapes.js, mark.js, dollapply.js,
+// dolledit.js, specstore.mjs, or the forge.js finishUnit tail.
 //
-// 這一族**壞掉的樣子與「使用者自己就是拖成這樣」長得一模一樣** —— 沒有錯誤訊息、
-// 沒有紅字、畫面照樣動,所以每一條都要有人在離線這一端咬著:
-//   ① 夾制沒生效 → 覆寫層存進一個 1e30 的角度,下次開機體台整台機體不見(而 JSON 是合法的)。
-//   ② 鍵漂掉    → 拖的是左臂,套回去的是右腿;看板不會抱怨,它只是照著文件擺。
-//   ③ 套用順序錯 → 貼花貼在「還沒換形狀」的那一顆幾何上,換完形狀貼花就浮在空中。
-//   ④ 存檔語意退回整格取代 → 在覆核台調一次比例,機體台存的紙娃娃整份消失。
-//   ⑤ 名冊分家   → 面板列得出「六稜柱」但 shapes.js 沒有它,選下去等於什麼都沒發生。
+// This family fails exactly like user-sculpted content: no error message,
+// no red item, the picture still animates, so every rule needs an offline pin here:
+//   1 Clamp not applied leads to an override layer storing a 1e30 angle, so the whole chassis vanishes next time the bay opens (while JSON stays valid).
+//   2 Key drift means dragging the left arm poses the right leg; the panel never complains, it just places per document.
+//   3 Wrong apply order sticks decals onto pre-morph geometry, so decals float after the morph.
+//   4 Save semantics regressing to whole-cell replace means one scale tweak on the review bench wipes the bay doll record.
+//   5 Split roster means the panel lists hex prisms that shapes.js never defines, so selecting one does nothing.
 //
-// 手法:
-//   ・純資料層(doll.js)**零 import** ⇒ 直接 import 真品跑行為直測。
-//   ・吃 three 的三支(shapes/mark/dollapply/dolledit)Node 端載不動 ⇒ 讀**執行原文**驗紀律
-//     (readSrc 單一縫;逐行剝註解在 CRLF 工作區會靜默失效,見 audit_src.mjs 檔頭)。
-//   ・`--break-*` 反向驗證(CLAUDE.md 原則 9):把判定寫回壞版,對應段落 MUST 當場紅字。
-//     破壞一律以 `data:` URL 重載被改過的 doll.js 原文 —— 它零 import,是唯一能這樣重載的一支。
+// Method:
+//   pure-data layer (doll.js) has zero imports, so import the genuine article for behavior tests.
+//   three-backed modules (shapes, mark, dollapply, dolledit) cannot load under Node, so verify discipline against executed source
+//     (readSrc single seam; per-line comment stripping silently fails on CRLF checkouts, see audit_src.mjs header).
+//   break-flag reverse checks (principle 9): write the verdict back to the bad version and the matching section MUST go red at once.
+//     Breakage always reloads tampered doll.js source through a data URL; it is the only module that can reload this way because it has zero imports.
 //
 // 跑法:
 //   node tools/audit_paper_doll.mjs
