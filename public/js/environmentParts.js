@@ -18,7 +18,7 @@ import { architecturalFacadeParts } from './architectureFacadeParts.js';
 import { architecturalRoofParts } from './architectureRoofParts.js';
 import { functionalBuildingParts } from './functionalBuildingParts.js';
 import { sceneFurnitureParts } from './sceneFurnitureParts.js';
-import { fracturedIceData, industrialShellData, applyEnvironmentAppearance } from './sceneryAppearance.js';
+import { fracturedIceData, industrialShellData, applyEnvironmentAppearance, sceneryMeshData } from './sceneryAppearance.js';
 import { floatIceMesh } from './iceHydrostatics.js';
 import { optimalSolarTiltRad } from './data.js';
 
@@ -570,7 +570,9 @@ export function environmentParts(kind, { size = ENVIRONMENT_OBJECTS[kind]?.size,
     const tree = createForestTree(choose(rnd, ['redwood', 'sequoia']), seed, undefined, undefined, 1, season, environment);
     rows = tree.parts.filter(p => !p.hidden && (kind !== 'fallentree' || !['leaf', 'flower', 'fruit', 'snow'].includes(p.role))).map(p => {
       const g = p.g.parameters;
-      return { g: g.height ? ['cyl', g.radiusTop, g.radiusBottom, g.height, g.radialSegments] : ['ico', g.radius],
+      const size = [g.radius * 2, g.radius * 2, g.radius * 2];
+      return { g: g.height ? ['cyl', g.radiusTop, g.radiusBottom, g.height, g.radialSegments]
+        : p.role === 'leaf' ? ['mesh', sceneryMeshData('crown', size, p.naturalSeed), size] : ['ico', g.radius],
         p: [p.px || 0, p.y || 0, p.pz || 0], r: [p.rx || 0, 0, p.rz || 0], s: [1, p.sy || 1, 1], c: p.c, role: p.role };
     });
     if (kind === 'fallentree') rows = layDown(rows);

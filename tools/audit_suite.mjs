@@ -25,6 +25,13 @@ const AUDIT_SCRIPTS = [
 
   // -- Core map rules, lane topology, and movement blocking --
   'tools/audit_map_rules.mjs',
+  'test/mapSelection.mjs',
+  'test/mixedMap.mjs',
+  'test/randomMap.mjs',
+  'test/mapRules.mjs',
+  'test/mapPreparation.mjs',
+  'test/venueRoadSources.mjs',
+  'test/mapCatalogue.mjs',
   'tools/audit_map_evidence.mjs',
   'tools/audit_habitat.mjs',
   'tools/audit_facility_fusion.mjs',
@@ -44,6 +51,7 @@ const AUDIT_SCRIPTS = [
   'tools/audit_slope_platform.mjs',
   'tools/audit_world_height.mjs',
   'tools/audit_forest.mjs',
+  'test/naturalAppearance.mjs',
   'tools/audit_seasonal_environment.mjs',
   'tools/audit_geology.mjs',
   'tools/audit_zone_cut.mjs',

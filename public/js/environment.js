@@ -508,6 +508,9 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
     getWeatherDynamics() {
       return curDyn;
     },
+    getWeatherSurface() {
+      return surfaceState;
+    },
     syncSurface(state, marks) {
       if (state) { surfaceState = state; surfaceSynced = true; }
       scorchAtlas?.sync(marks);

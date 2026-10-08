@@ -9,8 +9,7 @@ import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
 import {
   SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, resolveEnv,
-  BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit,
-  laneCountFor, mapArg, mapPlan,
+  BOT_DIFF, DEFAULT_BOT_DIFF,
 } from '../public/js/data.js';
 // Control-mode values (room-wide, host-finalized) live only in ctrlmode.js -- copying the
 // strings here would fork a second option table (a fourth mode would miss one copy). That file
@@ -25,19 +24,15 @@ import { sanitizeEvidenceRelay } from '../public/js/mapEvidenceRelay.js';
 import { sanitizeOsmRelay, osmRelayKey } from '../public/js/osmrelay.js';
 // Extended-map seams (zero Node API, shared with solo): mix-clamping truth lives in mapgen;
 // the validator reads results without rewriting formulas.
-import { MAX_WATER_WET, sanitizeProcRelief } from '../public/js/mapgen.js';
+import { sanitizeProcRelief } from '../public/js/mapgen.js';
+import { validMixedMap } from '../public/js/mapLayerSources.js';
+import { MIXED_MAP_TEXT } from '../public/js/mixedMapContent.js';
+import { validRandomMap } from '../public/js/randomMapRules.js';
+import { RANDOM_MAP_TEXT } from '../public/js/randomMapContent.js';
+import { mapGeometryAudit, settleMapMetrics } from '../public/js/mapRules.js';
+import { validMapSources } from '../public/js/mapSourceValidation.js';
+import { MAP_RULE_TEXT } from '../public/js/mapRulesContent.js';
 
-// Lanes (lat/lng) -> game meters (arbitrary origin; towerLayoutAudit uses relative distances only). Same conversion as mapSelect / baking.
-const EARTH_M = 6371000, SC_GAME = 1 / MAPGEO.REAL_SCALE;
-function lanesToGame(lanes) {
-  const o = lanes[0]?.[0];
-  if (!o) return null;
-  const cosO = Math.cos(o[0] * Math.PI / 180);
-  return lanes.map((lane) => lane.map(([lat, lng]) => [
-    (lng - o[1]) * Math.PI / 180 * EARTH_M * cosO * SC_GAME,
-    (lat - o[0]) * Math.PI / 180 * EARTH_M * SC_GAME,
-  ]));
-}
 
 function sanitizeName(s) {
   return String(s || '').replace(/[^\w一-鿿\- ]/g, '').trim().slice(0, 16) || '指揮官';
@@ -49,41 +44,21 @@ function genToken() {
 /** Pre-room battlefield-config validation: returns an error message or null (same bar across all three modes, solo included) */
 export function validateBattleConfig(cfg, teamSize) {
   if (!cfg || !cfg.bases || !cfg.center || !Array.isArray(cfg.lanes)) return '戰場設定不完整,請先建立/選擇地圖';
-  // Map kind (standard / story campaign) has one reading in `mapArg` -- shared with solveTowerSites,
-  // scale functions, and lane counts, so validation and generation can never disagree on a battle's kind.
   // Geometry checks below consume client-submitted JSON; a malformed shape (map/number/array)
   // throws TypeError deep inside -- so MUST return error strings, MUST NOT throw: a throw
   // exits the whole server process = every room disconnects. The host sees one sentence, not a fleet-wide outage.
   try {
-    const mapA = mapArg(cfg);
-  const plan = mapPlan(mapA);
-  const L = laneCountFor(teamSize, mapA);
-  if (cfg.lanes.length !== L) {
-    return plan.mode === 'story'
-      ? `劇情戰役恆為 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`
-      : `隊伍 ${teamSize}v${teamSize} 需要 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`;
-  }
-  if (!(cfg.distM >= cfg.diagM * 0.8)) {
-    return `主堡距離 ${Math.round(cfg.distM)}m 未達地圖對角線 80%(${Math.round(cfg.diagM * 0.8)}m)`;
-  }
-  // Rule #4 (authoritative gate): tower layout from this lane geometry would leave >80% overlap or stacked towers -> reject (same bar for custom/preset; client scan pre-filters)
-  // Pass the kind through: story mode builds towers on one side only, so validating against the full solution checks
-  // towers that will never spawn and would block otherwise legal maps (see towerLayoutAudit)
-  const game = lanesToGame(cfg.lanes);
-  if (!game || !towerLayoutAudit(game, mapA).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
-  // Rule (authoritative gate): lanes within one L never touch/cross (closest mid-segment distance >= 20m real; 3D crossings also banned)
-  if (!laneSeparationAudit(game).ok) return '此地圖的兵線互相接觸或交叉(任兩線最近距離須 ≥ 20m),請改選其他推薦點或位置';
-  // Rule (authoritative gate): terrain water+marsh <= 50% (mixed/random map clamp; threshold lives in mapgen.js MAX_WATER_WET)
-  if (cfg.venue && cfg.venue.mix) {
-    const m = cfg.venue.mix;
-    const ww = (Number(m.water) || 0) + (Number(m.wet) || 0);
-    if (!(ww <= MAX_WATER_WET + 1e-9)) return `此地圖水域+沼澤占比 ${(ww * 100).toFixed(0)}% 超過上限 50%,請重新生成`;
-  }
-  return null;
+    if (cfg.gen?.mode === 'mixed' && !validMixedMap(cfg)) return MIXED_MAP_TEXT.noRoadLanes;
+    if (cfg.gen?.mode === 'random' && !validRandomMap(cfg)) return RANDOM_MAP_TEXT.invalid;
+    const audit = mapGeometryAudit(cfg, teamSize);
+    if (!audit.ok) return MAP_RULE_TEXT[audit.code] || MAP_RULE_TEXT.shape;
+    if (!validMapSources(cfg)) return MAP_RULE_TEXT.roads;
+    return null;
   } catch {
-    return '戰場設定格式異常,請重新建立/選擇地圖';
+    return MAP_RULE_TEXT.shape;
   }
 }
+
 
 /**
  * Randomize which side holds which base position (2026-07-21): 50% chance to swap the two bases side assignment. Reverse every lane point order
@@ -415,7 +390,10 @@ export class RoomHub {
           return;
         }
         const teamSize = Math.max(TEAM.MIN, Math.min(TEAM.MAX, Math.round(m.teamSize) || TEAM.DEFAULT));
-        const cfg = m.battleConfig;
+        // Solo clients share memory with the hub; normalization and side swaps need a detached recipe.
+        let cfg;
+        try { cfg = structuredClone(m.battleConfig); }
+        catch { send({ t: 'error', msg: MAP_RULE_TEXT.shape }); return; }
         // ---- Map-kind flag normalization: MUST run BEFORE validation ----
         // battleConfig arrives whole from the client, stuffing it into sim as-is lets the peer decide truth (A1 family).
         // Order cannot flip: `defSide: 'FOO'` reads as a normal battle on the validation side, then is cleared to
@@ -433,6 +411,7 @@ export class RoomHub {
           cfg.procRelief = sanitizeProcRelief(cfg.procRelief);
         }
         const err = validateBattleConfig(cfg, teamSize);
+        if (!err) settleMapMetrics(cfg);
         if (err) { send({ t: 'error', msg: err }); return; }
         cfg.env = resolveEnv(cfg.env || {});   // Random picks finalized here, whole room shares one environment
         cfg.architectureSeed = Math.floor(Math.random() * 4294967296); // Per-game building look seed, server decides

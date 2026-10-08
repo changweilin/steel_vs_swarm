@@ -195,7 +195,7 @@ export function geologyEnvironment(input = {}) {
     volcanic: number(input.volcanic, 0, 0, 1), exposure: number(input.exposure, .5, 0, 1),
     sediment: number(input.sediment, .4, 0, 1), dissolution: number(input.dissolution, .4, 0, 1),
     human: number(input.human, 0, 0, 1),
-    slope: number(input.slope, 0, 0, 90), rainfall: number(input.rainfall, 0, 0, 1),
+    slope: number(input.slope, 0, 0, 90), rainfall: number(input.rainfallIntensity ?? input.rainfall, 0, 0, 1),
     instability: number(input.instability, 0, 0, 1), geothermal: number(input.geothermal, 0, 0, 1),
     gasPressure: number(input.gasPressure, 0, 0, 1), springPressure: number(input.springPressure, 0, 0, 1),
     impact: number(input.impact, 0, 0, 1), activity: number(input.activity, .7, 0, 1) };
@@ -710,6 +710,14 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
   if (morphology) p.morphology = morphology;
   if (Object.hasOwn(PHENOMENA, type)) Object.assign(p, { activity: .7,
     ventRadius: .12 + rnd() * .12, channelWidth: .12 + rnd() * .14, jetHeight: .3 + rnd() * .6 });
+  // Each summit retains the formation's family, with its own erosion and flanks.
+  // Independent streams leave wavelengths, valleys and the shared layout RNG intact.
+  const summits = Array.from({ length: bumps }, (_, i) => {
+    const summitSeed = (seed ^ Math.imul(i + 1, 0x9e3779b9)) >>> 0, local = mulberry32(summitSeed);
+    const shape = morphology ? geologyMorphology(type, summitSeed, morphology.family) : null;
+    return { ...p, erosion: .25 + local() * .75, dissolution: local(),
+      ...(shape ? { morphology: shape } : {}), phases: [local(), local(), local()].map(v => v * Math.PI * 2) };
+  });
 
   // 2D 雙向取樣與網格解析度
   const bumpsZ = Math.max(2, Math.round(totalDepth / 16));
@@ -727,10 +735,13 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
 
   const grid = new Float32Array((nx + 1) * (nz + 1));
   const tintCh = [16, 8, 0].map(shift => ((tint >> shift) & 255) / 255);
-  const paint = (y, shade) => {
+  const paint = (y, shade, x, z) => {
     const t = clamp(y / height, 0, 1);
-    const k = (.80 + .20 * t) * shade;
-    return [16, 8, 0].map((shift, i) => linear(clamp((((color ?? s.color) >> shift) & 255) / 255 * k * tintCh[i], 0, 1)));
+    const weathering = .93 + .10 * Math.sin(x / avgW * 2.3 + z / totalDepth * 4 + phases[0]);
+    const warmth = .035 * Math.cos(x / avgW * 1.7 - z / totalDepth * 3 + phases[1]);
+    const k = (.80 + .20 * t) * shade * weathering;
+    return [16, 8, 0].map((shift, i) => linear(clamp((((color ?? s.color) >> shift) & 255) / 255
+      * k * tintCh[i] * (1 + warmth * (1 - i)), 0, 1)));
   };
 
   const taperL = Math.max(1e-9, wavelengths[0] / 2);
@@ -787,11 +798,12 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
       const win = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 0.7);
       const winR = Math.pow(Math.max(0, Math.sin(Math.PI * frac)), 2);
 
-      const base = profile(type, lu * .92, v * .92, p);
-      const noise = (Math.sin(lu * 7 + v * 3 + phases[0]) * .3
-        + Math.sin(lu * 13 - v * 9 + phases[1]) * .15
-        + Math.cos((lu + v) * 17 + phases[2]) * .05)
-        * p.roughness * (1 - p.erosion * .5) * base * err * (morphology ? .15 : 1);
+      const summit = summits[cell], localPhases = summit.phases;
+      const base = profile(type, lu * .92, v * .92, summit);
+      const noise = (Math.sin(lu * 7 + v * 3 + localPhases[0]) * .3
+        + Math.sin(lu * 13 - v * 9 + localPhases[1]) * .15
+        + Math.cos((lu + v) * 17 + localPhases[2]) * .05)
+        * summit.roughness * (1 - summit.erosion * .5) * base * err * (morphology ? .15 : 1);
 
       const cross = Math.pow(Math.max(0, Math.cos(v * Math.PI / 2)), .5 * sharp);
       let crossMod = .72 + .28 * cross;
@@ -831,7 +843,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
       vertices.push(-len / 2 + ix / nx * len, yy, zPhys);
       const lu = (ix / nx * 2 - 1);
       const v = (zPhys - zMid) / (totalDepth / 2);
-      colors.push(...paint(yy, .94 + .06 * Math.sin(lu * 31 + v * 4 + p.erosion * 3)));
+      colors.push(...paint(yy, .94 + .06 * Math.sin(lu * 31 + v * 4 + p.erosion * 3), -len / 2 + ix / nx * len, zPhys));
     }
   }
   for (let ix = 0; ix < nx; ix++) for (let iz = 0; iz < nzObs; iz++) {
@@ -876,7 +888,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
         bufVerts.push(-len / 2 + ix / nx * len, yy, zPhys - pzCenter);
         const lu = (ix / nx * 2 - 1);
         const v = (zPhys - zMid) / (totalDepth / 2);
-        bufColors.push(...paint(yy, .94 + .06 * Math.sin(lu * 31 + v * 4 + p.erosion * 3)));
+        bufColors.push(...paint(yy, .94 + .06 * Math.sin(lu * 31 + v * 4 + p.erosion * 3), -len / 2 + ix / nx * len, zPhys));
       }
     }
     for (let ix = 0; ix < nx; ix++) for (let izB = 0; izB < nzBuf; izB++) {
@@ -916,7 +928,7 @@ export function elongatedGeologyMesh(type, seed, { len, depth, height, tint = 0x
     meshData: { vertices, faces, colors },
     size,
     params,
-    ...(morphology ? { morphology } : {}),
+    ...(morphology ? { morphology, summitMorphologies: summits.map(summit => summit.morphology) } : {}),
     undulation: { peaks, valleys, wavelengths, errors, gains, pattern: morphology ? null : activePattern, is2D },
     heightAt,
     surfaceHeightAt,

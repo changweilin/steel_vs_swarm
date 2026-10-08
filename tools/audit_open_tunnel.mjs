@@ -504,8 +504,8 @@ ok(/covV\[k\] && galAny\(k\)/.test(STRC),
   ok(/corridors\.push\(\{[^}]*kind, cy[\s,][^}]*\}\)/.test(MGC), 'Ⅲ-e cy MUST 進走廊記錄(buildRoads 的判定就吃這一份)');
   const B0 = src.indexOf('function buildRoads(');
   const BR = src.slice(B0, src.indexOf('\n// ---- 地標', B0) > 0 ? src.indexOf('\n// ---- 地標', B0) : B0 + 120000);
-  ok(/function buildRoads\([^)]*bores = \[\]\)/.test(src), 'Ⅲ-e buildRoads MUST 收走廊清單(bores)');
-  ok((src.match(/buildRoads\(group, [^\n]*gradeCorridors\)/g) || []).length === 2,
+  ok(/function buildRoads\([^)]*bores = \[\][^)]*\)/.test(src), 'Ⅲ-e buildRoads MUST 收走廊清單(bores)');
+  ok((src.match(/buildRoads\(group, [^\n]*gradeCorridors/g) || []).length === 2,
     'Ⅲ-e buildRoads 兩處呼叫端 MUST 都傳 gradeCorridors(漏一處 = 該批道路照舊畫進洞裡)');
   ok((BR.match(/const inTunBore = /g) || []).length === 1, 'Ⅲ-e 洞內判定 MUST 只有一份 inTunBore');
   ok(/const dropXZ = \(px, pz\) => !strc && !brg/.test(BR),

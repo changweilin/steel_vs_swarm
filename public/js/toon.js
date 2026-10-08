@@ -1394,9 +1394,9 @@ const CEL_SEA_GLSL = `
  * dt 夾在 [0, 0.25]:分頁切回來的那一幀 dt 可能是好幾秒,不夾的話整片林子會抽一下。
  */
 export function stepCelWind(dt) {
-  _windT.value += Math.min(0.25, Math.max(0, dt || 0));
   // Integrate rates so changing weather never multiplies the accumulated age into a phase jump.
   const d = Number.isFinite(dt) ? Math.min(.25, Math.max(0, dt)) : 0;
+  _windT.value += d;
   _windPhase.value += d * _weatherWind.freq.value;
   _wavePhase.value += d * _weatherWind.waveSpeed.value;
   _gustPhase.value += d * _weatherWind.shape.value.w;

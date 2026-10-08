@@ -39,6 +39,7 @@ import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from '../public/js/osmrelay.js';
 import { RoomHub } from '../server/rooms.js';
 import { MAPGEO } from '../public/js/data.js';
+import { VENUES, venueConfig } from '../public/js/venues.js';
 
 const argv = process.argv;
 let pass = 0, fail = 0;
@@ -240,17 +241,7 @@ sec('Ⅲ 伺服器:不可信輸入 + 逐格單調 + 晚到者補送');
     (strip(roomsSrc).match(/hub\.osmPayload\(room\)/g) || []).length === 2);
 
   // ---- 行為直測:真的起一個 RoomHub 跑一輪(原文斷言驗形狀,這一段驗它真的這樣動)----
-  const A = [25.0330, 121.5654], D = 1600, R = 6371000;
-  const realD = D * MAPGEO.REAL_SCALE, dLat = realD / R * 180 / Math.PI;
-  const B = [A[0] + dLat, A[1]], mid = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
-  const lane = [];
-  for (let u = 0; u <= 1.001; u += 0.05) lane.push([A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u]);
-  const sizeM = D / (0.85 * Math.SQRT2);
-  const cfg = {
-    center: { lat: mid[0], lng: mid[1] }, bases: { SWARM: A, STEEL: B }, lanes: [lane],
-    sizeM, diagM: sizeM * Math.SQRT2, distM: D, geoScaleVer: MAPGEO.GEO_SCALE_VER,
-    maxOverlap: 0.05, synthetic: true, placeName: '中繼測試', env: { season: 'summer', time: 'day', weather: 'clear' },
-  };
+  const cfg = venueConfig(VENUES.find(v => v.id === 'taipei101'), 1);
   const BB = { minLat: 25.03, minLng: 121.55, maxLat: 25.06, maxLng: 121.59 };
   const mkRoads = (name) => [{ tags: { highway: 'primary', name }, geometry: [{ lat: 25.04, lon: 121.56 }, { lat: 25.05, lon: 121.57 }] }];
   const mkAreas = () => [{

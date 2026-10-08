@@ -51,3 +51,27 @@
   Soil stress suppresses reproductive organs without reshaping the woody skeleton.
 - Legacy instanced shrubs and grasses apply local seasonal strength, drought and
   snow through instance colors, retaining shared meshes and instance transforms.
+
+## Vegetation communities
+
+- `habitat.js` resolves structure after satellite cover and exact OSM masks; climate,
+  annual rainfall in millimetres, latitude, altitude and settled water select appearance
+  priors. Explicit grassland and managed fields remain open. Water deficits favour
+  shrubs and xeric forms; an oasis requires mapped oasis semantics or nearby settled
+  water, and known saline water cannot supply it. These proxies are not groundwater
+  measurements or species occurrence records.
+- `habitatCatalog.js` owns stocking, stature and relative juvenile/mature/old stages.
+  Age labels describe visual development, not years inferred from imagery. Gap patches
+  favour recruitment; stands share a dominant taxon with a minority of other suitable
+  taxa. Climate and leaf structure still filter every sampled species.
+- Dense stands reuse three seeded botanical skeletons per species and phenology state.
+  The same skeleton supplies rendering, ground footprint and trunk collision; seasonal
+  batching never alters planting coordinates. Planting reserves capacity for later
+  static colliders instead of creating visible solid trees beyond the authority limit.
+  Surface patches spread metre-scale blades within fitted envelopes instead of enlarging
+  a single grass tuft; terrain-plane shear keeps roots on slopes and blades upright,
+  while non-planar or missing probes omit a patch.
+- Ecological references: [FAO grassland structure and water constraints](https://www.fao.org/agriculture/crops/thematic-sitemap/theme/spi/scpi-home/managing-ecosystems/management-of-grasslands-and-rangelands/grasslands-what/en/),
+  [NPS canopy gaps and uneven-aged forests](https://home.nps.gov/neri/planyourvisit/old-growth-forest-hike.htm),
+  and [NPS desert vegetation, elevation and water availability](https://home.nps.gov/deva/learn/nature/plants.htm).
+  Numerical rendering budgets are game appearance choices, not ecological survey estimates.

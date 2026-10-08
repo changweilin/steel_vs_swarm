@@ -26,13 +26,15 @@ import { protoOf } from './codex.js';
 import { avatarURL, portraitURL, artAvatarURL, artPortraitURL, isArtMode } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
-import { buildTerrain, battleBBox } from './terrain.js';
+import { MAP_SELECT_TEXT, mapCandidateLabel, mapCandidateSource } from './mapSelectContent.js';
+import { buildTerrain, battleBBox, roadImagerySampler } from './terrain.js';
 import {
   buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode, warmOsm,
-  commitOsmIn, osmInReady, resetOsmMisses, clearOsmIn, fetchGridRoads,
+  commitOsmIn, osmInReady, resetOsmMisses, clearOsmIn, fetchGridRoads, fetchOsmRoads,
 } from './biomes.js';
 import { roadGridRotDeg } from './roadgrid.js';
 import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from './osmrelay.js';
+import { inferSatelliteRoadLanes } from './roadLaneEvidence.js';
 import { MAP_EVIDENCE, evidenceFrame, evidenceFrameKey } from './mapEvidence.js';
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
 import { encodeEvidenceRelay, decodeEvidenceRelay } from './mapEvidenceRelay.js';
@@ -45,8 +47,18 @@ import { CharPreview } from './charPreview.js';
 import {
   createShowcaseFallbackTerrain, GAME_SHOWCASE_SITES, showcaseTerrainConfig,
 } from './showcase.js';
-import { VENUES, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
-import { GEN_BIOMES, MAX_WATER_WET, mixedMapConfig, randomMapConfig, describeGen, biomeName } from './mapgen.js';
+import { VENUES, VENUE_BASES, VARIANT_DEFS, PRESET_VENUES, STORY_VENUES, venueTip, venueBrief, venueConfig, venueAvailability, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
+import { MAP_RULE_TEXT } from './mapRulesContent.js';
+import { roadSourceSummary } from './roadEvidence.js';
+import { mapGeometryAudit } from './mapRules.js';
+import { validMapSources } from './mapSourceValidation.js';
+import { GEN_BIOMES, MAX_WATER_WET, randomMapConfig, describeGen, biomeName } from './mapgen.js';
+import { generateMixedMap } from './mixedMap.js';
+import { MIXED_LAYERS } from './mapLayerSources.js';
+import { MIXED_MAP_TEXT } from './mixedMapContent.js';
+import { isRandomMap, RANDOM_MAP_RANGES, randomRangeStep } from './randomMapRules.js';
+import { RANDOM_MAP_TEXT } from './randomMapContent.js';
+import { drawRandomMapPreview } from './randomMapPreview.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { talkOf, stageKey } from './storytalk.js';
 // Story screen marker single seam - game body and local story book share one copy, see storyui.js header
@@ -631,7 +643,13 @@ async function enterMapBuilder(initialMode = 'preset') {
   show('mapbuilder');
   app.favCfg = null;
   setFavBtnDisabled(true);
+  $('mapSearchHint').textContent = MAP_SELECT_TEXT.setup;
+  $('mapCandidates').setAttribute('aria-label', MAP_SELECT_TEXT.ranked);
+  $('nextCandBtn').textContent = MAP_SELECT_TEXT.nextButton;
   if ($('nextCandBtn')) { $('nextCandBtn').style.display = 'none'; $('nextCandBtn').disabled = true; }
+  initMapGenUI();
+  syncMapGenModeRow();
+  if (initialMode === 'random') { $('mapStatus').textContent = RANDOM_MAP_TEXT.ready; return; }
 
   try {
     await ensureLeaflet();
@@ -639,8 +657,10 @@ async function enterMapBuilder(initialMode = 'preset') {
     $('mapStatus').textContent = '地圖元件載入失敗,檢查網路後重試。';
     return;
   }
+  if (app.mapGenMode === 'random' || app.phaseShown !== 'mapbuilder') return;
   if (!app.mapSel) {
     app.mapSel = new MapSelect('leafletMap', {
+      roads: bbox => fetchOsmRoads(bbox, { evidence: true }),
       status: (text, frac) => {
         $('mapStatus').textContent = text;
         $('mapProgressBar').style.width = `${Math.round(frac * 100)}%`;
@@ -653,22 +673,30 @@ async function enterMapBuilder(initialMode = 'preset') {
         if (cfg) {
           const candCount = app.mapSel?.candidates?.length || 0;
           const candIdx = app.mapSel?.chosen ? app.mapSel.candidates.indexOf(app.mapSel.chosen) : -1;
-          const candText = candCount > 1 && candIdx >= 0 ? ` [候選 ${candIdx + 1}/${candCount}] ` : '';
-          $('mapStatus').innerHTML =
-            `已選定${candText}:兩堡直線 <b>${(cfg.distM / 1000).toFixed(2)} km</b>(門檻 ${(cfg.diagM * 0.8 / 1000).toFixed(2)} km)` +
-            `・${cfg.laneCount} 條兵線,最大重合 <b>${(cfg.maxOverlap * 100).toFixed(0)}%</b>` +
-            (cfg.tactics ? `・彎折 <b>×${cfg.tactics.sinuosity.toFixed(2)}</b>・轉角 <b>${cfg.tactics.turnsPerKm.toFixed(1)}/km</b>` : '') +
-            `${cfg.synthetic ? '(含離線模擬路徑)' : ''}`;
+          const candidate = app.mapSel.chosen;
+          $('mapStatus').textContent = MAP_SELECT_TEXT.summary(candIdx + 1, candCount,
+            candidate.match.score * 100, candidate.match.distanceM, cfg, mapCandidateSource(candidate));
           triggerBackgroundMapSetup(cfg, cfg.placeName || '自訂戰區');
         }
       },
       candidates: (list, chosenIdx) => {
+        const results = $('mapCandidates');
+        results.replaceChildren();
+        results.hidden = !list.length;
+        for (const [index, candidate] of list.entries()) {
+          const item = document.createElement('button');
+          item.className = 'btn small' + (index === chosenIdx ? ' swarm-btn' : '');
+          item.textContent = mapCandidateLabel(candidate, index);
+          item.setAttribute('aria-pressed', String(index === chosenIdx));
+          item.onclick = () => app.mapSel.selectCandidate(index);
+          results.appendChild(item);
+        }
         const btn = $('nextCandBtn');
         if (!btn) return;
         if (list && list.length > 1 && chosenIdx >= 0) {
           btn.style.display = '';
           btn.disabled = false;
-          btn.textContent = `⟳ 建議其他候選 ${chosenIdx + 1}/${list.length}`;
+          btn.textContent = MAP_SELECT_TEXT.next(chosenIdx + 1, list.length);
         } else {
           btn.style.display = 'none';
           btn.disabled = true;
@@ -683,9 +711,9 @@ async function enterMapBuilder(initialMode = 'preset') {
   syncMapGenModeRow();
   syncVenueTips();
   $('mapStatus').textContent = app.mapGenMode === 'mixed'
-    ? '勾選兩處以上地點,按「生成混合地圖」。'
-    : app.mapGenMode === 'random' ? '按「生成隨機地圖」(種子空白即隨機)。'
-    : '選一個場地,或在地圖上點選主堡位置自動計算兵線。';
+    ? MIXED_MAP_TEXT.ready
+    : app.mapGenMode === 'random' ? RANDOM_MAP_TEXT.ready
+    : MAP_SELECT_TEXT.idle;
 }
 
 /** 人數/兵線/地圖規模摘要一行(開戰時刻用;MUST NOT 在製作地圖頁另寫一套)*/
@@ -703,11 +731,15 @@ function venueBtn(v, teamSize = app.teamSize) {
   const b = document.createElement('button');
   b.className = 'venue-btn' + (v.story ? ' story' : '');
   b.dataset.vid = v.id;
+  const availability = venueAvailability(v, teamSize);
+  b.disabled = !availability.available;
   const vdef = VARIANT_DEFS.find((d) => d.key === v.variant);
   b.innerHTML = `<span class="venue-name"><span class="venue-name-text">${v.country} ${esc(v.name)}</span></span>`
     + `<span class="venue-tags"><span class="venue-type t-${v.type}">${v.type}</span>`
     + (vdef ? `<span class="venue-var var-${v.variant}">${vdef.name}</span>` : '')
     + (v.story ? '<span class="venue-var story-tag">劇情</span>' : '')
+    + (availability.available && availability.cfg.roadMode === 'natural-hybrid' ? `<span class="venue-var">${esc(MAP_RULE_TEXT.hybrid)}</span>` : '')
+    + (!availability.available ? `<span class="venue-var">${esc(MAP_RULE_TEXT.pending)}</span>` : '')
     + '</span>';
   attachTip(b, venueTip(v, teamSize));
   return b;
@@ -800,10 +832,12 @@ function syncVenueTips() {
   }
 }
 
-/** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描;製作地圖一律建三線母體 */
+/** Preset selection requires the same source and geometry gates as room creation. */
 function selectVenue(v) {
+  if (!venueAvailability(v, MAP_BUILD_TEAMSIZE).available) { $('mapStatus').textContent = MAP_RULE_TEXT.unavailable; setFavBtnDisabled(true); return; }
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
   const cfg = venueConfig(v, MAP_BUILD_TEAMSIZE);
+  const provenance = roadSourceSummary(cfg);
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
   app.venueSel = v;
   app.favCfg = cfg;
@@ -813,7 +847,7 @@ function selectVenue(v) {
   savePrefs({ lastVenueId: v.id });
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,加入最愛地圖後即可開房。` +
-    `(想用真實道路兵線,可改在地圖上手動點選錨點)` +
+    `<div>${esc(MAP_RULE_TEXT.sourceSummary(provenance.real, provenance.total, provenance.active, provenance.count))}</div>` +
     `<div class="venue-desc">${esc(venueBrief(v, MAP_BUILD_TEAMSIZE))}</div>`;
   $('mapProgressBar').style.width = '100%';
   setFavBtnDisabled(false);
@@ -821,7 +855,7 @@ function selectVenue(v) {
 
 /* ================= Extended creation modes: mixed maps / random maps ================= */
 // 兩模式皆輸出標準 battleConfig(走既有 showConfig 預覽 + 存入最愛 + 伺服器驗證管線)。
-// 混合:勾選地點等權混合,滑桿有值則覆蓋 mix(夾限走 mapgen 唯一縫);隨機:全由種子推導。
+// Mixed sources settle on explicit generation; every mode shares the favorite/preview pipeline.
 
 /** 建圖模式分段鈕同步(唯一出口) */
 function syncMapGenModeRow() {
@@ -829,49 +863,52 @@ function syncMapGenModeRow() {
     b.classList.toggle('on', b.dataset.gmode === app.mapGenMode);
   }
   const m = app.mapGenMode;
+  if (m !== 'mixed') cancelMixedGeneration();
   if ($('mixedPanel')) $('mixedPanel').style.display = m === 'mixed' ? '' : 'none';
   if ($('randomPanel')) $('randomPanel').style.display = m === 'random' ? '' : 'none';
   if ($('presetPanel')) $('presetPanel').style.display = m === 'preset' ? '' : 'none';
   if ($('resetSiteBtn')) $('resetSiteBtn').style.display = m === 'preset' ? '' : 'none';
   if ($('nextCandBtn') && m !== 'preset') $('nextCandBtn').style.display = 'none';
+  if ($('mapCandidates')) $('mapCandidates').hidden = m !== 'preset' || !app.mapSel?.candidates.length;
+  $('leafletMap').hidden = m === 'random';
+  $('randomMapPreview').hidden = m !== 'random';
+  $('mapRules').textContent = m === 'random' ? RANDOM_MAP_TEXT.rules : MAP_SELECT_TEXT.rules;
 }
 
 /** 生成結果走既有預覽+存檔管線(與 selectVenue 同出口) */
 function acceptGenCfg(cfg) {
   if (!cfg) { toast('生成失敗,請調整來源或種子後重試'); return; }
   warmModels();
-  app.mapSel?.showConfig(cfg);
+  if (isRandomMap(cfg)) drawRandomMapPreview($('randomMapPreview'), cfg);
+  else app.mapSel?.showConfig(cfg);
   app.venueSel = null;
   app.favCfg = cfg;
   triggerBackgroundMapSetup(cfg, cfg.placeName || '生成戰區');
   $('mapStatus').innerHTML =
     `📍 <b>${esc(cfg.placeName)}</b>:${esc(describeGen(cfg))} — 加入最愛地圖後即可開房。`;
+  if (!isRandomMap(cfg)) {
+    const s = roadSourceSummary(cfg);
+    $('mapStatus').innerHTML += `<div>${esc(MAP_RULE_TEXT.sourceSummary(s.real, s.total, s.active, s.count))}</div>`;
+  }
   $('mapProgressBar').style.width = '100%';
   setFavBtnDisabled(false);
 }
 
-/** 混合來源勾選格(預設場地 18 張,等權) */
-function renderMixedSrcGrid() {
+/** Show each settled geographic layer rather than a centroid source pool. */
+function renderMixedSrcGrid(cfg = null) {
   const grid = $('mixedSrcGrid');
-  if (!grid || grid.children.length) return;
-  for (const v of PRESET_VENUES()) {
-    const lab = document.createElement('label');
-    lab.className = 'chk venue-btn';
-    lab.innerHTML = `<input type="checkbox" data-vid="${v.id}"> ${esc(v.country || '')} ${esc(v.name)} <span class="venue-type">${esc(v.type)}</span>`;
-    grid.appendChild(lab);
+  if (!grid) return;
+  grid.replaceChildren();
+  for (const role of MIXED_LAYERS) {
+    const row = document.createElement('div');
+    row.className = 'setup-info';
+    const source = cfg?.gen?.layers?.[role];
+    row.textContent = source ? MIXED_MAP_TEXT.source(MIXED_MAP_TEXT[role], source.name, source.roadCount) : MIXED_MAP_TEXT[role];
+    grid.appendChild(row);
   }
-  // 預設勾兩處不同主地形,首屏即有混合感
-  const boxes = [...grid.querySelectorAll('input[type="checkbox"]')];
-  if (boxes[0]) boxes[0].checked = true;
-  const other = boxes.find((b) => {
-    const v = VENUES.find((x) => x.id === b.dataset.vid);
-    const f = VENUES.find((x) => x.id === boxes[0].dataset.vid);
-    return v && f && (v.base || v.type) !== (f.base || f.type);
-  });
-  if (other) other.checked = true;
 }
 
-/** 地貌滑桿(全 0 = 依勾選地點自動混合) */
+/** Zeroed sliders retain the source-derived mix. */
 function renderMixedMixRows() {
   const wrap = $('mixedMixRows');
   if (!wrap || wrap.children.length) return;
@@ -913,27 +950,71 @@ function readMixedSliders() {
   return raw;
 }
 
-function mixedSourcesFromUI() {
-  return [...document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]:checked')]
-    .map((b) => VENUES.find((x) => x.id === b.dataset.vid))
-    .filter(Boolean)
-    .map((v) => ({ name: v.name, ll: v.ll, mix: v.mix, ampF: v.ampF ?? 1, weight: 1 }));
+let _mixedGeneration = null;
+function cancelMixedGeneration() {
+  _mixedGeneration?.abort();
+  _mixedGeneration = null;
+  for (const id of ['mixedGenBtn', 'mixedPick3Btn']) if ($(id)) $(id).disabled = false;
 }
 
-function genMixedFromUI() {
-  const sources = mixedSourcesFromUI();
-  if (!sources.length) { toast('請至少勾選一處混合來源'); return; }
-  acceptGenCfg(mixedMapConfig(sources, { teamSize: MAP_BUILD_TEAMSIZE, mixOverride: readMixedSliders() }));
+async function genMixedFromUI() {
+  cancelMixedGeneration();
+  const ctrl = _mixedGeneration = new AbortController();
+  app.favCfg = null;
+  app.mapSel?.reset();
+  renderMixedSrcGrid();
+  setFavBtnDisabled(true);
+  for (const id of ['mixedGenBtn', 'mixedPick3Btn']) $(id).disabled = true;
+  const current = () => _mixedGeneration === ctrl && !ctrl.signal.aborted && app.mapGenMode === 'mixed' && app.phaseShown === 'mapbuilder';
+  try {
+    const cfg = await generateMixedMap(VENUES, {
+      seed: (Math.random() * 4294967296) >>> 0, teamSize: MAP_BUILD_TEAMSIZE,
+      fetchRoads: fetchOsmRoads, signal: ctrl.signal, mixOverride: readMixedSliders(),
+      onProgress: (role, name) => {
+        if (current()) $('mapStatus').textContent = MIXED_MAP_TEXT.checking(MIXED_MAP_TEXT[role], name);
+      },
+    });
+    if (!current()) return;
+    if (!cfg) { $('mapStatus').textContent = MIXED_MAP_TEXT.noSources; return; }
+    acceptGenCfg(cfg);
+    renderMixedSrcGrid(cfg);
+  } catch (error) {
+    if (current()) {
+      console.error('Mixed map generation failed', error);
+      $('mapStatus').textContent = MIXED_MAP_TEXT.failed;
+    }
+  } finally {
+    if (_mixedGeneration === ctrl) cancelMixedGeneration();
+  }
+}
+
+function readRandomRanges() {
+  const ranges = {};
+  for (const [layer, entries] of Object.entries(RANDOM_MAP_RANGES)) {
+    ranges[layer] = {};
+    for (const key of Object.keys(entries)) ranges[layer][key] = ['min', 'max'].map(edge =>
+      document.querySelector(`#randomRanges input[data-layer="${layer}"][data-key="${key}"][data-edge="${edge}"]`).valueAsNumber);
+  }
+  return ranges;
 }
 
 function genRandomFromUI() {
+  app.favCfg = null;
+  setFavBtnDisabled(true);
+  $('randomMapPreview').replaceChildren();
+  $('randomHint').textContent = '';
   const raw = ($('randomSeedInput')?.value || '').trim();
   const seed = /^\d+$/.test(raw) ? Number(raw) >>> 0 : (Math.random() * 4294967296) >>> 0;
   if ($('randomSeedInput')) $('randomSeedInput').value = String(seed);
-  const cfg = randomMapConfig({ teamSize: MAP_BUILD_TEAMSIZE, seed, anchors: VENUES.map((v) => ({ ll: v.ll })) });
+  let cfg;
+  try { cfg = randomMapConfig({ teamSize: MAP_BUILD_TEAMSIZE, seed, ranges: readRandomRanges() }); }
+  catch {
+    $('mapStatus').textContent = RANDOM_MAP_TEXT.invalidRanges;
+    return;
+  }
   acceptGenCfg(cfg);
   if (cfg && $('randomHint')) {
-    $('randomHint').textContent = `中心 ${cfg.center.lat.toFixed(4)}, ${cfg.center.lng.toFixed(4)} ・ 種子 ${seed} ・ 同一種子跨端同一張圖`;
+    $('randomHint').textContent = RANDOM_MAP_TEXT.seed(seed);
   }
 }
 
@@ -944,6 +1025,7 @@ function initMapGenUI() {
   document.querySelectorAll('#mapGenModeRow .segb').forEach((b) => {
     b.onclick = () => {
       app.mapGenMode = b.dataset.gmode;
+      cancelMixedGeneration();
       app.favCfg = null;
       app.venueSel = null;
       app.mapSel?.reset();
@@ -951,27 +1033,51 @@ function initMapGenUI() {
       syncMapGenModeRow();
       syncVenueTips();
       $('mapStatus').textContent = app.mapGenMode === 'mixed'
-        ? '勾選兩處以上地點,按「生成混合地圖」。'
-        : app.mapGenMode === 'random' ? '按「生成隨機地圖」(種子空白即隨機)。'
-        : '選一個場地,或在地圖上點選蜂群主堡位置。';
+        ? MIXED_MAP_TEXT.ready
+        : app.mapGenMode === 'random' ? RANDOM_MAP_TEXT.ready
+        : MAP_SELECT_TEXT.idle;
+      if (app.mapGenMode !== 'random' && !app.mapSel) enterMapBuilder(app.mapGenMode);
     };
   });
   renderMixedSrcGrid();
+  $('mixedSetupHint').textContent = MIXED_MAP_TEXT.setup;
+  $('mixedMixHint').textContent = MIXED_MAP_TEXT.mixHint;
+  $('mixedPick3Btn').textContent = MIXED_MAP_TEXT.pick;
+  $('mixedClearBtn').textContent = MIXED_MAP_TEXT.clear;
+  $('randomSetupHint').textContent = RANDOM_MAP_TEXT.setup;
+  $('randomSeedInput').setAttribute('aria-label', RANDOM_MAP_TEXT.seedLabel);
+  const ranges = $('randomRanges');
+  ranges.replaceChildren();
+  for (const [layer, entries] of Object.entries(RANDOM_MAP_RANGES)) {
+    const section = document.createElement('details');
+    const title = document.createElement('summary');
+    title.textContent = `${RANDOM_MAP_TEXT.layerNames[layer]} · ${RANDOM_MAP_TEXT.rangeTitle}`;
+    section.appendChild(title);
+    for (const [key, [min, max]] of Object.entries(entries)) {
+      const row = document.createElement('label'); row.className = 'random-range-row';
+      const label = document.createElement('span'); label.textContent = RANDOM_MAP_TEXT.parameters[key]; row.appendChild(label);
+      for (const [i, edge] of ['min', 'max'].entries()) {
+        if (i) { const separator = document.createElement('span'); separator.textContent = '–'; row.appendChild(separator); }
+        const input = document.createElement('input'); input.type = 'number';
+        input.min = min; input.max = max; input.step = randomRangeStep(key); input.value = i ? max : min;
+        input.dataset.layer = layer; input.dataset.key = key; input.dataset.edge = edge;
+        input.setAttribute('aria-label', `${RANDOM_MAP_TEXT.parameters[key]} ${RANDOM_MAP_TEXT.rangeEdge[edge]}`);
+        row.appendChild(input);
+      }
+      section.appendChild(row);
+    }
+    ranges.appendChild(section);
+  }
   renderMixedMixRows();
   $('mixedGenBtn')?.addEventListener('click', genMixedFromUI);
   $('mixedSaveFavBtn')?.addEventListener('click', () => $('saveFavBtn')?.click());
-  $('mixedPick3Btn')?.addEventListener('click', () => {
-    const boxes = [...document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]')];
-    for (const b of boxes) b.checked = false;
-    for (let i = boxes.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [boxes[i], boxes[j]] = [boxes[j], boxes[i]];
-    }
-    boxes.slice(0, 3).forEach((b) => { b.checked = true; });
-    genMixedFromUI();
-  });
+  $('mixedPick3Btn')?.addEventListener('click', genMixedFromUI);
   $('mixedClearBtn')?.addEventListener('click', () => {
-    for (const b of document.querySelectorAll('#mixedSrcGrid input[type="checkbox"]')) b.checked = false;
+    cancelMixedGeneration();
+    app.favCfg = null;
+    app.mapSel?.reset();
+    renderMixedSrcGrid();
+    $('mapStatus').textContent = MIXED_MAP_TEXT.ready;
   });
   $('randomGenBtn')?.addEventListener('click', genRandomFromUI);
   $('randomSaveFavBtn')?.addEventListener('click', () => $('saveFavBtn')?.click());
@@ -998,7 +1104,13 @@ function renderFavsOpenRoom() {
     b.onclick = () => {
       warmModels();   // 選定最愛地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
       app.teamSize = f.teamSize;
-      const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
+      const cfg = migrateFavCfg(f);
+      const audit = mapGeometryAudit(cfg, f.teamSize);
+      if (!audit.ok || !validMapSources(cfg)) {
+        app.favCfg = null; $('createRoomBtn').disabled = true;
+        $('openRoomStatus').textContent = audit.ok ? MAP_RULE_TEXT.roads : MAP_RULE_TEXT[audit.code];
+        return;
+      }
       savePrefs(app.isSuperDeploy ? { superTeamSize: f.teamSize } : { teamSize: f.teamSize });
       app.favCfg = cfg;
       triggerBackgroundMapSetup(cfg, f.name);
@@ -1028,6 +1140,7 @@ function renderFavsOpenRoom() {
 
 // ================= 開戰時刻與超級大戰(現場選人數 + 預設場地,或挑已存最愛;設定房名/公開性/環境後開房)=================
 function enterOpenRoom(opts = {}) {
+  app.mapSel?.reset();
   app.isSuperDeploy = !!opts.isSuper;
   show('openroom');
   app.favCfg = null;
@@ -1109,6 +1222,9 @@ function renderVenuesOpen() {
 
 /** 開戰時刻現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
 function selectVenueOpen(v) {
+  if (!venueAvailability(v, app.teamSize).available) {
+    app.favCfg = null; $('createRoomBtn').disabled = true; $('openRoomStatus').textContent = MAP_RULE_TEXT.unavailable; return;
+  }
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
   const cfg = venueConfig(v, app.teamSize);
   app.venueSelOpen = v;
@@ -1369,28 +1485,48 @@ async function resolveMapRot(cfg) {
   return cfg;
 }
 
-$('saveFavBtn')?.addEventListener('click', async () => {
-  const cfg = app.favCfg || app.mapSel?.buildConfig();
-  if (!cfg) return;
-  const prevStatus = $('mapStatus').innerHTML;   // 量測是短暫的過場,MUST 還原原本的選址摘要
+async function saveMapFavorite() {
+  const selected = app.favCfg, candidate = app.mapSel?.chosen;
+  const cfg = selected || app.mapSel?.buildConfig();
+  const current = () => app.phaseShown === 'mapbuilder' && app.favCfg === selected
+    && (selected || app.mapSel?.chosen === candidate);
+  if (!cfg || !current()) return;
+  const prevStatus = $('mapStatus').innerHTML;
+  let failedMessage = null;
   setFavBtnDisabled(true);
   app.mapSel?.resetPlaceNameStats?.();
   try {
     $('mapStatus').textContent = '取得地圖名稱(最久 5 秒)…';
-    await app.mapSel.fetchPlaceName(cfg);
+    if (!isRandomMap(cfg)) await app.mapSel?.fetchPlaceName(cfg);
+    if (!current()) return;
     if (cfg.center?.rot == null) $('mapStatus').textContent = '量測地圖主方位(對齊大馬路)…';
     await resolveMapRot(cfg);
-    const evidence = await prepareMapCreation(cfg, label => { $('mapStatus').textContent = label; return buildYield(); });
+    if (!current()) return;
+    const evidence = await prepareMapCreation(cfg, label => {
+      if (current()) $('mapStatus').textContent = label;
+      return buildYield();
+    });
+    if (!current()) return;
+    const audit = mapGeometryAudit(cfg, MAP_BUILD_TEAMSIZE);
+    if (!audit.ok || !validMapSources(cfg)) throw new Error(audit.ok ? MAP_RULE_TEXT.roads : MAP_RULE_TEXT[audit.code]);
     if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
-    if (app.mapSel.placeNameLastSkipped) {
+    if (!isRandomMap(cfg) && app.mapSel?.placeNameLastSkipped) {
       $('mapStatus').textContent = '地圖建立完成，補試地圖名稱(最久 5 秒)…';
       await app.mapSel.fetchPlaceName(cfg);
     }
   } catch (error) {
     console.error('Map creation failed:', error);
-    toast(MAP_EVIDENCE_COPY.failed);
+    failedMessage = error.message || MAP_EVIDENCE_COPY.failed;
+    if (current()) toast(failedMessage);
     return;
-  } finally { setFavBtnDisabled(false); $('mapStatus').innerHTML = prevStatus; }
+  } finally {
+    if (current()) {
+      setFavBtnDisabled(false);
+      if (failedMessage) $('mapStatus').textContent = failedMessage;
+      else $('mapStatus').innerHTML = prevStatus;
+    }
+  }
+  if (!current()) return;
   const name = prompt('地圖名稱:', cfg.placeName)?.trim();
   if (!name) return;
   saveFavorite(name, MAP_BUILD_TEAMSIZE, cfg);
@@ -1398,10 +1534,12 @@ $('saveFavBtn')?.addEventListener('click', async () => {
   const rotDeg = cfg.center.rot * 180 / Math.PI;
   toast(`⭐ 已加入最愛地圖:${name}(可到「開戰時刻」選用)`
     + (Math.abs(rotDeg) > 0.05 ? ` ・地圖主方位 ${rotDeg.toFixed(1)}°` : '')
-    + ` ・名稱查詢略過 ${app.mapSel.placeNameSkips || 0} 次`);
-});
+    + ` ・名稱查詢略過 ${app.mapSel?.placeNameSkips || 0} 次`);
+}
+$('saveFavBtn')?.addEventListener('click', saveMapFavorite);
 
 $('resetSiteBtn')?.addEventListener('click', () => {
+  cancelMixedGeneration();
   app.favCfg = null;
   app.mapSel?.reset();
   if ($('nextCandBtn')) {
@@ -1410,6 +1548,7 @@ $('resetSiteBtn')?.addEventListener('click', () => {
   }
 });
 $('backLobbyBtn')?.addEventListener('click', () => {
+  cancelMixedGeneration();
   app.favCfg = null;
   app.mapSel?.reset();
   if ($('nextCandBtn')) {
@@ -1419,10 +1558,10 @@ $('backLobbyBtn')?.addEventListener('click', () => {
   show('connect');
   refreshRooms();
 });
-$('goOpenRoomBtn')?.addEventListener('click', () => enterOpenRoom());
+$('goOpenRoomBtn')?.addEventListener('click', () => { cancelMixedGeneration(); enterOpenRoom(); });
 $('goMapBuilderBtn')?.addEventListener('click', () => enterMapBuilder());
 
-$('createRoomBtn')?.addEventListener('click', async () => {
+async function createSelectedRoom() {
   const cfg = app.favCfg;
   if (!cfg) return;
   if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
@@ -1437,10 +1576,18 @@ $('createRoomBtn')?.addEventListener('click', async () => {
   const isSuper = !!app.isSuperDeploy;
   cfg.super = isSuper;
 
-  // 圖資由背景視窗繼續跑,不阻塞開房;開戰後由載入進度頁(mapEvidenceGate)等圖資再建立遊戲。
-  prepareMapCreation(cfg, () => {}).catch((error) => console.warn('Map preparation degraded:', error));
-  if (app.phaseShown !== 'openroom' || app.favCfg !== cfg) { $('createRoomBtn').disabled = !app.favCfg; return; }
-
+  // Source qualification settles before sending the room recipe on any transport.
+  await prepareMapCreation(cfg, label => {
+    if (app.phaseShown === 'openroom' && app.favCfg === cfg) $('openRoomStatus').textContent = label;
+    return buildYield();
+  });
+  if (app.phaseShown !== 'openroom' || app.favCfg !== cfg) return;
+  const audit = mapGeometryAudit(cfg, app.teamSize);
+  if (!audit.ok || !validMapSources(cfg)) {
+    $('openRoomStatus').textContent = audit.ok ? MAP_RULE_TEXT.roads : MAP_RULE_TEXT[audit.code];
+    $('createRoomBtn').disabled = false;
+    return;
+  }
   app.net?.send({
     t: 'createRoom',
     name: myName(),
@@ -1453,7 +1600,8 @@ $('createRoomBtn')?.addEventListener('click', async () => {
     ctrl: ctrlPref(),
     battleConfig: cfg,
   });
-});
+}
+$('createRoomBtn')?.addEventListener('click', createSelectedRoom);
 $('backFromOpenRoomBtn')?.addEventListener('click', () => {
   app.favCfg = null;
   show('connect');
@@ -2587,7 +2735,7 @@ function prebuildKey(cfg) {
   // `defSide` MUST 進 key:劇情戰役的塔位是非對稱的(只有防守方有塔)⇒ 換邊就是換一個世界,
   // 漏掉它會讓房間階段預建好的地形被原樣沿用,而塔的淨空/墩座全長在錯的那一側。
   return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, cfg.defSide || null,
-    cfg.architectureSeed || 0, devOsmFixtureName(), MAP_EVIDENCE.VERSION, SVS_CACHE_VERSION]);
+    cfg.architectureSeed || 0, cfg.gen?.layers || null, devOsmFixtureName(), MAP_EVIDENCE.VERSION, SVS_CACHE_VERSION]);
 }
 
 /** 房間畫面的預載狀態列(#roomPreload 獨立於 roomMapInfo,renderRoom 的 sync 重繪不會覆寫進度) */
@@ -2719,6 +2867,7 @@ function onOsmRelay(m) {
  * ⇒ 一般到 await 那一刻早就清空了,不會多出一個一閃而過的狀態)。空字串 = 沒在等。
  */
 async function osmGate(cfg, onLabel = () => {}) {
+  if (isRandomMap(cfg)) return;
   const bbox = battleBBox(cfg);
   if (!app.isHost) {
     // 兩道不等的閘,少一道就是白等 20 秒:
@@ -2754,6 +2903,9 @@ async function osmGate(cfg, onLabel = () => {}) {
   } else {
     onLabel('取得道路圖資(全房共用一份)…');
     try { [feats, roads] = await warmOsm(bbox); } catch { /* 缺席照走備援 */ }
+    if (roads?.length) {
+      roads = await inferSatelliteRoadLanes(roads, p => llToXZ(p.lat, p.lon, cfg.center), roadImagerySampler(cfg.center, bbox));
+    }
     const relayInput = { bbox, roads: roads?.length ? roads : null };
     // features=null 代表查詢失敗；不得把空陣列送成「成功但零面域」，否則全房會停用 fallback。
     if (feats !== null && feats !== undefined) {
@@ -2788,6 +2940,7 @@ function cancelOsmRetry() {
   _osmRetry = null;
 }
 function scheduleOsmRetry(cfg, key) {
+  if (isRandomMap(cfg)) { cancelOsmRetry(); return; }
   if (_osmRetry?.key === key) return;   // 同房已排程
   cancelOsmRetry();
   const st = { key, tries: 0, timer: null };
@@ -3665,117 +3818,100 @@ function makeHud() {
         return `<div class="${cls}"><div class="sq-fill" style="width:${w}%"></div><span>${d.si + 1}號 ${label}</span></div>`;
       }).join('');
     },
-    // 異常狀態圖示列:每 8Hz 快照更新一次(game.js 統整後呼叫)
-    // list = [{ id, remS, stacks?, positive, label }]  依 remS 升序(game.js 已排好)
+    // Status icon strip: updated per 8Hz snapshot.
+    // list = [{ id, remS, stacks?, positive, label }] sorted by remS ascending.
     statusIcons: (() => {
-      // ── 唯一定義點:每種狀態的背景色 + SVG 圖形 ─────────────────────────────
-      // 設計原則:
-      //   ・每個圖形語義對應「被影響的能力值」:移速/HP/武器/視野/方向/命中/閃避
-      //   ・暈眩 (全行動中斷) 與 麻痺 (動力系統離線) 使用不同圖示與視覺語義
-      //   ・組合效果(中毒=DoT+減速、高地壓制=命中+閃避+移速、暈眩=動力+武器雙鎖)使用對應組合圖示
-      //   ・時鐘式進度表:外環與扇形順時鐘 360° 走滿一圈表示結束
+      // Visual semantics map to affected stat (speed, HP, weapons, sight, bearing, hit/evasion).
+      // Stun (full action lockout) and paralyze (locomotion offline) retain distinct iconography.
       const DEFS = {
-        // ── 負面:全行動封鎖 (行動+武器全鎖組合效果) ──────────────────────────
-        // stun 暈眩:頭部受創暈眩星環繞 → 意識中斷,禁移動+禁攻擊
         stun: { bg: '#2e1400', fg: '#ff9900',
-          svg: '<ellipse cx="14" cy="14" rx="7.5" ry="3.8" fill="none" stroke="#ff9900" stroke-width="1.2" stroke-dasharray="2.2,2" transform="rotate(-20 14 14)" opacity="0.6"/>'
-             + '<path d="M14 11.5 A2.8 2.8 0 0 1 16.5 14 A2.4 2.4 0 0 1 14 16.2 A2 2 0 0 1 12 14.2" fill="none" stroke="#ff9900" stroke-width="1.3" stroke-linecap="round"/>'
-             + '<path d="M14 4.5 L14.9 6.2 L16.6 6.6 L14.9 7 L14 8.7 L13.1 7 L11.4 6.6 L13.1 6.2 Z" fill="#ff9900"/>'
-             + '<path d="M8.5 16 L9.3 17.5 L10.8 18 L9.3 18.5 L8.5 20 L7.7 18.5 L6.2 18 L7.7 17.5 Z" fill="#ff9900"/>'
-             + '<path d="M19.5 15 L20.3 16.5 L21.8 17 L20.3 17.5 L19.5 19 L18.7 17.5 L17.2 17 L18.7 16.5 Z" fill="#ff9900"/>' },
+          svg: '<ellipse cx="14" cy="14" rx="8.5" ry="4" fill="none" stroke="#ff9900" stroke-width="1.3" stroke-dasharray="3,2" transform="rotate(-22 14 14)" opacity="0.6"/>'
+             + '<path d="M14 10.5 A3.5 3.5 0 0 1 17.5 14 A2.8 2.8 0 0 1 14.5 16.8 A2 2 0 0 1 12.5 14.8 A1.3 1.3 0 0 1 13.8 13.5" fill="none" stroke="#ff9900" stroke-width="1.6" stroke-linecap="round"/>'
+             + '<polygon points="7,8 8.2,10.2 10.5,11 8.2,11.8 7,14 5.8,11.8 3.5,11 5.8,10.2" fill="#ff9900"/>'
+             + '<polygon points="20.5,14 21.6,16 23.5,16.8 21.6,17.6 20.5,19.5 19.4,17.6 17.5,16.8 19.4,16" fill="#ff9900"/>'
+             + '<polygon points="17.5,6.5 18.4,7.8 20,8.4 18.4,9 17.5,10.2 16.6,9 15,8.4 16.6,7.8" fill="#ff9900"/>' },
 
-        // ── 負面:動力離線 (移速×0,武器照常) ──────────────────────────────────
-        // paralyze 麻痺:高壓電弧劈裂履帶齒輪 → 動力系統離線,武器仍可運作
         paralyze: { bg: '#242200', fg: '#ffe600',
-          svg: '<circle cx="14" cy="14" r="7" fill="none" stroke="#ffe600" stroke-width="1.3" stroke-dasharray="2.4,2.4" opacity="0.45"/>'
-             + '<circle cx="14" cy="14" r="2.2" fill="#ffe600" opacity="0.4"/>'
-             + '<path d="M15.5 5 L10.5 13.5 H14.5 L12.5 23 L18.5 12.5 H14 Z" fill="#ffe600"/>'
-             + '<line x1="7.5" y1="8" x2="9.5" y2="10" stroke="#ffe600" stroke-width="1.3" stroke-linecap="round"/>'
-             + '<line x1="18.5" y1="18" x2="20.5" y2="20" stroke="#ffe600" stroke-width="1.3" stroke-linecap="round"/>' },
+          svg: '<path d="M9.5 8 A6.8 6.8 0 0 0 7.2 14 A6.8 6.8 0 0 0 11.5 20.5" fill="none" stroke="#ffe600" stroke-width="2" stroke-linecap="round"/>'
+             + '<path d="M18.5 20 A6.8 6.8 0 0 0 20.8 14 A6.8 6.8 0 0 0 16.5 7.5" fill="none" stroke="#ffe600" stroke-width="2" stroke-linecap="round"/>'
+             + '<line x1="5.5" y1="10" x2="8" y2="11.2" stroke="#ffe600" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="5.2" y1="15.8" x2="7.8" y2="15.2" stroke="#ffe600" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="22.5" y1="12.2" x2="20" y2="12.8" stroke="#ffe600" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="22.8" y1="8" x2="20.2" y2="8.8" stroke="#ffe600" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<path d="M15.5 4.5 L10.5 13 H15 L12.5 23.5 L18.5 12 H14 Z" fill="#ffe600"/>'
+             + '<line x1="6.8" y1="5.8" x2="9" y2="8" stroke="#ffe600" stroke-width="1.4" stroke-linecap="round"/>'
+             + '<line x1="18.5" y1="19.5" x2="21" y2="21.5" stroke="#ffe600" stroke-width="1.4" stroke-linecap="round"/>' },
 
-        // ── 負面:武器/招式離線 ────────────────────────────────────────────────
-        // emp 電磁干擾:火炮管線被電磁脈衝波截斷 → 武器系統離線,機體可移動
         emp: { bg: '#1d002b', fg: '#d044ff',
-          svg: '<rect x="9" y="8" width="4" height="12" rx="1" fill="none" stroke="#d044ff" stroke-width="1.4" transform="rotate(30 11 14)"/>'
-             + '<path d="M6 14 A8 8 0 0 1 22 14" fill="none" stroke="#d044ff" stroke-width="1.3" stroke-dasharray="2,2" opacity="0.6"/>'
-             + '<path d="M8 17 A6 6 0 0 1 20 17" fill="none" stroke="#d044ff" stroke-width="1.3" stroke-dasharray="2,1.5" opacity="0.4"/>'
-             + '<line x1="7" y1="7" x2="21" y2="21" stroke="#d044ff" stroke-width="2.2" stroke-linecap="round"/>' },
+          svg: '<rect x="9.5" y="7" width="3" height="11" rx="1" fill="#d044ff"/>'
+             + '<rect x="15.5" y="7" width="3" height="11" rx="1" fill="#d044ff"/>'
+             + '<line x1="8.5" y1="7" x2="19.5" y2="7" stroke="#d044ff" stroke-width="1.6" stroke-linecap="round"/>'
+             + '<path d="M8 17 H20 V20 Q20 22 14 22 Q8 22 8 20 Z" fill="#d044ff"/>'
+             + '<path d="M5.5 11 A10 10 0 0 1 22.5 11" fill="none" stroke="#d044ff" stroke-width="1.4" stroke-dasharray="2.2,2" opacity="0.8"/>'
+             + '<path d="M7 6.5 A13 13 0 0 1 21 6.5" fill="none" stroke="#d044ff" stroke-width="1.2" stroke-dasharray="2,2" opacity="0.5"/>'
+             + '<line x1="5.5" y1="5.5" x2="22.5" y2="22.5" stroke="#d044ff" stroke-width="2.6" stroke-linecap="round"/>' },
 
-        // ── 負面:移速×35%（重減速,近凍結）────────────────────────────────────
-        // freeze 凍結:六角晶體雪花 → 冰封移速
         freeze: { bg: '#001b2a', fg: '#7fe8ff',
           svg: '<line x1="14" y1="5" x2="14" y2="23" stroke="#7fe8ff" stroke-width="1.8" stroke-linecap="round"/>'
              + '<line x1="6.2" y1="9.5" x2="21.8" y2="18.5" stroke="#7fe8ff" stroke-width="1.8" stroke-linecap="round"/>'
              + '<line x1="6.2" y1="18.5" x2="21.8" y2="9.5" stroke="#7fe8ff" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<polygon points="14,8 15.5,9.5 14,11 12.5,9.5" fill="#7fe8ff"/>'
-             + '<polygon points="14,20 15.5,18.5 14,17 12.5,18.5" fill="#7fe8ff"/>'
              + '<polygon points="14,11.5 16.2,12.8 16.2,15.2 14,16.5 11.8,15.2 11.8,12.8" fill="#001b2a" stroke="#7fe8ff" stroke-width="1.2"/>'
+             + '<path d="M11.5 8 L14 6.5 L16.5 8 M11.5 20 L14 21.5 L16.5 20" fill="none" stroke="#7fe8ff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
+             + '<path d="M7.5 12.2 L7.8 10.3 L10.1 10.8 M19.9 17.2 L20.2 15.3 L17.9 15.8" fill="none" stroke="#7fe8ff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
+             + '<path d="M7.5 15.8 L7.8 17.7 L10.1 17.2 M19.9 10.8 L20.2 12.7 L17.9 12.2" fill="none" stroke="#7fe8ff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
              + '<circle cx="14" cy="5" r="1.1" fill="#7fe8ff"/><circle cx="14" cy="23" r="1.1" fill="#7fe8ff"/>'
              + '<circle cx="6.2" cy="9.5" r="1.1" fill="#7fe8ff"/><circle cx="21.8" cy="18.5" r="1.1" fill="#7fe8ff"/>'
              + '<circle cx="6.2" cy="18.5" r="1.1" fill="#7fe8ff"/><circle cx="21.8" cy="9.5" r="1.1" fill="#7fe8ff"/>' },
 
-        // ── 負面:移速×60~70%（中等減速）────────────────────────────────────────
-        // slow 減速:速度指針低落+減速箭頭 → 引擎功率下降,移速遲滯
         slow: { bg: '#001333', fg: '#4da6ff',
-          svg: '<path d="M7 16 A7.5 7.5 0 1 1 21 16" fill="none" stroke="#4da6ff" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<line x1="14" y1="6" x2="14" y2="7.8" stroke="#4da6ff" stroke-width="1.4"/>'
-             + '<line x1="8.5" y1="11" x2="10" y2="12" stroke="#4da6ff" stroke-width="1.4"/>'
-             + '<line x1="19.5" y1="11" x2="18" y2="12" stroke="#4da6ff" stroke-width="1.4"/>'
-             + '<line x1="14" y1="16" x2="9.8" y2="12.5" stroke="#4da6ff" stroke-width="2" stroke-linecap="round"/>'
-             + '<circle cx="14" cy="16" r="1.7" fill="#4da6ff"/>'
-             + '<path d="M11 19.5 L14 22.5 L17 19.5" fill="none" stroke="#4da6ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' },
+          svg: '<path d="M7.5 17 A7.5 7.5 0 1 1 20.5 17" fill="none" stroke="#4da6ff" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="18.5" y1="12" x2="17" y2="12.8" stroke="#4da6ff" stroke-width="1.3" stroke-linecap="round"/>'
+             + '<line x1="14" y1="6.5" x2="14" y2="8.3" stroke="#4da6ff" stroke-width="1.3" stroke-linecap="round"/>'
+             + '<line x1="9.5" y1="12" x2="11" y2="12.8" stroke="#4da6ff" stroke-width="1.3" stroke-linecap="round"/>'
+             + '<path d="M7.5 17 A7.5 7.5 0 0 1 9.5 12" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>'
+             + '<line x1="14" y1="15" x2="9.8" y2="11.5" stroke="#4da6ff" stroke-width="2" stroke-linecap="round"/>'
+             + '<circle cx="14" cy="15" r="1.8" fill="#4da6ff"/>'
+             + '<path d="M11 18.5 L14 21.5 L17 18.5" fill="none" stroke="#4da6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
 
-        // ── 負面:HP 持續損耗(灼燒 DoT)──────────────────────────────────────────
-        // burn 灼燒:多層熾熱烈焰 → 熱能高溫灼燒,純 HP DoT
         burn: { bg: '#2a0700', fg: '#ff4800',
-          svg: '<path d="M14 4.5 Q10.5 9 11 13.5 Q9 11 8.5 14.5 Q8 19.5 14 23.5 Q20 19.5 19.5 14.5 Q19 11 17 13.5 Q17.5 9 14 4.5 Z" fill="#ff4800"/>'
-             + '<path d="M14 11 Q11.5 14 12 17 Q14 21.5 16 17 Q16.5 14 14 11 Z" fill="#ffcc00"/>'
-             + '<circle cx="9.5" cy="8.5" r="0.8" fill="#ffaa00"/>'
-             + '<circle cx="18" cy="8" r="0.8" fill="#ffaa00"/>' },
+          svg: '<path d="M14 4.5 Q10.5 8.5 11 13 Q9.2 11 8.5 14 Q7.5 18.5 13.5 22.8 Q14 23.2 14.5 22.8 Q20.5 18.5 19.5 14 Q18.8 11 17 13 Q17.5 8.5 14 4.5 Z" fill="#ff4800"/>'
+             + '<path d="M14 11 Q12 14 12.4 16.5 Q11 15 10.5 17 Q10.2 19.5 14 21.5 Q17.8 19.5 17.5 17 Q17 15 15.6 16.5 Q16 14 14 11 Z" fill="#ffcc00"/>'
+             + '<circle cx="14" cy="8" r="1" fill="#ffee66"/>' },
 
-        // ── 負面:裝甲撕裂/穿透失血 (純破口 DoT)───────────────────────────────
-        // bleed 流血:破裂裝甲鋼板+滴血 → 裝甲遭撕裂穿透,持續失血
         bleed: { bg: '#2a0006', fg: '#ff2233',
-          svg: '<path d="M6 7 L12 6 L9 12 Z" fill="#ff2233" opacity="0.5"/>'
-             + '<path d="M22 7 L16 6 L19 12 Z" fill="#ff2233" opacity="0.5"/>'
-             + '<path d="M7 6 L13 12.5 L10 15.5 L17 20.5" fill="none" stroke="#ff2233" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
-             + '<path d="M13 14.5 Q11.5 17 13 18.5 Q14.5 17 13 14.5 Z" fill="#ff2233"/>'
-             + '<path d="M17 16.5 Q15.8 19 17 20.5 Q18.2 19 17 16.5 Z" fill="#ff2233"/>'
-             + '<path d="M9 17.5 Q8 19.5 9 20.5 Q10 19.5 9 17.5 Z" fill="#ff2233"/>' },
+          svg: '<path d="M6 9 L15 17 M10 6 L20 15 M15 5 L22 11" stroke="#ff2233" stroke-width="2.2" stroke-linecap="round"/>'
+             + '<path d="M11 15 Q8.8 18.5 11 21 Q13.2 21 13.2 18.5 Q13.2 15 11 15 Z" fill="#ff2233"/>'
+             + '<path d="M17 16 Q15.2 18.5 17 20.5 Q18.8 20.5 18.8 18.5 Q18.8 16 17 16 Z" fill="#ff2233"/>'
+             + '<circle cx="7.5" cy="18" r="1.1" fill="#ff2233"/>' },
 
-        // ── 負面:HP DoT + 移速70%（毒=組合效果）────────────────────────────────
-        // poison 中毒:生化毒素骷髏+減速尾跡 → 毒液侵蝕生命+腳步沉重遲滯(組合圖示)
         poison: { bg: '#061d02', fg: '#44ee22',
-          svg: '<ellipse cx="11.5" cy="9.5" rx="5.2" ry="4.8" fill="#44ee22"/>'
-             + '<rect x="9.2" y="13" width="4.6" height="3.8" rx="0.8" fill="#44ee22"/>'
-             + '<circle cx="9.8" cy="9" r="1.3" fill="#061d02"/>'
-             + '<circle cx="13.2" cy="9" r="1.3" fill="#061d02"/>'
-             + '<line x1="10.7" y1="14.5" x2="10.7" y2="16.8" stroke="#061d02" stroke-width="0.9"/>'
-             + '<line x1="12.3" y1="14.5" x2="12.3" y2="16.8" stroke="#061d02" stroke-width="0.9"/>'
-             + '<path d="M17.5 11.5 L21.5 15.5 M17.5 15.5 L21.5 19.5 M17.5 19.5 L21.5 23.5" stroke="#44ee22" stroke-width="1.6" stroke-linecap="round"/>'
-             + '<path d="M14.5 20.5 L17.5 23.5 L20.5 20.5" fill="none" stroke="#44ee22" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' },
+          svg: '<path d="M9 13.5 C9 8.5 10.5 5.8 14 5.8 C17.5 5.8 19 8.5 19 13.5 C19 15.2 17.8 15.8 16.8 15.8 C16.5 15.8 16.2 16.6 16.2 17.4 C16.2 18.5 15.5 19.2 14.5 19.2 H13.5 C12.5 19.2 11.8 18.5 11.8 17.4 C11.8 16.6 11.5 15.8 11.2 15.8 C10.2 15.8 9 15.2 9 13.5 Z" fill="#44ee22"/>'
+             + '<ellipse cx="11.8" cy="11.8" rx="1.5" ry="1.9" fill="#061d02" transform="rotate(12 11.8 11.8)"/>'
+             + '<ellipse cx="16.2" cy="11.8" rx="1.5" ry="1.9" fill="#061d02" transform="rotate(-12 16.2 11.8)"/>'
+             + '<polygon points="14,13.8 13.2,15.1 14.8,15.1" fill="#061d02"/>'
+             + '<line x1="13.1" y1="17.2" x2="13.1" y2="19" stroke="#061d02" stroke-width="1"/>'
+             + '<line x1="14.9" y1="17.2" x2="14.9" y2="19" stroke="#061d02" stroke-width="1"/>'
+             + '<circle cx="6.8" cy="8.2" r="1.3" fill="#44ee22" opacity="0.8"/>'
+             + '<circle cx="21.2" cy="8.8" r="1.4" fill="#44ee22" opacity="0.8"/>'
+             + '<circle cx="7.2" cy="18" r="0.9" fill="#44ee22" opacity="0.6"/>'
+             + '<circle cx="20.8" cy="17.5" r="1" fill="#44ee22" opacity="0.6"/>' },
 
-        // ── 負面:視野+火控喪失 ───────────────────────────────────────────────
-        // blind 致盲:光學感測鏡頭過曝+對角阻斷 → 視野遮蔽,無法瞄準
         blind: { bg: '#1a1600', fg: '#ffe033',
-          svg: '<path d="M5 14 Q9.5 8 14 8 Q18.5 8 23 14 Q18.5 20 14 20 Q9.5 20 5 14 Z" fill="none" stroke="#ffe033" stroke-width="1.8"/>'
-             + '<circle cx="14" cy="14" r="3.2" fill="#ffe033"/>'
-             + '<circle cx="14" cy="14" r="1.4" fill="#1a1600"/>'
-             + '<line x1="5.5" y1="5.5" x2="22.5" y2="22.5" stroke="#ffe033" stroke-width="2.4" stroke-linecap="round"/>'
-             + '<line x1="14" y1="5" x2="14" y2="7" stroke="#ffe033" stroke-width="1.4"/>'
-             + '<line x1="14" y1="21" x2="14" y2="23" stroke="#ffe033" stroke-width="1.4"/>' },
+          svg: '<path d="M5 14 Q14 6.8 23 14 Q14 21.2 5 14 Z" fill="none" stroke="#ffe033" stroke-width="1.8" stroke-linejoin="round"/>'
+             + '<circle cx="14" cy="14" r="3.6" fill="none" stroke="#ffe033" stroke-width="1.4"/>'
+             + '<circle cx="14" cy="14" r="1.5" fill="#ffe033"/>'
+             + '<line x1="5.5" y1="5.5" x2="22.5" y2="22.5" stroke="#ffe033" stroke-width="2.5" stroke-linecap="round"/>'
+             + '<line x1="5.5" y1="14" x2="8" y2="14" stroke="#ffe033" stroke-width="1.4" opacity="0.7"/>'
+             + '<line x1="20" y1="14" x2="22.5" y2="14" stroke="#ffe033" stroke-width="1.4" opacity="0.7"/>' },
 
-        // ── 負面:移速折半+方向反轉 ──────────────────────────────────────────
-        // conf 混亂:反向導航羅盤箭頭 → 操縱訊號被反轉
         conf: { bg: '#001a18', fg: '#00e5b8',
-          svg: '<path d="M7 10 A7.5 7.5 0 0 1 20 8" fill="none" stroke="#00e5b8" stroke-width="2" stroke-linecap="round"/>'
-             + '<polygon points="20,8 24,7 22,12" fill="#00e5b8"/>'
-             + '<path d="M21 18 A7.5 7.5 0 0 1 8 20" fill="none" stroke="#00e5b8" stroke-width="2" stroke-linecap="round"/>'
-             + '<polygon points="8,20 4,21 6,16" fill="#00e5b8"/>'
-             + '<circle cx="14" cy="14" r="2" fill="#00e5b8" opacity="0.6"/>' },
+          svg: '<path d="M7.5 11 A7.2 7.2 0 0 1 20 8.5" fill="none" stroke="#00e5b8" stroke-width="2" stroke-linecap="round"/>'
+             + '<polygon points="20,5.8 23.5,9 19.5,11.5" fill="#00e5b8"/>'
+             + '<path d="M20.5 17 A7.2 7.2 0 0 1 8 19.5" fill="none" stroke="#00e5b8" stroke-width="2" stroke-linecap="round"/>'
+             + '<polygon points="8,22.2 4.5,19 8.5,16.5" fill="#00e5b8"/>'
+             + '<polygon points="14,11.5 16.5,14 14,16.5 11.5,14" fill="#00e5b8" opacity="0.6"/>'
+             + '<circle cx="14" cy="14" r="1.2" fill="#001a18"/>' },
 
-        // ── 負面:取消閃避 ─────────────────────────────────────────────────────
-        // mark 標記:狙擊鎖定框角+準星 → 閃避被鎖死,強制必中必暴
         mark: { bg: '#200800', fg: '#ff5500',
           svg: '<path d="M7 10 V7 H10 M18 7 H21 V10 M21 18 V21 H18 M10 21 H7 V18" fill="none" stroke="#ff5500" stroke-width="1.8" stroke-linecap="round"/>'
              + '<circle cx="14" cy="14" r="4.5" fill="none" stroke="#ff5500" stroke-width="1.5"/>'
@@ -3785,59 +3921,46 @@ function makeHud() {
              + '<line x1="20" y1="14" x2="23" y2="14" stroke="#ff5500" stroke-width="1.8"/>'
              + '<circle cx="14" cy="14" r="1.5" fill="#ff5500"/>' },
 
-        // ── 負面:命中率懲罰(射擊精度下降)────────────────────────────────────
-        // unbal 失衡:震盪破裂準星+後座發散 → 砲管劇震,命中率與暴擊率減半
         unbal: { bg: '#22000c', fg: '#ff2d60',
-          svg: '<path d="M8 12 A6 6 0 0 1 18 8" fill="none" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<path d="M10 20 A6 6 0 0 0 20 16" fill="none" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<path d="M12 9 L9.5 6.5 M9.5 6.5 L12.5 6.5" fill="none" stroke="#ff2d60" stroke-width="1.5" stroke-linecap="round"/>'
-             + '<path d="M16 19 L18.5 21.5 M18.5 21.5 L15.5 21.5" fill="none" stroke="#ff2d60" stroke-width="1.5" stroke-linecap="round"/>'
-             + '<line x1="6.5" y1="15" x2="11.5" y2="13" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<line x1="16.5" y1="15" x2="21.5" y2="13" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<line x1="13" y1="7.5" x2="15" y2="20.5" stroke="#ff2d60" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2,2"/>' },
+          svg: '<circle cx="14" cy="14" r="5" fill="none" stroke="#ff2d60" stroke-width="1.6"/>'
+             + '<line x1="14" y1="6" x2="14" y2="9" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="14" y1="19" x2="14" y2="22" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="6" y1="14" x2="9" y2="14" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<line x1="19" y1="14" x2="22" y2="14" stroke="#ff2d60" stroke-width="1.8" stroke-linecap="round"/>'
+             + '<path d="M12.5 8 L15.5 13 L12.5 15 L15.5 20" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
+             + '<path d="M6 9.5 A6.5 6.5 0 0 0 6 18.5" fill="none" stroke="#ff2d60" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>'
+             + '<path d="M22 9.5 A6.5 6.5 0 0 1 22 18.5" fill="none" stroke="#ff2d60" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>' },
 
-        // ── 負面:命中+閃避雙懲罰(高地壓制組合)──────────────────────────────────
-        // hiSup 高地壓制:制高點俯衝重壓箭雨+壓制底座 → 命中與閃避雙懲罰(組合圖示)
         hiSup: { bg: '#141f00', fg: '#bbff00',
-          svg: '<polygon points="8,5 20,5 18,8 10,8" fill="#bbff00"/>'
-             + '<path d="M10 9 L10 15 M14 9 L14 17 M18 9 L18 15" stroke="#bbff00" stroke-width="1.8" stroke-linecap="round"/>'
-             + '<polygon points="10,17 7.5,13.5 12.5,13.5" fill="#bbff00"/>'
-             + '<polygon points="14,19 11.5,15.5 16.5,15.5" fill="#bbff00"/>'
-             + '<polygon points="18,17 15.5,13.5 20.5,13.5" fill="#bbff00"/>'
-             + '<line x1="6" y1="22" x2="22" y2="22" stroke="#bbff00" stroke-width="2" stroke-linecap="round"/>' },
+          svg: '<polygon points="6,6 22,6 19.5,9.5 8.5,9.5" fill="#bbff00"/>'
+             + '<polygon points="14,21 11,15.5 13,15.5 13,10.5 15,10.5 15,15.5 17,15.5" fill="#bbff00"/>'
+             + '<polygon points="9.2,18.5 7,14 8.5,14 8.5,10.5 10,10.5 10,14 11.5,14" fill="#bbff00" opacity="0.85"/>'
+             + '<polygon points="18.8,18.5 16.5,14 18,14 18,10.5 19.5,10.5 19.5,14 21,14" fill="#bbff00" opacity="0.85"/>'
+             + '<line x1="6.5" y1="22.5" x2="21.5" y2="22.5" stroke="#bbff00" stroke-width="2" stroke-linecap="round"/>' },
 
-        // ── 正面:隱身 ────────────────────────────────────────────────────────
-        // stealth 隱身:虛線光學迷彩菱形 → 形體模糊消散
         stealth: { bg: '#001622', fg: '#00e5ff',
-          svg: '<polygon points="14,4.5 22.5,14 14,23.5 5.5,14" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-dasharray="3,2.2"/>'
-             + '<polygon points="14,9 18.5,14 14,19 9.5,14" fill="#00e5ff" opacity="0.25"/>'
-             + '<circle cx="14" cy="14" r="1.8" fill="#00e5ff" opacity="0.7"/>' },
+          svg: '<polygon points="14,4.5 22.5,19 14,16 5.5,19" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-linejoin="round"/>'
+             + '<polygon points="14,7.5 14,15 8,17" fill="#00e5ff" opacity="0.35"/>'
+             + '<path d="M14 8.5 H18.5 M14 11 H19.8 M14 13.5 H17.5" stroke="#00e5ff" stroke-width="1.3" stroke-dasharray="1.6,1.4"/>'
+             + '<circle cx="14" cy="11" r="1.5" fill="#00e5ff"/>' },
 
-        // ── 正面:無敵 ────────────────────────────────────────────────────────
-        // inv 無敵:金黃六角神聖護盾+防禦星芒 → 全傷害免疫
         inv: { bg: '#1e1600', fg: '#ffe566',
           svg: '<polygon points="14,3.5 22,8 22,20 14,24.5 6,20 6,8" fill="none" stroke="#ffe566" stroke-width="1.5" opacity="0.5"/>'
              + '<polygon points="14,5.5 16.2,11.2 22.2,11.2 17.4,14.8 19.2,20.5 14,17 8.8,20.5 10.6,14.8 5.8,11.2 11.8,11.2" fill="#ffe566"/>'
              + '<circle cx="14" cy="14" r="2.2" fill="#1e1600" opacity="0.6"/>' },
 
-        // ── 正面:招式增益(可多層)─────────────────────────────────────────────
-        // mod 招式增益:三重推進箭頭+能力梯級底座 → 招式能力值上升
         mod: { bg: '#001c0c', fg: '#00f080',
           svg: '<path d="M14 20 V8" stroke="#00f080" stroke-width="2.6" stroke-linecap="round"/>'
              + '<path d="M9 13.5 L14 7.5 L19 13.5" fill="none" stroke="#00f080" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
              + '<path d="M10.5 17.5 L14 13 L17.5 17.5" fill="none" stroke="#00f080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>'
              + '<rect x="7" y="21" width="14" height="2.2" rx="1.1" fill="#00f080"/>' },
 
-        // ── 正面詞綴:填彈速度 ─────────────────────────────────────────────────
-        // tempered 淬火軍械:雙聯彈匣+充能電弧 → 填彈加速
         tempered: { bg: '#190628', fg: '#c060ff',
           svg: '<rect x="8" y="5" width="12" height="15" rx="2" fill="none" stroke="#c060ff" stroke-width="1.8"/>'
              + '<rect x="11" y="3" width="6" height="3" rx="1" fill="#c060ff"/>'
              + '<line x1="8" y1="10" x2="20" y2="10" stroke="#c060ff" stroke-width="1.2" opacity="0.5"/>'
              + '<path d="M15 7.5 L11 13.5 H14 L13 18.5 L17 13.5 H14 Z" fill="#c060ff"/>' },
 
-        // ── 正面詞綴:受傷減免 ─────────────────────────────────────────────────
-        // hardened 複合裝甲:雙層重裝甲六角板+核心栓柱 → 承受傷害大幅減免
         hardened: { bg: '#041422', fg: '#50b0ff',
           svg: '<polygon points="14,4.5 22,9 22,19 14,23.5 6,19 6,9" fill="none" stroke="#50b0ff" stroke-width="1.8"/>'
              + '<polygon points="14,7.8 19,10.6 19,17.4 14,20.2 9,17.4 9,10.6" fill="#50b0ff" opacity="0.2"/>'
@@ -3845,20 +3968,16 @@ function makeHud() {
              + '<line x1="14" y1="8" x2="14" y2="12" stroke="#50b0ff" stroke-width="1.4"/>'
              + '<line x1="14" y1="16" x2="14" y2="20" stroke="#50b0ff" stroke-width="1.4"/>' },
 
-        // ── 正面詞綴:擊殺回血 ─────────────────────────────────────────────────
-        // vampiric 汲能核心:能量汲取心核+向心旋流 → 造成傷害/擊殺時回饋裝甲
         vampiric: { bg: '#22001c', fg: '#ff40b0',
           svg: '<path d="M14 20.5 Q5.5 13.5 5.5 9.5 A4.5 4.5 0 0 1 14 7.5 A4.5 4.5 0 0 1 22.5 9.5 Q22.5 13.5 14 20.5 Z" fill="#ff40b0"/>'
              + '<path d="M14 9 L14 16 M11.5 13.5 L14 16 L16.5 13.5" stroke="#22001c" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' },
 
-        // ── 正面詞綴:擊殺賞金 ─────────────────────────────────────────────────
-        // bounty 懸賞頻道:全息賞金硬幣+金幣信號 → 擊殺敵軍賞金翻倍
         bounty: { bg: '#1c1200', fg: '#ffcc00',
           svg: '<circle cx="14" cy="14" r="9.5" fill="#ffcc00" opacity="0.15" stroke="#ffcc00" stroke-width="1.8"/>'
-             + '<circle cx="14" cy="14" r="5.2" fill="none" stroke="#ffcc00" stroke-width="1.4"/>'
+             + '<circle cx="14" cy="14" r="6" fill="none" stroke="#ffcc00" stroke-width="1.3"/>'
              + '<line x1="14" y1="4.5" x2="14" y2="7" stroke="#ffcc00" stroke-width="1.8"/>'
              + '<line x1="14" y1="21" x2="14" y2="23.5" stroke="#ffcc00" stroke-width="1.8"/>'
-             + '<text x="14" y="17.2" text-anchor="middle" font-size="7.5" font-weight="900" fill="#ffcc00" font-family="monospace">¥</text>' },
+             + '<text x="14" y="17.6" text-anchor="middle" font-size="9" font-weight="900" fill="#ffcc00" font-family="-apple-system, BlinkMacSystemFont, monospace">$</text>' },
       };
       const el = $('statusIcons');
       const durCache = new Map();
@@ -3871,7 +3990,7 @@ function makeHud() {
         const stackBadge = (item.stacks != null && item.stacks > 1)
           ? `<span class="si-n">${item.stacks}</span>` : '';
 
-        // 時鐘式進度表: 順時鐘繞完一圈表示結束 (0% -> 100% 走滿 360 度)
+        // Clockwise dial completion represents expiration (0% -> 100% sweep over 360 deg).
         let maxS = item.maxS || durCache.get(item.id) || item.remS;
         if (item.remS > maxS) { maxS = item.remS; durCache.set(item.id, maxS); }
         else if (!durCache.has(item.id)) { durCache.set(item.id, maxS); }
@@ -5699,7 +5818,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.documentElement.classList.add('app-ready');
   setTimeout(() => {
     try {
-      startPresetWarmup(VENUES.map((v) => ({ cfg: venueConfig(v, MAP_BUILD_TEAMSIZE), name: v.name })));
+      startPresetWarmup(VENUES.filter(v => venueAvailability(v).available).map((v) => ({ cfg: venueConfig(v, MAP_BUILD_TEAMSIZE), name: v.name })));
     } catch (err) { console.warn('預設地圖預熱未啟動:', err); }
   }, 3000);
   playPrologueIntro();

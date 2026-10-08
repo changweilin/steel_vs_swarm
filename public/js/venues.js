@@ -3,13 +3,18 @@
 //   + bearing(對點方位角,朝內陸/地形有趣的方向):
 //   單一型:主要地貌 ≥ 80%;混合型:多種地貌各佔一定比例。
 // mix 鍵對應 data.js 的 BIOMES:green 綠地 / bare 裸露地 / urban 市區 / water 水體 / wet 濕地。
-// 預設場地的路線/圖資「預先算好」:venueConfig() 以確定性幾何直接產出
-// 完整 battleConfig(合成兵線),不需要 OSRM 掃描即可開房;
-// 想用真實道路兵線,仍可在地圖上手動點選錨點走掃描流程。
+// Preset admission distinguishes full roads from eligible one-road natural recipes.
+// Authored story lanes retain their separate catalogue-bound mode.
 // 「我的最愛」存整份 battleConfig(含兵線),選了即用、不必重新搜尋。
 import { MAPGEO, lanesFor, laneCountFor, mapPlan, targetDistFor, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneIsSide, laneTacticsXZ, altTier, laneSubsetFor, geoLanesFor } from './data.js';
 import { VENUE_LANES } from './venueLanes.js';
 import { VENUE_GRID } from './venueGrid.js';
+import { VENUE_ROAD_EVIDENCE, VENUE_ROAD_TERRAIN } from './venueRoadEvidence.js';
+import { VENUE_NATURAL_LANES } from './venueNaturalLanes.js';
+import { MAP_RULE_VERSION, mapGeometryAudit, settleMapMetrics } from './mapRules.js';
+import { laneFingerprint, syntheticLaneEvidence, roadSourceSummary, ROAD_EVIDENCE_VERSION } from './roadEvidence.js';
+import { MAP_RULE_TEXT } from './mapRulesContent.js';
+import { validMapSources } from './mapSourceValidation.js';
 
 /**
  * 1v1(L1)兵線立體場景標記(2026-07-28 使用者需求:九種場景各要有一張預設地圖可測)。
@@ -68,7 +73,10 @@ export function venueRoute(v, teamSize) {
   const st = cfg.lanes.map((l) => laneTacticsXZ(laneToGameXZ(l, o)));
   const avg = (f) => (st.length ? st.reduce((s, t) => s + f(t), 0) / st.length : 0);
   return {
-    real: !cfg.synthetic,                       // 真實道路兵線 vs 離線合成弧
+    real: roadSourceSummary(cfg).real === (cfg.motherLanes || cfg.lanes).length,
+    hybrid: cfg.roadMode === 'natural-hybrid',
+    sources: roadSourceSummary(cfg),
+    sourceKinds: cfg.roadSources.map(p => MAP_RULE_TEXT.sourceKinds[p.kind] || MAP_RULE_TEXT.pending),
     laneCount: cfg.laneCount,
     distM: cfg.distM,                           // 兩堡距離(遊戲公尺)
     lenM: avg((t) => t.total),                  // 單線平均長度(遊戲公尺)
@@ -92,7 +100,9 @@ const bioText = (mix) => Object.entries(mix)
  */
 export function venueTip(v, teamSize) {
   const r = venueRoute(v, teamSize);
-  const route = `路線:${r.real ? '真實道路' : '離線合成'}兵線 ${r.laneCount} 條`
+  const route = `路線:${r.real ? '真實道路' : r.hybrid ? MAP_RULE_TEXT.hybrid : MAP_RULE_TEXT.pending}兵線 ${r.laneCount} 條`
+    + ` · ${MAP_RULE_TEXT.sourceSummary(r.sources.real, r.sources.total, r.sources.active, r.sources.count)}`
+    + ` · ${MAP_RULE_TEXT.laneSources(r.sourceKinds)}`
     + ` ・ 兩堡 ${(r.distM / 1000).toFixed(2)} km ・ 單線 ${Math.round(r.lenM)} m`
     + ` ・ 彎曲度 ${r.sinuosity.toFixed(2)} ・ 戰術轉角 ${r.turns} 個`
     + (r.scen.length ? `\n　　途經:${r.scen.join('・')}` : '');
@@ -179,25 +189,25 @@ const V = (o) => ({ scen: [], relief: 2, ...o, mix: mixFor(o.base, o.variant), a
 export const VENUES = [
   // ---- 市區 ×6----
   V({ id: 'berlin',    name: '柏林・普倫茨勞山',     country: '🇩🇪', base: '市區', variant: 'plain',  type: '市區', ll: [52.538038, 13.415268], bearing: 70, scen: [], relief: 2 }),
-  V({ id: 'madrid',    name: '馬德里・卡斯提亞大道', country: '🇪🇸', base: '市區', variant: 'light',  type: '市區', ll: [40.437794, -3.685632], bearing: 245, scen: ['overTunnel'], relief: 11 }),
+  V({ id: 'madrid',    name: '馬德里・卡斯提亞大道', country: '🇪🇸', base: '市區', variant: 'light',  type: '市區', ll: [40.437794, -3.685632], bearing: 245, scen: [], relief: null }),
   V({ id: 'roppongi',  name: '東京・六本木',         country: '🇯🇵', base: '市區', variant: 'mixed',  type: '市區', ll: [35.661630, 139.728510], bearing: 200, relief: 13 }),
-  V({ id: 'seoul',     name: '首爾・江南',           country: '🇰🇷', base: '市區', variant: 'rugged', type: '市區', ll: [37.497891, 127.027621], bearing: 150, relief: 22 }),
-  V({ id: 'neworleans', name: '紐奧良・龐恰特雷恩湖濱', country: '🇺🇸', base: '市區', variant: 'swamp', type: '市區', ll: [30.023000, -90.082000], bearing: 80, scen: ['bridge'], relief: 2 }),
-  V({ id: 'rotterdam', name: '鹿特丹・伊拉斯謨大橋', country: '🇳🇱', base: '市區', variant: 'water',  type: '市區', ll: [51.909000, 4.486000],   bearing: 135, scen: ['bridge'], relief: 3 }),
+  V({ id: 'seoul',     name: '首爾・江南',           country: '🇰🇷', base: '市區', variant: 'rugged', type: '市區', ll: [37.497891, 127.027621], bearing: 150, relief: null }),
+  V({ id: 'neworleans', name: '紐奧良・龐恰特雷恩湖濱', country: '🇺🇸', base: '市區', variant: 'swamp', type: '市區', ll: [30.023000, -90.082000], bearing: 80, scen: [], relief: null }),
+  V({ id: 'rotterdam', name: '鹿特丹・伊拉斯謨大橋', country: '🇳🇱', base: '市區', variant: 'water',  type: '市區', ll: [51.909000, 4.486000],   bearing: 135, scen: [], relief: null }),
   // ---- 綠地 ×6----
-  V({ id: 'matamata',   name: '紐西蘭・哈比屯綠丘草原', country: '🇳🇿', base: '綠地', variant: 'plain',  type: '綠地', ll: [-37.872000, 175.683000], bearing: 260, relief: 12 }),
-  V({ id: 'interlaken', name: '瑞士・因特拉肯山谷', country: '🇨🇭', base: '綠地', variant: 'light',  type: '綠地', ll: [46.686000, 7.863000], bearing: 100, scen: ['highGround'], relief: 25 }),
+  V({ id: 'matamata',   name: '紐西蘭・哈比屯綠丘草原', country: '🇳🇿', base: '綠地', variant: 'plain',  type: '綠地', ll: [-37.872000, 175.683000], bearing: 260, relief: null }),
+  V({ id: 'interlaken', name: '瑞士・因特拉肯山谷', country: '🇨🇭', base: '綠地', variant: 'light',  type: '綠地', ll: [46.686000, 7.863000], bearing: 100, scen: [], relief: null }),
   V({ id: 'kyoto',        name: '京都・嵐山竹林寺町', country: '🇯🇵', base: '綠地', variant: 'mixed',  type: '綠地', ll: [35.010032, 135.710095], bearing: 90, relief: 8 }),
   V({ id: 'taroko',       name: '太魯閣・燕子口',     country: '🇹🇼', base: '綠地', variant: 'rugged', type: '綠地', ll: [24.171200, 121.556000], bearing: 262, scen: ['tunnel', 'underpass', 'gallery', 'highGround'], relief: 371 }),
-  V({ id: 'mekong',       name: '越南・湄公河三角洲水鄉', country: '🇻🇳', base: '綠地', variant: 'swamp',  type: '綠地', ll: [10.355000, 106.350000], bearing: 140, scen: ['bridge'], relief: 2 }),
-  V({ id: 'bergen',       name: '挪威・卑爾根峽灣',   country: '🇳🇴', base: '綠地', variant: 'water',  type: '綠地', ll: [60.397000, 5.240000], bearing: 250, scen: ['bridge'], relief: 35 }),
+  V({ id: 'mekong',       name: '越南・湄公河三角洲水鄉', country: '🇻🇳', base: '綠地', variant: 'swamp',  type: '綠地', ll: [10.355000, 106.350000], bearing: 140, scen: [], relief: null }),
+  V({ id: 'bergen',       name: '挪威・卑爾根峽灣',   country: '🇳🇴', base: '綠地', variant: 'water',  type: '綠地', ll: [60.397000, 5.240000], bearing: 250, scen: [], relief: null }),
   // ---- 裸露地 ×6----
-  V({ id: 'phoenix',    name: '鳳凰城・索諾拉沙漠', country: '🇺🇸', base: '裸露地', variant: 'plain',  type: '裸露地', ll: [33.495000, -112.170000], bearing: 30, relief: 2 }),
-  V({ id: 'cappadocia', name: '土耳其・卡帕多奇亞岩原', country: '🇹🇷', base: '裸露地', variant: 'light',  type: '裸露地', ll: [38.643000, 34.829000], bearing: 25, scen: ['tunnel'], relief: 15 }),
-  V({ id: 'uluru',      name: '澳洲・烏魯魯巨岩',   country: '🇦🇺', base: '裸露地', variant: 'mixed',  type: '裸露地', ll: [-25.240662, 130.989010], bearing: 80, relief: 13 }),
+  V({ id: 'phoenix',    name: '鳳凰城・索諾拉沙漠', country: '🇺🇸', base: '裸露地', variant: 'plain',  type: '裸露地', ll: [33.495000, -112.170000], bearing: 30, relief: null }),
+  V({ id: 'cappadocia', name: '土耳其・卡帕多奇亞岩原', country: '🇹🇷', base: '裸露地', variant: 'light',  type: '裸露地', ll: [38.643000, 34.829000], bearing: 25, scen: [], relief: null }),
+  V({ id: 'uluru',      name: '澳洲・烏魯魯巨岩',   country: '🇦🇺', base: '裸露地', variant: 'mixed',  type: '裸露地', ll: [-25.240662, 130.989010], bearing: 80, relief: null }),
   V({ id: 'todra',      name: '摩洛哥・托德拉大峽谷', country: '🇲🇦', base: '裸露地', variant: 'rugged', type: '裸露地', ll: [31.550000, -5.600000], bearing: 56, scen: ['tunnel', 'highGround'], relief: 45 }),
-  V({ id: 'dubai',      name: '杜拜・火烈鳥濕地保護區', country: '🇦🇪', base: '裸露地', variant: 'swamp', type: '裸露地', ll: [25.198000, 55.310000], bearing: 45, scen: ['bridge'], relief: 4 }),
-  V({ id: 'walvisbay',  name: '納米比亞・鯨灣港沙漠海濱', country: '🇳🇦', base: '裸露地', variant: 'water',  type: '裸露地', ll: [-22.958000, 14.505000], bearing: 300, scen: ['bridge'], relief: 3 }),
+  V({ id: 'dubai',      name: '杜拜・火烈鳥濕地保護區', country: '🇦🇪', base: '裸露地', variant: 'swamp', type: '裸露地', ll: [25.198000, 55.310000], bearing: 45, scen: [], relief: null }),
+  V({ id: 'walvisbay',  name: '納米比亞・鯨灣港沙漠海濱', country: '🇳🇦', base: '裸露地', variant: 'water',  type: '裸露地', ll: [-22.958000, 14.505000], bearing: 300, scen: [], relief: null }),
   // ---- 劇情戰役(另計分類,不佔 3×6 名額;story.js 六章 venueId 錨定此六張)----
   { id: 'taipei101',  name: '台北・101 信義計畫區', country: '🇹🇼', type: '市區', story: true, ll: [25.034009, 121.563871], bearing: 190, mix: { urban: 0.85, green: 0.1, water: 0.05 }, scen: ['underBridge', 'highGround'], relief: 34 },
   { id: 'shibuya',    name: '東京・澀谷十字路口',   country: '🇯🇵', type: '市區', story: true, ll: [35.659538, 139.700442], bearing: 280, mix: { urban: 0.9, green: 0.1 }, scen: ['underBridge'], relief: 14 },
@@ -307,20 +317,10 @@ export const VENUE_LANE_KEYS = [
 export const venueLaneModes = (mapA) => (mapPlan(mapA).mode === 'story' ? ['SWARM', 'STEEL'] : [false]);
 
 /**
- * 兵線兩端**對稱剪短**到指定的兩端直線距離(真實公尺)—— 縮小尺度的縮圖手法(唯一縫)。
- *
- * 為什麼是「剪短」而不是「把座標朝中心等比縮小」:烘焙兵線的每一段都是真實道路,剪短之後
- * 剩下的仍然逐點落在同一條路上 ⇒「兵線 MUST 與現實導航路線相符」原封不動;等比縮小則是把
- * 整條路線平移離開它自己的道路(那是 `migrateFavCfg` 對**自訂**地圖已知且刻意付出的代價,
- * 沒有理由讓預設場地也吃)。
- * 付出的代價只有一個:剪短後的端點(= 兩座主堡)落在路段中間而不是 OSM 節點上。位置仍在
- * 道路中心線上,只是不保證是圖資裡的一顆頂點。
- *
- * 解法是**對稱二分搜尋**沿線內縮量 t:`d(t) = |at(t) − at(total−t)|` 隨 t 遞減(真實道路
- * 偶有回頭段,不保證嚴格,但二分在單調段上收斂、非單調時仍落在容差內)。MUST NOT 改成
- * 「按比例取中間 60% 的沿線長度」—— 那量的是**沿線**距離,而兩堡距離與地圖邊長綁的是
- * **直線**距離(蜿蜒的路剪掉一半沿線長,直線距離可能只掉兩成)。
- * 已經比目標還短的兵線原樣回傳(降級不例外)。
+ * Trim both ends along the road to a target straight-line span in real meters.
+ * Rescaling coordinates would detach the route from its archived source.
+ * The span is not arc length: winding roads need a symmetric endpoint search.
+ * New endpoints may lie inside a source edge; already-short lanes remain intact.
  */
 export function trimLaneTo(pts, targetM) {
   if (!pts || pts.length < 2 || !(targetM > 0)) return pts;
@@ -421,32 +421,21 @@ export function synthLane(a, b, side, salt = 0) {
 }
 
 /**
- * 由場地產出完整 battleConfig(免掃描、離線可用)。
- * 兵線一律取 venueLanes.js 預算好的**真實道路路線**(Overpass 路網 + 邊不相交最短路徑),
- * 每個頂點都是 OSM 道路節點 ⇒ NPC 引導路線與現實導航路線完全相符;
- * 主堡座標即該路線兩端的道路節點,兵線端點因此精確落在主堡上。
- *
- * 沒有預算資料的場地(路網不足)才退回 synthLane 合成弧 —— 這是離線/無圖資的最後防線,
- * MUST NOT 移除(見 CLAUDE.md「外部 API 皆會限流或掛掉」)。
- * 幾何:母體框架固定三線尺度(真實邊長 0.36km,兩堡距離 = 邊長 × 0.85 × √2);
- * 烘焙尺度較小的場地(僅有 L1/L2 烘焙),框架由實際兩堡距離反推(兩堡恆為對角線 85%)。
- *
- * 第三參數 = 地圖型態(見 data.js `mapPlan`;省略 = 標準戰場、劇情戰役 = 防守方 side):
- * 尺度整組乘 `mapScaleF` ⇒ 邊長 / 兩堡距離 / 重合網格一起縮。劇情戰役**有自己的
- * 一組烘焙兵線**(鍵見 `venueLaneKey` 的 `m1`):同一張圖在不同兩堡距離下,路網上
- * 走得通又合規的路徑不是同一條。烤不到的場地才退回「完整版路線兩端對稱剪短」(`trimLaneTo`)。
- * 合成弧那條路天生吃 realD,零改動。
- * 劇情戰役另外**恆為單兵線**(`laneCountFor`)—— 3v3 / 5v5 一律只取 L1 那條烘焙路線,
- * MUST NOT 拿 lanesFor(teamSize) 去查表(查到的是兩三條線,而兵線數是 STORY_MAP.LANES 定的)。
- *
- * 標準戰役**同一張圖**(2026-09-25 使用者定案):框架恆為三線母體,與人數無關 ——
- * `D/sizeM` 一律取母體尺度(`geoLanesFor`),L1 取母體中路、L2 取母體左右兩路
- * (下標見 data.js `laneSubsetFor`),L3 全開。母體來源三階:①合規 L3 烘焙 →
- * ②合規 L2 烘焙配合成中路(須再過分離稽核,不過就往下掉) → ③合成弧母體。
- * 框架(主堡/尺寸)因此不隨人數漂移;`laneIds` 記母體下標(渲染色號用),
- * `motherLanes` 存整份母體(換人數重派子集用,不進戰鬥結算)。
+ * Full battles retain one mother/frame across team sizes; active lanes are its prescribed subsets.
+ * Natural recipes retain a verified road middle and explicitly generated flanks.
+ * Diagnostic fallbacks do not imply admission: source and geometry gates decide availability.
+ * Authored story routes keep their independent distance, lane and tower policy.
  */
 export function venueConfig(venue, teamSize, mapA = false) {
+  const cfg = venueFrameConfig(venue, teamSize, mapA);
+  if (mapPlan(mapA).mode === 'full' && VENUE_NATURAL_LANES[venue.id]
+    && (!validMapSources(cfg) || !mapGeometryAudit(cfg, teamSize).ok)) {
+    return venueFrameConfig(venue, teamSize, mapA, true);
+  }
+  return cfg;
+}
+
+function venueFrameConfig(venue, teamSize, mapA, useNatural = false) {
   const plan = mapPlan(mapA);
   const L = laneCountFor(teamSize, mapA);
   if (plan.mode !== 'full') return venueStoryConfig(venue, L, mapA, plan);
@@ -457,8 +446,13 @@ export function venueConfig(venue, teamSize, mapA = false) {
 
   // 三線母體:[上, 中, 下],兩端即兩座主堡
   const baked3 = VENUE_LANES[venue.id]?.[3];
+  const natural = VENUE_NATURAL_LANES[venue.id];
   let A, B, mother, maxOverlap, synthetic, frameFromBases = false;
-  if (baked3 && bakedLanesSeparated(baked3)) {
+  if (useNatural) {
+    mother = natural.lanes.map(l => l.map(p => [...p]));
+    [A, B] = natural.bases.map(p => [...p]);
+    synthetic = true;
+  } else if (baked3 && bakedLanesSeparated(baked3)) {
     mother = baked3.lanes.map((l) => l.map((p) => [...p]));
     [A, B] = baked3.bases.map((p) => [...p]);
     maxOverlap = baked3.maxOverlap;
@@ -477,7 +471,7 @@ export function venueConfig(venue, teamSize, mapA = false) {
           [A, B] = [A2, B2];
           mother = [top, mid.map((p) => [...p]), bot];
           maxOverlap = baked2.maxOverlap;
-          synthetic = false;
+          synthetic = true;
           frameFromBases = true;   // 烘焙尺度主堡配母體公式邊長會跌破兩堡 80% 門檻 ⇒ 邊長由實際兩堡距離反推
           break;
         }
@@ -493,7 +487,7 @@ export function venueConfig(venue, teamSize, mapA = false) {
           [A, B] = [A1, B1];
           mother = cand;
           maxOverlap = baked1.maxOverlap;
-          synthetic = false;
+          synthetic = true;
           frameFromBases = true;
         }
       }
@@ -511,7 +505,7 @@ export function venueConfig(venue, teamSize, mapA = false) {
   // distM 用實際兩堡距離(預算路線的端點吸附到道路節點,與理想值有數十公尺差)
   const distGame = distMeters(A, B) / MAPGEO.REAL_SCALE;
   const sizeMUse = frameFromBases ? distGame / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2) : sizeM;
-  return {
+  return settleMapMetrics({
     // rot = 地圖主方位(弧度):把整張地圖轉這麼多度,該場地的大馬路就對齊世界軸
     // (2026-08-10 使用者定案)。離線烘焙的表沒有這個場地 ⇒ 0 = 不旋轉 = 逐位元同舊制。
     // **旋轉是投影的一部分**(見 data.js llToXZ),隨 battleConfig 廣播全房 ⇒ 兩端同一個世界。
@@ -521,6 +515,9 @@ export function venueConfig(venue, teamSize, mapA = false) {
     laneCount: L,
     laneIds: [...sub],
     motherLanes: mother.map((l) => l.map((p) => [...p])),
+    mapRuleVersion: MAP_RULE_VERSION, roadMode: useNatural ? 'natural-hybrid' : 'real',
+    roadSources: useNatural ? structuredClone(natural.roadSources) : venueLaneSources(venue.id, mother),
+    roadTerrain: structuredClone(useNatural ? natural.roadTerrain : VENUE_ROAD_TERRAIN[venue.id]?.[3] || null),
     sizeM: sizeMUse, diagM: sizeMUse * Math.SQRT2, distM: distGame,   // 全為遊戲世界公尺
     geoScaleVer: MAPGEO.GEO_SCALE_VER,
     maxOverlap,
@@ -534,7 +531,24 @@ export function venueConfig(venue, teamSize, mapA = false) {
     // 劇情戰役:防守方(BOSS 方)陣營 id。同樣 MUST 隨 battleConfig 廣播 —— 塔位是非對稱的,
     // 少一台知道就少一台把敵方的兩座塔建在同一個地方。一般對戰恆 null ⇒ 一切推導同舊制。
     defSide: plan.def,
-  };
+  });
+}
+
+function venueLaneSources(id, lanes) {
+  const proofs = [...Object.values(VENUE_ROAD_EVIDENCE[id] || {}).flat(),
+    ...Object.values(VENUE_LANES[id] || {}).flatMap(entry => entry.roadSources || [])];
+  const baked = Object.values(VENUE_LANES[id] || {}).flatMap(entry => entry.lanes);
+  return lanes.map(lane => {
+    const hash = laneFingerprint(lane), proof = proofs.find(p => p.laneHash === hash);
+    if (proof) return structuredClone(proof);
+    if (baked.some(raw => laneFingerprint(raw) === hash)) return { version: ROAD_EVIDENCE_VERSION, kind: 'unverified', laneHash: hash };
+    return syntheticLaneEvidence(lane);
+  });
+}
+
+export function venueAvailability(venue, teamSize = 5) {
+  const cfg = venueConfig(venue, teamSize), audit = mapGeometryAudit(cfg, teamSize), sources = roadSourceSummary(cfg);
+  return { available: audit.ok && validMapSources(cfg), cfg, audit, sources };
 }
 
 /**
@@ -576,7 +590,7 @@ function venueStoryConfig(venue, L, mapA, plan) {
   }
   // distM 用實際兩堡距離(預算路線的端點吸附到道路節點,與理想值有數十公尺差)
   const distGame = distMeters(A, B) / MAPGEO.REAL_SCALE;
-  return {
+  return settleMapMetrics({
     // rot = 地圖主方位(弧度):把整張地圖轉這麼多度,該場地的大馬路就對齊世界軸
     // (2026-08-10 使用者定案)。離線烘焙的表沒有這個場地 ⇒ 0 = 不旋轉 = 逐位元同舊制。
     // **旋轉是投影的一部分**(見 data.js llToXZ),隨 battleConfig 廣播全房 ⇒ 兩端同一個世界。
@@ -585,6 +599,8 @@ function venueStoryConfig(venue, L, mapA, plan) {
     lanes,
     laneCount: L,
     laneIds: lanes.map((_, i) => i),   // 劇情單線無母體,下標即自身
+    mapRuleVersion: MAP_RULE_VERSION, roadMode: 'story-baked', roadSources: venueLaneSources(venue.id, lanes),
+    roadTerrain: structuredClone(VENUE_ROAD_TERRAIN[venue.id]?.m1 || null),
     sizeM, diagM: sizeM * Math.SQRT2, distM: distGame,   // 全為遊戲世界公尺
     geoScaleVer: MAPGEO.GEO_SCALE_VER,
     maxOverlap,
@@ -598,43 +614,19 @@ function venueStoryConfig(venue, L, mapA, plan) {
     // 劇情戰役:防守方(BOSS 方)陣營 id。同樣 MUST 隨 battleConfig 廣播 —— 塔位是非對稱的,
     // 少一台知道就少一台把敵方的兩座塔建在同一個地方。一般對戰恆 null ⇒ 一切推導同舊制。
     defSide: plan.def,
-  };
+  });
 }
 
-/**
- * 尺度追溯:把舊尺度(geoScaleVer 不符)的最愛 cfg 遷移到目前尺度。
- *  - 已知預設場地 → 直接以新尺度 venueConfig 重算(最精確,且拿得到新的真實道路兵線)。
- *  - 自訂地圖 → 真實座標朝中心等比收縮,使兩堡真實距離對上新尺度的 realDistFor(L);
- *    遊戲世界幾何(邊長/對角/兩堡距離比例)因此完全符合新公式。
- *    收縮比由「新舊實際距離」推導,**MUST NOT** 寫死倍率:ver3→ver4 動的是 REAL_SCALE,
- *    ver4→ver5 動的是邊長公式,寫死 0.5 只對前者成立。
- *    代價:收縮後的自訂兵線不再精確貼合現實道路(預設場地不受影響,它們是重算的)。
- */
+/** Rebuild outdated known presets; custom recipes must be regenerated without moving their roads. */
 export function migrateFavCfg(fav) {
   const cfg = fav.cfg;
   if (!cfg) return cfg;
-  if (cfg.geoScaleVer === MAPGEO.GEO_SCALE_VER) return cfg;
-  // 地圖只剩一種:舊最愛的 mini 旗標不再解讀,一律按標準戰場重算(幾何逐位元相同)。
-  if (cfg.venue?.id) {
-    const v = VENUES.find((x) => x.id === cfg.venue.id);
-    if (v) return venueConfig(v, fav.teamSize);
-  }
-  const L = lanesFor(fav.teamSize);
-  const D = targetDistFor(L);
-  const realNow = D * MAPGEO.REAL_SCALE;
-  const realOld = distMeters(cfg.bases.SWARM, cfg.bases.STEEL);
-  const s = realOld > 1 ? realNow / realOld : 1;
-  const c = cfg.center;
-  const sc = ([lat, lng]) => [c.lat + (lat - c.lat) * s, c.lng + (lng - c.lng) * s];
-  const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
-  return {
-    ...cfg,
-    bases: { SWARM: sc(cfg.bases.SWARM), STEEL: sc(cfg.bases.STEEL) },
-    lanes: cfg.lanes.map((lane) => lane.map(sc)),
-    laneCount: L,
-    sizeM, diagM: sizeM * Math.SQRT2, distM: D,
-    geoScaleVer: MAPGEO.GEO_SCALE_VER,
-  };
+  const venue = VENUES.find(v => v.id === cfg.venue?.id);
+  if (cfg.geoScaleVer === MAPGEO.GEO_SCALE_VER && cfg.mapRuleVersion === MAP_RULE_VERSION
+    && (!venue || cfg.gen || validMapSources(cfg))) return cfg;
+  if (venue && !cfg.gen) return venueConfig(venue, fav.teamSize);
+  // Rescaling custom coordinates would detach their archived road evidence.
+  return cfg;
 }
 
 // ---- 我的最愛(localStorage,存完整 battleConfig)----

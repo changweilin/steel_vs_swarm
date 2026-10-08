@@ -29,6 +29,9 @@ import {
   weaponMaxHoriz, inWeaponRange,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT, FLY_Y, PUSH_EPS, baseCollideR,
   weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor, fogSightMult,
+  weatherFlightSlowFactor, weatherGroundSlowFactor, unbalAltThreshold, weatherAccuracyPenalty, weatherMissP,
+  weatherFlightAttackRateFactor, weatherGroundAttackRateFactor, weatherSurfaceCover, WEATHER_FREEZE,
+  clockHour, computeSolarSchedule,
   FIRE_WEATHER, fireDotMul,
   SCENE_STRUCT, sceneIsPhysical, sceneIsVehicle, sceneIsEV, sceneHpFor, sceneArmorFor, sceneFireTtl, sceneVehicleFireTtl,
   wrapPi, bloodScreenUv, botFovHalf, botFovVerticalHalf,
@@ -288,6 +291,8 @@ export class BattleSim {
     this.startTime = env.time || 'day';
     this.startWeather = env.weather || 'clear';
     this.latDeg = this.center?.lat ?? 25.0;
+    this.lunarDay = env.lunarDay ?? 15;
+    this.sched = computeSolarSchedule(this.startSeason, this.latDeg, 0, this.lunarDay);
     this.weatherSeed = Math.round((this.center?.lat ?? 0) * 1e4) * 31 + Math.round((this.center?.lng ?? 0) * 1e4);
     this.curWeatherVec = weatherVectorAt(this.startSeason, this.startTime, this.startWeather, 0, this.weatherSeed, this.latDeg);
     this.curWeatherDyn = resolveWeatherDynamics(this.curWeatherVec);
@@ -2148,7 +2153,7 @@ export class BattleSim {
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
     if ((h.phaseUntil || 0) > now) return false;                   // 相位狀態下無法開火
     if (h.cast || (h.castLockUntil || 0) > now) return false;      // 招式施展前搖期間鎖定武器開火
-    const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+    const sandMul = this._sandAttackRateMul(h);
     const rateMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_RATE_F : 1) * sandMul;
     const defRateMul = (h.defending && (h.sp || 0) > 0) ? 0.5 : 1;
     if (now - (h.fireAt[id] || 0) < 1 / (def.rate * rateMul * defRateMul * (lenient ? 1.5 : 1))) return false;
@@ -2488,11 +2493,33 @@ export class BattleSim {
     return e.kind === 'drone' || (e.kind === 'morph' && (e.y || 0) > MORPH.GROUND_Y) || (e.y || 0) >= GAME.AA_MIN_ALT;
   }
 
+  /** 實體是否為空中單位 (飛行機體、大跳滯空、直升機或 TARGET_CLASS 为 air) */
+  _isAirEnt(e) {
+    if (!e) return false;
+    if (this._isFlyingHero(e)) return true;
+    if (e.hero && airUnit(e.kind, e.y)) return true;
+    if (e.kind === 'heli' || TARGET_CLASS[e.kind] === 'air' || (e.y || 0) > 0) return true;
+    return false;
+  }
+
+  /** Dune/sand attack rate multiplier: airborne units scale by airborne sand (up to -25%), ground units by dune cover (up to -25%) */
+  _sandAttackRateMul(e) {
+    if (this._isAirEnt(e)) {
+      return this.curWeatherDyn ? weatherFlightAttackRateFactor(this.curWeatherDyn) : 1;
+    }
+    return weatherGroundAttackRateFactor(this.weatherSurface);
+  }
+
+  _unbalAltThreshold() {
+    return unbalAltThreshold(this.curWeatherDyn?.wind ?? 0);
+  }
+
   /** 受擊失衡戳記(2026-09-01 飛行機體跌落到穩住期間;持盾減輕失衡。
    *  大跳躍滯空被攻擊同樣進入失衡(airUnit 判定:蓄力跳高過一般跳躍頂點的區間)。
-   *  無人機低空飛行(離地低於砲塔高 TARGET_H.tower)不失衡:貼地突防不吃跌落懲罰。 */
+   *  Drones flying low (below _unbalAltThreshold) do not destabilize: low-altitude runs bypass stall penalty.
+   *  In strong wind, threshold drops to 0.5 tower height, increasing unbalance vulnerability. */
   _stampUnbal(t, factor = 1) {
-    if (t && t.kind === 'drone' && (t.y || 0) < TARGET_H.tower) return;
+    if (t && t.kind === 'drone' && (t.y || 0) < this._unbalAltThreshold()) return;
     if (!this._isFlyingHero(t) && !airUnit(t.kind, t.y)) return;
     const f = t._unbalFactor ?? factor;
     t._unbalFactor = null;
@@ -2505,14 +2532,21 @@ export class BattleSim {
     return !!(e && (e.unbalUntil || 0) > this.t);
   }
 
+  _weatherAccuracyPenalty() {
+    const dyn = this.curWeatherDyn;
+    const h = clockHour(this.startTime, this.t, this.sched?.startH);
+    return weatherAccuracyPenalty(dyn?.effectiveFog ?? 0, h, this.sched);
+  }
+
   /**
-   * 這一發打不中的機率 = 目標閃避 ⊕ **射手**被高地壓制而失準 ⊕ 射手受擊失衡(獨立事件,見 data.highSupMissP, unbalMissP)。
+   * Miss probability = target evasion + shooter suppressed + shooter unbalanced + weather/night miss (independent events).
    * 伺服器只擲一顆骰 ⇒ 兩條路徑(`_dodges` 與 `_blast`)MUST 都經這一支;
    * 而閃避補償 `evadeCompF` 的分母 MUST 仍只吃 `_dodgeP`(壓制不在「維持 DPS」那個帳裡,A45 ⑦)。
    */
   _missP(t, shooter) {
     const p = highSupMissP(this._dodgeP(t, shooter), this._supF(shooter));
-    return unbalMissP(p, this._isUnbalanced(shooter));
+    const unbalP = unbalMissP(p, this._isUnbalanced(shooter));
+    return weatherMissP(unbalP, this._weatherAccuracyPenalty());
   }
 
   /** 擲骰。`p > 0` 的短路 MUST 留著:不合格的目標**不消耗亂數**(與拆成 _dodgeP 之前逐位元同流) */
@@ -4613,7 +4647,7 @@ export class BattleSim {
           if (d <= wp.def.range) {
             c.ry = Math.atan2(-(target.x - c.x), target.z - c.z);
             if (c.cd === 0) {
-              const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+              const sandMul = this._sandAttackRateMul(c);
               const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
               c.cd = 1 / ((wp.def.rate || 3) * sandMul);
               const dmg = this._rollCrit(c, wp.def, this._heroDmg(h, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul, target);
@@ -4629,8 +4663,10 @@ export class BattleSim {
           }
           // 接敵:推進到射程 85% 處
           const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
-          const windMul = this.curWeatherDyn ? windSpeedFactor(target.x - c.x, target.z - c.z, wDir, this.curWeatherDyn.wind) : 1;
-          const moveD = Math.min((h.speed || 21) * windMul * dt, d - wp.def.range * 0.85);
+          const isFlying = this._isFlyingHero(h);
+          const windMul = (isFlying && this.curWeatherDyn) ? windSpeedFactor(target.x - c.x, target.z - c.z, wDir, this.curWeatherDyn.wind) : 1;
+          const weatherSpeedMul = isFlying ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1) : weatherGroundSlowFactor(this.weatherSurface);
+          const moveD = Math.min((h.speed || 21) * windMul * weatherSpeedMul * dt, d - wp.def.range * 0.85);
           if (moveD > 0) {
             this._placeSolid(c, c.x + ((target.x - c.x) / d) * moveD, c.z + ((target.z - c.z) / d) * moveD);
             c.ry = Math.atan2(-(target.x - c.x), target.z - c.z);
@@ -4643,8 +4679,10 @@ export class BattleSim {
         const od = dist2d(c.x, c.z, targetX, targetZ);
         if (od > 6) {
           const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
-          const windMul = this.curWeatherDyn ? windSpeedFactor(targetX - c.x, targetZ - c.z, wDir, this.curWeatherDyn.wind) : 1;
-          const moveD = Math.min((h.speed || 21) * windMul * dt, od - 4);
+          const isFlying = this._isFlyingHero(h);
+          const windMul = (isFlying && this.curWeatherDyn) ? windSpeedFactor(targetX - c.x, targetZ - c.z, wDir, this.curWeatherDyn.wind) : 1;
+          const weatherSpeedMul = isFlying ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1) : weatherGroundSlowFactor(this.weatherSurface);
+          const moveD = Math.min((h.speed || 21) * windMul * weatherSpeedMul * dt, od - 4);
           if (moveD > 0) {
             this._placeSolid(c, c.x + ((targetX - c.x) / od) * moveD, c.z + ((targetZ - c.z) / od) * moveD);
           }
@@ -4937,7 +4975,7 @@ export class BattleSim {
         if (d <= (dec.range || wp.def.range)) {
           dec.ry = Math.atan2(-(target.x - dec.x), target.z - dec.z);
           if (dec.cd === 0) {
-            const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+            const sandMul = this._sandAttackRateMul(dec);
             const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
             dec.cd = 1 / ((dec.rate || wp.def.rate || 3) * sandMul);
             const dmg = this._heroDmg(owner, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul * this._holoDecoyDmgF();
@@ -5115,7 +5153,7 @@ export class BattleSim {
         const d = dist2d(s.x, s.z, target.x, target.z);
         if (d <= s.range) {
           if (s.cd === 0) {
-            const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+            const sandMul = this._sandAttackRateMul(s);
             const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
             s.cd = 1 / ((s.rate || 0.8) * sandMul);
             const wd = s.wid ? WEAPONS[s.wid] : null;
@@ -5131,8 +5169,10 @@ export class BattleSim {
         } else {
           // 向目標移動
           const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
-          const windMul = this.curWeatherDyn ? windSpeedFactor(target.x - s.x, target.z - s.z, wDir, this.curWeatherDyn.wind) : 1;
-          const moveD = Math.min(s.speed * windMul * dt, d - s.range * 0.85);
+          const isAir = TARGET_CLASS[s.kind] === 'air' || (s.y || 0) > 0;
+          const windMul = (isAir && this.curWeatherDyn) ? windSpeedFactor(target.x - s.x, target.z - s.z, wDir, this.curWeatherDyn.wind) : 1;
+          const weatherSpeedMul = isAir ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1) : weatherGroundSlowFactor(this.weatherSurface);
+          const moveD = Math.min(s.speed * windMul * weatherSpeedMul * dt, d - s.range * 0.85);
           if (moveD > 0) {
             this._placeSolid(s, s.x + ((target.x - s.x) / d) * moveD, s.z + ((target.z - s.z) / d) * moveD);
           }
@@ -5144,8 +5184,10 @@ export class BattleSim {
         const od = dist2d(s.x, s.z, targetX, targetZ);
         if (od > 6) {
           const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
-          const windMul = this.curWeatherDyn ? windSpeedFactor(targetX - s.x, targetZ - s.z, wDir, this.curWeatherDyn.wind) : 1;
-          const moveD = Math.min(s.speed * windMul * dt, od - 4);
+          const isAir = TARGET_CLASS[s.kind] === 'air' || (s.y || 0) > 0;
+          const windMul = (isAir && this.curWeatherDyn) ? windSpeedFactor(targetX - s.x, targetZ - s.z, wDir, this.curWeatherDyn.wind) : 1;
+          const weatherSpeedMul = isAir ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1) : weatherGroundSlowFactor(this.weatherSurface);
+          const moveD = Math.min(s.speed * windMul * weatherSpeedMul * dt, od - 4);
           this._placeSolid(s, s.x + ((targetX - s.x) / od) * moveD, s.z + ((targetZ - s.z) / od) * moveD);
         }
       }
@@ -5875,6 +5917,10 @@ export class BattleSim {
     if (t.sq?.boss && (t.sq.bossSeg || 0) >= 3 && (!by || !by.hero)) {
       dmg *= BOSS.ENRAGE_NPC_DMG_F;                // 狂暴模式:受到兵波NPC/砲塔/主堡的傷害減少至25%
     }
+    // Weather freeze: 75% damage reduction during freeze
+    if ((t.freezeUntil || 0) > this.t) {
+      dmg *= (1.0 - WEATHER_FREEZE.DMG_REDUCTION);
+    }
     if (t.gar) return;                             // 駐守碉堡中的第三方步槍兵:碉堡保護,免傷
     if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
     if (t.hero && (t.phaseUntil || 0) > this.t) return; // 相位穿梭(超維步):完全無敵
@@ -6046,11 +6092,11 @@ export class BattleSim {
    */
   _botAirSink(t, dealt) {
     if (!t.hero || !isBotId(t.pid) || !(dealt > 0)) return;
-    // 掉高歸類於失衡效果:無人機低空飛行(離地低於砲塔高)不失衡 ⇒ 也不掉高(與 _stampUnbal 同判)
-    if (t.kind === 'drone' && (t.y || 0) < TARGET_H.tower) return;
+    // 掉高歸類於失衡效果:無人機低空飛行(離地低於門檻)不失衡 ⇒ 也不掉高(與 _stampUnbal 同判)
+    if (t.kind === 'drone' && (t.y || 0) < this._unbalAltThreshold()) return;
     const flying = t.kind === 'drone' || (t.kind === 'morph' && (t.y || 0) > MORPH.GROUND_Y);
     if (!flying) return;
-    t.y = Math.max(0, (t.y || 0) - airSinkM(dealt));
+    t.y = Math.max(0, (t.y || 0) - airSinkM(dealt, this.curWeatherDyn?.wind ?? 0));
   }
 
   /**
@@ -6431,6 +6477,38 @@ export class BattleSim {
     const dyn = this.curWeatherDyn;
     this.weatherSurface = stepWeatherSurface(this.weatherSurface, dyn, dt);
     for (const entity of this.ents.values()) clearLightningScorch(entity, this.t);
+
+    // Snow/snowfall causes probabilistic freezing for ground/air units (up to 2s every 30s)
+    const effSnow = dyn?.effectiveSnow ?? 0;
+    const snowCover = weatherSurfaceCover(this.weatherSurface?.snow);
+    if (effSnow > 0 || snowCover > 0) {
+      const stepIdx = Math.floor(this.t); // Test once per second
+      if (this._lastSnowFreezeStep !== stepIdx) {
+        this._lastSnowFreezeStep = stepIdx;
+        let seed = ((this.weatherSeed ^ (stepIdx * 0x85ebca6b)) >>> 0);
+        for (const e of this.ents.values()) {
+          if (e.dead || e.inv || e.hp <= 0) continue;
+          if (e.kind === 'mapbuilding' || e.isTree || e.isMoon || e.isSlab) continue;
+          if (this.t - (e._lastFreezeAt || -WEATHER_FREEZE.COOLDOWN_S) < WEATHER_FREEZE.COOLDOWN_S) continue;
+
+          const isAir = this._isAirEnt(e);
+          const prob = isAir ? effSnow * 0.05 : snowCover * 0.05; // 5% baseline x snow intensity/cover per second
+          if (prob <= 0) continue;
+
+          seed = ((seed + 0x6D2B79F5) | 0);
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          const roll = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+
+          if (roll < prob) {
+            e.freezeUntil = this.t + WEATHER_FREEZE.DUR_S;
+            e._lastFreezeAt = this.t;
+            this.events.push({ e: 'freeze', id: e.id, pid: e.pid, x: e.x, z: e.z });
+          }
+        }
+      }
+    }
+
     if (!dyn || dyn.effectiveThunder <= 0) {
       this._lightningTimer = 0;
       return;
@@ -6476,6 +6554,7 @@ export class BattleSim {
             const targetRoll = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
             const idx = Math.floor(targetRoll * candidates.length);
             const target = candidates.splice(idx, 1)[0];
+            this.strikes = strikes;
             this._damage(target, cfg.BASE_DMG, null, cfg.PEN);
             if (target.neutral && !UNITS[target.kind]) {
               const ground = this._hgtAt(target.x, target.z);
@@ -6484,12 +6563,47 @@ export class BattleSim {
               target.lightningScorch = { hp: target.hp, states: lightningStatus(target, this.t) };
             }
             strikes.push({ id: target.id, x: target.x, y: (target.y || 0) + hitH(target), z: target.z, kind: target.kind });
+            this._lightningShockwave(target.x, target.z, target.id);
           }
           if (strikes.length > 0) {
             this.events.push({ e: 'lightning_strike', pts: strikes });
           }
         }
         this._strikeWeatherSurface(mulberry32((this.weatherSeed ^ stepIdx ^ 0x57ea7) >>> 0));
+      }
+    }
+  }
+
+  _lightningShockwave(sx, sz, directTargetId = null) {
+    const cfg = WEATHER_DEBUFFS.LIGHTNING;
+    const r = cfg.SHOCK_R || 18;
+    const maxDmg = cfg.SHOCK_DMG || 18;
+    const maxImp = cfg.SHOCK_IMP || 14;
+
+    for (const e of this.ents.values()) {
+      if (e.dead || e.inv || (e.hp <= 0 && (e.sp || 0) <= 0)) continue;
+      // Direct hit scorches without knockback and avoids double damage from shockwave
+      if (directTargetId != null && e.id === directTargetId) continue;
+      const d = Math.hypot(e.x - sx, e.z - sz);
+      if (d > r) continue;
+
+      const frac = 1.0 - d / r; // Attenuates with distance
+      const dmg = maxDmg * frac;
+      this._damage(e, dmg, null, 0);
+
+      // Shockwave displacement impulse
+      const dist = Math.max(0.1, d);
+      const nx = (e.x - sx) / dist;
+      const nz = (e.z - sz) / dist;
+      const imp = maxImp * frac;
+
+      if (e.hero && !isBotId(e.pid)) {
+        this.events.push({ e: 'cc', k: 'shockwave', x: sx, z: sz, tpid: e.pid, imp });
+      } else {
+        const pushDist = imp * 0.35;
+        const [px, pz] = this.solidResolve ? this.solidResolve(e, e.x, e.z, e.x + nx * pushDist, e.z + nz * pushDist, (e.y || 0) > 5) : [e.x + nx * pushDist, e.z + nz * pushDist];
+        e.x = px;
+        e.z = pz;
       }
     }
   }
@@ -6518,6 +6632,7 @@ export class BattleSim {
     const r = WEATHER_SURFACE.strikeR;
     this._markWeatherScorch(x, y, z);
     this.events.push({ e: 'lightning_strike', pts: [{ x, y, z, absolute: true }] });
+    this._lightningShockwave(x, z, null);
     if (object || lightningFireWet(this.curWeatherDyn) || (this._fires?.length || 0) >= 40) return;
     const ring = [[x-r,z],[x+r,z],[x,z-r],[x,z+r]];
     if (ring.some(([sx,sz]) => sx < b.minX || sx > b.maxX || sz < b.minZ || sz > b.maxZ || this._wetAt(sx,sz) || this._slabLevAt(sx,sz))) return;
@@ -6688,7 +6803,7 @@ export class BattleSim {
         // `u.guns`(主堡)在這裡**不開火**:2026-08-13 起它的兩把武器已合併成一把,
         // 開火路徑只剩 `_tickBaseGuns` 一條(合併卻留著本體那一支 = 又變回兩把)。
         if (e.cd === 0 && !u.guns && !((e.empUntil || 0) > this.t)) {
-          const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+          const sandMul = this._sandAttackRateMul(e);
           const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
           e.cd = 1 / (u.rate * sandMul);
           // 塔/主堡是制式火砲:沒有 `wid` ⇒ 舊制 wd 為 undefined = 既不可閃也不爆風。
@@ -6776,6 +6891,7 @@ export class BattleSim {
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
     b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.blindUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
+    b.freezeUntil = 0; b._lastFreezeAt = -WEATHER_FREEZE.COOLDOWN_S;
     b.supUntil = 0; b.supF = 0;   // 高地壓制:重生一律清乾淨(同上列控場狀態)
     if (soloWipe) {
       b.mp = b.maxMp;
@@ -7435,7 +7551,7 @@ export class BattleSim {
       if (e.gunCd[i] > 0) continue;
       const target = this._acquireTarget(e, gu);
       if (!target) continue;
-      const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+      const sandMul = this._sandAttackRateMul(e);
       const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
       e.gunCd[i] = 1 / (g.rate * sandMul);
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
@@ -7601,7 +7717,8 @@ export class BattleSim {
       if ((e.confUntil || 0) > this.t) sf *= -0.5;
     }
     let windMul = 1;
-    if (this.curWeatherDyn && this.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
+    const isAir = TARGET_CLASS[e.kind] === 'air' || e.kind === 'heli';
+    if (isAir && this.curWeatherDyn && this.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
       const d0 = e.side === 'SWARM' ? (e.prog ?? 0) : total - (e.prog ?? 0);
       let i = 1;
       while (cum[i] < d0 && i < cum.length - 1) i++;
@@ -7610,7 +7727,10 @@ export class BattleSim {
       const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
       windMul = windSpeedFactor(ldx * dirSign, ldz * dirSign, wDir, this.curWeatherDyn.wind);
     }
-    if (!hold && sf !== 0) e.prog = Math.max(0, (e.prog ?? 0) + u.speed * sf * windMul * dt);
+    const weatherSpeedMul = isAir
+      ? (this.curWeatherDyn ? weatherFlightSlowFactor(this.curWeatherDyn) : 1)
+      : weatherGroundSlowFactor(this.weatherSurface);
+    if (!hold && sf !== 0) e.prog = Math.max(0, (e.prog ?? 0) + u.speed * sf * windMul * weatherSpeedMul * dt);
     const d = e.side === 'SWARM' ? e.prog : total - e.prog;
     const [x, z] = pointAt(pts, cum, Math.max(0, Math.min(total, d)));
     // 平滑靠攏路徑(保留生成時的隊形抖動,不瞬移)
@@ -7757,6 +7877,7 @@ export class BattleSim {
       if (this._supF(e) > 0) { o.hs = Math.round((e.supUntil - this.t) * 100) / 100; o.hsf = Math.round(e.supF * 100) / 100; }
       if ((e.markUntil || 0) > this.t) o.mk = Math.round((e.markUntil - this.t) * 10) / 10;
       if ((e.unbalUntil || 0) > this.t) o.ub = Math.round((e.unbalUntil - this.t) * 10) / 10;
+      if ((e.freezeUntil || 0) > this.t) o.fz = Math.round((e.freezeUntil - this.t) * 10) / 10;
       if (e.bleed && e.bleed.until > this.t) o.bl = Math.round((e.bleed.until - this.t) * 10) / 10;
       if ((e.invUntil || 0) > this.t) o.iv = Math.round((e.invUntil - this.t) * 10) / 10;   // 無敵幀
       if (e.cast && (e.cast.start + e.cast.dur > this.t)) o.cst = Math.round((e.cast.start + e.cast.dur - this.t) * 10) / 10;
@@ -7776,6 +7897,7 @@ export class BattleSim {
       if (this._supF(e) > 0) { o.hs = Math.round((e.supUntil - this.t) * 100) / 100; o.hsf = Math.round(e.supF * 100) / 100; }
       if ((e.markUntil || 0) > this.t) o.mk = Math.round((e.markUntil - this.t) * 10) / 10;
       if ((e.unbalUntil || 0) > this.t) o.ub = Math.round((e.unbalUntil - this.t) * 10) / 10;
+      if ((e.freezeUntil || 0) > this.t) o.fz = Math.round((e.freezeUntil - this.t) * 10) / 10;
       if (e.bleed && e.bleed.until > this.t) o.bl = Math.round((e.bleed.until - this.t) * 10) / 10;
     }
     return o;

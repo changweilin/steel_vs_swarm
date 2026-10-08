@@ -152,5 +152,5 @@ export function parseOsmFeatureElements(elements = []) {
 export function osmRoadsFromElements(elements = []) {
   return (Array.isArray(elements) ? elements : [])
     .filter((el) => el?.type === 'way' && el.geometry && el.tags?.highway)
-    .map((el) => ({ tags: el.tags, geometry: el.geometry }));
+    .map((el) => ({ id: el.id, nodes: el.nodes, tags: el.tags, geometry: el.geometry }));
 }

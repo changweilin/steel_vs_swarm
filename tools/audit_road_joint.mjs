@@ -46,6 +46,7 @@
 //    `audit_underpass`。把它們寫成假斷言會讓「這裡有人在守」變成一句謊。
 import { readSrc } from './audit_src.mjs';
 import { PED_PLAN, isPedestrianWay } from '../public/js/pedestrian.js';
+import { ROAD_LANE_M, taggedRoadLanes, observedRoadWidth } from '../public/js/roadLaneEvidence.js';
 
 let src = readSrc('public', 'js', 'biomes.js');
 const breakJunctionMark = process.argv.includes('--break-junction-mark');
@@ -74,9 +75,9 @@ const slice = (a, b, what) => {
 const widthSrc = slice('const ROAD_W = {', '};', 'ROAD_W') + '};\n'
   + /const PASS_W = \d+(\.\d+)?;/.exec(src)[0] + '\n'
   + slice('function roadWidth(tags) {', '// 路面顏色(cel-shaded)', 'roadWidth…flareHw');
-const W = new Function('PED_PLAN', 'isPedestrianWay', `${widthSrc}
+const W = new Function('PED_PLAN', 'isPedestrianWay', 'ROAD_LANE_M', 'taggedRoadLanes', 'observedRoadWidth', `${widthSrc}
   return { ROAD_W, PASS_W, roadWidth, strucHw, carriageHw, flareHw, ROAD_FLARE_M };`)(
-  PED_PLAN, isPedestrianWay);
+  PED_PLAN, isPedestrianWay, ROAD_LANE_M, taggedRoadLanes, observedRoadWidth);
 
 // 圖資 tag 樣本:ROAD_W 全家族 × lanes 變體(含把 base 撐過 PASS_W 的多車道)
 const TAGS = [];
@@ -156,14 +157,14 @@ console.log('Ⅲ 標線消費端單一縫 + 橋隧同款風格(原文)');
   ok(/if \(strc \|\| brg\) biome = 'urban';/.test(src), 'Ⅲ 橋與隧道 MUST 同款定調柏油(工程結構物無土石路面)');
   ok(/if \(!strc && !brg && main && lamps\.length < 380\) \{/.test(src),
     'Ⅲ 地面路燈 MUST 仍排除橋與隧道(橋有橋燈、洞有天花燈)');
-  ok(/\} else if \(!brg && !strc && \(biome === 'green' \|\| biome === 'wet'\)/.test(src),
+  ok(/\} else if \(!brg && !strc && \(biome === 'green' \|\| biome === 'wet' \|\| wetRoadside\)/.test(src),
     'Ⅲ 行道樹 MUST 仍排除橋與隧道');
 }
 
 console.log('Ⅳ 銜接漸縮帶(行為直測:執行原文區塊)');
 {
   const flareSrc = slice('      // ---- 銜接漸縮帶(2026-07-30 使用者需求「接合處貼合」)----',
-    '\n      const at = (d) => {', '漸縮帶區塊');
+    '\n      const at = (', '漸縮帶區塊');
   ok(/flareHw\(hw, laneHw, t\)/.test(flareSrc), 'Ⅳ 漸縮半寬 MUST 由 flareHw(hw → 車道寬)推導');
   ok((src.match(/flareHw\(/g) || []).length === 1, 'Ⅳ flareHw MUST 只有一個消費端(漸縮帶;邊帶吃同一個 fhw,MUST NOT 自己再算一次)');
   for (const bad of ['decks.push', 'tunnelSegs.push', 'cols.push', 'corridors.push', 'blockArea(', 'rnd('])
@@ -362,9 +363,9 @@ console.log('\nⅧ 路口／槽化標線裁切');
   const build = slice('function buildRoads(', '  // ---- 路口:斑馬線', 'buildRoads 標線段');
   ok(build.indexOf('for (const way of roads) {') < build.indexOf('let built = 0;'),
     '路口臂 MUST 在鋪路前完整預掃，前段道路才能知道後段交叉臂');
-  ok(/const same = rec\.dirs\.findIndex\([^\n]+> 0\.92\);/.test(build)
+  ok(/const same = rec\.dirs\.findIndex\([^\n]+> 1 - 1e-8\);/.test(build)
     && /rec\.arms = rec\.dirs\.length;/.test(build),
-  '重複同向臂 MUST 合併後再判路口，避免假路口與重複斑馬線');
+  'Coincident arms merge, while acute bends retain two distinct approaches');
   ok(/return dropXZ\(x, z\) \|\| inJunctionMarkCut\(x, z\);/.test(build),
     '實線 MUST 在路口填面前截斷，不得穿過斑馬線');
   ok(/inJunctionMarkCut\(ax0, az0\) \|\| inJunctionMarkCut\(bx0, bz0\)/.test(build),

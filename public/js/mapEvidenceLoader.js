@@ -12,7 +12,8 @@ function decodeBase64(value) {
 }
 
 export async function loadVenueEvidence(cfg) {
-  const id = cfg.venue?.id;
+  if (cfg.gen?.mode === 'random') return null;
+  const id = cfg.gen?.mode === 'mixed' ? cfg.gen.layers?.surface?.id : cfg.venue?.id;
   if (!/^[a-z0-9_-]+$/.test(id || '')) return null;
   if (!manifestPromise) manifestPromise = fetch(manifestURL, { signal: AbortSignal.timeout(10000) })
     .then(r => r.ok ? r.json() : null).catch(() => null);

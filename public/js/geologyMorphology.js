@@ -12,13 +12,15 @@ export const GEOLOGY_MORPHOLOGIES = Object.freeze(Object.fromEntries(Object.entr
   karst: ['dissolution-ridges'], cliff: ['fault-scarp'],
 }).map(([type, families]) => [type, Object.freeze(families)])));
 
-export function geologyMorphology(type, seed) {
+export function geologyMorphology(type, seed, requestedFamily = null) {
   if (!Number.isSafeInteger(seed)) throw new TypeError('Geology seed must be a safe integer');
   const families = GEOLOGY_MORPHOLOGIES[type];
   if (!families) return null;
+  if (requestedFamily !== null && !families.includes(requestedFamily)) throw new RangeError('Unknown geology morphology family');
   // This stream never advances object dimensions, covers or scene layout.
   const rnd = mulberry32(seed ^ 0x4d4f5250), sample = (lo, hi) => lo + rnd() * (hi - lo);
-  const family = families[Math.floor(rnd() * families.length)];
+  const sampledFamily = families[Math.floor(rnd() * families.length)];
+  const family = requestedFamily ?? sampledFamily;
   const m = { family, spanX: sample(.74, .96), spanZ: sample(.70, .94),
     offsetX: sample(-.08, .08), offsetZ: sample(-.08, .08),
     sharpness: sample(.85, 1.3), ridgeWidth: family === 'arete' ? sample(.22, .34) : sample(.48, .68),

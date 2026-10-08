@@ -108,7 +108,7 @@ export function evidenceInputs(cfg, terrain, areas = [], prior = null) {
     evidenceChecksum(new Uint8Array(heights.buffer)), evidenceChecksum(cover),
     evidenceChecksum(semantics.cover), evidenceChecksum(semantics.coupled)].join('|');
   return { frame, colors, heights, prior: cover, osm: semantics.cover, coupled: semantics.coupled, inputId,
-    complete: areas !== null && (!cfg.venue?.id || !!prior)
+    complete: areas !== null && (cfg.gen?.mode === 'random' || !cfg.venue?.id || !!prior)
       && !!terrain.sourceQuality?.imageryComplete && !!terrain.sourceQuality?.elevationComplete,
     priorDigest: prior?.digest || null };
 }

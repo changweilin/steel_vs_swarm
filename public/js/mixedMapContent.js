@@ -1,0 +1,16 @@
+export const MIXED_MAP_TEXT = {
+  setup: '三層混合地圖：各層隨機挑選不同的有道路地區；綠地／裸露地可採一條真實道路加兩條生成兵線。',
+  mixHint: '地貌比例：留空時依三層來源自動混合',
+  ready: '按「生成混合地圖」，隨機挑選三個不同地區。',
+  elevation: '等高線地形',
+  surface: '衛星／OSM 道路建物',
+  regional: '經緯度推斷的氣候植被文化／地質外觀',
+  pick: '🎲 重新挑選三層',
+  clear: '清空來源',
+  noSources: '找不到三個不同且有道路的來源地區，請稍後重試。',
+  noRoadLanes: '此混合地圖的來源或兵線不符合地貌資格規則，請重新生成。',
+  failed: '混合地圖建立失敗，請重新生成。',
+  checking: (layer, name) => `檢查${layer}來源的道路：${name}…`,
+  source: (layer, name, roads) => `${layer}：${name} · ${roads} 條道路`,
+  name: names => `混合地圖・${names.join('+')}`,
+};

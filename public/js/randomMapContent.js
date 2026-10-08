@@ -1,0 +1,23 @@
+export const RANDOM_MAP_TEXT = {
+  name: seed => `隨機地圖・${(seed >>> 0).toString(16).padStart(8, '0').slice(-6)}`,
+  setup: '完全虛構的三層地圖：依地形、道路用地與環境規則生成，不下載真實地區圖資。',
+  ready: '設定種子後生成三層隨機地圖；留空會隨機選擇種子。',
+  elevation: '生成等高線地形…',
+  surface: '生成地表與道路用地…',
+  features: '建立程序道路與建物…',
+  preview: '程序地形與道路預覽',
+  seedLabel: '隨機地圖種子',
+  rules: '兩陣營主堡與三條母兵線共用連通道路網，兵線套用遊戲平衡與砲塔規則。',
+  invalid: '此隨機地圖的生成參數無效或版本過舊，請重新生成。',
+  seed: value => `種子 ${value} · 三層獨立生成 · 同一種子與範圍可重建相同地圖`,
+  rangeTitle: '隨機參數範圍',
+  rangeEdge: { min: '最小值', max: '最大值' },
+  invalidRanges: '參數範圍無效，請確認最小值不大於最大值，且兩者都在可用範圍內。',
+  layerNames: { elevation: '地形', surface: '道路用地', regional: '環境類型' },
+  parameters: {
+    amplitudeM: '起伏幅度 m', wavelengthM: '地形波長 m', roughness: '粗糙度', ridge: '稜脊比例', terraceM: '階地高度 m', datumM: '基準高度 m',
+    blockM: '街區間距 m', gridJitter: '格網偏移', streetLanes: '車道數', buildingDensity: '建物密度', buildingWidthM: '建物尺度 m', buildingLevels: '建物樓層',
+    urbanFraction: '市區比例', bareFraction: '剩餘旱地中裸地比例', waterFraction: '水域比例', wetFraction: '濕地比例',
+    latitude: '虛構緯度', longitude: '虛構經度', moisture: '濕度', wind: '風化風力', rainfallMm: '年雨量 mm', vegetation: '植被密度',
+  },
+};
