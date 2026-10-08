@@ -4,9 +4,9 @@
   "unitKinds": 14,
   "unitShowcasePlays": 28,
   "unitPeakCalls": 9,
-  "peakCalls": 7,
+  "peakCalls": 6,
   "memory": {
-    "geometries": 29,
-    "textures": 112
+    "geometries": 215,
+    "textures": 2
   }
 }

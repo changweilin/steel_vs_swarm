@@ -30,6 +30,13 @@ for (const [env, path] of [['THREE_GLTF_LOADER', 'loaders/GLTFLoader.js'], ['THR
 }
 await page.route('**/main.js', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
 if (process.argv.includes('--break-vfx-ease')) {
+  await page.route('**/public/js/forge/combatCast.js', async (route) => {
+    const response = await route.fetch();
+    const src = await response.text();
+    const broken = src.replace(/import \{ sampleCombatKeys \} from '\.\/combatKeys\.js';\r?\n/, '');
+    if (broken === src) throw new Error('Cannot break the authored animation sampler');
+    await route.fulfill({ response, body: broken });
+  });
   await page.route('**/public/js/castfx.js', async (route) => {
     const response = await route.fetch();
     const src = await response.text();

@@ -2,8 +2,8 @@ import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync } from 
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CHARACTERS, heroWeapon } from '../../public/js/data.js';
-import { characterCombatStyle } from '../../public/js/characterStyle.js';
+import { CHARACTERS } from '../../public/js/data.js';
+import { combatIntent } from './combat_intent.mjs';
 import { blenderMcp } from './mcp.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -31,12 +31,7 @@ const flags = args.filter((value, i) => value !== '--mcp'
 if (combat) {
   const directory = path.join(root, 'out/combat_reference');
   mkdirSync(directory, { recursive: true });
-  const intent = Object.fromEntries(Object.keys(CHARACTERS).map(id => [id, {
-    ...characterCombatStyle(id), weapons: Object.fromEntries(['light', 'heavy'].map(slot => {
-      const weapon = heroWeapon(id, slot);
-      return [slot, { type: weapon.type, charge: weapon.charge, fan: weapon.fan, rate: weapon.rate }];
-    })),
-  }]));
+  const intent = combatIntent(readFileSync(path.join(root, 'docs/art_gen.md'), 'utf8'));
   const file = path.join(directory, 'intent.json');
   writeFileSync(file, JSON.stringify(intent));
   flags.push('--combat-data', file);

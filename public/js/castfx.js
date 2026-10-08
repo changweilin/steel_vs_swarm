@@ -24,6 +24,7 @@ import { CULTURAL_PALETTES, CULTURE_FRAME } from './characterStyle.js';
 import { markShared, disposeTree } from './toon.js';
 import { spawnParticleCast } from './castparticles.js';
 import { lowPower } from './mobile.js';
+import { spawnAuthoredCast } from './forge/combatCast.js';
 
 const TAU = Math.PI * 2;
 
@@ -1964,5 +1965,5 @@ export function spawnCastFx(scene, effects, opts) {
     col, col2: new THREE.Color(conf.c2 ?? conf.accent ?? FX_ACCENT[fx] ?? 0xffffff),
   };
   spawnParticleCast(scene, effects, P, PARTICLE_RECIPES[profileId]);
-  profileCastCompositor(scene, effects, P);
+  if (!spawnAuthoredCast(scene, effects, P, opts.ch, opts.slot)) profileCastCompositor(scene, effects, P);
 }

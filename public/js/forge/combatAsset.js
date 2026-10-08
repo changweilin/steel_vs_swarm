@@ -2,12 +2,16 @@ import * as THREE from 'three';
 import { COMBAT_ASSETS } from './combatAssets.js';
 import { makeShieldMaterial } from '../vfx.js';
 import { characterShieldTexture } from '../castfx.js';
+import { sampleCombatKeys } from './combatKeys.js';
+export { sampleCombatKeys } from './combatKeys.js';
 
 /** Every effect is attached to the shipped rig, never to a second simulation or animation loop. */
 export function attachCombatAsset(group, nodes, id, form) {
   const asset = COMBAT_ASSETS[id];
   if (!asset) return null;
   const profile = asset.combat;
+  const detached = new Set([...(profile.transported || []),
+    ...Object.values(profile.fields || {}).flatMap(field => field.nodes)]);
   const hull = [], owners = new Map();
   if (form) group.traverse(mesh => {
     if (!mesh.isMesh || mesh.userData.presentationEffect || mesh.parent.name === 'barrier') return;
@@ -33,7 +37,7 @@ export function attachCombatAsset(group, nodes, id, form) {
   const materials = new Map();
   for (const part of asset.meshes) {
     // Transported geometry belongs to projectileMesh, not an invisible duplicate on every rig.
-    if (profile.transported.includes(part.parent)) continue;
+    if (detached.has(part.parent)) continue;
     const desc = asset.materials[part.material];
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(part.positions, 3));
@@ -68,8 +72,10 @@ export function attachCombatAsset(group, nodes, id, form) {
     uniform.value = Math.max(uniform.value, strength);
   };
   return { ...profile, guard, nodes, hull, group, inverse: new THREE.Matrix4(), local: new THREE.Matrix4(),
+    detached,
     clips: Object.fromEntries(Object.entries(profile.clips).map(([slot, clip]) => [slot,
-      { ...clip, tracks: clip.tracks.map(track => ({ ...track, target: nodes.get(track.node) })) }])) };
+      { ...clip, tracks: clip.tracks.filter(track => !detached.has(track.node))
+        .map(track => ({ ...track, target: nodes.get(track.node) })) }])) };
 }
 
 /** Live morph and firing poses can exceed endpoint envelopes; cached joint bounds avoid vertex scans. */
@@ -86,16 +92,6 @@ export function clearMorphCombatShield(rig) {
       + Math.abs(e[2]) * half.x + Math.abs(e[6]) * half.y + Math.abs(e[10]) * half.z);
   }
   combat.guard.position.z = Math.max(combat.shield.center[2], front + combat.shield.clearance);
-}
-
-export function sampleCombatKeys(keys, time) {
-  if (time <= keys[0][0]) return keys[0][1];
-  for (let i = 1; i < keys.length; i++) {
-    if (time > keys[i][0]) continue;
-    const [start, value] = keys[i - 1], [end, target] = keys[i];
-    return value + (target - value) * (time - start) / (end - start);
-  }
-  return keys[keys.length - 1][1];
 }
 
 export function stepAuthoredCombat(rig, ent, now) {

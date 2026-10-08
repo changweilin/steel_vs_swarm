@@ -56,6 +56,8 @@ import { unitShotStyle, unitShotFx, comicPop, starburst, shockRing, impactBurst,
 import { spawnCastFx, characterShieldTexture } from './castfx.js';
 import { characterCombatStyle } from './characterStyle.js';
 import { SHIELD_PRESENTATION_EXPAND } from './vfx.js';
+import { lanceDischarge, fanDischarge } from './vfx.js';
+import { COMBAT_ASSETS } from './forge/combatAssets.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
 import { onCtrlChange, viewMode, setViewMode, onViewModeChange } from './ctrlmode.js';
@@ -2585,6 +2587,8 @@ export class BattleClient {
    * 真散彈的圓形彈著。散彈 = 動能彈丸(細短曳光、密);電漿 = 焰舌(粗長、稀)。命中判定在伺服器。
    */
   _fanBlast(muzzle, dir, def, rng = def.range) {
+    if (fanDischarge(this.scene, this.effects, muzzle, dir, def,
+      { range: rng, clip: (from, to) => this._clipBeam(from, to) })) return;
     const up = new THREE.Vector3(0, 1, 0);
     const right = new THREE.Vector3().crossVectors(dir, up).normalize();
     const half = (def.arc || 15) * Math.PI / 180;
@@ -5392,10 +5396,17 @@ export class BattleClient {
         // 起點優先解析射手機體的 rig 槍口錨(嘴砲/噴口);退路才用 ent 座標 + 高度概略
         const from = this._entMuzzle(ev.pid, ev.slot !== 'light' ? 'heavy' : 'light',
           new THREE.Vector3(fx, this.terrain.heightAt(fx, fz) + (ev.y || 0) + 2, fz));
-        const dir3 = new THREE.Vector3(ev.dx, 0, -ev.dz).normalize();
+        const dir3 = new THREE.Vector3(ev.dx, ev.dy || 0, -ev.dz).normalize();
         const arc = (ev.arc || 15) * Math.PI / 180;
         const up = new THREE.Vector3(0, 1, 0);
         const shooter = this._heroEntByPid(ev.pid);
+        const fanSlot = ev.slot === 'light' ? 'light' : 'heavy';
+        const fanDef = shooter ? this._heroDefOf(shooter.ch, fanSlot) : null;
+        if (fanDef && fanDischarge(this.scene, this.effects, from, dir3, fanDef,
+          { range: ev.r || fanDef.range, clip: (a, b) => this._clipBeam(a, b) })) {
+          this._markFire(ev.pid, fanSlot, performance.now() / 1000);
+          return;
+        }
         const pcol = CHARACTERS[shooter?.ch]?.visual?.hue ?? (ev.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff);
         const heavy = ev.slot !== 'light';   // 電漿重武器 = 明顯焰舌;散彈輕武器 = 細一號
         const bar = !!ev.bar;
@@ -8112,6 +8123,10 @@ export class BattleClient {
    */
   _lanceVisual(from, to, def, side) {
     const { col, hot } = this._shotCols(side);
+    if (COMBAT_ASSETS[def.ch]) {
+      lanceDischarge(this.scene, this.effects, from, to, def, CHARACTERS[def.ch]?.visual?.hue ?? col);
+      return;
+    }
     const r = lanceR(def);
     if (def.type === 'beam') {
       const bcol = CHARACTERS[def.ch]?.visual?.hue ?? (side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff);
