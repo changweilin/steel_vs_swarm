@@ -1900,10 +1900,11 @@ export const atkLaunchLegM = ultLaunchLegM;
 /** 這一槽位的載具發射腿(公尺):守招 = 主機身邊 MIN_LEG;攻招 = 後方工事飛過來(代表值)。 */
 export const abilLaunchLegM = (slot) =>
   (abilOrigin(slot) === 'fort' ? atkLaunchLegM() : ATK_CARRIER.MIN_LEG);
+export const CARRIER_HEROES = new Set(['s01', 'm06', 't01', 't09', 'm07']);
+export const isCarrierAbil = (ch, slot = 'atk') => (slot === 'atk' && CARRIER_HEROES.has(ch));
 /**
- * 這名角色的這一招是不是**點遞送**(**推導判定,MUST NOT 手寫名冊**):
- * 2026-08-22:載具遞送只服務**攻招**;守招改為本體詠唱施展。
- * 區域/指向型 = strike/emp/summon + 團隊 heal/buff;其餘(自身/personal 型)= 跟隨編隊。
+ * 這名角色的這一招是不是區域/指向型招式(推導判定):
+ * 區域/指向型 = strike/emp/summon + 團隊 heal/buff;其餘 = 純自身強化型。
  */
 export const abilDelivered = (ch, slot = 'atk') => {
   if (slot !== 'atk') return false;
@@ -1916,11 +1917,16 @@ export const abilDelivered = (ch, slot = 'atk') => {
 export const atkDelivered = (ch) => abilDelivered(ch, 'atk');
 /**
  * 這一招的 cd 要不要被壓進槽位 CD 帶。
- *   守招:**全部**(使用者定案「CD時間15~30s」對 32 台一視同仁);
- *   攻招:只有點遞送那 22 台 —— 10 台自身型的 cd 同時是 `selfAtkEq` 的分子(補償 ∝ cd),
- *         壓進去等於一個改動同時動兩個平衡面(2026-08-07 前一輪已定案,MUST NOT 順手併進來)。
+ *   守招:全部(使用者定案「CD時間15~30s」對 32 台一視同仁);
+ *   攻招:長 CD(原設計 > 35s)映射至 [30, 60]s 帶，維持攻招冷卻穩定性。
  */
-export const abilCdMapped = (ch, slot) => (slot === 'atk' ? atkDelivered(ch) : !!CHARACTERS[ch]?.[slot]);
+export const abilCdMapped = (ch, slot) => {
+  if (slot !== 'atk') return !!CHARACTERS[ch]?.[slot];
+  const c = CHARACTERS[ch]?.atk;
+  if (!c) return false;
+  const rawCd = Array.isArray(c.cd) ? c.cd[0] : (c.cd || 0);
+  return rawCd > 35;
+};
 /** 該槽位「會被映射的那一群」的原 cd 全距(逐階掃描;memo —— CHARACTERS 之後才叫得動) */
 const _abilCdBand = {};
 export const abilCdBand = (slot) => {
@@ -3674,12 +3680,10 @@ export function heroAbility(ch, slot, lvl = 1) {
   // 2026-08-22(守招改制):守招改為本體詠唱施展(castTime 依效果強度推導 [0.5, 2.5]s),
   // 不再是載具或輔助機(carrier/support 恆 false);攻招維持載具/輔助機遞送(castTime 恆 0)。
   const isUlt = slot === 'atk';
-  const carrier = isUlt && abilDelivered(ch, 'atk');
-  const support = isUlt && !carrier;
+  const carrier = isUlt && CARRIER_HEROES.has(ch);
+  const support = false; // 全面清除通用輔助機隊機制無殘留
   const castTime = isUlt ? ATK_CAST_S : defCastTime(ch, lvl);
-  // 遞送距離的預設值只給**攻招**:它是「從後方工事送到指定點」的戰略遞送 ⇒ 未標 range 的支援型
-  //   要有一段可以指定的遞送距離(= hyperRange,與機甲接戰距離同一把尺)。守招從主機身邊施放,
-  //   遞送距離就是招式本來的 range(未標 = 施放在腳下)。
+  // 遞送距離的預設值只給專屬載具攻招
   const deliverR = carrier && !a.range;
   return {
     id: slot, name: a.name, fx: a.fx, desc: a.desc, carrier, support, castTime,
@@ -3705,6 +3709,8 @@ export function heroAbility(ch, slot, lvl = 1) {
     vs: a.vs || {},
     vsSp: a.vsSp ?? 1, vsHp: a.vsHp ?? 1, spPierce: a.spPierce || 0,   // 見 heroWeapon 同欄註
     pen: t(a.pen ?? 0),
+    elem: a.elem || null,
+    elemBuildup: t(a.elemBuildup ?? (a.elem ? 50 : 0)),
     // 追加效果(2026-07-16):{fx:'pull|stun|slow|confuse|haste|leap|dodge|vamp|bleed|mark', 數值欄逐一過 tierVal}
     add: a.add ? Object.fromEntries(Object.entries(a.add).map(([k, v]) =>
       [k, typeof v === 'string' ? v : t(v)])) : null,
@@ -3857,8 +3863,9 @@ export const CHARACTERS = {
     def: { name: '賦格・天籟共鳴', fx: 'buff', target: 'self', spRestore: [40, 60, 80], shieldExpand: true,
       charges: 2,
       mul: { dmgTaken: [0.85, 0.8, 0.75] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '奏響巴哈復調防護律動（可使用2次）：同調共鳴力場頻率，瞬間充盈磁力並大幅擴張防守護盾面積' },
-    atk: { name: '終章・天穹合奏', fx: 'summon', unit: 'heli_squad', count: [2, 3, 4],
-      cd: [80, 70, 60], mp: [80, 90, 100], desc: '揮動終極樂章指揮棒：召喚交響武裝直升機編隊凌空突進，自主索敵並與旗艦協同集火' },
+    atk: { name: '終章・群蜂交響', fx: 'strike', count: 4,
+      dmg: [260, 360, 480], r: 12, scatter: 14, pen: 15, elem: 'impact', elemBuildup: 40,
+      cd: [80, 70, 60], mp: [80, 90, 100], desc: '指揮自殺式攻擊無人機編隊自後方工事高速撲向目標自爆，造成穿甲動能爆風打擊' },
   },
   s02: {
     side: 'SWARM', kind: 'drone', name: '塔拉斯・邦達爾', code: '鐵匠', machine: '「鐵匠鋪」重載運翼機',
@@ -3960,7 +3967,7 @@ export const CHARACTERS = {
     atk: { name: '暴走・萬星墜閃', fx: 'strike', count: [6, 8, 10], dmg: [60, 77, 94], r: 10, scatter: 30,
       add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 320, pen: 8, cd: [70, 62, 54], mp: [85, 95, 105], vs: { armor: 1.3, building: 1.1 },
-      desc: '導引海量微型自爆蜂群暴走俯衝：漫天星芒飽和轟炸指定空域，引發毀滅性光爆與強烈致盲' },
+      desc: '以極限超頻激發漫天高能星芒光幕打擊：光子射束飽和轟炸指定空域，引發強烈眩目光爆與致盲干擾' },
   },
   s06: {
     // 2026-08-02 機體混編:接下原屬鋼鐵的「半人馬」四足機甲(希臘神話的凱隆 —— 教人療傷的射手,
@@ -4124,10 +4131,11 @@ export const CHARACTERS = {
     def: { name: '霜狼・北境重盾', fx: 'shield_bash', shieldBash: true, imp: 28, dmg: [65, 90, 120], r: 12,
       mul: { speed: [1.2, 1.3, 1.4], dmgTaken: [0.75, 0.7, 0.65] },
       dur: [5, 6, 7], cd: [24, 22, 20], mp: [35, 40, 45], desc: '霜狼巨盾雪原突襲衝撞：防守姿態下狂暴持盾突進，擊退並震暈沿途敵軍，大幅減免承受傷害' },
-    atk: { name: '雪崩・烏拉爾雷', fx: 'strike', count: [6, 8, 10], dmg: [77, 98, 119], r: 12, scatter: 40,
-      add: { fx: 'stun', dur: [0.8, 1, 1.2] },
-      range: 340, pen: 10, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
-      desc: '呼叫烏拉爾重裝砲兵軍團雪崩齊射：以毀滅性雷霆轟炸目標空域，強烈衝擊震撼並癱瘓敵軍' },
+    atk: { name: '雪崩・極寒霜星', fx: 'strike', count: 1, dmg: [550, 750, 980], r: 16, scatter: 0,
+      pen: 20, elem: 'frost', elemBuildup: 100,
+      add: { fx: 'stun', dur: [1.5, 2.0, 2.5] },
+      range: 340, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
+      desc: '發射單發重型極寒集束飛彈凌空打擊：引爆大範圍極低溫冰爆，造成毀滅性凍結傷害並絕對凍結暈眩敵軍' },
   },
   t02: {
     side: 'STEEL', kind: 'robot', name: '薇拉・佐洛塔列娃', code: '編號七', machine: '「加拉泰亞-7」神經同步機',
@@ -4286,10 +4294,11 @@ export const CHARACTERS = {
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
     def: { name: '悼文・鐵壁殘卷', fx: 'buff', target: 'self', intercept: true, r: 16, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '以波斯哀歌詩紋構築悼文鐵壁：母機搭載的護衛無人機循詩節迎擊，粉碎近身來襲彈道，充盈磁力並大幅提高護盾減傷' },
-    atk: { name: '天罰・焚天黑雨', fx: 'strike', count: [7, 9, 11], dmg: [72, 89, 111], r: 11, scatter: 45,
-      add: { fx: 'bleed', dps: [22, 28, 35], dur: [3.5, 4.0, 4.5], pen: 8 },
-      range: 360, pen: 8, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
-      desc: '降下蔽日遮天的波斯天罰黑雨：海量巡飛彈飽和俯衝轟炸目標空域，引發毀滅性烈焰火海與爆震衝擊' },
+    atk: { name: '天罰・黑雨星群', fx: 'strike', count: 8, dmg: [75, 95, 120], r: 12, scatter: 50,
+      pen: 10, elem: 'fire', elemBuildup: 50,
+      add: { fx: 'bleed', dps: [25, 32, 40], dur: [4.0, 4.5, 5.0], pen: 8 },
+      range: 360, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
+      desc: '發射多聯裝黑雨集束子母飛彈分散覆蓋大面積戰場：彈頭引爆燃燒火海與流血黑雨，造成持續灼燒與撕裂' },
   },
   t10: {
     side: 'STEEL', kind: 'robot', name: '蕾拉・侯賽尼', code: '落點', machine: '「軌跡」攔截機甲',
@@ -4320,8 +4329,8 @@ export const CHARACTERS = {
       vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.3 } },
     def: { name: '固守・偏折鏡陣', fx: 'reflect', dur: [4.0, 4.5, 5.0], spRestore: [40, 60, 80], shieldDefBoost: [0.55, 0.45, 0.35],
       cd: [24, 22, 20], mp: [35, 40, 45], desc: '立起陣地幾何偏折鏡陣：彈開敵方直線穿甲彈與光束直擊，充盈磁力並極限強化護盾傷害減免' },
-    atk: { name: '衝鋒・鋼鐵營陣', fx: 'summon', unit: 'veteran_squad', count: [3, 4, 5],
-      cd: [85, 75, 65], mp: [85, 95, 105], desc: '吹響宿將鐵血集結衝鋒哨：召喚精銳老兵特戰連隊伴隨推進，以猛烈火力主動索敵與協同集火' },
+    atk: { name: '鐵甲・裝甲洪流', fx: 'summon', unit: 'main_battle_tank', count: [1, 2, 2],
+      cd: [85, 75, 65], mp: [85, 95, 105], desc: '吹響宿將鐵血集結衝鋒哨：召喚自律主戰坦克裝甲營突進推進，以重裝加農砲撕裂敵陣並協同集火' },
   },
   t12: {
     side: 'STEEL', kind: 'robot', name: '阿列霞・卡爾波維奇', code: '螢火', machine: '「巨兵」訊號掃描機',
@@ -4477,8 +4486,9 @@ export const CHARACTERS = {
     def: { name: '狂歡・花車浮游', fx: 'buff', target: 'self', shieldExpand: true, spRestore: [30, 45, 60],
       charges: 2,
       mul: { speed: [1.25, 1.35, 1.45] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '啟動嘉年華花車浮游護衛力場（可使用2次）：直接充盈磁力並加速巡航，防守姿態下大幅擴張護盾保護面積' },
-    atk: { name: '盛宴・天穹巡遊', fx: 'summon', unit: 'carnival_heli', count: [2, 3, 4],
-      cd: [85, 75, 65], mp: [90, 100, 110], desc: '召喚空中主力嘉年華直升機盛宴：號令武裝直升機編隊凌空巡遊突擊，以狂歡狂瀾火力自主索敵集火' },
+    atk: { name: '盛宴・天火巡航', fx: 'strike', count: 5, dmg: [180, 240, 310], r: 14, scatter: 16,
+      pen: 8, elem: 'fire', elemBuildup: 50,
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '呼叫重裝轟炸機凌空地毯式投擲燃燒彈，對目標區域實施熾烈火海飽和轟炸' },
   },
   m07: {
     side: 'MERC', kind: 'morph', name: '約蘭妲・里奧斯', code: '界碑', machine: '「落閘」區域拒止可變機甲',
@@ -4492,10 +4502,11 @@ export const CHARACTERS = {
       vs: { flesh: 0.8, armor: 1.25, air: 2.2, building: 0.3 } },
     def: { name: '拒止・百戰心訣', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35], spRestore: [50, 75, 100],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '運轉界碑拒止百戰心訣：持鞘翅甲盾衝撞擊退闖入禁區之敵機，立即充盈磁力並大幅強化護盾減傷' },
-    atk: { name: '絕界・全域封殺', fx: 'strike', count: [7, 9, 11], dmg: [55, 68, 85], r: 9, scatter: 40,
-      add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
+    atk: { name: '絕界・拒止星梭', fx: 'strike', count: 6, dmg: [80, 105, 135], r: 10, scatter: 35,
+      pen: 10, elem: 'impact', elemBuildup: 45,
+      add: { fx: 'slow', f: 0.5, dur: [3.0, 3.5, 4.0] },
       range: 320, cd: [74, 66, 58], mp: [85, 95, 105], vs: { air: 2.0, flesh: 1.2 },
-      desc: '劃定全域拒止之毀滅絕界：傾瀉鋪天蓋地的界碑彈幕，徹底壓制全域敵軍並造成極限減速' },
+      desc: '發射梯次時差界碑集束飛彈：按時間差連續打擊，隨發射序次擴大軌跡偏差散布，造成連續衝擊與強效減速' },
   },
   m08: {
     side: 'MERC', kind: 'morph', name: '維迪雅・拉托爾', code: '尾聲', machine: '「空號」隱形狙擊可變機甲',

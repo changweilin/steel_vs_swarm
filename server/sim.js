@@ -3502,6 +3502,7 @@ export class BattleSim {
       for (let i = list.length - 1; i >= 0; i--) {
       const m = list[i];
       if (m.hp <= 0) { list.splice(i, 1); continue; }   // 已被擊落(_kill 走 _hyperShotDown)
+      if (m.launchAt && this.t < m.launchAt) continue;  // 時間差發射等待
       // 追擊候選(射後不理:飛彈自己追,玩家不必維持鎖定);死亡/離場即放掉,落點維持原軌跡
       const t0 = m.tid ? this.ents.get(m.tid) : null;
       const t = t0 && t0.hp > 0 && !(t0.hero && t0.dead) ? t0 : null;
@@ -3983,21 +3984,17 @@ export class BattleSim {
     // 效果由載具抵達時經同一支 _castEffect 施放(單一縫;擊落 = 該份否定)。
     // 發射點只有 `abilOrigin` 一份(攻招 = 最近的我方砲塔/主堡,見 _launchOrigin)。
     h.castLockUntil = this.t + (A.castTime || ATK_CAST_S);
-    const org = this._launchOrigin(h, slot);
     if (A.carrier) {
+      const org = this._launchOrigin(h, slot);
       this._launchAtkCarrier(h, A, x, z, org);
       this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1, ox: org.x, oz: org.z, castDur: A.castTime || ATK_CAST_S });
       return;
     }
-    // 分身化影招式(如齊天大聖):身外化影直接由本尊分化,不走遠程工事輔助載具
-    if (A.add?.fx === 'clone') {
-      this._castEffect(h, A, h.x, h.z, 1, null, true);
-      this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 0, castDur: A.castTime || ATK_CAST_S });
-      return;
-    }
-    // 自身強化型攻招:派出 supportN 架跟隨玩家的輔助機
-    this._launchAtkSupport(h, A, org, slot);
-    this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 1, sup: supportN(h.ch, slot), ox: org.x, oz: org.z, castDur: A.castTime || ATK_CAST_S });
+    // Non-carrier abilities cast directly by hull (no carriers, no support wings)
+    const cx = (A.target === 'self' || A.add?.fx === 'clone') ? h.x : x;
+    const cz = (A.target === 'self' || A.add?.fx === 'clone') ? h.z : z;
+    this._castEffect(h, A, cx, cz, 1, null, true);
+    this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: cx, z: cz, r: A.r, dur: A.dur, lvl, carrier: 0, castDur: A.castTime || ATK_CAST_S });
   }
 
   /**
@@ -4120,7 +4117,8 @@ export class BattleSim {
         // 重建的 def MUST 帶齊剋制欄位:漏抄 vsSp/vsHp/spPierce 的話,招式版與武器版
         // 會對同一個護盾軸有兩種行為(A34 的第二份拆分邏輯,只是換了個地方漏)。
         this._blast(h, { dmg: A.dmg * frac, r: A.r, vs: A.vs, pen: A.pen,
-          vsSp: A.vsSp, vsHp: A.vsHp, spPierce: A.spPierce }, ix, iz, 0, 0);
+          vsSp: A.vsSp, vsHp: A.vsHp, spPierce: A.spPierce,
+          elem: A.elem, elemBuildup: A.elemBuildup }, ix, iz, 0, 0);
         if (A.add) this._applyCC(h, A.add, ix, iz, A.r);   // 控場類追加效果:彈著區內敵人
       }
     } else if (A.fx === 'summon') {
@@ -5436,8 +5434,127 @@ export class BattleSim {
     // 自身召喚且瞄在腳邊時,落點本來就是沿機首推出去的 ⇒ 這一支與舊制同解。
     const lry = Math.atan2(-(x - o.x), z - o.z);
     const atk = A.id === 'atk' ? 1 : 0;
+    if (h.ch === 's01') {
+      // s01: Dedicated kamikaze drone squadron
+      const n = A.count || SQUAD.KAMI.N || 4;
+      const K = SQUAD.KAMI;
+      const sq = h.sq;
+      if (sq) sq.kamis ??= [];
+      const fx = -Math.sin(lry), fz = Math.cos(lry);
+      const rx = Math.cos(lry), rz = Math.sin(lry);
+      const flyS = d0 / (UNITS.drone.speed * K.SPEED_MUL);
+      for (let i = 0; i < n; i++) {
+        const s = kamiSide(i);
+        const k = this._add({
+          kind: 'kami', side: h.side, pid: h.pid, ch: h.ch, kami: true,
+          uA: A, uFrac: 1 / n, uImp: partImp(i),
+          pt: { x, z },
+          x: o.x + fx * K.FWD + rx * K.SIDE * s,
+          z: o.z + fz * K.FWD + rz * K.SIDE * s,
+          y: o.y || 0, ry: lry + K.SPREAD * s,
+          hp: kamiHp(), armor: 0, tid: 0, dieAt: this.t + flyS + K.TTL_S,
+        });
+        k.maxSp = 0; k.sp = 0;
+        if (sq) sq.kamis.push(k);
+      }
+      this.events.push({ e: 'kami', pid: h.pid, side: h.side, n, atk, slot: A.id });
+      return;
+    }
+    if (h.ch === 'm06') {
+      // m06: Heavy bomber carpet incendiary bombing
+      const n = A.count || 5;
+      const sq = h.sq;
+      const flyS = d0 / DECOY.SPEED;
+      const d = this._add({
+        kind: 'decoy', side: h.side, pid: h.pid, decoy: true,
+        bombType: 'fire',
+        uA: A, uDrops: Array.from({ length: n }, (_, i) => ({ frac: 1 / n, n: partImp(i) })),
+        pt: { x, z }, nextBomb: 0,
+        x: o.x, z: o.z, y: (o.y || 0) + DECOY.ALT, ry: lry,
+        hp: decoyHp(), armor: 0, tid: 0, lost: false, dieAt: this.t + flyS + n * DECOY.BOMB_GAP + DECOY.TTL_S,
+      });
+      d.maxSp = 0; d.sp = 0;
+      if (sq) { (sq.decoys ||= []).push(d); }
+      this.events.push({ e: 'decoy', pid: h.pid, side: h.side, id: d.id, homing: 0, atk, slot: A.id });
+      return;
+    }
+    if (h.ch === 't01') {
+      // t01: Heavy frost cluster missile (single heavy warhead + frost + stun)
+      const dx = x - o.x, dz = z - o.z;
+      const arcD = Math.max(1, Math.hypot(dx, dz));
+      const m = this._add({
+        kind: 'hyper', side: h.side, pid: h.pid, hyper: true,
+        uA: A, uFrac: 1, uImp: partImp(0),
+        x: o.x, z: o.z, y: o.y || 0, ry: lry,
+        hp: hyperHp(), armor: 0,
+        tid: 0, tx: x, tz: z,
+        x0: o.x, z0: o.z, y0: o.y || 0,
+        ux: dx / arcD, uz: dz / arcD, arcD,
+        trav: 0, phase: 'climb', spin: 0, dive: null, chase: false,
+      });
+      m.maxSp = 0; m.sp = 0;
+      (h.hypers ||= []).push(m);
+      this.events.push({ e: 'hyper', pid: h.pid, side: h.side, id: m.id, homing: 0, atk, slot: A.id });
+      return;
+    }
+    if (h.ch === 't09') {
+      // t09: Multi-warhead black rain cluster submunitions (wide scatter + fire + bleed)
+      const count = A.count || 8;
+      const scatter = A.scatter || 50;
+      for (let i = 0; i < count; i++) {
+        const ang = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        const sr = i === 0 ? 0 : (0.2 + 0.8 * Math.random()) * scatter;
+        const subTx = x + Math.cos(ang) * sr;
+        const subTz = z + Math.sin(ang) * sr;
+        const dx = subTx - o.x, dz = subTz - o.z;
+        const arcD = Math.max(1, Math.hypot(dx, dz));
+        const subLry = Math.atan2(-dx, dz);
+        const m = this._add({
+          kind: 'hyper', side: h.side, pid: h.pid, hyper: true,
+          uA: A, uFrac: 1 / count, uImp: partImp(i),
+          x: o.x, z: o.z, y: o.y || 0, ry: subLry,
+          hp: hyperHp(), armor: 0,
+          tid: 0, tx: subTx, tz: subTz,
+          x0: o.x, z0: o.z, y0: o.y || 0,
+          ux: dx / arcD, uz: dz / arcD, arcD,
+          trav: 0, phase: 'climb', spin: 0, dive: null, chase: false,
+        });
+        m.maxSp = 0; m.sp = 0;
+        (h.hypers ||= []).push(m);
+        this.events.push({ e: 'hyper', pid: h.pid, side: h.side, id: m.id, homing: 0, atk, slot: A.id });
+      }
+      return;
+    }
+    if (h.ch === 'm07') {
+      // m07: Staggered time-delay denial cluster missiles (progressive scatter + impact + slow)
+      const count = A.count || 6;
+      const scatter = A.scatter || 35;
+      for (let i = 0; i < count; i++) {
+        const devR = scatter * (0.2 + (i / count) * 1.2);
+        const ang = Math.random() * Math.PI * 2;
+        const subTx = x + Math.cos(ang) * devR;
+        const subTz = z + Math.sin(ang) * devR;
+        const dx = subTx - o.x, dz = subTz - o.z;
+        const arcD = Math.max(1, Math.hypot(dx, dz));
+        const subLry = Math.atan2(-dx, dz);
+        const m = this._add({
+          kind: 'hyper', side: h.side, pid: h.pid, hyper: true,
+          launchAt: this.t + i * 0.22,
+          uA: A, uFrac: 1 / count, uImp: partImp(i),
+          x: o.x, z: o.z, y: o.y || 0, ry: subLry,
+          hp: hyperHp(), armor: 0,
+          tid: 0, tx: subTx, tz: subTz,
+          x0: o.x, z0: o.z, y0: o.y || 0,
+          ux: dx / arcD, uz: dz / arcD, arcD,
+          trav: 0, phase: 'climb', spin: 0, dive: null, chase: false,
+        });
+        m.maxSp = 0; m.sp = 0;
+        (h.hypers ||= []).push(m);
+        this.events.push({ e: 'hyper', pid: h.pid, side: h.side, id: m.id, homing: 0, atk, slot: A.id });
+      }
+      return;
+    }
     if (h.kind === 'robot') {
-      // 極音速飛彈形式:單彈頭、拋物線 + 螺旋俯衝(彈道機制沿用 _tickHypers;點遞送 ⇒ 不追擊)
       const dx = x - o.x, dz = z - o.z;
       const arcD = Math.max(1, Math.hypot(dx, dz));
       const m = this._add({
@@ -5454,8 +5571,6 @@ export class BattleSim {
       (h.hypers ||= []).push(m);
       this.events.push({ e: 'hyper', pid: h.pid, side: h.side, id: m.id, homing: 0, atk, slot: A.id });
     } else if (h.kind === 'morph') {
-      // 集束轟炸機形式:飛向落點,進 BOMB_R 起每 BOMB_GAP 投遞一份(間斷型);投完飛離解體。
-      // 擊落 = 剩餘份全數否定(_kill 的 decoy 分支對 uA 載具沒有 bombsLeft ⇒ 天然不補投)。
       const sq = h.sq;
       const flyS = d0 / DECOY.SPEED;
       const d = this._add({
@@ -5469,7 +5584,6 @@ export class BattleSim {
       if (sq) { (sq.decoys ||= []).push(d); }
       this.events.push({ e: 'decoy', pid: h.pid, side: h.side, id: d.id, homing: 0, atk, slot: A.id });
     } else {
-      // 自殺攻擊機形式:n 架自發射點前方散開衝出、直飛落點近炸,各攜 1/n 份(擊落 = 該份否定)
       const K = SQUAD.KAMI;
       const sq = h.sq;
       if (sq) sq.kamis ??= [];
