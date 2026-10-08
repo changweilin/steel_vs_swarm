@@ -7359,12 +7359,11 @@ export function windSpeedFactor(moveX, moveZ, windDir, wind) {
   return 1.0 + WEATHER_DEBUFFS.MAX_CHANGE * intensity * cosTheta;
 }
 
-/** 飛行單位受雨量/雪量/砂量直接影響的速度倍率 (最多降低 10%) */
+/** 飛行單位受雨量/雪量直接影響的速度倍率 (最多降低 10%) */
 export function weatherFlightSlowFactor(dyn = {}) {
   const rainInt = dyn.rainSlow ?? (dyn.rainIntensity ?? (dyn.effectiveRain ?? (dyn.rain > WEATHER_DEBUFFS.THRESHOLD ? (dyn.rain - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
   const snowInt = dyn.snowSlow ?? (dyn.snowIntensity ?? (dyn.effectiveSnow ?? (dyn.snow > WEATHER_DEBUFFS.THRESHOLD ? (dyn.snow - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
-  const sandInt = dyn.sandSlow ?? (dyn.sandIntensity ?? (dyn.effectiveSand ?? (dyn.sand > WEATHER_DEBUFFS.THRESHOLD ? (dyn.sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
-  const intensity = Math.min(1.0, Math.max(0, Math.max(rainInt, snowInt, sandInt)));
+  const intensity = Math.min(1.0, Math.max(0, Math.max(rainInt, snowInt)));
   return 1.0 - WEATHER_DEBUFFS.AIR_PRECIP_SLOW_MAX * intensity;
 }
 
@@ -7417,7 +7416,20 @@ export function weatherAccuracyPenalty(fog = 0, hour = 12, sched = null, lunarDa
 export const weatherMissP = (missP, penalty = 0) =>
   1 - (1 - (missP || 0)) * (1 - Math.max(0, Math.min(WEATHER_ACCURACY.MAX_PENALTY, penalty || 0)));
 
-export { weatherSurfaceCoverMax, weatherGroundSlowFactor, weatherJumpHeightFactor, weatherJumpVelocityFactor } from './weatherState.js';
+/** 飛行單位受砂量直接影響的攻速倍率 (最多降低 25%) */
+export function weatherFlightAttackRateFactor(dyn = {}) {
+  const sandInt = dyn.sandSlow ?? (dyn.sandIntensity ?? (dyn.effectiveSand ?? (dyn.sand > WEATHER_DEBUFFS.THRESHOLD ? (dyn.sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
+  const intensity = Math.min(1.0, Math.max(0, sandInt));
+  return 1.0 - 0.25 * intensity;
+}
+
+export const WEATHER_FREEZE = {
+  DUR_S: 2.0,            // 凍結持續時間 2 秒
+  COOLDOWN_S: 30.0,      // 每 30 秒最多觸發一次
+  DMG_REDUCTION: 0.75,   // 凍結受傷減少 75% (受傷為原來的 25%)
+};
+
+export { weatherSurfaceCover, weatherSurfaceCoverMax, weatherGroundSlowFactor, weatherJumpHeightFactor, weatherJumpVelocityFactor, weatherGroundAttackRateFactor } from './weatherState.js';
 
 /**
  * 依季節、開場時段、開場天氣、經過秒數與種子確定性計算當前天氣。

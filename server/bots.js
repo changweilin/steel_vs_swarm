@@ -192,6 +192,7 @@ export class BotBrain {
    *  _speed 與 _push 的位置收斂共用這一縫 —— 不得在 update 各處另寫折速。 */
   _ccF(h) {
     const t = this.sim.t;
+    if ((h.freezeUntil || 0) > t) return 0;
     if ((h.stunUntil || 0) > t) return 0;
     let f = 1;
     if ((h.slowUntil || 0) > t) f *= h.slowF ?? 0.6;
@@ -343,6 +344,7 @@ export class BotBrain {
     const sim = this.sim;
     const h = sim.heroes.get(this.pid);
     if (!h || sim.over) return;
+    if ((h.freezeUntil || 0) > sim.t) return;
     if (h.dead) { this.state = 'PUSH'; this.prog = 0; return; }
     this._resolveRole(h);
 

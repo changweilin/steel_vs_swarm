@@ -26,6 +26,7 @@ import {
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
   WEATHER_DEBUFFS, windSpeedFactor, laneCssColor,
   weatherFlightSlowFactor, weatherGroundSlowFactor, weatherJumpVelocityFactor, unbalAltThreshold,
+  weatherFlightAttackRateFactor, weatherGroundAttackRateFactor, WEATHER_FREEZE,
   FIRE_WEATHER, fireDotMul,
     SCENE_STRUCT, sceneIsPhysical, clampHeroSpawn, solveTowerSites, mapArg,
 } from './data.js';
@@ -2423,8 +2424,9 @@ export class BattleClient {
     return v;
   }
 
-  /** 控場移動係數(麻痺 = 0、緩速 ×slowF)—— 與伺服器 NPC(_advance)/bot(_speed)同一套規則 */
+  /** 控場移動係數(麻痺/凍結 = 0、緩速 ×slowF)—— 與伺服器 NPC(_advance)/bot(_speed)同一套規則 */
   _ccMoveF() {
+    if ((this.freezeLeft || 0) > 0) return 0;
     if ((this.stunLeft || 0) > 0) return 0;
     return (this.slowLeft || 0) > 0 ? (this.slowF || 0.6) : 1;
   }
@@ -2444,6 +2446,7 @@ export class BattleClient {
       }
       this[key] = on;
     };
+    edge('_freezeOn', this.freezeLeft, '❄️ 機體凍結:全系統鎖定(受傷-75%)!');
     edge('_stunOn', this.stunLeft, '⛓️ 機體麻痺:動力系統離線(武器仍可運作)!', 'stun');
     edge('_slowOn', this.slowLeft, '🕸️ 機體緩速:行動遲滯!');
     edge('_confOn', this.confLeft, '💫 操縱混亂:控制訊號反轉!', 'conf');
@@ -3326,6 +3329,7 @@ export class BattleClient {
    * 系統驅動(視野鎖定自動追瞄)走 system=true 繞過反轉:反轉只反使用者手,不反系統。
    */
   _applyLook(dYaw, dPitch, system = false) {
+    if ((this.freezeLeft || 0) > 0) return;
     let ix = 1, iy = 1;
     if (!system) {
       ix = lookPref('invertX') ? -1 : 1;
@@ -3669,6 +3673,7 @@ export class BattleClient {
         ent.hsf = e.hsf || 0;
         ent.mk = e.mk || 0;
         ent.ub = e.ub || 0;
+        ent.fz = e.fz || 0;
         ent.bl = e.bl || 0;
         ent.iv = e.iv || 0;
         ent.cst = e.cst || 0;
@@ -3712,6 +3717,7 @@ export class BattleClient {
           this.blindLeft = e.vb || 0;
           this.stealthLeft = e.st || 0;
           // 控場/追加效果狀態(伺服器權威剩餘秒;條件欄位缺省 = 已結束)
+          this.freezeLeft = e.fz || 0;
           this.stunLeft = e.pz || 0;
           this.slowLeft = e.sl || 0;
           this.slowF = e.slf ?? 0.6;
@@ -3802,6 +3808,11 @@ export class BattleClient {
           icons.push({ id, remS, positive, label, stacks, maxS: this._statusMax[id] });
         }
       };
+
+      // ── 凍結 (freezeLeft): 全行動鎖定 + 受傷-75% ─────────────────────
+      if (this.freezeLeft > 0) {
+        push('freeze', this.freezeLeft, false, '凍結');
+      }
 
       // ── 控場:麻痺 / 癱瘓 / 暈眩 ──────────────────────────────────────
       // 1. 麻痺 (pz/stunLeft): 動力系統離線,武器仍可運作
@@ -8202,6 +8213,7 @@ export class BattleClient {
     // 2026-08-01:舊巨砲的「窗內免彈夾/免射速閘 + 自動擊發」旁路隨機甲改招整組移除 ——
     // 重武器射擊路徑上不該再有任何跳過彈夾/電力/射速閘的分支(MUST NOT 復辟)。
     if (!this.firing) return;
+    if ((this.freezeLeft || 0) > 0) return;
     if (this._isCasting(now)) {
       if (now - (this._castWarnAt || 0) > 1.2) {
         this._castWarnAt = now;
@@ -8219,7 +8231,9 @@ export class BattleClient {
     const defRateMul = (this.defending && (this.sp || 0) > 0) ? 0.5 : 1;
     const effRate = def.rate * defRateMul;
     if (defRateMul < 1 && now - (this.lastFireAt[id] || 0) < 1 / effRate) return;
-    const sandMul = this.env?.getWeatherDynamics?.()?.sandRateMul ?? 1;
+    const sandMul = this._flying()
+      ? (this.env?.getWeatherDynamics ? weatherFlightAttackRateFactor(this.env.getWeatherDynamics() || {}) : 1)
+      : (this.env?.getWeatherSurface ? weatherGroundAttackRateFactor(this.env.getWeatherSurface() || {}) : 1);
     if (sandMul < 1 && now - (this.lastFireAt[id] || 0) < 1 / (effRate * sandMul)) return;
     this._fallbackFromEmptyHeavy(id, st);
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
@@ -8918,6 +8932,7 @@ export class BattleClient {
   // ---------------- 招式(Q 守招 / E 攻招:解鎖 + CD + 電力,伺服器結算)----------------
   _castAbility(slot) {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
+    if ((this.freezeLeft || 0) > 0) return;
     const now = performance.now() / 1000;
     if (this._isCasting(now)) {
       if (now - (this._castWarnAt || 0) > 1.2) {
@@ -9025,6 +9040,7 @@ export class BattleClient {
 
   /** 防守姿態切換(正面生成機體大小的低透明度護盾;磁力歸零無法生成) */
   _toggleDefense(on) {
+    if ((this.freezeLeft || 0) > 0) return;
     const next = (on !== undefined) ? !!on : !this.defending;
     if (next) {
       if (!this._canEnterDefense()) {
@@ -9622,7 +9638,8 @@ export class BattleClient {
     const ax = this._moveAxis();
     const boost = ax.boost ? 1.35 : 1;
     const move = _TMP_C.set(0, 0, 0).addScaledVector(fwd, ax.f).addScaledVector(right, ax.r);
-    if (ax.mag > 1) move.multiplyScalar(1 / ax.mag);
+    if ((this.freezeLeft || 0) > 0) move.set(0, 0, 0);
+    else if (ax.mag > 1) move.multiplyScalar(1 / ax.mag);
     this._stepThirdPersonBody(dt, move);
 
     // 攀爬(長梯/攀岩抓點/垂降技術繩)接管:掛在梯上時不吃重力、不吃地面加速,其餘(結構物硬碰撞 /
@@ -9758,8 +9775,8 @@ export class BattleClient {
           && this.pos.y - gy <= slopeSnapM(Math.hypot(this.pos.x - px0, this.pos.z - pz0))) {
         this.pos.y = gy; this.vy = 0;
       }
-      // 麻痺 = 禁移動:蓄力/起跳/變形彈射一併封鎖(已騰空的物理慣性不受影響)
-      if ((this.stunLeft || 0) > 0) {
+      // 麻痺 / 凍結 = 禁移動:蓄力/起跳/變形彈射一併封鎖(已騰空的物理慣性不受影響)
+      if ((this.freezeLeft || 0) > 0 || (this.stunLeft || 0) > 0) {
         this.charge = 0;
       } else if (this.isMorph) {
         // 蓄力彈射:按住 Space 蓄力 → 放開時蓄力足夠且動力足夠即彈射變形為飛行型,否則只是小跳(無 CD,改吃動力)

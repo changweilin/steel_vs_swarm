@@ -8,6 +8,7 @@ import {
   WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor,
   weatherSurfaceCoverMax, weatherGroundSlowFactor, weatherJumpHeightFactor, weatherJumpVelocityFactor,
   weatherFlightSlowFactor, unbalAltThreshold, airSinkM, weatherAccuracyPenalty, weatherMissP,
+  weatherGroundAttackRateFactor, weatherFlightAttackRateFactor, WEATHER_FREEZE,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 
@@ -351,23 +352,39 @@ console.log('\n▍Ⅶ 動態天氣 Debuff 參數與閃電判定 (WEATHER_DEBUFFS
 // Ⅷ 複合天氣物理與戰鬥機制稽核 (地面積聚減速/跳躍、飛行雨雪砂折減、強風失衡、閃電衝擊波、迷霧與夜晚命中率)
 console.log('\n▍Ⅷ 複合天氣物理與戰鬥機制稽核');
 {
-  // 1. 地面積水/積雪/土丘降低地面單位移速與跳躍高度 (最多 25%)
+  // 1. 地面積水/積雪降低地面單位移速與跳躍高度 (最多 25%)
   const emptySurf = { puddle: 0, snow: 0, dune: 0 };
   const fullSurf = { puddle: 1, snow: 0, dune: 0 };
-  const halfSurf = { puddle: 0.5, snow: 0.2, dune: 0.1 };
+  const halfSurf = { puddle: 0.5, snow: 0.2, dune: 1.0 };
   ok(weatherGroundSlowFactor(emptySurf) === 1, '地面無積累時移速不折減 (1.0)');
-  ok(Math.abs(weatherGroundSlowFactor(fullSurf) - 0.75) < 1e-6, '地面最大積累時移速降低 25% (0.75)');
-  ok(Math.abs(weatherJumpHeightFactor(fullSurf) - 0.75) < 1e-6, '地面最大積累時跳躍高度降低 25% (0.75)');
-  ok(Math.abs(weatherJumpVelocityFactor(fullSurf) - Math.sqrt(0.75)) < 1e-6, '地面最大積累時起跳初速折減為 sqrt(0.75)');
-  ok(Math.abs(weatherGroundSlowFactor(halfSurf) - (1 - 0.25 * weatherSurfaceCoverMax(halfSurf))) < 1e-6, '地面取 puddle/snow/dune 最大覆蓋率結算');
+  ok(Math.abs(weatherGroundSlowFactor(fullSurf) - 0.75) < 1e-6, '地面最大積水時移速降低 25% (0.75)');
+  ok(Math.abs(weatherJumpHeightFactor(fullSurf) - 0.75) < 1e-6, '地面最大積水時跳躍高度降低 25% (0.75)');
+  ok(Math.abs(weatherJumpVelocityFactor(fullSurf) - Math.sqrt(0.75)) < 1e-6, '地面最大積水時起跳初速折減為 sqrt(0.75)');
+  ok(Math.abs(weatherGroundSlowFactor(halfSurf) - (1 - 0.25 * weatherSurfaceCoverMax(halfSurf))) < 1e-6, '地面移速/跳躍只取 puddle/snow 最大覆蓋率結算, 土丘不影響');
 
-  // 飛行單位由雨量/雪量/砂量直接影響 (最多 10%)
-  const dynClear = { rainSlow: 0, snowSlow: 0, sandSlow: 0 };
+  // 土丘/砂量改為分別降低地面/飛行單位的攻速 (最多 25%)
+  const fullDuneSurf = { sand: 1.0 };
+  const emptyDuneSurf = { sand: 0.0 };
+  ok(weatherGroundAttackRateFactor(emptyDuneSurf) === 1, '地面無土丘時地面單位攻速不折減 (1.0)');
+  ok(Math.abs(weatherGroundAttackRateFactor(fullDuneSurf) - 0.75) < 1e-6, '地面最大土丘時地面單位攻速降低 25% (0.75)');
+
+  const dynSandFull = { sandSlow: 1.0 };
+  const dynSandZero = { sandSlow: 0.0 };
+  ok(weatherFlightAttackRateFactor(dynSandZero) === 1, '無沙暴時飛行單位攻速不折減 (1.0)');
+  ok(Math.abs(weatherFlightAttackRateFactor(dynSandFull) - 0.75) < 1e-6, '最大砂量時飛行單位攻速降低 25% (0.75)');
+
+  // 飛行單位由雨量/雪量直接影響移速 (最多 10%)
+  const dynClear = { rainSlow: 0, snowSlow: 0, sandSlow: 1 };
   const dynRain = { rainSlow: 1, snowSlow: 0, sandSlow: 0 };
-  const dynMixed = { rainSlow: 0.4, snowSlow: 0.8, sandSlow: 0.2 };
-  ok(weatherFlightSlowFactor(dynClear) === 1, '無雨雪砂時飛行移速不折減 (1.0)');
+  const dynMixed = { rainSlow: 0.4, snowSlow: 0.8, sandSlow: 1.0 };
+  ok(weatherFlightSlowFactor(dynClear) === 1, '無雨雪時飛行移速不折減 (1.0), 砂量不影響飛行移速');
   ok(Math.abs(weatherFlightSlowFactor(dynRain) - 0.90) < 1e-6, '雨量最大時飛行移速降低 10% (0.90)');
-  ok(Math.abs(weatherFlightSlowFactor(dynMixed) - (1 - 0.10 * 0.8)) < 1e-6, '飛行單位取雨雪砂最大強度折減');
+  ok(Math.abs(weatherFlightSlowFactor(dynMixed) - (1 - 0.10 * 0.8)) < 1e-6, '飛行單位取雨雪最大強度折減移速');
+
+  // 積雪/雪量造成機率性凍結 (每30秒最多2秒, 凍結效果: 無法操作且受傷-75%)
+  ok(WEATHER_FREEZE.DUR_S === 2.0, '凍結持續時間為 2.0s');
+  ok(WEATHER_FREEZE.COOLDOWN_S === 30.0, '凍結冷卻間隔為 30.0s');
+  ok(WEATHER_FREEZE.DMG_REDUCTION === 0.75, '凍結傷害減免為 75%');
 
   // 2. 強風只影響飛行與跳躍單位，失衡門檻降至 0.5 塔高，失衡掉高增加最多 25%
   const windZero = 0;

@@ -27,8 +27,7 @@ export function weatherSurfaceCover(value) {
 export function weatherSurfaceCoverMax(surface = {}) {
   const water = weatherSurfaceCover(surface?.water ?? surface?.puddle);
   const snow = weatherSurfaceCover(surface?.snow);
-  const sand = weatherSurfaceCover(surface?.sand ?? surface?.dune);
-  return Math.max(water, snow, sand);
+  return Math.max(water, snow);
 }
 
 export function weatherGroundSlowFactor(surface = {}) {
@@ -41,6 +40,11 @@ export function weatherJumpHeightFactor(surface = {}) {
 
 export function weatherJumpVelocityFactor(surface = {}) {
   return Math.sqrt(weatherJumpHeightFactor(surface));
+}
+
+export function weatherGroundAttackRateFactor(surface = {}) {
+  const sand = weatherSurfaceCover(surface?.sand ?? surface?.dune);
+  return 1.0 - 0.25 * sand;
 }
 
 export const lightningFireSeconds = () => 24 / dayHourRate();
