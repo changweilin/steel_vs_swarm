@@ -349,10 +349,10 @@ console.log('\n▍Ⅶ 動態天氣 Debuff 參數與閃電判定 (WEATHER_DEBUFFS
   ok(!lowThunderFired, '雷雨指數 ≤ 75% 時不觸發閃電打擊');
 }
 
-// Ⅷ 複合天氣物理與戰鬥機制稽核 (地面積聚減速/跳躍、飛行雨雪砂折減、強風失衡、閃電衝擊波、迷霧與夜晚命中率)
+// VIII. Combined weather physics and combat mechanics audit
 console.log('\n▍Ⅷ 複合天氣物理與戰鬥機制稽核');
 {
-  // 1. 地面積水/積雪降低地面單位移速與跳躍高度 (最多 25%)
+  // 1. Surface water/snow reduces ground unit move speed and jump height (up to 25%)
   const emptySurf = { puddle: 0, snow: 0, dune: 0 };
   const fullSurf = { puddle: 1, snow: 0, dune: 0 };
   const halfSurf = { puddle: 0.5, snow: 0.2, dune: 1.0 };
@@ -362,7 +362,7 @@ console.log('\n▍Ⅷ 複合天氣物理與戰鬥機制稽核');
   ok(Math.abs(weatherJumpVelocityFactor(fullSurf) - Math.sqrt(0.75)) < 1e-6, '地面最大積水時起跳初速折減為 sqrt(0.75)');
   ok(Math.abs(weatherGroundSlowFactor(halfSurf) - (1 - 0.25 * weatherSurfaceCoverMax(halfSurf))) < 1e-6, '地面移速/跳躍只取 puddle/snow 最大覆蓋率結算, 土丘不影響');
 
-  // 土丘/砂量改為分別降低地面/飛行單位的攻速 (最多 25%)
+  // Dune/sand reduces ground/air attack rate (up to 25%)
   const fullDuneSurf = { sand: 1.0 };
   const emptyDuneSurf = { sand: 0.0 };
   ok(weatherGroundAttackRateFactor(emptyDuneSurf) === 1, '地面無土丘時地面單位攻速不折減 (1.0)');
@@ -373,7 +373,7 @@ console.log('\n▍Ⅷ 複合天氣物理與戰鬥機制稽核');
   ok(weatherFlightAttackRateFactor(dynSandZero) === 1, '無沙暴時飛行單位攻速不折減 (1.0)');
   ok(Math.abs(weatherFlightAttackRateFactor(dynSandFull) - 0.75) < 1e-6, '最大砂量時飛行單位攻速降低 25% (0.75)');
 
-  // 飛行單位由雨量/雪量直接影響移速 (最多 10%)
+  // Airborne units speed reduced by rain/snow (up to 10%)
   const dynClear = { rainSlow: 0, snowSlow: 0, sandSlow: 1 };
   const dynRain = { rainSlow: 1, snowSlow: 0, sandSlow: 0 };
   const dynMixed = { rainSlow: 0.4, snowSlow: 0.8, sandSlow: 1.0 };
@@ -381,12 +381,12 @@ console.log('\n▍Ⅷ 複合天氣物理與戰鬥機制稽核');
   ok(Math.abs(weatherFlightSlowFactor(dynRain) - 0.90) < 1e-6, '雨量最大時飛行移速降低 10% (0.90)');
   ok(Math.abs(weatherFlightSlowFactor(dynMixed) - (1 - 0.10 * 0.8)) < 1e-6, '飛行單位取雨雪最大強度折減移速');
 
-  // 積雪/雪量造成機率性凍結 (每30秒最多2秒, 凍結效果: 無法操作且受傷-75%)
+  // Snow/snowfall causes probabilistic freeze (up to 2s per 30s, freeze effect: unable to act + 75% damage reduction)
   ok(WEATHER_FREEZE.DUR_S === 2.0, '凍結持續時間為 2.0s');
   ok(WEATHER_FREEZE.COOLDOWN_S === 30.0, '凍結冷卻間隔為 30.0s');
   ok(WEATHER_FREEZE.DMG_REDUCTION === 0.75, '凍結傷害減免為 75%');
 
-  // 2. 強風只影響飛行與跳躍單位，失衡門檻降至 0.5 塔高，失衡掉高增加最多 25%
+  // 2. Strong wind affects flying/jumping units, unbalance threshold drops to 0.5 tower height, sink increases up to 25%
   const windZero = 0;
   const windFull = 100;
   ok(unbalAltThreshold(windZero) === 26, '無風時失衡高度門檻為 1.0 塔高 (26m)');
@@ -395,7 +395,7 @@ console.log('\n▍Ⅷ 複合天氣物理與戰鬥機制稽核');
   const sinkWind = airSinkM(100, 100);
   ok(Math.abs(sinkWind - sinkBase * 1.25) < 1e-6, '最強風時受擊掉高增加 25%');
 
-  // 3. 閃電直接擊中灼傷無位移；附近單位受衝擊波位移與傷害 (越近傷害越高)
+  // 3. Direct lightning strike scorches without knockback; nearby units take shockwave displacement and damage
   const testCfg = {
     center: { lat: 25.033, lng: 121.565 },
     bases: { SWARM: [25.033, 121.565], STEEL: [25.037, 121.565] },
@@ -418,15 +418,15 @@ console.log('\n▍Ⅷ 複合天氣物理與戰鬥機制稽核');
   const farDmg = 100 - farTarget.hp;
   ok(nearDmg > 0 && farDmg > 0 && nearDmg > farDmg, `衝擊波傷害隨距離衰減 (近: ${nearDmg} > 遠: ${farDmg})`);
 
-  // 4. 迷霧和夜晚降低命中率，最多下降 20% (最濃霧/無月亮午夜)
-  const sched = computeSolarSchedule(25, 172); // 夏至
+  // 4. Fog and night reduce accuracy up to 20% (dense fog / moonless midnight)
+  const sched = computeSolarSchedule(25, 172); // Summer solstice
   const penClearDay = weatherAccuracyPenalty(0, 12, sched, 15);
   ok(penClearDay === 0, '晴天正午無命中率懲罰 (0%)');
   const penMaxFog = weatherAccuracyPenalty(1.0, 12, sched, 15);
   ok(Math.abs(penMaxFog - 0.20) < 1e-6, '最濃霧時命中率下降 20%');
-  const penNewMoonMidnight = weatherAccuracyPenalty(0, 0, sched, 0); // 朔月 (lunarDay 0) 午夜 0:00
+  const penNewMoonMidnight = weatherAccuracyPenalty(0, 0, sched, 0); // New moon midnight
   ok(Math.abs(penNewMoonMidnight - 0.20) < 1e-6, '無月亮午夜命中率下降 20%');
-  const penFullMoonMidnight = weatherAccuracyPenalty(0, 0, sched, 15); // 滿月 (lunarDay 15) 午夜
+  const penFullMoonMidnight = weatherAccuracyPenalty(0, 0, sched, 15); // Full moon midnight
   ok(penFullMoonMidnight < 0.20, `滿月午夜受月光補償命中率下降較少 (${(penFullMoonMidnight * 100).toFixed(1)}% < 20%)`);
   const baseMissP = 0.10;
   const adjustedMissP = weatherMissP(baseMissP, penMaxFog);

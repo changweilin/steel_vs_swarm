@@ -2424,7 +2424,7 @@ export class BattleClient {
     return v;
   }
 
-  /** 控場移動係數(麻痺/凍結 = 0、緩速 ×slowF)—— 與伺服器 NPC(_advance)/bot(_speed)同一套規則 */
+  /** CC movement factor (paralyze/freeze = 0, slow x slowF) - shares rules with server NPC/bot */
   _ccMoveF() {
     if ((this.freezeLeft || 0) > 0) return 0;
     if ((this.stunLeft || 0) > 0) return 0;
@@ -3809,7 +3809,7 @@ export class BattleClient {
         }
       };
 
-      // ── 凍結 (freezeLeft): 全行動鎖定 + 受傷-75% ─────────────────────
+      // -- Freeze (freezeLeft): all actions locked + 75% damage reduction --
       if (this.freezeLeft > 0) {
         push('freeze', this.freezeLeft, false, '凍結');
       }
@@ -9553,7 +9553,7 @@ export class BattleClient {
   _unbalanced(now) {
     if (!this._flying() || this.dead) return false;
     const unbalThres = this._unbalAltThreshold ? this._unbalAltThreshold() : TARGET_H.tower;
-    if (this.isDrone && (this._altAG || 0) < unbalThres) return false;   // 無人機低空飛行(離地低於門檻)不失衡(與伺服器 _stampUnbal 同判)
+    if (this.isDrone && (this._altAG || 0) < unbalThres) return false;   // Low-flying drones do not destabilize (matches server _stampUnbal)
     const t = now ?? (typeof performance !== 'undefined' ? performance.now() / 1000 : 0);
     return (this._airSink > 0) || (t < (this._liftLockUntil || 0)) || ((this.unbalLeft || 0) > 0);
   }
@@ -9599,7 +9599,7 @@ export class BattleClient {
    * 只記帳不直接改高度 —— 8Hz 快照一次入帳的傷害若直接扣 y,畫面上是瞬移;
    * 逐幀以「待落總量 / FLIGHT.SINK_S」的速率消化 ⇒ **總掉幅只由傷害決定**,SINK_S 只管節奏。
    * 飛行受擊下降時設定鎖定窗 FLIGHT.HIT_LOCK_S(此期間無法恢復飛行動力)。
-   * 掉高歸類於失衡效果:無人機低空飛行(離地低於門檻)不失衡 ⇒ 也不掉高、不鎖動力
+   * Altitude loss is part of unbalance: low-flying drones do not destabilize => no altitude loss or locked lift
    * (與 _unbalanced / 伺服器 _stampUnbal + _botAirSink 同判)。
    */
   _airSinkHit(dmg, now) {
@@ -9775,7 +9775,7 @@ export class BattleClient {
           && this.pos.y - gy <= slopeSnapM(Math.hypot(this.pos.x - px0, this.pos.z - pz0))) {
         this.pos.y = gy; this.vy = 0;
       }
-      // 麻痺 / 凍結 = 禁移動:蓄力/起跳/變形彈射一併封鎖(已騰空的物理慣性不受影響)
+      // Paralyze / freeze = movement blocked: charged jump/liftoff/eject blocked
       if ((this.freezeLeft || 0) > 0 || (this.stunLeft || 0) > 0) {
         this.charge = 0;
       } else if (this.isMorph) {

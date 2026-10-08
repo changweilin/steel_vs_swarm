@@ -2502,7 +2502,7 @@ export class BattleSim {
     return false;
   }
 
-  /** 土丘/砂量攻速倍率: 飛行單位吃空中砂量 (最多降25%), 地面單位吃土丘覆蓋 (最多降25%) */
+  /** Dune/sand attack rate multiplier: airborne units scale by airborne sand (up to -25%), ground units by dune cover (up to -25%) */
   _sandAttackRateMul(e) {
     if (this._isAirEnt(e)) {
       return this.curWeatherDyn ? weatherFlightAttackRateFactor(this.curWeatherDyn) : 1;
@@ -2516,8 +2516,8 @@ export class BattleSim {
 
   /** 受擊失衡戳記(2026-09-01 飛行機體跌落到穩住期間;持盾減輕失衡。
    *  大跳躍滯空被攻擊同樣進入失衡(airUnit 判定:蓄力跳高過一般跳躍頂點的區間)。
-   *  無人機低空飛行(離地低於失衡門檻 _unbalAltThreshold)不失衡:貼地突防不吃跌落懲罰。
-   *  強風時門檻降至 0.5 塔高,更容易失衡。 */
+   *  Drones flying low (below _unbalAltThreshold) do not destabilize: low-altitude runs bypass stall penalty.
+   *  In strong wind, threshold drops to 0.5 tower height, increasing unbalance vulnerability. */
   _stampUnbal(t, factor = 1) {
     if (t && t.kind === 'drone' && (t.y || 0) < this._unbalAltThreshold()) return;
     if (!this._isFlyingHero(t) && !airUnit(t.kind, t.y)) return;
@@ -2539,7 +2539,7 @@ export class BattleSim {
   }
 
   /**
-   * 這一發打不中的機率 = 目標閃避 ⊕ **射手**被高地壓制而失準 ⊕ 射手受擊失衡 ⊕ 天氣夜晚失準(獨立事件,見 data.highSupMissP, unbalMissP, weatherMissP)。
+   * Miss probability = target evasion + shooter suppressed + shooter unbalanced + weather/night miss (independent events).
    * 伺服器只擲一顆骰 ⇒ 兩條路徑(`_dodges` 與 `_blast`)MUST 都經這一支;
    * 而閃避補償 `evadeCompF` 的分母 MUST 仍只吃 `_dodgeP`(壓制不在「維持 DPS」那個帳裡,A45 ⑦)。
    */
@@ -5917,7 +5917,7 @@ export class BattleSim {
     if (t.sq?.boss && (t.sq.bossSeg || 0) >= 3 && (!by || !by.hero)) {
       dmg *= BOSS.ENRAGE_NPC_DMG_F;                // 狂暴模式:受到兵波NPC/砲塔/主堡的傷害減少至25%
     }
-    // 天氣凍結: 凍結期間受到的傷害減少 75%
+    // Weather freeze: 75% damage reduction during freeze
     if ((t.freezeUntil || 0) > this.t) {
       dmg *= (1.0 - WEATHER_FREEZE.DMG_REDUCTION);
     }
@@ -6478,11 +6478,11 @@ export class BattleSim {
     this.weatherSurface = stepWeatherSurface(this.weatherSurface, dyn, dt);
     for (const entity of this.ents.values()) clearLightningScorch(entity, this.t);
 
-    // 積雪/雪量分別造成地面/飛行單位的機率性凍結, 每30秒最多2秒
+    // Snow/snowfall causes probabilistic freezing for ground/air units (up to 2s every 30s)
     const effSnow = dyn?.effectiveSnow ?? 0;
     const snowCover = weatherSurfaceCover(this.weatherSurface?.snow);
     if (effSnow > 0 || snowCover > 0) {
-      const stepIdx = Math.floor(this.t); // 每整秒檢定一次機率
+      const stepIdx = Math.floor(this.t); // Test once per second
       if (this._lastSnowFreezeStep !== stepIdx) {
         this._lastSnowFreezeStep = stepIdx;
         let seed = ((this.weatherSeed ^ (stepIdx * 0x85ebca6b)) >>> 0);
@@ -6492,7 +6492,7 @@ export class BattleSim {
           if (this.t - (e._lastFreezeAt || -WEATHER_FREEZE.COOLDOWN_S) < WEATHER_FREEZE.COOLDOWN_S) continue;
 
           const isAir = this._isAirEnt(e);
-          const prob = isAir ? effSnow * 0.05 : snowCover * 0.05; // 5% 基準 × 雪強度/積雪覆蓋率每秒檢定
+          const prob = isAir ? effSnow * 0.05 : snowCover * 0.05; // 5% baseline x snow intensity/cover per second
           if (prob <= 0) continue;
 
           seed = ((seed + 0x6D2B79F5) | 0);
@@ -6582,16 +6582,16 @@ export class BattleSim {
 
     for (const e of this.ents.values()) {
       if (e.dead || e.inv || (e.hp <= 0 && (e.sp || 0) <= 0)) continue;
-      // 直接擊中會灼傷但沒有位移, 亦不重複承受衝擊波傷害
+      // Direct hit scorches without knockback and avoids double damage from shockwave
       if (directTargetId != null && e.id === directTargetId) continue;
       const d = Math.hypot(e.x - sx, e.z - sz);
       if (d > r) continue;
 
-      const frac = 1.0 - d / r; // 越近傷害越高
+      const frac = 1.0 - d / r; // Attenuates with distance
       const dmg = maxDmg * frac;
       this._damage(e, dmg, null, 0);
 
-      // 衝擊波產生位移
+      // Shockwave displacement impulse
       const dist = Math.max(0.1, d);
       const nx = (e.x - sx) / dist;
       const nz = (e.z - sz) / dist;

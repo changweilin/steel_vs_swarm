@@ -74,7 +74,7 @@ const swapImpl = (roomsSrc.match(/cfg\.bases\.SWARM = cfg\.bases\.STEEL/g) || []
 ok(swapImpl === 1, `主堡對調 MUST 只有一份實作 rollSideSwap(實際 ${swapImpl} 處)`);
 const swapCalls = (roomsSrc.match(/rollSideSwap\(/g) || []).length - 1;   // 扣掉函式定義本身
 ok(swapCalls === 2, `主堡對調 MUST 在「開房」與「再戰回房」各擲一次(實際 ${swapCalls} 處呼叫)`);
-ok(/backToRoom[\s\S]{0,400}?rollSideSwap\(/.test(roomsSrc),
+ok(/(?:'backToRoom'|backToRoom)[\s\S]{0,600}?rollSideSwap\(/.test(roomsSrc),
   '再戰回房 MUST 重擲主堡歸屬(只在開房擲 = 同一間房永遠從同一端開場)');
 ok(!grabMethod(roomsSrc, 'startBattle').includes('rollSideSwap'),
   '擲點 MUST 留在房間階段,MUST NOT 移進 startBattle(客戶端房間階段的地形預建會整份作廢)');

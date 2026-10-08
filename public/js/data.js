@@ -7297,20 +7297,20 @@ export const WEATHER_DEBUFFS = {
   MAX_CHANGE: 0.125,   // 最大變化幅度 12.5%
   LIGHTNING: {
     BASE_DMG: 75,      // 閃電基礎傷害
-    PEN: 15,           // 穿甲值
-    INTERVAL_MIN: 2.0, // 打雷 100% 時判定頻率 (每 2 秒一次)
-    INTERVAL_MAX: 8.0, // 打雷 75% 剛觸發時判定頻率 (每 8 秒一次)
-    PROB_MIN: 0.35,    // 最低觸發機率
-    PROB_MAX: 0.90,    // 最高觸發機率
-    MAX_TARGETS: 3,    // 單次閃電最大打擊目標數
-    SHOCK_R: 18,       // 閃電衝擊波半徑 (公尺)
-    SHOCK_DMG: 18,     // 閃電衝擊波最大微量傷害 (爆心處最高, 隨距離衰減)
-    SHOCK_IMP: 14,     // 閃電衝擊波位移推力 (衝量)
+    PEN: 15,           // Armor penetration
+    INTERVAL_MIN: 2.0, // Check interval at thunder 100% (every 2s)
+    INTERVAL_MAX: 8.0, // Check interval at thunder 75% threshold (every 8s)
+    PROB_MIN: 0.35,    // Min trigger probability
+    PROB_MAX: 0.90,    // Max trigger probability
+    MAX_TARGETS: 3,    // Max lightning targets per strike
+    SHOCK_R: 18,       // Shockwave radius (m)
+    SHOCK_DMG: 18,     // Max shockwave minor damage (attenuates with distance)
+    SHOCK_IMP: 14,     // Shockwave displacement impulse
   },
-  SURFACE_SLOW_MAX: 0.25,    // 積水/積雪/土丘降低地面移動速度與跳躍高度上限 (25%)
-  AIR_PRECIP_SLOW_MAX: 0.10,  // 雨量/雪量/砂量降低飛行速度上限 (10%)
-  WIND_SINK_MAX: 0.25,        // 強風失衡高度損失增加上限 (25%)
-  ACCURACY_DROP_MAX: 0.20,    // 迷霧與夜晚命中率下降上限 (20%)
+  SURFACE_SLOW_MAX: 0.25,    // Surface slow/jump penalty cap (25%)
+  AIR_PRECIP_SLOW_MAX: 0.10,  // Airborne flight speed penalty cap (10%)
+  WIND_SINK_MAX: 0.25,        // Wind unbalance altitude loss increase cap (25%)
+  ACCURACY_DROP_MAX: 0.20,    // Fog/night accuracy penalty cap (20%)
 };
 
 /**
@@ -7365,7 +7365,7 @@ export function windSpeedFactor(moveX, moveZ, windDir, wind) {
   return 1.0 + WEATHER_DEBUFFS.MAX_CHANGE * intensity * cosTheta;
 }
 
-/** 飛行單位受雨量/雪量直接影響的速度倍率 (最多降低 10%) */
+/** Airborne unit speed multiplier affected by rain/snow (up to -10%) */
 export function weatherFlightSlowFactor(dyn = {}) {
   const rainInt = dyn.rainSlow ?? (dyn.rainIntensity ?? (dyn.effectiveRain ?? (dyn.rain > WEATHER_DEBUFFS.THRESHOLD ? (dyn.rain - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
   const snowInt = dyn.snowSlow ?? (dyn.snowIntensity ?? (dyn.effectiveSnow ?? (dyn.snow > WEATHER_DEBUFFS.THRESHOLD ? (dyn.snow - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
@@ -7374,9 +7374,9 @@ export function weatherFlightSlowFactor(dyn = {}) {
 }
 
 /**
- * 強風環境下飛行機體失衡高度門檻:
- * 平時維持 1 個砲塔高 (TARGET_H.tower)；
- * 最強風 (wind = 100) 時門檻降至 0.5 塔高 (TARGET_H.tower * 0.5)，使機體更容易失衡。
+ * Wind-induced unbalance height threshold:
+ * Baseline: 1 tower height (TARGET_H.tower);
+ * At max wind (wind=100), drops to 0.5 tower height, making mechs easier to destabilize.
  */
 export function unbalAltThreshold(wind = 0) {
   const intensity = wind > WEATHER_DEBUFFS.THRESHOLD
@@ -7386,14 +7386,14 @@ export function unbalAltThreshold(wind = 0) {
 }
 
 export const WEATHER_ACCURACY = {
-  MAX_PENALTY: 0.20, // 迷霧與夜晚最多下降 20% 命中率
+  MAX_PENALTY: 0.20, // Max 20% accuracy reduction from fog and night
 };
 
 /**
- * 迷霧與夜晚對命中率的負面影響 (0 ~ 0.20):
- * - 迷霧: effectiveFog (0~1) 線性推導, 最濃霧 (effectiveFog=1) 達 20%
- * - 夜晚: 依日落/日出與午夜深度, 結合月相與月球仰角 (朔日或無月之午夜達 20%)
- * - 兩者疊加, 最多下降 20% (MAX_PENALTY)
+ * Fog and night accuracy penalty (0 ~ 0.20):
+ * - Fog: linear scale from effectiveFog (0~1), up to 20% at full fog.
+ * - Night: sunset/sunrise and midnight depth, combined with lunar phase and moon altitude.
+ * - Sum capped at MAX_PENALTY (20%).
  */
 export function weatherAccuracyPenalty(fog = 0, hour = 12, sched = null, lunarDayOpt = null) {
   const effectiveFog = typeof fog === 'object' ? (fog.effectiveFog ?? 0) : Number(fog) || 0;
@@ -7418,11 +7418,11 @@ export function weatherAccuracyPenalty(fog = 0, hour = 12, sched = null, lunarDa
   return Math.min(WEATHER_ACCURACY.MAX_PENALTY, fogPen + nightPen);
 }
 
-/** 依天氣/時間懲罰調整未命中機率 (命中率下降 penalty，即 missP' = 1 - (1 - missP) * (1 - penalty)) */
+/** Adjusted miss probability under weather/time accuracy penalty */
 export const weatherMissP = (missP, penalty = 0) =>
   1 - (1 - (missP || 0)) * (1 - Math.max(0, Math.min(WEATHER_ACCURACY.MAX_PENALTY, penalty || 0)));
 
-/** 飛行單位受砂量直接影響的攻速倍率 (最多降低 25%) */
+/** Airborne unit attack rate multiplier affected by airborne sand (up to -25%) */
 export function weatherFlightAttackRateFactor(dyn = {}) {
   const sandInt = dyn.sandSlow ?? (dyn.sandIntensity ?? (dyn.effectiveSand ?? (dyn.sand > WEATHER_DEBUFFS.THRESHOLD ? (dyn.sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
   const intensity = Math.min(1.0, Math.max(0, sandInt));
@@ -7430,9 +7430,9 @@ export function weatherFlightAttackRateFactor(dyn = {}) {
 }
 
 export const WEATHER_FREEZE = {
-  DUR_S: 2.0,            // 凍結持續時間 2 秒
-  COOLDOWN_S: 30.0,      // 每 30 秒最多觸發一次
-  DMG_REDUCTION: 0.75,   // 凍結受傷減少 75% (受傷為原來的 25%)
+  DUR_S: 2.0,            // Freeze duration in seconds
+  COOLDOWN_S: 30.0,      // Trigger cooldown per entity in seconds
+  DMG_REDUCTION: 0.75,   // Damage reduction during freeze (-75%)
 };
 
 export { weatherSurfaceCover, weatherSurfaceCoverMax, weatherGroundSlowFactor, weatherJumpHeightFactor, weatherJumpVelocityFactor, weatherGroundAttackRateFactor } from './weatherState.js';
