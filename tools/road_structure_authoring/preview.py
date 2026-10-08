@@ -7,7 +7,7 @@ import bpy
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / 'out/road_structure_review'
+OUT = Path(globals().get('REVIEW_OUT', ROOT / 'out/road_structure_review'))
 models = json.loads((OUT / 'review.json').read_text(encoding='utf8'))['models']
 if globals().get('REVIEW_KEYS'):
     models = [model for model in models if model['key'] in REVIEW_KEYS]
@@ -128,7 +128,7 @@ def camera(scene, name, target, direction, points, aspect):
 
 
 for model in models:
-    scene = bpy.data.scenes.new('Road Review | ' + model['key'])
+    scene = bpy.data.scenes.new(globals().get('REVIEW_LABEL', 'Road Review') + ' | ' + model['key'])
     scenes[model['key']] = scene
     scene['review_key'] = model['key']
     scene['production_geometry'] = True

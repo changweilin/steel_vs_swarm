@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { HABITAT_SCENE } from './habitatCatalog.js';
-import { createHabitatSampler, planHabitatDetails, planHabitatStreets, planHabitatFurniture, drapeHabitatPanel } from './habitat.js';
+import { createHabitatSampler, planHabitatDetails, planHabitatStreets, planHabitatFurniture, planHabitatPathEdges } from './habitat.js';
 import { groundPlantParts, groundCoverParts } from './scenePlantParts.js';
 import { compileSceneParts } from './scenePropModels.js';
 import { envMat } from './toon.js';
@@ -8,6 +8,8 @@ import { makeFootprintIndex, blockerFoot } from './ground.js';
 import { seasonalEnvironment } from './seasonalEnvironment.js';
 import { sceneFurnitureParts } from './sceneFurnitureParts.js';
 import { sceneryGeometry } from './sceneryGeometry.js';
+import { buildWalkwaySurfaces, walkwayGeometry } from './walkwayRender.js';
+import { WALKWAY_MESHES } from './walkwayMeshData.js';
 
 function detailGeometry(kind, variant, coverSize = 0) {
   if (coverSize) {
@@ -53,7 +55,8 @@ function detailGeometry(kind, variant, coverSize = 0) {
 
 /** Ground material belongs to terrain triangles; these batches fill free slots with bounded surface detail. */
 export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, blockers = [], reservedFootprints = [],
-  roadSegments = [], areas = [], roadClear, envCodeAt, isBlocked, inset = 0, low = false, season = 'summer', environment = {}, environmentAt }) {
+  roadSegments = [], walkwayPoints = [], realScale = .5, areas = [], roadClear, envCodeAt, isBlocked, inset = 0,
+  low = false, season = 'summer', environment = {}, environmentAt }) {
   const occupied = makeFootprintIndex([...blockers.map(blockerFoot), ...reservedFootprints]);
   const bounds = { minX: terrain.minX + inset, maxX: terrain.maxX - inset,
     minZ: terrain.minZ + inset, maxZ: terrain.maxZ - inset };
@@ -75,14 +78,15 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
     const heights = [[0, 0], [-r, -r], [r, -r], [r, r], [-r, r]].map(([dx, dz]) => terrain.heightAt(x + dx, z + dz));
     return heights.every(Number.isFinite) && Math.max(...heights) - Math.min(...heights) <= Math.max(.12, r * .6);
   };
-  const streetPlan = planHabitatStreets({ segments: roadSegments, seed, sampleAt, heightAt: terrain.heightAt, fits });
-  const allFurniture = planHabitatFurniture({ panels: streetPlan, seed, fits, sampleAt, heightAt: terrain.heightAt });
-  for (const foot of allFurniture) occupied.add(foot);
+  const streetPlan = planHabitatStreets({ segments: roadSegments, seed, sampleAt, heightAt: terrain.heightAt, fits, realScale,
+    fitsPanel: foot => !occupied.near(foot) && sampleAt.contains(foot) });
+  const pathEdges = planHabitatPathEdges({ segments: roadSegments, seed, sampleAt, heightAt: terrain.heightAt });
   for (const panel of streetPlan) {
-    const hw = Math.hypot(panel.corners[0][0] - panel.corners[3][0], panel.corners[0][2] - panel.corners[3][2]) / 2;
-    const hd = HABITAT_SCENE.STREET_WIDTH_M / 2;
-    occupied.add({ x: panel.x, z: panel.z, hw, hd, ry: panel.ry, r: Math.hypot(hw, hd) });
+    occupied.add({ x: panel.x, z: panel.z, hw: panel.hw, hd: panel.hd, ry: panel.ry, r: panel.r });
   }
+  const allFurniture = planHabitatFurniture({ panels: [...streetPlan, ...pathEdges], points: walkwayPoints,
+    seed, fits, sampleAt, heightAt: terrain.heightAt });
+  for (const foot of allFurniture) occupied.add(foot);
   const furniture = allFurniture.slice(0, low ? HABITAT_SCENE.LOW_FURNITURE_LIMIT : HABITAT_SCENE.FURNITURE_LIMIT);
   const plan = planHabitatDetails({ bounds, seed, sampleAt, heightAt: terrain.heightAt, fits,
     maxDetails: low ? HABITAT_SCENE.LOW_DETAIL_LIMIT : HABITAT_SCENE.DETAIL_LIMIT });
@@ -131,7 +135,7 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
     furnitureKinds.get(row.kind).push(row);
   }
   for (const [kind, rows] of furnitureKinds) {
-    const geometry = compileSceneParts(sceneFurnitureParts(kind));
+    const geometry = Object.hasOwn(WALKWAY_MESHES, kind) ? walkwayGeometry(kind) : compileSceneParts(sceneFurnitureParts(kind));
     const mesh = new THREE.InstancedMesh(geometry, envMat(0xffffff, { vertexColors: true }), rows.length);
     mesh.name = 'habitat/' + kind;
     for (let i = 0; i < rows.length; i++) {
@@ -142,28 +146,12 @@ export function buildHabitatScene(group, terrain, { surfaceField, seed = 0, bloc
     mesh.computeBoundingBox(); mesh.computeBoundingSphere(); mesh.receiveShadow = true; group.add(mesh);
   }
   const panels = streetPlan.slice(0, low ? HABITAT_SCENE.LOW_STREET_LIMIT : HABITAT_SCENE.STREET_LIMIT);
-  if (panels.length) {
-    const vertices = [], colors = [];
-    for (const panel of panels) {
-      const tone = .60 + (panel.seed % 81) / 1000;
-      const draped = drapeHabitatPanel(panel, terrain);
-      vertices.push(...draped);
-      for (let i = 0; i < draped.length; i += 3) {
-        color.setRGB(tone, tone * .98, tone * .91, THREE.SRGBColorSpace);
-        colors.push(color.r, color.g, color.b);
-      }
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    geometry.computeVertexNormals();
-    const mesh = new THREE.Mesh(geometry, envMat(0xffffff, { vertexColors: true, wash: .06, land: true,
-      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
-    mesh.name = 'habitat/street-verges'; mesh.receiveShadow = true;
-    group.add(mesh);
-  }
+  const walkway = buildWalkwaySurfaces(group, panels, terrain, { low, pathEdges,
+    canDetailAt: (x, z) => x >= bounds.minX && x <= bounds.maxX && z >= bounds.minZ && z <= bounds.maxZ
+      && envCodeAt(x, z) === 0 && !isBlocked(x, z) });
   return { patches: panels.length, details: plan.rows.length, aligned: panels.length, bufCells: 0,
     bandDryAt: null, habitats: plan.counts, furniture: furniture.length,
     filledCells: plan.rows.filter(row => row.round === 0).length,
-    models: buckets.size + furnitureKinds.size, recipe: 'evidence-habitat-v2' };
+    models: buckets.size + furnitureKinds.size, walkway: { ...walkway, pathAnchors: pathEdges.length },
+    recipe: 'evidence-habitat-v2' };
 }

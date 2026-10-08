@@ -3,7 +3,7 @@
 // Runtime, fixture extractors, and payload validation tools all source from here to prevent divergent query filters.
 import { OSM_AREA_KEYS, buildAreaRecords } from './osmAreas.js';
 
-export const OSM_FEATURE_QUERY_VERSION = 11;
+export const OSM_FEATURE_QUERY_VERSION = 12;
 export const OSM_ROAD_QUERY_VERSION = 2;
 export const OSM_QUERY_TIMEOUT_S = 15;
 
@@ -65,6 +65,9 @@ export function osmFeatureQuery(bbox) {
     + `node["highway"~"^(stop|give_way|crossing|mini_roundabout|traffic_signals)$"](${bb});out body 120;`
     + `node["traffic_calming"](${bb});out body 80;`
     + `node["highway"="street_lamp"](${bb});out body 200;`
+    + `node["amenity"~"^(bench|waste_basket|bicycle_parking|drinking_water|shelter)$"](${bb});out body 160;`
+    + `node["leisure"="picnic_table"](${bb});out body 60;`
+    + `node["barrier"="bollard"](${bb});out body 80;`
     + `node["natural"="tree"](${bb});out body 200;`
     + `way["area:highway"="traffic_island"](${bb});out body geom 120;`
     + `way["natural"="tree_row"](${bb});out body geom 80;`
@@ -132,7 +135,7 @@ export function parseOsmFeatureElements(elements = []) {
       entrances.push({ lat: el.lat, lng: el.lon, tags });
     } else if (el?.type === 'node' && (tags.place || ['peak', 'tree'].includes(tags.natural) || tags.highway === 'street_lamp'
       || tags.traffic_sign || tags.traffic_calming || /^(stop|give_way|crossing|mini_roundabout|traffic_signals)$/.test(tags.highway || '')
-      || tags.highway === 'motorway_junction' || tags.railway || tags.amenity
+      || tags.highway === 'motorway_junction' || tags.railway || tags.amenity || tags.leisure === 'picnic_table' || tags.barrier === 'bollard'
       || ['museum', 'gallery', 'attraction', 'viewpoint', 'zoo', 'theme_park', 'information'].includes(tags.tourism) || tags.office === 'government' || tags.power === 'tower'
       || (tags.power === 'generator' && tags['generator:source'] === 'wind')
       || ['tower', 'mast', 'communications_tower', 'lighthouse'].includes(tags.man_made) || tags.aeroway === 'control_tower')) {

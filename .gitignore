@@ -92,3 +92,6 @@ tools/road_structure_authoring/__pycache__/
 
 out/facade_review/
 tools/facade_authoring/__pycache__/
+
+out/walkway_review/
+tools/walkway_authoring/__pycache__/
