@@ -82,6 +82,7 @@
     "audit:walkways": "node test/walkways.mjs",
     "shot:walkways": "node tools/walkway_authoring/shot.mjs",
     "author:shoreline": "node tools/shoreline_authoring/build.mjs",
+    "author:environment": "node tools/environment_authoring/build.mjs",
     "audit:shoreline": "node test/shoreline.mjs",
     "shot:shoreline": "node tools/shoreline_authoring/shot.mjs",
     "shot:roads": "node tools/road_structure_authoring/shot.mjs",

@@ -98,3 +98,6 @@ tools/walkway_authoring/__pycache__/
 
 out/shoreline_review/
 tools/shoreline_authoring/__pycache__/
+
+out/environment_project/
+tools/environment_authoring/__pycache__/
