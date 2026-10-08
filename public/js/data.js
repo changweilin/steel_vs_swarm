@@ -730,7 +730,7 @@ export const WEAPONS = {
   squad_rocket:     { name: '「賦格」雷導集束微型火箭', dmg: 35, rate: 0.9, range: 180, mag: 4,  reload: 2.5, pen: 10, mv: 720, guide: 1, vs: { flesh: 1.0, armor: 1.4, air: 0.8, building: 1.2 } },
   mbt_cannon:       { name: '「凌霄破陣」130mm 滑膛穿甲砲', dmg: 55, rate: 0.5, range: 160, mag: 3,  reload: 3.0, pen: 24, mv: 1650, needAim: true, vs: { flesh: 0.8, armor: 1.8, air: 0.3, building: 1.8 } },
   veteran_hmg:      { name: '「老戰士」特裝 12.7mm 穿甲重機槍', dmg: 18, rate: 1.2, range: 150, mag: 40, reload: 2.0, pen: 8,  mv: 880, vs: { flesh: 1.3, armor: 1.1, air: 1.0, building: 0.5 } },
-  carnival_missile: { name: '「森巴熱浪」空對地燃燒火箭巢', dmg: 32, rate: 0.8, range: 180, mag: 6,  reload: 2.8, pen: 8,  mv: 650, vs: { flesh: 1.3, armor: 1.1, air: 0.6, building: 1.3 } },
+  carnival_missile: { name: '「森巴烈焰」空對地多管火箭巢', dmg: 32, rate: 0.8, range: 180, mag: 6,  reload: 2.8, pen: 8,  mv: 650, vs: { flesh: 1.3, armor: 1.1, air: 0.6, building: 1.3 } },
 };
 export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 
@@ -3832,7 +3832,7 @@ export const CHARACTERS = {
     side: 'SWARM', kind: 'drone', name: '塔拉斯・邦達爾', code: '鐵匠', machine: '「鐵匠鋪」重載運翼機',
     visual: { hue: 0xc98a3d, frame: 'hexa', body: 'slab', paint: 'minimal' },
     mods: { hp: 1.2, sp: 0.9, mp: 0.9, speed: 0.85, armor: 12 },
-    light: { name: '「重砧」12.7mm 重型速射機槍', rw: '大口徑同軸機槍・12.7mm 穿甲燃燒彈・初速 850m/s', type: 'gun', mv: 850,
+    light: { name: '「重砧」12.7mm 重型速射機槍', rw: '大口徑同軸機槍・12.7mm 鎢芯穿甲彈・初速 850m/s', type: 'gun', mv: 850,
       // crit 0 = 類型基準(重機槍低暴擊);2026-07-25 起 heroWeapon() 夾 CRIT_MIN 5% ⇒ 實戰 ≥5%。
       // e2e 的 s02/t01 確定性傷害斷言改用 Math.random 樁固定不觸發暴擊(不再依賴 crit:0)。
       dmg: [15, 19, 23], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0, pen: 6,
@@ -3848,8 +3848,8 @@ export const CHARACTERS = {
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
     def: { name: '地脈・百煉重鑄', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.6, 0.5, 0.4],
       dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '啟動應急奈米回火鍛造：持重盾狂暴衝撞擊退敵機，直接充盈磁力並大幅強化護盾減傷' },
-    atk: { name: '天工・萬象焚熔', fx: 'heal', target: 'team', r: 200, heal: [220, 300, 380], sp: true,
-      cd: [80, 70, 60], mp: [85, 95, 105], desc: '全面解放萬噸重型熔爐：以熾熱奈米回火烈焰覆蓋全軍，大幅修復機體裝甲並充盈能量護盾' },
+    atk: { name: '天工・萬象百煉', fx: 'heal', target: 'team', r: 200, heal: [220, 300, 380], sp: true,
+      cd: [80, 70, 60], mp: [85, 95, 105], desc: '全面解放重載維修鍛爐：以高速奈米回火重塑流覆蓋全軍，大幅修復機體裝甲並充盈能量護盾' },
   },
   s03: {
     // 2026-08-03 使用者定案「台灣換成變形者(迅猛龍 + 始祖鳥)」:接下原屬 s12 的
@@ -3901,7 +3901,7 @@ export const CHARACTERS = {
     light: { name: '「連牙」九式近迫爆裂霰彈', rw: '高密度多重近戰霰彈莢・12 鉛徑鹿彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: 16,
       dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.75, air: 1.2, building: 0.4 } },
-    heavy: { name: '「紅蓮業火」聚能電漿噴湧口', rw: '高溫磁化電漿短程扇形投射器・熱核噴焰', type: 'plasma', arc: 13,
+    heavy: { name: '「突風破障」高壓氣浪噴湧口', rw: '戰壕工兵定向高壓衝擊氣浪錐・短程擴散破障震波', type: 'plasma', arc: 13,
       dmg: [46, 75, 117], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
     def: { name: '金剛・修羅逆浪', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [42, 56, 74], r: 12,
@@ -4085,7 +4085,7 @@ export const CHARACTERS = {
     // 名冊內,紀律①)。反護盾的鏡像:榴彈的超壓是「大面積、慢」的能量,護盾場整個消化得掉;
     // 但盾一破,152mm 破片打在裝甲板上就不是護盾場能談的事了。
     // 它同時留著 vs.armor 1.3,依紀律③「加成越多含金量越低」⇒ vsHp 只給一小格,折減照吃。
-    heavy: { name: '「冰魄霜斧」重型電漿戰斧', rw: '高溫磁化冷焰電漿戰斧・重型扇形近戰揮砍', type: 'plasma', arc: 15,
+    heavy: { name: '「冰魄霜斧」重型深冷急凍戰斧', rw: '重型深冷液氮超導戰斧・絕對零度扇面衝擊・極低溫碎甲', type: 'plasma', arc: 15,
       dmg: [60, 90, 126], mag: 3, reload: 7, range: 264, pen: 16,
       vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
     def: { name: '霜狼・北境重盾', fx: 'shield_bash', shieldBash: true, imp: 28, dmg: [65, 90, 120], r: 12,
@@ -4137,13 +4137,13 @@ export const CHARACTERS = {
     // 守招保留鑄鐵鍋盾本體(機體左前臂真的掛著那口鍋,見 models.js gorilla)並補上衝鋒 ——
     // lore 寫的就是「頂著那口鑄鐵鍋盾一路撞進去」,承傷減免 + 加速正是這句話的機制化;
     // 攻招從自身增益改成把敵人捲進鍋裡的範圍打擊,直接把目標帶進扇形武器的甜蜜點。
-    def: { name: '鎮煞・金剛熔壁', fx: 'shield_bash', shieldBash: true, imp: 30, dmg: [45, 62, 85], r: 12, shieldExpand: true,
+    def: { name: '不屈鐵壁・狂暴碾壓', fx: 'shield_bash', shieldBash: true, imp: 30, dmg: [45, 62, 85], r: 12, shieldExpand: true,
       charges: 2,
-      spRestore: [25, 40, 55], dur: [3, 3.5, 4], cd: [17, 15, 13], mp: [25, 30, 35], desc: '八卦爐神火化為鎮煞金剛壁（可使用2次）：防守姿態下持重盾強勢衝撞擊退敵機，大幅擴大護盾並補充磁力' },
-    atk: { name: '焚天・八卦火海', fx: 'strike', count: [2, 3, 4], dmg: [88, 110, 138], r: 14, scatter: 18,
+      spRestore: [25, 40, 55], dur: [3, 3.5, 4], cd: [17, 15, 13], mp: [25, 30, 35], desc: '持厚重合金鑄鐵盾強勢衝撞破陣（可使用2次）：以巨大質量撞飛並震退敵群，充盈磁力並大幅提高護盾減傷' },
+    atk: { name: '重力崩陷・地脈裂隙', fx: 'strike', count: [2, 3, 4], dmg: [88, 110, 138], r: 14, scatter: 18,
       add: { fx: 'pull', imp: [24, 30, 36] },
       range: 160, pen: 10, cd: [75, 65, 55], mp: [80, 90, 100], vs: { flesh: 1.5, armor: 1.1 },
-      desc: '解放八卦爐核心三昧真火：掀起焚天引力火海，強大吸力將範圍內敵軍全數吞入核心煉獄' },
+      desc: '超載動力引擎釋放核心引力崩塌：掀起地脈震裂的強大引力旋渦，將範圍內敵軍全數強行拉入核心並劇烈震盪撕碎' },
   },
   t04: {
     side: 'STEEL', kind: 'robot', name: '娜傑日達・奧爾洛娃', code: '灰雁', machine: '「灰犬」獵殺型',
@@ -4188,7 +4188,7 @@ export const CHARACTERS = {
     light: { name: '「疾風」191 特裝突擊步槍', rw: '新型高初速步槍・5.8mm 微聲穿甲彈・初速 930m/s', type: 'gun', mv: 930,
       dmg: [15, 18, 23], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
       vs: { flesh: 0.75, armor: 0.9, air: 1.0, building: 0.5 } },
-    heavy: { name: '「如意金箍」熔核焚天砲', rw: '高溫磁化電漿聚爆砲・多節長尾前捲破敵', type: 'plasma', arc: 10,
+    heavy: { name: '「如意金箍」天罡震地杖', rw: '多節超合金長棍前捲重擊・天罡震波扇面裂地・動能重擊破陣', type: 'plasma', arc: 10,
       dmg: [60, 93, 144], mag: 3, reload: 7, range: 264, pen: 10,
       vs: { flesh: 0.8, armor: 1.4, air: 0.45, building: 0.8 } },
     def: { name: '騰雲・筋斗御風', fx: 'buff', target: 'self', defJump: 3, mul: { speed: [1.25, 1.35, 1.45] }, spRestore: [40, 60, 80],
@@ -4256,7 +4256,7 @@ export const CHARACTERS = {
     atk: { name: '天罰・焚天黑雨', fx: 'strike', count: [7, 9, 11], dmg: [72, 89, 111], r: 11, scatter: 45,
       add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 360, pen: 8, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
-      desc: '降下蔽日遮天的波斯天罰黑雨：海量巡飛彈飽和俯衝轟炸目標空域，引發毀滅性混亂與火海' },
+      desc: '降下蔽日遮天的波斯天罰黑雨：海量巡飛彈飽和俯衝轟炸目標空域，引發毀滅性烈焰火海與爆震衝擊' },
   },
   t10: {
     side: 'STEEL', kind: 'robot', name: '蕾拉・侯賽尼', code: '落點', machine: '「軌跡」攔截機甲',
@@ -4335,14 +4335,14 @@ export const CHARACTERS = {
     side: 'MERC', kind: 'morph', name: '德揚・科瓦切維奇', code: '渡鴉', machine: '「渡鴉」可變式突襲機甲',
     visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'vampire', bulk: 1.0, paint: 'natflag', flag: [0xc6363c, 0x0c4076, 0xffffff] },
     mods: { hp: 1.05, sp: 1.05, mp: 1.0, speed: 1.1, armor: 14 },
-    light: { name: '「冥火」7.62mm 六管加特林機槍', rw: '多管旋轉速射機關槍・M134 改・初速 850m/s', type: 'gun', mv: 850,
+    light: { name: '「死翼」7.62mm 六管加特林機槍', rw: '多管旋轉速射機關槍・M134 改・初速 850m/s', type: 'gun', mv: 850,
       dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 210, crit: 0.05,
       vs: { flesh: 0.85, armor: 0.75, air: 1.3, building: 0.4 } },
     // 護盾軸示範 ③【穿盾】(原 vs.building 1.1,在 EX_SIEGE_WEAPONS 名冊內 —— 紀律①):
     // 破甲彈的金屬射流截面極小、速度極高,護盾場來不及耦合就被穿過去,一半動能直接打在裝甲上。
     // 代價寫在兩處:總量偏低(vsHp < 1)、基礎傷害再吃 counterDmgF —— 它同時還留著 vs.armor 1.7
     // 這個大加成,依紀律③「加成越多含金量越低」,折減會比只掛一項的武器更重。
-    heavy: { name: '「滅靈地獄火」穿盾導引飛彈', rw: '雷射駕束穿甲導引飛彈・AGM-114 衍生・初速 360m/s', type: 'missile', mv: 360,
+    heavy: { name: '「噬魂血錐」穿盾導引飛彈', rw: '雷射駕束反裝甲導引飛彈・反裝甲高能貫穿彈頭・初速 360m/s', type: 'missile', mv: 360,
       dmg: [50, 72, 103], r: [12, 14, 16], mag: 4, reload: 11, range: 320, pen: [14, 18, 22],
       spPierce: 0.45, vsHp: 0.9,
       vs: { flesh: 0.9, armor: 1.7, air: 0.55, building: 1.1 } },
@@ -4438,7 +4438,7 @@ export const CHARACTERS = {
     light: { name: '「狂歡風暴」雙聯機關槍', rw: '雙聯裝高射速機槍・7.62mm 穿甲彈・初速 825m/s', type: 'gun', mv: 825,
       dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 210, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.6, air: 1.2, building: 0.5 } },
-    heavy: { name: '「萬象盛宴」集束子母巨彈', rw: '大範圍散布集束子母彈・拋撒破片・初速 400m/s', type: 'launcher', mv: 400,
+    heavy: { name: '「萬象盛宴」集束子母巨彈', rw: '大範圍散布高熱彩焰集束子母彈・嘉年華煙火拋撒破片・初速 400m/s', type: 'launcher', mv: 400,
       dmg: [55, 79, 112], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 6,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.4, armor: 0.9, air: 0.5, building: 1.2 } },
     def: { name: '狂歡・花車浮游', fx: 'buff', target: 'self', shieldExpand: true, spRestore: [30, 45, 60],
@@ -4454,7 +4454,7 @@ export const CHARACTERS = {
     light: { name: '「界皇」雙聯 35mm 厄利孔高砲', rw: '雙聯裝防空機砲・35mm 高速破甲彈・初速 1100m/s', type: 'gun', mv: 1100,
       dmg: [18, 23, 28], rate: 6.5, mag: [32, 40, 48], reload: 2.6, range: 210, crit: 0.05,
       vs: { flesh: 0.7, armor: 1.0, air: 1.6, building: 0.5 } },
-    heavy: { name: '「焚天界域」扇面防衛電漿幕', rw: '近迫磁化電漿散射矩陣・扇形防空幕', type: 'plasma', arc: 22,
+    heavy: { name: '「禁飛鐵幕」扇面破片阻絕網', rw: '近迫高密重金屬鎢彈破片幕・扇形區域拒止防空網・動能阻絕', type: 'plasma', arc: 22,
       dmg: [46, 73, 111], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 0.8, armor: 1.25, air: 2.2, building: 0.3 } },
     def: { name: '拒止・百戰心訣', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35], spRestore: [50, 75, 100],

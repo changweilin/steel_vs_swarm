@@ -85,9 +85,9 @@ export const INITIAL_REVIEWS = {
 };
 
 export const INITIAL_TRAITS = {
-  // ================= SWARM 陣營 (無人機篇 / 變形者) =================
+  // ================= SWARM (Drones / Morphers) =================
   s01: {
-    element: '音波／電磁',
+    element: '音波／諧振',
     personality: '沉著冷靜、節拍器般精準、外柔內剛、理性護短',
     likes: '巴哈無伴奏、亡弟懷錶、舊燕尾指揮外套',
     combatStyle: '遠戰・敏攻指揮（多機同步協同集火、雷導火箭齊射、復調護盾共振擴張）'
@@ -105,10 +105,10 @@ export const INITIAL_TRAITS = {
     combatStyle: '中近戰・敏攻變形（迅猛龍低伏突襲與始祖鳥高空滑翔雙態變換、靈巧穿刺）'
   },
   s04: {
-    element: '電漿／風',
+    element: '風／衝擊',
     personality: '豪邁好鬥、反射神經極快、日常生活少根筋、重義氣',
     likes: '保養槍械、釣魚雜誌、溫泉紀念T恤',
-    combatStyle: '近戰・狂戰士（單翼機高機動衝角突防、超近距離電漿破甲、狂暴突進）'
+    combatStyle: '近戰・狂戰士（單翼機高機動衝角突防、超近距離工兵氣浪破障、狂暴突進）'
   },
   s05: {
     element: '電磁／物理',
@@ -141,7 +141,7 @@ export const INITIAL_TRAITS = {
     combatStyle: '中近戰・敏捷獵殺（袋鼠反曲腿大跳躍遷、近距防空霰彈火網、引力拘束強行牽引）'
   },
   s10: {
-    element: '光子／電磁',
+    element: '光子／白噪聲學',
     personality: '內向孤僻、線上話癆線下沉默、高專注沉浸、情感封閉',
     likes: '電子徽章、深夜匿名網路圍棋、oversize 連帽衫',
     combatStyle: '近戰・敏捷狂暴（始祖鳥滑翔高速切入轉迅猛龍低伏、高頻鐮爪狂暴撕裂斬切）'
@@ -159,12 +159,12 @@ export const INITIAL_TRAITS = {
     combatStyle: '遠戰・攻守導引（高空三角鴨翼測距、大威力光電引導轟炸、星移斗轉規避）'
   },
 
-  // ================= STEEL 陣營 (機甲篇 / 變形者) =================
+  // ================= STEEL (Mechas / Morphers) =================
   t01: {
     element: '冰／霜凍',
     personality: '鐵血嚴厲、極度重視士兵護甲與伙食、痛失獨子而不露聲色',
     likes: '黑咖啡不加糖、下盲棋、冬泳、獨子追授勳章',
-    combatStyle: '近戰・重守與狂戰突進（持霜狼重盾強勢衝撞、近戰扇形冷焰冰斧劈砍、雪崩重砲齊射震暈）'
+    combatStyle: '近戰・重守與狂戰突進（持霜狼重盾強勢衝撞、近戰扇形深冷霜斧劈砍、雪崩重砲齊射震暈）'
   },
   t02: {
     element: '電磁／靈能神經',
@@ -173,10 +173,10 @@ export const INITIAL_TRAITS = {
     combatStyle: '中近戰・敏捷極限輸出（神經同步超頻靈動大跳、免裝填超弦同步爆發、電磁穿甲長矛光速穿透）'
   },
   t03: {
-    element: '火／熔岩',
+    element: '重力／破障',
     personality: '豪邁粗野、重情重義、嗓門震天、大口吃肉記恩記仇',
     likes: '戰地料理(機甲排氣燉湯)、走調手風琴、防彈圍裙',
-    combatStyle: '近戰・守攻兼備（巨猿體態持推土防盾衝撞擊退、近距彈鼓霰彈狂暴壓制、八卦火海強大牽引吞噬）'
+    combatStyle: '近戰・守攻兼備（巨猿體態持推土鐵盾衝撞破障、近距彈鼓霰彈狂暴壓制、核心引力崩塌強大牽引吞噬）'
   },
   t04: {
     element: '物理／匿蹤',
@@ -191,10 +191,10 @@ export const INITIAL_TRAITS = {
     combatStyle: '中遠戰・敏守分身（長頸涉禽反曲長腿高機動跳躍、翼載光子長矛穿刺、備用化身分身協同火擊）'
   },
   t06: {
-    element: '火／電漿',
+    element: '震波／動能',
     personality: '靈動機靈、操作天賦異稟、私下嘴碎怕教官、思鄉想家',
     likes: '機甲模擬器省冠軍、麻辣火鍋、畫逃跑機甲漫畫',
-    combatStyle: '中近戰・敏捷攻堅（靈猴-筋斗雲雙態高速突防、如意金箍棒電漿前捲範圍爆發、靈巧七十二變位移）'
+    combatStyle: '中近戰・敏捷攻堅（靈猴-筋斗雲雙態高速突防、如意金箍棒天罡震地扇面爆發、靈巧七十二變位移）'
   },
   t07: {
     element: '物理／風',
@@ -209,13 +209,13 @@ export const INITIAL_TRAITS = {
     combatStyle: '中遠戰・攻守破盾（機械神龍身段、破盾諧振音波砲強效瓦解護盾、音律波紋全頻干擾）'
   },
   t09: {
-    element: '火／物理',
+    element: '火／熱能爆破',
     personality: '悲憫疲憊、詩人學者氣質、清醒超脫、夜寫悼亡詩',
     likes: '魯米詩集、藏紅花茶、修老鋼筆、學生來信',
-    combatStyle: '遠戰・攻守母機（波斯匿蹤無尾大三角飛翼、隱蔽帷幕防衛、後方引導巡飛彈集群飽和覆蓋轟炸）'
+    combatStyle: '遠戰・攻守母機（波斯匿蹤無尾大三角飛翼、隱蔽帷幕防衛、後方引導巡飛彈集群飽和烈焰轟炸）'
   },
   t10: {
-    element: '電磁／物理',
+    element: '幾何／物理防衛',
     personality: '外冷內韌、數學般精確嚴謹、頭巾內縫禁詩',
     likes: '數論研究、石榴、深夜波斯語詩歌探討',
     combatStyle: '中遠戰・守護防空（幾何全息雷達屏障擴張、雙肩六聯垂直防空攔截、天穹聖所全隊傷害減免）'
@@ -233,9 +233,9 @@ export const INITIAL_TRAITS = {
     combatStyle: '中遠戰・守護電戰（超重型裝甲抗傷、測向天線陣同調護生受擊回充、全域神經共振靜默壓制）'
   },
 
-  // ================= SPEC / MERC 陣營 (變形者 / 巨獸) =================
+  // ================= SPEC / MERC (Morphers / Beasts) =================
   m01: {
-    element: '暗／血液／熱能',
+    element: '暗／血液／穿刺',
     personality: '冷酷嚴準、秒數精算職業傭兵、對時間與合約偏執',
     likes: '收藏合約範本、黑咖啡配菸、退役拆彈剪',
     combatStyle: '中近戰・狂戰士（三角滑翔超音速突襲、血月之庇衝撞受擊回充、夜鴉血宴超頻解限狂暴吸血）'
@@ -265,16 +265,16 @@ export const INITIAL_TRAITS = {
     combatStyle: '近戰・敏捷狂戰（滑翔飛鼠高速近身轉狼人暴起、噬魂電磁機砲近距瘋狂絞殺、毒霧遁影）'
   },
   m06: {
-    element: '物理／爆破',
+    element: '火／煙火／爆破',
     personality: '熱情奔放、張揚狂野、里約嘉年華派對靈魂',
     likes: '放克音樂開到最大聲、顛球足球、一季換一次螢光塗裝',
-    combatStyle: '中近戰・攻守召喚（四足劍龍象柱腿抗線、背部骨板扇面齊射子母巡飛彈、號令武裝直升機編隊凌空巡遊集火）'
+    combatStyle: '中近戰・攻守召喚（四足劍龍象柱腿抗線、背部骨板扇面齊射煙火子母彈、號令武裝直升機編隊凌空巡遊集火）'
   },
   m07: {
-    element: '電漿／物理',
+    element: '金屬／物理拒止',
     personality: '頑強堅韌、合約至上、原則分明、死裡逃生的傲骨',
     likes: '家鄉仙人掌盆栽、研讀合約漏洞補償條款、親自替鞘翅上油',
-    combatStyle: '近戰・重裝攻守（犀角金龜兩態昆蟲重甲抗線、扇面高溫電漿幕防空、破軍突刺強襲攻堅）'
+    combatStyle: '近戰・重裝攻守（犀角金龜兩態昆蟲重甲抗線、扇面破片鐵幕拒止防空、破軍突刺強襲攻堅）'
   },
   m08: {
     element: '冰／匿蹤暗影',
@@ -1222,7 +1222,7 @@ function renderHtmlPage(localThree = false) {
 <header class="app-nav">
   <div class="brand-group">
     <div class="brand-title">
-      <span>戰術審查台</span> // 機體立繪與 3D 比對工作台
+      <span>戰術審查台</span>
     </div>
     <div class="brand-badge" id="statsBadge">載入中...</div>
   </div>
@@ -1584,32 +1584,32 @@ function selectMech(id) {
   document.getElementById('wbMechName').textContent = m.nickname ? \`\${m.pilot}「\${m.nickname}」\` : m.pilot;
   document.getElementById('wbMechSub').textContent = \`\${m.categoryName} · \${m.side} 陣營\`;
 
-  // 審核判定 Badge
+  // Verdict badge
   const badge = document.getElementById('wbVerdictBadge');
   badge.textContent = m.verdict || '未判定';
   badge.className = 'badge-verdict ' + (m.verdict === '通過' ? 'pass' : (m.verdict === '更正' ? 'fix' : (m.verdict === '重繪' ? 'redraw' : 'none')));
 
-  // 判定按鈕群
+  // Verdict button group
   document.querySelectorAll('.btn-verdict-choice').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.val === m.verdict);
   });
 
-  // 改善方向
+  // Improvement direction
   document.getElementById('fieldImprovement').value = m.improvement || '';
 
-  // 更新機體特性
+  // Update traits
   updateTraitsView();
 
-  // 更新 2D 立繪
+  // Update 2D illustration
   updateStandeeImage();
 
-  // 更新 3D 模型
+  // Update 3D model
   update3DModel();
 
-  // 渲染動態表格欄位
+  // Render dynamic table fields
   renderTableFields();
 
-  // 三段 prompt 預覽（全機體／對應分類／個別機體，皆取自 art_gen.md）
+  // Three-part prompt preview
   updatePromptPreview();
 }
 
@@ -1787,7 +1787,7 @@ function setSaveStatus(msg) {
   if (s2) s2.textContent = msg;
 }
 
-// 寫回 Markdown 儲存
+// Save back to Markdown
 async function saveCurrentMech() {
   if (!currentMech) return;
   setSaveStatus('儲存中...');
@@ -2143,7 +2143,7 @@ window.__MECH_REVIEW = { get preview() { return preview3D; }, selectMech };
 </html>`;
 }
 
-// ============ HTTP 伺服器 ============
+// ============ HTTP Server ============
 export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MODULE, pageFile = null, extraFiles = {} } = {}) {
   // An optional existing dependency copy keeps the review bench usable offline.
   const localModules = new Map();
@@ -2177,7 +2177,7 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
       const url = new URL(req.url, `http://localhost:${port}`);
       const pathname = decodeURIComponent(url.pathname);
 
-      // API: 獲取全部機體
+      // API: fetch all mechs
       if (pathname === '/api/mechs') {
         const data = await getAllMechsData();
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -2185,7 +2185,7 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
         return;
       }
 
-      // API: 寫回 Markdown
+      // API: write back to Markdown
       if (pathname === '/api/save' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk; });
@@ -2203,7 +2203,7 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
         return;
       }
 
-      // API: 注意事項表格讀取
+      // API: read notes tables
       if (pathname === '/api/notes') {
         try {
           const tables = await parseNotesTables();
@@ -2217,7 +2217,7 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
         return;
       }
 
-      // API: 注意事項表格寫回
+      // API: save notes table
       if (pathname === '/api/save-notes' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk; });
@@ -2235,14 +2235,14 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
         return;
       }
 
-      // 首頁
+      // Root index page
       if (pathname === '/' || pathname === '/index.html') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
         res.end(pageFile ? await readFile(pageFile, 'utf8') : renderHtmlPage(!!threeModule));
         return;
       }
 
-      // 靜態資源映射
+      // Static resource mappings
       let targetFile = localModules.get(pathname) || null;
       if (!targetFile && pathname.startsWith('/public/')) {
         targetFile = path.join(ROOT, pathname);
@@ -2274,7 +2274,7 @@ export function serve(port = DEFAULT_PORT, { threeModule = process.env.THREE_MOD
   return server;
 }
 
-// 支援命令列執行
+// CLI entry point
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   if (process.argv.includes('--sync-init')) {
     console.log('[機體審查台] 執行批次初始化同步判定至 Markdown...');

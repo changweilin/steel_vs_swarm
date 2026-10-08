@@ -60,7 +60,7 @@ function sandbox() {
   return sim;
 }
 
-/** 配好扇形重武器的射手(s04 紅蓮業火,arc Lv1 = 13° → 4 格);每量測一座新沙盤 */
+/** 配好扇形重武器的射手(s04 突風破障,arc Lv1 = 13° → 4 格);每量測一座新沙盤 */
 function fanShooter(tag) {
   const sim = sandbox();
   const h = sim.addHero('SWARM', tag, 's04');
@@ -78,7 +78,7 @@ log('— 扇形小錐分格(sim.heroPlasma)—');
 // ---------- ① 分格基本盤 ----------
 {
   assert(CHARACTERS.s04 && heroWeapon('s04', 'heavy', 1, true)?.fan,
-    '測試素材:s04 重武器是扇形(紅蓮業火)');
+    '測試素材:s04 重武器是扇形(突風破障)');
   assert(ARC === 13, `測試前提:s04 Lv1 錐角 ${ARC}°(不是 13° 的話下面格數全錯)`);
   assert(fanSubs({ arc: ARC }) === 11, `13° 錐切 ${fanSubs({ arc: ARC })} 格(SUB_DEG 2.4° 推導)`);
 }
