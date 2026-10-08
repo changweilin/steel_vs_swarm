@@ -32,6 +32,12 @@
   ring/roof/facade -- whole models attach no legacy skirts, stair towers, or second
   roofs. Legacy branches keep only their existing RNG draw order so other scene
   objects never drift.
+- Exterior vocabulary follows the enclosing parcel or building identity, independent
+  of polygon order and shared scatter RNG. Doors use the same vocabulary and finish
+  seed. Blender-authored reveals keep the existing wall as their cavity backing;
+  raised surrounds avoid holes in authoritative combat walls. A separate bounded
+  facade supplement preserves depth cues when mandatory high-rise glazing exhausts
+  the ordinary decoration budget (`test/buildingExteriors.mjs`).
 - Level-only parts stay level: heli hangars, billboards, water tanks, masts, and
   dovecotes mount on flat/stepped roofs only; sloped roofs take only penetrating
   chimneys, ridge antennas, gable belfries, or spire pins.

@@ -1,7 +1,8 @@
 // Render-free facade shared by polygon buildings and environment objects.
 import { FACADE_GEOMETRY_LIMIT } from './regionalArchitecture.js';
 import { ROOF_RIM_LIP } from './architectureRoofParts.js';
-import { resolveWindowScheme } from './architectureStyles.js';
+import { resolveWindowScheme, resolveExteriorScheme, getEdgeFrame } from './architectureStyles.js';
+import { EXTERIOR_MESHES } from './architectureExteriorMeshData.js';
 import { mat3FromEulerXYZ, mat3Multiply, eulerXYZFromMat3 } from './partTransform.js';
 
 function placeFacadePart(g, edge, u, y, z, color, style, rotation = [0, 0, 0], role = 'facade-detail') {
@@ -32,17 +33,49 @@ const BUSY_FACADE_DETAIL = new Set([
 ]);
 
 function windowReveal(w, h, rim, depth) {
-  const vertices = [], faces = [];
-  for (const z of [-depth / 2, depth / 2]) for (const [x, y] of [
-    [-w/2-rim,-h/2-rim], [w/2+rim,-h/2-rim], [w/2+rim,h/2+rim], [-w/2-rim,h/2+rim],
-    [-w/2,-h/2], [w/2,-h/2], [w/2,h/2], [-w/2,h/2],
-  ]) vertices.push(x, y, z);
-  for (let i = 0; i < 4; i++) {
-    const j = (i + 1) % 4;
-    for (const [a,b,c,d] of [[i,j,j+4,i+4], [i+8,i+12,j+12,j+8],
-      [i,i+8,j+8,j], [i+4,j+4,j+12,i+12]]) faces.push(a,c,b,a,d,c);
+  const source = EXTERIOR_MESHES.reveal;
+  const vertices = source.vertices.map((v, i) => i % 3 === 2 ? v * depth
+    : Math.sign(v) * ((i % 3 === 0 ? w : h) / 2 + (Math.abs(v) - 0.5) * rim * 10));
+  return ['mesh', { vertices, faces: source.faces }, [w + rim * 2, h + rim * 2, depth]];
+}
+
+function eaveMesh(w, h, depth) {
+  return ['mesh', { vertices: EXTERIOR_MESHES.eave.vertices.map((v, i) => v * [w, h, depth][i % 3]),
+    faces: EXTERIOR_MESHES.eave.faces }, [w, h, depth]];
+}
+
+/** pre: edge local +Z faces outdoors; sill is the slab center above edge.y.
+ * post: the facade and equipment planners share one fitted balcony volume. */
+export function architecturalBalconyParts(edge, u, sill, width, depth, style, thickness, railH = 0.65, railColor = style.trim) {
+  if (![u, sill, width, depth, thickness, railH].every(Number.isFinite) || width <= 0.06 || depth <= 0 || railH <= 0) return [];
+  const trim = style.trim ?? 0x546575, wallFace = thickness / 2;
+  const slabZ = wallFace + depth / 2 - 0.015, railY = sill + railH / 2 + 0.06;
+  const box = (w, h, d, x, y, z, color, role) =>
+    placeFacadePart(['box', w, h, d], edge, x, y, z, color, style, [0, 0, 0], role);
+  return [box(width, 0.12, depth, u, sill, slabZ, trim, 'facade-balcony'),
+    box(width, railH, 0.06, u, railY, wallFace + depth - 0.04, railColor ?? trim, 'balcony-rail'),
+    ...[-1, 1].map(side => box(0.06, railH, depth, u + side * (width / 2 - 0.03),
+      railY, slabZ, railColor ?? trim, 'balcony-rail'))];
+}
+
+/** pre: edge local +Z faces outdoors; u is in that edge's frame, y starts at the door sill.
+ * post: closed entrance surrounds keep the authoritative wall as their cavity backing. */
+export function architecturalEntranceParts(edge, u, w, h, style, thickness, key = '') {
+  if (![u, w, h, thickness].every(Number.isFinite) || w <= 0 || h <= 0) return [];
+  const exterior = resolveExteriorScheme(style, key);
+  if (exterior.entrance === 'flush') return [];
+  const room = Math.min(edge.hw2 - Math.abs(u) - w / 2 - 0.02, edge.h - h - 0.02);
+  if (!(room > 0.025)) return [];
+  const rim = Math.min(0.18, room, w * 0.25, h * 0.25);
+  const depth = exterior.depth * (exterior.entrance === 'recess' ? 1.6 : 1);
+  const trim = style.trim ?? 0x546575;
+  if (exterior.entrance === 'canopy') {
+    const canopyH = Math.min(0.12, room);
+    return [placeFacadePart(eaveMesh(w + rim * 2, canopyH, depth * 1.8), edge, u,
+      h + canopyH / 2 + 0.01, thickness / 2 + depth * 0.9 - 0.02, style.roof ?? trim, style, [0, 0, 0], 'entrance-canopy')];
   }
-  return ['mesh', { vertices, faces }, [w + rim * 2, h + rim * 2, depth]];
+  return [placeFacadePart(windowReveal(w, h - rim, rim, depth), edge, u, (h + rim) / 2,
+    thickness / 2 + depth / 2 - 0.015, trim, style, [0, 0, 0], `entrance-${exterior.entrance}`)];
 }
 
 /** 飾件雜湊（FNV-1a）：窗間飾／外推結構的「插或不插」只吃雜湊，零共享 rnd 消耗、
@@ -73,7 +106,7 @@ function ornamentHash(text) {
  * 首層對應開間不鋪玻璃不加框（wins 保留開口佔位，飾帶分段、柱體避讓照走，
  * 開間索引不錯位）；無開口（無首層玻璃）行為不變。
  */
-export function architecturalFacadeParts(edges, style, thickness, doorOpenings = []) {
+export function architecturalFacadeParts(edges, style, thickness, doorOpenings = [], poly = null) {
   const geos = [];
   const facade = style.facade || style.wallType || 'ribbon';
   const glassColor = style.glass || 0x68a5c2;
@@ -82,15 +115,21 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
   const firstEdge = edges[0];
   const buildingKey = `${firstEdge?.sourceId ?? ''}|${style.variant ?? 0}|${style.id ?? ''}|${style.functionInfo?.type ?? ''}|${style.functionInfo?.key ?? ''}|${firstEdge ? `${firstEdge.x.toFixed(1)},${firstEdge.z.toFixed(1)}` : ''}`;
   const scheme = resolveWindowScheme(style, buildingKey);
+  const exterior = resolveExteriorScheme(style, buildingKey);
+  let exteriorBudget = FACADE_GEOMETRY_LIMIT.exterior;
   const shapeAt = (floor, bay) => {
     if (scheme.mode === 'checker') return scheme.shapes[(floor + bay) & 1] || 'rect';
     if (scheme.mode === 'honeycomb') return scheme.shapes[((bay % 3) + (floor & 1 ? 1 : 0)) % 3] || 'rect';
     return scheme.shapes[0] || 'rect';
   };
-  const plainFrame = !BUSY_FACADE_DETAIL.has(style.detail);
+  const plainFrame = exterior.kind !== 'plain' && !BUSY_FACADE_DETAIL.has(style.detail);
 
   for (let ei = 0; ei < edges.length; ei++) {
     const edge = edges[ei];
+    const frame = getEdgeFrame(edge, poly);
+    const outwardEdge = { ...edge, ry: -frame.rotY };
+    const placeExterior = (g, u, y, z, color, rotation = [0, 0, 0], role = 'facade-detail') =>
+      placeFacadePart(g, outwardEdge, u * frame.uSign, y, z, color, style, rotation, role);
     const length = edge.hw2 * 2;
     if (!(length > 1e-5) || !(edge.h > 0.5)) continue;
     const limit = style.detail ? FACADE_GEOMETRY_LIMIT.regional : FACADE_GEOMETRY_LIMIT.base;
@@ -128,10 +167,10 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
       return true;
     };
     // 帶 +Z 外移量的體積件（陽台底板／欄杆／雨遮）：一律扣額度，role 恆為 facade-detail。
-    const addZ = (w, h, d, u, y, z, color, pitch = 0) => {
+    const addZ = (w, h, d, u, y, z, color, pitch = 0, role = 'facade-detail') => {
       if (budget-- <= 0) return false;
-      geos.push(placeFacadePart(['box', w, h, d], edge, u, y, z,
-        color, style, [pitch, 0, 0], 'facade-detail'));
+      geos.push(placeExterior(role === 'facade-eave' ? eaveMesh(w, h, d) : ['box', w, h, d],
+        u, y, z, color, [pitch, 0, 0], role));
       return true;
     };
 
@@ -165,7 +204,7 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
         }
         // 老虎窗（dormer）：整棟頂層統一有無，外凸窗體＋小斜蓋，取代平面玻璃。
         // 窗體玻璃非等比縮放後仍須長寬比 ≤1.5（不可太細）。
-        if (topFloor && scheme.dormer) {
+        if (topFloor && scheme.dormer && exterior.kind !== 'plain') {
           let dw = w * 0.8, dh = h * 0.7;
           if (dw > dh * 1.5) dw = dh * 1.5;
           else if (dh > dw * 1.5) dh = dw * 1.5;
@@ -196,10 +235,95 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
     // 高棟玻璃優先，裝飾讓路），額度耗盡則後續窗框裝飾逐窗跳過。
     budget -= (geos.length - edgeStart);
 
+    // The wall closes each reveal at its back; raised surrounds create real cavities without cutting combat walls.
+    if (exterior.kind !== 'plain') {
+      const exteriorStart = geos.length, remainingBudget = budget;
+      budget = Math.min(exteriorBudget, Math.max(4, Math.floor(FACADE_GEOMETRY_LIMIT.exterior / edges.length)));
+      const accent = style.roof ?? trimColor, wallFace = thickness / 2;
+      if (exterior.kind === 'eaves') {
+        addZ(Math.max(0.1, length - 0.04), 0.12, exterior.depth, 0, edge.h - 0.12,
+          wallFace + exterior.depth / 2 - 0.015, accent, 0, 'facade-eave');
+      }
+      const firstFloor = exterior.kind === 'balconies' ? 1 : 0;
+      const eligible = wins.filter(win => !win.doorway && win.floor >= firstFloor && !['dormer', 'oculus', 'arch'].includes(win.shape));
+      const cost = exterior.kind === 'balconies'
+        ? architecturalBalconyParts(outwardEdge, 0, 0, 1, exterior.depth, style, thickness).length
+        : exterior.kind === 'bay_windows' ? 2 : 1;
+      const cells = Math.max(1, Math.floor(budget / cost)), storeys = Math.max(1, floors - firstFloor);
+      const bayStep = Math.max(exterior.period, Math.ceil(bays * storeys / cells));
+      const floorStep = Math.max(1, Math.ceil(storeys * Math.ceil(bays / bayStep) / cells));
+      for (const win of eligible) {
+        if (win.bay % bayStep !== 0 || (win.floor - firstFloor) % floorStep !== 0) continue;
+        const { u, y, w, h } = win;
+        const rim = Math.min(0.16, (bayW - w) / 3, (floorH - h) / 3);
+        const depth = exterior.depth;
+        if (rim < 0.025 || budget < cost) continue;
+        if (exterior.kind === 'recessed_windows' || exterior.kind === 'bay_windows') {
+          geos.push(placeExterior(windowReveal(w, h, rim, depth), u, y,
+            wallFace + depth / 2 - 0.015, trimColor, [0, 0, 0], `facade-${exterior.kind}`));
+          budget--;
+          win.exteriorReveal = true;
+          if (exterior.kind === 'bay_windows') {
+            geos.push(placeExterior(['box', w + rim * 0.4, h + rim * 0.4, 0.045], u, y, wallFace + depth - 0.01,
+              glassColor, [0, 0, 0], 'window'));
+            budget--;
+            win.projected = true;
+          }
+        } else if (exterior.kind === 'balconies' && win.floor > 0) {
+          const bw = Math.min(w + rim * 2, bayW * 0.9), sill = y - h / 2 - 0.06;
+          const railH = Math.min(0.65, h * 0.4);
+          const parts = architecturalBalconyParts(outwardEdge, u * frame.uSign, sill, bw, depth, style, thickness, railH);
+          geos.push(...parts);
+          budget -= parts.length;
+        } else if (exterior.kind === 'eaves' || exterior.kind === 'layered') {
+          addZ(Math.min(w + rim * 2, bayW * 0.95), 0.1, depth, u, y + h / 2 + rim / 2,
+            wallFace + depth / 2 - 0.015, accent, 0, 'facade-eave');
+        }
+      }
+      if (exterior.kind === 'niches' || exterior.kind === 'pilasters' || exterior.kind === 'layered') {
+        for (let bay = 0; bay < bays - 1 && budget > 0; bay += exterior.period) {
+          const u = -length / 2 + (bay + 1) * bayW;
+          const gap = wins.filter(win => win.bay === bay || win.bay === bay + 1)
+            .reduce((room, win) => Math.min(room, Math.abs(u - win.u) - win.w / 2), bayW / 2);
+          const width = Math.min(0.65, gap * 1.6), height = Math.min(1.4, floorH * 0.6);
+          if (width < 0.2) continue;
+          const stepFloor = Math.max(1, Math.ceil(floors * Math.max(1, bays - 1) / Math.max(1, budget)));
+          for (let floor = 0; floor < floors && budget > 0; floor += stepFloor) {
+            const y = (floor + 0.5) * floorH;
+            if (exterior.kind === 'niches') {
+              if (width + 0.18 > gap * 2 - 0.02) continue;
+              geos.push(placeExterior(windowReveal(width, height, 0.09, exterior.depth), u, y,
+                wallFace + exterior.depth / 2 - 0.015, trimColor, [0, 0, 0], 'facade-niche'));
+              budget--;
+            } else {
+              const color = exterior.ornament === 'tile' ? accent : trimColor;
+              addZ(width, exterior.ornament === 'hanging' ? height : floorH * 0.88,
+                exterior.depth * 0.4, u, y, wallFace + exterior.depth * 0.2 - 0.015,
+                color, 0, 'facade-pilaster');
+            }
+          }
+        }
+      }
+      if (!wins.length && exterior.kind !== 'eaves') {
+        addZ(Math.max(0.1, length - 0.04), 0.12, exterior.depth, 0, edge.h - 0.12,
+          wallFace + exterior.depth / 2 - 0.015, accent, 0, 'facade-eave');
+      }
+      if (geos.length === exteriorStart && budget > 0) {
+        addZ(Math.max(0.1, length - 0.04), 0.12, exterior.depth, 0, edge.h - 0.12,
+          wallFace + exterior.depth / 2 - 0.015, accent, 0, 'facade-eave');
+      }
+      const used = geos.length - exteriorStart;
+      for (let i = exteriorStart; i < geos.length; i++) geos[i].exteriorScheme = exterior.kind;
+      exteriorBudget -= used;
+      budget = remainingBudget - used;
+    }
+
+    if (exterior.kind === 'plain') continue;
+
     // One hollow reveal per opening keeps depth readable without consuming four draw primitives.
     if (plainFrame) for (const win of wins) {
       if (budget <= 0) break;
-      if (win.doorway || ['oculus', 'arch', 'dormer'].includes(win.shape)) continue;
+      if (win.doorway || win.exteriorReveal || ['oculus', 'arch', 'dormer'].includes(win.shape)) continue;
       const rim = Math.min(0.09, (bayW - win.w) * 0.22, (floorH - win.h) * 0.22);
       if (rim < 0.025) continue;
       geos.push(placeFacadePart(windowReveal(win.w, win.h, rim, thickness + 0.11),
@@ -256,10 +380,10 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
           if (!left || !right) continue;
           const gapW = (right.u - right.w / 2) - (left.u + left.w / 2);
           if (gapW < 0.9) continue;
-          if (roll(floor, gap, 'insert') >= 0.5) continue;
+          if ((floor + gap) % exterior.period !== 0) continue;
           const u = (left.u + left.w / 2 + right.u - right.w / 2) / 2;
           const y = (floor + 0.5) * floorH;
-          const kind = scheme.ornament || 'relief';
+          const kind = exterior.ornament;
           if (kind === 'tile') {
             // 花磚：底板＋上下兩色橫帶（Tier 2 深度，不與玻璃共面）。
             add(Math.min(0.55, gapW * 0.34), floorH * 0.62, u, y, trimColor, 0.10);
@@ -277,7 +401,7 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
           }
         }
       }
-      if (bayW >= 3.2) {
+      if (bayW >= 3.2 && !style.exteriorKey && !style.exterior) {
         for (const win of wins) {
           if (budget <= 0) break;
           if (win.shape === 'dormer' || win.shape === 'oculus') continue;
@@ -306,7 +430,7 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
     // 門洞窗不加框（門面留給外掛正門）。
     for (const win of wins) {
       if (budget <= 0) break;
-      if (win.shape === 'dormer' || win.doorway) continue;
+      if (win.shape === 'dormer' || win.doorway || win.projected) continue;
       const { u, y, w, h, shape } = win;
       if (shape === 'oculus') {
         if (scheme.oculusCross) {
@@ -372,7 +496,7 @@ export function architecturalFacadeParts(edges, style, thickness, doorOpenings =
     }
     for (const win of wins) {
       if (budget <= 0) break;
-      if (win.shape === 'oculus' || win.shape === 'dormer') continue;
+      if (win.shape === 'oculus' || win.shape === 'dormer' || win.projected) continue;
       if (win.doorway) continue; // 門洞不加文化飾（門面留給外掛正門）
       const { u, y, w, h, floor } = win;
       const detail = style.detail;

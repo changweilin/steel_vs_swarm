@@ -5,6 +5,8 @@ import { mulberry32 } from './rng.js';
 import { procReliefAt } from './mapgen.js';
 import { areaSurfaceRows, pointInProjectedArea, projectedAreaContainsDisk, projectedAreaIntersectsDisk, classifyArea } from './osmAreas.js';
 import { areaLayoutAngle } from './osmAreaLayout.js';
+import { walkwaySides, walkwayWidth, walkwaySurface, groundWalkway, mappedWalkwayFurniture } from './walkway.js';
+import { WALKWAY_FURNITURE, WALKWAY_DETAIL } from './walkwayCatalog.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const fallback = { green: 'meadow', urban: 'built', bare: 'exposed', alpine: 'alpine', cliff: 'cliff', wet: 'marsh' };
@@ -264,39 +266,59 @@ export function planHabitatDetails({ bounds, seed = 0, sampleAt, heightAt, fits,
 
 /** OSM direction is measured from roads; directional RGB contrast supplies no road bearing. */
 export function planHabitatStreets({ segments = [], seed = 0, sampleAt, heightAt, fits,
-  maxPanels = HABITAT_SCENE.STREET_LIMIT }) {
+  fitsPanel, realScale = .5, maxPanels = HABITAT_SCENE.STREET_LIMIT }) {
   const rows = [], keys = new Set();
   if (!Number.isInteger(maxPanels) || maxPanels < 0 || typeof sampleAt !== 'function'
     || typeof heightAt !== 'function' || typeof fits !== 'function') throw new TypeError('Invalid habitat streets');
   for (const seg of segments) {
     const { a, b, hw } = seg;
-    if (!Array.isArray(a) || !Array.isArray(b) || ![...a, ...b, hw].every(Number.isFinite) || !(hw > 0)) continue;
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== 2 || b.length !== 2
+      || ![...a, ...b, hw].every(Number.isFinite) || !(hw > 0)) continue;
     const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
     if (len < 1) continue;
     const tx = dx / len, tz = dz / len, nx = -tz, nz = tx;
     const count = Math.ceil(len / HABITAT_SCENE.STREET_STEP_M), step = len / count;
+    const materialSeed = seg.appearanceSeed ?? forestSeed((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, seed);
     for (let k = 0; k < count; k++) for (const side of [-1, 1]) {
-      const offset = side * (hw + HABITAT_SCENE.STREET_WIDTH_M / 2 + .25);
+      const width = walkwayWidth(seg.tags, side, HABITAT_SCENE.STREET_WIDTH_M, realScale);
+      if (width == null) continue;
+      const offset = side * (hw + width / 2 + .25);
       const x = a[0] + tx * (k + .5) * step + nx * offset;
       const z = a[1] + tz * (k + .5) * step + nz * offset;
       const habitat = sampleAt(x, z);
-      if (habitat?.key !== 'built') continue;
+      if (!habitat || !walkwaySides(seg.tags, habitat).includes(side) || ['water', 'wet', 'cliff'].includes(habitat.zone)) continue;
       const key = `${Math.round(x * 2)},${Math.round(z * 2)}`;
       if (keys.has(key)) continue;
       const corners = [];
       for (const [along, across] of [[-1, -1], [-1, 1], [1, 1], [1, -1]]) {
-        const px = x + along * tx * step / 2 + across * nx * HABITAT_SCENE.STREET_WIDTH_M / 2;
-        const pz = z + along * tz * step / 2 + across * nz * HABITAT_SCENE.STREET_WIDTH_M / 2;
+        const px = x + along * tx * step / 2 + across * nx * width / 2;
+        const pz = z + along * tz * step / 2 + across * nz * width / 2;
         corners.push([px, heightAt(px, pz), pz]);
       }
       // A panel fits entirely; missing heights, holes, other carriageways and slope breaks omit it.
-      if (corners.some(p => !p.every(Number.isFinite) || sampleAt(p[0], p[2])?.key !== 'built'
-        || !fits({ x: p[0], z: p[2], r: .05 }, 'urban'))) continue;
-      if (!fits({ x, z, r: .05 }, 'urban')) continue;
-      const heights = corners.map(p => p[1]);
+      let valid = true;
+      const probeHeights = [];
+      for (let i = 0; i <= Math.ceil(step / WALKWAY_DETAIL.PANEL_PROBE_M) && valid; i++) {
+        for (let j = 0; j <= Math.ceil(width / WALKWAY_DETAIL.PANEL_PROBE_M); j++) {
+          const along = (i / Math.ceil(step / WALKWAY_DETAIL.PANEL_PROBE_M) - .5) * step;
+          const across = (j / Math.ceil(width / WALKWAY_DETAIL.PANEL_PROBE_M) - .5) * width;
+          const px = x + along * tx + across * nx, pz = z + along * tz + across * nz;
+          const y = heightAt(px, pz);
+          if (sampleAt(px, pz)?.key !== habitat.key || !fits({ x: px, z: pz, r: .05 }, habitat.zone)
+            || !Number.isFinite(y)) { valid = false; break; }
+          probeHeights.push(y);
+        }
+      }
+      const foot = { x, z, hw: step / 2, hd: width / 2, ry: Math.atan2(dz, dx), r: Math.hypot(step / 2, width / 2) };
+      if (!valid || corners.some(p => !p.every(Number.isFinite)) || fitsPanel && !fitsPanel(foot)) continue;
+      const heights = [...corners.map(p => p[1]), ...probeHeights];
       if (Math.max(...heights) - Math.min(...heights) > step * .20) continue;
       keys.add(key);
-      rows.push({ x, z, corners, side, seed: forestSeed(x, z, seed), ry: Math.atan2(dz, dx) });
+      rows.push({ ...foot, corners, side, width, tags: seg.tags || {}, zone: habitat.zone, habitat: habitat.key,
+        surface: walkwaySurface(seg.tags, habitat, materialSeed, side),
+        source: seg.tags?.sidewalk || seg.tags?.['sidewalk:both'] || seg.tags?.[side === -1 ? 'sidewalk:left' : 'sidewalk:right']
+          ? 'osm-sidewalk' : 'osm-road-cover-inference',
+        seed: forestSeed(x, z, seed) });
     }
   }
   rows.sort((a, b) => a.seed - b.seed || a.x - b.x || a.z - b.z);
@@ -304,27 +326,71 @@ export function planHabitatStreets({ segments = [], seed = 0, sampleAt, heightAt
   return rows;
 }
 
-/** Sparse furniture follows verified built road verges and has its own coordinate stream. */
-export function planHabitatFurniture({ panels = [], seed = 0, fits, heightAt, sampleAt,
+/** post: anchors follow mapped dry paths; no inferred paths connect unverified satellite pixels. */
+export function planHabitatPathEdges({ segments = [], seed = 0, sampleAt, heightAt }) {
+  const rows = [], keys = new Set();
+  for (const { a, b, hw, tags = {} } of segments) {
+    if (!groundWalkway(tags) || !Array.isArray(a) || !Array.isArray(b) || a.length !== 2 || b.length !== 2
+      || ![...a, ...b, hw].every(Number.isFinite) || !(hw > 0)) continue;
+    const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
+    if (len < 1) continue;
+    const count = Math.ceil(len / HABITAT_SCENE.FURNITURE_STEP_M);
+    for (let k = 0; k < count; k++) {
+      const x = a[0] + dx * (k + .5) / count, z = a[1] + dz * (k + .5) / count;
+      const habitat = sampleAt(x, z), key = `${Math.round(x)},${Math.round(z)}`;
+      if (!habitat || ['water', 'wet', 'cliff'].includes(habitat.zone) || !Number.isFinite(heightAt(x, z)) || keys.has(key)) continue;
+      keys.add(key);
+      rows.push({ x, z, ry: Math.atan2(dz, dx), side: 1, width: hw * 2, length: len / count, path: true, tags,
+        seed: forestSeed(x, z, seed), zone: habitat.zone, habitat: habitat.key,
+        surface: walkwaySurface(tags, habitat, forestSeed(a[0], a[1], seed)) });
+    }
+  }
+  rows.sort((a, b) => a.seed - b.seed || a.x - b.x || a.z - b.z);
+  return rows.slice(0, WALKWAY_DETAIL.PATH_ANCHOR_LIMIT);
+}
+
+/** post: mapped points take precedence; complete dry envelopes stay outside the pedestrian through corridor. */
+export function planHabitatFurniture({ panels = [], points = [], seed = 0, fits, heightAt, sampleAt,
   maxObjects = HABITAT_SCENE.FURNITURE_LIMIT }) {
   if (!Number.isInteger(maxObjects) || maxObjects < 0 || typeof fits !== 'function'
     || typeof heightAt !== 'function' || typeof sampleAt !== 'function') throw new TypeError('Invalid street furniture');
   const rows = [], cells = new Map();
+  const accept = (kind, x, z, ry, localSeed, source, rank) => {
+    const r = WALKWAY_FURNITURE[kind]?.r, habitat = sampleAt(x, z);
+    if (!r || !habitat || ['water', 'wet', 'cliff'].includes(habitat.zone) || !fits({ x, z, r }, habitat.zone)) return;
+    const heights = [];
+    for (let i = 0; i < 9; i++) {
+      const angle = i / 8 * Math.PI * 2, px = x + (i ? Math.cos(angle) * r : 0), pz = z + (i ? Math.sin(angle) * r : 0);
+      if (sampleAt(px, pz)?.key !== habitat.key) return;
+      heights.push(heightAt(px, pz));
+    }
+    if (!heights.every(Number.isFinite) || Math.max(...heights) - Math.min(...heights) > r * WALKWAY_DETAIL.MAX_SLOPE_F) return;
+    if (rows.some(row => Math.hypot(row.x - x, row.z - z) < row.r + r + .5)) return;
+    rows.push({ kind, x, y: Math.min(...heights), z, r, ry, seed: localSeed, rank, source });
+  };
+  const mapped = points.map(p => ({ ...p, kind: mappedWalkwayFurniture(p.tags) }))
+    .filter(p => p.kind && [p.x, p.z].every(Number.isFinite))
+    .sort((a, b) => a.x - b.x || a.z - b.z || a.kind.localeCompare(b.kind));
+  for (const point of mapped) {
+    const panel = panels.filter(p => Math.hypot(p.x - point.x, p.z - point.z) <= WALKWAY_DETAIL.MAPPED_NEAR_M)
+      .sort((a, b) => Math.hypot(a.x - point.x, a.z - point.z) - Math.hypot(b.x - point.x, b.z - point.z) || a.seed - b.seed)[0];
+    if (!panel) continue;
+    accept(point.kind, point.x, point.z, Math.PI / 2 - panel.ry, forestSeed(point.x, point.z, seed), 'osm-point', -1);
+  }
   for (const panel of panels) {
     const key = `${Math.floor(panel.x / HABITAT_SCENE.FURNITURE_STEP_M)},${Math.floor(panel.z / HABITAT_SCENE.FURNITURE_STEP_M)}`;
     if (!cells.has(key) || panel.seed < cells.get(key).seed) cells.set(key, panel);
   }
   for (const panel of [...cells.values()].sort((a, b) => a.seed - b.seed || a.x - b.x || a.z - b.z)) {
     const localSeed = forestSeed(panel.x, panel.z, seed ^ 0x535452), rnd = mulberry32(localSeed);
-    const kind = ['bench', 'planter'][Math.floor(rnd() * 2)], r = kind === 'planter' ? 1.1 : 1.5;
-    const offset = (panel.side || 1) * .7;
+    const context = panel.habitat === 'built' || !panel.habitat ? 'urban'
+      : ['meadow', 'pasture', 'orchard'].includes(panel.habitat) ? 'park' : 'trail';
+    const choices = Object.entries(WALKWAY_FURNITURE).filter(([, spec]) => spec[context]).map(([kind]) => kind);
+    const kind = choices[Math.floor(rnd() * choices.length)], r = WALKWAY_FURNITURE[kind].r;
+    const side = panel.path ? rnd() < .5 ? -1 : 1 : panel.side || 1;
+    const offset = side * ((panel.width || HABITAT_SCENE.STREET_WIDTH_M) / 2 + r + WALKWAY_DETAIL.FURNITURE_CLEAR_M);
     const x = panel.x - Math.sin(panel.ry) * offset, z = panel.z + Math.cos(panel.ry) * offset;
-    if (!fits({ x, z, r }, 'urban') || [[-r, -r], [r, -r], [r, r], [-r, r]]
-      .some(([dx, dz]) => sampleAt(x + dx, z + dz)?.key !== 'built')) continue;
-    const y = heightAt(x, z);
-    if (!Number.isFinite(y)) continue;
-    if (rows.some(row => Math.hypot(row.x - x, row.z - z) < row.r + r + .5)) continue;
-    rows.push({ kind, x, y, z, r, ry: Math.PI / 2 - panel.ry, seed: localSeed, rank: rnd() });
+    accept(kind, x, z, Math.PI / 2 - panel.ry, localSeed, 'inferred-dressing', rnd());
   }
   rows.sort((a, b) => a.rank - b.rank || a.seed - b.seed);
   return rows.slice(0, maxObjects);

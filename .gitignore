@@ -89,3 +89,15 @@ tools/ambient_authoring/__pycache__/
 
 out/road_structure_review/
 tools/road_structure_authoring/__pycache__/
+
+out/facade_review/
+tools/facade_authoring/__pycache__/
+
+out/walkway_review/
+tools/walkway_authoring/__pycache__/
+
+out/shoreline_review/
+tools/shoreline_authoring/__pycache__/
+
+out/environment_project/
+tools/environment_authoring/__pycache__/

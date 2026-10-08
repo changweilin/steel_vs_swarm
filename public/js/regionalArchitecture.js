@@ -171,4 +171,4 @@ export const REGIONAL_CULTURES = Object.freeze({
     styles: ["yemeni_tower","earthen","modern"],
   },
 });
-export const FACADE_GEOMETRY_LIMIT = Object.freeze({ base: 180, regional: 320 });
+export const FACADE_GEOMETRY_LIMIT = Object.freeze({ base: 180, regional: 320, exterior: 32 });

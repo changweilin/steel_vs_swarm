@@ -254,8 +254,8 @@ export function paintGeometry(geometry, hex, variant = 0) {
   return geometry;
 }
 
-export function architecturalFacade(edges, style, thickness, doorOpenings = []) {
-  return architecturalFacadeParts(edges, style, thickness, doorOpenings).map(architecturePartGeometry);
+export function architecturalFacade(edges, style, thickness, doorOpenings = [], poly = null) {
+  return architecturalFacadeParts(edges, style, thickness, doorOpenings, poly).map(architecturePartGeometry);
 }
 
 export function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null, targetH = 10) {
@@ -518,7 +518,7 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         const doorOpenings = (!architecture.functionalDesign)
           ? [resolveFrontDoorOpening(poly, facadeEdges, architecture, targetH),
             resolveSideDoorOpening(poly, facadeEdges, architecture, targetH)].filter(Boolean) : [];
-        batch.details.push(...architecturalFacade(facadeEdges, architecture, wallThickness, doorOpenings));
+        batch.details.push(...architecturalFacade(facadeEdges, architecture, wallThickness, doorOpenings, poly));
 
         // Phase 4: Exterior appurtenances filtered for roof type compatibility
         if (!architecture.functionalDesign) batch.details.push(...generateBuildingAppurtenances(poly, facadeEdges, baseY, topY, architecture, wallThickness, adaptiveRoofForm, metrics, terrain));

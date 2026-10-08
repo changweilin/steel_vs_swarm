@@ -3,7 +3,7 @@
 // Runtime, fixture extractors, and payload validation tools all source from here to prevent divergent query filters.
 import { OSM_AREA_KEYS, buildAreaRecords } from './osmAreas.js';
 
-export const OSM_FEATURE_QUERY_VERSION = 11;
+export const OSM_FEATURE_QUERY_VERSION = 13;
 export const OSM_ROAD_QUERY_VERSION = 2;
 export const OSM_QUERY_TIMEOUT_S = 15;
 
@@ -65,6 +65,16 @@ export function osmFeatureQuery(bbox) {
     + `node["highway"~"^(stop|give_way|crossing|mini_roundabout|traffic_signals)$"](${bb});out body 120;`
     + `node["traffic_calming"](${bb});out body 80;`
     + `node["highway"="street_lamp"](${bb});out body 200;`
+    + `node["amenity"~"^(bench|waste_basket|bicycle_parking|drinking_water|shelter)$"](${bb});out body 160;`
+    + `node["leisure"="picnic_table"](${bb});out body 60;`
+    + `node["barrier"="bollard"](${bb});out body 80;`
+    + `node["emergency"~"^(life_ring|lifeguard_tower)$"](${bb});out body 80;`
+    + `node["man_made"~"^(pier|ladder|pumping_station|outfall|monitoring_station)$"](${bb});out body 80;`
+    + `node["waterway"~"^(sluice_gate|debris_screen)$"](${bb});out body 60;`
+    + `node["mooring"~"^(bollard|ring)$"](${bb});out body 80;`
+    + `node["leisure"~"^(fishing|slipway)$"](${bb});out body 60;`
+    + `node["canoe"="put_in"](${bb});out body 40;`
+    + `node["amenity"="shower"](${bb});out body 40;`
     + `node["natural"="tree"](${bb});out body 200;`
     + `way["area:highway"="traffic_island"](${bb});out body geom 120;`
     + `way["natural"="tree_row"](${bb});out body geom 80;`
@@ -78,7 +88,7 @@ export function osmFeatureQuery(bbox) {
     + `node["railway"~"^(station|halt)$"](${bb});out 12;`
     + `node["railway"~"^(subway_entrance|station_entrance)$"](${bb});out 80;`
     + `node["entrance"]["public_transport"~"^(station|subway)$"](${bb});out 40;`
-    + `way["waterway"~"^(river|stream|canal|drain|ditch)$"](${bb});out geom 120;`
+    + `way["waterway"~"^(river|stream|canal|drain|ditch|tidal_channel)$"](${bb});out geom 120;`
     + `way["landuse"](${bb});out geom ${nCover};`
     + `way["natural"](${bb});out geom ${nCover};`
     + `way["leisure"~"^(park|garden|golf_course|nature_reserve|recreation_ground)$"](${bb});out geom ${nCover};`
@@ -101,7 +111,9 @@ export function parseOsmFeatureElements(elements = []) {
   const waters = [], boundaries = [], roadFurniture = [], areaKeys = new Set(OSM_AREA_KEYS);
   for (const el of Array.isArray(elements) ? elements : []) {
     const tags = el?.tags || {};
-    if (el?.type === 'way' && el.geometry && (tags['area:highway'] === 'traffic_island' || tags.natural === 'tree_row')) {
+    if (el?.type === 'way' && el.geometry && tags.natural === 'coastline') {
+      boundaries.push({ tags, geometry: el.geometry });
+    } else if (el?.type === 'way' && el.geometry && (tags['area:highway'] === 'traffic_island' || tags.natural === 'tree_row')) {
       roadFurniture.push({ tags, geometry: el.geometry });
     } else if (el?.type === 'relation' && (tags.type === 'multipolygon' || Array.isArray(el.members))) {
       // Retain relation member ways in areaElements; buildAreaRecords chains outer/inner rings by source ID.
@@ -118,8 +130,6 @@ export function parseOsmFeatureElements(elements = []) {
       rails.push({ tags, geometry: el.geometry });
     } else if (el?.type === 'way' && el.geometry && tags.waterway) {
       waters.push({ tags, geometry: el.geometry });
-    } else if (el?.type === 'way' && el.geometry && tags.natural === 'coastline') {
-      boundaries.push({ tags, geometry: el.geometry });
     } else if (el?.type === 'way' && el.geometry) {
       // Member ways expanded from relations typically lack boundary tags; non-categorized ways represent administrative boundaries.
       boundaries.push({ tags, geometry: el.geometry });
@@ -132,10 +142,13 @@ export function parseOsmFeatureElements(elements = []) {
       entrances.push({ lat: el.lat, lng: el.lon, tags });
     } else if (el?.type === 'node' && (tags.place || ['peak', 'tree'].includes(tags.natural) || tags.highway === 'street_lamp'
       || tags.traffic_sign || tags.traffic_calming || /^(stop|give_way|crossing|mini_roundabout|traffic_signals)$/.test(tags.highway || '')
-      || tags.highway === 'motorway_junction' || tags.railway || tags.amenity
+      || tags.highway === 'motorway_junction' || tags.railway || tags.amenity || tags.leisure === 'picnic_table' || tags.barrier === 'bollard'
       || ['museum', 'gallery', 'attraction', 'viewpoint', 'zoo', 'theme_park', 'information'].includes(tags.tourism) || tags.office === 'government' || tags.power === 'tower'
       || (tags.power === 'generator' && tags['generator:source'] === 'wind')
-      || ['tower', 'mast', 'communications_tower', 'lighthouse'].includes(tags.man_made) || tags.aeroway === 'control_tower')) {
+      || ['tower', 'mast', 'communications_tower', 'lighthouse', 'pier', 'ladder', 'pumping_station', 'outfall', 'monitoring_station'].includes(tags.man_made)
+      || ['life_ring', 'lifeguard_tower'].includes(tags.emergency) || ['sluice_gate', 'debris_screen'].includes(tags.waterway)
+      || ['bollard', 'ring'].includes(tags.mooring) || ['fishing', 'slipway'].includes(tags.leisure)
+      || tags.canoe === 'put_in' || tags.aeroway === 'control_tower')) {
       pois.push({ lat: el.lat, lng: el.lon, tags });
     }
   }

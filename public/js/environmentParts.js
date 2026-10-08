@@ -320,7 +320,7 @@ export function environmentBuildingPlan(kind, size, seed, functionType = null, c
     : { parts: [], replacesRoof: false };
   const parts = [{ g: ['box', w, bodyH, d], p: [0, bodyH / 2, 0], c: style.wall, role: 'building-body',
     architecture: { style: style.id, roofForm, function: functionInfo.key, seed } },
-    ...architecturalFacadeParts(edges, style, .12),
+    ...architecturalFacadeParts(edges, style, .12, [], poly),
     ...semantic.parts,
     ...(semantic.replacesRoof ? [] : architecturalRoofParts(poly, bodyH, style, roofForm, metrics, bodyH))];
   return { parts, style, w, d, bodyH };

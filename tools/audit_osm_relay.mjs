@@ -40,6 +40,7 @@ import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from '../public
 import { RoomHub } from '../server/rooms.js';
 import { MAPGEO } from '../public/js/data.js';
 import { VENUES, venueConfig } from '../public/js/venues.js';
+import { OSM_FEATURE_QUERY_VERSION } from '../public/js/osmQuery.js';
 
 const argv = process.argv;
 let pass = 0, fail = 0;
@@ -398,6 +399,82 @@ sec('Ⅴ 定案表三態(原文沙箱直測)');
     store.osmInOf(BB2, 'roads') === undefined);
   t('換圖後定案不會污染回舊圖(store 只留一把鍵)',
     store.commitOsmIn(BB2, { roads: R2 }) === true && store.osmInOf(BB, 'roads') === undefined);
+}
+
+// =================================================================================
+sec('Ⅵ Failed-source recovery (production fetchers and retry scheduler)');
+{
+  const BB = { minLat: 35.65, minLng: 139.72, maxLat: 35.67, maxLng: 139.74 };
+  const roads = [{ id: 1, tags: { highway: 'residential', lanes: '2' },
+    geometry: [{ lat: 35.66, lon: 139.73 }, { lat: 35.661, lon: 139.731 }] }];
+  const features = { areas: [], pointFeatures: { pois: [] } };
+  const timers = [], cache = new Map();
+  const app = { phaseShown: 'room', pre: { key: 'tokyo' } };
+  let calls = 0, available = false, rebuilds = 0;
+  const deps = {
+    osmRelayKey, OSM_FEATURE_QUERY_VERSION, app, isRandomMap: () => false, battleBBox: () => BB,
+    setTimeout: fn => (timers.push(fn), timers.length), clearTimeout: () => {},
+    geoKey: kind => kind, geoGet: async key => cache.get(key),
+    geoPut: (key, value) => cache.set(key, value),
+    osmFeatureQuotas: () => ({ nBld: 1, nCover: 1, nArea: 1 }),
+    osmRoadQuotas: () => ({ nMain: 1, nMinor: 1 }),
+    osmFeatureQuery: () => 'feats', osmRoadQuery: () => 'roads',
+    parseOsmFeatureElements: () => features, osmRoadsFromElements: () => roads,
+    OVERPASS_TRY: {}, OVERPASS_TOTAL: {},
+    overpassQuery: async (_query, parse) => { calls++; return available ? parse({ elements: [] }) : null; },
+    startPrebuild: () => { rebuilds++; },
+  };
+  const createSandbox = new Function('deps', `
+    const { ${Object.keys(deps).join(', ')} } = deps;
+    let _osmIn = null, _osmRetry = null;
+    ${['commitOsmIn', 'osmInOf', 'resetOsmMisses', 'fetchOsmFeatures', 'fetchOsmRoads', 'warmOsm']
+      .map(name => grabFn(bioSrc, name)).join('\n')}
+    ${grabFn(mainSrc, 'cancelOsmRetry')}
+    ${grabFn(mainSrc, 'scheduleOsmRetry')}
+    return { commitOsmIn, osmInOf, warmOsm, scheduleOsmRetry };
+  `);
+  const sandbox = createSandbox(deps);
+  sandbox.commitOsmIn(BB, { feats: features, roads: null });
+  await sandbox.warmOsm(BB);
+  t('Normal loads reuse settled failure without repeating network waits', calls === 0);
+  sandbox.scheduleOsmRetry({}, 'tokyo');
+  await timers.shift()();
+  t('A failed road slot is actually queried again', calls === 1);
+  t('Previously loaded buildings do not cancel a failed road retry', timers.length === 1 && rebuilds === 0);
+  t('Failed recovery preserves the room input and its accepted features',
+    sandbox.osmInOf(BB, 'roads') === null && sandbox.osmInOf(BB, 'feats') === features);
+  available = true;
+  if (timers.length) await timers.shift()();
+  t('Recovered roads trigger one room rebuild', calls === 2 && rebuilds === 1 && app.pre === null);
+  const recovered = await sandbox.warmOsm(BB);
+  t('The rebuild gets the full recovered network while accepted features stay fixed',
+    JSON.stringify(recovered[1]) === JSON.stringify(roads) && sandbox.osmInOf(BB, 'feats') === features);
+  sandbox.commitOsmIn(BB, { roads: recovered[1] });
+  const before = calls;
+  const replay = await sandbox.warmOsm(BB, { retryMissing: true });
+  t('Retry mode neither refetches nor aliases accepted room inputs', calls === before
+    && replay[1] !== recovered[1] && JSON.stringify(replay[1]) === JSON.stringify(roads));
+
+  cache.clear(); timers.length = 0; calls = 0; rebuilds = 0;
+  const missingBoth = createSandbox(deps);
+  app.phaseShown = 'loading'; app.pre = { key: 'tokyo' };
+  missingBoth.commitOsmIn(BB, { feats: null, roads: null });
+  missingBoth.scheduleOsmRetry({}, 'tokyo');
+  await timers.shift()();
+  t('Both failed slots recover without rebuilding an active loading screen', calls === 2
+    && rebuilds === 0 && missingBoth.osmInOf(BB, 'feats') === undefined
+    && missingBoth.osmInOf(BB, 'roads') === undefined,
+    JSON.stringify({ calls, rebuilds, feats: missingBoth.osmInOf(BB, 'feats'), roads: missingBoth.osmInOf(BB, 'roads') }));
+
+  cache.clear(); timers.length = 0; calls = 0; rebuilds = 0;
+  const missingFeatures = createSandbox(deps);
+  app.phaseShown = 'room'; app.pre = { key: 'tokyo' };
+  missingFeatures.commitOsmIn(BB, { feats: null, roads });
+  missingFeatures.scheduleOsmRetry({}, 'tokyo');
+  await timers.shift()();
+  t('Feature recovery leaves the accepted road network unchanged', calls === 1
+    && rebuilds === 1 && missingFeatures.osmInOf(BB, 'roads') === roads,
+    JSON.stringify({ calls, rebuilds, feats: missingFeatures.osmInOf(BB, 'feats') }));
 }
 
 // =================================================================================

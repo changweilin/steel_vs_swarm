@@ -1,5 +1,9 @@
 # Road structures
 
+Ground pedestrian paving, sidewalk side/width tags and contextual shoulder furniture
+share the [walkway pipeline](walkways.md); roadway datums and mapped roadside controls
+retain the owners below.
+
 `roadFurniturePlan.js` consumes built surface runs, the room's projected OSM points and closed island/tree-row ways, and the installed satellite observation field. [Mapped island outlines](https://wiki.openstreetmap.org/wiki/Tag:area:highway%3Dtraffic_island) retain their footprints; crossing refuge nodes use fitted presentation geometry with a flush pedestrian gap. Broad median inference requires named or referenced opposing one-way carriageways on the same layer, sufficient separation to resolve an observation cell, and corroborating RGB vegetation probes. Narrow unresolved gaps, adjacent streets, water, invalid rings and unavailable heights omit islands. Returned arrays retain positions and source labels; their length counts accepted footprints rather than certifying surveyed inventory.
 
 Individual tree and [street-lamp nodes](https://wiki.openstreetmap.org/wiki/Tag:highway%3Dstreet_lamp) provide mapped positions. Tree-row ways provide a mapped corridor with schematic spacing. A [lit road](https://wiki.openstreetmap.org/wiki/Key:lit) does not identify pole positions, so the renderer does not invent lamps from that tag or from road width. Traffic controls require mapped signal evidence; heads face incoming arms, exclude outbound-only approaches and show a static, mutually exclusive intersection phase. Signs retain `roadSigns.js` and the existing text atlas. Satellite cells cannot identify individual poles, signs or tree species; botanical appearance remains owned by the existing forest seam.
