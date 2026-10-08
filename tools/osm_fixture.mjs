@@ -22,7 +22,9 @@ export const osmFixtureFiles = dir => readdirSync(dir).filter(name => /\.json(?:
 
 /** Capture checksums refer to the preserved JSON bytes, independent of storage compression. */
 export function readOsmCapture(path) {
-  const stored = readFileSync(path), bytes = path.endsWith('.gz') ? gunzipSync(stored) : stored;
+  const stored = readFileSync(path);
+  let bytes = path.endsWith('.gz') ? gunzipSync(stored) : stored;
+  if (bytes.includes(13)) bytes = Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
   return { bytes, data: JSON.parse(bytes), sha256: createHash('sha256').update(bytes).digest('hex') };
 }
 
