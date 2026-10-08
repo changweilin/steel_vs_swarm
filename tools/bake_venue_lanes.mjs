@@ -23,15 +23,22 @@ import { MAPGEO, battleBBox, realDistFor, targetDistFor, overlapCellM, laneTacti
 import { VENUE_LANES } from '../public/js/venueLanes.js';
 // Table keys live only in venues.js (producer and consumer share it -- copying one string prefix here
 // means a key rename will miss one side, with the symptom that baked lanes have no reader and no error message).
-import { VENUE_LANE_KEYS, venueLaneModes } from '../public/js/venues.js';
+import { VENUE_LANE_KEYS, venueLaneModes, VENUES } from '../public/js/venues.js';
 import { readSrc, grabBlock } from './audit_src.mjs';
+import { mapGeometryAudit, laneOverlapRatioXZ, MAP_ROAD_PROFILE, MAP_RULE_VERSION } from '../public/js/mapRules.js';
+import { sideMFor, laneSubsetFor } from '../public/js/data.js';
+import { traceRoadEvidence, roadFingerprint } from '../public/js/roadEvidence.js';
 // Structural-tunnel qualification gate (the copy that executes biomes.js source text, section 2.1 single seam for offline tool structure profiles).
 // 2026-08-04: legacy buildGraph read w.tags.tunnel directly, a second implementation looser than the engine --
 // indoor=yes service passages (station underground malls / parking ramps) always flatten to ordinary paths in the engine
 // (strucTunnel, 2026-07-29 Shibuya side-wall breach case), yet PREFER_TUNNEL still scored them as routes
 // reaching a tunnel, and the bridge-or-tunnel only via portals rule still blocked them as structures.
 // Selection-time and run-time tunnel definitions diverged, with the symptom that baked lanes claimed an underpass while the map showed a flat street.
-import { strucTunnel } from './venue_field.mjs';
+import { buildGraph, dijkstra } from './road_graph.mjs';
+import { loadElevationFixture, fixtureElevationSampler, osmFixtureFiles, readOsmCapture } from './osm_fixture.mjs';
+import { makeTerrainAssessment, validTerrainAssessment } from '../public/js/roadEvidence.js';
+import { xzToLL } from '../public/js/data.js';
+import { VENUE_GRID } from '../public/js/venueGrid.js';
 
 // Lane lat/lng to game meters (center-relative; same conversion as audit_map_rules and runtime, so bake-time rule checks match the final audit)
 const SC_GAME = 1 / MAPGEO.REAL_SCALE, EARTH_M = 6371000;
@@ -135,21 +142,23 @@ const ANCHORS_ALL = {
   // naming-based anchors land on cliffs with no road node within 120m); first anchor is the easternmost open-cut midpoint, baking westward.
   taroko: [[24.1712, 121.5547], [24.1712, 121.5560]],
   kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // Ukyo street grid / Arashiyama
+  rotterdam: [[51.909, 4.486], [51.913869, 4.4813346], [51.9130457, 4.4842288], [51.9115783, 4.4914119]],
 };
 
 // Pinned fixture mode: feed versioned raw road responses through the same graph and selection gates as live Overpass,
 // fully offline with no silent network fallback when a fixture piece is missing. Fixture venue.id is the sole join key,
 // so file names like berlin.json and london_water.json can stay independent of game venue ids.
 const FIXTURE_DIR = process.env.OSM_FIXTURE_DIR || process.env.FIXTURE_DIR || '';
+for (const venue of VENUES) if (!ANCHORS_ALL[venue.id]) ANCHORS_ALL[venue.id] = [venue.ll];
 const FIXTURE_BY_VENUE = new Map();
 if (FIXTURE_DIR) {
   const fixtureRoot = resolve(FIXTURE_DIR);
-  if (!existsSync(fixtureRoot)) throw new Error(`OSM fixture 目錄不存在：${fixtureRoot}`);
-  for (const file of readdirSync(fixtureRoot).filter((name) => name.endsWith('.json')).sort()) {
-    const fixture = JSON.parse(readFileSync(join(fixtureRoot, file), 'utf8'));
+  if (!existsSync(fixtureRoot)) throw new Error(`OSM fixture directory does not exist: ${fixtureRoot}`);
+  for (const file of osmFixtureFiles(fixtureRoot).sort()) {
+    const fixture = readOsmCapture(join(fixtureRoot, file)).data;
     const id = fixture.venue?.id || fixture.name;
     if (fixture.team !== 5 || !id) continue;
-    if (FIXTURE_BY_VENUE.has(id)) throw new Error(`OSM fixture venue.id 重複：${id}`);
+    if (FIXTURE_BY_VENUE.has(id)) throw new Error(`OSM fixture duplicate venue.id: ${id}`);
     FIXTURE_BY_VENUE.set(id, fixture);
   }
 }
@@ -159,8 +168,7 @@ const ANCHORS = ONLY.length
     ? Object.fromEntries(Object.entries(ANCHORS_ALL).filter(([k]) => FIXTURE_BY_VENUE.has(k)))
     : ANCHORS_ALL;
 
-const DRIVABLE = 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service'
-  + '|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link';
+const DRIVABLE = MAP_ROAD_PROFILE.source.slice(1, -1);
 const ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
@@ -201,18 +209,18 @@ async function overpassRoads(id, lat, lng, radius) {
 function fixtureRoads(id) {
   const fixture = FIXTURE_BY_VENUE.get(id);
   if (!fixture) {
-    throw new Error(`OSM fixture 缺少 venue.id=${id} 的 team=5 raw road response`);
+    throw new Error(`OSM fixture missing venue.id=${id} team=5 raw road response`);
   }
   const roads = fixture.responses?.roads?.elements;
   if (!Array.isArray(roads) || !roads.length) {
-    throw new Error(`OSM fixture ${id} 沒有 raw road response`);
+    throw new Error(`OSM fixture ${id} missing raw road response`);
   }
   const usable = roads.filter((way) => way?.type === 'way'
     && new RegExp(`^(${DRIVABLE})$`).test(way.tags?.highway || '')
     && Array.isArray(way.geometry) && way.geometry.length >= 2
     && way.geometry.every((point) => Number.isFinite(point?.lat)
       && Number.isFinite(point?.lon ?? point?.lng)));
-  if (!usable.length) throw new Error(`OSM fixture ${id} 沒有可建圖的 raw road geometry`);
+  if (!usable.length) throw new Error(`OSM fixture ${id} has no usable raw road geometry to build graph`);
   log(`  fixture ${id}: raw roads=${roads.length} usable=${usable.length}`);
   return usable;
 }
@@ -223,7 +231,7 @@ async function roadsFor(id, anchor, radius) {
     anchor[0], anchor[1], radius);
 }
 
-/** OSM 官方 /map 備援:回傳與 Overpass `out geom` 同形的 way 陣列(只留車行道) */
+/** Official OSM /map fallback: returns way array identical in shape to Overpass `out geom` (drivable only) */
 async function osmApiRoads(lat, lng, radius) {
   const dLat = radius / 111320, dLng = radius / (111320 * Math.cos(lat * d2r));
   const url = `https://api.openstreetmap.org/api/0.6/map?bbox=${(lng - dLng).toFixed(5)},${(lat - dLat).toFixed(5)},`
@@ -250,149 +258,21 @@ async function osmApiRoads(lat, lng, radius) {
           const p = nodes.get(n[1]);
           if (p) geometry.push({ lat: p.lat, lon: p.lon });
         }
-        if (geometry.length >= 2) out.push({ type: 'way', tags, geometry });
+        if (geometry.length >= 2) out.push({ type: 'way', id: Number(attr(m[1], 'id')), tags, geometry });
       }
-      log(`  osm-api 備援取得 ${out.length} 條車行道`);
+      log(`  osm-api fallback retrieved ${out.length} carriageways`);
       return out.length ? out : null;
     } catch (e) { log('  osm-api err', e.message); await sleep(3000 * (a + 1)); }
   }
   return null;
 }
 
-// ---- 數值索引路網圖 ----
-function buildGraph(ways, origin, tunPrefRe) {
-  const idx = new Map();          // "lat,lng" -> i
-  const X = [], Z = [], LA = [], LN = [], adj = [];
-  const tunE = new Set();         // 隧道邊 "u:v"(雙向都記):規則 #5 選線判定用
-  const tunPrefE = new Set();     // PREFER_TUNNEL 偏好專用:只收目標隧道的邊,tunE 本體不動
-  const brgE = new Set();         // 橋樑邊(同上):PREFER_BRIDGE 場地的選線偏好用
-  const portalN = new Set();      // 橋/隧 way 的端點節點 = 出入口(portal):規則「只能從出入口進出」
-  const cosO = Math.cos(origin[0] * d2r);
-  const nid = (la, ln) => {
-    const k = `${la.toFixed(6)},${ln.toFixed(6)}`;
-    let i = idx.get(k);
-    if (i === undefined) {
-      i = X.length;
-      idx.set(k, i);
-      X.push((ln - origin[1]) * d2r * R * cosO);
-      Z.push((la - origin[0]) * d2r * R);
-      LA.push(la); LN.push(ln); adj.push([]);
-    }
-    return i;
-  };
-  for (const w of ways) {
-    if (!w.geometry) continue;
-    const tun = strucTunnel(w.tags);          // 資格閘與引擎同一份(見檔頭 import 註解)
-    const brg = !!w.tags?.bridge && !w.tags?.tunnel;
-    for (let i = 1; i < w.geometry.length; i++) {
-      const a = w.geometry[i - 1], b = w.geometry[i];
-      const u = nid(a.lat, a.lon), v = nid(b.lat, b.lon);
-      if (u === v) continue;
-      const len = Math.hypot(X[u] - X[v], Z[u] - Z[v]);
-      adj[u].push(v, len);        // 扁平化:[v0,len0, v1,len1, …]
-      adj[v].push(u, len);
-      if (tun) {
-        tunE.add(`${u}:${v}`); tunE.add(`${v}:${u}`);
-        if (!tunPrefRe || tunPrefRe.test(w.tags?.name || '')) {
-          tunPrefE.add(`${u}:${v}`); tunPrefE.add(`${v}:${u}`);
-        }
-      }
-      if (brg) { brgE.add(`${u}:${v}`); brgE.add(`${v}:${u}`); }
-    }
-    // 結構 way 的頭尾幾何節點 = 出入口(portal):真實匝道/洞口只接在結構兩端,
-    // way 中間節點若被兵線側切上/下橋 = 「從側邊出入」(規則禁止,見 laneStructEntryAudit)。
-    if (tun || brg) {
-      const g0 = w.geometry[0], gN = w.geometry[w.geometry.length - 1];
-      portalN.add(nid(g0.lat, g0.lon));
-      portalN.add(nid(gN.lat, gN.lon));
-    }
-  }
-  // 連通 component 只作 fixture target 候選的穩定優先序；不改 Dijkstra 或任何路線閘。
-  // adjacency 的插入順序來自版本化 raw response，component id 只比較相等性，故不受 id 編號影響。
-  const component = new Int32Array(X.length).fill(-1);
-  let componentCount = 0;
-  for (let s = 0; s < X.length; s++) {
-    if (component[s] >= 0) continue;
-    const q = [s]; component[s] = componentCount;
-    for (let h = 0; h < q.length; h++) {
-      const u = q[h], a = adj[u];
-      for (let j = 0; j < a.length; j += 2) {
-        const v = a[j];
-        if (component[v] < 0) { component[v] = componentCount; q.push(v); }
-      }
-    }
-    componentCount++;
-  }
-  const junction = adj.map((edges) => {
-    const neighbors = new Set();
-    for (let j = 0; j < edges.length; j += 2) neighbors.add(edges[j]);
-    return neighbors.size >= 3;
-  });
-  return { X, Z, LA, LN, adj, n: X.length, tunE, tunPrefE, brgE, portalN, component, componentCount, junction };
-}
-
-class MinHeap {
-  constructor(cap) { this.k = new Float64Array(cap); this.v = new Int32Array(cap); this.n = 0; }
-  push(k, v) {
-    if (this.n === this.k.length) { const K = new Float64Array(this.n * 2), V = new Int32Array(this.n * 2); K.set(this.k); V.set(this.v); this.k = K; this.v = V; }
-    let i = this.n++;
-    this.k[i] = k; this.v[i] = v;
-    while (i > 0) { const p = (i - 1) >> 1; if (this.k[p] <= this.k[i]) break; this._sw(p, i); i = p; }
-  }
-  pop() {
-    const rk = this.k[0], rv = this.v[0];
-    this.n--;
-    if (this.n) {
-      this.k[0] = this.k[this.n]; this.v[0] = this.v[this.n];
-      let i = 0;
-      for (;;) {
-        const l = 2 * i + 1, r = l + 1;
-        let s = i;
-        if (l < this.n && this.k[l] < this.k[s]) s = l;
-        if (r < this.n && this.k[r] < this.k[s]) s = r;
-        if (s === i) break;
-        this._sw(s, i); i = s;
-      }
-    }
-    return [rk, rv];
-  }
-  _sw(a, b) { const k = this.k[a], v = this.v[a]; this.k[a] = this.k[b]; this.v[a] = this.v[b]; this.k[b] = k; this.v[b] = v; }
-}
-
-// 已被前一條兵線用掉的邊:重罰而非硬禁。
-// 硬禁(邊不相交)會逼第三條繞路超過 2.2× 上限而全滅;重罰讓它「盡量不重用」,
-// 真正的硬門檻交給重合率(那才是規則本身)。
-const REUSE_PEN = 20;  // 已用邊重罰倍數(提升後讓第二條路線強力迴避第一條,有助形成 O 形對)
-
-/** Dijkstra;used = Set of (u*n+v) 已用邊;wMul(u,v) 側翼偏好乘數 */
-function dijkstra(g, src, dst, used, wMul) {
-  const { adj, n } = g;
-  const dist = new Float64Array(n).fill(Infinity);
-  const prev = new Int32Array(n).fill(-1);
-  const done = new Uint8Array(n);
-  dist[src] = 0;
-  const h = new MinHeap(1024);
-  h.push(0, src);
-  while (h.n) {
-    const [d, u] = h.pop();
-    if (done[u]) continue;
-    done[u] = 1;
-    if (u === dst) break;
-    const a = adj[u];
-    for (let i = 0; i < a.length; i += 2) {
-      const v = a[i];
-      if (done[v]) continue;
-      let w = a[i + 1] * (wMul ? wMul(u, v) : 1);
-      if (used.has(u * n + v)) w *= REUSE_PEN;
-      const nd = d + w;
-      if (nd < dist[v]) { dist[v] = nd; prev[v] = u; h.push(nd, v); }
-    }
-  }
-  if (!done[dst]) return null;
-  const path = [dst];
-  while (path[0] !== src) { const p = prev[path[0]]; if (p < 0) return null; path.unshift(p); }
-  return path;
-}
+// ---- Indexed road graph ----
+// Edges already used by a previous lane: heavily penalized rather than strictly forbidden.
+// A hard ban (edge-disjoint) would force the third lane past the 2.2x detour cap; heavy penalty encourages avoidance,
+// leaving the hard threshold to the overlap ratio (the true rule).
+const REUSE_PEN = 20;  // Multiplier for used edges (steered second route away from first, favoring O-pair)
+/** Dijkstra; used = Set of (u*n+v) used edges; wMul(u,v) flank preference multiplier */
 
 const pathLen = (g, p) => { let s = 0; for (let i = 1; i < p.length; i++) s += Math.hypot(g.X[p[i]] - g.X[p[i - 1]], g.Z[p[i]] - g.Z[p[i - 1]]); return s; };
 const banPath = (b, p, n, prog) => {
@@ -405,7 +285,7 @@ const banPath = (b, p, n, prog) => {
   }
 };
 
-/** Douglas-Peucker;回傳「保留下來的位置索引」(端點恆保留 ⇒ 兵線端點精確落在主堡) */
+/** Douglas-Peucker; returns preserved indices (endpoints always preserved -> lane ends land exactly on base) */
 function simplifyIdx(pts, tol) {
   const keep = new Uint8Array(pts.length);
   keep[0] = keep[pts.length - 1] = 1;
@@ -432,9 +312,9 @@ function simplifyIdx(pts, tol) {
   return outIdx;
 }
 
-// ---- 規則 #5 輸入:完整節點路徑上的 tunnel 邊 → 簡化兵線(遊戲公尺)上的弧長區間 ----
-// 兵線頂點經 Douglas-Peucker 簡化過,隧道端點未必留在頂點上 ⇒ 投影取弧長。
-// 相鄰段 ≤ SPAN_GAP 縫成同一座洞(雙孔/分段 way);同 tools/audit_lane_grade_sep.mjs。
+// ---- Rule #5 input: tunnel edges on full path -> arc-length intervals on simplified game lane (game meters) ----
+// Simplified lane vertices may not keep tunnel endpoints -> project to arc length.
+// Adjacent segments <= SPAN_GAP are stitched into one tunnel (dual-bore / segmented ways); matches tools/audit_lane_grade_sep.mjs.
 const SPAN_GAP = 36;
 function tunSpansOf(g, full, gpts, cc) {
   const cum = [0];
@@ -472,75 +352,45 @@ function tunSpansOf(g, full, gpts, cc) {
   return out;
 }
 
-function overlapXZ(a, b, cell) {
-  const gridOf = (lane) => {
-    const s = new Set();
-    for (let i = 1; i < lane.length; i++) {
-      const [x1, z1] = lane[i - 1], [x2, z2] = lane[i];
-      const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / (cell / 2)));
-      for (let k = 0; k <= n; k++) s.add(`${Math.round((x1 + (x2 - x1) * k / n) / cell)},${Math.round((z1 + (z2 - z1) * k / n) / cell)}`);
-    }
-    return s;
-  };
-  const ga = gridOf(a), gb = gridOf(b);
-  if (!ga.size || !gb.size) return 1;
-  let sh = 0;
-  for (const c of ga) if (gb.has(c)) sh++;
-  return sh / Math.min(ga.size, gb.size);
-}
+function overlapXZ(a, b, cell) { return laneOverlapRatioXZ(a, b, cell); }
 
-// 側移目標檔位:與 mapSelect 的 OFFSET_FRACS 同一組(近→遠)
-const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62, 0.80];  // 最後一檔 0.80 讓側翼偏到更遠街道，有助 O 形分離
+// Lateral offset steps: same set as mapSelect OFFSET_FRACS (near -> far)
+const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62, 0.80];  // 0.80 shifts flanks to further streets, aiding O-shape separation
 
-// 指定場地限定方位角扇區(度,[起, 迄] 順時針含跨 0°;**逐錨點**一份扇區清單):
-// 兵線軸向必須對準特定地標才有測試意義(如 jinlong:兩錨沿隧道軸對向,兵線才會穿
-// 金龍隧道山體;全向暴搜會挑分數更高的街廓方位,兵線就繞開隧道了)。未列場地 = 全向。
-// 這些場地是「兵線要踩上高架橋」的測試場地 ⇒ 選線時先比「踩在橋上的長度」,再走原本的排序。
-// 一般場地不受影響(集合外的 id 完全走舊路徑)。
-// 2026-08-04:`civicblvd` 從 PREFER_TUNNEL 改列這裡(市民大道要的是它自己的高架道路,
-// 不是那群挖不出來的圖資地下道 —— 見 ANCHORS 的註解)。
+// Bearing sectors for specific venues (degrees, [start, end] clockwise spanning 0; per-anchor list):
+// Lane axis must align with specific landmark for meaningful testing (e.g. jinlong: two anchors oppose along tunnel axis,
+// threading Jinlong tunnel; unconstrained search would pick higher-scoring street grids and bypass the tunnel). Unlisted = omnidirectional.
+// These venues test lanes walking onto viaducts -> selection compares bridge length first, then default ranking.
+// Ordinary venues unaffected.
+// 2026-08-04: civicblvd switched from PREFER_TUNNEL to here (wants its elevated expressway, not underground passages).
 const PREFER_BRIDGE = new Set(['parkave', 'chicago', 'civicblvd']);
-// 同理:「兵線要走進地下道」的測試場地 ⇒ 先比「踩在 tunnel way 上的長度」。
-// **踩的是 `strucTunnel` 認可的那種 tunnel way**(見檔頭 import):`indoor` 通道不算,
-// 引擎會把它攤平成一般小路,選線期把它當隧道加分就是「號稱走地下道、開圖是平街」。
-// 註:圖資上是隧道 ≠ 執行期挖得出來 —— `underpassPlan` 會因「引道空間不足 / 太深 / 碰水」
-// 放棄(civicblvd 的 60m service 就是這樣落空的)。這個集合只是選線偏好,成不成立一律
-// 以 `audit_lane_scenarios` 的實測為準。
+// Likewise: venues where lanes should enter underpasses compare tunnel way length first.
+// Measured on strucTunnel-recognized tunnel ways; indoor passages do not count (engine flattens them).
+// Note: map tunnel != runtime diggable; underpassPlan may abort due to portal space, depth, or water.
 const PREFER_TUNNEL = new Set(['taroko', 'madrid', 'roppongi']);
-// 場地 → OSM way name 正則:該場地的隧道偏好只比目標隧道(多洞並存時不被最長但建不起來的洞帶走)。
-// 未列場地一律全收 ⇒ 選線逐位元不變。tunE(安全閘輸入)不受影響。
+// Venue -> OSM way name regex: tunnel preference matches target tunnels only.
+// Unlisted match all; tunE safety gate input unaffected.
 const PREFER_TUNNEL_WAY = {};
 const BEARING_SECTORS = {
-  // 僅仍保留結構場地的定向扇區；一般都市場地不列入，走全向暴搜。
-  // madrid 兩錨都夾往東(Joaquín Costa / María de Molina 都是東西向,目標地下道在錨點東側)。
-  // 不夾的話 L2 會沿卡斯提亞大道往北,把後塔擺進一條 service 隧道深處 273m —— 規則 #5 直接紅字
-  // (2026-08-02 首輪實測)。夾了以後 L2/L3 多半湊不出真實道路解 ⇒ 退回 synthLane,那正是想要的:
-  // 這張圖的用途是 **1v1 兵線走地下道**,不是三線市區圖。
-  // 逐錨點一份扇區(索引對齊 ANCHORS):①María de Molina 西錨往東 ②同街東錨往西
-  // ③Joaquín Costa(2026-08-04 新增的第三錨,212m 覆蓋段)也是東西向,兩向都放行 ——
-  // 這一錨沒有「目標在哪一側」的先驗,夾單向等於先賭一半。
+  // Retained directional sectors for structural venues; standard urban venues use omnidirectional search.
+  // madrid: both anchors clamp eastward (Joaquin Costa / Maria de Molina are E-W, target underpass is east).
+  // Without clamp, L2 would head north along Castellana, placing rear turret 273m into a service tunnel -> Rule #5 violation.
   madrid: [[[60, 120]], [[240, 300]], [[60, 120], [240, 300]]],
-  chicago: [[[330, 30]], [[150, 210]]],    // 南岸 → 北 / 北岸 → 南(芝加哥河主河道東西向)
-  jinlong: [[[30, 80]], [[210, 260]]],   // 西南錨(金龍路)→東北;東北錨(金湖路)→西南(隧道軸 ~56°)
-  // taroko 兩錨都夾往西:東側是 656m 的靳珩隧道,PREFER_TUNNEL 不夾會整條兵線鑽進長隧道
-  // (洞內塔違規 ×3、明隧道只沾 36m);往西才是三段「幾乎整條明隧道」的短洞群
+  chicago: [[[330, 30]], [[150, 210]]],    // S bank -> N / N bank -> S (Chicago River main stem is E-W)
+  jinlong: [[[30, 80]], [[210, 260]]],   // SW anchor -> NE; NE anchor -> SW (tunnel axis ~56 deg)
+  // taroko: both anchors clamp west towards the short open-cut tunnel cluster.
   taroko: [[[235, 300]], [[235, 300]]],
-  // parkave 不夾方位角:改由 PREFER_BRIDGE 的「踩在橋上長度」自己挑(夾了反而把能上橋的
-  // 方位角排除掉 —— 實測夾 195~235° 時兵線只擦過高架 4m,沒真的走上去)。
-  // civicblvd 夾在市民大道高架的軸上(東西向):西錨往東 / 東錨往西。
-  // 不夾的話暴搜會挑南北向的街廓(市區格柵的戰術評分更高、也不必上高架)——
-  // 舊制正是這樣把 L1 兵線整條拉到錨點以北 280~620m,場景 0 種。
+  // parkave: unconstrained; PREFER_BRIDGE selects based on bridge length.
+  // civicblvd: clamped along Civic Blvd viaduct axis (E-W): W anchor -> E / E anchor -> W.
   civicblvd: [[[60, 120]], [[240, 300]]],
-  // roppongi **刻意不夾**:這一帶三條候選地下道的軸向不一(乃木坂東西向、環状三号線
-  // 南北向),夾錯就是把唯一走得通的方位排除掉(parkave 的前例)。交給 PREFER_TUNNEL 挑。
+  // roppongi: intentionally unconstrained; candidate underpass axes vary.
 };
 const inSector = (br, [a, b]) => ((br - a + 360) % 360) <= ((b - a + 360) % 360);
-/** 詞典序比較(錨點挑選用):第一個不同的欄位決勝,全同 = 不換(同分取先列者) */
+/** Lexicographic comparison (anchor selection): first differing field decides; identical = preserve earlier entry */
 const lexGT = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
 
-// 固定 fixture 的密集路網可能把「最接近理想方位的單一終點」卡在橋頭、死端或
-// 共享瓶頸；L3 仍須由同一組正式閘逐候選終點驗證，不能手填路線座標或退回合成弧。
-// 只擴展完整戰場 L3，並保留距理想端點最近的有限候選，讓離線重烤保持可重現。
+// Fixed fixture dense road networks may bottleneck single target endpoints.
+// Full-battlefield L3 candidate endpoints are verified through formal gates.
 const FIXTURE_TARGET_LIMIT = Number.isFinite(+process.env.FIXTURE_TARGET_LIMIT)
   ? Math.max(1, Math.floor(+process.env.FIXTURE_TARGET_LIMIT)) : 32;
 function rankTargetRows(rows, sourceComponent, component) {
@@ -563,8 +413,7 @@ function targetCandidates(g, aIdx, bearing, L, mapA) {
     if (ab < minAB || ab > realD * 1.15) continue;
     rows.push({ i, off: Math.hypot(g.X[i] - bx0, g.Z[i] - bz0), junction: g.junction[i] });
   }
-  // 先穩定優先 source 所在 component，再套用既有 cap；不可把 disconnected target
-  // 排在可達 target 前製造假 noPath，也不可因此放寬任何後續 route gate。
+  // Prioritize source component stably, then apply candidate cap.
   rankTargetRows(rows, g.component[aIdx], g.component);
   return rows.slice(0, FIXTURE_TARGET_LIMIT).map((row) => row.i);
 }
@@ -572,16 +421,16 @@ function targetCandidates(g, aIdx, bearing, L, mapA) {
 function selfTestTargetComponentRanking() {
   const component = Int32Array.from([7, 3, 7, 3]);
   const rows = [
-    { i: 1, off: 0.01 },  // 舊排序會選到：幾何最近，但與 source 不連通
-    { i: 2, off: 0.20 },  // component-aware 排序必須先選到：稍遠但可達
+    { i: 1, off: 0.01 },  // Legacy ordering picked: closest geometrically, but disconnected from source
+    { i: 2, off: 0.20 },  // Component-aware ordering must pick: slightly further but reachable
     { i: 3, off: 0.30 },
   ];
   const legacy = rows.slice().sort((a, b) => a.off - b.off || a.i - b.i).slice(0, 1);
   const fixed = rankTargetRows(rows.slice(), component[0], component).slice(0, 1);
   const legacyReachable = component[legacy[0].i] === component[0];
   const fixedReachable = component[fixed[0].i] === component[0];
-  if (legacyReachable) throw new Error('target component self-test 舊排序未製造 disconnected red case');
-  if (!fixedReachable) throw new Error('target component self-test component-aware 排序未優先可達 target');
+  if (legacyReachable) throw new Error('target component self-test legacy ordering failed to produce disconnected red case');
+  if (!fixedReachable) throw new Error('target component self-test component-aware ordering failed to prioritize reachable target');
   log('target component self-test legacy ordering: RED (disconnected target selected)');
   log('target component self-test component-aware ordering: GREEN (same-component target selected)');
   const junctionRows = [{ i: 1, off: 0, junction: true }, { i: 0, off: 0.01 }, { i: 2, off: 1, junction: true }];
@@ -660,12 +509,12 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, 
 
   const straight = Math.hypot(X[bIdx] - ax, Z[bIdx] - az);
   const vx = (X[bIdx] - ax) / straight, vz = (Z[bIdx] - az) / straight;
-  const px = -vz, pz = vx;                                    // 垂直單位向量
-  const lat = (i) => (X[i] - ax) * px + (Z[i] - az) * pz;     // 側向位移(正 = 左)
-  const prog = (i) => ((X[i] - ax) * vx + (Z[i] - az) * vz) / straight;   // 沿 A→B 的進度 0..1
-  // 側翼:不只是「別走錯邊」,而是主動朝目標側移弧線靠攏 —— 與 synthLane 的主脊同形
-  // (sin 拱形:兩端歸零、中段最寬 LANE_OFFSET_FRAC×D)。
-  // 只罰錯邊的舊寫法會讓路徑貼著中線走,重合率因此壓不下來。
+  const px = -vz, pz = vx;                                    // Perpendicular unit vector
+  const lat = (i) => (X[i] - ax) * px + (Z[i] - az) * pz;     // Lateral offset (+ = left)
+  const prog = (i) => ((X[i] - ax) * vx + (Z[i] - az) * vz) / straight;   // Progress along A->B (0..1)
+  // Flanks: actively hugs target lateral offset arc rather than just penalizing the wrong side --
+  // shaped like synthLane spine (sin arc: zero at endpoints, widest at mid-stretch with LANE_OFFSET_FRAC * D).
+  // The legacy logic that only penalized the wrong side let routes hug the centerline, inflating overlap.
   const STEER_W = 2.4;
   const sideW = (s, offFrac) => (u, v) => {
     const m = (lat(u) + lat(v)) / 2;
@@ -679,35 +528,27 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, 
   const take = (wMul) => {
     const p = dijkstra(g, aIdx, bIdx, used, wMul);
     if (!p) { why = 'noPath'; return null; }
-    if (pathLen(g, p) / straight > 2.2) { why = 'detour'; return null; }   // 繞路閘門(同 mapSelect)
-    // 折返閘門(同 mapSelect / MAPGEO.MAX_BACKTRACK):prog 已正規化為 A→B 進度,
-    // 累加進度倒退段 = 往主堡折返比例;超標淘汰(側翼 via 導引偶會把路徑吸回起點)
+    if (pathLen(g, p) / straight > 2.2) { why = 'detour'; return null; }   // Detour gate (matches mapSelect)
+    // Backtrack gate (matches mapSelect / MAPGEO.MAX_BACKTRACK): prog normalized to A->B progress;
+    // accumulating backward progress checks return ratio toward main base; excess is rejected.
     let back = 0, pr = prog(p[0]);
     for (let k = 1; k < p.length; k++) { const pg = prog(p[k]); if (pg < pr) back += pr - pg; pr = pg; }
     if (back > MAPGEO.MAX_BACKTRACK) { why = 'backtrack'; return null; }
-    // 規則(2026-07-28):橋/隧只能從出入口(結構 way 端點 portalN)進出,不可從側邊上/下橋。
-    // struc 對齊節點路徑 p:段 k 連 p[k−1]→p[k];portal = p[i] 是否為結構端點(見 laneStructEntryAudit)。
+    // Bridges/tunnels must be entered/exited via portals (endpoints portalN), never from the side.
+    // struc aligns with node path p: segment k connects p[k-1]->p[k]; portal = whether p[i] is structural endpoint.
     const struc = new Array(p.length);
     struc[0] = false;
     for (let k = 1; k < p.length; k++) struc[k] = g.tunE.has(`${p[k - 1]}:${p[k]}`) || g.brgE.has(`${p[k - 1]}:${p[k]}`);
     if (!laneStructEntryAudit(struc, p.map((nd) => g.portalN.has(nd))).ok) { why = 'sideEntry'; return null; }
     const all = p.map((i) => [X[i], Z[i]]);
     const keep = simplifyIdx(all, 3);
-    const idx = keep.map((k) => p[k]);                        // 簡化後仍全是 OSM 道路節點
+    const idx = keep.map((k) => p[k]);                        // All vertices remain OSM road nodes after simplification
     const xz = keep.map((k) => all[k]);
-    // 規則(2026-07-28):兵線不可接近 180° 迴轉(側翼 via / REUSE 重罰偶會逼出上橋再折回式掉頭)。
-    // xz 是真實公尺(buildGraph 用地球半徑),laneUTurnAudit 的 SEG_M 取樣與 laneTacticsXZ 同在
-    // 遊戲公尺語意下 ⇒ 換算後再判(× 1/REAL_SCALE;此處在 s 宣告前被呼叫,不能用 s,直接取 MAPGEO)。
-    const gs = 1 / MAPGEO.REAL_SCALE;
-    const gxz = xz.map(([x, z]) => [x * gs, z * gs]);
-    if (!laneUTurnAudit(gxz).ok) { why = 'uturn'; return null; }
-    // 規則③(2026-07-29):相對 A→B 主軸的帶號偏航累積 MUST 落在 ±TURN_ACCUM_MAX_DEG 內
-    // (順逆時針抵消;背對主軸走/繞圈在此淘汰)。與迴轉閘同一組遊戲公尺取樣語彙。
-    if (!laneTurnAccumAudit(gxz).ok) { why = 'turnAccum'; return null; }
-    banPath(used, p, n, prog);                                // 過閘後才標記已用邊(下一條被 REUSE_PEN 重罰)
+    // Ban path marks used edges after passing gates (subsequent lanes penalized by REUSE_PEN)
+    banPath(used, p, n, prog);
     let s = 0;
     for (const q of idx) s += lat(q);
-    return { xz, idx, full: p, lat: s / idx.length };   // full = 未簡化節點路徑(規則 #5 取隧道邊用)
+    return { xz, idx, full: p, lat: s / idx.length };   // full = unsimplified node path (used for Rule #5 tunnel edges)
   };
 
   const lanes = [];
@@ -717,46 +558,55 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, 
     if (!lane) return { fail: why };
     lanes.push(lane);
   }
-  lanes.sort((p, q) => q.lat - p.lat);                        // [上, 中, 下]
+  lanes.sort((p, q) => q.lat - p.lat);                        // [top, middle, bottom]
 
   const cell = overlapCellM(L, mapA);
   let mo = 0;
   for (let i = 0; i < lanes.length; i++)
     for (let j = i + 1; j < lanes.length; j++) mo = Math.max(mo, overlapXZ(lanes[i].xz, lanes[j].xz, cell));
-  if (mo > MAPGEO.MAX_OVERLAP) return { fail: 'overlap', ov: mo };
 
   const s = 1 / MAPGEO.REAL_SCALE;
-  // 兵線互不接觸/交叉硬門檻(全禁,含立體交叉;與 mapSelect / server / audit_lane_sep 同一支)。
-  // MUST 判「寫出後」的幾何:六位小數捨入 lat/lng → llToGame(origin = 捨入後 bases[0],
-  // 與 audit_lane_sep 逐式相同)。圖平面座標(未捨入)在扇出帶的公分級貼近會與寫出幾何
-  // 不同判 —— 捨入讓兩線換邊變成交叉(2026-07-29 barcelona L3 實案:bake 閘綠、離線稽核紅
-  // → runner 拒絕提交)。判寫出幾何 = 兩端永遠同判(原則 3)。
+  // Hard gate: lanes must not touch or cross (fully forbidden including grade separation).
+  // MUST evaluate geometry *after* rounding: 6 decimal places lat/lng -> llToGame (origin = rounded bases[0]).
   const wr6 = (i) => [r6(g.LA[i]), r6(g.LN[i])];
   const oW = wr6(aIdx);
   const lanesWritten = lanes.map((l) => l.idx.map((i) => {
     const [la, ln] = wr6(i);
     return llToGame(la, ln, { lat: oW[0], lng: oW[1] });
   }));
-  if (!laneSeparationAudit(lanesWritten).ok) return { fail: 'touch' };
   let sinu = 0, tpk = 0;
   for (const l of lanes) { const t = laneTacticsXZ(l.xz.map(([x, z]) => [x * s, z * s])); sinu += t.sinuosity; tpk += t.turnsPerKm; }
   sinu /= L; tpk /= L;
-  // 砲塔規則合規(規則 #4):跑與 runtime 同一換算的 towerLayoutAudit ⇒ 選址時就偏好「砲塔佈局合規」的方位
+  // Tower layout audit (Rule #4): prefers compliant tower layouts.
   const A = [g.LA[aIdx], g.LN[aIdx]], B = [g.LA[bIdx], g.LN[bIdx]];
   const cc = { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 };
+  const written = lanes.map(l => l.idx.map(wr6));
+  const writtenA = wr6(aIdx), writtenB = wr6(bIdx);
+  const frame = { center: { lat: (writtenA[0] + writtenB[0]) / 2, lng: (writtenA[1] + writtenB[1]) / 2, rot: 0 },
+    bases: { SWARM: writtenA, STEEL: writtenB }, lanes: written, laneCount: L,
+    laneIds: mapA ? [0] : laneSubsetFor(L), ...(mapA ? {} : { motherLanes: written }),
+    defSide: mapA || null, sizeM: sideMFor(mapA ? 1 : 3, mapA) };
+  frame.center.rot = g.rotation || 0;
+  const common = mapGeometryAudit(frame, 5);
+  if (!common.ok) return { fail: common.code };
+  if (!mapA && FIXTURE_DIR) {
+    if (!g.elevationAt) return { fail: 'missingElevation' };
+    frame.roadTerrain = makeTerrainAssessment(frame, (x, z) => g.elevationAt(...xzToLL(x, z, frame.center)));
+    if (!validTerrainAssessment(frame)) return { fail: 'terrain' };
+  }
+  mo = common.metrics.maxOverlap;
   const lanesGame = lanes.map((l) => l.idx.map((i) => llToGame(g.LA[i], g.LN[i], cc)));
-  // 砲塔洞口規則(規則 #5):兵線穿隧道時,埋在洞內的砲塔 MUST 有 ≥TOWER_TUNNEL_OUT_F 射程涵蓋洞口外。
-  // 隧道段取圖資 tunnel way 全長(上界;執行期只有地形蓋得住的段落才成洞)⇒ 選線期寧可保守。
+  // Tower portal rule (Rule #5): when threading tunnels, turrets buried inside tunnel MUST have >= TOWER_TUNNEL_OUT_F range covering outside.
+  // Tunnel segment takes full tunnel way length (conservative bound).
   const spans = lanes.map((l, li) => tunSpansOf(g, l.full, lanesGame[li], cc));
-  // 兩條規則逐型態各驗一次再加總(見 venues.js venueLaneModes):完整戰場恆為單一型態 ⇒ 逐位元同舊制。
+  // Validate rules across venueLaneModes: full battlefield is single mode.
   let resid = 0, tunBad = 0;
   for (const m of venueLaneModes(mapA)) {
     const ta = towerLayoutAudit(lanesGame, m);
-    resid += ta.residual + (ta.stackBad ? 1000 : 0);   // 疊塔視為重罰(絕不選)
+    resid += ta.residual + (ta.stackBad ? 1000 : 0);   // Stacked towers heavily penalized
     tunBad += towerTunnelAudit(lanesGame, spans, m).bad.length;
   }
-  // 兵線實際踩在橋樑邊上的長度(遊戲公尺):PREFER_BRIDGE 場地用它當首要偏好 ——
-  // 「純陸域高架橋」的測試場地要的就是兵線真的走在橋面上,一般的戰術評分不會特意去挑高架。
+  // Bridge length in game meters: PREFER_BRIDGE venues use this as primary preference.
   let brgLen = 0, tunLen = 0;
   for (const l of lanes) {
     for (let i = 1; i < l.full.length; i++) {
@@ -766,15 +616,11 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1, 
       if ((g.tunPrefE ?? g.tunE)?.has(`${u}:${v}`)) tunLen += seg;
     }
   }
-  // 規則(2026-09-02):L2/L3 路徑平衡閘 —— 左右長度誤差/外側比/重合度。
-  // lanesGame 已以 cc 為中心換算好遊戲公尺,與 lanePathBalanceAudit 要求的輸入格式相同。
-  // 閘放在 touch/overlap 之後(兩者先淘汰結構性違規)、return 之前。
-  if (L >= 2 && !lanePathBalanceAudit(lanesGame, L).ok) return { fail: 'balance' };
   return {
     bearing, aIdx, bIdx, lanes, brgLen, tunLen,
     maxOverlap: mo, sinuosity: sinu, turnsPerKm: tpk,
-    resid,      // 規則 #4 殘餘(逐型態加總)
-    tunBad,     // 規則 #5 違規塔數(逐型態加總;0 = 合規)
+    resid,      // Rule #4 residual
+    tunBad,     // Rule #5 violating turrets (0 = compliant)
     score: tacticalScore(sinu, tpk, mo),
   };
 }
@@ -791,10 +637,10 @@ if (TARGET_COMPONENT_SELF_TEST) {
   process.exit(0);
 }
 
-// ---- 主流程 ----
+// ---- Main loop ----
 const out = {}, report = [];
 const maxRealD = realDistFor(3);
-// 表的鍵(順序即寫檔順序;唯一縫在 venues.js):完整戰場 1~3 條兵線 + 縮小尺度的單兵線。
+// Table keys (order matches write order; single seam in venues.js): full battlefield 1~3 lanes + reduced-scale single lane.
 const KEYS = VENUE_LANE_KEYS.map((k) => k.key);
 for (const [id, anchors] of Object.entries(ANCHORS)) {
   let picked = null;
@@ -807,27 +653,34 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
     : anchors;
   for (const anchor of fixtureAnchors) {
     log(`${id} @ [${anchor}] …`);
-    // 半徑要留給側翼外凸的空間(B 已在 1.15×realD;繞路上限 2.2×)
+    // Radius leaves room for flank bulging (B is at 1.15x realD; detour cap 2.2x)
     const RAD = maxRealD * 2.4;
     const ways = await roadsFor(id, anchor, RAD);
     if (!ways || ways.length < 20) { log(`  ways=${ways ? ways.length : 'ERR'} → skip`); continue; }
     const g = buildGraph(ways, anchor, PREFER_TUNNEL_WAY[id]);
+    g.rotation = (VENUE_GRID[id] || 0) * Math.PI / 180;
+    if (fixture) {
+      try {
+        const at = fixtureElevationSampler(loadElevationFixture(fixture.name, join(resolve(FIXTURE_DIR), 'elevation')));
+        g.elevationAt = (lat, lng) => lat < fixture.bbox.minLat || lat > fixture.bbox.maxLat
+          || lng < fixture.bbox.minLng || lng > fixture.bbox.maxLng ? null : at(lat, lng);
+      } catch { /* Full-road admission remains pending without the captured relief. */ }
+    }
     log(`  ways=${ways.length} nodes=${g.n}`);
-    // 錨點 → 最近道路節點(120m 內)
+    // Anchor -> nearest road node (within 120m)
     let aIdx = -1, ad = 120;
     for (let i = 0; i < g.n; i++) { const d = Math.hypot(g.X[i], g.Z[i]); if (d < ad) { ad = d; aIdx = i; } }
-    if (aIdx < 0) { log('  錨點 120m 內無道路節點 → skip'); continue; }
+    if (aIdx < 0) { log('  No road node within 120m of anchor -> skip'); continue; }
 
     const byL = {};
-    // 同一張圖(2026-09-25):完整戰場只烤三線母體(L3),L1(中路)/L2(左右兩路)寫檔時由母體派生;
-    // 縮小尺度(劇情戰役)只有單兵線 —— 恆為 1 條線(laneCountFor)。
-    // 母體烤不到的場地:L1/L2 不寫(執行期 venueConfig 以混合母體/合成弧補),不等於舊表的獨立路線。
+    // Full battlefield bakes 3-lane parent (L3); L1/L2 derive from parent at write time. Reduced-scale is 1 lane.
+    // Venues unable to bake parent do not write L1/L2.
     for (const { key, L, mapA } of VENUE_LANE_KEYS.filter(({ mapA: m, L: l }) => m || l === 3)) {
       let best = null;
       const why = {};
       let bestOv = 9;
       const seenTargets = new Set();
-      // 方位角每 5° × 三檔側移目標:離線暴搜,不放過任何一組能全線走真實道路的解
+      // Bearing every 5 deg x 3 lateral offset targets: exhaustive offline search
       const sectors = BEARING_SECTORS[id]?.[anchors.indexOf(anchor)];
       for (let i = 0; i < 72; i++) {
         if (sectors && !sectors.some((s) => inSector(i * 5, s))) continue;
@@ -849,18 +702,18 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
               }
             }
             if (r?.fail) { why[r.fail] = (why[r.fail] || 0) + 1; if (r.ov != null) bestOv = Math.min(bestOv, r.ov); continue; }
-            // fixture 已有正式 L3 時，先固定其兩堡中點；同中心的候選才回到原本的
-            // 橋／隧偏好與戰術排序。這讓「烤路線 → 重抓 fixture → 再烤」收斂為固定點。
+            // When fixture already has formal L3, lock its midpoint first. Same-center candidates revert to
+            // bridge/tunnel preferences and tactical ranking, converging bake -> recapture -> rebake into a fixed point.
             if (r && pinnedL3 && L === 3 && !mapA) {
               r.centerM = centerErrorM(fixture, g, r);
               const bestCenterM = best?.centerM ?? Infinity;
               if (!best || r.centerM < bestCenterM - 0.001) { best = r; continue; }
               if (r.centerM > bestCenterM + 0.001) continue;
             }
-            // 詞典序:先「規則 #5 洞內砲塔違規少」(塔埋在山體裡只能沿洞內走廊對射 = 功能性缺陷,
-            // 比 #4 的重疊殘餘嚴重)、再「規則 #4 殘餘少」、同分才取戰術評分高。
-            // 兩者皆是**偏好非硬門檻**:全方位皆不合規時仍取最小者(不放棄該 L,行為等同舊版最佳努力)。
-            // 無隧道的場地 tunBad 恆 0 ⇒ 排序退化為舊版,選線結果不動。
+            // Lexicographical ordering: Rule #5 tunnel turret violations lowest first,
+            // then Rule #4 residual lowest, then tactical score highest.
+            // Both are preferences, not hard gates: take minimum even if noncompliant.
+            // TunBad remains 0 for venues without tunnels.
             if (r && PREFER_TUNNEL.has(id)
               && (!best || r.tunLen > best.tunLen + 1
                 || (Math.abs(r.tunLen - best.tunLen) <= 1 && (r.tunBad < best.tunBad
@@ -874,68 +727,61 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
             if (r && !PREFER_BRIDGE.has(id) && !PREFER_TUNNEL.has(id) && (!best || r.tunBad < best.tunBad
               || (r.tunBad === best.tunBad && (r.resid < best.resid
                 || (r.resid === best.resid && r.score > best.score))))) best = r;
-            // ↑ 一般場地的排序(規則 #5 → 規則 #4 → 戰術評分)不動
           }
         }
       }
       if (!best) {
-        // 這個尺度湊不出真實道路兵線 → 該鍵不寫;完整戰場 L1/L2 由母體派生故不需獨立解,
-        // 執行期 venueConfig 對缺母體以降級鏈補(混合母體 / synthLane,見 venues.js)。
-        log(`  ${key} ✗ 無可行方位角 reasons=${JSON.stringify(why)}${bestOv < 9 ? ` bestOv=${bestOv.toFixed(3)}` : ''}`);
+        // Unable to assemble real road lanes for this scale -> key is omitted;
+        // full battlefield L1/L2 derive from parent.
+        log(`  ${key} X No viable bearing reasons=${JSON.stringify(why)}${bestOv < 9 ? ` bestOv=${bestOv.toFixed(3)}` : ''}`);
         continue;
       }
       byL[key] = { g, ...best };
-      log(`  ${key} ✓ br=${best.bearing}° ov=${best.maxOverlap.toFixed(3)} sinu=${best.sinuosity.toFixed(2)} resid=${best.resid}` +
-        (best.tunBad ? ` ⚠️洞內塔違規=${best.tunBad}` : ''));
+      log(`  ${key} OK br=${best.bearing} deg ov=${best.maxOverlap.toFixed(3)} sinu=${best.sinuosity.toFixed(2)} resid=${best.resid}` +
+        (best.tunBad ? ` [WARN] tunnel tower violations=${best.tunBad}` : ''));
     }
     const hits = Object.keys(byL).length;
     if (!hits) continue;
-    // 取錨點:先「規則 #4/#5 合規的鍵數」最多,再「真實道路可用鍵數」最多;同分取先列者。
-    // **完整戰場的鍵排在縮小尺度之前**(2026-08-14 加入 m1 時追加):比較序寫成
-    // [完整合規數, 完整可用數, 全部合規數, 全部可用數]。多錨點的場地(tamsui / madrid /
-    // roppongi …)本來就是靠這個計數挑錨,把新鍵併進同一個計數 = 「另一個錨點的**迷你**
-    // 路線比較好」就足以換掉那張圖已經定案的母體(連同 `scen` 場景實測標記整份過期)。
-    // 分層之後新增鍵只能當同分時的決勝,既有尺度的選擇一格不動。
-    // 同一張圖(2026-09-25):完整戰場只剩母體鍵 3,故「完整」= 母體本身。
+    // Pick anchor: most compliant keys (Rules #4/#5), then most available road keys; first listed breaks ties.
+    // Full-battlefield keys precede reduced-scale keys.
     const cnt = (ks) => {
       const es = ks.map((k) => byL[k]).filter(Boolean);
       return [es.filter((b) => b.resid === 0 && b.tunBad === 0).length, es.length];
     };
-    // fixture 重烤還要把正式場地的投影縫固定住：同等合規時，優先選 L3 兩堡中點最貼近
-    // fixture.center 的候選。否則每次重抓 bbox 都會換一個「第一個完美錨點」，中心一路漂移。
+    // Re-baking fixture locks projection seam: identical compliance prioritizes L3 midpoint closest to fixture.center.
     const centerM = fixture ? centerErrorM(fixture, g, byL[3]) : 0;
     const rank = [...cnt(KEYS.filter((k) => typeof k === 'number')), ...cnt(KEYS), -centerM];
     if (!picked || lexGT(rank, picked.rank)) picked = { anchor, byL, ways: ways.length, g, conf: rank[2], rank, centerM };
-    if (!fixture && byL[3] && byL.m1 && rank[0] === 1 && rank[2] === 2) break;   // 線上模式維持既有提前收手(母體+m1 雙合規)
+    if (!fixture && byL[3] && byL.m1 && rank[0] === 1 && rank[2] === 2) break;   // Online mode stops early on full compliance
   }
-  if (!picked) { report.push(`${id}: ❌ 全尺度皆無真實道路解 → 一律 synthLane`); log(`${id}: ❌`); continue; }
+  if (!picked) { report.push(`${id}: [FAIL] No real road solution across scales -> default to synthLane`); log(`${id}: [FAIL]`); continue; }
   out[id] = picked;
   const mark = (K) => {
     if (picked.byL[K]) return `${K} ov=${picked.byL[K].maxOverlap.toFixed(2)}`;
-    if ((K === 1 || K === 2) && picked.byL[3]) return `${K} ¬母體派生`;
+    if ((K === 1 || K === 2) && picked.byL[3]) return `${K} (derived from parent)`;
     return `${K} synth`;
   };
   const full = !!(picked.byL[3] && picked.byL.m1);
-  report.push(`${id}: ${full ? '✅' : '◐'} A=[${picked.anchor.map((v) => v.toFixed(5))}] ${KEYS.map(mark).join(' | ')}`
-    + (fixture ? ` | centerΔ=${Number.isFinite(picked.centerM) ? picked.centerM.toFixed(3) : '∞'}m` : ''));
-  log(`${id}: ${full ? '✅' : '◐'}`);
+  report.push(`${id}: ${full ? 'OK' : 'PARTIAL'} A=[${picked.anchor.map((v) => v.toFixed(5))}] ${KEYS.map(mark).join(' | ')}`
+    + (fixture ? ` | centerΔ=${Number.isFinite(picked.centerM) ? picked.centerM.toFixed(3) : 'inf'}m` : ''));
+  log(`${id}: ${full ? 'OK' : 'PARTIAL'}`);
 }
 
-// 指定場地只准在**全部**取得新路網並至少選出一組路線後寫檔。
-// 外部服務失敗時若仍重寫，`keep` 會把該場地當成已重烤而移除舊表，
-// 下一局才靜默退回 synthLane，等同把原本有效的 baked route 刪掉。
+// Specified venues only write when ALL succeed in acquiring graphs and lanes.
+// When external services fail, rewriting would drop unbaked venues from the table,
+// falling back silently to synthLane next match and effectively deleting valid routes.
 const missing = ONLY.filter((id) => !out[id]);
 if (missing.length) {
-  log(`\n❌ 指定場地未取得可用路線，拒絕重寫 venueLanes.js：${missing.join(', ')}`);
+  log(`\n[FAIL] Target venues missing usable routes, refusing to rewrite venueLanes.js: ${missing.join(', ')}`);
   process.exit(1);
 }
 
-log('\n---- 報告 ----');
+log('\n---- Report ----');
 for (const r of report) log(r);
-log(`\n成功 ${Object.keys(out).length} / ${Object.keys(ANCHORS).length}`);
+log(`\nSuccess ${Object.keys(out).length} / ${Object.keys(ANCHORS).length}`);
 
 if (FIXTURE_DIR && process.env.FIXTURE_WRITE !== '1') {
-  log('\nfixture 診斷模式：未設 FIXTURE_WRITE=1，不覆寫 public/js/venueLanes.js。');
+  log('\nFixture diagnostic mode: FIXTURE_WRITE=1 not set, skipping overwrite of public/js/venueLanes.js.');
   process.exit(0);
 }
 
@@ -951,27 +797,25 @@ if (FIXTURE_DIR) {
       ? [] : [`${id}(center=${drift.centerM.toFixed(3)}m,bbox=${drift.bboxDeg.toExponential(2)}°)`];
   });
   if (drifted.length && process.env.FIXTURE_RECAPTURE !== '1') {
-    log(`\n❌ 候選會改變 fixture center/bbox，拒絕寫表：${drifted.join(', ')}`);
-    log('若確定要移動正式場地，請設 FIXTURE_RECAPTURE=1，寫入後立即用 fetch_osm_fixture.mjs --update 重抓同名 raw fixture。');
+    log(`\n[FAIL] Candidate would drift fixture center/bbox, refusing write: ${drifted.join(', ')}`);
+    log('To move venue coordinates permanently, set FIXTURE_RECAPTURE=1 and run fetch_osm_fixture.mjs --update.');
     process.exit(1);
   }
 }
 
-let js = `// ============ 預設場地兵線(離線預算,勿手改)============
-// 由 tools/bake_venue_lanes.mjs 產生:Overpass 真實道路路網 → 邊不相交最短路徑。
-// 每條兵線的每個頂點都是 OSM 道路節點 ⇒ NPC 引導路線 100% 與現實導航路線相符。
-// 通過的規則(與互動式選址流程相同):兩堡距離 ≥ 對角線 ${MAPGEO.MIN_DIST_FRAC * 100}%、
-// 任兩線重合率 ≤ ${MAPGEO.MAX_OVERLAP}(判定網格 overlapCellM(L))、單線繞路 ≤ 2.2×直線距離、
-// 任兩線互不接觸/交叉(排除主堡扇出段,中段最近距離 ≥ ${MAPGEO.LANE_MIN_SEP_M} 遊戲公尺,含立體交叉亦禁)。
-// bases[0] = SWARM(錨點側)、bases[1] = STEEL;lanes 依側向排序 [上, 中, 下]。
-// 鍵(見 venues.js \`venueLaneKey\`):1/2 = 由鍵 3 母體派生的中路 / 左右兩路(同 bases);
+let js = `// ============ Default venue lanes (offline precomputed, do not hand edit) ============
+// Generated by tools/bake_venue_lanes.mjs: Overpass real road network -> edge-disjoint shortest path.
+// Every vertex of each lane is an OSM road node -> NPC paths 100% match navigation routes.
+// Rules passed: base distance >= ${MAPGEO.MIN_DIST_FRAC * 100}% diagonal,
+// overlap <= ${MAPGEO.MAX_OVERLAP} (overlapCellM(L)), detour <= 2.2x straight distance,
+// no mutual contact/crossing (excluding base fanouts, mid-segment min separation >= ${MAPGEO.LANE_MIN_SEP_M} game meters).
+// bases[0] = SWARM (anchor side), bases[1] = STEEL; lanes sorted laterally [top, middle, bottom].
+// Keys (see venues.js \`venueLaneKey\`): 1/2 = derived middle / outer lanes from parent key 3 (same bases);
 // m1 = Dedicated story route (base distance factor ${(realDistFor(1, 'SWARM') / realDistFor(1)).toFixed(1)}).
 // Different distance constraints require an independent road route rather than a truncated full route.
 // Tower placement is validated for both defending factions.
 export const VENUE_LANES = {\n`;
-// ONLY= 只烤指定場地時,**其餘場地的既有兵線 MUST 原樣保留** —— 這支一律重寫整份
-// venueLanes.js,少了這段就會把沒烤到的場地整批清空(2026-07-28 實測:ONLY=parkave
-// 之後其餘 22 個場地全數退回 synthLane 合成弧,場景掃描結果整個變樣)。
+// When baking ONLY= specified venues, existing lanes of remaining venues MUST be preserved unchanged.
 const keep = FIXTURE_DIR
   ? Object.entries(VENUE_LANES).filter(([id]) => !(id in ANCHORS) || !out[id])
   : ONLY.length ? Object.entries(VENUE_LANES).filter(([id]) => !(id in ANCHORS)) : [];
@@ -988,8 +832,8 @@ for (const [id, byL] of keep) {
 }
 for (const [id, v] of Object.entries(out)) {
   js += `  ${id}: {\n`;
-  // 同一張圖(2026-09-25):L1/L2 由母體(鍵 3)派生,與母體同 bases ——
-  // L1 = 母體中路(idx 1)、L2 = 母體左右兩路(idx 0/2)。母體缺席則該場地不寫 L1/L2。
+  // L1/L2 derived from parent (key 3), sharing same bases:
+  // L1 = parent middle (idx 1), L2 = parent left and right (idx 0/2). Missing parent omits L1/L2.
   const m3 = v.byL[3];
   const derived = {};
   if (m3) {
@@ -1000,14 +844,17 @@ for (const [id, v] of Object.entries(out)) {
   for (const K of KEYS) {
     const dv = derived[K];
     const b = v.byL[K] || (dv && m3);
-    if (!b) continue;                     // 該鍵無真實道路解 → venues.js 對它降級(見 venueConfig)
+    if (!b) continue;                     // Key lacks real road solution -> venues.js degrades (see venueConfig)
     const g = v.g;
     const A = [g.LA[b.aIdx], g.LN[b.aIdx]], B = [g.LA[b.bIdx], g.LN[b.bIdx]];
     const lanesLL = (dv ? dv.sub.map((i) => b.lanes[i]) : b.lanes).map((l) => l.idx.map((i) => [r6(g.LA[i]), r6(g.LN[i])]));
     const mo = dv ? dv.ov : b.maxOverlap;
+    const source = { provider: 'baked-osm-graph', version: 'road-profile-' + MAP_RULE_VERSION,
+      fingerprint: roadFingerprint(g.ways) };
+    const proofs = lanesLL.map(lane => traceRoadEvidence(lane, g.ways, { source }));
     js += `    ${K}: { bearing: ${b.bearing}, maxOverlap: ${+mo.toFixed(3)},\n`;
     js += `      bases: [[${r6(A[0])},${r6(A[1])}],[${r6(B[0])},${r6(B[1])}]],\n`;
-    js += `      lanes: [\n        ${lanesLL.map((l) => `[${l.map((p) => `[${p[0]},${p[1]}]`).join(',')}]`).join(',\n        ')}\n      ] },\n`;
+    js += `      lanes: [\n        ${lanesLL.map((l) => `[${l.map((p) => `[${p[0]},${p[1]}]`).join(',')}]`).join(',\n        ')}\n      ], roadSources: ${JSON.stringify(proofs.every(Boolean) ? proofs : null)} },\n`;
   }
   js += `  },\n`;
 }
@@ -1017,8 +864,13 @@ if (ONLY.length || FIXTURE_DIR) {
   let current = readSrc('public', 'js', 'venueLanes.js');
   for (const id of Object.keys(out)) {
     const marker = `\n  ${id}: `;
-    const oldBlock = grabBlock(current, marker);
     const newBlock = grabBlock(js, marker);
+    if (!current.includes(marker)) {
+      const end = current.lastIndexOf('};');
+      current = current.slice(0, end) + `  ${id}: ${newBlock},\n` + current.slice(end);
+      continue;
+    }
+    const oldBlock = grabBlock(current, marker);
     const start = current.indexOf('{', current.indexOf(marker));
     current = current.slice(0, start) + newBlock + current.slice(start + oldBlock.length);
   }

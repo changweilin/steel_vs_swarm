@@ -17,7 +17,7 @@ export function scenePartGeometry(part) {
   else if (type === 'box') geometry = runtimePrimitiveGeometry({ type: 'box', dimensions: [a, b, c] });
   else if (type === 'cyl') geometry = new THREE.CylinderGeometry(a, b, c, sides || 8);
   else if (type === 'cone') geometry = new THREE.ConeGeometry(a, b, c || 8);
-  else if (type === 'crown') geometry = sceneryGeometry('crown', [a * 2, a * 2, a * 2]);
+  else if (type === 'crown') geometry = sceneryGeometry('crown', [a * 2, a * 2, a * 2], part.naturalSeed);
   else if (type === 'ico') {
     geometry = new THREE.IcosahedronGeometry(a, 1);
   }
@@ -60,7 +60,7 @@ export function forestSceneGeometry(type, seed, size, season = 'summer') {
         : [part.role === 'leaf' ? 'crown' : 'ico', g.radius],
       p: [part.px || 0, part.y || 0, part.pz || 0],
       r: [part.rx || 0, part.ry || 0, part.rz || 0],
-      s: [part.sx || 1, part.sy || 1, part.sz || 1], c: part.c, hidden: part.hidden, role: part.role,
+      s: [part.sx || 1, part.sy || 1, part.sz || 1], c: part.c, hidden: part.hidden, role: part.role, naturalSeed: part.naturalSeed,
     };
   });
   if (type === 'fallenLog') {

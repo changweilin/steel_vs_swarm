@@ -126,9 +126,9 @@ try {
 } finally { hub.shutdown(); }
 
 const main = readSrc('public/js/main.js'), biomes = readSrc('public/js/biomes.js');
-const saving = main.slice(main.indexOf("$('saveFavBtn')?.addEventListener"), main.indexOf("$('resetSiteBtn')?.addEventListener"));
+const saving = grabFn(main, 'saveMapFavorite');
 assert(saving.indexOf('await prepareMapCreation') >= 0 && saving.indexOf('await prepareMapCreation') < saving.indexOf('saveFavorite('));
-const creation = main.slice(main.indexOf("$('createRoomBtn')?.addEventListener"), main.indexOf("$('backFromOpenRoomBtn')?.addEventListener"));
+const creation = grabFn(main, 'createSelectedRoom');
 assert(creation.indexOf('prepareMapCreation(') >= 0 && creation.indexOf('prepareMapCreation(') < creation.indexOf("t: 'createRoom'"));
 // Room creation may overlap preparation; scene construction must still await the shared task.
 if (!creation.includes('await prepareMapCreation(')) {
@@ -138,7 +138,7 @@ if (!creation.includes('await prepareMapCreation(')) {
 assert(biomes.indexOf('await prepareEvidence(') >= 0 && biomes.indexOf('await prepareEvidence(') < biomes.indexOf('let architectureAt = createArchitecturePlanner('));
 assert(readSrc('public/js/mapPreparation.js').includes('{ sourceOnly: true }'));
 for (const fn of ['startStoryChapter', 'quickRestartGame']) {
-  const start = main.indexOf('async function ' + fn), end = main.indexOf('\n}', start), body = main.slice(start, end);
+  const body = grabFn(main, fn);
   assert(body.indexOf('await prepareMapCreation') >= 0 && body.indexOf('await prepareMapCreation') < body.indexOf("t: 'createRoom'"));
 }
 assert(main.includes('prepareEvidence: (cfg, terrain, areas) => mapEvidenceGate'));

@@ -729,6 +729,18 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .map-rules { font-size: 11px; color: var(--dim); line-height: 1.6; border-left: 2px solid var(--railS-dark); padding-left: 8px; }
 .map-status { font-size: 13px; line-height: 1.6; min-height: 40px; font-family: var(--mono); }
 .map-status b { color: var(--railW); }
+.map-candidates { display: flex; flex-direction: column; gap: 4px; }
+.map-candidates[hidden] { display: none; }
+.map-candidates .btn { white-space: normal; text-align: left; }
+.mixed-sources { display: flex; flex-direction: column; gap: 6px; }
+.random-ranges { display: flex; flex-direction: column; gap: 6px; }
+.random-seed-row > input { min-width: 0; }
+.random-ranges summary { cursor: pointer; font-size: 12px; color: var(--dim); }
+.random-range-row { display: grid; grid-template-columns: minmax(0, 1fr) 60px 12px 60px; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; }
+.random-range-row input { width: 100%; min-width: 0; padding: 4px; }
+#randomMapPreview { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg0); }
+#randomMapPreview[hidden], #leafletMap[hidden] { display: none; }
+#randomMapPreview canvas { max-width: 100%; max-height: 100%; width: auto; height: 100%; }
 /* Post-pick route/terrain note (venueBrief flattened to one line, wraps on its own on narrow screens; A20: MUST NOT switch to vertical) */
 .venue-desc { margin-top: 4px; font-size: 11px; line-height: 1.6; color: var(--dim); word-break: break-word; }
 .pbar {

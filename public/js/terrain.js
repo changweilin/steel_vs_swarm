@@ -15,6 +15,10 @@ import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
 import { lowPower } from './mobile.js';
 import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, siteCPs, mapArg, curveMaxEdgeM, edgeBufferM, edgeWallInsetM, isMarineWater } from './data.js';
 import { procReliefAt, sanitizeProcRelief } from './mapgen.js';
+import { mapSourceCenter, mapSourceKey } from './mapLayerSources.js';
+import { isRandomMap } from './randomMapRules.js';
+import { randomMapSamplers } from './randomMapSources.js';
+import { RANDOM_MAP_TEXT } from './randomMapContent.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { MIP_ANISO, registerStreamTex, registerVirtualPages, buildGridVirtualPages } from './tex.js';
 
@@ -132,12 +136,16 @@ function installWeatherField(bounds, center) {
   setWeatherField(bakeFieldTexture(makeField(seed, span), bounds, WEATHER_TEX_N), WEATHER_TEX_N, bounds);
 }
 
-function loadImage(url) {
+function loadImage(url, timeoutMs = 0) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`載入失敗:${url}`));
+    const timer = timeoutMs ? setTimeout(() => {
+      img.onload = img.onerror = null; img.src = '';
+      reject(new Error('Satellite tile timed out'));
+    }, timeoutMs) : null;
+    img.onload = () => { clearTimeout(timer); resolve(img); };
+    img.onerror = () => { clearTimeout(timer); reject(new Error(`載入失敗:${url}`)); };
     img.src = url;
   });
 }
@@ -258,6 +266,48 @@ async function fetchImagery(bbox, onProgress) {
   return { canvas, z, tx0, ty0, complete: fails === 0 };
 }
 
+/** Bounded raw high-resolution tiles for road observations; never sample the stylized canvas. */
+export function roadImagerySampler(center, bbox) {
+  const zoom = 18, tiles = new Map(), maxTiles = 48;
+  const loadTile = (tx, ty) => {
+    const key = `${tx},${ty}`;
+    if (tiles.has(key)) return tiles.get(key);
+    if (tiles.size >= maxTiles) return Promise.resolve(null);
+    const job = (async () => {
+      const cacheKey = geoKey('roadImg', 1, bbox, `${zoom}/${ty}/${tx}`);
+      const cached = await geoGet(cacheKey);
+      if (cached?.pixels?.length === 256 * 256 * 4) return cached.pixels;
+      const image = await loadImage(IMAGERY(zoom, tx, ty), 8000);
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0, 256, 256);
+      const pixels = ctx.getImageData(0, 0, 256, 256).data;
+      await geoPut(cacheKey, { pixels });
+      return pixels;
+    })().catch(() => null);
+    tiles.set(key, job); return job;
+  };
+  return async (x, z) => {
+    const [lat, lng] = xzToLL(x, z, center);
+    if (lat < bbox.minLat || lat > bbox.maxLat || lng < bbox.minLng || lng > bbox.maxLng) return null;
+    const pixelM = 2 * Math.PI * 6378137 * Math.cos(lat * Math.PI / 180) / (256 * 2 ** zoom);
+    const tx = lon2tx(lng, zoom), ty = lat2ty(lat, zoom), radius = 28 / (pixelM * 256);
+    const rows = [];
+    for (let j = Math.floor(ty - radius); j <= Math.floor(ty + radius); j++) {
+      for (let i = Math.floor(tx - radius); i <= Math.floor(tx + radius); i++) rows.push([i, j]);
+    }
+    const loaded = await Promise.all(rows.map(async ([i, j]) => [`${i},${j}`, await loadTile(i, j)]));
+    const data = new Map(loaded);
+    if (loaded.some(([, pixels]) => !pixels)) return null;
+    return { pixelM, sampleColor: (sx, sz) => {
+      const [slat, slng] = xzToLL(sx, sz, center), px = lon2tx(slng, zoom) * 256, py = lat2ty(slat, zoom) * 256;
+      const i = Math.floor(px / 256), j = Math.floor(py / 256), pixels = data.get(`${i},${j}`);
+      if (!pixels) return null;
+      const k = (Math.floor(py - j * 256) * 256 + Math.floor(px - i * 256)) * 4;
+      return pixels[k + 3] ? [pixels[k], pixels[k + 1], pixels[k + 2]] : null;
+    } };
+  };
+}
+
 // ---- 衛星影像賽璐璐化(botw_plan Task 2.1):寬筆刷低通 + 色階量化 + 飽和提升 ----
 // photoreal 顆粒抹平成水彩色塊;呼叫前 sampleColor 已捕捉原始像素,分類不受影響。
 function stylizeImagery(canvas) {
@@ -294,23 +344,29 @@ export async function buildTerrain(cfg, onProgress, options) {
   const bbox = battleBBox(cfg);   // 資料抓取範圍(經緯度;已覆蓋旋轉後的世界方框)
   const rect = battleRect(cfg);   // 世界方框(遊戲公尺,恆軸對齊)
   const center = cfg.center;
+  const elevCenter = mapSourceCenter(cfg, 'elevation');
+  const elevBBox = battleBBox(cfg, elevCenter);
+  const generated = isRandomMap(cfg) ? randomMapSamplers(cfg) : null;
 
-  await onProgress?.(0.02, '下載高程資料…');
+  await onProgress?.(0.02, generated ? RANDOM_MAP_TEXT.elevation : '下載高程資料…');
   // 高程網格快取(geocache.js):同 bbox 首次由主來源(terrarium)完整取樣成功即定案入庫
   // (raw N×N,平滑/AMP/乾地帶處理前)。之後每場直接取用 → 高度場逐局位元級一致,
   // 兵線跨水段/橋數不再隨「terrarium vs open-meteo」來源切換浮動(倫敦橋數 1~3 案根因之一)。
   // 備援來源結果 MUST NOT 入庫 —— 一次網路顛簸不能把 33×33 粗高程永久定案。
-  const elevKey = geoKey('elev', 1, bbox, `n${GRID_N}`);
-  let rawElev = await geoGet(elevKey);
+  const sourceKey = mapSourceKey(cfg);
+  const elevKey = geoKey('elev', 1, elevBBox, `n${GRID_N}` + (sourceKey ? `|${sourceKey}` : ''));
+  let rawElev = generated ? null : await geoGet(elevKey);
   let usedFallback = false;
   let elevationComplete = true;
   if (!(rawElev instanceof Float32Array) || rawElev.length !== GRID_N * GRID_N) {
     let sampleElev;
-    try {
-      sampleElev = await fetchElevTerrarium(bbox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料…'));
+    if (generated) {
+      sampleElev = (lat, lng) => generated.elevationAt(...llToXZ(lat, lng, center));
+    } else try {
+      sampleElev = await fetchElevTerrarium(elevBBox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料…'));
     } catch {
       usedFallback = true;
-      sampleElev = await fetchElevOpenMeteo(bbox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料(備援來源)…'));
+      sampleElev = await fetchElevOpenMeteo(elevBBox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料(備援來源)…'));
     }
     rawElev = new Float32Array(GRID_N * GRID_N);
     // 取樣網格 MUST 與下方 heights 網格**同一組點**:那一份是**世界方框**上的規則格
@@ -321,23 +377,23 @@ export async function buildTerrain(cfg, onProgress, options) {
       const z = rect.minZ + (rect.maxZ - rect.minZ) * i / (GRID_N - 1);
       for (let j = 0; j < GRID_N; j++) {
         const x = rect.minX + (rect.maxX - rect.minX) * j / (GRID_N - 1);
-        const [lat, lng] = xzToLL(x, z, center);
+        const [lat, lng] = xzToLL(x, z, elevCenter);
         const h = sampleElev(lat, lng);
         if (!Number.isFinite(h)) elevationComplete = false;
         rawElev[i * GRID_N + j] = Number.isFinite(h) ? h : 0;
       }
     }
-    if (!usedFallback && elevationComplete) geoPut(elevKey, rawElev);
+    if (!generated && !usedFallback && elevationComplete) geoPut(elevKey, rawElev);
   }
 
-  await onProgress?.(0.34, '下載衛星影像…');
+  await onProgress?.(0.34, generated ? RANDOM_MAP_TEXT.surface : '下載衛星影像…');
   // 衛星影像快取:原始像素(stylize 前)整塊入庫,只有「零缺磚」的完整拼接才定案 ——
   // 缺磚底色入庫會讓水色/地被分類永久帶洞。命中時以 putImageData 重建 canvas,
   // 之後的取樣/賽璐璐化/貼圖管線與網路版全同。
   const imgKey = geoKey('img', 1, bbox);
   let imagery = null;
   let idata = null;
-  const cachedImg = await geoGet(imgKey);
+  const cachedImg = generated ? null : await geoGet(imgKey);
   if (cachedImg?.w && cachedImg?.h && cachedImg?.data?.length === cachedImg.w * cachedImg.h * 4) {
     try {
       const u8c = cachedImg.data instanceof Uint8ClampedArray
@@ -353,14 +409,14 @@ export async function buildTerrain(cfg, onProgress, options) {
       idata = null;
     }
   }
-  if (!imagery) {
+  if (!imagery && !generated) {
     try {
       imagery = await fetchImagery(bbox, (f) => onProgress?.(0.34 + f * 0.30, '下載衛星影像…'));
     } catch { /* 沒有貼圖就用素色 */ }
   }
 
   // 影像取樣(世界公尺 → 經緯度 → mercator 像素):biomes.js 地被分類用
-  let sampleColor = null;
+  let sampleColor = generated?.sampleColor || null;
   if (imagery) {
     if (!idata) {
       idata = imagery.canvas.getContext('2d').getImageData(0, 0, imagery.canvas.width, imagery.canvas.height).data;
@@ -389,9 +445,11 @@ export async function buildTerrain(cfg, onProgress, options) {
   const worldW = maxX - minX, worldH = maxZ - minZ;
 
   const N = GRID_N;
-  const sourceQuality = { imageryComplete: !!imagery?.complete, elevationComplete: elevationComplete && !usedFallback };
+  const sourceQuality = { imageryComplete: generated ? true : !!imagery?.complete,
+    elevationComplete: elevationComplete && !usedFallback, synthetic: !!generated };
+  const roadImageryAt = generated ? null : roadImagerySampler(center, bbox);
   // Creation/restart preparation must not allocate scene meshes or replace live shader fields.
-  if (options?.sourceOnly) return { center, bbox, sampleColor, sourceQuality,
+  if (options?.sourceOnly) return { center, bbox, sampleColor, sourceQuality, roadImageryAt,
     elevationAt: (x, z) => sampleField(rawElev, x, z) };
   // rawElev = 上方定案的 N×N 原始高程(i:z 方向北→南 = maxLat→minLat;快取命中或現抓皆同一組網格點)
   const heights = new Float32Array(rawElev);
@@ -1503,5 +1561,5 @@ export async function buildTerrain(cfg, onProgress, options) {
   // `gridM` = 高程網格的格距(公尺)。對外只有一個用途:**貼地地被層要拿地形法線**
   // (ground.js 的 landN)—— 中央差分的取樣距 MUST 是這一格,取更小是在同一個雙線性面內
   // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
-  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, sourceQuality, get waterY() { return waterY; }, set waterY(v) { waterY = v; }, isMarine, baseWaterY, updateTide, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
+  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, carvePlatforms, punchPortalHoles, sampleColor, sourceQuality, roadImageryAt, get waterY() { return waterY; }, set waterY(v) { waterY = v; }, isMarine, baseWaterY, updateTide, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
 }

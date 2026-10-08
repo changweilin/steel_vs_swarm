@@ -17,15 +17,15 @@
     },
     "madrid": {
       "file": "madrid.json",
-      "digest": "78deb41e07130182018ddaaeca8421e0a7e87d1cdff49b2b971ffafedcf2b169",
-      "checksum": "870b8dbf",
+      "digest": "cd288979b880f17d0f6dce9ea50cf7fa18a804dd1b967262fb2a2a3a62ce0c50",
+      "checksum": "99e53037",
       "grid": {
-        "west": -3.6955,
-        "north": 40.44283333333333,
+        "west": -3.6965,
+        "north": 40.44741666666666,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 172,
-        "rows": 119
+        "cols": 191,
+        "rows": 174
       },
       "product": "2021-v200"
     },
@@ -45,71 +45,71 @@
     },
     "seoul": {
       "file": "seoul.json",
-      "digest": "3f962eaa209d05628168820f6600b931dec4eae5f332e2b0571ee0aeaf0dfd65",
-      "checksum": "581c1f33",
+      "digest": "b364ae08d7305396da4c15febeb0a09b5d48d2815d2b18d871d2022a311ce7a8",
+      "checksum": "99de2399",
       "grid": {
-        "west": 127.01766666666666,
-        "north": 37.50383333333333,
+        "west": 127.01816666666666,
+        "north": 37.50625,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 191,
-        "rows": 147
+        "cols": 185,
+        "rows": 176
       },
       "product": "2021-v200"
     },
     "neworleans": {
       "file": "neworleans.json",
-      "digest": "10d353e87f4b73d1a96bd1dfb5fd28dcafc8a086d31034fde8195ca64463ea6a",
-      "checksum": "c654116b",
+      "digest": "172b0febe768bee73ac283bf3ee7bb2430073bcbc773a3fc9e4b376a3024f9d5",
+      "checksum": "b0343a8f",
       "grid": {
-        "west": -90.08691666666667,
-        "north": 30.028,
+        "west": -90.08708333333333,
+        "north": 30.027749999999997,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 171,
-        "rows": 113
+        "cols": 188,
+        "rows": 128
       },
       "product": "2021-v200"
     },
     "rotterdam": {
       "file": "rotterdam.json",
-      "digest": "014c95c62767c05943e7c5b251f6989921f0c065d9b4a752dd2c44076ae47208",
-      "checksum": "ec84e741",
+      "digest": "d363f88edc919865f36d08ef335d5ce8c8f6fb48e05aae0d93888ad915c83687",
+      "checksum": "40ff1ddf",
       "grid": {
-        "west": 4.480666666666666,
-        "north": 51.91258333333333,
+        "west": 4.485083333333333,
+        "north": 51.91825,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 185,
-        "rows": 118
+        "cols": 201,
+        "rows": 130
       },
       "product": "2021-v200"
     },
     "matamata": {
       "file": "matamata.json",
-      "digest": "042cf5df7b62ee54fafb496ad5e0e5251176d1f1d46465561465b6326d460226",
-      "checksum": "08e4037f",
+      "digest": "b641eb54c1af22190990b2b69992727d6f0aae6484335237d3c6c9c2666cba9d",
+      "checksum": "ff1c9ba7",
       "grid": {
-        "west": 175.67308333333332,
-        "north": -37.86758333333333,
+        "west": 175.67333333333332,
+        "north": -37.86266666666666,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 180,
-        "rows": 113
+        "cols": 174,
+        "rows": 156
       },
       "product": "2021-v200"
     },
     "interlaken": {
       "file": "interlaken.json",
-      "digest": "3bf807edc96f54157a585ce55bfa6e6849d523dc1580d141550bffc1f5de6295",
-      "checksum": "14f12415",
+      "digest": "33cae1754b3d7f91ae4d3848aee71cbcce4f0fc53b078ab75ce7941ec4ff02e7",
+      "checksum": "e43725e1",
       "grid": {
-        "west": 7.857666666666667,
-        "north": 46.69025,
+        "west": 7.857916666666666,
+        "north": 46.68925,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 195,
-        "rows": 112
+        "cols": 206,
+        "rows": 113
       },
       "product": "2021-v200"
     },
@@ -143,71 +143,71 @@
     },
     "mekong": {
       "file": "mekong.json",
-      "digest": "159835b148d996e8c41c1779969666c5bb982962824c84ae0c161ad669f035ff",
-      "checksum": "72c603b1",
+      "digest": "e27cc35c4566dc70f7ce7d214b6172824cfd0f1a38348bb28933ca4e25ff0afa",
+      "checksum": "9d4ccccd",
       "grid": {
-        "west": 106.3455,
-        "north": 10.3585,
+        "west": 106.34416666666667,
+        "north": 10.358833333333333,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 142,
-        "rows": 120
+        "cols": 151,
+        "rows": 127
       },
       "product": "2021-v200"
     },
     "bergen": {
       "file": "bergen.json",
-      "digest": "47fb1a9e54f7556305a6dde4bed03265d3a2f002b18b4ff15ae577223e3ad69c",
-      "checksum": "cdbf2ca7",
+      "digest": "2d9b6f72818a8c61df28660beeb1eb56b0a119f9c4839f0a14108518504b190a",
+      "checksum": "03bef513",
       "grid": {
-        "west": 5.226416666666666,
-        "north": 60.400999999999996,
+        "west": 5.2259166666666665,
+        "north": 60.400166666666664,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 237,
-        "rows": 113
+        "cols": 239,
+        "rows": 146
       },
       "product": "2021-v200"
     },
     "phoenix": {
       "file": "phoenix.json",
-      "digest": "fb1b52702a83920fcf7742c89d4bfc594ac63721f363456562c6689da38a6438",
-      "checksum": "47d315a3",
+      "digest": "f4ef8588fc0e7d89adaa14efbc176bf83d1f9303d453ae27cfce230644ef8713",
+      "checksum": "26e551b9",
       "grid": {
         "west": -112.17824999999999,
-        "north": 33.50225,
+        "north": 33.502833333333335,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 192,
-        "rows": 152
+        "cols": 191,
+        "rows": 159
       },
       "product": "2021-v200"
     },
     "cappadocia": {
       "file": "cappadocia.json",
-      "digest": "225105bc5a5f858ad2d359cbc4082fef8df9b6727227e953d3a935f9ea12edb2",
-      "checksum": "b3d31775",
+      "digest": "e6575561b17e6f4c506090f4ec1e336a027a99295a767fef06d276dcd10f4060",
+      "checksum": "073b3df5",
       "grid": {
-        "west": 34.82358333333333,
+        "west": 34.82266666666666,
         "north": 38.650083333333335,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 155,
-        "rows": 128
+        "cols": 151,
+        "rows": 132
       },
       "product": "2021-v200"
     },
     "uluru": {
       "file": "uluru.json",
-      "digest": "23e95d6d259b439f0e857ff440d488dbee1977f5f5ed18ef045b3a3bb69dc71d",
-      "checksum": "e953a20d",
+      "digest": "7c3c2d37751f5826e0bfc11f4953ecd3b9d047c0130218505bc9de96cd810842",
+      "checksum": "6b27b4cf",
       "grid": {
-        "west": 130.98416666666665,
+        "west": 130.98383333333334,
         "north": -25.235666666666667,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 167,
-        "rows": 118
+        "cols": 170,
+        "rows": 128
       },
       "product": "2021-v200"
     },
@@ -227,29 +227,29 @@
     },
     "dubai": {
       "file": "dubai.json",
-      "digest": "c8ffde5b4068f61a0f6c8d95683675bf4cd53707222286b280cbc781eb66615e",
-      "checksum": "457f1c91",
+      "digest": "66259e4f4d77dc5ac2a03c1a037c817cbbbdda1bd777551e4ef7e7b4f21412c2",
+      "checksum": "8d0f062e",
       "grid": {
-        "west": 55.30525,
-        "north": 25.20433333333333,
+        "west": 55.30383333333333,
+        "north": 25.204916666666666,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 149,
-        "rows": 118
+        "cols": 152,
+        "rows": 131
       },
       "product": "2021-v200"
     },
     "walvisbay": {
       "file": "walvisbay.json",
-      "digest": "ce33458924dac42f729e25a1fd2ea2026beb2437d30b0ebb0259390e68aa434a",
-      "checksum": "d2ae0d69",
+      "digest": "0dde8c06b2ed25e4bb9e3a3e0805a2b0cb6f19b603cf4cbd4dc464fe003f8e86",
+      "checksum": "c9409845",
       "grid": {
-        "west": 14.496666666666666,
-        "north": -22.952333333333332,
+        "west": 14.496083333333333,
+        "north": -22.952083333333334,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 156,
-        "rows": 114
+        "cols": 161,
+        "rows": 116
       },
       "product": "2021-v200"
     },
@@ -269,15 +269,15 @@
     },
     "shibuya": {
       "file": "shibuya.json",
-      "digest": "3f3aea6e4788521b203e4c4e9f8a11567492e0643425a1ccaf44ad1d7e1d19e4",
-      "checksum": "8dfa6abf",
+      "digest": "ca0c5bc29872982849bdc4d11a6f4268b413f59e1ce0c7bf71490fdd6966e8ba",
+      "checksum": "53a35c87",
       "grid": {
-        "west": 139.69033333333334,
-        "north": 35.667,
+        "west": 139.69025,
+        "north": 35.66825,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 202,
-        "rows": 148
+        "cols": 199,
+        "rows": 160
       },
       "product": "2021-v200"
     },

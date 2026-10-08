@@ -38,9 +38,10 @@ try {
     const THREE = await import('three');
     const { buildLandField } = await import('/public/js/landfield.js');
     const { buildHabitatScene } = await import('/public/js/habitatRender.js');
-    const { habitatAt, planHabitatCanopy } = await import('/public/js/habitat.js');
+    const { habitatAt, planHabitatCanopy, habitatPlant } = await import('/public/js/habitat.js');
     const { HABITAT_SCENE } = await import('/public/js/habitatCatalog.js');
-    const { forestSceneGeometry } = await import('/public/js/scenePropModels.js');
+    const { buildVegMeshes } = await import('/public/js/biomes.js');
+    const { TREE_VARIANTS } = await import('/public/js/forest.js');
     const { envMat, setLandField, updateCelLight, setCelSun, disposeTree } = await import('/public/js/toon.js');
     const { buildOsmPolygonBuildings } = await import('/public/js/osmBuilding.js');
     const { buildOsmAreaObjects } = await import('/public/js/osmAreaObjects.js');
@@ -62,7 +63,7 @@ try {
     const results = [], shots = [], memory = [];
     const terrain = { minX: -110, maxX: 110, minZ: -85, maxZ: 85, worldW: 220, worldH: 170, gridM: 220 / 64,
       heightAt: () => 3, center: { lat: 25, lng: 121 }, minH: 3, maxH: 3 };
-    const scenarios = [['street', 50, 'urban', {}], ['meadow', 30, 'green', {}],
+    const scenarios = [['street', 50, 'urban', {}], ['meadow', 30, 'green', {}], ['sloping-meadow', 30, 'green', {}],
       ['woodland', 10, 'green', {}], ['scrub', 20, 'green', {}], ['exposed', 60, 'bare', {}],
       ['cropland', 40, 'green', { landuse: 'farmland' }], ['orchard', 10, 'green', { landuse: 'orchard' }],
       ['sand', 60, 'bare', { natural: 'sand' }], ['rocky', 60, 'bare', { natural: 'scree' }],
@@ -76,8 +77,12 @@ try {
       ['flood', 90, 'wet', { landuse: 'basin', basin: 'detention' }],
       ['forestry', 50, 'urban', { landuse: 'industrial', craft: 'sawmill' }],
       ['mining', 60, 'bare', { landuse: 'quarry' }],
-      ['greenhouse', 40, 'green', { landuse: 'greenhouse_horticulture' }]];
-    for (const [name, code, zone, tags] of scenarios) {
+      ['greenhouse', 40, 'green', { landuse: 'greenhouse_horticulture' }],
+      ['desert-scrub', 20, 'green', {}, { latitude: 25, climate: 'arid', moisture: .15, rainfall: 180 }],
+      ['savanna', 30, 'green', {}, { latitude: 15, climate: 'arid', moisture: .28, rainfall: 350 }],
+      ['oasis', 10, 'green', { natural: 'oasis' }, { latitude: 25, climate: 'arid', moisture: .15, rainfall: 180 }]];
+    for (const [name, code, zone, tags, climate = { latitude: 25, climate: 'temperate', moisture: .65 }] of scenarios) {
+      terrain.heightAt = name === 'sloping-meadow' ? (x, z) => 3 + x * .08 + z * .04 : () => 3;
       terrain.evidenceAt = () => observations(code);
       terrain.waterY = zone === 'water' || zone === 'wet' ? 3.5 : null;
       const envCodeAt = () => zone === 'water' ? 1 : zone === 'wet' ? 2 : 0;
@@ -91,6 +96,9 @@ try {
       setLandField(field.data, field.nx, field.nz, field.bounds, field.appearance);
       const root = new THREE.Group(); scene.add(root);
       const groundGeo = new THREE.PlaneGeometry(220, 170, 64, 64); groundGeo.rotateX(-Math.PI / 2); groundGeo.translate(0, 3, 0);
+      const groundPos = groundGeo.attributes.position;
+      for (let i = 0; i < groundPos.count; i++) groundPos.setY(i, terrain.heightAt(groundPos.getX(i), groundPos.getZ(i)));
+      groundGeo.computeVertexNormals();
       root.add(new THREE.Mesh(groundGeo, envMat(0xffffff, { land: true, landField: true, landNrm: true, rim: 0 })));
       const roadClear = (x, z, f) => name === 'street' && Math.abs(z) < 5 + f.r;
       const areaResult = name === 'street' || !areas.length ? null : buildOsmAreaObjects(root, areas, {
@@ -107,9 +115,41 @@ try {
         roadSegments: name === 'street' ? [{ a: [-100, 0], b: [100, 0], hw: 5 }] : [],
         reservedFootprints: name === 'street' ? [{ x: -22, z: 21.5, hw: 10, hd: 8.5, ry: 0, r: 14 }]
           : areaResult?.footprints || [],
-        environment: { latitude: 25 }, season: 'summer' };
+        environment: climate, season: 'summer' };
+      const habitat = habitatAt(observations(code), zone, tags, .5, { ...climate, altitude: 100 });
+      const canopy = planHabitatCanopy({ bounds: field.bounds, seed: 7717, maxPlants: HABITAT_SCENE.CANOPY_LIMIT,
+        sampleAt: () => habitat });
+      const trees = new Map();
+      for (const row of canopy.rows) {
+        const plant = habitatPlant(row);
+        if (!plant) continue;
+        if (!trees.has(plant.type)) trees.set(plant.type, []);
+        trees.get(plant.type).push({ x: row.x, y: terrain.heightAt(row.x, row.z), z: row.z, s: plant.s, ry: row.seed / 4294967296 * Math.PI * 2,
+          modelSeed: plant.modelSeed, environment: { ...row.environment, altitude: 0 } });
+      }
+      for (const [type, items] of trees) {
+        const meshes = buildVegMeshes(type, items, 'summer');
+        if (meshes.length > TREE_VARIANTS * 4) throw new Error('Dense canopy was not batched by botanical variants');
+        for (const mesh of meshes) root.add(mesh);
+      }
       const batch = new THREE.Group(); root.add(batch);
       const stats = buildHabitatScene(batch, terrain, args);
+      if (name === 'sloping-meadow') {
+        let roots = 0;
+        for (const mesh of batch.children.filter(m => m.name.startsWith('habitat/grass/'))) {
+          const pos = mesh.geometry.attributes.position, matrix = new THREE.Matrix4(), point = new THREE.Vector3();
+          for (let i = 0; i < mesh.count; i++) {
+            mesh.getMatrixAt(i, matrix);
+            for (let k = 0; k < pos.count; k++) {
+              if (pos.getY(k) > 1e-7) continue;
+              point.fromBufferAttribute(pos, k).applyMatrix4(matrix);
+              if (Math.abs(point.y - terrain.heightAt(point.x, point.z)) > .026) throw new Error('Grass roots detached from sloping ground');
+              roots++;
+            }
+          }
+        }
+        if (!roots) throw new Error('Slope fixture omitted all grass');
+      }
       for (const mesh of batch.children) {
         if (!mesh.isInstancedMesh || !areaResult) continue;
         let radius = 0;
@@ -140,7 +180,7 @@ try {
       if (signature(batch) !== signature(again)) throw new Error('Habitat renderer replay differs');
       disposeTree(again);
       const low = new THREE.Group(); const lowStats = buildHabitatScene(low, terrain, { ...args, low: true });
-      if (lowStats.details > stats.details || lowStats.models > 16) throw new Error('Habitat budget exceeded');
+      if (lowStats.details > stats.details || lowStats.models > HABITAT_SCENE.DETAIL_MODEL_LIMIT) throw new Error('Habitat budget exceeded');
       low.traverse(node => {
         if (!node.isMesh) return;
         const full = batch.children.find(child => child.name === node.name);
@@ -155,14 +195,6 @@ try {
         const buildings = buildOsmPolygonBuildings(root, areas, { terrain, rings: [], terrainEnvCode: () => 0 });
         if (!buildings.generated) throw new Error('OSM street fixture failed to generate');
       }
-      const canopy = planHabitatCanopy({ bounds: field.bounds, seed: 7717, maxPlants: 60,
-        sampleAt: () => habitatAt(observations(code), zone, tags, .5) });
-      if (name === 'woodland' || name === 'meadow' || name === 'orchard') {
-        for (const row of canopy.rows) {
-          const mesh = new THREE.Mesh(forestSceneGeometry('holmOak', row.seed, [5, 8, 5]), envMat(0xffffff, { vertexColors: true }));
-          mesh.position.set(row.x, 3, row.z); root.add(mesh);
-        }
-      }
       if (zone === 'water') {
         const waterGeo = new THREE.PlaneGeometry(220, 170); waterGeo.rotateX(-Math.PI / 2); waterGeo.translate(0, terrain.waterY, 0);
         root.add(new THREE.Mesh(waterGeo, envMat(0x638a94, { transparent: true, opacity: .45, rim: 0 })));
@@ -176,7 +208,8 @@ try {
       }
       pipeline.render();
       shots.push({ name, data: renderer.domElement.toDataURL('image/png') });
-      results.push({ name, ...stats, objects: areaResult?.generated || 0, draws, triangles });
+      results.push({ name, ...stats, objects: areaResult?.generated || 0, canopy: canopy.rows.length,
+        species: trees.size, community: habitat?.community, draws, triangles });
       scene.remove(root); disposeTree(root); pipeline.render();
       memory.push({ ...renderer.info.memory });
     }
@@ -193,31 +226,40 @@ try {
   await writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2) + '\n');
   console.log('PASS browser habitat:', JSON.stringify(report));
   const fixtureIndex = process.argv.indexOf('--fixture');
-  if (fixtureIndex >= 0) {
-    const name = process.argv[fixtureIndex + 1], fixture = loadOsmFixture(name), elevation = loadElevationFixture(name);
-    assert(fixture && elevation, 'Full habitat review requires matching validated OSM/elevation fixtures');
+  const random = process.argv.includes('--random');
+  if (fixtureIndex >= 0 || random) {
+    const name = random ? 'random-forest' : process.argv[fixtureIndex + 1];
+    const fixture = random ? null : loadOsmFixture(name), elevation = random ? null : loadElevationFixture(name);
+    assert(random || (fixture && elevation), 'Full habitat review requires matching validated OSM/elevation fixtures');
     const tiles = new Map();
-    for (const tile of elevation.source.tiles) tiles.set(tile.url, await readFile(path.join(DEFAULT_ELEVATION_DIR, tile.path)));
+    for (const tile of elevation?.source.tiles || []) tiles.set(tile.url, await readFile(path.join(DEFAULT_ELEVATION_DIR, tile.path)));
     await page.route('https://s3.amazonaws.com/elevation-tiles-prod/**', route => {
       const body = tiles.get(route.request().url());
       return body ? route.fulfill({ contentType: 'image/png', body, headers: { 'access-control-allow-origin': '*' } }) : route.abort();
     });
     omittedImagery = true;
     await page.route('https://server.arcgisonline.com/**', route => route.abort());
-    const actual = await page.evaluate(async ({ venueId, team, osm }) => {
+    const actual = await page.evaluate(async ({ venueId, team, osm, random }) => {
       const THREE = await import('three');
       const { VENUES, venueConfig } = await import('/public/js/venues.js');
+      const { randomMapConfig } = await import('/public/js/mapgen.js');
+      const { LOS } = await import('/public/js/data.js');
       const { buildTerrain } = await import('/public/js/terrain.js');
       const { buildBiomes, commitOsmIn } = await import('/public/js/biomes.js');
       const { applyEnvironment } = await import('/public/js/environment.js');
       const { Pipeline } = await import('/public/js/postfx.js');
       const { updateCelLight, disposeTree } = await import('/public/js/toon.js');
-      const cfg = venueConfig(VENUES.find(v => v.id === venueId), team);
+      const cfg = random ? randomMapConfig({ seed: 7717, teamSize: 5, ranges: {
+        surface: { urbanFraction: [.2, .2], bareFraction: [.05, .05], waterFraction: [0, 0], wetFraction: [0, 0] },
+        elevation: { amplitudeM: [8, 8], wavelengthM: [700, 700] },
+        regional: { latitude: [25, 25], longitude: [121, 121], moisture: [.8, .8], rainfallMm: [1800, 1800], vegetation: [.85, .85] },
+      } }) : venueConfig(VENUES.find(v => v.id === venueId), team);
       cfg.env = { season: 'summer', time: 'day', weather: 'clear' };
       const start = performance.now(), terrain = await buildTerrain(cfg);
-      if (terrain.usedFallback) throw new Error('Real elevation fixture fell back');
-      commitOsmIn(terrain.bbox, { feats: osm.features, roads: osm.roads });
+      if (!random && terrain.usedFallback) throw new Error('Real elevation fixture fell back');
+      if (osm) commitOsmIn(terrain.bbox, { feats: osm.features, roads: osm.roads });
       const bio = await buildBiomes(cfg, terrain);
+      if (bio.userData.blockers.length > LOS.MAX_OCC) throw new Error('Vegetation exceeded the authority collider capacity');
       if (bio.userData.stats.habitatScene.recipe !== 'evidence-habitat-v2' || !bio.userData.stats.mapEvidence) {
         throw new Error('Full prebuild bypassed habitat/evidence generation');
       }
@@ -230,11 +272,12 @@ try {
       camera.lookAt(0, terrain.avgH, 0); camera.updateMatrixWorld(true);
       updateCelLight(camera);
       const pipeline = new Pipeline(renderer, scene, camera, { dof: false, wipe: false }); pipeline.render();
-      const result = { venueId, stats: bio.userData.stats, buildMs: Math.round(performance.now() - start),
+      const result = { venueId: random ? cfg.venueId : venueId, stats: bio.userData.stats, blockers: bio.userData.blockers.length,
+        buildMs: Math.round(performance.now() - start),
         image: renderer.domElement.toDataURL('image/png') };
       pipeline.dispose(); environment.dispose?.(); disposeTree(bio); disposeTree(terrain.group); renderer.dispose();
       return result;
-    }, { venueId: fixture.venue.id, team: fixture.team, osm: fixtureOsm(fixture) });
+    }, { venueId: fixture?.venue.id, team: fixture?.team, osm: fixture ? fixtureOsm(fixture) : null, random });
     assert.deepEqual(errors, [], 'Full prebuild browser errors');
     await writeFile(path.join(out, name + '.png'), Buffer.from(actual.image.split(',')[1], 'base64'));
     delete actual.image;

@@ -10,12 +10,13 @@ const environmentReview = process.argv.includes('--environment');
 const iceVariants = process.argv.includes('--ice-variants');
 const icebergVariants = process.argv.includes('--iceberg-variants');
 const geologyVariants = process.argv.includes('--geology-variants');
-const variants = iceVariants || icebergVariants || geologyVariants;
+const naturalVariants = process.argv.includes('--natural-variants');
+const variants = iceVariants || icebergVariants || geologyVariants || naturalVariants;
 const compare = process.argv.includes('--compare');
 assert(!compare || environmentReview, '--compare requires --environment');
-assert([iceVariants, icebergVariants, geologyVariants].filter(Boolean).length <= 1, 'Choose one variant family');
+assert([iceVariants, icebergVariants, geologyVariants, naturalVariants].filter(Boolean).length <= 1, 'Choose one variant family');
 assert(!variants || (!environmentReview && !compare), 'Variants are a separate review mode');
-const directory = path.join(ROOT, 'out/scenery_review', geologyVariants ? 'geology-variants' : icebergVariants ? 'iceberg-variants' : iceVariants ? 'ice-variants' : environmentReview ? 'environment' : '');
+const directory = path.join(ROOT, 'out/scenery_review', naturalVariants ? 'natural-variants' : geologyVariants ? 'geology-variants' : icebergVariants ? 'iceberg-variants' : iceVariants ? 'ice-variants' : environmentReview ? 'environment' : '');
 await mkdir(directory, { recursive: true });
 const server = await serve();
 let browser;
@@ -39,7 +40,7 @@ try {
       body: readSrc('tools', 'scenery_authoring', file) }));
   if (compare) await page.route('**/tools/scenery_authoring/environment-before.json', async route => route.fulfill({
     contentType: 'application/json', body: await readFile(path.join(directory, '../environment-before.json'), 'utf8') }));
-  const query = geologyVariants ? '?geology-variants' : icebergVariants ? '?iceberg-variants' : iceVariants ? '?ice-variants' : environmentReview ? '?environment' + (compare ? '&compare' : '') : '';
+  const query = naturalVariants ? '?natural-variants' : geologyVariants ? '?geology-variants' : icebergVariants ? '?iceberg-variants' : iceVariants ? '?ice-variants' : environmentReview ? '?environment' + (compare ? '&compare' : '') : '';
   await page.goto(new URL('tools/scenery_authoring/review.html' + query, server.url).href);
   await page.waitForFunction('window.__sceneryReview', null, { timeout: 60000 });
   const result = await page.evaluate(() => window.__sceneryReview);

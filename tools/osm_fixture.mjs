@@ -3,7 +3,8 @@
 // Terrarium 來源 tile 與 193×193 raw 網格。這裡只負責路徑、契約、來源完整性與
 // 正式 parser 的接線。抓取器與離線 audit 不得各自發明 payload 形狀。
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TERRAIN, llToXZ, rotXZ, xzToLL } from '../public/js/data.js';
@@ -16,6 +17,27 @@ export const FIXTURE_VERSION = 1;
 export const ELEVATION_FIXTURE_VERSION = 1;
 export const ELEVATION_FIXTURE_SCHEMA = 'terrain-elevation-fixture-v1';
 export const ELEVATION_GRID_N = TERRAIN.GRID_N;
+
+export const osmFixtureFiles = dir => readdirSync(dir).filter(name => /\.json(?:\.gz)?$/.test(name));
+
+/** Capture checksums refer to the preserved JSON bytes, independent of storage compression. */
+export function readOsmCapture(path) {
+  const stored = readFileSync(path);
+  let bytes = path.endsWith('.gz') ? gunzipSync(stored) : stored;
+  if (bytes.includes(13)) bytes = Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+  return { bytes, data: JSON.parse(bytes), sha256: createHash('sha256').update(bytes).digest('hex') };
+}
+
+/** OSM map nodes resolve complete way geometry; missing referenced nodes never become partial roads. */
+export function osmMapRoadResponse(raw) {
+  if (!Array.isArray(raw?.elements)) throw new TypeError('OSM map response has no elements');
+  const nodes = new Map(raw.elements.filter(e => e.type === 'node').map(e => [e.id, e]));
+  const elements = raw.elements.filter(e => e.type === 'way' && e.tags?.highway && Array.isArray(e.nodes))
+    .filter(e => e.nodes.length >= 2 && e.nodes.every(id => nodes.has(id)))
+    .map(e => ({ ...e, geometry: e.nodes.map(id => ({ lat: nodes.get(id).lat, lon: nodes.get(id).lon })) }));
+  const { parts, ...metadata } = raw;
+  return { ...metadata, elements };
+}
 
 export function fixtureNameOf(name) {
   return /^[a-z0-9][a-z0-9_-]*$/i.test(String(name || '')) ? String(name) : null;
@@ -36,9 +58,10 @@ export function elevationFixturePath(name, dir = DEFAULT_ELEVATION_DIR) {
 }
 
 export function loadOsmFixture(name, dir = DEFAULT_FIXTURE_DIR) {
-  const path = fixturePath(name, dir);
+  let path = fixturePath(name, dir);
+  if (path && !existsSync(path) && existsSync(path + '.gz')) path += '.gz';
   if (!path || !existsSync(path)) return null;
-  const fixture = JSON.parse(readFileSync(path, 'utf8'));
+  const fixture = readOsmCapture(path).data;
   if (fixture?.version !== FIXTURE_VERSION || fixture?.name !== name) return null;
   return fixture;
 }

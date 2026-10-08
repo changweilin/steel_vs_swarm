@@ -21,14 +21,30 @@ export const HABITATS = Object.freeze({
 export const HABITAT_SCENE = Object.freeze({
   CELL_M: 6, PATCH_WAVE_F: 5, MAX_CELLS: 60000,
   INFILL_TRIES: 3, DETAIL_GAP_M: .3, COVERAGE_BUDGET_F: .6,
-  CANOPY_CELL_M: 14,
+  CANOPY_CELL_M: 6, CANOPY_LIMIT: 16000, CANOPY_COLLIDER_F: .5, COMMUNITY_CELL_M: 72,
+  PHENOLOGY_ALTITUDE_M: 250,
   DETAIL_LIMIT: 12000, LOW_DETAIL_LIMIT: 3200,
   DETAIL_PLANT_PARTS: 6,
+  DETAIL_MODEL_LIMIT: 47,
   STREET_STEP_M: 4, STREET_WIDTH_M: 1.8, STREET_LIFT_M: .045,
   STREET_LIMIT: 6000, LOW_STREET_LIMIT: 1800,
   FURNITURE_STEP_M: 24, FURNITURE_LIMIT: 240, LOW_FURNITURE_LIMIT: 70,
   SHALLOW_DEPTH_M: .8,
   VARIANTS: 4,
+});
+
+// Structural appearance priors, not surveyed stocking rates or measured ages.
+// Moisture limits woody cover; recruitment clusters in gaps, while managed rows stay regular.
+export const HABITAT_COMMUNITIES = Object.freeze({
+  forest: { woody: 1.2, ground: .75, height: [14, 24], recruits: .28, dominance: .72, forms: 'tree' },
+  drywood: { woody: .6, ground: .55, height: [5, 12], recruits: .18, dominance: .82, forms: 'tree' },
+  savanna: { woody: 1, ground: 1, height: [5, 11], recruits: .16, dominance: .85, forms: 'tree' },
+  grassland: { woody: .35, ground: 1, height: [4, 9], recruits: .18, dominance: .8, forms: 'tree' },
+  shrubland: { woody: 1.8, ground: .8, height: [.7, 2.4], recruits: .3, dominance: .82, forms: 'shrub' },
+  desert: { woody: 3, ground: .18, height: [.5, 2.2], recruits: .12, dominance: .9, forms: 'xeric' },
+  oasis: { woody: 1.15, ground: .9, height: [6, 15], recruits: .25, dominance: .85, forms: 'oasis' },
+  tundra: { woody: .25, ground: .4, height: [.15, .65], recruits: .2, dominance: .9, forms: 'shrub' },
+  managed: { woody: 1, ground: 1, height: [4, 6], recruits: 0, dominance: 1, forms: 'tree' },
 });
 
 // Occupied slots reduce the target; minimum coverage precedes optional densification.

@@ -205,6 +205,7 @@ export { architectureHash };
 
 /** 依國家代碼或經緯度判定所屬文化圈 */
 export function detectCulturalRegion(location = {}) {
+  if (typeof location.region === 'string' && Object.hasOwn(CULTURAL_REGIONS, location.region)) return location.region;
   const country = String(location.country || location.iso || '').trim().toUpperCase();
   if (country) {
     for (const [regionKey, reg] of Object.entries(CULTURAL_REGIONS)) {

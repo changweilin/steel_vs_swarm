@@ -123,6 +123,8 @@ const BREAK_SCHOOLMIX = process.argv.includes('--break-schoolmix');
 const BREAK_SHADOWTYPE = process.argv.includes('--break-shadowtype');
 /** 反向驗證:三平面遮罩退回單一 XZ 投影(= 垂直崖面沿 Y 拉成一整條)⇒ Ⅸ MUST 紅字 */
 const BREAK_LANDMASK = process.argv.includes('--break-landmask');
+const BREAK_LANDMASK_EDGE = process.argv.includes('--break-landmask-edge');
+const BREAK_HABITAT_MASK = process.argv.includes('--break-habitat-mask');
 /** 反向驗證:材質槽耗盡後退回循環配號(= 第 65 個語意材質撞回既有 id)⇒ Ⅷ MUST 紅字 */
 const BREAK_SURF = process.argv.includes('--break-surf');
 let surfToonBase = toon;
@@ -805,6 +807,13 @@ console.log('\nⅨ 溶入的材質契約(④-2)+ 地貌分區子帶(①-3)');
       /return celNoise\( p\.yz \) \* w\.x \+ celNoise\( p\.xz \) \* w\.y \+ celNoise\( p\.xy \) \* w\.z;/g,
       'return celNoise( p.xz );', '--break-landmask(三平面)');
   }
+  if (BREAK_LANDMASK_EDGE) {
+    T = bend2(T, /\* step\( 0\.64,/, '* smoothstep( 0.54, 0.74,', '--break-landmask-edge');
+  }
+  if (BREAK_HABITAT_MASK) {
+    T = bend2(T, /smoothstep\( 0\.48, 0\.86, lmA \* 0\.65 \+ lmB \* 0\.35 \) \* 0\.16;/,
+      'smoothstep( 0.48, 0.86, lmA * 0.65 + lmB * 0.35 ) * 0.9;', '--break-habitat-mask');
+  }
   // ---- ① 溶入:錨點、uniform 物件、快取鍵、外殼 ----
   const iClip = T.indexOf("'#include <clipping_planes_fragment>'");
   const iOpq = T.indexOf(".replace('#include <opaque_fragment>'");
@@ -902,9 +911,15 @@ return { LAND_MASK_N, landMaskId };`)();
   ok(/lmGrassZone/.test(landMask) && /lmWetZone/.test(landMask)
     && /lmN\.y/.test(landMask) && /lmA/.test(landMask) && /lmB/.test(landMask),
   '苔草 / 濕痕各自同時吃分區語意、表面方向與兩個噪聲尺度(只有幾何 = 等高線;只有噪聲 = 隨機斑點)');
-  ok(/lmGrass = [\s\S]*?\* step\(/.test(landMask) && /lmWet = [\s\S]*?\* step\(/.test(landMask)
-    && !/smoothstep/.test(landMask),
-  '兩種材質邊界都是硬 step,MUST NOT 混成賽璐璐畫面裡唯一一條軟邊');
+  // Habitat-colored bare ground has a faint tint, separate from the primary material masks.
+  const primaryMasks = ['lmGrass', 'lmWet'].map(name => new RegExp(`float ${name} = [^;]+;`).exec(landMask)?.[0] || '');
+  ok(primaryMasks.every(mask => /\* step\(/.test(mask) && !/smoothstep/.test(mask)),
+    'Primary grass and wet material masks retain hard boundaries');
+  const habitatMask = /if \( habitatColor\.a > 0\.5 \) \{([^}]+)\}/.exec(landMask)?.[1] || '';
+  const habitatStrength = Number(/\* ([\d.]+);\s*$/.exec(habitatMask)?.[1]);
+  ok(/lmGrass = lmOpen/.test(habitatMask) && /1\.0 - step\( 0\.5, abs\( z - 2\.0 \) \)/.test(habitatMask)
+    && Number.isFinite(habitatStrength) && habitatStrength > 0 && habitatStrength <= .16,
+    'Habitat tint stays on open bare ground and mask strength cannot exceed 16%');
   ok(/lmOpen = 1\.0 - step\( 0\.5, lf\.a \)/.test(landMask),
     '道路 / 建成遮罩排除苔草與濕痕(正式道路上不得被地形 shader 重新長回覆蓋)');
   ok(/if \( celLandMask > 0\.5 \)/.test(T)

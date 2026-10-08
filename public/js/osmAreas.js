@@ -42,6 +42,7 @@ export const AREA_CATALOG = rows([
   { kind: 'wood', family: 'forestry', key: 'natural', values: ['wood'], generator: null, surface: 'green', priority: 40 },
   { kind: 'scrub', family: 'natural', key: 'natural', values: ['scrub', 'heath'], generator: null, surface: 'green', priority: 40 },
   { kind: 'grassland', family: 'natural', key: 'natural', values: ['grassland'], generator: null, surface: 'green', priority: 40 },
+  { kind: 'oasis', family: 'natural', key: 'natural', values: ['oasis'], generator: null, surface: 'green', priority: 40 },
   { kind: 'park', family: 'park', key: 'leisure', values: ['park', 'garden', 'nature_reserve', 'recreation_ground', 'village_green'], generator: 'park', surface: 'green', priority: 45 },
   { kind: 'sports', family: 'sports', key: 'sport', values: ['soccer', 'football', 'tennis', 'basketball', 'baseball', 'athletics', 'golf'], generator: 'sports', surface: 'green', priority: 70 },
   { kind: 'sports', family: 'sports', key: 'leisure', values: ['pitch', 'sports_centre', 'stadium', 'track', 'golf_course', 'swimming_pool'], generator: 'sports', surface: 'green', priority: 70 },

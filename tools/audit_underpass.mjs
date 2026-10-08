@@ -85,6 +85,7 @@
 //     **蓋在別人上面的那一層 MUST 蓋滿**(否則是縫)。判斷是哪一種,看的是「兩塊在不在同一個高度」。
 import { LOS, WATER } from '../public/js/data.js';
 import { PED_PLAN, isPedestrianWay } from '../public/js/pedestrian.js';
+import { structuralTunnel } from '../public/js/roadSemantics.js';
 import { readSrc } from './audit_src.mjs';
 
 const src = readSrc('public', 'js', 'biomes.js');
@@ -732,12 +733,13 @@ function build(under = true, heightAt = null, natureAt = null) {
     'Ⅴ 移動側壁閘 MUST NOT 濾 open —— 溝底不能爬牆側出,出入口只在道路頭尾兩端');
 }
 
-// ---- Ⅵ 結構隧道資格閘(執行 biomes.js 原文;2026-07-29 澀谷側壁破口案)----
+// Execute the shared tunnel policy and verify that terrain carving still delegates to it.
 {
-  const m = /const strucTunnel = \(tags\) =>[\s\S]*?;\r?\n/.exec(src);
-  ok(!!m, 'Ⅵ biomes.js MUST 有 strucTunnel 資格閘(單一縫)');
-  if (m) {
-    const strucTunnel = new Function('isPedestrianWay', `${m[0]}return strucTunnel;`)(isPedestrianWay);
+  const shared = /import \{ structuralTunnel \} from '\.\/roadSemantics\.js';/.test(src)
+    && /const strucTunnel = structuralTunnel;/.test(src);
+  ok(shared, 'Ⅵ biomes.js MUST 使用 roadSemantics 的隧道資格閘(單一縫)');
+  if (shared) {
+    const strucTunnel = structuralTunnel;
     ok(strucTunnel({ tunnel: 'yes', highway: 'primary' }) === true,
       'Ⅵ 戶外車行 tunnel MUST 過資格閘(山體隧道/地下道行為不變)');
     ok(strucTunnel({ tunnel: 'building_passage', highway: 'unclassified' }) === true,

@@ -45,7 +45,8 @@ import { llToWorld } from './terrain.js';
 import { pruneRoads, quantizeRoads, GRID_HW } from './roadgrid.js';
 import { structureLayer, bridgeConnections, waysShareNode, planBridgeDeck, bridgeOpenings, bridgeOpeningAt, bridgeSupportClearance, platformApproaches, roundaboutIsland } from './roadStructures.js';
 import { roadStructureGeo, roadBarrierGeo, buildRoadStructureDetails } from './roadStructureRender.js';
-import { junctionBoundary, roadTransitionIndex } from './roadJunctions.js';
+import { junctionBoundary, roadTransitionIndex, roadCurveIndex, roadPathWidthAt, roadOffsetPoint, roadQuadIndices } from './roadJunctions.js';
+import { ROAD_LANE_M, taggedRoadLanes, observedRoadWidth, inferSatelliteRoadLanes } from './roadLaneEvidence.js';
 import { planRoadSigns, guideSignKind } from './roadSigns.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { osmRelayKey } from './osmrelay.js';
@@ -60,9 +61,15 @@ import {
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { seasonalEnvironment } from './seasonalEnvironment.js';
+import { mapSourceCenter } from './mapLayerSources.js';
+import { isRandomMap } from './randomMapRules.js';
+import { randomMapSources } from './randomMapSources.js';
+import { RANDOM_MAP_TEXT } from './randomMapContent.js';
+import { structuralTunnel } from './roadSemantics.js';
 import { makeFootprintIndex, blockerFoot } from './ground.js';
 import { buildHabitatScene } from './habitatRender.js';
-import { createHabitatSampler, planHabitatCanopy } from './habitat.js';
+import { createHabitatSampler, planHabitatCanopy, habitatPlant } from './habitat.js';
+import { HABITAT_SCENE } from './habitatCatalog.js';
 import { buildLandField } from './landfield.js';
 import { prepareMapEvidence, installMapEvidence } from './mapEvidenceLoader.js';
 import { evidenceDryBiome } from './mapEvidence.js';
@@ -156,7 +163,7 @@ import {
 } from './pedestrian.js';
 
 const CELL = 10;                 // clearance grid (m); corridor full width ~34m > 4x3.5m mechs
-const MAX_VEG = 7000;            // vegetation instance cap
+const MAX_VEG = HABITAT_SCENE.CANOPY_LIMIT; // vegetation instance cap
 const MAX_BUILDINGS = 240;       // seed building cap: OSM data / procedural blocks (special landmarks extra, up to 60)
 const MAX_INFILL = 1200;         // infill building cap (facade InstancedMesh stays at constant ~10)
 // Urban infill params: each seed lays a cols x rows block grid along its own heading.
@@ -536,7 +543,7 @@ function forestTypeAt(terrain, x, z, roll, leafType = 'unknown') {
   const altitude = terrain.elevationAt?.(x, z) ?? terrain.natureAt?.(x, z) ?? terrain.heightAt(x, z);
   const environment = { ...forestEnvironmentAt(terrain, x, z), leafType };
   if (!Number.isFinite(environment.slope)) return null;
-  return pickTreeType(terrain.center?.lat, altitude, roll, forestSeed(x, z), environment);
+  return pickTreeType((terrain.regionCenter || terrain.center)?.lat, altitude, roll, forestSeed(x, z), environment);
 }
 
 // Giants take four seasons: green-dominant (g largest channel) crown/moss/lichen parts auto-tag gleaf for seasonal tint
@@ -721,7 +728,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       const mangrove = TREE_SPECIES[type].roots === 'pneumatophore';
       if ((!mangrove && (gy < 0.4 || environment.wet))
         || (mangrove && (!environment.wet || terrain.waterY == null || gy < terrain.waterY - .8))
-        || treeHabitatWeight(type, terrain.center?.lat, altitude, environment) <= 0) continue;
+        || treeHabitatWeight(type, (terrain.regionCenter || terrain.center)?.lat, altitude, environment) <= 0) continue;
       (items[type] ??= []).push({
         x: gx, y: gy, z: gz, s,
         ry: rnd() * Math.PI * 2,
@@ -975,7 +982,7 @@ function leafRowGeo(type, part, pi) {
   // **MUST 讀保險絲 `part.g` 的 parameters**(不是 partGeo 的解析結果):包絡與 `giantCrownR`
   // 吃同一組參數,畫出來的冠幅才不可能大過佈局用的那一份(leafcard.js 檔頭 ③④)
   const env = cardEnvelope(part.g?.parameters);
-  const cards = env ? planCards(env, cardRnd(type, pi)) : [];
+  const cards = env ? planCards(env, part.naturalSeed === undefined ? cardRnd(type, pi) : mulberry32(part.naturalSeed)) : [];
   if (!cards.length) { if (type !== null) _cardGeo.set(ck, null); return null; }
   const n = cards.length;
   const pos = new Float32Array(n * 12), nor = new Float32Array(n * 12);
@@ -1033,7 +1040,7 @@ function surfIdGeo(geo, attr, treeAttr, owned = false) {
 // Bake every branch into tree-local space before wind deformation. Shared vertex height
 // gives wood and leaves identical displacement at their joints, even on tilted branches.
 function forestRenderDef(type, item, season) {
-  const tree = createForestTree(type, forestSeed(item.x, item.z),
+  const tree = createForestTree(type, item.modelSeed ?? forestSeed(item.x, item.z),
     (rt, rb, h, n, sections) => new THREE.CylinderGeometry(rt, rb, h, n, sections), ico, item.s ?? 1, season, item.environment);
   const buckets = { wood: [], leaf: [], flower: [], fruit: [] };
   let cards = false;
@@ -1043,7 +1050,7 @@ function forestRenderDef(type, item, season) {
     const radius = part.g.parameters?.radius;
     if (isLeaf && radius && !part.noCard) {
       part.g.dispose();
-      part.g = sceneryGeometry('crown', [radius * 2, radius * 2, radius * 2]);
+      part.g = sceneryGeometry('crown', [radius * 2, radius * 2, radius * 2], part.naturalSeed);
       part.g.parameters = { radius };
       part.g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(part.g.attributes.position.count * 2), 2));
     }
@@ -1112,7 +1119,22 @@ export function buildVegMeshes(type, items, season, generated = null) {
     });
   }
   if (GIANT_DEFS[type] && !generated) {
-    return items.flatMap(item => buildVegMeshes(type, [{ ...item, dj: 0 }], season, forestRenderDef(type, item, season)));
+    const groups = new Map(), meshes = [];
+    for (const item of items) {
+      if (item.modelSeed === undefined) {
+        meshes.push(...buildVegMeshes(type, [{ ...item, dj: 0 }], season, forestRenderDef(type, item, season)));
+        continue;
+      }
+      const key = item.modelSeed + '/' + JSON.stringify(treePhenology(type, { ...item.environment, season }));
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ ...item, dj: 0 });
+    }
+    // Dense stands reuse botanical skeletons; subdivision fits the tallest survivor in each batch.
+    for (const rows of groups.values()) {
+      const exemplar = { ...rows[0], s: Math.max(...rows.map(row => row.s)) };
+      meshes.push(...buildVegMeshes(type, rows, season, forestRenderDef(type, exemplar, season)));
+    }
+    return meshes;
   }
   const def = generated || VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
   const span = generated ? generated.h : vegSpan(def);
@@ -1202,10 +1224,8 @@ export function buildVegMeshes(type, items, season, generated = null) {
       // (葉團層層異色、板根塊塊異調),不再整株同一支 tint。
       // 葉/冠零件(key)振幅放大 = 明度連色相一起動;岩塊(j)次之;
       // 結構件(幹/枝/根)只小幅動明度 + 極淡暖冷偏,保住樹種手調色版
-      const k = i * 197 + pi * 3121 + 1;
-      const j1 = ((k * 2654435761) >>> 0) % 100 / 100;
-      const j2 = ((k * 1597334677) >>> 0) % 100 / 100;
-      const j3 = ((k * 3812015801) >>> 0) % 100 / 100;
+      const tintRnd = mulberry32(forestSeed(it.x, it.z, Math.imul(pi + 1, 3121)));
+      const j1 = tintRnd(), j2 = tintRnd(), j3 = tintRnd();
       // 區域色相家族(2026-08-05;sakura-crossing):同一片林地共用一份「暖黃 ↔ 冷藍綠」
       // 偏向(這片林子偏黃、那片偏藍綠),逐簇只在家族之上再抖 —— 逐簇全隨機的每通道
       // 雜訊沒有族群感,只讀成顆粒。位置雜湊(格寬 ~110m ≈ 一個群落),零共享 rnd 消耗。
@@ -1385,7 +1405,7 @@ function buildPetals(group, terrain, items, season, mode, dynamics, gseed) {
       if (spec) {
         const state = treePhenology(type, { ...it.environment, season });
         if (mode === 'bloom' ? !spec.flower?.seasons.includes(season) || state.growth <= 0 : state.litter <= .1) continue;
-        const tree = createForestTree(type, forestSeed(it.x, it.z), undefined, undefined, 1, season, it.environment);
+        const tree = createForestTree(type, it.modelSeed ?? forestSeed(it.x, it.z), undefined, undefined, 1, season, it.environment);
         const leaves = tree.parts.filter(p => p.role === 'leaf' && !p.hidden);
         if (!leaves.length) continue;
         const radius = Math.max(...leaves.map(p => Math.hypot(p.px || 0, p.pz || 0) + (p.g.parameters.radius || 0)));
@@ -3782,7 +3802,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, sites, basesW, road
       const slope = battleGeologySlope((px, pz) => terrain.heightAt(px, pz), x, z, probeR);
       if (slope == null) continue;
       const environment = { ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z), slope,
-        latitude: terrain.center?.lat,
+        latitude: (terrain.regionCenter || terrain.center)?.lat,
         altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z),
         formationSeed: beaconSeed(fx, fz) };
       // 先建再驗:淘汰只是丟棄未進場景的 Group,rnd 序全房一致
@@ -3843,7 +3863,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, sites, basesW, road
       if (placedM.some((p) => Math.hypot(x - p.x, z - p.z)
         < r + p.r + (p.f === fields.length ? ROCKFIELD.GAP_M : 70))) continue;
       decorateMegalith(g, meta.anchor, rnd, s, { ...terrain.objectEnvironment, season: terrain.season,
-        latitude: terrain.center?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) });
+        latitude: (terrain.regionCenter || terrain.center)?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) });
       // 岩色隨生成/風化各異(2026-07-29):整顆色相/彩度/明度偏移 = 同名岩兩顆不同礦源;
       // 逐塊再抖一點明度 = 塊面風化深淺。只動 rockMat 標記的材質(綠冠/木門/描邊不動);
       // envMat 每次呼叫都建新材質,就地調色不會污染他顆。traverse 順序 = 加入序,rnd 序確定
@@ -4081,7 +4101,7 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
       const water = code === 1;
       const bio = water ? 'water' : code === 2 ? 'wet' : classifyImg(terrain.sampleColor?.(x, z)) || 'bare';
       const kinds = Object.keys(ENVIRONMENT_OBJECTS).filter(k => ENVIRONMENT_OBJECTS[k].bio.includes(bio)
-        && environmentAvailable(k, { latitude: terrain.center?.lat, ...terrain.objectEnvironment }));
+        && environmentAvailable(k, { latitude: (terrain.regionCenter || terrain.center)?.lat, ...terrain.objectEnvironment }));
       if (!kinds.length) continue;
       const kind = kinds[Math.floor(rnd() * kinds.length)], def = ENVIRONMENT_OBJECTS[kind];
       const sampledSize = environmentSize(kind, localSeed);
@@ -4104,7 +4124,7 @@ function placeSharedEnvironment({ group, terrain, blocked, blockers, roadOccupie
       if (!water && (wet || y < .4 || Math.abs(slopeDeg(rise, radius * 2)) > SLOPE.EASE_DEG)) continue;
       const parts = environmentParts(kind, { size, seed: localSeed, season: terrain.season || 'summer',
         environment: { ...terrain.objectEnvironment,
-          latitude: terrain.center?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) } });
+          latitude: (terrain.regionCenter || terrain.center)?.lat, altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) } });
       if (water) {
         if (!Number.isFinite(terrain.waterY) || !def.ice) continue;
         y = terrain.waterY - parts[0].waterline;
@@ -4338,9 +4358,9 @@ async function fetchOsmFeatures(bbox) {
  * 道路路網(獨立 Overpass 查詢):與建物/鐵路分開,避免道路查詢過重或逾時時
  * 連帶拖垮既有的建物/鐵路渲染。失敗回 null → buildBiomes 退回以兵線為主要道路。
  */
-async function fetchOsmRoads(bbox) {
+export async function fetchOsmRoads(bbox, { evidence = false } = {}) {
   const inj = osmInOf(bbox, 'roads');   // 路網中繼(理由同 fetchOsmFeatures)
-  if (inj !== undefined) return inj && structuredClone(inj);
+  if (inj !== undefined && (!evidence || inj?.every(road => Number.isSafeInteger(road.id)))) return inj && structuredClone(inj);
   // 路網快取:兵線橋/地下道/隧道的唯一 OSM 輸入 —— 首次完整成功即定案,
   // 之後每場真橋/隧道 way 集合恆定(dropLaneBridges/dedupe/carve 皆純幾何 → 整條管線可重現)。
   // 兩級查詢、各自額度(2026-07-17 巴黎道路消失案):單一 `out geom 300` 在密路網市區
@@ -4348,9 +4368,9 @@ async function fetchOsmRoads(bbox) {
   // 一樣被犧牲。車道級與小徑分開給額(隨 bbox 面積縮放),幹道永不被 footway/path 擠掉。
   // 額度放大後 payload ~700KB、Overpass 實測 ~10s(舊 10s abort 必掐死)→ timeout 同步放寬。
   const { nMain, nMinor } = osmRoadQuotas(bbox);
-  const ckey = geoKey('osmR', 1, bbox, `q${nMain}-${nMinor}`);
+  const ckey = geoKey('osmR', evidence ? 2 : 1, bbox, `q${nMain}-${nMinor}`);
   const cached = await geoGet(ckey);
-  if (cached?.length) return cached;
+  if (cached?.length && (!evidence || cached.every(road => Number.isSafeInteger(road.id)))) return cached;
   const q = osmRoadQuery(bbox);
   return overpassQuery(q, (data) => {
     const roads = osmRoadsFromElements(data.elements);
@@ -4475,8 +4495,7 @@ const TUN_GAP_CLOSE = 36, TUN_COV_MIN = 18;
 // 側壁挖成走得出去的破口(側壁閘「側向地表高差 >2.6m」的前提被自家開挖打破)。
 // 消費端 = carve 指派 way._tun 的入口(唯一結構開關;buildRoads/markGradeCorridors 皆以
 // way._tun[ri].intervals 判結構性)與 audit_lane_scenarios 場景判定 —— MUST NOT 另寫第二份。
-const strucTunnel = (tags) => !!tags?.tunnel && (tags.indoor == null || tags.indoor === 'no')
-  && !isPedestrianWay(tags);
+const strucTunnel = structuralTunnel;
 /**
  * 隧道覆蓋區間(單一縫,2026-07-22):carve 呼叫端 / buildRoads / markGradeCorridors 三個
  * 消費端 MUST 共用這一份分類,否則開挖、牆/天花、走廊的「洞口位置」互相對不上(舊版各自
@@ -4745,13 +4764,17 @@ function tunnelWallProfile(pts, floors, cov, heightAt, hw, side, natAt = heightA
 const BRIDGE_RISE = 7.5;
 function roadWidth(tags) {
   const base = ROAD_W[tags.highway] || 4;
-  const lanes = parseInt(tags.lanes, 10) || 0;
-  return lanes ? Math.max(base, lanes * 3.2) : base;   // 寬度依圖資車道數
+  const lanes = taggedRoadLanes(tags);
+  return lanes ? Math.max(base, lanes * ROAD_LANE_M) : observedRoadWidth(tags) ?? base;
 }
 // 由寬度反推車道數(單一縫;3.2m/線是全檔唯一換算比例,markings 車道分隔線與路面鋪裝判定
 // 共用這一支,MUST NOT 各自手寫 /3.2)。roadWidth 已把圖資 lanes 值折進寬度,故此處不必
 // 再讀一次 tags.lanes。
-const roadLaneN = (tags) => roadWidth(tags) / 3.2;
+const roadLaneN = (tags) => roadWidth(tags) / ROAD_LANE_M;
+// Surrounding vegetation and wetland appearance cannot replace a multi-lane carriageway's pavement.
+function roadSurfaceBiome(biome, tags) {
+  return (biome === 'bare' || biome === 'green' || biome === 'wet') && roadLaneN(tags) >= 2 ? 'urban' : biome;
+}
 /**
  * 立體結構(橋/隧道/地下道)的通行半寬 —— **單一縫**:buildRoads 的路面/牆、markGradeCorridors
  * 的走廊、carveTunnels 的開挖剖面共用這一支。分家的後果是開挖寬度小於路面寬度 ⇒ 路面兩緣埋進土裡。
@@ -4810,7 +4833,7 @@ function densify(pts, seg) {
   for (let i = 1; i < pts.length; i++) {
     const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
     const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / seg));
-    for (let k = 1; k <= n; k++) out.push([ax + (bx - ax) * k / n, az + (bz - az) * k / n]);
+    for (let k = 1; k <= n; k++) out.push(k === n && pts[i].normal ? pts[i] : [ax + (bx - ax) * k / n, az + (bz - az) * k / n]);
   }
   return out;
 }
@@ -6296,6 +6319,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   const supportClear = bridgeSupportClearance(roads, p => llToWorld(p.lat, p.lon, center), tags =>
     tags.bridge ? strucHw(tags) * 2 : roadWidth(tags));
   const detailRuns = [];
+  const layoutRuns = new WeakMap();
   let gradeRejected = 0;
   const inb = 4;
   // ---- 別條路的洞內斷面:貼地路段的路面/標線 MUST NOT 畫進去(2026-08-01 金龍隧道真圖資實測)----
@@ -6345,6 +6369,18 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // 路面貼地規則:非橋樑截面「各自貼地,但夾在同截面最高點 −0.7m 之上」——
   // 橫坡路段路面切進山壁(路塹感)而不是被地形吞掉;抬升量 0.45 > 地被(0.07~0.18)
   const ROAD_LIFT = 0.45, CLAMP = 0.7;
+  // Platform carving settles collision heights; this overlay only keeps flat decorations below roads.
+  const roadHeightAt = (x, z) => {
+    let y = terrain.heightAt(x, z);
+    for (const pad of terrain.roadPads || []) {
+      const ca = Math.cos(pad.ry || 0), sa = Math.sin(pad.ry || 0);
+      const dx = x - pad.cx, dz = z - pad.cz;
+      if (Math.abs(dx * ca - dz * sa) <= pad.hw && Math.abs(dx * sa + dz * ca) <= pad.hd) {
+        y = Math.max(y, pad.y - ROAD_LIFT + .06);
+      }
+    }
+    return y;
+  };
   const AVOID_MIN = 1.5;   // 每側避車道邊帶最小寬:窄於此不鋪(過寬才畫人行道/槽化線)
   // 標線合併幾何(頂點色 = 黃/白):雙黃線/白虛線/路緣邊線/斑馬線全進同一 draw call
   const mark = { pos: [], nrm: [], col: [], idx: [], base: 0 };
@@ -6353,7 +6389,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // yB ≠ null 時直接以它為基準(結構隧道:路面在山體之下,貼地取樣會把標線畫到山頂;
   // 平直剖面無橫坡,夾高規則本來就用不上)。
   const putMark = (vx, vz, lift2, c, hM = -Infinity, yB = null) => {
-    mark.pos.push(vx, (yB ?? Math.max(terrain.heightAt(vx, vz), hM - CLAMP)) + lift2, vz);
+    mark.pos.push(vx, (yB ?? Math.max(roadHeightAt(vx, vz), hM - CLAMP)) + lift2, vz);
     mark.nrm.push(0, 1, 0);
     mark.col.push(...c);
   };
@@ -6366,21 +6402,23 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       const a = run[Math.max(0, i - 1)], b2 = run[Math.min(nP - 1, i + 1)];
       let dx = b2[0] - a[0], dz = b2[1] - a[1];
       const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-      const px = dz, pz = -dx;
+      const [px, pz] = run[i].normal || [dz, -dx];
       const sectionHw = widthAt ? widthAt(x, z, hw2) : hw2;
-      const sectionOff = off * sectionHw / hw2;
+      const sectionOff = Math.abs(off) < 1 ? off : off * sectionHw / hw2;
       const yB = yBAt ? yBAt(i) : null;
       const hM = yB !== null ? -Infinity
-        : Math.max(terrain.heightAt(x + px * sectionHw, z + pz * sectionHw),
-                   terrain.heightAt(x - px * sectionHw, z - pz * sectionHw));
+        : Math.max(roadHeightAt(x + px * sectionHw, z + pz * sectionHw),
+                   roadHeightAt(x - px * sectionHw, z - pz * sectionHw));
       // 頂點序:大偏移在前(與路面quad同向繞行 → 面朝 +y,不會背面剔除消失)
-      putMark(x + px * (sectionOff + w / 2), z + pz * (sectionOff + w / 2), lift2, c, hM, yB);
-      putMark(x + px * (sectionOff - w / 2), z + pz * (sectionOff - w / 2), lift2, c, hM, yB);
+      const right = roadOffsetPoint(run[i], px, pz, sectionOff + w / 2);
+      const left = roadOffsetPoint(run[i], px, pz, sectionOff - w / 2);
+      putMark(right[0], right[1], lift2, c, hM, yB);
+      putMark(left[0], left[1], lift2, c, hM, yB);
     }
     for (let i = 0; i < nP - 1; i++) {
       if (dropSeg?.(i)) continue;                  // 落進別條路的洞內斷面:頂點留著、這一格不成面
       const k = k0 + i * 2;
-      mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+      mark.idx.push(...roadQuadIndices(mark.pos, k, k + 1, k + 2, k + 3));
     }
     mark.base += nP * 2;
   };
@@ -6428,18 +6466,19 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     const bridge = isPedestrianWay(way.tags) ? isPedestrianBridge(way.tags) : !!way.tags.bridge;
     const tunnel = !!way.tags.tunnel;
     const hwWay = bridge ? strucHw(way.tags) : roadWidth(way.tags) / 2;
-    if (hwWay < 2 || bridge || tunnel) continue;
+    if (!(hwWay > 0) || bridge || tunnel || (isPedestrianWay(way.tags) && hwWay < 2)) continue;
     const n = way.geometry.length;
     for (let i = 0; i < n; i++) {
       const gpt = way.geometry[i], key = `${structureLayer(way.tags)}:${gpt.lat.toFixed(6)},${gpt.lon.toFixed(6)}`;
       let rec = nodeArms.get(key);
       if (!rec) {
         const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
-        rec = { x, z, layer: structureLayer(way.tags), arms: 0, hw: 0, main: false, roundabout: false, dirs: [], armHw: [], armLength: [] };
+        rec = { x, z, layer: structureLayer(way.tags), tags: way.tags, arms: 0, hw: 0, main: false, roundabout: false, dirs: [], armHw: [], armLength: [] };
         nodeArms.set(key, rec);
       }
+      if (hwWay > rec.hw) rec.tags = way.tags;
       rec.hw = Math.max(rec.hw, hwWay);
-      rec.main = rec.main || MAIN_HW.test(way.tags.highway);
+      rec.main = rec.main || MAIN_HW.test(way.tags.highway) || /_link$/.test(way.tags.highway);
       rec.roundabout = rec.roundabout || way.tags.junction === 'roundabout';
       for (const j of [i - 1, i + 1]) {
         if (j < 0 || j >= n) continue;
@@ -6447,7 +6486,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         const dl = Math.hypot(ax - rec.x, az - rec.z);
         if (dl < .01) continue;
         const dx = (ax - rec.x) / dl, dz = (az - rec.z) / dl;
-        const same = rec.dirs.findIndex(([ux, uz]) => ux * dx + uz * dz > 0.92);
+        const same = rec.dirs.findIndex(([ux, uz]) => ux * dx + uz * dz > 1 - 1e-8);
         if (same >= 0) {
           rec.armHw[same] = Math.max(rec.armHw[same], hwWay);
           rec.armLength[same] = Math.min(rec.armLength[same], dl);
@@ -6457,7 +6496,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   }
   for (const rec of nodeArms.values()) rec.arms = rec.dirs.length;
   for (const rec of nodeArms.values()) rec.boundary = junctionBoundary(rec);
-  const widthAt = roadTransitionIndex(nodeArms.values(), flareHw);
+  const curvePath = roadCurveIndex(nodeArms.values());
+  const widthAt = roadTransitionIndex(nodeArms.values(), flareHw, curvePath.reachOf);
   const junctionCuts = [...nodeArms.values()].filter((rec) => rec.arms >= 3);
   const JCELL = 32, junctionGrid = new Map();
   for (const rec of junctionCuts) {
@@ -6537,10 +6577,25 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // (圖資的 tunnel way 只畫覆蓋段,引道是我們接出去的),重算 densify(raw) 會少掉引道。
       const pieces = strc ? [tw.pts] : bridge ? [densify(raw, ROAD_SEG)]
         : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
-      for (const run of pieces) {
+      let renderPieces = pieces;
+      // Water-crossing decks retain the grading planner's original path and datum.
+      if (!strc && !bridge && !pieces.some(piece => piece.wet === true)) {
+        const curved = splitWaterPieces(densify(curvePath(raw, structureLayer(way.tags)), ROAD_SEG), terrain, inclSwamp);
+        if (curved.length === pieces.length && !curved.some(piece => piece.wet === true)) {
+          curved.forEach((piece, i) => layoutRuns.set(piece, pieces[i]));
+          renderPieces = curved;
+        }
+      }
+      for (const run of renderPieces) {
       if (run.length < 2) continue;
       // 通過水域或沼澤的道路與鐵道一率都以高架橋處理
       const brg = bridge || run.wet === true;
+      const layoutRun = layoutRuns.get(run) || run;
+      const layoutCum = [0];
+      for (let i = 1; i < layoutRun.length; i++) layoutCum.push(layoutCum[i - 1]
+        + Math.hypot(layoutRun[i][0] - layoutRun[i - 1][0], layoutRun[i][1] - layoutRun[i - 1][1]));
+      const layoutTotal = layoutCum.at(-1);
+      const runWidthAt = strc || brg ? wayWidthAt : roadPathWidthAt(run, wayWidthAt);
       // 沉錨橋碎片不建(2026-07-22 倫敦雙層橋案):錨點高程沒入水下 ≥1m = 斷鏈/邊界裁切殘片
       // (步橋鏈常在河面上的分岔節點斷開,mergeGradeChains 保守不併)—— 河床錨把 hA/hB 拖沉,
       // 剖面沉成貼水浮板、疊在真橋之下 = 上下兩層(倫敦實測:斷點錨 h=−2.48)。
@@ -6562,7 +6617,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 逐條對齊)、兩側差額鋪避車道視覺(見下方 walk/hatch 段)、結構外緣補漸縮帶接回一般路寬。
       const laneHw = carriageHw(way.tags);
       const avoidHw = (brg || strc) ? Math.max(0, hw - laneHw) : 0;
-      const mid = run[(run.length / 2) | 0];
+      const mid = layoutRun[(layoutRun.length / 2) | 0];
       let biome = classify(terrain.sampleColor?.(mid[0], mid[1]), terrain.heightAt(mid[0], mid[1]), mix, rnd);
       // 橋樑就是為了跨越水面而存在 —— 橋段中點取樣落在水色上是常態(河/運河正下方),
       // MUST NOT 跳過,否則現實中最常見的跨河橋會整段連同橋面碰撞一起消失。
@@ -6576,11 +6631,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 橋面;跨河橋中點恆取到水色 ⇒ 舊版整座橋鋪成 roadColor('water') 的青灰、郊區橋鋪成泥土,
       // 與洞內柏油、與標線(只畫柏油)三種風格。定調柏油後橋面才與隧道/一般市區路同一套外觀。
       if (strc || brg) biome = 'urban';
-      // 雙線道以上鋪柏油(2026-08-11 使用者定案「就算是裸露地或綠地,只要是雙線道或以上也都
-      // 鋪設公路」):中點取樣落在路旁植被/裸岩色上時常見(林道遮蔭、路緣曝光偏移),但雙線道
-      // 以上本來就是鋪面公路而非產業道路/林道,MUST NOT 因為取樣點誤判而退回泥土/礫石。
-      // 只收 bare/green(濕地/水面另有各自的定調規則,不在此列)。
-      if ((biome === 'bare' || biome === 'green') && roadLaneN(way.tags) >= 2) biome = 'urban';
+      // Keep the existing roadside RNG path when only the carriageway material changes.
+      const wetRoadside = biome === 'wet';
+      biome = roadSurfaceBiome(biome, way.tags);
       const pedTheme = ped ? (brg ? 'footbridge' : way._ped?.theme || null) : null;
       const b = bucketOf(biome, main || link, pedTheme);
       const nP = run.length, vbase = b.base;
@@ -6607,23 +6660,23 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       const tBaseAt = (s) => tunFloorAt(tw, s, total, false);
       detailRuns.push({ kind: strc ? (under ? 'underpass' : 'tunnel') : brg ? 'bridge' : 'road',
         points: run, floors: cum.map(s => strc ? tFloorAt(s) + ROAD_LIFT : brg ? deckAt(s) : null),
-        hw, widths: run.map(([x, z]) => strc || brg ? hw : wayWidthAt(x, z, hw)),
+        hw, widths: run.map(([x, z]) => strc || brg ? hw : runWidthAt(x, z, hw)),
         tags: way.tags, way, junctions: bridgeJunctions });
       for (let i = 0; i < nP; i++) {
         const [x, z] = run[i];
         const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
         let dx = c[0] - a[0], dz = c[1] - a[1];
         const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-        const px = dz, pz = -dx;                 // XZ 垂直向量
+        const [px, pz] = !strc && !brg && run[i].normal || [dz, -dx];
         // 截面 4 頂點:外緣暗(墨線)→ 內緣亮,漸層即手繪描邊筆觸。
         // 非橋:各自貼地但夾在截面最高點 −CLAMP 之上(橫坡不吞路);橋:水平橋面
-        const sectionHw = strc || brg ? hw : wayWidthAt(x, z, hw);
+        const sectionHw = strc || brg ? hw : runWidthAt(x, z, hw);
         const offs = [[sectionHw, 1], [sectionHw * 0.64, 0], [-sectionHw * 0.64, 0], [-sectionHw, 1]];
-        const hs = offs.map(([off]) => terrain.heightAt(x + px * off, z + pz * off));
+        const hs = offs.map(([off]) => roadHeightAt(...roadOffsetPoint(run[i], px, pz, off)));
         const hMax = Math.max(...hs);
         for (let k = 0; k < 4; k++) {
           const [off, ink] = offs[k];
-          const vx = x + px * off, vz = z + pz * off;
+          const [vx, vz] = roadOffsetPoint(run[i], px, pz, off);
           const vy = strc ? tFloorAt(cum[i]) + ROAD_LIFT
             : brg ? deckAt(cum[i], x, z)
               : Math.max(hs[k], hMax - CLAMP) + ROAD_LIFT;
@@ -6647,7 +6700,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         if (dropRoadSeg(i)) continue;
         const k = vbase + i * 4;
         for (const o of [0, 1, 2]) {
-          b.idx.push(k + o, k + o + 1, k + o + 4, k + o + 1, k + o + 5, k + o + 4);
+          b.idx.push(...roadQuadIndices(b.pos, k + o, k + o + 1, k + o + 4, k + o + 5));
         }
       }
       b.base += nP * 4;
@@ -6725,14 +6778,19 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           b.base += (FN + 1) * 4;
         }
       }
-      const at = (d) => {
-        let i = 1; while (cum[i] < d && i < nP - 1) i++;
-        const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
-        const x = run[i - 1][0] + (run[i][0] - run[i - 1][0]) * f;
-        const z = run[i - 1][1] + (run[i][1] - run[i - 1][1]) * f;
-        let dx = run[i][0] - run[i - 1][0], dz = run[i][1] - run[i - 1][1];
+      const at = (d, points = run, distances = cum) => {
+        let i = 1; while (distances[i] < d && i < points.length - 1) i++;
+        const f = (d - distances[i - 1]) / (distances[i] - distances[i - 1] || 1);
+        const x = points[i - 1][0] + (points[i][0] - points[i - 1][0]) * f;
+        const z = points[i - 1][1] + (points[i][1] - points[i - 1][1]) * f;
+        let dx = points[i][0] - points[i - 1][0], dz = points[i][1] - points[i - 1][1];
         const l = Math.hypot(dx, dz) || 1;
-        return [x, z, dx / l, dz / l];
+        const point = [x, z, dx / l, dz / l];
+        if (points[i - 1].innerSide === points[i].innerSide && points[i].innerSide != null) {
+          point.innerSide = points[i].innerSide;
+          point.innerScale = points[i - 1].innerScale + (points[i].innerScale - points[i - 1].innerScale) * f;
+        }
+        return point;
       };
       // ---- 橋面碰撞面:每個路面小段登記成可站立平台(game.js 表面高度取樣用)----
       if (brg) {
@@ -7185,7 +7243,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // ≥8,標線一律鋪在真實車道寬上 ⇒ 車道數與路緣線位置與結構外那條路對齊,邊帶交給避車道 +
       // 銜接漸縮帶。MUST NOT 依「差額夠不夠寬」在 laneHw / hw 之間切換(見 carriageHw 註解)。
       const mHw = laneHw;
-      const paintWidthAt = strc || brg ? null : wayWidthAt;
+      const paintWidthAt = strc || brg ? null : runWidthAt;
       if (biome === 'urban' && mHw >= 2) {
         // 白虛線通用鋪法:偏移 off(0 = 中線)。off=0 逐位元同舊版中線(±0.28 = 0.56 寬)
         const dashLine = (off) => {
@@ -7195,24 +7253,26 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             if (dropXZ(px0, pz0) || inJunctionMarkCut(ax0, az0) || inJunctionMarkCut(bx0, bz0)) continue;
             const k = mark.base;
             for (const d of [s, s + 3.2]) {
-              const [ex, ez, ddx, ddz] = at(d);
+              const point = at(d), [ex, ez, ddx, ddz] = point;
               const qx = ddz, qz = -ddx;
               const paintHw = paintWidthAt ? paintWidthAt(ex, ez, mHw) : mHw;
               const paintOff = off * paintHw / mHw;
               const yB = markBaseAt ? markBaseAt(d, ex, ez) : null;
               const hM = yB !== null ? -Infinity
-                : Math.max(terrain.heightAt(ex + qx * paintHw, ez + qz * paintHw),
-                           terrain.heightAt(ex - qx * paintHw, ez - qz * paintHw));
-              putMark(ex + qx * (paintOff + 0.28), ez + qz * (paintOff + 0.28), 0.58, MARK_W, hM, yB);
-              putMark(ex + qx * (paintOff - 0.28), ez + qz * (paintOff - 0.28), 0.58, MARK_W, hM, yB);
+                : Math.max(roadHeightAt(ex + qx * paintHw, ez + qz * paintHw),
+                           roadHeightAt(ex - qx * paintHw, ez - qz * paintHw));
+              const right = roadOffsetPoint(point, qx, qz, paintOff + .28);
+              const left = roadOffsetPoint(point, qx, qz, paintOff - .28);
+              putMark(right[0], right[1], .58, MARK_W, hM, yB);
+              putMark(left[0], left[1], .58, MARK_W, hM, yB);
             }
-            mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+            mark.idx.push(...roadQuadIndices(mark.pos, k, k + 1, k + 2, k + 3));
             mark.base += 4;
           }
         };
         if (main || link) {
-          const lanes = Math.max(link ? 1 : 2, Math.round(roadLaneN(way.tags)));
           const oneWay = /^(yes|1|-1|true)$/.test(way.tags.oneway || '');
+          const lanes = Math.max(oneWay || link ? 1 : 2, Math.round(roadLaneN(way.tags)));
           if (oneWay) {
             for (let k = 1; k < lanes; k++) dashLine(mHw * (2 * k / lanes - 1));
           } else if (arterial && lanes > 1) {
@@ -7233,13 +7293,15 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           emitLine(run, mHw, 0.56, mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg, paintWidthAt);
           emitLine(run, mHw, 0.56, -mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg, paintWidthAt);
         }
+      }
+      if (biome === 'urban' && mHw >= 2 && !wetRoadside) {
         // ---- 路燈:沿路等間距、左右交錯(燈臂朝路心)----
         // 隧道不立(洞內照明是天花燈;路燈桿會戳穿天花板與山體);橋不立(橋燈另有一套沿橋面
         // 邊緣的實例,見上方 brg 段 —— 地面路燈桿以 heightAt 落地,在高架橋上會從橋面下長出來)
         if (!strc && !brg && main && lamps.length < 380) {
           let side = rnd() < 0.5 ? 1 : -1;
-          for (let s = 14 + rnd() * 10; s < total - 8 && lamps.length < 380; s += 40) {
-            const [ex, ez, ddx, ddz] = at(s);
+          for (let s = 14 + rnd() * 10; s < layoutTotal - 8 && lamps.length < 380; s += 40) {
+            const [ex, ez, ddx, ddz] = at(s, layoutRun, layoutCum);
             const qx = ddz, qz = -ddx, off = hw + 1.2;
             const lx = ex + qx * off * side, lz = ez + qz * off * side;
             if (terrain.heightAt(lx, lz) < 0.4) { side = -side; continue; }
@@ -7248,10 +7310,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             side = -side;
           }
         }
-      } else if (!brg && !strc && (biome === 'green' || biome === 'wet') && main && hw >= 2.4) {
+      } else if (!brg && !strc && (biome === 'green' || biome === 'wet' || wetRoadside) && main && hw >= 2.4) {
         // ---- 行道樹:郊區幹道兩側等間距(純視覺,不登記碰撞)----
-        for (let s = 10 + rnd() * 8; s < total - 6 && roadTrees.length < 460; s += 26 + rnd() * 8) {
-          const [ex, ez, ddx, ddz] = at(s);
+        for (let s = 10 + rnd() * 8; s < layoutTotal - 6 && roadTrees.length < 460; s += 26 + rnd() * 8) {
+          const [ex, ez, ddx, ddz] = at(s, layoutRun, layoutCum);
           const qx = ddz, qz = -ddx, off = hw + 1.6 + rnd() * 0.8;
           for (const side of [1, -1]) {
             if (rnd() < 0.18) continue;          // 缺株:不像牙籤陣
@@ -7351,7 +7413,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
 
   // ---- 路口填面: fitted arm boundaries ----
   // Width transitions already modify ribbons; only connected corner gaps need additional pavement.
-  const fillLift = (vx, vz, hMax) => Math.max(terrain.heightAt(vx, vz), hMax - CLAMP) + ROAD_LIFT;
+  const fillLift = (vx, vz, hMax) => Math.max(roadHeightAt(vx, vz), hMax - CLAMP) + ROAD_LIFT;
   // nodeArms 包含圖外 OSM 節點；補面須與道路本體共用邊界，否則路被截掉後留下浮空圓盤。
   const fillInBounds = (x, z, r = 0) => x - r >= terrain.minX + inb && x + r <= terrain.maxX - inb
     && z - r >= terrain.minZ + inb && z + r <= terrain.maxZ - inb;
@@ -7359,11 +7421,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     if (rec.hw < 2) continue;
     const boundary = rec.boundary;
     if (!boundary || !boundary.points.every(([x, z]) => fillInBounds(x, z))) continue;
-    const biome = classify(terrain.sampleColor?.(rec.x, rec.z), terrain.heightAt(rec.x, rec.z), null, rnd);
+    const biome = roadSurfaceBiome(classify(terrain.sampleColor?.(rec.x, rec.z), terrain.heightAt(rec.x, rec.z), null, rnd), rec.tags);
     if (biome === 'water') continue;               // 河面節點(橋另建),不鋪路面
     const b = bucketOf(biome, rec.main);
     const points = boundary.points;
-    const hMax = Math.max(...points.map(([x, z]) => terrain.heightAt(x, z)));
+    const hMax = Math.max(...points.map(([x, z]) => roadHeightAt(x, z)));
     if (!Number.isFinite(hMax)) continue;
     const c0 = b.base;
     for (const [vx, vz] of points) {
@@ -7413,6 +7475,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     m.frustumCulled = false;
     m.renderOrder = 1;
     m.userData.noOutline = true;
+    m.userData.roadSurface = true;
     group.add(m);
   }
   // ---- 標線 Mesh(黃/白頂點色,單一 draw call)----
@@ -9508,7 +9571,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
     // 先切 run + 配款；整圈款式定案後，再解相鄰端面與轉角。
     // 固定高度加上同次取樣的地形範圍，貼坡表面與權威盒一起建立。
     let prevKind = null;
-    for (const r of planWallRuns(row, { environment: { latitude: terrain.center?.lat, venue: terrain.venue, mix: terrain.mix, ...terrain.objectEnvironment } })) {
+    for (const r of planWallRuns(row, { environment: { latitude: (terrain.regionCenter || terrain.center)?.lat, venue: terrain.venue, mix: terrain.mix, ...terrain.objectEnvironment } })) {
       const kinds = planWallKinds(r, row, prevKind);
       for (let i = r.i0; i < r.i1; i++) {
         plans.push({ s: row[i], e, step, kind: kinds[i - r.i0], tier: r.tier });
@@ -9537,7 +9600,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
     // 盒心 = 內面往圖界方向退半個厚度 ⇒ 內緣恆落在夾制線上(不管這一款多厚)
     const x = e.ax ? s.x : s.x + e.sz * hd2;
     const z = e.ax ? s.z + e.sz * hd2 : s.z;
-    const environment = { ...terrain.objectEnvironment, latitude: terrain.center?.lat,
+    const environment = { ...terrain.objectEnvironment, latitude: (terrain.regionCenter || terrain.center)?.lat,
       altitude: terrain.elevationAt?.(x, z) ?? s.hi };
     const seed = edgeSeed(x, z);
     const variant = wallVariant(kind, seed, kind === prevKind ? prevVariant : -1);
@@ -9835,7 +9898,7 @@ function buildBufferProps({ group, terrain }) {
       return p.kind === 'islet' && wy != null ? Math.max(y, wy) - 0.6 : y;
     };
     emitWallParts(batch, propParts(p.kind, p.seed, { season: terrain.season || 'summer',
-      environment: { ...terrain.objectEnvironment, latitude: terrain.center?.lat,
+      environment: { ...terrain.objectEnvironment, latitude: (terrain.regionCenter || terrain.center)?.lat,
         altitude: terrain.elevationAt?.(p.x, p.z) ?? gy(p.x, p.z) } }), p.x, gy(p.x, p.z), p.z, p.ry, p.s, gy);
   }
   flushPartBatch(group, batch, { wash: 0.5, cool: 0.5 });
@@ -9872,7 +9935,7 @@ function buildBackdrop({ group, terrain, ctr }) {
       return wy != null && b.kind === 'sea' ? Math.max(y, wy) - 1 : y;
     };
     emitWallParts(batch, backdropParts(b.kind, { len: b.len, h, seed: b.seed, season,
-      environment: { ...terrain.objectEnvironment, latitude: terrain.center?.lat,
+      environment: { ...terrain.objectEnvironment, latitude: (terrain.regionCenter || terrain.center)?.lat,
         altitude: terrain.elevationAt?.(b.x, b.z) ?? gy(b.x, b.z) } }),
       b.x, gy(b.x, b.z), b.z, b.ry, 1, gy);
   }
@@ -10281,6 +10344,10 @@ function densifyUrban({ seeds, generic, blocked, terrain, rnd, inb, occ, roadFac
  */
 export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = prepareMapEvidence } = {}) {
   const center = cfg.center;
+  const regionCenter = mapSourceCenter(cfg, 'regional');
+  const regionLocation = { lat: regionCenter.lat, lng: regionCenter.lng, venue: cfg.venue, country: cfg.venue?.country,
+    region: isRandomMap(cfg) ? cfg.gen.layers.regional.culture : null };
+  terrain.regionCenter = regionCenter;
   const season = cfg.env?.season || 'summer';
   const night = cfg.env?.time === 'night';
   const mix = cfg.venue?.mix || null;
@@ -10288,7 +10355,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   terrain.venue = cfg.venue || null;
   terrain.mix = mix;
   terrain.forestEnv = cfg.env?.forest || cfg.venue?.forest || {};
-  terrain.objectEnvironment = { ...terrain.forestEnv, ...cfg.env };
+  terrain.objectEnvironment = { ...terrain.forestEnv, ...cfg.env, latitude: regionCenter.lat };
   const rnd = mulberry32(
     (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) ^ ((cfg.teamSize || 5) << 20),
   );
@@ -10322,11 +10389,15 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   // 順序是硬約束:①洞口開挖先於植被/神木/建物 → 引道上的地物不再「先種在原地表、開挖後漂浮」;
   // ②隧道敞開段與橋樑走廊先進 blocked → 建物/巨木/巨石等障礙不會生成在地下道/隧道內與橋下淨空。
   // 此區全程不耗共享 rnd(fetch/合併/開挖/走廊皆確定性)⇒ 佈局亂數序列與舊版一致。
-  await onProgress?.(0.03, '讀取 OSM 圖資(建物/鐵路/道路/瀑布)…');
+  await onProgress?.(0.03, isRandomMap(cfg) ? RANDOM_MAP_TEXT.features : '讀取 OSM 圖資(建物/鐵路/道路/瀑布)…');
   // OSM 抓取不再以影像成敗為前提(2026-07-22 倫敦橋數浮動案):舊版 `if (terrain.sampleColor)`
   // 讓 Esri 影像失敗連鎖放棄整組 Overpass → 道路/真橋整套換成兵線備援,圖資逐局忽有忽無。
   // 影像與路網是獨立服務,各自失敗各自降級;離線時 fetch 快速失敗,不拖載入。
-  let [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
+  let [osmData, osmRoads] = isRandomMap(cfg) ? randomMapSources(cfg)
+    : await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
+  if (!isRandomMap(cfg) && osmRoads?.length && osmInOf(terrain.bbox, 'roads') === undefined) {
+    osmRoads = await inferSatelliteRoadLanes(osmRoads, p => llToWorld(p.lat, p.lon, center), terrain.roadImageryAt);
+  }
   // OSM 查詢一旦成功，即使 areas 為空也代表「這個 bbox 沒有面域」；只在整個來源回 null
   // 時才走程序城市 fallback。投影與分類共用 osmAreas.js，後續建物／landfield 不再各猜一次。
   const osmSource = osmData !== null && osmData !== undefined;
@@ -10360,7 +10431,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   if (evidence) installMapEvidence(terrain, evidence);
   let architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
-    center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
+    center, venue: cfg.venue, country: cfg.venue?.country, location: regionLocation, terrainEnvCode,
     environmentAt: (x, z) => ({ ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z) }),
     pois: osmData?.pois || [],
     roads: osmRoads || [], rails: osmData?.rails || [],
@@ -10591,7 +10662,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
   architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
-    center, venue: cfg.venue, country: cfg.venue?.country, terrainEnvCode,
+    center, venue: cfg.venue, country: cfg.venue?.country, location: regionLocation, terrainEnvCode,
     environmentAt: (x, z) => ({ ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z) }),
     pois: osmData?.pois || [],
     roads: roadInput || osmRoads || [], rails: osmData?.rails || [],
@@ -10698,6 +10769,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     }
     terrain.carvePlatforms(slopePlatformsToCarve);
   }
+  terrain.roadPads = slopePlatformsToCarve;
 
   // 立體交通走廊:淨空(blocked)+ 上傳伺服器用小段(gradeCorridors);開挖後才算(高度已定案)。
   // 通過水域或沼澤的道路一律升橋，登記橋下淨空與走廊。
@@ -10707,12 +10779,12 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   ];
 
   // ---- 散佈植被 ----
-  const areaKm2 = terrain.worldW * terrain.worldH / 1e6;
-  const vegTarget = Math.max(800, Math.min(MAX_VEG, Math.round(areaKm2 * 560)));   // 密度加高(仍全 instanced)
+  const vegTarget = MAX_VEG;
   const items = {};   // type -> [{x,y,z,s,ry}]
   const urbanPts = [];
   let placed = 0;
-  const put = (type, x, z, s, plantRnd = rnd, leafType = 'unknown') => {
+  let vegetationColliders = 0;
+  const put = (type, x, z, s, plantRnd = rnd, leafType = 'unknown', community = null) => {
     let actualS = s * (VEG_SCALE[type] || 1);
     // 拒絕前仍固定抽完姿態亂數，地圖上的後續物件不因道路淘汰而漂移。
     const item = {
@@ -10722,21 +10794,26 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
       dj: plantRnd(),
     };
     const environment = forestEnvironmentAt(terrain, x, z);
-    if (!Number.isFinite(environment.slope)) return;
+    if (!Number.isFinite(item.y) || !Number.isFinite(environment.slope)) return;
     const procedural = TRUNK_TYPES.has(type) || type === 'succulent' || type === 'shrub';
     let tree = null;
     if (procedural) {
-      type = forestTypeAt(terrain, x, z, mulberry32(forestSeed(x, z, 0x504c414e))(), leafType);
+      const plant = community ? habitatPlant(community) : null;
+      if (community && !plant) return;
+      type = plant?.type ?? forestTypeAt(terrain, x, z, mulberry32(forestSeed(x, z, 0x504c414e))(), leafType);
       if (!type) return;
       const spec = TREE_SPECIES[type];
-      tree = createForestTree(type, forestSeed(x, z));
-      actualS *= Math.min(1, 9 / spec.h);
+      if (plant) item.modelSeed = plant.modelSeed;
+      tree = plant?.tree ?? createForestTree(type, forestSeed(x, z));
+      actualS = plant?.s ?? actualS * Math.min(1, 9 / spec.h);
       item.s = actualS;
       if (environment.wet && (spec.roots !== 'pneumatophore' || terrain.waterY == null || item.y < terrain.waterY - .8)) return;
       item.y = sinkBaseY(terrain, x, z, tree.footprint * actualS);
       if (spec.steep) { item.tx = 0; item.tz = 0; }
     } else if (environment.slope >= FOREST_STEEP_DEG) return;
     const foot = { x, z, r: (tree ? tree.footprint : VEG_FOOT_R[type] ?? 1) * actualS };
+    if (community) { item.age = community.age; item.footR = foot.r; item.communityEnvironment = community.environment; }
+    if (community && !habitatSampleAt.contains(foot)) return;
     // 優先序:兵線/塔位/主堡淨空(blocked)高於植被 ⇒ 足印圓盤掃 areaFree(單格驗擋不住大樹);
     // 地被級平面植栽走 areaFreeLane,可鋪進塔堡圈當草原/沙漠背景
     if (VEG_FLAT.has(type)) {
@@ -10746,6 +10823,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     // 背景實體互斥:植被避開已登記的大型背景與圖資建物占位(抽樣之後淘汰,序列不漂移)。
     if (occ && !occ.free(x, z, foot.r, 1)) return;
     if (osmBldHit(x, z, foot.r)) return;
+    if (community && tree && vegetationColliders + tree.stems.length > vegetationColliderBudget) return;
     items[type] ??= [];
     items[type].push(item);
     if (tree) occ?.add(x, z, foot.r);
@@ -10754,6 +10832,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
       blockers.push({ x: xf.pos[0], z: xf.pos[2], y: item.y, r: stem.r * actualS,
         h: stem.h * actualS, cl: 'tree' });
     }
+    if (community && tree) vegetationColliders += tree.stems.length;
     vegFootIndex.add(foot);
     placed++;
   };
@@ -10767,6 +10846,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   terrain.season = season;
   const edgeSegs = buildEdgeWall({ group, terrain, blockers });
   const habitatSampleAt = createHabitatSampler({ areas: osmData?.areas || [], evidenceAt: terrain.evidenceAt,
+    environmentAt: (x, z) => ({ ...forestEnvironmentAt(terrain, x, z), latitude: regionCenter.lat,
+      altitude: terrain.elevationAt?.(x, z) ?? terrain.heightAt(x, z) }),
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     zoneAt: (x, z, area, observation) => area?.zone || evidenceDryBiome(observation)
       || classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null),
@@ -11009,7 +11090,7 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
       heightAt: (x, z) => terrain.heightAt(x, z),
       envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
       seed: sceneSeed,
-      location: { center, venue: cfg.venue, country: cfg.venue?.country },
+      location: regionLocation,
       environmentAt: (x, z) => ({ ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, x, z) }),
       utilityPoints: (osmData.pois || []).filter(p => p.tags?.power === 'generator').map(p => {
         const [x, z] = llToWorld(p.lat, p.lng, center);
@@ -11101,16 +11182,19 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   const baseFlags = placeBaseFlags({ group, terrain, blocked, basesW, nation });
 
   await onProgress?.(0.08, '鋪設植被地貌…');
+  // Keep capacity for later structures; every accepted solid plant must retain all trunk colliders.
+  const vegetationColliderBudget = Math.floor(Math.max(0, LOS.MAX_OCC - blockers.length) * HABITAT_SCENE.CANOPY_COLLIDER_F);
   const canopy = planHabitatCanopy({
     bounds: { minX: terrain.minX + inb, maxX: terrain.maxX - inb, minZ: terrain.minZ + inb, maxZ: terrain.maxZ - inb },
     seed: sceneSeed, maxPlants: vegTarget, sampleAt: habitatSampleAt,
+    densityScale: isRandomMap(cfg) ? cfg.gen.layers.regional.vegetation : 1,
   });
   urbanPts.push(...canopy.urban.filter(([x, z]) => cfg.synthetic
     || evidenceDryBiome(terrain.evidenceAt?.(x, z)) === 'urban'));
   for (let i = 0; i < canopy.rows.length; i++) {
     if ((i & 255) === 0) await onProgress?.(0.08 + i / Math.max(1, canopy.rows.length) * .27, '鋪設植被地貌…');
     const row = canopy.rows[i];
-    put(row.shrub ? 'shrub' : 'broadleaf', row.x, row.z, row.scale, mulberry32(row.seed), row.leafType);
+    put(row.shrub ? 'shrub' : 'broadleaf', row.x, row.z, row.scale, mulberry32(row.seed), row.leafType, row);
   }
   // ---- 圖資建物(OSM 已於開頭抓取;植被網格延後到建物定案之後才建:
   // 先拔掉落在建物腳印內的植被(見下),樹才不會穿屋頂)----
@@ -11517,7 +11601,9 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   for (const type in items) {
     for (const item of items[type]) {
       item.environment = { ...terrain.objectEnvironment, ...forestEnvironmentAt(terrain, item.x, item.z),
-        latitude: center.lat, altitude: terrain.elevationAt?.(item.x, item.z) ?? item.y };
+        ...item.communityEnvironment,
+        latitude: regionCenter.lat, altitude: terrain.elevationAt?.(item.x, item.z) ?? item.y };
+      if (item.modelSeed !== undefined) item.environment.altitude = Math.round(item.environment.altitude / HABITAT_SCENE.PHENOLOGY_ALTITUDE_M) * HABITAT_SCENE.PHENOLOGY_ALTITUDE_M;
     }
     const meshes = buildVegMeshes(type, items[type], season);
     for (const m of meshes) group.add(m);
@@ -12338,11 +12424,11 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     });
   }
   for (const type in items) {
-    if (GIANT_DEFS[type]) continue;   // 神木幹已在 blockers；樹上附著物不占地面
     const rr = VEG_FOOT_R[type] ?? 1;
     for (const it of items[type]) {
+      if (GIANT_DEFS[type] && it.modelSeed === undefined) continue;
       if (Math.abs(it.y - terrain.heightAt(it.x, it.z)) <= 4) {
-        reservedFootprints.push({ x: it.x, z: it.z, r: rr * it.s });
+        reservedFootprints.push({ x: it.x, z: it.z, r: it.footR ?? rr * it.s });
       }
     }
   }
@@ -12367,7 +12453,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
     reservedFootprints,
     areas: osmData?.areas || [],
     surfaceField: landField,
-    environment: { ...terrain.objectEnvironment, latitude: center.lat },
+    environment: { ...terrain.objectEnvironment, latitude: regionCenter.lat },
+    environmentAt: (x, z) => forestEnvironmentAt(terrain, x, z),
   });
   // 落點與建物/地被淘汰全部定案後才追加：只增加物理，不反向推移既有世界佈局。
   const trunkColliders = registerTreeTrunkColliders(items, blockers);
@@ -12531,6 +12618,8 @@ export async function buildBiomes(cfg, terrain, onProgress, { prepareEvidence = 
   group.userData.bandDryAt = ground.bandDryAt;
   group.userData.stats = {
     veg: placed,
+    canopyCandidates: canopy.rows.length,
+    canopyColliders: vegetationColliders,
     giantTrees,
     trunkColliders,
     megaliths: megalithsBuilt,

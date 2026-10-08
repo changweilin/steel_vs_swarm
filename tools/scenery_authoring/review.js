@@ -83,7 +83,31 @@ try {
   // The plain inspection material cannot execute the game's billboard vertex shader.
   setVisualPref('leafCard', 'off');
   const query = new URLSearchParams(location.search);
-  if (query.has('geology-variants')) {
+  if (query.has('natural-variants')) {
+    document.querySelector('h1').textContent = '自然物件：葉冠、山脊、碎石與蕈傘';
+    const items = [{ x: 3, y: 0, z: 4, s: 1, modelSeed: 42 }, { x: 30, y: 0, z: 12, s: 1, modelSeed: 42 }];
+    const ordered = buildVegMeshes('banyan', items, 'summer'), reversed = buildVegMeshes('banyan', items.slice().reverse(), 'summer');
+    for (let row = 0; row < ordered.length; row++) for (let i = 0; i < items.length; i++) {
+      const a = ordered[row].instanceColor.array.slice(i * 3, i * 3 + 3);
+      const b = reversed[row].instanceColor.array.slice((1 - i) * 3, (2 - i) * 3);
+      if (!a.every((n, k) => n === b[k])) throw Error('Instance colour depends on list order');
+    }
+    for (const mesh of [...ordered, ...reversed]) disposeTree(mesh);
+    for (const seed of [3, 42, 107]) {
+      for (const type of ['banyan', 'dougfir', 'holmOak']) {
+        const root = new THREE.Group(); root.add(...buildVegMeshes(type, [{ x: 0, y: 0, z: 0, s: 1, modelSeed: seed }], 'summer'));
+        render(root, `natural/${type}/${seed}`, `${type} · seed ${seed}`);
+      }
+      render(environmentModel(environmentParts('gianttree', { seed })), `natural/gianttree/${seed}`, `巨木 · seed ${seed}`);
+      const ridge = elongatedGeologyMesh('mountain', seed, { len: 120, depth: 16, height: 14, bufferDepth: 30 });
+      render(environmentModel([{ g: ['mesh', ridge.meshData] }, { g: ['mesh', ridge.bufferMeshData], p: [0, 0, -23] }]),
+        `natural/range/${seed}`, `連續山峰 · seed ${seed}`);
+      render(colored(compileSceneParts(groundPlantParts('toadstool', seed))), `natural/mushrooms/${seed}`, `蕈叢 · seed ${seed}`);
+      render(colored(compileSceneParts(groundPlantParts('redcap', seed))), `natural/redcap/${seed}`, `紅蕈 · seed ${seed}`);
+      render(new THREE.Mesh(sceneryGeometry('stone', [1.4, .9, 1.2], seed),
+        new THREE.MeshStandardMaterial({ color: 0x8f8b80 })), `natural/stone/${seed}`, `碎石 · seed ${seed}`);
+    }
+  } else if (query.has('geology-variants')) {
     document.querySelector('h1').textContent = '地質與山峰：依岩性限制的隨機輪廓';
     for (const [type, families] of Object.entries(GEOLOGY_MORPHOLOGIES)) for (const family of families) {
       let seed = 0;

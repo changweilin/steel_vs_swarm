@@ -7,10 +7,10 @@ import { evidenceChecksum } from '../public/js/mapEvidence.js';
 
 const output = join(ROOT, 'public', 'assets', 'map-evidence');
 mkdirSync(output, { recursive: true });
-const selected = process.argv.find(a => a.startsWith('--venue='))?.slice(8);
-if (selected && !VENUES.some(v => v.id === selected)) throw new Error('Unknown venue: ' + selected);
+const selected = process.argv.find(a => a.startsWith('--venue='))?.slice(8).split(',');
+if (selected?.some(id => !VENUES.some(v => v.id === id))) throw new Error('Unknown venue selection');
 const entries = {};
-for (const venue of VENUES.filter(v => !selected || v.id === selected)) {
+for (const venue of VENUES.filter(v => !selected || selected.includes(v.id))) {
   const boxes = [false, 'SWARM', 'STEEL'].flatMap(mode => [TEAM.MIN, TEAM.MAX].map(n => battleBBox(venueConfig(venue, n, mode))));
   const bbox = {
     minLat: Math.min(...boxes.map(b => b.minLat)) - 0.002,

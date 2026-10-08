@@ -13,6 +13,8 @@
 import { MAPGEO, lanesFor, laneCountFor, laneSubsetFor, MOTHER_LANES, laneSeparationAudit, towerLayoutAudit } from '../public/js/data.js';
 import { VENUES, venueConfig, synthLane, VENUE_LANE_KEYS, venueLaneKey, venueLaneModes } from '../public/js/venues.js';
 import { mixedMapConfig, randomMapConfig } from '../public/js/mapgen.js';
+import { mixedRoadFrame } from '../public/js/mixedMap.js';
+import { MIXED_LAYERS } from '../public/js/mapLayerSources.js';
 import { readSrc } from './audit_src.mjs';
 
 let pass = 0, fail = 0;
@@ -79,7 +81,9 @@ console.log('Ⅰ 預設場地:同圖同母體');
 
 console.log('Ⅱ 擴充地圖:同種子同圖');
 {
-  const sources = VENUES.slice(0, 3).map((v) => ({ name: v.name, ll: v.ll, mix: v.mix, weight: 1 }));
+  const sourceVenues = ['berlin', 'roppongi', 'kyoto'].map(id => VENUES.find(v => v.id === id));
+  const sources = sourceVenues.map((v, i) => ({ ...v, role: MIXED_LAYERS[i], frame: mixedRoadFrame(v) || venueConfig(v, 5),
+    roadCount: 1, weight: 1, laneSource: 'osm-baked' }));
   const cfgs = [1, 2, 3, 4, 5].map((ts) => mixedMapConfig(sources, { teamSize: ts, seed: 12345 }));
   ok(cfgs.every((c) => J(c.bases) === J(cfgs[0].bases) && c.sizeM === cfgs[0].sizeM), 'mixed 同種子跨人數同圖');
   cfgs.forEach((c, i) => {

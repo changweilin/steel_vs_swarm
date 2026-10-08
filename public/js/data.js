@@ -103,6 +103,7 @@ export const laneCountFor = (teamSize, m) =>
  * Mother order is always [top, mid, bottom]; composite-arc side +1/0/-1 matches bake order.
  */
 export const MOTHER_LANES = 3;
+export const MAX_MAP_WATER_WET = .5;
 /** Active subset (mother indexes): L1 -> [1], L2 -> [0, 2], L3 -> all */
 export const laneSubsetFor = (L) => (L <= 1 ? [1] : L === 2 ? [0, 2] : [0, 1, 2]);
 /** Frame lane count: standard battlefield always takes the mother, story campaign follows lane count */
@@ -218,6 +219,16 @@ export const MAPGEO = {
   LANE_BALANCE_OV_MAX: 0.05,    // Pairwise lane overlap cap (ratio, e.g. 0.05 = 5%)
   CANDIDATE_BEARINGS: 12,
   MAX_CANDIDATES: 4,
+  CUSTOM_SEARCH: {
+    CENTER_OFFSET_FRAC: 0.5,
+    MAX_SNAP_FRAC: 0.2,
+    REQUEST_TIMEOUT_MS: 8000,
+    SOURCE_TIMEOUT_MS: 30000,
+    REQUEST_GAP_MS: 130,
+    OFFLINE_FAILURE_LIMIT: 3,
+    W_DISTANCE: .10, W_SEPARATION: .25, W_BALANCE: .15, W_DETOUR: .15,
+    W_PROXIMITY: .15, W_TRAVEL: .15, W_GRADE: .05,
+  },
   // Path tactics metrics (Diablo DRLG idea: corridors should bend and offer corners, never a see-through straight line) --
   // Sinuosity = path length / endpoint straight distance; corners = equidistant samples turning by >= TURN_MIN_DEG
   // (corners double as ambush points / cover anchors / sight blockers, shared by server obstacle placement and client route scoring).
@@ -343,12 +354,14 @@ export function battleRect(cfg) {
  * Elevation tiles / satellite imagery / Overpass fetches and the geocache key all consume this one copy, so rotating the map bearing
  * automatically widens the fetch extent to cover the rotated world rect (worst case 45 deg multiplies side by sqrt-2).
  * At rot = 0 it is the same box as the old scheme (difference is one projection round-trip float epsilon, far below the geoKey 1e-5 degree quantum).
+ * Mixed elevation and source verification use another source center without moving the
+ * battle frame; ordinary imagery and OSM queries retain the battle's own center.
  */
-export function battleBBox(cfg) {
+export function battleBBox(cfg, sourceCenter = cfg.center) {
   const r = battleRect(cfg);
   let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
   for (const [x, z] of [[r.minX, r.minZ], [r.maxX, r.minZ], [r.minX, r.maxZ], [r.maxX, r.maxZ]]) {
-    const [la, ln] = xzToLL(x, z, cfg.center);
+    const [la, ln] = xzToLL(x, z, sourceCenter);
     if (la < minLat) minLat = la;
     if (la > maxLat) maxLat = la;
     if (ln < minLng) minLng = ln;

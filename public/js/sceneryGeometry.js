@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { runtimeMeshDataGeometry, runtimePrimitiveGeometry } from './runtimePartModel.js';
 import { sceneryMeshData } from './sceneryAppearance.js';
 
-export const sceneryGeometry = (name, dimensions) => runtimeMeshDataGeometry(sceneryMeshData(name, dimensions));
+export const sceneryGeometry = (name, dimensions, seed) => runtimeMeshDataGeometry(sceneryMeshData(name, dimensions, seed));
 
 export function sceneryBoxGeometry(dimensions) {
   const geometry = runtimePrimitiveGeometry({ type: 'box', dimensions });

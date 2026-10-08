@@ -10,7 +10,8 @@
 // Usage: node tools/audit_world_text.mjs [--break-cache]
 import { readSrc, grabFn } from './audit_src.mjs';
 import { pickName, pickRef } from '../public/js/vernacular.js';
-import { VISUAL_KNOBS } from '../public/js/visualPrefs.js';
+import { VISUAL_KNOBS, VISUAL_PRESETS, visualPref, visualPreset, setVisualPref, setVisualPreset } from '../public/js/visualPrefs.js';
+import { HELP } from '../public/js/help.js';
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -19,7 +20,12 @@ const wtSrc = readSrc('public', 'js', 'worldtext.js');
 let bioSrc = readSrc('public', 'js', 'biomes.js');
 const querySrc = readSrc('public', 'js', 'osmQuery.js');
 const mainSrc = readSrc('public', 'js', 'main.js');
-const helpSrc = readSrc('public', 'js', 'help.js');
+let nameSource = grabFn(wtSrc, 'resolveName');
+if (process.argv.includes('--break-language')) {
+  const broken = nameSource.replace("lang = visualPref('worldTextLang')", "lang = 'local'");
+  if (broken === nameSource) throw new Error('--break-language did not alter the shipped resolver');
+  nameSource = broken;
+}
 if (process.argv.includes('--break-cache')) {
   const broken = bioSrc.replace(/geoKey\('osmF', OSM_FEATURE_QUERY_VERSION,/, "geoKey('osmF', 5,");
   if (broken === bioSrc) throw new Error('--break-cache 無法造出舊快取版本');
@@ -36,7 +42,8 @@ const STYLE_PX = Object.fromEntries(
 
 // Name resolution lives in vernacular.js pickName (zero dependencies; directly imported).
 // worldtext.resolveName wraps pickName with UI language defaults.
-const MAX_CHARS = 14;
+const MAX_CHARS = Number(/\nconst MAX_CHARS = (\d+);/.exec(wtSrc)?.[1]);
+if (!(MAX_CHARS > 0)) throw new Error('Missing shipped sign-name length limit');
 const resolveName = (tags, lang) => pickName(tags, lang, MAX_CHARS);
 const resolveRef = pickRef;
 
@@ -142,11 +149,23 @@ console.log('\nⅢ 接線(biomes.js)');
 // ============ IV. Settings and Help UI ============
 console.log('\nⅣ 設定頁');
 {
-  ok(/d\.choices/.test(mainSrc) && /class="seg seg-sm"|'seg seg-sm'/.test(mainSrc),
-    '互斥選項渲染成分段按鈕(§2.1「一組互斥選項」的統一樣式)');
-  ok(!/worldTextLang/.test(bare(mainSrc)),
-    'main.js 沒有把語言鍵寫死(控件型別由 choices 這一欄推導)');
-  ok(/世界文字/.test(helpSrc), '說明講得到世界文字語言這一項');
+  const settings = grabFn(mainSrc, 'renderVisualSettings');
+  ok(/VISUAL_PRESETS\.map/.test(settings) && /setVisualPreset\(p\.id\)/.test(settings)
+    && /aria-pressed/.test(settings) && !/VISUAL_KNOBS|setVisualPref\(/.test(settings),
+    'Settings use accessible catalogue presets without per-knob language controls');
+  ok(VISUAL_PRESETS.every(p => JSON.stringify(HELP).includes(p.label)),
+    'Help describes every selectable visual preset');
+  const resolveDefaultName = new Function('pickName', 'visualPref', 'MAX_CHARS', `${nameSource}\nreturn resolveName;`)(pickName, visualPref, MAX_CHARS);
+  const savedLanguage = visualPref('worldTextLang'), savedStyle = visualPreset().id;
+  const tags = { name: 'Local name', 'name:zh-Hant': '當地名稱' };
+  try {
+    setVisualPref('worldTextLang', 'zh');
+    for (const preset of VISUAL_PRESETS) {
+      setVisualPreset(preset.id);
+      ok(visualPref('worldTextLang') === 'zh' && resolveDefaultName(tags) === tags['name:zh-Hant'],
+        `${preset.id}: style changes preserve the signage language used by the shipped resolver`);
+    }
+  } finally { setVisualPreset(savedStyle); setVisualPref('worldTextLang', savedLanguage); }
 }
 
 

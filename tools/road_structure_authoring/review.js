@@ -10,6 +10,7 @@ import { SignSheet, applySignGlow } from '../../public/js/worldtext.js';
 import { trafficSignStyle } from '../../public/js/roadSigns.js';
 import { planLaneGuidance } from '../../public/js/laneGuidancePlan.js';
 import { buildLaneGuidance, laneGuidePlates } from '../../public/js/laneGuidance.js';
+import { inferSatelliteRoadLanes } from '../../public/js/roadLaneEvidence.js';
 
 const center = { lat: 25, lng: 121, rot: 0 };
 const way = (points, tags) => ({ tags: { highway: 'primary', lanes: '2', ...tags }, geometry: points.map(([x, z]) => {
@@ -20,6 +21,20 @@ const models = [], report = [], images = [], textures = {};
 const straight = Array.from({ length: 25 }, (_, i) => [i * 12 - 144, 0]);
 const ring = Array.from({ length: 33 }, (_, i) => [Math.cos(i / 32 * Math.PI * 2) * 39, Math.sin(i / 32 * Math.PI * 2) * 39]);
 const cases = [
+  { key: 'bend-angles', label: 'Continuous bends · 22.5, 45, 90, 135 and 165 degrees', height: () => 8,
+    roads: [22.5, 45, 90, 135, 165].map((angle, i) => {
+      const x = i * 110 - 220, theta = angle * Math.PI / 180;
+      return way([[x - 42, -60], [x, -60], [x + Math.cos(theta) * 42, -60 + Math.sin(theta) * 42]],
+        { highway: 'residential', lanes: '2' });
+    }) },
+  { key: 'bend-split', label: 'Split OSM bend · unequal widths share one curved seam', height: () => 8, roads: [
+    way([[-85, 0], [0, 0]], { lanes: '4' }), way([[0, 0], [0, 85]], { lanes: '2' }),
+  ] },
+  { key: 'bend-zigzag', label: 'Short alternating bends · continuous ribbon and paint', height: () => 8,
+    roads: [way(Array.from({ length: 17 }, (_, i) => [-96 + i * 12, i % 2 ? 6 : 0]), { highway: 'secondary' })] },
+  { key: 'satellite-widths', label: 'Missing lanes · widths inferred from raw synthetic image cross-sections', height: () => 8,
+    satellite: true, roads: [3.2, 6.4, 12.8].map((width, i) => way([[-80, i * 35], [80, i * 35]],
+      { highway: 'primary', lanes: null, oneway: 'yes' })) },
   { key: 'lane-guidance', label: 'Lane route and ordinary side road · fixed roadside furniture', height: () => 8,
     roads: [way([[-80, 0], [80, 0]], { name: '中山北路' }), way([[0, 0], [0, 45]], { highway: 'residential' })],
     signs: true, guidance: [[-80, 0], [80, 0]] },
@@ -56,6 +71,22 @@ const cases = [
   { key: 'bend-junction', label: 'Right-angle connection · fitted inside corner', height: () => 8, roads: [
     way([[-85, 0], [0, 0], [0, 85]], { highway: 'secondary', lanes: '2' }),
   ] },
+  { key: 'green-junction', label: 'Paved junction · vegetation does not repaint the connection', height: () => 8,
+    continuousPavement: true, sampleColor: () => [75, 130, 60], roads: [
+      way([[-85, 0], [0, 0], [85, 0]], { lanes: '2' }),
+      way([[0, 0], [0, 75]], { lanes: '2' }),
+    ] },
+  { key: 'wet-network', label: 'Paved network · wet appearance does not split connected roads', height: () => 6,
+    continuousPavement: true, mix: { wet: 1 }, roads: [
+      way([[-85, 0], [0, 0]], { lanes: '2' }),
+      way([[0, 0], [85, 0]], { lanes: '2' }),
+      way([[0, 0], [0, 75]], { lanes: '2' }),
+    ] },
+  { key: 'link-junction', label: 'Connecting roads · junction retains the approach colour', height: () => 8,
+    continuousPavement: true, roads: [
+      way([[-85, 0], [0, 0], [85, 0]], { highway: 'primary_link', lanes: '2' }),
+      way([[0, 0], [0, 75]], { highway: 'primary_link', lanes: '2' }),
+    ] },
   { key: 'local-guide-signs', label: 'OSM labels · street, destination, attraction and civic signs', height: () => 8, roads: [
     way([[-120, 0], [120, 0]], { highway: 'secondary', lanes: '2', name: '明治通り', maxspeed: '40',
       destination: '新宿;原宿', 'destination:ref': '305' }),
@@ -81,6 +112,9 @@ const cases = [
   { key: 'crossing', label: 'Level crossing · raised gate and flush roadway', height: () => 8, roads: [way([[-75, 0], [75, 0]], { highway: 'secondary' })], crossing: true },
   { key: 'military-platform', label: 'Military platform · graded access, cut and fill', height: (x, z) => 60 + x * .14 + z * .08,
     roads: [way([[-240, 0], [240, 0]], { highway: 'secondary' })], platform: true },
+  { key: 'platform-crossroads', label: 'Base platform · off-center roads and paint remain above the slab', height: () => 12,
+    roads: [way([[-150, 18], [150, 18]], { highway: 'secondary' }),
+      way([[-16, -150], [-16, 150]], { highway: 'secondary', lanes: '4' })], platform: true },
 ];
 
 function exportParts(root, prefix) {
@@ -153,8 +187,17 @@ try {
   for (const fixture of cases) {
     const root = new THREE.Group(), terrain = { minX: -350, maxX: 350, minZ: -350, maxZ: 350,
       worldW: 700, worldH: 700, heightAt: fixture.height, natureAt: fixture.height,
-      sampleColor: () => [110, 110, 110], envCodeAt: () => 0, waterY: null,
+      sampleColor: fixture.sampleColor || (() => [110, 110, 110]), envCodeAt: () => 0, waterY: null,
       punchPortalHoles: () => ({ rims: [], touched: [] }) };
+    if (fixture.satellite) {
+      fixture.roads = await inferSatelliteRoadLanes(fixture.roads, p => llToXZ(p.lat, p.lon, center), async () => ({
+        pixelM: .4, sampleColor: (_x, z) => {
+          const row = Math.round(z / 35), width = [3.2, 6.4, 12.8][row];
+          return width && Math.abs(z - row * 35) * MAPGEO.REAL_SCALE <= width / 2 ? [85, 85, 85] : [45, 135, 50];
+        },
+      }));
+      if (fixture.roads.some(road => road.tags['svs:lane-source'] !== 'satellite')) throw Error('Satellite width fixture was not observed');
+    }
     if (fixture.platform) {
       const N = 351, heights = new Float32Array(N * N);
       for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) heights[i * N + j] = fixture.height(j * 2 - 350, i * 2 - 350);
@@ -165,6 +208,7 @@ try {
         grade: Math.tan(MAPGEO.MAX_ROAD_GRADE_DEG * Math.PI / 180), lift: window.__roadLift });
       if (pad.approaches.length !== 2) throw Error('Platform approaches are incomplete');
       hf.carve([pad]); terrain.heightAt = hf.heightAt;
+      terrain.roadPads = [pad];
     }
     let run = null;
     if (fixture.bore) {
@@ -191,8 +235,13 @@ try {
       for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) heights[i * N + j] = fixture.height(j * 2 - 350, i * 2 - 350);
       terrain.heightAt = window.__carveRoadFixture({ ...terrain, N, heights }, carveRuns);
     }
-    const result = fixture.roads.length ? buildRoads(root, fixture.roads, terrain, center, null, mulberry32(781), 'summer')
+    const result = fixture.roads.length ? buildRoads(root, fixture.roads, terrain, center, fixture.mix || null, mulberry32(781), 'summer')
       : { decks: [], tunnels: [], cols: [], gradeRejected: 0 };
+    if (fixture.continuousPavement) {
+      const surfaces = root.children.filter(node => node.isMesh && node.geometry.attributes.uv
+        && node.geometry.attributes.color && node.material.polygonOffsetFactor === -2);
+      if (surfaces.length !== 1) throw Error(`${fixture.key}: disconnected pavement materials (${surfaces.length})`);
+    }
     if (fixture.signs) {
       const pois = (fixture.targets || []).map(p => { const [lat, lon] = xzToLL(p.x, p.z, center); return { lat, lng: lon, tags: p.tags }; });
       buildWorldSigns({ group: root, terrain, center, portals: [], signSpots: [], generic: [], pois,
@@ -247,6 +296,10 @@ try {
       }
     }
     let steps = 0, maxStep = 0;
+    root.updateMatrixWorld(true);
+    const roadMeshes = root.children.filter(node => node.userData.roadSurface);
+    const roadRay = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0));
+    const checkPavement = fixture.key.startsWith('bend-') || fixture.platform;
     const routes = run ? [run.pts] : fixture.roads.map(w =>
       w.geometry.map(p => llToXZ(p.lat, p.lon, center)));
     // Probe the production standing query in both directions at sub-step spacing.
@@ -262,6 +315,17 @@ try {
         const a = pts[i - 1], b = pts[i], count = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / .35);
         for (let k = 1; k <= count; k++) {
           const x = a[0] + (b[0] - a[0]) * k / count, z = a[1] + (b[1] - a[1]) * k / count;
+          if (checkPavement) {
+            // Float32 end caps may round across the exact double-precision endpoint.
+            const inset = i === pts.length - 1 && k === count ? .002 / Math.hypot(b[0] - a[0], b[1] - a[1]) : 0;
+            roadRay.ray.origin.set(x - (b[0] - a[0]) * inset, 1000, z - (b[1] - a[1]) * inset);
+            const hit = roadRay.intersectObjects(roadMeshes)[0];
+            if (!hit) throw Error(`${fixture.key}: pavement gap at ${x},${z}`);
+            for (const pad of terrain.roadPads || []) {
+              if (Math.abs(x - pad.cx) < pad.hw - 1 && Math.abs(z - pad.cz) < pad.hd - 1
+                && hit.point.y < pad.y + .025) throw Error(`${fixture.key}: platform hides road at ${x},${z}`);
+            }
+          }
           const next = surface(x, z, y);
           if (!Number.isFinite(next)) throw Error(`${fixture.key}: non-finite standing surface`);
           maxStep = Math.max(maxStep, Math.abs(next - y));

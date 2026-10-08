@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Test fixtures and captures must preserve LF line endings across platforms
+test/fixtures/** text eol=lf

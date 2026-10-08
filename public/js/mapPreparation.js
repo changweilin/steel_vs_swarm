@@ -5,6 +5,12 @@ import { projectAreaRecord, catalogAreas, subdivideLargeZones } from './osmAreas
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
 import { MAP_EVIDENCE, validateEvidence } from './mapEvidence.js';
 import { MAP_EVIDENCE_COPY } from './help.js';
+import { mapSourceKey } from './mapLayerSources.js';
+import { isRandomMap } from './randomMapRules.js';
+import { randomMapSources } from './randomMapSources.js';
+import { makeTerrainAssessment, validTerrainAssessment, laneFingerprint } from './roadEvidence.js';
+import { MAP_RULE_TEXT } from './mapRulesContent.js';
+import { requiresRoadTerrain } from './mapRules.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
 const _prepCache = new Map();
@@ -18,7 +24,9 @@ export function mapPrepKey(cfg) {
   const rot = Math.round((c.rot || 0) * 1e4) / 1e4;
   const size = Math.round(cfg.sizeM || 0);
   const lanes = cfg.lanes?.length || 0;
-  return `${lat},${lng},${rot},${size},${lanes}`;
+  const sourceKey = mapSourceKey(cfg);
+  return `${lat},${lng},${rot},${size},${lanes}` + (sourceKey ? `|${sourceKey}` : '')
+    + '|' + JSON.stringify([(cfg.motherLanes || cfg.lanes || []).map(laneFingerprint), cfg.mapRuleVersion || 0, cfg.roadMode]);
 }
 
 function prepGeoKey(cfg, key) {
@@ -81,6 +89,8 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
   const key = mapPrepKey(cfg);
   if (key && _prepCache.has(key)) {
     const pack = _prepCache.get(key);
+    if (pack.failed && requiresRoadTerrain(cfg)) cfg.roadTerrain = null;
+    if (pack.roadTerrain) cfg.roadTerrain = structuredClone(pack.roadTerrain);
     cfg.mapEvidence = pack.failed ? null : { version: pack.version, checksum: pack.checksum, complete: pack.complete,
       priorDigest: pack.priorDigest };
     await onProgress(MAP_EVIDENCE_COPY.analyzing);
@@ -91,6 +101,8 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
     task.listeners.add(onProgress);
     try {
       const pack = await task.promise;
+      if (pack.failed && requiresRoadTerrain(cfg)) cfg.roadTerrain = null;
+      if (pack.roadTerrain) cfg.roadTerrain = structuredClone(pack.roadTerrain);
       cfg.mapEvidence = pack.failed ? null : { version: pack.version, checksum: pack.checksum, complete: pack.complete,
         priorDigest: pack.priorDigest };
       return pack;
@@ -111,9 +123,11 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
       if (key) {
         try {
           const cached = await geoGet(prepGeoKey(cfg, key));
-          if (cached && !cached.failed && validateEvidence(cached)) {
+          if (cached && !cached.failed && validateEvidence(cached)
+            && (!requiresRoadTerrain(cfg) || validTerrainAssessment({ ...cfg, roadTerrain: cached.roadTerrain }))) {
             _prepCache.set(key, cached);
             addMark(key);
+            if (cached.roadTerrain) cfg.roadTerrain = structuredClone(cached.roadTerrain);
             cfg.mapEvidence = { version: cached.version, checksum: cached.checksum, complete: cached.complete,
               priorDigest: cached.priorDigest };
             await notify(MAP_EVIDENCE_COPY.analyzing);
@@ -124,14 +138,21 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
 
       await notify(MAP_EVIDENCE_COPY.preparing);
       const [terrain, [features, roads]] = await Promise.all([
-        buildTerrain(cfg, (f, label) => notify(label), { sourceOnly: true }), warmOsm(battleBBox(cfg)),
+        buildTerrain(cfg, (f, label) => notify(label), { sourceOnly: true }),
+        isRandomMap(cfg) ? randomMapSources(cfg) : warmOsm(battleBBox(cfg)),
       ]);
+      if (requiresRoadTerrain(cfg)) {
+        if (!terrain.sourceQuality?.elevationComplete) throw new Error(MAP_RULE_TEXT.terrain);
+        cfg.roadTerrain = makeTerrainAssessment(cfg, terrain.elevationAt);
+        if (!validTerrainAssessment(cfg)) throw new Error(MAP_RULE_TEXT.terrain);
+      }
       await notify(MAP_EVIDENCE_COPY.analyzing);
       const projected = features?.areas?.map(a => projectAreaRecord(a, llToWorld, cfg.center)).filter(Boolean) || [];
       const areas = features == null ? null : catalogAreas(subdivideLargeZones(catalogAreas(projected).areas, roads, {
         toWorld: (lat, lon) => llToWorld(lat, lon, cfg.center),
       })).areas;
       const pack = await prepareMapEvidence(cfg, terrain, areas);
+      if (cfg.roadTerrain) pack.roadTerrain = structuredClone(cfg.roadTerrain);
       cfg.mapEvidence = { version: pack.version, checksum: pack.checksum, complete: pack.complete,
         priorDigest: pack.priorDigest };
       if (key) _prepCache.set(key, pack);
@@ -142,6 +163,7 @@ export async function prepareMapCreation(cfg, onProgress = () => {}) {
       return pack;
     } catch (err) {
       console.warn('Map evidence preparation degraded:', err);
+      if (requiresRoadTerrain(cfg)) cfg.roadTerrain = null;
       cfg.mapEvidence = null;
       const degraded = { version: MAP_EVIDENCE.VERSION, checksum: 0, complete: false, priorDigest: null, failed: true };
       // Session-remember the failure: re-selecting an unchanged map must not refetch everything.
