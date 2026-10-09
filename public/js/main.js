@@ -1871,6 +1871,9 @@ function charAbilityRow(id, slot, key) {
   if (A.regen) bits.push(`回復速度 ${tri((l) => a(l).regen, 1)}×`);
   if (A.revive) bits.push(`原地復活 ${tri((l) => a(l).revive * 100)}% 血`);
   if (A.cleanse) bits.push('解除並免疫異常');
+  if (A.aura) bits.push('移動修復光環');
+  if (A.hot) bits.push(`光環修復 ${tri((l) => a(l).hot)}/s`);
+  if (A.healAmp) bits.push(`受療增幅 +${tri((l) => Math.round(a(l).healAmp * 100))}%`);
   if (B.alphaX > 1) bits.push(`破隱爆發 ${tri((l) => bst(l).alphaX, 2)}×`
     + `<span class="cd-boost">(${SELF_ATK.ALPHA_S}s)</span>`);
   if (A.spRestore) bits.push(`充盈磁力 ${tri((l) => a(l).spRestore)}`);

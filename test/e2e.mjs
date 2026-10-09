@@ -1170,17 +1170,17 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     //    heroKamikaze / heroDecoy / heroHyper entries no longer exist (sim.js keeps a named retirement record).
     //    The only spawn point for all three carriers = _launchAtkCarrier, covered by 1-4 above.
 
-    // 6: unconverted roles stay instant (no carrier); heal = base value plus the ultimate-retirement compensation.
+    // 6: unconverted roles stay instant (no carrier); damage buff = base value plus the ultimate-retirement compensation.
     const s6 = new BattleSim(fakeBattleConfig(1));
     const h6 = s6.addHero('SWARM', 'uc_i', 's11');
-    h6.mp = 999; h6.abil.atk = 1; h6.hp = 50;
+    h6.mp = 999; h6.abil.atk = 1;
     s6.heroCast('uc_i', 'atk');
     const A6 = heroAbility('s11', 'atk', 1);
     const B6 = selfAtkBoost('s11', 1, h6.abil);
     assert(!A6.carrier && !A6.support, 's11 為本體施放攻招(非載具且無輔助機隊)');
-    assert(B6.heal > 0, `s11 領到機種絕招退場的補償(+${Math.round(B6.heal)} 治療)`);
-    assert(Math.abs(h6.hp - Math.min(h6.maxHp, 50 + A6.heal + B6.heal)) < 1,
-      `s11 本體自補立即生效 = 原值 ${A6.heal} + 補償 ${Math.round(B6.heal)}(cd ${A6.cd}s 不變)`);
+    assert(B6.dmgMul > 0, `s11 領到機種絕招退場的補償(+${(B6.dmgMul * 100).toFixed(1)}% 傷害加成)`);
+    assert(h6.mods.some((m) => m.k === 'dmg' && Math.abs(m.m - (A6.mul.dmg + B6.dmgMul)) < 0.01),
+      `s11 本體增益立即生效 = 原值 ${A6.mul.dmg} + 補償 ${B6.dmgMul.toFixed(3)}(cd ${A6.cd}s 不變)`);
   }
 
   log('— sim/data:清除通用輔助機隊無殘留 + 本體直接施放—');

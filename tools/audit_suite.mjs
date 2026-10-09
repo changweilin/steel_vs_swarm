@@ -73,6 +73,7 @@ const AUDIT_SCRIPTS = [
   'tools/audit_hex_stats.mjs',
   'tools/audit_climb.mjs',
   'tools/audit_cc_flash.mjs',
+  'tools/audit_heal_archetypes.mjs',
   'tools/audit_flight_power.mjs',
   'tools/audit_slope_move.mjs',
 

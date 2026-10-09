@@ -2435,6 +2435,24 @@ export class BattleSim {
     }
   }
 
+  /** Purge all crowd control debuffs, DoT effects, and elemental buildups (single seam). */
+  _cleanseHero(a) {
+    if (!a) return;
+    for (const b of this._bodies(a)) {
+      b.stunUntil = 0;
+      b.slowUntil = 0;
+      b.confUntil = 0;
+      b.empUntil = 0;
+      b.bleed = null;
+      b._elemBuildup = null;
+      b._elemLastHit = null;
+      b._psnStacks = 0;
+      b._sonicStacks = 0;
+      b._staggerStacks = 0;
+    }
+    this.events.push({ e: 'cleanse', pid: a.pid, side: a.side, x: a.x, z: a.z });
+  }
+
   /** 詞綴強化 × 招式增益乘數(dmg/reload/dmgTaken/bounty;過期即清,全部伺服器結算) */
   _buffMul(h, key) {
     let m = 1;
@@ -4095,16 +4113,46 @@ export class BattleSim {
         }
       }
     } else if (A.fx === 'heal') {
-      // 「特殊招式」是裝甲(第二層 HP)在主堡以外唯一的回復手段(小隊三架一起回)。
-      // frac = 載具分批份額(heal 量與護盾補量等比;瞬發 frac = 1 逐位元同舊制)
       const targets = A.target === 'team' ? allies(A.r || 0) : [h];
       const healAmt = A.heal + B.heal;   // 補償增額(s11「大修」;治療 X 點 = 抵銷 X 點傷害)
-      for (const a of targets) {
-        for (const b of this._bodies(a)) {
-          if (b.dead) continue;
-          this._healBody(b, healAmt * frac, 'def');
-          if (A.sp) b.sp = Math.min(b.maxSp, b.sp + b.maxSp * frac);
+      if (healAmt > 0) {
+        for (const a of targets) {
+          for (const b of this._bodies(a)) {
+            if (b.dead) continue;
+            this._healBody(b, healAmt * frac, 'def');
+            if (A.sp && !A.aura) b.sp = Math.min(b.maxSp, b.sp + b.maxSp * frac);
+          }
         }
+      }
+      if (A.target === 'team' && (A.r || 0) > 0) {
+        this.events.push({ e: 'heal_aoe', x, z, r: A.r, side: h.side, pid: h.pid });
+      }
+      for (const a of targets) {
+        if (A.cleanse && once) this._cleanseHero(a);
+        const dur = (A.dur || 0) * frac;
+        if (dur > 0) {
+          if (A.ccImm || (A.cleanse && !A.aura && A.id === 'def')) {
+            a.mods.push({ k: 'ccImm', m: 1, until: this.t + dur });
+          }
+          if (A.healAmp > 0) {
+            a.mods.push({ k: 'healAmp', m: mf(1 + A.healAmp), until: this.t + dur });
+          }
+          if (A.regen > 0) {
+            a.mods.push({ k: 'regen', m: mf(A.regen), until: this.t + dur });
+          }
+        }
+      }
+      if (A.aura && once) {
+        const dur = (A.dur || 6) * frac;
+        h.healAura = {
+          until: this.t + dur,
+          r: A.r || 28,
+          hps: (A.hot || 35) * frac,
+          spHps: (A.spRestore ? (A.spRestore / dur) : (A.sp ? 15 : 0)) * frac,
+          side: h.side,
+          cleanse: !!A.cleanse,
+        };
+        this.events.push({ e: 'heal_aura_start', pid: h.pid, side: h.side, x: h.x, z: h.z, r: A.r || 28, dur });
       }
     } else if (A.fx === 'strike') {
       const nStrike = nImp ?? A.count;
@@ -4181,9 +4229,7 @@ export class BattleSim {
         if (A.regen > 0) a.mods.push({ k: 'regen', m: mf(A.regen), until: this.t + A.dur });
         if (A.add?.fx === 'evade') a.mods.push({ k: 'evade', m: vf(A.add.evade || 0), until: this.t + A.dur });
         if (A.cleanse) {
-          // 解除既有異常 + 期間免疫(`ccImm` 由 _applyCC / _applyHitEmp / emp 分支同判)。
-          // 二元狀態沒有「一半」⇒ 只要還有一架輔助機在線就是整份(同 vision;見 ATK_SUPPORT)。
-          if (once) { a.stunUntil = 0; a.slowUntil = 0; a.confUntil = 0; a.empUntil = 0; a.bleed = null; a._elemBuildup = null; a._elemLastHit = null; }
+          if (once) this._cleanseHero(a);
           a.mods.push({ k: 'ccImm', m: 1, until: this.t + A.dur });
         }
       }
@@ -4523,20 +4569,27 @@ export class BattleSim {
     if (A.fx === 'buff' && A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
 
     // 防守招式核心機制：磁力回補、受擊回充、護盾強化、面積擴大、護盾衝撞、大跳躍次數
-    if (A.spRestore && once) {
-      for (const b of this._bodies(h)) {
-        if (!b.dead) b.sp = Math.min(b.maxSp, (b.sp || 0) + A.spRestore * frac);
+    const defTargets = A.target === 'team' ? allies(A.r || 0) : [h];
+    if (A.spRestore && once && !A.aura) {
+      for (const a of defTargets) {
+        for (const b of this._bodies(a)) {
+          if (!b.dead) b.sp = Math.min(b.maxSp, (b.sp || 0) + A.spRestore * frac);
+        }
       }
     }
     if (A.spRegenHit) {
       const dur = (A.dur || 8) * frac;
-      for (const b of this._bodies(h)) {
-        b.spRegenHitUntil = Math.max(b.spRegenHitUntil || 0, this.t + dur);
+      for (const a of defTargets) {
+        for (const b of this._bodies(a)) {
+          b.spRegenHitUntil = Math.max(b.spRegenHitUntil || 0, this.t + dur);
+        }
       }
     }
     if (A.shieldDefBoost) {
       const dur = (A.dur || 8) * frac;
-      h.shieldDefBoostUntil = Math.max(h.shieldDefBoostUntil || 0, this.t + dur);
+      for (const a of defTargets) {
+        a.shieldDefBoostUntil = Math.max(a.shieldDefBoostUntil || 0, this.t + dur);
+      }
     }
     if (A.shieldExpand) {
       const dur = (A.dur || 8) * frac;
@@ -4553,6 +4606,32 @@ export class BattleSim {
   }
 
   // ---------- 新戰鬥技能 Tick 機制 ----------
+  _tickHealAuras(dt) {
+    for (const h of this.heroes.values()) {
+      if (!h.healAura) continue;
+      if (h.dead || this.t >= h.healAura.until) {
+        this.events.push({ e: 'heal_aura_end', pid: h.pid, side: h.side });
+        delete h.healAura;
+        continue;
+      }
+      const au = h.healAura;
+      const targets = [...this.heroes.values(), ...this.ents.values()];
+      for (const e of targets) {
+        if (e.side !== au.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        if (dist2d(h.x, h.z, e.x, e.z) <= au.r + (e.r || 0)) {
+          for (const b of this._bodies(e)) {
+            if (b.dead) continue;
+            if (au.hps > 0) this._healBody(b, au.hps * dt, 'aura');
+            if (au.spHps > 0 && b.sp < b.maxSp) {
+              b.sp = Math.min(b.maxSp, b.sp + au.spHps * dt);
+            }
+          }
+          if (au.cleanse && e.hero) this._cleanseHero(e);
+        }
+      }
+    }
+  }
+
   _tickStorms(dt) {
     for (const h of this.heroes.values()) {
       if (!h.storm) continue;
@@ -6482,9 +6561,10 @@ export class BattleSim {
     const boss = b.sq?.boss;
     const f = boss ? bossHealF(src) : 1;
     if (!(f > 0)) return 0;
+    const amp = b.hero ? this._buffMul(b, 'healAmp') : 1;
     const cap = b.maxHp * (boss ? bossSegCapF(b.sq.bossSeg) : 1);
     const before = b.hp;
-    b.hp = Math.min(cap, b.hp + amt * f);
+    b.hp = Math.min(cap, b.hp + amt * f * amp);
     if (b.hp > before) delete b.lightningScorch;
     return Math.max(0, b.hp - before);
   }
@@ -7025,6 +7105,7 @@ export class BattleSim {
     this._tickHazards(dt);
     this._tickAirdrops(dt);
     this._tickCamps(dt);
+    this._tickHealAuras(dt);
     this._tickStorms(dt);
     this._tickBoomerangs(dt);
     this._tickFirePillars(dt);
@@ -7150,7 +7231,8 @@ export class BattleSim {
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
     b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.blindUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
-    b._elemBuildup = null; b._elemLastHit = null;
+    b._elemBuildup = null; b._elemLastHit = null; b._psnStacks = 0; b._sonicStacks = 0; b._staggerStacks = 0;
+    delete b.healAura;
     b.freezeUntil = 0; b._lastFreezeAt = -WEATHER_FREEZE.COOLDOWN_S;
     b.supUntil = 0; b.supF = 0;   // 高地壓制:重生一律清乾淨(同上列控場狀態)
     if (soloWipe) {

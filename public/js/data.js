@@ -2142,7 +2142,7 @@ export const abilHoldSlot = (defending) => (defending ? 'def' : 'atk');
 // 兌現形式**逐 fx 分派**(`selfAtkBoost`),但一律走既有的 mods / heal 通道:
 //   ①有傷害窗的 buff 型(s04/t04/t06/m01)⇒ 把當量攤進 `dur` 秒的 `mul.dmg` 增額
 //     (Δ = 當量 ÷ (該角色重武器持續 DPS × dur);DPS 走 `weaponDps` 單一縫,MUST NOT 手抄彈匣週期);
-//   ②自補型(s11)⇒ 治療量增額 = 當量本身(治療 X 點抵銷 X 點傷害,等價可推導);
+//   ②自補型⇒ 治療量增額 = 當量本身(治療 X 點抵銷 X 點傷害,等價可推導);
 //   ③匿蹤(m08)⇒ 收斂成**破隱後 `ALPHA_S` 秒**的傷害倍率(使用者定案「破隱一秒內傷害增加」)——
 //     同一份預算換一個更短更硬的窗,倍率因此也是推導值,MUST NOT 手寫 3。
 //   ④重新設計的三台(s12 復甦 / t02 超載 / m04 偵搜)⇒ 效果本身就是補償,不再另加乘數
@@ -3705,6 +3705,8 @@ export function heroAbility(ch, slot, lvl = 1) {
     shieldDefBoost: a.shieldDefBoost ? t(a.shieldDefBoost) : 0,
     shieldExpand: !!a.shieldExpand, shieldBash: !!a.shieldBash,
     defJump: t(a.defJump ?? 0), intercept: !!a.intercept,
+    aura: !!a.aura, hot: t(a.hot ?? 0),
+    healAmp: t(a.healAmp ?? 0), ccImm: !!a.ccImm, stackable: !!a.stackable,
     mul: a.mul ? Object.fromEntries(Object.entries(a.mul).map(([k, v]) => [k, t(v)])) : null,
     vs: a.vs || {},
     vsSp: a.vsSp ?? 1, vsHp: a.vsHp ?? 1, spPierce: a.spPierce || 0,   // 見 heroWeapon 同欄註
@@ -3721,7 +3723,7 @@ export function heroAbility(ch, slot, lvl = 1) {
 // 攻招 = atk 槽、守招 = def 槽,判準是**施放條件**不是機制內容:
 //   護盾模式中施展(`abilHoldSlot(true)` → def)必為守招;
 //   無護盾施展(`abilHoldSlot(false)` → atk)必為攻招(伺服器 `heroCast` 放 atk 即解除 defending)。
-// 機制偏向不影響歸屬:團隊守護型 atk(s02/s06/s08/s11/s12/t10/m02/m03)與
+// 機制偏向不影響歸屬:團隊守護型 atk(s02/s06/s08/s12/t10/m02/m03)與
 // 盾擊/emp 型 def(s04/s10/t01/t03/t08/m05)照此定義分別歸攻招/守招。
 // 檔名格式 `{id}_skill_{atk|def}.png`(2026-09-21 使用者定案:兩張一律 skill 前綴,
 // 以攻守後綴區分;攻招圖 = atk 槽立繪、守招圖 = def 槽立繪),見 portraits.js CUTIN_ART。
@@ -4019,10 +4021,10 @@ export const CHARACTERS = {
     heavy: { name: '「神聖裁決」電磁獵魔長槍', rw: '軌道級重型電磁狙擊管・高能穿甲針・初速 2200m/s', type: 'rail', mv: 2200,
       dmg: [58, 87, 132], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
-    def: { name: '晨鐘・聖域庇護', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 85, 110], shieldExpand: true,
-      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '敲響克拉科夫破曉晨鐘：聖光洗禮修復機體裝甲與磁力，並在防守時大幅擴大護盾庇護範圍' },
-    atk: { name: '暮鐘・萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true,
-      cd: [85, 75, 65], mp: [90, 100, 110], desc: '敲響大教堂神聖祈願暮鐘：奇蹟光輝普照大地，全軍裝甲超大幅修復且能量護盾全數回滿' },
+    def: { name: '晨鐘・聖域庇護', fx: 'heal', target: 'team', aura: true, r: 28, heal: [60, 80, 100], hot: [30, 42, 55], sp: true, spRestore: [20, 30, 40], shieldExpand: true,
+      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '敲響克拉科夫破曉晨鐘展開聖域修復光環：聖光光環隨機體移動持續6秒，每秒持續修復半徑28m範圍內自身與友軍裝甲及磁力護盾，並大幅擴大護盾庇護範圍' },
+    atk: { name: '暮鐘・萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true, cleanse: true,
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '敲響大教堂神聖祈願暮鐘：奇蹟光輝普照大地，超廣域全軍裝甲超大幅修復、能量護盾全數回滿並滌除全隊異常' },
   },
   s09: {
     // 2026-08-02 機體混編:「袋鼠」機甲轉入蜂群(使用者定案 —— 袋鼠是澳洲的機體),
@@ -4081,8 +4083,8 @@ export const CHARACTERS = {
       vs: { flesh: 0.8, armor: 1.8, air: 1.2, building: 0.7 } },
     def: { name: '規訓・天平錶匣', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.55, 0.45, 0.35],
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '啟動格拉蘇蒂擒縱防衛力場：磁力瞬間充盈，時序律動使護盾承受傷害減免效果大幅躍升' },
-    atk: { name: '重調・時之逆轉', fx: 'heal', target: 'self', heal: [400, 550, 700], sp: true,
-      cd: [28, 24, 20], mp: [80, 90, 100], desc: '逆轉齒輪主發條時序：以精密機械大修校準自身機體，裝甲大幅回復且能量護盾瞬間滿載' },
+    atk: { name: '超頻・擒縱共振', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], reload: [0.75, 0.7, 0.65] },
+      dur: [8, 10, 12], cd: [28, 24, 20], mp: [80, 90, 100], desc: '解除齒輪主發條擒縱極限：精密機件超頻運轉，主武器傷害大幅躍升且裝填冷卻巨幅縮減' },
   },
   s12: {
     // 2026-08-03 台灣變形者定案的另一半:把「始祖鳥↔迅猛龍」讓給 s03,自己接下她那架鴨翼定翼機。
@@ -4213,8 +4215,8 @@ export const CHARACTERS = {
       dmg: [35, 52, 78], mag: 5, reload: 8, range: 320, pen: [18, 22, 26],
       vs: { flesh: 0.8, armor: 1.7, air: 0.6, building: 0.6 } },
     def: { name: '觀自在・應力回火', fx: 'heal', target: 'self', heal: [50, 70, 95], sp: true, spRestore: [30, 45, 60], spRegenHit: true,
-      charges: 2,
-      dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '全機應力掃描自檢回火（可使用2次）：釋放殘餘應力並重鑄疲勞關節，立即修復機體與磁力，時效內受擊仍可源源不絕回充磁力' },
+      charges: 2, stackable: true, cleanse: true, ccImm: true, healAmp: [0.35, 0.45, 0.55], regen: [1.5, 1.8, 2.2],
+      dur: [4, 4.5, 5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '全機應力掃描自檢回火（可儲存2次/狀態可疊加）：立即修復機體與磁力並滌除異常；時效內進入異常免疫狀態，受擊磁力回充不中斷，且大幅疊加強化受治癒效果與自然恢復速率' },
     atk: { name: '千機・重鋼天降', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] },
       add: { fx: 'clone', count: 2 },
       dur: [8, 10, 12], cd: [30, 26, 22], mp: [90, 100, 110], desc: '總設計師親率千機備用機天降：分化兩具仿生鶴戰力化身協同火擊，本尊若遇致命一擊則轉移至化身重生' },
@@ -4342,9 +4344,11 @@ export const CHARACTERS = {
     heavy: { name: '「星火標定」EM 電磁貫通砲', rw: '電磁超導標定穿甲砲・初速 2500m/s', type: 'rail', mv: 2500,
       dmg: [53, 82, 122], mag: 2, reload: 8, range: 340, emp: [0.8, 1.0, 1.2],
       vs: { flesh: 0.8, armor: 1.0, air: 1.6, building: 0.5 } },
-    def: { name: '同調・螢火護生', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60], shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '同調・螢火護生', fx: 'heal', target: 'team', r: 180, heal: [70, 100, 135], sp: true, spRestore: [35, 50, 70],
+      spRegenHit: true, shieldDefBoost: [0.55, 0.45, 0.35],
       charges: 2,
-      dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '將全身測向天線陣調諧至友軍頻段，點亮同調螢火護持生機（可使用2次）：直接充盈磁力，受擊仍可源源回充，並在防守時大幅提高護盾減傷' },
+      dur: [4, 4.5, 5], cd: [17, 15, 13], mp: [25, 30, 35],
+      desc: '將全身測向天線陣調諧至友軍頻段，點亮同調螢火建立全域生機護生鏈（可使用2次）：以頻譜同調建立全域生機護生鏈詮釋人道主義支援，為範圍內全體友軍修復裝甲並充盈磁力，時效內受擊回充不中斷且防守減傷大幅躍升' },
     atk: { name: '共振・萬象沉寂', fx: 'emp', r: 240, dur: [3, 4, 5], vision: [4, 5, 6],
       cd: [75, 65, 55], mp: [90, 100, 110], desc: '引動全域神經共振沉寂之潮：強制靜默所有被同調標記之敵機系統，並實時回傳其精準座標' },
   },
@@ -4425,10 +4429,10 @@ export const CHARACTERS = {
     heavy: { name: '「雪崩精準」雷導空投火箭', rw: '雷射制導高爆空投火箭・APKWS 縮裝・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
       dmg: [62, 95, 137], r: [11, 13, 15], mag: 3, reload: 12, range: 300, pen: 8,
       vs: { flesh: 1.1, armor: 1.2, air: 1.2, building: 1.0 } },
-    def: { name: '冰魄・靈泉玉澤', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 90, 120], cleanse: true,
-      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '召喚高山冰魄靈泉玉澤：瞬間滌除自身一切異常狀態，大幅修復機體裝甲並充盈磁力護盾' },
-    atk: { name: '極光・萬象淨化', fx: 'heal', target: 'team', r: 220, heal: [260, 350, 440], sp: true,
-      cd: [85, 75, 65], mp: [90, 100, 110], desc: '引動阿爾卑斯極光萬象淨化：以漫天極光洗禮戰場，全體友軍裝甲大幅回滿並同步充滿能量護盾' },
+    def: { name: '冰魄・靈泉玉澤', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 90, 120], cleanse: true, ccImm: true,
+      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '召喚高山冰魄靈泉玉澤：瞬間滌除自身一切異常狀態並獲得暫態免疫，大幅修復機體裝甲並充盈磁力護盾' },
+    atk: { name: '極光・萬象淨化', fx: 'heal', target: 'team', r: 220, heal: [260, 350, 440], sp: true, cleanse: true,
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '引動阿爾卑斯極光萬象淨化：以漫天極光洗禮戰場，全體友軍裝甲大幅回滿、同步充滿能量護盾並滌除全隊異常' },
   },
   m04: {
     // 2026-08-02 機體混編:改駕「鷹」擬態翼無人機 —— 她的檔案上寫著「雷達截面壓到鳥類等級」,

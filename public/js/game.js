@@ -5098,6 +5098,14 @@ export class BattleClient {
           this.hud.feed?.('🔥 你在火場中持續受創，快離開！');
         }
       }
+    } else if (ev.e === 'cleanse') {
+      if (ev.pid === this.youId) {
+        this.hud?.feed?.('✨ 異常狀態已全數滌除！');
+      }
+    } else if (ev.e === 'heal_aura_start') {
+      if (ev.pid === this.youId) {
+        this.hud?.feed?.('🌿 聖域修復光環展開，持續修復周圍機體！');
+      }
     } else if (ev.e === 'freeze') {
       if (ev.pid === this.youId) {
         this.trauma = Math.min(1, this.trauma + 0.25);
