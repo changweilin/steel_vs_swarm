@@ -3573,7 +3573,7 @@
         {
           "id": "silhouette",
           "route": "procedural",
-          "intent": "Serpentine eastern dragon with horned whiskered head, four tucked claws, pink blade feather wings and curved segmented tail; no rotors"
+          "intent": "Fantasy eastern dragon with a stable horned whiskered head leading a dense continuous serpentine cervical/body/tail chain; four tucked claws, pink feather wings and no rotors"
         },
         {
           "id": "articulation",
@@ -3608,15 +3608,17 @@
         "concealedOralCannon": true,
         "tailWidth": 0.46,
         "tailTip": [
-          -0.15,
-          0.25,
-          0.12
+          -0.08999999999999986,
+          0.1499999999999999,
+          0.07200000000000006
         ],
         "neckWidths": [
-          0.72,
-          0.65,
-          0.59,
-          0.53
+          0.48,
+          0.528,
+          0.576,
+          0.624,
+          0.6719999999999999,
+          0.72
         ],
         "skullSize": [
           0.95,
@@ -3674,57 +3676,75 @@
           ]
         ],
         [
-          "body_0",
+          "sensor",
           "tilt",
           [
             0,
-            0,
-            0.38
+            0.28500000000000003,
+            2.2199999999999998
           ]
         ],
         [
           "cervical_0",
-          "body_0",
-          [
-            0,
-            0.04,
-            0.4
-          ]
-        ],
-        [
-          "cervical_1",
-          "cervical_0",
-          [
-            0,
-            0.07,
-            0.43
-          ]
-        ],
-        [
-          "cervical_2",
-          "cervical_1",
-          [
-            0,
-            0.08,
-            0.4
-          ]
-        ],
-        [
-          "cervical_3",
-          "cervical_2",
-          [
-            0,
-            0.06,
-            0.35
-          ]
-        ],
-        [
           "sensor",
+          [
+            0,
+            -0.04750000000000001,
+            -0.30666666666666664
+          ]
+        ],
+        [
+          "cervical_1",
+          "cervical_0",
+          [
+            0,
+            -0.04750000000000001,
+            -0.30666666666666664
+          ]
+        ],
+        [
+          "cervical_2",
+          "cervical_1",
+          [
+            0,
+            -0.04750000000000001,
+            -0.30666666666666664
+          ]
+        ],
+        [
+          "cervical_3",
+          "cervical_2",
+          [
+            0,
+            -0.04750000000000001,
+            -0.30666666666666664
+          ]
+        ],
+        [
+          "cervical_4",
           "cervical_3",
           [
             0,
-            0.035,
-            0.26
+            -0.04750000000000001,
+            -0.30666666666666664
+          ]
+        ],
+        [
+          "cervical_5",
+          "cervical_4",
+          [
+            0,
+            -0.04750000000000001,
+            -0.30666666666666664
+          ]
+        ],
+        [
+          "body_0",
+          "cervical_5",
+          [
+            0,
+            0,
+            0
           ]
         ],
         [
@@ -3732,13 +3752,175 @@
           "body_0",
           [
             0,
-            -0.015,
-            -0.46
+            -0.008333333333333333,
+            -0.2555555555555556
+          ]
+        ],
+        [
+          "body_2",
+          "body_1",
+          [
+            0,
+            -0.008333333333333333,
+            -0.2555555555555556
+          ]
+        ],
+        [
+          "body_3",
+          "body_2",
+          [
+            0,
+            -0.008333333333333333,
+            -0.2555555555555556
+          ]
+        ],
+        [
+          "body_4",
+          "body_3",
+          [
+            0,
+            -0.008333333333333333,
+            -0.2555555555555556
+          ]
+        ],
+        [
+          "body_5",
+          "body_4",
+          [
+            0,
+            -0.008333333333333333,
+            -0.2555555555555556
+          ]
+        ],
+        [
+          "body_6",
+          "body_5",
+          [
+            0,
+            -0.008333333333333333,
+            -0.2555555555555556
+          ]
+        ],
+        [
+          "body_7",
+          "body_6",
+          [
+            0,
+            -0.008333333333333333,
+            -0.2555555555555556
+          ]
+        ],
+        [
+          "body_8",
+          "body_7",
+          [
+            0,
+            -0.008333333333333333,
+            -0.2555555555555556
+          ]
+        ],
+        [
+          "body_9",
+          "body_8",
+          [
+            0,
+            -0.008333333333333333,
+            -0.2555555555555556
+          ]
+        ],
+        [
+          "tail_0",
+          "body_9",
+          [
+            0,
+            -0.03,
+            -0.43
+          ]
+        ],
+        [
+          "tail_1",
+          "tail_0",
+          [
+            0.09000000000000001,
+            -0.12000000000000002,
+            -0.5400000000000001
+          ]
+        ],
+        [
+          "tail_2",
+          "tail_1",
+          [
+            0.14000000000000007,
+            -0.11000000000000001,
+            -0.5399999999999999
+          ]
+        ],
+        [
+          "tail_3",
+          "tail_2",
+          [
+            0.2399999999999999,
+            -0.08999999999999991,
+            -0.5399999999999998
+          ]
+        ],
+        [
+          "tail_4",
+          "tail_3",
+          [
+            0.30000000000000027,
+            0.010000000000000009,
+            -0.4600000000000002
+          ]
+        ],
+        [
+          "tail_5",
+          "tail_4",
+          [
+            0.32999999999999985,
+            0.05999999999999997,
+            -0.41999999999999993
+          ]
+        ],
+        [
+          "tail_6",
+          "tail_5",
+          [
+            0.23999999999999977,
+            0.17999999999999988,
+            -0.27
+          ]
+        ],
+        [
+          "tail_7",
+          "tail_6",
+          [
+            0.16000000000000014,
+            0.20999999999999977,
+            -0.20999999999999996
+          ]
+        ],
+        [
+          "tail_8",
+          "tail_7",
+          [
+            0,
+            0.2700000000000006,
+            -0.0900000000000003
+          ]
+        ],
+        [
+          "tail_9",
+          "tail_8",
+          [
+            -0.06000000000000005,
+            0.18999999999999984,
+            0.018000000000000238
           ]
         ],
         [
           "wing_r",
-          "body_1",
+          "body_2",
           [
             -0.46,
             0.12,
@@ -3756,7 +3938,7 @@
         ],
         [
           "wing_l",
-          "body_1",
+          "body_2",
           [
             0.46,
             0.12,
@@ -3770,96 +3952,6 @@
             0.987,
             0,
             -0.6580000000000001
-          ]
-        ],
-        [
-          "body_2",
-          "body_1",
-          [
-            0,
-            -0.015,
-            -0.46
-          ]
-        ],
-        [
-          "body_3",
-          "body_2",
-          [
-            0,
-            -0.015,
-            -0.46
-          ]
-        ],
-        [
-          "body_4",
-          "body_3",
-          [
-            0,
-            -0.015,
-            -0.46
-          ]
-        ],
-        [
-          "body_5",
-          "body_4",
-          [
-            0,
-            -0.015,
-            -0.46
-          ]
-        ],
-        [
-          "tail_0",
-          "body_5",
-          [
-            0,
-            -0.03,
-            -0.43
-          ]
-        ],
-        [
-          "tail_1",
-          "tail_0",
-          [
-            0.15,
-            -0.2,
-            -0.9
-          ]
-        ],
-        [
-          "tail_2",
-          "tail_1",
-          [
-            0.4,
-            -0.15,
-            -0.9
-          ]
-        ],
-        [
-          "tail_3",
-          "tail_2",
-          [
-            0.55,
-            0.1,
-            -0.7
-          ]
-        ],
-        [
-          "tail_4",
-          "tail_3",
-          [
-            0.4,
-            0.3,
-            -0.45
-          ]
-        ],
-        [
-          "tail_5",
-          "tail_4",
-          [
-            0,
-            0.45,
-            -0.15
           ]
         ],
         [
@@ -3882,7 +3974,7 @@
         ],
         [
           "fore_hip_r",
-          "body_1",
+          "body_2",
           [
             -0.42,
             -0.29,
@@ -3918,7 +4010,7 @@
         ],
         [
           "fore_hip_l",
-          "body_1",
+          "body_2",
           [
             0.42,
             -0.29,
@@ -3954,7 +4046,7 @@
         ],
         [
           "hind_hip_r",
-          "body_4",
+          "body_7",
           [
             -0.38,
             -0.27,
@@ -3990,7 +4082,7 @@
         ],
         [
           "hind_hip_l",
-          "body_4",
+          "body_7",
           [
             0.38,
             -0.27,
@@ -4164,7 +4256,11 @@
           "tail_2",
           "tail_3",
           "tail_4",
-          "tail_5"
+          "tail_5",
+          "tail_6",
+          "tail_7",
+          "tail_8",
+          "tail_9"
         ],
         "wpn": {
           "light": {
@@ -4188,7 +4284,9 @@
           "cervical_0",
           "cervical_1",
           "cervical_2",
-          "cervical_3"
+          "cervical_3",
+          "cervical_4",
+          "cervical_5"
         ],
         "flightLegs": [
           {
@@ -4234,31 +4332,46 @@
           "body_2",
           "body_3",
           "body_4",
-          "body_5"
+          "body_5",
+          "body_6",
+          "body_7",
+          "body_8",
+          "body_9"
         ],
         "axialWave": {
           "chain": [
-            "cervical_3",
-            "cervical_2",
-            "cervical_1",
             "cervical_0",
+            "cervical_1",
+            "cervical_2",
+            "cervical_3",
+            "cervical_4",
+            "cervical_5",
             "body_0",
             "body_1",
             "body_2",
             "body_3",
             "body_4",
             "body_5",
+            "body_6",
+            "body_7",
+            "body_8",
+            "body_9",
             "tail_0",
             "tail_1",
             "tail_2",
             "tail_3",
             "tail_4",
-            "tail_5"
+            "tail_5",
+            "tail_6",
+            "tail_7",
+            "tail_8",
+            "tail_9"
           ],
-          "amplitude": 0.075,
-          "frequency": 0.75,
-          "delay": 0.4,
-          "turn": 0.11
+          "amplitude": 0.09,
+          "frequency": 1,
+          "delay": 0.37699111843077515,
+          "turn": 0.11,
+          "stableHead": true
         }
       },
       "motion": {
@@ -4389,7 +4502,8 @@
       "decisions": [
         "Visual dimensions are estimates from a single illustration, not measured CAD.",
         "Prompt controls component counts and anatomical weapon sides; illustration controls shape, finish and pose.",
-        "Unseen joint backs and shield emitters are inferred mechanical design."
+        "Unseen joint backs and shield emitters are inferred mechanical design.",
+        "Head-first axial parenting keeps the head and neck connected while a travelling lateral wave bends the body; the visual carrier stays level and all gameplay anchors retain their existing authority."
       ]
     },
     "t09": {
@@ -5605,7 +5719,7 @@
         {
           "id": "silhouette",
           "route": "procedural",
-          "intent": "Four hoofed horse legs and knight upper torso without horse head; anatomical right sniper rifle and low twin dorsal rocket pods below the head, extending before launch beside the rider"
+          "intent": "Fantasy centaur with four hoofed horse legs, a cavalry-stabilized rider torso, a right-hand recurved bow and left-hand draw; low twin dorsal rocket pods retain their clearance"
         },
         {
           "id": "articulation",
@@ -5771,7 +5885,7 @@
           "hum_chest",
           [
             -0.95,
-            0.4,
+            0.7,
             0
           ]
         ],
@@ -5798,7 +5912,7 @@
           "hum_chest",
           [
             0.95,
-            0.4,
+            0.7,
             0
           ]
         ],
@@ -6023,13 +6137,40 @@
           "wrist_r",
           [
             0,
-            -0.23,
-            0.16
+            -0.05,
+            0
+          ]
+        ],
+        [
+          "bow_nock",
+          "gun",
+          [
+            0,
+            0,
+            -0.24
+          ]
+        ],
+        [
+          "bow_string_upper",
+          "gun",
+          [
+            0,
+            0.95,
+            0
+          ]
+        ],
+        [
+          "bow_string_lower",
+          "gun",
+          [
+            0,
+            -0.95,
+            0
           ]
         ],
         [
           "gun_recoil",
-          "gun",
+          "bow_nock",
           [
             0,
             0,
@@ -6042,7 +6183,7 @@
           [
             0,
             0,
-            1.8
+            1.55
           ]
         ],
         [
@@ -6151,14 +6292,15 @@
         ],
         "armBase": [
           {
-            "shX": -0.48,
-            "shZ": 0,
-            "elX": -1.09
+            "shX": -1.65,
+            "shZ": 0.12,
+            "elX": -0.1,
+            "shY": 0.7
           },
           {
-            "shX": -0.3,
-            "shZ": 0,
-            "elX": -0.7
+            "shX": -0.72,
+            "shZ": -0.48,
+            "elX": -0.88
           }
         ],
         "gunR": {
@@ -6274,7 +6416,8 @@
             "ref": "gun",
             "muzzle": "light_muzzle",
             "r": 0.075,
-            "aimJoint": "wrist_r"
+            "aimJoint": "wrist_r",
+            "alwaysForward": true
           },
           "heavy": {
             "nodes": [
@@ -6290,13 +6433,7 @@
           "fore": "unguligrade",
           "hind": "unguligrade"
         },
-        "heldWeapons": [
-          {
-            "node": "gun",
-            "hand": "wrist_r",
-            "staff": false
-          }
-        ],
+        "heldWeapons": [],
         "launcher": {
           "base": "launcher_base",
           "lift": "launcher_lift",
@@ -6305,6 +6442,26 @@
           "rest": 0.32,
           "clearance": 0.2,
           "rotateStart": 0.85
+        },
+        "archery": {
+          "bow": "gun",
+          "nock": "bow_nock",
+          "strings": [
+            "bow_string_upper",
+            "bow_string_lower"
+          ],
+          "shoulder": "shoulder_l",
+          "elbow": "elbow_l",
+          "hand": "wrist_l",
+          "halfHeight": 0.95,
+          "restDraw": 0.24,
+          "fullDraw": 0.88,
+          "arrowLength": 1.55,
+          "pole": [
+            1,
+            0.15,
+            -0.05
+          ]
         }
       },
       "motion": {
@@ -6334,7 +6491,7 @@
             "channel": "position",
             "axis": "z",
             "rest": 0,
-            "amplitude": -0.17
+            "amplitude": 0.13
           }
         ],
         "charge": [
@@ -6384,7 +6541,8 @@
         "Visual dimensions are estimates from a single illustration, not measured CAD.",
         "Prompt controls component counts and anatomical weapon sides; illustration controls shape, finish and pose.",
         "Unseen joint backs and shield emitters are inferred mechanical design.",
-        "The equine dorsal launcher extends before aiming; the raised firing path clears the rider instead of mounting on the human chest."
+        "The equine dorsal launcher extends before aiming; the raised firing path clears the rider instead of mounting on the human chest.",
+        "The recurved bow presents the existing light-fire event as archery; ammunition, projectile settlement and dorsal heavy-launcher authority remain unchanged."
       ]
     },
     "s07": {

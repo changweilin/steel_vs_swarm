@@ -7939,42 +7939,42 @@
             },
             "shoulder_l": {
               "rotation": [
-                -0.38,
+                -0.68,
                 0,
-                0.1
+                0.18
               ]
             },
             "elbow_l": {
               "rotation": [
-                -0.58,
+                -0.94,
                 0,
                 0
               ]
             },
             "shoulder_r": {
               "rotation": [
-                -0.38,
+                -0.68,
                 0,
-                -0.1
+                -0.18
               ]
             },
             "elbow_r": {
               "rotation": [
-                -0.58,
+                -0.94,
                 0,
                 0
               ]
             },
             "hunch": {
               "rotation": [
-                0.32,
+                0.58,
                 0,
                 0
               ]
             },
             "head": {
               "rotation": [
-                -0.25,
+                -0.58,
                 0,
                 0
               ]
@@ -8170,6 +8170,20 @@
                 -3.141592653589793,
                 0
               ]
+            },
+            "wrist_l": {
+              "rotation": [
+                -0.2,
+                0,
+                0
+              ]
+            },
+            "wrist_r": {
+              "rotation": [
+                -0.2,
+                0,
+                0
+              ]
             }
           },
           "rig": {}
@@ -8344,6 +8358,13 @@
                 0,
                 0
               ]
+            },
+            "hunch": {
+              "rotation": [
+                0,
+                0,
+                0
+              ]
             }
           },
           "rig": {
@@ -8361,7 +8382,9 @@
               "tail_2",
               "tail_3",
               "tail_4"
-            ]
+            ],
+            "predatory": null,
+            "tuckArms": false
           }
         }
       },
@@ -8417,13 +8440,14 @@
       },
       "decisions": [
         "Both endpoint poses use identical rigid geometry and named joints. Hidden bay geometry is an inferred mechanical design.",
-        "The explicit flying-squirrel exception exposes exactly four limb struts supporting the patagium; no extra legs or feathers."
+        "The explicit flying-squirrel exception exposes exactly four limb struts supporting the patagium; no extra legs or feathers.",
+        "The ground predator pose owns the hunch and both claw arms after generic gait and cast overlays; flight endpoints release that pose so the same four limbs can spread the patagium."
       ],
       "components": [
         {
           "id": "component_0",
           "route": "procedural",
-          "intent": "Deep-crouched wolf and fanged muzzle"
+          "intent": "Fantasy werewolf with an arched forward hunch, digitigrade crouch, fanged muzzle and both open claws held ready to rake; running preserves the grasping stance"
         },
         {
           "id": "component_1",
@@ -8469,12 +8493,12 @@
         "legR": "hip_r",
         "armL": "shoulder_l",
         "armR": "shoulder_r",
-        "armBase": -0.38,
+        "armBase": -0.68,
         "sway": 0.045,
         "hop": false,
         "knuckle": false,
         "tinyArms": false,
-        "tuckArms": false,
+        "tuckArms": true,
         "grounded": false,
         "legChainR": [
           {
@@ -8499,13 +8523,13 @@
         "armChainR": [
           {
             "g": "elbow_r",
-            "base": -0.58,
+            "base": -0.94,
             "k": -0.56,
             "d": 0.15
           },
           {
             "g": "wrist_r",
-            "base": 0,
+            "base": -0.2,
             "k": -0.26,
             "d": 0.55
           }
@@ -8533,13 +8557,13 @@
         "armChainL": [
           {
             "g": "elbow_l",
-            "base": -0.58,
+            "base": -0.94,
             "k": -0.56,
             "d": 0.15
           },
           {
             "g": "wrist_l",
-            "base": 0,
+            "base": -0.2,
             "k": -0.26,
             "d": 0.55
           }
@@ -8576,7 +8600,15 @@
         ],
         "tailAmp": 0.1,
         "waist": "waist",
-        "neck": "neck"
+        "neck": "neck",
+        "predatory": {
+          "hunch": "hunch",
+          "pitch": 0.58,
+          "shoulder": -0.68,
+          "elbow": -0.94,
+          "wrist": -0.2,
+          "splay": 0.18
+        }
       },
       "cavity": null,
       "motion": {

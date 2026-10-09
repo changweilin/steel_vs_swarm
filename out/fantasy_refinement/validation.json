@@ -1,0 +1,116 @@
+{
+  "assets": {
+    "m05": {
+      "contract": "tools/mech_authoring/morphers.json",
+      "blend": "out/morph_reference/m05/m05.blend",
+      "glb": "public/assets/models/reference/m05.glb",
+      "runtime": "public/js/forge/assets/m05.js",
+      "cycle": "out/fantasy_refinement/m05-cycle.png",
+      "hashes": {
+        "runtime": "21ef12be82759bf7b667da55730f31651c1cb943eeefd77de26d77a5560ddea2",
+        "blend": "169197332d7fee144cbc43f39337b0f18c1257e13c93acc3cee2db5fd7d01c9e",
+        "glb": "89ada2d2817f1b126540801a7de4fb8672dd283c83c27c70c31339803c747eef"
+      },
+      "measurements": {
+        "triangles": 16184,
+        "meshes": 131,
+        "joints": 66,
+        "source": {
+          "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
+          "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+          "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
+          "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
+          "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+          "sharedCatalog": "bc63d14dd236bc4cb59c289e7c6420f9ef4056ed29c63e2cf0d722d302679199"
+        }
+      },
+      "gates": {
+        "editableSource": "pass",
+        "independentGLB": "pass",
+        "runtime": "pass",
+        "resources": "pass",
+        "motion": "pass",
+        "cleanRebuild": "pass",
+        "visualInspection": "pass",
+        "userSignoff": "pending_user_review"
+      }
+    },
+    "s06": {
+      "contract": "tools/mech_authoring/assets.json",
+      "blend": "out/mech_reference/s06/s06.blend",
+      "glb": "public/assets/models/reference/s06.glb",
+      "runtime": "public/js/forge/assets/s06.js",
+      "cycle": "out/fantasy_refinement/s06-cycle.png",
+      "hashes": {
+        "runtime": "6a17c2922a1a83aa44846927b8c382d4796180abaab721ad328660937ae508a2",
+        "blend": "42c056c697abffcf5f51b17f6923e217148ffdbbb9e0a0464985a54350cec6a1",
+        "glb": "b7502d545811593a410cbc1531c7a3dee49441d1352fd32b804764d095f47090"
+      },
+      "measurements": {
+        "triangles": 14004,
+        "meshes": 112,
+        "joints": 51,
+        "source": {
+          "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+          "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+          "catalog": "bc63d14dd236bc4cb59c289e7c6420f9ef4056ed29c63e2cf0d722d302679199",
+          "image": "c306aa4c5a235e254fe1ae3946178b4d61441b627a686193250c5e29d5513e03"
+        }
+      },
+      "gates": {
+        "editableSource": "pass",
+        "independentGLB": "pass",
+        "runtime": "pass",
+        "resources": "pass",
+        "motion": "pass",
+        "cleanRebuild": "pass",
+        "visualInspection": "pass",
+        "userSignoff": "pending_user_review"
+      }
+    },
+    "t08": {
+      "contract": "tools/mech_authoring/assets.json",
+      "blend": "out/mech_reference/t08/t08.blend",
+      "glb": "public/assets/models/reference/t08.glb",
+      "runtime": "public/js/forge/assets/t08.js",
+      "cycle": "out/fantasy_refinement/t08-cycle.png",
+      "hashes": {
+        "runtime": "f4c9ba16de27825fcea3e03d3b0ceb8c1701c54d590381ad65c7943e1bea9ab6",
+        "blend": "37858d3590c9fa2a3349f8ea9b4bf30c7e5a65cae26ade38b30b3d001aa4b98b",
+        "glb": "74409214931e39824eae987cf7174a1fdd313a88c61efff771bb8653a7107956"
+      },
+      "measurements": {
+        "triangles": 17196,
+        "meshes": 123,
+        "joints": 61,
+        "source": {
+          "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+          "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+          "catalog": "bc63d14dd236bc4cb59c289e7c6420f9ef4056ed29c63e2cf0d722d302679199",
+          "image": "f046001a41666408caabe83923bcfd804416e0fd031db2e415ca2ca327014fa4"
+        }
+      },
+      "gates": {
+        "editableSource": "pass",
+        "independentGLB": "pass",
+        "runtime": "pass",
+        "resources": "pass",
+        "motion": "pass",
+        "cleanRebuild": "pass",
+        "visualInspection": "pass",
+        "userSignoff": "pending_user_review"
+      }
+    }
+  },
+  "evidence": {
+    "motion": "motion-validation.json",
+    "rebuild": "rebuild-validation.json",
+    "reference": "reference-audit/runtime-validation.json",
+    "morph": "../morph_reference/m05/runtime-validation.json",
+    "combat": "../combat_reference/runtime-validation.json"
+  },
+  "visualNotes": [
+    "Inspected fixed source multiviews, complete runtime cycles and the reversible werewolf flight endpoint.",
+    "The fixed centaur side authoring frame crops the arrow tip; the runtime cycle shows the complete bow and arrow."
+  ]
+}

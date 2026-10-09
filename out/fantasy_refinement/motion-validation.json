@@ -1,0 +1,127 @@
+{
+  "identities": {
+    "m05": "89ada2d2817f1b126540801a7de4fb8672dd283c83c27c70c31339803c747eef",
+    "s06": "b7502d545811593a410cbc1531c7a3dee49441d1352fd32b804764d095f47090",
+    "t08": "74409214931e39824eae987cf7174a1fdd313a88c61efff771bb8653a7107956"
+  },
+  "measurements": {
+    "runtime": {
+      "m05": [
+        {
+          "fps": 30,
+          "handStringGap": 0,
+          "headDrift": 0,
+          "clawPitch": -0.7049997551637677
+        },
+        {
+          "fps": 60,
+          "handStringGap": 0,
+          "headDrift": 0,
+          "clawPitch": -0.7049997551637677
+        },
+        {
+          "fps": 144,
+          "handStringGap": 0,
+          "headDrift": 0,
+          "clawPitch": -0.7049997551637677
+        }
+      ],
+      "s06": [
+        {
+          "fps": 30,
+          "handStringGap": 9.192921513844874e-16,
+          "headDrift": 0,
+          "clawPitch": 0
+        },
+        {
+          "fps": 60,
+          "handStringGap": 1.378047558473373e-15,
+          "headDrift": 0,
+          "clawPitch": 0
+        },
+        {
+          "fps": 144,
+          "handStringGap": 1.0817777879298014e-15,
+          "headDrift": 0,
+          "clawPitch": 0
+        }
+      ],
+      "t08": [
+        {
+          "fps": 30,
+          "handStringGap": 0,
+          "headDrift": 0,
+          "clawPitch": 0
+        },
+        {
+          "fps": 60,
+          "handStringGap": 0,
+          "headDrift": 0,
+          "clawPitch": 0
+        },
+        {
+          "fps": 144,
+          "handStringGap": 0,
+          "headDrift": 0,
+          "clawPitch": 0
+        }
+      ]
+    },
+    "exports": {
+      "m05": {
+        "clips": [
+          "flight_idle",
+          "shield_deploy",
+          "shield_retract",
+          "flight_shield_deploy",
+          "flight_shield_retract",
+          "idle",
+          "to_flight",
+          "to_ground",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "flight_light",
+          "flight_heavy",
+          "flight_skill",
+          "flight_ult"
+        ],
+        "headDrift": 0,
+        "handGap": 0,
+        "animatedTracks": 127
+      },
+      "s06": {
+        "clips": [
+          "idle",
+          "run",
+          "light",
+          "heavy",
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract"
+        ],
+        "headDrift": 0,
+        "handGap": 0.009326332086061751,
+        "animatedTracks": 306
+      },
+      "t08": {
+        "clips": [
+          "shield_deploy",
+          "shield_retract",
+          "skill",
+          "ult",
+          "idle",
+          "run",
+          "light",
+          "heavy"
+        ],
+        "headDrift": 0,
+        "handGap": 0,
+        "animatedTracks": 59
+      }
+    }
+  }
+}

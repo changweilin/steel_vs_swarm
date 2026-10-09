@@ -2,18 +2,18 @@
   "asset": "m05",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 18248,
-    "meshes": 145,
+    "triangles": 18512,
+    "meshes": 147,
     "joints": 81,
     "source": {
-      "contract": "fa78892af40ad0217318af92bc8898d2e8a594c23f10c2d81ca9a91919661c30",
-      "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
-      "catalog": "d4b2992d65cb32e056766118edf1a3dadfb55cfda52db2b35f01505224c5117a",
+      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
+      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
       "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
       "combat": "e2982b57af135c577a74355159096288e7ccdc8b85e5cb741cf9b934fc0d7b89",
-      "intent": "4c76ab0362639fae1609e7c0c7850ee7f995b556ddb089a7dc71689fafc56a99",
-      "sharedContract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
-      "sharedCatalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97"
+      "intent": "2e50daa0f2a9abddeae934d33384d2eea62eecec07a466ae51844c1c57852993",
+      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+      "sharedCatalog": "bc63d14dd236bc4cb59c289e7c6420f9ef4056ed29c63e2cf0d722d302679199"
     }
   },
   "clips": [
@@ -39,9 +39,9 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "f9908346c0465bf35ffaffb5883ee8915feb5768fc6ddd7f48bfa7b798eee59b",
-    "blend": "0809d0cc075b941065d247a69ba2b7a0a52bd44a8f6a061f3ba072ef18842c91",
-    "glb": "95e55a64e2c50f46373dea161b74802f9b845aa090916271af3a3a336e11566b"
+    "runtime": "8ae4a14a6d21a2e13887ccb6df3046c4f185c8bf86ee48e144bc2a2ac71c0fce",
+    "blend": "2a3b8ebc0f5836a4e56f7c5c43f8940696920fb0a970b90d1959876b9144338e",
+    "glb": "b64aae63da1347e9d7b0bff2bb55843801ed395a5d896d9ef1fd2111764a2c55"
   },
   "gates": {
     "structure": "pass",
@@ -56,6 +56,6 @@
   "reviewEvidence": {
     "runtime": "../runtime-validation.json",
     "source": "../source-validation.json",
-    "attachments": "../actions-4.png"
+    "attachments": "../actions-1.png"
   }
 }

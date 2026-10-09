@@ -200,9 +200,9 @@
     }
   },
   "t08": {
-    "blend": "fdee85770bb72b6f88ba4b2274cb07e8cb329e506a142d1fbd339f8f98c6198a",
-    "sourceMeshes": 357,
-    "bones": 51,
+    "blend": "37858d3590c9fa2a3349f8ea9b4bf30c7e5a65cae26ade38b30b3d001aa4b98b",
+    "sourceMeshes": 377,
+    "bones": 61,
     "editableClips": [
       "idle",
       "run",
@@ -294,9 +294,9 @@
     }
   },
   "s06": {
-    "blend": "638be6440aa499163dcb0f8753b9e91187f10d6dc71c35c9fb6af200fee33efa",
+    "blend": "42c056c697abffcf5f51b17f6923e217148ffdbbb9e0a0464985a54350cec6a1",
     "sourceMeshes": 291,
-    "bones": 48,
+    "bones": 51,
     "editableClips": [
       "idle",
       "run",
@@ -311,7 +311,7 @@
     "anatomy": {
       "articulation": {
         "waist": null,
-        "heldWeapons": 1
+        "heldWeapons": 0
       }
     }
   },

@@ -122,7 +122,11 @@ for id in ids:
         activate_clip(spec, 'run', 7)
         before = {name: bpy.data.objects[name].rotation_euler.x for name in ['shoulder_l', 'shoulder_r']}
         activate_clip(spec, 'run', 22)
-        assert all(abs(bpy.data.objects[name].rotation_euler.x - angle) > .15 for name, angle in before.items()), 'Frozen biped running arm'
+        if spec['rig'].get('predatory'):
+            assert all(bpy.data.objects[name].rotation_euler.x < -.5 for name in before), 'Predator loses claw-ready arms'
+            assert bpy.data.objects[spec['rig']['predatory']['hunch']].rotation_euler.x > .45, 'Predator loses its forward hunch'
+        else:
+            assert all(abs(bpy.data.objects[name].rotation_euler.x - angle) > .15 for name, angle in before.items()), 'Frozen biped running arm'
         for clip in ['light', 'heavy']:
             activate_clip(spec, clip, 16)
             for side in ['l', 'r']:
@@ -241,5 +245,8 @@ for id in ids:
     if outside:
         failures.append(id)
     print('MORPH_SOURCE ' + id + ' outside=' + str(len(outside)), flush=True)
+if args:
+    prior = output / 'source-validation.json'
+    results = (json.loads(prior.read_text()) if prior.exists() else {}) | results
 write_report(output / 'source-validation.json', results)
 assert not failures, 'Uncontained folded limbs: ' + ', '.join(failures)

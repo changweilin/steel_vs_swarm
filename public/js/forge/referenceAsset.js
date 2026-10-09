@@ -76,6 +76,12 @@ export function buildReferenceAsset(asset, spec) {
     root: nodeOf(leg.root), lift: nodeOf(leg.lift), chain: rig[leg.chain] }));
   if (rig.tentacleWaves) rig.tentacleWaves = rig.tentacleWaves.map(wave => ({ ...wave, chain: wave.chain.map(nodeOf) }));
   if (rig.axialWave) rig.axialWave = { ...rig.axialWave, chain: rig.axialWave.chain.map(nodeOf) };
+  if (rig.predatory) rig.predatory = { ...rig.predatory, hunch: nodeOf(rig.predatory.hunch) };
+  if (rig.archery) rig.archery = { ...rig.archery,
+    ...Object.fromEntries(['bow','nock','shoulder','elbow','hand'].map(key => [key,nodeOf(rig.archery[key])])),
+    strings: rig.archery.strings.map(nodeOf), scratch: Array.from({length:6}, () => new THREE.Vector3()) };
+  // Parent-space yaw brings the holding hand inward instead of twisting a hanging arm.
+  if (rig.archery) rig.armSh[0].rotation.order = 'YXZ';
   if (rig.rotorWings) rig.rotorWings = rig.rotorWings.map(wing => ({ ...wing, node: nodeOf(wing.node) }));
   if (rig.flightAxial) rig.flightAxial = Object.fromEntries(Object.entries(rig.flightAxial)
     .map(([key,value]) => [key, typeof value === 'string' ? nodeOf(value) : value]));

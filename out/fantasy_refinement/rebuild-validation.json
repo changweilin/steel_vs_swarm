@@ -1,0 +1,17 @@
+{
+  "s06": {
+    "runtime": "6a17c2922a1a83aa44846927b8c382d4796180abaab721ad328660937ae508a2",
+    "glb": "b7502d545811593a410cbc1531c7a3dee49441d1352fd32b804764d095f47090",
+    "byteIdentical": true
+  },
+  "t08": {
+    "runtime": "f4c9ba16de27825fcea3e03d3b0ceb8c1701c54d590381ad65c7943e1bea9ab6",
+    "glb": "74409214931e39824eae987cf7174a1fdd313a88c61efff771bb8653a7107956",
+    "byteIdentical": true
+  },
+  "m05": {
+    "runtime": "21ef12be82759bf7b667da55730f31651c1cb943eeefd77de26d77a5560ddea2",
+    "glb": "89ada2d2817f1b126540801a7de4fb8672dd283c83c27c70c31339803c747eef",
+    "byteIdentical": true
+  }
+}

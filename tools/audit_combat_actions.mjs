@@ -12,7 +12,10 @@ import { readSrc, grabMethod } from './audit_src.mjs';
 import { combatIntent } from './mech_authoring/combat_intent.mjs';
 
 const output = 'out/combat_reference';
-const ids = Object.keys(CHARACTERS), slots = ['light', 'heavy', 'def', 'atk'];
+const roster = Object.keys(CHARACTERS), slots = ['light', 'heavy', 'def', 'atk'];
+const selected = process.argv.indexOf('--asset');
+const ids = selected < 0 ? roster : process.argv[selected + 1].split(',');
+assert(ids.every(id => roster.includes(id)), 'Unknown combat asset');
 const contract = JSON.parse(await readFile('tools/mech_authoring/assets.json', 'utf8'));
 const sha = value => createHash('sha256').update(value).digest('hex');
 const codeHash = sha(await readFile('tools/mech_authoring/combat.py'));
@@ -24,8 +27,8 @@ for (const file of ['game.js', 'vfx.js', 'unitMotion.js', 'locomotion.js', 'char
   'characterStyle.js', 'models.js', 'forge/referenceAsset.js', 'forge/combatAsset.js', 'forge/combatCast.js', 'forge/combatKeys.js', 'castparticles.js']) {
   integration[file] = sha(await readFile(`public/js/${file}`));
 }
-assert.deepEqual(Object.keys(COMBAT_ASSETS).sort(), ids.slice().sort(), 'Incomplete combat roster');
-assert.equal(new Set(ids.map(id => characterCombatStyle(id).shieldForm)).size, ids.length, 'Repeated shield identity');
+assert.deepEqual(Object.keys(COMBAT_ASSETS).sort(), roster.slice().sort(), 'Incomplete combat roster');
+assert.equal(new Set(roster.map(id => characterCombatStyle(id).shieldForm)).size, roster.length, 'Repeated shield identity');
 for (const id of ids) {
   const asset = COMBAT_ASSETS[id], style = characterCombatStyle(id);
   assert.equal(asset.source.combat, codeHash, `${id}: stale combat recipe`);

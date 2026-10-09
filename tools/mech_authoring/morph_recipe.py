@@ -338,7 +338,8 @@ def limb_inventory(a):
             a.box('Articulated palm', 'wrist_'+n, (.28, .22, .22), (0, -.08, .04), 'shade', .025)
             for x in [-.09, 0, .09]:
                 if a.spec['id'] == 'm05':
-                    spike(a, 'Wolf fore claw', 'wrist_'+n, (x, -.18, .1), (x, -.38, .28), .042, 'steel')
+                    a.strut('Open wolf proximal finger','wrist_'+n,(x,-.15,.09),(x*1.55,-.26,.30),.038,'armor')
+                    spike(a, 'Wolf fore claw', 'wrist_'+n, (x*1.55, -.26, .30), (x*1.8, -.36, .52), .055, 'steel')
                 else:
                     a.box('Armored finger', 'wrist_'+n, (.06, .18, .08), (x, -.22, .12), 'armor', .009)
 

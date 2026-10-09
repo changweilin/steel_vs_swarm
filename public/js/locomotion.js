@@ -99,6 +99,16 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   // 加法才不會跨幀累積;morph 的部件經 pose(m) 全軸 rotation.set 重設,全軸皆安全。
   stepCastPose(L, rig, ent, dt, now);
   stepJumpPose(L, rig, ent, dt);
+  if (rig.predatory && rig.kind === 'biped') {
+    const pose = rig.predatory;
+    pose.hunch.rotation.x = pose.pitch;
+    for (const [side, sign] of [['L',1],['R',-1]]) {
+      rig['arm'+side].rotation.set(pose.shoulder + Math.sin(now*2+sign)*.025, 0, sign*pose.splay);
+      rig['armChain'+side][0].g.rotation.set(pose.elbow,0,0);
+      rig['armChain'+side][1].g.rotation.set(pose.wrist,0,0);
+    }
+    rig.head.rotation.x -= pose.pitch;
+  }
   if (rig.groundWings) {
     // Folded avian arms override the humanoid arm driver in every non-running pose.
     L.wingSpread = damp(L.wingSpread || 0, clamp((speed / (rig.top || 10) - .3) / .3, 0, 1), 7, dt);
@@ -141,6 +151,8 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
     stepAimForward(morph.ground, rig);
     stepAimForward(morph.air, rig);
   } else stepAimForward(rig);
+  // The drawing hand follows the final aimed bow, including the wrist correction.
+  if (rig.archery) poseArchery(rig);
   if (morph) {
     clearMorphCombatShield(morph.ground);
     clearMorphCombatShield(morph.air);
@@ -1014,7 +1026,13 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
   }
   if (rig.axialWave) {
     const wave = rig.axialWave;
+    if (wave.stableHead) {
+      // The head leads the chain; banking the carrier would reintroduce head wobble.
+      rig.tilt.rotation.set(0,0,0);
+      rig.tilt.position.y = rig.tiltY0;
+    }
     wave.chain.forEach((node, i) => {
+      if (wave.stableHead) node.rotation.set(0,0,0);
       node.rotation.y = wave.amplitude * Math.sin(now * Math.PI * 2 * wave.frequency - i * wave.delay)
         - clamp(yawRate * wave.turn, -.12, .12);
     });
@@ -1042,6 +1060,34 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
     });
     swim.fins.forEach((node, i) => { node.rotation.z = (i ? -1 : 1) * swim.finAmp * Math.sin(phase - .7) * amplitude; });
   }
+}
+
+function poseArchery(rig) {
+  const a = rig.archery;
+  const release = clamp(rig._kickR || 0,0,1);
+  const draw = a.restDraw + (a.fullDraw-a.restDraw) * clamp((rig._fireAim || 0)-release*1.5,0,1);
+  a.nock.position.z = -draw;
+  a.strings.forEach((node,i) => {
+    node.rotation.x = (i ? -1 : 1) * (Math.atan2(draw,a.halfHeight)-Math.atan2(a.restDraw,a.halfHeight));
+    node.scale.setScalar(Math.hypot(draw,a.halfHeight)/Math.hypot(a.restDraw,a.halfHeight));
+  });
+  rig.wpn.light.ref.getObjectByName('gun_recoil').scale.setScalar(release>.45 ? .001 : 1);
+  const [target,delta,pole,upper,rest,local] = a.scratch;
+  a.nock.getWorldPosition(target);
+  a.shoulder.parent.updateWorldMatrix(true,false);
+  local.copy(target); a.shoulder.parent.worldToLocal(local);
+  delta.copy(local).sub(a.shoulder.position);
+  const lengthA = a.elbow.position.length(), lengthB = a.hand.position.length();
+  const distance = clamp(delta.length(),Math.abs(lengthA-lengthB)+1e-5,lengthA+lengthB-1e-5);
+  delta.normalize();
+  const reach = (lengthA*lengthA-lengthB*lengthB+distance*distance)/(2*distance);
+  pole.fromArray(a.pole).addScaledVector(delta,-pole.dot(delta)).normalize();
+  upper.copy(delta).multiplyScalar(reach).addScaledVector(pole,Math.sqrt(Math.max(0,lengthA*lengthA-reach*reach)));
+  a.shoulder.quaternion.setFromUnitVectors(rest.copy(a.elbow.position).normalize(),upper.normalize());
+  a.shoulder.updateWorldMatrix(true,false);
+  local.copy(target); a.shoulder.worldToLocal(local);
+  a.elbow.quaternion.setFromUnitVectors(rest.copy(a.hand.position).normalize(),local.sub(a.elbow.position).normalize());
+  a.hand.rotation.set(0,0,0);
 }
 
 function stepCephalopod(L, rig, dt, now, speed, yawRate) {
@@ -1273,6 +1319,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
         sh.rotation.x = b.shX + idle * 0.02 * Math.sin(now * 1.6 - i * 1.8)
           + rChg * (rHv.armR || 0) - rKick * 0.08;
         sh.rotation.z = b.shZ + idle * 0.015 * Math.sin(now * 1.6 - i * 1.8 + 1.2);
+        if (rig.archery) sh.rotation.y = b.shY || 0;
         el.rotation.x = b.elX + idle * 0.025 * Math.sin(now * 1.6 - i * 1.8 + 0.6);
       });
     }

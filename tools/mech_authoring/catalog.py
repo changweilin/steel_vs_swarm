@@ -679,18 +679,18 @@ def flyer_body(a):
                 chain=a.spec['rig']['bodySegments']
                 end=positions[chain[i+1]] if i+1<len(chain) else positions['tail_0']
                 length=Vector(end).length
-                width=p['width']*(1.14-i*.085)
+                width=p['width']*(1.14-.425*i/max(1,len(chain)-1))
                 obj=a.loft('Continuous serpentine thoracoabdominal segment',name,
                            [(-.10,width,width*.9),(length*.45,width*.98,width*.88),
                             (length+.10,width*.92,width*.83)],'armor')
                 obj.rotation_euler=Vector((end[0],-end[2],end[1])).to_track_quat('Z','Y').to_euler()
-                ellipsoid(a,'Overlapping serpentine joint collar',name,(width*.96,width*.86,width*.76),(0,0,0),'shade',12,6)
+                ellipsoid(a,'Overlapping serpentine joint collar',name,(width*.96,width*.86,width*.76),(0,0,0),'armor',12,6)
             chain=a.spec['rig']['cervicals']
             for i,name in enumerate(chain):
-                end=positions[chain[i+1]] if i+1<len(chain) else positions['sensor']
+                end=positions[chain[i+1]] if i+1<len(chain) else positions['body_0']
                 length=Vector(end).length
                 width=p['neckWidths'][i]
-                next_width=p['neckWidths'][i+1] if i+1<len(chain) else .48
+                next_width=p['neckWidths'][i+1] if i+1<len(chain) else p['width']*1.14
                 obj=a.loft('Continuous ophidian cervical sheath',name,[(-.09,width,width*.82),(length*.5,(width+next_width)*.5,(width+next_width)*.40),(length+.09,next_width,next_width*.82)],'armor')
                 obj.rotation_euler=Vector((end[0],-end[2],end[1])).to_track_quat('Z','Y').to_euler()
                 ellipsoid(a,'Overlapping ophidian cervical joint',name,(width*.98,width*.80,.24),(0,0,0),'shade',12,6)
@@ -807,10 +807,36 @@ def flyer_body(a):
     rotors(a)
 
 
+def bow(a):
+    p = a.spec['rig']['archery']
+    h, draw = p['halfHeight'], p['restDraw']
+    a.strut('Recurved bow wrapped grip', 'gun', (0,-.16,0), (0,.16,0), .11, 'dark')
+    for sign, node in [(1,p['strings'][0]),(-1,p['strings'][1])]:
+        points = [(0,sign*.12,0), (0,sign*h*.45,.14), (0,sign*h*.78,.12), (0,sign*h,0)]
+        for start, end in zip(points, points[1:]):
+            a.strut('Swept recurved bow limb', 'gun', start, end, .065, 'armor')
+        a.strut('Tensioned bowstring',node,(0,0,0),(0,-sign*h,-draw),.012,'steel')
+    length = p['arrowLength']
+    a.strut('Nocked magnetic arrow shaft','gun_recoil',(0,0,0),(0,0,length-.16),.024,'brass')
+    spike(a,'Forward arrowhead','gun_recoil',(0,0,length-.23),(0,0,length),.06,'steel')
+    for side in [-1,1]:
+        wing(a,'Arrow fletching','gun_recoil',[(0,0),(side*.11,.04),(side*.10,.25),(0,.29)],(0,0,.05),'shade',.02)
+    a.disk('Arrow emission anchor','light_muzzle',.025,.012,(0,0,0),'glow')
+
+
 def weapons(a):
     p, r = a.p, a.spec['recipe']
     positions = {name: pos for name, _, pos in a.spec['joints']}
     length = positions['light_muzzle'][2]
+    if r == 'centaur':
+        bow(a)
+    else:
+        light_weapon(a, length)
+    heavy_weapon(a)
+
+
+def light_weapon(a, length):
+    p, r = a.p, a.spec['recipe']
     a.loft('Light weapon receiver', 'gun_recoil', [(-.27, .34, .3), (.26, .32, .28)], 'brass' if r == 'roo' else 'dark', axis='z')
     count = 4 if r == 'fpv' else 2 if r in ['eagle', 'crane', 'trex', 'zero', 'canard', 'roo', 'stego', 'pterosaur','medical'] else 1
     for i in range(count):
@@ -822,7 +848,7 @@ def weapons(a):
         a.tube('Light weapon open bore', 'gun_recoil', .065 if count > 1 else .09, .035 if count > 1 else .052, length - .2, (x, 0, (length + .2) / 2), 'steel', segments=12)
         for z in [.3, length * .65]: a.tube('Weapon cooling collar', 'gun_recoil', .09 if count > 1 else .12, .065 if count > 1 else .09, .06, (x, 0, z), 'shade', segments=12)
     a.disk('Light muzzle emission', 'light_muzzle', .045, .014, (0, 0, 0), 'glow')
-    if r in ['centaur', 'glider', 'medical']:
+    if r in ['glider', 'medical']:
         for side in [-1, 1]: a.strut('Sniper electromagnetic rail', 'gun_recoil', (side * .14, .11, .25), (side * .14, .11, length), .045, 'brass')
         if r!='medical':
             a.tube('Sniper optical scope', 'gun', .085, .04, .5, (0, .25, .2), 'shade', segments=12)
@@ -830,6 +856,10 @@ def weapons(a):
         a.box('Left belt feed ammunition box', 'gun', (.58, .5, .55), (.42, -.12, 0), 'armor')
         for i in range(7): a.box('Machine gun feed belt link', 'gun', (.1, .11, .15), (.13 + i * .05, .17 - math.sin(i * .6) * .12, -.1), 'brass')
     if r == 'gorilla': a.disk('Left drum shotgun magazine', 'gun', .35, .35, (.23, -.15, 0), 'shade', 'x')
+
+
+def heavy_weapon(a):
+    p, r = a.p, a.spec['recipe']
     if r == 'bastion':
         a.disk('Right revolver six chamber drum', 'heavy', .54, .6, (0, 0, .2), 'shade')
         for i in range(6):
