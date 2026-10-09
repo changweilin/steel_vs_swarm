@@ -59,7 +59,7 @@ import { MIXED_MAP_TEXT } from './mixedMapContent.js';
 import { isRandomMap, RANDOM_MAP_RANGES, randomRangeStep } from './randomMapRules.js';
 import { RANDOM_MAP_TEXT } from './randomMapContent.js';
 import { drawRandomMapPreview } from './randomMapPreview.js';
-import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
+import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared, hasSeenChapterAnim } from './story.js';
 import { talkOf, stageKey } from './storytalk.js';
 // Story screen marker single seam - game body and local story book share one copy, see storyui.js header
 import {
@@ -1335,13 +1335,15 @@ function showStoryBrief(i) {
     onUp: () => stepStoryPilot(ch, 1),
     onDown: () => stepStoryPilot(ch, -1),
   });
-  const playAnim = () => {
+  const playAnim = (onDone) => {
     $('storyBrief').style.display = 'none';
     playChapterIntro({
       chId: ch.id,
       side,
+      finishBtnText: onDone ? '▶ 出擊' : '▶ 返回戰區簡報',
       onFinished: () => {
-        $('storyBrief').style.display = '';
+        if (onDone) onDone();
+        else $('storyBrief').style.display = '';
       },
     });
   };
@@ -1353,7 +1355,13 @@ function showStoryBrief(i) {
   if (animBtn) animBtn.onclick = () => playAnim();
 
   $('storyFightBtn').className = 'btn big ' + (side === 'STEEL' ? 'steel-btn' : 'swarm-btn');
-  $('storyFightBtn').onclick = () => startStoryChapter(i);
+  $('storyFightBtn').onclick = () => {
+    if (hasSeenChapterAnim(side, ch.id)) {
+      startStoryChapter(i);
+    } else {
+      playAnim(() => startStoryChapter(i));
+    }
+  };
   $('storyBrief').style.display = '';
   $('storyBriefBody').scrollTop = 0;
 }

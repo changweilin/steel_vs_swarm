@@ -5,6 +5,8 @@
 // with a fixed, non-obscuring narrative text box where prose scrolls upward smoothly.
 
 import { CHAPTER_SCENES } from './chapterScenes.js';
+import { markChapterAnimSeen, hasSeenChapterAnim } from './story.js';
+export { markChapterAnimSeen, hasSeenChapterAnim };
 
 export const PROLOGUE_SCENES = [
   {
@@ -308,7 +310,9 @@ export class PrologueIntroController {
     if (!this.content) return;
 
     const endNote = this.isPrologue ? '—— 序幕終曲・歷史檔案解密完畢 ——' : '—— 戰役檔案解密完畢 ——';
-    const finishBtnText = this.isPrologue ? '▶ 進入戰術終端' : '▶ 返回戰區簡報';
+    const finishBtnText = this.isPrologue
+      ? '▶ 進入戰術終端'
+      : (this.options.finishBtnText || '▶ 返回戰區簡報');
 
     this.content.innerHTML = this.scenes.map((sc, idx) => `
       <section class="prologue-crawl-section" data-idx="${idx}" id="prologue-crawl-${sc.id}">
@@ -646,17 +650,23 @@ export function playPrologueIntro({ onFinished, force = false, startIdx = 0 } = 
 }
 
 /** Entry function to play a specific chapter cinematic intro. */
-export function playChapterIntro({ chId, side, startIdx = 0, onFinished } = {}) {
+export function playChapterIntro({ chId, side, startIdx = 0, finishBtnText, onFinished } = {}) {
   const scenes = CHAPTER_SCENES[chId]?.[side];
   if (!scenes || !scenes.length) {
+    if (side && chId) markChapterAnimSeen(side, chId);
     onFinished?.();
     return null;
   }
   const controller = new PrologueIntroController({
     scenes,
     isPrologue: false,
-    onFinished,
+    finishBtnText,
+    onFinished: () => {
+      if (side && chId) markChapterAnimSeen(side, chId);
+      onFinished?.();
+    },
   });
+  if (side && chId) markChapterAnimSeen(side, chId);
   controller.play(startIdx);
   return controller;
 }

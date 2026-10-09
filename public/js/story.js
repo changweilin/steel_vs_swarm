@@ -194,3 +194,20 @@ export function markCleared(side, id) {
   localStorage.setItem(KEY(side), JSON.stringify(cur));
   return cur;
 }
+
+// ---- Chapter Animation Persistence (localStorage array of seen chapter IDs per faction) ----
+const ANIM_KEY = (side) => 'svs_story_anim_' + side;
+
+export function loadSeenAnims(side) {
+  try { return JSON.parse(localStorage.getItem(ANIM_KEY(side))) || []; } catch { return []; }
+}
+export function hasSeenChapterAnim(side, id) {
+  return isCleared(side, id) || loadSeenAnims(side).includes(id);
+}
+export function markChapterAnimSeen(side, id) {
+  const cur = loadSeenAnims(side);
+  if (!cur.includes(id)) cur.push(id);
+  try { localStorage.setItem(ANIM_KEY(side), JSON.stringify(cur)); } catch { /* Ignore incognito storage error */ }
+  return cur;
+}
+
