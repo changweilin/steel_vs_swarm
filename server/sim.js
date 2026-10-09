@@ -2317,7 +2317,7 @@ export class BattleSim {
 
   /** Weapon elemental status buildup & probability (single seam). */
   _applyHitElem(attacker, def, target) {
-    if (!def?.elem || !target || target.hp <= 0) return;
+    if (!def?.elem || def.elem === 'physical' || !target || target.hp <= 0) return;
     if (target.kind === 'tower' || target.kind === 'base') return;
     if (target.hero && (target.dead || target.invUntil > this.t)) return;
     if (target.hero && this._buffVal(target, 'ccImm') > 0) return;

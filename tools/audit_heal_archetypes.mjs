@@ -1,12 +1,12 @@
 // Execute healing archetype differentiation audit:
 // 1. Single-target heavy burst heal + status cleanse (m03.def)
-// 2. Area team heal (s02.atk, t12.def, s08.atk, m03.atk)
+// 2. Area team heal (s02.atk, t12.def, s08.atk, t12.atk)
 // 3. Aura continuous mobile heal over time (s08.def)
 // 4. Recovery enhancement state (multi-charge/stackable) + CC immunity (t05.def)
 // 5. Verification of canonical 5 support mechs balanced across factions:
-//    SWARM: s02, s08 (2)
-//    STEEL: t05, t12 (2)
-//    MERC:  m03      (1)
+//    SWARM: s08 (double-healer), s02 (single-healer)
+//    STEEL: t12 (double-healer), t05 (single-healer)
+//    MERC:  m03 (single-healer)
 import assert from 'node:assert/strict';
 import { BattleSim } from '../server/sim.js';
 import { MAPGEO, heroAbility, CHARACTERS } from '../public/js/data.js';
@@ -89,6 +89,17 @@ const sim = new BattleSim(config);
   assert(tMate.sp > 20, 'tMate ally SP replenished');
   assert(t12.spRegenHitUntil > sim.t, 't12 gained uninterrupted SP regen');
   assert(tMate.spRegenHitUntil > sim.t, 'tMate gained uninterrupted SP regen');
+
+  // T-12 atk team heal & cleanse (spectrum resonance life tide)
+  const At12Atk = heroAbility('t12', 'atk', 1);
+  assert.equal(At12Atk.fx, 'heal', 't12 atk fx is heal');
+  assert.equal(At12Atk.target, 'team', 't12 atk targets team');
+  assert(At12Atk.r >= 200, 't12 atk covers wide team area');
+  assert(At12Atk.cleanse, 't12 atk cleanses status');
+  t12.hp = 100; tMate.hp = 100;
+  sim._castEffect(t12, At12Atk, t12.x, t12.z, 1, null, true);
+  assert(t12.hp >= 360, 't12 received massive team heal from atk');
+  assert(tMate.hp >= 360, 'tMate received massive team heal from atk');
 }
 
 // 3. Aura continuous heal (S-08 def)
@@ -181,6 +192,21 @@ const sim = new BattleSim(config);
   assert.equal(swarmCount, 2, 'SWARM has exactly 2 healing mechs (s02, s08)');
   assert.equal(steelCount, 2, 'STEEL has exactly 2 healing mechs (t05, t12)');
   assert.equal(mercCount, 1, 'MERC has exactly 1 healing mech (m03)');
+
+  const doubleHealers = Object.entries(CHARACTERS)
+    .filter(([_, c]) => c.atk?.fx === 'heal' && c.def?.fx === 'heal')
+    .map(([id]) => id)
+    .sort();
+  assert.deepEqual(doubleHealers, ['s08', 't12'], 'Double-healers are strictly 1 in SWARM (s08) and 1 in STEEL (t12)');
+
+  const singleHealers = Object.entries(CHARACTERS)
+    .filter(([_, c]) => (c.atk?.fx === 'heal') !== (c.def?.fx === 'heal'))
+    .map(([id]) => id)
+    .sort();
+  assert.deepEqual(singleHealers, ['m03', 's02', 't05'], 'Single-healers are strictly s02 (SWARM), t05 (STEEL), and m03 (MERC)');
+
+  assert.equal(CHARACTERS.m03.atk?.fx, 'emp', 'm03 atk is EMP frost non-heal');
+  assert.equal(CHARACTERS.m03.def?.fx, 'heal', 'm03 def is single burst heal');
 }
 
 console.log('✅ Healing archetypes differentiation audit passed all assertions');
