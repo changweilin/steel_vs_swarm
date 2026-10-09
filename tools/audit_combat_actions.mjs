@@ -5,29 +5,35 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { chromiumOrNull, chromePath, writeReview as writeFile } from './pw.mjs';
 import { serve } from './mech_prompt_review.mjs';
-import { CHARACTERS } from '../public/js/data.js';
+import { CHARACTERS, heroWeapon, fanArcHalf, fanSubs } from '../public/js/data.js';
 import { COMBAT_ASSETS } from '../public/js/forge/combatAssets.js';
 import { characterCombatStyle } from '../public/js/characterStyle.js';
 import { readSrc, grabMethod } from './audit_src.mjs';
+import { combatIntent } from './mech_authoring/combat_intent.mjs';
 
 const output = 'out/combat_reference';
-const ids = Object.keys(CHARACTERS), slots = ['light', 'heavy', 'def', 'atk'];
+const roster = Object.keys(CHARACTERS), slots = ['light', 'heavy', 'def', 'atk'];
+const selected = process.argv.indexOf('--asset');
+const ids = selected < 0 ? roster : process.argv[selected + 1].split(',');
+assert(ids.every(id => roster.includes(id)), 'Unknown combat asset');
 const contract = JSON.parse(await readFile('tools/mech_authoring/assets.json', 'utf8'));
 const sha = value => createHash('sha256').update(value).digest('hex');
 const codeHash = sha(await readFile('tools/mech_authoring/combat.py'));
 const builderHash = sha(await readFile('tools/mech_authoring/build.py'));
+const intents = JSON.parse(JSON.stringify(combatIntent(await readFile('docs/art_gen.md', 'utf8'))));
 const identities = {};
 const integration = {};
 for (const file of ['game.js', 'vfx.js', 'unitMotion.js', 'locomotion.js', 'charPreview.js', 'castfx.js',
-  'characterStyle.js', 'models.js', 'forge/referenceAsset.js', 'forge/combatAsset.js']) {
+  'characterStyle.js', 'models.js', 'forge/referenceAsset.js', 'forge/combatAsset.js', 'forge/combatCast.js', 'forge/combatKeys.js', 'castparticles.js']) {
   integration[file] = sha(await readFile(`public/js/${file}`));
 }
-assert.deepEqual(Object.keys(COMBAT_ASSETS).sort(), ids.slice().sort(), 'Incomplete combat roster');
-assert.equal(new Set(ids.map(id => characterCombatStyle(id).shieldForm)).size, ids.length, 'Repeated shield identity');
+assert.deepEqual(Object.keys(COMBAT_ASSETS).sort(), roster.slice().sort(), 'Incomplete combat roster');
+assert.equal(new Set(roster.map(id => characterCombatStyle(id).shieldForm)).size, roster.length, 'Repeated shield identity');
 for (const id of ids) {
   const asset = COMBAT_ASSETS[id], style = characterCombatStyle(id);
   assert.equal(asset.source.combat, codeHash, `${id}: stale combat recipe`);
   assert.equal(asset.source.builder, builderHash, `${id}: stale builder`);
+  assert.deepEqual(asset.combat.intent, intents[id], `${id}: stale art or authority measures`);
   for (const key of ['color', 'accent', 'frame', 'shieldForm', 'variant']) assert.equal(asset.combat.intent[key], style[key], `${id}: stale ${key}`);
   assert.deepEqual(Object.keys(asset.combat.clips), slots);
   for (const clip of Object.values(asset.combat.clips)) {
@@ -35,6 +41,28 @@ for (const id of ids) {
     for (const track of clip.tracks) {
       assert(track.keys.length >= 2 && track.keys.flat().every(Number.isFinite));
       assert(track.keys.every(([time], i) => i === 0 || time > track.keys[i - 1][0]), `${id}: unordered samples`);
+    }
+  }
+  for (const slot of ['light', 'heavy']) {
+    const def = heroWeapon(id, slot);
+    if (!def.fan) continue;
+    const ownership = asset.combat.fans[slot], half = fanArcHalf(def), span = half * 2 / fanSubs(def);
+    assert.equal(ownership.count, fanSubs(def), `${id}/${slot}: wrong sub-cone count`);
+    for (const part of asset.meshes.filter(mesh => mesh.parent === `fx_${slot}_ion`)) {
+      const owners = ownership.vertexBins[part.material];
+      assert.equal(owners.length, part.positions.length / 3, `${id}/${slot}: lost sub-cone ownership`);
+      for (let i = 0; i < part.indices.length; i += 3) {
+        const bin = owners[part.indices[i]];
+        assert(Number.isInteger(bin) && bin >= 0 && bin < ownership.count, `${id}/${slot}: invalid sub-cone`);
+        assert(part.indices.slice(i, i + 3).every(vertex => owners[vertex] === bin), `${id}/${slot}: triangle bridges sub-cones`);
+      }
+      for (let i = 0; i < owners.length; i++) {
+        const [x, , z] = part.positions.slice(i * 3, i * 3 + 3);
+        const lo = -half + owners[i] * span, hi = lo + span;
+        // Float32 evaluation and five-decimal export can move shared edges; runtime projects them back into their owned bins.
+        assert(x * Math.cos(lo) - z * Math.sin(lo) >= -.0002 &&
+          x * Math.cos(hi) - z * Math.sin(hi) <= .0002, `${id}/${slot}: exported geometry crosses its sub-cone`);
+      }
     }
   }
   const bytes = await readFile(`public/assets/models/combat/${id}.glb`);
@@ -65,12 +93,13 @@ try {
   const result = await page.evaluate(async ({ ids, slots, limits, shieldFactory }) => {
     const T = await import('three');
     const { forgeMech, forgeMorphUnit, specOf } = await import('/public/js/forge/forge.js');
-    const { CHARACTERS, heroWeapon } = await import('/public/js/data.js');
+    const { CHARACTERS, heroWeapon, heroAbility, fanArcHalf, fanSubs, fanBinOf, fanBinRangeF } = await import('/public/js/data.js');
     const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
     const { stepCombatFx, stepLocomotion } = await import('/public/js/locomotion.js');
     const { stepAuthoredCombat } = await import('/public/js/forge/combatAsset.js');
     const { disposeTree } = await import('/public/js/toon.js');
-    const { projectileMesh, stepProjectileFx, makeShieldMaterial, SHIELD_PRESENTATION_EXPAND, gundamBeam, ionBreath } = await import('/public/js/vfx.js');
+    const { projectileMesh, stepProjectileFx, makeShieldMaterial, SHIELD_PRESENTATION_EXPAND, gundamBeam, ionBreath, fanDischarge } = await import('/public/js/vfx.js');
+    const { spawnCastFx } = await import('/public/js/castfx.js');
     const { characterShieldTexture } = await import('/public/js/castfx.js');
     const { characterCombatStyle } = await import('/public/js/characterStyle.js');
     const createShield = new Function('THREE', 'makeShieldMaterial', 'characterCombatStyle', 'characterShieldTexture',
@@ -87,7 +116,17 @@ try {
       const ctx = canvas.getContext('2d'); ctx.fillStyle = '#111c29'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       return { canvas, ctx };
     });
-    const measures = {}, patterns = new Set();
+    const fieldSheets = Array.from({ length: 4 }, () => {
+      const canvas = document.createElement('canvas'); canvas.width = 1800; canvas.height = 8 * 264;
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#111c29'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return { canvas, ctx };
+    });
+    const fanSlots = ids.flatMap(id => ['light', 'heavy'].filter(slot => heroWeapon(id, slot).fan));
+    const fanSheet = document.createElement('canvas');
+    fanSheet.width = 1200; fanSheet.height = Math.ceil(fanSlots.length / 3) * 344;
+    const fanContext = fanSheet.getContext('2d');
+    fanContext.fillStyle = '#111c29'; fanContext.fillRect(0, 0, fanSheet.width, fanSheet.height);
+    const measures = {}, patterns = new Set(), fanBounds = [];
     let peakCalls = 0;
     const finite = unit => unit.traverse(node => check([...node.position, ...node.scale, ...node.quaternion].every(Number.isFinite), `${unit.name}: nonfinite transform`));
     const bodyBox = (unit, rig) => {
@@ -171,7 +210,65 @@ try {
       }
       for (const slot of ['light', 'heavy']) {
         const def = heroWeapon(id, slot);
-        if (def.type === 'beam' || def.type === 'plasma') {
+        if (def.fan) {
+          const from = new T.Vector3(1, 2, 3), direction = new T.Vector3(.2, .3, 1).normalize();
+          const inverse = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 0, 1), direction).invert();
+          const half = fanArcHalf(def), count = fanSubs(def), span = half * 2 / count;
+          let maximumBinOvershootRadians = 0;
+          for (const range of [def.range, def.range * 1.3]) for (const blocked of [false, true]) {
+            const effects = [], limit = range * .45;
+            const clip = (a, b) => ({ to: b.distanceTo(a) > limit ? a.clone().add(b.clone().sub(a).setLength(limit)) : b });
+            check(fanDischarge(scene, effects, from, direction, def, { range, clip: blocked ? clip : undefined }), `${id}: authored fan omitted`);
+            const fan = effects[0].obj;
+            for (const fraction of [1, .5, 0]) {
+              effects[0].fade(fan, fraction); fan.updateWorldMatrix(true, true);
+              fan.traverse(mesh => {
+                if (!mesh.isMesh) return;
+                const positions = mesh.geometry.attributes.position, vertex = new T.Vector3();
+                const owners = mesh.geometry.userData.fanBins, indices = mesh.geometry.index;
+                check(owners?.length === positions.count, `${id}/${slot}: runtime lost sub-cone ownership`);
+                for (let i = 0; i < indices.count; i += 3) {
+                  const bin = owners[indices.getX(i)];
+                  check(owners[indices.getX(i + 1)] === bin && owners[indices.getX(i + 2)] === bin,
+                    `${id}/${slot}: runtime triangle bridges sub-cones`);
+                }
+                for (let i = 0; i < positions.count; i++) {
+                  vertex.fromBufferAttribute(positions, i).applyMatrix4(mesh.matrixWorld).sub(from).applyQuaternion(inverse);
+                  const distance = vertex.length();
+                  if (distance < .001) continue;
+                  const phi = Math.atan2(vertex.x, vertex.z), owner = owners[i];
+                  const lo = -half + owner * span, hi = lo + span;
+                  maximumBinOvershootRadians = Math.max(maximumBinOvershootRadians, lo - phi, phi - hi);
+                  // These convex half-spaces constrain whole triangles, including their interiors.
+                  const tolerance = distance * .000001;
+                  check(vertex.x * Math.cos(lo) - vertex.z * Math.sin(lo) >= -tolerance &&
+                    vertex.x * Math.cos(hi) - vertex.z * Math.sin(hi) <= tolerance,
+                    `${id}/${slot}: sub-cone ${owner} overlaps its neighbour`);
+                  const angle = Math.acos(Math.min(1, vertex.z / distance));
+                  const bin = fanBinOf(def, phi);
+                  check(angle <= fanArcHalf(def) + .0005, `${id}/${slot}: fan widens beyond damage cone (${angle}, ${vertex.toArray()}, f=${fraction}, blocked=${blocked})`);
+                  check(distance <= range * fanBinRangeF(def, bin) + .005, `${id}: fan exceeds per-bin spherical reach`);
+                  if (blocked) check(distance <= limit + .001, `${id}: fan penetrates obstacle`);
+                }
+              });
+            }
+            scene.remove(fan); disposeTree(fan);
+          }
+          fanBounds.push({ id, slot, subCones: count, testCases: 12, maximumBinOvershootRadians });
+          const effects = [];
+          fanDischarge(scene, effects, new T.Vector3(), new T.Vector3(0, 0, 1), def);
+          const fan = effects[0].obj, box = new T.Box3().setFromObject(fan), center = box.getCenter(new T.Vector3());
+          const radius = box.getSize(new T.Vector3()).length() * .5;
+          camera.up.set(0, 0, -1);
+          camera.position.copy(center).add(new T.Vector3(0, 1, .12).normalize().multiplyScalar(radius * 3.2));
+          camera.lookAt(center); renderer.setSize(400, 320); renderer.render(scene, camera);
+          const panel = fanBounds.length - 1, x = panel % 3 * 400, y = Math.floor(panel / 3) * 344;
+          fanContext.drawImage(renderer.domElement, x, y);
+          fanContext.fillStyle = '#d9ecff'; fanContext.font = '15px monospace';
+          fanContext.fillText(`${id} ${slot}: ${count} bins, ${def.range}m + center reach`, x + 8, y + 337);
+          camera.up.set(0, 1, 0);
+          renderer.setSize(300, 240); scene.remove(fan); disposeTree(fan);
+        } else if (def.type === 'beam' || def.type === 'plasma') {
           const effects = [], from = new T.Vector3(1, 2, 3), to = new T.Vector3(8, 7, 17);
           const emit = def.type === 'beam' ? gundamBeam : ionBreath;
           emit(scene, effects, from, to, style.color, { r: .8, ttl: .5, def });
@@ -199,6 +296,34 @@ try {
           for (const time of [0, .1, .5, 1]) { stepProjectileFx(shot, time, 300); finite(shot); }
           disposeTree(shot);
         }
+      }
+      for (const slot of ['def', 'atk']) for (const radius of [.5, 7, 220, heroAbility(id, slot).r || 4]) {
+        const effects = [], at = new T.Vector3(4, 0, 3), a = heroAbility(id, slot);
+        spawnCastFx(scene, effects, { ch: id, slot, fx: a.fx, at, r: radius, dur: a.dur, scale: 20 });
+        const field = effects.find(effect => effect.obj.userData.authoredCast);
+        check(field?.obj.userData.authoredCast.radius === radius, `${id}/${slot}: field ignores event radius`);
+        for (const fraction of [1, .92, .7, .4, 0]) {
+          field.fade(field.obj, fraction); field.obj.updateWorldMatrix(true, true);
+          field.obj.traverse(mesh => {
+            if (!mesh.isMesh) return;
+            const positions = mesh.geometry.attributes.position, vertex = new T.Vector3();
+            for (let i = 0; i < positions.count; i++) {
+              vertex.fromBufferAttribute(positions, i).applyMatrix4(mesh.matrixWorld);
+              check(vertex.distanceTo(at) <= radius * 1.0001, `${id}/${slot}: animated field exceeds settled radius`);
+            }
+          });
+          const beat = [.92, .7, .4].indexOf(fraction);
+          if (radius === (a.r || 4) && beat >= 0) {
+            camera.far = Math.max(1000, radius * 5); camera.updateProjectionMatrix();
+            camera.position.copy(at).add(new T.Vector3(.65, .5, 1).normalize().multiplyScalar(radius * 3.2));
+            camera.lookAt(at); renderer.render(scene, camera);
+            const sheet = fieldSheets[Math.floor(index / 8)], row = index % 8, col = (slot === 'def' ? 0 : 3) + beat;
+            sheet.ctx.drawImage(renderer.domElement, col * 300, row * 264);
+            sheet.ctx.fillStyle = '#d9ecff'; sheet.ctx.font = '15px monospace';
+            sheet.ctx.fillText(`${id} ${slot} ${['tell', 'release', 'contact'][beat]} r=${radius}m`, col * 300 + 8, row * 264 + 257);
+          }
+        }
+        for (const effect of effects) { scene.remove(effect.obj); effect.dispose ? effect.dispose() : disposeTree(effect.obj); }
       }
       if (CHARACTERS[id].kind === 'morph') {
         const unit = forgeMorphUnit(specOf(`${id}@ground`), specOf(`${id}@flight`)).group;
@@ -230,11 +355,18 @@ try {
     renderer.render(scene, camera);
     check(renderer.info.memory.geometries === resident, 'Combat geometry leaked on repeated teardown');
     renderer.dispose();
-    return { measures, uniquePatterns: patterns.size, peakCalls, sheets: sheets.map(sheet => sheet.canvas.toDataURL('image/png')) };
+    return { measures, fanBounds, uniquePatterns: patterns.size, peakCalls,
+      fanSheet: fanSheet.toDataURL('image/png'),
+      sheets: sheets.map(sheet => sheet.canvas.toDataURL('image/png')),
+      fieldSheets: fieldSheets.map(sheet => sheet.canvas.toDataURL('image/png')) };
   }, { ids, slots, limits: contract.limits, shieldFactory });
   assert.deepEqual(errors, [], 'Browser or shader errors');
   for (let i = 0; i < result.sheets.length; i++) await writeFile(`${output}/actions-${i + 1}.png`, Buffer.from(result.sheets[i].split(',')[1], 'base64'));
+  for (let i = 0; i < result.fieldSheets.length; i++) await writeFile(`${output}/fields-${i + 1}.png`, Buffer.from(result.fieldSheets[i].split(',')[1], 'base64'));
+  await writeFile(`${output}/fans.png`, Buffer.from(result.fanSheet.split(',')[1], 'base64'));
+  delete result.fanSheet;
   delete result.sheets;
+  delete result.fieldSheets;
   await writeFile(`${output}/runtime-validation.json`, JSON.stringify({ identities, integration, ...result, browserErrors: errors }, null, 2));
   for (const id of ids) {
     const path = `${output}/${id}/validation.json`, report = JSON.parse(await readFile(path, 'utf8'));

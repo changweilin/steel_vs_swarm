@@ -14,6 +14,7 @@ import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './mo
 import { animWeights } from './animweights.js';
 import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion, poseReferenceShield, resetReferenceShieldPose } from './unitMotion.js';
 import { stepAuthoredCombat, clearMorphCombatShield } from './forge/combatAsset.js';
+import { resetAnatomicalPose, stepAnatomicalPose } from './anatomicalPose.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -51,6 +52,10 @@ function phaseOf(id) {
 export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   if (dt < 0.004) return;   // hitstop / 極小步:骨架凍結
   const mesh = ent.mesh;
+  if (mesh.userData.morph) {
+    resetAnatomicalPose(mesh.userData.morph.ground);
+    resetAnatomicalPose(mesh.userData.morph.air);
+  } else resetAnatomicalPose(mesh.userData.rig);
   // 變形者:先決定「現在是哪一棵樹」再取 rig(兩棵樹並存,見 morphSwap)
   if (mesh.userData.morph) morphSwap(ent, mesh, dt);
   const rig = mesh.userData.rig;
@@ -89,6 +94,7 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   if (rig.kind === 'biped') resetReferenceShieldPose(rig.shield);
   if (rig.kind === 'biped') stepBiped(L, rig, dt, now, speed, yawRate);
   else if (rig.kind === 'aerial') stepAerial(L, rig, dt, now, vFwd, vLat, yawRate);
+  else if (rig.kind === 'quad' && rig.cephalopod) stepCephalopod(L, rig, dt, now, speed, yawRate);
   else if (rig.kind === 'quad') stepQuad(L, rig, dt, now, speed, yawRate);
   else if (rig.kind === 'morph') stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate);
   else stepVehicle(L, rig, dt, now, speed, vFwd, yawRate);
@@ -98,6 +104,16 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   // 加法才不會跨幀累積;morph 的部件經 pose(m) 全軸 rotation.set 重設,全軸皆安全。
   stepCastPose(L, rig, ent, dt, now);
   stepJumpPose(L, rig, ent, dt);
+  if (rig.predatory && rig.kind === 'biped') {
+    const pose = rig.predatory;
+    pose.hunch.rotation.x = pose.pitch;
+    for (const [side, sign] of [['L',1],['R',-1]]) {
+      rig['arm'+side].rotation.set(pose.shoulder + Math.sin(now*2+sign)*.025, 0, sign*pose.splay);
+      rig['armChain'+side][0].g.rotation.set(pose.elbow,0,0);
+      rig['armChain'+side][1].g.rotation.set(pose.wrist,0,0);
+    }
+    rig.head.rotation.x -= pose.pitch;
+  }
   if (rig.groundWings) {
     // Folded avian arms override the humanoid arm driver in every non-running pose.
     L.wingSpread = damp(L.wingSpread || 0, clamp((speed / (rig.top || 10) - .3) / .3, 0, 1), 7, dt);
@@ -113,7 +129,8 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   if (rig.tentacleWaves) {
     for (const wave of rig.tentacleWaves) wave.chain.forEach((node,i) => {
       ['x','y','z'].forEach((axis,j) => {
-        node.rotation[axis] = wave.swing[j] * Math.sin(now * Math.PI * 2 * wave.frequency + wave.phase - i*.36 + j*1.2);
+        const amplitude = wave.swing[j] + (wave.travel?.[j] || 0) * clamp(L.amp, 0, 1);
+        node.rotation[axis] = amplitude * Math.sin(now * Math.PI * 2 * wave.frequency + wave.phase + L.ph - i*.36 + j*1.2);
       });
     });
   }
@@ -135,10 +152,24 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   // 開火槍軸校正是最後的 post-pass：跑步扭腰、飛行壓坡、跳躍與變形姿態都已結算後，
   // 再把本次發射槽的每根槍軸鎖回機體 +z。否則任一個後續父骨驅動都會把槍口帶偏。
   if (morph?.act) {
+    const blend = morphEase(morph.m);
+    stepAnatomicalPose(morph.ground, 1 - blend);
+    morph.plan.g.pairs.forEach((pair, i) => morph.plan.a.pairs[i].n.quaternion.copy(pair.n.quaternion));
+    stepAnatomicalPose(morph.air, blend);
+    // Overlay weights follow transformation progress instead of jumping at the active-rig threshold.
+    morph.plan.a.pairs.forEach((pair, i) => morph.plan.g.pairs[i].n.quaternion.copy(pair.n.quaternion));
     // Both rigid trees must receive the same wrist correction while their matched poses overlap.
     stepAimForward(morph.ground, rig);
     stepAimForward(morph.air, rig);
-  } else stepAimForward(rig);
+    const source = rig === morph.ground ? morph.plan.g : morph.plan.a;
+    const target = rig === morph.ground ? morph.plan.a : morph.plan.g;
+    source.pairs.forEach((pair, i) => target.pairs[i].n.quaternion.copy(pair.n.quaternion));
+  } else {
+    stepAnatomicalPose(rig);
+    stepAimForward(rig);
+  }
+  // The drawing hand follows the final aimed bow, including the wrist correction.
+  if (rig.archery) poseArchery(rig);
   if (morph) {
     clearMorphCombatShield(morph.ground);
     clearMorphCombatShield(morph.air);
@@ -220,15 +251,21 @@ function stepStab(rig) {
  * local = inverse(parentWorld) * unitWorld * forwardLocal。沒有 Three import，暫存四元數由鍛造端配好。
  */
 function stepAimForward(rig, state = rig) {
-  const raise = clamp(state._fireAim || 0, 0, 1);
+  const aimRaise = clamp(state._fireAim || 0, 0, 1);
   if (!rig.aimForward) return;
   const slot = state._aimSlot || 'light';
   for (const a of rig.aimForward) {
+    const raise = a.alwaysForward ? 1 : aimRaise;
     if (!a.alwaysForward && (raise <= 1e-4 || !a.slots.includes(slot))) continue;
     a.ref.getWorldQuaternion(a.qa);
     a.g.parent.getWorldQuaternion(a.qb);
     a.qc.copy(a.qb).invert().multiply(a.qa).multiply(a.qf);
-    a.g.quaternion.slerp(a.qc, a.alwaysForward ? 1 : raise);
+    if (rig.launcher?.pivot === a.g) {
+      const extension = clamp((rig.launcher.lift.position.y / rig.launcher.extension - rig.launcher.rotateStart)
+        / (1 - rig.launcher.rotateStart), 0, 1);
+      a.qc.slerp(a.g.quaternion, 1 - extension);
+    }
+    a.g.quaternion.slerp(a.qc, raise);
   }
 }
 
@@ -444,7 +481,8 @@ function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0, aim = null, curl
   segs.forEach((t, i) => {
     const d = i * 0.6;                       // 逐節相位延遲(由根往梢傳的波)
     const lag = 1 + i * 0.35;                // 尾梢甩幅大於尾根
-    t.rotation.y = (L.tail * lag * (1 - ap) + Math.sin(L.ph - d) * 0.1 * a) * stiffness;
+    t.rotation.y = (L.tail * lag * (1 - ap) + Math.sin(L.ph - d) * 0.1 * a
+      + idle * Math.sin(now * 1.1 - d) * .045) * stiffness;
     t.rotation.x = (i === 0 ? base : 0)
       + (curl ? (curl.rot0 + i * curl.rotD) * (1 - ap) : 0)
       + (ap ? ap * (aim.rot0 + i * aim.rotD) : 0)
@@ -595,6 +633,7 @@ function morphSide(S, t, k, a) {
 }
 
 function poseBipedAim(rig, idle) {
+  if (rig.anatomical && !rig.anatomical.shots[rig._aimSlot || 'light']) return 0;
   const aimF = Math.min(1, (rig.aimWhileIdle === false ? 0 : idle) + (rig._fireAim || 0));
   const ap = rig.aimPose;
   if (!ap) return aimF;
@@ -650,13 +689,13 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   // 一律趾行,其餘 = 人形機甲 = 蹠行(整片腳掌貼地 ⇒ 踝的行程只有趾行的 0.4 倍)。
   // 判據全部取自既有旗標,加一台獸型雙足不必回頭改這裡(同 A33 ⑤ 的紀律)。
   const LP = rig.limbP || (rig.limbP = limbProfile(rig.limb || (
-    (rig.knuckle || rig.tuckArms || rig.tinyArms || rig.grounded || rig.hop || (rig.leanF ?? 1) < 1)
+    (rig.knuckle || rig.primate || rig.tuckArms || rig.tinyArms || rig.grounded || rig.hop || (rig.leanF ?? 1) < 1)
       ? {} : { fore: 'plantigrade', hind: 'plantigrade' })));
   const duty = dutyOf('walk', runF);
   const hip = GAIT_ANAT ? (p) => hipDrive(cycleU(p), duty) : (p) => Math.sin(p);
   // 人形跑步只由骨架拓樸推導(蹠行、無獸型旗標)，不寫逐機名冊。過半速後連續混入
   // AMASS/motion-ControlNet 的觸地→吸震→蹬離→收腿曲線；慢步仍保留等速後掠的走路曲線。
-  const humanF = GAIT_ANAT && LP.hind.posture === 'plantigrade' && !rig.knuckle && !rig.tuckArms
+  const humanF = GAIT_ANAT && LP.hind.posture === 'plantigrade' && !rig.knuckle && !rig.primate && !rig.tuckArms
     && !rig.tinyArms && !rig.grounded && !rig.hop && (rig.leanF ?? 1) >= 1 ? runF : 0;
   const legDrive = (p) => {
     const walk = hip(p);
@@ -680,7 +719,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     rig.armR.rotation.x = armB + Math.sin(L.ph * 2 + 0.5) * 0.05 * a + idle * Math.sin(now * 1.3 + 0.6) * 0.02;
   } else {
     // 指節/掌行(rig.knuckle,猩猩):前肢就是前腳 —— 擺幅與腿同級、對角相位真的撐地
-    const kn = rig.naturalArms ? rig.armSwing : rig.knuckle ? 1.0 : 0.75;
+    const kn = rig.naturalArms ? rig.armSwing : rig.knuckle || rig.primate ? 1.0 : 0.75;
     const armDriveL = Math.sin(L.ph + oAL)
       + (humanRunPose(cycleU(L.ph + oAL), duty).arm - Math.sin(L.ph + oAL)) * humanF;
     const armDriveR = Math.sin(L.ph + oAR)
@@ -707,7 +746,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
       // 退化短前臂(暴龍):肘/腕只做微幅抓握顫動,不做人形的恆屈泵動或大幅擺盪
       flexChain(rig.armChainL, L.ph, a * 0.15, idle, now + 0.7, 0.15, 0.15 * a);
       flexChain(rig.armChainR, L.ph + 0.4, a * 0.15, idle, now + 2.6, 0.15, 0.15 * a);
-    } else if (rig.knuckle && !rig.naturalArms) {
+    } else if ((rig.knuckle || rig.primate) && !rig.naturalArms) {
       // 指節行走的前肢**就是前腳** ⇒ 吃 fore profile(肘小幅 + 腕支撐相鎖死),
       // 與後腿的 hind profile 分家 —— 猩猩的手腕在撐地那半週期是硬柱,不是彈簧
       const AF = { P: LP.fore, duty };
@@ -747,6 +786,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   hips.position.y = rig.hipsY0 - bodyBounce(L.ph, duty, bnd) * (rig.bob || 0.06) * a * bobF
     + idle * sg.breathK * Math.sin(now * 1.7 * sg.iF + L.ph) * 0.012   // 靜止呼吸微沉浮(性格化:狼/豹極淺、重裝深沉)
     - L.srg * 0.03 - L.brk * 0.025;   // 爆發起步下蹲驅離 / 急停壓低重心插地
+  if (rig.primate) hips.position.y -= rig.primate.crouch * a;
   // 移動中開火(奔跑射擊):上身收成**穩定射擊台** —— 骨盆側移/滾轉/對轉一起收斂,
   // 讓下半身照常跑、上半身別把槍口甩來甩去。braceF 只吃「開火保持窗」(rig._aim),
   // MUST NOT 用 aimF(它含 idle ⇒ 站著不動時恆為 1,那條路徑上 a≈0 本來就沒有擺動要收)。
@@ -762,6 +802,10 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   // launch 撲身前衝 / brake 後仰拋錨煞停:× leanF —— 直立機甲全幅俯衝,水平體軸獸型(鴕鳥/暴龍)
   // 幾乎不再壓脊(牠們本來就近水平,再前傾就變臉朝地);垂直下蹲(hips.position.y)照舊保留給所有機種
   hips.rotation.x = L.lean + (L.srg * 0.07 - L.brk * 0.08) * (rig.leanF ?? 1);
+  if (rig.primate) hips.rotation.x += rig.primate.lean * a;
+  if (rig.waist) {
+    rig.waist.rotation.set(-Math.sin(L.ph * 2) * .045 * runF, sw * .04 * a, -hips.rotation.z * .25);
+  }
   // 胸腔:與骨盆對轉(走路時肩線與髖線反向扭 = 上下半身的角動量互抵)+ 呼吸擴張
   const chest = rig.chest;
   if (chest) {
@@ -777,9 +821,9 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   if (rig.headY0 != null) rig.head.position.y = rig.headY0 + (rig.hipsY0 - hips.position.y) * 0.5;
   // 頭/頸:反轉抵銷骨盆 + 胸腔 ⇒ 跑起來軀幹在扭,頭卻穩穩鎖住前方;再疊入彎凝視(看向轉向)
   stabilizeHead(rig, [
-    hips.rotation.x + (chest ? chest.rotation.x : 0),
-    hips.rotation.y + (chest ? chest.rotation.y : 0),
-    hips.rotation.z + (chest ? chest.rotation.z : 0),
+    hips.rotation.x + (rig.waist?.rotation.x || 0) + (chest ? chest.rotation.x : 0),
+    hips.rotation.y + (rig.waist?.rotation.y || 0) + (chest ? chest.rotation.y : 0),
+    hips.rotation.z + (rig.waist?.rotation.z || 0) + (chest ? chest.rotation.z : 0),
   ], idle, now, 0.85 + 0.12 * braceF, sg.idleK);   // 開火時頭再鎖緊一段(視線 = 準星);scanK = idleK
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
   if (rig.head) rig.head.rotation.y += L.gaze;   // 無頭 rig 的簡易單位(如步兵)跳過凝視
@@ -981,11 +1025,21 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
       // 外翼多收一段 = 半收翼的俯衝輪廓。猛禽撲擊時翅膀是張開定住的,不是還在拍。
       L.flap = (L.flap || 0) + dt * (3.2 + k * 9) * (1 - 0.8 * atk);
       const amp = (0.24 + k * 0.34 + L.flr * 0.5) * (1 - 0.85 * atk);
+      if (!rig.axialWave?.stableHead) {
+        rig.tilt.position.y += Math.cos(L.flap + L.ph) * amp * .06;
+        rig.tilt.rotation.x += Math.sin(L.flap + L.ph - .4) * amp * .035;
+      }
       for (const { w, outer, hand, sgn, dihedral = 0, elbowSweep = .14, wristSweep = .10 } of rig.wings) {
-        w.rotation.z = sgn * (dihedral + Math.sin(L.flap + L.ph) * amp - 0.10 * atk);
+        const phase = L.flap + L.ph;
+        const recovery = (1 + Math.cos(phase)) * .5;
+        w.rotation.z = sgn * (dihedral + Math.sin(phase) * amp - 0.10 * atk);
+        w.rotation.x = Math.cos(phase) * amp * .18;
         if (hand) {
-          outer.rotation.y = sgn * (elbowSweep + Math.sin(L.flap + L.ph - .7) * amp * .55 + .25 * atk);
-          hand.rotation.y = sgn * (wristSweep + Math.sin(L.flap + L.ph - .95) * amp * .4 + .18 * atk);
+          outer.rotation.y = sgn * (elbowSweep + recovery * amp * .65 + .25 * atk);
+          outer.rotation.z = sgn * Math.sin(phase - .35) * amp * .25;
+          hand.rotation.y = sgn * (wristSweep + (1 + Math.cos(phase - .3)) * .5 * amp * .5 + .18 * atk);
+          hand.rotation.z = sgn * Math.sin(phase - .7) * amp * .18;
+          hand.rotation.x = Math.cos(phase - .5) * amp * .3;
         } else {
           outer.rotation.z = sgn * (Math.sin(L.flap + L.ph - 0.7) * amp * 1.5 - 0.18 * atk);
         }
@@ -1001,11 +1055,78 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
   }
   if (rig.axialWave) {
     const wave = rig.axialWave;
+    if (wave.stableHead) {
+      // The head leads the chain; banking the carrier would reintroduce head wobble.
+      rig.tilt.rotation.set(0,0,0);
+      rig.tilt.position.y = rig.tiltY0;
+    }
     wave.chain.forEach((node, i) => {
+      if (wave.stableHead) node.rotation.set(0,0,0);
       node.rotation.y = wave.amplitude * Math.sin(now * Math.PI * 2 * wave.frequency - i * wave.delay)
         - clamp(yawRate * wave.turn, -.12, .12);
     });
   }
+  for (const wing of rig.rotorWings || []) {
+    const phase = now * Math.PI * 2 * wing.frequency + wing.phase;
+    wing.node.rotation.set(wing.twist * Math.sin(phase + Math.PI / 2),
+      wing.sign * wing.sweep * Math.cos(phase), wing.sign * wing.lift * Math.sin(phase));
+  }
+  if (rig.flightAxial) {
+    const axial = rig.flightAxial;
+    axial.waist.rotation.set(Math.sin(now * 2) * axial.bend, clamp(yawRate * .04, -.08, .08), 0);
+    axial.chest.rotation.x = -axial.waist.rotation.x * .6;
+    axial.neck.rotation.x = -rig.tilt.rotation.x - axial.waist.rotation.x - axial.chest.rotation.x;
+  }
+  if (rig.swim) {
+    const swim = rig.swim;
+    const phase = now * Math.PI * 2 * swim.frequency;
+    const amplitude = .35 + .65 * clamp(spd / top, 0, 1);
+    swim.body.rotation.x = swim.bodyAmp * Math.sin(phase) * amplitude;
+    swim.tail.forEach((node, i) => {
+      node.rotation.x = swim.tailAmp * Math.sin(phase - i * swim.delay) * amplitude;
+      node.rotation.y = clamp(-yawRate * .035, -.08, .08) * (i + 1) / swim.tail.length;
+      node.rotation.z = 0;
+    });
+    swim.fins.forEach((node, i) => { node.rotation.z = (i ? -1 : 1) * swim.finAmp * Math.sin(phase - .7) * amplitude; });
+  }
+}
+
+function poseArchery(rig) {
+  const a = rig.archery;
+  const release = clamp(rig._kickR || 0,0,1);
+  const draw = a.restDraw + (a.fullDraw-a.restDraw) * clamp((rig._fireAim || 0)-release*1.5,0,1);
+  a.nock.position.z = -draw;
+  a.strings.forEach((node,i) => {
+    node.rotation.x = (i ? -1 : 1) * (Math.atan2(draw,a.halfHeight)-Math.atan2(a.restDraw,a.halfHeight));
+    node.scale.setScalar(Math.hypot(draw,a.halfHeight)/Math.hypot(a.restDraw,a.halfHeight));
+  });
+  rig.wpn.light.ref.getObjectByName('gun_recoil').scale.setScalar(release>.45 ? .001 : 1);
+  const [target,delta,pole,upper,rest,local] = a.scratch;
+  a.nock.getWorldPosition(target);
+  a.shoulder.parent.updateWorldMatrix(true,false);
+  local.copy(target); a.shoulder.parent.worldToLocal(local);
+  delta.copy(local).sub(a.shoulder.position);
+  const lengthA = a.elbow.position.length(), lengthB = a.hand.position.length();
+  const distance = clamp(delta.length(),Math.abs(lengthA-lengthB)+1e-5,lengthA+lengthB-1e-5);
+  delta.normalize();
+  const reach = (lengthA*lengthA-lengthB*lengthB+distance*distance)/(2*distance);
+  pole.fromArray(a.pole).addScaledVector(delta,-pole.dot(delta)).normalize();
+  upper.copy(delta).multiplyScalar(reach).addScaledVector(pole,Math.sqrt(Math.max(0,lengthA*lengthA-reach*reach)));
+  a.shoulder.quaternion.setFromUnitVectors(rest.copy(a.elbow.position).normalize(),upper.normalize());
+  a.shoulder.updateWorldMatrix(true,false);
+  local.copy(target); a.shoulder.worldToLocal(local);
+  a.elbow.quaternion.setFromUnitVectors(rest.copy(a.hand.position).normalize(),local.sub(a.elbow.position).normalize());
+  a.hand.rotation.set(0,0,0);
+}
+
+function stepCephalopod(L, rig, dt, now, speed, yawRate) {
+  L.amp = damp(L.amp, clamp(speed / rig.top, 0, 1), 6, dt);
+  L.ph += speed * dt / Math.max(.2, rig.stride * (rig.s || 1));
+  rig.spine.position.y = rig.hipsY0 + Math.sin(now * .9) * rig.bob;
+  rig.spine.rotation.set(.025 * L.amp, clamp(-yawRate * .035, -.10, .10), 0);
+  rig.chest.rotation.set(0, 0, 0);
+  rig.neck.rotation.set(0, 0, 0);
+  rig.head.rotation.set(0, 0, 0);
 }
 
 /** 四足獸型:各生物專屬步態(rig.gait)+ 脊椎波傳導 + 尾巴配重(Task 2.2)。
@@ -1227,6 +1348,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
         sh.rotation.x = b.shX + idle * 0.02 * Math.sin(now * 1.6 - i * 1.8)
           + rChg * (rHv.armR || 0) - rKick * 0.08;
         sh.rotation.z = b.shZ + idle * 0.015 * Math.sin(now * 1.6 - i * 1.8 + 1.2);
+        if (rig.archery) sh.rotation.y = b.shY || 0;
         el.rotation.x = b.elX + idle * 0.025 * Math.sin(now * 1.6 - i * 1.8 + 0.6);
       });
     }

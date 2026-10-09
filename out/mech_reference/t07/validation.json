@@ -2,13 +2,13 @@
   "asset": "t07",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 10824,
-    "meshes": 61,
-    "joints": 26,
+    "triangles": 11032,
+    "meshes": 64,
+    "joints": 30,
     "source": {
-      "contract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
-      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
-      "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
+      "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+      "catalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea",
       "image": "0e0b9d9122cd94868496cfd170b6d0a8c4187191175313b5a88f20fab18105d4"
     }
   },
@@ -22,41 +22,74 @@
     "shield_deploy",
     "shield_retract"
   ],
-  "renders": [
-    "reference.png",
-    "front.png",
-    "side.png",
-    "back.png",
-    "top.png",
-    "idle.png",
-    "shield_deploy.png",
-    "shield_retract.png",
-    "light.png",
-    "heavy.png",
-    "skill.png",
-    "ult.png",
-    "run.png"
-  ],
+  "renders": [],
   "hashes": {
-    "runtime": "8a0e73348defcb41e67171af07084ab081aa1cf088162b845d284ae86c6a0306",
-    "blend": "d8d8d3abd1539db477b2f61016becf4f18db875993849c44002ed9b84a36811e",
-    "glb": "d6846d141fd0e3313e5ff64c4756b11cb430c2705d38e59542c0fe8a075974d0"
+    "runtime": "3bb9261ce430d5641f67d63f71c2d9c99bb2e0fb6d931f3d3ea62f968a6d4414",
+    "blend": "b0b69f385c2488adc5e79c3e1985a0871887df74a17e612550eb482634904844",
+    "glb": "47eaef6fd071dd1693d692a5e5e72b6901c2aa14c5f87ce83e0a7359e21e9c39"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pass",
-    "appearance": "pass",
-    "export": "pass",
-    "destination": "pass",
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pending_independent_load",
+    "destination": "pending_browser_review",
     "user_signoff": "pending_user_review",
     "editable_source": "pass",
-    "rebuild": "pass"
+    "motion": "pass_structural"
   },
-  "editableSourceRecipe": {
-    "contract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
-    "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
-    "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
-    "image": "0e0b9d9122cd94868496cfd170b6d0a8c4187191175313b5a88f20fab18105d4"
+  "motionSource": {
+    "samples": "4eb4a71629963f0a6af02e17a4d71df3bc295d474afc0454fb1551e2bac6e006",
+    "inputBlend": "out/anatomical_motion/before/t07-b44916257853.blend",
+    "clips": [
+      "idle",
+      "run",
+      "light",
+      "heavy"
+    ],
+    "nodes": [
+      "tilt",
+      "pelvis",
+      "waist",
+      "chest",
+      "neck",
+      "sensor",
+      "wing_r",
+      "wing_r_outer",
+      "wing_l",
+      "wing_l_outer",
+      "wing_r_wrist",
+      "wing_l_wrist",
+      "hind_hip_r",
+      "hind_knee_r",
+      "hind_ankle_r",
+      "hind_toe_r",
+      "hind_hip_l",
+      "hind_knee_l",
+      "hind_ankle_l",
+      "hind_toe_l",
+      "gun",
+      "gun_recoil",
+      "light_muzzle",
+      "heavy",
+      "charge_hinge",
+      "heavy_muzzle",
+      "cast_dish",
+      "emitter_l",
+      "emitter_r",
+      "barrier"
+    ],
+    "drivers": {
+      "locomotion.js": "a07cfe35d8521913187dad322307a185235e7b79a63bf792c35b8b0ad3109596",
+      "anatomicalPose.js": "65d2ed330104b88190804fd61f5146acf70765678cfea2d704d009e4a341cda0",
+      "forge/referenceAsset.js": "aa587f0c5f7293df36e0bc667bd0931e25f17df911156f5ea64b907f32092dd4",
+      "gaitcurve.js": "357bf0c0bab9d108cdeed6531a77adda3f29bff723e2f3a0d924270bc516b895",
+      "unitMotion.js": "a404f67ef665ab4ffd18479de99a40dfe54ef55c416f2c8d6cb8005c72a62f47"
+    },
+    "baker": "ccd04038d3378aea18129aace2dfbbb5c533cadb3eefcf6370ebfbb81f2ef112",
+    "fps": 60,
+    "encoder": "e8cc689c554a9557827e4528f417d68f85d77308f16aa783754b3d4c94854213",
+    "restorer": "7581a939e9940060deea71ad48457955ce77fe0060fc946478bf993de2111d0f"
   }
 }

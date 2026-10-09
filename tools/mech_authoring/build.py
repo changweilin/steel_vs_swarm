@@ -10,7 +10,7 @@ from pathlib import Path
 
 import bpy
 import bmesh
-from mathutils import Vector
+from mathutils import Quaternion, Vector
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
@@ -70,6 +70,11 @@ class Asset:
         spec = copy.deepcopy(spec)
         self.spec = spec
         rig = spec['rig']
+        for group in ['fire', 'charge', 'cast']:
+            for track in spec['motion'][group]:
+                if 'amplitudeFrom' in track:
+                    owner, field = track['amplitudeFrom'].split('.')
+                    track['amplitude'] = rig[owner][field]
         parents = {name: parent for name, parent, _ in spec['joints']}
         positions = {name: at for name, _, at in spec['joints']}
         for held in rig.get('heldWeapons', []):
@@ -82,7 +87,7 @@ class Asset:
             if rig.get('aimPose') and side+'ShoulderX' in rig['aimPose']:
                 rig['aimPose'][side+'ElbowX'] = -held['pitch'] - rig['aimPose'][side+'ShoulderX']
         if spec['kind'] == 'biped':
-            rig['naturalArms'] = not (rig.get('knuckle') or rig.get('tinyArms') or rig.get('groundWings'))
+            rig['naturalArms'] = not (rig.get('knuckle') or rig.get('primate') or rig.get('tinyArms') or rig.get('groundWings') or rig.get('predatory'))
             rig['aimWhileIdle'] = False
             rig['armSwing'] = .24 if rig.get('tinyArms') else .42 if rig.get('tuckArms') else .75
             aim = rig.setdefault('aimPose', {'rShoulderX': -.55, 'rElbowX': -.92})
@@ -144,7 +149,9 @@ class Asset:
                 self.p['tentacles'].append({'root':chain[0]['g'],'deltas':[positions[name] for name in names]})
             self.p['tail'] = [positions[name] for name in rig.get('tailSegs', [])]
         if spec['id'] == 's01':
-            self.p.update(rotorX=abs(positions['rotor_lf'][0]), rotorZ=abs(positions['rotor_lf'][2]))
+            support = positions['rotor_support_lf']
+            self.p.update(rotorX=abs(positions['rotor_lf'][0] + support[0]),
+                          rotorZ=abs(positions['rotor_lf'][2] + support[2]))
         elif spec['id'] == 't10':
             self.p.update(thigh=abs(positions['knee_l'][1]), shin=abs(positions['ankle_l'][1]),
                           foreArm=abs(positions['wrist_l'][1]))
@@ -275,17 +282,21 @@ class Asset:
         return obj
 
     def drone(self):
+        from catalog import ellipsoid
         p = self.p
         length, w, h = p['length'], p['width'], p['depth']
-        sections = [(-length * .5, .17, h * .22), (-length * .36, w * .73, h * .85),
-                    (-length * .12, w, h), (length * .15, w * .96, h),
-                    (length * .33, w * .81, h * .87), (length * .5, w * .18, h * .26)]
-        self.loft('Carbon ventral keel', 'tilt', sections, 'dark', (0, -.055, 0), 'z')
-        self.loft('Blue dorsal armor', 'tilt', [(z, a * .96, b * .79) for z, a, b in sections], 'blue', (0, .115, 0), 'z')
-        for i, z in enumerate([-.82, -1.5]):
-            width = w * (.9 if i == 0 else .65)
-            self.loft('Golden abdomen band ' + str(i), 'tilt', [(z - .13, width, h * .78), (z + .13, width * 1.08, h * .84)], 'gold', (0, .12, 0), 'z')
+        bee = p['bee']
+        ellipsoid(self, 'Rounded bee thoracic carapace', 'tilt', bee['thorax'], (0, .08, .15), 'blue', 24, 12)
+        ellipsoid(self, 'Separate bee abdominal shell', 'abdomen', bee['abdomen'], (0, 0, 0), 'dark', 24, 12)
+        ellipsoid(self, 'Compound-eyed bee head', 'sensor', bee['head'], (0, .02, .12), 'gold', 20, 10)
+        for i, z in enumerate([.30, -.25, -.76]):
+            width = bee['abdomen'][0] * math.sqrt(1 - (z / (bee['abdomen'][2] * .5)) ** 2)
+            depth = bee['abdomen'][1] * width / bee['abdomen'][0]
+            self.loft('Golden abdomen band ' + str(i), 'abdomen',
+                      [(z - .08, width * 1.025, depth * 1.025), (z + .08, width * 1.025, depth * 1.025)], 'gold', axis='z')
         for side in [-1, 1]:
+            self.strut('Articulated bee sensor antenna', 'sensor', (side * .28, .30, .22), (side * .47, .70, .58), .045, 'dark')
+            self.disk('Antenna terminal sensor', 'sensor', .075, .10, (side * .47, .70, .58), 'gold', 'y')
             self.loft('Golden forward chine ' + str(side), 'tilt', [(.26, .25, .45), (1.25, .23, .4), (1.96, .11, .14)], 'gold', (side * .43, .11, 0), 'z')
             for name, radius, depth, z, material in [('Golden sensor cheek', .31, .16, .3, 'gold'),
                                                     ('Compound sensor eye', .27, .18, .35, 'dark'),
@@ -297,13 +308,15 @@ class Asset:
                     self.disk('Sensor cell', 'sensor', .025, .008, (side * (.25 + k * .065), -.2 + j * .1, .49), 'blue', 'z', 6)
             for z, suffix in [(p['rotorZ'], 'f'), (-p['rotorZ'], 'r')]:
                 prefix = ('l' if side < 0 else 'r') + suffix
-                center = (side * p['rotorX'], .03, z)
-                self.strut('Carbon rotor arm ' + prefix, 'tilt', (side * .43, 0, z * .73), center, .17, 'dark')
-                self.strut('Arm brace ' + prefix, 'tilt', (side * .44, -.12, z * .55), (center[0], -.07, z), .075, 'steel')
-                self.tube('Full blue duct ' + prefix, 'tilt', p['rotorRadius'], p['rotorRadius'] - .095, p['ductDepth'], center, 'blue', 'y', 32)
-                self.tube('Golden duct rim ' + prefix, 'tilt', p['rotorRadius'] + .012, p['rotorRadius'] - .035, .066, (center[0], .17, z), 'gold', 'y', 32)
-                self.tube('Golden lower duct belt ' + prefix, 'tilt', p['rotorRadius'] + .006, p['rotorRadius'] - .094, .13, (center[0], -.055, z), 'gold', 'y', 32)
-                self.tube('Cyan inner airflow ring ' + prefix, 'tilt', p['rotorRadius'] - .09, p['rotorRadius'] - .106, .018, (center[0], .105, z), 'glow', 'y', 32)
+                support = 'rotor_support_' + prefix
+                center = tuple(self.nodes['rotor_' + prefix].location)
+                center = (center[0], center[2], -center[1])
+                self.strut('Carbon rotor arm ' + prefix, support, (0, 0, 0), center, .17, 'dark')
+                self.strut('Arm brace ' + prefix, support, (side * .01, -.12, -z * .18), (center[0], -.07, center[2]), .075, 'steel')
+                self.tube('Full blue duct ' + prefix, support, p['rotorRadius'], p['rotorRadius'] - .095, p['ductDepth'], center, 'blue', 'y', 32)
+                self.tube('Golden duct rim ' + prefix, support, p['rotorRadius'] + .012, p['rotorRadius'] - .035, .066, (center[0], .17, center[2]), 'gold', 'y', 32)
+                self.tube('Golden lower duct belt ' + prefix, support, p['rotorRadius'] + .006, p['rotorRadius'] - .094, .13, (center[0], -.055, center[2]), 'gold', 'y', 32)
+                self.tube('Cyan inner airflow ring ' + prefix, support, p['rotorRadius'] - .09, p['rotorRadius'] - .106, .018, (center[0], .105, center[2]), 'glow', 'y', 32)
                 node = 'rotor_' + prefix
                 self.disk('Motor hub ' + prefix, node, .14, .22, (0, 0, 0), 'steel', 'y')
                 for angle in [0, math.tau / 3, 2 * math.tau / 3]:
@@ -354,7 +367,7 @@ class Asset:
         for a, b in [((.33, 1.78, .535), (.59, 1.56, .535)), ((.59, 1.56, .535), (.7, 1.82, .535)),
                      ((.7, 1.82, .535), (.42, 1.89, .535)), ((.42, 1.89, .535), (.33, 1.78, .535))]:
             self.strut('Right chest geometric insignia', 'chest', (-a[0], a[1], a[2]), (-b[0], b[1], b[2]), .022, 'shade')
-        self.disk('Neck actuator', 'chest', .19, .2, (0, 2.16, 0), 'dark', 'y')
+        self.disk('Neck actuator', 'neck', .19, .2, (0, 2.16 - self.nodes['neck'].location.z, 0), 'dark', 'y')
         self.loft('Trapezoid helmet', 'head', [(-.31, .4, .43), (.12, .62, .56), (.34, .4, .38)], 'armor')
         self.plate('Dark face inset', 'head', [(-.26, .15), (.26, .15), (.17, -.29), (0, -.34), (-.17, -.29)], .09, (0, .02, .3), 'dark')
         self.plate('Brow shade', 'head', [(-.34, .2), (.2, .25), (.31, .09), (-.29, .045)], .11, (0, .07, .365), 'dark')
@@ -490,11 +503,36 @@ class Asset:
                         self.nodes[track['node']].scale[index] = track['rest']
         self.nodes['barrier'].scale = (.001,) * 3
         self.anatomy_pose('rest', 0)
+        rig = self.spec['rig']
+        if rig.get('rider'):
+            self.rider_pose()
+        if rig.get('archery'):
+            self.aim_hands(0)
+            self.archery_pose(rig['archery']['restDraw'])
         if hasattr(self, 'combat'):
             combat.reset(self)
 
     def anatomy_pose(self, clip, t):
         rig = self.spec['rig']
+        if hasattr(self, '_pose_form'):
+            rig = rig | self.spec['forms'][self._pose_form]['rig']
+        predator = rig.get('predatory')
+        if predator:
+            self.rotate(self.nodes[predator['hunch']],'x',predator['pitch'])
+            for side, sign in [('L',1),('R',-1)]:
+                arm = self.nodes[rig['arm'+side]]
+                angle = predator['shoulder']+(math.sin(t*math.tau+sign)-math.sin(sign))*.025
+                # The endpoint composes pitch before splay in game coordinates.
+                arm.rotation_euler = (Quaternion((1,0,0),angle) @ Quaternion((0,-1,0),sign*predator['splay'])).to_euler()
+                self.rotate(self.nodes[rig['armChain'+side][0]['g']],'x',predator['elbow'])
+                self.rotate(self.nodes[rig['armChain'+side][1]['g']],'x',predator['wrist'])
+            self.rotate(self.nodes[rig['head']],'x',-predator['pitch'])
+        for wing in rig.get('rotorWings', []):
+            phase = t * math.tau * wing['frequency'] + wing['phase']
+            node = self.nodes[wing['node']]
+            self.rotate(node, 'z', wing['sign'] * wing['lift'] * math.sin(phase))
+            self.rotate(node, 'y', wing['sign'] * wing['sweep'] * math.cos(phase))
+            self.rotate(node, 'x', wing['twist'] * math.sin(phase + math.pi / 2))
         for w in rig.get('wings', []):
             if not w.get('hand'):
                 continue
@@ -513,17 +551,61 @@ class Asset:
                 self.rotate(self.nodes[w['outer']],'x',math.sin(t*math.tau-.6)*.035)
         for wave in rig.get('tentacleWaves', []):
             for i,name in enumerate(wave['chain']):
-                for axis, amplitude, offset in zip('xyz',wave['swing'],[0,1.2,2.4]):
-                    self.rotate(self.nodes[name],axis,amplitude*math.sin(t*math.tau*wave['frequency']+wave['phase']-i*.36+offset))
+                amplitude_run = wave.get('travel', [0, 0, 0]) if clip == 'run' else [0, 0, 0]
+                for axis, amplitude, offset, travel in zip('xyz',wave['swing'],[0,1.2,2.4],amplitude_run):
+                    self.rotate(self.nodes[name],axis,(amplitude+travel)*math.sin(t*math.tau*wave['frequency']+wave['phase']-i*.36+offset))
         wave=rig.get('axialWave')
         if wave:
+            if wave.get('stableHead'):
+                self.nodes[rig['tilt']].rotation_euler = (0,0,0)
+                self.nodes[rig['tilt']].location = xyz(next(p for name,_,p in self.spec['joints'] if name == rig['tilt']))
             for i,name in enumerate(wave['chain']):
+                if wave.get('stableHead'):
+                    self.nodes[name].rotation_euler = (0,0,0)
                 self.rotate(self.nodes[name],'y',wave['amplitude']*math.sin(t*math.tau*wave['frequency']-i*wave['delay']))
+
+    def archery_pose(self, draw):
+        a = self.spec['rig']['archery']
+        nock = self.nodes[a['nock']]
+        nock.location = xyz((0,0,-draw))
+        for i,name in enumerate(a['strings']):
+            node = self.nodes[name]
+            self.rotate(node,'x',(-1 if i else 1)*(math.atan2(draw,a['halfHeight'])-math.atan2(a['restDraw'],a['halfHeight'])))
+            node.scale = (math.hypot(draw,a['halfHeight'])/math.hypot(a['restDraw'],a['halfHeight']),)*3
+        bpy.context.view_layer.update()
+        shoulder, elbow, hand = (self.nodes[a[key]] for key in ['shoulder','elbow','hand'])
+        target = nock.matrix_world.translation
+        local = shoulder.parent.matrix_world.inverted() @ target
+        delta = local - shoulder.location
+        length_a, length_b = elbow.location.length, hand.location.length
+        distance = max(abs(length_a-length_b)+1e-5,min(length_a+length_b-1e-5,delta.length))
+        delta.normalize()
+        reach = (length_a*length_a-length_b*length_b+distance*distance)/(2*distance)
+        pole = xyz(a['pole'])
+        pole = (pole-delta*pole.dot(delta)).normalized()
+        upper = delta*reach+pole*math.sqrt(max(0,length_a*length_a-reach*reach))
+        shoulder.rotation_mode = elbow.rotation_mode = 'QUATERNION'
+        shoulder.rotation_quaternion = elbow.location.normalized().rotation_difference(upper.normalized())
+        bpy.context.view_layer.update()
+        local = shoulder.matrix_world.inverted() @ target
+        elbow.rotation_quaternion = hand.location.normalized().rotation_difference((local-elbow.location).normalized())
+        hand.rotation_euler = (0,0,0)
 
     @staticmethod
     def rotate(node, axis, value):
         index, sign = {'x': (0, 1), 'y': (2, 1), 'z': (1, -1)}[axis]
         node.rotation_euler[index] = value * sign
+
+    def rider_pose(self):
+        rig = self.spec['rig']
+        for shoulder,elbow,base in zip(rig['armSh'],rig['armEl'],rig['armBase']):
+            node = self.nodes[shoulder]
+            node.rotation_euler = (0,0,0)
+            self.rotate(node,'x',base['shX'])
+            self.rotate(node,'z',base['shZ'])
+            node.rotation_euler = (Quaternion((0,0,1),base.get('shY',0)) @ node.rotation_euler.to_quaternion()).to_euler()
+            self.rotate(self.nodes[elbow],'x',base['elX'])
+        self.rotate(self.nodes[rig['gunR']['g']],'x',rig['gunR']['rest'])
 
     def aim_hands(self, weight):
         bpy.context.view_layer.update()
@@ -562,10 +644,7 @@ class Asset:
                     self.rotate(self.nodes[joint['g']], joint.get('axis', 'x'),
                                 joint['base'] + math.sin(t * math.tau - i * .4) * (.12 if clip == 'run' else .04))
         if rig.get('rider'):
-            for shoulder, elbow, base in zip(rig['armSh'], rig['armEl'], rig['armBase']):
-                self.rotate(self.nodes[shoulder], 'x', base['shX'])
-                self.rotate(self.nodes[elbow], 'x', base['elX'])
-            self.rotate(self.nodes[rig['gunR']['g']], 'x', rig['gunR']['rest'])
+            self.rider_pose()
         if clip == 'idle':
             rig = self.spec['rig']
             carrier = self.nodes[rig.get('tilt') or rig.get('hips') or rig['spine']]
@@ -588,11 +667,11 @@ class Asset:
             self.nodes['barrier'].scale = (k,) * 3
         elif clip == 'run':
             if self.spec['kind'] == 'biped':
-                for side, phase in [('l', 0), ('r', 0 if rig.get('hop') else math.pi)]:
+                for side, phase in [('l', 0), ('r', 0 if rig.get('hop') else math.pi * (1 - rig.get('bound', 0)) if rig.get('primate') else math.pi)]:
                     angle = math.sin(t * math.tau + phase)
                     self.rotate(self.nodes['hip_' + side], 'x', rig.get('legBase', 0) + angle * .55)
                     self.rotate(self.nodes['knee_' + side], 'x', rig['legChain' + side.upper()][0]['base'] + max(0, -angle) * .7)
-                    arm_angle = math.sin(t * math.tau + (0 if side == 'l' else math.pi))
+                    arm_angle = math.sin(t * math.tau + phase)
                     self.rotate(self.nodes['shoulder_' + side], 'x', rig.get('armBase', 0) - arm_angle * .34 * rig['armSwing'] / .75)
                     elbow = rig['armChain' + side.upper()][0]
                     self.rotate(self.nodes[elbow['g']], elbow.get('axis','x'),
@@ -608,6 +687,10 @@ class Asset:
                                         joint['base'] + joint['k'] * max(0, -angle) * .75)
                 if rig.get('hop'):
                     self.nodes['hips'].location.z += max(0, math.sin(t * math.tau)) * .4
+                if rig.get('primate'):
+                    self.nodes['hips'].location.z -= rig['primate']['crouch']
+                    self.rotate(self.nodes['hips'], 'x', rig['primate']['lean'])
+                    self.rotate(self.nodes['chest'], 'x', .12 * math.sin(t * math.tau))
             elif self.spec['kind'] == 'quad':
                 if rig.get('insectLegs'):
                     for leg in rig['insectLegs']:
@@ -676,7 +759,24 @@ class Asset:
             elif self.spec['kind'] == 'aerial':
                 self.rotate(self.nodes['tilt'], 'x', -.13 * weight)
         self.anatomy_pose(clip, t)
+        launcher = rig.get('launcher')
+        if launcher and clip == 'heavy':
+            extension = self.nodes[launcher['lift']].location.z / launcher['extension']
+            aim = max(0, min(1, (extension - launcher['rotateStart']) / (1 - launcher['rotateStart'])))
+            self.rotate(self.nodes[launcher['pivot']], 'x', math.pi / 2 * aim)
         self.aim_hands(math.sin(math.pi*u)**2 if clip in ('light','heavy','skill','ult') else 0)
+        if rig.get('archery'):
+            bow = rig['archery']
+            draw = 0
+            if clip == 'light':
+                if u < .55:
+                    phase = min(1,u/.45)
+                    draw = phase*phase*(3-2*phase)
+                elif u < .70:
+                    phase = (u-.55)/.15
+                    draw = 1-phase*phase*(3-2*phase)
+                self.nodes['gun_recoil'].scale = ((.001 if .58<=u<.80 else 1),)*3
+            self.archery_pose(bow['restDraw']+(bow['fullDraw']-bow['restDraw'])*draw)
         if hasattr(self, 'combat'):
             combat.pose(self, clip, t)
 
@@ -688,11 +788,12 @@ class Asset:
             for node in self.nodes.values():
                 node.animation_data_create()
                 node.animation_data.action = None
-            for frame in range(1, 32, 3):
+            # Coupled string/hand motion needs dense quaternion samples across release.
+            for frame in range(1, 32, 1 if self.spec['rig'].get('archery') else 3):
                 self.pose(clip, (frame - 1) / 30)
                 for node in self.nodes.values():
                     node.keyframe_insert(data_path='location', frame=frame)
-                    node.keyframe_insert(data_path='rotation_euler', frame=frame)
+                    node.keyframe_insert(data_path='rotation_quaternion' if node.rotation_mode == 'QUATERNION' else 'rotation_euler', frame=frame)
                     node.keyframe_insert(data_path='scale', frame=frame)
             for node in self.nodes.values():
                 action = node.animation_data.action
@@ -714,7 +815,9 @@ class Asset:
             evaluated = obj.evaluated_get(depsgraph)
             mesh = evaluated.to_mesh()
             mesh.calc_loop_triangles()
-            transform = obj.parent.matrix_world.inverted() @ evaluated.matrix_world
+            assert obj.parent_type == 'OBJECT' and not obj.constraints, 'Unsupported mesh transform owner: ' + obj.name
+            # World-matrix cancellation amplifies translation error under near-zero effect scales.
+            transform = obj.matrix_parent_inverse @ evaluated.matrix_basis
             normal_transform = transform.to_3x3().inverted().transposed()
             key = (obj.parent.name, obj['region'])
             batch = batches.setdefault(key, {'parent': key[0], 'material': key[1], 'positions': [], 'normals': [], 'indices': [], 'parts': []})
@@ -849,7 +952,7 @@ for spec in contract['assets'].values():
     # glTF's object-track optimization otherwise drops that entire clip channel.
     bpy.ops.export_scene.gltf(filepath=str(temporary_glb), export_format='GLB', use_selection=True,
                              export_animations=True, export_animation_mode='NLA_TRACKS',
-                             export_optimize_animation_keep_anim_object=bool(spec['rig'].get('groundWings')),
+                             export_optimize_animation_keep_anim_object=bool(spec['rig'].get('groundWings') or spec['rig'].get('archery')),
                              export_nla_strips_merged_animation_name='Animation', export_force_sampling=True)
     temporary_glb.replace(glb)
     report = {'asset': spec['id'], 'blender': bpy.app.version_string, 'measurements': measured,

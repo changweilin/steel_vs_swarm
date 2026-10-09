@@ -10,11 +10,14 @@ import { charKind } from '../public/js/data.js';
 const outputOption = process.argv.indexOf('--output');
 const root = path.resolve(outputOption < 0 ? 'out/mech_reference' : process.argv[outputOption + 1]);
 const contract = JSON.parse(await readFile('tools/mech_authoring/assets.json', 'utf8'));
-const ids = Object.keys(contract.assets);
-assert.equal(ids.length, 24, 'Scope must contain exactly twelve mechs and twelve drones');
-assert.equal(ids.filter(id => charKind(id) === 'robot').length, 12, 'Incomplete mech scope');
-assert.equal(ids.filter(id => charKind(id) === 'drone').length, 12, 'Incomplete drone scope');
-assert(ids.every(id => charKind(id) !== 'morph'), 'Morphers must remain excluded');
+const roster = Object.keys(contract.assets);
+assert.equal(roster.length, 24, 'Scope must contain exactly twelve mechs and twelve drones');
+assert.equal(roster.filter(id => charKind(id) === 'robot').length, 12, 'Incomplete mech scope');
+assert.equal(roster.filter(id => charKind(id) === 'drone').length, 12, 'Incomplete drone scope');
+assert(roster.every(id => charKind(id) !== 'morph'), 'Morphers must remain excluded');
+const selected = process.argv.indexOf('--asset');
+const ids = selected < 0 ? roster : process.argv[selected + 1].split(',');
+assert(ids.every(id => roster.includes(id)), 'Unknown reference asset');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const identities = {};
 const requiredCounts = {
@@ -150,7 +153,8 @@ try {
       const recoil = rig.referenceMotion.fire[0];
       ent.fireFx = { t0: now, slot: 'light' };
       step(1 / 60, 5);
-      check(recoil.node.position.z < recoil.rest, `${id}: no barrel recoil`);
+      check(rig.archery ? recoil.node.position.z > recoil.rest : recoil.node.position.z < recoil.rest,
+        `${id}: no ${rig.archery ? 'arrow release' : 'barrel recoil'}`);
       if (id === 'm02') check(unit.getObjectByName('throat_barrel').scale.x <= .002, 'm02: light fire exposes throat cannon');
       if (id === 't12') check(unit.getObjectByName('forehead_bore').scale.x <= .002, 't12: light fire exposes forehead cannon');
       const localMuzzle = rig.muzzles.light.n.getWorldPosition(new THREE.Vector3());

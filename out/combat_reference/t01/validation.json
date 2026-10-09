@@ -2,16 +2,16 @@
   "asset": "t01",
   "blender": "5.2.0 LTS",
   "measurements": {
-    "triangles": 13616,
-    "meshes": 90,
-    "joints": 35,
+    "triangles": 13717,
+    "meshes": 94,
+    "joints": 41,
     "source": {
-      "contract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
-      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
-      "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
+      "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+      "catalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea",
       "image": "97ba25c19ced1a3a2388100cf3b9202297dda2cff2209075306e6a2896b69649",
-      "combat": "5ca8bd633985f3b8a2313cac79395151e662c971f9df02373aa167c9b2d03c2c",
-      "intent": "a8ab7c1e77a956f0d8f07c68e7e25f4c08e2277441c1a555b0cec8d283691a83"
+      "combat": "e2982b57af135c577a74355159096288e7ccdc8b85e5cb741cf9b934fc0d7b89",
+      "intent": "8a20f54432767ac8fbe6edb4539ce343803c981fa23399713dfcfb19487ffa1f"
     }
   },
   "clips": [
@@ -28,9 +28,9 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "c3e5650d4adaf07aa9153b185b8f96b0b7a6f40bdb24cfbb6f28eab3269eb84c",
-    "blend": "44871747228ba993638cc40bf709bd85d7b9a9cd1bf433f14cc4d250c6394b38",
-    "glb": "2e914f64639882eab13bfba845f60592e0d2de88ad94a5979df66354abb732be"
+    "runtime": "40f443dd7b4d6010d6714cecfe4ac02e577d130ca3685afbb6ca13bde8cd913f",
+    "blend": "8e93a8161d5aa765da8450f8c361bd3cf9eb18ccc69bbf9df540980f8451074e",
+    "glb": "35abd2e5cc57e6a28c310b4bdd4e2aecef8866c59612824682d8d1c65be2984f"
   },
   "gates": {
     "structure": "pass",

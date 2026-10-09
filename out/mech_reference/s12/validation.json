@@ -6,9 +6,9 @@
     "meshes": 33,
     "joints": 16,
     "source": {
-      "contract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
-      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
-      "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
+      "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+      "catalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea",
       "image": "a26c52cdc2232d0a4960c851c92c01e0484ecd2211b1a79ef85a370946a17a51"
     }
   },
@@ -22,41 +22,20 @@
     "shield_deploy",
     "shield_retract"
   ],
-  "renders": [
-    "reference.png",
-    "front.png",
-    "side.png",
-    "back.png",
-    "top.png",
-    "idle.png",
-    "shield_deploy.png",
-    "shield_retract.png",
-    "light.png",
-    "heavy.png",
-    "skill.png",
-    "ult.png",
-    "run.png"
-  ],
+  "renders": [],
   "hashes": {
-    "runtime": "d614c518cfb84e76801db978acb8ba6b870e5d9aaf528155105a96adb92deddb",
-    "blend": "07a2195b72b807ba3f8e35782f6f2f32a66332c0670c2adf60dac86a296218fd",
-    "glb": "e20f9bb3b06a634eb60cab498658ad02d48e79c0d565daae9599dc0772b77c61"
+    "runtime": "731054a014d842fa6790e64656450568f86067867a9862ac7caa6da2f30b00a8",
+    "blend": "43c509a65857f57807578058f6a3d81ac6301d8b4e9d15ba039e7d28a9e771cf",
+    "glb": "ac3a240be58f39eeacffe00012581aae1a511f71d020c0d192534bffbb712da9"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pass",
-    "appearance": "pass",
-    "export": "pass",
-    "destination": "pass",
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pending_independent_load",
+    "destination": "pending_browser_review",
     "user_signoff": "pending_user_review",
-    "editable_source": "pass",
-    "rebuild": "pass"
-  },
-  "editableSourceRecipe": {
-    "contract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
-    "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
-    "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
-    "image": "a26c52cdc2232d0a4960c851c92c01e0484ecd2211b1a79ef85a370946a17a51"
+    "editable_source": "pass"
   }
 }

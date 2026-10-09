@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mat, jetFlame, sph } from '../geo3d.js';
 import { attachCombatAsset } from './combatAsset.js';
+import { anatomicalRig } from '../anatomicalPose.js';
 
 /** Blender batches static parts per joint/material; each unit owns its disposable GPU resources. */
 export function buildReferenceAsset(asset, spec) {
@@ -76,6 +77,19 @@ export function buildReferenceAsset(asset, spec) {
     root: nodeOf(leg.root), lift: nodeOf(leg.lift), chain: rig[leg.chain] }));
   if (rig.tentacleWaves) rig.tentacleWaves = rig.tentacleWaves.map(wave => ({ ...wave, chain: wave.chain.map(nodeOf) }));
   if (rig.axialWave) rig.axialWave = { ...rig.axialWave, chain: rig.axialWave.chain.map(nodeOf) };
+  if (rig.predatory) rig.predatory = { ...rig.predatory, hunch: nodeOf(rig.predatory.hunch) };
+  if (rig.archery) rig.archery = { ...rig.archery,
+    ...Object.fromEntries(['bow','nock','shoulder','elbow','hand'].map(key => [key,nodeOf(rig.archery[key])])),
+    strings: rig.archery.strings.map(nodeOf), scratch: Array.from({length:6}, () => new THREE.Vector3()) };
+  // Parent-space yaw brings the holding hand inward instead of twisting a hanging arm.
+  if (rig.archery) rig.armSh[0].rotation.order = 'YXZ';
+  if (rig.rotorWings) rig.rotorWings = rig.rotorWings.map(wing => ({ ...wing, node: nodeOf(wing.node) }));
+  if (rig.flightAxial) rig.flightAxial = Object.fromEntries(Object.entries(rig.flightAxial)
+    .map(([key,value]) => [key, typeof value === 'string' ? nodeOf(value) : value]));
+  if (rig.swim) rig.swim = { ...rig.swim, body: nodeOf(rig.swim.body),
+    tail: rig.swim.tail.map(nodeOf), fins: rig.swim.fins.map(nodeOf) };
+  if (rig.launcher) rig.launcher = { ...rig.launcher, base: nodeOf(rig.launcher.base),
+    lift: nodeOf(rig.launcher.lift), pivot: nodeOf(rig.launcher.pivot) };
   if (rig.groundWings) rig.groundWings = rig.groundWings.map(wing => ({ ...wing,
     w: nodeOf(wing.w), outer: nodeOf(wing.outer), hand: nodeOf(wing.hand) }));
   if (rig.wings) rig.wings = rig.wings.map(wing => ({ ...wing, w: nodeOf(wing.w), outer: nodeOf(wing.outer),
@@ -165,5 +179,6 @@ export function buildReferenceAsset(asset, spec) {
   joints.renderOrder = 20;
   group.add(joints);
   group.userData.rig = rig;
+  rig.anatomical = anatomicalRig(group, rig, nodes);
   return { group, rig, joints: [joints], weapons: W, spin: group.userData.spin, nodes };
 }

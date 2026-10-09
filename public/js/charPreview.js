@@ -10,7 +10,7 @@
 // setChar() 換機體、start()/stop() 隨 charSection 顯隱開關 rAF。
 
 import * as THREE from 'three';
-import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility, castDirF } from './data.js';
+import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility, castDirF, lanceR } from './data.js';
 import { makeUnit, heroTargetH, measureBox } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { fireUnitMotion, stepUnitSpinners } from './unitMotion.js';
@@ -19,6 +19,7 @@ import { updateCelLight, disposeTree } from './toon.js';
 import { unitShotStyle, unitShotFx, starburst, shockRing, impactBurst, explosionBurst, beamLine, gundamBeam, ionBreath, projectileMesh, stepProjectileFx } from './vfx.js';
 import { SUMMON_BUILDERS } from './summonModels.js';
 import { spawnCastFx } from './castfx.js';
+import { lanceDischarge, fanDischarge } from './vfx.js';
 
 const SUN = new THREE.Vector3(0.4, 0.8, 0.4);
 const AUTO_SPIN = 0.35;      // idle 自轉角速度 (rad/s)
@@ -337,14 +338,15 @@ export class CharPreview {
       // 鏡頭:重武器蓄力/開火期間先定住看機體(wantR=R),砲彈射出後 _stepHeavy 才把鏡頭
       // 交給砲彈(trackObj)並拉遠;輕武器全程維持機體特寫。虛擬目標在正前方供彈道對準。
       this.wantR = R;
-      if (slot === 'heavy') { this.anim.aimAt = this._showTarget(this._aimDist(w)); this.anim.wide = { rail: 2.6, missile: 2.4, launcher: 2.4, plasma: 2.0, beam: 1.8 }[w.type] ?? 1.6; }
+      this.anim.aimAt = this._showTarget(this._aimDist(w));
+      if (slot === 'heavy') this.anim.wide = { rail: 2.6, missile: 2.4, launcher: 2.4, plasma: 2.0, beam: 1.8 }[w.type] ?? 1.6;
     } else {
       const a = heroAbility(id, slot, 1);
       // dur 蓋住「蓄勢半拍 + 最長特效壽命 ~2.8s」:取景在演出結束前不縮回
       this.anim = { slot, t: 0, a, fired: 0, dur: slot === 'ult' ? 3.4 : 3.0 };
       // 有目標招式(strike / 有施放距離)→ 前方立虛擬目標,特效落在目標上;自身型(增益/治療/視野)不立標記
       const targeted = (a.range || 0) > 0 || a.fx === 'strike';
-      this.anim.at = targeted ? this._showTarget(Math.min(this.fitR * 1.8, this.fitR * 3)) : new THREE.Vector3(0, 0, 0);
+      this.anim.at = targeted ? this._showTarget(a.range || this.fitR * 1.8) : new THREE.Vector3(0, 0, 0);
       // 施法動作(locomotion stepCastPose;與戰場 'cast' 事件同語意):
       // 指向型(strike/dash/遠端 emp)= 定向動作,其餘 = 全向動作
       if (this._ent) {
@@ -352,7 +354,7 @@ export class CharPreview {
         this._ent.castFx = { t0: this._now(), slot, dir };
       }
       // 大招法陣/劍氣最大到 ~2.2R + 浮空,取景放大以完整入鏡
-      this.wantR = slot === 'atk' ? R * 2.2 : R * 1.5;
+      this.wantR = Math.max(slot === 'atk' ? R * 2.2 : R * 1.5, a.r || 0);
     }
     this._auto = true;
     this.idle = 0;
@@ -396,7 +398,7 @@ export class CharPreview {
   }
 
   /** 目標下彈道距離(世界公尺):虛擬目標擺這、砲彈也飛向這 —— 夾在取景框得住的範圍 */
-  _aimDist(w) { return Math.min(Math.max(this.fitR * 2.6, (w?.r || 0) * 2), this.fitR * 3.4); }
+  _aimDist(w) { return w?.range || this.fitR * 2.6; }
 
   /** 擊發瞬間把鏡頭交給砲彈:trackObj 追蹤點 from→to,鏡頭跟著拉遠;結束緩回機體特寫。
    *  瞬擊武器(rail/beam/plasma/gun)無實體彈 → 建一顆隱形追蹤點模擬「砲彈飛出去」。 */
@@ -426,7 +428,8 @@ export class CharPreview {
     const m = this._muzzle('heavy');
     const fwd = this._fwd();
     const up = new THREE.Vector3(0, 1, 0);
-    const aim = A.aimAt || m.clone().addScaledVector(fwd, this._aimDist(w));
+    const target = A.aimAt || m.clone().addScaledVector(fwd, this._aimDist(w));
+    const aim = target.clone().sub(m).clampLength(0, w.range).add(m);
 
     if (w.type === 'rail') {
       if (A.fired) return;
@@ -437,7 +440,7 @@ export class CharPreview {
         A.spark = A.t + 0.12;
       }
       if (chg >= 1) {
-        gundamBeam(this.scene, this.effects, m, aim, hue, { ttl: 0.5, r: R * 0.035 });
+        lanceDischarge(this.scene, this.effects, m, aim, w, hue);
         starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.35, 0xffffff);
         this.holder.position.z -= R * 0.2;                            // 極速彈的重後座
         this.holder.rotation.x -= 0.14;
@@ -449,7 +452,7 @@ export class CharPreview {
       // 0.25s 起持續 1 秒的穩定輸出:短壽命光束連續刷新 = 駐留光束
       if (A.t >= 0.25 && A.t <= 1.35 && A.t >= (A.tick || 0)) {
         if (!A.tick) { this._fireCue(true); this._followShell(m, aim, 1.1); }   // 首拍 = 擊發
-        gundamBeam(this.scene, this.effects, m, aim, hue, { ttl: 0.18, r: R * 0.04, rings: 2, def: w });
+        lanceDischarge(this.scene, this.effects, m, aim, w, hue);
         starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.12, hue);
         this.holder.position.z -= R * 0.004;                          // 持續微反壓
         A.tick = A.t + 0.11;
@@ -462,8 +465,7 @@ export class CharPreview {
       if (A.fired === 0 && A.t < 0.45) {
         this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.45 * Math.PI);   // 蓄壓下蹲
       } else if (A.fired === 0) {
-        ionBreath(this.scene, this.effects, m, aim, hue, { ttl: 0.35, r: R * 0.12, def: w });
-        shockRing(this.scene, this.effects, aim.x, 0, aim.z, R * 2.0, 0x7fe8ff);
+        fanDischarge(this.scene, this.effects, m, fwd, w);
         this.holder.position.z -= R * 0.1;
         this._fireCue(true);
         this._followShell(m, aim, 0.5);
@@ -517,14 +519,15 @@ export class CharPreview {
         A.fired = 1;
       } else if (A.fired === 1 && A.t >= A.boomAt) {
         const p = A.boomPos;
-        explosionBurst(this.scene, this.effects, p.x, p.y, p.z, Math.min(R * 2, Math.max(R * 0.9, w.r || 0)), 0xffaa33);
+        explosionBurst(this.scene, this.effects, p.x, p.y, p.z, w.r || 0, 0xffaa33);
         A.fired = 2;
       }
     } else if (A.fired === 0 && A.t >= 0.55) {
       // 動能重砲(gun):蓄力後單發重擊 + 象徵性衝擊環
       starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.30, 0xffd27a);
       impactBurst(this.scene, this.effects, aim,
-        { r: Math.max(R * 0.9, w.r || 0), color: 0xffd27a, core: 0xfff2b8, heavy: true });
+        { r: w.r || 0, color: 0xffd27a, core: 0xfff2b8, heavy: true });
+      lanceDischarge(this.scene, this.effects, m, aim, w, hue);
       this.holder.position.z -= R * 0.12;
       this.holder.rotation.x -= 0.10;
       this._fireCue(true);
@@ -559,11 +562,21 @@ export class CharPreview {
         while (A.fired < A.shots && A.t >= A.next) {
           const m = this._muzzle();
           starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.10, 0xfff2b8);
-          // NPC 連射:朝虛擬目標拉曳光(帶輕微散布);英雄輕武器維持原本純槍口焰(不設 aimAt)
-          if (A.aimAt) {
-            const j = R * 0.12;
-            const end = A.aimAt.clone().add(new THREE.Vector3((Math.random() - 0.5) * j, (Math.random() - 0.5) * j, 0));
-            beamLine(this.scene, this.effects, m, end, 0xfff2b8, { ttl: 0.09, w: R * 0.014 });
+          const direction = A.aimAt.clone().sub(m).normalize();
+          const end = m.clone().addScaledVector(direction, A.w.range);
+          if (A.w.fan) fanDischarge(this.scene, this.effects, m, direction, A.w, { ttl: .18 });
+          else if (A.w.type === 'beam') gundamBeam(this.scene, this.effects, m, end,
+            CHARACTERS[this.charId].visual.hue, { r: Math.min(lanceR(A.w), this.height * .035), ttl: .18, def: A.w });
+          else {
+            const projectile = projectileMesh(A.w);
+            const duration = Math.min(.35, Math.max(.08, A.w.range / (A.w.mv || 600)));
+            projectile.position.copy(m);
+            projectile.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+            this.scene.add(projectile);
+            this.effects.push({ obj: projectile, ttl: duration, fade: (object, fraction) => {
+              object.position.copy(m).lerp(end, 1 - fraction);
+              stepProjectileFx(object, (1 - fraction) * duration, A.w.mv || 600);
+            } });
           }
           this.holder.position.z -= R * 0.02;          // 後座:每發往後推,下面阻尼拉回
           this._fireCue(false);
@@ -582,10 +595,8 @@ export class CharPreview {
           casterPos: () => new THREE.Vector3(
             this.holder.position.x, this.holder.position.y + this.targetY, this.holder.position.z),
           groundY: () => 0,
-          // 展示台的範圍演出夾在取景可框住的尺度內(戰場才用真實半徑);
-          // rvCap 連帶夾住 gate/zone/snipe 的「絕對世界公尺下限」
-          r: Math.min(A.a.r || R * 1.2, R * (isUlt ? 2.2 : 1.5)),
-          rvCap: R * (isUlt ? 2.2 : 1.5),
+          // Camera fitting must not resize the settled effect footprint.
+          r: A.a.r || 0,
           dur: A.a.dur, scale: Math.max(this.height, R * 0.8),
         });
         A.fired = 1;

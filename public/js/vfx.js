@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { toonMat, outlinify, markShared, disposeTree, getWeatherDynamics, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
 import { flameGeometry } from './sceneDisasterGeometry.js';
 import { lowPower } from './mobile.js';
-import { UNITS, WEAPONS, BALLISTIC, shotFlightS } from './data.js';
+import { UNITS, WEAPONS, BALLISTIC, shotFlightS, lanceR, fanArcHalf, fanBinOf, fanBinRangeF, fanSubs } from './data.js';
 import { Pool } from './pool.js';
 import { registerStreamTex } from './tex.js';
 import { COMBAT_ASSETS } from './forge/combatAssets.js';
@@ -662,7 +662,80 @@ function combatDischarge(scene, effects, from, to, def, family, radius, ttl) {
       if (family === 'ion') o.children[i].rotation.z = (1 - f) * Math.PI * 2;
     }
   } });
-  starburst(scene, effects, to.x, to.y, to.z, radius * 1.6, asset.combat.intent.accent);
+  starburst(scene, effects, to.x, to.y, to.z, radius * .5, asset.combat.intent.accent);
+  return true;
+}
+
+/** Pre: endpoints are clipped world coordinates. Invariant: beam thickness equals the shared penetration radius. */
+export function lanceDischarge(scene, effects, from, to, def, color) {
+  const radius = lanceR(def);
+  if (crowded(effects)) return;
+  // The styled core can taper; the constant-width channel still exposes the full hit cylinder.
+  if (COMBAT_ASSETS[def.ch]) beamLine(scene, effects, from, to, color,
+    { ttl: def.type === 'beam' ? .5 : .26, w: radius, op: .14 });
+  if (def.type === 'beam') {
+    gundamBeam(scene, effects, from, to, color, { r: radius, ttl: .5, def });
+    return;
+  }
+  if (combatDischarge(scene, effects, from, to, def, 'bullet', radius, .26)) return;
+  beamLine(scene, effects, from, to, color, { ttl: .26, w: radius, op: .28 });
+}
+
+/** Pre: range is the resolved weapon reach; clip returns the nearest obstacle on each ray. Post: every sub-cone uses its authored authority boundary. */
+export function fanDischarge(scene, effects, from, direction, def, { range = def.range, clip, ttl = .45 } = {}) {
+  if (crowded(effects) || !Number.isFinite(range) || range <= 0 || direction.lengthSq() < 1e-10) return false;
+  const asset = COMBAT_ASSETS[def.ch], slot = def.slot || 'heavy';
+  const parts = asset?.meshes.filter(part => part.parent === `fx_${slot}_ion`);
+  if (!parts?.length) return false;
+  const ownership = asset.combat.fans?.[slot];
+  if (!ownership || parts.some(part => ownership.vertexBins[part.material]?.length !== part.positions.length / 3)) return false;
+  const half = fanArcHalf(def), span = half * 2 / fanSubs(def);
+  const orientation = new THREE.Quaternion().setFromUnitVectors(_FWD, direction.clone().normalize());
+  const group = new THREE.Group(), alpha = [];
+  const local = new THREE.Vector3(), endpoint = new THREE.Vector3();
+  for (const part of parts) {
+    const positions = part.positions.slice();
+    const owners = ownership.vertexBins[part.material];
+    for (let i = 0; i < positions.length; i += 3) {
+      local.fromArray(part.positions, i);
+      local.z = Math.max(0, local.z);
+      const bin = owners[i / 3], lo = -half + bin * span, hi = lo + span;
+      const phi = Math.max(lo, Math.min(hi, Math.atan2(local.x, local.z)));
+      const maximum = Math.acos(Math.min(1, Math.cos(half) / Math.cos(phi)));
+      const elevation = Math.max(-maximum, Math.min(maximum, Math.atan2(local.y, Math.hypot(local.x, local.z))));
+      let reach = Math.min(fanBinRangeF(def, bin), fanBinRangeF(def, fanBinOf(def, phi)));
+      // Shared edges must survive float32 rotation without entering the longer neighbour's reach.
+      if (phi - lo < .000001 && bin > 0) reach = Math.min(reach, fanBinRangeF(def, bin - 1));
+      if (hi - phi < .000001 && bin + 1 < ownership.count) reach = Math.min(reach, fanBinRangeF(def, bin + 1));
+      const length = Math.min(local.length(), reach);
+      local.set(Math.sin(phi) * Math.cos(elevation) * length, Math.sin(elevation) * length,
+        Math.cos(phi) * Math.cos(elevation) * length);
+      local.multiplyScalar(range).applyQuaternion(orientation);
+      if (clip && local.lengthSq() > 1e-10) {
+        endpoint.copy(from).add(local);
+        const clipped = clip(from, endpoint);
+        if (clipped?.to && clipped.to.distanceToSquared(from) < local.lengthSq()) local.setLength(clipped.to.distanceTo(from));
+      }
+      local.toArray(positions, i);
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setIndex(part.indices);
+    geometry.userData.fanBins = owners;
+    const desc = asset.materials[part.material];
+    const mesh = new THREE.Mesh(geometry, energyMat(desc.color, desc.opacity));
+    mesh.userData.noOutline = true;
+    mesh.userData.presentationEffect = true;
+    mesh.raycast = () => {};
+    group.add(mesh); alpha.push(desc.opacity);
+  }
+  group.position.copy(from);
+  group.userData.authoredFan = { ch: def.ch, slot, range, arc: def.arc };
+  scene.add(group);
+  effects.push({ obj: group, ttl, fade(o, f) {
+    o.scale.setScalar(.3 + .7 * f);
+    for (let i = 0; i < o.children.length; i++) o.children[i].material.opacity = alpha[i] * f;
+  } });
   return true;
 }
 

@@ -238,15 +238,28 @@ export function spawnParticleCast(scene, effects, P, recipe) {
     else if (layout === 4) { lx = Math.cos(a) * rr; lz = Math.sin(a) * rr * 0.45; }
     else if (layout === 5) { lx = (rand() - 0.5) * P.scale * 0.45; lz = (rand() - 0.5) * P.scale * 0.45; }
     else if (layout === 6) { lx = (i % 7 - 3) * P.scale * 0.18; lz = (Math.floor(i / 7) - 3) * P.scale * 0.18; }
-    const px = P.at.x + lx, py = P.at.y + 0.3 + rand() * P.scale, pz = P.at.z + lz;
+    let ly = 0.3 + rand() * P.scale;
+    if (P.r > 0) {
+      const fit = Math.min(1, P.r * .45 / Math.max(.001, Math.hypot(lx, ly, lz)));
+      lx *= fit; ly *= fit; lz *= fit;
+    }
+    const px = P.at.x + lx, py = P.at.y + ly, pz = P.at.z + lz;
     const life = Math.min(ttl, 0.65 + rand() * 0.75);
     engine.slots[slot] = handle; slotsForCast.push(slot);
     const particleColor = (i % 4 === accentMode % 4) ? accent : color;
     const delay = (i % 3) * Math.min(0.12, ttl * 0.12);
+    const size = P.scale * (0.08 + rand() * 0.12) * (0.88 + (recipe.tempo || 1) * 0.14);
+    let vx = (rand() - 0.5) * 1.2, vy = (rand() - 0.25) * 1.8, vz = (rand() - 0.5) * 1.2;
+    let burst = P.scale * (0.4 + rand() * 0.6) * (0.8 + (recipe.tempo || 1) * 0.2);
+    if (P.r > 0) {
+      burst = Math.min(burst, P.r * .12);
+      // Includes the shader's largest drift gain, orbit product, and billboard extent.
+      const fit = Math.min(1, P.r * .12 / ((Math.max(1, ttl) * 3.4 + burst + 1) * Math.max(.001, Math.hypot(vx, vy, vz))));
+      vx *= fit; vy *= fit; vz *= fit;
+    }
     write(sys, index, px, py, pz, start + delay, Math.min(life, ttl - delay),
-      P.scale * (0.08 + rand() * 0.12) * (0.88 + (recipe.tempo || 1) * 0.14), shape, motion, contact, layout,
-      (rand() - 0.5) * 1.2, (rand() - 0.25) * 1.8, (rand() - 0.5) * 1.2,
-      P.scale * (0.4 + rand() * 0.6) * (0.8 + (recipe.tempo || 1) * 0.2),
+      P.r > 0 ? Math.min(size, P.r * .025) : size, shape, motion, contact, layout,
+      vx, vy, vz, burst,
       particleColor.r, particleColor.g, particleColor.b, 0.78);
   }
   flush(systems[0]); flush(systems[1]);

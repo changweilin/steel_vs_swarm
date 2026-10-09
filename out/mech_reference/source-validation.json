@@ -1,8 +1,8 @@
 {
   "s01": {
-    "blend": "8e76f077e33142268610a0c847709134241b21de22dacb521773e0644685a35f",
-    "sourceMeshes": 226,
-    "bones": 17,
+    "blend": "7e642915e416384b192f66939e77f161a830805b5158130dded8a950b81a30c6",
+    "sourceMeshes": 232,
+    "bones": 22,
     "editableClips": [
       "idle",
       "run",
@@ -22,9 +22,9 @@
     }
   },
   "t10": {
-    "blend": "234096c42c574511c1b202b32e8885fcd6dfdf97aa4d72b17916e5a54e7f1453",
+    "blend": "412cc9ff13d0b1cc583e1fb146322153b2bdb30f889a9dc5f94b42c1595a1764",
     "sourceMeshes": 268,
-    "bones": 28,
+    "bones": 29,
     "editableClips": [
       "idle",
       "run",
@@ -44,7 +44,7 @@
     }
   },
   "s02": {
-    "blend": "ca8c1e33a36e42d882faf51c43340280b18e17a25f76250ed5ac1b5e2641842f",
+    "blend": "ec023e61495b4fe68e7d4f4d347ecc224847761b30f24c700a867257a03a6ce2",
     "sourceMeshes": 170,
     "bones": 18,
     "editableClips": [
@@ -66,7 +66,7 @@
     }
   },
   "s04": {
-    "blend": "553feb05deb7753c37f88e1c05c00bc336fb8ded017e7dd0cb503990d183dce8",
+    "blend": "90612ebd5ede6305146cfeeea2bad5f4fb46e9eb3c11f930fc5ce869ec6bee07",
     "sourceMeshes": 148,
     "bones": 13,
     "editableClips": [
@@ -88,7 +88,7 @@
     }
   },
   "s05": {
-    "blend": "3ab2d636d45a9c6139d7c9c1be64673ad38494f593d6a22c3bc31fd2eacccc57",
+    "blend": "536628817410306ef26ee15212d0d9087c2b77dc78652a590e0164021a8883e2",
     "sourceMeshes": 167,
     "bones": 16,
     "editableClips": [
@@ -110,7 +110,7 @@
     }
   },
   "s08": {
-    "blend": "4c0cd0a5bb3fabc473988c1726e60aa537d35d64468433955043437c3c97a9d5",
+    "blend": "f5badc8c9b9acf64ac938e086d512c3978c21172232ceb0436cc704ad6f67478",
     "sourceMeshes": 145,
     "bones": 14,
     "editableClips": [
@@ -132,7 +132,7 @@
     }
   },
   "s11": {
-    "blend": "fe3adff89e6984417be064410c637b45a4d84bb2b746300748d07cc72264f621",
+    "blend": "9e39df3a2236116820408f779c61bf2a2aa3e42e5b4e5c40371c359f16c82d0d",
     "sourceMeshes": 164,
     "bones": 13,
     "editableClips": [
@@ -154,7 +154,7 @@
     }
   },
   "s12": {
-    "blend": "07a2195b72b807ba3f8e35782f6f2f32a66332c0670c2adf60dac86a296218fd",
+    "blend": "43c509a65857f57807578058f6a3d81ac6301d8b4e9d15ba039e7d28a9e771cf",
     "sourceMeshes": 170,
     "bones": 16,
     "editableClips": [
@@ -176,9 +176,9 @@
     }
   },
   "t07": {
-    "blend": "d8d8d3abd1539db477b2f61016becf4f18db875993849c44002ed9b84a36811e",
-    "sourceMeshes": 198,
-    "bones": 26,
+    "blend": "b0b69f385c2488adc5e79c3e1985a0871887df74a17e612550eb482634904844",
+    "sourceMeshes": 201,
+    "bones": 30,
     "editableClips": [
       "idle",
       "run",
@@ -200,9 +200,9 @@
     }
   },
   "t08": {
-    "blend": "ab1145b0bae971c87ba599b729be9cd97e73b7b45b8213546eecfa4a5d194457",
-    "sourceMeshes": 357,
-    "bones": 51,
+    "blend": "0b98847ba73bff03e0f7042f4ece251f8744677e58d1e4f516afe1ca04a96ac2",
+    "sourceMeshes": 377,
+    "bones": 61,
     "editableClips": [
       "idle",
       "run",
@@ -225,7 +225,7 @@
     }
   },
   "t09": {
-    "blend": "0348e78dc77bba0db311b222e54aedd2bc03c164266d55130ef5f29b82938378",
+    "blend": "caaf8b8a1b5386343820be44506c75e01204941c84b96a54ba102a8573d4bf2f",
     "sourceMeshes": 174,
     "bones": 14,
     "editableClips": [
@@ -247,7 +247,7 @@
     }
   },
   "m03": {
-    "blend": "2acc6023590abfaedebc1bad60f37c125f520073f964b03c4b2dc531d4a6b19b",
+    "blend": "74cf6b1ebeb28f79e84579633390af2f34c6fe12e02cb1186305ed8d1537d80c",
     "sourceMeshes": 155,
     "bones": 13,
     "editableClips": [
@@ -269,9 +269,9 @@
     }
   },
   "m04": {
-    "blend": "f33dfba8b5af48f61befe22ac8ea91b524f35f47a24a6f35fd50529bab0e2245",
-    "sourceMeshes": 291,
-    "bones": 27,
+    "blend": "708794b7fda0467763de063f56e82ca38bbf2eb5a1516788eb4b9beca097ddec",
+    "sourceMeshes": 294,
+    "bones": 31,
     "editableClips": [
       "idle",
       "run",
@@ -294,9 +294,9 @@
     }
   },
   "s06": {
-    "blend": "b93f60993a97d2c7d94ca706e45bc4b8957ddbda40a67c4510131825823fe04a",
-    "sourceMeshes": 277,
-    "bones": 45,
+    "blend": "bf4ac690d460ffb5bf8df0d1702e9c3d1518fe5bf458c847dabf55e134defc29",
+    "sourceMeshes": 291,
+    "bones": 51,
     "editableClips": [
       "idle",
       "run",
@@ -307,16 +307,16 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 248,
     "anatomy": {
       "articulation": {
         "waist": null,
-        "heldWeapons": 1
+        "heldWeapons": 0
       }
     }
   },
   "s07": {
-    "blend": "434c9199d06058fc7caa193279f4513de2d202da14bd92bdc9a505fa10a040dd",
+    "blend": "a572d795aae24f1b8957a4fb242bf42b60e767f066a41b39cf08da0bdf48bfe6",
     "sourceMeshes": 431,
     "bones": 119,
     "editableClips": [
@@ -329,7 +329,7 @@
       "shield_deploy",
       "shield_retract"
     ],
-    "poseSamples": 40,
+    "poseSamples": 248,
     "anatomy": {
       "articulation": {
         "waist": null,
@@ -349,9 +349,9 @@
     }
   },
   "s09": {
-    "blend": "a9205176312a66cbfdbbd6d15e287bd78db59417c8e76b4b349686d9f733e4d4",
+    "blend": "2c32babbc139b47dabf4edab77d2b4580d67a1b60d64d4d06bd8dab7258b26b0",
     "sourceMeshes": 222,
-    "bones": 34,
+    "bones": 35,
     "editableClips": [
       "idle",
       "run",
@@ -371,9 +371,9 @@
     }
   },
   "t01": {
-    "blend": "55fe966f91d0c7ae23a84588945103d67a5620c1ef1015df499df33ad731054d",
+    "blend": "2ace7b1ac18ac85154969401e3ed0ef734c3f475b50af1f94792e279442ed6aa",
     "sourceMeshes": 223,
-    "bones": 25,
+    "bones": 26,
     "editableClips": [
       "idle",
       "run",
@@ -393,9 +393,9 @@
     }
   },
   "t02": {
-    "blend": "1959ca8ac324c808fe59248826fd95e3eacb34bc48bc7db716fee9268868fbdc",
+    "blend": "139d5a463803dc599e43f9faaa48173b7095dfa0959e7840e76407fcbed72d45",
     "sourceMeshes": 254,
-    "bones": 25,
+    "bones": 26,
     "editableClips": [
       "idle",
       "run",
@@ -415,9 +415,9 @@
     }
   },
   "t03": {
-    "blend": "974b214ef256d807c6dc4ceac8e43de29e4e0598a069c2d148fb80eac231fa42",
+    "blend": "7069d0ca7e49b5cc97f74a34d3f7a6b5c6b0ca34f952883d807c99de26a112e3",
     "sourceMeshes": 209,
-    "bones": 25,
+    "bones": 26,
     "editableClips": [
       "idle",
       "run",
@@ -437,7 +437,7 @@
     }
   },
   "t04": {
-    "blend": "dce5b3898a1390472283f9066102b954cbea0c4f320dfa887a65ada152a18606",
+    "blend": "89a455c1be8a94e589a037dce7138a4b6d5422cedb60105e769229d3e6a1cb43",
     "sourceMeshes": 253,
     "bones": 38,
     "editableClips": [
@@ -459,9 +459,9 @@
     }
   },
   "t05": {
-    "blend": "27647cf7886b9669e0cb64c3e7d93cb1f2e0bf4d6c5c3bbca4e9627dbb7e25ce",
-    "sourceMeshes": 299,
-    "bones": 32,
+    "blend": "5a9e3a67130405cf775a4e16d8c316acded4646753341d366ab9af8eb1e70673",
+    "sourceMeshes": 302,
+    "bones": 33,
     "editableClips": [
       "idle",
       "run",
@@ -475,15 +475,15 @@
     "poseSamples": 40,
     "anatomy": {
       "articulation": {
-        "waist": null,
+        "waist": "waist",
         "heldWeapons": 0
       }
     }
   },
   "t12": {
-    "blend": "2e93bd5937f69915ba8a6e73e54141429754210d4f5730cb3af317c4716df532",
+    "blend": "7789b3a29b12745106742f55cf1c0bdc4b1878f07c2374975d25e59ebc81393e",
     "sourceMeshes": 221,
-    "bones": 26,
+    "bones": 27,
     "editableClips": [
       "idle",
       "run",
@@ -503,9 +503,9 @@
     }
   },
   "m02": {
-    "blend": "e4d3f6c23c94ddcd0b357bb37f4acd683c8f445d70eef64f8014da97e8291de7",
+    "blend": "7a4b4aaea5dbb19ece5c8f6ed3e449471a8a1d3115b26b6117e10378f97619a1",
     "sourceMeshes": 248,
-    "bones": 37,
+    "bones": 38,
     "editableClips": [
       "idle",
       "run",
@@ -526,7 +526,7 @@
     }
   },
   "m06": {
-    "blend": "a91c33e1da81776594a2338cab884c7fed6133118f21af425141a04588c2891a",
+    "blend": "9d265dfa16add548c45a36c5e67646ce8a98fc456e122715f1d9a9a42a60015b",
     "sourceMeshes": 250,
     "bones": 38,
     "editableClips": [

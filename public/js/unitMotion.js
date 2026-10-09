@@ -24,6 +24,11 @@ export function stepReferenceMotion(rig, ent, dt, now, applyShield = true) {
       track.node[track.channel][track.axis] = track.rest + track.amplitude * phase;
     }
   }
+  if (rig.launcher) {
+    // Retraction restores the vertical rack before the support enters the rider's height range.
+    rig.launcher.pivot.rotation.set(0, 0, 0);
+    rig.launcher.lift.scale.y = 1;
+  }
   const spinner = motion.fireSpin;
   if (spinner) spinner.node.rotation[spinner.axis] = (spinner.node.rotation[spinner.axis]
     + dt * spinner.rate * Math.max(kick, rig._fireAim || 0)) % (Math.PI * 2);

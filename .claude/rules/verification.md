@@ -19,6 +19,7 @@
 | Building HP, rubble and damage presentation | `audit_building_damage`, `audit_building_motion`, `shot_building_damage` | Server-owned HP and shared wall/roof geometry survive collapse and late joins; damaged batches isolate neighbours and retain their equipment. |
 | Mobile unit and skill-object damage presentation | `audit_unit_damage` | Damage follows articulated parts without editing shared vertices; healing restores materials; missile HP comes from snapshots. |
 | NPC and combat-building motion | `audit_unit_motion`, `audit_unit_damage`, `audit_client_syntax` | Limb chains stay finite; per-barrel recoil follows event time, returns to rest and carries its muzzle anchor. |
+| Blender-authored mech anatomy and species motion | `audit_reference_mechs`, `audit_reference_morph`, `audit_anatomical_motion`, `audit_combat_actions`, `audit_client_syntax` | Joint-owned geometry, reference identity, full motion cycles, launch clearance, both morph forms and shared event clocks survive export and runtime integration. |
 | Generated civilian appearance | `audit_civilian_generator`, `audit_unit_motion`, `audit_lance_hit`, `audit_ui_layout` | Entity seeds replay across clients; visual height and hit dimensions share one body generator; civilians have no encyclopedia entry. |
 | Shield split and shield-axis setup | `audit_shield_counter` | Shield and armor handling stays single-track. |
 | Codex hexagon chart | `audit_hex_stats` | Chart bands derive from weapon output. |

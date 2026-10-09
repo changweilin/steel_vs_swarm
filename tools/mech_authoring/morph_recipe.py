@@ -85,6 +85,14 @@ def create(base, spec):
                 if clip == 'flight_idle':
                     self.nodes['tilt'].location.z += math.sin(t * math.tau) * self.spec['forms']['flight']['rig']['bob']
                 rig=self.spec['forms']['flight']['rig']
+                swim = rig.get('swim')
+                if swim:
+                    phase = t * math.tau * swim['frequency']
+                    self.rotate(self.nodes[swim['body']], 'x', swim['bodyAmp'] * math.sin(phase))
+                    for i, name in enumerate(swim['tail']):
+                        self.rotate(self.nodes[name], 'x', swim['tailAmp'] * math.sin(phase - i * swim['delay']))
+                    for i, name in enumerate(swim['fins']):
+                        self.rotate(self.nodes[name], 'z', (1 if i == 0 else -1) * swim['finAmp'] * math.sin(phase - .7))
                 for entry in rig.get('spin', []):
                     self.rotate(self.nodes[entry['node']],entry['axis'],t*entry['rate'])
                 for entry in rig.get('wings', []):
@@ -330,12 +338,17 @@ def limb_inventory(a):
             a.box('Articulated palm', 'wrist_'+n, (.28, .22, .22), (0, -.08, .04), 'shade', .025)
             for x in [-.09, 0, .09]:
                 if a.spec['id'] == 'm05':
-                    spike(a, 'Wolf fore claw', 'wrist_'+n, (x, -.18, .1), (x, -.38, .28), .042, 'steel')
+                    a.strut('Open wolf proximal finger','wrist_'+n,(x,-.15,.09),(x*1.55,-.26,.30),.038,'armor')
+                    spike(a, 'Wolf fore claw', 'wrist_'+n, (x*1.55, -.26, .30), (x*1.8, -.36, .52), .055, 'steel')
                 else:
                     a.box('Armored finger', 'wrist_'+n, (.06, .18, .08), (x, -.22, .12), 'armor', .009)
 
 
 def biped_body(a):
+    if 'neck' in a.nodes:
+        end = next(pos for name, _, pos in a.spec['joints'] if name == 'head')
+        a.strut('Articulated cervical actuator','neck',(0,0,0),end,.16,'dark')
+        ellipsoid(a,'Cervical armor coupling','neck',(.34,.24,.32),tuple(v*.45 for v in end),'shade',12,6)
     if a.spec['id'] == 'm05':
         a.loft('Separate wolf pelvic girdle', 'hips', [(-.32, .62, .42), (.08, .98, .62), (.22, .72, .48)], 'shade')
         a.loft('Long canine rib armor', 'chest', [(0, .72, .5), (.85, 1.72, .78), (1.3, 1.68, .7)], 'shade')
@@ -434,7 +447,8 @@ def atlas(a):
             a.strut('Shared three blade tilt rotor','rotor_'+n,(.12*math.cos(ang),.12*math.sin(ang),0),(.88*math.cos(ang),.88*math.sin(ang),0),.078,'dark')
             a.strut('Rotor blade ivory tip','rotor_'+n,(.75*math.cos(ang),.75*math.sin(ang),.02),(.87*math.cos(ang),.87*math.sin(ang),.02),.042,'white')
         for i in range(10):
-            a.disk('Exposed shoulder tray rivet','wing_'+n,.022,.025,(s*(.16+i*.21),.115,.53-i*.12),'steel','y',8)
+            # Fixed rivets share the warning-rim material to leave draw batches for the articulated neck.
+            a.disk('Exposed shoulder tray rivet','wing_'+n,.022,.025,(s*(.16+i*.21),.115,.53-i*.12),'white','y',8)
         for row in range(4):
             for col in range(6):
                 x=s*(.24+col*.28);z=.30-row*.28-col*.15
