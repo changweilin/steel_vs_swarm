@@ -6079,7 +6079,8 @@ export class BattleSim {
         delete h.ammo[up.abil]; delete h.reloadUntil[up.abil];
       }
     } else if (item === 'hp') {
-      const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + up.step * h.upg.hp) * upgradeCurveMul('hp', h.upg.hp));
+      const bossMul = (h.sq?.boss || this.isBoss(h)) ? BOSS.HP_MUL : 1;
+      const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * bossMul * (1 + up.step * h.upg.hp) * upgradeCurveMul('hp', h.upg.hp));
       for (const b of this._bodies(h)) {       // 機殼升級套用到小隊每一架
         if (!b.dead) b.hp += nm - b.maxHp;     // 陣亡中只擴上限,重生時 hp = maxHp
         b.maxHp = nm;
