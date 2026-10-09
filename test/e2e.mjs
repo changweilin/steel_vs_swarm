@@ -23,7 +23,7 @@ import {
   aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
   trajClass, shotFlightS, vsMult, blastFamily, buildDps, heroRange,
   altRangeMax, RANGE_TOL,
-  ATK_CARRIER, atkDelivered, abilDelivered, abilOrigin, atkCarrierCd, atkCdBand, atkParts, atkPartN,
+  ATK_CARRIER, CARRIER_HEROES, atkDelivered, abilDelivered, abilOrigin, atkCarrierCd, atkCdBand, atkParts, atkPartN,
   SELF_ATK, selfAtkEq, selfAtkBoost, abilHoldSlot,
   ATK_SUPPORT, supportN, supportHp, supportLegS, supportStackable, supportTempoF, selfAtkTempo,
   kindParts, frontKillHp,
@@ -1079,19 +1079,22 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     // 1: conversion rule is derived (all area/targeted convert: strike/emp/summon plus team heal/buff = 22 hulls);
     //    10 pure self-only hulls stay instant and heroAbility output (cd/range) stays bit-identical
     const conv = Object.keys(CHARACTERS).filter((c) => atkDelivered(c));
-    assert(conv.length === 22, `區域/指向型攻招共 22 台轉載具(實得 ${conv.length})`);
+    assert(conv.length === 22, `區域/指向型攻招共 22 台(實得 ${conv.length})`);
     for (const c of Object.keys(CHARACTERS)) {
       const u = CHARACTERS[c].atk;
       const inst = !(u.fx === 'strike' || u.fx === 'emp' || u.fx === 'summon'
         || ((u.fx === 'heal' || u.fx === 'buff') && u.target === 'team'));
       assert(atkDelivered(c) === !inst, `${c} 轉換判定與「區域/指向型」定義一致`);
       const A = heroAbility(c, 'atk', 1);
-      if (inst) {
-        assert(!A.carrier && A.cd === tierVal(u.cd, 1), `${c} 純自身型攻招維持瞬發、cd 不動(${A.cd}s)`);
-      } else {
+      if (CARRIER_HEROES.has(c)) {
         assert(A.carrier && A.cd >= ATK_CARRIER.CD_LO - 1e-9 && A.cd <= ATK_CARRIER.CD_HI + 1e-9,
-          `${c} 載具攻招 CD ${A.cd.toFixed(1)}s 落在 [${ATK_CARRIER.CD_LO}, ${ATK_CARRIER.CD_HI}]`);
-        assert(A.range > 0, `${c} 載具攻招有遞送距離(${A.range.toFixed(0)}m)`);
+          `${c} 專屬載具攻招 CD ${A.cd.toFixed(1)}s 落在 [${ATK_CARRIER.CD_LO}, ${ATK_CARRIER.CD_HI}]`);
+        assert(A.range > 0, `${c} 專屬載具攻招有遞送距離(${A.range.toFixed(0)}m)`);
+      } else {
+        assert(!A.carrier && !A.support, `${c} non-carrier ability has no carrier or support residuals`);
+        if (inst) {
+          assert(A.cd === tierVal(u.cd, 1), `${c} 純自身型攻招維持瞬發、cd 不動(${A.cd}s)`);
+        }
       }
     }
     // CD mapping preserves order (affine): shorter original cd still maps to shorter new cd
@@ -1126,156 +1129,109 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(!rc.hypers.length && flew * 0.125 >= 1, `飛彈有飛行時間(${(flew * 0.125).toFixed(1)}s ≥ 1s)後引爆`);
     assert(fxN === 1 && dum.hp < hp0, `著彈推送 atkfx 並以 strike 結算(${Math.round(hp0)} → ${Math.round(dum.hp)})`);
 
-    // 3: drone team heal atk = 4 suicide attackers in waves; losing half halves the heal (that share denied, no martyrdom damage)
+    // 3: s01 drone kami squad: 4 suicide attackers in waves; losing half halves the delivered strike damage
     const s3 = new BattleSim(fakeBattleConfig(1));
-    const dc = s3.addHero('SWARM', 'uc_d', 's02');
-    dc.x = 400; dc.z = 0; dc.mp = 999; dc.abil.atk = 1; dc.hp = 100;
-    // 2026-08-07: atk summons from the nearest friendly work, so carriers fly seconds before arriving; meanwhile this 100 HP dummy is killed by
-    // nearby enemy works (the old window was only 0.7s, so it never met them). What is measured is heal amount, not survival,
-    // so grant invulnerability frames to move the damage axis away (heal still writes hp and ignores invUntil).
-    dc.invUntil = 1e9;
-    // Spectator picks bunker (speed 0): test dummies have no lane, and speed > 0 arms would crash _advance on an undefined lane
+    const dc = s3.addHero('SWARM', 'uc_d', 's01');
+    dc.x = 400; dc.z = 0; dc.mp = 999; dc.abil.atk = 1;
     const bys = s3._add({ kind: 'bunker', side: 'STEEL', x: 450, z: 0, y: 0, hp: 4000 }); delete bys.lane;
     s3.heroCast('uc_d', 'atk', 450, 0);
     const uk = [...s3.ents.values()].filter((e) => e.kami);
-    assert(uk.length === SQUAD.KAMI.N && uk.every((k) => k.uA && k.pt), `s02 攻招生成 ${SQUAD.KAMI.N} 架點遞送 kami(分批)`);
+    assert(uk.length === SQUAD.KAMI.N && uk.every((k) => k.uA && k.pt), `s01 攻招生成 ${SQUAD.KAMI.N} 架點遞送 kami(分批)`);
     uk[0].hp = 0; s3._kill(uk[0], null);
     uk[1].hp = 0; s3._kill(uk[1], null);
-    // Dummy pinned in combat (lastHitAt): out-of-combat armor regen at 1/4 would pollute the heal measurement; healing itself ignores OOC
-    for (let i = 0; i < 200 && [...s3.ents.values()].some((e) => e.kami); i++) { dc.lastHitAt = s3.t; s3.tick(0.125); }
-    const healFull = heroAbility('s02', 'atk', 1).heal;
-    assert(Math.abs((dc.hp - 100) - healFull / 2) < 12,
-      `擊落 2/${SQUAD.KAMI.N} ⇒ 只補一半(${(dc.hp - 100).toFixed(0)} / 全額 ${healFull})`);
-    assert(bys.hp === 4000, '效果取代傷害:heal 載具抵達不產生任何爆風傷害(落點敵方單位毫髮無傷)');
+    for (let i = 0; i < 200 && [...s3.ents.values()].some((e) => e.kami); i++) { s3.tick(0.125); }
+    const s3Ref = new BattleSim(fakeBattleConfig(1));
+    const dcRef = s3Ref.addHero('SWARM', 'uc_d', 's01');
+    dcRef.x = 400; dcRef.z = 0; dcRef.mp = 999; dcRef.abil.atk = 1;
+    const bysRef = s3Ref._add({ kind: 'bunker', side: 'STEEL', x: 450, z: 0, y: 0, hp: 4000 }); delete bysRef.lane;
+    s3Ref.heroCast('uc_d', 'atk', 450, 0);
+    for (let i = 0; i < 200 && [...s3Ref.ents.values()].some((e) => e.kami); i++) { s3Ref.tick(0.125); }
+    const dmgFull = 4000 - bysRef.hp;
+    const dmgHalf = 4000 - bys.hp;
+    assert(Math.abs(dmgHalf - dmgFull / 2) < 2,
+      `擊落 2/${SQUAD.KAMI.N} ⇒ 傷害只得一半(${dmgHalf.toFixed(1)} / 全額 ${dmgFull.toFixed(1)})`);
 
-    // 4: morph emp atk = single bomber (indivisible single payload); enemies in the drop zone lose weapons on arrival
+    // 4: m06 heavy bomber: carpet incendiary bombing (5 bombs with fire element)
     const s4 = new BattleSim(fakeBattleConfig(1));
-    const mc = s4.addHero('SWARM', 'uc_m', 's03');
+    const mc = s4.addHero('SWARM', 'uc_m', 'm06');
     mc.x = 400; mc.z = 0; mc.mp = 999; mc.abil.atk = 1;
     const dum4 = s4._add({ kind: 'bunker', side: 'STEEL', x: 520, z: 0, y: 0, hp: 4000 }); delete dum4.lane;
     s4.heroCast('uc_m', 'atk', 520, 0);
     const ub = [...s4.ents.values()].filter((e) => e.decoy);
-    assert(ub.length === 1 && ub[0].uA && ub[0].uDrops.length === 1, 's03(emp)= 單一轟炸機、單份投遞(emp/buff 不可分)');
+    assert(ub.length === 1 && ub[0].uA && ub[0].uDrops.length === 5 && ub[0].bombType === 'fire',
+      'm06(bomber)= 重裝燃燒轟炸機、5枚地毯式投彈(bombType: fire)');
     assert(atkParts('morph', 'emp') === 1 && atkParts('drone', 'buff') === 1
       && atkParts('drone', 'heal') === SQUAD.KAMI.N && atkParts('morph', 'strike') === DECOY.BOMB_MAX,
       'atkParts:可分預算分批、不可分狀態單載(推導規則)');
     for (let i = 0; i < 300 && [...s4.ents.values()].some((e) => e.decoy); i++) s4.tick(0.125);
-    assert((dum4.empUntil || 0) > s4.t, '轟炸機抵達 ⇒ 落點敵人 EMP 武器離線(效果取代傷害)');
+    assert(dum4.hp < 4000, '轟炸機抵達 ⇒ 實施地毯式燃燒轟炸並造成傷害');
 
     // 5: hull ultimates fully retired 2026-08-06, so the converted-role old-path guard section has no target:
     //    heroKamikaze / heroDecoy / heroHyper entries no longer exist (sim.js keeps a named retirement record).
     //    The only spawn point for all three carriers = _launchAtkCarrier, covered by 1-4 above.
 
-    // 6: unconverted roles stay instant (no carrier); heal = base value plus the ultimate-retirement compensation.
-    //    Expected value MUST go through selfAtkBoost -- hardcoding 400 means a later SELF_ATK or s11 cd change
-    //    reds the test on a number that is actually right, while the real split (server vs HUD each computing one) goes unverified.
+    // 6: unconverted roles stay instant (no carrier); damage buff = base value plus the ultimate-retirement compensation.
     const s6 = new BattleSim(fakeBattleConfig(1));
     const h6 = s6.addHero('SWARM', 'uc_i', 's11');
-    h6.mp = 999; h6.abil.atk = 1; h6.hp = 50;
+    h6.mp = 999; h6.abil.atk = 1;
     s6.heroCast('uc_i', 'atk');
     const A6 = heroAbility('s11', 'atk', 1);
     const B6 = selfAtkBoost('s11', 1, h6.abil);
-    // 2026-08-07: self-buff types are now supplied by the player-following support squadron (see next section), so here only pin
-    // not-a-point-delivery carrier and compensation really flows through selfAtkBoost into settlement; delivery waits for the squadron to fly the drop leg.
-    assert(!A6.carrier && A6.support, 's11 是輔助機隊型攻招(不是點遞送載具)');
-    assert(B6.heal > 0, `s11 領到機種絕招退場的補償(+${Math.round(B6.heal)} 治療)`);
-    assert(Math.abs(h6.hp - 50) < 0.01, 's11 施放當下不回血 —— 輔助機還在飛投放腿(有攔截窗)');
-    // Four craft each deliver 1/4: wait until the whole team arrives (stopping at the first arrival measures only one quarter)
-    for (let i = 0; i < 400 && [...s6.ents.values()].some((e) => e.supG); i++) s6.tick(0.125);
-    assert(Math.abs(h6.hp - Math.min(h6.maxHp, 50 + A6.heal + B6.heal)) < 1,
-      `s11 自補 = 原值 ${A6.heal} + 補償 ${Math.round(B6.heal)}(cd ${A6.cd}s 不變)`);
+    assert(!A6.carrier && !A6.support, 's11 為本體施放攻招(非載具且無輔助機隊)');
+    assert(B6.dmgMul > 0, `s11 領到機種絕招退場的補償(+${(B6.dmgMul * 100).toFixed(1)}% 傷害加成)`);
+    assert(h6.mods.some((m) => m.k === 'dmg' && Math.abs(m.m - (A6.mul.dmg + B6.dmgMul)) < 0.01),
+      `s11 本體增益立即生效 = 原值 ${A6.mul.dmg} + 補償 ${B6.dmgMul.toFixed(3)}(cd ${A6.cd}s 不變)`);
   }
 
-  log('— sim/data:自身強化型攻招 = 跟隨玩家的輔助機隊(2026-08-07 使用者定案)—');
+  log('— sim/data:清除通用輔助機隊無殘留 + 本體直接施放—');
   {
-    // 1: category and craft counts are derived: some abilities become multi-craft (stackable ones batch by hull), binary states stay single-craft
-    const SELF9 = Object.keys(CHARACTERS).filter((c) => !atkDelivered(c));
-    assert(SELF9.length === 10 && SELF9.every((c) => heroAbility(c, 'atk', 1).support),
-      `自身強化型 10 台全走輔助機隊(${SELF9.join(' ')})`);
-    assert(SELF9.every((c) => supportN(c) === (supportStackable(c) ? kindParts(charKind(c)) : 1)),
-      '機數 = 可疊加 ? 該機種分批數 : 1(與 atkParts 同一張機種表)');
-    assert(supportN('s04') === SQUAD.KAMI.N && supportN('t06') === DECOY.BOMB_MAX
-      && supportN('t02') === 1 && supportN('m08') === 1,
-      `多機 ${supportN('s04')}(drone)/ ${supportN('t06')}(morph),單機 robot 與純二元狀態(m08 匿蹤)`);
-    assert(new Set(SELF9.map((c) => selfAtkTempo(c))).size === 3,
-      '三種節奏(瞬發/間斷/持續)在現役角色上都有人');
+    // 1: all 32 heroes have support === false (support wing mechanism fully purged)
+    const CHS = Object.keys(CHARACTERS);
+    assert(CHS.every((c) => !heroAbility(c, 'atk', 1).support),
+      '全 32 台攻招通用輔助機隊機制已完全清除(support === false)');
+    const SELF9 = CHS.filter((c) => !atkDelivered(c));
+    assert(SELF9.length === 10 && SELF9.every((c) => !heroAbility(c, 'atk', 1).carrier),
+      `自身強化型 10 台全為本體施放(非載具)(${SELF9.join(' ')})`);
 
-    // 2: durability: sustain > intermittent > instant, and longer dur means tougher (recomputed per hull -- derived, never hardcoded)
-    for (const c of SELF9) {
-      const n = supportN(c), dur = tierVal(CHARACTERS[c].atk.dur ?? 0, 1);
-      const tf = supportTempoF(selfAtkTempo(c));
-      assert(supportHp(c, 1) === frontKillHp(supportLegS() + tf * dur / n),
-        `${c} 每架 ${supportHp(c, 1)} = 前線一組塔位 ×(投放腿 + ${selfAtkTempo(c)} 窗 ÷ ${n})`);
-    }
-    {
-      const hpAt = (tempo, dur) => frontKillHp(supportLegS() + supportTempoF(tempo) * dur / 4) * 4;
-      assert(hpAt('sustain', 8) > hpAt('pulse', 8) && hpAt('pulse', 8) > hpAt('burst', 8),
-        `同 dur:持續 ${hpAt('sustain', 8)} > 間斷 ${hpAt('pulse', 8)} > 瞬發 ${hpAt('burst', 8)}`);
-      assert(hpAt('sustain', 12) > hpAt('sustain', 8) && hpAt('pulse', 12) > hpAt('pulse', 8),
-        '持續時間越久,輔助機隊越硬');
-    }
-
-    // Support squadron wait: atk summons from the nearest friendly work (2026-08-07), so the drop leg is a real distance, not a fixed value,
-    // MUST NOT reuse fixed-cell supportLegS over dt math (flight time grows with distance from the work to the caster).
-    const armWait = (sim, pred, maxS = 30) => {
-      for (let i = 0; i < Math.ceil(maxS / 0.125) && !pred(); i++) sim.tick(0.125);
-    };
-
-    // 3: behavior: buffs apply only once in place, stacking is additive, kills remove one share, wipe removes the whole buff
+    // 2: behavior: self buffs apply directly to hull without spawning supG entities
     const sS = new BattleSim(fakeBattleConfig(1));
     const hS = sS.addHero('SWARM', 'sup_d', 's04');
     hS.x = 400; hS.z = 0; hS.mp = 999; hS.abil.atk = 1;
     sS.heroCast('sup_d', 'atk');
-    const cS = [...sS.ents.values()].filter((e) => e.supG);
-    assert(cS.length === supportN('s04') && cS.every((k) => k.hp === supportHp('s04', 1) && k.armor === 0),
-      `s04 派出 ${cS.length} 架輔助機、每架 HP ${supportHp('s04', 1)}(armor 0)`);
-    assert(Math.abs(sS._buffMul(hS, 'dmg') - 1) < 1e-9, '投放腿飛行中 ⇒ 加成尚未上線(每一發都有攔截窗)');
-    // Atk summons from the nearest friendly work, so spawn sits a real distance from the caster (this also pins not-spawned-in-place)
-    assert(cS.every((k) => Math.hypot(k.x - hS.x, k.z - hS.z) > ATK_SUPPORT.SLOT_R * 2),
-      '攻招輔助機自後方工事出發(生成點不在主機身邊)');
-    armWait(sS, () => [...sS.ents.values()].some((e) => e.supG && e.phase === 'escort'));
+    assert(![...sS.ents.values()].some((e) => e.supG), 's04 施放攻招不產生 supG 輔助機');
     const fullS = heroAbility('s04', 'atk', 1).mul.dmg + selfAtkBoost('s04', 1, hS.abil).dmgMul;
     assert(Math.abs(sS._buffMul(hS, 'dmg') - fullS) < 1e-6,
-      `全員就位 ⇒ 效果值逐位元同舊制(×${fullS.toFixed(3)})`);
-    const aliveS = [...sS.ents.values()].filter((e) => e.supG);
-    aliveS[0].hp = 0; sS._kill(aliveS[0], null);
-    aliveS[1].hp = 0; sS._kill(aliveS[1], null);
-    assert(Math.abs(sS._buffMul(hS, 'dmg') - (1 + (fullS - 1) * 0.5)) < 1e-6,
-      `擊落 2/4 ⇒ ×${(1 + (fullS - 1) * 0.5).toFixed(3)}(加法疊加;相乘會是 ${((1 + (fullS - 1) / 4) ** 2).toFixed(3)})`);
-    for (const k of [...sS.ents.values()].filter((e) => e.supG)) { k.hp = 0; sS._kill(k, null); }
-    assert(Math.abs(sS._buffMul(hS, 'dmg') - 1) < 1e-9, '機隊全滅 ⇒ 加成整份下線');
+      `hull directly receives damage boost (x${fullS.toFixed(3)})`);
 
-    // 4: binary state (stealth) is single-craft: losing the support craft breaks stealth at once
+    // 3: binary state (stealth): hull enters stealth immediately without support craft
     const sT = new BattleSim(fakeBattleConfig(1));
     const hT = sT.addHero('STEEL', 'sup_m', 'm08');
     hT.x = 400; hT.z = 0; hT.mp = 999; hT.abil.atk = 1;
     sT.heroCast('sup_m', 'atk');
-    armWait(sT, () => hT.stealthUntil > sT.t);
-    assert(hT.stealthUntil > sT.t, 'm08 輔助機就位 ⇒ 匿蹤上線');
-    const kT = [...sT.ents.values()].filter((e) => e.supG)[0];
-    kT.hp = 0; sT._kill(kT, null);
-    assert(hT.stealthUntil === 0, '輔助機被擊落 ⇒ 當場現形(二元狀態顯式撤掉)');
+    assert(![...sT.ents.values()].some((e) => e.supG), 'm08 施放攻招不產生 supG 輔助機');
+    assert(hT.stealthUntil > sT.t, 'm08 本體立即進入匿蹤');
 
-    // 5: the 22 point-delivery hulls are fully unaffected
+    // 4: non-carrier targeted ability (s02): cast directly by hull, no carrier / support entities
     const sC = new BattleSim(fakeBattleConfig(1));
     const hC = sC.addHero('SWARM', 'sup_c', 's02');
-    hC.x = 400; hC.z = 0; hC.mp = 999; hC.abil.atk = 1;
+    hC.x = 400; hC.z = 0; hC.mp = 999; hC.abil.atk = 1; hC.hp = 100;
     sC.heroCast('sup_c', 'atk', 450, 0);
-    assert(![...sC.ents.values()].some((e) => e.supG)
-      && [...sC.ents.values()].filter((e) => e.kami).length === SQUAD.KAMI.N,
-      's02(點遞送)仍生 kami 載具、一架輔助機都沒有');
+    assert(![...sC.ents.values()].some((e) => e.supG || e.kami || e.decoy || e.hyper),
+      's02 非專屬載具機體不產生任何 carrier/support 實體');
+    assert(hC.hp > 100, 's02 直接結算本體治療');
   }
 
-  log('— sim/data:守招詠唱機制 + 攻招載具遞送(2026-08-22 使用者定案)—');
+  log('— sim/data:守招詠唱機制 + 專屬攻招載具遞送—');
   {
-    // 1: all 32 atk are carrier-based (point delivery / escort formation); all 32 guard skills are cast by the hull itself (no carrier/squadron)
+    // 1: only designated heroes use carrier delivery; all guard skills are cast by the hull itself
     const CHS2 = Object.keys(CHARACTERS);
     assert(CHS2.every((c) => {
       const uA = heroAbility(c, 'atk', 1);
       const sA = heroAbility(c, 'def', 1);
-      return (uA.carrier !== uA.support && uA.carrier === abilDelivered(c, 'atk'))
+      const carrierExpected = CARRIER_HEROES.has(c);
+      return (uA.carrier === carrierExpected && !uA.support)
         && (!sA.carrier && !sA.support && !abilDelivered(c, 'def') && sA.castTime > 0);
-    }), '攻招全數載具化、守招全數為本體施展技能(castTime > 0)');
+    }), '專屬載具攻招為 carrier、其餘攻招無 carrier/support、守招全數為本體施展技能(castTime > 0)');
 
     // 2: guard CD band [15,30] with strict order preservation (rank-stability guarantee)
     const skCd = [];
@@ -1293,7 +1249,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
 
     // 3: direct check that atk sorties from works
     const sk = new BattleSim(fakeBattleConfig(1));
-    const hk = sk.addHero('SWARM', 'ab_o', 's03');
+    const hk = sk.addHero('SWARM', 'ab_o', 'm06');
     hk.x = 320; hk.z = 140; hk.mp = 999; hk.abil.def = 1; hk.abil.atk = 1;
     const fortP = sk._launchOrigin(hk, 'atk');
     assert(Math.hypot(fortP.x - hk.x, fortP.z - hk.z) > ATK_CARRIER.MIN_LEG,
@@ -2481,9 +2437,9 @@ log('— 選角(角色綁陣營;不選 = 開戰隨機)—');
 host.send({ t: 'pickChar', ch: 't01' });   // 蜂群玩家選鋼鐵角色 → 拒絕
 await host.wait((c) => c.msgs.find((m) => m.t === 'error' && /陣營不符/.test(m.msg)));
 assert(true, '選敵陣營角色被拒絕');
-host.send({ t: 'pickChar', ch: 's02' });   // 鐵匠(重武器溫壓火箭:高破甲,後面拆堡用)
-await host.wait((c) => c.sync.lobby.clients.find((x) => x.id === c.sync.youId)?.ch === 's02');
-assert(true, `host 選角「${CHARACTERS.s02.code}」(lobby 同步)`);
+host.send({ t: 'pickChar', ch: 's01' });   // Queen bee (kamikaze carrier atk)
+await host.wait((c) => c.sync.lobby.clients.find((x) => x.id === c.sync.youId)?.ch === 's01');
+assert(true, `host 選角「${CHARACTERS.s01.code}」(lobby 同步)`);
 guest.send({ t: 'pickChar', ch: 't04' });
 await guest.wait((c) => c.sync.lobby.clients.find((x) => x.id === c.sync.youId)?.ch === 't04');
 assert(true, `guest 選角「${CHARACTERS.t04.code}」`);
@@ -2547,7 +2503,7 @@ const myHero = snap.ents.find((h) => h.pid === host.sync.youId && h.act);
 assert(myHero && myHero.k === 'drone', `英雄快照帶 pid,能認出自己的座機(pid=${myHero?.pid})`);
 assert(typeof myHero.$ === 'number' && myHero.ab && typeof myHero.kn === 'number',
   `英雄快照帶金錢/招式階級/戰鬥分數($${myHero.$}・ab=${JSON.stringify(myHero.ab)})`);
-assert(myHero.ch === 's02', `快照帶角色 id(ch=${myHero.ch},客戶端渲染專屬機體)`);
+assert(myHero.ch === 's01', `快照帶角色 id(ch=${myHero.ch},客戶端渲染專屬機體)`);
 assert(myHero.sp != null && myHero.msp > 0 && myHero.mp != null && myHero.mm > 0,
   `快照帶護盾/電力(sp=${myHero.sp}/${myHero.msp}・mp=${myHero.mp}/${myHero.mm})`);
 const botAssigned = specSnap.ents.filter((e) => (e.k === 'drone' || e.k === 'robot') && e.act && e.ch);
@@ -2606,7 +2562,7 @@ if (t3) {
   await new Promise((r) => setTimeout(r, 400));
   const nowT = host.snaps.at(-1).ents.find((e) => e.id === t3.id);
   const dmgDone = before - (nowT ? nowT.hp : 0);
-  const wLight = heroWeapon('s02', 'light', 1);
+  const wLight = heroWeapon('s01', 'light', 1);
   const cap = wLight.dmg * 1.3 * (wLight.critX ?? 1.6) * 10;   // 遠小於 50 發全吃
   assert(dmgDone < cap, `50 連發只吃進 ${Math.round(dmgDone)} 傷害 < ${Math.round(cap)}(限速生效)`);
 }
@@ -2623,30 +2579,28 @@ host.send({ t: 'aim', on: false });
 const boomsAfter = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom').length;
 assert(boomsAfter - boomsBefore === 1, `連按兩次只炸一次(重武器 CD 生效;實際 ${boomsAfter - boomsBefore})`);
 
-log('— 無人機長按 = 攻招載具(2026-08-06:s02 攻招已轉載具遞送;kami 事件帶 ult 旗標)—');
+log('— 無人機長按 = 專屬自殺機載具(s01 專屬自殺機編隊;kami 事件帶 atk 旗標)—');
 const droneDies = () => host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'die' && e.kind === 'drone').length;
 const dies0 = droneDies();
-// 移到高空(250 > SAM 240)避免被塔擊落干擾,再觸發
+// Fly to high altitude (250 > SAM 240) to prevent turret intercept interference
 const foeTower = spec.snaps.at(-1).ents.find((e) => e.k === 'tower' && e.s === 'STEEL');
 host.send({ t: 'pos', x: foeTower.x, y: HI_ALT, z: foeTower.z, ry: 0 });
 await new Promise((r) => setTimeout(r, 250));
-// WS 端只驗「長按 → 伺服器 → 廣播」這條路走通;確切架數/HP/payload/擊落否定走上方 sim 直測與稽核。
-// host = s02(團隊 heal 攻招,已轉載具)⇒ ①舊 {t:'kami'} 路徑被 atkDelivered 守衛擋下;
-// ②長按改送 {t:'cast', slot:'atk'}(client._fireHoldAbility 同一縫)⇒ kami 事件帶 atk:1。
-// **判據是 `kami` 事件而不是快照裡的機體**(2026-08-01):每架只有 kamiHp()(刻意的脆),
-// 8Hz 快照可能一幀都沒拍到;事件是伺服器「確實受理」的權威回報,不受存活時間影響。
+// WS tests hold -> server -> broadcast path; unit/hp/payload verified in sim above.
+// host = s01: (1) old {t:'kami'} path blocked by guard; (2) hold sends {t:'cast', slot:'atk'}
+// Check kami event rather than snapshot entity (kamiHp is intentionally fragile).
 const kamiEvs = () => host.snaps.flatMap((snp) => snp.ev || []).filter((e) => e.e === 'kami' && e.pid === host.sync.youId);
-host.send({ t: 'kami' });   // 舊機種絕招路徑:converted 角色 MUST 被守衛擋下
+host.send({ t: 'kami' });   // Retired ult path: converted role MUST be blocked by guard
 await new Promise((r) => setTimeout(r, 400));
-assert(kamiEvs().length === 0, 'converted 角色(s02)按舊 kami 路徑被守衛擋下(不生成護衛機)');
-// 長按 = 施放攻招(與 E 鍵同縫):電力由前面測試消耗過 ⇒ 等回充到夠再送(wait 內重送無妨,CD 擋重複)
+assert(kamiEvs().length === 0, 'converted 角色(s01)按舊 kami 路徑被守衛擋下(不生成護衛機)');
+// Hold = cast atk (same seam as E key); energy recharges before sending
 host.send({ t: 'cast', slot: 'atk', x: foeTower.x, z: foeTower.z });
 await host.wait(() => { host.send({ t: 'cast', slot: 'atk', x: foeTower.x, z: foeTower.z }); return kamiEvs().length >= 1; }, 15000);
 assert(kamiEvs().length === 1, `攻招經網路發射載具(收到 ${kamiEvs().length} 次 kami 事件)`);
 assert(kamiEvs()[0].atk === 1 && kamiEvs()[0].n === SQUAD.KAMI.N,
   `kami 事件帶 ult 旗標與架數 n = ${SQUAD.KAMI.N}(實得 atk:${kamiEvs()[0].atk} n:${kamiEvs()[0].n})`);
 assert(droneDies() === dies0, '主機不自爆(攻招載具不會炸掉自己)');
-host.send({ t: 'cast', slot: 'atk', x: foeTower.x, z: foeTower.z });   // CD 內再按:不應再放一次
+host.send({ t: 'cast', slot: 'atk', x: foeTower.x, z: foeTower.z });   // Cast during CD: rejected
 await new Promise((r) => setTimeout(r, 300));
 assert(kamiEvs().length === 1, 'CD 內再按不會再放一次攻招載具');
 

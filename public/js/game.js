@@ -25,8 +25,9 @@ import {
    CREEP_UPG, DISSOLVE, dissolveOutAt, ATK_CAST_S, fogSightMult, scopeRvminFog,
   isSuperSide, SUPER_UPG, superCombatLvl, superScaleF,
   WEATHER_DEBUFFS, windSpeedFactor, laneCssColor,
-  weatherFlightSlowFactor, weatherGroundSlowFactor, weatherJumpVelocityFactor, unbalAltThreshold,
+  weatherFlightSlowFactor, weatherFlightLiftFactor, weatherGroundSlowFactor, weatherJumpVelocityFactor, unbalAltThreshold,
   weatherFlightAttackRateFactor, weatherGroundAttackRateFactor, WEATHER_FREEZE,
+  terrainJumpHeightFactor, terrainJumpVelocityFactor,
   FIRE_WEATHER, fireDotMul,
     SCENE_STRUCT, sceneIsPhysical, clampHeroSpawn, solveTowerSites, mapArg,
 } from './data.js';
@@ -2305,20 +2306,35 @@ export class BattleClient {
    *  超出即完全無感 —— MUST NOT 加回固定下限或倍數放大。 */
   _applyBlast(x, y, z, r) {
     if (!this.side || this.dead) return;
-    const eye = this.camera.position;
-    const d = Math.hypot(eye.x - x, eye.y - y, eye.z - z);
     const R = r * SHAKE.BLAST_F;
-    if (!(R > 0) || d > R) return;
-    const f = 1 - d / R;
-    const k = f * f;                 // 平方衰減(距離越遠震動掉得越快)
+    if (!(R > 0)) return;
     const eScale = Math.min(1.6, Math.max(0.4, r / 12));   // 爆炸半徑代表能量:小彈少晃、重砲/主堡更晃
-    const dir = new THREE.Vector3(eye.x - x, eye.y - y, eye.z - z);
-    if (dir.lengthSq() < 0.01) dir.set(0, 1, 0);
-    dir.normalize();
-    const power = k * eScale * (this._flying() ? 55 : 26);
-    this.vel.addScaledVector(dir, power);
-    if (!this._flying()) this.vy = (this.vy ?? 0) + k * eScale * 10;   // 機甲被掀離地
-    this.trauma = Math.min(1, this.trauma + k * eScale * 0.8);
+
+    // ① 鏡頭震動(表現層:依爆點至鏡頭距離衰減)
+    const eye = this.camera.position;
+    const dCam = Math.hypot(eye.x - x, eye.y - y, eye.z - z);
+    if (dCam <= R) {
+      const fCam = 1 - dCam / R;
+      this.trauma = Math.min(1, this.trauma + fCam * fCam * eScale * 0.8);
+    }
+
+    // ② 機體衝量(物理層:依爆點至機體重心距離與方向結算,正面受彈往後退)
+    const mcy = this.pos.y + (this.selfH || 2) * 0.5;
+    const mx = this.pos.x - x, my = mcy - y, mz = this.pos.z - z;
+    const dMech = Math.hypot(mx, my, mz);
+    if (dMech <= R) {
+      const fMech = 1 - dMech / R;
+      const kMech = fMech * fMech;
+      const dir = new THREE.Vector3(mx, my, mz);
+      if (dir.lengthSq() < 0.04) {
+        // 直擊或穿心爆:沿視線反向(朝後退)並帶微幅仰角,避免退化為 (0,1,0) 無水平阻滯或誤向前推
+        dir.set(Math.sin(this.yaw), 0.35, Math.cos(this.yaw));
+      }
+      dir.normalize();
+      const power = kMech * eScale * (this._flying() ? 55 : 26);
+      this.vel.addScaledVector(dir, power);
+      if (!this._flying()) this.vy = (this.vy ?? 0) + kMech * eScale * 10;   // 機甲被掀離地
+    }
   }
 
   // 單位碰撞半徑 / 高度(公尺):玩家座機不能穿過單位與建築。
@@ -4697,10 +4713,30 @@ export class BattleClient {
           this._floodWarnAt = now;
           this.hud.feed?.('🌊 淹水區:機甲涉水速度大減!');
         }
-        return f.slow;
+        return Math.min(WATER.SLOW, f.slow ?? WATER.SLOW);
       }
     }
     return 1;
+  }
+
+  /** Terrain fluid and flood zone multiplier on initial jump velocity */
+  _terrainJumpVelocityF() {
+    if (this._flying() || this._env?.air) return 1;
+    for (const f of this.floods) {
+      if (Math.hypot(this.pos.x - f.x, this.pos.z - f.z) <= f.r) {
+        return Math.sqrt(WATER.SLOW); // Flood zone treated as water/shallow water
+      }
+    }
+    const e = this._env;
+    if (!e || e.ground === 0) return 1;
+    if (e.code > 0) return Math.sqrt(fluidFactor(e.code));
+    if (isWeatherFrozen()) return 1;
+    if (e.ground === 2) {
+      const hF = Math.min(1, 1 - (1 - TERRAIN_FX.SWAMP_SLOW) * Math.min(1, e.depth / WATER.SWAMP_BAND));
+      return Math.sqrt(hF);
+    }
+    const hF = Math.min(WATER.SLOW, 1 - (1 - WATER.SLOW_MIN) * Math.min(1, e.depth / WATER.FULL_D));
+    return Math.sqrt(hF);
   }
 
   /**
@@ -5076,6 +5112,14 @@ export class BattleClient {
         } else {
           this.hud.feed?.('🔥 你在火場中持續受創，快離開！');
         }
+      }
+    } else if (ev.e === 'cleanse') {
+      if (ev.pid === this.youId) {
+        this.hud?.feed?.('✨ 異常狀態已全數滌除！');
+      }
+    } else if (ev.e === 'heal_aura_start') {
+      if (ev.pid === this.youId) {
+        this.hud?.feed?.('🌿 聖域修復光環展開，持續修復周圍機體！');
       }
     } else if (ev.e === 'freeze') {
       if (ev.pid === this.youId) {
@@ -7480,7 +7524,7 @@ export class BattleClient {
   /** 地面型 → 飛行型:蓄力彈射(初速 ∝ 蓄力比例),FOV 拉廣;變形中段附無敵幀請求 */
   _morphLaunch(gy) {
     this.flight = true;
-    this.vel.y = MORPH.JUMP_V * this.charge;
+    this.vel.y = MORPH.JUMP_V * this.charge * (this._jumpMul ? this._jumpMul() : 1);
     this.vy = 0;
     this.pos.y = gy + 1.0;   // 抬離地表,避免下一幀立即觸發觸地變形
     this.charge = 0;
@@ -7508,11 +7552,17 @@ export class BattleClient {
     return weatherJumpVelocityFactor(this.weatherSurface || this.envFx?.getWeatherSurface?.());
   }
 
+  _jumpMul() {
+    const wVel = this._weatherJumpMul ? this._weatherJumpMul() : 1;
+    const tVel = this._terrainJumpVelocityF ? this._terrainJumpVelocityF() : 1;
+    return wVel * tVel;
+  }
+
   // ---------------- 機甲蓄力跳躍(2026-07-16;robot 限定,常數住 data.js CJUMP)----------------
   /** 垂直彈射 ∝ 蓄力 + 沿視線水平推進(距離 ∝ 機體速度);騰空低重力 = 太空漫步;起跳離地即請求無敵幀 */
   _chargeJump() {
     const k = this.charge;
-    this.vy = CJUMP.V * k * this._modF('jump') * (this._weatherJumpMul ? this._weatherJumpMul() : 1);
+    this.vy = CJUMP.V * k * this._modF('jump') * (this._jumpMul ? this._jumpMul() : 1);
     this._lowG = true;
     const look = this.camera.getWorldDirection(new THREE.Vector3());
     look.y = 0;
@@ -9586,10 +9636,12 @@ export class BattleClient {
       if (!this._unbalanced(now)) {
         const wet = this._env?.code || 0;
         const descF = target.y < 0 ? Math.min(1, -target.y / dnV) : 0;
+        const dyn = this.env?.getWeatherDynamics?.();
+        const liftWeatherFactor = dyn ? weatherFlightLiftFactor(dyn) : 1;
         // 下降回充吃同一條高度曲線:高處爬升貴、同高下降回得也多 ⇒ 2/3 比例在任何高度都成立
         const descRecharge = liftDescentPS() * liftAltF(this.pos.y, this._liftBaseY(), this._ceilY()) * descF;
         this.lift = Math.min(lMax, this.lift
-          + (liftRegen() + descRecharge) * fluidFactor(wet) * dt);
+          + (liftRegen() + descRecharge) * fluidFactor(wet) * liftWeatherFactor * dt);
       }
     }
   }
@@ -9686,7 +9738,7 @@ export class BattleClient {
         }
         this._spaceWas = this.keys.Space;
       }
-      if (this.keys.Space) target.y += u.vspeed * ccF * tSlow;
+      if (this.keys.Space) target.y += u.vspeed * ccF * tSlow * (dyn ? weatherFlightLiftFactor(dyn) : 1);
       if (this.keys.KeyC || this.keys.ControlLeft) target.y -= (u.vdown ?? u.vspeed) * ccF * tSlow;
       // 爬升動力(2026-07-30 使用者需求;唯一縫 data.js FLIGHT):**往上飛才耗動力** ——
       // 耗速/回充 ∝ (爬升率/下降率) × 高度曲線(起點全速爬升 = liftDrainPS × 1 ⇒ 起點滿動力恰好撐 FLIGHT.DRAIN_S 秒),
@@ -9792,7 +9844,7 @@ export class BattleClient {
             this._morphLaunch(gy);
           } else if (onGround) {
             if (k >= MORPH.JUMP_MIN) this.hud.feed?.(`🪫 動力不足(變形起飛需 ${cost} 動力)`);
-            this.vy = u.jump * this._modF('jump') * (this._weatherJumpMul ? this._weatherJumpMul() : 1); this.charge = 0;
+            this.vy = u.jump * this._modF('jump') * (this._jumpMul ? this._jumpMul() : 1); this.charge = 0;
           } else this.charge = 0;
         }
       } else if (onGround && this.keys.Space) {
@@ -9808,9 +9860,9 @@ export class BattleClient {
           if (!free) { this.lift = Math.max(0, curLift - cost); this.net?.send({ t: 'jump', k }); }
           this._chargeJump();
         } else if (onGround && k >= CJUMP.MIN) {
-          this.vy = u.jump * this._modF('jump') * (this._weatherJumpMul ? this._weatherJumpMul() : 1);
+          this.vy = u.jump * this._modF('jump') * (this._jumpMul ? this._jumpMul() : 1);
           this.hud.feed?.(`🪫 動力不足(蓄力跳躍需 ${cost} 動力)`);
-        } else if (onGround) this.vy = u.jump * this._modF('jump') * (this._weatherJumpMul ? this._weatherJumpMul() : 1);
+        } else if (onGround) this.vy = u.jump * this._modF('jump') * (this._jumpMul ? this._jumpMul() : 1);
         this.charge = 0;
       }
       // 地面機體動力回充(爬升 target.y = 0 ⇒ _stepLift 只做回充,不扣動力)

@@ -1900,10 +1900,11 @@ export const atkLaunchLegM = ultLaunchLegM;
 /** 這一槽位的載具發射腿(公尺):守招 = 主機身邊 MIN_LEG;攻招 = 後方工事飛過來(代表值)。 */
 export const abilLaunchLegM = (slot) =>
   (abilOrigin(slot) === 'fort' ? atkLaunchLegM() : ATK_CARRIER.MIN_LEG);
+export const CARRIER_HEROES = new Set(['s01', 'm06', 't01', 't09', 'm07']);
+export const isCarrierAbil = (ch, slot = 'atk') => (slot === 'atk' && CARRIER_HEROES.has(ch));
 /**
- * 這名角色的這一招是不是**點遞送**(**推導判定,MUST NOT 手寫名冊**):
- * 2026-08-22:載具遞送只服務**攻招**;守招改為本體詠唱施展。
- * 區域/指向型 = strike/emp/summon + 團隊 heal/buff;其餘(自身/personal 型)= 跟隨編隊。
+ * 這名角色的這一招是不是區域/指向型招式(推導判定):
+ * 區域/指向型 = strike/emp/summon + 團隊 heal/buff;其餘 = 純自身強化型。
  */
 export const abilDelivered = (ch, slot = 'atk') => {
   if (slot !== 'atk') return false;
@@ -1916,11 +1917,16 @@ export const abilDelivered = (ch, slot = 'atk') => {
 export const atkDelivered = (ch) => abilDelivered(ch, 'atk');
 /**
  * 這一招的 cd 要不要被壓進槽位 CD 帶。
- *   守招:**全部**(使用者定案「CD時間15~30s」對 32 台一視同仁);
- *   攻招:只有點遞送那 22 台 —— 10 台自身型的 cd 同時是 `selfAtkEq` 的分子(補償 ∝ cd),
- *         壓進去等於一個改動同時動兩個平衡面(2026-08-07 前一輪已定案,MUST NOT 順手併進來)。
+ *   守招:全部(使用者定案「CD時間15~30s」對 32 台一視同仁);
+ *   攻招:長 CD(原設計 > 35s)映射至 [30, 60]s 帶，維持攻招冷卻穩定性。
  */
-export const abilCdMapped = (ch, slot) => (slot === 'atk' ? atkDelivered(ch) : !!CHARACTERS[ch]?.[slot]);
+export const abilCdMapped = (ch, slot) => {
+  if (slot !== 'atk') return !!CHARACTERS[ch]?.[slot];
+  const c = CHARACTERS[ch]?.atk;
+  if (!c) return false;
+  const rawCd = Array.isArray(c.cd) ? c.cd[0] : (c.cd || 0);
+  return rawCd > 35;
+};
 /** 該槽位「會被映射的那一群」的原 cd 全距(逐階掃描;memo —— CHARACTERS 之後才叫得動) */
 const _abilCdBand = {};
 export const abilCdBand = (slot) => {
@@ -2136,7 +2142,7 @@ export const abilHoldSlot = (defending) => (defending ? 'def' : 'atk');
 // 兌現形式**逐 fx 分派**(`selfAtkBoost`),但一律走既有的 mods / heal 通道:
 //   ①有傷害窗的 buff 型(s04/t04/t06/m01)⇒ 把當量攤進 `dur` 秒的 `mul.dmg` 增額
 //     (Δ = 當量 ÷ (該角色重武器持續 DPS × dur);DPS 走 `weaponDps` 單一縫,MUST NOT 手抄彈匣週期);
-//   ②自補型(s11)⇒ 治療量增額 = 當量本身(治療 X 點抵銷 X 點傷害,等價可推導);
+//   ②自補型⇒ 治療量增額 = 當量本身(治療 X 點抵銷 X 點傷害,等價可推導);
 //   ③匿蹤(m08)⇒ 收斂成**破隱後 `ALPHA_S` 秒**的傷害倍率(使用者定案「破隱一秒內傷害增加」)——
 //     同一份預算換一個更短更硬的窗,倍率因此也是推導值,MUST NOT 手寫 3。
 //   ④重新設計的三台(s12 復甦 / t02 超載 / m04 偵搜)⇒ 效果本身就是補償,不再另加乘數
@@ -2961,12 +2967,13 @@ export const WATER = {
 // 涵蓋五大維度:受到傷害 / 水下移動速度 / 飛行動力回速 / 電力回充速度 / 護盾脫戰回復速度。
 // (舊制退場:WATER_FREEZE_S 凍結冷卻/換彈、SWAMP_DRAIN_* 沼澤扣血、SWAMP_SLOW_MIN 移動探底已全數退場)。
 export const TERRAIN_FX = {
-  WATER_FACTOR: 1 / 2,   // 水域異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/2)
-  SWAMP_FACTOR: 1 / 4,   // 沼澤異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/4)
-  FROZEN_FACTOR: 1 / 8,  // 凍結異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/8)
+  WATER_FACTOR: 1 / 2,   // 水域異常狀態倍率(受到傷害/移動速度/跳躍高度/飛行動力/電力/護盾恢復皆為 1/2)
+  SWAMP_FACTOR: 1 / 4,   // 沼澤異常狀態倍率(受到傷害/移動速度/跳躍高度/飛行動力/電力/護盾恢復皆為 1/4)
+  FROZEN_FACTOR: 1 / 8,  // 凍結異常狀態倍率(受到傷害/移動速度/跳躍高度/飛行動力/電力/護盾恢復皆為 1/8)
   FROZEN_DOT: 40,        // 凍結異常狀態扣血速度 (HP+SP/s，持續扣血直到死亡)
   WATER_DMG_TAKEN: 1 / 2, SWAMP_DMG_TAKEN: 1 / 4,
   WATER_SLOW: 1 / 2, SWAMP_SLOW: 1 / 4,
+  WATER_JUMP: 1 / 2, SWAMP_JUMP: 1 / 4,
   WATER_LIFT_REGEN: 1 / 2, SWAMP_LIFT_REGEN: 1 / 4,
   WATER_MP_REGEN: 1 / 2, SWAMP_MP_REGEN: 1 / 4,
   WATER_SP_REGEN: 1 / 2, SWAMP_SP_REGEN: 1 / 4,
@@ -2980,6 +2987,35 @@ export const fluidFactor = (wet) => (
   wet === 2 ? TERRAIN_FX.SWAMP_FACTOR :
   1
 );
+
+/** Terrain fluid jump height multiplier (water 1/2, swamp 1/4, frozen 1/8; depth-scaled for shallow) */
+export function terrainJumpHeightFactor(env) {
+  if (!env) return 1;
+  if (typeof env === 'string') {
+    if (env === 'swamp') return TERRAIN_FX.SWAMP_JUMP;
+    if (env === 'shallow_swamp') return 1 - (1 - TERRAIN_FX.SWAMP_JUMP) * 0.5;
+    if (env === 'water') return TERRAIN_FX.WATER_JUMP;
+    if (env === 'shallow_water') return 1 - (1 - TERRAIN_FX.WATER_JUMP) * 0.5;
+    return 1;
+  }
+  if (typeof env === 'number') {
+    if (env === 1) return TERRAIN_FX.WATER_JUMP;
+    if (env === 2) return TERRAIN_FX.SWAMP_JUMP;
+    if (env === 3) return TERRAIN_FX.FROZEN_FACTOR;
+    return 1;
+  }
+  if (env.ground === 0) return 1;
+  if (env.code > 0) return fluidFactor(env.code);
+  if (env.frozen) return 1;
+  if (env.ground === 2) {
+    return Math.max(TERRAIN_FX.SWAMP_JUMP, 1 - (1 - TERRAIN_FX.SWAMP_JUMP) * Math.min(1, (env.depth || 0) / WATER.SWAMP_BAND));
+  }
+  return Math.max(TERRAIN_FX.WATER_JUMP, 1 - (1 - TERRAIN_FX.WATER_JUMP) * Math.min(1, (env.depth || 0) / WATER.FULL_D));
+}
+
+export function terrainJumpVelocityFactor(env) {
+  return Math.sqrt(terrainJumpHeightFactor(env));
+}
 
 /**
  * 地形異常狀態觸發(2026-07-23 / 2026-08-22 整合重構;唯一縫 —— 客戶端 _envAt 與水下帷幕共用同一把尺)。
@@ -3619,7 +3655,8 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
     critX: Math.max(VITALS.CRITX_MIN, w.critX ?? VITALS.CRIT_X) + VITALS.CRITX_PER_LVL * (lvl - 1),
     emp: t(w.emp ?? 0),
     elem: w.elem || null,
-    elemBuildup: t(w.elemBuildup ?? (w.elem ? (w.id === 'heavy' ? 40 : (w.rate > 5 ? 12 : 25)) : 0)),
+    elemBuildup: t(w.elemBuildup ?? (w.elem && w.elem !== 'physical' ? (w.id === 'heavy' ? 40 : (w.rate > 5 ? 12 : 25)) : 0)),
+    elemProb: w.elemProb ?? null,
     charge: t(w.charge ?? 0), guide: !!w.guide, arc: t(w.arc ?? 0),
     fan: !!w.fan || w.type === 'plasma',   // 扇形武器(散彈 / 電漿):錐狀判定 + 越近越高衰減
     recoil: recoilTier(w, slot === 'heavy' ? 'heavy' : 'light', !!w.fan || w.type === 'plasma'),
@@ -3644,12 +3681,10 @@ export function heroAbility(ch, slot, lvl = 1) {
   // 2026-08-22(守招改制):守招改為本體詠唱施展(castTime 依效果強度推導 [0.5, 2.5]s),
   // 不再是載具或輔助機(carrier/support 恆 false);攻招維持載具/輔助機遞送(castTime 恆 0)。
   const isUlt = slot === 'atk';
-  const carrier = isUlt && abilDelivered(ch, 'atk');
-  const support = isUlt && !carrier;
+  const carrier = isUlt && CARRIER_HEROES.has(ch);
+  const support = false; // 全面清除通用輔助機隊機制無殘留
   const castTime = isUlt ? ATK_CAST_S : defCastTime(ch, lvl);
-  // 遞送距離的預設值只給**攻招**:它是「從後方工事送到指定點」的戰略遞送 ⇒ 未標 range 的支援型
-  //   要有一段可以指定的遞送距離(= hyperRange,與機甲接戰距離同一把尺)。守招從主機身邊施放,
-  //   遞送距離就是招式本來的 range(未標 = 施放在腳下)。
+  // 遞送距離的預設值只給專屬載具攻招
   const deliverR = carrier && !a.range;
   return {
     id: slot, name: a.name, fx: a.fx, desc: a.desc, carrier, support, castTime,
@@ -3671,10 +3706,15 @@ export function heroAbility(ch, slot, lvl = 1) {
     shieldDefBoost: a.shieldDefBoost ? t(a.shieldDefBoost) : 0,
     shieldExpand: !!a.shieldExpand, shieldBash: !!a.shieldBash,
     defJump: t(a.defJump ?? 0), intercept: !!a.intercept,
+    aura: !!a.aura, hot: t(a.hot ?? 0),
+    healAmp: t(a.healAmp ?? 0), ccImm: !!a.ccImm, stackable: !!a.stackable,
     mul: a.mul ? Object.fromEntries(Object.entries(a.mul).map(([k, v]) => [k, t(v)])) : null,
     vs: a.vs || {},
     vsSp: a.vsSp ?? 1, vsHp: a.vsHp ?? 1, spPierce: a.spPierce || 0,   // 見 heroWeapon 同欄註
     pen: t(a.pen ?? 0),
+    elem: a.elem || null,
+    elemBuildup: t(a.elemBuildup ?? (a.elem && a.elem !== 'physical' ? 50 : 0)),
+    elemProb: a.elemProb ?? null,
     // 追加效果(2026-07-16):{fx:'pull|stun|slow|confuse|haste|leap|dodge|vamp|bleed|mark', 數值欄逐一過 tierVal}
     add: a.add ? Object.fromEntries(Object.entries(a.add).map(([k, v]) =>
       [k, typeof v === 'string' ? v : t(v)])) : null,
@@ -3685,7 +3725,7 @@ export function heroAbility(ch, slot, lvl = 1) {
 // 攻招 = atk 槽、守招 = def 槽,判準是**施放條件**不是機制內容:
 //   護盾模式中施展(`abilHoldSlot(true)` → def)必為守招;
 //   無護盾施展(`abilHoldSlot(false)` → atk)必為攻招(伺服器 `heroCast` 放 atk 即解除 defending)。
-// 機制偏向不影響歸屬:團隊守護型 atk(s02/s06/s08/s11/s12/t10/m02/m03)與
+// 機制偏向不影響歸屬:團隊守護型 atk(s02/s06/s08/s12/t10/m02/m03)與
 // 盾擊/emp 型 def(s04/s10/t01/t03/t08/m05)照此定義分別歸攻招/守招。
 // 檔名格式 `{id}_skill_{atk|def}.png`(2026-09-21 使用者定案:兩張一律 skill 前綴,
 // 以攻守後綴區分;攻招圖 = atk 槽立繪、守招圖 = def 槽立繪),見 portraits.js CUTIN_ART。
@@ -3816,25 +3856,28 @@ export const CHARACTERS = {
   // ================= 蜂群陣營(無人機)=================
   s01: {
     side: 'SWARM', kind: 'drone', name: '卡特琳娜・薛甫琴科', code: '蜂后', machine: '「第聶伯總譜」指揮型六旋翼',
+    element: '音波／諧振',
     visual: { hue: 0xffd257, frame: 'hexa', body: 'box', form: 'avian', creature: 'bee', paint: 'natflag', flag: [0xffd700, 0x0057b7] },
     mods: { hp: 1.0, sp: 1.15, mp: 1.15, speed: 0.95, armor: 6 },
-    light: { name: '「天籟之弦」微型同軸點陣機槍', rw: '同軸六旋翼點陣機槍・5.56mm 高速穿甲・初速 915m/s', type: 'gun', mv: 915,
+    light: { name: '「天籟之弦」微型同軸點陣機槍', rw: '同軸六旋翼點陣機槍・5.56mm 高速穿甲・初速 915m/s', type: 'gun', mv: 915, elem: 'physical',
       dmg: [11, 14, 17], rate: 10, mag: [40, 50, 60], reload: 2.0, range: 190, crit: 0.06,
       vs: { flesh: 1.2, armor: 0.6, air: 1.3, building: 0.5 } },
-    heavy: { name: '「命運終章」雷導巡弋火箭巢', rw: '多聯裝雷射終端制導火箭巢・Hydra 70 改・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
+    heavy: { name: '「命運終章」雷導巡弋火箭巢', rw: '多聯裝雷射終端制導火箭巢・Hydra 70 改・初速 700m/s', type: 'launcher', mv: 700, guide: 1, elem: 'physical',
       dmg: [49, 75, 109], r: [12, 14, 16], mag: 3, reload: 12, range: 300, pen: 6,
       vs: { flesh: 1.1, armor: 1.4, air: 0.5, building: 1.2 } },
-    def: { name: '賦格・天籟共鳴', fx: 'buff', target: 'self', spRestore: [40, 60, 80], shieldExpand: true,
+    def: { name: '賦格・天籟共鳴', fx: 'buff', target: 'self', spRestore: [40, 60, 80], shieldExpand: true, elem: 'sonic',
       charges: 2,
       mul: { dmgTaken: [0.85, 0.8, 0.75] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '奏響巴哈復調防護律動（可使用2次）：同調共鳴力場頻率，瞬間充盈磁力並大幅擴張防守護盾面積' },
-    atk: { name: '終章・天穹合奏', fx: 'summon', unit: 'heli_squad', count: [2, 3, 4],
-      cd: [80, 70, 60], mp: [80, 90, 100], desc: '揮動終極樂章指揮棒：召喚交響武裝直升機編隊凌空突進，自主索敵並與旗艦協同集火' },
+    atk: { name: '終章・群蜂交響', fx: 'strike', count: 4,
+      dmg: [260, 360, 480], r: 12, scatter: 14, pen: 15, elem: 'sonic', elemBuildup: 40,
+      cd: [80, 70, 60], mp: [80, 90, 100], desc: '指揮自殺式攻擊無人機編隊自後方工事高速撲向目標自爆，造成穿甲動能爆風打擊' },
   },
   s02: {
     side: 'SWARM', kind: 'drone', name: '塔拉斯・邦達爾', code: '鐵匠', machine: '「鐵匠鋪」重載運翼機',
+    element: '火／熱核',
     visual: { hue: 0xc98a3d, frame: 'hexa', body: 'slab', paint: 'minimal' },
     mods: { hp: 1.2, sp: 0.9, mp: 0.9, speed: 0.85, armor: 12 },
-    light: { name: '「重砧」12.7mm 重型速射機槍', rw: '大口徑同軸機槍・12.7mm 鎢芯穿甲彈・初速 850m/s', type: 'gun', mv: 850,
+    light: { name: '「重砧」12.7mm 重型速射機槍', rw: '大口徑同軸機槍・12.7mm 鎢芯穿甲彈・初速 850m/s', type: 'gun', mv: 850, elem: 'physical',
       // crit 0 = 類型基準(重機槍低暴擊);2026-07-25 起 heroWeapon() 夾 CRIT_MIN 5% ⇒ 實戰 ≥5%。
       // e2e 的 s02/t01 確定性傷害斷言改用 Math.random 樁固定不觸發暴擊(不再依賴 crit:0)。
       dmg: [15, 19, 23], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0, pen: 6,
@@ -3844,13 +3887,13 @@ export const CHARACTERS = {
     // 電漿扇形重武器(180~210m)是刻意的近戰例外,不在此列。
     // 榴彈類(trajClass 'lob')射程一律 = 全表最短的那一帶(= 扇形 264;見 AREA_WEAPONS 檔頭
     // 2026-08-04 定案)—— 吊射的大範圍換的就是「得走進去打」。r 由家族帶夾制(BLAST_BAND)。
-    heavy: { name: '「地脈熔核」溫壓巨彈', rw: '重型溫壓破甲火箭・TBG-7V 聚合裝藥・初速 120m/s', type: 'launcher', mv: 120,
+    heavy: { name: '「地脈熔核」溫壓巨彈', rw: '重型溫壓破甲火箭・TBG-7V 聚合裝藥・初速 120m/s', type: 'launcher', mv: 120, elem: 'fire', elemBuildup: 40,
       // dmg −5%:讓出 15m 爆風換回的火力補償(aoeTrimF)把它推到 bal ⑤ 81% 出界(見 t02 heavy 同欄註)
       dmg: [48, 69, 100], r: [15, 17, 19], mag: 3, reload: 12, range: 264, pen: 15,
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
-    def: { name: '地脈・百煉重鑄', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '地脈・百煉重鑄', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.6, 0.5, 0.4], elem: 'fire',
       dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '啟動應急奈米回火鍛造：持重盾狂暴衝撞擊退敵機，直接充盈磁力並大幅強化護盾減傷' },
-    atk: { name: '天工・萬象百煉', fx: 'heal', target: 'team', r: 200, heal: [220, 300, 380], sp: true,
+    atk: { name: '天工・萬象百煉', fx: 'heal', target: 'team', r: 200, heal: [220, 300, 380], sp: true, elem: 'fire',
       cd: [80, 70, 60], mp: [85, 95, 105], desc: '全面解放重載維修鍛爐：以高速奈米回火重塑流覆蓋全軍，大幅修復機體裝甲並充盈能量護盾' },
   },
   s03: {
@@ -3869,6 +3912,7 @@ export const CHARACTERS = {
     // 塗裝 paint:'tattoo' 仍留在她身上(角色欄):那張對稱線描羽紋徽是她自己畫的**私章**,
     // 不是機體識別 —— 換機之後她照樣把它噴在利維坦的囊體側面(見 lore.js)。
     side: 'SWARM', kind: 'morph', name: '林翎', code: '半羽', machine: '「利維坦」長耳可變訊號機',
+    element: '雷／電磁',
     visual: { hue: 0x9ef2e6, pod: 'antenna', flight: 'levi', ground: 'elephant', bulk: 0.95, paint: 'tattoo' },
     mods: { hp: 1.0, sp: 1.2, mp: 1.2, speed: 1.05, armor: 12 },
     // 2026-08-03 換機體後的 dmg 校準(唯一合法的旋鈕,見 §2.1 三軸預算:「校準只走 dmg 階梯」)。
@@ -3880,132 +3924,138 @@ export const CHARACTERS = {
     // 2026-08-16 換機:武器/招式**只改顯示字串**(翼面/羽冠/頸羽/羽面 → 耳廓/額隆/雙耳/隔艙稜線)——
     // 那幾個名字指的是機體上的**實體零件**,機體換了就不存在;數值(dmg/rate/mag/range/vs/vsSp…)
     // 一格未動 ⇒ bal 與 e2e 的期望值逐位元不變。武器本身仍是綁角色的(§2.1 角色機種),沒有搬給 s10。
-    light: { name: '「靈羽」相位相控波束槍', rw: '耳廓相控陣高頻波束・高能相干光束・光速直擊', type: 'beam',
+    light: { name: '「靈羽」相位相控波束槍', rw: '耳廓相控陣高頻波束・高能相干光束・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.12,
       dmg: [17, 23, 29], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 220, crit: 0.06,
       vs: { flesh: 0.75, armor: 0.85, air: 1.3, building: 0.5 } },
     // 護盾軸示範 ①【反護盾】:HPM 微波把能量灌進護盾場直接燒穿,對裝甲板卻幾乎只是加熱 ——
     // 開場兩發剝光對手護盾,之後就得換輕武器慢慢磨(見 data.js shieldSplit 上方註)。
     // **原本的 air 2.0 由夾制②自動歸 1**(反護盾不得有其他單位加成)—— 這裡刻意留著原值不手改:
     // 紀律是程式在管,寫死 1.0 反而看不出「這把武器本來被拿掉了什麼」。
-    heavy: { name: '「天穹裂帛」定向高功率微波', rw: '額隆微波集束發射矩陣・高能 EMP 射束・光速直擊', type: 'beam',
+    heavy: { name: '「天穹裂帛」定向高功率微波', rw: '額隆微波集束發射矩陣・高能 EMP 射束・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.35,
       dmg: [44, 66, 96], mag: 5, reload: 8, range: 320, emp: [0.8, 1.0, 1.2],
       vsSp: 1.7, vsHp: 0.7,
       vs: { flesh: 0.7, armor: 0.95, air: 2.0, building: 0.4 } },
-    def: { name: '幽溟・天海屏障', fx: 'buff', target: 'self', spRestore: [50, 75, 100], shieldExpand: true, shieldDefBoost: [0.65, 0.55, 0.45],
+    def: { name: '幽溟・天海屏障', fx: 'buff', target: 'self', spRestore: [50, 75, 100], shieldExpand: true, shieldDefBoost: [0.65, 0.55, 0.45], elem: 'shock',
       dur: [6, 7, 8], cd: [18, 16, 14], mp: [35, 40, 45], desc: '展開十六道深海共形陣列：構築幽溟水幕屏障，立即充盈磁力並大幅擴張防守護盾' },
-    atk: { name: '逆潮・鯨嘯長歌', fx: 'emp', r: 260, dur: [4, 5, 6],
+    atk: { name: '逆潮・鯨嘯長歌', fx: 'emp', r: 260, dur: [4, 5, 6], elem: 'shock', elemProb: 1.0,
       cd: [70, 62, 54], mp: [90, 100, 110], desc: '引爆低頻超音速利維坦鯨歌：海嘯般音波逆潮狂湧，全頻段封鎖壓制範圍內敵機電磁迴路' },
   },
   s04: {
     side: 'SWARM', kind: 'drone', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
+    element: '風／衝擊',
     visual: { hue: 0xd6d63a, body: 'box', form: 'fixed', wing: 'zero', paint: 'hinomaru' },  // 純黃素色;雙翼正反面各一枚紅日
     mods: { hp: 1.1, sp: 1.0, mp: 0.95, speed: 1.05, armor: 8 },
-    light: { name: '「連牙」九式近迫爆裂霰彈', rw: '高密度多重近戰霰彈莢・12 鉛徑鹿彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: 16,
+    light: { name: '「連牙」九式近迫爆裂霰彈', rw: '高密度多重近戰霰彈莢・12 鉛徑鹿彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: 16, elem: 'physical',
       dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.75, air: 1.2, building: 0.4 } },
     heavy: { name: '「突風破障」高壓氣浪噴湧口', rw: '戰壕工兵定向高壓衝擊氣浪錐・短程擴散破障震波', type: 'plasma', arc: 13, elem: 'impact', elemBuildup: 40,
       dmg: [46, 75, 117], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
-    def: { name: '金剛・修羅逆浪', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [42, 56, 74], r: 12,
+    def: { name: '金剛・修羅逆浪', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [42, 56, 74], r: 12, elem: 'impact',
       charges: 2,
       mul: { speed: [1.25, 1.35, 1.45], dmgTaken: [0.75, 0.7, 0.65] },
       dur: [4, 5, 6], cd: [13, 12, 11], mp: [25, 30, 35], desc: '修羅揮鍬狂瀾突進（可使用2次）：以工兵鍬格開彈道、正面衝撞震退並眩暈敵軍，強行撕開包圍網並大幅減免承受傷害' },
-    atk: { name: '無雙・修羅死線', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.85, 0.8, 0.75] },
+    atk: { name: '無雙・修羅死線', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.85, 0.8, 0.75] }, elem: 'physical',
       add: { fx: 'haste', f: [1.25, 1.3, 1.35] },
       dur: [3, 4, 5], cd: [24, 21, 18], mp: [75, 85, 95], desc: '完全解放修羅死線本能：化身戰場鬼神，以鐵鍬開路、移動速度與傷害減免達到極限，以極速狂暴撕裂敵陣' },
   },
   s05: {
     side: 'SWARM', kind: 'drone', name: '河瑟琪', code: 'Overclock', machine: '「超頻」競速 FPV',
+    element: '電磁／物理',
     visual: { hue: 0xff6fb0, frame: 'quad', body: 'wedge', paint: 'minimal' },
     mods: { hp: 0.85, sp: 1.1, mp: 1.1, speed: 1.2, armor: 3 },
-    light: { name: '「星流」超導磁軌轉輪槍', rw: '高頻線性磁軌機關槍・電磁加速彈・初速 1400m/s', type: 'rail', mv: 1400,
+    light: { name: '「星流」超導磁軌轉輪槍', rw: '高頻線性磁軌機關槍・電磁加速彈・初速 1400m/s', type: 'rail', mv: 1400, elem: 'shock', elemProb: 0.12,
       dmg: [9, 11, 14], rate: [14, 16, 18], mag: [70, 90, 110], reload: 2.8, range: 180, crit: 0.05,
       vs: { flesh: 1.2, armor: 0.6, air: 1.4, building: 0.4 } },
-    heavy: { name: '「星穹之影」巡飛蜂群', rw: '微型高動態巡飛彈掛架・複合制導・巡航 72m/s', type: 'missile', mv: 72,
+    heavy: { name: '「星穹之影」巡飛蜂群', rw: '微型高動態巡飛彈掛架・複合制導・巡航 72m/s', type: 'missile', mv: 72, elem: 'physical',
       dmg: [44, 63, 88], r: [13, 15, 17], mag: 4, reload: 11, range: 320, pen: 12,
       vs: { flesh: 1.0, armor: 1.6, air: 0.6, building: 1.1 } },
-    def: { name: '極限・超頻充能', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60],
+    def: { name: '極限・超頻充能', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60], elem: 'shock',
       charges: 2,
       dur: [4, 5, 6], cd: [12, 11, 10], mp: [25, 30, 35], desc: '超頻啟動神經應急奈米鏈（可使用2次）：瞬間激活磁力護盾，時效內即便持續受擊亦絕不中斷充能' },
-    atk: { name: '暴走・萬星墜閃', fx: 'strike', count: [6, 8, 10], dmg: [60, 77, 94], r: 10, scatter: 30,
+    atk: { name: '暴走・萬星墜閃', fx: 'strike', count: [6, 8, 10], dmg: [60, 77, 94], r: 10, scatter: 30, elem: 'shock', elemBuildup: 40,
       add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 320, pen: 8, cd: [70, 62, 54], mp: [85, 95, 105], vs: { armor: 1.3, building: 1.1 },
-      desc: '導引海量微型自爆蜂群暴走俯衝：漫天星芒飽和轟炸指定空域，引發毀滅性光爆與強烈致盲' },
+      desc: '以極限超頻激發漫天高能星芒光幕打擊：光子射束飽和轟炸指定空域，引發強烈眩目光爆與致盲干擾' },
   },
   s06: {
     // 2026-08-02 機體混編:接下原屬鋼鐵的「半人馬」四足機甲(希臘神話的凱隆 —— 教人療傷的射手,
     // 不是獵人)。四足射擊平台把她的精準軌道步槍鎖死,上半身空出來的雙手才是她真正要的:擋。
     side: 'SWARM', kind: 'robot', name: '瑪雅・柯爾曼', code: '悼歌', machine: '「輓歌」凱隆式護衛機甲',
+    element: '電磁／光',
     visual: { hue: 0xb9c7ff, pod: 'rack', form: 'beast', creature: 'centaur', paint: 'minimal' },
     mods: { hp: 1.0, sp: 1.2, mp: 1.1, speed: 1.0, armor: 16 },
-    light: { name: '「審判之音」重型磁軌步槍', rw: '高精度固態磁軌狙擊步槍・鎢合金穿甲彈・初速 1600m/s', type: 'rail', mv: 1600,
+    light: { name: '「審判之音」重型磁軌步槍', rw: '高精度固態磁軌狙擊步槍・鎢合金穿甲彈・初速 1600m/s', type: 'rail', mv: 1600, elem: 'shock', elemProb: 0.22,
       dmg: [27, 34, 42], rate: 3, mag: [15, 18, 21], reload: 2.2, range: 230, crit: 0.15, critX: 1.8,
       vs: { flesh: 1.2, armor: 0.8, air: 1.5, building: 0.5 } },
     // r 6 → 8(2026-08-02 機體混編):她從飛行機體換到地面四足平台,sight 270 → 240 ⇒ 重武器解析
     // 射程 194 → 173m,導引頭在「剛解除保險」的近帶只剩約 26m 修正距離(audit_weapon_gate Ⅵ 的
     // s06@50% 由此翻紅)。核心帶 6 → 8m 把承諾(射程光暈)拉回實際彈道,仍是全機種最小的戰鬥部。
-    heavy: { name: '「淨化之矢」超音速防空飛彈', rw: '近程空對空攔截飛彈・全向光電尋的・初速 800m/s', type: 'missile', mv: 800,
+    heavy: { name: '「淨化之矢」超音速防空飛彈', rw: '近程空對空攔截飛彈・全向光電尋的・初速 800m/s', type: 'missile', mv: 800, elem: 'physical',
       dmg: [45, 68, 102], r: [8, 9, 10], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.6, armor: 0.9, air: 2.5, building: 0.3 } },
-    def: { name: '聖靈・不墜穹頂', fx: 'intercept', r: [140, 170, 200], intercept: true, shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '聖靈・不墜穹頂', fx: 'intercept', r: [140, 170, 200], intercept: true, shieldDefBoost: [0.55, 0.45, 0.35], elem: 'shock',
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '展開拜占庭神聖攔截力場：粉碎周身來襲之彈幕，並在防守姿態下獲得超高護盾傷害減免' },
-    atk: { name: '輓歌・不滅戰陣', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.6, 0.5, 0.4] },
+    atk: { name: '輓歌・不滅戰陣', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.6, 0.5, 0.4] }, elem: 'shock',
       dur: [6, 7, 8], cd: [75, 65, 55], mp: [85, 95, 105], desc: '奏響陣亡勇士之不朽輓歌：展開凱隆聖光防衛矩陣，於廣闊空域為全體友軍構築鋼鐵庇護' },
   },
   s07: {
     // 2026-08-02 機體混編:接下原屬鋼鐵的「頭足類」四足機甲 —— 四觸手步行、四觸手持械,
     // 掛載恆為偶數,正好對上他「演算法一律雙發齊射」的執念(非歐幾何的機體,給非歐幾何的數學家)。
     side: 'SWARM', kind: 'robot', name: '埃坦・沙哈', code: '鐵證', machine: '「證明完畢」八臂防空機甲',
+    element: '電漿／空間幾何',
     visual: { hue: 0x7fd8ff, pod: 'dish', form: 'beast', creature: 'cthulhu', paint: 'totem' },
     mods: { hp: 1.05, sp: 1.1, mp: 1.1, speed: 0.9, armor: 18 },
-    light: { name: '「公理」25mm 程控空爆砲', rw: '程控多用途破片空爆砲・智慧引信彈・初速 760m/s', type: 'gun', mv: 760,
+    light: { name: '「公理」25mm 程控空爆砲', rw: '程控多用途破片空爆砲・智慧引信彈・初速 760m/s', type: 'gun', mv: 760, elem: 'physical',
       dmg: [20, 25, 31], rate: 6, mag: [24, 30, 36], reload: 2.3, range: 210, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.95, air: 1.6, building: 0.5 } },
-    heavy: { name: '「非歐撕裂」電漿防空網', rw: '高能磁約束電漿矩陣・拓撲扇形散布', type: 'plasma', arc: 20,
+    heavy: { name: '「非歐撕裂」電漿防空網', rw: '高能磁約束電漿矩陣・拓撲扇形散布', type: 'plasma', arc: 20, elem: 'fire', elemBuildup: 40,
       dmg: [50, 77, 113], mag: 3, reload: 7, range: 264, pen: 4,
       vs: { flesh: 0.9, armor: 0.85, air: 2.0, building: 0.4 } },
-    def: { name: '公理・非歐折射', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '公理・非歐折射', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35], elem: 'physical',
       charges: 2,
       dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '構築非歐幾何拓撲偏折面（可使用2次）：持盾衝撞擊退敵機，大幅提高護盾減免並逆轉物理受力' },
-    atk: { name: '悖論・幾何破滅', fx: 'strike', count: [5, 7, 9], dmg: [68, 85, 106], r: 11, scatter: 35,
+    atk: { name: '悖論・幾何破滅', fx: 'strike', count: [5, 7, 9], dmg: [68, 85, 106], r: 11, scatter: 35, elem: 'physical',
       add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 340, pen: 6, cd: [72, 64, 56], mp: [85, 95, 105], vs: { air: 1.5, armor: 1.1 },
       desc: '推演幾何空間奇點悖論：釋放反向拓撲破片彈幕，徹底撕裂範圍內所有敵機之氣動舵面與引擎' },
   },
   s08: {
     side: 'SWARM', kind: 'drone', name: '佐菲亞・馬列克', code: '聖燭', machine: '「燭台」醫療運補機',
+    element: '光／生化治療',
     visual: { hue: 0xe8f0f4, frame: 'coax', body: 'sphere', paint: 'flag' },
     mods: { hp: 1.0, sp: 1.15, mp: 1.25, speed: 1.0, armor: 5 },
-    light: { name: '「守望聖歌」7.62mm 淨化機槍', rw: '修道院守衛機關槍・7.62mm 聖裁穿甲彈・初速 825m/s', type: 'gun', mv: 825,
+    light: { name: '「守望聖歌」7.62mm 淨化機槍', rw: '修道院守衛機關槍・7.62mm 聖裁穿甲彈・初速 825m/s', type: 'gun', mv: 825, elem: 'physical',
       dmg: [14, 18, 22], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.1, building: 0.5 } },
-    heavy: { name: '「神聖裁決」電磁獵魔長槍', rw: '軌道級重型電磁狙擊管・高能穿甲針・初速 2200m/s', type: 'rail', mv: 2200,
+    heavy: { name: '「神聖裁決」電磁獵魔長槍', rw: '軌道級重型電磁狙擊管・高能穿甲針・初速 2200m/s', type: 'rail', mv: 2200, elem: 'shock', elemProb: 0.35,
       dmg: [58, 87, 132], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
-    def: { name: '晨鐘・聖域庇護', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 85, 110], shieldExpand: true,
-      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '敲響克拉科夫破曉晨鐘：聖光洗禮修復機體裝甲與磁力，並在防守時大幅擴大護盾庇護範圍' },
-    atk: { name: '暮鐘・萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true,
-      cd: [85, 75, 65], mp: [90, 100, 110], desc: '敲響大教堂神聖祈願暮鐘：奇蹟光輝普照大地，全軍裝甲超大幅修復且能量護盾全數回滿' },
+    def: { name: '晨鐘・聖域庇護', fx: 'heal', target: 'team', aura: true, r: 28, heal: [60, 80, 100], hot: [30, 42, 55], sp: true, spRestore: [20, 30, 40], shieldExpand: true, elem: 'shock',
+      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '敲響克拉科夫破曉晨鐘展開聖域修復光環：聖光光環隨機體移動持續6秒，每秒持續修復半徑28m範圍內自身與友軍裝甲及磁力護盾，並大幅擴大護盾庇護範圍' },
+    atk: { name: '暮鐘・萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true, cleanse: true, elem: 'shock',
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '敲響大教堂神聖祈願暮鐘：奇蹟光輝普照大地，超廣域全軍裝甲超大幅修復、能量護盾全數回滿並滌除全隊異常' },
   },
   s09: {
     // 2026-08-02 機體混編:「袋鼠」機甲轉入蜂群(使用者定案 —— 袋鼠是澳洲的機體),
     // 駕駛員國籍隨之改為澳洲(見 lore.js s09:內陸大牧場的獵場主,不再是英國子爵)。
     // 跟腱儲能的躍步底盤 = 打完就換陣地的防空獵手,和他「一發撂一架、換膛的停頓分毫不差」是同一套節奏。
     side: 'SWARM', kind: 'robot', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」躍步防空機甲',
+    element: '物理／重力牽引',
     visual: { hue: 0xd0602f, pod: 'rack', form: 'biped', creature: 'roo', paint: 'split', split: 'shade' },  // 鏽橙同色系:反蔭 —— 面朝上=背深、面朝下=腹淺
     mods: { hp: 1.05, sp: 1.15, mp: 1.0, speed: 1.05, armor: 18 },
-    light: { name: '「荒原之鷹」12號連發防空霰彈', rw: '雙管重型防空霰彈槍・高初速鎢合金箭彈・初速 420m/s', type: 'gun', mv: 420, fan: true, arc: 18,
+    light: { name: '「荒原之鷹」12號連發防空霰彈', rw: '雙管重型防空霰彈槍・高初速鎢合金箭彈・初速 420m/s', type: 'gun', mv: 420, fan: true, arc: 18, elem: 'physical',
       dmg: [34, 43, 53], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.3, armor: 0.4, air: 2.0, building: 0.3 } },
-    heavy: { name: '「星辰之錐」雷導破空飛彈', rw: '多彈頭雷射駕束引導飛彈・Starstreak 衍生型・初速 300m/s', type: 'launcher', mv: 300, guide: 1,
+    heavy: { name: '「星辰之錐」雷導破空飛彈', rw: '多彈頭雷射駕束引導飛彈・Starstreak 衍生型・初速 300m/s', type: 'launcher', mv: 300, guide: 1, elem: 'physical',
       dmg: [76, 112, 165], r: [13, 15, 17], mag: 3, reload: 12, range: 320, pen: 10,
       vs: { flesh: 0.9, armor: 1.2, air: 1.8, building: 0.8 } },
     // mark 只在 heroHit(直擊彈道)有消耗路徑 —— s09 雙武器是 fan 散彈(heroPlasma)+ launcher
     // (heroBurst),掛 mark 等於死效果,2026-07-16 改 haste(獵手加速追獵)
-    def: { name: '逐風・靈步躍遷', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.2, 1.3, 1.4] }, spRestore: [40, 60, 80],
+    def: { name: '逐風・靈步躍遷', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.2, 1.3, 1.4] }, spRestore: [40, 60, 80], elem: 'physical',
       charges: 2,
       dur: [4, 5, 6], cd: [12, 11, 10], mp: [25, 30, 35], desc: '荒原荒野獵巡本能爆發（可使用2次）：立即充盈磁力並大幅加速，於防守姿態下追加連續靈巧大跳躍' },
-    atk: { name: '封喉・禁獵天羅', fx: 'strike', count: [8, 10, 12], dmg: [51, 64, 77], r: 9, scatter: 40,
+    atk: { name: '封喉・禁獵天羅', fx: 'strike', count: [8, 10, 12], dmg: [51, 64, 77], r: 9, scatter: 40, elem: 'impact', elemBuildup: 45,
       add: { fx: 'pull', imp: [16, 20, 24] },
       range: 300, cd: [70, 62, 54], mp: [80, 90, 100], vs: { air: 2.0, flesh: 1.2 },
       desc: '向蒼穹拋射引力拘束天羅：展開絕對禁獵領域，強大向心引力將封鎖空域內所有獵物強行吸向陣眼' },
@@ -4017,35 +4067,37 @@ export const CHARACTERS = {
     // 換得過去是因為這台機的設計理由與她本人一模一樣:翼面張開是相控陣、收翼摺成背脊長天線
     // ——「同一組振子,兩種指向」,對一個靠聽頻譜活下來的人來說,耳朵換了形狀而已。
     side: 'SWARM', kind: 'morph', name: '卡佳・塔姆', code: '白噪音', machine: '「羽陣」始祖式可變機甲',
+    element: '光子／白噪聲學',
     visual: { hue: 0xd7b8ff, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'minimal' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.15, speed: 1.10, armor: 12 },
-    light: { name: '「始祖鳴動」相位脈衝雷射', rw: '高相干相控陣脈衝雷射槍・光速直擊', type: 'beam',
+    light: { name: '「始祖鳴動」相位脈衝雷射', rw: '高相干相控陣脈衝雷射槍・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.12,
       dmg: [18, 23, 29], rate: 9, mag: [30, 36, 42], reload: 1.8, range: 220, crit: 0.08,
       vs: { flesh: 0.8, armor: 0.7, air: 1.1, building: 0.4 } },
     heavy: { name: '「神經穿刺」電磁穿顱長矛', rw: '重型 EMP 穿甲貫穿狙擊彈・初速 900m/s', type: 'gun', mv: 900, elem: 'sonic', elemBuildup: 45,
       dmg: [52, 78, 112], mag: 3, reload: 9, range: 340, emp: [1.5, 2, 2.5],
       vs: { flesh: 0.8, armor: 1.05, air: 1.8, building: 0.5 } },
-    def: { name: '始祖・天塹巨翼', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [36, 48, 65], r: 12, spRestore: [25, 40, 55],
+    def: { name: '始祖・天塹巨翼', fx: 'shield_bash', shieldBash: true, imp: 22, dmg: [36, 48, 65], r: 12, spRestore: [25, 40, 55], elem: 'impact',
       charges: 2,
       shieldDefBoost: [0.6, 0.5, 0.4], dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [25, 30, 35], desc: '始祖巨翼化為重鋼天塹（可使用2次）：持巨盾強勢突進衝撞擊退敵群，充盈磁力並大幅提升護盾傷害減免' },
-    atk: { name: '寂滅・全域白噪', fx: 'emp', r: 300, dur: [4, 5, 6],
+    atk: { name: '寂滅・全域白噪', fx: 'emp', r: 300, dur: [4, 5, 6], elem: 'sonic', elemBuildup: 50,
       add: { fx: 'confuse', dur: [2.0, 2.5, 3.0] },
       cd: [75, 65, 55], mp: [90, 100, 110], desc: '展開超廣域消音白噪音矩陣：終端信號覆蓋全場，瞬間切斷範圍內敵軍全部通訊與火控感測鏈路，引發感測混亂' },
   },
   s11: {
     side: 'SWARM', kind: 'drone', name: '維爾納・哈特曼', code: '鐘匠', machine: '「錶芯」精密工作機',
+    element: '光子／物理',
     visual: { hue: 0xd8c690, frame: 'wing', body: 'frame', form: 'fixed', wing: 'vtail', paint: 'minimal' },
     mods: { hp: 1.0, sp: 1.05, mp: 1.05, speed: 0.95, armor: 8 },
-    light: { name: '「天平指針」聚焦光子長標', rw: '超高精度聚焦固態雷射・零散射光束・光速直擊', type: 'beam',
+    light: { name: '「天平指針」聚焦光子長標', rw: '超高精度聚焦固態雷射・零散射光束・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.12,
       dmg: [16, 20, 24], rate: 3.5, mag: [20, 24, 28], reload: 2.1, range: 220, crit: 0.12, critX: 1.8, pen: 6,
       vs: { flesh: 1.1, armor: 1.3, air: 1.0, building: 0.6 } },
-    heavy: { name: '「擒縱碎核」重型磁軌貫甲砲', rw: '高密電磁穿甲重砲・關節破壞彈・初速 2000m/s', type: 'rail', mv: 2000,
+    heavy: { name: '「擒縱碎核」重型磁軌貫甲砲', rw: '高密電磁穿甲重砲・關節破壞彈・初速 2000m/s', type: 'rail', mv: 2000, elem: 'physical',
       dmg: [40, 58, 82], mag: 2, reload: 8, range: 380, crit: 0.15, critX: 2.0, pen: [20, 24, 28],
       vs: { flesh: 0.8, armor: 1.8, air: 1.2, building: 0.7 } },
-    def: { name: '規訓・天平錶匣', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '規訓・天平錶匣', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldDefBoost: [0.55, 0.45, 0.35], elem: 'physical',
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '啟動格拉蘇蒂擒縱防衛力場：磁力瞬間充盈，時序律動使護盾承受傷害減免效果大幅躍升' },
-    atk: { name: '重調・時之逆轉', fx: 'heal', target: 'self', heal: [400, 550, 700], sp: true,
-      cd: [28, 24, 20], mp: [80, 90, 100], desc: '逆轉齒輪主發條時序：以精密機械大修校準自身機體，裝甲大幅回復且能量護盾瞬間滿載' },
+    atk: { name: '超頻・擒縱共振', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], reload: [0.75, 0.7, 0.65] }, elem: 'physical',
+      dur: [8, 10, 12], cd: [28, 24, 20], mp: [80, 90, 100], desc: '解除齒輪主發條擒縱極限：精密機件超頻運轉，主武器傷害大幅躍升且裝填冷卻巨幅縮減' },
   },
   s12: {
     // 2026-08-03 台灣變形者定案的另一半:把「始祖鳥↔迅猛龍」讓給 s03,自己接下她那架鴨翼定翼機。
@@ -4053,25 +4105,26 @@ export const CHARACTERS = {
     // 高攻角安定性:機身一邊急轉,星象儀一邊維持指向。他的偵察本來就分兩段(先用腳走過、
     // 再從天上核對一遍),讓出撲翼收爪那一段,換來整夜不落地的長航時。
     side: 'SWARM', kind: 'drone', name: '埃米爾・賽伊托夫', code: '歸鄉', machine: '「星圖」鴨翼長航偵察機',
+    element: '光子／宇宙光電',
     visual: { hue: 0x9db8d8, frame: 'wing', body: 'wedge', form: 'fixed', wing: 'canard', paint: 'totem' },
     mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 4 },
-    light: { name: '「長路」74U 特裝精準卡賓', rw: '特戰短突擊步槍・高裝藥穿甲彈・初速 735m/s', type: 'gun', mv: 735,
+    light: { name: '「長路」74U 特裝精準卡賓', rw: '特戰短突擊步槍・高裝藥穿甲彈・初速 735m/s', type: 'gun', mv: 735, elem: 'physical',
       dmg: [16, 20, 25], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 180, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.6, air: 1.1, building: 0.4 } },
-    heavy: { name: '「天權」星象光電測距巨砲', rw: '星相儀整合定向能量巨砲・光電重擊・光速直擊', type: 'beam',
+    heavy: { name: '「天權」星象光電測距巨砲', rw: '星相儀整合定向能量巨砲・光電重擊・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.35,
       dmg: [44, 68, 102], mag: 5, reload: 8, range: 320, pen: [10, 13, 16],
       // range 320 MUST NOT 因為換機種而下修:bal ④ 要求**每一名無人機**的重武器解析射程 > 砲塔
       // (站外攻堅是無人機的生存方式)。他從變形機甲底盤換到無人機底盤,rangeCap 由 sight 240 升到 270
       // ⇒ 解析射程 172.8 → 192m。曾經試過把名目射程壓回去讓解析值不動(320 → 240),結果是
       // ④ 當場紅字(172.8 < 砲塔的 186)、而且 rngDmgF 反手把傷害補上去,⑤ 直接衝到 88%。
       vs: { flesh: 0.8, armor: 1.1, air: 0.5, building: 1.2 } },
-    def: { name: '織星・奇點引力', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '織星・奇點引力', fx: 'buff', target: 'self', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.6, 0.5, 0.4], elem: 'shock',
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '編織吉里赫奇點引力透鏡：磁力瞬間回滿，防守時大幅展開星軌護盾並強化傷害減免' },
     // 2026-08-06 使用者定案(機種絕招退場的補償;見 SELF_ATK):由「全隊無霧」改成**全隊復甦**——
     // 恢復速度倍率 + 解除既有異常 + 期間免疫異常 + **仍在重生倒數中**的隊友原地半血復活。
     // 復活刻意只救「倒數中」的(已重生的不算)且回場半血 + 一瞬無敵,CD 維持 70→54s:
     // 這是全場唯一能把一條命拿回來的效果,價錢付在「必須在那 30 秒窗口內按下去」。
-    atk: { name: '引渡・群星歸鄉', fx: 'rally', target: 'team', regen: [2.5, 3, 3.5],
+    atk: { name: '引渡・群星歸鄉', fx: 'rally', target: 'team', regen: [2.5, 3, 3.5], elem: 'shock',
       cleanse: true, revive: [0.5, 0.5, 0.5], dur: [8, 10, 12],
       cd: [26, 22, 18], mp: [80, 90, 100], desc: '詠唱星象古老引渡誓約：全軍回復速度倍增且免疫異常，倒下的戰友受群星召喚原地復甦歸隊' },
   },
@@ -4079,9 +4132,10 @@ export const CHARACTERS = {
   // ================= 鋼鐵陣營(機甲)=================
   t01: {
     side: 'STEEL', kind: 'robot', name: '瓦列里・格羅莫夫', code: '冬將軍', machine: '「莫洛茲」指揮型重機甲',
+    element: '冰／霜凍',
     visual: { hue: 0xd6e4ef, pod: 'none', proto: 'bastion', paint: 'natflag', flag: [0xffffff, 0x0039a6, 0xd52b1e] },
     mods: { hp: 1.15, sp: 1.0, mp: 1.1, speed: 0.9, armor: 18 },
-    light: { name: '「暴風雪」12.7mm 同軸重機槍', rw: '重型同軸壓制機關槍・12.7mm 穿甲彈・初速 860m/s', type: 'gun', mv: 860,
+    light: { name: '「暴風雪」12.7mm 同軸重機槍', rw: '重型同軸壓制機關槍・12.7mm 穿甲彈・初速 860m/s', type: 'gun', mv: 860, elem: 'physical',
       dmg: [22, 27, 33], rate: 4.5, mag: [40, 48, 56], reload: 2.4, range: 210, pen: 4,
       vs: { flesh: 1.3, armor: 1.0, air: 1.05, building: 0.6 } },
     // 護盾軸示範 ④【反裝甲】(原 vs.building 1.8 —— 全表最高的攻城加乘之一,在 EX_SIEGE_WEAPONS
@@ -4091,46 +4145,49 @@ export const CHARACTERS = {
     heavy: { name: '「冰魄霜斧」重型深冷急凍戰斧', rw: '重型深冷液氮超導戰斧・絕對零度扇面衝擊・極低溫碎甲', type: 'plasma', arc: 15, elem: 'frost', elemBuildup: 45,
       dmg: [60, 90, 126], mag: 3, reload: 7, range: 264, pen: 16,
       vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
-    def: { name: '霜狼・北境重盾', fx: 'shield_bash', shieldBash: true, imp: 28, dmg: [65, 90, 120], r: 12,
+    def: { name: '霜狼・北境重盾', fx: 'shield_bash', shieldBash: true, imp: 28, dmg: [65, 90, 120], r: 12, elem: 'impact',
       mul: { speed: [1.2, 1.3, 1.4], dmgTaken: [0.75, 0.7, 0.65] },
       dur: [5, 6, 7], cd: [24, 22, 20], mp: [35, 40, 45], desc: '霜狼巨盾雪原突襲衝撞：防守姿態下狂暴持盾突進，擊退並震暈沿途敵軍，大幅減免承受傷害' },
-    atk: { name: '雪崩・烏拉爾雷', fx: 'strike', count: [6, 8, 10], dmg: [77, 98, 119], r: 12, scatter: 40,
-      add: { fx: 'stun', dur: [0.8, 1, 1.2] },
-      range: 340, pen: 10, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
-      desc: '呼叫烏拉爾重裝砲兵軍團雪崩齊射：以毀滅性雷霆轟炸目標空域，強烈衝擊震撼並癱瘓敵軍' },
+    atk: { name: '雪崩・極寒霜星', fx: 'strike', count: 1, dmg: [550, 750, 980], r: 16, scatter: 0,
+      pen: 20, elem: 'frost', elemBuildup: 100,
+      add: { fx: 'stun', dur: [1.5, 2.0, 2.5] },
+      range: 340, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
+      desc: '發射單發重型極寒集束飛彈凌空打擊：引爆大範圍極低溫冰爆，造成毀滅性凍結傷害並絕對凍結暈眩敵軍' },
   },
   t02: {
     side: 'STEEL', kind: 'robot', name: '薇拉・佐洛塔列娃', code: '編號七', machine: '「加拉泰亞-7」神經同步機',
+    element: '電磁／靈能神經',
     visual: { hue: 0xcfd8ff, pod: 'none', proto: 'seraph', paint: 'minimal' },
     mods: { hp: 0.9, sp: 1.3, mp: 1.2, speed: 1.15, armor: 14 },
-    light: { name: '「聖痕」高斯脈衝衝鋒槍', rw: '線圈加速衝鋒槍・超導穿甲彈頭・初速 1100m/s', type: 'rail', mv: 1100,
+    light: { name: '「聖痕」高斯脈衝衝鋒槍', rw: '線圈加速衝鋒槍・超導穿甲彈頭・初速 1100m/s', type: 'rail', mv: 1100, elem: 'shock', elemProb: 0.12,
       dmg: [14, 18, 21], rate: 8, mag: [32, 40, 48], reload: 1.9, range: 200, crit: 0.08,
       vs: { flesh: 1.2, armor: 0.9, air: 1.15, building: 0.5 } },
-    heavy: { name: '「裁決神矛」高能磁軌貫甲砲', rw: '超高能電磁加速穿甲長矛・光速穿透・初速 1500m/s', type: 'rail', mv: 1500,
+    heavy: { name: '「裁決神矛」高能磁軌貫甲砲', rw: '超高能電磁加速穿甲長矛・光速穿透・初速 1500m/s', type: 'rail', mv: 1500, elem: 'shock', elemProb: 0.35,
       // dmg −5%(2026-08-04):榴彈類改吃短射程帶之後,長射程貫穿砲在 bal ⑤ 的相對優勢跟著上浮
       // (t02 79% → 82%,出界)。射程差買不回來(⑦ 實測 +15% 射程 = +21pp,火力只有 +4pp)⇒
       // 依 §2.1「個別角色改 dmg 階梯」這條唯一的具名出口修正,MUST NOT 回頭動 vs 表。
       dmg: [65, 98, 142], mag: 2, reload: 8, range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
       vs: { flesh: 1.0, armor: 1.8, air: 1.2, building: 0.6 } },
-    def: { name: '臨界・第七神經', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.3, 1.4, 1.5] }, spRestore: [40, 60, 80],
+    def: { name: '臨界・第七神經', fx: 'buff', target: 'self', defJump: 2, mul: { speed: [1.3, 1.4, 1.5] }, spRestore: [40, 60, 80], elem: 'shock',
       dur: [5, 6, 7], cd: [13, 12, 11], mp: [30, 35, 40], desc: '第七神經臨界超頻：瞬間充盈磁力並大幅提高機動性，於防守姿態下追加連續靈動大跳躍' },
     // 2026-08-06 使用者定案(見 SELF_ATK):改成**超載** —— 彈藥全滿 + 期間無限彈藥(免裝填)
     // + 閃避率提升,**被擊中即結束**。補償當量由「免裝填的 DPS 增益 × 撐得住的秒數」兌現,
     // 故刻意不再疊 mul.dmg(疊上去就是同一份預算領兩次);`brk` 那條風險正是它的價錢 ——
     // 全滿彈匣 + 零裝填的爆發只有在沒被打到的前提下成立,吃到一發就回到常態。
     atk: { name: '神化・超弦同步', fx: 'buff', target: 'self',
-      mul: { dmgTaken: [0.75, 0.7, 0.65] },
+      mul: { dmgTaken: [0.75, 0.7, 0.65] }, elem: 'shock',
       add: { fx: 'overdrive', evade: [0.25, 0.32, 0.4] }, brk: true,
       dur: [8, 10, 12], cd: [28, 24, 20], mp: [85, 95, 105], desc: '超弦同步率百分之百神化解放：彈藥瞬間全滿且免裝填、閃避率飆至極致（承受攻擊即解除）' },
   },
   t03: {
     side: 'STEEL', kind: 'robot', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「爐膛」突擊機甲',
+    element: '重力／破障',
     visual: { hue: 0xe08a4a, pod: 'shield', form: 'biped', creature: 'gorilla', paint: 'minimal' },
     mods: { hp: 1.25, sp: 0.85, mp: 0.9, speed: 0.95, armor: 18 },
-    light: { name: '「碎骨」12號重型狂暴霰彈', rw: '高射速彈鼓霰彈槍・大口徑碎肉彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: 17,
+    light: { name: '「碎骨」12號重型狂暴霰彈', rw: '高射速彈鼓霰彈槍・大口徑碎肉彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: 17, elem: 'physical',
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.6, air: 1.05, building: 0.5 } },
-    heavy: { name: '「裂地泰坦」152mm 破障加農砲', rw: '大口徑重型破障榴彈加農砲・2A65 衍生・初速 650m/s', type: 'launcher', mv: 650,
+    heavy: { name: '「裂地泰坦」152mm 破障加農砲', rw: '大口徑重型破障榴彈加農砲・2A65 衍生・初速 650m/s', type: 'launcher', mv: 650, elem: 'impact', elemBuildup: 40,
       dmg: [72, 107, 150], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 14,
       vsSp: 0.72, vsHp: 1.15,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
@@ -4140,44 +4197,46 @@ export const CHARACTERS = {
     // 守招保留鑄鐵鍋盾本體(機體左前臂真的掛著那口鍋,見 models.js gorilla)並補上衝鋒 ——
     // lore 寫的就是「頂著那口鑄鐵鍋盾一路撞進去」,承傷減免 + 加速正是這句話的機制化;
     // 攻招從自身增益改成把敵人捲進鍋裡的範圍打擊,直接把目標帶進扇形武器的甜蜜點。
-    def: { name: '不屈鐵壁・狂暴碾壓', fx: 'shield_bash', shieldBash: true, imp: 30, dmg: [45, 62, 85], r: 12, shieldExpand: true,
+    def: { name: '不屈鐵壁・狂暴碾壓', fx: 'shield_bash', shieldBash: true, imp: 30, dmg: [45, 62, 85], r: 12, shieldExpand: true, elem: 'impact',
       charges: 2,
       spRestore: [25, 40, 55], dur: [3, 3.5, 4], cd: [17, 15, 13], mp: [25, 30, 35], desc: '持厚重合金鑄鐵盾強勢衝撞破陣（可使用2次）：以巨大質量撞飛並震退敵群，充盈磁力並大幅提高護盾減傷' },
-    atk: { name: '重力崩陷・地脈裂隙', fx: 'strike', count: [2, 3, 4], dmg: [88, 110, 138], r: 14, scatter: 18,
+    atk: { name: '重力崩陷・地脈裂隙', fx: 'strike', count: [2, 3, 4], dmg: [88, 110, 138], r: 14, scatter: 18, elem: 'impact', elemBuildup: 50,
       add: { fx: 'pull', imp: [24, 30, 36] },
       range: 160, pen: 10, cd: [75, 65, 55], mp: [80, 90, 100], vs: { flesh: 1.5, armor: 1.1 },
       desc: '超載動力引擎釋放核心引力崩塌：掀起地脈震裂的強大引力旋渦，將範圍內敵軍全數強行拉入核心並劇烈震盪撕碎' },
   },
   t04: {
     side: 'STEEL', kind: 'robot', name: '娜傑日達・奧爾洛娃', code: '灰雁', machine: '「灰犬」獵殺型',
+    element: '物理／匿蹤',
     visual: { hue: 0x8a97a5, pod: 'rack', form: 'beast', creature: 'hound', paint: 'camo' },
     mods: { hp: 0.95, sp: 1.1, mp: 1.1, speed: 1.1, armor: 16 },
-    light: { name: '「寂滅」9×39 特裝微聲步槍', rw: '亞音速特戰步槍・VSS 專用重彈頭・初速 295m/s', type: 'gun', mv: 295,
+    light: { name: '「寂滅」9×39 特裝微聲步槍', rw: '亞音速特戰步槍・VSS 專用重彈頭・初速 295m/s', type: 'gun', mv: 295, elem: 'physical',
       dmg: [21, 27, 33], rate: 3.2, mag: [20, 24, 28], reload: 2.0, range: 210, crit: 0.15, critX: 1.8,
       vs: { flesh: 1.4, armor: 0.8, air: 1.15, building: 0.5 } },
-    heavy: { name: '「天誅」14.5mm 反器材重砲', rw: '大口徑鎢芯穿甲反器材砲・KPV 縮裝・初速 1000m/s', type: 'gun', mv: 1000,
+    heavy: { name: '「天誅」14.5mm 反器材重砲', rw: '大口徑鎢芯穿甲反器材砲・KPV 縮裝・初速 1000m/s', type: 'gun', mv: 1000, elem: 'physical',
       dmg: [50, 75, 105], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],   // dmg −5%:同 t02 heavy 同欄註(bal ⑤ 離群修正)
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
-    def: { name: '匿影・千幻羽衣', fx: 'decoy_beacon', count: 2, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '匿影・千幻羽衣', fx: 'decoy_beacon', count: 2, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4], elem: 'physical',
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '展開灰雁千幻光學迷彩羽衣：干擾敵方火控雷達，迅速充盈磁力並在防守時大幅提高護盾減傷' },
-    atk: { name: '滅頂・天穹要塞', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
+    atk: { name: '滅頂・天穹要塞', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] }, elem: 'physical',
       add: { fx: 'siege', setupS: 1.0, recoverS: 1.5 },
       dur: [8, 10, 12], cd: [28, 24, 20], mp: [85, 95, 105], desc: '展開四足液壓駐鋤就地化為滅頂要塞：進入重裝狙擊狀態，無限重彈免裝填狂轟敵陣（解除需硬直）' },
   },
   t05: {
     side: 'STEEL', kind: 'robot', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
+    element: '光子／電磁',
     visual: { hue: 0xf2f2f2, pod: 'dish', form: 'biped', creature: 'ostrich', paint: 'solid' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.15, speed: 1.05, armor: 16 },
-    light: { name: '「凌霄」電磁線圈步槍', rw: '高頻實驗性線圈步槍・高斯子彈・初速 1500m/s', type: 'rail', mv: 1500,
+    light: { name: '「凌霄」電磁線圈步槍', rw: '高頻實驗性線圈步槍・高斯子彈・初速 1500m/s', type: 'rail', mv: 1500, elem: 'shock', elemProb: 0.12,
       dmg: [16, 20, 25], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 200, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.8, air: 1.1, building: 0.5 } },
-    heavy: { name: '「長空貫日」聚能光子長矛', rw: '關節整合型高能雷射長矛・光速直擊', type: 'beam',
+    heavy: { name: '「長空貫日」聚能光子長矛', rw: '關節整合型高能雷射長矛・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.35,
       dmg: [35, 52, 78], mag: 5, reload: 8, range: 320, pen: [18, 22, 26],
       vs: { flesh: 0.8, armor: 1.7, air: 0.6, building: 0.6 } },
-    def: { name: '觀自在・應力回火', fx: 'heal', target: 'self', heal: [50, 70, 95], sp: true, spRestore: [30, 45, 60], spRegenHit: true,
-      charges: 2,
-      dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '全機應力掃描自檢回火（可使用2次）：釋放殘餘應力並重鑄疲勞關節，立即修復機體與磁力，時效內受擊仍可源源不絕回充磁力' },
-    atk: { name: '千機・重鋼天降', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] },
+    def: { name: '觀自在・應力回火', fx: 'heal', target: 'self', heal: [50, 70, 95], sp: true, spRestore: [30, 45, 60], spRegenHit: true, elem: 'shock',
+      charges: 2, stackable: true, cleanse: true, ccImm: true, healAmp: [0.35, 0.45, 0.55], regen: [1.5, 1.8, 2.2],
+      dur: [4, 4.5, 5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '全機應力掃描自檢回火（可儲存2次/狀態可疊加）：立即修復機體與磁力並滌除異常；時效內進入異常免疫狀態，受擊磁力回充不中斷，且大幅疊加強化受治癒效果與自然恢復速率' },
+    atk: { name: '千機・重鋼天降', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] }, elem: 'physical',
       add: { fx: 'clone', count: 2 },
       dur: [8, 10, 12], cd: [30, 26, 22], mp: [90, 100, 110], desc: '總設計師親率千機備用機天降：分化兩具仿生鶴戰力化身協同火擊，本尊若遇致命一擊則轉移至化身重生' },
   },
@@ -4186,18 +4245,19 @@ export const CHARACTERS = {
     // 「孫悟空」變形機甲從傭兵轉入鋼鐵。掌行跑酷的猴姿 ↔ 升空展開觔斗雲式光翼,
     // 正是他那套「輕功」的原型;麻辣走位(dash)與主角時刻(leap)一個字都不用改。
     side: 'STEEL', kind: 'morph', name: '陸小川', code: '小川', machine: '「輕功」齊天式可變機甲',
+    element: '震波／動能',
     visual: { hue: 0xffb84d, pod: 'blade', flight: 'uav', ground: 'monkey', bulk: 0.95, paint: 'minimal' },
     mods: { hp: 1.05, sp: 1.05, mp: 1.0, speed: 1.2, armor: 14 },
-    light: { name: '「疾風」191 特裝突擊步槍', rw: '新型高初速步槍・5.8mm 微聲穿甲彈・初速 930m/s', type: 'gun', mv: 930,
+    light: { name: '「疾風」191 特裝突擊步槍', rw: '新型高初速步槍・5.8mm 微聲穿甲彈・初速 930m/s', type: 'gun', mv: 930, elem: 'physical',
       dmg: [15, 18, 23], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
       vs: { flesh: 0.75, armor: 0.9, air: 1.0, building: 0.5 } },
     heavy: { name: '「如意金箍」天罡震地杖', rw: '多節超合金長棍前捲重擊・天罡震波扇面裂地・動能重擊破陣', type: 'plasma', arc: 10, elem: 'shockwave', elemBuildup: 40,
       dmg: [60, 93, 144], mag: 3, reload: 7, range: 264, pen: 10,
       vs: { flesh: 0.8, armor: 1.4, air: 0.45, building: 0.8 } },
-    def: { name: '騰雲・筋斗御風', fx: 'buff', target: 'self', defJump: 3, mul: { speed: [1.25, 1.35, 1.45] }, spRestore: [40, 60, 80],
+    def: { name: '騰雲・筋斗御風', fx: 'buff', target: 'self', defJump: 3, mul: { speed: [1.25, 1.35, 1.45] }, spRestore: [40, 60, 80], elem: 'physical',
       charges: 3,
       dur: [1.5, 2.0, 2.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '大顯筋斗御風騰雲神通（可使用3次）：瞬間充盈磁力並大幅加速，於防守姿態下追加多次騰雲大跳躍' },
-    atk: { name: '通天・身外化影', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] },
+    atk: { name: '通天・身外化影', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] }, elem: 'impact', elemBuildup: 40,
       add: { fx: 'clone', count: 2 },
       dur: [8, 10, 12], cd: [30, 26, 22], mp: [80, 90, 100], desc: '拔毫毛變幻通天身外法影：分化兩具戰力化身協同火擊，本尊若遇致命一擊則元神轉移至化身重生' },
   },
@@ -4205,17 +4265,18 @@ export const CHARACTERS = {
     // 2026-08-02 機體混編:接下原屬蜂群的「翼龍」擬態翼無人機 —— 膜翼滑翔幾乎不耗電、也幾乎沒有聲音,
     // 雙爪各抓一具槍莢:要抓才有、鬆手就沒有,對一個「只需要一發」的狙擊手是量身訂做的機體。
     side: 'STEEL', kind: 'drone', name: '李正赫', code: '無聲', machine: '「屏息」翼龍狙擊機',
+    element: '物理／風',
     visual: { hue: 0x3fae4a, frame: 'coax', body: 'sphere', form: 'avian', creature: 'ptero', paint: 'split', split: 'y', splitAt: 0.63 },  // 翡翠綠同色系:翼背(上)亮/腹面(下)暗
     mods: { hp: 0.9, sp: 1.0, mp: 1.05, speed: 1.05, armor: 7 },
-    light: { name: '「幽邃」88 式微聲短卡賓', rw: '微聲縮裝卡賓槍・亞音速特裝彈・初速 720m/s', type: 'gun', mv: 720,
+    light: { name: '「幽邃」88 式微聲短卡賓', rw: '微聲縮裝卡賓槍・亞音速特裝彈・初速 720m/s', type: 'gun', mv: 720, elem: 'physical',
       dmg: [15, 19, 23], rate: 6, mag: [30, 36, 42], reload: 2.0, range: 190, crit: 0.10,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.4 } },
-    heavy: { name: '「斷魂」14.5mm 栓動破甲重狙', rw: '重型手動栓動狙擊步槍・重鎢穿甲彈・初速 1000m/s', type: 'gun', mv: 1000,
+    heavy: { name: '「斷魂」14.5mm 栓動破甲重狙', rw: '重型手動栓動狙擊步槍・重鎢穿甲彈・初速 1000m/s', type: 'gun', mv: 1000, elem: 'physical',
       dmg: [40, 57, 80], mag: 3, reload: 9, range: 400, crit: 0.25, critX: 2.2, pen: [18, 24, 30],
       vs: { flesh: 2.0, armor: 1.6, air: 1.2, building: 0.5 } },
-    def: { name: '幽冥・擬態無形', fx: 'stealth', spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] },
+    def: { name: '幽冥・擬態無形', fx: 'stealth', spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] }, elem: 'physical',
       dur: [5, 6, 7], cd: [13, 12, 11], mp: [35, 40, 45], desc: '展開幽邃翼龍擬態隱蔽力場：進入無聲遁形狀態並迅速回充磁力，奔襲速度顯著提升' },
-    atk: { name: '絕影・落日貫雲', fx: 'strike', count: 1, dmg: [190, 250, 315], r: 6,
+    atk: { name: '絕影・落日貫雲', fx: 'strike', count: 1, dmg: [190, 250, 315], r: 6, elem: 'physical',
       charges: 2,
       add: { fx: 'bleed', dps: [16, 22, 28], dur: 4, pen: 12 },
       range: 400, pen: 20, cd: [70, 62, 54], mp: [50, 60, 70], vs: { flesh: 1.5, armor: 1.2 },
@@ -4225,89 +4286,97 @@ export const CHARACTERS = {
     // 2026-08-02 機體混編:接下原屬蜂群的「機械龍」擬態翼無人機 —— 東亞的龍,張口即齊射,
     // 而她的武器本來就是從喉嚨裡出來的:諧振波炮的發射口就是那張嘴。
     side: 'STEEL', kind: 'drone', name: '韓雪', code: '電波歌姬', machine: '「詠嘆調」電戰無人機',
+    element: '音波／諧振',
     visual: { hue: 0xffc7dd, frame: 'hexa', body: 'slab', form: 'avian', creature: 'dragon', paint: 'sakura' },
     mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 6 },
-    light: { name: '「清商」光電諧振步槍', rw: '聲電複合調頻雷射槍・相干光束・光速直擊', type: 'beam',
+    light: { name: '「清商」光電諧振步槍', rw: '聲電複合調頻雷射槍・相干光束・光速直擊', type: 'beam', elem: 'sonic', elemBuildup: 12,
       dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 220, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
     // 護盾軸示範 ②【反護盾】:諧振頻率對準護盾場的共振點,場一垮就沒戲唱了 —— 與 s03 同型,
     // 但削盾幅度小一點、主 HP 掉得少一點(同一個原型的兩種調校,不是同一把武器)。
-    heavy: { name: '「龍嘯九天」破盾諧振音波砲', rw: '定向高能聲電諧振巨砲・護盾共振破壞・光速直擊', type: 'beam',
+    heavy: { name: '「龍嘯九天」破盾諧振音波砲', rw: '定向高能聲電諧振巨砲・護盾共振破壞・光速直擊', type: 'beam', elem: 'sonic', elemBuildup: 45,
       dmg: [23, 33, 45], mag: 5, reload: 8, range: 320, emp: [1.0, 1.5, 2.0],
       vsSp: 1.55, vsHp: 0.78,
       vs: { flesh: 0.9, armor: 0.8, air: 1.8, building: 0.4 } },
-    def: { name: '休止・斷音結界', fx: 'emp', r: 16, dur: [2.0, 2.5, 3.0], spRestore: [25, 35, 50], shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '休止・斷音結界', fx: 'emp', r: 16, dur: [2.0, 2.5, 3.0], spRestore: [25, 35, 50], shieldDefBoost: [0.55, 0.45, 0.35], elem: 'sonic',
       charges: 2,
       cd: [17, 15, 13], mp: [25, 30, 35], desc: '仙音暫歇引動休止斷音結界（可使用2次）：強烈干擾周圍敵機武器使其離線，並立即充盈磁力與強化護盾' },
-    atk: { name: '絕唱・龍吟神曲', fx: 'emp', r: 280, dur: [4, 5, 6],
+    atk: { name: '絕唱・龍吟神曲', fx: 'emp', r: 280, dur: [4, 5, 6], elem: 'sonic', elemBuildup: 50,
       cd: [72, 64, 56], mp: [90, 100, 110], desc: '引吭高歌宣洩神龍絕唱之音：以毀滅性聲電海嘯席捲全場，強行震碎並壓制敵軍全頻段通訊鏈路' },
   },
   t09: {
     // 2026-08-02 機體混編:接下原屬蜂群的三角翼定翼無人機 —— 他是「廉價自殺式無人機之父」,
     // 而 Shahed-136 本來就是三角翼。他終於坐進了自己畫出來的那個外形裡。
     side: 'STEEL', kind: 'drone', name: '達留什・法拉赫扎德', code: '詩人', machine: '「悲歌」巡飛彈母機',
+    element: '火／熱能爆破',
     visual: { hue: 0xc9b7e8, frame: 'wing', body: 'wedge', form: 'fixed', wing: 'delta', paint: 'totem' },
     mods: { hp: 1.05, sp: 1.0, mp: 1.15, speed: 0.9, armor: 8 },
-    light: { name: '「千夜」守衛機關槍', rw: '經典速射機關槍・7.62mm 穿甲彈・初速 820m/s', type: 'gun', mv: 820,
+    light: { name: '「千夜」守衛機關槍', rw: '經典速射機關槍・7.62mm 穿甲彈・初速 820m/s', type: 'gun', mv: 820, elem: 'physical',
       dmg: [14, 18, 22], rate: 8, mag: [40, 48, 56], reload: 2.2, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
     heavy: { name: '「天罰見證」136 巡飛彈發射槽', rw: '三角翼自主攻擊巡飛彈・Shahed-136 縮裝・巡飛 80m/s', type: 'missile', mv: 80, elem: 'fire', elemBuildup: 35,
       dmg: [38, 55, 77], r: [15, 17, 19], mag: 4, reload: 11, range: 360, pen: 10,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
-    def: { name: '悼文・鐵壁殘卷', fx: 'buff', target: 'self', intercept: true, r: 16, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '悼文・鐵壁殘卷', fx: 'buff', target: 'self', intercept: true, r: 16, spRestore: [50, 75, 100], shieldDefBoost: [0.6, 0.5, 0.4], elem: 'physical',
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '以波斯哀歌詩紋構築悼文鐵壁：母機搭載的護衛無人機循詩節迎擊，粉碎近身來襲彈道，充盈磁力並大幅提高護盾減傷' },
-    atk: { name: '天罰・焚天黑雨', fx: 'strike', count: [7, 9, 11], dmg: [72, 89, 111], r: 11, scatter: 45,
-      add: { fx: 'bleed', dps: [22, 28, 35], dur: [3.5, 4.0, 4.5], pen: 8 },
-      range: 360, pen: 8, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
-      desc: '降下蔽日遮天的波斯天罰黑雨：海量巡飛彈飽和俯衝轟炸目標空域，引發毀滅性烈焰火海與爆震衝擊' },
+    atk: { name: '天罰・黑雨星群', fx: 'strike', count: 8, dmg: [75, 95, 120], r: 12, scatter: 50,
+      pen: 10, elem: 'fire', elemBuildup: 50,
+      add: { fx: 'bleed', dps: [25, 32, 40], dur: [4.0, 4.5, 5.0], pen: 8 },
+      range: 360, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
+      desc: '發射多聯裝黑雨集束子母飛彈分散覆蓋大面積戰場：彈頭引爆燃燒火海與流血黑雨，造成持續灼燒與撕裂' },
   },
   t10: {
     side: 'STEEL', kind: 'robot', name: '蕾拉・侯賽尼', code: '落點', machine: '「軌跡」攔截機甲',
+    element: '幾何／物理防衛',
     visual: { hue: 0x7fe8c9, pod: 'none', proto: 'aegis', paint: 'tattoo' },
     mods: { hp: 1.0, sp: 1.15, mp: 1.2, speed: 1.0, armor: 16 },
-    light: { name: '「碎星」30mm 截擊速射砲', rw: '高射速轉膛截擊砲・30mm 破片彈・初速 960m/s', type: 'gun', mv: 960,
+    light: { name: '「碎星」30mm 截擊速射砲', rw: '高射速轉膛截擊砲・30mm 破片彈・初速 960m/s', type: 'gun', mv: 960, elem: 'physical',
       dmg: [18, 22, 27], rate: 5.5, mag: [28, 34, 40], reload: 2.3, range: 210, pen: 6,
       vs: { flesh: 1.1, armor: 1.0, air: 1.5, building: 0.5 } },
-    heavy: { name: '「天穹衛士」垂直防空飛彈', rw: '垂直冷發射防空攔截飛彈・9M330 衍生・初速 640m/s', type: 'missile', mv: 640,
+    heavy: { name: '「天穹衛士」垂直防空飛彈', rw: '垂直冷發射防空攔截飛彈・9M330 衍生・初速 640m/s', type: 'missile', mv: 640, elem: 'physical',
       dmg: [50, 75, 113], r: [11, 13, 15], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.7, armor: 0.7, air: 2.4, building: 0.4 } },
-    def: { name: '聖石・神聖幾何', fx: 'cube', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '聖石・神聖幾何', fx: 'cube', spRestore: [60, 90, 120], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35], elem: 'physical',
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [40, 45, 50], desc: '凝結穆卡納斯立體神聖幾何石板：直接補充磁力，防守時大幅擴展護盾面積並強化傷害減免' },
-    atk: { name: '王權・天穹聖所', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.55, 0.45, 0.35] },
+    atk: { name: '王權・天穹聖所', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.55, 0.45, 0.35] }, elem: 'physical',
       dur: [6, 7, 8], cd: [80, 70, 60], mp: [90, 100, 110], desc: '升起至高無上之王權天穹聖所：構築不可動搖的絕對防衛領域，於廣闊範圍內大幅減免友軍承受傷害' },
   },
   t11: {
     // 2026-08-02 機體混編:接下原屬傭兵的「傾轉旋翼 ↔ 負重工」變形機甲 —— 傾轉旋翼把步兵班
     // 載到定位(攻招「安哥拉支援」),落地變成扛著整個班的負重前傾體態。老兵的活,本來就是扛人。
     side: 'STEEL', kind: 'morph', name: '拉斐爾・富恩特斯', code: '老雪茄', machine: '「老兵」可變式戰術指導機',
+    element: '物理／震盪',
     visual: { hue: 0x8a9a5a, pod: 'antenna', flight: 'tilt', ground: 'atlas', bulk: 1.15, paint: 'camo' },
     mods: { hp: 1.05, sp: 0.9, mp: 1.0, speed: 0.9, armor: 14 },
-    light: { name: '「老戰士」12.7mm 重型機槍', rw: '經典重型機關槍・12.7mm 鎢合金彈・初速 850m/s', type: 'gun', mv: 850,
+    light: { name: '「老戰士」12.7mm 重型機槍', rw: '經典重型機關槍・12.7mm 鎢合金彈・初速 850m/s', type: 'gun', mv: 850, elem: 'physical',
       dmg: [20, 25, 31], rate: 4.8, mag: [34, 40, 48], reload: 2.3, range: 200, pen: 4,
       vs: { flesh: 1.1, armor: 1.0, air: 0.8, building: 0.6 } },
-    heavy: { name: '「破城者」SPG-9 無後座力砲', rw: '重型破甲無後座力加農砲・高爆穿甲彈・初速 435m/s', type: 'launcher', mv: 435,
+    heavy: { name: '「破城者」SPG-9 無後座力砲', rw: '重型破甲無後座力加農砲・高爆穿甲彈・初速 435m/s', type: 'launcher', mv: 435, elem: 'impact', elemBuildup: 40,
       dmg: [78, 115, 168], r: [13, 15, 17], mag: 3, reload: 12, range: 264, pen: 12,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.3 } },
-    def: { name: '固守・偏折鏡陣', fx: 'reflect', dur: [4.0, 4.5, 5.0], spRestore: [40, 60, 80], shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '固守・偏折鏡陣', fx: 'reflect', dur: [4.0, 4.5, 5.0], spRestore: [40, 60, 80], shieldDefBoost: [0.55, 0.45, 0.35], elem: 'physical',
       cd: [24, 22, 20], mp: [35, 40, 45], desc: '立起陣地幾何偏折鏡陣：彈開敵方直線穿甲彈與光束直擊，充盈磁力並極限強化護盾傷害減免' },
-    atk: { name: '衝鋒・鋼鐵營陣', fx: 'summon', unit: 'veteran_squad', count: [3, 4, 5],
-      cd: [85, 75, 65], mp: [85, 95, 105], desc: '吹響宿將鐵血集結衝鋒哨：召喚精銳老兵特戰連隊伴隨推進，以猛烈火力主動索敵與協同集火' },
+    atk: { name: '鐵甲・裝甲洪流', fx: 'summon', unit: 'main_battle_tank', count: [1, 2, 2], elem: 'impact', elemBuildup: 45,
+      cd: [85, 75, 65], mp: [85, 95, 105], desc: '吹響宿將鐵血集結衝鋒哨：召喚自律主戰坦克裝甲營突進推進，以重裝加農砲撕裂敵陣並協同集火' },
   },
   t12: {
     side: 'STEEL', kind: 'robot', name: '阿列霞・卡爾波維奇', code: '螢火', machine: '「巨兵」訊號掃描機',
+    element: '電磁／訊號',
     visual: { hue: 0xb8ffb0, pod: 'none', proto: 'colossus', paint: 'tattoo' },
     mods: { hp: 0.95, sp: 1.15, mp: 1.3, speed: 1.05, armor: 12 },
-    light: { name: '「微芒」相位偵蒐雷射槍', rw: '微功率相位掃描雷射槍・相干光束・光速直擊', type: 'beam',
+    light: { name: '「微芒」相位偵蒐雷射槍', rw: '微功率相位掃描雷射槍・相干光束・光速直擊', type: 'beam', elem: 'shock', elemProb: 0.12,
       dmg: [13, 16, 20], rate: 10, mag: [40, 50, 60], reload: 1.8, range: 220, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.5, air: 1.0, building: 0.4 } },
-    heavy: { name: '「星火標定」EM 電磁貫通砲', rw: '電磁超導標定穿甲砲・初速 2500m/s', type: 'rail', mv: 2500,
+    heavy: { name: '「星火標定」EM 電磁貫通砲', rw: '電磁超導標定穿甲砲・初速 2500m/s', type: 'rail', mv: 2500, elem: 'shock', elemProb: 0.35,
       dmg: [53, 82, 122], mag: 2, reload: 8, range: 340, emp: [0.8, 1.0, 1.2],
       vs: { flesh: 0.8, armor: 1.0, air: 1.6, building: 0.5 } },
-    def: { name: '同調・螢火護生', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [30, 45, 60], shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '同調・螢火護生', fx: 'heal', target: 'team', r: 180, heal: [70, 100, 135], sp: true, spRestore: [35, 50, 70], elem: 'shock',
+      spRegenHit: true, shieldDefBoost: [0.55, 0.45, 0.35],
       charges: 2,
-      dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '將全身測向天線陣調諧至友軍頻段，點亮同調螢火護持生機（可使用2次）：直接充盈磁力，受擊仍可源源回充，並在防守時大幅提高護盾減傷' },
-    atk: { name: '共振・萬象沉寂', fx: 'emp', r: 240, dur: [3, 4, 5], vision: [4, 5, 6],
-      cd: [75, 65, 55], mp: [90, 100, 110], desc: '引動全域神經共振沉寂之潮：強制靜默所有被同調標記之敵機系統，並實時回傳其精準座標' },
+      dur: [4, 4.5, 5], cd: [17, 15, 13], mp: [25, 30, 35],
+      desc: '將全身測向天線陣調諧至友軍頻段，點亮同調螢火建立全域生機護生鏈（可使用2次）：以頻譜同調建立全域生機護生鏈詮釋人道主義支援，為範圍內全體友軍修復裝甲並充盈磁力，時效內受擊回充不中斷且防守減傷大幅躍升' },
+    atk: { name: '共振・萬象生息', fx: 'heal', target: 'team', r: 240, heal: [260, 360, 460], sp: true, cleanse: true, elem: 'shock',
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '引動全域神經共振生息之潮：以溫暖螢火頻譜鏈結全場，超廣域全軍裝甲大幅修復、能量護盾全數回滿並滌除全隊異常' },
   },
 
   // ================= 傭兵(side:'MERC',雙陣營皆可受雇)=================
@@ -4336,23 +4405,24 @@ export const CHARACTERS = {
     // 他賣的就是那個剪影,人與機體在他這門生意裡是同一件商品(見 lore.js m01 bond:
     // 「客戶記不住兩個名字,那就只給他們一個」)。其餘同名者一律已改成相似但不同的機體名。
     side: 'MERC', kind: 'morph', name: '德揚・科瓦切維奇', code: '渡鴉', machine: '「渡鴉」可變式突襲機甲',
+    element: '暗／血液／穿刺',
     visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'vampire', bulk: 1.0, paint: 'natflag', flag: [0xc6363c, 0x0c4076, 0xffffff] },
     mods: { hp: 1.05, sp: 1.05, mp: 1.0, speed: 1.1, armor: 14 },
-    light: { name: '「死翼」7.62mm 六管加特林機槍', rw: '多管旋轉速射機關槍・M134 改・初速 850m/s', type: 'gun', mv: 850,
+    light: { name: '「死翼」7.62mm 六管加特林機槍', rw: '多管旋轉速射機關槍・M134 改・初速 850m/s', type: 'gun', mv: 850, elem: 'physical',
       dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 210, crit: 0.05,
       vs: { flesh: 0.85, armor: 0.75, air: 1.3, building: 0.4 } },
     // 護盾軸示範 ③【穿盾】(原 vs.building 1.1,在 EX_SIEGE_WEAPONS 名冊內 —— 紀律①):
     // 破甲彈的金屬射流截面極小、速度極高,護盾場來不及耦合就被穿過去,一半動能直接打在裝甲上。
     // 代價寫在兩處:總量偏低(vsHp < 1)、基礎傷害再吃 counterDmgF —— 它同時還留著 vs.armor 1.7
     // 這個大加成,依紀律③「加成越多含金量越低」,折減會比只掛一項的武器更重。
-    heavy: { name: '「噬魂血錐」穿盾導引飛彈', rw: '雷射駕束反裝甲導引飛彈・反裝甲高能貫穿彈頭・初速 360m/s', type: 'missile', mv: 360,
+    heavy: { name: '「噬魂血錐」穿盾導引飛彈', rw: '雷射駕束反裝甲導引飛彈・反裝甲高能貫穿彈頭・初速 360m/s', type: 'missile', mv: 360, elem: 'physical',
       dmg: [50, 72, 103], r: [12, 14, 16], mag: 4, reload: 11, range: 320, pen: [14, 18, 22],
       spPierce: 0.45, vsHp: 0.9,
       vs: { flesh: 0.9, armor: 1.7, air: 0.55, building: 1.1 } },
-    def: { name: '狂湧・血月之庇', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [25, 35, 50], shieldBash: true,
+    def: { name: '狂湧・血月之庇', fx: 'buff', target: 'self', spRegenHit: true, spRestore: [25, 35, 50], shieldBash: true, elem: 'impact',
       charges: 2,
       mul: { speed: [1.2, 1.3, 1.4] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '喚醒血月夜鴉嗜戰之庇（可使用2次）：持盾強勢衝撞擊退敵機，充盈磁力且在受擊時激發源源不絕的狂暴回充' },
-    atk: { name: '貪婪・夜鴉血宴', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5], reload: [0.8, 0.75, 0.7] },
+    atk: { name: '貪婪・夜鴉血宴', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5], reload: [0.8, 0.75, 0.7] }, elem: 'physical',
       add: { fx: 'vamp', f: [0.12, 0.16, 0.2] },
       dur: [8, 10, 12], cd: [28, 24, 20], mp: [80, 90, 100], desc: '啟動狂戰士貪婪夜鴉血宴：核心超頻解限，攻擊射速與裝填狂暴暴增，並透過撕裂敵軍瘋狂吸取生命' },
   },
@@ -4360,36 +4430,38 @@ export const CHARACTERS = {
     // 2026-08-02 機體混編:改駕「暴龍」雙足機甲 —— 前傾軀幹以重尾配平,巨顎裡藏的正是
     // 他那門重型線圈加農砲(HEAVY_MOUNT.trex = mouth);護衛重裝的體格一分未減。
     side: 'MERC', kind: 'robot', name: '巴澤爾・奧坎', code: '磐石', machine: '「壓艙石」重型突擊機甲',
+    element: '土／岩漿／磁軌',
     visual: { hue: 0x9aa3ad, pod: 'shield', form: 'biped', creature: 'trex', paint: 'totem' },
     mods: { hp: 1.20, sp: 0.9, mp: 0.95, speed: 0.9, armor: 20 },
-    light: { name: '「巨壁」7.62mm 重裝機槍', rw: '通用防衛機關槍・FN MAG 衍生・初速 840m/s', type: 'gun', mv: 840,
+    light: { name: '「巨壁」7.62mm 重裝機槍', rw: '通用防衛機關槍・FN MAG 衍生・初速 840m/s', type: 'gun', mv: 840, elem: 'physical',
       dmg: [16, 20, 25], rate: 7, mag: [40, 48, 56], reload: 2.2, range: 195, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.8, air: 0.9, building: 0.5 } },
-    heavy: { name: '「滅絕巨顎」重型口藏磁軌砲', rw: '大口徑超導線性磁軌巨砲・穿甲重彈・初速 1800m/s', type: 'rail', mv: 1800,
+    heavy: { name: '「滅絕巨顎」重型口藏磁軌砲', rw: '大口徑超導線性磁軌巨砲・穿甲重彈・初速 1800m/s', type: 'rail', mv: 1800, elem: 'shock', elemProb: 0.35,
       dmg: [74, 109, 154], mag: 2, reload: 8, range: 360, crit: 0.1, critX: 1.8, pen: [20, 25, 30],
       vs: { flesh: 0.9, armor: 1.7, air: 0.4, building: 1.0 } },
-    def: { name: '金湯・泰坦地幔', fx: 'buff', target: 'self', spRestore: [35, 55, 75], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35],
+    def: { name: '金湯・泰坦地幔', fx: 'buff', target: 'self', spRestore: [35, 55, 75], shieldExpand: true, shieldDefBoost: [0.55, 0.45, 0.35], elem: 'physical',
       charges: 2,
       dur: [3.5, 4, 4.5], cd: [17, 15, 13], mp: [25, 30, 35], desc: '展開泰坦地幔金湯防衛護盾（可使用2次）：直接充盈磁力，防守時大幅擴大護盾屏障面積並強化減傷' },
-    atk: { name: '磐石・永恆誓約', fx: 'buff', target: 'team', r: 200, mul: { dmgTaken: [0.7, 0.62, 0.55] },
+    atk: { name: '磐石・永恆誓約', fx: 'buff', target: 'team', r: 200, mul: { dmgTaken: [0.7, 0.62, 0.55] }, elem: 'physical',
       dur: [6, 8, 10], cd: [80, 70, 60], mp: [85, 95, 105], desc: '締結不可破滅之磐石永恆誓約：於廣闊戰場半徑內為全體友軍提供堅不可摧的極限承傷減免' },
   },
   m03: {
     // 2026-08-02 機體混編:改駕雙尾桁定翼無人機 —— 兩根尾桁之間的空腔本來是天線艙,
     // 她改成了貨艙:先把血漿、零件、修理臂空投下去,帳單後到。
     side: 'MERC', kind: 'drone', name: '烏蘇拉・林德特', code: '雪線', machine: '「續命」雙尾桁運補機',
+    element: '冰／霜',
     visual: { hue: 0x59c9a5, frame: 'wing', body: 'frame', form: 'fixed', wing: 'twinboom', paint: 'minimal' },
     mods: { hp: 0.95, sp: 1.15, mp: 1.2, speed: 1.0, armor: 5 },
-    light: { name: '「霜華」防衛脈衝雷射槍', rw: '低散射固態防禦雷射・相干光束・光速直擊', type: 'beam',
+    light: { name: '「霜華」防衛脈衝雷射槍', rw: '低散射固態防禦雷射・相干光束・光速直擊', type: 'beam', elem: 'frost', elemBuildup: 12,
       dmg: [15, 19, 23], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 220, crit: 0.07,
       vs: { flesh: 1.4, armor: 0.5, air: 1.1, building: 0.4 } },
-    heavy: { name: '「雪崩精準」雷導空投火箭', rw: '雷射制導高爆空投火箭・APKWS 縮裝・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
+    heavy: { name: '「雪崩精準」雷導空投火箭', rw: '雷射制導高爆空投火箭・APKWS 縮裝・初速 700m/s', type: 'launcher', mv: 700, guide: 1, elem: 'frost', elemBuildup: 40,
       dmg: [62, 95, 137], r: [11, 13, 15], mag: 3, reload: 12, range: 300, pen: 8,
       vs: { flesh: 1.1, armor: 1.2, air: 1.2, building: 1.0 } },
-    def: { name: '冰魄・靈泉玉澤', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 90, 120], cleanse: true,
-      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '召喚高山冰魄靈泉玉澤：瞬間滌除自身一切異常狀態，大幅修復機體裝甲並充盈磁力護盾' },
-    atk: { name: '極光・萬象淨化', fx: 'heal', target: 'team', r: 220, heal: [260, 350, 440], sp: true,
-      cd: [85, 75, 65], mp: [90, 100, 110], desc: '引動阿爾卑斯極光萬象淨化：以漫天極光洗禮戰場，全體友軍裝甲大幅回滿並同步充滿能量護盾' },
+    def: { name: '冰魄・靈泉玉澤', fx: 'heal', target: 'self', heal: [120, 160, 200], sp: true, spRestore: [60, 90, 120], cleanse: true, ccImm: true, elem: 'frost',
+      dur: 6, cd: [24, 22, 20], mp: [40, 45, 50], desc: '召喚高山冰魄靈泉玉澤：瞬間滌除自身一切異常狀態並獲得暫態免疫，大幅修復機體裝甲並充盈磁力護盾' },
+    atk: { name: '極光・萬象霜封', fx: 'emp', r: 240, dur: [3, 4, 5], vision: [4, 5, 6], elem: 'frost', elemProb: 1.0,
+      cd: [75, 65, 55], mp: [90, 100, 110], desc: '引動阿爾卑斯極光萬象霜封之潮：以漫天極光低溫脈衝籠罩戰場，強制凍結靜默範圍內敵機電磁系統並實時獲取戰場視野' },
   },
   m04: {
     // 2026-08-02 機體混編:改駕「鷹」擬態翼無人機 —— 她的檔案上寫著「雷達截面壓到鳥類等級」,
@@ -4397,26 +4469,28 @@ export const CHARACTERS = {
     // 2026-08-03 國籍對帳:加拿大 → 蒙古(阿爾泰馴鷹世家)。鷹式機體終於有了它的原產地,
     // 而「第三鄰國」的等距外交,正是不結盟市場最乾淨的一張履歷。
     side: 'MERC', kind: 'drone', name: '烏音嘎・策倫', code: '霧行者', machine: '「無名」鷹式偵獵機',
+    element: '風／物理',
     visual: { hue: 0xd24fb4, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle', paint: 'totem' },  // 洋紅+圖騰徽:與夜豹(m08 紫)脫鉤,改素色+徽章
     mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.1, armor: 8 },
-    light: { name: '「鷹爪」精準微聲戰鬥步槍', rw: '高精度射手步槍・微聲穿甲彈・初速 780m/s', type: 'gun', mv: 780,
+    light: { name: '「鷹爪」精準微聲戰鬥步槍', rw: '高精度射手步槍・微聲穿甲彈・初速 780m/s', type: 'gun', mv: 780, elem: 'physical',
       dmg: [17, 21, 25], rate: 3.6, mag: [20, 24, 28], reload: 2.0, range: 215, crit: 0.14, critX: 1.8,
       vs: { flesh: 1.3, armor: 0.8, air: 1.1, building: 0.5 } },
-    heavy: { name: '「天穹破甲」20mm 鷹眼重砲', rw: '大口徑遠程穿甲反器材砲・初速 900m/s', type: 'gun', mv: 900,
+    heavy: { name: '「天穹破甲」20mm 鷹眼重砲', rw: '大口徑遠程穿甲反器材砲・初速 900m/s', type: 'gun', mv: 900, elem: 'physical',
       dmg: [40, 58, 81], mag: 3, reload: 9, range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.2, armor: 1.9, air: 1.3, building: 0.5 } },
-    def: { name: '迷障・神鷹蒼雲', fx: 'fog', r: 24, dur: [6, 7, 8], spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] },
+    def: { name: '迷障・神鷹蒼雲', fx: 'fog', r: 24, dur: [6, 7, 8], spRestore: [40, 60, 80], mul: { speed: [1.2, 1.3, 1.4] }, elem: 'physical',
       cd: [18, 16, 14], mp: [35, 40, 45], desc: '撒布長生天神鷹蒼雲迷障：遮蔽敵方視野並隱匿行蹤，迅速充盈磁力並大幅提高移速脫離危險' },
     // 2026-08-06 使用者定案(見 SELF_ATK):無霧秒數加倍,並在同一段窗內給**全隊**射程 / 跑速 /
     // 閃避率加成。fx 仍是 `recon`(不是 buff+team)⇒ `atkDelivered` 不收它,維持瞬發全隊型;
     // 射程加成走 mods 的 `range` 鍵(伺服器射程閘與客戶端有效射程同吃 heroRange 那條縫)。
-    atk: { name: '天眼・長生雄鷹', fx: 'recon', target: 'team', vision: [18, 24, 30],
+    atk: { name: '天眼・長生雄鷹', fx: 'recon', target: 'team', vision: [18, 24, 30], elem: 'physical',
       mul: { range: [1.2, 1.25, 1.3], speed: [1.2, 1.25, 1.3] },
       add: { fx: 'evade', evade: [0.12, 0.16, 0.2] }, dur: [8, 10, 12],
       cd: [26, 22, 18], mp: [85, 95, 105], desc: '開展騰格里長生雄鷹天眼：全隊無霧視野翻倍，且射程、機動速度與閃避率同步獲得全面增幅' },
   },
   m05: {
     side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '熄燈', machine: '「鎖喉」電戰可變機甲',
+    element: '毒／雷電',
     visual: { hue: 0x5551cc, pod: 'antenna', flight: 'jet', ground: 'wolf', bulk: 1.05, paint: 'split', split: 'x', splitFlip: true },  // 靛藍同色系:機體右半(-x)亮/左半暗
     mods: { hp: 1.00, sp: 1.0, mp: 1.15, speed: 0.98, armor: 13 },
     light: { name: '「噬魂」12.7mm 三管電磁機砲', rw: '三管旋轉線圈機砲・高斯加速・初速 1300m/s', type: 'rail', mv: 1300, elem: 'shock', elemBuildup: 15,
@@ -4425,9 +4499,9 @@ export const CHARACTERS = {
     heavy: { name: '「冥府追魂」全向自導飛彈', rw: '智慧鎖定追蹤飛彈・破甲多用途彈頭・初速 320m/s', type: 'missile', mv: 320, elem: 'poison', elemBuildup: 35,
       dmg: [50, 72, 103], r: [13, 15, 17], mag: 4, reload: 11, range: 330, pen: [12, 15, 18],
       vs: { flesh: 1.0, armor: 1.5, air: 0.55, building: 1.2 } },
-    def: { name: '幽霧・劇毒遁影', fx: 'fog', r: 20, dur: [4.5, 5.0, 5.5], add: { fx: 'bleed', dps: [10, 14, 18], pen: 10 }, spRestore: [40, 60, 80], mul: { speed: [1.25, 1.35, 1.45] }, shieldDefBoost: [0.6, 0.5, 0.4],
+    def: { name: '幽霧・劇毒遁影', fx: 'fog', r: 20, dur: [4.5, 5.0, 5.5], add: { fx: 'bleed', dps: [10, 14, 18], pen: 10 }, spRestore: [40, 60, 80], mul: { speed: [1.25, 1.35, 1.45] }, shieldDefBoost: [0.6, 0.5, 0.4], elem: 'poison',
       cd: [18, 16, 14], mp: [35, 40, 45], desc: '釋放劇毒侵蝕匿蹤迷霧：遮蔽敵方視野並大幅加速脫離，霧區內腐蝕敵機系統，迅速補滿磁力並大幅強化護盾減傷' },
-    atk: { name: '引煞・萬雷清算', fx: 'strike', count: [6, 8, 10], dmg: [68, 85, 106], r: 11, scatter: 38,
+    atk: { name: '引煞・萬雷清算', fx: 'strike', count: [6, 8, 10], dmg: [68, 85, 106], r: 11, scatter: 38, elem: 'shock', elemProb: 0.5,
       add: { fx: 'stun', dur: [0.8, 1, 1.2] },
       range: 330, pen: 10, cd: [78, 68, 58], mp: [88, 98, 108], vs: { armor: 1.3, building: 1.2 },
       desc: '引動九天凶煞之萬雷清算：傾瀉飽和電磁滅絕狂雷，瞬間重創並強效麻痺範圍內全部敵方機體' },
@@ -4436,53 +4510,58 @@ export const CHARACTERS = {
     // 2026-08-02 機體混編:改駕「劍龍」四足機甲 —— 背上那排骨板就是發射軌(HEAVY_MOUNT.stego = back),
     // 一整排掛架吊著轉包出去的貨:一座會走路的碼頭,比傾轉旋翼還像他的生意。
     side: 'MERC', kind: 'robot', name: '圖里奧・費雷拉', code: '嘉年華', machine: '「傾盆」母艦式機甲',
+    element: '火／煙火／爆破',
     visual: { hue: 0xf0c24a, pod: 'rack', form: 'beast', creature: 'stego', paint: 'totem' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 14 },
-    light: { name: '「狂歡風暴」雙聯機關槍', rw: '雙聯裝高射速機槍・7.62mm 穿甲彈・初速 825m/s', type: 'gun', mv: 825,
+    light: { name: '「狂歡風暴」雙聯機關槍', rw: '雙聯裝高射速機槍・7.62mm 穿甲彈・初速 825m/s', type: 'gun', mv: 825, elem: 'physical',
       dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 210, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.6, air: 1.2, building: 0.5 } },
     heavy: { name: '「萬象盛宴」集束子母巨彈', rw: '大範圍散布高熱彩焰集束子母彈・嘉年華煙火拋撒破片・初速 400m/s', type: 'launcher', mv: 400, elem: 'fire', elemBuildup: 35,
       dmg: [55, 79, 112], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 6,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.4, armor: 0.9, air: 0.5, building: 1.2 } },
-    def: { name: '狂歡・花車浮游', fx: 'buff', target: 'self', shieldExpand: true, spRestore: [30, 45, 60],
+    def: { name: '狂歡・花車浮游', fx: 'buff', target: 'self', shieldExpand: true, spRestore: [30, 45, 60], elem: 'fire',
       charges: 2,
       mul: { speed: [1.25, 1.35, 1.45] }, dur: [3.5, 4, 4.5], cd: [13, 12, 11], mp: [20, 25, 30], desc: '啟動嘉年華花車浮游護衛力場（可使用2次）：直接充盈磁力並加速巡航，防守姿態下大幅擴張護盾保護面積' },
-    atk: { name: '盛宴・天穹巡遊', fx: 'summon', unit: 'carnival_heli', count: [2, 3, 4],
-      cd: [85, 75, 65], mp: [90, 100, 110], desc: '召喚空中主力嘉年華直升機盛宴：號令武裝直升機編隊凌空巡遊突擊，以狂歡狂瀾火力自主索敵集火' },
+    atk: { name: '盛宴・天火巡航', fx: 'strike', count: 5, dmg: [180, 240, 310], r: 14, scatter: 16, elem: 'fire', elemBuildup: 50,
+      pen: 8,
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '呼叫重裝轟炸機凌空地毯式投擲燃燒彈，對目標區域實施熾烈火海飽和轟炸' },
   },
   m07: {
     side: 'MERC', kind: 'morph', name: '約蘭妲・里奧斯', code: '界碑', machine: '「落閘」區域拒止可變機甲',
+    element: '金屬／物理拒止',
     visual: { hue: 0x5fa8d3, pod: 'shield', flight: 'beetle', ground: 'beetle', bulk: 1.25, paint: 'totem' },
     mods: { hp: 1.05, sp: 1.05, mp: 1.1, speed: 0.9, armor: 14 },
-    light: { name: '「界皇」雙聯 35mm 厄利孔高砲', rw: '雙聯裝防空機砲・35mm 高速破甲彈・初速 1100m/s', type: 'gun', mv: 1100,
+    light: { name: '「界皇」雙聯 35mm 厄利孔高砲', rw: '雙聯裝防空機砲・35mm 高速破甲彈・初速 1100m/s', type: 'gun', mv: 1100, elem: 'physical',
       dmg: [18, 23, 28], rate: 6.5, mag: [32, 40, 48], reload: 2.6, range: 210, crit: 0.05,
       vs: { flesh: 0.7, armor: 1.0, air: 1.6, building: 0.5 } },
     heavy: { name: '「禁飛鐵幕」扇面破片阻絕網', rw: '近迫高密重金屬鎢彈破片幕・扇形區域拒止防空網・動能阻絕', type: 'plasma', arc: 22, elem: 'impact', elemBuildup: 35,
       dmg: [46, 73, 111], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 0.8, armor: 1.25, air: 2.2, building: 0.3 } },
-    def: { name: '拒止・百戰心訣', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35], spRestore: [50, 75, 100],
+    def: { name: '拒止・百戰心訣', fx: 'buff', target: 'self', shieldBash: true, shieldDefBoost: [0.55, 0.45, 0.35], spRestore: [50, 75, 100], elem: 'impact',
       dur: [6, 7, 8], cd: [24, 22, 20], mp: [35, 40, 45], desc: '運轉界碑拒止百戰心訣：持鞘翅甲盾衝撞擊退闖入禁區之敵機，立即充盈磁力並大幅強化護盾減傷' },
-    atk: { name: '絕界・全域封殺', fx: 'strike', count: [7, 9, 11], dmg: [55, 68, 85], r: 9, scatter: 40,
-      add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
+    atk: { name: '絕界・拒止星梭', fx: 'strike', count: 6, dmg: [80, 105, 135], r: 10, scatter: 35, elem: 'impact', elemBuildup: 45,
+      pen: 10,
+      add: { fx: 'slow', f: 0.5, dur: [3.0, 3.5, 4.0] },
       range: 320, cd: [74, 66, 58], mp: [85, 95, 105], vs: { air: 2.0, flesh: 1.2 },
-      desc: '劃定全域拒止之毀滅絕界：傾瀉鋪天蓋地的界碑彈幕，徹底壓制全域敵軍並造成極限減速' },
+      desc: '發射梯次時差界碑集束飛彈：按時間差連續打擊，隨發射序次擴大軌跡偏差散布，造成連續衝擊與強效減速' },
   },
   m08: {
     side: 'MERC', kind: 'morph', name: '維迪雅・拉托爾', code: '尾聲', machine: '「空號」隱形狙擊可變機甲',
+    element: '冰／匿蹤暗影',
     visual: { hue: 0x8f7fd0, pod: 'blade', flight: 'owl', ground: 'panther', bulk: 0.85, paint: 'camo' },
     mods: { hp: 0.98, sp: 1.1, mp: 1.15, speed: 1.15, armor: 12 },
-    light: { name: '「夜梟無聲」特製微聲點射槍', rw: '消音特裝狙擊步槍・亞音速重彈頭・初速 295m/s', type: 'gun', mv: 295,
+    light: { name: '「夜梟無聲」特製微聲點射槍', rw: '消音特裝狙擊步槍・亞音速重彈頭・初速 295m/s', type: 'gun', mv: 295, elem: 'physical',
       dmg: [24, 30, 37], rate: 3.2, mag: [18, 22, 26], reload: 2.0, range: 200, crit: 0.16, critX: 1.9,
       vs: { flesh: 1.1, armor: 0.75, air: 1.0, building: 0.4 } },
-    heavy: { name: '「冰川之息」大口徑反器材重狙', rw: '超遠程重型反器材狙擊砲・穿甲鎢芯彈・初速 900m/s', type: 'gun', mv: 900,
+    heavy: { name: '「冰川之息」大口徑反器材重狙', rw: '超遠程重型反器材狙擊砲・穿甲鎢芯彈・初速 900m/s', type: 'gun', mv: 900, elem: 'frost', elemBuildup: 45,
       dmg: [61, 89, 126], mag: 3, reload: 9, range: 390, crit: 0.2, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.3, armor: 1.7, air: 1.2, building: 0.5 } },
-    def: { name: '歸隱・相位虛無', fx: 'phaseshift', dur: [1.2, 1.4, 1.6], spRestore: [30, 45, 60], mul: { speed: [1.3, 1.4, 1.5] },
+    def: { name: '歸隱・相位虛無', fx: 'phaseshift', dur: [1.2, 1.4, 1.6], spRestore: [30, 45, 60], mul: { speed: [1.3, 1.4, 1.5] }, elem: 'physical',
       charges: 2,
       cd: [13, 12, 11], mp: [25, 30, 35], desc: '身遁曼陀羅相位虛無之境（可使用2次）：短暫免疫一切傷害與負面狀態，立即補滿磁力並以極速脫離交火' },
     // 2026-08-06 使用者定案(見 SELF_ATK):破隱後 SELF_ATK.ALPHA_S 秒內傷害倍增 ——
     // 倍率由 `selfAtkBoost` 從被移除的機種絕招預算**推導**(MUST NOT 手寫);`alpha` 只是旗標。
-    atk: { name: '絕殺・一念空華', fx: 'stealth', dur: [4, 5, 6], add: { fx: 'alpha' },
+    atk: { name: '絕殺・一念空華', fx: 'stealth', dur: [4, 5, 6], add: { fx: 'alpha' }, elem: 'physical',
       cd: [26, 22, 18], mp: [80, 90, 100], desc: '凝聚契約刺客之一念空華：遁入絕對虛空隱匿，現身開火剎那爆發極限毀滅性一擊（首擊傷害狂暴倍增）' },
   },
 };
@@ -6260,7 +6339,7 @@ export const HAZARDS = {
   factoryfire:  { name: '工廠大火',   biome: 'urban', r: 14,  dot: 45, maxY: 40 },
   sinkhole:     { name: '路面塌陷',   biome: 'urban', r: 7,   block: true },
   pothole:      { name: '坑洞',       biome: 'urban', r: 4,   slow: 0.55 },
-  flood:        { name: '淹水區',     biome: 'wet',   r: 20,  slow: 0.45 },
+  flood:        { name: '淹水區',     biome: 'wet',   r: 20,  slow: 0.5 },
   landslide:    { name: '坍方土石流', biome: 'bare',  r: 13,  block: true },
   rockfall:     { name: '落石',       biome: 'bare',  r: 6.5, block: true, hp: 300, salvage: 0.65 },
   fallentree:   { name: '倒木',       biome: 'green', r: 7,   block: true, hp: 130, salvage: 0.5 },
@@ -7323,8 +7402,9 @@ export const WEATHER_DEBUFFS = {
     SHOCK_DMG: 18,     // Max shockwave minor damage (attenuates with distance)
     SHOCK_IMP: 14,     // Shockwave displacement impulse
   },
-  SURFACE_SLOW_MAX: 0.25,    // Surface slow/jump penalty cap (25%)
-  AIR_PRECIP_SLOW_MAX: 0.10,  // Airborne flight speed penalty cap (10%)
+  SURFACE_SLOW_MAX: 0.125,    // Surface slow/jump penalty cap (12.5%, was 25%)
+  AIR_PRECIP_SLOW_MAX: 0.0,   // Airborne flight speed penalty canceled (was 10%)
+  AIR_LIFT_SLOW_MAX: 0.125,   // Airborne flight lift penalty cap (12.5%)
   WIND_SINK_MAX: 0.25,        // Wind unbalance altitude loss increase cap (25%)
   ACCURACY_DROP_MAX: 0.20,    // Fog/night accuracy penalty cap (20%)
 };
@@ -7381,12 +7461,18 @@ export function windSpeedFactor(moveX, moveZ, windDir, wind) {
   return 1.0 + WEATHER_DEBUFFS.MAX_CHANGE * intensity * cosTheta;
 }
 
-/** Airborne unit speed multiplier affected by rain/snow (up to -10%) */
+/** Airborne unit speed multiplier affected by rain/snow (canceled: returns 1.0) */
 export function weatherFlightSlowFactor(dyn = {}) {
+  return 1.0;
+}
+
+/** Airborne unit climb/flight lift multiplier affected by rain/snow/sand (up to -12.5%) */
+export function weatherFlightLiftFactor(dyn = {}) {
   const rainInt = dyn.rainSlow ?? (dyn.rainIntensity ?? (dyn.effectiveRain ?? (dyn.rain > WEATHER_DEBUFFS.THRESHOLD ? (dyn.rain - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
   const snowInt = dyn.snowSlow ?? (dyn.snowIntensity ?? (dyn.effectiveSnow ?? (dyn.snow > WEATHER_DEBUFFS.THRESHOLD ? (dyn.snow - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
-  const intensity = Math.min(1.0, Math.max(0, Math.max(rainInt, snowInt)));
-  return 1.0 - WEATHER_DEBUFFS.AIR_PRECIP_SLOW_MAX * intensity;
+  const sandInt = dyn.sandSlow ?? (dyn.sandIntensity ?? (dyn.effectiveSand ?? (dyn.sand > WEATHER_DEBUFFS.THRESHOLD ? (dyn.sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
+  const intensity = Math.min(1.0, Math.max(0, Math.max(rainInt, snowInt, sandInt)));
+  return 1.0 - WEATHER_DEBUFFS.AIR_LIFT_SLOW_MAX * intensity;
 }
 
 /**
@@ -7438,11 +7524,11 @@ export function weatherAccuracyPenalty(fog = 0, hour = 12, sched = null, lunarDa
 export const weatherMissP = (missP, penalty = 0) =>
   1 - (1 - (missP || 0)) * (1 - Math.max(0, Math.min(WEATHER_ACCURACY.MAX_PENALTY, penalty || 0)));
 
-/** Airborne unit attack rate multiplier affected by airborne sand (up to -25%) */
+/** Airborne unit attack rate multiplier affected by airborne sand (up to -12.5%, aligned with ground) */
 export function weatherFlightAttackRateFactor(dyn = {}) {
   const sandInt = dyn.sandSlow ?? (dyn.sandIntensity ?? (dyn.effectiveSand ?? (dyn.sand > WEATHER_DEBUFFS.THRESHOLD ? (dyn.sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0)));
   const intensity = Math.min(1.0, Math.max(0, sandInt));
-  return 1.0 - 0.25 * intensity;
+  return 1.0 - WEATHER_DEBUFFS.MAX_CHANGE * intensity;
 }
 
 export const WEATHER_FREEZE = {

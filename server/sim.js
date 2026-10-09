@@ -2315,20 +2315,79 @@ export class BattleSim {
     t.empUntil = Math.max(t.empUntil || 0, this.t + def.emp);
   }
 
-  /** Weapon elemental status buildup (single seam). Triggers abnormal status when threshold (100) is reached. */
+  /** Weapon elemental status buildup & probability (single seam). */
   _applyHitElem(attacker, def, target) {
-    if (!def?.elem || !target || target.hp <= 0) return;
+    if (!def?.elem || def.elem === 'physical' || !target || target.hp <= 0) return;
     if (target.kind === 'tower' || target.kind === 'base') return;
     if (target.hero && (target.dead || target.invUntil > this.t)) return;
     if (target.hero && this._buffVal(target, 'ccImm') > 0) return;
 
+    const elem = def.elem;
+
+    // 感電: 機率制 (不走量表)
+    if (elem === 'shock') {
+      const prob = def.elemProb ?? (def.id === 'heavy' ? 0.35 : (def.rate > 5 ? 0.12 : 0.22));
+      if (Math.random() < prob) {
+        target.empUntil = Math.max(target.empUntil || 0, this.t + (def.empDur || 1.2));
+        this.events.push({ e: 'emp_hit', pid: target.pid, x: target.x, z: target.z, elem: 'shock' });
+      }
+      return;
+    }
+
+    // Impact / shockwave: probabilistic trigger + stacking stagger
+    if (elem === 'impact' || elem === 'shockwave') {
+      const prob = def.elemProb ?? (def.id === 'heavy' ? 0.60 : (def.rate > 5 ? 0.28 : 0.45));
+      if (Math.random() < prob) {
+        target._staggerStacks = Math.min(3, (target._staggerStacks || 0) + 1);
+        const addDur = 0.25;
+        target.stunUntil = Math.min(this.t + 1.2, Math.max(target.stunUntil || 0, this.t) + addDur);
+        target.staggerStacks = target._staggerStacks;
+        this.events.push({ e: 'stagger', pid: target.pid, x: target.x, z: target.z, elem, stacks: target._staggerStacks });
+      }
+      return;
+    }
+
+    // Buildup elements: poison, sonic, fire, frost
     target._elemBuildup ||= {};
     target._elemLastHit ||= {};
-    const elem = def.elem;
     const inc = def.elemBuildup || (def.id === 'heavy' ? 40 : (def.rate > 5 ? 12 : 25));
     target._elemBuildup[elem] = (target._elemBuildup[elem] || 0) + inc;
     target._elemLastHit[elem] = this.t;
 
+    // Poison: faster buildup (threshold 50) + stacking poison
+    if (elem === 'poison') {
+      if (target._elemBuildup[elem] >= 50) {
+        target._elemBuildup[elem] = 0;
+        target._psnStacks = Math.min(5, (target._psnStacks || 0) + 1);
+        const dpsPerStack = Math.max(6, Math.round((def.dmg || 50) * 0.15));
+        target.bleed = {
+          dps: dpsPerStack * target._psnStacks,
+          until: this.t + 3.0,
+          pen: 10,
+          pid: attacker?.pid,
+          attacker,
+        };
+        target.slowUntil = Math.max(target.slowUntil || 0, this.t + 2.0);
+        target.slowF = Math.max(0.5, 1.0 - 0.08 * target._psnStacks);
+        this.events.push({ e: 'poison_hit', pid: target.pid, x: target.x, z: target.z, elem: 'poison', stacks: target._psnStacks });
+      }
+      return;
+    }
+
+    // Sonic: faster buildup (threshold 50) + stacking confusion
+    if (elem === 'sonic') {
+      if (target._elemBuildup[elem] >= 50) {
+        target._elemBuildup[elem] = 0;
+        target._sonicStacks = Math.min(4, (target._sonicStacks || 0) + 1);
+        const durPerStack = 0.8;
+        target.confUntil = Math.min(this.t + 3.5, Math.max(target.confUntil || 0, this.t) + durPerStack);
+        target.confStacks = target._sonicStacks;
+        this.events.push({ e: 'confuse_hit', pid: target.pid, x: target.x, z: target.z, elem: 'sonic', stacks: target._sonicStacks });
+      }
+      return;
+    }
+
+    // Fire / frost (threshold 100)
     if (target._elemBuildup[elem] >= 100) {
       target._elemBuildup[elem] = 0;
       if (elem === 'fire') {
@@ -2339,21 +2398,6 @@ export class BattleSim {
         target.slowUntil = Math.max(target.slowUntil || 0, this.t + 2.5);
         target.slowF = 0.45;
         this.events.push({ e: 'freeze', pid: target.pid, x: target.x, z: target.z, elem: 'frost' });
-      } else if (elem === 'shock') {
-        target.empUntil = Math.max(target.empUntil || 0, this.t + 1.2);
-        this.events.push({ e: 'emp_hit', pid: target.pid, x: target.x, z: target.z, elem: 'shock' });
-      } else if (elem === 'poison') {
-        const dps = Math.round((def.dmg || 50) * 0.3);
-        target.bleed = { dps: Math.max(12, dps), until: this.t + 3.0, pen: 10, pid: attacker?.pid, attacker };
-        target.slowUntil = Math.max(target.slowUntil || 0, this.t + 2.0);
-        target.slowF = 0.7;
-        this.events.push({ e: 'poison_hit', pid: target.pid, x: target.x, z: target.z, elem: 'poison' });
-      } else if (elem === 'impact' || elem === 'shockwave') {
-        target.stunUntil = Math.max(target.stunUntil || 0, this.t + 0.6);
-        this.events.push({ e: 'stagger', pid: target.pid, x: target.x, z: target.z, elem });
-      } else if (elem === 'sonic') {
-        target.confUntil = Math.max(target.confUntil || 0, this.t + 1.5);
-        this.events.push({ e: 'confuse_hit', pid: target.pid, x: target.x, z: target.z, elem: 'sonic' });
       }
     }
   }
@@ -2362,23 +2406,51 @@ export class BattleSim {
   _tickElemBuildup(dt) {
     const decay = 20 * dt;
     for (const h of this.heroes.values()) {
-      if (!h._elemBuildup) continue;
-      for (const elem in h._elemBuildup) {
-        if (this.t - (h._elemLastHit?.[elem] || 0) > 2.5) {
-          h._elemBuildup[elem] = Math.max(0, h._elemBuildup[elem] - decay);
-          if (h._elemBuildup[elem] <= 0) delete h._elemBuildup[elem];
+      if (h._elemBuildup) {
+        for (const elem in h._elemBuildup) {
+          if (this.t - (h._elemLastHit?.[elem] || 0) > 2.5) {
+            h._elemBuildup[elem] = Math.max(0, h._elemBuildup[elem] - decay);
+            if (h._elemBuildup[elem] <= 0) delete h._elemBuildup[elem];
+          }
         }
       }
+      if (h._psnStacks && (!h.bleed || h.bleed.until <= this.t)) h._psnStacks = 0;
+      if (h._sonicStacks && (h.confUntil || 0) <= this.t) h._sonicStacks = 0;
+      if (h._staggerStacks && (h.stunUntil || 0) <= this.t) h._staggerStacks = 0;
     }
     for (const e of this.ents.values()) {
-      if (!e._elemBuildup || e.hero) continue;
-      for (const elem in e._elemBuildup) {
-        if (this.t - (e._elemLastHit?.[elem] || 0) > 2.5) {
-          e._elemBuildup[elem] = Math.max(0, e._elemBuildup[elem] - decay);
-          if (e._elemBuildup[elem] <= 0) delete e._elemBuildup[elem];
+      if (!e.hero) {
+        if (e._elemBuildup) {
+          for (const elem in e._elemBuildup) {
+            if (this.t - (e._elemLastHit?.[elem] || 0) > 2.5) {
+              e._elemBuildup[elem] = Math.max(0, e._elemBuildup[elem] - decay);
+              if (e._elemBuildup[elem] <= 0) delete e._elemBuildup[elem];
+            }
+          }
         }
+        if (e._psnStacks && (!e.bleed || e.bleed.until <= this.t)) e._psnStacks = 0;
+        if (e._sonicStacks && (e.confUntil || 0) <= this.t) e._sonicStacks = 0;
+        if (e._staggerStacks && (e.stunUntil || 0) <= this.t) e._staggerStacks = 0;
       }
     }
+  }
+
+  /** Purge all crowd control debuffs, DoT effects, and elemental buildups (single seam). */
+  _cleanseHero(a) {
+    if (!a) return;
+    for (const b of this._bodies(a)) {
+      b.stunUntil = 0;
+      b.slowUntil = 0;
+      b.confUntil = 0;
+      b.empUntil = 0;
+      b.bleed = null;
+      b._elemBuildup = null;
+      b._elemLastHit = null;
+      b._psnStacks = 0;
+      b._sonicStacks = 0;
+      b._staggerStacks = 0;
+    }
+    this.events.push({ e: 'cleanse', pid: a.pid, side: a.side, x: a.x, z: a.z });
   }
 
   /** 詞綴強化 × 招式增益乘數(dmg/reload/dmgTaken/bounty;過期即清,全部伺服器結算) */
@@ -2397,7 +2469,6 @@ export class BattleSim {
       }
     }
     if (key === 'dmg' && h.sq?.boss && (h.sq.bossSeg || 0) >= 3) m *= BOSS.ENRAGE_DMG_F;
-    if (key === 'dmg') m *= (this.curWeatherDyn?.rainAtkMul ?? 1);
     return m;
   }
 
@@ -3449,6 +3520,7 @@ export class BattleSim {
       for (let i = list.length - 1; i >= 0; i--) {
       const m = list[i];
       if (m.hp <= 0) { list.splice(i, 1); continue; }   // 已被擊落(_kill 走 _hyperShotDown)
+      if (m.launchAt && this.t < m.launchAt) continue;  // 時間差發射等待
       // 追擊候選(射後不理:飛彈自己追,玩家不必維持鎖定);死亡/離場即放掉,落點維持原軌跡
       const t0 = m.tid ? this.ents.get(m.tid) : null;
       const t = t0 && t0.hp > 0 && !(t0.hero && t0.dead) ? t0 : null;
@@ -3930,21 +4002,17 @@ export class BattleSim {
     // 效果由載具抵達時經同一支 _castEffect 施放(單一縫;擊落 = 該份否定)。
     // 發射點只有 `abilOrigin` 一份(攻招 = 最近的我方砲塔/主堡,見 _launchOrigin)。
     h.castLockUntil = this.t + (A.castTime || ATK_CAST_S);
-    const org = this._launchOrigin(h, slot);
     if (A.carrier) {
+      const org = this._launchOrigin(h, slot);
       this._launchAtkCarrier(h, A, x, z, org);
       this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1, ox: org.x, oz: org.z, castDur: A.castTime || ATK_CAST_S });
       return;
     }
-    // 分身化影招式(如齊天大聖):身外化影直接由本尊分化,不走遠程工事輔助載具
-    if (A.add?.fx === 'clone') {
-      this._castEffect(h, A, h.x, h.z, 1, null, true);
-      this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 0, castDur: A.castTime || ATK_CAST_S });
-      return;
-    }
-    // 自身強化型攻招:派出 supportN 架跟隨玩家的輔助機
-    this._launchAtkSupport(h, A, org, slot);
-    this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 1, sup: supportN(h.ch, slot), ox: org.x, oz: org.z, castDur: A.castTime || ATK_CAST_S });
+    // Non-carrier abilities cast directly by hull (no carriers, no support wings)
+    const cx = (A.target === 'self' || A.add?.fx === 'clone') ? h.x : x;
+    const cz = (A.target === 'self' || A.add?.fx === 'clone') ? h.z : z;
+    this._castEffect(h, A, cx, cz, 1, null, true);
+    this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: cx, z: cz, r: A.r, dur: A.dur, lvl, carrier: 0, castDur: A.castTime || ATK_CAST_S });
   }
 
   /**
@@ -4045,16 +4113,46 @@ export class BattleSim {
         }
       }
     } else if (A.fx === 'heal') {
-      // 「特殊招式」是裝甲(第二層 HP)在主堡以外唯一的回復手段(小隊三架一起回)。
-      // frac = 載具分批份額(heal 量與護盾補量等比;瞬發 frac = 1 逐位元同舊制)
       const targets = A.target === 'team' ? allies(A.r || 0) : [h];
       const healAmt = A.heal + B.heal;   // 補償增額(s11「大修」;治療 X 點 = 抵銷 X 點傷害)
-      for (const a of targets) {
-        for (const b of this._bodies(a)) {
-          if (b.dead) continue;
-          this._healBody(b, healAmt * frac, 'def');
-          if (A.sp) b.sp = Math.min(b.maxSp, b.sp + b.maxSp * frac);
+      if (healAmt > 0) {
+        for (const a of targets) {
+          for (const b of this._bodies(a)) {
+            if (b.dead) continue;
+            this._healBody(b, healAmt * frac, 'def');
+            if (A.sp && !A.aura) b.sp = Math.min(b.maxSp, b.sp + b.maxSp * frac);
+          }
         }
+      }
+      if (A.target === 'team' && (A.r || 0) > 0) {
+        this.events.push({ e: 'heal_aoe', x, z, r: A.r, side: h.side, pid: h.pid });
+      }
+      for (const a of targets) {
+        if (A.cleanse && once) this._cleanseHero(a);
+        const dur = (A.dur || 0) * frac;
+        if (dur > 0) {
+          if (A.ccImm || (A.cleanse && !A.aura && A.id === 'def')) {
+            a.mods.push({ k: 'ccImm', m: 1, until: this.t + dur });
+          }
+          if (A.healAmp > 0) {
+            a.mods.push({ k: 'healAmp', m: mf(1 + A.healAmp), until: this.t + dur });
+          }
+          if (A.regen > 0) {
+            a.mods.push({ k: 'regen', m: mf(A.regen), until: this.t + dur });
+          }
+        }
+      }
+      if (A.aura && once) {
+        const dur = (A.dur || 6) * frac;
+        h.healAura = {
+          until: this.t + dur,
+          r: A.r || 28,
+          hps: (A.hot || 35) * frac,
+          spHps: (A.spRestore ? (A.spRestore / dur) : (A.sp ? 15 : 0)) * frac,
+          side: h.side,
+          cleanse: !!A.cleanse,
+        };
+        this.events.push({ e: 'heal_aura_start', pid: h.pid, side: h.side, x: h.x, z: h.z, r: A.r || 28, dur });
       }
     } else if (A.fx === 'strike') {
       const nStrike = nImp ?? A.count;
@@ -4067,7 +4165,8 @@ export class BattleSim {
         // 重建的 def MUST 帶齊剋制欄位:漏抄 vsSp/vsHp/spPierce 的話,招式版與武器版
         // 會對同一個護盾軸有兩種行為(A34 的第二份拆分邏輯,只是換了個地方漏)。
         this._blast(h, { dmg: A.dmg * frac, r: A.r, vs: A.vs, pen: A.pen,
-          vsSp: A.vsSp, vsHp: A.vsHp, spPierce: A.spPierce }, ix, iz, 0, 0);
+          vsSp: A.vsSp, vsHp: A.vsHp, spPierce: A.spPierce,
+          elem: A.elem, elemBuildup: A.elemBuildup }, ix, iz, 0, 0);
         if (A.add) this._applyCC(h, A.add, ix, iz, A.r);   // 控場類追加效果:彈著區內敵人
       }
     } else if (A.fx === 'summon') {
@@ -4130,9 +4229,7 @@ export class BattleSim {
         if (A.regen > 0) a.mods.push({ k: 'regen', m: mf(A.regen), until: this.t + A.dur });
         if (A.add?.fx === 'evade') a.mods.push({ k: 'evade', m: vf(A.add.evade || 0), until: this.t + A.dur });
         if (A.cleanse) {
-          // 解除既有異常 + 期間免疫(`ccImm` 由 _applyCC / _applyHitEmp / emp 分支同判)。
-          // 二元狀態沒有「一半」⇒ 只要還有一架輔助機在線就是整份(同 vision;見 ATK_SUPPORT)。
-          if (once) { a.stunUntil = 0; a.slowUntil = 0; a.confUntil = 0; a.empUntil = 0; a.bleed = null; a._elemBuildup = null; a._elemLastHit = null; }
+          if (once) this._cleanseHero(a);
           a.mods.push({ k: 'ccImm', m: 1, until: this.t + A.dur });
         }
       }
@@ -4472,20 +4569,27 @@ export class BattleSim {
     if (A.fx === 'buff' && A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
 
     // 防守招式核心機制：磁力回補、受擊回充、護盾強化、面積擴大、護盾衝撞、大跳躍次數
-    if (A.spRestore && once) {
-      for (const b of this._bodies(h)) {
-        if (!b.dead) b.sp = Math.min(b.maxSp, (b.sp || 0) + A.spRestore * frac);
+    const defTargets = A.target === 'team' ? allies(A.r || 0) : [h];
+    if (A.spRestore && once && !A.aura) {
+      for (const a of defTargets) {
+        for (const b of this._bodies(a)) {
+          if (!b.dead) b.sp = Math.min(b.maxSp, (b.sp || 0) + A.spRestore * frac);
+        }
       }
     }
     if (A.spRegenHit) {
       const dur = (A.dur || 8) * frac;
-      for (const b of this._bodies(h)) {
-        b.spRegenHitUntil = Math.max(b.spRegenHitUntil || 0, this.t + dur);
+      for (const a of defTargets) {
+        for (const b of this._bodies(a)) {
+          b.spRegenHitUntil = Math.max(b.spRegenHitUntil || 0, this.t + dur);
+        }
       }
     }
     if (A.shieldDefBoost) {
       const dur = (A.dur || 8) * frac;
-      h.shieldDefBoostUntil = Math.max(h.shieldDefBoostUntil || 0, this.t + dur);
+      for (const a of defTargets) {
+        a.shieldDefBoostUntil = Math.max(a.shieldDefBoostUntil || 0, this.t + dur);
+      }
     }
     if (A.shieldExpand) {
       const dur = (A.dur || 8) * frac;
@@ -4502,6 +4606,32 @@ export class BattleSim {
   }
 
   // ---------- 新戰鬥技能 Tick 機制 ----------
+  _tickHealAuras(dt) {
+    for (const h of this.heroes.values()) {
+      if (!h.healAura) continue;
+      if (h.dead || this.t >= h.healAura.until) {
+        this.events.push({ e: 'heal_aura_end', pid: h.pid, side: h.side });
+        delete h.healAura;
+        continue;
+      }
+      const au = h.healAura;
+      const targets = [...this.heroes.values(), ...this.ents.values()];
+      for (const e of targets) {
+        if (e.side !== au.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        if (dist2d(h.x, h.z, e.x, e.z) <= au.r + (e.r || 0)) {
+          for (const b of this._bodies(e)) {
+            if (b.dead) continue;
+            if (au.hps > 0) this._healBody(b, au.hps * dt, 'aura');
+            if (au.spHps > 0 && b.sp < b.maxSp) {
+              b.sp = Math.min(b.maxSp, b.sp + au.spHps * dt);
+            }
+          }
+          if (au.cleanse && e.hero) this._cleanseHero(e);
+        }
+      }
+    }
+  }
+
   _tickStorms(dt) {
     for (const h of this.heroes.values()) {
       if (!h.storm) continue;
@@ -4722,9 +4852,8 @@ export class BattleSim {
             c.ry = Math.atan2(-(target.x - c.x), target.z - c.z);
             if (c.cd === 0) {
               const sandMul = this._sandAttackRateMul(c);
-              const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
               c.cd = 1 / ((wp.def.rate || 3) * sandMul);
-              const dmg = this._rollCrit(c, wp.def, this._heroDmg(h, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul, target);
+              const dmg = this._rollCrit(c, wp.def, this._heroDmg(h, wp.def, target.kind) * dmgFalloff(wp.def, d), target);
               this._damage(target, dmg, c, wp.def.pen, 0, wp.def, { origin: [c.x, c.z] });
               this.events.push({
                 e: 'shot', id: c.id, kind: c.kind,
@@ -5068,9 +5197,8 @@ export class BattleSim {
           dec.ry = Math.atan2(-(target.x - dec.x), target.z - dec.z);
           if (dec.cd === 0) {
             const sandMul = this._sandAttackRateMul(dec);
-            const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
             dec.cd = 1 / ((dec.rate || wp.def.rate || 3) * sandMul);
-            const dmg = this._heroDmg(owner, wp.def, target.kind) * dmgFalloff(wp.def, d) * rainMul * this._holoDecoyDmgF();
+            const dmg = this._heroDmg(owner, wp.def, target.kind) * dmgFalloff(wp.def, d) * this._holoDecoyDmgF();
             this._damage(target, dmg, dec, wp.def.pen, 0, wp.def, { origin: [dec.x, dec.z] });
             this.events.push({
               e: 'shot', id: dec.id, kind: dec.kind,
@@ -5246,11 +5374,10 @@ export class BattleSim {
         if (d <= s.range) {
           if (s.cd === 0) {
             const sandMul = this._sandAttackRateMul(s);
-            const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
             s.cd = 1 / ((s.rate || 0.8) * sandMul);
-            const wd = s.wid ? WEAPONS[s.wid] : null;
+            const wd = s.wid ? WEAPONS[s.wid] : (s.dmg ? { dmg: s.dmg, pen: 0 } : null);
             // 直射衰減與英雄同一支 dmgFalloff(無 type 的武器恆為 1 ⇒ 其餘召喚逐位元不動;beam 類召喚此前全額,現與英雄光束同衰減)
-            this._damage(target, s.dmg * rainMul * (wd ? dmgFalloff(wd, d) : 1), s, wd?.pen || 0, 0, wd);
+            this._damage(target, s.dmg * (wd ? dmgFalloff(wd, d) : 1), s, wd?.pen || 0, 0, wd);
             this.events.push({
               e: 'shot', id: s.id, kind: s.kind, wid: s.wid,
               from: [s.x, s.z], to: [target.x, target.z],
@@ -5386,8 +5513,127 @@ export class BattleSim {
     // 自身召喚且瞄在腳邊時,落點本來就是沿機首推出去的 ⇒ 這一支與舊制同解。
     const lry = Math.atan2(-(x - o.x), z - o.z);
     const atk = A.id === 'atk' ? 1 : 0;
+    if (h.ch === 's01') {
+      // s01: Dedicated kamikaze drone squadron
+      const n = A.count || SQUAD.KAMI.N || 4;
+      const K = SQUAD.KAMI;
+      const sq = h.sq;
+      if (sq) sq.kamis ??= [];
+      const fx = -Math.sin(lry), fz = Math.cos(lry);
+      const rx = Math.cos(lry), rz = Math.sin(lry);
+      const flyS = d0 / (UNITS.drone.speed * K.SPEED_MUL);
+      for (let i = 0; i < n; i++) {
+        const s = kamiSide(i);
+        const k = this._add({
+          kind: 'kami', side: h.side, pid: h.pid, ch: h.ch, kami: true,
+          uA: A, uFrac: 1 / n, uImp: partImp(i),
+          pt: { x, z },
+          x: o.x + fx * K.FWD + rx * K.SIDE * s,
+          z: o.z + fz * K.FWD + rz * K.SIDE * s,
+          y: o.y || 0, ry: lry + K.SPREAD * s,
+          hp: kamiHp(), armor: 0, tid: 0, dieAt: this.t + flyS + K.TTL_S,
+        });
+        k.maxSp = 0; k.sp = 0;
+        if (sq) sq.kamis.push(k);
+      }
+      this.events.push({ e: 'kami', pid: h.pid, side: h.side, n, atk, slot: A.id });
+      return;
+    }
+    if (h.ch === 'm06') {
+      // m06: Heavy bomber carpet incendiary bombing
+      const n = A.count || 5;
+      const sq = h.sq;
+      const flyS = d0 / DECOY.SPEED;
+      const d = this._add({
+        kind: 'decoy', side: h.side, pid: h.pid, decoy: true,
+        bombType: 'fire',
+        uA: A, uDrops: Array.from({ length: n }, (_, i) => ({ frac: 1 / n, n: partImp(i) })),
+        pt: { x, z }, nextBomb: 0,
+        x: o.x, z: o.z, y: (o.y || 0) + DECOY.ALT, ry: lry,
+        hp: decoyHp(), armor: 0, tid: 0, lost: false, dieAt: this.t + flyS + n * DECOY.BOMB_GAP + DECOY.TTL_S,
+      });
+      d.maxSp = 0; d.sp = 0;
+      if (sq) { (sq.decoys ||= []).push(d); }
+      this.events.push({ e: 'decoy', pid: h.pid, side: h.side, id: d.id, homing: 0, atk, slot: A.id });
+      return;
+    }
+    if (h.ch === 't01') {
+      // t01: Heavy frost cluster missile (single heavy warhead + frost + stun)
+      const dx = x - o.x, dz = z - o.z;
+      const arcD = Math.max(1, Math.hypot(dx, dz));
+      const m = this._add({
+        kind: 'hyper', side: h.side, pid: h.pid, hyper: true,
+        uA: A, uFrac: 1, uImp: partImp(0),
+        x: o.x, z: o.z, y: o.y || 0, ry: lry,
+        hp: hyperHp(), armor: 0,
+        tid: 0, tx: x, tz: z,
+        x0: o.x, z0: o.z, y0: o.y || 0,
+        ux: dx / arcD, uz: dz / arcD, arcD,
+        trav: 0, phase: 'climb', spin: 0, dive: null, chase: false,
+      });
+      m.maxSp = 0; m.sp = 0;
+      (h.hypers ||= []).push(m);
+      this.events.push({ e: 'hyper', pid: h.pid, side: h.side, id: m.id, homing: 0, atk, slot: A.id });
+      return;
+    }
+    if (h.ch === 't09') {
+      // t09: Multi-warhead black rain cluster submunitions (wide scatter + fire + bleed)
+      const count = A.count || 8;
+      const scatter = A.scatter || 50;
+      for (let i = 0; i < count; i++) {
+        const ang = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        const sr = i === 0 ? 0 : (0.2 + 0.8 * Math.random()) * scatter;
+        const subTx = x + Math.cos(ang) * sr;
+        const subTz = z + Math.sin(ang) * sr;
+        const dx = subTx - o.x, dz = subTz - o.z;
+        const arcD = Math.max(1, Math.hypot(dx, dz));
+        const subLry = Math.atan2(-dx, dz);
+        const m = this._add({
+          kind: 'hyper', side: h.side, pid: h.pid, hyper: true,
+          uA: A, uFrac: 1 / count, uImp: partImp(i),
+          x: o.x, z: o.z, y: o.y || 0, ry: subLry,
+          hp: hyperHp(), armor: 0,
+          tid: 0, tx: subTx, tz: subTz,
+          x0: o.x, z0: o.z, y0: o.y || 0,
+          ux: dx / arcD, uz: dz / arcD, arcD,
+          trav: 0, phase: 'climb', spin: 0, dive: null, chase: false,
+        });
+        m.maxSp = 0; m.sp = 0;
+        (h.hypers ||= []).push(m);
+        this.events.push({ e: 'hyper', pid: h.pid, side: h.side, id: m.id, homing: 0, atk, slot: A.id });
+      }
+      return;
+    }
+    if (h.ch === 'm07') {
+      // m07: Staggered time-delay denial cluster missiles (progressive scatter + impact + slow)
+      const count = A.count || 6;
+      const scatter = A.scatter || 35;
+      for (let i = 0; i < count; i++) {
+        const devR = scatter * (0.2 + (i / count) * 1.2);
+        const ang = Math.random() * Math.PI * 2;
+        const subTx = x + Math.cos(ang) * devR;
+        const subTz = z + Math.sin(ang) * devR;
+        const dx = subTx - o.x, dz = subTz - o.z;
+        const arcD = Math.max(1, Math.hypot(dx, dz));
+        const subLry = Math.atan2(-dx, dz);
+        const m = this._add({
+          kind: 'hyper', side: h.side, pid: h.pid, hyper: true,
+          launchAt: this.t + i * 0.22,
+          uA: A, uFrac: 1 / count, uImp: partImp(i),
+          x: o.x, z: o.z, y: o.y || 0, ry: subLry,
+          hp: hyperHp(), armor: 0,
+          tid: 0, tx: subTx, tz: subTz,
+          x0: o.x, z0: o.z, y0: o.y || 0,
+          ux: dx / arcD, uz: dz / arcD, arcD,
+          trav: 0, phase: 'climb', spin: 0, dive: null, chase: false,
+        });
+        m.maxSp = 0; m.sp = 0;
+        (h.hypers ||= []).push(m);
+        this.events.push({ e: 'hyper', pid: h.pid, side: h.side, id: m.id, homing: 0, atk, slot: A.id });
+      }
+      return;
+    }
     if (h.kind === 'robot') {
-      // 極音速飛彈形式:單彈頭、拋物線 + 螺旋俯衝(彈道機制沿用 _tickHypers;點遞送 ⇒ 不追擊)
       const dx = x - o.x, dz = z - o.z;
       const arcD = Math.max(1, Math.hypot(dx, dz));
       const m = this._add({
@@ -5404,8 +5650,6 @@ export class BattleSim {
       (h.hypers ||= []).push(m);
       this.events.push({ e: 'hyper', pid: h.pid, side: h.side, id: m.id, homing: 0, atk, slot: A.id });
     } else if (h.kind === 'morph') {
-      // 集束轟炸機形式:飛向落點,進 BOMB_R 起每 BOMB_GAP 投遞一份(間斷型);投完飛離解體。
-      // 擊落 = 剩餘份全數否定(_kill 的 decoy 分支對 uA 載具沒有 bombsLeft ⇒ 天然不補投)。
       const sq = h.sq;
       const flyS = d0 / DECOY.SPEED;
       const d = this._add({
@@ -5419,7 +5663,6 @@ export class BattleSim {
       if (sq) { (sq.decoys ||= []).push(d); }
       this.events.push({ e: 'decoy', pid: h.pid, side: h.side, id: d.id, homing: 0, atk, slot: A.id });
     } else {
-      // 自殺攻擊機形式:n 架自發射點前方散開衝出、直飛落點近炸,各攜 1/n 份(擊落 = 該份否定)
       const K = SQUAD.KAMI;
       const sq = h.sq;
       if (sq) sq.kamis ??= [];
@@ -5777,8 +6020,7 @@ export class BattleSim {
           x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
         continue;
       }
-      const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
-      const base = npcDmg != null ? npcDmg * (t.hero ? 1 : (h.cu || 1)) * rainMul : this._heroDmg(h, def, t.kind);
+      const base = npcDmg != null ? npcDmg * (t.hero ? 1 : (h.cu || 1)) : this._heroDmg(h, def, t.kind);
       // 閃避補償(2026-08-12 使用者定案「維持 DPS 提高傷害,閃避率不動」):被閃掉的那一份還給
       // 沒被閃掉的這一發 ⇒ 期望傷害 = base × (1−p) × 1/(1−p) ≡ base。分母 MUST 是**這個目標自己的**
       // p(逐目標,與上面那一顆骰同一個值)—— 閃不掉的小兵/建築/重甲 p = 0 ⇒ 係數恆 1 ⇒ 逐位元同舊制。
@@ -6006,6 +6248,9 @@ export class BattleSim {
     // 夾在地板、不呼叫 _kill」—— 自己寫一份的話「不呼叫 _kill」很容易漏,而漏掉的症狀是塔照樣
     // 被拆掉、階段照樣推進,鎖血等於沒有發生。
     floorHp = Math.max(floorHp, this.siegeHpFloor(t));
+    if (wd && !this._inReflect && !this._inEntangle && this.curWeatherDyn?.rainAtkMul != null) {
+      dmg *= this.curWeatherDyn.rainAtkMul;
+    }
     dmg *= this._allyBotDmgF(t, by);               // 我方電腦玩家對 BOSS ×10% / 對建築 ×25%
     if (t.sq?.boss && (t.sq.bossSeg || 0) >= 3 && (!by || !by.hero)) {
       dmg *= BOSS.ENRAGE_NPC_DMG_F;                // 狂暴模式:受到兵波NPC/砲塔/主堡的傷害減少至25%
@@ -6316,9 +6561,10 @@ export class BattleSim {
     const boss = b.sq?.boss;
     const f = boss ? bossHealF(src) : 1;
     if (!(f > 0)) return 0;
+    const amp = b.hero ? this._buffMul(b, 'healAmp') : 1;
     const cap = b.maxHp * (boss ? bossSegCapF(b.sq.bossSeg) : 1);
     const before = b.hp;
-    b.hp = Math.min(cap, b.hp + amt * f);
+    b.hp = Math.min(cap, b.hp + amt * f * amp);
     if (b.hp > before) delete b.lightningScorch;
     return Math.max(0, b.hp - before);
   }
@@ -6859,6 +7105,7 @@ export class BattleSim {
     this._tickHazards(dt);
     this._tickAirdrops(dt);
     this._tickCamps(dt);
+    this._tickHealAuras(dt);
     this._tickStorms(dt);
     this._tickBoomerangs(dt);
     this._tickFirePillars(dt);
@@ -6898,7 +7145,6 @@ export class BattleSim {
         // 開火路徑只剩 `_tickBaseGuns` 一條(合併卻留著本體那一支 = 又變回兩把)。
         if (e.cd === 0 && !u.guns && !((e.empUntil || 0) > this.t)) {
           const sandMul = this._sandAttackRateMul(e);
-          const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
           e.cd = 1 / (u.rate * sandMul);
           // 塔/主堡是制式火砲:沒有 `wid` ⇒ 舊制 wd 為 undefined = 既不可閃也不爆風。
           // 2026-08-13 使用者「**所有爆炸傷害武器都套用**」⇒ 它們也是爆炸彈頭,改吃 `STRUCT_W`
@@ -6924,7 +7170,7 @@ export class BattleSim {
             // 陣營小兵強化:傷害吃 e.cu(生成時定案;塔/主堡/第三方無此欄 ⇒ ×1),但
             // **只對非玩家目標**(2026-08-11 使用者改制:打玩家機體一律原始傷害)。
             // 高度差不改基礎傷害(見 §3;閃避/射程仍吃高度差)
-            this._damage(target, u.dmg * (target.hero ? 1 : (e.cu || 1)) * rainMul, e, wd?.pen || 0, 0, wd);
+            this._damage(target, u.dmg * (target.hero ? 1 : (e.cu || 1)), e, wd?.pen || 0, 0, wd);
           }
           // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
@@ -6985,7 +7231,8 @@ export class BattleSim {
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
     b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.blindUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
-    b._elemBuildup = null; b._elemLastHit = null;
+    b._elemBuildup = null; b._elemLastHit = null; b._psnStacks = 0; b._sonicStacks = 0; b._staggerStacks = 0;
+    delete b.healAura;
     b.freezeUntil = 0; b._lastFreezeAt = -WEATHER_FREEZE.COOLDOWN_S;
     b.supUntil = 0; b.supF = 0;   // 高地壓制:重生一律清乾淨(同上列控場狀態)
     if (soloWipe) {
@@ -7647,7 +7894,6 @@ export class BattleSim {
       const target = this._acquireTarget(e, gu);
       if (!target) continue;
       const sandMul = this._sandAttackRateMul(e);
-      const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
       e.gunCd[i] = 1 / (g.rate * sandMul);
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
       const mx = e.x + off, mz = e.z, my = BASE_MISSILE.LAUNCH_Y;

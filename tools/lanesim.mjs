@@ -660,7 +660,7 @@ function castSelfUlt(M, foe, enemyTower, t, foes, ownFort) {
  * CD = atkCarrierCd 解析值([30,60]s)、MP = 攻招電力(與重武器搶同一池 —— 正式對局同構)。
  */
 function castAtkCarrier(M, foe, enemyTower, t, foes, ownFort) {
-  const kind = ABIL_KIND[M.kind];
+  const kind = M.ch === 's01' ? 'kami' : M.ch === 'm06' ? 'decoy' : (M.ch === 't01' || M.ch === 't09' || M.ch === 'm07') ? 'hyper' : ABIL_KIND[M.kind];
   const A = heroAbility(M.ch, 'atk', 1);
   if (M.mp < A.mp) return [];
   const offensive = A.fx === 'strike' || A.fx === 'emp' || A.fx === 'summon';
@@ -692,7 +692,7 @@ function castAtkCarrier(M, foe, enemyTower, t, foes, ownFort) {
   M.mp -= A.mp;
   spendAbilCharge(M, t, A);
   M.abilN++;
-  const n = atkParts(M.kind, A.fx);
+  const n = M.ch === 's01' ? 4 : M.ch === 'm06' ? 5 : M.ch === 't01' ? 1 : M.ch === 't09' ? 8 : M.ch === 'm07' ? 6 : atkParts(M.kind, A.fx);
   // 交付率的分母(bal ⑦f 的載具組):送出去幾份 —— 抵達幾份在 ultDetonate 那一頭記。
   // `carNom` 只有 strike 有意義(名目爆風預算),它同時是 SELF_ATK.REALIZED_F 的量測面:
   // 「同一批載具帶著**傷害** payload,實得 ÷ 名目」正是被移除的機種絕招那個實得率的直接類比。
