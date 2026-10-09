@@ -38,7 +38,7 @@ import { inferSatelliteRoadLanes } from './roadLaneEvidence.js';
 import { MAP_EVIDENCE, evidenceFrame, evidenceFrameKey } from './mapEvidence.js';
 import { prepareMapEvidence } from './mapEvidenceLoader.js';
 import { encodeEvidenceRelay, decodeEvidenceRelay } from './mapEvidenceRelay.js';
-import { prepareMapCreation, awaitPreparedPack, clearPrepCache } from './mapPreparation.js';
+import { prepareMapCreation, awaitPreparedPack, clearPrepCache, isMapPrepared } from './mapPreparation.js';
 import { triggerBackgroundMapSetup, hideBackgroundMapSetup, startPresetWarmup } from './mapSetupProgress.js';
 import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
@@ -1399,9 +1399,16 @@ async function startStoryChapter(i) {
   $('storyBrief').style.display = 'none';
   $('storyDeploy').style.display = '';
   $('storyDeploy').textContent = `⚙ 部署中:${sc.title}(${v.name})…`;
+  if (!isMapPrepared(cfg)) showLoadingScreen(cfg, `⚙ 部署中:${sc.title}(${v.name})…`);
   const deployment = app.story;
   try {
-    const evidence = await prepareMapCreation(cfg, label => { $('storyDeploy').textContent = label; return buildYield(); });
+    const evidence = await prepareMapCreation(cfg, label => {
+      $('storyDeploy').textContent = label;
+      if (app.phaseShown === 'loading') {
+        $('loadLabel').textContent = label;
+      }
+      return buildYield();
+    });
     if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
   } catch (error) {
     console.warn('Story map preparation degraded:', error);
@@ -3371,6 +3378,20 @@ function installDevSceneHook() {
 }
 
 // ================= 載入 + 開戰 =================
+function showLoadingScreen(cfg, label = '正在處理地圖圖資…') {
+  hideBackgroundMapSetup();
+  show('loading');
+  if (cfg) {
+    $('loadPlace').textContent = `${cfg.placeName || ''}${cfg.env ? ' ・ ' + envLabel(cfg.env) : ''}`;
+    if (cfg.lanes && cfg.distM != null && cfg.sizeM != null) {
+      $('loadStats').textContent =
+        `主堡距離 ${(cfg.distM / 1000).toFixed(2)} km ・ 戰場 ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ ${cfg.lanes.length} 條兵線(重合 ≤ ${((cfg.maxOverlap || 0) * 100).toFixed(0)}%)`;
+    }
+  }
+  $('loadBar').style.width = '20%';
+  $('loadLabel').textContent = label;
+}
+
 async function enterLoading(cfg) {
   hideBackgroundMapSetup();
   app.battleCfg = cfg;
@@ -5638,9 +5659,15 @@ async function quickRestartGame() {
   }
   app.quickRestart = { ...session, launched: false };
   toast('⚡ 正在套用上次配置快速開戰…');
+  if (!isMapPrepared(session.battleConfig)) showLoadingScreen(session.battleConfig, '⚡ 快速開戰：正在處理圖資…');
   const restart = app.quickRestart;
   try {
-    const evidence = await prepareMapCreation(session.battleConfig, () => buildYield());
+    const evidence = await prepareMapCreation(session.battleConfig, label => {
+      if (app.phaseShown === 'loading') {
+        $('loadLabel').textContent = label;
+      }
+      return buildYield();
+    });
     if (!evidence.complete) toast(MAP_EVIDENCE_COPY.partial);
   } catch (error) {
     console.warn('Restart map preparation degraded:', error);
@@ -5809,6 +5836,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
   $('startBattleBtn').onclick = () => {
     enterFullscreenAuto();
+    const cfg = app.lobby?.battleConfig;
+    if (cfg && !isMapPrepared(cfg)) {
+      showLoadingScreen(cfg, '正在處理地圖圖資…');
+    }
     const me = app.lobby?.clients.find((c) => c.id === app.youId);
     if (app.lobby?.battleConfig?.super && me && !me.ready) {
       app.net?.send({ t: 'setReady', ready: true });
