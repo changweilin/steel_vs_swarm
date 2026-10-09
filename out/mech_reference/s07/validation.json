@@ -6,9 +6,9 @@
     "meshes": 123,
     "joints": 119,
     "source": {
-      "contract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
-      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
-      "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
+      "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+      "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+      "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
       "image": "5122ff559180b8e2f471844c24a897380d6a085956c2115c94dcb8f52db0f5e3"
     }
   },
@@ -38,25 +38,18 @@
     "run.png"
   ],
   "hashes": {
-    "runtime": "79417ca45363b30f18b97ce80f081d369312833acdf903d6a5ecaa5f7af9b640",
-    "blend": "434c9199d06058fc7caa193279f4513de2d202da14bd92bdc9a505fa10a040dd",
-    "glb": "58c9ebd65150f708e79c2659006cca27103867b4c8e1447d55920f05be8df02a"
+    "runtime": "d1fb7fb25a1d0bd03910cf48b4455dd185c56246bef1a5e1fd7e8a934ba85281",
+    "blend": "3b9676af2a007608a80f386f62c207991dd0a01bffecd273aa1f3d29edcb4c06",
+    "glb": "6685c491e42d7c0a4c4921a3e80739abfa7c6b8ef3056811cf98c64d266a56b3"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pass",
-    "appearance": "pass",
-    "export": "pass",
-    "destination": "pass",
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pending_independent_load",
+    "destination": "pending_browser_review",
     "user_signoff": "pending_user_review",
-    "editable_source": "pass",
-    "rebuild": "pass"
-  },
-  "editableSourceRecipe": {
-    "contract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
-    "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
-    "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
-    "image": "5122ff559180b8e2f471844c24a897380d6a085956c2115c94dcb8f52db0f5e3"
+    "editable_source": "pass"
   }
 }

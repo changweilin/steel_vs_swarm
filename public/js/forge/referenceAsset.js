@@ -76,6 +76,13 @@ export function buildReferenceAsset(asset, spec) {
     root: nodeOf(leg.root), lift: nodeOf(leg.lift), chain: rig[leg.chain] }));
   if (rig.tentacleWaves) rig.tentacleWaves = rig.tentacleWaves.map(wave => ({ ...wave, chain: wave.chain.map(nodeOf) }));
   if (rig.axialWave) rig.axialWave = { ...rig.axialWave, chain: rig.axialWave.chain.map(nodeOf) };
+  if (rig.rotorWings) rig.rotorWings = rig.rotorWings.map(wing => ({ ...wing, node: nodeOf(wing.node) }));
+  if (rig.flightAxial) rig.flightAxial = Object.fromEntries(Object.entries(rig.flightAxial)
+    .map(([key,value]) => [key, typeof value === 'string' ? nodeOf(value) : value]));
+  if (rig.swim) rig.swim = { ...rig.swim, body: nodeOf(rig.swim.body),
+    tail: rig.swim.tail.map(nodeOf), fins: rig.swim.fins.map(nodeOf) };
+  if (rig.launcher) rig.launcher = { ...rig.launcher, base: nodeOf(rig.launcher.base),
+    lift: nodeOf(rig.launcher.lift), pivot: nodeOf(rig.launcher.pivot) };
   if (rig.groundWings) rig.groundWings = rig.groundWings.map(wing => ({ ...wing,
     w: nodeOf(wing.w), outer: nodeOf(wing.outer), hand: nodeOf(wing.hand) }));
   if (rig.wings) rig.wings = rig.wings.map(wing => ({ ...wing, w: nodeOf(wing.w), outer: nodeOf(wing.outer),

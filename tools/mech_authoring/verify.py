@@ -11,7 +11,7 @@ from mathutils.bvhtree import BVHTree
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
-from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose
+from anatomy_checks import verify_feather_planes, verify_articulated_body, verify_weapon_pose, ancestor_chain
 ROOT = HERE.parent.parent
 contract_file = HERE / 'assets.json'
 contract = json.loads(contract_file.read_text(encoding='utf8'))
@@ -66,6 +66,21 @@ for id in selected:
     assert meshes and all(obj.parent and obj.data.materials for obj in meshes), id + ': orphan geometry'
     assert all(math.isfinite(v) for obj in meshes for vertex in obj.data.vertices for v in vertex.co), id + ': nonfinite geometry'
     anatomy = {'articulation':verify_articulated_body(spec,meshes)}
+    if id == 's01':
+        assert all(any(obj.name.startswith(prefix) for obj in meshes) for prefix in
+                   ['Rounded bee thoracic carapace','Separate bee abdominal shell','Compound-eyed bee head']), 's01: insect body regions missing'
+        for wing in spec['rig']['rotorWings']:
+            root = bpy.data.objects[wing['node']]
+            assert any(obj.name.startswith('Full blue duct') and obj.parent == root for obj in meshes), 's01: duct does not follow its wing support'
+    if id == 's02':
+        slab = bounds([obj for obj in meshes if obj.name.startswith('Thick industrial slab')])
+        assert slab[2] >= spec['parameters']['bodyDepth'] * .95, 's02: industrial body remains too thin'
+    if id == 's06':
+        assert bpy.data.objects['launcher_base'].parent.name == 'spine', 's06: launcher is mounted on the rider'
+        assert len([obj for obj in meshes if obj.name.startswith('Dorsal rocket launch cell')]) == 6, 's06: multi-rocket rack is incomplete'
+        rider = [obj for obj in meshes if any(p.name == 'hum_waist' for p in ancestor_chain(obj))]
+        helmet = [obj for obj in meshes if any(p.name == 'head' for p in ancestor_chain(obj))]
+        rack = [obj for obj in meshes if bpy.data.objects['heavy'] in ancestor_chain(obj)]
     if id == 'm06':
         plates = [obj for obj in meshes if obj.name.startswith('Eight pentagonal launch backplates')]
         assert len(plates) == 8, 'm06: backplate count changed'
@@ -74,6 +89,8 @@ for id in selected:
         assert max(size[2] for size in sizes) > min(size[2] for size in sizes) * 1.8, 'm06: backplate heights are uniform'
         anatomy['sagittalBackplates'] = 8
     if id == 's07':
+        assert bpy.data.objects['gun'].parent.name == 'tent_0_11', 's07: light weapon is not held by the right upper tentacle'
+        assert bpy.data.objects['heavy'].parent.name == 'tent_2_11', 's07: heavy weapon is not held by the left upper tentacle'
         assert len([obj for obj in meshes if obj.name.startswith('Cephalopod luminous eye')]) == 2, 's07: eyes missing'
         anatomy['flexibleChains'] = [len(spec['rig'][key]) for key in ['chFL', 'chFR', 'chHL', 'chHR']] + [len(chain) for chain in spec['rig']['tents']]
         assert all(count >= 12 for count in anatomy['flexibleChains']), 's07: insufficient tentacle articulation'
@@ -142,7 +159,7 @@ for id in selected:
                 if track.name == clip:
                     joint.animation_data.action = track.strips[0].action
                     joint.animation_data.action_slot = track.strips[0].action_slot
-        for frame in [1, 8, 16, 24, 31]:
+        for frame in (range(1, 32) if id in ['s06', 's07'] else [1, 8, 16, 24, 31]):
             bpy.context.scene.frame_set(frame)
             depsgraph = bpy.context.evaluated_depsgraph_get()
             evaluated = skeleton.evaluated_get(depsgraph)
@@ -153,6 +170,8 @@ for id in selected:
                 forward=bpy.data.objects['barrier'].matrix_world.to_quaternion() @ Vector((0,-1,0))
                 assert forward.y<-.95, 't10: deployed shield does not face forward'
             if id == 's07':
+                for weapon, root in [('gun', 'tent_0'), ('heavy', 'tent_2')]:
+                    assert bpy.data.objects[weapon].matrix_world.translation.z > bpy.data.objects[root].matrix_world.translation.z + .3, 's07: upper tentacle holds its weapon too low'
                 trees=[collision_tree(tentacle_meshes[root]) for root in roots]
                 for i,tree in enumerate(trees):
                     assert all(not tree.overlap(other) for other in trees[i+1:]), 's07: tentacle collision in '+clip+' frame '+str(frame)
@@ -161,6 +180,25 @@ for id in selected:
                 center=bpy.data.objects['spine'].matrix_world.translation
                 cross=[(b.x-a.x)*(center.y-a.y)-(b.y-a.y)*(center.x-a.x) for a,b in zip(contacts,contacts[1:]+contacts[:1])]
                 assert all(v>0 for v in cross) or all(v<0 for v in cross), 's07: mantle lies outside support polygon'
+                for eye in [obj for obj in meshes if obj.name.startswith('Cephalopod luminous eye')]:
+                    origin = eye.matrix_world.translation
+                    assert all(tree.ray_cast(origin, Vector((0,-1,0)), 12)[0] is None for tree in trees), 's07: front tentacle blocks an eye'
+            if id == 's06':
+                rack_top = max((obj.matrix_world @ v.co).z for obj in rack for v in obj.data.vertices)
+                head_top = max((obj.matrix_world @ v.co).z for obj in helmet for v in obj.data.vertices)
+                assert rack_top <= head_top + 1e-5, 's06: launcher exceeds the helmet in '+clip+' frame '+str(frame)
+                assert not collision_tree(rack).overlap(collision_tree(rider)), 's06: launcher intersects rider in '+clip
+                if clip == 'heavy' and frame == 16:
+                    muzzle = bpy.data.objects['heavy_muzzle']
+                    direction = muzzle.matrix_world.to_quaternion() @ Vector((0,0,1))
+                    assert direction.y < -.99, 's06: raised rack does not face the target'
+                    assert collision_tree(rider).ray_cast(muzzle.matrix_world.translation, direction, 12)[0] is None, 's06: launch path strikes rider'
+                    for cell in [obj for obj in rack if obj.name.startswith('Dorsal rocket launch cell')]:
+                        points = [cell.matrix_world @ v.co for v in cell.data.vertices]
+                        front = max(p.dot(direction) for p in points)
+                        rim = [p for p in points if p.dot(direction) > front - 1e-5]
+                        origin = sum(rim, Vector()) / len(rim)
+                        assert collision_tree(rider).ray_cast(origin, direction, 12)[0] is None, 's06: an outboard launch cell strikes rider'
             for joint in joints:
                 assert all(math.isfinite(v) for row in joint.matrix_world for v in row), id + ': nonfinite ' + clip
                 head = evaluated.matrix_world @ evaluated.pose.bones[joint.name].head

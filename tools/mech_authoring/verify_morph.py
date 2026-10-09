@@ -54,6 +54,17 @@ for id in ids:
         assert set(spec['clips']).issubset({t.name for t in joint.animation_data.nla_tracks})
     meshes=[obj for obj in bpy.data.objects if obj.type=='MESH']
     anatomy={'articulation':verify_articulated_body(spec,meshes)}
+    if id == 't06':
+        assert len(spec['rig']['tailSegs']) == 8, 't06: monkey tail missing'
+        assert any(obj.name.startswith('Tapered anatomical tail vertebra armor') for obj in meshes), 't06: tail has no visible geometry'
+        assert all(not any(p.name in spec['rig']['tailSegs'] for p in ancestor_chain(bpy.data.objects[weapon['ref']]))
+                   for weapon in spec['rig']['wpn'].values()), 't06: normal monkey tail gained a weapon'
+    if id == 's03':
+        swim = spec['forms']['flight']['rig']['swim']
+        activate_clip(spec, 'flight_idle', 7)
+        before = bpy.data.objects[swim['tail'][-1]].rotation_euler.x
+        activate_clip(spec, 'flight_idle', 22)
+        assert abs(before - bpy.data.objects[swim['tail'][-1]].rotation_euler.x) > .05, 's03: flight tail does not swim dorsoventrally'
     if id in ['s10','m08']:
         positions={name:pos for name,_,pos in spec['joints']}
         segments=[]

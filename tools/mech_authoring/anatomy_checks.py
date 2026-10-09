@@ -5,6 +5,12 @@ from mathutils import Vector
 
 
 def verify_articulated_body(spec, meshes):
+    if spec['kind'] == 'biped':
+        head = bpy.data.objects[spec['rig']['head']]
+        necks = spec['rig'].get('cervicals') or [spec['rig'].get('neck')]
+        assert necks and all(name and name in {p.name for p in ancestor_chain(head)} for name in necks), 'Head bypasses functional cervical joints'
+        assert all(spec['rig']['chest'] in {p.name for p in ancestor_chain(bpy.data.objects[spec['rig']['arm'+side]])}
+                   for side in ['L','R']), 'Shoulder is detached from thorax'
     waist = spec['rig'].get('waist')
     if waist:
         assert bpy.data.objects[waist].parent.name in ['hips','hunch'], 'Waist lost its pelvic attachment'

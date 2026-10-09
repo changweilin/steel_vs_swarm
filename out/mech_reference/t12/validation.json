@@ -4,11 +4,11 @@
   "measurements": {
     "triangles": 10676,
     "meshes": 60,
-    "joints": 26,
+    "joints": 27,
     "source": {
-      "contract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
-      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
-      "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
+      "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+      "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+      "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
       "image": "8eda38a83b12a0494b91d0674607c2ad03081ed5662d69e5f4ca8c580419ea5c"
     }
   },
@@ -22,41 +22,20 @@
     "shield_deploy",
     "shield_retract"
   ],
-  "renders": [
-    "reference.png",
-    "front.png",
-    "side.png",
-    "back.png",
-    "top.png",
-    "idle.png",
-    "shield_deploy.png",
-    "shield_retract.png",
-    "light.png",
-    "heavy.png",
-    "skill.png",
-    "ult.png",
-    "run.png"
-  ],
+  "renders": [],
   "hashes": {
-    "runtime": "0ae2f486f7154f3f0fa9c50e274867058a68e2f8980a19b4c1a4b3cb29b767f1",
-    "blend": "2e93bd5937f69915ba8a6e73e54141429754210d4f5730cb3af317c4716df532",
-    "glb": "38f6902b1f1588d382f38320111a88b2e3d54f48a311ca747ab1363d73587a44"
+    "runtime": "dfa42654863688a189ce3907d7881a869b4fb165b8a0424011b9b2d186824147",
+    "blend": "19598e207048a7c5eba921219466fb2334b5207a4c8ac7abc74f101b12093348",
+    "glb": "7ac85aa1272aeadb30b0669825fec14387402928d417f951084782df156f50c7"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pass",
-    "appearance": "pass",
-    "export": "pass",
-    "destination": "pass",
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
+    "export": "pending_independent_load",
+    "destination": "pending_browser_review",
     "user_signoff": "pending_user_review",
-    "editable_source": "pass",
-    "rebuild": "pass"
-  },
-  "editableSourceRecipe": {
-    "contract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
-    "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
-    "catalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3",
-    "image": "8eda38a83b12a0494b91d0674607c2ad03081ed5662d69e5f4ca8c580419ea5c"
+    "editable_source": "pass"
   }
 }

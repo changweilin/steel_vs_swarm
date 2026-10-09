@@ -3,7 +3,8 @@
 The contract covers all twelve mechs and twelve drones. Morphers and their alternate forms are excluded.
 The review bench reads the existing art prompt tables and original mech images; those remain the visual authority.
 T10 carries the anatomical right forearm gun and paired forward-facing shoulder launchers.
-S01 follows the four enclosed rotor reference instead of the retired insect-wing body.
+S01 combines a segmented bee head, thorax and abdomen with four enclosed propulsion rotors.
+Their supports articulate slowly through small angles; front and rear supports share one cycle with a half-cycle phase offset.
 
 [The asset contract](../tools/mech_authoring/assets.json) owns component plans, estimated proportions,
 material regions, joint bindings, motion channels and acceptance limits.
@@ -18,8 +19,12 @@ Bent elbow and wrist offsets distinguish avian wings from the pterosaur's elonga
 Overlapping hinge gores cover the sweep between articulated wing panels, including membrane wings.
 Ground avian wings fold along the body and spread only during running; this posture overrides humanoid arm motion.
 Cephalopod limbs use dense flexible chains. The tyrannosaur jaw and concealed throat barrel follow heavy-fire presentation.
-Eight radial cephalopod chains carry independent three-axis phases. The colossus forehead aperture stays recessed
-behind a hinged shutter and becomes visible only during heavy-fire presentation.
+Eight radial cephalopod chains carry independent three-axis phases.
+Cephalopod travel uses radial crawling waves instead of the terrestrial leg driver; each joint offset owns its segment length,
+and the front chains stay below the face. Raised lateral upper tentacles hold the two cephalopod weapons.
+The centaur's low twin dorsal rocket pods stay below the helmet throughout deployment, aiming and retraction;
+their six outboard launch paths clear the rider. The support extends before aiming and returns upright before retracting.
+The colossus forehead aperture stays recessed behind a hinged shutter and becomes visible only during heavy-fire presentation.
 Limb geometry, tail segments and rider gun compensation derive from those same joint bindings;
 the recipe does not maintain a second list of pivot coordinates.
 

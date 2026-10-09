@@ -56,7 +56,7 @@ for (const id of ids) {
       for (let i = 0; i < owners.length; i++) {
         const [x, , z] = part.positions.slice(i * 3, i * 3 + 3);
         const lo = -half + owners[i] * span, hi = lo + span;
-        // Blender's evaluated parent-matrix cancellation precedes five-decimal export; runtime projects these offsets back into the bin.
+        // Float32 evaluation and five-decimal export can move shared edges; runtime projects them back into their owned bins.
         assert(x * Math.cos(lo) - z * Math.sin(lo) >= -.0002 &&
           x * Math.cos(hi) - z * Math.sin(hi) <= .0002, `${id}/${slot}: exported geometry crosses its sub-cone`);
       }

@@ -389,7 +389,7 @@ def ground(a):
     positions = {name: pos for name, _, pos in a.spec['joints']}
     if kind == 'biped' and r != 'crane':
         start = (0, .3, p['length'] * .3) if r == 'trex' else (0, .65, .05)
-        end = positions['head']
+        end = tuple(positions['head'][i] + positions.get('neck', (0, 0, 0))[i] for i in range(3))
         a.strut('Visible cervical actuator', 'chest', start, end, .38 if r == 'trex' else .2, 'dark')
         center = tuple((start[i] + end[i]) / 2 for i in range(3))
         ellipsoid(a, 'Armored neck coupling', 'chest', (.7, .55, .8) if r == 'trex' else (.32, .32, .32), center, 'shade', 12, 6)
@@ -639,9 +639,10 @@ def flight_wings(a, folded=False):
 def flyer_body(a):
     p, r = a.p, a.spec['recipe']
     if r == 'slab':
-        for y in [-.23, .23]: a.box('Thick industrial slab', 'tilt', (p['width'], .35, p['length']), (0, y, 0), 'armor', .08)
-        for z in [-1.35, -.65, .2, 1.05]: a.box('External cross reinforcement rib', 'tilt', (p['width'] + .2, .12, .18), (0, .46, z), 'dark')
-        a.box('Asymmetric repaired panel', 'tilt', (.7, .065, .9), (-.3, .47, -.35), 'shade')
+        depth = p['bodyDepth']
+        for y in [-depth * .24, depth * .24]: a.box('Thick industrial slab', 'tilt', (p['width'], depth * .52, p['length']), (0, y, 0), 'armor', .08)
+        for z in [-1.35, -.65, .2, 1.05]: a.box('External cross reinforcement rib', 'tilt', (p['width'] + .2, .12, .18), (0, depth * .5 + .04, z), 'dark')
+        a.box('Asymmetric repaired panel', 'tilt', (.7, .065, .9), (-.3, depth * .5 + .05, -.35), 'shade')
         for side in [-1, 1]: vents(a, 'tilt', (side * .65, -.2, p['length'] * .5 + .04), .2, 5, 'brass')
     elif r == 'fpv':
         # Two open rail decks deliberately leave the center and rotor sweep unarmored.
@@ -665,8 +666,12 @@ def flyer_body(a):
             for size in [( .045, .55, .16), (.045, .16, .55)]: a.box('Dark green medical cross', 'tilt', size, (side * 1.77, -.03, 0), 'shade', .005)
     elif r in ['dragon', 'pterosaur', 'eagle']:
         if r != 'dragon':
-            ellipsoid(a,'Deep flight breast','tilt',(p['width']*1.15,.92,1.45),(0,-.04,.06),'armor')
-            ellipsoid(a,'Tapering flight abdomen','tilt',(p['width']*.76,.61,1.50),(0,.03,-.76),'shade',16,8)
+            ellipsoid(a,'Deep flight breast','chest',(p['width']*1.15,.92,1.45),(0,-.04,.06),'armor')
+            ellipsoid(a,'Separate avian pelvic croup','pelvis',(p['width']*.76,.61,1.05),(0,.03,-.18),'shade',16,8)
+            a.loft('Flexible avian lumbar waist','waist',[(-.36,p['width']*.72,.55),(-.12,p['width']*.64,.49),(.20,p['width']*.83,.66)],'shade',axis='z')
+            neck_end = next(pos for name, _, pos in a.spec['joints'] if name == 'sensor')
+            a.strut('Avian cervical actuator','neck',(0,0,0),neck_end,.18,'dark')
+            ellipsoid(a,'Avian neck collar','neck',(.34,.30,.40),(0,0,neck_end[2]*.45),'shade',12,6)
         if r == 'dragon':
             from mathutils import Vector
             positions={name:pos for name,_,pos in a.spec['joints']}
@@ -892,8 +897,24 @@ def weapons(a):
     elif r == 'slab':
         a.box('Single side thermal rocket housing', 'heavy', (.6, .7, .85), (0, 0, .1), 'shade')
         a.tube('Single large thermal rocket port', 'heavy', .3, .23, .8, (0, 0, .4), 'steel', segments=16)
+    elif r == 'centaur':
+        a.box('Dorsal launcher mounting saddle','launcher_base',(.84,.17,.74),(0,-.08,0),'dark',.045)
+        for side in [-1,1]:
+            a.tube('Launcher fixed telescopic guide','launcher_base',.115,.075,.64,(side*.31,.20,0),'shade','y',12)
+            a.strut('Launcher extensible piston','launcher_piston',(side*.31,0,0),
+                    (side*.31,a.spec['rig']['launcher']['extension'],0),.07,'steel')
+            a.strut('Launcher moving support rail','launcher_lift',(side*.31,-.12,0),(side*.31,.32,0),.10,'steel')
+        a.disk('Launcher elevation hinge','heavy',.18,.95,(0,0,0),'brass','x',16)
+        pod_x = a.nodes['heavy_muzzle'].location.x
+        # Outboard launch cells clear the rider without lifting the rack above the helmet.
+        a.box('Low dorsal launcher crossbeam','heavy',(2*pod_x,.14,.28),(0,.08,0),'steel',.025)
+        for side in [-1,1]:
+            x = side * pod_x
+            a.box('Dorsal multi-rocket armored rack','heavy',(.42,1.28,.72),(x,.40,0),'shade',.06)
+            for z in [-.22,0,.22]:
+                a.tube('Dorsal rocket launch cell','heavy',.105,.079,1.40,(x,.48,z),'steel','y',12)
     else:
-        vertical = r == 'centaur'
+        vertical = False
         size = (.75, 1.45, .7) if vertical else (.8, .55, .85)
         a.box('Heavy payload armored housing', 'heavy', size, (0, .3 if vertical else 0, 0), 'shade', .055)
         for x in [-.2, .2]:

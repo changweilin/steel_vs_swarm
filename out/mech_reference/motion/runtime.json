@@ -1,0 +1,562 @@
+{
+  "metrics": {
+    "s01": {
+      "period": 15.384615384615383,
+      "maxWingAngle": 0.045,
+      "rotors": 4,
+      "source": {
+        "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+        "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+        "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
+        "image": "8594939b9bcfd6fae905fdc845035f49ff056cbbc485028585535b6ce9098d32"
+      }
+    },
+    "s02": {
+      "source": {
+        "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+        "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+        "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
+        "image": "0e1e16a7d00df7d7e8a09b167f2f026ef497ca8d4e96c648149ff655bfac8859"
+      }
+    },
+    "s06": {
+      "extension": 0.6199718520435472,
+      "forward": [
+        0,
+        0.00047905675869497344,
+        0.9999998852523047
+      ],
+      "minimumHeadClearance": 0.07498171465006509,
+      "source": {
+        "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+        "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+        "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
+        "image": "c306aa4c5a235e254fe1ae3946178b4d61441b627a686193250c5e29d5513e03"
+      }
+    },
+    "s07": {
+      "terrestrialDriver": false,
+      "chains": 8,
+      "weaponHolders": [
+        "tent_0_11",
+        "tent_2_11"
+      ],
+      "minimumElevation": 0.5386480953872959,
+      "source": {
+        "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+        "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+        "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
+        "image": "5122ff559180b8e2f471844c24a897380d6a085956c2115c94dcb8f52db0f5e3"
+      }
+    },
+    "t06": {
+      "tail": 8,
+      "crouch": 0.6220251642290249,
+      "source": {
+        "contract": "fa78892af40ad0217318af92bc8898d2e8a594c23f10c2d81ca9a91919661c30",
+        "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+        "catalog": "d4b2992d65cb32e056766118edf1a3dadfb55cfda52db2b35f01505224c5117a",
+        "image": "fd0806c19fa65a2cd12611a94e919bd40427b478eb5d10795e64aed5ed2acafe",
+        "sharedContract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+        "sharedCatalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97"
+      }
+    },
+    "s03": {
+      "tailPitchChange": 0.1529905649007996,
+      "source": {
+        "contract": "fa78892af40ad0217318af92bc8898d2e8a594c23f10c2d81ca9a91919661c30",
+        "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+        "catalog": "d4b2992d65cb32e056766118edf1a3dadfb55cfda52db2b35f01505224c5117a",
+        "image": "b335083d23ec7ec543f37bb9acf7da2657e0cf47773f5cd6101022dac7a28253",
+        "sharedContract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+        "sharedCatalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97"
+      }
+    },
+    "t07": {
+      "axialHierarchy": true,
+      "waistPitch": -0.009779542436962795,
+      "source": {
+        "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+        "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+        "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
+        "image": "0e0b9d9122cd94868496cfd170b6d0a8c4187191175313b5a88f20fab18105d4"
+      }
+    },
+    "m04": {
+      "axialHierarchy": true,
+      "waistPitch": -0.009779542436962795,
+      "source": {
+        "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+        "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+        "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
+        "image": "f2fd8afa576c4ae134d5d14ea751981f8255413745c33abf7761f971fe7ced08"
+      }
+    }
+  },
+  "activeAxes": {
+    "s01": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s02": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s03": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s04": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s05": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 0.9999999999999999
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s06": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s07": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s08": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s09": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s10": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s11": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "s12": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t01": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t02": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t03": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t04": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t05": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t06": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t07": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t08": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t09": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t10": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t11": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "t12": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "m01": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "m02": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "m03": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "m04": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 0.9999999999999999
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 0.9999999999999999
+      }
+    ],
+    "m05": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "m06": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "m07": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ],
+    "m08": [
+      {
+        "form": "ground",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "ground",
+        "slot": "heavy",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "light",
+        "forward": 1
+      },
+      {
+        "form": "flight",
+        "slot": "heavy",
+        "forward": 1
+      }
+    ]
+  }
+}

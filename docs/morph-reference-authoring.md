@@ -18,6 +18,8 @@ attack, cast and shield clips without overwriting those joints.
 Sealed hulls contain only the limbs explicitly listed as stowed by each contract.
 Monkey and vampire limbs remain exposed; the raptor retains two hind talons in flight.
 The whale keeps its tusks fixed and aligns its head, hull and tail along one axis.
+Flight propulsion bends the whale's caudal chain dorsoventrally, with a delayed tail-fluke cycle.
+The monkey retains an unarmed segmented tail in both forms and lowers its pelvis into a forward-leaning bounding run.
 The flying squirrel follows its individual prompt: exactly four exposed struts support
 the patagium. The Atlas arms follow the wing leading edges as propulsion mounts.
 Solid shield petals fold into the rotor ducts in flight. Bird primary and secondary

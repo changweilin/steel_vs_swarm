@@ -6,12 +6,12 @@
     "meshes": 109,
     "joints": 58,
     "source": {
-      "contract": "c5dba55d8bd609759f9982d56f88e96a329398aee2f8e0d466054b548b4354de",
-      "builder": "ade4e5c4d53458c0c61c6b80d534a9720721b8fe4fe14b0ba96581269dce8e56",
-      "catalog": "486d856fdb73eaba3992348756c901f9010442b554cf1429feb4ae554950abe7",
+      "contract": "fa78892af40ad0217318af92bc8898d2e8a594c23f10c2d81ca9a91919661c30",
+      "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
+      "catalog": "d4b2992d65cb32e056766118edf1a3dadfb55cfda52db2b35f01505224c5117a",
       "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
-      "sharedContract": "9b4a8b5fbed64eb56bdcf9f3d57d4a55d701dfab115f44b4563fcdc4179be442",
-      "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
+      "sharedContract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
+      "sharedCatalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97"
     }
   },
   "clips": [
@@ -33,64 +33,22 @@
     "flight_shield_deploy",
     "flight_shield_retract"
   ],
-  "renders": [
-    "reference.png",
-    "front.png",
-    "side.png",
-    "back.png",
-    "top.png",
-    "idle.png",
-    "shield_deploy.png",
-    "shield_retract.png",
-    "light.png",
-    "heavy.png",
-    "skill.png",
-    "ult.png",
-    "run.png",
-    "flight_reference.png",
-    "flight_front.png",
-    "flight_side.png",
-    "flight_back.png",
-    "flight_top.png",
-    "transform_0.png",
-    "transform_1.png",
-    "transform_2.png",
-    "transform_3.png",
-    "transform_4.png",
-    "shield_retract.png",
-    "flight_shield_deploy.png",
-    "flight_shield_retract.png",
-    "flight_light.png",
-    "flight_heavy.png",
-    "skill.png",
-    "ult.png",
-    "flight_skill.png",
-    "flight_ult.png"
-  ],
+  "renders": [],
   "hashes": {
-    "runtime": "e9c6cd1bbbde564006b7fa4043d4684ac2878c82ced71586a165b0aa1de7372d",
-    "blend": "6228c8e60ae33dc53ddb724e492f78cbbb404b00ec5bca606e9d59cf674fc6ac",
-    "glb": "672ad9c113d31c6c27230cdc5df71c636e51a43a26467a2342e094dca0195a9b"
+    "runtime": "29cc18c9f72579ba081bb9b45f81842a5a380cce6e7a1c78ad467cdfdb52c617",
+    "blend": "1e049786c6b54021d8a41b420b33cd018e16eacdfdf092e9ffe3e5df4f87bfd3",
+    "glb": "d893245d7c67e26019dcb3d52154e6860483e1737ca90e00bb7b0926d77e28f3"
   },
   "gates": {
     "structure": "pass",
     "resources": "pass",
-    "geometry": "pass",
-    "appearance": "pass",
+    "geometry": "pending_visual_review",
+    "appearance": "pending_visual_review",
     "export": "pass",
     "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass",
-    "flight_belly": "pass",
-    "rebuild": "pass"
-  },
-  "editableSourceRecipe": {
-    "contract": "681c954bd16922450b6b205ccb681c24ad873db703a78d3697968010a527571f",
-    "builder": "29f788ad6edf0d6a49a48aab4b527458e169f2ee13f6ceec6d174cb762aac3f4",
-    "catalog": "b2804962cd7dcab21540b9f17117d34d7dc343ed2379f81529423c24b1635f8b",
-    "image": "f254d75b95c9702af2f903d7a9e5dc8b9a9830fca89e8cf500a261c2ede24da6",
-    "sharedContract": "7c9a4984971ef1c50fa65b709e78312f7751f727729fd53bcb7deb6d95a5a925",
-    "sharedCatalog": "ee55fb6ea0f5d3fc6ee57caffc5ec368a3b2e6a7f4e14f1b21a07db4b5cfbed3"
+    "flight_belly": "pass"
   },
   "validation_refs": {
     "runtime": "runtime-validation.json",

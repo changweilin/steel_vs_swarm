@@ -1,8 +1,8 @@
 {
   "identities": {
     "s01": {
-      "glb": "ae782457db6b04aed0a5556c5c47752e979627b4072ad231d339e98ac0b34a94",
-      "runtime": "b1ddf3950f64cbc1026a19c299abbe486fc5d1c1dd3dec927b52655441ae5e56",
+      "glb": "5c19d8a883503f8d83e35136dfff667fde45b68bf0660439fdc30506ee698b25",
+      "runtime": "2cab9666c3d461505661fc6e9dbd099d0f8707188e4bd46396bba805fd6ee2af",
       "clips": [
         "idle",
         "run",
@@ -15,8 +15,8 @@
       ]
     },
     "t10": {
-      "glb": "e9eff49a74203e8ff134062afbbc6d92b3e8f4ed1741eb143d03bca14b9856dc",
-      "runtime": "224d949f73eb56bf6cf23070d02edf5caa7295850cf3c457b2318e8dee50faed",
+      "glb": "799d20f1d39c684b1f070c0a24a66781f085a457c6dfa28dd14927d308dc2da1",
+      "runtime": "8943d22a5f08a76a4bf82cd9a07dc6e17092f1a7bf86d3ec1ec2621aef4f861d",
       "clips": [
         "run",
         "idle",
@@ -29,8 +29,8 @@
       ]
     },
     "s02": {
-      "glb": "663f24b9cc948f7b7490d67c8b9f7675b9ab8030c6652f2bf48c81967104c6cc",
-      "runtime": "4be8f4095a4ce49608c549fedd5af9e5f35bc49973140ef0537f0481852ab76a",
+      "glb": "45f6956fa69e791fb98b9c538f909e73f906db0f4e0e8d6f7498c7c1d1825df9",
+      "runtime": "5a29395b388384c8fe6697907ef5d962deb0c50996a8008ed025d206827bbbb1",
       "clips": [
         "idle",
         "run",
@@ -43,8 +43,8 @@
       ]
     },
     "s04": {
-      "glb": "86631fd653a0b185dcf41779fdbca23c643ca937466ec84493a520249af2289b",
-      "runtime": "bec1741760b5b29a82c8c4a22ef0367f409429dcda115795a6e879e14af93e24",
+      "glb": "e379a12cf9584f8eb5342f809c3faf4020003f87763bda62c16b54ce9d8217cf",
+      "runtime": "6969aabf04d850bc19835c839e282460c143db87eba645d28c0910499f59e028",
       "clips": [
         "idle",
         "run",
@@ -57,8 +57,8 @@
       ]
     },
     "s05": {
-      "glb": "378c8c53eff27978f8b4b36206eef197a339dec75bef34363b9a5255f67ca684",
-      "runtime": "49d64ba46493dba0921a7a62d2701e7e0de19ac576d1e2439094fe8035fed47d",
+      "glb": "435f011c3e14aeb19559631efe5e40388c94ee2775a3f208700b908805dda126",
+      "runtime": "d67fc25f677f3a9b30228d4fe1d235c4f73041ff4848b1bc2d893baf278579b8",
       "clips": [
         "idle",
         "run",
@@ -71,8 +71,8 @@
       ]
     },
     "s08": {
-      "glb": "31bc308f259e47eb5fd984cf7481d96b1ca61adaee34fe18a216593e7cf0e15a",
-      "runtime": "927867344e673ad88c28ec66630f8ec462a14f8646b44329ae9f8fa92f21b5c6",
+      "glb": "8eee0ddd80475e62919333b89f43635eab37d3ae32773d5619c9fd6c24f8e090",
+      "runtime": "37046d50546e9261d61abb141dac45a29013bf5e6ce43cd2a3d7b5f2608f3dce",
       "clips": [
         "idle",
         "run",
@@ -85,8 +85,8 @@
       ]
     },
     "s11": {
-      "glb": "509a934371e77a685ff0a6c01930989bc4fa33f69ae0c05a46f1c9c36478482c",
-      "runtime": "93f6495bdcfa4700f7ba45ae8deb4cf638320ac2dab19c0cd4eebdec26c2bc1e",
+      "glb": "d5323c7787fd84bb97eda6073ce05499d9990f07bdd771099f83571d30736b8d",
+      "runtime": "050732b694636a4764864136b566242609312fcf39f9c82f6536eb7ce4f751c9",
       "clips": [
         "idle",
         "run",
@@ -99,8 +99,8 @@
       ]
     },
     "s12": {
-      "glb": "e20f9bb3b06a634eb60cab498658ad02d48e79c0d565daae9599dc0772b77c61",
-      "runtime": "d614c518cfb84e76801db978acb8ba6b870e5d9aaf528155105a96adb92deddb",
+      "glb": "ac3a240be58f39eeacffe00012581aae1a511f71d020c0d192534bffbb712da9",
+      "runtime": "c92910534536d233b51a2736da2710559f1351e3a19b3debb503ad654d67c75a",
       "clips": [
         "idle",
         "run",
@@ -113,8 +113,8 @@
       ]
     },
     "t07": {
-      "glb": "d6846d141fd0e3313e5ff64c4756b11cb430c2705d38e59542c0fe8a075974d0",
-      "runtime": "8a0e73348defcb41e67171af07084ab081aa1cf088162b845d284ae86c6a0306",
+      "glb": "5e39da72bc31d070fad6b5fc5d67094bc7db179afab0dba16ffedb31ed71410e",
+      "runtime": "b37f551c91b1bdc42033a18e79fee6bc311c0814f830a38bc77a4cce744d2d41",
       "clips": [
         "idle",
         "run",
@@ -127,8 +127,8 @@
       ]
     },
     "t08": {
-      "glb": "96974d82882faafebdef2a7470b4f7c89f87756e5d73671e155af19ff64c127e",
-      "runtime": "e0b38a1d95c47f26caeabdc34f998fc496a210de7e3fb83af909db13df0c0c2d",
+      "glb": "69206c53fa77700318f6e26e524434fbbaab2277c175cf40d743fa05ac2baa57",
+      "runtime": "8027bc2669ec3a032004dfaf5046dca7365ecaf87da2034741453cc4c35a31b3",
       "clips": [
         "idle",
         "run",
@@ -141,8 +141,8 @@
       ]
     },
     "t09": {
-      "glb": "2ad434fac7f12c96cfd77eadbd78976e58e77d86d61c3ff33272d07054ea52ff",
-      "runtime": "bbedb2588c60986295705c0858a4e13b6722e1ca3890cef6cbcf969a86d58652",
+      "glb": "01154e92859f1ebb0060676387b05dcb8f9324eba1506fb46d83fad8673781fd",
+      "runtime": "0d748894c8a634c11aa48809e40fd7a92afcf6a48157b6838aa48dfe1837ccdc",
       "clips": [
         "idle",
         "run",
@@ -155,8 +155,8 @@
       ]
     },
     "m03": {
-      "glb": "38060c9b303fbb7a35b78a977dd62a7c6999dc1fe938d2a22b86f5774c18802f",
-      "runtime": "45b8732858883ca233b0ac8033ec8690ff42de6caee72f159d4657115dabe2c4",
+      "glb": "35ba50a528f935dda65662f5673e5d9805a81b401d1d67226711d8380fd11058",
+      "runtime": "78768a5ac1a0d82d4d3fc521f4ec445c5fdeaec29a3d429d2a03340cf1122229",
       "clips": [
         "idle",
         "run",
@@ -169,8 +169,8 @@
       ]
     },
     "m04": {
-      "glb": "15a7b10deec21ca8a48d497957803dbb47da13cba4f0257bc9636aa61f3885b9",
-      "runtime": "2b6433df729ab32ca34d71734ac16b86746cc9ece797f9185c3b45ac50f21d8c",
+      "glb": "b409d2332c911cac95d1e8d3a46945575bc8a0463e23424e759b28043b3b0143",
+      "runtime": "cac6cc938559b0cac9cdaaa0cd54b1c94666a73eff3bdc619a7a681b7f7836c6",
       "clips": [
         "idle",
         "run",
@@ -183,22 +183,22 @@
       ]
     },
     "s06": {
-      "glb": "5649c270c794a52ad5fb8e53054f7dd07f64bf6c530c92dcf2ac3729ba1e18ec",
-      "runtime": "4da3b101a906fc50f4e4e3fc7130a74494d518092daa8412f22a1696e0994256",
+      "glb": "88449fb2a32b51eb2f356380f735477131aed4cb3d97df952da1d23da334d303",
+      "runtime": "a88badd7d9833764dd36ca2eb3a57cd51b52737c94d46b141fd0c6fe5306eb54",
       "clips": [
         "idle",
         "shield_deploy",
         "shield_retract",
         "skill",
         "ult",
-        "heavy",
         "light",
+        "heavy",
         "run"
       ]
     },
     "s07": {
-      "glb": "58c9ebd65150f708e79c2659006cca27103867b4c8e1447d55920f05be8df02a",
-      "runtime": "79417ca45363b30f18b97ce80f081d369312833acdf903d6a5ecaa5f7af9b640",
+      "glb": "6685c491e42d7c0a4c4921a3e80739abfa7c6b8ef3056811cf98c64d266a56b3",
+      "runtime": "d1fb7fb25a1d0bd03910cf48b4455dd185c56246bef1a5e1fd7e8a934ba85281",
       "clips": [
         "idle",
         "shield_deploy",
@@ -211,8 +211,8 @@
       ]
     },
     "s09": {
-      "glb": "a657a215002578a505283aa40cfab276e89abb9b30c27742ea075b67fac29f13",
-      "runtime": "6f87d8384c93b0320a1c8ec8d2fd915bad758cbc7c7aedf5319a5db199c63c0b",
+      "glb": "b624be95c70ad02a362afea9218982a2f16aba62b06f569ce816e0c7fdb61f17",
+      "runtime": "dd377b9eee8b2238423a349a27132927db42c340e8b4adacfcb0ac3ee872f04f",
       "clips": [
         "idle",
         "run",
@@ -225,8 +225,8 @@
       ]
     },
     "t01": {
-      "glb": "95aad0edaf1e30d1ed8a9e4372cd7d8e3f12f36fe6d6e6ec12b249d5d0ca8a24",
-      "runtime": "7c4766c9c0d26dacba918bb5c4d3a5a4f2e7e095222e8910cce0fa76f79e34e8",
+      "glb": "0eda2d1e8b9cc6b4c79adde48dc7cbf7ce5e387e3e32220c53a686397127bd74",
+      "runtime": "43b86f506ff9c38b8afc2cfbe8ee5a94566ed4ee7ef72430eb74b562c942afb9",
       "clips": [
         "idle",
         "shield_deploy",
@@ -239,8 +239,8 @@
       ]
     },
     "t02": {
-      "glb": "941306d689ae7afc1274d991365ed3e9d0b7ceaea258b766f58314e78e221d0c",
-      "runtime": "981dc670e3240155fe28c14820546c25bb8d174d115aa948f1f4ab6e26c523cc",
+      "glb": "7e3ec3a38322f5140a83efae77ec70ac9aa72fd09dfd21f9e2a48f5ab72fa911",
+      "runtime": "ad857b3a8829e634643ceabe74dbe3f21bf4a6bae9a6a4fd018c724a398229a4",
       "clips": [
         "idle",
         "shield_deploy",
@@ -253,8 +253,8 @@
       ]
     },
     "t03": {
-      "glb": "f481afcebe7bae5d3504ce8ae9891e45a3d8b95b9de600d15b498a41f3789c65",
-      "runtime": "b29e85668615f09e7686c86fc0f14f7614d4dfa036a533f3986857f35bdbbfd0",
+      "glb": "965c551772a1458987dd5a85d09677ee1d503b087d3673fa805c5d8942d78725",
+      "runtime": "c53e78632e80d7ed5e91792dd52c0c8e0f18990e83c2d0da021fd646fa9d9bf9",
       "clips": [
         "idle",
         "shield_deploy",
@@ -267,8 +267,8 @@
       ]
     },
     "t04": {
-      "glb": "559f61d98bebed5dfe193a3d6f0d65cf66f66d7d93515afe6192a25acb6e9b17",
-      "runtime": "e154a3cf21560e129c725a74d943b977b889ff28111886e75e8a8450a1a3eef0",
+      "glb": "0e4beaad6c985cdda016887c8fb2aacd0b32bfcb5bbd6897cd4d705e1050c7e4",
+      "runtime": "fbb769ed65292b3342a3bb731e2758760c303487fa8b764fcbd032773b845392",
       "clips": [
         "idle",
         "shield_deploy",
@@ -281,8 +281,8 @@
       ]
     },
     "t05": {
-      "glb": "706399e6a26575a9093cb2f6c9817b6e1087eb6aaa4f5a36da2135fc66a6e47c",
-      "runtime": "59f2824fbdbdf7f068b0bf277c7cc2566e8f5bc6e4ca3b226ce20e4b25c937f9",
+      "glb": "29d48b0280c5a326bf888b684ec15503aceb1d6c7d15579861d83e65878b2b4b",
+      "runtime": "64ae5692251225d5b2122e0ee7ffb45c90048a1f92cab229ce7265ff62e68718",
       "clips": [
         "idle",
         "run",
@@ -295,8 +295,8 @@
       ]
     },
     "t12": {
-      "glb": "38f6902b1f1588d382f38320111a88b2e3d54f48a311ca747ab1363d73587a44",
-      "runtime": "0ae2f486f7154f3f0fa9c50e274867058a68e2f8980a19b4c1a4b3cb29b767f1",
+      "glb": "7ac85aa1272aeadb30b0669825fec14387402928d417f951084782df156f50c7",
+      "runtime": "dfa42654863688a189ce3907d7881a869b4fb165b8a0424011b9b2d186824147",
       "clips": [
         "idle",
         "shield_deploy",
@@ -309,8 +309,8 @@
       ]
     },
     "m02": {
-      "glb": "234e68b03b26a0dac31d26bd9028adbbffd697ce656affabdfe5445843b23131",
-      "runtime": "67a152bb870ec197b4613cc4fa297b51a29ebb39039f1058b991f2e3e9a80d6d",
+      "glb": "44a85acf580811babaab007c799ca0939d970c346f5ab281c6f5176cc7f96bae",
+      "runtime": "00e616fdf3fb833792cb88cea6ea4ca8923674ffe2275ed79ec929f876f61e7d",
       "clips": [
         "idle",
         "shield_deploy",
@@ -323,8 +323,8 @@
       ]
     },
     "m06": {
-      "glb": "83964c2e9b213fa6ec586dce1a008aeb3f2cb693ae16e02892afcc61219e6256",
-      "runtime": "4001390d4ead38cf23257e02897237bae9c724e9a8def26c13732215ddaa4399",
+      "glb": "952d088fd2f63884cf6efb404b7d93f071708b25d5f8720f3e47d5e0b1c1b3a3",
+      "runtime": "9192224938f20e5553e660309ac82e122c8514993825bbf4c95bed7795561956",
       "clips": [
         "idle",
         "shield_deploy",
@@ -339,8 +339,8 @@
   },
   "metrics": {
     "s01": {
-      "meshes": 50,
-      "triangles": 15524,
+      "meshes": 68,
+      "triangles": 16448,
       "fps": [
         30,
         60,
@@ -363,8 +363,8 @@
       ]
     },
     "t10": {
-      "meshes": 101,
-      "triangles": 15260,
+      "meshes": 100,
+      "triangles": 14672,
       "fps": [
         30,
         60,
@@ -387,8 +387,8 @@
       ]
     },
     "s02": {
-      "meshes": 42,
-      "triangles": 11212,
+      "meshes": 40,
+      "triangles": 10624,
       "fps": [
         30,
         60,
@@ -411,8 +411,8 @@
       ]
     },
     "s04": {
-      "meshes": 39,
-      "triangles": 10524,
+      "meshes": 37,
+      "triangles": 9784,
       "fps": [
         30,
         60,
@@ -435,8 +435,8 @@
       ]
     },
     "s05": {
-      "meshes": 44,
-      "triangles": 10036,
+      "meshes": 42,
+      "triangles": 9396,
       "fps": [
         30,
         60,
@@ -459,8 +459,8 @@
       ]
     },
     "s08": {
-      "meshes": 40,
-      "triangles": 10004,
+      "meshes": 38,
+      "triangles": 9296,
       "fps": [
         30,
         60,
@@ -483,8 +483,8 @@
       ]
     },
     "s11": {
-      "meshes": 41,
-      "triangles": 9880,
+      "meshes": 39,
+      "triangles": 9280,
       "fps": [
         30,
         60,
@@ -507,8 +507,8 @@
       ]
     },
     "s12": {
-      "meshes": 47,
-      "triangles": 10584,
+      "meshes": 45,
+      "triangles": 9908,
       "fps": [
         30,
         60,
@@ -531,8 +531,8 @@
       ]
     },
     "t07": {
-      "meshes": 75,
-      "triangles": 12692,
+      "meshes": 76,
+      "triangles": 12204,
       "fps": [
         30,
         60,
@@ -555,8 +555,8 @@
       ]
     },
     "t08": {
-      "meshes": 127,
-      "triangles": 17892,
+      "meshes": 125,
+      "triangles": 17120,
       "fps": [
         30,
         60,
@@ -579,8 +579,8 @@
       ]
     },
     "t09": {
-      "meshes": 37,
-      "triangles": 9772,
+      "meshes": 35,
+      "triangles": 9260,
       "fps": [
         30,
         60,
@@ -603,8 +603,8 @@
       ]
     },
     "m03": {
-      "meshes": 37,
-      "triangles": 9336,
+      "meshes": 35,
+      "triangles": 8704,
       "fps": [
         30,
         60,
@@ -627,8 +627,8 @@
       ]
     },
     "m04": {
-      "meshes": 77,
-      "triangles": 14704,
+      "meshes": 78,
+      "triangles": 14204,
       "fps": [
         30,
         60,
@@ -651,8 +651,8 @@
       ]
     },
     "s06": {
-      "meshes": 120,
-      "triangles": 14972,
+      "meshes": 123,
+      "triangles": 15360,
       "fps": [
         30,
         60,
@@ -669,14 +669,14 @@
         "shield_retract",
         "skill",
         "ult",
-        "heavy",
         "light",
+        "heavy",
         "run"
       ]
     },
     "s07": {
-      "meshes": 137,
-      "triangles": 23488,
+      "meshes": 131,
+      "triangles": 22664,
       "fps": [
         30,
         60,
@@ -699,8 +699,8 @@
       ]
     },
     "s09": {
-      "meshes": 97,
-      "triangles": 14008,
+      "meshes": 95,
+      "triangles": 13400,
       "fps": [
         30,
         60,
@@ -723,8 +723,8 @@
       ]
     },
     "t01": {
-      "meshes": 88,
-      "triangles": 13128,
+      "meshes": 86,
+      "triangles": 12552,
       "fps": [
         30,
         60,
@@ -747,8 +747,8 @@
       ]
     },
     "t02": {
-      "meshes": 84,
-      "triangles": 15072,
+      "meshes": 82,
+      "triangles": 14420,
       "fps": [
         30,
         60,
@@ -771,8 +771,8 @@
       ]
     },
     "t03": {
-      "meshes": 82,
-      "triangles": 12984,
+      "meshes": 80,
+      "triangles": 12256,
       "fps": [
         30,
         60,
@@ -795,8 +795,8 @@
       ]
     },
     "t04": {
-      "meshes": 102,
-      "triangles": 14284,
+      "meshes": 100,
+      "triangles": 13640,
       "fps": [
         30,
         60,
@@ -820,7 +820,7 @@
     },
     "t05": {
       "meshes": 91,
-      "triangles": 14924,
+      "triangles": 14512,
       "fps": [
         30,
         60,
@@ -843,8 +843,8 @@
       ]
     },
     "t12": {
-      "meshes": 74,
-      "triangles": 12540,
+      "meshes": 72,
+      "triangles": 11800,
       "fps": [
         30,
         60,
@@ -867,8 +867,8 @@
       ]
     },
     "m02": {
-      "meshes": 96,
-      "triangles": 14812,
+      "meshes": 94,
+      "triangles": 14256,
       "fps": [
         30,
         60,
@@ -891,8 +891,8 @@
       ]
     },
     "m06": {
-      "meshes": 100,
-      "triangles": 14764,
+      "meshes": 98,
+      "triangles": 14080,
       "fps": [
         30,
         60,

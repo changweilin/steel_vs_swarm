@@ -95,6 +95,7 @@
     "review:mechs": "node tools/mech_prompt_review.mjs",
     "author:mechs": "node tools/mech_authoring/build.mjs",
     "audit:reference-mechs": "node tools/audit_reference_mechs.mjs",
+    "audit:anatomical-motion": "node tools/audit_anatomical_motion.mjs",
     "author:morphers": "node tools/mech_authoring/build.mjs --contract morphers.json",
     "audit:reference-morph": "node tools/audit_reference_morph.mjs",
     "author:combat": "node tools/mech_authoring/build.mjs --combat --mcp --no-render && node tools/mech_authoring/build.mjs --contract morphers.json --combat --mcp --no-render",

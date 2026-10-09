@@ -1,7 +1,7 @@
 {
   "m01": {
-    "blend": "416f23a4f88d1b195178ffff348a7c915b0bb83ee9993485d1e23cdbb2db44a9",
-    "bones": 32,
+    "blend": "488d97d685a73d7cc914308e1b9fc6fe1aad46eed3575d44bec1fa86f155af2f",
+    "bones": 33,
     "clips": [
       "idle",
       "run",
@@ -85,7 +85,7 @@
     "flight_belly": "pass"
   },
   "s03": {
-    "blend": "c69acbb828911613d4cb94adc4ce9c447861a69149d142c6d0a466fe5b750a7b",
+    "blend": "f6d02ed9c21749297176fc575d360c285148a01737630505ce1f5ec503044b97",
     "bones": 50,
     "clips": [
       "idle",
@@ -170,7 +170,7 @@
     "flight_belly": "pass"
   },
   "s10": {
-    "blend": "6228c8e60ae33dc53ddb724e492f78cbbb404b00ec5bca606e9d59cf674fc6ac",
+    "blend": "1e049786c6b54021d8a41b420b33cd018e16eacdfdf092e9ffe3e5df4f87bfd3",
     "bones": 58,
     "clips": [
       "idle",
@@ -256,8 +256,8 @@
     "flight_belly": "pass"
   },
   "t06": {
-    "blend": "08921031afc4c96efec0cac7875a1f515387000a008028ddd5bb1a266fddca6e",
-    "bones": 31,
+    "blend": "fca368f9e3c437268fdc265da8b679c490513d46ed65c81b06268a7dba063bcb",
+    "bones": 40,
     "clips": [
       "idle",
       "run",
@@ -341,8 +341,8 @@
     "flight_belly": "pass"
   },
   "t11": {
-    "blend": "49fec55e4037bd0e75a034f4ff48c20ac45494f52941c24109ad4dd5e8c2b8ed",
-    "bones": 101,
+    "blend": "5ad57a27af76932609ae1bdfac0409b241a3bd0d6bdbde8aaa1c4f0b5497de71",
+    "bones": 102,
     "clips": [
       "idle",
       "run",
@@ -427,8 +427,8 @@
     "flight_belly": "pass"
   },
   "m05": {
-    "blend": "450e672c1d79ee5d51cb6aed641a176fabe83809a85816f8aca24d1795ca17eb",
-    "bones": 65,
+    "blend": "0090ea6c1fffa7427fabc2fd712ac779548f0ae418e7e98b2a1e59afc46a0528",
+    "bones": 66,
     "clips": [
       "idle",
       "run",
@@ -463,7 +463,7 @@
     "flight_belly": "exposed_patagium_struts"
   },
   "m07": {
-    "blend": "824a6d39603bd159e92d21dd55e137b722e8020bd6d467e0bf3f796101a6b1ef",
+    "blend": "8b13b007a6062dd829222c02c705832f7394eed60656293e5628f5714c6aa4d7",
     "bones": 88,
     "clips": [
       "idle",
@@ -572,7 +572,7 @@
     "flight_belly": "pass"
   },
   "m08": {
-    "blend": "22fc17d70a3eeeeb9a7222920844c68d4a1b94ee689d3ecc1c27cc2bcd1e324f",
+    "blend": "fb881bf95e57ccc5da7a4698b6e5c57f5e1e11740b4d506d36b3fb85d9a3a7d5",
     "bones": 50,
     "clips": [
       "idle",
