@@ -6,9 +6,9 @@
     "meshes": 79,
     "joints": 33,
     "source": {
-      "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
-      "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
-      "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
+      "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+      "catalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea",
       "image": "d0dee31f053ea6bcf1dd33184159b5c7937f2f56ab551d65a83fc8b2de159fc0"
     }
   },
@@ -24,9 +24,9 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "64ae5692251225d5b2122e0ee7ffb45c90048a1f92cab229ce7265ff62e68718",
-    "blend": "0dad001b6b627050c9fa847b3bc6fadd7575b0401c142a4ea08e50e8badc9f8d",
-    "glb": "29d48b0280c5a326bf888b684ec15503aceb1d6c7d15579861d83e65878b2b4b"
+    "runtime": "94dc1ab3019d2696be9b800052fd9581f80b163d33108016fb9c75b43ebae54e",
+    "blend": "5a9e3a67130405cf775a4e16d8c316acded4646753341d366ab9af8eb1e70673",
+    "glb": "fc8c574333ba201a17bf0967e6a98966c633cc6de1bdac4df3e5804f12155b63"
   },
   "gates": {
     "structure": "pass",
@@ -36,6 +36,63 @@
     "export": "pending_independent_load",
     "destination": "pending_browser_review",
     "user_signoff": "pending_user_review",
-    "editable_source": "pass"
+    "editable_source": "pass",
+    "motion": "pass_structural"
+  },
+  "motionSource": {
+    "samples": "afb2c7226a338959c8623577a5953c0d8a31c5c9989b80ba5a025d95c1276bcc",
+    "inputBlend": "out/anatomical_motion/before/t05-3eef441a8510.blend",
+    "clips": [
+      "idle",
+      "run",
+      "light",
+      "heavy"
+    ],
+    "nodes": [
+      "hips",
+      "waist",
+      "chest",
+      "cervical_0",
+      "cervical_1",
+      "cervical_2",
+      "cervical_3",
+      "head",
+      "hip_r",
+      "knee_r",
+      "ankle_r",
+      "toe_r",
+      "shoulder_r",
+      "elbow_r",
+      "wrist_r",
+      "hip_l",
+      "knee_l",
+      "ankle_l",
+      "toe_l",
+      "shoulder_l",
+      "elbow_l",
+      "wrist_l",
+      "gun",
+      "gun_recoil",
+      "light_muzzle",
+      "heavy",
+      "charge_hinge",
+      "heavy_muzzle",
+      "cast_dish",
+      "emitter_l",
+      "emitter_r",
+      "barrier",
+      "tail_0"
+    ],
+    "drivers": {
+      "locomotion.js": "a07cfe35d8521913187dad322307a185235e7b79a63bf792c35b8b0ad3109596",
+      "anatomicalPose.js": "65d2ed330104b88190804fd61f5146acf70765678cfea2d704d009e4a341cda0",
+      "forge/referenceAsset.js": "aa587f0c5f7293df36e0bc667bd0931e25f17df911156f5ea64b907f32092dd4",
+      "gaitcurve.js": "357bf0c0bab9d108cdeed6531a77adda3f29bff723e2f3a0d924270bc516b895",
+      "unitMotion.js": "a404f67ef665ab4ffd18479de99a40dfe54ef55c416f2c8d6cb8005c72a62f47"
+    },
+    "baker": "ccd04038d3378aea18129aace2dfbbb5c533cadb3eefcf6370ebfbb81f2ef112",
+    "fps": 60,
+    "encoder": "e8cc689c554a9557827e4528f417d68f85d77308f16aa783754b3d4c94854213",
+    "restorer": "7581a939e9940060deea71ad48457955ce77fe0060fc946478bf993de2111d0f"
   }
 }

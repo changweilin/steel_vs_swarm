@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mat, jetFlame, sph } from '../geo3d.js';
 import { attachCombatAsset } from './combatAsset.js';
+import { anatomicalRig } from '../anatomicalPose.js';
 
 /** Blender batches static parts per joint/material; each unit owns its disposable GPU resources. */
 export function buildReferenceAsset(asset, spec) {
@@ -178,5 +179,6 @@ export function buildReferenceAsset(asset, spec) {
   joints.renderOrder = 20;
   group.add(joints);
   group.userData.rig = rig;
+  rig.anatomical = anatomicalRig(group, rig, nodes);
   return { group, rig, joints: [joints], weapons: W, spin: group.userData.spin, nodes };
 }

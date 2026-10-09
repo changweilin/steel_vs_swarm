@@ -6,6 +6,19 @@
 
 ---
 
+## Articulated locomotion and firing differences
+
+| Previous presentation | Required motion | Constraints |
+| --- | --- | --- |
+| Avian shoulder flapping with small, mostly planar elbow/wrist sweeps; the sensor inherited carrier rotations. | Humerus strokes, ulna recovery folds and delayed manus flex/twist share one wingbeat. The body responds to the stroke while the connected cervical chain compensates the forward gaze. | Preserve feather and membrane ownership, species-specific wing geometry and existing attack-glide behavior. Do not detach or translate a head to fake stabilization. The head-led dragon keeps its continuous cervical/body/tail wave. |
+| Blender running clips used generic sinusoidal limb samples, while the game used anatomical stance/recovery curves. | Blender locomotion clips are sampled from the shipped solver: forelimb humerus/ulna/manus and hindlimb femur/tibia/metatarsus retain distinct loading, push-off and recovery phases. | Human plantigrade, equine unguligrade, canine digitigrade, primate support, grasping claws, insect tripod and cephalopod waves retain their own topology. A loaded wrist may brace briefly; the entire limb must not remain a rigid rod. |
+| Aiming raised both arms through one forward-facing torso pose; idle gaze scanning continued during firing. | A held weapon selects an oblique stance from its actual holding hand. Pelvis, lumbar and thoracic regions share the turn; the shoulder/elbow bring the grip inward and the neck/head maintain forward gaze. Opposite hands reverse the turn, and long axial weapons and bows use their own brace angles. | Derive holders from the existing weapon hierarchy. A mounted mouth, forehead, shoulder, back, tail or other body weapon must not trigger a hand-held stance. Preserve muzzle direction, grip attachment, recoil timing, bow/string contact and the werewolf's open-claw pose. |
+| Turning tails received a common turn offset, and an idle tail had almost no lateral activity. | Successive vertebrae carry delayed lateral and vertical waves through motion and idle, preserving the authored tail curl and species stiffness. | Tail pivots and overlapping sheaths remain parented; never rotate the whole tail as a single replacement. Bird tail fans remain short control surfaces, and aquatic tails keep their dorsoventral propulsion. |
+
+The motion owner remains [locomotion.js](../public/js/locomotion.js), with final connected-joint overlays in [anatomicalPose.js](../public/js/anatomicalPose.js). The [runtime sampler](../tools/mech_authoring/author_motion.mjs) and [Blender baker](../tools/mech_authoring/bake_motion.py) transfer actual local joint transforms to the existing editable scenes and GLB exports. Re-sample and re-bake after changing a driver; do not patch generated animation tracks as another motion owner. Before/after samples and current measurements live under [anatomical_motion](../out/anatomical_motion/). Preserve axial/limb pivot translations and review complete cycles, firing-slot switches and reversible morphs for visible gaps and equipment clearance.
+
+Motion references: [coupled avian elbow/wrist kinematics](https://pmc.ncbi.nlm.nih.gov/articles/PMC5582118/), [flight head stabilization](https://pmc.ncbi.nlm.nih.gov/articles/PMC5717024/) and [Marine Corps oblique pistol stance](https://www.marines.mil/portals/1/Publications/MCRP%208-10B.3.pdf). These support the motion principles; mechanical amplitudes and mirrored weapon poses are stylized inferences from each model's existing anatomy.
+
 ## Fantasy anatomy and motion overrides
 
 These user-directed overrides supersede conflicting rifle, upright-wolf and coarse-dragon descriptions in the original illustrations. Source images remain reference evidence; generated validation reports own technical results, and visual acceptance remains a separate user decision.

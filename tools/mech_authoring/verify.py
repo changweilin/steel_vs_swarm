@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import bpy
-from mathutils import Vector
+from mathutils import Quaternion, Vector
 from mathutils.bvhtree import BVHTree
 
 HERE = Path(__file__).resolve().parent
@@ -154,6 +154,7 @@ for id in selected:
     pose_samples = 0
     for clip in report['clips']:
         for joint in joints:
+            joint.animation_data.action = None
             for track in joint.animation_data.nla_tracks:
                 track.mute = True
                 if track.name == clip:
@@ -164,8 +165,13 @@ for id in selected:
             depsgraph = bpy.context.evaluated_depsgraph_get()
             evaluated = skeleton.evaluated_get(depsgraph)
             if id == 't05':
-                expected = .22 if clip == 'run' else 1.12
-                assert abs(bpy.data.objects['shoulder_l'].rotation_euler.z - expected) < 1e-4, 't05: editable clip loses wing posture'
+                wing=next(wing for wing in spec['rig']['groundWings'] if wing['w']=='shoulder_l')
+                expected=wing['run' if clip=='run' else 'fold'][0]
+                axis=Quaternion((1,0,0),math.pi/2)
+                q=axis.inverted() @ bpy.data.objects['shoulder_l'].rotation_euler.to_quaternion() @ axis
+                # Game XYZ yaw differs from Blender XYZ yaw after the up-axis conversion.
+                yaw=math.asin(max(-1,min(1,2*(q.x*q.z+q.w*q.y))))
+                assert abs(yaw-expected)<1e-4, 't05: editable clip loses wing posture'
             if id=='t10' and clip=='shield_deploy' and frame==31:
                 forward=bpy.data.objects['barrier'].matrix_world.to_quaternion() @ Vector((0,-1,0))
                 assert forward.y<-.95, 't10: deployed shield does not face forward'
@@ -212,7 +218,7 @@ for id in selected:
                         if other != axis:
                             assert abs(joint.location[index] - origin['xyz'.index(other)] * sign) < 1e-5, id + ': displaced pivot'
             if frame == 16:
-                verify_weapon_pose(spec,clip in ['light','heavy'])
+                verify_weapon_pose(spec,clip in ['light','heavy'],clip)
             pose_samples += 1
     for joint in joints:
         for track in joint.animation_data.nla_tracks:

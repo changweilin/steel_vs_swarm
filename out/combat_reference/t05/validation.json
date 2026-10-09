@@ -6,12 +6,12 @@
     "meshes": 100,
     "joints": 48,
     "source": {
-      "contract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
-      "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
-      "catalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97",
+      "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+      "catalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea",
       "image": "d0dee31f053ea6bcf1dd33184159b5c7937f2f56ab551d65a83fc8b2de159fc0",
       "combat": "e2982b57af135c577a74355159096288e7ccdc8b85e5cb741cf9b934fc0d7b89",
-      "intent": "4c76ab0362639fae1609e7c0c7850ee7f995b556ddb089a7dc71689fafc56a99"
+      "intent": "8a20f54432767ac8fbe6edb4539ce343803c981fa23399713dfcfb19487ffa1f"
     }
   },
   "clips": [
@@ -28,8 +28,8 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "d9948f2b82979c1e82bc256d99b12f95cb5f9e4166ec69bdb69255afcbb01ece",
-    "blend": "3e70f05f38a30603052037ef4ec402070884f05517a5877cabffddcf0da2c084",
+    "runtime": "4149c268af948da066f864540583214c018321774a1751481147d856dc571eb8",
+    "blend": "1524feebf4db396d89779c303b4c9c395ba413fff511fe0be063dffdbe468f42",
     "glb": "9dba6d913381494b438e3748258ec7b16469d719c2d6635e7bbcb26c8cff7a1a"
   },
   "gates": {

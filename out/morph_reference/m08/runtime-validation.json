@@ -1,15 +1,15 @@
 {
   "source": {
-    "contract": "fa78892af40ad0217318af92bc8898d2e8a594c23f10c2d81ca9a91919661c30",
-    "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
-    "catalog": "d4b2992d65cb32e056766118edf1a3dadfb55cfda52db2b35f01505224c5117a",
+    "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
+    "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+    "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
     "image": "bf80c8b004668068ad3d1b4cbf779072aba0a7f68d2e3cc00fc68b1857be0e20",
-    "sharedContract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
-    "sharedCatalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97"
+    "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+    "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
   },
   "hashes": {
-    "runtime": "fac36941747d85d7027036d946dedde67de32e5322fd9b20f51741895aa1afd0",
-    "glb": "7c554899ee5b7751ffdf552f25220144c8e3e19323ec51a2a02847bdafadf7ae"
+    "runtime": "6087eee5be35b9355d7419c6c60d136583c65690af17821fec1f1179d9ba19bc",
+    "glb": "e967f678807c6442d704a17e7571e489ec99536c0bd6be4337f8ff5e6fc3eb24"
   },
   "measurements": {
     "trianglesPerVisibleForm": 16612,
@@ -52,23 +52,23 @@
       }
     ],
     "clips": [
-      "flight_idle",
+      "skill",
+      "ult",
       "shield_deploy",
       "shield_retract",
+      "to_flight",
+      "to_ground",
+      "flight_skill",
+      "flight_ult",
       "flight_shield_deploy",
       "flight_shield_retract",
       "idle",
-      "to_flight",
-      "to_ground",
-      "skill",
-      "ult",
-      "flight_skill",
-      "flight_ult",
+      "run",
       "light",
-      "flight_light",
       "heavy",
-      "flight_heavy",
-      "run"
+      "flight_idle",
+      "flight_light",
+      "flight_heavy"
     ]
   },
   "gates": {

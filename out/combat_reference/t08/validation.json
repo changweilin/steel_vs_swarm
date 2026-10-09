@@ -8,10 +8,10 @@
     "source": {
       "contract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
       "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
-      "catalog": "bc63d14dd236bc4cb59c289e7c6420f9ef4056ed29c63e2cf0d722d302679199",
+      "catalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea",
       "image": "f046001a41666408caabe83923bcfd804416e0fd031db2e415ca2ca327014fa4",
       "combat": "e2982b57af135c577a74355159096288e7ccdc8b85e5cb741cf9b934fc0d7b89",
-      "intent": "2e50daa0f2a9abddeae934d33384d2eea62eecec07a466ae51844c1c57852993"
+      "intent": "8a20f54432767ac8fbe6edb4539ce343803c981fa23399713dfcfb19487ffa1f"
     }
   },
   "clips": [
@@ -28,8 +28,8 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "fdb76e10c16aaf7e0b9fb6f3137594d939671a95adfdf9c50a807b4c8a82f064",
-    "blend": "09bb78cb9a14754e66bedc705160d66c70dd747dca0189dcd5531fa91a66e126",
+    "runtime": "2b9270fd2d9ce4bd78074b14a3ed815a3b8a1fc21ad964246a4dd9591d429980",
+    "blend": "e28daaef21f97492aad195b052493fcea32c04a841e1f62006bd91337c7f21d1",
     "glb": "065c07b68ffa9f548cad2e1307291edb4ba50e10fd10964b7d8857dcf59aeb80"
   },
   "gates": {
@@ -45,6 +45,6 @@
   "reviewEvidence": {
     "runtime": "../runtime-validation.json",
     "source": "../source-validation.json",
-    "attachments": "../actions-1.png"
+    "attachments": "../actions-3.png"
   }
 }

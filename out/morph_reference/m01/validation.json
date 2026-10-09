@@ -6,12 +6,12 @@
     "meshes": 103,
     "joints": 33,
     "source": {
-      "contract": "fa78892af40ad0217318af92bc8898d2e8a594c23f10c2d81ca9a91919661c30",
-      "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
-      "catalog": "d4b2992d65cb32e056766118edf1a3dadfb55cfda52db2b35f01505224c5117a",
+      "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
+      "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+      "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
       "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
-      "sharedContract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
-      "sharedCatalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97"
+      "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+      "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
     }
   },
   "clips": [
@@ -35,9 +35,9 @@
   ],
   "renders": [],
   "hashes": {
-    "runtime": "767f1545f929dd505ae75094cf35e7f445d8274b62c359f8a4b4b9323fe0c9c8",
-    "blend": "488d97d685a73d7cc914308e1b9fc6fe1aad46eed3575d44bec1fa86f155af2f",
-    "glb": "5746b7be5e71ce9d32b9114ea611a67cae968dba3cf2d57f1b858e8c5e18cd3d"
+    "runtime": "74f3ef897e58819f998be871bad99602d47ffe65d2679f632edf53e1638ff5ef",
+    "blend": "a12e634a1d4a44bb127b996d36bc1e891098fddcec0e7e38bd355ab89592bb4a",
+    "glb": "ef55430beb493e3204d2ace09c8764682fba569204887eda4fa72e582ddddb55"
   },
   "gates": {
     "structure": "pass",
@@ -48,7 +48,67 @@
     "destination": "pass",
     "user_signoff": "pending_user_review",
     "editable_source": "pass",
+    "motion": "pass_structural",
     "flight_belly": "pass"
+  },
+  "motionSource": {
+    "samples": "4b89187070f9135ad57f872a6bb580482ba132ebbe4e5565f47efbacea562faa",
+    "inputBlend": "out/anatomical_motion/before/m01-622fcc7350cc.blend",
+    "clips": [
+      "idle",
+      "run",
+      "light",
+      "heavy",
+      "flight_idle",
+      "flight_light",
+      "flight_heavy"
+    ],
+    "nodes": [
+      "tilt",
+      "hips",
+      "waist",
+      "chest",
+      "neck",
+      "head",
+      "hip_l",
+      "knee_l",
+      "ankle_l",
+      "shoulder_l",
+      "elbow_l",
+      "wrist_l",
+      "wing_l",
+      "bay_l",
+      "hip_r",
+      "knee_r",
+      "ankle_r",
+      "shoulder_r",
+      "elbow_r",
+      "wrist_r",
+      "wing_r",
+      "bay_r",
+      "gun",
+      "gun_recoil",
+      "gun_spin",
+      "light_muzzle",
+      "heavy",
+      "charge_hinge",
+      "heavy_muzzle",
+      "cast_dish",
+      "emitter_l",
+      "emitter_r",
+      "barrier"
+    ],
+    "drivers": {
+      "locomotion.js": "a07cfe35d8521913187dad322307a185235e7b79a63bf792c35b8b0ad3109596",
+      "anatomicalPose.js": "65d2ed330104b88190804fd61f5146acf70765678cfea2d704d009e4a341cda0",
+      "forge/referenceAsset.js": "aa587f0c5f7293df36e0bc667bd0931e25f17df911156f5ea64b907f32092dd4",
+      "gaitcurve.js": "357bf0c0bab9d108cdeed6531a77adda3f29bff723e2f3a0d924270bc516b895",
+      "unitMotion.js": "a404f67ef665ab4ffd18479de99a40dfe54ef55c416f2c8d6cb8005c72a62f47"
+    },
+    "baker": "6b8e4f014cb52dc27679ad6a4d45fe9679a623b4818fa2d64fd31690ae127b8f",
+    "fps": 60,
+    "encoder": "e8cc689c554a9557827e4528f417d68f85d77308f16aa783754b3d4c94854213",
+    "restorer": "7581a939e9940060deea71ad48457955ce77fe0060fc946478bf993de2111d0f"
   },
   "validation_refs": {
     "runtime": "runtime-validation.json",

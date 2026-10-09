@@ -159,6 +159,20 @@ try {
           if(axis.startsWith('-'))local.negate();
           const direction=local.applyQuaternion(weapon.ref.getWorldQuaternion(new THREE.Quaternion()));
           if(direction.z<.95)throw new Error(`${id}/${form}/${slot}: active firing axis ${direction.z}`);
+          const pose=unit.userData.rig.anatomical,shot=pose?.shots[slot];
+          if(shot?.hand){
+            const forearm=shot.hand.getWorldPosition(new THREE.Vector3())
+              .sub(shot.elbow.getWorldPosition(new THREE.Vector3())).normalize();
+            if(forearm.dot(direction)<.90)throw new Error(`${id}/${form}/${slot}: barrel diverges from the forearm`);
+            const target=pose.group.getWorldQuaternion(new THREE.Quaternion()).multiply(pose.gaze);
+            if(target.angleTo(pose.head.getWorldQuaternion(new THREE.Quaternion()))>1e-4)
+              throw new Error(`${id}/${form}/${slot}: firing head turns away from the target`);
+          }
+          if(pose?.bird){
+            const target=pose.group.getWorldQuaternion(new THREE.Quaternion()).multiply(pose.gaze);
+            if(target.angleTo(pose.head.getWorldQuaternion(new THREE.Quaternion()))>1e-4)
+              throw new Error(`${id}/${form}/${slot}: wingbeat rotates the head`);
+          }
           activeAxes[id].push({form,slot,forward:direction.z});
         }
       }

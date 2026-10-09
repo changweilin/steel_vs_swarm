@@ -1,15 +1,15 @@
 {
   "source": {
-    "contract": "fa78892af40ad0217318af92bc8898d2e8a594c23f10c2d81ca9a91919661c30",
-    "builder": "0ff5f1dff1a03c0dcbe3a35687cbdc756f777dd86d82aa927483b611efc03fba",
-    "catalog": "d4b2992d65cb32e056766118edf1a3dadfb55cfda52db2b35f01505224c5117a",
+    "contract": "bd51d1422ebbe21fdd384ea33e0c8142c711e4fa6efbbbff035e594986ad145b",
+    "builder": "46b3893cae59e1f3c7b110698c33f4ba54b4a2c11d5d4c7b9ff8a3b8abd2303d",
+    "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
     "image": "e6e50137bce23beafa733363c884c563ba4716b6aa7e0b47a315740880dadc5e",
-    "sharedContract": "271e674c31f223d72732c38e1658049dabd8bf178394a56e9c52dac68a6ef1c2",
-    "sharedCatalog": "790d17949d2e6cf3fedbdf2f1d31ff18e61e12b56948b0994bcb1e13c7924c97"
+    "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
+    "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
   },
   "hashes": {
-    "runtime": "767f1545f929dd505ae75094cf35e7f445d8274b62c359f8a4b4b9323fe0c9c8",
-    "glb": "5746b7be5e71ce9d32b9114ea611a67cae968dba3cf2d57f1b858e8c5e18cd3d"
+    "runtime": "74f3ef897e58819f998be871bad99602d47ffe65d2679f632edf53e1638ff5ef",
+    "glb": "ef55430beb493e3204d2ace09c8764682fba569204887eda4fa72e582ddddb55"
   },
   "measurements": {
     "trianglesPerVisibleForm": 11812,
@@ -23,7 +23,7 @@
       "gOnly": 0,
       "aOnly": 0
     },
-    "maxSeamError": 8.881784197001252e-16,
+    "maxSeamError": 0,
     "samples": [
       0.05,
       0.25,
@@ -52,21 +52,21 @@
       }
     ],
     "clips": [
-      "flight_idle",
+      "skill",
+      "ult",
       "shield_deploy",
       "shield_retract",
+      "to_flight",
+      "to_ground",
+      "flight_skill",
+      "flight_ult",
       "flight_shield_deploy",
       "flight_shield_retract",
       "idle",
-      "to_flight",
-      "to_ground",
       "run",
-      "skill",
-      "ult",
-      "flight_skill",
-      "flight_ult",
       "light",
       "heavy",
+      "flight_idle",
       "flight_light",
       "flight_heavy"
     ]

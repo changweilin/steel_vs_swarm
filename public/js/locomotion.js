@@ -14,6 +14,7 @@ import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './mo
 import { animWeights } from './animweights.js';
 import { stepUnitMotion, stepVehicleMotion, stepReferenceMotion, poseReferenceShield, resetReferenceShieldPose } from './unitMotion.js';
 import { stepAuthoredCombat, clearMorphCombatShield } from './forge/combatAsset.js';
+import { resetAnatomicalPose, stepAnatomicalPose } from './anatomicalPose.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -51,6 +52,10 @@ function phaseOf(id) {
 export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   if (dt < 0.004) return;   // hitstop / 極小步:骨架凍結
   const mesh = ent.mesh;
+  if (mesh.userData.morph) {
+    resetAnatomicalPose(mesh.userData.morph.ground);
+    resetAnatomicalPose(mesh.userData.morph.air);
+  } else resetAnatomicalPose(mesh.userData.rig);
   // 變形者:先決定「現在是哪一棵樹」再取 rig(兩棵樹並存,見 morphSwap)
   if (mesh.userData.morph) morphSwap(ent, mesh, dt);
   const rig = mesh.userData.rig;
@@ -147,10 +152,22 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   // 開火槍軸校正是最後的 post-pass：跑步扭腰、飛行壓坡、跳躍與變形姿態都已結算後，
   // 再把本次發射槽的每根槍軸鎖回機體 +z。否則任一個後續父骨驅動都會把槍口帶偏。
   if (morph?.act) {
+    const blend = morphEase(morph.m);
+    stepAnatomicalPose(morph.ground, 1 - blend);
+    morph.plan.g.pairs.forEach((pair, i) => morph.plan.a.pairs[i].n.quaternion.copy(pair.n.quaternion));
+    stepAnatomicalPose(morph.air, blend);
+    // Overlay weights follow transformation progress instead of jumping at the active-rig threshold.
+    morph.plan.a.pairs.forEach((pair, i) => morph.plan.g.pairs[i].n.quaternion.copy(pair.n.quaternion));
     // Both rigid trees must receive the same wrist correction while their matched poses overlap.
     stepAimForward(morph.ground, rig);
     stepAimForward(morph.air, rig);
-  } else stepAimForward(rig);
+    const source = rig === morph.ground ? morph.plan.g : morph.plan.a;
+    const target = rig === morph.ground ? morph.plan.a : morph.plan.g;
+    source.pairs.forEach((pair, i) => target.pairs[i].n.quaternion.copy(pair.n.quaternion));
+  } else {
+    stepAnatomicalPose(rig);
+    stepAimForward(rig);
+  }
   // The drawing hand follows the final aimed bow, including the wrist correction.
   if (rig.archery) poseArchery(rig);
   if (morph) {
@@ -464,7 +481,8 @@ function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0, aim = null, curl
   segs.forEach((t, i) => {
     const d = i * 0.6;                       // 逐節相位延遲(由根往梢傳的波)
     const lag = 1 + i * 0.35;                // 尾梢甩幅大於尾根
-    t.rotation.y = (L.tail * lag * (1 - ap) + Math.sin(L.ph - d) * 0.1 * a) * stiffness;
+    t.rotation.y = (L.tail * lag * (1 - ap) + Math.sin(L.ph - d) * 0.1 * a
+      + idle * Math.sin(now * 1.1 - d) * .045) * stiffness;
     t.rotation.x = (i === 0 ? base : 0)
       + (curl ? (curl.rot0 + i * curl.rotD) * (1 - ap) : 0)
       + (ap ? ap * (aim.rot0 + i * aim.rotD) : 0)
@@ -615,6 +633,7 @@ function morphSide(S, t, k, a) {
 }
 
 function poseBipedAim(rig, idle) {
+  if (rig.anatomical && !rig.anatomical.shots[rig._aimSlot || 'light']) return 0;
   const aimF = Math.min(1, (rig.aimWhileIdle === false ? 0 : idle) + (rig._fireAim || 0));
   const ap = rig.aimPose;
   if (!ap) return aimF;
@@ -1006,11 +1025,21 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
       // 外翼多收一段 = 半收翼的俯衝輪廓。猛禽撲擊時翅膀是張開定住的,不是還在拍。
       L.flap = (L.flap || 0) + dt * (3.2 + k * 9) * (1 - 0.8 * atk);
       const amp = (0.24 + k * 0.34 + L.flr * 0.5) * (1 - 0.85 * atk);
+      if (!rig.axialWave?.stableHead) {
+        rig.tilt.position.y += Math.cos(L.flap + L.ph) * amp * .06;
+        rig.tilt.rotation.x += Math.sin(L.flap + L.ph - .4) * amp * .035;
+      }
       for (const { w, outer, hand, sgn, dihedral = 0, elbowSweep = .14, wristSweep = .10 } of rig.wings) {
-        w.rotation.z = sgn * (dihedral + Math.sin(L.flap + L.ph) * amp - 0.10 * atk);
+        const phase = L.flap + L.ph;
+        const recovery = (1 + Math.cos(phase)) * .5;
+        w.rotation.z = sgn * (dihedral + Math.sin(phase) * amp - 0.10 * atk);
+        w.rotation.x = Math.cos(phase) * amp * .18;
         if (hand) {
-          outer.rotation.y = sgn * (elbowSweep + Math.sin(L.flap + L.ph - .7) * amp * .55 + .25 * atk);
-          hand.rotation.y = sgn * (wristSweep + Math.sin(L.flap + L.ph - .95) * amp * .4 + .18 * atk);
+          outer.rotation.y = sgn * (elbowSweep + recovery * amp * .65 + .25 * atk);
+          outer.rotation.z = sgn * Math.sin(phase - .35) * amp * .25;
+          hand.rotation.y = sgn * (wristSweep + (1 + Math.cos(phase - .3)) * .5 * amp * .5 + .18 * atk);
+          hand.rotation.z = sgn * Math.sin(phase - .7) * amp * .18;
+          hand.rotation.x = Math.cos(phase - .5) * amp * .3;
         } else {
           outer.rotation.z = sgn * (Math.sin(L.flap + L.ph - 0.7) * amp * 1.5 - 0.18 * atk);
         }

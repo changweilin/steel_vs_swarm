@@ -859,6 +859,7 @@ def light_weapon(a, length):
 
 
 def heavy_weapon(a):
+    positions = {name: at for name, _, at in a.spec['joints']}
     p, r = a.p, a.spec['recipe']
     if r == 'bastion':
         a.disk('Right revolver six chamber drum', 'heavy', .54, .6, (0, 0, .2), 'shade')

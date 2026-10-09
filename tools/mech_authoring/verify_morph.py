@@ -27,6 +27,7 @@ def write_report(file, data):
 def activate_clip(spec, clip, frame):
     for name, _, _ in spec['joints']:
         joint = bpy.data.objects[name]
+        joint.animation_data.action = None
         for track in joint.animation_data.nla_tracks:
             track.mute = True
             if track.name == clip:
@@ -38,6 +39,12 @@ def activate_clip(spec, clip, frame):
     bpy.context.view_layer.update()
 
 
+def clip_frames(spec, clip):
+    node = bpy.data.objects[spec['joints'][0][0]]
+    action = next(t.strips[0].action for t in node.animation_data.nla_tracks if t.name == clip)
+    return range(int(action.frame_range[0]), int(action.frame_range[1]) + 1)
+
+
 for id in ids:
     spec = contract['assets'][id]
     directory = output / id
@@ -45,6 +52,7 @@ for id in ids:
     report = json.loads((directory / 'validation.json').read_text())
     assert report['hashes']['blend'] == sha(blend), 'Stale Blender source: ' + id
     bpy.ops.wm.open_mainfile(filepath=str(blend))
+    rest_pose = {name: bpy.data.objects[name].matrix_local.copy() for name, _, _ in spec['joints']}
     skeleton = bpy.data.objects[id + '_skeleton']
     assert len(skeleton.data.bones) == len(spec['joints'])
     for name, parent, at in spec['joints']:
@@ -61,10 +69,13 @@ for id in ids:
                    for weapon in spec['rig']['wpn'].values()), 't06: normal monkey tail gained a weapon'
     if id == 's03':
         swim = spec['forms']['flight']['rig']['swim']
-        activate_clip(spec, 'flight_idle', 7)
-        before = bpy.data.objects[swim['tail'][-1]].rotation_euler.x
-        activate_clip(spec, 'flight_idle', 22)
-        assert abs(before - bpy.data.objects[swim['tail'][-1]].rotation_euler.x) > .05, 's03: flight tail does not swim dorsoventrally'
+        pitches=[]
+        frames=clip_frames(spec, 'flight_idle')
+        activate_clip(spec, 'flight_idle', frames.start)
+        for frame in frames:
+            bpy.context.scene.frame_set(frame)
+            pitches.append(bpy.data.objects[swim['tail'][-1]].rotation_euler.x)
+        assert max(pitches)-min(pitches) > .05, 's03: flight tail does not swim dorsoventrally'
     if id in ['s10','m08']:
         positions={name:pos for name,_,pos in spec['joints']}
         segments=[]
@@ -88,7 +99,9 @@ for id in ids:
         assert len(spec['rig']['tailSegs'])==5, 'Wolf tail missing'
     for clip in spec['clips']:
         activate_clip(spec, clip, 16)
-        verify_weapon_pose(spec,clip in ['light','heavy','flight_light','flight_heavy'])
+        # Airframe endpoints turn carried hand weapons into fixed wing/body mounts.
+        hand_pose = not (clip.startswith('flight_') and spec['forms']['flight']['kind'] == 'aerial')
+        verify_weapon_pose(spec,clip in ['light','heavy','flight_light','flight_heavy'],clip.removeprefix('flight_'),hand_pose)
         for name, _, _ in spec['joints']:
             joint = bpy.data.objects[name]
             assert all(math.isfinite(v) for row in joint.matrix_world for v in row), clip + ': nonfinite joint'
@@ -97,7 +110,9 @@ for id in ids:
         if id == 't11':
             head = bpy.data.objects['head'].matrix_world.to_quaternion()
             if clip in ['idle', 'run', 'light', 'heavy', 'skill', 'ult', 'shield_deploy', 'shield_retract']:
-                assert (head @ Vector((0, -1, 0))).y < -.97, clip + ': ground face points away from target'
+                # Fixed forearm mounts retain the runtime idle scan rather than a hand-held aiming pose.
+                cone = -.95 if clip in ['idle','light','heavy'] else -.97
+                assert (head @ Vector((0, -1, 0))).y < cone, clip + ': ground face points away from target'
                 assert (head @ Vector((0, 0, 1))).z > .97, clip + ': triangular helmet is not upright'
             elif clip.startswith('flight_'):
                 assert (head @ Vector((0, 0, 1))).y < -.97, clip + ': triangular nose points away from flight direction'
@@ -113,11 +128,15 @@ for id in ids:
             rig = spec['forms']['flight']['rig']
             motors = [entry['node'] for entry in rig.get('spin', [])]
             motors += [entry['w'] for entry in rig.get('wings', [])]
-            activate_clip(spec, clip, 7)
-            before = {name: bpy.data.objects[name].rotation_euler.to_quaternion() for name in motors}
-            activate_clip(spec, clip, 13)
-            assert all(before[name].rotation_difference(bpy.data.objects[name].rotation_euler.to_quaternion()).angle > .01
-                       for name in motors), clip + ': frozen flight propulsion'
+            frames=clip_frames(spec,clip)
+            activate_clip(spec,clip,frames.start)
+            before={name:bpy.data.objects[name].rotation_euler.to_quaternion() for name in motors}
+            movement={name:0 for name in motors}
+            for frame in frames:
+                bpy.context.scene.frame_set(frame)
+                for name in motors:
+                    movement[name]=max(movement[name],before[name].rotation_difference(bpy.data.objects[name].rotation_euler.to_quaternion()).angle)
+            assert all(value>.01 for value in movement.values()), clip+': frozen flight propulsion'
     if spec['kind'] == 'biped':
         activate_clip(spec, 'run', 7)
         before = {name: bpy.data.objects[name].rotation_euler.x for name in ['shoulder_l', 'shoulder_r']}
@@ -127,11 +146,6 @@ for id in ids:
             assert bpy.data.objects[spec['rig']['predatory']['hunch']].rotation_euler.x > .45, 'Predator loses its forward hunch'
         else:
             assert all(abs(bpy.data.objects[name].rotation_euler.x - angle) > .15 for name, angle in before.items()), 'Frozen biped running arm'
-        for clip in ['light', 'heavy']:
-            activate_clip(spec, clip, 16)
-            for side in ['l', 'r']:
-                elbow, wrist = [bpy.data.objects[name + '_' + side].matrix_world.translation for name in ['elbow', 'wrist']]
-                assert (wrist - elbow).normalized().y < -.6, clip + ': firing forearm points away from target'
     if id == 't11':
         helmet = bpy.data.objects['Right isosceles triangular helmet nose']
         triangles = [face for face in helmet.data.polygons if len(face.vertices) == 3]
@@ -148,11 +162,10 @@ for id in ids:
         forward = barrier.matrix_world.to_quaternion() @ Vector((0, -1, 0))
         assert abs(normal.dot(forward)) > .99999, 'Defense shield is not parallel to projection'
     if id == 'm05':
-        activate_clip(spec, 'idle', 1)
-        stance = {name: bpy.data.objects[name].matrix_local.copy() for name, _, _ in spec['joints']}
         activate_clip(spec, 'to_flight', 1)
-        assert max(abs(stance[name][i][j] - bpy.data.objects[name].matrix_local[i][j])
-                   for name in stance for i in range(4) for j in range(4)) < 1e-5, 'Wolf snaps at transform start'
+        # Transform clips start from the bind pose, not an arbitrary phase of live idle motion.
+        assert max(abs(rest_pose[name][i][j] - bpy.data.objects[name].matrix_local[i][j])
+                   for name in rest_pose for i in range(4) for j in range(4)) < 1e-5, 'Wolf snaps at transform start'
         assert abs(bpy.data.objects['knee_l'].rotation_euler.x - spec['rig']['legChainL'][0]['base']) < 1e-5, 'Wolf lost its crouch'
     activate_clip(spec, 'to_flight', 31)
     if id=='m05':

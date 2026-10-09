@@ -5,11 +5,11 @@
     "catalog": "e72c39bcfcef8b5641f30f7685f88c0c236ee2aea9696c18b23b6906a48e8879",
     "image": "3fea3aa49b0f380bfb3502675327b456dfd1a52f01f6a93708e0b79ba76cec2e",
     "sharedContract": "795e63bafeafcb653a848ed4a663e777dd55d75f957ad0b544c643894c3311a9",
-    "sharedCatalog": "bc63d14dd236bc4cb59c289e7c6420f9ef4056ed29c63e2cf0d722d302679199"
+    "sharedCatalog": "bb6d280022ee4b64b901568b74d88f464ed7874331337402b1d8219cf715adea"
   },
   "hashes": {
-    "runtime": "21ef12be82759bf7b667da55730f31651c1cb943eeefd77de26d77a5560ddea2",
-    "glb": "89ada2d2817f1b126540801a7de4fb8672dd283c83c27c70c31339803c747eef"
+    "runtime": "8fc53478049a580b69a5954eca5f5bb704a3adab084773dcca12b35c068377da",
+    "glb": "c0589bdd93f0cea68c9a061f9f7244200f98b86d1eb445919c65fb134a2ac840"
   },
   "measurements": {
     "trianglesPerVisibleForm": 16184,
@@ -52,23 +52,23 @@
       }
     ],
     "clips": [
-      "flight_idle",
+      "skill",
+      "ult",
       "shield_deploy",
       "shield_retract",
+      "to_flight",
+      "to_ground",
+      "flight_skill",
+      "flight_ult",
       "flight_shield_deploy",
       "flight_shield_retract",
       "idle",
-      "to_flight",
-      "to_ground",
       "run",
       "light",
       "heavy",
-      "skill",
-      "ult",
+      "flight_idle",
       "flight_light",
-      "flight_heavy",
-      "flight_skill",
-      "flight_ult"
+      "flight_heavy"
     ]
   },
   "gates": {

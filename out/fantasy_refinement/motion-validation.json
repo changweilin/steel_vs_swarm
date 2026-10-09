@@ -1,8 +1,8 @@
 {
   "identities": {
-    "m05": "89ada2d2817f1b126540801a7de4fb8672dd283c83c27c70c31339803c747eef",
-    "s06": "b7502d545811593a410cbc1531c7a3dee49441d1352fd32b804764d095f47090",
-    "t08": "74409214931e39824eae987cf7174a1fdd313a88c61efff771bb8653a7107956"
+    "m05": "c0589bdd93f0cea68c9a061f9f7244200f98b86d1eb445919c65fb134a2ac840",
+    "s06": "45c3c8ab60411c757c7b6aaa718736fe7703169195439aefae33076ad224e782",
+    "t08": "3431c5fa612de40862433c838d7a8d0864a2e61db6f909bee608df8b853ba7d4"
   },
   "measurements": {
     "runtime": {
@@ -29,19 +29,19 @@
       "s06": [
         {
           "fps": 30,
-          "handStringGap": 9.192921513844874e-16,
+          "handStringGap": 9.742167503148516e-16,
           "headDrift": 0,
           "clawPitch": 0
         },
         {
           "fps": 60,
-          "handStringGap": 1.378047558473373e-15,
+          "handStringGap": 9.80915185026648e-16,
           "headDrift": 0,
           "clawPitch": 0
         },
         {
           "fps": 144,
-          "handStringGap": 1.0817777879298014e-15,
+          "handStringGap": 1.2539255187600815e-15,
           "headDrift": 0,
           "clawPitch": 0
         }
@@ -70,57 +70,57 @@
     "exports": {
       "m05": {
         "clips": [
-          "flight_idle",
+          "skill",
+          "ult",
           "shield_deploy",
           "shield_retract",
+          "to_flight",
+          "to_ground",
+          "flight_skill",
+          "flight_ult",
           "flight_shield_deploy",
           "flight_shield_retract",
           "idle",
-          "to_flight",
-          "to_ground",
           "run",
           "light",
           "heavy",
-          "skill",
-          "ult",
+          "flight_idle",
           "flight_light",
-          "flight_heavy",
-          "flight_skill",
-          "flight_ult"
+          "flight_heavy"
         ],
         "headDrift": 0,
         "handGap": 0,
-        "animatedTracks": 127
+        "animatedTracks": 792
       },
       "s06": {
         "clips": [
-          "idle",
-          "run",
-          "light",
-          "heavy",
           "skill",
           "ult",
-          "shield_deploy",
-          "shield_retract"
-        ],
-        "headDrift": 0,
-        "handGap": 0.009326332086061751,
-        "animatedTracks": 306
-      },
-      "t08": {
-        "clips": [
           "shield_deploy",
           "shield_retract",
-          "skill",
-          "ult",
           "idle",
           "run",
           "light",
           "heavy"
         ],
         "headDrift": 0,
+        "handGap": 0.00003864296600382464,
+        "animatedTracks": 306
+      },
+      "t08": {
+        "clips": [
+          "skill",
+          "ult",
+          "shield_deploy",
+          "shield_retract",
+          "idle",
+          "run",
+          "light",
+          "heavy"
+        ],
+        "headDrift": 4.440892098500626e-16,
         "handGap": 0,
-        "animatedTracks": 59
+        "animatedTracks": 366
       }
     }
   }

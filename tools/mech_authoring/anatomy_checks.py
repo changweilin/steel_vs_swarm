@@ -38,19 +38,22 @@ def ancestor_chain(obj):
         yield obj
 
 
-def verify_weapon_pose(spec, shooting):
+def verify_weapon_pose(spec, shooting, slot=None, hand_pose=True):
     held_by_node={h['node']:h for h in spec['rig'].get('heldWeapons', [])}
-    for weapon in spec['rig']['wpn'].values():
+    for key, weapon in spec['rig']['wpn'].items():
         ref=bpy.data.objects[weapon['ref']]
         held=next((held_by_node[node.name] for node in [ref,*ancestor_chain(ref)] if node.name in held_by_node),None)
+        # The inactive hand may carry its weapon across the oblique firing stance.
+        if held and shooting and slot and key != slot and not weapon.get('alwaysForward'):
+            continue
         if not weapon.get('alwaysForward') and not (held and shooting):
             continue
         forward=ref.matrix_world.to_quaternion() @ Vector((0,-1,0))
-        assert forward.y < -.999, 'Weapon firing axis deviates from the target'
-        if held and shooting:
+        assert forward.y<-.999, f'{spec["id"]}/{slot}/{key}: firing axis {tuple(forward)}'
+        if held and shooting and hand_pose:
             tip=bpy.data.objects[held.get('forearmTip',held['hand'])]
             direction=(tip.matrix_world.translation-tip.parent.matrix_world.translation).normalized()
-            assert direction.dot(forward) > .90, 'Barrel diverges from the anatomical forearm'
+            assert direction.dot(forward) > .90, f'{spec["id"]}/{slot}/{key}: barrel diverges from the anatomical forearm'
 
 
 def verify_feather_planes(meshes, segments):
