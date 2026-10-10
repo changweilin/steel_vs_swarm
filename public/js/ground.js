@@ -3073,7 +3073,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // ---- 3D 細節(表面特徵輪廓)----
   // zn = 所在分區:同物件跨地貌形式不同(雜草/花/灌木 — 綠地大面積密集、
   // 市區/裸露地零星;貨櫃/太陽能板 — 裸露地大陣列、市區零星單件)
-  function scatterDetails(sub, x, z, r, rot, def, zn, enc = null, density = 1) {
+  function scatterDetails(sub, x, z, r, rot, def, zn, enc = null, density = 1, carpetHalf = 0) {
     const w = r * 2, dp = r * 2 * (def.aspect || 0.7);
     const ca = Math.cos(rot), sa = Math.sin(rot);
     const atLocal = (lx, lz) => [x + lx * ca - lz * sa, z + lx * sa + lz * ca];
@@ -3081,8 +3081,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 散佈型態每 patch×型別隨機:cluster 群聚(1~3 簇)/ ring 沿緣 / uniform 均勻
     const kMul = Math.min(3, Math.max(0.7, (r / ((SIZE[sub]?.[0] || 9) * RSCALE)) ** 1.6));
     const scatter = (type, k, s0, sv, tintPick = null) => {
-      k = Math.max(1, Math.round(k * kMul * density * (0.55 + rnd() * 1.1)));
-      const mode = rnd();
+      // carpetHalf>0 (carpet fill): stochastic count + uniform square over the whole cell, so adjacent
+      // cells tile into one continuous sward instead of per-cell blobs
+      const kf = k * kMul * density * (0.55 + rnd() * 1.1);
+      k = carpetHalf ? Math.floor(kf + rnd()) : Math.max(1, Math.round(kf));
+      const mode = carpetHalf ? 1 : rnd();
       let centers = null, arc0 = 0, arcSpan = Math.PI * 2;
       if (mode < 0.3) {
         centers = [];
@@ -3100,6 +3103,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         } else if (mode < 0.45) {                      // ring:沿 patch 邊緣的隨機弧段
           const rr = r * (0.55 + rnd() * 0.35), th = arc0 + rnd() * arcSpan;
           px = x + Math.cos(th) * rr; pz = z + Math.sin(th) * rr;
+        } else if (carpetHalf) {
+          px = x + (rnd() * 2 - 1) * carpetHalf; pz = z + (rnd() * 2 - 1) * carpetHalf;
         } else {                                       // uniform:面積均勻
           const rr = r * 0.75 * Math.sqrt(rnd()), th = rnd() * Math.PI * 2;
           px = x + Math.cos(th) * rr; pz = z + Math.sin(th) * rr;
@@ -3328,9 +3333,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     for (const [cx2, cz2, key] of landCells) {
       if (detCount >= MAX_DETAIL) break;
       const q = 0.5 + 0.5 * qcVal(cx2, cz2, CAR_QC_W);     // [0,1] 準晶體疏密調變(峰密谷疏,去隨機禿斑)
-      if (rnd() >= pDet * (0.35 + 1.3 * q)) continue;       // 先抽 1 枚;E[0.35+1.3q]=1 ⇒ 總量不變
       const sub = key.slice(0, key.indexOf('#'));
-      scatterDetails(sub, cx2, cz2, cell * 0.55, rnd() * Math.PI * 2, DEFS[sub], zoneAt(cx2, cz2), encAt(cx2, cz2));
+      // Every cell contributes (density-scaled, uniform over its full square): E[0.35+1.3q]=1 keeps the total
+      scatterDetails(sub, cx2, cz2, cell * 0.55, rnd() * Math.PI * 2, DEFS[sub], zoneAt(cx2, cz2), encAt(cx2, cz2), pDet * (0.35 + 1.3 * q), cell * 0.5);
     }
   }
 
