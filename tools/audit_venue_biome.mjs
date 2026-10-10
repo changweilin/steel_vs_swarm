@@ -55,7 +55,7 @@ const ONLY = (ARG.only || '').split(',').filter(Boolean);
 // linears and the like) is unclassified, counted as "untagged" ⇒ low-coverage venues automatically read
 // low-confidence instead of a forced composition.
 const COVER_KIND = [
-  ['water', /^(natural=(water|bay|strait|spring)|landuse=(reservoir|basin|salt_pond)|waterway=riverbank)$/],
+  ['water', /^(natural=(water|bay|strait|spring)|landuse=(reservoir|basin|salt_pond)|waterway=(riverbank|canal|dock)|water=.*)$/],
   ['wet', /^(natural=(wetland|mud)|landuse=aquaculture)$/],
   ['bare', /^(natural=(bare_rock|scree|shingle|sand|rock|cliff|glacier|desert|dune)|landuse=(quarry|salt_pond|landfill))$/],
   ['green', /^(natural=(wood|scrub|grassland|heath|fell|moor)|landuse=(forest|grass|meadow|farmland|farmyard|orchard|vineyard|allotments|village_green|greenfield|plant_nursery|recreation_ground)|leisure=(park|garden|golf_course|nature_reserve|recreation_ground))$/],
@@ -63,7 +63,7 @@ const COVER_KIND = [
 ];
 /** tag object → biome key (null when unclassifiable) */
 export function coverKind(tags) {
-  for (const k of ['landuse', 'natural', 'leisure', 'waterway']) {
+  for (const k of ['landuse', 'natural', 'leisure', 'waterway', 'water']) {
     const v = tags?.[k];
     if (!v) continue;
     const s = `${k}=${v}`;
@@ -130,6 +130,19 @@ const clippedAreaM2 = (geom, b, lat0) => {
   const p = clipToBBox(geom, b);
   return p.length >= 3 ? polyAreaM2(p, lat0) : 0;
 };
+
+/** Point-in-polygon test (ray casting) */
+function ptInPoly(p, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].lon, yi = poly[i].lat;
+    const xj = poly[j].lon, yj = poly[j].lat;
+    const intersect = ((yi > p.lat) !== (yj > p.lat))
+      && (p.lon < (xj - xi) * (p.lat - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
 
 // ---- Decision thresholds (judgment values; semantics live here) ----
 const TOL = {
@@ -288,15 +301,39 @@ for (const v of list) {
   const lat0 = (bbox.minLat + bbox.maxLat) / 2;
   const boxA = bboxAreaM2(bbox);
   const area = Object.fromEntries(BIO_KEYS.map((k) => [k, 0]));
-  let covered = 0;
+  const coverPolys = [];
   for (const c of lc.covers) {
     const k = coverKind(c.tags);
     if (!k) continue;
     const a = clippedAreaM2(c.geometry, bbox, lat0);
-    area[k] += a; covered += a;
+    if (a <= 0) continue;
+    area[k] += a;
+    coverPolys.push({ kind: k, geom: c.geometry });
   }
   let built = 0;
-  for (const b of lc.buildings) built += clippedAreaM2(b.geometry, bbox, lat0);
+  for (const b of lc.buildings) {
+    const a = clippedAreaM2(b.geometry, bbox, lat0);
+    if (a <= 0) continue;
+    built += a;
+    // OSM building footprints classified as urban; green/bare landcover excludes building areas
+    const cp = {
+      lon: b.geometry.reduce((s, pt) => s + pt.lon, 0) / b.geometry.length,
+      lat: b.geometry.reduce((s, pt) => s + pt.lat, 0) / b.geometry.length,
+    };
+    const matched = coverPolys.find((c) => ptInPoly(cp, c.geom));
+    if (matched) {
+      if (matched.kind === 'green') {
+        area.green = Math.max(0, area.green - a);
+        area.urban += a;
+      } else if (matched.kind === 'bare') {
+        area.bare = Math.max(0, area.bare - a);
+        area.urban += a;
+      }
+    } else {
+      area.urban += a;
+    }
+  }
+  const covered = BIO_KEYS.reduce((s, k) => s + area[k], 0);
   const measured = Object.fromEntries(BIO_KEYS.map((k) => [k, covered > 0 ? area[k] / covered : 0]));
   const coverF = Math.min(1, covered / boxA);      // tagged share of the bbox (confidence)
   const builtF = Math.min(1, built / boxA);        // building coverage
@@ -310,7 +347,8 @@ for (const v of list) {
       const m = keys.reduce((s, k) => s + measured[k], 0);
       const kind = `axis:${name}`;
       if (d >= TOL.MAJOR && m < TOL.MAJOR_MIN) notes.push({ kind, text: `宣告 ${name} ${(d * 100) | 0}% 但圖資只有 ${(m * 100) | 0}%` });
-      if (m >= TOL.SURPRISE && d < TOL.SURPRISE_DECL) notes.push({ kind, text: `圖資 ${name} ${(m * 100) | 0}% 但宣告只有 ${(d * 100) | 0}%` });
+      const expDecl = d + (name === 'water' && v.variant === 'swamp' ? (v.mix.wet || 0) : 0);
+      if (m >= TOL.SURPRISE && expDecl < TOL.SURPRISE_DECL) notes.push({ kind, text: `圖資 ${name} ${(m * 100) | 0}% 但宣告只有 ${(d * 100) | 0}%` });
     }
   }
   // urban is judged by building coverage only (both directions) — landcover's urban share is

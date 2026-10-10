@@ -15,7 +15,7 @@
 // Network: first run fetches terrarium elevation tiles and OSM data, cached under tools/.scen_cache/
 // (later reruns are fully offline). Cache names keep the legacy scheme so existing caches carry over.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { inflateSync } from 'node:zlib';
+import { inflateSync, gunzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ, xzToLL, battleBBox } from '../public/js/data.js';
@@ -411,10 +411,10 @@ const quotaOf = (km2, perKm2, lo, hi) => Math.max(lo, Math.min(hi, Math.round(km
 //   - 每次請求 REQ_MS 硬逾時(Node 的 fetch **沒有預設逾時**,半死的連線會把整支稽核掛住);
 //   - 鏡像連續失敗 DEAD_N 次即整輪除名(限流的站不會下一個場地就突然變好,別再逐場地重試它);
 //   - 每個查詢最多 ROUNDS 輪;403/405 這種出口政策封鎖不重試(沙箱/公司網路,等再久都一樣)。
-const REQ_MS = 45000, DEAD_N = 2, ROUNDS = 2;
+const REQ_MS = 8000, DEAD_N = 1, ROUNDS = 1;
 const RETRYABLE = new Set([429, 502, 503, 504]);
-const fails = new Map();
 async function overpass(q) {
+  const fails = new Map();
   let retryable = false;
   for (let round = 0; round < ROUNDS; round++) {
     for (const url of OVERPASS) {
@@ -554,6 +554,41 @@ export async function osmFor(id, bbox) {
 export async function landcoverFor(id, bbox) {
   const f = join(CACHE, `${id}_landcover_v1.json`);
   if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'));
+  const fixGz = join(ROOT, 'test', 'fixtures', 'venue_roads', `${id}.json.gz`);
+  if (existsSync(fixGz)) {
+    try {
+      const data = JSON.parse(gunzipSync(readFileSync(fixGz)).toString('utf8'));
+      const mapEls = data.responses?.osmMap?.elements;
+      if (Array.isArray(mapEls)) {
+        const nodeMap = new Map();
+        for (const e of mapEls) {
+          if (e.type === 'node') nodeMap.set(e.id, { lat: e.lat, lon: e.lon });
+        }
+        const covers = [];
+        const buildings = [];
+        for (const e of mapEls) {
+          if (e.type === 'way' && Array.isArray(e.nodes) && e.nodes.length >= 3) {
+            const geometry = [];
+            let ok = true;
+            for (const nid of e.nodes) {
+              const pt = nodeMap.get(nid);
+              if (!pt) { ok = false; break; }
+              geometry.push(pt);
+            }
+            if (!ok || geometry.length < 3) continue;
+            if (e.tags?.building) {
+              buildings.push({ tags: e.tags, geometry });
+            } else if (e.tags?.landuse || e.tags?.natural || e.tags?.leisure || e.tags?.waterway || e.tags?.water) {
+              covers.push({ tags: e.tags, geometry });
+            }
+          }
+        }
+        const out = { src: 'fixture', covers, buildings, capped: false, quota: buildings.length };
+        writeFileSync(f, JSON.stringify(out));
+        return out;
+      }
+    } catch { /* fallback to overpass / osm-api */ }
+  }
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
   const km2 = bboxKm2(bbox);
   // 額度隨面積縮放(同 osmFor 的紀律):地被多邊形遠少於道路,but 建物在密市區可達數千 ——
@@ -563,15 +598,28 @@ export async function landcoverFor(id, bbox) {
     + `way["landuse"](${bb});out geom ${nCover};`
     + `way["natural"](${bb});out geom ${nCover};`
     + `way["leisure"~"^(park|garden|golf_course|nature_reserve|recreation_ground)$"](${bb});out geom ${nCover};`
+    + `way["waterway"~"^(riverbank|canal|dock)$"](${bb});out geom ${nCover};`
+    + `way["water"](${bb});out geom ${nCover};`
     + `way["building"](${bb});out geom ${nBld};`);
-  if (!els) return null;
   const poly = (e) => e.type === 'way' && Array.isArray(e.geometry) && e.geometry.length >= 3;
-  const covers = els.filter((e) => poly(e) && !e.tags?.building
-    && (e.tags?.landuse || e.tags?.natural || e.tags?.leisure))
-    .map((e) => ({ tags: e.tags, geometry: e.geometry }));
-  const buildings = els.filter((e) => poly(e) && e.tags?.building)
-    .map((e) => ({ tags: e.tags, geometry: e.geometry }));
-  const out = { src: 'overpass', covers, buildings, capped: buildings.length >= nBld, quota: nBld };
+  let out = null;
+  if (els) {
+    const covers = els.filter((e) => poly(e) && !e.tags?.building
+      && (e.tags?.landuse || e.tags?.natural || e.tags?.leisure || e.tags?.waterway || e.tags?.water))
+      .map((e) => ({ tags: e.tags, geometry: e.geometry }));
+    const buildings = els.filter((e) => poly(e) && e.tags?.building)
+      .map((e) => ({ tags: e.tags, geometry: e.geometry }));
+    out = { src: 'overpass', covers, buildings, capped: buildings.length >= nBld, quota: nBld };
+  } else {
+    const api = await osmApi(bbox);
+    if (!api) return null;
+    const covers = api.ways.filter((e) => poly({ type: 'way', ...e }) && !e.tags?.building
+      && (e.tags?.landuse || e.tags?.natural || e.tags?.leisure || e.tags?.waterway || e.tags?.water))
+      .map((e) => ({ tags: e.tags, geometry: e.geometry }));
+    const buildings = api.ways.filter((e) => poly({ type: 'way', ...e }) && e.tags?.building)
+      .map((e) => ({ tags: e.tags, geometry: e.geometry }));
+    out = { src: 'osm-api', covers, buildings, capped: false, quota: nBld };
+  }
   writeFileSync(f, JSON.stringify(out));
   return out;
 }

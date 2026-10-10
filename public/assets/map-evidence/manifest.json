@@ -101,15 +101,15 @@
     },
     "interlaken": {
       "file": "interlaken.json",
-      "digest": "33cae1754b3d7f91ae4d3848aee71cbcce4f0fc53b078ab75ce7941ec4ff02e7",
-      "checksum": "e43725e1",
+      "digest": "693ab5e85a3ae9e591066414b43f17ea150d861aa1e3d259e118eb9ef4a4ef3c",
+      "checksum": "635fe11b",
       "grid": {
-        "west": 7.857916666666666,
-        "north": 46.68925,
+        "west": 8.04175,
+        "north": 46.6275,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 206,
-        "rows": 113
+        "cols": 204,
+        "rows": 134
       },
       "product": "2021-v200"
     },
@@ -171,29 +171,29 @@
     },
     "phoenix": {
       "file": "phoenix.json",
-      "digest": "f4ef8588fc0e7d89adaa14efbc176bf83d1f9303d453ae27cfce230644ef8713",
-      "checksum": "26e551b9",
+      "digest": "6ab53d3f1664ed163a7bb44e8118665fdd2200896135622fb133646c70483255",
+      "checksum": "4407c6af",
       "grid": {
         "west": -112.17824999999999,
-        "north": 33.502833333333335,
+        "north": 33.498666666666665,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 191,
-        "rows": 159
+        "cols": 1558,
+        "rows": 2009
       },
       "product": "2021-v200"
     },
     "cappadocia": {
       "file": "cappadocia.json",
-      "digest": "e6575561b17e6f4c506090f4ec1e336a027a99295a767fef06d276dcd10f4060",
-      "checksum": "073b3df5",
+      "digest": "c6f4e65da216e280eccc9fe03116dccbc66b2c718b2ec7aa89ac7445a4cb9d10",
+      "checksum": "7a740bf3",
       "grid": {
-        "west": 34.82266666666666,
-        "north": 38.650083333333335,
+        "west": 34.83433333333333,
+        "north": 38.647,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 151,
-        "rows": 132
+        "cols": 199,
+        "rows": 115
       },
       "product": "2021-v200"
     },
@@ -241,15 +241,15 @@
     },
     "walvisbay": {
       "file": "walvisbay.json",
-      "digest": "0dde8c06b2ed25e4bb9e3a3e0805a2b0cb6f19b603cf4cbd4dc464fe003f8e86",
-      "checksum": "c9409845",
+      "digest": "bf8abfb19b0373a230c29653c619750b351a4ff37bb6fbc44d2ac1d7d8619c8c",
+      "checksum": "2fcff195",
       "grid": {
-        "west": 14.496083333333333,
-        "north": -22.952083333333334,
+        "west": 14.523083333333332,
+        "north": -22.688666666666666,
         "dx": 0.00008333333333333333,
         "dy": 0.00008333333333333333,
-        "cols": 161,
-        "rows": 116
+        "cols": 146,
+        "rows": 133
       },
       "product": "2021-v200"
     },

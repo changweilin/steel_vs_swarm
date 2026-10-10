@@ -196,18 +196,18 @@ export const VENUES = [
   V({ id: 'rotterdam', name: '鹿特丹・伊拉斯謨大橋', country: '🇳🇱', base: '市區', variant: 'water',  type: '市區', ll: [51.909000, 4.486000],   bearing: 135, scen: [], relief: null }),
   // ---- 綠地 ×6----
   V({ id: 'matamata',   name: '紐西蘭・哈比屯綠丘草原', country: '🇳🇿', base: '綠地', variant: 'plain',  type: '綠地', ll: [-37.872000, 175.683000], bearing: 260, relief: null }),
-  V({ id: 'interlaken', name: '瑞士・因特拉肯山谷', country: '🇨🇭', base: '綠地', variant: 'light',  type: '綠地', ll: [46.686000, 7.863000], bearing: 100, scen: [], relief: null }),
+  V({ id: 'interlaken', name: '瑞士・因特拉肯山谷', country: '🇨🇭', base: '綠地', variant: 'light',  type: '綠地', ll: [46.620000, 8.050000], bearing: 100, scen: [], relief: null }),
   V({ id: 'kyoto',        name: '京都・嵐山竹林寺町', country: '🇯🇵', base: '綠地', variant: 'mixed',  type: '綠地', ll: [35.010032, 135.710095], bearing: 90, relief: 8, forest: { dominantSpecies: 'forestBamboo', dominantWeight: 10, woodlandF: 0.70 } }),
   V({ id: 'taroko',       name: '太魯閣・燕子口',     country: '🇹🇼', base: '綠地', variant: 'rugged', type: '綠地', ll: [24.171200, 121.556000], bearing: 262, scen: ['tunnel', 'underpass', 'gallery', 'highGround'], relief: 371 }),
   V({ id: 'mekong',       name: '越南・湄公河三角洲水鄉', country: '🇻🇳', base: '綠地', variant: 'swamp',  type: '綠地', ll: [10.355000, 106.350000], bearing: 140, scen: [], relief: null }),
   V({ id: 'bergen',       name: '挪威・卑爾根峽灣',   country: '🇳🇴', base: '綠地', variant: 'water',  type: '綠地', ll: [60.397000, 5.240000], bearing: 250, scen: [], relief: null }),
   // ---- 裸露地 ×6----
-  V({ id: 'phoenix',    name: '鳳凰城・索諾拉沙漠', country: '🇺🇸', base: '裸露地', variant: 'plain',  type: '裸露地', ll: [33.495000, -112.170000], bearing: 30, relief: null }),
-  V({ id: 'cappadocia', name: '土耳其・卡帕多奇亞岩原', country: '🇹🇷', base: '裸露地', variant: 'light',  type: '裸露地', ll: [38.643000, 34.829000], bearing: 25, scen: [], relief: null }),
+  V({ id: 'phoenix',    name: '鳳凰城・索諾拉沙漠', country: '🇺🇸', base: '裸露地', variant: 'plain',  type: '裸露地', ll: [33.335000, -112.060000], bearing: 30, relief: null }),
+  V({ id: 'cappadocia', name: '土耳其・卡帕多奇亞岩原', country: '🇹🇷', base: '裸露地', variant: 'light',  type: '裸露地', ll: [38.641000, 34.845000], bearing: 25, scen: [], relief: null }),
   V({ id: 'uluru',      name: '澳洲・烏魯魯巨岩',   country: '🇦🇺', base: '裸露地', variant: 'mixed',  type: '裸露地', ll: [-25.240662, 130.989010], bearing: 80, relief: null }),
   V({ id: 'todra',      name: '摩洛哥・托德拉大峽谷', country: '🇲🇦', base: '裸露地', variant: 'rugged', type: '裸露地', ll: [31.550000, -5.600000], bearing: 56, scen: ['tunnel', 'highGround'], relief: 45 }),
   V({ id: 'dubai',      name: '杜拜・火烈鳥濕地保護區', country: '🇦🇪', base: '裸露地', variant: 'swamp', type: '裸露地', ll: [25.198000, 55.310000], bearing: 45, scen: [], relief: null }),
-  V({ id: 'walvisbay',  name: '納米比亞・鯨灣港沙漠海濱', country: '🇳🇦', base: '裸露地', variant: 'water',  type: '裸露地', ll: [-22.958000, 14.505000], bearing: 300, scen: [], relief: null }),
+  V({ id: 'walvisbay',  name: '納米比亞・鯨灣港沙漠海濱', country: '🇳🇦', base: '裸露地', variant: 'water',  type: '裸露地', ll: [-22.695000, 14.530000], bearing: 300, scen: [], relief: null }),
   // ---- 劇情戰役(另計分類,不佔 3×6 名額;story.js 六章 venueId 錨定此六張)----
   { id: 'taipei101',  name: '台北・101 信義計畫區', country: '🇹🇼', type: '市區', story: true, ll: [25.034009, 121.563871], bearing: 190, mix: { urban: 0.85, green: 0.1, water: 0.05 }, scen: ['underBridge', 'highGround'], relief: 34 },
   { id: 'shibuya',    name: '東京・澀谷十字路口',   country: '🇯🇵', type: '市區', story: true, ll: [35.659538, 139.700442], bearing: 280, mix: { urban: 0.9, green: 0.1 }, scen: ['underBridge'], relief: 14 },

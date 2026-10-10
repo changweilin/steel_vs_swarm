@@ -219,7 +219,7 @@ export async function startPresetWarmup(items) {
       console.warn('預設地圖預熱略過:', it.name, err);
     }
     done++;
-    // 每張地圖處理完後給予瀏覽器排程空檔，確保 UI 事件佇列隨時能即時響應
+    // Yield to the browser scheduler between maps so the UI event loop remains responsive
     await new Promise((r) => setTimeout(r, 100));
   }
   show('✅ 所有預設地圖圖資已處理並記憶');
