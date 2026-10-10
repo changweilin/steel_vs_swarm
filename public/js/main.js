@@ -1578,10 +1578,17 @@ $('goMapBuilderBtn')?.addEventListener('click', () => enterMapBuilder());
 
 async function createSelectedRoom() {
   const cfg = app.favCfg;
-  if (!cfg) return;
+  if (!cfg || $('createRoomBtn').disabled) return;
   if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
+  // Sync gates only: archived geometry/sources settle instantly, so a click while preset
+  // warmup runs enters the room instead of stuck at 建立戰區…. Preparation joins the shared
+  // background task below; room/loading gates (awaitPreparedPack/mapEvidenceGate) await it.
+  const audit = mapGeometryAudit(cfg, app.teamSize);
+  if (!audit.ok || !validMapSources(cfg)) {
+    $('openRoomStatus').textContent = audit.ok ? MAP_RULE_TEXT.roads : MAP_RULE_TEXT[audit.code];
+    return;
+  }
   $('createRoomBtn').disabled = true;
-  $('openRoomStatus').textContent = '建立戰區…';
   cfg.env = {
     season: $('envSeason').value,
     time: $('envTime').value,
@@ -1591,18 +1598,10 @@ async function createSelectedRoom() {
   const isSuper = !!app.isSuperDeploy;
   cfg.super = isSuper;
 
-  // Source qualification settles before sending the room recipe on any transport.
-  await prepareMapCreation(cfg, label => {
-    if (app.phaseShown === 'openroom' && app.favCfg === cfg) $('openRoomStatus').textContent = label;
-    return buildYield();
-  });
-  if (app.phaseShown !== 'openroom' || app.favCfg !== cfg) return;
-  const audit = mapGeometryAudit(cfg, app.teamSize);
-  if (!audit.ok || !validMapSources(cfg)) {
-    $('openRoomStatus').textContent = audit.ok ? MAP_RULE_TEXT.roads : MAP_RULE_TEXT[audit.code];
-    $('createRoomBtn').disabled = false;
-    return;
-  }
+  // Never block the send on preparation: same key joins the in-flight warmup/selection
+  // pack, a new key runs alongside it; failures degrade in room/loading, never here.
+  prepareMapCreation(cfg).catch(() => {});
+  $('openRoomStatus').textContent = isMapPrepared(cfg) ? '建立戰區…' : '建立戰區…(圖資背景處理中，進入房間後自動等待)';
   app.net?.send({
     t: 'createRoom',
     name: myName(),
